@@ -257,7 +257,7 @@ struct _mmc_csd {
 #define EXT_CSD_REV		192	/* RO */
 #define EXT_CSD_SEC_CNT		212	/* RO, 4 bytes */
 #define EXT_CSD_S_A_TIMEOUT	217
-
+#define EXT_CSD_BOOT_SIZE_MULTI	226
 /*
  * EXT_CSD field definitions
  */
