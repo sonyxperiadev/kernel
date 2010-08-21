@@ -82,3 +82,6 @@ GTAGS
 *.orig
 *~
 \#*#
+
+#brcm
+initramfs
