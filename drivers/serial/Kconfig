@@ -1575,4 +1575,29 @@ config SERIAL_ALTERA_UART_CONSOLE
 	help
 	  Enable a Altera UART port to be the system console.
 
+config SERIAL_BCM_VUART
+	tristate "BCM2708 virtual serial port support"
+	depends on ARM && (ARCH_BCM2708)
+	select SERIAL_CORE
+	help
+	  If you have a machine based on a BCM 2708 CPU you
+	  can enable this virtual UART that communicates with
+          the communications co-processor
+
+config SERIAL_BCM_VUART_CONSOLE
+	bool "Support for console on BCM2708 virtual serial port"
+	depends on SERIAL_BCM_VUART=y
+	select SERIAL_CORE_CONSOLE
+	---help---
+	  Say Y here if you wish to use the Broadcom virtual serial port as a
+	  console (the system console is the device which receives all kernel
+	  messages and warnings and which allows logins in single user mode).
+
+	  Even if you say Y here, the currently visible framebuffer console
+	  (/dev/tty0) will still be used as the system console by default, but
+	  you can alter that using a kernel command line option such as
+	  "console=ttybcv0". (Try "man bootparam" or see the documentation of
+	  your boot loader (lilo or loadlin) about how to pass options to the
+	  kernel at boot time.)
+
 endmenu

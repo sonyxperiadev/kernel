@@ -186,6 +186,9 @@
 #define PORT_ALTERA_JTAGUART	91
 #define PORT_ALTERA_UART	92
 
+/* Broadcom Virtual UART */
+#define PORT_BCMVUART   93
+
 #ifdef __KERNEL__
 
 #include <linux/compiler.h>
