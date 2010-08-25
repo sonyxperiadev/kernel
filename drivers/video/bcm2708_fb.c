@@ -105,7 +105,7 @@ bcm2708_fb_set_bitfields(struct bcm2708_fb *fb, struct fb_var_screeninfo *var)
 
 static int bcm2708_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
-	printk(KERN_INFO "HEREEREJSALDJAS\n");
+//	printk(KERN_INFO "HEREEREJSALDJAS\n");
 
 	return -1;
 }
@@ -194,6 +194,7 @@ static int bcm2708_fb_register(struct bcm2708_fb *fb)
 	dma_addr_t dma;
 
 	int ret;
+	size_t framesize;
         
 	fb->fb.fbops		= &bcm2708_fb_ops;
 	fb->fb.flags		= FBINFO_FLAG_DEFAULT;
@@ -210,7 +211,7 @@ static int bcm2708_fb_register(struct bcm2708_fb *fb)
 	fb->fb.var.xres		= 800;
 	fb->fb.var.yres		= 480;
 	fb->fb.var.xres_virtual	= 800;
-	fb->fb.var.yres_virtual	= 480;
+	fb->fb.var.yres_virtual	= 480 * 2; /* Double buffer */
 	fb->fb.var.bits_per_pixel = 16;
 	fb->fb.var.vmode	= FB_VMODE_NONINTERLACED;
 	fb->fb.var.activate	= FB_ACTIVATE_NOW;
@@ -228,7 +229,8 @@ static int bcm2708_fb_register(struct bcm2708_fb *fb)
 
 	bcm2708_fb_set_bitfields(fb, &fb->fb.var);
 
-	fb->fb.screen_base = dma_alloc_writecombine(&fb->dev->dev, SZ_1M,
+    framesize = 800 * 480 * 2 * 2; /* 2 RGB565 buffers of 800x480 */
+	fb->fb.screen_base = dma_alloc_writecombine(&fb->dev->dev, framesize,
 						    &dma, GFP_KERNEL);
 	if (!fb->fb.screen_base) {
 		printk(KERN_ERR "BCM2708B0: unable to map framebuffer\n");
@@ -236,7 +238,7 @@ static int bcm2708_fb_register(struct bcm2708_fb *fb)
 	}
 
 	fb->fb.fix.smem_start	= dma;
-	fb->fb.fix.smem_len	= SZ_1M;
+	fb->fb.fix.smem_len	= framesize;
 
 	/*
 	 * Allocate colourmap.
