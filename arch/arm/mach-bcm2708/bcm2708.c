@@ -72,6 +72,11 @@ static struct map_desc bcm2708_io_desc[] __initdata = {
 		.length		= SZ_4K,
 		.type		= MT_DEVICE
 	}, {
+		.virtual        = IO_ADDRESS(DMA_BASE),
+		.pfn            = __phys_to_pfn(DMA_BASE),
+		.length		= SZ_4K,
+		.type		= MT_DEVICE
+	}, {
 		.virtual        = IO_ADDRESS(MCORE_BASE),
 		.pfn            = __phys_to_pfn(MCORE_BASE),
 		.length		= SZ_4K,
@@ -199,17 +204,34 @@ static void bcm2708_leds_event(led_event_t ledevt)
 }
 #endif	/* CONFIG_LEDS */
 
-static struct resource bcm2708_mci_resource = {
-	.start			= MMCI0_BASE,
-	.end			= MMCI0_BASE + SZ_4K - 1,
-	.flags			= IORESOURCE_MEM,
+static struct resource bcm2708_mci_resources[] = {
+	{
+		.start			= MMCI0_BASE,
+		.end			= MMCI0_BASE + SZ_4K - 1,
+		.flags			= IORESOURCE_MEM,
+	}, {
+		.start			= DMA_BASE,
+		.end			= DMA_BASE + SZ_4K - 1,
+		.flags			= IORESOURCE_MEM,
+	}, {
+		.start                  = IRQ_DMA4,
+		.end                    = IRQ_DMA4,
+		.flags                  = IORESOURCE_IRQ,
+	}, {
+		.start                  = IRQ_SDIO,
+		.end                    = IRQ_SDIO,
+		.flags                  = IORESOURCE_IRQ,
+	}
 };
 
 static struct platform_device bcm2708_mci_device = {
 	.name			= "bcm2708_mci",
 	.id			= 0, // first bcm2708_mci
-	.num_resources		= 1,
-	.resource		= &bcm2708_mci_resource,
+	.resource		= bcm2708_mci_resources,
+	.num_resources		= 4,
+	.dev			= {					
+                .coherent_dma_mask      = DMA_BIT_MASK(DMA_MASK_BITS_COMMON),			
+	},							
 };
 
 static u64 fb_dmamask = DMA_BIT_MASK(DMA_MASK_BITS_COMMON);

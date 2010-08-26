@@ -21,6 +21,8 @@ struct clk;
 
 #define BCM2708_MCI_ARGUMENT	0x04
 
+#define BCM2708_MCI_TIMEOUT	0x08
+
 #define BCM2708_MCI_RESPONSE0	0x10
 #define BCM2708_MCI_RESPONSE1	0x14
 #define BCM2708_MCI_RESPONSE2	0x18
@@ -35,9 +37,29 @@ struct clk;
 
 #define NR_SG		16
 
+typedef struct bulk_data_struct
+{
+   unsigned long info;
+   unsigned long src;
+   unsigned long dst;
+   unsigned long length;
+   unsigned long stride;
+   unsigned long next;
+   unsigned long pad[2];
+} BCM2708_DMA_CB_T;
+
 struct bcm2708_mci_host {
-	void __iomem		*base;
+	struct platform_device	*dev;
+
+	void __iomem		*mmc_base;
+	void __iomem		*dma_base;
+
+	BCM2708_DMA_CB_T	*cb_base;
+	dma_addr_t		cb_handle;
+
 	struct mmc_host		*mmc;
+
+	struct semaphore 	sem;
 
 	int is_acmd;
 };

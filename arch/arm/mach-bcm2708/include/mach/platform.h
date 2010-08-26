@@ -63,6 +63,7 @@
 #define UART1_BASE               (BCM2708_PERI_BASE + 0x215000) /* Uart 1 */
 #define ST_BASE                  (BCM2708_PERI_BASE + 0x3000)   /* System Timer */
 #define MCORE_BASE               (BCM2708_PERI_BASE + 0x0000)   /* Fake frame buffer device (actually the multicore sync block*/
+#define DMA_BASE		 (BCM2708_PERI_BASE + 0x7000)	/* DMA controller */
 
 #define ARMCTRL_BASE             (ARM_BASE + 0x000)
 #define ARMCTRL_IC_BASE          (ARM_BASE + 0x200)           /* ARM interrupt controller */

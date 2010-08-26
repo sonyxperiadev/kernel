@@ -48,4 +48,12 @@
 #define __bus_to_virt(x)    ((x) - (BUS_OFFSET - PAGE_OFFSET))
 #define __pfn_to_bus(x)     (__pfn_to_phys(x) + (BUS_OFFSET - PHYS_OFFSET))
 #define __bus_to_pfn(x)     __phys_to_pfn((x) - (BUS_OFFSET - PHYS_OFFSET))
+
+/*
+ * Boost our consistent DMA area to 4M to support 1920x1080 framebuffers
+ */
+
+/*
+#define CONSISTENT_DMA_SIZE SZ_4M
+*/
 #endif
