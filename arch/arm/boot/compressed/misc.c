@@ -25,6 +25,8 @@ unsigned int __machine_arch_type;
 #include <linux/stddef.h>	/* for NULL */
 #include <linux/linkage.h>
 #include <asm/string.h>
+#include <linux/linkage.h>
+#include <asm/unaligned.h>
 
 #include <asm/unaligned.h>
 
