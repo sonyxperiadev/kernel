@@ -126,6 +126,12 @@
 #define gadget_is_ci13xxx(g)	0
 #endif
 
+#ifdef CONFIG_USB_GADGET_SNPS_DWC_OTG
+#define	gadget_is_dwc_otg(g)	!strcmp("dwc_otg_pcd", (g)->name)
+#else
+#define	gadget_is_dwc_otg(g)	0
+#endif
+
 // CONFIG_USB_GADGET_SX2
 // CONFIG_USB_GADGET_AU1X00
 // ...

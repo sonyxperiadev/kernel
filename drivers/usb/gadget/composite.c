@@ -26,6 +26,8 @@
 #include <linux/device.h>
 
 #include <linux/usb/composite.h>
+#include <linux/delay.h>
+#include <linux/kdev_t.h>
 
 
 /*

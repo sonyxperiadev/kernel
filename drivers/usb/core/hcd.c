@@ -592,6 +592,9 @@ static int rh_call_control (struct usb_hcd *hcd, struct urb *urb)
 		case GetHubDescriptor:
 			len = sizeof (struct usb_hub_descriptor);
 			break;
+		case SetandTestPortFeature:
+			len = 1;
+			break;
 		}
 		status = hcd->driver->hub_control (hcd,
 			typeReq, wValue, wIndex,
