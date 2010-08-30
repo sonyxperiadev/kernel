@@ -219,7 +219,7 @@ source "net/sched/Kconfig"
 source "net/dcb/Kconfig"
 
 config RPS
-	boolean
+	boolean "RPS"
 	depends on SMP && SYSFS
 	default y
 
