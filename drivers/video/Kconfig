@@ -303,6 +303,16 @@ config FB_BCM2708
 	  here and read <file:Documentation/kbuild/modules.txt>.  The module
 	  will be called bcm2708_fb.
 
+config FB_VCEB
+        tristate "VideoCore Early Boot frame buffer support"
+        depends on FB && BRCM_VIDEOCORE_SERVICES
+        select FB_CFB_FILLRECT
+        select FB_CFB_COPYAREA
+        select FB_CFB_IMAGEBLIT
+        select LCD_API
+        ---help---
+          Support for the VideoCore Early Boot framebuffer.
+
 config FB_ARMCLCD
 	tristate "ARM PrimeCell PL110 support"
 	depends on FB && ARM && ARM_AMBA

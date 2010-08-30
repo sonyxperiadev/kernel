@@ -104,8 +104,8 @@ config VC_LOGSERVER
 	default n
 	select VC_VCHIQ
 
-config	BRCM_VIDEOCORE_FRAMEBUFFER 
-	tristate "Videocore Framebuffer service module"
+config	BRCM_VMCS_FRAMEBUFFER 
+	tristate "Videocore VMCS Framebuffer service module"
 	depends on BRCM_VIDEOCORE_SERVICES && FB_VCEB
 	default BRCM_VIDEOCORE_SERVICES
 	select VC_DISPMANX
@@ -115,14 +115,14 @@ config	BRCM_VIDEOCORE_FRAMEBUFFER
 
 config BRCM_VC_FB_DEFAULT_Z_ORDER
         int "Default z-order of the videocore framebuffer"
-        depends on BRCM_VIDEOCORE_FRAMEBUFFER
+        depends on BRCM_VMCS_FRAMEBUFFER
         default -100
         help
           Sets the default z-order used by the videocore framebuffer.
 
 config BRCM_VC_FB_BUS_CONNECTED_FB_UPDATE
         bool "Update framebuffer on videocore connect?"
-        depends on BRCM_VIDEOCORE_FRAMEBUFFER
+        depends on BRCM_VMCS_FRAMEBUFFER
         default y
         help
           Causes a framebuffer update to occur when the videocore
