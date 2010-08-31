@@ -34,3 +34,5 @@ obj-$(CONFIG_USB_ISP1760_HCD)	+= isp1760.o
 obj-$(CONFIG_USB_HWA_HCD)	+= hwa-hc.o
 obj-$(CONFIG_USB_IMX21_HCD)	+= imx21-hcd.o
 
+obj-y        += $(CONFIG_DWCOTG_ROOT)/sw/linux/2.90a/driver/
+obj-y        += $(CONFIG_DWCOTG_ROOT)/sw/linux/2.90a/dwc_common_port/
