@@ -105,9 +105,12 @@ bcm2708_fb_set_bitfields(struct bcm2708_fb *fb, struct fb_var_screeninfo *var)
 
 static int bcm2708_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
-//	printk(KERN_INFO "HEREEREJSALDJAS\n");
 
-	return -1;
+	/* Usually we check for bounds here, but since we are not doing anything
+	 * right now, always return success
+	 */
+
+	return 0;
 }
 
 static int bcm2708_fb_set_par(struct fb_info *info)
