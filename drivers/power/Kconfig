@@ -142,4 +142,11 @@ config CHARGER_PCF50633
 	help
 	 Say Y to include support for NXP PCF50633 Main Battery Charger.
 
+config BATTERY_BCM2708
+	tristate "BCM2708 Fake Battery (Always fully charged and on AC power)"
+	depends on ARCH_BCM2708
+	help
+	  A fake battery driver which export sysfs values saying the battery is always
+	  fully chanrged and on AC is online. Helpful for Android.
+ 
 endif # POWER_SUPPLY
