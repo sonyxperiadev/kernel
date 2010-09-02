@@ -42,6 +42,7 @@ struct bcm2708_fb {
 	struct platform_device	*dev;
 	void __iomem		*regs;
 	u32			cmap[16];
+	u32			fbmail_initialised;
 };
 
 #define to_bcm2708(info)	container_of(info, struct bcm2708_fb, fb)
@@ -113,26 +114,38 @@ static int bcm2708_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *i
 	return 0;
 }
 
+/* Faking double buffer here */
 static int bcm2708_fb_set_par(struct fb_info *info)
 {
 	struct bcm2708_fb *fb = to_bcm2708(info);
+	void *fbstart = (void *)fb->fb.screen_base;
+	uint32_t offset = fb->fb.var.yoffset * fb->fb.var.xres * 2; // 16 bpp
+	void *data = (void *) (fb->fb.screen_base + offset);
+	unsigned int fbsize;
 
-	fb->fb.fix.line_length = fb->fb.var.xres_virtual *
-				 fb->fb.var.bits_per_pixel / 8;
+	fbsize = fb->fb.var.xres * 2 * fb->fb.var.yres; //16 bpp
 
 	if (fb->fb.var.bits_per_pixel <= 8)
 		fb->fb.fix.visual = FB_VISUAL_PSEUDOCOLOR;
 	else
 		fb->fb.fix.visual = FB_VISUAL_TRUECOLOR;
-        
-        bcm_mailbox_write(MBOX_CHAN_FB,
-                          fb->fb.fix.smem_start +
-                          fb->fb.var.yoffset * fb->fb.fix.line_length);
-        
-	printk(KERN_INFO "BCM2708FB: start = 0x%08x\n",
-               (unsigned)fb->fb.fix.smem_start +
-               fb->fb.var.yoffset * fb->fb.fix.line_length);
+      
+	/*
+     * printk(KERN_INFO"BCM2708 FB: fbstart (0x%08x), data (0x%08x)\n", fbstart, data);
+     */
+	if (data != fbstart)
+		memcpy(fbstart, data, fbsize);
 
+	if (!fb->fbmail_initialised) {
+		printk(KERN_EMERG"FB : writing mbox ..\n");
+		bcm_mailbox_write(MBOX_CHAN_FB, (unsigned)fb->fb.fix.smem_start);
+		printk(KERN_INFO "BCM2708FB: start = 0x%08x\n", (unsigned)fb->fb.fix.smem_start);
+		fb->fbmail_initialised = 1;
+	}
+        
+	/*
+     * printk(KERN_EMERG " BCM2708_FB : fb_set_par success .. \n");
+     */
 	return 0;
 }
 
@@ -210,6 +223,7 @@ static int bcm2708_fb_register(struct bcm2708_fb *fb)
 	fb->fb.fix.ypanstep	= 0;
 	fb->fb.fix.ywrapstep	= 0;
 	fb->fb.fix.accel	= FB_ACCEL_NONE;
+	fb->fb.fix.line_length  = 800 * 2; /* WIDTH * bytes_per_pixel */
 
 	fb->fb.var.xres		= 800;
 	fb->fb.var.yres		= 480;
@@ -232,7 +246,7 @@ static int bcm2708_fb_register(struct bcm2708_fb *fb)
 
 	bcm2708_fb_set_bitfields(fb, &fb->fb.var);
 
-    framesize = 800 * 480 * 2 * 2; /* 2 RGB565 buffers of 800x480 */
+	framesize = 800 * 480 * 2 * 2; /* 2 RGB565 buffers of 800x480 */
 	fb->fb.screen_base = dma_alloc_writecombine(&fb->dev->dev, framesize,
 						    &dma, GFP_KERNEL);
 	if (!fb->fb.screen_base) {
@@ -240,6 +254,8 @@ static int bcm2708_fb_register(struct bcm2708_fb *fb)
 		return -ENOMEM;
 	}
 
+	printk(KERN_INFO"BCM2708 FB : starts at phys (0x%08x), virt (0x%08x) size (0x%08x)\n",
+			dma, (unsigned int)fb->fb.screen_base, framesize);
 	fb->fb.fix.smem_start	= dma;
 	fb->fb.fix.smem_len	= framesize;
 
