@@ -33,7 +33,7 @@
  * Physical DRAM offset.
  */
 #define PHYS_OFFSET	 UL(0x00000000)
-#define ARMMEM_OFFSET    UL(0x02c00000)   /* offset in VC of ARM memory */
+#define ARMMEM_OFFSET    UL(0x00000000)   /* offset in VC of ARM memory */
 #define _REAL_BUS_OFFSET UL(0xC0000000)   /* don't use L1 or L2 caches */
 
 /* We're using the memory at 64M in the VideoCore for Linux - this adjustment
