@@ -19,7 +19,7 @@ config BRCM_VIDEOCORE_ROOT
 
 config BRCM_VIDEOCORE_VERSION
    string "VideoCore Processor Version"
-   default "vc3"
+   default "vc4"
    depends on BRCM_VIDEOCORE_SERVICES
    help
      This is required to tell the kernel which videocore variant we are.
