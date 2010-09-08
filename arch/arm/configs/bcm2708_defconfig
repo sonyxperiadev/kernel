@@ -1000,8 +1000,8 @@ CONFIG_FB_CFB_IMAGEBLIT=y
 #
 # Frame buffer hardware drivers
 #
-CONFIG_FB_BCM2708=y
-# CONFIG_FB_VCEB is not set
+#CONFIG_FB_BCM2708 is not set
+CONFIG_FB_VCEB=y
 # CONFIG_FB_ARMCLCD is not set
 # CONFIG_FB_S1D13XXX is not set
 # CONFIG_FB_VIRTUAL is not set
