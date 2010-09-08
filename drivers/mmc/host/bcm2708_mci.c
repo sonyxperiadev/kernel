@@ -40,7 +40,7 @@
 #define DBG(host,fmt,args...)	\
 	pr_debug("%s: %s: " fmt, mmc_hostname(host->mmc), __func__ , args)
 
-#define USE_DMA
+//#define USE_DMA
 
 #define BCM2708_DMA_ACTIVE	(1 << 0)
 #define BCM2708_DMA_INT		(1 << 2)
