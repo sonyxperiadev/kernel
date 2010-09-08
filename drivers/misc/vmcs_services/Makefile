@@ -17,9 +17,9 @@ obj-y += $(CONFIG_BRCM_VIDEOCORE_ROOT)/services/vcos/kernel/
 
 ifneq ($(CONFIG_BRCM_VIDEOCORE_VCEB),)
    ifeq ($(strip $(CONFIG_BRCM_VIDEOCORE_SANITIZED)),y)
-      obj-n	+= $(CONFIG_BRCM_VIDEOCORE_ROOT)/vmcs/$(CONFIG_BRCM_VIDEOCORE_VERSION)/src_sanitized/interface/vceb/host/linux/
+      obj-y	+= $(CONFIG_BRCM_VIDEOCORE_ROOT)/vmcs/$(CONFIG_BRCM_VIDEOCORE_VERSION)/src_sanitized/interface/vceb/host/linux/
    else
-      obj-n += $(CONFIG_BRCM_VIDEOCORE_ROOT)/vmcs/$(CONFIG_BRCM_VIDEOCORE_VERSION)/src/interface/vceb/host/linux/
+      obj-y += $(CONFIG_BRCM_VIDEOCORE_ROOT)/vmcs/$(CONFIG_BRCM_VIDEOCORE_VERSION)/src/interface/vceb/host/linux/
    endif
 endif
 

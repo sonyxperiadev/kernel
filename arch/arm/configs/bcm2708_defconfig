@@ -292,7 +292,7 @@ CONFIG_ALIGNMENT_TRAP=y
 #
 CONFIG_ZBOOT_ROM_TEXT=0
 CONFIG_ZBOOT_ROM_BSS=0
-CONFIG_CMDLINE="mem=84M console=tty0 dwc_otg.otg_cap=2 dwc_otg.phy_utmi_width=8 dwc_otg.data_fifo_size=4080 dwc_otg.host_rx_fifo_size=774 dwc_otg.host_nperio_tx_fifo_size=256 dwc_otg.host_perio_tx_fifo_size=512 dwc_otg.lpm_enable=0 dwc_otg.dma_enable=1 dwc_otg.debug=0x0 dwc_otg.dma_desc_enable=0 kgdb=ttyAMA0,38400 kgdboc=ttyAMA0,38400,halt console=ttyAMA0"
+CONFIG_CMDLINE="mem=64M console=tty0 dwc_otg.otg_cap=2 dwc_otg.phy_utmi_width=8 dwc_otg.data_fifo_size=4080 dwc_otg.host_rx_fifo_size=774 dwc_otg.host_nperio_tx_fifo_size=256 dwc_otg.host_perio_tx_fifo_size=512 dwc_otg.lpm_enable=0 dwc_otg.dma_enable=1 dwc_otg.debug=0x0 dwc_otg.dma_desc_enable=0 kgdb=ttyAMA0,38400 kgdboc=ttyAMA0,38400,halt console=ttyAMA0"
 # CONFIG_XIP_KERNEL is not set
 # CONFIG_KEXEC is not set
 

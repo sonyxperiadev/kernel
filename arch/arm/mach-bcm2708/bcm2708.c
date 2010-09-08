@@ -247,6 +247,18 @@ static struct platform_device bcm2708_fb_device = {
 	},							
 };
 
+static struct platform_device vceb_fb_device = {
+	.name			= "vceb_fb",
+	.id			= -1,  // only one vceb_fb
+	.resource               = NULL,
+	.num_resources          = 0,
+	.dev			= {
+                .dma_mask               = &fb_dmamask,
+                .coherent_dma_mask      = DMA_BIT_MASK(DMA_MASK_BITS_COMMON),
+
+   },
+};
+
 #ifdef DEV_UART1
 static struct plat_serial8250_port bcm2708_uart1_platform_data[] = {
 	{
@@ -375,6 +387,7 @@ void __init bcm2708_init(void)
 	bcm_register_device(&bcm2708_vuart_device);
 	bcm_register_device(&bcm2708_mci_device);
 	bcm_register_device(&bcm2708_fb_device);
+   bcm_register_device(&vceb_fb_device);
 	bcm_register_device(&bcm2708_usb_device);
 #ifdef DEV_UART1
 	bcm_register_device(&bcm2708_uart1_device);

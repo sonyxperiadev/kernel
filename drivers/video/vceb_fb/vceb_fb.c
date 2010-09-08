@@ -270,7 +270,7 @@ out:
 		atomic_inc(&scrn->f_count);
 		ret = 0;
 	} else {
-		printk(KERN_WARNING"%s : FB open failed\n", __func__);
+		printk(KERN_WARNING"%s : FB open failed (ret=%d)\n", __func__, ret);
 	}
 
 	return ret;
@@ -280,7 +280,6 @@ static int vceb_fb_release(struct fb_info *info, int user)
 {
 	struct vceb_screen_info *scrn = to_screen_info(info);
 	int ret = 0;
-
 	if (atomic_dec_and_test(&scrn->f_count)) {
 
 		if (scrn->ops && atomic_read(&scrn->vmcs_fb_opened) && !scrn->keep_vmcs_res) {
@@ -291,6 +290,24 @@ static int vceb_fb_release(struct fb_info *info, int user)
 			}
 		}
 	}
+
+	return ret;
+}
+
+static int bcm2708_fb_mmap(struct fb_info *info,
+		       struct vm_area_struct *vma)
+{
+	struct vceb_screen_info *fb =  to_screen_info(info);
+	unsigned long len, off = vma->vm_pgoff << PAGE_SHIFT;
+	int ret = -EINVAL;
+
+	len = info->fix.smem_len;
+
+	if (off <= len && vma->vm_end - vma->vm_start <= len - off)
+		ret = dma_mmap_writecombine(NULL, vma,
+					    fb->fb.screen_base,
+					    fb->fb.fix.smem_start,
+					    fb->fb.fix.smem_len);
 
 	return ret;
 }
@@ -306,6 +323,7 @@ static struct fb_ops vceb_fb_ops = {
 	.fb_fillrect    = cfb_fillrect,
 	.fb_copyarea    = cfb_copyarea,
 	.fb_imageblit   = cfb_imageblit,
+	.fb_mmap	= bcm2708_fb_mmap,
 };
 
 static int init_fb_screen(struct vceb_fb *fb, uint32_t screen)
