@@ -794,6 +794,12 @@ config PLAT_SPEAR
 	help
 	  Support for ST's SPEAr platform (SPEAr3xx, SPEAr6xx and SPEAr13xx).
 
+config ARCH_KONA
+	bool "Broadcom KONA Architecture"
+	depends on MMU
+	help
+	  This enables support for system based on Broadcom KONA architecture
+
 endchoice
 
 #
@@ -838,6 +844,8 @@ source "arch/arm/mach-ixp2000/Kconfig"
 source "arch/arm/mach-ixp23xx/Kconfig"
 
 source "arch/arm/mach-kirkwood/Kconfig"
+
+source "arch/arm/mach-kona/Kconfig"
 
 source "arch/arm/mach-ks8695/Kconfig"
 
