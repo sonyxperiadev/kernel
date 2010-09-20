@@ -41,6 +41,7 @@
 #include <linux/serial_core.h>
 
 #include <mach/hardware.h>
+#include <mach/io.h>
 #include <mach/map.h>
 
 #define IO_DESC(va, sz) { .virtual = va, \
@@ -55,6 +56,15 @@ static struct map_desc kona_io_desc[] __initdata =
 	IO_DESC(KONA_UART1_VA, SZ_4K),
 	IO_DESC(KONA_UART2_VA, SZ_4K),
 	IO_DESC(KONA_UART3_VA, SZ_4K),
+	IO_DESC(KONA_GPTIMER_VA, SZ_4K),
+	/* This descriptor maps the following
+	 * SCU
+	 * GICCPU
+	 * GTIM
+	 * PTIM
+	 * GICDIST
+	 */
+	IO_DESC(KONA_SCU_VA, SZ_8K),
 };
 
 void __init kona_map_io(void)
