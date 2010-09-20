@@ -28,6 +28,7 @@
 
 #include <asm/sizes.h>
 #include <mach/memory.h>
+#include <mach/map.h>
 
 /* Hardware addresses of major areas.
  *  *_START is the physical address

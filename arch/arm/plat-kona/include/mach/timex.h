@@ -26,6 +26,10 @@
 #ifndef __PLAT_KONA_TIMEX_H
 #define __PLAT_KONA_TIMEX_H
 
+/* This is copied as is from linux-d and assuming we are running
+ * on FPGA.
+ * ToDo: Revisit this
+ */
 #define CLOCK_TICK_RATE     (1000000)
 
 #endif /* __PLAT_KONA_TIMEX_H */

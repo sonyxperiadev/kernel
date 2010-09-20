@@ -24,24 +24,20 @@
 /************************************************************************************************/
 
 #include <linux/init.h>
-#include <linux/device.h>
-#include <linux/platform_device.h>
-#include <linux/sysdev.h>
-#include <linux/ioport.h>
-#include <linux/serial_8250.h>
 
 #include <asm/io.h>
 #include <asm/pgtable.h>
 #include <asm/page.h>
 
 #include <asm/mach/map.h>
-#include <asm/pgalloc.h>
-
-#include <linux/serial.h>
-#include <linux/serial_core.h>
-
+#include <asm/hardware/gic.h>
 #include <mach/hardware.h>
+#include <mach/irqs.h>
 
 void __init kona_init_irq(void)
 {
+	/* start with GLBTIMER */ 
+	gic_dist_init(0, IOMEM(KONA_GICDIST_VA), BCM_INT_ID_PPI11);
+	gic_cpu_init(0, IOMEM(KONA_GICCPU_VA));
+
 }
