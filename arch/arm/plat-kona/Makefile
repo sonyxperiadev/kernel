@@ -12,4 +12,4 @@
 # consent.
 #*****************************************************************************
 
-obj-y := mm.o irq.o timer.o
+obj-$(CONFIG_PLAT_KONA) := mm.o irq.o timer.o

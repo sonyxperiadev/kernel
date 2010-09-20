@@ -3,7 +3,5 @@ config PLAT_KONA
 	depends on ARCH_KONA
 	default y
 	select GENERIC_CLOCKEVENTS
-	select ARCH_REQUIRE_GPIOLIB
-	select HAVE_GPIO_LIB
 	help
 	  Base platform code for any Broadcom Kona architecture device
