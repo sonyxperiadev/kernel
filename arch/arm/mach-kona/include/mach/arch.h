@@ -1,5 +1,5 @@
 /*
- * linux/arch/arm/mach-bcm2153/include/mach/entry-macro.S
+ * linux/arch/arm/mach-kona/include/mach/arch.h
  *
  * Copyright (C) 2009 Broadcom Corporation.
  *
@@ -19,36 +19,9 @@
  * MA  02111-1307, USA
  */
 
-#include <mach/irqs.h>
-#include <mach/hardware.h>
-#include <mach/io.h>
+#ifndef __ASM_ARCH_ARCH_H
+#define __ASM_ARCH_ARCH_H
 
-	.macro	disable_fiq
-	.endm
-
-	.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
-	ldr	\base, =IO_ADDRESS(INTC_REG_BASE)
-	ldr	\irqstat, [\base, #INTC_IMSR0_OFFSET]
-	teq	\irqstat, #0
-	beq	1001f
-	mov	\irqnr, #IRQ_LO_END
-	clz	\tmp, \irqstat
-	sub	\irqnr, \irqnr, \tmp
-	b	1002f
-1001: 	ldr	\irqstat, [\base, #INTC_IMSR1_OFFSET]
-	teq	\irqstat, #0
-	beq	1002f
-	mov	\irqnr, #IRQ_HI_END
-	clz	\tmp, \irqstat
-	sub	\irqnr, \irqnr, \tmp
-1002:
-	.endm
-
-	.macro  get_irqnr_preamble, base, tmp
-	.endm
-
-	.macro  arch_ret_to_user, tmp1, tmp2
-	.endm
-
-	.macro	irq_prio_table
-	.endm
+extern void __init kona_init_irq(void);
+extern void __init kona_map_io(void);
+#endif
