@@ -57,7 +57,6 @@ static struct map_desc kona_io_desc[] __initdata =
 	IO_DESC(KONA_UART2_VA, SZ_4K),
 	IO_DESC(KONA_UART3_VA, SZ_4K),
 	IO_DESC(KONA_GPTIMER_VA, SZ_4K),
-	IO_DESC(KONA_GTIM_VA, SZ_4K),
 	/* This descriptor maps the following
 	 * SCU
 	 * GICCPU
@@ -66,9 +65,6 @@ static struct map_desc kona_io_desc[] __initdata =
 	 * GICDIST
 	 */
 	IO_DESC(KONA_SCU_VA, SZ_8K),
-	IO_DESC(KONA_GICCPU_VA, SZ_4K),
-	IO_DESC(KONA_GICDIST_VA, SZ_4K),
-
 };
 
 void __init kona_map_io(void)
