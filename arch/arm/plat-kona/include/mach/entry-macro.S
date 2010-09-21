@@ -16,11 +16,13 @@
  */
 
 #include <asm/hardware/gic.h>
+#include <mach/map.h>
 
 	.macro	disable_fiq
 	.endm
 
 	.macro  get_irqnr_preamble, base, tmp
+	ldr	\base, =KONA_GICCPU_VA
 	.endm
 
 	/*
@@ -39,7 +41,18 @@
 	 */
 
 	.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
-	/* TODO */
+
+	/* bits 12-10 = src CPU, 9-0 = int # */
+	ldr     \irqstat, [\base, #GIC_CPU_INTACK]
+	ldr	\tmp, =1021
+
+	bic     \irqnr, \irqstat, #0x1c00
+
+	cmp	\irqnr, #31
+	cmpcc	\irqnr, \irqnr
+	cmpne	\irqnr, \tmp
+	cmpcs	\irqnr, \irqnr
+
 	.endm
 
 	@code taken from realview/entry-macro.S
@@ -50,11 +63,19 @@
 	 * we won't easily be able to recreate later.
 	 */
 	.macro	test_for_ipi, irqnr, irqstat, base, tmp
-	/* TODO */
+	bic	\irqnr, \irqstat, #0x1c00
+	cmp	\irqnr, #16
+	strcc	\irqstat, [\base, #GIC_CPU_EOI]
+	cmpcs	\irqnr, \irqnr
 	.endm
 
 	.macro	test_for_ltirq, irqnr, irqstat, base,tmp
-	/* TODO */
+	bic	\irqnr, \irqstat, #0x1c00
+	mov	\tmp, #0
+	cmp	\irqnr, #29
+	moveq	\tmp, #1
+	streq	\irqstat, [\base, #GIC_CPU_EOI]
+	cmp	\tmp, #0
 	.endm
 
 	.macro  arch_ret_to_user, tmp1, tmp2
