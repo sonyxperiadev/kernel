@@ -24,13 +24,13 @@
 /************************************************************************************************/
 
 #include <linux/init.h>
+#include <linux/kernel.h>
+#include <linux/cpumask.h>
 
 #include <asm/io.h>
-#include <asm/pgtable.h>
-#include <asm/page.h>
-
 #include <asm/mach/map.h>
 #include <asm/hardware/gic.h>
+
 #include <mach/hardware.h>
 #include <mach/irqs.h>
 
