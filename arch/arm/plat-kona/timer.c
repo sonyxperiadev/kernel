@@ -64,9 +64,7 @@ static void gptimer_disable_and_clear(void *gptimer_regs)
 	* We are using compare/match register 0 for
 	* our system interrupts
 	*/
-
-	reg = readl(base + KONA_GPTIMER_STCS_OFFSET); 
-	reg &= ~(KONA_GPTIMER_STCS_TIMER_MATCH_MASK);
+	reg = 0;
 
 	/* Clear compare (0) interrupt */
 	reg |= 1 << (SYS_TIMER_NUM + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
@@ -191,8 +189,7 @@ static int gptimer_set_next_event(unsigned long clc,
 
 	/* Enable compare */
 	reg = readl(timers.gptmr_regs + KONA_GPTIMER_STCS_OFFSET);
-	reg &= ~(KONA_GPTIMER_STCS_TIMER_MATCH_MASK);
-	reg |= 1 << (SYS_TIMER_NUM + KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT);
+	reg |= (1 << (SYS_TIMER_NUM + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
 	writel(reg, timers.gptmr_regs + KONA_GPTIMER_STCS_OFFSET);
 
 	return 0;
@@ -255,6 +252,7 @@ static void __init kona_timer_init(void)
 	timers_init();
 	gptimer_clockevents_init();
 	setup_irq(timers.gptmr_irq, &gptimer_irq);
+	gptimer_set_next_event((CLOCK_TICK_RATE / HZ), NULL);
 }
 
 /* Right now Global timer runs at 5000000 on FPGA (A9 PERIPHCLK)
