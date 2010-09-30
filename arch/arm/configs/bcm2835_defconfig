@@ -1104,7 +1104,8 @@ CONFIG_USB_MON=y
 # CONFIG_USB_SL811_HCD is not set
 # CONFIG_USB_R8A66597_HCD is not set
 # CONFIG_USB_HWA_HCD is not set
-# CONFIG_USB_DWCOTG is not set
+CONFIG_USB_DWCOTG=y
+CONFIG_DWCOTG_ROOT="../../../../hardware/broadcom/bcm2835/DWC_otg/"
 # CONFIG_USB_MUSB_HDRC is not set
 
 #
