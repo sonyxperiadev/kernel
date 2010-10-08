@@ -803,10 +803,11 @@ static const struct file_operations zero_fops = {
 /*
  * capabilities for /dev/zero
  * - permits private mappings, "copies" are taken of the source of zeros
+ * - no writeback happens
  */
 static struct backing_dev_info zero_bdi = {
 	.name		= "char/mem",
-	.capabilities	= BDI_CAP_MAP_COPY,
+	.capabilities	= BDI_CAP_MAP_COPY | BDI_CAP_NO_ACCT_AND_WRITEBACK,
 };
 
 static const struct file_operations full_fops = {
@@ -933,7 +934,7 @@ static int __init chr_dev_init(void)
 			      NULL, devlist[minor].name);
 	}
 
-	return 0;
+	return tty_init();
 }
 
 fs_initcall(chr_dev_init);

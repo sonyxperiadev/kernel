@@ -869,7 +869,17 @@ void r600_pcie_gart_tlb_flush(struct radeon_device *rdev)
 	u32 tmp;
 
 	/* flush hdp cache so updates hit vram */
-	WREG32(R_005480_HDP_MEM_COHERENCY_FLUSH_CNTL, 0x1);
+	if ((rdev->family >= CHIP_RV770) && (rdev->family <= CHIP_RV740)) {
+		void __iomem *ptr = (void *)rdev->gart.table.vram.ptr;
+		u32 tmp;
+
+		/* r7xx hw bug.  write to HDP_DEBUG1 followed by fb read
+		 * rather than write to HDP_REG_COHERENCY_FLUSH_CNTL
+		 */
+		WREG32(HDP_DEBUG1, 0);
+		tmp = readl((void __iomem *)ptr);
+	} else
+		WREG32(R_005480_HDP_MEM_COHERENCY_FLUSH_CNTL, 0x1);
 
 	WREG32(VM_CONTEXT0_INVALIDATION_LOW_ADDR, rdev->mc.gtt_start >> 12);
 	WREG32(VM_CONTEXT0_INVALIDATION_HIGH_ADDR, (rdev->mc.gtt_end - 1) >> 12);
@@ -2094,10 +2104,7 @@ int r600_cp_start(struct radeon_device *rdev)
 	}
 	radeon_ring_write(rdev, PACKET3(PACKET3_ME_INITIALIZE, 5));
 	radeon_ring_write(rdev, 0x1);
-	if (rdev->family >= CHIP_CEDAR) {
-		radeon_ring_write(rdev, 0x0);
-		radeon_ring_write(rdev, rdev->config.evergreen.max_hw_contexts - 1);
-	} else if (rdev->family >= CHIP_RV770) {
+	if (rdev->family >= CHIP_RV770) {
 		radeon_ring_write(rdev, 0x0);
 		radeon_ring_write(rdev, rdev->config.rv770.max_hw_contexts - 1);
 	} else {
@@ -3512,5 +3519,15 @@ int r600_debugfs_mc_info_init(struct radeon_device *rdev)
  */
 void r600_ioctl_wait_idle(struct radeon_device *rdev, struct radeon_bo *bo)
 {
-	WREG32(R_005480_HDP_MEM_COHERENCY_FLUSH_CNTL, 0x1);
+	/* r7xx hw bug.  write to HDP_DEBUG1 followed by fb read
+	 * rather than write to HDP_REG_COHERENCY_FLUSH_CNTL
+	 */
+	if ((rdev->family >= CHIP_RV770) && (rdev->family <= CHIP_RV740)) {
+		void __iomem *ptr = (void *)rdev->vram_scratch.ptr;
+		u32 tmp;
+
+		WREG32(HDP_DEBUG1, 0);
+		tmp = readl((void __iomem *)ptr);
+	} else
+		WREG32(R_005480_HDP_MEM_COHERENCY_FLUSH_CNTL, 0x1);
 }

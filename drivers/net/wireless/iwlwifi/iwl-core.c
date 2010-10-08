@@ -403,18 +403,35 @@ EXPORT_SYMBOL(iwlcore_free_geos);
  *  iwlcore_rts_tx_cmd_flag: Set rts/cts. 3945 and 4965 only share this
  *  function.
  */
-void iwlcore_rts_tx_cmd_flag(struct ieee80211_tx_info *info,
-				__le32 *tx_flags)
+void iwlcore_rts_tx_cmd_flag(struct iwl_priv *priv,
+			       struct ieee80211_tx_info *info,
+			       __le16 fc, __le32 *tx_flags)
 {
 	if (info->control.rates[0].flags & IEEE80211_TX_RC_USE_RTS_CTS) {
 		*tx_flags |= TX_CMD_FLG_RTS_MSK;
 		*tx_flags &= ~TX_CMD_FLG_CTS_MSK;
+		*tx_flags |= TX_CMD_FLG_FULL_TXOP_PROT_MSK;
+
+		if (!ieee80211_is_mgmt(fc))
+			return;
+
+		switch (fc & cpu_to_le16(IEEE80211_FCTL_STYPE)) {
+		case cpu_to_le16(IEEE80211_STYPE_AUTH):
+		case cpu_to_le16(IEEE80211_STYPE_DEAUTH):
+		case cpu_to_le16(IEEE80211_STYPE_ASSOC_REQ):
+		case cpu_to_le16(IEEE80211_STYPE_REASSOC_REQ):
+			*tx_flags &= ~TX_CMD_FLG_RTS_MSK;
+			*tx_flags |= TX_CMD_FLG_CTS_MSK;
+			break;
+		}
 	} else if (info->control.rates[0].flags & IEEE80211_TX_RC_USE_CTS_PROTECT) {
 		*tx_flags &= ~TX_CMD_FLG_RTS_MSK;
 		*tx_flags |= TX_CMD_FLG_CTS_MSK;
+		*tx_flags |= TX_CMD_FLG_FULL_TXOP_PROT_MSK;
 	}
 }
 EXPORT_SYMBOL(iwlcore_rts_tx_cmd_flag);
+
 
 static bool is_single_rx_stream(struct iwl_priv *priv)
 {
@@ -1294,51 +1311,6 @@ out:
 EXPORT_SYMBOL(iwl_apm_init);
 
 
-
-void iwl_configure_filter(struct ieee80211_hw *hw,
-			  unsigned int changed_flags,
-			  unsigned int *total_flags,
-			  u64 multicast)
-{
-	struct iwl_priv *priv = hw->priv;
-	__le32 filter_or = 0, filter_nand = 0;
-
-#define CHK(test, flag)	do { \
-	if (*total_flags & (test))		\
-		filter_or |= (flag);		\
-	else					\
-		filter_nand |= (flag);		\
-	} while (0)
-
-	IWL_DEBUG_MAC80211(priv, "Enter: changed: 0x%x, total: 0x%x\n",
-			changed_flags, *total_flags);
-
-	CHK(FIF_OTHER_BSS | FIF_PROMISC_IN_BSS, RXON_FILTER_PROMISC_MSK);
-	CHK(FIF_CONTROL, RXON_FILTER_CTL2HOST_MSK);
-	CHK(FIF_BCN_PRBRESP_PROMISC, RXON_FILTER_BCON_AWARE_MSK);
-
-#undef CHK
-
-	mutex_lock(&priv->mutex);
-
-	priv->staging_rxon.filter_flags &= ~filter_nand;
-	priv->staging_rxon.filter_flags |= filter_or;
-
-	iwlcore_commit_rxon(priv);
-
-	mutex_unlock(&priv->mutex);
-
-	/*
-	 * Receiving all multicast frames is always enabled by the
-	 * default flags setup in iwl_connection_init_rx_config()
-	 * since we currently do not support programming multicast
-	 * filters into the device.
-	 */
-	*total_flags &= FIF_OTHER_BSS | FIF_ALLMULTI | FIF_PROMISC_IN_BSS |
-			FIF_BCN_PRBRESP_PROMISC | FIF_CONTROL;
-}
-EXPORT_SYMBOL(iwl_configure_filter);
-
 int iwl_set_hw_params(struct iwl_priv *priv)
 {
 	priv->hw_params.max_rxq_size = RX_QUEUE_SIZE;
@@ -1936,6 +1908,10 @@ void iwl_bss_info_changed(struct ieee80211_hw *hw,
 			priv->staging_rxon.flags |= RXON_FLG_TGG_PROTECT_MSK;
 		else
 			priv->staging_rxon.flags &= ~RXON_FLG_TGG_PROTECT_MSK;
+		if (bss_conf->use_cts_prot)
+			priv->staging_rxon.flags |= RXON_FLG_SELF_CTS_EN;
+		else
+			priv->staging_rxon.flags &= ~RXON_FLG_SELF_CTS_EN;
 	}
 
 	if (changes & BSS_CHANGED_BASIC_RATES) {

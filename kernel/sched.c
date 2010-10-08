@@ -1233,16 +1233,6 @@ void wake_up_idle_cpu(int cpu)
 		smp_send_reschedule(cpu);
 }
 
-int nohz_ratelimit(int cpu)
-{
-	struct rq *rq = cpu_rq(cpu);
-	u64 diff = rq->clock - rq->nohz_stamp;
-
-	rq->nohz_stamp = rq->clock;
-
-	return diff < (NSEC_PER_SEC / HZ) >> 1;
-}
-
 #endif /* CONFIG_NO_HZ */
 
 static u64 sched_avg_period(void)
@@ -3360,9 +3350,9 @@ void task_times(struct task_struct *p, cputime_t *ut, cputime_t *st)
 	rtime = nsecs_to_cputime(p->se.sum_exec_runtime);
 
 	if (total) {
-		u64 temp;
+		u64 temp = rtime;
 
-		temp = (u64)(rtime * utime);
+		temp *= utime;
 		do_div(temp, total);
 		utime = (cputime_t)temp;
 	} else
@@ -3393,9 +3383,9 @@ void thread_group_times(struct task_struct *p, cputime_t *ut, cputime_t *st)
 	rtime = nsecs_to_cputime(cputime.sum_exec_runtime);
 
 	if (total) {
-		u64 temp;
+		u64 temp = rtime;
 
-		temp = (u64)(rtime * cputime.utime);
+		temp *= cputime.utime;
 		do_div(temp, total);
 		utime = (cputime_t)temp;
 	} else
@@ -3705,8 +3695,16 @@ int mutex_spin_on_owner(struct mutex *lock, struct thread_info *owner)
 		/*
 		 * Owner changed, break to re-assess state.
 		 */
-		if (lock->owner != owner)
+		if (lock->owner != owner) {
+			/*
+			 * If the lock has switched to a different owner,
+			 * we likely have heavy contention. Return 0 to quit
+			 * optimistic spinning and not contend further:
+			 */
+			if (lock->owner)
+				return 0;
 			break;
+		}
 
 		/*
 		 * Is that owner really running on that cpu?

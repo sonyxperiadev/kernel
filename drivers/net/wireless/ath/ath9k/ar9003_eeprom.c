@@ -768,7 +768,7 @@ static bool ar9300_uncompress_block(struct ath_hw *ah,
 		length = block[it+1];
 		length &= 0xff;
 
-		if (length > 0 && spot >= 0 && spot+length < mdataSize) {
+		if (length > 0 && spot >= 0 && spot+length <= mdataSize) {
 			ath_print(common, ATH_DBG_EEPROM,
 				  "Restore at %d: spot=%d "
 				  "offset=%d length=%d\n",
@@ -944,7 +944,7 @@ static u8 ath9k_hw_ar9300_get_num_ant_config(struct ath_hw *ah,
 	return 1;
 }
 
-static u16 ath9k_hw_ar9300_get_eeprom_antenna_cfg(struct ath_hw *ah,
+static u32 ath9k_hw_ar9300_get_eeprom_antenna_cfg(struct ath_hw *ah,
 						  struct ath9k_channel *chan)
 {
 	return -EINVAL;

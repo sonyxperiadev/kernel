@@ -128,6 +128,9 @@ static bool hardif_is_iface_up(struct batman_if *batman_if)
 
 static void update_mac_addresses(struct batman_if *batman_if)
 {
+	if (!batman_if || !batman_if->packet_buff)
+		return;
+
 	addr_to_string(batman_if->addr_str, batman_if->net_dev->dev_addr);
 
 	memcpy(((struct batman_packet *)(batman_if->packet_buff))->orig,
@@ -194,8 +197,6 @@ static void hardif_activate_interface(struct bat_priv *bat_priv,
 	if (batman_if->if_status != IF_INACTIVE)
 		return;
 
-	dev_hold(batman_if->net_dev);
-
 	update_mac_addresses(batman_if);
 	batman_if->if_status = IF_TO_BE_ACTIVATED;
 
@@ -221,8 +222,6 @@ static void hardif_deactivate_interface(struct batman_if *batman_if)
 	if ((batman_if->if_status != IF_ACTIVE) &&
 	   (batman_if->if_status != IF_TO_BE_ACTIVATED))
 		return;
-
-	dev_put(batman_if->net_dev);
 
 	batman_if->if_status = IF_INACTIVE;
 
@@ -321,12 +320,14 @@ static struct batman_if *hardif_add_interface(struct net_device *net_dev)
 	if (ret != 1)
 		goto out;
 
+	dev_hold(net_dev);
+
 	batman_if = kmalloc(sizeof(struct batman_if), GFP_ATOMIC);
 	if (!batman_if) {
 		printk(KERN_ERR "batman-adv:"
 		       "Can't add interface (%s): out of memory\n",
 		       net_dev->name);
-		goto out;
+		goto release_dev;
 	}
 
 	batman_if->dev = kstrdup(net_dev->name, GFP_ATOMIC);
@@ -340,6 +341,7 @@ static struct batman_if *hardif_add_interface(struct net_device *net_dev)
 	batman_if->if_num = -1;
 	batman_if->net_dev = net_dev;
 	batman_if->if_status = IF_NOT_IN_USE;
+	batman_if->packet_buff = NULL;
 	INIT_LIST_HEAD(&batman_if->list);
 
 	check_known_mac_addr(batman_if->net_dev->dev_addr);
@@ -350,6 +352,8 @@ free_dev:
 	kfree(batman_if->dev);
 free_if:
 	kfree(batman_if);
+release_dev:
+	dev_put(net_dev);
 out:
 	return NULL;
 }
@@ -378,6 +382,7 @@ static void hardif_remove_interface(struct batman_if *batman_if)
 	batman_if->if_status = IF_TO_BE_REMOVED;
 	list_del_rcu(&batman_if->list);
 	sysfs_del_hardif(&batman_if->hardif_obj);
+	dev_put(batman_if->net_dev);
 	call_rcu(&batman_if->rcu, hardif_free_interface);
 }
 
@@ -397,15 +402,13 @@ static int hard_if_event(struct notifier_block *this,
 	/* FIXME: each batman_if will be attached to a softif */
 	struct bat_priv *bat_priv = netdev_priv(soft_device);
 
-	if (!batman_if)
-		batman_if = hardif_add_interface(net_dev);
+	if (!batman_if && event == NETDEV_REGISTER)
+			batman_if = hardif_add_interface(net_dev);
 
 	if (!batman_if)
 		goto out;
 
 	switch (event) {
-	case NETDEV_REGISTER:
-		break;
 	case NETDEV_UP:
 		hardif_activate_interface(bat_priv, batman_if);
 		break;

@@ -454,7 +454,8 @@ unsigned int tcp_poll(struct file *file, struct socket *sock, poll_table *wait)
 				if (sk_stream_wspace(sk) >= sk_stream_min_wspace(sk))
 					mask |= POLLOUT | POLLWRNORM;
 			}
-		}
+		} else
+			mask |= POLLOUT | POLLWRNORM;
 
 		if (tp->urg_data & TCP_URG_VALID)
 			mask |= POLLPRI;
@@ -2014,11 +2015,8 @@ adjudge_to_death:
 		}
 	}
 	if (sk->sk_state != TCP_CLOSE) {
-		int orphan_count = percpu_counter_read_positive(
-						sk->sk_prot->orphan_count);
-
 		sk_mem_reclaim(sk);
-		if (tcp_too_many_orphans(sk, orphan_count)) {
+		if (tcp_too_many_orphans(sk, 0)) {
 			if (net_ratelimit())
 				printk(KERN_INFO "TCP: too many of orphaned "
 				       "sockets\n");
@@ -2188,6 +2186,8 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 				      GFP_KERNEL);
 			if (cvp == NULL)
 				return -ENOMEM;
+
+			kref_init(&cvp->kref);
 		}
 		lock_sock(sk);
 		tp->rx_opt.cookie_in_always =
@@ -2202,12 +2202,11 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 				 */
 				kref_put(&tp->cookie_values->kref,
 					 tcp_cookie_values_release);
-				kref_init(&cvp->kref);
-				tp->cookie_values = cvp;
 			} else {
 				cvp = tp->cookie_values;
 			}
 		}
+
 		if (cvp != NULL) {
 			cvp->cookie_desired = ctd.tcpct_cookie_desired;
 
@@ -2221,6 +2220,8 @@ static int do_tcp_setsockopt(struct sock *sk, int level,
 				cvp->s_data_desired = ctd.tcpct_s_data_desired;
 				cvp->s_data_constant = 0; /* false */
 			}
+
+			tp->cookie_values = cvp;
 		}
 		release_sock(sk);
 		return err;
@@ -3205,7 +3206,7 @@ void __init tcp_init(void)
 {
 	struct sk_buff *skb = NULL;
 	unsigned long nr_pages, limit;
-	int order, i, max_share;
+	int i, max_share, cnt;
 	unsigned long jiffy = jiffies;
 
 	BUILD_BUG_ON(sizeof(struct tcp_skb_cb) > sizeof(skb->cb));
@@ -3254,22 +3255,12 @@ void __init tcp_init(void)
 		INIT_HLIST_HEAD(&tcp_hashinfo.bhash[i].chain);
 	}
 
-	/* Try to be a bit smarter and adjust defaults depending
-	 * on available memory.
-	 */
-	for (order = 0; ((1 << order) << PAGE_SHIFT) <
-			(tcp_hashinfo.bhash_size * sizeof(struct inet_bind_hashbucket));
-			order++)
-		;
-	if (order >= 4) {
-		tcp_death_row.sysctl_max_tw_buckets = 180000;
-		sysctl_tcp_max_orphans = 4096 << (order - 4);
-		sysctl_max_syn_backlog = 1024;
-	} else if (order < 3) {
-		tcp_death_row.sysctl_max_tw_buckets >>= (3 - order);
-		sysctl_tcp_max_orphans >>= (3 - order);
-		sysctl_max_syn_backlog = 128;
-	}
+
+	cnt = tcp_hashinfo.ehash_mask + 1;
+
+	tcp_death_row.sysctl_max_tw_buckets = cnt / 2;
+	sysctl_tcp_max_orphans = cnt / 2;
+	sysctl_max_syn_backlog = max(128, cnt / 256);
 
 	/* Set the pressure threshold to be a fraction of global memory that
 	 * is up to 1/2 at 256 MB, decreasing toward zero with the amount of

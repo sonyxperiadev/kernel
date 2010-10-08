@@ -40,6 +40,8 @@
 #include <linux/vga_switcheroo.h>
 #include <linux/slab.h>
 
+extern int intel_max_stolen; /* from AGP driver */
+
 /**
  * Sets up the hardware status page for devices that need a physical address
  * in the register.
@@ -610,8 +612,10 @@ static int i915_batchbuffer(struct drm_device *dev, void *data,
 		ret = copy_from_user(cliprects, batch->cliprects,
 				     batch->num_cliprects *
 				     sizeof(struct drm_clip_rect));
-		if (ret != 0)
+		if (ret != 0) {
+			ret = -EFAULT;
 			goto fail_free;
+		}
 	}
 
 	mutex_lock(&dev->struct_mutex);
@@ -652,8 +656,10 @@ static int i915_cmdbuffer(struct drm_device *dev, void *data,
 		return -ENOMEM;
 
 	ret = copy_from_user(batch_data, cmdbuf->buf, cmdbuf->sz);
-	if (ret != 0)
+	if (ret != 0) {
+		ret = -EFAULT;
 		goto fail_batch_free;
+	}
 
 	if (cmdbuf->num_cliprects) {
 		cliprects = kcalloc(cmdbuf->num_cliprects,
@@ -666,8 +672,10 @@ static int i915_cmdbuffer(struct drm_device *dev, void *data,
 		ret = copy_from_user(cliprects, cmdbuf->cliprects,
 				     cmdbuf->num_cliprects *
 				     sizeof(struct drm_clip_rect));
-		if (ret != 0)
+		if (ret != 0) {
+			ret = -EFAULT;
 			goto fail_clip_free;
+		}
 	}
 
 	mutex_lock(&dev->struct_mutex);
@@ -875,7 +883,7 @@ intel_alloc_mchbar_resource(struct drm_device *dev)
 	int reg = IS_I965G(dev) ? MCHBAR_I965 : MCHBAR_I915;
 	u32 temp_lo, temp_hi = 0;
 	u64 mchbar_addr;
-	int ret = 0;
+	int ret;
 
 	if (IS_I965G(dev))
 		pci_read_config_dword(dev_priv->bridge_dev, reg + 4, &temp_hi);
@@ -885,22 +893,23 @@ intel_alloc_mchbar_resource(struct drm_device *dev)
 	/* If ACPI doesn't have it, assume we need to allocate it ourselves */
 #ifdef CONFIG_PNP
 	if (mchbar_addr &&
-	    pnp_range_reserved(mchbar_addr, mchbar_addr + MCHBAR_SIZE)) {
-		ret = 0;
-		goto out;
-	}
+	    pnp_range_reserved(mchbar_addr, mchbar_addr + MCHBAR_SIZE))
+		return 0;
 #endif
 
 	/* Get some space for it */
-	ret = pci_bus_alloc_resource(dev_priv->bridge_dev->bus, &dev_priv->mch_res,
+	dev_priv->mch_res.name = "i915 MCHBAR";
+	dev_priv->mch_res.flags = IORESOURCE_MEM;
+	ret = pci_bus_alloc_resource(dev_priv->bridge_dev->bus,
+				     &dev_priv->mch_res,
 				     MCHBAR_SIZE, MCHBAR_SIZE,
 				     PCIBIOS_MIN_MEM,
-				     0,   pcibios_align_resource,
+				     0, pcibios_align_resource,
 				     dev_priv->bridge_dev);
 	if (ret) {
 		DRM_DEBUG_DRIVER("failed bus alloc: %d\n", ret);
 		dev_priv->mch_res.start = 0;
-		goto out;
+		return ret;
 	}
 
 	if (IS_I965G(dev))
@@ -909,8 +918,7 @@ intel_alloc_mchbar_resource(struct drm_device *dev)
 
 	pci_write_config_dword(dev_priv->bridge_dev, reg,
 			       lower_32_bits(dev_priv->mch_res.start));
-out:
-	return ret;
+	return 0;
 }
 
 /* Setup MCHBAR if possible, return true if we should disable it again */
@@ -2071,6 +2079,10 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 		goto free_priv;
 	}
 
+	/* overlay on gen2 is broken and can't address above 1G */
+	if (IS_GEN2(dev))
+		dma_set_coherent_mask(&dev->pdev->dev, DMA_BIT_MASK(30));
+
 	dev_priv->regs = ioremap(base, size);
 	if (!dev_priv->regs) {
 		DRM_ERROR("failed to map registers\n");
@@ -2103,6 +2115,12 @@ int i915_driver_load(struct drm_device *dev, unsigned long flags)
 	ret = i915_probe_agp(dev, &agp_size, &prealloc_size, &prealloc_start);
 	if (ret)
 		goto out_iomapfree;
+
+	if (prealloc_size > intel_max_stolen) {
+		DRM_INFO("detected %dM stolen memory, trimming to %dM\n",
+			 prealloc_size >> 20, intel_max_stolen >> 20);
+		prealloc_size = intel_max_stolen;
+	}
 
 	dev_priv->wq = create_singlethread_workqueue("i915");
 	if (dev_priv->wq == NULL) {

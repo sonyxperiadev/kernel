@@ -62,7 +62,7 @@
 
 #define SD_NO_CTL               0xE0
 #define NO_CTL                  0xff
-#define CTL_MODE_M              7
+#define CTL_MODE_M              0xf
 #define CTL_11A                 0
 #define CTL_11B                 1
 #define CTL_11G                 2
@@ -669,7 +669,7 @@ struct eeprom_ops {
 	int (*get_eeprom_ver)(struct ath_hw *hw);
 	int (*get_eeprom_rev)(struct ath_hw *hw);
 	u8 (*get_num_ant_config)(struct ath_hw *hw, enum ieee80211_band band);
-	u16 (*get_eeprom_antenna_cfg)(struct ath_hw *hw,
+	u32 (*get_eeprom_antenna_cfg)(struct ath_hw *hw,
 				      struct ath9k_channel *chan);
 	void (*set_board_values)(struct ath_hw *hw, struct ath9k_channel *chan);
 	void (*set_addac)(struct ath_hw *hw, struct ath9k_channel *chan);

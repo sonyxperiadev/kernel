@@ -19,6 +19,7 @@
 #include <linux/slab.h>
 #include <linux/idr.h>
 #include <linux/hdreg.h>
+#include <linux/delay.h>
 
 #include <trace/events/block.h>
 
@@ -2141,6 +2142,7 @@ static struct mapped_device *dm_find_md(dev_t dev)
 	md = idr_find(&_minor_idr, minor);
 	if (md && (md == MINOR_ALLOCED ||
 		   (MINOR(disk_devt(dm_disk(md))) != minor) ||
+		   dm_deleting_md(md) ||
 		   test_bit(DMF_FREEING, &md->flags))) {
 		md = NULL;
 		goto out;
@@ -2175,6 +2177,7 @@ void dm_set_mdptr(struct mapped_device *md, void *ptr)
 void dm_get(struct mapped_device *md)
 {
 	atomic_inc(&md->holders);
+	BUG_ON(test_bit(DMF_FREEING, &md->flags));
 }
 
 const char *dm_device_name(struct mapped_device *md)
@@ -2183,27 +2186,55 @@ const char *dm_device_name(struct mapped_device *md)
 }
 EXPORT_SYMBOL_GPL(dm_device_name);
 
-void dm_put(struct mapped_device *md)
+static void __dm_destroy(struct mapped_device *md, bool wait)
 {
 	struct dm_table *map;
 
-	BUG_ON(test_bit(DMF_FREEING, &md->flags));
+	might_sleep();
 
-	if (atomic_dec_and_lock(&md->holders, &_minor_lock)) {
-		map = dm_get_live_table(md);
-		idr_replace(&_minor_idr, MINOR_ALLOCED,
-			    MINOR(disk_devt(dm_disk(md))));
-		set_bit(DMF_FREEING, &md->flags);
-		spin_unlock(&_minor_lock);
-		if (!dm_suspended_md(md)) {
-			dm_table_presuspend_targets(map);
-			dm_table_postsuspend_targets(map);
-		}
-		dm_sysfs_exit(md);
-		dm_table_put(map);
-		dm_table_destroy(__unbind(md));
-		free_dev(md);
+	spin_lock(&_minor_lock);
+	map = dm_get_live_table(md);
+	idr_replace(&_minor_idr, MINOR_ALLOCED, MINOR(disk_devt(dm_disk(md))));
+	set_bit(DMF_FREEING, &md->flags);
+	spin_unlock(&_minor_lock);
+
+	if (!dm_suspended_md(md)) {
+		dm_table_presuspend_targets(map);
+		dm_table_postsuspend_targets(map);
 	}
+
+	/*
+	 * Rare, but there may be I/O requests still going to complete,
+	 * for example.  Wait for all references to disappear.
+	 * No one should increment the reference count of the mapped_device,
+	 * after the mapped_device state becomes DMF_FREEING.
+	 */
+	if (wait)
+		while (atomic_read(&md->holders))
+			msleep(1);
+	else if (atomic_read(&md->holders))
+		DMWARN("%s: Forcibly removing mapped_device still in use! (%d users)",
+		       dm_device_name(md), atomic_read(&md->holders));
+
+	dm_sysfs_exit(md);
+	dm_table_put(map);
+	dm_table_destroy(__unbind(md));
+	free_dev(md);
+}
+
+void dm_destroy(struct mapped_device *md)
+{
+	__dm_destroy(md, true);
+}
+
+void dm_destroy_immediate(struct mapped_device *md)
+{
+	__dm_destroy(md, false);
+}
+
+void dm_put(struct mapped_device *md)
+{
+	atomic_dec(&md->holders);
 }
 EXPORT_SYMBOL_GPL(dm_put);
 

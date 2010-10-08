@@ -5183,6 +5183,7 @@ static void fillup_priv_adc_nids(struct hda_codec *codec, hda_nid_t *nids,
 
 static struct snd_pci_quirk beep_white_list[] = {
 	SND_PCI_QUIRK(0x1043, 0x829f, "ASUS", 1),
+	SND_PCI_QUIRK(0x8086, 0xd613, "Intel", 1),
 	{}
 };
 
@@ -6863,6 +6864,7 @@ static int patch_alc260(struct hda_codec *codec)
 
 	spec->stream_analog_playback = &alc260_pcm_analog_playback;
 	spec->stream_analog_capture = &alc260_pcm_analog_capture;
+	spec->stream_analog_alt_capture = &alc260_pcm_analog_capture;
 
 	spec->stream_digital_playback = &alc260_pcm_digital_playback;
 	spec->stream_digital_capture = &alc260_pcm_digital_capture;
@@ -7003,7 +7005,7 @@ static struct hda_input_mux alc883_lenovo_nb0763_capture_source = {
 	.num_items = 4,
 	.items = {
 		{ "Mic", 0x0 },
-		{ "iMic", 0x1 },
+		{ "Int Mic", 0x1 },
 		{ "Line", 0x2 },
 		{ "CD", 0x4 },
 	},
@@ -8573,8 +8575,8 @@ static struct snd_kcontrol_new alc883_lenovo_nb0763_mixer[] = {
 	HDA_CODEC_MUTE("CD Playback Switch", 0x0b, 0x04, HDA_INPUT),
 	HDA_CODEC_VOLUME("Mic Playback Volume", 0x0b, 0x0, HDA_INPUT),
 	HDA_CODEC_MUTE("Mic Playback Switch", 0x0b, 0x0, HDA_INPUT),
-	HDA_CODEC_VOLUME("iMic Playback Volume", 0x0b, 0x1, HDA_INPUT),
-	HDA_CODEC_MUTE("iMic Playback Switch", 0x0b, 0x1, HDA_INPUT),
+	HDA_CODEC_VOLUME("Int Mic Playback Volume", 0x0b, 0x1, HDA_INPUT),
+	HDA_CODEC_MUTE("Int Mic Playback Switch", 0x0b, 0x1, HDA_INPUT),
 	{ } /* end */
 };
 
@@ -13024,6 +13026,8 @@ static int alc268_new_analog_output(struct alc_spec *spec, hda_nid_t nid,
 		dac = 0x02;
 		break;
 	case 0x15:
+	case 0x1a: /* ALC259/269 only */
+	case 0x1b: /* ALC259/269 only */
 	case 0x21: /* ALC269vb has this pin, too */
 		dac = 0x03;
 		break;
@@ -13303,7 +13307,6 @@ static struct snd_pci_quirk alc268_cfg_tbl[] = {
 	SND_PCI_QUIRK(0x14c0, 0x0025, "COMPAL IFL90/JFL-92", ALC268_TOSHIBA),
 	SND_PCI_QUIRK(0x152d, 0x0763, "Diverse (CPR2000)", ALC268_ACER),
 	SND_PCI_QUIRK(0x152d, 0x0771, "Quanta IL1", ALC267_QUANTA_IL1),
-	SND_PCI_QUIRK(0x1854, 0x1775, "LG R510", ALC268_DELL),
 	{}
 };
 
@@ -14227,6 +14230,7 @@ static void alc269_auto_init(struct hda_codec *codec)
 
 enum {
 	ALC269_FIXUP_SONY_VAIO,
+	ALC269_FIXUP_DELL_M101Z,
 };
 
 static const struct hda_verb alc269_sony_vaio_fixup_verbs[] = {
@@ -14238,10 +14242,20 @@ static const struct alc_fixup alc269_fixups[] = {
 	[ALC269_FIXUP_SONY_VAIO] = {
 		.verbs = alc269_sony_vaio_fixup_verbs
 	},
+	[ALC269_FIXUP_DELL_M101Z] = {
+		.verbs = (const struct hda_verb[]) {
+			/* Enables internal speaker */
+			{0x20, AC_VERB_SET_COEF_INDEX, 13},
+			{0x20, AC_VERB_SET_PROC_COEF, 0x4040},
+			{}
+		}
+	},
 };
 
 static struct snd_pci_quirk alc269_fixup_tbl[] = {
 	SND_PCI_QUIRK(0x104d, 0x9071, "Sony VAIO", ALC269_FIXUP_SONY_VAIO),
+	SND_PCI_QUIRK(0x104d, 0x9077, "Sony VAIO", ALC269_FIXUP_SONY_VAIO),
+	SND_PCI_QUIRK(0x1028, 0x0470, "Dell M101z", ALC269_FIXUP_DELL_M101Z),
 	{}
 };
 
