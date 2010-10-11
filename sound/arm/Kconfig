@@ -17,6 +17,15 @@ config SND_ARMAACI
 	select SND_PCM
 	select SND_AC97_CODEC
 
+config SND_ARM_BRCM_VCEB
+	tristate "Broadcom VCEB Sound Driver"
+	depends on SND
+	select SND_PCM
+	help
+	  Say Y here to activate an ALSA driver frontend to the BRCM vceb endpoint
+	  To compile this driver as a module, choose M here: the module
+	  will be called snd-brcm-vceb.
+
 config SND_PXA2XX_PCM
 	tristate
 	select SND_PCM
