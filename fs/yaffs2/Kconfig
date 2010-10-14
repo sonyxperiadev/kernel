@@ -178,3 +178,13 @@ config YAFFS_DISABLE_BACKGROUND
 	 Background processing makes many foreground activities faster.
 
 	  If unsure, say N.
+
+config YAFFS_XATTR
+	bool "Enable yaffs2 xattr support"
+	depends on YAFFS_FS
+	default y
+	help
+	 If this is set then yaffs2 will provide xattr support.
+	 If unsure, say Y.
+
+

@@ -91,7 +91,7 @@ static struct nand_ecclayout nand_oob_16 = {
 int nandmtd1_WriteChunkWithTagsToNAND(yaffs_Device *dev,
 	int chunkInNAND, const __u8 *data, const yaffs_ExtendedTags *etags)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 	int chunkBytes = dev->nDataBytesPerChunk;
 	loff_t addr = ((loff_t)chunkInNAND) * chunkBytes;
 	struct mtd_oob_ops ops;
@@ -169,7 +169,7 @@ static int rettags(yaffs_ExtendedTags *etags, int eccResult, int retval)
 int nandmtd1_ReadChunkWithTagsFromNAND(yaffs_Device *dev,
 	int chunkInNAND, __u8 *data, yaffs_ExtendedTags *etags)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 	int chunkBytes = dev->nDataBytesPerChunk;
 	loff_t addr = ((loff_t)chunkInNAND) * chunkBytes;
 	int eccres = YAFFS_ECC_RESULT_NO_ERROR;
@@ -280,7 +280,7 @@ int nandmtd1_ReadChunkWithTagsFromNAND(yaffs_Device *dev,
  */
 int nandmtd1_MarkNANDBlockBad(struct yaffs_DeviceStruct *dev, int blockNo)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 	int blocksize = dev->param.nChunksPerBlock * dev->nDataBytesPerChunk;
 	int retval;
 
@@ -321,7 +321,7 @@ static int nandmtd1_TestPrerequists(struct mtd_info *mtd)
 int nandmtd1_QueryNANDBlock(struct yaffs_DeviceStruct *dev, int blockNo,
 	yaffs_BlockState *pState, __u32 *pSequenceNumber)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 	int chunkNo = blockNo * dev->param.nChunksPerBlock;
 	loff_t addr = (loff_t)chunkNo * dev->nDataBytesPerChunk;
 	yaffs_ExtendedTags etags;

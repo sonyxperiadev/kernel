@@ -12,23 +12,14 @@
  *
  * Note: Only YAFFS headers are LGPL, YAFFS C code is covered by GPL.
  */
+#ifndef __NAMEVAL_H__
+#define __NAMEVAL_H__
 
+#include "yportenv.h"
 
-#ifndef __YAFFS_QSORT_H__
-#define __YAFFS_QSORT_H__
-
-#ifdef __KERNEL__
-#include <linux/sort.h>
-
-extern void yaffs_qsort(void *const base, size_t total_elems, size_t size,
-			int (*cmp)(const void *, const void *)){
-	sort(base, total_elems, size, cmp, NULL);
-}
-
-#else
-
-extern void yaffs_qsort(void *const base, size_t total_elems, size_t size,
-			int (*cmp)(const void *, const void *));
-
-#endif
+int nval_del(char *xb, int xb_size, const YCHAR *name);
+int nval_set(char *xb, int xb_size, const YCHAR *name, const char *buf, int bsize, int flags);
+int nval_get(const char *xb, int xb_size, const YCHAR *name, char *buf, int bsize);
+int nval_list(const char *xb, int xb_size, char *buf, int bsize);
+int nval_hasvalues(const char *xb, int xb_size);
 #endif

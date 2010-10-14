@@ -25,7 +25,7 @@
 
 int nandmtd_EraseBlockInNAND(yaffs_Device *dev, int blockNumber)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 	__u32 addr =
 	    ((loff_t) blockNumber) * dev->param.totalBytesPerChunk
 		* dev->param.nChunksPerBlock;

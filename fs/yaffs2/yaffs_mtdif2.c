@@ -34,7 +34,7 @@ int nandmtd2_WriteChunkWithTagsToNAND(yaffs_Device *dev, int chunkInNAND,
 				      const __u8 *data,
 				      const yaffs_ExtendedTags *tags)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 #if (MTD_VERSION_CODE > MTD_VERSION(2, 6, 17))
 	struct mtd_oob_ops ops;
 #else
@@ -100,7 +100,7 @@ int nandmtd2_WriteChunkWithTagsToNAND(yaffs_Device *dev, int chunkInNAND,
 int nandmtd2_ReadChunkWithTagsFromNAND(yaffs_Device *dev, int chunkInNAND,
 				       __u8 *data, yaffs_ExtendedTags *tags)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 #if (MTD_VERSION_CODE > MTD_VERSION(2, 6, 17))
 	struct mtd_oob_ops ops;
 #endif
@@ -141,7 +141,7 @@ int nandmtd2_ReadChunkWithTagsFromNAND(yaffs_Device *dev, int chunkInNAND,
 		ops.len = data ? dev->nDataBytesPerChunk : packed_tags_size;
 		ops.ooboffs = 0;
 		ops.datbuf = data;
-		ops.oobbuf = yaffs_DeviceToContext(dev)->spareBuffer;
+		ops.oobbuf = yaffs_DeviceToLC(dev)->spareBuffer;
 		retval = mtd->read_oob(mtd, addr, &ops);
 	}
 #else
@@ -171,7 +171,7 @@ int nandmtd2_ReadChunkWithTagsFromNAND(yaffs_Device *dev, int chunkInNAND,
 		}
 	} else {
 		if (tags) {
-			memcpy(packed_tags_ptr, yaffs_DeviceToContext(dev)->spareBuffer, packed_tags_size);
+			memcpy(packed_tags_ptr, yaffs_DeviceToLC(dev)->spareBuffer, packed_tags_size);
 			yaffs_UnpackTags2(tags, &pt, !dev->param.noTagsECC);
 		}
 	}
@@ -195,7 +195,7 @@ int nandmtd2_ReadChunkWithTagsFromNAND(yaffs_Device *dev, int chunkInNAND,
 
 int nandmtd2_MarkNANDBlockBad(struct yaffs_DeviceStruct *dev, int blockNo)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 	int retval;
 	T(YAFFS_TRACE_MTD,
 	  (TSTR("nandmtd2_MarkNANDBlockBad %d" TENDSTR), blockNo));
@@ -215,7 +215,7 @@ int nandmtd2_MarkNANDBlockBad(struct yaffs_DeviceStruct *dev, int blockNo)
 int nandmtd2_QueryNANDBlock(struct yaffs_DeviceStruct *dev, int blockNo,
 			    yaffs_BlockState *state, __u32 *sequenceNumber)
 {
-	struct mtd_info *mtd = yaffs_DeviceToContext(dev)->mtd;
+	struct mtd_info *mtd = yaffs_DeviceToMtd(dev);
 	int retval;
 
 	T(YAFFS_TRACE_MTD,

@@ -63,6 +63,10 @@
 /* #define CONFIG_DISABLE_BACKGROUND */
 
 
+/* Default: Selected */
+/* Meaning: Enable XATTR support */
+#define CONFIG_YAFFS_XATTR
+
 /*
 Older-style on-NAND data format has a "pageStatus" byte to record
 chunk/page state.  This byte is zeroed when the page is discarded.
