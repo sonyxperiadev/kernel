@@ -22,34 +22,34 @@
 		.macro	get_irqnr_and_base, irqnr, irqstat, base, tmp
 		ldr	\irqstat, [\base, #(ARM_IRQ_PEND0 - ARMCTRL_IC_BASE)]	@ get masked status
 		mov	\irqnr, #(ARM_IRQ0_BASE + 31)
-		teq	\irqstat, #0
-		beq	1010f
+		and	\tmp, \irqstat, #0x300		 @ save bits 8 and 9
+		bics	\irqstat, \irqstat, #0x300	 @ clear bits 8 and 9, and test
+		bne	1010f
 
-      @ For non-zero x, LSB(x) = 31 - CLZ(x^(x-1))
-      @ N.B. CLZ is an ARM5 instruction.
-      sub   \tmp, \irqstat, #1
-      eor   \irqstat, \irqstat, \tmp
-      clz   \tmp, \irqstat
-      sub   \irqnr, \tmp
+		tst	\tmp, #0x100
+		ldrne	\irqstat, [\base, #(ARM_IRQ_PEND1 - ARMCTRL_IC_BASE)]
+		movne \irqnr, #(ARM_IRQ1_BASE + 31)
+		@ Mask out the interrupts also present in PEND0 - see SW-5809
+		bicne \irqstat, #((1<<7) | (1<<9) | (1<<10))
+		bicne \irqstat, #((1<<18) | (1<<19))
+		bne	1010f
 
-      cmp   \irqnr, #INTERRUPT_PENDING1
-      blt   1010f
-      cmp   \irqnr, #INTERRUPT_PENDING2
-      bgt   1010f
+		tst	\tmp, #0x200
+		ldrne \irqstat, [\base, #(ARM_IRQ_PEND2 - ARMCTRL_IC_BASE)]
+		movne \irqnr, #(ARM_IRQ2_BASE + 31)
+		@ Mask out the interrupts also present in PEND0 - see SW-5809
+		bicne \irqstat, #((1<<21) | (1<<22) | (1<<23) | (1<<24) | (1<<25))
+		bicne \irqstat, #((1<<30))
+		beq 1020f
 
-      ldrne \irqstat, [\base, #(ARM_IRQ_PEND1 - ARMCTRL_IC_BASE)]	@ get masked status
-      ldreq \irqstat, [\base, #(ARM_IRQ_PEND2 - ARMCTRL_IC_BASE)]	@ get masked status
-      movne \irqnr, #(ARM_IRQ1_BASE + 31)
-      moveq \irqnr, #(ARM_IRQ2_BASE + 31)
-		teq	\irqstat, #0
-		beq	1010f
+1010:
+		@ For non-zero x, LSB(x) = 31 - CLZ(x^(x-1))
+		@ N.B. CLZ is an ARM5 instruction.
+		sub	\tmp, \irqstat, #1
+		eor	\irqstat, \irqstat, \tmp
+		clz	\tmp, \irqstat
+		sub	\irqnr, \tmp
 
-      @ For non-zero x, LSB(x) = 31 - CLZ(x^(x-1))
-      @ N.B. CLZ is an ARM5 instruction.
-      sub   \tmp, \irqstat, #1
-      eor   \irqstat, \irqstat, \tmp
-      clz   \tmp, \irqstat
-      sub   \irqnr, \tmp
-
-1010:	@ EQ will be set if no irqs pending
+1020:	@ EQ will be set if no irqs pending
+		  
 		.endm
