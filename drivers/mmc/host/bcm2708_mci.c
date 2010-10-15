@@ -324,14 +324,18 @@ static irqreturn_t bcm2708_mci_command_irq(int irq, void *dev_id)
 static irqreturn_t bcm2708_mci_data_irq(int irq, void *dev_id)
 {
 	struct bcm2708_mci_host *host = dev_id;
+        irqreturn_t handled = IRQ_NONE;
 
-	writel(BCM2708_DMA_INT, host->dma_base + BCM2708_DMA4_CS);
+	if (0 != (BCM2708_DMA_INT & readl(host->dma_base + BCM2708_DMA4_CS))) {
+		writel(BCM2708_DMA_INT, host->dma_base + BCM2708_DMA4_CS);
+		dsb();
+		handled = IRQ_HANDLED;
+		up(&host->sem);
+	} else {
+		printk(KERN_ERR"bcm2708_mci irq check failed !!\n");
+	}
 
-	dsb();
-
-	up(&host->sem);
-
-	return IRQ_RETVAL(0);
+	return IRQ_RETVAL(handled);
 }
 
 static const struct mmc_host_ops bcm2708_mci_ops = {

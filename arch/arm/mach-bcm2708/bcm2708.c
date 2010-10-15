@@ -145,6 +145,13 @@ static struct clk osc_clk = {
 #endif
 };
 // warning - the USB needs a clock > 34MHz
+static struct clk sdhost_clk = {
+#ifdef CONFIG_ARCH_BCM2708_CHIPIT
+   .rate	=   4000000, // 4MHz
+#else
+   .rate	= 250000000, // 250MHz
+#endif
+};
 
 static struct clk_lookup lookups[] = {
 	{	/* UART0 */
@@ -154,6 +161,10 @@ static struct clk_lookup lookups[] = {
 	{	/* USB */
 		.dev_id		= "bcm2708_usb",
 		.clk		= &osc_clk,
+	},
+	{	/* MCI */
+		.dev_id		= "bcm2708_mci.0",
+		.clk		= &sdhost_clk,
 	}
 };
 
