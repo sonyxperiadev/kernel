@@ -30,6 +30,7 @@
 #include <asm/mach/time.h>
 #include <asm/mach/map.h>
 //#include <asm/mach/mmc.h>
+#include <mach/ipc.h>
 
 #include "bcm2708.h"
 #include "armctrl.h"
@@ -91,7 +92,13 @@ static struct map_desc bcm2708_io_desc[] __initdata = {
 		.pfn		= __phys_to_pfn(USB_BASE),
 		.length		= SZ_128K,
 		.type		= MT_DEVICE
-	}
+	}, {
+                .virtual        = IO_ADDRESS(IPC_BLOCK_BASE_PHY),
+                .pfn            = __phys_to_pfn(IPC_BLOCK_BASE_PHY),
+                .length         = IPC_BLOCK_SIZE,
+                .type           = MT_DEVICE
+        }
+
 };
 
 #if 0

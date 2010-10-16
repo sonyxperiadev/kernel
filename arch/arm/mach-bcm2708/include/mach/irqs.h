@@ -19,6 +19,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#ifndef _BCM2708_IRQS_H_
+#define _BCM2708_IRQS_H_
+
 #include <mach/platform.h>
 
 /* 
@@ -181,4 +184,14 @@
 #define FIQ_PENDING1          INT_PENDING1
 #define FIQ_PENDING2          INT_PENDING2
 
-#define NR_IRQS			      (64 + 21)
+
+#define NR_NON_IPC_IRQS		(64 + 21)
+#define NR_IPC_IRQS		32
+#define IPC_TO_IRQ(ipc_id)	(ipc_id + NR_NON_IPC_IRQS)
+#define IRQ_TO_IPC(irq_num)	(irq_num - NR_NON_IPC_IRQS)
+
+#define NR_IRQS			(NR_NON_IPC_IRQS + NR_IPC_IRQS)
+
+
+#endif /* _BCM2708_IRQS_H_ */
+
