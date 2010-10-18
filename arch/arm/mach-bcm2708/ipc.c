@@ -18,7 +18,20 @@
 #include <linux/types.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/sysctl.h>
+#include <linux/proc_fs.h>
+#include <linux/vmalloc.h>
+#include <linux/mm.h>
+#include <linux/fs.h>
+#include <linux/semaphore.h>
+#include <linux/module.h>
+#include <linux/sched.h>
+#include <linux/kernel.h>
+#include <linux/version.h>
+#include <linux/types.h>
+#include <linux/param.h>
 
+#include <asm/uaccess.h>
 
 #include <mach/irqs.h>
 #include <mach/ipc.h>
@@ -45,7 +58,7 @@ Private macros and constants
 
 #endif
 
-#define IPC_BASE	IO_ADDRESS(IPC_BLOCK_BASE_PHY)
+#define IPC_BASE	IO_ADDRESS(IPC_BLOCK_BASE)
 
 /******************************************************************************
  Private Types
@@ -115,7 +128,7 @@ int ipc_notify_vc_event(int ipc_id)
 	writel(vc_irq_status, IPC_BASE + IPC_ARM_VC_INTERRUPT_OFFSET);
 	ipc_spin_unlock(IPC_SEMAPHORE_ID_0);
 
-	writel(0x1, IO_ADDRESS(ARM_0_BELL0));
+	writel(0x1, IO_ADDRESS(ARM_0_BELL2));
 
 	return 0;
 }
@@ -141,6 +154,8 @@ EXPORT_SYMBOL(ipc_lookup_irqnum);
 static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 {
 	u32 vc_irq_status, ipc_id;
+
+	printk(KERN_ERR "we got interrupt from VC side\n");
 	/* 
 	 * Clear the doorbell first.
 	 *
@@ -149,7 +164,7 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 	 * Scan the 32bit and invoke specific second-level IRQ handler
 	 *
 	 */
-	(void)readl(IO_ADDRESS(ARM_0_BELL1));
+	(void)readl(IO_ADDRESS(ARM_0_BELL0));
 	
 	ipc_spin_lock(IPC_SEMAPHORE_ID_1);
 	vc_irq_status = readl(IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
@@ -163,11 +178,98 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 
 }
 
+typedef struct
+{
+   //proc entries
+   struct proc_dir_entry *init;
+} IPC_STATE_T;
+
+
+static struct proc_dir_entry *ipc_create_proc_entry( const char * const name,
+                                                      read_proc_t *read_proc,
+                                                           write_proc_t *write_proc )
+{
+   struct proc_dir_entry *ret = NULL;
+
+   ret = create_proc_entry( name, 0644, NULL);
+
+   if (ret == NULL)
+   {
+      remove_proc_entry( name, NULL);
+      printk(KERN_ALERT "could not initialize %s", name );
+   }
+   else
+   {
+      ret->read_proc  = read_proc;
+      ret->write_proc = write_proc;
+      ret->mode           = S_IFREG | S_IRUGO;
+      ret->uid    = 0;
+      ret->gid    = 0;
+      ret->size           = 37;
+   }
+   return ret;
+}
+
+static int vceb_dummy_read(char *buf, char **start, off_t offset, int count, int *eof, void *data)
+{
+   int len = 0;
+
+   if (offset > 0)
+   {
+      *eof = 1;
+      return 0;
+   }
+
+   *eof = 1;
+
+   return len;
+}
+
+#define VCEB_MAX_INPUT_STR_LENGTH   256
+
+static int vceb_init_write(struct file *file, const char *buffer, unsigned long count, void *data)
+{
+   char *init_string = NULL;
+   int init = 0;
+   int noreset = 0;
+   int resume = 0;
+
+   init_string = vmalloc(VCEB_MAX_INPUT_STR_LENGTH);
+
+   if(NULL == init_string)
+      return -EFAULT;
+
+   memset(init_string, 0, VCEB_MAX_INPUT_STR_LENGTH);
+
+   count = (count > VCEB_MAX_INPUT_STR_LENGTH) ? VCEB_MAX_INPUT_STR_LENGTH : count;
+
+   if(copy_from_user(init_string, buffer, count))
+   {
+      return -EFAULT;
+   }
+
+   init_string[ VCEB_MAX_INPUT_STR_LENGTH  - 1 ] = 0;
+
+   writel(0x1, IO_ADDRESS(ARM_0_BELL0));  
+
+   vfree(init_string);
+
+   return count;
+}
+
+static irqreturn_t ipc_isr(int irq, void *dev_id)
+{
+   (void) dev_id;
+	
+   printk(KERN_ERR "service with fcc=%d got interrupt from VC!", irq);
+
+   return IRQ_HANDLED;
+}
 
 static int __init bcm_ipc_init(void)
 {
 	u32 i;
-
+	IPC_STATE_T  *state = NULL;
 	/* 
 	 * First sanity-check if the IPC block is setup by VC; and after that,
 	 * we will set up the ipc_irq_chip for interrupts from VC to ARM and also expose 
@@ -186,10 +288,24 @@ static int __init bcm_ipc_init(void)
 		set_irq_handler(i, handle_level_irq);
 		set_irq_flags(i, IRQF_VALID);
 	}
-	set_irq_chained_handler(IRQ_ARM_DOORBELL_1, ipc_isr_handler);
+	set_irq_chained_handler(IRQ_ARM_DOORBELL_0, ipc_isr_handler);
+
+       state = kmalloc( sizeof(IPC_STATE_T ), GFP_KERNEL );
+
+   	if( state != NULL ) {
+      		state->init = ipc_create_proc_entry( "ipc", vceb_dummy_read, vceb_init_write );
+   	}
+
+	printk("ARM/VC IPC has been initialized successfully!");
+
+#if 1	
+	for (i = IPC_TO_IRQ(0); i <= IPC_TO_IRQ(31); i++) {
+		request_irq(i,  ipc_isr, IRQF_DISABLED, "ipc", NULL);
+	}
+#endif
 
 	return 0;
 };
 
-arch_initcall(bcm_ipc_init);
+module_init(bcm_ipc_init);
 

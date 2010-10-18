@@ -33,7 +33,6 @@
 //currently we tie the interrupt number to the user slot
 #define IPC_BLOCK_MAX_NUM_USERS		32
 
-#define	IPC_BLOCK_BASE_PHY		0x07E00000
 #define IPC_BLOCK_SIZE			SZ_2M
 
 #define IPC_IRQNUM_NONE		-1

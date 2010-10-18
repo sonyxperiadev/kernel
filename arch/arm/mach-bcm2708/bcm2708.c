@@ -93,8 +93,8 @@ static struct map_desc bcm2708_io_desc[] __initdata = {
 		.length		= SZ_128K,
 		.type		= MT_DEVICE
 	}, {
-                .virtual        = IO_ADDRESS(IPC_BLOCK_BASE_PHY),
-                .pfn            = __phys_to_pfn(IPC_BLOCK_BASE_PHY),
+                .virtual        = IO_ADDRESS(IPC_BLOCK_BASE),
+                .pfn            = __phys_to_pfn(IPC_BLOCK_BASE),
                 .length         = IPC_BLOCK_SIZE,
                 .type           = MT_DEVICE
         }

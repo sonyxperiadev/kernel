@@ -70,6 +70,7 @@
 #define ARMCTRL_TIMER0_1_BASE    (ARM_BASE + 0x400)           /* Timer 0 and 1 */
 #define ARMCTRL_0_SBM_BASE       (ARM_BASE + 0x800)           /* User 0 (ARM)'s Semaphores Doorbells and Mailboxes */
 
+#define IPC_BLOCK_BASE		0x09000000
 
 /*
  * Interrupt assignments
