@@ -36,39 +36,14 @@
 #include <mach/irqs.h>
 #include <mach/ipc.h>
 
-/******************************************************************************
-Private macros and constants
-******************************************************************************/
-#if 0
-
-#define IPC_BLOCK_MAGIC			0xCAFEBABE
-
-#define IPC_BLOCK_MAGIC_OFFSET		0x000
-
-#define IPC_BLOCK_INFO_OFFSET		0x200
-
-#define IPC_VC_ARM_INTERRUPT_OFFSET	0x800  /* VC  -> ARM */
-#define IPC_ARM_VC_INTERRUPT_OFFSET	0x804  /* ARM -> VC */
-
-//currently we tie the interrupt number to the user slot
-#define IPC_BLOCK_MAX_NUM_USERS		32
-
-#define	IPC_BLOCK_BASE_PHY		0x07E00000
-#define IPC_BLOCK_SIZE			SIZE_2M
-
-#endif
+#define DEBUG_IPC_MODULE   0
 
 #define IPC_BASE	IO_ADDRESS(IPC_BLOCK_BASE)
-
-/******************************************************************************
- Private Types
- *****************************************************************************/
 
 /* Struct to store the user info in */
 typedef struct IPC_BLOCK_USER_INFO
 {
    const void *funcs;
-
    uint32_t four_cc;
    uint32_t block_base_address;
    uint32_t interrupt_number_in_ipc;
@@ -171,6 +146,7 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 	writel(0x0, IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
 	ipc_spin_unlock(IPC_SEMAPHORE_ID_1);
 
+	printk(KERN_ERR "the int offset has value 0x%08x\n", vc_irq_status);
 	for (ipc_id = 0; ipc_id < 32; ipc_id++) {
 		if (vc_irq_status & (0x1 << ipc_id))
 			generic_handle_irq(IPC_TO_IRQ(ipc_id));
@@ -210,7 +186,7 @@ static struct proc_dir_entry *ipc_create_proc_entry( const char * const name,
    return ret;
 }
 
-static int vceb_dummy_read(char *buf, char **start, off_t offset, int count, int *eof, void *data)
+static int ipc_dummy_read(char *buf, char **start, off_t offset, int count, int *eof, void *data)
 {
    int len = 0;
 
@@ -227,12 +203,9 @@ static int vceb_dummy_read(char *buf, char **start, off_t offset, int count, int
 
 #define VCEB_MAX_INPUT_STR_LENGTH   256
 
-static int vceb_init_write(struct file *file, const char *buffer, unsigned long count, void *data)
+static int ipc_init_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
    char *init_string = NULL;
-   int init = 0;
-   int noreset = 0;
-   int resume = 0;
 
    init_string = vmalloc(VCEB_MAX_INPUT_STR_LENGTH);
 
@@ -250,6 +223,8 @@ static int vceb_init_write(struct file *file, const char *buffer, unsigned long 
 
    init_string[ VCEB_MAX_INPUT_STR_LENGTH  - 1 ] = 0;
 
+   writel(0xff, IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
+
    writel(0x1, IO_ADDRESS(ARM_0_BELL0));  
 
    vfree(init_string);
@@ -257,6 +232,8 @@ static int vceb_init_write(struct file *file, const char *buffer, unsigned long 
    return count;
 }
 
+
+#if DEBUG_IPC_MODULE
 static irqreturn_t ipc_isr(int irq, void *dev_id)
 {
    (void) dev_id;
@@ -265,6 +242,8 @@ static irqreturn_t ipc_isr(int irq, void *dev_id)
 
    return IRQ_HANDLED;
 }
+#endif
+
 
 static int __init bcm_ipc_init(void)
 {
@@ -278,14 +257,14 @@ static int __init bcm_ipc_init(void)
 	//ipc_base = ioremap(IPC_BLOCK_BASE_PHY, 	IPC_BLOCK_SIZE);
 
 	if (IPC_BLOCK_MAGIC != readl(IPC_BASE +  IPC_BLOCK_MAGIC_OFFSET)) {
-		printk(KERN_ERR "The VC has not initialized the IPC block yet!");
+		printk(KERN_ERR "BCM2708 VC has not initialized the IPC block yet!");
 		return  -1;
 	}
 
 	/* Enable the doorbell interrupt from VC side and set up the irq chip. */
 	for (i = IPC_TO_IRQ(0); i <= IPC_TO_IRQ(31); i++) {
 		set_irq_chip(i, &ipc_irq_chip);
-		set_irq_handler(i, handle_level_irq);
+		set_irq_handler(i, handle_simple_irq);
 		set_irq_flags(i, IRQF_VALID);
 	}
 	set_irq_chained_handler(IRQ_ARM_DOORBELL_0, ipc_isr_handler);
@@ -293,19 +272,20 @@ static int __init bcm_ipc_init(void)
        state = kmalloc( sizeof(IPC_STATE_T ), GFP_KERNEL );
 
    	if( state != NULL ) {
-      		state->init = ipc_create_proc_entry( "ipc", vceb_dummy_read, vceb_init_write );
+      		state->init = ipc_create_proc_entry( "bcm2708_ipc", ipc_dummy_read, ipc_init_write );
    	}
 
-	printk("ARM/VC IPC has been initialized successfully!");
+	printk("BCM2708 ARM/VC IPC has been initialized successfully!");
 
-#if 1	
-	for (i = IPC_TO_IRQ(0); i <= IPC_TO_IRQ(31); i++) {
-		request_irq(i,  ipc_isr, IRQF_DISABLED, "ipc", NULL);
+#if DEBUG_IPC_MODULE
+	for (i = IPC_TO_IRQ(0); i <= IPC_TO_IRQ(2); i++) {
+		if (request_irq(i,  ipc_isr, IRQF_DISABLED, "ipc", NULL))
+			printk(KERN_ERR "BRCM IPC irq request failed for irq# %d\n", i);
 	}
 #endif
 
 	return 0;
 };
 
-module_init(bcm_ipc_init);
+arch_initcall(bcm_ipc_init);
 
