@@ -406,4 +406,12 @@ config INPUT_PCAP
 	  To compile this driver as a module, choose M here: the
 	  module will be called pcap_keys.
 
+config INPUT_BCM2835_IR
+        tristate "BCM2835 IR input events"
+        depends on MACH_BCM2708
+        help
+          Say Y here if want to use remote control on BCM2835 based devices.
+
+          To compile this driver as a module, choose M here.
+
 endif
