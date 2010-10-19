@@ -72,6 +72,7 @@
 
 #define IPC_BLOCK_BASE		0x09000000
 #define GENCMD_IPC_BASE		(IPC_BLOCK_BASE + 0x4000)
+#define FBUF_IPC_BASE		(IPC_BLOCK_BASE + 0xC000)
 
 /*
  * Interrupt assignments
