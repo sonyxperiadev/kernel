@@ -26,7 +26,7 @@
 #include <linux/interrupt.h>
 #include <mach/ipc.h>
 
-#include "gencmd_kernel.h"
+#include "gencmd_regs.h"
 
 /* macros */
 #define MAKEFOURCC(ch0, ch1, ch2, ch3) ((unsigned int)(unsigned char)(ch0) \
@@ -73,9 +73,9 @@ int vc_gencmd(char *response, int maxlen, const char *format, ...)
     down(&gencmd_state.work_status);
 
 	va_start(args, format);
-	len = vsnprintf((char *)(gencmd_state.base_address+GENCMD_GENCMD_REQUEST_DATA_OFFSET) , GENCMD_MAX_LENGTH, format, args );
+	len = vsnprintf((char *)(gencmd_state.base_address+GENCMD_REQUEST_DATA_OFFSET) , GENCMD_MAX_LENGTH, format, args );
 	len++;
-	GENCMD_REGISTER_RW(gencmd_state.base_address, GENCMD_GENCMD_REQUEST_LENGTH_OFFSET) = len;
+	GENCMD_REGISTER_RW(gencmd_state.base_address, GENCMD_REQUEST_LENGTH_OFFSET) = len;
 
 	/* ping videocore to process gencmd */
 	GENCMD_REGISTER_RW(gencmd_state.base_address, GENCMD_CONTROL_OFFSET) = GENCMD_CONTROL_GO;
@@ -95,10 +95,10 @@ int vc_gencmd(char *response, int maxlen, const char *format, ...)
 	gencmd_print("-done waiting\n");
 
 	if( response ) {
-		len = GENCMD_REGISTER_RW(gencmd_state.base_address, GENCMD_GENCMD_REPLY_LENGTH_OFFSET);
+		len = GENCMD_REGISTER_RW(gencmd_state.base_address, GENCMD_REPLY_LENGTH_OFFSET);
 		if( len > maxlen)
 			len = maxlen;
-		strncpy(response, (char *)(gencmd_state.base_address + GENCMD_GENCMD_REPLY_DATA_OFFSET), len);
+		strncpy(response, (char *)(gencmd_state.base_address + GENCMD_REPLY_DATA_OFFSET), len);
 		gencmd_print("-resposne=%s\n", response);
 		ret = len;
 	}
@@ -114,6 +114,7 @@ done:
 	gencmd_print("-exiting\n");
 	return ret;
 }
+EXPORT_SYMBOL(vc_gencmd);
 
 /* static functions */
 static int dump_gencmd_ipc_block( char *buffer, char **start, off_t offset, int bytes, int *eof, void *context )
@@ -134,13 +135,13 @@ static int dump_gencmd_ipc_block( char *buffer, char **start, off_t offset, int 
 	bytes -= len;
 	buffer+= len;
 
-	len = snprintf(buffer, bytes, "Last Gencmd:%s\n", (char *)((char *)gencmd_state.base_address + GENCMD_GENCMD_REQUEST_DATA_OFFSET));
+	len = snprintf(buffer, bytes, "Last Gencmd:%s\n", (char *)((char *)gencmd_state.base_address + GENCMD_REQUEST_DATA_OFFSET));
 	len++;
 	ret += len;
 	bytes -= len;
 	buffer+= len;
 
-	len = snprintf(buffer, bytes, "Last Gencmd Response:%s\n", (char *)((char *)gencmd_state.base_address + GENCMD_GENCMD_REPLY_DATA_OFFSET));
+	len = snprintf(buffer, bytes, "Last Gencmd Response:%s\n", (char *)((char *)gencmd_state.base_address + GENCMD_REPLY_DATA_OFFSET));
 	len++;
 	ret += len;
 	bytes -= len;
