@@ -51,7 +51,6 @@ config VC_GENCMD
 	tristate "GENCMD service module"
 	depends on BRCM_VIDEOCORE_SERVICES
 	default BRCM_VIDEOCORE_SERVICES
-	select VC_VCHIQ
 
 config VC_CTL
 	tristate "VC Control service module"

@@ -3,7 +3,7 @@ EXTRA_CFLAGS := -fno-inline -Wno-multichar -O0
 
 ifneq ($(CONFIG_BRCM_VIDEOCORE_ROOT),)
 
-obj-n	+= $(CONFIG_BRCM_VIDEOCORE_ROOT)/services/gencmd/kernel/
+obj-y	+= gencmd/
 obj-n	+= $(CONFIG_BRCM_VIDEOCORE_ROOT)/services/dispmanx/kernel/
 obj-n	+= $(CONFIG_BRCM_VIDEOCORE_ROOT)/services/ilcs/kernel/
 obj-n	+= $(CONFIG_BRCM_VIDEOCORE_ROOT)/services/hostreq/kernel/
