@@ -14,7 +14,6 @@
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/io.h>
-#include <linux/version.h>
 #include <linux/types.h>
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -23,22 +22,20 @@
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
 #include <linux/fs.h>
-#include <linux/semaphore.h>
-#include <linux/module.h>
-#include <linux/sched.h>
-#include <linux/kernel.h>
-#include <linux/version.h>
-#include <linux/types.h>
-#include <linux/param.h>
+#include <linux/platform_device.h>
+#include <linux/dma-mapping.h>
 
 #include <asm/uaccess.h>
 
+#include <mach/memory.h>
 #include <mach/irqs.h>
 #include <mach/ipc.h>
 
 #define DEBUG_IPC_MODULE   0
 
-#define IPC_BASE	IO_ADDRESS(IPC_BLOCK_BASE)
+#define PLAT_DEV_NAME_SIZE_MAX 256
+#define IPC_BASE_ON_VC	0xC7C00000		/* physical addr only on VC */
+#define IPC_BASE        IO_ADDRESS(__bus_to_phys(IPC_BASE_ON_VC))
 
 /* Struct to store the user info in */
 typedef struct IPC_BLOCK_USER_INFO
@@ -49,6 +46,16 @@ typedef struct IPC_BLOCK_USER_INFO
    const void *funcs;
 
 } IPC_BLOCK_USER_INFO_T;
+
+typedef struct ipc_client_db {
+	u32	num_registered_client;		
+	struct {
+		uint32_t four_cc;
+		uint32_t irq;
+	} client_info[IPC_BLOCK_MAX_NUM_USERS];
+} ipc_client_db_t;	
+
+static ipc_client_db_t	g_ipc_client_db;
 
 static void ipc_mask_irq(unsigned int irq)
 {
@@ -93,9 +100,10 @@ static void ipc_spin_unlock(IPC_SEMAPHORE_ID_T lock_id)
 	writel(0x1, IO_ADDRESS(ARM_0_SEM0) + (lock_id << 2));
 }
 
-int ipc_notify_vc_event(int ipc_id)
+int ipc_notify_vc_event(int irq_num)
 {
 	u32 vc_irq_status;
+	u32 ipc_id = IRQ_TO_IPC(irq_num);
 
 	ipc_spin_lock(IPC_SEMAPHORE_ID_0);
 	vc_irq_status = readl(IPC_BASE + IPC_ARM_VC_INTERRUPT_OFFSET);
@@ -109,22 +117,31 @@ int ipc_notify_vc_event(int ipc_id)
 }
 EXPORT_SYMBOL(ipc_notify_vc_event);
 
-
-int ipc_lookup_irqnum(u32 four_cc)
+#if 0
+static nt ipc_lookup_service_resource(u32 four_cc, vc_service_resource_t *res)
 {	
 	u32 blk_num;
-	u32 four_cc_offset = IPC_BASE + IPC_BLOCK_INFO_OFFSET;
+	u32 fcc_offset = IPC_BASE + IPC_BLOCK_INFO_OFFSET;
+	int ret = -EINVAL;
+
+	if (!res)
+		return ret;
 
 	for (blk_num = 0; blk_num < IPC_BLOCK_MAX_NUM_USERS; blk_num++) {
-		if (four_cc ==  readl(four_cc_offset + offsetof(IPC_BLOCK_USER_INFO_T, four_cc)))
-			return readl(four_cc_offset + offsetof(IPC_BLOCK_USER_INFO_T, interrupt_number_in_ipc));
-
-		four_cc_offset +=  sizeof(IPC_BLOCK_USER_INFO_T);
+		if (four_cc ==  readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, four_cc))) {
+			res->irq = 
+				IPC_TO_IRQ(readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, interrupt_number_in_ipc)));
+			res->block_base = 
+                                readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
+			res->block_base = IO_ADDRESS(__bus_to_phys(res->block_base));
+			return 0;
+		}
+		fcc_offset +=  sizeof(IPC_BLOCK_USER_INFO_T);
 	}
 	
-	return IPC_IRQNUM_NONE;
+	return ret;
 }
-EXPORT_SYMBOL(ipc_lookup_irqnum);
+#endif
 
 static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 {
@@ -156,14 +173,14 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 
 typedef struct
 {
-   //proc entries
+   /* proc entries */
    struct proc_dir_entry *init;
 } IPC_STATE_T;
 
 
 static struct proc_dir_entry *ipc_create_proc_entry( const char * const name,
-                                                      read_proc_t *read_proc,
-                                                           write_proc_t *write_proc )
+                                                     read_proc_t *read_proc,
+                                                     write_proc_t *write_proc )
 {
    struct proc_dir_entry *ret = NULL;
 
@@ -201,27 +218,27 @@ static int ipc_dummy_read(char *buf, char **start, off_t offset, int count, int 
    return len;
 }
 
-#define VCEB_MAX_INPUT_STR_LENGTH   256
+#define IPC_MAX_INPUT_STR_LENGTH   256
 
 static int ipc_init_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
    char *init_string = NULL;
 
-   init_string = vmalloc(VCEB_MAX_INPUT_STR_LENGTH);
+   init_string = vmalloc(IPC_MAX_INPUT_STR_LENGTH);
 
    if(NULL == init_string)
       return -EFAULT;
 
-   memset(init_string, 0, VCEB_MAX_INPUT_STR_LENGTH);
+   memset(init_string, 0, IPC_MAX_INPUT_STR_LENGTH);
 
-   count = (count > VCEB_MAX_INPUT_STR_LENGTH) ? VCEB_MAX_INPUT_STR_LENGTH : count;
+   count = (count > IPC_MAX_INPUT_STR_LENGTH) ? IPC_MAX_INPUT_STR_LENGTH : count;
 
    if(copy_from_user(init_string, buffer, count))
    {
       return -EFAULT;
    }
 
-   init_string[ VCEB_MAX_INPUT_STR_LENGTH  - 1 ] = 0;
+   init_string[ IPC_MAX_INPUT_STR_LENGTH  - 1 ] = 0;
 
    writel(0xff, IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
 
@@ -244,6 +261,78 @@ static irqreturn_t ipc_isr(int irq, void *dev_id)
 }
 #endif
 
+static int __init ipc_add_service_devices(void)
+{
+        u32 blk_num, four_cc;
+        u32 fcc_offset = IPC_BASE + IPC_BLOCK_INFO_OFFSET;
+	char *dev_name = NULL;
+	struct resource *dev_resource = NULL;
+	struct platform_device *plat_dev = NULL;	
+	int ret;
+
+	/*
+ 	 * Scan through the IPC info block and register the appropriate platform device
+ 	 * according to the information in the block for each service.
+ 	 */
+	for (blk_num = 0; blk_num < IPC_BLOCK_MAX_NUM_USERS; blk_num++) {
+		four_cc = readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, four_cc));
+		if (0 == four_cc)
+			break;
+		plat_dev =  kzalloc(sizeof(struct platform_device), GFP_KERNEL);
+		if (NULL == plat_dev) {
+			printk(KERN_ERR "ipc failed to allocate mem\n");
+			return -ENOMEM;
+		}
+
+		dev_name = kzalloc(PLAT_DEV_NAME_SIZE_MAX, GFP_KERNEL);
+                if (NULL == dev_name) {
+                        printk(KERN_ERR "ipc failed to allocate mem\n");
+                        return -ENOMEM;
+                }
+		sprintf(dev_name, "%s%c%c%c%c", "bcm2835_", ((const char *)four_cc)[0], ((const char *)four_cc)[1],
+			((const char *)four_cc)[2], ((const char *)four_cc)[3]);	
+
+		plat_dev->name		= (const char *)dev_name;
+		plat_dev->id 		= -1;
+
+                dev_resource = kzalloc(sizeof(struct resource)*2, GFP_KERNEL);
+                if (NULL == dev_resource) {
+                        printk(KERN_ERR "ipc failed to allocate mem\n");
+                        return -ENOMEM;
+                }
+		dev_resource->start	= readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
+                dev_resource->end	= dev_resource->start + SZ_16K - 1;
+                dev_resource->flags     = IORESOURCE_MEM;
+
+                (dev_resource+1)->start	= 
+				IPC_TO_IRQ(readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, interrupt_number_in_ipc)));
+                (dev_resource+1)->end	= (dev_resource+1)->start;
+                (dev_resource+1)->flags	= IORESOURCE_IRQ;
+		
+		plat_dev->resource	= dev_resource;
+		plat_dev->num_resources = 2;
+		plat_dev->dev.coherent_dma_mask	= DMA_BIT_MASK(32);
+
+		ret = platform_device_register(plat_dev);
+		if (ret) {
+                        printk(KERN_ERR "ipc failed to register platform device\n");
+                        return ret;
+                }
+
+#if DEBUG_IPC_MODULE
+		printk(KERN_ERR "IPC just added plat dev with name=%d irq=\n", dev_name, (dev_resource+1)->start);
+#endif
+
+		g_ipc_client_db.client_info[blk_num].four_cc	= four_cc;
+                g_ipc_client_db.client_info[blk_num].irq	= (dev_resource+1)->start;		 
+
+		fcc_offset +=  sizeof(IPC_BLOCK_USER_INFO_T);
+	}
+
+	g_ipc_client_db.num_registered_client = blk_num;
+
+	return 0;
+}
 
 static int __init bcm_ipc_init(void)
 {
@@ -254,7 +343,6 @@ static int __init bcm_ipc_init(void)
 	 * we will set up the ipc_irq_chip for interrupts from VC to ARM and also expose 
 	 * APIs to ring doorbell from ARM to VC side.
 	 */
-	//ipc_base = ioremap(IPC_BLOCK_BASE_PHY, 	IPC_BLOCK_SIZE);
 
 	if (IPC_BLOCK_MAGIC != readl(IPC_BASE +  IPC_BLOCK_MAGIC_OFFSET)) {
 		printk(KERN_ERR "BCM2708 VC has not initialized the IPC block yet!");
@@ -269,11 +357,16 @@ static int __init bcm_ipc_init(void)
 	}
 	set_irq_chained_handler(IRQ_ARM_DOORBELL_0, ipc_isr_handler);
 
-       state = kmalloc( sizeof(IPC_STATE_T ), GFP_KERNEL );
+	state = kmalloc( sizeof(IPC_STATE_T ), GFP_KERNEL );
 
-   	if( state != NULL ) {
-      		state->init = ipc_create_proc_entry( "bcm2708_ipc", ipc_dummy_read, ipc_init_write );
-   	}
+	if( state != NULL ) {
+		state->init = ipc_create_proc_entry( "bcm2708_ipc", ipc_dummy_read, ipc_init_write );
+	}
+
+	if (ipc_add_service_devices()) {
+		printk(KERN_ERR "bcm2708 ipc failed to register ipc service device\n");
+                return  -1;
+	}
 
 	printk("BCM2708 ARM/VC IPC has been initialized successfully!");
 
@@ -288,4 +381,3 @@ static int __init bcm_ipc_init(void)
 };
 
 arch_initcall(bcm_ipc_init);
-
