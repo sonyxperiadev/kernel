@@ -71,6 +71,7 @@
 #define ARMCTRL_0_SBM_BASE       (ARM_BASE + 0x800)           /* User 0 (ARM)'s Semaphores Doorbells and Mailboxes */
 
 #define IPC_BLOCK_BASE		0x09000000
+#define GENCMD_IPC_BASE		(IPC_BLOCK_BASE + 0x4000)
 
 /*
  * Interrupt assignments
