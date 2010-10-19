@@ -43,10 +43,10 @@
 /* Struct to store the user info in */
 typedef struct IPC_BLOCK_USER_INFO
 {
-   const void *funcs;
    uint32_t four_cc;
    uint32_t block_base_address;
    uint32_t interrupt_number_in_ipc;
+   const void *funcs;
 
 } IPC_BLOCK_USER_INFO_T;
 
