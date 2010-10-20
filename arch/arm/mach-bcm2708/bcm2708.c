@@ -252,31 +252,7 @@ static struct platform_device bcm2708_mci_device = {
 	},							
 };
 
-static struct resource bcm2708_fb_resources[] = {
-	{
-		.start	= FBUF_IPC_BASE,
-		.end	= FBUF_IPC_BASE + SZ_16K - 1,
-		.flags	= IORESOURCE_MEM,
-	},
-	{
-		.start	= IPC_TO_IRQ(0),
-		.end	= IPC_TO_IRQ(0),
-		.flags	= IORESOURCE_IRQ,
-	}
-};
-
 static u64 fb_dmamask = DMA_BIT_MASK(DMA_MASK_BITS_COMMON);
-static struct platform_device bcm2708_fb_device = {
-	.name			= "bcm2708_fb",
-	.id			= -1,  // only one bcm2708_fb
-	.resource               = bcm2708_fb_resources,
-	.num_resources          = 2,
-	.dev			= {
-                .dma_mask               = &fb_dmamask,
-                .coherent_dma_mask      = DMA_BIT_MASK(DMA_MASK_BITS_COMMON),
-	},							
-};
-
 static struct platform_device vceb_fb_device = {
 	.name			= "vceb_fb",
 	.id			= -1,  // only one vceb_fb
@@ -437,7 +413,6 @@ void __init bcm2708_init(void)
 	bcm_register_device(&bcm2708_systemtimer_device);
 	bcm_register_device(&bcm2708_vuart_device);
 	bcm_register_device(&bcm2708_mci_device);
-	bcm_register_device(&bcm2708_fb_device);
 	bcm_register_device(&vceb_fb_device);
 	bcm_register_device(&bcm2708_usb_device);
 	bcm_register_device(&bcm2708_gencmd_device);

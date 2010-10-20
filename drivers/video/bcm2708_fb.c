@@ -158,7 +158,7 @@ static int bcm2708_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info 
 	fb->base_update_count++;
 
 	/* ring the doorbell */
-	ipc_notify_vc_event(fb->ipc_id);
+	ipc_notify_vc_event(fb->irq);
 	spin_unlock_irqrestore(&fb->lock, irq_flags);
 
 	ret = down_timeout(&fb->wait_for_irq, HZ*3); /* 3 sec timeout */
@@ -217,7 +217,7 @@ static int enable_fb_device(struct bcm2708_fb *fb)
 	writel(control, fb->reg_base + FB_CONTROL);
 
 	/* ring the doorbell */
-	ipc_notify_vc_event(fb->ipc_id);
+	ipc_notify_vc_event(fb->irq);
 
 	/* Wait for Framebuffer to get enabled .. */
 	ret = down_timeout(&fb->wait_for_irq, HZ*3);
@@ -261,7 +261,7 @@ static int disable_fb_device(struct bcm2708_fb *fb)
 	control &= ~CTRL_ENABLE_MASK; 
 	writel(control, fb->reg_base + FB_CONTROL);
 
-	ipc_notify_vc_event(fb->ipc_id);
+	ipc_notify_vc_event(fb->irq);
 	ret = down_timeout(&fb->wait_for_irq, HZ*3);
 	if (ret != 0) {
 		bcm2708fb_error("Disable BCM2708 FB device timed out \n");
@@ -324,10 +324,10 @@ static int bcm2708_fb_probe(struct platform_device *pdev)
 	bcm2708fb_info("FB registers start-end (0x%08x)-(0x%08x)\n", r->start, r->end);
 
 	/* 
-	 * TODO: IPC driver will put virtual address here so we dont need to
+	 * IPC driver puts virtual address here so we dont need to
 	 * use the __io_address()
 	 */
-	fb->reg_base = __io_address(r->start);
+	fb->reg_base = (void __iomem *)r->start;
 
 	/* Request memory region */
 	fb->regs_res = request_mem_region_exclusive(r->start, resource_size(r), "bcm2708fb_regs");
@@ -337,7 +337,6 @@ static int bcm2708_fb_probe(struct platform_device *pdev)
 		goto err_no_mem_region;
 
 	}
-#ifdef USE_PLAT_IRQ	
 	fb->irq = platform_get_irq(pdev, 0);
 	if(fb->irq < 0) {
 		bcm2708fb_error("Unable to get framebuffer irq resource\n");
@@ -347,18 +346,6 @@ static int bcm2708_fb_probe(struct platform_device *pdev)
 	
 	ret = request_irq(fb->irq, bcm2708_fb_interrupt, IRQF_DISABLED,
 				"bcm2708 fb interrupt", (void *)fb);
-#elif defined USE_FB_IRQ
-	fb->ipc_id = ipc_lookup_irqnum(FBUF_FOURCC);
-	if (fb->ipc_id == IPC_IRQNUM_NONE) {
-		bcm2708fb_error("Unable to find BCM2708 FB IRQ number\n");
-		ret = -ENODEV;
-		goto err_no_irq;
-	}
-	
-	ret = request_irq(IPC_TO_IRQ(fb->ipc_id), bcm2708_fb_interrupt, IRQF_DISABLED,
-				"bcm2708 fb interrupt", (void *)fb);
-#endif
-
 	if (ret < 0) {
 		bcm2708fb_error("Unable to register Interrupt for bcm2708 FB\n");
 		goto err_no_irq;
@@ -377,7 +364,6 @@ static int bcm2708_fb_probe(struct platform_device *pdev)
 	fb->fb.fbops		= &bcm2708_fb_ops;
 	fb->fb.flags		= FBINFO_FLAG_DEFAULT;
 	fb->fb.pseudo_palette	= fb->cmap;
-	//strncpy(fb->fb.fix.id, clcd_name, sizeof(fb->fb.fix.id));
 	fb->fb.fix.type		= FB_TYPE_PACKED_PIXELS;
 	fb->fb.fix.visual	= FB_VISUAL_TRUECOLOR;
 	fb->fb.fix.line_length	= width * 2;
@@ -496,7 +482,7 @@ static struct platform_driver bcm2708_fb_driver = {
 	.probe		= bcm2708_fb_probe,
 	.remove		= __devexit_p(bcm2708_fb_remove),
 	.driver = {
-		.name = "bcm2708_fb"
+		.name = "bcm2835_FBUF"
 	}
 };
 
@@ -505,7 +491,6 @@ static int __init bcm2708_fb_init(void)
 	int ret;
 
 	/* FIXME:ssp check if this device exists ?? */
-
 	ret = platform_driver_register(&bcm2708_fb_driver);
 	if (ret)
 		printk(KERN_ERR"%s : Unable to register BRCM battery driver\n", __func__);
