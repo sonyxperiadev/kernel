@@ -8,3 +8,14 @@ menuconfig GENERIC_PWM
 	  Enables PWM device support implemented via a generic
 	  framework.  If unsure, say N.
 
+config GPIO_PWM
+       tristate "GPIO+hrtimer PWM device emulation"
+       depends on GENERIC_PWM
+       help
+         When enabled, this feature emulates single-channel PWM
+	 devices using high-resolution timers and GPIO pins.  You may
+	 create as many of these devices as desired, subject to CPU
+	 throughput limitations and GPIO pin availability.
+
+	 To compile this feature as a module, chose M here; the module
+	 will be called gpio-pwm.  If unsure, say N.

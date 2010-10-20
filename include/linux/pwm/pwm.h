@@ -137,4 +137,7 @@ int pwm_config(struct pwm_device *p, struct pwm_config *c);
 int pwm_synchronize(struct pwm_device *p, struct pwm_device *to_p);
 int pwm_unsynchronize(struct pwm_device *p, struct pwm_device *from_p);
 
+struct pwm_device *gpio_pwm_create(int gpio);
+int gpio_pwm_destroy(struct pwm_device *p);
+
 #endif
