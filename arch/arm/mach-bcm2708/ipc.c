@@ -34,8 +34,7 @@
 #define DEBUG_IPC_MODULE   0
 
 #define PLAT_DEV_NAME_SIZE_MAX 256
-#define IPC_BASE_ON_VC	0xC7C00000		/* physical addr only on VC */
-#define IPC_BASE        IO_ADDRESS(__bus_to_phys(IPC_BASE_ON_VC))
+#define IPC_BASE        __io_address(IPC_BLOCK_BASE)
 
 /* Struct to store the user info in */
 typedef struct IPC_BLOCK_USER_INFO
@@ -255,7 +254,7 @@ static int ipc_init_write(struct file *file, const char *buffer, unsigned long c
 }
 
 
-#if DEBUG_IPC_MODULE
+#if DEBUG_IPC_MODULE 
 static irqreturn_t ipc_isr(int irq, void *dev_id)
 {
    (void) dev_id;
@@ -269,10 +268,11 @@ static irqreturn_t ipc_isr(int irq, void *dev_id)
 static int __init ipc_add_service_devices(void)
 {
         u32 blk_num, four_cc;
-        u32 fcc_offset = IPC_BASE + IPC_BLOCK_INFO_OFFSET;
+        u32 fcc_offset = (uint32_t )((char *)IPC_BASE + IPC_BLOCK_INFO_OFFSET);
 	char *dev_name = NULL;
 	struct resource *dev_resource = NULL;
 	struct platform_device *plat_dev = NULL;	
+	resource_size_t start;
 	int ret;
 
 	/*
@@ -280,9 +280,11 @@ static int __init ipc_add_service_devices(void)
  	 * according to the information in the block for each service.
  	 */
 	for (blk_num = 0; blk_num < IPC_BLOCK_MAX_NUM_USERS; blk_num++) {
+		start = 0;
 		four_cc = readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, four_cc));
 		if (0 == four_cc)
 			break;
+
 		plat_dev =  kzalloc(sizeof(struct platform_device), GFP_KERNEL);
 		if (NULL == plat_dev) {
 			printk(KERN_ERR "ipc failed to allocate mem\n");
@@ -294,8 +296,9 @@ static int __init ipc_add_service_devices(void)
                         printk(KERN_ERR "ipc failed to allocate mem\n");
                         return -ENOMEM;
                 }
-		sprintf(dev_name, "%s%c%c%c%c", "bcm2835_", ((const char *)four_cc)[0], ((const char *)four_cc)[1],
-			((const char *)four_cc)[2], ((const char *)four_cc)[3]);	
+
+		sprintf(dev_name, "%s%c%c%c%c", "bcm2835_", (four_cc & 0xff), ((four_cc >> 8) & 0xff),
+						((four_cc >> 16) & 0xff), ((four_cc >> 24) & 0xff));
 
 		plat_dev->name		= (const char *)dev_name;
 		plat_dev->id 		= -1;
@@ -305,7 +308,11 @@ static int __init ipc_add_service_devices(void)
                         printk(KERN_ERR "ipc failed to allocate mem\n");
                         return -ENOMEM;
                 }
-		dev_resource->start	= readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
+
+		start = readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
+		start = __bus_to_phys(start);
+
+		dev_resource->start	= (resource_size_t) __io_address(start);
                 dev_resource->end	= dev_resource->start + SZ_16K - 1;
                 dev_resource->flags     = IORESOURCE_MEM;
 
@@ -323,13 +330,12 @@ static int __init ipc_add_service_devices(void)
                         printk(KERN_ERR "ipc failed to register platform device\n");
                         return ret;
                 }
-
 #if DEBUG_IPC_MODULE
 		printk(KERN_ERR "IPC just added plat dev with name=%s irq=%d\n", dev_name, (dev_resource+1)->start);
 #endif
 
 		g_ipc_client_db.client_info[blk_num].four_cc	= four_cc;
-                g_ipc_client_db.client_info[blk_num].irq	= (dev_resource+1)->start;		 
+                g_ipc_client_db.client_info[blk_num].irq	= (dev_resource+1)->start; 
 
 		fcc_offset +=  sizeof(IPC_BLOCK_USER_INFO_T);
 	}
@@ -349,9 +355,9 @@ static int __init bcm_ipc_init(void)
 	 * APIs to ring doorbell from ARM to VC side.
 	 */
 
-	if (IPC_BLOCK_MAGIC != readl(IPC_BASE +  IPC_BLOCK_MAGIC_OFFSET)) {
+	if (IPC_BLOCK_MAGIC != readl(IPC_BASE + IPC_BLOCK_MAGIC_OFFSET)) {
 		printk(KERN_ERR "BCM2708 VC has not initialized the IPC block yet!");
-		return  -1;
+		return  -ENODEV;
 	}
 
 	/* Enable the doorbell interrupt from VC side and set up the irq chip. */
@@ -370,12 +376,11 @@ static int __init bcm_ipc_init(void)
 
 	if (ipc_add_service_devices()) {
 		printk(KERN_ERR "bcm2708 ipc failed to register ipc service device\n");
-                return  -1;
+                return  -ENODEV;
 	}
-
 	printk("BCM2708 ARM/VC IPC has been initialized successfully!");
 
-#if DEBUG_IPC_MODULE
+#if DEBUG_IPC_MODULE 
 	for (i = IPC_TO_IRQ(0); i <= IPC_TO_IRQ(2); i++) {
 		if (request_irq(i,  ipc_isr, IRQF_DISABLED, "ipc", NULL))
 			printk(KERN_ERR "BRCM IPC irq request failed for irq# %d\n", i);

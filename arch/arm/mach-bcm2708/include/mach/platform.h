@@ -55,7 +55,7 @@
 // This file is manually generated.
 //
 
-#define BCM2708_PERI_BASE        0x08000000
+#define BCM2708_PERI_BASE        (0x08000000)
 #define ARM_BASE                 (BCM2708_PERI_BASE + 0xB000)   /* BCM2708 ARM control block */
 #define USB_BASE                 (BCM2708_PERI_BASE + 0x980000) /* DTC_OTG USB controller */
 #define UART0_BASE               (BCM2708_PERI_BASE + 0x201000)	/* Uart 0 */
@@ -70,9 +70,8 @@
 #define ARMCTRL_TIMER0_1_BASE    (ARM_BASE + 0x400)           /* Timer 0 and 1 */
 #define ARMCTRL_0_SBM_BASE       (ARM_BASE + 0x800)           /* User 0 (ARM)'s Semaphores Doorbells and Mailboxes */
 
-#define IPC_BLOCK_BASE		0x09000000
+#define IPC_BLOCK_BASE		(0x07C00000)
 #define GENCMD_IPC_BASE		(IPC_BLOCK_BASE + 0x4000)
-#define FBUF_IPC_BASE		(IPC_BLOCK_BASE + 0xC000)
 
 /*
  * Interrupt assignments
