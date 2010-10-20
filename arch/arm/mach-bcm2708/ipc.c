@@ -147,7 +147,9 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 {
 	u32 vc_irq_status, ipc_id;
 
+#if DEBUG_IPC_MODULE
 	printk(KERN_ERR "we got interrupt from VC side\n");
+#endif
 	/* 
 	 * Clear the doorbell first.
 	 *
@@ -163,7 +165,10 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 	writel(0x0, IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
 	ipc_spin_unlock(IPC_SEMAPHORE_ID_1);
 
+#if DEBUG_IPC_MODULE
 	printk(KERN_ERR "the int offset has value 0x%08x\n", vc_irq_status);
+#endif
+
 	for (ipc_id = 0; ipc_id < 32; ipc_id++) {
 		if (vc_irq_status & (0x1 << ipc_id))
 			generic_handle_irq(IPC_TO_IRQ(ipc_id));
@@ -320,7 +325,7 @@ static int __init ipc_add_service_devices(void)
                 }
 
 #if DEBUG_IPC_MODULE
-		printk(KERN_ERR "IPC just added plat dev with name=%d irq=\n", dev_name, (dev_resource+1)->start);
+		printk(KERN_ERR "IPC just added plat dev with name=%s irq=%d\n", dev_name, (dev_resource+1)->start);
 #endif
 
 		g_ipc_client_db.client_info[blk_num].four_cc	= four_cc;
