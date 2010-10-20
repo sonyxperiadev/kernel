@@ -19,3 +19,11 @@ config GPIO_PWM
 
 	 To compile this feature as a module, chose M here; the module
 	 will be called gpio-pwm.  If unsure, say N.
+
+config ATMEL_PWMC
+       tristate "Atmel AT32/AT91 PWMC support"
+       depends on GENERIC_PWM && (AVR32 || ARCH_AT91SAM9263 || ARCH_AT91SAM9RL || ARCH_AT91CAP9)
+       help
+         This option enables support under the generic PWM
+	 framework for PWMC peripheral channels found on
+	 certain Atmel microcontrollers.  If unsure, say N.
