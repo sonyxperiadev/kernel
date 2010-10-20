@@ -9,21 +9,27 @@
  * semaphores, doorbells etc. that are shared between the ARM and the VideoCore
  * processor
  */
-
-#if defined(CONFIG_SERIAL_BCM_MBOX_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
-#define SUPPORT_SYSRQ
-#endif
-
 #include <linux/module.h>
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/bitops.h>
 #include <linux/platform_device.h>
 #include <linux/io.h>
+#include <linux/sysctl.h>
+#include <linux/proc_fs.h>
+#include <linux/vmalloc.h>
 
+#include <asm/uaccess.h>
+
+#include <mach/memory.h>
+#include <mach/irqs.h>
+#include <mach/ipc.h>
 #include <mach/input_server_cfg.h>
 
-#define DRIVER_NAME "BCM2835 Input Driver" 
+#define DEBUG_BCM2835_INPUT_DRIVER 0
+
+#define IPC_BASE        __io_address(IPC_BLOCK_BASE)
+#define DRIVER_NAME "bcm2835_INPT"
 
 struct bcm_input_device {
 	struct input_dev 	*input_dev;
@@ -33,28 +39,119 @@ struct bcm_input_device {
 	u32			fifo_offset;
 };
 
+static struct bcm_input_device *g_bcm_input = NULL; /* purely for debug consumption. */
+
+static struct proc_dir_entry *input_create_proc_entry( const char * const name,
+                                                     read_proc_t *read_proc,
+                                                     write_proc_t *write_proc )
+{
+   struct proc_dir_entry *ret = NULL;
+
+   ret = create_proc_entry( name, 0644, NULL);
+
+   if (ret == NULL)
+   {
+      remove_proc_entry( name, NULL);
+      printk(KERN_ALERT "could not initialize %s", name );
+   }
+   else
+   {
+      ret->read_proc  = read_proc;
+      ret->write_proc = write_proc;
+      ret->mode           = S_IFREG | S_IRUGO;
+      ret->uid    = 0;
+      ret->gid    = 0;
+      ret->size           = 37;
+   }
+   return ret;
+}
+
+static int input_dummy_read(char *buf, char **start, off_t offset, int count, int *eof, void *data)
+{
+   int len = 0;
+
+   if (offset > 0)
+   {
+      *eof = 1;
+      return 0;
+   }
+
+   *eof = 1;
+
+   return len;
+}
+
+#define INPUT_MAX_INPUT_STR_LENGTH   256
+
+static int input_proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
+{
+	char *init_string = NULL;
+	volatile input_fifo_t *fifo_p =
+		(volatile input_fifo_t *)((u32)g_bcm_input->base_addr + g_bcm_input->fifo_offset);
+	u32 fifo_size = fifo_p->element_count;
+	u32 i, key_array[] = 
+		{KEY_HOME, KEY_HOME, KEY_BACK, KEY_BACK, KEY_DOWN, KEY_BACK, KEY_OK, KEY_OK, KEY_RIGHT, KEY_UP, KEY_FORWARD, KEY_PLAYPAUSE, KEY_VOLUMEUP, KEY_VOLUMEDOWN, KEY_RESERVED};
+
+   init_string = vmalloc(INPUT_MAX_INPUT_STR_LENGTH);
+
+   if(NULL == init_string)
+      return -EFAULT;
+
+   memset(init_string, 0, INPUT_MAX_INPUT_STR_LENGTH);
+
+   count = (count > INPUT_MAX_INPUT_STR_LENGTH) ? INPUT_MAX_INPUT_STR_LENGTH : count;
+
+   if(copy_from_user(init_string, buffer, count))
+   {
+      return -EFAULT;
+   }
+   init_string[ INPUT_MAX_INPUT_STR_LENGTH  - 1 ] = 0;
+
+   i = 0;
+   while (((fifo_p->index_in + 1) % fifo_size) != fifo_p->index_out) {
+		fifo_p->data[fifo_p->index_in].type = EV_KEY;
+		fifo_p->data[fifo_p->index_in].code = key_array[i];
+		fifo_p->index_in = (fifo_p->index_in + 1) % fifo_size;
+		if (key_array[i] == KEY_RESERVED)
+			break;
+		i++;
+  }
+
+   writel(0xff, IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
+
+   writel(0x1, IO_ADDRESS(ARM_0_BELL0));
+
+   vfree(init_string);
+
+   return count;
+}
+
 static irqreturn_t bcm2835_input_isr(int irq, void *dev_id)
 {
 	struct bcm_input_device *bcm_input = (struct bcm_input_device *)dev_id;
 	
 	volatile input_fifo_t *fifo_p = 
-				(volatile input_fifo_t *)((u32)bcm_input->base_addr + bcm_input->fifo_offset);
-	u32			fifo_size = fifo_p->element_count;	
-
-	BUG_ON(fifo_p->magic != ((INPUT_MAGIC_HEADER<<16) + INPUT_REMOTE_ID));
+		(volatile input_fifo_t *)((u32)bcm_input->base_addr + bcm_input->fifo_offset);
+	u32 fifo_size = fifo_p->element_count;
 
 	while (fifo_p->index_in != fifo_p->index_out) {
+
+#if DEBUG_BCM2835_INPUT_DRIVER	
+		printk(KERN_ERR DRIVER_NAME ":get the key with type:%d code: %d\n", fifo_p->data[fifo_p->index_out].type, fifo_p->data[fifo_p->index_out].code);
+#endif
 		
-		printk(KERN_ERR DRIVER_NAME ":get the key with type:%d code: %d\n",
-			 fifo_p->data[fifo_p->index_out].type, fifo_p->data[fifo_p->index_out].code);
- 
+		/*
+		 * Two things considered here:
+		 * 	1. simulate the key press and release action with each event passed from VC side.
+		 * 	2. VC side is passing KEY_REP type and is ignored by this driver.
+		 */
+		input_report_key(bcm_input->input_dev, fifo_p->data[fifo_p->index_out].code, 1);
 		input_report_key(bcm_input->input_dev, fifo_p->data[fifo_p->index_out].code, 0);
 
 		fifo_p->index_out = (fifo_p->index_out + 1) % fifo_size;
-	}
-	
+	}	
 	return IRQ_HANDLED;
-}	
+}
 
 static int bcm2835_input_probe(struct platform_device *pdev)
 {
@@ -93,9 +190,9 @@ static int bcm2835_input_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto no_inputdev_mem;
 	}
-	
+
 	/* Get the input device info from the server side on VC */
-	if (readl(bcm_input->base_addr) != ((INPUT_MAGIC_HEADER << 16) + INPUT_MAGIC_BASE) ) {
+	if (readl(bcm_input->base_addr) != ((INPUT_MAGIC_HEADER << 16) + INPUT_MAGIC_BASE)) {
 		printk(KERN_ERR DRIVER_NAME ": Input server is not ready yet!\n");
 		ret = -EIO;
 		goto no_inputdev_mem;
@@ -104,35 +201,44 @@ static int bcm2835_input_probe(struct platform_device *pdev)
 	bcm_input->fifo_offset = ((input_directory_t *)bcm_input->base_addr)->entry[0].offset;
 	BUG_ON(((input_directory_t *)bcm_input->base_addr)->entry[0].ident != INPUT_REMOTE_ID);
 
-        set_bit(EV_KEY, bcm_input->input_dev->evbit);
-        set_bit(EV_REP, bcm_input->input_dev->evbit);
+	BUG_ON(((input_fifo_t *)((u32)bcm_input->base_addr + bcm_input->fifo_offset))->magic
+						!= ((INPUT_MAGIC_HEADER<<16) + INPUT_REMOTE_ID));
 
-	/* Create the keymap for this device */
+        set_bit(EV_KEY, bcm_input->input_dev->evbit);
+	/*
+ 	 * Since the IR hardwrae on VC side is doing the auto-repeat handling, we do not enable
+	 * the software auto-repeat capability.
+ 	 */
+        /* set_bit(EV_REP, bcm_input->input_dev->evbit); */
+
+	/* Create the keymap for this device, right now we will just enable every key value */
 	for (cnt = 0; cnt <= KEY_MAX; cnt++)
 		set_bit(cnt, bcm_input->input_dev->keybit);
 
-	bcm_input->input_dev->name = "ir";
-	bcm_input->input_dev->phys = "ir/input0";		 	  
+	bcm_input->input_dev->name = " Broadcom IR driver";
+	bcm_input->input_dev->phys = "ir";
         bcm_input->input_dev->id.bustype = BUS_VIRTUAL;
 	bcm_input->input_dev->id.vendor = 0x0001;
 	bcm_input->input_dev->id.product = 0x0001;
 	bcm_input->input_dev->id.version = 0x0100;
-#if 0
-	bcm_input->input_dev->keycodesize = sizeof(unsigned char);
-	bcm_input->input_dev->keycodemax = KEY_MAX;
-#endif
 
 	ret = request_irq(bcm_input->irq, bcm2835_input_isr, IRQF_DISABLED, "input", bcm_input);
 	if (ret) {
 		printk(KERN_ERR DRIVER_NAME ":Unable to register ISR\n");
 		goto fail_to_irq;
-	} 
+	}
 
 	ret = input_register_device(bcm_input->input_dev);
 	if (ret) {
 		printk(KERN_ERR DRIVER_NAME ":Unable to register input device");
 		goto fail_to_register_input;
-	}		 
+	}
+
+#if DEBUG_BCM2835_INPUT_DRIVER
+	printk(KERN_ERR DRIVER_NAME "The device has been probed\n");
+#endif
+        input_create_proc_entry("bcm2835_inpt", input_dummy_read, input_proc_write);
+	g_bcm_input = bcm_input;
 
 	return 0;
 
@@ -179,7 +285,7 @@ static int __init bcm2835_input_init(void)
                 printk(KERN_ERR DRIVER_NAME ": failed to register "
                        "on platform\n");
         } else
-                printk(KERN_INFO DRIVER_NAME ": is registered\n");
+                printk(DRIVER_NAME ": is registered\n");
 
         return ret;
 }
