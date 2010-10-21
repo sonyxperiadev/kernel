@@ -210,9 +210,12 @@ static int enable_fb_device(struct bcm2708_fb *fb)
 	writel(FRAMEBUFFER_HEIGHT, fb->reg_base + FB_HEIGHT);
 	writel(FB_FORMAT_RGB565, fb->reg_base + FB_SET_FORMAT);
 	writel(FRAMEBUFFER_NUM_BUFFERS, fb->reg_base + FB_SET_NUM_BUFFERS);
+	/* Set z-orfer to 0 */
+	writel(0, fb->reg_base + FB_TARGET_LAYER);
 
 	/* Write control register bits ...*/
 	control = readl(fb->reg_base + FB_CONTROL);
+	control &= ~(CTRL_BUFF_IDX_MASK);
 	control |= ((1 << CTRL_ENABLE_SHIFT) | (1 << CTRL_DISP_EN_SHIFT)); 
 	writel(control, fb->reg_base + FB_CONTROL);
 

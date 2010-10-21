@@ -37,10 +37,10 @@
 	#define STAT_EN_MASK		(0x00000001)
 	#define STAT_DISP_SHIFT		(1)
 	#define STAT_DISP_MASK		(0x00000002)
-	#define STAT_BUFF_IDX_SHIFT	(4)
-	#define STAT_BUFF_IDX_MASK	(0x000000f0)
-	#define	STAT_UPDATE_COUNT_SHIFT	(8)	
-	#define STAT_UPDATE_COUNT_MASK	(0xffffff00)
+	#define STAT_BUFF_IDX_SHIFT	(8)
+	#define STAT_BUFF_IDX_MASK	(0x00000f00)
+	#define	STAT_UPDATE_COUNT_SHIFT	(16)
+	#define STAT_UPDATE_COUNT_MASK	(0xffff0000)
 
 #define FB_WIDTH			(0x20)	/* Should be read only?? */
 
