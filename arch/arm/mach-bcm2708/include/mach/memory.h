@@ -50,6 +50,32 @@
 #define __bus_to_pfn(x)     __phys_to_pfn((x) - (BUS_OFFSET - PHYS_OFFSET))
 #define __bus_to_phys(x)    ((x) - (BUS_OFFSET - PHYS_OFFSET))
 
+
+/*
+ *  Two definitions are required for sparsemem:
+ *  
+ *  MAX_PHYSMEM_BITS: The number of physical address bits required
+ *  to address the last byte of memory.
+ *
+ *  SECTION_SIZE_BITS: The number of physical address bits to cover
+ *  the maximum amount of memory in a section.
+ *
+ *  Eg, if you have 2 banks of up to 64MB at 0x80000000, 0x84000000,
+ *  then MAX_PHYSMEM_BITS is 32, SECTION_SIZE_BITS is 26.
+ *            *
+ *  Define these in your mach/memory.h.
+ */
+
+#define MAX_PHYSMEM_BITS 32
+#define SECTION_SIZE_BITS 24
+
+#if !defined(__ASSEMBLY__)
+extern void bcm2708_adjust_zones(int node, unsigned long *size,
+				  unsigned long *hole);
+#define arch_adjust_zones(node, size, hole) \
+	bcm2708_adjust_zones(node, size, hole)
+#endif
+
 /*
  * Boost our consistent DMA area to 4M to support 1920x1080 framebuffers
  */

@@ -123,6 +123,7 @@ int __section_nr(struct mem_section* ms)
 	unsigned long root_nr;
 	struct mem_section* root;
 
+	root = __nr_to_section(0);
 	for (root_nr = 0; root_nr < NR_SECTION_ROOTS; root_nr++) {
 		root = __nr_to_section(root_nr * SECTIONS_PER_ROOT);
 		if (!root)

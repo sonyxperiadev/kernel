@@ -121,6 +121,36 @@ void show_mem(void)
 	printk("%d pages swap cached\n", cached);
 }
 
+#ifdef CONFIG_MEMORY_HOTPLUG
+int arch_add_memory(int nid, u64 start, u64 size)
+{
+	pg_data_t *pgdat;
+	unsigned long start_pfn = start >> PAGE_SHIFT;
+	unsigned long nr_pages = size >> PAGE_SHIFT;
+	int ret;
+
+	pgdat = NODE_DATA(nid);
+
+	/* We only have ZONE_NORMAL, so this is easy.. */
+	ret = __add_pages(nid, pgdat->node_zones + ZONE_NORMAL,
+				start_pfn, nr_pages);
+	if (unlikely(ret))
+		printk("%s: Failed, __add_pages() == %d\n", __func__, ret);
+
+	return ret;
+}
+EXPORT_SYMBOL_GPL(arch_add_memory);
+
+#ifdef CONFIG_NUMA
+int memory_add_physaddr_to_nid(u64 addr)
+{
+	/* Node 0 for now.. */
+	return 0;
+}
+EXPORT_SYMBOL_GPL(memory_add_physaddr_to_nid);
+#endif
+#endif /* CONFIG_MEMORY_HOTPLUG */
+
 static void __init find_node_limits(int node, struct meminfo *mi,
 	unsigned long *min, unsigned long *max_low, unsigned long *max_high)
 {

@@ -22,6 +22,7 @@
 #include <asm/memory.h>
 #include <mach/vmalloc.h>
 #include <asm/pgtable-hwdef.h>
+#include <asm/tlbflush.h>
 
 /*
  * Just any arbitrary offset to the start of the vmalloc VM area: the

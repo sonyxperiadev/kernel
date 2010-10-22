@@ -804,6 +804,11 @@ config ARCH_BCM2708
 	select ARM_ERRATA_411920
 	select MACH_BCM2708
 	select VC4
+	select ARCH_SPARSEMEM_ENABLE
+	select ARCH_ENABLE_MEMORY_HOTPLUG
+	select ARCH_ENABLE_MEMORY_HOTREMOVE
+	select ARCH_MEMORY_PROBE
+#	select SPARSEMEM_VMEMMAP_ENABLE
 	help
 	  This enables support for Broadcom BCM2708 boards.
 
@@ -1286,6 +1291,17 @@ config NODES_SHIFT
 	default "4" if ARCH_LH7A40X
 	default "2"
 	depends on NEED_MULTIPLE_NODES
+
+config ARCH_ENABLE_MEMORY_HOTPLUG
+	def_bool y
+
+config ARCH_ENABLE_MEMORY_HOTREMOVE
+	def_bool y
+	depends on MEMORY_HOTPLUG
+
+config ARCH_MEMORY_PROBE
+	def_bool y
+	depends on MEMORY_HOTPLUG
 
 config HIGHMEM
 	bool "High Memory Support (EXPERIMENTAL)"
