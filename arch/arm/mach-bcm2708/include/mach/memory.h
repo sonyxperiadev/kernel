@@ -66,8 +66,8 @@
  *  Define these in your mach/memory.h.
  */
 
-#define MAX_PHYSMEM_BITS 32
-#define SECTION_SIZE_BITS 24
+#define MAX_PHYSMEM_BITS  28
+#define SECTION_SIZE_BITS 23
 
 #if !defined(__ASSEMBLY__)
 extern void bcm2708_adjust_zones(int node, unsigned long *size,
