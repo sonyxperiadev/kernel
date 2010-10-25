@@ -48,7 +48,8 @@
 /* structure decalaration */
 static struct {
 	volatile unsigned char *base_address;
-	unsigned int ipc_id;
+	struct resource *mem_res;
+	unsigned int irq;
 	struct proc_dir_entry *dump_info;
 	struct semaphore work_status; /* 0 = busy processing, 1 = free */
 	struct semaphore command_complete;
@@ -81,7 +82,7 @@ int vc_gencmd(char *response, int maxlen, const char *format, ...)
 	GENCMD_REGISTER_RW(gencmd_state.base_address, GENCMD_CONTROL_OFFSET) = GENCMD_CONTROL_GO;
 	
 	/* ring the doorbell */
-	ipc_notify_vc_event(gencmd_state.ipc_id);
+	ipc_notify_vc_event(gencmd_state.irq);
 	
 	/* wait for the done bit */
 	gencmd_print("-waiting\n");
@@ -184,8 +185,9 @@ static irqreturn_t bcm2708_gencmd_isr(int irq, void *dev_id)
 
 static int __devexit bcm2708_gencmd_remove(struct platform_device *pdev)
 {
-	free_irq(IPC_TO_IRQ(gencmd_state.ipc_id), NULL);	
 	remove_proc_entry("vc_gencmd", NULL);
+	free_irq(gencmd_state.irq, NULL);
+	release_region(gencmd_state.mem_res->start, resource_size(gencmd_state.mem_res));
 	gencmd_state.initialized = 0;
 	return 0;
 }
@@ -193,7 +195,7 @@ static int __devexit bcm2708_gencmd_remove(struct platform_device *pdev)
 static int __devinit bcm2708_gencmd_probe(struct platform_device *pdev)
 {
 	struct resource *res;
-	int ret;
+	int ret = -ENOENT;
 
 	gencmd_print("probe=%p\n", pdev);
 			
@@ -204,35 +206,47 @@ static int __devinit bcm2708_gencmd_probe(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
 		dev_err(&pdev->dev, "failed to get memory region resource\n");
-		return -ENOENT;
+		ret = -ENODEV;
+		goto err_platform_res;
 	}
 
 	gencmd_print("gencmd memory region start=%p end=%p\n", (void *)res->start,
 			(void *)res->end);
 
-	gencmd_state.base_address = __io_address(res->start);
+	gencmd_state.base_address = (void __iomem *)(res->start);
 
-	/* find our ipc id */
-	gencmd_state.ipc_id = ipc_lookup_irqnum(GENCMD_FOURCC);
+	/* Request memory region */
+	gencmd_state.mem_res = request_mem_region_exclusive(res->start, resource_size(res), "bcm2708gencmd_regs");
+	if (gencmd_state.mem_res == NULL) {
+		dev_err(&pdev->dev, "Unable to request gencmd memory region\n");
+		ret = -ENOMEM;
+		goto err_mem_region;
 
-	if( gencmd_state.ipc_id == IPC_IRQNUM_NONE ) {
-		dev_err(&pdev->dev, "failed to find ipc id for gencmd fourcc=0x%x\n", GENCMD_FOURCC);
-		return -ENOENT;
 	}
-	gencmd_print("gencmd ipcid=%d irqno =%d\n", gencmd_state.ipc_id,
-			IPC_TO_IRQ(gencmd_state.ipc_id));
+	
+	/* find our ipc id */
+	gencmd_state.irq = platform_get_irq(pdev, 0);
+
+	if( gencmd_state.irq < 0 ) {
+		dev_err(&pdev->dev, "failed to get irq for gencmd fourcc=0x%x\n", GENCMD_FOURCC);
+		ret = -ENODEV;
+		goto err_irq;
+	}
+
+	gencmd_print("gencmd irqno =%d\n", gencmd_state.irq);
 
 	/* initialize the semaphores */
 	sema_init( &gencmd_state.work_status, 1);
 	sema_init( &gencmd_state.command_complete, 0);
 
 	/* register irq for gencmd service */
-	ret = request_irq( IPC_TO_IRQ(gencmd_state.ipc_id), bcm2708_gencmd_isr,
+	ret = request_irq( gencmd_state.irq, bcm2708_gencmd_isr,
 			IRQF_DISABLED, "bcm2708 gencmd interrupt", NULL);
 	if (ret < 0) {
 		dev_err(&pdev->dev, "failed to install gencmd irq handler(%d)\n",
-				IPC_TO_IRQ(gencmd_state.ipc_id));
-		return -ENOENT;
+				gencmd_state.irq);
+		ret = -ENOENT;
+		goto err_irq_handler;
 	}
 
 	/* create a proc entry */
@@ -241,7 +255,8 @@ static int __devinit bcm2708_gencmd_probe(struct platform_device *pdev)
 
 	if( !gencmd_state.dump_info ) {
 		dev_err(&pdev->dev, "failed to create vc_gencmd proc entry\n");
-		return -ENOENT;
+		ret = -ENOENT;
+		goto err_proc_entry;
 	}
 	else {
 		gencmd_state.dump_info->write_proc = proc_vc_gencmd;
@@ -250,13 +265,24 @@ static int __devinit bcm2708_gencmd_probe(struct platform_device *pdev)
 
 	gencmd_state.initialized = 1;
 	return 0;
+
+err_proc_entry:
+	/* free irq */
+	free_irq(gencmd_state.irq, NULL);
+err_irq_handler:
+err_irq:
+	/* release region */
+	release_region(gencmd_state.mem_res->start, resource_size(gencmd_state.mem_res));
+err_mem_region:
+err_platform_res:	
+	return ret;
 }
 
 static struct platform_driver bcm2708_gencmd_driver = {
 	.probe		= bcm2708_gencmd_probe,
 	.remove		= __devexit_p(bcm2708_gencmd_remove),
 	.driver		= {
-		.name = "bcm2708_gencmd",
+		.name = "bcm2835_GENC",
 		.owner = THIS_MODULE,
 	},
 };
