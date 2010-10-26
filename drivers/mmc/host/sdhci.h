@@ -240,6 +240,10 @@ struct sdhci_host {
 #define SDHCI_QUIRK_CAP_CLOCK_BASE_BROKEN		(1<<25)
 /* Controller cannot support End Attribute in NOP ADMA descriptor */
 #define SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC		(1<<26)
+/* Controller reports wrong voltage capability */
+#define SDHCI_QUIRK_CAP_VOLTAGE_BROKEN			(1<<27)
+/* Controller gives spurious CRC errors on ACMD51 */
+#define SDHCI_QUIRK_SPURIOUS_CRC_ACMD51			(1<<28)
 
 	int			irq;		/* Device IRQ */
 	void __iomem *		ioaddr;		/* Mapped address */

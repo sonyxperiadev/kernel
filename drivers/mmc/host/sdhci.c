@@ -1467,7 +1467,10 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 	if (intmask & SDHCI_INT_DATA_TIMEOUT)
 		host->data->error = -ETIMEDOUT;
 	else if (intmask & (SDHCI_INT_DATA_CRC | SDHCI_INT_DATA_END_BIT))
-		host->data->error = -EILSEQ;
+		if (host->quirks & SDHCI_QUIRK_SPURIOUS_CRC_ACMD51)
+			intmask = SDHCI_INT_DATA_AVAIL|SDHCI_INT_DATA_END;
+		else
+			host->data->error = -EILSEQ;
 	else if (intmask & SDHCI_INT_ADMA_ERROR) {
 		printk(KERN_ERR "%s: ADMA error\n", mmc_hostname(host->mmc));
 		sdhci_show_adma_error(host);
@@ -1809,6 +1812,9 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc->ocr_avail |= MMC_VDD_29_30|MMC_VDD_30_31;
 	if (caps & SDHCI_CAN_VDD_180)
 		mmc->ocr_avail |= MMC_VDD_165_195;
+
+	if (host->quirks & SDHCI_QUIRK_CAP_VOLTAGE_BROKEN)
+		mmc->ocr_avail |= MMC_VDD_29_30|MMC_VDD_30_31;
 
 	if (mmc->ocr_avail == 0) {
 		printk(KERN_ERR "%s: Hardware doesn't report any "

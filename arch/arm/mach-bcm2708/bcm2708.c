@@ -368,6 +368,36 @@ static struct platform_device bcm2708_systemtimer_device = {
                 .coherent_dma_mask      = DMA_BIT_MASK(DMA_MASK_BITS_COMMON),
         },							
 };
+
+#ifdef CONFIG_MMC_SDHCI_BCM2708 /* Arasan emmc SD */
+static struct resource bcm2708_emmc_resources[] = {
+	[0] = {
+		.start = EMMC_BASE,
+		.end   = EMMC_BASE + SZ_256 - 1, // we only need this area
+                // the memory map actually makes SZ_4K available 
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = IRQ_ARASANSDIO,
+		.end   = IRQ_ARASANSDIO,
+		.flags = IORESOURCE_IRQ,
+	}
+};
+
+static u64 bcm2708_emmc_dmamask = 0xffffffffUL;
+
+struct platform_device bcm2708_emmc_device = {
+	.name		= "bcm2708_sdhci",
+	.id		= 0,
+	.num_resources	= ARRAY_SIZE(bcm2708_emmc_resources),
+	.resource	= bcm2708_emmc_resources,
+	.dev		= {
+		.dma_mask		= &bcm2708_emmc_dmamask,
+		.coherent_dma_mask	= 0xffffffffUL
+	},
+};
+#endif /* CONFIG_MMC_SDHCI_BCM2708 */
+
 /* gencmd device */
 static struct resource bcm2708_gencmd_resources[] = {
 	[0] = {
@@ -448,6 +478,9 @@ void __init bcm2708_init(void)
 	bcm_register_device(&bcm2708_gencmd_device);
 #ifdef DEV_UART1
 	bcm_register_device(&bcm2708_uart1_device);
+#endif
+#ifdef CONFIG_MMC_SDHCI_BCM2708
+	bcm_register_device(&bcm2708_emmc_device);
 #endif
         
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++) {
