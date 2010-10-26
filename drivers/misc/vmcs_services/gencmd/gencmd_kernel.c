@@ -1,5 +1,5 @@
 /*
- *  gencmd_kernel.c
+ *  gencmd_kernel.c - core gencmd driver
  *
  *  Copyright (C) 2010 Broadcom
  *
@@ -26,7 +26,9 @@
 #include <linux/interrupt.h>
 #include <mach/ipc.h>
 
+#include "gencmd.h"
 #include "gencmd_regs.h"
+#include "gencmd_driver.h"
 
 /* macros */
 #define MAKEFOURCC(ch0, ch1, ch2, ch3) ((unsigned int)(unsigned char)(ch0) \
@@ -35,15 +37,6 @@
 		| ((unsigned int)(unsigned char)(ch3) << 24 ))
 
 #define GENCMD_FOURCC MAKEFOURCC( 'G', 'E', 'N', 'C')
-#define GENCMD_DEBUG
-
-#ifdef GENCMD_DEBUG
-#define refmt(fmt) "[%s]: " fmt, __func__
-#define gencmd_print(fmt, ...) \
-	printk(KERN_ERR refmt(fmt), ##__VA_ARGS__)
-#else
-#define gencmd_print(fmt, ...)
-#endif
 
 /* structure decalaration */
 static struct {
@@ -185,10 +178,14 @@ static irqreturn_t bcm2708_gencmd_isr(int irq, void *dev_id)
 
 static int __devexit bcm2708_gencmd_remove(struct platform_device *pdev)
 {
-	remove_proc_entry("vc_gencmd", NULL);
-	free_irq(gencmd_state.irq, NULL);
-	release_region(gencmd_state.mem_res->start, resource_size(gencmd_state.mem_res));
-	gencmd_state.initialized = 0;
+	if( gencmd_state.initialized ) {
+		gencmd_driver_exit();
+		remove_proc_entry("vc_gencmd", NULL);
+		free_irq(gencmd_state.irq, NULL);
+		release_region(gencmd_state.mem_res->start, resource_size(gencmd_state.mem_res));
+		gencmd_state.initialized = 0;
+	}
+
 	return 0;
 }
 
@@ -263,9 +260,20 @@ static int __devinit bcm2708_gencmd_probe(struct platform_device *pdev)
 		gencmd_state.dump_info->read_proc = dump_gencmd_ipc_block;
 	}
 
+	/* register the driver */
+	ret = gencmd_driver_init();
+	if( ret < 0 ) {
+		dev_err(&pdev->dev, "failed to register the driver\n");
+		ret = -ENOENT;
+		goto err_driver;
+	}
+
 	gencmd_state.initialized = 1;
 	return 0;
 
+err_driver:
+	/* remove proc entry */
+	remove_proc_entry("vc_gencmd", NULL);
 err_proc_entry:
 	/* free irq */
 	free_irq(gencmd_state.irq, NULL);

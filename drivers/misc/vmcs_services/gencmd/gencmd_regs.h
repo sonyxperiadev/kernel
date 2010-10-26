@@ -1,5 +1,5 @@
-#ifndef __GENCMD_KERNEL_H
-#define __GENCMD_KERNEL_H
+#ifndef __GENCMD_REGS_H
+#define __GENCMD_REGS_H
 
 #define GENCMD_MAX_LENGTH 1024
 
@@ -20,4 +20,4 @@
 //access macro
 #define GENCMD_REGISTER_RW(base, offset) (*(volatile unsigned long *)(base + offset))
 
-#endif /* __GENCMD_KERNEL_H */
+#endif /* __GENCMD_REGS_H */
