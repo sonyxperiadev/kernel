@@ -7,7 +7,7 @@ EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2
 EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -D__linux__
 
-OBJ :=  gencmd_kernel.o gencmd_driver.o
+OBJ :=  gencmd_core.o gencmd_driver.o
 
 obj-$(CONFIG_VC_GENCMD) := vc-gencmd.o
 	vc-gencmd-objs := $(OBJ)
