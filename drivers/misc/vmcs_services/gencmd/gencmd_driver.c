@@ -18,14 +18,12 @@
 #include <linux/cdev.h>
 #include <linux/errno.h>
 #include <asm/uaccess.h>
+#include <linux/miscdevice.h>
 
 #include "gencmd.h"
 #include "gencmd_driver.h"
 
-struct gencmd_dev {
-	dev_t number;
-	struct cdev cdev;
-};
+#define GENCMD_DRIVER_NAME  "gencmd"
 
 struct gencmd_buffers {
 	char cmd[GENCMD_CMD_SIZE];
@@ -34,7 +32,6 @@ struct gencmd_buffers {
 	struct semaphore buf_sem;
 };
 
-static struct gencmd_dev *gencmd_device;
 
 /*driver functions  */
 ssize_t gencmd_read(struct file *filp, char __user *buf, size_t count,
@@ -262,68 +259,27 @@ struct file_operations gencmd_fops = {
 	.release =	gencmd_release,
 };
 
+struct miscdevice gencmd_dev = {
+    .minor =    MISC_DYNAMIC_MINOR,
+    .name =     GENCMD_DRIVER_NAME,
+    .fops =     &gencmd_fops
+};
+
+
 int __devinit gencmd_driver_init(void)
 {
 	int ret;
 
-	gencmd_device = NULL;
+    ret = misc_register(&gencmd_dev);
+    if (ret < 0) {
+        printk(KERN_ERR "%s:failed to register device\n",
+                GENCMD_DRIVER_NAME);
+    }
 
-	/* allocate internal structure */
-	gencmd_device = kmalloc(sizeof(struct gencmd_dev), GFP_KERNEL);
-	if( !gencmd_device ) {
-		ret = -ENOMEM;
-		printk(KERN_ERR"[%s] failed to allocate mem for gencmd\n", __func__);
-		goto err_gencmd_device;
-	}
-
-	/* allocate major and minor number */
-	gencmd_device->number = 0;
-	ret = alloc_chrdev_region(&gencmd_device->number, 0, 1, "VC Gencmd device");
-	if( ret < 0 ) {
-		printk(KERN_ERR"[%s]failed to allocate major/minor num for gencmd\n",
-				__func__);
-		goto err_number;
-	}
-	
-	gencmd_print("Gencmd major=%d minor=%d\n", MAJOR(gencmd_device->number),
-			MINOR(gencmd_device->number));
-
-	/*init cdev */
-	cdev_init(&gencmd_device->cdev, &gencmd_fops);
-
-	/* register character driver */
-	ret = cdev_add(&gencmd_device->cdev, gencmd_device->number, 1);
-	if( ret < 0 ) {
-		printk(KERN_ERR"[%s]failed to register gencmd character driver\n",
-				__func__);
-		goto err_cdev;
-	}
-
-
-	return 0;
-err_cdev:
-	/* free up major/minor number */
-	unregister_chrdev_region(gencmd_device->number, 1);
-
-err_number:
-	/* free gencmd structure */
-	kfree(gencmd_device);
-	gencmd_device = NULL;
-err_gencmd_device:
 	return ret;
 }
 
 void __devexit gencmd_driver_exit(void)
 {
-	if(gencmd_device) {
-		/* remove char dev */
-		cdev_del(&gencmd_device->cdev);
-		
-		/* free up major/minor number */
-		unregister_chrdev_region(gencmd_device->number, 1);
-		
-		/* free gencmd structure */
-		kfree(gencmd_device);
-		gencmd_device = NULL;
-	}
+    misc_deregister(&gencmd_dev);
 }

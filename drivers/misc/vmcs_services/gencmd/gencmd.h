@@ -1,6 +1,7 @@
 #ifndef _GENCMD_H
 #define _GENCMD_H
-#define GENCMD_DEBUG
+
+//#define GENCMD_DEBUG
 
 #ifdef GENCMD_DEBUG
 
