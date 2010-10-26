@@ -22,10 +22,6 @@
 #include "gencmd.h"
 #include "gencmd_driver.h"
 
-
-#define GENCMD_CMD_SIZE		512
-#define GENCMD_RESP_SIZE	512
-
 struct gencmd_dev {
 	dev_t number;
 	struct cdev cdev;
@@ -133,6 +129,86 @@ int gencmd_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsig
 {
 	int ret = -1;
 	gencmd_print("-IN cmd=%d arg=0x%lx\n", cmd, arg);
+
+    switch( cmd ) {
+        case GENCMD_IOCTL_CMD_SEND_RESP:
+            {
+                GENCMD_IOCTL_SEND_RESP_T  request; 
+                int count, resp_len, len;
+                struct gencmd_buffers *g_buf;
+
+                if( copy_from_user(&request,(void *) arg, sizeof(GENCMD_IOCTL_SEND_RESP_T)) ) {
+                    ret = -EFAULT;
+                    printk(KERN_ERR"[%s]error in copying cmd structure\n", __func__);
+                    goto err_cmd;
+                }
+
+                count = request.cmd_len;
+                resp_len = request.resp_len;
+
+                /* check the length */
+                if( count > (GENCMD_CMD_SIZE - 1) ) {
+                    printk(KERN_ERR"[%s] max cmd size=%d\n", __func__, GENCMD_CMD_SIZE);
+                    ret = -ENOMEM;
+                    goto err_len;
+                }
+
+                /* get the buffer */
+                g_buf = (struct gencmd_buffers *) filp->private_data;
+
+                ret = down_interruptible(&g_buf->buf_sem);
+                if( ret < 0 ) {
+                    printk(KERN_ERR"[%s] error in getting buffer semaphore\n", __func__ );
+                    goto err_lock;
+                }
+
+                /* copy from user */
+                if( copy_from_user(g_buf->cmd, request.cmd, count) ) {
+                    ret = -EFAULT;
+                    printk(KERN_ERR"[%s] copy from user failed user_buf=%p\n",
+                            __func__, request.cmd);
+                    goto done;
+                }
+                g_buf->cmd[count] = '\0';
+                gencmd_print("cmd=%s\n", g_buf->cmd);
+
+                /* call vc_gencmd */
+                g_buf->resp_len = vc_gencmd( g_buf->resp, GENCMD_RESP_SIZE, g_buf->cmd);
+
+                /* check the length */
+                len = g_buf->resp_len;
+
+                if( len > resp_len )
+                    len = resp_len;
+
+                if( !request.resp ) {
+                    printk(KERN_ERR"[%s] no user buffer passed\n", __func__);
+                    ret = 0;
+                    goto done;
+                }
+
+                ret = copy_to_user(request.resp, g_buf->resp, len);
+                if( ret < 0 ) {
+                    printk(KERN_ERR"[%s] error in copying date to user buffer\n", __func__);
+                    goto done;
+                }
+
+                gencmd_print("gencmd resp=%s\n", g_buf->resp);
+                ret = len;
+done:
+                up(&g_buf->buf_sem);
+                break;
+err_lock:
+err_len:
+err_cmd:
+                break;
+            }
+
+        default:
+            printk(KERN_ERR"[%s]:unknown command cmd=%d\n", __func__, cmd);
+            ret = -EIO;
+            break;
+    }
 
 	gencmd_print("-OUT ret=%d\n", ret);
 	return ret;
