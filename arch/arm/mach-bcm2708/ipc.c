@@ -34,7 +34,11 @@
 #define DEBUG_IPC_MODULE   0
 
 #define PLAT_DEV_NAME_SIZE_MAX 256
-#define IPC_BASE        __io_address(IPC_BLOCK_BASE)
+
+static void __iomem *ipc_base_virt;
+static phys_addr_t ipc_base_phys;
+
+#define ipc_phys_to_virt(x)	((x) - ipc_base_phys + ipc_base_virt)
 
 /* Struct to store the user info in */
 typedef struct IPC_BLOCK_USER_INFO
@@ -105,9 +109,9 @@ int ipc_notify_vc_event(int irq_num)
 	u32 ipc_id = IRQ_TO_IPC(irq_num);
 
 	ipc_spin_lock(IPC_SEMAPHORE_ID_0);
-	vc_irq_status = readl(IPC_BASE + IPC_ARM_VC_INTERRUPT_OFFSET);
+	vc_irq_status = readl(ipc_base_virt + IPC_ARM_VC_INTERRUPT_OFFSET);
 	vc_irq_status |= (0x1 << ipc_id);
-	writel(vc_irq_status, IPC_BASE + IPC_ARM_VC_INTERRUPT_OFFSET);
+	writel(vc_irq_status, ipc_base_virt + IPC_ARM_VC_INTERRUPT_OFFSET);
 	ipc_spin_unlock(IPC_SEMAPHORE_ID_0);
 
 	writel(0x1, IO_ADDRESS(ARM_0_BELL2));
@@ -120,7 +124,7 @@ EXPORT_SYMBOL(ipc_notify_vc_event);
 static nt ipc_lookup_service_resource(u32 four_cc, vc_service_resource_t *res)
 {	
 	u32 blk_num;
-	u32 fcc_offset = IPC_BASE + IPC_BLOCK_INFO_OFFSET;
+	u32 fcc_offset = ipc_base_virt + IPC_BLOCK_INFO_OFFSET;
 	int ret = -EINVAL;
 
 	if (!res)
@@ -160,8 +164,8 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 	(void)readl(IO_ADDRESS(ARM_0_BELL0));
 	
 	ipc_spin_lock(IPC_SEMAPHORE_ID_1);
-	vc_irq_status = readl(IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
-	writel(0x0, IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
+	vc_irq_status = readl(ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
+	writel(0x0, ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
 	ipc_spin_unlock(IPC_SEMAPHORE_ID_1);
 
 #if DEBUG_IPC_MODULE
@@ -244,7 +248,7 @@ static int ipc_init_write(struct file *file, const char *buffer, unsigned long c
 
    init_string[ IPC_MAX_INPUT_STR_LENGTH  - 1 ] = 0;
 
-   writel(0xff, IPC_BASE + IPC_VC_ARM_INTERRUPT_OFFSET);
+   writel(0xff, ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
 
    writel(0x1, IO_ADDRESS(ARM_0_BELL0));  
 
@@ -268,7 +272,7 @@ static irqreturn_t ipc_isr(int irq, void *dev_id)
 static int __init ipc_add_service_devices(void)
 {
         u32 blk_num, four_cc;
-        u32 fcc_offset = (uint32_t )((char *)IPC_BASE + IPC_BLOCK_INFO_OFFSET);
+        u32 fcc_offset = (uint32_t )((char *)ipc_base_virt + IPC_BLOCK_INFO_OFFSET);
 	char *dev_name = NULL;
 	struct resource *dev_resource = NULL;
 	struct platform_device *plat_dev = NULL;	
@@ -312,8 +316,8 @@ static int __init ipc_add_service_devices(void)
 		start = readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
 		start = __bus_to_phys(start);
 
-		dev_resource->start	= (resource_size_t) __io_address(start);
-                dev_resource->end	= dev_resource->start + SZ_16K - 1;
+		dev_resource->start	= (resource_size_t) ipc_phys_to_virt(start);
+                dev_resource->end	= dev_resource->start + SZ_8K - 1;
                 dev_resource->flags     = IORESOURCE_MEM;
 
                 (dev_resource+1)->start	= 
@@ -355,7 +359,35 @@ static int __init bcm_ipc_init(void)
 	 * APIs to ring doorbell from ARM to VC side.
 	 */
 
-	if (IPC_BLOCK_MAGIC != readl(IPC_BASE + IPC_BLOCK_MAGIC_OFFSET)) {
+	
+	/* Wait for data to arrive in mailbox 0 and then read ipc base address from mailbox */
+	if ((readl(IO_ADDRESS(ARM_0_MAIL0_STA)) & ARM_MS_EMPTY)) {
+		printk(KERN_ERR"Mailbox 0 is empty, we dont have IPC base address\n");
+		printk(KERN_ERR"%s: FAILED!!! \n", __func__);
+		printk(KERN_ERR"Mailbox regs  ->\n");
+		printk(KERN_ERR"RD -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_RD)));
+		printk(KERN_ERR"POL -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_POL)));
+		printk(KERN_ERR"SND -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_SND)));
+		printk(KERN_ERR"STA -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_STA)));
+		printk(KERN_ERR"SNF -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_CNF)));
+		return -ENODEV;
+	}
+
+	ipc_base_phys = readl(IO_ADDRESS(ARM_0_MAIL0_RD));
+	printk(KERN_ERR"Received ipc_base = 0x%08x\n", ipc_base_phys);
+	ipc_base_phys = __bus_to_phys(ipc_base_phys);
+	printk(KERN_ERR"Real ipc_base = 0x%08x\n", ipc_base_phys);
+
+	ipc_base_virt = ioremap(ipc_base_phys, IPC_BLOCK_SIZE);
+	if (ipc_base_virt == NULL) {
+		printk(KERN_ERR"Failed to ioremap ipc memory\n");
+		return -ENOMEM;
+	}
+
+	printk(KERN_INFO"%s: IPC mem is mapped at 0x%08x\n", __func__, (uint32_t)ipc_base_virt);
+
+
+	if (IPC_BLOCK_MAGIC != readl(ipc_base_virt + IPC_BLOCK_MAGIC_OFFSET)) {
 		printk(KERN_ERR "BCM2708 VC has not initialized the IPC block yet!");
 		return  -ENODEV;
 	}
@@ -380,7 +412,7 @@ static int __init bcm_ipc_init(void)
 	}
 	printk("BCM2708 ARM/VC IPC has been initialized successfully!");
 
-#if DEBUG_IPC_MODULE 
+#if DEBUG_IPC_MODULE
 	for (i = IPC_TO_IRQ(0); i <= IPC_TO_IRQ(2); i++) {
 		if (request_irq(i,  ipc_isr, IRQF_DISABLED, "ipc", NULL))
 			printk(KERN_ERR "BRCM IPC irq request failed for irq# %d\n", i);
