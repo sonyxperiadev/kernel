@@ -299,7 +299,7 @@ static char __initdata banner[] = "VC4 Gencmd Driver,(C) 2010 Broadcom Corp\n";
 
 static int __init bcm2708_gencmd_init( void )
 {
-	printk(banner);
+	printk(KERN_ERR"%s", banner);
 	return platform_driver_register(&bcm2708_gencmd_driver);
 }
 
