@@ -2,14 +2,14 @@
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/interrupt.h>
-#include <linux/ioport.h>
-#include <linux/mm.h>
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
 #include <linux/device.h>
 #include <linux/sched.h>
+#include <linux/miscdevice.h>
 #include <linux/vmalloc.h>
+#include <linux/string.h>
 
 #include <asm/bug.h>
 
@@ -19,19 +19,20 @@
 #include "bcm2708_mdec.h"
 
 
-#define BCM2708_DRIVER_NAME "bcm2708 mdec"
-#define BCM2708_MDEC_MAJOR  123
+#define BCM2708_MDEC_DRIVER_NAME "bcm2708_mdec"
 
 #define BCM2708MDEC_DEBUG 0
 
 #define bcm2708mdec_error(format, arg...) \
-	printk(KERN_ERR BCM2708_DRIVER_NAME ": %s" format, __func__, ##arg) 
+	printk(KERN_ERR BCM2708_MDEC_DRIVER_NAME ": %s" format, __func__, ##arg) 
 
 #if BCM2708MDEC_DEBUG
 #define bcm2708mdec_dbg(format, arg...) bcm2708mdec_error(format, ##arg)
 #else
-#define bcm2708mdec_dbg(format, arg...) printk(KERN_INFO BCM2708_DRIVER_NAME ": %s" format, __func__, ##arg)
+#define bcm2708mdec_dbg(format, arg...) printk(KERN_DEBUG BCM2708_MDEC_DRIVER_NAME ": %s" format, __func__, ##arg)
 #endif
+
+#define VC_MFS_SD_PREFIX "/mfs/sd/"	/* the path for mdeia file on VC SD card. */
 
 #define MEDIA_DEC_TEST_REGISTER_RW(offset)	\
 	(*((volatile u32 *)((u32)g_mdec->reg_base + (offset))))
@@ -47,20 +48,13 @@ static struct bcm2708_mdec *g_mdec = NULL;
 
 static int do_playback(bcm2708_mdec_play_t *play_cmd)
 {
-	int max_filename_len = 0, ret = 0;
+	int ret = 0;
 	u32 time = 0, prev_time = 0;
 	int count;
-#if 0
-	int uncopied = 0;
-	char *filename = (char *)vmalloc(MEDIA_DEC_DEBUG_FILENAME_LENGTH);
-#endif
+	char *temp_name;
 	
-	BUG_ON(MEDIA_DEC_DEBUG_FILENAME_LENGTH < play_cmd->filename_size);
- #if 0
-	uncopied = copy_from_user(filename, play_cmd->filename, play_cmd->filename_size); 
-	if (0 != uncopied)
-		return -EFAULT;
- #endif
+	BUG_ON(MEDIA_DEC_DEBUG_FILENAME_LENGTH  <= play_cmd->filename_size);
+
 	/* Set up the debug mode */
 	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_DEBUG_MASK ) = 0;
 
@@ -74,20 +68,36 @@ static int do_playback(bcm2708_mdec_play_t *play_cmd)
 	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_VID_TYPE ) = play_cmd->video_type;
 	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_AUD_TYPE ) = play_cmd->audio_type;
 
+#if BCM2708MDEC_DEBUG
+	play_cmd->filename[play_cmd->filename_size] = 0;
 	bcm2708mdec_dbg("filename=%s size=%d\n", play_cmd->filename, play_cmd->filename_size);
-        
+#endif
+	/* If user does not provide a full ppath filename, fix it. */
+	if (strncmp(play_cmd->filename, VC_MFS_SD_PREFIX, strlen(VC_MFS_SD_PREFIX))) {
+		temp_name = (char *)vmalloc(play_cmd->filename_size);
+		if (NULL == temp_name) {
+			bcm2708mdec_error("Unable to allocate name\n");
+			return -ENOMEM;
+		}
+		strncpy(temp_name, play_cmd->filename, play_cmd->filename_size);
+		strcpy(play_cmd->filename, VC_MFS_SD_PREFIX);
+		strncat(play_cmd->filename, temp_name, play_cmd->filename_size);
+		vfree(temp_name);
+		play_cmd->filename_size += strlen(VC_MFS_SD_PREFIX);
+	}
+
+#if BCM2708MDEC_DEBUG
+        play_cmd->filename[play_cmd->filename_size] = 0;
+        bcm2708mdec_dbg("filename=%s size=%d\n", play_cmd->filename, play_cmd->filename_size);
+#endif
+
 	/* Write in the filename */	
- 	max_filename_len = play_cmd->filename_size;
-	strncpy((char *)&MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_DEBUG_FILENAME), play_cmd->filename, max_filename_len);
+	strncpy((char *)&MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_DEBUG_FILENAME), play_cmd->filename, play_cmd->filename_size);
 
 	/* Enable the mode */
 	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = MEDIA_DEC_CONTROL_ENABLE_BIT | MEDIA_DEC_CONTROL_LOCAL_FILEMODE_BIT;
 
 	ipc_notify_vc_event(g_mdec->irq);	
-
-#if 0
-	vfree(filename)
-#endif
 
 	/* Wait for it to get ready */
 	while ((MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1) {
@@ -111,8 +121,7 @@ static int do_playback(bcm2708_mdec_play_t *play_cmd)
 		schedule_timeout(100);
 		time = MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_PLAYBACK_TIME );
 		if (time == prev_time)
-			bcm2708mdec_error("the playback ts is not moving\n");
-			
+			bcm2708mdec_dbg("the playback ts is not moving\n");
 	}
 
 	return ret;
@@ -148,9 +157,8 @@ static int mdec_release( struct inode *inode, struct file *file_id )
 {
 	int ret = 0;
 
-#if 0
 	ret = do_playback_teardown();	
-#endif
+	
 	return ret;
 }
 
@@ -205,7 +213,7 @@ static struct file_operations mdec_file_ops =
     mmap:       mdec_mmap,
 };
 
-static struct proc_dir_entry *input_create_proc_entry( const char * const name,
+static struct proc_dir_entry *mdec_create_proc_entry( const char * const name,
                                                      read_proc_t *read_proc,
                                                      write_proc_t *write_proc )
 {
@@ -230,7 +238,7 @@ static struct proc_dir_entry *input_create_proc_entry( const char * const name,
    return ret;
 }
 
-static int input_dummy_read(char *buf, char **start, off_t offset, int count, int *eof, void *data)
+static int mdec_dummy_read(char *buf, char **start, off_t offset, int count, int *eof, void *data)
 {
    int len = 0;
 
@@ -247,7 +255,7 @@ static int input_dummy_read(char *buf, char **start, off_t offset, int count, in
 
 #define INPUT_MAX_INPUT_STR_LENGTH   256
 
-static int input_proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
+static int mdec_proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
         char *init_string = NULL;
 	bcm2708_mdec_play_t cmd;
@@ -298,7 +306,11 @@ static irqreturn_t bcm2708_mdec_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-
+struct miscdevice mdec_misc_dev = {
+    .minor =    MISC_DYNAMIC_MINOR,
+    .name =     BCM2708_MDEC_DRIVER_NAME,
+    .fops =     &mdec_file_ops
+};
 
 static int bcm2708_mdec_probe(struct platform_device *pdev)
 {
@@ -339,12 +351,13 @@ static int bcm2708_mdec_probe(struct platform_device *pdev)
         }
 
 
-	if (( ret = register_chrdev(BCM2708_MDEC_MAJOR, "bcm2708_mdec", &mdec_file_ops )) < 0 ) 	{
-		bcm2708mdec_error("register_chrdev failed\n");
+	ret = misc_register(&mdec_misc_dev);
+	if (ret < 0) {
+		bcm2708mdec_error("failed to register char device\n");
 		goto err_reg_chrdev;
 	}
 
-       input_create_proc_entry("bcm2835_mdec", input_dummy_read, input_proc_write);
+       mdec_create_proc_entry("bcm2835_mdec", mdec_dummy_read, mdec_proc_write);
 
        bcm2708mdec_dbg("The MDEC device is probed successfully");
 	
@@ -365,7 +378,7 @@ static int __devexit bcm2708_mdec_remove(struct platform_device *pdev)
         struct bcm2708_mdec *bcm_mdec = platform_get_drvdata(pdev);
 
 	free_irq(bcm_mdec->irq, NULL);
-	unregister_chrdev(BCM2708_MDEC_MAJOR, "bcm2708_mdec");
+	misc_deregister(&mdec_misc_dev);
         kfree(bcm_mdec);
         bcm2708mdec_dbg("BCM2708 MDEC device removed!!\n");
 
@@ -387,9 +400,9 @@ static int __init bcm2708_mdec_init(void)
 
         ret = platform_driver_register(&bcm2708_mdec_driver);
         if (ret)
-                printk(KERN_ERR BCM2708_DRIVER_NAME "%s : Unable to register BCM2708 MDEC driver\n", __func__);
+                printk(KERN_ERR BCM2708_MDEC_DRIVER_NAME "%s : Unable to register BCM2708 MDEC driver\n", __func__);
 
-        printk(KERN_INFO BCM2708_DRIVER_NAME "Init %s !\n", ret ? "FAILED" : "OK");
+        printk(KERN_INFO BCM2708_MDEC_DRIVER_NAME "Init %s !\n", ret ? "FAILED" : "OK");
 
         return ret;
 }
@@ -399,7 +412,7 @@ static void __exit bcm2708_mdec_exit(void)
         /* Clean up .. */
         platform_driver_unregister(&bcm2708_mdec_driver);
 
-        printk(KERN_INFO BCM2708_DRIVER_NAME "BRCM MDEC driver exit OK\n");
+        printk(KERN_INFO BCM2708_MDEC_DRIVER_NAME "BRCM MDEC driver exit OK\n");
 }
 
 module_init(bcm2708_mdec_init);
