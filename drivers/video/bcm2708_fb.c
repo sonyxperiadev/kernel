@@ -164,15 +164,16 @@ static int bcm2708_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info 
 	ret = down_timeout(&fb->wait_for_irq, HZ*3); /* 3 sec timeout */
 	if (ret != 0) {
 		bcm2708fb_warning("BRCM fb update timed out, no irq received\n");
+		fb->base_update_count--;
 		goto out;
 	}
 
 	/* poll to read status and timeout after 3 secs */
 	status = readl(fb->reg_base + FB_STATUS);
 	vc_update_count = status >> STAT_UPDATE_COUNT_SHIFT;
-	if(((fb->base_update_count & 0x00ffffff) != vc_update_count)) {
+	if(((fb->base_update_count & 0x0000ffff) != vc_update_count)) {
 		bcm2708fb_error("Failed: status = (0x%08x), host_update = (0x%08x)\n",
-				status, (fb->base_update_count & 0x00ffffff));
+				status, (fb->base_update_count & 0x0000ffff));
 		ret = -EAGAIN;
 	}
 
