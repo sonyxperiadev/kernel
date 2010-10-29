@@ -52,20 +52,72 @@
 
 static struct map_desc kona_io_desc[] __initdata =
 {
-	IO_DESC(KONA_UART0_VA, SZ_4K),
-	IO_DESC(KONA_UART1_VA, SZ_4K),
-	IO_DESC(KONA_UART2_VA, SZ_4K),
-	IO_DESC(KONA_UART3_VA, SZ_4K),
-	IO_DESC(KONA_GPTIMER_VA, SZ_4K),
-	/* This descriptor maps the following
-	 * SCU
-	 * GICCPU
-	 * GTIM
-	 * PTIM
-	 * GICDIST
-	 */
-	IO_DESC(KONA_SCU_VA, SZ_8K),
+	/**************************************************
+	* NOTE: The following are alphabetically ordered.
+	***************************************************/
+
+	IO_DESC( KONA_BSC1_VA, SZ_4K  ),
+	IO_DESC( KONA_BSC2_VA, SZ_4K  ),
+	IO_DESC( KONA_CHIPREG_VA, SZ_4K	),
+	IO_DESC( KONA_D1W_VA, SZ_4K ),
+	IO_DESC( KONA_DMAC_NS_VA, SZ_4K	),
+	IO_DESC( KONA_DMAC_S_VA, SZ_4K  ),
+	IO_DESC( KONA_DMUX_VA, SZ_4K  ),
+	IO_DESC( KONA_EDMA_VA, SZ_4K ),
+	IO_DESC( KONA_ESW_VA, SZ_1M ),
+	IO_DESC( KONA_GICDIST_VA, SZ_4K ),
+	IO_DESC( KONA_GPIO2_VA, SZ_4K ),
+	IO_DESC( KONA_HSI_VA, SZ_4K ),
+	IO_DESC( KONA_IPC_NS_VA, SZ_4K ),
+	IO_DESC( KONA_IPC_S_VA, SZ_4K ),
+	IO_DESC( KONA_KEK_VA, SZ_4K ),
+	IO_DESC( KONA_KPM_CLK_VA, SZ_4K ),
+	IO_DESC( KONA_SLV_CLK_VA, SZ_4K ),
+	IO_DESC( KONA_L2C_VA, SZ_4K ),
+	IO_DESC( KONA_MPHI_VA, SZ_4K ),
+	IO_DESC( KONA_NAND_VA, SZ_64K ),
+	IO_DESC( KONA_MPU_VA, SZ_4K ),
+	IO_DESC( KONA_OTP_VA, SZ_4K ),
+	IO_DESC( KONA_PKA_VA, SZ_4K ),
+	IO_DESC( KONA_PWM_VA, SZ_4K ),
+	IO_DESC( KONA_ROOT_RST_VA, SZ_4K ),
+	IO_DESC( KONA_RNG_VA, SZ_4K ),
+
+	/*
+	* This SCU region also covers MM_ADDR_IO_GICCPU,
+	* KONA_PROFTMR aka (GTIM) aka (GLB) aka knllog timer,
+	* and KONA_PTIM aka os tick timer
+	*/
+	IO_DESC( KONA_SCU_VA, SZ_4K ),
+
+	IO_DESC( KONA_SEC_VA, SZ_4K ),
+	IO_DESC( KONA_SECWD_VA, SZ_4K ),
+	IO_DESC( KONA_SPUM_NS_VA, SZ_64K ),
+	IO_DESC( KONA_SPUM_S_VA, SZ_64K ),
+	IO_DESC( KONA_SPUM_APB_NS_VA, SZ_4K ),
+	IO_DESC( KONA_SPUM_APB_S_VA, SZ_4K ),
+	IO_DESC( KONA_SRAM_VA, SZ_256K ),
+
+	IO_DESC( KONA_SSP0_VA, SZ_4K ),
+	IO_DESC( KONA_SSP2_VA, SZ_4K ),
+	IO_DESC( KONA_SSP3_VA, SZ_4K ),
+	IO_DESC( KONA_SSP4_VA, SZ_4K ),
+	
+	IO_DESC( KONA_SYSTMR_VA, SZ_4K ),  /* 32-bit kona gp timer */
+	IO_DESC( KONA_TMR_HUB_VA, SZ_4K ), /* 64-bit hub timer */
+	IO_DESC( KONA_TZCFG_VA, SZ_4K ),
+	IO_DESC( KONA_UART0_VA, SZ_4K ),
+	IO_DESC( KONA_UART1_VA, SZ_4K ),
+	IO_DESC( KONA_UART2_VA, SZ_4K ),
+	IO_DESC( KONA_UART3_VA, SZ_4K ),
+	IO_DESC( KONA_USB_FSHOST_CTRL_VA, SZ_4K ),
+	IO_DESC( KONA_USB_HOST_CTRL_VA, SZ_256 ),	/* Could really use SZ_32 if was def'd. Note: 256 not 256K */
+	IO_DESC( KONA_USB_HOST_EHCI_VA, SZ_256 ),	/* Includes DWC specific registers, otherwise could use SZ_128 if was def'd */
+	IO_DESC( KONA_USB_HOST_OHCI_VA, SZ_256 ),	/* Could really use SZ_128 if was def'd */
+	IO_DESC( KONA_USB_HSOTG_CTRL_VA, SZ_4K ),
 };
+
+
 
 void __init kona_map_io(void)
 {

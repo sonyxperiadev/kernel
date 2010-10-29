@@ -159,8 +159,8 @@ static void __init timers_init(void)
 	timers.proftmr_irq = -1; /* Not used */
 
 	/* Setup IO addresses */
-	timers.gptmr_regs = IOMEM(KONA_GPTIMER_VA);
-	timers.proftmr_regs = IOMEM(KONA_GTIM_VA);
+	timers.gptmr_regs = IOMEM(KONA_SYSTMR_VA);
+	timers.proftmr_regs = IOMEM(KONA_PROFTMR_VA);
 
 	gptimer_disable_and_clear(timers.gptmr_regs);
 	profile_timer_init();
