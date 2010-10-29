@@ -39,5 +39,6 @@
 
 extern int ipc_notify_vc_event(int ipc_id);
 extern int ipc_lookup_irqnum(u32 four_cc);
+extern void *ipc_bus_to_virt(uint32_t bus_addr);
 
 #endif  /* _BCM2708_IPC_H_ */

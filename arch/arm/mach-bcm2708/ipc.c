@@ -120,7 +120,18 @@ int ipc_notify_vc_event(int irq_num)
 }
 EXPORT_SYMBOL(ipc_notify_vc_event);
 
+void *ipc_bus_to_virt(uint32_t bus_addr)
+{
+	if (ipc_base_virt && ipc_base_phys)
+		return (void *)ipc_phys_to_virt(__bus_to_phys(bus_addr));
+	else
+		return NULL;
+
+}
+EXPORT_SYMBOL(ipc_bus_to_virt);
+
 #if 0
+
 static nt ipc_lookup_service_resource(u32 four_cc, vc_service_resource_t *res)
 {	
 	u32 blk_num;
@@ -314,12 +325,15 @@ static int __init ipc_add_service_devices(void)
                 }
 
 		start = readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
+		printk(KERN_INFO"%s: Adding (%s) from 0x%08x-0x%08x VC address range\n", __func__, dev_name, start, start + SZ_8K - 1);
 		start = __bus_to_phys(start);
+		printk(KERN_INFO"%s: Adding (%s) from 0x%08x-0x%08x Phys address range\n", __func__, dev_name, start, start + SZ_8K - 1);
 
 		dev_resource->start	= (resource_size_t) ipc_phys_to_virt(start);
                 dev_resource->end	= dev_resource->start + SZ_8K - 1;
                 dev_resource->flags     = IORESOURCE_MEM;
 
+		printk(KERN_INFO"%s: Adding (%s) from 0x%08x-0x%08x Phys address range\n", __func__, dev_name, dev_resource->start,dev_resource->end);
                 (dev_resource+1)->start	= 
 				IPC_TO_IRQ(readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, interrupt_number_in_ipc)));
                 (dev_resource+1)->end	= (dev_resource+1)->start;
