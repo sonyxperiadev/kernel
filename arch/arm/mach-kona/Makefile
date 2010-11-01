@@ -12,5 +12,4 @@
 # consent.
 #*****************************************************************************
 
-obj-$(CONFIG_MACH_BCM2850) += bcm2850.o
-obj-$(CONFIG_MACH_BCM2850_FPGA) += bcm2850_fpga.o
+obj-y += bcm2850.o
