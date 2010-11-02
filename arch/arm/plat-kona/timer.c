@@ -76,9 +76,9 @@ static void gptimer_disable_and_clear(void *gptimer_regs)
 }
 
 static void
-gptimer_get_counter(void *proftimer_base, uint32_t *msw, uint32_t *lsw)
+gptimer_get_counter(void *gptimer_base, uint32_t *msw, uint32_t *lsw)
 {
-	void __iomem *base = IOMEM(proftimer_base);
+	void __iomem *base = IOMEM(gptimer_base);
 
 	/* Read 64-bit free running counter
 	 * 1. Read hi-word
