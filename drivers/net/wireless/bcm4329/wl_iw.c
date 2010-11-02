@@ -109,8 +109,7 @@ static int wl_iw_softap_deassoc_stations(struct net_device *dev);
 	} while (0)
 
 static int		g_onoff = G_WLAN_SET_ON;
-wl_iw_extra_params_t	 g_wl_iw_params;
-static struct mutex	wl_start_lock;
+wl_iw_extra_params_t	g_wl_iw_params;
 static struct mutex	wl_cache_lock;
 
 extern bool wl_iw_conn_status_str(uint32 event_type, uint32 status,
@@ -1347,6 +1346,7 @@ wl_iw_send_priv_event(
 int
 wl_control_wl_start(struct net_device *dev)
 {
+	wl_iw_t *iw;
 	int ret = 0;
 
 	WL_TRACE(("Enter %s \n", __FUNCTION__));
@@ -1356,7 +1356,8 @@ wl_control_wl_start(struct net_device *dev)
 		return -1;
 	}
 
-	mutex_lock(&wl_start_lock);
+	iw = *(wl_iw_t **)netdev_priv(dev);
+	dhd_os_start_lock(iw->pub);
 
 	if (g_onoff == G_WLAN_SET_OFF) {
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
@@ -1377,7 +1378,7 @@ wl_control_wl_start(struct net_device *dev)
 	}
 	WL_TRACE(("Exited %s \n", __FUNCTION__));
 
-	mutex_unlock(&wl_start_lock);
+	dhd_os_start_unlock(iw->pub);
 	return ret;
 }
 
@@ -1388,7 +1389,9 @@ wl_iw_control_wl_off(
 	struct iw_request_info *info
 )
 {
+	wl_iw_t *iw;
 	int ret = 0;
+
 	WL_TRACE(("Enter %s\n", __FUNCTION__));
 
 	if (!dev) {
@@ -1396,7 +1399,8 @@ wl_iw_control_wl_off(
 		return -1;
 	}
 
-	mutex_lock(&wl_start_lock);
+	iw = *(wl_iw_t **)netdev_priv(dev);
+	dhd_os_start_lock(iw->pub);
 
 #ifdef SOFTAP
 	ap_cfg_running = FALSE;
@@ -1435,7 +1439,7 @@ wl_iw_control_wl_off(
 		wl_iw_send_priv_event(dev, "STOP");
 	}
 
-	mutex_unlock(&wl_start_lock);
+	dhd_os_start_unlock(iw->pub);
 
 	WL_TRACE(("Exited %s\n", __FUNCTION__));
 
@@ -7753,7 +7757,7 @@ wl_iw_bt_init(struct net_device *dev)
 	return 0;
 }
 
-int wl_iw_attach(struct net_device *dev, void * dhdp)
+int wl_iw_attach(struct net_device *dev, void *dhdp)
 {
 	int params_size;
 	wl_iw_t *iw;
@@ -7762,7 +7766,6 @@ int wl_iw_attach(struct net_device *dev, void * dhdp)
 #endif
 
 	mutex_init(&wl_cache_lock);
-	mutex_init(&wl_start_lock);
 
 #if defined(WL_IW_USE_ISCAN)
 	if (!dev)
