@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32.9
-# Wed Oct 27 11:56:46 2010
+# Tue Nov  2 11:05:24 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -192,7 +192,8 @@ CONFIG_CPU_BCM2850=y
 # KONA Machine types
 #
 CONFIG_MACH_BCM2850_FPGA=y
-# CONFIG_MACH_BCM2850 is not set
+# CONFIG_MACH_BCM2850_BU is not set
+# CONFIG_MACH_BCM2850_DK is not set
 # CONFIG_MACH_BCM2860 is not set
 CONFIG_PLAT_KONA=y
 

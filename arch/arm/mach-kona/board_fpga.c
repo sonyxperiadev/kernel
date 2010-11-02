@@ -44,10 +44,8 @@
  */
 #define KONA_UART0_PA	UARTB_BASE_ADDR
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
-#define KONA_UART2_PA	UARTB3_BASE_ADDR
-#define KONA_UART3_PA	UARTB4_BASE_ADDR
 
-#define BCM2850_8250PORT(name)				\
+#define KONA_8250PORT(name)				\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA), 	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),    	\
@@ -59,59 +57,50 @@
 	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,	\
 }
 
-static struct plat_serial8250_port bcm2850_uart_data[] = {
-	BCM2850_8250PORT(UART0),
-	BCM2850_8250PORT(UART1),
-#ifndef CONFIG_MACH_BCM2850_FPGA
-	BCM2850_8250PORT(UART2),
-	BCM2850_8250PORT(UART3),
-#endif
+static struct plat_serial8250_port uart_data[] = {
+	KONA_8250PORT(UART0),
+	KONA_8250PORT(UART1),
 	{
-		.flags		= 0
+		.flags		= 0,
 	},
 };
 
-static struct platform_device bcm2850_serial_device = {
+static struct platform_device board_serial_device = {
 	.name		= "serial8250",
 	.id		= PLAT8250_DEV_PLATFORM,
 	.dev		= {
-		.platform_data = bcm2850_uart_data,
+		.platform_data = uart_data,
 	},
 };
 
 
-void __init bcm2850_map_io(void)
+void __init board_map_io(void)
 {
-	/* Map bcm2850 machine specific iodesc here */
+	/* Map machine specific iodesc here */
 
 	kona_map_io();
 }
 
-static struct platform_device *bcm2850_devices[] __initdata = {
-	&bcm2850_serial_device,
+static struct platform_device *board_devices[] __initdata = {
+	&board_serial_device,
 };
 
-static void __init bcm2850_add_devices(void)
+static void __init board_add_devices(void)
 {
-	platform_add_devices(bcm2850_devices, ARRAY_SIZE(bcm2850_devices));
+	platform_add_devices(board_devices, ARRAY_SIZE(board_devices));
 }
 
-void __init bcm2850_init(void)
+void __init board_init(void)
 {
-	bcm2850_add_devices();
+	board_add_devices();
 	return;
 }
 
-
-#ifdef CONFIG_MACH_BCM2850_FPGA
 MACHINE_START(BCM2850_FPGA, "bcm2850_fpga")
-#else
-MACHINE_START(BCM2850, "bcm2850")
-#endif
 	.phys_io = IO_START,
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
-	.map_io = bcm2850_map_io,
+	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
-	.init_machine = bcm2850_init,
+	.init_machine = board_init,
 MACHINE_END
