@@ -47,6 +47,18 @@
 #define KONA_UART2_PA	UARTB3_BASE_ADDR
 #define KONA_UART3_PA	UARTB4_BASE_ADDR
 
+/*
+ * The BSC index starts from 1 in CHAL, which is really not by
+ * convention. Re-define them here to avoid confusions
+ */
+#define PHYS_ADDR_BSC0         BSC1_BASE_ADDR
+#define PHYS_ADDR_BSC1         BSC2_BASE_ADDR
+#define BSC_CORE_REG_SIZE      0x100
+
+/* number of I2C adapters (hosts/masters) */
+#define MAX_I2C_ADAPS    2
+
+
 #define KONA_8250PORT(name)				\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA), 	\
@@ -58,6 +70,52 @@
 	.type	    = PORT_16550A,          			\
 	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,	\
 }
+
+static struct resource board_i2c0_resource[] = {
+   [0] =
+   {
+      .start = PHYS_ADDR_BSC0,
+      .end = PHYS_ADDR_BSC0 + BSC_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = 
+   {
+      .start = BCM_INT_ID_I2C0,
+      .end = BCM_INT_ID_I2C0,
+      .flags = IORESOURCE_IRQ,
+   },
+};
+
+static struct resource board_i2c1_resource[] = {
+   [0] =
+   {
+      .start = PHYS_ADDR_BSC1,
+      .end = PHYS_ADDR_BSC1 + BSC_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = 
+   {
+      .start = BCM_INT_ID_I2C1,
+      .end = BCM_INT_ID_I2C1,
+      .flags = IORESOURCE_IRQ,
+   },
+};
+
+static struct platform_device board_i2c_adap_devices[MAX_I2C_ADAPS] =
+{
+   {  /* for BSC0 */
+      .name = "bsc-i2c",
+      .id = 0,
+      .resource = board_i2c0_resource,
+      .num_resources	= ARRAY_SIZE(board_i2c0_resource),
+   },
+   {  /* for BSC0 */
+      .name = "bsc-i2c",
+      .id = 1,
+      .resource = board_i2c1_resource,
+      .num_resources	= ARRAY_SIZE(board_i2c1_resource),
+   },
+};
 
 static struct plat_serial8250_port uart_data[] = {
 	KONA_8250PORT(UART0),
@@ -87,6 +145,8 @@ void __init board_map_io(void)
 
 static struct platform_device *board_devices[] __initdata = {
 	&board_serial_device,
+	&board_i2c_adap_devices[0],
+	&board_i2c_adap_devices[1],
 };
 
 static void __init board_add_devices(void)
