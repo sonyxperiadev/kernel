@@ -411,7 +411,8 @@ CONFIG_CONSOLE_POLL=y
 # CONFIG_RAW_DRIVER is not set
 # CONFIG_TCG_TPM is not set
 # CONFIG_DCC_TTY is not set
-# CONFIG_I2C is not set
+CONFIG_I2C=y
+CONFIG_I2C_BSC=y
 # CONFIG_SPI is not set
 
 #
