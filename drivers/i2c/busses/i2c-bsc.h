@@ -175,9 +175,12 @@ static inline void isl_bsc_init(uint32_t baseAddr)
 #ifdef BSC_HS
    /*pad control, slew rate 60ns<Tr(Tf)<100ns
      The PAD enable polarity is reverted. Need to use 0 instead of 1.*/
+	// BRCM_WRITE_REG_FIELD(baseAddr, I2C_MM_HS_PADCTL, PAD_OUT_EN, 0);
 	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_PADCTL_OFFSET), I2C_MM_HS_PADCTL_PAD_OUT_EN_MASK, I2C_MM_HS_PADCTL_PAD_OUT_EN_SHIFT , 0);
    /* start with non-HS, use 13MHz */
+	// BRCM_WRITE_REG_FIELD(baseAddr, I2C_MM_HS_TIM, PRESCALE, I2C_MM_HS_TIM_PRESCALE_CMD_NODIV);
 	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TIM_OFFSET), I2C_MM_HS_TIM_PRESCALE_MASK , I2C_MM_HS_TIM_PRESCALE_SHIFT, I2C_MM_HS_TIM_PRESCALE_CMD_NODIV);
+	// BRCM_WRITE_REG_FIELD(baseAddr, I2C_MM_HS_TIM, NO_DIV, 0);
 	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TIM_OFFSET), I2C_MM_HS_TIM_NO_DIV_MASK, I2C_MM_HS_TIM_NO_DIV_SHIFT, 0);
 #endif
 
@@ -416,6 +419,8 @@ static inline void bsc_start_highspeed(uint32_t baseAddr)
 *****************************************************************************/
 static inline void bsc_stop_highspeed(uint32_t baseAddr)
 {
+    /* uint32_t val; */
+
   /* Disable Hs-mode - leave other Hs-mode timing values untouched */
     BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_HSTIM_OFFSET), I2C_MM_HS_HSTIM_HS_MODE_MASK, I2C_MM_HS_HSTIM_HS_MODE_SHIFT, 0);
 }
