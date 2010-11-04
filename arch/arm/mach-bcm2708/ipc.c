@@ -325,15 +325,14 @@ static int __init ipc_add_service_devices(void)
                 }
 
 		start = readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
-		printk(KERN_INFO"%s: Adding (%s) from 0x%08x-0x%08x VC address range\n", __func__, dev_name, start, start + SZ_8K - 1);
+		printk(KERN_INFO"%s: Adding (%s) @ bus(0x%08x), phys(0x%08x) address\n", __func__, dev_name, start, __bus_to_phys(start));
 		start = __bus_to_phys(start);
-		printk(KERN_INFO"%s: Adding (%s) from 0x%08x-0x%08x Phys address range\n", __func__, dev_name, start, start + SZ_8K - 1);
 
 		dev_resource->start	= (resource_size_t) ipc_phys_to_virt(start);
                 dev_resource->end	= dev_resource->start + SZ_8K - 1;
                 dev_resource->flags     = IORESOURCE_MEM;
 
-		printk(KERN_INFO"%s: Adding (%s) from 0x%08x-0x%08x Phys address range\n", __func__, dev_name, dev_resource->start,dev_resource->end);
+		printk(KERN_INFO"%s: Adding (%s) from 0x%08x-0x%08x Virt address range\n", __func__, dev_name, dev_resource->start,dev_resource->end);
                 (dev_resource+1)->start	= 
 				IPC_TO_IRQ(readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, interrupt_number_in_ipc)));
                 (dev_resource+1)->end	= (dev_resource+1)->start;

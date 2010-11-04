@@ -6,6 +6,7 @@
 #include <linux/device.h>
 #include <linux/list.h>
 #include <linux/interrupt.h>
+#include <linux/wait.h>
 #include <sound/core.h>
 #include <sound/initval.h>
 #include <sound/pcm.h>
@@ -15,9 +16,45 @@
 
 #include "ipc_fifo.h"
 
-/* 8 x 2k @ (44.1kh 2 channel) == 100ms of latency worst case */
-#define AUDIO_IPC_BLOCK_NUM_BUFFERS    8
-#define AUDIO_IPC_BLOCK_BUFFER_SIZE    (1024*2)
+/* #define DUMP_RAW_DATA */
+/* #define AUDIO_DEBUG_ENABLE */
+/* #define AUDIO_VERBOSE_DEBUG_ENABLE */
+
+/* Debug macros */
+#ifdef AUDIO_DEBUG_ENABLE
+
+#ifdef AUDIO_VERBOSE_DEBUG_ENABLE
+
+#define audio_debug(fmt, arg...)	\
+	printk(KERN_INFO"%s:%d " fmt, __func__, __LINE__, ##arg)
+#else
+
+#define audio_debug(fmt, arg...)	\
+	printk(KERN_DEBUG"%s:%d " fmt, __func__, __LINE__, ##arg)
+
+#endif /* AUDIO_VERBOSE_DEBUG_ENABLE */
+
+#define audio_info(fmt, arg...)	\
+	printk(KERN_INFO"%s:%d " fmt, __func__, __LINE__, ##arg)
+#else
+
+#define audio_debug(fmt, arg...)	do {} while (0)
+
+#define audio_info(fmt, arg...)		do {} while (0)
+
+#endif /* AUDIO_DEBUG_ENABLE */
+
+#define audio_error(fmt, arg...)	\
+	printk(KERN_ERR"%s:%d " fmt, __func__, __LINE__, ##arg)
+
+#define audio_warning(fmt, arg...)	\
+	printk(KERN_WARNING"%s:%d " fmt, __func__, __LINE__, ##arg)
+
+#define audio_alert(fmt, arg...)	\
+	printk(KERN_ALERT"%s:%d " fmt, __func__, __LINE__, ##arg)
+
+#define AUDIO_IPC_BLOCK_NUM_BUFFERS    (8)
+#define AUDIO_IPC_BLOCK_BUFFER_SIZE    (1024*8)
 
 #define AUDIO_CONTROL_OFFSET			(0x00)
 	#define CTRL_EN_SHIFT			(0)
@@ -102,7 +139,7 @@ typedef struct bcm2835_chip {
 typedef struct bcm2835_audio_buffer {
 	uint32_t buffer_id;
 	phys_addr_t	bus_addr;
-	void __iomem	*start;
+	uint8_t __iomem	*start;
 	uint32_t size;
 	uint32_t data_left;
 	struct list_head link;
@@ -114,14 +151,20 @@ typedef struct bcm2835_alsa_stream {
 	bcm2835_chip_t *chip;
 	struct snd_pcm_substream *substream;
 
+	struct semaphore buffers_update_sem;
 	struct semaphore control_sem;
-    uint32_t post_control_sem;
 	spinlock_t lock;
+	uint32_t control;
 	uint32_t status;
 	uint32_t dest;
 
 	int open;
 	int running;
+
+#ifdef DUMP_RAW_DATA
+	/* for debug */
+	int file;
+#endif
 	unsigned int pos;
 	unsigned int buffer_size;
 	unsigned int period_size;
@@ -130,10 +173,10 @@ typedef struct bcm2835_alsa_stream {
 	IPC_FIFO_T in_fifo;
 	IPC_FIFO_T out_fifo;
 
+	uint32_t enable_fifo_irq;
 	irq_handler_t fifo_irq_handler;
-	struct tasklet_struct pcm_int_task;
 
-	/* Always contains the buffers that arm can write to */
+	/* Always contains the buffers that we can write */
 	struct list_head buffer_list;
 	uint32_t buffer_count;
 
@@ -150,7 +193,8 @@ int bcm2835_audio_set_params(bcm2835_alsa_stream_t *alsa_stream, uint32_t channe
 int bcm2835_audio_start(bcm2835_alsa_stream_t *alsa_stream);
 int bcm2835_audio_stop(bcm2835_alsa_stream_t *alsa_stream);
 int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void *src);
-void bcm2835_audio_retrieve_buffers(bcm2835_alsa_stream_t *alsa_stream);
+//uint32_t bcm2835_audio_buffers_consumed_bytes(bcm2835_alsa_stream_t *alsa_stream);
+uint32_t bcm2835_audio_retrieve_buffers(bcm2835_alsa_stream_t *alsa_stream);
 void bcm2835_audio_flush_buffers(bcm2835_alsa_stream_t *alsa_stream);
 
 #endif /* __SOUND_ARM_BCM2835_H */

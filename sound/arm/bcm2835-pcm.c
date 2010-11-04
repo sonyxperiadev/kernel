@@ -14,11 +14,11 @@ static struct snd_pcm_hardware snd_bcm2835_playback_hw = {
 	.rate_max =         44100,
 	.channels_min =     1,
 	.channels_max =     2,
-	.buffer_bytes_max = 14336, // Can increase to 128k
-	.period_bytes_min = 2048,
-	.period_bytes_max = 14336, // Can increase to 128k
+	.buffer_bytes_max = 57334, /* Can increase to 128k */
+	.period_bytes_min = 8192,
+	.period_bytes_max = 8192, /* Can increase to 128k */
 	.periods_min =      1,
-	.periods_max =      7,
+	.periods_max =      8,
 };
 
 #if 0
@@ -42,29 +42,6 @@ static struct snd_pcm_hardware snd_bcm2835_capture_hw = {
 };
 #endif
 
-
-void snd_bcm2835_pcm_interrupt_task(unsigned long data)
-{
-	struct snd_pcm_substream *substream = (struct snd_pcm_substream *)data;
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	bcm2835_alsa_stream_t *alsa_stream = runtime->private_data;
-
-	printk(KERN_INFO"%s() .. IN\n", __func__);
-
-	if (alsa_stream->open)
-		bcm2835_audio_retrieve_buffers(alsa_stream);
-
-	printk("pcm int task.. updating pos cur: %d + %d max: %d\n", alsa_stream->pos, alsa_stream->period_size, alsa_stream->buffer_size);
-	alsa_stream->pos += alsa_stream->period_size;
-	alsa_stream->pos %= alsa_stream->buffer_size;
-
-	snd_pcm_period_elapsed(substream);
-
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
-
-	return;
-}
-
 static void snd_bcm2835_playback_free(struct snd_pcm_runtime *runtime)
 {
 	kfree(runtime->private_data);
@@ -73,20 +50,23 @@ static void snd_bcm2835_playback_free(struct snd_pcm_runtime *runtime)
 static irqreturn_t bcm2835_playback_fifo_irq(int irq, void *dev_id)
 {
 	bcm2835_alsa_stream_t *alsa_stream = (bcm2835_alsa_stream_t *)dev_id;
+	uint32_t consumed = 0;
 
-	printk(KERN_INFO"%s() .. IN\n", __func__);
+	audio_debug(" .. IN\n");
 
-//	tasklet_schedule(&alsa_stream->pcm_int_task);
 	if (alsa_stream->open)
-		bcm2835_audio_retrieve_buffers(alsa_stream);
+		consumed = bcm2835_audio_retrieve_buffers(alsa_stream);
 
-	printk("pcm int task.. updating pos cur: %d + %d max: %d\n", alsa_stream->pos, alsa_stream->period_size, alsa_stream->buffer_size);
-	alsa_stream->pos += alsa_stream->period_size;
+	/* We get called only if playback was triggered, So, the number of buffers we retrieve in
+	 * each iteration are the buffers that have been played out already
+	 */
+	audio_info("updating pos cur: %d + %d max: %d\n", alsa_stream->pos, consumed, alsa_stream->buffer_size);
+	alsa_stream->pos += (consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE);
 	alsa_stream->pos %= alsa_stream->buffer_size;
 
 	snd_pcm_period_elapsed(alsa_stream->substream);
 
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
+	audio_debug(" .. OUT\n");
 
 	return IRQ_HANDLED;
 }
@@ -99,21 +79,26 @@ static int snd_bcm2835_playback_open(struct snd_pcm_substream *substream)
 	bcm2835_alsa_stream_t *alsa_stream;
 	int err;
 
-	printk(KERN_INFO"%s() .. IN\n", __func__);
+	audio_debug(" .. IN\n");
 	alsa_stream = kzalloc(sizeof(bcm2835_alsa_stream_t), GFP_KERNEL);
 	if (alsa_stream == NULL) {
 		return -ENOMEM;
 	}
 
+	/* Initialise alsa_stream */
 	alsa_stream->chip = chip;
 	alsa_stream->substream = substream;
 
-	/* Make sure this is locked */
+	sema_init(&alsa_stream->buffers_update_sem, 0);
 	sema_init(&alsa_stream->control_sem, 0);
 	spin_lock_init(&alsa_stream->lock);
-	alsa_stream->post_control_sem = 0;
+	/* Destination is HDMI by default */
 	alsa_stream->dest = AUDIO_DEST_HDMI;
+	/* List of buffers we can write to .. */
 	INIT_LIST_HEAD(&alsa_stream->buffer_list);
+
+	/* Enabled in start trigger, called on each "fifo irq" after that */
+	alsa_stream->enable_fifo_irq = 0;
 	alsa_stream->fifo_irq_handler = bcm2835_playback_fifo_irq;
 	alsa_stream->buffer_count = 0;
 
@@ -121,16 +106,15 @@ static int snd_bcm2835_playback_open(struct snd_pcm_substream *substream)
 	runtime->private_free = snd_bcm2835_playback_free;
 	runtime->hw = snd_bcm2835_playback_hw;
 
-	tasklet_init(&alsa_stream->pcm_int_task, snd_bcm2835_pcm_interrupt_task, (unsigned long)substream);
-	tasklet_enable(&alsa_stream->pcm_int_task);
-
 	err = bcm2835_audio_open(alsa_stream);
 	if (err != 0) {
 		kfree(alsa_stream);
+		return err;
 	}
 	
 	alsa_stream->open = 1;
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
+	audio_debug(" .. OUT\n");
+
 	return err;
 }
 
@@ -142,12 +126,12 @@ static int snd_bcm2835_playback_close(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	bcm2835_alsa_stream_t *alsa_stream = runtime->private_data;
 
-	printk(KERN_INFO"%s() .. IN\n", __func__);
-	printk("Alsa close\n");
+	audio_debug(" .. IN\n");
+	audio_info("Alsa close\n");
 	BUG_ON(alsa_stream->running);
 
-        tasklet_disable_nosync(&alsa_stream->pcm_int_task);
-	tasklet_kill(&alsa_stream->pcm_int_task);
+	alsa_stream->period_size = 0;
+	alsa_stream->buffer_size = 0;
 
 	if (alsa_stream->open) {
 		alsa_stream->open = 0;
@@ -156,7 +140,7 @@ static int snd_bcm2835_playback_close(struct snd_pcm_substream *substream)
 
 	kfree(alsa_stream);
 
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
+	audio_debug(" .. OUT\n");
 	return 0;
 }
 
@@ -192,21 +176,22 @@ static int snd_bcm2835_pcm_hw_params(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	bcm2835_alsa_stream_t *alsa_stream = (bcm2835_alsa_stream_t *)runtime->private_data;
 
-	printk(KERN_INFO"%s() .. IN\n", __func__);
+	audio_debug(" .. IN\n");
 	err = snd_pcm_lib_malloc_pages(substream,
 			params_buffer_bytes(params));
 	if (err < 0) {
-		printk(KERN_ERR"%s: pcm_lib_malloc failed to allocated pages for buffers\n", __func__);
+		audio_error(" pcm_lib_malloc failed to allocated pages for buffers\n");
 		return err;
 	}
 
 	err = bcm2835_audio_set_params(alsa_stream, params_channels(params),
 				params_rate(params), snd_pcm_format_width(params_format(params)));
 	if (err < 0) {
-		printk(KERN_ERR"%s: error setting hw params\n", __func__);
+		audio_error(" error setting hw params\n");
 	}
 
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
+	audio_debug(" .. OUT\n");
+
 	return err;
 }
 
@@ -219,16 +204,15 @@ static int snd_bcm2835_pcm_hw_free(struct snd_pcm_substream *substream)
 /* prepare callback */
 static int snd_bcm2835_pcm_prepare(struct snd_pcm_substream *substream)
 {
-	//    bcm2835_chip_t *chip = snd_pcm_substream_chip(substream);
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	bcm2835_alsa_stream_t *alsa_stream = runtime->private_data;
 
-	printk(KERN_INFO"%s() .. IN\n", __func__);
+	audio_debug(" .. IN\n");
 	alsa_stream->pos = 0;
 	alsa_stream->buffer_size = snd_pcm_lib_buffer_bytes(substream);
 	alsa_stream->period_size = snd_pcm_lib_period_bytes(substream);
 
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
+	audio_debug(" .. OUT\n");
 	return 0;
 }
 
@@ -240,30 +224,30 @@ static int snd_bcm2835_pcm_trigger(struct snd_pcm_substream *substream,
 	bcm2835_alsa_stream_t *alsa_stream = runtime->private_data;
 	int err = 0;
 
-	printk(KERN_INFO"%s() .. IN\n", __func__);
+	audio_debug(" .. IN\n");
 	switch (cmd) {
 		case SNDRV_PCM_TRIGGER_START:
-			printk("bcm2835_AUDIO_TRIGGER_START\n");
+			audio_info("bcm2835_AUDIO_TRIGGER_START\n");
 			if (!alsa_stream->running) {
-				alsa_stream->running = 1;
 				err = bcm2835_audio_start(alsa_stream);
-				if (err != 0)
-					alsa_stream->running = 0;
+				if (err == 0)
+					alsa_stream->running = 1;
 			}
 			break;
 		case SNDRV_PCM_TRIGGER_STOP:
-			printk("bcm2835_AUDIO_TRIGGER_STOP\n");
+			audio_info("bcm2835_AUDIO_TRIGGER_STOP\n");
 			if (alsa_stream->running) {
 				err = bcm2835_audio_stop(alsa_stream);
-				if (err == 0)
-					alsa_stream->running = 0;
+				if (err != 0)
+					audio_error(" Failed to STOP alsa device\n");
+				alsa_stream->running = 0;
 			}
 			break;
 		default:
 			err = -EINVAL;
 	}
 
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
+	audio_debug(" .. OUT\n");
 	return err;
 }
 
@@ -274,10 +258,10 @@ snd_bcm2835_pcm_pointer(struct snd_pcm_substream *substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	bcm2835_alsa_stream_t *alsa_stream = runtime->private_data;
 
-	printk(KERN_INFO"%s() .. IN\n", __func__);
-	printk("pcm_pointer %u\n",  alsa_stream->pos);
+	audio_debug(" .. IN\n");
+	audio_info("pcm_pointer %u\n",  alsa_stream->pos);
 
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
+	audio_debug(" .. OUT\n");
 	return bytes_to_frames(runtime, alsa_stream->pos);
 }
 
@@ -287,8 +271,8 @@ static int snd_bcm2835_pcm_copy(struct snd_pcm_substream *substream, int channel
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	bcm2835_alsa_stream_t *alsa_stream = runtime->private_data;
 
-	printk(KERN_INFO"%s() .. IN\n", __func__);
-	printk("copy... %d\n", frames_to_bytes(runtime, count));
+	audio_debug(" .. IN\n");
+	audio_info("copy... %d\n", frames_to_bytes(runtime, count));
 
 	return bcm2835_audio_write(alsa_stream, frames_to_bytes(runtime, count), src);
 }
@@ -356,7 +340,9 @@ int __devinit snd_bcm2835_new_pcm(bcm2835_chip_t *chip)
 	/* NOTE: this may fail */
 	snd_pcm_lib_preallocate_pages_for_all(pcm, SNDRV_DMA_TYPE_CONTINUOUS,
 				snd_dma_continuous_data(GFP_KERNEL), 64*1024, 64*1024);
-	printk(KERN_INFO"%s() .. OUT\n", __func__);
+
+	audio_debug(" .. OUT\n");
+
 	return 0;
 }
 
