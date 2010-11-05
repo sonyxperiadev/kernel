@@ -44,6 +44,7 @@ static struct snd_pcm_hardware snd_bcm2835_capture_hw = {
 
 static void snd_bcm2835_playback_free(struct snd_pcm_runtime *runtime)
 {
+	audio_alert("Freeing up alsa stream here ..\n");
 	kfree(runtime->private_data);
 }
 
@@ -60,7 +61,8 @@ static irqreturn_t bcm2835_playback_fifo_irq(int irq, void *dev_id)
 	/* We get called only if playback was triggered, So, the number of buffers we retrieve in
 	 * each iteration are the buffers that have been played out already
 	 */
-	audio_info("updating pos cur: %d + %d max: %d\n", alsa_stream->pos, consumed, alsa_stream->buffer_size);
+	audio_info("updating pos cur: %d + %d max: %d\n", alsa_stream->pos,
+				(consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE), alsa_stream->buffer_size);
 	alsa_stream->pos += (consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE);
 	alsa_stream->pos %= alsa_stream->buffer_size;
 
@@ -138,9 +140,13 @@ static int snd_bcm2835_playback_close(struct snd_pcm_substream *substream)
 		bcm2835_audio_close(alsa_stream);
 	}
 
-	kfree(alsa_stream);
+	/*
+	 * Do not free up alsa_stream here, it will be freed up by
+	 * runtime->private_free callback we registered in *_open above
+	 */
 
 	audio_debug(" .. OUT\n");
+
 	return 0;
 }
 

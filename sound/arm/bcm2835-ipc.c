@@ -79,7 +79,7 @@ static irqreturn_t bcm2835_audio_irq(int irq, void *dev_id)
 		}
 
 		/* post semaphore only for enable/disable */
-		if ((old_status ^ alsa_stream->status) & CTRL_EN_MASK) 
+		if ((old_status ^ alsa_stream->status) & CTRL_EN_MASK)
 			up(&alsa_stream->control_sem);
 	}
 
@@ -90,6 +90,7 @@ static irqreturn_t bcm2835_audio_irq(int irq, void *dev_id)
 	}
 
 	audio_debug(" .. OUT\n");
+
 	return IRQ_HANDLED;
 }
 
@@ -131,6 +132,7 @@ int bcm2835_audio_open(bcm2835_alsa_stream_t *alsa_stream)
 	}
 	
 	/* wait for it .. */
+	audio_info("waiting for audio to be enabled ..\n");
 	down(&alsa_stream->control_sem);
 
 	ipc_fifo_setup_no_reset(&alsa_stream->out_fifo, (chip->reg_base + AUDIO_OUT_WRITE_PTR_OFFSET),
@@ -186,24 +188,25 @@ void bcm2835_audio_close(bcm2835_alsa_stream_t *alsa_stream)
 #endif
 	audio_debug(" .. IN\n");
 
-	/* FIXME: ssp
-	 * Do we need to do this ??
-	 */
+	/* Stop period elapsed irqs right now */
+	alsa_stream->enable_fifo_irq = 0;
 
-	/* bcm2835_audio_flush_buffers(alsa_stream); */
+	/* Free up all buffers in our queue */
+	bcm2835_audio_flush_buffers(alsa_stream);
 
 	alsa_stream->control = readl(chip->reg_base + AUDIO_CONTROL_OFFSET);
 
 	alsa_stream->control &= ~(CTRL_EN_MASK);
 	writel(alsa_stream->control, chip->reg_base + AUDIO_CONTROL_OFFSET);
 
-	alsa_stream->enable_fifo_irq = 0;
-
 	/* ring the doorbell */
 	ipc_notify_vc_event(chip->irq);
 
-	/* wait for it .. */
+	/* wait for it .. (with timeout ??) */
+	audio_info("waiting for audio to be disabled ..\n");
 	down(&alsa_stream->control_sem);
+
+	audio_info("Freeing alsa irq (%d)\n", chip->irq);
 
 	free_irq(chip->irq, (void *)alsa_stream);
 
@@ -445,40 +448,28 @@ uint32_t bcm2835_audio_retrieve_buffers(bcm2835_alsa_stream_t *alsa_stream)
 
 void bcm2835_audio_flush_buffers(bcm2835_alsa_stream_t *alsa_stream)
 {
-	bcm2835_chip_t *chip = alsa_stream->chip;
 	struct list_head *p, *next;
 	bcm2835_audio_buffer_t *buffer;
-	AUDIO_FIFO_ENTRY_T entry;
 	unsigned long flags;
 
 	audio_debug(" .. IN\n");
 
 	spin_lock_irqsave(&alsa_stream->lock, flags);
-	bcm2835_audio_fifo_get_lock(alsa_stream);
+
+	audio_info("(%d) buffers still in the queue, flushing them out\n", alsa_stream->buffer_count);
 
 	list_for_each_safe(p, next, &alsa_stream->buffer_list) {
 		buffer = list_entry(p, bcm2835_audio_buffer_t, link);
 
-		entry.buffer_id = buffer->buffer_id;
-		entry.buffer_size = buffer->size;
-		entry.buffer_ptr = buffer->bus_addr;
 		if (buffer->start != NULL)
 			iounmap(buffer->start);
+
 		list_del_init(p);
 		alsa_stream->buffer_count--;
-
-		/* add into out fifo, we know its not full as long as we are
-		 * runnnig this loop
-		 */
-		BUG_ON(ipc_fifo_full(&alsa_stream->out_fifo));
-		ipc_fifo_write(&alsa_stream->out_fifo, &entry);
+		kfree(buffer);
 	}
 
-	bcm2835_audio_fifo_put_lock(alsa_stream);
 	spin_unlock_irqrestore(&alsa_stream->lock, flags);
-	
-	/* ring the doorbell */
-	ipc_notify_vc_event(chip->irq);
 	
 	audio_debug(" .. OUT\n");
 

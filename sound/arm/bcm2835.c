@@ -108,7 +108,7 @@ static int __devinit snd_bcm2835_alsa_probe(struct platform_device *pdev)
 	/* Setup the register base for this chip */
 	chip->reg_base = (void __iomem *)r->start;
 
-	/* Request memory region ?? - Dont do it for now  : ssp*/
+	/* Request memory region ?? - Dont do it for now  : ssp */
 
 	/* get irq */
 	chip->irq = platform_get_irq(pdev, 0);
