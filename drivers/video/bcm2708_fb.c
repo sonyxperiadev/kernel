@@ -29,10 +29,7 @@
 
 #include "bcm2708_fb.h"
 
-#define USE_FB_IRQ 1
-
 struct bcm2708_fb {
-	struct resource *regs_res;
 	struct resource *fbmem_res;
 	phys_addr_t phys_fbbase;
 	void __iomem *reg_base;
@@ -333,14 +330,6 @@ static int bcm2708_fb_probe(struct platform_device *pdev)
 	 */
 	fb->reg_base = (void __iomem *)r->start;
 
-	/* Request memory region */
-	fb->regs_res = request_mem_region_exclusive(r->start, resource_size(r), "bcm2708fb_regs");
-	if (fb->regs_res == NULL) {
-		bcm2708fb_error("Unable to request framebuffer memory region\n");
-		ret = -ENOMEM;
-		goto err_no_mem_region;
-
-	}
 	fb->irq = platform_get_irq(pdev, 0);
 	if(fb->irq < 0) {
 		bcm2708fb_error("Unable to get framebuffer irq resource\n");
@@ -447,12 +436,7 @@ err_ioremap_fbmem_failed:
 err_get_fbmem_resource_failed:
 	disable_fb_device(fb);
 err_enable_fb_failed:
-#ifdef USE_PLAT_IRQ
 	free_irq(fb->irq, (void *)fb);
-#elif defined USE_FB_IRQ
-	free_irq(IPC_TO_IRQ(fb->ipc_id), (void *)fb);
-#endif
-	release_region(fb->regs_res->start, resource_size(fb->regs_res));
 err_no_irq:
 err_no_mem_region:
 err_no_io_base:
@@ -476,7 +460,6 @@ static int __devexit bcm2708_fb_remove(struct platform_device *pdev)
 	iounmap(fb->fb.screen_base);
 	release_region(fb->fbmem_res->start, resource_size(fb->fbmem_res));
 	disable_fb_device(fb);
-	release_region(fb->regs_res->start, resource_size(fb->regs_res));
 	kfree(fb);
 	bcm2708fb_info("BCM2708 FB removed !!\n");
 	return 0;
