@@ -96,6 +96,7 @@ static int snd_bcm2835_playback_open(struct snd_pcm_substream *substream)
 	spin_lock_init(&alsa_stream->lock);
 	/* Destination is HDMI by default */
 	chip->dest = AUDIO_DEST_LOCAL;
+	chip->volume = 100;
 	/* List of buffers we can write to .. */
 	INIT_LIST_HEAD(&alsa_stream->buffer_list);
 

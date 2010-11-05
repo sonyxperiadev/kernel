@@ -123,8 +123,7 @@ int bcm2835_audio_open(bcm2835_alsa_stream_t *alsa_stream)
 
 		alsa_stream->control &= ~(CTRL_MUTE_MASK);
 		alsa_stream->control |= (1 << CTRL_EN_SHIFT);
-		/* default volume .. ?? */
-		writel(100, chip->reg_base + AUDIO_VOLUME_OFFSET);
+		writel(chip->volume, chip->reg_base + AUDIO_VOLUME_OFFSET);
 		writel(alsa_stream->control, chip->reg_base + AUDIO_CONTROL_OFFSET);
 
 		/* ring the doorbell */
