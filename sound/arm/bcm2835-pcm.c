@@ -44,7 +44,7 @@ static struct snd_pcm_hardware snd_bcm2835_capture_hw = {
 
 static void snd_bcm2835_playback_free(struct snd_pcm_runtime *runtime)
 {
-	audio_alert("Freeing up alsa stream here ..\n");
+	audio_info("Freeing up alsa stream here ..\n");
 	kfree(runtime->private_data);
 }
 

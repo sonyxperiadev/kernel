@@ -194,6 +194,10 @@ void bcm2835_audio_close(bcm2835_alsa_stream_t *alsa_stream)
 	/* Free up all buffers in our queue */
 	bcm2835_audio_flush_buffers(alsa_stream);
 
+	/* Wait till we get playback stopped ack .. */
+	audio_info("Waiting for playback to stop ..\n");
+	while (alsa_stream->status & STAT_PLAY_MASK);
+
 	alsa_stream->control = readl(chip->reg_base + AUDIO_CONTROL_OFFSET);
 
 	alsa_stream->control &= ~(CTRL_EN_MASK);
