@@ -124,6 +124,12 @@ static int __devinit snd_bcm2835_alsa_probe(struct platform_device *pdev)
 		goto out_bcm2835_new_pcm;
 	}
 
+    err = snd_bcm2835_new_ctl(chip);
+	if (err < 0) {
+		printk(KERN_ERR"Failed to create new BCM2835 ctl\n");
+		goto out_bcm2835_new_ctl;
+    }
+
 	printk("Creating 4.\n");
 
 	err = snd_card_register(card);
@@ -141,6 +147,7 @@ static int __devinit snd_bcm2835_alsa_probe(struct platform_device *pdev)
 
 out_card_register:
 out_bcm2835_new_pcm:
+out_bcm2835_new_ctl:
 out_get_irq:
 out_get_resource:
 out_bcm2835_create:

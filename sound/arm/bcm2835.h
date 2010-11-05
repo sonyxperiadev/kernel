@@ -116,6 +116,11 @@
 #define AUDIO_DEST_HDMI				(2)
 #define AUDIO_DEST_LOCAL			(0)
 
+typedef enum {
+    PCM_PLAYBACK_VOLUME,
+    PCM_PLAYBACK_MUTE,
+    PCM_PLAYBACK_DEVICE,
+} SND_BCM2835_CTRL_T;
 
 /* this struct is tightly packed - its size is 16bytes */
 typedef struct
@@ -134,6 +139,10 @@ typedef struct bcm2835_chip {
 	void __iomem *reg_base;
 	uint32_t irq;
 	struct resource *regs_resource;
+
+    int volume;
+    int dest;
+    int mute;
 } bcm2835_chip_t;
 
 typedef struct bcm2835_audio_buffer {
@@ -156,7 +165,6 @@ typedef struct bcm2835_alsa_stream {
 	spinlock_t lock;
 	uint32_t control;
 	uint32_t status;
-	uint32_t dest;
 
 	int open;
 	int running;
@@ -182,6 +190,7 @@ typedef struct bcm2835_alsa_stream {
 
 } bcm2835_alsa_stream_t;
 
+int snd_bcm2835_new_ctl(bcm2835_chip_t *chip);
 int snd_bcm2835_new_pcm(bcm2835_chip_t *chip);
 
 void bcm2835_audio_fifo_get_lock(bcm2835_alsa_stream_t *alsa_stream);

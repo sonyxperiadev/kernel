@@ -104,7 +104,7 @@ int bcm2835_audio_open(bcm2835_alsa_stream_t *alsa_stream)
 	bcm2835_chip_t *chip = alsa_stream->chip;
 
 	audio_debug(" .. IN\n");
-	audio_info("dest = %d, reg_base = 0x%08x\n", alsa_stream->dest, (uint32_t)chip->reg_base);
+	audio_info("dest = %d, reg_base = 0x%08x\n", chip->dest, (uint32_t)chip->reg_base);
 	
 	err = request_irq(chip->irq, bcm2835_audio_irq, IRQF_DISABLED, "bcm2835 audio irq", (void *)alsa_stream);
 	if (err < 0) {
@@ -114,7 +114,7 @@ int bcm2835_audio_open(bcm2835_alsa_stream_t *alsa_stream)
 
 
 	/* setup the destination and enable device*/
-	writel(alsa_stream->dest, chip->reg_base + AUDIO_DESTINATION_OFFSET);
+	writel(chip->dest, chip->reg_base + AUDIO_DESTINATION_OFFSET);
 	alsa_stream->control = readl(chip->reg_base + AUDIO_CONTROL_OFFSET);
 	if (alsa_stream->control & CTRL_EN_MASK) {
 		audio_alert("Alsa device was already enabled !\n");
