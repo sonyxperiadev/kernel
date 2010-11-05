@@ -69,6 +69,8 @@
 #define KONA_PKA_VA                 HW_IO_PHYS_TO_VIRT( SEC_PKA_BASE_ADDR )
 #define KONA_PROFTMR_VA             HW_IO_PHYS_TO_VIRT( GTIM_BASE_ADDR )            /* PROFILE TIMER */
 #define KONA_PTIM_VA                HW_IO_PHYS_TO_VIRT( PTIM_BASE_ADDR )            /* Private timer and watchdog */
+#define KONA_PMU_BSC_VA             HW_IO_PHYS_TO_VIRT( PMU_BSC_BASE_ADDR )			/* PMU BSC Controller */ 
+
 #define KONA_ROOT_CLK_VA            HW_IO_PHYS_TO_VIRT( ROOT_CLK_BASE_ADDR )
 #define KONA_ROOT_RST_VA            HW_IO_PHYS_TO_VIRT( ROOT_RST_BASE_ADDR )
 #define KONA_PWM_VA                 HW_IO_PHYS_TO_VIRT( PWM_BASE_ADDR )             /* PWM */

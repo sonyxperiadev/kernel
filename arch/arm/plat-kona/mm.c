@@ -80,6 +80,7 @@ static struct map_desc kona_io_desc[] __initdata =
 	IO_DESC( KONA_OTP_VA, SZ_4K ),
 	IO_DESC( KONA_PKA_VA, SZ_4K ),
 	IO_DESC( KONA_PWM_VA, SZ_4K ),
+	IO_DESC( KONA_PMU_BSC_VA, SZ_4K ),
 	IO_DESC( KONA_ROOT_RST_VA, SZ_4K ),
 	IO_DESC( KONA_RNG_VA, SZ_4K ),
 
