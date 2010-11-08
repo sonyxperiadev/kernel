@@ -374,6 +374,12 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
 	if (err)
 		goto remove;
 
+#ifdef CONFIG_BCM_SDIOWL
+	if ((card->cis.max_dtr == 0) ||
+	    ((!card->cccr.high_speed) && (card->cis.max_dtr > 25000000)) ||
+	    ((!(card->host->caps & MMC_CAP_SD_HIGHSPEED)) && (card->cis.max_dtr > 25000000)))
+		card->cis.max_dtr = 25000000;
+#endif
 	/*
 	 * Change to the card's maximum speed.
 	 */

@@ -23,6 +23,10 @@
 #include "mmc_ops.h"
 #include "sd_ops.h"
 
+#ifdef CONFIG_MMC_BCM_SD
+#include "../host/sdhci.h"
+#endif
+
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
 	0,		0,		0,		0
@@ -255,6 +259,10 @@ static int mmc_switch_hs(struct mmc_card *card)
 	if (card->sw_caps.hs_max_dtr == 0)
 		return 0;
 
+#ifdef CONFIG_MMC_BCM_SD
+	if (card->host->f_max <= SDHCI_HOST_MAX_CLK_LS_MODE)
+		return 0;
+#endif
 	err = -EIO;
 
 	status = kmalloc(64, GFP_KERNEL);

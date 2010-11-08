@@ -50,6 +50,13 @@ struct mmc_ios {
 #define MMC_TIMING_LEGACY	0
 #define MMC_TIMING_MMC_HS	1
 #define MMC_TIMING_SD_HS	2
+#ifdef	 CONFIG_BCM_SDIOWL
+	unsigned char	host_reset;		/* reset host controller */
+
+#define MMC_HOST_RESET_CMD	1
+#define MMC_HOST_RESET_DAT	2
+#define MMC_HOST_RESET_ALL	3
+#endif
 };
 
 struct mmc_host_ops {
