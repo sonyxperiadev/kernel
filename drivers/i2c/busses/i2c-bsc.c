@@ -763,7 +763,7 @@ static int __init bsc_probe(struct platform_device *pdev)
 
    /* get the interrupt number */
    irq = platform_get_irq(pdev, 0);
-   if (!irq)
+   if (irq == -ENXIO)
    {
       dev_err(&pdev->dev, "no irq resource\n");
       return -ENODEV;

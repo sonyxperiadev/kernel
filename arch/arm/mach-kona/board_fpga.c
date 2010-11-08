@@ -46,16 +46,7 @@
 #define KONA_UART0_PA	UARTB_BASE_ADDR
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
 
-/*
- * The BSC index starts from 1 in CHAL, which is really not by
- * convention. Re-define them here to avoid confusions
- */
-#define PHYS_ADDR_BSC0         BSC1_BASE_ADDR
-#define PHYS_ADDR_BSC1         BSC2_BASE_ADDR
 #define BSC_CORE_REG_SIZE      0x100
-
-/* number of I2C adapters (hosts/masters) */
-#define MAX_I2C_ADAPS    2
 
 #define KONA_8250PORT(name)				\
 {								\
@@ -80,8 +71,8 @@ static struct plat_serial8250_port uart_data[] = {
 static struct resource board_i2c0_resource[] = {
    [0] =
    {
-      .start = PHYS_ADDR_BSC0,
-      .end = PHYS_ADDR_BSC0 + BSC_CORE_REG_SIZE - 1,
+      .start = BSC1_BASE_ADDR,
+      .end = BSC1_BASE_ADDR + BSC_CORE_REG_SIZE - 1,
       .flags = IORESOURCE_MEM,
    },
    [1] = 
@@ -95,8 +86,8 @@ static struct resource board_i2c0_resource[] = {
 static struct resource board_i2c1_resource[] = {
    [0] =
    {
-      .start = PHYS_ADDR_BSC1,
-      .end = PHYS_ADDR_BSC1 + BSC_CORE_REG_SIZE - 1,
+      .start = BSC2_BASE_ADDR,
+      .end = BSC2_BASE_ADDR + BSC_CORE_REG_SIZE - 1,
       .flags = IORESOURCE_MEM,
    },
    [1] = 
@@ -107,7 +98,22 @@ static struct resource board_i2c1_resource[] = {
    },
 };
 
-static struct platform_device board_i2c_adap_devices[MAX_I2C_ADAPS] =
+static struct resource board_pmu_bsc_resource[] = {
+   [0] =
+   {
+      .start = PMU_BSC_BASE_ADDR,
+      .end = PMU_BSC_BASE_ADDR + BSC_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = 
+   {
+      .start = BCM_INT_ID_PM_I2C,
+      .end = BCM_INT_ID_PM_I2C,
+      .flags = IORESOURCE_IRQ,
+   },
+};
+
+static struct platform_device board_i2c_adap_devices[] =
 {
    {  /* for BSC0 */
       .name = "bsc-i2c",
@@ -120,6 +126,12 @@ static struct platform_device board_i2c_adap_devices[MAX_I2C_ADAPS] =
       .id = 1,
       .resource = board_i2c1_resource,
       .num_resources	= ARRAY_SIZE(board_i2c1_resource),
+   },
+   {  /* for PMU BSC */
+      .name = "bsc-pmu",
+      .id = 2,
+      .resource = board_pmu_bsc_resource,
+      .num_resources	= ARRAY_SIZE(board_pmu_bsc_resource),
    },
 };
 
