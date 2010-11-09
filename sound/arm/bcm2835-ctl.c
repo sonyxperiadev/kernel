@@ -32,6 +32,7 @@
 #include <sound/pcm_params.h>
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
+#include <sound/tlv.h>
 
 #include "bcm2835.h"
 
@@ -42,8 +43,8 @@ static int snd_bcm2835_ctl_info(struct snd_kcontrol * kcontrol,
 	{
 		uinfo->type					= SNDRV_CTL_ELEM_TYPE_INTEGER;
 		uinfo->count				= 1;
-		uinfo->value.integer.min	= 0;
-		uinfo->value.integer.max	= 100;
+		uinfo->value.integer.min	= -10240;
+		uinfo->value.integer.max	= 2303;
 	}
 	else if (kcontrol->private_value == PCM_PLAYBACK_MUTE)
 	{
@@ -97,15 +98,20 @@ static int snd_bcm2835_ctl_put(struct snd_kcontrol * kcontrol, struct snd_ctl_el
 
 		if (changed || (ucontrol->value.integer.value[0] != chip->volume))
 		{
+			int atten;
+
 			chip->volume = ucontrol->value.integer.value[0];
 			changed = 1;
-			writel(chip->volume, chip->reg_base + AUDIO_VOLUME_OFFSET);
+
+			atten = -((chip->volume << 8) / 100);
+
+			writel(atten, chip->reg_base + AUDIO_VOLUME_OFFSET);
 	}
 
 	}
 	else if (kcontrol->private_value == PCM_PLAYBACK_MUTE)
 	{
-        // Not implemented
+	  // Not implemented
 		if (ucontrol->value.integer.value[0] != chip->mute)
 		{
 			chip->mute = ucontrol->value.integer.value[0];
@@ -128,6 +134,7 @@ static int snd_bcm2835_ctl_put(struct snd_kcontrol * kcontrol, struct snd_ctl_el
 	return changed;
 }
 
+static DECLARE_TLV_DB_SCALE(snd_bcm2835_db_scale, -10240, 1, 1);
 
 static struct snd_kcontrol_new snd_bcm2835_ctl[] __devinitdata =
 {
@@ -135,12 +142,13 @@ static struct snd_kcontrol_new snd_bcm2835_ctl[] __devinitdata =
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
 		.name  = "PCM Playback Volume",
 		.index = 0,
-		.access= SNDRV_CTL_ELEM_ACCESS_READWRITE,
+		.access= SNDRV_CTL_ELEM_ACCESS_READWRITE | SNDRV_CTL_ELEM_ACCESS_TLV_READWRITE,
 		.private_value = PCM_PLAYBACK_VOLUME,
 		.info  = snd_bcm2835_ctl_info,
 		.get   = snd_bcm2835_ctl_get,
 		.put   = snd_bcm2835_ctl_put,
 		.count = 1,
+        .tlv = { .p = snd_bcm2835_db_scale }
 	},
 	{
 		.iface = SNDRV_CTL_ELEM_IFACE_MIXER,
