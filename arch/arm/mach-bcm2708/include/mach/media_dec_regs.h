@@ -17,6 +17,7 @@ FILE DESCRIPTION
 #define MEDIA_DEC_CONTROL_OFFSET                    0x00
    #define MEDIA_DEC_CONTROL_ENABLE_BIT             0x00000001  
    #define MEDIA_DEC_CONTROL_PLAY_BIT               0x00000002
+   #define MEDIA_DEC_CONTROL_BUSY_BIT               0x20000000
    #define MEDIA_DEC_CONTROL_LOCAL_FILEMODE_BIT     0x40000000
    #define MEDIA_DEC_CONTROL_ERROR_BIT              0x80000000
 #define MEDIA_DEC_STATUS_OFFSET                     0x04
@@ -56,17 +57,17 @@ FILE DESCRIPTION
 #define MEDIA_DEC_OUT_FIFO_ENTRY_OFFSET            0x23C
 #define MEDIA_DEC_OUT_FIFO_START_OFFSET            0x240
 
-//8 entries here of 4 words each = 0x80 gap from 0x50
+//0x14 entries here of 0x1c words each = 0x230 gap from 0x50
 #define MEDIA_DEC_OUT_FIFO_OFFSET                  0x250
 
-#define MEDIA_DEC_IN_WRITE_PTR_OFFSET              0x2D0
-#define MEDIA_DEC_IN_READ_PTR_OFFSET               0x2D4
-#define MEDIA_DEC_IN_FIFO_SIZE_OFFSET              0x2D8
-#define MEDIA_DEC_IN_FIFO_ENTRY_OFFSET             0x2DC
-#define MEDIA_DEC_IN_FIFO_START_OFFSET             0x2E0
+#define MEDIA_DEC_IN_WRITE_PTR_OFFSET              0x480
+#define MEDIA_DEC_IN_READ_PTR_OFFSET               0x484
+#define MEDIA_DEC_IN_FIFO_SIZE_OFFSET              0x488
+#define MEDIA_DEC_IN_FIFO_ENTRY_OFFSET             0x48C
+#define MEDIA_DEC_IN_FIFO_START_OFFSET             0x490
 
 //8 entries here of 4 words each = 0x80 gap from 0xF0
-#define MEDIA_DEC_IN_FIFO_OFFSET                   0x2F0
+#define MEDIA_DEC_IN_FIFO_OFFSET                   0x4A0
 
 //video types
 

@@ -10,11 +10,15 @@
 #include <linux/miscdevice.h>
 #include <linux/vmalloc.h>
 #include <linux/string.h>
+#include <linux/spinlock.h>
 
 #include <asm/bug.h>
+#include <asm/io.h>
+#include <asm/atomic.h>
 
 #include <mach/media_dec_regs.h>
 #include <mach/ipc.h>
+#include <mach/fifo.h>
 
 #include "bcm2708_mdec.h"
 
@@ -35,16 +39,236 @@
 #define VC_MFS_SD_PREFIX "/mfs/sd/"	/* the path for mdeia file on VC SD card. */
 
 #define MEDIA_DEC_TEST_REGISTER_RW(offset)	\
-	(*((volatile u32 *)((u32)g_mdec->reg_base + (offset))))
+	(*((volatile unsigned long *)((u32)g_mdec->reg_base + (offset))))
 
+struct play_data_request {
+	void			*buf;
+	unsigned int		buf_size;
+	struct completion	*cmpl;
+	struct list_head	node;
+};
+
+/* TODO:
+ * save the global into dev 
+ * save per task into filp
+ * then we do not need to have global hanging around and we can also
+ * manage more than one process or open/close
+ */
+ 
 struct bcm2708_mdec {
-        u32		irq;
-        void __iomem	*reg_base;
-	char 		ioctl_cmd_buf[MAX_BCM2708_MDEC_IOCTL_CMD_SIZE];
+        u32			irq;
+        void __iomem		*reg_base;
+	struct semaphore	vc_ack_sem;	
+	struct semaphore	vc_buf_sem;
+	spinlock_t		vc_fifo_lock;
+	IPC_FIFO_T		vc_to_arm_fifo;
+	spinlock_t		arm_fifo_lock;
+	IPC_FIFO_T		arm_to_vc_fifo;
+	atomic_t		sequence_num;
+	char 			ioctl_cmd_buf[MAX_BCM2708_MDEC_IOCTL_CMD_SIZE];
 };
 
 /* hacky here; needs to make a per thread buffer */
 static struct bcm2708_mdec *g_mdec = NULL;
+
+static inline void dump_vc_to_arm_fifo(void)
+{
+#if BCM2708MDEC_DEBUG
+        printk(KERN_ERR "vc_to_arm_fifo: write=0x%08x           read=0x%08x\n"
+                                        "base=0x%08x            size=0x%08x\n"
+                                        "entry_size=0x%08x\n",
+                                        (u32)g_mdec->vc_to_arm_fifo.write, (u32)g_mdec->vc_to_arm_fifo.read,
+                                        (u32)g_mdec->vc_to_arm_fifo.base, g_mdec->vc_to_arm_fifo.size,
+                                        g_mdec->vc_to_arm_fifo.entry_size);
+#endif
+}
+
+static inline void dump_arm_to_vc_fifo(void)
+{
+#if BCM2708MDEC_DEBUG
+        printk(KERN_ERR "arm_to_vc_fifo: write=0x%08x           read=0x%08x\n"
+                                        "base=0x%08x            size=0x%08x\n"
+                                        "entry_size=0x%08x\n",
+                                        (u32)g_mdec->arm_to_vc_fifo.write, (u32)g_mdec->arm_to_vc_fifo.read,
+                                        (u32)g_mdec->arm_to_vc_fifo.base, g_mdec->arm_to_vc_fifo.size,
+                                        g_mdec->arm_to_vc_fifo.entry_size);
+#endif
+}
+
+static inline void dump_fifo_entry(MEDIA_DEC_FIFO_ENTRY_T *entry)
+{
+#if BCM2708MDEC_DEBUG
+        printk(KERN_ERR "fifo entry:    buffer_id=0x%08x                buffer_size=0x%08x\n"
+                                        "buffer_filled=0x%08x           buffer_ptr=0x%08x\n"
+                                        "timestamp=0x%08x\n",
+                                        entry->buffer_id, entry->buffer_size,
+                                        entry->buffer_filled_size, entry->buffer_ptr,
+                                        entry->timestamp);
+#endif
+}
+
+static inline int notify_vc_and_wait_for_ack(void)
+{
+	int ret = 0;
+
+	ipc_notify_vc_event(g_mdec->irq);
+	
+	ret = down_timeout(&g_mdec->vc_ack_sem, HZ * 3);
+	if (ret)
+		bcm2708mdec_error("Faided to acquire the semaphore, probably VC side is pegged!");
+	
+	return ret;
+}
+
+
+static int player_setup(bcm2708_mdec_setup_t *setup_cmd)
+{
+	int ret = 0;
+
+	bcm2708mdec_dbg("player setup with video_type=%d audio_type=%d\n", 
+				setup_cmd->video_type,
+				setup_cmd->audio_type);
+
+        /* Set up the debug mode */
+        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_DEBUG_MASK ) = 0;
+
+        /* Set up the src width as 0xFFFFFFFF (ignore) */
+        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_X_OFFSET ) = 0xFFFFFFFF;
+        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_Y_OFFSET ) = 0xFFFFFFFF;
+        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_WIDTH_OFFSET ) = 0xFFFFFFFF;
+        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_HEIGHT_OFFSET ) = 0xFFFFFFFF;
+
+        /* Set up the target codec */
+        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_VID_TYPE ) = setup_cmd->video_type;
+        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_AUD_TYPE ) = setup_cmd->audio_type;
+
+        /* Enable the mode */
+        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = MEDIA_DEC_CONTROL_ENABLE_BIT;
+
+	mb();
+
+	ret = notify_vc_and_wait_for_ack();
+
+	BUG_ON((MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1);
+
+	/* FIFO is set up on the VC side after enabl bit is set. */
+        ipc_fifo_setup_no_reset(&g_mdec->vc_to_arm_fifo,
+                        &MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_WRITE_PTR_OFFSET),
+                        &MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_READ_PTR_OFFSET),
+                        ipc_bus_to_virt(MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_FIFO_START_OFFSET)),
+                        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_FIFO_SIZE_OFFSET),
+                        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_FIFO_ENTRY_OFFSET));
+
+        ipc_fifo_setup_no_reset(&g_mdec->arm_to_vc_fifo,
+                        &MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_WRITE_PTR_OFFSET),
+                        &MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_READ_PTR_OFFSET),
+                        ipc_bus_to_virt(MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_FIFO_START_OFFSET)),
+                        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_FIFO_SIZE_OFFSET),
+                        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_FIFO_ENTRY_OFFSET));
+
+	return ret;
+}
+
+static int player_start(void)
+{
+	int ret = 0;
+
+	bcm2708mdec_dbg("player start\n");
+
+        /* start to play */
+        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_CONTROL_OFFSET) |= MEDIA_DEC_CONTROL_PLAY_BIT;
+
+	mb();
+
+        ret = notify_vc_and_wait_for_ack();
+
+        WARN_ON((MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & MEDIA_DEC_CONTROL_PLAY_BIT) != MEDIA_DEC_CONTROL_PLAY_BIT);
+
+	return ret;
+}
+
+static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd)
+{
+	MEDIA_DEC_FIFO_ENTRY_T entry;
+	unsigned long flags, copy_bytes, total_bytes;
+	void 	*buf_virt, *copy_ptr;
+	int ret = 0;
+
+	if (0 == send_data_cmd->data_size)
+		return 0;
+
+	bcm2708mdec_dbg("player send data with buf=0x%08x and size=0x%08x\n", 
+				(u32)send_data_cmd->data_buf,
+				send_data_cmd->data_size);
+
+	memset(&entry, 0, sizeof(&entry));
+	total_bytes = send_data_cmd->data_size;
+	copy_ptr = send_data_cmd->data_buf;
+
+	/*
+	 * Spinlock is used to protect against simualtenious access from 
+	 * ARM side. And once the thread is waken up, it needs to check if
+	 * FIFO is still empty because of potential access from other thread, or
+	 * the wake up interrupt is an extra one.
+	 */
+	do {
+		spin_lock_irqsave(&g_mdec->vc_fifo_lock, flags);
+		if (!ipc_fifo_empty(&g_mdec->vc_to_arm_fifo)) {
+			ipc_fifo_read(&g_mdec->vc_to_arm_fifo, &entry);
+			BUG_ON(0 == entry.buffer_size);
+			spin_unlock_irqrestore(&g_mdec->vc_fifo_lock, flags);
+		} else {
+			spin_unlock_irqrestore(&g_mdec->vc_fifo_lock, flags);		
+			ret = down_interruptible(&g_mdec->vc_buf_sem);
+			if (ret < 0)
+				return -ERESTARTSYS;
+			else {
+				continue;
+			}
+		}
+		copy_bytes = (entry.buffer_size > total_bytes)?
+				total_bytes:entry.buffer_size; 
+
+		BUG_ON(0UL == entry.buffer_ptr);
+	
+		buf_virt = ioremap(__bus_to_phys(entry.buffer_ptr), copy_bytes);
+		if (NULL == buf_virt) {
+	                bcm2708mdec_error("failed to map the memory\n");
+        	        return -ENOMEM;
+        	}
+                bcm2708mdec_dbg("VC buffer bus addr=0x%08x, virt addr=0x%08x\n", 
+				(u32)entry.buffer_ptr, (u32)buf_virt);
+
+		if (copy_from_user(buf_virt, copy_ptr, copy_bytes)) {
+			bcm2708mdec_error("failed to copy the user data\n");
+			iounmap(buf_virt);
+			return -EFAULT;
+		}
+		entry.buffer_filled_size	= copy_bytes;
+		entry.sequence_number		= atomic_add_return(1, &g_mdec->sequence_num);
+		entry.timestamp			= 0;
+		iounmap(buf_virt);
+
+		total_bytes -= copy_bytes;
+		copy_ptr = (void *)((u32)copy_ptr + copy_bytes);
+
+		/* Now put the filled buf into output fifo; and we assume that
+ 		 * there should be a slot in the input FIFO. 
+ 		 * Afterwards, tell VC about this buffer with ringing doorbell.
+ 		 */
+                spin_lock_irqsave(&g_mdec->arm_fifo_lock, flags);
+                BUG_ON(1 == ipc_fifo_full(&g_mdec->arm_to_vc_fifo));
+		ipc_fifo_write(&g_mdec->arm_to_vc_fifo, &entry);
+		spin_unlock_irqrestore(&g_mdec->arm_fifo_lock, flags);
+
+		mb();
+
+		ipc_notify_vc_event(g_mdec->irq);
+
+	} while (total_bytes > 0);
+
+	return 0;
+}
 
 static int do_playback(bcm2708_mdec_play_t *play_cmd)
 {
@@ -128,11 +352,13 @@ static int do_playback(bcm2708_mdec_play_t *play_cmd)
 }
 
 
-static int do_playback_teardown(void)
+static int player_stop(void)
 {
-	BUG_ON(0x1 != (0x1 & MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET )));
+	WARN_ON(0x1 != (0x1 & MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET )));
 
 	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0;
+
+	mb();
 
         ipc_notify_vc_event(g_mdec->irq);
 
@@ -157,7 +383,7 @@ static int mdec_release( struct inode *inode, struct file *file_id )
 {
 	int ret = 0;
 
-	ret = do_playback_teardown();	
+	ret = player_stop();	
 	
 	return ret;
 }
@@ -178,13 +404,31 @@ static int mdec_ioctl( struct inode *inode, struct file *file_id, unsigned int c
 	unsigned long uncopied;
 
 	BUG_ON(MAX_BCM2708_MDEC_IOCTL_CMD_SIZE < _IOC_SIZE(cmd));
-	uncopied = 
-		copy_from_user(g_mdec->ioctl_cmd_buf, (void *)arg, _IOC_SIZE(cmd));
-	if (uncopied != 0)
-		return -EFAULT;
+	if (0 != _IOC_SIZE(cmd)) {
+		uncopied = 
+			copy_from_user(g_mdec->ioctl_cmd_buf, (void *)arg, _IOC_SIZE(cmd));
+		if (uncopied != 0)
+			return -EFAULT;
+	}
 
 	switch (cmd) {
-	case MDEC_IOCTL_PLAY:
+        case MDEC_IOCTL_PLAYER_SETUP:
+                ret = player_setup((bcm2708_mdec_setup_t *)g_mdec->ioctl_cmd_buf);
+                break;
+
+        case MDEC_IOCTL_PLAYER_START:
+                ret = player_start();
+                break;
+
+        case MDEC_IOCTL_PLAYER_SEND_DATA:
+                ret = player_send_data((bcm2708_mdec_send_data_t *)g_mdec->ioctl_cmd_buf);
+                break;
+
+        case MDEC_IOCTL_PLAYER_STOP:
+                ret = player_stop();
+                break;
+
+	case MDEC_IOCTL_PLAYER_LOCAL_DBG:
 		do_playback((bcm2708_mdec_play_t *)g_mdec->ioctl_cmd_buf);
 		break; 
 
@@ -290,7 +534,7 @@ static int mdec_proc_write(struct file *file, const char *buffer, unsigned long 
    do_playback(&cmd);
    } else
    {
-	do_playback_teardown();	
+	player_stop();	
    }
 
    vfree(init_string);
@@ -302,6 +546,9 @@ static int mdec_proc_write(struct file *file, const char *buffer, unsigned long 
 static irqreturn_t bcm2708_mdec_isr(int irq, void *dev_id)
 {
 	bcm2708mdec_dbg("The MDEC device rxed one interrupt");
+
+	up(&g_mdec->vc_ack_sem);
+	up(&g_mdec->vc_buf_sem);
 
 	return IRQ_HANDLED;
 }
@@ -350,6 +597,11 @@ static int bcm2708_mdec_probe(struct platform_device *pdev)
                 goto err_no_irq;
         }
 
+	sema_init(&g_mdec->vc_ack_sem, 0);
+	sema_init(&g_mdec->vc_buf_sem, 0);
+	spin_lock_init(&g_mdec->vc_fifo_lock);
+	spin_lock_init(&g_mdec->arm_fifo_lock);
+	atomic_set(&g_mdec->sequence_num, 0);
 
 	ret = misc_register(&mdec_misc_dev);
 	if (ret < 0) {
