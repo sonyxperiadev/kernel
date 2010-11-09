@@ -94,9 +94,9 @@ static int snd_bcm2835_playback_open(struct snd_pcm_substream *substream)
 	sema_init(&alsa_stream->buffers_update_sem, 0);
 	sema_init(&alsa_stream->control_sem, 0);
 	spin_lock_init(&alsa_stream->lock);
-	/* Destination is HDMI by default */
+
 	chip->dest = AUDIO_DEST_LOCAL;
-	chip->volume = 100;
+	chip->volume = 0;
 	/* List of buffers we can write to .. */
 	INIT_LIST_HEAD(&alsa_stream->buffer_list);
 
@@ -114,7 +114,7 @@ static int snd_bcm2835_playback_open(struct snd_pcm_substream *substream)
 		kfree(alsa_stream);
 		return err;
 	}
-	
+
 	alsa_stream->open = 1;
 	audio_debug(" .. OUT\n");
 
@@ -131,7 +131,18 @@ static int snd_bcm2835_playback_close(struct snd_pcm_substream *substream)
 
 	audio_debug(" .. IN\n");
 	audio_info("Alsa close\n");
-	BUG_ON(alsa_stream->running);
+
+	/*
+	 * Call stop if it's still running. This happens when app
+	 * is force killed and we don't get a stop trigger.
+	 */
+	if (alsa_stream->running) {
+		int err;
+		err = bcm2835_audio_stop(alsa_stream);
+		alsa_stream->running = 0;
+		if (err != 0)
+			audio_error(" Failed to STOP alsa device\n");
+	}
 
 	alsa_stream->period_size = 0;
 	alsa_stream->buffer_size = 0;
