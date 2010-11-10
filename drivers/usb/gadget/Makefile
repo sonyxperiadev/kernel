@@ -15,6 +15,12 @@ obj-$(CONFIG_USB_GOKU)		+= goku_udc.o
 obj-$(CONFIG_USB_OMAP)		+= omap_udc.o
 obj-$(CONFIG_USB_LH7A40X)	+= lh7a40x_udc.o
 obj-$(CONFIG_USB_S3C2410)	+= s3c2410_udc.o
+obj-$(CONFIG_USB_DWC_OTG)	:= dwc_otg.o
+dwc_otg-y			:= dwc_otg_driver.o dwc_otg_attr.o dwc_otg_cil.o dwc_otg_cil_intr.o dwc_otg_pcd.o dwc_otg_pcd_intr.o  dwc_otg_hcd.o dwc_otg_hcd_intr.o dwc_otg_hcd_queue.o
+ifeq ($(CONFIG_ARCH_KONA),y)
+obj-m						+= kona_otg_device.o
+endif
+obj-$(CONFIG_USB_BCMRING_UDC)	+= bcm_udc_dwc.o
 obj-$(CONFIG_USB_AT91)		+= at91_udc.o
 obj-$(CONFIG_USB_ATMEL_USBA)	+= atmel_usba_udc.o
 obj-$(CONFIG_USB_FSL_USB2)	+= fsl_usb2_udc.o
