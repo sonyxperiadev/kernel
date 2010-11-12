@@ -90,7 +90,10 @@ static struct map_desc kona_io_desc[] __initdata =
 	* and KONA_PTIM aka os tick timer
 	*/
 	IO_DESC( KONA_SCU_VA, SZ_4K ),
-
+	IO_DESC( KONA_SDIO1_VA, SZ_64K ),
+	IO_DESC( KONA_SDIO2_VA, SZ_64K ),
+	IO_DESC( KONA_SDIO3_VA, SZ_64K ),
+	IO_DESC( KONA_SDIO4_VA, SZ_64K ),
 	IO_DESC( KONA_SEC_VA, SZ_4K ),
 	IO_DESC( KONA_SECWD_VA, SZ_4K ),
 	IO_DESC( KONA_SPUM_NS_VA, SZ_64K ),
