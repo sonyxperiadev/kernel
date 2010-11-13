@@ -32,5 +32,6 @@
 #include <mach/brcm_rdb_kona_gptimer.h>
 #include <mach/brcm_rdb_glbtmr.h>
 #include <mach/brcm_rdb_sysmap.h>
+#include <mach/brcm_rdb_gpio.h>
 
 #endif /* __PLAT_KONA_REG_KONA_H */

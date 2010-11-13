@@ -797,6 +797,8 @@ config PLAT_SPEAR
 config ARCH_KONA
 	bool "Broadcom KONA Architecture"
 	depends on MMU
+	select GENERIC_GPIO
+	select ARCH_REQUIRE_GPIOLIB
 	help
 	  This enables support for system based on Broadcom KONA architecture
 
