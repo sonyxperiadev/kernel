@@ -31,6 +31,7 @@
 #include <linux/types.h>
 
 #include <asm/io.h>
+#include <asm/smp_twd.h>
 #include <asm/mach/time.h>
 
 #include <mach/timer.h>
@@ -249,6 +250,9 @@ static struct irqaction gptimer_irq = {
 
 static void __init kona_timer_init(void)
 {
+#ifdef CONFIG_LOCAL_TIMERS
+    twd_base = __io(KONA_PTIM_VA);
+#endif	
 	timers_init();
 	gptimer_clockevents_init();
 	setup_irq(timers.gptmr_irq, &gptimer_irq);

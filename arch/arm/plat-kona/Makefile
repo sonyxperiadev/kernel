@@ -13,5 +13,6 @@
 #*****************************************************************************
 
 obj-$(CONFIG_PLAT_KONA) := mm.o irq.o timer.o
-
+obj-$(CONFIG_SMP) += headsmp.o smp.o
+obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
 obj-$(CONFIG_USB_GADGET_DWC_OTG) += lm.o 
