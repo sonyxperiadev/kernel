@@ -24,7 +24,7 @@
 #include <mach/memory.h>
 #include <mach/irqs.h>
 #include <mach/ipc.h>
-#include <mach/input_server_cfg.h>
+#include <mach/input_ipc_cfg.h>
 
 #define DEBUG_BCM2835_INPUT_DRIVER 0
 

@@ -11,13 +11,14 @@ FILE DESCRIPTION
 Input service, server side API 
 Dependency: HDMI/HDCP VEC middleware
 =============================================================================*/
-#ifndef _INPUT_SERVER_CFG_H_
-#define _INPUT_SERVER_CFG_H_
+#ifndef _INPUT_IPC_CFG_H_
+#define _INPUT_IPC_CFG_H_
 
 // Select what sources of events the input service should pass to the ARM
 #define INPUT_WANT_REMOTE
 //#define INPUT_WANT_KEYBOARD
 //#define INPUT_WANT_MOUSE
+#define INPUT_WANT_RAW_REMOTE
 
 // Marker for upper word of our magic values bounding shared data
 #ifndef INPUT_MAGIC_HEADER
@@ -53,11 +54,20 @@ Dependency: HDMI/HDCP VEC middleware
 #define INPUT_MOUSE_ID (0x02)
 #endif
 
+// Raw IR remote control defaults
+#ifndef INPUT_RAW_REMOTE_ID
+#define INPUT_RAW_REMOTE_ID (0x03)
+#endif
+
 typedef struct {
    uint32_t    ident;            // The ID of the event source (e.g. INPUT_KEYBOARD_ID)
    uint32_t    offset;           // The offset in shared memory, in bytes, where the
                                  // FIFO is located.
 } input_dir_entry_t;
+
+#define INPUT_DIR_ENTRY_SIZE   (8)     // bytes
+#define INPUT_DIR_ENTRY_IDENT_OFFSET (0x00)
+#define INPUT_DIR_ENTRY_OFFSET_OFFSET (0x04)
 
 // There is one input_directory_t structure located at byte offset 0 in the shared memory. It
 // contains information about the devices that may be sending input events and the location
@@ -70,11 +80,19 @@ typedef struct {
                                  // value as the magic field at the beginning of this structure
 } input_directory_t;
 
+#define INPUT_DIR_MAGIC_OFFSET (0x00)
+#define INPUT_DIR_COUNT_OFFSET (0x04)
+#define INPUT_DIR_ENTRY_OFFSET (0x08)
+
 typedef struct {
    uint32_t    type;             // EV_REP or EV_KEY
    uint32_t    code;             // One of the KEY_nnnn values from input_linux_events.h (VC)
                                  // or 2835-kernel-2.6.32/include/linux/input.h
 } input_event_t;
+
+#define INPUT_EVENT_TYPE_OFFSET  (0x00)
+#define INPUT_EVENT_CODE_OFFSET  (0x04)
+#define INPUT_EVENT_SIZE         (0x08)
 
 typedef struct {
    uint32_t       magic;                  // Marker for FIFO. Upper bytes are INPUT_MAGIC_HEADER
@@ -85,4 +103,9 @@ typedef struct {
    input_event_t  data[INPUT_FIFO_SIZE];  // The event queue
 } input_fifo_t;
 
-#endif   // _INPUT_SERVER_CFG_H_
+#define INPUT_FIFO_MAGIC_OFFSET     (0x00)
+#define INPUT_FIFO_COUNT_OFFSET     (0x04)
+#define INPUT_FIFO_INDEX_IN_OFFSET  (0x08)
+#define INPUT_FIFO_INDEX_OUT_OFFSET (0x0C)
+#define INPUT_FIFO_DATA_OFFSET      (0x10)
+#endif   // _INPUT_IPC_CFG_H_
