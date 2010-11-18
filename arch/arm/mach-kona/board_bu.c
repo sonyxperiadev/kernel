@@ -173,11 +173,7 @@ void __init board_init(void)
 }
 
 
-#ifdef CONFIG_MACH_BCM2850_FPGA
-MACHINE_START(BCM2850_FPGA, "bcm2850_fpga")
-#else
 MACHINE_START(BCM2850, "bcm2850")
-#endif
 	.phys_io = IO_START,
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,

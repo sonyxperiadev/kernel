@@ -168,7 +168,7 @@ void __init board_init(void)
 	return;
 }
 
-MACHINE_START(BCM2850_FPGA, "bcm2850_fpga")
+MACHINE_START(BCM2850, "bcm2850")
 	.phys_io = IO_START,
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,

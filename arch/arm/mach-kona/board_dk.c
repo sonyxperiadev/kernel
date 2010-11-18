@@ -159,7 +159,7 @@ static struct platform_device *board_devices[] __initdata = {
 	&board_serial_device,
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
-        &board_i2c_adap_devices[2],
+    &board_i2c_adap_devices[2],
 };
 
 static void __init board_add_devices(void)
