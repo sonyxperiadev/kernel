@@ -28,7 +28,7 @@
 #include <mach/input_ipc_cfg.h>
 #include "bcm2835_ir_remote.h"
 
-#define BCM2835_INPUT_DEBUG 1
+#define BCM2835_INPUT_DEBUG 0
 
 #define BCM2835_IR_DRIVER_NAME "bcm2835_INPT"
 #define BCM2835_IR_MISC_DRIVER_NAME "bcm2835_ir_remote"
@@ -148,8 +148,6 @@ static irqreturn_t bcm2835_input_isr(int irq, void *dev_id)
 {
 	struct bcm_input_device *bcm_input = (struct bcm_input_device *)dev_id;
 
-	bcm2835_ir_dbg("We got some input event in ISR\n");
-
 	up(&bcm_input->fifo_sem);
 	
 	return IRQ_HANDLED;
@@ -206,6 +204,8 @@ static int read_event(bcm2835_ir_remote_event_t *entry)
                 spin_lock_irqsave(&g_bcm_input->fifo_lock, flags);
                 if (!input_fifo_empty(fifo_p)) {
                         ret = input_fifo_get(fifo_p, entry);
+			bcm2835_ir_dbg("entry got type=0x%08x code=0x%08x\n", 
+				entry->type, entry->code);
                         BUG_ON(-1 == ret);
                         spin_unlock_irqrestore(&g_bcm_input->fifo_lock, flags);
 			break;
@@ -229,7 +229,11 @@ static int ir_ioctl( struct inode *inode, struct file *file_id, unsigned int cmd
         unsigned long uncopied;
 
         BUG_ON(MAX_BCM2835_IR_REMOTE_IOCTL_CMD_SIZE < _IOC_SIZE(cmd));
-        if ((IOC_IN == _IOC_DIR(cmd)) && (0 != _IOC_SIZE(cmd))) {
+
+        bcm2835_ir_dbg("the ret value =%d and the direct is %s\n", ret, (IOC_OUT == _IOC_DIR(cmd))?"OUT":"IN");
+
+
+        if ((_IOC_WRITE & _IOC_DIR(cmd)) && (0 != _IOC_SIZE(cmd))) {
                 uncopied =
                         copy_from_user(g_bcm_input->ioctl_cmd_buf, (void *)arg, _IOC_SIZE(cmd));
                 if (uncopied != 0)
@@ -239,6 +243,10 @@ static int ir_ioctl( struct inode *inode, struct file *file_id, unsigned int cmd
         switch (cmd) {
         case IOCTL_IR_REMOTE_GET_EV:
                 ret = read_event((bcm2835_ir_remote_event_t *)g_bcm_input->ioctl_cmd_buf);
+		bcm2835_ir_dbg("the size of cmd is =0x%08x, and type= 0x%08x code = 0x%08x\n",
+			_IOC_SIZE(cmd),
+			((bcm2835_ir_remote_event_t *)g_bcm_input->ioctl_cmd_buf)->type,
+			 ((bcm2835_ir_remote_event_t *)g_bcm_input->ioctl_cmd_buf)->code);
                 break;
 
         default:
@@ -247,11 +255,13 @@ static int ir_ioctl( struct inode *inode, struct file *file_id, unsigned int cmd
                 break;
         }
 
+	bcm2835_ir_dbg("the ret value =%d and the direct is %s\n", ret, (IOC_OUT == _IOC_DIR(cmd))?"OUT":"IN");
+
 	if (ret < 0) {
 		return ret;
 	}
 	else {
-		if ((IOC_OUT == _IOC_DIR(cmd)) && (0 != _IOC_SIZE(cmd))) {
+		if ((_IOC_READ & _IOC_DIR(cmd)) && (0 != _IOC_SIZE(cmd))) {
                 	uncopied = 
                         	copy_to_user((void *)arg, g_bcm_input->ioctl_cmd_buf, _IOC_SIZE(cmd));
                 	if (uncopied != 0)
@@ -337,6 +347,7 @@ static int bcm2835_input_probe(struct platform_device *pdev)
 	for (num_input_src--; num_input_src >= 0; num_input_src--) {
 		if (input_dir->entry[num_input_src].ident == INPUT_RAW_REMOTE_ID) { 
 		        bcm_input->fifo_offset = input_dir->entry[num_input_src].offset;
+			bcm2835_ir_dbg("the offset is 0x%08x\n", bcm_input->fifo_offset);
 			break;
 		}
 	}
