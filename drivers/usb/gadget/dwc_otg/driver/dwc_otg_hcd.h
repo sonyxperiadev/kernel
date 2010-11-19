@@ -1,13 +1,13 @@
 /* ==========================================================================
- * $File: //dwh/usb_iip/dev/software/otg_ipmate/linux/drivers/dwc_otg_hcd.h $
- * $Revision: #6 $
- * $Date: 2006/12/05 $
- * $Change: 762293 $
+ * $File: //dwh/usb_iip/dev/software/otg/linux/drivers/dwc_otg_hcd.h $
+ * $Revision: #53 $
+ * $Date: 2010/03/09 $
+ * $Change: 1458980 $
  *
  * Synopsys HS OTG Linux Software Driver and documentation (hereinafter,
  * "Software") is an Unsupported proprietary work of Synopsys, Inc. unless
  * otherwise expressly agreed to in writing between Synopsys and you.
- * 
+ *
  * The Software IS NOT an item of Licensed Software or Licensed Product under
  * any End User Software License Agreement or Agreement for Licensed Product
  * with Synopsys or any supplement thereto. You are permitted to use and
@@ -17,7 +17,7 @@
  * any information contained herein except pursuant to this license grant from
  * Synopsys. If you do not agree with this notice, including the disclaimer
  * below, then you are not authorized to use the Software.
- * 
+ *
  * THIS SOFTWARE IS BEING DISTRIBUTED BY SYNOPSYS SOLELY ON AN "AS IS" BASIS
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -31,21 +31,13 @@
  * DAMAGE.
  * ========================================================================== */
 #ifndef DWC_DEVICE_ONLY
-#if !defined(__DWC_HCD_H__)
+#ifndef __DWC_HCD_H__
 #define __DWC_HCD_H__
 
-#include <linux/list.h>
-#include <linux/usb.h>
-
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,34)
-#include <linux/usb/hcd.h>
-#else
-#include <../drivers/usb/core/hcd.h>
-#endif
-
-struct lm_device;
-struct dwc_otg_device;
-
+#include <usb.h>
+#include "dwc_otg_hcd_if.h"
+#include "dwc_otg_core_if.h"
+#include "dwc_list.h"
 #include "dwc_otg_cil.h"
 
 /**
@@ -59,6 +51,110 @@ struct dwc_otg_device;
  * It isolates the USBD from the specifics of the controller by providing an
  * API to the USBD.
  */
+
+struct dwc_otg_hcd_pipe_info {
+	uint8_t dev_addr;
+	uint8_t ep_num;
+	uint8_t pipe_type;
+	uint8_t pipe_dir;
+	uint16_t mps;
+};
+
+struct dwc_otg_hcd_iso_packet_desc {
+	uint32_t offset;
+	uint32_t length;
+	uint32_t actual_length;
+	uint32_t status;
+};
+
+struct dwc_otg_qtd;
+
+struct dwc_otg_hcd_urb {
+	void *priv;
+	struct dwc_otg_qtd *qtd;
+	void *buf;
+	dwc_dma_t dma;
+	void *setup_packet;
+	dwc_dma_t setup_dma;
+	uint32_t length;
+	uint32_t actual_length;
+	uint32_t status;
+	uint32_t error_count;
+	uint32_t packet_count;
+	uint32_t flags;
+	uint16_t interval;
+	struct dwc_otg_hcd_pipe_info pipe_info;
+	struct dwc_otg_hcd_iso_packet_desc iso_descs[0];
+};
+
+static inline uint8_t dwc_otg_hcd_get_ep_num(struct dwc_otg_hcd_pipe_info *pipe)
+{
+	return pipe->ep_num;
+}
+
+static inline uint8_t dwc_otg_hcd_get_pipe_type(struct dwc_otg_hcd_pipe_info
+						*pipe)
+{
+	return pipe->pipe_type;
+}
+
+static inline uint16_t dwc_otg_hcd_get_mps(struct dwc_otg_hcd_pipe_info *pipe)
+{
+	return pipe->mps;
+}
+
+static inline uint8_t dwc_otg_hcd_get_dev_addr(struct dwc_otg_hcd_pipe_info
+					       *pipe)
+{
+	return pipe->dev_addr;
+}
+
+static inline uint8_t dwc_otg_hcd_is_pipe_isoc(struct dwc_otg_hcd_pipe_info
+					       *pipe)
+{
+	return (pipe->pipe_type == UE_ISOCHRONOUS);
+}
+
+static inline uint8_t dwc_otg_hcd_is_pipe_int(struct dwc_otg_hcd_pipe_info
+					      *pipe)
+{
+	return (pipe->pipe_type == UE_INTERRUPT);
+}
+
+static inline uint8_t dwc_otg_hcd_is_pipe_bulk(struct dwc_otg_hcd_pipe_info
+					       *pipe)
+{
+	return (pipe->pipe_type == UE_BULK);
+}
+
+static inline uint8_t dwc_otg_hcd_is_pipe_control(struct dwc_otg_hcd_pipe_info
+						  *pipe)
+{
+	return (pipe->pipe_type == UE_CONTROL);
+}
+
+static inline uint8_t dwc_otg_hcd_is_pipe_in(struct dwc_otg_hcd_pipe_info *pipe)
+{
+	return (pipe->pipe_dir == UE_DIR_IN);
+}
+
+static inline uint8_t dwc_otg_hcd_is_pipe_out(struct dwc_otg_hcd_pipe_info
+					      *pipe)
+{
+	return (!dwc_otg_hcd_is_pipe_in(pipe));
+}
+
+static inline void dwc_otg_hcd_fill_pipe(struct dwc_otg_hcd_pipe_info *pipe,
+					 uint8_t devaddr, uint8_t ep_num,
+					 uint8_t pipe_type, uint8_t pipe_dir,
+					 uint16_t mps)
+{
+	pipe->dev_addr = devaddr;
+	pipe->ep_num = ep_num;
+	pipe->pipe_type = pipe_type;
+	pipe->pipe_dir = pipe_dir;
+	pipe->mps = mps;
+}
 
 /**
  * Phases for control transfers.
@@ -76,6 +172,8 @@ typedef enum dwc_otg_transaction_type {
 	DWC_OTG_TRANSACTION_NON_PERIODIC,
 	DWC_OTG_TRANSACTION_ALL
 } dwc_otg_transaction_type_e;
+
+struct dwc_otg_qh;
 
 /**
  * A Queue Transfer Descriptor (QTD) holds the state of a bulk, control,
@@ -98,23 +196,23 @@ typedef struct dwc_otg_qtd {
 	 *	- DWC_OTG_HC_PID_DATA0
 	 *	- DWC_OTG_HC_PID_DATA1
 	 */
-	uint8_t			data_toggle;
+	uint8_t data_toggle;
 
 	/** Current phase for control transfers (Setup, Data, or Status). */
-	dwc_otg_control_phase_e	control_phase;
+	dwc_otg_control_phase_e control_phase;
 
 	/** Keep track of the current split type
 	 * for FS/LS endpoints on a HS Hub */
-	uint8_t                 complete_split;
+	uint8_t complete_split;
 
 	/** How many bytes transferred during SSPLIT OUT */
-	uint32_t                ssplit_out_xfer_count;
+	uint32_t ssplit_out_xfer_count;
 
 	/**
 	 * Holds the number of bus errors that have occurred for a transaction
 	 * within this transfer.
 	 */
-	uint8_t 		error_count;
+	uint8_t error_count;
 
 	/**
 	 * Index of the next frame descriptor for an isochronous transfer. A
@@ -123,21 +221,37 @@ typedef struct dwc_otg_qtd {
 	 * isochronous transfer. It also holds status for that transaction.
 	 * The frame index starts at 0.
 	 */
-	int			isoc_frame_index;
+	uint16_t isoc_frame_index;
 
 	/** Position of the ISOC split on full/low speed */
-	uint8_t                 isoc_split_pos;
+	uint8_t isoc_split_pos;
 
 	/** Position of the ISOC split in the buffer for the current frame */
-	uint16_t                isoc_split_offset;
+	uint16_t isoc_split_offset;
 
 	/** URB for this transfer */
-	struct urb 		*urb;
+	struct dwc_otg_hcd_urb *urb;
+
+	struct dwc_otg_qh *qh;
 
 	/** This list of QTDs */
-	struct list_head  	qtd_list_entry;
+	 DWC_CIRCLEQ_ENTRY(dwc_otg_qtd) qtd_list_entry;
+
+	/** Indicates if this QTD is currently processed by HW. */
+	uint8_t in_process;
+
+	/** Number of DMA descriptors for this QTD */
+	uint8_t n_desc;
+
+	/** 
+	 * Last activated frame(packet) index. 
+	 * Used in Descriptor DMA mode only.
+	 */
+	uint16_t isoc_frame_index_last;
 
 } dwc_otg_qtd_t;
+
+DWC_CIRCLEQ_HEAD(dwc_otg_qtd_list, dwc_otg_qtd);
 
 /**
  * A Queue Head (QH) holds the static characteristics of an endpoint and
@@ -148,87 +262,132 @@ typedef struct dwc_otg_qh {
 	/**
 	 * Endpoint type.
 	 * One of the following values:
-	 * 	- USB_ENDPOINT_XFER_CONTROL
-	 *	- USB_ENDPOINT_XFER_ISOC
-	 *	- USB_ENDPOINT_XFER_BULK
-	 *	- USB_ENDPOINT_XFER_INT
+	 *	- UE_CONTROL
+	 *	- UE_BULK
+	 *	- UE_INTERRUPT
+	 *	- UE_ISOCHRONOUS
 	 */
-	uint8_t 		ep_type;
-	uint8_t 		ep_is_in;
+	uint8_t ep_type;
+	uint8_t ep_is_in;
 
 	/** wMaxPacketSize Field of Endpoint Descriptor. */
-	uint16_t		maxp;
+	uint16_t maxp;
+
+	/**
+	 * Device speed.
+	 * One of the following values:
+	 *	- DWC_OTG_EP_SPEED_LOW
+	 *	- DWC_OTG_EP_SPEED_FULL
+	 *	- DWC_OTG_EP_SPEED_HIGH
+	 */
+	uint8_t dev_speed;
 
 	/**
 	 * Determines the PID of the next data packet for non-control
 	 * transfers. Ignored for control transfers.<br>
 	 * One of the following values:
 	 *	- DWC_OTG_HC_PID_DATA0
-	 * 	- DWC_OTG_HC_PID_DATA1
+	 *	- DWC_OTG_HC_PID_DATA1
 	 */
-	uint8_t			data_toggle;
+	uint8_t data_toggle;
 
 	/** Ping state if 1. */
-	uint8_t 		ping_state;
+	uint8_t ping_state;
 
 	/**
 	 * List of QTDs for this QH.
 	 */
-	struct list_head 	qtd_list;
+	struct dwc_otg_qtd_list qtd_list;
 
 	/** Host channel currently processing transfers for this QH. */
-	dwc_hc_t		*channel;
-
-	/** QTD currently assigned to a host channel for this QH. */
-	dwc_otg_qtd_t		*qtd_in_process;
+	struct dwc_hc *channel;
 
 	/** Full/low speed endpoint on high-speed hub requires split. */
-	uint8_t                 do_split;
+	uint8_t do_split;
 
 	/** @name Periodic schedule information */
 	/** @{ */
 
 	/** Bandwidth in microseconds per (micro)frame. */
-	uint8_t			usecs;
+	uint16_t usecs;
 
 	/** Interval between transfers in (micro)frames. */
-	uint16_t		interval;
+	uint16_t interval;
 
 	/**
 	 * (micro)frame to initialize a periodic transfer. The transfer
 	 * executes in the following (micro)frame.
 	 */
-	uint16_t		sched_frame;
+	uint16_t sched_frame;
 
 	/** (micro)frame at which last start split was initialized. */
-	uint16_t		start_split_frame;
+	uint16_t start_split_frame;
 
 	/** @} */
 
+	/** 
+	 * Used instead of original buffer if 
+	 * it(physical address) is not dword-aligned.
+	 */
+	uint8_t *dw_align_buf;
+	dwc_dma_t dw_align_buf_dma;
+
 	/** Entry for QH in either the periodic or non-periodic schedule. */
-	struct list_head        qh_list_entry;
+	dwc_list_link_t qh_list_entry;
+
+	/** @name Descriptor DMA support */
+	/** @{ */
+
+	/** Descriptor List. */
+	dwc_otg_host_dma_desc_t *desc_list;
+
+	/** Descriptor List physical address. */
+	dwc_dma_t desc_list_dma;
+
+	/** 
+	 * Xfer Bytes array.
+	 * Each element corresponds to a descriptor and indicates 
+	 * original XferSize size value for the descriptor.
+	 */
+	uint32_t *n_bytes;
+
+	/** Actual number of transfer descriptors in a list. */
+	uint16_t ntd;
+
+	/** First activated isochronous transfer descriptor index. */
+	uint8_t td_first;
+	/** Last activated isochronous transfer descriptor index. */
+	uint8_t td_last;
+
+	/** @} */
+
 } dwc_otg_qh_t;
+
+DWC_CIRCLEQ_HEAD(hc_list, dwc_hc);
 
 /**
  * This structure holds the state of the HCD, including the non-periodic and
  * periodic schedules.
  */
-typedef struct dwc_otg_hcd {
-
+struct dwc_otg_hcd {
 	/** DWC OTG Core Interface Layer */
-	dwc_otg_core_if_t       *core_if;
+	dwc_otg_core_if_t *core_if;
 
-	/** Internal DWC HCD Flags */	
+	/** Function HCD driver callbacks */
+	struct dwc_otg_hcd_function_ops *fops;
+
+	/** Internal DWC HCD Flags */
 	volatile union dwc_otg_hcd_internal_flags {
 		uint32_t d32;
 		struct {
-			unsigned port_connect_status_change : 1;
-			unsigned port_connect_status : 1;
-			unsigned port_reset_change : 1;
-			unsigned port_enable_change : 1;
-			unsigned port_suspend_change : 1;
-			unsigned port_over_current_change : 1;
-			unsigned reserved : 27;
+			unsigned port_connect_status_change:1;
+			unsigned port_connect_status:1;
+			unsigned port_reset_change:1;
+			unsigned port_enable_change:1;
+			unsigned port_suspend_change:1;
+			unsigned port_over_current_change:1;
+			unsigned port_l1_change:1;
+			unsigned reserved:26;
 		} b;
 	} flags;
 
@@ -237,20 +396,20 @@ typedef struct dwc_otg_hcd {
 	 * Queue Heads. Transfers associated with these Queue Heads are not
 	 * currently assigned to a host channel.
 	 */
-	struct list_head 	non_periodic_sched_inactive;
+	dwc_list_link_t non_periodic_sched_inactive;
 
 	/**
 	 * Active items in the non-periodic schedule. This is a list of
 	 * Queue Heads. Transfers associated with these Queue Heads are
 	 * currently assigned to a host channel.
 	 */
-	struct list_head 	non_periodic_sched_active;
+	dwc_list_link_t non_periodic_sched_active;
 
 	/**
 	 * Pointer to the next Queue Head to process in the active
 	 * non-periodic schedule.
 	 */
-	struct list_head 	*non_periodic_qh_ptr;
+	dwc_list_link_t *non_periodic_qh_ptr;
 
 	/**
 	 * Inactive items in the periodic schedule. This is a list of QHs for
@@ -266,7 +425,7 @@ typedef struct dwc_otg_hcd {
 	 * Items move from this list to periodic_sched_ready when the QH
 	 * interval counter is 0 at SOF.
 	 */
-	struct list_head	periodic_sched_inactive;
+	dwc_list_link_t periodic_sched_inactive;
 
 	/**
 	 * List of periodic QHs that are ready for execution in the next
@@ -275,7 +434,7 @@ typedef struct dwc_otg_hcd {
 	 * Items move from this list to periodic_sched_assigned as host
 	 * channels become available during the current frame.
 	 */
-	struct list_head	periodic_sched_ready;
+	dwc_list_link_t periodic_sched_ready;
 
 	/**
 	 * List of periodic QHs to be executed in the next frame that are
@@ -284,7 +443,7 @@ typedef struct dwc_otg_hcd {
 	 * Items move from this list to periodic_sched_queued as the
 	 * transactions for the QH are queued to the DWC_otg controller.
 	 */
-	struct list_head	periodic_sched_assigned;
+	dwc_list_link_t periodic_sched_assigned;
 
 	/**
 	 * List of periodic QHs that have been queued for execution.
@@ -295,306 +454,245 @@ typedef struct dwc_otg_hcd {
 	 * periodic_sched_ready because it must be rescheduled for the next
 	 * frame. Otherwise, the item moves to periodic_sched_inactive.
 	 */
-	struct list_head	periodic_sched_queued;
+	dwc_list_link_t periodic_sched_queued;
 
 	/**
 	 * Total bandwidth claimed so far for periodic transfers. This value
 	 * is in microseconds per (micro)frame. The assumption is that all
 	 * periodic transfers may occur in the same (micro)frame.
 	 */
-	uint16_t		periodic_usecs;
+	uint16_t periodic_usecs;
 
 	/**
 	 * Frame number read from the core at SOF. The value ranges from 0 to
 	 * DWC_HFNUM_MAX_FRNUM.
 	 */
-	uint16_t		frame_number;
+	uint16_t frame_number;
 
 	/**
 	 * Free host channels in the controller. This is a list of
 	 * dwc_hc_t items.
 	 */
-	struct list_head 	free_hc_list;
-
+	struct hc_list free_hc_list;
 	/**
 	 * Number of host channels assigned to periodic transfers. Currently
 	 * assuming that there is a dedicated host channel for each periodic
 	 * transaction and at least one host channel available for
 	 * non-periodic transactions.
 	 */
-	int			periodic_channels;
+	int periodic_channels;
 
 	/**
 	 * Number of host channels assigned to non-periodic transfers.
 	 */
-	int			non_periodic_channels;
+	int non_periodic_channels;
 
 	/**
 	 * Array of pointers to the host channel descriptors. Allows accessing
 	 * a host channel descriptor given the host channel number. This is
 	 * useful in interrupt handlers.
 	 */
-	dwc_hc_t		*hc_ptr_array[MAX_EPS_CHANNELS];
+	struct dwc_hc *hc_ptr_array[MAX_EPS_CHANNELS];
 
 	/**
 	 * Buffer to use for any data received during the status phase of a
 	 * control transfer. Normally no data is transferred during the status
-	 * phase. This buffer is used as a bit bucket. 
+	 * phase. This buffer is used as a bit bucket.
 	 */
-	uint8_t			*status_buf;
+	uint8_t *status_buf;
 
 	/**
 	 * DMA address for status_buf.
 	 */
-	dma_addr_t		status_buf_dma;
-#define DWC_OTG_HCD_STATUS_BUF_SIZE 64	
-
-	/**
-	 * Structure to allow starting the HCD in a non-interrupt context
-	 * during an OTG role change.
-	 */
-	struct work_struct	start_work;
+	dma_addr_t status_buf_dma;
+#define DWC_OTG_HCD_STATUS_BUF_SIZE 64
 
 	/**
 	 * Connection timer. An OTG host must display a message if the device
 	 * does not connect. Started when the VBus power is turned on via
 	 * sysfs attribute "buspower".
 	 */
-        struct timer_list 	conn_timer;
+	dwc_timer_t *conn_timer;
 
 	/* Tasket to do a reset */
-	struct tasklet_struct   *reset_tasklet;
+	dwc_tasklet_t *reset_tasklet;
+
+	/*  */
+	dwc_spinlock_t *lock;
+
+	/**
+	 * Private data that could be used by OS wrapper.
+	 */
+	void *priv;
+
+	uint8_t otg_port;
+
+	/** Frame List */
+	uint32_t *frame_list;
+
+	/** Frame List DMA address */
+	dma_addr_t frame_list_dma;
 
 #ifdef DEBUG
-	uint32_t 		frrem_samples;
-	uint64_t 		frrem_accum;
+	uint32_t frrem_samples;
+	uint64_t frrem_accum;
 
-	uint32_t		hfnum_7_samples_a;
-	uint64_t		hfnum_7_frrem_accum_a;
-	uint32_t		hfnum_0_samples_a;
-	uint64_t		hfnum_0_frrem_accum_a;
-	uint32_t		hfnum_other_samples_a;
-	uint64_t		hfnum_other_frrem_accum_a;
+	uint32_t hfnum_7_samples_a;
+	uint64_t hfnum_7_frrem_accum_a;
+	uint32_t hfnum_0_samples_a;
+	uint64_t hfnum_0_frrem_accum_a;
+	uint32_t hfnum_other_samples_a;
+	uint64_t hfnum_other_frrem_accum_a;
 
-	uint32_t		hfnum_7_samples_b;
-	uint64_t		hfnum_7_frrem_accum_b;
-	uint32_t		hfnum_0_samples_b;
-	uint64_t		hfnum_0_frrem_accum_b;
-	uint32_t		hfnum_other_samples_b;
-	uint64_t		hfnum_other_frrem_accum_b;
-#endif	
-
-} dwc_otg_hcd_t;
-
-/** Gets the dwc_otg_hcd from a struct usb_hcd */
-static inline dwc_otg_hcd_t *hcd_to_dwc_otg_hcd(struct usb_hcd *hcd)
-{
-	return (dwc_otg_hcd_t *)(hcd->hcd_priv);
-}
-
-/** Gets the struct usb_hcd that contains a dwc_otg_hcd_t. */
-static inline struct usb_hcd *dwc_otg_hcd_to_hcd(dwc_otg_hcd_t *dwc_otg_hcd)
-{
-	return container_of((void *)dwc_otg_hcd, struct usb_hcd, hcd_priv);
-}
-
-/** @name HCD Create/Destroy Functions */
-/** @{ */
-extern int __init dwc_otg_hcd_init(struct lm_device *_lmdev);
-extern void dwc_otg_hcd_remove(struct lm_device *_lmdev);
-/** @} */
-
-/** @name Linux HC Driver API Functions */
-/** @{ */
-
-extern int dwc_otg_hcd_start(struct usb_hcd *hcd);
-extern void dwc_otg_hcd_stop(struct usb_hcd *hcd);
-extern int dwc_otg_hcd_get_frame_number(struct usb_hcd *hcd);
-extern void dwc_otg_hcd_free(struct usb_hcd *hcd);
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-extern int dwc_otg_hcd_urb_enqueue(struct usb_hcd *_hcd, 
-			    struct urb *_urb, 
-			    gfp_t _mem_flags);
-#else
-extern int dwc_otg_hcd_urb_enqueue(struct usb_hcd *_hcd, 
-			    struct usb_host_endpoint *_ep,
-			    struct urb *_urb, 
-			    int _mem_flags);
+	uint32_t hfnum_7_samples_b;
+	uint64_t hfnum_7_frrem_accum_b;
+	uint32_t hfnum_0_samples_b;
+	uint64_t hfnum_0_frrem_accum_b;
+	uint32_t hfnum_other_samples_b;
+	uint64_t hfnum_other_frrem_accum_b;
 #endif
-
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-extern int dwc_otg_hcd_urb_dequeue(struct usb_hcd *hcd,
-				   struct urb *urb,
-				   int status);
-#else
-extern int dwc_otg_hcd_urb_dequeue(struct usb_hcd *hcd, 
-/*				   struct usb_host_endpoint *ep,*/
-				   struct urb *urb);
-#endif
-
-extern void dwc_otg_hcd_endpoint_disable(struct usb_hcd *hcd,
-					 struct usb_host_endpoint *ep);
-                     
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-extern irqreturn_t dwc_otg_hcd_irq(struct usb_hcd *hcd);
-#else
-extern irqreturn_t dwc_otg_hcd_irq(struct usb_hcd *hcd, 
-				   struct pt_regs *regs);
-#endif
-
-extern int dwc_otg_hcd_hub_status_data(struct usb_hcd *hcd, 
-				       char *buf);
-extern int dwc_otg_hcd_hub_control(struct usb_hcd *hcd, 
-				   u16 typeReq, 
-				   u16 wValue, 
-				   u16 wIndex, 
-				   char *buf, 
-				   u16 wLength);
-
-/** @} */
+};
 
 /** @name Transaction Execution Functions */
 /** @{ */
-extern dwc_otg_transaction_type_e dwc_otg_hcd_select_transactions(dwc_otg_hcd_t *_hcd);
-extern void dwc_otg_hcd_queue_transactions(dwc_otg_hcd_t *_hcd,
-					   dwc_otg_transaction_type_e _tr_type);
-extern void dwc_otg_hcd_complete_urb(dwc_otg_hcd_t *_hcd, struct urb *_urb,
-				     int _status);
+extern dwc_otg_transaction_type_e dwc_otg_hcd_select_transactions(dwc_otg_hcd_t
+								  * hcd);
+extern void dwc_otg_hcd_queue_transactions(dwc_otg_hcd_t * hcd,
+					   dwc_otg_transaction_type_e tr_type);
+
 /** @} */
 
 /** @name Interrupt Handler Functions */
 /** @{ */
-extern int32_t dwc_otg_hcd_handle_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_sof_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_rx_status_q_level_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_np_tx_fifo_empty_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_perio_tx_fifo_empty_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_incomplete_periodic_intr(dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_port_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_conn_id_status_change_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_disconnect_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_hc_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_hc_n_intr (dwc_otg_hcd_t *_dwc_otg_hcd, uint32_t _num);
-extern int32_t dwc_otg_hcd_handle_session_req_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
-extern int32_t dwc_otg_hcd_handle_wakeup_detected_intr (dwc_otg_hcd_t *_dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_intr(dwc_otg_hcd_t * dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_sof_intr(dwc_otg_hcd_t * dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_rx_status_q_level_intr(dwc_otg_hcd_t *
+							 dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_np_tx_fifo_empty_intr(dwc_otg_hcd_t *
+							dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_perio_tx_fifo_empty_intr(dwc_otg_hcd_t *
+							   dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_incomplete_periodic_intr(dwc_otg_hcd_t *
+							   dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_port_intr(dwc_otg_hcd_t * dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_conn_id_status_change_intr(dwc_otg_hcd_t *
+							     dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_disconnect_intr(dwc_otg_hcd_t * dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_hc_intr(dwc_otg_hcd_t * dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_hc_n_intr(dwc_otg_hcd_t * dwc_otg_hcd,
+					    uint32_t num);
+extern int32_t dwc_otg_hcd_handle_session_req_intr(dwc_otg_hcd_t * dwc_otg_hcd);
+extern int32_t dwc_otg_hcd_handle_wakeup_detected_intr(dwc_otg_hcd_t *
+						       dwc_otg_hcd);
 /** @} */
-
 
 /** @name Schedule Queue Functions */
 /** @{ */
 
 /* Implemented in dwc_otg_hcd_queue.c */
-extern dwc_otg_qh_t *dwc_otg_hcd_qh_create (dwc_otg_hcd_t *_hcd, struct urb *_urb);
-extern void dwc_otg_hcd_qh_init (dwc_otg_hcd_t *_hcd, dwc_otg_qh_t *_qh, struct urb *_urb);
-extern void dwc_otg_hcd_qh_free (dwc_otg_qh_t *_qh);
-extern int dwc_otg_hcd_qh_add (dwc_otg_hcd_t *_hcd, dwc_otg_qh_t *_qh);
-extern void dwc_otg_hcd_qh_remove (dwc_otg_hcd_t *_hcd, dwc_otg_qh_t *_qh);
-extern void dwc_otg_hcd_qh_deactivate (dwc_otg_hcd_t *_hcd, dwc_otg_qh_t *_qh, int sched_csplit);
+extern dwc_otg_qh_t *dwc_otg_hcd_qh_create(dwc_otg_hcd_t * hcd,
+					   dwc_otg_hcd_urb_t * urb);
+extern void dwc_otg_hcd_qh_free(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
+extern int dwc_otg_hcd_qh_add(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
+extern void dwc_otg_hcd_qh_remove(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
+extern void dwc_otg_hcd_qh_deactivate(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh,
+				      int sched_csplit);
 
 /** Remove and free a QH */
-static inline void dwc_otg_hcd_qh_remove_and_free (dwc_otg_hcd_t *_hcd,
-						   dwc_otg_qh_t *_qh)
+static inline void dwc_otg_hcd_qh_remove_and_free(dwc_otg_hcd_t * hcd,
+						  dwc_otg_qh_t * qh)
 {
-	dwc_otg_hcd_qh_remove (_hcd, _qh);
-	dwc_otg_hcd_qh_free (_qh);
+	dwc_otg_hcd_qh_remove(hcd, qh);
+	dwc_otg_hcd_qh_free(hcd, qh);
 }
 
 /** Allocates memory for a QH structure.
  * @return Returns the memory allocate or NULL on error. */
-static inline dwc_otg_qh_t *dwc_otg_hcd_qh_alloc (void)
+static inline dwc_otg_qh_t *dwc_otg_hcd_qh_alloc(void)
 {
-    /*
-     * This routine is only called in a context where interrupts are
-     * disabled. See dwc_otg_hcd_qtd_add(). Since interrupts are disabled,
-     * cannot wait for allocation and must use GFP_ATOMIC memory flag.
-     * See __might_sleep() in kernel/sched.c
-     */
-	return (dwc_otg_qh_t *) kmalloc (sizeof(dwc_otg_qh_t), GFP_ATOMIC);
+	return (dwc_otg_qh_t *) dwc_alloc(sizeof(dwc_otg_qh_t));
 }
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-extern dwc_otg_qtd_t *dwc_otg_hcd_qtd_create (struct urb *urb, gfp_t _mem_flags);
-#else
-extern dwc_otg_qtd_t *dwc_otg_hcd_qtd_create (struct urb *urb, int _mem_flags);
-#endif
-extern void dwc_otg_hcd_qtd_init (dwc_otg_qtd_t *qtd, struct urb *urb);
-extern int dwc_otg_hcd_qtd_add (dwc_otg_qtd_t *qtd, dwc_otg_hcd_t *dwc_otg_hcd);
+extern dwc_otg_qtd_t *dwc_otg_hcd_qtd_create(dwc_otg_hcd_urb_t * urb);
+extern void dwc_otg_hcd_qtd_init(dwc_otg_qtd_t * qtd, dwc_otg_hcd_urb_t * urb);
+extern int dwc_otg_hcd_qtd_add(dwc_otg_qtd_t * qtd, dwc_otg_hcd_t * dwc_otg_hcd,
+			       dwc_otg_qh_t ** qh);
 
 /** Allocates memory for a QTD structure.
  * @return Returns the memory allocate or NULL on error. */
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
-static inline dwc_otg_qtd_t *dwc_otg_hcd_qtd_alloc (gfp_t _mem_flags)
-#else
-static inline dwc_otg_qtd_t *dwc_otg_hcd_qtd_alloc (int _mem_flags)
-#endif
+static inline dwc_otg_qtd_t *dwc_otg_hcd_qtd_alloc(void)
 {
-  	return (dwc_otg_qtd_t *) kmalloc (sizeof(dwc_otg_qtd_t), _mem_flags);
+	return (dwc_otg_qtd_t *) dwc_alloc(sizeof(dwc_otg_qtd_t));
 }
 
 /** Frees the memory for a QTD structure.  QTD should already be removed from
  * list.
- * @param[in] _qtd QTD to free.*/
-static inline void dwc_otg_hcd_qtd_free (dwc_otg_qtd_t *_qtd)
+ * @param qtd QTD to free.*/
+static inline void dwc_otg_hcd_qtd_free(dwc_otg_qtd_t * qtd)
 {
-	kfree (_qtd);
+	dwc_free(qtd);
 }
 
 /** Removes a QTD from list.
- * @param[in] _qtd QTD to remove from list. */
-static inline void dwc_otg_hcd_qtd_remove (dwc_otg_qtd_t *_qtd)
+ * @param hcd HCD instance.
+ * @param qtd QTD to remove from list.
+ * @param qh QTD belongs to.
+ */
+static inline void dwc_otg_hcd_qtd_remove(dwc_otg_hcd_t * hcd,
+					  dwc_otg_qtd_t * qtd,
+					  dwc_otg_qh_t * qh)
 {
-	unsigned long flags;
-	local_irq_save (flags);
-	list_del (&_qtd->qtd_list_entry);
-	local_irq_restore (flags);
+	uint64_t flags;
+	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
+	DWC_CIRCLEQ_REMOVE(&qh->qtd_list, qtd, qtd_list_entry);
+	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 }
 
 /** Remove and free a QTD */
-static inline void dwc_otg_hcd_qtd_remove_and_free (dwc_otg_qtd_t *_qtd)
+static inline void dwc_otg_hcd_qtd_remove_and_free(dwc_otg_hcd_t * hcd,
+						   dwc_otg_qtd_t * qtd,
+						   dwc_otg_qh_t * qh)
 {
-	dwc_otg_hcd_qtd_remove (_qtd);
-	dwc_otg_hcd_qtd_free (_qtd);
+	dwc_otg_hcd_qtd_remove(hcd, qtd, qh);
+	dwc_otg_hcd_qtd_free(qtd);
 }
 
 /** @} */
 
+/** @name Descriptor DMA Supporting Functions */
+/** @{ */
+
+extern void dwc_otg_hcd_start_xfer_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
+extern void dwc_otg_hcd_complete_xfer_ddma(dwc_otg_hcd_t * hcd,
+					   dwc_hc_t * hc,
+					   dwc_otg_hc_regs_t * hc_regs,
+					   dwc_otg_halt_status_e halt_status);
+
+extern int dwc_otg_hcd_qh_init_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
+extern void dwc_otg_hcd_qh_free_ddma(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh);
+
+/** @} */
 
 /** @name Internal Functions */
 /** @{ */
-dwc_otg_qh_t *dwc_urb_to_qh(struct urb *_urb);
-void dwc_otg_hcd_dump_frrem(dwc_otg_hcd_t *_hcd);
-void dwc_otg_hcd_dump_state(dwc_otg_hcd_t *_hcd);
+dwc_otg_qh_t *dwc_urb_to_qh(dwc_otg_hcd_urb_t * urb);
 /** @} */
 
-/** Gets the usb_host_endpoint associated with an URB. */
-static inline struct usb_host_endpoint *dwc_urb_to_endpoint(struct urb *_urb)
-{
-	struct usb_device *dev = _urb->dev;
-	int ep_num = usb_pipeendpoint(_urb->pipe);
-
-	if (usb_pipein(_urb->pipe))
-		return dev->ep_in[ep_num];
-	else
-		return dev->ep_out[ep_num];
-}
-
-/**
- * Gets the endpoint number from a _bEndpointAddress argument. The endpoint is
- * qualified with its direction (possible 32 endpoints per device).
- */
-#define dwc_ep_addr_to_endpoint(_bEndpointAddress_) ((_bEndpointAddress_ & USB_ENDPOINT_NUMBER_MASK) | \
-                                                     ((_bEndpointAddress_ & USB_DIR_IN) != 0) << 4)
+#ifdef CONFIG_USB_DWC_OTG_LPM
+extern int dwc_otg_hcd_get_hc_for_lpm_tran(dwc_otg_hcd_t * hcd,
+					   uint8_t devaddr);
+extern void dwc_otg_hcd_free_hc_from_lpm(dwc_otg_hcd_t * hcd);
+#endif
 
 /** Gets the QH that contains the list_head */
-#define dwc_list_to_qh(_list_head_ptr_) (container_of(_list_head_ptr_,dwc_otg_qh_t,qh_list_entry))
+#define dwc_list_to_qh(_list_head_ptr_) container_of(_list_head_ptr_, dwc_otg_qh_t, qh_list_entry)
 
 /** Gets the QTD that contains the list_head */
-#define dwc_list_to_qtd(_list_head_ptr_) (container_of(_list_head_ptr_,dwc_otg_qtd_t,qtd_list_entry))
+#define dwc_list_to_qtd(_list_head_ptr_) container_of(_list_head_ptr_, dwc_otg_qtd_t, qtd_list_entry)
 
 /** Check if QH is non-periodic  */
-#define dwc_qh_is_non_per(_qh_ptr_) ((_qh_ptr_->ep_type == USB_ENDPOINT_XFER_BULK) || \
-                                     (_qh_ptr_->ep_type == USB_ENDPOINT_XFER_CONTROL))
+#define dwc_qh_is_non_per(_qh_ptr_) ((_qh_ptr_->ep_type == UE_BULK) || \
+				     (_qh_ptr_->ep_type == UE_CONTROL))
 
 /** High bandwidth multiplier as encoded in highspeed endpoint descriptors */
 #define dwc_hb_mult(wMaxPacketSize) (1 + (((wMaxPacketSize) >> 11) & 0x03))
@@ -607,10 +705,10 @@ static inline struct usb_host_endpoint *dwc_urb_to_endpoint(struct urb *_urb)
  * done modulo DWC_HFNUM_MAX_FRNUM. This accounts for the rollover of the
  * frame number when the max frame number is reached.
  */
-static inline int dwc_frame_num_le(uint16_t _frame1, uint16_t _frame2)
+static inline int dwc_frame_num_le(uint16_t frame1, uint16_t frame2)
 {
-	return ((_frame2 - _frame1) & DWC_HFNUM_MAX_FRNUM) <=
-		(DWC_HFNUM_MAX_FRNUM >> 1);
+	return ((frame2 - frame1) & DWC_HFNUM_MAX_FRNUM) <=
+	    (DWC_HFNUM_MAX_FRNUM >> 1);
 }
 
 /**
@@ -618,31 +716,35 @@ static inline int dwc_frame_num_le(uint16_t _frame1, uint16_t _frame2)
  * modulo DWC_HFNUM_MAX_FRNUM. This accounts for the rollover of the frame
  * number when the max frame number is reached.
  */
-static inline int dwc_frame_num_gt(uint16_t _frame1, uint16_t _frame2)
+static inline int dwc_frame_num_gt(uint16_t frame1, uint16_t frame2)
 {
-	return (_frame1 != _frame2) &&
-		(((_frame1 - _frame2) & DWC_HFNUM_MAX_FRNUM) <
-		 (DWC_HFNUM_MAX_FRNUM >> 1));
+	return (frame1 != frame2) &&
+	    (((frame1 - frame2) & DWC_HFNUM_MAX_FRNUM) <
+	     (DWC_HFNUM_MAX_FRNUM >> 1));
 }
 
 /**
  * Increments _frame by the amount specified by _inc. The addition is done
  * modulo DWC_HFNUM_MAX_FRNUM. Returns the incremented value.
  */
-static inline uint16_t dwc_frame_num_inc(uint16_t _frame, uint16_t _inc)
+static inline uint16_t dwc_frame_num_inc(uint16_t frame, uint16_t inc)
 {
-	return (_frame + _inc) & DWC_HFNUM_MAX_FRNUM;
+	return (frame + inc) & DWC_HFNUM_MAX_FRNUM;
 }
 
-static inline uint16_t dwc_full_frame_num (uint16_t _frame)
+static inline uint16_t dwc_full_frame_num(uint16_t frame)
 {
-	return ((_frame) & DWC_HFNUM_MAX_FRNUM) >> 3;
+	return (frame & DWC_HFNUM_MAX_FRNUM) >> 3;
 }
 
-static inline uint16_t dwc_micro_frame_num (uint16_t _frame)
+static inline uint16_t dwc_micro_frame_num(uint16_t frame)
 {
-	return (_frame) & 0x7;
+	return frame & 0x7;
 }
+
+void dwc_otg_hcd_save_data_toggle(dwc_hc_t * hc,
+				  dwc_otg_hc_regs_t * hc_regs,
+				  dwc_otg_qtd_t * qtd);
 
 #ifdef DEBUG
 /**
@@ -678,7 +780,7 @@ static inline uint16_t dwc_micro_frame_num (uint16_t _frame)
 	} \
 }
 #else
-#define dwc_sample_frrem(_hcd, _qh, _letter) 
-#endif		
+#define dwc_sample_frrem(_hcd, _qh, _letter)
 #endif
-#endif /* DWC_DEVICE_ONLY */
+#endif
+#endif				/* DWC_DEVICE_ONLY */

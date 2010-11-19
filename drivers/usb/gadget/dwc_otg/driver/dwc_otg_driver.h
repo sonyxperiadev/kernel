@@ -1,8 +1,8 @@
 /* ==========================================================================
- * $File: //dwh/usb_iip/dev/software/otg_ipmate/linux/drivers/dwc_otg_attr.h $
- * $Revision: #1 $
- * $Date: 2005/07/07 $
- * $Change: 510275 $
+ * $File: //dwh/usb_iip/dev/software/otg/linux/drivers/dwc_otg_driver.h $
+ * $Revision: #17 $
+ * $Date: 2010/03/09 $
+ * $Change: 1458980 $
  *
  * Synopsys HS OTG Linux Software Driver and documentation (hereinafter,
  * "Software") is an Unsupported proprietary work of Synopsys, Inc. unless
@@ -31,37 +31,67 @@
  * DAMAGE.
  * ========================================================================== */
 
-#if !defined(__DWC_OTG_ATTR_H__)
-#define __DWC_OTG_ATTR_H__
+#ifndef __DWC_OTG_DRIVER_H__
+#define __DWC_OTG_DRIVER_H__
 
 /** @file
- * This file contains the interface to the Linux device attributes.
+ * This file contains the interface to the Linux driver.
  */
-extern struct device_attribute dev_attr_regoffset;
-extern struct device_attribute dev_attr_regvalue;
+#include "dwc_otg_core_if.h"
 
-extern struct device_attribute dev_attr_mode;
-extern struct device_attribute dev_attr_hnpcapable;
-extern struct device_attribute dev_attr_srpcapable;
-extern struct device_attribute dev_attr_hnp;
-extern struct device_attribute dev_attr_srp;
-extern struct device_attribute dev_attr_buspower;
-extern struct device_attribute dev_attr_bussuspend;
-extern struct device_attribute dev_attr_busconnected;
-extern struct device_attribute dev_attr_gotgctl;
-extern struct device_attribute dev_attr_gusbcfg;
-extern struct device_attribute dev_attr_grxfsiz;
-extern struct device_attribute dev_attr_gnptxfsiz;
-extern struct device_attribute dev_attr_gpvndctl;
-extern struct device_attribute dev_attr_ggpio;
-extern struct device_attribute dev_attr_guid;
-extern struct device_attribute dev_attr_gsnpsid;
-extern struct device_attribute dev_attr_devspeed;
-extern struct device_attribute dev_attr_enumspeed;
-extern struct device_attribute dev_attr_hptxfsiz;
-extern struct device_attribute dev_attr_hprt0;
+/* Type declarations */
+struct dwc_otg_pcd;
+struct dwc_otg_hcd;
 
-void dwc_otg_attr_create (struct lm_device *lmdev);
-void dwc_otg_attr_remove (struct lm_device *lmdev);
+#ifdef  PCI_INTERFACE
+#include <linux/pci.h>
+#endif
+
+/**
+ * This structure is a wrapper that encapsulates the driver components used to
+ * manage a single DWC_otg controller.
+ */
+typedef struct dwc_otg_device {
+	/** Base address returned from ioremap() */
+	void *base;
+
+#ifdef LM_INTERFACE
+	struct lm_device *lmdev;
+#elif defined (PCI_INTERFACE)
+	int rsrc_start;
+	int rsrc_len;
+#endif
+
+	/** Pointer to the core interface structure. */
+	dwc_otg_core_if_t *core_if;
+
+	/** Register offset for Diagnostic API. */
+	uint32_t reg_offset;
+
+	/** Pointer to the PCD structure. */
+	struct dwc_otg_pcd *pcd;
+
+	/** Pointer to the HCD structure. */
+	struct dwc_otg_hcd *hcd;
+
+	/** Flag to indicate whether the common IRQ handler is installed. */
+	uint8_t common_irq_installed;
+
+} dwc_otg_device_t;
+
+/*We must clear S3C24XX_EINTPEND external interrupt register 
+ * because after clearing in this register trigerred IRQ from 
+ * H/W core in kernel interrupt can be occured again before OTG
+ * handlers clear all IRQ sources of Core registers because of
+ * timing latencies and Low Level IRQ Type.
+ */
+#ifdef CONFIG_MACH_IPMATE
+#define  S3C2410X_CLEAR_EINTPEND()   \
+do { \
+	__raw_writel(1UL << 11,S3C24XX_EINTPEND); \
+} while (0)
+#else
+#define  S3C2410X_CLEAR_EINTPEND()   do { } while (0)
+#endif
 
 #endif

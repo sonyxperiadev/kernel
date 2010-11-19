@@ -46,7 +46,7 @@
 #ifdef DEBUG
    #define DBG_PRINT            printk
 #else
-   #define DBG_PRINT(fmt...)
+   #define DBG_PRINT(fmt...)	do {} while (0)
 #endif
 
 static void __exit dwc_otg_device_exit(void);
