@@ -267,9 +267,13 @@ static int gpio_irq_set_type( unsigned irq, unsigned type )
 *
 ***************************************************************************/
 
-static void gpio_isr_handler_common(unsigned int gpio, struct irq_desc *desc )
+static void gpio_isr_handler_common(unsigned int gpio, struct irq_desc *desc, unsigned int irq )
 {
    int loop;
+   struct irq_desc *gpio_desc;
+
+   /* temporarily ack/mask (level sensitive) parent IRQ */
+   desc->chip->ack(irq);
 
    do
    {
@@ -283,15 +287,15 @@ static void gpio_isr_handler_common(unsigned int gpio, struct irq_desc *desc )
 			isl_gpio_clear_int_register(gpio);
 
          irq = gpio_to_irq( gpio );
-         desc = irq_desc + irq;
+         gpio_desc = irq_desc + irq;
          do
          {
             if ( mask & 1 )
             {
-               desc->handle_irq( irq, desc );
+               gpio_desc->handle_irq( irq, gpio_desc );
             }
             irq++;
-            desc++;
+            gpio_desc++;
             mask >>= 1;
 
          } while ( mask );
@@ -301,31 +305,32 @@ static void gpio_isr_handler_common(unsigned int gpio, struct irq_desc *desc )
 
    } while ( loop );
 
+   desc->chip->unmask(irq);
 } /* gpio_isr_handler */
 
 static void gpio_isr_handler0( unsigned int irq, struct irq_desc *desc )
 {
-	gpio_isr_handler_common(0, desc);
+   gpio_isr_handler_common(0, desc, irq);
 }
 static void gpio_isr_handler1( unsigned int irq, struct irq_desc *desc )
 {
-	gpio_isr_handler_common(32, desc);
+	gpio_isr_handler_common(32, desc, irq);
 }
 static void gpio_isr_handler2( unsigned int irq, struct irq_desc *desc )
 {
-	gpio_isr_handler_common(64, desc);
+	gpio_isr_handler_common(64, desc, irq);
 }
 static void gpio_isr_handler3( unsigned int irq, struct irq_desc *desc )
 {
-	gpio_isr_handler_common(96, desc);
+	gpio_isr_handler_common(96, desc, irq);
 }
 static void gpio_isr_handler4( unsigned int irq, struct irq_desc *desc )
 {
-	gpio_isr_handler_common(128, desc);
+	gpio_isr_handler_common(128, desc, irq);
 }
 static void gpio_isr_handler5( unsigned int irq, struct irq_desc *desc )
 {
-	gpio_isr_handler_common(160, desc);
+	gpio_isr_handler_common(160, desc, irq);
 }
 
 /****************************************************************************
@@ -341,6 +346,7 @@ static struct irq_chip gpio_chip =
    .mask    = gpio_irq_mask,
    .unmask  = gpio_irq_unmask,
    .set_type    = gpio_irq_set_type,
+   .disable = gpio_irq_mask,
 };
 
 /****************************************************************************
