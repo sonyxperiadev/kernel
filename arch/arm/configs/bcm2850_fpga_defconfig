@@ -1,10 +1,11 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32.9
-# Fri Nov 12 16:58:55 2010
+# Fri Nov 19 16:43:21 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
+CONFIG_GENERIC_GPIO=y
 CONFIG_GENERIC_TIME=y
 CONFIG_GENERIC_CLOCKEVENTS=y
 CONFIG_GENERIC_HARDIRQS=y
@@ -21,7 +22,6 @@ CONFIG_GENERIC_HARDIRQS_NO__DO_IRQ=y
 CONFIG_VECTORS_BASE=0xffff0000
 CONFIG_DEFCONFIG_LIST="/lib/modules/$UNAME_RELEASE/.config"
 CONFIG_CONSTRUCTORS=y
-CONFIG_GENERIC_GPIO=y
 
 #
 # General setup
@@ -286,8 +286,8 @@ CONFIG_ALIGNMENT_TRAP=y
 #
 # Boot options
 #
-CONFIG_ZBOOT_ROM_TEXT=0x87000000
-CONFIG_ZBOOT_ROM_BSS=0x87A00000
+CONFIG_ZBOOT_ROM_TEXT=0x80008000
+CONFIG_ZBOOT_ROM_BSS=0x80A08000
 CONFIG_ZBOOT_ROM=y
 CONFIG_CMDLINE="console=ttyS0,115200n8 mem=126M"
 # CONFIG_KEXEC is not set
@@ -353,6 +353,7 @@ CONFIG_BLK_DEV_RAM_COUNT=1
 CONFIG_BLK_DEV_RAM_SIZE=32768
 # CONFIG_BLK_DEV_XIP is not set
 # CONFIG_CDROM_PKTCDVD is not set
+# CONFIG_MG_DISK is not set
 CONFIG_MISC_DEVICES=y
 # CONFIG_BRCM_VIDEOCORE_SERVICES is not set
 CONFIG_ANDROID_PMEM=y
@@ -436,6 +437,7 @@ CONFIG_I2C_HELPER_AUTO=y
 #
 # I2C system bus drivers (mostly embedded / system-on-chip)
 #
+# CONFIG_I2C_GPIO is not set
 # CONFIG_I2C_OCORES is not set
 # CONFIG_I2C_SIMTEC is not set
 
@@ -468,17 +470,39 @@ CONFIG_I2C_BSC=y
 # PPS support
 #
 # CONFIG_PPS is not set
+CONFIG_ARCH_REQUIRE_GPIOLIB=y
+CONFIG_GPIOLIB=y
+# CONFIG_DEBUG_GPIO is not set
+CONFIG_GPIO_SYSFS=y
+
+#
+# Memory mapped GPIO expanders:
+#
+
+#
+# I2C GPIO expanders:
+#
+# CONFIG_GPIO_MAX732X is not set
+# CONFIG_GPIO_PCA953X is not set
+# CONFIG_GPIO_PCF857X is not set
+
+#
+# PCI GPIO expanders:
+#
+
+#
+# SPI GPIO expanders:
+#
+
+#
+# AC97 GPIO expanders:
+#
 # CONFIG_W1 is not set
 # CONFIG_POWER_SUPPLY is not set
 # CONFIG_HWMON is not set
 # CONFIG_THERMAL is not set
 # CONFIG_WATCHDOG is not set
 CONFIG_SSB_POSSIBLE=y
-
-CONFIG_HAVE_GPIO_LIB=y
-CONFIG_ARCH_REQUIRE_GPIOLIB=y
-CONFIG_GPIOLIB=y
-CONFIG_GPIO_SYSFS=y
 
 #
 # Sonics Silicon Backplane
@@ -490,9 +514,13 @@ CONFIG_GPIO_SYSFS=y
 #
 # CONFIG_MFD_CORE is not set
 # CONFIG_MFD_SM501 is not set
+# CONFIG_MFD_ASIC3 is not set
+# CONFIG_HTC_EGPIO is not set
 # CONFIG_HTC_PASIC3 is not set
+# CONFIG_TPS65010 is not set
 # CONFIG_TWL4030_CORE is not set
 # CONFIG_MFD_TMIO is not set
+# CONFIG_MFD_TC6393XB is not set
 # CONFIG_PMIC_DA903X is not set
 # CONFIG_MFD_WM8400 is not set
 # CONFIG_MFD_WM831X is not set
