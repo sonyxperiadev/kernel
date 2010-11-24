@@ -115,21 +115,12 @@ void __init bcm2708_map_io(void)
 // in generating the kernel's 'jiffies' clock count.
 unsigned long long sched_clock(void)
 {
-        // The ARM_T_FREECNT free running counter increments at the rate of
-        // the 2708's system clock (not the ARM clock)
-        // that's normally a rate of 250MHz - a period of 4ns
-	unsigned long long v = cnt32_to_63(readl(__io_address(ARM_T_FREECNT)));
+        // The STC is a free running counter that increments at the rate of 1MHz
+        unsigned long t = readl(__io_address(ST_BASE+0x04)) * 1000;
         // For cnt32_to_63 to work correctly we MUST call this routine at least
-        // once every half-32-bit-wraparound period - that's once every 8s
+        // once every half-32-bit-wraparound period - that's once every 35minutes
         // or so
-
-#ifdef CONFIG_ARCH_BCM2708_CHIPIT
-	v *= 1000;
-#else
-        v *= 4;
-#endif
-
-	return v;
+	return cnt32_to_63(t);
 }
 
 /*
@@ -347,7 +338,13 @@ static struct resource bcm2708_systemtimer_resources[] = {
                 .start			= ST_BASE,
                 .end			= ST_BASE + SZ_4K - 1,
                 .flags			= IORESOURCE_MEM,
-        },
+	}, {
+		.start                  = IRQ_TIMER3,
+		.end                    = IRQ_TIMER3,
+		.flags                  = IORESOURCE_IRQ,
+	}
+
+
 };
 
 static u64 systemtimer_dmamask = DMA_BIT_MASK(DMA_MASK_BITS_COMMON);
@@ -464,75 +461,42 @@ void __init bcm2708_init(void)
 #endif
 }
 
-
-/*
- * How long is the timer interval?
- */
-#define TIMER_INTERVAL	(TICKS_PER_uSEC * mSEC_10)
-#if TIMER_INTERVAL >= 0x100000
-#define TIMER_RELOAD	(TIMER_INTERVAL >> 8)
-#define TIMER_DIVISOR	(ARM_T_CONTROL_DIV256)
-#define TICKS2USECS(x)	(256 * (x) / TICKS_PER_uSEC)
-#elif TIMER_INTERVAL >= 0x10000
-#define TIMER_RELOAD	(TIMER_INTERVAL >> 4)		/* Divide by 16 */
-#define TIMER_DIVISOR	(ARM_T_CONTROL_DIV16)
-#define TICKS2USECS(x)	(16 * (x) / TICKS_PER_uSEC)
-#else
-#define TIMER_RELOAD	(TIMER_INTERVAL)
-#define TIMER_DIVISOR	(ARM_T_CONTROL_DIV1)
-#define TICKS2USECS(x)	((x) / TICKS_PER_uSEC)
-#endif
-
-/*
- * This is the Versatile sched_clock implementation.  This has
- * a resolution of 41.7ns, and a maximum value of about 35583 days.
- *
- * The return value is guaranteed to be monotonic in that range as
- * long as there is always less than 89 seconds between successive
- * calls to this function.
- */
-
-
+#define TIMER_PERIOD 10000 /* HZ in microsecs */
 
 static void timer_set_mode(enum clock_event_mode mode,
 			   struct clock_event_device *clk)
 {
-	unsigned long ctrl;
+	unsigned long stc;
 
-   ctrl = TIMER_CTRL_32BIT | TIMER_CTRL_IE | TIMER_CTRL_DBGHALT | TIMER_CTRL_ENAFREE;
 	switch(mode) {
 	case CLOCK_EVT_MODE_PERIODIC:
-		writel(TIMER_RELOAD, __io_address(ARM_T_LOAD));
-		ctrl |= TIMER_CTRL_PERIODIC | TIMER_CTRL_ENABLE;
+		stc = readl(__io_address(ST_BASE+0x04));
+		writel(stc + TIMER_PERIOD, __io_address(ST_BASE+0x18)); // stc3
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
-		/* period set, and timer enabled in 'next_event' hook */
-		ctrl |= TIMER_CTRL_ONESHOT;
-		break;
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
 	default:
-	   break;
+		printk(KERN_ERR "timer_set_mode: unhandled mode:%d\n", (int)mode);
+		break;
 	}
 
-	writel(ctrl, __io_address(ARM_T_CONTROL));
 }
 
 static int timer_set_next_event(unsigned long evt,
 				struct clock_event_device *unused)
 {
-	unsigned long ctrl = readl(__io_address(ARM_T_CONTROL));
+	unsigned long stc;
 
-	writel(evt, __io_address(ARM_T_LOAD));
-	writel(ctrl | TIMER_CTRL_ENABLE, __io_address(ARM_T_CONTROL));
-
+        stc = readl(__io_address(ST_BASE+0x04));
+        writel(stc+ TIMER_PERIOD, __io_address(ST_BASE+0x18)); // stc3
 	return 0;
 }
 
 static struct clock_event_device timer0_clockevent =	 {
 	.name		= "timer0",
 	.shift		= 32,
-	.features       = CLOCK_EVT_FEAT_PERIODIC | CLOCK_EVT_FEAT_ONESHOT,
+	.features       = CLOCK_EVT_FEAT_ONESHOT,
 	.set_mode	= timer_set_mode,
 	.set_next_event	= timer_set_next_event,
 };
@@ -544,7 +508,7 @@ static irqreturn_t bcm2708_timer_interrupt(int irq, void *dev_id)
 {
 	struct clock_event_device *evt = &timer0_clockevent;
 
-	writel(1, __io_address(ARM_T_IRQCNTL));
+        writel(1<<3, __io_address(ST_BASE+0x00)); // stcs clear timer int
 
 	evt->event_handler(evt);
 
@@ -552,7 +516,7 @@ static irqreturn_t bcm2708_timer_interrupt(int irq, void *dev_id)
 }
 
 static struct irqaction bcm2708_timer_irq = {
-	.name		= "Versatile Timer Tick",
+	.name		= "BCM2708 Timer Tick",
 	.flags		= IRQF_DISABLED | IRQF_TIMER | IRQF_IRQPOLL,
 	.handler	= bcm2708_timer_interrupt,
 };
@@ -569,7 +533,7 @@ static void __init bcm2708_timer_init(void)
 	/* 
 	 * Make irqs happen for the system timer
 	 */
-	setup_irq(IRQ_ARM_TIMER, &bcm2708_timer_irq);
+	setup_irq(IRQ_TIMER3, &bcm2708_timer_irq);
 #if 0
 	bcm2708_clocksource_init();
 #endif
