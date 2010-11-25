@@ -116,7 +116,7 @@ static int snd_bcm2835_ctl_put(struct snd_kcontrol * kcontrol, struct snd_ctl_el
 		{
 			chip->mute = ucontrol->value.integer.value[0];
 			changed = 0;
-	}
+		}
 	}
 	else if (kcontrol->private_value == PCM_PLAYBACK_DEVICE)
 	{

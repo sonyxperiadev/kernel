@@ -95,8 +95,6 @@ static int snd_bcm2835_playback_open(struct snd_pcm_substream *substream)
 	sema_init(&alsa_stream->control_sem, 0);
 	spin_lock_init(&alsa_stream->lock);
 
-	chip->dest = AUDIO_DEST_LOCAL;
-	chip->volume = 0;
 	/* List of buffers we can write to .. */
 	INIT_LIST_HEAD(&alsa_stream->buffer_list);
 
@@ -347,6 +345,8 @@ int __devinit snd_bcm2835_new_pcm(bcm2835_chip_t *chip)
 	pcm->private_data = chip;
 	strcpy(pcm->name, "bcm2835 ALSA");
 	chip->pcm = pcm;
+	chip->dest = AUDIO_DEST_LOCAL;
+	chip->volume = 0;
 	/* set operators */
 	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK,
 	    &snd_bcm2835_playback_ops);
