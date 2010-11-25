@@ -163,8 +163,8 @@ typedef struct bcm2835_alsa_stream {
 	struct semaphore buffers_update_sem;
 	struct semaphore control_sem;
 	spinlock_t lock;
-	uint32_t control;
-	uint32_t status;
+	volatile uint32_t control;
+	volatile uint32_t status;
 
 	int open;
 	int running;
