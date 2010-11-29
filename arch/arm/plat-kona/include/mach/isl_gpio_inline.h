@@ -29,7 +29,7 @@ extern "C" {
 // SARU #include <mach/csp/mm_io.h>
 // SARU #include <mach/csp/reg.h>
 
-#include <mach/brcm_rdb_gpio.h>
+#include <mach/rdb/brcm_rdb_gpio.h>
 #include <mach/map.h>
 	/**
  * @addtogroup cHAL_Interface 

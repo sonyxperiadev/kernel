@@ -25,7 +25,7 @@
 #define chipregHw_REG_H
 
 // SARU #include <mach/csp/reg.h>
-#include <mach/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
 // SARU #include <mach/csp/mm_io.h>
 #include <mach/map.h>
 

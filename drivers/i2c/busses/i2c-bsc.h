@@ -15,7 +15,7 @@
 #ifndef __KERNEL__
 #include <stdio.h>
 #endif
-#include <mach/brcm_rdb_i2c_mm_hs.h>
+#include <mach/rdb/brcm_rdb_i2c_mm_hs.h>
 
 /*#define BSC_HS*/   /* Athena has HS controller*/
 

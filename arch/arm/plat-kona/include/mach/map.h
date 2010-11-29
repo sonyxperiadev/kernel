@@ -27,8 +27,8 @@
 #define __PLAT_KONA_MAP_H
 
 #include <asm/memory.h>
-#include <mach/reg-kona.h>
-#include <mach/brcm_rdb_ehci.h>
+#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_ehci.h>
 
 #define KONA_AON_CLK_VA             HW_IO_PHYS_TO_VIRT( AON_CLK_BASE_ADDR )
 #define KONA_AON_RST_VA             HW_IO_PHYS_TO_VIRT( AON_RST_BASE_ADDR )

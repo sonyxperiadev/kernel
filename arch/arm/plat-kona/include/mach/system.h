@@ -26,16 +26,43 @@
 #ifndef __PLAT_KONA_SYSTEM_H
 #define __PLAT_KONA_SYSTEM_H
 
-/* FIXME: Actually wait in sleep mode */
+#include <linux/io.h>
+#include <mach/map.h>
+#include <mach/rdb/brcm_rdb_gicdist.h>
+#include <mach/rdb/brcm_rdb_iroot_rst_mgr_reg.h>
+
+
 static void arch_idle(void)
 {
-	/* Do nothing here for now */
+	/*
+	 * This should do all the clock switching
+	 * and wait for interrupt tricks
+	 */
+	cpu_do_idle();
 }
 
-/* FIXME: Finish correct arch_reset() */
 static void arch_reset(char mode, const char *cmd)
 {
-	/* Do nothing */
+	unsigned int val;
+	
+	/*
+	 * Disable GIC interrupt distribution.
+	 */
+	writel(0, KONA_GICDIST_VA + GICDIST_ENABLE_S_OFFSET);
+
+	/* enable reset register access */
+	val  = readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
+	val &= IROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;		  /* retain access mode 	 */
+	val |= (0xA5A5 << IROOT_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	  /* set password			 */
+	val |= IROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK; 			  /* set access enable		 */
+	writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+
+	/* trigger reset */
+	val  = readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	val &= IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	  /* retain access mode 	 */
+	writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	
+	while(1);
 }
 
 #endif /*__PLAT_KONA_SYSTEM_H */

@@ -30,7 +30,7 @@
 // SARU #include <mach/chipregHw_def.h>
 
 #include <mach/gpio_defs_hana.h>
-#include <mach/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
 
 /* ---- Private Constants and Types ---------------------------------------- */
 /* ---- Private Variables ------------------------------------------------ */

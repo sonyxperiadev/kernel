@@ -38,6 +38,8 @@
 #include <mach/hardware.h>
 #include <mach/map.h>
 #include <mach/irqs.h>
+#include <mach/rdb/brcm_rdb_kona_gptimer.h>
+#include <mach/rdb/brcm_rdb_glbtmr.h>
 
 #define SYS_TIMER_NUM	(0)
 
