@@ -26,14 +26,28 @@
 #ifndef	__ASM_ARCH_UNCOMPRESS_H
 #define __ASM_ARCH_UNCOMPRESS_H
 
+#include <linux/io.h>
+#include <mach/map.h>
+#include <mach/rdb/brcm_rdb_uartb.h>
+
+#define KONA_UART0_PA UARTB_BASE_ADDR
+
 static inline void putc(int c)
 {
-	/* do something */
+	/* data should be written to THR register only if THRE (LSR bit5) is set) */
+	while (0 == (readl(KONA_UART0_PA + UARTB_LSR_OFFSET) & UARTB_LSR_THRE_MASK ))
+	{
+	}
+
+	writel((unsigned long)c, KONA_UART0_PA + UARTB_RBR_THR_DLL_OFFSET);
 }
 
 static inline void flush(void)
 {
-	/* do something */
+	/* Wait for the tx fifo to be empty and last char to be sent */
+	while (0 == (readl(KONA_UART0_PA + UARTB_LSR_OFFSET) & UARTB_LSR_TEMT_MASK ))
+	{
+	}
 }
 
 #define arch_decomp_setup()
