@@ -36,8 +36,8 @@
 #include <mach/irqs.h>
 #include <mach/map.h>
 
-#include <mach/brcm_rdb_hsotg_ctrl.h>
-#include <mach/brcm_rdb_hsotg.h>
+#include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
+#include <mach/rdb/brcm_rdb_hsotg.h>
 
 /* ---- Public Variables ------------------------------------------------- */
 /* ---- Private Constants and Types -------------------------------------- */
