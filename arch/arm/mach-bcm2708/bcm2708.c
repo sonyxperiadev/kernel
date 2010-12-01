@@ -304,6 +304,26 @@ static struct platform_device bcm2708_usb_device = {
         },							
 };
 
+static struct resource bcm2708_smi_resources[] = {
+	[0] = {
+		.start = SMI_BASE,
+		.end   = SMI_BASE + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static u64 smi_dmamask = DMA_BIT_MASK(DMA_MASK_BITS_COMMON);
+static struct platform_device bcm2708_smi_device = {
+	.name           = "bcm2708_smi",
+	.id             = -1,
+	.resource       = bcm2708_smi_resources,
+	.num_resources  = ARRAY_SIZE(bcm2708_smi_resources),
+	.dev            = {
+		.dma_mask           = &smi_dmamask,
+		.coherent_dma_mask  = DMA_BIT_MASK(DMA_MASK_BITS_COMMON),
+	},
+};
+
 
 static u64 vuart_dmamask = DMA_BIT_MASK(DMA_MASK_BITS_COMMON);
 
@@ -450,6 +470,7 @@ void __init bcm2708_init(void)
 	bcm_register_device(&bcm2708_mci_device);
 	bcm_register_device(&vceb_fb_device);
 	bcm_register_device(&bcm2708_usb_device);
+	bcm_register_device(&bcm2708_smi_device);
 #ifdef DEV_UART1
 	bcm_register_device(&bcm2708_uart1_device);
 #endif

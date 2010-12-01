@@ -12,3 +12,10 @@ config VC_GENCMD
 	tristate "GENCMD Driver"
 	depends on BRCM_MISC_DRIVERS
 	default BRCM_MISC_DRIVERS
+
+config BCM2708_SMI
+	tristate "SMI Driver"
+	depends on BRCM_MISC_DRIVERS
+	default BRCM_MISC_DRIVERS
+	help
+		SMI driver required for Nand

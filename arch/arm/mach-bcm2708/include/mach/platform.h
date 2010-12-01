@@ -57,7 +57,9 @@
 
 #define BCM2708_PERI_BASE        (0x08000000)
 #define ARM_BASE                 (BCM2708_PERI_BASE + 0xB000)   /* BCM2708 ARM control block */
+#define SMI_BASE                 (BCM2708_PERI_BASE + 0x600000) /* SMI  */
 #define USB_BASE                 (BCM2708_PERI_BASE + 0x980000) /* DTC_OTG USB controller */
+#define GPIO_BASE                (BCM2708_PERI_BASE + 0x200000) /* GPIO */
 #define UART0_BASE               (BCM2708_PERI_BASE + 0x201000)	/* Uart 0 */
 #define MMCI0_BASE               (BCM2708_PERI_BASE + 0x202000) /* MMC interface */
 #define UART1_BASE               (BCM2708_PERI_BASE + 0x215000) /* Uart 1 */
