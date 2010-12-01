@@ -18,12 +18,16 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
+
 #ifndef __ASM_ARCH_SYSTEM_H
 #define __ASM_ARCH_SYSTEM_H
 
 #include <linux/io.h>
 #include <mach/hardware.h>
 #include <mach/platform.h>
+#include <mach/powerman.h>
+
+#define PM_RSTC_WRCFG_FULL_RESET	(0x00000020)
 
 static inline void arch_idle(void)
 {
@@ -36,6 +40,17 @@ static inline void arch_idle(void)
 
 static inline void arch_reset(char mode, const char *cmd)
 {
+	uint32_t pm_rstc, pm_wdog;
+	uint32_t timeout = 10;
+
+	/* Setup watchdog for reset */
+	pm_rstc = readl(IO_ADDRESS(PM_RSTC));
+
+	pm_wdog = PM_PASSWORD | (timeout & PM_WDOG_TIME_SET); // watchdog timer = timer clock / 16; need password (31:16) + value (11:0)
+	pm_rstc = PM_PASSWORD | (pm_rstc & PM_RSTC_WRCFG_CLR) | PM_RSTC_WRCFG_FULL_RESET;
+
+	writel(pm_wdog, IO_ADDRESS(PM_WDOG));
+	writel(pm_rstc, IO_ADDRESS(PM_RSTC));
 }
 
 #endif
