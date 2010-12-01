@@ -182,6 +182,10 @@ static void tsc2007_work(struct work_struct *work)
 	}
 
 	tsc2007_read_values(ts, &tc);
+#if defined(CONFIG_MACH_BCM2850_FPGA) || defined(CONFIG_MACH_BCM2850_DK)
+	if(ts->clear_penirq)
+		ts->clear_penirq();
+#endif
 
 	rt = tsc2007_calculate_pressure(ts, &tc);
 	if (rt > MAX_12BIT) {
@@ -312,8 +316,13 @@ static int __devinit tsc2007_probe(struct i2c_client *client,
 	if (pdata->init_platform_hw)
 		pdata->init_platform_hw();
 
+#if defined(CONFIG_MACH_BCM2850_FPGA) || defined(CONFIG_MACH_BCM2850_DK)
+	err = request_irq(ts->irq, tsc2007_irq, IRQF_TRIGGER_FALLING | IRQF_SHARED,
+			client->dev.driver->name, ts);
+#else
 	err = request_irq(ts->irq, tsc2007_irq, 0,
 			client->dev.driver->name, ts);
+#endif
 	if (err < 0) {
 		dev_err(&client->dev, "irq %d busy?\n", ts->irq);
 		goto err_free_mem;

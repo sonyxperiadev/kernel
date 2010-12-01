@@ -404,6 +404,7 @@ static inline void i2c_unlock_adapter(struct i2c_adapter *adapter)
 #define I2C_CLASS_TV_DIGITAL	(1<<2)	/* dvb cards */
 #define I2C_CLASS_DDC		(1<<3)	/* DDC bus on graphics adapters */
 #define I2C_CLASS_SPD		(1<<7)	/* SPD EEPROMs and similar */
+#define I2C_CLASS_TOUCHSCREEN	(1<<8)	/* Capacitive touchscreen */
 
 /* Internal numbers to terminate lists */
 #define I2C_CLIENT_END		0xfffeU
