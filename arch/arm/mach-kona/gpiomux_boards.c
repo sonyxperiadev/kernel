@@ -50,8 +50,16 @@ gpiomux_boards_t gpiomux_boards[] =
  * is in use and the boot is passing actual machine id's into the kernel */
 extern const gpiomux_group_t gpiomux_GroupList_BCMHANA_BASE[];
 extern const unsigned int gpiomux_GroupListEntries_BCMHANA_BASE;
-extern const gpiomux_group_t gpiomux_GroupList_BCMHANA_FPGA[];
-extern const unsigned int gpiomux_GroupListEntries_BCMHANA_FPGA;
+#if defined(CONFIG_MACH_BCM2850_FPGA)
+extern const gpiomux_group_t gpiomux_GroupList_ISLAND_FPGA[];
+extern const unsigned int gpiomux_GroupListEntries_ISLAND_FPGA;
+#elif defined(CONFIG_MACH_BCM2850_DK)
+extern const gpiomux_group_t gpiomux_GroupList_ISLAND_DK[];
+extern const unsigned int gpiomux_GroupListEntries_ISLAND_DK;
+#elif defined(CONFIG_MACH_BCM2850_BU)
+extern const gpiomux_group_t gpiomux_GroupList_ISLAND_BU[];
+extern const unsigned int gpiomux_GroupListEntries_ISLAND_BU;
+#endif
 extern const gpiomux_group_t gpiomux_GroupList_BCMHANA_HERARAY[];
 extern const unsigned int gpiomux_GroupListEntries_BCMHANA_HERARAY;
 extern const gpiomux_group_t gpiomux_GroupList_BCMHANA_HERARAY_RAMPAGE[];
@@ -76,7 +84,15 @@ void gpiomux_boards_init(void)
    
 // #elif defined(CONFIG_MACH_BCMHANA_FPGA)
 #elif defined(CONFIG_MACH_BCM2850_FPGA)
-	gpiomux_earlyinit(gpiomux_GroupListEntries_BCMHANA_FPGA,             gpiomux_GroupList_BCMHANA_FPGA);
+	gpiomux_earlyinit(gpiomux_GroupListEntries_ISLAND_FPGA,             gpiomux_GroupList_ISLAND_FPGA);
+
+// For now let BCM2850_BU and DK have same settings as that of FPGA.
+// Correct values will be populated into these arrays later.
+#elif defined(CONFIG_MACH_BCM2850_BU)
+	gpiomux_earlyinit(gpiomux_GroupListEntries_ISLAND_BU,             gpiomux_GroupList_ISLAND_BU);
+   
+#elif defined(CONFIG_MACH_BCM2850_DK)
+	gpiomux_earlyinit(gpiomux_GroupListEntries_ISLAND_DK,             gpiomux_GroupList_ISLAND_DK);
    
 #elif defined(CONFIG_MACH_BCMHANA_HERARAY)
 	gpiomux_earlyinit(gpiomux_GroupListEntries_BCMHANA_HERARAY,          gpiomux_GroupList_BCMHANA_HERARAY);

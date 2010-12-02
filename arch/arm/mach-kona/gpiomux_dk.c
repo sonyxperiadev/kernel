@@ -429,7 +429,7 @@ static const gpiomux_pinconfig_t vc_jtagList[] =
  * and to make chipreg assignments.
  */
 
-const gpiomux_group_t gpiomux_GroupList_ISLAND_FPGA[] =
+const gpiomux_group_t gpiomux_GroupList_ISLAND_DK[] =
 {
    { gpiomux_group_i2c,           ARRAY_LEN(arm_i2c0List),        arm_i2c0List,    0 },
    { gpiomux_group_i2c,           ARRAY_LEN(arm_i2c1List),        arm_i2c1List,    1 },
@@ -471,5 +471,5 @@ const gpiomux_group_t gpiomux_GroupList_ISLAND_FPGA[] =
    { gpiomux_group_vc_jtag,       ARRAY_LEN(vc_jtagList),         vc_jtagList,     0 },
 };
 
-const unsigned int gpiomux_GroupListEntries_ISLAND_FPGA = ARRAY_LEN(gpiomux_GroupList_ISLAND_FPGA);
+const unsigned int gpiomux_GroupListEntries_ISLAND_DK = ARRAY_LEN(gpiomux_GroupList_ISLAND_DK);
 
