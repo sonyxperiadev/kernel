@@ -330,11 +330,13 @@ static struct mtd_partition bcm2708_default_nand_part[] = {
       .name = "bootloaders",
       .size = 3 * SZ_4M,
       .offset = 0,
+      .mask_flags = MTD_WRITEABLE, /* force read-only */
    },
    [1] = {
       .name = "kernel",
       .size = 3 * SZ_4M,
       .offset = 3 * SZ_4M,
+      .mask_flags = MTD_WRITEABLE, /* force read-only */
    },
    [2] = {
       .name = "system",
