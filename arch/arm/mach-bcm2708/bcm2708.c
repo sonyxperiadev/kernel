@@ -16,6 +16,7 @@
 #include <linux/clockchips.h>
 #include <linux/cnt32_to_63.h>
 #include <linux/io.h>
+#include <mtd/mtd-abi.h>
 
 #include <asm/clkdev.h>
 #include <asm/system.h>
