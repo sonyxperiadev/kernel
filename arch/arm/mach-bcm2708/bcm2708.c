@@ -340,14 +340,20 @@ static struct mtd_partition bcm2708_default_nand_part[] = {
       .mask_flags = MTD_WRITEABLE, /* force read-only */
    },
    [2] = {
-      .name = "system",
-      .size = SZ_48M,
+      .name = "firmware",
+      .size = 3 * SZ_4M,
       .offset = SZ_16M + SZ_8M,
+      .mask_flags = MTD_WRITEABLE, /* force read-only */
    },
    [3] = {
+      .name = "system",
+      .size = SZ_48M,
+      .offset = SZ_32M + SZ_4M,
+   },
+   [4] = {
       .name = "data",
       .size = MTDPART_SIZ_FULL,
-      .offset = SZ_64M + SZ_8M,
+      .offset = SZ_64M + SZ_16M + SZ_4M,
    },
 };
 
