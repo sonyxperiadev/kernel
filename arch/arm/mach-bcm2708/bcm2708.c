@@ -31,6 +31,7 @@
 #include <asm/mach/map.h>
 //#include <asm/mach/mmc.h>
 #include <mach/ipc.h>
+#include <mach/plat_nand.h>
 
 #include "bcm2708.h"
 #include "armctrl.h"
@@ -324,6 +325,43 @@ static struct platform_device bcm2708_smi_device = {
 	},
 };
 
+static struct mtd_partition bcm2708_default_nand_part[] = {
+   [0] = {
+      .name = "bootloaders",
+      .size = 3 * SZ_4M,
+      .offset = 0,
+   },
+   [1] = {
+      .name = "kernel",
+      .size = 3 * SZ_4M,
+      .offset = 3 * SZ_4M,
+   },
+   [2] = {
+      .name = "system",
+      .size = SZ_48M,
+      .offset = SZ_16M + SZ_8M,
+   },
+   [3] = {
+      .name = "data",
+      .size = MTDPART_SIZ_FULL,
+      .offset = SZ_64M + SZ_8M,
+   },
+};
+
+static struct bcm2708_platform_nand bcm2708_plat_nand_info = {
+   .partitions    = bcm2708_default_nand_part,
+   .nr_partitions = ARRAY_SIZE(bcm2708_default_nand_part),
+};
+
+static struct platform_device bcm2708_nand_device = {
+   .name          = "bcm2708_nand",
+   .id            = -1,
+   .num_resources = 0,
+   .dev           = {
+      .platform_data = &bcm2708_plat_nand_info,
+   }
+};
+
 
 static u64 vuart_dmamask = DMA_BIT_MASK(DMA_MASK_BITS_COMMON);
 
@@ -471,6 +509,7 @@ void __init bcm2708_init(void)
 	bcm_register_device(&vceb_fb_device);
 	bcm_register_device(&bcm2708_usb_device);
 	bcm_register_device(&bcm2708_smi_device);
+	bcm_register_device(&bcm2708_nand_device);
 #ifdef DEV_UART1
 	bcm_register_device(&bcm2708_uart1_device);
 #endif

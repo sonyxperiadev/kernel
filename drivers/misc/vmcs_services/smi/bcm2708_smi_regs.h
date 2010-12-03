@@ -1,7 +1,7 @@
 #ifndef _BCM2708_SMI_REGS_H
 #define _BCM2708_SMI_REGS_H
 
-#define BCM2708_SMI_DEBUG
+//#define BCM2708_SMI_DEBUG
 
 #ifdef BCM2708_SMI_DEBUG
 #define refmt(fmt) "[%s]: " fmt, __func__
