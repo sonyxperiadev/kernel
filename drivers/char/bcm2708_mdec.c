@@ -562,6 +562,7 @@ struct miscdevice mdec_misc_dev = {
 static int bcm2708_mdec_probe(struct platform_device *pdev)
 {
         int ret = -ENXIO;
+        int timeout = 0;
         struct resource *r;
 	struct bcm2708_mdec *bcm_mdec = NULL;
 
@@ -612,7 +613,19 @@ static int bcm2708_mdec_probe(struct platform_device *pdev)
        mdec_create_proc_entry("bcm2835_mdec", mdec_dummy_read, mdec_proc_write);
 
        bcm2708mdec_dbg("The MDEC device is probed successfully");
-	
+
+	// Turn off incase U-Boot was running splash screen
+	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0x0;
+	while (MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET)) {
+		schedule_timeout(10);
+		timeout++;
+		if (timeout > 100) {
+			printk("Error disabling MDEC control\n");
+			break;
+		}
+		bcm2708mdec_dbg("slept for 1 sec in disabling control\n");
+	}
+
 	return 0;
 
 err_reg_chrdev:
