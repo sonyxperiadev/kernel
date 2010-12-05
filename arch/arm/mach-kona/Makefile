@@ -12,8 +12,13 @@
 # consent.
 #*****************************************************************************
 
-obj-y := gpio_irq.o gpiomux.o gpiomux_hana.o gpiomux_boards.o 
-obj-$(CONFIG_MACH_BCM2850_FPGA) += board_fpga.o gpiomux_fpga.o
-obj-$(CONFIG_MACH_BCM2850_BU) += board_bu.o gpiomux_bu.o
-obj-$(CONFIG_MACH_BCM2850_DK) += board_dk.o gpiomux_dk.o
+#obj-y := gpio_irq.o gpiomux.o gpiomux_hana.o gpiomux_boards.o 
+#obj-$(CONFIG_MACH_BCM2850_FPGA) += board_fpga.o gpiomux_fpga.o
+#obj-$(CONFIG_MACH_BCM2850_BU) += board_bu.o gpiomux_bu.o
+#obj-$(CONFIG_MACH_BCM2850_DK) += board_dk.o gpiomux_dk.o
+#obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o
+obj-y := gpio_irq.o 
+obj-$(CONFIG_MACH_BCM2850_FPGA) += board_fpga.o 
+obj-$(CONFIG_MACH_BCM2850_BU) += board_bu.o 
+obj-$(CONFIG_MACH_BCM2850_DK) += board_dk.o 
 obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o

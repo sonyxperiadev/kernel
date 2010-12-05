@@ -35,12 +35,10 @@
 #include <linux/init.h>
 
 #include <asm/gpio.h>
-// #include <asm-generic/gpio.h>
 
-// SARU #include <linux/broadcom/gpio.h>
-#include <mach/gpio_defs.h>
+// #include <mach/gpio_defs.h>
 #include <mach/isl_gpio_inline.h>
-#include <mach/gpiomux.h>
+// #include <mach/gpiomux.h>
 
 /* ---- Public Variables ------------------------------------------------- */
 
@@ -51,7 +49,7 @@ typedef struct
     struct gpio_chip chip;
     volatile unsigned int *reg;
 
-} bcmhana_gpio_chip;
+} bigisland_gpio_chip;
 
 /* ---- Private Function Prototypes -------------------------------------- */
 
@@ -67,7 +65,7 @@ static spinlock_t gGpioLock = SPIN_LOCK_UNLOCKED;
 *
 *****************************************************************************/
 
-static int gpio_bcmhana_direction_input( struct gpio_chip *chip, unsigned gpio )
+static int gpio_bigisland_direction_input( struct gpio_chip *chip, unsigned gpio )
 {
 	 uint32_t mode;
 	 unsigned long flags;
@@ -86,7 +84,7 @@ static int gpio_bcmhana_direction_input( struct gpio_chip *chip, unsigned gpio )
 	 spin_unlock_irqrestore(&gGpioLock, flags);
     return 0;
 
-} /* gpio_bcmhana_direction_input */
+} /* gpio_bigisland_direction_input */
 
 /****************************************************************************
 *
@@ -94,7 +92,7 @@ static int gpio_bcmhana_direction_input( struct gpio_chip *chip, unsigned gpio )
 *
 *****************************************************************************/
 
-static int gpio_bcmhana_direction_output( struct gpio_chip *chip, unsigned gpio, int value )
+static int gpio_bigisland_direction_output( struct gpio_chip *chip, unsigned gpio, int value )
 {
 	 uint32_t mode;
 	 unsigned long flags;
@@ -115,7 +113,7 @@ static int gpio_bcmhana_direction_output( struct gpio_chip *chip, unsigned gpio,
 
     return 0;
 
-} /* gpio_bcmhana_direction_output */
+} /* gpio_bigisland_direction_output */
 
 /****************************************************************************
 *
@@ -124,13 +122,13 @@ static int gpio_bcmhana_direction_output( struct gpio_chip *chip, unsigned gpio,
 *
 *****************************************************************************/
 
-static int gpio_bcmhana_get( struct gpio_chip *chip, unsigned gpio )
+static int gpio_bigisland_get( struct gpio_chip *chip, unsigned gpio )
 {
 	(void)chip;	/* Not required for this particular lower level API */
 
     return isl_gpio_get_bit(gpio);
 
-} /* gpio_bcmhana_get */
+} /* gpio_bigisland_get */
 
 /****************************************************************************
 *
@@ -138,13 +136,13 @@ static int gpio_bcmhana_get( struct gpio_chip *chip, unsigned gpio )
 *
 *****************************************************************************/
 
-static void gpio_bcmhana_set( struct gpio_chip *chip, unsigned gpio, int value )
+static void gpio_bigisland_set( struct gpio_chip *chip, unsigned gpio, int value )
 {
 	(void)chip;	/* Not required for this particular lower level API */
 
 	 isl_gpio_set_bit(gpio, value);
 
-} /* gpio_bcmhana_set */
+} /* gpio_bigisland_set */
 
 /****************************************************************************
 *
@@ -155,7 +153,7 @@ static void gpio_bcmhana_set( struct gpio_chip *chip, unsigned gpio, int value )
 *
 *****************************************************************************/
 
-static void gpio_bcmhana_dbg_show( struct seq_file *s, struct gpio_chip *chip )
+static void gpio_bigisland_dbg_show( struct seq_file *s, struct gpio_chip *chip )
 {
     unsigned    gpio = chip->base;
     int         i;
@@ -225,7 +223,7 @@ static void gpio_bcmhana_dbg_show( struct seq_file *s, struct gpio_chip *chip )
         seq_printf( s, "\n");
     }
     
-} /* gpio_bcmhana_dbg_show */
+} /* gpio_bigisland_dbg_show */
 
 /****************************************************************************
 *
@@ -239,25 +237,26 @@ static void gpio_bcmhana_dbg_show( struct seq_file *s, struct gpio_chip *chip )
  *       the custom fields after. See asm-arm/arch-pxa/gpio.c for an example. 
  */
 
-static bcmhana_gpio_chip gpio_bcmhana_chip[] =
+static bigisland_gpio_chip gpio_bigisland_chip[] =
 {
     [0] = /* We could have 6 chips here, but lower level isl API based on chip doesn't exist */
     {
         .reg  = (volatile uint32_t *)KONA_GPIO2_VA,
         .chip =
         {
-            .label              = "bcmhana",
-            .direction_input    = gpio_bcmhana_direction_input,
-            .direction_output   = gpio_bcmhana_direction_output,
-            .get                = gpio_bcmhana_get,
-            .set                = gpio_bcmhana_set,
-            .dbg_show           = gpio_bcmhana_dbg_show,
+            .label              = "bigisland",
+            .direction_input    = gpio_bigisland_direction_input,
+            .direction_output   = gpio_bigisland_direction_output,
+            .get                = gpio_bigisland_get,
+            .set                = gpio_bigisland_set,
+            .dbg_show           = gpio_bigisland_dbg_show,
             .base               = 0,
             .ngpio              = NR_ISL_GPIO,
         },
     },
 };
 
+#if 0
 /****************************************************************************/
 /**
 *  @brief   mux_isRequested
@@ -277,9 +276,9 @@ static const char * mux_isRequested(int pin)
     * into a gpiomux register/chip array structure. Since this is typically
     * init time code, it may not be worth worrying about for this one case.
     */
-   for ( i = 0; i < ARRAY_LEN(gpio_bcmhana_chip); i++ )
+   for ( i = 0; i < ARRAY_LEN(gpio_bigisland_chip); i++ )
    {
-      struct gpio_chip *chipp = &gpio_bcmhana_chip[i].chip;
+      struct gpio_chip *chipp = &gpio_bigisland_chip[i].chip;
       int base = chipp->base;
       if ((pin >= base) && (pin < base + chipp->ngpio))
       {
@@ -342,6 +341,8 @@ static void mux_initfunc(void)
       }
    }
 }
+#endif
+
 /****************************************************************************
 *
 *  brcm_init_gpio
@@ -352,10 +353,10 @@ static void mux_initfunc(void)
 static int __init brcm_init_gpio( void )
 {
 	int ret;
-   gpiomux_init_t initstruct;
+   // gpiomux_init_t initstruct;
 
 	printk("%s called\n", __func__);
-   ret = gpiochip_add( &gpio_bcmhana_chip[0].chip );
+   ret = gpiochip_add( &gpio_bigisland_chip[0].chip );
    if (ret)
    {
        printk(KERN_ERR "%s: ret=%d, NR_ISL_GPIO=%d\n",
@@ -363,6 +364,7 @@ static int __init brcm_init_gpio( void )
        return ret;
    }
 
+#if 0
    /* Initialize callbacks for gpiomux function calls into gpiolib */
    initstruct.request_gpio = mux_request;
    initstruct.free_gpio = mux_free;
@@ -386,7 +388,7 @@ static int __init brcm_init_gpio( void )
        printk(KERN_ERR "%s: ret=%d, gpiomux_requestGroup failed\n", __func__, ret );
        return ret;
    }
-
+#endif
 	return ret;
 
 } /* brcm_init_gpio */

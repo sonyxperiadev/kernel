@@ -48,7 +48,7 @@
 // #include <linux/broadcom/gpio_irq.h>
 #include <asm/mach/irq.h>
 
-#include <mach/gpio_defs.h>
+// #include <mach/gpio_defs.h>
 #include <mach/isl_gpio_inline.h>
 
 /* ---- Public Variables ------------------------------------------------- */

@@ -17,8 +17,6 @@
 #if !defined( ASM_ARCH_GPIO_H )
 #define ASM_ARCH_GPIO_H
 
-/* We put thre real stuff in reg_gpio.h for backwards compatability */
-
 #include <mach/reg_gpio.h>
 
 #endif  /* ASM_ARCH_GPIO_H */
