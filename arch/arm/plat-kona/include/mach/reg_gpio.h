@@ -17,11 +17,11 @@
 
 /* ---- Include Files ---------------------------------------------------- */
 
-#include <mach/isl_gpio_inline.h>
+#include <mach/kona_gpio_inline.h>
 
 #if defined( CONFIG_ARCH_REQUIRE_GPIOLIB ) 
 
-    #define   ARCH_NR_GPIOS   NR_ISL_GPIO
+    #define   ARCH_NR_GPIOS   NR_KONA_GPIO
     #include <asm-generic/gpio.h>
     #define gpio_get_value(gpio)        __gpio_get_value(gpio)
     #define gpio_set_value(gpio,value)  __gpio_set_value(gpio,value)

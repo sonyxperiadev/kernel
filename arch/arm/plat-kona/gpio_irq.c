@@ -43,13 +43,8 @@
 #include <linux/interrupt.h>
 #include <linux/spinlock.h>
 
-// #include <linux/broadcom/bcm_major.h>
-// #include <linux/broadcom/bcm_sysctl.h>
-// #include <linux/broadcom/gpio_irq.h>
 #include <asm/mach/irq.h>
-
-// #include <mach/gpio_defs.h>
-#include <mach/isl_gpio_inline.h>
+#include <mach/kona_gpio_inline.h>
 
 /* ---- Public Variables ------------------------------------------------- */
 
@@ -99,7 +94,7 @@ static void gpio_irq_ack( unsigned irq )
     * Since this function is ONLY called with interrupts disabled, we don't 
     * need to disable irqs around the following 
     */
-	isl_gpio_clear_int(irq_to_gpio(irq));
+	kona_gpio_clear_int(irq_to_gpio(irq));
 }
 
 /****************************************************************************
@@ -116,7 +111,7 @@ static void gpio_irq_mask( unsigned irq )
     * Since this function is ONLY called with interrupts disabled, we don't 
     * need to disable irqs around the following 
     */
-	isl_gpio_set_irqmask(irq_to_gpio(irq), 1);
+	kona_gpio_set_irqmask(irq_to_gpio(irq), 1);
 }
 
 /****************************************************************************
@@ -134,7 +129,7 @@ static void gpio_irq_unmask( unsigned irq )
     * need to disable irqs around the following 
     */
 
-	isl_gpio_set_irqmask(irq_to_gpio(irq), 0);
+	kona_gpio_set_irqmask(irq_to_gpio(irq), 0);
 }
 
 /****************************************************************************
@@ -148,26 +143,26 @@ static void gpio_set_irq_trigger_type(unsigned gpio, unsigned type)
 {
 	uint32_t mode;
 	
-	mode = isl_gpio_get_mode(gpio);
+	mode = kona_gpio_get_mode(gpio);
 	 
 	mode &= GPIO_GPCTR0_IOTR_MASK;
 	switch (type)
 	{
 		case IRQ_TYPE_EDGE_RISING:
-			mode |= (ISL_GPIO_INT_RISING << 1);
+			mode |= (KONA_GPIO_INT_RISING << 1);
 			break;
 		case IRQ_TYPE_EDGE_FALLING:
-			mode |= (ISL_GPIO_INT_FALLING << 1);
+			mode |= (KONA_GPIO_INT_FALLING << 1);
 			break;
 		case IRQ_TYPE_EDGE_BOTH:
-			mode |= (ISL_GPIO_INT_BOTH << 1);
+			mode |= (KONA_GPIO_INT_BOTH << 1);
 			break;
 		default:
 			printk(KERN_ERR "%s Bad interrupt trigger type %d\n", __func__, type);
 			return;
 	}
 
-	isl_gpio_set_mode(gpio, mode);
+	kona_gpio_set_mode(gpio, mode);
 }
 /****************************************************************************
 *
@@ -193,7 +188,7 @@ static int gpio_irq_set_type( unsigned irq, unsigned type )
    {
       /* Don't mess GPIOs which already have interrupt handlers registered. */
 
-      if ( isl_gpio_get_irqmask( gpio ) == 0 )
+      if ( kona_gpio_get_irqmask( gpio ) == 0 )
       {
          return 0;
       }
@@ -204,19 +199,19 @@ static int gpio_irq_set_type( unsigned irq, unsigned type )
    printk( KERN_INFO "IRQ%d (gpio%d): ", irq, gpio );
 
 	/* Disable Ints */
-	isl_gpio_set_irqmask(gpio, 1);
+	kona_gpio_set_irqmask(gpio, 1);
 
 	/* Set direction as input */
-	mode = isl_gpio_get_mode(gpio);
+	mode = kona_gpio_get_mode(gpio);
    mode &= ~GPIO_GPCTR0_IOTR_MASK;
-	mode |= ISL_GPIO_DIR_INPUT;
-   isl_gpio_set_mode(gpio, mode);
+	mode |= KONA_GPIO_DIR_INPUT;
+   kona_gpio_set_mode(gpio, mode);
 
 	/* Clear ints */
-	isl_gpio_clear_int(gpio);
+	kona_gpio_clear_int(gpio);
 
 	/* Enable ints */
-	isl_gpio_set_irqmask(gpio, 0);
+	kona_gpio_set_irqmask(gpio, 0);
 
    if ( type & IRQ_TYPE_EDGE_RISING )
    {
@@ -250,7 +245,7 @@ static int gpio_irq_set_type( unsigned irq, unsigned type )
    {
       printk( "no edges\n" );
       printk( KERN_ERR "%s: Failed to set type for IRQ%d (gpio%d): ", __func__, irq, gpio );
-		isl_gpio_set_irqmask(gpio, 1); /* Disable interrupt */
+		kona_gpio_set_irqmask(gpio, 1); /* Disable interrupt */
       return -EINVAL;
    }
 
@@ -277,14 +272,14 @@ static void gpio_isr_handler_common(unsigned int gpio, struct irq_desc *desc, un
 
    do
    {
-		unsigned int mask = isl_gpio_get_irqstatus_register(gpio);
+		unsigned int mask = kona_gpio_get_irqstatus_register(gpio);
       loop = 0;
       if ( mask )
       {
 			unsigned int irq;
 			
          /* Clear the interrupts */	
-			isl_gpio_clear_int_register(gpio);
+			kona_gpio_clear_int_register(gpio);
 
          irq = gpio_to_irq( gpio );
          gpio_desc = irq_desc + irq;
@@ -379,7 +374,7 @@ static int __init gpio_init( void )
 
 	printk( banner );
 
-   isl_gpio_init();
+   kona_gpio_init();
    {
       int   irq;
 
