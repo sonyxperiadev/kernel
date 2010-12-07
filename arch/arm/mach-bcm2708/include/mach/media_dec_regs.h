@@ -17,7 +17,7 @@ FILE DESCRIPTION
 #define MEDIA_DEC_CONTROL_OFFSET                    0x00
    #define MEDIA_DEC_CONTROL_ENABLE_BIT             0x00000001  
    #define MEDIA_DEC_CONTROL_PLAY_BIT               0x00000002
-   #define MEDIA_DEC_CONTROL_BUSY_BIT               0x20000000
+   #define MEDIA_DEC_CONTROL_LOCAL_DATAMODE_BIT     0x20000000
    #define MEDIA_DEC_CONTROL_LOCAL_FILEMODE_BIT     0x40000000
    #define MEDIA_DEC_CONTROL_ERROR_BIT              0x80000000
 #define MEDIA_DEC_STATUS_OFFSET                     0x04
@@ -46,28 +46,53 @@ FILE DESCRIPTION
 #define MEDIA_DEC_DEBUG_FILENAME                    0x90
 #define MEDIA_DEC_DEBUG_FILENAME_LENGTH             256
 
+#define MEDIA_DEC_DATA_ADDRESS_OFFSET               0xA0
+#define MEDIA_DEC_DATA_LENGTH_OFFSET                0xA4
+
 //implemention of peterson's algorithm for shared memory semaphores
 #define MEDIA_DEC_FLAG0_OFFSET                     0x200
 #define MEDIA_DEC_FLAG1_OFFSET                     0x204
 #define MEDIA_DEC_TURN_OFFSET                      0x208
 
-#define MEDIA_DEC_OUT_WRITE_PTR_OFFSET             0x230
-#define MEDIA_DEC_OUT_READ_PTR_OFFSET              0x234
-#define MEDIA_DEC_OUT_FIFO_SIZE_OFFSET             0x238
-#define MEDIA_DEC_OUT_FIFO_ENTRY_OFFSET            0x23C
-#define MEDIA_DEC_OUT_FIFO_START_OFFSET            0x240
+
+#define MEDIA_DEC_VIDEO_OUT_WRITE_PTR_OFFSET             0x230
+#define MEDIA_DEC_VIDEO_OUT_READ_PTR_OFFSET              0x234
+#define MEDIA_DEC_VIDEO_OUT_FIFO_SIZE_OFFSET             0x238
+#define MEDIA_DEC_VIDEO_OUT_FIFO_ENTRY_OFFSET            0x23C
+#define MEDIA_DEC_VIDEO_OUT_FIFO_START_OFFSET            0x240
 
 //0x14 entries here of 0x1c words each = 0x230 gap from 0x50
-#define MEDIA_DEC_OUT_FIFO_OFFSET                  0x250
+#define MEDIA_DEC_VIDEO_OUT_FIFO_OFFSET                  0x250
 
-#define MEDIA_DEC_IN_WRITE_PTR_OFFSET              0x480
-#define MEDIA_DEC_IN_READ_PTR_OFFSET               0x484
-#define MEDIA_DEC_IN_FIFO_SIZE_OFFSET              0x488
-#define MEDIA_DEC_IN_FIFO_ENTRY_OFFSET             0x48C
-#define MEDIA_DEC_IN_FIFO_START_OFFSET             0x490
+#define MEDIA_DEC_AUDIO_OUT_WRITE_PTR_OFFSET             0x480
+#define MEDIA_DEC_AUDIO_OUT_READ_PTR_OFFSET              0x484
+#define MEDIA_DEC_AUDIO_OUT_FIFO_SIZE_OFFSET             0x488
+#define MEDIA_DEC_AUDIO_OUT_FIFO_ENTRY_OFFSET            0x48C
+#define MEDIA_DEC_AUDIO_OUT_FIFO_START_OFFSET            0x490
+
+//0x14 entries here of 0x1c words each = 0x230 gap from 0x50
+#define MEDIA_DEC_AUDIO_OUT_FIFO_OFFSET                  0x4A0
+
+
+#define MEDIA_DEC_VIDEO_IN_WRITE_PTR_OFFSET              0x6D0
+#define MEDIA_DEC_VIDEO_IN_READ_PTR_OFFSET               0x6D4
+#define MEDIA_DEC_VIDEO_IN_FIFO_SIZE_OFFSET              0x6D8
+#define MEDIA_DEC_VIDEO_IN_FIFO_ENTRY_OFFSET             0x6DC
+#define MEDIA_DEC_VIDEO_IN_FIFO_START_OFFSET             0x6E0
 
 //8 entries here of 4 words each = 0x80 gap from 0xF0
-#define MEDIA_DEC_IN_FIFO_OFFSET                   0x4A0
+#define MEDIA_DEC_VIDEO_IN_FIFO_OFFSET                   0x6F0
+
+
+#define MEDIA_DEC_AUDIO_IN_WRITE_PTR_OFFSET              0x7A0
+#define MEDIA_DEC_AUDIO_IN_READ_PTR_OFFSET               0x7A4
+#define MEDIA_DEC_AUDIO_IN_FIFO_SIZE_OFFSET              0x7A8
+#define MEDIA_DEC_AUDIO_IN_FIFO_ENTRY_OFFSET             0x7AC
+#define MEDIA_DEC_AUDIO_IN_FIFO_START_OFFSET             0x7B0
+
+//8 entries here of 4 words each = 0x80 gap from 0xF0
+#define MEDIA_DEC_AUDIO_IN_FIFO_OFFSET                   0x7C0
+
 
 //video types
 
@@ -139,6 +164,7 @@ typedef struct
    uint32_t buffer_ptr;
    uint32_t timestamp;
    uint32_t sequence_number;
+   uint32_t flags;
    uint32_t spare;
 
 } MEDIA_DEC_FIFO_ENTRY_T;

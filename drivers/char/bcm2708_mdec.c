@@ -38,8 +38,35 @@
 
 #define VC_MFS_SD_PREFIX "/mfs/sd/"	/* the path for mdeia file on VC SD card. */
 
-#define MEDIA_DEC_TEST_REGISTER_RW(offset)	\
+#define MEDIA_DEC_REGISTER_RW(offset)	\
 	(*((volatile unsigned long *)((u32)g_mdec->reg_base + (offset))))
+
+#define START_SEQUENCE_NUM	1
+
+typedef enum
+{
+   MEDIA_DEC_FLAGS_NONE = 0x0,
+   MEDIA_DEC_FLAGS_END_OF_FRAME = 0x1,
+   MEDIA_DEC_FLAGS_TIME_UNKNOWN = 0x8,
+
+} MEDIA_DEC_FLAGS_T;
+
+typedef enum {
+	AUDIO_STREAM = 0x0,
+	VIDEO_STREAM,
+} MEDIA_STREAM_T;
+
+typedef enum {
+	PLAYBACK_IDLE		=	0x0,
+	PLAYBACK_ENABLED,
+	PLAYBACK_STARTED,
+	PLAYBACK_CLOSED,
+} playback_state_t;
+
+typedef enum {
+        AUDIO_MASK	=       0x1<<0,
+        VIDEO_MASK	=	0x1<<1,
+} playback_type_t;
 
 struct play_data_request {
 	void			*buf;
@@ -48,50 +75,65 @@ struct play_data_request {
 	struct list_head	node;
 };
 
-/* TODO:
- * save the global into dev 
- * save per task into filp
- * then we do not need to have global hanging around and we can also
- * manage more than one process or open/close
+/* 
+ * TODO:
+ *    1. Each media control structure can be allocated at device open time and stored at filp
+ *    	then all the following filp operations can use it.
+ *    2. Then this sturcture can be linked into the global list that resides inside the g_mdec. 
  */
- 
+struct media_stream_ctl {
+	struct semaphore        vc_buf_sem;
+	struct semaphore        arm_buf_sem;
+	spinlock_t              vc_fifo_lock;
+	IPC_FIFO_T              vc_to_arm_fifo;
+	spinlock_t              arm_fifo_lock;
+	IPC_FIFO_T              arm_to_vc_fifo;
+	atomic_t                sequence_num;
+}; 
+
+struct media_av_ctl {
+	struct media_stream_ctl		audio_ctl;
+	struct media_stream_ctl		video_ctl;
+	u32				playback_type;	
+	playback_state_t		state;
+}; 
+
+/* TODO:
+ *	1. need to add spinlock to make sure there is only one stream setup on-the-fly at any single moment if we do
+ *	   support multi-stream use case.
+ */
 struct bcm2708_mdec {
         u32			irq;
         void __iomem		*reg_base;
-	struct semaphore	vc_ack_sem;	
-	struct semaphore	vc_buf_sem;
-	spinlock_t		vc_fifo_lock;
-	IPC_FIFO_T		vc_to_arm_fifo;
-	spinlock_t		arm_fifo_lock;
-	IPC_FIFO_T		arm_to_vc_fifo;
-	atomic_t		sequence_num;
-	char 			ioctl_cmd_buf[MAX_BCM2708_MDEC_IOCTL_CMD_SIZE];
+	struct semaphore	vc_ack_sem;
+	struct media_av_ctl	av_stream_ctl;
+	//char 			ioctl_cmd_buf[MAX_BCM2708_MDEC_IOCTL_CMD_SIZE];
 };
 
 /* hacky here; needs to make a per thread buffer */
 static struct bcm2708_mdec *g_mdec = NULL;
 
-static inline void dump_vc_to_arm_fifo(void)
+static inline void dump_vc_to_arm_fifo(struct media_stream_ctl *stream_ctl)
 {
 #if BCM2708MDEC_DEBUG
-        printk(KERN_ERR "vc_to_arm_fifo: write=0x%08x           read=0x%08x\n"
+        printk(KERN_ERR "vc_to_arm_video_fifo: write=0x%08x           read=0x%08x\n"
                                         "base=0x%08x            size=0x%08x\n"
                                         "entry_size=0x%08x\n",
-                                        (u32)g_mdec->vc_to_arm_fifo.write, (u32)g_mdec->vc_to_arm_fifo.read,
-                                        (u32)g_mdec->vc_to_arm_fifo.base, g_mdec->vc_to_arm_fifo.size,
-                                        g_mdec->vc_to_arm_fifo.entry_size);
+                                        (u32)stream_ctl->vc_to_arm_fifo.write, (u32)stream_ctl->vc_to_arm_fifo.read,
+                                        (u32)stream_ctl->vc_to_arm_fifo.base, stream_ctl->vc_to_arm_fifo.size,
+                                        stream_ctl->vc_to_arm_fifo.entry_size);
 #endif
 }
 
-static inline void dump_arm_to_vc_fifo(void)
+static inline void dump_arm_to_vc_video_fifo(struct media_stream_ctl *stream_ctl)
 {
 #if BCM2708MDEC_DEBUG
-        printk(KERN_ERR "arm_to_vc_fifo: write=0x%08x           read=0x%08x\n"
+        printk(KERN_ERR "arm_to_vc_video_fifo: write=0x%08x           read=0x%08x\n"
                                         "base=0x%08x            size=0x%08x\n"
                                         "entry_size=0x%08x\n",
-                                        (u32)g_mdec->arm_to_vc_fifo.write, (u32)g_mdec->arm_to_vc_fifo.read,
-                                        (u32)g_mdec->arm_to_vc_fifo.base, g_mdec->arm_to_vc_fifo.size,
-                                        g_mdec->arm_to_vc_fifo.entry_size);
+                                        (u32)stream_ctl->arm_to_vc_fifo.write, (u32)stream_ctl->arm_to_vc_fifo.read,
+                                        (u32)stream_ctl->arm_to_vc_fifo.base, stream_ctl->arm_to_vc_fifo.size,
+                                        stream_ctl->arm_to_vc_fifo.entry_size);
 #endif
 }
 
@@ -112,10 +154,13 @@ static inline int notify_vc_and_wait_for_ack(void)
 	int ret = 0;
 
 	ipc_notify_vc_event(g_mdec->irq);
-	
+
+#if 0	
 	ret = down_timeout(&g_mdec->vc_ack_sem, HZ * 3);
 	if (ret)
 		bcm2708mdec_error("Faided to acquire the semaphore, probably VC side is pegged!");
+#endif
+	down(&g_mdec->vc_ack_sem);
 	
 	return ret;
 }
@@ -125,46 +170,92 @@ static int player_setup(bcm2708_mdec_setup_t *setup_cmd)
 {
 	int ret = 0;
 
+	g_mdec->av_stream_ctl.state = PLAYBACK_IDLE;
+
+        sema_init(&g_mdec->vc_ack_sem, 0);
+
 	bcm2708mdec_dbg("player setup with video_type=%d audio_type=%d\n", 
 				setup_cmd->video_type,
 				setup_cmd->audio_type);
 
         /* Set up the debug mode */
-        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_DEBUG_MASK ) = 0;
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_DEBUG_MASK ) = 0;
 
         /* Set up the src width as 0xFFFFFFFF (ignore) */
-        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_X_OFFSET ) = 0xFFFFFFFF;
-        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_Y_OFFSET ) = 0xFFFFFFFF;
-        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_WIDTH_OFFSET ) = 0xFFFFFFFF;
-        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_HEIGHT_OFFSET ) = 0xFFFFFFFF;
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_X_OFFSET ) = 0xFFFFFFFF;
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_Y_OFFSET ) = 0xFFFFFFFF;
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_WIDTH_OFFSET ) = 0xFFFFFFFF;
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_HEIGHT_OFFSET ) = 0xFFFFFFFF;
 
         /* Set up the target codec */
-        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_VID_TYPE ) = setup_cmd->video_type;
-        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_AUD_TYPE ) = setup_cmd->audio_type;
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_VID_TYPE ) = setup_cmd->video_type;
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_AUD_TYPE ) = setup_cmd->audio_type;
 
         /* Enable the mode */
-        MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = MEDIA_DEC_CONTROL_ENABLE_BIT;
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = MEDIA_DEC_CONTROL_ENABLE_BIT;
 
 	mb();
 
 	ret = notify_vc_and_wait_for_ack();
 
-	BUG_ON((MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1);
+	BUG_ON((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1);
 
-	/* FIFO is set up on the VC side after enabl bit is set. */
-        ipc_fifo_setup_no_reset(&g_mdec->vc_to_arm_fifo,
-                        &MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_WRITE_PTR_OFFSET),
-                        &MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_READ_PTR_OFFSET),
-                        ipc_bus_to_virt(MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_FIFO_START_OFFSET)),
-                        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_FIFO_SIZE_OFFSET),
-                        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_OUT_FIFO_ENTRY_OFFSET));
+	/*
+ 	 * Initialize the stream control structure for both audio and video streams, if any. 
+ 	 *
+ 	 */
+ 
+	g_mdec->av_stream_ctl.playback_type = 0;
+	/* FIFO is set up on the VC side after enabl bit is set and the ARM side is doing the same. */
+	if (MEDIA_DEC_VIDEO_CodingUnused != setup_cmd->video_type) {
+	        ipc_fifo_setup_no_reset(&g_mdec->av_stream_ctl.video_ctl.vc_to_arm_fifo,
+        	                &MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_OUT_WRITE_PTR_OFFSET),
+                	        &MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_OUT_READ_PTR_OFFSET),
+                        	ipc_bus_to_virt(MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_OUT_FIFO_START_OFFSET)),
+	                        MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_OUT_FIFO_SIZE_OFFSET),
+        	                MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_OUT_FIFO_ENTRY_OFFSET));
 
-        ipc_fifo_setup_no_reset(&g_mdec->arm_to_vc_fifo,
-                        &MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_WRITE_PTR_OFFSET),
-                        &MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_READ_PTR_OFFSET),
-                        ipc_bus_to_virt(MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_FIFO_START_OFFSET)),
-                        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_FIFO_SIZE_OFFSET),
-                        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_IN_FIFO_ENTRY_OFFSET));
+	        ipc_fifo_setup_no_reset(&g_mdec->av_stream_ctl.video_ctl.arm_to_vc_fifo,
+        	                &MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_IN_WRITE_PTR_OFFSET),
+                	        &MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_IN_READ_PTR_OFFSET),
+                        	ipc_bus_to_virt(MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_IN_FIFO_START_OFFSET)),
+	                        MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_IN_FIFO_SIZE_OFFSET),
+        	                MEDIA_DEC_REGISTER_RW(MEDIA_DEC_VIDEO_IN_FIFO_ENTRY_OFFSET));
+
+		sema_init(&g_mdec->av_stream_ctl.video_ctl.vc_buf_sem, 0);
+		sema_init(&g_mdec->av_stream_ctl.video_ctl.arm_buf_sem, 0);
+		spin_lock_init(&g_mdec->av_stream_ctl.video_ctl.vc_fifo_lock);
+		spin_lock_init(&g_mdec->av_stream_ctl.video_ctl.arm_fifo_lock);
+		atomic_set(&g_mdec->av_stream_ctl.video_ctl.sequence_num, 0);
+
+		g_mdec->av_stream_ctl.playback_type |= VIDEO_MASK;
+	}
+
+	if (MEDIA_DEC_AUDIO_CodingUnused != setup_cmd->audio_type) {
+                ipc_fifo_setup_no_reset(&g_mdec->av_stream_ctl.audio_ctl.vc_to_arm_fifo,
+                                &MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_OUT_WRITE_PTR_OFFSET),
+                                &MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_OUT_READ_PTR_OFFSET),
+                                ipc_bus_to_virt(MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_OUT_FIFO_START_OFFSET)),
+                                MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_OUT_FIFO_SIZE_OFFSET),
+                                MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_OUT_FIFO_ENTRY_OFFSET));
+
+                ipc_fifo_setup_no_reset(&g_mdec->av_stream_ctl.audio_ctl.arm_to_vc_fifo,
+                                &MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_IN_WRITE_PTR_OFFSET),
+                                &MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_IN_READ_PTR_OFFSET),
+                                ipc_bus_to_virt(MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_IN_FIFO_START_OFFSET)),
+                                MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_IN_FIFO_SIZE_OFFSET),
+                                MEDIA_DEC_REGISTER_RW(MEDIA_DEC_AUDIO_IN_FIFO_ENTRY_OFFSET));
+
+                sema_init(&g_mdec->av_stream_ctl.audio_ctl.vc_buf_sem, 0);
+                sema_init(&g_mdec->av_stream_ctl.audio_ctl.arm_buf_sem, 0);
+                spin_lock_init(&g_mdec->av_stream_ctl.audio_ctl.vc_fifo_lock);
+                spin_lock_init(&g_mdec->av_stream_ctl.audio_ctl.arm_fifo_lock);
+                atomic_set(&g_mdec->av_stream_ctl.audio_ctl.sequence_num, 0);
+
+		g_mdec->av_stream_ctl.playback_type |= AUDIO_MASK;
+	}
+		
+	g_mdec->av_stream_ctl.state = PLAYBACK_ENABLED;
 
 	return ret;
 }
@@ -175,31 +266,52 @@ static int player_start(void)
 
 	bcm2708mdec_dbg("player start\n");
 
+	if (PLAYBACK_ENABLED != g_mdec->av_stream_ctl.state)
+		return -EIO;
+	
         /* start to play */
-        MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_CONTROL_OFFSET) |= MEDIA_DEC_CONTROL_PLAY_BIT;
+        MEDIA_DEC_REGISTER_RW(MEDIA_DEC_CONTROL_OFFSET) |= MEDIA_DEC_CONTROL_PLAY_BIT;
 
 	mb();
 
         ret = notify_vc_and_wait_for_ack();
 
-        WARN_ON((MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & MEDIA_DEC_CONTROL_PLAY_BIT) != MEDIA_DEC_CONTROL_PLAY_BIT);
+        WARN_ON((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & MEDIA_DEC_CONTROL_PLAY_BIT) != MEDIA_DEC_CONTROL_PLAY_BIT);
+
+	g_mdec->av_stream_ctl.state = PLAYBACK_STARTED;
 
 	return ret;
 }
 
-static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd)
+static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd, MEDIA_STREAM_T stream_type)
 {
 	MEDIA_DEC_FIFO_ENTRY_T entry;
 	unsigned long flags, copy_bytes, total_bytes;
 	void 	*buf_virt, *copy_ptr;
 	int ret = 0;
+	struct media_stream_ctl *stream_ctl;
+
+	if (PLAYBACK_STARTED != g_mdec->av_stream_ctl.state)
+                return -EIO;
+
+	if (AUDIO_STREAM == stream_type) {
+		stream_ctl = &g_mdec->av_stream_ctl.audio_ctl;
+	}
+	else if (VIDEO_STREAM == stream_type) {
+		stream_ctl = &g_mdec->av_stream_ctl.video_ctl;
+	}
+	else 
+		BUG();  
 
 	if (0 == send_data_cmd->data_size)
 		return 0;
 
-	bcm2708mdec_dbg("player send data with buf=0x%08x and size=0x%08x\n", 
+#if 0
+	bcm2708mdec_dbg("player send %s data with buf=0x%08x and size=0x%08x\n", 
+				(AUDIO_STREAM == stream_type)?"audio":"video",
 				(u32)send_data_cmd->data_buf,
 				send_data_cmd->data_size);
+#endif
 
 	memset(&entry, 0, sizeof(&entry));
 	total_bytes = send_data_cmd->data_size;
@@ -212,14 +324,14 @@ static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd)
 	 * the wake up interrupt is an extra one.
 	 */
 	do {
-		spin_lock_irqsave(&g_mdec->vc_fifo_lock, flags);
-		if (!ipc_fifo_empty(&g_mdec->vc_to_arm_fifo)) {
-			ipc_fifo_read(&g_mdec->vc_to_arm_fifo, &entry);
+		//spin_lock_irqsave(&stream_ctl->vc_fifo_lock, flags);
+		if (!ipc_fifo_empty(&stream_ctl->vc_to_arm_fifo)) {
+			ipc_fifo_read(&stream_ctl->vc_to_arm_fifo, &entry);
 			BUG_ON(0 == entry.buffer_size);
-			spin_unlock_irqrestore(&g_mdec->vc_fifo_lock, flags);
+		//	spin_unlock_irqrestore(&stream_ctl->vc_fifo_lock, flags);
 		} else {
-			spin_unlock_irqrestore(&g_mdec->vc_fifo_lock, flags);		
-			ret = down_interruptible(&g_mdec->vc_buf_sem);
+		//	spin_unlock_irqrestore(&stream_ctl->vc_fifo_lock, flags);		
+			ret = down_interruptible(&stream_ctl->vc_buf_sem);
 			if (ret < 0)
 				return -ERESTARTSYS;
 			else {
@@ -236,8 +348,10 @@ static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd)
 	                bcm2708mdec_error("failed to map the memory\n");
         	        return -ENOMEM;
         	}
+#if 0
                 bcm2708mdec_dbg("VC buffer bus addr=0x%08x, virt addr=0x%08x\n", 
 				(u32)entry.buffer_ptr, (u32)buf_virt);
+#endif
 
 		if (copy_from_user(buf_virt, copy_ptr, copy_bytes)) {
 			bcm2708mdec_error("failed to copy the user data\n");
@@ -245,7 +359,12 @@ static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd)
 			return -EFAULT;
 		}
 		entry.buffer_filled_size	= copy_bytes;
-		entry.sequence_number		= atomic_add_return(1, &g_mdec->sequence_num);
+		entry.sequence_number		= atomic_add_return(1, &stream_ctl->sequence_num);
+		if (START_SEQUENCE_NUM == entry.sequence_number)
+			entry.flags = MEDIA_DEC_FLAGS_NONE;
+		else
+			entry.flags = MEDIA_DEC_FLAGS_TIME_UNKNOWN;
+
 		entry.timestamp			= 0;
 		iounmap(buf_virt);
 
@@ -256,10 +375,22 @@ static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd)
  		 * there should be a slot in the input FIFO. 
  		 * Afterwards, tell VC about this buffer with ringing doorbell.
  		 */
-                spin_lock_irqsave(&g_mdec->arm_fifo_lock, flags);
-                BUG_ON(1 == ipc_fifo_full(&g_mdec->arm_to_vc_fifo));
-		ipc_fifo_write(&g_mdec->arm_to_vc_fifo, &entry);
-		spin_unlock_irqrestore(&g_mdec->arm_fifo_lock, flags);
+		while (1) {
+			//spin_lock_irqsave(&stream_ctl->arm_fifo_lock, flags);
+                	if (!ipc_fifo_full(&stream_ctl->arm_to_vc_fifo)) {
+				ipc_fifo_write(&stream_ctl->arm_to_vc_fifo, &entry);
+                        	//spin_unlock_irqrestore(&stream_ctl->arm_fifo_lock, flags);
+				break;
+               		} else {
+                        	//spin_unlock_irqrestore(&stream_ctl->arm_fifo_lock, flags);
+                        	ret = down_interruptible(&stream_ctl->arm_buf_sem);
+				if (ret < 0)
+                                	return -ERESTARTSYS;
+				else {
+					continue;
+				}
+			}
+		}	
 
 		mb();
 
@@ -268,6 +399,16 @@ static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd)
 	} while (total_bytes > 0);
 
 	return 0;
+}
+
+static int player_send_video_data(bcm2708_mdec_send_data_t *send_data_cmd)
+{
+        return player_send_data(send_data_cmd, VIDEO_STREAM);
+}
+
+static int player_send_audio_data(bcm2708_mdec_send_data_t *send_data_cmd)
+{
+        return player_send_data(send_data_cmd, AUDIO_STREAM);
 }
 
 static int do_playback(bcm2708_mdec_play_t *play_cmd)
@@ -280,17 +421,17 @@ static int do_playback(bcm2708_mdec_play_t *play_cmd)
 	BUG_ON(MEDIA_DEC_DEBUG_FILENAME_LENGTH  <= play_cmd->filename_size);
 
 	/* Set up the debug mode */
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_DEBUG_MASK ) = 0;
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_DEBUG_MASK ) = 0;
 
 	/* Set up the src width as 0xFFFFFFFF (ignore) */
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_X_OFFSET ) = 0xFFFFFFFF;
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_Y_OFFSET ) = 0xFFFFFFFF;
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_WIDTH_OFFSET ) = 0xFFFFFFFF;
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_SOURCE_HEIGHT_OFFSET ) = 0xFFFFFFFF;
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_X_OFFSET ) = 0xFFFFFFFF;
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_Y_OFFSET ) = 0xFFFFFFFF;
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_WIDTH_OFFSET ) = 0xFFFFFFFF;
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_HEIGHT_OFFSET ) = 0xFFFFFFFF;
 	
 	/* Set up the target codec */
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_VID_TYPE ) = play_cmd->video_type;
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_AUD_TYPE ) = play_cmd->audio_type;
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_VID_TYPE ) = play_cmd->video_type;
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_AUD_TYPE ) = play_cmd->audio_type;
 
 #if BCM2708MDEC_DEBUG
 	play_cmd->filename[play_cmd->filename_size] = 0;
@@ -316,26 +457,26 @@ static int do_playback(bcm2708_mdec_play_t *play_cmd)
 #endif
 
 	/* Write in the filename */	
-	strncpy((char *)&MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_DEBUG_FILENAME), play_cmd->filename, play_cmd->filename_size);
+	strncpy((char *)&MEDIA_DEC_REGISTER_RW( MEDIA_DEC_DEBUG_FILENAME), play_cmd->filename, play_cmd->filename_size);
 
 	/* Enable the mode */
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = MEDIA_DEC_CONTROL_ENABLE_BIT | MEDIA_DEC_CONTROL_LOCAL_FILEMODE_BIT;
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = MEDIA_DEC_CONTROL_ENABLE_BIT | MEDIA_DEC_CONTROL_LOCAL_FILEMODE_BIT;
 
 	ipc_notify_vc_event(g_mdec->irq);	
 
 	/* Wait for it to get ready */
-	while ((MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1) {
+	while ((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1) {
 		schedule_timeout(100);
 		bcm2708mdec_dbg("slept for 1 sec in enabling playback\n");	
 	}
 
 	/* start to play */
-	MEDIA_DEC_TEST_REGISTER_RW(MEDIA_DEC_CONTROL_OFFSET) |= MEDIA_DEC_CONTROL_PLAY_BIT;
+	MEDIA_DEC_REGISTER_RW(MEDIA_DEC_CONTROL_OFFSET) |= MEDIA_DEC_CONTROL_PLAY_BIT;
 
         ipc_notify_vc_event(g_mdec->irq);
 
 	/* Wait for it to start */
-	while ((MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & MEDIA_DEC_CONTROL_PLAY_BIT) != MEDIA_DEC_CONTROL_PLAY_BIT) {
+	while ((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & MEDIA_DEC_CONTROL_PLAY_BIT) != MEDIA_DEC_CONTROL_PLAY_BIT) {
 		schedule_timeout(100);
 		bcm2708mdec_dbg("slept for 1 sec in playback\n");
 	}
@@ -343,7 +484,7 @@ static int do_playback(bcm2708_mdec_play_t *play_cmd)
 	for( count = 0; count < 10; count++ ) {
 		prev_time = time;
 		schedule_timeout(100);
-		time = MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_PLAYBACK_TIME );
+		time = MEDIA_DEC_REGISTER_RW( MEDIA_DEC_PLAYBACK_TIME );
 		if (time == prev_time)
 			bcm2708mdec_dbg("the playback ts is not moving\n");
 	}
@@ -354,25 +495,37 @@ static int do_playback(bcm2708_mdec_play_t *play_cmd)
 
 static int player_stop(void)
 {
-	WARN_ON(0x1 != (0x1 & MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET )));
+	int ret = 0;
 
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0;
+	bcm2708mdec_dbg("player stops\n");
 
+//	WARN_ON(0x1 != (0x1 & MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET )));
+
+
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0x0;
+
+        mb();
+
+        ret = notify_vc_and_wait_for_ack();
+	
 	mb();
 
-        ipc_notify_vc_event(g_mdec->irq);
 
-#if 0
-	while ((MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x3) != 0x0) {
-        	schedule_timeout(100);
-		bcm2708mdec_dbg("slept for 1 sec in tear down\n");
+//	BUG_ON((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x3) != 0x0);
+
+#if 1        
+	while ((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x3) != 0x0) {
+                schedule_timeout(1);
 	}
-
-	BUG_ON(0x0 != MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_MAX_BUFFER_SIZE));
 #endif
 
-	return 0;
+//	sema_init(&g_mdec->vc_ack_sem, 0);
+
+	g_mdec->av_stream_ctl.state =  PLAYBACK_IDLE;
+
+	return ret;
 }
+
 
 static int mdec_open( struct inode *inode, struct file *file_id)
 {
@@ -383,7 +536,8 @@ static int mdec_release( struct inode *inode, struct file *file_id )
 {
 	int ret = 0;
 
-	ret = player_stop();	
+	if (g_mdec->av_stream_ctl.state !=  PLAYBACK_IDLE)
+		ret = player_stop();	
 	
 	return ret;
 }
@@ -402,34 +556,45 @@ static int mdec_ioctl( struct inode *inode, struct file *file_id, unsigned int c
 {
 	int ret = 0;
 	unsigned long uncopied;
+	u8 *ioctl_cmd_buf;
 
 	BUG_ON(MAX_BCM2708_MDEC_IOCTL_CMD_SIZE < _IOC_SIZE(cmd));
+
+	ioctl_cmd_buf = (u8 *)kmalloc(MAX_BCM2708_MDEC_IOCTL_CMD_SIZE, GFP_KERNEL);
+	if (!ioctl_cmd_buf)
+		return -ENOMEM;	
+
 	if (0 != _IOC_SIZE(cmd)) {
 		uncopied = 
-			copy_from_user(g_mdec->ioctl_cmd_buf, (void *)arg, _IOC_SIZE(cmd));
+			copy_from_user(ioctl_cmd_buf, (void *)arg, _IOC_SIZE(cmd));
 		if (uncopied != 0)
 			return -EFAULT;
 	}
 
 	switch (cmd) {
         case MDEC_IOCTL_PLAYER_SETUP:
-                ret = player_setup((bcm2708_mdec_setup_t *)g_mdec->ioctl_cmd_buf);
+                ret = player_setup((bcm2708_mdec_setup_t *)ioctl_cmd_buf);
                 break;
 
         case MDEC_IOCTL_PLAYER_START:
                 ret = player_start();
                 break;
 
-        case MDEC_IOCTL_PLAYER_SEND_DATA:
-                ret = player_send_data((bcm2708_mdec_send_data_t *)g_mdec->ioctl_cmd_buf);
+        case MDEC_IOCTL_PLAYER_SEND_VIDEO_DATA:
+                ret = player_send_video_data((bcm2708_mdec_send_data_t *)ioctl_cmd_buf);
                 break;
+
+        case MDEC_IOCTL_PLAYER_SEND_AUDIO_DATA:
+                ret = player_send_audio_data((bcm2708_mdec_send_data_t *)ioctl_cmd_buf);
+                break;
+
 
         case MDEC_IOCTL_PLAYER_STOP:
                 ret = player_stop();
                 break;
 
 	case MDEC_IOCTL_PLAYER_LOCAL_DBG:
-		do_playback((bcm2708_mdec_play_t *)g_mdec->ioctl_cmd_buf);
+		do_playback((bcm2708_mdec_play_t *)ioctl_cmd_buf);
 		break; 
 
 	default: 
@@ -548,7 +713,15 @@ static irqreturn_t bcm2708_mdec_isr(int irq, void *dev_id)
 	bcm2708mdec_dbg("The MDEC device rxed one interrupt");
 
 	up(&g_mdec->vc_ack_sem);
-	up(&g_mdec->vc_buf_sem);
+
+	if (g_mdec->av_stream_ctl.playback_type & AUDIO_MASK) {
+                up(&g_mdec->av_stream_ctl.audio_ctl.vc_buf_sem);
+		up(&g_mdec->av_stream_ctl.audio_ctl.arm_buf_sem);
+	}
+	if (g_mdec->av_stream_ctl.playback_type & VIDEO_MASK) {
+		up(&g_mdec->av_stream_ctl.video_ctl.vc_buf_sem);
+		up(&g_mdec->av_stream_ctl.video_ctl.arm_buf_sem);
+        }
 
 	return IRQ_HANDLED;
 }
@@ -599,10 +772,6 @@ static int bcm2708_mdec_probe(struct platform_device *pdev)
         }
 
 	sema_init(&g_mdec->vc_ack_sem, 0);
-	sema_init(&g_mdec->vc_buf_sem, 0);
-	spin_lock_init(&g_mdec->vc_fifo_lock);
-	spin_lock_init(&g_mdec->arm_fifo_lock);
-	atomic_set(&g_mdec->sequence_num, 0);
 
 	ret = misc_register(&mdec_misc_dev);
 	if (ret < 0) {
@@ -615,8 +784,8 @@ static int bcm2708_mdec_probe(struct platform_device *pdev)
        bcm2708mdec_dbg("The MDEC device is probed successfully");
 
 	// Turn off incase U-Boot was running splash screen
-	MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0x0;
-	while (MEDIA_DEC_TEST_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET)) {
+	MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0x0;
+	while (MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET)) {
 		schedule_timeout(10);
 		timeout++;
 		if (timeout > 100) {

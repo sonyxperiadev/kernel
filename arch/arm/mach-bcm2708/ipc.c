@@ -79,8 +79,8 @@ static struct irq_chip ipc_irq_chip = {
 
 typedef enum {
 	IPC_SEMAPHORE_ID_MIN	= 0,
-	IPC_SEMAPHORE_ID_0	= IPC_SEMAPHORE_ID_MIN,
-	IPC_SEMAPHORE_ID_1,
+	IPC_SEMAPHORE_VC_TO_ARM	= IPC_SEMAPHORE_ID_MIN,
+	IPC_SEMAPHORE_ARM_TO_VC = IPC_SEMAPHORE_ID_MIN,
 	IPC_SEMAPHORE_ID_2,
 	IPC_SEMAPHORE_ID_3,
 	IPC_SEMAPHORE_ID_4,
@@ -90,29 +90,38 @@ typedef enum {
 	IPC_SEMAPHORE_ID_MAX	= IPC_SEMAPHORE_ID_7,
 } IPC_SEMAPHORE_ID_T;
 
+typedef enum {
+	IPC_SEMAPHORE_OWNER_VC = 0,
+        IPC_SEMAPHORE_OWNER_ARM = 1,
+} IPC_SEMAPHORE_OWNER_T;
 
-static void ipc_spin_lock(IPC_SEMAPHORE_ID_T lock_id)
+static void ipc_spin_lock(IPC_SEMAPHORE_ID_T lock_id, IPC_SEMAPHORE_OWNER_T owner)
 {
-	while (0x0 != readl(IO_ADDRESS(ARM_0_SEM0) + (lock_id << 2)));
+	while (0x0 != readl(IO_ADDRESS(ARM_0_SEM0 + 0x100 * owner) + (lock_id << 2)));
 }
 
 
-static void ipc_spin_unlock(IPC_SEMAPHORE_ID_T lock_id)
+static void ipc_spin_unlock(IPC_SEMAPHORE_ID_T lock_id, IPC_SEMAPHORE_OWNER_T owner)
 {
-	BUG_ON(0x0 == readl(IO_ADDRESS(ARM_0_SEM0) + (lock_id << 2)));
-	writel(0x1, IO_ADDRESS(ARM_0_SEM0) + (lock_id << 2));
+	//BUG_ON(0x0 == readl(IO_ADDRESS(ARM_0_SEM0 + 0x100 * owner) + (lock_id << 2)));
+	writel(0x0, IO_ADDRESS(ARM_0_SEM0 + 0x100 * owner) + (lock_id << 2));
 }
 
 int ipc_notify_vc_event(int irq_num)
 {
 	u32 vc_irq_status;
 	u32 ipc_id = IRQ_TO_IPC(irq_num);
+        unsigned long irq_flags;
 
-	ipc_spin_lock(IPC_SEMAPHORE_ID_0);
+	local_irq_save(irq_flags);
+	ipc_spin_lock(IPC_SEMAPHORE_ARM_TO_VC, IPC_SEMAPHORE_OWNER_ARM);
 	vc_irq_status = readl(ipc_base_virt + IPC_ARM_VC_INTERRUPT_OFFSET);
 	vc_irq_status |= (0x1 << ipc_id);
 	writel(vc_irq_status, ipc_base_virt + IPC_ARM_VC_INTERRUPT_OFFSET);
-	ipc_spin_unlock(IPC_SEMAPHORE_ID_0);
+	ipc_spin_unlock(IPC_SEMAPHORE_ARM_TO_VC, IPC_SEMAPHORE_OWNER_ARM);
+	local_irq_restore(irq_flags);
+
+	mb();
 
 	writel(0x1, IO_ADDRESS(ARM_0_BELL2));
 
@@ -160,6 +169,7 @@ static nt ipc_lookup_service_resource(u32 four_cc, vc_service_resource_t *res)
 static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 {
 	u32 vc_irq_status, ipc_id;
+	unsigned long irq_flags;
 
 #if DEBUG_IPC_MODULE
 	printk(KERN_ERR "we got interrupt from VC side\n");
@@ -173,11 +183,13 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 	 *
 	 */
 	(void)readl(IO_ADDRESS(ARM_0_BELL0));
-	
-	ipc_spin_lock(IPC_SEMAPHORE_ID_1);
+
+	local_irq_save(irq_flags);
+	ipc_spin_lock(IPC_SEMAPHORE_VC_TO_ARM, IPC_SEMAPHORE_OWNER_ARM);
 	vc_irq_status = readl(ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
 	writel(0x0, ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
-	ipc_spin_unlock(IPC_SEMAPHORE_ID_1);
+	ipc_spin_unlock(IPC_SEMAPHORE_VC_TO_ARM, IPC_SEMAPHORE_OWNER_ARM);
+	local_irq_restore(irq_flags);
 
 #if DEBUG_IPC_MODULE
 	printk(KERN_ERR "the int offset has value 0x%08x\n", vc_irq_status);
@@ -390,6 +402,7 @@ static int __init bcm_ipc_init(void)
 	printk(KERN_ERR"Received ipc_base = 0x%08x\n", ipc_base_phys);
 	ipc_base_phys = __bus_to_phys(ipc_base_phys);
 	printk(KERN_ERR"Real ipc_base = 0x%08x\n", ipc_base_phys);
+	printk(KERN_ERR"sema address=0x%08x\n", IO_ADDRESS(ARM_0_SEM0 + 0x100 * 1));
 
 	ipc_base_virt = ioremap(ipc_base_phys, IPC_BLOCK_SIZE);
 	if (ipc_base_virt == NULL) {
