@@ -168,7 +168,7 @@ static void gpio_kona_dbg_show( struct seq_file *s, struct gpio_chip *chip )
             label = "---unreq----";
         }
 
-        // is_out = gpio_direction_is_output( gpio ); SARU commented this out. See what is the relavent thing ??? 
+		is_out = KONA_GPIO_CTR_REG(gpio) & KONA_GPIO_GPCTR_IOTR ;
         seq_printf(s, " gpio-%-3d (%-12s) %s %s",
             gpio, label, is_out ? "out" : "in ",
             chip->get(chip, i) ? "hi" : "lo" );
