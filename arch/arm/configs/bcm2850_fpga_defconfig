@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32.9
-# Wed Dec  1 07:16:45 2010
+# Mon Dec  6 23:00:40 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -189,16 +189,19 @@ CONFIG_MMU=y
 # CONFIG_ARCH_BCMRING is not set
 # CONFIG_ARCH_BCM2708 is not set
 CONFIG_ARCH_KONA=y
-CONFIG_CPU_BCM2850=y
 
 #
-# KONA Machine types
+# Broadcom KONA architecture based implementations
 #
-CONFIG_MACH_BCM2850_FPGA=y
-# CONFIG_MACH_BCM2850_BU is not set
-# CONFIG_MACH_BCM2850_DK is not set
-# CONFIG_MACH_BCM2860 is not set
-CONFIG_PLAT_KONA=y
+CONFIG_ARCH_ISLAND=y
+# CONFIG_ARCH_RHEA is not set
+
+#
+# Island SoC based Machine types
+#
+CONFIG_MACH_ISLAND_FPGA=y
+# CONFIG_MACH_ISLAND_BU is not set
+# CONFIG_MACH_ISLAND_DK is not set
 
 #
 # Processor Type
