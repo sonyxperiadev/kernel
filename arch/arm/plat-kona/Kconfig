@@ -1,7 +1,21 @@
-config PLAT_KONA
-	bool
+menu	"Broadcom KONA architecture based implementations"
 	depends on ARCH_KONA
-	default y
-	select GENERIC_CLOCKEVENTS
+	
+choice
+	prompt "Broadcom KONA SoC Type"
+	default ARCH_ISLAND	
+
+config ARCH_ISLAND
+	bool "BROADCOM Island SoC"
 	help
-	  Base platform code for any Broadcom Kona architecture device
+	  Support for the Broadcom Island SoC platform.
+
+config ARCH_RHEA
+	bool "BROADCOM Rhea SoC"
+	help
+	  Support for the Broadcom Rhea SoC platform.
+
+endchoice
+
+endmenu
+

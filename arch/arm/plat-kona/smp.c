@@ -22,7 +22,7 @@
 #include <asm/smp_scu.h>
 #include <asm/localtimer.h>
 #include <asm/io.h>
-#include <mach/map.h>
+#include <mach/io_map.h>
 
 /* SCU base address */
 static void __iomem *scu_base = (void __iomem *)(KONA_SCU_VA);

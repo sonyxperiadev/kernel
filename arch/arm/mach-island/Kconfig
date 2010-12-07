@@ -1,0 +1,26 @@
+menu	"Island SoC based Machine types"
+	depends on ARCH_ISLAND
+
+choice
+	prompt "Island SoC based board type"
+	default MACH_ISLAND_DK	
+
+config MACH_ISLAND_FPGA
+	bool "Support Broadcom Island FPGA platform"
+	help
+	  Support for the Broadcom Island FPGA platform.
+
+config MACH_ISLAND_BU
+	bool "Support Broadcom Island bring-up board"
+	help
+	  Support for the Broadcom Island bring-up board.
+
+config MACH_ISLAND_DK
+	bool "Support Broadcom Island DK/FF board"
+	help
+	  Support for the Broadcom Island DK/FF board.
+	  
+endchoice
+
+endmenu
+

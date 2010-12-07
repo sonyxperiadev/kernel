@@ -1,0 +1,21 @@
+menu	"Rhea SoC based Machine types"
+	depends on ARCH_RHEA
+
+choice
+	prompt "Rhea SoC based board type"
+	default MACH_RHEA_RAY	
+
+config MACH_RHEA_RAY
+	bool "Support Broadcom Rhea Ray board"
+	help
+	  Support for the Broadcom Rhea Ray board.
+
+config MACH_HERA_RAY
+        bool "Support Broadcom Hera Ray board"
+        help
+          Support for the Broadcom Hera Ray board.
+
+endchoice
+
+endmenu
+

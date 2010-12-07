@@ -36,7 +36,7 @@
 
 #include <mach/timer.h>
 #include <mach/hardware.h>
-#include <mach/map.h>
+#include <mach/io_map.h>
 #include <mach/irqs.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>

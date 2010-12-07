@@ -27,9 +27,13 @@
 #define __PLAT_KONA_SYSTEM_H
 
 #include <linux/io.h>
-#include <mach/map.h>
+#include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_gicdist.h>
+#ifdef CONFIG_ARCH_ISLAND
 #include <mach/rdb/brcm_rdb_iroot_rst_mgr_reg.h>
+#else
+#include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
+#endif
 
 
 static void arch_idle(void)
@@ -50,6 +54,7 @@ static void arch_reset(char mode, const char *cmd)
 	 */
 	writel(0, KONA_GICDIST_VA + GICDIST_ENABLE_S_OFFSET);
 
+#ifdef CONFIG_ARCH_ISLAND
 	/* enable reset register access */
 	val  = readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
 	val &= IROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;		  /* retain access mode 	 */
@@ -61,7 +66,20 @@ static void arch_reset(char mode, const char *cmd)
 	val  = readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 	val &= IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	  /* retain access mode 	 */
 	writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
-	
+#else
+	/* enable reset register access */
+	val  = readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
+	val &= ROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;		  /* retain access mode 	 */
+	val |= (0xA5A5 << ROOT_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	  /* set password			 */
+	val |= ROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK; 			  /* set access enable		 */
+	writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+
+	/* trigger reset */
+	val  = readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	val &= ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	  /* retain access mode 	 */
+	writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+#endif
+
 	while(1);
 }
 

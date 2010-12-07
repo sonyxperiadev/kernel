@@ -16,7 +16,7 @@
  */
 
 #include <asm/hardware/gic.h>
-#include <mach/map.h>
+#include <mach/io_map.h>
 
 	.macro	disable_fiq
 	.endm

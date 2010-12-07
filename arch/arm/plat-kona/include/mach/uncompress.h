@@ -27,7 +27,7 @@
 #define __ASM_ARCH_UNCOMPRESS_H
 
 #include <linux/io.h>
-#include <mach/map.h>
+#include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 
 #define KONA_UART0_PA UARTB_BASE_ADDR

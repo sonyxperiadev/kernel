@@ -28,7 +28,7 @@ extern "C" {
 
 
 #include <mach/rdb/brcm_rdb_gpio.h>
-#include <mach/map.h>
+#include <mach/io_map.h>
 /**
  * @addtogroup gpio_Interface 
  * @{
@@ -132,6 +132,7 @@ extern "C" {
 ******************************************************************************/
 static inline void kona_gpio_init(void)
 {
+#ifdef CONFIG_ARCH_ISLAND
    KONA_GPIO_PWR_REG = KONA_GPIO_PWR;
    KONA_GPIO_PLSR_REGSET(0) = 0x00000000;
    KONA_GPIO_PWR_REG = KONA_GPIO_PWR;
@@ -144,6 +145,7 @@ static inline void kona_gpio_init(void)
    KONA_GPIO_PLSR_REGSET(4) = 0x00000000;
    KONA_GPIO_PWR_REG = KONA_GPIO_PWR;
    KONA_GPIO_PLSR_REGSET(5) = 0x00000000;
+#endif
 }
 
 /**
