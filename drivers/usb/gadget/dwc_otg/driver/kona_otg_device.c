@@ -34,7 +34,7 @@
 
 #include <mach/lm.h>
 #include <mach/irqs.h>
-#include <mach/map.h>
+#include <mach/io_map.h>
 
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_hsotg.h>
