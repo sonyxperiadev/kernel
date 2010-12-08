@@ -198,8 +198,13 @@ static int player_setup(bcm2708_mdec_setup_t *setup_cmd)
 
 	ret = notify_vc_and_wait_for_ack();
 
-	BUG_ON((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1);
+        while ((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1) {
+                schedule_timeout(1);
+        }
 
+#if 0
+	BUG_ON((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & 0x1) != 0x1);
+#endif
 	/*
  	 * Initialize the stream control structure for both audio and video streams, if any. 
  	 *
@@ -276,7 +281,13 @@ static int player_start(void)
 
         ret = notify_vc_and_wait_for_ack();
 
+#if 0
         WARN_ON((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & MEDIA_DEC_CONTROL_PLAY_BIT) != MEDIA_DEC_CONTROL_PLAY_BIT);
+#endif
+
+        while ((MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET) & MEDIA_DEC_CONTROL_PLAY_BIT) != MEDIA_DEC_CONTROL_PLAY_BIT) {
+                schedule_timeout(1);
+        }
 
 	g_mdec->av_stream_ctl.state = PLAYBACK_STARTED;
 

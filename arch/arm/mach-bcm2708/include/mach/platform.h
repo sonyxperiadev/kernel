@@ -56,6 +56,7 @@
 //
 
 #define BCM2708_PERI_BASE        (0x08000000)
+#define MCORESYNC_BASE		 (BCM2708_PERI_BASE)
 #define ARM_BASE                 (BCM2708_PERI_BASE + 0xB000)   /* BCM2708 ARM control block */
 #define SMI_BASE                 (BCM2708_PERI_BASE + 0x600000) /* SMI  */
 #define USB_BASE                 (BCM2708_PERI_BASE + 0x980000) /* DTC_OTG USB controller */

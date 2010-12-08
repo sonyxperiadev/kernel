@@ -54,7 +54,12 @@ void __init bcm2708_init_irq(void)
 }
 
 static struct map_desc bcm2708_io_desc[] __initdata = {
-	{
+        {
+                .virtual        = IO_ADDRESS(MCORESYNC_BASE),
+                .pfn            = __phys_to_pfn(MCORESYNC_BASE),
+                .length         = SZ_4K,
+                .type           = MT_DEVICE
+        }, {
 		.virtual	= IO_ADDRESS(ARMCTRL_BASE),
 		.pfn		= __phys_to_pfn(ARMCTRL_BASE),
 		.length		= SZ_4K,

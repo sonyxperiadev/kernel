@@ -97,14 +97,13 @@ typedef enum {
 
 static void ipc_spin_lock(IPC_SEMAPHORE_ID_T lock_id, IPC_SEMAPHORE_OWNER_T owner)
 {
-	while (0x0 != readl(IO_ADDRESS(ARM_0_SEM0 + 0x100 * owner) + (lock_id << 2)));
+	while (0x0 != readl(IO_ADDRESS(MCORESYNC_BASE) + 4 * 6));
 }
 
 
 static void ipc_spin_unlock(IPC_SEMAPHORE_ID_T lock_id, IPC_SEMAPHORE_OWNER_T owner)
 {
-	//BUG_ON(0x0 == readl(IO_ADDRESS(ARM_0_SEM0 + 0x100 * owner) + (lock_id << 2)));
-	writel(0x0, IO_ADDRESS(ARM_0_SEM0 + 0x100 * owner) + (lock_id << 2));
+	writel(0x1, IO_ADDRESS(MCORESYNC_BASE) + 4 * 6);
 }
 
 int ipc_notify_vc_event(int irq_num)
@@ -114,11 +113,16 @@ int ipc_notify_vc_event(int irq_num)
         unsigned long irq_flags;
 
 	local_irq_save(irq_flags);
-	ipc_spin_lock(IPC_SEMAPHORE_ARM_TO_VC, IPC_SEMAPHORE_OWNER_ARM);
+	mb();
+
+	//ipc_spin_lock(IPC_SEMAPHORE_ARM_TO_VC, IPC_SEMAPHORE_OWNER_ARM);
 	vc_irq_status = readl(ipc_base_virt + IPC_ARM_VC_INTERRUPT_OFFSET);
 	vc_irq_status |= (0x1 << ipc_id);
 	writel(vc_irq_status, ipc_base_virt + IPC_ARM_VC_INTERRUPT_OFFSET);
-	ipc_spin_unlock(IPC_SEMAPHORE_ARM_TO_VC, IPC_SEMAPHORE_OWNER_ARM);
+
+	//ipc_spin_unlock(IPC_SEMAPHORE_ARM_TO_VC, IPC_SEMAPHORE_OWNER_ARM);
+	mb();
+
 	local_irq_restore(irq_flags);
 
 	mb();
@@ -185,10 +189,12 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 	(void)readl(IO_ADDRESS(ARM_0_BELL0));
 
 	local_irq_save(irq_flags);
-	ipc_spin_lock(IPC_SEMAPHORE_VC_TO_ARM, IPC_SEMAPHORE_OWNER_ARM);
+	mb();
+	//ipc_spin_lock(IPC_SEMAPHORE_VC_TO_ARM, IPC_SEMAPHORE_OWNER_ARM);
 	vc_irq_status = readl(ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
-	writel(0x0, ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
-	ipc_spin_unlock(IPC_SEMAPHORE_VC_TO_ARM, IPC_SEMAPHORE_OWNER_ARM);
+	//writel(0x0, ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
+	//ipc_spin_unlock(IPC_SEMAPHORE_VC_TO_ARM, IPC_SEMAPHORE_OWNER_ARM);
+        mb();
 	local_irq_restore(irq_flags);
 
 #if DEBUG_IPC_MODULE
