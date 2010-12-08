@@ -38,6 +38,9 @@
 #define GRAPHICS_DRIVER_NAME  "vc_graphics"
 
 //#define BULK_DEBUG 1
+//#define SEMAPHORE_DEBUG 1
+//#define IOCTL_DEBUG 1
+//#define FIFO_DEBUG 1
 
 /****
  ****
@@ -106,6 +109,10 @@ static int graphics_fifo_empty(void)
 {
 	uint32_t read = *graphics_register(GRAPHICS_FIFO_READ); 
 	uint32_t write = *graphics_register(GRAPHICS_FIFO_WRITE);
+#ifdef FIFO_DEBUG 
+	printk(KERN_INFO "graphics_fifo_empty: read %d, write %d\n",
+		read, write);
+#endif
 	return read == write;
 }
 
@@ -116,12 +123,25 @@ static int graphics_fifo_write(const uint32_t *data, uint32_t count)
 	uint32_t write = 0;
 	uint32_t *fifo = NULL;
 
+#ifdef FIFO_DEBUG
+	printk(KERN_INFO "graphics_fifo_write:"
+			 " data = 0x%x, count = %d\n",
+			 (uint32_t) data, count);
+#endif
+
 	if (free_count < count) {
 		*graphics_register(GRAPHICS_FIFO_WRITE_REQ) = 1;
 		graphics_fire_vc_interrupt();
 		do {
+#ifdef FIFO_DEBUG
+			printk(KERN_INFO "graphics_fifo_write:"
+					" Not enough space:"
+					" free = %d, count = %d\n", 
+					free_count, count);
+#endif
 			graphics_wait();
-		} while (graphics_fifo_free_entries() < count);
+			free_count = graphics_fifo_free_entries();
+		} while (free_count < count);
 	}
 
 	write = *graphics_register(GRAPHICS_FIFO_WRITE);
@@ -160,7 +180,11 @@ out:
 
 static bool graphics_read_requested(void)
 {
-	return *graphics_register(GRAPHICS_FIFO_READ_REQ);
+	uint32_t read_req = *graphics_register(GRAPHICS_FIFO_READ_REQ);
+#ifdef FIFO_DEBUG
+	printk(KERN_INFO "graphics_read_requested: %d\n", read_req);
+#endif
+	return read_req;
 }
 		
 static void graphics_wait_vc_idle(void)
@@ -240,7 +264,7 @@ static int do_rx_ctrl(struct graphics_txrx_ctrl *ctrl)
 	uint32_t *response = (uint32_t *)graphics_register(GRAPHICS_RESULT);
 	uint32_t response_len = 0;
 
-	if (response == NULL) {
+	if (ctrl->response == NULL) {
 		goto out;
 	} 
 
@@ -249,7 +273,7 @@ static int do_rx_ctrl(struct graphics_txrx_ctrl *ctrl)
 	response_len = *graphics_register(GRAPHICS_RESULT_WRITE) * 4;
 	
 	if (response_len > ctrl->response_max_len) {
-		printk(KERN_ERR "graphics: do_rx_ctrl() response_len too big\n");
+		printk(KERN_ERR "graphics_do_rx_ctrl(): response_len too big\n");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -293,10 +317,11 @@ static int ioctl_rpc_tx_bulk(struct graphics_ioctl_rpc_tx_bulk *rpc_tx_bulk)
 	tx_bulk = ioremap(__bus_to_phys(tx_bulk_bus), rpc_tx_bulk->tx_bulk_len);
        
 #ifdef BULK_DEBUG 
-	printk(KERN_ERR "graphics: tx_bulk: bus = 0x%x, virt = 0x%x, length = %d\n",
-		tx_bulk_bus,
-		(uint32_t) tx_bulk,
-		rpc_tx_bulk->tx_bulk_len);
+	printk(KERN_INFO "graphics_ioctl_rpc_tx_bulk:"
+			 " bus = 0x%x, virt = 0x%x, length = %d\n",
+			 tx_bulk_bus,
+			 (uint32_t) tx_bulk,
+			 rpc_tx_bulk->tx_bulk_len);
 #endif
 
 	if (copy_from_user((void *)tx_bulk,
@@ -327,9 +352,7 @@ static int ioctl_rpc_rx_bulk(struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
 	bulk_size = *graphics_register(GRAPHICS_BULK_SIZE_USED);
 	rx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
 	if (rx_bulk_bus == 0) {
-#ifdef BULK_DEBUG 
-		printk(KERN_ERR "graphics: rx_bulk: Bus address NULL\n");
-#endif
+		printk(KERN_ERR "graphics_ioctl_rpc_rx_bulk: Bus address NULL\n");
 		ret = -EINVAL;
 		goto out;
 	}
@@ -338,8 +361,9 @@ static int ioctl_rpc_rx_bulk(struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
 	rx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
    
 #ifdef BULK_DEBUG 
-	printk(KERN_ERR
-		"graphics: rx_bulk: bus = 0x%x, virt = 0x%x, length = %d\n",
+	printk(KERN_INFO
+		"graphics_ioctl_rpc_rx_bulk:"
+		" bus = 0x%x, virt = 0x%x, length = %d\n",
 		rx_bulk_bus,
 		(uint32_t) rx_bulk,
 		bulk_size);
@@ -362,11 +386,18 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	switch (cmd) {
 	case GRAPHICS_IOCTL_RPC: {
 		struct graphics_ioctl_rpc rpc;
+#ifdef IOCTL_DEBUG
+		printk(KERN_INFO "graphics_ioctl: RPC_TX_CTRL\n");
+#endif
 		if (copy_from_user(&rpc, (void *) arg, sizeof(rpc))) {
 			ret = -EFAULT;
 			goto err_cmd;
 		}
-
+#ifdef IOCTL_DEBUG
+		if (rpc.ctrl.response) {
+			printk(KERN_INFO "graphics_ioctl: RPC_RX_CTRL\n");
+		}
+#endif
 		ret = do_txrx_ctrl(&rpc.ctrl);
 		if (ret != 0) goto err_cmd;
 
@@ -377,8 +408,8 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	} break;
 	case GRAPHICS_IOCTL_RPC_TX_BULK: {
 		struct graphics_ioctl_rpc_tx_bulk rpc_tx_bulk;
-#ifdef BULK_DEBUG
-		printk(KERN_INFO "graphics: tx_bulk_ioctl\n");
+#if defined(BULK_DEBUG) || defined(IOCTL_DEBUG)
+		printk(KERN_INFO "graphics_ioctl: RPC_TX_BULK\n");
 #endif
 		if (copy_from_user(&rpc_tx_bulk, (void *) arg, 
 						sizeof(rpc_tx_bulk))) {
@@ -397,8 +428,8 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	} break;
 	case GRAPHICS_IOCTL_RPC_RX_BULK: {
 		struct graphics_ioctl_rpc_rx_bulk rpc_rx_bulk;
-#ifdef BULK_DEBUG
-		printk(KERN_INFO "graphics: rx_bulk_ioctl\n");
+#if defined(BULK_DEBUG) || defined(IOCTL_DEBUG)
+		printk(KERN_INFO "graphics_ioctl: RPC_RX_BULK\n");
 #endif
 		if (copy_from_user(&rpc_rx_bulk, (void *) arg, 
 						sizeof(rpc_rx_bulk))) {
@@ -418,6 +449,9 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	case GRAPHICS_IOCTL_CREATE_SEM: {
 		struct graphics_ioctl_create_sem create_sem;
 		struct named_semaphore *s;
+#ifdef IOCTL_DEBUG
+		printk(KERN_INFO "graphics_ioctl: CREATE_SEM\n");
+#endif
 
 		if (copy_from_user(&create_sem, (void *) arg, sizeof(create_sem))) {
 			ret = -EFAULT;
@@ -426,6 +460,9 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 
 		s = create_named_semaphore(create_sem.count, create_sem.name);
 		if (s) {
+#ifdef SEMAPHORE_DEBUG
+			printk(KERN_INFO "graphics_ioctl: Created semaphore name %d: number %d\n", create_sem.name, s->sem_no);
+#endif
 			create_sem.sem_no = s->sem_no;
 		}
 		else {
@@ -442,6 +479,9 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	case GRAPHICS_IOCTL_ACQUIRE_SEM: {
 		struct graphics_ioctl_acquire_sem acquire_sem;
 		struct named_semaphore *s = NULL;
+#ifdef IOCTL_DEBUG
+		printk(KERN_INFO "graphics_ioctl: ACQUIRE_SEM\n");
+#endif
 		if (copy_from_user(&acquire_sem, (void *) arg, sizeof(acquire_sem))) {
 			ret = -EFAULT;
 			goto err_cmd;
@@ -467,6 +507,9 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 	} break;
 	}
 err_cmd:
+#ifdef IOCTL_DEBUG
+	printk(KERN_INFO "graphics_ioctl: exit %d\n", ret);
+#endif
 	return ret;
 }
 
@@ -521,27 +564,34 @@ static irqreturn_t bcm2708_graphics_isr(int irq, void *dev_id)
 {
 	uint32_t sem_name = *graphics_register(GRAPHICS_ASYNC_SEM);
 	if (sem_name != 0xffffffff) { //NEN_TODO: KHRN_NO_SEMAPHORE
-		uint32_t command = *graphics_register(GRAPHICS_ASYNC_SEM);
+		uint32_t command = *graphics_register(GRAPHICS_ASYNC_COMMAND);
 		uint32_t pid_0 = *graphics_register(GRAPHICS_ASYNC_PID_0);
 		uint32_t pid_1 = *graphics_register(GRAPHICS_ASYNC_PID_1);
 		struct named_semaphore *s = get_named_semaphore(sem_name, pid_0, pid_1);
 		if (s) {
 			switch (command) {
 			case 1: //NEN_TODO: ASYNC_COMMAND_POST:
+#ifdef SEMAPHORE_DEBUG
+				printk(KERN_INFO "graphics_isr: Semaphore post: name %d number %d\n", sem_name, s->sem_no);
+#endif
 				up(&s->sem);
 				break;
 			case 2: //NEN_TODO: ASYNC_COMMAND_DESTROY:
+#ifdef SEMAPHORE_DEBUG
+				printk(KERN_INFO "graphics_isr: Destroying semaphore name %d number %d\n", sem_name, s->sem_no);
+#endif
 				s->initialized = 0;
 				break;
 			default:
-				printk(KERN_ERR "graphics: semaphore number %d: unknown command %d\n", s->sem_no, command);
+				printk(KERN_ERR "graphics_isr: Semaphore number %d: unknown command %d\n", s->sem_no, command);
 				break;
 			}
 		}
 		else {
-			printk(KERN_ERR "graphics: couldn't find semaphore with name %d\n", sem_name);
+			printk(KERN_ERR "graphics_isr: Couldn't find semaphore with name %d\n", sem_name);
 		}
 		*graphics_register(GRAPHICS_ASYNC_SEM) = 0xffffffff; //NEN_TODO: KHRN_NO_SEMAPHORE
+		graphics_fire_vc_interrupt(); //NEN_TODO: Should this been done in a BH handler or kernel thread?
 	}
 	graphics_post();
 	return IRQ_HANDLED;
@@ -565,7 +615,7 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 	memset(&graphics_state, 0 , sizeof(graphics_state));
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
-		printk(KERN_ERR "graphics: failed to get resource\n");
+		printk(KERN_ERR "graphics_probe: failed to get resource\n");
 		ret = -ENODEV;
 		goto err_platform_res;
 	}
@@ -574,7 +624,7 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 	graphics_state.irq = platform_get_irq(pdev, 0);
 
 	if( graphics_state.irq < 0 ) {
-		printk(KERN_ERR "graphics: failed to get platform irq\n");
+		printk(KERN_ERR "graphics_probe: failed to get platform irq\n");
 		ret = -ENODEV;
 		goto err_irq;
 	}
@@ -584,14 +634,14 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 	ret = request_irq( graphics_state.irq, bcm2708_graphics_isr,
 			IRQF_DISABLED, "bcm2708 graphics interrupt", NULL);
 	if (ret < 0) {
-		printk(KERN_ERR "graphics: failed to get local irq\n");
+		printk(KERN_ERR "graphics_probe: failed to get local irq\n");
 		ret = -ENOENT;
 		goto err_irq_handler;
 	}
 
 	ret = graphics_driver_init();
 	if( ret < 0 ) {
-		printk(KERN_ERR "graphics: failed to register driver\n");
+		printk(KERN_ERR "graphics_probe: failed to register driver\n");
 		ret = -ENOENT;
 		goto err_driver;
 	}
