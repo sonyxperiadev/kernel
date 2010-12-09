@@ -2953,4 +2953,4 @@ flexibity		MACH_FLEXIBITY		FLEXIBITY		2965
 wlan_computer		MACH_WLAN_COMPUTER	WLAN_COMPUTER		2966
 bcm2708			ARCH_BCM2708		BCM2708			2708
 island			ARCH_ISLAND			ISLAND			2554
-rhea		    ARCH_RHEA           RHEA            2558
+rhea		    ARCH_RHEA           RHEA            2701

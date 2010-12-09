@@ -55,6 +55,7 @@ struct kona_timers {
 
 struct kona_timers timers;
 
+
 /* We use the peripheral timers for system tick, the cpu global timer for
  * profile tick
  */
@@ -183,6 +184,16 @@ static int gptimer_set_next_event(unsigned long clc,
 
 	uint32_t lsw, msw;
 	uint32_t reg;
+
+#ifdef CONFIG_PERIPHERAL_TIMER_FIX
+   {
+	  volatile unsigned int i;
+	  gptimer_disable_and_clear(timers.gptmr_regs);
+	  for (i=0; i<1800; i++)
+	  {
+	  }
+   }
+#endif   
 
 	gptimer_get_counter(timers.gptmr_regs, &msw, &lsw);
 

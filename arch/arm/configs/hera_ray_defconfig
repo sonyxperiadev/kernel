@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32.9
-# Mon Dec  6 16:23:34 2010
+# Tue Dec  7 23:06:42 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -194,6 +194,7 @@ CONFIG_ARCH_KONA=y
 #
 # CONFIG_ARCH_ISLAND is not set
 CONFIG_ARCH_RHEA=y
+CONFIG_PERIPHERAL_TIMER_FIX=y
 
 #
 # Rhea SoC based Machine types

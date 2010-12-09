@@ -17,5 +17,11 @@ config ARCH_RHEA
 
 endchoice
 
+config PERIPHERAL_TIMER_FIX
+	bool "Enable the generic peripheral timer fix"
+	depends on ARCH_RHEA
+	help
+	  Say Y if you want to enable the generic peripheral timer fix
+	  
 endmenu
 
