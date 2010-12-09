@@ -56,14 +56,7 @@
 #define GRAPHICS_ASYNC_PID_0            0x304
 #define GRAPHICS_ASYNC_PID_1            0x308
 #define GRAPHICS_ASYNC_SEM              0x30C
-
-////
-//// RPC result
-////
-
-//
-// RESULT_WRITE: Number of uint32_t's written into the result buffer
-//
+#define GRAPHICS_ASYNC_REQ              0x310
 
 #define GRAPHICS_RESULT_WRITE           0x400
 
