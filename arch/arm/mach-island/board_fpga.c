@@ -87,7 +87,7 @@
 
 #define TANGO_GPIO_IRQ_PIN    		0
 #define TANGO_GPIO_RESET_PIN  		1
-#define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ 10
+#define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ 14
 
 /*
  * Set to 0 for active high (pull-down) mode
@@ -99,13 +99,6 @@
 
 /* 32 ~ 64 ms gives appropriate debouncing */
 #define HW_KEYPAD_DEBOUNCE_TIME   KEYPAD_DEBOUNCE_64MS
-
-/* starting GPIO pin for row (keyout) */
-#define HW_KEYPAD_GPIO_OFFSET_ROW    8
-
-/* starting GPIO pin for column (keyin) */
-#define HW_KEYPAD_GPIO_OFFSET_COL    0
-#define HW_POWER_OFF_KEYSET { '*', '#', 'H' }
 
 static struct plat_serial8250_port uart_data[] = {
 	KONA_8250PORT(UART0),
@@ -218,14 +211,12 @@ static struct platform_device board_gpio_keys_device = {
 static int tsc2007_init_platform_hw(void)
 {
    int rc; 
-   /* -da-
    rc = set_irq_type(gpio_to_irq(TSC2007_PEN_DOWN_GPIO_PIN), IRQ_TYPE_EDGE_FALLING);
    if (rc < 0)
    {
       printk(KERN_ERR "set_irq_type failed with irq %d\n", BCM_INT_ID_GPIO1);
       return rc;
    }
-   */
    rc = gpio_request(TSC2007_PEN_DOWN_GPIO_PIN, "ts_pen_down");
    if (rc < 0)
    {
@@ -273,9 +264,9 @@ static struct TANGO_I2C_TS_t tango_plat_data = {
    .i2c_slave_address = 0,
    .gpio_irq_pin      = TANGO_GPIO_IRQ_PIN,
    .gpio_reset_pin    = TANGO_GPIO_RESET_PIN,
-   .x_max_value       = 0x7ff,
-   .y_max_value       = 0x7ff,
-   .layout            = X_RIGHT_Y_DOWN,
+   .x_max_value       = 480,
+   .y_max_value       = 800,
+   .layout            = X_RIGHT_Y_UP,
    .num_bytes_to_read = TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ,
    .is_multi_touch    = IS_MULTI_TOUCH,
    .is_resetable      = 1,
@@ -285,20 +276,20 @@ static struct TANGO_I2C_TS_t tango_plat_data = {
    .x1_hi_idx         = 3,
    .y1_lo_idx         = 4,
    .y1_hi_idx         = 5,
-   .x2_lo_idx         = 7,
-   .x2_hi_idx         = 8,
-   .y2_lo_idx         = 9,
-   .y2_hi_idx         = 10,
-   .x1_width_idx      = 11,  // X1 coordinate touch area of the first finger
-   .y1_width_idx      = 12,  // Y1 coordinate touch area of the first finger
-   .x2_width_idx      = 13,  // X2 coordinate touch area of the first finger
-   .y2_width_idx      = 14,  // Y2 coordinate touch area of the first finger
+   .x2_lo_idx         = 6,
+   .x2_hi_idx         = 7,
+   .y2_lo_idx         = 8,
+   .y2_hi_idx         = 9,
+   .x1_width_idx      = 10,  // X1 coordinate touch area of the first finger
+   .y1_width_idx      = 11,  // Y1 coordinate touch area of the first finger
+   .x2_width_idx      = 12,  // X2 coordinate touch area of the first finger
+   .y2_width_idx      = 13,  // Y2 coordinate touch area of the first finger
    .power_mode_idx    = 20,   
    .int_mode_idx      = 21,   // INT)mode register
    .int_width_idx     = 22,   // Interrupt pulse width  
    .min_finger_val    = 0,
    .max_finger_val    = MAX_NUM_FINGERS,
-   .panel_width       = 165,
+   .panel_width       = 56,
 };
 
 static struct i2c_board_info __initdata tango_info[] = 

@@ -46,6 +46,8 @@ struct sdio_platform_cfg {
     * to 1
     */
    unsigned int data_pullup;
+   /* card detection GPIO, required for SD/MMC */
+   int cd_gpio;   
    enum sdio_devtype devtype;
    union {
       struct sdio_wifi_gpio_cfg wifi_gpio;
