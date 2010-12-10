@@ -40,6 +40,10 @@
 #include <mach/irqs.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
+#ifdef CONFIG_PERIPHERAL_TIMER_FIX
+#include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
+#endif
 
 #define SYS_TIMER_NUM	(0)
 
@@ -261,8 +265,97 @@ static struct irqaction gptimer_irq = {
 	.handler	= gptimer_interrupt,
 };
 
+#ifdef CONFIG_PERIPHERAL_TIMER_FIX
+
+/* Macros to set/get multiple register bits at one time */
+#define kona_set_reg_field(addr, mask, shift, val)      \
+            do                                              \
+            {                                               \
+               uint32_t tmp;                                \
+               tmp  = readl(addr);                \
+               tmp &= ~(mask);                              \
+               tmp |= (((val) << (shift)) & (mask));        \
+               writel(tmp, addr);                 \
+                                                            \
+            } while(0)
+
+static void __init kona_adjust_gptimer_clock(void)
+{
+	void __iomem *slaveClockMgr_regs = IOMEM(KONA_SLV_CLK_VA);
+	void __iomem *rootClockMgr_regs = IOMEM(KONA_ROOT_CLK_VA);
+	uint32_t val, old_enable, mask; 
+
+	/* unlock slave clock manager */
+	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	old_enable = val & 0x1;	
+	val &= 0x80000000;
+	val |= 0xA5A500 | 0x1;
+	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	
+	/* set the value */
+	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
+ 	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET, 
+		mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT, 0);
+
+
+	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
+	writel(val | (1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT), 
+		slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
+
+	while(readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET) & 
+			(1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT))
+		;
+
+	/* restore slave clock manager */
+	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	val &= 0x80000000;
+	val |= 0xA5A500;
+	val |= old_enable & 0x1;
+	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+
+	/* unlock root clock manager */
+	val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	old_enable = val & 0x1;	
+	val &= 0x80000000;
+	val |= 0xA5A500 | 0x1;
+	writel(val, rootClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	
+	/* fix up frac 1m divisor */
+	val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_FRAC_1M_DIV_OFFSET);
+	writel((val & (~ROOT_CLK_MGR_REG_FRAC_1M_DIV_FRAC_1M_DIV_MASK)) | 0x250000, 
+		rootClockMgr_regs + ROOT_CLK_MGR_REG_FRAC_1M_DIV_OFFSET);
+	
+	/* enable trigger override */
+	val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_OFFSET);
+	writel(val | (1 << ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_FRAC_1M_TRIGGER_OVERRIDE_SHIFT), 
+		rootClockMgr_regs + ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_OFFSET);
+	
+	/* trigger */
+	val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_FRAC_1M_TRG_OFFSET);
+	writel(val | (1 << ROOT_CLK_MGR_REG_FRAC_1M_TRG_FRAC_1M_TRIGGER_SHIFT), 
+		rootClockMgr_regs + ROOT_CLK_MGR_REG_FRAC_1M_TRG_OFFSET);
+	
+	/* wait until completes */
+	while(readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_FRAC_1M_TRG_OFFSET) & 
+		  (1 << ROOT_CLK_MGR_REG_FRAC_1M_TRG_FRAC_1M_TRIGGER_SHIFT))
+		  ;
+	
+	/* disable access to root clock manager */
+	val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	val &= 0x80000000;
+	val |= 0xA5A500;
+	writel(val, slaveClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+}
+#endif
+
+
 static void __init kona_timer_init(void)
 {
+	
+#ifdef	CONFIG_PERIPHERAL_TIMER_FIX
+	kona_adjust_gptimer_clock();
+#endif
+
 #ifdef CONFIG_LOCAL_TIMERS
     twd_base = __io(KONA_PTIM_VA);
 #endif	
