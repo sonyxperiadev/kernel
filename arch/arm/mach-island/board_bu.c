@@ -22,7 +22,7 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
-
+#include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
 #include <linux/platform_device.h>
@@ -30,12 +30,19 @@
 #include <linux/interrupt.h>
 #include <linux/serial_8250.h>
 
+#include <linux/i2c.h>
+#include <linux/irq.h>
+#include <linux/gpio_keys.h>
+#include <linux/input.h>
+#include <linux/i2c/tsc2007.h>
 #include <mach/hardware.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <asm/gpio.h>
 
 #include <mach/kona.h>
 #include <mach/island.h>
+#include <mach/sdio_platform.h>
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to 
@@ -47,6 +54,10 @@
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
 #define KONA_UART2_PA	UARTB3_BASE_ADDR
 #define KONA_UART3_PA	UARTB4_BASE_ADDR
+#define KONA_SDIO0_PA	SDIO1_BASE_ADDR
+#define KONA_SDIO1_PA	SDIO2_BASE_ADDR
+#define KONA_SDIO2_PA	SDIO3_BASE_ADDR
+#define SDIO_CORE_REG_SIZE 0x10000
 
 #define BSC_CORE_REG_SIZE      0x100
 
@@ -61,6 +72,22 @@
 	.type	    = PORT_16550A,          			\
 	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,	\
 }
+
+/*
+ * GPIO pin for Touch screen pen down interrupt
+ */
+#define TSC2007_PEN_DOWN_GPIO_PIN	143
+
+/*
+ * Set to 0 for active high (pull-down) mode
+ *        1 for active low (pull-up) mode
+ */
+#define HW_NUM_GPIO_KEYS     4
+
+#define HW_KEYPAD_ACTIVE_MODE     0
+
+/* 32 ~ 64 ms gives appropriate debouncing */
+#define HW_KEYPAD_DEBOUNCE_TIME   KEYPAD_DEBOUNCE_64MS
 
 static struct resource board_i2c0_resource[] = {
    [0] =
@@ -115,7 +142,7 @@ static struct platform_device board_i2c_adap_devices[] =
       .resource = board_i2c0_resource,
       .num_resources	= ARRAY_SIZE(board_i2c0_resource),
    },
-   {  /* for BSC0 */
+   {  /* for BSC1 */
       .name = "bsc-i2c",
       .id = 1,
       .resource = board_i2c1_resource,
@@ -139,6 +166,89 @@ static struct plat_serial8250_port uart_data[] = {
 	},
 };
 
+#if defined(CONFIG_KEYBOARD_GPIO)
+static struct gpio_keys_button board_gpio_keys_button[] = {
+   { KEY_HOME, 166, 1, "Home", EV_KEY, 0, 64},
+   { KEY_SEARCH, 167, 1, "Search", EV_KEY, 0, 64},
+   { KEY_MENU, 172, 1, "Menu", EV_KEY, 0, 64},
+   { KEY_BACK, 164, 1, "Back", EV_KEY, 0, 64},
+};
+
+static struct gpio_keys_platform_data board_gpio_keys = {
+	.buttons = board_gpio_keys_button,
+	.nbuttons = HW_NUM_GPIO_KEYS,
+	.rep = 1,		
+};
+
+static struct platform_device board_gpio_keys_device = {
+   .name = "gpio-keys",
+   .id = -1,
+   .dev = {
+      .platform_data = &board_gpio_keys,
+   },
+};
+
+#endif
+
+/*
+ * Touchscreen device
+ */
+#ifdef CONFIG_TOUCHSCREEN_TSC2007   
+/*
+ * I2C Touchscreen device
+ */
+static int tsc2007_init_platform_hw(void)
+{
+   int rc; 
+   rc = set_irq_type(gpio_to_irq(TSC2007_PEN_DOWN_GPIO_PIN), IRQ_TYPE_EDGE_FALLING);
+   if (rc < 0)
+   {
+      printk(KERN_ERR "set_irq_type failed with irq %d\n",
+						  	gpio_to_irq(TSC2007_PEN_DOWN_GPIO_PIN));
+      return rc;
+   }
+   rc = gpio_request(TSC2007_PEN_DOWN_GPIO_PIN, "ts_pen_down");
+   if (rc < 0)
+   {
+      printk(KERN_ERR "unable to request GPIO pin %d\n", TSC2007_PEN_DOWN_GPIO_PIN);
+      return rc;
+   }
+   gpio_direction_input(TSC2007_PEN_DOWN_GPIO_PIN);
+   return 0;
+}
+
+static void tsc2007_exit_platform_hw(void)
+{
+   gpio_free(TSC2007_PEN_DOWN_GPIO_PIN);
+}
+
+static void tsc2007_clear_penirq(void)
+{
+   struct irq_desc *desc = irq_to_desc(gpio_to_irq(TSC2007_PEN_DOWN_GPIO_PIN));
+   desc->chip->ack(gpio_to_irq(TSC2007_PEN_DOWN_GPIO_PIN));
+}
+
+static struct tsc2007_platform_data tsc_plat_data = {
+	.model			= 2007,
+	.x_plate_ohms	= 510, // For Sharp K3889TP Touch panel device
+	.get_pendown_state = NULL,
+	.clear_penirq = NULL,
+	.init_platform_hw = tsc2007_init_platform_hw,
+	.exit_platform_hw = tsc2007_exit_platform_hw,
+	.clear_penirq = tsc2007_clear_penirq,
+};
+
+static struct i2c_board_info __initdata tsc2007_info[] = 
+{
+   {  /* New touch screen i2c slave address. */
+      I2C_BOARD_INFO("tsc2007", 0x48),
+      .platform_data  = &tsc_plat_data,
+      .irq = gpio_to_irq(TSC2007_PEN_DOWN_GPIO_PIN),
+   },
+};
+
+#endif
+
 static struct platform_device board_serial_device = {
 	.name		= "serial8250",
 	.id		= PLAT8250_DEV_PLATFORM,
@@ -147,6 +257,83 @@ static struct platform_device board_serial_device = {
 	},
 };
 
+static struct resource board_sdio0_resource[] = {
+	[0] = {
+		.start = KONA_SDIO0_PA,
+		.end = KONA_SDIO0_PA + SDIO_CORE_REG_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO0,
+		.end = BCM_INT_ID_SDIO0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_sdio1_resource[] = {
+	[0] = {
+		.start = KONA_SDIO1_PA,
+		.end = KONA_SDIO1_PA + SDIO_CORE_REG_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO1,
+		.end = BCM_INT_ID_SDIO1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_sdio2_resource[] = {
+	[0] = {
+		.start = KONA_SDIO2_PA,
+		.end = KONA_SDIO2_PA + SDIO_CORE_REG_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct sdio_platform_cfg board_sdio_param[] = {
+   { /* SDIO0 */
+      .id = 0,
+      .data_pullup = 0,
+      .devtype = SDIO_DEV_TYPE_WIFI,
+   },
+   { /* SDIO1 */
+      .id = 1,
+      .data_pullup = 0,
+      .devtype = SDIO_DEV_TYPE_EMMC,
+   },
+   { /* SDIO2 */
+      .id = 2,
+      .data_pullup = 0,
+      .cd_gpio = 106,
+      .devtype = SDIO_DEV_TYPE_SDMMC,
+   },
+};
+
+static struct platform_device island_sdio1_device = {
+	.name = "sdhci",
+	.id = 1,
+	.resource = board_sdio1_resource,
+	.num_resources	= ARRAY_SIZE(board_sdio1_resource),
+	.dev		= {
+		.platform_data = &board_sdio_param[1],
+	},
+};
+
+static struct platform_device island_sdio2_device = {
+	.name = "sdhci",
+	.id = 2,
+	.resource = board_sdio2_resource,
+	.num_resources	= ARRAY_SIZE(board_sdio1_resource),
+	.dev		= {
+		.platform_data = &board_sdio_param[2],
+	},
+};
 
 void __init board_map_io(void)
 {
@@ -159,12 +346,23 @@ static struct platform_device *board_devices[] __initdata = {
 	&board_serial_device,
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
-	&board_i2c_adap_devices[2],
+    &board_i2c_adap_devices[2],
+	&island_sdio1_device,
+	&island_sdio2_device,
 };
 
 static void __init board_add_devices(void)
 {
 	platform_add_devices(board_devices, ARRAY_SIZE(board_devices));
+#ifdef CONFIG_TOUCHSCREEN_TSC2007
+   i2c_register_board_info(1, 
+                           tsc2007_info,
+                           ARRAY_SIZE(tsc2007_info));
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO)
+   platform_device_register(&board_gpio_keys_device);
+#endif
 }
 
 void __init board_init(void)
