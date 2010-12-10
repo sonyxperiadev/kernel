@@ -596,6 +596,12 @@ static irqreturn_t bcm2708_graphics_isr(int irq, void *dev_id)
 		*graphics_register(GRAPHICS_ASYNC_REQ) = 0;
 		graphics_fire_vc_interrupt();
 	}
+	if (*graphics_register(GRAPHICS_FIFO_READ_REQ)) {
+		if (!graphics_fifo_empty()) {
+			*graphics_register(GRAPHICS_FIFO_READ_REQ) = 0;
+			graphics_fire_vc_interrupt();
+		}
+	}
 	graphics_post();
 	return IRQ_HANDLED;
 }
