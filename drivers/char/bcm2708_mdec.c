@@ -107,7 +107,6 @@ struct bcm2708_mdec {
         void __iomem		*reg_base;
 	struct semaphore	vc_ack_sem;
 	struct media_av_ctl	av_stream_ctl;
-	//char 			ioctl_cmd_buf[MAX_BCM2708_MDEC_IOCTL_CMD_SIZE];
 };
 
 /* hacky here; needs to make a per thread buffer */
@@ -578,8 +577,10 @@ static int mdec_ioctl( struct inode *inode, struct file *file_id, unsigned int c
 	if (0 != _IOC_SIZE(cmd)) {
 		uncopied = 
 			copy_from_user(ioctl_cmd_buf, (void *)arg, _IOC_SIZE(cmd));
-		if (uncopied != 0)
+		if (uncopied != 0) {
+			kfree(ioctl_cmd_buf);
 			return -EFAULT;
+		}
 	}
 
 	switch (cmd) {
@@ -614,6 +615,7 @@ static int mdec_ioctl( struct inode *inode, struct file *file_id, unsigned int c
 		break;
 	}
 
+	kfree(ioctl_cmd_buf);
 	return ret;
 }
 
