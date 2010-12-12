@@ -47,6 +47,9 @@
 #include <mach/island.h>
 #include <mach/sdio_platform.h>
 
+#include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcm590xx/pmic.h>
+
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to 
  * use FIXED type
@@ -342,6 +345,66 @@ static struct platform_device island_sdio1_device = {
 	},
 };
 
+#ifdef CONFIG_REGULATOR_BCM_PMU59055_A0
+static struct regulator_init_data bcm59055_rfldo_data =  { .constraints = { .name = "rfldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_camldo_data = { .constraints = { .name = "camldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_hv1ldo_data = { .constraints = { .name = "hv1ldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_hv2ldo_data = { .constraints = { .name = "hv2ldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_hv3ldo_data = { .constraints = { .name = "hv3ldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_hv4ldo_data = { .constraints = { .name = "hv4ldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_hv5ldo_data = { .constraints = { .name = "hv5ldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_hv6ldo_data = { .constraints = { .name = "hv6ldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_hv7ldo_data = { .constraints = { .name = "hv7ldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+static struct regulator_init_data bcm59055_simldo_data = { .constraints = { .name = "simldo", .min_uV = 1300000, .max_uV = 3300000, }, };
+
+static struct {
+	int regulator;
+	struct regulator_init_data *initdata;
+} bcm59055_regulators[] = {
+	{ BCM59055_RFLDO, &bcm59055_rfldo_data },
+	{ BCM59055_CAMLDO, &bcm59055_camldo_data },
+	{ BCM59055_HV1LDO, &bcm59055_hv1ldo_data },
+	{ BCM59055_HV2LDO, &bcm59055_hv2ldo_data },
+	{ BCM59055_HV3LDO, &bcm59055_hv3ldo_data },
+	{ BCM59055_HV4LDO, &bcm59055_hv4ldo_data },
+	{ BCM59055_HV5LDO, &bcm59055_hv5ldo_data },
+	{ BCM59055_HV6LDO, &bcm59055_hv6ldo_data },
+	{ BCM59055_HV7LDO, &bcm59055_hv7ldo_data },
+	{ BCM59055_SIMLDO, &bcm59055_simldo_data },
+};
+#endif
+
+#ifdef CONFIG_REGULATOR_BCM_PMU590XX
+static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
+{
+	int i;
+
+	printk("REG: pmu_init_platform_hw called \n") ;
+
+	/* Instantiate the regulators */
+	for (i = 0; i < ARRAY_SIZE(bcm59055_regulators); i++)
+		bcm590xx_register_regulator(bcm590xx,
+					  bcm59055_regulators[i].regulator,
+					  bcm59055_regulators[i].initdata);
+	return 0;
+}
+
+#define PMU_DEVICE_I2C_ADDR   0x08 
+static struct bcm590xx_platform_data bcm590xx_plat_data = {
+	.init = bcm590xx_init_platform_hw,
+};
+
+
+static struct i2c_board_info __initdata pmu_info[] = 
+{
+   {  /* New touch screen i2c slave address. */
+      I2C_BOARD_INFO("bcm590xx", 0x08 ), 
+      .platform_data  = &bcm590xx_plat_data,
+   },
+};
+
+#endif
+
 void __init board_map_io(void)
 {
 	/* Map machine specific iodesc here */
@@ -374,6 +437,14 @@ static void __init board_add_devices(void)
 
 #if defined(CONFIG_KEYBOARD_GPIO)
    platform_device_register(&board_gpio_keys_device);
+#endif
+
+#ifdef CONFIG_REGULATOR_BCM_PMU590XX
+   printk("REG: i2c_register_board_info for pmu called \n") ;
+
+   i2c_register_board_info(1,              // This is i2c adapter number. For fpga put it on i2c 1.
+                           pmu_info,
+                           ARRAY_SIZE(pmu_info));
 #endif
 }
 
