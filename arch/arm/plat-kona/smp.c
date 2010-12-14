@@ -23,6 +23,7 @@
 #include <asm/localtimer.h>
 #include <asm/io.h>
 #include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
 
 /* SCU base address */
 static void __iomem *scu_base = (void __iomem *)(KONA_SCU_VA);
@@ -70,17 +71,16 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 	spin_unlock(&boot_lock);
 }
 
-static void __iomem *addr;
-
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
-
 	unsigned long timeout;
+	void __iomem *addr;
+
+	addr = ioremap(INTERNAL_SRAM_BASE_ADDR, SZ_4K);
 	/*
 	 * Set synchronisation state between this boot processor
 	 * and the secondary one
 	 */
-
 	spin_lock(&boot_lock);
 
 	flush_cache_all();
@@ -104,21 +104,18 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 
 static void __init wakeup_secondary(void)
 {
-	/* FIXME
-	 * As of now, we are using sram to pass entry point
-	 */
+#if defined(CHIPREG_BOOT_2ND_ADDR_OFFSET)
+	void __iomem *chipRegBase;
 
-    addr = ioremap(INTERNAL_SRAM_BASE_ADDR, SZ_4K);
+	chipRegBase = IOMEM(KONA_CHIPREG_VA);
 
-	__raw_writel(0xDEADBEEF, addr);
-	__raw_writel(virt_to_phys(kona_secondary_startup),
-			(addr + 4));
+	writel((virt_to_phys(kona_secondary_startup) & (~0x3))|0x1, chipRegBase + CHIPREG_BOOT_2ND_ADDR_OFFSET);
 
 	smp_wmb();
 
 	set_event();
 	mb();
-
+#endif
 }
 
 
