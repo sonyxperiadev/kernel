@@ -381,7 +381,7 @@ static int __init gpio_init( void )
       for ( irq = gpio_to_irq( 0 ); irq <= gpio_to_irq( NUM_GPIO_IRQS-1 ); irq++ )
       {
          set_irq_chip( irq, &gpio_chip );
-         set_irq_handler( irq, handle_edge_irq );
+         set_irq_handler( irq, handle_simple_irq );
          set_irq_flags( irq, IRQF_VALID | IRQF_PROBE );
       }
       set_irq_chained_handler( BCM_INT_ID_GPIO1, gpio_isr_handler0 );
