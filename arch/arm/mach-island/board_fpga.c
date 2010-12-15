@@ -392,7 +392,7 @@ static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
 }
 
 #define PMU_DEVICE_I2C_ADDR   0x08 
-static struct bcm590xx_platform_data bcm590xx_plat_data = {
+static struct bcm590xx_platform_data __initdata bcm590xx_plat_data = {
 	.init = bcm590xx_init_platform_hw,
 };
 
