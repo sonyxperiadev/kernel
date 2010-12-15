@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.32.9
-# Thu Dec  9 10:50:15 2010
+# Wed Dec 15 14:40:23 2010
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -248,8 +248,9 @@ CONFIG_ARM_GIC=y
 #
 # Kernel Features
 #
-# CONFIG_NO_HZ is not set
-# CONFIG_HIGH_RES_TIMERS is not set
+CONFIG_TICK_ONESHOT=y
+CONFIG_NO_HZ=y
+CONFIG_HIGH_RES_TIMERS=y
 CONFIG_GENERIC_CLOCKEVENTS_BUILD=y
 CONFIG_SMP=y
 CONFIG_HAVE_ARM_SCU=y
@@ -451,7 +452,7 @@ CONFIG_ANDROID_PMEM=y
 # CONFIG_ENCLOSURE_SERVICES is not set
 # CONFIG_KERNEL_DEBUGGER_CORE is not set
 # CONFIG_ISL29003 is not set
-# CONFIG_UID_STAT is not set
+CONFIG_UID_STAT=y
 # CONFIG_APANIC is not set
 # CONFIG_C2PORT is not set
 
@@ -629,6 +630,7 @@ CONFIG_INPUT_TOUCHSCREEN=y
 # CONFIG_TOUCHSCREEN_TSC2007 is not set
 CONFIG_TOUCHSCREEN_TANGO_S32=y
 # CONFIG_INPUT_MISC is not set
+# CONFIG_INPUT_GPIO is not set
 
 #
 # Hardware I/O ports
@@ -719,7 +721,7 @@ CONFIG_I2C_BSC=y
 CONFIG_ARCH_REQUIRE_GPIOLIB=y
 CONFIG_GPIOLIB=y
 # CONFIG_DEBUG_GPIO is not set
-# CONFIG_GPIO_SYSFS is not set
+CONFIG_GPIO_SYSFS=y
 
 #
 # Memory mapped GPIO expanders:
@@ -758,7 +760,8 @@ CONFIG_SSB_POSSIBLE=y
 #
 # Multifunction device drivers
 #
-# CONFIG_MFD_CORE is not set
+CONFIG_MFD_CORE=y
+# CONFIG_MFD_BCM_PMU590XX is not set
 # CONFIG_MFD_SM501 is not set
 # CONFIG_MFD_ASIC3 is not set
 # CONFIG_HTC_EGPIO is not set
@@ -1002,7 +1005,8 @@ CONFIG_MMC_BCM_SD=y
 # CONFIG_BCM_SDIOWL is not set
 # CONFIG_MEMSTICK is not set
 # CONFIG_NEW_LEDS is not set
-# CONFIG_SWITCH is not set
+CONFIG_SWITCH=y
+CONFIG_SWITCH_GPIO=y
 # CONFIG_ACCESSIBILITY is not set
 CONFIG_RTC_LIB=y
 # CONFIG_RTC_CLASS is not set
@@ -1013,7 +1017,44 @@ CONFIG_RTC_LIB=y
 #
 # TI VLYNQ
 #
-# CONFIG_STAGING is not set
+CONFIG_STAGING=y
+# CONFIG_STAGING_EXCLUDE_BUILD is not set
+# CONFIG_USB_IP_COMMON is not set
+# CONFIG_PRISM2_USB is not set
+# CONFIG_ECHO is not set
+# CONFIG_COMEDI is not set
+# CONFIG_ASUS_OLED is not set
+# CONFIG_INPUT_MIMIO is not set
+# CONFIG_TRANZPORT is not set
+
+#
+# Android
+#
+CONFIG_ANDROID=y
+CONFIG_ANDROID_BINDER_IPC=y
+CONFIG_ANDROID_LOGGER=y
+# CONFIG_ANDROID_RAM_CONSOLE is not set
+CONFIG_ANDROID_TIMED_OUTPUT=y
+# CONFIG_ANDROID_TIMED_GPIO is not set
+CONFIG_ANDROID_LOW_MEMORY_KILLER=y
+
+#
+# Qualcomm MSM Camera And Video
+#
+
+#
+# Camera Sensor Selection
+#
+# CONFIG_DST is not set
+# CONFIG_POHMELFS is not set
+# CONFIG_PLAN9AUTH is not set
+# CONFIG_VT6656 is not set
+
+#
+# RAR Register Driver
+#
+# CONFIG_RAR_REGISTER is not set
+# CONFIG_IIO is not set
 
 #
 # File systems
@@ -1048,7 +1089,7 @@ CONFIG_FS_POSIX_ACL=y
 # CONFIG_NILFS2_FS is not set
 CONFIG_FILE_LOCKING=y
 CONFIG_FSNOTIFY=y
-CONFIG_DNOTIFY=y
+# CONFIG_DNOTIFY is not set
 CONFIG_INOTIFY=y
 CONFIG_INOTIFY_USER=y
 # CONFIG_QUOTA is not set
