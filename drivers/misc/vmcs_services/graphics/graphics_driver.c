@@ -63,7 +63,11 @@ static struct {
 	volatile unsigned char *base_address;
 	unsigned int irq;
 	struct semaphore work_done;
+	struct semaphore bulk_req;
 	struct named_semaphore sem_slots[20];
+	uint32_t tgid_owner;
+	uint32_t pid_owner;
+	volatile int request_bulk;
 	int initialized;
 } graphics_state;
 
@@ -85,7 +89,7 @@ static void graphics_fire_vc_interrupt(void)
 
 static void graphics_wait(void)
 {
-	down(&graphics_state.work_done); //NEN_TODO:  Use down_interruptible()
+	down(&graphics_state.work_done);
 }
 
 static void graphics_post(void)
@@ -93,18 +97,33 @@ static void graphics_post(void)
 	up(&graphics_state.work_done);
 }
 
-static uint32_t graphics_fifo_free_entries(void)
+static void graphics_bulk_wait(void)
+{
+	down(&graphics_state.bulk_req);
+}
+
+static void graphics_bulk_post(void)
+{
+	up(&graphics_state.bulk_req);
+}
+
+static uint32_t graphics_fifo_entries(void)
 {
 	uint32_t read = *graphics_register(GRAPHICS_FIFO_READ); 
 	uint32_t write = *graphics_register(GRAPHICS_FIFO_WRITE);
- 	uint32_t free_entries = 0;
+ 	uint32_t entries = 0;
 	if (read > write) {
-		free_entries = read - write - 1;
+		entries = GRAPHICS_FIFO_LENGTH - read + write;
 	}
 	else {
-		free_entries = read + GRAPHICS_FIFO_LENGTH - write - 1;
+		entries = write - read;
 	}
-	return free_entries;
+	return entries;
+}
+
+static uint32_t graphics_fifo_free_entries(void)
+{
+	return GRAPHICS_FIFO_LENGTH - graphics_fifo_entries() - 1;
 }
 
 static int graphics_fifo_empty(void)
@@ -118,7 +137,7 @@ static int graphics_fifo_empty(void)
 	return read == write;
 }
 
-static int graphics_fifo_write(const uint32_t *data, uint32_t count)
+static int graphics_fifo_write(int system, const uint32_t *data, uint32_t count)
 {
 	uint32_t free_count = graphics_fifo_free_entries();
 	int ret = 0;
@@ -132,7 +151,7 @@ static int graphics_fifo_write(const uint32_t *data, uint32_t count)
 #endif
 
 	if (free_count < count) {
-		*graphics_register(GRAPHICS_FIFO_WRITE_REQ) = 1;
+		*graphics_register(GRAPHICS_FIFO_WRITE_REQ) = count;
 		graphics_fire_vc_interrupt();
 		do {
 #ifdef FIFO_DEBUG
@@ -142,16 +161,19 @@ static int graphics_fifo_write(const uint32_t *data, uint32_t count)
 					free_count, count);
 #endif
 			graphics_wait();
-			free_count = graphics_fifo_free_entries();
-		} while (free_count < count);
+		} while (*graphics_register(GRAPHICS_FIFO_WRITE_REQ));
 	}
 
 	write = *graphics_register(GRAPHICS_FIFO_WRITE);
-   	fifo = (uint32_t *)graphics_register(GRAPHICS_FIFO);
+	fifo = (uint32_t *)graphics_register(GRAPHICS_FIFO);
 
 	if ((write + count) > GRAPHICS_FIFO_LENGTH) {
 		uint32_t size = (GRAPHICS_FIFO_LENGTH - write) * 4;
-		if (copy_from_user(fifo + write, data, size)) {
+	
+		if (system) {
+			memcpy(fifo + write, data, size);
+		}
+		else if (copy_from_user(fifo + write, data, size)) {
 			ret = -EFAULT;
 			goto out;
 		}
@@ -159,22 +181,31 @@ static int graphics_fifo_write(const uint32_t *data, uint32_t count)
 		data += GRAPHICS_FIFO_LENGTH - write;
 		write += count - GRAPHICS_FIFO_LENGTH;
 
-		if (copy_from_user(fifo, data, write * 4)) {
+		if (system) {
+			memcpy(fifo, data, write * 4);
+		}
+		else if (copy_from_user(fifo, data, write * 4)) {
 			ret = -EFAULT;
 			goto out;
 		}
 	}
 	else {
-		if (copy_from_user(fifo + write, data, count * 4)) {
+		if (system) {
+			memcpy(fifo + write, data, count * 4);
+		}
+		else if (copy_from_user(fifo + write, data, count * 4)) {
 			ret = -EFAULT;
 			goto out;
 		}
 		write += count;
 	}
 	*graphics_register(GRAPHICS_FIFO_WRITE) = write;
+
 	if (*graphics_register(GRAPHICS_FIFO_READ_REQ)) {
-		*graphics_register(GRAPHICS_FIFO_READ_REQ) = 0;
-		graphics_fire_vc_interrupt();
+		if (graphics_fifo_entries() >= *graphics_register(GRAPHICS_FIFO_READ_REQ)) {
+			*graphics_register(GRAPHICS_FIFO_READ_REQ) = 0;
+			graphics_fire_vc_interrupt();
+		}
 	}
 out:
 	return ret;
@@ -256,7 +287,7 @@ ssize_t graphics_write(struct file *filp, const char __user *buf, size_t count,
 static int do_tx_ctrl(struct graphics_txrx_ctrl *ctrl)
 {
 	int ret = 0;
-	ret = graphics_fifo_write(ctrl->request, ctrl->request_len/4);
+	ret = graphics_fifo_write(0, ctrl->request, ctrl->request_len/4);
 	return ret;
 }
 
@@ -300,19 +331,24 @@ out:
 	return ret;
 }
 
+static void request_bulk(uint32_t req_size)
+{
+	*graphics_register(GRAPHICS_BULK_REQ_SIZE) = req_size;
+	*graphics_register(GRAPHICS_BULK_REQ) = 1;
+	graphics_fire_vc_interrupt();
+	graphics_bulk_wait();
+}
+
 static int ioctl_rpc_tx_bulk(struct graphics_ioctl_rpc_tx_bulk *rpc_tx_bulk)
 {
 	int ret = 0;
 	uint32_t tx_bulk_bus = 0;
 	void *tx_bulk = NULL;
+
 	graphics_wait_vc_idle(); 
 
-	*graphics_register(GRAPHICS_BULK_REQ_SIZE) = rpc_tx_bulk->tx_bulk_len;
-
-	graphics_fire_vc_interrupt();
-
-	while(*graphics_register(GRAPHICS_BULK_REQ_SIZE) != 0) {
-		graphics_wait();
+	if (rpc_tx_bulk->tx_bulk_len > *graphics_register(GRAPHICS_BULK_SIZE)) {
+		request_bulk(rpc_tx_bulk->tx_bulk_len);
 	}
 	
 	tx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
@@ -384,6 +420,15 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
 	int ret = -1;
+	
+	if (current->pid != graphics_state.pid_owner) {
+		printk(KERN_ERR 
+			"graphics_ioctl: ioctl called by pid %d"
+			" but file was opened by pid %d\n",
+			current->pid, graphics_state.pid_owner);
+		ret = -EACCES;
+		goto err_cmd;
+	}
 
 	switch (cmd) {
 	case GRAPHICS_IOCTL_RPC: {
@@ -491,8 +536,7 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 
 		//NEN_TODO: validate process id
 		s = graphics_state.sem_slots + acquire_sem.sem_no;
-		down(&s->sem); //NEN_TODO: use down_interruptible()
-		ret = 0;
+		ret = down_killable(&s->sem);
 	} break;
 	case GRAPHICS_IOCTL_RELEASE_SEM: {
 		struct graphics_ioctl_release_sem release_sem;
@@ -517,11 +561,47 @@ err_cmd:
 
 int graphics_open(struct inode *inode, struct file *filp)
 {
-	return 0;
+
+	int ret = 0;
+	if (graphics_state.pid_owner) {
+		printk(KERN_ERR "graphics_open: "
+				"File is already opened by pid %d\n",
+				graphics_state.pid_owner);
+		ret = -EACCES;
+		goto out;
+	}
+	graphics_state.pid_owner = current->pid;
+	graphics_state.tgid_owner = current->tgid;
+out:
+	return ret;
 }
+
+#define EGLINTMAKECURRENT_ID  (0x4008)
+#define EGLINTDESTROYBYPID_ID (0x4022)
+#define EGL_SERVER_NO_GL_CONTEXT (0)
+#define EGL_SERVER_NO_VG_CONTEXT (0)
+#define EGL_SERVER_NO_SURFACE (0)
 
 int graphics_release(struct inode *inode, struct file *filp)
 {
+	uint32_t message[] = {
+		EGLINTMAKECURRENT_ID,          /* id */
+		graphics_state.tgid_owner,     /* pid_0 */
+		0,                             /* pid_1 */
+		0,                             /* gltype */
+		EGL_SERVER_NO_GL_CONTEXT,      /* servergl */
+		EGL_SERVER_NO_SURFACE,         /* servergldraw */
+		EGL_SERVER_NO_SURFACE,         /* serverglread */
+		EGL_SERVER_NO_VG_CONTEXT,      /* servervg */
+		EGL_SERVER_NO_SURFACE,          /* servervgsurf */
+		
+		EGLINTDESTROYBYPID_ID,         /* id */
+		graphics_state.tgid_owner,     /* pid_0 */
+		0                              /* pid_1 */
+	};
+	graphics_fifo_write(1, message, ARRAY_SIZE(message));
+	graphics_state.pid_owner = 0;
+	graphics_state.tgid_owner = 0;
 	return 0;
 }
 
@@ -565,7 +645,9 @@ void __devexit graphics_driver_exit(void)
 static irqreturn_t bcm2708_graphics_isr(int irq, void *dev_id)
 {
 	uint32_t sem_name = *graphics_register(GRAPHICS_ASYNC_SEM);
-	if (sem_name != 0xffffffff) { //NEN_TODO: KHRN_NO_SEMAPHORE
+	uint32_t async_req = *graphics_register(GRAPHICS_ASYNC_REQ);
+
+	if (async_req && sem_name != 0xffffffff) { //NEN_TODO: KHRN_NO_SEMAPHORE
 		uint32_t command = *graphics_register(GRAPHICS_ASYNC_COMMAND);
 		uint32_t pid_0 = *graphics_register(GRAPHICS_ASYNC_PID_0);
 		uint32_t pid_1 = *graphics_register(GRAPHICS_ASYNC_PID_1);
@@ -593,15 +675,24 @@ static irqreturn_t bcm2708_graphics_isr(int irq, void *dev_id)
 			printk(KERN_ERR "graphics_isr: Couldn't find semaphore with name %d\n", sem_name);
 		}
 		*graphics_register(GRAPHICS_ASYNC_SEM) = 0xffffffff; //NEN_TODO: KHRN_NO_SEMAPHORE
-	}
-	if (*graphics_register(GRAPHICS_ASYNC_REQ)) {
-		*graphics_register(GRAPHICS_ASYNC_REQ) = 0;
 		graphics_fire_vc_interrupt();
 	}
+
+	//requests from VC
 	if (*graphics_register(GRAPHICS_FIFO_READ_REQ)) {
-		if (!graphics_fifo_empty()) {
+		if (graphics_fifo_entries() >= *graphics_register(GRAPHICS_FIFO_READ_REQ)) {
 			*graphics_register(GRAPHICS_FIFO_READ_REQ) = 0;
 			graphics_fire_vc_interrupt();
+		}
+	}
+
+	//requests to VC
+	if (*graphics_register(GRAPHICS_BULK_REQ)) {
+		uint32_t req_size = *graphics_register(GRAPHICS_BULK_REQ_SIZE);
+		uint32_t size = *graphics_register(GRAPHICS_BULK_SIZE);
+		if (size >= req_size) {
+			*graphics_register(GRAPHICS_BULK_REQ) = 0;
+			graphics_bulk_post();
 		}
 	}
 	graphics_post();
@@ -630,8 +721,11 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err_platform_res;
 	}
+
+	graphics_state.tgid_owner = 0;
+	graphics_state.pid_owner = 0;
+	graphics_state.request_bulk = 0;
 	graphics_state.base_address = (void __iomem *)(res->start);
-	
 	graphics_state.irq = platform_get_irq(pdev, 0);
 
 	if( graphics_state.irq < 0 ) {
@@ -640,7 +734,8 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 		goto err_irq;
 	}
 
-	sema_init(&graphics_state.work_done, 1);
+	sema_init(&graphics_state.work_done, 0);
+	sema_init(&graphics_state.bulk_req, 0);
 
 	ret = request_irq( graphics_state.irq, bcm2708_graphics_isr,
 			IRQF_DISABLED, "bcm2708 graphics interrupt", NULL);
@@ -656,7 +751,6 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 		ret = -ENOENT;
 		goto err_driver;
 	}
-
 	graphics_state.initialized = 1;
 	return 0;
 err_driver:

@@ -35,6 +35,7 @@
 #define GRAPHICS_BULK_SIZE              0x204
 #define GRAPHICS_BULK_REQ_SIZE          0x208
 #define GRAPHICS_BULK_SIZE_USED         0x20C
+#define GRAPHICS_BULK_REQ               0x210
 
 ////
 //// Asynchonous message registers
