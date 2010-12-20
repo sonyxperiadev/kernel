@@ -25,6 +25,10 @@
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
 
+#ifdef CONFIG_REGULATOR_BCM_PMU59055_A0
+#include <linux/mfd/bcm590xx/bcm59055_A0.h>
+#endif
+
 /*
  * BCM590XX Device IO
  */
@@ -46,7 +50,7 @@ u16 bcm590xx_reg_read(struct bcm590xx *bcm590xx, int reg)
 	int err;
 	mutex_lock(&io_mutex);
 	err = bcm590xx_read(bcm590xx, reg);
-
+	// printk("RRRRRRR Read to regi_addr = 0x%x , return = 0x%x \n", reg, err ) ;
 	mutex_unlock(&io_mutex);
 	return err ;
 
@@ -59,6 +63,7 @@ int bcm590xx_reg_write(struct bcm590xx *bcm590xx, int reg, u16 val)
 
 	mutex_lock(&io_mutex);
 	ret = bcm590xx_write(bcm590xx, reg, 1, val);
+	// printk("Wrote to regi_addr = 0x%x value is = 0x%x , return = %d \n", reg, val, ret ) ;
 	if (ret)
 		dev_err(bcm590xx->dev, "write to reg R%d failed\n", reg);
 	mutex_unlock(&io_mutex);
@@ -70,15 +75,12 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		       struct bcm590xx_platform_data *pdata)
 {
 	int ret;
-	// u16 id1, id2, mask_rev;
-	// u16 cust_id, mode, chip_rev;
 
 	printk("REG: bcm590xx_device_init called \n") ;
 
 	/* get BCM590XX revision and config mode */
-	ret = bcm590xx->read_dev(bcm590xx, BCM59035_REG_PMUID);
+	ret = bcm590xx->read_dev(bcm590xx, BCM59055_REG_PMUID);
 
-    // printk("BCM590XX: Chip Version [0x%x]\n", ret);
 
 	if (ret < 0) {
 		dev_err(bcm590xx->dev, "Failed to read ID: %d\n", ret);

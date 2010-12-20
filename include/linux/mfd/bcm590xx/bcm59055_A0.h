@@ -16,6 +16,7 @@
 #ifndef __LINUX_MFD_BCM59055_A0_H
 #define __LINUX_MFD_BCM59055_A0_H
 
+#include <linux/mfd/bcm590xx/pmic.h> 
 
 /* Register addresses */
 #define BCM59055_REG_RFOPMODCTRL      0xA0    /* R/W  RFLDO */
@@ -42,14 +43,11 @@
 #define BCM59055_REG_HVLDO6CTRL       0xB7
 #define BCM59055_REG_HVLDO7CTRL       0xB8
 #define BCM59055_REG_SIMLDOCTRL       0xB9  
+#define BCM59055_REG_CSRCTRL1         0xC0    
+#define BCM59055_REG_IOSRCTRL1        0xC8    
+#define BCM59055_REG_SDSRCTRL1        0xD0    
 
-#define BCM59035_REG_PMUID            0x04    // 0x00    /* R    revision/id */
-
-// Register field values for regulator.
-#define LDO_NORMAL              0 
-#define LDO_IDLE_STANDBY        1
-#define LDO_OFF                 2
-#define LDO_RESERVED            3 
+#define BCM59055_REG_PMUID            0x04    // 0x00    /* R    revision/id */
 
 /* #defines to identify LDOs inside linux frameworks. */
 #define BCM59055_RFLDO  0 
@@ -66,7 +64,11 @@
 #define BCM59055_IOSR   11
 #define BCM59055_SDSR   12
 
+struct bcm590xx_regulator_init_data ; 
+
 void bcm59055_register_details(void **reg_info) ;
 void bcm59055_regulator_desc(void **info) ;
+
+void bcm59055_reg_init_dev_init(struct bcm590xx *bcm590xx)  ;
 
 #endif
