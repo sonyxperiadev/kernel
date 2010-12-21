@@ -338,27 +338,34 @@ static struct mtd_partition bcm2708_default_nand_part[] = {
       .offset = 0,
       .mask_flags = MTD_WRITEABLE, /* force read-only */
    },
+
    [1] = {
-      .name = "kernel",
-      .size = 3 * SZ_4M,
-      .offset = 3 * SZ_4M,
-      .mask_flags = MTD_WRITEABLE, /* force read-only */
+	   .name = "u-boot env and splash screen",
+	   .size = SZ_2M,
+	   .offset = 3 * SZ_4M,
+	   .mask_flags = MTD_WRITEABLE, /* force read-only */
    },
    [2] = {
-      .name = "firmware",
+      .name = "kernel",
       .size = 3 * SZ_4M,
-      .offset = SZ_16M + SZ_8M,
+      .offset = (3 * SZ_4M + SZ_2M),
       .mask_flags = MTD_WRITEABLE, /* force read-only */
    },
    [3] = {
-      .name = "system",
-      .size = SZ_48M,
-      .offset = SZ_32M + SZ_4M,
+      .name = "firmware",
+      .size = 3 * SZ_4M,
+      .offset = (SZ_16M + SZ_8M + SZ_2M),
+      .mask_flags = MTD_WRITEABLE, /* force read-only */
    },
    [4] = {
+      .name = "system",
+      .size = SZ_48M,
+      .offset = (SZ_32M + SZ_4M + SZ_2M),
+   },
+   [5] = {
       .name = "data",
       .size = MTDPART_SIZ_FULL,
-      .offset = SZ_64M + SZ_16M + SZ_4M,
+      .offset = (SZ_64M + SZ_16M + SZ_4M + SZ_2M),
    },
 };
 
