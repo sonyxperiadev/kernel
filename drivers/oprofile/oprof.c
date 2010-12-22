@@ -33,7 +33,7 @@ static DEFINE_MUTEX(start_mutex);
    0 - use performance monitoring hardware if available
    1 - use the timer int mechanism regardless
  */
-static int timer = 0;
+static int timer = 1;
 
 int oprofile_setup(void)
 {
