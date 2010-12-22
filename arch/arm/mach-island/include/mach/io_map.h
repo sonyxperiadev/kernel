@@ -126,7 +126,4 @@
 #define KONA_USB_HSOTG_VA           HW_IO_PHYS_TO_VIRT( HSOTG_BASE_ADDR )           /* USB OTG */
 #define KONA_USB_HSOTG_CTRL_VA      HW_IO_PHYS_TO_VIRT( HSOTG_CTRL_BASE_ADDR )      /* USB OTG Control */
 
-
-#define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */ 
-
 #endif /* __ISLAND_IO_MAP_H */

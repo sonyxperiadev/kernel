@@ -17,6 +17,7 @@
 #include <linux/smp.h>
 #include <linux/spinlock.h>
 #include <linux/jiffies.h>
+#include <linux/delay.h>
 
 #include <asm/cacheflush.h>
 #include <asm/smp_scu.h>
@@ -24,6 +25,12 @@
 #include <asm/io.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+
+/*
+ * control for which core is the next to come out of the secondary
+ * boot "holding pen"
+ */
+volatile int __cpuinitdata pen_release = -1;
 
 /* SCU base address */
 static void __iomem *scu_base = (void __iomem *)(KONA_SCU_VA);
@@ -65,6 +72,13 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
     gic_cpu_init(0, __io(KONA_GICCPU_VA));
 
 	/*
+	 * let the primary processor know we're out of the
+	 * pen, then head off into the C entry point
+	 */
+	pen_release = -1;
+	smp_wmb();
+
+	/*
 	 * Synchronise with the boot thread.
 	 */
 	spin_lock(&boot_lock);
@@ -74,24 +88,33 @@ void __cpuinit platform_secondary_init(unsigned int cpu)
 int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 {
 	unsigned long timeout;
-	void __iomem *addr;
-
-	addr = ioremap(INTERNAL_SRAM_BASE_ADDR, SZ_4K);
 	/*
+
 	 * Set synchronisation state between this boot processor
 	 * and the secondary one
 	 */
 	spin_lock(&boot_lock);
 
+	/*
+	 * The secondary processor is waiting to be released from
+	 * the holding pen - release it, then wait for it to flag
+	 * that it has been released by resetting pen_release.
+	 *
+	 * Note that "pen_release" is the hardware CPU ID, whereas
+	 * "cpu" is Linux's internal ID.
+	 */
+	pen_release = cpu;
 	flush_cache_all();
-	__raw_writel(0xDEADBEEF, (addr + 8));
-	smp_wmb();
 
-	iounmap(addr);
 
 	timeout = jiffies + (1 * HZ);
-	while (time_before(jiffies, timeout))
-		;
+	while (time_before(jiffies, timeout)) {
+		smp_rmb();
+		if (pen_release == -1)
+			break;
+
+		udelay(10);
+	}
 
 	/*
 	 * Now the secondary core is starting up let it run its
@@ -99,7 +122,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 */
 	spin_unlock(&boot_lock);
 
-	return 0;
+	return pen_release != -1 ? -ENOSYS : 0;
 }
 
 static void __init wakeup_secondary(void)
