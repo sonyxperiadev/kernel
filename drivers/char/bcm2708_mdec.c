@@ -33,7 +33,7 @@
 #if BCM2708MDEC_DEBUG
 #define bcm2708mdec_dbg(format, arg...) bcm2708mdec_error(format, ##arg)
 #else
-#define bcm2708mdec_dbg(format, arg...) printk(KERN_DEBUG BCM2708_MDEC_DRIVER_NAME ": %s" format, __func__, ##arg)
+#define bcm2708mdec_dbg(format, arg...) do {} while (0)
 #endif
 
 #define VC_MFS_SD_PREFIX "/mfs/sd/"	/* the path for mdeia file on VC SD card. */

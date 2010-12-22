@@ -69,13 +69,6 @@
 #define MAX_PHYSMEM_BITS  28
 #define SECTION_SIZE_BITS 23
 
-#if !defined(__ASSEMBLY__)
-extern void bcm2708_adjust_zones(int node, unsigned long *size,
-				  unsigned long *hole);
-#define arch_adjust_zones(node, size, hole) \
-	bcm2708_adjust_zones(node, size, hole)
-#endif
-
 /*
  * Boost our consistent DMA area to 4M to support 1920x1080 framebuffers
  */

@@ -486,36 +486,6 @@ int __init bcm_register_device(struct platform_device *pdev)
 	return ret;
 }
 
-static unsigned long movablecore_size __initdata = 0;
-
-static int __init early_movablecore(char *p)
-{
-	unsigned long coremem;
-	
-	if ((!p) || (!*p))
-		return -EINVAL;
-
-	coremem = memparse(p, &p);
-	movablecore_size = coremem >> PAGE_SHIFT;
-
-	printk(KERN_ERR "the size of movable: 0x%08x\n", (u32)coremem);
-
-	return 0;
-}
-early_param("movablecore=", early_movablecore);
-
-void __init bcm2708_adjust_zones(int node, unsigned long *size,
-				  unsigned long *hole)
-{
-	if (0 == movablecore_size)
-		movablecore_size = SZ_32M >> PAGE_SHIFT;
-
-	size[ZONE_NORMAL] = size[0] - movablecore_size;
-	size[ZONE_MOVABLE] = movablecore_size;
-	hole[ZONE_NORMAL] = hole[0];
-	hole[ZONE_MOVABLE] = 0;
-}
-
 void __init bcm2708_init(void)
 {
 	int i;
