@@ -13,6 +13,11 @@ config VC_GENCMD
 	depends on BRCM_MISC_DRIVERS
 	default BRCM_MISC_DRIVERS
 
+config BCM2835_TVINTF
+	tristate "TV Interface Driver"
+	depends on BRCM_MISC_DRIVERS
+	default BRCM_MISC_DRIVERS
+
 config BCM2708_SMI
 	tristate "SMI Driver"
 	depends on BRCM_MISC_DRIVERS
