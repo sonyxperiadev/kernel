@@ -124,91 +124,50 @@ err_len:
 
 int tv_intf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	int ret = -1;
-	tv_intf_print("-IN cmd=%d arg=0x%lx\n", cmd, arg);
+    int ret = 0;
+	 unsigned long uncopied;
+	 u8 *ioctl_cmd_buf;
 
-    switch( cmd ) {
-        case TV_INTF_IOCTL_CMD_SEND_RESP:
-            {
-                TV_INTF_IOCTL_SEND_RESP_T  request; 
-                int count, resp_len, len;
-                struct tv_intf_buffers *g_buf;
+    tv_intf_print("cmd = %x, size=%d\n", cmd, _IOC_SIZE(cmd));
 
-                if( copy_from_user(&request,(void *) arg, sizeof(TV_INTF_IOCTL_SEND_RESP_T)) ) {
-                    ret = -EFAULT;
-                    printk(KERN_ERR"[%s]error in copying cmd structure\n", __func__);
-                    goto err_cmd;
-                }
+	 BUG_ON(TV_INTF_MAX_IOCTL_CMD_SIZE < _IOC_SIZE(cmd));
 
-                count = request.cmd_len;
-                resp_len = request.resp_len;
+	 ioctl_cmd_buf = (u8 *)kmalloc(TV_INTF_MAX_IOCTL_CMD_SIZE, GFP_KERNEL);
+	 if (!ioctl_cmd_buf)
+        return -ENOMEM;	
 
-                /* check the length */
-                if( count > (TV_INTF_CMD_SIZE - 1) ) {
-                    printk(KERN_ERR"[%s] max cmd size=%d\n", __func__, TV_INTF_CMD_SIZE);
-                    ret = -ENOMEM;
-                    goto err_len;
-                }
+    tv_intf_print("Got buffer.\n");
+    if (0 != _IOC_SIZE(cmd)) {
+        uncopied = copy_from_user(ioctl_cmd_buf, (void *)arg, _IOC_SIZE(cmd));
+        if (uncopied != 0) {
+            kfree(ioctl_cmd_buf);
+            return -EFAULT;
+        }
+        tv_intf_print("Copied from user space\n");
 
-                /* get the buffer */
-                g_buf = (struct tv_intf_buffers *) filp->private_data;
-
-                ret = down_interruptible(&g_buf->buf_sem);
-                if( ret < 0 ) {
-                    printk(KERN_ERR"[%s] error in getting buffer semaphore\n", __func__ );
-                    goto err_lock;
-                }
-
-                /* copy from user */
-                if( copy_from_user(g_buf->cmd, request.cmd, count) ) {
-                    ret = -EFAULT;
-                    printk(KERN_ERR"[%s] copy from user failed user_buf=%p\n",
-                            __func__, request.cmd);
-                    goto done;
-                }
-                g_buf->cmd[count] = '\0';
-                tv_intf_print("cmd=%s\n", g_buf->cmd);
-
-                /* call bcm2835_tv_intf */
-                g_buf->resp_len = bcm2835_tv_intf( g_buf->resp, TV_INTF_RESP_SIZE, g_buf->cmd);
-
-                /* check the length */
-                len = g_buf->resp_len;
-
-                if( len > resp_len )
-                    len = resp_len;
-
-                if( !request.resp ) {
-                    printk(KERN_ERR"[%s] no user buffer passed\n", __func__);
-                    ret = 0;
-                    goto done;
-                }
-
-                ret = copy_to_user(request.resp, g_buf->resp, len);
-                if( ret < 0 ) {
-                    printk(KERN_ERR"[%s] error in copying date to user buffer\n", __func__);
-                    goto done;
-                }
-
-                tv_intf_print("tv_intf resp=%s\n", g_buf->resp);
-                ret = len;
-done:
-                up(&g_buf->buf_sem);
+        switch (cmd) {
+            case TV_INTF_IOCTL_GET_CTRLS:
+                ret = bcm2835_tv_ioctl_get((TV_INTF_IOCTL_CTRLS_T *)ioctl_cmd_buf);
+                uncopied = copy_to_user((void *)arg, ioctl_cmd_buf, _IOC_SIZE(cmd));
+                if (uncopied != 0)
+                   ret = -EFAULT;
+                tv_intf_print("Copied to user space\n");
                 break;
-err_lock:
-err_len:
-err_cmd:
-                break;
-            }
 
-        default:
-            printk(KERN_ERR"[%s]:unknown command cmd=%d\n", __func__, cmd);
-            ret = -EIO;
-            break;
+            case TV_INTF_IOCTL_SET_CTRLS:
+                ret = bcm2835_tv_ioctl_set((TV_INTF_IOCTL_CTRLS_T *)ioctl_cmd_buf);
+                break;
+
+            default: 
+                tv_intf_print("Wrong IOCTL cmd. Expect %x or %x\n",
+                              TV_INTF_IOCTL_GET_CTRLS, TV_INTF_IOCTL_SET_CTRLS);
+                ret = -EFAULT;
+                break;
+        }
     }
 
-	tv_intf_print("-OUT ret=%d\n", ret);
-	return ret;
+    kfree(ioctl_cmd_buf);
+    return ret;
 }
 
 int tv_intf_open (struct inode *inode, struct file *filp)

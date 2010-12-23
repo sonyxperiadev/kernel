@@ -90,17 +90,6 @@ typedef enum {
 #define TV_INTF_CTRL_CHANGE_OFFSET           0x10     // ARM->VC control changed bits (TV_INTF_CHANGE_T)
 #define TV_INTF_STATUS_CHANGE_OFFSET         0x14     // VC->ARM status changed bits (TV_INTF_CHANGE_T)
 
-/**
- * TV output control
- */
-typedef enum {
-   TV_INTF_CTRL_INVALID = 0,      ///< Disallow cleared memory
-   TV_INTF_CTRL_OFF,              ///< No output at all (device appears to be powered down)
-   TV_INTF_CTRL_HDMI,             ///< Output to HDMI
-   TV_INTF_CTRL_SDTV,             ///< Output to composite
-   TV_INTF_CTRL_AUTO,             ///< Output to HDMI if plugged in otherwise composite
-} TV_INTF_CTRL_T;
-
 #define TV_INTF_OUTPUT_CTRL_OFFSET              0x18     // Values of type TV_INTF_CTRL_T
 #define TV_INTF_OUTPUT_STATUS_OFFSET            0x1C     // Values of type TV_INTF_CTRL_T
 

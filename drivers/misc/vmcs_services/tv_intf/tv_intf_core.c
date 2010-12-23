@@ -82,6 +82,24 @@ static tv_dict_t *dict_lookup(tv_dict_t *dictionary, const char *key)
    return NULL;
 }
 
+static void test_tv_intf_vc_arm_lock(void)
+{
+    TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_VC_ARM_FLAG1_OFFSET ) = 1;
+    TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_VC_ARM_TURN_OFFSET ) = 2;
+
+    while(( TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_VC_ARM_FLAG0_OFFSET ) == 1) &&
+          ( TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_VC_ARM_TURN_OFFSET ) == 2))
+    {
+       //_nop();
+        schedule_timeout(1);
+    }
+}
+
+static void test_tv_intf_vc_arm_unlock( void )
+{
+     TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_VC_ARM_FLAG1_OFFSET ) = 0;
+}
+
 /* global function */
 
 int bcm2835_tv_intf(char *response, int maxlen, const char *format, ...)
@@ -129,7 +147,9 @@ int bcm2835_tv_intf(char *response, int maxlen, const char *format, ...)
            if (dict_p != NULL) {
                tv_intf_print("Setting %s (offset %x) to %lx\n", dict_p->key, dict_p->ctrl_offset, value );
                TV_INTF_REGISTER_RW(tv_intf_state.base_address, dict_p->ctrl_offset) = value;
+               test_tv_intf_vc_arm_lock();
                TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_CTRL_CHANGE_OFFSET) |= dict_p->ctrl_bit;
+               test_tv_intf_vc_arm_unlock();
                ipc_notify_vc_event(tv_intf_state.irq);
            }
            else
@@ -206,6 +226,50 @@ int proc_bcm2835_tv_intf(struct file *file, const char __user *buffer, unsigned 
 
 	return count;
 }
+
+int bcm2835_tv_ioctl_get(TV_INTF_IOCTL_CTRLS_T *ctl)
+{
+    int ret = 0;
+    
+    ctl->output_ctrl       = TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_STATUS_OFFSET);
+    ctl->hdmi_res_group    = TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_GROUP_STATUS_OFFSET);
+    ctl->hdmi_res_code     = TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_STATUS_OFFSET);
+
+    return ret;
+}
+EXPORT_SYMBOL(bcm2835_tv_ioctl_get);
+
+int bcm2835_tv_ioctl_set(TV_INTF_IOCTL_CTRLS_T *ctl)
+{
+    uint32_t change_bits = 0;
+    int ret = 0;
+
+    if (ctl->output_ctrl != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_STATUS_OFFSET)) {
+        TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_CTRL_OFFSET) = ctl->output_ctrl;
+        change_bits |= TV_INTF_OUTPUT_CHANGE;
+        tv_intf_print("Setting TV_INTF_OUTPUT_CTRL to %x\n", ctl->output_ctrl);
+    }
+    if (ctl->hdmi_res_group != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_GROUP_STATUS_OFFSET)) {
+        TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_GROUP_CTRL_OFFSET) = ctl->hdmi_res_group;
+        change_bits |= TV_INTF_HDMI_RES_GROUP_CHANGE;
+        tv_intf_print("Setting TV_INTF_HDMI_RES_GROUP_CTRL to %x\n", ctl->hdmi_res_group);
+   }
+    if (ctl->hdmi_res_code != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_STATUS_OFFSET)) {
+        TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_CTRL_OFFSET) = ctl->hdmi_res_code;
+        change_bits |= TV_INTF_HDMI_RES_CODE_CHANGE;
+        tv_intf_print("Setting TV_INTF_HDMI_RES_CODE_CTRL to %x\n", ctl->hdmi_res_code);
+    }
+    if (change_bits) {
+        tv_intf_print("Setting change bits and ringing doorbell\n");
+        test_tv_intf_vc_arm_lock();
+        TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_CTRL_CHANGE_OFFSET) |= change_bits;
+        test_tv_intf_vc_arm_lock();
+        ipc_notify_vc_event(tv_intf_state.irq);
+    }
+
+   return ret;
+}
+EXPORT_SYMBOL(bcm2835_tv_ioctl_set);
 
 static irqreturn_t bcm2835_tv_intf_isr(int irq, void *dev_id)
 {
