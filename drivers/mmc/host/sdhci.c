@@ -1117,7 +1117,10 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	else
 		present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 				SDHCI_CARD_PRESENT;
-
+	/* Force present = true for now, when SD-detection with GPIO works,
+	 * it should be removed */
+	present = true;
+	
 	if (!present || host->flags & SDHCI_DEVICE_DEAD) {
 		host->mrq->cmd->error = -ENOMEDIUM;
 		tasklet_schedule(&host->finish_tasklet);

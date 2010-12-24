@@ -31,6 +31,7 @@
 #include <linux/proc_fs.h>
 #include <linux/mmc/host.h>
 #include <linux/io.h>
+#include <linux/gpio.h>
 
 #include <mach/sdio_platform.h>
 #include "sdhci.h"
@@ -73,6 +74,7 @@ struct sdio_dev {
    struct sdhci_host *host;
    unsigned long clk_hz;
    enum sdio_devtype devtype;
+   int cd_gpio;
    struct sdio_wifi_gpio_cfg *wifi_gpio;
    struct procfs proc;
 };
@@ -91,7 +93,11 @@ static const unsigned long gClock[SDIO_DEV_TYPE_MAX] =
    8000000,
    8000000
 #else
-   48000000, /* SD/MMC cards */
+   /* Temperately setup max SD/MMC clock to 20Mhz, later on it should be 
+    * changed to 48Mhz when boot1 and Uboot codes set SD/MMC base
+    * clock to 48Mhz
+    */
+   20000000, /* SD/MMC cards */
    /*
     * TODO: set the WiFi SDIO clock to 6 MHz for now due to high noises with
     * the daughter card. Can switch to 48 MHz later when the Hera Tablet
@@ -303,6 +309,22 @@ static void proc_term(struct platform_device *pdev)
    remove_proc_entry(proc->name, gProcParent);
 }
 
+/*
+ * SD card detection interrupt handler
+ */
+static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
+{
+   struct sdio_dev *dev = (struct sdio_dev *)dev_id;
+
+   /* card insert */
+   if (gpio_get_value(dev->cd_gpio) == 0)
+      bcm_kona_sd_card_emulate(dev, 1);
+   else /* card removal */
+      bcm_kona_sd_card_emulate(dev, 0);
+
+   return IRQ_HANDLED;
+}
+
 static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 {
    struct sdhci_host *host;
@@ -455,6 +477,33 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
          goto err_proc_term;
       }
       printk(KERN_INFO "%s card insert emulated!\n", devname);
+   }  else if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
+      ret = gpio_request(dev->cd_gpio, "sdio cd");
+      if (ret < 0) {
+         dev_err(&pdev->dev, "Unable to request GPIO pin %d\n", dev->cd_gpio);
+         goto err_proc_term;
+      }
+      gpio_direction_input(dev->cd_gpio);
+
+      ret = request_irq(gpio_to_irq(dev->cd_gpio),
+            sdhci_pltfm_cd_interrupt,
+            IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+            "sdio cd",
+            dev);
+      if (ret) {
+         dev_err(&pdev->dev, "Unable to request card detection irq=%d for gpio=%d\n",
+               gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
+         goto err_free_cd_gpio;
+      }
+
+      /*
+       * Since the card detection GPIO interrupt is configured to be edge
+       * sensitive, check the initial GPIO value here
+       */
+      if (gpio_get_value(dev->cd_gpio) == 0)
+         bcm_kona_sd_card_emulate(dev, 1);
+      else
+         bcm_kona_sd_card_emulate(dev, 0);
    }
 
    atomic_set(&dev->initialized, 1);
@@ -462,6 +511,11 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
    printk(KERN_INFO "%s initialized properly\n", devname);
 
 	return 0;
+
+err_free_cd_gpio:
+   if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
+      gpio_free(dev->cd_gpio);
+   }
 
 err_proc_term:
    proc_term(pdev);

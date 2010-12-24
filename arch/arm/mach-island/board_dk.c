@@ -54,28 +54,28 @@
  * confuses it as an XSCALE UART.  Problem seems to be that it reads
  * bit6 in IER as non-zero sometimes when it's supposed to be 0.
  */
-#define KONA_UART0_PA	UARTB_BASE_ADDR
-#define KONA_UART1_PA	UARTB2_BASE_ADDR
-#define KONA_UART2_PA	UARTB3_BASE_ADDR
-#define KONA_UART3_PA	UARTB4_BASE_ADDR
-#define KONA_SDIO0_PA	SDIO1_BASE_ADDR
-#define KONA_SDIO1_PA	SDIO2_BASE_ADDR
-#define KONA_SDIO2_PA	SDIO3_BASE_ADDR
+#define KONA_UART0_PA   UARTB_BASE_ADDR
+#define KONA_UART1_PA   UARTB2_BASE_ADDR
+#define KONA_UART2_PA   UARTB3_BASE_ADDR
+#define KONA_UART3_PA   UARTB4_BASE_ADDR
+#define KONA_SDIO0_PA   SDIO1_BASE_ADDR
+#define KONA_SDIO1_PA   SDIO2_BASE_ADDR
+#define KONA_SDIO2_PA   SDIO3_BASE_ADDR
 #define SDIO_CORE_REG_SIZE 0x10000
 
 #define BSC_CORE_REG_SIZE      0x100
 
-#define KONA_8250PORT(name)				\
-{								\
-	.membase    = (void __iomem *)(KONA_##name##_VA), 	\
-	.mapbase    = (resource_size_t)(KONA_##name##_PA),    	\
-	.irq	    = BCM_INT_ID_##name,               		\
-	.uartclk    = 13000000,					\
-	.regshift   = 2,					\
-	.iotype	    = UPIO_DWAPB,					\
-	.type	    = PORT_16550A,          			\
-	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,	\
-	.private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET), \
+#define KONA_8250PORT(name)                                                 \
+{                                                                           \
+   .membase    = (void __iomem *)(KONA_##name##_VA),                        \
+   .mapbase    = (resource_size_t)(KONA_##name##_PA),                       \
+   .irq       = BCM_INT_ID_##name,                                          \
+   .uartclk    = 13000000,                                                  \
+   .regshift   = 2,                                                         \
+   .iotype       = UPIO_DWAPB,                                              \
+   .type       = PORT_16550A,                                               \
+   .flags       = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,       \
+   .private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET), \
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
@@ -89,10 +89,10 @@
 /*
  * GPIO pin for Touch screen pen down interrupt
  */
-#define TSC2007_PEN_DOWN_GPIO_PIN	112
+#define TSC2007_PEN_DOWN_GPIO_PIN   112
 
-#define TANGO_GPIO_IRQ_PIN    		112
-#define TANGO_GPIO_RESET_PIN  		113
+#define TANGO_GPIO_IRQ_PIN          112
+#define TANGO_GPIO_RESET_PIN        113
 #define TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ 14
 
 /*
@@ -158,30 +158,30 @@ static struct platform_device board_i2c_adap_devices[] =
       .name = "bsc-i2c",
       .id = 0,
       .resource = board_i2c0_resource,
-      .num_resources	= ARRAY_SIZE(board_i2c0_resource),
+      .num_resources = ARRAY_SIZE(board_i2c0_resource),
    },
    {  /* for BSC1 */
       .name = "bsc-i2c",
       .id = 1,
       .resource = board_i2c1_resource,
-      .num_resources	= ARRAY_SIZE(board_i2c1_resource),
+      .num_resources = ARRAY_SIZE(board_i2c1_resource),
    },
    {  /* for PMU BSC */
       .name = "bsc-pmu",
       .id = 2,
       .resource = board_pmu_bsc_resource,
-      .num_resources	= ARRAY_SIZE(board_pmu_bsc_resource),
+      .num_resources = ARRAY_SIZE(board_pmu_bsc_resource),
    },
 };
 
 static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT(UART0),
-	KONA_8250PORT(UART1),
-	KONA_8250PORT(UART2),
-	KONA_8250PORT(UART3),
-	{
-		.flags		= 0,
-	},
+   KONA_8250PORT(UART0),
+   KONA_8250PORT(UART1),
+   KONA_8250PORT(UART2),
+   KONA_8250PORT(UART3),
+   {
+      .flags      = 0,
+   },
 };
 #if defined(CONFIG_KEYBOARD_GPIO)
 static struct gpio_keys_button board_gpio_keys_button[] = {
@@ -194,9 +194,9 @@ static struct gpio_keys_button board_gpio_keys_button[] = {
 };
 
 static struct gpio_keys_platform_data board_gpio_keys = {
-	.buttons = board_gpio_keys_button,
-	.nbuttons = HW_NUM_GPIO_KEYS,
-	.rep = 1,		
+   .buttons = board_gpio_keys_button,
+   .nbuttons = HW_NUM_GPIO_KEYS,
+   .rep = 1,      
 };
 
 static struct platform_device board_gpio_keys_device = {
@@ -247,13 +247,13 @@ static void tsc2007_clear_penirq(void)
 }
 
 static struct tsc2007_platform_data tsc_plat_data = {
-	.model			= 2007,
-	.x_plate_ohms	= 510, // For Sharp K3889TP Touch panel device
-	.get_pendown_state = NULL,
-	.clear_penirq = NULL,
-	.init_platform_hw = tsc2007_init_platform_hw,
-	.exit_platform_hw = tsc2007_exit_platform_hw,
-	.clear_penirq = tsc2007_clear_penirq,
+   .model             = 2007,
+   .x_plate_ohms      = 510, // For Sharp K3889TP Touch panel device
+   .get_pendown_state = NULL,
+   .clear_penirq      = NULL,
+   .init_platform_hw  = tsc2007_init_platform_hw,
+   .exit_platform_hw  = tsc2007_exit_platform_hw,
+   .clear_penirq      = tsc2007_clear_penirq,
 };
 
 static struct i2c_board_info __initdata tsc2007_info[] = 
@@ -304,7 +304,7 @@ static struct i2c_board_info __initdata tango_info[] =
 {
    {  /* New touch screen i2c slave address. */
       I2C_BOARD_INFO(I2C_TS_DRIVER_NAME, 0x5C),
-      .platform_data  = &tango_plat_data,
+      .platform_data = &tango_plat_data,
       .irq = gpio_to_irq(TANGO_GPIO_IRQ_PIN),
    },
 };
@@ -312,50 +312,50 @@ static struct i2c_board_info __initdata tango_info[] =
 #endif
 
 static struct platform_device board_serial_device = {
-	.name		= "serial8250",
-	.id		= PLAT8250_DEV_PLATFORM,
-	.dev		= {
-		.platform_data = uart_data,
-	},
+   .name    = "serial8250",
+   .id      = PLAT8250_DEV_PLATFORM,
+   .dev     = {
+      .platform_data = uart_data,
+   },
 };
 
 static struct resource board_sdio0_resource[] = {
-	[0] = {
-		.start = KONA_SDIO0_PA,
-		.end = KONA_SDIO0_PA + SDIO_CORE_REG_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO0,
-		.end = BCM_INT_ID_SDIO0,
-		.flags = IORESOURCE_IRQ,
-	},
+   [0] = {
+      .start = KONA_SDIO0_PA,
+      .end = KONA_SDIO0_PA + SDIO_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = {
+      .start = BCM_INT_ID_SDIO0,
+      .end = BCM_INT_ID_SDIO0,
+      .flags = IORESOURCE_IRQ,
+   },
 };
 
 static struct resource board_sdio1_resource[] = {
-	[0] = {
-		.start = KONA_SDIO1_PA,
-		.end = KONA_SDIO1_PA + SDIO_CORE_REG_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO1,
-		.end = BCM_INT_ID_SDIO1,
-		.flags = IORESOURCE_IRQ,
-	},
+   [0] = {
+      .start = KONA_SDIO1_PA,
+      .end = KONA_SDIO1_PA + SDIO_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = {
+      .start = BCM_INT_ID_SDIO1,
+      .end = BCM_INT_ID_SDIO1,
+      .flags = IORESOURCE_IRQ,
+   },
 };
 
 static struct resource board_sdio2_resource[] = {
-	[0] = {
-		.start = KONA_SDIO2_PA,
-		.end = KONA_SDIO2_PA + SDIO_CORE_REG_SIZE - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO_NAND,
-		.end = BCM_INT_ID_SDIO_NAND,
-		.flags = IORESOURCE_IRQ,
-	},
+   [0] = {
+      .start = KONA_SDIO2_PA,
+      .end = KONA_SDIO2_PA + SDIO_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = {
+      .start = BCM_INT_ID_SDIO_NAND,
+      .end = BCM_INT_ID_SDIO_NAND,
+      .flags = IORESOURCE_IRQ,
+   },
 };
 
 static struct sdio_platform_cfg board_sdio_param[] = {
@@ -378,44 +378,43 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 };
 
 static struct platform_device island_sdio1_device = {
-	.name = "sdhci",
-	.id = 1,
-	.resource = board_sdio1_resource,
-	.num_resources	= ARRAY_SIZE(board_sdio1_resource),
-	.dev		= {
-		.platform_data = &board_sdio_param[1],
-	},
+   .name = "sdhci",
+   .id = 1,
+   .resource = board_sdio1_resource,
+   .num_resources   = ARRAY_SIZE(board_sdio1_resource),
+   .dev      = {
+      .platform_data = &board_sdio_param[1],
+   },
 };
 
 static struct platform_device island_sdio2_device = {
-	.name = "sdhci",
-	.id = 2,
-	.resource = board_sdio2_resource,
-	.num_resources	= ARRAY_SIZE(board_sdio1_resource),
-	.dev		= {
-		.platform_data = &board_sdio_param[2],
-	},
+   .name = "sdhci",
+   .id = 2,
+   .resource = board_sdio2_resource,
+   .num_resources   = ARRAY_SIZE(board_sdio2_resource),
+   .dev      = {
+      .platform_data = &board_sdio_param[2],
+   },
 };
 
 void __init board_map_io(void)
 {
-	/* Map machine specific iodesc here */
+   /* Map machine specific iodesc here */
 
-	island_map_io();
+   island_map_io();
 }
 
 static struct platform_device *board_devices[] __initdata = {
-	&board_serial_device,
-	&board_i2c_adap_devices[0],
-	&board_i2c_adap_devices[1],
-    &board_i2c_adap_devices[2],
-	&island_sdio1_device,
-	&island_sdio2_device,
+   &board_serial_device,
+   &board_i2c_adap_devices[0],
+   &board_i2c_adap_devices[1],
+   &board_i2c_adap_devices[2],
+   &island_sdio2_device,
 };
 
 static void __init board_add_devices(void)
 {
-	platform_add_devices(board_devices, ARRAY_SIZE(board_devices));
+   platform_add_devices(board_devices, ARRAY_SIZE(board_devices));
 #ifdef CONFIG_TOUCHSCREEN_TSC2007
    i2c_register_board_info(1, 
                            tsc2007_info,
@@ -435,16 +434,16 @@ static void __init board_add_devices(void)
 
 void __init board_init(void)
 {
-	board_add_devices();
-	return;
+   board_add_devices();
+   return;
 }
 
 
 MACHINE_START(ISLAND, "Island DK/FF")
-	.phys_io = IO_START,
-	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
-	.map_io = board_map_io,
-	.init_irq = kona_init_irq,
-	.timer  = &kona_timer,
-	.init_machine = board_init,
+   .phys_io = IO_START,
+   .io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
+   .map_io = board_map_io,
+   .init_irq = kona_init_irq,
+   .timer  = &kona_timer,
+   .init_machine = board_init,
 MACHINE_END
