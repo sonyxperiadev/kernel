@@ -167,7 +167,7 @@ static struct platform_device board_i2c_adap_devices[] =
       .num_resources = ARRAY_SIZE(board_i2c1_resource),
    },
    {  /* for PMU BSC */
-      .name = "bsc-pmu",
+      .name = "bsc-i2c",
       .id = 2,
       .resource = board_pmu_bsc_resource,
       .num_resources = ARRAY_SIZE(board_pmu_bsc_resource),
