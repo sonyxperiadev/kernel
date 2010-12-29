@@ -16,4 +16,5 @@ obj-y := io_map.o
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o 
 obj-$(CONFIG_MACH_ISLAND_BU) += board_bu.o 
 obj-$(CONFIG_MACH_ISLAND_DK) += board_dk.o 
+obj-$(CONFIG_HAVE_CLK) += clock-island.o
 
