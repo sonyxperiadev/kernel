@@ -275,10 +275,8 @@ void bcm59055_regulator_desc(void **info)
 }
 
 /*****************************************************************************************/
-/************************* I S L A N D      F P G A     S E T T I N G S ******************/
+/************************* I S L A N D                  S E T T I N G S ******************/
 /*****************************************************************************************/
-#ifdef CONFIG_MACH_ISLAND_FPGA  
-
 #define BCM590XX_REG_ENABLED  1
 #define BCM590XX_REG_DISABLED 0
 
@@ -525,19 +523,6 @@ struct platform_device *bcm59055_state_change_and_voltage_change_devices[] __ini
     &bcm59055_uc_device_sdsr , &bcm59055_vc_device_sdsr ,
 };
 
-#if 0
-void bcm59055_get_regulator_init_data(void **data, int *num) 
-{
-    *data = &bcm59055_regulators[0] ;
-    *num = ARRAY_SIZE(bcm59055_regulators) ;
-}
-
-void bcm59055_get_platform_dev_data(void **dev_data, int *num) 
-{
-    *dev_data = 
-}
-#endif
-
 void bcm59055_reg_init_dev_init(struct bcm590xx *bcm590xx) 
 {
     int i = 0 ;
@@ -550,5 +535,4 @@ void bcm59055_reg_init_dev_init(struct bcm590xx *bcm590xx)
 
     platform_add_devices(bcm59055_state_change_and_voltage_change_devices, ARRAY_SIZE(bcm59055_state_change_and_voltage_change_devices));
 }
-#endif  // ISLAND_FPGA settings when using bcm59055 PMU.
 

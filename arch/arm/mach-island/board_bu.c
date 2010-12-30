@@ -45,6 +45,19 @@
 #include <mach/sdio_platform.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 
+#include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcm590xx/pmic.h>
+
+// #include <linux/regulator/machine.h>
+// #include <linux/regulator/consumer.h>
+// #include <linux/regulator/userspace-consumer.h>
+
+#ifdef CONFIG_REGULATOR_BCM_PMU59055_A0
+#include <linux/mfd/bcm590xx/bcm59055_A0.h>
+#endif
+
+#include <linux/regulator/max8649.h>
+
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to 
  * use FIXED type
@@ -337,6 +350,96 @@ static struct platform_device island_sdio2_device = {
    },
 };
 
+#ifdef CONFIG_REGULATOR_MAX8649 
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
+// int island_maxim_platform_hw_init(void ) ;
+void island_maxim_platform_hw_init_1(void ) ;
+void island_maxim_platform_hw_init_2(void ) ;
+
+struct regulator_consumer_supply max8649_supply1 = { .supply = "vc_core" };
+struct regulator_init_data max8649_init_data1 = {
+	.constraints	= {
+    .name = "vc_core", .min_uV = 1210000, .max_uV	= 1280000, .always_on = 0, .boot_on	= 0, .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE|REGULATOR_CHANGE_MODE , .valid_modes_mask = REGULATOR_MODE_NORMAL|REGULATOR_MODE_FAST ,
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8649_supply1,
+};
+struct max8649_platform_data max8649_info1 = { .mode = 2,	.extclk	= 0, .ramp_timing = MAX8649_RAMP_32MV, .regulator = &max8649_init_data1 , .init = island_maxim_platform_hw_init_1, } ;
+
+#if 0
+struct regulator_bulk_data maxim_bd1 = { .supply = "vc_core", };
+struct regulator_userspace_consumer_data maxim_uscd1 = { .name = "vc_core", .num_supplies = 1, .supplies = &maxim_bd1, .init_on = 0,};  
+struct platform_device max8649_uc1 =  { .name = "reg-userspace-consumer", .id = 13,           .dev = { .platform_data = &maxim_uscd1, }, };
+#endif
+struct platform_device max8649_vc1 =  { .name = "reg-virt-consumer",      .id = 13,           .dev = { .platform_data = "vc_core" , }, };
+struct i2c_board_info max_switch_info_1[] = { { .type		= "max8649", .addr		= 0x60, .platform_data	= &max8649_info1, }, };
+
+/***** Second Maxim part init data ( ARM part )*********/
+struct regulator_consumer_supply max8649_supply2 = { .supply = "arm_core" };
+struct regulator_init_data max8649_init_data2 = {
+	.constraints	= {
+    .name = "arm_core", .min_uV = 1210000, .max_uV = 1280000, .always_on = 0, .boot_on = 0, .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE|REGULATOR_CHANGE_MODE , .valid_modes_mask = REGULATOR_MODE_NORMAL|REGULATOR_MODE_FAST,
+	},
+	.num_consumer_supplies	= 1,
+	.consumer_supplies	= &max8649_supply2,
+};
+struct max8649_platform_data max8649_info2 = { .mode = 2,	/* VID1 = 1, VID0 = 0 */
+	.extclk		= 0, .ramp_timing	= MAX8649_RAMP_32MV, .regulator	= &max8649_init_data2 , .init = island_maxim_platform_hw_init_2, } ;
+
+#if 0
+struct regulator_bulk_data maxim_bd2 = { .supply = "arm_core", };
+struct regulator_userspace_consumer_data maxim_uscd2 = { .name = "arm_core", .num_supplies = 1, .supplies = &maxim_bd2, .init_on = 0,};  
+struct platform_device max8649_uc2 =  { .name = "reg-userspace-consumer", .id = 14,           .dev = { .platform_data = &maxim_uscd2, }, };
+#endif
+
+struct platform_device max8649_vc2 =  { .name = "reg-virt-consumer",      .id = 14,           .dev = { .platform_data = "arm_core" , }, };
+struct i2c_board_info max_switch_info_2[] = { { .type		= "max8649", .addr		= 0x62, .platform_data	= &max8649_info2, }, };
+
+struct platform_device *maxim_devices_1[] __initdata = { &max8649_vc1 } ;
+struct platform_device *maxim_devices_2[] __initdata = { &max8649_vc2 };
+
+void island_maxim_platform_hw_init_1(void )
+{
+	printk("REG: island_maxim_platform_hw_init for VC called\n") ;
+    platform_add_devices(maxim_devices_1, ARRAY_SIZE(maxim_devices_1));
+}
+
+void island_maxim_platform_hw_init_2(void )
+{
+	printk("REG: island_maxim_platform_hw_init for ARM called \n") ;
+    platform_add_devices(maxim_devices_2, ARRAY_SIZE(maxim_devices_2));
+}
+
+#endif
+#endif
+
+#ifdef CONFIG_REGULATOR_BCM_PMU590XX
+#define PMU_DEVICE_I2C_ADDR   0x08 
+static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
+{
+    // int i;
+    printk("REG: pmu_init_platform_hw called \n") ;
+#ifdef CONFIG_REGULATOR_BCM_PMU59055_A0
+    bcm59055_reg_init_dev_init(bcm590xx)  ;
+#endif
+
+    return 0 ;
+}
+
+static struct bcm590xx_platform_data __initdata bcm590xx_plat_data = {
+	.init = bcm590xx_init_platform_hw,
+};
+
+
+static struct i2c_board_info __initdata pmu_info[] = 
+{
+   {  /* New touch screen i2c slave address. */
+      I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR ), 
+      .platform_data  = &bcm590xx_plat_data,
+   },
+};
+#endif
+
 void __init board_map_io(void)
 {
    /* Map machine specific iodesc here */
@@ -363,6 +466,25 @@ static void __init board_add_devices(void)
 
 #if defined(CONFIG_KEYBOARD_GPIO)
    platform_device_register(&board_gpio_keys_device);
+#endif
+
+#ifdef CONFIG_REGULATOR_MAX8649 
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
+   i2c_register_board_info(2,              // This is i2c adapter number. For fpga put it on i2c 1.
+                           max_switch_info_1,
+                           ARRAY_SIZE(max_switch_info_1));
+   i2c_register_board_info(2,              // This is i2c adapter number. For fpga put it on i2c 1.
+                           max_switch_info_2,
+                           ARRAY_SIZE(max_switch_info_2));
+#endif
+#endif
+
+#ifdef CONFIG_REGULATOR_BCM_PMU590XX
+   printk("REG: i2c_register_board_info for pmu called \n") ;
+
+   i2c_register_board_info(2,              // This is i2c adapter number. For fpga put it on i2c 1.
+                           pmu_info,
+                           ARRAY_SIZE(pmu_info));
 #endif
 }
 
