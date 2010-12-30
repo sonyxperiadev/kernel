@@ -53,6 +53,8 @@ modules.builtin
 #
 # Generated include files
 #
+include/asm
+include/asm-*/asm-offsets.h
 include/asm-*/mach-types.h
 include/config
 include/linux/autoconf.h
