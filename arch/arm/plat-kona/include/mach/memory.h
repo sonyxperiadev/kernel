@@ -37,7 +37,4 @@
 
 #define HW_IO_VIRT_TO_PHYS(virt)	((virt) - IO_START_VA + IO_START_PA)
 
-#define __virt_to_bus(x) __virt_to_phys(x)
-#define __bus_to_virt(x) __phys_to_virt(x)
-
 #endif /* __PLAT_KONA_MEMORY_H */ 
