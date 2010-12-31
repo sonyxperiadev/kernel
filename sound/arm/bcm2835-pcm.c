@@ -1,4 +1,5 @@
 #include <linux/interrupt.h>
+#include <linux/slab.h>
 
 #include "bcm2835.h"
 

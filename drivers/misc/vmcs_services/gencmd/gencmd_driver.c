@@ -19,6 +19,7 @@
 #include <linux/errno.h>
 #include <asm/uaccess.h>
 #include <linux/miscdevice.h>
+#include <linux/slab.h>
 
 #include "gencmd.h"
 #include "gencmd_driver.h"

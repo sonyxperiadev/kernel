@@ -7,6 +7,7 @@
 #include <asm/sizes.h>
 #include <asm/io.h>
 #include <mach/bcm2708_smi.h>
+#include <linux/slab.h>
 
 #include "bcm2708_smi_regs.h"
 

@@ -9,6 +9,7 @@
 #include <linux/mm.h>
 #include <linux/syscalls.h>
 #include <asm/uaccess.h>
+#include <linux/slab.h>
 
 #include "ipc_fifo.h"
 #include "bcm2835.h"

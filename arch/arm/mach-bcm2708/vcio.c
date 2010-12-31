@@ -60,22 +60,6 @@ typedef struct mailbox_s
    uint32_t magic;
 } MAILBOX_T;
 
-/* These device_lock/unlock/tylock functions are imported from kernel v2.6.34 */
-static inline void device_lock(struct device *dev)
-{
-	down(&dev->sem);
-}
-
-static inline int device_trylock(struct device *dev)
-{
-	return down_trylock(&dev->sem);
-}
-
-static inline void device_unlock(struct device *dev)
-{
-	up(&dev->sem);
-}
-
 static void mbox_init(MAILBOX_T *mbox_out, struct device *dev,
                       uint32_t addr_mbox)
 {

@@ -26,6 +26,7 @@
 #define HUB_RESET_TT		9
 #define HUB_GET_TT_STATE	10
 #define HUB_STOP_TT		11
+#define HUB_SET_AND_TEST	12
 
 /*
  * Hub Class feature numbers

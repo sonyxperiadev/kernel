@@ -10,6 +10,7 @@
 #include <linux/mtd/nand.h>
 #include <mach/bcm2708_smi.h>
 #include <mach/plat_nand.h>
+#include <linux/slab.h>
 
 #include "bcm2708_nand.h"
 

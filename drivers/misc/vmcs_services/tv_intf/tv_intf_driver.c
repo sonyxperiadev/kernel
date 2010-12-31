@@ -19,6 +19,7 @@
 #include <linux/errno.h>
 #include <asm/uaccess.h>
 #include <linux/miscdevice.h>
+#include <linux/slab.h>
 
 #include "tv_intf.h"
 #include "tv_intf_driver.h"

@@ -16,6 +16,7 @@
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <asm/io.h>
+#include <linux/slab.h>
 
 struct bcm2708_battery_data {
 	struct power_supply battery;
