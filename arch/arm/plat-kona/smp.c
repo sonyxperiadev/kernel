@@ -103,9 +103,8 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	 * Note that "pen_release" is the hardware CPU ID, whereas
 	 * "cpu" is Linux's internal ID.
 	 */
-	flush_cache_all();
-	smp_mb();
 	pen_release = cpu;
+	smp_wmb();
 	flush_cache_all();
 
 
