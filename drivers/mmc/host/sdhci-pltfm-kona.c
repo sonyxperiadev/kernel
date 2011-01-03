@@ -532,7 +532,6 @@ err_term_clk:
 err_free_gpio:
 #endif
 
-err_rm_platform:
    platform_set_drvdata(pdev, NULL);
    kfree(dev);
 
