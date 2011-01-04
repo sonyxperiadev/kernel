@@ -1117,7 +1117,10 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	else
 		present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 				SDHCI_CARD_PRESENT;
-
+	/* Force present = true for now, when SD-detection with GPIO works,
+	 * it should be removed */
+	present = true;
+	
 	if (!present || host->flags & SDHCI_DEVICE_DEAD) {
 		host->mrq->cmd->error = -ENOMEDIUM;
 		tasklet_schedule(&host->finish_tasklet);
@@ -1166,10 +1169,28 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 
 	if (ios->timing == MMC_TIMING_SD_HS)
 		ctrl |= SDHCI_CTRL_HISPD;
+#ifdef CONFIG_MMC_BCM_SD
+	else if (ios->timing == MMC_TIMING_MMC_HS)
+		ctrl |= SDHCI_CTRL_HISPD;
+#endif
 	else
 		ctrl &= ~SDHCI_CTRL_HISPD;
 
 	sdhci_writeb(host, ctrl, SDHCI_HOST_CONTROL);
+
+#ifdef CONFIG_BCM_SDIOWL  // BROADCOM MODIFICATION
+	if (ios->host_reset) {
+		unsigned char reset_flags = 0;
+		if (ios->host_reset & MMC_HOST_RESET_CMD) {
+			reset_flags |= SDHCI_RESET_CMD;
+		}
+		if (ios->host_reset & MMC_HOST_RESET_DAT) {
+			reset_flags |= SDHCI_RESET_DATA;
+		}
+		printk(KERN_INFO "%s: performing host reset\n",	mmc_hostname(host->mmc));
+		sdhci_reset(host, reset_flags);
+	}
+#endif // BROADCOM MODIFICATION
 
 	/*
 	 * Some (ENE) controllers go apeshit on some ios operation,
@@ -1754,6 +1775,12 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc_dev(host->mmc)->dma_mask = &host->dma_mask;
 	}
 
+#ifdef CONFIG_MMC_BCM_SD
+	if (host->ops->get_max_clk)
+		host->max_clk = host->ops->get_max_clk(host);
+	else
+		host->max_clk = 0;
+#else
 	host->max_clk =
 		(caps & SDHCI_CLOCK_BASE_MASK) >> SDHCI_CLOCK_BASE_SHIFT;
 	host->max_clk *= 1000000;
@@ -1767,7 +1794,7 @@ int sdhci_add_host(struct sdhci_host *host)
 		}
 		host->max_clk = host->ops->get_max_clock(host);
 	}
-
+#endif
 	host->timeout_clk =
 		(caps & SDHCI_TIMEOUT_CLK_MASK) >> SDHCI_TIMEOUT_CLK_SHIFT;
 	if (host->timeout_clk == 0) {
@@ -1794,13 +1821,26 @@ int sdhci_add_host(struct sdhci_host *host)
 	else
 		mmc->f_min = host->max_clk / 256;
 	mmc->f_max = host->max_clk;
+#ifdef CONFIG_MACH_BCM2850_FPGA
+   /* frequency divisor does not work on FPGA image */
+   mmc->f_min = mmc->f_min = host->max_clk;
+#endif
 	mmc->caps = MMC_CAP_SDIO_IRQ;
 
 	if (!(host->quirks & SDHCI_QUIRK_FORCE_1_BIT_DATA))
 		mmc->caps |= MMC_CAP_4_BIT_DATA;
 
+#ifndef CONFIG_MACH_BCM2850_FPGA /* FPGA not fast enough for high speed */
 	if (caps & SDHCI_CAN_DO_HISPD)
+#ifdef CONFIG_MMC_BCM_SD
+	{
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED;
+		mmc->caps |= MMC_CAP_MMC_HIGHSPEED;
+	}
+#else
+		mmc->caps |= MMC_CAP_SD_HIGHSPEED;
+#endif
+#endif
 
 	if (host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION)
 		mmc->caps |= MMC_CAP_NEEDS_POLL;
@@ -1861,7 +1901,11 @@ int sdhci_add_host(struct sdhci_host *host)
 	} else {
 		mmc->max_blk_size = (caps & SDHCI_MAX_BLOCK_MASK) >>
 				SDHCI_MAX_BLOCK_SHIFT;
+#ifdef CONFIG_MMC_BCM_SD
+		if (mmc->max_blk_size > 3) {
+#else
 		if (mmc->max_blk_size >= 3) {
+#endif
 			printk(KERN_WARNING "%s: Invalid maximum block size, "
 				"assuming 512 bytes\n", mmc_hostname(mmc));
 			mmc->max_blk_size = 0;
@@ -2001,6 +2045,9 @@ static int __init sdhci_drv_init(void)
 	printk(KERN_INFO DRIVER_NAME
 		": Secure Digital Host Controller Interface driver\n");
 	printk(KERN_INFO DRIVER_NAME ": Copyright(c) Pierre Ossman\n");
+#ifdef CONFIG_BCM_SDIOWL  // BROADCOM MODIFICATION
+	printk(KERN_INFO DRIVER_NAME ": modified by Broadcom for SDIO Wireless purposes\n");
+#endif
 
 	return 0;
 }

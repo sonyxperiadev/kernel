@@ -126,6 +126,12 @@
 #define gadget_is_ci13xxx(g)	0
 #endif
 
+#ifdef CONFIG_USB_GADGET_DWC_OTG
+#define gadget_is_dwc(g)	!strcmp("dwc_otg_pcd", (g)->name)
+#else
+#define gadget_is_dwc(g)	0
+#endif
+
 #ifdef CONFIG_USB_GADGET_SNPS_DWC_OTG
 #define	gadget_is_dwc_otg(g)	!strcmp("dwc_otg_pcd", (g)->name)
 #else
@@ -206,6 +212,8 @@ static inline int usb_gadget_controller_number(struct usb_gadget *gadget)
 		return 0x25;
 	else if (gadget_is_s3c_hsotg(gadget))
 		return 0x26;
+	else if (gadget_is_dwc(gadget))
+		return 0x29;
 	return -ENOENT;
 }
 

@@ -1,0 +1,20 @@
+#
+# Makefile for the Synopsis DWC OTG driver
+#
+DWC_COMMON_PORT_DIR	:= $(PWD)/drivers/usb/gadget/dwc_otg/dwc_common_port
+
+EXTRA_CFLAGS	+=  -DLM_INTERFACE -DDWC_LINUX
+EXTRA_CFLAGS	+=   -I$(DWC_COMMON_PORT_DIR)
+
+obj-$(CONFIG_USB_DWC_OTG)	+= kona_otg_device.o
+obj-$(CONFIG_USB_DWC_OTG)	+= dwc_otg.o
+
+dwc_otg-objs    := dwc_otg_driver.o dwc_otg_attr.o
+dwc_otg-objs    += dwc_otg_cil.o dwc_otg_cil_intr.o
+dwc_otg-objs    += dwc_otg_pcd_linux.o dwc_otg_pcd.o dwc_otg_pcd_intr.o
+dwc_otg-objs    += dwc_otg_hcd.o dwc_otg_hcd_linux.o dwc_otg_hcd_intr.o dwc_otg_hcd_queue.o dwc_otg_hcd_ddma.o
+dwc_otg-objs    += dwc_otg_adp.o
+
+ifneq ($(CFI),)
+	dwc_otg-objs    += dwc_otg_cfi.o
+endif

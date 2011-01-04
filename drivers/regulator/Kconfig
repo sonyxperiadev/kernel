@@ -201,5 +201,25 @@ config REGULATOR_88PM8607
 	help
 	  This driver supports 88PM8607 voltage regulator chips.
 
+config REGULATOR_BCM_PMU590XX
+	bool "BCM PMU59055 Regulator"
+	depends on MFD_BCM_PMU590XX
+	help
+	  This driver supports the voltage regulators provided by
+	  this family of companion chips.
+
+config REGULATOR_BCM_PMU59055_A0
+	bool "BCM PMU59055 Regulator"
+	depends on MFD_BCM_PMU590XX && REGULATOR_BCM_PMU590XX
+	help
+	  This driver supports the voltage regulators provided by
+	  PMU 59055.
+
+config MAX8649_SUPPORT_CHANGE_VID_MODE
+	bool "Enable Maxim 8649 regulator to change voltage "
+	depends on REGULATOR_MAX8649
+	help
+	  This support is to add a virtual consumer for changing voltages, and modes.
+
 endif
 

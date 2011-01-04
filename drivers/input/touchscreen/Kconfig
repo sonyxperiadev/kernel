@@ -578,6 +578,12 @@ config TOUCHSCREEN_TSC2007
 	  To compile this driver as a module, choose M here: the
 	  module will be called tsc2007.
 
+config TOUCHSCREEN_TANGO_S32
+   tristate "TANGO_S32 Capacitive Touchscreen"
+   depends on I2C
+   help
+     Say Y here if you have a Tango_S32 based touchscreen. If unsure, say N.
+
 config TOUCHSCREEN_W90X900
 	tristate "W90P910 touchscreen driver"
 	depends on HAVE_CLK

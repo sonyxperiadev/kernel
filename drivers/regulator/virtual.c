@@ -46,6 +46,7 @@ static void update_voltage_constraints(struct device *dev,
 		}
 	}
 
+#if 0
 	if (data->min_uV && data->max_uV && !data->enabled) {
 		dev_dbg(dev, "Enabling regulator\n");
 		ret = regulator_enable(data->regulator);
@@ -65,6 +66,8 @@ static void update_voltage_constraints(struct device *dev,
 			dev_err(dev, "regulator_disable() failed: %d\n",
 				ret);
 	}
+#endif
+
 }
 
 static void update_current_limit_constraints(struct device *dev,

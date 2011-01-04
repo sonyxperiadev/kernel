@@ -401,9 +401,13 @@ static struct sk_buff *asix_tx_fixup(struct usbnet *dev, struct sk_buff *skb,
 
 	padlen = ((skb->len + 4) % 512) ? 0 : 4;
 
-	if ((!skb_cloned(skb)) &&
-	    ((headroom + tailroom) >= (4 + padlen))) {
-		if ((headroom < 4) || (tailroom < padlen)) {
+	if ((!skb_cloned(skb))
+	    && ((headroom + tailroom) >= (4 + padlen))) {
+		if ((headroom < 4) || (tailroom < padlen)
+#ifdef CONFIG_ARCH_KONA
+			||  ((u32)(skb->data) & 0x3)
+#endif
+		) {
 			skb->data = memmove(skb->head + 4, skb->data, skb->len);
 			skb_set_tail_pointer(skb, skb->len);
 		}

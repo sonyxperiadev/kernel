@@ -13,7 +13,13 @@ if MFD_SUPPORT
 
 config MFD_CORE
 	tristate
-	default n
+	default y
+
+config MFD_BCM_PMU590XX
+	bool "MFD BCM PMU590XX PMIC"
+	depends on MFD_CORE && I2C_BSC 
+	help
+	  Support for the Broadcom PMIC.
 
 config MFD_88PM860X
 	bool "Support Marvell 88PM8606/88PM8607"

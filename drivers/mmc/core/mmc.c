@@ -21,6 +21,10 @@
 #include "bus.h"
 #include "mmc_ops.h"
 
+#ifdef CONFIG_MMC_BCM_SD
+#include "../host/sdhci.h"
+#endif
+
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
 	0,		0,		0,		0
@@ -221,9 +225,14 @@ static int mmc_read_ext_csd(struct mmc_card *card)
 	}
 
 	card->ext_csd.rev = ext_csd[EXT_CSD_REV];
+#ifdef CONFIG_MMC_BCM_SD
 	if (card->ext_csd.rev > 5) {
-		printk(KERN_ERR "%s: unrecognised EXT_CSD revision %d\n",
-			mmc_hostname(card->host), card->ext_csd.rev);
+#else
+	if (card->ext_csd.rev > 3) {
+#endif
+		printk(KERN_ERR "%s: unrecognised EXT_CSD structure "
+			"version %d\n", mmc_hostname(card->host),
+			card->ext_csd.rev);
 		err = -EINVAL;
 		goto out;
 	}
@@ -239,6 +248,12 @@ static int mmc_read_ext_csd(struct mmc_card *card)
 			/* size is in 256K chunks, i.e. 512 sectors each */
 			boot_sectors = ext_csd[EXT_CSD_BOOT_SIZE_MULTI] * 512;
 			card->ext_csd.sectors -= boot_sectors;
+#ifdef CONFIG_MMC_BCM_SD
+		/* Cards with density > 2GiB are sector addressed */
+		if (card->ext_csd.sectors > (2u * 1024 * 1024 * 1024) / 512)
+#else
+		if (card->ext_csd.sectors)
+#endif
 			mmc_card_set_blockaddr(card);
 		}
 	}
@@ -430,6 +445,9 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 	 * Activate high speed (if supported)
 	 */
 	if ((card->ext_csd.hs_max_dtr != 0) &&
+#ifdef CONFIG_MMC_BCM_SD
+        (host->f_max > SDHCI_HOST_MAX_CLK_LS_MODE) &&
+#endif
 		(host->caps & MMC_CAP_MMC_HIGHSPEED)) {
 		err = mmc_switch(card, EXT_CSD_CMD_SET_NORMAL,
 			EXT_CSD_HS_TIMING, 1);

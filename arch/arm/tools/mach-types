@@ -2539,6 +2539,10 @@ esyx			MACH_ESYX		ESYX			2551
 dove_db2		MACH_DOVE_DB2		DOVE_DB2		2552
 bulldog			MACH_BULLDOG		BULLDOG			2553
 <<<<<<< HEAD:arch/arm/tools/mach-types
+<<<<<<< HEAD:arch/arm/tools/mach-types
+=======
+<<<<<<< HEAD
+>>>>>>> ae6e6049532af25b6191e438a15c66ec80cdcf32:arch/arm/tools/mach-types
 derell_me2000		MACH_DERELL_ME2000	DERELL_ME2000		2554
 bcmring_base		MACH_BCMRING_BASE	BCMRING_BASE		2555
 bcmring_evm		MACH_BCMRING_EVM	BCMRING_EVM		2556
@@ -2953,3 +2957,5 @@ flexibity		MACH_FLEXIBITY		FLEXIBITY		2965
 wlan_computer		MACH_WLAN_COMPUTER	WLAN_COMPUTER		2966
 #FIXME - fix machine id
 bcm2708			ARCH_BCM2708		BCM2708			2708
+island			ARCH_ISLAND		ISLAND			2554
+rhea			ARCH_RHEA		RHEA   			2701

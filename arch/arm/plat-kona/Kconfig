@@ -1,0 +1,27 @@
+menu	"Broadcom KONA architecture based implementations"
+	depends on ARCH_KONA
+	
+choice
+	prompt "Broadcom KONA SoC Type"
+	default ARCH_ISLAND	
+
+config ARCH_ISLAND
+	bool "BROADCOM Island SoC"
+	help
+	  Support for the Broadcom Island SoC platform.
+
+config ARCH_RHEA
+	bool "BROADCOM Rhea SoC"
+	help
+	  Support for the Broadcom Rhea SoC platform.
+
+endchoice
+
+config PERIPHERAL_TIMER_FIX
+	bool "Enable the generic peripheral timer fix"
+	depends on ARCH_RHEA
+	help
+	  Say Y if you want to enable the generic peripheral timer fix
+	  
+endmenu
+

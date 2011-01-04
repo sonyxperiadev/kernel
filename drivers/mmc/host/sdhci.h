@@ -16,6 +16,9 @@
 #include <linux/types.h>
 #include <linux/io.h>
 
+#ifdef CONFIG_MMC_BCM_SD
+#define SDHCI_HOST_MAX_CLK_LS_MODE	25000000
+#endif
 /*
  * Controller registers
  */
@@ -313,6 +316,9 @@ struct sdhci_ops {
 	void	(*set_clock)(struct sdhci_host *host, unsigned int clock);
 
 	int		(*enable_dma)(struct sdhci_host *host);
+#ifdef CONFIG_MMC_SDHCI_PLTFM_KONA
+	unsigned long	(*get_max_clk)(struct sdhci_host *host);
+#endif
 	unsigned int	(*get_max_clock)(struct sdhci_host *host);
 	unsigned int	(*get_min_clock)(struct sdhci_host *host);
 	unsigned int	(*get_timeout_clock)(struct sdhci_host *host);

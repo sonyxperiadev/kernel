@@ -229,12 +229,30 @@ static int max8649_set_mode(struct regulator_dev *rdev, unsigned int mode)
 
 	switch (mode) {
 	case REGULATOR_MODE_FAST:
-		max8649_set_bits(info->i2c, info->vol_reg, MAX8649_FORCE_PWM,
-				 MAX8649_FORCE_PWM);
+        {
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
+		// Change CONTROL register value ( bit5 = 0, bit6 = 0, so that we are in MODE0 ).
+	    max8649_set_bits(info->i2c, MAX8649_CONTROL, MAX8649_VID_MASK, 0);
+
+		// Change info->vol_reg value to MODE0.
+        info->vol_reg = MAX8649_MODE0 ;
+#else
+		max8649_set_bits(info->i2c, info->vol_reg, MAX8649_FORCE_PWM, MAX8649_FORCE_PWM);
+#endif
 		break;
+		}
 	case REGULATOR_MODE_NORMAL:
-		max8649_set_bits(info->i2c, info->vol_reg,
-				 MAX8649_FORCE_PWM, 0);
+		{
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
+		// Change CONTROL register value ( bit5 = 0, bit 6 = 1, so that we are in MODE2 ).
+	    max8649_set_bits(info->i2c, MAX8649_CONTROL, MAX8649_VID_MASK, MAX8649_VID0_PD );
+
+		// Change info->vol_reg value to MODE0.
+        info->vol_reg = MAX8649_MODE2 ;
+#else
+		max8649_set_bits(info->i2c, info->vol_reg, MAX8649_FORCE_PWM, 0);
+#endif
+		}
 		break;
 	default:
 		return -EINVAL;
@@ -247,10 +265,18 @@ static unsigned int max8649_get_mode(struct regulator_dev *rdev)
 	struct max8649_regulator_info *info = rdev_get_drvdata(rdev);
 	int ret;
 
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
+	ret = max8649_reg_read(info->i2c, MAX8649_CONTROL) ;
+	ret = ( ret & MAX8649_VID_MASK ) >> 5 ;
+	if ( ret & MAX8649_MODE0 ) 
+        return REGULATOR_MODE_FAST ;
+	return REGULATOR_MODE_NORMAL ;
+#else
 	ret = max8649_reg_read(info->i2c, info->vol_reg);
 	if (ret & MAX8649_FORCE_PWM)
-		return REGULATOR_MODE_FAST;
+	    return REGULATOR_MODE_FAST;
 	return REGULATOR_MODE_NORMAL;
+#endif
 }
 
 static struct regulator_ops max8649_dcdc_ops = {
@@ -260,7 +286,7 @@ static struct regulator_ops max8649_dcdc_ops = {
 	.enable		= max8649_enable,
 	.disable	= max8649_disable,
 	.is_enabled	= max8649_is_enabled,
-	.enable_time	= max8649_enable_time,
+	// .enable_time	= max8649_enable_time,
 	.set_mode	= max8649_set_mode,
 	.get_mode	= max8649_get_mode,
 
@@ -320,7 +346,11 @@ static int __devinit max8649_regulator_probe(struct i2c_client *client,
 	dev_info(info->dev, "Detected MAX8649 (ID:%x)\n", ret);
 
 	/* enable VID0 & VID1 */
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
+	max8649_set_bits(info->i2c, MAX8649_CONTROL, MAX8649_VID_MASK, ( pdata->mode << 5 ) );
+#else
 	max8649_set_bits(info->i2c, MAX8649_CONTROL, MAX8649_VID_MASK, 0);
+#endif
 
 	/* enable/disable external clock synchronization */
 	info->extclk = pdata->extclk;
@@ -353,6 +383,8 @@ static int __devinit max8649_regulator_probe(struct i2c_client *client,
 		ret = PTR_ERR(info->regulator);
 		goto out;
 	}
+
+	if ( pdata->init ) { pdata->init() ; } 
 
 	dev_info(info->dev, "Max8649 regulator device is detected.\n");
 	return 0;

@@ -793,4 +793,9 @@ config SCx200_ACB
 	  This support is also available as a module.  If so, the module
 	  will be called scx200_acb.
 
+config I2C_BSC
+	tristate "I2C BSC adapter"
+	depends on ARCH_KONA
+	help
+	Enable the i2c adapter on Island.
 endmenu

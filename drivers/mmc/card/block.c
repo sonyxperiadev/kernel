@@ -44,10 +44,18 @@
 
 MODULE_ALIAS("mmc:block");
 
+#ifdef CONFIG_MMC_BCM_SD
+/*
+ * max 16 partitions per card
+ */
+#define MMC_SHIFT	4
+#else
 /*
  * max 8 partitions per card
  */
 #define MMC_SHIFT	3
+#endif
+
 #define MMC_NUM_MINORS	(256 >> MMC_SHIFT)
 
 static DECLARE_BITMAP(dev_use, MMC_NUM_MINORS);

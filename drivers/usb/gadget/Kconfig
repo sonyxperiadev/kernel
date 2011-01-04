@@ -505,7 +505,22 @@ config USB_LANGWELL
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
+config USB_GADGET_DWC_OTG
+	boolean "Synopsis DWC_OTG 2.91a"
+	depends on ARCH_KONA
+	help
+	   This driver provides USB Device Controller driver for DW_OTG
 
+	   Say "y" to link the driver statically, or "m" to build a
+	   dynamically linked module called "dwc_otg" and to force all
+	   gadget drivers to also be dynamically linked.
+
+config USB_DWC_OTG
+	tristate
+	depends on USB_GADGET_DWC_OTG
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+	select USB_GADGET_DUALSPEED
 #
 # LAST -- dummy/emulated controller
 #

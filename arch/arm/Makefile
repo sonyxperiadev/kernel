@@ -135,6 +135,7 @@ machine-$(CONFIG_ARCH_INTEGRATOR)	:= integrator
 machine-$(CONFIG_ARCH_IOP13XX)		:= iop13xx
 machine-$(CONFIG_ARCH_IOP32X)		:= iop32x
 machine-$(CONFIG_ARCH_IOP33X)		:= iop33x
+machine-$(CONFIG_ARCH_ISLAND)           := island
 machine-$(CONFIG_ARCH_IXP2000)		:= ixp2000
 machine-$(CONFIG_ARCH_IXP23XX)		:= ixp23xx
 machine-$(CONFIG_ARCH_IXP4XX)		:= ixp4xx
@@ -163,6 +164,7 @@ machine-$(CONFIG_ARCH_ORION5X)		:= orion5x
 machine-$(CONFIG_ARCH_PNX4008)		:= pnx4008
 machine-$(CONFIG_ARCH_PXA)		:= pxa
 machine-$(CONFIG_ARCH_REALVIEW)		:= realview
+machine-$(CONFIG_ARCH_RHEA)             := rhea
 machine-$(CONFIG_ARCH_RPC)		:= rpc
 machine-$(CONFIG_ARCH_S3C2410)		:= s3c2410 s3c2400 s3c2412 s3c2416 s3c2440 s3c2443
 machine-$(CONFIG_ARCH_S3C24A0)		:= s3c24a0
@@ -190,6 +192,7 @@ machine-$(CONFIG_MACH_SPEAR600)		:= spear6xx
 
 # Platform directory name.  This list is sorted alphanumerically
 # by CONFIG_* macro name.
+plat-$(CONFIG_ARCH_KONA)	:= kona
 plat-$(CONFIG_ARCH_MXC)		:= mxc
 plat-$(CONFIG_ARCH_OMAP)	:= omap
 plat-$(CONFIG_ARCH_S3C64XX)	:= samsung

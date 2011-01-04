@@ -703,7 +703,6 @@ void sdio_f0_writeb(struct sdio_func *func, unsigned char b, unsigned int addr,
 		*err_ret = ret;
 }
 EXPORT_SYMBOL_GPL(sdio_f0_writeb);
-
 /**
  *	sdio_get_host_pm_caps - get host power management capabilities
  *	@func: SDIO function attached to host
@@ -752,3 +751,43 @@ int sdio_set_host_pm_flags(struct sdio_func *func, mmc_pm_flag_t flags)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(sdio_set_host_pm_flags);
+#ifdef CONFIG_BCM_SDIOWL  // BROADCOM MODIFICATION
+/**
+ *	sdio_abort - send an abort to an SDIO function.
+ *	@func: SDIO function to abort
+ *
+ */
+int sdio_abort(struct sdio_func *func)
+{
+	int ret;
+	struct mmc_ios *ios = &(func->card->host->ios);
+
+	BUG_ON(!func);
+	BUG_ON(!func->card);
+
+	ios->host_reset = MMC_HOST_RESET_ALL;
+    func->card->host->ops->set_ios(func->card->host, ios);
+	ios->host_reset = 0;
+
+	printk("SDIO: Sending abort, device %s...\n", sdio_func_id(func));
+	pr_debug("SDIO: Sending abort, device %s...\n", sdio_func_id(func));
+
+	ret = mmc_io_rw_direct(func->card, 1, 0, SDIO_CCCR_ABORT, func->num, NULL);
+
+	ios->host_reset = MMC_HOST_RESET_ALL;
+    func->card->host->ops->set_ios(func->card->host, ios);
+	ios->host_reset = 0;
+
+	if (ret)
+		goto err;
+
+	pr_debug("SDIO: Abort complete: device %s\n", sdio_func_id(func));
+
+	return 0;
+
+err:
+	pr_debug("SDIO: Abort failed: device %s\n", sdio_func_id(func));
+	return -EIO;
+}
+EXPORT_SYMBOL_GPL(sdio_abort);
+#endif // BROADCOM MODIFICATION

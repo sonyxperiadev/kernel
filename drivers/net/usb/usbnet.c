@@ -33,6 +33,11 @@
 // #define	DEBUG			// error path messages, extra info
 // #define	VERBOSE			// more; success messages
 
+#ifdef CONFIG_ARCH_KONA
+#undef NET_IP_ALIGN
+#define NET_IP_ALIGN 0
+#endif
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/netdevice.h>
