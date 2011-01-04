@@ -178,7 +178,7 @@ static int _hub_info(dwc_otg_hcd_t * hcd, void *urb_handle, uint32_t * hub_addr,
 		     uint32_t * port_addr)
 {
 	struct urb *urb = (struct urb *)urb_handle;
-	if (urb->dev->tt) {
+	if (urb->dev->tt && urb->dev->tt->hub) {
 		*hub_addr = urb->dev->tt->hub->devnum;
 	} else {
 		*hub_addr = 0;

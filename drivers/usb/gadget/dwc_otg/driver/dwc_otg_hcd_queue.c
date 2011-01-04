@@ -295,7 +295,7 @@ void qh_init(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh,
 dwc_otg_qh_t *dwc_otg_hcd_qh_create(dwc_otg_hcd_t * hcd,
 				    dwc_otg_hcd_urb_t * urb)
 {
-	dwc_otg_qh_t *qh;
+	dwc_otg_qh_t *qh = NULL;
 
 	/* Allocate memory */
 	/** @todo add memflags argument */
