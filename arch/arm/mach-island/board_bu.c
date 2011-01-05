@@ -43,7 +43,9 @@
 #include <mach/kona.h>
 #include <mach/island.h>
 #include <mach/sdio_platform.h>
+#include <asm/io.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
 
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
@@ -74,6 +76,17 @@
 #define SDIO_CORE_REG_SIZE 0x10000
 
 #define BSC_CORE_REG_SIZE      0x100
+
+enum ALT_FUNC {
+   ALT_1 = 0x0 << CHIPREG_GPIO_7_PINSEL_2_0_SHIFT,
+   ALT_2 = 0x1 << CHIPREG_GPIO_7_PINSEL_2_0_SHIFT,
+   ALT_3 = 0x2 << CHIPREG_GPIO_7_PINSEL_2_0_SHIFT,
+   ALT_4 = 0x3 << CHIPREG_GPIO_7_PINSEL_2_0_SHIFT,
+   ALT_GPIO = ALT_4,
+};
+
+#define GPIO_PULL_UP CHIPREG_GPIO_7_PUP_GPIO_7_MASK
+#define GPIO_DRIVE_STRENGTH 0x3 << CHIPREG_GPIO_7_SEL_2_0_SHIFT
 
 #define KONA_8250PORT(name)                                                   \
 {                                                                             \
@@ -494,6 +507,24 @@ static void __init board_add_devices(void)
 
 void __init board_init(void)
 {
+   void __iomem *chipRegBase;
+   chipRegBase = IOMEM(KONA_CHIPREG_VA);
+#ifdef CONFIG_TOUCHSCREEN_TSC2007
+   // Set pinmux for GPIO_143 which is used for TSC2007's interrupt pin
+   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_SIM2_RESETN_OFFSET);
+#endif
+
+#ifdef CONFIG_KEYBOARD_GPIO
+   // Set pinmux for GPIO_166 which is used for <Home> key
+   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_ADLAT_EN_OFFSET);
+   // Set pinmux for GPIO_167 which is used for <Search> key
+   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_AADLAT_EN_OFFSET);
+   // Set pinmux for GPIO_172 which is used for <Menu> key
+   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_ADDR_20_OFFSET);
+   // Set pinmux for GPIO_164 which is used for <Back> key
+   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_AD_14_OFFSET);
+#endif
+
    board_add_devices();
    return;
 }
