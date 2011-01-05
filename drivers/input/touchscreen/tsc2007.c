@@ -180,9 +180,11 @@ static void tsc2007_work(struct work_struct *work)
 
 		dev_dbg(&ts->client->dev, "pen is still down\n");
 	}
-
 	tsc2007_read_values(ts, &tc);
-
+#ifdef CONFIG_ARCH_KONA
+	if(ts->clear_penirq)
+		ts->clear_penirq();
+#endif
 	rt = tsc2007_calculate_pressure(ts, &tc);
 	if (rt > MAX_12BIT) {
 		/*
