@@ -170,8 +170,6 @@ done:
 }
 EXPORT_SYMBOL(bcm2835_tv_intf);
 
-#define TV_INTF_REGISTER_RW_BYTE(base, offset) (*(volatile unsigned char *)(base + offset))
-
 /* static functions */
 static int dump_tv_intf_ipc_block( char *buffer, char **start, off_t offset, int bytes, int *eof, void *context )
 {
@@ -288,16 +286,25 @@ int bcm2835_tv_ioctl_set(TV_INTF_IOCTL_CTRLS_T *ctl)
         tv_intf_print("Setting TV_INTF_HDMI_RES_CODE_CTRL to %x\n", ctl->hdmi_res_code);
     }
     if (change_bits) {
-        tv_intf_print("Setting change bits and ringing doorbell\n");
+        tv_intf_print("Setting change bits (%x) and ringing doorbell\n", change_bits);
         test_tv_intf_vc_arm_lock();
         TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_CTRL_CHANGE_OFFSET) |= change_bits;
-        test_tv_intf_vc_arm_lock();
+        test_tv_intf_vc_arm_unlock();
         ipc_notify_vc_event(tv_intf_state.irq);
     }
 
    return ret;
 }
 EXPORT_SYMBOL(bcm2835_tv_ioctl_set);
+
+int bcm2835_tv_ioctl_edid_get(TV_INTF_IOCTL_EDID_T *edid)
+{
+   int ret = 0;
+
+   memcpy(&edid->edid, (uint8_t *)&TV_INTF_REGISTER_RW_BYTE(tv_intf_state.base_address, TV_INTF_EDID_OFFSET), 128);
+   return ret;
+}
+EXPORT_SYMBOL(bcm2835_tv_ioctl_edid_get);
 
 static irqreturn_t bcm2835_tv_intf_isr(int irq, void *dev_id)
 {

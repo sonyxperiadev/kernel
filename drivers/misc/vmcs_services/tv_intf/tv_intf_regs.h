@@ -62,6 +62,7 @@ extern "C"
 #endif
 //access macro
 #define TV_INTF_REGISTER_RW(base, offset) (*(volatile unsigned long *)(base + offset))
+#define TV_INTF_REGISTER_RW_BYTE(base, offset) (*(volatile unsigned char *)(base + offset))
 
 typedef enum {
    TV_INTF_OUTPUT_CHANGE            = (1 << 0),       // TV_INTF_OUTPUT_xxx_OFFSET value changed

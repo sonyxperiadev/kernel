@@ -159,6 +159,14 @@ int tv_intf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsi
                 ret = bcm2835_tv_ioctl_set((TV_INTF_IOCTL_CTRLS_T *)ioctl_cmd_buf);
                 break;
 
+            case TV_INTF_IOCTL_GET_EDID:
+                ret = bcm2835_tv_ioctl_edid_get((TV_INTF_IOCTL_EDID_T *)ioctl_cmd_buf);
+                uncopied = copy_to_user((void *)arg, ioctl_cmd_buf, _IOC_SIZE(cmd));
+                if (uncopied != 0)
+                    ret = -EFAULT;
+                tv_intf_print("Copied EDID to user space\n");
+                break;
+
             default: 
                 tv_intf_print("Wrong IOCTL cmd. Expect %x or %x\n",
                               TV_INTF_IOCTL_GET_CTRLS, TV_INTF_IOCTL_SET_CTRLS);

@@ -176,20 +176,27 @@ typedef struct {
     uint32_t            hdmi_res_code;       // of type HDMI_CEA_RES_CODE_T or type HDMI_DMT_RES_CODE_T
 } TV_INTF_IOCTL_CTRLS_T;
 
+typedef struct {
+   uint8_t edid[128];
+} TV_INTF_IOCTL_EDID_T;
+
 typedef enum
 {
     TV_INTF_IOCTL_CTRLS_ID = 0x1,
+    TV_INTF_IOCTL_EDID_ID,
 
 }TV_INTF_COMMAND_ID_T;
 
 #define TV_INTF_IOCTL_GET_CTRLS  _IOR('T', TV_INTF_IOCTL_CTRLS_ID, TV_INTF_IOCTL_CTRLS_T )
 #define TV_INTF_IOCTL_SET_CTRLS  _IOW('T', TV_INTF_IOCTL_CTRLS_ID, TV_INTF_IOCTL_CTRLS_T )
+#define TV_INTF_IOCTL_GET_EDID   _IOR('T', TV_INTF_IOCTL_EDID_ID, TV_INTF_IOCTL_EDID_T )
 
 #define TV_INTF_MAX_IOCTL_CMD_SIZE 128
 
 int bcm2835_tv_intf(char *response, int maxlen, const char *format, ...);
 int bcm2835_tv_ioctl_get(TV_INTF_IOCTL_CTRLS_T *ctl);
 int bcm2835_tv_ioctl_set(TV_INTF_IOCTL_CTRLS_T *ctl);
+int bcm2835_tv_ioctl_edid_get(TV_INTF_IOCTL_EDID_T *edid);
 
 #endif
 
