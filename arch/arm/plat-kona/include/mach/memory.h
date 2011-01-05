@@ -29,7 +29,7 @@
 #define PHYS_OFFSET	(0x80000000)
 
 #define IO_START_PA			(0x34000000) /* HUB clock manager reg base */
-#define IO_START_VA			(PAGE_OFFSET + 0x24000000)
+#define IO_START_VA			(PAGE_OFFSET + 0x30000000)
 
 #ifndef HW_IO_PHYS_TO_VIRT
 #define HW_IO_PHYS_TO_VIRT(phys)	((phys) - IO_START_PA + IO_START_VA) 
