@@ -172,16 +172,20 @@ int ipc_notify_vc_event(int irq_num)
 	spin_lock_irqsave(&g_ipc_data_p->host_to_gpu_lock, irq_flags);
 	mb();
 
-	ipc_vc_arm_get_lock(IPC_VC_ARM_LOCK1);
+	if (g_ipc_data_p->ipc_chip_p->send_req_atomic)
+		g_ipc_data_p->ipc_chip_p->send_req_atomic(ipc_id);
+	else {
+		ipc_vc_arm_get_lock(IPC_VC_ARM_LOCK1);
 
-	g_ipc_data_p->ipc_chip_p->send_req(ipc_id);
+		g_ipc_data_p->ipc_chip_p->send_req(ipc_id);
 
-	ipc_vc_arm_put_lock(IPC_VC_ARM_LOCK1);
+		ipc_vc_arm_put_lock(IPC_VC_ARM_LOCK1);
+	}
 	mb();
 
 	spin_unlock_irqrestore(&g_ipc_data_p->host_to_gpu_lock, irq_flags);
 
-	g_ipc_data_p->ipc_chip_p->clear_doorbell_irq();
+	g_ipc_data_p->ipc_chip_p->ring_doorbell_irq();
 
 	return 0;
 }
@@ -219,11 +223,15 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 	spin_lock_irqsave(&g_ipc_data_p->gpu_to_host_lock, irq_flags);
 	mb();
 
-	ipc_vc_arm_get_lock(IPC_VC_ARM_LOCK0);
+	if (g_ipc_data_p->ipc_chip_p->read_and_ack_req_atomic)
+		vc_irq_status = g_ipc_data_p->ipc_chip_p->read_and_ack_req_atomic();
+	else {
+		ipc_vc_arm_get_lock(IPC_VC_ARM_LOCK0);
 	
-	vc_irq_status = g_ipc_data_p->ipc_chip_p->read_and_ack_req();
+		vc_irq_status = g_ipc_data_p->ipc_chip_p->read_and_ack_req();
 
-	ipc_vc_arm_put_lock(IPC_VC_ARM_LOCK0);
+		ipc_vc_arm_put_lock(IPC_VC_ARM_LOCK0);
+	}
 	mb();
 
 	spin_unlock_irqrestore(&g_ipc_data_p->gpu_to_host_lock, irq_flags);

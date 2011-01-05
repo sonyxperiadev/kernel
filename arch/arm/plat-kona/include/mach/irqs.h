@@ -274,6 +274,10 @@
 #define     INTV_DMAC_SECURE                                       69
 #define     INTV_DMAC_OPEN                                         70
 
+/* The IPC virtual interrupt IDs */
+#define		IRQ_IPC_0		(BCM_INT_ID_MAX)
+#define		NUM_IPC_IRQS		32
+
 /* Start virtual GPIO range above this max irq number */													
 #define IRQ_GPIO_0			300
 
