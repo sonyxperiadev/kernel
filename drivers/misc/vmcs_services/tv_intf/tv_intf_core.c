@@ -170,12 +170,15 @@ done:
 }
 EXPORT_SYMBOL(bcm2835_tv_intf);
 
+#define TV_INTF_REGISTER_RW_BYTE(base, offset) (*(volatile unsigned char *)(base + offset))
+
 /* static functions */
 static int dump_tv_intf_ipc_block( char *buffer, char **start, off_t offset, int bytes, int *eof, void *context )
 {
    tv_dict_t *dict_p = cmd_dict;
 	int len;
 	int ret = 0;
+   int i;
 	*eof = 1;
 
 	len = snprintf(buffer, bytes, "TV_Intf IPC block registers:\n");
@@ -195,7 +198,32 @@ static int dump_tv_intf_ipc_block( char *buffer, char **start, off_t offset, int
        dict_p++;
    }
 
-   len = snprintf(buffer, bytes, "last=%s\n", tv_intf_state.cmd_buf);
+   // If HDMI is plugged in, dump the EDID information
+   if (TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_STATUS_OFFSET) & TV_INTF_STATUS_HDMI)
+   {
+      len = snprintf(buffer, bytes, "edid=   ");
+      len++;
+      ret += len;
+      bytes -= len;
+      buffer += len;
+      for (i=0; i<128; i++)
+      {
+         if ((i != 0) && ((i & 0x0F) == 0))
+         {
+            len = snprintf(buffer, bytes, "\n        ");
+            len++;
+            ret += len;
+            bytes -= len;
+            buffer += len;
+         }
+         len = snprintf(buffer, bytes, "%02x ", TV_INTF_REGISTER_RW_BYTE(tv_intf_state.base_address, i+TV_INTF_EDID_OFFSET));
+         len++;
+         ret += len;
+         bytes -= len;
+         buffer += len;
+      }
+   }
+   len = snprintf(buffer, bytes, "\nlast=%s\n", tv_intf_state.cmd_buf);
 	len++;
 	ret += len;
 	bytes -= len;
@@ -244,7 +272,7 @@ int bcm2835_tv_ioctl_set(TV_INTF_IOCTL_CTRLS_T *ctl)
     uint32_t change_bits = 0;
     int ret = 0;
 
-    if (ctl->output_ctrl != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_STATUS_OFFSET)) {
+    if (ctl->output_ctrl != (TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_STATUS_OFFSET) & 0xFFFF)) {
         TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_CTRL_OFFSET) = ctl->output_ctrl;
         change_bits |= TV_INTF_OUTPUT_CHANGE;
         tv_intf_print("Setting TV_INTF_OUTPUT_CTRL to %x\n", ctl->output_ctrl);

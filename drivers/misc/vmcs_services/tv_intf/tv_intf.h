@@ -30,6 +30,11 @@ typedef enum {
     TV_INTF_CTRL_AUTO,             ///< Output to HDMI if plugged in otherwise composite
 } TV_INTF_CTRL_T;
 
+// Status bit(s) in same register as control report back for TV_INTF_CTRL_T
+typedef enum {
+   TV_INTF_STATUS_HDMI = 0x80000000,         // Set if HDMI is plugged in
+} TV_INTF_STATUS_T;
+
 //Two main types of displays (CEA - HDMI device, DMT - computer monitors)
 typedef enum {
     HDMI_RES_GROUP_INVALID = 0,
