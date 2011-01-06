@@ -65,6 +65,7 @@ static tv_dict_t cmd_dict[] =
       {"TV_CTRL",          TV_INTF_OUTPUT_CTRL_OFFSET,         TV_INTF_OUTPUT_STATUS_OFFSET,         TV_INTF_OUTPUT_CHANGE},
       {"HDMI_RES_GROUP",   TV_INTF_HDMI_RES_GROUP_CTRL_OFFSET, TV_INTF_HDMI_RES_GROUP_STATUS_OFFSET, TV_INTF_HDMI_RES_GROUP_CHANGE},
       {"HDMI_RES_CODE",    TV_INTF_HDMI_RES_CODE_CTRL_OFFSET,  TV_INTF_HDMI_RES_CODE_STATUS_OFFSET,  TV_INTF_HDMI_RES_CODE_CHANGE},
+      {"HDMI_EDID_BLOCK",  TV_INTF_HDMI_EDID_BLOCK_CTRL_OFFSET,TV_INTF_HDMI_EDID_BLOCK_STATUS_OFFSET,TV_INTF_HDMI_EDID_BLOCK_CHANGE},
       {NULL, 0}
    };
 
@@ -260,6 +261,7 @@ int bcm2835_tv_ioctl_get(TV_INTF_IOCTL_CTRLS_T *ctl)
     ctl->output_ctrl       = TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_STATUS_OFFSET);
     ctl->hdmi_res_group    = TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_GROUP_STATUS_OFFSET);
     ctl->hdmi_res_code     = TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_STATUS_OFFSET);
+    ctl->hdmi_edid_block   = TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_EDID_BLOCK_STATUS_OFFSET);
 
     return ret;
 }
@@ -279,11 +281,16 @@ int bcm2835_tv_ioctl_set(TV_INTF_IOCTL_CTRLS_T *ctl)
         TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_GROUP_CTRL_OFFSET) = ctl->hdmi_res_group;
         change_bits |= TV_INTF_HDMI_RES_GROUP_CHANGE;
         tv_intf_print("Setting TV_INTF_HDMI_RES_GROUP_CTRL to %x\n", ctl->hdmi_res_group);
-   }
+    }
     if (ctl->hdmi_res_code != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_STATUS_OFFSET)) {
         TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_CTRL_OFFSET) = ctl->hdmi_res_code;
         change_bits |= TV_INTF_HDMI_RES_CODE_CHANGE;
         tv_intf_print("Setting TV_INTF_HDMI_RES_CODE_CTRL to %x\n", ctl->hdmi_res_code);
+    }
+    if (ctl->hdmi_edid_block != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_EDID_BLOCK_STATUS_OFFSET)) {
+        TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_EDID_BLOCK_CTRL_OFFSET) = ctl->hdmi_edid_block;
+        change_bits |= TV_INTF_HDMI_EDID_BLOCK_CHANGE;
+        tv_intf_print("Setting TV_INTF_HDMI_EDID_BLOCK_CTRL to %x\n", ctl->hdmi_edid_block);
     }
     if (change_bits) {
         tv_intf_print("Setting change bits (%x) and ringing doorbell\n", change_bits);

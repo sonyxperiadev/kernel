@@ -174,6 +174,7 @@ typedef struct {
     TV_INTF_CTRL_T      output_ctrl;
     HDMI_RES_GROUP_T    hdmi_res_group;
     uint32_t            hdmi_res_code;       // of type HDMI_CEA_RES_CODE_T or type HDMI_DMT_RES_CODE_T
+    uint32_t            hdmi_edid_block;     // Which block of EDID to present
 } TV_INTF_IOCTL_CTRLS_T;
 
 typedef struct {

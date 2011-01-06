@@ -81,6 +81,7 @@ typedef enum {
    TV_INTF_HDMI_OPTIONS_CHANGE      = (1 << 13),      // TV_INTF_HDMI_OPTIONS_xxx_OFFSET value changed
    TV_INTF_HDMI_EDID_CHANGE         = (1 << 14),      // TV_INTF_HDMI_EDID_OFFSET value changed
    TV_INTF_HDMI_CEC_CHANGE          = (1 << 15),      // TV_INTF_HDMI_CEC_xxx_OFFSET value changed
+   TV_INTF_HDMI_EDID_BLOCK_CHANGE   = (1 << 16),      // TV_INTF_HDMI_EDID_BLOCK_xxx_OFFSET value changed
 } TV_INTF_CHANGE_T;
 
 // Registers for Peterson's algorithm for locking control and status change registers.
@@ -134,6 +135,11 @@ typedef enum {
 
 #define TV_INTF_CEC_OUTPUT_OFFSET               0x1A0    // 16 bytes of CEC data
 #define TV_INTF_CEC_INPUT_OFFSET                0x1B0    // 16 bytes of CEC data
+
+#define TV_INTF_HDMI_EDID_BLOCK_CTRL_OFFSET     0x1C0    // Select which block of HDMI EDID info
+                                                         // is presented at the TV_INTF_EDID_OFFSET
+                                                         // address,
+#define TV_INTF_HDMI_EDID_BLOCK_STATUS_OFFSET   0x1C4    // Actual block number of HDMI EDID info
 
 #if defined( __cplusplus )
 }

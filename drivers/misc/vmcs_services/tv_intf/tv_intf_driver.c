@@ -168,8 +168,10 @@ int tv_intf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsi
                 break;
 
             default: 
-                tv_intf_print("Wrong IOCTL cmd. Expect %x or %x\n",
-                              TV_INTF_IOCTL_GET_CTRLS, TV_INTF_IOCTL_SET_CTRLS);
+                tv_intf_print("Wrong IOCTL cmd. Expect %x, %x or %x\n",
+                              TV_INTF_IOCTL_GET_CTRLS,
+                              TV_INTF_IOCTL_SET_CTRLS,
+                              TV_INTF_IOCTL_GET_EDID);
                 ret = -EFAULT;
                 break;
         }
