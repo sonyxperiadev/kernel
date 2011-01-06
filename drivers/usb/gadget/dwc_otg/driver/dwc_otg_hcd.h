@@ -602,7 +602,12 @@ extern void dwc_otg_hcd_qh_deactivate(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh,
 static inline void dwc_otg_hcd_qh_remove_and_free(dwc_otg_hcd_t * hcd,
 						  dwc_otg_qh_t * qh)
 {
+	uint64_t flags;
+
+	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 	dwc_otg_hcd_qh_remove(hcd, qh);
+	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
+
 	dwc_otg_hcd_qh_free(hcd, qh);
 }
 
