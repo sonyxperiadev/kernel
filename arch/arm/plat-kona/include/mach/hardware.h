@@ -37,7 +37,6 @@
  */
 #define RAM_START		PHYS_OFFSET
 
-#define RAM_SIZE		(0x8000000)
 #define RAM_BASE		PAGE_OFFSET
 
 #define IO_START IO_START_PA
