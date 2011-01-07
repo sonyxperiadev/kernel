@@ -77,7 +77,6 @@ static tv_dict_t *dict_lookup(tv_dict_t *dictionary, const char *key)
    while (dict_p->key != NULL) {
       if (!strcmp(dict_p->key, key))
          return dict_p;
-      tv_intf_print("%s does not match %s\n", key, dict_p->key );
       dict_p++;
    }
    return NULL;
@@ -272,22 +271,22 @@ int bcm2835_tv_ioctl_set(TV_INTF_IOCTL_CTRLS_T *ctl)
     uint32_t change_bits = 0;
     int ret = 0;
 
-    if (ctl->output_ctrl != (TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_STATUS_OFFSET) & 0xFFFF)) {
+    if (ctl->output_ctrl != (TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_CTRL_OFFSET) & 0xFFFF)) {
         TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_OUTPUT_CTRL_OFFSET) = ctl->output_ctrl;
         change_bits |= TV_INTF_OUTPUT_CHANGE;
         tv_intf_print("Setting TV_INTF_OUTPUT_CTRL to %x\n", ctl->output_ctrl);
     }
-    if (ctl->hdmi_res_group != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_GROUP_STATUS_OFFSET)) {
+    if (ctl->hdmi_res_group != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_GROUP_CTRL_OFFSET)) {
         TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_GROUP_CTRL_OFFSET) = ctl->hdmi_res_group;
         change_bits |= TV_INTF_HDMI_RES_GROUP_CHANGE;
         tv_intf_print("Setting TV_INTF_HDMI_RES_GROUP_CTRL to %x\n", ctl->hdmi_res_group);
     }
-    if (ctl->hdmi_res_code != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_STATUS_OFFSET)) {
+    if (ctl->hdmi_res_code != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_CTRL_OFFSET)) {
         TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_RES_CODE_CTRL_OFFSET) = ctl->hdmi_res_code;
         change_bits |= TV_INTF_HDMI_RES_CODE_CHANGE;
         tv_intf_print("Setting TV_INTF_HDMI_RES_CODE_CTRL to %x\n", ctl->hdmi_res_code);
     }
-    if (ctl->hdmi_edid_block != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_EDID_BLOCK_STATUS_OFFSET)) {
+    if (ctl->hdmi_edid_block != TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_EDID_BLOCK_CTRL_OFFSET)) {
         TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_HDMI_EDID_BLOCK_CTRL_OFFSET) = ctl->hdmi_edid_block;
         change_bits |= TV_INTF_HDMI_EDID_BLOCK_CHANGE;
         tv_intf_print("Setting TV_INTF_HDMI_EDID_BLOCK_CTRL to %x\n", ctl->hdmi_edid_block);
