@@ -28,8 +28,11 @@
 #include <asm/uaccess.h>
 
 #include <mach/irqs.h>
+#include <mach/io_map.h>
+#include <mach/rdb/brcm_rdb_ipcopen.h>
 
-#define IPC_MODULE_DEBUG   1
+#define IPC_MODULE_DEBUG	1
+#define IPC_VC4_FIRMWARE_READY	0
 
 #define IPC_DRIVER_NAME "Inter Processor Comm"
 
@@ -61,12 +64,6 @@
 #define IPC_IRQNUM_NONE			-1
 
 #define PLAT_DEV_NAME_SIZE_MAX 256
-
-static void __iomem *ipc_base_virt;
-static phys_addr_t ipc_base_phys;
-
-#define ipc_phys_to_virt(x)	((x) - ipc_base_phys + ipc_base_virt)
-
 
 /* Struct to store the user info in */
 typedef struct IPC_BLOCK_USER_INFO
@@ -148,19 +145,19 @@ typedef enum {
 
 static void ipc_vc_arm_get_lock(IPC_VC_ARM_LOCK_T lock_num)
 {
-        writel(1, ipc_base_virt + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_FLAG1_OFFSET);
-        writel(0, ipc_base_virt + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_TURN_OFFSET);
+        writel(1, g_ipc_data_p->virt_base + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_FLAG1_OFFSET);
+        writel(0, g_ipc_data_p->virt_base + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_TURN_OFFSET);
 
         mb();
 
         /* busy wait until VC has given it up ... */
-        while ((readl(ipc_base_virt + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_FLAG0_OFFSET) == 1) && (readl(ipc_base_virt + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_TURN_OFFSET) == 0));
+        while ((readl(g_ipc_data_p->virt_base + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_FLAG0_OFFSET) == 1) && (readl(g_ipc_data_p->virt_base + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_TURN_OFFSET) == 0));
 
 }
 
 static void ipc_vc_arm_put_lock(IPC_VC_ARM_LOCK_T lock_num)
 {
-        writel(0, ipc_base_virt + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_FLAG1_OFFSET);
+        writel(0, g_ipc_data_p->virt_base + IPC_VC_ARM_LOCK_BASE_OFFSET + lock_num * 0x20 + IPC_VC_ARM_FLAG1_OFFSET);
         mb();
 }
 
@@ -203,8 +200,9 @@ static inline u32 __bus_to_phys(u32 bus_addr)
 
 void *ipc_bus_to_virt(uint32_t bus_addr)
 {
-	if (ipc_base_virt && ipc_base_phys)
-		return (void *)ipc_phys_to_virt(__bus_to_phys(bus_addr));
+	if (g_ipc_data_p)
+		return (void *)(__bus_to_phys(bus_addr) - 
+			(u32)g_ipc_data_p->phys_base + (u32)g_ipc_data_p->virt_base);
 	else
 		return 0;
 
@@ -215,6 +213,8 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 {
 	u32 vc_irq_status, ipc_id;
 	unsigned long irq_flags;
+
+	desc->chip->ack(irq);
 
 	ipc_dbg("we got interrupt from VC side\n");
 
@@ -243,6 +243,7 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 			generic_handle_irq(IPC_TO_IRQ(ipc_id));
 	}
 
+	desc->chip->unmask(irq);
 }
 
 typedef struct
@@ -313,10 +314,12 @@ static int ipc_init_write(struct file *file, const char *buffer, unsigned long c
 	init_string[ IPC_MAX_INPUT_STR_LENGTH  - 1 ] = 0;
 
 #if 0
-	writel(0xff, ipc_base_virt + IPC_VC_ARM_INTERRUPT_OFFSET);
+	writel(0xff, g_ipc_data_p->virt_base + IPC_VC_ARM_INTERRUPT_OFFSET);
 
 	writel(0x1, IO_ADDRESS(ARM_0_BELL0));  
 #endif
+
+	writel(0xff, (KONA_IPC_NS_VA) + (IPCOPEN_IPCVSET_OFFSET)); 
 
 	vfree(init_string);
 
@@ -381,9 +384,7 @@ static int __init ipc_add_service_devices(void)
 
 		start = readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
 		printk(KERN_INFO"%s: Adding (%s) @ bus(0x%08x), phys(0x%08x) address\n", __func__, dev_name, start, __bus_to_phys(start));
-		start = __bus_to_phys(start);
-
-		dev_resource->start	= (resource_size_t) ipc_phys_to_virt(start);
+		dev_resource->start	= (resource_size_t) ipc_bus_to_virt(start);
                 dev_resource->end	= dev_resource->start + SZ_8K - 1;
                 dev_resource->flags     = IORESOURCE_MEM;
 
@@ -449,11 +450,13 @@ static int ipc_probe(struct platform_device *pdev)
 	}
 	printk(KERN_INFO"%s: IPC mem is mapped at virtiual addr 0x%08x\n", __func__, (uint32_t)ipc_data_p->virt_base);
 
+#if IPC_VC4_FIRMWARE_READY
 	if (IPC_BLOCK_MAGIC != readl((u32)ipc_data_p->virt_base + IPC_BLOCK_MAGIC_OFFSET)) {
 		ipc_error("The IPC block has not been initialized yet!");
 		ret = -ENODEV;
 		goto err_no_magic;
 	}
+#endif
 
 	ipc_data_p->irq = platform_get_irq(pdev, 0);
         if(ipc_data_p->irq < 0) {
@@ -462,6 +465,9 @@ static int ipc_probe(struct platform_device *pdev)
                 goto err_no_irq;
         }
 	ipc_data_p->ipc_chip_p = (struct ipc_chip *)pdev->dev.platform_data;
+
+	printk(KERN_INFO"%s: IPC irq:%d and irq_base:%d\n", __func__, (uint32_t)ipc_data_p->irq,
+			(uint32_t)ipc_data_p->ipc_chip_p->irq_base);
 
 	/* Enable the doorbell interrupt from the other side and set up the irq chip. */
 	for (i = 0; i < ipc_data_p->ipc_chip_p->num_channels; i++) {
@@ -477,26 +483,28 @@ static int ipc_probe(struct platform_device *pdev)
 		goto err_create_proc_entry;
 	}
 
+#if IPC_VC4_FIRMWARE_READY
 	if (ipc_add_service_devices()) {
 		ipc_error("Failed to register ipc service devices\n");
                 ret = -ENODEV;
 		goto err_add_services;
 	}
-	
+#endif
+
 	spin_lock_init(&ipc_data_p->gpu_to_host_lock);
 	spin_lock_init(&ipc_data_p->host_to_gpu_lock);
 
-	printk(KERN_INFO"Inter-Processor Communication has been initialized successfully!");
-
 #if IPC_MODULE_DEBUG
 	for (i = 0; i <= 2; i++) {
-		if (request_irq(i+ipc_data_p->ipc_chip_p->irq_base, ipc_isr, IRQF_DISABLED, "ipc", NULL))
+		if (request_irq(i+ipc_data_p->ipc_chip_p->irq_base, ipc_isr, IRQF_DISABLED, "ipc", NULL)) {
 			ipc_error("IPC irq request failed for irq# %d\n", i+ipc_data_p->ipc_chip_p->irq_base);
 			ret = -ENODEV;
 			goto err_add_services;
+		}
 	}
 #endif
 
+	printk(KERN_INFO"Inter-Processor Communication has been initialized successfully!");
 	return 0;
 
 err_add_services:
