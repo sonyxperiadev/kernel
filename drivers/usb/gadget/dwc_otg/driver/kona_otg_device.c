@@ -88,6 +88,12 @@ module_exit(dwc_otg_device_exit);
 
 
 /* ==== Private Functions ================================================= */
+static int __init otghost_setup(char *str)
+{
+	get_option(&str, &otghost);
+	return 1;
+}
+__setup("otghost=", otghost_setup);
 
 /****************************************************************************
  *
