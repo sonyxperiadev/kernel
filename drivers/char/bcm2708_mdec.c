@@ -193,6 +193,9 @@ static int player_setup(bcm2708_mdec_setup_t *setup_cmd)
         /* Enable the mode */
         MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = MEDIA_DEC_CONTROL_ENABLE_BIT;
 
+        /* Clear the flags */
+        MEDIA_DEC_REGISTER_RW( MEDIA_DEC_FLAGS_OFFSET ) = 0x0;
+
 	mb();
 
 	ret = notify_vc_and_wait_for_ack();
@@ -536,6 +539,199 @@ static int player_stop(void)
 	return ret;
 }
 
+static int player_set_paused(int paused)
+{
+	int ret = 0;
+
+   bcm2708mdec_dbg( "player %s\n", ( ( paused ) ? "paused" : "resumed" ) );
+
+/*   if( paused )
+      MEDIA_DEC_REGISTER_RW( MEDIA_DEC_FLAGS_OFFSET ) |= MEDIA_DEC_FLAGS_PAUSED;
+   else
+      MEDIA_DEC_REGISTER_RW( MEDIA_DEC_FLAGS_OFFSET ) &= ~MEDIA_DEC_FLAGS_PAUSED;
+*/
+   if( paused )
+   {
+      if( g_mdec->av_stream_ctl.state != PLAYBACK_STARTED )
+         return -EIO;
+
+      MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) &= ~MEDIA_DEC_CONTROL_PLAY_BIT;
+
+      g_mdec->av_stream_ctl.state = PLAYBACK_ENABLED;
+   }
+   else
+   {
+      if( g_mdec->av_stream_ctl.state != PLAYBACK_ENABLED )
+         return -EIO;
+
+      MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) |= MEDIA_DEC_CONTROL_PLAY_BIT;
+
+      g_mdec->av_stream_ctl.state = PLAYBACK_STARTED;
+   }
+   
+   mb();
+
+   ret = notify_vc_and_wait_for_ack();
+	
+   mb();
+
+	return ret;
+}
+
+static int player_set_volume(bcm2708_mdec_set_volume_t * data)
+{
+	int ret = 0;
+
+   bcm2708mdec_dbg( "player volume set to %d\n", data->volumeInmB );
+
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_VOLUME_OFFSET ) = data->volumeInmB;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) |= MEDIA_DEC_CONTROL_SET_VOLUME_BIT;
+
+   mb();
+
+   ret = notify_vc_and_wait_for_ack();
+	
+   mb();
+
+	return ret;
+}
+
+static int player_set_muted(bcm2708_mdec_set_muted_t * data)
+{
+	int ret = 0;
+
+   bcm2708mdec_dbg( "player mute setting set to %d\n", data->muted );
+
+   if( data->muted )
+   {
+      MEDIA_DEC_REGISTER_RW( MEDIA_DEC_FLAGS_OFFSET ) |= MEDIA_DEC_FLAGS_MUTED;
+   }
+   else
+   {
+      MEDIA_DEC_REGISTER_RW( MEDIA_DEC_FLAGS_OFFSET ) &= ~MEDIA_DEC_FLAGS_MUTED;
+   }
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) |= MEDIA_DEC_CONTROL_SET_FLAGS_BIT;
+
+   mb();
+
+   ret = notify_vc_and_wait_for_ack();
+	
+   mb();
+
+	return ret;
+}
+
+static int player_set_src_region(bcm2708_mdec_set_source_region_t * data)
+{
+	int ret = 0;
+
+   bcm2708mdec_dbg( "player source region set to %d,%d: %d x %d\n", data->x, data->y, data->width, data->height );
+
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_X_OFFSET ) = data->x;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_Y_OFFSET ) = data->y;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_WIDTH_OFFSET ) = data->width;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_SOURCE_HEIGHT_OFFSET ) = data->height;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) |= MEDIA_DEC_CONTROL_SET_SRC_REGION_BIT;
+
+   mb();
+
+   ret = notify_vc_and_wait_for_ack();
+	
+   mb();
+
+	return ret;
+}
+
+static int player_set_dest_region(bcm2708_mdec_set_dest_region_t * data )
+{
+	int ret = 0;
+
+   bcm2708mdec_dbg( "player dest region set to (%d,%d,%d) %d,%d: %d x %d (%d,%d)\n", 
+                  data->display, data->fullscreen, data->layer, data->x, data->y, data->width, data->height, 
+                  data->transform, data->mode );
+
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_DISPLAY_OFFSET ) = data->display;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_FULLSCREEN_OFFSET ) = data->fullscreen;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_LAYER_OFFSET ) = data->layer;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_X_OFFSET ) = data->x;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_Y_OFFSET ) = data->y;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_WIDTH_OFFSET ) = data->width;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_HEIGHT_OFFSET ) = data->height;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_TRANSFORM_OFFSET ) = data->transform;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TARGET_ASPECT_MODE ) = data->mode;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) |= MEDIA_DEC_CONTROL_SET_TARGET_REGION_BIT;
+
+   mb();
+
+   ret = notify_vc_and_wait_for_ack();
+	
+   mb();
+
+	return ret;
+}
+
+static int player_set_transparency(bcm2708_mdec_set_transparency_t * data )
+{
+	int ret = 0;
+
+   bcm2708mdec_dbg( "player transparency set to %d\n", data->alpha );
+
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_TRANSPARENCY_OFFSET ) = data->alpha;
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) |= MEDIA_DEC_CONTROL_SET_TRANSPARENCY_BIT;
+
+   mb();
+
+   ret = notify_vc_and_wait_for_ack();
+	
+   mb();
+
+	return ret;
+}
+
+static int player_get_property(bcm2708_mdec_get_property_t * data )
+{
+	int ret = 0;
+
+   bcm2708mdec_dbg( "player retrieve property %d\n", data->property_id );
+
+   uint32_t which = 0;
+   switch( data->property_id )
+   {
+      case MDEC_PROPERTY_VOLUME:             which = MEDIA_DEC_CONTROL_GET_VOLUME_BIT; break;
+      case MDEC_PROPERTY_VIDEO_BUFFER_LEVEL: which = MEDIA_DEC_CONTROL_GET_VIDEO_LEVEL_BIT; break;
+      case MDEC_PROPERTY_AUDIO_BUFFER_LEVEL: which = MEDIA_DEC_CONTROL_GET_AUDIO_LEVEL_BIT; break;
+      default:
+         bcm2708mdec_dbg( "unknown property id %d\n", data->property_id );
+         return -1;
+   }
+         
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) |= which;
+
+   mb();
+
+   ret = notify_vc_and_wait_for_ack();
+	
+   mb();
+
+   switch( data->property_id )
+   {
+      case MDEC_PROPERTY_VOLUME:      
+         data->out_value.volume = 0;
+         break;
+      case MDEC_PROPERTY_VIDEO_BUFFER_LEVEL:
+         data->out_value.level = MEDIA_DEC_REGISTER_RW( MEDIA_DEC_VIDEO_LEVEL_OFFSET );
+         break;
+      case MDEC_PROPERTY_AUDIO_BUFFER_LEVEL:
+         data->out_value.level = MEDIA_DEC_REGISTER_RW( MEDIA_DEC_AUDIO_LEVEL_OFFSET );
+         break;
+      default:
+         // Should have already caught this
+         return -1;
+   }
+   
+	return ret;
+}
+
 
 static int mdec_open( struct inode *inode, struct file *file_id)
 {
@@ -608,6 +804,38 @@ static int mdec_ioctl( struct inode *inode, struct file *file_id, unsigned int c
 	case MDEC_IOCTL_PLAYER_LOCAL_DBG:
 		do_playback((bcm2708_mdec_play_t *)ioctl_cmd_buf);
 		break; 
+
+        case MDEC_IOCTL_PLAYER_PAUSE:
+                ret = player_set_paused( -1 );
+                break;
+                
+        case MDEC_IOCTL_PLAYER_RESUME:
+                ret = player_set_paused( 0 );        
+                break;
+                
+        case MDEC_IOCTL_PLAYER_SET_VOLUME:
+                ret = player_set_volume( (bcm2708_mdec_set_volume_t *)ioctl_cmd_buf );
+                break;
+
+        case MDEC_IOCTL_PLAYER_SET_MUTED:
+                ret = player_set_muted( (bcm2708_mdec_set_muted_t *)ioctl_cmd_buf );
+                break;
+
+        case MDEC_IOCTL_PLAYER_GET_PROPERTY:
+                ret = player_get_property( (bcm2708_mdec_get_property_t *)ioctl_cmd_buf );
+                break;
+
+        case MDEC_IOCTL_PLAYER_SET_SOURCE_REGION:
+                ret = player_set_src_region( (bcm2708_mdec_set_source_region_t *)ioctl_cmd_buf );
+                break;
+
+        case MDEC_IOCTL_PLAYER_SET_DEST_REGION:
+                ret = player_set_dest_region( (bcm2708_mdec_set_dest_region_t *)ioctl_cmd_buf );
+                break;
+                
+        case MDEC_IOCTL_PLAYER_SET_TRANSPARENCY:
+                ret = player_set_transparency( (bcm2708_mdec_set_transparency_t *)ioctl_cmd_buf );
+                break;
 
 	default: 
 		bcm2708mdec_error("Wrong IOCTL cmd\n");
