@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_HSI_APB_H__
@@ -509,54 +509,6 @@
 #define    HSI_APB_DMA_CTRL_DMA_CTRL_UNUSED_MASK                          0xFFFFFFFE
 #define    HSI_APB_DMA_CTRL_DMA_MODE_SHIFT                                0
 #define    HSI_APB_DMA_CTRL_DMA_MODE_MASK                                 0x00000001
-
-typedef volatile struct {
-   UInt32 RESERVED_AC_0[42];
-   UInt32 m_DMA_CTRL;                // 0x00AC
-   UInt32 m_FRAME_BURST_CNT;         // 0x00A8
-   UInt32 m_FRAME_TO_CNT;            // 0x00A0
-   UInt32 m_RX0_FIFO_DATA;           // 0x0034
-   UInt32 m_RX1_FIFO_DATA;           // 0x0038
-   UInt32 m_RX_CH_ID;                // 0x003C
-   UInt32 m_RX_CTRL;                 // 0x0030
-   UInt32 RESERVED_50_30[7];
-   UInt32 m_RX_DMA_BURST_LENGTH;     // 0x0050
-   UInt32 m_RX_DMA_CTRL;             // 0x0048
-   UInt32 m_RX_DMA_STS;              // 0x004C
-   UInt32 m_RX_FIFO_STS;             // 0x0044
-   UInt32 RESERVED_80_44[14];
-   UInt32 m_RX_INT_CLR;              // 0x0080
-   UInt32 m_RX_INT_EN;               // 0x0084
-   UInt32 m_RX_INT_STS;              // 0x007C
-   UInt32 m_RX_SW_CH_ID;             // 0x0070
-   UInt32 m_RX_SW_FIFO_DATA;         // 0x006C
-   UInt32 RESERVED_78_6C[2];
-   UInt32 m_RX_SW_FIFO_STS;          // 0x0078
-   UInt32 m_RX_SW_FIFO_THRSD;        // 0x0074
-   UInt32 m_RX_THRSD;                // 0x0040
-   UInt32 RESERVED_A4_40[24];
-   UInt32 m_TRAILING_BIT_CNT;        // 0x00A4
-   UInt32 m_TX0_FIFO_DATA;           // 0x0004
-   UInt32 m_TX1_FIFO_DATA;           // 0x0008
-   UInt32 m_TX_CH_ID;                // 0x000C
-   UInt32 m_TX_CTRL;                 // 0x0000
-   UInt32 RESERVED_1C_0[6];
-   UInt32 m_TX_DMA_BURST_LENGTH;     // 0x001C
-   UInt32 m_TX_DMA_CTRL;             // 0x0018
-   UInt32 RESERVED_20_18[1];
-   UInt32 m_TX_DMA_STS;              // 0x0020
-   UInt32 m_TX_FIFO_STS;             // 0x0010
-   UInt32 m_TX_FIFO_THRSD;           // 0x0014
-   UInt32 RESERVED_8C_14[29];
-   UInt32 m_TX_INT_CLR;              // 0x008C
-   UInt32 m_TX_INT_EN;               // 0x0090
-   UInt32 m_TX_INT_STS;              // 0x0088
-   UInt32 m_TX_SW_CH_ID;             // 0x0064
-   UInt32 m_TX_SW_FIFO_DATA;         // 0x0060
-   UInt32 RESERVED_68_60[1];
-   UInt32 m_TX_SW_FIFO_STS;          // 0x0068
-} BRCM_HSI_APB_REGS;
-
 
 #endif /* __BRCM_RDB_HSI_APB_H__ */
 

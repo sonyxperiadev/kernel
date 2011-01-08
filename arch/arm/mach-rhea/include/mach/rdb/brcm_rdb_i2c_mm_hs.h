@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_I2C_MM_HS_H__
@@ -90,27 +90,27 @@
 #define    I2C_MM_HS_RCD_CRC_SHIFT                                        0
 #define    I2C_MM_HS_RCD_CRC_MASK                                         0x000000FF
 
-#define I2C_MM_HS_FCR_OFFSET                                              0x0000003C
-#define I2C_MM_HS_FCR_TYPE                                                UInt32
-#define I2C_MM_HS_FCR_RESERVED_MASK                                       0xFFFFFF20
-#define    I2C_MM_HS_FCR_FIFO_FLUSH_SHIFT                                 7
-#define    I2C_MM_HS_FCR_FIFO_FLUSH_MASK                                  0x00000080
-#define    I2C_MM_HS_FCR_FIFO_EN_SHIFT                                    6
-#define    I2C_MM_HS_FCR_FIFO_EN_MASK                                     0x00000040
-#define    I2C_MM_HS_FCR_FIFOCNT_SHIFT                                    0
-#define    I2C_MM_HS_FCR_FIFOCNT_MASK                                     0x0000001F
+#define I2C_MM_HS_TXFCR_OFFSET                                            0x0000003C
+#define I2C_MM_HS_TXFCR_TYPE                                              UInt32
+#define I2C_MM_HS_TXFCR_RESERVED_MASK                                     0xFFFFFF3F
+#define    I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT                               7
+#define    I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK                                0x00000080
+#define    I2C_MM_HS_TXFCR_FIFO_EN_SHIFT                                  6
+#define    I2C_MM_HS_TXFCR_FIFO_EN_MASK                                   0x00000040
 
-#define I2C_MM_HS_FIFORDOUT_OFFSET                                        0x00000040
-#define I2C_MM_HS_FIFORDOUT_TYPE                                          UInt32
-#define I2C_MM_HS_FIFORDOUT_RESERVED_MASK                                 0xFFFFFF00
-#define    I2C_MM_HS_FIFORDOUT_FIFO_RDOUT_SHIFT                           0
-#define    I2C_MM_HS_FIFORDOUT_FIFO_RDOUT_MASK                            0x000000FF
+#define I2C_MM_HS_TXFIFORDOUT_OFFSET                                      0x00000040
+#define I2C_MM_HS_TXFIFORDOUT_TYPE                                        UInt32
+#define I2C_MM_HS_TXFIFORDOUT_RESERVED_MASK                               0xFFFFFF00
+#define    I2C_MM_HS_TXFIFORDOUT_FIFO_RDOUT_SHIFT                         0
+#define    I2C_MM_HS_TXFIFORDOUT_FIFO_RDOUT_MASK                          0x000000FF
 
 #define I2C_MM_HS_IER_OFFSET                                              0x00000044
 #define I2C_MM_HS_IER_TYPE                                                UInt32
-#define I2C_MM_HS_IER_RESERVED_MASK                                       0xFFFFFF70
+#define I2C_MM_HS_IER_RESERVED_MASK                                       0xFFFFFF60
 #define    I2C_MM_HS_IER_CMDBUSY_INT_EN_SHIFT                             7
 #define    I2C_MM_HS_IER_CMDBUSY_INT_EN_MASK                              0x00000080
+#define    I2C_MM_HS_IER_READ_COMPLETE_INT_SHIFT                          4
+#define    I2C_MM_HS_IER_READ_COMPLETE_INT_MASK                           0x00000010
 #define    I2C_MM_HS_IER_I2C_INT_EN_SHIFT                                 3
 #define    I2C_MM_HS_IER_I2C_INT_EN_MASK                                  0x00000008
 #define    I2C_MM_HS_IER_ERR_INT_EN_SHIFT                                 2
@@ -122,9 +122,11 @@
 
 #define I2C_MM_HS_ISR_OFFSET                                              0x00000048
 #define I2C_MM_HS_ISR_TYPE                                                UInt32
-#define I2C_MM_HS_ISR_RESERVED_MASK                                       0xFFFFFF70
+#define I2C_MM_HS_ISR_RESERVED_MASK                                       0xFFFFFF60
 #define    I2C_MM_HS_ISR_CMDBUSY_SHIFT                                    7
 #define    I2C_MM_HS_ISR_CMDBUSY_MASK                                     0x00000080
+#define    I2C_MM_HS_ISR_READ_COMPLETE_SHIFT                              4
+#define    I2C_MM_HS_ISR_READ_COMPLETE_MASK                               0x00000010
 #define    I2C_MM_HS_ISR_SES_DONE_SHIFT                                   3
 #define    I2C_MM_HS_ISR_SES_DONE_MASK                                    0x00000008
 #define    I2C_MM_HS_ISR_ERR_SHIFT                                        2
@@ -146,17 +148,27 @@
 #define    I2C_MM_HS_CLKEN_CLKEN_SHIFT                                    0
 #define    I2C_MM_HS_CLKEN_CLKEN_MASK                                     0x00000001
 
-#define I2C_MM_HS_BSTAT_OFFSET                                            0x00000050
-#define I2C_MM_HS_BSTAT_TYPE                                              UInt32
-#define I2C_MM_HS_BSTAT_RESERVED_MASK                                     0xFFFFFFFE
-#define    I2C_MM_HS_BSTAT_STATUS_SHIFT                                   0
-#define    I2C_MM_HS_BSTAT_STATUS_MASK                                    0x00000001
+#define I2C_MM_HS_TXCOUNT_OFFSET                                          0x00000050
+#define I2C_MM_HS_TXCOUNT_TYPE                                            UInt32
+#define I2C_MM_HS_TXCOUNT_RESERVED_MASK                                   0xFFFFFF00
+#define    I2C_MM_HS_TXCOUNT_FIFOCNT_SHIFT                                1
+#define    I2C_MM_HS_TXCOUNT_FIFOCNT_MASK                                 0x000000FE
+#define    I2C_MM_HS_TXCOUNT_STATUS_SHIFT                                 0
+#define    I2C_MM_HS_TXCOUNT_STATUS_MASK                                  0x00000001
 
-#define I2C_MM_HS_RETXMT_OFFSET                                           0x00000054
-#define I2C_MM_HS_RETXMT_TYPE                                             UInt32
-#define I2C_MM_HS_RETXMT_RESERVED_MASK                                    0xFFFFFFFE
-#define    I2C_MM_HS_RETXMT_RETX_SHIFT                                    0
-#define    I2C_MM_HS_RETXMT_RETX_MASK                                     0x00000001
+#define I2C_MM_HS_FIFO_STATUS_OFFSET                                      0x00000054
+#define I2C_MM_HS_FIFO_STATUS_TYPE                                        UInt32
+#define I2C_MM_HS_FIFO_STATUS_RESERVED_MASK                               0xFFFFFFE0
+#define    I2C_MM_HS_FIFO_STATUS_TXFIFO_EMPTY_SHIFT                       4
+#define    I2C_MM_HS_FIFO_STATUS_TXFIFO_EMPTY_MASK                        0x00000010
+#define    I2C_MM_HS_FIFO_STATUS_TXFIFO_FULL_SHIFT                        3
+#define    I2C_MM_HS_FIFO_STATUS_TXFIFO_FULL_MASK                         0x00000008
+#define    I2C_MM_HS_FIFO_STATUS_RXFIFO_EMPTY_SHIFT                       2
+#define    I2C_MM_HS_FIFO_STATUS_RXFIFO_EMPTY_MASK                        0x00000004
+#define    I2C_MM_HS_FIFO_STATUS_RXFIFO_FULL_SHIFT                        1
+#define    I2C_MM_HS_FIFO_STATUS_RXFIFO_FULL_MASK                         0x00000002
+#define    I2C_MM_HS_FIFO_STATUS_RETX_SHIFT                               0
+#define    I2C_MM_HS_FIFO_STATUS_RETX_MASK                                0x00000001
 
 #define I2C_MM_HS_HSTIM_OFFSET                                            0x00000058
 #define I2C_MM_HS_HSTIM_TYPE                                              UInt32
@@ -185,6 +197,30 @@
 #define    I2C_MM_HS_SFTRST_SWRST_RDY_MASK                                0x00000002
 #define    I2C_MM_HS_SFTRST_SWRST_SHIFT                                   0
 #define    I2C_MM_HS_SFTRST_SWRST_MASK                                    0x00000001
+
+#define I2C_MM_HS_FILTER_OFFSET                                           0x00000064
+#define I2C_MM_HS_FILTER_TYPE                                             UInt32
+#define I2C_MM_HS_FILTER_RESERVED_MASK                                    0xFFFFFFF8
+#define    I2C_MM_HS_FILTER_FILTER_READOUT_SHIFT                          2
+#define    I2C_MM_HS_FILTER_FILTER_READOUT_MASK                           0x00000004
+#define    I2C_MM_HS_FILTER_CLKFAST_EN_SHIFT                              1
+#define    I2C_MM_HS_FILTER_CLKFAST_EN_MASK                               0x00000002
+#define    I2C_MM_HS_FILTER_FILTER_ON_SHIFT                               0
+#define    I2C_MM_HS_FILTER_FILTER_ON_MASK                                0x00000001
+
+#define I2C_MM_HS_RXFCR_OFFSET                                            0x00000068
+#define I2C_MM_HS_RXFCR_TYPE                                              UInt32
+#define I2C_MM_HS_RXFCR_RESERVED_MASK                                     0xFFFFFF00
+#define    I2C_MM_HS_RXFCR_NACK_EN_SHIFT                                  7
+#define    I2C_MM_HS_RXFCR_NACK_EN_MASK                                   0x00000080
+#define    I2C_MM_HS_RXFCR_READ_COUNT_SHIFT                               0
+#define    I2C_MM_HS_RXFCR_READ_COUNT_MASK                                0x0000007F
+
+#define I2C_MM_HS_RXFIFORDOUT_OFFSET                                      0x0000006C
+#define I2C_MM_HS_RXFIFORDOUT_TYPE                                        UInt32
+#define I2C_MM_HS_RXFIFORDOUT_RESERVED_MASK                               0xFFFFFF00
+#define    I2C_MM_HS_RXFIFORDOUT_RXFIFO_RDOUT_SHIFT                       0
+#define    I2C_MM_HS_RXFIFORDOUT_RXFIFO_RDOUT_MASK                        0x000000FF
 
 #endif /* __BRCM_RDB_I2C_MM_HS_H__ */
 

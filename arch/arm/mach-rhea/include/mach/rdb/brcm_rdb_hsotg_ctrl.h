@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_HSOTG_CTRL_H__
@@ -43,10 +43,10 @@
 #define    HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK                     0x08000000
 #define    HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_SHIFT                26
 #define    HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK                 0x04000000
-#define    HSOTG_CTRL_USBOTGCONTROL_OTGID_CTRL_SHIFT                      25
-#define    HSOTG_CTRL_USBOTGCONTROL_OTGID_CTRL_MASK                       0x02000000
-#define    HSOTG_CTRL_USBOTGCONTROL_SOFT_PHY_ISO_SHIFT                    24
-#define    HSOTG_CTRL_USBOTGCONTROL_SOFT_PHY_ISO_MASK                     0x01000000
+#define    HSOTG_CTRL_USBOTGCONTROL_RESERV2_SHIFT                         25
+#define    HSOTG_CTRL_USBOTGCONTROL_RESERV2_MASK                          0x02000000
+#define    HSOTG_CTRL_USBOTGCONTROL_PHY_ISO_I_SHIFT                       24
+#define    HSOTG_CTRL_USBOTGCONTROL_PHY_ISO_I_MASK                        0x01000000
 #define    HSOTG_CTRL_USBOTGCONTROL_WAKEUP_INT_MODE_SHIFT                 23
 #define    HSOTG_CTRL_USBOTGCONTROL_WAKEUP_INT_MODE_MASK                  0x00800000
 #define    HSOTG_CTRL_USBOTGCONTROL_BC_MODE_SHIFT                         22
@@ -120,17 +120,19 @@
 
 #define HSOTG_CTRL_PHY_P1CTL_OFFSET                                       0x00000008
 #define HSOTG_CTRL_PHY_P1CTL_TYPE                                         UInt32
-#define HSOTG_CTRL_PHY_P1CTL_RESERVED_MASK                                0xFC000200
-#define    HSOTG_CTRL_PHY_P1CTL_PHY_RESETB_MASK_SHIFT                     25
-#define    HSOTG_CTRL_PHY_P1CTL_PHY_RESETB_MASK_MASK                      0x02000000
-#define    HSOTG_CTRL_PHY_P1CTL_PHY_LDODPWRDWNB_MASK_SHIFT                24
-#define    HSOTG_CTRL_PHY_P1CTL_PHY_LDODPWRDWNB_MASK_MASK                 0x01000000
-#define    HSOTG_CTRL_PHY_P1CTL_DFE_LDOCNTLEN_1P2_I_SHIFT                 23
-#define    HSOTG_CTRL_PHY_P1CTL_DFE_LDOCNTLEN_1P2_I_MASK                  0x00800000
-#define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOCNTLEN_1P2_I_SHIFT                 22
-#define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOCNTLEN_1P2_I_MASK                  0x00400000
-#define    HSOTG_CTRL_PHY_P1CTL_DFE_LDOCNTL_1P2_I_SHIFT                   19
-#define    HSOTG_CTRL_PHY_P1CTL_DFE_LDOCNTL_1P2_I_MASK                    0x00380000
+#define HSOTG_CTRL_PHY_P1CTL_RESERVED_MASK                                0x10000200
+#define    HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQ_CLEAR_SHIFT                 31
+#define    HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQ_CLEAR_MASK                  0x80000000
+#define    HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQUEST_SHIFT                   30
+#define    HSOTG_CTRL_PHY_P1CTL_PHY_CLOCK_REQUEST_MASK                    0x40000000
+#define    HSOTG_CTRL_PHY_P1CTL_PHY_RESETB_MASK_SHIFT                     29
+#define    HSOTG_CTRL_PHY_P1CTL_PHY_RESETB_MASK_MASK                      0x20000000
+#define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOBG_OUTADJ_SHIFT                    24
+#define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOBG_OUTADJ_MASK                     0x0F000000
+#define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOBG_CADJ_SHIFT                      20
+#define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOBG_CADJ_MASK                       0x00F00000
+#define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOCNTLEN_1P2_I_SHIFT                 19
+#define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOCNTLEN_1P2_I_MASK                  0x00080000
 #define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOCNTL_1P2_I_SHIFT                   16
 #define    HSOTG_CTRL_PHY_P1CTL_AFE_LDOCNTL_1P2_I_MASK                    0x00070000
 #define    HSOTG_CTRL_PHY_P1CTL_PLL_SUSPEND_ENABLE_SHIFT                  15
@@ -242,17 +244,13 @@
 
 #define HSOTG_CTRL_PHY_CTRL_OFFSET                                        0x0000001C
 #define HSOTG_CTRL_PHY_CTRL_TYPE                                          UInt32
-#define HSOTG_CTRL_PHY_CTRL_RESERVED_MASK                                 0x000003FF
-#define    HSOTG_CTRL_PHY_CTRL_L2_COUNT_SHIFT                             24
-#define    HSOTG_CTRL_PHY_CTRL_L2_COUNT_MASK                              0xFF000000
-#define    HSOTG_CTRL_PHY_CTRL_L1_COUNT_SHIFT                             16
-#define    HSOTG_CTRL_PHY_CTRL_L1_COUNT_MASK                              0x00FF0000
-#define    HSOTG_CTRL_PHY_CTRL_ISO_COUNT_SHIFT                            12
-#define    HSOTG_CTRL_PHY_CTRL_ISO_COUNT_MASK                             0x0000F000
+#define HSOTG_CTRL_PHY_CTRL_RESERVED_MASK                                 0xFFFF0700
+#define    HSOTG_CTRL_PHY_CTRL_POST_COUNT_SHIFT                           12
+#define    HSOTG_CTRL_PHY_CTRL_POST_COUNT_MASK                            0x0000F000
 #define    HSOTG_CTRL_PHY_CTRL_SUSPEND_MASK_SHIFT                         11
 #define    HSOTG_CTRL_PHY_CTRL_SUSPEND_MASK_MASK                          0x00000800
-#define    HSOTG_CTRL_PHY_CTRL_L1_MASK_SHIFT                              10
-#define    HSOTG_CTRL_PHY_CTRL_L1_MASK_MASK                               0x00000400
+#define    HSOTG_CTRL_PHY_CTRL_MAIN_COUNTER_SHIFT                         0
+#define    HSOTG_CTRL_PHY_CTRL_MAIN_COUNTER_MASK                          0x000000FF
 
 #define HSOTG_CTRL_USBREG_OFFSET                                          0x00000020
 #define HSOTG_CTRL_USBREG_TYPE                                            UInt32

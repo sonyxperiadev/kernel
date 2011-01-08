@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_TMON_H__
@@ -81,6 +81,18 @@
 #define TMON_CFG_SUPP_MODE_RESERVED_MASK                                  0xFFFFFFFE
 #define    TMON_CFG_SUPP_MODE_SUPPLYMODE_SHIFT                            0
 #define    TMON_CFG_SUPP_MODE_SUPPLYMODE_MASK                             0x00000001
+
+#define TMON_CFG_ANA_VTMON_CTRL_OFFSET                                    0x00000024
+#define TMON_CFG_ANA_VTMON_CTRL_TYPE                                      UInt32
+#define TMON_CFG_ANA_VTMON_CTRL_RESERVED_MASK                             0xFFFFFFC0
+#define    TMON_CFG_ANA_VTMON_CTRL_ANA_VTMON_MUXSEL_SHIFT                 5
+#define    TMON_CFG_ANA_VTMON_CTRL_ANA_VTMON_MUXSEL_MASK                  0x00000020
+#define    TMON_CFG_ANA_VTMON_CTRL_ANA_VTMON_RESET_SHIFT                  4
+#define    TMON_CFG_ANA_VTMON_CTRL_ANA_VTMON_RESET_MASK                   0x00000010
+#define    TMON_CFG_ANA_VTMON_CTRL_ANA_VTMON_PWRUP_SHIFT                  3
+#define    TMON_CFG_ANA_VTMON_CTRL_ANA_VTMON_PWRUP_MASK                   0x00000008
+#define    TMON_CFG_ANA_VTMON_CTRL_ANA_VTMON_SEL_SHIFT                    0
+#define    TMON_CFG_ANA_VTMON_CTRL_ANA_VTMON_SEL_MASK                     0x00000007
 
 #endif /* __BRCM_RDB_TMON_H__ */
 

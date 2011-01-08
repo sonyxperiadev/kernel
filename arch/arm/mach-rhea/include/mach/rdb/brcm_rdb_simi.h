@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_SIMI_H__
@@ -206,7 +206,9 @@
 
 #define SIMI_SIMDEBUG_OFFSET                                              0x00000030
 #define SIMI_SIMDEBUG_TYPE                                                UInt32
-#define SIMI_SIMDEBUG_RESERVED_MASK                                       0x80000818
+#define SIMI_SIMDEBUG_RESERVED_MASK                                       0x00000818
+#define    SIMI_SIMDEBUG_REVSEBACK_RXPARITY_GEN_SHIFT                     31
+#define    SIMI_SIMDEBUG_REVSEBACK_RXPARITY_GEN_MASK                      0x80000000
 #define    SIMI_SIMDEBUG_SIMSTATE_SHIFT                                   24
 #define    SIMI_SIMDEBUG_SIMSTATE_MASK                                    0x7F000000
 #define    SIMI_SIMDEBUG_FIFOWPT_SHIFT                                    18
@@ -227,8 +229,8 @@
 #define SIMI_SRTOR_OFFSET                                                 0x00000038
 #define SIMI_SRTOR_TYPE                                                   UInt32
 #define SIMI_SRTOR_RESERVED_MASK                                          0xC000FC00
-#define    SIMI_SRTOR_CLK100US_PRESCALE_SHIFT                             24
-#define    SIMI_SRTOR_CLK100US_PRESCALE_MASK                              0x3F000000
+#define    SIMI_SRTOR_CLK1MHZ_PRESCALE_SHIFT                              24
+#define    SIMI_SRTOR_CLK1MHZ_PRESCALE_MASK                               0x3F000000
 #define    SIMI_SRTOR_CLK100US_DIV_SHIFT                                  16
 #define    SIMI_SRTOR_CLK100US_DIV_MASK                                   0x00FF0000
 #define    SIMI_SRTOR_TIMEOUT_VALUE_SHIFT                                 0
@@ -313,32 +315,6 @@
 #define    SIMI_SLDOCR_SIMVCC_SEL_MASK                                    0x00000002
 #define    SIMI_SLDOCR_SIMVCC_EN_SHIFT                                    0
 #define    SIMI_SLDOCR_SIMVCC_EN_MASK                                     0x00000001
-
-typedef volatile struct {
-   UInt32 m_SCR;                     // 0x0000
-   UInt32 m_SSR;                     // 0x0004
-   UInt32 m_SDR;                     // 0x0008
-   UInt32 m_SIER;                    // 0x000C
-   UInt32 m_SFCR;                    // 0x0010
-   UInt32 m_SECGTR;                  // 0x0014
-   UInt32 m_STGTR;                   // 0x0018
-   UInt32 m_SGCCR;                   // 0x001C
-   UInt32 m_SGCVR;                   // 0x0020
-   UInt32 m_SCDR;                    // 0x0024
-   UInt32 m_SFDRR;                   // 0x0028
-   UInt32 m_SESR;                    // 0x002C
-   UInt32 m_SIMDEBUG;                // 0x0030
-   UInt32 RESERVED_38_30[1];
-   UInt32 m_SRTOR;                   // 0x0038
-   UInt32 RESERVED_4C_38[4];
-   UInt32 m_SIPVER;                  // 0x004C
-   UInt32 RESERVED_60_4C[4];
-   UInt32 m_DESDCR;                  // 0x0060
-   UInt32 m_DESDISR;                 // 0x0064
-   UInt32 m_SCARDSR;                 // 0x0068
-   UInt32 m_SLDOCR;                  // 0x006C
-} BRCM_SIMI_REGS;
-
 
 #endif /* __BRCM_RDB_SIMI_H__ */
 

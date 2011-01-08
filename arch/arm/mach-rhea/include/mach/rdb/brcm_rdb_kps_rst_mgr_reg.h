@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_KPS_RST_MGR_REG_H__
@@ -50,37 +50,21 @@
 
 #define KPS_RST_MGR_REG_AHB1_SOFTRST_OFFSET                               0x00000010
 #define KPS_RST_MGR_REG_AHB1_SOFTRST_TYPE                                 UInt32
-#define KPS_RST_MGR_REG_AHB1_SOFTRST_RESERVED_MASK                        0x7FFFFFC3
+#define KPS_RST_MGR_REG_AHB1_SOFTRST_RESERVED_MASK                        0x7FFFFFDF
 #define    KPS_RST_MGR_REG_AHB1_SOFTRST_PRIV_ACCESS_MODE_SHIFT            31
 #define    KPS_RST_MGR_REG_AHB1_SOFTRST_PRIV_ACCESS_MODE_MASK             0x80000000
 #define    KPS_RST_MGR_REG_AHB1_SOFTRST_MPHI_SOFT_RSTN_SHIFT              5
 #define    KPS_RST_MGR_REG_AHB1_SOFTRST_MPHI_SOFT_RSTN_MASK               0x00000020
-#define    KPS_RST_MGR_REG_AHB1_SOFTRST_CRC_SOFT_RSTN_SHIFT               4
-#define    KPS_RST_MGR_REG_AHB1_SOFTRST_CRC_SOFT_RSTN_MASK                0x00000010
-#define    KPS_RST_MGR_REG_AHB1_SOFTRST_MAGIC_SOFT_RSTN_SHIFT             3
-#define    KPS_RST_MGR_REG_AHB1_SOFTRST_MAGIC_SOFT_RSTN_MASK              0x00000008
-#define    KPS_RST_MGR_REG_AHB1_SOFTRST_MSPRO_SOFT_RSTN_SHIFT             2
-#define    KPS_RST_MGR_REG_AHB1_SOFTRST_MSPRO_SOFT_RSTN_MASK              0x00000004
 
 #define KPS_RST_MGR_REG_APB1_SOFTRST_OFFSET                               0x00000018
 #define KPS_RST_MGR_REG_APB1_SOFTRST_TYPE                                 UInt32
-#define KPS_RST_MGR_REG_APB1_SOFTRST_RESERVED_MASK                        0x7FFFD980
+#define KPS_RST_MGR_REG_APB1_SOFTRST_RESERVED_MASK                        0x7FFFDFE8
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_PRIV_ACCESS_MODE_SHIFT            31
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_PRIV_ACCESS_MODE_MASK             0x80000000
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_TIMERS_SOFT_RSTN_SHIFT            13
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_TIMERS_SOFT_RSTN_MASK             0x00002000
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_I2S_SOFT_RSTN_SHIFT               10
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_I2S_SOFT_RSTN_MASK                0x00000400
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_IRDA_SOFT_RSTN_SHIFT              9
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_IRDA_SOFT_RSTN_MASK               0x00000200
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_SSP2_SOFT_RSTN_SHIFT              6
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_SSP2_SOFT_RSTN_MASK               0x00000040
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_SSP1_SOFT_RSTN_SHIFT              5
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_SSP1_SOFT_RSTN_MASK               0x00000020
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_SSP0_SOFT_RSTN_SHIFT              4
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_SSP0_SOFT_RSTN_MASK               0x00000010
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_UARTB4_SOFT_RSTN_SHIFT            3
-#define    KPS_RST_MGR_REG_APB1_SOFTRST_UARTB4_SOFT_RSTN_MASK             0x00000008
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_UARTB3_SOFT_RSTN_SHIFT            2
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_UARTB3_SOFT_RSTN_MASK             0x00000004
 #define    KPS_RST_MGR_REG_APB1_SOFTRST_UARTB2_SOFT_RSTN_SHIFT            1
@@ -90,27 +74,17 @@
 
 #define KPS_RST_MGR_REG_APB2_SOFTRST_OFFSET                               0x00000020
 #define KPS_RST_MGR_REG_APB2_SOFTRST_TYPE                                 UInt32
-#define KPS_RST_MGR_REG_APB2_SOFTRST_RESERVED_MASK                        0x7FFFF103
+#define KPS_RST_MGR_REG_APB2_SOFTRST_RESERVED_MASK                        0x7FFFFB37
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_PRIV_ACCESS_MODE_SHIFT            31
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_PRIV_ACCESS_MODE_MASK             0x80000000
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_BBL_REG_SOFT_RSTN_SHIFT           11
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_BBL_REG_SOFT_RSTN_MASK            0x00000800
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_PWM_SOFT_RSTN_SHIFT               10
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_PWM_SOFT_RSTN_MASK                0x00000400
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_AUXADC_SOFT_RSTN_SHIFT            9
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_AUXADC_SOFT_RSTN_MASK             0x00000200
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_BSC2_SOFT_RSTN_SHIFT              7
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_BSC2_SOFT_RSTN_MASK               0x00000080
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_BSC1_SOFT_RSTN_SHIFT              6
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_BSC1_SOFT_RSTN_MASK               0x00000040
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_D1W_SOFT_RSTN_SHIFT               5
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_D1W_SOFT_RSTN_MASK                0x00000020
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_HDMIKEY_SOFT_RSTN_SHIFT           4
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_HDMIKEY_SOFT_RSTN_MASK            0x00000010
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_DMAC_MUX_SOFT_RSTN_SHIFT          3
 #define    KPS_RST_MGR_REG_APB2_SOFTRST_DMAC_MUX_SOFT_RSTN_MASK           0x00000008
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_INT_STEER_SOFT_RSTN_SHIFT         2
-#define    KPS_RST_MGR_REG_APB2_SOFTRST_INT_STEER_SOFT_RSTN_MASK          0x00000004
 
 #endif /* __BRCM_RDB_KPS_RST_MGR_REG_H__ */
 

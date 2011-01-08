@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_CSR_H__
@@ -56,7 +56,9 @@
 
 #define CSR_DRAM_INIT_CONTROL_OFFSET                                      0x00000014
 #define CSR_DRAM_INIT_CONTROL_TYPE                                        UInt32
-#define CSR_DRAM_INIT_CONTROL_RESERVED_MASK                               0xFFC00000
+#define CSR_DRAM_INIT_CONTROL_RESERVED_MASK                               0x00C00000
+#define    CSR_DRAM_INIT_CONTROL_MRW_DATA_DDR3_EXTN_SHIFT                 24
+#define    CSR_DRAM_INIT_CONTROL_MRW_DATA_DDR3_EXTN_MASK                  0xFF000000
 #define    CSR_DRAM_INIT_CONTROL_CS_BITS_SHIFT                            20
 #define    CSR_DRAM_INIT_CONTROL_CS_BITS_MASK                             0x00300000
 #define    CSR_DRAM_INIT_CONTROL_INIT_CMD_SHIFT                           16
@@ -95,6 +97,12 @@
 #define    CSR_AXI_PORT_CTRL_PORT1_DISABLE_MASK                           0x00000002
 #define    CSR_AXI_PORT_CTRL_PORT0_DISABLE_SHIFT                          0
 #define    CSR_AXI_PORT_CTRL_PORT0_DISABLE_MASK                           0x00000001
+
+#define CSR_MEMC_SWAP_CS0_CS1_OFFSET                                      0x00000020
+#define CSR_MEMC_SWAP_CS0_CS1_TYPE                                        UInt32
+#define CSR_MEMC_SWAP_CS0_CS1_RESERVED_MASK                               0xFFFFFFFE
+#define    CSR_MEMC_SWAP_CS0_CS1_SWAP_CS_SHIFT                            0
+#define    CSR_MEMC_SWAP_CS0_CS1_SWAP_CS_MASK                             0x00000001
 
 #define CSR_CAM_UPDATE_OFFSET                                             0x0000003C
 #define CSR_CAM_UPDATE_TYPE                                               UInt32
@@ -378,11 +386,11 @@
 
 #define CSR_DRAM_TIMING1_OFFSET                                           0x000000A4
 #define CSR_DRAM_TIMING1_TYPE                                             UInt32
-#define CSR_DRAM_TIMING1_RESERVED_MASK                                    0xC8008E08
+#define CSR_DRAM_TIMING1_RESERVED_MASK                                    0xC0008E08
 #define    CSR_DRAM_TIMING1_TDQSCK_SHIFT                                  28
 #define    CSR_DRAM_TIMING1_TDQSCK_MASK                                   0x30000000
 #define    CSR_DRAM_TIMING1_TXSR_SHIFT                                    20
-#define    CSR_DRAM_TIMING1_TXSR_MASK                                     0x07F00000
+#define    CSR_DRAM_TIMING1_TXSR_MASK                                     0x0FF00000
 #define    CSR_DRAM_TIMING1_TCKESR_SHIFT                                  16
 #define    CSR_DRAM_TIMING1_TCKESR_MASK                                   0x000F0000
 #define    CSR_DRAM_TIMING1_TXP_SHIFT                                     12
@@ -414,11 +422,11 @@
 
 #define CSR_REFRESH_CNTRL_OFFSET                                          0x000000B0
 #define CSR_REFRESH_CNTRL_TYPE                                            UInt32
-#define CSR_REFRESH_CNTRL_RESERVED_MASK                                   0xF8800000
+#define CSR_REFRESH_CNTRL_RESERVED_MASK                                   0xF8000000
 #define    CSR_REFRESH_CNTRL_PENDING_REFRESH_PRIORITY_COUNT_SHIFT         24
 #define    CSR_REFRESH_CNTRL_PENDING_REFRESH_PRIORITY_COUNT_MASK          0x07000000
 #define    CSR_REFRESH_CNTRL_TRFC_SHIFT                                   16
-#define    CSR_REFRESH_CNTRL_TRFC_MASK                                    0x007F0000
+#define    CSR_REFRESH_CNTRL_TRFC_MASK                                    0x00FF0000
 #define    CSR_REFRESH_CNTRL_REFRESH_PERIOD_SHIFT                         0
 #define    CSR_REFRESH_CNTRL_REFRESH_PERIOD_MASK                          0x0000FFFF
 
@@ -596,12 +604,6 @@
 #define    CSR_CURRENT_FREQUENCY_STATE_CURRENT_STATE_SHIFT                0
 #define    CSR_CURRENT_FREQUENCY_STATE_CURRENT_STATE_MASK                 0x0000000F
 
-#define CSR_TARGET_FREQUENCY_STATE_OFFSET                                 0x00000100
-#define CSR_TARGET_FREQUENCY_STATE_TYPE                                   UInt32
-#define CSR_TARGET_FREQUENCY_STATE_RESERVED_MASK                          0xFFFFFFF0
-#define    CSR_TARGET_FREQUENCY_STATE_FREQUENCY_STATE_SHIFT               0
-#define    CSR_TARGET_FREQUENCY_STATE_FREQUENCY_STATE_MASK                0x0000000F
-
 #define CSR_SW_CLK_SWITCH_CNTRL_REG_OFFSET                                0x00000104
 #define CSR_SW_CLK_SWITCH_CNTRL_REG_TYPE                                  UInt32
 #define CSR_SW_CLK_SWITCH_CNTRL_REG_RESERVED_MASK                         0xFFFFFF08
@@ -639,6 +641,20 @@
 #define CSR_CS0_MEMORY_TYPE_RESERVED_MASK                                 0xFFFFFFFE
 #define    CSR_CS0_MEMORY_TYPE_CS0_MEM_TYPE_SHIFT                         0
 #define    CSR_CS0_MEMORY_TYPE_CS0_MEM_TYPE_MASK                          0x00000001
+
+#define CSR_REFRESH_CNTRL_2_OFFSET                                        0x00000118
+#define CSR_REFRESH_CNTRL_2_TYPE                                          UInt32
+#define CSR_REFRESH_CNTRL_2_RESERVED_MASK                                 0xFFFFEC00
+#define    CSR_REFRESH_CNTRL_2_TREFBW_EN_SHIFT                            12
+#define    CSR_REFRESH_CNTRL_2_TREFBW_EN_MASK                             0x00001000
+#define    CSR_REFRESH_CNTRL_2_TREFBW_SHIFT                               0
+#define    CSR_REFRESH_CNTRL_2_TREFBW_MASK                                0x000003FF
+
+#define CSR_DEMESH_ARB_DISABLE_OFFSET                                     0x0000011C
+#define CSR_DEMESH_ARB_DISABLE_TYPE                                       UInt32
+#define CSR_DEMESH_ARB_DISABLE_RESERVED_MASK                              0xFFFFFFFE
+#define    CSR_DEMESH_ARB_DISABLE_ARB_DISABLE_SHIFT                       0
+#define    CSR_DEMESH_ARB_DISABLE_ARB_DISABLE_MASK                        0x00000001
 
 #define CSR_PHY_BIST_CONTROL_OFFSET                                       0x00000120
 #define CSR_PHY_BIST_CONTROL_TYPE                                         UInt32
@@ -718,9 +734,153 @@
 #define    CSR_ATE_MODE_CONTROL_RL_OFFSET_SHIFT                           0
 #define    CSR_ATE_MODE_CONTROL_RL_OFFSET_MASK                            0x0000003F
 
+#define CSR_MEMC_MAX_PWR_STATE_OFFSET                                     0x0000014C
+#define CSR_MEMC_MAX_PWR_STATE_TYPE                                       UInt32
+#define CSR_MEMC_MAX_PWR_STATE_RESERVED_MASK                              0xFFFFFFEC
+#define    CSR_MEMC_MAX_PWR_STATE_FORCE_MAX_POWER_STATE_SHIFT             4
+#define    CSR_MEMC_MAX_PWR_STATE_FORCE_MAX_POWER_STATE_MASK              0x00000010
+#define    CSR_MEMC_MAX_PWR_STATE_MEMC_MAX_PWR_STATE_SHIFT                0
+#define    CSR_MEMC_MAX_PWR_STATE_MEMC_MAX_PWR_STATE_MASK                 0x00000003
+
+#define CSR_APPS_MIN_PWR_STATE_OFFSET                                     0x00000150
+#define CSR_APPS_MIN_PWR_STATE_TYPE                                       UInt32
+#define CSR_APPS_MIN_PWR_STATE_RESERVED_MASK                              0xFFFFFFFC
+#define    CSR_APPS_MIN_PWR_STATE_APPS_MIN_PWR_STATE_SHIFT                0
+#define    CSR_APPS_MIN_PWR_STATE_APPS_MIN_PWR_STATE_MASK                 0x00000003
+
+#define CSR_MODEM_MIN_PWR_STATE_OFFSET                                    0x00000154
+#define CSR_MODEM_MIN_PWR_STATE_TYPE                                      UInt32
+#define CSR_MODEM_MIN_PWR_STATE_RESERVED_MASK                             0xFFFFFFFC
+#define    CSR_MODEM_MIN_PWR_STATE_MODEM_MIN_PWR_STATE_SHIFT              0
+#define    CSR_MODEM_MIN_PWR_STATE_MODEM_MIN_PWR_STATE_MASK               0x00000003
+
+#define CSR_MEMC_PWR_STATE_PENDING_OFFSET                                 0x00000158
+#define CSR_MEMC_PWR_STATE_PENDING_TYPE                                   UInt32
+#define CSR_MEMC_PWR_STATE_PENDING_RESERVED_MASK                          0xFFFFFFF8
+#define    CSR_MEMC_PWR_STATE_PENDING_MODEM_MIN_PWR_STATE_PENDING_SHIFT   2
+#define    CSR_MEMC_PWR_STATE_PENDING_MODEM_MIN_PWR_STATE_PENDING_MASK    0x00000004
+#define    CSR_MEMC_PWR_STATE_PENDING_APPS_MIN_PWR_STATE_PENDING_SHIFT    1
+#define    CSR_MEMC_PWR_STATE_PENDING_APPS_MIN_PWR_STATE_PENDING_MASK     0x00000002
+#define    CSR_MEMC_PWR_STATE_PENDING_MEMC_MAX_PWR_STATE_PENDING_SHIFT    0
+#define    CSR_MEMC_PWR_STATE_PENDING_MEMC_MAX_PWR_STATE_PENDING_MASK     0x00000001
+
+#define CSR_MEMC_FREQ_STATE_MAPPING_OFFSET                                0x0000015C
+#define CSR_MEMC_FREQ_STATE_MAPPING_TYPE                                  UInt32
+#define CSR_MEMC_FREQ_STATE_MAPPING_RESERVED_MASK                         0xFFFFFFCC
+#define    CSR_MEMC_FREQ_STATE_MAPPING_SYS_FREQ_DIVIDE_VAL_SHIFT          4
+#define    CSR_MEMC_FREQ_STATE_MAPPING_SYS_FREQ_DIVIDE_VAL_MASK           0x00000030
+#define    CSR_MEMC_FREQ_STATE_MAPPING_DDR_FREQ_DIVIDE_VAL_SHIFT          0
+#define    CSR_MEMC_FREQ_STATE_MAPPING_DDR_FREQ_DIVIDE_VAL_MASK           0x00000003
+
+#define CSR_DRAM_TIMING0_XTAL_OFFSET                                      0x00000160
+#define CSR_DRAM_TIMING0_XTAL_TYPE                                        UInt32
+#define CSR_DRAM_TIMING0_XTAL_RESERVED_MASK                               0xE0080080
+#define    CSR_DRAM_TIMING0_XTAL_TRAS_XTAL_SHIFT                          24
+#define    CSR_DRAM_TIMING0_XTAL_TRAS_XTAL_MASK                           0x1F000000
+#define    CSR_DRAM_TIMING0_XTAL_TWR_XTAL_SHIFT                           20
+#define    CSR_DRAM_TIMING0_XTAL_TWR_XTAL_MASK                            0x00F00000
+#define    CSR_DRAM_TIMING0_XTAL_TRTP_XTAL_SHIFT                          16
+#define    CSR_DRAM_TIMING0_XTAL_TRTP_XTAL_MASK                           0x00070000
+#define    CSR_DRAM_TIMING0_XTAL_TRP_PB_XTAL_SHIFT                        12
+#define    CSR_DRAM_TIMING0_XTAL_TRP_PB_XTAL_MASK                         0x0000F000
+#define    CSR_DRAM_TIMING0_XTAL_TRP_AB_XTAL_SHIFT                        8
+#define    CSR_DRAM_TIMING0_XTAL_TRP_AB_XTAL_MASK                         0x00000F00
+#define    CSR_DRAM_TIMING0_XTAL_TRRD_XTAL_SHIFT                          4
+#define    CSR_DRAM_TIMING0_XTAL_TRRD_XTAL_MASK                           0x00000070
+#define    CSR_DRAM_TIMING0_XTAL_TRCD_XTAL_SHIFT                          0
+#define    CSR_DRAM_TIMING0_XTAL_TRCD_XTAL_MASK                           0x0000000F
+
+#define CSR_DRAM_TIMING1_XTAL_OFFSET                                      0x00000164
+#define CSR_DRAM_TIMING1_XTAL_TYPE                                        UInt32
+#define CSR_DRAM_TIMING1_XTAL_RESERVED_MASK                               0xC0008E08
+#define    CSR_DRAM_TIMING1_XTAL_TDQSCK_XTAL_SHIFT                        28
+#define    CSR_DRAM_TIMING1_XTAL_TDQSCK_XTAL_MASK                         0x30000000
+#define    CSR_DRAM_TIMING1_XTAL_TXSR_XTAL_SHIFT                          20
+#define    CSR_DRAM_TIMING1_XTAL_TXSR_XTAL_MASK                           0x0FF00000
+#define    CSR_DRAM_TIMING1_XTAL_TCKESR_XTAL_SHIFT                        16
+#define    CSR_DRAM_TIMING1_XTAL_TCKESR_XTAL_MASK                         0x000F0000
+#define    CSR_DRAM_TIMING1_XTAL_TXP_XTAL_SHIFT                           12
+#define    CSR_DRAM_TIMING1_XTAL_TXP_XTAL_MASK                            0x00007000
+#define    CSR_DRAM_TIMING1_XTAL_TFAW_XTAL_SHIFT                          4
+#define    CSR_DRAM_TIMING1_XTAL_TFAW_XTAL_MASK                           0x000001F0
+#define    CSR_DRAM_TIMING1_XTAL_TWTR_XTAL_SHIFT                          0
+#define    CSR_DRAM_TIMING1_XTAL_TWTR_XTAL_MASK                           0x00000007
+
+#define CSR_NVM_TIMING0_XTAL_OFFSET                                       0x00000168
+#define CSR_NVM_TIMING0_XTAL_TYPE                                         UInt32
+#define CSR_NVM_TIMING0_XTAL_RESERVED_MASK                                0xFC000000
+#define    CSR_NVM_TIMING0_XTAL_TRP_NVM_XTAL_SHIFT                        24
+#define    CSR_NVM_TIMING0_XTAL_TRP_NVM_XTAL_MASK                         0x03000000
+#define    CSR_NVM_TIMING0_XTAL_TRAS_NVM_XTAL_SHIFT                       16
+#define    CSR_NVM_TIMING0_XTAL_TRAS_NVM_XTAL_MASK                        0x00FF0000
+#define    CSR_NVM_TIMING0_XTAL_TRRD_NVM_XTAL_SHIFT                       8
+#define    CSR_NVM_TIMING0_XTAL_TRRD_NVM_XTAL_MASK                        0x0000FF00
+#define    CSR_NVM_TIMING0_XTAL_TRCD_NVM_XTAL_SHIFT                       0
+#define    CSR_NVM_TIMING0_XTAL_TRCD_NVM_XTAL_MASK                        0x000000FF
+
+#define CSR_DRAM_TIMING0_SYSPLL_OFFSET                                    0x0000016C
+#define CSR_DRAM_TIMING0_SYSPLL_TYPE                                      UInt32
+#define CSR_DRAM_TIMING0_SYSPLL_RESERVED_MASK                             0xE0080080
+#define    CSR_DRAM_TIMING0_SYSPLL_TRAS_SYSPLL_SHIFT                      24
+#define    CSR_DRAM_TIMING0_SYSPLL_TRAS_SYSPLL_MASK                       0x1F000000
+#define    CSR_DRAM_TIMING0_SYSPLL_TWR_SYSPLL_SHIFT                       20
+#define    CSR_DRAM_TIMING0_SYSPLL_TWR_SYSPLL_MASK                        0x00F00000
+#define    CSR_DRAM_TIMING0_SYSPLL_TRTP_SYSPLL_SHIFT                      16
+#define    CSR_DRAM_TIMING0_SYSPLL_TRTP_SYSPLL_MASK                       0x00070000
+#define    CSR_DRAM_TIMING0_SYSPLL_TRP_PB_SYSPLL_SHIFT                    12
+#define    CSR_DRAM_TIMING0_SYSPLL_TRP_PB_SYSPLL_MASK                     0x0000F000
+#define    CSR_DRAM_TIMING0_SYSPLL_TRP_AB_SYSPLL_SHIFT                    8
+#define    CSR_DRAM_TIMING0_SYSPLL_TRP_AB_SYSPLL_MASK                     0x00000F00
+#define    CSR_DRAM_TIMING0_SYSPLL_TRRD_SYSPLL_SHIFT                      4
+#define    CSR_DRAM_TIMING0_SYSPLL_TRRD_SYSPLL_MASK                       0x00000070
+#define    CSR_DRAM_TIMING0_SYSPLL_TRCD_SYSPLL_SHIFT                      0
+#define    CSR_DRAM_TIMING0_SYSPLL_TRCD_SYSPLL_MASK                       0x0000000F
+
+#define CSR_DRAM_TIMING1_SYSPLL_OFFSET                                    0x00000170
+#define CSR_DRAM_TIMING1_SYSPLL_TYPE                                      UInt32
+#define CSR_DRAM_TIMING1_SYSPLL_RESERVED_MASK                             0xC0008E08
+#define    CSR_DRAM_TIMING1_SYSPLL_TDQSCK_SYSPLL_SHIFT                    28
+#define    CSR_DRAM_TIMING1_SYSPLL_TDQSCK_SYSPLL_MASK                     0x30000000
+#define    CSR_DRAM_TIMING1_SYSPLL_TXSR_SYSPLL_SHIFT                      20
+#define    CSR_DRAM_TIMING1_SYSPLL_TXSR_SYSPLL_MASK                       0x0FF00000
+#define    CSR_DRAM_TIMING1_SYSPLL_TCKESR_SYSPLL_SHIFT                    16
+#define    CSR_DRAM_TIMING1_SYSPLL_TCKESR_SYSPLL_MASK                     0x000F0000
+#define    CSR_DRAM_TIMING1_SYSPLL_TXP_SYSPLL_SHIFT                       12
+#define    CSR_DRAM_TIMING1_SYSPLL_TXP_SYSPLL_MASK                        0x00007000
+#define    CSR_DRAM_TIMING1_SYSPLL_TFAW_SYSPLL_SHIFT                      4
+#define    CSR_DRAM_TIMING1_SYSPLL_TFAW_SYSPLL_MASK                       0x000001F0
+#define    CSR_DRAM_TIMING1_SYSPLL_TWTR_SYSPLL_SHIFT                      0
+#define    CSR_DRAM_TIMING1_SYSPLL_TWTR_SYSPLL_MASK                       0x00000007
+
+#define CSR_NVM_TIMING0_SYSPLL_OFFSET                                     0x00000174
+#define CSR_NVM_TIMING0_SYSPLL_TYPE                                       UInt32
+#define CSR_NVM_TIMING0_SYSPLL_RESERVED_MASK                              0xFC000000
+#define    CSR_NVM_TIMING0_SYSPLL_TRP_NVM_SYSPLL_SHIFT                    24
+#define    CSR_NVM_TIMING0_SYSPLL_TRP_NVM_SYSPLL_MASK                     0x03000000
+#define    CSR_NVM_TIMING0_SYSPLL_TRAS_NVM_SYSPLL_SHIFT                   16
+#define    CSR_NVM_TIMING0_SYSPLL_TRAS_NVM_SYSPLL_MASK                    0x00FF0000
+#define    CSR_NVM_TIMING0_SYSPLL_TRRD_NVM_SYSPLL_SHIFT                   8
+#define    CSR_NVM_TIMING0_SYSPLL_TRRD_NVM_SYSPLL_MASK                    0x0000FF00
+#define    CSR_NVM_TIMING0_SYSPLL_TRCD_NVM_SYSPLL_SHIFT                   0
+#define    CSR_NVM_TIMING0_SYSPLL_TRCD_NVM_SYSPLL_MASK                    0x000000FF
+
+#define CSR_REFRESH_TRFC_CNTRL_XTAL_SYSPLL_OFFSET                         0x00000178
+#define CSR_REFRESH_TRFC_CNTRL_XTAL_SYSPLL_TYPE                           UInt32
+#define CSR_REFRESH_TRFC_CNTRL_XTAL_SYSPLL_RESERVED_MASK                  0xFFFF0000
+#define    CSR_REFRESH_TRFC_CNTRL_XTAL_SYSPLL_TRFC_SYSPLL_SHIFT           8
+#define    CSR_REFRESH_TRFC_CNTRL_XTAL_SYSPLL_TRFC_SYSPLL_MASK            0x0000FF00
+#define    CSR_REFRESH_TRFC_CNTRL_XTAL_SYSPLL_TRFC_XTAL_SHIFT             0
+#define    CSR_REFRESH_TRFC_CNTRL_XTAL_SYSPLL_TRFC_XTAL_MASK              0x000000FF
+
 #define CSR_STATISTICS_CONTROL_OFFSET                                     0x00000180
 #define CSR_STATISTICS_CONTROL_TYPE                                       UInt32
-#define CSR_STATISTICS_CONTROL_RESERVED_MASK                              0xFFFFFFFE
+#define CSR_STATISTICS_CONTROL_RESERVED_MASK                              0xFF8000F8
+#define    CSR_STATISTICS_CONTROL_LAT_URG_STATISTICS_AXI_ID_SHIFT         8
+#define    CSR_STATISTICS_CONTROL_LAT_URG_STATISTICS_AXI_ID_MASK          0x007FFF00
+#define    CSR_STATISTICS_CONTROL_LAT_URG_SEL_SHIFT                       2
+#define    CSR_STATISTICS_CONTROL_LAT_URG_SEL_MASK                        0x00000004
+#define    CSR_STATISTICS_CONTROL_STAT_ON_DEM_BUSY_SHIFT                  1
+#define    CSR_STATISTICS_CONTROL_STAT_ON_DEM_BUSY_MASK                   0x00000002
 #define    CSR_STATISTICS_CONTROL_STATISTICS_EN_SHIFT                     0
 #define    CSR_STATISTICS_CONTROL_STATISTICS_EN_MASK                      0x00000001
 
@@ -818,6 +978,14 @@
 #define    CSR_STATISTICS_ENTRIES_ADDR_COH_ENTRIES_ADDR_COH_COUNT_SHIFT   0
 #define    CSR_STATISTICS_ENTRIES_ADDR_COH_ENTRIES_ADDR_COH_COUNT_MASK    0xFFFFFFFF
 
+#define CSR_STATISTICS_LATENCY_URGENT_TIMES_OFFSET                        0x000001C4
+#define CSR_STATISTICS_LATENCY_URGENT_TIMES_TYPE                          UInt32
+#define CSR_STATISTICS_LATENCY_URGENT_TIMES_RESERVED_MASK                 0x00000000
+#define    CSR_STATISTICS_LATENCY_URGENT_TIMES_MAX_TIME_SHIFT             16
+#define    CSR_STATISTICS_LATENCY_URGENT_TIMES_MAX_TIME_MASK              0xFFFF0000
+#define    CSR_STATISTICS_LATENCY_URGENT_TIMES_MIN_TIME_SHIFT             0
+#define    CSR_STATISTICS_LATENCY_URGENT_TIMES_MIN_TIME_MASK              0x0000FFFF
+
 #define CSR_CALIBRATION_INTR_OFFSET                                       0x00000200
 #define CSR_CALIBRATION_INTR_TYPE                                         UInt32
 #define CSR_CALIBRATION_INTR_RESERVED_MASK                                0xFFFFFFFE
@@ -826,131 +994,155 @@
 
 #define CSR_CAM_ENABLE_0_OFFSET                                           0x00000204
 #define CSR_CAM_ENABLE_0_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_0_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_0_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_0_CAM_TAG_ENABLE_0_SHIFT                        16
-#define    CSR_CAM_ENABLE_0_CAM_TAG_ENABLE_0_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_0_CAM_TAG_ENABLE_0_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_0_CAM_TAG_0_SHIFT                               0
-#define    CSR_CAM_ENABLE_0_CAM_TAG_0_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_0_CAM_TAG_0_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_1_OFFSET                                           0x00000208
 #define CSR_CAM_ENABLE_1_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_1_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_1_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_1_CAM_TAG_ENABLE_1_SHIFT                        16
-#define    CSR_CAM_ENABLE_1_CAM_TAG_ENABLE_1_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_1_CAM_TAG_ENABLE_1_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_1_CAM_TAG_1_SHIFT                               0
-#define    CSR_CAM_ENABLE_1_CAM_TAG_1_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_1_CAM_TAG_1_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_2_OFFSET                                           0x0000020C
 #define CSR_CAM_ENABLE_2_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_2_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_2_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_2_CAM_TAG_ENABLE_2_SHIFT                        16
-#define    CSR_CAM_ENABLE_2_CAM_TAG_ENABLE_2_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_2_CAM_TAG_ENABLE_2_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_2_CAM_TAG_2_SHIFT                               0
-#define    CSR_CAM_ENABLE_2_CAM_TAG_2_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_2_CAM_TAG_2_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_3_OFFSET                                           0x00000210
 #define CSR_CAM_ENABLE_3_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_3_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_3_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_3_CAM_TAG_ENABLE_3_SHIFT                        16
-#define    CSR_CAM_ENABLE_3_CAM_TAG_ENABLE_3_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_3_CAM_TAG_ENABLE_3_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_3_CAM_TAG_3_SHIFT                               0
-#define    CSR_CAM_ENABLE_3_CAM_TAG_3_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_3_CAM_TAG_3_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_4_OFFSET                                           0x00000214
 #define CSR_CAM_ENABLE_4_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_4_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_4_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_4_CAM_TAG_ENABLE_4_SHIFT                        16
-#define    CSR_CAM_ENABLE_4_CAM_TAG_ENABLE_4_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_4_CAM_TAG_ENABLE_4_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_4_CAM_TAG_4_SHIFT                               0
-#define    CSR_CAM_ENABLE_4_CAM_TAG_4_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_4_CAM_TAG_4_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_5_OFFSET                                           0x00000218
 #define CSR_CAM_ENABLE_5_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_5_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_5_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_5_CAM_TAG_ENABLE_5_SHIFT                        16
-#define    CSR_CAM_ENABLE_5_CAM_TAG_ENABLE_5_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_5_CAM_TAG_ENABLE_5_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_5_CAM_TAG_5_SHIFT                               0
-#define    CSR_CAM_ENABLE_5_CAM_TAG_5_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_5_CAM_TAG_5_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_6_OFFSET                                           0x0000021C
 #define CSR_CAM_ENABLE_6_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_6_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_6_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_6_CAM_TAG_ENABLE_6_SHIFT                        16
-#define    CSR_CAM_ENABLE_6_CAM_TAG_ENABLE_6_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_6_CAM_TAG_ENABLE_6_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_6_CAM_TAG_6_SHIFT                               0
-#define    CSR_CAM_ENABLE_6_CAM_TAG_6_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_6_CAM_TAG_6_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_7_OFFSET                                           0x00000220
 #define CSR_CAM_ENABLE_7_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_7_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_7_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_7_CAM_TAG_ENABLE_7_SHIFT                        16
-#define    CSR_CAM_ENABLE_7_CAM_TAG_ENABLE_7_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_7_CAM_TAG_ENABLE_7_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_7_CAM_TAG_7_SHIFT                               0
-#define    CSR_CAM_ENABLE_7_CAM_TAG_7_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_7_CAM_TAG_7_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_8_OFFSET                                           0x00000224
 #define CSR_CAM_ENABLE_8_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_8_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_8_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_8_CAM_TAG_ENABLE_8_SHIFT                        16
-#define    CSR_CAM_ENABLE_8_CAM_TAG_ENABLE_8_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_8_CAM_TAG_ENABLE_8_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_8_CAM_TAG_8_SHIFT                               0
-#define    CSR_CAM_ENABLE_8_CAM_TAG_8_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_8_CAM_TAG_8_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_9_OFFSET                                           0x00000228
 #define CSR_CAM_ENABLE_9_TYPE                                             UInt32
-#define CSR_CAM_ENABLE_9_RESERVED_MASK                                    0xE000E000
+#define CSR_CAM_ENABLE_9_RESERVED_MASK                                    0x80008000
 #define    CSR_CAM_ENABLE_9_CAM_TAG_ENABLE_9_SHIFT                        16
-#define    CSR_CAM_ENABLE_9_CAM_TAG_ENABLE_9_MASK                         0x1FFF0000
+#define    CSR_CAM_ENABLE_9_CAM_TAG_ENABLE_9_MASK                         0x7FFF0000
 #define    CSR_CAM_ENABLE_9_CAM_TAG_9_SHIFT                               0
-#define    CSR_CAM_ENABLE_9_CAM_TAG_9_MASK                                0x00001FFF
+#define    CSR_CAM_ENABLE_9_CAM_TAG_9_MASK                                0x00007FFF
 
 #define CSR_CAM_ENABLE_10_OFFSET                                          0x0000022C
 #define CSR_CAM_ENABLE_10_TYPE                                            UInt32
-#define CSR_CAM_ENABLE_10_RESERVED_MASK                                   0xE000E000
+#define CSR_CAM_ENABLE_10_RESERVED_MASK                                   0x80008000
 #define    CSR_CAM_ENABLE_10_CAM_TAG_ENABLE_10_SHIFT                      16
-#define    CSR_CAM_ENABLE_10_CAM_TAG_ENABLE_10_MASK                       0x1FFF0000
+#define    CSR_CAM_ENABLE_10_CAM_TAG_ENABLE_10_MASK                       0x7FFF0000
 #define    CSR_CAM_ENABLE_10_CAM_TAG_10_SHIFT                             0
-#define    CSR_CAM_ENABLE_10_CAM_TAG_10_MASK                              0x00001FFF
+#define    CSR_CAM_ENABLE_10_CAM_TAG_10_MASK                              0x00007FFF
 
 #define CSR_CAM_ENABLE_11_OFFSET                                          0x00000230
 #define CSR_CAM_ENABLE_11_TYPE                                            UInt32
-#define CSR_CAM_ENABLE_11_RESERVED_MASK                                   0xE000E000
+#define CSR_CAM_ENABLE_11_RESERVED_MASK                                   0x80008000
 #define    CSR_CAM_ENABLE_11_CAM_TAG_ENABLE_11_SHIFT                      16
-#define    CSR_CAM_ENABLE_11_CAM_TAG_ENABLE_11_MASK                       0x1FFF0000
+#define    CSR_CAM_ENABLE_11_CAM_TAG_ENABLE_11_MASK                       0x7FFF0000
 #define    CSR_CAM_ENABLE_11_CAM_TAG_11_SHIFT                             0
-#define    CSR_CAM_ENABLE_11_CAM_TAG_11_MASK                              0x00001FFF
+#define    CSR_CAM_ENABLE_11_CAM_TAG_11_MASK                              0x00007FFF
 
 #define CSR_CAM_ENABLE_12_OFFSET                                          0x00000234
 #define CSR_CAM_ENABLE_12_TYPE                                            UInt32
-#define CSR_CAM_ENABLE_12_RESERVED_MASK                                   0xE000E000
+#define CSR_CAM_ENABLE_12_RESERVED_MASK                                   0x80008000
 #define    CSR_CAM_ENABLE_12_CAM_TAG_ENABLE_12_SHIFT                      16
-#define    CSR_CAM_ENABLE_12_CAM_TAG_ENABLE_12_MASK                       0x1FFF0000
+#define    CSR_CAM_ENABLE_12_CAM_TAG_ENABLE_12_MASK                       0x7FFF0000
 #define    CSR_CAM_ENABLE_12_CAM_TAG_12_SHIFT                             0
-#define    CSR_CAM_ENABLE_12_CAM_TAG_12_MASK                              0x00001FFF
+#define    CSR_CAM_ENABLE_12_CAM_TAG_12_MASK                              0x00007FFF
 
 #define CSR_CAM_ENABLE_13_OFFSET                                          0x00000238
 #define CSR_CAM_ENABLE_13_TYPE                                            UInt32
-#define CSR_CAM_ENABLE_13_RESERVED_MASK                                   0xE000E000
+#define CSR_CAM_ENABLE_13_RESERVED_MASK                                   0x80008000
 #define    CSR_CAM_ENABLE_13_CAM_TAG_ENABLE_13_SHIFT                      16
-#define    CSR_CAM_ENABLE_13_CAM_TAG_ENABLE_13_MASK                       0x1FFF0000
+#define    CSR_CAM_ENABLE_13_CAM_TAG_ENABLE_13_MASK                       0x7FFF0000
 #define    CSR_CAM_ENABLE_13_CAM_TAG_13_SHIFT                             0
-#define    CSR_CAM_ENABLE_13_CAM_TAG_13_MASK                              0x00001FFF
+#define    CSR_CAM_ENABLE_13_CAM_TAG_13_MASK                              0x00007FFF
 
 #define CSR_CAM_ENABLE_14_OFFSET                                          0x0000023C
 #define CSR_CAM_ENABLE_14_TYPE                                            UInt32
-#define CSR_CAM_ENABLE_14_RESERVED_MASK                                   0xE000E000
+#define CSR_CAM_ENABLE_14_RESERVED_MASK                                   0x80008000
 #define    CSR_CAM_ENABLE_14_CAM_TAG_ENABLE_14_SHIFT                      16
-#define    CSR_CAM_ENABLE_14_CAM_TAG_ENABLE_14_MASK                       0x1FFF0000
+#define    CSR_CAM_ENABLE_14_CAM_TAG_ENABLE_14_MASK                       0x7FFF0000
 #define    CSR_CAM_ENABLE_14_CAM_TAG_14_SHIFT                             0
-#define    CSR_CAM_ENABLE_14_CAM_TAG_14_MASK                              0x00001FFF
+#define    CSR_CAM_ENABLE_14_CAM_TAG_14_MASK                              0x00007FFF
 
 #define CSR_CAM_ENABLE_15_OFFSET                                          0x00000240
 #define CSR_CAM_ENABLE_15_TYPE                                            UInt32
-#define CSR_CAM_ENABLE_15_RESERVED_MASK                                   0xE000E000
+#define CSR_CAM_ENABLE_15_RESERVED_MASK                                   0x80008000
 #define    CSR_CAM_ENABLE_15_CAM_TAG_ENABLE_15_SHIFT                      16
-#define    CSR_CAM_ENABLE_15_CAM_TAG_ENABLE_15_MASK                       0x1FFF0000
+#define    CSR_CAM_ENABLE_15_CAM_TAG_ENABLE_15_MASK                       0x7FFF0000
 #define    CSR_CAM_ENABLE_15_CAM_TAG_15_SHIFT                             0
-#define    CSR_CAM_ENABLE_15_CAM_TAG_15_MASK                              0x00001FFF
+#define    CSR_CAM_ENABLE_15_CAM_TAG_15_MASK                              0x00007FFF
+
+#define CSR_ACC_VIO_ADDR_OFFSET                                           0x00000244
+#define CSR_ACC_VIO_ADDR_TYPE                                             UInt32
+#define CSR_ACC_VIO_ADDR_RESERVED_MASK                                    0x00000000
+#define    CSR_ACC_VIO_ADDR_ACC_VIO_ADDR_SHIFT                            0
+#define    CSR_ACC_VIO_ADDR_ACC_VIO_ADDR_MASK                             0xFFFFFFFF
+
+#define CSR_ACC_VIO_INFO_OFFSET                                           0x00000248
+#define CSR_ACC_VIO_INFO_TYPE                                             UInt32
+#define CSR_ACC_VIO_INFO_RESERVED_MASK                                    0x00000000
+#define    CSR_ACC_VIO_INFO_ACC_VIO_INTR_OVERRUN_SHIFT                    31
+#define    CSR_ACC_VIO_INFO_ACC_VIO_INTR_OVERRUN_MASK                     0x80000000
+#define    CSR_ACC_VIO_INFO_ACC_VIO_INTR_SHIFT                            30
+#define    CSR_ACC_VIO_INFO_ACC_VIO_INTR_MASK                             0x40000000
+#define    CSR_ACC_VIO_INFO_ACC_VIO_REASON_SHIFT                          27
+#define    CSR_ACC_VIO_INFO_ACC_VIO_REASON_MASK                           0x38000000
+#define    CSR_ACC_VIO_INFO_ACC_VIO_PORT_ID_SHIFT                         25
+#define    CSR_ACC_VIO_INFO_ACC_VIO_PORT_ID_MASK                          0x06000000
+#define    CSR_ACC_VIO_INFO_ACC_VIO_REGION_SHIFT                          16
+#define    CSR_ACC_VIO_INFO_ACC_VIO_REGION_MASK                           0x01FF0000
+#define    CSR_ACC_VIO_INFO_ACC_VIO_CLIENT_ID_SHIFT                       1
+#define    CSR_ACC_VIO_INFO_ACC_VIO_CLIENT_ID_MASK                        0x0000FFFE
+#define    CSR_ACC_VIO_INFO_ACC_VIO_TYPE_SHIFT                            0
+#define    CSR_ACC_VIO_INFO_ACC_VIO_TYPE_MASK                             0x00000001
 
 #define CSR_TEST_MUX_SELECT_OFFSET                                        0x00000300
 #define CSR_TEST_MUX_SELECT_TYPE                                          UInt32
@@ -1024,27 +1216,11 @@
 #define    CSR_DBG_PORT3_AXI_ERR_COND_PORT3_AXI_ERR_COND_SHIFT            0
 #define    CSR_DBG_PORT3_AXI_ERR_COND_PORT3_AXI_ERR_COND_MASK             0x00000FFF
 
-#define CSR_DBG_ACC_VIO_ADDR_OFFSET                                       0x00000324
-#define CSR_DBG_ACC_VIO_ADDR_TYPE                                         UInt32
-#define CSR_DBG_ACC_VIO_ADDR_RESERVED_MASK                                0x00000000
-#define    CSR_DBG_ACC_VIO_ADDR_ACC_VIO_ADDR_SHIFT                        0
-#define    CSR_DBG_ACC_VIO_ADDR_ACC_VIO_ADDR_MASK                         0xFFFFFFFF
-
-#define CSR_DBG_ACC_VIO_INFO_OFFSET                                       0x00000328
-#define CSR_DBG_ACC_VIO_INFO_TYPE                                         UInt32
-#define CSR_DBG_ACC_VIO_INFO_RESERVED_MASK                                0x40000000
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_INTR_OVERRUN_SHIFT                31
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_INTR_OVERRUN_MASK                 0x80000000
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_REASON_SHIFT                      27
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_REASON_MASK                       0x38000000
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_PORT_ID_SHIFT                     25
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_PORT_ID_MASK                      0x06000000
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_REGION_SHIFT                      16
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_REGION_MASK                       0x01FF0000
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_CLIENT_ID_SHIFT                   1
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_CLIENT_ID_MASK                    0x0000FFFE
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_TYPE_SHIFT                        0
-#define    CSR_DBG_ACC_VIO_INFO_ACC_VIO_TYPE_MASK                         0x00000001
+#define CSR_DEMESH_HALT_ARB_OFFSET                                        0x0000032C
+#define CSR_DEMESH_HALT_ARB_TYPE                                          UInt32
+#define CSR_DEMESH_HALT_ARB_RESERVED_MASK                                 0xFFFFFFFE
+#define    CSR_DEMESH_HALT_ARB_HALT_ARB_ON_URG_MISS_SHIFT                 0
+#define    CSR_DEMESH_HALT_ARB_HALT_ARB_ON_URG_MISS_MASK                  0x00000001
 
 #endif /* __BRCM_RDB_CSR_H__ */
 

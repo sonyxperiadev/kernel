@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_KHUB_RST_MGR_REG_H__
@@ -78,9 +78,13 @@
 
 #define KHUB_RST_MGR_REG_SOFT_RSTN1_OFFSET                                0x00000008
 #define KHUB_RST_MGR_REG_SOFT_RSTN1_TYPE                                  UInt32
-#define KHUB_RST_MGR_REG_SOFT_RSTN1_RESERVED_MASK                         0x7FFC060C
+#define KHUB_RST_MGR_REG_SOFT_RSTN1_RESERVED_MASK                         0x7FF0060C
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_PRIV_ACCESS_MODE_SHIFT             31
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_PRIV_ACCESS_MODE_MASK              0x80000000
+#define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_13_SOFT_RSTN_SHIFT       19
+#define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_13_SOFT_RSTN_MASK        0x00080000
+#define    KHUB_RST_MGR_REG_SOFT_RSTN1_SSP4_SOFT_RSTN_SHIFT               18
+#define    KHUB_RST_MGR_REG_SOFT_RSTN1_SSP4_SOFT_RSTN_MASK                0x00040000
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_VAR_SPM_SOFT_RSTN_SHIFT            17
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_VAR_SPM_SOFT_RSTN_MASK             0x00020000
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_TMON_SOFT_RSTN_SHIFT               16
@@ -107,8 +111,8 @@
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_MDIOMASTER_SOFT_RSTN_MASK          0x00000010
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_11_SOFT_RSTN_SHIFT       1
 #define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_11_SOFT_RSTN_MASK        0x00000002
-#define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_10_SOFT_RSTN_SHIFT       0
-#define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_10_SOFT_RSTN_MASK        0x00000001
+#define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_19_SOFT_RSTN_SHIFT       0
+#define    KHUB_RST_MGR_REG_SOFT_RSTN1_AXI_TRACE_19_SOFT_RSTN_MASK        0x00000001
 
 #endif /* __BRCM_RDB_KHUB_RST_MGR_REG_H__ */
 

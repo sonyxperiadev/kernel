@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_MPHI_H__
@@ -42,25 +42,29 @@
 
 #define MPHI_RREQ_OFFSET                                                  0x00000008
 #define MPHI_RREQ_TYPE                                                    UInt32
-#define MPHI_RREQ_RESERVED_MASK                                           0xFFFFF000
+#define MPHI_RREQ_RESERVED_MASK                                           0xFFC00000
+#define    MPHI_RREQ_RD_CNT_HIGH_SHIFT                                    12
+#define    MPHI_RREQ_RD_CNT_HIGH_MASK                                     0x003FF000
 #define    MPHI_RREQ_CS_CONTROL_SHIFT                                     11
 #define    MPHI_RREQ_CS_CONTROL_MASK                                      0x00000800
 #define    MPHI_RREQ_RD_CMD_SHIFT                                         10
 #define    MPHI_RREQ_RD_CMD_MASK                                          0x00000400
-#define    MPHI_RREQ_RD_CNT_SHIFT                                         0
-#define    MPHI_RREQ_RD_CNT_MASK                                          0x000003FF
+#define    MPHI_RREQ_RD_CNT_LOW_SHIFT                                     0
+#define    MPHI_RREQ_RD_CNT_LOW_MASK                                      0x000003FF
 
 #define MPHI_SPECIAL_RREQ_OFFSET                                          0x0000000C
 #define MPHI_SPECIAL_RREQ_TYPE                                            UInt32
-#define MPHI_SPECIAL_RREQ_RESERVED_MASK                                   0xFFFFE000
+#define MPHI_SPECIAL_RREQ_RESERVED_MASK                                   0xFF800000
+#define    MPHI_SPECIAL_RREQ_RD_CNT2_HIGH_SHIFT                           13
+#define    MPHI_SPECIAL_RREQ_RD_CNT2_HIGH_MASK                            0x007FE000
 #define    MPHI_SPECIAL_RREQ_CS_CONTROL_SHIFT                             12
 #define    MPHI_SPECIAL_RREQ_CS_CONTROL_MASK                              0x00001000
 #define    MPHI_SPECIAL_RREQ_FIFO_REG_SHIFT                               11
 #define    MPHI_SPECIAL_RREQ_FIFO_REG_MASK                                0x00000800
 #define    MPHI_SPECIAL_RREQ_RD_CMD2_SHIFT                                10
 #define    MPHI_SPECIAL_RREQ_RD_CMD2_MASK                                 0x00000400
-#define    MPHI_SPECIAL_RREQ_RD_CNT2_SHIFT                                0
-#define    MPHI_SPECIAL_RREQ_RD_CNT2_MASK                                 0x000003FF
+#define    MPHI_SPECIAL_RREQ_RD_CNT2_LOW_SHIFT                            0
+#define    MPHI_SPECIAL_RREQ_RD_CNT2_LOW_MASK                             0x000003FF
 
 #define MPHI_CR_OFFSET                                                    0x00000010
 #define MPHI_CR_TYPE                                                      UInt32

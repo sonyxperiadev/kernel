@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_FSHOST_CTRL_H__
@@ -68,21 +68,7 @@
 
 #define FSHOST_CTRL_USBPOWERCTRL_OFFSET                                   0x00000004
 #define FSHOST_CTRL_USBPOWERCTRL_TYPE                                     UInt32
-#define FSHOST_CTRL_USBPOWERCTRL_RESERVED_MASK                            0xFF80FFFF
-#define    FSHOST_CTRL_USBPOWERCTRL_SPEED_USBP_SHIFT                      22
-#define    FSHOST_CTRL_USBPOWERCTRL_SPEED_USBP_MASK                       0x00400000
-#define    FSHOST_CTRL_USBPOWERCTRL_PDN_N_USBP_SHIFT                      21
-#define    FSHOST_CTRL_USBPOWERCTRL_PDN_N_USBP_MASK                       0x00200000
-#define    FSHOST_CTRL_USBPOWERCTRL_PDN_P_USBP_SHIFT                      20
-#define    FSHOST_CTRL_USBPOWERCTRL_PDN_P_USBP_MASK                       0x00100000
-#define    FSHOST_CTRL_USBPOWERCTRL_PUP_ACT_N_USBP_SHIFT                  19
-#define    FSHOST_CTRL_USBPOWERCTRL_PUP_ACT_N_USBP_MASK                   0x00080000
-#define    FSHOST_CTRL_USBPOWERCTRL_PUP_ACT_P_USBP_SHIFT                  18
-#define    FSHOST_CTRL_USBPOWERCTRL_PUP_ACT_P_USBP_MASK                   0x00040000
-#define    FSHOST_CTRL_USBPOWERCTRL_PUP_IDLE_N_USBP_SHIFT                 17
-#define    FSHOST_CTRL_USBPOWERCTRL_PUP_IDLE_N_USBP_MASK                  0x00020000
-#define    FSHOST_CTRL_USBPOWERCTRL_PUP_IDLE_P_USBP_SHIFT                 16
-#define    FSHOST_CTRL_USBPOWERCTRL_PUP_IDLE_P_USBP_MASK                  0x00010000
+#define FSHOST_CTRL_USBPOWERCTRL_RESERVED_MASK                            0xFFFFFFFF
 
 #define FSHOST_CTRL_USBREG3_OFFSET                                        0x0000000C
 #define FSHOST_CTRL_USBREG3_TYPE                                          UInt32
@@ -105,16 +91,6 @@
 #define FSHOST_CTRL_USBREG_RESERVED_MASK                                  0xFFFFFFFC
 #define    FSHOST_CTRL_USBREG_SS_SCALEDOWN_MODE_SHIFT                     0
 #define    FSHOST_CTRL_USBREG_SS_SCALEDOWN_MODE_MASK                      0x00000003
-
-typedef volatile struct {
-   UInt32 m_USBSUSPEND;              // 0x0000
-   UInt32 m_USBPOWERCTRL;            // 0x0004
-   UInt32 RESERVED_C_4[1];
-   UInt32 m_USBREG3;                 // 0x000C
-   UInt32 RESERVED_20_C[4];
-   UInt32 m_USBREG;                  // 0x0020
-} BRCM_FSHOST_CTRL_REGS;
-
 
 #endif /* __BRCM_RDB_FSHOST_CTRL_H__ */
 

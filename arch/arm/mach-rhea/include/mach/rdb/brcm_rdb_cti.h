@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_CTI_H__
@@ -36,9 +36,9 @@
 
 #define CTI_CTIINTACK_OFFSET                                              0x00000010
 #define CTI_CTIINTACK_TYPE                                                UInt32
-#define CTI_CTIINTACK_RESERVED_MASK                                       0xFFFFFEFF
-#define    CTI_CTIINTACK_VADDR_WPT_SHIFT                                  8
-#define    CTI_CTIINTACK_VADDR_WPT_MASK                                   0x00000100
+#define CTI_CTIINTACK_RESERVED_MASK                                       0xFFFFFF00
+#define    CTI_CTIINTACK_INTACK_SHIFT                                     0
+#define    CTI_CTIINTACK_INTACK_MASK                                      0x000000FF
 
 #define CTI_CTIAPPSET_OFFSET                                              0x00000014
 #define CTI_CTIAPPSET_TYPE                                                UInt32
@@ -106,12 +106,6 @@
 #define    CTI_CTIINEN7_TRIGINEN7_SHIFT                                   0
 #define    CTI_CTIINEN7_TRIGINEN7_MASK                                    0x0000000F
 
-#define CTI_CTIINEN8_OFFSET                                               0x00000040
-#define CTI_CTIINEN8_TYPE                                                 UInt32
-#define CTI_CTIINEN8_RESERVED_MASK                                        0xFFFFFFF0
-#define    CTI_CTIINEN8_TRIGINEN8_SHIFT                                   0
-#define    CTI_CTIINEN8_TRIGINEN8_MASK                                    0x0000000F
-
 #define CTI_CTIOUTEN0_OFFSET                                              0x000000A0
 #define CTI_CTIOUTEN0_TYPE                                                UInt32
 #define CTI_CTIOUTEN0_RESERVED_MASK                                       0xFFFFFFF0
@@ -160,23 +154,17 @@
 #define    CTI_CTIOUTEN7_TRIGOUTEN7_SHIFT                                 0
 #define    CTI_CTIOUTEN7_TRIGOUTEN7_MASK                                  0x0000000F
 
-#define CTI_CTIOUTEN8_OFFSET                                              0x000000C0
-#define CTI_CTIOUTEN8_TYPE                                                UInt32
-#define CTI_CTIOUTEN8_RESERVED_MASK                                       0xFFFFFFF0
-#define    CTI_CTIOUTEN8_TRIGOUTEN8_SHIFT                                 0
-#define    CTI_CTIOUTEN8_TRIGOUTEN8_MASK                                  0x0000000F
-
 #define CTI_CTITRIGINSTATUS_OFFSET                                        0x00000130
 #define CTI_CTITRIGINSTATUS_TYPE                                          UInt32
-#define CTI_CTITRIGINSTATUS_RESERVED_MASK                                 0xFFFFFE00
+#define CTI_CTITRIGINSTATUS_RESERVED_MASK                                 0xFFFFFF00
 #define    CTI_CTITRIGINSTATUS_TRIGINSTATUS_SHIFT                         0
-#define    CTI_CTITRIGINSTATUS_TRIGINSTATUS_MASK                          0x000001FF
+#define    CTI_CTITRIGINSTATUS_TRIGINSTATUS_MASK                          0x000000FF
 
 #define CTI_CTITRIGOUTSTATUS_OFFSET                                       0x00000134
 #define CTI_CTITRIGOUTSTATUS_TYPE                                         UInt32
-#define CTI_CTITRIGOUTSTATUS_RESERVED_MASK                                0xFFFFFE00
+#define CTI_CTITRIGOUTSTATUS_RESERVED_MASK                                0xFFFFFF00
 #define    CTI_CTITRIGOUTSTATUS_TRIGOUTSTATUS_SHIFT                       0
-#define    CTI_CTITRIGOUTSTATUS_TRIGOUTSTATUS_MASK                        0x000001FF
+#define    CTI_CTITRIGOUTSTATUS_TRIGOUTSTATUS_MASK                        0x000000FF
 
 #define CTI_CTICHINSTATUS_OFFSET                                          0x00000138
 #define CTI_CTICHINSTATUS_TYPE                                            UInt32
@@ -226,9 +214,9 @@
 
 #define CTI_ITTRIGINACK_OFFSET                                            0x00000EE0
 #define CTI_ITTRIGINACK_TYPE                                              UInt32
-#define CTI_ITTRIGINACK_RESERVED_MASK                                     0xFFFFFE00
+#define CTI_ITTRIGINACK_RESERVED_MASK                                     0xFFFFFF00
 #define    CTI_ITTRIGINACK_CTTRIGINACK_SHIFT                              0
-#define    CTI_ITTRIGINACK_CTTRIGINACK_MASK                               0x000001FF
+#define    CTI_ITTRIGINACK_CTTRIGINACK_MASK                               0x000000FF
 
 #define CTI_ITCHOUT_OFFSET                                                0x00000EE4
 #define CTI_ITCHOUT_TYPE                                                  UInt32
@@ -238,9 +226,9 @@
 
 #define CTI_ITTRIGOUT_OFFSET                                              0x00000EE8
 #define CTI_ITTRIGOUT_TYPE                                                UInt32
-#define CTI_ITTRIGOUT_RESERVED_MASK                                       0xFFFFFE00
+#define CTI_ITTRIGOUT_RESERVED_MASK                                       0xFFFFFF00
 #define    CTI_ITTRIGOUT_CTTRIGOUT_SHIFT                                  0
-#define    CTI_ITTRIGOUT_CTTRIGOUT_MASK                                   0x000001FF
+#define    CTI_ITTRIGOUT_CTTRIGOUT_MASK                                   0x000000FF
 
 #define CTI_ITCHOUTACK_OFFSET                                             0x00000EEC
 #define CTI_ITCHOUTACK_TYPE                                               UInt32
@@ -250,9 +238,9 @@
 
 #define CTI_ITTRIGOUTACK_OFFSET                                           0x00000EF0
 #define CTI_ITTRIGOUTACK_TYPE                                             UInt32
-#define CTI_ITTRIGOUTACK_RESERVED_MASK                                    0xFFFFFE00
+#define CTI_ITTRIGOUTACK_RESERVED_MASK                                    0xFFFFFF00
 #define    CTI_ITTRIGOUTACK_CTTRIGOUTACK_SHIFT                            0
-#define    CTI_ITTRIGOUTACK_CTTRIGOUTACK_MASK                             0x000001FF
+#define    CTI_ITTRIGOUTACK_CTTRIGOUTACK_MASK                             0x000000FF
 
 #define CTI_ITCHIN_OFFSET                                                 0x00000EF4
 #define CTI_ITCHIN_TYPE                                                   UInt32
@@ -262,9 +250,9 @@
 
 #define CTI_ITTRIGIN_OFFSET                                               0x00000EF8
 #define CTI_ITTRIGIN_TYPE                                                 UInt32
-#define CTI_ITTRIGIN_RESERVED_MASK                                        0xFFFFFE00
+#define CTI_ITTRIGIN_RESERVED_MASK                                        0xFFFFFF00
 #define    CTI_ITTRIGIN_CTTRIGIN_SHIFT                                    0
-#define    CTI_ITTRIGIN_CTTRIGIN_MASK                                     0x000001FF
+#define    CTI_ITTRIGIN_CTTRIGIN_MASK                                     0x000000FF
 
 #define CTI_ICTRL_OFFSET                                                  0x00000F00
 #define CTI_ICTRL_TYPE                                                    UInt32
@@ -377,79 +365,6 @@
 #define CTI_COMPID3_RESERVED_MASK                                         0xFFFFFF00
 #define    CTI_COMPID3_CID3_SHIFT                                         0
 #define    CTI_COMPID3_CID3_MASK                                          0x000000FF
-
-typedef volatile struct {
-   UInt32 RESERVED_144_0[80];
-   UInt32 m_ASICCTL;                 // 0x0144
-   UInt32 RESERVED_FB8_144[924];
-   UInt32 m_AUTHSTATUS;              // 0x0FB8
-   UInt32 m_CLAIMCLR;                // 0x0FA4
-   UInt32 m_CLAIMSET;                // 0x0FA0
-   UInt32 RESERVED_FF0_FA0[19];
-   UInt32 m_COMPID0;                 // 0x0FF0
-   UInt32 m_COMPID1;                 // 0x0FF4
-   UInt32 m_COMPID2;                 // 0x0FF8
-   UInt32 m_COMPID3;                 // 0x0FFC
-   UInt32 m_CTIAPPCLEAR;             // 0x0018
-   UInt32 m_CTIAPPPULSE;             // 0x001C
-   UInt32 m_CTIAPPSET;               // 0x0014
-   UInt32 RESERVED_140_14[74];
-   UInt32 m_CTICHGATE;               // 0x0140
-   UInt32 m_CTICHINSTATUS;           // 0x0138
-   UInt32 m_CTICHOUTSTATUS;          // 0x013C
-   UInt32 m_CTICONTROL;              // 0x0000
-   UInt32 RESERVED_20_0[7];
-   UInt32 m_CTIINEN0;                // 0x0020
-   UInt32 m_CTIINEN1;                // 0x0024
-   UInt32 m_CTIINEN2;                // 0x0028
-   UInt32 m_CTIINEN3;                // 0x002C
-   UInt32 m_CTIINEN4;                // 0x0030
-   UInt32 m_CTIINEN5;                // 0x0034
-   UInt32 m_CTIINEN6;                // 0x0038
-   UInt32 m_CTIINEN7;                // 0x003C
-   UInt32 m_CTIINEN8;                // 0x0040
-   UInt32 m_CTIINTACK;               // 0x0010
-   UInt32 RESERVED_A0_10[35];
-   UInt32 m_CTIOUTEN0;               // 0x00A0
-   UInt32 m_CTIOUTEN1;               // 0x00A4
-   UInt32 m_CTIOUTEN2;               // 0x00A8
-   UInt32 m_CTIOUTEN3;               // 0x00AC
-   UInt32 m_CTIOUTEN4;               // 0x00B0
-   UInt32 m_CTIOUTEN5;               // 0x00B4
-   UInt32 m_CTIOUTEN6;               // 0x00B8
-   UInt32 m_CTIOUTEN7;               // 0x00BC
-   UInt32 m_CTIOUTEN8;               // 0x00C0
-   UInt32 RESERVED_130_C0[27];
-   UInt32 m_CTITRIGINSTATUS;         // 0x0130
-   UInt32 m_CTITRIGOUTSTATUS;        // 0x0134
-   UInt32 RESERVED_FC8_134[932];
-   UInt32 m_DEVID;                   // 0x0FC8
-   UInt32 m_DEVTYPE;                 // 0x0FCC
-   UInt32 m_ICTRL;                   // 0x0F00
-   UInt32 m_ITCHIN;                  // 0x0EF4
-   UInt32 m_ITCHINACK;               // 0x0EDC
-   UInt32 RESERVED_EE4_EDC[1];
-   UInt32 m_ITCHOUT;                 // 0x0EE4
-   UInt32 RESERVED_EEC_EE4[1];
-   UInt32 m_ITCHOUTACK;              // 0x0EEC
-   UInt32 RESERVED_EF8_EEC[2];
-   UInt32 m_ITTRIGIN;                // 0x0EF8
-   UInt32 m_ITTRIGINACK;             // 0x0EE0
-   UInt32 RESERVED_EE8_EE0[1];
-   UInt32 m_ITTRIGOUT;               // 0x0EE8
-   UInt32 RESERVED_EF0_EE8[1];
-   UInt32 m_ITTRIGOUTACK;            // 0x0EF0
-   UInt32 RESERVED_FB0_EF0[47];
-   UInt32 m_LOCKACCESS;              // 0x0FB0
-   UInt32 m_LOCKSTATUS;              // 0x0FB4
-   UInt32 RESERVED_FE0_FB4[10];
-   UInt32 m_PERID0;                  // 0x0FE0
-   UInt32 m_PERID1;                  // 0x0FE4
-   UInt32 m_PERID2;                  // 0x0FE8
-   UInt32 m_PERID3;                  // 0x0FEC
-   UInt32 m_PERID4;                  // 0x0FD0
-} BRCM_CTI_REGS;
-
 
 #endif /* __BRCM_RDB_CTI_H__ */
 

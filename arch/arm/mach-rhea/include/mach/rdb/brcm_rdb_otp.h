@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_OTP_H__
@@ -30,7 +30,7 @@
 
 #define OTP_CFG_OFFSET                                                    0x00000000
 #define OTP_CFG_TYPE                                                      UInt32
-#define OTP_CFG_RESERVED_MASK                                             0xFF8F2FFE
+#define OTP_CFG_RESERVED_MASK                                             0xFF8F2FEE
 #define    OTP_CFG_OTP_CLK_DIV_EN_SHIFT                                   22
 #define    OTP_CFG_OTP_CLK_DIV_EN_MASK                                    0x00400000
 #define    OTP_CFG_OTP_CLK_DIV_RATIO_SHIFT                                20
@@ -41,6 +41,8 @@
 #define    OTP_CFG_RST_MASK                                               0x00004000
 #define    OTP_CFG_OTP_ENABLE_SHIFT                                       12
 #define    OTP_CFG_OTP_ENABLE_MASK                                        0x00001000
+#define    OTP_CFG_USE_TEST_KEYS_SHIFT                                    4
+#define    OTP_CFG_USE_TEST_KEYS_MASK                                     0x00000010
 #define    OTP_CFG_OTP_HW_INIT_DONE_SHIFT                                 0
 #define    OTP_CFG_OTP_HW_INIT_DONE_MASK                                  0x00000001
 

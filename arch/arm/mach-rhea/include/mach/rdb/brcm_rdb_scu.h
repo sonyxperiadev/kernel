@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_SCU_H__
@@ -30,7 +30,15 @@
 
 #define SCU_CONTROL_OFFSET                                                0x00000000
 #define SCU_CONTROL_TYPE                                                  UInt32
-#define SCU_CONTROL_RESERVED_MASK                                         0xFFFFFFF8
+#define SCU_CONTROL_RESERVED_MASK                                         0xFFFFFF80
+#define    SCU_CONTROL_IC_STANDBY_EN_SHIFT                                6
+#define    SCU_CONTROL_IC_STANDBY_EN_MASK                                 0x00000040
+#define    SCU_CONTROL_SCU_STANDBY_EN_SHIFT                               5
+#define    SCU_CONTROL_SCU_STANDBY_EN_MASK                                0x00000020
+#define    SCU_CONTROL_FORCE_PORT0_EN_SHIFT                               4
+#define    SCU_CONTROL_FORCE_PORT0_EN_MASK                                0x00000010
+#define    SCU_CONTROL_SPEC_LINEFILL_EN_SHIFT                             3
+#define    SCU_CONTROL_SPEC_LINEFILL_EN_MASK                              0x00000008
 #define    SCU_CONTROL_PARITY_ON_SHIFT                                    2
 #define    SCU_CONTROL_PARITY_ON_MASK                                     0x00000004
 #define    SCU_CONTROL_ADDRESS_FILTER_ENABLE_SHIFT                        1

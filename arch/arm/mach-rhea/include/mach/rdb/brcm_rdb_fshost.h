@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_FSHOST_H__
@@ -412,7 +412,7 @@
 
 #define FSHOST_HWCFG4_OFFSET                                              0x00000050
 #define FSHOST_HWCFG4_TYPE                                                UInt32
-#define FSHOST_HWCFG4_RESERVED_MASK                                       0x00003FC0
+#define FSHOST_HWCFG4_RESERVED_MASK                                       0x00003F80
 #define    FSHOST_HWCFG4_SCATGAT_DMA_SHIFT                                31
 #define    FSHOST_HWCFG4_SCATGAT_DMA_MASK                                 0x80000000
 #define    FSHOST_HWCFG4_SCATGAT2_DMA_SHIFT                               30
@@ -435,6 +435,8 @@
 #define    FSHOST_HWCFG4_NUMCTLEPS_MASK                                   0x000F0000
 #define    FSHOST_HWCFG4_PHYDATAWIDTH_SHIFT                               14
 #define    FSHOST_HWCFG4_PHYDATAWIDTH_MASK                                0x0000C000
+#define    FSHOST_HWCFG4_ENABLE_HIBERNATION_SHIFT                         6
+#define    FSHOST_HWCFG4_ENABLE_HIBERNATION_MASK                          0x00000040
 #define    FSHOST_HWCFG4_AHBFREQ_SHIFT                                    5
 #define    FSHOST_HWCFG4_AHBFREQ_MASK                                     0x00000020
 #define    FSHOST_HWCFG4_ENABLEPWROPT_SHIFT                               4
@@ -2264,9 +2266,15 @@
 
 #define FSHOST_PCGCR_OFFSET                                               0x00000E00
 #define FSHOST_PCGCR_TYPE                                                 UInt32
-#define FSHOST_PCGCR_RESERVED_MASK                                        0xFFFFFFE0
-#define    FSHOST_PCGCR_PHYSUSPENDED_SHIFT                                4
-#define    FSHOST_PCGCR_PHYSUSPENDED_MASK                                 0x00000010
+#define FSHOST_PCGCR_RESERVED_MASK                                        0xFFFFFE10
+#define    FSHOST_PCGCR_RESETAFTERSUSP_SHIFT                              8
+#define    FSHOST_PCGCR_RESETAFTERSUSP_MASK                               0x00000100
+#define    FSHOST_PCGCR_L1_SUSPENDED_SHIFT                                7
+#define    FSHOST_PCGCR_L1_SUSPENDED_MASK                                 0x00000080
+#define    FSHOST_PCGCR_PHYSLEEP_SHIFT                                    6
+#define    FSHOST_PCGCR_PHYSLEEP_MASK                                     0x00000040
+#define    FSHOST_PCGCR_ENBL_L1GATING_SHIFT                               5
+#define    FSHOST_PCGCR_ENBL_L1GATING_MASK                                0x00000020
 #define    FSHOST_PCGCR_RSTPDWNMODULE_SHIFT                               3
 #define    FSHOST_PCGCR_RSTPDWNMODULE_MASK                                0x00000008
 #define    FSHOST_PCGCR_PWRCLMP_SHIFT                                     2
@@ -2275,158 +2283,6 @@
 #define    FSHOST_PCGCR_GATEHCLK_MASK                                     0x00000002
 #define    FSHOST_PCGCR_STOPPCLK_SHIFT                                    0
 #define    FSHOST_PCGCR_STOPPCLK_MASK                                     0x00000001
-
-typedef volatile struct {
-   UInt32 m_OTGCTL;                  // 0x0000
-   UInt32 m_OTGINT;                  // 0x0004
-   UInt32 m_AHBCFG;                  // 0x0008
-   UInt32 m_CFG;                     // 0x000C
-   UInt32 m_RSTCTL;                  // 0x0010
-   UInt32 m_INTSTS;                  // 0x0014
-   UInt32 m_INTMSK;                  // 0x0018
-   UInt32 m_RXSTSR;                  // 0x001C
-   UInt32 m_RXSTSP;                  // 0x0020
-   UInt32 m_RXFSIZ;                  // 0x0024
-   UInt32 m_NPTXFSIZ;                // 0x0028
-   UInt32 m_NPTXSTS;                 // 0x002C
-   UInt32 m_I2CCTL;                  // 0x0030
-   UInt32 m_PVNDCTL;                 // 0x0034
-   UInt32 RESERVED_3C_34[1];
-   UInt32 m_UID;                     // 0x003C
-   UInt32 m_SNPSID;                  // 0x0040
-   UInt32 m_HWCFG1;                  // 0x0044
-   UInt32 m_HWCFG2;                  // 0x0048
-   UInt32 m_HWCFG3;                  // 0x004C
-   UInt32 m_HWCFG4;                  // 0x0050
-   UInt32 RESERVED_100_50[43];
-   UInt32 m_HPTXFSIZ;                // 0x0100
-   UInt32 RESERVED_400_100[191];
-   UInt32 m_HCFG;                    // 0x0400
-   UInt32 m_HFIR;                    // 0x0404
-   UInt32 m_HFNUM;                   // 0x0408
-   UInt32 RESERVED_410_408[1];
-   UInt32 m_HPTXSTS;                 // 0x0410
-   UInt32 m_HAINT;                   // 0x0414
-   UInt32 m_HAINTMSK;                // 0x0418
-   UInt32 m_HFLBADDR;                // 0x041C
-   UInt32 RESERVED_440_41C[8];
-   UInt32 m_HPRT;                    // 0x0440
-   UInt32 RESERVED_500_440[47];
-   UInt32 m_HCCHAR0;                 // 0x0500
-   UInt32 m_HCSPLT0;                 // 0x0504
-   UInt32 m_HCINT0;                  // 0x0508
-   UInt32 m_HCINTMSK0;               // 0x050C
-   UInt32 m_HCTSIZ0;                 // 0x0510
-   UInt32 m_HCDMA0;                  // 0x0514
-   UInt32 RESERVED_520_514[2];
-   UInt32 m_HCCHAR1;                 // 0x0520
-   UInt32 m_HCSPLT1;                 // 0x0524
-   UInt32 m_HCINT1;                  // 0x0528
-   UInt32 m_HCINTMSK1;               // 0x052C
-   UInt32 m_HCTSIZ1;                 // 0x0530
-   UInt32 m_HCDMA1;                  // 0x0534
-   UInt32 RESERVED_540_534[2];
-   UInt32 m_HCCHAR2;                 // 0x0540
-   UInt32 m_HCSPLT2;                 // 0x0544
-   UInt32 m_HCINT2;                  // 0x0548
-   UInt32 m_HCINTMSK2;               // 0x054C
-   UInt32 m_HCTSIZ2;                 // 0x0550
-   UInt32 m_HCDMA2;                  // 0x0554
-   UInt32 RESERVED_560_554[2];
-   UInt32 m_HCCHAR3;                 // 0x0560
-   UInt32 m_HCSPLT3;                 // 0x0564
-   UInt32 m_HCINT3;                  // 0x0568
-   UInt32 m_HCINTMSK3;               // 0x056C
-   UInt32 m_HCTSIZ3;                 // 0x0570
-   UInt32 m_HCDMA3;                  // 0x0574
-   UInt32 RESERVED_580_574[2];
-   UInt32 m_HCCHAR4;                 // 0x0580
-   UInt32 m_HCSPLT4;                 // 0x0584
-   UInt32 m_HCINT4;                  // 0x0588
-   UInt32 m_HCINTMSK4;               // 0x058C
-   UInt32 m_HCTSIZ4;                 // 0x0590
-   UInt32 m_HCDMA4;                  // 0x0594
-   UInt32 RESERVED_5A0_594[2];
-   UInt32 m_HCCHAR5;                 // 0x05A0
-   UInt32 m_HCSPLT5;                 // 0x05A4
-   UInt32 m_HCINT5;                  // 0x05A8
-   UInt32 m_HCINTMSK5;               // 0x05AC
-   UInt32 m_HCTSIZ5;                 // 0x05B0
-   UInt32 m_HCDMA5;                  // 0x05B4
-   UInt32 RESERVED_5C0_5B4[2];
-   UInt32 m_HCCHAR6;                 // 0x05C0
-   UInt32 m_HCSPLT6;                 // 0x05C4
-   UInt32 m_HCINT6;                  // 0x05C8
-   UInt32 m_HCINTMSK6;               // 0x05CC
-   UInt32 m_HCTSIZ6;                 // 0x05D0
-   UInt32 m_HCDMA6;                  // 0x05D4
-   UInt32 RESERVED_5E0_5D4[2];
-   UInt32 m_HCCHAR7;                 // 0x05E0
-   UInt32 m_HCSPLT7;                 // 0x05E4
-   UInt32 m_HCINT7;                  // 0x05E8
-   UInt32 m_HCINTMSK7;               // 0x05EC
-   UInt32 m_HCTSIZ7;                 // 0x05F0
-   UInt32 m_HCDMA7;                  // 0x05F4
-   UInt32 RESERVED_600_5F4[2];
-   UInt32 m_HCCHAR8;                 // 0x0600
-   UInt32 m_HCSPLT8;                 // 0x0604
-   UInt32 m_HCINT8;                  // 0x0608
-   UInt32 m_HCINTMSK8;               // 0x060C
-   UInt32 m_HCTSIZ8;                 // 0x0610
-   UInt32 m_HCDMA8;                  // 0x0614
-   UInt32 RESERVED_620_614[2];
-   UInt32 m_HCCHAR9;                 // 0x0620
-   UInt32 m_HCSPLT9;                 // 0x0624
-   UInt32 m_HCINT9;                  // 0x0628
-   UInt32 m_HCINTMSK9;               // 0x062C
-   UInt32 m_HCTSIZ9;                 // 0x0630
-   UInt32 m_HCDMA9;                  // 0x0634
-   UInt32 RESERVED_640_634[2];
-   UInt32 m_HCCHAR10;                // 0x0640
-   UInt32 m_HCSPLT10;                // 0x0644
-   UInt32 m_HCINT10;                 // 0x0648
-   UInt32 m_HCINTMSK10;              // 0x064C
-   UInt32 m_HCTSIZ10;                // 0x0650
-   UInt32 m_HCDMA10;                 // 0x0654
-   UInt32 RESERVED_660_654[2];
-   UInt32 m_HCCHAR11;                // 0x0660
-   UInt32 m_HCSPLT11;                // 0x0664
-   UInt32 m_HCINT11;                 // 0x0668
-   UInt32 m_HCINTMSK11;              // 0x066C
-   UInt32 m_HCTSIZ11;                // 0x0670
-   UInt32 m_HCDMA11;                 // 0x0674
-   UInt32 RESERVED_680_674[2];
-   UInt32 m_HCCHAR12;                // 0x0680
-   UInt32 m_HCSPLT12;                // 0x0684
-   UInt32 m_HCINT12;                 // 0x0688
-   UInt32 m_HCINTMSK12;              // 0x068C
-   UInt32 m_HCTSIZ12;                // 0x0690
-   UInt32 m_HCDMA12;                 // 0x0694
-   UInt32 RESERVED_6A0_694[2];
-   UInt32 m_HCCHAR13;                // 0x06A0
-   UInt32 m_HCSPLT13;                // 0x06A4
-   UInt32 m_HCINT13;                 // 0x06A8
-   UInt32 m_HCINTMSK13;              // 0x06AC
-   UInt32 m_HCTSIZ13;                // 0x06B0
-   UInt32 m_HCDMA13;                 // 0x06B4
-   UInt32 RESERVED_6C0_6B4[2];
-   UInt32 m_HCCHAR14;                // 0x06C0
-   UInt32 m_HCSPLT14;                // 0x06C4
-   UInt32 m_HCINT14;                 // 0x06C8
-   UInt32 m_HCINTMSK14;              // 0x06CC
-   UInt32 m_HCTSIZ14;                // 0x06D0
-   UInt32 m_HCDMA14;                 // 0x06D4
-   UInt32 RESERVED_6E0_6D4[2];
-   UInt32 m_HCCHAR15;                // 0x06E0
-   UInt32 m_HCSPLT15;                // 0x06E4
-   UInt32 m_HCINT15;                 // 0x06E8
-   UInt32 m_HCINTMSK15;              // 0x06EC
-   UInt32 m_HCTSIZ15;                // 0x06F0
-   UInt32 m_HCDMA15;                 // 0x06F4
-   UInt32 RESERVED_E00_6F4[450];
-   UInt32 m_PCGCR;                   // 0x0E00
-} BRCM_FSHOST_REGS;
-
 
 #endif /* __BRCM_RDB_FSHOST_H__ */
 

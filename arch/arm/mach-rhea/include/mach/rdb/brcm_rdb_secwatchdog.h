@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_SECWATCHDOG_H__
@@ -30,7 +30,9 @@
 
 #define SECWATCHDOG_SDOGCR_OFFSET                                         0x00000000
 #define SECWATCHDOG_SDOGCR_TYPE                                           UInt32
-#define SECWATCHDOG_SDOGCR_RESERVED_MASK                                  0xF2000000
+#define SECWATCHDOG_SDOGCR_RESERVED_MASK                                  0xE2000000
+#define    SECWATCHDOG_SDOGCR_WD_LOAD_FLAG_SHIFT                          28
+#define    SECWATCHDOG_SDOGCR_WD_LOAD_FLAG_MASK                           0x10000000
 #define    SECWATCHDOG_SDOGCR_EN_SHIFT                                    27
 #define    SECWATCHDOG_SDOGCR_EN_MASK                                     0x08000000
 #define    SECWATCHDOG_SDOGCR_SRSTEN_SHIFT                                26
@@ -50,7 +52,9 @@
 
 #define SECWATCHDOG_STIMERCR_OFFSET                                       0x00000008
 #define SECWATCHDOG_STIMERCR_TYPE                                         UInt32
-#define SECWATCHDOG_STIMERCR_RESERVED_MASK                                0xF4000000
+#define SECWATCHDOG_STIMERCR_RESERVED_MASK                                0xE4000000
+#define    SECWATCHDOG_STIMERCR_STIMER_LOAD_FLAG_SHIFT                    28
+#define    SECWATCHDOG_STIMERCR_STIMER_LOAD_FLAG_MASK                     0x10000000
 #define    SECWATCHDOG_STIMERCR_EN_SHIFT                                  27
 #define    SECWATCHDOG_STIMERCR_EN_MASK                                   0x08000000
 #define    SECWATCHDOG_STIMERCR_INTEN_SHIFT                               25
@@ -68,11 +72,11 @@
 #define    SECWATCHDOG_STMR_CNT_SHIFT                                     0
 #define    SECWATCHDOG_STMR_CNT_MASK                                      0x000FFFFF
 
-#define SECWATCHDOG_FREE_1KHZ_CNTR_OFFSET                                 0x00000010
-#define SECWATCHDOG_FREE_1KHZ_CNTR_TYPE                                   UInt32
-#define SECWATCHDOG_FREE_1KHZ_CNTR_RESERVED_MASK                          0xFFFF0000
-#define    SECWATCHDOG_FREE_1KHZ_CNTR_CNT_1KHZ_SHIFT                      0
-#define    SECWATCHDOG_FREE_1KHZ_CNTR_CNT_1KHZ_MASK                       0x0000FFFF
+#define SECWATCHDOG_FREE_32KHZ_CNTR_OFFSET                                0x00000010
+#define SECWATCHDOG_FREE_32KHZ_CNTR_TYPE                                  UInt32
+#define SECWATCHDOG_FREE_32KHZ_CNTR_RESERVED_MASK                         0xFFFF8000
+#define    SECWATCHDOG_FREE_32KHZ_CNTR_CNT_32KHZ_SHIFT                    0
+#define    SECWATCHDOG_FREE_32KHZ_CNTR_CNT_32KHZ_MASK                     0x00007FFF
 
 #define SECWATCHDOG_UTC_LDR_OFFSET                                        0x00000014
 #define SECWATCHDOG_UTC_LDR_TYPE                                          UInt32
@@ -94,7 +98,11 @@
 
 #define SECWATCHDOG_UTC_CR_OFFSET                                         0x00000020
 #define SECWATCHDOG_UTC_CR_TYPE                                           UInt32
-#define SECWATCHDOG_UTC_CR_RESERVED_MASK                                  0xFFFFFCF0
+#define SECWATCHDOG_UTC_CR_RESERVED_MASK                                  0xFFFFF0F0
+#define    SECWATCHDOG_UTC_CR_UTC_LOAD_FLAG_SHIFT                         11
+#define    SECWATCHDOG_UTC_CR_UTC_LOAD_FLAG_MASK                          0x00000800
+#define    SECWATCHDOG_UTC_CR_DSLPCEN_SHIFT                               10
+#define    SECWATCHDOG_UTC_CR_DSLPCEN_MASK                                0x00000400
 #define    SECWATCHDOG_UTC_CR_UTCINT_EN_SHIFT                             9
 #define    SECWATCHDOG_UTC_CR_UTCINT_EN_MASK                              0x00000200
 #define    SECWATCHDOG_UTC_CR_UTC_EN_SHIFT                                8
@@ -104,7 +112,9 @@
 
 #define SECWATCHDOG_CHKCR_OFFSET                                          0x00000024
 #define SECWATCHDOG_CHKCR_TYPE                                            UInt32
-#define SECWATCHDOG_CHKCR_RESERVED_MASK                                   0xF8FFFFFF
+#define SECWATCHDOG_CHKCR_RESERVED_MASK                                   0xF0FFFFFF
+#define    SECWATCHDOG_CHKCR_CHK_LOAD_FLAG_SHIFT                          27
+#define    SECWATCHDOG_CHKCR_CHK_LOAD_FLAG_MASK                           0x08000000
 #define    SECWATCHDOG_CHKCR_CHK_EN_SHIFT                                 26
 #define    SECWATCHDOG_CHKCR_CHK_EN_MASK                                  0x04000000
 #define    SECWATCHDOG_CHKCR_CHK_SRSTEN_SHIFT                             25
@@ -128,7 +138,9 @@
 
 #define SECWATCHDOG_INTSR_OFFSET                                          0x00000030
 #define SECWATCHDOG_INTSR_TYPE                                            UInt32
-#define SECWATCHDOG_INTSR_RESERVED_MASK                                   0xFFFFFFF8
+#define SECWATCHDOG_INTSR_RESERVED_MASK                                   0xFFFFFFF0
+#define    SECWATCHDOG_INTSR_UTC_OVERFLOW_FLAG_SHIFT                      3
+#define    SECWATCHDOG_INTSR_UTC_OVERFLOW_FLAG_MASK                       0x00000008
 #define    SECWATCHDOG_INTSR_CHKINT_FLAG_SHIFT                            2
 #define    SECWATCHDOG_INTSR_CHKINT_FLAG_MASK                             0x00000004
 #define    SECWATCHDOG_INTSR_UTCINT_FLAG_SHIFT                            1
@@ -180,7 +192,9 @@
 
 #define SECWATCHDOG_UTC_CR_LCR_OFFSET                                     0x00000120
 #define SECWATCHDOG_UTC_CR_LCR_TYPE                                       UInt32
-#define SECWATCHDOG_UTC_CR_LCR_RESERVED_MASK                              0xFFFFFCFE
+#define SECWATCHDOG_UTC_CR_LCR_RESERVED_MASK                              0xFFFFF8FE
+#define    SECWATCHDOG_UTC_CR_LCR_UTC_DSLPCEN_LOCK_SHIFT                  10
+#define    SECWATCHDOG_UTC_CR_LCR_UTC_DSLPCEN_LOCK_MASK                   0x00000400
 #define    SECWATCHDOG_UTC_CR_LCR_UTCINT_EN_LOCK_SHIFT                    9
 #define    SECWATCHDOG_UTC_CR_LCR_UTCINT_EN_LOCK_MASK                     0x00000200
 #define    SECWATCHDOG_UTC_CR_LCR_UTC_EN_LOCK_SHIFT                       8
@@ -205,18 +219,6 @@
 #define    SECWATCHDOG_CHKLMCR_LCR_CHK_HIGH_LOCK_MASK                     0x00010000
 #define    SECWATCHDOG_CHKLMCR_LCR_CHK_LOW_LOCK_SHIFT                     0
 #define    SECWATCHDOG_CHKLMCR_LCR_CHK_LOW_LOCK_MASK                      0x00000001
-
-#define SECWATCHDOG_OPEN_UTC_CNTR_OFFSET                                  0x00000818
-#define SECWATCHDOG_OPEN_UTC_CNTR_TYPE                                    UInt32
-#define SECWATCHDOG_OPEN_UTC_CNTR_RESERVED_MASK                           0x00000000
-#define    SECWATCHDOG_OPEN_UTC_CNTR_UT_CNT_SHIFT                         0
-#define    SECWATCHDOG_OPEN_UTC_CNTR_UT_CNT_MASK                          0xFFFFFFFF
-
-#define SECWATCHDOG_OPEN_UTC_CR_OFFSET                                    0x00000820
-#define SECWATCHDOG_OPEN_UTC_CR_TYPE                                      UInt32
-#define SECWATCHDOG_OPEN_UTC_CR_RESERVED_MASK                             0xFFFFFFF0
-#define    SECWATCHDOG_OPEN_UTC_CR_UTC_CLKS_SHIFT                         0
-#define    SECWATCHDOG_OPEN_UTC_CR_UTC_CLKS_MASK                          0x0000000F
 
 #endif /* __BRCM_RDB_SECWATCHDOG_H__ */
 

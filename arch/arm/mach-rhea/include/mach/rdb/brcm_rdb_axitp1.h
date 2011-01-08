@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_AXITP1_H__
@@ -30,7 +30,7 @@
 
 #define AXITP1_ATM_CONFIG_OFFSET                                          0x00000000
 #define AXITP1_ATM_CONFIG_TYPE                                            UInt32
-#define AXITP1_ATM_CONFIG_RESERVED_MASK                                   0x00002000
+#define AXITP1_ATM_CONFIG_RESERVED_MASK                                   0x00000000
 #define    AXITP1_ATM_CONFIG_BUSY_ID_SHIFT                                19
 #define    AXITP1_ATM_CONFIG_BUSY_ID_MASK                                 0xFFF80000
 #define    AXITP1_ATM_CONFIG_OUTS_THRESH_SHIFT                            16
@@ -39,6 +39,8 @@
 #define    AXITP1_ATM_CONFIG_OUTS_FILTERED_MASK                           0x00008000
 #define    AXITP1_ATM_CONFIG_OUTS_EN_SHIFT                                14
 #define    AXITP1_ATM_CONFIG_OUTS_EN_MASK                                 0x00004000
+#define    AXITP1_ATM_CONFIG_ALL_CYCLES_EN_SHIFT                          13
+#define    AXITP1_ATM_CONFIG_ALL_CYCLES_EN_MASK                           0x00002000
 #define    AXITP1_ATM_CONFIG_RDLAT_MODE_SHIFT                             12
 #define    AXITP1_ATM_CONFIG_RDLAT_MODE_MASK                              0x00001000
 #define    AXITP1_ATM_CONFIG_LATENCY_FILTERED_SHIFT                       11
@@ -507,71 +509,6 @@
 #define AXITP1_ATM_ADDRHIGH_7_RESERVED_MASK                               0x000000FF
 #define    AXITP1_ATM_ADDRHIGH_7_ADDR_HIGH_7_SHIFT                        8
 #define    AXITP1_ATM_ADDRHIGH_7_ADDR_HIGH_7_MASK                         0xFFFFFF00
-
-typedef volatile struct {
-   UInt32 RESERVED_88_0[7];
-   UInt32 m_ATM_ADDRHIGH_0;          // 0x0088
-   UInt32 m_ATM_ADDRHIGH_1;          // 0x0098
-   UInt32 m_ATM_ADDRHIGH_2;          // 0x00A8
-   UInt32 m_ATM_ADDRHIGH_3;          // 0x00B8
-   UInt32 m_ATM_ADDRHIGH_4;          // 0x00C8
-   UInt32 m_ATM_ADDRHIGH_5;          // 0x00D8
-   UInt32 m_ATM_ADDRHIGH_6;          // 0x00E8
-   UInt32 m_ATM_ADDRHIGH_7;          // 0x00F8
-   UInt32 m_ATM_ADDRLOW_0;           // 0x0084
-   UInt32 m_ATM_ADDRLOW_1;           // 0x0094
-   UInt32 m_ATM_ADDRLOW_2;           // 0x00A4
-   UInt32 m_ATM_ADDRLOW_3;           // 0x00B4
-   UInt32 m_ATM_ADDRLOW_4;           // 0x00C4
-   UInt32 m_ATM_ADDRLOW_5;           // 0x00D4
-   UInt32 m_ATM_ADDRLOW_6;           // 0x00E4
-   UInt32 m_ATM_ADDRLOW_7;           // 0x00F4
-   UInt32 m_ATM_ARBUSY;              // 0x0030
-   UInt32 m_ATM_ARCYCLES;            // 0x001C
-   UInt32 m_ATM_AWBUSY;              // 0x002C
-   UInt32 m_ATM_AWCYCLES;            // 0x0018
-   UInt32 RESERVED_3C_18[1];
-   UInt32 m_ATM_BBUSY;               // 0x003C
-   UInt32 m_ATM_BCYCLES;             // 0x0028
-   UInt32 m_ATM_CMD;                 // 0x000C
-   UInt32 m_ATM_CONFIG;              // 0x0000
-   UInt32 RESERVED_80_0[7];
-   UInt32 m_ATM_FILTER_0;            // 0x0080
-   UInt32 m_ATM_FILTER_1;            // 0x0090
-   UInt32 m_ATM_FILTER_2;            // 0x00A0
-   UInt32 m_ATM_FILTER_3;            // 0x00B0
-   UInt32 m_ATM_FILTER_4;            // 0x00C0
-   UInt32 m_ATM_FILTER_5;            // 0x00D0
-   UInt32 m_ATM_FILTER_6;            // 0x00E0
-   UInt32 m_ATM_FILTER_7;            // 0x00F0
-   UInt32 m_ATM_OUTIDS;              // 0x0008
-   UInt32 RESERVED_38_8[2];
-   UInt32 m_ATM_RBUSY;               // 0x0038
-   UInt32 m_ATM_RCYCLES;             // 0x0024
-   UInt32 RESERVED_5C_24[2];
-   UInt32 m_ATM_RDBEATS;             // 0x005C
-   UInt32 m_ATM_RDCMDS;              // 0x0014
-   UInt32 RESERVED_54_14[3];
-   UInt32 m_ATM_RDMAX;               // 0x0054
-   UInt32 m_ATM_RDMIN;               // 0x004C
-   UInt32 RESERVED_64_4C[0];
-   UInt32 m_ATM_RDOUTS;              // 0x0064
-   UInt32 m_ATM_RDSUM;               // 0x0044
-   UInt32 m_ATM_STATUS;              // 0x0004
-   UInt32 RESERVED_34_4[2];
-   UInt32 m_ATM_WBUSY;               // 0x0034
-   UInt32 m_ATM_WCYCLES;             // 0x0020
-   UInt32 RESERVED_58_20[2];
-   UInt32 m_ATM_WRBEATS;             // 0x0058
-   UInt32 m_ATM_WRCMDS;              // 0x0010
-   UInt32 RESERVED_50_10[3];
-   UInt32 m_ATM_WRMAX;               // 0x0050
-   UInt32 m_ATM_WRMIN;               // 0x0048
-   UInt32 RESERVED_60_48[0];
-   UInt32 m_ATM_WROUTS;              // 0x0060
-   UInt32 m_ATM_WRSUM;               // 0x0040
-} BRCM_AXITP1_REGS;
-
 
 #endif /* __BRCM_RDB_AXITP1_H__ */
 

@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_SEC_H__
@@ -801,6 +801,16 @@
 #define SEC_NVM_OW_CTRL_RESERVED_MASK                                     0xFFFFFFFE
 #define    SEC_NVM_OW_CTRL_OW_WR_ENABLE_SHIFT                             0
 #define    SEC_NVM_OW_CTRL_OW_WR_ENABLE_MASK                              0x00000001
+
+#define SEC_ANTI_CLONING_CTRL_OFFSET                                      0x00000220
+#define SEC_ANTI_CLONING_CTRL_TYPE                                        UInt32
+#define SEC_ANTI_CLONING_CTRL_RESERVED_MASK                               0xFFFFFFF8
+#define    SEC_ANTI_CLONING_CTRL_NVM_OWBA_ADDR_LOCK_SHIFT                 2
+#define    SEC_ANTI_CLONING_CTRL_NVM_OWBA_ADDR_LOCK_MASK                  0x00000004
+#define    SEC_ANTI_CLONING_CTRL_NVM_ADDR_LOCK_SHIFT                      1
+#define    SEC_ANTI_CLONING_CTRL_NVM_ADDR_LOCK_MASK                       0x00000002
+#define    SEC_ANTI_CLONING_CTRL_DRAM_ADDR_LOCK_SHIFT                     0
+#define    SEC_ANTI_CLONING_CTRL_DRAM_ADDR_LOCK_MASK                      0x00000001
 
 #define SEC_MEMC_DEBUG_CTRL_OFFSET                                        0x00000300
 #define SEC_MEMC_DEBUG_CTRL_TYPE                                          UInt32

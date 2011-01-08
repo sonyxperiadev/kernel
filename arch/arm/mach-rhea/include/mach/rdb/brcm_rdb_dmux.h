@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DMUX_H__
@@ -111,22 +111,6 @@
 #define    DMUX_PER_7_PER_B_7_MASK                                        0x00007F00
 #define    DMUX_PER_7_PER_A_7_SHIFT                                       0
 #define    DMUX_PER_7_PER_A_7_MASK                                        0x0000007F
-
-typedef volatile struct {
-   UInt32 m_CHAN_ALLOC_DEALLOC;      // 0x0000
-   UInt32 RESERVED_40_0[15];
-   UInt32 m_PER_0;                   // 0x0040
-   UInt32 m_PER_1;                   // 0x0044
-   UInt32 m_PER_2;                   // 0x0048
-   UInt32 m_PER_3;                   // 0x004C
-   UInt32 m_PER_4;                   // 0x0050
-   UInt32 m_PER_5;                   // 0x0054
-   UInt32 m_PER_6;                   // 0x0058
-   UInt32 m_PER_7;                   // 0x005C
-   UInt32 m_PER_DEALLOC;             // 0x0004
-   UInt32 m_SEMAPHORE;               // 0x0008
-} BRCM_DMUX_REGS;
-
 
 #endif /* __BRCM_RDB_DMUX_H__ */
 

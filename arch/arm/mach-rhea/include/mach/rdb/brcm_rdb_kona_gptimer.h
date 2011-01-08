@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_KONA_GPTIMER_H__
@@ -31,8 +31,18 @@
 #define KONA_GPTIMER_STCS_OFFSET                                          0x00000000
 #define KONA_GPTIMER_STCS_TYPE                                            UInt32
 #define KONA_GPTIMER_STCS_RESERVED_MASK                                   0x00000000
-#define    KONA_GPTIMER_STCS_NOT_USED_SHIFT                               8
-#define    KONA_GPTIMER_STCS_NOT_USED_MASK                                0xFFFFFF00
+#define    KONA_GPTIMER_STCS_NOT_USED_SHIFT                               16
+#define    KONA_GPTIMER_STCS_NOT_USED_MASK                                0xFFFF0000
+#define    KONA_GPTIMER_STCS_STCM3_SYNC_SHIFT                             15
+#define    KONA_GPTIMER_STCS_STCM3_SYNC_MASK                              0x00008000
+#define    KONA_GPTIMER_STCS_STCM2_SYNC_SHIFT                             14
+#define    KONA_GPTIMER_STCS_STCM2_SYNC_MASK                              0x00004000
+#define    KONA_GPTIMER_STCS_STCM1_SYNC_SHIFT                             13
+#define    KONA_GPTIMER_STCS_STCM1_SYNC_MASK                              0x00002000
+#define    KONA_GPTIMER_STCS_STCM0_SYNC_SHIFT                             12
+#define    KONA_GPTIMER_STCS_STCM0_SYNC_MASK                              0x00001000
+#define    KONA_GPTIMER_STCS_COMPARE_ENABLE_SYNC_SHIFT                    8
+#define    KONA_GPTIMER_STCS_COMPARE_ENABLE_SYNC_MASK                     0x00000F00
 #define    KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT                         4
 #define    KONA_GPTIMER_STCS_COMPARE_ENABLE_MASK                          0x000000F0
 #define    KONA_GPTIMER_STCS_TIMER_MATCH_SHIFT                            0

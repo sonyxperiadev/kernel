@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_CAM_H__
@@ -30,25 +30,35 @@
 
 #define CAM_CTL_OFFSET                                                    0x00000000
 #define CAM_CTL_TYPE                                                      UInt32
-#define CAM_CTL_RESERVED_MASK                                             0x7FFFFE00
-#define    CAM_CTL_CPR_SHIFT                                              31
-#define    CAM_CTL_CPR_MASK                                               0x80000000
-#define    CAM_CTL_SLS_SHIFT                                              8
-#define    CAM_CTL_SLS_MASK                                               0x00000100
-#define    CAM_CTL_PFT_SHIFT                                              4
-#define    CAM_CTL_PFT_MASK                                               0x000000F0
-#define    CAM_CTL_DCM_SHIFT                                              3
-#define    CAM_CTL_DCM_MASK                                               0x00000008
-#define    CAM_CTL_CPM_SHIFT                                              2
-#define    CAM_CTL_CPM_MASK                                               0x00000004
-#define    CAM_CTL_MSC_SHIFT                                              1
-#define    CAM_CTL_MSC_MASK                                               0x00000002
+#define CAM_CTL_RESERVED_MASK                                             0xFFF000C0
+#define    CAM_CTL_OET_SHIFT                                              12
+#define    CAM_CTL_OET_MASK                                               0x000FF000
+#define    CAM_CTL_PFT_SHIFT                                              8
+#define    CAM_CTL_PFT_MASK                                               0x00000F00
+#define    CAM_CTL_DCM_SHIFT                                              5
+#define    CAM_CTL_DCM_MASK                                               0x00000020
+#define    CAM_CTL_SOE_SHIFT                                              4
+#define    CAM_CTL_SOE_MASK                                               0x00000010
+#define    CAM_CTL_CPM_SHIFT                                              3
+#define    CAM_CTL_CPM_MASK                                               0x00000008
+#define    CAM_CTL_CPR_SHIFT                                              2
+#define    CAM_CTL_CPR_MASK                                               0x00000004
+#define    CAM_CTL_MEN_SHIFT                                              1
+#define    CAM_CTL_MEN_MASK                                               0x00000002
 #define    CAM_CTL_CPE_SHIFT                                              0
 #define    CAM_CTL_CPE_MASK                                               0x00000001
 
 #define CAM_STA_OFFSET                                                    0x00000004
 #define CAM_STA_TYPE                                                      UInt32
-#define CAM_STA_RESERVED_MASK                                             0xFFFE0000
+#define CAM_STA_RESERVED_MASK                                             0xFF0E0000
+#define    CAM_STA_BUF1_NO_SHIFT                                          23
+#define    CAM_STA_BUF1_NO_MASK                                           0x00800000
+#define    CAM_STA_BUF1_RDY_SHIFT                                         22
+#define    CAM_STA_BUF1_RDY_MASK                                          0x00400000
+#define    CAM_STA_BUF0_NO_SHIFT                                          21
+#define    CAM_STA_BUF0_NO_MASK                                           0x00200000
+#define    CAM_STA_BUF0_RDY_SHIFT                                         20
+#define    CAM_STA_BUF0_RDY_MASK                                          0x00100000
 #define    CAM_STA_PI1_SHIFT                                              16
 #define    CAM_STA_PI1_MASK                                               0x00010000
 #define    CAM_STA_PI0_SHIFT                                              15
@@ -65,8 +75,8 @@
 #define    CAM_STA_OFO_MASK                                               0x00000400
 #define    CAM_STA_IFO_SHIFT                                              9
 #define    CAM_STA_IFO_MASK                                               0x00000200
-#define    CAM_STA_OEB_SHIFT                                              8
-#define    CAM_STA_OEB_MASK                                               0x00000100
+#define    CAM_STA_OES_SHIFT                                              8
+#define    CAM_STA_OES_MASK                                               0x00000100
 #define    CAM_STA_CRCE_SHIFT                                             7
 #define    CAM_STA_CRCE_MASK                                              0x00000080
 #define    CAM_STA_SSC_SHIFT                                              6
@@ -102,7 +112,7 @@
 
 #define CAM_PRI_OFFSET                                                    0x0000000C
 #define CAM_PRI_TYPE                                                      UInt32
-#define CAM_PRI_RESERVED_MASK                                             0xFFFC0008
+#define CAM_PRI_RESERVED_MASK                                             0xFFFC0009
 #define    CAM_PRI_BL_SHIFT                                               16
 #define    CAM_PRI_BL_MASK                                                0x00030000
 #define    CAM_PRI_BS_SHIFT                                               12
@@ -113,8 +123,6 @@
 #define    CAM_PRI_NP_MASK                                                0x000000F0
 #define    CAM_PRI_PT_SHIFT                                               1
 #define    CAM_PRI_PT_MASK                                                0x00000006
-#define    CAM_PRI_PE_SHIFT                                               0
-#define    CAM_PRI_PE_MASK                                                0x00000001
 
 #define CAM_CLK_OFFSET                                                    0x00000010
 #define CAM_CLK_TYPE                                                      UInt32
@@ -314,11 +322,11 @@
 
 #define CAM_ICTL_OFFSET                                                   0x00000100
 #define CAM_ICTL_TYPE                                                     UInt32
-#define CAM_ICTL_RESERVED_MASK                                            0xE000FFC0
+#define CAM_ICTL_RESERVED_MASK                                            0xE000FF80
 #define    CAM_ICTL_LCIE_SHIFT                                            16
 #define    CAM_ICTL_LCIE_MASK                                             0x1FFF0000
 #define    CAM_ICTL_LIP_SHIFT                                             5
-#define    CAM_ICTL_LIP_MASK                                              0x00000020
+#define    CAM_ICTL_LIP_MASK                                              0x00000060
 #define    CAM_ICTL_TFC_SHIFT                                             4
 #define    CAM_ICTL_TFC_MASK                                              0x00000010
 #define    CAM_ICTL_FCM_SHIFT                                             3
@@ -354,7 +362,11 @@
 
 #define CAM_IPIPE_OFFSET                                                  0x0000010C
 #define CAM_IPIPE_TYPE                                                    UInt32
-#define CAM_IPIPE_RESERVED_MASK                                           0xFFFF8000
+#define CAM_IPIPE_RESERVED_MASK                                           0xFFF80000
+#define    CAM_IPIPE_IDM_SHIFT                                            17
+#define    CAM_IPIPE_IDM_MASK                                             0x00060000
+#define    CAM_IPIPE_ICM_SHIFT                                            15
+#define    CAM_IPIPE_ICM_MASK                                             0x00018000
 #define    CAM_IPIPE_DEBL_SHIFT                                           12
 #define    CAM_IPIPE_DEBL_MASK                                            0x00007000
 #define    CAM_IPIPE_DEM_SHIFT                                            10
@@ -418,6 +430,66 @@
 #define    CAM_IVSTA_LPF_SHIFT                                            0
 #define    CAM_IVSTA_LPF_MASK                                             0x0000FFFF
 
+#define CAM_ICC_OFFSET                                                    0x00000130
+#define CAM_ICC_TYPE                                                      UInt32
+#define CAM_ICC_RESERVED_MASK                                             0x00000000
+#define    CAM_ICC_ICLL_SHIFT                                             16
+#define    CAM_ICC_ICLL_MASK                                              0xFFFF0000
+#define    CAM_ICC_ICLT_SHIFT                                             13
+#define    CAM_ICC_ICLT_MASK                                              0x0000E000
+#define    CAM_ICC_ICST_SHIFT                                             10
+#define    CAM_ICC_ICST_MASK                                              0x00001C00
+#define    CAM_ICC_ICFH_SHIFT                                             5
+#define    CAM_ICC_ICFH_MASK                                              0x000003E0
+#define    CAM_ICC_ICFL_SHIFT                                             0
+#define    CAM_ICC_ICFL_MASK                                              0x0000001F
+
+#define CAM_ICS_OFFSET                                                    0x00000134
+#define CAM_ICS_TYPE                                                      UInt32
+#define CAM_ICS_RESERVED_MASK                                             0x00000000
+#define    CAM_ICS_ICOPC_SHIFT                                            16
+#define    CAM_ICS_ICOPC_MASK                                             0xFFFF0000
+#define    CAM_ICS_ICIPC_SHIFT                                            0
+#define    CAM_ICS_ICIPC_MASK                                             0x0000FFFF
+
+#define CAM_IDC_OFFSET                                                    0x00000138
+#define CAM_IDC_TYPE                                                      UInt32
+#define CAM_IDC_RESERVED_MASK                                             0x00000000
+#define    CAM_IDC_IDLL_SHIFT                                             16
+#define    CAM_IDC_IDLL_MASK                                              0xFFFF0000
+#define    CAM_IDC_IDSF_SHIFT                                             0
+#define    CAM_IDC_IDSF_MASK                                              0x0000FFFF
+
+#define CAM_IDPO_OFFSET                                                   0x0000013C
+#define CAM_IDPO_TYPE                                                     UInt32
+#define CAM_IDPO_RESERVED_MASK                                            0x00000000
+#define    CAM_IDPO_IDOPO_SHIFT                                           16
+#define    CAM_IDPO_IDOPO_MASK                                            0xFFFF0000
+#define    CAM_IDPO_IDSO_SHIFT                                            0
+#define    CAM_IDPO_IDSO_MASK                                             0x0000FFFF
+
+#define CAM_IDCA_OFFSET                                                   0x00000140
+#define CAM_IDCA_TYPE                                                     UInt32
+#define CAM_IDCA_RESERVED_MASK                                            0xFFFFFF00
+#define    CAM_IDCA_IDCA_SHIFT                                            0
+#define    CAM_IDCA_IDCA_MASK                                             0x000000FF
+
+#define CAM_IDCD_OFFSET                                                   0x00000144
+#define CAM_IDCD_TYPE                                                     UInt32
+#define CAM_IDCD_RESERVED_MASK                                            0xE000E000
+#define    CAM_IDCD_IDCDB_SHIFT                                           16
+#define    CAM_IDCD_IDCDB_MASK                                            0x1FFF0000
+#define    CAM_IDCD_IDCDA_SHIFT                                           0
+#define    CAM_IDCD_IDCDA_MASK                                            0x00001FFF
+
+#define CAM_IDS_OFFSET                                                    0x00000148
+#define CAM_IDS_TYPE                                                      UInt32
+#define CAM_IDS_RESERVED_MASK                                             0x00000000
+#define    CAM_IDS_IDOPC_SHIFT                                            16
+#define    CAM_IDS_IDOPC_MASK                                             0xFFFF0000
+#define    CAM_IDS_IDIPC_SHIFT                                            0
+#define    CAM_IDS_IDIPC_MASK                                             0x0000FFFF
+
 #define CAM_DCS_OFFSET                                                    0x00000200
 #define CAM_DCS_TYPE                                                      UInt32
 #define CAM_DCS_RESERVED_MASK                                             0xFFFF00C0
@@ -453,6 +525,70 @@
 #define CAM_DBWP_RESERVED_MASK                                            0x00000000
 #define    CAM_DBWP_DBWP_SHIFT                                            0
 #define    CAM_DBWP_DBWP_MASK                                             0xFFFFFFFF
+
+#define CAM_DBCTL_OFFSET                                                  0x00000300
+#define CAM_DBCTL_TYPE                                                    UInt32
+#define CAM_DBCTL_RESERVED_MASK                                           0xFFFFFFF8
+#define    CAM_DBCTL_BUF1_IE_SHIFT                                        2
+#define    CAM_DBCTL_BUF1_IE_MASK                                         0x00000004
+#define    CAM_DBCTL_BUF0_IE_SHIFT                                        1
+#define    CAM_DBCTL_BUF0_IE_MASK                                         0x00000002
+#define    CAM_DBCTL_DB_EN_SHIFT                                          0
+#define    CAM_DBCTL_DB_EN_MASK                                           0x00000001
+
+#define CAM_IBSA1_OFFSET                                                  0x00000304
+#define CAM_IBSA1_TYPE                                                    UInt32
+#define CAM_IBSA1_RESERVED_MASK                                           0x00000000
+#define    CAM_IBSA1_IBSA1_SHIFT                                          0
+#define    CAM_IBSA1_IBSA1_MASK                                           0xFFFFFFFF
+
+#define CAM_IBEA1_OFFSET                                                  0x00000308
+#define CAM_IBEA1_TYPE                                                    UInt32
+#define CAM_IBEA1_RESERVED_MASK                                           0x00000000
+#define    CAM_IBEA1_IBEA1_SHIFT                                          0
+#define    CAM_IBEA1_IBEA1_MASK                                           0xFFFFFFFF
+
+#define CAM_IDI1_OFFSET                                                   0x0000030C
+#define CAM_IDI1_TYPE                                                     UInt32
+#define CAM_IDI1_RESERVED_MASK                                            0x00000000
+#define    CAM_IDI1_IDI7_SHIFT                                            24
+#define    CAM_IDI1_IDI7_MASK                                             0xFF000000
+#define    CAM_IDI1_IDI6_SHIFT                                            16
+#define    CAM_IDI1_IDI6_MASK                                             0x00FF0000
+#define    CAM_IDI1_IDI5_SHIFT                                            8
+#define    CAM_IDI1_IDI5_MASK                                             0x0000FF00
+#define    CAM_IDI1_IDI4_SHIFT                                            0
+#define    CAM_IDI1_IDI4_MASK                                             0x000000FF
+
+#define CAM_DBSA1_OFFSET                                                  0x00000310
+#define CAM_DBSA1_TYPE                                                    UInt32
+#define CAM_DBSA1_RESERVED_MASK                                           0x00000000
+#define    CAM_DBSA1_DBSA1_SHIFT                                          0
+#define    CAM_DBSA1_DBSA1_MASK                                           0xFFFFFFFF
+
+#define CAM_DBEA1_OFFSET                                                  0x00000314
+#define CAM_DBEA1_TYPE                                                    UInt32
+#define CAM_DBEA1_RESERVED_MASK                                           0x00000000
+#define    CAM_DBEA1_DBEA1_SHIFT                                          0
+#define    CAM_DBEA1_DBEA1_MASK                                           0xFFFFFFFF
+
+#define CAM_MISC_OFFSET                                                   0x00000400
+#define CAM_MISC_TYPE                                                     UInt32
+#define CAM_MISC_RESERVED_MASK                                            0xFFFC0008
+#define    CAM_MISC_CPI_SELECT_SHIFT                                      17
+#define    CAM_MISC_CPI_SELECT_MASK                                       0x00020000
+#define    CAM_MISC_AXI_BURST_CTRL_SHIFT                                  15
+#define    CAM_MISC_AXI_BURST_CTRL_MASK                                   0x00018000
+#define    CAM_MISC_FSP_FLUSH_SHIFT                                       10
+#define    CAM_MISC_FSP_FLUSH_MASK                                        0x00007C00
+#define    CAM_MISC_FIFO_FLUSH_SHIFT                                      5
+#define    CAM_MISC_FIFO_FLUSH_MASK                                       0x000003E0
+#define    CAM_MISC_DIS_DB_IE_SHIFT                                       4
+#define    CAM_MISC_DIS_DB_IE_MASK                                        0x00000010
+#define    CAM_MISC_PASS_LS_SHIFT                                         2
+#define    CAM_MISC_PASS_LS_MASK                                          0x00000004
+#define    CAM_MISC_PACK_FLUSH_SHIFT                                      0
+#define    CAM_MISC_PACK_FLUSH_MASK                                       0x00000003
 
 #endif /* __BRCM_RDB_CAM_H__ */
 

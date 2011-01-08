@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_CSTF_H__
@@ -233,41 +233,6 @@
 #define CSTF_COMPONENT_ID3_RESERVED_MASK                                  0xFFFFFF00
 #define    CSTF_COMPONENT_ID3_ID3_SHIFT                                   0
 #define    CSTF_COMPONENT_ID3_ID3_MASK                                    0x000000FF
-
-typedef volatile struct {
-   UInt32 m_FUNNEL_CONTROL;          // 0x0000
-   UInt32 m_PRIORITY_CONTROL;        // 0x0004
-   UInt32 RESERVED_EEC_4[953];
-   UInt32 m_ITATBDATA0;              // 0x0EEC
-   UInt32 m_ITATBCTR2;               // 0x0EF0
-   UInt32 m_ITATBCTR1;               // 0x0EF4
-   UInt32 m_ITATBCTR0;               // 0x0EF8
-   UInt32 RESERVED_F00_EF8[1];
-   UInt32 m_ITCTRL;                  // 0x0F00
-   UInt32 RESERVED_FA0_F00[39];
-   UInt32 m_CLAIM_TAG_SET;           // 0x0FA0
-   UInt32 m_CLAIM_TAG_CLEAR;         // 0x0FA4
-   UInt32 RESERVED_FB0_FA4[2];
-   UInt32 m_LOCKACCESS;              // 0x0FB0
-   UInt32 m_LOCKSTATUS;              // 0x0FB4
-   UInt32 m_AUTHSTATUS;              // 0x0FB8
-   UInt32 RESERVED_FC8_FB8[3];
-   UInt32 m_DEVICE_ID;               // 0x0FC8
-   UInt32 m_DEVICE_TYPE_IDENTIFIER;  // 0x0FCC
-   UInt32 m_PERIPHERAL_ID4;          // 0x0FD0
-   UInt32 m_PERIPHERAL_ID5;          // 0x0FD4
-   UInt32 m_PERIPHERAL_ID6;          // 0x0FD8
-   UInt32 m_PERIPHERAL_ID7;          // 0x0FDC
-   UInt32 m_PERIPHERAL_ID0;          // 0x0FE0
-   UInt32 m_PERIPHERAL_ID1;          // 0x0FE4
-   UInt32 m_PERIPHERAL_ID2;          // 0x0FE8
-   UInt32 m_PERIPHERAL_ID3;          // 0x0FEC
-   UInt32 m_COMPONENT_ID0;           // 0x0FF0
-   UInt32 m_COMPONENT_ID1;           // 0x0FF4
-   UInt32 m_COMPONENT_ID2;           // 0x0FF8
-   UInt32 m_COMPONENT_ID3;           // 0x0FFC
-} BRCM_CSTF_REGS;
-
 
 #endif /* __BRCM_RDB_CSTF_H__ */
 

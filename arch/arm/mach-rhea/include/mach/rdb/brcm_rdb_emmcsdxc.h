@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_EMMCSDXC_H__
@@ -212,11 +212,13 @@
 
 #define EMMCSDXC_INTR_OFFSET                                              0x00000030
 #define EMMCSDXC_INTR_TYPE                                                UInt32
-#define EMMCSDXC_INTR_RESERVED_MASK                                       0xCC000000
+#define EMMCSDXC_INTR_RESERVED_MASK                                       0xC8000000
 #define    EMMCSDXC_INTR_CEATAERR_SHIFT                                   29
 #define    EMMCSDXC_INTR_CEATAERR_MASK                                    0x20000000
 #define    EMMCSDXC_INTR_TRESPERR_SHIFT                                   28
 #define    EMMCSDXC_INTR_TRESPERR_MASK                                    0x10000000
+#define    EMMCSDXC_INTR_TUNEERR_SHIFT                                    26
+#define    EMMCSDXC_INTR_TUNEERR_MASK                                     0x04000000
 #define    EMMCSDXC_INTR_ADMAERR_SHIFT                                    25
 #define    EMMCSDXC_INTR_ADMAERR_MASK                                     0x02000000
 #define    EMMCSDXC_INTR_CMDERROR_SHIFT                                   24
@@ -272,11 +274,13 @@
 
 #define EMMCSDXC_INTREN1_OFFSET                                           0x00000034
 #define EMMCSDXC_INTREN1_TYPE                                             UInt32
-#define EMMCSDXC_INTREN1_RESERVED_MASK                                    0xCC000000
+#define EMMCSDXC_INTREN1_RESERVED_MASK                                    0xC8000000
 #define    EMMCSDXC_INTREN1_CEATAERREN_SHIFT                              29
 #define    EMMCSDXC_INTREN1_CEATAERREN_MASK                               0x20000000
 #define    EMMCSDXC_INTREN1_TRESPERREN_SHIFT                              28
 #define    EMMCSDXC_INTREN1_TRESPERREN_MASK                               0x10000000
+#define    EMMCSDXC_INTREN1_TUNEERREN_SHIFT                               26
+#define    EMMCSDXC_INTREN1_TUNEERREN_MASK                                0x04000000
 #define    EMMCSDXC_INTREN1_ADMAEREN_SHIFT                                25
 #define    EMMCSDXC_INTREN1_ADMAEREN_MASK                                 0x02000000
 #define    EMMCSDXC_INTREN1_CMDERREN_SHIFT                                24
@@ -332,11 +336,13 @@
 
 #define EMMCSDXC_INTREN2_OFFSET                                           0x00000038
 #define EMMCSDXC_INTREN2_TYPE                                             UInt32
-#define EMMCSDXC_INTREN2_RESERVED_MASK                                    0xCC000000
+#define EMMCSDXC_INTREN2_RESERVED_MASK                                    0xC8000000
 #define    EMMCSDXC_INTREN2_CEATAERRSEN_SHIFT                             29
 #define    EMMCSDXC_INTREN2_CEATAERRSEN_MASK                              0x20000000
 #define    EMMCSDXC_INTREN2_TRESPERRSEN_SHIFT                             28
 #define    EMMCSDXC_INTREN2_TRESPERRSEN_MASK                              0x10000000
+#define    EMMCSDXC_INTREN2_TUNEERRSEN_SHIFT                              26
+#define    EMMCSDXC_INTREN2_TUNEERRSEN_MASK                               0x04000000
 #define    EMMCSDXC_INTREN2_ADMASIGEN_SHIFT                               25
 #define    EMMCSDXC_INTREN2_ADMASIGEN_MASK                                0x02000000
 #define    EMMCSDXC_INTREN2_CMDSIGEN_SHIFT                                24
@@ -456,15 +462,19 @@
 
 #define EMMCSDXC_CAPABILITIES2_OFFSET                                     0x00000044
 #define EMMCSDXC_CAPABILITIES2_TYPE                                       UInt32
-#define EMMCSDXC_CAPABILITIES2_RESERVED_MASK                              0xFF00F888
+#define EMMCSDXC_CAPABILITIES2_RESERVED_MASK                              0xFC001088
+#define    EMMCSDXC_CAPABILITIES2_SPIBLOCKMODE_SHIFT                      25
+#define    EMMCSDXC_CAPABILITIES2_SPIBLOCKMODE_MASK                       0x02000000
+#define    EMMCSDXC_CAPABILITIES2_SPIMODE_CAP_SHIFT                       24
+#define    EMMCSDXC_CAPABILITIES2_SPIMODE_CAP_MASK                        0x01000000
 #define    EMMCSDXC_CAPABILITIES2_CLOCKMULT_SHIFT                         16
 #define    EMMCSDXC_CAPABILITIES2_CLOCKMULT_MASK                          0x00FF0000
-#define    EMMCSDXC_CAPABILITIES2_USERETUNE_TIMER_SHIFT                   10
-#define    EMMCSDXC_CAPABILITIES2_USERETUNE_TIMER_MASK                    0x00000400
-#define    EMMCSDXC_CAPABILITIES2_USERETUNE_REQ_SHIFT                     9
-#define    EMMCSDXC_CAPABILITIES2_USERETUNE_REQ_MASK                      0x00000200
-#define    EMMCSDXC_CAPABILITIES2_USETUNE_SDR50_SHIFT                     8
-#define    EMMCSDXC_CAPABILITIES2_USETUNE_SDR50_MASK                      0x00000100
+#define    EMMCSDXC_CAPABILITIES2_RETUNE_MODE_SHIFT                       14
+#define    EMMCSDXC_CAPABILITIES2_RETUNE_MODE_MASK                        0x0000C000
+#define    EMMCSDXC_CAPABILITIES2_USETUNE_SDR50_SHIFT                     13
+#define    EMMCSDXC_CAPABILITIES2_USETUNE_SDR50_MASK                      0x00002000
+#define    EMMCSDXC_CAPABILITIES2_TMRCNT_RETUNE_SHIFT                     8
+#define    EMMCSDXC_CAPABILITIES2_TMRCNT_RETUNE_MASK                      0x00000F00
 #define    EMMCSDXC_CAPABILITIES2_DRVR_TYPED_SHIFT                        6
 #define    EMMCSDXC_CAPABILITIES2_DRVR_TYPED_MASK                         0x00000040
 #define    EMMCSDXC_CAPABILITIES2_DRVR_TYPEC_SHIFT                        5
@@ -626,13 +636,15 @@
 
 #define EMMCSDXC_SBUSCTRL_OFFSET                                          0x000000E0
 #define EMMCSDXC_SBUSCTRL_TYPE                                            UInt32
-#define EMMCSDXC_SBUSCTRL_RESERVED_MASK                                   0xFF8088C8
-#define    EMMCSDXC_SBUSCTRL_BEPWR_CTRL_SHIFT                             16
-#define    EMMCSDXC_SBUSCTRL_BEPWR_CTRL_MASK                              0x007F0000
-#define    EMMCSDXC_SBUSCTRL_INTRPINSEL_SHIFT                             12
-#define    EMMCSDXC_SBUSCTRL_INTRPINSEL_MASK                              0x00007000
-#define    EMMCSDXC_SBUSCTRL_CLKPINSEL_SHIFT                              8
-#define    EMMCSDXC_SBUSCTRL_CLKPINSEL_MASK                               0x00000700
+#define EMMCSDXC_SBUSCTRL_RESERVED_MASK                                   0x808880C8
+#define    EMMCSDXC_SBUSCTRL_BEPWR_CTRL_SHIFT                             24
+#define    EMMCSDXC_SBUSCTRL_BEPWR_CTRL_MASK                              0x7F000000
+#define    EMMCSDXC_SBUSCTRL_INTRPINSEL_SHIFT                             20
+#define    EMMCSDXC_SBUSCTRL_INTRPINSEL_MASK                              0x00700000
+#define    EMMCSDXC_SBUSCTRL_CLKPINSEL_SHIFT                              16
+#define    EMMCSDXC_SBUSCTRL_CLKPINSEL_MASK                               0x00070000
+#define    EMMCSDXC_SBUSCTRL_BUSW_PRESET_SHIFT                            8
+#define    EMMCSDXC_SBUSCTRL_BUSW_PRESET_MASK                             0x00007F00
 #define    EMMCSDXC_SBUSCTRL_NUMIRQPINS_SHIFT                             4
 #define    EMMCSDXC_SBUSCTRL_NUMIRQPINS_MASK                              0x00000030
 #define    EMMCSDXC_SBUSCTRL_NUMCLKPINS_SHIFT                             0

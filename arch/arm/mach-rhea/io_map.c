@@ -96,7 +96,6 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_SRAM_VA, SZ_256K ),
 
 	IO_DESC( KONA_SSP0_VA, SZ_4K ),
-	IO_DESC( KONA_SSP1_VA, SZ_4K ),
 	IO_DESC( KONA_SSP3_VA, SZ_4K ),
 	
 	IO_DESC( KONA_SYSTMR_VA, SZ_4K ),  /* 32-bit kona gp timer */

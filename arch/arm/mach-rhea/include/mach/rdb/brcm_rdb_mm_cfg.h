@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_MM_CFG_H__
@@ -284,7 +284,9 @@
 
 #define MM_CFG_DSI_PRBS_CTRL_OFFSET                                       0x00000020
 #define MM_CFG_DSI_PRBS_CTRL_TYPE                                         UInt32
-#define MM_CFG_DSI_PRBS_CTRL_RESERVED_MASK                                0xFE008000
+#define MM_CFG_DSI_PRBS_CTRL_RESERVED_MASK                                0xFC008000
+#define    MM_CFG_DSI_PRBS_CTRL_PM_INV_SHIFT                              25
+#define    MM_CFG_DSI_PRBS_CTRL_PM_INV_MASK                               0x02000000
 #define    MM_CFG_DSI_PRBS_CTRL_DSI_CONST_REG_EN_SHIFT                    24
 #define    MM_CFG_DSI_PRBS_CTRL_DSI_CONST_REG_EN_MASK                     0x01000000
 #define    MM_CFG_DSI_PRBS_CTRL_DSI_CONSTANT_REG_SHIFT                    16

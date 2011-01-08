@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_PTMR_WD_H__
@@ -84,9 +84,11 @@
 
 #define PTMR_WD_WATCHDOG_CTRL_OFFSET                                      0x00000028
 #define PTMR_WD_WATCHDOG_CTRL_TYPE                                        UInt32
-#define PTMR_WD_WATCHDOG_CTRL_RESERVED_MASK                               0xFFFF00F8
+#define PTMR_WD_WATCHDOG_CTRL_RESERVED_MASK                               0xFFFF00F0
 #define    PTMR_WD_WATCHDOG_CTRL_PRESCALER_W_SHIFT                        8
 #define    PTMR_WD_WATCHDOG_CTRL_PRESCALER_W_MASK                         0x0000FF00
+#define    PTMR_WD_WATCHDOG_CTRL_WD_MODE_SHIFT                            3
+#define    PTMR_WD_WATCHDOG_CTRL_WD_MODE_MASK                             0x00000008
 #define    PTMR_WD_WATCHDOG_CTRL_IT_EN_SHIFT                              2
 #define    PTMR_WD_WATCHDOG_CTRL_IT_EN_MASK                               0x00000004
 #define    PTMR_WD_WATCHDOG_CTRL_AUTORELOAD_EN_SHIFT                      1

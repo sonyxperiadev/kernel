@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_KPROC_RST_MGR_REG_H__
@@ -40,13 +40,19 @@
 
 #define KPROC_RST_MGR_REG_SOFT_RSTN_OFFSET                                0x00000004
 #define KPROC_RST_MGR_REG_SOFT_RSTN_TYPE                                  UInt32
-#define KPROC_RST_MGR_REG_SOFT_RSTN_RESERVED_MASK                         0x7FFFFF7D
+#define KPROC_RST_MGR_REG_SOFT_RSTN_RESERVED_MASK                         0x7FFFFF70
 #define    KPROC_RST_MGR_REG_SOFT_RSTN_PRIV_ACCESS_MODE_SHIFT             31
 #define    KPROC_RST_MGR_REG_SOFT_RSTN_PRIV_ACCESS_MODE_MASK              0x80000000
 #define    KPROC_RST_MGR_REG_SOFT_RSTN_ARM_PERIPH_SOFT_RSTN_SHIFT         7
 #define    KPROC_RST_MGR_REG_SOFT_RSTN_ARM_PERIPH_SOFT_RSTN_MASK          0x00000080
-#define    KPROC_RST_MGR_REG_SOFT_RSTN_APB0_SOFT_RSTN_SHIFT               1
-#define    KPROC_RST_MGR_REG_SOFT_RSTN_APB0_SOFT_RSTN_MASK                0x00000002
+#define    KPROC_RST_MGR_REG_SOFT_RSTN_A9_AXI_SOFT_RSTN_SHIFT             3
+#define    KPROC_RST_MGR_REG_SOFT_RSTN_A9_AXI_SOFT_RSTN_MASK              0x00000008
+#define    KPROC_RST_MGR_REG_SOFT_RSTN_A9_ATB_SOFT_RSTN_SHIFT             2
+#define    KPROC_RST_MGR_REG_SOFT_RSTN_A9_ATB_SOFT_RSTN_MASK              0x00000004
+#define    KPROC_RST_MGR_REG_SOFT_RSTN_APB_SOFT_RSTN_SHIFT                1
+#define    KPROC_RST_MGR_REG_SOFT_RSTN_APB_SOFT_RSTN_MASK                 0x00000002
+#define    KPROC_RST_MGR_REG_SOFT_RSTN_A9_MP_CORE_SOFT_RSTN_SHIFT         0
+#define    KPROC_RST_MGR_REG_SOFT_RSTN_A9_MP_CORE_SOFT_RSTN_MASK          0x00000001
 
 #define KPROC_RST_MGR_REG_A9_CORE_SOFT_RSTN_OFFSET                        0x00000008
 #define KPROC_RST_MGR_REG_A9_CORE_SOFT_RSTN_TYPE                          UInt32

@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_VCE_H__
@@ -125,8 +125,24 @@
 #define VCE_BAD_ADDR_OFFSET                                               0x00040030
 #define VCE_BAD_ADDR_TYPE                                                 UInt32
 #define VCE_BAD_ADDR_RESERVED_MASK                                        0x00000000
-#define    VCE_BAD_ADDR_BAD_ADDR_SHIFT                                    0
-#define    VCE_BAD_ADDR_BAD_ADDR_MASK                                     0xFFFFFFFF
+#define    VCE_BAD_ADDR_OUT_OF_RANGE_SHIFT                                31
+#define    VCE_BAD_ADDR_OUT_OF_RANGE_MASK                                 0x80000000
+#define    VCE_BAD_ADDR_INSTR_ERR_SHIFT                                   30
+#define    VCE_BAD_ADDR_INSTR_ERR_MASK                                    0x40000000
+#define    VCE_BAD_ADDR_BANG_IN_ERR_SHIFT                                 29
+#define    VCE_BAD_ADDR_BANG_IN_ERR_MASK                                  0x20000000
+#define    VCE_BAD_ADDR_BANG_OUT_ERR_SHIFT                                28
+#define    VCE_BAD_ADDR_BANG_OUT_ERR_MASK                                 0x10000000
+#define    VCE_BAD_ADDR_DMA_IN_ERR_SHIFT                                  27
+#define    VCE_BAD_ADDR_DMA_IN_ERR_MASK                                   0x08000000
+#define    VCE_BAD_ADDR_DMA_OUT_ERR_SHIFT                                 26
+#define    VCE_BAD_ADDR_DMA_OUT_ERR_MASK                                  0x04000000
+#define    VCE_BAD_ADDR_DMAINIT_ERR_SHIFT                                 25
+#define    VCE_BAD_ADDR_DMAINIT_ERR_MASK                                  0x02000000
+#define    VCE_BAD_ADDR_SD_ACCESS_ERR_SHIFT                               24
+#define    VCE_BAD_ADDR_SD_ACCESS_ERR_MASK                                0x01000000
+#define    VCE_BAD_ADDR_DMEM_ADDR_SHIFT                                   0
+#define    VCE_BAD_ADDR_DMEM_ADDR_MASK                                    0x00FFFFFF
 
 #define VCE_PC_ERR_OFFSET                                                 0x00040034
 #define VCE_PC_ERR_TYPE                                                   UInt32

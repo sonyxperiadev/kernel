@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:17:6                                             */
-/*     RDB file : //R4/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_NON_DMAC_H__
@@ -957,148 +957,6 @@
 #define    NON_DMAC_CRDN_WR_CAP_MASK                                      0x00000070
 #define    NON_DMAC_CRDN_DATA_WIDTH_SHIFT                                 0
 #define    NON_DMAC_CRDN_DATA_WIDTH_MASK                                  0x00000007
-
-typedef volatile struct {
-   UInt32 m_DS;                      // 0x0000
-   UInt32 m_DPC;                     // 0x0004
-   UInt32 RESERVED_20_4[6];
-   UInt32 m_INTEN;                   // 0x0020
-   UInt32 m_ES;                      // 0x0024
-   UInt32 m_INTSTATUS;               // 0x0028
-   UInt32 m_INTCLR;                  // 0x002C
-   UInt32 m_FSM;                     // 0x0030
-   UInt32 m_FSC;                     // 0x0034
-   UInt32 m_FTM;                     // 0x0038
-   UInt32 RESERVED_40_38[1];
-   UInt32 m_FTC0;                    // 0x0040
-   UInt32 m_FTC1;                    // 0x0044
-   UInt32 m_FTC2;                    // 0x0048
-   UInt32 m_FTC3;                    // 0x004C
-   UInt32 m_FTC4;                    // 0x0050
-   UInt32 m_FTC5;                    // 0x0054
-   UInt32 m_FTC6;                    // 0x0058
-   UInt32 m_FTC7;                    // 0x005C
-   UInt32 RESERVED_100_5C[40];
-   UInt32 m_CS0;                     // 0x0100
-   UInt32 RESERVED_108_100[1];
-   UInt32 m_CS1;                     // 0x0108
-   UInt32 RESERVED_110_108[1];
-   UInt32 m_CS2;                     // 0x0110
-   UInt32 RESERVED_118_110[1];
-   UInt32 m_CS3;                     // 0x0118
-   UInt32 RESERVED_120_118[1];
-   UInt32 m_CS4;                     // 0x0120
-   UInt32 RESERVED_128_120[1];
-   UInt32 m_CS5;                     // 0x0128
-   UInt32 RESERVED_130_128[1];
-   UInt32 m_CS6;                     // 0x0130
-   UInt32 RESERVED_138_130[1];
-   UInt32 m_CS7;                     // 0x0138
-   UInt32 m_CPC0;                    // 0x0104
-   UInt32 RESERVED_10C_104[1];
-   UInt32 m_CPC1;                    // 0x010C
-   UInt32 RESERVED_114_10C[1];
-   UInt32 m_CPC2;                    // 0x0114
-   UInt32 RESERVED_11C_114[1];
-   UInt32 m_CPC3;                    // 0x011C
-   UInt32 RESERVED_124_11C[1];
-   UInt32 m_CPC4;                    // 0x0124
-   UInt32 RESERVED_12C_124[1];
-   UInt32 m_CPC5;                    // 0x012C
-   UInt32 RESERVED_134_12C[1];
-   UInt32 m_CPC6;                    // 0x0134
-   UInt32 RESERVED_13C_134[1];
-   UInt32 m_CPC7;                    // 0x013C
-   UInt32 RESERVED_400_13C[176];
-   UInt32 m_SA_0;                    // 0x0400
-   UInt32 RESERVED_420_400[7];
-   UInt32 m_SA_1;                    // 0x0420
-   UInt32 RESERVED_440_420[7];
-   UInt32 m_SA_2;                    // 0x0440
-   UInt32 RESERVED_460_440[7];
-   UInt32 m_SA_3;                    // 0x0460
-   UInt32 RESERVED_480_460[7];
-   UInt32 m_SA_4;                    // 0x0480
-   UInt32 RESERVED_4A0_480[7];
-   UInt32 m_SA_5;                    // 0x04A0
-   UInt32 RESERVED_4C0_4A0[7];
-   UInt32 m_SA_6;                    // 0x04C0
-   UInt32 RESERVED_4E0_4C0[7];
-   UInt32 m_SA_7;                    // 0x04E0
-   UInt32 m_DA_0;                    // 0x0404
-   UInt32 RESERVED_424_404[7];
-   UInt32 m_DA_1;                    // 0x0424
-   UInt32 RESERVED_444_424[7];
-   UInt32 m_DA_2;                    // 0x0444
-   UInt32 RESERVED_464_444[7];
-   UInt32 m_DA_3;                    // 0x0464
-   UInt32 RESERVED_484_464[7];
-   UInt32 m_DA_4;                    // 0x0484
-   UInt32 RESERVED_4A4_484[7];
-   UInt32 m_DA_5;                    // 0x04A4
-   UInt32 RESERVED_4C4_4A4[7];
-   UInt32 m_DA_6;                    // 0x04C4
-   UInt32 RESERVED_4E4_4C4[7];
-   UInt32 m_DA_7;                    // 0x04E4
-   UInt32 m_CC_0;                    // 0x0408
-   UInt32 RESERVED_428_408[7];
-   UInt32 m_CC_1;                    // 0x0428
-   UInt32 RESERVED_448_428[7];
-   UInt32 m_CC_2;                    // 0x0448
-   UInt32 RESERVED_468_448[7];
-   UInt32 m_CC_3;                    // 0x0468
-   UInt32 RESERVED_488_468[7];
-   UInt32 m_CC_4;                    // 0x0488
-   UInt32 RESERVED_4A8_488[7];
-   UInt32 m_CC_5;                    // 0x04A8
-   UInt32 RESERVED_4C8_4A8[7];
-   UInt32 m_CC_6;                    // 0x04C8
-   UInt32 RESERVED_4E8_4C8[7];
-   UInt32 m_CC_7;                    // 0x04E8
-   UInt32 m_LC0_0;                   // 0x040C
-   UInt32 RESERVED_42C_40C[7];
-   UInt32 m_LC0_1;                   // 0x042C
-   UInt32 RESERVED_44C_42C[7];
-   UInt32 m_LC0_2;                   // 0x044C
-   UInt32 RESERVED_46C_44C[7];
-   UInt32 m_LC0_3;                   // 0x046C
-   UInt32 RESERVED_48C_46C[7];
-   UInt32 m_LC0_4;                   // 0x048C
-   UInt32 RESERVED_4AC_48C[7];
-   UInt32 m_LC0_5;                   // 0x04AC
-   UInt32 RESERVED_4CC_4AC[7];
-   UInt32 m_LC0_6;                   // 0x04CC
-   UInt32 RESERVED_4EC_4CC[7];
-   UInt32 m_LC0_7;                   // 0x04EC
-   UInt32 m_LC1_0;                   // 0x0410
-   UInt32 RESERVED_430_410[7];
-   UInt32 m_LC1_1;                   // 0x0430
-   UInt32 RESERVED_450_430[7];
-   UInt32 m_LC1_2;                   // 0x0450
-   UInt32 RESERVED_470_450[7];
-   UInt32 m_LC1_3;                   // 0x0470
-   UInt32 RESERVED_490_470[7];
-   UInt32 m_LC1_4;                   // 0x0490
-   UInt32 RESERVED_4B0_490[7];
-   UInt32 m_LC1_5;                   // 0x04B0
-   UInt32 RESERVED_4D0_4B0[7];
-   UInt32 m_LC1_6;                   // 0x04D0
-   UInt32 RESERVED_4F0_4D0[7];
-   UInt32 m_LC1_7;                   // 0x04F0
-   UInt32 RESERVED_D00_4F0[515];
-   UInt32 m_DBGSTATUS;               // 0x0D00
-   UInt32 m_DBGCMD;                  // 0x0D04
-   UInt32 m_DBGINST0;                // 0x0D08
-   UInt32 m_DBGINST1;                // 0x0D0C
-   UInt32 RESERVED_E00_D0C[60];
-   UInt32 m_CR0;                     // 0x0E00
-   UInt32 m_CR1;                     // 0x0E04
-   UInt32 m_CR2;                     // 0x0E08
-   UInt32 m_CR3;                     // 0x0E0C
-   UInt32 m_CR4;                     // 0x0E10
-   UInt32 m_CRDN;                    // 0x0E14
-} BRCM_NON_DMAC_REGS;
-
 
 #endif /* __BRCM_RDB_NON_DMAC_H__ */
 

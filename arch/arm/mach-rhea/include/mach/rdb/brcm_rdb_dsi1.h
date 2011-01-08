@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/9/2010 1:16:58                                             */
-/*     RDB file : //HERA/                                                                   */
+/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DSI1_H__
@@ -500,19 +500,19 @@
 
 #define DSI1_TST_SEL_OFFSET                                               0x00000078
 #define DSI1_TST_SEL_TYPE                                                 UInt32
-#define DSI1_TST_SEL_RESERVED_MASK                                        0x00000000
+#define DSI1_TST_SEL_RESERVED_MASK                                        0xFFFFFFF0
 #define    DSI1_TST_SEL_TST_SEL_SHIFT                                     0
-#define    DSI1_TST_SEL_TST_SEL_MASK                                      0xFFFFFFFF
+#define    DSI1_TST_SEL_TST_SEL_MASK                                      0x0000000F
 
 #define DSI1_TST_MON_OFFSET                                               0x0000007C
 #define DSI1_TST_MON_TYPE                                                 UInt32
 #define DSI1_TST_MON_RESERVED_MASK                                        0x00000000
-#define    DSI1_TST_MON_TST_MON_SHIFT                                     0
-#define    DSI1_TST_MON_TST_MON_MASK                                      0xFFFFFFFF
+#define    DSI1_TST_MON_UNION_SHIFT                                       0
+#define    DSI1_TST_MON_UNION_MASK                                        0xFFFFFFFF
 
 #define DSI1_PHY_TST1_OFFSET                                              0x00000080
 #define DSI1_PHY_TST1_TYPE                                                UInt32
-#define DSI1_PHY_TST1_RESERVED_MASK                                       0xFFE00000
+#define DSI1_PHY_TST1_RESERVED_MASK                                       0xFFE0FFF0
 #define    DSI1_PHY_TST1_PHYC_TEST_HSRST_SHIFT                            20
 #define    DSI1_PHY_TST1_PHYC_TEST_HSRST_MASK                             0x00100000
 #define    DSI1_PHY_TST1_PHYC_TEST_DM_SHIFT                               19
@@ -523,30 +523,6 @@
 #define    DSI1_PHY_TST1_PHYC_TEST_LP_MASK                                0x00020000
 #define    DSI1_PHY_TST1_PHYC_TEST_EN_SHIFT                               16
 #define    DSI1_PHY_TST1_PHYC_TEST_EN_MASK                                0x00010000
-#define    DSI1_PHY_TST1_PHYD3_TEST_DM_SHIFT                              15
-#define    DSI1_PHY_TST1_PHYD3_TEST_DM_MASK                               0x00008000
-#define    DSI1_PHY_TST1_PHYD3_TEST_DP_SHIFT                              14
-#define    DSI1_PHY_TST1_PHYD3_TEST_DP_MASK                               0x00004000
-#define    DSI1_PHY_TST1_PHYD3_TEST_LP_SHIFT                              13
-#define    DSI1_PHY_TST1_PHYD3_TEST_LP_MASK                               0x00002000
-#define    DSI1_PHY_TST1_PHYD3_TEST_EN_SHIFT                              12
-#define    DSI1_PHY_TST1_PHYD3_TEST_EN_MASK                               0x00001000
-#define    DSI1_PHY_TST1_PHYD2_TEST_DM_SHIFT                              11
-#define    DSI1_PHY_TST1_PHYD2_TEST_DM_MASK                               0x00000800
-#define    DSI1_PHY_TST1_PHYD2_TEST_DP_SHIFT                              10
-#define    DSI1_PHY_TST1_PHYD2_TEST_DP_MASK                               0x00000400
-#define    DSI1_PHY_TST1_PHYD2_TEST_LP_SHIFT                              9
-#define    DSI1_PHY_TST1_PHYD2_TEST_LP_MASK                               0x00000200
-#define    DSI1_PHY_TST1_PHYD2_TEST_EN_SHIFT                              8
-#define    DSI1_PHY_TST1_PHYD2_TEST_EN_MASK                               0x00000100
-#define    DSI1_PHY_TST1_PHYD1_TEST_DM_SHIFT                              7
-#define    DSI1_PHY_TST1_PHYD1_TEST_DM_MASK                               0x00000080
-#define    DSI1_PHY_TST1_PHYD1_TEST_DP_SHIFT                              6
-#define    DSI1_PHY_TST1_PHYD1_TEST_DP_MASK                               0x00000040
-#define    DSI1_PHY_TST1_PHYD1_TEST_LP_SHIFT                              5
-#define    DSI1_PHY_TST1_PHYD1_TEST_LP_MASK                               0x00000020
-#define    DSI1_PHY_TST1_PHYD1_TEST_EN_SHIFT                              4
-#define    DSI1_PHY_TST1_PHYD1_TEST_EN_MASK                               0x00000010
 #define    DSI1_PHY_TST1_PHYD0_TEST_DM_SHIFT                              3
 #define    DSI1_PHY_TST1_PHYD0_TEST_DM_MASK                               0x00000008
 #define    DSI1_PHY_TST1_PHYD0_TEST_DP_SHIFT                              2
@@ -558,13 +534,7 @@
 
 #define DSI1_PHY_TST2_OFFSET                                              0x00000084
 #define DSI1_PHY_TST2_TYPE                                                UInt32
-#define DSI1_PHY_TST2_RESERVED_MASK                                       0x00000000
-#define    DSI1_PHY_TST2_PHYD3_TEST_HSDATA_SHIFT                          24
-#define    DSI1_PHY_TST2_PHYD3_TEST_HSDATA_MASK                           0xFF000000
-#define    DSI1_PHY_TST2_PHYD2_TEST_HSDATA_SHIFT                          16
-#define    DSI1_PHY_TST2_PHYD2_TEST_HSDATA_MASK                           0x00FF0000
-#define    DSI1_PHY_TST2_PHYD1_TEST_HSDATA_SHIFT                          8
-#define    DSI1_PHY_TST2_PHYD1_TEST_HSDATA_MASK                           0x0000FF00
+#define DSI1_PHY_TST2_RESERVED_MASK                                       0xFFFFFF00
 #define    DSI1_PHY_TST2_PHYD0_TEST_HSDATA_SHIFT                          0
 #define    DSI1_PHY_TST2_PHYD0_TEST_HSDATA_MASK                           0x000000FF
 

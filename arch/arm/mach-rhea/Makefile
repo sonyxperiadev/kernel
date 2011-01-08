@@ -14,3 +14,4 @@
 
 obj-y := io_map.o
 obj-$(CONFIG_MACH_HERA_RAY) += hera_ray.o
+obj-$(CONFIG_MACH_RHEA_RAY) += rhea_ray.o
