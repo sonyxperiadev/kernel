@@ -17,7 +17,22 @@ FILE DESCRIPTION
 #define MEDIA_DEC_CONTROL_OFFSET                    0x00
    #define MEDIA_DEC_CONTROL_ENABLE_BIT             0x00000001  
    #define MEDIA_DEC_CONTROL_PLAY_BIT               0x00000002
+   
+   // The following are independent bits of the above control bits;
+   // set them to indicate you want the following requests
+   #define MEDIA_DEC_CONTROL_SET_FLAGS_BIT          0x00000004
+   #define MEDIA_DEC_CONTROL_SET_SRC_REGION_BIT     0x00000008
+   #define MEDIA_DEC_CONTROL_SET_TARGET_REGION_BIT  0x00000010
+   #define MEDIA_DEC_CONTROL_SET_VOLUME_BIT         0x00000020
+   #define MEDIA_DEC_CONTROL_GET_VOLUME_BIT         0x00000040
+   #define MEDIA_DEC_CONTROL_GET_VIDEO_LEVEL_BIT    0x00000080
+   #define MEDIA_DEC_CONTROL_GET_AUDIO_LEVEL_BIT    0x00000100
+   #define MEDIA_DEC_CONTROL_SET_MUTED_BIT          0x00000200
+   #define MEDIA_DEC_CONTROL_SET_TRANSPARENCY_BIT   0x00000400
+   
    #define MEDIA_DEC_CONTROL_LOCAL_DATAMODE_BIT     0x20000000
+   
+
    #define MEDIA_DEC_CONTROL_LOCAL_FILEMODE_BIT     0x40000000
    #define MEDIA_DEC_CONTROL_ERROR_BIT              0x80000000
 #define MEDIA_DEC_STATUS_OFFSET                     0x04
@@ -93,66 +108,36 @@ FILE DESCRIPTION
 //8 entries here of 4 words each = 0x80 gap from 0xF0
 #define MEDIA_DEC_AUDIO_IN_FIFO_OFFSET                   0x7C0
 
+#define MEDIA_DEC_FLAGS_OFFSET                           0x840
+#define MEDIA_DEC_VOLUME_OFFSET                          0x844
+
+// Flags for the FLAGS field above
+#define MEDIA_DEC_FLAGS_PAUSED      0x01
+#define MEDIA_DEC_FLAGS_MUTED       0x02
+
+#define MEDIA_DEC_TARGET_FULLSCREEN_OFFSET               0x848
+#define MEDIA_DEC_TARGET_TRANSFORM_OFFSET                0x84C
+
+#define MEDIA_DEC_TRANSPARENCY_OFFSET                    0x850
+#define MEDIA_DEC_VIDEO_LEVEL_OFFSET                     0x854
+#define MEDIA_DEC_AUDIO_LEVEL_OFFSET                     0x858
 
 //video types
 
 typedef enum
 {
     MEDIA_DEC_VIDEO_CodingUnused,     /**< Value when coding is N/A */
-    MEDIA_DEC_VIDEO_CodingAutoDetect, /**< Autodetection of coding type */
-    MEDIA_DEC_VIDEO_CodingMPEG2,      /**< AKA: H.262 */
-    MEDIA_DEC_VIDEO_CodingH263,       /**< H.263 */
     MEDIA_DEC_VIDEO_CodingMPEG4,      /**< MPEG-4 */
-    MEDIA_DEC_VIDEO_CodingWMV,        /**< all versions of Windows Media Video */
-    MEDIA_DEC_VIDEO_CodingRV,         /**< all versions of Real Video */
     MEDIA_DEC_VIDEO_CodingAVC,        /**< H.264/AVC */
-    MEDIA_DEC_VIDEO_CodingMJPEG,      /**< Motion JPEG */
-    MEDIA_DEC_VIDEO_CodingVP6,        /**< On2 VP6 */
-    MEDIA_DEC_VIDEO_CodingVP7,        /**< On2 VP7 */
-    MEDIA_DEC_VIDEO_CodingVP8,        /**< On2 VP8 */
-    MEDIA_DEC_VIDEO_CodingSorenson,   /**< Sorenson */
-    MEDIA_DEC_VIDEO_CodingTheora      /**< Theora */
 } MEDIA_DEC_VIDEO_T;
 
 typedef enum
 {
     MEDIA_DEC_AUDIO_CodingUnused = 0,  /**< Placeholder value when coding is N/A  */
-    MEDIA_DEC_AUDIO_CodingAutoDetect,  /**< auto detection of audio format */
     MEDIA_DEC_AUDIO_CodingPCM,         /**< Any variant of PCM coding */
-    MEDIA_DEC_AUDIO_CodingADPCM,       /**< Any variant of ADPCM encoded data */
-    MEDIA_DEC_AUDIO_CodingAMR,         /**< Any variant of AMR encoded data */
-    MEDIA_DEC_AUDIO_CodingGSMFR,       /**< Any variant of GSM fullrate (i.e. GSM610) */
-    MEDIA_DEC_AUDIO_CodingGSMEFR,      /**< Any variant of GSM Enhanced Fullrate encoded data*/
-    MEDIA_DEC_AUDIO_CodingGSMHR,       /**< Any variant of GSM Halfrate encoded data */
-    MEDIA_DEC_AUDIO_CodingPDCFR,       /**< Any variant of PDC Fullrate encoded data */
-    MEDIA_DEC_AUDIO_CodingPDCEFR,      /**< Any variant of PDC Enhanced Fullrate encoded data */
-    MEDIA_DEC_AUDIO_CodingPDCHR,       /**< Any variant of PDC Halfrate encoded data */
-    MEDIA_DEC_AUDIO_CodingTDMAFR,      /**< Any variant of TDMA Fullrate encoded data (TIA/EIA-136-420) */
-    MEDIA_DEC_AUDIO_CodingTDMAEFR,     /**< Any variant of TDMA Enhanced Fullrate encoded data (TIA/EIA-136-410) */
-    MEDIA_DEC_AUDIO_CodingQCELP8,      /**< Any variant of QCELP 8kbps encoded data */
-    MEDIA_DEC_AUDIO_CodingQCELP13,     /**< Any variant of QCELP 13kbps encoded data */
-    MEDIA_DEC_AUDIO_CodingEVRC,        /**< Any variant of EVRC encoded data */
-    MEDIA_DEC_AUDIO_CodingSMV,         /**< Any variant of SMV encoded data */
-    MEDIA_DEC_AUDIO_CodingG711,        /**< Any variant of G.711 encoded data */
-    MEDIA_DEC_AUDIO_CodingG723,        /**< Any variant of G.723 dot 1 encoded data */
-    MEDIA_DEC_AUDIO_CodingG726,        /**< Any variant of G.726 encoded data */
-    MEDIA_DEC_AUDIO_CodingG729,        /**< Any variant of G.729 encoded data */
     MEDIA_DEC_AUDIO_CodingAAC,         /**< Any variant of AAC encoded data */
     MEDIA_DEC_AUDIO_CodingMP3,         /**< Any variant of MP3 encoded data */
-    MEDIA_DEC_AUDIO_CodingSBC,         /**< Any variant of SBC encoded data */
-    MEDIA_DEC_AUDIO_CodingVORBIS,      /**< Any variant of VORBIS encoded data */
-    MEDIA_DEC_AUDIO_CodingWMA,         /**< Any variant of WMA encoded data */
-    MEDIA_DEC_AUDIO_CodingRA,          /**< Any variant of RA encoded data */
-    MEDIA_DEC_AUDIO_CodingMIDI,        /**< Any variant of MIDI encoded data */
-
-    MEDIA_DEC_AUDIO_CodingFLAC,        /**< Any variant of FLAC */
     MEDIA_DEC_AUDIO_CodingDDP,         /**< Any variant of Dolby Digital Plus */
-    MEDIA_DEC_AUDIO_CodingDTS,         /**< Any variant of DTS */
-    MEDIA_DEC_AUDIO_CodingWMAPRO,      /**< Any variant of WMA Professional */
-    MEDIA_DEC_AUDIO_CodingATRAC3,      /**< Sony ATRAC-3 variants */
-    MEDIA_DEC_AUDIO_CodingATRACX,      /**< Sony ATRAC-X variants */
-    MEDIA_DEC_AUDIO_CodingATRACAAL     /**< Sony ATRAC advanced-lossless variants  */
-
 } MEDIA_DEC_AUDIO_T;
 
 //this struct is tightly packet - its size is 32bytes
