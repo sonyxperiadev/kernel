@@ -31,6 +31,7 @@
 #ifndef CONFIG_MACH_IPMATE
 
 
+#include "linux/math64.h"
 #include "dwc_modpow.h"
 
 #define BIGNUM_INT_MASK  0xFFFFFFFFUL
@@ -74,8 +75,7 @@ static void *snmalloc(size_t n, size_t size)
 #else
 #define DIVMOD_WORD(q, r, hi, lo, w) do { \
     BignumDblInt n = (((BignumDblInt)hi) << BIGNUM_INT_BITS) | lo; \
-    q = n / w; \
-    r = n % w; \
+    q = (unsigned int)div_u64_rem(n, w, &r);	\
 } while (0)
 #endif
 

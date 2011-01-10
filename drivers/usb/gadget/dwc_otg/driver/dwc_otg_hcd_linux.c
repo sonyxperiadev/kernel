@@ -57,7 +57,11 @@
 #endif
 
 #include <linux/usb.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
 #include <../drivers/usb/core/hcd.h>
+#else
+#include <linux/usb/hcd.h>
+#endif
 
 #include "dwc_otg_hcd_if.h"
 #include "dwc_otg_dbg.h"
