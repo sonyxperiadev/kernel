@@ -612,7 +612,7 @@ intf_desc = {
 	.bInterfaceClass =	USB_CLASS_MASS_STORAGE,
 	.bInterfaceSubClass =	USB_SC_SCSI,	// Adjusted during fsg_bind()
 	.bInterfaceProtocol =	USB_PR_BULK,	// Adjusted during fsg_bind()
-	.iInterface =		STRING_INTERFACE,
+	.iInterface =		FSG_STRING_INTERFACE,
 };
 
 /* Three full-speed endpoint descriptors: bulk-in, bulk-out,
@@ -3313,7 +3313,7 @@ static int __init check_parameters(struct fsg_dev *fsg)
                 else if (gadget_is_dwc_otg(fsg->gadget)) {
 			mod_data.release = __constant_cpu_to_le16 (0x0200);
                         mod_data.vendor  = __constant_cpu_to_le16 (0x053f);
-                        if (mod_data.product == DRIVER_PRODUCT_ID) {
+                        if (mod_data.product == FSG_PRODUCT_ID) {
                                 mod_data.product  = __constant_cpu_to_le16 (0x0000);
                         }
                 }
