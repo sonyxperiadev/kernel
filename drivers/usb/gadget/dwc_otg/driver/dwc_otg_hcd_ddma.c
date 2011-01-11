@@ -1034,6 +1034,7 @@ void dwc_otg_hcd_complete_xfer_ddma(dwc_otg_hcd_t *hcd,
 	uint8_t continue_isoc_xfer = 0;
 	dwc_otg_transaction_type_e tr_type;
 	dwc_otg_qh_t *qh = hc->qh;
+	uint64_t flags;
 	
 	if (hc->ep_type == DWC_OTG_EP_TYPE_ISOC) {
 
@@ -1049,7 +1050,10 @@ void dwc_otg_hcd_complete_xfer_ddma(dwc_otg_hcd_t *hcd,
 			}	
 			
 			release_channel_ddma(hcd, qh);
+			DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 			dwc_otg_hcd_qh_remove(hcd, qh);
+			DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
+
 		} else {
 			/* Keep in assigned schedule to continue transfer */
 			DWC_LIST_MOVE_HEAD(&hcd->periodic_sched_assigned,
@@ -1065,12 +1069,16 @@ void dwc_otg_hcd_complete_xfer_ddma(dwc_otg_hcd_t *hcd,
 		complete_non_isoc_xfer_ddma(hcd, hc, hc_regs, halt_status);
 		
 		release_channel_ddma(hcd, qh);
-		
+
+		DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 		dwc_otg_hcd_qh_remove(hcd, qh);
+		DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 		
 		if (!DWC_CIRCLEQ_EMPTY(&qh->qtd_list)) {
+			DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 			/* Add back to inactive non-periodic schedule on normal completion */
 			dwc_otg_hcd_qh_add(hcd, qh);
+			DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
 		}
 	
 

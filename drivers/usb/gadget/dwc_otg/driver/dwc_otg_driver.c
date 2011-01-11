@@ -164,9 +164,9 @@ struct dwc_otg_driver_module_params {
 
 static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.opt = -1,
-	.otg_cap = -1,
-	.dma_enable = -1,
-	.dma_desc_enable = -1,
+	.otg_cap = 2,
+	.dma_enable = 1,
+	.dma_desc_enable = 0,
 	.dma_burst_size = -1,
 	.speed = -1,
 	.host_support_fs_ls_low_power = -1,
@@ -201,8 +201,8 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.max_packet_count = -1,
 	.host_channels = -1,
 	.dev_endpoints = -1,
-	.phy_type = -1,
-	.phy_utmi_width = -1,
+	.phy_type = 1,
+	.phy_utmi_width = 8,
 	.phy_ulpi_ddr = -1,
 	.phy_ulpi_ext_vbus = -1,
 	.i2c_enable = -1,

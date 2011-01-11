@@ -295,7 +295,7 @@ void qh_init(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh,
 dwc_otg_qh_t *dwc_otg_hcd_qh_create(dwc_otg_hcd_t * hcd,
 				    dwc_otg_hcd_urb_t * urb)
 {
-	dwc_otg_qh_t *qh;
+	dwc_otg_qh_t *qh = NULL;
 
 	/* Allocate memory */
 	/** @todo add memflags argument */
@@ -466,14 +466,13 @@ static int schedule_periodic(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
  * it is not already in the schedule. If the QH is already in the schedule, no
  * action is taken.
  *
+ * This function must be called with hcd->lock held
+ *
  * @return 0 if successful, negative error code otherwise.
  */
 int dwc_otg_hcd_qh_add(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 {
 	int status = 0;
-	uint64_t flags;
-
-	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
 
 	if (!DWC_LIST_EMPTY(&qh->qh_list_entry)) {
 		/* QH already in a schedule. */
@@ -490,7 +489,7 @@ int dwc_otg_hcd_qh_add(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 	}
 
       done:
-	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
+
 
 	return status;
 }
@@ -516,13 +515,12 @@ static void deschedule_periodic(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
  * Removes a QH from either the non-periodic or periodic schedule.  Memory is
  * not freed.
  *
+ * This function must be called with hcd->lock held
+ *
  * @param hcd The HCD state structure.
  * @param qh QH to remove from schedule. */
 void dwc_otg_hcd_qh_remove(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 {
-	uint64_t flags;
-	DWC_SPINLOCK_IRQSAVE(hcd->lock, &flags);
-
 	if (DWC_LIST_EMPTY(&qh->qh_list_entry)) {
 		/* QH is not in a schedule. */
 		goto done;
@@ -538,8 +536,8 @@ void dwc_otg_hcd_qh_remove(dwc_otg_hcd_t * hcd, dwc_otg_qh_t * qh)
 		deschedule_periodic(hcd, qh);
 	}
 
-      done:
-	DWC_SPINUNLOCK_IRQRESTORE(hcd->lock, flags);
+done:
+	return;
 }
 
 /**

@@ -816,6 +816,8 @@ config ARCH_KONA
 	bool "Broadcom KONA Architecture"
 	depends on MMU
 	select CPU_V7
+	select HAVE_CLK
+	select COMMON_CLKDEV
 	select ARM_GIC
 	select GENERIC_GPIO
 	select ARCH_REQUIRE_GPIOLIB
