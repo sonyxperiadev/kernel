@@ -106,7 +106,7 @@ void __init board_init(void)
 	return;
 }
 
-MACHINE_START(RHEA, "HeraRay")
+MACHINE_START(RHEA, "RheaRay")
 	.phys_io = IO_START,
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,
