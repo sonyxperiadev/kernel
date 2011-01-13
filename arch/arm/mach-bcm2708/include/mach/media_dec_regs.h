@@ -122,23 +122,6 @@ FILE DESCRIPTION
 #define MEDIA_DEC_VIDEO_LEVEL_OFFSET                     0x854
 #define MEDIA_DEC_AUDIO_LEVEL_OFFSET                     0x858
 
-//video types
-
-typedef enum
-{
-    MEDIA_DEC_VIDEO_CodingUnused,     /**< Value when coding is N/A */
-    MEDIA_DEC_VIDEO_CodingMPEG4,      /**< MPEG-4 */
-    MEDIA_DEC_VIDEO_CodingAVC,        /**< H.264/AVC */
-} MEDIA_DEC_VIDEO_T;
-
-typedef enum
-{
-    MEDIA_DEC_AUDIO_CodingUnused = 0,  /**< Placeholder value when coding is N/A  */
-    MEDIA_DEC_AUDIO_CodingPCM,         /**< Any variant of PCM coding */
-    MEDIA_DEC_AUDIO_CodingAAC,         /**< Any variant of AAC encoded data */
-    MEDIA_DEC_AUDIO_CodingMP3,         /**< Any variant of MP3 encoded data */
-    MEDIA_DEC_AUDIO_CodingDDP,         /**< Any variant of Dolby Digital Plus */
-} MEDIA_DEC_AUDIO_T;
 
 //this struct is tightly packet - its size is 32bytes
 typedef struct

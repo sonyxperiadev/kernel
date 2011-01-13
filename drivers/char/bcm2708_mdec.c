@@ -299,7 +299,7 @@ static int player_start(void)
 static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd, MEDIA_STREAM_T stream_type)
 {
 	MEDIA_DEC_FIFO_ENTRY_T entry;
-	unsigned long flags, copy_bytes, total_bytes;
+	unsigned long copy_bytes, total_bytes;
 	void 	*buf_virt, *copy_ptr;
 	int ret = 0;
 	struct media_stream_ctl *stream_ctl;
@@ -691,10 +691,10 @@ static int player_set_transparency(bcm2708_mdec_set_transparency_t * data )
 static int player_get_property(bcm2708_mdec_get_property_t * data )
 {
 	int ret = 0;
+   uint32_t which = 0;
 
    bcm2708mdec_dbg( "player retrieve property %d\n", data->property_id );
 
-   uint32_t which = 0;
    switch( data->property_id )
    {
       case MDEC_PROPERTY_VOLUME:             which = MEDIA_DEC_CONTROL_GET_VOLUME_BIT; break;
@@ -823,6 +823,9 @@ static int mdec_ioctl( struct inode *inode, struct file *file_id, unsigned int c
 
         case MDEC_IOCTL_PLAYER_GET_PROPERTY:
                 ret = player_get_property( (bcm2708_mdec_get_property_t *)ioctl_cmd_buf );
+                uncopied = copy_to_user( (void *)arg, ioctl_cmd_buf, _IOC_SIZE( cmd ) );
+                if (uncopied != 0)
+                   ret = -EFAULT;
                 break;
 
         case MDEC_IOCTL_PLAYER_SET_SOURCE_REGION:

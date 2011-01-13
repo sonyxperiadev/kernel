@@ -1,25 +1,32 @@
 #ifndef	_BCM2708_MDEC_H_
 #define	_BCM2708_MDEC_H_
 
-#define BCM_STATUS_T int
-#define BCM_HANDLE_T int
+#include "mdec_codecs.h"
 
+#define MEDIA_DEC_DEBUG_FILENAME_LENGTH 256
+ 
 typedef struct {
-	unsigned int	audio_type;
-	unsigned int	video_type;
-        unsigned int    filename_size;
-	char		filename[MEDIA_DEC_DEBUG_FILENAME_LENGTH];
+   unsigned int    audio_type;
+   unsigned int    video_type;
+   unsigned int    filename_size;
+   char            filename[MEDIA_DEC_DEBUG_FILENAME_LENGTH];
 } bcm2708_mdec_play_t;
 
 typedef struct {
-        unsigned int    audio_type;
-        unsigned int    video_type;
+   unsigned int    audio_type;
+   unsigned int    video_type;
+
+   union
+   {
+      MDEC_PCM_CONFIG   mPCM;
+      MDEC_DDP_CONFIG   mDDP;
+   } mAudioConfig;
+   
 } bcm2708_mdec_setup_t;
 
-
 typedef struct {
-	unsigned int	data_size;
-	void		*data_buf;
+        unsigned int    data_size;
+        void            *data_buf;
 } bcm2708_mdec_send_data_t;
 
 typedef struct {
@@ -61,17 +68,17 @@ typedef struct {
    int alpha;
 } bcm2708_mdec_set_transparency_t;
 
-#define MAX_BCM2708_MDEC_IOCTL_CMD_SIZE	(MEDIA_DEC_DEBUG_FILENAME_LENGTH + 256)
+#define MAX_BCM2708_MDEC_IOCTL_CMD_SIZE (MEDIA_DEC_DEBUG_FILENAME_LENGTH + 256)
 
 enum mdec_property_id {
-   MDEC_PROPERTY_VOLUME = 0x1,         // int
+   MDEC_PROPERTY_VOLUME = 0x1,         // float
    MDEC_PROPERTY_VIDEO_BUFFER_LEVEL,   // unsigned int
    MDEC_PROPERTY_AUDIO_BUFFER_LEVEL,   // unsigned int
 };
 
 enum mdec_ioctl_id {
         MDEC_IOCTL_PLAYER_LOCAL_DBG_ID  = 0x1,
-	MDEC_IOCTL_PLAYER_SETUP_ID,
+        MDEC_IOCTL_PLAYER_SETUP_ID,
         MDEC_IOCTL_PLAYER_START_ID,
         MDEC_IOCTL_PLAYER_SEND_VIDEO_DATA_ID,
         MDEC_IOCTL_PLAYER_SEND_AUDIO_DATA_ID,
@@ -113,5 +120,6 @@ enum mdec_ioctl_id {
 #define MDEC_IOCTL_PLAYER_SET_MUTED  _IOW('S', MDEC_IOCTL_PLAYER_SET_MUTED_ID, bcm2708_mdec_set_muted_t)
 
 #define MDEC_IOCTL_PLAYER_SET_TRANSPARENCY  _IOW('S', MDEC_IOCTL_PLAYER_SET_TRANSPARENCY_ID, bcm2708_mdec_set_transparency_t)
+
 
 #endif	
