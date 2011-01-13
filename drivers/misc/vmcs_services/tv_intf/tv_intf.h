@@ -181,16 +181,41 @@ typedef struct {
    uint8_t edid[128];
 } TV_INTF_IOCTL_EDID_T;
 
+//CEA 861-B defined video code and aspect ratios for various HDMI modes
+typedef enum {
+   HDMI_ASPECT_UNKNOWN  = 0,
+   HDMI_ASPECT_4_3      = 1,
+   HDMI_ASPECT_14_9     = 2,
+   HDMI_ASPECT_16_9     = 3
+} TV_INTF_IOCTL_HDMI_ASPECT_T;
+
+// Display options set the bounding box (only used in CEA mode)
+typedef struct {
+   TV_INTF_IOCTL_HDMI_ASPECT_T   aspect;
+   // Active area information - meanings as in CEA-861.
+   uint8_t         vertical_bar_present;
+   uint16_t        left_bar_width;
+   uint16_t        right_bar_width;
+   uint8_t         horizontal_bar_present;
+   uint16_t        top_bar_height;
+   uint16_t        bottom_bar_height;
+   // S0/S1 flags as defined in CEA-861.
+   uint8_t         overscan_flags;
+} TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T;
+
 typedef enum
 {
     TV_INTF_IOCTL_CTRLS_ID = 0x1,
     TV_INTF_IOCTL_EDID_ID,
+    TV_INTF_IOCTL_HDMI_OPT_ID,
 
-}TV_INTF_COMMAND_ID_T;
+} TV_INTF_COMMAND_ID_T;
 
 #define TV_INTF_IOCTL_GET_CTRLS  _IOR('T', TV_INTF_IOCTL_CTRLS_ID, TV_INTF_IOCTL_CTRLS_T )
 #define TV_INTF_IOCTL_SET_CTRLS  _IOW('T', TV_INTF_IOCTL_CTRLS_ID, TV_INTF_IOCTL_CTRLS_T )
 #define TV_INTF_IOCTL_GET_EDID   _IOR('T', TV_INTF_IOCTL_EDID_ID, TV_INTF_IOCTL_EDID_T )
+#define TV_INTF_IOCTL_GET_HDMI_OPT  _IOR('T', TV_INTF_IOCTL_CTRLS_ID, TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T )
+#define TV_INTF_IOCTL_SET_HDMI_OPT  _IOW('T', TV_INTF_IOCTL_CTRLS_ID, TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T )
 
 #define TV_INTF_MAX_IOCTL_CMD_SIZE 128
 
@@ -198,6 +223,8 @@ int bcm2835_tv_intf(char *response, int maxlen, const char *format, ...);
 int bcm2835_tv_ioctl_get(TV_INTF_IOCTL_CTRLS_T *ctl);
 int bcm2835_tv_ioctl_set(TV_INTF_IOCTL_CTRLS_T *ctl);
 int bcm2835_tv_ioctl_edid_get(TV_INTF_IOCTL_EDID_T *edid);
+int bcm2835_tv_ioctl_hdmi_opt_get(TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T *opt_p);
+int bcm2835_tv_ioctl_hdmi_opt_set(TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T *opt_p);
 
 #endif
 

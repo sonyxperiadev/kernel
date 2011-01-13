@@ -152,7 +152,7 @@ int tv_intf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsi
                 uncopied = copy_to_user((void *)arg, ioctl_cmd_buf, _IOC_SIZE(cmd));
                 if (uncopied != 0)
                    ret = -EFAULT;
-                tv_intf_print("Copied to user space\n");
+                tv_intf_print("Copied ctrl/status to user space\n");
                 break;
 
             case TV_INTF_IOCTL_SET_CTRLS:
@@ -167,11 +167,25 @@ int tv_intf_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsi
                 tv_intf_print("Copied EDID to user space\n");
                 break;
 
+            case TV_INTF_IOCTL_GET_HDMI_OPT:
+                ret = bcm2835_tv_ioctl_hdmi_opt_get((TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T *)ioctl_cmd_buf);
+                uncopied = copy_to_user((void *)arg, ioctl_cmd_buf, _IOC_SIZE(cmd));
+                if (uncopied != 0)
+                   ret = -EFAULT;
+                tv_intf_print("Copied HDMI options to user space\n");
+                break;
+
+            case TV_INTF_IOCTL_SET_HDMI_OPT:
+                ret = bcm2835_tv_ioctl_hdmi_opt_set((TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T *)ioctl_cmd_buf);
+                break;
+
             default: 
-                tv_intf_print("Wrong IOCTL cmd. Expect %x, %x or %x\n",
+                tv_intf_print("Wrong IOCTL cmd. Expect %x, %x, %x, %x or %x\n",
                               TV_INTF_IOCTL_GET_CTRLS,
                               TV_INTF_IOCTL_SET_CTRLS,
-                              TV_INTF_IOCTL_GET_EDID);
+                              TV_INTF_IOCTL_GET_EDID,
+                              TV_INTF_IOCTL_GET_HDMI_OPT,
+                              TV_INTF_IOCTL_SET_HDMI_OPT);
                 ret = -EFAULT;
                 break;
         }

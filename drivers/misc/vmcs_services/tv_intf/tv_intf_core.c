@@ -66,6 +66,14 @@ static tv_dict_t cmd_dict[] =
       {"HDMI_RES_GROUP",   TV_INTF_HDMI_RES_GROUP_CTRL_OFFSET, TV_INTF_HDMI_RES_GROUP_STATUS_OFFSET, TV_INTF_HDMI_RES_GROUP_CHANGE},
       {"HDMI_RES_CODE",    TV_INTF_HDMI_RES_CODE_CTRL_OFFSET,  TV_INTF_HDMI_RES_CODE_STATUS_OFFSET,  TV_INTF_HDMI_RES_CODE_CHANGE},
       {"HDMI_EDID_BLOCK",  TV_INTF_HDMI_EDID_BLOCK_CTRL_OFFSET,TV_INTF_HDMI_EDID_BLOCK_STATUS_OFFSET,TV_INTF_HDMI_EDID_BLOCK_CHANGE},
+      {"HDMI_OPTIONS.ASPECT",                   TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET+0x00, TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET+0x00, TV_INTF_HDMI_DISPLAY_OPTION_CHANGE},
+      {"HDMI_OPTIONS.VERTICAL_BAR_PRESENT",     TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET+0x04, TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET+0x04, TV_INTF_HDMI_DISPLAY_OPTION_CHANGE},
+      {"HDMI_OPTIONS.LEFT_BAR_WIDTH",           TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET+0x08, TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET+0x08, TV_INTF_HDMI_DISPLAY_OPTION_CHANGE},
+      {"HDMI_OPTIONS.RIGHT_BAR_WIDTH",          TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET+0x0C, TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET+0x0C, TV_INTF_HDMI_DISPLAY_OPTION_CHANGE},
+      {"HDMI_OPTIONS.HORIZONTAL_BAR_PRESENT",   TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET+0x10, TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET+0x10, TV_INTF_HDMI_DISPLAY_OPTION_CHANGE},
+      {"HDMI_OPTIONS.TOP_BAR_HEIGHT",           TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET+0x14, TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET+0x14, TV_INTF_HDMI_DISPLAY_OPTION_CHANGE},
+      {"HDMI_OPTIONS.BOTTOM_BAR_HEIGHT",        TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET+0x18, TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET+0x18, TV_INTF_HDMI_DISPLAY_OPTION_CHANGE},
+      {"HDMI_OPTIONS.OVERSCAN_FLAGS",           TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET+0x1C, TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET+0x1C, TV_INTF_HDMI_DISPLAY_OPTION_CHANGE},
       {NULL, 0}
    };
 
@@ -128,7 +136,7 @@ int bcm2835_tv_intf(char *response, int maxlen, const char *format, ...)
     while (isspace(*key_p))
           key_p++;
     value_p = key_p;
-    while (isalnum(*value_p) || (*value_p == '_')) {
+    while (isalnum(*value_p) || (*value_p == '_') || (*value_p == '.')) {
         *value_p = toupper(*value_p);
         value_p++;
     }
@@ -311,6 +319,64 @@ int bcm2835_tv_ioctl_edid_get(TV_INTF_IOCTL_EDID_T *edid)
    return ret;
 }
 EXPORT_SYMBOL(bcm2835_tv_ioctl_edid_get);
+
+int bcm2835_tv_ioctl_hdmi_opt_get(TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T *opt_p)
+{
+    int ret=0;
+    TV_INTF_HDMI_DISPLAY_OPTIONS_T *ipc_p;
+
+    ipc_p = (TV_INTF_HDMI_DISPLAY_OPTIONS_T *)&TV_INTF_REGISTER_RW_BYTE(tv_intf_state.base_address,TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET);
+    opt_p->aspect                 = (TV_INTF_IOCTL_HDMI_ASPECT_T)ipc_p->aspect;
+    opt_p->vertical_bar_present   = ipc_p->vertical_bar_present;
+    opt_p->left_bar_width         = ipc_p->left_bar_width;
+    opt_p->right_bar_width        = ipc_p->right_bar_width;
+    opt_p->horizontal_bar_present = ipc_p->horizontal_bar_present;
+    opt_p->top_bar_height         = ipc_p->top_bar_height;
+    opt_p->bottom_bar_height      = ipc_p->bottom_bar_height;
+    opt_p->overscan_flags         = ipc_p->overscan_flags;
+    return ret;
+}
+EXPORT_SYMBOL(bcm2835_tv_ioctl_hdmi_opt_get);
+
+int bcm2835_tv_ioctl_hdmi_opt_set(TV_INTF_IOCTL_HDMI_DISPLAY_OPTIONS_T *opt_p)
+{
+    uint32_t change_bits = 0;
+    int ret = 0;
+    TV_INTF_HDMI_DISPLAY_OPTIONS_T *ipc_p;
+
+    ipc_p = (TV_INTF_HDMI_DISPLAY_OPTIONS_T *)&TV_INTF_REGISTER_RW_BYTE(tv_intf_state.base_address,TV_INTF_HDMI_DISPLAY_OPTIONS_STATUS_OFFSET);
+
+    if ((opt_p->aspect != ipc_p->aspect)                                  ||
+        (opt_p->vertical_bar_present != ipc_p->vertical_bar_present)      ||
+        (opt_p->left_bar_width != ipc_p->left_bar_width)                  ||
+        (opt_p->right_bar_width != ipc_p->right_bar_width)                ||
+        (opt_p->horizontal_bar_present != ipc_p->horizontal_bar_present)  ||
+        (opt_p->top_bar_height != ipc_p->top_bar_height)                  ||
+        (opt_p->bottom_bar_height != ipc_p->bottom_bar_height)            ||
+        (opt_p->overscan_flags != ipc_p->overscan_flags))
+    {
+        ipc_p = (TV_INTF_HDMI_DISPLAY_OPTIONS_T *)&TV_INTF_REGISTER_RW_BYTE(tv_intf_state.base_address,TV_INTF_HDMI_DISPLAY_OPTIONS_CTRL_OFFSET);
+        ipc_p->aspect                 = opt_p->aspect;
+        ipc_p->vertical_bar_present   = opt_p->vertical_bar_present;
+        ipc_p->left_bar_width         = opt_p->left_bar_width;
+        ipc_p->right_bar_width        = opt_p->right_bar_width;
+        ipc_p->horizontal_bar_present = opt_p->horizontal_bar_present;
+        ipc_p->top_bar_height         = opt_p->top_bar_height;
+        ipc_p->bottom_bar_height      = opt_p->bottom_bar_height;
+        ipc_p->overscan_flags         = opt_p->overscan_flags;
+        change_bits |= TV_INTF_HDMI_DISPLAY_OPTION_CHANGE;
+    }
+
+    if (change_bits) {
+        tv_intf_print("Setting change bits (%x) and ringing doorbell\n", change_bits);
+        test_tv_intf_vc_arm_lock();
+        TV_INTF_REGISTER_RW(tv_intf_state.base_address, TV_INTF_CTRL_CHANGE_OFFSET) |= change_bits;
+        test_tv_intf_vc_arm_unlock();
+        ipc_notify_vc_event(tv_intf_state.irq);
+    }
+    return ret;
+}
+EXPORT_SYMBOL(bcm2835_tv_ioctl_hdmi_opt_set);
 
 static irqreturn_t bcm2835_tv_intf_isr(int irq, void *dev_id)
 {
