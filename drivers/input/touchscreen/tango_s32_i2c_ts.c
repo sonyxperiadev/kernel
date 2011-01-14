@@ -40,6 +40,7 @@
 #include <linux/signal.h>
 #include <linux/kthread.h>
 #include <linux/syscalls.h>
+#include <linux/slab.h>
 
 #include <linux/hrtimer.h>
 #include <asm/io.h>
