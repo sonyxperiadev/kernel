@@ -95,8 +95,8 @@ typedef enum {
 #define TV_INTF_OUTPUT_CTRL_OFFSET              0x18     // Values of type TV_INTF_CTRL_T
 #define TV_INTF_OUTPUT_STATUS_OFFSET            0x1C     // Values of type TV_INTF_CTRL_T or'd with TV_INTF_STATUS_T
 
-#define TV_INTF_SDTV_COLOR_CTRL_OFFSET          0x20     // Value of type SDTV_COLOUR_T
-#define TV_INTF_SDTV_COLOR_STATUS_OFFSET        0x24     // Value of type SDTV_COLOUR_T
+//#define TV_INTF_SDTV_COLOR_CTRL_OFFSET          0x20     // Value of type SDTV_COLOUR_T
+//#define TV_INTF_SDTV_COLOR_STATUS_OFFSET        0x24     // Value of type SDTV_COLOUR_T
 
 #define TV_INTF_SDTV_MODE_CTRL_OFFSET           0x28     // Value of type SDTV_MODE_T
 #define TV_INTF_SDTV_MODE_STATUS_OFFSET         0x2C     // Value of type SDTV_MODE_T
