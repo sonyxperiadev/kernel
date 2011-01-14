@@ -33,8 +33,9 @@
  * Physical DRAM offset.
  */
 #define PHYS_OFFSET	 UL(0x00000000)
-#define ARMMEM_OFFSET    UL(0x00000000)   /* offset in VC of ARM memory */
+#define ARMMEM_OFFSET    UL(0x03000000)   /* offset in VC of ARM memory */
 #define _REAL_BUS_OFFSET UL(0xC0000000)   /* don't use L1 or L2 caches */
+#define VC_BASE_ADDR_IN_ARM_MAP UL(0x0D000000) /* offset to the VC physical 0x0 in ARM's view */
 
 /* We're using the memory at 64M in the VideoCore for Linux - this adjustment
    will provide the offset into this area as well as setting the bits that
@@ -48,7 +49,7 @@
 #define __bus_to_virt(x)    ((x) - (BUS_OFFSET - PAGE_OFFSET))
 #define __pfn_to_bus(x)     (__pfn_to_phys(x) + (BUS_OFFSET - PHYS_OFFSET))
 #define __bus_to_pfn(x)     __phys_to_pfn((x) - (BUS_OFFSET - PHYS_OFFSET))
-#define __bus_to_phys(x)    ((x) - (BUS_OFFSET - PHYS_OFFSET))
+#define __bus_to_phys(x)    ((x) - _REAL_BUS_OFFSET + VC_BASE_ADDR_IN_ARM_MAP) /* Assuming this is always IPC memory */
 
 
 /*
