@@ -50,6 +50,8 @@
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
 
+#include <linux/smb380.h>
+
 // #include <linux/regulator/machine.h>
 // #include <linux/regulator/consumer.h>
 // #include <linux/regulator/userspace-consumer.h>
@@ -369,61 +371,105 @@ static struct platform_device island_sdio2_device = {
 
 #ifdef CONFIG_REGULATOR_MAX8649 
 #ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
-// int island_maxim_platform_hw_init(void ) ;
 void island_maxim_platform_hw_init_1(void ) ;
 void island_maxim_platform_hw_init_2(void ) ;
 
 struct regulator_consumer_supply max8649_supply1 = { .supply = "vc_core" };
 struct regulator_init_data max8649_init_data1 = {
-	.constraints	= {
-    .name = "vc_core", .min_uV = 1210000, .max_uV	= 1280000, .always_on = 0, .boot_on	= 0, .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE|REGULATOR_CHANGE_MODE , .valid_modes_mask = REGULATOR_MODE_NORMAL|REGULATOR_MODE_FAST ,
-	},
-	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max8649_supply1,
+    .constraints	= 
+    {
+        .name = "vc_core", 
+        .min_uV = 1210000, 
+        .max_uV	= 1280000, 
+        .always_on = 0, 
+        .boot_on = 0, 
+        .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE|REGULATOR_CHANGE_MODE , 
+        .valid_modes_mask = REGULATOR_MODE_NORMAL|REGULATOR_MODE_FAST ,
+    },
+    .num_consumer_supplies	= 1,
+    .consumer_supplies	= &max8649_supply1,
 };
-struct max8649_platform_data max8649_info1 = { .mode = 2,	.extclk	= 0, .ramp_timing = MAX8649_RAMP_32MV, .regulator = &max8649_init_data1 , .init = island_maxim_platform_hw_init_1, } ;
 
-#if 0
-struct regulator_bulk_data maxim_bd1 = { .supply = "vc_core", };
-struct regulator_userspace_consumer_data maxim_uscd1 = { .name = "vc_core", .num_supplies = 1, .supplies = &maxim_bd1, .init_on = 0,};  
-struct platform_device max8649_uc1 =  { .name = "reg-userspace-consumer", .id = 13,           .dev = { .platform_data = &maxim_uscd1, }, };
-#endif
-struct platform_device max8649_vc1 =  { .name = "reg-virt-consumer",      .id = 13,           .dev = { .platform_data = "vc_core" , }, };
-struct i2c_board_info max_switch_info_1[] = { { .type		= "max8649", .addr		= 0x60, .platform_data	= &max8649_info1, }, };
+struct max8649_platform_data max8649_info1 = { 
+    .mode = 2,	
+    .extclk	= 0, 
+    .ramp_timing = MAX8649_RAMP_32MV, 
+    .regulator = &max8649_init_data1 , 
+    .init = island_maxim_platform_hw_init_1, 
+} ;
+
+struct platform_device max8649_vc1 =  { 
+    .name = "reg-virt-consumer",      
+    .id = 13,           
+    .dev = 
+    { 
+        .platform_data = "vc_core" , 
+    }, 
+};
+
+struct i2c_board_info max_switch_info_1[] = { 
+{ 
+    .type		= "max8649", 
+    .addr		= 0x60, 
+    .platform_data	= &max8649_info1, 
+    }, 
+};
 
 /***** Second Maxim part init data ( ARM part )*********/
 struct regulator_consumer_supply max8649_supply2 = { .supply = "arm_core" };
+
 struct regulator_init_data max8649_init_data2 = {
-	.constraints	= {
-    .name = "arm_core", .min_uV = 1210000, .max_uV = 1280000, .always_on = 0, .boot_on = 0, .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE|REGULATOR_CHANGE_MODE , .valid_modes_mask = REGULATOR_MODE_NORMAL|REGULATOR_MODE_FAST,
-	},
-	.num_consumer_supplies	= 1,
-	.consumer_supplies	= &max8649_supply2,
+    .constraints	= 
+    {
+        .name = "arm_core", 
+        .min_uV = 1210000, 
+        .max_uV = 1280000, 
+        .always_on = 0, 
+        .boot_on = 0, 
+        .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE|REGULATOR_CHANGE_MODE , 
+        .valid_modes_mask = REGULATOR_MODE_NORMAL|REGULATOR_MODE_FAST,
+    },
+    .num_consumer_supplies	= 1,
+    .consumer_supplies	= &max8649_supply2,
 };
-struct max8649_platform_data max8649_info2 = { .mode = 2,	/* VID1 = 1, VID0 = 0 */
-	.extclk		= 0, .ramp_timing	= MAX8649_RAMP_32MV, .regulator	= &max8649_init_data2 , .init = island_maxim_platform_hw_init_2, } ;
+struct max8649_platform_data max8649_info2 = 
+{ 
+    .mode = 2,	/* VID1 = 1, VID0 = 0 */
+    .extclk		= 0, 
+    .ramp_timing	= MAX8649_RAMP_32MV, 
+    .regulator	= &max8649_init_data2 , 
+    .init = island_maxim_platform_hw_init_2, 
+} ;
 
-#if 0
-struct regulator_bulk_data maxim_bd2 = { .supply = "arm_core", };
-struct regulator_userspace_consumer_data maxim_uscd2 = { .name = "arm_core", .num_supplies = 1, .supplies = &maxim_bd2, .init_on = 0,};  
-struct platform_device max8649_uc2 =  { .name = "reg-userspace-consumer", .id = 14,           .dev = { .platform_data = &maxim_uscd2, }, };
-#endif
+struct platform_device max8649_vc2 =  { 
+    .name = "reg-virt-consumer",      
+    .id = 14,           
+    .dev = 
+    { 
+        .platform_data = "arm_core" , 
+    }, 
+};
 
-struct platform_device max8649_vc2 =  { .name = "reg-virt-consumer",      .id = 14,           .dev = { .platform_data = "arm_core" , }, };
-struct i2c_board_info max_switch_info_2[] = { { .type		= "max8649", .addr		= 0x62, .platform_data	= &max8649_info2, }, };
+struct i2c_board_info max_switch_info_2[] = { 
+    { 
+        .type		= "max8649", 
+        .addr		= 0x62, 
+        .platform_data	= &max8649_info2, 
+    }, 
+};
 
 struct platform_device *maxim_devices_1[] __initdata = { &max8649_vc1 } ;
 struct platform_device *maxim_devices_2[] __initdata = { &max8649_vc2 };
 
 void island_maxim_platform_hw_init_1(void )
 {
-	printk("REG: island_maxim_platform_hw_init for VC called\n") ;
+    printk("REG: island_maxim_platform_hw_init for VC called\n") ;
     platform_add_devices(maxim_devices_1, ARRAY_SIZE(maxim_devices_1));
 }
 
 void island_maxim_platform_hw_init_2(void )
 {
-	printk("REG: island_maxim_platform_hw_init for ARM called \n") ;
+    printk("REG: island_maxim_platform_hw_init for ARM called \n") ;
     platform_add_devices(maxim_devices_2, ARRAY_SIZE(maxim_devices_2));
 }
 
@@ -453,6 +499,37 @@ static struct i2c_board_info __initdata pmu_info[] =
    {  /* New touch screen i2c slave address. */
       I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR ), 
       .platform_data  = &bcm590xx_plat_data,
+   },
+};
+#endif
+
+#ifdef CONFIG_INPUT_SMB380
+#define BMA150_IRQ_PIN 140
+
+static struct smb380_platform_data bma150_plat_data = {
+   .range = RANGE_2G,
+   .bandwidth = BW_375HZ, 
+   .enable_adv_int = 1,
+   .new_data_int = 0 ,
+   .hg_int = 1 ,
+   .lg_int = 1 ,
+   .lg_dur = 150 ,
+   .lg_thres = 20 ,
+   .lg_hyst = 0 ,
+   .hg_dur = 60 ,
+   .hg_thres = 160 ,
+   .hg_hyst = 0 ,
+   .any_motion_dur  = 2 ,
+   .any_motion_thres  = 30 ,
+   .any_motion_int  = 1 ,
+};
+
+static struct i2c_board_info __initdata bma150_info[] = 
+{
+   {  
+      I2C_BOARD_INFO("smb380", 0x38 ), 
+      .platform_data  = &bma150_plat_data,
+      .irq = gpio_to_irq(BMA150_IRQ_PIN),
    },
 };
 #endif
@@ -488,10 +565,10 @@ static void __init board_add_devices(void)
 
 #ifdef CONFIG_REGULATOR_MAX8649 
 #ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
-   i2c_register_board_info(2,              // This is i2c adapter number. For fpga put it on i2c 1.
+   i2c_register_board_info(2,              
                            max_switch_info_1,
                            ARRAY_SIZE(max_switch_info_1));
-   i2c_register_board_info(2,              // This is i2c adapter number. For fpga put it on i2c 1.
+   i2c_register_board_info(2,              
                            max_switch_info_2,
                            ARRAY_SIZE(max_switch_info_2));
 #endif
@@ -500,10 +577,35 @@ static void __init board_add_devices(void)
 #ifdef CONFIG_REGULATOR_BCM_PMU590XX
    printk("REG: i2c_register_board_info for pmu called \n") ;
 
-   i2c_register_board_info(2,              // This is i2c adapter number. For fpga put it on i2c 1.
+   i2c_register_board_info(2,              
                            pmu_info,
                            ARRAY_SIZE(pmu_info));
 #endif
+
+#ifdef CONFIG_INPUT_SMB380
+   printk("REG: i2c_register_board_info for BMA150 called \n") ;
+   i2c_register_board_info(2,              
+                           bma150_info,
+                           ARRAY_SIZE(bma150_info));
+
+   // Setup GPIO properties for interrupt from sensor.
+   int rc = 0 ; 
+   rc = set_irq_type(gpio_to_irq(BMA150_IRQ_PIN), IRQ_TYPE_EDGE_FALLING);
+   if (rc < 0)
+   {
+      printk("set_irq_type failed with irq %d\n", gpio_to_irq(BMA150_IRQ_PIN));
+      return ;
+   }
+   rc = gpio_request(BMA150_IRQ_PIN, "bma_pen_down");
+   if (rc < 0)
+   {
+      printk("unable to request GPIO pin %d\n", BMA150_IRQ_PIN);
+      return ;
+   }
+   gpio_direction_input(BMA150_IRQ_PIN);
+
+#endif
+
 }
 
 void __init board_init(void)
@@ -524,6 +626,14 @@ void __init board_init(void)
    writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_ADDR_20_OFFSET);
    // Set pinmux for GPIO_164 which is used for <Back> key
    writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_AD_14_OFFSET);
+#endif
+
+#ifdef CONFIG_INPUT_SMB380
+   // Setup pin muxing for sensor interrupt pin.
+   int val = 0 ;
+   val = val | ( 3 << CHIPREG_SIM2_DET_PINSEL_2_0_SHIFT ) |      // Set ALT value to 3.
+               ( 3 << CHIPREG_SIM2_DET_SEL_2_0_SHIFT )    ;      // Set drive strength to 3.
+   writel( val,  ( chipRegBase + CHIPREG_SIM2_DET_OFFSET ) ) ;
 #endif
 
    board_add_devices();

@@ -406,6 +406,14 @@ config INPUT_PCAP
 	  To compile this driver as a module, choose M here: the
 	  module will be called pcap_keys.
 
+config INPUT_SMB380
+	tristate "SMB380/BMA023 Triaxial acceleration sensor"
+	depends on I2C
+	help
+	Say Y here if you want to support Bosch SMB380/BMA023 connected via an I2C bus.
+	To compile this driver as a module, choose M here: the module will be called smb380.
+
+
 config INPUT_BCM2835_IR
         tristate "BCM2835 IR input events"
         depends on MACH_BCM2708
