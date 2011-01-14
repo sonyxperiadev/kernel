@@ -53,8 +53,8 @@
  *
  ***************************************************************************/
 
-#ifndef TV_INTERFACE_H
-#define TV_INTERFACE_H
+#ifndef TV_INTF_REGS_H
+#define TV_INTF_REGS_H
 
 #if defined( __cplusplus )
 extern "C"
@@ -128,8 +128,8 @@ typedef enum {
    
 #define TV_INTF_HDMI_NOTIFY_OFFSET              0x70     // Value of type VC_HDMI_NOTIFY_T
 
-#define TV_INTF_HDMI_OPTIONS_CTRL_OFFSET        0x80     // 12 bytes of HDMI_DISPLAY_OPTIONS_T
-#define TV_INTF_HDMI_OPTIONS_STATUS_OFFSET      0x90     // 12 bytes of HDMI_DISPLAY_OPTIONS_T
+//#define TV_INTF_HDMI_OPTIONS_CTRL_OFFSET        0x80     // 12 bytes of HDMI_DISPLAY_OPTIONS_T
+//#define TV_INTF_HDMI_OPTIONS_STATUS_OFFSET      0x90     // 12 bytes of HDMI_DISPLAY_OPTIONS_T
 
 #define TV_INTF_EDID_OFFSET                     0xA0     // 128 bytes of EDID data
 
@@ -161,4 +161,4 @@ typedef struct {
 #if defined( __cplusplus )
 }
 #endif
-#endif // TV_INTERFACE_H
+#endif // TV_INTF_REGS_H
