@@ -26,6 +26,13 @@
 #include <linux/spinlock.h>
 #include <asm/clkdev.h>
 #include <mach/clock.h>
+#include <asm/io.h>
+#include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+
+#ifdef CONFIG_SMP
+#include <asm/cpu.h>
+#endif
+
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -101,7 +108,7 @@ unsigned long clk_get_rate(struct clk *clk)
 	unsigned long flags, rate;
 
 	if (!clk || !clk->ops || !clk->ops->get_rate)
-		return 0;	
+		return 0;
 
 	spin_lock_irqsave(&clk_lock, flags);
 	rate = clk->ops->get_rate(clk);
@@ -151,7 +158,7 @@ struct clk *clk_get_parent(struct clk *clk)
 {
 	struct clk *parent;
 	unsigned long flags;
-	
+
 	if (!clk)
 		return NULL;
 
@@ -217,16 +224,16 @@ static unsigned long common_round_rate(struct clk *c, unsigned long rate)
 
 	for (i=0; i<c->src->total;i++) {
 		unsigned long new_rate, div;
-		/* round to the new rate */		
-		div = c->src->parents[i].rate / rate;
-		new_rate = c->src->parents[i].rate/div;
+		/* round to the new rate */
+		div = c->src->parents[i]->rate / rate;
+		new_rate = c->src->parents[i]->rate/div;
 		/* get the min diff */
 		if(new_rate-rate < diff) {
 			diff = new_rate-rate;
 			ind = i;
 		}
 	}
-	return c->src->parents[ind].rate;
+	return c->src->parents[ind]->rate;
 }
 
 static int common_set_rate(struct clk *c, unsigned long rate)
@@ -240,13 +247,13 @@ static int common_set_rate(struct clk *c, unsigned long rate)
 		return c->rate;
 	}
 
-	BUG_ON(!c->src || !c->src->total);
+	BUG_ON( !c->src || !c->src->total);
 
 	for (i=0; i<c->src->total;i++) {
 		unsigned long new_rate, div;
-		/* round to the new rate */		
-		div = c->src->parents[i].rate / rate;
-		new_rate = c->src->parents[i].rate/div;
+		/* round to the new rate */
+		div = c->src->parents[i]->rate / rate;
+		new_rate = c->src->parents[i]->rate/div;
 		/* get the min diff */
 		if(new_rate-rate < diff) {
 			diff = new_rate-rate;
@@ -267,22 +274,182 @@ static int common_set_parent(struct clk *c, struct clk *parent)
 	BUG_ON(!c->src || !c->src->total);
 
 	for (i=0; i<c->src->total; i++) {
-		if (is_same_clock(parent, &c->src->parents[i]))
+		if (is_same_clock(parent, c->src->parents[i]))
 			return 0;
 	}
 	return -EINVAL;
 }
 
+static inline void __proc_clk_enable_access (void __iomem *base, int enable)
+{
+	if (enable)
+		writel(CLK_WR_ACCESS_PASSWORD, base + KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	else
+		writel(0, base + KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET);
+}
+
+/* swtich ARM to policy x */
+static inline int __proc_clk_switch_to_policy(void __iomem *base, int policy)
+{
+	clk_dbg ("switch to policy %d\n", policy);
+	if (policy>=0 && policy<=7) {
+		int val;
+
+		/* Software update enable for policy related data */
+		writel (KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK, base + KPROC_CLK_MGR_REG_LVM_EN_OFFSET);
+		do {
+			val = readl (base + KPROC_CLK_MGR_REG_LVM_EN_OFFSET);
+		} while (val & KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK);
+
+		val = (policy<<24) | (policy<<16) | (policy<<8) | policy;
+
+		/* program policy ID */
+		writel (val, base + KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET);
+
+		val = KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK |
+			KPROC_CLK_MGR_REG_POLICY_CTL_GO_ATL_MASK;
+		writel (val, base + KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET);
+
+		/*polling ctrl go bit back to 0 */
+		do {
+			val = readl (base + KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET);
+		} while (val & KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK);
+	}
+	else
+		return -EINVAL;
+
+	return 0;
+}
+
+/* enable arm_pll VCO */
+static inline void __proc_clk_enable_arm_pll(void __iomem *base, unsigned long rate)
+{
+	int val;
+	unsigned r;
+#define	VC0_FREQ_THRE 	1750000000
+#define	XTAL_FREQ		26000000		// 26Mhz, FIXME, may need to come from board file
+#define	NDIV_SHIFT		20
+	int pdiv = 1, ndiv_int, ndiv_frac;
+
+	// required if VCO > 1.75Ghz
+	if (rate >= VC0_FREQ_THRE)
+		val = 0x08102000;
+	else
+		val = 0x08000000;
+	writel (val, base + KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET);
+
+	ndiv_int= rate / XTAL_FREQ;
+	ndiv_frac = div_u64_rem ( ((u64)(rate % XTAL_FREQ)) << NDIV_SHIFT, XTAL_FREQ, &r);
+	clk_dbg ("int = %d 0x%x, frac = %d 0x%x\n", ndiv_int, ndiv_frac);
+
+	/* PLL integer */
+	val = (pdiv<<KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT)
+		| (ndiv_int<<KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT)
+		| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK
+		| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK;
+	writel (val, base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+
+	/* PLL fraction */
+	val = ndiv_frac<<KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
+	writel (val, base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
+}
+
+
+/* post divider for policy 6 and 7*/
+static inline void __proc_clk_set_policy_div(void __iomem *base, int policy, int div)
+{
+	if (policy==6)
+		writel (div, base + KPROC_CLK_MGR_REG_PLLARMC_OFFSET);
+	else if( policy==7)
+		writel (div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
+}
+
+static inline void __proc_clk_dump_register (void __iomem *base)
+{
+#if defined(CONFIG_SMP)
+	unsigned int cpu = get_cpu();
+	clk_dbg("current cpu %d\n", cpu);
+	put_cpu();
+#endif
+	clk_dbg ("policy freq      0x%08x\n", readl(base+KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET));
+	clk_dbg ("policy_ctrl      0x%08x\n", readl(base+KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET));
+	clk_dbg ("arma             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
+	clk_dbg ("armb             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMB_OFFSET));
+	clk_dbg ("armc             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMC_OFFSET));
+	clk_dbg ("armctrl3         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET));
+	clk_dbg ("armctrl5         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET));
+	clk_dbg ("lvm_en           0x%08x\n", readl(base+KPROC_CLK_MGR_REG_LVM_EN_OFFSET));
+}
 /* Proc clocks */
 static int proc_clk_enable(struct clk *c, int enable)
 {
 	int ret=0;
 	return ret;
 }
+
+#ifndef CONFIG_CPU_FREQ
+static void __recalc_loops_per_jiffy(unsigned long old_rate, unsigned long new_rate)
+{
+	u64 prod;
+	u32 r;
+
+#if defined(CONFIG_SMP)
+	int i;
+	clk_dbg ("recal jiffy - SMP\n");
+	for_each_online_cpu(i) {
+		clk_dbg ("recal for cpu %d\n", i);
+		prod = (u64)per_cpu(cpu_data, i).loops_per_jiffy * (u64)new_rate;
+		per_cpu(cpu_data, i).loops_per_jiffy = div_u64_rem(prod, (u32)old_rate, &r);
+	}
+#else
+	clk_dbg ("recal jiffy - UP\n");
+	extern unsigned long loops_per_jiffy;
+	prod = (u64)loops_per_jiffy * (u64)new_rate;
+	loops_per_jiffy = (unsigned long) div_u64_rem(prod, (u32)old_rate, &r);
+#endif
+
+#endif
+}
+
 static int proc_clk_set_rate(struct clk *c, unsigned long rate)
 {
-	int ret=0;
+	struct proc_clock *proc_clk = to_proc_clk(c);
+	unsigned long old_rate = c->rate;
+	void __iomem *base;
+	int ret = 0, div = 2;
+
 	c->rate = rate;
+
+	base = ioremap (proc_clk->proc_clk_mgr_base, SZ_4K);
+	if(!base)
+		return -ENOMEM;
+
+	__proc_clk_enable_access (base, 1);
+
+	ret = __proc_clk_switch_to_policy (base, 2);
+	if (ret)
+		goto err;
+
+	__proc_clk_enable_arm_pll(base, rate*div);
+
+	__proc_clk_set_policy_div (base, 7, div);
+
+	ret = __proc_clk_switch_to_policy (base, 7);
+	if (ret)
+		goto err;
+
+	__proc_clk_dump_register (base);
+	__proc_clk_enable_access (base, 0);
+	iounmap (base);
+
+#ifndef CONFIG_CPU_FREQ
+	__recalc_loops_per_jiffy(old_rate, rate);
+#endif
+
+	return ret;
+err:
+	__proc_clk_enable_access (base, 0);
+	iounmap (base);
 	return ret;
 }
 static unsigned long proc_clk_get_rate(struct clk *c)
@@ -363,25 +530,26 @@ static int clk_debug_set_rate(void *data, u64 val)
 }
 
 
-DEFINE_SIMPLE_ATTRIBUTE(clock_rate_fops, clk_debug_get_rate, 
+DEFINE_SIMPLE_ATTRIBUTE(clock_rate_fops, clk_debug_get_rate,
 	clk_debug_set_rate, "%llu\n");
 
 
 static int clk_parent_show(struct seq_file *seq, void *p)
 {
-	struct clk *clock = p;
+	struct clk *clock = seq->private;
 
+	seq_printf(seq, "name   -- %s\n", clock->name);
 	if(clock->parent)
-		seq_printf(seq, "parent->%s\n", clock->parent->name);
+		seq_printf(seq, "parent -- %s\n", clock->parent->name);
 	else
-		seq_printf(seq, "parent-> NULL\n");
-	seq_printf(seq, "name->%s\n", clock->name);
+		seq_printf(seq, "parent -- NULL\n");
+
 	return 0;
 }
 
 static int fops_parent_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, clk_parent_show, NULL);
+	return single_open(file, clk_parent_show, inode->i_private);
 }
 
 static const struct file_operations clock_parent_fops = {
@@ -393,13 +561,13 @@ static const struct file_operations clock_parent_fops = {
 
 static int clk_source_show(struct seq_file *seq, void *p)
 {
-	struct clk *clock = p;
+	struct clk *clock = seq->private;
 
 	if (clock->src) {
 		int i;
 		seq_printf(seq, "clock source for %s\n", clock->name);
 		for (i=0; i<clock->src->total; i++) {
-			seq_printf(seq, "%d	%s\n", i, clock->src->parents->name);
+			seq_printf(seq, "%d	%s\n", i, clock->src->parents[i]->name);
 		}
 	}
 	else
@@ -409,7 +577,7 @@ static int clk_source_show(struct seq_file *seq, void *p)
 
 static int fops_source_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, clk_source_show, NULL);
+	return single_open(file, clk_source_show, inode->i_private);
 }
 
 static const struct file_operations clock_source_fops = {
@@ -442,7 +610,7 @@ int __init clock_debug_add_clock(struct clk *c)
 	dent_rate	=	debugfs_create_file("rate", 0644, dent_clk_dir, c, &clock_rate_fops);
 	if(!dent_rate)
 		goto err;
-	
+
 	/* file /clock/clk_a/div */
 	dent_div	=	debugfs_create_u32("div", 0444, dent_clk_dir, (unsigned int*)&c->div);
 	if(!dent_div)
@@ -452,7 +620,7 @@ int __init clock_debug_add_clock(struct clk *c)
 	dent_usr_cnt	=	debugfs_create_u32("usr_cnt", 0444, dent_clk_dir, (unsigned int*)&c->use_cnt);
 	if(!dent_usr_cnt)
 		goto err;
-	
+
 	/* file /clock/clk_a/id */
 	dent_id		=	debugfs_create_u32("id", 0444, dent_clk_dir, (unsigned int*)&c->id);
 	if(!dent_id)
@@ -467,6 +635,7 @@ int __init clock_debug_add_clock(struct clk *c)
 	dent_source	=	debugfs_create_file("source", 0444, dent_clk_dir, c, &clock_source_fops);
 	if(!dent_source)
 		goto err;
+	return 0;
 
 err:
 	debugfs_remove(dent_rate);
@@ -476,6 +645,6 @@ err:
 	debugfs_remove(dent_parent);
 	debugfs_remove(dent_source);
 	debugfs_remove(dent_clk_dir);
-	return 0;
+	return -ENOMEM;
 }
 #endif

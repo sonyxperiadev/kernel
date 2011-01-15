@@ -44,6 +44,7 @@
 #include <asm/gpio.h>
 
 #include <mach/kona.h>
+#include <mach/clock.h>
 #include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
@@ -434,8 +435,9 @@ static void __init board_add_devices(void)
 
 void __init board_init(void)
 {
-   board_add_devices();
-   return;
+	clock_init();
+	board_add_devices();
+	return;
 }
 
 

@@ -41,6 +41,7 @@
 #include <asm/gpio.h>
 
 #include <mach/kona.h>
+#include <mach/clock.h>
 #include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <asm/io.h>
@@ -610,22 +611,22 @@ static void __init board_add_devices(void)
 
 void __init board_init(void)
 {
-   void __iomem *chipRegBase;
-   chipRegBase = IOMEM(KONA_CHIPREG_VA);
+	void __iomem *chipRegBase;
+	chipRegBase = IOMEM(KONA_CHIPREG_VA);
 #ifdef CONFIG_TOUCHSCREEN_TSC2007
-   // Set pinmux for GPIO_143 which is used for TSC2007's interrupt pin
-   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_SIM2_RESETN_OFFSET);
+	// Set pinmux for GPIO_143 which is used for TSC2007's interrupt pin
+	writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_SIM2_RESETN_OFFSET);
 #endif
 
 #ifdef CONFIG_KEYBOARD_GPIO
-   // Set pinmux for GPIO_166 which is used for <Home> key
-   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_ADLAT_EN_OFFSET);
-   // Set pinmux for GPIO_167 which is used for <Search> key
-   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_AADLAT_EN_OFFSET);
-   // Set pinmux for GPIO_172 which is used for <Menu> key
-   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_ADDR_20_OFFSET);
-   // Set pinmux for GPIO_164 which is used for <Back> key
-   writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_AD_14_OFFSET);
+	// Set pinmux for GPIO_166 which is used for <Home> key
+	writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_ADLAT_EN_OFFSET);
+	// Set pinmux for GPIO_167 which is used for <Search> key
+	writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_AADLAT_EN_OFFSET);
+	// Set pinmux for GPIO_172 which is used for <Menu> key
+	writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_ADDR_20_OFFSET);
+	// Set pinmux for GPIO_164 which is used for <Back> key
+	writel(ALT_GPIO | GPIO_PULL_UP | GPIO_DRIVE_STRENGTH,  chipRegBase + CHIPREG_NORFLSH_AD_14_OFFSET);
 #endif
 
 #ifdef CONFIG_INPUT_SMB380
@@ -636,8 +637,10 @@ void __init board_init(void)
    writel( val,  ( chipRegBase + CHIPREG_SIM2_DET_OFFSET ) ) ;
 #endif
 
-   board_add_devices();
-   return;
+	clock_init();
+
+	board_add_devices();
+	return;
 }
 
 

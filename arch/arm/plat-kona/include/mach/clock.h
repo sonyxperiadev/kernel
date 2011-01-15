@@ -12,8 +12,10 @@
 * consent.
 *****************************************************************************/
 
-
+#include <linux/errno.h>
 #include <linux/spinlock.h>
+#include <linux/init.h>
+#include <asm/clkdev.h>
 
 struct clk;
 
@@ -45,7 +47,7 @@ struct clk_ops {
  */
 struct clk_src {
 	int			total;
-	struct clk 	*parents;
+	struct clk 	**parents;
 };
 
 struct clk {
@@ -55,7 +57,7 @@ struct clk {
 	const char			*name;
 	int					id;
 	int					use_cnt;
-	
+
 	unsigned long		rate;		/* in HZ */
 	unsigned long		div;		/* programmable divider. 0 means fixed ratio to parent clock */
 
@@ -64,7 +66,8 @@ struct clk {
 };
 
 struct proc_clock {
-	struct clk	clk;
+	struct clk		clk;
+	unsigned long	proc_clk_mgr_base;
 };
 
 struct peri_clock {
@@ -85,6 +88,9 @@ static inline int is_same_clock(struct clk *a, struct clk *b)
 }
 
 #define	to_clk(p) (&((p)->clk))
+#define	name_to_clk(name) (&((name##_clk).clk))
+/* declare a struct clk_lookup */
+#define	CLK_LK(name) {.con_id=__stringify(name##_clk), .clk=name_to_clk(name),}
 
 static inline struct proc_clock *to_proc_clk(struct clk *clock)
 {
@@ -119,3 +125,15 @@ int clock_debug_add_clock(struct clk *c);
 #define	clock_debug_add_clock(clk) do {} while(0)
 #endif
 
+int __init clock_init(void);
+int __init clock_late_init(void);
+
+#define	CLK_WR_ACCESS_PASSWORD	0x00A5A501
+#define	CLOCK_1K				1000
+#define	CLOCK_1M				(CLOCK_1K * 1000)
+
+#if defined(DEBUG)
+#define	clk_dbg printk
+#else
+#define clk_dbg(format...) do{} while(0)
+#endif
