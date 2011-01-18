@@ -352,7 +352,7 @@ static int bcm590xx_regulator_probe(struct platform_device *pdev)
 {
 	struct regulator_dev *rdev;
 
-	printk("REG: bcm590xx_regulator_probe called \n"); 
+	// printk("REG: bcm590xx_regulator_probe called \n"); 
 
 	/* register regulator */
 #ifdef CONFIG_REGULATOR_BCM_PMU59055_A0 
@@ -396,7 +396,7 @@ int bcm590xx_register_regulator(struct bcm590xx *bcm590xx, int reg,
 	struct platform_device *pdev;
 	int ret = 0 ;
 
-	printk("REG: bcm590xx_register_regulator called for regulator %d \n", reg ) ;
+	// printk("REG: bcm590xx_register_regulator called for regulator %d \n", reg ) ;
 
 	pdev = platform_device_alloc("bcm590xx-regulator", reg);
 	if (!pdev)
