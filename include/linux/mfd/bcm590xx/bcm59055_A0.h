@@ -64,6 +64,13 @@
 #define BCM59055_IOSR   11
 #define BCM59055_SDSR   12
 
+#define PC2_IS_0_PC1_IS_0  0
+#define PC2_IS_0_PC1_IS_1  2
+#define PC2_IS_1_PC1_IS_0  4
+#define PC2_IS_1_PC1_IS_1  6
+
+#define EN_DIS_SHIFT    PC2_IS_1_PC1_IS_1 
+
 struct bcm590xx_regulator_init_data ; 
 
 void bcm59055_register_details(void **reg_info) ;

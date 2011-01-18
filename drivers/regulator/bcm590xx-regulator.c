@@ -113,7 +113,9 @@ static int bcm590xxreg_enable(struct regulator_dev *rdev)
         if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) < LDO_OFF ) { return 1 ; }  // Already enabled.
         else 
         { 
-            return ( bcm590xx_reg_write(bcm59055, info->reg_addr, (  ( rc & ~info->en_dis_mask  ) | LDO_STANDBY ) ) ) ;
+            // return ( bcm590xx_reg_write(bcm59055, info->reg_addr, ( ( rc & ~info->en_dis_mask  ) | LDO_STANDBY ) ) ) ;
+			rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) | ( LDO_STANDBY << info->en_dis_shift ) ;
+            return ( bcm590xx_reg_write(bcm59055, info->reg_addr, rc ) ) ;
         } 
     }
 	else if ( ldo_or_sr == BCM590XX_SR ) 
@@ -121,7 +123,9 @@ static int bcm590xxreg_enable(struct regulator_dev *rdev)
         if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) != LDO_OFF ) { return 1 ; }  // Already enabled.
         else 
         { 
-            return ( bcm590xx_reg_write(bcm59055, info->reg_addr, (  ( rc & ~info->en_dis_mask  ) | LDO_NORMAL ) ) ) ;
+            // return ( bcm590xx_reg_write(bcm59055, info->reg_addr, (  ( rc & ~info->en_dis_mask  ) | LDO_NORMAL ) ) ) ;
+			rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) | ( LDO_NORMAL << info->en_dis_shift ) ;
+            return ( bcm590xx_reg_write(bcm59055, info->reg_addr, rc ) ) ;
         } 
 	}
 }
@@ -143,7 +147,9 @@ static int bcm590xxreg_disable(struct regulator_dev *rdev)
 	if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) == LDO_OFF ) { return 1 ; }  // Already disabled.
 	else 
 	{ 
-        return ( bcm590xx_reg_write(bcm59055, info->reg_addr, (  ( rc & ~info->en_dis_mask  ) | LDO_OFF ) ) ) ;
+        // return ( bcm590xx_reg_write(bcm59055, info->reg_addr, (  ( rc & ~info->en_dis_mask  ) | LDO_OFF ) ) ) ;
+        rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) | ( LDO_OFF << info->en_dis_shift ) ;
+        return ( bcm590xx_reg_write(bcm59055, info->reg_addr, rc ) ) ;
 	} 
 }
 
@@ -225,17 +231,18 @@ static int bcm590xxreg_set_mode(struct regulator_dev *rdev, unsigned mode)
 		return rc;
 	}
 
-	// Clear up last 2 bits after read.
-	rc = ( rc >> info->en_dis_shift ) & ( ~info->en_dis_mask ) ;
+	// rc = ( rc >> info->en_dis_shift ) & ( ~info->en_dis_mask ) ;
+	// Clear up needed 2 bits after read.
+    rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) ;
 
     switch ( mode ) 
 	{
-        case REGULATOR_MODE_NORMAL : { rc = rc | LDO_NORMAL ; break ; } // Normal setting.
-        case REGULATOR_MODE_STANDBY : { rc = rc | LDO_STANDBY ; break ; } // Standby setting.
+        case REGULATOR_MODE_NORMAL :  { rc = rc | ( LDO_NORMAL << info->en_dis_shift ) ; break ; } // Normal setting.
+        case REGULATOR_MODE_STANDBY : { rc = rc | ( LDO_STANDBY << info->en_dis_shift ) ; break ; } // Standby setting.
         case REGULATOR_MODE_IDLE : 
         { 
-            if ( ldo_or_sr == BCM590XX_SR ) { rc = rc | LDO_RESERVED_SR_IDLE ; }
-			else if ( ldo_or_sr == BCM590XX_LDO ) { rc = rc | LDO_STANDBY ; }
+            if ( ldo_or_sr == BCM590XX_SR ) { rc = rc | ( LDO_RESERVED_SR_IDLE << info->en_dis_shift ); }
+			else if ( ldo_or_sr == BCM590XX_LDO ) { rc = rc | ( LDO_STANDBY << info->en_dis_shift ) ; }
         }
 		default : { return -EINVAL ; }
 	}
