@@ -366,7 +366,7 @@ static inline void __proc_clk_set_policy_div(void __iomem *base, int policy, int
 
 static inline void __proc_clk_dump_register (void __iomem *base)
 {
-#if defined(CONFIG_SMP)
+#if defined(CONFIG_SMP) && defined(DEBUG)
 	unsigned int cpu = get_cpu();
 	clk_dbg("current cpu %d\n", cpu);
 	put_cpu();
