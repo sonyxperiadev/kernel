@@ -305,8 +305,8 @@ static struct regulator_init_data bcm59055_rfldo_data =  {
 
 static struct regulator_bulk_data bcm59055_bd_rf =                    { .supply = "rf_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_rf = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_rf, .init_on = BCM59055_RFLDO_OTP_VAL};
-static struct platform_device bcm59055_uc_device_rf =                 { .name = "reg-userspace-consumer", .id = 0,           .dev = { .platform_data = &bcm59055_uc_data_rf, }, };
-static struct platform_device bcm59055_vc_device_rf =                 { .name = "reg-virt-consumer",      .id = 0,           .dev = { .platform_data = "rf_voltage" , }, };
+static struct platform_device bcm59055_uc_device_rf =                 { .name = "reg-userspace-consumer", .id = 2,           .dev = { .platform_data = &bcm59055_uc_data_rf, }, };
+static struct platform_device bcm59055_vc_device_rf =                 { .name = "reg-virt-consumer",      .id = 2,           .dev = { .platform_data = "rf_voltage" , }, };
 /*********** RFLDO END ********************************************************************************************************************************************************/
 
 /*********** CAMLDO Start ******************************************************************************************************************************************************/
@@ -320,8 +320,8 @@ static struct regulator_init_data bcm59055_camldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_cam =                    { .supply = "cam_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_cam = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_cam, .init_on = BCM59055_CAMLDO_OTP_VAL };
-static struct platform_device bcm59055_uc_device_cam =                 { .name = "reg-userspace-consumer", .id = 1,           .dev = { .platform_data = &bcm59055_uc_data_cam, }, };
-static struct platform_device bcm59055_vc_device_cam =                 { .name = "reg-virt-consumer",      .id = 1,           .dev = { .platform_data = "cam_voltage" , }, };
+static struct platform_device bcm59055_uc_device_cam =                 { .name = "reg-userspace-consumer", .id = 3,           .dev = { .platform_data = &bcm59055_uc_data_cam, }, };
+static struct platform_device bcm59055_vc_device_cam =                 { .name = "reg-virt-consumer",      .id = 3,           .dev = { .platform_data = "cam_voltage" , }, };
 /*********** CAMLDO END ********************************************************************************************************************************************************/
 
 /*********** HV1LDO Start ******************************************************************************************************************************************************/
@@ -335,8 +335,8 @@ static struct regulator_init_data bcm59055_hv1ldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_hv1 =                    { .supply = "hv1_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv1 = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_hv1, .init_on = BCM59055_HV1LDO_OTP_VAL, };  
-static struct platform_device bcm59055_uc_device_hv1 =                 { .name = "reg-userspace-consumer", .id = 2,           .dev = { .platform_data = &bcm59055_uc_data_hv1, }, };
-static struct platform_device bcm59055_vc_device_hv1 =                 { .name = "reg-virt-consumer",      .id = 2,           .dev = { .platform_data = "hv1_voltage" , }, };
+static struct platform_device bcm59055_uc_device_hv1 =                 { .name = "reg-userspace-consumer", .id = 4,           .dev = { .platform_data = &bcm59055_uc_data_hv1, }, };
+static struct platform_device bcm59055_vc_device_hv1 =                 { .name = "reg-virt-consumer",      .id = 4,           .dev = { .platform_data = "hv1_voltage" , }, };
 /*********** HV1LDO END ********************************************************************************************************************************************************/
 
 /*********** HV2LDO Start ******************************************************************************************************************************************************/
@@ -350,8 +350,8 @@ static struct regulator_init_data bcm59055_hv2ldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_hv2 =                    { .supply = "hv2_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv2 = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_hv2, .init_on = BCM59055_HV2LDO_OTP_VAL, };  
-static struct platform_device bcm59055_uc_device_hv2 =                 { .name = "reg-userspace-consumer", .id = 3,           .dev = { .platform_data = &bcm59055_uc_data_hv2, }, };
-static struct platform_device bcm59055_vc_device_hv2 =                 { .name = "reg-virt-consumer",      .id = 3,           .dev = { .platform_data = "hv2_voltage" , }, };
+static struct platform_device bcm59055_uc_device_hv2 =                 { .name = "reg-userspace-consumer", .id = 5,           .dev = { .platform_data = &bcm59055_uc_data_hv2, }, };
+static struct platform_device bcm59055_vc_device_hv2 =                 { .name = "reg-virt-consumer",      .id = 5,           .dev = { .platform_data = "hv2_voltage" , }, };
 /*********** HV2LDO END ********************************************************************************************************************************************************/
 
 /*********** HV3LDO Start ******************************************************************************************************************************************************/
@@ -365,8 +365,8 @@ static struct regulator_init_data bcm59055_hv3ldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_hv3 =                    { .supply = "hv3_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv3 = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_hv3, .init_on = BCM59055_HV3LDO_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_hv3 =                 { .name = "reg-userspace-consumer", .id = 4,           .dev = { .platform_data = &bcm59055_uc_data_hv3, }, };
-static struct platform_device bcm59055_vc_device_hv3 =                 { .name = "reg-virt-consumer",      .id = 4,           .dev = { .platform_data = "hv3_voltage" , }, };
+static struct platform_device bcm59055_uc_device_hv3 =                 { .name = "reg-userspace-consumer", .id = 6,           .dev = { .platform_data = &bcm59055_uc_data_hv3, }, };
+static struct platform_device bcm59055_vc_device_hv3 =                 { .name = "reg-virt-consumer",      .id = 6,           .dev = { .platform_data = "hv3_voltage" , }, };
 /*********** HV3LDO END ********************************************************************************************************************************************************/
 
 /*********** HV4LDO Start ******************************************************************************************************************************************************/
@@ -380,8 +380,8 @@ static struct regulator_init_data bcm59055_hv4ldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_hv4 =                    { .supply = "hv4_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv4 = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_hv4, .init_on = BCM59055_HV4LDO_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_hv4 =                 { .name = "reg-userspace-consumer", .id = 5,           .dev = { .platform_data = &bcm59055_uc_data_hv4, }, };
-static struct platform_device bcm59055_vc_device_hv4 =                 { .name = "reg-virt-consumer",      .id = 5,           .dev = { .platform_data = "hv4_voltage" , }, };
+static struct platform_device bcm59055_uc_device_hv4 =                 { .name = "reg-userspace-consumer", .id = 7,           .dev = { .platform_data = &bcm59055_uc_data_hv4, }, };
+static struct platform_device bcm59055_vc_device_hv4 =                 { .name = "reg-virt-consumer",      .id = 7,           .dev = { .platform_data = "hv4_voltage" , }, };
 /*********** HV4LDO END ********************************************************************************************************************************************************/
 
 /*********** HV5LDO Start ******************************************************************************************************************************************************/
@@ -395,8 +395,8 @@ static struct regulator_init_data bcm59055_hv5ldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_hv5 =                    { .supply = "hv5_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv5 = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_hv5, .init_on = BCM59055_HV5LDO_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_hv5 =                 { .name = "reg-userspace-consumer", .id = 6,           .dev = { .platform_data = &bcm59055_uc_data_hv5, }, };
-static struct platform_device bcm59055_vc_device_hv5 =                 { .name = "reg-virt-consumer",      .id = 6,           .dev = { .platform_data = "hv5_voltage" , }, };
+static struct platform_device bcm59055_uc_device_hv5 =                 { .name = "reg-userspace-consumer", .id = 8,           .dev = { .platform_data = &bcm59055_uc_data_hv5, }, };
+static struct platform_device bcm59055_vc_device_hv5 =                 { .name = "reg-virt-consumer",      .id = 8,           .dev = { .platform_data = "hv5_voltage" , }, };
 /*********** HV5LDO END ********************************************************************************************************************************************************/
 
 /*********** HV6LDO Start ******************************************************************************************************************************************************/
@@ -410,8 +410,8 @@ static struct regulator_init_data bcm59055_hv6ldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_hv6 =                    { .supply = "hv6_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv6 = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_hv6, .init_on = BCM59055_HV6LDO_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_hv6 =                 { .name = "reg-userspace-consumer", .id = 7,           .dev = { .platform_data = &bcm59055_uc_data_hv6, }, };
-static struct platform_device bcm59055_vc_device_hv6 =                 { .name = "reg-virt-consumer",      .id = 7,           .dev = { .platform_data = "hv6_voltage" , }, };
+static struct platform_device bcm59055_uc_device_hv6 =                 { .name = "reg-userspace-consumer", .id = 9,           .dev = { .platform_data = &bcm59055_uc_data_hv6, }, };
+static struct platform_device bcm59055_vc_device_hv6 =                 { .name = "reg-virt-consumer",      .id = 9,           .dev = { .platform_data = "hv6_voltage" , }, };
 /*********** HV6LDO END ********************************************************************************************************************************************************/
 
 /*********** HV7LDO Start ******************************************************************************************************************************************************/
@@ -425,8 +425,8 @@ static struct regulator_init_data bcm59055_hv7ldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_hv7 =                    { .supply = "hv7_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv7 = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_hv7, .init_on = BCM59055_HV7LDO_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_hv7 =                 { .name = "reg-userspace-consumer", .id = 8,           .dev = { .platform_data = &bcm59055_uc_data_hv7, }, };
-static struct platform_device bcm59055_vc_device_hv7 =                 { .name = "reg-virt-consumer",      .id = 8,           .dev = { .platform_data = "hv7_voltage" , }, };
+static struct platform_device bcm59055_uc_device_hv7 =                 { .name = "reg-userspace-consumer", .id = 10,           .dev = { .platform_data = &bcm59055_uc_data_hv7, }, };
+static struct platform_device bcm59055_vc_device_hv7 =                 { .name = "reg-virt-consumer",      .id = 10,           .dev = { .platform_data = "hv7_voltage" , }, };
 /*********** HV7LDO END ********************************************************************************************************************************************************/
 
 
@@ -441,8 +441,8 @@ static struct regulator_init_data bcm59055_simldo_data = {
 
 static struct regulator_bulk_data bcm59055_bd_sim =                    { .supply = "sim_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_sim = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_sim, .init_on = BCM59055_SIMLDO_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_sim =                 { .name = "reg-userspace-consumer", .id = 9,           .dev = { .platform_data = &bcm59055_uc_data_sim, }, };
-static struct platform_device bcm59055_vc_device_sim =                 { .name = "reg-virt-consumer",      .id = 9,           .dev = { .platform_data = "sim_voltage" , }, };
+static struct platform_device bcm59055_uc_device_sim =                 { .name = "reg-userspace-consumer", .id = 11,           .dev = { .platform_data = &bcm59055_uc_data_sim, }, };
+static struct platform_device bcm59055_vc_device_sim =                 { .name = "reg-virt-consumer",      .id = 11,           .dev = { .platform_data = "sim_voltage" , }, };
 /*********** SIMLDO END ********************************************************************************************************************************************************/
 
 /*********** CSR Start ******************************************************************************************************************************************************/
@@ -456,8 +456,8 @@ static struct regulator_init_data bcm59055_csr_data = {
 
 static struct regulator_bulk_data bcm59055_bd_csr =                    { .supply = "csr_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_csr = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_csr, .init_on = BCM59055_CSR_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_csr =                 { .name = "reg-userspace-consumer", .id = 10,           .dev = { .platform_data = &bcm59055_uc_data_csr, }, };
-static struct platform_device bcm59055_vc_device_csr =                 { .name = "reg-virt-consumer",      .id = 10,           .dev = { .platform_data = "csr_voltage" , }, };
+static struct platform_device bcm59055_uc_device_csr =                 { .name = "reg-userspace-consumer", .id = 12,           .dev = { .platform_data = &bcm59055_uc_data_csr, }, };
+static struct platform_device bcm59055_vc_device_csr =                 { .name = "reg-virt-consumer",      .id = 12,           .dev = { .platform_data = "csr_voltage" , }, };
 /*********** CSR END ********************************************************************************************************************************************************/
 
 /*********** IOSR Start ******************************************************************************************************************************************************/
@@ -471,8 +471,8 @@ static struct regulator_init_data bcm59055_iosr_data = {
 
 static struct regulator_bulk_data bcm59055_bd_iosr =                    { .supply = "iosr_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_iosr = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_iosr, .init_on = BCM59055_IOSR_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_iosr =                 { .name = "reg-userspace-consumer", .id = 11,           .dev = { .platform_data = &bcm59055_uc_data_iosr, }, };
-static struct platform_device bcm59055_vc_device_iosr =                 { .name = "reg-virt-consumer",      .id = 11,           .dev = { .platform_data = "iosr_voltage" , }, };
+static struct platform_device bcm59055_uc_device_iosr =                 { .name = "reg-userspace-consumer", .id = 13,           .dev = { .platform_data = &bcm59055_uc_data_iosr, }, };
+static struct platform_device bcm59055_vc_device_iosr =                 { .name = "reg-virt-consumer",      .id = 13,           .dev = { .platform_data = "iosr_voltage" , }, };
 /*********** IOSR END ********************************************************************************************************************************************************/
 
 /*********** SDSR Start ******************************************************************************************************************************************************/
@@ -486,8 +486,8 @@ static struct regulator_init_data bcm59055_sdsr_data = {
 
 static struct regulator_bulk_data bcm59055_bd_sdsr =                    { .supply = "sdsr_voltage", };
 static struct regulator_userspace_consumer_data bcm59055_uc_data_sdsr = { .name = "bcm590xx",               .num_supplies = 1, .supplies = &bcm59055_bd_sdsr, .init_on = BCM59055_SDSR_OTP_VAL,};  
-static struct platform_device bcm59055_uc_device_sdsr =                 { .name = "reg-userspace-consumer", .id = 12,           .dev = { .platform_data = &bcm59055_uc_data_sdsr, }, };
-static struct platform_device bcm59055_vc_device_sdsr =                 { .name = "reg-virt-consumer",      .id = 12,           .dev = { .platform_data = "sdsr_voltage" , }, };
+static struct platform_device bcm59055_uc_device_sdsr =                 { .name = "reg-userspace-consumer", .id = 14,           .dev = { .platform_data = &bcm59055_uc_data_sdsr, }, };
+static struct platform_device bcm59055_vc_device_sdsr =                 { .name = "reg-virt-consumer",      .id = 14,           .dev = { .platform_data = "sdsr_voltage" , }, };
 /*********** SDSR END ********************************************************************************************************************************************************/
 
 struct bcm590xx_regulator_init_data bcm59055_regulators[] = 

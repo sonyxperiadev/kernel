@@ -401,7 +401,7 @@ struct max8649_platform_data max8649_info1 = {
 
 struct platform_device max8649_vc1 =  { 
     .name = "reg-virt-consumer",      
-    .id = 13,           
+    .id = 0,           
     .dev = 
     { 
         .platform_data = "vc_core" , 
@@ -444,7 +444,7 @@ struct max8649_platform_data max8649_info2 =
 
 struct platform_device max8649_vc2 =  { 
     .name = "reg-virt-consumer",      
-    .id = 14,           
+    .id = 1,           
     .dev = 
     { 
         .platform_data = "arm_core" , 
