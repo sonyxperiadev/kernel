@@ -204,10 +204,18 @@ static int gptimer_set_next_event(unsigned long clc,
 
 	gptimer_get_counter(timers.gptmr_regs, &msw, &lsw);
 
-	/* Load the "next" event tick value */
+	/* Load the next event tick value */
 	writel(lsw + clc,
 		timers.gptmr_regs+ KONA_GPTIMER_STCM0_OFFSET + (SYS_TIMER_NUM * 4));
 
+	/* Poll the corresponding STCS bits to become 0.
+     * This is to make sure the next event tick value is actually loaded (taking 3 32KHz clock cycles)
+     * before enabling compare (taking 2 32KHz clock cycles). 
+	 */
+	while (readl(timers.gptmr_regs + KONA_GPTIMER_STCS_OFFSET) & 
+			(1 << (KONA_GPTIMER_STCS_STCM0_SYNC_SHIFT+SYS_TIMER_NUM)))
+		;
+	
 	/* Enable compare */
 	reg = readl(timers.gptmr_regs + KONA_GPTIMER_STCS_OFFSET);
 	reg |= (1 << (SYS_TIMER_NUM + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
