@@ -62,7 +62,11 @@ static int __init  dwc_otg_device_register( unsigned irq, unsigned base_addr );
 /* ---- Private Variables ------------------------------------------------ */
 
 static unsigned int fshost = 0;
+#if !defined(CONFIG_USB_DWC_OTG_HOST_MODE)
 static unsigned int otghost = 0;
+#else
+static unsigned int otghost = 1;
+#endif
 static struct lm_device *lmdev = NULL;
 
 
