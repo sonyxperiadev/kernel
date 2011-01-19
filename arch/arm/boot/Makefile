@@ -77,7 +77,7 @@ else
 $(obj)/uImage: STARTADDR=$(LOADADDR)
 endif
 
-$(obj)/uImage:	$(obj)/Image FORCE
+$(obj)/uImage:	$(obj)/zImage FORCE
 	$(call if_changed,uimage)
 	@echo '  Image $@ is ready'
 
