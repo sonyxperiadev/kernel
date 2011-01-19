@@ -148,5 +148,10 @@ config BATTERY_BCM2708
 	help
 	  A fake battery driver which export sysfs values saying the battery is always
 	  fully chanrged and on AC is online. Helpful for Android.
- 
+
+config BATTERY_BCM59055
+	tristate "BCM59055 Battery support"
+	depends on ARCH_ISLAND
+	help
+	  A battery driver for PMU59055. 
 endif # POWER_SUPPLY
