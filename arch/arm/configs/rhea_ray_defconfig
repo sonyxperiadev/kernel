@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Tue Jan 11 18:30:55 2011
+# Wed Jan 19 17:18:48 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -249,7 +249,8 @@ CONFIG_ARCH_KONA=y
 #
 # CONFIG_ARCH_ISLAND is not set
 CONFIG_ARCH_RHEA=y
-# CONFIG_PERIPHERAL_TIMER_FIX is not set
+# CONFIG_GP_TIMER_CLOCK_OFF_FIX is not set
+CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY_=y
 CONFIG_KONA_DCACHE_INVALIDATION=y
 
 #

@@ -42,7 +42,7 @@
 #include <mach/rdb/brcm_rdb_glbtmr.h>
 #ifdef CONFIG_ARCH_RHEA
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
-#ifdef CONFIG_PERIPHERAL_TIMER_FIX
+#ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #endif
 #else
@@ -192,7 +192,7 @@ static int gptimer_set_next_event(unsigned long clc,
 	uint32_t lsw, msw;
 	uint32_t reg;
 
-#ifdef CONFIG_PERIPHERAL_TIMER_FIX
+#ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
    {
 	  volatile unsigned int i;
 	  gptimer_disable_and_clear(timers.gptmr_regs);
@@ -208,6 +208,8 @@ static int gptimer_set_next_event(unsigned long clc,
 	writel(lsw + clc,
 		timers.gptmr_regs+ KONA_GPTIMER_STCM0_OFFSET + (SYS_TIMER_NUM * 4));
 
+#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
+
 	/* Poll the corresponding STCS bits to become 0.
      * This is to make sure the next event tick value is actually loaded (taking 3 32KHz clock cycles)
      * before enabling compare (taking 2 32KHz clock cycles). 
@@ -215,7 +217,8 @@ static int gptimer_set_next_event(unsigned long clc,
 	while (readl(timers.gptmr_regs + KONA_GPTIMER_STCS_OFFSET) & 
 			(1 << (KONA_GPTIMER_STCS_STCM0_SYNC_SHIFT+SYS_TIMER_NUM)))
 		;
-	
+#endif
+
 	/* Enable compare */
 	reg = readl(timers.gptmr_regs + KONA_GPTIMER_STCS_OFFSET);
 	reg |= (1 << (SYS_TIMER_NUM + KONA_GPTIMER_STCS_COMPARE_ENABLE_SHIFT));
@@ -357,7 +360,7 @@ static void __init kona_adjust_gptimer_clock(void)
 #endif
 
 
-#ifdef CONFIG_PERIPHERAL_TIMER_FIX
+#ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
 
 	/* unlock root clock manager */
 	val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);

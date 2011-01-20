@@ -17,11 +17,16 @@ config ARCH_RHEA
 
 endchoice
 
-config PERIPHERAL_TIMER_FIX
-	bool "Enable the generic peripheral timer fix"
+config GP_TIMER_CLOCK_OFF_FIX
+	bool "Enable the fix for general purpose timer clock off issue."
 	depends on ARCH_RHEA
 	help
-	  Say Y if you want to enable the generic peripheral timer fix
+	  Say Y if you want to enable the general purpose timer clock off fix
+
+config GP_TIMER_COMPARATOR_LOAD_DELAY_
+        bool "Enable the delay after loading general purpose timer compare register"
+        depends on ARCH_RHEA || ARCH_ISLAND
+        default y  
 	  
 config KONA_DCACHE_INVALIDATION
 	bool "Have Linux invalidate D-Cache"
