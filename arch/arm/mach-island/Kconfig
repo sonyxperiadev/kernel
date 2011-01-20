@@ -3,7 +3,7 @@ menu	"Island SoC based Machine types"
 
 choice
 	prompt "Island SoC based board type"
-	default MACH_ISLAND_DK	
+	default MACH_ISLAND_FF	
 
 config MACH_ISLAND_FPGA
 	bool "Support Broadcom Island FPGA platform"
@@ -15,10 +15,10 @@ config MACH_ISLAND_BU
 	help
 	  Support for the Broadcom Island bring-up board.
 
-config MACH_ISLAND_DK
-	bool "Support Broadcom Island DK/FF board"
+config MACH_ISLAND_FF
+	bool "Support Broadcom Island FF/DK board"
 	help
-	  Support for the Broadcom Island DK/FF board.
+	  Support for the Broadcom Island FF/DK board.
 	  
 endchoice
 
