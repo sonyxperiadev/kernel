@@ -66,8 +66,8 @@
 
 /* Register values used by the driver .. */
 #define FRAMEBUFFER_TARGET_DISPLAY	(0)
-#define FRAMEBUFFER_WIDTH		(640)
-#define FRAMEBUFFER_HEIGHT		(480)
+#define FRAMEBUFFER_WIDTH		(480)
+#define FRAMEBUFFER_HEIGHT		(800)
 #define FRAMEBUFFER_NUM_BUFFERS		(2)
 
 
