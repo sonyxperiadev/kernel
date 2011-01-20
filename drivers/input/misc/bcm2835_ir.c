@@ -19,13 +19,14 @@
 #include <linux/proc_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/miscdevice.h>
+#include <linux/ipc/ipc.h>
 
 #include <asm/uaccess.h>
 
 #include <mach/memory.h>
 #include <mach/irqs.h>
-#include <mach/ipc.h>
 #include <mach/input_ipc_cfg.h>
+
 #include "bcm2835_ir_remote.h"
 
 #define BCM2835_INPUT_DEBUG 0
@@ -135,9 +136,11 @@ static int input_proc_write(struct file *file, const char *buffer, unsigned long
 
   printk(KERN_ERR"ipc_phy_base and ipc_base = 0x%08x and 0x%08x\n", ipc_base_phys, ipc_base);
 
+#if 0
    writel(0xff, ipc_base + IPC_VC_ARM_INTERRUPT_OFFSET);
 
    writel(0x1, IO_ADDRESS(ARM_0_BELL0));
+#endif
 
    vfree(init_string);
 

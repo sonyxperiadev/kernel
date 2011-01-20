@@ -30,25 +30,42 @@
 
 #include <asm/bug.h>
 
-#include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_ipcopen.h>
-#include <mach/island.h>
+#include <mach/memory.h>
+#include <mach/ipc.h>
+#include <mach/irqs.h> 
 
-#define VC4_IPC_PHYS_ADDR_BASE	0x60040000UL
-#define ARM_IPC_PHYS_ADDR_BASE	0x34040000UL
+#define BCM2835_VC_IPC_BLOCK_SIZE		(SZ_2M)
 
-#define ISLAND_VC_IPC_BLOCK_PHYS_BASE		((ARM_IPC_PHYS_ADDR_BASE) + 0x0)
-#define ISLAND_VC_IPC_BLOCK_SIZE		(SZ_128K)
+void __init bcm2835_get_ipc_base(u32 *ipc_base_phys)
+{
+	*ipc_base_phys = 0;
+	/* Wait for data to arrive in mailbox 0 and then read ipc base address from mailbox */
+	if ((readl(IO_ADDRESS(ARM_0_MAIL0_STA)) & ARM_MS_EMPTY)) {
+		printk(KERN_ERR"Mailbox 0 is empty, we dont have IPC base address\n");
+		printk(KERN_ERR"%s: FAILED!!! \n", __func__);
+		printk(KERN_ERR"Mailbox regs  ->\n");
+		printk(KERN_ERR"RD -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_RD)));
+		printk(KERN_ERR"POL -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_POL)));
+		printk(KERN_ERR"SND -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_SND)));
+		printk(KERN_ERR"STA -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_STA)));
+		printk(KERN_ERR"SNF -> 0x%08x\n", readl(IO_ADDRESS(ARM_0_MAIL0_CNF)));
+	}
+
+	*ipc_base_phys = readl(IO_ADDRESS(ARM_0_MAIL0_RD));
+	printk(KERN_ERR"Received ipc_base = 0x%08x\n", *ipc_base_phys);
+	*ipc_base_phys = __bus_to_phys(*ipc_base_phys);
+	printk(KERN_ERR"Real ipc_base = 0x%08x\n", *ipc_base_phys);
+}
 
 static struct resource ipc_resource[] = {
    [0] = {
-      .start = ISLAND_VC_IPC_BLOCK_PHYS_BASE,
-      .end =  (ISLAND_VC_IPC_BLOCK_PHYS_BASE) + (ISLAND_VC_IPC_BLOCK_SIZE) - 1,
+      .start = 0,
+      .end = 0 + (BCM2835_VC_IPC_BLOCK_SIZE) - 1,
       .flags = IORESOURCE_MEM,
    },
    [1] = {
-      .start = BCM_INT_ID_IPC_OPEN,
-      .end = BCM_INT_ID_IPC_OPEN,
+      .start = IRQ_ARM_DOORBELL_0,
+      .end = IRQ_ARM_DOORBELL_0,
       .flags = IORESOURCE_IRQ,
    },
 };
@@ -56,50 +73,48 @@ static struct resource ipc_resource[] = {
 
 static u32 gpu_to_host_phys_addr(u32 gpu_addr)
 {
-	WARN_ON(gpu_addr < (VC4_IPC_PHYS_ADDR_BASE));
-
-	return gpu_addr - (VC4_IPC_PHYS_ADDR_BASE) + (ARM_IPC_PHYS_ADDR_BASE);
+	return __bus_to_phys(gpu_addr);
 }
 
 static void clear_doorbell_irq(void)
 {
-
+	(void)readl(IO_ADDRESS(ARM_0_BELL0));
 }
 
 static void ring_doorbell_irq(void)
 {
 
+	writel(0x1, IO_ADDRESS(ARM_0_BELL2));
 }
 
-static u32 read_and_ack_req_atomic(u32 virt_base)
+static u32 read_and_ack_req(u32 ipc_virt_base)
 {
-	u32 req;
+	u32 vc_irq_status = readl(ipc_virt_base + IPC_VC_ARM_INTERRUPT_OFFSET);
+	writel(0x0, ipc_virt_base + IPC_VC_ARM_INTERRUPT_OFFSET);
 
-	(void)virt_base;
-	req = readl((KONA_IPC_NS_VA) + (IPCOPEN_IPCASTATUS_OFFSET));
-	writel(req, (KONA_IPC_NS_VA) + (IPCOPEN_IPCACLR_OFFSET));
-	return req;
+	return vc_irq_status; 
 }
 
-static void send_req_atomic(u32 req, u32 virt_base)
+static void send_req(u32 req, u32 ipc_virt_base)
 {
-	(void)virt_base;
-	writel(req, (KONA_IPC_NS_VA) + (IPCOPEN_IPCASET_OFFSET));
+	u32 vc_irq_status = readl(ipc_virt_base + IPC_ARM_VC_INTERRUPT_OFFSET);
+	vc_irq_status |= (0x1 << req);
+	writel(vc_irq_status, ipc_virt_base + IPC_ARM_VC_INTERRUPT_OFFSET);
 }
 
 static struct ipc_chip ipc_chip = {
 	32,
-	IRQ_IPC_0,
+	IPC_TO_IRQ(0),
 	&gpu_to_host_phys_addr,
 	&clear_doorbell_irq,
 	&ring_doorbell_irq,
-	&read_and_ack_req_atomic,
-	&send_req_atomic,
 	NULL,
 	NULL,
+	&read_and_ack_req,
+	&send_req,
 };
 
-struct platform_device island_ipc_device = {
+struct platform_device bcm2835_ipc_device = {
 	.name = "IPC",
 	.resource = ipc_resource,
 	.num_resources = ARRAY_SIZE(ipc_resource),

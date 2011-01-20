@@ -29,6 +29,7 @@ extern void __init bcm2708_init_irq(void);
 extern void __init bcm2708_map_io(void);
 extern struct sys_timer bcm2708_timer;
 extern unsigned int mmc_status(struct device *dev);
+extern struct platform_device bcm2835_ipc_device;
 
 #define AMBA_DEVICE(name,busid,base,plat)			\
 static struct amba_device name##_device = {			\

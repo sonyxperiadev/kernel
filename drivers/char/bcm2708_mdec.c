@@ -17,7 +17,7 @@
 #include <asm/atomic.h>
 
 #include <mach/media_dec_regs.h>
-#include <mach/ipc.h>
+#include <linux/ipc/ipc.h>
 #include <mach/fifo.h>
 
 #include "bcm2708_mdec.h"

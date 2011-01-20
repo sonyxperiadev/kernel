@@ -24,9 +24,9 @@
 #include <linux/stat.h>
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
-#include <mach/ipc.h>
 #include <linux/ctype.h>
 #include <linux/kernel.h>
+#include <linux/ipc/ipc.h>
 
 #include "tv_intf.h"
 #include "tv_intf_regs.h"

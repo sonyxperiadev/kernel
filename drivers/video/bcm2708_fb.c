@@ -16,12 +16,16 @@
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
+#include <linux/ipc/ipc.h>
 
+#if 0
 #include <mach/hardware.h>
 #include <mach/io.h>
 #include <mach/memory.h>
 #include <mach/platform.h>
-#include <mach/ipc.h>
+#endif
+
+#include <mach/io.h>
 
 #ifdef CONFIG_ANDROID_POWER
 #include <linux/android_power.h>
@@ -245,7 +249,7 @@ static int enable_fb_device(struct bcm2708_fb *fb)
 	}
 
 	/* Convert VC phys addr to Kernel phys addr */
-	fb->phys_fbbase = __bus_to_phys(fb->phys_fbbase);
+	fb->phys_fbbase = __VC_BUS_TO_ARM_PHYS_ADDR(fb->phys_fbbase);
 
 out:
 	return ret;

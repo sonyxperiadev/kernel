@@ -24,7 +24,7 @@
 #include <linux/stat.h>
 #include <linux/platform_device.h>
 #include <linux/interrupt.h>
-#include <mach/ipc.h>
+#include <linux/ipc/ipc.h>
 
 #include "gencmd.h"
 #include "gencmd_regs.h"

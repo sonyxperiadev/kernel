@@ -26,11 +26,13 @@
 #include <linux/cdev.h>
 #include <linux/errno.h>
 #include <linux/miscdevice.h>
+#include <linux/ipc/ipc.h>
+
 #include <asm/uaccess.h>
 #include <asm/sizes.h>
 #include <asm/io.h>
+
 #include <mach/platform.h>
-#include <mach/ipc.h>
 #include "graphics_regs.h"
 #include "graphics.h"
 #include "graphics_driver.h"

@@ -37,4 +37,8 @@
 #define IOMEM(x)		((void __force __iomem *)(x))
 #endif
 
+#define VC_DIRECT_ACCESS_BASE		0xC0000000UL
+#define ARM_VC_PHYS_ADDR_BASE		0x40000000UL
+#define __VC_BUS_TO_ARM_PHYS_ADDR(x)	((x) - (VC_DIRECT_ACCESS_BASE) + (ARM_VC_PHYS_ADDR_BASE))
+
 #endif /*__PLAT_KONA_IO_H */

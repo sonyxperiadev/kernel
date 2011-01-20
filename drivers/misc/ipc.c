@@ -31,8 +31,9 @@
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_ipcopen.h>
 
-#define IPC_MODULE_DEBUG	1
-#define IPC_VC4_FIRMWARE_READY	0
+#define IPC_MODULE_DEBUG	0
+#define IPC_VC4_FIRMWARE_READY	1
+#define IPC_MODULE_DEBUG_ISR	0
 
 #define IPC_DRIVER_NAME "Inter Processor Comm"
 
@@ -96,6 +97,7 @@ struct ipc_data {
 
 static struct ipc_data *g_ipc_data_p = NULL;
 
+#if 0
 static inline u32 IPC_TO_IRQ(u32 ipc_id)	
 {
 	if (g_ipc_data_p)
@@ -115,6 +117,7 @@ static inline u32 IRQ_TO_IPC(u32 irq_num)
 		return 0;
 	}
 }
+#endif
 
 static void ipc_mask_irq(unsigned int irq)
 {
@@ -163,19 +166,17 @@ static void ipc_vc_arm_put_lock(IPC_VC_ARM_LOCK_T lock_num)
 
 int ipc_notify_vc_event(int irq_num)
 {
-	u32 ipc_id = IRQ_TO_IPC(irq_num);
+	u32 req = 0x1 << (irq_num - g_ipc_data_p->ipc_chip_p->irq_base);
         unsigned long irq_flags;
 
 	spin_lock_irqsave(&g_ipc_data_p->host_to_gpu_lock, irq_flags);
 	mb();
 
 	if (g_ipc_data_p->ipc_chip_p->send_req_atomic)
-		g_ipc_data_p->ipc_chip_p->send_req_atomic(ipc_id);
+		g_ipc_data_p->ipc_chip_p->send_req_atomic(req, (u32)g_ipc_data_p->virt_base);
 	else {
 		ipc_vc_arm_get_lock(IPC_VC_ARM_LOCK1);
-
-		g_ipc_data_p->ipc_chip_p->send_req(ipc_id);
-
+		g_ipc_data_p->ipc_chip_p->send_req(req, (u32)g_ipc_data_p->virt_base);
 		ipc_vc_arm_put_lock(IPC_VC_ARM_LOCK1);
 	}
 	mb();
@@ -188,6 +189,7 @@ int ipc_notify_vc_event(int irq_num)
 }
 EXPORT_SYMBOL(ipc_notify_vc_event);
 
+#if 0
 static inline u32 __bus_to_phys(u32 bus_addr)
 {
 	if (g_ipc_data_p)
@@ -197,11 +199,12 @@ static inline u32 __bus_to_phys(u32 bus_addr)
 		return 0;
 	}	
 }
+#endif
 
 void *ipc_bus_to_virt(uint32_t bus_addr)
 {
 	if (g_ipc_data_p)
-		return (void *)(__bus_to_phys(bus_addr) - 
+		return (void *)(g_ipc_data_p->ipc_chip_p->gpu_to_host_phys_addr(bus_addr) - 
 			(u32)g_ipc_data_p->phys_base + (u32)g_ipc_data_p->virt_base);
 	else
 		return 0;
@@ -216,19 +219,17 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 
 	desc->chip->ack(irq);
 
-	ipc_dbg("we got interrupt from VC side\n");
-
 	g_ipc_data_p->ipc_chip_p->clear_doorbell_irq();
 
 	spin_lock_irqsave(&g_ipc_data_p->gpu_to_host_lock, irq_flags);
 	mb();
 
 	if (g_ipc_data_p->ipc_chip_p->read_and_ack_req_atomic)
-		vc_irq_status = g_ipc_data_p->ipc_chip_p->read_and_ack_req_atomic();
+		vc_irq_status = g_ipc_data_p->ipc_chip_p->read_and_ack_req_atomic((u32)g_ipc_data_p->virt_base);
 	else {
 		ipc_vc_arm_get_lock(IPC_VC_ARM_LOCK0);
 	
-		vc_irq_status = g_ipc_data_p->ipc_chip_p->read_and_ack_req();
+		vc_irq_status = g_ipc_data_p->ipc_chip_p->read_and_ack_req((u32)g_ipc_data_p->virt_base);
 
 		ipc_vc_arm_put_lock(IPC_VC_ARM_LOCK0);
 	}
@@ -240,7 +241,7 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 
 	for (ipc_id = 0; ipc_id < 32; ipc_id++) {
 		if (vc_irq_status & (0x1 << ipc_id))
-			generic_handle_irq(IPC_TO_IRQ(ipc_id));
+			generic_handle_irq(ipc_id + g_ipc_data_p->ipc_chip_p->irq_base);
 	}
 
 	desc->chip->unmask(irq);
@@ -317,6 +318,8 @@ static int ipc_init_write(struct file *file, const char *buffer, unsigned long c
 	writel(0xff, g_ipc_data_p->virt_base + IPC_VC_ARM_INTERRUPT_OFFSET);
 
 	writel(0x1, IO_ADDRESS(ARM_0_BELL0));  
+
+	writel(0xff, (KONA_IPC_NS_VA) + (IPCOPEN_IPCVSET_OFFSET)); 
 #endif
 
 	writel(0xff, (KONA_IPC_NS_VA) + (IPCOPEN_IPCVSET_OFFSET)); 
@@ -327,7 +330,7 @@ static int ipc_init_write(struct file *file, const char *buffer, unsigned long c
 }
 
 
-#if	IPC_MODULE_DEBUG
+#if	IPC_MODULE_DEBUG_ISR
 static irqreturn_t ipc_isr(int irq, void *dev_id)
 {
 	(void) dev_id;
@@ -383,14 +386,15 @@ static int __init ipc_add_service_devices(void)
                 }
 
 		start = readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, block_base_address));
-		printk(KERN_INFO"%s: Adding (%s) @ bus(0x%08x), phys(0x%08x) address\n", __func__, dev_name, start, __bus_to_phys(start));
+		printk(KERN_INFO"%s: Adding (%s) @ bus(0x%08x), phys(0x%08x) address\n", 
+			__func__, dev_name, start, g_ipc_data_p->ipc_chip_p->gpu_to_host_phys_addr(start));
 		dev_resource->start	= (resource_size_t) ipc_bus_to_virt(start);
                 dev_resource->end	= dev_resource->start + SZ_8K - 1;
                 dev_resource->flags     = IORESOURCE_MEM;
 
 		printk(KERN_INFO"%s: Adding (%s) from 0x%08x-0x%08x Virt address range\n", __func__, dev_name, dev_resource->start,dev_resource->end);
                 (dev_resource+1)->start	= 
-				IPC_TO_IRQ(readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, interrupt_number_in_ipc)));
+				readl(fcc_offset + offsetof(IPC_BLOCK_USER_INFO_T, interrupt_number_in_ipc)) + g_ipc_data_p->ipc_chip_p->irq_base;
                 (dev_resource+1)->end	= (dev_resource+1)->start;
                 (dev_resource+1)->flags	= IORESOURCE_IRQ;
 		
@@ -494,7 +498,7 @@ static int ipc_probe(struct platform_device *pdev)
 	spin_lock_init(&ipc_data_p->gpu_to_host_lock);
 	spin_lock_init(&ipc_data_p->host_to_gpu_lock);
 
-#if IPC_MODULE_DEBUG
+#if IPC_MODULE_DEBUG_ISR
 	for (i = 0; i <= 2; i++) {
 		if (request_irq(i+ipc_data_p->ipc_chip_p->irq_base, ipc_isr, IRQF_DISABLED, "ipc", NULL)) {
 			ipc_error("IPC irq request failed for irq# %d\n", i+ipc_data_p->ipc_chip_p->irq_base);

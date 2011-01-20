@@ -12,7 +12,7 @@
 #include <sound/pcm.h>
 #include <sound/pcm_params.h>
 
-#include <mach/ipc.h>
+#include <linux/ipc/ipc.h>
 
 #include "ipc_fifo.h"
 

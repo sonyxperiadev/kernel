@@ -37,8 +37,6 @@
 
 #define IPC_IRQNUM_NONE		-1
 
-extern int ipc_notify_vc_event(int ipc_id);
-extern int ipc_lookup_irqnum(u32 four_cc);
-extern void *ipc_bus_to_virt(uint32_t bus_addr);
+extern void __init bcm2835_get_ipc_base(u32 *ipc_base_phys);
 
 #endif  /* _BCM2708_IPC_H_ */

@@ -489,6 +489,7 @@ int __init bcm_register_device(struct platform_device *pdev)
 void __init bcm2708_init(void)
 {
 	int i;
+	u32 ipc_base;
 
 	for (i = 0; i < ARRAY_SIZE(lookups); i++)
 		clkdev_add(&lookups[i]);
@@ -507,7 +508,12 @@ void __init bcm2708_init(void)
 #ifdef CONFIG_MMC_SDHCI_BCM2708
 	bcm_register_device(&bcm2708_emmc_device);
 #endif
-        
+	bcm2835_get_ipc_base(&ipc_base);
+	bcm2835_ipc_device.resource[0].start += ipc_base;
+	bcm2835_ipc_device.resource[0].end += ipc_base;
+
+ 	bcm_register_device(&bcm2835_ipc_device);
+
 	for (i = 0; i < ARRAY_SIZE(amba_devs); i++) {
 		struct amba_device *d = amba_devs[i];
 		amba_device_register(d, &iomem_resource);
