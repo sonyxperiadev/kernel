@@ -23,7 +23,7 @@ config GP_TIMER_CLOCK_OFF_FIX
 	help
 	  Say Y if you want to enable the general purpose timer clock off fix
 
-config GP_TIMER_COMPARATOR_LOAD_DELAY_
+config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
         depends on ARCH_RHEA || ARCH_ISLAND
         default y  
