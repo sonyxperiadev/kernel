@@ -358,10 +358,17 @@ static inline void __proc_clk_enable_arm_pll(void __iomem *base, unsigned long r
 /* post divider for policy 6 and 7*/
 static inline void __proc_clk_set_policy_div(void __iomem *base, int policy, int div)
 {
+	unsigned long offset;
 	if (policy==6)
-		writel (div, base + KPROC_CLK_MGR_REG_PLLARMC_OFFSET);
+		offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET;
 	else if( policy==7)
-		writel (div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
+		offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET;
+
+	writel(div, base+offset);
+	writel((div<<KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT)|
+		KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
+		base+offset);
+	writel(div, base+offset);
 }
 
 static inline void __proc_clk_dump_register (void __iomem *base)
@@ -379,7 +386,34 @@ static inline void __proc_clk_dump_register (void __iomem *base)
 	clk_dbg ("armctrl3         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET));
 	clk_dbg ("armctrl5         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET));
 	clk_dbg ("lvm_en           0x%08x\n", readl(base+KPROC_CLK_MGR_REG_LVM_EN_OFFSET));
+	clk_dbg ("arm_div          0x%08x\n", readl(base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET));
 }
+
+static inline void __proc_clk_set_axi_override(void __iomem *base, unsigned rate)
+{
+#define	MAX_AXI_RATE	(350*CLOCK_1M)
+	int div = (rate > 2*MAX_AXI_RATE)? 3:2;
+	writel (KPROC_CLK_MGR_REG_CLKGATE_DBG_ARM_SWITCH_POLICY_OVERRIDE_VALUE_MASK,
+		base+KPROC_CLK_MGR_REG_CLKGATE_DBG_OFFSET);
+	writel ( KPROC_CLK_MGR_REG_ARM_DIV_ARM_SWITCH_DIV_OVERRIDE_MASK |
+		((div-1)<<KPROC_CLK_MGR_REG_ARM_DIV_ARM_SWITCH_DIV_SHIFT),
+		base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET);
+}
+
+static inline void __proc_clk_clear_axi_override(void __iomem *base)
+{
+	int val = readl(base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET);
+	val &= KPROC_CLK_MGR_REG_ARM_DIV_ARM_SWITCH_DIV_MASK;
+	writel (val, base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET);
+}
+
+static inline void __proc_clk_trg_axi(void __iomem *base)
+{
+	writel (KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK,
+		base+KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET);
+	while (readl(base+KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET) & KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK);
+}
+
 /* Proc clocks */
 static int proc_clk_enable(struct clk *c, int enable)
 {
@@ -424,17 +458,38 @@ static int proc_clk_set_rate(struct clk *c, unsigned long rate)
 	if(!base)
 		return -ENOMEM;
 
+	/* enable  access */
 	__proc_clk_enable_access (base, 1);
 
+	/* swtich to lower frequency of policy 7 */
+	__proc_clk_set_policy_div (base, 7, 12);
+
+	/* clear AXI override and get back to div/2 before switch to policy 2 */
+	__proc_clk_clear_axi_override(base);
+
+	__proc_clk_trg_axi(base);
+
+	/* switch to policy 2 */
 	ret = __proc_clk_switch_to_policy (base, 2);
 	if (ret)
 		goto err;
 
+	/* configure PLL */
 	__proc_clk_enable_arm_pll(base, rate*div);
 
-	__proc_clk_set_policy_div (base, 7, div);
+	/* set AXI override */
+	__proc_clk_set_axi_override (base, rate);
 
+	/* set big divider (lower freq) for policy 7  */
+	__proc_clk_set_policy_div (base, 7, 12);
+
+	/* switch to policy 7 */
 	ret = __proc_clk_switch_to_policy (base, 7);
+
+	__proc_clk_trg_axi(base);
+
+	/* switch to normal freq of policy 7 */
+	__proc_clk_set_policy_div (base, 7, div);
 	if (ret)
 		goto err;
 
