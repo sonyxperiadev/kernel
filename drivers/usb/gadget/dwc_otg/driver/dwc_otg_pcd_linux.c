@@ -399,8 +399,14 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
 	dma_addr = usb_req->dma;
 #else
+
+#if defined (LM_INTERFACE)
 	dma_addr = virt_to_phys(usb_req->buf);
-	dma_sync_single_for_device (NULL, dma_addr, usb_req->length, DMA_BIDIRECTIONAL);
+	dma_sync_single_for_device (NULL, dma_addr, usb_req->length,
+			ep->dwc_ep.is_in?DMA_TO_DEVICE:DMA_FROM_DEVICE);
+#elif defined(PCI_INTERFACE)
+#error	"need to take care cache coherence"
+#endif
 #endif
 
 	retval = dwc_otg_pcd_ep_queue(pcd, usb_ep, usb_req->buf, dma_addr,
@@ -818,6 +824,8 @@ static int _complete(dwc_otg_pcd_t * pcd, void *ep_handle,
 		     void *req_handle, int32_t status, uint32_t actual)
 {
 	struct usb_request *req = (struct usb_request *)req_handle;
+	dma_addr_t dma_addr;
+	struct dwc_otg_pcd_ep *ep = NULL;
 
 	if (req && req->complete) {
 		switch (status) {
@@ -835,9 +843,17 @@ static int _complete(dwc_otg_pcd_t * pcd, void *ep_handle,
 			break;
 		default:
 			req->status = status;
-
 		}
 		req->actual = actual;
+		ep = ep_from_handle(pcd, ep_handle);
+#if defined(LM_INTERFACE)
+		dma_addr = virt_to_phys(req->buf);
+		dma_sync_single_for_cpu(NULL, dma_addr,
+				req->length,
+				ep->dwc_ep.is_in?DMA_TO_DEVICE:DMA_FROM_DEVICE);
+#elif defined(PCI_INTERFACE)
+#error	"need to take care cache coherence"
+#endif
 		req->complete(ep_handle, req);
 	}
 
