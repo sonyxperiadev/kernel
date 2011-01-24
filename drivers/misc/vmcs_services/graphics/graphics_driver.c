@@ -32,7 +32,6 @@
 #include <asm/sizes.h>
 #include <asm/io.h>
 
-#include <mach/platform.h>
 #include "graphics_regs.h"
 #include "graphics.h"
 #include "graphics_driver.h"

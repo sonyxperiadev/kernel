@@ -19,7 +19,6 @@
 #include <linux/semaphore.h>
 #include <asm/sizes.h>
 #include <asm/io.h>
-#include <mach/platform.h>
 #include <linux/delay.h>
 #include <linux/stat.h>
 #include <linux/platform_device.h>
