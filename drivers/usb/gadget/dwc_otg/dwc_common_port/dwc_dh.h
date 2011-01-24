@@ -68,6 +68,7 @@ extern int dwc_dh_modpow(void *num, uint32_t num_len,
  */
 extern int dwc_dh_pk(uint8_t nd, uint8_t *exp, uint8_t *pkd, uint8_t *hash);
 
+#ifdef DH_TEST_VECTORS
 /** Computes the DHKEY, and VD.
  *
  * If called from host, then it will comput DHKEY=PKD^exp % p.
@@ -90,6 +91,7 @@ extern int dwc_dh_pk(uint8_t nd, uint8_t *exp, uint8_t *pkd, uint8_t *hash);
 extern int dwc_dh_derive_keys(uint8_t nd, uint8_t *pkh, uint8_t *pkd,
 			      uint8_t *exp, int is_host,
 			      char *dd, uint8_t *ck, uint8_t *kdk);
+#endif
 
 #ifdef DH_TEST_VECTORS
 extern void dwc_run_dh_test_vectors(void);

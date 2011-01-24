@@ -56,7 +56,9 @@ EXPORT_SYMBOL(dwc_cc_name);
 EXPORT_SYMBOL(dwc_modpow);
 /* DH */
 EXPORT_SYMBOL(dwc_dh_modpow);
+#ifdef DH_TEST_VECTORS
 EXPORT_SYMBOL(dwc_dh_derive_keys);
+#endif /* DH_TEST_VECTORS */
 EXPORT_SYMBOL(dwc_dh_pk);
 #endif /* CONFIG_MACH_IPMATE  */
 /* Crypto */

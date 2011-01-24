@@ -157,6 +157,7 @@ int dwc_dh_pk(uint8_t nd, uint8_t *exp, uint8_t *pk, uint8_t *hash)
 	return 0;
 }
 
+#ifdef DH_TEST_VECTORS
 int dwc_dh_derive_keys(uint8_t nd, uint8_t *pkh, uint8_t *pkd,
 			     uint8_t *exp, int is_host,
 			     char *dd, uint8_t *ck, uint8_t *kdk)
@@ -232,7 +233,7 @@ int dwc_dh_derive_keys(uint8_t nd, uint8_t *pkh, uint8_t *pkd,
 
 	return 0;
 }
-
+#endif /* DH_TEST_VECTORS */
 
 #ifdef DH_TEST_VECTORS
 
