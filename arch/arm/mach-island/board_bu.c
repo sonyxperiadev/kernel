@@ -549,6 +549,7 @@ static struct platform_device *board_devices[] __initdata = {
    &board_i2c_adap_devices[1],
    &board_i2c_adap_devices[2],
    &island_sdio2_device,
+   &island_sdio1_device,
    &island_ipc_device,
 };
 
