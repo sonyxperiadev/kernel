@@ -424,6 +424,9 @@ static int proc_clk_enable(struct clk *c, int enable)
 #ifndef CONFIG_CPU_FREQ
 static void __recalc_loops_per_jiffy(unsigned long old_rate, unsigned long new_rate)
 {
+#if !defined(CONFIG_SMP)
+	extern unsigned long loops_per_jiffy;
+#endif
 	u64 prod;
 	u32 r;
 
@@ -437,7 +440,6 @@ static void __recalc_loops_per_jiffy(unsigned long old_rate, unsigned long new_r
 	}
 #else
 	clk_dbg ("recal jiffy - UP\n");
-	extern unsigned long loops_per_jiffy;
 	prod = (u64)loops_per_jiffy * (u64)new_rate;
 	loops_per_jiffy = (unsigned long) div_u64_rem(prod, (u32)old_rate, &r);
 #endif
