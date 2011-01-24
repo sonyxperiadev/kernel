@@ -39,7 +39,6 @@
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <asm/gpio.h>
-#include <asm/hardware/cache-l2x0.h>
 
 #include <mach/kona.h>
 #include <mach/clock.h>
@@ -614,14 +613,6 @@ static void __init board_add_devices(void)
 void __init board_init(void)
 {
 	void __iomem *chipRegBase;
-#ifdef CONFIG_CACHE_L2X0
-	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
-
-	/*
-	 * 32KB way size, 16-way associativity
-	 */
-	l2x0_init(l2cache_base, 0x0e050000, 0xc0000fff);
-#endif
 
 	chipRegBase = IOMEM(KONA_CHIPREG_VA);
 #ifdef CONFIG_TOUCHSCREEN_TSC2007
