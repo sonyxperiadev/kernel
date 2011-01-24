@@ -302,6 +302,14 @@ config LEDS_MC13783
 	  This option enable support for on-chip LED drivers found
 	  on Freescale Semiconductor MC13783 PMIC.
 
+config LEDS_ISLANDS_FF
+        tristate "LED Support for Islands FF"
+        depends on VC_GENCMD
+        help
+          This option enable support for on-chip LED drivers found
+          on Broadcom Islands FF
+
+
 config LEDS_TRIGGERS
 	bool "LED Trigger support"
 	help

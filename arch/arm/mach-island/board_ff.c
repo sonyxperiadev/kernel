@@ -221,6 +221,17 @@ static struct platform_device board_gpio_keys_device = {
 
 #endif
 
+static struct platform_device islands_ff_leds_device = {
+     .name    = "islands_ff-led",
+     .id      = -1,
+     .dev = {
+        .dma_mask      = ~(u32)0,
+        .coherent_dma_mask   = ~(u32)0,
+     },
+     .num_resources = 0,
+};
+
+
 /*
  * Touchscreen device
  */
@@ -558,6 +569,7 @@ static struct platform_device *board_devices[] __initdata = {
    &board_i2c_adap_devices[2],
    &island_sdio2_device,
    &island_ipc_device,
+   &islands_ff_leds_device,
 };
 
 static void __init board_add_devices(void)
