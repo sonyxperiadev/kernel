@@ -223,7 +223,7 @@ static struct platform_device islands_ff_leds_device = {
      .name    = "islands_ff-led",
      .id      = -1,
      .dev = {
-        .dma_mask      = ~(u32)0,
+        .dma_mask      = (u64 *) ~(u32)0,
         .coherent_dma_mask   = ~(u32)0,
      },
      .num_resources = 0,
