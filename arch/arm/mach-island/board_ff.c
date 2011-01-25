@@ -428,10 +428,10 @@ struct regulator_init_data max8649_init_data1 = {
     .constraints	= 
     {
         .name = "vc_core", 
-        .min_uV = 1210000, 
-        .max_uV	= 1280000, 
-        .always_on = 0, 
-        .boot_on = 0, 
+        .min_uV =  750000, 
+        .max_uV	= 1380000, 
+        .always_on = 1, 
+        .boot_on = 1, 
         .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE|REGULATOR_CHANGE_MODE , 
         .valid_modes_mask = REGULATOR_MODE_NORMAL|REGULATOR_MODE_FAST ,
     },
@@ -471,10 +471,10 @@ struct regulator_init_data max8649_init_data2 = {
     .constraints	= 
     {
         .name = "arm_core", 
-        .min_uV = 1210000, 
-        .max_uV = 1280000, 
-        .always_on = 0, 
-        .boot_on = 0, 
+        .min_uV = 750000, 
+        .max_uV = 1380000, 
+        .always_on = 1, 
+        .boot_on = 1, 
         .valid_ops_mask = REGULATOR_CHANGE_VOLTAGE|REGULATOR_CHANGE_MODE , 
         .valid_modes_mask = REGULATOR_MODE_NORMAL|REGULATOR_MODE_FAST,
     },
