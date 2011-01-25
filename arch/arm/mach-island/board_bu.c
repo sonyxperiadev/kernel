@@ -301,6 +301,7 @@ static struct resource board_sdio0_resource[] = {
       .flags = IORESOURCE_IRQ,
    },
 };
+#endif
 
 static struct resource board_sdio1_resource[] = {
    [0] = {
@@ -314,7 +315,6 @@ static struct resource board_sdio1_resource[] = {
       .flags = IORESOURCE_IRQ,
    },
 };
-#endif
 
 static struct resource board_sdio2_resource[] = {
    [0] = {
@@ -348,7 +348,6 @@ static struct sdio_platform_cfg board_sdio_param[] = {
    },
 };
 
-#if 0
 static struct platform_device island_sdio1_device = {
    .name = "sdhci",
    .id = 1,
@@ -358,7 +357,6 @@ static struct platform_device island_sdio1_device = {
    .platform_data = &board_sdio_param[1],
    },
 };
-#endif
 
 static struct platform_device island_sdio2_device = {
    .name = "sdhci",
