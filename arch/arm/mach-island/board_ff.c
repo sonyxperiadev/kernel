@@ -57,6 +57,9 @@
 #endif
 
 #include <linux/regulator/max8649.h>
+#ifdef CONFIG_USB_ANDROID
+#include <linux/usb/android_composite.h>
+#endif
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to 
@@ -510,6 +513,50 @@ struct i2c_board_info max_switch_info_2[] = {
 struct platform_device *maxim_devices_1[] __initdata = { &max8649_vc1 } ;
 struct platform_device *maxim_devices_2[] __initdata = { &max8649_vc2 };
 
+#ifdef CONFIG_USB_ANDROID
+static char *andoroid_function_name[] =
+{
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
+#endif
+#ifdef CONFIG_USB_ANDROID_ADB
+	"adb",
+#endif
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_MTP
+	"mtp",
+#endif
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis",
+#endif
+};
+
+#define	BRCM_VENDOR_ID		0x0a5c
+#define	BIG_ISLAND_PRODUCT_ID	0x2816
+
+struct android_usb_platform_data android_usb_data = {
+	.vendor_id		= 	__constant_cpu_to_le16(BRCM_VENDOR_ID),
+	.product_id		=	__constant_cpu_to_le16(BIG_ISLAND_PRODUCT_ID),
+	.version		=	0,
+	.product_name		=	"Big Bsland",
+	.manufacturer_name	= 	"Broadcom",
+	.serial_number		=	"bcm28160",
+
+	.num_functions		=	ARRAY_SIZE(andoroid_function_name),
+	.functions		=	andoroid_function_name,
+};
+
+struct platform_device android_usb = {
+	.name 	= "android_usb",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &android_usb_data,
+	},
+};
+#endif /* CONFIG_USB_ANDROID*/
+
 void island_maxim_platform_hw_init_1(void )
 {
     printk("REG: island_maxim_platform_hw_init for VC called\n") ;
@@ -609,6 +656,9 @@ static void __init board_add_devices(void)
                            ARRAY_SIZE(pmu_info));
 #endif
 
+#ifdef CONFIG_USB_ANDROID
+	platform_device_register(&android_usb);
+#endif
 }
 
 void __init board_init(void)
