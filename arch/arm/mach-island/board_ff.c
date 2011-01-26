@@ -536,7 +536,7 @@ static char *andoroid_function_name[] =
 #define	BRCM_VENDOR_ID		0x0a5c
 #define	BIG_ISLAND_PRODUCT_ID	0x2816
 
-struct android_usb_platform_data android_usb_data = {
+static struct android_usb_platform_data android_usb_data = {
 	.vendor_id		= 	__constant_cpu_to_le16(BRCM_VENDOR_ID),
 	.product_id		=	__constant_cpu_to_le16(BIG_ISLAND_PRODUCT_ID),
 	.version		=	0,
@@ -548,7 +548,7 @@ struct android_usb_platform_data android_usb_data = {
 	.functions		=	andoroid_function_name,
 };
 
-struct platform_device android_usb = {
+static struct platform_device android_usb = {
 	.name 	= "android_usb",
 	.id	= 1,
 	.dev	= {
