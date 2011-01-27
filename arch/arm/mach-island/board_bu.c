@@ -41,7 +41,6 @@
 #include <asm/gpio.h>
 
 #include <mach/kona.h>
-#include <mach/clock.h>
 #include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <asm/io.h>
@@ -636,9 +635,6 @@ void __init board_init(void)
                ( 3 << CHIPREG_SIM2_DET_SEL_2_0_SHIFT )    ;      // Set drive strength to 3.
    writel( val,  ( chipRegBase + CHIPREG_SIM2_DET_OFFSET ) ) ;
 #endif
-
-	clock_init();
-
 	board_add_devices();
 	return;
 }
