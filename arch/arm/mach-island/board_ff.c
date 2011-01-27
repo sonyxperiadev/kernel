@@ -535,13 +535,31 @@ static char *andoroid_function_name[] =
 #define	BRCM_VENDOR_ID		0x0a5c
 #define	BIG_ISLAND_PRODUCT_ID	0x2816
 
+/* FIXME borrow Google Nexus One ID to use windows driver */
+#define	GOOGLE_VENDOR_ID	0x18d1
+#define	NEXUS_ONE_PROD_ID	0x0d02
+
+#define	VENDOR_ID		GOOGLE_VENDOR_ID
+#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
+
+static struct android_usb_product android_products[] = {
+	{
+		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(andoroid_function_name),
+		.functions	=	andoroid_function_name,
+	},
+};
+
 static struct android_usb_platform_data android_usb_data = {
-	.vendor_id		= 	__constant_cpu_to_le16(BRCM_VENDOR_ID),
-	.product_id		=	__constant_cpu_to_le16(BIG_ISLAND_PRODUCT_ID),
+	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
+	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
 	.version		=	0,
-	.product_name		=	"Big Bsland",
+	.product_name		=	"Big Island",
 	.manufacturer_name	= 	"Broadcom",
-	.serial_number		=	"bcm28160",
+	.serial_number		=	"0123456789ABCDEF",
+
+	.num_products		=	ARRAY_SIZE(android_products),
+	.products		=	android_products,
 
 	.num_functions		=	ARRAY_SIZE(andoroid_function_name),
 	.functions		=	andoroid_function_name,
