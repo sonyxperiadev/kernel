@@ -106,7 +106,7 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 	pen_release = cpu;
 	smp_wmb();
 	flush_cache_all();
-
+	outer_flush_all();
 
 	timeout = jiffies + (1 * HZ);
 	while (time_before(jiffies, timeout)) {
