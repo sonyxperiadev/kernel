@@ -52,32 +52,32 @@ static void arch_reset(char mode, const char *cmd)
 	/*
 	 * Disable GIC interrupt distribution.
 	 */
-	writel(0, KONA_GICDIST_VA + GICDIST_ENABLE_S_OFFSET);
+	__raw_writel(0, KONA_GICDIST_VA + GICDIST_ENABLE_S_OFFSET);
 
 #ifdef CONFIG_ARCH_ISLAND
 	/* enable reset register access */
-	val  = readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
+	val  = __raw_readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
 	val &= IROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;		  /* retain access mode 	 */
 	val |= (0xA5A5 << IROOT_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	  /* set password			 */
 	val |= IROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK; 			  /* set access enable		 */
-	writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+	__raw_writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
 
 	/* trigger reset */
-	val  = readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	val  = __raw_readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 	val &= IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	  /* retain access mode 	 */
-	writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	__raw_writel(val, KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 #else
 	/* enable reset register access */
-	val  = readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
+	val  = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
 	val &= ROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;		  /* retain access mode 	 */
 	val |= (0xA5A5 << ROOT_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);	  /* set password			 */
 	val |= ROOT_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_MASK; 			  /* set access enable		 */
-	writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
+	__raw_writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_WR_ACCESS_OFFSET);
 
 	/* trigger reset */
-	val  = readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	val  = __raw_readl(KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 	val &= ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_PRIV_ACCESS_MODE_MASK;	  /* retain access mode 	 */
-	writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
+	__raw_writel(val, KONA_ROOT_RST_VA + ROOT_RST_MGR_REG_CHIP_SOFT_RSTN_OFFSET);
 #endif
 
 	while(1);
