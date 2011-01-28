@@ -20,24 +20,9 @@
 #include <linux/mutex.h>
 #include <linux/workqueue.h>
 #include <linux/mfd/bcm590xx/pmic.h>
+#include <linux/platform_device.h>
 
 struct bcm590xx;
-
-/* Define irq structure here. */
-
-struct bcm590xx {
-	struct device *dev;
-
-    struct i2c_client *i2c_client;
-	int (*read_dev)(struct bcm590xx *bcm590xx, char reg );
-	int (*write_dev)(struct bcm590xx *bcm590xx, char reg, int size, u8 val);
-	u16 *reg_cache;
-
-	/* Interrupt handling */
-
-	/* Client devices */
-	struct bcm590xx_pmic pmic;
-};
 
 /**
  * Data to be supplied by the platform to initialise the BCM590XX.
@@ -47,6 +32,28 @@ struct bcm590xx {
  */
 struct bcm590xx_platform_data {
 	int (*init)(struct bcm590xx *bcm590xx);
+    struct bcm590xx_battery_pdata *battery_pdata ;
+	int slave ; 
+};
+
+struct bcm590xx {
+	struct device *dev;
+
+    struct i2c_client *i2c_client;
+	int (*read_dev)(struct bcm590xx *bcm590xx, char reg );
+	int (*write_dev)(struct bcm590xx *bcm590xx, char reg, int size, u8 val);
+	
+
+	/* Interrupt handling */
+	struct mutex list_lock;
+	int irq;
+	struct list_head irq_handlers;
+	struct work_struct work;
+
+	/* Client devices */
+	struct bcm590xx_pmic pmic;
+
+    struct bcm590xx_platform_data  *pdata ;
 };
 
 
@@ -59,6 +66,16 @@ void bcm590xx_device_exit(struct bcm590xx *bcm590xx);
 /*
  * BCM590XX device IO
  */
-u16 bcm590xx_reg_read(struct bcm590xx *bcm590xx, int reg);
+int bcm590xx_reg_read(struct bcm590xx *bcm590xx, int reg);
 int bcm590xx_reg_write(struct bcm590xx *bcm590xx, int reg, u16 val);
+
+int bcm590xx_request_irq(struct bcm590xx *bcm590xx, int irq, bool enable_irq,
+			 void (*handler) (int, void *), void *data) ;
+
+int bcm590xx_reg_read_slave1(int reg) ;
+int bcm590xx_reg_write_slave1(int reg, u16 val) ;
+
+void bcm59055_initialize_charging( struct bcm590xx *bcm59055 ) ;
+void bcm59055_start_charging(struct bcm590xx *bcm59055 ) ;
+
 #endif

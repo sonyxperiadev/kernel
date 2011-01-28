@@ -60,6 +60,8 @@
 #include <linux/usb/android_composite.h>
 #endif
 
+#include <asm/io.h>
+
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to 
  * use FIXED type
@@ -590,7 +592,10 @@ void island_maxim_platform_hw_init_2(void )
 #endif
 
 #ifdef CONFIG_REGULATOR_BCM_PMU590XX
-#define PMU_DEVICE_I2C_ADDR   0x08 
+#define PMU_DEVICE_I2C_ADDR_0   0x08 
+#define PMU_DEVICE_I2C_ADDR_1   0x0C
+#define PMU_IRQ_PIN           10
+
 static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
 {
     // int i;
@@ -604,14 +609,24 @@ static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
 
 static struct bcm590xx_platform_data __initdata bcm590xx_plat_data = {
 	.init = bcm590xx_init_platform_hw,
+	.slave = 0 ,
 };
 
+static struct bcm590xx_platform_data __initdata bcm590xx_plat_data_sl1 = {
+	.slave = 1 ,
+};
 
 static struct i2c_board_info __initdata pmu_info[] = 
 {
-   {  /* New touch screen i2c slave address. */
-      I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR ), 
-      .platform_data  = &bcm590xx_plat_data,
+   {  
+      I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR_1 ), 
+      .irq = gpio_to_irq(PMU_IRQ_PIN),
+      .platform_data  = &bcm590xx_plat_data_sl1,
+   },
+   {  
+      I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR_0 ), 
+      .irq = gpio_to_irq(PMU_IRQ_PIN),
+      .platform_data  = &bcm590xx_plat_data, 
    },
 };
 #endif
@@ -671,6 +686,23 @@ static void __init board_add_devices(void)
    i2c_register_board_info(2,              
                            pmu_info,
                            ARRAY_SIZE(pmu_info));
+
+   // Setup GPIO properties for interrupt from PMU.
+   int rc = 0 ; 
+   rc = set_irq_type(gpio_to_irq(PMU_IRQ_PIN), IRQ_TYPE_EDGE_FALLING);
+   if (rc < 0)
+   {
+      printk("set_irq_type failed with irq %d\n", gpio_to_irq(PMU_IRQ_PIN));
+      return ;
+   }
+   rc = gpio_request(PMU_IRQ_PIN, "pmu_pen_down");
+   if (rc < 0)
+   {
+      printk("unable to request GPIO pin %d\n", PMU_IRQ_PIN);
+      return ;
+   }
+   gpio_direction_input(PMU_IRQ_PIN);
+
 #endif
 
 #ifdef CONFIG_USB_ANDROID
@@ -680,6 +712,19 @@ static void __init board_add_devices(void)
 
 void __init board_init(void)
 {
+	void __iomem *chipRegBase;
+	chipRegBase = IOMEM(KONA_CHIPREG_VA);
+
+#ifdef CONFIG_REGULATOR_BCM_PMU590XX
+  // Setup pin muxing for sensor interrupt pin.
+   int val = 0 ;
+   val = val | ( 3 << CHIPREG_PMU_INT_PINSEL_2_0_SHIFT ) |      // Set ALT value to 3.
+               ( 1 << CHIPREG_PMU_INT_PUP_PMU_INT_SHIFT ) |    // Set pull up
+               ( 3 << CHIPREG_PMU_INT_SEL_2_0_SHIFT )    ;      // Set drive strength to 3.
+   writel( val,  ( chipRegBase + CHIPREG_PMU_INT_OFFSET ) ) ;
+
+#endif
+
 	board_add_devices();
 	return;
 }

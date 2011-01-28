@@ -18,10 +18,29 @@
 #include <asm/io.h>
 #include <linux/slab.h>
 
+#include <linux/mfd/bcm590xx/bcm59055_A0.h>
+
+#include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcm590xx/pmic.h>
+
 struct bcm59055_battery_data {
+	// struct power_supply battery;
+	// struct power_supply ac;
+
+	struct bcm590xx *bcm590xx;
 	struct power_supply battery;
-	struct power_supply ac;
+	struct power_supply wall;
+	// struct power_supply usb;
+
+	enum power_supply_type power_src;
+	struct delayed_work charger_insert_wq;
+	struct delayed_work batt_lvl_wq;
+#ifdef CONFIG_HAS_WAKELOCK
+	// struct wake_lock batt_monitor_wl;
+	// struct wake_lock usb_charger_wl;
+#endif
 };
+
 
 /* Battery values exported in /sys/class/power_supply/battery */
 #define BATT_TECHNOLOGY	 (POWER_SUPPLY_TECHNOLOGY_UNKNOWN)
@@ -45,11 +64,11 @@ static enum power_supply_property bcm59055_battery_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 };
 
-static enum power_supply_property bcm59055_ac_props[] = {
+static enum power_supply_property bcm59055_wall_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 };
 
-static int bcm59055_ac_get_property(struct power_supply *psy,
+static int bcm59055_wall_get_property(struct power_supply *psy,
 			enum power_supply_property psp,
 			union power_supply_propval *val)
 {
@@ -103,45 +122,112 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 	return ret;
 }
 
+void bcm59055_initialize_charging( struct bcm590xx *bcm59055 )
+{
+    // Set battery initialization registers.
+    // bsc_rw w 2 0x08 0x55 0x08
+    // bsc_rw w 2 0x08 0x57 0x07
+    // bsc_rw w 2 0x08 0x58 0x01
+    bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL6, 0x08 ) ;
+    bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL8, 0x07 ) ;
+    bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL9, 0x01 ) ;
+}
+
+void bcm59055_start_charging(struct bcm590xx *bcm59055 )
+{
+    // Enable wall charging.
+    // bsc_rw w 2 0x08 0x52 0x05
+    bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL3, 5 ) ;
+    bcm590xx_reg_write_slave1(0, 0x44) ;
+    return ;
+}
+
+static void bcm59055_power_isr(int intr, void *data)
+{
+	struct bcm59055_battery_data *battery_data = data;
+	struct bcm590xx *bcm59055 = battery_data->bcm590xx;
+
+	switch (intr) {
+	case BCM59055_IRQID_INT2_CHGINS:
+		printk("%s Wall Charger inserted interrupt \n", __func__);
+        bcm59055_start_charging(bcm59055 ) ;
+		break;
+
+	case BCM59055_IRQID_INT2_CHGRM:
+		printk("%s Wall Charger REMOVED interrupt \n", __func__);
+        bcm590xx_reg_write_slave1(0, 0x46) ;
+		break;
+
+	}
+}
+
+int bcm59055_init_charger(struct bcm59055_battery_data *battery_data)
+{
+	struct bcm590xx *bcm59055 = battery_data->bcm590xx;
+	// u8 reg_val;
+	// struct bcm590xx_battery_pdata *pdata = bcm59055->pdata->battery_pdata;
+
+	printk("######## Init charging called \n" ) ;
+
+	bcm59055_initialize_charging(bcm59055 ) ;
+
+    bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_CHGINS, true, bcm59055_power_isr, battery_data);	/*EOC charge interrupt */
+	bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_CHGRM, true, bcm59055_power_isr, battery_data);	/*WAC connected interrupt */
+    return 0 ;
+}
+
 static int bcm59055_battery_probe(struct platform_device *pdev)
 {
 	int ret;
-	struct bcm59055_battery_data *data;
+	struct bcm59055_battery_data *battery_data;
+	struct bcm590xx *bcm59055 = dev_get_drvdata(pdev->dev.parent);  // From debugger make sure we get this information correctly.
+	struct bcm590xx_battery_pdata *battery_pdata;
 
-	data = kzalloc(sizeof(struct bcm59055_battery_data), GFP_KERNEL);
-	if (data == NULL) {
+	printk("Inside %s\n", __func__);
+
+	battery_pdata = bcm59055->pdata->battery_pdata;
+
+	battery_data = kzalloc(sizeof(struct bcm59055_battery_data), GFP_KERNEL);
+	if (battery_data == NULL) {
 		printk(KERN_ERR"%s : Failed to allocate memory for bcm59055_battery_data\n", __func__);
 		ret = -ENOMEM;
 		goto err_data_alloc;
 	}
 
-	data->battery.properties = bcm59055_battery_props;
-	data->battery.num_properties = ARRAY_SIZE(bcm59055_battery_props);
-	data->battery.get_property = bcm59055_battery_get_property;
-	data->battery.name = "battery";
-	data->battery.type = POWER_SUPPLY_TYPE_BATTERY;
+	battery_data->bcm590xx = bcm59055;
 
-	data->ac.properties = bcm59055_ac_props;
-	data->ac.num_properties = ARRAY_SIZE(bcm59055_ac_props);
-	data->ac.get_property = bcm59055_ac_get_property;
-	data->ac.name = "ac";
-	data->ac.type = POWER_SUPPLY_TYPE_MAINS;
+	// INIT_DELAYED_WORK(&battery_data->charger_insert_wq, bcm59055_charger_wq); Implement bcm59055_charger_wq
+	// INIT_DELAYED_WORK(&battery_data->batt_lvl_wq, bcm59055_batt_lvl_wq); Implement bcm59055_batt_lvl_wq
+
+	platform_set_drvdata(pdev, battery_data);
+
+	bcm59055_init_charger(battery_data) ;
+
+	battery_data->battery.name = "bcm59055-battery";
+	battery_data->battery.type = POWER_SUPPLY_TYPE_BATTERY;
+	battery_data->battery.properties = bcm59055_battery_props;
+	battery_data->battery.num_properties = ARRAY_SIZE(bcm59055_battery_props);
+	battery_data->battery.get_property = bcm59055_battery_get_property;
+
+	battery_data->wall.name = "bcm59055-wall";
+	battery_data->wall.type = POWER_SUPPLY_TYPE_MAINS;
+	battery_data->wall.properties = bcm59055_wall_props;
+	battery_data->wall.num_properties = ARRAY_SIZE(bcm59055_wall_props);
+	battery_data->wall.get_property = bcm59055_wall_get_property;
 
 	/* If it were a real device, get platform device resources here
 	 * and ioremap the register space + register an interrupt if needed
 	 */
 
-	platform_set_drvdata(pdev, data);
-
 	/* Register AC power supply */
-	ret = power_supply_register(&pdev->dev, &data->ac);
+	ret = power_supply_register(&pdev->dev, &battery_data->wall);
 	if (ret) {
-		printk(KERN_ERR"%s : Failed to register AC power supply\n", __func__); 
+		printk(KERN_ERR"%s : Failed to register WALL power supply\n", __func__); 
 		goto err_ac_register;
 	}
 
 	/* Register battery power supply */
-	ret = power_supply_register(&pdev->dev, &data->battery);
+	ret = power_supply_register(&pdev->dev, &battery_data->battery);
 	if (ret) {
 		printk(KERN_ERR"%s : Failed to register battery power supply\n", __func__); 
 		goto err_battery_register;
@@ -150,9 +236,9 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 	return 0;
 
 err_battery_register:
-	power_supply_unregister(&data->ac);
+	power_supply_unregister(&battery_data->wall);
 err_ac_register:
-	kfree(data);
+	kfree(battery_data);
 err_data_alloc:
 	return ret;
 }
@@ -162,7 +248,7 @@ static int bcm59055_battery_remove(struct platform_device *pdev)
 	struct bcm59055_battery_data *data = platform_get_drvdata(pdev);
 
 	power_supply_unregister(&data->battery);
-	power_supply_unregister(&data->ac);
+	power_supply_unregister(&data->wall);
 	kfree(data);
 
 	return 0;
@@ -176,37 +262,14 @@ static struct platform_driver bcm59055_battery_driver = {
 	}
 };
 
-static struct platform_device bcm59055_battery_device = {
-	.name	= "bcm59055-battery",
-	.id	= -1,
-	.dev	= {
-		.coherent_dma_mask = 0xffffffff,
-    },
-};
-
 static int __init bcm59055_battery_init(void)
 {
-	int ret;
-
-	ret = platform_device_register(&bcm59055_battery_device);
-	if (ret) {
-		printk(KERN_ERR"%s : Unable to register BCM59055 battery device\n", __func__);
-		goto out;
-	}
-
-    ret = platform_driver_register(&bcm59055_battery_driver);
-	if (ret)
-		printk(KERN_ERR"%s : Unable to register BCM59055 battery driver\n", __func__);
-
-	printk(KERN_INFO"BCM59055 Battery Init %s !\n", ret ? "FAILED" : "OK");
-out:
-	return ret;
+	return platform_driver_register(&bcm59055_battery_driver);
 }
 
 static void __exit bcm59055_battery_exit(void)
 {
 	platform_driver_unregister(&bcm59055_battery_driver);
-	platform_device_unregister(&bcm59055_battery_device);
 }
 
 module_init(bcm59055_battery_init);

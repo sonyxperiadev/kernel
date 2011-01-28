@@ -18,6 +18,51 @@
 
 #include <linux/mfd/bcm590xx/pmic.h> 
 
+/* Interrupt register addresses. */
+#define BCM59055_REG_INT1             0x30 
+#define BCM59055_REG_INT2             0x31 
+#define BCM59055_REG_INT3             0x32 
+#define BCM59055_REG_INT4             0x33 
+#define BCM59055_REG_INT5             0x34 
+#define BCM59055_REG_INT6             0x35 
+#define BCM59055_REG_INT7             0x36 
+#define BCM59055_REG_INT8             0x37 
+#define BCM59055_REG_INT9             0x38 
+#define BCM59055_REG_INT10             0x39 
+#define BCM59055_REG_INT11             0x3a 
+#define BCM59055_REG_INT12             0x3b 
+#define BCM59055_REG_INT13             0x3c 
+#define BCM59055_REG_INT14             0x3d 
+
+/* Interrupt mask register addresses. */
+#define BCM59055_REG_INT1MSK             0x40 
+#define BCM59055_REG_INT2MSK             0x41 
+#define BCM59055_REG_INT3MSK             0x42 
+#define BCM59055_REG_INT4MSK             0x43 
+#define BCM59055_REG_INT5MSK             0x44 
+#define BCM59055_REG_INT6MSK             0x45 
+#define BCM59055_REG_INT7MSK             0x46 
+#define BCM59055_REG_INT8MSK             0x47 
+#define BCM59055_REG_INT9MSK             0x48 
+#define BCM59055_REG_INT10MSK            0x49 
+#define BCM59055_REG_INT11MSK            0x4a 
+#define BCM59055_REG_INT12MSK            0x4b 
+#define BCM59055_REG_INT13MSK            0x4c 
+#define BCM59055_REG_INT14MSK            0x4d 
+
+/* MBCCTRL register addresses */
+#define BCM59055_REG_MBCCTRL1            0x50
+#define BCM59055_REG_MBCCTRL2            0x51
+#define BCM59055_REG_MBCCTRL3            0x52
+#define BCM59055_REG_MBCCTRL4            0x53
+#define BCM59055_REG_MBCCTRL5            0x54
+#define BCM59055_REG_MBCCTRL6            0x55
+#define BCM59055_REG_MBCCTRL7            0x56
+#define BCM59055_REG_MBCCTRL8            0x57
+#define BCM59055_REG_MBCCTRL9            0x58
+#define BCM59055_REG_MBCCTRL10            0x59
+#define BCM59055_REG_MBCCTRL11            0x5a
+
 /* Register addresses */
 #define BCM59055_REG_RFOPMODCTRL      0xA0    /* R/W  RFLDO */
 #define BCM59055_REG_CAMOPMODCTRL     0xA1    /* R/W  CAMLDO */
@@ -70,6 +115,36 @@
 #define PC2_IS_1_PC1_IS_1  6
 
 #define EN_DIS_SHIFT    PC2_IS_1_PC1_IS_1 
+
+#define BCM59055_MAX_INT_REGS            14
+#define BCM59055_MAX_INTMASK_REGS        14
+
+#define BCM59055_INT_REG_BASE            BCM59055_REG_INT1
+#define BCM59055_INT_MASK_REG_BASE       BCM59055_REG_INT1MSK
+
+/* PMU Interrupts IDs  --------------------------------------------------------------- */
+typedef enum {
+	BCM59055_IRQID_INT1_POK_PRESSED,
+	BCM59055_IRQID_INT1_POK_RELEASED,
+	BCM59055_IRQID_INT1_POK_WAKEUP,	
+	BCM59055_IRQID_INT1_POK_BIT_VLD,
+	BCM59055_IRQID_INT1_POK_SHDWN,
+	BCM59055_IRQID_INT1_AUX_INS,
+	BCM59055_IRQID_INT1_AUX_RM,
+	BCM59055_IRQID_INT1_GBAT_PLUG_IN,
+
+	BCM59055_IRQID_INT2_CHGINS,
+	BCM59055_IRQID_INT2_CHGRM,
+	BCM59055_IRQID_INT2_CHGOV_DIS,
+	BCM59055_IRQID_INT2_WAC_C_REDUCE,
+	BCM59055_IRQID_INT2_USBINS,
+	BCM59055_IRQID_INT2_USBRM,	
+	BCM59055_IRQID_INT2_UBPD_CHP_DIS,
+	BCM59055_IRQID_INT2_USB_CC_REDUCE,
+
+	BCM59055_TOTAL_IRQ
+} BCM59038_InterruptId;
+
 
 struct bcm590xx_regulator_init_data ; 
 

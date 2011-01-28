@@ -69,6 +69,33 @@ struct bcm590xx_regulator_init_data
     struct regulator_init_data   *initdata ;
 } ; 
 
+struct bcm590xx_battery_pdata {
+	// struct charger_info usb;
+	// struct charger_info wac;
+	u8 eoc_current;
+
+	u8 volt_adc_channel;
+	u8 temp_adc_channel;
+	u8 batt_level_count;
+	struct batt_level_table *batt_level_table;
+
+	u16 temp_low_limit;
+	u16 temp_high_limit;
+
+	u16 batt_min_volt;
+	u16 batt_max_volt;
+
+	u8 batt_technology;
+};
+
+struct bcm_pmu_irq {
+	struct list_head node;
+	void (*handler) (int, void *);
+	void *data;
+	int irq;
+	bool irq_enabled;
+};
+
 // Needed for assignment in bcm59055_A0.c
 extern struct regulator_ops bcm590xxldo_ops ;
 #endif

@@ -37,6 +37,7 @@ static int bcm590xx_i2c_probe(struct i2c_client *i2c,
 {
 	struct bcm590xx *bcm590xx;
 	int ret = 0;
+        struct bcm590xx_platform_data *pdata = i2c->dev.platform_data;
 
 	printk("REG : bcm590xx_i2c_probe called \n"); 
 	
@@ -49,8 +50,10 @@ static int bcm590xx_i2c_probe(struct i2c_client *i2c,
 	i2c_set_clientdata(i2c, bcm590xx);
 	bcm590xx->dev = &i2c->dev;
 	bcm590xx->i2c_client = i2c;
+        bcm590xx->irq = i2c->irq;
 	bcm590xx->read_dev = bcm590xx_i2c_read_device;
 	bcm590xx->write_dev = bcm590xx_i2c_write_device;
+        bcm590xx->pdata = pdata ;
 
 	ret = bcm590xx_device_init(bcm590xx, i2c->irq, i2c->dev.platform_data);
 	if (ret < 0)
