@@ -41,8 +41,6 @@ static void __init island_l2x0_init(void)
 	 * 32KB way size, 16-way associativity
 	 */
 	l2x0_init(l2cache_base, 0x00050000, 0xfff0ffff);
-
-	return 0;
 }
 #endif
 
