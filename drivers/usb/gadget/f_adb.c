@@ -612,8 +612,10 @@ static int adb_bind_config(struct usb_configuration *c)
 	dev->function.set_alt = adb_function_set_alt;
 	dev->function.disable = adb_function_disable;
 
-	/* start disabled */
-	dev->function.disabled = 1;
+	/* start enabled */
+	/* host can get correct interface information before adb daemon starts*/
+	/* it shows offline before adbd starts */
+	dev->function.disabled = 0;
 
 	/* _adb_dev must be set before calling usb_gadget_register_driver */
 	_adb_dev = dev;
