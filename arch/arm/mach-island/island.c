@@ -44,7 +44,7 @@ static void __init island_l2x0_init(void)
 }
 #endif
 
-static void __init island_init(void)
+static int __init island_init(void)
 {
 #ifdef CONFIG_CACHE_L2X0
 	island_l2x0_init();
@@ -53,6 +53,8 @@ static void __init island_init(void)
 #ifdef CONFIG_HAVE_CLK
 	clock_init();
 #endif
+
+	return 0;
 }
 
 early_initcall(island_init);

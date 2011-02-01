@@ -35,32 +35,26 @@
 #include <linux/input.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_s32.h>
+#include <linux/smb380.h>
 
-#include <mach/hardware.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <asm/gpio.h>
+#include <asm/io.h>
 
+#include <mach/hardware.h>
 #include <mach/kona.h>
 #include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
-
 #include <mach/rdb/brcm_rdb_chipreg.h>
 
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
-
-#ifdef CONFIG_REGULATOR_BCM_PMU59055_A0
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
-#endif
-
 #include <linux/regulator/max8649.h>
-#ifdef CONFIG_USB_ANDROID
 #include <linux/usb/android_composite.h>
-#endif
 
-#include <asm/io.h>
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to 
@@ -197,7 +191,7 @@ static struct plat_serial8250_port uart_data[] = {
       .flags      = 0,
    },
 };
-#if defined(CONFIG_KEYBOARD_GPIO)
+
 static struct gpio_keys_button board_gpio_keys_button[] = {
    { KEY_HOME, 154, 1, "Home", EV_KEY, 0, 64},
    { KEY_SEARCH, 157, 1, "Search", EV_KEY, 0, 64},
@@ -221,9 +215,7 @@ static struct platform_device board_gpio_keys_device = {
    },
 };
 
-#endif
-
-static struct platform_device islands_ff_leds_device = {
+static struct platform_device islands_leds_device = {
      .name    = "islands_ff-led",
      .id      = -1,
      .dev = {
@@ -344,6 +336,7 @@ static struct platform_device board_serial_device = {
    },
 };
 
+#if 0 /* To be enabled when WIFI over SDIO is ready */ 
 static struct resource board_sdio0_resource[] = {
    [0] = {
       .start = KONA_SDIO0_PA,
@@ -356,6 +349,7 @@ static struct resource board_sdio0_resource[] = {
       .flags = IORESOURCE_IRQ,
    },
 };
+#endif
 
 static struct resource board_sdio1_resource[] = {
    [0] = {
@@ -422,8 +416,6 @@ static struct platform_device island_sdio2_device = {
    },
 };
 
-#ifdef CONFIG_REGULATOR_MAX8649 
-#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
 void island_maxim_platform_hw_init_1(void ) ;
 void island_maxim_platform_hw_init_2(void ) ;
 
@@ -514,7 +506,82 @@ struct i2c_board_info max_switch_info_2[] = {
 struct platform_device *maxim_devices_1[] __initdata = { &max8649_vc1 } ;
 struct platform_device *maxim_devices_2[] __initdata = { &max8649_vc2 };
 
-#ifdef CONFIG_USB_ANDROID
+void island_maxim_platform_hw_init_1(void )
+{
+    printk("REG: island_maxim_platform_hw_init for VC called\n") ;
+    platform_add_devices(maxim_devices_1, ARRAY_SIZE(maxim_devices_1));
+}
+
+void island_maxim_platform_hw_init_2(void )
+{
+    printk("REG: island_maxim_platform_hw_init for ARM called \n") ;
+    platform_add_devices(maxim_devices_2, ARRAY_SIZE(maxim_devices_2));
+}
+
+#define PMU_DEVICE_I2C_ADDR_0   0x08 
+#define PMU_DEVICE_I2C_ADDR_1   0x0C
+#define PMU_IRQ_PIN           10
+
+static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
+{
+    printk("REG: pmu_init_platform_hw called \n") ;
+    bcm59055_reg_init_dev_init(bcm590xx)  ;
+
+    return 0 ;
+}
+
+static struct bcm590xx_platform_data __initdata bcm590xx_plat_data = {
+	.init = bcm590xx_init_platform_hw,
+	.slave = 0 ,
+};
+
+static struct bcm590xx_platform_data __initdata bcm590xx_plat_data_sl1 = {
+	.slave = 1 ,
+};
+
+static struct i2c_board_info __initdata pmu_info[] = 
+{
+   {  
+      I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR_1 ), 
+      .irq = gpio_to_irq(PMU_IRQ_PIN),
+      .platform_data  = &bcm590xx_plat_data_sl1,
+   },
+   {  
+      I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR_0 ), 
+      .irq = gpio_to_irq(PMU_IRQ_PIN),
+      .platform_data  = &bcm590xx_plat_data, 
+   },
+};
+
+#define BMA150_IRQ_PIN 140
+
+static struct smb380_platform_data bma150_plat_data = {
+   .range = RANGE_2G,
+   .bandwidth = BW_375HZ, 
+   .enable_adv_int = 1,
+   .new_data_int = 0 ,
+   .hg_int = 1 ,
+   .lg_int = 1 ,
+   .lg_dur = 150 ,
+   .lg_thres = 20 ,
+   .lg_hyst = 0 ,
+   .hg_dur = 60 ,
+   .hg_thres = 160 ,
+   .hg_hyst = 0 ,
+   .any_motion_dur  = 2 ,
+   .any_motion_thres  = 30 ,
+   .any_motion_int  = 1 ,
+};
+
+static struct i2c_board_info __initdata bma150_info[] = 
+{
+   {  
+      I2C_BOARD_INFO("smb380", 0x38 ), 
+      .platform_data  = &bma150_plat_data,
+      .irq = gpio_to_irq(BMA150_IRQ_PIN),
+   },
+};
+
 static char *andoroid_function_name[] =
 {
 #ifdef CONFIG_USB_ANDROID_ACM
@@ -574,63 +641,6 @@ static struct platform_device android_usb = {
 		.platform_data = &android_usb_data,
 	},
 };
-#endif /* CONFIG_USB_ANDROID*/
-
-void island_maxim_platform_hw_init_1(void )
-{
-    printk("REG: island_maxim_platform_hw_init for VC called\n") ;
-    platform_add_devices(maxim_devices_1, ARRAY_SIZE(maxim_devices_1));
-}
-
-void island_maxim_platform_hw_init_2(void )
-{
-    printk("REG: island_maxim_platform_hw_init for ARM called \n") ;
-    platform_add_devices(maxim_devices_2, ARRAY_SIZE(maxim_devices_2));
-}
-
-#endif
-#endif
-
-#ifdef CONFIG_REGULATOR_BCM_PMU590XX
-#define PMU_DEVICE_I2C_ADDR_0   0x08 
-#define PMU_DEVICE_I2C_ADDR_1   0x0C
-#define PMU_IRQ_PIN           10
-
-static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
-{
-    // int i;
-    printk("REG: pmu_init_platform_hw called \n") ;
-#ifdef CONFIG_REGULATOR_BCM_PMU59055_A0
-    bcm59055_reg_init_dev_init(bcm590xx)  ;
-#endif
-
-    return 0 ;
-}
-
-static struct bcm590xx_platform_data __initdata bcm590xx_plat_data = {
-	.init = bcm590xx_init_platform_hw,
-	.slave = 0 ,
-};
-
-static struct bcm590xx_platform_data __initdata bcm590xx_plat_data_sl1 = {
-	.slave = 1 ,
-};
-
-static struct i2c_board_info __initdata pmu_info[] = 
-{
-   {  
-      I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR_1 ), 
-      .irq = gpio_to_irq(PMU_IRQ_PIN),
-      .platform_data  = &bcm590xx_plat_data_sl1,
-   },
-   {  
-      I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR_0 ), 
-      .irq = gpio_to_irq(PMU_IRQ_PIN),
-      .platform_data  = &bcm590xx_plat_data, 
-   },
-};
-#endif
-
 
 void __init board_map_io(void)
 {
@@ -647,12 +657,17 @@ static struct platform_device *board_devices[] __initdata = {
    &island_sdio2_device,
    &island_sdio1_device,
    &island_ipc_device,
-   &islands_ff_leds_device,
+   &board_gpio_keys_device,
+   &islands_leds_device,
+   &android_usb,
 };
 
 static void __init board_add_devices(void)
 {
+   int rc = 0;
+   
    platform_add_devices(board_devices, ARRAY_SIZE(board_devices));
+
 #ifdef CONFIG_TOUCHSCREEN_TSC2007
    i2c_register_board_info(1, 
                            tsc2007_info,
@@ -665,30 +680,19 @@ static void __init board_add_devices(void)
                            ARRAY_SIZE(tango_info));
 #endif
 
-#if defined(CONFIG_KEYBOARD_GPIO)
-   platform_device_register(&board_gpio_keys_device);
-#endif
-
-#ifdef CONFIG_REGULATOR_MAX8649 
-#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
    i2c_register_board_info(2,              
                            max_switch_info_1,
                            ARRAY_SIZE(max_switch_info_1));
    i2c_register_board_info(2,              
                            max_switch_info_2,
                            ARRAY_SIZE(max_switch_info_2));
-#endif
-#endif
-
-#ifdef CONFIG_REGULATOR_BCM_PMU590XX
-   printk("REG: i2c_register_board_info for pmu called \n") ;
 
    i2c_register_board_info(2,              
                            pmu_info,
                            ARRAY_SIZE(pmu_info));
 
-   // Setup GPIO properties for interrupt from PMU.
-   int rc = 0 ; 
+   /* Setup GPIO properties for interrupt from PMU.
+    */
    rc = set_irq_type(gpio_to_irq(PMU_IRQ_PIN), IRQ_TYPE_EDGE_FALLING);
    if (rc < 0)
    {
@@ -703,30 +707,52 @@ static void __init board_add_devices(void)
    }
    gpio_direction_input(PMU_IRQ_PIN);
 
-#endif
+   i2c_register_board_info(2,              
+                           bma150_info,
+                           ARRAY_SIZE(bma150_info));
 
-#ifdef CONFIG_USB_ANDROID
-	platform_device_register(&android_usb);
-#endif
+   /* Setup GPIO properties for interrupt from sensor.
+    */
+   rc = set_irq_type(gpio_to_irq(BMA150_IRQ_PIN), IRQ_TYPE_EDGE_FALLING);
+   if (rc < 0)
+   {
+      printk("set_irq_type failed with irq %d\n", gpio_to_irq(BMA150_IRQ_PIN));
+      return ;
+   }
+   rc = gpio_request(BMA150_IRQ_PIN, "bma_pen_down");
+   if (rc < 0)
+   {
+      printk("unable to request GPIO pin %d\n", BMA150_IRQ_PIN);
+      return ;
+   }
+   gpio_direction_input(BMA150_IRQ_PIN);
 }
+
+void __init pinmux_setup(void)
+{
+	void __iomem *chipRegBase = IOMEM(KONA_CHIPREG_VA);
+    uint32_t val;
+	
+    /* Setup pin muxing for PMU interrupt pin.
+     */
+    val = ( 3 << CHIPREG_PMU_INT_PINSEL_2_0_SHIFT ) |      
+          ( 1 << CHIPREG_PMU_INT_PUP_PMU_INT_SHIFT ) |    
+          ( 3 << CHIPREG_PMU_INT_SEL_2_0_SHIFT )    ;     
+    writel( val,   chipRegBase + CHIPREG_PMU_INT_OFFSET );
+
+	/* Setup pin muxing for sensor interrupt pin.
+	 */
+	val = ( 3 << CHIPREG_SIM2_DET_PINSEL_2_0_SHIFT ) |	
+		  ( 3 << CHIPREG_SIM2_DET_SEL_2_0_SHIFT )    ;	
+	writel( val,  chipRegBase + CHIPREG_SIM2_DET_OFFSET ) ;
+}
+
+
 
 void __init board_init(void)
 {
-	void __iomem *chipRegBase;
-	chipRegBase = IOMEM(KONA_CHIPREG_VA);
-
-#ifdef CONFIG_REGULATOR_BCM_PMU590XX
-  // Setup pin muxing for sensor interrupt pin.
-   int val = 0 ;
-   val = val | ( 3 << CHIPREG_PMU_INT_PINSEL_2_0_SHIFT ) |      // Set ALT value to 3.
-               ( 1 << CHIPREG_PMU_INT_PUP_PMU_INT_SHIFT ) |    // Set pull up
-               ( 3 << CHIPREG_PMU_INT_SEL_2_0_SHIFT )    ;      // Set drive strength to 3.
-   writel( val,  ( chipRegBase + CHIPREG_PMU_INT_OFFSET ) ) ;
-
-#endif
-
+	pinmux_setup();
 	board_add_devices();
-	return;
 }
 
 
