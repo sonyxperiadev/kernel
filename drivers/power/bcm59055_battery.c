@@ -146,11 +146,17 @@ static void bcm59055_power_isr(int intr, void *data)
 {
 	struct bcm59055_battery_data *battery_data = data;
 	struct bcm590xx *bcm59055 = battery_data->bcm590xx;
+	struct bcm590xx_battery_pdata *pdata = bcm59055->pdata->battery_pdata;
 
 	switch (intr) {
 	case BCM59055_IRQID_INT2_CHGINS:
 		printk("%s Wall Charger inserted interrupt \n", __func__);
-        bcm59055_start_charging(bcm59055 ) ;
+		if (pdata && pdata->can_start_charging && !pdata->can_start_charging(NULL))
+			printk ("charging not started\n");
+		else {
+			printk ("charging started\n");
+			bcm59055_start_charging(bcm59055);
+		}
 		break;
 
 	case BCM59055_IRQID_INT2_CHGRM:

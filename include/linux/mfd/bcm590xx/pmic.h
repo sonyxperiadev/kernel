@@ -86,6 +86,7 @@ struct bcm590xx_battery_pdata {
 	u16 batt_max_volt;
 
 	u8 batt_technology;
+	int (*can_start_charging)(void*);
 };
 
 struct bcm_pmu_irq {

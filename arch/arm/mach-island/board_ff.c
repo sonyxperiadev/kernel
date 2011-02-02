@@ -54,6 +54,7 @@
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/regulator/max8649.h>
 #include <linux/usb/android_composite.h>
+#include <linux/kernel_stat.h>
 
 
 /*
@@ -530,12 +531,38 @@ static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
     return 0 ;
 }
 
-static struct bcm590xx_platform_data __initdata bcm590xx_plat_data = {
-	.init = bcm590xx_init_platform_hw,
-	.slave = 0 ,
+/* wall charging and vbus are wired together on FF board
+     we monitor USB activity to make sure it is not USB cable that is inserted
+ */
+static int can_start_charging(void* data)
+{
+#define INTERVAL (HZ/10)
+	int cpu, usb_otg_int[4], i;
+	for_each_present_cpu(cpu)
+		usb_otg_int[cpu] =  kstat_irqs_cpu(
+		BCM_INT_ID_USB_HSOTG, cpu);
+
+	for (i=0; i<10; i++) {
+		schedule_timeout_interruptible(INTERVAL);
+		for_each_present_cpu(cpu)
+			if (usb_otg_int[cpu]!= kstat_irqs_cpu(
+				BCM_INT_ID_USB_HSOTG, cpu))
+				return 0;
+	}
+	return 1;
+}
+
+static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
+	.can_start_charging = can_start_charging,
 };
 
-static struct bcm590xx_platform_data __initdata bcm590xx_plat_data_sl1 = {
+static struct bcm590xx_platform_data bcm590xx_plat_data = {
+	.init = bcm590xx_init_platform_hw,
+	.slave = 0 ,
+	.battery_pdata = &bcm590xx_battery_plat_data,
+};
+
+static struct bcm590xx_platform_data bcm590xx_plat_data_sl1 = {
 	.slave = 1 ,
 };
 
