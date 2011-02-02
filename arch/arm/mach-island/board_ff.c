@@ -691,22 +691,6 @@ static void __init board_add_devices(void)
                            pmu_info,
                            ARRAY_SIZE(pmu_info));
 
-   /* Setup GPIO properties for interrupt from PMU.
-    */
-   rc = set_irq_type(gpio_to_irq(PMU_IRQ_PIN), IRQ_TYPE_EDGE_FALLING);
-   if (rc < 0)
-   {
-      printk("set_irq_type failed with irq %d\n", gpio_to_irq(PMU_IRQ_PIN));
-      return ;
-   }
-   rc = gpio_request(PMU_IRQ_PIN, "pmu_pen_down");
-   if (rc < 0)
-   {
-      printk("unable to request GPIO pin %d\n", PMU_IRQ_PIN);
-      return ;
-   }
-   gpio_direction_input(PMU_IRQ_PIN);
-
    i2c_register_board_info(2,              
                            bma150_info,
                            ARRAY_SIZE(bma150_info));

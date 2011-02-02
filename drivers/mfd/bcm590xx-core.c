@@ -31,6 +31,8 @@
 #include <linux/mutex.h>
 #include <linux/list.h>
 #include <linux/mfd/core.h>
+#include <linux/irq.h>
+#include <asm/gpio.h> 
 
 #ifdef CONFIG_REGULATOR_BCM_PMU59055_A0
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
@@ -38,6 +40,8 @@
 
 #define IRQ_TO_REG_INX(irq)  ((irq)/8)
 #define IRQ_TO_REG_BIT(irq)  ((irq) % 8)
+
+#define PMU_IRQ_PIN           10
 
 /*
  * BCM590XX Device IO
@@ -300,6 +304,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		       struct bcm590xx_platform_data *pdata)
 {
 	int ret;
+	int rc = 0 ;
 
 	printk("REG: bcm590xx_device_init called \n") ;
 
@@ -331,6 +336,21 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
         INIT_LIST_HEAD(&bcm590xx->irq_handlers);
     	INIT_WORK(&bcm590xx->work, bcm590xx_irq_workq);
     	mutex_init(&bcm590xx->list_lock);
+
+        // Setup GPIO properties for interrupt from PMU.
+        rc = set_irq_type(irq, IRQ_TYPE_EDGE_FALLING);
+        if (rc < 0)
+        {
+           printk("set_irq_type failed with irq %d\n", irq);
+           return rc ;
+        }
+        rc = gpio_request(PMU_IRQ_PIN, "pmu_pen_down");
+        if (rc < 0)
+        {
+           printk("unable to request GPIO pin %d\n", PMU_IRQ_PIN);
+           return rc ;
+        }
+        gpio_direction_input(PMU_IRQ_PIN);
 
     	// Register IRQ.
     	if (irq > 0) {
