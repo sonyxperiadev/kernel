@@ -337,10 +337,11 @@ static int pmem_open(struct inode *inode, struct file *file)
 	/* setup file->private_data to indicate its unmapped */
 	/*  you can only open a pmem device one time */
 #if 0 /* FIXME: Why this private_data gets set to pmem??? */ 
-		if (file->private_data != NULL)
+	if (file->private_data != NULL)
 #else
-		if ((file->private_data != NULL) && (file->private_data != pmem))
+	if ((file->private_data != NULL) && (file->private_data != pmem))
 #endif
+		return -1;
 
 	data = kmalloc(sizeof(struct pmem_data), GFP_KERNEL);
 	if (!data) {
