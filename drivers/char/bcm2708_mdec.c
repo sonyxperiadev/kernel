@@ -11,13 +11,13 @@
 #include <linux/vmalloc.h>
 #include <linux/string.h>
 #include <linux/spinlock.h>
+#include <linux/ipc/ipc.h>
 
 #include <asm/bug.h>
 #include <asm/io.h>
 #include <asm/atomic.h>
 
 #include <mach/media_dec_regs.h>
-//#include <mach/ipc.h>
 #include <mach/fifo.h>
 
 #include "bcm2708_mdec.h"
@@ -366,7 +366,7 @@ static int player_send_data(bcm2708_mdec_send_data_t *send_data_cmd, MEDIA_STREA
 
       BUG_ON(0UL == entry.buffer_ptr);
 
-      buf_virt = ioremap(__bus_to_phys(entry.buffer_ptr), copy_bytes);
+      buf_virt = ioremap(__VC_BUS_TO_ARM_PHYS_ADDR(entry.buffer_ptr), copy_bytes);
       if (NULL == buf_virt) {
                    bcm2708mdec_error("failed to map the memory\n");
                    return -ENOMEM;
