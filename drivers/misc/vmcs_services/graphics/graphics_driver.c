@@ -351,7 +351,7 @@ static int ioctl_rpc_tx_bulk(struct graphics_ioctl_rpc_tx_bulk *rpc_tx_bulk)
 	}
 	
 	tx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
-	tx_bulk = ioremap(__bus_to_phys(tx_bulk_bus), rpc_tx_bulk->tx_bulk_len);
+	tx_bulk = ioremap( __VC_BUS_TO_ARM_PHYS_ADDR( tx_bulk_bus ), rpc_tx_bulk->tx_bulk_len);
        
 #ifdef BULK_DEBUG 
 	printk(KERN_INFO "graphics_ioctl_rpc_tx_bulk:"
@@ -394,7 +394,7 @@ static int ioctl_rpc_rx_bulk(struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
 		goto out;
 	}
 
-	rx_bulk = ioremap(__bus_to_phys(rx_bulk_bus), bulk_size);
+	rx_bulk = ioremap( __VC_BUS_TO_ARM_PHYS_ADDR(rx_bulk_bus), bulk_size);
 	rx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
    
 #ifdef BULK_DEBUG 
