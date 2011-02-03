@@ -17,8 +17,8 @@
 #include "ipc_fifo.h"
 
 /* #define DUMP_RAW_DATA */
-/* #define AUDIO_DEBUG_ENABLE */
-/* #define AUDIO_VERBOSE_DEBUG_ENABLE */
+//#define AUDIO_DEBUG_ENABLE
+//#define AUDIO_VERBOSE_DEBUG_ENABLE
 
 /* Debug macros */
 #ifdef AUDIO_DEBUG_ENABLE
@@ -186,7 +186,7 @@ typedef struct bcm2835_alsa_stream {
 
 	/* Always contains the buffers that we can write */
 	struct list_head buffer_list;
-	uint32_t buffer_count;
+	volatile uint32_t buffer_count;
 
 } bcm2835_alsa_stream_t;
 

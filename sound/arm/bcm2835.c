@@ -215,5 +215,5 @@ static void __devexit bcm2835_alsa_device_exit(void)
     platform_driver_unregister(&bcm2835_alsa_driver);
 }
 
-late_initcall(bcm2835_alsa_device_init);
+module_init(bcm2835_alsa_device_init);
 module_exit(bcm2835_alsa_device_exit);

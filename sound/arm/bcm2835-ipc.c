@@ -67,11 +67,13 @@ static irqreturn_t bcm2835_audio_irq(int irq, void *dev_id)
 	audio_debug(" .. IN\n");
 
 	intstat = readl(chip->reg_base + AUDIO_INTSTAT_OFFSET);
+	audio_debug(" .. int state: %08x\n", intstat);
 	/* clear intstat for next interrupt */
 	writel(0, chip->reg_base + AUDIO_INTSTAT_OFFSET);
 
 	/* is it a control ack ? */
 	if (intstat & INTSTAT_CONTROL_MASK) {
+		audio_debug(" .. control ack\n");
 		uint32_t old_status = alsa_stream->status;
 		alsa_stream->status = readl(chip->reg_base + AUDIO_STATUS_OFFSET);
 		if (alsa_stream->control != alsa_stream->status) {
@@ -86,6 +88,7 @@ static irqreturn_t bcm2835_audio_irq(int irq, void *dev_id)
 
 	/* is it a fifo irq ? */
 	if ((intstat & INTSTAT_FIFO_MASK) && alsa_stream->enable_fifo_irq) {
+		audio_debug(" .. fifo ack %08x\n", alsa_stream->fifo_irq_handler);
 		if (alsa_stream->fifo_irq_handler)
 			ret = alsa_stream->fifo_irq_handler(irq, dev_id);
 	}
@@ -106,7 +109,7 @@ int bcm2835_audio_open(bcm2835_alsa_stream_t *alsa_stream)
 
 	audio_debug(" .. IN\n");
 	audio_info("dest = %d, reg_base = 0x%08x\n", chip->dest, (uint32_t)chip->reg_base);
-	
+
 	err = request_irq(chip->irq, bcm2835_audio_irq, IRQF_DISABLED, "bcm2835 audio irq", (void *)alsa_stream);
 	if (err < 0) {
 		printk(KERN_ERR"Failed to request IRQ for bcm2835 playback\n");
@@ -130,7 +133,7 @@ int bcm2835_audio_open(bcm2835_alsa_stream_t *alsa_stream)
 		/* ring the doorbell */
 		ipc_notify_vc_event(chip->irq);
 	}
-	
+
 	/* wait for it .. */
 	audio_info("waiting for audio to be enabled ..\n");
 	down(&alsa_stream->control_sem);
@@ -264,8 +267,17 @@ int bcm2835_audio_start(bcm2835_alsa_stream_t *alsa_stream)
 	audio_debug(" .. IN\n");
 
 	alsa_stream->control = readl(chip->reg_base + AUDIO_CONTROL_OFFSET);
+	alsa_stream->status = readl(chip->reg_base + AUDIO_STATUS_OFFSET);
 
 	BUG_ON(!(alsa_stream->control & CTRL_EN_MASK));
+
+    if (alsa_stream->control != alsa_stream->status) {
+        printk("control != status %d!=%d\n", alsa_stream->control, alsa_stream->status);
+        if (alsa_stream->control & (1 << CTRL_PLAY_SHIFT)) {
+            printk("playback already started!\n");
+            return -1;
+        }
+    }
 
 	alsa_stream->control |= (1 << CTRL_PLAY_SHIFT);
 	writel(alsa_stream->control, chip->reg_base + AUDIO_CONTROL_OFFSET);
@@ -289,6 +301,14 @@ int bcm2835_audio_stop(bcm2835_alsa_stream_t *alsa_stream)
 	alsa_stream->control = readl(chip->reg_base + AUDIO_CONTROL_OFFSET);
 
 	BUG_ON(!(alsa_stream->control & CTRL_EN_MASK));
+
+    if (alsa_stream->control != alsa_stream->status) {
+        printk("control != status %d!=%d\n", alsa_stream->control, alsa_stream->status);
+        if (!(alsa_stream->control & (1 << CTRL_PLAY_SHIFT))) {
+            printk("playback already stopped!\n");
+            return -1;
+        }
+    }
 
 	alsa_stream->control &= ~(CTRL_PLAY_MASK);
 	writel(alsa_stream->control, chip->reg_base + AUDIO_CONTROL_OFFSET);
@@ -359,17 +379,17 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 
 		buffer = list_entry(p, bcm2835_audio_buffer_t, link);
 
-		audio_info(" ioremapping phys_addr (0x%08x)\n",__bus_to_phys(buffer->bus_addr));
-		buffer->start = (uint8_t *)ioremap(__bus_to_phys(buffer->bus_addr), buffer->size);
+		audio_info(" ioremapping phys_addr (0x%08x)\n",__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr));
+		buffer->start = (uint8_t *)ioremap(__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr), buffer->size);
 		if (buffer->start == NULL) {
 			audio_error(" Failed to Ioremap buffer from phys(0x%08x), size(%d)\n",
-					(uint32_t)__bus_to_phys(buffer->bus_addr), buffer->size);
+					(uint32_t)__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr), buffer->size);
 			kfree(buffer);
 			break;
 		}
 
 		copy_size = count > buffer->data_left ? buffer->data_left : count;
-		audio_info(" Copying into buffer (%d),for size (%d)\n", buffer->buffer_id, copy_size);
+		audio_info(" Copying into buffer (%d: %08x offset: %d),for size (%d)\n", buffer->buffer_id, buffer->start, buffer->size - buffer->data_left, copy_size);
 		memcpy((buffer->start + buffer->size - buffer->data_left), src, copy_size);
 		buffer->data_left -= copy_size;
 		count -= copy_size;
@@ -378,12 +398,15 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 			/* This buffer is only partially filled, so not doing
 			 * anything */
 			BUG_ON(count);
+			audio_info("partial filled buf\n");
+			iounmap(buffer->start);
 			break;
 		}
 
 		entry.buffer_id = buffer->buffer_id;
 		entry.buffer_size = buffer->size;
 		entry.buffer_ptr = buffer->bus_addr;
+		audio_info("sending buf to VC id: %08x sz: %08x adr: %08x cnt: %d\n", buffer->buffer_id, buffer->size, buffer->bus_addr, alsa_stream->buffer_count);
 		iounmap(buffer->start);
 		list_del_init(p);
 		alsa_stream->buffer_count--;

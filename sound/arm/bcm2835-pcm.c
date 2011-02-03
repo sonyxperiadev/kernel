@@ -15,7 +15,7 @@ static struct snd_pcm_hardware snd_bcm2835_playback_hw = {
 	.rate_max =         44100,
 	.channels_min =     1,
 	.channels_max =     2,
-	.buffer_bytes_max = 57334, /* Can increase to 128k */
+	.buffer_bytes_max = 57344, /* Can increase to 128k */
 	.period_bytes_min = 8192,
 	.period_bytes_max = 8192, /* Can increase to 128k */
 	.periods_min =      1,
@@ -62,12 +62,14 @@ static irqreturn_t bcm2835_playback_fifo_irq(int irq, void *dev_id)
 	/* We get called only if playback was triggered, So, the number of buffers we retrieve in
 	 * each iteration are the buffers that have been played out already
 	 */
-	audio_info("updating pos cur: %d + %d max: %d\n", alsa_stream->pos,
-				(consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE), alsa_stream->buffer_size);
-	alsa_stream->pos += (consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE);
-	alsa_stream->pos %= alsa_stream->buffer_size;
+    if (consumed) {
+        audio_info("updating pos cur: %d + %d max: %d\n", alsa_stream->pos,
+                (consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE), alsa_stream->buffer_size);
+        alsa_stream->pos += (consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE);
+        alsa_stream->pos %= alsa_stream->buffer_size;
 
-	snd_pcm_period_elapsed(alsa_stream->substream);
+        snd_pcm_period_elapsed(alsa_stream->substream);
+    }
 
 	audio_debug(" .. OUT\n");
 
@@ -95,6 +97,8 @@ static int snd_bcm2835_playback_open(struct snd_pcm_substream *substream)
 	sema_init(&alsa_stream->buffers_update_sem, 0);
 	sema_init(&alsa_stream->control_sem, 0);
 	spin_lock_init(&alsa_stream->lock);
+
+//    INIT_WORK(&alsa_stream->trigger_wq, alsa_trigger_handler);
 
 	/* List of buffers we can write to .. */
 	INIT_LIST_HEAD(&alsa_stream->buffer_list);
@@ -200,6 +204,7 @@ static int snd_bcm2835_pcm_hw_params(struct snd_pcm_substream *substream,
 		audio_error(" pcm_lib_malloc failed to allocated pages for buffers\n");
 		return err;
 	}
+	audio_debug(" allocated %d\n", params_buffer_bytes(params));
 
 	err = bcm2835_audio_set_params(alsa_stream, params_channels(params),
 				params_rate(params), snd_pcm_format_width(params_format(params)));
@@ -228,6 +233,7 @@ static int snd_bcm2835_pcm_prepare(struct snd_pcm_substream *substream)
 	alsa_stream->pos = 0;
 	alsa_stream->buffer_size = snd_pcm_lib_buffer_bytes(substream);
 	alsa_stream->period_size = snd_pcm_lib_period_bytes(substream);
+	audio_debug(" buf size: %d  per size: %d\n", snd_pcm_lib_buffer_bytes(substream), snd_pcm_lib_period_bytes(substream));
 
 	audio_debug(" .. OUT\n");
 	return 0;
@@ -267,6 +273,13 @@ static int snd_bcm2835_pcm_trigger(struct snd_pcm_substream *substream,
 	audio_debug(" .. OUT\n");
 	return err;
 }
+
+#if 0
+void snd_bcm2835_pcm_trigger_handler(struct work_struct *work)
+{
+    bcm2835_alsa_stream_t *alsa_stream = container_of(work, bcm2835_alsa_stream_t, trigger_wq);
+}
+#endif
 
 /* pointer callback */
 static snd_pcm_uframes_t
