@@ -336,8 +336,12 @@ static int pmem_open(struct inode *inode, struct file *file)
 	DLOG("current %u file %p(%d)\n", current->pid, file, file_count(file));
 	/* setup file->private_data to indicate its unmapped */
 	/*  you can only open a pmem device one time */
-	if (file->private_data != NULL)
-		return -1;
+#if 0 /* FIXME: Why this private_data gets set to pmem??? */ 
+		if (file->private_data != NULL)
+#else
+		if ((file->private_data != NULL) && (file->private_data != pmem))
+#endif
+
 	data = kmalloc(sizeof(struct pmem_data), GFP_KERNEL);
 	if (!data) {
 		printk("pmem: unable to allocate memory for pmem metadata.");

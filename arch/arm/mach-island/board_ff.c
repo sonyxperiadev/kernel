@@ -55,6 +55,7 @@
 #include <linux/regulator/max8649.h>
 #include <linux/usb/android_composite.h>
 #include <linux/kernel_stat.h>
+#include <linux/android_pmem.h>
 
 
 /*
@@ -669,6 +670,24 @@ static struct platform_device android_usb = {
 	},
 };
 
+static struct android_pmem_platform_data android_pmem_data = {
+	.name = "pmem",
+	.start = 0x9C000000,
+	.size = SZ_64M,
+	.no_allocator = 0,
+	.cached = 0,
+	.buffered = 0,
+};
+
+static struct platform_device android_pmem = {
+	.name 	= "android_pmem",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &android_pmem_data,
+	},
+};
+
+
 void __init board_map_io(void)
 {
    /* Map machine specific iodesc here */
@@ -687,6 +706,7 @@ static struct platform_device *board_devices[] __initdata = {
    &board_gpio_keys_device,
    &islands_leds_device,
    &android_usb,
+   &android_pmem,
 };
 
 static void __init board_add_devices(void)
