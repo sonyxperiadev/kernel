@@ -336,11 +336,11 @@ static int pmem_open(struct inode *inode, struct file *file)
 	DLOG("current %u file %p(%d)\n", current->pid, file, file_count(file));
 	/* setup file->private_data to indicate its unmapped */
 	/*  you can only open a pmem device one time */
-#if 0 /* FIXME: Why this private_data gets set to pmem??? */ 
-	if (file->private_data != NULL)
-#else
-	if ((file->private_data != NULL) && (file->private_data != pmem))
-#endif
+
+	/* pmem_open() is invoked by misc_open() which will initialse 
+	 * file->private_data to misdevice pointer. 
+	 */
+	if ((file->private_data != NULL) && (file->private_data != &pmem[id].dev))
 		return -1;
 
 	data = kmalloc(sizeof(struct pmem_data), GFP_KERNEL);
