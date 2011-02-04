@@ -2,8 +2,58 @@
 #include <linux/init.h>
 #include <linux/platform_device.h>
 #include <linux/leds.h>
+#include <linux/err.h>
+#include <linux/clk.h> /* only needed for hacked clk rate change */
 #include <asm/hardware/scoop.h>
 #include <asm/mach-types.h>
+
+
+static void hacked_arm_clk_rate_change(enum led_brightness value)
+{
+   #define LED_OFF_ARM_CLK_RATE   25000000 
+
+   static unsigned long  max_arm_clk_rate = LED_OFF_ARM_CLK_RATE;
+   static unsigned long  min_arm_clk_rate = LED_OFF_ARM_CLK_RATE;
+   struct clk *          arm_clk;
+   unsigned long         old_arm_clk_rate;
+   unsigned long         new_arm_clk_rate;
+   int                   rc;
+
+   arm_clk = clk_get(NULL, "arm_clk");
+   BUG_ON(IS_ERR(arm_clk));
+
+   old_arm_clk_rate = clk_get_rate(arm_clk);
+   
+   // remember the current "maximum" so we can restore it when backlight is 
+   // back on
+   max_arm_clk_rate = max(old_arm_clk_rate, max_arm_clk_rate);
+
+   if( value == LED_OFF ) 
+   {
+      new_arm_clk_rate = min_arm_clk_rate;
+   }
+   else
+   {
+      new_arm_clk_rate = max_arm_clk_rate;
+   }
+
+   
+   rc = clk_set_rate(arm_clk, new_arm_clk_rate);
+   if (rc < 0 )
+   {
+      printk(KERN_WARNING \
+     "Warning: %s(): HACK: setting arm clock rate to %ld Hz failed, rc=%d\n", 
+                    __FUNCTION__, new_arm_clk_rate, rc);
+   }
+   else
+   {
+      printk(KERN_INFO \
+      "Info: %s(): HACK: set arm clock rate to %ld Hz, got %ld Hz\n", 
+                    __FUNCTION__, new_arm_clk_rate, clk_get_rate(arm_clk));
+   }
+
+   clk_put(arm_clk);
+}
 
 extern int vc_gencmd(char *response, int maxlen, const char *format, ...);
 
@@ -13,6 +63,9 @@ static void islands_ff_led_lcdbacklight_set(struct led_classdev *led_cdev,
    char response_buffer[32];
    vc_gencmd(response_buffer, 32,
       	     "set_backlight %i", value);
+
+   hacked_arm_clk_rate_change(value);
+
 }
 
 static void islands_ff_led_buttonbacklight_set(struct led_classdev *led_cdev,
