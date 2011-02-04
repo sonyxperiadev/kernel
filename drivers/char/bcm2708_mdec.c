@@ -1171,6 +1171,7 @@ static int bcm2708_mdec_probe(struct platform_device *pdev)
 
    // Turn off incase U-Boot was running splash screen
    MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0x0;
+   ipc_notify_vc_event(bcm_mdec->irq);
    while (MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET)) {
       schedule_timeout(10);
       timeout++;
