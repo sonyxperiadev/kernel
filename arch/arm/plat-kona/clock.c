@@ -24,6 +24,7 @@
 #include <linux/string.h>
 #include <linux/clk.h>
 #include <linux/spinlock.h>
+#include <linux/io.h>
 #include <asm/clkdev.h>
 #include <mach/clock.h>
 #include <asm/io.h>
@@ -288,82 +289,17 @@ static inline void __proc_clk_enable_access (void __iomem *base, int enable)
 		writel(0, base + KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET);
 }
 
-/* swtich ARM to policy x */
-static inline int __proc_clk_switch_to_policy(void __iomem *base, int policy)
-{
-	clk_dbg ("switch to policy %d\n", policy);
-	if (policy>=0 && policy<=7) {
-		int val;
-
-		/* Software update enable for policy related data */
-		writel (KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK, base + KPROC_CLK_MGR_REG_LVM_EN_OFFSET);
-		do {
-			val = readl (base + KPROC_CLK_MGR_REG_LVM_EN_OFFSET);
-		} while (val & KPROC_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK);
-
-		val = (policy<<24) | (policy<<16) | (policy<<8) | policy;
-
-		/* program policy ID */
-		writel (val, base + KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET);
-
-		val = KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK |
-			KPROC_CLK_MGR_REG_POLICY_CTL_GO_ATL_MASK;
-		writel (val, base + KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET);
-
-		/*polling ctrl go bit back to 0 */
-		do {
-			val = readl (base + KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET);
-		} while (val & KPROC_CLK_MGR_REG_POLICY_CTL_GO_MASK);
-	}
-	else
-		return -EINVAL;
-
-	return 0;
-}
-
-/* enable arm_pll VCO */
-static inline void __proc_clk_enable_arm_pll(void __iomem *base, unsigned long rate)
-{
-	int val;
-	unsigned r;
-#define	VC0_FREQ_THRE 	1750000000
-#define	XTAL_FREQ		26000000		// 26Mhz, FIXME, may need to come from board file
-#define	NDIV_SHIFT		20
-	int pdiv = 1, ndiv_int, ndiv_frac;
-
-	// required if VCO > 1.75Ghz
-	if (rate >= VC0_FREQ_THRE)
-		val = 0x08102000;
-	else
-		val = 0x08000000;
-	writel (val, base + KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET);
-
-	ndiv_int= rate / XTAL_FREQ;
-	ndiv_frac = div_u64_rem ( ((u64)(rate % XTAL_FREQ)) << NDIV_SHIFT, XTAL_FREQ, &r);
-	clk_dbg ("int = %d 0x%x, frac = %d 0x%x\n", ndiv_int, ndiv_frac);
-
-	/* PLL integer */
-	val = (pdiv<<KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT)
-		| (ndiv_int<<KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT)
-		| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK
-		| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK;
-	writel (val, base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-
-	/* PLL fraction */
-	val = ndiv_frac<<KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
-	writel (val, base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
-}
-
-
 /* post divider for policy 6 and 7*/
 static inline void __proc_clk_set_policy_div(void __iomem *base, int policy, int div)
 {
 	unsigned long offset;
+
 	if (policy==6)
 		offset = KPROC_CLK_MGR_REG_PLLARMC_OFFSET;
 	else if( policy==7)
 		offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET;
 
+	clk_dbg ("policy %d div %d\n", policy, div);
 	writel(div, base+offset);
 	writel((div<<KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT)|
 		KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
@@ -387,31 +323,6 @@ static inline void __proc_clk_dump_register (void __iomem *base)
 	clk_dbg ("armctrl5         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET));
 	clk_dbg ("lvm_en           0x%08x\n", readl(base+KPROC_CLK_MGR_REG_LVM_EN_OFFSET));
 	clk_dbg ("arm_div          0x%08x\n", readl(base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET));
-}
-
-static inline void __proc_clk_set_axi_override(void __iomem *base, unsigned rate)
-{
-#define	MAX_AXI_RATE	(350*CLOCK_1M)
-	int div = (rate > 2*MAX_AXI_RATE)? 3:2;
-	writel (KPROC_CLK_MGR_REG_CLKGATE_DBG_ARM_SWITCH_POLICY_OVERRIDE_VALUE_MASK,
-		base+KPROC_CLK_MGR_REG_CLKGATE_DBG_OFFSET);
-	writel ( KPROC_CLK_MGR_REG_ARM_DIV_ARM_SWITCH_DIV_OVERRIDE_MASK |
-		((div-1)<<KPROC_CLK_MGR_REG_ARM_DIV_ARM_SWITCH_DIV_SHIFT),
-		base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET);
-}
-
-static inline void __proc_clk_clear_axi_override(void __iomem *base)
-{
-	int val = readl(base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET);
-	val &= KPROC_CLK_MGR_REG_ARM_DIV_ARM_SWITCH_DIV_MASK;
-	writel (val, base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET);
-}
-
-static inline void __proc_clk_trg_axi(void __iomem *base)
-{
-	writel (KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK,
-		base+KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET);
-	while (readl(base+KPROC_CLK_MGR_REG_ARM_SEG_TRG_OFFSET) & KPROC_CLK_MGR_REG_ARM_SEG_TRG_ARM_TRIGGER_MASK);
 }
 
 /* Proc clocks */
@@ -447,14 +358,57 @@ static void __recalc_loops_per_jiffy(unsigned long old_rate, unsigned long new_r
 #endif
 }
 
+#ifdef CONFIG_HAVE_ARM_TWD
+static void __recalc_twd_rate(unsigned long old_rate, unsigned long new_rate)
+{
+extern unsigned long twd_timer_rate;
+extern void __iomem *twd_base;
+
+	u64 prod;
+	u32 r, load;
+
+	clk_dbg ("reacl twd_rate\n");
+	prod = (u64)twd_timer_rate * (u64)new_rate;
+	twd_timer_rate = (unsigned long) div_u64_rem(prod, (u32)old_rate, &r);
+
+	load = twd_timer_rate / HZ;
+	writel (load, twd_base + 0);
+}
+#endif
+
+static unsigned int __proc_clk_get_vco_rate(void __iomem *base)
+{
+#define	XTAL_FREQ	(26*CLOCK_1M)
+	unsigned int ndiv_int, ndiv_frac, vco_rate;
+
+	ndiv_int = (readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET)&KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
+		>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
+	ndiv_frac = (readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET) & KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK)
+		>> KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
+
+	vco_rate = ndiv_int * XTAL_FREQ;
+
+	vco_rate += (unsigned long) (u64) (((u64)ndiv_frac * (u64)XTAL_FREQ) >> 20);
+
+	clk_dbg ("int %d, frac %d, vco %d\n", ndiv_int, ndiv_frac, vco_rate);
+	return vco_rate;
+}
+
+static unsigned int __proc_clk_get_rate(void __iomem *base)
+{
+	unsigned int vco_rate = __proc_clk_get_vco_rate (base);
+	int div = (readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET)& KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK)
+		>> KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT;
+
+	return vco_rate /div;
+}
+
 static int proc_clk_set_rate(struct clk *c, unsigned long rate)
 {
 	struct proc_clock *proc_clk = to_proc_clk(c);
-	unsigned long old_rate = c->rate;
+	unsigned long old_rate, vco_rate;
 	void __iomem *base;
 	int ret = 0, div = 2;
-
-	c->rate = rate;
 
 	base = ioremap (proc_clk->proc_clk_mgr_base, SZ_4K);
 	if(!base)
@@ -463,44 +417,32 @@ static int proc_clk_set_rate(struct clk *c, unsigned long rate)
 	/* enable  access */
 	__proc_clk_enable_access (base, 1);
 
-	/* swtich to lower frequency of policy 7 */
-	__proc_clk_set_policy_div (base, 7, 12);
 
-	/* clear AXI override and get back to div/2 before switch to policy 2 */
-	__proc_clk_clear_axi_override(base);
+	old_rate = __proc_clk_get_rate(base);
 
-	__proc_clk_trg_axi(base);
+	vco_rate = __proc_clk_get_vco_rate (base);
 
-	/* switch to policy 2 */
-	ret = __proc_clk_switch_to_policy (base, 2);
-	if (ret)
-		goto err;
+	div = (vco_rate / rate) + 1;
+	div = min (max (2, div), 255);
 
-	/* configure PLL */
-	__proc_clk_enable_arm_pll(base, rate*div);
-
-	/* set AXI override */
-	__proc_clk_set_axi_override (base, rate);
-
-	/* set big divider (lower freq) for policy 7  */
-	__proc_clk_set_policy_div (base, 7, 12);
-
-	/* switch to policy 7 */
-	ret = __proc_clk_switch_to_policy (base, 7);
-
-	__proc_clk_trg_axi(base);
+	c->rate = vco_rate / div;
 
 	/* switch to normal freq of policy 7 */
 	__proc_clk_set_policy_div (base, 7, div);
+
 	if (ret)
 		goto err;
 
 	__proc_clk_dump_register (base);
+
 	__proc_clk_enable_access (base, 0);
 	iounmap (base);
 
 #ifndef CONFIG_CPU_FREQ
-	__recalc_loops_per_jiffy(old_rate, rate);
+	__recalc_loops_per_jiffy(old_rate, c->rate);
+#endif
+#ifdef CONFIG_HAVE_ARM_TWD
+	__recalc_twd_rate(old_rate, c->rate);
 #endif
 
 	return ret;
@@ -512,9 +454,18 @@ err:
 static unsigned long proc_clk_get_rate(struct clk *c)
 {
 	unsigned int ret = 0;
+	struct proc_clock *proc_clk = to_proc_clk(c);
+	void __iomem *base;
+
+	base = ioremap (proc_clk->proc_clk_mgr_base, SZ_4K);
+	if (!base)
+		return -ENOMEM;
+	c->rate = __proc_clk_get_rate(base);
+	iounmap (base);
 	ret = c->rate;
 	return ret;
 }
+
 static unsigned long proc_clk_round_rate(struct clk *c, unsigned long rate)
 {
 	unsigned long ret = rate;

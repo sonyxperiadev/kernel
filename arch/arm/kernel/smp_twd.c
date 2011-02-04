@@ -24,7 +24,7 @@
 /* set up by the platform code */
 void __iomem *twd_base;
 
-static unsigned long twd_timer_rate;
+unsigned long twd_timer_rate;
 
 static void twd_set_mode(enum clock_event_mode mode,
 			struct clock_event_device *clk)
