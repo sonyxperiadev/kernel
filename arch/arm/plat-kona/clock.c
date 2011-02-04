@@ -422,7 +422,8 @@ static int proc_clk_set_rate(struct clk *c, unsigned long rate)
 
 	vco_rate = __proc_clk_get_vco_rate (base);
 
-	div = (vco_rate / rate) + 1;
+	/* to get minimium clock >= desired_rate */
+	div = vco_rate/rate;
 	div = min (max (2, div), 255);
 
 	c->rate = vco_rate / div;
