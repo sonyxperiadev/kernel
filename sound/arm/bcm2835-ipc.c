@@ -379,8 +379,13 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 
 		buffer = list_entry(p, bcm2835_audio_buffer_t, link);
 
-		audio_info(" ioremapping phys_addr (0x%08x)\n",__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr));
-		buffer->start = (uint8_t *)ioremap(__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr), buffer->size);
+        /* If first time getting this buffer */
+        if (buffer->start == NULL) {
+            audio_info(" ioremapping phys_addr (0x%08x)\n",__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr));
+            buffer->start = (uint8_t *)ioremap(__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr), buffer->size);
+        }
+
+        /* Check if ioremap failed */
 		if (buffer->start == NULL) {
 			audio_error(" Failed to Ioremap buffer from phys(0x%08x), size(%d)\n",
 					(uint32_t)__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr), buffer->size);
@@ -399,7 +404,6 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 			 * anything */
 			BUG_ON(count);
 			audio_info("partial filled buf\n");
-			iounmap(buffer->start);
 			break;
 		}
 
