@@ -687,6 +687,27 @@ static struct platform_device android_pmem = {
 	},
 };
 
+static struct gpio_led island_gpio_leds[] = {
+	{
+		.name			= "green-led",
+		.gpio			= 105,
+	},
+	{
+		.name			= "red-led",
+		.gpio			= 114,
+	},
+};
+static struct gpio_led_platform_data island_gpio_led_data = {
+	.leds		= island_gpio_leds,
+	.num_leds	= ARRAY_SIZE(island_gpio_leds),
+};
+static struct platform_device island_leds_gpio_device = {
+	.name	= "leds-gpio",
+	.id	= -1,
+	.dev	= {
+		.platform_data	= &island_gpio_led_data,
+	},
+};
 
 void __init board_map_io(void)
 {
@@ -707,6 +728,7 @@ static struct platform_device *board_devices[] __initdata = {
    &islands_leds_device,
    &android_usb,
    &android_pmem,
+   &island_leds_gpio_device,
 };
 
 static void __init board_add_devices(void)
@@ -780,45 +802,8 @@ void __init pinmux_setup(void)
 
 
 
-Comms_Start(void)
-{
-#if 0
-        void __iomem *apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
-        if (!apcp_shmem) {
-                pr_err("%s: ioremap shmem failed\n", __func__);
-                return;
-        }
-        /* clear first (9) 32-bit words in shared memory */
-        memset(apcp_shmem, 0, IPC_SIZE);
-        iounmap(apcp_shmem);
-
-#endif
-
-#define MODEM_DTCM_ADDRESS 0x3AD00000
- 
-#define MAIN_ADDRESS_OFFSET 0x30
- 
-#define INIT_ADDRESS_OFFSET 0x34
- 
-#define CP_BOOT_BASE_SIZE (0x40)
-
-        void __iomem *cp_boot_base;
-        cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
-        if (!cp_boot_base) {
-                pr_err("%s: ioremap error\n", __func__);
-                return;
-        }
-
-        /* Start the CP, Code taken from Nucleus BSP */
-        *(unsigned int *)(cp_boot_base+INIT_ADDRESS_OFFSET) = *(unsigned int *)(cp_boot_base+MAIN_ADDRESS_OFFSET);
-
-        iounmap(cp_boot_base);
-        pr_info("%s: BCM_FUSE CP Started....\n", __func__);
-}
-
 void __init board_init(void)
 {
-	Comms_Start();
 	pinmux_setup();
 	board_add_devices();
 }
