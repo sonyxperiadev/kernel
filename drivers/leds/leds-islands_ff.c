@@ -38,18 +38,21 @@ static void hacked_arm_clk_rate_change(enum led_brightness value)
    }
 
    
-   rc = clk_set_rate(arm_clk, new_arm_clk_rate);
-   if (rc < 0 )
+   if (new_arm_clk_rate != old_arm_clk_rate) 
    {
-      printk(KERN_WARNING \
-     "Warning: %s(): HACK: setting arm clock rate to %ld Hz failed, rc=%d\n", 
+      rc = clk_set_rate(arm_clk, new_arm_clk_rate);
+      if (rc < 0 )
+      {
+         printk(KERN_WARNING \
+        "Warning: %s(): HACK: setting arm clock rate to %ld Hz failed, rc=%d\n", 
                     __FUNCTION__, new_arm_clk_rate, rc);
-   }
-   else
-   {
-      printk(KERN_INFO \
-      "Info: %s(): HACK: set arm clock rate to %ld Hz, got %ld Hz\n", 
+      }
+      else
+      {
+         printk(KERN_INFO \
+         "Info: %s(): HACK: set arm clock rate to %ld Hz, got %ld Hz\n", 
                     __FUNCTION__, new_arm_clk_rate, clk_get_rate(arm_clk));
+      }
    }
 
    clk_put(arm_clk);
