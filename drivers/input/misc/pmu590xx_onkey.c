@@ -83,7 +83,7 @@ static int __devinit pmu590xx_onkey_probe(struct platform_device *pdev)
 		goto out_input;
 	}
 
-	info->idev->name = "pmu590xx_on";
+	//info->idev->name = "pmu590xx_on";
 	info->idev->phys = "pmu590xx_on/input0";
 	info->idev->dev.parent = &pdev->dev;
 	info->idev->evbit[0] = BIT_MASK(EV_KEY);
