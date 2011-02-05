@@ -818,7 +818,7 @@ Comms_Start(void)
 
 void __init board_init(void)
 {
-	//Comms_Start();
+	Comms_Start();
 	pinmux_setup();
 	board_add_devices();
 }
