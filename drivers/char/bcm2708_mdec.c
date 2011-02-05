@@ -1014,8 +1014,8 @@ static int mdec_dummy_read(char *buf, char **start, off_t offset, int count, int
 static int mdec_proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {
         char *init_string = NULL;
-   bcm2708_mdec_play_t cmd;
         int num;
+	int timeout = 0;
 
         init_string = vmalloc(INPUT_MAX_INPUT_STR_LENGTH);
 
@@ -1035,18 +1035,17 @@ static int mdec_proc_write(struct file *file, const char *buffer, unsigned long 
    num = simple_strtol(init_string, 0, 0);
    bcm2708mdec_dbg("read from /proc is %d\n", num);
 
-   if (8 == num)
-   {
-
-   cmd.audio_type = MEDIA_DEC_AUDIO_CodingUnused;
-   cmd.video_type = MEDIA_DEC_VIDEO_CodingAVC;
-   strncpy(cmd.filename, "/mfs/sd/bond2.264", strlen("/mfs/sd/bond2.264"));
-   cmd.filename_size = strlen("/mfs/sd/bond2.264");
-
-   do_playback(&cmd);
-   } else
-   {
-   player_stop();
+   //write anything to this proc entry and it will kill any instance of the media decoder running (usually the splash screen)
+   //no state in the rest of the driver is checked!
+   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0x0;
+   ipc_notify_vc_event(g_mdec->irq);
+   while (MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET)) {
+      schedule_timeout(10);
+      timeout++;
+      if (timeout > 100) {
+         printk( KERN_ERR "Error disabling MDEC control!\n");
+         break;
+      }   
    }
 
    vfree(init_string);
@@ -1118,7 +1117,6 @@ struct miscdevice mdec_misc_dev = {
 static int bcm2708_mdec_probe(struct platform_device *pdev)
 {
         int ret = -ENXIO;
-        int timeout = 0;
         struct resource *r;
    struct bcm2708_mdec *bcm_mdec = NULL;
 
@@ -1165,22 +1163,9 @@ static int bcm2708_mdec_probe(struct platform_device *pdev)
       goto err_reg_chrdev;
    }
 
-       mdec_create_proc_entry("bcm2835_mdec", mdec_dummy_read, mdec_proc_write);
+    mdec_create_proc_entry("bcm2835_mdec", mdec_dummy_read, mdec_proc_write);
 
-       bcm2708mdec_dbg("The MDEC device is probed successfully");
-
-   // Turn off incase U-Boot was running splash screen
-   MEDIA_DEC_REGISTER_RW( MEDIA_DEC_CONTROL_OFFSET ) = 0x0;
-   ipc_notify_vc_event(bcm_mdec->irq);
-   while (MEDIA_DEC_REGISTER_RW( MEDIA_DEC_STATUS_OFFSET)) {
-      schedule_timeout(10);
-      timeout++;
-      if (timeout > 100) {
-         printk("Error disabling MDEC control\n");
-         break;
-      }
-      bcm2708mdec_dbg("slept for 1 sec in disabling control\n");
-   }
+    bcm2708mdec_dbg("The MDEC device is probed successfully");
 
    return 0;
 
