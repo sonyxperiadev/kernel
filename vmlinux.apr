@@ -1,0 +1,11 @@
+# Auto-Project file created by RVDEBUG. Do not hand edit unless
+# you know what you are doing. Use the Settings Window
+# Copyright (c) 2002 - ARM Ltd
+$make_prj
+[PROJECT] 
+source_search="R:"
+source_mapping="f:\WS_User->R:"
+[MAKEFILE=default] 
+application="vmlinux"
+arguments="This project does not build anything"
+command="@echo $a"

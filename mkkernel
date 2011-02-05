@@ -1,0 +1,28 @@
+
+#!/bin/sh
+
+echo $0 $1 $2
+cd common  > /dev/null 2>&1
+
+if [ ! $2 ]
+then
+  LOAD=30
+else
+  LOAD=$2
+fi
+echo $LOAD
+
+if [ $1 ] && [ $1 = "clean" ]
+then
+  make clean
+  cd initramfs
+  git reset --hard
+  cd ..
+else
+  time make ARCH=arm CROSS_COMPILE=../prebuilt/linux-x86/toolchain/arm-eabi-4.4.0/bin/arm-eabi- bcm2850_ff_defconfig
+# time make modules zImage -j$LOAD ARCH=arm CROSS_COMPILE=../prebuilt/linux-x86/toolchain/arm-eabi-4.4.0/bin/arm-eabi- bcm2850_ff_defconfig
+  time make modules uImage -j$LOAD ARCH=arm CROSS_COMPILE=../prebuilt/linux-x86/toolchain/arm-eabi-4.4.0/bin/arm-eabi- bcm2850_ff_defconfig
+fi
+cd ../
+
+

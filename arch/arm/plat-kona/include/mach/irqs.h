@@ -278,6 +278,14 @@
 #define		IRQ_IPC_0		(BCM_INT_ID_MAX)
 #define		NUM_IPC_IRQS		32
 
+/* For AP-CP */
+#define IRQ_APCP_0		BCM_INT_ID_RESERVED36
+#define IRQ_IPC_A2C             235
+#define IRQ_IPC_C2A             199 //279
+#define IRQ_IPC_C2A_BINTC       279 //BMIRQ55
+#define IRQ_GPIO                (2 + IRQ_APCP_0)      /* GPIO */
+#define NUM_APCP_IRQS		32
+
 /* Start virtual GPIO range above this max irq number */													
 #define IRQ_GPIO_0			300
 
