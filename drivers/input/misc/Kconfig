@@ -422,4 +422,12 @@ config INPUT_BCM2835_IR
 
           To compile this driver as a module, choose M here.
 
+config INPUT_PMU590XX_ONKEY
+        tristate "BCM PMU590XX PowerOnKey input events"
+        depends on MFD_BCM_PMU590XX
+        help
+          Say Y here if want to support PMU590XX PowerOnKey events.
+
+          To compile this driver as a module, choose M here.
+
 endif

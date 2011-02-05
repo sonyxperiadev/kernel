@@ -71,6 +71,7 @@ int bcm590xx_reg_write(struct bcm590xx *bcm590xx, int reg, u16 val);
 
 int bcm590xx_request_irq(struct bcm590xx *bcm590xx, int irq, bool enable_irq,
 			 void (*handler) (int, void *), void *data) ;
+int bcm590xx_free_irq(struct bcm590xx *bcm590xx, int irq);
 
 int bcm590xx_reg_read_slave1(int reg) ;
 int bcm590xx_reg_write_slave1(int reg, u16 val) ;

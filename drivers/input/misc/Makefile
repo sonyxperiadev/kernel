@@ -41,4 +41,5 @@ obj-$(CONFIG_INPUT_WM831X_ON)		+= wm831x-on.o
 obj-$(CONFIG_INPUT_YEALINK)		+= yealink.o
 obj-$(CONFIG_INPUT_BCM2835_IR)		+= bcm2835_ir.o
 obj-$(CONFIG_INPUT_SMB380)      += smb380.o 
+obj-$(CONFIG_INPUT_PMU590XX_ONKEY)	+= pmu590xx_onkey.o 
 

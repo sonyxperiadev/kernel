@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Thu Feb  3 22:59:54 2011
+# Fri Feb  4 12:08:38 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -793,7 +793,8 @@ CONFIG_INPUT_MISC=y
 # CONFIG_INPUT_GPIO is not set
 # CONFIG_INPUT_PCF8574 is not set
 # CONFIG_INPUT_GPIO_ROTARY_ENCODER is not set
-CONFIG_INPUT_SMB380=y
+# CONFIG_INPUT_SMB380 is not set
+CONFIG_INPUT_PMU590XX_ONKEY=y
 
 #
 # Hardware I/O ports

@@ -371,6 +371,10 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
  
     	// Register battery device, so that battery probe function will be called.
         bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery") ;
+
+		/* Register PowerOnKey device */
+		bcm590xx_client_dev_register(bcm590xx, "pmu590xx-onkey") ;
+
     }
 	else
 	{
