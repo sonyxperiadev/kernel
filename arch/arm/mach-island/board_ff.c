@@ -819,27 +819,30 @@ void __init pinmux_setup(void)
 
 void Comms_Start(void)
 {
-        void __iomem *apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
-        if (!apcp_shmem) {
-                pr_err("%s: ioremap shmem failed\n", __func__);
-                return;
-        }
-        /* clear first (9) 32-bit words in shared memory */
-        memset(apcp_shmem, 0, IPC_SIZE);
-        iounmap(apcp_shmem);
+	uint32_t val;
+	
+    void __iomem *apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
+    if (!apcp_shmem) {
+            pr_err("%s: ioremap shmem failed\n", __func__);
+            return;
+    }
+    /* clear first (9) 32-bit words in shared memory */
+    memset(apcp_shmem, 0, IPC_SIZE);
+    iounmap(apcp_shmem);
 
-        void __iomem *cp_boot_base;
-        cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
-        if (!cp_boot_base) {
-                pr_err("%s: ioremap error\n", __func__);
-                return;
-        }
+    void __iomem *cp_boot_base;
+    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
+    if (!cp_boot_base) {
+            pr_err("%s: ioremap error\n", __func__);
+            return;
+    }
 
-        /* Start the CP, Code taken from Nucleus BSP */
-        *(unsigned int *)(cp_boot_base+INIT_ADDRESS_OFFSET) = *(unsigned int *)(cp_boot_base+MAIN_ADDRESS_OFFSET);
-
-        iounmap(cp_boot_base);
-        pr_info("%s: BCM_FUSE CP Started....\n", __func__);
+    /* Start the CP */
+	val = readl(cp_boot_base+MAIN_ADDRESS_OFFSET);
+	writel(val, cp_boot_base+INIT_ADDRESS_OFFSET);
+	
+    iounmap(cp_boot_base);
+    pr_info("%s: BCM_FUSE CP Started....\n", __func__);
 }
 
 
