@@ -43,11 +43,12 @@ struct bcm59055_battery_data {
 #endif
 };
 
-static struct voltage_percentage 
+struct voltage_percentage   
 {
     unsigned int voltage ;
     unsigned int percentage ;
 } ; 
+
 
 #define MAX_VOLTAGES   8 
 
@@ -148,8 +149,6 @@ static void bcm59055_batt_lvl_wq(struct work_struct *work)
 {
     struct bcm59055_battery_data *battery_data = container_of(work, struct bcm59055_battery_data, batt_lvl_wq.work);
 
-	printk("Inside %s\n", __func__);
-
     bcm59055_get_battery_voltage_per(battery_data->bcm590xx, &g_battery_percentage) ;
 
 	schedule_delayed_work(&battery_data->batt_lvl_wq, msecs_to_jiffies(30000));
@@ -162,7 +161,7 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 {
 	int ret = 0;
 
-	printk(" bcm59055_battery_get_property called with %d \n", psp ) ;
+	printk(" bcm59055_battery_get_property called with %d, battery_percentage is %d \n", psp, g_battery_percentage ) ;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -252,8 +251,6 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 	struct bcm59055_battery_data *battery_data;
 	struct bcm590xx *bcm59055 = dev_get_drvdata(pdev->dev.parent);  // From debugger make sure we get this information correctly.
 	struct bcm590xx_battery_pdata *battery_pdata;
-
-	printk("Inside %s\n", __func__);
 
 	battery_pdata = bcm59055->pdata->battery_pdata;
 
