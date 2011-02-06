@@ -23,6 +23,8 @@
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
 
+#include <linux/workqueue.h>
+
 struct bcm59055_battery_data {
 	// struct power_supply battery;
 	// struct power_supply ac;
@@ -41,10 +43,28 @@ struct bcm59055_battery_data {
 #endif
 };
 
+static struct voltage_percentage 
+{
+    unsigned int voltage ;
+    unsigned int percentage ;
+} ; 
+
+#define MAX_VOLTAGES   8 
+
+struct voltage_percentage vp_table[MAX_VOLTAGES] = 
+{
+    { 3200 , 10 },
+    { 3800 , 20 },
+    { 3900 , 30 },
+    { 3950 , 40 },
+    { 4000 , 50 },
+    { 4100 , 70 },
+    { 4150 , 80 },
+    { 4200 , 100 },
+} ;
 
 /* Battery values exported in /sys/class/power_supply/battery */
 #define BATT_TECHNOLOGY	 (POWER_SUPPLY_TECHNOLOGY_UNKNOWN)
-#define BATT_CAPACITY	(100)
 #define BATT_VOLT	(1200)
 #define BATT_HEALTH	(1)	/* Good */
 #define BATT_PRESENT	(1)
@@ -53,6 +73,8 @@ struct bcm59055_battery_data {
 
 /* AC power values exported in /sys/class/power_supply/ac */
 #define AC_ONLINE	(1)
+
+unsigned int g_battery_percentage = 0 ;
 
 static enum power_supply_property bcm59055_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
@@ -67,6 +89,8 @@ static enum power_supply_property bcm59055_battery_props[] = {
 static enum power_supply_property bcm59055_wall_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 };
+
+static int bcm59055_get_battery_voltage_per(struct bcm590xx *bcm590xx, unsigned int *percentage )  ;
 
 static int bcm59055_wall_get_property(struct power_supply *psy,
 			enum power_supply_property psp,
@@ -86,11 +110,59 @@ static int bcm59055_wall_get_property(struct power_supply *psy,
 	return ret;
 }
 
+static int bcm59055_get_battery_voltage_per(struct bcm590xx *bcm590xx, unsigned int *percentage ) 
+{
+	unsigned int regval = 0 ;
+	unsigned int regval1 = 0 ;
+	unsigned int millivolt_mul = 1000 ;
+	unsigned int i = 0 ;
+
+    regval = bcm590xx_reg_read(bcm590xx,BCM59055_REG_ADCCTRL3 ) ;
+
+	if ( !(regval & BCM59055_INVALID_ADCVAL ) )
+	{
+		regval  = regval & BCM59055_REG_ADCCTRL3_VALID_BITS ;
+		 
+        regval1 = bcm590xx_reg_read(bcm590xx,BCM59055_REG_ADCCTRL4 ) ;
+
+        regval = ( regval << 8 ) | ( regval1 ) ;
+
+    	regval = ( regval * millivolt_mul * 48) / ( 1024 * 10 ) ;
+
+		i = 0 ;
+		while ( i < MAX_VOLTAGES ) 
+		{
+            if ( regval <= vp_table[i].voltage ) 
+            {
+                *percentage = vp_table[i].percentage ;
+				break ;
+            }
+            i++ ;
+		}
+    }
+	return 0 ;    
+}
+
+
+static void bcm59055_batt_lvl_wq(struct work_struct *work)
+{
+    struct bcm59055_battery_data *battery_data = container_of(work, struct bcm59055_battery_data, batt_lvl_wq.work);
+
+	printk("Inside %s\n", __func__);
+
+    bcm59055_get_battery_voltage_per(battery_data->bcm590xx, &g_battery_percentage) ;
+
+	schedule_delayed_work(&battery_data->batt_lvl_wq, msecs_to_jiffies(30000));
+}
+
+
 static int bcm59055_battery_get_property(struct power_supply *psy,
 				 enum power_supply_property psp,
 				 union power_supply_propval *val)
 {
 	int ret = 0;
+
+	printk(" bcm59055_battery_get_property called with %d \n", psp ) ;
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
@@ -106,7 +178,7 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 		val->intval = BATT_TECHNOLOGY;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		val->intval = BATT_CAPACITY;
+		val->intval = g_battery_percentage ;
 		break;
 	case POWER_SUPPLY_PROP_TEMP:
 		val->intval = BATT_TEMP;
@@ -124,10 +196,6 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 
 void bcm59055_initialize_charging( struct bcm590xx *bcm59055 )
 {
-    // Set battery initialization registers.
-    // bsc_rw w 2 0x08 0x55 0x08
-    // bsc_rw w 2 0x08 0x57 0x07
-    // bsc_rw w 2 0x08 0x58 0x01
     bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL6, 0x08 ) ;
     bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL8, 0x07 ) ;
     bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL9, 0x01 ) ;
@@ -135,8 +203,6 @@ void bcm59055_initialize_charging( struct bcm590xx *bcm59055 )
 
 void bcm59055_start_charging(struct bcm590xx *bcm59055 )
 {
-    // Enable wall charging.
-    // bsc_rw w 2 0x08 0x52 0x05
     bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL3, 5 ) ;
     bcm590xx_reg_write_slave1(0, 0x44) ;
     return ;
@@ -170,8 +236,6 @@ static void bcm59055_power_isr(int intr, void *data)
 int bcm59055_init_charger(struct bcm59055_battery_data *battery_data)
 {
 	struct bcm590xx *bcm59055 = battery_data->bcm590xx;
-	// u8 reg_val;
-	// struct bcm590xx_battery_pdata *pdata = bcm59055->pdata->battery_pdata;
 
 	printk("######## Init charging called \n" ) ;
 
@@ -203,7 +267,7 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 	battery_data->bcm590xx = bcm59055;
 
 	// INIT_DELAYED_WORK(&battery_data->charger_insert_wq, bcm59055_charger_wq); Implement bcm59055_charger_wq
-	// INIT_DELAYED_WORK(&battery_data->batt_lvl_wq, bcm59055_batt_lvl_wq); Implement bcm59055_batt_lvl_wq
+	INIT_DELAYED_WORK(&battery_data->batt_lvl_wq, bcm59055_batt_lvl_wq); 
 
 	platform_set_drvdata(pdev, battery_data);
 
@@ -239,6 +303,7 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 		goto err_battery_register;
 	}
 
+	schedule_delayed_work(&battery_data->batt_lvl_wq, 0 );
 	return 0;
 
 err_battery_register:

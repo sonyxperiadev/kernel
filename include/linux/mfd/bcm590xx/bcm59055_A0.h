@@ -92,6 +92,9 @@
 #define BCM59055_REG_IOSRCTRL1        0xC8    
 #define BCM59055_REG_SDSRCTRL1        0xD0    
 
+#define BCM59055_REG_ADCCTRL3       0x82
+#define BCM59055_REG_ADCCTRL4       0x83
+
 #define BCM59055_REG_PMUID            0x04    // 0x00    /* R    revision/id */
 
 /* #defines to identify LDOs inside linux frameworks. */
@@ -121,6 +124,9 @@
 
 #define BCM59055_INT_REG_BASE            BCM59055_REG_INT1
 #define BCM59055_INT_MASK_REG_BASE       BCM59055_REG_INT1MSK
+
+#define BCM59055_INVALID_ADCVAL              0x04 
+#define BCM59055_REG_ADCCTRL3_VALID_BITS     0x03 
 
 /* PMU Interrupts IDs  --------------------------------------------------------------- */
 typedef enum {
