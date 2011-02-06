@@ -10,7 +10,7 @@
 
 static void hacked_arm_clk_rate_change(enum led_brightness value)
 {
-   #define LED_OFF_ARM_CLK_RATE   25000000 
+   #define LED_OFF_ARM_CLK_RATE   100000000 
 
    static unsigned long  max_arm_clk_rate = LED_OFF_ARM_CLK_RATE;
    static unsigned long  min_arm_clk_rate = LED_OFF_ARM_CLK_RATE;
