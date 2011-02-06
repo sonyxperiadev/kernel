@@ -22,6 +22,9 @@
 #define CAMERA_CMD_SIZE		512
 #define CAMERA_RESP_SIZE	512
 
+/***************************************************************
+					Viewfinder setup
+***************************************************************/
 typedef enum {
 	ROT_0 = 0,
 	ROT_90,
@@ -47,6 +50,21 @@ typedef struct {
 	CAMERA_VIEWFINDER_REGION_S  vf_region;
 } CAMERA_IOCTL_SETUP_CAMERA_T;
 
+/***************************************************************
+					Capture Setup
+***************************************************************/
+typedef struct {
+	uint32_t                        width;
+	uint32_t                        height;
+	uint32_t                        quality;
+	uint32_t                        max_size;
+	void                           *buffer;
+} CAMERA_CAPTURE_S;
+
+
+/***************************************************************
+					Camera IOCTLS
+***************************************************************/
 typedef enum
 {
 	CAMERA_IOCTL_VIEWFINDER_SETUP_ID = 0x1,
@@ -54,9 +72,12 @@ typedef enum
 }CAMERA_COMMAND_ID_T;
 
 #define CAMERA_IOCTL_VIEWFINDER_SETUP _IOWR('C', CAMERA_IOCTL_VIEWFINDER_SETUP_ID, CAMERA_IOCTL_SETUP_CAMERA_T )
-#define CAMERA_IOCTL_TAKE_PICTURE     _IOWR('C', CAMERA_IOCTL_TAKE_PICTURE_ID, CAMERA_IOCTL_SETUP_CAMERA_T )
+#define CAMERA_IOCTL_TAKE_PICTURE     _IOWR('C', CAMERA_IOCTL_TAKE_PICTURE_ID, CAMERA_CAPTURE_S )
 
+/***************************************************************
+					Public interface
+***************************************************************/
 int vc_camera(char *response, int maxlen, const char *format, ...);
 int vc_camera_control(uint32_t enable);
-
+int vc_camera_take_picture(uint32_t width, uint32_t height, uint32_t max_size, void *memory);
 #endif

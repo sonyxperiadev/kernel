@@ -25,6 +25,10 @@
 #include <linux/interrupt.h>
 #include <linux/ipc/ipc.h>
 
+#include <mach/hardware.h>
+#include <mach/io.h>
+#include <mach/memory.h>
+
 #include "camera.h"
 #include "camera_regs.h"
 #include "camera_driver.h"
@@ -81,7 +85,6 @@ int vc_camera_control(uint32_t enable)
 	int ret = 0;
 	uint32_t current_state = CAMERA_REGISTER_RW( camera_state.base_address, CAMERA_CONTROL_OFFSET ) & CAMERA_CONTROL_ENABLE_BIT;
 
-
 	if( enable == current_state){
 		camera_print(KERN_ERR"Camera already in required state\n");
 		return ret;
@@ -111,6 +114,90 @@ int vc_camera_control(uint32_t enable)
 	return ret;
 }
 EXPORT_SYMBOL(vc_camera_control);
+
+int vc_camera_take_picture(uint32_t width, uint32_t height, uint32_t max_size, void *memory)
+{
+	int ret = 0;
+	uint32_t viewfinder_state = CAMERA_REGISTER_RW( camera_state.base_address, CAMERA_CONTROL_OFFSET ) & CAMERA_CONTROL_ENABLE_BIT;
+	uint32_t capture_addr;
+	resource_size_t jpeg_size;
+	void __iomem *jpeg_addr;
+
+	if( !viewfinder_state){
+		camera_print(KERN_ERR"Camera not running: can't take picture\n");
+		return ret;
+	}
+
+	camera_print("Setting the capture enable bit\n");
+	CAMERA_REGISTER_RW( camera_state.base_address, CAMERA_CONTROL_OFFSET ) |= CAMERA_CONTROL_CAPTURE_BIT;
+
+	/* mark the camera state as busy */
+	down(&camera_state.work_status);
+
+	/* ring the doorbell */
+	printk(KERN_ERR"%s: Ringing the doorbell with enable\n", __func__);
+	ipc_notify_vc_event(camera_state.irq);
+
+	/* wait for the done bit */
+	camera_print("-waiting\n");
+	ret = down_interruptible(&camera_state.command_complete);
+	if (ret < 0) {
+		printk(KERN_ERR"Failed to get the semaphore error code=%d\n", ret);
+	}
+
+	/* Capture done: copy the jpeg buffer */
+	capture_addr = CAMERA_REGISTER_RW(camera_state.base_address, CAMERA_IMAGE_BUFFER_ADDRESS_OFFSET);
+	jpeg_size =  CAMERA_REGISTER_RW(camera_state.base_address, CAMERA_IMAGE_SIZE_OFFSET);
+	camera_print("Got jpeg buffer @ 0X%x and size = %d\n", capture_addr, jpeg_size);
+#define VC_BASE_ADDR_IN_ARM_MAP UL(0x40000000) /* offset to the VC physical 0x0 in ARM's view */
+#define VC_CACHE UL(0xC0000000) /* offset to the VC physical 0x0 in ARM's view */
+
+	capture_addr = capture_addr - VC_CACHE + VC_BASE_ADDR_IN_ARM_MAP;
+
+	if( !capture_addr || !jpeg_size || (jpeg_size > max_size)){
+		printk(KERN_ERR"[%s] Capture Error\n", __func__);
+		goto capture_error;
+	}
+
+	camera_print("Got jpeg buffer @ 0X%x and size = %d\n", capture_addr, jpeg_size);
+	/* Request the jpeg buffer and ioremap it */
+	if (!request_mem_region(capture_addr, jpeg_size, "jpeg_image")) {
+		printk(KERN_ERR"Failed to request the capture region\n");
+		goto capture_error;
+	}
+
+	jpeg_addr= ioremap(capture_addr, jpeg_size);
+	if (!jpeg_addr) {
+		printk(KERN_ERR"Failed to get the ioremapped address region\n");
+		goto map_error;
+	}
+
+	printk(KERN_ERR"Copying data from %p to %p with size = %d", jpeg_addr, memory,jpeg_size);
+	/* Copy the jpeg buffer from VC in user buffer */
+	ret = copy_to_user(memory, jpeg_addr, jpeg_size);
+	if( ret < 0 ) {
+		printk(KERN_ERR"[%s] error in copying date to user buffer\n", __func__);
+		goto copy_error;
+	}
+
+copy_error:
+	iounmap(jpeg_addr);
+
+map_error:
+	release_mem_region(capture_addr, jpeg_size);
+
+capture_error:
+	/* Disable the caprute and ring the doorbell */
+	CAMERA_REGISTER_RW(camera_state.base_address, CAMERA_CONTROL_OFFSET ) &= (~CAMERA_CONTROL_CAPTURE_BIT);
+	printk(KERN_ERR"%s: Ringing the doorbell with capture disnable\n", __func__);
+	ipc_notify_vc_event(camera_state.irq);
+
+	/* mark camera state as free */
+	up(&camera_state.work_status);
+
+	return ret;
+}
+EXPORT_SYMBOL(vc_camera_take_picture);
 
 /* static functions */
 static int dump_camera_ipc_block( char *buffer, char **start, off_t offset, int bytes, int *eof, void *context )

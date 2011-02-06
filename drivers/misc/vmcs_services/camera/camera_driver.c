@@ -130,7 +130,7 @@ int camera_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsig
 	camera_print("-IN cmd=%d arg=0x%lx\n", cmd, arg);
 
 	switch( cmd ) {
-		case CAMERA_IOCTL_VIEWFINDER_SETUP_ID:
+		case CAMERA_IOCTL_VIEWFINDER_SETUP:
 			{
 				CAMERA_IOCTL_SETUP_CAMERA_T  request;
 
@@ -144,10 +144,18 @@ int camera_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsig
 				break;
 			}
 
-		case CAMERA_IOCTL_TAKE_PICTURE_ID:
-			printk(KERN_ERR"[%s]:unimplemented cmd=%d\n", __func__, cmd);
-			ret = -EIO;
-			break;
+		case CAMERA_IOCTL_TAKE_PICTURE:
+            {
+				CAMERA_CAPTURE_S  request;
+
+				if( copy_from_user(&request,(void *) arg, sizeof(CAMERA_CAPTURE_S)) ) {
+					ret = -EFAULT;
+					printk(KERN_ERR"[%s]error in copying cmd structure\n", __func__);
+					goto err_cmd;
+				}
+                ret = vc_camera_take_picture(request.width, request.height, request.max_size, request.buffer);
+				break;
+            }
 
 		default:
 			printk(KERN_ERR"[%s]:unknown command cmd=%d\n", __func__, cmd);
