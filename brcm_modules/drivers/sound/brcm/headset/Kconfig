@@ -1,0 +1,7 @@
+#Broadcom headset detection driver
+config BRCM_HEADSET
+	tristate "Broadcom headset drivers"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+       default N
+        help
+          Activate BRCM headset driver

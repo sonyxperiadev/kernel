@@ -1,0 +1,7994 @@
+<MSG>
+MSG_MEASURE_REPORT_PARAM_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MS_RxTestParam_t", this, pointerContent)	MS_RxTestParam_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_LOCAL_ELEM_NOTIFY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MS_LocalElemNotifyInd_t", this, pointerContent)	MS_LocalElemNotifyInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CIPHER_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PLMNLIST_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SEARCHED_PLMN_LIST_t", this, pointerContent)	SEARCHED_PLMN_LIST_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_RX_SIGNAL_INFO_CHG_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_RX_SIGNAL_INFO_CHG_t", this, pointerContent)	RX_SIGNAL_INFO_CHG_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_RSSI_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_RxSignalInfo_t", this, pointerContent)	RxSignalInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PLMN_SELECT_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_REG_GSM_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MSRegInfo_t", this, pointerContent)	MSRegInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_REG_GPRS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MSRegInfo_t", this, pointerContent)	MSRegInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DATE_TIMEZONE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TimeZoneDate_t", this, pointerContent)	TimeZoneDate_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_NETWORK_NAME_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_nitzNetworkName_t", this, pointerContent)	nitzNetworkName_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CELL_INFO_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MMPlmnInfo_t", this, pointerContent)	MMPlmnInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SERVING_CELL_INFO_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ServingCellInfo_t", this, pointerContent)	ServingCellInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CIPHER_ALG_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PHONECTRL_CIPHER_ALG_t", this, pointerContent)	PHONECTRL_CIPHER_ALG_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_NET_UARFCN_DL_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_NW_MEAS_RESULT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PHONECTRL_NMR_t", this, pointerContent)	PHONECTRL_NMR_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_INCOMING_CALL_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallReceiveMsg_t", this, pointerContent)	CallReceiveMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_VOICECALL_CONNECTED_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_VoiceCallConnectMsg_t", this, pointerContent)	VoiceCallConnectMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_VOICECALL_WAITING_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_VoiceCallWaitingMsg_t", this, pointerContent)	VoiceCallWaitingMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_VOICECALL_ACTION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_VoiceCallActionMsg_t", this, pointerContent)	VoiceCallActionMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_VOICECALL_PRECONNECT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_VoiceCallPreConnectMsg_t", this, pointerContent)	VoiceCallPreConnectMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_VOICECALL_RELEASE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_VoiceCallReleaseMsg_t", this, pointerContent)	VoiceCallReleaseMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_VOICECALL_RELEASE_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_VoiceCallReleaseMsg_t", this, pointerContent)	VoiceCallReleaseMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CALL_STATUS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallStatusMsg_t", this, pointerContent)	CallStatusMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CALL_CONNECTEDLINEID_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DTMF_STATUS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ApiDtmfStatus_t", this, pointerContent)	ApiDtmfStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DATACALL_STATUS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_DataCallStatusMsg_t", this, pointerContent)	DataCallStatusMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DATACALL_CONNECTED_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_DataCallConnectMsg_t", this, pointerContent)	DataCallConnectMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DATACALL_RELEASE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_DataCallReleaseMsg_t", this, pointerContent)	DataCallReleaseMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DATACALL_ECDC_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_DataECDCLinkMsg_t", this, pointerContent)	DataECDCLinkMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_API_CLIENT_CMD_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ApiClientCmdInd_t", this, pointerContent)	ApiClientCmdInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CALL_CCM_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallCCMMsg_t", this, pointerContent)	CallCCMMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CALL_AOCSTATUS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallAOCStatusMsg_t", this, pointerContent)	CallAOCStatusMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNCC_CLIENT_NOTIFY_SS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_NotifySs_t", this, pointerContent)	SS_NotifySs_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNCC_CLIENT_FACILITY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CC_FacilityInd_t", this, pointerContent)	CC_FacilityInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSPP_DELIVER_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsSimMsg_t", this, pointerContent)	SmsSimMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSPP_STORED_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsIncMsgStoredResult_t", this, pointerContent)	SmsIncMsgStoredResult_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSCB_DATA_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsStoredSmsCb_t", this, pointerContent)	SmsStoredSmsCb_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSCB_STORED_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsIncMsgStoredResult_t", this, pointerContent)	SmsIncMsgStoredResult_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSSR_REPORT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsSimMsg_t", this, pointerContent)	SmsSimMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSSR_STORED_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsIncMsgStoredResult_t", this, pointerContent)	SmsIncMsgStoredResult_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SUBMIT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsSubmitRspMsg_t", this, pointerContent)	SmsSubmitRspMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_COMMAND_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_T_MN_TP_SMS_RSP", this, pointerContent)	T_MN_TP_SMS_RSP
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_CB_START_STOP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsCBMsgRspType_t", this, pointerContent)	SmsCBMsgRspType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSCB_READ_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SMS_DATA_t", this, pointerContent)	SIM_SMS_DATA_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsSimMsg_t", this, pointerContent)	SmsSimMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_WRITE_RSP_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsIncMsgStoredResult_t", this, pointerContent)	SmsIncMsgStoredResult_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_HOMEZONE_STATUS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_HomezoneIndData_t", this, pointerContent)	HomezoneIndData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_VM_WAITING_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsVoicemailInd_t", this, pointerContent)	SmsVoicemailInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_VMSC_UPDATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_EFILE_UPDATE_RESULT_t", this, pointerContent)	SIM_EFILE_UPDATE_RESULT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_READY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_smsModuleReady_t", this, pointerContent)	smsModuleReady_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSPP_OTA_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsSimMsg_t", this, pointerContent)	SmsSimMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSPP_REGULAR_PUSH_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsSimMsg_t", this, pointerContent)	SmsSimMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSPP_SECURE_PUSH_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsSimMsg_t", this, pointerContent)	SmsSimMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSPP_APP_SPECIFIC_SMS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsAppSpecificData_t", this, pointerContent)	SmsAppSpecificData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMSPP_OTA_SYNC_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsSimMsg_t", this, pointerContent)	SmsSimMsg_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_BUILD_PBK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FIND_PBK_ALPHA_MUL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_FIND_ALPHA_MUL_REQ_t", this, pointerContent)	PBK_FIND_ALPHA_MUL_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FIND_PBK_ALPHA_ONE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_FIND_ALPHA_ONE_REQ_t", this, pointerContent)	PBK_FIND_ALPHA_ONE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GET_PBK_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_INFO_REQ_t", this, pointerContent)	PBK_INFO_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GET_PBK_INFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_INFO_RSP_t", this, pointerContent)	PBK_INFO_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_READ_PBK_ENTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_ENTRY_READ_REQ_t", this, pointerContent)	PBK_ENTRY_READ_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ENTRY_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_ENTRY_DATA_RSP_t", this, pointerContent)	PBK_ENTRY_DATA_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRT_PBK_ENTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_WRITE_ENTRY_REQ_t", this, pointerContent)	PBK_WRITE_ENTRY_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRT_PBK_ENTRY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRT_PBK_ENTRY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_WRITE_ENTRY_IND_t", this, pointerContent)	PBK_WRITE_ENTRY_IND_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CHK_PBK_DIALLED_NUM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_CHK_NUM_DIALLABLE_REQ_t", this, pointerContent)	PBK_CHK_NUM_DIALLABLE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CHK_PBK_DIALLED_NUM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_CHK_NUM_DIALLABLE_RSP_t", this, pointerContent)	PBK_CHK_NUM_DIALLABLE_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GET_USIM_PBK_ALPHA_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_ALPHA_INFO_REQ_t", this, pointerContent)	USIM_PBK_ALPHA_INFO_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GET_USIM_PBK_ALPHA_INFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_ALPHA_INFO_RSP_t", this, pointerContent)	USIM_PBK_ALPHA_INFO_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_READ_USIM_PBK_ALPHA_ENTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_READ_ALPHA_ENTRY_REQ_t", this, pointerContent)	USIM_PBK_READ_ALPHA_ENTRY_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_READ_USIM_PBK_ALPHA_ENTRY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_READ_ALPHA_ENTRY_RSP_t", this, pointerContent)	USIM_PBK_READ_ALPHA_ENTRY_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRITE_USIM_PBK_ALPHA_ENTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_UPDATE_ALPHA_ENTRY_REQ_t", this, pointerContent)	USIM_PBK_UPDATE_ALPHA_ENTRY_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRITE_USIM_PBK_ALPHA_ENTRY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_UPDATE_ALPHA_ENTRY_RSP_t", this, pointerContent)	USIM_PBK_UPDATE_ALPHA_ENTRY_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_READ_USIM_PBK_HDK_ENTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_READ_HDK_ENTRY_REQ_t", this, pointerContent)	USIM_PBK_READ_HDK_ENTRY_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRITE_USIM_PBK_HDK_ENTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_UPDATE_HDK_ENTRY_REQ_t", this, pointerContent)	USIM_PBK_UPDATE_HDK_ENTRY_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_READ_USIM_PBK_HDK_ENTRY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_READ_HDK_ENTRY_RSP_t", this, pointerContent)	USIM_PBK_READ_HDK_ENTRY_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRITE_USIM_PBK_HDK_ENTRY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_PBK_UPDATE_HDK_ENTRY_RSP_t", this, pointerContent)	USIM_PBK_UPDATE_HDK_ENTRY_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DC_REPORT_CALL_STATUS
+<DESC>
+DataTypeDecodingStarter.decode("Gen_DC_ReportCallStatus_t", this, pointerContent)	DC_ReportCallStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DC_IR_SHUTDOWN_CONNECTION_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_DC_IR_ShutdownDataConnection_t", this, pointerContent)	DC_IR_ShutdownDataConnection_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DC_IR_STARTUP_CONNECTION_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_DC_IR_StartupDataConnection_t", this, pointerContent)	DC_IR_StartupDataConnection_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GPRS_ACTIVATE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GPRSActInd_t", this, pointerContent)	GPRSActInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GPRS_DEACTIVATE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GPRSDeactInd_t", this, pointerContent)	GPRSDeactInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GPRS_MODIFY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_ModifyContextInd_t", this, pointerContent)	Inter_ModifyContextInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GPRS_REACT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GPRSReActInd_t", this, pointerContent)	GPRSReActInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SEC_ACTIVATION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_SendPDPActivateSecReq_Rsp_t", this, pointerContent)	PDP_SendPDPActivateSecReq_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ACTIVATION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_SendPDPActivateReq_Rsp_t", this, pointerContent)	PDP_SendPDPActivateReq_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_DEACTIVATION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_SendPDPDeactivateReq_Rsp_t", this, pointerContent)	PDP_SendPDPDeactivateReq_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_DEACTIVATION_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_PDPDeactivate_Ind_t", this, pointerContent)	PDP_PDPDeactivate_Ind_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ACTIVATE_SNDCP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_DataState_t", this, pointerContent)	PDP_DataState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_MODIFICATION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_SendPDPModifyReq_Rsp_t", this, pointerContent)	PDP_SendPDPModifyReq_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_PPP_SENDCLOSE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_SendPDPModifyReq_Rsp_t", this, pointerContent)	PDP_SendPDPModifyReq_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ACTIVATION_PDU_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_SendPDPActivatePDUReq_Rsp_t", this, pointerContent)	PDP_SendPDPActivatePDUReq_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ACTIVATION_NWI_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_ActivateNWI_Ind_t", this, pointerContent)	PDP_ActivateNWI_Ind_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ACTIVATION_SEC_NWI_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_ActivateSecNWI_Ind_t", this, pointerContent)	PDP_ActivateSecNWI_Ind_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FS_VOLUME_USE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_FsVolumeUseInd_t", this, pointerContent)	FsVolumeUseInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FS_REMOVABLE_MEDIA_INSERT_EVENT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_FS_RemovableMediaInsertEvent_t", this, pointerContent)	FS_RemovableMediaInsertEvent_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_DISPLAY_TEXT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_GET_INKEY
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_GET_INPUT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_PLAY_TONE
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_SELECT_ITEM
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_SEND_SS
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_SEND_USSD
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_SETUP_CALL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_SETUP_MENU
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_SEND_DTMF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_REFRESH
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_SEND_SHORT_MSG
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_STK_SESSION_END
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_LAUNCH_BROWSER
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_IDLEMODE_TEXT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_PROV_LOCAL_LANG
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_DATA_SERVICE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkDataService_t", this, pointerContent)	StkDataService_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_ACTIVATE
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_EVENT_PROV_LOCAL_DATE
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_EventData_t", this, pointerContent)	SATK_EventData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_REPORT_CALL_RELEASE
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkReportCallRelease_t", this, pointerContent)	StkReportCallRelease_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_REPORT_SUPP_SVC_STATUS
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkReportSuppSvcStatus_t", this, pointerContent)	StkReportSuppSvcStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_NOTIFICATION
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_CallNotification_t", this, pointerContent)	SS_CallNotification_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_NOTIFY_CLOSED_USER_GROUP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_CallNotification_t", this, pointerContent)	SS_CallNotification_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_NOTIFY_EXTENDED_CALL_TRANSFER
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_CallNotification_t", this, pointerContent)	SS_CallNotification_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_NOTIFY_CALLING_NAME_PRESENT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_CallNotification_t", this, pointerContent)	SS_CallNotification_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_FORWARD_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_NetworkCause_t", this, pointerContent)	NetworkCause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_FORWARD_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallForwardStatus_t", this, pointerContent)	CallForwardStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_BARRING_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_NetworkCause_t", this, pointerContent)	NetworkCause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_BARRING_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallBarringStatus_t", this, pointerContent)	CallBarringStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_BARRING_PWD_CHANGE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_NetworkCause_t", this, pointerContent)	NetworkCause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALLING_LINE_ID_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_WAITING_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_NetworkCause_t", this, pointerContent)	NetworkCause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_WAITING_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_ActivationStatus_t", this, pointerContent)	SS_ActivationStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CONNECTED_LINE_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALLING_LINE_RESTRICTION_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CONNECTED_LINE_RESTRICTION_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALLING_NAME_PRESENT_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_INTERNAL_PARAM_SET_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_IntParSetInd_t", this, pointerContent)	SS_IntParSetInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CLIENT_SATK_SS_SRV_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_String_t", this, pointerContent)	SS_String_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CLIENT_SATK_USSD_SRV_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_SrvReq_t", this, pointerContent)	SS_SrvReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CLIENT_MNSS_SS_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_SrvReq_t", this, pointerContent)	SS_SrvReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CLIENT_MNSS_SS_REL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_SrvReq_t", this, pointerContent)	SS_SrvReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNSS_CLIENT_SS_SRV_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_SrvRsp_t", this, pointerContent)	SS_SrvRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNSS_CLIENT_SS_SRV_REL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_SrvRel_t", this, pointerContent)	SS_SrvRel_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNSS_CLIENT_SS_SRV_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_SrvInd_t", this, pointerContent)	SS_SrvInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNSS_SATK_SS_SRV_REL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_STK_SsSrvRel_t", this, pointerContent)	STK_SsSrvRel_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNSS_CLIENT_LCS_SRV_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LCS_SrvInd_t", this, pointerContent)	LCS_SrvInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNSS_CLIENT_LCS_SRV_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LCS_SrvRsp_t", this, pointerContent)	LCS_SrvRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MNSS_CLIENT_LCS_SRV_REL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_SrvRel_t", this, pointerContent)	SS_SrvRel_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USSD_DATA_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USSDataInfo_t", this, pointerContent)	USSDataInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USSD_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USSDataInfo_t", this, pointerContent)	USSDataInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USSD_SESSION_END_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallIndex_t", this, pointerContent)	CallIndex_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USSD_CALLINDEX_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkReportCallStatus_t", this, pointerContent)	StkReportCallStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USSD_CALLRELEASE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallIndex_t", this, pointerContent)	CallIndex_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_DFILE_INFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_DFILE_INFO_t", this, pointerContent)	SIM_DFILE_INFO_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_EFILE_INFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_EFILE_INFO_t", this, pointerContent)	SIM_EFILE_INFO_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_EFILE_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_EFILE_DATA_t", this, pointerContent)	SIM_EFILE_DATA_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_EFILE_UPDATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_EFILE_UPDATE_RESULT_t", this, pointerContent)	SIM_EFILE_UPDATE_RESULT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PIN_ATTEMPT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PIN_ATTEMPT_RESULT_t", this, pointerContent)	PIN_ATTEMPT_RESULT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEEK_REC_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SEEK_RECORD_DATA_t", this, pointerContent)	SIM_SEEK_RECORD_DATA_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SET_FDN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMAccess_t", this, pointerContent)	SIMAccess_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ENABLE_CHV_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMAccess_t", this, pointerContent)	SIMAccess_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CHANGE_CHV_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMAccess_t", this, pointerContent)	SIMAccess_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_VERIFY_CHV_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMAccess_t", this, pointerContent)	SIMAccess_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_UNBLOCK_CHV_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMAccess_t", this, pointerContent)	SIMAccess_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PBK_INFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PBK_INFO_t", this, pointerContent)	SIM_PBK_INFO_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PBK_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PBK_DATA_t", this, pointerContent)	SIM_PBK_DATA_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PBK_WRITE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PBK_WRITE_RESULT_t", this, pointerContent)	SIM_PBK_WRITE_RESULT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SET_BDN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMAccess_t", this, pointerContent)	SIMAccess_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PLMN_NUM_OF_ENTRY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PLMN_NUM_OF_ENTRY_t", this, pointerContent)	SIM_PLMN_NUM_OF_ENTRY_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PLMN_ENTRY_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PLMN_ENTRY_DATA_t", this, pointerContent)	SIM_PLMN_ENTRY_DATA_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_MUL_PLMN_ENTRY_UPDATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_MUL_PLMN_ENTRY_UPDATE_t", this, pointerContent)	SIM_MUL_PLMN_ENTRY_UPDATE_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_MUL_REC_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_MUL_REC_DATA_t", this, pointerContent)	SIM_MUL_REC_DATA_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_MAX_ACM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_MAX_ACM_t", this, pointerContent)	SIM_MAX_ACM_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ACM_VALUE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_ACM_VALUE_t", this, pointerContent)	SIM_ACM_VALUE_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ACM_UPDATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMAccess_t", this, pointerContent)	SIMAccess_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ACM_MAX_UPDATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ACM_INCREASE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SVC_PROV_NAME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SVC_PROV_NAME_t", this, pointerContent)	SIM_SVC_PROV_NAME_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PUCT_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PUCT_DATA_t", this, pointerContent)	SIM_PUCT_DATA_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PUCT_UPDATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_POWER_ON_OFF_CARD_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_GENERIC_APDU_RES_INFO_t", this, pointerContent)	SIM_GENERIC_APDU_RES_INFO_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_GET_RAW_ATR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_GENERIC_APDU_ATR_INFO_t", this, pointerContent)	SIM_GENERIC_APDU_ATR_INFO_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_GENERIC_APDU_CMD_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_GENERIC_APDU_XFER_RSP_t", this, pointerContent)	SIM_GENERIC_APDU_XFER_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_OPEN_SOCKET_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_OPEN_SOCKET_RES_t", this, pointerContent)	SIM_OPEN_SOCKET_RES_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SELECT_APPLI_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SELECT_APPLI_RES_t", this, pointerContent)	SIM_SELECT_APPLI_RES_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_DEACTIVATE_APPLI_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_DEACTIVATE_APPLI_RES_t", this, pointerContent)	SIM_DEACTIVATE_APPLI_RES_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CLOSE_SOCKET_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_CLOSE_SOCKET_RES_t", this, pointerContent)	SIM_CLOSE_SOCKET_RES_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_WRITE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SMS_UPDATE_RESULT_t", this, pointerContent)	SIM_SMS_UPDATE_RESULT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_STATUS_UPD_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SMS_UPDATE_RESULT_t", this, pointerContent)	SIM_SMS_UPDATE_RESULT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_SCA_UPD_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SMS_UPDATE_RESULT_t", this, pointerContent)	SIM_SMS_UPDATE_RESULT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_PARAM_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SMS_PARAM_t", this, pointerContent)	SIM_SMS_PARAM_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_TP_MR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SMS_TP_MR_t", this, pointerContent)	SIM_SMS_TP_MR_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_RESTRICTED_ACCESS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_RESTRICTED_ACCESS_DATA_t", this, pointerContent)	SIM_RESTRICTED_ACCESS_DATA_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SET_EST_SERV_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_FILE_UPDATE_RSP_t", this, pointerContent)	USIM_FILE_UPDATE_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_UPDATE_ONE_APN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_FILE_UPDATE_RSP_t", this, pointerContent)	USIM_FILE_UPDATE_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_DELETE_ALL_APN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_FILE_UPDATE_RSP_t", this, pointerContent)	USIM_FILE_UPDATE_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_ACTIVATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ISIM_ACTIVATE_RSP_t", this, pointerContent)	ISIM_ACTIVATE_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_AUTHEN_AKA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ISIM_AUTHEN_AKA_RSP_t", this, pointerContent)	ISIM_AUTHEN_AKA_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_AUTHEN_HTTP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ISIM_AUTHEN_HTTP_RSP_t", this, pointerContent)	ISIM_AUTHEN_HTTP_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_AUTHEN_GBA_BOOT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ISIM_AUTHEN_GBA_BOOT_RSP_t", this, pointerContent)	ISIM_AUTHEN_GBA_BOOT_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_AUTHEN_GBA_NAF_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ISIM_AUTHEN_GBA_NAF_RSP_t", this, pointerContent)	ISIM_AUTHEN_GBA_NAF_RSP_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_DETECTION_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_DETECTION_t", this, pointerContent)	SIM_DETECTION_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_RESET_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MsgType_t", this, pointerContent)	MsgType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_MMI_SETUP_EVENT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GL_GPS_USERCOMMAND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Int32", this, pointerContent)	Int32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_STATUS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsState_t", this, pointerContent)	LcsState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_START_FIX_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsStartFixResult_t", this, pointerContent)	LcsStartFixResult_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_REQ_RESULT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsPosReqResult_t", this, pointerContent)	LcsPosReqResult_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_SUPL_NOTIFICATION_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplNotificationData_t", this, pointerContent)	LcsSuplNotificationData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_NMEA_READY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsNmeaData_t", this, pointerContent)	LcsNmeaData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_SUPL_CONNECT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplConnection_t", this, pointerContent)	LcsSuplConnection_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_SUPL_DISCONNECT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplSessionInfo_t", this, pointerContent)	LcsSuplSessionInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_SUPL_INIT_HMAC_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplData_t", this, pointerContent)	LcsSuplData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_SUPL_WRITE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplCommData_t", this, pointerContent)	LcsSuplCommData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_POSITION_INFO_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsPosInfo_t", this, pointerContent)	LcsPosInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_POSITION_DETAIL_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsPosDetail_t", this, pointerContent)	LcsPosDetail_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_LTO_CONNECT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsLtoConnection_t", this, pointerContent)	LcsLtoConnection_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_LTO_DISCONNECT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsLtoSessionInfo_t", this, pointerContent)	LcsLtoSessionInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_LTO_WRITE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsLtoCommData_t", this, pointerContent)	LcsLtoCommData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_LTO_SYNC_RESULT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsResult_t", this, pointerContent)	LcsResult_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_DEVICE_STATE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsDeviceState_t", this, pointerContent)	LcsDeviceState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRLP_DATA_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsMsgData_t", this, pointerContent)	LcsMsgData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRLP_RESET_POS_STORED_INFO_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ClientInfo_t", this, pointerContent)	ClientInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_ASSISTANCE_DATA_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsMsgData_t", this, pointerContent)	LcsMsgData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_MEASUREMENT_CTRL_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsRrcMeasurement_t", this, pointerContent)	LcsRrcMeasurement_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_BROADCAST_SYS_INFO_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsRrcBroadcastSysInfo_t", this, pointerContent)	LcsRrcBroadcastSysInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_UE_STATE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsRrcUeState_t", this, pointerContent)	LcsRrcUeState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_STOP_MEASUREMENT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ClientInfo_t", this, pointerContent)	ClientInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_RESET_POS_STORED_INFO_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ClientInfo_t", this, pointerContent)	ClientInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_FTT_SYNC_RESULT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsFttResult_t", this, pointerContent)	LcsFttResult_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_WLAN_DEV_OPEN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ClientInfo_t", this, pointerContent)	ClientInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_WLAN_DEV_CLOSE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ClientInfo_t", this, pointerContent)	ClientInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_WLAN_SCAN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ClientInfo_t", this, pointerContent)	ClientInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_STOP_FIX_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsHandle_t", this, pointerContent)	LcsHandle_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SET_FIX_TIMEOUT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SET_FIX_MODE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsFixMode_t", this, pointerContent)	LcsFixMode_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SET_ACCURACY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SUPL_NOTIFICATION_RESP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplAnswer_t", this, pointerContent)	LcsSuplAnswer_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SUPL_CONNECT_RESP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplConnectResp_t", this, pointerContent)	LcsSuplConnectResp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SUPL_DATA_AVAILABLE_NTF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplCommData_t", this, pointerContent)	LcsSuplCommData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SUPL_DISCONNECT_NTF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplSessionInfo_t", this, pointerContent)	LcsSuplSessionInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SUPL_INIT_HMAC_RESP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsSuplSessionInfo_t", this, pointerContent)	LcsSuplSessionInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_HANDLE_SUPL_INIT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsDataItem_t", this, pointerContent)	LcsDataItem_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_LTO_CONNECT_RESP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsLtoSessionInfo_t", this, pointerContent)	LcsLtoSessionInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_LTO_DATA_AVAILABLE_NTF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsLtoCommData_t", this, pointerContent)	LcsLtoCommData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_LTO_DISCONNECT_NTF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsLtoSessionInfo_t", this, pointerContent)	LcsLtoSessionInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_PAL_SUPL_LOC_ID_RESP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsPalSuplLocId_t", this, pointerContent)	LcsPalSuplLocId_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_PAL_LBS_RIL_RESP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GLLBS_RIL_NOTIFY_DATA", this, pointerContent)	GLLBS_RIL_NOTIFY_DATA
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_SUPL_TIMER_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TimerID_t", this, pointerContent)	TimerID_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_WLAN_DEV_STATE_NTF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_LcsWlanDevState_t", this, pointerContent)	LcsWlanDevState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_WLAN_SCAN_RESULT_NTF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GLLBS_WLAN_NOTIFY_DATA", this, pointerContent)	GLLBS_WLAN_NOTIFY_DATA
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_APP_LBS_TIMER_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TimerID_t", this, pointerContent)	TimerID_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_TLS_OPEN_CONNECTION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TlsClientRsp_t", this, pointerContent)	TlsClientRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_TLS_CONNECTION_STATE_NTF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TlsClientRsp_t", this, pointerContent)	TlsClientRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_TLS_RECVD_APP_DATA_NTF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TlsClientRsp_t", this, pointerContent)	TlsClientRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_TLS_INIT_HANDSHAKE
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TlsClientHdl_t", this, pointerContent)	TlsClientHdl_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_TLS_RECV_DATA
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TlsClientHdl_t", this, pointerContent)	TlsClientHdl_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_TLS_CLOSE_CONNECTION
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TlsClientHdl_t", this, pointerContent)	TlsClientHdl_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_TLS_UNLOAD_SECURITY_CONTEXT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TlsSecurityContextHdl_t", this, pointerContent)	TlsSecurityContextHdl_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FTPC_CONNECTED_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FTPC_CONNECT_FAIL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_FTPCStatus_t", this, pointerContent)	FTPCStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FTPC_LOGIN_FAIL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_FTPCStatus_t", this, pointerContent)	FTPCStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FTPC_GET_FAIL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_FTPCStatus_t", this, pointerContent)	FTPCStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FTPC_PUT_FAIL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_FTPCStatus_t", this, pointerContent)	FTPCStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FTPC_CHDIR_FAIL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_FTPCStatus_t", this, pointerContent)	FTPCStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ECC_LIST_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_T_NW_EMERGENCY_NUMBER_LIST", this, pointerContent)	T_NW_EMERGENCY_NUMBER_LIST
+</DESC>
+</MSG>
+
+<MSG>
+MSG_UE_3G_STATUS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MSUe3gStatusInd_t", this, pointerContent)	MSUe3gStatusInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_COPS_CMD
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ATCOPSData_t", this, pointerContent)	ATCOPSData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_CGATT_CMD
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ATCGATTData_t", this, pointerContent)	ATCGATTData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_CGACT_CMD
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ATCGACTData_t", this, pointerContent)	ATCGACTData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_CME_ERROR
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ATCCmeError_t", this, pointerContent)	ATCCmeError_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_CGCMOD_CMD
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ATCGCMODData_t", this, pointerContent)	ATCGCMODData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_CALL_TIMER
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallTimerID_t", this, pointerContent)	CallTimerID_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_CALL_ABORT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_ESC_DATA_CALL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_CMMS_TIMER_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TimerID_t", this, pointerContent)	TimerID_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_LINE_STATE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_READY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MODULE_READY_STATUS_t", this, pointerContent)	MODULE_READY_STATUS_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CALL_MONITOR_STATUS
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_COMMAND_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_AtCmdInfo_t", this, pointerContent)	AtCmdInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_AT_COMMAND_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_AtCmdInfo_t", this, pointerContent)	AtCmdInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_COMPOSE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_at_cmgsCmd_t", this, pointerContent)	at_cmgsCmd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_PARM_CHECK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsParmCheckRsp_t", this, pointerContent)	SmsParmCheckRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_REPORT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsReportInd_t", this, pointerContent)	SmsReportInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_MEM_AVAIL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_T_MN_TP_SMS_RSP", this, pointerContent)	T_MN_TP_SMS_RSP
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GET_MSG_FROM_BUFFER
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsGetMsgFromBuffer_t", this, pointerContent)	SmsGetMsgFromBuffer_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_STORE_SMS_MSG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsMsgToBeStored_t", this, pointerContent)	SmsMsgToBeStored_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_CNMA_TIMER_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TimerID_t", this, pointerContent)	TimerID_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SS_SsApiReq_t", this, pointerContent)	SS_SsApiReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_CALL_REQ_FAIL
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SsCallReqFail_t", this, pointerContent)	SsCallReqFail_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USSD_CALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UssdCallReq_t", this, pointerContent)	UssdCallReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DETACH_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_DetachInd_t", this, pointerContent)	Inter_DetachInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ACTIVATE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_ActivateInd_t", this, pointerContent)	Inter_ActivateInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DEACTIVATE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_DeactivateInd_t", this, pointerContent)	Inter_DeactivateInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ATTACH_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_AttachCnf_t", this, pointerContent)	Inter_AttachCnf_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DETACH_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_DetachCnf_t", this, pointerContent)	Inter_DetachCnf_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ACTIVATE_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_ActivateCnf_t", this, pointerContent)	Inter_ActivateCnf_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DEACTIVATE_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_DeactivateCnf_t", this, pointerContent)	Inter_DeactivateCnf_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SN_XID_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_SnXidCnf_t", this, pointerContent)	Inter_SnXidCnf_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ACTIVATE_SEC_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_ActivateSecCnf_t", this, pointerContent)	Inter_ActivateSecCnf_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MODIFY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_ModifyContextInd_t", this, pointerContent)	Inter_ModifyContextInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SERVICE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_ServiceInd_t", this, pointerContent)	Inter_ServiceInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CHECK_QOSMIN_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_CheckQoSMinInd_t", this, pointerContent)	Inter_CheckQoSMinInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_INT_TIMEZONE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MMMsgParmTimeZoneInd_t", this, pointerContent)	MMMsgParmTimeZoneInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_INT_DATE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MMMsgParmDateInd_t", this, pointerContent)	MMMsgParmDateInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_INT_LSA_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MMMsgParmLSAInd_t", this, pointerContent)	MMMsgParmLSAInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ACTIVATE_SEC_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_ActivateSecInd_t", this, pointerContent)	Inter_ActivateSecInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DATA_SUSPEND_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GPRSSuspendInd_t", this, pointerContent)	GPRSSuspendInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_UL_DATA_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_ULData_Ind_t", this, pointerContent)	PDP_ULData_Ind_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MODIFY_CNF
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Inter_ModifyCnf_t", this, pointerContent)	Inter_ModifyCnf_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_RADIO_ACTIVITY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MSRadioActivityInd_t", this, pointerContent)	MSRadioActivityInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_STATUS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMStatus_t", this, pointerContent)	SIMStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_MEM_AVAIL_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_DFILE_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_DFILE_INFO_REQ_t", this, pointerContent)	SIM_PROC_DFILE_INFO_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_EFILE_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_EFILE_INFO_REQ_t", this, pointerContent)	SIM_PROC_EFILE_INFO_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_WHOLE_BINARY_FILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_WHOLE_BINARY_FILE_REQ_t", this, pointerContent)	SIM_PROC_WHOLE_BINARY_FILE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_BINARY_FILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_READ_BINARY_FILE_REQ_t", this, pointerContent)	SIM_PROC_READ_BINARY_FILE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_FILE_REC_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_READ_FILE_REC_REQ_t", this, pointerContent)	SIM_PROC_READ_FILE_REC_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_UPDATE_BINARY_FILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_UPDATE_BINARY_FILE_REQ_t", this, pointerContent)	SIM_PROC_UPDATE_BINARY_FILE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_UPDATE_LINEAR_FILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_UPDATE_LINEAR_FILE_REQ_t", this, pointerContent)	SIM_PROC_UPDATE_LINEAR_FILE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_UPDATE_CYCLIC_FILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_UPDATE_CYCLIC_FILE_REQ_t", this, pointerContent)	SIM_PROC_UPDATE_CYCLIC_FILE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_REMAINING_PIN_ATTEMPT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_REMAINING_PIN_ATTEMPT_REQ_t", this, pointerContent)	SIM_PROC_REMAINING_PIN_ATTEMPT_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_PBK_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_PBK_INFO_REQ_t", this, pointerContent)	SIM_PROC_PBK_INFO_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_SET_FDN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_SET_FDN_REQ_t", this, pointerContent)	SIM_PROC_SET_FDN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_VERIFY_PIN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_VERIFY_PIN_REQ_t", this, pointerContent)	SIM_PROC_VERIFY_PIN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_CHANGE_PIN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_CHANGE_PIN_REQ_t", this, pointerContent)	SIM_PROC_CHANGE_PIN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_SET_PIN1_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_SET_PIN1_REQ_t", this, pointerContent)	SIM_PROC_SET_PIN1_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_UNBLOCK_PIN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_UNBLOCK_PIN_REQ_t", this, pointerContent)	SIM_PROC_UNBLOCK_PIN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_PBK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_READ_PBK_REQ_t", this, pointerContent)	SIM_PROC_READ_PBK_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_WRITE_PBK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_WRITE_PBK_REQ_t", this, pointerContent)	SIM_PROC_WRITE_PBK_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_ACM_MAX_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_READ_ACM_MAX_REQ_t", this, pointerContent)	SIM_PROC_READ_ACM_MAX_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_WRITE_ACM_MAX_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_WRITE_ACM_MAX_REQ_t", this, pointerContent)	SIM_PROC_WRITE_ACM_MAX_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_ACM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_READ_ACM_REQ_t", this, pointerContent)	SIM_PROC_READ_ACM_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_WRITE_ACM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_WRITE_ACM_REQ_t", this, pointerContent)	SIM_PROC_WRITE_ACM_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_INCREASE_ACM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_INCREASE_ACM_REQ_t", this, pointerContent)	SIM_PROC_INCREASE_ACM_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_PUCT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_READ_PUCT_REQ_t", this, pointerContent)	SIM_PROC_READ_PUCT_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_WRITE_PUCT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_WRITE_PUCT_REQ_t", this, pointerContent)	SIM_PROC_WRITE_PUCT_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_SEARCH_SMS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_SEARCH_SMS_REQ_t", this, pointerContent)	SIM_PROC_SEARCH_SMS_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_SMS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_READ_SMS_REQ_t", this, pointerContent)	SIM_PROC_READ_SMS_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_WRITE_SMS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_WRITE_SMS_REQ_t", this, pointerContent)	SIM_PROC_WRITE_SMS_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_WRITE_SMS_STATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_WRITE_SMS_STATUS_REQ_t", this, pointerContent)	SIM_PROC_WRITE_SMS_STATUS_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_SMS_PARAM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_READ_SMS_PARAM_REQ_t", this, pointerContent)	SIM_PROC_READ_SMS_PARAM_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_WRITE_SMS_SCA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_WRITE_SMS_SCA_REQ_t", this, pointerContent)	SIM_PROC_WRITE_SMS_SCA_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_SMS_REF_NUM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_SMS_REF_NUM_REQ_t", this, pointerContent)	SIM_PROC_SMS_REF_NUM_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_RESTRICTED_ACCESS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_RESTRICTED_ACCESS_REQ_t", this, pointerContent)	SIM_PROC_RESTRICTED_ACCESS_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_SET_EST_SERV_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_SET_EST_SERV_REQ_t", this, pointerContent)	USIM_SET_EST_SERV_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_UPDATE_ONE_APN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_UPDATE_ONE_APN_REQ_t", this, pointerContent)	USIM_UPDATE_ONE_APN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_DELETE_ALL_APN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_DELETE_ALL_APN_REQ_t", this, pointerContent)	USIM_DELETE_ALL_APN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_GENERAL_SERVICE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMGeneralServiceStatus_t", this, pointerContent)	SIMGeneralServiceStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_SEEK_RECORD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_SEEK_RECORD_REQ_t", this, pointerContent)	SIM_PROC_SEEK_RECORD_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_NUM_OF_PLMN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_NUM_OF_PLMN_REQ_t", this, pointerContent)	SIM_NUM_OF_PLMN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_PLMN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_READ_PLMN_REQ_t", this, pointerContent)	SIM_READ_PLMN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_UPDATE_MUL_PLMN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_UPDATE_MUL_PLMN_REQ_t", this, pointerContent)	SIM_UPDATE_MUL_PLMN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_ISIM_ACTIVATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_ISIM_ACTIVATE_REQ_t", this, pointerContent)	SIM_PROC_ISIM_ACTIVATE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_ISIM_AUTHEN_AKA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_ISIM_AUTHENTICATE_REQ_t", this, pointerContent)	SIM_PROC_ISIM_AUTHENTICATE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_ISIM_AUTHEN_HTTP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_ISIM_AUTHENTICATE_REQ_t", this, pointerContent)	SIM_PROC_ISIM_AUTHENTICATE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_ISIM_AUTHEN_GBA_BOOT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_ISIM_AUTHENTICATE_REQ_t", this, pointerContent)	SIM_PROC_ISIM_AUTHENTICATE_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_ISIM_AUTHEN_GBA_NAF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_SET_BDN_REQ_t", this, pointerContent)	SIM_PROC_SET_BDN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_SET_BDN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_SET_BDN_REQ_t", this, pointerContent)	SIM_PROC_SET_BDN_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_POWER_ON_OFF_CARD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_POWER_ON_OFF_CARD_REQ_t", this, pointerContent)	SIM_PROC_POWER_ON_OFF_CARD_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_GET_RAW_ATR_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_GET_RAW_ATR_REQ_t", this, pointerContent)	SIM_PROC_GET_RAW_ATR_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_OPEN_SOCKET_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_OPEN_SOCKET_REQ_t", this, pointerContent)	SIM_PROC_OPEN_SOCKET_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_SELECT_APPLI_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_SELECT_APPLI_REQ_t", this, pointerContent)	SIM_PROC_SELECT_APPLI_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_DEACTIVATE_APPLI_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_DEACTIVATE_APPLI_REQ_t", this, pointerContent)	SIM_PROC_DEACTIVATE_APPLI_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_CLOSE_SOCKET_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_CLOSE_SOCKET_REQ_t", this, pointerContent)	SIM_PROC_CLOSE_SOCKET_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_STEERING_OF_ROAMING_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SimProcSteeringOfRoamingReq_t", this, pointerContent)	SimProcSteeringOfRoamingReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PROC_READ_MUL_REC_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PROC_MUL_REC_REQ_t", this, pointerContent)	SIM_PROC_MUL_REC_REQ_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_DISPLAY_TEXT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmDisplayTextReq_t", this, pointerContent)	SIMParmDisplayTextReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SETUP_IDLEMODE_TEXT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSetupIdlemodeTextReq_t", this, pointerContent)	SIMParmSetupIdlemodeTextReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_GET_INPUT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmGetInputReq_t", this, pointerContent)	SIMParmGetInputReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_GET_INKEY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmGetInkeyReq_t", this, pointerContent)	SIMParmGetInkeyReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_PLAY_TONE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmPlayToneReq_t", this, pointerContent)	SIMParmPlayToneReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SELECT_ITEM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSelectItemReq_t", this, pointerContent)	SIMParmSelectItemReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SETUP_MENU_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSetupMenuReq_t", this, pointerContent)	SIMParmSetupMenuReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SIMTOOLKIT_REFRESH_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSimtoolkitRefreshReq_t", this, pointerContent)	SIMParmSimtoolkitRefreshReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SIAT_SIMTOOLKIT_REFRESH_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSiatSimtoolkitRefreshReq_t", this, pointerContent)	SIMParmSiatSimtoolkitRefreshReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_SS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSendSsReq_t", this, pointerContent)	SIMParmSendSsReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SETUP_CALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSetupCallReq_t", this, pointerContent)	SIMParmSetupCallReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_MOSMS_ALPHA_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmMoSMSAlphaInd_t", this, pointerContent)	SIMParmMoSMSAlphaInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_CC_SETUPFAIL_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkCallSetupFail_t", this, pointerContent)	StkCallSetupFail_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_CC_DISPLAY_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkCallControlDisplay_t", this, pointerContent)	StkCallControlDisplay_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_TERMINAL_RESPONSE
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkSendTermRespData_t", this, pointerContent)	StkSendTermRespData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_LAUNCH_BROWSER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_STKLaunchBrowserReq_t", this, pointerContent)	STKLaunchBrowserReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_DTMF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSendDtmfReq_t", this, pointerContent)	SIMParmSendDtmfReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_CALL_CONNECTED_EVT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkCallConnectedEvt_t", this, pointerContent)	StkCallConnectedEvt_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CALL_ESTABLISH_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CCParmSend_t", this, pointerContent)	CCParmSend_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_CC_SETUP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_SendCcSetupReq_t", this, pointerContent)	SATK_SendCcSetupReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_CC_SS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_SendCcSsReq_t", this, pointerContent)	SATK_SendCcSsReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_CC_USSD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_SendCcUssdReq_t", this, pointerContent)	SATK_SendCcUssdReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_CC_SMS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_SendCcSmsReq_t", this, pointerContent)	SATK_SendCcSmsReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_ENVELOPE_CMD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_SendEnvelopCmdReq_t", this, pointerContent)	SATK_SendEnvelopCmdReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_TERMINAL_RSP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SATK_SendTerminalRspReq_t", this, pointerContent)	SATK_SendTerminalRspReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_CALL_CONTROL_SETUP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkCallControlSetupRsp_t", this, pointerContent)	StkCallControlSetupRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_CALL_CONTROL_SS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkCallControlSsRsp_t", this, pointerContent)	StkCallControlSsRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_CALL_CONTROL_USSD_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkCallControlUssdRsp_t", this, pointerContent)	StkCallControlUssdRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_CALL_CONTROL_SMS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkCallControlSmsRsp_t", this, pointerContent)	StkCallControlSmsRsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_PROACTIVE_CMD_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ProactiveCmdData_t", this, pointerContent)	ProactiveCmdData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_ENVELOPE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_EnvelopeRspData_t", this, pointerContent)	EnvelopeRspData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_TERMINAL_RESPONSE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_TerminalResponseRspData_t", this, pointerContent)	TerminalResponseRspData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_OPEN_CHANNEL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmOpenChannelReq_t", this, pointerContent)	SIMParmOpenChannelReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmSendDataReq_t", this, pointerContent)	SIMParmSendDataReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_RECEIVE_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmReceiveDataReq_t", this, pointerContent)	SIMParmReceiveDataReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_CLOSE_CHANNEL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMParmCloseChannelReq_t", this, pointerContent)	SIMParmCloseChannelReq_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_TERMINATE_DATA_SERV_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_DATA_AVAIL_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_ACTIVATE_GPRS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHResponseType_t", this, pointerContent)	PCHResponseType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_DEACTIVATE_GPRS_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHResponseType_t", this, pointerContent)	PCHResponseType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_RUN_AT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_RunAT_Request", this, pointerContent)	RunAT_Request
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_RUN_AT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_RunAT_Response", this, pointerContent)	RunAT_Response
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_RUN_AT_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_StkRunAtCmd_t", this, pointerContent)	StkRunAtCmd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSIMSMSCAPACITYEXCEEDEDFLAG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSTOREDSTATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMSMSMesgStatus_t", this, pointerContent)	SIMSMSMesgStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETLASTTPMR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSTXPARAMS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsTxParam_t", this, pointerContent)	SmsTxParam_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETTXPARAMINTEXTMODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsTxTextModeParms_t", this, pointerContent)	SmsTxTextModeParms_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETNEWMSGDISPLAYPREF_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSTORAGESTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_GetSMSStorageStatus_t", this, pointerContent)	CAPI2_SMS_GetSMSStorageStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETCBIGNOREDUPLFLAG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ISVMINDENABLED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETVMWAITINGSTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsVoicemailInd_t", this, pointerContent)	SmsVoicemailInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETNUMOFVMSCNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETVMSCNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsAddress_t", this, pointerContent)	SmsAddress_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSBEARERPREFERENCE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SMS_BEARER_PREFERENCE_t", this, pointerContent)	SMS_BEARER_PREFERENCE_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSREADSTATUSCHANGEMODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSRVCENTERNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsAddress_t", this, pointerContent)	SmsAddress_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSPREFSTORAGE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsStorage_t", this, pointerContent)	SmsStorage_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETCBMI_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SMS_CB_MSG_IDS_t", this, pointerContent)	SMS_CB_MSG_IDS_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETCBLANGUAGE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MS_T_MN_CB_LANGUAGES", this, pointerContent)	MS_T_MN_CB_LANGUAGES
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETTRANSACTIONFROMCLIENTID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_GetTransactionFromClientID_t", this, pointerContent)	CAPI2_SMS_GetTransactionFromClientID_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ISCACHEDDATAREADY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETENHANCEDVMINFOIEI_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsEnhancedVMInd_t", this, pointerContent)	SmsEnhancedVMInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_340ADDRTOTE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_340AddrToTe_Rsp_t", this, pointerContent)	CAPI2_SMS_340AddrToTe_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_GETALPHA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PBK_API_Name_t", this, pointerContent)	PBK_API_Name_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISEMERGENCYCALLNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISPARTIALEMERGENCYCALLNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISNUMDIALABLE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISUSSDDIALLABLE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISNUMBARRED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_GETCACHEDROOTMENUPTR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SetupMenu_t", this, pointerContent)	SetupMenu_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_DATASERVCMDRESP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_CMDRESP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_GETTERMPROFILE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_TermProfile_t", this, pointerContent)	CAPI2_TermProfile_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SENDTERMINALRSP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SENDDATASERVREQ_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCURRENTCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNEXTACTIVECALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNEXTHELDCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNEXTWAITCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETMPTYCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLSTATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CCallState_t", this, pointerContent)	CCallState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLTYPE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CCallType_t", this, pointerContent)	CCallType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTCALLEXITCAUSE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Cause_t", this, pointerContent)	Cause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCNAPNAME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CNAP_NAME_t", this, pointerContent)	CNAP_NAME_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PHONE_NUMBER_STR_t", this, pointerContent)	PHONE_NUMBER_STR_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLINGINFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallingInfo_t", this, pointerContent)	CallingInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLCALLSTATES_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ALL_CALL_STATE_t", this, pointerContent)	ALL_CALL_STATE_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ALL_CALL_INDEX_t", this, pointerContent)	ALL_CALL_INDEX_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLHELDCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ALL_CALL_INDEX_t", this, pointerContent)	ALL_CALL_INDEX_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLACTIVECALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ALL_CALL_INDEX_t", this, pointerContent)	ALL_CALL_INDEX_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLMPTYCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_ALL_CALL_INDEX_t", this, pointerContent)	ALL_CALL_INDEX_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNUMOFMPTYCALLS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNUMOFACTIVECALLS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNUMOFHELDCALLS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISTHEREWAITINGCALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISTHEREALERTINGCALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCONNECTEDLINEID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PHONE_NUMBER_STR_t", this, pointerContent)	PHONE_NUMBER_STR_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISMULTIPARTYCALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISVALIDDTMF_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISTHEREVOICECALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISCONNECTEDLINEIDPRESENTALLOWED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCURRENTCALLDURATIONINMILLISECONDS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTCALLCCM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTCALLDURATION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTDATACALLRXBYTES_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTDATACALLTXBYTES_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETDATACALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLCLIENTID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETTYPEADD_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISVOICECALLAUTOREJECT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISTTYENABLE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_GETDTMFTIMER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Ticks_t", this, pointerContent)	Ticks_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISSIMORIGINEDCALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETVIDEOCALLPARAM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_VideoCallParam_t", this, pointerContent)	VideoCallParam_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLCFG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CallConfig_t", this, pointerContent)	CAPI2_CallConfig_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_GETTIFROMCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CCAPI_GetTiFromCallIndex_Rsp_t", this, pointerContent)	CAPI2_CCAPI_GetTiFromCallIndex_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_IS_SUPPORTED_BC_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_GET_BEARERCAP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CC_GetBearerCap_Rsp_t", this, pointerContent)	CAPI2_CC_GetBearerCap_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISREADY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_ISISIMSUPPORTED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_ISISIMACTIVATED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPCONTEXT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPContext_t", this, pointerContent)	PDPContext_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETGPRSQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHQosProfile_t", this, pointerContent)	PCHQosProfile_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETGPRSMINQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_GPRSMinQoS_t", this, pointerContent)	PDP_GPRSMinQoS_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ISSECONDARYPDPDEFINED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETGPRSACTIVATESTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_GetGPRSActivateStatus_Rsp_t", this, pointerContent)	PDP_GetGPRSActivateStatus_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETMSCLASS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MSClass_t", this, pointerContent)	MSClass_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSTFT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHTrafficFlowTemplate_t", this, pointerContent)	PCHTrafficFlowTemplate_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPDEFAULTCONTEXT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPDefaultContext_t", this, pointerContent)	PDPDefaultContext_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPCHCONTEXT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDP_GetPCHContext_Rsp_t", this, pointerContent)	PDP_GetPCHContext_Rsp_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPCHCONTEXTSTATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHContextState_t", this, pointerContent)	PCHContextState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPCHCONTEXTSTATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHContextState_t", this, pointerContent)	PCHContextState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETGPRSATTACHSTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_AttachState_t", this, pointerContent)	AttachState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETATTACHMODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_ISGPRSCALLACTIVE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETGPRSACTIVECHANFROMCID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETCIDFROMGPRSACTIVECHAN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPPPMODEMCID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHCid_t", this, pointerContent)	PCHCid_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPADDRESS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHPDPAddress_t", this, pointerContent)	PCHPDPAddress_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETR99UMTSMINQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHR99QosProfile_t", this, pointerContent)	PCHR99QosProfile_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETR99UMTSQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHR99QosProfile_t", this, pointerContent)	PCHR99QosProfile_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_READDECODEDPROTCONFIG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHDecodedProtConfig_t", this, pointerContent)	PCHDecodedProtConfig_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_BUILDPROTCONFIGOPTIONS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHProtConfig_t", this, pointerContent)	PCHProtConfig_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETNEGQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHR99QosProfile_t", this, pointerContent)	PCHR99QosProfile_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETNEGOTIATEDPARMS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHNegotiatedParms_t", this, pointerContent)	PCHNegotiatedParms_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_BUILDPROTCONFIGOPTIONS2_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHProtConfig_t", this, pointerContent)	PCHProtConfig_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSMINQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHUMTSQosProfile_t", this, pointerContent)	PCHUMTSQosProfile_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHUMTSQosProfile_t", this, pointerContent)	PCHUMTSQosProfile_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ADC_START_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CAPI2_AT_RESPONSE_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_AtResponse_t", this, pointerContent)	AtResponse_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GSM_REGISTERED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GPRS_REGISTERED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GSM_CAUSE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_NetworkCause_t", this, pointerContent)	NetworkCause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GPRS_CAUSE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_NetworkCause_t", this, pointerContent)	NetworkCause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_REGISTERED_LAC_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_PLMN_MCC_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_PLMN_MNC_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GPRS_ALLOWED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_CURRENT_RAT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_CURRENT_BAND_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_UPDATE_SMSCAPEXC_FLAG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_UpdateSMSCapExceededFlag_Req_t", this, pointerContent)	CAPI2_SimApi_UpdateSMSCapExceededFlag_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SELECT_BAND_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_SelectBand_Req_t", this, pointerContent)	CAPI2_NetRegApi_SelectBand_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SET_RAT_BAND_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_SetSupportedRATandBand_Req_t", this, pointerContent)	CAPI2_NetRegApi_SetSupportedRATandBand_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_MCC_COUNTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PLMN_GetCountryByMcc_Req_t", this, pointerContent)	CAPI2_PLMN_GetCountryByMcc_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_MCC_COUNTRY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Int8", this, pointerContent)	Int8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_PLMN_INFO_BY_CODE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_GetPLMNEntryByIndex_Req_t", this, pointerContent)	CAPI2_MS_GetPLMNEntryByIndex_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_PLMN_INFO_BY_CODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_PLMN_LIST_SIZE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_PLMN_INFO_BY_INDEX_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_GetPLMNByCode_Req_t", this, pointerContent)	CAPI2_MS_GetPLMNByCode_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_PLMN_INFO_BY_INDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PLMN_SELECT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_PlmnSelect_Req_t", this, pointerContent)	CAPI2_NetRegApi_PlmnSelect_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PLMN_SELECT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_PLMN_MODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PlmnSelectMode_t", this, pointerContent)	PlmnSelectMode_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SET_PLMN_MODE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_SetPlmnMode_Req_t", this, pointerContent)	CAPI2_NetRegApi_SetPlmnMode_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_PLMN_FORMAT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PlmnSelectFormat_t", this, pointerContent)	PlmnSelectFormat_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SET_PLMN_FORMAT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_SetPlmnFormat_Req_t", this, pointerContent)	CAPI2_MS_SetPlmnFormat_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_MATCH_PLMN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_IsMatchedPLMN_Req_t", this, pointerContent)	CAPI2_MS_IsMatchedPLMN_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_MATCH_PLMN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_PLMN_NAME_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_GetPLMNNameByCode_Req_t", this, pointerContent)	CAPI2_NetRegApi_GetPLMNNameByCode_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_PLMN_NAME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_GET_SYSTEM_STATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SystemState_t", this, pointerContent)	SystemState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SET_SYSTEM_STATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PhoneCtrlApi_SetSystemState_Req_t", this, pointerContent)	CAPI2_PhoneCtrlApi_SetSystemState_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_GET_RX_LEVEL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_GET_GSMREG_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_RegisterStatus_t", this, pointerContent)	RegisterStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_GET_GPRSREG_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_RegisterStatus_t", this, pointerContent)	RegisterStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_GET_REG_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_HOME_PLMN_REG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SET_POWER_DOWN_TIMER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PhoneCtrlApi_SetPowerDownTimer_Req_t", this, pointerContent)	CAPI2_PhoneCtrlApi_SetPowerDownTimer_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PARAM_REC_NUM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_GET_SMSMEMEXC_FLAG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_IS_TEST_SIM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PIN_REQ_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CARD_PHASE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMPhase_t", this, pointerContent)	SIMPhase_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_TYPE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMType_t", this, pointerContent)	SIMType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PRESENT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMPresent_t", this, pointerContent)	SIMPresent_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PIN_OPERATION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PIN_BLOCK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_IsPINBlocked_Req_t", this, pointerContent)	CAPI2_SimApi_IsPINBlocked_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PIN_BLOCK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PUK_BLOCK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_IsPUKBlocked_Req_t", this, pointerContent)	CAPI2_SimApi_IsPUKBlocked_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PUK_BLOCK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_IS_INVALID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_DETECT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_GET_RUIM_SUPP_FLAG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_VERIFY_CHV_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendVerifyChvReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendVerifyChvReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CHANGE_CHV_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendChangeChvReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendChangeChvReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ENABLE_CHV_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendSetChv1OnOffReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendSetChv1OnOffReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_UNBLOCK_CHV_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendUnblockChvReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendUnblockChvReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SET_FDN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendSetOperStateReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendSetOperStateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_IS_PBK_ALLOWED_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_IsPbkAccessAllowed_Req_t", this, pointerContent)	CAPI2_SimApi_IsPbkAccessAllowed_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_IS_PBK_ALLOWED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PBK_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendPbkInfoReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendPbkInfoReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ACM_MAX_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendWriteAcmMaxReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendWriteAcmMaxReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ACM_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendWriteAcmReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendWriteAcmReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ACM_INCREASE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendIncreaseAcmReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendIncreaseAcmReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SERVICE_STATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_GetServiceStatus_Req_t", this, pointerContent)	CAPI2_SimApi_GetServiceStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SERVICE_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMServiceStatus_t", this, pointerContent)	SIMServiceStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PIN_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PIN_Status_t", this, pointerContent)	SIM_PIN_Status_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PIN_OK_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_IMSI_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_IMSI_t", this, pointerContent)	IMSI_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_GID_DIGIT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GID_DIGIT_t", this, pointerContent)	GID_DIGIT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_GID_DIGIT2_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GID_DIGIT_t", this, pointerContent)	GID_DIGIT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_HOME_PLMN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_APDU_FILEID_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_simmiApi_GetMasterFileId_Req_t", this, pointerContent)	CAPI2_simmiApi_GetMasterFileId_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_APDU_FILEID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_APDUFileID_t", this, pointerContent)	APDUFileID_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SELECT_APPLI_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendSelectAppiReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendSelectAppiReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_DEACTIVATE_APPLI_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendDeactivateAppiReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendDeactivateAppiReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CLOSE_SOCKET_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendCloseSocketReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendCloseSocketReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ATR_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMAccess_t", this, pointerContent)	SIMAccess_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_DFILE_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SIM_SubmitDFileInfoReqOld_Req_t", this, pointerContent)	CAPI2_SIM_SubmitDFileInfoReqOld_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_EFILE_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitEFileInfoReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitEFileInfoReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_EFILE_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendEFileInfoReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendEFileInfoReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_DFILE_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendDFileInfoReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendDFileInfoReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_WHOLE_EFILE_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitWholeBinaryEFileReadReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitWholeBinaryEFileReadReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_WHOLE_EFILE_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendWholeBinaryEFileReadReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendWholeBinaryEFileReadReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_EFILE_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitBinaryEFileReadReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitBinaryEFileReadReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_EFILE_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendBinaryEFileReadReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendBinaryEFileReadReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_RECORD_EFILE_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitRecordEFileReadReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitRecordEFileReadReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_RECORD_EFILE_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendRecordEFileReadReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendRecordEFileReadReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_EFILE_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitBinaryEFileUpdateReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitBinaryEFileUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_EFILE_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendBinaryEFileUpdateReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendBinaryEFileUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_LINEAR_EFILE_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitLinearEFileUpdateReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitLinearEFileUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_LINEAR_EFILE_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendLinearEFileUpdateReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendLinearEFileUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEEK_RECORD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitSeekRecordReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitSeekRecordReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_SEEK_RECORD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendSeekRecordReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendSeekRecordReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CYCLIC_EFILE_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitCyclicEFileUpdateReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitCyclicEFileUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_CYCLIC_EFILE_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendCyclicEFileUpdateReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendCyclicEFileUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CACHE_DATA_READY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SERVICE_CODE_STATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_GetServiceCodeStatus_Req_t", this, pointerContent)	CAPI2_SimApi_GetServiceCodeStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SERVICE_CODE_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SERVICE_FLAG_STATUS_t", this, pointerContent)	SERVICE_FLAG_STATUS_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CHECK_CPHS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_CheckCphsService_Req_t", this, pointerContent)	CAPI2_SimApi_CheckCphsService_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CHECK_CPHS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CPHS_PHASE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_SCA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_GetSmsSca_Req_t", this, pointerContent)	CAPI2_SimApi_GetSmsSca_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SMS_SCA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ICCID_PARAM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ALS_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_ALS_DEFAULT_LINE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SET_ALS_DEFAULT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SetAlsDefaultLine_Req_t", this, pointerContent)	CAPI2_SimApi_SetAlsDefaultLine_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_CALLFWD_COND_FLAG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_CALL_FORWARD_UNCONDITIONAL_FLAG_t", this, pointerContent)	SIM_CALL_FORWARD_UNCONDITIONAL_FLAG_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_APP_TYPE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_APPL_TYPE_t", this, pointerContent)	SIM_APPL_TYPE_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PUCT_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendWritePuctReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendWritePuctReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_RESTRICTED_ACCESS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitRestrictedAccessReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitRestrictedAccessReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ADC_START_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_ADCMGR_Start_Req_t", this, pointerContent)	CAPI2_ADCMGR_Start_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_SYSTEM_RAT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_RATSelect_t", this, pointerContent)	RATSelect_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_SUPPORTED_RAT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_RATSelect_t", this, pointerContent)	RATSelect_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_SYSTEM_BAND_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_BandSelect_t", this, pointerContent)	BandSelect_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_SUPPORTED_BAND_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_BandSelect_t", this, pointerContent)	BandSelect_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_MSCLASS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_MNF_NAME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_MODEL_NAME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_SW_VERSION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_EGPRS_CLASS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PLMN_NUM_OF_ENTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendNumOfPLMNEntryReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendNumOfPLMNEntryReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PLMN_ENTRY_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendReadPLMNEntryReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendReadPLMNEntryReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_MUL_PLMN_ENTRY_UPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendWriteMulPLMNEntryReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendWriteMulPLMNEntryReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SET_REG_EVENT_MASK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYS_SetRegisteredEventMask_Req_t", this, pointerContent)	CAPI2_SYS_SetRegisteredEventMask_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SET_REG_EVENT_MASK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SET_REG_FILTER_MASK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYS_SetFilteredEventMask_Req_t", this, pointerContent)	CAPI2_SYS_SetFilteredEventMask_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SET_REG_FILTER_MASK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SET_RSSI_THRESHOLD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PhoneCtrlApi_SetRssiThreshold_Req_t", this, pointerContent)	CAPI2_PhoneCtrlApi_SetRssiThreshold_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_CHANNEL_MODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_CLASSMARK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_Class_t", this, pointerContent)	CAPI2_Class_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_IND_FILE_VER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SET_DARP_CFG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYSPARM_SetDARPCfg_Req_t", this, pointerContent)	CAPI2_SYSPARM_SetDARPCfg_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_SET_EGPRS_MSCLASS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYSPARM_SetEGPRSMSClass_Req_t", this, pointerContent)	CAPI2_SYSPARM_SetEGPRSMSClass_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_SET_GPRS_MSCLASS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYSPARM_SetGPRSMSClass_Req_t", this, pointerContent)	CAPI2_SYSPARM_SetGPRSMSClass_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CAPI2_TEST_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_TestCmds_Req_t", this, pointerContent)	CAPI2_TestCmds_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_PLAYTONE_RES_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendPlayToneRes_Req_t", this, pointerContent)	CAPI2_SatkApi_SendPlayToneRes_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SETUP_CALL_RES_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SATK_SendSetupCallRes_Req_t", this, pointerContent)	CAPI2_SATK_SendSetupCallRes_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_SET_FDN_CHECK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SetFdnCheck_Req_t", this, pointerContent)	CAPI2_PbkApi_SetFdnCheck_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_GET_FDN_CHECK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PMU_BATT_LEVEL_REGISTER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PMU_Battery_Register_Req_t", this, pointerContent)	CAPI2_PMU_Battery_Register_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PMU_BATT_LEVEL_REGISTER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_HAL_EM_BATTMGR_ErrorCode_en_t", this, pointerContent)	HAL_EM_BATTMGR_ErrorCode_en_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PMU_BATT_LEVEL_IND
+<DESC>
+DataTypeDecodingStarter.decode("Gen_HAL_EM_BatteryLevel_t", this, pointerContent)	HAL_EM_BatteryLevel_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_CONFIGUREMESTORAGE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_ConfigureMEStorage_Req_t", this, pointerContent)	CAPI2_SMS_ConfigureMEStorage_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SET_ELEMENT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MsDbApi_SetElement_Req_t", this, pointerContent)	CAPI2_MsDbApi_SetElement_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_ELEMENT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MsDbApi_GetElement_Req_t", this, pointerContent)	CAPI2_MsDbApi_GetElement_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_ELEMENT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_Element_t", this, pointerContent)	CAPI2_MS_Element_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_IS_APP_SUPPORTED_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_USimApi_IsApplicationSupported_Req_t", this, pointerContent)	CAPI2_USimApi_IsApplicationSupported_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_IS_APP_SUPPORTED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_IS_APN_ALLOWED_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_USimApi_IsAllowedAPN_Req_t", this, pointerContent)	CAPI2_USimApi_IsAllowedAPN_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_IS_APN_ALLOWED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_GET_NUM_APN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_GET_APN_ENTRY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_USimApi_GetAPNEntry_Req_t", this, pointerContent)	CAPI2_USimApi_GetAPNEntry_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_GET_APN_ENTRY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_IS_EST_SERV_ACTIVATED_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_USimApi_IsEstServActivated_Req_t", this, pointerContent)	CAPI2_USimApi_IsEstServActivated_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_IS_EST_SERV_ACTIVATED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SET_EST_SERV_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_USimApi_SendSetEstServReq_Req_t", this, pointerContent)	CAPI2_USimApi_SendSetEstServReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_UPDATE_ONE_APN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_USimApi_SendWriteAPNReq_Req_t", this, pointerContent)	CAPI2_USimApi_SendWriteAPNReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_GET_RAT_MODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USIM_RAT_MODE_t", this, pointerContent)	USIM_RAT_MODE_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_GPRS_STATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MSRegState_t", this, pointerContent)	MSRegState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_GSM_STATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MSRegState_t", this, pointerContent)	MSRegState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GET_CELL_INFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CellInfo_t", this, pointerContent)	CellInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SETMEPOWER_CLASS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_SetMEPowerClass_Req_t", this, pointerContent)	CAPI2_MS_SetMEPowerClass_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_GET_SERVICE_STATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_USimApi_GetServiceStatus_Req_t", this, pointerContent)	CAPI2_USimApi_GetServiceStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_GET_SERVICE_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMServiceStatus_t", this, pointerContent)	SIMServiceStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_IS_ALLOWED_APN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_IsAllowedAPN_Req_t", this, pointerContent)	CAPI2_SimApi_IsAllowedAPN_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_IS_ALLOWED_APN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSMAXCAPACITY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_GetSmsMaxCapacity_Req_t", this, pointerContent)	CAPI2_SmsApi_GetSmsMaxCapacity_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSMAXCAPACITY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_RETRIEVEMAXCBCHNLLENGTH_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_IS_BDN_RESTRICTED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_PLMN_UPDATE_IND_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendPreferredPlmnUpdateInd_Req_t", this, pointerContent)	CAPI2_SimApi_SendPreferredPlmnUpdateInd_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SET_BDN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendSetBdnReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendSetBdnReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_POWER_ON_OFF_CARD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_PowerOnOffCard_Req_t", this, pointerContent)	CAPI2_SimApi_PowerOnOffCard_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SET_PROTOCOL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_Set_Protocol_Req_t", this, pointerContent)	CAPI2_SimApi_Set_Protocol_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_GET_PROTOCOL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_GENERIC_APDU_CMD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendGenericApduCmd_Req_t", this, pointerContent)	CAPI2_SimApi_SendGenericApduCmd_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_GET_SIM_INTERFACE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_SIM_INTERFACE_t", this, pointerContent)	SIM_SIM_INTERFACE_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SET_PLMN_SELECT_RAT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_SetPlmnSelectRat_Req_t", this, pointerContent)	CAPI2_NetRegApi_SetPlmnSelectRat_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_IS_DEREGISTER_IN_PROGRESS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_IS_REGISTER_IN_PROGRESS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRITE_USIM_PBK_HDK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendUsimHdkUpdateReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendUsimHdkUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_READ_USIM_PBK_ALPHA_AAS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendUsimAasReadReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendUsimAasReadReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRITE_USIM_PBK_ALPHA_AAS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendUsimAasUpdateReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendUsimAasUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_READ_USIM_PBK_ALPHA_GAS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendUsimGasReadReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendUsimGasReadReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_WRITE_USIM_PBK_ALPHA_GAS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendUsimGasUpdateReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendUsimGasUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GET_USIM_PBK_ALPHA_INFO_AAS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendUsimAasInfoReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendUsimAasInfoReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GET_USIM_PBK_ALPHA_INFO_GAS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendUsimGasInfoReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendUsimGasInfoReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DIAG_MEASURE_REPORT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_DiagApi_MeasurmentReportReq_Req_t", this, pointerContent)	CAPI2_DiagApi_MeasurmentReportReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PMU_BATT_CHARGING_NOTIFICATION_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PMU_BattChargingNotification_Req_t", this, pointerContent)	CAPI2_PMU_BattChargingNotification_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARM_GET_ACTUAL_LOW_VOLT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARM_GET_ACTUAL_4P2_VOLT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SEND_COMMAND_TXT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendSMSCommandTxtReq_Req_t", this, pointerContent)	CAPI2_SmsApi_SendSMSCommandTxtReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SEND_COMMAND_PDU_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendSMSCommandPduReq_Req_t", this, pointerContent)	CAPI2_SmsApi_SendSMSCommandPduReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SEND_ACKTONETWORK_PDU_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendPDUAckToNetwork_Req_t", this, pointerContent)	CAPI2_SmsApi_SendPDUAckToNetwork_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_CB_START_STOP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t", this, pointerContent)	CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SET_TPMR_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetMoSmsTpMr_Req_t", this, pointerContent)	CAPI2_SmsApi_SetMoSmsTpMr_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIMLOCK_SET_STATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SIMLOCKApi_SetStatus_Req_t", this, pointerContent)	CAPI2_SIMLOCKApi_SetStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DIAG_CELLLOCK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_DIAG_ApiCellLockReq_Req_t", this, pointerContent)	CAPI2_DIAG_ApiCellLockReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DIAG_CELLLOCK_STATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SET_RUA_READY_TIMER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_SetRuaReadyTimer_Req_t", this, pointerContent)	CAPI2_MS_SetRuaReadyTimer_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_REG_RRLP_HDL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_RegisterRrlpDataHandler_Req_t", this, pointerContent)	CAPI2_LCS_RegisterRrlpDataHandler_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_REG_RRC_HDL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_RegisterRrcDataHandler_Req_t", this, pointerContent)	CAPI2_LCS_RegisterRrcDataHandler_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_IS_THERE_EMERGENCY_CALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_ENABLE_CELL_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYS_EnableCellInfoMsg_Req_t", this, pointerContent)	CAPI2_SYS_EnableCellInfoMsg_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_L1_BB_ISLOCKED_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_L1_bb_isLocked_Req_t", this, pointerContent)	CAPI2_LCS_L1_bb_isLocked_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_L1_BB_ISLOCKED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_UTIL_DIAL_STR_PARSE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_DIALSTR_ParseGetCallType_Req_t", this, pointerContent)	CAPI2_DIALSTR_ParseGetCallType_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_UTIL_DIAL_STR_PARSE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CallType_t", this, pointerContent)	CallType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_FTT_DELTA_TIME_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_FttCalcDeltaTime_Req_t", this, pointerContent)	CAPI2_LCS_FttCalcDeltaTime_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_FTT_DELTA_TIME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_FORCEDREADYSTATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_ForcedReadyStateReq_Req_t", this, pointerContent)	CAPI2_NetRegApi_ForcedReadyStateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIMLOCK_GET_STATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SIMLOCK_GetStatus_Req_t", this, pointerContent)	CAPI2_SIMLOCK_GetStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DIALSTR_IS_VALID_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_DIALSTR_IsValidString_Req_t", this, pointerContent)	CAPI2_DIALSTR_IsValidString_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DIALSTR_IS_VALID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_UTIL_CONVERT_NTWK_CAUSE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_UTIL_Cause2NetworkCause_Req_t", this, pointerContent)	CAPI2_UTIL_Cause2NetworkCause_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_UTIL_CONVERT_NTWK_CAUSE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_NetworkCause_t", this, pointerContent)	NetworkCause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_UTIL_CONVERT_ERRCODE_NTWK_CAUSE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_UTIL_ErrCodeToNetCause_Req_t", this, pointerContent)	CAPI2_UTIL_ErrCodeToNetCause_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_UTIL_CONVERT_ERRCODE_NTWK_CAUSE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_NetworkCause_t", this, pointerContent)	NetworkCause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISGPRS_DIAL_STR_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_IsGprsDialStr_Req_t", this, pointerContent)	CAPI2_IsGprsDialStr_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISGPRS_DIAL_STR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GET_NUM_SS_STR_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_UTIL_GetNumOffsetInSsStr_Req_t", this, pointerContent)	CAPI2_UTIL_GetNumOffsetInSsStr_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_GET_NUM_SS_STR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DIALSTR_IS_PPPLOOPBACK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_IsPppLoopbackDialStr_Req_t", this, pointerContent)	CAPI2_IsPppLoopbackDialStr_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_DIALSTR_IS_PPPLOOPBACK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_GETRIPPROCVERSION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARM_SET_HSDPA_PHY_CAT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYSPARM_SetHSDPAPHYCategory_Req_t", this, pointerContent)	CAPI2_SYSPARM_SetHSDPAPHYCategory_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_GET_HSDPA_CATEGORY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_CONVERT_MSGTYPE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_ConvertSmsMSMsgType_Req_t", this, pointerContent)	CAPI2_SmsApi_ConvertSmsMSMsgType_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_CONVERT_MSGTYPE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETPREFNETSTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_GANStatus_t", this, pointerContent)	GANStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_TEST_MSG_IND_1
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_TEST_MSG_IND_2
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_TEST_MSG_IND_3
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_TEST_MSG_IND_4
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_TEST_MSG_IND_5
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_TEST_MSG_IND_6
+<DESC>
+DataTypeDecodingStarter.decode("Gen_uchar_ptr_t", this, pointerContent)	uchar_ptr_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_INTERTASK_MSG_TO_CP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_InterTaskMsgToCP_Req_t", this, pointerContent)	CAPI2_InterTaskMsgToCP_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_INTERTASK_MSG_TO_AP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_InterTaskMsgToAP_Req_t", this, pointerContent)	CAPI2_InterTaskMsgToAP_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCURRENTCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNEXTACTIVECALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNEXTHELDCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNEXTWAITCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETMPTYCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLSTATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCallState_Req_t", this, pointerContent)	CAPI2_CcApi_GetCallState_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLSTATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CCallState_t", this, pointerContent)	CCallState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLTYPE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCallType_Req_t", this, pointerContent)	CAPI2_CcApi_GetCallType_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLTYPE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CCallType_t", this, pointerContent)	CCallType_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTCALLEXITCAUSE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Cause_t", this, pointerContent)	Cause_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLNUMBER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCallNumber_Req_t", this, pointerContent)	CAPI2_CcApi_GetCallNumber_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLINGINFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCallingInfo_Req_t", this, pointerContent)	CAPI2_CcApi_GetCallingInfo_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLINGINFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLCALLSTATES_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLHELDCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLACTIVECALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETALLMPTYCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNUMOFMPTYCALLS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNUMOFACTIVECALLS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETNUMOFHELDCALLS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISTHEREWAITINGCALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISTHEREALERTINGCALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCONNECTEDLINEID_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetConnectedLineID_Req_t", this, pointerContent)	CAPI2_CcApi_GetConnectedLineID_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCONNECTEDLINEID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GET_CALL_PRESENT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCallPresent_Req_t", this, pointerContent)	CAPI2_CcApi_GetCallPresent_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GET_CALL_PRESENT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GET_INDEX_STATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCallIndexInThisState_Req_t", this, pointerContent)	CAPI2_CcApi_GetCallIndexInThisState_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GET_INDEX_STATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISMULTIPARTYCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_IsMultiPartyCall_Req_t", this, pointerContent)	CAPI2_CcApi_IsMultiPartyCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISMULTIPARTYCALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISTHEREVOICECALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISCONNECTEDLINEIDPRESENTALLOWED_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_IsConnectedLineIDPresentAllowed_Req_t", this, pointerContent)	CAPI2_CcApi_IsConnectedLineIDPresentAllowed_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISCONNECTEDLINEIDPRESENTALLOWED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCURRENTCALLDURATIONINMILLISECONDS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCurrentCallDurationInMilliSeconds_Req_t", this, pointerContent)	CAPI2_CcApi_GetCurrentCallDurationInMilliSeconds_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCURRENTCALLDURATIONINMILLISECONDS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTCALLCCM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTCALLDURATION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTDATACALLRXBYTES_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETLASTDATACALLTXBYTES_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETDATACALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLCLIENT_INFO_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCallClientInfo_Req_t", this, pointerContent)	CAPI2_CcApi_GetCallClientInfo_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLCLIENT_INFO_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLCLIENTID_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCallClientID_Req_t", this, pointerContent)	CAPI2_CcApi_GetCallClientID_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCALLCLIENTID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETTYPEADD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetTypeAdd_Req_t", this, pointerContent)	CAPI2_CcApi_GetTypeAdd_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETTYPEADD_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_SETVOICECALLAUTOREJECT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_SetVoiceCallAutoReject_Req_t", this, pointerContent)	CAPI2_CcApi_SetVoiceCallAutoReject_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISVOICECALLAUTOREJECT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_SETTTYCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_SetTTYCall_Req_t", this, pointerContent)	CAPI2_CcApi_SetTTYCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISTTYENABLE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISSIMORIGINEDCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_IsSimOriginedCall_Req_t", this, pointerContent)	CAPI2_CcApi_IsSimOriginedCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISSIMORIGINEDCALL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_SETVIDEOCALLPARAM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_SetVideoCallParam_Req_t", this, pointerContent)	CAPI2_CcApi_SetVideoCallParam_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETVIDEOCALLPARAM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_VideoCallParam_t", this, pointerContent)	VideoCallParam_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCCM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCCM_Req_t", this, pointerContent)	CAPI2_CcApi_GetCCM_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCCM_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_SENDDTMF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_SendDtmfTone_Req_t", this, pointerContent)	CAPI2_CcApi_SendDtmfTone_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_STOPDTMF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_StopDtmfTone_Req_t", this, pointerContent)	CAPI2_CcApi_StopDtmfTone_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_ABORTDTMF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_AbortDtmf_Req_t", this, pointerContent)	CAPI2_CcApi_AbortDtmf_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_SETDTMFTIMER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_SetDtmfToneTimer_Req_t", this, pointerContent)	CAPI2_CcApi_SetDtmfToneTimer_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_RESETDTMFTIMER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_ResetDtmfToneTimer_Req_t", this, pointerContent)	CAPI2_CcApi_ResetDtmfToneTimer_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_GETDTMFTIMER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetDtmfToneTimer_Req_t", this, pointerContent)	CAPI2_CcApi_GetDtmfToneTimer_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_GETDTMFTIMER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Ticks_t", this, pointerContent)	Ticks_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_GETTIFROMCALLINDEX_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetTiFromCallIndex_Req_t", this, pointerContent)	CAPI2_CcApi_GetTiFromCallIndex_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_GETTIFROMCALLINDEX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_IS_SUPPORTEDBC_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_IsSupportedBC_Req_t", this, pointerContent)	CAPI2_CcApi_IsSupportedBC_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_IS_SUPPORTEDBC_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_IS_BEARER_CAPABILITY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetBearerCapability_Req_t", this, pointerContent)	CAPI2_CcApi_GetBearerCapability_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_IS_BEARER_CAPABILITY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SENDSMSSRVCENTERNUMBERUPDATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendSMSSrvCenterNumberUpdateReq_Req_t", this, pointerContent)	CAPI2_SmsApi_SendSMSSrvCenterNumberUpdateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSRVCENTERNUMBER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_GetSMSrvCenterNumber_Req_t", this, pointerContent)	CAPI2_SmsApi_GetSMSrvCenterNumber_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSRVCENTERNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSIMSMSCAPACITYEXCEEDEDFLAG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSTOREDSTATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_GetSmsStoredState_Req_t", this, pointerContent)	CAPI2_SmsApi_GetSmsStoredState_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSTOREDSTATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_WRITESMSPDU_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_WriteSMSPduReq_Req_t", this, pointerContent)	CAPI2_SmsApi_WriteSMSPduReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_WRITESMSREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_WriteSMSReq_Req_t", this, pointerContent)	CAPI2_SmsApi_WriteSMSReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SENDSMSREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendSMSReq_Req_t", this, pointerContent)	CAPI2_SmsApi_SendSMSReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SENDSMSPDUREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendSMSPduReq_Req_t", this, pointerContent)	CAPI2_SmsApi_SendSMSPduReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SENDSTOREDSMSREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendStoredSmsReq_Req_t", this, pointerContent)	CAPI2_SmsApi_SendStoredSmsReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_WRITESMSPDUTOSIM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_WriteSMSPduToSIMReq_Req_t", this, pointerContent)	CAPI2_SmsApi_WriteSMSPduToSIMReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETLASTTPMR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSTXPARAMS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETTXPARAMINTEXTMODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSTXPARAMPROCID_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsTxParamProcId_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsTxParamProcId_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSTXPARAMCODINGTYPE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsTxParamCodingType_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsTxParamCodingType_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSTXPARAMVALIDPERIOD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsTxParamValidPeriod_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsTxParamValidPeriod_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSTXPARAMCOMPRESSION_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsTxParamCompression_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsTxParamCompression_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSTXPARAMREPLYPATH_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsTxParamReplyPath_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsTxParamReplyPath_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSTXPARAMUSERDATAHDRIND_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsTxParamUserDataHdrInd_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsTxParamUserDataHdrInd_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSTXPARAMSTATUSRPTREQFLAG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsTxParamStatusRptReqFlag_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsTxParamStatusRptReqFlag_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSTXPARAMREJDUPL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsTxParamRejDupl_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsTxParamRejDupl_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_DELETESMSMSGBYINDEX_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_DeleteSmsMsgByIndexReq_Req_t", this, pointerContent)	CAPI2_SmsApi_DeleteSmsMsgByIndexReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_READSMSMSG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_ReadSmsMsgReq_Req_t", this, pointerContent)	CAPI2_SmsApi_ReadSmsMsgReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_LISTSMSMSG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_ListSmsMsgReq_Req_t", this, pointerContent)	CAPI2_SmsApi_ListSmsMsgReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETNEWMSGDISPLAYPREF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetNewMsgDisplayPref_Req_t", this, pointerContent)	CAPI2_SmsApi_SetNewMsgDisplayPref_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETNEWMSGDISPLAYPREF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_GetNewMsgDisplayPref_Req_t", this, pointerContent)	CAPI2_SmsApi_GetNewMsgDisplayPref_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETNEWMSGDISPLAYPREF_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSPREFSTORAGE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSMSPrefStorage_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSMSPrefStorage_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSPREFSTORAGE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsStorage_t", this, pointerContent)	SmsStorage_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSTORAGESTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_GetSMSStorageStatus_Req_t", this, pointerContent)	CAPI2_SmsApi_GetSMSStorageStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSSTORAGESTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SAVESMSSERVICEPROFILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SaveSmsServiceProfile_Req_t", this, pointerContent)	CAPI2_SmsApi_SaveSmsServiceProfile_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_RESTORESMSSERVICEPROFILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_RestoreSmsServiceProfile_Req_t", this, pointerContent)	CAPI2_SmsApi_RestoreSmsServiceProfile_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETCELLBROADCASTMSGTYPE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetCellBroadcastMsgTypeReq_Req_t", this, pointerContent)	CAPI2_SmsApi_SetCellBroadcastMsgTypeReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_CBALLOWALLCHNLREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_CBAllowAllChnlReq_Req_t", this, pointerContent)	CAPI2_SmsApi_CBAllowAllChnlReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ADDCELLBROADCASTCHNLREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_AddCellBroadcastChnlReq_Req_t", this, pointerContent)	CAPI2_SmsApi_AddCellBroadcastChnlReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_REMOVECELLBROADCASTCHNLREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_RemoveCellBroadcastChnlReq_Req_t", this, pointerContent)	CAPI2_SmsApi_RemoveCellBroadcastChnlReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETCBMI_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETCBLANGUAGE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ADDCELLBROADCASTLANGREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_AddCellBroadcastLangReq_Req_t", this, pointerContent)	CAPI2_SmsApi_AddCellBroadcastLangReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_REMOVECELLBROADCASTLANGREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_RemoveCellBroadcastLangReq_Req_t", this, pointerContent)	CAPI2_SmsApi_RemoveCellBroadcastLangReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETCBIGNOREDUPLFLAG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetCBIgnoreDuplFlag_Req_t", this, pointerContent)	CAPI2_SmsApi_SetCBIgnoreDuplFlag_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETCBIGNOREDUPLFLAG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETVMINDONOFF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetVMIndOnOff_Req_t", this, pointerContent)	CAPI2_SmsApi_SetVMIndOnOff_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ISVMINDENABLED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETVMWAITINGSTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETNUMOFVMSCNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETVMSCNUMBER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_GetVmscNumber_Req_t", this, pointerContent)	CAPI2_SmsApi_GetVmscNumber_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETVMSCNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_UPDATEVMSCNUMBERREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_UpdateVmscNumberReq_Req_t", this, pointerContent)	CAPI2_SmsApi_UpdateVmscNumberReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSBEARERPREFERENCE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SMS_BEARER_PREFERENCE_t", this, pointerContent)	SMS_BEARER_PREFERENCE_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSBEARERPREFERENCE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSMSBearerPreference_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSMSBearerPreference_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSREADSTATUSCHANGEMODE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsReadStatusChangeMode_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsReadStatusChangeMode_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETSMSREADSTATUSCHANGEMODE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_CHANGESTATUSREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_ChangeSmsStatusReq_Req_t", this, pointerContent)	CAPI2_SmsApi_ChangeSmsStatusReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SENDMESTOREDSTATUSIND_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendMEStoredStatusInd_Req_t", this, pointerContent)	CAPI2_SmsApi_SendMEStoredStatusInd_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SENDMERETRIEVESMSDATAIND_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendMERetrieveSmsDataInd_Req_t", this, pointerContent)	CAPI2_SmsApi_SendMERetrieveSmsDataInd_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SENDMEREMOVEDSTATUSIND_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendMERemovedStatusInd_Req_t", this, pointerContent)	CAPI2_SmsApi_SendMERemovedStatusInd_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETSMSSTOREDSTATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetSmsStoredState_Req_t", this, pointerContent)	CAPI2_SmsApi_SetSmsStoredState_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ISCACHEDDATAREADY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETENHANCEDVMINFOIEI_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SmsEnhancedVMInd_t", this, pointerContent)	SmsEnhancedVMInd_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETALLNEWMSGDISPLAYPREF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SetAllNewMsgDisplayPref_Req_t", this, pointerContent)	CAPI2_SmsApi_SetAllNewMsgDisplayPref_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ACKTONETWORK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SmsApi_SendAckToNetwork_Req_t", this, pointerContent)	CAPI2_SmsApi_SendAckToNetwork_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_PDA_OVERFLOW_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_SetPDAStorageOverFlowFlag_Req_t", this, pointerContent)	CAPI2_SMS_SetPDAStorageOverFlowFlag_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_SENDAUTHENAKAREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_ISimApi_SendAuthenAkaReq_Req_t", this, pointerContent)	CAPI2_ISimApi_SendAuthenAkaReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_ISISIMSUPPORTED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_ISISIMACTIVATED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_SENDAUTHENHTTPREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_ISimApi_SendAuthenHttpReq_Req_t", this, pointerContent)	CAPI2_ISimApi_SendAuthenHttpReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_SENDAUTHENGBANAFREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_ISimApi_SendAuthenGbaNafReq_Req_t", this, pointerContent)	CAPI2_ISimApi_SendAuthenGbaNafReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_ISIM_SENDAUTHENGBABOOTREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_ISimApi_SendAuthenGbaBootReq_Req_t", this, pointerContent)	CAPI2_ISimApi_SendAuthenGbaBootReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_GETALPHA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_GetAlpha_Req_t", this, pointerContent)	CAPI2_PbkApi_GetAlpha_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_GETALPHA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISEMERGENCYCALLNUMBER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_IsEmergencyCallNumber_Req_t", this, pointerContent)	CAPI2_PbkApi_IsEmergencyCallNumber_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISEMERGENCYCALLNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISPARTIALEMERGENCYCALLNUMBER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_IsPartialEmergencyCallNumber_Req_t", this, pointerContent)	CAPI2_PbkApi_IsPartialEmergencyCallNumber_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISPARTIALEMERGENCYCALLNUMBER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_SENDINFOREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendInfoReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendInfoReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SENDFINDALPHAMATCHMULTIPLEREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendFindAlphaMatchMultipleReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendFindAlphaMatchMultipleReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SENDFINDALPHAMATCHONEREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendFindAlphaMatchOneReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendFindAlphaMatchOneReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISREADY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SENDREADENTRYREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendReadEntryReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendReadEntryReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_SENDWRITEENTRYREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendWriteEntryReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendWriteEntryReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_SENDUPDATEENTRYREQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendUpdateEntryReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendUpdateEntryReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_SENDISNUMDIALLABLEREQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_SendIsNumDiallableReq_Req_t", this, pointerContent)	CAPI2_PbkApi_SendIsNumDiallableReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISNUMDIALLABLE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_IsNumDiallable_Req_t", this, pointerContent)	CAPI2_PbkApi_IsNumDiallable_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISNUMDIALLABLE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISNUMBARRED_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_IsNumBarred_Req_t", this, pointerContent)	CAPI2_PbkApi_IsNumBarred_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISNUMBARRED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISUSSDDIALLABLE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PbkApi_IsUssdDiallable_Req_t", this, pointerContent)	CAPI2_PbkApi_IsUssdDiallable_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PBK_ISUSSDDIALLABLE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETPDPCONTEXT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetPDPContext_Req_t", this, pointerContent)	CAPI2_PdpApi_SetPDPContext_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETSECPDPCONTEXT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetSecPDPContext_Req_t", this, pointerContent)	CAPI2_PdpApi_SetSecPDPContext_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETGPRSQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetGPRSQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_GetGPRSQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETGPRSQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETGPRSQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetGPRSQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_SetGPRSQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETGPRSMINQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetGPRSMinQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_GetGPRSMinQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETGPRSMINQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETGPRSMINQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetGPRSMinQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_SetGPRSMinQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SENDCOMBINEDATTACHREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_SendCombinedAttachReq_Req_t", this, pointerContent)	CAPI2_NetRegApi_SendCombinedAttachReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SENDDETACHREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_SendDetachReq_Req_t", this, pointerContent)	CAPI2_NetRegApi_SendDetachReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETGPRSATTACHSTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_AttachState_t", this, pointerContent)	AttachState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ISSECONDARYPDPDEFINED_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_IsSecondaryPdpDefined_Req_t", this, pointerContent)	CAPI2_PdpApi_IsSecondaryPdpDefined_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ISSECONDARYPDPDEFINED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_SENDPDPACTIVATEREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PchExApi_SendPDPActivateReq_Req_t", this, pointerContent)	CAPI2_PchExApi_SendPDPActivateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_SENDPDPMODIFYREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PchExApi_SendPDPModifyReq_Req_t", this, pointerContent)	CAPI2_PchExApi_SendPDPModifyReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_SENDPDPDEACTIVATEREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PchExApi_SendPDPDeactivateReq_Req_t", this, pointerContent)	CAPI2_PchExApi_SendPDPDeactivateReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_SENDPDPACTIVATESECREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PchExApi_SendPDPActivateSecReq_Req_t", this, pointerContent)	CAPI2_PchExApi_SendPDPActivateSecReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETGPRSACTIVATESTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETMSCLASS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_NetRegApi_SetMSClass_Req_t", this, pointerContent)	CAPI2_NetRegApi_SetMSClass_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETMSCLASS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_MSClass_t", this, pointerContent)	MSClass_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSTFT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetUMTSTft_Req_t", this, pointerContent)	CAPI2_PdpApi_GetUMTSTft_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSTFT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETUMTSTFT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetUMTSTft_Req_t", this, pointerContent)	CAPI2_PdpApi_SetUMTSTft_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_DELETEUMTSTFT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_DeleteUMTSTft_Req_t", this, pointerContent)	CAPI2_PdpApi_DeleteUMTSTft_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_DEACTIVATESNDCPCONNECTION_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_DeactivateSNDCPConnection_Req_t", this, pointerContent)	CAPI2_PdpApi_DeactivateSNDCPConnection_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETR99UMTSMINQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetR99UMTSMinQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_GetR99UMTSMinQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETR99UMTSMINQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETR99UMTSQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetR99UMTSQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_GetR99UMTSQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETR99UMTSQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSMINQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetUMTSMinQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_GetUMTSMinQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSMINQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetUMTSQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_GetUMTSQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETUMTSQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETNEGQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetNegQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_GetNegQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETNEGQOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETR99UMTSMINQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetR99UMTSMinQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_SetR99UMTSMinQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETR99UMTSQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetR99UMTSQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_SetR99UMTSQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETUMTSMINQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetUMTSMinQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_SetUMTSMinQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETUMTSQOS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetUMTSQoS_Req_t", this, pointerContent)	CAPI2_PdpApi_SetUMTSQoS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETNEGOTIATEDPARMS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetNegotiatedParms_Req_t", this, pointerContent)	CAPI2_PdpApi_GetNegotiatedParms_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETNEGOTIATEDPARMS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_ISGPRSCALLACTIVE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_IsGprsCallActive_Req_t", this, pointerContent)	CAPI2_MS_IsGprsCallActive_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_ISGPRSCALLACTIVE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SETCHANGPRSCALLACTIVE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_SetChanGprsCallActive_Req_t", this, pointerContent)	CAPI2_MS_SetChanGprsCallActive_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_SETCIDFORGPRSACTIVECHAN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_SetCidForGprsActiveChan_Req_t", this, pointerContent)	CAPI2_MS_SetCidForGprsActiveChan_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPPPMODEMCID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHCid_t", this, pointerContent)	PCHCid_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETGPRSACTIVECHANFROMCID_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_GetGprsActiveChanFromCid_Req_t", this, pointerContent)	CAPI2_MS_GetGprsActiveChanFromCid_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETGPRSACTIVECHANFROMCID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETCIDFROMGPRSACTIVECHAN_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_MS_GetCidFromGprsActiveChan_Req_t", this, pointerContent)	CAPI2_MS_GetCidFromGprsActiveChan_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_MS_GETCIDFROMGPRSACTIVECHAN_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPADDRESS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetPDPAddress_Req_t", this, pointerContent)	CAPI2_PdpApi_GetPDPAddress_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPADDRESS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SENDTBFDATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SendTBFData_Req_t", this, pointerContent)	CAPI2_PdpApi_SendTBFData_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TFTADDFILTER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_TftAddFilter_Req_t", this, pointerContent)	CAPI2_PdpApi_TftAddFilter_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETPCHCONTEXTSTATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetPCHContextState_Req_t", this, pointerContent)	CAPI2_PdpApi_SetPCHContextState_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETDEFAULTPDPCONTEXT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetDefaultPDPContext_Req_t", this, pointerContent)	CAPI2_PdpApi_SetDefaultPDPContext_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_READDECODEDPROTCONFIG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PCHEx_GetDecodedProtConfig_Req_t", this, pointerContent)	CAPI2_PCHEx_GetDecodedProtConfig_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_READDECODEDPROTCONFIG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_BUILDPROTCONFIGOPTIONS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PchExApi_BuildIpConfigOptions_Req_t", this, pointerContent)	CAPI2_PchExApi_BuildIpConfigOptions_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_BUILDPROTCONFIGOPTIONS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_BUILDPROTCONFIGOPTIONS2_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PCHEx_BuildIpConfigOptions2_Req_t", this, pointerContent)	CAPI2_PCHEx_BuildIpConfigOptions2_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_BUILDPROTCONFIGOPTIONS2_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_BUILDPROTCONFIGOPTION_CHAP_TYPE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PchExApi_BuildIpConfigOptionsWithChapAuthType_Req_t", this, pointerContent)	CAPI2_PchExApi_BuildIpConfigOptionsWithChapAuthType_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_BUILDPROTCONFIGOPTION_CHAP_TYPE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GET_DEFAULT_QOS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ISCONTEXT_ACTIVE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_IsPDPContextActive_Req_t", this, pointerContent)	CAPI2_PdpApi_IsPDPContextActive_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ISCONTEXT_ACTIVE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_ACTIVATESNDCPCONNECTION_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_ActivateSNDCPConnection_Req_t", this, pointerContent)	CAPI2_PdpApi_ActivateSNDCPConnection_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPCONTEXT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetPDPContext_Req_t", this, pointerContent)	CAPI2_PdpApi_GetPDPContext_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPCONTEXT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPDefaultContext_t", this, pointerContent)	PDPDefaultContext_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPCONTEXT_CID_LIST_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_UTIL_GET_IMEI_STR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_BOOTLOADER_VER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYS_GetBootLoaderVersion_Req_t", this, pointerContent)	CAPI2_SYS_GetBootLoaderVersion_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_BOOTLOADER_VER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_DSF_VER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYS_GetDSFVersion_Req_t", this, pointerContent)	CAPI2_SYS_GetDSFVersion_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_DSF_VER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USIM_UST_DATA_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PATCH_GET_REVISION_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SENDCALLFORWARDREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SendCallForwardReq_Req_t", this, pointerContent)	CAPI2_SS_SendCallForwardReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_QUERYCALLFORWARDSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_QueryCallForwardStatus_Req_t", this, pointerContent)	CAPI2_SS_QueryCallForwardStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SENDCALLBARRINGREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SendCallBarringReq_Req_t", this, pointerContent)	CAPI2_SS_SendCallBarringReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_QUERYCALLBARRINGSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_QueryCallBarringStatus_Req_t", this, pointerContent)	CAPI2_SS_QueryCallBarringStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SENDCALLBARRINGPWDCHANGEREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SendCallBarringPWDChangeReq_Req_t", this, pointerContent)	CAPI2_SS_SendCallBarringPWDChangeReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SENDCALLWAITINGREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SendCallWaitingReq_Req_t", this, pointerContent)	CAPI2_SS_SendCallWaitingReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_QUERYCALLWAITINGSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_QueryCallWaitingStatus_Req_t", this, pointerContent)	CAPI2_SS_QueryCallWaitingStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SETCALLINGLINEIDSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SetCallingLineIDStatus_Req_t", this, pointerContent)	CAPI2_SS_SetCallingLineIDStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SETCALLINGLINERESTRICTIONSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SetCallingLineRestrictionStatus_Req_t", this, pointerContent)	CAPI2_SS_SetCallingLineRestrictionStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SETCONNECTEDLINEIDSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SetConnectedLineIDStatus_Req_t", this, pointerContent)	CAPI2_SS_SetConnectedLineIDStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SETCONNECTEDLINERESTRICTIONSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SetConnectedLineRestrictionStatus_Req_t", this, pointerContent)	CAPI2_SS_SetConnectedLineRestrictionStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SENDUSSDCONNECTREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SendUSSDConnectReq_Req_t", this, pointerContent)	CAPI2_SS_SendUSSDConnectReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_SENDUSSDDATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SendUSSDData_Req_t", this, pointerContent)	CAPI2_SS_SendUSSDData_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SSAPI_DIALSTRSRVREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SsApi_DialStrSrvReq_Req_t", this, pointerContent)	CAPI2_SsApi_DialStrSrvReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_ENDUSSDCONNECTREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_EndUSSDConnectReq_Req_t", this, pointerContent)	CAPI2_SS_EndUSSDConnectReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SSAPI_SSSRVREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SsApi_SsSrvReq_Req_t", this, pointerContent)	CAPI2_SsApi_SsSrvReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SSAPI_USSDSRVREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SsApi_UssdSrvReq_Req_t", this, pointerContent)	CAPI2_SsApi_UssdSrvReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SSAPI_USSDDATAREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SsApi_UssdDataReq_Req_t", this, pointerContent)	CAPI2_SsApi_UssdDataReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SSAPI_SSRELEASEREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SsApi_SsReleaseReq_Req_t", this, pointerContent)	CAPI2_SsApi_SsReleaseReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SSAPI_DATAREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SsApi_DataReq_Req_t", this, pointerContent)	CAPI2_SsApi_DataReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SSAPI_DISPATCH_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_SsApiReqDispatcher_Req_t", this, pointerContent)	CAPI2_SS_SsApiReqDispatcher_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_GET_STR_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SS_GetStr_Req_t", this, pointerContent)	CAPI2_SS_GetStr_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_GET_STR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SS_GETCLIENTID_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt8", this, pointerContent)	UInt8
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_GETCACHEDROOTMENUPTR_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SetupMenu_t", this, pointerContent)	SetupMenu_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SENDLANGSELECTEVENT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendLangSelectEvent_Req_t", this, pointerContent)	CAPI2_SatkApi_SendLangSelectEvent_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SENDBROWSERTERMEVENT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendBrowserTermEvent_Req_t", this, pointerContent)	CAPI2_SatkApi_SendBrowserTermEvent_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_CMDRESP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_CmdResp_Req_t", this, pointerContent)	CAPI2_SatkApi_CmdResp_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_CMDRESP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_DATASERVCMDRESP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_DataServCmdResp_Req_t", this, pointerContent)	CAPI2_SatkApi_DataServCmdResp_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_DATASERVCMDRESP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SENDDATASERVREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendDataServReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendDataServReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SENDDATASERVREQ_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SENDTERMINALRSP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendTerminalRsp_Req_t", this, pointerContent)	CAPI2_SatkApi_SendTerminalRsp_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SENDTERMINALRSP_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SETTERMPROFILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SetTermProfile_Req_t", this, pointerContent)	CAPI2_SatkApi_SetTermProfile_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SEND_ENVELOPE_CMD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendEnvelopeCmdReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendEnvelopeCmdReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_TERMINAL_RESPONSE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendTerminalRspReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendTerminalRspReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_SEND_BROWSING_STATUS_EVT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SATK_SendBrowsingStatusEvent_Req_t", this, pointerContent)	CAPI2_SATK_SendBrowsingStatusEvent_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SEND_CC_SETUP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendCcSetupReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendCcSetupReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SEND_CC_SS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendCcSsReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendCcSsReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SEND_CC_USSD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendCcUssdReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendCcUssdReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SEND_CC_SMS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendCcSmsReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendCcSmsReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_CPMOLRREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_CpMoLrReq_Req_t", this, pointerContent)	CAPI2_LCS_CpMoLrReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_CPMTLRVERIFICATIONRSP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_CpMtLrVerificationRsp_Req_t", this, pointerContent)	CAPI2_LCS_CpMtLrVerificationRsp_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_CPMTLRRSP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_CpMtLrRsp_Req_t", this, pointerContent)	CAPI2_LCS_CpMtLrRsp_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_CPLOCUPDATERSP_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_CpLocUpdateRsp_Req_t", this, pointerContent)	CAPI2_LCS_CpLocUpdateRsp_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_DECODEPOSESTIMATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_DecodePosEstimate_Req_t", this, pointerContent)	CAPI2_LCS_DecodePosEstimate_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_DECODEPOSESTIMATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_void", this, pointerContent)	void
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_ENCODEASSISTANCEREQ_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_EncodeAssistanceReq_Req_t", this, pointerContent)	CAPI2_LCS_EncodeAssistanceReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_ENCODEASSISTANCEREQ_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Int32", this, pointerContent)	Int32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_SEND_RRLP_DATA_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_SendRrlpDataToNetwork_Req_t", this, pointerContent)	CAPI2_LCS_SendRrlpDataToNetwork_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_MEAS_REPORT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_RrcMeasurementReport_Req_t", this, pointerContent)	CAPI2_LCS_RrcMeasurementReport_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_MEAS_FAILURE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_RrcMeasurementControlFailure_Req_t", this, pointerContent)	CAPI2_LCS_RrcMeasurementControlFailure_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_LCS_RRC_STATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_LCS_RrcStatus_Req_t", this, pointerContent)	CAPI2_LCS_RrcStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_MAKEVOICECALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_MakeVoiceCall_Req_t", this, pointerContent)	CAPI2_CcApi_MakeVoiceCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_MAKEDATACALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_MakeDataCall_Req_t", this, pointerContent)	CAPI2_CcApi_MakeDataCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_MAKEFAXCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_MakeFaxCall_Req_t", this, pointerContent)	CAPI2_CcApi_MakeFaxCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_MAKEVIDEOCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_MakeVideoCall_Req_t", this, pointerContent)	CAPI2_CcApi_MakeVideoCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ENDCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_EndCall_Req_t", this, pointerContent)	CAPI2_CcApi_EndCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CCAPI_ENDCALL_IMMEDIATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_EndCallImmediate_Req_t", this, pointerContent)	CAPI2_CcApi_EndCallImmediate_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ACCEPTVOICECALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_AcceptVoiceCall_Req_t", this, pointerContent)	CAPI2_CcApi_AcceptVoiceCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ACCEPTDATACALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_AcceptDataCall_Req_t", this, pointerContent)	CAPI2_CcApi_AcceptDataCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ACCEPTVIDEOCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_AcceptVideoCall_Req_t", this, pointerContent)	CAPI2_CcApi_AcceptVideoCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_HOLDCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_HoldCall_Req_t", this, pointerContent)	CAPI2_CcApi_HoldCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_RETRIEVECALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_RetrieveCall_Req_t", this, pointerContent)	CAPI2_CcApi_RetrieveCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_SWAPCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_SwapCall_Req_t", this, pointerContent)	CAPI2_CcApi_SwapCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_SPLITCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_SplitCall_Req_t", this, pointerContent)	CAPI2_CcApi_SplitCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_JOINCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_JoinCall_Req_t", this, pointerContent)	CAPI2_CcApi_JoinCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_TRANSFERCALL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_TransferCall_Req_t", this, pointerContent)	CAPI2_CcApi_TransferCall_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCNAPNAME_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_GetCNAPName_Req_t", this, pointerContent)	CAPI2_CcApi_GetCNAPName_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_GETCNAPNAME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CNAP_NAME_t", this, pointerContent)	CNAP_NAME_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARM_GET_HSUPA_SUPPORTED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARM_GET_HSDPA_SUPPORTED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISCURRENTSTATEMPTY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CcApi_IsCurrentStateMpty_Req_t", this, pointerContent)	CAPI2_CcApi_IsCurrentStateMpty_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CC_ISCURRENTSTATEMPTY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPCHCONTEXTSTATE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_GetPCHContextState_Req_t", this, pointerContent)	CAPI2_PdpApi_GetPCHContextState_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPCHCONTEXTSTATE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PCHContextState_t", this, pointerContent)	PCHContextState_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPCHCONTEXT_EX_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CcApi_PdpApi_GetPDPContextEx_Req_t", this, pointerContent)	CcApi_PdpApi_GetPDPContextEx_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPCHCONTEXT_EX_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_PIN_LOCK_TYPE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIM_PIN_Status_t", this, pointerContent)	SIM_PIN_Status_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SEND_APDU_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SubmitSelectFileSendApduReq_Req_t", this, pointerContent)	CAPI2_SimApi_SubmitSelectFileSendApduReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SIM_SELECT_APPLICATION_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SimApi_SendSelectApplicationReq_Req_t", this, pointerContent)	CAPI2_SimApi_SendSelectApplicationReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_PROACTIVE_CMD_FETCHING_ON_OFF_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendProactiveCmdFetchingOnOffReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendProactiveCmdFetchingOnOffReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SEND_EXT_PROACTIVE_CMD_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendExtProactiveCmdReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendExtProactiveCmdReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SATK_SEND_TERMINAL_PROFILE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendTerminalProfileReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendTerminalProfileReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_STK_POLLING_INTERVAL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SatkApi_SendPollingIntervalReq_Req_t", this, pointerContent)	CAPI2_SatkApi_SendPollingIntervalReq_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SETPDPACTIVATIONCCFLAG_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SetPDPActivationCallControlFlag_Req_t", this, pointerContent)	CAPI2_PdpApi_SetPDPActivationCallControlFlag_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_GETPDPACTIVATIONCCFLAG_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_SENDPDPACTIVATIONPDU_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_SendPDPActivateReq_PDU_Req_t", this, pointerContent)	CAPI2_PdpApi_SendPDPActivateReq_PDU_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_REJECTNWIACTIVATION_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PdpApi_RejectNWIPDPActivation_Req_t", this, pointerContent)	CAPI2_PdpApi_RejectNWIPDPActivation_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ISMESTORAGEENABLED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETMAXMECAPACITY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETNEXTFREESLOT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETMESMSSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_SetMeSmsStatus_Req_t", this, pointerContent)	CAPI2_SMS_SetMeSmsStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_SETMESMSSTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETMESMSSTATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_GetMeSmsStatus_Req_t", this, pointerContent)	CAPI2_SMS_GetMeSmsStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETMESMSSTATUS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SIMSMSMesgStatus_t", this, pointerContent)	SIMSMSMesgStatus_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_STORESMSTOME_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_StoreSmsToMe_Req_t", this, pointerContent)	CAPI2_SMS_StoreSmsToMe_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_STORESMSTOME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_RETRIEVESMSFROMME_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_RetrieveSmsFromMe_Req_t", this, pointerContent)	CAPI2_SMS_RetrieveSmsFromMe_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_RETRIEVESMSFROMME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_REMOVESMSFROMME_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_RemoveSmsFromMe_Req_t", this, pointerContent)	CAPI2_SMS_RemoveSmsFromMe_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_REMOVESMSFROMME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Result_t", this, pointerContent)	Result_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_ISSMSREPLACE_SUPPORTED_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETMESMS_BUF_STATUS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_GetMeSmsBufferStatus_Req_t", this, pointerContent)	CAPI2_SMS_GetMeSmsBufferStatus_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETRECORDNUMBEROFREPLACESMS_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SMS_GetRecordNumberOfReplaceSMS_Req_t", this, pointerContent)	CAPI2_SMS_GetRecordNumberOfReplaceSMS_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SMS_GETRECORDNUMBEROFREPLACESMS_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt16", this, pointerContent)	UInt16
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CPPS_CONTROL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CPPS_Control_Req_t", this, pointerContent)	CAPI2_CPPS_Control_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CPPS_CONTROL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UInt32", this, pointerContent)	UInt32
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CP2AP_PEDESTALMODE_CONTROL_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_CP2AP_PedestalMode_Control_Req_t", this, pointerContent)	CAPI2_CP2AP_PedestalMode_Control_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_CP2AP_PEDESTALMODE_CONTROL_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PMU_IS_SIM_READY_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PMU_IsSIMReady_Req_t", this, pointerContent)	CAPI2_PMU_IsSIMReady_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PMU_IS_SIM_READY_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PMU_ACTIVATE_SIM_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_PMU_ActivateSIM_Req_t", this, pointerContent)	CAPI2_PMU_ActivateSIM_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FLASH_SAVEIMAGE_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_FLASH_SaveImage_Req_t", this, pointerContent)	CAPI2_FLASH_SaveImage_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_FLASH_SAVEIMAGE_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USB_IPC_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_USB_IpcMsg_Req_t", this, pointerContent)	CAPI2_USB_IpcMsg_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_USB_IPC_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_USBPayload_t", this, pointerContent)	USBPayload_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYSPARAM_GET_IMEI_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_CAPI2_SYSPARM_IMEI_PTR_t", this, pointerContent)	CAPI2_SYSPARM_IMEI_PTR_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_SET_REG_EVENT_MASK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SYS_Sync_SetRegisteredEventMask_Req_t", this, pointerContent)	SYS_Sync_SetRegisteredEventMask_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_SET_REG_EVENT_MASK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_SET_REG_FILTER_MASK_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SYS_Sync_SetFilteredEventMask_Req_t", this, pointerContent)	SYS_Sync_SetFilteredEventMask_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_SET_REG_FILTER_MASK_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_REG_EVENT_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SYS_Sync_RegisterForMSEvent_Req_t", this, pointerContent)	SYS_Sync_RegisterForMSEvent_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_REG_EVENT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_DEREG_EVENT_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_ENABLE_FILTER_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SYS_Sync_EnableFilterMask_Req_t", this, pointerContent)	SYS_Sync_EnableFilterMask_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_ENABLE_FILTER_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_REGISTER_NAME_REQ
+<DESC>
+DataTypeDecodingStarter.decode("Gen_SYS_Sync_RegisterSetClientName_Req_t", this, pointerContent)	SYS_Sync_RegisterSetClientName_Req_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_SYS_SYNC_REGISTER_NAME_RSP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_Boolean", this, pointerContent)	Boolean
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_CREATE_DATA_ACCT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPTestCreateAccount_t", this, pointerContent)	PDPTestCreateAccount_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_SETUP_CONN
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPTestBasic_t", this, pointerContent)	PDPTestBasic_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_SHUTDOWN_CONN
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPTestBasic_t", this, pointerContent)	PDPTestBasic_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_ISSecPDP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPTestBasic_t", this, pointerContent)	PDPTestBasic_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_GETPrimCid
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPTestBasic_t", this, pointerContent)	PDPTestBasic_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_GETTFT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPTestBasic_t", this, pointerContent)	PDPTestBasic_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_SETTFT
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPSetTFT_t", this, pointerContent)	PDPSetTFT_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_SCK
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPTestSck_t", this, pointerContent)	PDPTestSck_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PDP_TEST_INJECT_DATA
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PDPTestInjectData_t", this, pointerContent)	PDPTestInjectData_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_TEST_ACTIVATEPDP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_IcmpPingInfo_t", this, pointerContent)	IcmpPingInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_TEST_ICMPPING
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UdpQuoteInfo_t", this, pointerContent)	UdpQuoteInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_TEST_UDPQUOTE
+<DESC>
+DataTypeDecodingStarter.decode("Gen_UdpQuoteInfo_t", this, pointerContent)	UdpQuoteInfo_t
+</DESC>
+</MSG>
+
+<MSG>
+MSG_PCHEX_TEST_DEACTIVATEPDP
+<DESC>
+DataTypeDecodingStarter.decode("Gen_PdpDeactInfo_t", this, pointerContent)	PdpDeactInfo_t
+</DESC>
+</MSG>
+

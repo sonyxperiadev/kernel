@@ -1,0 +1,87 @@
+/*------------------------------------------------------------------------------
+--                                                                            --
+--       This software is confidential and proprietary and may be used        --
+--        only as expressly authorized by a licensing agreement from          --
+--                                                                            --
+--                            Hantro Products Oy.                             --
+--                                                                            --
+--      In the event of publication, the following notice is applicable:      --
+--                                                                            --
+--                   (C) COPYRIGHT 2002 HANTRO PRODUCTS OY                    --
+--                            ALL RIGHTS RESERVED                             --
+--                                                                            --
+--          The entire notice above must be reproduced on all copies.         --
+--                                                                            --
+------------------------------------------------------------------------------*/
+
+==============================================================================
+                            USAGE
+==============================================================================
+
+Basic memory allocation scheme:
+
+./memalloc_load.sh
+
+same thing:
+
+./memalloc_load.sh alloc_method=0
+
+Maximum output testing:
+
+./memalloc_load.sh alloc_method=1
+
+===============================================================================
+                            What is memalloc?
+===============================================================================
+
+memalloc is a test environment specific memory allocation kernel driver.
+It uses memory left outside linux memory management, devides it into chunks and
+gives base  addresses to processes for these chunks(= a block of memory).
+
+It has been written for test memory purposes for a very  specific test
+environment and nothing more.
+
+===============================================================================
+                    Loading the memalloc kernel script
+===============================================================================
+
+NOTE: Check the kerner source path in the makefile! there are predefined paths
+for 2.6.9 or 2.6.16 kernels.
+
+1. Use the tool-chain workstation, similarly like in "Setting up the
+environment".
+
+2. compile the kernel driver in 6170_decoder/software/linux/memalloc
+> make
+
+3. Copy the loading script memalloc_load.sh and the kernel object memalloc.ko
+to /your_sandbox/work_dir/
+
+4. Load kernel driver with ./memalloc_load.sh
+
+5. Debugging:
+the device node should show up in the the directory /tmp/dev/.
+The device should show up in the list /proc/devices
+> ls /tmp/dev
+> cat /proc/devices
+Kernel messages can be viewed with
+> dmesg
+More kernel debug prints can be enables in the Makefile
+
+===============================================================================
+Module parameters
+===============================================================================
+
+parameter alloc_method:
+
+alloc_method=0 - Basic allocation scheme
+                    Covers a compromise set of memory allcoation situations:
+                    Maximum chunk size is 16 777 216 Bytes,
+                    Allows multi-instance testing.
+
+alloc_method=1 - Maximum output size allocation scheme
+                    Use for maximum output size testing: for example JPEG
+                    without output buffering.
+                    Maximum chunk size is 34 603 008 bytes.
+
+

@@ -1,0 +1,7 @@
+config BRCM_FUSE_LOG
+	#tristate "Broadcom FUSE LOG drivers"
+	boolean "Broadcom FUSE LOG drivers"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE LOG drivers

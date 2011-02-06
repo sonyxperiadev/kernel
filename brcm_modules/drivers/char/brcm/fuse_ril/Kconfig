@@ -1,0 +1,30 @@
+config BRCM_FUSE_RIL_2153SDB
+	#tristate "Broadcom FUSE RIL drivers 2153SDB"
+	boolean "Broadcom FUSE RIL drivers 2153SDB"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE RIL drivers 2153 SDB
+
+config BRCM_FUSE_RIL_2157SDB
+	#tristate "Broadcom FUSE RIL drivers 2157SDB"
+	boolean "Broadcom FUSE RIL drivers 2157SDB"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE RIL drivers 2157SDB
+
+config BRCM_FUSE_RIL_CIB
+	#tristate "Broadcom FUSE RIL drivers CIB"
+	boolean "Broadcom FUSE RIL drivers CIB"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE RIL drivers CIB
+
+config BRCM_SIM_SECURE_ENABLE
+	boolean "Broadcom SIM Secure Enable"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom SIM Secure Enable

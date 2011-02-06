@@ -1,0 +1,32 @@
+#/*******************************************************************************************
+#Copyright 2010 Broadcom Corporation.  All rights reserved.
+#
+#Unless you and Broadcom execute a separate written software license agreement 
+#governing use of this software, this software is licensed to you under the 
+#terms of the GNU General Public License version 2, available at 
+#http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+#
+#Notwithstanding the above, under no circumstances may you combine this software 
+#in any way with any other Broadcom software provided under a license other than 
+#the GPL, without Broadcom's express prior written consent.
+#*******************************************************************************************/
+
+config BRCM_SOUND_ALSA
+	#tristate "Broadcom ALSA sound drivers"
+	boolean "Broadcom ALSA sound drivers"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+        select SND_PCM
+        help
+          Say Y here to activate an ALSA driver frontend to the BRCM endpoint
+          To compile this driver as a module, choose M here: the module
+          will be called snd-brcm-omx.
+
+config AMP_MAX9877
+	boolean "MAX9877 Audio Amplifier driver"
+	---help---
+	Selet this to enable MAX9877 Audio Amplifier driver for Brava.
+
+config AMP_NCP2704
+	boolean "NCP2704 Audio Amplifier driver"
+	---help---
+	Selet this to enable NCP2704 Audio Amplifier driver for Brava.

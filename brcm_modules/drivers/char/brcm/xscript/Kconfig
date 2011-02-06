@@ -1,0 +1,38 @@
+config BRCM_XSCRIPT
+	#tristate "Broadcom XSCRIPT drivers"
+	boolean "Broadcom XSCRIPT drivers"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom XSCRIPT drivers
+
+config BRCM_XSCRIPT_GPIO
+        tristate "Broadcom XSCRIPT GPIO drivers"
+        depends on BRCM_MODULES && BRCM_MODULES_PRIV && GPIOLIB
+        default m
+        ---help---
+        Broadcom XSCRIPT GPIO drivers
+
+
+config BRCM_XSCRIPT_DMA
+        tristate "Broadcom XSCRIPT DMA drivers"
+        depends on BRCM_MODULES && BRCM_MODULES_PRIV
+        default m
+        ---help---
+        Broadcom XSCRIPT DMA drivers
+
+
+
+config BRCM_XSCRIPT_REGULATOR
+        tristate "Broadcom XSCRIPT REGULATOR drivers"
+        depends on BRCM_MODULES && BRCM_MODULES_PRIV && REGULATOR
+        default m
+        ---help---
+        Broadcom XSCRIPT REGULATOR drivers
+
+config BRCM_XSCRIPT_I2S
+        tristate "Broadcom XSCRIPT I2S drivers"
+        depends on BRCM_MODULES && BRCM_MODULES_PRIV && BCM_I2SDAI
+        default m
+        ---help---
+        Broadcom XSCRIPT I2S drivers

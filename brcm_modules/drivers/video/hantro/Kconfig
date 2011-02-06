@@ -1,0 +1,7 @@
+# Hantro
+config HANTRO
+	tristate "Hantro support"
+ 	depends on BRCM_MODULES && BRCM_MODULES_PRIV && HANTRO_WRAP
+	default N
+	help
+	  Hantro device driver support

@@ -1,0 +1,42 @@
+menuconfig BRCM_MODULES_PRIV
+	tristate "Broadcom Proprietary Kernel Modules"
+	depends on BRCM_MODULES
+	default N
+	help
+	  Broadcom Proprietary Kernel Modules
+
+if BRCM_MODULES_PRIV
+
+# source Kconfig for proprietary drivers here
+# add "depends on BRCM_MODULES && BRCM_MODULES_PRIV" to Kconfig
+source "brcm_modules/drivers/video/hantro/Kconfig"
+source "brcm_modules/drivers/video/ge/Kconfig"
+
+source "brcm_modules/drivers/char/brcm/hal_cam/Kconfig"
+
+source "brcm_modules/drivers/char/brcm/fuse_ipc/Kconfig"
+source "brcm_modules/drivers/char/brcm/fuse_net/Kconfig"
+source "brcm_modules/drivers/char/brcm/fuse_at/Kconfig"
+source "brcm_modules/drivers/char/brcm/fuse_ril/Kconfig"
+source "brcm_modules/drivers/char/brcm/fuse_rpc/Kconfig"
+source "brcm_modules/drivers/char/brcm/fuse_log/Kconfig"
+source "brcm_modules/drivers/char/brcm/fuse_sysparm/Kconfig"
+source "brcm_modules/drivers/char/brcm/fuse_vsp/Kconfig"
+source "brcm_modules/drivers/char/brcm/xscript/Kconfig"
+source "brcm_modules/drivers/char/brcm/v3d/Kconfig"
+
+source "brcm_modules/drivers/sound/brcm/alsa/Kconfig"
+source "brcm_modules/drivers/sound/brcm/alsa_athena/Kconfig"
+# Headset module
+source "brcm_modules/drivers/sound/brcm/headset/Kconfig"
+source "brcm_modules/drivers/gps/brcm/Kconfig"
+
+# video telephony
+config VIDEO_TELEPHONY_ENABLE
+	boolean "Video Telephony support"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	help
+	  Video Telephony support
+
+endif # BRCM_MODULES_PRIV

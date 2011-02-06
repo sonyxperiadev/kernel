@@ -1,0 +1,24 @@
+config BRCM_FUSE_IPC_2153SDB
+	#tristate "Broadcom FUSE IPC drivers 2153SDB"
+	boolean "Broadcom FUSE IPC drivers 2153SDB"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE IPC drivers 2153SDB
+
+config BRCM_FUSE_IPC_2157SDB
+	#tristate "Broadcom FUSE IPC drivers 2157SDB"
+	boolean "Broadcom FUSE IPC drivers 2157SDB"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE IPC drivers 2157SDB
+	  
+config BRCM_FUSE_IPC_CIB
+	#tristate "Broadcom FUSE IPC drivers CIB"
+	boolean "Broadcom FUSE IPC drivers CIB"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE IPC drivers CIB
+

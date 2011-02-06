@@ -1,0 +1,5 @@
+#BRCM_CNTIN
+config BRCM_CNTIN
+	boolean "Broadcom cntin drivers"
+ 	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N

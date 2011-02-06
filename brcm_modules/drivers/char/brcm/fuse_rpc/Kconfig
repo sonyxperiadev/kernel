@@ -1,0 +1,15 @@
+config BRCM_FUSE_RPC_2157SDB
+	#tristate "Broadcom FUSE RPC drivers 2157SDB"
+	boolean "Broadcom FUSE RPC drivers 2157SDB"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE RPC drivers 2157SDB
+
+config BRCM_FUSE_RPC_CIB
+	#tristate "Broadcom FUSE RPC drivers CIB"
+	boolean "Broadcom FUSE RPC drivers CIB"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE RPC drivers CIB

@@ -1,0 +1,7 @@
+config BRCM_FUSE_SYSPARM
+	#tristate "Broadcom FUSE SYSPARM drivers"
+	boolean "Broadcom FUSE SYSPARM drivers"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV
+	default N
+	---help---
+	  Broadcom FUSE SYSPARM drivers

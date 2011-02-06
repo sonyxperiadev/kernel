@@ -1,0 +1,7 @@
+# GE
+config GE
+	tristate "GE support"
+	depends on BRCM_MODULES && BRCM_MODULES_PRIV && HANTRO_WRAP
+	default N
+	help
+	  GE device driver support
