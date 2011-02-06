@@ -34,6 +34,12 @@
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/mfd/bcm590xx/core.h>
 
+#define BCM59055_PONKEYCTRL1_DEB_MASK 0x3F
+#define PON_PRESS_DEB_OFFSET 0
+#define PON_RELEASE_DEB_OFFSET 3
+
+#define PON_PRESS_DEB_VAL 4 /* 500 ms */ 
+#define PON_RELEASE_DEB_VAL 4 /* 500 ms */ 
 
 struct bcm59055_onkey_info {
 	struct input_dev	*idev;
@@ -68,6 +74,7 @@ static int __devinit bcm59055_onkey_probe(struct platform_device *pdev)
 {
 	struct bcm590xx *chip = dev_get_drvdata(pdev->dev.parent);
 	struct bcm59055_onkey_info *info;
+	int ctrl1;
 	int error;
 
 	info = kzalloc(sizeof(struct bcm59055_onkey_info), GFP_KERNEL);
@@ -105,6 +112,14 @@ static int __devinit bcm59055_onkey_probe(struct platform_device *pdev)
 			BCM59055_IRQID_INT1_POK_RELEASED, error);
 		goto out_irq_released;
 	}
+
+	/* Adjust key press debounce time. 
+	 */
+	ctrl1 = bcm590xx_reg_read(chip, BCM59055_REG_PONKEYCTRL1);	
+	ctrl1 &= ~BCM59055_PONKEYCTRL1_DEB_MASK;
+	ctrl1 &= 0xFF;
+	ctrl1 |= (PON_PRESS_DEB_VAL << PON_PRESS_DEB_OFFSET) | (PON_RELEASE_DEB_VAL << PON_RELEASE_DEB_OFFSET);
+	bcm590xx_reg_write(chip, BCM59055_REG_PONKEYCTRL1, (uint16_t) ctrl1);
 
 	error = input_register_device(info->idev);
 	if (error) {
