@@ -7,7 +7,8 @@ enum GRAPHICS_COMMAND_ID_T {
 	GRAPHICS_IOCTL_RPC_RX_BULK_ID,
 	GRAPHICS_IOCTL_CREATE_SEM_ID,
 	GRAPHICS_IOCTL_ACQUIRE_SEM_ID,
-	GRAPHICS_IOCTL_RELEASE_SEM_ID
+	GRAPHICS_IOCTL_RELEASE_SEM_ID,
+	GRAPHICS_IOCTL_CURRENT_ID
 };
 
 struct graphics_ioctl_rpc;
@@ -39,6 +40,11 @@ struct graphics_ioctl_release_sem;
 
 #define GRAPHICS_IOCTL_RELEASE_SEM _IOR('G', GRAPHICS_IOCTL_RELEASE_SEM_ID, \
         struct graphics_ioctl_release_sem)
+
+struct graphics_ioctl_current;
+
+#define GRAPHICS_IOCTL_CURRENT _IOR('G', GRAPHICS_IOCTL_CURRENT_ID, \
+        struct graphics_ioctl_current)
 
 struct graphics_txrx_ctrl {
 	const uint32_t *request;
@@ -76,6 +82,15 @@ struct graphics_ioctl_acquire_sem {
 
 struct graphics_ioctl_release_sem {
 	uint32_t sem_no;	
+};
+
+struct graphics_ioctl_current {
+	uint32_t gltype;
+	uint32_t servergl;
+	uint32_t servergldraw;
+	uint32_t serverglread;
+	uint32_t servervg;
+	uint32_t servervgsurf;
 };
 
 #endif

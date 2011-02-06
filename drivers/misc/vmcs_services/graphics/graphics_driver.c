@@ -64,11 +64,50 @@ static struct {
 	struct semaphore work_done;
 	struct semaphore bulk_req;
 	struct named_semaphore sem_slots[20];
-	uint32_t tgid_owner;
-	uint32_t pid_owner;
 	volatile int request_bulk;
 	int initialized;
-} graphics_state;
+	struct mutex ioctl_mutex;
+	pid_t tid_owner;
+	struct thread_private *owner_state;
+} state;
+
+struct thread_private {
+	pid_t tid;
+	struct graphics_ioctl_current current_server;
+	struct graphics_ioctl_current current_client;
+	struct thread_private *next;
+};
+
+struct process_private {
+	pid_t tgid_owner;
+	struct thread_private *owner_state_list;
+};
+
+//NOTE: These defines were copied from VC4 src tree
+#define EGLINTMAKECURRENT_ID  (0x4008)
+#define EGL_SERVER_NO_GL_CONTEXT (0)
+#define EGL_SERVER_NO_VG_CONTEXT (0)
+#define EGL_SERVER_NO_SURFACE (0)
+#define EGLINTDESTROYBYPID_ID (0x4022)
+
+//NOTE: This structure will need to be updated whenever the eglMakeCurrent RPC interface changes
+struct make_current_rpc {
+	uint32_t id; //Must be EGLINTMAKECURRENT_ID
+	uint32_t pid_0;
+	uint32_t pid_1;
+	uint32_t gltype;
+	uint32_t servergl;
+	uint32_t servergldraw;
+	uint32_t serverglread;
+	uint32_t servervg;
+	uint32_t servervgsurf;
+};
+
+struct destroy_by_pid_rpc {
+	uint32_t id; //Must be EGLINTDESTROYBYPID_ID
+	uint32_t pid_0;
+	uint32_t pid_1;
+};
 
 /****
  ****
@@ -76,34 +115,74 @@ static struct {
  ****
  ****/
 
+static struct process_private *process_private_state(struct file *filp)
+{
+	return (struct process_private *)filp->private_data;	
+} 
+
+static struct thread_private *thread_private_state(struct process_private *process_priv)
+{
+	struct thread_private *ret = NULL;
+	if (state.tid_owner == current->pid) {
+		ret = state.owner_state;
+		goto out;
+	}
+
+	ret = process_priv->owner_state_list;
+
+	while (ret && ret->tid != current->pid) {
+		ret = ret->next;
+	}
+
+	if (ret != NULL) goto out;
+
+	ret = (struct thread_private *)kmalloc(sizeof(struct thread_private),
+		GFP_KERNEL);
+
+	if (ret == NULL) goto out;
+
+    ret->tid = current->pid;
+	ret->current_client.servergl = EGL_SERVER_NO_GL_CONTEXT;
+	ret->current_client.servergldraw = EGL_SERVER_NO_SURFACE;
+	ret->current_client.serverglread = EGL_SERVER_NO_SURFACE;
+	ret->current_client.servervg = EGL_SERVER_NO_VG_CONTEXT;
+	ret->current_client.servervgsurf = EGL_SERVER_NO_SURFACE;
+	memcpy(&ret->current_server, &ret->current_client,
+        sizeof(ret->current_server));
+	ret->next = process_priv->owner_state_list;
+	process_priv->owner_state_list = ret;
+out:
+	return ret;
+} 
+
 static volatile uint32_t *graphics_register(uint32_t offset)
 {
-	return (volatile uint32_t *)(graphics_state.base_address + offset);
+	return (volatile uint32_t *)(state.base_address + offset);
 }
 
 static void graphics_fire_vc_interrupt(void)
 {
-	ipc_notify_vc_event(graphics_state.irq);
+	ipc_notify_vc_event(state.irq);
 }
 
 static void graphics_wait(void)
 {
-	down(&graphics_state.work_done);
+	down(&state.work_done);
 }
 
 static void graphics_post(void)
 {
-	up(&graphics_state.work_done);
+	up(&state.work_done);
 }
 
 static void graphics_bulk_wait(void)
 {
-	down(&graphics_state.bulk_req);
+	down(&state.bulk_req);
 }
 
 static void graphics_bulk_post(void)
 {
-	up(&graphics_state.bulk_req);
+	up(&state.bulk_req);
 }
 
 static uint32_t graphics_fifo_entries(void)
@@ -206,6 +285,12 @@ static int graphics_fifo_write(int system, const uint32_t *data, uint32_t count)
 			graphics_fire_vc_interrupt();
 		}
 	}
+#ifdef FIFO_DEBUG
+	printk(KERN_INFO "graphics_fifo_write:"
+			 " read = %d, write = %d\n",
+             *graphics_register(GRAPHICS_FIFO_READ),
+             *graphics_register(GRAPHICS_FIFO_WRITE));
+#endif
 out:
 	return ret;
 }
@@ -231,9 +316,9 @@ static struct named_semaphore *get_named_semaphore(uint32_t name,
 						   uint32_t pid_1)
 {
 	int i;
-	struct named_semaphore *s = graphics_state.sem_slots;
+	struct named_semaphore *s = state.sem_slots;
 	struct named_semaphore *ret = NULL;
-	for (i = 0; i < ARRAY_SIZE(graphics_state.sem_slots); i++) {
+	for (i = 0; i < ARRAY_SIZE(state.sem_slots); i++) {
 		if (s->initialized && s->name == name && s->pid_0 == pid_0 
 						      && s->pid_1 == pid_1) {
 			ret = s;
@@ -247,9 +332,9 @@ static struct named_semaphore *get_named_semaphore(uint32_t name,
 static struct named_semaphore *create_named_semaphore(uint32_t count, uint32_t name)
 {
 	int i;
-	struct named_semaphore *s = graphics_state.sem_slots;
+	struct named_semaphore *s = state.sem_slots;
 	struct named_semaphore *ret = NULL;
-	for (i = 0; i < ARRAY_SIZE(graphics_state.sem_slots); i++) {
+	for (i = 0; i < ARRAY_SIZE(state.sem_slots); i++) {
 		if (!s->initialized) {
 			s->pid_0 = current->tgid;
 			s->pid_1 = 0;
@@ -293,12 +378,14 @@ static int do_tx_ctrl(struct graphics_txrx_ctrl *ctrl)
 static int do_rx_ctrl(struct graphics_txrx_ctrl *ctrl)
 {
 	int ret = 0;
-	uint32_t *response = (uint32_t *)graphics_register(GRAPHICS_RESULT);
-	uint32_t response_len = 0;
+	uint32_t *response;
+	uint32_t response_len;
 
 	if (ctrl->response == NULL) {
 		goto out;
 	} 
+
+	response = (uint32_t *)graphics_register(GRAPHICS_RESULT);
 
 	graphics_wait_vc_idle();
 
@@ -318,14 +405,39 @@ out:
 	return ret;
 }
 
-static int do_txrx_ctrl(struct graphics_txrx_ctrl *ctrl)
+static int do_txrx_ctrl(struct process_private *priv, struct thread_private *thread_priv, struct graphics_txrx_ctrl *ctrl)
 {
 	int ret = 0;
+
+	if(state.tid_owner != current->pid) {
+		struct make_current_rpc current_rpc;
+		struct graphics_ioctl_current *server;
+
+		server = &thread_priv->current_server;
+
+		current_rpc.id = EGLINTMAKECURRENT_ID;
+		current_rpc.pid_0 = current->tgid;
+		current_rpc.pid_1 = 0;
+		current_rpc.gltype = server->gltype;
+		current_rpc.servergl = server->servergl;
+		current_rpc.servergldraw = server->servergldraw;
+		current_rpc.serverglread = server->serverglread;
+		current_rpc.servervg = server->servervg;
+		current_rpc.servervgsurf = server->servervgsurf;
+
+		graphics_fifo_write(1, (uint32_t *)&current_rpc,
+			sizeof(current_rpc)/sizeof(uint32_t));
+		state.tid_owner = current->pid;
+		state.owner_state = thread_priv;
+	}
 
 	ret = do_tx_ctrl(ctrl);
 	if (ret) goto out;
 
 	ret = do_rx_ctrl(ctrl);
+
+	memcpy(&thread_priv->current_server, &thread_priv->current_client,
+		sizeof(thread_priv->current_server));
 out:
 	return ret;
 }
@@ -338,7 +450,7 @@ static void request_bulk(uint32_t req_size)
 	graphics_bulk_wait();
 }
 
-static int ioctl_rpc_tx_bulk(struct graphics_ioctl_rpc_tx_bulk *rpc_tx_bulk)
+static int ioctl_rpc_tx_bulk(struct process_private *priv, struct thread_private *thread_priv, struct graphics_ioctl_rpc_tx_bulk *rpc_tx_bulk)
 {
 	int ret = 0;
 	uint32_t tx_bulk_bus = 0;
@@ -368,34 +480,37 @@ static int ioctl_rpc_tx_bulk(struct graphics_ioctl_rpc_tx_bulk *rpc_tx_bulk)
 		goto err_copy_bulk;
 	}
 
-	ret = do_txrx_ctrl(&rpc_tx_bulk->ctrl);
+	ret = do_txrx_ctrl(priv, thread_priv, &rpc_tx_bulk->ctrl);
 err_copy_bulk:	
 	iounmap(tx_bulk);
 	return ret;
 }
 
-static int ioctl_rpc_rx_bulk(struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
+static int ioctl_rpc_rx_bulk(struct process_private *process_priv,
+			     struct thread_private *thread_priv,
+			     struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
 {
 	int ret = 0;
 	uint32_t bulk_size = 0;
 	uint32_t rx_bulk_bus = 0;
 	void *rx_bulk = NULL;
 
-	ret = do_txrx_ctrl(&rpc_rx_bulk->ctrl);
+	ret = do_txrx_ctrl(process_priv, thread_priv, &rpc_rx_bulk->ctrl);
+
 	if (ret != 0) goto out;
 	
 	graphics_wait_vc_idle();
 
 	bulk_size = *graphics_register(GRAPHICS_BULK_SIZE_USED);
 	rx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
+
 	if (rx_bulk_bus == 0) {
 		printk(KERN_ERR "graphics_ioctl_rpc_rx_bulk: Bus address NULL\n");
 		ret = -EINVAL;
 		goto out;
 	}
 
-	rx_bulk = ioremap( __VC_BUS_TO_ARM_PHYS_ADDR(rx_bulk_bus), bulk_size);
-	rx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
+	rx_bulk = ioremap(__VC_BUS_TO_ARM_PHYS_ADDR(rx_bulk_bus), bulk_size);
    
 #ifdef BULK_DEBUG 
 	printk(KERN_INFO
@@ -419,15 +534,13 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
 	int ret = -1;
-	
-	if (current->pid != graphics_state.pid_owner) {
-		printk(KERN_ERR 
-			"graphics_ioctl: ioctl called by pid %d"
-			" but file was opened by pid %d\n",
-			current->pid, graphics_state.pid_owner);
-		ret = -EACCES;
-		goto err_cmd;
-	}
+	struct process_private *process_priv = NULL;
+	struct thread_private *thread_priv = NULL;
+
+	process_priv = process_private_state(filp);
+	thread_priv = thread_private_state(process_priv);
+
+	mutex_lock(&state.ioctl_mutex);
 
 	switch (cmd) {
 	case GRAPHICS_IOCTL_RPC: {
@@ -444,7 +557,7 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			printk(KERN_INFO "graphics_ioctl: RPC_RX_CTRL\n");
 		}
 #endif
-		ret = do_txrx_ctrl(&rpc.ctrl);
+		ret = do_txrx_ctrl(process_priv, thread_priv, &rpc.ctrl);
 		if (ret != 0) goto err_cmd;
 
 		if (copy_to_user((void *) arg, &rpc, sizeof(rpc))) {
@@ -463,7 +576,7 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			goto err_cmd;
 		}
 
-		ret = ioctl_rpc_tx_bulk(&rpc_tx_bulk);
+		ret = ioctl_rpc_tx_bulk(process_priv, thread_priv, &rpc_tx_bulk);
 		if(ret) goto err_cmd;
 
 		if (copy_to_user((void *) arg, &rpc_tx_bulk,
@@ -483,7 +596,7 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			goto err_cmd;
 		}
 
-		ret = ioctl_rpc_rx_bulk(&rpc_rx_bulk);
+		ret = ioctl_rpc_rx_bulk(process_priv, thread_priv, &rpc_rx_bulk);
 		if (ret) goto err_cmd;
 
 		if (copy_to_user((void *) arg, &rpc_rx_bulk,
@@ -534,7 +647,7 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 		}
 
 		//NEN_TODO: validate process id
-		s = graphics_state.sem_slots + acquire_sem.sem_no;
+		s = state.sem_slots + acquire_sem.sem_no;
 		ret = down_killable(&s->sem);
 	} break;
 	case GRAPHICS_IOCTL_RELEASE_SEM: {
@@ -546,8 +659,19 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 		}
 
 		//NEN_TODO: validate process id
-		s = graphics_state.sem_slots + release_sem.sem_no;
+		s = state.sem_slots + release_sem.sem_no;
 		up(&s->sem);
+		ret = 0;
+	} break;
+	case GRAPHICS_IOCTL_CURRENT: {
+#ifdef IOCTL_DEBUG
+		printk(KERN_INFO "graphics_ioctl: CURRENT\n");
+#endif
+		if (copy_from_user(&thread_priv->current_client, (void *)arg,
+				   sizeof(thread_priv->current_client))) {
+			ret = -EFAULT;
+			goto err_cmd;
+		}
 		ret = 0;
 	} break;
 	}
@@ -555,6 +679,7 @@ err_cmd:
 #ifdef IOCTL_DEBUG
 	printk(KERN_INFO "graphics_ioctl: exit %d\n", ret);
 #endif
+	mutex_unlock(&state.ioctl_mutex);
 	return ret;
 }
 
@@ -562,45 +687,60 @@ int graphics_open(struct inode *inode, struct file *filp)
 {
 
 	int ret = 0;
-	if (graphics_state.pid_owner) {
-		printk(KERN_ERR "graphics_open: "
-				"File is already opened by pid %d\n",
-				graphics_state.pid_owner);
-		ret = -EACCES;
+	struct process_private *process_priv = NULL;
+
+	process_priv = kmalloc(sizeof(struct process_private), GFP_KERNEL);
+	if (process_priv == NULL) {
+		ret = -ENOMEM;
 		goto out;
 	}
-	graphics_state.pid_owner = current->pid;
-	graphics_state.tgid_owner = current->tgid;
-out:
-	return ret;
-}
 
-#define EGLINTMAKECURRENT_ID  (0x4008)
-#define EGLINTDESTROYBYPID_ID (0x4022)
-#define EGL_SERVER_NO_GL_CONTEXT (0)
-#define EGL_SERVER_NO_VG_CONTEXT (0)
-#define EGL_SERVER_NO_SURFACE (0)
+	filp->private_data = process_priv;
+
+	process_priv->tgid_owner = current->tgid;
+	process_priv->owner_state_list = NULL;
+out:
+	return ret;	
+}
 
 int graphics_release(struct inode *inode, struct file *filp)
 {
-	uint32_t message[] = {
-		EGLINTMAKECURRENT_ID,          /* id */
-		graphics_state.tgid_owner,     /* pid_0 */
-		0,                             /* pid_1 */
-		0,                             /* gltype */
-		EGL_SERVER_NO_GL_CONTEXT,      /* servergl */
-		EGL_SERVER_NO_SURFACE,         /* servergldraw */
-		EGL_SERVER_NO_SURFACE,         /* serverglread */
-		EGL_SERVER_NO_VG_CONTEXT,      /* servervg */
-		EGL_SERVER_NO_SURFACE,          /* servervgsurf */
-		
-		EGLINTDESTROYBYPID_ID,         /* id */
-		graphics_state.tgid_owner,     /* pid_0 */
-		0                              /* pid_1 */
-	};
-	graphics_fifo_write(1, message, ARRAY_SIZE(message));
-	graphics_state.pid_owner = 0;
-	graphics_state.tgid_owner = 0;
+	struct process_private *process_priv = process_private_state(filp);
+	struct make_current_rpc current_rpc;
+	struct destroy_by_pid_rpc destroy_by_pid_rpc;
+
+	mutex_lock(&state.ioctl_mutex);
+
+	//Set current to NULL for owning pid (tgid)
+	current_rpc.id = EGLINTMAKECURRENT_ID;
+	current_rpc.pid_0 = process_priv->tgid_owner;
+	current_rpc.pid_1 = 0;
+	current_rpc.gltype = 0;
+	current_rpc.servergl = EGL_SERVER_NO_GL_CONTEXT;
+	current_rpc.servergldraw = EGL_SERVER_NO_SURFACE;
+	current_rpc.serverglread = EGL_SERVER_NO_SURFACE;
+	current_rpc.servervg = EGL_SERVER_NO_VG_CONTEXT;
+	current_rpc.servervgsurf = EGL_SERVER_NO_SURFACE;
+	graphics_fifo_write(1, (uint32_t *)&current_rpc,
+		sizeof(current_rpc)/sizeof(uint32_t));
+
+	//Destroy the pid (tgid) server side
+	destroy_by_pid_rpc.id = EGLINTDESTROYBYPID_ID;
+	destroy_by_pid_rpc.pid_0 = process_priv->tgid_owner;
+	destroy_by_pid_rpc.pid_1 = 0;
+	graphics_fifo_write(1, (uint32_t *)&destroy_by_pid_rpc,
+		sizeof(destroy_by_pid_rpc)/sizeof(uint32_t)); 
+
+	//Free kernel memory
+	while (process_priv->owner_state_list != NULL) {
+		struct thread_private *thread_priv;
+		thread_priv = process_priv->owner_state_list;
+		process_priv->owner_state_list = thread_priv->next;
+		kfree(thread_priv);
+	}
+	kfree(process_priv);
+	
+	mutex_unlock(&state.ioctl_mutex);
 	return 0;
 }
 
@@ -641,25 +781,30 @@ void __devexit graphics_driver_exit(void)
  ****
  ****/
 
+//NOTE: These defines were copied from VC4 src tree
+#define ASYNC_COMMAND_POST (1)
+#define ASYNC_COMMAND_DESTROY (2)
+#define KHRN_NO_SEMAPHORE (0xffffffff)
+
 static irqreturn_t bcm2708_graphics_isr(int irq, void *dev_id)
 {
 	uint32_t sem_name = *graphics_register(GRAPHICS_ASYNC_SEM);
 	uint32_t async_req = *graphics_register(GRAPHICS_ASYNC_REQ);
 
-	if (async_req && sem_name != 0xffffffff) { //NEN_TODO: KHRN_NO_SEMAPHORE
+	if (async_req && sem_name != KHRN_NO_SEMAPHORE) {
 		uint32_t command = *graphics_register(GRAPHICS_ASYNC_COMMAND);
 		uint32_t pid_0 = *graphics_register(GRAPHICS_ASYNC_PID_0);
 		uint32_t pid_1 = *graphics_register(GRAPHICS_ASYNC_PID_1);
 		struct named_semaphore *s = get_named_semaphore(sem_name, pid_0, pid_1);
 		if (s) {
 			switch (command) {
-			case 1: //NEN_TODO: ASYNC_COMMAND_POST:
+			case ASYNC_COMMAND_POST:
 #ifdef SEMAPHORE_DEBUG
 				printk(KERN_INFO "graphics_isr: Semaphore post: name %d number %d\n", sem_name, s->sem_no);
 #endif
 				up(&s->sem);
 				break;
-			case 2: //NEN_TODO: ASYNC_COMMAND_DESTROY:
+			case ASYNC_COMMAND_DESTROY:
 #ifdef SEMAPHORE_DEBUG
 				printk(KERN_INFO "graphics_isr: Destroying semaphore name %d number %d\n", sem_name, s->sem_no);
 #endif
@@ -673,7 +818,7 @@ static irqreturn_t bcm2708_graphics_isr(int irq, void *dev_id)
 		else {
 			printk(KERN_ERR "graphics_isr: Couldn't find semaphore with name %d\n", sem_name);
 		}
-		*graphics_register(GRAPHICS_ASYNC_SEM) = 0xffffffff; //NEN_TODO: KHRN_NO_SEMAPHORE
+		*graphics_register(GRAPHICS_ASYNC_SEM) = KHRN_NO_SEMAPHORE;
 		graphics_fire_vc_interrupt();
 	}
 
@@ -700,11 +845,11 @@ static irqreturn_t bcm2708_graphics_isr(int irq, void *dev_id)
 
 static int __devexit bcm2708_graphics_remove(struct platform_device *pdev)
 {
-	if (graphics_state.initialized) {
+	if (state.initialized) {
 		graphics_driver_exit();
 		remove_proc_entry("vc_graphics", NULL);
-		free_irq(graphics_state.irq, NULL);
-		graphics_state.initialized = 0;
+		free_irq(state.irq, NULL);
+		state.initialized = 0;
 	}
 	return 0;
 }
@@ -713,7 +858,7 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 {
 	struct resource *res;
 	int ret = -ENOENT;
-	memset(&graphics_state, 0 , sizeof(graphics_state));
+	memset(&state, 0 , sizeof(state));
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (res == NULL) {
 		printk(KERN_ERR "graphics_probe: failed to get resource\n");
@@ -721,22 +866,21 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 		goto err_platform_res;
 	}
 
-	graphics_state.tgid_owner = 0;
-	graphics_state.pid_owner = 0;
-	graphics_state.request_bulk = 0;
-	graphics_state.base_address = (void __iomem *)(res->start);
-	graphics_state.irq = platform_get_irq(pdev, 0);
+	state.request_bulk = 0;
+	state.base_address = (void __iomem *)(res->start);
+	state.irq = platform_get_irq(pdev, 0);
 
-	if( graphics_state.irq < 0 ) {
+	if( state.irq < 0 ) {
 		printk(KERN_ERR "graphics_probe: failed to get platform irq\n");
 		ret = -ENODEV;
 		goto err_irq;
 	}
 
-	sema_init(&graphics_state.work_done, 0);
-	sema_init(&graphics_state.bulk_req, 0);
+	sema_init(&state.work_done, 0);
+	sema_init(&state.bulk_req, 0);
+	mutex_init(&state.ioctl_mutex);
 
-	ret = request_irq( graphics_state.irq, bcm2708_graphics_isr,
+	ret = request_irq( state.irq, bcm2708_graphics_isr,
 			IRQF_DISABLED, "bcm2708 graphics interrupt", NULL);
 	if (ret < 0) {
 		printk(KERN_ERR "graphics_probe: failed to get local irq\n");
@@ -750,10 +894,14 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 		ret = -ENOENT;
 		goto err_driver;
 	}
-	graphics_state.initialized = 1;
+
+	state.tid_owner = 0;
+        state.owner_state = NULL;
+
+	state.initialized = 1;
 	return 0;
 err_driver:
-	free_irq(graphics_state.irq, NULL);
+	free_irq(state.irq, NULL);
 err_irq_handler:
 err_irq:
 err_platform_res:

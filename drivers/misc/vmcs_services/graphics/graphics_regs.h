@@ -39,8 +39,6 @@
 
 ////
 //// Asynchonous message registers
-//// NEN_TODO: These registers effectively represent a FIFO with a single entry. It would be
-//// best to use a general purpose FIFO here
 ////
 
 // ASYNC_COMMAND: Operation to perform on semaphore ASYNC_SEM. 
@@ -68,7 +66,7 @@
 
 // EGL_ERROR: Last EGL error other than EGL_SUCCESS
 //
-// GL_ERROR: Last GL error other than EGL_SUCCESS
+// GL_ERROR: Last GL error other than GL_SUCCESS
 //
 // VG_ERROR: Last VG error other than VG_SUCCESS
 
