@@ -845,7 +845,6 @@ void Comms_Start(void)
 
 void __init board_init(void)
 {
-	Comms_Start();
 	pinmux_setup();
         //start cp
         Comms_Start();
