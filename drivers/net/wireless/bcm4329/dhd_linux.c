@@ -1284,6 +1284,7 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt)
 			&event,
 			&data);
 
+
 		ASSERT(ifidx < DHD_MAX_IFS && dhd->iflist[ifidx]);
 		if (dhd->iflist[ifidx] && !dhd->iflist[ifidx]->state)
 			ifp = dhd->iflist[ifidx];
@@ -2654,7 +2655,7 @@ dhd_os_set_ioctl_resp_timeout(unsigned int timeout_msec)
 }
 
 int
-dhd_os_ioctl_resp_wait(dhd_pub_t *pub, uint *condition, bool *pending)
+dhd_os_ioctl_resp_wait(dhd_pub_t *pub, volatile uint *condition, bool *pending)
 {
 	dhd_info_t *dhd = (dhd_info_t *)(pub->info);
 	DECLARE_WAITQUEUE(wait, current);

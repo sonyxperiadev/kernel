@@ -103,13 +103,60 @@ static const unsigned long gClock[SDIO_DEV_TYPE_MAX] =
     * the daughter card. Can switch to 48 MHz later when the Hera Tablet
     * comes back
     */
-   6000000, /* WiFi */
+   20000000, /* WiFi */
    52000000 /* eMMC */
 #endif
 };
 
 static struct proc_dir_entry *gProcParent;
 static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
+
+#define DRIVER_NAME "sdio"
+
+static void sdhci_dumpregs(struct sdhci_host *host)
+{
+	printk(KERN_DEBUG DRIVER_NAME ": ============== REGISTER DUMP ==============\n");
+
+	printk(KERN_DEBUG DRIVER_NAME ": Sys addr: 0x%08x | Version:  0x%08x\n",
+		sdhci_readl(host, SDHCI_DMA_ADDRESS),
+		sdhci_readw(host, SDHCI_HOST_VERSION));
+	printk(KERN_DEBUG DRIVER_NAME ": Blk size: 0x%08x | Blk cnt:  0x%08x\n",
+		sdhci_readw(host, SDHCI_BLOCK_SIZE),
+		sdhci_readw(host, SDHCI_BLOCK_COUNT));
+	printk(KERN_DEBUG DRIVER_NAME ": Argument: 0x%08x | Trn mode: 0x%08x\n",
+		sdhci_readl(host, SDHCI_ARGUMENT),
+		sdhci_readw(host, SDHCI_TRANSFER_MODE));
+	printk(KERN_DEBUG DRIVER_NAME ": Present:  0x%08x | Host ctl: 0x%08x\n",
+		sdhci_readl(host, SDHCI_PRESENT_STATE),
+		sdhci_readb(host, SDHCI_HOST_CONTROL));
+	printk(KERN_DEBUG DRIVER_NAME ": Power:    0x%08x | Blk gap:  0x%08x\n",
+		sdhci_readb(host, SDHCI_POWER_CONTROL),
+		sdhci_readb(host, SDHCI_BLOCK_GAP_CONTROL));
+	printk(KERN_DEBUG DRIVER_NAME ": Wake-up:  0x%08x | Clock:    0x%08x\n",
+		sdhci_readb(host, SDHCI_WAKE_UP_CONTROL),
+		sdhci_readw(host, SDHCI_CLOCK_CONTROL));
+	printk(KERN_DEBUG DRIVER_NAME ": Timeout:  0x%08x | Int stat: 0x%08x\n",
+		sdhci_readb(host, SDHCI_TIMEOUT_CONTROL),
+		sdhci_readl(host, SDHCI_INT_STATUS));
+	printk(KERN_DEBUG DRIVER_NAME ": Int enab: 0x%08x | Sig enab: 0x%08x\n",
+		sdhci_readl(host, SDHCI_INT_ENABLE),
+		sdhci_readl(host, SDHCI_SIGNAL_ENABLE));
+	printk(KERN_DEBUG DRIVER_NAME ": AC12 err: 0x%08x | Slot int: 0x%08x\n",
+		sdhci_readw(host, SDHCI_ACMD12_ERR),
+		sdhci_readw(host, SDHCI_SLOT_INT_STATUS));
+	printk(KERN_DEBUG DRIVER_NAME ": Caps:     0x%08x | Max curr: 0x%08x\n",
+		sdhci_readl(host, SDHCI_CAPABILITIES),
+		sdhci_readl(host, SDHCI_MAX_CURRENT));
+
+	if (host->flags & SDHCI_USE_ADMA)
+		printk(KERN_DEBUG DRIVER_NAME ": ADMA Err: 0x%08x | ADMA Ptr: 0x%08x\n",
+		       readl(host->ioaddr + SDHCI_ADMA_ERROR),
+		       readl(host->ioaddr + SDHCI_ADMA_ADDRESS));
+
+	printk(KERN_DEBUG DRIVER_NAME ": ===========================================\n");
+}
+
+
 
 /*
  * Get the base clock. Use central clock source for now. Not sure if different
@@ -210,6 +257,11 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
       val &= ~KONA_SDHOST_CD_SW;
       sdhci_writel(host, val, KONA_SDHOST_CORESTAT);
    }
+
+   mmc_detect_change(host->mmc, msecs_to_jiffies(10));
+
+   //sdhci_dumpregs(host);
+   
 
    return 0;
 }
@@ -395,7 +447,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
    dev->host = host;
    dev->devtype = hw_cfg->devtype;
    if (dev->devtype == SDIO_DEV_TYPE_WIFI)
-      dev->wifi_gpio = &hw_cfg->dev_option.wifi_gpio;
+      dev->wifi_gpio = &hw_cfg->wifi_gpio;
 
    gDevs[dev->devtype] = dev;
    platform_set_drvdata(pdev, dev);

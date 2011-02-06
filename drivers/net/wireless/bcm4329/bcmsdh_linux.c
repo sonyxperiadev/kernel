@@ -192,8 +192,7 @@ int bcmsdh_probe(struct device *dev)
 
 #if defined(OOB_INTR_ONLY)
 #ifdef HW_OOB
-	irq_flags = \
-		IORESOURCE_IRQ | IORESOURCE_IRQ_HIGHLEVEL | IORESOURCE_IRQ_SHAREABLE;
+	irq_flags = 0; 
 #else
 	 irq_flags = IRQF_TRIGGER_FALLING;
 #endif /* HW_OOB */

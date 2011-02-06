@@ -15,6 +15,8 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/delay.h>
+#include <linux/irq.h>
+
 #include <asm/gpio.h>
 
 #include <mach/sdio_platform.h>
@@ -53,7 +55,7 @@ void bcm_sdiowl_reset_b(int onoff)
    gpio_set_value(wifi_gpio->reset, onoff);
    
    /* Insert delay - required for chip to wake up or enter reset */
-   msleep(200);
+   //msleep(200);
 }
 EXPORT_SYMBOL(bcm_sdiowl_reset_b);
 
@@ -80,12 +82,16 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 {
    int rc;
 
-   if (gpio->reg >= 0)
+
+   PRINT_ERR("All WIFI related GPIO pins reset:%d, req:%d wake:%d shutdown: %d \n", 
+		   gpio->reset, gpio->reg, gpio->host_wake,gpio->shutdown);
+
+   if (gpio->reg > 0)
    {
       rc = gpio_request(gpio->reg, "wl_reg_on");
       if (rc < 0)
       {
-         PRINT_ERR("unable to request GPIO pin %d\n", gpio->reg);
+         PRINT_ERR("unable to request reg GPIO pin %d\n", gpio->reg);
          return -EBUSY;
       }
 
@@ -93,24 +99,24 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
       gpio_set_value(gpio->reg, 1);
    }
 
-   if (gpio->reset >= 0)
+   if (gpio->reset > 0)
    {
       rc = gpio_request(gpio->reset, "wl_reset");
       if (rc < 0)
       {
-         PRINT_ERR("unable to request GPIO pin %d\n", gpio->reset);
+         PRINT_ERR("unable to request reset GPIO pin %d\n", gpio->reset);
          goto err_free_gpio_reg;
       }
-      gpio_direction_output(gpio->reset, 1);
-      gpio_set_value(gpio->reset, 1);
+      //gpio_direction_output(gpio->reset, 0);
+      //gpio_set_value(gpio->reset, 1);
    }
 
-   if (gpio->shutdown >= 0)
+   if (gpio->shutdown > 0)
    {
-      rc = gpio_request(gpio->shutdown, "wl_wake");
+      rc = gpio_request(gpio->shutdown, "wl_shutdown");
       if (rc < 0)
       {
-         PRINT_ERR("unable to request GPIO pin %d\n", gpio->shutdown);
+         PRINT_ERR("unable to request shutdown GPIO pin %d\n", gpio->shutdown);
          goto err_free_gpio_reset;
       }
       gpio_direction_output(gpio->shutdown, 1);
@@ -121,10 +127,16 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
       rc = gpio_request(gpio->host_wake, "wl_host_wake");
       if (rc < 0)
       {
-         PRINT_ERR("unable to request GPIO pin %d\n", gpio->host_wake);
+         PRINT_ERR("unable to request wake GPIO pin %d\n", gpio->host_wake);
          goto err_free_gpio_shutdown;
       }
       gpio_direction_input(gpio->host_wake);
+      rc = set_irq_type(gpio_to_irq(gpio->host_wake), IRQ_TYPE_EDGE_RISING);
+      if (rc < 0)
+      {
+         PRINT_ERR("unable to set irq type for GPIO pin %d\n", gpio->host_wake);
+         goto err_free_gpio_shutdown;
+      }
    }
 
    return 0;
@@ -189,12 +201,13 @@ static int __init sdio_wifi_init(void)
 
    atomic_set(&dev->dev_is_ready, 1);
 
-   /* reset the wifi chip */
-   bcm_sdiowl_reset_b(0);
-   msleep(100);
-   bcm_sdiowl_reset_b(1);
-   msleep(100);
+   if (dev->wifi_gpio->reset > 0)
+      gpio_direction_output(dev->wifi_gpio->reset, 0);
 
+   msleep(500);
+   bcm_sdiowl_reset_b(1);
+   msleep(500);
+   
    /* now, emulate the card insertion */
    rc = sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 1);
    if (rc < 0)
@@ -202,8 +215,7 @@ static int __init sdio_wifi_init(void)
       PRINT_ERR("sdio_card_emulate failed\n");
       goto err_free_gpio;
    }
-   
-	return 0;
+   return 0;
 
 err_free_gpio:
    atomic_set(&dev->dev_is_ready, 0);
@@ -211,7 +223,7 @@ err_free_gpio:
 
    return rc;
 }
-
+#if 1
 static void __exit sdio_wifi_exit(void)
 {
    struct sdio_wifi_dev *dev = &gDev;
@@ -224,6 +236,7 @@ static void __exit sdio_wifi_exit(void)
 
    dev->wifi_gpio = NULL;
 }
+#endif
 
 module_init(sdio_wifi_init);
 module_exit(sdio_wifi_exit);

@@ -213,6 +213,9 @@ osl_attach(void *pdev, uint bustype, bool pkttag)
 		bcm_static_skb = (bcm_static_pkt_t *)((char *)bcm_static_buf + 2048);
 		skb_buff_ptr = dhd_os_prealloc(4, 0);
 
+		printk(KERN_ERR "skb:0x%08x staic_skb:0x%08x, size=0x%08x\n", 
+				(u32)skb_buff_ptr, (u32)bcm_static_skb, (u32)(sizeof(struct sk_buff *)*16));
+
 		bcopy(skb_buff_ptr, bcm_static_skb, sizeof(struct sk_buff *)*16);
 		for (i = 0; i < MAX_STATIC_PKT_NUM*2; i++)
 			bcm_static_skb->pkt_use[i] = 0;

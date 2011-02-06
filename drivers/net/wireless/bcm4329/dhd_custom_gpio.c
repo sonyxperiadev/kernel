@@ -59,6 +59,8 @@ extern int sdioh_mmc_irq(int irq);
 #include <mach/gpio.h>
 #endif
 
+#define EXAMPLE_GET_MAC
+
 /* Customer specific Host GPIO defintion  */
 static int dhd_oob_gpio_num = -1; /* GG 19 */
 
@@ -75,7 +77,8 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 #else /* for NOT  CUSTOMER_HW2 */
 #if defined(CUSTOM_OOB_GPIO_NUM)
 	if (dhd_oob_gpio_num < 0) {
-		dhd_oob_gpio_num = CUSTOM_OOB_GPIO_NUM;
+		dhd_oob_gpio_num = 178;
+		host_oob_irq = gpio_to_irq(dhd_oob_gpio_num);
 	}
 #endif
 

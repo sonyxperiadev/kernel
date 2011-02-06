@@ -338,7 +338,6 @@ static struct platform_device board_serial_device = {
    },
 };
 
-#if 0 /* To be enabled when WIFI over SDIO is ready */ 
 static struct resource board_sdio0_resource[] = {
    [0] = {
       .start = KONA_SDIO0_PA,
@@ -351,7 +350,6 @@ static struct resource board_sdio0_resource[] = {
       .flags = IORESOURCE_IRQ,
    },
 };
-#endif
 
 static struct resource board_sdio1_resource[] = {
    [0] = {
@@ -384,6 +382,11 @@ static struct sdio_platform_cfg board_sdio_param[] = {
       .id = 0,
       .data_pullup = 0,
       .devtype = SDIO_DEV_TYPE_WIFI,
+	{
+	      .reset		= 179,
+	      .reg		= 177,
+	      .host_wake	= 178,
+	},
    },
    { /* SDIO1 */
       .id = 1,
@@ -395,6 +398,16 @@ static struct sdio_platform_cfg board_sdio_param[] = {
       .data_pullup = 0,
       .cd_gpio = 106,
       .devtype = SDIO_DEV_TYPE_SDMMC,
+   },
+};
+
+static struct platform_device island_sdio0_device = {
+   .name = "sdhci",
+   .id = 0,
+   .resource = board_sdio0_resource,
+   .num_resources   = ARRAY_SIZE(board_sdio0_resource),
+   .dev      = {
+      .platform_data = &board_sdio_param[0],
    },
 };
 
@@ -729,6 +742,7 @@ static struct platform_device *board_devices[] __initdata = {
    &android_usb,
    &android_pmem,
    &island_leds_gpio_device,
+   &island_sdio0_device,
 };
 
 static void __init board_add_devices(void)

@@ -721,6 +721,9 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 		return ret;
 	}
 
+	if (target != CLK_AVAIL)
+		return 0;
+
 	switch (target) {
 	case CLK_AVAIL:
 		/* Make sure SD clock is available */
@@ -756,6 +759,7 @@ dhdsdio_clkctl(dhd_bus_t *bus, uint target, bool pendok)
 		dhd_os_wd_timer(bus->dhd, 0);
 		break;
 	}
+
 #ifdef DHD_DEBUG
 	DHD_INFO(("dhdsdio_clkctl: %d -> %d\n", oldstate, bus->clkstate));
 #endif /* DHD_DEBUG */
@@ -1358,7 +1362,7 @@ dhd_bus_rxctl(struct dhd_bus *bus, uchar *msg, uint msglen)
 		return -EIO;
 
 	/* Wait until control frame is available */
-	timeleft = dhd_os_ioctl_resp_wait(bus->dhd, &bus->rxlen, &pending);
+	timeleft = dhd_os_ioctl_resp_wait(bus->dhd, (volatile uint *)&bus->rxlen, &pending);
 
 	dhd_os_sdlock(bus->dhd);
 	rxlen = bus->rxlen;
@@ -3041,6 +3045,7 @@ gotpkt:
 	bus->rxlen = len - doff;
 
 done:
+	smp_mb();
 	/* Awake any waiters */
 	dhd_os_ioctl_resp_wake(bus->dhd);
 }

@@ -144,7 +144,7 @@ extern void osl_dma_unmap(osl_t *osh, uint pa, uint size, int direction);
 
 
 #ifndef printf
-#define	printf(fmt, args...)	printk(fmt, ## args)
+#define	printf(fmt, args...)	printk(KERN_DEBUG fmt, ## args)
 #endif 
 #include <linux/kernel.h>
 #include <linux/string.h>
