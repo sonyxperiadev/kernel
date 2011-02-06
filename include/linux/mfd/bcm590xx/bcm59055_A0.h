@@ -64,6 +64,8 @@
 #define BCM59055_REG_MBCCTRL11            0x5a
 
 /* Register addresses */
+#define BCM59055_REG_PONKEYCTRL1      0x0C
+#define BCM59055_REG_PONKEYCTRL2      0x0D
 #define BCM59055_REG_RFOPMODCTRL      0xA0    /* R/W  RFLDO */
 #define BCM59055_REG_CAMOPMODCTRL     0xA1    /* R/W  CAMLDO */
 #define BCM59055_REG_HV1OPMODCTRL     0xA2    /* R/W  HV1LDO */

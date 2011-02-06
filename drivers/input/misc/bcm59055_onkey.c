@@ -35,14 +35,14 @@
 #include <linux/mfd/bcm590xx/core.h>
 
 
-struct pmu590xx_onkey_info {
+struct bcm59055_onkey_info {
 	struct input_dev	*idev;
 	struct bcm590xx		*chip;
 };
 
-static void pmu590xx_onkey_handler(int irq, void *data)
+static void bcm59055_onkey_handler(int irq, void *data)
 {
-	struct pmu590xx_onkey_info *info = data;
+	struct bcm59055_onkey_info *info = data;
 	int val = 0;
 
 	switch(irq) {
@@ -64,15 +64,15 @@ static void pmu590xx_onkey_handler(int irq, void *data)
 	input_sync(info->idev);
 }
 
-static int __devinit pmu590xx_onkey_probe(struct platform_device *pdev)
+static int __devinit bcm59055_onkey_probe(struct platform_device *pdev)
 {
 	struct bcm590xx *chip = dev_get_drvdata(pdev->dev.parent);
-	struct pmu590xx_onkey_info *info;
+	struct bcm59055_onkey_info *info;
 	int error;
 
-	info = kzalloc(sizeof(struct pmu590xx_onkey_info), GFP_KERNEL);
+	info = kzalloc(sizeof(struct bcm59055_onkey_info), GFP_KERNEL);
 	if (!info) {
-		dev_err(chip->dev, "Failed to allocate memory (%d bytes)\n", sizeof(struct pmu590xx_onkey_info));
+		dev_err(chip->dev, "Failed to allocate memory (%d bytes)\n", sizeof(struct bcm59055_onkey_info));
 		return -ENOMEM;
 	}
 	
@@ -83,8 +83,8 @@ static int __devinit pmu590xx_onkey_probe(struct platform_device *pdev)
 		goto out_input;
 	}
 
-	//info->idev->name = "pmu590xx_on";
-	info->idev->phys = "pmu590xx_on/input0";
+	info->idev->name = "bcm59055_on";
+	info->idev->phys = "bcm59055_on/input0";
 	info->idev->dev.parent = &pdev->dev;
 	info->idev->evbit[0] = BIT_MASK(EV_KEY);
 	info->idev->keybit[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER);
@@ -92,16 +92,16 @@ static int __devinit pmu590xx_onkey_probe(struct platform_device *pdev)
 	
 	/* Request PRESSED and RELEASED interrupts. 
 	 */ 
-    error = bcm590xx_request_irq(chip, BCM59055_IRQID_INT1_POK_PRESSED, true, pmu590xx_onkey_handler, info);
+    error = bcm590xx_request_irq(chip, BCM59055_IRQID_INT1_POK_PRESSED, true, bcm59055_onkey_handler, info);
 	if (error < 0) {
-		dev_err(chip->dev, "Failed to request PMU590XX IRQ %d: %d\n", 
+		dev_err(chip->dev, "Failed to request bcm59055 IRQ %d: %d\n", 
 			BCM59055_IRQID_INT1_POK_PRESSED, error);
 		goto out_irq_pressed;
 	}
 
-	error = bcm590xx_request_irq(chip, BCM59055_IRQID_INT1_POK_RELEASED, true, pmu590xx_onkey_handler, info);
+	error = bcm590xx_request_irq(chip, BCM59055_IRQID_INT1_POK_RELEASED, true, bcm59055_onkey_handler, info);
 	if (error < 0) {
-		dev_err(chip->dev, "Failed to request PMU590XX IRQ %d: %d\n", 
+		dev_err(chip->dev, "Failed to request bcm59055 IRQ %d: %d\n", 
 			BCM59055_IRQID_INT1_POK_RELEASED, error);
 		goto out_irq_released;
 	}
@@ -127,9 +127,9 @@ out_input:
 	return error;
 }
 
-static int __devexit pmu590xx_onkey_remove(struct platform_device *pdev)
+static int __devexit bcm59055_onkey_remove(struct platform_device *pdev)
 {
-	struct pmu590xx_onkey_info *info = platform_get_drvdata(pdev);
+	struct bcm59055_onkey_info *info = platform_get_drvdata(pdev);
 
 	bcm590xx_free_irq(info->chip, BCM59055_IRQID_INT1_POK_PRESSED);
 	bcm590xx_free_irq(info->chip, BCM59055_IRQID_INT1_POK_RELEASED);
@@ -141,32 +141,32 @@ static int __devexit pmu590xx_onkey_remove(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver pmu590xx_onkey_driver = {
+static struct platform_driver bcm59055_onkey_driver = {
 	.driver		= {
-		.name	= "pmu590xx-onkey",
+		.name	= "bcm59055-onkey",
 		.owner	= THIS_MODULE,
 	},
-	.probe		= pmu590xx_onkey_probe,
-	.remove		= __devexit_p(pmu590xx_onkey_remove),
+	.probe		= bcm59055_onkey_probe,
+	.remove		= __devexit_p(bcm59055_onkey_remove),
 };
 
-static int __init pmu590xx_onkey_init(void)
+static int __init bcm59055_onkey_init(void)
 {
-	return platform_driver_register(&pmu590xx_onkey_driver);
+	return platform_driver_register(&bcm59055_onkey_driver);
 }
 
-static void __exit pmu590xx_onkey_exit(void)
+static void __exit bcm59055_onkey_exit(void)
 {
-	platform_driver_unregister(&pmu590xx_onkey_driver);
+	platform_driver_unregister(&bcm59055_onkey_driver);
 }
 
 /*
  *	module specification
  */
 
-module_init(pmu590xx_onkey_init);
-module_exit(pmu590xx_onkey_exit);
+module_init(bcm59055_onkey_init);
+module_exit(bcm59055_onkey_exit);
 
-MODULE_AUTHOR("Randy Pan <rpan@broadcom.com>");
-MODULE_DESCRIPTION("PMU590XX Power-On Key device driver");
+MODULE_AUTHOR("Broadcom Corporation");
+MODULE_DESCRIPTION("BCM59055 Power-On Key device driver");
 MODULE_LICENSE("GPL");

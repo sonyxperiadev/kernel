@@ -373,7 +373,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
         bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery") ;
 
 		/* Register PowerOnKey device */
-		bcm590xx_client_dev_register(bcm590xx, "pmu590xx-onkey") ;
+		bcm590xx_client_dev_register(bcm590xx, "bcm59055-onkey") ;
 
     }
 	else
