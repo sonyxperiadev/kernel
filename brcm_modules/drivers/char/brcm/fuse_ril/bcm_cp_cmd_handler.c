@@ -309,6 +309,9 @@ void CAPI2_FFS_Control(UInt32 tid, UInt8 clientID, UInt32 cmd, UInt32 address, U
     {
         case FFS_CONTROL_COPY_NVS_FILE_TO_SM: // copy the NVS file to shared memory
         {
+            ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+            goto Exit;
+
             hFileTmp = filp_open("/data/cp_data.txt", O_RDONLY, 0);
             if (IS_ERR(hFileTmp))
             {
@@ -365,6 +368,9 @@ void CAPI2_FFS_Control(UInt32 tid, UInt8 clientID, UInt32 cmd, UInt32 address, U
 
         case FFS_CONTROL_COPY_SM_TO_NVS_FILE: // copy shared memory to the NVS file
         {
+            ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+            goto Exit;
+
             hFileTmp = filp_open("/data/cp_data.txt", O_CREAT|O_TRUNC|O_WRONLY, 0);
             if (IS_ERR(hFileTmp))
             {
