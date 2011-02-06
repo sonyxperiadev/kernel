@@ -24,3 +24,10 @@ config BCM2708_SMI
 	default BRCM_MISC_DRIVERS
 	help
 		SMI driver required for Nand
+        
+config VC_CAMERA
+	tristate "CAMERA Driver"
+	depends on BRCM_MISC_DRIVERS
+	default BRCM_MISC_DRIVERS
+	help
+		Camera driver based on VC IPC
