@@ -119,12 +119,18 @@ int vc_camera_take_picture(uint32_t width, uint32_t height, uint32_t max_size, v
 {
 	int ret = 0;
 	uint32_t viewfinder_state = CAMERA_REGISTER_RW( camera_state.base_address, CAMERA_CONTROL_OFFSET ) & CAMERA_CONTROL_ENABLE_BIT;
+	uint32_t capture_state = CAMERA_REGISTER_RW( camera_state.base_address, CAMERA_CONTROL_OFFSET ) & CAMERA_CONTROL_CAPTURE_BIT;
 	uint32_t capture_addr;
 	resource_size_t jpeg_size;
 	void __iomem *jpeg_addr;
 
 	if( !viewfinder_state){
 		camera_print(KERN_ERR"Camera not running: can't take picture\n");
+		return ret;
+	}
+
+	if(capture_state){
+		camera_print(KERN_ERR"Camera capture in progress: try later\n");
 		return ret;
 	}
 
@@ -135,7 +141,8 @@ int vc_camera_take_picture(uint32_t width, uint32_t height, uint32_t max_size, v
 	down(&camera_state.work_status);
 
 	/* ring the doorbell */
-	printk(KERN_ERR"%s: Ringing the doorbell with enable\n", __func__);
+	capture_state = CAMERA_REGISTER_RW( camera_state.base_address, CAMERA_CONTROL_OFFSET ) & CAMERA_CONTROL_CAPTURE_BIT;
+	printk(KERN_ERR"%s: Ringing the doorbell with capture %s\n", __func__, capture_state? "enable":"disable");
 	ipc_notify_vc_event(camera_state.irq);
 
 	/* wait for the done bit */
@@ -189,7 +196,8 @@ map_error:
 capture_error:
 	/* Disable the caprute and ring the doorbell */
 	CAMERA_REGISTER_RW(camera_state.base_address, CAMERA_CONTROL_OFFSET ) &= (~CAMERA_CONTROL_CAPTURE_BIT);
-	printk(KERN_ERR"%s: Ringing the doorbell with capture disnable\n", __func__);
+	capture_state = CAMERA_REGISTER_RW( camera_state.base_address, CAMERA_CONTROL_OFFSET ) & CAMERA_CONTROL_CAPTURE_BIT;
+	printk(KERN_ERR"%s: Ringing the doorbell with capture %s\n", __func__, capture_state? "enable":"disable");
 	ipc_notify_vc_event(camera_state.irq);
 
 	/* mark camera state as free */
