@@ -740,6 +740,12 @@ int graphics_release(struct inode *inode, struct file *filp)
 	}
 
 	kfree(file_priv);
+
+	//Reset owner to NULL to force driver to send a make current
+	// RPC on the next transaction. This is neccisary since as of
+	// this call the current context has been set to NULL.
+	state.tid_owner = 0;
+	state.owner_state = NULL;
 	
 	mutex_unlock(&state.ioctl_mutex);
 	return 0;
