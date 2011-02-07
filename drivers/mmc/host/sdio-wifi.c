@@ -223,7 +223,7 @@ err_free_gpio:
 
    return rc;
 }
-#if 1
+#if 0
 static void __exit sdio_wifi_exit(void)
 {
    struct sdio_wifi_dev *dev = &gDev;
@@ -238,8 +238,10 @@ static void __exit sdio_wifi_exit(void)
 }
 #endif
 
-module_init(sdio_wifi_init);
+late_initcall(sdio_wifi_init);
+#if 0
 module_exit(sdio_wifi_exit);
+#endif
 
 MODULE_DESCRIPTION("Broadcom SDIO WiFi/BT Utility Driver");
 MODULE_AUTHOR("Broadcom");
