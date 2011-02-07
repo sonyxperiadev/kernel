@@ -61,6 +61,14 @@ static int __devinit snd_bcm2835_create(struct snd_card *card,
 	return 0;
 }
 
+//ALSA for CAPH - platform device structure
+//Fix this after the demo - used for strict ordering at the moment of the ALSA cards
+static struct platform_device platform_device_caph_alsa =
+{
+        .name           = "brcm_alsa_device",
+        .id             = -1,
+};
+
 static int __devinit snd_bcm2835_alsa_probe(struct platform_device *pdev)
 {
 	static int dev;
@@ -142,6 +150,10 @@ static int __devinit snd_bcm2835_alsa_probe(struct platform_device *pdev)
 	dev++;
 
 	printk("bcm2835 ALSA CARD CREATED!\n");
+
+        //finally, register the CAPH ALSA driver
+        //we do this here to ensure the cards are number correctly
+	platform_device_register(&platform_device_caph_alsa);
 
 	return 0;
 

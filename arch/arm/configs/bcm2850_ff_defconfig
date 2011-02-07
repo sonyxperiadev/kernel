@@ -1439,6 +1439,13 @@ CONFIG_ANDROID_LOW_MEMORY_KILLER=y
 #
 
 #
+# CAPH device control driver
+#
+CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA=y
+
+
+
+#
 # File systems
 #
 CONFIG_EXT2_FS=y

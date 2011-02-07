@@ -126,6 +126,19 @@
 #define KONA_USB_HSOTG_VA           HW_IO_PHYS_TO_VIRT( HSOTG_BASE_ADDR )           /* USB OTG */
 #define KONA_USB_HSOTG_CTRL_VA      HW_IO_PHYS_TO_VIRT( HSOTG_CTRL_BASE_ADDR )      /* USB OTG Control */
 
-#define KONA_BINTC_BASE_ADDR        HW_IO_PHYS_TO_VIRT( BINTC_BASE_ADDR )           /* BModem Int Ctrlr Base Address */
+#define	KONA_BINTC_BASE_ADDR			  HW_IO_PHYS_TO_VIRT(BINTC_BASE_ADDR)
+
+
+/* add for CAPH*/
+#define KONA_HUB_CLK_BASE_VA		  HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR) /* brcm_rdb_khub_clk_mgr_reg.h */
+#define KONA_AUDIOH_BASE_VA          HW_IO_PHYS_TO_VIRT(AUDIOH_BASE_ADDR) /* brcm_rdb_audioh.h */
+#define KONA_SDT_BASE_VA             HW_IO_PHYS_TO_VIRT(SDT_BASE_ADDR) /* brcm_rdb_sdt.h */
+#define KONA_SSP4_BASE_VA            HW_IO_PHYS_TO_VIRT(SSP4_BASE_ADDR) /* brcm_rdb_sspil.h */
+#define KONA_SSP3_BASE_VA            HW_IO_PHYS_TO_VIRT(SSP3_BASE_ADDR) /* brcm_rdb_sspil.h */
+#define KONA_SRCMIXER_BASE_VA        HW_IO_PHYS_TO_VIRT(SRCMIXER_BASE_ADDR) /* brcm_rdb_srcmixer.h */
+#define KONA_CFIFO_BASE_VA           HW_IO_PHYS_TO_VIRT(CFIFO_BASE_ADDR) /* brcm_rdb_cph_cfifo.h */
+#define KONA_AADMAC_BASE_VA          HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR) /* brcm_rdb_cph_aadmac.h */
+#define KONA_SSASW_BASE_VA           HW_IO_PHYS_TO_VIRT(SSASW_BASE_ADDR) /* brcm_rdb_cph_ssasw.h */
+#define KONA_AHINTC_BASE_VA          HW_IO_PHYS_TO_VIRT(AHINTC_BASE_ADDR) /* brcm_rdb_ahintc.h */
 
 #endif /* __ISLAND_IO_MAP_H */

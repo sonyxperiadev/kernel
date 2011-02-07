@@ -1,0 +1,53 @@
+Release Notes for DSP binary images checked into Perforce
+
+Release contents:
+-----------------
+
+Rhea_PTCM.img
+Rhea_EXT.img
+
+
+Verification:
+------------
+Made FS, EFS, HS, AFS-NB and AHS-NB audio phone calls with Rhearay (A0)
+
+Known Issues:
+
+
+Build information and client spec:
+----------------------------------
+
+DSP images are built with Teaklite3 tool version 9.2
+
+DSP Change list : 330973
+
+Tools:
+
+- C Compiler:               CEVA-TL321x(TM) Compiler V9.2 (Build #472.6), Oct  5 2009
+- Assembler:                CEVA-TL321x(TM) Assembler V9.2  (Build #839.3)  Jul 19 2009       
+- Pre-processor:            Macro Preprocessor, Version V9.2.0  (Build #839) [for Windows platforms] Jul 19 2009    
+- Linker:                   Linker V9.2  (Build #839.3)  Jul 19 2009
+
+RTL version:                
+
+
+ARM
+Label		 :  
+CL		 :  
+Hardware	 :  
+PLATFORMS:	 :   	
+RHEARAY_APPS_MODEM_PLUS
+COMMS_RHEARAY_HSPA_BCM2091B0_MIPI
+
+
+
+
+
+
+   
+   
+
+ 
+
+
+

@@ -120,6 +120,18 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_USB_HOST_EHCI_VA, SZ_256 ),	/* Includes DWC specific registers, otherwise could use SZ_128 if was def'd */
 	IO_DESC( KONA_USB_HOST_OHCI_VA, SZ_256 ),	/* Could really use SZ_128 if was def'd */
 	IO_DESC( KONA_USB_HSOTG_CTRL_VA, SZ_4K ),
+	
+	/* add for CAPH*/
+	IO_DESC( KONA_HUB_CLK_BASE_VA, SZ_4K ),
+	IO_DESC( KONA_AUDIOH_BASE_VA, SZ_32K ),
+	IO_DESC( KONA_SDT_BASE_VA, SZ_4K ),
+	IO_DESC( KONA_SSP4_BASE_VA, SZ_4K ),
+	IO_DESC( KONA_SSP3_BASE_VA, SZ_4K ),
+	IO_DESC( KONA_SRCMIXER_BASE_VA, SZ_4K ),
+	IO_DESC( KONA_CFIFO_BASE_VA, SZ_4K ),
+	IO_DESC( KONA_AADMAC_BASE_VA, SZ_4K ),
+	IO_DESC( KONA_SSASW_BASE_VA, SZ_4K ),
+	IO_DESC( KONA_AHINTC_BASE_VA, SZ_4K ), 
 };
 
 
