@@ -68,19 +68,19 @@ static struct {
 	int initialized;
 	struct mutex ioctl_mutex;
 	pid_t tid_owner;
-	struct thread_private *owner_state;
+	struct thread_state *owner_state;
 } state;
 
-struct thread_private {
+struct thread_state {
 	pid_t tid;
 	struct graphics_ioctl_current current_server;
 	struct graphics_ioctl_current current_client;
-	struct thread_private *next;
+	struct thread_state *next;
 };
 
-struct process_private {
-	pid_t tgid_owner;
-	struct thread_private *owner_state_list;
+struct file_private {
+	pid_t tgid;
+	struct thread_state *thread_state_list;
 };
 
 //NOTE: These defines were copied from VC4 src tree
@@ -115,20 +115,20 @@ struct destroy_by_pid_rpc {
  ****
  ****/
 
-static struct process_private *process_private_state(struct file *filp)
+static struct file_private *get_file_private(struct file *filp)
 {
-	return (struct process_private *)filp->private_data;	
+	return (struct file_private *)filp->private_data;	
 } 
 
-static struct thread_private *thread_private_state(struct process_private *process_priv)
+static struct thread_state *get_thread_state(struct file_private *file_priv)
 {
-	struct thread_private *ret = NULL;
+	struct thread_state *ret = NULL;
 	if (state.tid_owner == current->pid) {
 		ret = state.owner_state;
 		goto out;
 	}
 
-	ret = process_priv->owner_state_list;
+	ret = file_priv->thread_state_list;
 
 	while (ret && ret->tid != current->pid) {
 		ret = ret->next;
@@ -136,21 +136,21 @@ static struct thread_private *thread_private_state(struct process_private *proce
 
 	if (ret != NULL) goto out;
 
-	ret = (struct thread_private *)kmalloc(sizeof(struct thread_private),
+	ret = (struct thread_state *)kmalloc(sizeof(struct thread_state),
 		GFP_KERNEL);
 
 	if (ret == NULL) goto out;
 
-    ret->tid = current->pid;
+	ret->tid = current->pid;
 	ret->current_client.servergl = EGL_SERVER_NO_GL_CONTEXT;
 	ret->current_client.servergldraw = EGL_SERVER_NO_SURFACE;
 	ret->current_client.serverglread = EGL_SERVER_NO_SURFACE;
 	ret->current_client.servervg = EGL_SERVER_NO_VG_CONTEXT;
 	ret->current_client.servervgsurf = EGL_SERVER_NO_SURFACE;
 	memcpy(&ret->current_server, &ret->current_client,
-        sizeof(ret->current_server));
-	ret->next = process_priv->owner_state_list;
-	process_priv->owner_state_list = ret;
+		sizeof(ret->current_server));
+	ret->next = file_priv->thread_state_list;
+	file_priv->thread_state_list = ret;
 out:
 	return ret;
 } 
@@ -405,7 +405,7 @@ out:
 	return ret;
 }
 
-static int do_txrx_ctrl(struct process_private *priv, struct thread_private *thread_priv, struct graphics_txrx_ctrl *ctrl)
+static int do_txrx_ctrl(struct file_private *priv, struct thread_state *thread_state, struct graphics_txrx_ctrl *ctrl)
 {
 	int ret = 0;
 
@@ -413,7 +413,7 @@ static int do_txrx_ctrl(struct process_private *priv, struct thread_private *thr
 		struct make_current_rpc current_rpc;
 		struct graphics_ioctl_current *server;
 
-		server = &thread_priv->current_server;
+		server = &thread_state->current_server;
 
 		current_rpc.id = EGLINTMAKECURRENT_ID;
 		current_rpc.pid_0 = current->tgid;
@@ -427,40 +427,40 @@ static int do_txrx_ctrl(struct process_private *priv, struct thread_private *thr
 
 		graphics_fifo_write(1, (uint32_t *)&current_rpc,
 			sizeof(current_rpc)/sizeof(uint32_t));
-		state.tid_owner = current->pid;
-		state.owner_state = thread_priv;
+			state.tid_owner = current->pid;
+			state.owner_state = thread_state;
+		}
+
+		ret = do_tx_ctrl(ctrl);
+		if (ret) goto out;
+
+		ret = do_rx_ctrl(ctrl);
+
+		memcpy(&thread_state->current_server, &thread_state->current_client,
+			sizeof(thread_state->current_server));
+	out:
+		return ret;
 	}
 
-	ret = do_tx_ctrl(ctrl);
-	if (ret) goto out;
-
-	ret = do_rx_ctrl(ctrl);
-
-	memcpy(&thread_priv->current_server, &thread_priv->current_client,
-		sizeof(thread_priv->current_server));
-out:
-	return ret;
-}
-
-static void request_bulk(uint32_t req_size)
-{
-	*graphics_register(GRAPHICS_BULK_REQ_SIZE) = req_size;
-	*graphics_register(GRAPHICS_BULK_REQ) = 1;
-	graphics_fire_vc_interrupt();
-	graphics_bulk_wait();
-}
-
-static int ioctl_rpc_tx_bulk(struct process_private *priv, struct thread_private *thread_priv, struct graphics_ioctl_rpc_tx_bulk *rpc_tx_bulk)
-{
-	int ret = 0;
-	uint32_t tx_bulk_bus = 0;
-	void *tx_bulk = NULL;
-
-	graphics_wait_vc_idle(); 
-
-	if (rpc_tx_bulk->tx_bulk_len > *graphics_register(GRAPHICS_BULK_SIZE)) {
-		request_bulk(rpc_tx_bulk->tx_bulk_len);
+	static void request_bulk(uint32_t req_size)
+	{
+		*graphics_register(GRAPHICS_BULK_REQ_SIZE) = req_size;
+		*graphics_register(GRAPHICS_BULK_REQ) = 1;
+		graphics_fire_vc_interrupt();
+		graphics_bulk_wait();
 	}
+
+	static int ioctl_rpc_tx_bulk(struct file_private *priv, struct thread_state *thread_state, struct graphics_ioctl_rpc_tx_bulk *rpc_tx_bulk)
+	{
+		int ret = 0;
+		uint32_t tx_bulk_bus = 0;
+		void *tx_bulk = NULL;
+
+		graphics_wait_vc_idle(); 
+
+		if (rpc_tx_bulk->tx_bulk_len > *graphics_register(GRAPHICS_BULK_SIZE)) {
+			request_bulk(rpc_tx_bulk->tx_bulk_len);
+		}
 	
 	tx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
 	tx_bulk = ioremap( __VC_BUS_TO_ARM_PHYS_ADDR( tx_bulk_bus ), rpc_tx_bulk->tx_bulk_len);
@@ -480,22 +480,22 @@ static int ioctl_rpc_tx_bulk(struct process_private *priv, struct thread_private
 		goto err_copy_bulk;
 	}
 
-	ret = do_txrx_ctrl(priv, thread_priv, &rpc_tx_bulk->ctrl);
+	ret = do_txrx_ctrl(priv, thread_state, &rpc_tx_bulk->ctrl);
 err_copy_bulk:	
 	iounmap(tx_bulk);
 	return ret;
 }
 
-static int ioctl_rpc_rx_bulk(struct process_private *process_priv,
-			     struct thread_private *thread_priv,
-			     struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
+static int ioctl_rpc_rx_bulk(struct file_private *file_priv,
+				 struct thread_state *thread_state,
+				 struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
 {
 	int ret = 0;
 	uint32_t bulk_size = 0;
 	uint32_t rx_bulk_bus = 0;
 	void *rx_bulk = NULL;
 
-	ret = do_txrx_ctrl(process_priv, thread_priv, &rpc_rx_bulk->ctrl);
+	ret = do_txrx_ctrl(file_priv, thread_state, &rpc_rx_bulk->ctrl);
 
 	if (ret != 0) goto out;
 	
@@ -534,11 +534,11 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 		unsigned long arg)
 {
 	int ret = -1;
-	struct process_private *process_priv = NULL;
-	struct thread_private *thread_priv = NULL;
+	struct file_private *file_priv = NULL;
+	struct thread_state *thread_state = NULL;
 
-	process_priv = process_private_state(filp);
-	thread_priv = thread_private_state(process_priv);
+	file_priv = get_file_private(filp);
+	thread_state = get_thread_state(file_priv);
 
 	mutex_lock(&state.ioctl_mutex);
 
@@ -557,7 +557,7 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			printk(KERN_INFO "graphics_ioctl: RPC_RX_CTRL\n");
 		}
 #endif
-		ret = do_txrx_ctrl(process_priv, thread_priv, &rpc.ctrl);
+		ret = do_txrx_ctrl(file_priv, thread_state, &rpc.ctrl);
 		if (ret != 0) goto err_cmd;
 
 		if (copy_to_user((void *) arg, &rpc, sizeof(rpc))) {
@@ -576,7 +576,7 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			goto err_cmd;
 		}
 
-		ret = ioctl_rpc_tx_bulk(process_priv, thread_priv, &rpc_tx_bulk);
+		ret = ioctl_rpc_tx_bulk(file_priv, thread_state, &rpc_tx_bulk);
 		if(ret) goto err_cmd;
 
 		if (copy_to_user((void *) arg, &rpc_tx_bulk,
@@ -596,7 +596,7 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 			goto err_cmd;
 		}
 
-		ret = ioctl_rpc_rx_bulk(process_priv, thread_priv, &rpc_rx_bulk);
+		ret = ioctl_rpc_rx_bulk(file_priv, thread_state, &rpc_rx_bulk);
 		if (ret) goto err_cmd;
 
 		if (copy_to_user((void *) arg, &rpc_rx_bulk,
@@ -667,8 +667,8 @@ int graphics_ioctl(struct inode *inode, struct file *filp, unsigned int cmd,
 #ifdef IOCTL_DEBUG
 		printk(KERN_INFO "graphics_ioctl: CURRENT\n");
 #endif
-		if (copy_from_user(&thread_priv->current_client, (void *)arg,
-				   sizeof(thread_priv->current_client))) {
+		if (copy_from_user(&thread_state->current_client, (void *)arg,
+				   sizeof(thread_state->current_client))) {
 			ret = -EFAULT;
 			goto err_cmd;
 		}
@@ -687,25 +687,25 @@ int graphics_open(struct inode *inode, struct file *filp)
 {
 
 	int ret = 0;
-	struct process_private *process_priv = NULL;
+	struct file_private *file_priv = NULL;
 
-	process_priv = kmalloc(sizeof(struct process_private), GFP_KERNEL);
-	if (process_priv == NULL) {
+	file_priv = kmalloc(sizeof(struct file_private), GFP_KERNEL);
+	if (file_priv == NULL) {
 		ret = -ENOMEM;
 		goto out;
 	}
 
-	filp->private_data = process_priv;
+	filp->private_data = file_priv;
 
-	process_priv->tgid_owner = current->tgid;
-	process_priv->owner_state_list = NULL;
+	file_priv->tgid = current->tgid;
+	file_priv->thread_state_list = NULL;
 out:
 	return ret;	
 }
 
 int graphics_release(struct inode *inode, struct file *filp)
 {
-	struct process_private *process_priv = process_private_state(filp);
+	struct file_private *file_priv = get_file_private(filp);
 	struct make_current_rpc current_rpc;
 	struct destroy_by_pid_rpc destroy_by_pid_rpc;
 
@@ -713,7 +713,7 @@ int graphics_release(struct inode *inode, struct file *filp)
 
 	//Set current to NULL for owning pid (tgid)
 	current_rpc.id = EGLINTMAKECURRENT_ID;
-	current_rpc.pid_0 = process_priv->tgid_owner;
+	current_rpc.pid_0 = file_priv->tgid;
 	current_rpc.pid_1 = 0;
 	current_rpc.gltype = 0;
 	current_rpc.servergl = EGL_SERVER_NO_GL_CONTEXT;
@@ -726,19 +726,20 @@ int graphics_release(struct inode *inode, struct file *filp)
 
 	//Destroy the pid (tgid) server side
 	destroy_by_pid_rpc.id = EGLINTDESTROYBYPID_ID;
-	destroy_by_pid_rpc.pid_0 = process_priv->tgid_owner;
+	destroy_by_pid_rpc.pid_0 = file_priv->tgid;
 	destroy_by_pid_rpc.pid_1 = 0;
 	graphics_fifo_write(1, (uint32_t *)&destroy_by_pid_rpc,
 		sizeof(destroy_by_pid_rpc)/sizeof(uint32_t)); 
 
 	//Free kernel memory
-	while (process_priv->owner_state_list != NULL) {
-		struct thread_private *thread_priv;
-		thread_priv = process_priv->owner_state_list;
-		process_priv->owner_state_list = thread_priv->next;
-		kfree(thread_priv);
+	while (file_priv->thread_state_list != NULL) {
+		struct thread_state *thread_state;
+		thread_state = file_priv->thread_state_list;
+		file_priv->thread_state_list = thread_state->next;
+		kfree(thread_state);
 	}
-	kfree(process_priv);
+
+	kfree(file_priv);
 	
 	mutex_unlock(&state.ioctl_mutex);
 	return 0;
