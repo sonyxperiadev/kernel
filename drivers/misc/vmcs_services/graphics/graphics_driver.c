@@ -288,8 +288,8 @@ static int graphics_fifo_write(int system, const uint32_t *data, uint32_t count)
 #ifdef FIFO_DEBUG
 	printk(KERN_INFO "graphics_fifo_write:"
 			 " read = %d, write = %d\n",
-             *graphics_register(GRAPHICS_FIFO_READ),
-             *graphics_register(GRAPHICS_FIFO_WRITE));
+			 *graphics_register(GRAPHICS_FIFO_READ),
+			 *graphics_register(GRAPHICS_FIFO_WRITE));
 #endif
 out:
 	return ret;
@@ -320,7 +320,7 @@ static struct named_semaphore *get_named_semaphore(uint32_t name,
 	struct named_semaphore *ret = NULL;
 	for (i = 0; i < ARRAY_SIZE(state.sem_slots); i++) {
 		if (s->initialized && s->name == name && s->pid_0 == pid_0 
-						      && s->pid_1 == pid_1) {
+							  && s->pid_1 == pid_1) {
 			ret = s;
 			break;
 		}
@@ -464,7 +464,7 @@ static int do_txrx_ctrl(struct file_private *priv, struct thread_state *thread_s
 	
 	tx_bulk_bus = *graphics_register(GRAPHICS_BULK_ADDR);
 	tx_bulk = ioremap( __VC_BUS_TO_ARM_PHYS_ADDR( tx_bulk_bus ), rpc_tx_bulk->tx_bulk_len);
-       
+
 #ifdef BULK_DEBUG 
 	printk(KERN_INFO "graphics_ioctl_rpc_tx_bulk:"
 			 " bus = 0x%x, virt = 0x%x, length = %d\n",
@@ -487,8 +487,8 @@ err_copy_bulk:
 }
 
 static int ioctl_rpc_rx_bulk(struct file_private *file_priv,
-				 struct thread_state *thread_state,
-				 struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
+			     struct thread_state *thread_state,
+			     struct graphics_ioctl_rpc_rx_bulk *rpc_rx_bulk)
 {
 	int ret = 0;
 	uint32_t bulk_size = 0;
@@ -761,9 +761,9 @@ struct file_operations graphics_fops = {
  ****/
 
 struct miscdevice graphics_dev = {
-	.minor =    MISC_DYNAMIC_MINOR,
-	.name =     GRAPHICS_DRIVER_NAME,
-	.fops =     &graphics_fops
+	.minor = MISC_DYNAMIC_MINOR,
+	.name  = GRAPHICS_DRIVER_NAME,
+	.fops  = &graphics_fops
 };
 
 int __devinit graphics_driver_init(void)
@@ -897,7 +897,7 @@ static int __devinit bcm2708_graphics_probe(struct platform_device *pdev)
 	}
 
 	state.tid_owner = 0;
-        state.owner_state = NULL;
+	state.owner_state = NULL;
 
 	state.initialized = 1;
 	return 0;
