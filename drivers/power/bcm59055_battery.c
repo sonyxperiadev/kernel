@@ -41,6 +41,10 @@ struct bcm59055_battery_data {
 	// struct wake_lock batt_monitor_wl;
 	// struct wake_lock usb_charger_wl;
 #endif
+	// Display properties.
+	unsigned int batt_capacity ; // Used for battery icon capacity. This is a percentage value.
+	unsigned int batt_status ; 
+	unsigned int batt_voltage_now ; 
 };
 
 struct voltage_percentage   
@@ -54,44 +58,33 @@ struct voltage_percentage
 
 struct voltage_percentage vp_table[MAX_VOLTAGES] = 
 {
-    { 3200 , 10 },
-    { 3800 , 20 },
-    { 3900 , 30 },
-    { 3950 , 40 },
-    { 4000 , 50 },
-    { 4100 , 70 },
-    { 4150 , 80 },
-    { 4200 , 100 },
+    { 3200 , 0 },
+    { 3800 , 5 },
+    { 3900 , 10 },
+    { 3950 , 20 },
+    { 4000 , 25 },
+    { 4100 , 30 },
+    { 4150 , 40 },
+    { 4200 , 50 },
 } ;
 
 /* Battery values exported in /sys/class/power_supply/battery */
 #define BATT_TECHNOLOGY	 (POWER_SUPPLY_TECHNOLOGY_UNKNOWN)
-#define BATT_VOLT	(1200)
-#define BATT_HEALTH	(1)	/* Good */
-#define BATT_PRESENT	(1)
-#define BATT_STATUS	(4)	/* Full */
 #define BATT_TEMP	(58)
 
 /* AC power values exported in /sys/class/power_supply/ac */
 #define AC_ONLINE	(1)
 
-unsigned int g_battery_percentage = 0 ;
-
 static enum power_supply_property bcm59055_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
-	POWER_SUPPLY_PROP_HEALTH,
-	POWER_SUPPLY_PROP_PRESENT,
 	POWER_SUPPLY_PROP_TECHNOLOGY,
 	POWER_SUPPLY_PROP_CAPACITY,
-	POWER_SUPPLY_PROP_TEMP,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 };
 
 static enum power_supply_property bcm59055_wall_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
 };
-
-static int bcm59055_get_battery_voltage_per(struct bcm590xx *bcm590xx, unsigned int *percentage )  ;
 
 static int bcm59055_wall_get_property(struct power_supply *psy,
 			enum power_supply_property psp,
@@ -111,7 +104,7 @@ static int bcm59055_wall_get_property(struct power_supply *psy,
 	return ret;
 }
 
-static int bcm59055_get_battery_voltage_per(struct bcm590xx *bcm590xx, unsigned int *percentage ) 
+static int bcm59055_get_battery_voltage_per(struct bcm590xx *bcm590xx, unsigned int *percentage, unsigned int *voltage_now  ) 
 {
 	unsigned int regval = 0 ;
 	unsigned int regval1 = 0 ;
@@ -129,6 +122,8 @@ static int bcm59055_get_battery_voltage_per(struct bcm590xx *bcm590xx, unsigned 
         regval = ( regval << 8 ) | ( regval1 ) ;
 
     	regval = ( regval * millivolt_mul * 48) / ( 1024 * 10 ) ;
+
+        *voltage_now = regval ;
 
 		i = 0 ;
 		while ( i < MAX_VOLTAGES ) 
@@ -149,9 +144,11 @@ static void bcm59055_batt_lvl_wq(struct work_struct *work)
 {
     struct bcm59055_battery_data *battery_data = container_of(work, struct bcm59055_battery_data, batt_lvl_wq.work);
 
-    bcm59055_get_battery_voltage_per(battery_data->bcm590xx, &g_battery_percentage) ;
+    bcm59055_get_battery_voltage_per(battery_data->bcm590xx, &(battery_data->batt_capacity) , &(battery_data->batt_voltage_now)) ;
 
-	schedule_delayed_work(&battery_data->batt_lvl_wq, msecs_to_jiffies(30000));
+    power_supply_changed(&battery_data->battery) ;
+
+	schedule_delayed_work(&battery_data->batt_lvl_wq, msecs_to_jiffies(7000));
 }
 
 
@@ -161,34 +158,32 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 {
 	int ret = 0;
 
-	printk(" bcm59055_battery_get_property called with %d, battery_percentage is %d \n", psp, g_battery_percentage ) ;
+	struct bcm59055_battery_data *battery_data = dev_get_drvdata(psy->dev->parent);
 
 	switch (psp) {
 	case POWER_SUPPLY_PROP_STATUS:
-		val->intval = BATT_STATUS;
-		break;
-	case POWER_SUPPLY_PROP_HEALTH:
-		val->intval = BATT_HEALTH;
-		break;
-	case POWER_SUPPLY_PROP_PRESENT:
-		val->intval = BATT_PRESENT;
+		val->intval = battery_data->batt_status ;
 		break;
 	case POWER_SUPPLY_PROP_TECHNOLOGY:
-		val->intval = BATT_TECHNOLOGY;
+		val->intval = POWER_SUPPLY_TECHNOLOGY_LION;
 		break;
 	case POWER_SUPPLY_PROP_CAPACITY:
-		val->intval = g_battery_percentage ;
+		val->intval = battery_data->batt_capacity ;
 		break;
-	case POWER_SUPPLY_PROP_TEMP:
-		val->intval = BATT_TEMP;
+	case POWER_SUPPLY_PROP_VOLTAGE_MIN:
+		val->intval = 3200 * 1000 ;
+		break;
+	case POWER_SUPPLY_PROP_VOLTAGE_MAX:
+		val->intval = 4200 * 1000 ;
 		break;
 	case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-		val->intval = BATT_VOLT;
+		val->intval = battery_data->batt_voltage_now * 1000 ;
 		break;
 	default:
 		ret = -EINVAL;
 		break;
 	}
+
 
 	return ret;
 }
@@ -217,18 +212,28 @@ static void bcm59055_power_isr(int intr, void *data)
 	case BCM59055_IRQID_INT2_CHGINS:
 		printk("%s Wall Charger inserted interrupt \n", __func__);
 		if (pdata && pdata->can_start_charging && !pdata->can_start_charging(NULL))
+		{
 			printk ("charging not started\n");
-		else {
+			battery_data->batt_status = POWER_SUPPLY_STATUS_DISCHARGING ;
+            power_supply_changed(&battery_data->battery) ;
+		}
+		else 
+		{
 			printk ("charging started\n");
 			bcm59055_start_charging(bcm59055);
+			battery_data->batt_status = POWER_SUPPLY_STATUS_CHARGING ; 
+            power_supply_changed(&battery_data->battery) ;
 		}
 		break;
 
 	case BCM59055_IRQID_INT2_CHGRM:
-		printk("%s Wall Charger REMOVED interrupt \n", __func__);
-        bcm590xx_reg_write_slave1(0, 0x46) ;
-		break;
-
+		{
+    		printk("%s Wall Charger REMOVED interrupt \n", __func__);
+            bcm590xx_reg_write_slave1(0, 0x46) ;
+            battery_data->batt_status = POWER_SUPPLY_STATUS_DISCHARGING ;
+            power_supply_changed(&battery_data->battery) ;
+    		break;
+		}
 	}
 }
 
@@ -275,6 +280,7 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 	battery_data->battery.properties = bcm59055_battery_props;
 	battery_data->battery.num_properties = ARRAY_SIZE(bcm59055_battery_props);
 	battery_data->battery.get_property = bcm59055_battery_get_property;
+    battery_data->batt_status = POWER_SUPPLY_STATUS_NOT_CHARGING ;
 
 	battery_data->wall.name = "bcm59055-wall";
 	battery_data->wall.type = POWER_SUPPLY_TYPE_MAINS;
