@@ -5,21 +5,20 @@
 
 /* hardware definition */
 static struct snd_pcm_hardware snd_bcm2835_playback_hw = {
-	.info = (SNDRV_PCM_INFO_MMAP |
-			SNDRV_PCM_INFO_INTERLEAVED |
-			SNDRV_PCM_INFO_BLOCK_TRANSFER |
-			SNDRV_PCM_INFO_MMAP_VALID),
+	.info = (
+			SNDRV_PCM_INFO_INTERLEAVED
+			),
 	.formats =          SNDRV_PCM_FMTBIT_S16_LE,
 	.rates =            SNDRV_PCM_RATE_44100,
 	.rate_min =         44100,
 	.rate_max =         44100,
 	.channels_min =     1,
 	.channels_max =     2,
-	.buffer_bytes_max = 57344, /* Can increase to 128k */
-	.period_bytes_min = 8192,
-	.period_bytes_max = 8192, /* Can increase to 128k */
+	.buffer_bytes_max = AUDIO_IPC_BLOCK_BUFFER_SIZE * (AUDIO_IPC_BLOCK_NUM_BUFFERS - 1),
+	.period_bytes_min = AUDIO_IPC_BLOCK_BUFFER_SIZE,
+	.period_bytes_max = AUDIO_IPC_BLOCK_BUFFER_SIZE,
 	.periods_min =      1,
-	.periods_max =      8,
+	.periods_max =      (AUDIO_IPC_BLOCK_NUM_BUFFERS - 1),
 };
 
 #if 0
@@ -63,7 +62,7 @@ static irqreturn_t bcm2835_playback_fifo_irq(int irq, void *dev_id)
 	 * each iteration are the buffers that have been played out already
 	 */
     if (consumed) {
-        audio_info("updating pos cur: %d + %d max: %d\n", alsa_stream->pos,
+        audio_debug("updating pos cur: %d + %d max: %d\n", alsa_stream->pos,
                 (consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE), alsa_stream->buffer_size);
         alsa_stream->pos += (consumed * AUDIO_IPC_BLOCK_BUFFER_SIZE);
         alsa_stream->pos %= alsa_stream->buffer_size;
@@ -106,7 +105,7 @@ static int snd_bcm2835_playback_open(struct snd_pcm_substream *substream)
 	/* Enabled in start trigger, called on each "fifo irq" after that */
 	alsa_stream->enable_fifo_irq = 0;
 	alsa_stream->fifo_irq_handler = bcm2835_playback_fifo_irq;
-	alsa_stream->buffer_count = 0;
+	atomic_set(&alsa_stream->buffer_count, 0); // Fifo implementation leaves 1 slot free
 
 	runtime->private_data = alsa_stream;
 	runtime->private_free = snd_bcm2835_playback_free;
@@ -147,13 +146,13 @@ static int snd_bcm2835_playback_close(struct snd_pcm_substream *substream)
 			audio_error(" Failed to STOP alsa device\n");
 	}
 
-	alsa_stream->period_size = 0;
-	alsa_stream->buffer_size = 0;
-
 	if (alsa_stream->open) {
 		alsa_stream->open = 0;
 		bcm2835_audio_close(alsa_stream);
 	}
+
+	alsa_stream->period_size = 0;
+	alsa_stream->buffer_size = 0;
 
 	/*
 	 * Do not free up alsa_stream here, it will be freed up by
@@ -198,12 +197,17 @@ static int snd_bcm2835_pcm_hw_params(struct snd_pcm_substream *substream,
 	bcm2835_alsa_stream_t *alsa_stream = (bcm2835_alsa_stream_t *)runtime->private_data;
 
 	audio_debug(" .. IN\n");
+	/* We use vc allocated buffers.
 	err = snd_pcm_lib_malloc_pages(substream,
 			params_buffer_bytes(params));
 	if (err < 0) {
 		audio_error(" pcm_lib_malloc failed to allocated pages for buffers\n");
 		return err;
 	}
+	*/
+
+	runtime->dma_bytes = params_buffer_bytes(params);
+
 	audio_debug(" allocated %d\n", params_buffer_bytes(params));
 
 	err = bcm2835_audio_set_params(alsa_stream, params_channels(params),
@@ -289,7 +293,7 @@ snd_bcm2835_pcm_pointer(struct snd_pcm_substream *substream)
 	bcm2835_alsa_stream_t *alsa_stream = runtime->private_data;
 
 	audio_debug(" .. IN\n");
-	audio_info("pcm_pointer %u\n",  alsa_stream->pos);
+	audio_debug("pcm_pointer %u\n",  alsa_stream->pos);
 
 	audio_debug(" .. OUT\n");
 	return bytes_to_frames(runtime, alsa_stream->pos);
@@ -302,7 +306,7 @@ static int snd_bcm2835_pcm_copy(struct snd_pcm_substream *substream, int channel
 	bcm2835_alsa_stream_t *alsa_stream = runtime->private_data;
 
 	audio_debug(" .. IN\n");
-	audio_info("copy... %d\n", frames_to_bytes(runtime, count));
+	audio_debug("copy... %d\n", frames_to_bytes(runtime, count));
 
 	return bcm2835_audio_write(alsa_stream, frames_to_bytes(runtime, count), src);
 }
@@ -370,9 +374,10 @@ int __devinit snd_bcm2835_new_pcm(bcm2835_chip_t *chip)
 #endif
 	/* pre-allocation of buffers */
 	/* NOTE: this may fail */
+	/*
 	snd_pcm_lib_preallocate_pages_for_all(pcm, SNDRV_DMA_TYPE_CONTINUOUS,
 				snd_dma_continuous_data(GFP_KERNEL), 64*1024, 64*1024);
-
+	*/
 	audio_debug(" .. OUT\n");
 
 	return 0;

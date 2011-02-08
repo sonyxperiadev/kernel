@@ -14,7 +14,7 @@
 #include "ipc_fifo.h"
 #include "bcm2835.h"
 
-#ifdef AUDIO_DEBUG_ENABLE
+#ifdef AUDIO_VERBSE_DEBUG_ENABLE
 /* Must be called with ARM<->VC fifo lock held */
 static inline void dump_fifo(bcm2835_alsa_stream_t *alsa_stream)
 {
@@ -194,6 +194,7 @@ void bcm2835_audio_close(bcm2835_alsa_stream_t *alsa_stream)
 	/* Stop period elapsed irqs right now */
 	alsa_stream->enable_fifo_irq = 0;
 
+	mb();
 	/* Free up all buffers in our queue */
 	bcm2835_audio_flush_buffers(alsa_stream);
 
@@ -344,13 +345,13 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 		goto out;
 
 	/* Block till we have enough free buffers : assuming 2K buffers */
-	while (alsa_stream->buffer_count * AUDIO_IPC_BLOCK_BUFFER_SIZE < count) {
+	while (atomic_read(&alsa_stream->buffer_count) * AUDIO_IPC_BLOCK_BUFFER_SIZE < count) {
 		if (down_trylock(&alsa_stream->buffers_update_sem)) {
 			/* Poke VC to read from the fifo ..*/
 			audio_alert("No space to wrie on this alsa device\n");
 			audio_alert("Availabe buffers(%d), size(%d), total needed (%d)\n",
-					alsa_stream->buffer_count,
-					(alsa_stream->buffer_count * AUDIO_IPC_BLOCK_BUFFER_SIZE), count);
+					atomic_read(&alsa_stream->buffer_count),
+					(atomic_read(&alsa_stream->buffer_count) * AUDIO_IPC_BLOCK_BUFFER_SIZE), count);
 			audio_info(" Trying to wake VC up ..\n");
 			dump_fifo(alsa_stream);
 			ipc_notify_vc_event(chip->irq);
@@ -367,9 +368,6 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 	set_fs(old_fs);
 #endif
 
-	spin_lock_irqsave(&alsa_stream->lock, flags);
-	bcm2835_audio_fifo_get_lock(alsa_stream);
-
 	list_for_each_safe(p, next, &alsa_stream->buffer_list) {
 
 		if (count == 0)
@@ -381,7 +379,7 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 
         /* If first time getting this buffer */
         if (buffer->start == NULL) {
-            audio_info(" ioremapping phys_addr (0x%08x)\n",__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr));
+            audio_debug(" ioremapping phys_addr (0x%08x)\n",__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr));
             buffer->start = (uint8_t *)ioremap(__VC_BUS_TO_ARM_PHYS_ADDR(buffer->bus_addr), buffer->size);
         }
 
@@ -394,7 +392,7 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 		}
 
 		copy_size = count > buffer->data_left ? buffer->data_left : count;
-		audio_info(" Copying into buffer (%d: %08x offset: %d),for size (%d)\n", buffer->buffer_id, buffer->start, buffer->size - buffer->data_left, copy_size);
+		audio_debug(" Copying into buffer (%d: %08x offset: %d),for size (%d)\n", buffer->buffer_id, buffer->start, buffer->size - buffer->data_left, copy_size);
 		memcpy((buffer->start + buffer->size - buffer->data_left), src, copy_size);
 		buffer->data_left -= copy_size;
 		count -= copy_size;
@@ -403,17 +401,17 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 			/* This buffer is only partially filled, so not doing
 			 * anything */
 			BUG_ON(count);
-			audio_info("partial filled buf\n");
+			audio_debug("partial filled buf\n");
 			break;
 		}
 
 		entry.buffer_id = buffer->buffer_id;
 		entry.buffer_size = buffer->size;
 		entry.buffer_ptr = buffer->bus_addr;
-		audio_info("sending buf to VC id: %08x sz: %08x adr: %08x cnt: %d\n", buffer->buffer_id, buffer->size, buffer->bus_addr, alsa_stream->buffer_count);
+		audio_debug("sending buf to VC id: %08x sz: %08x adr: %08x cnt: %d\n", buffer->buffer_id, buffer->size, buffer->bus_addr, atomic_read(&alsa_stream->buffer_count));
 		iounmap(buffer->start);
 		list_del_init(p);
-		alsa_stream->buffer_count--;
+		atomic_dec(&alsa_stream->buffer_count);
 		kfree(buffer);
 
 		/* add into out fifo, we know its not full as long as we are
@@ -426,8 +424,6 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 	/* ring the doorbell */
 	ipc_notify_vc_event(chip->irq);
 	
-	bcm2835_audio_fifo_put_lock(alsa_stream);
-	spin_unlock_irqrestore(&alsa_stream->lock, flags);
 out:
 	audio_debug(" .. OUT\n");
 	return 0;
@@ -444,7 +440,7 @@ uint32_t bcm2835_audio_retrieve_buffers(bcm2835_alsa_stream_t *alsa_stream)
 
 	/* get the lock first */
 	spin_lock_irqsave(&alsa_stream->lock, flags);
-	bcm2835_audio_fifo_get_lock(alsa_stream);
+//	bcm2835_audio_fifo_get_lock(alsa_stream);
 
 	while (!ipc_fifo_empty(&alsa_stream->in_fifo)) {
 		memset(&entry, 0, sizeof(entry));
@@ -455,9 +451,11 @@ uint32_t bcm2835_audio_retrieve_buffers(bcm2835_alsa_stream_t *alsa_stream)
 			buffer->bus_addr = entry.buffer_ptr;
 			buffer->size = entry.buffer_size;
 			buffer->data_left = entry.buffer_size;
-			audio_info(" Adding buffer(%d) @ bus_add(0x%08x), size (%d) to list\n", buffer->buffer_id, (uint32_t)buffer->bus_addr, buffer->size);
+			audio_debug(" Adding buffer(%d) @ bus_add(0x%08x), size (%d) to list\n", buffer->buffer_id, (uint32_t)buffer->bus_addr, buffer->size);
 			list_add_tail(&buffer->link, &alsa_stream->buffer_list);
-			alsa_stream->buffer_count++;
+			mb();
+			// Make sure data is copied before inc
+			atomic_inc(&alsa_stream->buffer_count);
 			retrieved++;
 			up(&alsa_stream->buffers_update_sem);
 		} else {
@@ -469,9 +467,9 @@ uint32_t bcm2835_audio_retrieve_buffers(bcm2835_alsa_stream_t *alsa_stream)
 
 	dump_fifo(alsa_stream);
 
-	audio_info(" Buffers avail(%d), retrieved (%d)\n", alsa_stream->buffer_count, retrieved);
+	audio_info(" Buffers avail(%d), retrieved (%d)\n", atomic_read(&alsa_stream->buffer_count), retrieved);
 	/* release the lock here */
-	bcm2835_audio_fifo_put_lock(alsa_stream);
+//	bcm2835_audio_fifo_put_lock(alsa_stream);
 	spin_unlock_irqrestore(&alsa_stream->lock, flags);
 	audio_debug(" .. OUT\n");
 
@@ -488,7 +486,7 @@ void bcm2835_audio_flush_buffers(bcm2835_alsa_stream_t *alsa_stream)
 
 	spin_lock_irqsave(&alsa_stream->lock, flags);
 
-	audio_info("(%d) buffers still in the queue, flushing them out\n", alsa_stream->buffer_count);
+	audio_info("(%d) buffers still in the queue, flushing them out\n", atomic_read(&alsa_stream->buffer_count));
 
 	list_for_each_safe(p, next, &alsa_stream->buffer_list) {
 		buffer = list_entry(p, bcm2835_audio_buffer_t, link);
@@ -497,7 +495,7 @@ void bcm2835_audio_flush_buffers(bcm2835_alsa_stream_t *alsa_stream)
 			iounmap(buffer->start);
 
 		list_del_init(p);
-		alsa_stream->buffer_count--;
+		atomic_dec(&alsa_stream->buffer_count);
 		kfree(buffer);
 	}
 

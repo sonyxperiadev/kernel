@@ -93,6 +93,7 @@ static inline void ipc_fifo_write(const IPC_FIFO_T *fifo, const void *entry)
 		memcpy(fifo_entry, entry, fifo->entry_size);
 		write++;
 		write %= fifo->size;
+		mb();
 		*fifo->write = write;
 	}
 }
@@ -111,6 +112,7 @@ static inline void ipc_fifo_read(const IPC_FIFO_T *fifo, void *entry)
 		/* inc the read ptr */
 		read++;
 		read %= fifo->size;
+		mb();
 		*fifo->read = read;
 	}
 }

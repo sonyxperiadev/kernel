@@ -53,8 +53,8 @@
 #define audio_alert(fmt, arg...)	\
 	printk(KERN_ALERT"%s:%d " fmt, __func__, __LINE__, ##arg)
 
-#define AUDIO_IPC_BLOCK_NUM_BUFFERS    (8)
-#define AUDIO_IPC_BLOCK_BUFFER_SIZE    (1024*8)
+#define AUDIO_IPC_BLOCK_NUM_BUFFERS    (2+1)
+#define AUDIO_IPC_BLOCK_BUFFER_SIZE    (1024*4)
 
 #define AUDIO_CONTROL_OFFSET			(0x00)
 	#define CTRL_EN_SHIFT			(0)
@@ -181,12 +181,12 @@ typedef struct bcm2835_alsa_stream {
 	IPC_FIFO_T in_fifo;
 	IPC_FIFO_T out_fifo;
 
-	uint32_t enable_fifo_irq;
+	volatile uint32_t enable_fifo_irq;
 	irq_handler_t fifo_irq_handler;
 
 	/* Always contains the buffers that we can write */
 	struct list_head buffer_list;
-	volatile uint32_t buffer_count;
+	atomic_t buffer_count;
 
 } bcm2835_alsa_stream_t;
 
