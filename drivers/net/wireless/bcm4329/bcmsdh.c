@@ -220,8 +220,8 @@ bcmsdh_cfg_read(void *sdh, uint fnc_num, uint32 addr, int *err)
 	do {
 		if (retry)	/* wait for 1 ms till bus get settled down */
 			OSL_DELAY(10000);
-		else
-			OSL_DELAY(100);
+//		else
+//			OSL_DELAY(100);
 #endif
 	status = sdioh_cfg_read(bcmsdh->sdioh, fnc_num, addr, (uint8 *)&data);
 #ifdef SDIOH_API_ACCESS_RETRY_LIMIT
@@ -233,7 +233,7 @@ bcmsdh_cfg_read(void *sdh, uint fnc_num, uint32 addr, int *err)
 	BCMSDH_INFO(("%s:fun = %d, addr = 0x%x, uint8data = 0x%x\n", __FUNCTION__,
 	            fnc_num, addr, data));
 
-	OSL_DELAY(100);
+	//OSL_DELAY(100);
 
 	return data;
 }
@@ -256,8 +256,8 @@ bcmsdh_cfg_write(void *sdh, uint fnc_num, uint32 addr, uint8 data, int *err)
 	do {
 		if (retry)	/* wait for 1 ms till bus get settled down */
 			OSL_DELAY(10000);
-		else
-			OSL_DELAY(100);
+//		else
+//			OSL_DELAY(100);
 
 #endif
 	status = sdioh_cfg_write(bcmsdh->sdioh, fnc_num, addr, (uint8 *)&data);
@@ -267,7 +267,7 @@ bcmsdh_cfg_write(void *sdh, uint fnc_num, uint32 addr, uint8 data, int *err)
 	if (err)
 		*err = SDIOH_API_SUCCESS(status) ? 0 : BCME_SDIO_ERROR;
 
-	OSL_DELAY(100);
+	//OSL_DELAY(100);
 
 	BCMSDH_INFO(("%s:fun = %d, addr = 0x%x, uint8data = 0x%x\n", __FUNCTION__,
 	            fnc_num, addr, data));
@@ -293,7 +293,7 @@ bcmsdh_cfg_read_word(void *sdh, uint fnc_num, uint32 addr, int *err)
 
 	BCMSDH_INFO(("%s:fun = %d, addr = 0x%x, uint32data = 0x%x\n", __FUNCTION__,
 	            fnc_num, addr, data));
-	OSL_DELAY(100);
+	//OSL_DELAY(100);
 
 	return data;
 }
@@ -315,7 +315,7 @@ bcmsdh_cfg_write_word(void *sdh, uint fnc_num, uint32 addr, uint32 data, int *er
 	if (err)
 		*err = (SDIOH_API_SUCCESS(status) ? 0 : BCME_SDIO_ERROR);
 
-	OSL_DELAY(100);
+	//OSL_DELAY(100);
 
 	BCMSDH_INFO(("%s:fun = %d, addr = 0x%x, uint32data = 0x%x\n", __FUNCTION__, fnc_num,
 	             addr, data));
