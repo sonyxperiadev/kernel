@@ -59,8 +59,6 @@ extern int sdioh_mmc_irq(int irq);
 #include <mach/gpio.h>
 #endif
 
-#define EXAMPLE_GET_MAC
-
 /* Customer specific Host GPIO defintion  */
 static int dhd_oob_gpio_num = -1; /* GG 19 */
 
@@ -168,6 +166,18 @@ dhd_custom_get_mac_address(unsigned char *buf)
 #ifdef CUSTOMER_HW2
 	ret = wifi_get_mac_addr(buf);
 #endif
+	{
+		uint rand_mac;
+
+		srandom32((uint)jiffies);
+		rand_mac = random32();
+		buf[0] = 0x00;         
+		buf[1] = 0x1B;
+		buf[2] = 0xE9;
+		buf[3] = (unsigned char)(rand_mac);
+		buf[4] = (unsigned char)(rand_mac >> 8);
+		buf[5] = (unsigned char)(rand_mac >> 16);
+	}
 
 #ifdef EXAMPLE_GET_MAC
 	/* EXAMPLE code */

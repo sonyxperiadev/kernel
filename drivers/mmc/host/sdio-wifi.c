@@ -223,6 +223,7 @@ err_free_gpio:
 
    return rc;
 }
+
 #if 0
 static void __exit sdio_wifi_exit(void)
 {

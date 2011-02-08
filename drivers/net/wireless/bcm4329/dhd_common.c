@@ -45,7 +45,7 @@
 #endif
 
 #ifdef GET_CUSTOM_MAC_ENABLE
-int wifi_get_mac_addr(unsigned char *buf);
+//int wifi_get_mac_addr(unsigned char *buf);
 #endif /* GET_CUSTOM_MAC_ENABLE */
 
 int dhd_msg_level;
