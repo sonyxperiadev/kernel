@@ -99,12 +99,12 @@ IPC_Boolean TraceChannel [IPC_Channel_All] =
 	IPC_FALSE, // Buffer
 	IPC_FALSE, // Pool
 	IPC_FALSE, // Queue
-	IPC_TRUE, // General
+	IPC_FALSE, // General
 	IPC_TRUE, // Error
 	IPC_FALSE, // Hisr
-	IPC_TRUE, // Sm
-	IPC_TRUE, // FlowControl
-	IPC_TRUE  // Debug
+	IPC_FALSE, // Sm
+	IPC_FALSE, // FlowControl
+	IPC_FALSE  // Debug
 };
 
 IPC_Boolean TraceToAt = IPC_FALSE;
