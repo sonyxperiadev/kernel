@@ -48,6 +48,7 @@
  */
 static DEFINE_MUTEX(io_mutex);
 
+struct bcm590xx *g_bcm590xx_slave0 ; 
 struct bcm590xx *g_bcm590xx_slave1 ; 
 
 static int bcm590xx_read(struct bcm590xx *bcm590xx, u8 reg)
@@ -300,6 +301,18 @@ static int bcm590xx_client_dev_register(struct bcm590xx *bcm590xx, const char *n
     return mfd_add_devices(bcm590xx->dev, -1, &cell, 1, NULL, 0);
 }
 
+void bcm590xx_shutdown(void)
+{
+	int host_ctrl1;
+	
+	host_ctrl1 = bcm590xx_reg_read(g_bcm590xx_slave0, BCM59055_REG_HOSTCTRL1);
+	host_ctrl1 |= 1 << BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET;
+	bcm590xx_reg_write(g_bcm590xx_slave0, BCM59055_REG_HOSTCTRL1, (uint16_t)host_ctrl1);
+}
+
+EXPORT_SYMBOL_GPL(bcm590xx_shutdown);
+
+
 int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		       struct bcm590xx_platform_data *pdata)
 {
@@ -361,6 +374,8 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
     		}
     	}
 
+		g_bcm590xx_slave0 = bcm590xx ; 
+
         /* init 59055 chip by reading and clearing INT registers */
     	disable_irq(irq);
 
@@ -368,7 +383,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
     	bcm59055_rd_cl_dis_intrs(bcm590xx);
 	
     	enable_irq(irq);
- 
+
     	// Register battery device, so that battery probe function will be called.
         bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery") ;
 

@@ -64,6 +64,7 @@
 #define BCM59055_REG_MBCCTRL11            0x5a
 
 /* Register addresses */
+#define BCM59055_REG_HOSTCTRL1        0x01
 #define BCM59055_REG_PONKEYCTRL1      0x0C
 #define BCM59055_REG_PONKEYCTRL2      0x0D
 #define BCM59055_REG_RFOPMODCTRL      0xA0    /* R/W  RFLDO */
@@ -129,6 +130,8 @@
 
 #define BCM59055_INVALID_ADCVAL              0x04 
 #define BCM59055_REG_ADCCTRL3_VALID_BITS     0x03 
+
+#define BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET  2
 
 /* PMU Interrupts IDs  --------------------------------------------------------------- */
 typedef enum {

@@ -31,6 +31,27 @@
 #include <asm/mach/map.h>
 #include <asm/hardware/cache-l2x0.h>
 #include <mach/clock.h>
+#include <linux/mfd/bcm590xx/core.h>
+
+#include <linux/delay.h>
+
+static void island_poweroff(void)
+{
+#ifdef CONFIG_MFD_BCM_PMU590XX
+
+	msleep(5000);
+	bcm590xx_shutdown();
+#endif
+
+	while(1)
+		;
+}
+
+static void island_restart(char mode, const char *cmd)
+{
+	arm_machine_restart('h', cmd);
+}
+
 
 #ifdef CONFIG_CACHE_L2X0
 static void __init island_l2x0_init(void)
@@ -46,6 +67,9 @@ static void __init island_l2x0_init(void)
 
 static int __init island_init(void)
 {
+	pm_power_off = island_poweroff;
+	arm_pm_restart = island_restart;
+	
 #ifdef CONFIG_CACHE_L2X0
 	island_l2x0_init();
 #endif

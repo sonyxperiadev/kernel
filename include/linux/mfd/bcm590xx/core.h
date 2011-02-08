@@ -79,4 +79,6 @@ int bcm590xx_reg_write_slave1(int reg, u16 val) ;
 void bcm59055_initialize_charging( struct bcm590xx *bcm59055 ) ;
 void bcm59055_start_charging(struct bcm590xx *bcm59055 ) ;
 
+void bcm590xx_shutdown(void);
+
 #endif
