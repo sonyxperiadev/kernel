@@ -194,6 +194,7 @@ int camera_release(struct inode *inode, struct file *filp)
 	struct camera_buffers *g_buf;
 
 	camera_print("-IN");
+	vc_camera_control(VIREFINDER_DISABLE);
 	g_buf = (struct camera_buffers *) filp->private_data;
 	ret = down_interruptible(&g_buf->buf_sem );
 	if( ret < 0 ) {
