@@ -739,6 +739,7 @@ static const struct xdr_discrim CAPI2_MSElement_t_dscrm[] = {
 		{ (int)MS_LOCAL_SS_ELEM_FDN_CHECK, _T("MS_LOCAL_SS_ELEM_FDN_CHECK"),						(xdrproc_t)xdr_u_char, sizeof(UInt8), NULL_capi2_proc_t, (xdrproc_t)xdr_u_char ,0 },
 		{ (int)MS_LOCAL_SS_ELEM_INCLUDE_FACILITY_IE, _T("MS_LOCAL_SS_ELEM_INCLUDE_FACILITY_IE"),	(xdrproc_t)xdr_u_char, sizeof(UInt8), NULL_capi2_proc_t, (xdrproc_t)xdr_u_char ,0 },
 
+        { (int)MS_NETWORK_ELEM_REGSTATE_INFO, _T("MS_NETWORK_ELEM_REGSTATE_INFO"),                (xdrproc_t)xdr_MSRegStateInfo_t, sizeof(MSRegStateInfo_t), NULL_capi2_proc_t, (xdrproc_t)xdr_u_char ,0 },
 		// We do not support FAX in CP, no need to pass the fax param to CP. 		// We do not support FAX in CP, no need to pass the fax param to CP. 
 		// { (int)MS_LOCAL_CC_ELEM_FAX_PARAMS,_T("MS_LOCAL_CC_ELEM_FAX_PARAMS"),	(xdrproc_t)xdr_Fax_Param_t, sizeof(Fax_Param_t),		NULL_capi2_proc_t, (xdrproc_t)xdr_Fax_Param_t ,0},
 		{ __dontcare__, _T(""), NULL_xdrproc_t ,0,0,0,0} 
