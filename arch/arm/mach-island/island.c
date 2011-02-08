@@ -38,8 +38,6 @@
 static void island_poweroff(void)
 {
 #ifdef CONFIG_MFD_BCM_PMU590XX
-
-	msleep(5000);
 	bcm590xx_shutdown();
 #endif
 
