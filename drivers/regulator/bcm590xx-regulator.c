@@ -68,6 +68,7 @@ static int bcm590xxreg_is_enabled(struct regulator_dev *rdev)
 	struct bcm590xx	*bcm59055 = rdev_get_drvdata(rdev);
 	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
     unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev) ;
+	int retval = 0 ;
 
 	int rc = bcm590xx_reg_read(bcm59055, info->reg_addr) ;
 
@@ -81,14 +82,15 @@ static int bcm590xxreg_is_enabled(struct regulator_dev *rdev)
 
 	if ( ldo_or_sr == BCM590XX_LDO ) 
 	{
-    	if ( rc < LDO_OFF ) { return 1 ; } 
-    	else { return 0 ; } 
+    	if ( rc < LDO_OFF ) { retval = 1 ; } 
+    	else { retval = 0 ; } 
 	}
 	else if ( ldo_or_sr == BCM590XX_SR ) 
 	{
-    	if ( rc == LDO_OFF ) { return 0 ; } 
-    	else { return 1 ; } 
+    	if ( rc == LDO_OFF ) { retval = 0 ; } 
+    	else { retval = 1 ; } 
 	}
+	return retval ; 
 }
 
 /* @enable: Configure the regulator as enabled. */
@@ -97,6 +99,7 @@ static int bcm590xxreg_enable(struct regulator_dev *rdev)
 	struct bcm590xx	*bcm59055 = rdev_get_drvdata(rdev);
     struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
     unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev) ;
+    int retval = 0 ;	
 
 	int rc = bcm590xx_reg_read(bcm59055, info->reg_addr) ;
 
@@ -110,24 +113,26 @@ static int bcm590xxreg_enable(struct regulator_dev *rdev)
 	// In case of SR always enable in NM (0)
 	if ( ldo_or_sr == BCM590XX_LDO ) 
 	{
-        if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) < LDO_OFF ) { return 1 ; }  // Already enabled.
+        if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) < LDO_OFF ) { retval = 1 ; }  // Already enabled.
         else 
         { 
             // return ( bcm590xx_reg_write(bcm59055, info->reg_addr, ( ( rc & ~info->en_dis_mask  ) | LDO_STANDBY ) ) ) ;
 			rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) | ( LDO_STANDBY << info->en_dis_shift ) ;
-            return ( bcm590xx_reg_write(bcm59055, info->reg_addr, rc ) ) ;
+            retval = bcm590xx_reg_write(bcm59055, info->reg_addr, rc ) ;
         } 
     }
 	else if ( ldo_or_sr == BCM590XX_SR ) 
 	{
-        if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) != LDO_OFF ) { return 1 ; }  // Already enabled.
+        if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) != LDO_OFF ) { retval = 1 ; }  // Already enabled.
         else 
         { 
             // return ( bcm590xx_reg_write(bcm59055, info->reg_addr, (  ( rc & ~info->en_dis_mask  ) | LDO_NORMAL ) ) ) ;
 			rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) | ( LDO_NORMAL << info->en_dis_shift ) ;
-            return ( bcm590xx_reg_write(bcm59055, info->reg_addr, rc ) ) ;
+            retval = bcm590xx_reg_write(bcm59055, info->reg_addr, rc ) ;
         } 
 	}
+
+	return retval ;
 }
 
 /* @disable: Configure the regulator as disabled. */
