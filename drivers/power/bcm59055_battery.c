@@ -247,16 +247,18 @@ int bcm59055_init_charger(struct bcm59055_battery_data *battery_data)
 
     bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_CHGINS, true, bcm59055_power_isr, battery_data);	/*EOC charge interrupt */
 	bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_CHGRM, true, bcm59055_power_isr, battery_data);	/*WAC connected interrupt */
+
     return 0 ;
 }
 
 static int bcm59055_battery_probe(struct platform_device *pdev)
 {
 	int ret;
+	int regval = 0 ;
 	struct bcm59055_battery_data *battery_data;
 	struct bcm590xx *bcm59055 = dev_get_drvdata(pdev->dev.parent);  // From debugger make sure we get this information correctly.
 	struct bcm590xx_battery_pdata *battery_pdata;
-
+   
 	battery_pdata = bcm59055->pdata->battery_pdata;
 
 	battery_data = kzalloc(sizeof(struct bcm59055_battery_data), GFP_KERNEL);
@@ -304,6 +306,15 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 	if (ret) {
 		printk(KERN_ERR"%s : Failed to register battery power supply\n", __func__); 
 		goto err_battery_register;
+	}
+
+	// Findout if charging is already enabled in uboot.
+    regval = bcm590xx_reg_read(bcm59055, BCM59055_REG_MBCCTRL3 ) ;
+	if ( regval & BCM59055_REG_MBCCTRL3_WAC_HOSTEN ) 
+	{
+        // This means charging was enabled in uboot. 
+        battery_data->batt_status = POWER_SUPPLY_STATUS_CHARGING ; 
+        power_supply_changed(&battery_data->battery) ;
 	}
 
 	schedule_delayed_work(&battery_data->batt_lvl_wq, 0 );

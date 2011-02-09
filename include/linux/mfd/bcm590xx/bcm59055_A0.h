@@ -133,6 +133,8 @@
 
 #define BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET  2
 
+#define BCM59055_REG_MBCCTRL3_WAC_HOSTEN     1 
+
 /* PMU Interrupts IDs  --------------------------------------------------------------- */
 typedef enum {
 	BCM59055_IRQID_INT1_POK_PRESSED,
