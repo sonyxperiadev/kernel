@@ -310,7 +310,9 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 
 	// Findout if charging is already enabled in uboot.
     regval = bcm590xx_reg_read(bcm59055, BCM59055_REG_MBCCTRL3 ) ;
-	if ( regval & BCM59055_REG_MBCCTRL3_WAC_HOSTEN ) 
+
+	if ( ( ( regval & BCM59055_REG_MBCCTRL3_WAC_HOSTEN ) == BCM59055_REG_MBCCTRL3_WAC_HOSTEN ) && 
+         (  ( regval & BCM59055_REG_MBCCTRL3_USB_HOSTEN ) == 0 ) )
 	{
         // This means charging was enabled in uboot. 
         battery_data->batt_status = POWER_SUPPLY_STATUS_CHARGING ; 
