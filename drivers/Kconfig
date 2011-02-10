@@ -114,7 +114,7 @@ source "drivers/staging/Kconfig"
 
 source "drivers/platform/Kconfig"
 
-source "brcm_modules/Kconfig"
+source "../modules/Kconfig"
 
 source "drivers/alsa/Kconfig"
 

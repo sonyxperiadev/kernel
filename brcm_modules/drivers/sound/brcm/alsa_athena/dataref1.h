@@ -1,6 +1,0 @@
-UInt16  hqAudioTestBuf[] = {
-0xc41f,
-0xe373,
-0xc741,
-0xe7d7
-};

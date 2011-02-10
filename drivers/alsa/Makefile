@@ -44,7 +44,7 @@ EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/public/
 EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/arpc/inc/
 EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/srpc/inc/
 EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/xdr/inc/
-EXTRA_CFLAGS += -I brcm_modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/public/
 #LOG Header files
 EXTRA_CFLAGS += -I $(src)/soc/debug/public
 #PMU Header files

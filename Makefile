@@ -4,7 +4,7 @@ SUBLEVEL = 35
 EXTRAVERSION = .7
 NAME = Yokohama
 
-BRCM_MODULES := brcm_modules
+BRCM_MODULES := ../modules
 BRCM_MODULES_DIR := $(BRCM_MODULES)
 
 # *DOCUMENTATION*
