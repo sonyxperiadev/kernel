@@ -25,6 +25,9 @@
 
 #include <linux/workqueue.h>
 
+#define ARRAYSIZE(a) (sizeof(a)/sizeof(a[0]))
+#define BATT_LVL_WQ_DELAY  (60000)
+
 struct bcm59055_battery_data {
 	// struct power_supply battery;
 	// struct power_supply ac;
@@ -47,30 +50,52 @@ struct bcm59055_battery_data {
 	unsigned int batt_voltage_now ; 
 };
 
+
 struct voltage_percentage   
 {
     unsigned int voltage ;
     unsigned int percentage ;
 } ; 
 
-
-#define MAX_VOLTAGES   8 
-
-struct voltage_percentage vp_table[MAX_VOLTAGES] = 
+struct voltage_percentage vp_table[] = 
 {
-    { 3200 , 0 },
     { 3800 , 5 },
-    { 3900 , 10 },
-    { 3950 , 20 },
-    { 4000 , 25 },
-    { 4100 , 30 },
-    { 4150 , 40 },
-    { 4200 , 50 },
+    { 3850 , 25 },
+    { 3900 , 50 },
+    { 3950 , 70 },
+    { 4000 , 90 },
+    { 4100 , 100 },
 } ;
 
-/* Battery values exported in /sys/class/power_supply/battery */
-#define BATT_TECHNOLOGY	 (POWER_SUPPLY_TECHNOLOGY_UNKNOWN)
-#define BATT_TEMP	(58)
+static inline int bcm59055_divround(int numer, int denom)
+{
+    return (numer + denom/2)/denom;
+}
+
+static inline int bcm59055_linear_solve(int x, int x1, int x2, int y1, int y2)
+{
+   return bcm59055_divround( (x-x1)*(y2-y1), (x2-x1)) + y1;
+}
+
+static int bcm59055_mv_to_percent(int voltage)
+{
+    int i;
+
+    for(i=ARRAYSIZE(vp_table) ; i > 0;  )
+    {
+       --i;
+       if (voltage > vp_table[i].voltage )
+       {
+          if( i == ARRAYSIZE(vp_table)-1 )
+                return vp_table[i].percentage;
+          else
+               return bcm59055_linear_solve(voltage,
+                       vp_table[i].voltage, vp_table[i+1].voltage,
+                       vp_table[i].percentage, vp_table[i+1].percentage);
+       }
+   }
+   return vp_table[0].percentage;
+}
 
 /* AC power values exported in /sys/class/power_supply/ac */
 #define AC_ONLINE	(1)
@@ -109,15 +134,13 @@ static int bcm59055_get_battery_voltage_per(struct bcm590xx *bcm590xx, unsigned 
 	unsigned int regval = 0 ;
 	unsigned int regval1 = 0 ;
 	unsigned int millivolt_mul = 1000 ;
-	unsigned int i = 0 ;
 
     regval = bcm590xx_reg_read(bcm590xx,BCM59055_REG_ADCCTRL3 ) ;
+    regval1 = bcm590xx_reg_read(bcm590xx,BCM59055_REG_ADCCTRL4 ) ;
 
 	if ( !(regval & BCM59055_INVALID_ADCVAL ) )
 	{
 		regval  = regval & BCM59055_REG_ADCCTRL3_VALID_BITS ;
-		 
-        regval1 = bcm590xx_reg_read(bcm590xx,BCM59055_REG_ADCCTRL4 ) ;
 
         regval = ( regval << 8 ) | ( regval1 ) ;
 
@@ -125,16 +148,7 @@ static int bcm59055_get_battery_voltage_per(struct bcm590xx *bcm590xx, unsigned 
 
         *voltage_now = regval ;
 
-		i = 0 ;
-		while ( i < MAX_VOLTAGES ) 
-		{
-            if ( regval <= vp_table[i].voltage ) 
-            {
-                *percentage = vp_table[i].percentage ;
-				break ;
-            }
-            i++ ;
-		}
+        *percentage = bcm59055_mv_to_percent(*voltage_now) ;
     }
 	return 0 ;    
 }
@@ -148,7 +162,7 @@ static void bcm59055_batt_lvl_wq(struct work_struct *work)
 
     power_supply_changed(&battery_data->battery) ;
 
-	schedule_delayed_work(&battery_data->batt_lvl_wq, msecs_to_jiffies(7000));
+	schedule_delayed_work(&battery_data->batt_lvl_wq, msecs_to_jiffies(BATT_LVL_WQ_DELAY));
 }
 
 
