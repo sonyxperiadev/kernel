@@ -633,15 +633,9 @@ void i2c_ts_driver_send_touch_info(void)
       g_num_good_events_per_touch = 0;
       g_num_bad_events_per_touch  = 0;
       
-      input_report_abs(gp_input_dev, ABS_PRESSURE, INPUT_EVENT_NO_PRESSURE);        
-      input_report_key(gp_input_dev, BTN_TOUCH, 0);
-
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)      
       if (gp_i2c_ts->is_multi_touch)
       {
-         input_report_abs(gp_input_dev, ABS_MT_TOUCH_MAJOR, 0);
-         input_report_abs(gp_input_dev, ABS_MT_POSITION_X, 0);
-         input_report_abs(gp_input_dev, ABS_MT_POSITION_Y, 0);
          input_mt_sync(gp_input_dev);
       }
 #endif      
@@ -725,8 +719,6 @@ void i2c_ts_driver_send_touch_info(void)
  */
 void i2c_ts_driver_send_multitouch_info(void)   
 {
-   int finger2_pressed = g_curr_touch_data.num_fingers > 1;
-   
    if (mod_param_debug & 0x1)
    {         
       printk(" %d fingers x1: %4d y1: %4d x2: %4d y2: %4d\n", 
@@ -736,20 +728,6 @@ void i2c_ts_driver_send_multitouch_info(void)
    }   
    
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
-   input_report_abs(gp_input_dev, ABS_X, g_curr_touch_data.x1);
-   input_report_abs(gp_input_dev, ABS_Y, g_curr_touch_data.y1);
-   
-   input_report_abs(gp_input_dev, ABS_PRESSURE, INPUT_EVENT_PRESSURE);     
-   input_report_abs(gp_input_dev, ABS_TOOL_WIDTH, g_blob_size);
-   input_report_key(gp_input_dev, BTN_TOUCH, g_curr_touch_data.num_fingers);
-   
-   if (g_curr_touch_data.num_fingers > 1)
-   {
-      finger2_pressed = 1;
-   }
-   
-   input_report_abs(gp_input_dev, BTN_2, finger2_pressed);
-
    /* Step 1: ABS_MT_TOUCH_MAJOR                                      */
    /* The length of the major axis of the contact.                    */
    /* Assume to be circular so _MINOR is not set.                     */
