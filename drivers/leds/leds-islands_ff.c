@@ -64,8 +64,19 @@ static void islands_ff_led_lcdbacklight_set(struct led_classdev *led_cdev,
 				enum led_brightness value)
 {
    char response_buffer[32];
+
+   unsigned int brightness = (unsigned int)value;
+
+   /* Restrict brighness level as 0 = 0, 1 - 90 = 90, 91-255 = 91-255
+    * We did this because, with brightness below 90 the display is barely
+    * visible.
+    * ssp
+    */
+   if (brightness && brightness < 90)
+       brightness = 90;
+
    vc_gencmd(response_buffer, 32,
-      	     "set_backlight %i", value);
+      	     "set_backlight %i", brightness);
 
    hacked_arm_clk_rate_change(value);
 
