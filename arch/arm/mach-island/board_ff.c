@@ -628,11 +628,20 @@ static struct i2c_board_info __initdata bma150_info[] =
 
 static char *andoroid_function_name[] =
 {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
 #endif
 #ifdef CONFIG_USB_ANDROID_ADB
 	"adb",
+#endif
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_MTP
+	"mtp",
+#endif
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis",
 #endif
 };
 
@@ -652,21 +661,6 @@ static struct android_usb_product android_products[] = {
 		.num_functions	=	ARRAY_SIZE(andoroid_function_name),
 		.functions	=	andoroid_function_name,
 	},
-};
-
-static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
-	.nluns          =       1,
-	.vendor         =       "Broadcom",
-	.product        =       "Big Island",
-	.release        =       0x0100
-};
-
-static struct platform_device android_mass_storage_device = {
-	.name   =       "usb_mass_storage",
-	.id     =       -1,
-	.dev    =       {
-		.platform_data  =       &android_mass_storage_pdata,
-        }
 };
 
 static struct android_usb_platform_data android_usb_data = {
@@ -748,7 +742,6 @@ static struct platform_device *board_devices[] __initdata = {
    &island_ipc_device,
    &board_gpio_keys_device,
    &islands_leds_device,
-   &android_mass_storage_device,
    &android_usb,
    &android_pmem,
    &island_leds_gpio_device,
