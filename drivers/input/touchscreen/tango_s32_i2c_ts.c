@@ -958,15 +958,28 @@ static int i2c_ts_driver_probe(struct i2c_client *p_i2c_client,
 
    /* Enable event bits. */
    set_bit(EV_SYN, gp_input_dev->evbit);
-   set_bit(EV_KEY, gp_input_dev->evbit);
-   set_bit(BTN_TOUCH, gp_input_dev->keybit);
    set_bit(EV_ABS, gp_input_dev->evbit);
+
+   /* No need to set BTN_TOUCH and KEY press capabilities here : ssp
+    *
+    * set_bit(EV_KEY, gp_input_dev->evbit);
+    * set_bit(BTN_TOUCH, gp_input_dev->keybit);
+    *
+    * Added by "ssp" looking at Android EventHub.cpp, but turns out, we dont
+    * need this as well.
+    * set_bit(ABS_MT_POSITION_X, gp_input_dev->absbit);
+    * set_bit(ABS_MT_POSITION_Y, gp_input_dev->absbit);
+    */
+
    
-   input_set_abs_params(gp_input_dev, ABS_X, 0, gp_i2c_ts->x_max_value, 0, 0);
-   input_set_abs_params(gp_input_dev, ABS_Y, 0, gp_i2c_ts->y_max_value, 0, 0);
-   /* Is pressure necessary .... yes! */
-   input_set_abs_params(gp_input_dev, ABS_PRESSURE, 0, INPUT_EVENT_PRESSURE, 0, 0);
-   input_set_abs_params(gp_input_dev, ABS_TOOL_WIDTH, 0, g_blob_size, 0, 0);
+   /*
+    * Again, This is not needed : ssp
+    *
+    * input_set_abs_params(gp_input_dev, ABS_X, 0, gp_i2c_ts->x_max_value, 0, 0);
+    * input_set_abs_params(gp_input_dev, ABS_Y, 0, gp_i2c_ts->y_max_value, 0, 0);
+    * input_set_abs_params(gp_input_dev, ABS_PRESSURE, 0, INPUT_EVENT_PRESSURE, 0, 0);
+    * input_set_abs_params(gp_input_dev, ABS_TOOL_WIDTH, 0, g_blob_size, 0, 0);
+    */
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
    input_set_abs_params(gp_input_dev, ABS_MT_POSITION_X, 0, gp_i2c_ts->x_max_value, 0, 0);
