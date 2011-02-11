@@ -744,6 +744,8 @@ void csl_caph_hwctrl_init(CSL_CAPH_HWCTRL_BASE_ADDR_t addr)
     ( *((volatile UInt32 *) (0x3502CC34)) = (UInt32) (0x00807300) );
 
 #endif
+    ( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502C260))) = (UInt32) (0x04000000) );
+    ( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x35020200))) = (UInt32) (0x003A0000) );
 	return;
 }
 
@@ -3023,6 +3025,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     	    // start the modules in path
 //#if 1	    
 #if 1
+    ( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502C260))) = (UInt32) (0x04000000) );
+    ( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x35020200))) = (UInt32) (0x003A0000) );
         	csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_MONO_CH2, CSL_CAPH_DSP);
 			( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502C160))) = (UInt32) (0xFFFF2777) );
 		

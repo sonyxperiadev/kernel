@@ -129,7 +129,7 @@ int bcm2835_audio_open(bcm2835_alsa_stream_t *alsa_stream)
 		alsa_stream->control |= (1 << CTRL_EN_SHIFT);
 		writel(chip->volume, chip->reg_base + AUDIO_VOLUME_OFFSET);
 		writel(alsa_stream->control, chip->reg_base + AUDIO_CONTROL_OFFSET);
-
+        mb();
 		/* ring the doorbell */
 		ipc_notify_vc_event(chip->irq);
 	}
@@ -207,7 +207,7 @@ void bcm2835_audio_close(bcm2835_alsa_stream_t *alsa_stream)
 
 	alsa_stream->control &= ~(CTRL_EN_MASK);
 	writel(alsa_stream->control, chip->reg_base + AUDIO_CONTROL_OFFSET);
-
+    mb();
 	/* ring the doorbell */
 	ipc_notify_vc_event(chip->irq);
 
@@ -282,7 +282,7 @@ int bcm2835_audio_start(bcm2835_alsa_stream_t *alsa_stream)
 
 	alsa_stream->control |= (1 << CTRL_PLAY_SHIFT);
 	writel(alsa_stream->control, chip->reg_base + AUDIO_CONTROL_OFFSET);
-
+    mb();
 	/* ring the doorbell */
 	ipc_notify_vc_event(chip->irq);
 
@@ -313,7 +313,7 @@ int bcm2835_audio_stop(bcm2835_alsa_stream_t *alsa_stream)
 
 	alsa_stream->control &= ~(CTRL_PLAY_MASK);
 	writel(alsa_stream->control, chip->reg_base + AUDIO_CONTROL_OFFSET);
-
+    mb();
 	/* ring the doorbell */
 	ipc_notify_vc_event(chip->irq);
 
@@ -354,6 +354,7 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 					(atomic_read(&alsa_stream->buffer_count) * AUDIO_IPC_BLOCK_BUFFER_SIZE), count);
 			audio_info(" Trying to wake VC up ..\n");
 			dump_fifo(alsa_stream);
+            mb();
 			ipc_notify_vc_event(chip->irq);
 		}
 	}
@@ -420,7 +421,7 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 		BUG_ON(ipc_fifo_full(&alsa_stream->out_fifo));
 		ipc_fifo_write(&alsa_stream->out_fifo, &entry);
 	}
-
+    mb();
 	/* ring the doorbell */
 	ipc_notify_vc_event(chip->irq);
 	
