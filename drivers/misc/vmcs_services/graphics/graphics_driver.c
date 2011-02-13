@@ -245,7 +245,7 @@ static int graphics_fifo_write(int system, const uint32_t *data, uint32_t count)
 	write = *graphics_register(GRAPHICS_FIFO_WRITE);
 	fifo = (uint32_t *)graphics_register(GRAPHICS_FIFO);
 
-	if ((write + count) > GRAPHICS_FIFO_LENGTH) {
+	if ((write + count) >= GRAPHICS_FIFO_LENGTH) {
 		uint32_t size = (GRAPHICS_FIFO_LENGTH - write) * 4;
 	
 		if (system) {
