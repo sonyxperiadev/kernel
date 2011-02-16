@@ -35,6 +35,7 @@
 #include <linux/input.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_s32.h>
+#include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
 
 #include <asm/mach/arch.h>
@@ -332,6 +333,22 @@ static struct i2c_board_info __initdata tango_info[] =
 };
 
 #endif
+
+static struct MIC_DET_t mic_det_plat_data = {
+   .comp1_irq = BCM_INT_ID_RESERVED131,
+   .comp2_irq = BCM_INT_ID_RESERVED132,
+   .comp1_threshold = 0xCB,
+   .comp2_threshold = 0xB3,
+   .reg_base = KONA_ACI_VA,
+};
+
+static struct i2c_board_info __initdata mic_det_info[] = 
+{
+   {  /* The codec's i2c slave address. */
+      I2C_BOARD_INFO(MIC_DET_DRIVER_NAME, 0x1A),
+      .platform_data = &mic_det_plat_data,
+   },
+};
 
 static struct platform_device board_serial_device = {
    .name    = "serial8250",
@@ -765,6 +782,10 @@ static void __init board_add_devices(void)
                            tango_info,
                            ARRAY_SIZE(tango_info));
 #endif
+
+   i2c_register_board_info(1, 
+                           mic_det_info,
+                           ARRAY_SIZE(mic_det_info));
 
    i2c_register_board_info(2,              
                            max_switch_info_1,

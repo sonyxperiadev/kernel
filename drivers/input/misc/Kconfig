@@ -430,4 +430,12 @@ config INPUT_BCM59055_ONKEY
 
           To compile this driver as a module, choose M here.
 
+config INPUT_BCM2850_MIC_DETECT
+   tristate "BCM2850 microphone detection support"
+   depends on I2C
+   help
+     Say Y here if you want to support MIC/Headset dectection for BCM2850 based boards.
+      
+     To compile this driver as a module, choose M here.
+
 endif
