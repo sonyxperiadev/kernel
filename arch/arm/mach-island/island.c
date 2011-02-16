@@ -32,8 +32,7 @@
 #include <asm/hardware/cache-l2x0.h>
 #include <mach/clock.h>
 #include <linux/mfd/bcm590xx/core.h>
-
-#include <linux/delay.h>
+#include <mach/gpio.h>
 
 static void island_poweroff(void)
 {
@@ -75,6 +74,9 @@ static int __init island_init(void)
 #ifdef CONFIG_HAVE_CLK
 	clock_init();
 #endif
+
+	/* island has 6 banks of GPIO pins */ 
+	kona_gpio_init(6);
 
 	return 0;
 }

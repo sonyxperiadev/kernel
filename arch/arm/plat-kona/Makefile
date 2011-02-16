@@ -17,6 +17,6 @@ obj-$(CONFIG_SMP) += headsmp.o platsmp.o
 obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
 obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o
 obj-$(CONFIG_USB_GADGET_DWC_OTG) += lm.o 
-obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o gpio_irq.o
+obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o 
 obj-$(CONFIG_HAVE_CLK) += clock.o
 obj-$(CONFIG_BRCM_MODULES) += irq_apcp.o

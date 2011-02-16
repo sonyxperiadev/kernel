@@ -1,280 +1,370 @@
-/*****************************************************************************
-* Copyright 2004 - 2008 Broadcom Corporation.  All rights reserved.
-*
-* Unless you and Broadcom execute a separate written software license
-* agreement governing use of this software, this software is licensed to you
-* under the terms of the GNU General Public License version 2, available at
-* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
-*
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a
-* license other than the GPL, without Broadcom's express prior written
-* consent.
-*****************************************************************************/
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2010  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 
-
-/****************************************************************************
-*
-*  gpio.c
-*
-*  PURPOSE:
-*
-*       This file implements the GPIO chips required to support the onchip
-*       gpio pins, as per gpiolib
-*
-*****************************************************************************/
-
-/* ---- Include Files ---------------------------------------------------- */
-
-#include <linux/version.h>
-#include <linux/types.h>
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/seq_file.h>
-#include <linux/irq.h>
 #include <linux/init.h>
+#include <linux/irq.h>
+#include <linux/interrupt.h>
 
+#include <linux/io.h>
 #include <asm/gpio.h>
+#include <mach/gpio.h>
+#include <mach/rdb/brcm_rdb_gpio.h>
+#include <mach/io_map.h>
 
-#include <mach/kona_gpio_inline.h>
 
-/* ---- Public Variables ------------------------------------------------- */
+#define KONA_GPIO_PASSWD (0x00a5a501)
+#define GPIO_PER_BANK (32)
+#define KONA_MAX_GPIO_BANK  (KONA_MAX_GPIO/GPIO_PER_BANK)
 
-/* ---- Private Constants and Types -------------------------------------- */
+#define GPIO_BANK(gpio)	((gpio) >> 5)
+#define GPIO_BIT(gpio)	((gpio) % GPIO_PER_BANK)
 
-typedef struct
-{
-    struct gpio_chip chip;
-    volatile unsigned int *reg;
+#define GPIO_OUT_STA(bank) (GPIO_GPOR0_OFFSET + (bank * 4))
+#define GPIO_IN_STA(bank) (GPIO_GPIR0_OFFSET + (bank * 4))
+#define GPIO_OUT_SET(bank) (GPIO_GPORS0_OFFSET + (bank * 4))
+#define GPIO_OUT_CLR(bank) (GPIO_GPORC0_OFFSET + (bank * 4))
+#define GPIO_INT_STA(bank) (GPIO_ISR0_OFFSET + (bank * 4))
+#define GPIO_INT_MSK(bank) (GPIO_IMR0_OFFSET + (bank * 4))
+#define GPIO_INT_MSKCLR(bank) (GPIO_IMRC0_OFFSET + (bank * 4))
+#define GPIO_PWD_STA(bank) (GPIO_GPPLSR0_OFFSET + (bank * 4))
+#define GPIO_CTRL(gpio) (GPIO_GPCTR0_OFFSET + (gpio * 4))
 
-} kona_gpio_chip;
 
-/* ---- Private Function Prototypes -------------------------------------- */
-
-/* ---- Private Variables ------------------------------------------------ */
-
-static spinlock_t gGpioLock = SPIN_LOCK_UNLOCKED;
-
-/* ---- Functions -------------------------------------------------------- */
-
-/****************************************************************************
-*
-*  Configure a GPIO pin as an input pin
-*
-*****************************************************************************/
-
-static int gpio_kona_direction_input( struct gpio_chip *chip, unsigned gpio )
-{
-	 uint32_t mode;
-	 unsigned long flags;
-
-	 (void)chip;	/* Not required for this particular lower level API */
-	
-	 spin_lock_irqsave(&gGpioLock, flags);
-
-	 mode = kona_gpio_get_mode(gpio);
-	 
-	 mode &= ~GPIO_GPCTR0_IOTR_MASK;
-	 mode |= KONA_GPIO_DIR_INPUT;
-
-	 kona_gpio_set_mode(gpio, mode);
-	 
-	 spin_unlock_irqrestore(&gGpioLock, flags);
-    return 0;
-
-} /* gpio_kona_direction_input */
-
-/****************************************************************************
-*
-*  Configure a GPIO pin as an output pin and sets its initial value.
-*
-*****************************************************************************/
-
-static int gpio_kona_direction_output( struct gpio_chip *chip, unsigned gpio, int value )
-{
-	 uint32_t mode;
-	 unsigned long flags;
-
-	(void)chip;	/* Not required for this particular lower level API */
-
-	 spin_lock_irqsave(&gGpioLock, flags);
-
-	 mode = kona_gpio_get_mode(gpio);
-	 
-	 mode &= ~GPIO_GPCTR0_IOTR_MASK;
-	 mode |= KONA_GPIO_DIR_OUTPUT;
-
-	 kona_gpio_set_mode(gpio, mode);
-	 kona_gpio_set_bit(gpio, value);
-	 
-	 spin_unlock_irqrestore(&gGpioLock, flags);
-
-    return 0;
-
-} /* gpio_kona_direction_output */
-
-/****************************************************************************
-*
-*  Retrieve the value of a GPIO pin. Note that this returns zero or the raw
-*   value.
-*
-*****************************************************************************/
-
-static int gpio_kona_get( struct gpio_chip *chip, unsigned gpio )
-{
-	(void)chip;	/* Not required for this particular lower level API */
-
-    return kona_gpio_get_bit(gpio);
-
-} /* gpio_kona_get */
-
-/****************************************************************************
-*
-*  Set the value of a GPIO pin
-*
-*****************************************************************************/
-
-static void gpio_kona_set( struct gpio_chip *chip, unsigned gpio, int value )
-{
-	(void)chip;	/* Not required for this particular lower level API */
-
-	 kona_gpio_set_bit(gpio, value);
-
-} /* gpio_kona_set */
-
-/****************************************************************************
-*
-*  Prints an ASCII representation of the GPIO pin
-*
-*   Currently, the dbg_show is for the entire chip. So we need to essentially
-*   copy the functionality from gpiolib.
-*
-*****************************************************************************/
-
-static void gpio_kona_dbg_show( struct seq_file *s, struct gpio_chip *chip )
-{
-    unsigned    gpio = chip->base;
-    int         i;
-
-    for ( i = 0; i < chip->ngpio; i++, gpio++ )
-    {
-        const char *label;
-        int         is_out;
-
-        if (( label = gpiochip_is_requested( chip, i )) == NULL )
-        {
-            /* gpio is currently unassigned */
-
-            label = "---unreq----";
-        }
-
-		is_out = KONA_GPIO_CTR_REG(gpio) & KONA_GPIO_GPCTR_IOTR ;
-        seq_printf(s, " gpio-%-3d (%-12s) %s %s",
-            gpio, label, is_out ? "out" : "in ",
-            chip->get(chip, i) ? "hi" : "lo" );
-
-        if ( !is_out ) 
-        {
-            int		irq = gpio_to_irq(gpio);
-            struct irq_desc	*desc = irq_desc + irq;
-
-            /* This races with request_irq(), set_irq_type(),
-             * and set_irq_wake() ... but those are "rare".
-             *
-             * More significantly, trigger type flags aren't
-             * currently maintained by genirq.
-             */
-            if (irq >= 0 && desc->action) {
-                char *trigger;
-
-                switch (desc->status & IRQ_TYPE_SENSE_MASK) {
-                case IRQ_TYPE_NONE:
-                    trigger = "(default)";
-                    break;
-                case IRQ_TYPE_EDGE_FALLING:
-                    trigger = "edge-falling";
-                    break;
-                case IRQ_TYPE_EDGE_RISING:
-                    trigger = "edge-rising";
-                    break;
-                case IRQ_TYPE_EDGE_BOTH:
-                    trigger = "edge-both";
-                    break;
-                case IRQ_TYPE_LEVEL_HIGH:
-                    trigger = "level-high";
-                    break;
-                case IRQ_TYPE_LEVEL_LOW:
-                    trigger = "level-low";
-                    break;
-                default:
-                    trigger = "?trigger?";
-                    break;
-                }
-
-                seq_printf(s, " irq-%d %s%s",
-                    irq, trigger,
-                    (desc->status & IRQ_WAKEUP)
-                        ? " wakeup" : "");
-            }
-
-        }
-        seq_printf( s, "\n");
-    }
-    
-} /* gpio_kona_dbg_show */
-
-/****************************************************************************
-*
-*  gpiolib chip description
-*
-*****************************************************************************/
-
-/*
- * Note: If you need to add a field, like a register base, then create a new 
- *       structure which includes the gpio_chip as the first element and has 
- *       the custom fields after. See asm-arm/arch-pxa/gpio.c for an example. 
- */
-
-static kona_gpio_chip gpio_kona_chip[] =
-{
-    [0] = /* We could have 6 chips here, but lower level kona API based on chip doesn't exist */
-    {
-        .reg  = (volatile uint32_t *)KONA_GPIO2_VA,
-        .chip =
-        {
-            .label              = "kona",
-            .direction_input    = gpio_kona_direction_input,
-            .direction_output   = gpio_kona_direction_output,
-            .get                = gpio_kona_get,
-            .set                = gpio_kona_set,
-            .dbg_show           = gpio_kona_dbg_show,
-            .base               = 0,
-            .ngpio              = NR_KONA_GPIO,
-        },
-    },
+struct kona_gpio_bank {
+	int id;
+	int irq;
 };
 
-/****************************************************************************
-*
-*  brcm_init_gpio
-*
-*   Sets up gpiolib so that it's aware of how to manipulate our GPIOs
-*
-*****************************************************************************/
-static int __init brcm_init_gpio( void )
+struct kona_gpio {
+	void __iomem * reg_base;
+	int num_bank;
+	spinlock_t lock;
+	struct kona_gpio_bank banks[KONA_MAX_GPIO_BANK];
+};
+
+static struct kona_gpio kona_gpio = {
+	.reg_base = (void __iomem *)(KONA_GPIO2_VA),  
+	.num_bank = 0,
+	.banks = {
+		{.id = 0, .irq = BCM_INT_ID_GPIO1},
+		{.id = 1, .irq = BCM_INT_ID_GPIO2},
+		{.id = 2, .irq = BCM_INT_ID_GPIO3},
+		{.id = 3, .irq = BCM_INT_ID_GPIO4},
+		{.id = 4, .irq = BCM_INT_ID_GPIO5},
+		{.id = 5, .irq = BCM_INT_ID_GPIO6},
+	},
+};
+
+static void kona_gpio_set(struct gpio_chip *chip, unsigned gpio, int value)
 {
-    int ret;
+	int bankId = GPIO_BANK(gpio);
+	int bit = GPIO_BIT(gpio);
+	void __iomem * reg_base = kona_gpio.reg_base;	
+	uint32_t val, reg_offset;
 
-    printk("%s called\n", __func__);
-    ret = gpiochip_add( &gpio_kona_chip[0].chip );
-    if (ret)
-    {
-        printk(KERN_ERR "%s: ret=%d, NR_KONA_GPIO=%d\n", __func__, ret, NR_KONA_GPIO);
-        return ret;
-    }
+	(void) chip; /* unused input parameter */ 
 
-    return ret;
+	/* determine the GPIO pin direction 
+	 */ 
+	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+	val &= GPIO_GPCTR0_IOTR_MASK;
 
-} /* brcm_init_gpio */
+	/* this function only applies to output pin
+	 */ 
+	if (GPIO_GPCTR0_IOTR_CMD_INPUT == val)
+		return;
 
-arch_initcall(brcm_init_gpio);
+	reg_offset = value ? GPIO_OUT_SET(bankId) : GPIO_OUT_CLR(bankId);
+
+	val = __raw_readl(reg_base + reg_offset);
+	val |= 1 << bit;
+	
+	__raw_writel(val, reg_base + reg_offset);
+}
+
+static int kona_gpio_get(struct gpio_chip *chip, unsigned gpio)
+{
+	int bankId = GPIO_BANK(gpio);
+	int bit = GPIO_BIT(gpio);
+	void __iomem * reg_base = kona_gpio.reg_base;	
+	uint32_t val, reg_offset;
+
+	(void) chip; /* unused input parameter */ 
+
+	/* determine the GPIO pin direction 
+	 */ 
+	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+	val &= GPIO_GPCTR0_IOTR_MASK;
+
+	/* read the GPIO bank status
+	 */
+	reg_offset = (GPIO_GPCTR0_IOTR_CMD_INPUT == val) ? 
+					GPIO_IN_STA(bankId) : GPIO_OUT_STA(bankId);
+	val = __raw_readl(reg_base + reg_offset); 
+
+	/* return the specified bit status  
+	 */
+	return (val & (1 << bit));
+}
+
+static int kona_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
+{
+	void __iomem * reg_base = kona_gpio.reg_base;	
+	uint32_t val; 
+	unsigned long flags;
+
+	(void) chip; /* unused input parameter */ 
+
+	spin_lock_irqsave(&kona_gpio.lock, flags);
+
+	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+	val &= GPIO_GPCTR0_IOTR_MASK;
+	val |= GPIO_GPCTR0_IOTR_CMD_INPUT;
+	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
+
+	spin_unlock_irqrestore(&kona_gpio.lock, flags);
+
+	return 0;
+}
+
+static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
+					int value)
+{
+	void __iomem * reg_base = kona_gpio.reg_base;	
+	uint32_t val; 
+	unsigned long flags;
+
+	(void) chip; /* unused input parameter */ 
+
+	spin_lock_irqsave(&kona_gpio.lock, flags);
+
+	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+	val &= GPIO_GPCTR0_IOTR_MASK;
+	val |= GPIO_GPCTR0_IOTR_CMD_0UTPUT;
+	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
+
+	spin_unlock_irqrestore(&kona_gpio.lock, flags);
+
+	return 0;
+}
+
+static struct gpio_chip kona_gpio_chip = {
+	.label              = "kona-gpio",
+	.direction_input    = kona_gpio_direction_input,
+	.get                = kona_gpio_get,
+	.direction_output   = kona_gpio_direction_output,
+	.set                = kona_gpio_set,
+	.base               = 0,
+	.ngpio              = 0,
+};
+
+static void kona_gpio_irq_ack(unsigned int irq)
+{
+	int gpio = irq_to_gpio(irq);
+	int bankId = GPIO_BANK(gpio);
+	int bit = GPIO_BIT(gpio);
+	void __iomem * reg_base = kona_gpio.reg_base;	
+	uint32_t val;
+
+	val = __raw_readl(reg_base + GPIO_INT_STA(bankId));
+	val |= 1 << bit;
+	__raw_writel(val, reg_base + GPIO_INT_STA(bankId));
+}
+
+static void kona_gpio_irq_mask(unsigned int irq)
+{
+	int gpio = irq_to_gpio(irq);
+	int bankId = GPIO_BANK(gpio);
+	int bit = GPIO_BIT(gpio);
+	void __iomem * reg_base = kona_gpio.reg_base;	
+	uint32_t val;
+
+	val = __raw_readl(reg_base + GPIO_INT_MSK(bankId));
+	val |= 1 << bit;
+	__raw_writel(val, reg_base + GPIO_INT_MSK(bankId));
+}
+
+static void kona_gpio_irq_unmask(unsigned int irq)
+{
+	int gpio = irq_to_gpio(irq);
+	int bankId = GPIO_BANK(gpio);
+	int bit = GPIO_BIT(gpio);
+	void __iomem * reg_base = kona_gpio.reg_base;	
+	uint32_t val;
+
+	val = __raw_readl(reg_base + GPIO_INT_MSKCLR(bankId));
+	val |= 1 << bit;
+	__raw_writel(val, reg_base + GPIO_INT_MSKCLR(bankId));
+}
+
+
+static int kona_gpio_irq_set_type(unsigned int irq, unsigned int type)
+{
+	int gpio = irq_to_gpio(irq);
+	struct kona_gpio *p_kona_gpio = get_irq_chip_data(irq);
+	uint32_t lvl_type;
+	uint32_t val;
+	unsigned long flags;
+
+	switch (type & IRQ_TYPE_SENSE_MASK) {
+	case IRQ_TYPE_EDGE_RISING:
+		lvl_type = GPIO_GPCTR0_ITR_CMD_RISING_EDGE;
+		break;
+
+	case IRQ_TYPE_EDGE_FALLING:
+		lvl_type = GPIO_GPCTR0_ITR_CMD_FALLING_EDGE;
+		break;
+
+	case IRQ_TYPE_EDGE_BOTH:
+		lvl_type = GPIO_GPCTR0_ITR_CMD_BOTH_EDGE;
+		break;
+
+	case IRQ_TYPE_LEVEL_HIGH:
+	case IRQ_TYPE_LEVEL_LOW:
+		/* KONA GPIO doesn't support level triggering.
+		 */
+	default:
+		printk(KERN_ERR "Invalid KONA GPIO irq type 0x%x\n", type);
+		return -EINVAL;
+	}
+
+	spin_lock_irqsave(&p_kona_gpio->lock, flags);
+
+	val = __raw_readl(p_kona_gpio->reg_base + GPIO_CTRL(gpio));
+	val &= ~GPIO_GPCTR0_ITR_MASK;
+	val |= lvl_type << GPIO_GPCTR0_ITR_SHIFT;
+	__raw_writel(val, p_kona_gpio->reg_base + GPIO_CTRL(gpio));
+
+	spin_unlock_irqrestore(&p_kona_gpio->lock, flags);
+
+	return 0;
+}
+
+
+static void kona_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
+{
+	struct kona_gpio_bank *bank;
+	int bit, bankId;
+	void __iomem * reg_base = kona_gpio.reg_base;
+	unsigned long sta;
+
+	desc->chip->ack(irq);
+
+	bank = get_irq_data(irq);
+	bankId = bank->id;
+	sta = __raw_readl(reg_base + GPIO_INT_STA(bankId)) &
+		      (~(__raw_readl(reg_base + GPIO_INT_MSK(bankId))));
+
+	for_each_set_bit(bit, &sta, 32)
+	{
+		/* Clear interrupt before handler is called so we don't
+		 * miss any interrupt occurred during executing them.
+		 */
+		__raw_writel(__raw_readl(reg_base + GPIO_INT_STA(bankId)) | (1 << bit), 
+			         reg_base + GPIO_INT_STA(bankId));
+
+		/* Invoke interrupt handler.
+		 */ 
+		generic_handle_irq(gpio_to_irq(GPIO_PER_BANK * bankId + bit));
+	}
+
+	desc->chip->unmask(irq);
+}
+
+
+static struct irq_chip kona_gpio_irq_chip = {
+	.name		= "GPIO",
+	.ack		= kona_gpio_irq_ack,
+	.mask		= kona_gpio_irq_mask,
+	.unmask		= kona_gpio_irq_unmask,
+	.set_type	= kona_gpio_irq_set_type,
+};
+
+
+/* This lock class tells lockdep that GPIO irqs are in a different
+ * category than their parents, so it won't report false recursion.
+ */
+static struct lock_class_key gpio_lock_class;
+
+static void kona_gpio_reset(int num_bank)
+{
+	int i;
+	void __iomem * reg_base = kona_gpio.reg_base;
+
+	/* KONA GPIO pins are locked by default.Unlock them so that
+	 * their registers can be accessed. 
+	 */ 
+	for (i = 0; i < num_bank; i++)
+	{
+		/* This register is password protected. 
+		 */ 
+		__raw_writel(KONA_GPIO_PASSWD, reg_base + GPIO_GPPWR_OFFSET);
+
+		/* Unlock the bank */ 
+		__raw_writel(0x0, reg_base + GPIO_PWD_STA(i));
+	}
+
+	/* disable interrupts and clear status
+	 */ 
+	for (i = 0; i < num_bank; i++)
+	{
+		__raw_writel(0xFFFFFFFF, reg_base + GPIO_INT_MSK(i));
+		__raw_writel(0xFFFFFFFF, reg_base + GPIO_INT_STA(i));
+	}
+}
+
+int __init kona_gpio_init(int num_bank)
+{
+	struct kona_gpio_bank *bank;
+	int i;
+
+	kona_gpio_reset(num_bank);
+	
+	kona_gpio.num_bank = num_bank;
+	spin_lock_init(&kona_gpio.lock);
+	kona_gpio_chip.ngpio = num_bank * GPIO_PER_BANK;
+	gpiochip_add(&kona_gpio_chip);
+
+	for (i = IRQ_GPIO_0; i < (IRQ_GPIO_0 + kona_gpio_chip.ngpio ); i++) 
+	{
+		lockdep_set_class(&irq_desc[i].lock, &gpio_lock_class);
+		set_irq_chip_data(i, &kona_gpio);
+		set_irq_chip(i, &kona_gpio_irq_chip);
+		set_irq_handler(i, handle_simple_irq);
+		set_irq_flags(i, IRQF_VALID);
+	}
+
+	for (i = 0; i < num_bank; i++) {
+		bank = &kona_gpio.banks[i];
+
+		set_irq_chained_handler(bank->irq, kona_gpio_irq_handler);
+		set_irq_data(bank->irq, bank);
+	}
+
+	printk("kona gpio initialised.\n");
+	return 0;
+}
+
+

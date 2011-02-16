@@ -12,12 +12,19 @@
 * consent.
 *****************************************************************************/
 
+#ifndef __PLAT_GPIO_H
+#define __PLAT_GPIO_H
 
+#define   KONA_MAX_GPIO   192
+#define   ARCH_NR_GPIOS   KONA_MAX_GPIO
 
-#if !defined( ASM_ARCH_GPIO_H )
-#define ASM_ARCH_GPIO_H
+#include <asm-generic/gpio.h>
 
-#include <mach/reg_gpio.h>
+#define gpio_get_value(gpio)		 __gpio_get_value(gpio)
+#define gpio_set_value(gpio,value)  __gpio_set_value(gpio,value)
+#define gpio_cansleep(gpio)		 __gpio_cansleep(gpio)
 
-#endif  /* ASM_ARCH_GPIO_H */
+int __init kona_gpio_init(int num_bank);
+
+#endif /* __PLAT_GPIO_H */
 
