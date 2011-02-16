@@ -21,8 +21,6 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/27/2010 23:54:34                                             */
-/*     RDB file : /projects/DSP/revA0                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_SSPI_H__
@@ -46,7 +44,7 @@
 #define    SSPI_CONTROL_SSPI_ENABLE_SHIFT                                 0
 #define    SSPI_CONTROL_SSPI_ENABLE_MASK                                  0x00000001
 
-#define SSPI_CONFIGURATION_CHECK_OFFSET                                   0x00000002
+#define SSPI_CONFIGURATION_CHECK_OFFSET                                   0x00000004
 #define SSPI_CONFIGURATION_CHECK_TYPE                                     UInt32
 #define SSPI_CONFIGURATION_CHECK_RESERVED_MASK                            0xF0F80000
 #define    SSPI_CONFIGURATION_CHECK_FIFO_MAXSIZE_SHIFT                    24
@@ -68,7 +66,7 @@
 #define    SSPI_CONFIGURATION_CHECK_SIDETONE_ON_SHIFT                     0
 #define    SSPI_CONFIGURATION_CHECK_SIDETONE_ON_MASK                      0x00000001
 
-#define SSPI_INTERRUPT_STATUS_OFFSET                                      0x00000008
+#define SSPI_INTERRUPT_STATUS_OFFSET                                      0x00000010
 #define SSPI_INTERRUPT_STATUS_TYPE                                        UInt32
 #define SSPI_INTERRUPT_STATUS_RESERVED_MASK                               0x0FF8F800
 #define    SSPI_INTERRUPT_STATUS_DMA_TX0_STATUS_SHIFT                     31
@@ -108,7 +106,7 @@
 #define    SSPI_INTERRUPT_STATUS_COPY_SSPI_INT_SHIFT                      0
 #define    SSPI_INTERRUPT_STATUS_COPY_SSPI_INT_MASK                       0x00000001
 
-#define SSPI_INTERRUPT_ENABLE_OFFSET                                      0x0000000A
+#define SSPI_INTERRUPT_ENABLE_OFFSET                                      0x00000014
 #define SSPI_INTERRUPT_ENABLE_TYPE                                        UInt32
 #define SSPI_INTERRUPT_ENABLE_RESERVED_MASK                               0x0FF8F801
 #define    SSPI_INTERRUPT_ENABLE_DMA_TX0_INTERRUPT_ENB_SHIFT              31
@@ -146,7 +144,7 @@
 #define    SSPI_INTERRUPT_ENABLE_SCHEDULER_INTERRUPT_ENB_SHIFT            1
 #define    SSPI_INTERRUPT_ENABLE_SCHEDULER_INTERRUPT_ENB_MASK             0x00000002
 
-#define SSPI_DETAIL_INTERRUPT_STATUS_OFFSET                               0x0000000C
+#define SSPI_DETAIL_INTERRUPT_STATUS_OFFSET                               0x00000018
 #define SSPI_DETAIL_INTERRUPT_STATUS_TYPE                                 UInt32
 #define SSPI_DETAIL_INTERRUPT_STATUS_RESERVED_MASK                        0x00000000
 #define    SSPI_DETAIL_INTERRUPT_STATUS_FIFO_OVERRUN_VECTOR_SHIFT         28
@@ -166,7 +164,7 @@
 #define    SSPI_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_SHIFT  0
 #define    SSPI_DETAIL_INTERRUPT_STATUS_APB_RX_ERROR_ACCESS_VECTOR_MASK   0x0000000F
 
-#define SSPI_INTERRUPT_ERROR_ENABLE_OFFSET                                0x0000000E
+#define SSPI_INTERRUPT_ERROR_ENABLE_OFFSET                                0x0000001C
 #define SSPI_INTERRUPT_ERROR_ENABLE_TYPE                                  UInt32
 #define SSPI_INTERRUPT_ERROR_ENABLE_RESERVED_MASK                         0x0FF8F801
 #define    SSPI_INTERRUPT_ERROR_ENABLE_DMA_TX0_INTERRUPT_ERROR_ENB_SHIFT  31
@@ -204,7 +202,7 @@
 #define    SSPI_INTERRUPT_ERROR_ENABLE_SCHEDULER_INTERRUPT_ERROR_ENB_SHIFT 1
 #define    SSPI_INTERRUPT_ERROR_ENABLE_SCHEDULER_INTERRUPT_ERROR_ENB_MASK 0x00000002
 
-#define SSPI_SCHEDULER_CONTROL_OFFSET                                     0x00000010
+#define SSPI_SCHEDULER_CONTROL_OFFSET                                     0x00000020
 #define SSPI_SCHEDULER_CONTROL_TYPE                                       UInt32
 #define SSPI_SCHEDULER_CONTROL_RESERVED_MASK                              0x03FFFFC2
 #define    SSPI_SCHEDULER_CONTROL_SCH_CURRENT_TASK_SHIFT                  29
@@ -222,7 +220,7 @@
 #define    SSPI_SCHEDULER_CONTROL_SCH_ENABLE_SHIFT                        0
 #define    SSPI_SCHEDULER_CONTROL_SCH_ENABLE_MASK                         0x00000001
 
-#define SSPI_SEQUENCE_CONTROL_OFFSET                                      0x00000012
+#define SSPI_SEQUENCE_CONTROL_OFFSET                                      0x00000024
 #define SSPI_SEQUENCE_CONTROL_TYPE                                        UInt32
 #define SSPI_SEQUENCE_CONTROL_RESERVED_MASK                               0x0400FFFF
 #define    SSPI_SEQUENCE_CONTROL_PC_SHIFT                                 27
@@ -230,7 +228,7 @@
 #define    SSPI_SEQUENCE_CONTROL_LOOP_REGISTER_SHIFT                      16
 #define    SSPI_SEQUENCE_CONTROL_LOOP_REGISTER_MASK                       0x03FF0000
 
-#define SSPI_STATE_MACHINE_CONTROL_OFFSET                                 0x00000014
+#define SSPI_STATE_MACHINE_CONTROL_OFFSET                                 0x00000028
 #define SSPI_STATE_MACHINE_CONTROL_TYPE                                   UInt32
 #define SSPI_STATE_MACHINE_CONTROL_RESERVED_MASK                          0xFFFFC000
 #define    SSPI_STATE_MACHINE_CONTROL_MASTER_CSOEN3_IDLE_SHIFT            13
@@ -262,7 +260,7 @@
 #define    SSPI_STATE_MACHINE_CONTROL_MS_TX0_IDLE_SHIFT                   0
 #define    SSPI_STATE_MACHINE_CONTROL_MS_TX0_IDLE_MASK                    0x00000001
 
-#define SSPI_STATE_MACHINE_TIMEOUT_OFFSET                                 0x00000016
+#define SSPI_STATE_MACHINE_TIMEOUT_OFFSET                                 0x0000002C
 #define SSPI_STATE_MACHINE_TIMEOUT_TYPE                                   UInt32
 #define SSPI_STATE_MACHINE_TIMEOUT_RESERVED_MASK                          0x00000000
 #define    SSPI_STATE_MACHINE_TIMEOUT_SLAVE_TIMEOUT_VALUE_SHIFT           16
@@ -270,7 +268,7 @@
 #define    SSPI_STATE_MACHINE_TIMEOUT_SCLKEXT_TIMEOUT_VALUE_SHIFT         0
 #define    SSPI_STATE_MACHINE_TIMEOUT_SCLKEXT_TIMEOUT_VALUE_MASK          0x0000FFFF
 
-#define SSPI_FIFO_SHARING_OFFSET                                          0x00000018
+#define SSPI_FIFO_SHARING_OFFSET                                          0x00000030
 #define SSPI_FIFO_SHARING_TYPE                                            UInt32
 #define SSPI_FIFO_SHARING_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_FIFO_SHARING_FIFO_RX_3_SIZE_SHIFT                         14
@@ -290,7 +288,7 @@
 #define    SSPI_FIFO_SHARING_FIFO_TX_0_SIZE_SHIFT                         0
 #define    SSPI_FIFO_SHARING_FIFO_TX_0_SIZE_MASK                          0x00000003
 
-#define SSPI_CLKDIV_OFFSET                                                0x0000001A
+#define SSPI_CLKDIV_OFFSET                                                0x00000034
 #define SSPI_CLKDIV_TYPE                                                  UInt32
 #define SSPI_CLKDIV_RESERVED_MASK                                         0x3F800000
 #define    SSPI_CLKDIV_CLK_CHOICE_SHIFT                                   30
@@ -306,7 +304,7 @@
 #define    SSPI_CLKDIV_CLKDIV_FACTOR_0_SHIFT                              0
 #define    SSPI_CLKDIV_CLKDIV_FACTOR_0_MASK                               0x0000000F
 
-#define SSPI_CLKGEN_OFFSET                                                0x0000001C
+#define SSPI_CLKGEN_OFFSET                                                0x00000038
 #define SSPI_CLKGEN_TYPE                                                  UInt32
 #define SSPI_CLKGEN_RESERVED_MASK                                         0x03000000
 #define    SSPI_CLKGEN_CLKGEN_RESYNC_ENABLE_SHIFT                         31
@@ -318,7 +316,7 @@
 #define    SSPI_CLKGEN_CLKGEN_NB_EDGES_SHIFT                              0
 #define    SSPI_CLKGEN_CLKGEN_NB_EDGES_MASK                               0x00000FFF
 
-#define SSPI_FIFOTX_0_CONTROL_OFFSET                                      0x00000020
+#define SSPI_FIFOTX_0_CONTROL_OFFSET                                      0x00000040
 #define SSPI_FIFOTX_0_CONTROL_TYPE                                        UInt32
 #define SSPI_FIFOTX_0_CONTROL_RESERVED_MASK                               0x0003F000
 #define    SSPI_FIFOTX_0_CONTROL_FIFOTX0_LEVEL_SHIFT                      20
@@ -342,13 +340,13 @@
 #define    SSPI_FIFOTX_0_CONTROL_FIFOTX0_RESET_SHIFT                      0
 #define    SSPI_FIFOTX_0_CONTROL_FIFOTX0_RESET_MASK                       0x00000001
 
-#define SSPI_FIFOTX_0_THRESHOLD_OFFSET                                    0x00000022
+#define SSPI_FIFOTX_0_THRESHOLD_OFFSET                                    0x00000044
 #define SSPI_FIFOTX_0_THRESHOLD_TYPE                                      UInt32
 #define SSPI_FIFOTX_0_THRESHOLD_RESERVED_MASK                             0x000FFFFF
 #define    SSPI_FIFOTX_0_THRESHOLD_FIFOTX0_TRESHOLD_SHIFT                 20
 #define    SSPI_FIFOTX_0_THRESHOLD_FIFOTX0_TRESHOLD_MASK                  0xFFF00000
 
-#define SSPI_FIFORX_0_CONTROL_OFFSET                                      0x00000024
+#define SSPI_FIFORX_0_CONTROL_OFFSET                                      0x00000048
 #define SSPI_FIFORX_0_CONTROL_TYPE                                        UInt32
 #define SSPI_FIFORX_0_CONTROL_RESERVED_MASK                               0x0003F000
 #define    SSPI_FIFORX_0_CONTROL_FIFORX0_LEVEL_SHIFT                      20
@@ -372,13 +370,13 @@
 #define    SSPI_FIFORX_0_CONTROL_FIFORX0_RESET_SHIFT                      0
 #define    SSPI_FIFORX_0_CONTROL_FIFORX0_RESET_MASK                       0x00000001
 
-#define SSPI_FIFORX_0_THRESHOLD_OFFSET                                    0x00000026
+#define SSPI_FIFORX_0_THRESHOLD_OFFSET                                    0x0000004C
 #define SSPI_FIFORX_0_THRESHOLD_TYPE                                      UInt32
 #define SSPI_FIFORX_0_THRESHOLD_RESERVED_MASK                             0x000FFFFF
 #define    SSPI_FIFORX_0_THRESHOLD_FIFORX0_TRESHOLD_SHIFT                 20
 #define    SSPI_FIFORX_0_THRESHOLD_FIFORX0_TRESHOLD_MASK                  0xFFF00000
 
-#define SSPI_FIFOTX_1_CONTROL_OFFSET                                      0x00000028
+#define SSPI_FIFOTX_1_CONTROL_OFFSET                                      0x00000050
 #define SSPI_FIFOTX_1_CONTROL_TYPE                                        UInt32
 #define SSPI_FIFOTX_1_CONTROL_RESERVED_MASK                               0x0003F000
 #define    SSPI_FIFOTX_1_CONTROL_FIFOTX1_LEVEL_SHIFT                      20
@@ -402,13 +400,13 @@
 #define    SSPI_FIFOTX_1_CONTROL_FIFOTX1_RESET_SHIFT                      0
 #define    SSPI_FIFOTX_1_CONTROL_FIFOTX1_RESET_MASK                       0x00000001
 
-#define SSPI_FIFOTX_1_THRESHOLD_OFFSET                                    0x0000002A
+#define SSPI_FIFOTX_1_THRESHOLD_OFFSET                                    0x00000054
 #define SSPI_FIFOTX_1_THRESHOLD_TYPE                                      UInt32
 #define SSPI_FIFOTX_1_THRESHOLD_RESERVED_MASK                             0x000FFFFF
 #define    SSPI_FIFOTX_1_THRESHOLD_FIFOTX1_TRESHOLD_SHIFT                 20
 #define    SSPI_FIFOTX_1_THRESHOLD_FIFOTX1_TRESHOLD_MASK                  0xFFF00000
 
-#define SSPI_FIFORX_1_CONTROL_OFFSET                                      0x0000002C
+#define SSPI_FIFORX_1_CONTROL_OFFSET                                      0x00000058
 #define SSPI_FIFORX_1_CONTROL_TYPE                                        UInt32
 #define SSPI_FIFORX_1_CONTROL_RESERVED_MASK                               0x0003F000
 #define    SSPI_FIFORX_1_CONTROL_FIFORX1_LEVEL_SHIFT                      20
@@ -432,13 +430,13 @@
 #define    SSPI_FIFORX_1_CONTROL_FIFORX1_RESET_SHIFT                      0
 #define    SSPI_FIFORX_1_CONTROL_FIFORX1_RESET_MASK                       0x00000001
 
-#define SSPI_FIFORX_1_THRESHOLD_OFFSET                                    0x0000002E
+#define SSPI_FIFORX_1_THRESHOLD_OFFSET                                    0x0000005C
 #define SSPI_FIFORX_1_THRESHOLD_TYPE                                      UInt32
 #define SSPI_FIFORX_1_THRESHOLD_RESERVED_MASK                             0x000FFFFF
 #define    SSPI_FIFORX_1_THRESHOLD_FIFORX1_TRESHOLD_SHIFT                 20
 #define    SSPI_FIFORX_1_THRESHOLD_FIFORX1_TRESHOLD_MASK                  0xFFF00000
 
-#define SSPI_FIFOTX_2_CONTROL_OFFSET                                      0x00000030
+#define SSPI_FIFOTX_2_CONTROL_OFFSET                                      0x00000060
 #define SSPI_FIFOTX_2_CONTROL_TYPE                                        UInt32
 #define SSPI_FIFOTX_2_CONTROL_RESERVED_MASK                               0x0003F000
 #define    SSPI_FIFOTX_2_CONTROL_FIFOTX2_LEVEL_SHIFT                      20
@@ -462,13 +460,13 @@
 #define    SSPI_FIFOTX_2_CONTROL_FIFOTX2_RESET_SHIFT                      0
 #define    SSPI_FIFOTX_2_CONTROL_FIFOTX2_RESET_MASK                       0x00000001
 
-#define SSPI_FIFOTX_2_THRESHOLD_OFFSET                                    0x00000032
+#define SSPI_FIFOTX_2_THRESHOLD_OFFSET                                    0x00000064
 #define SSPI_FIFOTX_2_THRESHOLD_TYPE                                      UInt32
 #define SSPI_FIFOTX_2_THRESHOLD_RESERVED_MASK                             0x000FFFFF
 #define    SSPI_FIFOTX_2_THRESHOLD_FIFOTX2_TRESHOLD_SHIFT                 20
 #define    SSPI_FIFOTX_2_THRESHOLD_FIFOTX2_TRESHOLD_MASK                  0xFFF00000
 
-#define SSPI_FIFORX_2_CONTROL_OFFSET                                      0x00000034
+#define SSPI_FIFORX_2_CONTROL_OFFSET                                      0x00000068
 #define SSPI_FIFORX_2_CONTROL_TYPE                                        UInt32
 #define SSPI_FIFORX_2_CONTROL_RESERVED_MASK                               0x0003F000
 #define    SSPI_FIFORX_2_CONTROL_FIFORX2_LEVEL_SHIFT                      20
@@ -492,13 +490,13 @@
 #define    SSPI_FIFORX_2_CONTROL_FIFORX2_RESET_SHIFT                      0
 #define    SSPI_FIFORX_2_CONTROL_FIFORX2_RESET_MASK                       0x00000001
 
-#define SSPI_FIFORX_2_THRESHOLD_OFFSET                                    0x00000036
+#define SSPI_FIFORX_2_THRESHOLD_OFFSET                                    0x0000006C
 #define SSPI_FIFORX_2_THRESHOLD_TYPE                                      UInt32
 #define SSPI_FIFORX_2_THRESHOLD_RESERVED_MASK                             0x000FFFFF
 #define    SSPI_FIFORX_2_THRESHOLD_FIFORX2_TRESHOLD_SHIFT                 20
 #define    SSPI_FIFORX_2_THRESHOLD_FIFORX2_TRESHOLD_MASK                  0xFFF00000
 
-#define SSPI_FIFOTX_3_CONTROL_OFFSET                                      0x00000038
+#define SSPI_FIFOTX_3_CONTROL_OFFSET                                      0x00000070
 #define SSPI_FIFOTX_3_CONTROL_TYPE                                        UInt32
 #define SSPI_FIFOTX_3_CONTROL_RESERVED_MASK                               0x0003F000
 #define    SSPI_FIFOTX_3_CONTROL_FIFOTX3_LEVEL_SHIFT                      20
@@ -522,13 +520,13 @@
 #define    SSPI_FIFOTX_3_CONTROL_FIFOTX3_RESET_SHIFT                      0
 #define    SSPI_FIFOTX_3_CONTROL_FIFOTX3_RESET_MASK                       0x00000001
 
-#define SSPI_FIFOTX_3_THRESHOLD_OFFSET                                    0x0000003A
+#define SSPI_FIFOTX_3_THRESHOLD_OFFSET                                    0x00000074
 #define SSPI_FIFOTX_3_THRESHOLD_TYPE                                      UInt32
 #define SSPI_FIFOTX_3_THRESHOLD_RESERVED_MASK                             0x000FFFFF
 #define    SSPI_FIFOTX_3_THRESHOLD_FIFOTX3_TRESHOLD_SHIFT                 20
 #define    SSPI_FIFOTX_3_THRESHOLD_FIFOTX3_TRESHOLD_MASK                  0xFFF00000
 
-#define SSPI_FIFORX_3_CONTROL_OFFSET                                      0x0000003C
+#define SSPI_FIFORX_3_CONTROL_OFFSET                                      0x00000078
 #define SSPI_FIFORX_3_CONTROL_TYPE                                        UInt32
 #define SSPI_FIFORX_3_CONTROL_RESERVED_MASK                               0x0003F000
 #define    SSPI_FIFORX_3_CONTROL_FIFORX3_LEVEL_SHIFT                      20
@@ -552,13 +550,13 @@
 #define    SSPI_FIFORX_3_CONTROL_FIFORX3_RESET_SHIFT                      0
 #define    SSPI_FIFORX_3_CONTROL_FIFORX3_RESET_MASK                       0x00000001
 
-#define SSPI_FIFORX_3_THRESHOLD_OFFSET                                    0x0000003E
+#define SSPI_FIFORX_3_THRESHOLD_OFFSET                                    0x0000007C
 #define SSPI_FIFORX_3_THRESHOLD_TYPE                                      UInt32
 #define SSPI_FIFORX_3_THRESHOLD_RESERVED_MASK                             0x000FFFFF
 #define    SSPI_FIFORX_3_THRESHOLD_FIFORX3_TRESHOLD_SHIFT                 20
 #define    SSPI_FIFORX_3_THRESHOLD_FIFORX3_TRESHOLD_MASK                  0xFFF00000
 
-#define SSPI_DMA_RX0_CONTROL_OFFSET                                       0x00000040
+#define SSPI_DMA_RX0_CONTROL_OFFSET                                       0x00000080
 #define SSPI_DMA_RX0_CONTROL_TYPE                                         UInt32
 #define SSPI_DMA_RX0_CONTROL_RESERVED_MASK                                0xFFFFFFE0
 #define    SSPI_DMA_RX0_CONTROL_DMA_RX0_FLUSH_SHIFT                       4
@@ -570,7 +568,7 @@
 #define    SSPI_DMA_RX0_CONTROL_DMA_RX0_ENABLE_SHIFT                      0
 #define    SSPI_DMA_RX0_CONTROL_DMA_RX0_ENABLE_MASK                       0x00000001
 
-#define SSPI_DMA_TX0_CONTROL_OFFSET                                       0x00000042
+#define SSPI_DMA_TX0_CONTROL_OFFSET                                       0x00000084
 #define SSPI_DMA_TX0_CONTROL_TYPE                                         UInt32
 #define SSPI_DMA_TX0_CONTROL_RESERVED_MASK                                0x0003FFF0
 #define    SSPI_DMA_TX0_CONTROL_DMA_TX0_SIZE_SHIFT                        18
@@ -582,7 +580,7 @@
 #define    SSPI_DMA_TX0_CONTROL_DMA_TX0_ENABLE_SHIFT                      0
 #define    SSPI_DMA_TX0_CONTROL_DMA_TX0_ENABLE_MASK                       0x00000001
 
-#define SSPI_DMA_RX1_CONTROL_OFFSET                                       0x00000044
+#define SSPI_DMA_RX1_CONTROL_OFFSET                                       0x00000088
 #define SSPI_DMA_RX1_CONTROL_TYPE                                         UInt32
 #define SSPI_DMA_RX1_CONTROL_RESERVED_MASK                                0xFFFFFFE0
 #define    SSPI_DMA_RX1_CONTROL_DMA_RX1_FLUSH_SHIFT                       4
@@ -594,7 +592,7 @@
 #define    SSPI_DMA_RX1_CONTROL_DMA_RX1_ENABLE_SHIFT                      0
 #define    SSPI_DMA_RX1_CONTROL_DMA_RX1_ENABLE_MASK                       0x00000001
 
-#define SSPI_DMA_TX1_CONTROL_OFFSET                                       0x00000046
+#define SSPI_DMA_TX1_CONTROL_OFFSET                                       0x0000008C
 #define SSPI_DMA_TX1_CONTROL_TYPE                                         UInt32
 #define SSPI_DMA_TX1_CONTROL_RESERVED_MASK                                0x0003FFF0
 #define    SSPI_DMA_TX1_CONTROL_DMA_TX1_SIZE_SHIFT                        18
@@ -606,7 +604,7 @@
 #define    SSPI_DMA_TX1_CONTROL_DMA_TX1_ENABLE_SHIFT                      0
 #define    SSPI_DMA_TX1_CONTROL_DMA_TX1_ENABLE_MASK                       0x00000001
 
-#define SSPI_FIFOTX_0_PIO_THRESHOLD_OFFSET                                0x00000050
+#define SSPI_FIFOTX_0_PIO_THRESHOLD_OFFSET                                0x000000A0
 #define SSPI_FIFOTX_0_PIO_THRESHOLD_TYPE                                  UInt32
 #define SSPI_FIFOTX_0_PIO_THRESHOLD_RESERVED_MASK                         0xC0000000
 #define    SSPI_FIFOTX_0_PIO_THRESHOLD_FIFOTX0_PIO_STOP_THRESH_SHIFT      20
@@ -616,7 +614,7 @@
 #define    SSPI_FIFOTX_0_PIO_THRESHOLD_FIFOTX0_PIO_STOP_ERR_THRESH_SHIFT  0
 #define    SSPI_FIFOTX_0_PIO_THRESHOLD_FIFOTX0_PIO_STOP_ERR_THRESH_MASK   0x000003FF
 
-#define SSPI_FIFOTX_1_PIO_THRESHOLD_OFFSET                                0x00000052
+#define SSPI_FIFOTX_1_PIO_THRESHOLD_OFFSET                                0x000000A4
 #define SSPI_FIFOTX_1_PIO_THRESHOLD_TYPE                                  UInt32
 #define SSPI_FIFOTX_1_PIO_THRESHOLD_RESERVED_MASK                         0xC0000000
 #define    SSPI_FIFOTX_1_PIO_THRESHOLD_FIFOTX1_PIO_STOP_THRESH_SHIFT      20
@@ -626,7 +624,7 @@
 #define    SSPI_FIFOTX_1_PIO_THRESHOLD_FIFOTX1_PIO_STOP_ERR_THRESH_SHIFT  0
 #define    SSPI_FIFOTX_1_PIO_THRESHOLD_FIFOTX1_PIO_STOP_ERR_THRESH_MASK   0x000003FF
 
-#define SSPI_FIFOTX_2_PIO_THRESHOLD_OFFSET                                0x00000054
+#define SSPI_FIFOTX_2_PIO_THRESHOLD_OFFSET                                0x000000A8
 #define SSPI_FIFOTX_2_PIO_THRESHOLD_TYPE                                  UInt32
 #define SSPI_FIFOTX_2_PIO_THRESHOLD_RESERVED_MASK                         0xC0000000
 #define    SSPI_FIFOTX_2_PIO_THRESHOLD_FIFOTX2_PIO_STOP_THRESH_SHIFT      20
@@ -636,7 +634,7 @@
 #define    SSPI_FIFOTX_2_PIO_THRESHOLD_FIFOTX2_PIO_STOP_ERR_THRESH_SHIFT  0
 #define    SSPI_FIFOTX_2_PIO_THRESHOLD_FIFOTX2_PIO_STOP_ERR_THRESH_MASK   0x000003FF
 
-#define SSPI_FIFOTX_3_PIO_THRESHOLD_OFFSET                                0x00000056
+#define SSPI_FIFOTX_3_PIO_THRESHOLD_OFFSET                                0x000000AC
 #define SSPI_FIFOTX_3_PIO_THRESHOLD_TYPE                                  UInt32
 #define SSPI_FIFOTX_3_PIO_THRESHOLD_RESERVED_MASK                         0xC0000000
 #define    SSPI_FIFOTX_3_PIO_THRESHOLD_FIFOTX3_PIO_STOP_THRESH_SHIFT      20
@@ -646,7 +644,7 @@
 #define    SSPI_FIFOTX_3_PIO_THRESHOLD_FIFOTX3_PIO_STOP_ERR_THRESH_SHIFT  0
 #define    SSPI_FIFOTX_3_PIO_THRESHOLD_FIFOTX3_PIO_STOP_ERR_THRESH_MASK   0x000003FF
 
-#define SSPI_FIFORX_0_PIO_THRESHOLD_OFFSET                                0x00000058
+#define SSPI_FIFORX_0_PIO_THRESHOLD_OFFSET                                0x000000B0
 #define SSPI_FIFORX_0_PIO_THRESHOLD_TYPE                                  UInt32
 #define SSPI_FIFORX_0_PIO_THRESHOLD_RESERVED_MASK                         0xC0000000
 #define    SSPI_FIFORX_0_PIO_THRESHOLD_FIFORX0_PIO_STOP_THRESH_SHIFT      20
@@ -656,7 +654,7 @@
 #define    SSPI_FIFORX_0_PIO_THRESHOLD_FIFORX0_PIO_STOP_ERR_THRESH_SHIFT  0
 #define    SSPI_FIFORX_0_PIO_THRESHOLD_FIFORX0_PIO_STOP_ERR_THRESH_MASK   0x000003FF
 
-#define SSPI_FIFORX_1_PIO_THRESHOLD_OFFSET                                0x0000005A
+#define SSPI_FIFORX_1_PIO_THRESHOLD_OFFSET                                0x000000B4
 #define SSPI_FIFORX_1_PIO_THRESHOLD_TYPE                                  UInt32
 #define SSPI_FIFORX_1_PIO_THRESHOLD_RESERVED_MASK                         0xC0000000
 #define    SSPI_FIFORX_1_PIO_THRESHOLD_FIFORX1_PIO_STOP_THRESH_SHIFT      20
@@ -666,7 +664,7 @@
 #define    SSPI_FIFORX_1_PIO_THRESHOLD_FIFORX1_PIO_STOP_ERR_THRESH_SHIFT  0
 #define    SSPI_FIFORX_1_PIO_THRESHOLD_FIFORX1_PIO_STOP_ERR_THRESH_MASK   0x000003FF
 
-#define SSPI_FIFORX_2_PIO_THRESHOLD_OFFSET                                0x0000005C
+#define SSPI_FIFORX_2_PIO_THRESHOLD_OFFSET                                0x000000B8
 #define SSPI_FIFORX_2_PIO_THRESHOLD_TYPE                                  UInt32
 #define SSPI_FIFORX_2_PIO_THRESHOLD_RESERVED_MASK                         0xC0000000
 #define    SSPI_FIFORX_2_PIO_THRESHOLD_FIFORX2_PIO_STOP_THRESH_SHIFT      20
@@ -676,7 +674,7 @@
 #define    SSPI_FIFORX_2_PIO_THRESHOLD_FIFORX2_PIO_STOP_ERR_THRESH_SHIFT  0
 #define    SSPI_FIFORX_2_PIO_THRESHOLD_FIFORX2_PIO_STOP_ERR_THRESH_MASK   0x000003FF
 
-#define SSPI_FIFORX_3_PIO_THRESHOLD_OFFSET                                0x0000005E
+#define SSPI_FIFORX_3_PIO_THRESHOLD_OFFSET                                0x000000BC
 #define SSPI_FIFORX_3_PIO_THRESHOLD_TYPE                                  UInt32
 #define SSPI_FIFORX_3_PIO_THRESHOLD_RESERVED_MASK                         0xC0000000
 #define    SSPI_FIFORX_3_PIO_THRESHOLD_FIFORX3_PIO_STOP_THRESH_SHIFT      20
@@ -686,103 +684,103 @@
 #define    SSPI_FIFORX_3_PIO_THRESHOLD_FIFORX3_PIO_STOP_ERR_THRESH_SHIFT  0
 #define    SSPI_FIFORX_3_PIO_THRESHOLD_FIFORX3_PIO_STOP_ERR_THRESH_MASK   0x000003FF
 
-#define SSPI_PATTERN_0_SCLK_OFFSET                                        0x00000060
+#define SSPI_PATTERN_0_SCLK_OFFSET                                        0x000000C0
 #define SSPI_PATTERN_0_SCLK_TYPE                                          UInt32
 #define SSPI_PATTERN_0_SCLK_RESERVED_MASK                                 0xFFFF0000
 #define    SSPI_PATTERN_0_SCLK_PATTERN0_SCLK_SHIFT                        0
 #define    SSPI_PATTERN_0_SCLK_PATTERN0_SCLK_MASK                         0x0000FFFF
 
-#define SSPI_PATTERN_0_CS_OFFSET                                          0x00000062
+#define SSPI_PATTERN_0_CS_OFFSET                                          0x000000C4
 #define SSPI_PATTERN_0_CS_TYPE                                            UInt32
 #define SSPI_PATTERN_0_CS_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_PATTERN_0_CS_PATTERN0_CS_SHIFT                            0
 #define    SSPI_PATTERN_0_CS_PATTERN0_CS_MASK                             0x0000FFFF
 
-#define SSPI_PATTERN_0_TX_OFFSET                                          0x00000064
+#define SSPI_PATTERN_0_TX_OFFSET                                          0x000000C8
 #define SSPI_PATTERN_0_TX_TYPE                                            UInt32
 #define SSPI_PATTERN_0_TX_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_PATTERN_0_TX_PATTERN0_TX_SHIFT                            0
 #define    SSPI_PATTERN_0_TX_PATTERN0_TX_MASK                             0x0000FFFF
 
-#define SSPI_PATTERN_0_TXOEN_OFFSET                                       0x00000066
+#define SSPI_PATTERN_0_TXOEN_OFFSET                                       0x000000CC
 #define SSPI_PATTERN_0_TXOEN_TYPE                                         UInt32
 #define SSPI_PATTERN_0_TXOEN_RESERVED_MASK                                0xFFFF0000
 #define    SSPI_PATTERN_0_TXOEN_PATTERN0_TXOEN_SHIFT                      0
 #define    SSPI_PATTERN_0_TXOEN_PATTERN0_TXOEN_MASK                       0x0000FFFF
 
-#define SSPI_PATTERN_1_SCLK_OFFSET                                        0x00000068
+#define SSPI_PATTERN_1_SCLK_OFFSET                                        0x000000D0
 #define SSPI_PATTERN_1_SCLK_TYPE                                          UInt32
 #define SSPI_PATTERN_1_SCLK_RESERVED_MASK                                 0xFFFF0000
 #define    SSPI_PATTERN_1_SCLK_PATTERN1_SCLK_SHIFT                        0
 #define    SSPI_PATTERN_1_SCLK_PATTERN1_SCLK_MASK                         0x0000FFFF
 
-#define SSPI_PATTERN_1_CS_OFFSET                                          0x0000006A
+#define SSPI_PATTERN_1_CS_OFFSET                                          0x000000D4
 #define SSPI_PATTERN_1_CS_TYPE                                            UInt32
 #define SSPI_PATTERN_1_CS_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_PATTERN_1_CS_PATTERN1_CS_SHIFT                            0
 #define    SSPI_PATTERN_1_CS_PATTERN1_CS_MASK                             0x0000FFFF
 
-#define SSPI_PATTERN_1_TX_OFFSET                                          0x0000006C
+#define SSPI_PATTERN_1_TX_OFFSET                                          0x000000D8
 #define SSPI_PATTERN_1_TX_TYPE                                            UInt32
 #define SSPI_PATTERN_1_TX_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_PATTERN_1_TX_PATTERN1_TX_SHIFT                            0
 #define    SSPI_PATTERN_1_TX_PATTERN1_TX_MASK                             0x0000FFFF
 
-#define SSPI_PATTERN_1_TXOEN_OFFSET                                       0x0000006E
+#define SSPI_PATTERN_1_TXOEN_OFFSET                                       0x000000DC
 #define SSPI_PATTERN_1_TXOEN_TYPE                                         UInt32
 #define SSPI_PATTERN_1_TXOEN_RESERVED_MASK                                0xFFFF0000
 #define    SSPI_PATTERN_1_TXOEN_PATTERN1_TXOEN_SHIFT                      0
 #define    SSPI_PATTERN_1_TXOEN_PATTERN1_TXOEN_MASK                       0x0000FFFF
 
-#define SSPI_PATTERN_2_SCLK_OFFSET                                        0x00000070
+#define SSPI_PATTERN_2_SCLK_OFFSET                                        0x000000E0
 #define SSPI_PATTERN_2_SCLK_TYPE                                          UInt32
 #define SSPI_PATTERN_2_SCLK_RESERVED_MASK                                 0xFFFF0000
 #define    SSPI_PATTERN_2_SCLK_PATTERN2_SCLK_SHIFT                        0
 #define    SSPI_PATTERN_2_SCLK_PATTERN2_SCLK_MASK                         0x0000FFFF
 
-#define SSPI_PATTERN_2_CS_OFFSET                                          0x00000072
+#define SSPI_PATTERN_2_CS_OFFSET                                          0x000000E4
 #define SSPI_PATTERN_2_CS_TYPE                                            UInt32
 #define SSPI_PATTERN_2_CS_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_PATTERN_2_CS_PATTERN2_CS_SHIFT                            0
 #define    SSPI_PATTERN_2_CS_PATTERN2_CS_MASK                             0x0000FFFF
 
-#define SSPI_PATTERN_2_TX_OFFSET                                          0x00000074
+#define SSPI_PATTERN_2_TX_OFFSET                                          0x000000E8
 #define SSPI_PATTERN_2_TX_TYPE                                            UInt32
 #define SSPI_PATTERN_2_TX_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_PATTERN_2_TX_PATTERN2_TX_SHIFT                            0
 #define    SSPI_PATTERN_2_TX_PATTERN2_TX_MASK                             0x0000FFFF
 
-#define SSPI_PATTERN_2_TXOEN_OFFSET                                       0x00000076
+#define SSPI_PATTERN_2_TXOEN_OFFSET                                       0x000000EC
 #define SSPI_PATTERN_2_TXOEN_TYPE                                         UInt32
 #define SSPI_PATTERN_2_TXOEN_RESERVED_MASK                                0xFFFF0000
 #define    SSPI_PATTERN_2_TXOEN_PATTERN2_TXOEN_SHIFT                      0
 #define    SSPI_PATTERN_2_TXOEN_PATTERN2_TXOEN_MASK                       0x0000FFFF
 
-#define SSPI_PATTERN_3_SCLK_OFFSET                                        0x00000078
+#define SSPI_PATTERN_3_SCLK_OFFSET                                        0x000000F0
 #define SSPI_PATTERN_3_SCLK_TYPE                                          UInt32
 #define SSPI_PATTERN_3_SCLK_RESERVED_MASK                                 0xFFFF0000
 #define    SSPI_PATTERN_3_SCLK_PATTERN3_SCLK_SHIFT                        0
 #define    SSPI_PATTERN_3_SCLK_PATTERN3_SCLK_MASK                         0x0000FFFF
 
-#define SSPI_PATTERN_3_CS_OFFSET                                          0x0000007A
+#define SSPI_PATTERN_3_CS_OFFSET                                          0x000000F4
 #define SSPI_PATTERN_3_CS_TYPE                                            UInt32
 #define SSPI_PATTERN_3_CS_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_PATTERN_3_CS_PATTERN3_CS_SHIFT                            0
 #define    SSPI_PATTERN_3_CS_PATTERN3_CS_MASK                             0x0000FFFF
 
-#define SSPI_PATTERN_3_TX_OFFSET                                          0x0000007C
+#define SSPI_PATTERN_3_TX_OFFSET                                          0x000000F8
 #define SSPI_PATTERN_3_TX_TYPE                                            UInt32
 #define SSPI_PATTERN_3_TX_RESERVED_MASK                                   0xFFFF0000
 #define    SSPI_PATTERN_3_TX_PATTERN3_TX_SHIFT                            0
 #define    SSPI_PATTERN_3_TX_PATTERN3_TX_MASK                             0x0000FFFF
 
-#define SSPI_PATTERN_3_TXOEN_OFFSET                                       0x0000007E
+#define SSPI_PATTERN_3_TXOEN_OFFSET                                       0x000000FC
 #define SSPI_PATTERN_3_TXOEN_TYPE                                         UInt32
 #define SSPI_PATTERN_3_TXOEN_RESERVED_MASK                                0xFFFF0000
 #define    SSPI_PATTERN_3_TXOEN_PATTERN3_TXOEN_SHIFT                      0
 #define    SSPI_PATTERN_3_TXOEN_PATTERN3_TXOEN_MASK                       0x0000FFFF
 
-#define SSPI_TASK0_DESC_MSB_OFFSET                                        0x00000080
+#define SSPI_TASK0_DESC_MSB_OFFSET                                        0x00000100
 #define SSPI_TASK0_DESC_MSB_TYPE                                          UInt32
 #define SSPI_TASK0_DESC_MSB_RESERVED_MASK                                 0x00000000
 #define    SSPI_TASK0_DESC_MSB_TASK0_ENABLE_SHIFT                         31
@@ -832,7 +830,7 @@
 #define    SSPI_TASK0_DESC_MSB_TASK0_CLK_SELECT_SHIFT                     0
 #define    SSPI_TASK0_DESC_MSB_TASK0_CLK_SELECT_MASK                      0x00000003
 
-#define SSPI_TASK0_DESC_LSB_OFFSET                                        0x00000082
+#define SSPI_TASK0_DESC_LSB_OFFSET                                        0x00000104
 #define SSPI_TASK0_DESC_LSB_TYPE                                          UInt32
 #define SSPI_TASK0_DESC_LSB_RESERVED_MASK                                 0x80FC0000
 #define    SSPI_TASK0_DESC_LSB_TASK0_SEQ_POINTER_SHIFT                    26
@@ -844,7 +842,7 @@
 #define    SSPI_TASK0_DESC_LSB_TASK0_INITIAL_CONDITION_SHIFT              0
 #define    SSPI_TASK0_DESC_LSB_TASK0_INITIAL_CONDITION_MASK               0x000000FF
 
-#define SSPI_TASK1_DESC_MSB_OFFSET                                        0x00000084
+#define SSPI_TASK1_DESC_MSB_OFFSET                                        0x00000108
 #define SSPI_TASK1_DESC_MSB_TYPE                                          UInt32
 #define SSPI_TASK1_DESC_MSB_RESERVED_MASK                                 0x00000000
 #define    SSPI_TASK1_DESC_MSB_TASK1_ENABLE_SHIFT                         31
@@ -894,7 +892,7 @@
 #define    SSPI_TASK1_DESC_MSB_TASK1_CLK_SELECT_SHIFT                     0
 #define    SSPI_TASK1_DESC_MSB_TASK1_CLK_SELECT_MASK                      0x00000003
 
-#define SSPI_TASK1_DESC_LSB_OFFSET                                        0x00000086
+#define SSPI_TASK1_DESC_LSB_OFFSET                                        0x0000010C
 #define SSPI_TASK1_DESC_LSB_TYPE                                          UInt32
 #define SSPI_TASK1_DESC_LSB_RESERVED_MASK                                 0x80FC0000
 #define    SSPI_TASK1_DESC_LSB_TASK1_SEQ_POINTER_SHIFT                    26
@@ -906,7 +904,7 @@
 #define    SSPI_TASK1_DESC_LSB_TASK1_INITIAL_CONDITION_SHIFT              0
 #define    SSPI_TASK1_DESC_LSB_TASK1_INITIAL_CONDITION_MASK               0x000000FF
 
-#define SSPI_TASK2_DESC_MSB_OFFSET                                        0x00000088
+#define SSPI_TASK2_DESC_MSB_OFFSET                                        0x00000110
 #define SSPI_TASK2_DESC_MSB_TYPE                                          UInt32
 #define SSPI_TASK2_DESC_MSB_RESERVED_MASK                                 0x00000000
 #define    SSPI_TASK2_DESC_MSB_TASK2_ENABLE_SHIFT                         31
@@ -956,7 +954,7 @@
 #define    SSPI_TASK2_DESC_MSB_TASK2_CLK_SELECT_SHIFT                     0
 #define    SSPI_TASK2_DESC_MSB_TASK2_CLK_SELECT_MASK                      0x00000003
 
-#define SSPI_TASK2_DESC_LSB_OFFSET                                        0x0000008A
+#define SSPI_TASK2_DESC_LSB_OFFSET                                        0x00000114
 #define SSPI_TASK2_DESC_LSB_TYPE                                          UInt32
 #define SSPI_TASK2_DESC_LSB_RESERVED_MASK                                 0x80FC0000
 #define    SSPI_TASK2_DESC_LSB_TASK2_SEQ_POINTER_SHIFT                    26
@@ -968,7 +966,7 @@
 #define    SSPI_TASK2_DESC_LSB_TASK2_INITIAL_CONDITION_SHIFT              0
 #define    SSPI_TASK2_DESC_LSB_TASK2_INITIAL_CONDITION_MASK               0x000000FF
 
-#define SSPI_TASK3_DESC_MSB_OFFSET                                        0x0000008C
+#define SSPI_TASK3_DESC_MSB_OFFSET                                        0x00000118
 #define SSPI_TASK3_DESC_MSB_TYPE                                          UInt32
 #define SSPI_TASK3_DESC_MSB_RESERVED_MASK                                 0x00000000
 #define    SSPI_TASK3_DESC_MSB_TASK3_ENABLE_SHIFT                         31
@@ -1018,7 +1016,7 @@
 #define    SSPI_TASK3_DESC_MSB_TASK3_CLK_SELECT_SHIFT                     0
 #define    SSPI_TASK3_DESC_MSB_TASK3_CLK_SELECT_MASK                      0x00000003
 
-#define SSPI_TASK3_DESC_LSB_OFFSET                                        0x0000008E
+#define SSPI_TASK3_DESC_LSB_OFFSET                                        0x0000011C
 #define SSPI_TASK3_DESC_LSB_TYPE                                          UInt32
 #define SSPI_TASK3_DESC_LSB_RESERVED_MASK                                 0x80FC0000
 #define    SSPI_TASK3_DESC_LSB_TASK3_SEQ_POINTER_SHIFT                    26
@@ -1030,7 +1028,7 @@
 #define    SSPI_TASK3_DESC_LSB_TASK3_INITIAL_CONDITION_SHIFT              0
 #define    SSPI_TASK3_DESC_LSB_TASK3_INITIAL_CONDITION_MASK               0x000000FF
 
-#define SSPI_TASK4_DESC_MSB_OFFSET                                        0x00000090
+#define SSPI_TASK4_DESC_MSB_OFFSET                                        0x00000120
 #define SSPI_TASK4_DESC_MSB_TYPE                                          UInt32
 #define SSPI_TASK4_DESC_MSB_RESERVED_MASK                                 0x00000000
 #define    SSPI_TASK4_DESC_MSB_TASK4_ENABLE_SHIFT                         31
@@ -1080,7 +1078,7 @@
 #define    SSPI_TASK4_DESC_MSB_TASK4_CLK_SELECT_SHIFT                     0
 #define    SSPI_TASK4_DESC_MSB_TASK4_CLK_SELECT_MASK                      0x00000003
 
-#define SSPI_TASK4_DESC_LSB_OFFSET                                        0x00000092
+#define SSPI_TASK4_DESC_LSB_OFFSET                                        0x00000124
 #define SSPI_TASK4_DESC_LSB_TYPE                                          UInt32
 #define SSPI_TASK4_DESC_LSB_RESERVED_MASK                                 0x80FC0000
 #define    SSPI_TASK4_DESC_LSB_TASK4_SEQ_POINTER_SHIFT                    26
@@ -1092,7 +1090,7 @@
 #define    SSPI_TASK4_DESC_LSB_TASK4_INITIAL_CONDITION_SHIFT              0
 #define    SSPI_TASK4_DESC_LSB_TASK4_INITIAL_CONDITION_MASK               0x000000FF
 
-#define SSPI_TASK5_DESC_MSB_OFFSET                                        0x00000094
+#define SSPI_TASK5_DESC_MSB_OFFSET                                        0x00000128
 #define SSPI_TASK5_DESC_MSB_TYPE                                          UInt32
 #define SSPI_TASK5_DESC_MSB_RESERVED_MASK                                 0x00000000
 #define    SSPI_TASK5_DESC_MSB_TASK5_ENABLE_SHIFT                         31
@@ -1142,7 +1140,7 @@
 #define    SSPI_TASK5_DESC_MSB_TASK5_CLK_SELECT_SHIFT                     0
 #define    SSPI_TASK5_DESC_MSB_TASK5_CLK_SELECT_MASK                      0x00000003
 
-#define SSPI_TASK5_DESC_LSB_OFFSET                                        0x00000096
+#define SSPI_TASK5_DESC_LSB_OFFSET                                        0x0000012C
 #define SSPI_TASK5_DESC_LSB_TYPE                                          UInt32
 #define SSPI_TASK5_DESC_LSB_RESERVED_MASK                                 0x80FC0000
 #define    SSPI_TASK5_DESC_LSB_TASK5_SEQ_POINTER_SHIFT                    26
@@ -1154,7 +1152,7 @@
 #define    SSPI_TASK5_DESC_LSB_TASK5_INITIAL_CONDITION_SHIFT              0
 #define    SSPI_TASK5_DESC_LSB_TASK5_INITIAL_CONDITION_MASK               0x000000FF
 
-#define SSPI_TASK6_DESC_MSB_OFFSET                                        0x00000098
+#define SSPI_TASK6_DESC_MSB_OFFSET                                        0x00000130
 #define SSPI_TASK6_DESC_MSB_TYPE                                          UInt32
 #define SSPI_TASK6_DESC_MSB_RESERVED_MASK                                 0x00000000
 #define    SSPI_TASK6_DESC_MSB_TASK6_ENABLE_SHIFT                         31
@@ -1204,7 +1202,7 @@
 #define    SSPI_TASK6_DESC_MSB_TASK6_CLK_SELECT_SHIFT                     0
 #define    SSPI_TASK6_DESC_MSB_TASK6_CLK_SELECT_MASK                      0x00000003
 
-#define SSPI_TASK6_DESC_LSB_OFFSET                                        0x0000009A
+#define SSPI_TASK6_DESC_LSB_OFFSET                                        0x00000134
 #define SSPI_TASK6_DESC_LSB_TYPE                                          UInt32
 #define SSPI_TASK6_DESC_LSB_RESERVED_MASK                                 0x80FC0000
 #define    SSPI_TASK6_DESC_LSB_TASK6_SEQ_POINTER_SHIFT                    26
@@ -1216,7 +1214,7 @@
 #define    SSPI_TASK6_DESC_LSB_TASK6_INITIAL_CONDITION_SHIFT              0
 #define    SSPI_TASK6_DESC_LSB_TASK6_INITIAL_CONDITION_MASK               0x000000FF
 
-#define SSPI_TASK7_DESC_MSB_OFFSET                                        0x0000009C
+#define SSPI_TASK7_DESC_MSB_OFFSET                                        0x00000138
 #define SSPI_TASK7_DESC_MSB_TYPE                                          UInt32
 #define SSPI_TASK7_DESC_MSB_RESERVED_MASK                                 0x00000000
 #define    SSPI_TASK7_DESC_MSB_TASK7_ENABLE_SHIFT                         31
@@ -1266,7 +1264,7 @@
 #define    SSPI_TASK7_DESC_MSB_TASK7_CLK_SELECT_SHIFT                     0
 #define    SSPI_TASK7_DESC_MSB_TASK7_CLK_SELECT_MASK                      0x00000003
 
-#define SSPI_TASK7_DESC_LSB_OFFSET                                        0x0000009E
+#define SSPI_TASK7_DESC_LSB_OFFSET                                        0x0000013C
 #define SSPI_TASK7_DESC_LSB_TYPE                                          UInt32
 #define SSPI_TASK7_DESC_LSB_RESERVED_MASK                                 0x80FC0000
 #define    SSPI_TASK7_DESC_LSB_TASK7_SEQ_POINTER_SHIFT                    26
@@ -1278,7 +1276,7 @@
 #define    SSPI_TASK7_DESC_LSB_TASK7_INITIAL_CONDITION_SHIFT              0
 #define    SSPI_TASK7_DESC_LSB_TASK7_INITIAL_CONDITION_MASK               0x000000FF
 
-#define SSPI_PATTERN_0_CONTROL_OFFSET                                     0x000000D0
+#define SSPI_PATTERN_0_CONTROL_OFFSET                                     0x000001A0
 #define SSPI_PATTERN_0_CONTROL_TYPE                                       UInt32
 #define SSPI_PATTERN_0_CONTROL_RESERVED_MASK                              0xFFFC00E0
 #define    SSPI_PATTERN_0_CONTROL_PATTERN0_EXTENSION_CHECK_SHIFT          17
@@ -1292,7 +1290,7 @@
 #define    SSPI_PATTERN_0_CONTROL_PATTERN0_LENGTH_SHIFT                   0
 #define    SSPI_PATTERN_0_CONTROL_PATTERN0_LENGTH_MASK                    0x0000001F
 
-#define SSPI_PATTERN_1_CONTROL_OFFSET                                     0x000000D2
+#define SSPI_PATTERN_1_CONTROL_OFFSET                                     0x000001A4
 #define SSPI_PATTERN_1_CONTROL_TYPE                                       UInt32
 #define SSPI_PATTERN_1_CONTROL_RESERVED_MASK                              0xFFFC00E0
 #define    SSPI_PATTERN_1_CONTROL_PATTERN1_EXTENSION_CHECK_SHIFT          17
@@ -1306,7 +1304,7 @@
 #define    SSPI_PATTERN_1_CONTROL_PATTERN1_LENGTH_SHIFT                   0
 #define    SSPI_PATTERN_1_CONTROL_PATTERN1_LENGTH_MASK                    0x0000001F
 
-#define SSPI_PATTERN_2_CONTROL_OFFSET                                     0x000000D4
+#define SSPI_PATTERN_2_CONTROL_OFFSET                                     0x000001A8
 #define SSPI_PATTERN_2_CONTROL_TYPE                                       UInt32
 #define SSPI_PATTERN_2_CONTROL_RESERVED_MASK                              0xFFFC00E0
 #define    SSPI_PATTERN_2_CONTROL_PATTERN2_EXTENSION_CHECK_SHIFT          17
@@ -1320,7 +1318,7 @@
 #define    SSPI_PATTERN_2_CONTROL_PATTERN2_LENGTH_SHIFT                   0
 #define    SSPI_PATTERN_2_CONTROL_PATTERN2_LENGTH_MASK                    0x0000001F
 
-#define SSPI_PATTERN_3_CONTROL_OFFSET                                     0x000000D6
+#define SSPI_PATTERN_3_CONTROL_OFFSET                                     0x000001AC
 #define SSPI_PATTERN_3_CONTROL_TYPE                                       UInt32
 #define SSPI_PATTERN_3_CONTROL_RESERVED_MASK                              0xFFFC00E0
 #define    SSPI_PATTERN_3_CONTROL_PATTERN3_EXTENSION_CHECK_SHIFT          17
@@ -1334,7 +1332,7 @@
 #define    SSPI_PATTERN_3_CONTROL_PATTERN3_LENGTH_SHIFT                   0
 #define    SSPI_PATTERN_3_CONTROL_PATTERN3_LENGTH_MASK                    0x0000001F
 
-#define SSPI_SEQUENCE_0_OFFSET                                            0x00000100
+#define SSPI_SEQUENCE_0_OFFSET                                            0x00000200
 #define SSPI_SEQUENCE_0_TYPE                                              UInt32
 #define SSPI_SEQUENCE_0_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_0_SEQ0_OPCODE_SHIFT                              30
@@ -1370,7 +1368,7 @@
 #define    SSPI_SEQUENCE_0_SEQ0_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_0_SEQ0_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_1_OFFSET                                            0x00000102
+#define SSPI_SEQUENCE_1_OFFSET                                            0x00000204
 #define SSPI_SEQUENCE_1_TYPE                                              UInt32
 #define SSPI_SEQUENCE_1_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_1_SEQ1_OPCODE_SHIFT                              30
@@ -1406,7 +1404,7 @@
 #define    SSPI_SEQUENCE_1_SEQ1_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_1_SEQ1_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_2_OFFSET                                            0x00000104
+#define SSPI_SEQUENCE_2_OFFSET                                            0x00000208
 #define SSPI_SEQUENCE_2_TYPE                                              UInt32
 #define SSPI_SEQUENCE_2_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_2_SEQ2_OPCODE_SHIFT                              30
@@ -1442,7 +1440,7 @@
 #define    SSPI_SEQUENCE_2_SEQ2_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_2_SEQ2_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_3_OFFSET                                            0x00000106
+#define SSPI_SEQUENCE_3_OFFSET                                            0x0000020C
 #define SSPI_SEQUENCE_3_TYPE                                              UInt32
 #define SSPI_SEQUENCE_3_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_3_SEQ3_OPCODE_SHIFT                              30
@@ -1478,7 +1476,7 @@
 #define    SSPI_SEQUENCE_3_SEQ3_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_3_SEQ3_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_4_OFFSET                                            0x00000108
+#define SSPI_SEQUENCE_4_OFFSET                                            0x00000210
 #define SSPI_SEQUENCE_4_TYPE                                              UInt32
 #define SSPI_SEQUENCE_4_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_4_SEQ4_OPCODE_SHIFT                              30
@@ -1514,7 +1512,7 @@
 #define    SSPI_SEQUENCE_4_SEQ4_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_4_SEQ4_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_5_OFFSET                                            0x0000010A
+#define SSPI_SEQUENCE_5_OFFSET                                            0x00000214
 #define SSPI_SEQUENCE_5_TYPE                                              UInt32
 #define SSPI_SEQUENCE_5_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_5_SEQ5_OPCODE_SHIFT                              30
@@ -1550,7 +1548,7 @@
 #define    SSPI_SEQUENCE_5_SEQ5_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_5_SEQ5_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_6_OFFSET                                            0x0000010C
+#define SSPI_SEQUENCE_6_OFFSET                                            0x00000218
 #define SSPI_SEQUENCE_6_TYPE                                              UInt32
 #define SSPI_SEQUENCE_6_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_6_SEQ6_OPCODE_SHIFT                              30
@@ -1586,7 +1584,7 @@
 #define    SSPI_SEQUENCE_6_SEQ6_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_6_SEQ6_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_7_OFFSET                                            0x0000010E
+#define SSPI_SEQUENCE_7_OFFSET                                            0x0000021C
 #define SSPI_SEQUENCE_7_TYPE                                              UInt32
 #define SSPI_SEQUENCE_7_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_7_SEQ7_OPCODE_SHIFT                              30
@@ -1622,7 +1620,7 @@
 #define    SSPI_SEQUENCE_7_SEQ7_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_7_SEQ7_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_8_OFFSET                                            0x00000110
+#define SSPI_SEQUENCE_8_OFFSET                                            0x00000220
 #define SSPI_SEQUENCE_8_TYPE                                              UInt32
 #define SSPI_SEQUENCE_8_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_8_SEQ8_OPCODE_SHIFT                              30
@@ -1658,7 +1656,7 @@
 #define    SSPI_SEQUENCE_8_SEQ8_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_8_SEQ8_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_9_OFFSET                                            0x00000112
+#define SSPI_SEQUENCE_9_OFFSET                                            0x00000224
 #define SSPI_SEQUENCE_9_TYPE                                              UInt32
 #define SSPI_SEQUENCE_9_RESERVED_MASK                                     0x00000000
 #define    SSPI_SEQUENCE_9_SEQ9_OPCODE_SHIFT                              30
@@ -1694,7 +1692,7 @@
 #define    SSPI_SEQUENCE_9_SEQ9_SIDETONE_RX_ON_SHIFT                      0
 #define    SSPI_SEQUENCE_9_SEQ9_SIDETONE_RX_ON_MASK                       0x00000001
 
-#define SSPI_SEQUENCE_10_OFFSET                                           0x00000114
+#define SSPI_SEQUENCE_10_OFFSET                                           0x00000228
 #define SSPI_SEQUENCE_10_TYPE                                             UInt32
 #define SSPI_SEQUENCE_10_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_10_SEQ10_OPCODE_SHIFT                            30
@@ -1730,7 +1728,7 @@
 #define    SSPI_SEQUENCE_10_SEQ10_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_10_SEQ10_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_11_OFFSET                                           0x00000116
+#define SSPI_SEQUENCE_11_OFFSET                                           0x0000022C
 #define SSPI_SEQUENCE_11_TYPE                                             UInt32
 #define SSPI_SEQUENCE_11_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_11_SEQ11_OPCODE_SHIFT                            30
@@ -1766,7 +1764,7 @@
 #define    SSPI_SEQUENCE_11_SEQ11_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_11_SEQ11_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_12_OFFSET                                           0x00000118
+#define SSPI_SEQUENCE_12_OFFSET                                           0x00000230
 #define SSPI_SEQUENCE_12_TYPE                                             UInt32
 #define SSPI_SEQUENCE_12_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_12_SEQ12_OPCODE_SHIFT                            30
@@ -1802,7 +1800,7 @@
 #define    SSPI_SEQUENCE_12_SEQ12_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_12_SEQ12_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_13_OFFSET                                           0x0000011A
+#define SSPI_SEQUENCE_13_OFFSET                                           0x00000234
 #define SSPI_SEQUENCE_13_TYPE                                             UInt32
 #define SSPI_SEQUENCE_13_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_13_SEQ13_OPCODE_SHIFT                            30
@@ -1838,7 +1836,7 @@
 #define    SSPI_SEQUENCE_13_SEQ13_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_13_SEQ13_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_14_OFFSET                                           0x0000011C
+#define SSPI_SEQUENCE_14_OFFSET                                           0x00000238
 #define SSPI_SEQUENCE_14_TYPE                                             UInt32
 #define SSPI_SEQUENCE_14_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_14_SEQ14_OPCODE_SHIFT                            30
@@ -1874,7 +1872,7 @@
 #define    SSPI_SEQUENCE_14_SEQ14_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_14_SEQ14_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_15_OFFSET                                           0x0000011E
+#define SSPI_SEQUENCE_15_OFFSET                                           0x0000023C
 #define SSPI_SEQUENCE_15_TYPE                                             UInt32
 #define SSPI_SEQUENCE_15_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_15_SEQ15_OPCODE_SHIFT                            30
@@ -1910,7 +1908,7 @@
 #define    SSPI_SEQUENCE_15_SEQ15_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_15_SEQ15_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_16_OFFSET                                           0x00000120
+#define SSPI_SEQUENCE_16_OFFSET                                           0x00000240
 #define SSPI_SEQUENCE_16_TYPE                                             UInt32
 #define SSPI_SEQUENCE_16_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_16_SEQ16_OPCODE_SHIFT                            30
@@ -1946,7 +1944,7 @@
 #define    SSPI_SEQUENCE_16_SEQ16_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_16_SEQ16_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_17_OFFSET                                           0x00000122
+#define SSPI_SEQUENCE_17_OFFSET                                           0x00000244
 #define SSPI_SEQUENCE_17_TYPE                                             UInt32
 #define SSPI_SEQUENCE_17_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_17_SEQ17_OPCODE_SHIFT                            30
@@ -1982,7 +1980,7 @@
 #define    SSPI_SEQUENCE_17_SEQ17_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_17_SEQ17_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_18_OFFSET                                           0x00000124
+#define SSPI_SEQUENCE_18_OFFSET                                           0x00000248
 #define SSPI_SEQUENCE_18_TYPE                                             UInt32
 #define SSPI_SEQUENCE_18_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_18_SEQ18_OPCODE_SHIFT                            30
@@ -2018,7 +2016,7 @@
 #define    SSPI_SEQUENCE_18_SEQ18_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_18_SEQ18_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_19_OFFSET                                           0x00000126
+#define SSPI_SEQUENCE_19_OFFSET                                           0x0000024C
 #define SSPI_SEQUENCE_19_TYPE                                             UInt32
 #define SSPI_SEQUENCE_19_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_19_SEQ19_OPCODE_SHIFT                            30
@@ -2054,7 +2052,7 @@
 #define    SSPI_SEQUENCE_19_SEQ19_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_19_SEQ19_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_20_OFFSET                                           0x00000128
+#define SSPI_SEQUENCE_20_OFFSET                                           0x00000250
 #define SSPI_SEQUENCE_20_TYPE                                             UInt32
 #define SSPI_SEQUENCE_20_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_20_SEQ20_OPCODE_SHIFT                            30
@@ -2090,7 +2088,7 @@
 #define    SSPI_SEQUENCE_20_SEQ20_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_20_SEQ20_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_21_OFFSET                                           0x0000012A
+#define SSPI_SEQUENCE_21_OFFSET                                           0x00000254
 #define SSPI_SEQUENCE_21_TYPE                                             UInt32
 #define SSPI_SEQUENCE_21_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_21_SEQ21_OPCODE_SHIFT                            30
@@ -2126,7 +2124,7 @@
 #define    SSPI_SEQUENCE_21_SEQ21_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_21_SEQ21_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_22_OFFSET                                           0x0000012C
+#define SSPI_SEQUENCE_22_OFFSET                                           0x00000258
 #define SSPI_SEQUENCE_22_TYPE                                             UInt32
 #define SSPI_SEQUENCE_22_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_22_SEQ22_OPCODE_SHIFT                            30
@@ -2162,7 +2160,7 @@
 #define    SSPI_SEQUENCE_22_SEQ22_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_22_SEQ22_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_23_OFFSET                                           0x0000012E
+#define SSPI_SEQUENCE_23_OFFSET                                           0x0000025C
 #define SSPI_SEQUENCE_23_TYPE                                             UInt32
 #define SSPI_SEQUENCE_23_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_23_SEQ23_OPCODE_SHIFT                            30
@@ -2198,7 +2196,7 @@
 #define    SSPI_SEQUENCE_23_SEQ23_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_23_SEQ23_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_24_OFFSET                                           0x00000130
+#define SSPI_SEQUENCE_24_OFFSET                                           0x00000260
 #define SSPI_SEQUENCE_24_TYPE                                             UInt32
 #define SSPI_SEQUENCE_24_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_24_SEQ24_OPCODE_SHIFT                            30
@@ -2234,7 +2232,7 @@
 #define    SSPI_SEQUENCE_24_SEQ24_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_24_SEQ24_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_25_OFFSET                                           0x00000132
+#define SSPI_SEQUENCE_25_OFFSET                                           0x00000264
 #define SSPI_SEQUENCE_25_TYPE                                             UInt32
 #define SSPI_SEQUENCE_25_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_25_SEQ25_OPCODE_SHIFT                            30
@@ -2270,7 +2268,7 @@
 #define    SSPI_SEQUENCE_25_SEQ25_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_25_SEQ25_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_26_OFFSET                                           0x00000134
+#define SSPI_SEQUENCE_26_OFFSET                                           0x00000268
 #define SSPI_SEQUENCE_26_TYPE                                             UInt32
 #define SSPI_SEQUENCE_26_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_26_SEQ26_OPCODE_SHIFT                            30
@@ -2306,7 +2304,7 @@
 #define    SSPI_SEQUENCE_26_SEQ26_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_26_SEQ26_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_27_OFFSET                                           0x00000136
+#define SSPI_SEQUENCE_27_OFFSET                                           0x0000026C
 #define SSPI_SEQUENCE_27_TYPE                                             UInt32
 #define SSPI_SEQUENCE_27_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_27_SEQ27_OPCODE_SHIFT                            30
@@ -2342,7 +2340,7 @@
 #define    SSPI_SEQUENCE_27_SEQ27_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_27_SEQ27_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_28_OFFSET                                           0x00000138
+#define SSPI_SEQUENCE_28_OFFSET                                           0x00000270
 #define SSPI_SEQUENCE_28_TYPE                                             UInt32
 #define SSPI_SEQUENCE_28_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_28_SEQ28_OPCODE_SHIFT                            30
@@ -2378,7 +2376,7 @@
 #define    SSPI_SEQUENCE_28_SEQ28_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_28_SEQ28_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_29_OFFSET                                           0x0000013A
+#define SSPI_SEQUENCE_29_OFFSET                                           0x00000274
 #define SSPI_SEQUENCE_29_TYPE                                             UInt32
 #define SSPI_SEQUENCE_29_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_29_SEQ29_OPCODE_SHIFT                            30
@@ -2414,7 +2412,7 @@
 #define    SSPI_SEQUENCE_29_SEQ29_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_29_SEQ29_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_30_OFFSET                                           0x0000013C
+#define SSPI_SEQUENCE_30_OFFSET                                           0x00000278
 #define SSPI_SEQUENCE_30_TYPE                                             UInt32
 #define SSPI_SEQUENCE_30_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_30_SEQ30_OPCODE_SHIFT                            30
@@ -2450,7 +2448,7 @@
 #define    SSPI_SEQUENCE_30_SEQ30_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_30_SEQ30_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_SEQUENCE_31_OFFSET                                           0x0000013E
+#define SSPI_SEQUENCE_31_OFFSET                                           0x0000027C
 #define SSPI_SEQUENCE_31_TYPE                                             UInt32
 #define SSPI_SEQUENCE_31_RESERVED_MASK                                    0x00000000
 #define    SSPI_SEQUENCE_31_SEQ31_OPCODE_SHIFT                            30
@@ -2486,7 +2484,7 @@
 #define    SSPI_SEQUENCE_31_SEQ31_SIDETONE_RX_ON_SHIFT                    0
 #define    SSPI_SEQUENCE_31_SEQ31_SIDETONE_RX_ON_MASK                     0x00000001
 
-#define SSPI_FRAME0_CS_IDLE_DEF_OFFSET                                    0x00000180
+#define SSPI_FRAME0_CS_IDLE_DEF_OFFSET                                    0x00000300
 #define SSPI_FRAME0_CS_IDLE_DEF_TYPE                                      UInt32
 #define SSPI_FRAME0_CS_IDLE_DEF_RESERVED_MASK                             0x8080FFC0
 #define    SSPI_FRAME0_CS_IDLE_DEF_FRAME0_CS_ACTIVE_SHIFT                 24
@@ -2506,7 +2504,7 @@
 #define    SSPI_FRAME0_CS_IDLE_DEF_FRAME0_CS_IDLE_VALUE_SHIFT             0
 #define    SSPI_FRAME0_CS_IDLE_DEF_FRAME0_CS_IDLE_VALUE_MASK              0x00000001
 
-#define SSPI_FRAME0_SCLK_DEF_OFFSET                                       0x00000182
+#define SSPI_FRAME0_SCLK_DEF_OFFSET                                       0x00000304
 #define SSPI_FRAME0_SCLK_DEF_TYPE                                         UInt32
 #define SSPI_FRAME0_SCLK_DEF_RESERVED_MASK                                0xFF800FF1
 #define    SSPI_FRAME0_SCLK_DEF_FRAME0_SCLK_END_SHIFT                     16
@@ -2518,7 +2516,7 @@
 #define    SSPI_FRAME0_SCLK_DEF_FRAME0_SCLK_RATIO_SHIFT                   1
 #define    SSPI_FRAME0_SCLK_DEF_FRAME0_SCLK_RATIO_MASK                    0x00000006
 
-#define SSPI_FRAME0_TX_DEF_OFFSET                                         0x00000184
+#define SSPI_FRAME0_TX_DEF_OFFSET                                         0x00000308
 #define SSPI_FRAME0_TX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME0_TX_DEF_RESERVED_MASK                                  0x80808004
 #define    SSPI_FRAME0_TX_DEF_FRAME0_TXOEN_END_SHIFT                      24
@@ -2534,7 +2532,7 @@
 #define    SSPI_FRAME0_TX_DEF_FRAME0_TX_EXTENDED_RIGHT_SHIFT              0
 #define    SSPI_FRAME0_TX_DEF_FRAME0_TX_EXTENDED_RIGHT_MASK               0x00000001
 
-#define SSPI_FRAME0_RX_DEF_OFFSET                                         0x00000186
+#define SSPI_FRAME0_RX_DEF_OFFSET                                         0x0000030C
 #define SSPI_FRAME0_RX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME0_RX_DEF_RESERVED_MASK                                  0xFFFF8007
 #define    SSPI_FRAME0_RX_DEF_FRAME0_RX_START_SHIFT                       8
@@ -2542,7 +2540,7 @@
 #define    SSPI_FRAME0_RX_DEF_FRAME0_RX_WORD_LENGTH_SHIFT                 3
 #define    SSPI_FRAME0_RX_DEF_FRAME0_RX_WORD_LENGTH_MASK                  0x000000F8
 
-#define SSPI_FRAME1_CS_IDLE_DEF_OFFSET                                    0x00000188
+#define SSPI_FRAME1_CS_IDLE_DEF_OFFSET                                    0x00000310
 #define SSPI_FRAME1_CS_IDLE_DEF_TYPE                                      UInt32
 #define SSPI_FRAME1_CS_IDLE_DEF_RESERVED_MASK                             0x8080FFC0
 #define    SSPI_FRAME1_CS_IDLE_DEF_FRAME1_CS_ACTIVE_SHIFT                 24
@@ -2562,7 +2560,7 @@
 #define    SSPI_FRAME1_CS_IDLE_DEF_FRAME1_CS_IDLE_VALUE_SHIFT             0
 #define    SSPI_FRAME1_CS_IDLE_DEF_FRAME1_CS_IDLE_VALUE_MASK              0x00000001
 
-#define SSPI_FRAME1_SCLK_DEF_OFFSET                                       0x0000018A
+#define SSPI_FRAME1_SCLK_DEF_OFFSET                                       0x00000314
 #define SSPI_FRAME1_SCLK_DEF_TYPE                                         UInt32
 #define SSPI_FRAME1_SCLK_DEF_RESERVED_MASK                                0xFF800FF1
 #define    SSPI_FRAME1_SCLK_DEF_FRAME1_SCLK_END_SHIFT                     16
@@ -2574,7 +2572,7 @@
 #define    SSPI_FRAME1_SCLK_DEF_FRAME1_SCLK_RATIO_SHIFT                   1
 #define    SSPI_FRAME1_SCLK_DEF_FRAME1_SCLK_RATIO_MASK                    0x00000006
 
-#define SSPI_FRAME1_TX_DEF_OFFSET                                         0x0000018C
+#define SSPI_FRAME1_TX_DEF_OFFSET                                         0x00000318
 #define SSPI_FRAME1_TX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME1_TX_DEF_RESERVED_MASK                                  0x80808004
 #define    SSPI_FRAME1_TX_DEF_FRAME1_TXOEN_END_SHIFT                      24
@@ -2590,7 +2588,7 @@
 #define    SSPI_FRAME1_TX_DEF_FRAME1_TX_EXTENDED_RIGHT_SHIFT              0
 #define    SSPI_FRAME1_TX_DEF_FRAME1_TX_EXTENDED_RIGHT_MASK               0x00000001
 
-#define SSPI_FRAME1_RX_DEF_OFFSET                                         0x0000018E
+#define SSPI_FRAME1_RX_DEF_OFFSET                                         0x0000031C
 #define SSPI_FRAME1_RX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME1_RX_DEF_RESERVED_MASK                                  0xFFFF8007
 #define    SSPI_FRAME1_RX_DEF_FRAME1_RX_START_SHIFT                       8
@@ -2598,7 +2596,7 @@
 #define    SSPI_FRAME1_RX_DEF_FRAME1_RX_WORD_LENGTH_SHIFT                 3
 #define    SSPI_FRAME1_RX_DEF_FRAME1_RX_WORD_LENGTH_MASK                  0x000000F8
 
-#define SSPI_FRAME2_CS_IDLE_DEF_OFFSET                                    0x00000190
+#define SSPI_FRAME2_CS_IDLE_DEF_OFFSET                                    0x00000320
 #define SSPI_FRAME2_CS_IDLE_DEF_TYPE                                      UInt32
 #define SSPI_FRAME2_CS_IDLE_DEF_RESERVED_MASK                             0x8080FFC0
 #define    SSPI_FRAME2_CS_IDLE_DEF_FRAME2_CS_ACTIVE_SHIFT                 24
@@ -2618,7 +2616,7 @@
 #define    SSPI_FRAME2_CS_IDLE_DEF_FRAME2_CS_IDLE_VALUE_SHIFT             0
 #define    SSPI_FRAME2_CS_IDLE_DEF_FRAME2_CS_IDLE_VALUE_MASK              0x00000001
 
-#define SSPI_FRAME2_SCLK_DEF_OFFSET                                       0x00000192
+#define SSPI_FRAME2_SCLK_DEF_OFFSET                                       0x00000324
 #define SSPI_FRAME2_SCLK_DEF_TYPE                                         UInt32
 #define SSPI_FRAME2_SCLK_DEF_RESERVED_MASK                                0xFF800FF1
 #define    SSPI_FRAME2_SCLK_DEF_FRAME2_SCLK_END_SHIFT                     16
@@ -2630,7 +2628,7 @@
 #define    SSPI_FRAME2_SCLK_DEF_FRAME2_SCLK_RATIO_SHIFT                   1
 #define    SSPI_FRAME2_SCLK_DEF_FRAME2_SCLK_RATIO_MASK                    0x00000006
 
-#define SSPI_FRAME2_TX_DEF_OFFSET                                         0x00000194
+#define SSPI_FRAME2_TX_DEF_OFFSET                                         0x00000328
 #define SSPI_FRAME2_TX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME2_TX_DEF_RESERVED_MASK                                  0x80808004
 #define    SSPI_FRAME2_TX_DEF_FRAME2_TXOEN_END_SHIFT                      24
@@ -2646,7 +2644,7 @@
 #define    SSPI_FRAME2_TX_DEF_FRAME2_TX_EXTENDED_RIGHT_SHIFT              0
 #define    SSPI_FRAME2_TX_DEF_FRAME2_TX_EXTENDED_RIGHT_MASK               0x00000001
 
-#define SSPI_FRAME2_RX_DEF_OFFSET                                         0x00000196
+#define SSPI_FRAME2_RX_DEF_OFFSET                                         0x0000032C
 #define SSPI_FRAME2_RX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME2_RX_DEF_RESERVED_MASK                                  0xFFFF8007
 #define    SSPI_FRAME2_RX_DEF_FRAME2_RX_START_SHIFT                       8
@@ -2654,7 +2652,7 @@
 #define    SSPI_FRAME2_RX_DEF_FRAME2_RX_WORD_LENGTH_SHIFT                 3
 #define    SSPI_FRAME2_RX_DEF_FRAME2_RX_WORD_LENGTH_MASK                  0x000000F8
 
-#define SSPI_FRAME3_CS_IDLE_DEF_OFFSET                                    0x00000198
+#define SSPI_FRAME3_CS_IDLE_DEF_OFFSET                                    0x00000330
 #define SSPI_FRAME3_CS_IDLE_DEF_TYPE                                      UInt32
 #define SSPI_FRAME3_CS_IDLE_DEF_RESERVED_MASK                             0x8080FFC0
 #define    SSPI_FRAME3_CS_IDLE_DEF_FRAME3_CS_ACTIVE_SHIFT                 24
@@ -2674,7 +2672,7 @@
 #define    SSPI_FRAME3_CS_IDLE_DEF_FRAME3_CS_IDLE_VALUE_SHIFT             0
 #define    SSPI_FRAME3_CS_IDLE_DEF_FRAME3_CS_IDLE_VALUE_MASK              0x00000001
 
-#define SSPI_FRAME3_SCLK_DEF_OFFSET                                       0x0000019A
+#define SSPI_FRAME3_SCLK_DEF_OFFSET                                       0x00000334
 #define SSPI_FRAME3_SCLK_DEF_TYPE                                         UInt32
 #define SSPI_FRAME3_SCLK_DEF_RESERVED_MASK                                0xFF800FF1
 #define    SSPI_FRAME3_SCLK_DEF_FRAME3_SCLK_END_SHIFT                     16
@@ -2686,7 +2684,7 @@
 #define    SSPI_FRAME3_SCLK_DEF_FRAME3_SCLK_RATIO_SHIFT                   1
 #define    SSPI_FRAME3_SCLK_DEF_FRAME3_SCLK_RATIO_MASK                    0x00000006
 
-#define SSPI_FRAME3_TX_DEF_OFFSET                                         0x0000019C
+#define SSPI_FRAME3_TX_DEF_OFFSET                                         0x00000338
 #define SSPI_FRAME3_TX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME3_TX_DEF_RESERVED_MASK                                  0x80808004
 #define    SSPI_FRAME3_TX_DEF_FRAME3_TXOEN_END_SHIFT                      24
@@ -2702,7 +2700,7 @@
 #define    SSPI_FRAME3_TX_DEF_FRAME3_TX_EXTENDED_RIGHT_SHIFT              0
 #define    SSPI_FRAME3_TX_DEF_FRAME3_TX_EXTENDED_RIGHT_MASK               0x00000001
 
-#define SSPI_FRAME3_RX_DEF_OFFSET                                         0x0000019E
+#define SSPI_FRAME3_RX_DEF_OFFSET                                         0x0000033C
 #define SSPI_FRAME3_RX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME3_RX_DEF_RESERVED_MASK                                  0xFFFF8007
 #define    SSPI_FRAME3_RX_DEF_FRAME3_RX_START_SHIFT                       8
@@ -2710,7 +2708,7 @@
 #define    SSPI_FRAME3_RX_DEF_FRAME3_RX_WORD_LENGTH_SHIFT                 3
 #define    SSPI_FRAME3_RX_DEF_FRAME3_RX_WORD_LENGTH_MASK                  0x000000F8
 
-#define SSPI_FRAME4_CS_IDLE_DEF_OFFSET                                    0x000001A0
+#define SSPI_FRAME4_CS_IDLE_DEF_OFFSET                                    0x00000340
 #define SSPI_FRAME4_CS_IDLE_DEF_TYPE                                      UInt32
 #define SSPI_FRAME4_CS_IDLE_DEF_RESERVED_MASK                             0x8080FFC0
 #define    SSPI_FRAME4_CS_IDLE_DEF_FRAME4_CS_ACTIVE_SHIFT                 24
@@ -2730,7 +2728,7 @@
 #define    SSPI_FRAME4_CS_IDLE_DEF_FRAME4_CS_IDLE_VALUE_SHIFT             0
 #define    SSPI_FRAME4_CS_IDLE_DEF_FRAME4_CS_IDLE_VALUE_MASK              0x00000001
 
-#define SSPI_FRAME4_SCLK_DEF_OFFSET                                       0x000001A2
+#define SSPI_FRAME4_SCLK_DEF_OFFSET                                       0x00000344
 #define SSPI_FRAME4_SCLK_DEF_TYPE                                         UInt32
 #define SSPI_FRAME4_SCLK_DEF_RESERVED_MASK                                0xFF800FF1
 #define    SSPI_FRAME4_SCLK_DEF_FRAME4_SCLK_END_SHIFT                     16
@@ -2742,7 +2740,7 @@
 #define    SSPI_FRAME4_SCLK_DEF_FRAME4_SCLK_RATIO_SHIFT                   1
 #define    SSPI_FRAME4_SCLK_DEF_FRAME4_SCLK_RATIO_MASK                    0x00000006
 
-#define SSPI_FRAME4_TX_DEF_OFFSET                                         0x000001A4
+#define SSPI_FRAME4_TX_DEF_OFFSET                                         0x00000348
 #define SSPI_FRAME4_TX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME4_TX_DEF_RESERVED_MASK                                  0x80808004
 #define    SSPI_FRAME4_TX_DEF_FRAME4_TXOEN_END_SHIFT                      24
@@ -2758,7 +2756,7 @@
 #define    SSPI_FRAME4_TX_DEF_FRAME4_TX_EXTENDED_RIGHT_SHIFT              0
 #define    SSPI_FRAME4_TX_DEF_FRAME4_TX_EXTENDED_RIGHT_MASK               0x00000001
 
-#define SSPI_FRAME4_RX_DEF_OFFSET                                         0x000001A6
+#define SSPI_FRAME4_RX_DEF_OFFSET                                         0x0000034C
 #define SSPI_FRAME4_RX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME4_RX_DEF_RESERVED_MASK                                  0xFFFF8007
 #define    SSPI_FRAME4_RX_DEF_FRAME4_RX_START_SHIFT                       8
@@ -2766,7 +2764,7 @@
 #define    SSPI_FRAME4_RX_DEF_FRAME4_RX_WORD_LENGTH_SHIFT                 3
 #define    SSPI_FRAME4_RX_DEF_FRAME4_RX_WORD_LENGTH_MASK                  0x000000F8
 
-#define SSPI_FRAME5_CS_IDLE_DEF_OFFSET                                    0x000001A8
+#define SSPI_FRAME5_CS_IDLE_DEF_OFFSET                                    0x00000350
 #define SSPI_FRAME5_CS_IDLE_DEF_TYPE                                      UInt32
 #define SSPI_FRAME5_CS_IDLE_DEF_RESERVED_MASK                             0x8080FFC0
 #define    SSPI_FRAME5_CS_IDLE_DEF_FRAME5_CS_ACTIVE_SHIFT                 24
@@ -2786,7 +2784,7 @@
 #define    SSPI_FRAME5_CS_IDLE_DEF_FRAME5_CS_IDLE_VALUE_SHIFT             0
 #define    SSPI_FRAME5_CS_IDLE_DEF_FRAME5_CS_IDLE_VALUE_MASK              0x00000001
 
-#define SSPI_FRAME5_SCLK_DEF_OFFSET                                       0x000001AA
+#define SSPI_FRAME5_SCLK_DEF_OFFSET                                       0x00000354
 #define SSPI_FRAME5_SCLK_DEF_TYPE                                         UInt32
 #define SSPI_FRAME5_SCLK_DEF_RESERVED_MASK                                0xFF800FF1
 #define    SSPI_FRAME5_SCLK_DEF_FRAME5_SCLK_END_SHIFT                     16
@@ -2798,7 +2796,7 @@
 #define    SSPI_FRAME5_SCLK_DEF_FRAME5_SCLK_RATIO_SHIFT                   1
 #define    SSPI_FRAME5_SCLK_DEF_FRAME5_SCLK_RATIO_MASK                    0x00000006
 
-#define SSPI_FRAME5_TX_DEF_OFFSET                                         0x000001AC
+#define SSPI_FRAME5_TX_DEF_OFFSET                                         0x00000358
 #define SSPI_FRAME5_TX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME5_TX_DEF_RESERVED_MASK                                  0x80808004
 #define    SSPI_FRAME5_TX_DEF_FRAME5_TXOEN_END_SHIFT                      24
@@ -2814,7 +2812,7 @@
 #define    SSPI_FRAME5_TX_DEF_FRAME5_TX_EXTENDED_RIGHT_SHIFT              0
 #define    SSPI_FRAME5_TX_DEF_FRAME5_TX_EXTENDED_RIGHT_MASK               0x00000001
 
-#define SSPI_FRAME5_RX_DEF_OFFSET                                         0x000001AE
+#define SSPI_FRAME5_RX_DEF_OFFSET                                         0x0000035C
 #define SSPI_FRAME5_RX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME5_RX_DEF_RESERVED_MASK                                  0xFFFF8007
 #define    SSPI_FRAME5_RX_DEF_FRAME5_RX_START_SHIFT                       8
@@ -2822,7 +2820,7 @@
 #define    SSPI_FRAME5_RX_DEF_FRAME5_RX_WORD_LENGTH_SHIFT                 3
 #define    SSPI_FRAME5_RX_DEF_FRAME5_RX_WORD_LENGTH_MASK                  0x000000F8
 
-#define SSPI_FRAME6_CS_IDLE_DEF_OFFSET                                    0x000001B0
+#define SSPI_FRAME6_CS_IDLE_DEF_OFFSET                                    0x00000360
 #define SSPI_FRAME6_CS_IDLE_DEF_TYPE                                      UInt32
 #define SSPI_FRAME6_CS_IDLE_DEF_RESERVED_MASK                             0x8080FFC0
 #define    SSPI_FRAME6_CS_IDLE_DEF_FRAME6_CS_ACTIVE_SHIFT                 24
@@ -2842,7 +2840,7 @@
 #define    SSPI_FRAME6_CS_IDLE_DEF_FRAME6_CS_IDLE_VALUE_SHIFT             0
 #define    SSPI_FRAME6_CS_IDLE_DEF_FRAME6_CS_IDLE_VALUE_MASK              0x00000001
 
-#define SSPI_FRAME6_SCLK_DEF_OFFSET                                       0x000001B2
+#define SSPI_FRAME6_SCLK_DEF_OFFSET                                       0x00000364
 #define SSPI_FRAME6_SCLK_DEF_TYPE                                         UInt32
 #define SSPI_FRAME6_SCLK_DEF_RESERVED_MASK                                0xFF800FF1
 #define    SSPI_FRAME6_SCLK_DEF_FRAME6_SCLK_END_SHIFT                     16
@@ -2854,7 +2852,7 @@
 #define    SSPI_FRAME6_SCLK_DEF_FRAME6_SCLK_RATIO_SHIFT                   1
 #define    SSPI_FRAME6_SCLK_DEF_FRAME6_SCLK_RATIO_MASK                    0x00000006
 
-#define SSPI_FRAME6_TX_DEF_OFFSET                                         0x000001B4
+#define SSPI_FRAME6_TX_DEF_OFFSET                                         0x00000368
 #define SSPI_FRAME6_TX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME6_TX_DEF_RESERVED_MASK                                  0x80808004
 #define    SSPI_FRAME6_TX_DEF_FRAME6_TXOEN_END_SHIFT                      24
@@ -2870,7 +2868,7 @@
 #define    SSPI_FRAME6_TX_DEF_FRAME6_TX_EXTENDED_RIGHT_SHIFT              0
 #define    SSPI_FRAME6_TX_DEF_FRAME6_TX_EXTENDED_RIGHT_MASK               0x00000001
 
-#define SSPI_FRAME6_RX_DEF_OFFSET                                         0x000001B6
+#define SSPI_FRAME6_RX_DEF_OFFSET                                         0x0000036C
 #define SSPI_FRAME6_RX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME6_RX_DEF_RESERVED_MASK                                  0xFFFF8007
 #define    SSPI_FRAME6_RX_DEF_FRAME6_RX_START_SHIFT                       8
@@ -2878,7 +2876,7 @@
 #define    SSPI_FRAME6_RX_DEF_FRAME6_RX_WORD_LENGTH_SHIFT                 3
 #define    SSPI_FRAME6_RX_DEF_FRAME6_RX_WORD_LENGTH_MASK                  0x000000F8
 
-#define SSPI_FRAME7_CS_IDLE_DEF_OFFSET                                    0x000001B8
+#define SSPI_FRAME7_CS_IDLE_DEF_OFFSET                                    0x00000370
 #define SSPI_FRAME7_CS_IDLE_DEF_TYPE                                      UInt32
 #define SSPI_FRAME7_CS_IDLE_DEF_RESERVED_MASK                             0x8080FFC0
 #define    SSPI_FRAME7_CS_IDLE_DEF_FRAME7_CS_ACTIVE_SHIFT                 24
@@ -2898,7 +2896,7 @@
 #define    SSPI_FRAME7_CS_IDLE_DEF_FRAME7_CS_IDLE_VALUE_SHIFT             0
 #define    SSPI_FRAME7_CS_IDLE_DEF_FRAME7_CS_IDLE_VALUE_MASK              0x00000001
 
-#define SSPI_FRAME7_SCLK_DEF_OFFSET                                       0x000001BA
+#define SSPI_FRAME7_SCLK_DEF_OFFSET                                       0x00000374
 #define SSPI_FRAME7_SCLK_DEF_TYPE                                         UInt32
 #define SSPI_FRAME7_SCLK_DEF_RESERVED_MASK                                0xFF800FF1
 #define    SSPI_FRAME7_SCLK_DEF_FRAME7_SCLK_END_SHIFT                     16
@@ -2910,7 +2908,7 @@
 #define    SSPI_FRAME7_SCLK_DEF_FRAME7_SCLK_RATIO_SHIFT                   1
 #define    SSPI_FRAME7_SCLK_DEF_FRAME7_SCLK_RATIO_MASK                    0x00000006
 
-#define SSPI_FRAME7_TX_DEF_OFFSET                                         0x000001BC
+#define SSPI_FRAME7_TX_DEF_OFFSET                                         0x00000378
 #define SSPI_FRAME7_TX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME7_TX_DEF_RESERVED_MASK                                  0x80808004
 #define    SSPI_FRAME7_TX_DEF_FRAME7_TXOEN_END_SHIFT                      24
@@ -2926,7 +2924,7 @@
 #define    SSPI_FRAME7_TX_DEF_FRAME7_TX_EXTENDED_RIGHT_SHIFT              0
 #define    SSPI_FRAME7_TX_DEF_FRAME7_TX_EXTENDED_RIGHT_MASK               0x00000001
 
-#define SSPI_FRAME7_RX_DEF_OFFSET                                         0x000001BE
+#define SSPI_FRAME7_RX_DEF_OFFSET                                         0x0000037C
 #define SSPI_FRAME7_RX_DEF_TYPE                                           UInt32
 #define SSPI_FRAME7_RX_DEF_RESERVED_MASK                                  0xFFFF8007
 #define    SSPI_FRAME7_RX_DEF_FRAME7_RX_START_SHIFT                       8
@@ -2934,55 +2932,55 @@
 #define    SSPI_FRAME7_RX_DEF_FRAME7_RX_WORD_LENGTH_SHIFT                 3
 #define    SSPI_FRAME7_RX_DEF_FRAME7_RX_WORD_LENGTH_MASK                  0x000000F8
 
-#define SSPI_FIFO_ENTRY0TX_OFFSET                                         0x00000200
+#define SSPI_FIFO_ENTRY0TX_OFFSET                                         0x00000400
 #define SSPI_FIFO_ENTRY0TX_TYPE                                           UInt32
 #define SSPI_FIFO_ENTRY0TX_RESERVED_MASK                                  0x00000000
 #define    SSPI_FIFO_ENTRY0TX_FIFO_ENTRY0TX_SHIFT                         0
 #define    SSPI_FIFO_ENTRY0TX_FIFO_ENTRY0TX_MASK                          0xFFFFFFFF
 
-#define SSPI_FIFO_ENTRY1TX_OFFSET                                         0x00000240
+#define SSPI_FIFO_ENTRY1TX_OFFSET                                         0x00000480
 #define SSPI_FIFO_ENTRY1TX_TYPE                                           UInt32
 #define SSPI_FIFO_ENTRY1TX_RESERVED_MASK                                  0x00000000
 #define    SSPI_FIFO_ENTRY1TX_FIFO_ENTRY1TX_SHIFT                         0
 #define    SSPI_FIFO_ENTRY1TX_FIFO_ENTRY1TX_MASK                          0xFFFFFFFF
 
-#define SSPI_FIFO_ENTRY2TX_OFFSET                                         0x00000280
+#define SSPI_FIFO_ENTRY2TX_OFFSET                                         0x00000500
 #define SSPI_FIFO_ENTRY2TX_TYPE                                           UInt32
 #define SSPI_FIFO_ENTRY2TX_RESERVED_MASK                                  0x00000000
 #define    SSPI_FIFO_ENTRY2TX_FIFO_ENTRY2TX_SHIFT                         0
 #define    SSPI_FIFO_ENTRY2TX_FIFO_ENTRY2TX_MASK                          0xFFFFFFFF
 
-#define SSPI_FIFO_ENTRY3TX_OFFSET                                         0x000002C0
+#define SSPI_FIFO_ENTRY3TX_OFFSET                                         0x00000580
 #define SSPI_FIFO_ENTRY3TX_TYPE                                           UInt32
 #define SSPI_FIFO_ENTRY3TX_RESERVED_MASK                                  0x00000000
 #define    SSPI_FIFO_ENTRY3TX_FIFO_ENTRY3TX_SHIFT                         0
 #define    SSPI_FIFO_ENTRY3TX_FIFO_ENTRY3TX_MASK                          0xFFFFFFFF
 
-#define SSPI_FIFO_ENTRY0RX_OFFSET                                         0x00000300
+#define SSPI_FIFO_ENTRY0RX_OFFSET                                         0x00000600
 #define SSPI_FIFO_ENTRY0RX_TYPE                                           UInt32
 #define SSPI_FIFO_ENTRY0RX_RESERVED_MASK                                  0x00000000
 #define    SSPI_FIFO_ENTRY0RX_FIFO_ENTRY0RX_SHIFT                         0
 #define    SSPI_FIFO_ENTRY0RX_FIFO_ENTRY0RX_MASK                          0xFFFFFFFF
 
-#define SSPI_FIFO_ENTRY1RX_OFFSET                                         0x00000340
+#define SSPI_FIFO_ENTRY1RX_OFFSET                                         0x00000680
 #define SSPI_FIFO_ENTRY1RX_TYPE                                           UInt32
 #define SSPI_FIFO_ENTRY1RX_RESERVED_MASK                                  0x00000000
 #define    SSPI_FIFO_ENTRY1RX_FIFO_ENTRY1RX_SHIFT                         0
 #define    SSPI_FIFO_ENTRY1RX_FIFO_ENTRY1RX_MASK                          0xFFFFFFFF
 
-#define SSPI_FIFO_ENTRY2RX_OFFSET                                         0x00000380
+#define SSPI_FIFO_ENTRY2RX_OFFSET                                         0x00000700
 #define SSPI_FIFO_ENTRY2RX_TYPE                                           UInt32
 #define SSPI_FIFO_ENTRY2RX_RESERVED_MASK                                  0x00000000
 #define    SSPI_FIFO_ENTRY2RX_FIFO_ENTRY2RX_SHIFT                         0
 #define    SSPI_FIFO_ENTRY2RX_FIFO_ENTRY2RX_MASK                          0xFFFFFFFF
 
-#define SSPI_FIFO_ENTRY3RX_OFFSET                                         0x000003C0
+#define SSPI_FIFO_ENTRY3RX_OFFSET                                         0x00000780
 #define SSPI_FIFO_ENTRY3RX_TYPE                                           UInt32
 #define SSPI_FIFO_ENTRY3RX_RESERVED_MASK                                  0x00000000
 #define    SSPI_FIFO_ENTRY3RX_FIFO_ENTRY3RX_SHIFT                         0
 #define    SSPI_FIFO_ENTRY3RX_FIFO_ENTRY3RX_MASK                          0xFFFFFFFF
 
-#define SSPI_SIDETONE_CONTROL_OFFSET                                      0x00000400
+#define SSPI_SIDETONE_CONTROL_OFFSET                                      0x00000800
 #define SSPI_SIDETONE_CONTROL_TYPE                                        UInt32
 #define SSPI_SIDETONE_CONTROL_RESERVED_MASK                               0xE0000009
 #define    SSPI_SIDETONE_CONTROL_SIDETONE_LOWER_FIT_TAB_SHIFT             23
@@ -3002,7 +3000,7 @@
 #define    SSPI_SIDETONE_CONTROL_SIDETONE_FIR_FILTER_DISABLE_SHIFT        1
 #define    SSPI_SIDETONE_CONTROL_SIDETONE_FIR_FILTER_DISABLE_MASK         0x00000002
 
-#define SSPI_SIDETONE_CURRENTGAIN_OFFSET                                  0x00000402
+#define SSPI_SIDETONE_CURRENTGAIN_OFFSET                                  0x00000804
 #define SSPI_SIDETONE_CURRENTGAIN_TYPE                                    UInt32
 #define SSPI_SIDETONE_CURRENTGAIN_RESERVED_MASK                           0xFFFFF800
 #define    SSPI_SIDETONE_CURRENTGAIN_SIDETONE_GAIN_ADJUST_TAB_SHIFT       9
@@ -3010,7 +3008,7 @@
 #define    SSPI_SIDETONE_CURRENTGAIN_SIDETONE_CURRENT_GAIN_SHIFT          0
 #define    SSPI_SIDETONE_CURRENTGAIN_SIDETONE_CURRENT_GAIN_MASK           0x000001FF
 
-#define SSPI_SIDETONE_CONTROL_2_OFFSET                                    0x00000404
+#define SSPI_SIDETONE_CONTROL_2_OFFSET                                    0x00000808
 #define SSPI_SIDETONE_CONTROL_2_TYPE                                      UInt32
 #define SSPI_SIDETONE_CONTROL_2_RESERVED_MASK                             0x80000000
 #define    SSPI_SIDETONE_CONTROL_2_SIDETONE_CLIP_DISABLE_SHIFT            30
@@ -3020,13 +3018,13 @@
 #define    SSPI_SIDETONE_CONTROL_2_SIDETONE_UPPER_FIR_TAPS_SHIFT          0
 #define    SSPI_SIDETONE_CONTROL_2_SIDETONE_UPPER_FIR_TAPS_MASK           0x0000003F
 
-#define SSPI_SIDETONE_COEF_ADDR_OFFSET                                    0x00000406
+#define SSPI_SIDETONE_COEF_ADDR_OFFSET                                    0x0000080C
 #define SSPI_SIDETONE_COEF_ADDR_TYPE                                      UInt32
 #define SSPI_SIDETONE_COEF_ADDR_RESERVED_MASK                             0xFFFFFE03
 #define    SSPI_SIDETONE_COEF_ADDR_SIDETONE_COEF_ADDR_SHIFT               2
 #define    SSPI_SIDETONE_COEF_ADDR_SIDETONE_COEF_ADDR_MASK                0x000001FC
 
-#define SSPI_SIDETONE_COEF_DATA_OFFSET                                    0x00000408
+#define SSPI_SIDETONE_COEF_DATA_OFFSET                                    0x00000810
 #define SSPI_SIDETONE_COEF_DATA_TYPE                                      UInt32
 #define SSPI_SIDETONE_COEF_DATA_RESERVED_MASK                             0xFFFF0000
 #define    SSPI_SIDETONE_COEF_DATA_SIDETONE_COEF_DATA_SHIFT               0

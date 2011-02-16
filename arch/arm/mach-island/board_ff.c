@@ -165,6 +165,22 @@ static struct resource board_pmu_bsc_resource[] = {
    },
 };
 
+#define SSP0_CORE_REG_SIZE 0x1000
+static struct resource board_sspi_i2c_resource[] = {
+   [0] =
+   {
+      .start = SSP0_BASE_ADDR,
+      .end = SSP0_BASE_ADDR + SSP0_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = 
+   {
+      .start = BCM_INT_ID_SSP0 ,
+      .end = BCM_INT_ID_SSP0 ,
+      .flags = IORESOURCE_IRQ,
+   },
+};
+
 
 static struct platform_device board_i2c_adap_devices[] =
 {
@@ -186,6 +202,13 @@ static struct platform_device board_i2c_adap_devices[] =
       .resource = board_pmu_bsc_resource,
       .num_resources = ARRAY_SIZE(board_pmu_bsc_resource),
    },
+   {  /* for SSPI i2c */
+      .name = "sspi-i2c",
+      .id = 3,
+      .resource = board_sspi_i2c_resource,
+      .num_resources = ARRAY_SIZE(board_sspi_i2c_resource),
+   },
+
 };
 
 static struct plat_serial8250_port uart_data[] = {
@@ -614,7 +637,7 @@ static struct i2c_board_info __initdata pmu_info[] =
    },
 };
 
-#define BMA150_IRQ_PIN 140
+#define BMA150_IRQ_PIN 120
 
 static struct smb380_platform_data bma150_plat_data = {
    .range = RANGE_2G,
@@ -754,6 +777,7 @@ static struct platform_device *board_devices[] __initdata = {
    &board_i2c_adap_devices[0],
    &board_i2c_adap_devices[1],
    &board_i2c_adap_devices[2],
+   &board_i2c_adap_devices[3],
    &island_sdio2_device,
    &island_sdio1_device,
    &island_ipc_device,
@@ -798,7 +822,7 @@ static void __init board_add_devices(void)
                            pmu_info,
                            ARRAY_SIZE(pmu_info));
 
-   i2c_register_board_info(2,              
+   i2c_register_board_info(3,              
                            bma150_info,
                            ARRAY_SIZE(bma150_info));
 
