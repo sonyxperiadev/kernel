@@ -1392,9 +1392,6 @@ int dwc_otg_pcd_ep_enable(dwc_otg_pcd_t * pcd,
 	dwc_otg_pcd_ep_t *ep = 0;
 	const usb_endpoint_descriptor_t *desc;
 	uint64_t flags;
-	fifosize_data_t dptxfsiz = { .d32 = 0 };
-	gdfifocfg_data_t gdfifocfg = { .d32 = 0 };	
-	gdfifocfg_data_t gdfifocfgbase = { .d32 = 0 };	
 	int retval = 0;
 	int i, epcount;
 
@@ -1473,16 +1470,6 @@ int dwc_otg_pcd_ep_enable(dwc_otg_pcd_t * pcd,
 			ep->dwc_ep.tx_fifo_num =
 			    assign_tx_fifo(GET_CORE_IF(pcd));
 		}
-
-		/* Calculating EP info controller base address */ 
-		if (ep->dwc_ep.tx_fifo_num) {
-			gdfifocfg.d32 = dwc_read_reg32(&GET_CORE_IF(pcd)->core_global_regs->gdfifocfg);
-			gdfifocfgbase.d32 = gdfifocfg.d32 >> 16;
-			dptxfsiz.d32 = (dwc_read_reg32(&GET_CORE_IF(pcd)->core_global_regs->
-						dtxfsiz[ep->dwc_ep.tx_fifo_num]) >> 16);
-			gdfifocfg.b.epinfobase = gdfifocfgbase.d32 + dptxfsiz.d32;
-			dwc_write_reg32(&GET_CORE_IF(pcd)->core_global_regs->gdfifocfg, gdfifocfg.d32);             
-		}
 	}
 	/* Set initial data PID. */
 	if (ep->dwc_ep.type == UE_BULK) {
@@ -1541,9 +1528,6 @@ int dwc_otg_pcd_ep_disable(dwc_otg_pcd_t * pcd, void *ep_handle)
 	uint64_t flags;
 	dwc_otg_dev_dma_desc_t *desc_addr;
 	dwc_dma_t dma_desc_addr;
-	gdfifocfg_data_t gdfifocfgbase = { .d32 = 0 };	
-	gdfifocfg_data_t gdfifocfg = { .d32 = 0 };	
-	fifosize_data_t dptxfsiz = { .d32 = 0 };
 
 	ep = get_ep_from_handle(pcd, ep_handle);
 
@@ -1560,18 +1544,10 @@ int dwc_otg_pcd_ep_disable(dwc_otg_pcd_t * pcd, void *ep_handle)
 	ep->desc = 0;
 	ep->stopped = 1;
 	
-	gdfifocfg.d32 = dwc_read_reg32(&GET_CORE_IF(pcd)->core_global_regs->gdfifocfg);
-	gdfifocfgbase.d32 = (dwc_read_reg32(&GET_CORE_IF(pcd)->core_global_regs->gdfifocfg) >> 16);         
-		
 	if (ep->dwc_ep.is_in) {
 		dwc_otg_flush_tx_fifo(GET_CORE_IF(pcd), ep->dwc_ep.tx_fifo_num);
 		release_perio_tx_fifo(GET_CORE_IF(pcd), ep->dwc_ep.tx_fifo_num);
 		release_tx_fifo(GET_CORE_IF(pcd), ep->dwc_ep.tx_fifo_num);
-		/* Decreasing EPinfo Base Addr */
-		dptxfsiz.d32 = (dwc_read_reg32(&GET_CORE_IF(pcd)->core_global_regs->
-						dtxfsiz[ep->dwc_ep.tx_fifo_num]) >> 16);
-		gdfifocfg.b.epinfobase = gdfifocfgbase.d32 - dptxfsiz.d32;
-		dwc_write_reg32(&GET_CORE_IF(pcd)->core_global_regs->gdfifocfg, gdfifocfg.d32);               
 	}
 
 	/* Free DMA Descriptors */

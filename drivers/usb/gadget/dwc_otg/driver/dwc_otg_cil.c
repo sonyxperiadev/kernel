@@ -752,7 +752,6 @@ int dwc_otg_save_global_regs(dwc_otg_core_if_t *core_if)
 #endif
 	gr->gi2cctl_local = dwc_read_reg32(&core_if->core_global_regs->gi2cctl);
 	gr->pcgcctl_local = dwc_read_reg32(core_if->pcgcctl);
-	gr->gdfifocfg_local = dwc_read_reg32(&core_if->core_global_regs->gdfifocfg);
 	for (i = 0; i < MAX_EPS_CHANNELS; i++) {
 		gr->dtxfsiz_local[i] = dwc_read_reg32(&(core_if->core_global_regs->dtxfsiz[i]));
 	}
@@ -770,7 +769,6 @@ int dwc_otg_save_global_regs(dwc_otg_core_if_t *core_if)
 #endif
 	DWC_DEBUGPL(DBG_ANY,"Backed up gi2cctl   = %08x\n",gr->gi2cctl_local);
 	DWC_DEBUGPL(DBG_ANY,"Backed up pcgcctl   = %08x\n",gr->pcgcctl_local);
-	DWC_DEBUGPL(DBG_ANY,"Backed up gdfifocfg   = %08x\n",gr->gdfifocfg_local);
 
 	return 0;
 }
@@ -892,7 +890,6 @@ int dwc_otg_restore_global_regs(dwc_otg_core_if_t *core_if)
 	dwc_write_reg32(&core_if->core_global_regs->grxfsiz, gr->grxfsiz_local);
 	dwc_write_reg32(&core_if->core_global_regs->gnptxfsiz, gr->gnptxfsiz_local);
 	dwc_write_reg32(&core_if->core_global_regs->hptxfsiz, gr->hptxfsiz_local);
-	dwc_write_reg32(&core_if->core_global_regs->gdfifocfg, gr->gdfifocfg_local);
 	for (i = 0; i < MAX_EPS_CHANNELS; i++) {
 		dwc_write_reg32(&core_if->core_global_regs->dtxfsiz[i], gr->dtxfsiz_local[i]);
 	}
@@ -1588,9 +1585,6 @@ void dwc_otg_core_dev_init(dwc_otg_core_if_t * core_if)
 	fifosize_data_t txfifosize;
 	dthrctl_data_t dthrctl;
 	fifosize_data_t ptxfifosize;
-	uint16_t rxfsiz, nptxfsiz;  
-	gdfifocfg_data_t gdfifocfg = { .d32 = 0 };
-	hwcfg3_data_t hwcfg3 = { .d32 = 0 };
 
 	/* Restart the Phy Clock */
 	dwc_write_reg32(core_if->pcgcctl, 0);
@@ -1737,17 +1731,7 @@ void dwc_otg_core_dev_init(dwc_otg_core_if_t * core_if)
 			}
 		}
 	}
-	
-	/* Calculating DFIFOCFG for Device mode to include RxFIFO and NPTXFIFO*/      
-	gdfifocfg.d32 = dwc_read_reg32(&global_regs->gdfifocfg);
-	hwcfg3.d32 = dwc_read_reg32(&global_regs->ghwcfg3);
-	gdfifocfg.b.gdfifocfg = (dwc_read_reg32(&global_regs->ghwcfg3) >> 16);
-	dwc_write_reg32(&global_regs->gdfifocfg, gdfifocfg.d32);             
-	rxfsiz = (dwc_read_reg32(&global_regs->grxfsiz) & 0x0000ffff);
-	nptxfsiz = (dwc_read_reg32(&global_regs->gnptxfsiz) >> 16);
-	gdfifocfg.b.epinfobase = rxfsiz + nptxfsiz;
-	dwc_write_reg32(&global_regs->gdfifocfg, gdfifocfg.d32);
-		
+
 	/* Flush the FIFOs */
 	dwc_otg_flush_tx_fifo(core_if, 0x10);	/* all Tx FIFOs */
 	dwc_otg_flush_rx_fifo(core_if);
@@ -1946,8 +1930,6 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t * core_if)
 	hprt0_data_t hprt0 = {.d32 = 0 };
 	fifosize_data_t nptxfifosize;
 	fifosize_data_t ptxfifosize;
-	uint16_t rxfsiz, nptxfsiz, hptxfsiz; 
-	gdfifocfg_data_t gdfifocfg = { .d32 = 0 };
 	int i;
 	hcchar_data_t hcchar;
 	hcfg_data_t hcfg;
@@ -2027,14 +2009,6 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t * core_if)
 		dwc_write_reg32(&global_regs->hptxfsiz, ptxfifosize.d32);
 		DWC_DEBUGPL(DBG_CIL, "new hptxfsiz=%08x\n",
 			    dwc_read_reg32(&global_regs->hptxfsiz));
-
-		/* Global DFIFOCFG calculation for Host mode - include RxFIFO, NPTXFIFO and HPTXFIFO */
-		gdfifocfg.d32 = dwc_read_reg32(&global_regs->gdfifocfg);
-		rxfsiz = (dwc_read_reg32(&global_regs->grxfsiz) & 0x0000ffff);
-		nptxfsiz = (dwc_read_reg32(&global_regs->gnptxfsiz) >> 16);
-		hptxfsiz = (dwc_read_reg32(&global_regs->hptxfsiz) >> 16);
-		gdfifocfg.b.epinfobase = rxfsiz + nptxfsiz + hptxfsiz;
-		dwc_write_reg32(&global_regs->gdfifocfg, gdfifocfg.d32);
 	}
 
 	/* TODO - check this */
@@ -4417,9 +4391,6 @@ void dwc_otg_dump_global_registers(dwc_otg_core_if_t * core_if)
 	addr = &core_if->core_global_regs->gpwrdn;
 	DWC_PRINTF("GPWRDN	 @0x%08X : 0x%08X\n", (uint32_t) addr,
 		   dwc_read_reg32(addr));	
-	addr = &core_if->core_global_regs->gdfifocfg;			
-	DWC_PRINTF("GDFIFOCFG	 @0x%08X : 0x%08X\n", (uint32_t) addr,
-		   dwc_read_reg32(addr));	   		   	  
 	addr = &core_if->core_global_regs->adpctl;
 	DWC_PRINTF("ADPCTL	 @0x%08X : 0x%08X\n", (uint32_t) addr,
 		   dwc_read_reg32(addr));
