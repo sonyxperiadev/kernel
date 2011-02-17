@@ -128,6 +128,8 @@ int clock_debug_add_clock(struct clk *c);
 int __init clock_init(void);
 int __init clock_late_init(void);
 
+unsigned long clock_get_xtal(void);
+
 #define	CLK_WR_ACCESS_PASSWORD	0x00A5A501
 #define	CLOCK_1K				1000
 #define	CLOCK_1M				(CLOCK_1K * 1000)

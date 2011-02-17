@@ -378,7 +378,7 @@ extern void __iomem *twd_base;
 
 static unsigned int __proc_clk_get_vco_rate(void __iomem *base)
 {
-#define	XTAL_FREQ	(26*CLOCK_1M)
+	unsigned long xtal = clock_get_xtal();
 	unsigned int ndiv_int, ndiv_frac, vco_rate;
 
 	ndiv_int = (readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET)&KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
@@ -386,11 +386,11 @@ static unsigned int __proc_clk_get_vco_rate(void __iomem *base)
 	ndiv_frac = (readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET) & KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK)
 		>> KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
 
-	vco_rate = ndiv_int * XTAL_FREQ;
+	vco_rate = ndiv_int * xtal;
 
-	vco_rate += (unsigned long) (u64) (((u64)ndiv_frac * (u64)XTAL_FREQ) >> 20);
+	vco_rate += (unsigned long) (u64) (((u64)ndiv_frac * (u64)xtal) >> 20);
 
-	clk_dbg ("int %d, frac %d, vco %d\n", ndiv_int, ndiv_frac, vco_rate);
+	clk_dbg ("xtal %d, int %d, frac %d, vco %d\n", xtal, ndiv_int, ndiv_frac, vco_rate);
 	return vco_rate;
 }
 

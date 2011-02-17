@@ -18,7 +18,9 @@
 #include <mach/clock.h>
 #include <asm/io.h>
 #include <linux/math64.h>
+#include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
 
 #define	DECLARE_REF_CLK(clk_name, clk_rate, clk_div, clk_parent)		\
 	static struct proc_clock clk_name##_clk = {				\
@@ -198,3 +200,12 @@ int __init clock_late_init(void)
 }
 
 late_initcall(clock_late_init);
+
+unsigned long clock_get_xtal(void)
+{
+	unsigned long xtal_tbl[] = { 13000000, 26000000, 19200000, 38400000};
+	unsigned int reg = readl (KONA_CHIPREG_VA + CHIPREG_ISLAND_STRAP_OFFSET);
+
+	return xtal_tbl[ (reg & CHIPREG_ISLAND_STRAP_STRAP_IN_7TO6_MASK)
+		>> CHIPREG_ISLAND_STRAP_STRAP_IN_7TO6_SHIFT];
+}
