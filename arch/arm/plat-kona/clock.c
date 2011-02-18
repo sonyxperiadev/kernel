@@ -42,6 +42,8 @@
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_lock);
 
+int clk_debug;
+
 static int __clk_enable(struct clk *clk)
 {
 	int ret = 0;
@@ -390,7 +392,7 @@ static unsigned int __proc_clk_get_vco_rate(void __iomem *base)
 
 	vco_rate += (unsigned long) (u64) (((u64)ndiv_frac * (u64)xtal) >> 20);
 
-	clk_dbg ("xtal %d, int %d, frac %d, vco %d\n", xtal, ndiv_int, ndiv_frac, vco_rate);
+	clk_dbg ("xtal %d, int %d, frac %d, vco %d\n", (int)xtal, ndiv_int, ndiv_frac, vco_rate);
 	return vco_rate;
 }
 
@@ -601,7 +603,13 @@ int __init clock_debug_init(void)
 {
 	/* create root clock dir /clock */
 	dent_clk_root_dir = debugfs_create_dir("clock", 0);
-	return dent_clk_root_dir?-ENOMEM:0;
+	if (!dent_clk_root_dir)
+		return -ENOMEM;
+
+	if (!debugfs_create_u32("debug", 0644, dent_clk_root_dir, (int*)&clk_debug))
+		return -ENOMEM;
+
+	return 0;
 }
 
 int __init clock_debug_add_clock(struct clk *c)

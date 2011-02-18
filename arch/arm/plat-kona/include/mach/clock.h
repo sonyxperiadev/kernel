@@ -117,6 +117,8 @@ extern struct clk_ops peri_clk_ops;
 extern struct clk_ops ccu_clk_ops;
 extern struct clk_ops ref_clk_ops;
 
+extern int clk_debug;
+
 #ifdef CONFIG_DEBUG_FS
 int clock_debug_init(void);
 int clock_debug_add_clock(struct clk *c);
@@ -137,5 +139,9 @@ unsigned long clock_get_xtal(void);
 #if defined(DEBUG)
 #define	clk_dbg printk
 #else
-#define clk_dbg(format...) do{} while(0)
+#define	clk_dbg(format...)		\
+	do {				\
+		if (clk_debug) 		\
+			printk(format);	\
+	} while(0)
 #endif
