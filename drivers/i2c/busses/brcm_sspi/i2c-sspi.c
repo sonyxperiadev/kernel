@@ -31,13 +31,9 @@
 
 #include "sspi_helpers.h"
 
-#define DEFAULT_I2C_BUS_SPEED    BSC_BUS_SPEED_50K
-#define CMDBUSY_DELAY            100000
 #define SES_TIMEOUT              (msecs_to_jiffies(100))
 
-/* upper 5 bits of the master code */
-#define MASTERCODE               0x08
-#define MASTERCODE_MASK          0x07
+#define ENABLE_SSPI_I2C_DEBUGGING 1
 
 #define BSC_DBG(dev, format, args...) \
    do { if (dev->debug) dev_err(dev->dev, format, ## args); } while (0)
@@ -660,6 +656,17 @@ static int sspi_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 		if (pmsg->flags & I2C_M_RD) {
 			memcpy(pmsg->buf, &rx_buf[rx_idx_checker], pmsg->len);
 			rx_idx_checker += pmsg->len;
+
+			BSC_DBG(dev, "%s segment#id=%d has rx %d bytes:\n", __func__, index, pmsg->len);
+
+			for (j = 0; j < pmsg->len; j++) {
+				if (j % 16)
+					BSC_DBG(dev, "%02x ", pmsg->buf[j]);
+				else
+					BSC_DBG(dev, "\n0x%04x: %02x ", j, pmsg->buf[j]);
+			}
+			BSC_DBG(dev, "\n");
+
 		} else {
 			for (j = 0; j < pmsg->len; j++) {
 				if (rx_buf[rx_idx_checker+j] & 0x1) {
@@ -772,8 +779,7 @@ error_mem_alloc:
 
 static u32 sspi_functionality(struct i2c_adapter *adap)
 {
-   return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL |
-          I2C_FUNC_10BIT_ADDR | I2C_FUNC_PROTOCOL_MANGLING;
+   return I2C_FUNC_I2C | I2C_FUNC_SMBUS_EMUL | I2C_FUNC_PROTOCOL_MANGLING;
 }
 
 static struct i2c_algorithm sspi_algo =
@@ -936,7 +942,7 @@ static int __init sspi_probe(struct platform_device *pdev)
    dev->hw_core.bIniitialized = 0;
    dev->hw_core.core_id = SSPI_CORE_ID_SSP0;
    dev->hw_core.base = dev->virt_base;
-   dev->debug = 1;
+   dev->debug = ENABLE_SSPI_I2C_DEBUGGING;
 
    SSPI_hw_init(&dev->hw_core);
    SSPI_hw_i2c_init(&dev->hw_core);

@@ -540,7 +540,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
         *frm_bitmap = 1 << frm_idx0;
 
         /* Setup the Rx Frame*/
-        val = ((word_len * 8) << SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_CS_SIZE_SHIFT) |
+        val = ((72) << SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_CS_SIZE_SHIFT) |
               SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_CS_IDLE_VALUE_MASK |
               SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_TX_IDLE_VALUE_MASK |
               SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_TXOEN_IDLE_VALUE_MASK;
@@ -2953,7 +2953,7 @@ uint32_t chal_sspi_read_data(CHAL_HANDLE handle,
                SSPIL_FIFORX_0_CONTROL_FIFORX0_EMPTY_MASK)
                 continue;
             else {
-                *buf = (uint8_t)CHAL_REG_READ32(entbase);
+                *buf = (uint8_t)CHAL_REG_READ8(entbase);
                 buf++;
                 tmp--;
             }
@@ -3104,7 +3104,7 @@ uint32_t chal_sspi_write_data(CHAL_HANDLE handle,
                SSPIL_FIFOTX_0_CONTROL_FIFOTX0_FULL_MASK)
                 return (size - tmp);
             else {
-                CHAL_REG_WRITE32(entbase, buf[0]);
+                CHAL_REG_WRITE8(entbase, *buf);
                 buf++;
                 tmp--;
             }

@@ -75,6 +75,8 @@ obj-$(CONFIG_I2C_STUB)		+= i2c-stub.o
 obj-$(CONFIG_SCx200_ACB)	+= scx200_acb.o
 obj-$(CONFIG_SCx200_I2C)	+= scx200_i2c.o
 obj-$(CONFIG_I2C_BSC)		+= i2c-bsc.o
+obj-$(CONFIG_I2C_BRCM_SSPI)	+= brcm_sspi/
+
 ifeq ($(CONFIG_I2C_DEBUG_BUS),y)
 EXTRA_CFLAGS += -DDEBUG
 endif

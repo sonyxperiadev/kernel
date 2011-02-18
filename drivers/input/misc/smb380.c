@@ -12,6 +12,8 @@
  *
  */
 
+#define DEBUG
+
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
@@ -23,12 +25,14 @@
 #include <linux/input.h>
 #include <linux/smb380.h>
 #include <linux/slab.h>
-/*
 #include <linux/irq.h>
-#include <asm/gpio.h>
-#include <mach/kona.h>
-#include <mach/island.h>
-*/
+#include <linux/gpio.h>
+
+#include <asm/io.h>
+
+#include <mach/hardware.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
+
 
 #define SMB380_CHIP_ID_REG	0x00
 #define SMB380_X_LSB_REG	0x02
@@ -558,8 +562,9 @@ static void smb380_work(struct work_struct *work)
 
 	smb380_read_xyz(sensor->client,
 		&sensor->data.x, &sensor->data.y, &sensor->data.z);
+#if 1
 	smb380_read_temperature(sensor->client, &sensor->data.temp);
-
+#endif
 	mutex_lock(&sensor->lock);
 	input_report_abs(sensor->idev, ABS_X, sensor->data.x);
 	input_report_abs(sensor->idev, ABS_Y, sensor->data.y);
@@ -645,33 +650,31 @@ static int smb380_register_input_device(struct smb380_sensor *sensor)
 		goto failed_reg;
 	}
 
-#if 0
-/**************** Added SARU ******************/
-#define BMA150_IRQ_PIN 140
-   int rc = 0 ; 
-   rc = set_irq_type(gpio_to_irq(BMA150_IRQ_PIN), IRQ_TYPE_EDGE_FALLING);
-   if (rc < 0)
-   {
-      printk("set_irq_type failed with irq %d\n",
-                     gpio_to_irq(BMA150_IRQ_PIN));
-      // return rc;
-   }
-   rc = gpio_request(BMA150_IRQ_PIN, "bma_pen_down");
-   if (rc < 0)
-   {
-      printk("unable to request GPIO pin %d\n", BMA150_IRQ_PIN);
-      // return rc;
-   }
-   gpio_direction_input(BMA150_IRQ_PIN);
-
-   /* We need to pull up this pin. */
-   // *(unsigned int *)(0xE5003330) = *(unsigned int *)(0xE5003330) | 0x06 ; 
-   *(unsigned int *)(0xE500489C) = 0x303 ;
-/*************** Ended Saru ******************/
-#endif
+	/* Hack:
+	 * Since an unknown source is changing this pin mux after the Uboot, 
+	 * without knowing where it came from, we will set up the right pin mux 
+	 * right before the usage.
+	 */
+	writel(0x303, KONA_CHIPREG_VA + CHIPREG_ULPI1_DATA_6_OFFSET);
 
 	if (client->irq > 0) {
-		ret = request_irq(client->irq, smb380_irq, IRQF_TRIGGER_RISING,
+
+		/* 
+		 * Setup GPIO properties for interrupt from sensor.
+		 */
+		ret = set_irq_type(client->irq, IRQ_TYPE_EDGE_FALLING);
+		if (ret < 0) {
+			printk(KERN_ERR "set_irq_type failed with irq %d\n", client->irq);
+			goto failed_reg;
+		}
+		ret = gpio_request(irq_to_gpio(client->irq), "bma150 sensor int");
+		if (ret < 0) {
+			printk(KERN_ERR "unable to request GPIO pin %d\n", irq_to_gpio(client->irq));
+			goto failed_reg;
+		}
+		gpio_direction_input(irq_to_gpio(client->irq));
+
+		ret = request_irq(client->irq, smb380_irq, IRQF_TRIGGER_FALLING,
 				"smb380 accelerometer", sensor);
 		if (ret) {
 			dev_err(&client->dev, "can't get IRQ %d, ret %d\n",

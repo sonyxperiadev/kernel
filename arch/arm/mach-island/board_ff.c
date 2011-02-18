@@ -832,22 +832,6 @@ static void __init board_add_devices(void)
    i2c_register_board_info(3,              
                            bma150_info,
                            ARRAY_SIZE(bma150_info));
-
-   /* Setup GPIO properties for interrupt from sensor.
-    */
-   rc = set_irq_type(gpio_to_irq(BMA150_IRQ_PIN), IRQ_TYPE_EDGE_FALLING);
-   if (rc < 0)
-   {
-      printk("set_irq_type failed with irq %d\n", gpio_to_irq(BMA150_IRQ_PIN));
-      return ;
-   }
-   rc = gpio_request(BMA150_IRQ_PIN, "bma_pen_down");
-   if (rc < 0)
-   {
-      printk("unable to request GPIO pin %d\n", BMA150_IRQ_PIN);
-      return ;
-   }
-   gpio_direction_input(BMA150_IRQ_PIN);
 }
 
 void __init pinmux_setup(void)

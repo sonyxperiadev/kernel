@@ -248,7 +248,7 @@ SSPI_hw_status_t SSPI_hw_i2c_init(SSPI_hw_core_t *pCore)
 
 SSPI_hw_status_t SSPI_hw_i2c_intr_enable(SSPI_hw_core_t *pCore)
 {
-    uint32_t intrMask = ( SSPIL_INTR_ENABLE_FIFO_UNDERRUN | SSPIL_INTR_ENABLE_FIFO_OVERRUN | SSPIL_INTR_ENABLE_SCHEDULER);
+    uint32_t intrMask = ( SSPIL_INTR_ENABLE_FIFO_UNDERRUN | SSPIL_INTR_ENABLE_FIFO_OVERRUN | SSPIL_INTR_ENABLE_SCHEDULER | SSPIL_INTR_ENABLE_APB_TX_ERROR | SSPIL_INTR_ENABLE_APB_RX_ERROR);
 	chal_sspi_clear_intr(pCore->handle, ~0, ~0);
 
 	chal_sspi_enable_intr(pCore->handle, intrMask);
