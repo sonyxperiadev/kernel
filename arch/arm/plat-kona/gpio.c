@@ -82,7 +82,8 @@ static void kona_gpio_set(struct gpio_chip *chip, unsigned gpio, int value)
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
 	void __iomem * reg_base = kona_gpio.reg_base;	
-	uint32_t val, reg_offset;
+	u32 val, reg_offset;
+	unsigned long flags;
 
 	(void) chip; /* unused input parameter */ 
 
@@ -98,10 +99,14 @@ static void kona_gpio_set(struct gpio_chip *chip, unsigned gpio, int value)
 
 	reg_offset = value ? GPIO_OUT_SET(bankId) : GPIO_OUT_CLR(bankId);
 
+	spin_lock_irqsave(&kona_gpio.lock, flags);
+
 	val = __raw_readl(reg_base + reg_offset);
 	val |= 1 << bit;
 	
 	__raw_writel(val, reg_base + reg_offset);
+
+	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 }
 
 static int kona_gpio_get(struct gpio_chip *chip, unsigned gpio)
@@ -109,7 +114,7 @@ static int kona_gpio_get(struct gpio_chip *chip, unsigned gpio)
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
 	void __iomem * reg_base = kona_gpio.reg_base;	
-	uint32_t val, reg_offset;
+	u32 val, reg_offset;
 
 	(void) chip; /* unused input parameter */ 
 
@@ -132,7 +137,7 @@ static int kona_gpio_get(struct gpio_chip *chip, unsigned gpio)
 static int kona_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
 {
 	void __iomem * reg_base = kona_gpio.reg_base;	
-	uint32_t val; 
+	u32 val; 
 	unsigned long flags;
 
 	(void) chip; /* unused input parameter */ 
@@ -153,7 +158,7 @@ static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
 					int value)
 {
 	void __iomem * reg_base = kona_gpio.reg_base;	
-	uint32_t val; 
+	u32 val; 
 	unsigned long flags;
 
 	(void) chip; /* unused input parameter */ 
@@ -186,11 +191,16 @@ static void kona_gpio_irq_ack(unsigned int irq)
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
 	void __iomem * reg_base = kona_gpio.reg_base;	
-	uint32_t val;
+	u32 val;
+	unsigned long flags;
 
+	spin_lock_irqsave(&kona_gpio.lock, flags);
+	
 	val = __raw_readl(reg_base + GPIO_INT_STA(bankId));
 	val |= 1 << bit;
 	__raw_writel(val, reg_base + GPIO_INT_STA(bankId));
+
+	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 }
 
 static void kona_gpio_irq_mask(unsigned int irq)
@@ -199,11 +209,16 @@ static void kona_gpio_irq_mask(unsigned int irq)
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
 	void __iomem * reg_base = kona_gpio.reg_base;	
-	uint32_t val;
+	u32 val;
+	unsigned long flags;
+	
+	spin_lock_irqsave(&kona_gpio.lock, flags);
 
 	val = __raw_readl(reg_base + GPIO_INT_MSK(bankId));
 	val |= 1 << bit;
 	__raw_writel(val, reg_base + GPIO_INT_MSK(bankId));
+
+	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 }
 
 static void kona_gpio_irq_unmask(unsigned int irq)
@@ -212,11 +227,16 @@ static void kona_gpio_irq_unmask(unsigned int irq)
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
 	void __iomem * reg_base = kona_gpio.reg_base;	
-	uint32_t val;
+	u32 val;
+	unsigned long flags;
+	
+	spin_lock_irqsave(&kona_gpio.lock, flags);
 
 	val = __raw_readl(reg_base + GPIO_INT_MSKCLR(bankId));
 	val |= 1 << bit;
 	__raw_writel(val, reg_base + GPIO_INT_MSKCLR(bankId));
+
+	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 }
 
 
@@ -224,8 +244,8 @@ static int kona_gpio_irq_set_type(unsigned int irq, unsigned int type)
 {
 	int gpio = irq_to_gpio(irq);
 	struct kona_gpio *p_kona_gpio = get_irq_chip_data(irq);
-	uint32_t lvl_type;
-	uint32_t val;
+	u32 lvl_type;
+	u32 val;
 	unsigned long flags;
 
 	switch (type & IRQ_TYPE_SENSE_MASK) {
@@ -285,17 +305,20 @@ static void kona_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 		__raw_writel(__raw_readl(reg_base + GPIO_INT_STA(bankId)) | (1 << bit), 
 			         reg_base + GPIO_INT_STA(bankId));
 
+		/* KONA GPIOs are all edge triggered. Clear condition
+		 * before executing the handler so that we don't miss edges.
+		 */ 
+		desc->chip->unmask(irq); 
+		
 		/* Invoke interrupt handler.
 		 */ 
 		generic_handle_irq(gpio_to_irq(GPIO_PER_BANK * bankId + bit));
 	}
-
-	desc->chip->unmask(irq);
 }
 
 
 static struct irq_chip kona_gpio_irq_chip = {
-	.name		= "GPIO",
+	.name		= "KONA-GPIO",
 	.ack		= kona_gpio_irq_ack,
 	.mask		= kona_gpio_irq_mask,
 	.unmask		= kona_gpio_irq_unmask,
@@ -356,7 +379,8 @@ int __init kona_gpio_init(int num_bank)
 		set_irq_flags(i, IRQF_VALID);
 	}
 
-	for (i = 0; i < num_bank; i++) {
+	for (i = 0; i < num_bank; i++)
+	{
 		bank = &kona_gpio.banks[i];
 
 		set_irq_chained_handler(bank->irq, kona_gpio_irq_handler);
