@@ -35,6 +35,7 @@
 
 #include <mach/lm.h>
 #include <mach/irqs.h>
+#include <linux/clk.h>
 #include <mach/io_map.h>
 
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
@@ -68,6 +69,7 @@ static unsigned int otghost = 0;
 static unsigned int otghost = 1;
 #endif
 static struct lm_device *lmdev = NULL;
+static struct clk *otg_clk;
 
 
 /*-------------------------------------------------------------------------*/
@@ -111,6 +113,10 @@ static void __exit dwc_otg_device_exit(void)
 		lm_device_unregister(lmdev);
 		lmdev = NULL;
 	}
+	if (otg_clk) {
+		clk_disable(otg_clk);
+		clk_put (otg_clk);
+	}
 }
 
 /****************************************************************************
@@ -129,8 +135,23 @@ static int __init dwc_otg_device_init(void)
 	else {
 		void __iomem *hsotg_ctrl_base;
 		int val;
+		unsigned long rate;
 
 		printk("\n%s: Setting up USB OTG PHY and Clock\n", __func__);
+
+		otg_clk = clk_get(NULL, "usb_otg_clk");
+		if (!otg_clk) {
+			printk("%s: error get clock\n", __func__);
+			return -EIO;
+		}
+
+		rc = clk_enable(otg_clk);
+		if (rc) {
+			printk("%s: error enable clock\n", __func__);
+			return -EIO;
+		}
+		rate = clk_get_rate(otg_clk);
+		printk("usb_otg_clk rate %lu\n", rate);
 
 		/* map base address */
 		hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
