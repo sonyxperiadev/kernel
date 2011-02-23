@@ -33,11 +33,11 @@ struct clk;
  *
  */
 struct clk_ops {
-	int					(*enable)(struct clk *c, int enable);
-	int                 (*set_rate)(struct clk *c, unsigned long rate);
-	unsigned long       (*get_rate)(struct clk *c);
-	unsigned long       (*round_rate)(struct clk *c, unsigned long rate);
-	int                 (*set_parent)(struct clk *c, struct clk *parent);
+	int			(*enable)(struct clk *c, int enable);
+	int			(*set_rate)(struct clk *c, unsigned long rate);
+	unsigned long		(*get_rate)(struct clk *c);
+	unsigned long		(*round_rate)(struct clk *c, unsigned long rate);
+	int			(*set_parent)(struct clk *c, struct clk *parent);
 };
 
 /**
@@ -47,35 +47,62 @@ struct clk_ops {
  */
 struct clk_src {
 	int			total;
-	struct clk 	**parents;
+	struct clk 		**parents;
 };
 
 struct clk {
 	struct list_head	list;
-	struct module		*owner;
-	struct clk			*parent;
-	const char			*name;
-	int					id;
-	int					use_cnt;
+	struct module	*owner;
+	struct clk	*parent;
+	const char	*name;
+	int		id;
+	int		use_cnt;
 
-	unsigned long		rate;		/* in HZ */
-	unsigned long		div;		/* programmable divider. 0 means fixed ratio to parent clock */
+	unsigned long	rate;		/* in HZ */
+	unsigned long	div;		/* programmable divider. 0 means fixed ratio to parent clock */
 
-	struct clk_src		*src;
-	struct clk_ops		*ops;
+	struct clk_src	*src;
+	struct clk_ops	*ops;
 };
 
 struct proc_clock {
-	struct clk		clk;
+	struct clk	clk;
 	unsigned long	proc_clk_mgr_base;
 };
 
 struct peri_clock {
-	struct clk		clk;
+	struct clk	clk;
 };
 
 struct ccu_clock {
 	struct clk	clk;
+
+	unsigned long	ccu_clk_mgr_base;
+	unsigned long	wr_access_offset;
+	unsigned long	policy_freq_offset;
+	unsigned long	policy_ctl_offset;
+	unsigned long	policy0_mask_offset;
+	unsigned long	policy1_mask_offset;
+	unsigned long	policy2_mask_offset;
+	unsigned long	policy3_mask_offset;
+	unsigned long	lvm_en_offset;
+
+	int		freq_id;
+	unsigned long	freq_tbl[8];
+};
+
+struct bus_clock {
+	struct clk	clk;
+
+	unsigned long	ccu_clk_mgr_base;
+	unsigned long	wr_access_offset;
+	unsigned long	clkgate_offset;
+
+	unsigned long	stprsts_mask;
+	unsigned long	hw_sw_gating_mask;
+	unsigned long	clk_en_mask;
+
+	unsigned long	freq_tbl[8];
 };
 
 struct ref_clock {
@@ -84,7 +111,7 @@ struct ref_clock {
 
 static inline int is_same_clock(struct clk *a, struct clk *b)
 {
-	return a==b;
+	return (a==b);
 }
 
 #define	to_clk(p) (&((p)->clk))
@@ -107,6 +134,11 @@ static inline struct ccu_clock *to_ccu_clk(struct clk *clock)
 	return container_of(clock, struct ccu_clock, clk);
 }
 
+static inline struct bus_clock *to_bus_clk(struct clk *clock)
+{
+	return container_of(clock, struct bus_clock, clk);
+}
+
 static inline struct ref_clock *to_ref_clk(struct clk *clock)
 {
 	return container_of(clock, struct ref_clock, clk);
@@ -115,6 +147,7 @@ static inline struct ref_clock *to_ref_clk(struct clk *clock)
 extern struct clk_ops proc_clk_ops;
 extern struct clk_ops peri_clk_ops;
 extern struct clk_ops ccu_clk_ops;
+extern struct clk_ops bus_clk_ops;
 extern struct clk_ops ref_clk_ops;
 
 extern int clk_debug;
@@ -133,8 +166,8 @@ int __init clock_late_init(void);
 unsigned long clock_get_xtal(void);
 
 #define	CLK_WR_ACCESS_PASSWORD	0x00A5A501
-#define	CLOCK_1K				1000
-#define	CLOCK_1M				(CLOCK_1K * 1000)
+#define	CLOCK_1K		1000
+#define	CLOCK_1M		(CLOCK_1K * 1000)
 
 #if defined(DEBUG)
 #define	clk_dbg printk

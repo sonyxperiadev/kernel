@@ -21,6 +21,8 @@
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_sysmap_a9.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
+
 
 #define	DECLARE_REF_CLK(clk_name, clk_rate, clk_div, clk_parent)		\
 	static struct proc_clock clk_name##_clk = {				\
@@ -51,10 +53,10 @@ static struct proc_clock arm_clk = {
 /* Ref clocks */
 DECLARE_REF_CLK		(crystal, 			26*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK		(frac_1m, 			1*CLOCK_1M,		1,	0);
-DECLARE_REF_CLK		(ref_96m_varVDD, 	96*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(ref_96m_varVDD, 		96*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK		(var_96m, 			96*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK		(ref_96m, 			96*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK		(var_500m_varVDD, 	500*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(var_500m_varVDD, 		500*CLOCK_1M,	1,	0);
 
 
 DECLARE_REF_CLK		(ref_32k, 			32*CLOCK_1K,	1,	0);
@@ -75,6 +77,54 @@ DECLARE_REF_CLK		(var_13m, 			13*CLOCK_1M,	4,	name_to_clk(var_52m));
 
 DECLARE_REF_CLK		(usbh_48m, 			48*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK		(ref_cx40, 			153600*CLOCK_1K,1,	0);	// FIXME
+
+/* CCU clocks*/
+static struct ccu_clock kpm_ccu_clk = {
+	.clk	=	{
+		.name	=	"kpm_ccu_clk",
+		.ops	=	&ccu_clk_ops,
+	},
+
+	.ccu_clk_mgr_base	=	KONA_MST_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.policy_freq_offset	=	KPM_CLK_MGR_REG_POLICY_FREQ_OFFSET,
+	.policy_ctl_offset	=	KPM_CLK_MGR_REG_POLICY_CTL_OFFSET,
+	.policy0_mask_offset	=	KPM_CLK_MGR_REG_POLICY0_MASK_OFFSET,
+	.policy1_mask_offset	=	KPM_CLK_MGR_REG_POLICY1_MASK_OFFSET,
+	.policy2_mask_offset	=	KPM_CLK_MGR_REG_POLICY2_MASK_OFFSET,
+	.policy3_mask_offset	=	KPM_CLK_MGR_REG_POLICY3_MASK_OFFSET,
+	.lvm_en_offset		=	KPM_CLK_MGR_REG_LVM_EN_OFFSET,
+
+	.freq_id	=	2,
+	.freq_tbl	=	{
+		 26*CLOCK_1M,  52*CLOCK_1M, 104*CLOCK_1M, 156*CLOCK_1M,
+		156*CLOCK_1M, 208*CLOCK_1M, 312*CLOCK_1M, 312*CLOCK_1M
+	},
+};
+
+/* bus clocks */
+/* KPM */
+static struct bus_clock usb_otg_clk = {
+	.clk	=	{
+		.name	=	"usb_otg_clk",
+		.parent	=	name_to_clk(kpm_ccu),
+		.ops	=	&bus_clk_ops,
+	},
+
+	.ccu_clk_mgr_base	=	KONA_MST_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset		=	KPM_CLK_MGR_REG_USB_OTG_CLKGATE_OFFSET,
+
+	.stprsts_mask		=	KPM_CLK_MGR_REG_USB_OTG_CLKGATE_USB_OTG_AHB_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPM_CLK_MGR_REG_USB_OTG_CLKGATE_USB_OTG_AHB_HW_SW_GATING_SEL_SHIFT,
+	.clk_en_mask		=	KPM_CLK_MGR_REG_USB_OTG_CLKGATE_USB_OTG_AHB_CLK_EN_MASK,
+
+	.freq_tbl	=	{
+		 26*CLOCK_1M,  52*CLOCK_1M,  52*CLOCK_1M,  52*CLOCK_1M,
+		 78*CLOCK_1M, 104*CLOCK_1M, 104*CLOCK_1M, 156*CLOCK_1M
+	},
+
+};
 
 /* peri clocks */
 static struct clk *sdio_clk_src_tbl[] =
@@ -177,6 +227,9 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(sdio2),
 	CLK_LK(sdio3),
 	CLK_LK(sdio4),
+
+	CLK_LK(kpm_ccu),
+	CLK_LK(usb_otg),
 };
 
 int __init clock_init(void)

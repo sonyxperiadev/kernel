@@ -499,16 +499,116 @@ struct clk_ops peri_clk_ops = {
 
 static int ccu_clk_enable(struct clk *c, int enable)
 {
-	int ret=0;
+	struct ccu_clock *ccu_clk = to_ccu_clk(c);
+	void __iomem *base;
+	int reg, ret = 0;
+
+	base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
+	if (!base)
+		return -ENOMEM;
+
+	if (!enable)
+		return -EINVAL;	/* CCU clock cannot shutdown */
+
+	/* enable access */
+	writel(CLK_WR_ACCESS_PASSWORD, base + ccu_clk->wr_access_offset);
+
+	/* config enable for policy engine */
+	writel(1, base + ccu_clk->lvm_en_offset);
+	while (readl(base + ccu_clk->lvm_en_offset) & 1);
+
+	/* freq ID */
+	reg = ccu_clk->freq_id |
+		(ccu_clk->freq_id << 8) |
+		(ccu_clk->freq_id << 16) |
+		(ccu_clk->freq_id << 24);
+	writel(reg, base + ccu_clk->policy_freq_offset);
+
+	/* enable all clock mask */
+	writel(0x7fffffff, base + ccu_clk->policy0_mask_offset);
+	writel(0x7fffffff, base + ccu_clk->policy1_mask_offset);
+	writel(0x7fffffff, base + ccu_clk->policy2_mask_offset);
+	writel(0x7fffffff, base + ccu_clk->policy3_mask_offset);
+
+	/* start policy engine */
+	reg = readl(base + ccu_clk->policy_ctl_offset);
+	reg |= 5;
+	writel(reg, base + ccu_clk->policy_ctl_offset);
+	while (readl(base + ccu_clk->policy_ctl_offset) & 1);
+
+	/* disable access */
+	writel(0, base + ccu_clk->wr_access_offset);
+
+	iounmap (base);
 	return ret;
+}
+
+unsigned long ccu_get_rate(struct clk *c)
+{
+	struct ccu_clock *ccu_clk = to_ccu_clk(c);
+	c->rate = ccu_clk->freq_tbl[ccu_clk->freq_id];
+	return 	c->rate;
 }
 
 struct clk_ops ccu_clk_ops = {
 	.enable		=	ccu_clk_enable,
-	.set_rate	=	common_set_rate,
-	.get_rate	=	common_get_rate,
-	.round_rate	=	common_round_rate,
-	.set_parent	=	common_set_parent,
+	.get_rate	=	ccu_get_rate,
+};
+
+/* bus clocks */
+static int bus_clk_enable(struct clk *c, int enable)
+{
+	struct bus_clock *bus_clk = to_bus_clk(c);
+	void __iomem *base;
+	int reg, ret = 0;
+
+	base = ioremap(bus_clk->ccu_clk_mgr_base, SZ_4K);
+	if(!base)
+		return -ENOMEM;
+
+	/* enable access */
+	writel(CLK_WR_ACCESS_PASSWORD, base + bus_clk->wr_access_offset);
+
+	/* enable gating */
+	reg = readl(base + bus_clk->clkgate_offset);
+	if (!!(reg&bus_clk->stprsts_mask) == !!enable)
+		clk_dbg ("%s already %s\n", c->name, enable?"enabled":"disabled");
+	else if (enable) {
+		reg |= bus_clk->hw_sw_gating_mask;
+		reg |= bus_clk->clk_en_mask;
+		writel(reg, base + bus_clk->clkgate_offset);
+		while(! (readl(base + bus_clk->clkgate_offset) & bus_clk->stprsts_mask));
+	}
+	else {
+		reg |= bus_clk->hw_sw_gating_mask;
+		reg &= ~bus_clk->clk_en_mask;
+		writel(reg, base + bus_clk->clkgate_offset);
+		while(readl(base + bus_clk->clkgate_offset) & bus_clk->stprsts_mask);
+	}
+
+	/* disable access */
+	writel(0, base + bus_clk->wr_access_offset);
+
+	iounmap(base);
+	return ret;
+}
+
+unsigned long bus_get_rate(struct clk *c)
+{
+	struct bus_clock *bus_clk = to_bus_clk(c);
+	struct ccu_clock *ccu_clk;
+
+	BUG_ON(!c->parent);
+	ccu_clk= to_ccu_clk(c->parent);
+
+	c->rate = bus_clk->freq_tbl[ccu_clk->freq_id];
+	c->div = ccu_clk->freq_tbl[ccu_clk->freq_id]/c->rate;
+	return c->rate;
+}
+
+struct clk_ops bus_clk_ops = {
+	.enable		=	bus_clk_enable,
+	.get_rate	=	bus_get_rate,
 };
 
 /* reference clocks */
