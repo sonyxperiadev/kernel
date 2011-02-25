@@ -644,16 +644,16 @@ static struct smb380_platform_data bma150_plat_data = {
    .bandwidth = BW_375HZ, 
    .enable_adv_int = 1,
    .new_data_int = 0 ,
-   .hg_int = 1 ,
-   .lg_int = 1 ,
+   .hg_int = 0 ,
+   .lg_int = 0 ,
    .lg_dur = 150 ,
    .lg_thres = 20 ,
    .lg_hyst = 0 ,
    .hg_dur = 60 ,
    .hg_thres = 160 ,
    .hg_hyst = 0 ,
-   .any_motion_dur  = 2 ,
-   .any_motion_thres  = 30 ,
+   .any_motion_dur  = 1 ,
+   .any_motion_thres  = 20 ,
    .any_motion_int  = 1 ,
 };
 
@@ -886,7 +886,7 @@ void __init board_init(void)
 {
 	pinmux_setup();
         //start cp
-        Comms_Start();
+	Comms_Start();
 	board_add_devices();
 }
 
