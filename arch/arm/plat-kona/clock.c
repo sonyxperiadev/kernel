@@ -42,7 +42,7 @@
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_lock);
 
-int clk_debug;
+int clk_debug=0;
 
 static int __clk_enable(struct clk *clk)
 {
@@ -229,10 +229,12 @@ static unsigned long common_round_rate(struct clk *c, unsigned long rate)
 		unsigned long new_rate, div;
 		/* round to the new rate */
 		div = c->src->parents[i]->rate / rate;
+		if(div == 0)
+			div = 1;
 		new_rate = c->src->parents[i]->rate/div;
 		/* get the min diff */
-		if(new_rate-rate < diff) {
-			diff = new_rate-rate;
+		if(abs(new_rate-rate) < diff) {
+			diff = abs(new_rate-rate);
 			ind = i;
 		}
 	}
@@ -485,14 +487,122 @@ struct clk_ops proc_clk_ops = {
 
 static int peri_clk_enable(struct clk *c, int enable)
 {
-	int ret=0;
+	int ret=0, reg;
+	struct peri_clock *peri_clk = to_peri_clk(c);
+	void __iomem *base;
+
+	base = ioremap (peri_clk->ccu_clk_mgr_base, SZ_4K);
+	if (!base)
+		return -ENOMEM;
+
+	/* enable access */
+	writel(CLK_WR_ACCESS_PASSWORD, base + peri_clk->wr_access_offset);
+
+	if(enable) {
+		clk_dbg("%s %s set rate %lu div %lu ind %d parent %lu\n", __func__, c->name,
+			c->rate, c->div, c->src->sel, c->parent->rate);
+
+		/* clkgate */
+		reg = readl(base + peri_clk->clkgate_offset);
+		reg |= peri_clk->clk_en_mask;
+		writel(reg, base + peri_clk->clkgate_offset);
+
+		/* div and pll select */
+		reg = ((c->div-1) << peri_clk->div_shift) |
+			(c->src->sel << peri_clk->pll_select_shift);
+		writel(reg, base + peri_clk->div_offset);
+
+		/* trigger */
+		writel(peri_clk->trigger_mask, base + peri_clk->div_trig_offset);
+		while(readl(base + peri_clk->div_trig_offset) & peri_clk->trigger_mask);
+
+		/* wait for running */
+		while(! (readl(base + peri_clk->clkgate_offset) & peri_clk->stprsts_mask));
+	}
+	else {
+		clk_dbg("%s disable clock %s\n", __func__, c->name);
+
+		/* clkgate */
+		reg = readl(base + peri_clk->clkgate_offset);
+		reg &= ~peri_clk->clk_en_mask;
+		writel(reg, base + peri_clk->clkgate_offset);
+
+		/* wait for stop */
+		while((readl(base + peri_clk->clkgate_offset) & peri_clk->stprsts_mask));
+	}
+
+	/* disable access */
+	writel(0, base + peri_clk->wr_access_offset);
+
+	iounmap (base);
+
 	return ret;
+}
+
+static int peri_clk_set_rate(struct clk *c, unsigned long rate)
+{
+	int ret = 0;
+	int i, ind = 0;
+	unsigned long diff;
+	unsigned long new_rate=0, div=1;
+
+	diff = rate;
+
+	BUG_ON(!c->parent);
+	BUG_ON(!c->src || !c->src->total);
+
+	for (i=0; i<c->src->total;i++) {
+		/* round to the new rate */
+		div = c->src->parents[i]->rate / rate;
+		if(div==0)
+			div = 1;
+		new_rate = c->src->parents[i]->rate/div;
+
+		/* get the min diff */
+		if(abs(new_rate-rate) < diff) {
+			diff = abs(new_rate-rate);
+			c->src->sel = i;
+			c->parent = c->src->parents[i];
+			c->rate = new_rate;
+			c->div = div;
+			ind = i;
+		}
+	}
+
+	clk_dbg("%s %s set rate %lu div %lu ind %d parent %lu\n", __func__, c->name,
+		c->rate, c->div, ind, c->parent->rate);
+	return ret;
+}
+
+static unsigned long peri_clk_get_rate(struct clk *c)
+{
+	struct peri_clock *peri_clk = to_peri_clk(c);
+	void __iomem *base;
+	int sel, div;
+
+	base = ioremap (peri_clk->ccu_clk_mgr_base, SZ_4K);
+	if (!base)
+		return -ENOMEM;
+	sel = (readl(base + peri_clk->div_offset) & peri_clk->pll_select_mask)
+		>> peri_clk->pll_select_shift;
+	div = ((readl(base + peri_clk->div_offset) & peri_clk->div_mask)
+		>> peri_clk->div_shift) + 1;
+
+	BUG_ON (sel >= c->src->total);
+	c->src->sel = sel;
+	c->parent = c->src->parents[sel];
+	c->div = div;
+	c->rate = c->parent->rate / c->div;
+	clk_dbg("%s src %lu sel %d div %d rate %lu\n",__func__, c->parent->rate, sel, div, c->rate);
+
+	iounmap (base);
+	return c->rate;
 }
 
 struct clk_ops peri_clk_ops = {
 	.enable		=	peri_clk_enable,
-	.set_rate	=	common_set_rate,
-	.get_rate	=	common_get_rate,
+	.set_rate	=	peri_clk_set_rate,
+	.get_rate	=	peri_clk_get_rate,
 	.round_rate	=	common_round_rate,
 	.set_parent	=	common_set_parent,
 };
@@ -543,7 +653,7 @@ static int ccu_clk_enable(struct clk *c, int enable)
 	return ret;
 }
 
-unsigned long ccu_get_rate(struct clk *c)
+static unsigned long ccu_clk_get_rate(struct clk *c)
 {
 	struct ccu_clock *ccu_clk = to_ccu_clk(c);
 	c->rate = ccu_clk->freq_tbl[ccu_clk->freq_id];
@@ -552,7 +662,7 @@ unsigned long ccu_get_rate(struct clk *c)
 
 struct clk_ops ccu_clk_ops = {
 	.enable		=	ccu_clk_enable,
-	.get_rate	=	ccu_get_rate,
+	.get_rate	=	ccu_clk_get_rate,
 };
 
 /* bus clocks */
@@ -593,7 +703,7 @@ static int bus_clk_enable(struct clk *c, int enable)
 	return ret;
 }
 
-unsigned long bus_get_rate(struct clk *c)
+static unsigned long bus_clk_get_rate(struct clk *c)
 {
 	struct bus_clock *bus_clk = to_bus_clk(c);
 	struct ccu_clock *ccu_clk;
@@ -608,7 +718,7 @@ unsigned long bus_get_rate(struct clk *c)
 
 struct clk_ops bus_clk_ops = {
 	.enable		=	bus_clk_enable,
-	.get_rate	=	bus_get_rate,
+	.get_rate	=	bus_clk_get_rate,
 };
 
 /* reference clocks */

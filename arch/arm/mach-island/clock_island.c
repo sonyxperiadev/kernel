@@ -138,6 +138,7 @@ static struct clk *sdio_clk_src_tbl[] =
 
 static struct clk_src sdio_clk_src = {
 	.total		=	ARRAY_SIZE(sdio_clk_src_tbl),
+	.sel		=	2,
 	.parents	=	sdio_clk_src_tbl,
 };
 
@@ -152,6 +153,21 @@ static struct peri_clock sdio1_clk = {
 		.src	= 	&sdio_clk_src,
 		.ops	=	&peri_clk_ops,
 	},
+
+	.ccu_clk_mgr_base	=	KONA_MST_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset		=	KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET,
+	.div_offset		=	KPM_CLK_MGR_REG_SDIO1_DIV_OFFSET,
+	.div_trig_offset	=	KPM_CLK_MGR_REG_DIV_TRIG_OFFSET,
+
+	.stprsts_mask		=	KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_HW_SW_GATING_SEL_MASK,
+	.clk_en_mask		=	KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_CLK_EN_MASK,
+	.div_mask		=	KPM_CLK_MGR_REG_SDIO1_DIV_SDIO1_DIV_MASK,
+	.div_shift		=	KPM_CLK_MGR_REG_SDIO1_DIV_SDIO1_DIV_SHIFT,
+	.pll_select_mask	=	KPM_CLK_MGR_REG_SDIO1_DIV_SDIO1_PLL_SELECT_MASK,
+	.pll_select_shift	=	KPM_CLK_MGR_REG_SDIO1_DIV_SDIO1_PLL_SELECT_SHIFT,
+	.trigger_mask		=	KPM_CLK_MGR_REG_DIV_TRIG_SDIO1_TRIGGER_MASK,
 };
 
 static struct peri_clock sdio2_clk = {
@@ -165,6 +181,21 @@ static struct peri_clock sdio2_clk = {
 		.src	= 	&sdio_clk_src,
 		.ops	=	&peri_clk_ops,
 	},
+
+	.ccu_clk_mgr_base	=	KONA_MST_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset		=	KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET,
+	.div_offset		=	KPM_CLK_MGR_REG_SDIO2_DIV_OFFSET,
+	.div_trig_offset	=	KPM_CLK_MGR_REG_DIV_TRIG_OFFSET,
+
+	.stprsts_mask		=	KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_HW_SW_GATING_SEL_MASK,
+	.clk_en_mask		=	KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_CLK_EN_MASK,
+	.div_mask		=	KPM_CLK_MGR_REG_SDIO2_DIV_SDIO2_DIV_MASK,
+	.div_shift		=	KPM_CLK_MGR_REG_SDIO2_DIV_SDIO2_DIV_SHIFT,
+	.pll_select_mask	=	KPM_CLK_MGR_REG_SDIO2_DIV_SDIO2_PLL_SELECT_MASK,
+	.pll_select_shift	=	KPM_CLK_MGR_REG_SDIO2_DIV_SDIO2_PLL_SELECT_SHIFT,
+	.trigger_mask		=	KPM_CLK_MGR_REG_DIV_TRIG_SDIO2_TRIGGER_MASK,
 };
 
 static struct peri_clock sdio3_clk = {
@@ -178,6 +209,21 @@ static struct peri_clock sdio3_clk = {
 		.src	= 	&sdio_clk_src,
 		.ops	=	&peri_clk_ops,
 	},
+
+	.ccu_clk_mgr_base	=	KONA_MST_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset		=	KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET,
+	.div_offset		=	KPM_CLK_MGR_REG_SDIO3_DIV_OFFSET,
+	.div_trig_offset	=	KPM_CLK_MGR_REG_DIV_TRIG_OFFSET,
+
+	.stprsts_mask		=	KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_HW_SW_GATING_SEL_MASK,
+	.clk_en_mask		=	KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_CLK_EN_MASK,
+	.div_mask		=	KPM_CLK_MGR_REG_SDIO3_DIV_SDIO3_DIV_MASK,
+	.div_shift		=	KPM_CLK_MGR_REG_SDIO3_DIV_SDIO3_DIV_SHIFT,
+	.pll_select_mask	=	KPM_CLK_MGR_REG_SDIO3_DIV_SDIO3_PLL_SELECT_MASK,
+	.pll_select_shift	=	KPM_CLK_MGR_REG_SDIO3_DIV_SDIO3_PLL_SELECT_SHIFT,
+	.trigger_mask		=	KPM_CLK_MGR_REG_DIV_TRIG_SDIO3_TRIGGER_MASK,
 };
 
 static struct peri_clock sdio4_clk = {
@@ -191,7 +237,22 @@ static struct peri_clock sdio4_clk = {
 		.src	= 	&sdio_clk_src,
 		.ops	=	&peri_clk_ops,
 	},
+	.ccu_clk_mgr_base	=	KONA_MST_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset 	=	KPM_CLK_MGR_REG_SDIO4_CLKGATE_OFFSET,
+	.div_offset		=	KPM_CLK_MGR_REG_SDIO4_DIV_OFFSET,
+	.div_trig_offset	=	KPM_CLK_MGR_REG_DIV_TRIG_OFFSET,
+
+	.stprsts_mask		=	KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_HW_SW_GATING_SEL_MASK,
+	.clk_en_mask		=	KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_CLK_EN_MASK,
+	.div_mask		=	KPM_CLK_MGR_REG_SDIO4_DIV_SDIO4_DIV_MASK,
+	.div_shift		=	KPM_CLK_MGR_REG_SDIO4_DIV_SDIO4_DIV_SHIFT,
+	.pll_select_mask	=	KPM_CLK_MGR_REG_SDIO4_DIV_SDIO4_PLL_SELECT_MASK,
+	.pll_select_shift	=	KPM_CLK_MGR_REG_SDIO4_DIV_SDIO4_PLL_SELECT_SHIFT,
+	.trigger_mask		=	KPM_CLK_MGR_REG_DIV_TRIG_SDIO4_TRIGGER_MASK,
 };
+
 
 /* table for registering clock */
 struct clk_lookup island_clk_tbl[] =

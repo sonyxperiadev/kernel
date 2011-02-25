@@ -33,11 +33,11 @@ struct clk;
  *
  */
 struct clk_ops {
-	int			(*enable)(struct clk *c, int enable);
-	int			(*set_rate)(struct clk *c, unsigned long rate);
-	unsigned long		(*get_rate)(struct clk *c);
-	unsigned long		(*round_rate)(struct clk *c, unsigned long rate);
-	int			(*set_parent)(struct clk *c, struct clk *parent);
+	int		(*enable)(struct clk *c, int enable);
+	int		(*set_rate)(struct clk *c, unsigned long rate);
+	unsigned long	(*get_rate)(struct clk *c);
+	unsigned long	(*round_rate)(struct clk *c, unsigned long rate);
+	int		(*set_parent)(struct clk *c, struct clk *parent);
 };
 
 /**
@@ -46,8 +46,9 @@ struct clk_ops {
  * @parents: array of parents - source
  */
 struct clk_src {
-	int			total;
-	struct clk 		**parents;
+	int		total;
+	int		sel;
+	struct clk 	**parents;
 };
 
 struct clk {
@@ -72,6 +73,21 @@ struct proc_clock {
 
 struct peri_clock {
 	struct clk	clk;
+
+	unsigned long	ccu_clk_mgr_base;
+	unsigned long	wr_access_offset;
+	unsigned long	clkgate_offset;
+	unsigned long	div_offset;
+	unsigned long	div_trig_offset;
+
+	unsigned long	stprsts_mask;
+	unsigned long	hw_sw_gating_mask;
+	unsigned long	clk_en_mask;
+	unsigned long	div_mask;
+	int		div_shift;
+	unsigned long	pll_select_mask;
+	int		pll_select_shift;
+	unsigned long	trigger_mask;
 };
 
 struct ccu_clock {
