@@ -43,6 +43,7 @@
 #include <mach/kona.h>
 #include <mach/rhea.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
+#include <linux/usb/android_composite.h>
 
 #include <asm/mach/map.h>
 #include <linux/broadcom/bcm_fuse_memmap.h>
@@ -88,6 +89,72 @@ static struct platform_device board_serial_device = {
 	},
 };
 
+static char *andoroid_function_name[] =
+{
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_ADB
+	"adb",
+#endif
+};
+
+#define	BRCM_VENDOR_ID		0x0a5c
+#define	BIG_ISLAND_PRODUCT_ID	0x2816
+
+/* FIXME borrow Google Nexus One ID to use windows driver */
+#define	GOOGLE_VENDOR_ID	0x18d1
+#define	NEXUS_ONE_PROD_ID	0x0d02
+
+#define	VENDOR_ID		GOOGLE_VENDOR_ID
+#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
+
+static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
+	.nluns		=	1,
+	.vendor		=	"Broadcom",
+	.product	=	"Big Island",
+	.release	=	0x0100
+};
+
+static struct platform_device android_mass_storage_device = {
+	.name	=	"usb_mass_storage",
+	.id	=	-1,
+	.dev	=	{
+		.platform_data	=	&android_mass_storage_pdata,
+	}
+};
+
+static struct android_usb_product android_products[] = {
+	{
+		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(andoroid_function_name),
+		.functions	=	andoroid_function_name,
+	},
+};
+
+static struct android_usb_platform_data android_usb_data = {
+	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
+	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
+	.version		=	0,
+	.product_name		=	"Big Island",
+	.manufacturer_name	= 	"Broadcom",
+	.serial_number		=	"0123456789ABCDEF",
+
+	.num_products		=	ARRAY_SIZE(android_products),
+	.products		=	android_products,
+
+	.num_functions		=	ARRAY_SIZE(andoroid_function_name),
+	.functions		=	andoroid_function_name,
+};
+
+static struct platform_device android_usb = {
+	.name 	= "android_usb",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &android_usb_data,
+	},
+};
+
 void __init board_map_io(void)
 {
 	/* Map machine specific iodesc here */
@@ -97,6 +164,8 @@ void __init board_map_io(void)
 
 static struct platform_device *board_devices[] __initdata = {
 	&board_serial_device,
+	&android_mass_storage_device,
+	&android_usb,
 };
 
 static void __init board_add_devices(void)
