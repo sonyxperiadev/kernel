@@ -155,6 +155,53 @@ static struct platform_device android_usb = {
 	},
 };
 
+static struct resource board_sdio1_resource[] = {
+	[0] = {
+		.start = SDIO2_BASE_ADDR,
+		.end = SDIO2_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO1,
+		.end = BCM_INT_ID_SDIO1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct sdio_platform_cfg board_sdio_param[] = {
+	{ /* SDIO0 */
+		.id = 0,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 179,
+			.reg		= 177,
+			.host_wake	= 178,
+		},
+	},
+	{ /* SDIO1 */
+		.id = 1,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+	},
+	{ /* SDIO2 */
+		.id = 2,
+		.data_pullup = 0,
+		.cd_gpio = 106,
+		.devtype = SDIO_DEV_TYPE_SDMMC,
+	},
+};
+
+static struct platform_device rhearay_sdio1_device = {
+	.name = "sdhci",
+	.id = 1,
+	.resource = board_sdio1_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[1],
+	},
+};
+
 void __init board_map_io(void)
 {
 	/* Map machine specific iodesc here */
@@ -164,6 +211,7 @@ void __init board_map_io(void)
 
 static struct platform_device *board_devices[] __initdata = {
 	&board_serial_device,
+	&rhearay_sdio1_device,
 	&android_mass_storage_device,
 	&android_usb,
 };
