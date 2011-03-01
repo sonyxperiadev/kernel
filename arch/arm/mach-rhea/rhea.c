@@ -71,10 +71,8 @@ static int __init rhea_init(void)
 	rhea_l2x0_init();
 #endif
 
-#if 0 /* FIXME: Disable clock_init for the time being as the support for Rhea is not there yet. */ 
 #ifdef CONFIG_HAVE_CLK
 	clock_init();
-#endif
 #endif
 
 #ifdef CONFIG_GPIOLIB
