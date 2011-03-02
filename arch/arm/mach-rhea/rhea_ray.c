@@ -173,6 +173,10 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.id = 0,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_WIFI,
+		.peri_clk_name = "sdio1_clk",
+		.ahb_clk_name = "sdio1_ahb_clk",
+		.sleep_clk_name = "sdio1_sleep_clk",
+		.peri_clk_rate = 20000000,
 		.wifi_gpio = {
 			.reset		= 179,
 			.reg		= 177,
@@ -183,12 +187,20 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.id = 1,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_EMMC,
+		.peri_clk_name = "sdio2_clk",
+		.ahb_clk_name = "sdio2_ahb_clk",
+		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
 	},
 	{ /* SDIO2 */
 		.id = 2,
 		.data_pullup = 0,
 		.cd_gpio = 106,
 		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 26000000,
 	},
 };
 

@@ -32,6 +32,7 @@
 #include <linux/mmc/host.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
+#include <linux/clk.h>
 
 #include <mach/sdio_platform.h>
 #include "sdhci.h"
@@ -64,19 +65,22 @@
 #define PROC_ENTRY_CARD_CTRL    "cardCtrl"
 
 struct procfs {
-   char name[MAX_PROC_NAME_SIZE];
-   struct proc_dir_entry *parent;
+	char name[MAX_PROC_NAME_SIZE];
+	struct proc_dir_entry *parent;
 };
 
 struct sdio_dev {
-   atomic_t initialized;
-   struct device *dev;
-   struct sdhci_host *host;
-   unsigned long clk_hz;
-   enum sdio_devtype devtype;
-   int cd_gpio;
-   struct sdio_wifi_gpio_cfg *wifi_gpio;
-   struct procfs proc;
+	atomic_t initialized;
+	struct device *dev;
+	struct sdhci_host *host;
+	unsigned long clk_hz;
+	enum sdio_devtype devtype;
+	int cd_gpio;
+	struct sdio_wifi_gpio_cfg *wifi_gpio;
+	struct procfs proc;
+	struct clk *peri_clk;
+	struct clk *ahb_clk;
+	struct clk *sleep_clk;
 };
 
 #ifdef CONFIG_MACH_BCM2850_FPGA
@@ -84,29 +88,6 @@ struct sdio_dev {
 static unsigned int clock = 0;
 module_param(clock, uint, 0444);
 #endif
-
-static const unsigned long gClock[SDIO_DEV_TYPE_MAX] = 
-{
-#ifdef CONFIG_MACH_BCM2850_FPGA
-   /* set everything to 8 MHz by default for FPGA */
-   8000000,
-   8000000,
-   8000000
-#else
-   /* Temperately setup max SD/MMC clock to 20Mhz, later on it should be 
-    * changed to 48Mhz when boot1 and Uboot codes set SD/MMC base
-    * clock to 48Mhz
-    */
-   20000000, /* SD/MMC cards */
-   /*
-    * TODO: set the WiFi SDIO clock to 6 MHz for now due to high noises with
-    * the daughter card. Can switch to 48 MHz later when the Hera Tablet
-    * comes back
-    */
-   20000000, /* WiFi */
-   52000000 /* eMMC */
-#endif
-};
 
 static struct proc_dir_entry *gProcParent;
 static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
@@ -377,29 +358,95 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
    return IRQ_HANDLED;
 }
 
+static int sdhci_pltfm_clk_enable (struct platform_device *pdev, int enable)
+{
+	struct sdio_dev *dev;
+	struct sdio_platform_cfg *hw_cfg;
+	int ret = 0;
+
+	BUG_ON (!pdev);
+
+	dev = platform_get_drvdata(pdev);
+	BUG_ON (!dev);
+
+	hw_cfg = pdev->dev.platform_data;
+	BUG_ON (!hw_cfg);
+
+	if (enable) {
+		BUG_ON(dev->peri_clk || !hw_cfg->peri_clk_name);
+		BUG_ON(dev->ahb_clk || !hw_cfg->ahb_clk_name);
+		BUG_ON(dev->sleep_clk || !hw_cfg->sleep_clk_name);
+
+		/* peripheral clock */
+		dev->peri_clk = clk_get(&pdev->dev, hw_cfg->peri_clk_name);
+		if (!dev->peri_clk)
+			return -EINVAL;
+		ret = clk_set_rate(dev->peri_clk, hw_cfg->peri_clk_rate);
+		if (ret)
+			return ret;
+		ret = clk_enable(dev->peri_clk);
+		if(ret)
+			return ret;
+
+		/* AHB clock */
+		dev->ahb_clk = clk_get(&pdev->dev, hw_cfg->ahb_clk_name);
+		if (!dev->ahb_clk)
+			return -EINVAL;
+		ret = clk_enable(dev->ahb_clk);
+		if(ret)
+			return ret;
+
+		/* sleep clock */
+		dev->sleep_clk = clk_get(&pdev->dev, hw_cfg->sleep_clk_name);
+		if(!dev->sleep_clk)
+			return -EINVAL;
+		ret = clk_enable(dev->sleep_clk);
+		if(ret)
+			return ret;
+	}
+	else {
+		if (dev->peri_clk) {
+			clk_disable(dev->peri_clk);
+			clk_put(dev->peri_clk);
+			dev->peri_clk = NULL;
+		}
+		if (dev->ahb_clk) {
+			clk_disable(dev->ahb_clk);
+			clk_put(dev->ahb_clk);
+			dev->ahb_clk = NULL;
+		}
+		if (dev->sleep_clk) {
+			clk_disable(dev->sleep_clk);
+			clk_put(dev->sleep_clk);
+			dev->sleep_clk = NULL;
+		}
+	}
+	return ret;
+}
+
 static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 {
-   struct sdhci_host *host;
-   struct sdio_dev *dev;
-   struct resource *iomem;
-   struct sdio_platform_cfg *hw_cfg;
-   char devname[MAX_DEV_NAME_SIZE];
-   int ret;
+	struct sdhci_host *host;
+	struct sdio_dev *dev;
+	struct resource *iomem;
+	struct sdio_platform_cfg *hw_cfg;
+	char devname[MAX_DEV_NAME_SIZE];
+	int ret;
 
-   BUG_ON(pdev == NULL);
+	BUG_ON(pdev == NULL);
 
-   if (pdev->dev.platform_data == NULL) {
-      dev_err(&pdev->dev, "platform_data missing\n");
-      ret = -EFAULT;
-      goto err;
-   }
+	if (pdev->dev.platform_data == NULL) {
+		dev_err(&pdev->dev, "platform_data missing\n");
+		ret = -EFAULT;
+		goto err;
+	}
 
-   hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
-   if (hw_cfg->devtype >= SDIO_DEV_TYPE_MAX) {
-      dev_err(&pdev->dev, "unknown device type\n");
-      ret = -EFAULT;
-      goto err;
-   }
+	hw_cfg = (struct sdio_platform_cfg *)pdev->dev.platform_data;
+	if (hw_cfg->devtype >= SDIO_DEV_TYPE_MAX) {
+		dev_err(&pdev->dev, "unknown device type\n");
+		ret = -EFAULT;
+		goto err;
+	}
 
 	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!iomem) {
@@ -434,158 +481,127 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err_free_mem_region;
 	}
 
-   /* allocate memory for our private data structure */
-   dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-   if (!dev)
-   {
-      dev_err(&pdev->dev, "unable to allocate mem for private data\n");
-      ret = -ENOMEM;
-      goto err_io_unmap;
-   }
+	/* allocate memory for our private data structure */
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	if (!dev) {
+		dev_err(&pdev->dev, "unable to allocate mem for private data\n");
+		ret = -ENOMEM;
+		goto err_io_unmap;
+	}
 
-   dev->dev = &pdev->dev;
-   dev->host = host;
-   dev->devtype = hw_cfg->devtype;
-   if (dev->devtype == SDIO_DEV_TYPE_WIFI)
-      dev->wifi_gpio = &hw_cfg->wifi_gpio;
+	dev->dev = &pdev->dev;
+	dev->host = host;
+	dev->devtype = hw_cfg->devtype;
+	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
+		dev->wifi_gpio = &hw_cfg->wifi_gpio;
 
-   gDevs[dev->devtype] = dev;
-   platform_set_drvdata(pdev, dev);
+	gDevs[dev->devtype] = dev;
+	platform_set_drvdata(pdev, dev);
 
-   /* resevre required GPIOs */
-   snprintf(devname, sizeof(devname), "%s%d", DEV_NAME, pdev->id);
-   /* need to use static memory gpiomux name string */
+	/* resevre required GPIOs */
+	snprintf(devname, sizeof(devname), "%s%d", DEV_NAME, pdev->id);
+	/* need to use static memory gpiomux name string */
 
+	/* enable clocks */
 #ifdef CONFIG_MACH_BCM2850_FPGA
-   if (clock) /* clock override */
-   {
-      dev->clk_hz = clock;
-   }
-   else
-   {
-      dev->clk_hz = gClock[dev->devtype];
-   }
+	if (clock) /* clock override */{
+		dev->clk_hz = clock;
+	}
+	else {
+		dev->clk_hz = gClock[dev->devtype];
+	}
 #else
-   dev->clk_hz = gClock[dev->devtype];
-   
-   /* 
-    * TODO: change to use dev->clk_hz directly through the Linux clock
-    * framework in the future
-    */
-   
-   /* now enable the SDIO core clock */
-   switch (dev->devtype)
-   {
-      case SDIO_DEV_TYPE_SDMMC:
-         // TODO: set sdio clock from CCU  	  	
-         ret = 0;
-         break;
 
-      case SDIO_DEV_TYPE_WIFI:
-         // TODO: set sdio clock from CCU  	  	
-         ret = 0;
-         break;
-
-      case SDIO_DEV_TYPE_EMMC:
-         // TODO: set sdio clock from CCU  	  	
-         ret = 0;
-         break;
-
-      default:
-         dev_err(&pdev->dev, "unknown device type %d\n", dev->devtype);
-         ret = -EFAULT;
-         break;
-   }
-
-   if (ret)
-   {
-      dev_err(&pdev->dev, "failed to initialize core clock for %s\n", devname);
-      ret = -EFAULT;
-      goto err_free_gpio;
-   }
+	ret = sdhci_pltfm_clk_enable(pdev, 1);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to initialize core clock for %s\n", devname);
+		ret = -EFAULT;
+		goto err_free_gpio;
+	}
+	dev->clk_hz = clk_get_rate(dev->peri_clk);
 #endif
 
-   ret = bcm_kona_sd_reset(dev);
-   if (ret)
-      goto err_term_clk;
+	ret = bcm_kona_sd_reset(dev);
+	if (ret)
+		goto err_term_clk;
 
-   ret = bcm_kona_sd_init(dev);
-   if (ret)
-      goto err_reset;
+	ret = bcm_kona_sd_init(dev);
+	if (ret)
+		goto err_reset;
 
 	ret = sdhci_add_host(host);
 	if (ret)
 		goto err_reset;
 
-   ret = proc_init(pdev);
-   if (ret)
-      goto err_rm_host;
+	ret = proc_init(pdev);
+	if (ret)
+		goto err_rm_host;
 
-   /* if device is NOT SD/MMC, emulate card insert right here */
-   if (dev->devtype == SDIO_DEV_TYPE_EMMC) {
-      ret = bcm_kona_sd_card_emulate(dev, 1);
-      if (ret) {
-         dev_err(&pdev->dev, "unable to emulate card insertion\n");
-         goto err_proc_term;
-      }
-      printk(KERN_INFO "%s card insert emulated!\n", devname);
-   }  else if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
-      ret = gpio_request(dev->cd_gpio, "sdio cd");
-      if (ret < 0) {
-         dev_err(&pdev->dev, "Unable to request GPIO pin %d\n", dev->cd_gpio);
-         goto err_proc_term;
-      }
-      gpio_direction_input(dev->cd_gpio);
+	/* if device is NOT SD/MMC, emulate card insert right here */
+	if (dev->devtype == SDIO_DEV_TYPE_EMMC) {
+		ret = bcm_kona_sd_card_emulate(dev, 1);
+		if (ret) {
+			dev_err(&pdev->dev, "unable to emulate card insertion\n");
+			goto err_proc_term;
+		}
+		printk(KERN_INFO "%s card insert emulated!\n", devname);
+	}  else if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
+		ret = gpio_request(dev->cd_gpio, "sdio cd");
 
-      ret = request_irq(gpio_to_irq(dev->cd_gpio),
-            sdhci_pltfm_cd_interrupt,
-            IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
-            "sdio cd",
-            dev);
-      if (ret) {
-         dev_err(&pdev->dev, "Unable to request card detection irq=%d for gpio=%d\n",
-               gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
-         goto err_free_cd_gpio;
-      }
+		if (ret < 0) {
+			dev_err(&pdev->dev, "Unable to request GPIO pin %d\n", dev->cd_gpio);
+			goto err_proc_term;
+		}
+		gpio_direction_input(dev->cd_gpio);
 
-      /*
-       * Since the card detection GPIO interrupt is configured to be edge
-       * sensitive, check the initial GPIO value here
-       */
-      if (gpio_get_value(dev->cd_gpio) == 0)
-         bcm_kona_sd_card_emulate(dev, 1);
-      else
-         bcm_kona_sd_card_emulate(dev, 0);
-   }
+		ret = request_irq(gpio_to_irq(dev->cd_gpio),
+			sdhci_pltfm_cd_interrupt,
+			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
+			"sdio cd",
+			dev);
+		if (ret) {
+			dev_err(&pdev->dev, "Unable to request card detection irq=%d for gpio=%d\n",
+			gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
+			goto err_free_cd_gpio;
+		}
 
-   atomic_set(&dev->initialized, 1);
-   
-   printk(KERN_INFO "%s initialized properly\n", devname);
+		/*
+		* Since the card detection GPIO interrupt is configured to be edge
+		* sensitive, check the initial GPIO value here
+		*/
+		if (gpio_get_value(dev->cd_gpio) == 0)
+			bcm_kona_sd_card_emulate(dev, 1);
+		else
+			bcm_kona_sd_card_emulate(dev, 0);
+	}
+
+	atomic_set(&dev->initialized, 1);
+
+	printk(KERN_INFO "%s initialized properly\n", devname);
 
 	return 0;
 
 err_free_cd_gpio:
-   if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
-      gpio_free(dev->cd_gpio);
-   }
+	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
+		gpio_free(dev->cd_gpio);
+	}
 
 err_proc_term:
-   proc_term(pdev);
+	proc_term(pdev);
 
 err_rm_host:
-   sdhci_remove_host(host, 0);
+	sdhci_remove_host(host, 0);
 
 err_reset:
-   bcm_kona_sd_reset(dev);
+	bcm_kona_sd_reset(dev);
 
 err_term_clk:
 #ifndef CONFIG_MACH_KONA_FPGA
-	// TODO: set ccu to turn on clk
-err_free_gpio:
+	sdhci_pltfm_clk_enable (pdev, 0);
 #endif
-
-   platform_set_drvdata(pdev, NULL);
-   kfree(dev);
+err_free_gpio:
+	platform_set_drvdata(pdev, NULL);
+	kfree(dev);
 
 err_io_unmap:
 	iounmap(host->ioaddr);
@@ -622,7 +638,7 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 
    //bcm_kona_sd_reset(dev);
 #ifndef CONFIG_MACH_KONA_FPGA
-   // TODO: turn off sdio clock from CCU
+	sdhci_pltfm_clk_enable (pdev, 0);
 #endif
 
    platform_set_drvdata(pdev, NULL);
