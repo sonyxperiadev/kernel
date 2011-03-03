@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -23,67 +23,84 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-#include <linux/init.h>
-#include <linux/kernel.h>
-#include <linux/cpumask.h>
-#include <mach/io_map.h>
-#include <asm/io.h>
-#include <asm/mach/map.h>
-#include <asm/hardware/cache-l2x0.h>
-#include <mach/clock.h>
-#include <linux/mfd/bcm590xx/core.h>
-#include <mach/gpio.h>
-#include <mach/pinmux.h>
+#ifndef __PINMUX_H_
+#define __PINMUX_H_
 
-static void rhea_poweroff(void)
+#include <mach/chip_pinmux.h>
+
+/* Pull up/down*/
+#define	PULL_UP_ON		1
+#define	PULL_UP_OFF		0
+
+#define	PULL_DN_ON		1
+#define	PULL_DN_OFF		0
+
+/*drive strength */
+#define	DRIVE_STRENGTH_2MA	0
+#define	DRIVE_STRENGTH_4MA	1
+#define	DRIVE_STRENGTH_6MA	2
+#define	DRIVE_STRENGTH_8MA	3
+#define	DRIVE_STRENGTH_10MA	4
+#define	DRIVE_STRENGTH_12MA	5
+#define	DRIVE_STRENGTH_14MA	6
+#define	DRIVE_STRENGTH_16MA	7
+
+/* pin description */
+struct pin_desc {
+	enum PIN_NAME	name;
+	unsigned int	reg_offset;
+	enum PIN_FUNC	f_tbl[MAX_ALT_FUNC];
+};
+
+/* chip-level pin description */
+struct chip_pin_desc {
+	struct pin_desc 	*desc_tbl;
+	unsigned int		base_addr;	/* pad control registers base address */
+	int			mapping_size;	/* register space for pad control register */
+};
+
+/* board-level or use-case based configuration */
+struct pin_config {
+	enum PIN_NAME		name;
+	enum PIN_FUNC		func;
+
+	union
+	{
+		unsigned int	val;
+		struct {
+			unsigned	drv_sth:3;
+			unsigned	input_dis:1;
+			unsigned	slew_rate_ctrl:1;
+			unsigned	pull_up:1;
+			unsigned	pull_dn:1;
+			unsigned	hys_en:1;
+			unsigned	sel:3;
+		} b;
+	}	reg;
+};
+
+extern struct chip_pin_desc g_chip_pin_desc;
+
+int pinmux_init(void);
+
+/* board level init */
+int pinmux_board_init(void);
+
+/*
+  get pin configuration at run time
+  caller provides pin ball name
+*/
+int pinmux_get_pin_config(struct pin_config *config);
+
+/*
+  set pin configuration at run time
+  caller fills pin_configuration, except sel, which will derived from func in this routine.
+*/
+int pinmux_set_pin_config(struct pin_config *config);
+
+static inline int is_ball_valid(enum PIN_NAME name)
 {
-#ifdef CONFIG_MFD_BCM_PMU590XX
-	bcm590xx_shutdown();
-#endif
-
-	while(1)
-		;
+	return name < PN_MAX;
 }
 
-static void rhea_restart(char mode, const char *cmd)
-{
-	arm_machine_restart('h', cmd);
-}
-
-
-#ifdef CONFIG_CACHE_L2X0
-static void __init rhea_l2x0_init(void)
-{
-	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
-
-	/*
-	 * 32KB way size, 8-way associativity
-	 */
-	l2x0_init(l2cache_base, 0x00040000, 0xfff0ffff);
-}
-#endif
-
-static int __init rhea_init(void)
-{
-	pm_power_off = rhea_poweroff;
-	arm_pm_restart = rhea_restart;
-	
-#ifdef CONFIG_CACHE_L2X0
-	rhea_l2x0_init();
-#endif
-
-#ifdef CONFIG_HAVE_CLK
-	clock_init();
-#endif
-	pinmux_init();
-
-#ifdef CONFIG_GPIOLIB
-	/* rhea has 4 banks of GPIO pins */ 
-	kona_gpio_init(4);
-#endif
-
-	return 0;
-}
-
-early_initcall(rhea_init);
-
+#endif /*__PINMUX_H_ */

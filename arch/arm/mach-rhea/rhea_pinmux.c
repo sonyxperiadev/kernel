@@ -22,68 +22,38 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
-
-#include <linux/init.h>
-#include <linux/kernel.h>
-#include <linux/cpumask.h>
-#include <mach/io_map.h>
-#include <asm/io.h>
-#include <asm/mach/map.h>
-#include <asm/hardware/cache-l2x0.h>
-#include <mach/clock.h>
-#include <linux/mfd/bcm590xx/core.h>
-#include <mach/gpio.h>
 #include <mach/pinmux.h>
+#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
 
-static void rhea_poweroff(void)
-{
-#ifdef CONFIG_MFD_BCM_PMU590XX
-	bcm590xx_shutdown();
-#endif
+#define	PIN_DESC(ball, alt1, alt2, alt3, alt4, alt5, alt6)	 	\
+	[PN_##ball] = {							\
+		.name		=	PN_##ball,			\
+		.reg_offset	=	PADCTRLREG_##ball##_OFFSET,	\
+		.f_tbl		=	{				\
+			PF_##alt1, PF_##alt2, PF_##alt3, 		\
+			PF_##alt4, PF_##alt5, PF_##alt6, 		\
+		},							\
+	}
 
-	while(1)
-		;
-}
+/* Rhea chip-level pin description table */
+static struct pin_desc pin_desc_tbl[PN_MAX] = {
+	/* MMC0 */
+	PIN_DESC(MMC0CK, MMC0CK, SSP2CK, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0CMD, MMC0CMD, SSP2DO, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0RST, MMC0RST, SSP2CK, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0DAT7, MMC0DAT7, SYSCLKREQA, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0DAT6, MMC0DAT6, SYSCLKREQB, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0DAT5, MMC0DAT5, DCLK2, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0DAT4, MMC0DAT4, DCLK3, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0DAT3, MMC0DAT3, SSP2SYN, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0DAT2, MMC0DAT2, RESERVED, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0DAT1, MMC0DAT1, RESERVED, RESERVED, RESERVED, GPIO, RESERVED),
+	PIN_DESC(MMC0DAT0, MMC0DAT0, SSP2DI, RESERVED, RESERVED, GPIO, RESERVED),
+};
 
-static void rhea_restart(char mode, const char *cmd)
-{
-	arm_machine_restart('h', cmd);
-}
-
-
-#ifdef CONFIG_CACHE_L2X0
-static void __init rhea_l2x0_init(void)
-{
-	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
-
-	/*
-	 * 32KB way size, 8-way associativity
-	 */
-	l2x0_init(l2cache_base, 0x00040000, 0xfff0ffff);
-}
-#endif
-
-static int __init rhea_init(void)
-{
-	pm_power_off = rhea_poweroff;
-	arm_pm_restart = rhea_restart;
-	
-#ifdef CONFIG_CACHE_L2X0
-	rhea_l2x0_init();
-#endif
-
-#ifdef CONFIG_HAVE_CLK
-	clock_init();
-#endif
-	pinmux_init();
-
-#ifdef CONFIG_GPIOLIB
-	/* rhea has 4 banks of GPIO pins */ 
-	kona_gpio_init(4);
-#endif
-
-	return 0;
-}
-
-early_initcall(rhea_init);
-
+struct chip_pin_desc g_chip_pin_desc = {
+	.desc_tbl	=	pin_desc_tbl,
+	.base_addr	=	PAD_CTRL_BASE_ADDR,
+	.mapping_size	=	0x800,
+};

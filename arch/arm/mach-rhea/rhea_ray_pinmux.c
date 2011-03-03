@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -22,68 +22,42 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
+#include "linux/kernel.h"
+#include "mach/pinmux.h"
 
-#include <linux/init.h>
-#include <linux/kernel.h>
-#include <linux/cpumask.h>
-#include <mach/io_map.h>
-#include <asm/io.h>
-#include <asm/mach/map.h>
-#include <asm/hardware/cache-l2x0.h>
-#include <mach/clock.h>
-#include <linux/mfd/bcm590xx/core.h>
-#include <mach/gpio.h>
-#include <mach/pinmux.h>
+#define	PIN_CFG(ball, f, hys, dn, up, rc, ipd, drv) 			\
+	{								\
+		.name		=	PN_##ball,			\
+		.func		=	PF_##f,				\
+		.reg.b		=	{				\
+			.hys_en		=	hys,			\
+			.pull_dn	=	PULL_DN_##dn,		\
+			.pull_up	=	PULL_UP_##up,		\
+			.slew_rate_ctrl	=	rc,			\
+			.input_dis	=	ipd,			\
+			.drv_sth	=	DRIVE_STRENGTH_##drv,	\
+		},							\
+	}
 
-static void rhea_poweroff(void)
+static struct pin_config board_pin_config[] = {
+	PIN_CFG(MMC0CK, MMC0CK, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(MMC0CMD, MMC0CMD, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0RST, MMC0RST, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0DAT7, MMC0DAT7, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0DAT6, MMC0DAT6, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0DAT5, MMC0DAT5, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0DAT4, MMC0DAT4, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0DAT3, MMC0DAT3, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0DAT2, MMC0DAT2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0DAT1, MMC0DAT1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC0DAT0, MMC0DAT0, 0, OFF, ON, 0, 0, 8MA),
+};
+
+/* board level init */
+int pinmux_board_init(void)
 {
-#ifdef CONFIG_MFD_BCM_PMU590XX
-	bcm590xx_shutdown();
-#endif
-
-	while(1)
-		;
+	int i;
+	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
+		pinmux_set_pin_config(&board_pin_config[i]);
 }
-
-static void rhea_restart(char mode, const char *cmd)
-{
-	arm_machine_restart('h', cmd);
-}
-
-
-#ifdef CONFIG_CACHE_L2X0
-static void __init rhea_l2x0_init(void)
-{
-	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
-
-	/*
-	 * 32KB way size, 8-way associativity
-	 */
-	l2x0_init(l2cache_base, 0x00040000, 0xfff0ffff);
-}
-#endif
-
-static int __init rhea_init(void)
-{
-	pm_power_off = rhea_poweroff;
-	arm_pm_restart = rhea_restart;
-	
-#ifdef CONFIG_CACHE_L2X0
-	rhea_l2x0_init();
-#endif
-
-#ifdef CONFIG_HAVE_CLK
-	clock_init();
-#endif
-	pinmux_init();
-
-#ifdef CONFIG_GPIOLIB
-	/* rhea has 4 banks of GPIO pins */ 
-	kona_gpio_init(4);
-#endif
-
-	return 0;
-}
-
-early_initcall(rhea_init);
 
