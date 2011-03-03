@@ -59,5 +59,5 @@ int pinmux_board_init(void)
 	int i;
 	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
 		pinmux_set_pin_config(&board_pin_config[i]);
+	return 0;
 }
-
