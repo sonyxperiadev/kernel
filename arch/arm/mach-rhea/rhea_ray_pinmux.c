@@ -51,6 +51,13 @@ static struct pin_config board_pin_config[] = {
 	PIN_CFG(MMC0DAT2, MMC0DAT2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(MMC0DAT1, MMC0DAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(MMC0DAT0, MMC0DAT0, 0, OFF, ON, 0, 0, 8MA),
+
+	PIN_CFG(SDCK, SDCK, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SDCMD, SDCMD, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(SDDAT3, SDDAT3, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(SDDAT2, SDDAT2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(SDDAT1, SDDAT1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 };
 
 /* board level init */

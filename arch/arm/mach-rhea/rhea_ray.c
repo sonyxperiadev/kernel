@@ -155,6 +155,19 @@ static struct platform_device android_usb = {
 	},
 };
 
+static struct resource board_sdio0_resource[] = {
+	[0] = {
+		.start = SDIO1_BASE_ADDR,
+		.end = SDIO1_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO0,
+		.end = BCM_INT_ID_SDIO0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
 static struct resource board_sdio1_resource[] = {
 	[0] = {
 		.start = SDIO2_BASE_ADDR,
@@ -172,16 +185,12 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO0 */
 		.id = 0,
 		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_WIFI,
+//		.cd_gpio = 106, FIXME
+		.devtype = SDIO_DEV_TYPE_SDMMC,
 		.peri_clk_name = "sdio1_clk",
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
-		.peri_clk_rate = 20000000,
-		.wifi_gpio = {
-			.reset		= 179,
-			.reg		= 177,
-			.host_wake	= 178,
-		},
+		.peri_clk_rate = 48000000,
 	},
 	{ /* SDIO1 */
 		.id = 1,
@@ -192,15 +201,15 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-	{ /* SDIO2 */
-		.id = 2,
-		.data_pullup = 0,
-		.cd_gpio = 106,
-		.devtype = SDIO_DEV_TYPE_SDMMC,
-		.peri_clk_name = "sdio3_clk",
-		.ahb_clk_name = "sdio3_ahb_clk",
-		.sleep_clk_name = "sdio3_sleep_clk",
-		.peri_clk_rate = 26000000,
+};
+
+static struct platform_device rhearay_sdio0_device = {
+	.name = "sdhci",
+	.id = 0,
+	.resource = board_sdio0_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio0_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[0],
 	},
 };
 
@@ -214,6 +223,7 @@ static struct platform_device rhearay_sdio1_device = {
 	},
 };
 
+
 void __init board_map_io(void)
 {
 	/* Map machine specific iodesc here */
@@ -223,6 +233,7 @@ void __init board_map_io(void)
 
 static struct platform_device *board_devices[] __initdata = {
 	&board_serial_device,
+	&rhearay_sdio0_device,
 	&rhearay_sdio1_device,
 	&android_mass_storage_device,
 	&android_usb,
