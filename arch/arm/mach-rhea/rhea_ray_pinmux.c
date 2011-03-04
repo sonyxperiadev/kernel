@@ -39,7 +39,29 @@
 		},							\
 	}
 
+/* BSC pad registers are different */
+#define PIN_BSC_CFG(ball, f, v)					\
+	{								\
+		.name		=	PN_##ball,			\
+		.func		=	PF_##f, 			\
+		.reg.val	=	v,				\
+	}
+
+
 static struct pin_config board_pin_config[] = {
+	/* PMU BSC */
+	PIN_BSC_CFG(PMBSCCLK, PMBSCCLK, 0x20),
+	PIN_BSC_CFG(PMBSCDAT, PMBSCDAT, 0x20),
+
+	/* BSC1 */
+	PIN_BSC_CFG(BSC1CLK, BSC1CLK, 0x20),
+	PIN_BSC_CFG(BSC1DAT, BSC1DAT, 0x20),
+
+	/* BSC2 */
+	PIN_BSC_CFG(GPIO16, BSC2CLK, 0x20),
+	PIN_BSC_CFG(GPIO17, BSC2DAT, 0x20),
+
+	/* eMMC */
 	PIN_CFG(MMC0CK, MMC0CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(MMC0CMD, MMC0CMD, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(MMC0RST, MMC0RST, 0, OFF, ON, 0, 0, 8MA),
@@ -52,6 +74,7 @@ static struct pin_config board_pin_config[] = {
 	PIN_CFG(MMC0DAT1, MMC0DAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(MMC0DAT0, MMC0DAT0, 0, OFF, ON, 0, 0, 8MA),
 
+	/* Micro SD */
 	PIN_CFG(SDCK, SDCK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SDCMD, SDCMD, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT3, SDDAT3, 0, OFF, ON, 0, 0, 8MA),

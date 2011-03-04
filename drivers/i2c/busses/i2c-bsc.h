@@ -434,10 +434,19 @@ static inline void bsc_stop_highspeed(uint32_t baseAddr)
 static inline void bsc_set_FIFO(uint32_t baseAddr, unsigned char enable)
 {
     if (enable){
+#ifdef I2C_MM_HS_FCR_OFFSET
         BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_FCR_OFFSET), I2C_MM_HS_FCR_FIFO_FLUSH_MASK, I2C_MM_HS_FCR_FIFO_FLUSH_SHIFT ,1);
         BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_FCR_OFFSET), I2C_MM_HS_FCR_FIFO_EN_MASK ,I2C_MM_HS_FCR_FIFO_EN_SHIFT,1);
+#else
+	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK, I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT ,1);
+	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_TXFCR_OFFSET), I2C_MM_HS_TXFCR_FIFO_EN_MASK ,I2C_MM_HS_TXFCR_FIFO_EN_SHIFT,1);
+#endif
     }else{
+#ifdef I2C_MM_HS_FCR_OFFSET
         BSC_WRITE_REG((baseAddr+I2C_MM_HS_FCR_OFFSET),0);
+#else
+	BSC_WRITE_REG((baseAddr+I2C_MM_HS_TXFCR_OFFSET),0);
+#endif
     }
 }
 
@@ -728,7 +737,11 @@ static inline unsigned char bsc_get_bus_status(uint32_t baseAddr)
 {
 	uint8_t temp;
 
+#ifdef I2C_MM_HS_BSTAT_OFFSET
 	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_BSTAT_OFFSET), I2C_MM_HS_BSTAT_STATUS_MASK, I2C_MM_HS_BSTAT_STATUS_SHIFT );
+#else
+	temp = BSC_READ_REG_FIELD((baseAddr+I2C_MM_HS_TXCOUNT_OFFSET), I2C_MM_HS_TXCOUNT_STATUS_MASK, I2C_MM_HS_TXCOUNT_STATUS_SHIFT );
+#endif
 
 	return temp;
 }

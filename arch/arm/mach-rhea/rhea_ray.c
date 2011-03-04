@@ -50,7 +50,7 @@
 #include <linux/broadcom/ipcinterface.h>
 
 /*
- * todo: 8250 driver has problem autodetecting the UART type -> have to 
+ * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
  * confuses it as an XSCALE UART.  Problem seems to be that it reads
  * bit6 in IER as non-zero sometimes when it's supposed to be 0.
@@ -223,6 +223,72 @@ static struct platform_device rhearay_sdio1_device = {
 	},
 };
 
+static struct resource board_i2c0_resource[] = {
+	[0] =
+	{
+		.start = BSC1_BASE_ADDR,
+		.end = BSC1_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] =
+	{
+		.start = BCM_INT_ID_I2C0,
+		.end = BCM_INT_ID_I2C0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_i2c1_resource[] = {
+	[0] =
+	{
+		.start = BSC2_BASE_ADDR,
+		.end = BSC2_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] =
+	{
+		.start = BCM_INT_ID_I2C1,
+		.end = BCM_INT_ID_I2C1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_pmu_bsc_resource[] = {
+	[0] =
+	{
+		.start = PMU_BSC_BASE_ADDR,
+		.end = PMU_BSC_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] =
+	{
+		.start = BCM_INT_ID_PM_I2C,
+		.end = BCM_INT_ID_PM_I2C,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device board_i2c_adap_devices[] =
+{
+	{  /* for BSC0 */
+		.name = "bsc-i2c",
+		.id = 0,
+		.resource = board_i2c0_resource,
+		.num_resources	= ARRAY_SIZE(board_i2c0_resource),
+	},
+	{  /* for BSC1 */
+		.name = "bsc-i2c",
+		.id = 1,
+		.resource = board_i2c1_resource,
+		.num_resources	= ARRAY_SIZE(board_i2c1_resource),
+	},
+	{  /* for PMU BSC */
+		.name = "bsc-i2c",
+		.id = 2,
+		.resource = board_pmu_bsc_resource,
+		.num_resources	= ARRAY_SIZE(board_pmu_bsc_resource),
+	},
+};
 
 void __init board_map_io(void)
 {
@@ -233,6 +299,9 @@ void __init board_map_io(void)
 
 static struct platform_device *board_devices[] __initdata = {
 	&board_serial_device,
+	&board_i2c_adap_devices[0],
+	&board_i2c_adap_devices[1],
+	&board_i2c_adap_devices[2],
 	&rhearay_sdio0_device,
 	&rhearay_sdio1_device,
 	&android_mass_storage_device,
