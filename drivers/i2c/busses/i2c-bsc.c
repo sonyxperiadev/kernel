@@ -26,6 +26,8 @@
 #include <linux/semaphore.h>
 #include <linux/uaccess.h>
 #include <linux/io.h>
+#include <linux/clk.h>
+#include <linux/i2c-kona.h>
 
 // #include <linux/broadcom/timer.h>
 
@@ -61,38 +63,41 @@ struct procfs
  */
 struct bsc_i2c_dev
 {
-   struct device *dev;
+	struct device *dev;
 
-   /* iomapped base virtual address of the registers */
-   void __iomem *virt_base;
-   
-   /* I2C bus speed */
-   enum bsc_bus_speed speed;
+	/* iomapped base virtual address of the registers */
+	void __iomem *virt_base;
 
-   /* the 8-bit master code (0000 1XXX, 0x08) used for high speed mode */
-   unsigned char mastercode;
+	/* I2C bus speed */
+	enum bsc_bus_speed speed;
 
-   /* to save the old BSC TIM register value */
-   volatile uint32_t tim_val;
+	/* the 8-bit master code (0000 1XXX, 0x08) used for high speed mode */
+	unsigned char mastercode;
 
-   /* flag to indicate whether the I2C bus is in high speed mode */
-   unsigned int high_speed_mode;
+	/* to save the old BSC TIM register value */
+	volatile uint32_t tim_val;
 
-   /* IRQ line number */
-   int irq;
+	/* flag to indicate whether the I2C bus is in high speed mode */
+	unsigned int high_speed_mode;
 
-   /* Linux I2C adapter struct */
-   struct i2c_adapter adapter;
+	/* IRQ line number */
+	int irq;
 
-   /* lock for data transfer */
-   struct semaphore xfer_lock;
+	/* Linux I2C adapter struct */
+	struct i2c_adapter adapter;
 
-   /* to signal the command completion */
-   struct completion	ses_done;
+	/* lock for data transfer */
+	struct semaphore xfer_lock;
 
-   struct procfs proc;
+	/* to signal the command completion */
+	struct completion	ses_done;
 
-   volatile int debug;
+	struct procfs proc;
+
+	volatile int debug;
+
+	struct clk *bsc_clk;
+	struct clk *bsc_apb_clk;
 };
 
 static const __devinitconst char gBanner[] = KERN_INFO "Broadcom BSC (I2C) Driver: 1.00\n";
@@ -743,212 +748,254 @@ static int proc_term(struct platform_device *pdev)
    return 0;
 }
 
+static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
+{
+	BUG_ON (dev->bsc_clk || dev->bsc_apb_clk);
+
+	if (cfg->bsc_apb_clk) {
+		dev->bsc_apb_clk = clk_get (dev->dev, cfg->bsc_apb_clk);
+		if (!dev->bsc_apb_clk)
+			return -EINVAL;
+	}
+
+	if (cfg->bsc_clk) {
+		dev->bsc_clk = clk_get (dev->dev, cfg->bsc_clk);
+		if (!dev->bsc_clk)
+			return -EINVAL;
+	}
+
+	return 0;
+}
+
+static void bsc_put_clk(struct bsc_i2c_dev *dev)
+{
+	if (dev->bsc_clk)
+		clk_put (dev->bsc_clk);
+	if (dev->bsc_apb_clk)
+		clk_put (dev->bsc_apb_clk);
+}
+
+static int bsc_enable_clk(struct bsc_i2c_dev *dev)
+{
+	int ret = 0;
+	if (dev->bsc_apb_clk)
+		ret |= clk_enable(dev->bsc_apb_clk);
+	if (dev->bsc_clk)
+		ret |= clk_enable(dev->bsc_clk);
+	return ret;
+}
+
+static void bsc_disable_clk(struct bsc_i2c_dev *dev)
+{
+	if (dev->bsc_clk)
+		clk_disable(dev->bsc_clk);
+	if (dev->bsc_apb_clk)
+		clk_disable(dev->bsc_apb_clk);
+}
+
 static int __init bsc_probe(struct platform_device *pdev)
 {
-   int rc, irq;
-   struct bsc_adap_cfg *hw_cfg;
-   struct bsc_i2c_dev *dev;
-   struct i2c_adapter *adap;
-   struct resource *iomem, *ioarea;
+	int rc=0, irq;
+	struct bsc_adap_cfg *hw_cfg;
+	struct bsc_i2c_dev *dev;
+	struct i2c_adapter *adap;
+	struct resource *iomem, *ioarea;
 
-   printk(gBanner);
+	printk(gBanner);
 
-   /* get register memory resource */
-   iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-   if (!iomem)
-   {
-      dev_err(&pdev->dev, "no mem resource\n");
-      return -ENODEV;
-   }
+	/* get register memory resource */
+	iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	if (!iomem) {
+		dev_err(&pdev->dev, "no mem resource\n");
+		return -ENODEV;
+	}
 
-   /* get the interrupt number */
-   irq = platform_get_irq(pdev, 0);
-   if (irq == -ENXIO)
-   {
-      dev_err(&pdev->dev, "no irq resource\n");
-      return -ENODEV;
-   }
+	/* get the interrupt number */
+	irq = platform_get_irq(pdev, 0);
+	if (irq == -ENXIO) {
+		dev_err(&pdev->dev, "no irq resource\n");
+		return -ENODEV;
+	}
 
-   /* mark the memory region as used */
-   ioarea = request_mem_region(iomem->start, resource_size(iomem),
+	/* mark the memory region as used */
+	ioarea = request_mem_region(iomem->start, resource_size(iomem),
 			pdev->name);
-   if (!ioarea)
-   {
+	if (!ioarea) {
 		dev_err(&pdev->dev, "I2C region already claimed\n");
 		return -EBUSY;
-   }
+	}
 
-   /* allocate memory for our private data structure */
-   dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-   if (!dev)
-   {
-      dev_err(&pdev->dev, "unable to allocate mem for private data\n");
-      rc = -ENOMEM;
-      goto err_release_mem_region;
-   }
-   
-   if (pdev->dev.platform_data)
-   {
-      hw_cfg = (struct bsc_adap_cfg *)pdev->dev.platform_data;
-      dev->speed = hw_cfg->speed;
-   }
-   else
-   {
-      /* use default speed */
-      dev->speed = DEFAULT_I2C_BUS_SPEED;
-   }
+	/* allocate memory for our private data structure */
+	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+	if (!dev) {
+		dev_err(&pdev->dev, "unable to allocate mem for private data\n");
+		rc = -ENOMEM;
+		goto err_release_mem_region;
+	}
 
-   /* validate the speed parameter */
-   if (dev->speed >= BSC_BUS_SPEED_MAX)
-   {
-      dev_err(&pdev->dev, "invalid bus speed parameter\n");
-      rc = -EFAULT;
-      goto err_release_mem_region;
-   }
+	/* init clocks */
+	if (pdev->dev.platform_data) {
+		hw_cfg = (struct bsc_adap_cfg *)pdev->dev.platform_data;
+		dev->speed = hw_cfg->speed;
 
-   /* high speed */
-   if (dev->speed == BSC_BUS_SPEED_HS ||
-       dev->speed == BSC_BUS_SPEED_HS_FPGA)
-   {
-      dev->high_speed_mode = 1;
-      
-   }
+		rc = bsc_get_clk (dev, hw_cfg);
+		if (rc)
+			goto err_free_clk;
+		rc = bsc_enable_clk (dev);
+		if (rc)
+			goto err_free_clk;
+	}
+	else {
+		/* use default speed */
+		dev->speed = DEFAULT_I2C_BUS_SPEED;
+		dev->bsc_clk = NULL;
+		dev->bsc_apb_clk = NULL;
+	}
 
-   dev->dev = &pdev->dev;
-   init_MUTEX(&dev->xfer_lock);
-   init_completion(&dev->ses_done);
-   dev->irq = irq;
-   dev->virt_base = ioremap(iomem->start, resource_size(iomem));
-   if (!dev->virt_base)
-   {
-      dev_err(&pdev->dev, "ioremap of register space failed\n");
-      rc = -ENOMEM;
-      goto err_free_dev_mem;
-   }
+	/* validate the speed parameter */
+	if (dev->speed >= BSC_BUS_SPEED_MAX) {
+		dev_err(&pdev->dev, "invalid bus speed parameter\n");
+		rc = -EFAULT;
+		goto err_release_mem_region;
+	}
 
-   platform_set_drvdata(pdev, dev);
+	/* high speed */
+	if (dev->speed == BSC_BUS_SPEED_HS || dev->speed == BSC_BUS_SPEED_HS_FPGA) {
+		dev->high_speed_mode = 1;
+	}
 
-   /*
-    * TODO: add core clock code in the future 13 MHz for normal and 104 MHz
-    * for high-speed
-    */
+	dev->dev = &pdev->dev;
+	init_MUTEX(&dev->xfer_lock);
+	init_completion(&dev->ses_done);
+	dev->irq = irq;
+	dev->virt_base = ioremap(iomem->start, resource_size(iomem));
+	if (!dev->virt_base) {
+		dev_err(&pdev->dev, "ioremap of register space failed\n");
+		rc = -ENOMEM;
+		goto err_free_dev_mem;
+	}
 
-   /*
-    * Configure the BSC bus speed. If it's a high-speed device, it will start
-    * off as fast speed
-    */
-   bsc_set_bus_speed((uint32_t)dev->virt_base,
-         gBusSpeedTable[dev->speed]);
+	platform_set_drvdata(pdev, dev);
 
-   /* init I2C controller */
-   isl_bsc_init((uint32_t)dev->virt_base);
+	/*
+	* TODO: add core clock code in the future 13 MHz for normal and 104 MHz
+	* for high-speed
+	*/
 
-   /* disable and clear interrupts */
-   bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
-   bsc_clear_intr_status((uint32_t)dev->virt_base, 0xFF);
+	/*
+	* Configure the BSC bus speed. If it's a high-speed device, it will start
+	* off as fast speed
+	*/
+	bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[dev->speed]);
 
-   /* disable BSC TX FIFO */
-   bsc_set_FIFO((uint32_t)dev->virt_base, 0);
+	/* init I2C controller */
+	isl_bsc_init((uint32_t)dev->virt_base);
 
-   /* high-speed mode */
-   if (dev->speed == BSC_BUS_SPEED_HS)
-   {
-      dev->high_speed_mode = 1;
+	/* disable and clear interrupts */
+	bsc_disable_intr((uint32_t)dev->virt_base, 0xFF);
+	bsc_clear_intr_status((uint32_t)dev->virt_base, 0xFF);
 
-      /*
-       * Since mastercode 0000 1000 is reserved for test and diagnostic
-       * purpose, we add 1 here
-       */
-      dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & pdev->id)) + 1;
+	/* disable BSC TX FIFO */
+	bsc_set_FIFO((uint32_t)dev->virt_base, 0);
 
-      /* 
-       * Auto-sense allows the slave device to stretch the clock for a long
-       * time. Need to turn off auto-sense for high-speed mode
-       */
-      bsc_set_autosense((uint32_t)dev->virt_base, 0);
+	/* high-speed mode */
+	if (dev->speed == BSC_BUS_SPEED_HS) {
+		dev->high_speed_mode = 1;
 
-      /*
-       * Now save the BSC_TIM register value as it will be modified before the
-       * master going into high-speed mode. We need to restore the BSC_TIM
-       * value when the device switches back to fast speed
-       */
-      dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
-   }
-   else
-   {
-      dev->high_speed_mode = 0;
-      bsc_set_autosense((uint32_t)dev->virt_base, 1);
-   }
+		/*
+		* Since mastercode 0000 1000 is reserved for test and diagnostic
+		* purpose, we add 1 here
+		*/
+		dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & pdev->id)) + 1;
 
-   /* register the ISR handler */
-   rc = request_irq(dev->irq, bsc_isr, IRQF_SHARED, pdev->name, dev);
-   if (rc)
-   {
-      dev_err(&pdev->dev, "failed to request irq %i\n", dev->irq);
-      goto err_bsc_deinit;
-   }
+		/*
+		* Auto-sense allows the slave device to stretch the clock for a long
+		* time. Need to turn off auto-sense for high-speed mode
+		*/
+		bsc_set_autosense((uint32_t)dev->virt_base, 0);
 
-   dev_info(dev->dev, "bus %d at speed %d \n", pdev->id, dev->speed);
+		/*
+		* Now save the BSC_TIM register value as it will be modified before the
+		* master going into high-speed mode. We need to restore the BSC_TIM
+		* value when the device switches back to fast speed
+		*/
+		dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
+	}
+	else {
+		dev->high_speed_mode = 0;
+		bsc_set_autosense((uint32_t)dev->virt_base, 1);
+	}
 
-   adap = &dev->adapter;
-   i2c_set_adapdata(adap, dev);
-   adap->owner = THIS_MODULE;
-   adap->class = UINT_MAX; /* can be used by any I2C device */
-   snprintf(adap->name, sizeof(adap->name), "bsc-i2c%d", pdev->id);
-   adap->algo = &bsc_algo;
-   adap->dev.parent = &pdev->dev;
-   adap->nr = pdev->id;
+	/* register the ISR handler */
+	rc = request_irq(dev->irq, bsc_isr, IRQF_SHARED, pdev->name, dev);
+	if (rc) {
+		dev_err(&pdev->dev, "failed to request irq %i\n", dev->irq);
+		goto err_bsc_deinit;
+	}
 
-   /* TODO: register proc entries here */
+	dev_info(dev->dev, "bus %d at speed %d \n", pdev->id, dev->speed);
 
-   /*
-    * Enable error (timeout) interrupt if it's not in high-speed mode. The
-    * timeout counter does not work in high-speed mode
-    */
-   if (!dev->high_speed_mode)
-      bsc_enable_intr((uint32_t)dev->virt_base,
-            I2C_MM_HS_IER_ERR_INT_EN_MASK);
+	adap = &dev->adapter;
+	i2c_set_adapdata(adap, dev);
+	adap->owner = THIS_MODULE;
+	adap->class = UINT_MAX; /* can be used by any I2C device */
+	snprintf(adap->name, sizeof(adap->name), "bsc-i2c%d", pdev->id);
+	adap->algo = &bsc_algo;
+	adap->dev.parent = &pdev->dev;
+	adap->nr = pdev->id;
 
-   rc = proc_init(pdev);
-   if (rc)
-   {
-      dev_err(dev->dev, "failed to install procfs\n");
-      goto err_free_irq;
-   }
+	/* TODO: register proc entries here */
 
-   /*
-    * I2C device drivers may be active on return from
-    * i2c_add_numbered_adapter()
-    */
-   rc = i2c_add_numbered_adapter(adap);
-   if (rc) {
-      dev_err(dev->dev, "failed to add adapter\n");
-      goto err_proc_term;
-   }
+	/*
+	* Enable error (timeout) interrupt if it's not in high-speed mode. The
+	* timeout counter does not work in high-speed mode
+	*/
+	if (!dev->high_speed_mode)
+		bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+
+	rc = proc_init(pdev);
+	if (rc) {
+		dev_err(dev->dev, "failed to install procfs\n");
+		goto err_free_irq;
+	}
+
+	/*
+	* I2C device drivers may be active on return from
+	* i2c_add_numbered_adapter()
+	*/
+	rc = i2c_add_numbered_adapter(adap);
+	if (rc) {
+		dev_err(dev->dev, "failed to add adapter\n");
+		goto err_proc_term;
+	}
 
 	return 0;
 
 err_proc_term:
-   proc_term(pdev);
-
-err_free_irq:
-   free_irq(dev->irq, dev);
+	proc_term(pdev);
 
 err_bsc_deinit:
-   bsc_set_autosense((uint32_t)dev->virt_base, 0);
-   bsc_deinit((uint32_t)dev->virt_base);
+	bsc_set_autosense((uint32_t)dev->virt_base, 0);
+	bsc_deinit((uint32_t)dev->virt_base);
 
-   iounmap(dev->virt_base);
+	iounmap(dev->virt_base);
 
-   platform_set_drvdata(pdev, NULL);
+	platform_set_drvdata(pdev, NULL);
+
+err_free_clk:
+	bsc_disable_clk(dev);
+	bsc_put_clk(dev);
 
 err_free_dev_mem:
-   kfree(dev);
+	kfree(dev);
+
+err_free_irq:
+	free_irq(dev->irq, dev);
 
 err_release_mem_region:
 	release_mem_region(iomem->start, resource_size(iomem));
 
-   return rc;
+	return rc;
 }
 
 static int bsc_remove(struct platform_device *pdev)
@@ -967,6 +1014,10 @@ static int bsc_remove(struct platform_device *pdev)
    bsc_deinit((uint32_t)dev->virt_base);
 
    iounmap(dev->virt_base);
+
+   bsc_disable_clk(dev);
+   bsc_put_clk(dev);
+
    kfree(dev);
 
    iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);

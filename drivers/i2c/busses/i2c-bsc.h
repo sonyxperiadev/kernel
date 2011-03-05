@@ -108,33 +108,7 @@ static inline unsigned char bsc_get_soft_reset_ready(uint32_t baseAddr);
 static inline unsigned char bsc_get_soft_reset(uint32_t baseAddr);
 static inline BSC_MODE_t bsc_set_mode(uint32_t baseAddr, BSC_MODE_t mode);
 
-enum bsc_bus_speed
-{
-   BSC_BUS_SPEED_32K,
-   BSC_BUS_SPEED_50K,
-   BSC_BUS_SPEED_230K,
-   BSC_BUS_SPEED_380K,
-   BSC_BUS_SPEED_400K,
-   BSC_BUS_SPEED_430K,
-   BSC_BUS_SPEED_HS, /* high-speed */
 
-   /* for FPGA where only the 26 MHz core clock is available */
-   BSC_BUS_SPEED_100K_FPGA,
-   BSC_BUS_SPEED_400K_FPGA,
-   BSC_BUS_SPEED_HS_FPGA,
-
-   /* used as internal array index so do not reorder this */
-   BSC_BUS_SPEED_MAX,
-};
-
-/*
- * Board dependent configuration for the Broadcom BSC (I2C) adapter
- */
-struct bsc_adap_cfg
-{
-   /* I2C bus speed in KHz */
-   enum bsc_bus_speed speed;
-};
 
 /**
 *

@@ -36,6 +36,7 @@
 #include <mach/hardware.h>
 #include <mach/sdio_platform.h>
 #include <linux/i2c.h>
+#include <linux/i2c-kona.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #include <linux/i2c/tsc2007.h>
@@ -268,6 +269,22 @@ static struct resource board_pmu_bsc_resource[] = {
 	},
 };
 
+static struct bsc_adap_cfg bsc_i2c_cfg[] = {
+	{ /* for BSC0 */
+		.speed = BSC_BUS_SPEED_50K,
+		.bsc_clk = "bsc1_clk",
+		.bsc_apb_clk = "bsc1_apb_clk",
+	},
+	{ /* for BSC1*/
+		.speed = BSC_BUS_SPEED_50K,
+		.bsc_clk = "bsc2_clk",
+		.bsc_apb_clk = "bsc2_apb_clk",
+	},
+	{ /* for PMU */
+		.speed = BSC_BUS_SPEED_50K,
+	},
+};
+
 static struct platform_device board_i2c_adap_devices[] =
 {
 	{  /* for BSC0 */
@@ -275,18 +292,28 @@ static struct platform_device board_i2c_adap_devices[] =
 		.id = 0,
 		.resource = board_i2c0_resource,
 		.num_resources	= ARRAY_SIZE(board_i2c0_resource),
+		.dev      = {
+			.platform_data = &bsc_i2c_cfg[0],
+		},
 	},
 	{  /* for BSC1 */
 		.name = "bsc-i2c",
 		.id = 1,
 		.resource = board_i2c1_resource,
 		.num_resources	= ARRAY_SIZE(board_i2c1_resource),
+		.dev	  = {
+			.platform_data = &bsc_i2c_cfg[1],
+		},
+
 	},
 	{  /* for PMU BSC */
 		.name = "bsc-i2c",
 		.id = 2,
 		.resource = board_pmu_bsc_resource,
 		.num_resources	= ARRAY_SIZE(board_pmu_bsc_resource),
+		.dev      = {
+			.platform_data = &bsc_i2c_cfg[2],
+		},
 	},
 };
 

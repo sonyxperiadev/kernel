@@ -42,7 +42,7 @@
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_lock);
 
-int clk_debug=0;
+int clk_debug;
 
 static int __clk_enable(struct clk *clk)
 {
@@ -508,8 +508,11 @@ static int peri_clk_enable(struct clk *c, int enable)
 		writel(reg, base + peri_clk->clkgate_offset);
 
 		/* div and pll select */
+		if (!peri_clk->div_mask)
+			BUG_ON (c->div != 1);
 		reg = ((c->div-1) << peri_clk->div_shift) |
 			(c->src->sel << peri_clk->pll_select_shift);
+
 		writel(reg, base + peri_clk->div_offset);
 
 		/* trigger */
@@ -585,8 +588,11 @@ static unsigned long peri_clk_get_rate(struct clk *c)
 		return -ENOMEM;
 	sel = (readl(base + peri_clk->div_offset) & peri_clk->pll_select_mask)
 		>> peri_clk->pll_select_shift;
+
 	div = ((readl(base + peri_clk->div_offset) & peri_clk->div_mask)
 		>> peri_clk->div_shift) + 1;
+	if (!peri_clk->div_mask)
+		BUG_ON (div != 1);
 
 	BUG_ON (sel >= c->src->total);
 	c->src->sel = sel;

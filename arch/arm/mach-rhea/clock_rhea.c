@@ -21,6 +21,7 @@
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_sysmap_a9.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 
 #define	DECLARE_REF_CLK(clk_name, clk_rate, clk_div, clk_parent)		\
 	static struct proc_clock clk_name##_clk = {				\
@@ -97,6 +98,29 @@ static struct ccu_clock kpm_ccu_clk = {
 	.freq_tbl	=	{
 		 26*CLOCK_1M,  52*CLOCK_1M, 104*CLOCK_1M, 156*CLOCK_1M,
 		156*CLOCK_1M, 208*CLOCK_1M, 312*CLOCK_1M, 312*CLOCK_1M
+	},
+};
+
+static struct ccu_clock kps_ccu_clk = {
+	.clk	=	{
+		.name	=	"kps_ccu_clk",
+		.ops	=	&ccu_clk_ops,
+	},
+
+	.ccu_clk_mgr_base	=	KONA_SLV_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.policy_freq_offset	=	KPS_CLK_MGR_REG_POLICY_FREQ_OFFSET,
+	.policy_ctl_offset	=	KPS_CLK_MGR_REG_POLICY_CTL_OFFSET,
+	.policy0_mask_offset	=	KPS_CLK_MGR_REG_POLICY0_MASK_OFFSET,
+	.policy1_mask_offset	=	KPS_CLK_MGR_REG_POLICY1_MASK_OFFSET,
+	.policy2_mask_offset	=	KPS_CLK_MGR_REG_POLICY2_MASK_OFFSET,
+	.policy3_mask_offset	=	KPS_CLK_MGR_REG_POLICY3_MASK_OFFSET,
+	.lvm_en_offset		=	KPS_CLK_MGR_REG_LVM_EN_OFFSET,
+
+	.freq_id	=	2,
+	.freq_tbl	=	{
+		 26*CLOCK_1M,  52*CLOCK_1M,  78*CLOCK_1M, 104*CLOCK_1M,
+		156*CLOCK_1M, 156*CLOCK_1M
 	},
 };
 
@@ -295,7 +319,50 @@ static struct bus_clock sdio4_sleep_clk = {
 	},
 };
 
+/* KPS */
+static struct bus_clock bsc1_apb_clk = {
+	.clk	=	{
+		.name	=	"bsc1_apb_clk",
+		.parent	=	name_to_clk(kps_ccu),
+		.ops	=	&bus_clk_ops,
+	},
 
+	.ccu_clk_mgr_base	=	KONA_SLV_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset		=	KPS_CLK_MGR_REG_BSC1_CLKGATE_OFFSET,
+
+	.stprsts_mask		=	KPS_CLK_MGR_REG_BSC1_CLKGATE_BSC1_APB_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPS_CLK_MGR_REG_BSC1_CLKGATE_BSC1_APB_HW_SW_GATING_SEL_SHIFT,
+	.clk_en_mask		=	KPS_CLK_MGR_REG_BSC1_CLKGATE_BSC1_APB_CLK_EN_MASK,
+
+	.freq_tbl	=	{
+		 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+		 52*CLOCK_1M,  78*CLOCK_1M
+	},
+
+};
+
+static struct bus_clock bsc2_apb_clk = {
+	.clk	=	{
+		.name	=	"bsc2_apb_clk",
+		.parent	=	name_to_clk(kps_ccu),
+		.ops	=	&bus_clk_ops,
+	},
+
+	.ccu_clk_mgr_base	=	KONA_SLV_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset		=	KPS_CLK_MGR_REG_BSC2_CLKGATE_OFFSET,
+
+	.stprsts_mask		=	KPS_CLK_MGR_REG_BSC2_CLKGATE_BSC2_APB_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPS_CLK_MGR_REG_BSC2_CLKGATE_BSC2_APB_HW_SW_GATING_SEL_SHIFT,
+	.clk_en_mask		=	KPS_CLK_MGR_REG_BSC2_CLKGATE_BSC2_APB_CLK_EN_MASK,
+
+	.freq_tbl	=	{
+		 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+		 52*CLOCK_1M,  78*CLOCK_1M
+	},
+
+};
 
 /* peri clocks */
 static struct clk *sdio_clk_src_tbl[] =
@@ -424,6 +491,73 @@ static struct peri_clock sdio4_clk = {
 	.trigger_mask		=	KPM_CLK_MGR_REG_DIV_TRIG_SDIO4_TRIGGER_MASK,
 };
 
+static struct clk *bsc_clk_src_tbl[] =
+{
+	name_to_clk(crystal),
+	name_to_clk(var_104m),
+	name_to_clk(ref_104m),
+	name_to_clk(var_13m),
+	name_to_clk(ref_13m),
+};
+
+static struct clk_src bsc_clk_src = {
+	.total		=	ARRAY_SIZE(bsc_clk_src_tbl),
+	.sel		=	3,
+	.parents	=	bsc_clk_src_tbl,
+};
+
+static struct peri_clock bsc1_clk = {
+	.clk	=	{
+		.name	=	"bsc1_clk",
+		.parent	=	name_to_clk(ref_13m),
+		.rate	=	13*CLOCK_1M,
+		.div	=	1,
+		.id	=	-1,
+
+		.src	= 	&bsc_clk_src,
+		.ops	=	&peri_clk_ops,
+	},
+
+	.ccu_clk_mgr_base	=	KONA_SLV_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset		=	KPS_CLK_MGR_REG_BSC1_CLKGATE_OFFSET,
+	.div_offset		=	KPS_CLK_MGR_REG_BSC1_DIV_OFFSET,
+	.div_trig_offset	=	KPS_CLK_MGR_REG_DIV_TRIG_OFFSET,
+
+	.stprsts_mask		=	KPS_CLK_MGR_REG_BSC1_CLKGATE_BSC1_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPS_CLK_MGR_REG_BSC1_CLKGATE_BSC1_HW_SW_GATING_SEL_MASK,
+	.clk_en_mask		=	KPS_CLK_MGR_REG_BSC1_CLKGATE_BSC1_CLK_EN_MASK,
+	.pll_select_mask	=	KPS_CLK_MGR_REG_BSC1_DIV_BSC1_PLL_SELECT_MASK,
+	.pll_select_shift	=	KPS_CLK_MGR_REG_BSC1_DIV_BSC1_PLL_SELECT_SHIFT,
+	.trigger_mask		=	KPS_CLK_MGR_REG_DIV_TRIG_BSC1_TRIGGER_MASK,
+};
+
+static struct peri_clock bsc2_clk = {
+	.clk	=	{
+		.name	=	"bsc2_clk",
+		.parent	=	name_to_clk(ref_13m),
+		.rate	=	13*CLOCK_1M,
+		.div	=	1,
+		.id	=	-1,
+
+		.src	= 	&bsc_clk_src,
+		.ops	=	&peri_clk_ops,
+	},
+
+	.ccu_clk_mgr_base	=	KONA_SLV_CLK_BASE_ADDR,
+	.wr_access_offset	=	KPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.clkgate_offset		=	KPS_CLK_MGR_REG_BSC2_CLKGATE_OFFSET,
+	.div_offset		=	KPS_CLK_MGR_REG_BSC2_DIV_OFFSET,
+	.div_trig_offset	=	KPS_CLK_MGR_REG_DIV_TRIG_OFFSET,
+
+	.stprsts_mask		=	KPS_CLK_MGR_REG_BSC2_CLKGATE_BSC2_STPRSTS_MASK,
+	.hw_sw_gating_mask	=	KPS_CLK_MGR_REG_BSC2_CLKGATE_BSC2_HW_SW_GATING_SEL_MASK,
+	.clk_en_mask		=	KPS_CLK_MGR_REG_BSC2_CLKGATE_BSC2_CLK_EN_MASK,
+	.pll_select_mask	=	KPS_CLK_MGR_REG_BSC2_DIV_BSC2_PLL_SELECT_MASK,
+	.pll_select_shift	=	KPS_CLK_MGR_REG_BSC2_DIV_BSC2_PLL_SELECT_SHIFT,
+	.trigger_mask		=	KPS_CLK_MGR_REG_DIV_TRIG_BSC2_TRIGGER_MASK,
+};
+
 
 /* table for registering clock */
 static struct __init clk_lookup rhea_clk_tbl[] =
@@ -460,7 +594,12 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	CLK_LK(sdio3),
 	CLK_LK(sdio4),
 
+	CLK_LK(bsc1),
+	CLK_LK(bsc2),
+
 	CLK_LK(kpm_ccu),
+	CLK_LK(kps_ccu),
+
 	CLK_LK(usb_otg),
 	CLK_LK(sdio1_ahb),
 	CLK_LK(sdio2_ahb),
@@ -470,6 +609,8 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	CLK_LK(sdio2_sleep),
 	CLK_LK(sdio3_sleep),
 	CLK_LK(sdio4_sleep),
+	CLK_LK(bsc1_apb),
+	CLK_LK(bsc2_apb),
 };
 
 int __init clock_init(void)
