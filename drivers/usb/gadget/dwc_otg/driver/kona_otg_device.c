@@ -165,7 +165,6 @@ static int __init dwc_otg_device_init(void)
 		}
 		else {
 			printk ("bc11 not done\n");
-			return -EIO;
 		}
 		/* force turn off VDP, enable sw_ovwr_set to take over the bc11 switches directly */
 		val = (BC11_OVR_KEY<<HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_SHIFT)
