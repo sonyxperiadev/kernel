@@ -133,4 +133,7 @@
 
 #define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */ 
 
+#define KONA_UART_LLDEBUG_VA		KONA_UART0_VA
+#define KONA_UART_LLDEBUG_PA		UARTB_BASE_ADDR
+
 #endif /* __RHEA_IO_MAP_H */
