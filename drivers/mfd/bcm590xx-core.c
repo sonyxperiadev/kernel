@@ -108,8 +108,10 @@ static	void bcm59055_rd_cl_dis_intrs( struct bcm590xx *bcm590xx )
 		// Start charging if charger is plugged in at the time of booting.
         if ( ( i == 1 ) && ( temp & 1 ) )
 		{
+#ifdef CONFIG_BATTERY_BCM59055
            bcm59055_initialize_charging(bcm590xx ) ;
            bcm59055_start_charging(bcm590xx ) ;
+#endif
 		}
     }
     /*mask all interrupts */

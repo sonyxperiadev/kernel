@@ -30,6 +30,7 @@
 #include <linux/interrupt.h>
 #include <linux/serial_8250.h>
 #include <linux/irq.h>
+#include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
 #include <asm/gpio.h>
@@ -49,6 +50,10 @@
 #include <asm/mach/map.h>
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
+
+#include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcm590xx/pmic.h>
+#include <linux/mfd/bcm590xx/bcm59055_A0.h>
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
@@ -317,6 +322,67 @@ static struct platform_device board_i2c_adap_devices[] =
 	},
 };
 
+#define PMU_DEVICE_I2C_ADDR_0   0x08
+#define PMU_DEVICE_I2C_ADDR_1   0x0C
+#define PMU_IRQ_PIN           10
+
+static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
+{
+	printk("REG: pmu_init_platform_hw called \n") ;
+	bcm59055_reg_init_dev_init(bcm590xx)  ;
+
+	return 0 ;
+}
+
+/* wall charging and vbus are wired together on FF board
+     we monitor USB activity to make sure it is not USB cable that is inserted
+ */
+static int can_start_charging(void* data)
+{
+#define INTERVAL (HZ/10)
+	int cpu, usb_otg_int[4], i;
+	for_each_present_cpu(cpu)
+		usb_otg_int[cpu] =  kstat_irqs_cpu(
+		BCM_INT_ID_USB_HSOTG, cpu);
+
+	for (i=0; i<10; i++) {
+		schedule_timeout_interruptible(INTERVAL);
+		for_each_present_cpu(cpu)
+			if (usb_otg_int[cpu]!= kstat_irqs_cpu(
+				BCM_INT_ID_USB_HSOTG, cpu))
+				return 0;
+	}
+	return 1;
+}
+
+static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
+	.can_start_charging = can_start_charging,
+};
+
+static struct bcm590xx_platform_data bcm590xx_plat_data = {
+	.init = bcm590xx_init_platform_hw,
+	.slave = 0 ,
+	.battery_pdata = &bcm590xx_battery_plat_data,
+};
+
+static struct bcm590xx_platform_data bcm590xx_plat_data_sl1 = {
+	.slave = 1 ,
+};
+
+static struct i2c_board_info __initdata pmu_info[] =
+{
+	[0] = {
+		I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR_1 ),
+		.irq = gpio_to_irq(PMU_IRQ_PIN),
+		.platform_data  = &bcm590xx_plat_data_sl1,
+	},
+	[1] = {
+		I2C_BOARD_INFO("bcm590xx", PMU_DEVICE_I2C_ADDR_0 ),
+		.irq = gpio_to_irq(PMU_IRQ_PIN),
+		.platform_data  = &bcm590xx_plat_data,
+	},
+};
+
 void __init board_map_io(void)
 {
 	/* Map machine specific iodesc here */
@@ -335,9 +401,19 @@ static struct platform_device *board_devices[] __initdata = {
 	&android_usb,
 };
 
+static void __init board_add_i2c_devices (void)
+{
+	/* 59055 on BSC - PMU */
+	i2c_register_board_info(2,
+		pmu_info,
+		ARRAY_SIZE(pmu_info));
+}
+
 static void __init board_add_devices(void)
 {
 	platform_add_devices(board_devices, ARRAY_SIZE(board_devices));
+
+	board_add_i2c_devices();
 }
 
 void __init board_init(void)
