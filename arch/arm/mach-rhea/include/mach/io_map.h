@@ -34,6 +34,7 @@
 #define KONA_BSC1_VA                HW_IO_PHYS_TO_VIRT( BSC1_BASE_ADDR )			/* BSC I2C 1 interface  */
 #define KONA_BSC2_VA                HW_IO_PHYS_TO_VIRT( BSC2_BASE_ADDR )			/* BSC I2C 2 interface  */
 #define KONA_CHIPREG_VA             HW_IO_PHYS_TO_VIRT( CHIPREGS_BASE_ADDR )        /* CHIPREG Block */
+#define KONA_PAD_CTRL_VA            HW_IO_PHYS_TO_VIRT( PAD_CTRL_BASE_ADDR )        /* PAD CTRL Block */
 #define KONA_DMAC_NS_VA             HW_IO_PHYS_TO_VIRT( NONDMAC_BASE_ADDR )         /* Non-Secure DMA interface */
 #define KONA_DMAC_S_VA              HW_IO_PHYS_TO_VIRT( SECDMAC_BASE_ADDR )         /* Secure DMA interface */
 #define KONA_DMUX_VA                HW_IO_PHYS_TO_VIRT( DMUX_BASE_ADDR )            /* DMA DMUX */
@@ -116,6 +117,15 @@
 #define KONA_USB_HSOTG_CTRL_VA      HW_IO_PHYS_TO_VIRT( HSOTG_CTRL_BASE_ADDR )      /* USB OTG Control */
 
 #define KONA_BINTC_BASE_ADDR        HW_IO_PHYS_TO_VIRT( BINTC_BASE_ADDR )           /* BModem Int Ctrlr Base Address */
+
+#define KONA_DSI0_VA		    HW_IO_PHYS_TO_VIRT( DSI0_BASE_ADDR )            /* DSI0 Interface */	
+#define KONA_DSI1_VA		    HW_IO_PHYS_TO_VIRT( DSI1_BASE_ADDR )            /* DSI1 Interface */	
+
+#define KONA_SMI_VA		    HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */	
+
+#define KONA_MM_CLK_VA		    HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */	
+
+#define KONA_MM_TECTL_VA	    HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
 
 #define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */ 
 

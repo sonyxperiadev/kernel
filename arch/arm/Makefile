@@ -101,9 +101,24 @@ AFLAGS_THUMB2	:=$(CFLAGS_THUMB2) -Wa$(comma)-mthumb
 endif
 
 # Need -Uarm for gcc < 3.x
-KBUILD_CFLAGS	+=$(CFLAGS_ABI) $(CFLAGS_THUMB2) $(arch-y) $(tune-y) $(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,)) -msoft-float -Uarm
-KBUILD_AFLAGS	+=$(CFLAGS_ABI) $(AFLAGS_THUMB2) $(arch-y) $(tune-y) -include asm/unified.h -msoft-float
+KBUILD_CFLAGS	+=$(CFLAGS_ABI) $(CFLAGS_THUMB2) $(arch-y) $(tune-y) $(call cc-option,-mshort-load-bytes,$(call cc-option,-malignment-traps,)) -Uarm
+KBUILD_AFLAGS	+=$(CFLAGS_ABI) $(AFLAGS_THUMB2) $(arch-y) $(tune-y) -include asm/unified.h
 
+ifeq ($(CONFIG_VFP),y)
+ifeq ($(CONFIG_VFPv3),y)
+# v3 vfp
+KBUILD_CFLAGS	+=-mfpu=vfp3 -mfloat-abi=softfp
+KBUILD_AFLAGS	+=-mfpu=vfp3 -mfloat-abi=softfp 
+else
+#non-v3 vfp
+KBUILD_CFLAGS	+=-mfloat-abi=softfp
+KBUILD_AFLAGS	+=-mfloat-abi=softfp
+endif
+else
+#no vfp
+KBUILD_CFLAGS	+=-mfloat-abi=soft
+KBUILD_AFLAGS	+=-mfloat-abi=soft
+endif
 CHECKFLAGS	+= -D__arm__
 
 #Default value

@@ -11,13 +11,9 @@
 # license other than the GPL, without Broadcom's express prior written
 # consent.
 #*****************************************************************************
+obj-$(CONFIG_FB_BRCM_RHEA) += chal_smi.o chal_dma_vc4lite.o \
+	chal_tectl_vc4lite.o chal_spi_vc4lite.o
 
-obj-y := irq.o timer.o pinmux.o
-obj-$(CONFIG_SMP) += headsmp.o platsmp.o
-obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
-obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o
-obj-$(CONFIG_USB_GADGET_DWC_OTG) += lm.o 
-obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o 
-obj-$(CONFIG_HAVE_CLK) += clock.o
-obj-$(CONFIG_MACH_RHEA_RAY) += chal/
-obj-$(CONFIG_MACH_RHEA_RAY) += csl/
+# Turn off over zealous gcc warnings
+EXTRA_CFLAGS += -D_RHEA_ -Wno-format -Wno-missing-braces
+

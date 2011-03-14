@@ -37,4 +37,6 @@
 
 #define HW_IO_VIRT_TO_PHYS(virt)	((virt) - IO_START_VA + IO_START_PA)
 
+#define CONSISTENT_DMA_SIZE SZ_4M
+
 #endif /* __PLAT_KONA_MEMORY_H */ 
