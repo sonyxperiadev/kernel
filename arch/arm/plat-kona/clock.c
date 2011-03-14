@@ -510,8 +510,9 @@ static int peri_clk_enable(struct clk *c, int enable)
 		/* div and pll select */
 		if (!peri_clk->div_mask)
 			BUG_ON (c->div != 1);
-		reg = ((c->div-1) << peri_clk->div_shift) |
-			(c->src->sel << peri_clk->pll_select_shift);
+
+		reg = ((c->div-1) << (peri_clk->div_shift + peri_clk->div_dithering));
+		reg |= (c->src->sel << peri_clk->pll_select_shift);
 
 		writel(reg, base + peri_clk->div_offset);
 
@@ -590,7 +591,9 @@ static unsigned long peri_clk_get_rate(struct clk *c)
 		>> peri_clk->pll_select_shift;
 
 	div = ((readl(base + peri_clk->div_offset) & peri_clk->div_mask)
-		>> peri_clk->div_shift) + 1;
+		>> peri_clk->div_shift);
+	div = (div >> peri_clk->div_dithering) + 1;
+
 	if (!peri_clk->div_mask)
 		BUG_ON (div != 1);
 
@@ -634,10 +637,12 @@ static int ccu_clk_enable(struct clk *c, int enable)
 	while (readl(base + ccu_clk->lvm_en_offset) & 1);
 
 	/* freq ID */
+	if (!ccu_clk->freq_bit_shift)
+		ccu_clk->freq_bit_shift = 8;
 	reg = ccu_clk->freq_id |
-		(ccu_clk->freq_id << 8) |
-		(ccu_clk->freq_id << 16) |
-		(ccu_clk->freq_id << 24);
+		(ccu_clk->freq_id << (ccu_clk->freq_bit_shift)) |
+		(ccu_clk->freq_id << (ccu_clk->freq_bit_shift * 2)) |
+		(ccu_clk->freq_id << (ccu_clk->freq_bit_shift * 3));
 	writel(reg, base + ccu_clk->policy_freq_offset);
 
 	/* enable all clock mask */

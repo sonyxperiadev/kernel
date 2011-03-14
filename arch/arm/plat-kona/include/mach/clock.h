@@ -85,6 +85,7 @@ struct peri_clock {
 	unsigned long	clk_en_mask;
 	unsigned long	div_mask;
 	int		div_shift;
+	int		div_dithering;		/* dithering franctional bit(s) */
 	unsigned long	pll_select_mask;
 	int		pll_select_shift;
 	unsigned long	trigger_mask;
@@ -96,6 +97,7 @@ struct ccu_clock {
 	unsigned long	ccu_clk_mgr_base;
 	unsigned long	wr_access_offset;
 	unsigned long	policy_freq_offset;
+	int		freq_bit_shift;		/* 8 for most CCU. MM in Rhea is special with 3 */
 	unsigned long	policy_ctl_offset;
 	unsigned long	policy0_mask_offset;
 	unsigned long	policy1_mask_offset;
