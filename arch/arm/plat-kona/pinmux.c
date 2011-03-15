@@ -27,8 +27,9 @@
 
 #include <mach/pinmux.h>
 
-int pinmux_init()
+int __init pinmux_init()
 {
+	pinmux_chip_init();
 	pinmux_board_init();
 	return 0;
 }
@@ -40,7 +41,7 @@ int pinmux_init()
 int pinmux_get_pin_config(struct pin_config *config)
 {
 	int ret = 0;
-	void __iomem *base;
+	void __iomem *base = g_chip_pin_desc.base;
 	enum PIN_NAME name;
 
 	if(!config)
@@ -49,18 +50,11 @@ int pinmux_get_pin_config(struct pin_config *config)
 	if(!is_ball_valid(name))
 		return -EINVAL;
 
-	base = ioremap(g_chip_pin_desc.base_addr, g_chip_pin_desc.mapping_size);
-	if(!base) {
-		printk (KERN_WARNING "%s ioremap failed\n", __func__);
-		return -ENOMEM;
-	}
-
 	config->reg.val = readl(base+g_chip_pin_desc.desc_tbl[name].reg_offset);
 
 	/* populate func */
 	config->func = g_chip_pin_desc.desc_tbl[name].f_tbl[config->reg.b.sel];
 
-	iounmap(base);
 	return ret;
 }
 
@@ -71,7 +65,7 @@ int pinmux_get_pin_config(struct pin_config *config)
 int pinmux_set_pin_config(struct pin_config *config)
 {
 	int ret = 0, i;
-	void __iomem *base;
+	void __iomem *base = g_chip_pin_desc.base;
 	enum PIN_NAME name;
 
 	if(!config)
@@ -79,12 +73,6 @@ int pinmux_set_pin_config(struct pin_config *config)
 	name = config->name;
 	if(!is_ball_valid(name))
 		return -EINVAL;
-
-	base = ioremap(g_chip_pin_desc.base_addr, g_chip_pin_desc.mapping_size);
-	if(!base) {
-		printk (KERN_WARNING "%s ioremap failed\n", __func__);
-		return -ENOMEM;
-	}
 
 	/* get the sel bits */
 	for (i=0; i<MAX_ALT_FUNC; i++) {
@@ -95,12 +83,9 @@ int pinmux_set_pin_config(struct pin_config *config)
 	}
 	if (i==MAX_ALT_FUNC) {
 		printk (KERN_WARNING "%s no matching\n", __func__);
-		ret = -EINVAL;
-		goto err;
+		return -EINVAL;
 	}
 
 	writel(config->reg.val, base + g_chip_pin_desc.desc_tbl[name].reg_offset);
-err:
-	iounmap(base);
 	return ret;
 }

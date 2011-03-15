@@ -26,6 +26,7 @@
 #ifndef __PINMUX_H_
 #define __PINMUX_H_
 
+#include <asm/io.h>
 #include <mach/chip_pinmux.h>
 
 /* Pull up/down*/
@@ -45,6 +46,29 @@
 #define	DRIVE_STRENGTH_14MA	6
 #define	DRIVE_STRENGTH_16MA	7
 
+/* declare configuration for a single pin */
+#define	PIN_CFG(ball, f, hys, dn, up, rc, ipd, drv) 			\
+	{								\
+		.name		=	PN_##ball,			\
+		.func		=	PF_##f,				\
+		.reg.b		=	{				\
+			.hys_en		=	hys,			\
+			.pull_dn	=	PULL_DN_##dn,		\
+			.pull_up	=	PULL_UP_##up,		\
+			.slew_rate_ctrl	=	rc,			\
+			.input_dis	=	ipd,			\
+			.drv_sth	=	DRIVE_STRENGTH_##drv,	\
+		},							\
+	}
+
+/* BSC pad registers are different */
+#define PIN_BSC_CFG(ball, f, v)						\
+	{								\
+		.name		=	PN_##ball,			\
+		.func		=	PF_##f, 			\
+		.reg.val	=	v,				\
+	}
+
 /* pin description */
 struct pin_desc {
 	enum PIN_NAME	name;
@@ -54,9 +78,8 @@ struct pin_desc {
 
 /* chip-level pin description */
 struct chip_pin_desc {
-	struct pin_desc 	*desc_tbl;
-	unsigned int		base_addr;	/* pad control registers base address */
-	int			mapping_size;	/* register space for pad control register */
+	const struct pin_desc 	*desc_tbl;
+	void __iomem 		*base;		/* pad control registers virtual base */
 };
 
 /* board-level or use-case based configuration */
@@ -82,6 +105,9 @@ struct pin_config {
 extern struct chip_pin_desc g_chip_pin_desc;
 
 int pinmux_init(void);
+
+/* chip level init */
+int pinmux_chip_init(void);
 
 /* board level init */
 int pinmux_board_init(void);

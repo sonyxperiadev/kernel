@@ -22,6 +22,9 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
+#include <linux/kernel.h>
+#include <linux/init.h>
+
 #include <mach/pinmux.h>
 #include <mach/rdb/brcm_rdb_sysmap_a9.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
@@ -41,7 +44,7 @@
  *  generated from
  *     http://mpg-twiki.broadcom.com/bin/view/Projects/RheaPinmux
  */
-static struct pin_desc pin_desc_tbl[PN_MAX] = {
+static const struct pin_desc pin_desc_tbl[PN_MAX] = {
 	PIN_DESC(LCDCS0, LCDSCS0, LCDCS2, RESERVED, RESERVED, GPIO, RESERVED),
 	PIN_DESC(LCDSCL, LCDSCL, LCDCD, RESERVED, RESERVED, GPIO, MPHI_HA0),
 	PIN_DESC(LCDSDA, LCDSDA, LCDD0, RESERVED, RESERVED, GPIO, MPHI_DATA0),
@@ -193,6 +196,33 @@ static struct pin_desc pin_desc_tbl[PN_MAX] = {
 
 struct chip_pin_desc g_chip_pin_desc = {
 	.desc_tbl	=	pin_desc_tbl,
-	.base_addr	=	PAD_CTRL_BASE_ADDR,
-	.mapping_size	=	0x800,
 };
+
+/* unlock access lock */
+static void __init rhea_unlock_padctl (void __iomem *base)
+{
+#define PASSWORD 0xA5A501
+	writel(PASSWORD, base + PADCTRLREG_WR_ACCESS_OFFSET);
+	writel(0x0, base + PADCTRLREG_ACCESS_LOCK0_OFFSET);
+
+	writel(PASSWORD, base + PADCTRLREG_WR_ACCESS_OFFSET);
+	writel(0x0, base + PADCTRLREG_ACCESS_LOCK1_OFFSET);
+
+	writel(PASSWORD, base + PADCTRLREG_WR_ACCESS_OFFSET);
+	writel(0x0, base + PADCTRLREG_ACCESS_LOCK2_OFFSET);
+
+	writel(PASSWORD, base + PADCTRLREG_WR_ACCESS_OFFSET);
+	writel(0x0, base + PADCTRLREG_ACCESS_LOCK3_OFFSET);
+
+	writel(PASSWORD, base + PADCTRLREG_WR_ACCESS_OFFSET);
+	writel(0x0, base + PADCTRLREG_ACCESS_LOCK4_OFFSET);
+}
+
+int __init pinmux_chip_init (void)
+{
+	g_chip_pin_desc.base = ioremap(PAD_CTRL_BASE_ADDR, SZ_2K);
+	BUG_ON (!g_chip_pin_desc.base);
+
+	rhea_unlock_padctl(g_chip_pin_desc.base);
+	return 0;
+}

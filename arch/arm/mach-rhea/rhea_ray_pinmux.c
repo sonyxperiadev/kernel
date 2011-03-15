@@ -22,38 +22,12 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
-#include "linux/kernel.h"
-#include <linux/errno.h>
-#include <linux/err.h>
-#include <linux/io.h>
+#include <linux/kernel.h>
+#include <linux/init.h>
 #include "mach/pinmux.h"
-
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 
-#define	PIN_CFG(ball, f, hys, dn, up, rc, ipd, drv) 			\
-	{								\
-		.name		=	PN_##ball,			\
-		.func		=	PF_##f,				\
-		.reg.b		=	{				\
-			.hys_en		=	hys,			\
-			.pull_dn	=	PULL_DN_##dn,		\
-			.pull_up	=	PULL_UP_##up,		\
-			.slew_rate_ctrl	=	rc,			\
-			.input_dis	=	ipd,			\
-			.drv_sth	=	DRIVE_STRENGTH_##drv,	\
-		},							\
-	}
-
-/* BSC pad registers are different */
-#define PIN_BSC_CFG(ball, f, v)					\
-	{								\
-		.name		=	PN_##ball,			\
-		.func		=	PF_##f, 			\
-		.reg.val	=	v,				\
-	}
-
-
-static struct pin_config board_pin_config[] = {
+static struct __init pin_config board_pin_config[] = {
 	/* BSC1 */
 	PIN_BSC_CFG(BSC1CLK, BSC1CLK, 0x20),
 	PIN_BSC_CFG(BSC1DAT, BSC1DAT, 0x20),
@@ -89,35 +63,9 @@ static struct pin_config board_pin_config[] = {
 };
 
 /* board level init */
-int pinmux_board_init(void)
+int __init pinmux_board_init(void)
 {
-#define PASSWORD 0xA5A501
 	int i;
-	void __iomem *base;
-
-	/* turn off access restriction */
-	base = ioremap(g_chip_pin_desc.base_addr, g_chip_pin_desc.mapping_size);
-
-	if (!base)
-		return -ENOMEM;
-
-	writel(0xA5A501, base + PADCTRLREG_WR_ACCESS_OFFSET);
-	writel(0x0, base + PADCTRLREG_ACCESS_LOCK0_OFFSET);
-
-	writel(0xA5A501, base + PADCTRLREG_WR_ACCESS_OFFSET);
-	writel(0x0, base + PADCTRLREG_ACCESS_LOCK1_OFFSET);
-
-	writel(0xA5A501, base + PADCTRLREG_WR_ACCESS_OFFSET);
-	writel(0x0, base + PADCTRLREG_ACCESS_LOCK2_OFFSET);
-
-	writel(0xA5A501, base + PADCTRLREG_WR_ACCESS_OFFSET);
-	writel(0x0, base + PADCTRLREG_ACCESS_LOCK3_OFFSET);
-
-	writel(0xA5A501, base + PADCTRLREG_WR_ACCESS_OFFSET);
-	writel(0x0, base + PADCTRLREG_ACCESS_LOCK4_OFFSET);
-
-	iounmap (base);
-
 	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
 		pinmux_set_pin_config(&board_pin_config[i]);
 
