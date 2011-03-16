@@ -175,12 +175,49 @@ static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
 	return 0;
 }
 
+static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigned debounce)
+{
+	void __iomem * reg_base = kona_gpio.reg_base;
+	u32 val, res, ret = 0;
+	unsigned long flags;
+
+	(void) chip; /* unused input parameter */
+
+	spin_lock_irqsave(&kona_gpio.lock, flags);
+
+	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+	val &= ~GPIO_GPCTR0_DBR_MASK;
+
+	if (!is_power_of_2(debounce)) {
+		printk(KERN_ERR "%s() : Invalid Debounce value %d\n", __func__, debounce);
+		ret = -EINVAL;
+		goto err;
+	}
+
+	res = fls(debounce) - 1;
+
+	if (res < GPIO_GPCTR0_DBR_CMD_1MS || res > GPIO_GPCTR0_DBR_CMD_128MS) {
+		printk(KERN_ERR "%s() : Debounce value %d not in range\n", __func__, debounce);
+		ret = -EINVAL;
+		goto err;
+	}
+
+	val |= ((GPIO_GPCTR0_DBR_CMD_ENABLE | res) << GPIO_GPCTR0_DBR_SHIFT);
+
+	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
+
+err:	spin_unlock_irqrestore(&kona_gpio.lock, flags);
+
+	return ret;
+}
+
 static struct gpio_chip kona_gpio_chip = {
 	.label              = "kona-gpio",
 	.direction_input    = kona_gpio_direction_input,
 	.get                = kona_gpio_get,
 	.direction_output   = kona_gpio_direction_output,
 	.set                = kona_gpio_set,
+	.set_debounce		= kona_gpio_set_debounce,
 	.base               = 0,
 	.ngpio              = 0,
 };
