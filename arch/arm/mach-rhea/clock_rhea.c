@@ -69,6 +69,18 @@ DECLARE_REF_CLK		(var_13m, 			13*CLOCK_1M,	4,	name_to_clk(var_52m));
 DECLARE_REF_CLK		(usbh_48m, 			48*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK		(ref_cx40, 			153600*CLOCK_1K,1,	0);	// FIXME
 
+DECLARE_REF_CLK 	(csi0_pix_phy,			125*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK 	(csi0_byte0_phy,		125*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK 	(csi0_byte1_phy,		125*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK 	(csi1_pix_phy,			125*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK 	(csi1_byte0_phy,		125*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK 	(csi1_byte1_phy,		125*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK 	(dsi0_pix_phy,			125*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK 	(dsi1_pix_phy,			125*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK 	(testdebug,			125*CLOCK_1M,	1,	0);
+
+
+
 /* CCU clock */
 /*****************************************************************************
 	Reference clocks
@@ -135,10 +147,45 @@ DECLARE_BUS_CLK(bsc2_apb, BSC2, BSC2_APB, kps_ccu, KONA_SLV, KPS,
 	 52*CLOCK_1M,  78*CLOCK_1M);
 
 /* MM bus clock */
+DECLARE_BUS_CLK(spi_apb, SPI_APB, SPI_APB, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
+
+DECLARE_BUS_CLK(mm_apb, MM_APB, MM_APB, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
+
+DECLARE_BUS_CLK(csi0_axi, CSI0_AXI, CSI0_AXI, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
+
+DECLARE_BUS_CLK(csi1_axi, CSI1_AXI, CSI1_AXI, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
+
+DECLARE_BUS_CLK(dsi0_axi, DSI0_AXI, DSI0_AXI, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
+
+DECLARE_BUS_CLK(dsi1_axi, DSI1_AXI, DSI1_AXI, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
+
 DECLARE_BUS_CLK(smi_axi, SMI_AXI, SMI_AXI, mm_ccu, MM, MM,
 	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
 	166400*CLOCK_1K, 249600*CLOCK_1K);
 
+DECLARE_BUS_CLK(v3d_axi, V3D, V3D_AXI, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
+
+DECLARE_BUS_CLK(isp_axi, ISP, ISP_AXI, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
+
+DECLARE_BUS_CLK(mm_dma_axi, MM_DMA, MM_DMA_AXI, mm_ccu, MM, MM,
+	 26*CLOCK_1M,  49920*CLOCK_1K,	83200*CLOCK_1K, 99840*CLOCK_1K,
+	166400*CLOCK_1K, 249600*CLOCK_1K);
 
 /*****************************************************************************
 	Peripheral clocks
@@ -177,10 +224,10 @@ static struct clk_src sdio4_clk_src = {
 	.parents	=	sdio_clk_src_tbl,
 };
 
-DECLARE_PERI_CLK(sdio1, SDIO1, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
-DECLARE_PERI_CLK(sdio2, SDIO2, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
-DECLARE_PERI_CLK(sdio3, SDIO3, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
-DECLARE_PERI_CLK(sdio4, SDIO4, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
+DECLARE_PERI_CLK(sdio1, SDIO1, SDIO1, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
+DECLARE_PERI_CLK(sdio2, SDIO2, SDIO2, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
+DECLARE_PERI_CLK(sdio3, SDIO3, SDIO3, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
+DECLARE_PERI_CLK(sdio4, SDIO4, SDIO4, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
 
 /* KPS peripheral clock */
 static struct clk *bsc_clk_src_tbl[] =
@@ -208,19 +255,18 @@ DECLARE_PERI_CLK_NO_DIV(bsc1, BSC1, ref_13m, 13*CLOCK_1M, 1, KONA_SLV, KPS);
 DECLARE_PERI_CLK_NO_DIV(bsc2, BSC2, ref_13m, 13*CLOCK_1M, 1, KONA_SLV, KPS);
 
 /* MM peripheral clock */
-static struct clk *smi_clk_src_tbl[] =
+static struct clk *mm_src_tbl[] =
 {
 	name_to_clk(var_500m),
 	name_to_clk(var_312m),
 };
 
 static struct clk_src smi_clk_src = {
-	.total		=	ARRAY_SIZE(smi_clk_src_tbl),
+	.total		=	ARRAY_SIZE(mm_src_tbl),
 	.sel		=	0,
-	.parents	=	smi_clk_src_tbl,
+	.parents	=	mm_src_tbl,
 };
-
-DECLARE_PERI_CLK(smi, SMI, var_500m, 500*CLOCK_1M, 1, MM, MM, 1);
+DECLARE_PERI_CLK(smi, SMI, SMI, var_500m, 500*CLOCK_1M, 1, MM, MM, 1);
 
 /* table for registering clock */
 static struct __init clk_lookup rhea_clk_tbl[] =
@@ -278,6 +324,25 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	CLK_LK(sdio4_sleep),
 	CLK_LK(bsc1_apb),
 	CLK_LK(bsc2_apb),
+
+	CLK_LK(csi0_pix_phy),
+	CLK_LK(csi0_byte0_phy),
+	CLK_LK(csi0_byte1_phy),
+	CLK_LK(csi1_pix_phy),
+	CLK_LK(csi1_byte0_phy),
+	CLK_LK(csi1_byte1_phy),
+	CLK_LK(dsi0_pix_phy),
+	CLK_LK(dsi1_pix_phy),
+	CLK_LK(testdebug),
+	CLK_LK(spi_apb),
+	CLK_LK(mm_apb),
+	CLK_LK(csi0_axi),
+	CLK_LK(csi1_axi),
+	CLK_LK(dsi0_axi),
+	CLK_LK(dsi1_axi),
+	CLK_LK(v3d_axi),
+	CLK_LK(isp_axi),
+	CLK_LK(mm_dma_axi),
 
 	CLK_LK(smi_axi),
 };
