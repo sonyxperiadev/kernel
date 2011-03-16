@@ -293,13 +293,13 @@ unsigned long clock_get_xtal(void);
 	}
 
 /* declare a peripheral clock without divider */
-#define	DECLARE_PERI_CLK_NO_DIV(clk_name, CLK_NAME, clk_parent, clk_rate, clk_div, ccu, pfx)	\
+#define	DECLARE_PERI_CLK_NO_DIV(clk_name, CLK_NAME, clk_parent, clk_rate, ccu, pfx)	\
 	static struct peri_clock clk_name##_clk = {						\
 		.clk	=	{								\
 			.name	=	__stringify(clk_name##_clk),				\
 			.parent =	name_to_clk(clk_parent),				\
 			.rate	=	clk_rate,						\
-			.div	=	clk_div,						\
+			.div	=	1,							\
 			.id	=	-1,							\
 			.src	=	&clk_name##_clk_src,					\
 			.ops	=	&peri_clk_ops,						\

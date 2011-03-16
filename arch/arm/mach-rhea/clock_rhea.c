@@ -49,12 +49,13 @@ DECLARE_REF_CLK		(ref_96m, 			96*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK		(var_500m,	 		500*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK		(var_500m_varVDD, 		500*CLOCK_1M,	1,	0);
 
-
+DECLARE_REF_CLK		(ref_1m,	 		1*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK		(ref_32k, 			32*CLOCK_1K,	1,	0);
 DECLARE_REF_CLK		(misc_32k, 			32*CLOCK_1K,	1,	0);
 
 DECLARE_REF_CLK		(ref_312m, 			312*CLOCK_1M,	0,	0);
 DECLARE_REF_CLK		(ref_208m, 			208*CLOCK_1M,	0,	name_to_clk(ref_312m));
+DECLARE_REF_CLK		(ref_156m, 			156*CLOCK_1M,	2,	name_to_clk(ref_312m));
 DECLARE_REF_CLK		(ref_104m, 			104*CLOCK_1M,	3,	name_to_clk(ref_312m));
 DECLARE_REF_CLK		(ref_52m, 			52*CLOCK_1M,	2,	name_to_clk(ref_104m));
 DECLARE_REF_CLK		(ref_13m, 			13*CLOCK_1M,	4,	name_to_clk(ref_52m));
@@ -138,6 +139,59 @@ DECLARE_BUS_CLK_NO_GATING(sdio4_sleep, SDIO4, SDIO4_SLEEP, kpm_ccu, KONA_MST, KP
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K);
 
 /* KPS bus clock */
+DECLARE_BUS_CLK(hsm_ahb, HSM, HSM_AHB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  52*CLOCK_1M,  78*CLOCK_1M,  104*CLOCK_1M,
+	 156*CLOCK_1M,  156*CLOCK_1M);
+
+DECLARE_BUS_CLK(hsm_apb, HSM, HSM_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(spum_open_apb, SPUM_OPEN_APB, SPUM_OPEN_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(spum_sec_apb, SPUM_SEC_APB, SPUM_SEC_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK_NO_GATING(apb1, APB1, APB1, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(timers_apb, TIMERS, TIMERS_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(ssp0_apb, SSP0, SSP0_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(dmac_mux_apb, DMAC_MUX, DMAC_MUX_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(uarb3_apb, UARTB3, UARTB3_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(uarb2_apb, UARTB2, UARTB2_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(uarb_apb, UARTB, UARTB_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK(pwm_apb, PWM, PWM_APB, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
+/* PWM has no divider - looks more likely bus clock, somehow in the peripheral clock zone  */
+DECLARE_BUS_CLK(pwm, PWM, PWM, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,
+	 26*CLOCK_1M,  26*CLOCK_1M);
+
 DECLARE_BUS_CLK(bsc1_apb, BSC1, BSC1_APB, kps_ccu, KONA_SLV, KPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
@@ -145,6 +199,11 @@ DECLARE_BUS_CLK(bsc1_apb, BSC1, BSC1_APB, kps_ccu, KONA_SLV, KPS,
 DECLARE_BUS_CLK(bsc2_apb, BSC2, BSC2_APB, kps_ccu, KONA_SLV, KPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
+
+DECLARE_BUS_CLK_NO_GATING(apb2, APB2_REG, APB2_REG, kps_ccu, KONA_SLV, KPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
 
 /* MM bus clock */
 DECLARE_BUS_CLK(spi_apb, SPI_APB, SPI_APB, mm_ccu, MM, MM,
@@ -251,8 +310,84 @@ static struct clk_src bsc2_clk_src = {
 	.parents	=	bsc_clk_src_tbl,
 };
 
-DECLARE_PERI_CLK_NO_DIV(bsc1, BSC1, ref_13m, 13*CLOCK_1M, 1, KONA_SLV, KPS);
-DECLARE_PERI_CLK_NO_DIV(bsc2, BSC2, ref_13m, 13*CLOCK_1M, 1, KONA_SLV, KPS);
+DECLARE_PERI_CLK_NO_DIV(bsc1, BSC1, ref_13m, 13*CLOCK_1M, KONA_SLV, KPS);
+DECLARE_PERI_CLK_NO_DIV(bsc2, BSC2, ref_13m, 13*CLOCK_1M, KONA_SLV, KPS);
+
+static struct clk *ssp_clk_src_tbl[] =
+{
+	name_to_clk(crystal),
+	name_to_clk(var_104m),
+	name_to_clk(ref_104m),
+	name_to_clk(var_96m),
+	name_to_clk(ref_96m),
+};
+
+static struct clk_src ssp0_clk_src = {
+	.total		=	ARRAY_SIZE(ssp_clk_src_tbl),
+	.sel		=	1,
+	.parents	=	ssp_clk_src_tbl,
+};
+DECLARE_PERI_CLK(ssp0, SSP0, SSP0, var_104m, 52*CLOCK_1M, 2, KONA_SLV, KPS, 0);
+
+static struct clk *uart_clk_src_tbl[] =
+{
+	name_to_clk(crystal),
+	name_to_clk(var_156m),
+	name_to_clk(ref_156m),
+};
+
+static struct clk_src uartb3_clk_src = {
+	.total		=	ARRAY_SIZE(uart_clk_src_tbl),
+	.sel		=	1,
+	.parents	=	uart_clk_src_tbl,
+};
+static struct clk_src uartb2_clk_src = {
+	.total		=	ARRAY_SIZE(uart_clk_src_tbl),
+	.sel		=	1,
+	.parents	=	uart_clk_src_tbl,
+};
+static struct clk_src uartb_clk_src = {
+	.total		=	ARRAY_SIZE(uart_clk_src_tbl),
+	.sel		=	1,
+	.parents	=	uart_clk_src_tbl,
+};
+DECLARE_PERI_CLK(uartb3, UARTB3, UARTB3, var_156m, 13*CLOCK_1M, 12, KONA_SLV, KPS, 8);
+DECLARE_PERI_CLK(uartb2, UARTB2, UARTB2, var_156m, 13*CLOCK_1M, 12, KONA_SLV, KPS, 8);
+DECLARE_PERI_CLK(uartb, UARTB, UARTB, var_156m, 13*CLOCK_1M, 12, KONA_SLV, KPS, 8);
+
+static struct clk *timers_clk_src_tbl[] =
+{
+	name_to_clk(ref_1m),
+	name_to_clk(ref_32k),
+};
+
+static struct clk_src timers_clk_src = {
+	.total		=	ARRAY_SIZE(timers_clk_src_tbl),
+	.sel		=	1,
+	.parents	=	timers_clk_src_tbl,
+};
+DECLARE_PERI_CLK_NO_DIV(timers, TIMERS, ref_32k, 32*CLOCK_1K, KONA_SLV, KPS);
+
+static struct clk *spum_clk_src_tbl[] =
+{
+	name_to_clk(var_312m),
+	name_to_clk(ref_312m),
+};
+
+static struct clk_src spum_open_clk_src = {
+	.total		=	ARRAY_SIZE(spum_clk_src_tbl),
+	.sel		=	0,
+	.parents	=	spum_clk_src_tbl,
+};
+
+static struct clk_src spum_sec_clk_src = {
+	.total		=	ARRAY_SIZE(spum_clk_src_tbl),
+	.sel		=	0,
+	.parents	=	spum_clk_src_tbl,
+};
+
+DECLARE_PERI_CLK(spum_open, SPUM_OPEN, SPUM_OPEN, var_312m, 28*CLOCK_1M, 11, KONA_SLV, KPS, 0);
+DECLARE_PERI_CLK(spum_sec, SPUM_SEC, SPUM_SEC, var_312m, 28*CLOCK_1M, 11, KONA_SLV, KPS, 0);
 
 /* MM peripheral clock */
 static struct clk *mm_src_tbl[] =
@@ -324,6 +459,27 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	CLK_LK(sdio4_sleep),
 	CLK_LK(bsc1_apb),
 	CLK_LK(bsc2_apb),
+	CLK_LK(hsm_ahb),
+	CLK_LK(hsm_apb),
+	CLK_LK(spum_open_apb),
+	CLK_LK(spum_sec_apb),
+	CLK_LK(apb1),
+	CLK_LK(timers_apb),
+	CLK_LK(ssp0_apb),
+	CLK_LK(dmac_mux_apb),
+	CLK_LK(uarb3_apb),
+	CLK_LK(uarb2_apb),
+	CLK_LK(uarb_apb),
+	CLK_LK(pwm_apb),
+	CLK_LK(pwm),
+	CLK_LK(apb2),
+	CLK_LK(ssp0),
+	CLK_LK(uartb3),
+	CLK_LK(uartb2),
+	CLK_LK(uartb),
+	CLK_LK(timers),
+	CLK_LK(spum_open),
+	CLK_LK(spum_sec),
 
 	CLK_LK(csi0_pix_phy),
 	CLK_LK(csi0_byte0_phy),
