@@ -425,6 +425,7 @@ config BCM59055_FUELGAUGE
 	---help---
 	 BCM59055 PMU Fuel Gauge driver
 
+source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"
