@@ -15,4 +15,3 @@ obj-$(CONFIG_FB_BRCM_RHEA) += csl_smi.o csl_dma_vc4lite.o csl_tectl_vc4lite.o
 
 # Turn off over zealous gcc warnings
 EXTRA_CFLAGS += -D_RHEA_ -Wno-format -Wno-missing-braces
-

@@ -17,6 +17,7 @@
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
 #include <linux/ipc/ipc.h>
+#include <linux/clk.h>
 
 #include <mach/io.h>
 
@@ -24,7 +25,7 @@
 #include <linux/android_power.h>
 #endif
 
-#define RHEA_FB_DEBUG	1 
+//#define RHEA_FB_DEBUG 
 #include "rhea_fb.h"
 #include <plat/mobcom_types.h>
 #include "lcd/display_drv.h"
@@ -34,7 +35,10 @@ extern DISPDRV_T* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable ( void );
 struct rhea_fb {
 	dma_addr_t phys_fbbase;
 	spinlock_t lock;
-	struct semaphore wait_for_irq;
+	struct task_struct *thread;
+	struct semaphore thread_sem;
+	struct semaphore update_sem;
+	atomic_t buff_idx;
 	int base_update_count;
 	int rotation;
 	struct fb_info fb;
@@ -60,6 +64,8 @@ rhea_fb_setcolreg(unsigned int regno, unsigned int red, unsigned int green,
 {
 	struct rhea_fb *fb = container_of(info, struct rhea_fb, fb);
 
+	rheafb_debug("RHEA regno = %d r=%d g=%d b=%d\n", regno, red, green, blue);
+
 	if (regno < 16) {
 		fb->cmap[regno] = convert_bitfield(transp, &fb->fb.var.transp) |
 				  convert_bitfield(blue, &fb->fb.var.blue) |
@@ -74,6 +80,8 @@ rhea_fb_setcolreg(unsigned int regno, unsigned int red, unsigned int green,
 
 static int rhea_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 {
+	rheafb_debug("RHEA %s\n", __func__);
+
 	if((var->rotate & 1) != (info->var.rotate & 1)) {
 		if((var->xres != info->var.yres) ||
 		   (var->yres != info->var.xres) ||
@@ -114,6 +122,9 @@ static int rhea_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info
 static int rhea_fb_set_par(struct fb_info *info)
 {
 	struct rhea_fb *fb = container_of(info, struct rhea_fb, fb);
+
+	rheafb_debug("RHEA %s\n", __func__);
+
 	if(fb->rotation != fb->fb.var.rotate) {
 		rheafb_warning("Rotation is not supported yet !\n");
 		return -EINVAL;
@@ -136,24 +147,22 @@ static irqreturn_t rhea_fb_interrupt(int irq, void *dev_id)
 
 static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 {
-	unsigned long irq_flags;
-	int ret;
+	int ret = 0;
 	struct rhea_fb *fb = container_of(info, struct rhea_fb, fb);
-	uint32_t buff_idx, control, status;
-	
+	uint32_t buff_idx;
+
 	/* We are here only if yoffset is '0' or 'yres',
 	 * so if yoffset = 0, update first buffer or update second
 	 */
 	buff_idx = var->yoffset ? 1 : 0;
 
-	fb->base_update_count++;
+	rheafb_debug("RHEA %s with buff_idx =%d \n", __func__, buff_idx);
 
-	
-	ret = down_timeout(&fb->wait_for_irq, HZ*3); /* 3 sec timeout */
-	if (ret != 0) {
-		rheafb_warning("BRCM fb update timed out, no irq received\n");
-		fb->base_update_count--;
-	}
+	atomic_set(&fb->buff_idx, buff_idx);
+
+	//fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
+
+	//rheafb_info("RHEA Display is updated once at %d time with yoffset=%d\n", fb->base_update_count, var->yoffset);
 
 	return ret;
 }
@@ -172,6 +181,25 @@ static void rhea_fb_late_resume(android_early_suspend_t *h)
 }
 #endif
 
+void enable_smi_display_clks(void)
+{
+	struct clk *smi_axi;
+	struct clk *mm_dma;
+	struct clk *smi;
+
+	smi_axi = clk_get (NULL, "smi_axi_clk");
+	mm_dma = clk_get (NULL, "mm_dma_axi_clk");
+
+	smi = clk_get (NULL, "smi_clk");
+	BUG_ON (!smi_axi || !smi || !mm_dma);
+
+	clk_set_rate (smi, 250000000);
+	clk_enable (smi_axi);
+	clk_enable (smi);
+	clk_enable(mm_dma);
+
+}
+
 static int enable_display(struct rhea_fb *fb)
 {
 	int ret = 0;
@@ -186,7 +214,10 @@ static int enable_display(struct rhea_fb *fb)
 		 */
 		local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
 		local_DISPDRV_OPEN_PARM_T.busCh = 0;
+		enable_smi_display_clks();
 		fb->display_ops->open((void *)&local_DISPDRV_OPEN_PARM_T, &fb->display_hdl);
+		fb->display_ops->start(fb->display_hdl);
+		fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_ON);
 	}
 #if 0
 	fb->display_info = fb->display_ops->get_info(fb->display_hdl);
@@ -210,6 +241,24 @@ static int disable_display(struct rhea_fb *fb)
 	return ret;
 }
 
+
+static int rhea_refresh_thread(void *arg)
+{
+	struct rhea_fb *fb = arg;
+	int ret = 0;
+
+	down(&fb->thread_sem);
+
+	do {
+		fb->display_ops->update(fb->display_hdl, atomic_read(&fb->buff_idx), NULL /* Callback */);
+		fb->base_update_count++;
+		rheafb_debug("RHEA Display is updated once at %d time with buffer idx=%d\n", fb->base_update_count, atomic_read(&fb->buff_idx));
+		ret = down_timeout(&fb->update_sem, msecs_to_jiffies(30));
+	} while (1);
+
+	up(&fb->thread_sem);
+	return 0;
+}
 
 static struct fb_ops rhea_fb_ops = {
 	.owner          = THIS_MODULE,
@@ -237,9 +286,17 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 
 	spin_lock_init(&fb->lock);
-	sema_init(&fb->wait_for_irq, 0);
 	platform_set_drvdata(pdev, fb);
 
+	sema_init(&fb->thread_sem, 0);
+	sema_init(&fb->update_sem, 0);
+	atomic_set(&fb->buff_idx, 0);
+	fb->thread = kthread_run(rhea_refresh_thread, fb, "lcdrefresh_d");
+	if (IS_ERR(fb->thread)) {
+		ret = PTR_ERR(fb->thread);
+		goto thread_create_failed;
+	}
+	
 #if 0
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if(r == NULL) {
@@ -349,7 +406,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 #endif
 
-	rheafb_info("Framebuffer starts at phys[0x%08x], and virt[0x%08x]\n",
+	rheafb_debug("Framebuffer starts at phys[0x%08x], and virt[0x%08x]\n",
 			fb->phys_fbbase, (uint32_t)fb->fb.screen_base);
 
 	ret = fb_set_var(&fb->fb, &fb->fb.var);
@@ -357,9 +414,9 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		rheafb_error("fb_set_var failed\n");
 		goto err_set_var_failed;
 	}
-
 	/* Paint it black (assuming default fb contents are all zero) */
 	rhea_fb_pan_display(&fb->fb.var, &fb->fb);
+	up(&fb->thread_sem);
 
 	ret = register_framebuffer(&fb->fb);
 	if (ret) {
@@ -368,7 +425,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 
 	rheafb_info("RHEA Framebuffer probe successfull\n");
-
+#if 0
 #ifdef CONFIG_LOGO
 	/*  Display the default logo/splash screen. */
 	fb_prepare_logo(&fb->fb, 0);
@@ -377,6 +434,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	rheafb_info("Logo is now in framebuffer\n");
 
 	fb->display_ops->update(fb->display_hdl, NULL /* Callback */);
+#endif
 #endif
 
 #ifdef CONFIG_ANDROID_POWER
@@ -394,6 +452,7 @@ err_set_var_failed:
 	disable_display(fb);
 err_enable_display_failed:
 err_fbmem_alloc_failed:
+thread_create_failed:
 	kfree(fb);
 err_fb_alloc_failed:
 	rheafb_alert("RHEA Framebuffer probe FAILED !!\n");

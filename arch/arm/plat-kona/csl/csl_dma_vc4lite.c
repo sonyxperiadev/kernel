@@ -119,11 +119,11 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
         }
 #endif
 
-		#ifdef UNDER_LINUX
+#ifdef UNDER_LINUX
         pdma->base = HW_IO_PHYS_TO_VIRT(DMA_VC4LITE_BASE_ADDR);
-		#else
+#else
 		pdma->base = DMA_VC4LITE_BASE_ADDR;
-		#endif
+#endif
         pdma->handle = (CHAL_HANDLE) chal_dma_vc4lite_init(pdma->base);
         if (pdma->handle == NULL)
         {		
@@ -153,9 +153,9 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
 
             // set the channel control block address
             pdma->chan[i].pDmaChanCtrlBlkList = (UInt32*)(dmaCtrlBlkList + 4*i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
-			#ifdef UNDER_LINUX
+#ifdef UNDER_LINUX
 			pdma->chan[i].pDmaChanCtrlBlkListPHYS = (UInt32*)(dmaCtrlBlkListPhys + 4*i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
-			#endif
+#endif
             pdma->chan[i].dmaChanCtrlBlkMemSize = DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE;
             pdma->chan[i].dmaChanCtrlBlkItemNum = 0;
         }		
@@ -705,7 +705,7 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
 {      
     CslDmaVc4lite_t *pdma = (CslDmaVc4lite_t *)&dmac;
     UInt8  chanNum;    
-	
+
 #ifndef UNDER_LINUX
 	// disable the dma channel 1 interrupt
     IRQ_Disable(MM_DMA_CHAN1_IRQ);
@@ -719,9 +719,9 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
     IRQ_Disable(MM_DMA_CHAN3_IRQ);
     IRQ_Clear(MM_DMA_CHAN3_IRQ);
 #else
-    disable_irq_nosync(BCM_INT_ID_MM_DMA_CHAN1);
-    disable_irq_nosync(BCM_INT_ID_MM_DMA_CHAN2);
-    disable_irq_nosync(BCM_INT_ID_MM_DMA_CHAN3);
+    //disable_irq_nosync(BCM_INT_ID_MM_DMA_CHAN1);
+    //disable_irq_nosync(BCM_INT_ID_MM_DMA_CHAN2);
+    //disable_irq_nosync(BCM_INT_ID_MM_DMA_CHAN3);
 #endif
 
 	// sanity check
@@ -803,9 +803,9 @@ static void dma_vc4lite_hisr(void)
     IRQ_Enable(MM_DMA_CHAN2_IRQ);
     IRQ_Enable(MM_DMA_CHAN3_IRQ);
 #else
-    enable_irq(BCM_INT_ID_MM_DMA_CHAN1);
-    enable_irq(BCM_INT_ID_MM_DMA_CHAN2);
-    enable_irq(BCM_INT_ID_MM_DMA_CHAN3);
+    //enable_irq(BCM_INT_ID_MM_DMA_CHAN1);
+    //enable_irq(BCM_INT_ID_MM_DMA_CHAN2);
+    //enable_irq(BCM_INT_ID_MM_DMA_CHAN3);
 #endif
 }
 

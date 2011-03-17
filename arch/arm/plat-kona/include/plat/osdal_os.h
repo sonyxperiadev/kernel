@@ -67,7 +67,7 @@ wait_for_completion_timeout((struct completion *)&(e), (t))
 
 /* Debug Print */
 //#define dprintf(prio, format, args...)	pr_info("%s:%s"" format", __FILE__, __FUNCTION__)
-#define dprintf(prio, fmt, ...) printk(KERN_DEBUG pr_fmt(fmt), ##__VA_ARGS__)
+#define dprintf(prio, fmt, ...) printk(KERN_ERR pr_fmt(fmt), ##__VA_ARGS__)
 
 #endif /*_OSDAL_OS_H_*/
 

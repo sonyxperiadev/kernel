@@ -499,7 +499,6 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	CLK_LK(v3d_axi),
 	CLK_LK(isp_axi),
 	CLK_LK(mm_dma_axi),
-
 	CLK_LK(smi_axi),
 };
 

@@ -88,27 +88,19 @@
 extern "C" {
 #endif
 
-#if ( defined(BSP_PLUS_BUILD_INCLUDED) )    
-#undef __LCD_DBG_USE_LOG__
-#else
-#define __LCD_DBG_USE_LOG__
-#endif
+//#define __RHEA_LCD_DBG__ 
 
-           
-#ifdef __LCD_DBG_USE_LOG__
-#define LCD_DBG(id, fmt, args...)         printk(fmt, ##args)
-#define LCD_DBG_ID      printk
-#define LCD_DBG_ERR_ID  printk
-#define LCD_DBG_INIT_ID printk
+#ifdef __RHEA_LCD_DBG__
+#define LCD_DBG(id, fmt, args...)         printk(KERN_ERR fmt, ##args)
 #else
-#define LCD_DBG(a, ...)     
-#define LCD_DBG_ID  
-#define LCD_DBG_ERR_ID
-#define LCD_DBG_INIT_ID  
-//#define LCD_DBG         dprintf
-//#define LCD_DBG_ID      DBG_L1
-//#define LCD_DBG_ERR_ID  DBG_L1
-//#define LCD_DBG_INIT_ID DBG_L1
+typedef enum 
+{
+	LCD_DBG_ID = 0,
+	LCD_DBG_ERR_ID = 1,
+	LCD_DBG_INIT_ID = 2,
+} LCD_DBG_ID_TYPE;
+
+#define LCD_DBG(id, fmt, args...)	do { if (id == LCD_DBG_ERR_ID) printk(KERN_ERR fmt, ##args); } while (0)
 #endif 
 
 /**

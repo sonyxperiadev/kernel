@@ -128,8 +128,8 @@
 #endif   /* __KERNEL__ */
 
 #define IRQ_Clear(irq_id)	do {} while (0)
-#define IRQ_Disable(irq_id) 	disable_irq_nosync(irq_id)
-#define IRQ_Enable(irq_id)	enable_irq(irq_id)
+#define IRQ_Disable(irq_id) 	do {} while (0) //disable_irq_nosync(irq_id)
+#define IRQ_Enable(irq_id)	do {} while (0) //enable_irq(irq_id)
 
 #define  __SMI_SPI_ENABLE_TRACE_MSG__
 #undef __SMI_USE_PRM__
@@ -289,7 +289,9 @@ static      Queue_t	    	            updReqQ;
 static      Semaphore_t                 eofDmaSema;
 static      Semaphore_t	                smiSema;
 static      Semaphore_t	                smiSemaInt;
+#ifndef __KERNEL__
 static      Interrupt_t                 sSmiHisr = NULL;
+#endif
 
 static      SMI_SPI_DRV_t               cslSmiSpiDrv;
 
@@ -318,10 +320,8 @@ static void cslSmi_LISR ( void );
 static irqreturn_t cslSmi_LISR(int irq, void *dev_id);
 #endif
 
-#ifndef __KERNEL
+#ifndef __KERNEL__
 static void cslSmi_HISR ( void );
-#else
-static void cslSmi_HISR ( unsigned long arg );
 #endif
 
 static void     cslSmiEnablePads ( void );
@@ -360,6 +360,7 @@ static void cslSmiDisInt ( pSMI_SPI_HANDLE pSmi );
 void cslSmiSetClkEna ( Boolean ena )
 {
 #ifndef FPGA_VERSION        
+#ifndef __KERNEL__
     // enable wr acess to MM_CLK CCU registers
     *MM_CLK_WR_ACCESS = 0x00A5A501; 
     
@@ -378,6 +379,7 @@ void cslSmiSetClkEna ( Boolean ena )
         *SMI_AXI_CLK_ENA  = CLK_GATE_SW;
         *SMI_CLK_ENA	  = CLK_GATE_SW;       
     } 
+#endif
 #endif //#ifndef FPGA_VERSION
 }
 
@@ -485,12 +487,14 @@ static int cslSmiSetSmiClk ( pSMI_SPI_HANDLE pSmi, pCSL_SMI_CLK pSmiClkCfg )
         smiPllMHz, pSmiClkCfg->smiClkDiv, pSmi->cfg.smiCfg.smi_clk_ns );
     
     #ifndef FPGA_VERSION        
+#ifndef __KERNEL__
     // enable wr acess to MM_CLK CCU registers
     *MM_CLK_WR_ACCESS = 0x00A5A501; 
 
     *SMI_CLK_ENA = 2; // stop  SMI clock      
     *SMI_DIV     = smiDivReg;
     *SMI_CLK_ENA = 3; // start SMI clock      
+#endif
     #endif //#ifndef FPGA_VERSION
     return ( 0 );
 #endif    
@@ -785,7 +789,9 @@ static CSL_LCD_RES_T cslSmiWaitForInt( pSMI_SPI_HANDLE pSmi, UInt32 tout_msec )
     
     osRes = OSSEMAPHORE_Obtain ( smiSemaInt, tout_msec );
 
+#ifndef __KERNEL__
     cslSmiDisInt ( pSmi );
+#endif
 
     if ( osRes != OSSTATUS_SUCCESS )
     {
@@ -814,17 +820,15 @@ static CSL_LCD_RES_T cslSmiWaitForInt( pSMI_SPI_HANDLE pSmi, UInt32 tout_msec )
 // Description:    SMI Controller HISR
 //
 //*****************************************************************************
-#ifndef __KERNEL
+#ifndef __KERNEL__
 static void cslSmi_HISR ( void )
-#else
-static void cslSmi_HISR ( unsigned long arg )
-#endif
 {
 #if defined(__SMI_SPI_ENABLE_TRACE_MSG__ )
     LCD_DBG ( LCD_DBG_ID, "[CSL SMI] %s:\r\n", __FUNCTION__ );
 #endif    
     OSSEMAPHORE_Release ( smiSemaInt );
 }
+#endif
 
 //*****************************************************************************
 //
@@ -842,7 +846,10 @@ static irqreturn_t cslSmi_LISR(int irq, void *dev_id)
     IRQ_Disable ( BCM_INT_ID_SMI );
     IRQ_Clear   ( BCM_INT_ID_SMI );
     
-    OSINTERRUPT_Trigger( sSmiHisr );
+    cslSmiDisInt ( cslSmiSpiDrv.activeHandle );
+
+    //OSINTERRUPT_Trigger( sSmiHisr );
+    OSSEMAPHORE_Release ( smiSemaInt );
 
 #ifdef __KERNEL__
     return IRQ_HANDLED;
@@ -923,11 +930,13 @@ static Boolean cslSmiOsInit (void)
     {
         OSSEMAPHORE_ChangeName ( smiSema, "SmiSInt");
     }   
-    
+   
+#ifndef __KERNEL__
     // SMI Controller Interrupt
     sSmiHisr = OSINTERRUPT_Create( 
                   (IEntry_t)&cslSmi_HISR, HISRNAME_SMISTAT, 
                   IPRIORITY_MIDDLE, HISRSTACKSIZE_SMISTAT );
+#endif
 
 #ifndef __KERNEL__
     IRQ_Register ( MM_SMI_IRQ, cslSmi_LISR );
@@ -1643,6 +1652,8 @@ CSL_LCD_RES_T CSL_SMI_WrRdDataProg (
             
             if ( status != OSSTATUS_SUCCESS)
             {
+		printk(KERN_ERR "we got no DMA int\n");
+		panic("No VC4 DMA int back\n");
                 cslSmiDisInt ( pSmi );
                 cslSmiSpiDmaStop ( updMsg.dmaCh );   
                 
@@ -1780,17 +1791,6 @@ CSL_LCD_RES_T CSL_SMI_Close ( CSL_LCD_HANDLE smiH )
     return ( res );
 }
 
-void  enable_mm_clk_policy_masks(void)
-{
-	 *MM_CLK_WR_ACCESS = 0x00A5A501; 
-	*(SMI_REG_RW(HW_IO_PHYS_TO_VIRT(0x3c000010))) = ~0x0UL;
-	*(SMI_REG_RW(HW_IO_PHYS_TO_VIRT(0x3c000014))) = ~0x0UL;
-	*(SMI_REG_RW(HW_IO_PHYS_TO_VIRT(0x3c000018))) = ~0x0UL;
-	*(SMI_REG_RW(HW_IO_PHYS_TO_VIRT(0x3c00001c))) = ~0x0UL;
-}
-
-
-
 //*****************************************************************************
 //                 
 // Function Name:  CSL_SMI_Open
@@ -1854,8 +1854,6 @@ CSL_LCD_RES_T CSL_SMI_Open (
         return ( CSL_LCD_INST_COUNT );    
     }
        
-    enable_mm_clk_policy_masks();
-
     pSmi->chalH = chal_smi_init ( KONA_SMI_VA );
     //pSmi->chalH = chal_smi_init ( chal_sysmap_get_base_addr( SMI ) );
     

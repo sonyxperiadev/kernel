@@ -132,8 +132,8 @@
 #define GPIODRV_Set_Bit(pin, val) gpio_set_value(pin, val)
 
 #define HAL_LCD_RESET	41
-#undef HAL_LCD_RESET_B
-#undef HAL_LCD_RESET_C
+#define HAL_LCD_RESET_B  95
+#define HAL_LCD_RESET_C  96
 
 typedef struct
 {
@@ -210,6 +210,7 @@ Int32   NT35582_WVGA_SMI_SetWindow ( DISPDRV_HANDLE_T dispH );
 
 Int32   NT35582_WVGA_SMI_Update ( 
             DISPDRV_HANDLE_T    dispH, 
+	    int			fb_idx,
             DISPDRV_CB_T        apiCb ); 
 
 Int32   NT35582_WVGA_SMI_Update_ExtFb ( 
@@ -387,7 +388,7 @@ static void nt35582wvgaSmi_IoCtlWr(
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] nt35582wvgaSmi_IoCtlWr: "
                 "WR REG[0x%04X] DATA[0x%04X]\n", 
-                acc->cmnd, ((UInt32*)acc->pBuff)[i] );
+                (unsigned int)acc->cmnd, (unsigned int)((UInt32*)acc->pBuff)[i] );
         }                                                      
     }
 }
@@ -426,7 +427,7 @@ static void nt35582wvgaSmi_IoCtlRd(
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: "
                 "RD REG[0x%04X] DATA[0x%04X]\n\r", 
-                __FUNCTION__, acc->cmnd, ((UInt32*)acc->pBuff)[i] );
+                __FUNCTION__, (unsigned int)acc->cmnd, (unsigned int)((UInt32*)acc->pBuff)[i] );
         }
     }                                                      
 }
@@ -853,10 +854,16 @@ Int32 NT35582_WVGA_SMI_Open (
             __FUNCTION__  );
         return ( -1 );
     }    
+   
+    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open:start 0");
+    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open:start 2");
     
-       
+
     pSmiCfg  = &NT35582_WVGA_SMI_SmiCtrlCfg;
 
+ LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open:start 1");
+
+#if 0
     if ( pSmiCfg->usesTE ) 
     {  
         res = nt35582wvgaSmi_TeOn ();
@@ -867,6 +874,7 @@ Int32 NT35582_WVGA_SMI_Open (
             return ( res );
         }    
     }
+#endif
 
     // HERA HAS HARDCODED SMI ADDRESS LINES A1=SMI_CS(LCD_CS1) A0=SMI_nCD
     pSmiCfg->addr_c = 0xFC;
@@ -874,11 +882,24 @@ Int32 NT35582_WVGA_SMI_Open (
     
     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open: "
         "BUSCH[0x%04X] => ADDR_CMND[0x%02X] ADDR_DATA[0x%02X]\n", 
-        busCh, pSmiCfg->addr_c, pSmiCfg->addr_d );
+        (unsigned int)busCh, pSmiCfg->addr_c, pSmiCfg->addr_d );
     
     panelData = &NT35582_WVGA_SMI_Info;
     
     DISPDRV_Reset( FALSE );
+
+   if ( pSmiCfg->usesTE ) 
+    {  
+        res = nt35582wvgaSmi_TeOn ();
+        if ( res == -1 )
+        {
+            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Failed To Configure "
+                "TE Input\n\r", __FUNCTION__ ); 
+            return ( res );
+        }    
+    }
+
+
 
 #if defined(__WVGA_MODE_888__) 
     pPanel->bpp         = 4;
@@ -903,6 +924,14 @@ Int32 NT35582_WVGA_SMI_Open (
         return ( -1 );
     }
 
+#ifdef __KERNEL__
+    if (csl_dma_vc4lite_init() != DMA_VC4LITE_STATUS_SUCCESS)
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: csl_dma_vc4lite_init Failed\n\r",
+            __FUNCTION__);
+        return ( -1 );
+    }
+#endif
 
     *dispH = (DISPDRV_HANDLE_T) pPanel;
     pPanel->drvState = DRV_STATE_OPEN;
@@ -1149,6 +1178,7 @@ Int32 NT35582_WVGA_SMI_Update_ExtFb (
 //*****************************************************************************
 Int32 NT35582_WVGA_SMI_Update ( 
     DISPDRV_HANDLE_T    dispH, 
+    int			fb_idx,
     DISPDRV_CB_T        apiCb
     )
 {
@@ -1170,11 +1200,18 @@ Int32 NT35582_WVGA_SMI_Update (
     
     CSL_SMI_Lock ( lcdDrv->cslH );
     nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_WR_MEM_START );
-    
-    req.buff           = lcdDrv->frameBuffer;
+
+    if (0 == fb_idx)
+    	req.buff           = lcdDrv->frameBuffer;
+     else
+	req.buff 	   = (void *)((UInt32)lcdDrv->frameBuffer  + 
+		lcdDrv->panelData->width * lcdDrv->panelData->height * lcdDrv->bpp);
+
+    LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s fb phys = 0x%08x\n", __FUNCTION__,  (unsigned int)req.buff);
+
     req.lineLenP       = lcdDrv->panelData->width;
     req.lineCount      = lcdDrv->panelData->height;
-    req.timeOut_ms     = 100;
+    req.timeOut_ms     = 1000;
     req.buffBpp        = lcdDrv->bpp;
     
     req.cslLcdCbRec.cslH            = lcdDrv->cslH;

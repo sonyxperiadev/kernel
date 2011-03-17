@@ -35,14 +35,13 @@
 // local macro declarations
 //****************************************************************************
 
-#define CHAL_DMAVC4LITE_DEBUG
+//#define CHAL_DMAVC4LITE_DEBUG
 #define DMA_CHANNEL_ADDR_OFFSET     (0x40)
 #define DMA_MAX_CHANNEL             (3)
 
 #define CHAL_DMA_VC4LITE_ENABLE     (1)
 #define CHAL_DMA_VC4LITE_DISABLE    (0)
 
-//#define  CHAL_DMAVC4LITE_DEBUG
 #ifdef CHAL_DMAVC4LITE_DEBUG
 #define  DMA_DEBUG(a)    a
 #else
@@ -294,11 +293,11 @@ CHAL_DMA_VC4LITE_STATUS_t chal_dma_vc4lite_prepare_transfer(
         pDmaDev->baseAddr, 
         DMA_CONBLK_AD, 
         (channel*DMA_CHANNEL_ADDR_OFFSET),
-        #ifndef UNDER_LINUX
+#ifndef UNDER_LINUX
         (cUInt32)(ctrlBlkList)
-        #else
-		(cUInt32)(ctrlBlkListPHYS)
-		#endif
+#else
+	(cUInt32)(ctrlBlkListPHYS)
+#endif
     );
 
     return CHAL_DMA_VC4LITE_STATUS_SUCCESS;
