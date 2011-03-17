@@ -90,6 +90,9 @@ static struct platform_device board_serial_device = {
 
 static char *andoroid_function_name[] =
 {
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis",
+#endif
 #ifdef CONFIG_USB_ANDROID_MASS_STORAGE
 	"usb_mass_storage",
 #endif
@@ -105,9 +108,19 @@ static char *andoroid_function_name[] =
 #define	GOOGLE_VENDOR_ID	0x18d1
 #define	NEXUS_ONE_PROD_ID	0x0d02
 
+#define NETCHIP_VENDOR_ID	0x0525
+#define RNDIS_PROD_ID		0xa4a2
+
+#ifdef CONFIG_USB_ANDROID_RNDIS
+/* Used netchip ID for RNDIS
+ * see Documentation/usb/linux.inf
+ */
+#define	VENDOR_ID		NETCHIP_VENDOR_ID
+#define	PRODUCT_ID		RNDIS_PROD_ID
+#else
 #define	VENDOR_ID		GOOGLE_VENDOR_ID
 #define	PRODUCT_ID		NEXUS_ONE_PROD_ID
-
+#endif
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
 	.nluns		=	1,
 	.vendor		=	"Broadcom",
@@ -121,6 +134,20 @@ static struct platform_device android_mass_storage_device = {
 	.dev	=	{
 		.platform_data	=	&android_mass_storage_pdata,
 	}
+};
+
+static struct usb_ether_platform_data android_rndis_pdata = {
+        /* ethaddr FIXME */
+        .vendorID       = __constant_cpu_to_le16(VENDOR_ID),
+        .vendorDescr    = "Broadcom RNDIS",
+};
+
+static struct platform_device android_rndis_device = {
+        .name   = "rndis",
+        .id     = -1,
+        .dev    = {
+                .platform_data = &android_rndis_pdata,
+        },
 };
 
 static struct android_usb_product android_products[] = {
@@ -323,6 +350,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_i2c_adap_devices[2],
 	&board_sdio0_device,
 	&board_sdio1_device,
+	&android_rndis_device,
 	&android_mass_storage_device,
 	&android_usb,
 };
