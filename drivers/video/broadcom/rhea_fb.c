@@ -214,7 +214,7 @@ static int enable_display(struct rhea_fb *fb)
 		 */
 		local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
 		local_DISPDRV_OPEN_PARM_T.busCh = 0;
-		enable_smi_display_clks();
+		//enable_smi_display_clks();
 		fb->display_ops->open((void *)&local_DISPDRV_OPEN_PARM_T, &fb->display_hdl);
 		fb->display_ops->start(fb->display_hdl);
 		fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_ON);

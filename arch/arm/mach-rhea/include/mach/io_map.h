@@ -129,6 +129,8 @@
 
 #define KONA_MM_DMA_VA		    HW_IO_PHYS_TO_VIRT( MM_DMA_BASE_ADDR )
 
+#define KONA_PWRMGR_VA		    HW_IO_PHYS_TO_VIRT( PWRMGR_BASE_ADDR )
+
 #define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */ 
 
 #endif /* __RHEA_IO_MAP_H */

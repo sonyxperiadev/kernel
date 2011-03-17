@@ -43,6 +43,7 @@
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
+#include <linux/clk.h>
 #include "common.h"
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
@@ -120,9 +121,31 @@ static void __init rhea_ray_add_i2c_devices (void)
 		ARRAY_SIZE(pmu_info));
 }
 
+static void enable_smi_display_clks(void)
+{
+	struct clk *smi_axi;
+	struct clk *mm_dma;
+	struct clk *smi;
+
+	smi_axi = clk_get (NULL, "smi_axi_clk");
+	mm_dma = clk_get (NULL, "mm_dma_axi_clk");
+
+	smi = clk_get (NULL, "smi_clk");
+	BUG_ON (!smi_axi || !smi || !mm_dma);
+
+
+	clk_set_rate (smi, 250000000);
+
+	clk_enable (smi_axi);
+	clk_enable (smi);
+	clk_enable(mm_dma);
+}
+
 /* All Rhea Ray specific devices */ 
 static void __init rhea_ray_add_devices(void)
 {
+	enable_smi_display_clks();
+
 	platform_add_devices(rhea_ray_plat_devices, ARRAY_SIZE(rhea_ray_plat_devices));
 
 	rhea_ray_add_i2c_devices();

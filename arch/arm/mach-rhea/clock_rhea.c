@@ -15,14 +15,18 @@
 * consent.
 *****************************************************************************/
 
-#include <mach/clock.h>
-#include <asm/io.h>
 #include <linux/math64.h>
+#include <linux/delay.h>
+
+#include <mach/clock.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_sysmap_a9.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_pwrmgr.h>
+
+#include <asm/io.h>
 
 /*****************************************************************************
 	Proc clocks
@@ -502,9 +506,19 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	CLK_LK(smi_axi),
 };
 
+static void pwr_on_mm_subsystem(void)
+{
+	writel(0x1500, KONA_PWRMGR_VA + PWRMGR_SOFTWARE_1_VI_MM_POLICY_OFFSET); 
+	writel(0x1, KONA_PWRMGR_VA + PWRMGR_SOFTWARE_1_EVENT_OFFSET);	
+	mdelay(2);
+}
+
 int __init clock_init(void)
 {
 	int i;
+
+	pwr_on_mm_subsystem();
+
 	for (i=0; i<ARRAY_SIZE(rhea_clk_tbl); i++)
 		clkdev_add (&rhea_clk_tbl[i]);
 
