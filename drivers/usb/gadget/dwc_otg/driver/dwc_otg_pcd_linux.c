@@ -97,6 +97,12 @@ static struct gadget_wrapper {
 
 } *gadget_wrapper;
 
+/* check if request buffer is 4byte aligned */
+static inline int is_req_aligned(struct usb_request *req)
+{
+	return ! ((int)req->buf & 0x3UL);
+}
+
 /* Display the contents of the buffer */
 extern void dump_msg(const u8 * buf, unsigned int length);
 /**
@@ -116,7 +122,7 @@ static struct dwc_otg_pcd_ep *ep_from_handle(dwc_otg_pcd_t *pcd, void *handle)
 		if (pcd->out_ep[i].priv == handle)
 			return &pcd->out_ep[i];
 	}
-	
+
 	return NULL;
 }
 
@@ -263,6 +269,14 @@ static void dwc_otg_pcd_free_request(struct usb_ep *ep, struct usb_request *req)
 		return;
 	}
 
+#ifdef LM_INTERFACE
+	/* free dma buffer if it's allocated but not freed
+	 * for example, req queued but killed w/o completion
+	 */
+	if ( (req->dma != DWC_INVALID_DMA_ADDR) && !is_req_aligned(req) )
+		kfree (phys_to_virt(req->dma));
+#endif
+
 	kfree(req);
 }
 
@@ -344,13 +358,11 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 		    gfp_t gfp_flags)
 {
 	dwc_otg_pcd_t *pcd;
-	struct dwc_otg_pcd_ep *ep = NULL;	
+	struct dwc_otg_pcd_ep *ep = NULL;
 	int retval = 0, is_isoc_ep = 0;
-	dma_addr_t dma_addr;
 
 	DWC_DEBUGPL(DBG_PCDV, "%s(%p,%p,%d)\n",
 		    __func__, usb_ep, usb_req, gfp_flags);
-
 	if (!usb_req || !usb_req->complete || !usb_req->buf) {
 		DWC_WARN("bad params\n");
 		return -EINVAL;
@@ -395,21 +407,42 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 		return 0;
 	}
 #endif
-	
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
 	dma_addr = usb_req->dma;
 #else
 
 #if defined (LM_INTERFACE)
-	dma_addr = virt_to_phys(usb_req->buf);
-	dma_sync_single_for_device (NULL, dma_addr, usb_req->length,
+	BUG_ON (usb_req->dma != DWC_INVALID_DMA_ADDR);
+
+	/*
+	 * DWC OTG DMA engine only accepts 4byte-aligned address
+	 * allocate 4byte-aligned dma buffer if needed
+	 */
+	if ( !is_req_aligned(usb_req) ) {
+		void *buf = kmalloc (usb_req->length, gfp_flags);
+		if (!buf) {
+			DWC_WARN("Can't allocate aligned DMA buffer\n");
+			return -ENOMEM;
+		}
+
+		usb_req->dma = virt_to_phys(buf);
+		if (ep->dwc_ep.is_in)
+			memcpy (buf, usb_req->buf, usb_req->length);
+	}
+	else
+		usb_req->dma = virt_to_phys(usb_req->buf);
+	dma_sync_single_for_device (NULL,
+			usb_req->dma,
+			usb_req->length,
 			ep->dwc_ep.is_in?DMA_TO_DEVICE:DMA_FROM_DEVICE);
+
 #elif defined(PCI_INTERFACE)
 #error	"need to take care cache coherence"
 #endif
 #endif
 
-	retval = dwc_otg_pcd_ep_queue(pcd, usb_ep, usb_req->buf, dma_addr,
+	retval = dwc_otg_pcd_ep_queue(pcd, usb_ep, usb_req->buf, usb_req->dma,
 				      usb_req->length, usb_req->zero, usb_req,
 				      gfp_flags == GFP_ATOMIC ? 1 : 0);
 	if (retval) {
@@ -788,12 +821,12 @@ static int _xisoc_complete(dwc_otg_pcd_t *pcd, void *ep_handle,
 	ereqorg = &req->ext_req;
 	ereqport = (struct dwc_iso_xreq_port *) ereq_port;
 	desc_org = ereqorg->per_io_frame_descs;
-	
+
 	if (req && req->complete) {
 		/* Copy the request data from the portable logic to our request */
 		for(i = 0; i < ereqport->pio_pkt_count; i++) {
 			desc_org[i].actual_length = ereqport->per_io_frame_descs[i].actual_length;
-			desc_org[i].status = ereqport->per_io_frame_descs[i].status;			
+			desc_org[i].status = ereqport->per_io_frame_descs[i].status;
 		}
 
 		switch (status) {
@@ -810,7 +843,7 @@ static int _xisoc_complete(dwc_otg_pcd_t *pcd, void *ep_handle,
 			req->status = -ETIMEDOUT;
 			break;
 		default:
-			req->status = status;			
+			req->status = status;
 		}
 
 		/* And call the gadget's completion */
@@ -824,8 +857,8 @@ static int _complete(dwc_otg_pcd_t * pcd, void *ep_handle,
 		     void *req_handle, int32_t status, uint32_t actual)
 {
 	struct usb_request *req = (struct usb_request *)req_handle;
-	dma_addr_t dma_addr;
 	struct dwc_otg_pcd_ep *ep = NULL;
+	enum dma_data_direction dir;
 
 	if (req && req->complete) {
 		switch (status) {
@@ -847,10 +880,33 @@ static int _complete(dwc_otg_pcd_t * pcd, void *ep_handle,
 		req->actual = actual;
 		ep = ep_from_handle(pcd, ep_handle);
 #if defined(LM_INTERFACE)
-		dma_addr = virt_to_phys(req->buf);
-		dma_sync_single_for_cpu(NULL, dma_addr,
+		/*
+		 * for control pipe, the complete callback may be delayed by 1 packet
+		 * so direction of current packet doesn't apply
+		 * use DMA_FROM_DEVICE for conservativeness
+		 */
+		if (ep->dwc_ep.type == UE_CONTROL)
+			dir = DMA_FROM_DEVICE;
+		else
+			dir = ep->dwc_ep.is_in?DMA_TO_DEVICE:DMA_FROM_DEVICE;
+
+		dma_sync_single_for_cpu(NULL,
+				req->dma,
 				req->length,
-				ep->dwc_ep.is_in?DMA_TO_DEVICE:DMA_FROM_DEVICE);
+				dir);
+
+		/* if 4byte-aligned dma buffer is ever used */
+		if ( !is_req_aligned(req) ) {
+			void *buf = phys_to_virt (req->dma);
+			if (!ep->dwc_ep.is_in)
+				memcpy (req->buf, buf, req->length);
+
+			kfree(buf);
+		}
+
+		/* reset dma to invalid value */
+		req->dma = DWC_INVALID_DMA_ADDR;
+
 #elif defined(PCI_INTERFACE)
 #error	"need to take care cache coherence"
 #endif
@@ -1290,7 +1346,7 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 	{
 		dctl_data_t dctl = {.d32=0};
 		volatile uint32_t *addr = &(GET_CORE_IF(gadget_wrapper->pcd)->dev_if->dev_global_regs->dctl);
-		
+
 		dctl.d32 = dwc_read_reg32 (addr);
 		dctl.b.sftdiscon = 0;
 		dwc_write_reg32 (addr, dctl.d32);
@@ -1330,7 +1386,7 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 	{
 		dctl_data_t dctl = {.d32=0};
 		volatile uint32_t *addr = &(GET_CORE_IF(gadget_wrapper->pcd)->dev_if->dev_global_regs->dctl);
-		
+
 		dctl.d32 = dwc_read_reg32 (addr);
 		dctl.b.sftdiscon = 1;
 		dwc_write_reg32 (addr, dctl.d32);

@@ -1536,6 +1536,7 @@ static inline void do_set_address(dwc_otg_pcd_t * pcd)
 //                      DWC_DEBUGPL(DBG_PCDV, "SET_ADDRESS:%d\n", ctrl.wValue);
 #endif
 		dcfg.b.devaddr = UGETW(ctrl.wValue);
+		DWC_PRINTF("USB addr = %d\n", dcfg.b.devaddr);
 		dwc_modify_reg32(&dev_if->dev_global_regs->dcfg, 0, dcfg.d32);
 		do_setup_in_status_phase(pcd);
 	}
