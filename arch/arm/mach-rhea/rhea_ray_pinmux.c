@@ -60,6 +60,9 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT2, SDDAT2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT1, SDDAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
+
+	/* GPIO74 for TCA9539 IO expander */
+	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
 };
 
 /* board level init */

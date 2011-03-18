@@ -294,6 +294,12 @@
 #define  gpio_to_irq(gpio)		((gpio) + IRQ_GPIO_0 )
 #define  irq_to_gpio(irq)		((irq) - IRQ_GPIO_0 )
 
-#define NR_IRQS				(IRQ_GPIO_0 + NUM_GPIO_IRQS)
+#ifdef CONFIG_GPIO_PCA953X
+#define EXPANDED_GPIO_IRQS    16
+#define NR_IRQS               (IRQ_GPIO_0+NUM_GPIO_IRQS + EXPANDED_GPIO_IRQS)
+#else
+#define NR_IRQS               (IRQ_GPIO_0 + NUM_GPIO_IRQS)
+#endif
+
 
 #endif /* __PLAT_KONA_IRQS_H */

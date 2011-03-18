@@ -16,7 +16,13 @@
 #define __PLAT_GPIO_H
 
 #define   KONA_MAX_GPIO   192
-#define   ARCH_NR_GPIOS   KONA_MAX_GPIO
+
+#ifdef CONFIG_GPIO_PCA953X
+#define EXPANDED_GPIOS		16
+#define ARCH_NR_GPIOS		(KONA_MAX_GPIO+EXPANDED_GPIOS)
+#else
+#define ARCH_NR_GPIOS		KONA_MAX_GPIO
+#endif
 
 #include <asm-generic/gpio.h>
 
