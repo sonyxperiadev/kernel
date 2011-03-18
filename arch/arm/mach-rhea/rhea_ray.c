@@ -37,6 +37,13 @@
 #include <linux/i2c-kona.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <asm/gpio.h>
+#ifdef CONFIG_GPIO_PCA953X
+#include <linux/i2c/pca953x.h>
+#endif
+#ifdef CONFIG_TOUCHSCREEN_QT602240
+#include <linux/i2c/qt602240_ts.h>
+#endif
 #include <mach/kona.h>
 #include <mach/rhea.h>
 #include <asm/mach/map.h>
@@ -107,6 +114,92 @@ static struct i2c_board_info __initdata pmu_info[] =
 	},
 };
 
+#ifdef CONFIG_GPIO_PCA953X
+#define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
+static int pca953x_platform_init_hw(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *context)
+{
+	int rc;
+	rc = gpio_request(GPIO_PCA953X_GPIO_PIN, "gpio_expander");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", GPIO_PCA953X_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(GPIO_PCA953X_GPIO_PIN);
+	return 0;
+}
+
+static int pca953x_platform_exit_hw(struct i2c_client *client,
+		unsigned gpio, unsigned ngpio, void *context)
+{
+	gpio_free(GPIO_PCA953X_GPIO_PIN);
+	return 0;
+}
+
+static struct pca953x_platform_data board_expander_info = {
+	.gpio_base	= KONA_MAX_GPIO,
+	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
+	.setup		= pca953x_platform_init_hw,
+	.teardown	= pca953x_platform_exit_hw,
+};
+
+static struct i2c_board_info __initdata pca953x_info[] = {
+	{
+		I2C_BOARD_INFO("pca9539", 0x74),
+		.irq = gpio_to_irq(GPIO_PCA953X_GPIO_PIN),
+		.platform_data = &board_expander_info,
+	},
+};
+#endif /* CONFIG_GPIO_PCA953X */
+
+#ifdef CONFIG_TOUCHSCREEN_QT602240
+#ifdef CONFIG_GPIO_PCA953X
+#define QT602240_INT_GPIO_PIN      (KONA_MAX_GPIO + 8)
+#else
+#define QT602240_INT_GPIO_PIN      74 /* skip expander chip */
+#endif
+static int qt602240_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(QT602240_INT_GPIO_PIN, "ts_qt602240");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", QT602240_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(QT602240_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void qt602240_platform_exit_hw(void)
+{
+	gpio_free(QT602240_INT_GPIO_PIN);
+}
+
+static struct qt602240_platform_data qt602240_platform_data = {
+	.x_line		= 17,
+	.y_line		= 11,
+	.x_size		= 800,
+	.y_size		= 480,
+	.blen		= 0x21,
+	.threshold	= 0x28,
+	.voltage	= 2800000,              /* 2.8V */
+	.orient		= QT602240_DIAGONAL,
+	.init_platform_hw = qt602240_platform_init_hw,
+	.exit_platform_hw = qt602240_platform_exit_hw,
+};
+
+static struct i2c_board_info __initdata qt602240_info[] = {
+	{
+		I2C_BOARD_INFO("qt602240_ts", 0x4a),
+		.platform_data = &qt602240_platform_data,
+		.irq = gpio_to_irq(QT602240_INT_GPIO_PIN),
+	},
+};
+#endif /* CONFIG_TOUCHSCREEN_QT602240 */
+
 /* Rhea Ray specific platform devices */ 
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 
@@ -119,6 +212,14 @@ static void __init rhea_ray_add_i2c_devices (void)
 	i2c_register_board_info(2,
 		pmu_info,
 		ARRAY_SIZE(pmu_info));
+
+#ifdef CONFIG_GPIO_PCA953X
+	i2c_register_board_info(1, pca953x_info, ARRAY_SIZE(pca953x_info));
+#endif
+
+#ifdef CONFIG_TOUCHSCREEN_QT602240
+	i2c_register_board_info(1, qt602240_info, ARRAY_SIZE(qt602240_info));
+#endif
 }
 
 static void enable_smi_display_clks(void)
