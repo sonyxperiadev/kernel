@@ -722,9 +722,30 @@ static int wakeup(struct usb_gadget *gadget)
 	return 0;
 }
 
+/**
+ * Use soft disonnect bit to enable/disable D+ and D- pull up,
+ * to notify host to start enumeration
+ *
+ */
+static int dwc_otg_pullup(struct usb_gadget *gadget, int is_on)
+{
+	dctl_data_t dctl = {
+		.b = {
+			.sftdiscon = 1
+		}
+	};
+
+	dwc_modify_reg32(&(GET_CORE_IF(gadget_wrapper->pcd)->dev_if->dev_global_regs->dctl),
+		dctl.d32,
+		is_on? 0 : dctl.d32);
+
+	return 0;
+}
+
 static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 	.get_frame = get_frame_number,
 	.wakeup = wakeup,
+	.pullup = dwc_otg_pullup,
 #ifdef CONFIG_USB_DWC_OTG_LPM
 	.lpm_support = test_lpm_enabled,
 #endif
@@ -1343,16 +1364,7 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 		    driver->driver.name);
 
 	/* Now we have all drivers ready, allow connect to USB host */
-	{
-		dctl_data_t dctl = {.d32=0};
-		volatile uint32_t *addr = &(GET_CORE_IF(gadget_wrapper->pcd)->dev_if->dev_global_regs->dctl);
-
-		dctl.d32 = dwc_read_reg32 (addr);
-		dctl.b.sftdiscon = 0;
-		dwc_write_reg32 (addr, dctl.d32);
-		dctl.d32 = dwc_read_reg32 (addr);
-	}
-	dwc_mdelay(20);
+	dwc_otg_pullup(&gadget_wrapper->gadget, 1);
 
 	/* only enable interrupt when gadget function is registered */
 	DWC_DEBUGPL(DBG_PCD, "Enable USB global interrupt\n");
@@ -1383,15 +1395,8 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 		return -EINVAL;
 	}
 
-	{
-		dctl_data_t dctl = {.d32=0};
-		volatile uint32_t *addr = &(GET_CORE_IF(gadget_wrapper->pcd)->dev_if->dev_global_regs->dctl);
-
-		dctl.d32 = dwc_read_reg32 (addr);
-		dctl.b.sftdiscon = 1;
-		dwc_write_reg32 (addr, dctl.d32);
-		dctl.d32 = dwc_read_reg32 (addr);
-	}
+	/* disable pull - soft disonnect */
+	dwc_otg_pullup(&gadget_wrapper->gadget, 0);
 
 	/* Disable USB interrupt before class driver unbind */
 	dwc_otg_disable_global_interrupts( GET_CORE_IF(gadget_wrapper->pcd) );
