@@ -88,16 +88,30 @@ static struct platform_device board_serial_device = {
 	},
 };
 
-static char *andoroid_function_name[] =
-{
+static char *android_function_rndis[] = {
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis",
 #endif
+};
+
+static char *android_function_adb_msc[] = {
 #ifdef CONFIG_USB_ANDROID_MASS_STORAGE
 	"usb_mass_storage",
 #endif
 #ifdef CONFIG_USB_ANDROID_ADB
 	"adb",
+#endif
+};
+
+static char *android_functions_all[] = {
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_ADB
+	"adb",
+#endif
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis",
 #endif
 };
 
@@ -108,19 +122,13 @@ static char *andoroid_function_name[] =
 #define	GOOGLE_VENDOR_ID	0x18d1
 #define	NEXUS_ONE_PROD_ID	0x0d02
 
-#define NETCHIP_VENDOR_ID	0x0525
-#define RNDIS_PROD_ID		0xa4a2
-
-#ifdef CONFIG_USB_ANDROID_RNDIS
-/* Used netchip ID for RNDIS
- * see Documentation/usb/linux.inf
- */
-#define	VENDOR_ID		NETCHIP_VENDOR_ID
-#define	PRODUCT_ID		RNDIS_PROD_ID
-#else
 #define	VENDOR_ID		GOOGLE_VENDOR_ID
 #define	PRODUCT_ID		NEXUS_ONE_PROD_ID
-#endif
+
+/* use a seprate PID for RNDIS */
+#define RNDIS_PRODUCT_ID	0x4e13
+
+
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
 	.nluns		=	1,
 	.vendor		=	"Broadcom",
@@ -153,8 +161,13 @@ static struct platform_device android_rndis_device = {
 static struct android_usb_product android_products[] = {
 	{
 		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(andoroid_function_name),
-		.functions	=	andoroid_function_name,
+		.num_functions	=	ARRAY_SIZE(android_function_adb_msc),
+		.functions	=	android_function_adb_msc,
+	},
+	{
+		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_rndis),
+		.functions	=	android_function_rndis,
 	},
 };
 
@@ -169,8 +182,8 @@ static struct android_usb_platform_data android_usb_data = {
 	.num_products		=	ARRAY_SIZE(android_products),
 	.products		=	android_products,
 
-	.num_functions		=	ARRAY_SIZE(andoroid_function_name),
-	.functions		=	andoroid_function_name,
+	.num_functions		=	ARRAY_SIZE(android_functions_all),
+	.functions		=	android_functions_all,
 };
 
 static struct platform_device android_usb = {
@@ -342,7 +355,7 @@ static struct platform_device board_i2c_adap_devices[] =
 	},
 };
 
-/* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */ 
+/* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
 	&board_i2c_adap_devices[0],
