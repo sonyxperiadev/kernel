@@ -131,7 +131,7 @@ static int kona_gpio_get(struct gpio_chip *chip, unsigned gpio)
 
 	/* return the specified bit status  
 	 */
-	return (val & (1 << bit));
+	return ((val >> bit) & 1);
 }
 
 static int kona_gpio_direction_input(struct gpio_chip *chip, unsigned gpio)
