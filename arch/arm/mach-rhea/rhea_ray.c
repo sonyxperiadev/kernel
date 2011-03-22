@@ -44,6 +44,7 @@
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #include <linux/i2c/qt602240_ts.h>
 #endif
+#include <mach/kona_headset_pd.h>
 #include <mach/kona.h>
 #include <mach/rhea.h>
 #include <asm/mach/map.h>
@@ -829,12 +830,57 @@ static struct i2c_board_info __initdata qt602240_info[] = {
 };
 #endif /* CONFIG_TOUCHSCREEN_QT602240 */
 
+#ifdef CONFIG_KONA_HEADSET
+#define HS_IRQ	gpio_to_irq(71)
+#define HSB_IRQ	BCM_INT_ID_AUXMIC_COMP1
+static struct kona_headset_pd headset_data = {
+	.hs_default_state = 1, /* GPIO state read is 0 on HS insert and 1 for
+							* HS remove*/
+};
+
+static struct resource board_headset_resource[] = {
+	{	/* For AUXMIC */
+		.start = AUXMIC_BASE_ADDR,
+		.end = AUXMIC_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{	/* For ACI */
+		.start = ACI_BASE_ADDR,
+		.end = ACI_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{	/* For Headset IRQ */
+		.start = HS_IRQ,
+		.end = HS_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+	{	/* For Headset button IRQ */
+		.start = HSB_IRQ,
+		.end = HSB_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device headset_device = {
+	.name = "konaheadset",
+	.id = -1,
+	.resource = board_headset_resource,
+	.num_resources	= ARRAY_SIZE(board_headset_resource),
+	.dev	=	{
+		.platform_data = &headset_data,
+	},
+};
+#endif /* CONFIG_KONA_HEADSET */
+
 /* Rhea Ray specific platform devices */ 
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
 	&bcm_kp_device,
 #endif
 
+#ifdef CONFIG_KONA_HEADSET
+	&headset_device,
+#endif
 };
 
 /* Rhea Ray specific i2c devices */ 

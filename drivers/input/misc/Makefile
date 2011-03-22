@@ -43,4 +43,4 @@ obj-$(CONFIG_INPUT_BCM2835_IR)		+= bcm2835_ir.o
 obj-$(CONFIG_INPUT_SMB380)      += smb380.o 
 obj-$(CONFIG_INPUT_BCM59055_ONKEY)	+= bcm59055_onkey.o 
 obj-$(CONFIG_INPUT_BCM2850_MIC_DETECT)	+= bcm2850_mic_detect.o 
-
+obj-$(CONFIG_KONA_HEADSET) = kona_headset.o

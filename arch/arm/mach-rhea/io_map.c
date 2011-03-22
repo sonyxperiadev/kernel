@@ -103,6 +103,7 @@ static struct map_desc rhea_io_desc[] __initdata =
 	
 	IO_DESC( KONA_SYSTMR_VA, SZ_4K ),  /* 32-bit kona gp timer */
 	IO_DESC( KONA_TMR_HUB_VA, SZ_4K ), /* 64-bit hub timer */
+	IO_DESC( KONA_HUB_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_TZCFG_VA, SZ_4K ),
 	IO_DESC( KONA_UART0_VA, SZ_4K ),
 	IO_DESC( KONA_UART1_VA, SZ_4K ),
@@ -116,6 +117,8 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_MM_DMA_VA, SZ_4K),
 	IO_DESC( KONA_PAD_CTRL_VA, SZ_4K),
 	IO_DESC( KONA_PWRMGR_VA, SZ_32K),
+	IO_DESC(KONA_AUXMIC_VA, SZ_4K),
+	IO_DESC(KONA_AUDIOH_VA, SZ_4K),
 };
 
 

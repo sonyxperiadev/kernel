@@ -438,4 +438,10 @@ config INPUT_BCM2850_MIC_DETECT
       
      To compile this driver as a module, choose M here.
 
+config KONA_HEADSET
+	tristate "Broadcom headset drivers"
+	depends on ARCH_KONA
+	default N
+        help
+          Activate Kona headset driver
 endif
