@@ -43,8 +43,8 @@ struct regulator_init_data;
 struct bcm590xx_regulator_init_data ;
 
 struct bcm590xx_pmic {
-	/* regulator devices */
-	struct platform_device *pdev[NUM_BCM590XX_REGULATORS];
+    /* regulator devices */
+    struct platform_device *pdev[NUM_BCM590XX_REGULATORS];
 };
 
 int bcm590xx_register_regulator(struct bcm590xx *bcm590xx, int reg,
@@ -58,7 +58,7 @@ struct bcm590xx_reg_info
    u32 en_dis_shift ; /* Shift for enable/disalbe bits */
    u32 vout_mask;     /* Mask of bits in register */
    u32 vout_shift;    /* Bit shift in register */
-   u32 *v_table;      /* Map for converting register voltage to register value */
+   const u32 *v_table;      /* Map for converting register voltage to register value */
    u32 num_voltages;  /* Size of register map */
    u32 mode ;
 } ;
@@ -69,32 +69,41 @@ struct bcm590xx_regulator_init_data
     struct regulator_init_data   *initdata ;
 } ; 
 
+struct mv_percent   
+{
+    unsigned int mv ;
+    unsigned int percentage ;
+} ; 
+
+
 struct bcm590xx_battery_pdata {
-	// struct charger_info usb;
-	// struct charger_info wac;
-	u8 eoc_current;
+    // struct charger_info usb;
+    // struct charger_info wac;
+    u8 eoc_current;
 
-	u8 volt_adc_channel;
-	u8 temp_adc_channel;
-	u8 batt_level_count;
-	struct batt_level_table *batt_level_table;
+    u8 volt_adc_channel;
+    u8 temp_adc_channel;
+    u8 batt_level_count;
+    // struct batt_level_table *batt_level_table;
+    struct mv_percent *vp_table ;
+    unsigned int vp_table_cnt ;
 
-	u16 temp_low_limit;
-	u16 temp_high_limit;
+    u16 temp_low_limit;
+    u16 temp_high_limit;
 
-	u16 batt_min_volt;
-	u16 batt_max_volt;
+    u16 batt_min_volt;
+    u16 batt_max_volt;
 
-	u8 batt_technology;
-	int (*can_start_charging)(void*);
+    u8 batt_technology;
+    int (*can_start_charging)(void*);
 };
 
 struct bcm_pmu_irq {
-	struct list_head node;
-	void (*handler) (int, void *);
-	void *data;
-	int irq;
-	bool irq_enabled;
+    struct list_head node;
+    void (*handler) (int, void *);
+    void *data;
+    int irq;
+    bool irq_enabled;
 };
 
 // Needed for assignment in bcm59055_A0.c

@@ -201,16 +201,9 @@ config REGULATOR_88PM8607
 	help
 	  This driver supports 88PM8607 voltage regulator chips.
 
-config REGULATOR_BCM_PMU590XX
+config REGULATOR_BCM_PMU59055
 	bool "BCM PMU59055 Regulator"
-	depends on MFD_BCM_PMU590XX
-	help
-	  This driver supports the voltage regulators provided by
-	  this family of companion chips.
-
-config REGULATOR_BCM_PMU59055_A0
-	bool "BCM PMU59055 Regulator"
-	depends on MFD_BCM_PMU590XX && REGULATOR_BCM_PMU590XX
+	depends on MFD_BCM_PMU590XX 
 	help
 	  This driver supports the voltage regulators provided by
 	  PMU 59055.

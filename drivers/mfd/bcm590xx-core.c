@@ -22,10 +22,8 @@
 #include <linux/delay.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
-
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
-
 #include <linux/platform_device.h>
 #include <linux/workqueue.h>
 #include <linux/mutex.h>
@@ -33,283 +31,215 @@
 #include <linux/mfd/core.h>
 #include <linux/irq.h>
 #include <asm/gpio.h> 
-
-#ifdef CONFIG_REGULATOR_BCM_PMU59055_A0
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
-#endif
 
 #define IRQ_TO_REG_INX(irq)  ((irq)/8)
 #define IRQ_TO_REG_BIT(irq)  ((irq) % 8)
-
 #define PMU_IRQ_PIN           10
 
-/*
- * BCM590XX Device IO
- */
-static DEFINE_MUTEX(io_mutex);
-
-struct bcm590xx *g_bcm590xx_slave0 ; 
-struct bcm590xx *g_bcm590xx_slave1 ; 
-
-static int bcm590xx_read(struct bcm590xx *bcm590xx, u8 reg)
-{
-	return bcm590xx->read_dev(bcm590xx, reg);
-}
-
-static int bcm590xx_write(struct bcm590xx *bcm590xx, u8 reg, int num_regs, u16 val)
-{
-	/* Actually write it out */
-	return bcm590xx->write_dev(bcm590xx, reg, num_regs, (char)val);
-}
-
-int bcm590xx_reg_read_slave1(int reg)
-{
-    return(bcm590xx_reg_read(g_bcm590xx_slave1, reg) ) ;
-}
-
-int bcm590xx_reg_write_slave1(int reg, u16 val)
-{
-    return(bcm590xx_reg_write(g_bcm590xx_slave1, reg, val) ) ;
-}
-
-int bcm590xx_reg_read(struct bcm590xx *bcm590xx, int reg)
-{
-	int err;
-	mutex_lock(&io_mutex);
-	err = bcm590xx_read(bcm590xx, reg);
-	// printk("RRRRRRR Read to regi_addr = 0x%x , return = 0x%x \n", reg, err ) ;
-	mutex_unlock(&io_mutex);
-	return err ;
-
-}
-EXPORT_SYMBOL_GPL(bcm590xx_reg_read);
-
-int bcm590xx_reg_write(struct bcm590xx *bcm590xx, int reg, u16 val)
-{
-	int ret;
-
-	mutex_lock(&io_mutex);
-	ret = bcm590xx_write(bcm590xx, reg, 1, val);
-	// printk("Wrote to regi_addr = 0x%x value is = 0x%x , return = %d \n", reg, val, ret ) ;
-	if (ret)
-		dev_err(bcm590xx->dev, "write to reg R%d failed\n", reg);
-	mutex_unlock(&io_mutex);
-	return ret;
-}
-EXPORT_SYMBOL_GPL(bcm590xx_reg_write);
-
-static	void bcm59055_rd_cl_dis_intrs( struct bcm590xx *bcm590xx )
+static void bcm59055_rd_cl_dis_intrs( struct bcm590xx *bcm590xx )
 {
     unsigned int i = 0 ;
     unsigned int temp = 0 ;
     /*Read & clear all interrupts */
     for (i = 0; i < BCM59055_MAX_INT_REGS; i++) {
-        temp = bcm590xx_reg_read(bcm590xx, (BCM59055_REG_INT1 + i));
-		// Start charging if charger is plugged in at the time of booting.
-        if ( ( i == 1 ) && ( temp & 1 ) )
-		{
+        // temp = bcm590xx_reg_read(bcm590xx, (BCM59055_REG_INT1 + i));
+        temp = bcm590xx_reg_read(SLAVE_ID0, (BCM59055_REG_INT1 + i));
 #ifdef CONFIG_BATTERY_BCM59055
-           bcm59055_initialize_charging(bcm590xx ) ;
-           bcm59055_start_charging(bcm590xx ) ;
+        // Start charging if charger is plugged in at the time of booting.
+        if ( ( i == 1 ) && ( temp & 1 ) ) {
+            bcm59055_initialize_charging(bcm590xx ) ;
+            bcm59055_start_charging(bcm590xx ) ;
+        }
 #endif
-		}
     }
     /*mask all interrupts */
-    for (i = 0; i <= BCM59055_MAX_INTMASK_REGS; i++) {
-        bcm590xx_reg_write(bcm590xx, (BCM59055_REG_INT1MSK + i ), 0xFF );
-    }
+    for (i = 0; i <= BCM59055_MAX_INTMASK_REGS; i++) 
+        bcm590xx_reg_write(SLAVE_ID0, (BCM59055_REG_INT1MSK + i ), 0xFF );
 }
 
 static struct bcm_pmu_irq *bcm590xx_find_irq_handler(struct bcm590xx *bcm590xx, int irq)
 {
-	struct bcm_pmu_irq *p;
-	struct bcm_pmu_irq *match = NULL;
+    struct bcm_pmu_irq *p;
+    struct bcm_pmu_irq *match = NULL;
 
-	list_for_each_entry(p, &bcm590xx->irq_handlers, node) {
-		if (p->irq == irq) {
-			match = p;
-			break;
-		}
-	}
-	return match;
+    list_for_each_entry(p, &bcm590xx->irq_handlers, node) {
+        if (p->irq == irq) {
+            match = p;
+            break;
+        }
+    }
+    return match;
 }
 
 int bcm590xx_disable_irq(struct bcm590xx *bcm590xx, int irq)
 {
-	int regInx;
-	int st;
-	u8 reg_val;
-	struct bcm_pmu_irq *handler;
+    int regInx;
+    int st;
+    u8 reg_val;
+    struct bcm_pmu_irq *handler;
 
-	printk(" Inside %s\n", __FUNCTION__);
+    if (irq < 0 || irq > BCM59055_TOTAL_IRQ)
+        return -EINVAL;
+    regInx = IRQ_TO_REG_INX(irq);
 
-	if (irq < 0 || irq > BCM59055_TOTAL_IRQ)
-		return -EINVAL;
+    st = bcm590xx_reg_read(SLAVE_ID0, regInx + BCM59055_INT_MASK_REG_BASE);
+    if (st < 0) {
+        printk(KERN_ERR "%s bcm590xx_disable_irq : PMU reg read error %d !!!\n", __FUNCTION__, (regInx + BCM59055_INT_MASK_REG_BASE));
+        return st;
+    }
+    reg_val = st ;
+    reg_val |= (1 << IRQ_TO_REG_BIT(irq));
+    
+    st = bcm590xx_reg_write(SLAVE_ID0, regInx + BCM59055_INT_MASK_REG_BASE, reg_val);
+    if (st < 0) {
+        printk(KERN_ERR "%s bcm590xx_disable_irq : PMU reg write error %d !!!\n", __FUNCTION__, ( regInx + BCM59055_INT_MASK_REG_BASE) );
+        return st;
+    }
 
-	regInx = IRQ_TO_REG_INX(irq);
-
-	st = bcm590xx_reg_read(bcm590xx, regInx + BCM59055_INT_MASK_REG_BASE);
-	if (reg_val < 0) {
-		printk("bcm590xx_disable_irq : PMU reg read error !!!\n");
-		return st;
-	}
-	reg_val = st ;
-	reg_val |= (1 << IRQ_TO_REG_BIT(irq));
-	st = bcm590xx_reg_write(bcm590xx, regInx + BCM59055_INT_MASK_REG_BASE, reg_val);
-	if (st < 0) {
-		printk( "bcm590xx_disable_irq : PMU reg write error !!!\n");
-		return st;
-	}
-
-	handler = bcm590xx_find_irq_handler(bcm590xx, irq);
-	if (handler) {
-		handler->irq_enabled = false; 
-	}
-	return 0;
+    handler = bcm590xx_find_irq_handler(bcm590xx, irq);
+    if (handler) {
+        handler->irq_enabled = false; 
+    }
+    return 0;
 }
 
 EXPORT_SYMBOL(bcm590xx_disable_irq);
 
 int bcm590xx_enable_irq(struct bcm590xx *bcm590xx, int irq)
 {
-	int regInx;
-	int st;
-	u8 reg_val;
-	struct bcm_pmu_irq *handler;
+    int regInx;
+    int st;
+    u8 reg_val;
+    struct bcm_pmu_irq *handler;
 
-	printk(" Inside %s, enabling irq %d \n", __FUNCTION__, irq );
+    printk(KERN_INFO " Inside %s, enabling irq %d \n", __FUNCTION__, irq );
 
-	if (irq < 0 || irq > BCM59055_TOTAL_IRQ)
-		return -EINVAL;
+    if (irq < 0 || irq > BCM59055_TOTAL_IRQ)
+        return -EINVAL;
 
-	regInx = IRQ_TO_REG_INX(irq);
+    regInx = IRQ_TO_REG_INX(irq);
 
-	st = bcm590xx_reg_read(bcm590xx, regInx + BCM59055_INT_MASK_REG_BASE);
-	if (reg_val < 0) {
-		printk( "bcm590xx_enable_irq : PMU reg read error !!!\n");
-		return st;
-	}
-	reg_val = st ;
-	reg_val &= ~(1 << IRQ_TO_REG_BIT(irq));
-	st = bcm590xx_reg_write(bcm590xx, regInx + BCM59055_INT_MASK_REG_BASE, reg_val);
-	if (st < 0) {
-		printk( "bcm590xx_enable_irq : PMU reg write error !!!\n");
-		return st;
-	}
+    st = bcm590xx_reg_read(SLAVE_ID0, regInx + BCM59055_INT_MASK_REG_BASE);
+    if (st < 0) {
+        printk( KERN_ERR "%s bcm590xx_enable_irq : PMU reg read error %d !!!\n", __FUNCTION__, (regInx + BCM59055_INT_MASK_REG_BASE) );
+        return st;
+    }
+    reg_val = st ;
+    reg_val &= ~(1 << IRQ_TO_REG_BIT(irq));
 
-	handler = bcm590xx_find_irq_handler(bcm590xx, irq);
-	if (!handler) {
-		printk( "bcm590xx_enable_irq : Enabling PMU irq without registering handler!!!\n");
-	} else {
-		handler->irq_enabled = true;
-	}
-	return 0;
+    st = bcm590xx_reg_write(SLAVE_ID0, regInx + BCM59055_INT_MASK_REG_BASE, reg_val);
+    if (st < 0) {
+        printk( KERN_ERR "%s bcm590xx_enable_irq : PMU reg write error %d  !!!\n", __FUNCTION__, (regInx + BCM59055_INT_MASK_REG_BASE) );
+        return st;
+    }
+
+    handler = bcm590xx_find_irq_handler(bcm590xx, irq);
+    if (!handler) 
+        printk( KERN_ERR "%s bcm590xx_enable_irq : Enabling PMU irq %d without registering handler!!!\n", __FUNCTION__, irq );
+    else 
+        handler->irq_enabled = true;
+    return 0;
 }
 EXPORT_SYMBOL(bcm590xx_enable_irq);
 
-int bcm590xx_request_irq(struct bcm590xx *bcm590xx, int irq, bool enable_irq,
-			 void (*handler) (int, void *), void *data)
+int bcm590xx_request_irq(struct bcm590xx *bcm590xx, int irq, bool enable_irq, void (*handler) (int, void *), void *data)
 {
-	struct bcm_pmu_irq *irq_info;
-	 printk(" Inside %s Interrupt no. 0x%x\n", __FUNCTION__, irq);
-	if (irq < 0 || irq >= BCM59055_TOTAL_IRQ || !handler)
-		return -EINVAL;
-	if (WARN_ON(bcm590xx_find_irq_handler(bcm590xx, irq))) {
-		printk( " %s: handler for irq : %x already registered !!!\n",
-			__FUNCTION__, irq);
-		return -EBUSY;
-	}
+    struct bcm_pmu_irq *irq_info;
+    printk(KERN_INFO " Inside %s Interrupt no. 0x%x\n", __FUNCTION__, irq);
+    if (irq < 0 || irq >= BCM59055_TOTAL_IRQ || !handler)
+        return -EINVAL;
+    if (WARN_ON(bcm590xx_find_irq_handler(bcm590xx, irq))) {
+        printk(KERN_ERR  " %s: handler for irq : %x already registered !!!\n", __FUNCTION__, irq);
+        return -EBUSY;
+    }
 
-	irq_info = kzalloc(sizeof(struct bcm_pmu_irq), GFP_KERNEL);
-	if (!irq_info)
-		return -ENOMEM;
+    irq_info = kzalloc(sizeof(struct bcm_pmu_irq), GFP_KERNEL);
+    if (!irq_info)
+        return -ENOMEM;
 
-	irq_info->handler = handler;
-	irq_info->data = data;
-	irq_info->irq_enabled = enable_irq;
-	irq_info->irq = irq;
+    irq_info->handler = handler;
+    irq_info->data = data;
+    irq_info->irq_enabled = enable_irq;
+    irq_info->irq = irq;
 
-	mutex_lock(&bcm590xx->list_lock);
-	list_add(&irq_info->node, &bcm590xx->irq_handlers);
-	mutex_unlock(&bcm590xx->list_lock);
+    mutex_lock(&bcm590xx->list_lock);
+    list_add(&irq_info->node, &bcm590xx->irq_handlers);
+    mutex_unlock(&bcm590xx->list_lock);
 
-	enable_irq ? bcm590xx_enable_irq(bcm590xx, irq) : bcm590xx_disable_irq(bcm590xx, irq);
-	return 0;
+    enable_irq ? bcm590xx_enable_irq(bcm590xx, irq) : bcm590xx_disable_irq(bcm590xx, irq);
+    return 0;
 }
 EXPORT_SYMBOL(bcm590xx_request_irq);
 
 int bcm590xx_free_irq(struct bcm590xx *bcm590xx, int irq)
 {
-	struct bcm_pmu_irq *irq_info;
-	printk(" Inside %s\n", __FUNCTION__);
-	if (irq < 0 || irq >= BCM59055_TOTAL_IRQ)
-		return -EINVAL;
-	irq_info = bcm590xx_find_irq_handler(bcm590xx, irq);
-	if (irq_info) {
-		mutex_lock(&bcm590xx->list_lock);
-		list_del(&irq_info->node);
-		mutex_unlock(&bcm590xx->list_lock);
-		kfree(irq_info);
-	}
+   struct bcm_pmu_irq *irq_info;
+   printk(KERN_INFO " Inside %s\n", __FUNCTION__);
+   if (irq < 0 || irq >= BCM59055_TOTAL_IRQ)
+      return -EINVAL;
+   irq_info = bcm590xx_find_irq_handler(bcm590xx, irq);
+   if (irq_info) {
+      mutex_lock(&bcm590xx->list_lock);
+      list_del(&irq_info->node);
+      mutex_unlock(&bcm590xx->list_lock);
+      kfree(irq_info);
+   }
 
-	/* disalbe IRQ as there is no handler */
-	bcm590xx_disable_irq(bcm590xx, irq);
-	return 0;
+   /* disalbe IRQ as there is no handler */
+   bcm590xx_disable_irq(bcm590xx, irq);
+   return 0;
 }
 EXPORT_SYMBOL(bcm590xx_free_irq);
 
 static void bcm590xx_irq_workq(struct work_struct *work)
 {
-	struct bcm590xx *bcm590xx = container_of(work, struct bcm590xx, work);
-	int i;
-	u8 intStatus[BCM59055_MAX_INT_REGS];
-	struct bcm_pmu_irq *handler;
+    struct bcm590xx *bcm590xx = container_of(work, struct bcm590xx, work);
+    int i;
+    u8 intStatus[BCM59055_MAX_INT_REGS];
+    struct bcm_pmu_irq *handler;
 
-	// printk(" Inside %s\n", __FUNCTION__);
-	/* Read all interrupt status registers. All interrupt status registers are R&C */
-	for (i = 0; i < BCM59055_MAX_INT_REGS; i++) {
-            intStatus[i] = bcm590xx_reg_read (bcm590xx, BCM59055_INT_REG_BASE + i) ;
-	}
+    /* Read all interrupt status registers. All interrupt status registers are R&C */
+    for (i = 0; i < BCM59055_MAX_INT_REGS; i++) {
+        intStatus[i] = bcm590xx_reg_read (SLAVE_ID0, BCM59055_INT_REG_BASE + i) ;
+    }
 
-	mutex_lock(&bcm590xx->list_lock);
-	list_for_each_entry(handler, &bcm590xx->irq_handlers, node) {
-		if (handler->irq_enabled &&
-		    (intStatus[IRQ_TO_REG_INX(handler->irq)] &
-		     (1 << IRQ_TO_REG_BIT(handler->irq)))) {
-			handler->handler(handler->irq, handler->data);
-		}
-	}
-	mutex_unlock(&bcm590xx->list_lock);
-
-	enable_irq(bcm590xx->irq);
+    mutex_lock(&bcm590xx->list_lock);
+    list_for_each_entry(handler, &bcm590xx->irq_handlers, node) {
+        if (handler->irq_enabled &&
+            (intStatus[IRQ_TO_REG_INX(handler->irq)] &
+            (1 << IRQ_TO_REG_BIT(handler->irq)))) {
+                handler->handler(handler->irq, handler->data);
+        }
+    }
+    mutex_unlock(&bcm590xx->list_lock);
+    enable_irq(bcm590xx->irq);
 }
 
 static irqreturn_t pmu_irq_handler(int irq, void *dev_id)
 {
-	struct bcm590xx *bcm590xx = dev_id;
+    struct bcm590xx *bcm590xx = dev_id;
 
-	// printk(" Inside %s\n", __FUNCTION__);
-	/* Read all interrupt status registers. All interrupt status registers are R&C */
-	disable_irq_nosync(irq);
-	schedule_work(&bcm590xx->work);
-	return IRQ_HANDLED;
+    /* Read all interrupt status registers. All interrupt status registers are R&C */
+    disable_irq_nosync(irq);
+    schedule_work(&bcm590xx->work);
+    return IRQ_HANDLED;
 }
 
 static int bcm590xx_client_dev_register(struct bcm590xx *bcm590xx, const char *name)
 {
-	struct mfd_cell cell = { };
-
-	cell.name = name;
+    struct mfd_cell cell = { };
+    cell.name = name;
     return mfd_add_devices(bcm590xx->dev, -1, &cell, 1, NULL, 0);
 }
 
 void bcm590xx_shutdown(void)
 {
-	int host_ctrl1;
+    int host_ctrl1;
 	
-	host_ctrl1 = bcm590xx_reg_read(g_bcm590xx_slave0, BCM59055_REG_HOSTCTRL1);
-	host_ctrl1 |= 1 << BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET;
-	bcm590xx_reg_write(g_bcm590xx_slave0, BCM59055_REG_HOSTCTRL1, (uint16_t)host_ctrl1);
+    host_ctrl1 = bcm590xx_reg_read(SLAVE_ID0, BCM59055_REG_HOSTCTRL1);
+    host_ctrl1 |= 1 << BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET;
+    bcm590xx_reg_write(SLAVE_ID0, BCM59055_REG_HOSTCTRL1, (u8)host_ctrl1);
 }
 
 EXPORT_SYMBOL_GPL(bcm590xx_shutdown);
@@ -318,102 +248,87 @@ EXPORT_SYMBOL_GPL(bcm590xx_shutdown);
 int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		       struct bcm590xx_platform_data *pdata)
 {
-	int ret;
-	int rc = 0 ;
+    int ret = 0 ;
 
-	printk("REG: bcm590xx_device_init called \n") ;
+    printk(KERN_INFO "%s REG: bcm590xx_device_init called \n", __FUNCTION__ ) ;
 
-    if ( pdata->slave == 0 )
-	{
-		// All PMU functionality ( MBCCTRL, INTRs, LDOs is present on slave 0
-		// So initialize regulators, isrs etc here.
-    	/* get BCM590XX revision and config mode */
-    	ret = bcm590xx_reg_read(bcm590xx, BCM59055_REG_PMUID);
-
-    	if (ret < 0) {
-    		dev_err(bcm590xx->dev, "Failed to read ID: %d\n", ret);
-    		goto err;
-    	}
-    	else
-    	{
-            printk("BCM590XX: Chip Version [0x%x]\n", ret);
-    	}
-
-    	if (pdata && pdata->init) {
-    		ret = pdata->init(bcm590xx);
-    		if (ret != 0) {
-    			dev_err(bcm590xx->dev, "Platform init() failed: %d\n",
-    				ret);
-    			goto err;
-    		}
-    	}
-
-        INIT_LIST_HEAD(&bcm590xx->irq_handlers);
-    	INIT_WORK(&bcm590xx->work, bcm590xx_irq_workq);
-    	mutex_init(&bcm590xx->list_lock);
-
-        // Setup GPIO properties for interrupt from PMU.
-        rc = set_irq_type(irq, IRQ_TYPE_EDGE_FALLING);
-        if (rc < 0)
-        {
-           printk("set_irq_type failed with irq %d\n", irq);
-           return rc ;
-        }
-        rc = gpio_request(PMU_IRQ_PIN, "pmu_pen_down");
-        if (rc < 0)
-        {
-           printk("unable to request GPIO pin %d\n", PMU_IRQ_PIN);
-           return rc ;
-        }
-        gpio_direction_input(PMU_IRQ_PIN);
-
-    	// Register IRQ.
-    	if (irq > 0) {
-    		ret = request_irq(irq, pmu_irq_handler, IRQF_TRIGGER_FALLING, "pmu 59055", bcm590xx);
-    		if (ret) {
-    			printk("can't get IRQ %d, ret %d\n", irq, ret);
-    			goto err;
-    		}
-    	}
-
-		g_bcm590xx_slave0 = bcm590xx ; 
-
-        /* init 59055 chip by reading and clearing INT registers */
-    	disable_irq(irq);
-
-    	/* Read, clear, and disable all the interrupts. */
-    	bcm59055_rd_cl_dis_intrs(bcm590xx);
-	
-    	enable_irq(irq);
-
-    	// Register battery device, so that battery probe function will be called.
-        bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery") ;
-
-		/* Register PowerOnKey device */
-		bcm590xx_client_dev_register(bcm590xx, "bcm59055-onkey") ;
-
+    // All PMU functionality ( MBCCTRL, INTRs, LDOs is present on slave 0
+    // So initialize regulators, isrs etc here.
+    ret = bcm590xx_reg_read(SLAVE_ID0, BCM59055_REG_PMUID);
+    if (ret < 0) {
+        printk(KERN_ERR "%s Failed to read ID: %d\n", __FUNCTION__, ret);
+        goto err;
     }
-	else
-	{
-        // Save i2c details to read and write from slave1 ( 0x0C ).
-        g_bcm590xx_slave1 = bcm590xx ;
-	}
+    else
+        printk(KERN_INFO "%s BCM590XX: Chip Version [0x%x]\n", __FUNCTION__, ret);
 
-	return 0;
+    if (pdata && pdata->init) {
+        ret = pdata->init(bcm590xx);
+        if (ret != 0) {
+            printk(KERN_ERR "%s Platform init() failed: %d\n", __FUNCTION__, ret);
+            goto err;
+        }
+    }
+
+    INIT_LIST_HEAD(&bcm590xx->irq_handlers);
+    INIT_WORK(&bcm590xx->work, bcm590xx_irq_workq);
+    mutex_init(&bcm590xx->list_lock);
+
+    // Setup GPIO properties for interrupt from PMU.
+    ret = set_irq_type(irq, IRQ_TYPE_EDGE_FALLING);
+    if (ret < 0) {
+        printk(KERN_ERR "%s set_irq_type failed with irq %d\n", __FUNCTION__, irq);
+        return ret ;
+    }
+    ret = gpio_request(PMU_IRQ_PIN, "pmu_pen_down");
+    if (ret < 0) {
+        printk(KERN_ERR "%s unable to request GPIO pin %d\n", __FUNCTION__, PMU_IRQ_PIN);
+        return ret ;
+    }
+    gpio_direction_input(PMU_IRQ_PIN);
+
+    // Register IRQ.
+    if (irq > 0) {
+        ret = request_irq(irq, pmu_irq_handler, IRQF_TRIGGER_FALLING, "pmu 59055", bcm590xx);
+        if (ret) {
+            printk(KERN_ERR "%s can't get IRQ %d, ret %d\n", __FUNCTION__, irq, ret);
+            goto err;
+        }
+    }
+
+    disable_irq(irq);
+
+    /* Read, clear, and disable all the interrupts. */
+    bcm59055_rd_cl_dis_intrs(bcm590xx);
+
+    enable_irq(irq);
+
+    // Register battery device, so that battery probe function will be called.
+    ret = bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery") ;
+    if (ret < 0) {
+        printk(KERN_ERR "%s client_dev_register for bcm59055-battery failed %d\n", __FUNCTION__, ret);
+        return ret ;
+    }
+
+    /* Register PowerOnKey device */
+    ret = bcm590xx_client_dev_register(bcm590xx, "bcm59055-onkey") ;
+    if (ret < 0) {
+        printk(KERN_ERR "%s client_dev_register for bcm59055-battery failed %d\n", __FUNCTION__, ret);
+        return ret ;
+    }
+
+    return 0;
 
 err:
-	// kfree(bcm590xx->reg_cache);
-	return ret;
+    return ret;
 }
 EXPORT_SYMBOL_GPL(bcm590xx_device_init);
 
 void bcm590xx_device_exit(struct bcm590xx *bcm590xx)
 {
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(bcm590xx->pmic.pdev); i++)
-		platform_device_unregister(bcm590xx->pmic.pdev[i]);
-
+    int i;
+    for (i = 0; i < ARRAY_SIZE(bcm590xx->pmic.pdev); i++)
+        platform_device_unregister(bcm590xx->pmic.pdev[i]);
 }
 EXPORT_SYMBOL_GPL(bcm590xx_device_exit);
 
