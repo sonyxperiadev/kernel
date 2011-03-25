@@ -183,32 +183,29 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 
 	(void) chip; /* unused input parameter */
 
-	spin_lock_irqsave(&kona_gpio.lock, flags);
-
-	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
-	val &= ~GPIO_GPCTR0_DBR_MASK;
-
 	if (!is_power_of_2(debounce)) {
-		printk(KERN_ERR "%s() : Invalid Debounce value %d\n", __func__, debounce);
-		ret = -EINVAL;
-		goto err;
+		printk(KERN_ERR "Invalid GPIO debounce value %d\n", debounce);
+		return -EINVAL;
 	}
 
 	res = fls(debounce) - 1;
 
 	if (res < GPIO_GPCTR0_DBR_CMD_1MS || res > GPIO_GPCTR0_DBR_CMD_128MS) {
-		printk(KERN_ERR "%s() : Debounce value %d not in range\n", __func__, debounce);
-		ret = -EINVAL;
-		goto err;
+		printk(KERN_ERR "Debounce value %d not in range\n", debounce);
+		return -EINVAL;
 	}
 
+	spin_lock_irqsave(&kona_gpio.lock, flags);
+
+	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+	val &= ~GPIO_GPCTR0_DBR_MASK;
 	val |= ((GPIO_GPCTR0_DBR_CMD_ENABLE | res) << GPIO_GPCTR0_DBR_SHIFT);
 
 	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
 
-err:	spin_unlock_irqrestore(&kona_gpio.lock, flags);
+	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 
-	return ret;
+	return 0;
 }
 
 static struct gpio_chip kona_gpio_chip = {
@@ -424,7 +421,7 @@ int __init kona_gpio_init(int num_bank)
 		set_irq_data(bank->irq, bank);
 	}
 
-	printk("kona gpio initialised.\n");
+	printk(KERN_INFO "kona gpio initialised.\n");
 	return 0;
 }
 
