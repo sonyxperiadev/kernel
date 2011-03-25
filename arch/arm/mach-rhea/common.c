@@ -42,10 +42,10 @@
 #include <mach/rhea.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <linux/usb/android_composite.h>
-
 #include <asm/mach/map.h>
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
+#include <asm/pmu.h>
 
 
 /*
@@ -355,6 +355,20 @@ static struct platform_device board_i2c_adap_devices[] =
 	},
 };
 
+/* ARM performance monitor unit */ 
+static struct resource pmu_resource = {
+       .start = BCM_INT_ID_PMU_IRQ0,
+       .end = BCM_INT_ID_PMU_IRQ0,
+       .flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device pmu_device = {
+       .name = "arm-pmu",
+       .id   = ARM_PMU_DEVICE_CPU,
+       .resource = &pmu_resource,
+       .num_resources = 1,
+};
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -366,6 +380,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&android_rndis_device,
 	&android_mass_storage_device,
 	&android_usb,
+	&pmu_device,	
 };
 
 void __init board_add_common_devices(void)
