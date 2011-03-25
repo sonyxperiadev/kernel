@@ -11,9 +11,11 @@
 # license other than the GPL, without Broadcom's express prior written
 # consent.
 #*****************************************************************************
+obj-y += chal_keypad.o
 obj-$(CONFIG_FB_BRCM_RHEA) += chal_smi.o chal_dma_vc4lite.o \
-	chal_tectl_vc4lite.o chal_spi_vc4lite.o
+	chal_tectl_vc4lite.o chal_spi_vc4lite.o chal_keypad.o
 
 # Turn off over zealous gcc warnings
 EXTRA_CFLAGS += -D_RHEA_ -Wno-format -Wno-missing-braces
+EXTRA_CFLAGS += -DtempINTERFACE_OSDAL_KEYPAD
 

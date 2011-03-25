@@ -63,6 +63,24 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* GPIO74 for TCA9539 IO expander */
 	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
+
+	/* GPIOs for keypad */
+	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO01, KEY_R1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO02, KEY_R2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO03, KEY_R3, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO04, KEY_R4, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO08, KEY_C0, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO09, KEY_C1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO10, KEY_C2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO11, KEY_C3, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 };
 
 /* board level init */

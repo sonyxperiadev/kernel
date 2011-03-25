@@ -134,6 +134,13 @@ config KEYBOARD_QT2160
 	  This driver can also be built as a module. If so, the module
 	  will be called qt2160.
 
+config KEYBOARD_BCM
+	bool "BCM keypad"
+	depends on ARCH_BCM215XX || ARCH_BCM116X || ARCH_RHEA
+	default y
+	help
+	  BCM keypad
+
 config KEYBOARD_BFIN
 	tristate "Blackfin BF54x keypad support"
 	depends on (BF54x && !BF544)

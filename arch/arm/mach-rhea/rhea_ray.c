@@ -52,10 +52,32 @@
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/clk.h>
 #include "common.h"
+#ifdef CONFIG_KEYBOARD_BCM
+#include <mach/bcm_keypad.h>
+#endif
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_DEVICE_I2C_ADDR_1   0x0C
 #define PMU_IRQ_PIN           10
+
+// keypad map
+#define BCM_KEY_ROW_0  0
+#define BCM_KEY_ROW_1  1
+#define BCM_KEY_ROW_2  2
+#define BCM_KEY_ROW_3  3
+#define BCM_KEY_ROW_4  4
+#define BCM_KEY_ROW_5  5
+#define BCM_KEY_ROW_6  6
+#define BCM_KEY_ROW_7  7
+
+#define BCM_KEY_COL_0  0
+#define BCM_KEY_COL_1  1
+#define BCM_KEY_COL_2  2
+#define BCM_KEY_COL_3  3
+#define BCM_KEY_COL_4  4
+#define BCM_KEY_COL_5  5
+#define BCM_KEY_COL_6  6
+#define BCM_KEY_COL_7  7
 
 static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
 {
@@ -89,6 +111,92 @@ static int can_start_charging(void* data)
 static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 	.can_start_charging = can_start_charging,
 };
+
+#ifdef CONFIG_KEYBOARD_BCM
+/*!
+ * The keyboard definition structure.
+ */
+struct platform_device bcm_kp_device = {
+	.name = "bcm_keypad",
+	.id = -1,
+};
+
+/* Keymap for Ray board plug-in 64 keypad. Just doing a-z then 0-9 and special keys at end */
+static struct bcm_keymap newKeymap[] = {
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "key a", KEY_A},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "key b", KEY_B},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "key c", KEY_C},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "key d", KEY_D},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "key e", KEY_E},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "key f", KEY_F},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "key g", KEY_G},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "key h", KEY_H},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "key i", KEY_I},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "key j", KEY_J},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "key k", KEY_K},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "key l", KEY_L},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "key m", KEY_M},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "key n", KEY_N},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "key o", KEY_O},
+	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "key p", KEY_P},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "key q", KEY_Q},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "key r", KEY_R},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "key s", KEY_S},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "key t", KEY_T},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "key u", KEY_U},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "key v", KEY_V},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "key w", KEY_W},
+	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "key x", KEY_X},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "key y", KEY_Y},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "key z", KEY_Z},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "Search Key", KEY_SEARCH},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "VolumnUp-Key", KEY_VOLUMEUP},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "VolumnDown-Key", KEY_VOLUMEDOWN},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "Menu-Key", KEY_MENU},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "key 0", KEY_0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "key 1", KEY_1},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "key 2", KEY_2},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "key 3", KEY_3},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "key 4", KEY_4},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "key 5", KEY_5},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "key 6", KEY_6},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "key 7", KEY_7},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "key 8", KEY_8},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "key 9", KEY_9},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", KEY_KPMINUS},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", KEY_LEFTALT},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", KEY_LEFTCTRL},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", KEY_KATAKANA},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "key minus", KEY_MINUS},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "key back-slash", KEY_BACKSLASH},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "key slash", KEY_SLASH},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "key right-b", KEY_LEFTBRACE},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "key left-b", KEY_RIGHTBRACE},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "key lshift", KEY_LEFTSHIFT},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "key space", KEY_SPACE},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "key tab", KEY_TAB},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "Back Key", KEY_BACK},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "key send", KEY_SEND},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "key semicol", KEY_SEMICOLON},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "key bkspace", KEY_BACKSPACE},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "Home Key", KEY_HOME},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "key comma", KEY_COMMA},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "key dot", KEY_DOT},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "key enter", KEY_ENTER},
+};
+
+static struct bcm_keypad_platform_info bcm_keypad_data = {
+	.row_num = 8,
+	.col_num = 8,
+	.keymap = newKeymap,
+	.bcm_keypad_base = (void *)__iomem HW_IO_PHYS_TO_VIRT(KEYPAD_BASE_ADDR),
+};
+
+#endif
 
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	.init = bcm590xx_init_platform_hw,
@@ -202,6 +310,9 @@ static struct i2c_board_info __initdata qt602240_info[] = {
 
 /* Rhea Ray specific platform devices */ 
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
+#ifdef CONFIG_KEYBOARD_BCM
+	&bcm_kp_device,
+#endif
 
 };
 
@@ -247,6 +358,9 @@ static void __init rhea_ray_add_devices(void)
 {
 	enable_smi_display_clks();
 
+#ifdef CONFIG_KEYBOARD_BCM
+	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
+#endif
 	platform_add_devices(rhea_ray_plat_devices, ARRAY_SIZE(rhea_ray_plat_devices));
 
 	rhea_ray_add_i2c_devices();
