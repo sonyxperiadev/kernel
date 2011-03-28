@@ -289,12 +289,12 @@ static void qt602240_platform_exit_hw(void)
 static struct qt602240_platform_data qt602240_platform_data = {
 	.x_line		= 17,
 	.y_line		= 11,
-	.x_size		= 480,
-	.y_size		= 800,
+	.x_size		= 800,
+	.y_size		= 480,
 	.blen		= 0x21,
 	.threshold	= 0x28,
 	.voltage	= 2800000,              /* 2.8V */
-	.orient		= QT602240_ROTATED_90,
+	.orient		= QT602240_DIAGONAL_COUNTER,
 	.init_platform_hw = qt602240_platform_init_hw,
 	.exit_platform_hw = qt602240_platform_exit_hw,
 };
