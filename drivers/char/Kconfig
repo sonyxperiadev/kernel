@@ -1138,6 +1138,8 @@ config DCC_TTY
 
 source "drivers/s390/char/Kconfig"
 
+source "drivers/char/broadcom/Kconfig"
+
 config RAMOOPS
 	tristate "Log panic/oops to a RAM buffer"
 	depends on HAS_IOMEM

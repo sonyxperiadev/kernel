@@ -1,0 +1,15 @@
+#
+# Broadcom char driver config
+#
+
+menuconfig BRCM_CHAR_DRIVERS
+	tristate "Broadcom Char Drivers"
+	depends on PROC_FS
+	help
+	  Broadcom's char drivers
+
+config V3D
+	tristate "V3D Driver"
+	depends on BRCM_CHAR_DRIVERS
+	default BRCM_CHAR_DRIVERS
+
