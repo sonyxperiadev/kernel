@@ -12,7 +12,7 @@
 # consent.
 #*****************************************************************************
 
-obj-y := irq.o timer.o pinmux.o
+obj-y := irq.o kona_timer.o timer.o pinmux.o sysfs.o
 obj-$(CONFIG_SMP) += headsmp.o platsmp.o
 obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
 obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o

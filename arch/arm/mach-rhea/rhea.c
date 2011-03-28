@@ -34,6 +34,8 @@
 #include <linux/mfd/bcm590xx/core.h>
 #include <mach/gpio.h>
 #include <mach/pinmux.h>
+#include <mach/kona.h>
+#include <mach/timer.h>
 
 static void rhea_poweroff(void)
 {
@@ -62,6 +64,23 @@ static void __init rhea_l2x0_init(void)
 	l2x0_init(l2cache_base, 0x00040000, 0xfff0ffff);
 }
 #endif
+
+/* GP Timer init code, common for all rhea based platforms */
+void __init rhea_ray_timer_init (void)
+{
+	struct gp_timer_setup gpt_setup;
+
+	gpt_setup.name   = "slave-timer";
+	gpt_setup.ch_num = 0;
+	gpt_setup.rate   = GPT_MHZ_1;
+
+	/* Call the init function of timer module */
+	kona_timer_init(&gpt_setup);
+}
+
+struct sys_timer kona_timer = {
+	.init	= rhea_ray_timer_init,
+};
 
 static int __init rhea_init(void)
 {

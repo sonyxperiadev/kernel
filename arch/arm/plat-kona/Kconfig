@@ -32,6 +32,11 @@ config KONA_DCACHE_INVALIDATION
 	bool "Have Linux invalidate D-Cache"
 	help 
 	  Say Y if you want Linux to invalidate primary core D-Cache
+
+config KONA_TIMER_UNIT_TESTS
+	bool "Include Kona Timer unit test code"
+	help
+	  Say Y if you want to test the AON,Peripheral Timer modules using the sysfs interface
 	  
 endmenu
 

@@ -56,7 +56,8 @@ static struct map_desc rhea_io_desc[] __initdata =
 	/**************************************************
 	* NOTE: The following are alphabetically ordered.
 	***************************************************/
-
+	
+	IO_DESC( KONA_AON_CLK_VA, SZ_4K	),
 	IO_DESC( KONA_BINTC_BASE_ADDR, SZ_4K  ),
 	IO_DESC( KONA_BSC1_VA, SZ_4K  ),
 	IO_DESC( KONA_BSC2_VA, SZ_4K  ),
@@ -77,7 +78,7 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_PKA_VA, SZ_4K ),
 	IO_DESC( KONA_PWM_VA, SZ_4K ),
 	IO_DESC( KONA_PMU_BSC_VA, SZ_4K ),
-	IO_DESC( KONA_ROOT_RST_VA, SZ_4K ),
+	IO_DESC( KONA_ROOT_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_RNG_VA, SZ_4K ),
 
 	/*

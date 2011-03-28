@@ -30,6 +30,6 @@
  * on FPGA.
  * ToDo: Revisit this
  */
-#define CLOCK_TICK_RATE     (1000000)
+#define CLOCK_TICK_RATE 	(1000000)
 
 #endif /* __PLAT_KONA_TIMEX_H */
