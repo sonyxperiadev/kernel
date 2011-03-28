@@ -81,7 +81,7 @@ cInt32 chal_te_set_mux_out ( cUInt32 teIn, cUInt32 teOut )
                 "Invalid MUX Output[%d]\n", (int)teOut );
             return ( -1 );    
     }
-    
+   
     TECTL_WRITE_REG_MASKED ( TECTL_ADDR, TE_MUX_CTL, mask, value );
     return ( 0 );            
 }        
@@ -137,7 +137,7 @@ cInt32 chal_te_cfg_input ( UInt32 teIn, pCHAL_TE_CFG teCfg )
     }    
     
     te_ctrl_reg_val |= TE_0C_TE_EN_MASK;
-    
+   
     switch ( teIn )
     {
         case TE_VC4L_IN_0:

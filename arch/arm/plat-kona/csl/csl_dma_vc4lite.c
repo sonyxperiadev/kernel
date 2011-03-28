@@ -42,8 +42,8 @@
 
 #ifdef UNDER_LINUX
 #define DEBUG
-static  UInt32* dmaCtrlBlkList; // Virtual address of DMA memory region
-static  UInt32* dmaCtrlBlkListPhys;
+static  UInt32* dmaCtrlBlkList = NULL; // Virtual address of DMA memory region
+static  UInt32* dmaCtrlBlkListPhys = NULL;
 #else
 #pragma arm section zidata="uncacheable"
 __align(32) static  UInt32 dmaCtrlBlkList[DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE*DMA_VC4LITE_TOTAL_CHANNELS] = {0};  
@@ -87,6 +87,8 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id);
 static void dma_vc4lite_hisr(void);
 static UInt8 dma_vc4lite_per_map(UInt8);
 
+#define printk(fmt, ...) do {} while (0)
+
 //******************************************************************************
 // Function Definition
 //******************************************************************************
@@ -108,15 +110,20 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
     {
 #ifdef UNDER_LINUX
         // Allocate dma memory
-        
+
+	dmaCtrlBlkList = kmalloc(DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE*DMA_VC4LITE_TOTAL_CHANNELS, GFP_KERNEL);
+#if 0
         dmaCtrlBlkList = dma_alloc_coherent( NULL, 
             DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE*DMA_VC4LITE_TOTAL_CHANNELS,
             (dma_addr_t *)&dmaCtrlBlkListPhys, GFP_KERNEL );
-        
+#endif        
         if ((void *)dmaCtrlBlkList == NULL) {
             pr_info("DMA driver: failed to allocate DMA memory\n");
             return -ENOMEM;
         }
+	dmaCtrlBlkListPhys = (UInt32 *)virt_to_phys(dmaCtrlBlkList);
+
+	printk(KERN_ERR "the virt addr=0x%08x phy addr=0x%08x acp addr=%08x\n", dmaCtrlBlkList, virt_to_phys(dmaCtrlBlkList), dmaCtrlBlkListPhys);
 #endif
 
 #ifdef UNDER_LINUX
@@ -152,9 +159,9 @@ DMA_VC4LITE_STATUS_t csl_dma_vc4lite_init(void)
             OSSEMAPHORE_ChangeName(pdma->chan[i].chanSema, name);
 
             // set the channel control block address
-            pdma->chan[i].pDmaChanCtrlBlkList = (UInt32*)(dmaCtrlBlkList + 4*i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
+            pdma->chan[i].pDmaChanCtrlBlkList = (UInt32*)((UInt32)dmaCtrlBlkList + i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
 #ifdef UNDER_LINUX
-			pdma->chan[i].pDmaChanCtrlBlkListPHYS = (UInt32*)(dmaCtrlBlkListPhys + 4*i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
+			pdma->chan[i].pDmaChanCtrlBlkListPHYS = (UInt32*)((UInt32)dmaCtrlBlkListPhys + i*DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE);
 #endif
             pdma->chan[i].dmaChanCtrlBlkMemSize = DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE;
             pdma->chan[i].dmaChanCtrlBlkItemNum = 0;
@@ -436,6 +443,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_release_channel(DMA_VC4LITE_CHANNEL_t chanID)
 DMA_VC4LITE_STATUS csl_dma_vc4lite_start_transfer(DMA_VC4LITE_CHANNEL_t chanID)
 {
     CslDmaVc4lite_t *pdma = (CslDmaVc4lite_t *)&dmac;
+	dma_addr_t  temp;
 
 	// sanity check
     if (!pdma->initialized) 
@@ -456,23 +464,31 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_start_transfer(DMA_VC4LITE_CHANNEL_t chanID)
         return DMA_VC4LITE_STATUS_FAILURE;   
     }
 
-	#ifdef UNDER_LINUX
+
+#ifdef UNDER_LINUX
     if (chal_dma_vc4lite_prepare_transfer(pdma->handle, chanID, (cVoid *)pdma->chan[chanID].pDmaChanCtrlBlkList, (cVoid *)pdma->chan[chanID].pDmaChanCtrlBlkListPHYS)
-	#else		
+#else		
     if (chal_dma_vc4lite_prepare_transfer(pdma->handle, chanID, (cVoid *)pdma->chan[chanID].pDmaChanCtrlBlkList) 	
-	#endif
+#endif
           != CHAL_DMA_VC4LITE_STATUS_SUCCESS)
     {
         dprintf(1, "%s: prepare data transfer failure\n", __FUNCTION__);
         return DMA_VC4LITE_STATUS_FAILURE;   
     }
 
+    temp = dma_map_single(NULL, 
+		    pdma->chan[chanID].pDmaChanCtrlBlkList, 
+		    DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE,
+		    DMA_TO_DEVICE);
+    printk(KERN_ERR "the temp dma addr=0x%08x and the phys addr=0x%08x\n", temp, pdma->chan[chanID].pDmaChanCtrlBlkListPHYS);
+
+
     if (chal_dma_vc4lite_enable_channel(pdma->handle, chanID) != CHAL_DMA_VC4LITE_STATUS_SUCCESS)
     {
         dprintf(1, "%s: start channel failure\n", __FUNCTION__);
         return DMA_VC4LITE_STATUS_FAILURE;   
     }
-        
+
     return DMA_VC4LITE_STATUS_SUCCESS;
 }
 
@@ -581,6 +597,7 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(
     dmaCtrlBlkInfo.srcStride = 0;
     dmaCtrlBlkInfo.dstStride = 0;
     dmaCtrlBlkInfo.xferLength.len = pData->xferLength;
+			
 
     if (chal_dma_vc4lite_build_ctrlblk_list(
            pdma->handle, 
@@ -592,6 +609,18 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(
         dprintf(1, "%s: get control block list failure\n", __FUNCTION__);
         return DMA_VC4LITE_STATUS_FAILURE;   
 	}
+
+
+    printk(KERN_ERR "ctl blk item num = %d, ctl blk info"
+		    "0x%08x 0x%08x 0x%08x 0x%08x 0x%08x 0x%08x\n",
+	 pdma->chan[chanID].dmaChanCtrlBlkItemNum,
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[0],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[1],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[2],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[3],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[4],
+	((unsigned int *)pdma->chan[chanID].pDmaChanCtrlBlkList)[5]
+	);
 
     pdma->chan[chanID].dmaChanCtrlBlkItemNum++;	
     return DMA_VC4LITE_STATUS_SUCCESS;
@@ -744,6 +773,10 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
             {
                 chal_dma_vc4lite_clear_int_status(pdma->handle, chanNum);
                 pdma->chan[chanNum].dmaChanCtrlBlkItemNum = 0;
+		dma_unmap_single(NULL, 
+				(dma_addr_t)pdma->chan[chanNum].pDmaChanCtrlBlkListPHYS,
+				DMA_VC4LITE_CHANNEL_CTRL_BLOCK_SIZE,
+				DMA_TO_DEVICE);
             }
 
         }

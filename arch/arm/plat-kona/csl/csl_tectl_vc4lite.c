@@ -83,7 +83,7 @@ static void cslTectlEnableLcdTeMux ( void )
 #ifndef FPGA_VERSION        
     // (0)LCDTE or (1)LCDTE
     // (4)GPIO42
-    *PAD_CTRL_LCDTE = PAD_CTRL_STD | ( 0 << 8 );
+    *PAD_CTRL_LCDTE = PAD_CTRL_STD | ( 0x0 << 8 );
 #endif    
 }
 

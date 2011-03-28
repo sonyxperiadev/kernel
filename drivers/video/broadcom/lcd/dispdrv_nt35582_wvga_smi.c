@@ -286,7 +286,8 @@ static CSL_SMI_CTRL_T  NT35582_WVGA_SMI_SmiCtrlCfg =
     // TODO: Plug-In Real Timing For The Display
     { 0, 90, 10, 360, },    //  CSL_SMI_TIMIMG_T  rdTiming;
     { 0, 30, 10, 30 , },    //  CSL_SMI_TIMIMG_T  wrTiming;       //  1-8-3-8 => BB 68ns
-    { 0, 15, 10, 15 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-4-3-4 => BB 36ns  
+//   { 0,  15, 10, 15 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-4-3-4 => BB 36ns  
+    { 0, 8, 4, 8, }, 
 //  { 0,  8, 10,  8 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-3-3-3 => BB 28ns  
 //  { 0,  4, 10,  4 , },    //  CSL_SMI_TIMIMG_T  wrTiming_m;     //  1-2-3-2 => BB 20ns  
     TRUE,                   //  usesTE
@@ -855,15 +856,8 @@ Int32 NT35582_WVGA_SMI_Open (
         return ( -1 );
     }    
    
-    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open:start 0");
-    LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open:start 2");
-    
-
     pSmiCfg  = &NT35582_WVGA_SMI_SmiCtrlCfg;
 
- LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] NT35582_WVGA_SMI_Open:start 1");
-
-#if 0
     if ( pSmiCfg->usesTE ) 
     {  
         res = nt35582wvgaSmi_TeOn ();
@@ -874,7 +868,6 @@ Int32 NT35582_WVGA_SMI_Open (
             return ( res );
         }    
     }
-#endif
 
     // HERA HAS HARDCODED SMI ADDRESS LINES A1=SMI_CS(LCD_CS1) A0=SMI_nCD
     pSmiCfg->addr_c = 0xFC;
@@ -886,20 +879,8 @@ Int32 NT35582_WVGA_SMI_Open (
     
     panelData = &NT35582_WVGA_SMI_Info;
     
+
     DISPDRV_Reset( FALSE );
-
-   if ( pSmiCfg->usesTE ) 
-    {  
-        res = nt35582wvgaSmi_TeOn ();
-        if ( res == -1 )
-        {
-            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Failed To Configure "
-                "TE Input\n\r", __FUNCTION__ ); 
-            return ( res );
-        }    
-    }
-
-
 
 #if defined(__WVGA_MODE_888__) 
     pPanel->bpp         = 4;
@@ -1211,7 +1192,7 @@ Int32 NT35582_WVGA_SMI_Update (
 
     req.lineLenP       = lcdDrv->panelData->width;
     req.lineCount      = lcdDrv->panelData->height;
-    req.timeOut_ms     = 1000;
+    req.timeOut_ms     = 100000;
     req.buffBpp        = lcdDrv->bpp;
     
     req.cslLcdCbRec.cslH            = lcdDrv->cslH;

@@ -3,7 +3,7 @@
 
 #ifdef RHEA_FB_DEBUG
 #define rheafb_debug(fmt, arg...)	\
-	printk(KERN_DEBUG"%s:%d " fmt, __func__, __LINE__, ##arg)
+	printk("%s:%d " fmt, __func__, __LINE__, ##arg)
 #else
 #define rheafb_debug(fmt, arg...)	\
 	do {	} while (0)

@@ -1067,9 +1067,9 @@ static CSL_LCD_RES_T cslSmiSpiDmaStart (
     if( smiSpiH->ctrlType == CTRL_SMI )
     {
         dmaChInfo.dstID     = DMA_VC4LITE_CLIENT_SMI;
-        dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_4;  // FrameTime=20.8ms
-//      dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_8;  // FrameTime=20.8ms
-//      dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_16; // FrameTime=46.78ms ???
+//        dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_4;  // FrameTime=20.8ms
+        dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_8;  // FrameTime=20.8ms
+ //       dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_16; // FrameTime=46.78ms ???
     }
     else
     {
@@ -1079,7 +1079,7 @@ static CSL_LCD_RES_T cslSmiSpiDmaStart (
     dmaChInfo.xferMode       = DMA_VC4LITE_XFER_MODE_LINERA;
     dmaChInfo.dstStride      = 0;
     dmaChInfo.srcStride      = 0;
-    dmaChInfo.waitResponse   = 1;    
+    dmaChInfo.waitResponse   = 0;    
     dmaChInfo.callback       = (DMA_VC4LITE_CALLBACK_t)cslSmiEofDma;    
 
     if ( csl_dma_vc4lite_config_channel( *pDmaCh, &dmaChInfo) 
@@ -1107,7 +1107,7 @@ static CSL_LCD_RES_T cslSmiSpiDmaStart (
             "ERR add DMA transfer data\r\n ", __FUNCTION__ );
         return CSL_LCD_DMA_ERR;
     }
-    
+
     // start DMA transfer
     if ( csl_dma_vc4lite_start_transfer ( *pDmaCh ) 
         != DMA_VC4LITE_STATUS_SUCCESS )

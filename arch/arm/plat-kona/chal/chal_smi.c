@@ -534,7 +534,7 @@ void chal_smi_fifo_acc (
     value |= SMI_CS_CLEAR_MASK;    // clear  FIFOs
     value |= SMI_CS_START_MASK;    // start  PROGRAMMED mode
     value |= SMI_CS_ENABLE_MASK;   // enable PROGRAMMED mode
-    
+
     SMI_WRITE_REG_MASKED( pDev->baseAddr,  SMI_CS, mask, value );
 }
 
