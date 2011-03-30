@@ -22,6 +22,13 @@
 #include "u_serial.h"
 #include "gadget_chips.h"
 
+#if defined(CONFIG_USB_ANDROID_ACM) && defined(CONFIG_ARCH_KONA)
+#define ACM_FIXED_CTRL_ID	0
+#define ACM_FIXED_DATA_ID	1
+#else
+#undef ACM_FIXED_CTRL_ID
+#undef ACM_FIXED_DATA_ID
+#endif
 
 /*
  * This CDC ACM function support just wraps control functions and
@@ -334,6 +341,7 @@ static int acm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	/* SET_LINE_CODING ... just read and save what the host sends */
 	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_REQ_SET_LINE_CODING:
+		w_index = composite_actual_intf(cdev, w_index);
 		if (w_length != sizeof(struct usb_cdc_line_coding)
 				|| w_index != acm->ctrl_id)
 			goto invalid;
@@ -346,6 +354,7 @@ static int acm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	/* GET_LINE_CODING ... return what host sent, or initial value */
 	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_REQ_GET_LINE_CODING:
+		w_index = composite_actual_intf(cdev, w_index);
 		if (w_index != acm->ctrl_id)
 			goto invalid;
 
@@ -357,6 +366,7 @@ static int acm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	/* SET_CONTROL_LINE_STATE ... save what the host sent */
 	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_REQ_SET_CONTROL_LINE_STATE:
+		w_index = composite_actual_intf(cdev, w_index);
 		if (w_index != acm->ctrl_id)
 			goto invalid;
 
@@ -468,6 +478,7 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 	const unsigned			len = sizeof(*notify) + length;
 	void				*buf;
 	int				status;
+	struct usb_composite_dev 	*cdev = acm->port.func.config->cdev;
 
 	req = acm->notify_req;
 	acm->notify_req = NULL;
@@ -481,7 +492,7 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 			| USB_RECIP_INTERFACE;
 	notify->bNotificationType = type;
 	notify->wValue = cpu_to_le16(value);
-	notify->wIndex = cpu_to_le16(acm->ctrl_id);
+	notify->wIndex = cpu_to_le16(composite_actual_intf(cdev, acm->ctrl_id));
 	notify->wLength = cpu_to_le16(length);
 	memcpy(buf, data, length);
 
@@ -585,10 +596,14 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 	if (status < 0)
 		goto fail;
 	acm->ctrl_id = status;
-	acm_iad_descriptor.bFirstInterface = status;
-
 	acm_control_interface_desc.bInterfaceNumber = status;
+#if defined(ACM_FIXED_CTRL_ID)
+	acm_iad_descriptor.bFirstInterface = ACM_FIXED_CTRL_ID;
+	acm_union_desc .bMasterInterface0 = ACM_FIXED_CTRL_ID;
+#else
+	acm_iad_descriptor.bFirstInterface = status;
 	acm_union_desc .bMasterInterface0 = status;
+#endif
 
 	status = usb_interface_id(c, f);
 	if (status < 0)
@@ -596,8 +611,13 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 	acm->data_id = status;
 
 	acm_data_interface_desc.bInterfaceNumber = status;
+#if defined(ACM_FIXED_DATA_ID)
+	acm_union_desc.bSlaveInterface0 = ACM_FIXED_DATA_ID;
+	acm_call_mgmt_descriptor.bDataInterface = ACM_FIXED_DATA_ID;
+#else
 	acm_union_desc.bSlaveInterface0 = status;
 	acm_call_mgmt_descriptor.bDataInterface = status;
+#endif
 
 	status = -ENODEV;
 
@@ -777,6 +797,7 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 	acm->port.func.set_alt = acm_set_alt;
 	acm->port.func.setup = acm_setup;
 	acm->port.func.disable = acm_disable;
+	acm->port.func.disabled = 1;
 
 	status = usb_add_function(c, &acm->port.func);
 	if (status)
