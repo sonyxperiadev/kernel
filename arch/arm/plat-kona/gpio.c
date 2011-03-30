@@ -205,7 +205,7 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 
-	return 0;
+	return ret;
 }
 
 static struct gpio_chip kona_gpio_chip = {

@@ -93,7 +93,7 @@ static struct proc_dir_entry *gProcParent;
 static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
 
 #define DRIVER_NAME "sdio"
-
+/*
 static void sdhci_dumpregs(struct sdhci_host *host)
 {
 	printk(KERN_DEBUG DRIVER_NAME ": ============== REGISTER DUMP ==============\n");
@@ -136,7 +136,7 @@ static void sdhci_dumpregs(struct sdhci_host *host)
 
 	printk(KERN_DEBUG DRIVER_NAME ": ===========================================\n");
 }
-
+*/
 
 
 /*

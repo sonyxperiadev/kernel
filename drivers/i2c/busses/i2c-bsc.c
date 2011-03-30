@@ -793,7 +793,7 @@ static void bsc_disable_clk(struct bsc_i2c_dev *dev)
 		clk_disable(dev->bsc_apb_clk);
 }
 
-static int __init bsc_probe(struct platform_device *pdev)
+static int __devinit bsc_probe(struct platform_device *pdev)
 {
 	int rc=0, irq;
 	struct bsc_adap_cfg *hw_cfg;

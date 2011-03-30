@@ -521,7 +521,7 @@ struct bcm590xx_regulator_init_data bcm59055_regulators[] =
 	{ BCM59055_SDSR, &bcm59055_sdsr_data }
 };
 
-struct platform_device *bcm59055_state_change_and_voltage_change_devices[] __initdata = {
+struct platform_device *bcm59055_state_change_and_voltage_change_devices[] = {
     &bcm59055_uc_device_rf , &bcm59055_vc_device_rf ,
     &bcm59055_uc_device_cam , &bcm59055_vc_device_cam ,
     &bcm59055_uc_device_hv1 , &bcm59055_vc_device_hv1 ,
