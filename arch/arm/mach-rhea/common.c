@@ -94,6 +94,11 @@ static char *android_function_rndis[] = {
 #endif
 };
 
+static char *android_function_acm[] = {
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
+#endif
+};
 static char *android_function_adb_msc[] = {
 #ifdef CONFIG_USB_ANDROID_MASS_STORAGE
 	"usb_mass_storage",
@@ -113,6 +118,9 @@ static char *android_functions_all[] = {
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis",
 #endif
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
+#endif
 };
 
 #define	BRCM_VENDOR_ID		0x0a5c
@@ -127,6 +135,7 @@ static char *android_functions_all[] = {
 
 /* use a seprate PID for RNDIS */
 #define RNDIS_PRODUCT_ID	0x4e13
+#define ACM_PRODUCT_ID		0x8888
 
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
@@ -168,6 +177,11 @@ static struct android_usb_product android_products[] = {
 		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
 		.num_functions	=	ARRAY_SIZE(android_function_rndis),
 		.functions	=	android_function_rndis,
+	},
+	{
+		.product_id	= 	__constant_cpu_to_le16(ACM_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_acm),
+		.functions	=	android_function_acm,
 	},
 };
 
