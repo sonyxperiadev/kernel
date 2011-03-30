@@ -178,7 +178,7 @@ static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
 static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigned debounce)
 {
 	void __iomem * reg_base = kona_gpio.reg_base;
-	u32 val, res, ret = 0;
+	u32 val, res;
 	unsigned long flags;
 
 	(void) chip; /* unused input parameter */
@@ -205,7 +205,7 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 
-	return ret;
+	return 0;
 }
 
 static struct gpio_chip kona_gpio_chip = {
@@ -214,7 +214,7 @@ static struct gpio_chip kona_gpio_chip = {
 	.get                = kona_gpio_get,
 	.direction_output   = kona_gpio_direction_output,
 	.set                = kona_gpio_set,
-	.set_debounce		= kona_gpio_set_debounce,
+	.set_debounce       = kona_gpio_set_debounce,
 	.base               = 0,
 	.ngpio              = 0,
 };
