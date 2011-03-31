@@ -125,7 +125,7 @@ struct platform_device bcm_kp_device = {
 	Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
 	GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
 	using pin GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
-	GPIO15 */*/
+	GPIO15 */
 static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "Search Key", KEY_SEARCH},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "Back Key", KEY_BACK},
