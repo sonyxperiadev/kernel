@@ -79,7 +79,7 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
-static int bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
+static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
 {
 	printk("REG: pmu_init_platform_hw called \n") ;
 	bcm59055_reg_init_dev_init(bcm590xx)  ;
@@ -121,72 +121,28 @@ struct platform_device bcm_kp_device = {
 	.id = -1,
 };
 
-/* Keymap for Ray board plug-in 64 keypad. Just doing a-z then 0-9 and special keys at end */
+/*	Keymap for Ray board plug-in 64-key keypad. 
+	Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
+	GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
+	using pin GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
+	GPIO15 */*/
 static struct bcm_keymap newKeymap[] = {
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "key a", KEY_A},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "key b", KEY_B},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "key c", KEY_C},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "key d", KEY_D},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "key e", KEY_E},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "key f", KEY_F},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "key g", KEY_G},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_7, "key h", KEY_H},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_0, "key i", KEY_I},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_1, "key j", KEY_J},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_2, "key k", KEY_K},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_3, "key l", KEY_L},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_4, "key m", KEY_M},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_5, "key n", KEY_N},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_6, "key o", KEY_O},
-	{BCM_KEY_ROW_1, BCM_KEY_COL_7, "key p", KEY_P},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_0, "key q", KEY_Q},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_1, "key r", KEY_R},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_2, "key s", KEY_S},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_3, "key t", KEY_T},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_4, "key u", KEY_U},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_5, "key v", KEY_V},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_6, "key w", KEY_W},
-	{BCM_KEY_ROW_2, BCM_KEY_COL_7, "key x", KEY_X},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_0, "key y", KEY_Y},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_1, "key z", KEY_Z},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_2, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_3, "VolumnUp-Key", KEY_VOLUMEUP},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_4, "VolumnDown-Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_5, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_3, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_0, "key 0", KEY_0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "key 1", KEY_1},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "key 2", KEY_2},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "key 3", KEY_3},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "key 4", KEY_4},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "key 5", KEY_5},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "key 6", KEY_6},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "key 7", KEY_7},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "key 8", KEY_8},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "key 9", KEY_9},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", KEY_KPMINUS},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", KEY_LEFTALT},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", KEY_LEFTCTRL},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", KEY_KATAKANA},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "key minus", KEY_MINUS},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "key back-slash", KEY_BACKSLASH},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "key slash", KEY_SLASH},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "key right-b", KEY_LEFTBRACE},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "key left-b", KEY_RIGHTBRACE},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "key lshift", KEY_LEFTSHIFT},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "key space", KEY_SPACE},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "key tab", KEY_TAB},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "Back Key", KEY_BACK},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "key send", KEY_SEND},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "key semicol", KEY_SEMICOLON},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "key bkspace", KEY_BACKSPACE},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "Home Key", KEY_HOME},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "key comma", KEY_COMMA},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "key dot", KEY_DOT},
-	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "key enter", KEY_ENTER},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "Search Key", KEY_SEARCH},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "Back Key", KEY_BACK},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "Forward key", KEY_FORWARD},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "Home Key", KEY_HOME},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "Menu-Key", KEY_MENU},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "VolumnUp-Key", KEY_VOLUMEUP},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "VolumnDown-Key", KEY_VOLUMEDOWN},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "key mute", KEY_MUTE},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "key space", KEY_SPACE},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "key power", KEY_POWER},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "key sleep", KEY_SLEEP},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "key wakeup", KEY_WAKEUP},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
 };
 
 static struct bcm_keypad_platform_info bcm_keypad_data = {

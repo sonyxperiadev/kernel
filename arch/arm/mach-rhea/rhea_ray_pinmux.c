@@ -64,7 +64,11 @@ static struct __init pin_config board_pin_config[] = {
 	/* GPIO74 for TCA9539 IO expander */
 	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
 
-	/* GPIOs for keypad */
+	/*	Pinmux for keypad
+		Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
+		GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
+		using GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
+		GPIO15 */
 	PIN_CFG(GPIO04, KEY_R4, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
