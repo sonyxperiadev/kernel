@@ -22,14 +22,6 @@
 #include "u_serial.h"
 #include "gadget_chips.h"
 
-#if defined(CONFIG_USB_ANDROID_ACM) && defined(CONFIG_ARCH_KONA)
-#define ACM_FIXED_CTRL_ID	0
-#define ACM_FIXED_DATA_ID	1
-#else
-#undef ACM_FIXED_CTRL_ID
-#undef ACM_FIXED_DATA_ID
-#endif
-
 /*
  * This CDC ACM function support just wraps control functions and
  * notifications around the generic serial-over-usb code.
@@ -597,13 +589,8 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 		goto fail;
 	acm->ctrl_id = status;
 	acm_control_interface_desc.bInterfaceNumber = status;
-#if defined(ACM_FIXED_CTRL_ID)
-	acm_iad_descriptor.bFirstInterface = ACM_FIXED_CTRL_ID;
-	acm_union_desc .bMasterInterface0 = ACM_FIXED_CTRL_ID;
-#else
 	acm_iad_descriptor.bFirstInterface = status;
 	acm_union_desc .bMasterInterface0 = status;
-#endif
 
 	status = usb_interface_id(c, f);
 	if (status < 0)
@@ -611,13 +598,8 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 	acm->data_id = status;
 
 	acm_data_interface_desc.bInterfaceNumber = status;
-#if defined(ACM_FIXED_DATA_ID)
-	acm_union_desc.bSlaveInterface0 = ACM_FIXED_DATA_ID;
-	acm_call_mgmt_descriptor.bDataInterface = ACM_FIXED_DATA_ID;
-#else
 	acm_union_desc.bSlaveInterface0 = status;
 	acm_call_mgmt_descriptor.bDataInterface = status;
-#endif
 
 	status = -ENODEV;
 

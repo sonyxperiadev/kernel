@@ -28,6 +28,7 @@
 #include <linux/usb/composite.h>
 #include <linux/delay.h>
 #include <linux/kdev_t.h>
+#include <linux/usb/cdc.h>
 
 
 /*
@@ -334,6 +335,7 @@ static int config_buf(struct usb_configuration *config,
 	list_for_each_entry(f, &config->functions, list) {
 		struct usb_descriptor_header **descriptors;
 		struct usb_descriptor_header *descriptor;
+		struct usb_interface_assoc_descriptor *iad = NULL;
 
 		if (speed == USB_SPEED_HIGH)
 			descriptors = f->hs_descriptors;
@@ -356,7 +358,29 @@ static int config_buf(struct usb_configuration *config,
 					intf->bInterfaceNumber = interfaceCount++;
 				else
 					intf->bInterfaceNumber = interfaceCount - 1;
+				if (iad) {
+					iad->bFirstInterface =
+						intf->bInterfaceNumber;
+					iad = NULL;
+				}
+			} else if (intf->bDescriptorType ==
+				USB_DT_INTERFACE_ASSOCIATION) {
+				iad = (struct usb_interface_assoc_descriptor *)
+					dest;
+			} else if (intf->bDescriptorType ==
+				USB_DT_CS_INTERFACE) {
+				struct usb_cdc_union_desc *cdc_union;
+				cdc_union = (struct usb_cdc_union_desc *)
+					dest;
+				if (cdc_union->bDescriptorSubType ==
+					USB_CDC_UNION_TYPE) {
+					cdc_union->bMasterInterface0 =
+						interfaceCount-1;
+					cdc_union->bSlaveInterface0 =
+						interfaceCount;
+				}
 			}
+
 			dest += intf->bLength;
 		}
 
