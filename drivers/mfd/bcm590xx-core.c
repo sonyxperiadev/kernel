@@ -303,19 +303,23 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 
     enable_irq(irq);
 
+#ifdef CONFIG_BATTERY_BCM59055
     // Register battery device, so that battery probe function will be called.
     ret = bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery") ;
     if (ret < 0) {
         printk(KERN_ERR "%s client_dev_register for bcm59055-battery failed %d\n", __FUNCTION__, ret);
         return ret ;
     }
+#endif
 
+#ifdef CONFIG_INPUT_BCM59055_ONKEY
     /* Register PowerOnKey device */
     ret = bcm590xx_client_dev_register(bcm590xx, "bcm59055-onkey") ;
     if (ret < 0) {
         printk(KERN_ERR "%s client_dev_register for bcm59055-battery failed %d\n", __FUNCTION__, ret);
         return ret ;
     }
+#endif
 
     return 0;
 
