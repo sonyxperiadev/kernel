@@ -80,11 +80,13 @@ static void  cslTectlEnableDsi1TeMux ( void );
 //*****************************************************************************
 static void cslTectlEnableLcdTeMux ( void )
 {
+#ifndef __KERNEL__
 #ifndef FPGA_VERSION        
     // (0)LCDTE or (1)LCDTE
     // (4)GPIO42
     *PAD_CTRL_LCDTE = PAD_CTRL_STD | ( 0x0 << 8 );
 #endif    
+#endif
 }
 
 

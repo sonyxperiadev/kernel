@@ -511,6 +511,7 @@ static int cslSmiSetSmiClk ( pSMI_SPI_HANDLE pSmi, pCSL_SMI_CLK pSmiClkCfg )
 //*****************************************************************************
 static void cslSmiEnablePads( void )
 {
+#ifndef __KERNEL__
 #ifndef FPGA_VERSION
 #ifdef __USE_PMUX_DRV__
     PinMuxConfig_t   pmuxCfg;
@@ -561,6 +562,7 @@ static void cslSmiEnablePads( void )
     *PAD_CTRL_LCDSDA = PAD_CTRL_STD | (1 << 8);  // (0)LCD_SDA  (1)LCD_D0  
 #endif // #ifdef __USE_PMUX_DRV__    
 #endif //#ifndef FPGA_VERSION
+#endif
 }
 
 //*****************************************************************************
@@ -602,6 +604,7 @@ static void cslSpiEnablePads( void )
 //*****************************************************************************
 static void  cslSmiMuxOn(void)
 {
+#ifndef __KERNEL__
 #ifndef FPGA_VERSION
 #ifdef __USE_PMUX_DRV__
     PinMuxConfig_t   pmuxCfg;
@@ -620,6 +623,7 @@ static void  cslSmiMuxOn(void)
     *PAD_CTRL_LCDSDA = PAD_CTRL_STD | (1 << 8);  // 000=LCD_SDA or  001=LCD_D0  
 #endif //#ifdef __USE_PMUX_DRV__
 #endif //#ifndef FPGA_VERSION
+#endif
 }    
 
 //*****************************************************************************
@@ -1067,7 +1071,7 @@ static CSL_LCD_RES_T cslSmiSpiDmaStart (
     if( smiSpiH->ctrlType == CTRL_SMI )
     {
         dmaChInfo.dstID     = DMA_VC4LITE_CLIENT_SMI;
-//        dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_4;  // FrameTime=20.8ms
+ //       dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_4;  // FrameTime=20.8ms
         dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_8;  // FrameTime=20.8ms
  //       dmaChInfo.burstLen  = DMA_VC4LITE_BURST_LENGTH_16; // FrameTime=46.78ms ???
     }
@@ -1327,7 +1331,7 @@ static CSL_LCD_RES_T cslSmi2cHal (
     pSmi->cfg.smiCfg.smiMode.swap      = smiCfg->swap;           
     pSmi->cfg.smiCfg.smiMode.setupFirstTrasferOnly = smiCfg->setupFirstTrOnly;
 
-    printk(KERN_ERR "smicfg info: addr=0x%08x  pixel in mode= %d bpp=%d buswidth=%d \n",
+     LCD_DBG ( LCD_DBG_INIT_ID, "smicfg info: addr=0x%08x  pixel in mode= %d bpp=%d buswidth=%d \n",
 		        &pSmi->cfg.smiCfg,
 			pSmi->cfg.smiCfg.smiMode.inPixelMode,
 			pSmi->cfg.smiCfg.buffBpp,
@@ -1652,8 +1656,8 @@ CSL_LCD_RES_T CSL_SMI_WrRdDataProg (
             
             if ( status != OSSTATUS_SUCCESS)
             {
-		printk(KERN_ERR "we got no DMA int\n");
-		panic("No VC4 DMA int back\n");
+		//asm("bkpt");
+		//panic("No VC4 DMA int back\n");
                 cslSmiDisInt ( pSmi );
                 cslSmiSpiDmaStop ( updMsg.dmaCh );   
                 
