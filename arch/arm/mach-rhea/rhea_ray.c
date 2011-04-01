@@ -79,7 +79,7 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
-static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
+static int bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx)
 {
 	printk("REG: pmu_init_platform_hw called \n") ;
 	bcm59055_reg_init_dev_init(bcm590xx)  ;
