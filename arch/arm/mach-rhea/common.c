@@ -383,6 +383,20 @@ static struct platform_device pmu_device = {
        .num_resources = 1,
 };
 
+// PWM configuration.
+static struct resource kona_pwm_resource = {
+                .start = PWM_BASE_ADDR,
+                .end = PWM_BASE_ADDR + SZ_4K - 1,
+                .flags = IORESOURCE_MEM,
+};
+
+static struct platform_device kona_pwm_device = {
+                .name = "kona_pwmc",
+                .id = -1,
+                .resource = &kona_pwm_resource,
+                .num_resources  = 1,
+} ;
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -395,6 +409,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&android_mass_storage_device,
 	&android_usb,
 	&pmu_device,	
+	&kona_pwm_device,	
 };
 
 void __init board_add_common_devices(void)

@@ -106,6 +106,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO26, LCDD2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO27, LCDD1, 0, OFF, ON, 0, 0, 8MA),
 
+	/* PWM config - PWM4, PWM5*/
+	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
+
 };
 
 /* board level init */

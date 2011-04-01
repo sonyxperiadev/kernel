@@ -27,3 +27,10 @@ config ATMEL_PWMC
          This option enables support under the generic PWM
 	 framework for PWMC peripheral channels found on
 	 certain Atmel microcontrollers.  If unsure, say N.
+
+
+config KONA_PWMC
+       tristate "KONA PWM"
+       depends on GENERIC_PWM && ARCH_KONA
+       help
+         When enabled, this feature supports PWM functionality for chip. If unsure, say N.
