@@ -1364,6 +1364,8 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 		    driver->driver.name);
 
 	/* Now we have all drivers ready, allow connect to USB host */
+	dwc_otg_pullup(&gadget_wrapper->gadget, 0);
+	dwc_mdelay(10);
 	dwc_otg_pullup(&gadget_wrapper->gadget, 1);
 
 	/* only enable interrupt when gadget function is registered */
