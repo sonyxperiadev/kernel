@@ -160,9 +160,9 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 
 	atomic_set(&fb->buff_idx, buff_idx);
 
-	//fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
+	fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
 
-	//rheafb_info("RHEA Display is updated once at %d time with yoffset=%d\n", fb->base_update_count, var->yoffset);
+	rheafb_debug("RHEA Display is updated once at %d time with yoffset=%d\n", fb->base_update_count, var->yoffset);
 
 	return ret;
 }
@@ -416,7 +416,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 	/* Paint it black (assuming default fb contents are all zero) */
 	rhea_fb_pan_display(&fb->fb.var, &fb->fb);
-	up(&fb->thread_sem);
+	//up(&fb->thread_sem);
 
 	ret = register_framebuffer(&fb->fb);
 	if (ret) {
@@ -425,17 +425,6 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 
 	rheafb_info("RHEA Framebuffer probe successfull\n");
-#if 0
-#ifdef CONFIG_LOGO
-	/*  Display the default logo/splash screen. */
-	fb_prepare_logo(&fb->fb, 0);
-	fb_show_logo(&fb->fb, 0);
-
-	rheafb_info("Logo is now in framebuffer\n");
-
-	fb->display_ops->update(fb->display_hdl, NULL /* Callback */);
-#endif
-#endif
 
 #ifdef CONFIG_ANDROID_POWER
 	fb->early_suspend.suspend = rhea_fb_early_suspend;
