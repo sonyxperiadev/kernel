@@ -796,14 +796,35 @@ static void __init rhea_ray_add_i2c_devices (void)
 	i2c_register_board_info(2,
 		pmu_info,
 		ARRAY_SIZE(pmu_info));
+}
 
+static int __init rhea_ray_add_lateInit_devices (void)
+{
+	struct i2c_adapter *adapter;
+	struct i2c_client *client;
+
+	adapter = i2c_get_adapter(1);
+	if (!adapter) {
+		printk(KERN_ERR "can't get i2c adapter 1 %d\n");
+		return ENODEV;
+	}
 #ifdef CONFIG_GPIO_PCA953X
-	i2c_register_board_info(1, pca953x_info, ARRAY_SIZE(pca953x_info));
+	client = i2c_new_device(adapter, pca953x_info);
+	if (!client) {
+		printk(KERN_ERR "an't add i2c device for pca953x\n");
+	}
 #endif
 
 #ifdef CONFIG_TOUCHSCREEN_QT602240
-	i2c_register_board_info(1, qt602240_info, ARRAY_SIZE(qt602240_info));
+	client = i2c_new_device(adapter, qt602240_info);
+	if (!client) {
+		printk(KERN_ERR "an't add i2c device for qt602240\n");
+	}
 #endif
+	i2c_put_adapter(adapter);
+
+	board_add_sdio_devices();
+	return 0;
 }
 
 static void enable_smi_display_clks(void)
@@ -852,6 +873,8 @@ void __init board_map_io(void)
 
 	rhea_map_io();
 }
+
+late_initcall(rhea_ray_add_lateInit_devices);
 
 MACHINE_START(RHEA, "RheaRay")
 	.phys_io = IO_START,

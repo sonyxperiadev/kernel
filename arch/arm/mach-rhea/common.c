@@ -58,6 +58,10 @@
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
 #define KONA_UART2_PA	UARTB3_BASE_ADDR
 
+#ifdef CONFIG_GPIO_PCA953X
+#define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
+#endif
+
 #define KONA_8250PORT(name)				\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA), 	\
@@ -238,7 +242,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO0 */
 		.id = 0,
 		.data_pullup = 0,
-//		.cd_gpio = 106, FIXME
+		.cd_gpio = SD_CARDDET_GPIO_PIN,
 		.devtype = SDIO_DEV_TYPE_SDMMC,
 		.peri_clk_name = "sdio1_clk",
 		.ahb_clk_name = "sdio1_ahb_clk",
@@ -403,8 +407,6 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
-	&board_sdio1_device,
-	&board_sdio0_device,
 	&android_rndis_device,
 	&android_mass_storage_device,
 	&android_usb,
@@ -412,8 +414,18 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_pwm_device,	
 };
 
+/* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
+static struct platform_device *board_sdio_plat_devices[] __initdata = {
+	&board_sdio1_device,
+	&board_sdio0_device,
+};
+
 void __init board_add_common_devices(void)
 {
 	platform_add_devices(board_common_plat_devices, ARRAY_SIZE(board_common_plat_devices));
 }
 
+void __init board_add_sdio_devices(void)
+{
+	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
+}

@@ -1424,12 +1424,7 @@ static void __exit qt602240_exit(void)
 	i2c_del_driver(&qt602240_driver);
 }
 
-#ifdef CONFIG_QT602240_BRCM_FIX
-/* IRQ is connected to GPIO expander on HeraRay */
-late_initcall(qt602240_init);
-#else
 module_init(qt602240_init);
-#endif
 module_exit(qt602240_exit);
 
 /* Module information */

@@ -616,7 +616,7 @@ static int __init pca953x_init(void)
 /* register after i2c postcore initcall and before
  * subsys initcalls that may rely on these GPIOs
  */
-    late_initcall(pca953x_init);
+subsys_initcall(pca953x_init);
 
 static void __exit pca953x_exit(void)
 {
