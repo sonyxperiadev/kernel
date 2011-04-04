@@ -492,6 +492,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	dev->dev = &pdev->dev;
 	dev->host = host;
 	dev->devtype = hw_cfg->devtype;
+	dev->cd_gpio = hw_cfg->cd_gpio;
 	if (dev->devtype == SDIO_DEV_TYPE_WIFI)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
 
