@@ -160,7 +160,7 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 
 	atomic_set(&fb->buff_idx, buff_idx);
 
-	fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
+	ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
 
 	rheafb_debug("RHEA Display is updated once at %d time with yoffset=%d\n", fb->base_update_count, var->yoffset);
 
@@ -415,7 +415,11 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		goto err_set_var_failed;
 	}
 	/* Paint it black (assuming default fb contents are all zero) */
-	rhea_fb_pan_display(&fb->fb.var, &fb->fb);
+	ret = rhea_fb_pan_display(&fb->fb.var, &fb->fb);
+	if (ret) {
+		rheafb_error("Can not enable the LCD!\n");
+		goto err_enable_display_failed;
+	}
 	//up(&fb->thread_sem);
 
 	ret = register_framebuffer(&fb->fb);

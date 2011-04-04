@@ -1192,7 +1192,7 @@ Int32 NT35582_WVGA_SMI_Update (
 
     req.lineLenP       = lcdDrv->panelData->width;
     req.lineCount      = lcdDrv->panelData->height;
-    req.timeOut_ms     = 100000;
+    req.timeOut_ms     = 100;
     req.buffBpp        = lcdDrv->bpp;
     
     req.cslLcdCbRec.cslH            = lcdDrv->cslH;
