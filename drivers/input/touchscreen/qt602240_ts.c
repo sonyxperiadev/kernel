@@ -1301,9 +1301,33 @@ static int __devinit qt602240_probe(struct i2c_client *client,
 		goto err_free_object;
 
 #ifdef CONFIG_QT602240_BRCM_FIX
-    // clear any new pending IRQ.Should be a generic fix
-    disable_irq(data->irq);
-    qt602240_make_highchg(data);
+	// clear any new pending IRQ.Should be a generic fix
+	disable_irq(data->irq);
+	qt602240_make_highchg(data);
+
+	/* Set max X and Y for touchscreen to the x_size and y_size passed
+	 * into platform data. This is necessary, otherwise Android will calculate
+	 * scaling factor < 1, and will only generate touchscreen coordinates
+	 * for a part of the screen.
+	 *
+	 * Also, here we use x_size to give MAX(ABS_y) and y_size for
+	 * MAX(ABS_x). as the touchscreen is oriented with DIAGONAL_COUNTER
+	 * See : arch/arm/mach-rhea/rhea_ray.c for details
+	 *
+	 * : ssp
+	 */
+
+	/* for single touch */
+	input_set_abs_params(input_dev, ABS_X,
+			     0, data->pdata->y_size, 0, 0);
+	input_set_abs_params(input_dev, ABS_Y,
+			     0, data->pdata->x_size, 0, 0);
+
+	/* for multi touch */
+	input_set_abs_params(input_dev, ABS_MT_POSITION_X,
+			     0, data->pdata->y_size, 0, 0);
+	input_set_abs_params(input_dev, ABS_MT_POSITION_Y,
+			     0, data->pdata->x_size, 0, 0);
 #endif
 
 	error = request_threaded_irq(client->irq, NULL, qt602240_interrupt,
