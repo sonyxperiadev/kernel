@@ -33,8 +33,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/broadcom/v3d.h>
 #include <mach/rdb/brcm_rdb_sysmap_a9.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
+#include <mach/rdb/brcm_rdb_v3d.h>
 #include <mach/gpio.h>
-#include "v3d_registers.h"
 
 #define V3D_DEV_NAME	"v3d"
 
@@ -43,7 +43,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define RHEA_V3D_BASE_PERIPHERAL_ADDRESS	MM_V3D_BASE_ADDR
 
-#define IRQ_GRAPHICS	148
+#define IRQ_GRAPHICS	BCM_INT_ID_RESERVED148
 
 #define V3D_DEBUG
 #ifdef V3D_DEBUG
@@ -77,12 +77,13 @@ static irqreturn_t v3d_isr(int irq, void *dev_id)
 {
 	v3d_t *dev;
 
-	dbg_print("Got v3d interrupt\n");
+	dbg_print("Got v3d interrupt: clear V3D interrupts\n");
+	writel ( 0xf, v3d_base + V3D_INTCTL_OFFSET);
 	dev = (v3d_t *)dev_id;
 
 	up(&dev->irq_sem);
 
-	return IRQ_RETVAL(1);
+	return IRQ_HANDLED;
 }
 
 static int v3d_open(struct inode *inode, struct file *filp)
@@ -102,7 +103,7 @@ static int v3d_open(struct inode *inode, struct file *filp)
 	sema_init(&dev->irq_sem, 0);
 
 	ret = request_irq(IRQ_GRAPHICS, v3d_isr,
-			IRQF_DISABLED | IRQF_SHARED, V3D_DEV_NAME, dev);
+			IRQF_DISABLED | IRQF_SHARED | IRQF_TRIGGER_RISING, V3D_DEV_NAME, dev);
 	if (ret){
 		err_print("request_irq failed ret = %d\n", ret);
 		goto err;
@@ -134,13 +135,14 @@ static int v3d_mmap(struct file *filp, struct vm_area_struct *vma)
 	v3d_t *dev = (v3d_t *)(filp->private_data);
 
 	if (vma_size & (~PAGE_MASK)) {
-		pr_err(KERN_ERR "v3d_mmap: mmaps must be aligned to a multiple of pages_size.\n");
+		err_print(KERN_ERR "v3d_mmap: mmaps must be aligned to a multiple of pages_size.\n");
 		return -EINVAL;
 	}
 
 	if (!vma->vm_pgoff) {
 		vma->vm_pgoff = RHEA_V3D_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
 	} else if (vma->vm_pgoff != (dev->mempool.addr >> PAGE_SHIFT)) {
+		err_print("v3d_mmap failed\n");
 		return -EINVAL;
 	}
 
@@ -152,7 +154,7 @@ static int v3d_mmap(struct file *filp, struct vm_area_struct *vma)
 			vma->vm_pgoff,
 			vma_size,
 			vma->vm_page_prot)) {
-		pr_err("%s(): remap_pfn_range() failed\n", __FUNCTION__);
+		err_print("%s(): remap_pfn_range() failed\n", __FUNCTION__);
 		return -EINVAL;
 	}
 
@@ -191,15 +193,15 @@ static int v3d_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, u
 
 	   case V3D_IOCTL_WAIT_IRQ:
 		{
-			//Enable V3D block to generate interrupt for every possible situation
-			writel (0xf, v3d_base  + V3D_INTENA_OFFSET);
+			//Enable V3D block to generate interrupt
 			dbg_print("Enabling v3d interrupt\n");
-
 			enable_irq(IRQ_GRAPHICS);
+
 			dbg_print("Waiting for interrupt\n");
 		   if (down_interruptible(&dev->irq_sem))
 			{
 				disable_irq(IRQ_GRAPHICS);
+				err_print("Wait for IRQ failed\n");
 				return -ERESTARTSYS;
 			}
 			dbg_print("Disabling v3d interrupt\n");
@@ -299,9 +301,9 @@ int __init v3d_init(void)
 		goto err;
 
 	/* Print out the V3D identification registers */
-	dbg_print("V3D Identification 0 = 0X%x\n", readl(v3d_base + 0));
-	dbg_print("V3D Identification 1 = 0X%x\n", readl(v3d_base + 4));
-	dbg_print("V3D Identification 2 = 0X%x\n", readl(v3d_base + 8));
+	dbg_print("V3D Identification 0 = 0X%x\n", readl(v3d_base + V3D_IDENT0_OFFSET));
+	dbg_print("V3D Identification 1 = 0X%x\n", readl(v3d_base + V3D_IDENT1_OFFSET));
+	dbg_print("V3D Identification 2 = 0X%x\n", readl(v3d_base + V3D_IDENT2_OFFSET));
 
 	return 0;
 
