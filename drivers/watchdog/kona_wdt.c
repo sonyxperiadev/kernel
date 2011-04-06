@@ -1,5 +1,5 @@
 /*
- * Watchdog driver for the BCM2850
+ * Watchdog driver for the KONA architecture
  *
  * Copyright (C) 2011 Broadcom Inc.
  *
@@ -34,7 +34,7 @@ static spinlock_t wdt_lock;
 #define	WDT_TICK_RATE			16 /* 16 ticks per sec */
 
 static unsigned long base = KONA_SECWD_VA;
-static void island_wdt_enable(void)
+static void kona_wdt_enable(void)
 {
 	unsigned long val;
 	spin_lock(&wdt_lock);
@@ -50,7 +50,7 @@ static void island_wdt_enable(void)
 	spin_unlock(&wdt_lock);
 }
 
-static void island_wdt_disable(void)
+static void kona_wdt_disable(void)
 {
 	unsigned long val;
 
@@ -64,7 +64,7 @@ static void island_wdt_disable(void)
 	spin_unlock(&wdt_lock);
 }
 
-static void island_wdt_keepalive(void)
+static void kona_wdt_keepalive(void)
 {
 	unsigned long val;
 
@@ -78,19 +78,19 @@ static void island_wdt_keepalive(void)
 	spin_unlock(&wdt_lock);
 }
 
-static int island_wdt_open(struct inode *inode, struct file *file)
+static int kona_wdt_open(struct inode *inode, struct file *file)
 {
 	if (test_and_set_bit(WDT_IN_USE, &wdt_status))
 		return -EBUSY;
 
 	clear_bit(WDT_OK_TO_CLOSE, &wdt_status);
 
-	 island_wdt_enable();
+	 kona_wdt_enable();
 
 	return nonseekable_open(inode, file);
 }
 
-static ssize_t island_wdt_write(struct file *file, const char *data,
+static ssize_t kona_wdt_write(struct file *file, const char *data,
 						size_t len, loff_t *ppos)
 {
 	if (len) {
@@ -108,7 +108,7 @@ static ssize_t island_wdt_write(struct file *file, const char *data,
 					set_bit(WDT_OK_TO_CLOSE, &wdt_status);
 			}
 		}
-		island_wdt_keepalive();
+		kona_wdt_keepalive();
 	}
 
 	return len;
@@ -118,11 +118,11 @@ static ssize_t island_wdt_write(struct file *file, const char *data,
 static const struct watchdog_info ident = {
 	.options	= WDIOF_MAGICCLOSE | WDIOF_SETTIMEOUT |
 				WDIOF_KEEPALIVEPING,
-	.identity	= " Island Watchdog",
+	.identity	= "KONA Watchdog",
 	.firmware_version = 0,
 };
 
-static long island_wdt_ioctl(struct file *file, unsigned int cmd,
+static long kona_wdt_ioctl(struct file *file, unsigned int cmd,
 							unsigned long arg)
 {
 	int ret = -ENOTTY;
@@ -143,7 +143,7 @@ static long island_wdt_ioctl(struct file *file, unsigned int cmd,
 		break;
 
 	case WDIOC_KEEPALIVE:
-		island_wdt_enable();
+		kona_wdt_enable();
 		ret = 0;
 		break;
 
@@ -158,7 +158,7 @@ static long island_wdt_ioctl(struct file *file, unsigned int cmd,
 		}
 
 		heartbeat = time;
-		island_wdt_keepalive();
+		kona_wdt_keepalive();
 		/* Fall through */
 
 	case WDIOC_GETTIMEOUT:
@@ -169,10 +169,10 @@ static long island_wdt_ioctl(struct file *file, unsigned int cmd,
 	return ret;
 }
 
-static int island_wdt_release(struct inode *inode, struct file *file)
+static int kona_wdt_release(struct inode *inode, struct file *file)
 {
 	if (test_bit(WDT_OK_TO_CLOSE, &wdt_status))
-		island_wdt_disable();
+		kona_wdt_disable();
 	else
 		printk(KERN_CRIT "WATCHDOG: Device closed unexpectedly - "
 					"timer will not stop\n");
@@ -183,37 +183,37 @@ static int island_wdt_release(struct inode *inode, struct file *file)
 }
 
 
-static const struct file_operations island_wdt_fops = {
+static const struct file_operations kona_wdt_fops = {
 	.owner		= THIS_MODULE,
 	.llseek		= no_llseek,
-	.write		= island_wdt_write,
-	.unlocked_ioctl	= island_wdt_ioctl,
-	.open		= island_wdt_open,
-	.release	= island_wdt_release,
+	.write		= kona_wdt_write,
+	.unlocked_ioctl	= kona_wdt_ioctl,
+	.open		= kona_wdt_open,
+	.release	= kona_wdt_release,
 };
 
-static struct miscdevice island_wdt_miscdev = {
+static struct miscdevice kona_wdt_miscdev = {
 	.minor		= WATCHDOG_MINOR,
 	.name		= "watchdog",
-	.fops		= &island_wdt_fops,
+	.fops		= &kona_wdt_fops,
 };
 
-static int __init island_wdt_init(void)
+static int __init kona_wdt_init(void)
 {
 	spin_lock_init(&wdt_lock);
-	return misc_register(&island_wdt_miscdev);
+	return misc_register(&kona_wdt_miscdev);
 }
 
-static void __exit island_wdt_exit(void)
+static void __exit kona_wdt_exit(void)
 {
-	misc_deregister(&island_wdt_miscdev);
+	misc_deregister(&kona_wdt_miscdev);
 }
 
-module_init(island_wdt_init);
-module_exit(island_wdt_exit);
+module_init(kona_wdt_init);
+module_exit(kona_wdt_exit);
 
 MODULE_AUTHOR("Broadcom Inc.");
-MODULE_DESCRIPTION("BCM2850 Watchdog");
+MODULE_DESCRIPTION("KONA Architecture Watchdog");
 
 module_param(heartbeat, int, 0);
 MODULE_PARM_DESC(heartbeat, "Watchdog heartbeat in seconds (default 60s)");

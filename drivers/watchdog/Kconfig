@@ -324,12 +324,12 @@ config IMX2_WDT
 	  To compile this driver as a module, choose M here: the
 	  module will be called imx2_wdt.
 
-config ISLAND_WATCHDOG
-	tristate "Island Watchdog"
-	depends on ARCH_ISLAND
+config KONA_WATCHDOG
+	tristate "KONA Watchdog"
+	depends on ARCH_KONA
 	help
 	  Say Y here if to include support for the watchdog timer
-	  in the BCM2850.
+	  in the KONA architecture.
 	  This driver can be built as a module by choosing M. The module
 	  will be called island_wdt.
 
