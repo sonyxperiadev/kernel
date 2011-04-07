@@ -230,7 +230,7 @@ static int __init setup_v3d_mempool(char *str)
 		get_option(&str, &v3d_mempool_size);
 	}
 	dbg_print("Allocating relocatable heap of size = %d\n", v3d_mempool_size);
-	v3d_mempool_base = alloc_bootmem( v3d_mempool_size );
+	v3d_mempool_base = alloc_bootmem_pages( v3d_mempool_size );
 	if( !v3d_mempool_base )
 		err_print("Failed to allocate relocatable heap memory\n");
 	return 0;
