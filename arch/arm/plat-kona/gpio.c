@@ -205,7 +205,7 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 
 	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
 	val &= ~GPIO_GPCTR0_DBR_MASK;
-	val |= ((GPIO_DB_ENABLE | res) << GPIO_GPCTR0_DBR_SHIFT);
+	val |= GPIO_DB_ENABLE | (res << GPIO_GPCTR0_DBR_SHIFT);
 
 	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
 
