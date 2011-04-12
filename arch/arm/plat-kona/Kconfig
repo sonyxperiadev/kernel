@@ -15,6 +15,11 @@ config ARCH_RHEA
 	help
 	  Support for the Broadcom Rhea SoC platform.
 
+config ARCH_SAMOA
+	bool "BROADCOM Samoa SoC"
+	help
+	  Support for the Broadcom Samoa SoC platform.
+
 endchoice
 
 config GP_TIMER_CLOCK_OFF_FIX

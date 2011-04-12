@@ -1,0 +1,21 @@
+menu	"Samoa SoC based Machine types"
+	depends on ARCH_SAMOA
+
+choice
+	prompt "Samoa SoC based board type"
+	default MACH_SAMOA_RAY
+
+config MACH_SAMOA_RAY
+	bool "Support Broadcom Samoa Ray board"
+	help
+	  Support for the Broadcom Samoa Ray board.
+
+config MACH_SAMOA_FPGA
+        bool "Support Broadcom Samoa FPGA"
+        help
+          Support for the Broadcom Samoa FPGA.
+
+endchoice
+
+endmenu
+
