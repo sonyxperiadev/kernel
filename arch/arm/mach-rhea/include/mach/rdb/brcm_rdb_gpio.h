@@ -2709,7 +2709,6 @@
 #define    GPIO_CTICTR_CTIMUX_MASK                                        0x000000FF
 
 #define GPIO_GPCTR0_OFFSET                                                0x00000100
-#define GPIO_GPCTR0_DBR_CMD_ENABLE                                        0x00000008
 #define GPIO_GPCTR0_TYPE                                                  UInt32
 #define GPIO_GPCTR0_RESERVED_MASK                                         0xFFFFFE06
 #define    GPIO_GPCTR0_DBR_SHIFT                                          5

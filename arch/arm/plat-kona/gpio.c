@@ -177,6 +177,12 @@ static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
 
 static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigned debounce)
 {
+/*
+ * bit 8 - debounce enable is not defined either in Island and Rhea RDB header file
+ * defined here before RDB is fixed
+ */
+#define	GPIO_DB_ENABLE (1<<8)
+
 	void __iomem * reg_base = kona_gpio.reg_base;
 	u32 val, res;
 	unsigned long flags;
@@ -199,7 +205,7 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 
 	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
 	val &= ~GPIO_GPCTR0_DBR_MASK;
-	val |= ((GPIO_GPCTR0_DBR_CMD_ENABLE | res) << GPIO_GPCTR0_DBR_SHIFT);
+	val |= ((GPIO_DB_ENABLE | res) << GPIO_GPCTR0_DBR_SHIFT);
 
 	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
 

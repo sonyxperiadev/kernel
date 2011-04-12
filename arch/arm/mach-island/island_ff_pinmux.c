@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -22,81 +22,19 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
-
-#include <linux/init.h>
 #include <linux/kernel.h>
-#include <linux/cpumask.h>
-#include <mach/io_map.h>
-#include <asm/io.h>
-#include <asm/mach/map.h>
-#include <asm/hardware/cache-l2x0.h>
-#include <mach/clock.h>
-#include <linux/mfd/bcm590xx/core.h>
-#include <mach/gpio.h>
-#include <mach/timer.h>
-#include <mach/kona.h>
+#include <linux/init.h>
+#include <mach/pinmux.h>
 
-static void island_poweroff(void)
+static struct __init pin_config board_pin_config[] = {
+};
+
+/* board level init */
+int __init pinmux_board_init(void)
 {
-#ifdef CONFIG_MFD_BCM_PMU590XX
-	bcm590xx_shutdown();
-#endif
-
-	while(1)
-		;
-}
-
-static void island_restart(char mode, const char *cmd)
-{
-	arm_machine_restart('h', cmd);
-}
-
-
-#ifdef CONFIG_CACHE_L2X0
-static void __init island_l2x0_init(void)
-{
-	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
-
-	/*
-	 * 32KB way size, 16-way associativity
-	 */
-	l2x0_init(l2cache_base, 0x00050000, 0xfff0ffff);
-}
-#endif
-
-static int __init island_init(void)
-{
-	pm_power_off = island_poweroff;
-	arm_pm_restart = island_restart;
-	
-#ifdef CONFIG_CACHE_L2X0
-	island_l2x0_init();
-#endif
-
-#ifdef CONFIG_HAVE_CLK
-	clock_init();
-#endif
-
-	/* island has 6 banks of GPIO pins */ 
-	kona_gpio_init(6);
+	int i;
+	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
+		pinmux_set_pin_config(&board_pin_config[i]);
 
 	return 0;
 }
-
-early_initcall(island_init);
-
-static void __init island_timer_init(void)
-{
-	struct gp_timer_setup gpt_setup;
-
-	gpt_setup.name   = "slave-timer";
-	gpt_setup.ch_num = 0;
-	gpt_setup.rate   = GPT_MHZ_1;
-
-	/* Call the init function of timer module */
-	kona_timer_init(&gpt_setup);
-}
-
-struct sys_timer kona_timer = {
-        .init   = island_timer_init,
-};
