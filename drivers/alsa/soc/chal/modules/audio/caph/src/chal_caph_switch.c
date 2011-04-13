@@ -19,8 +19,8 @@ Broadcom's express prior written consent.
 ****************************************************************************/
 
 #include "chal_caph_switch.h"
-#include "brcm_rdb_cph_ssasw.h"
-#include "brcm_rdb_util.h"
+#include "mach/rdb/brcm_rdb_cph_ssasw.h"
+#include "mach/rdb/brcm_rdb_util.h"
 #include "log.h"
 
 //****************************************************************************

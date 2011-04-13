@@ -34,8 +34,8 @@ Broadcom's express prior written consent.
 #include "drv_caph_hwctrl.h"
 //#include "pm_prm.h"  - check this later kishore
 
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_khub_clk_mgr_reg.h"
+#include "mach/rdb/brcm_rdb_sysmap_a9.h"
+#include "mach/rdb/brcm_rdb_khub_clk_mgr_reg.h"
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
