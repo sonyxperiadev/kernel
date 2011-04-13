@@ -40,7 +40,6 @@ Jian: to update for Samoa
 #define KONA_CHIPREG_VA             HW_IO_PHYS_TO_VIRT( CHIPREGS_BASE_ADDR )        /* CHIPREG Block */
 #define KONA_PAD_CTRL_VA            HW_IO_PHYS_TO_VIRT( PAD_CTRL_BASE_ADDR )        /* PAD CTRL Block */
 #define KONA_DMAC_NS_VA             HW_IO_PHYS_TO_VIRT( NONDMAC_BASE_ADDR )         /* Non-Secure DMA interface */
-#define KONA_DMAC_S_VA              HW_IO_PHYS_TO_VIRT( SECDMAC_BASE_ADDR )         /* Secure DMA interface */
 #define KONA_DMUX_VA                HW_IO_PHYS_TO_VIRT( DMUX_BASE_ADDR )            /* DMA DMUX */
 #define KONA_GICCPU_VA              HW_IO_PHYS_TO_VIRT( GICCPU_BASE_ADDR )          /* GIC CPU INTERFACE */
 #define KONA_GICDIST_VA             HW_IO_PHYS_TO_VIRT( GICDIST_BASE_ADDR )         /* GIC DISTRIBUTOR INTERFACE */
@@ -61,14 +60,10 @@ Jian: to update for Samoa
 #define KONA_MEMC1_DPHY_VA          HW_IO_PHYS_TO_VIRT( MEMC1_OPEN_DPHY_BASE_ADDR ) /* Videocore Memory Controller DPHY */
 #define KONA_MEMC1_NS_VA            HW_IO_PHYS_TO_VIRT( MEMC1_OPEN_BASE_ADDR )      /* Non-Secure Videocore Memory Controller */
 #define KONA_MEMC1_S_VA             HW_IO_PHYS_TO_VIRT( MEMC1_SECURE_BASE_ADDR )    /* Secure Videocore Memory Controller */
-#define KONA_MPHI_VA                HW_IO_PHYS_TO_VIRT( MPHI_BASE_ADDR )
 #define KONA_MPU_VA                 HW_IO_PHYS_TO_VIRT( MPU_BASE_ADDR )             /* Memory protection unit */
 #define KONA_NVSRAM_VA              HW_IO_PHYS_TO_VIRT( NVSRAM_BASE_ADDR )          /* NVSRAM controller */
-#define KONA_OTP_VA                 HW_IO_PHYS_TO_VIRT( SEC_OTP_BASE_ADDR )         /* OTP */
-#define KONA_PKA_VA                 HW_IO_PHYS_TO_VIRT( SEC_PKA_BASE_ADDR )
 #define KONA_PROFTMR_VA             HW_IO_PHYS_TO_VIRT( GTIM_BASE_ADDR )            /* PROFILE TIMER */
 #define KONA_PTIM_VA                HW_IO_PHYS_TO_VIRT( PTIM_BASE_ADDR )            /* Private timer and watchdog */
-#define KONA_PMU_BSC_VA             HW_IO_PHYS_TO_VIRT( PMU_BSC_BASE_ADDR )			/* PMU BSC Controller */ 
 
 #define KONA_ROOT_CLK_VA            HW_IO_PHYS_TO_VIRT( ROOT_CLK_BASE_ADDR )
 #define KONA_ROOT_RST_VA            HW_IO_PHYS_TO_VIRT( ROOT_RST_BASE_ADDR )
@@ -77,8 +72,6 @@ Jian: to update for Samoa
 #define KONA_SCU_VA                 HW_IO_PHYS_TO_VIRT( SCU_BASE_ADDR )             /* SCU */
 #define KONA_SDIO1_VA               HW_IO_PHYS_TO_VIRT( SDIO1_BASE_ADDR )           /* SDIO 1 */
 #define KONA_SDIO2_VA               HW_IO_PHYS_TO_VIRT( SDIO2_BASE_ADDR )           /* SDIO 2 */
-#define KONA_SDIO3_VA               HW_IO_PHYS_TO_VIRT( SDIO3_BASE_ADDR )           /* SDIO 3 */
-#define KONA_SEC_VA                 HW_IO_PHYS_TO_VIRT( SEC_CFG_BASE_ADDR )
 #define KONA_SEC_WATCHDOG_VA        HW_IO_PHYS_TO_VIRT( SEC_WATCHDOG_BASE_ADDR )    /* Watchdog Timer in security block
                                                                                      * (not to be confused with KONA_SECWD)
                                                                                      */
@@ -98,11 +91,7 @@ Jian: to update for Samoa
 #define KONA_SIMI2_VA               HW_IO_PHYS_TO_VIRT( SIM2_BASE_ADDR )            /* SIM interface */
 #define KONA_SLV_CLK_VA             HW_IO_PHYS_TO_VIRT( KONA_SLV_CLK_BASE_ADDR )    /* Kona Peripheral Slave Clock Manager */
 #define KONA_SLV_RST_VA             HW_IO_PHYS_TO_VIRT( KONA_SLV_RST_BASE_ADDR )    /* Kona Peripheral Slave Reset Manager */
-#define KONA_SPUM_NS_VA             HW_IO_PHYS_TO_VIRT( SPUM_NS_BASE_ADDR )         /* Non-Secure AXI interface */
-#define KONA_SPUM_S_VA              HW_IO_PHYS_TO_VIRT( SPUM_S_BASE_ADDR )          /* Secure AXI interface */
-#define KONA_SPUM_APB_NS_VA         HW_IO_PHYS_TO_VIRT( SEC_SPUM_NS_APB_BASE_ADDR ) /* Non-Secure APB interface */
-#define KONA_SPUM_APB_S_VA          HW_IO_PHYS_TO_VIRT( SEC_SPUM_S_APB_BASE_ADDR )  /* Secure APB interface */
-#define KONA_SRAM_VA                HW_IO_PHYS_TO_VIRT( SPUM_S_BASE_ADDR )          /* INTERNAL SRAM (160kB) */
+#define KONA_SRAM_VA                HW_IO_PHYS_TO_VIRT( 0x34040000 )                /* INTERNAL SRAM (80kB) */
 
 #define KONA_SSP0_VA            	HW_IO_PHYS_TO_VIRT( SSP0_BASE_ADDR )
 #define KONA_SSP1_VA            	HW_IO_PHYS_TO_VIRT( SSP1_BASE_ADDR )
@@ -115,15 +104,11 @@ Jian: to update for Samoa
 #define KONA_UART0_VA               HW_IO_PHYS_TO_VIRT( UARTB_BASE_ADDR )           /* UART 0 */
 #define KONA_UART1_VA               HW_IO_PHYS_TO_VIRT( UARTB2_BASE_ADDR )          /* UART 1 */
 #define KONA_UART2_VA               HW_IO_PHYS_TO_VIRT( UARTB3_BASE_ADDR )          /* UART 2 */
-#define KONA_USB_FSHOST_VA          HW_IO_PHYS_TO_VIRT( FSHOST_BASE_ADDR )          /* USB FSHOST */
 #define KONA_USB_FSHOST_CTRL_VA     HW_IO_PHYS_TO_VIRT( FSHOST_CTRL_BASE_ADDR )     /* USB FSHOST Control */
 #define KONA_USB_HSOTG_VA           HW_IO_PHYS_TO_VIRT( HSOTG_BASE_ADDR )           /* USB OTG */
 #define KONA_USB_HSOTG_CTRL_VA      HW_IO_PHYS_TO_VIRT( HSOTG_CTRL_BASE_ADDR )      /* USB OTG Control */
 
 #define KONA_BINTC_BASE_ADDR        HW_IO_PHYS_TO_VIRT( BINTC_BASE_ADDR )           /* BModem Int Ctrlr Base Address */
-
-#define KONA_DSI0_VA		    HW_IO_PHYS_TO_VIRT( DSI0_BASE_ADDR )            /* DSI0 Interface */	
-#define KONA_DSI1_VA		    HW_IO_PHYS_TO_VIRT( DSI1_BASE_ADDR )            /* DSI1 Interface */	
 
 #define KONA_SMI_VA		    HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */	
 
