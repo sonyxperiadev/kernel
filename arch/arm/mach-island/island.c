@@ -89,6 +89,11 @@ static void __init island_timer_init(void)
 {
 	struct gp_timer_setup gpt_setup;
 
+#ifdef CONFIG_LOCAL_TIMERS
+	extern void __iomem *twd_base;
+	twd_base = __io(KONA_PTIM_VA);
+#endif
+
 	gpt_setup.name   = "slave-timer";
 	gpt_setup.ch_num = 0;
 	gpt_setup.rate   = GPT_MHZ_1;
