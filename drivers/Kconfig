@@ -116,6 +116,10 @@ source "drivers/staging/Kconfig"
 
 source "drivers/platform/Kconfig"
 
+if BRCM_PROP_MODULES
+source "../modules/Kconfig"
+endif
+
 source "drivers/alsa/Kconfig"
 
 endmenu

@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Wed Apr  6 12:05:45 2011
+# Thu Apr 14 11:37:13 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -254,10 +254,12 @@ CONFIG_ARCH_KONA=y
 #
 # CONFIG_ARCH_ISLAND is not set
 CONFIG_ARCH_RHEA=y
+# CONFIG_ARCH_SAMOA is not set
 # CONFIG_GP_TIMER_CLOCK_OFF_FIX is not set
 CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY=y
 CONFIG_KONA_DCACHE_INVALIDATION=y
 # CONFIG_KONA_TIMER_UNIT_TESTS is not set
+# CONFIG_BRCM_PROP_MODULES is not set
 
 #
 # Rhea SoC based Machine types

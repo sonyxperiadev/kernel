@@ -82,6 +82,9 @@
 
 #define BSC_CORE_REG_SIZE      0x100
 
+#define BCM_INT_ID_RESERVED131         (131 + BCM_INT_ID_PPI_MAX)
+#define BCM_INT_ID_RESERVED132         (132 + BCM_INT_ID_PPI_MAX)
+
 #define KONA_8250PORT(name)                                                 \
 {                                                                           \
    .membase    = (void __iomem *)(KONA_##name##_VA),                        \
@@ -381,8 +384,8 @@ static struct i2c_board_info __initdata tango_info[] =
 #endif
 
 static struct MIC_DET_t mic_det_plat_data = {
-   //.comp1_irq = BCM_INT_ID_RESERVED131,
-   //.comp2_irq = BCM_INT_ID_RESERVED132,
+   .comp1_irq = BCM_INT_ID_RESERVED131,
+   .comp2_irq = BCM_INT_ID_RESERVED132,
    .comp1_threshold = 0xCB,
    .comp2_threshold = 0xB3,
    .reg_base = KONA_ACI_VA,

@@ -1148,5 +1148,12 @@ config RAMOOPS
 	  This enables panic and oops messages to be logged to a circular
 	  buffer in RAM where it can be read back at some later point.
 
+config BCM_MDEC
+	boolean "BCM MDEC driver"
+	depends on ARCH_ISLAND
+	default y
+	---help---
+	  BRCM multimeida codec kernel driver for Island architecture.
+
 endmenu
 

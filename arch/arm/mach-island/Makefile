@@ -17,4 +17,4 @@ obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o
 obj-$(CONFIG_MACH_ISLAND_BU) += board_bu.o
 obj-$(CONFIG_MACH_ISLAND_FF) += board_ff.o island_ff_pinmux.o
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
-
+obj-$(CONFIG_BRCM_MODULES) += irq_apcp.o

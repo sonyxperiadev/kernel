@@ -42,6 +42,11 @@ config KONA_TIMER_UNIT_TESTS
 	bool "Include Kona Timer unit test code"
 	help
 	  Say Y if you want to test the AON,Peripheral Timer modules using the sysfs interface
-	  
+
+config BRCM_PROP_MODULES
+	bool "Include Broadcom proprietary modules"
+	default n
+	help
+	  Say Y if you want to include the Broadcom proprietary modules.
 endmenu
 
