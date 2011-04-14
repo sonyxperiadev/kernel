@@ -33,6 +33,8 @@
 Jian: to update for Samoa
  */
 
+
+
 #define KONA_AON_CLK_VA             HW_IO_PHYS_TO_VIRT( AON_CLK_BASE_ADDR )
 #define KONA_AON_RST_VA             HW_IO_PHYS_TO_VIRT( AON_RST_BASE_ADDR )
 #define KONA_BSC1_VA                HW_IO_PHYS_TO_VIRT( BSC1_BASE_ADDR )			/* BSC I2C 1 interface  */
@@ -45,7 +47,6 @@ Jian: to update for Samoa
 #define KONA_GICDIST_VA             HW_IO_PHYS_TO_VIRT( GICDIST_BASE_ADDR )         /* GIC DISTRIBUTOR INTERFACE */
 #define KONA_GPIO2_VA               HW_IO_PHYS_TO_VIRT( GPIO2_BASE_ADDR )           /* GPIO 2 */
 #define KONA_HSI_VA                 HW_IO_PHYS_TO_VIRT( HSI_BASE_ADDR )             /* HSI */
-#define KONA_HUB_SWITCH_VA          HW_IO_PHYS_TO_VIRT( HUBSWITCH_BASE_ADDR )       /* HUB switch */
 #define KONA_KEYPAD_VA              HW_IO_PHYS_TO_VIRT( KEYPAD_BASE_ADDR )
 #define KONA_KPM_CLK_VA             HW_IO_PHYS_TO_VIRT( KONA_MST_CLK_BASE_ADDR )    /* Kona Peripheral Master Clock Manager */
 #define KONA_KPM_RST_VA             HW_IO_PHYS_TO_VIRT( KONA_MST_RST_BASE_ADDR )    /* Kona Peripheral Master Reset Manager */
@@ -61,7 +62,6 @@ Jian: to update for Samoa
 #define KONA_MEMC1_NS_VA            HW_IO_PHYS_TO_VIRT( MEMC1_OPEN_BASE_ADDR )      /* Non-Secure Videocore Memory Controller */
 #define KONA_MEMC1_S_VA             HW_IO_PHYS_TO_VIRT( MEMC1_SECURE_BASE_ADDR )    /* Secure Videocore Memory Controller */
 #define KONA_MPU_VA                 HW_IO_PHYS_TO_VIRT( MPU_BASE_ADDR )             /* Memory protection unit */
-#define KONA_NVSRAM_VA              HW_IO_PHYS_TO_VIRT( NVSRAM_BASE_ADDR )          /* NVSRAM controller */
 #define KONA_PROFTMR_VA             HW_IO_PHYS_TO_VIRT( GTIM_BASE_ADDR )            /* PROFILE TIMER */
 #define KONA_PTIM_VA                HW_IO_PHYS_TO_VIRT( PTIM_BASE_ADDR )            /* Private timer and watchdog */
 
@@ -104,7 +104,6 @@ Jian: to update for Samoa
 #define KONA_UART0_VA               HW_IO_PHYS_TO_VIRT( UARTB_BASE_ADDR )           /* UART 0 */
 #define KONA_UART1_VA               HW_IO_PHYS_TO_VIRT( UARTB2_BASE_ADDR )          /* UART 1 */
 #define KONA_UART2_VA               HW_IO_PHYS_TO_VIRT( UARTB3_BASE_ADDR )          /* UART 2 */
-#define KONA_USB_FSHOST_CTRL_VA     HW_IO_PHYS_TO_VIRT( FSHOST_CTRL_BASE_ADDR )     /* USB FSHOST Control */
 #define KONA_USB_HSOTG_VA           HW_IO_PHYS_TO_VIRT( HSOTG_BASE_ADDR )           /* USB OTG */
 #define KONA_USB_HSOTG_CTRL_VA      HW_IO_PHYS_TO_VIRT( HSOTG_CTRL_BASE_ADDR )      /* USB OTG Control */
 
