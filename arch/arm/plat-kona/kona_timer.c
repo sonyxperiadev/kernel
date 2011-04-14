@@ -35,7 +35,7 @@
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 
-#ifdef CONFIG_ARCh_ISLAND
+#ifdef CONFIG_ARCH_ISLAND
 #include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>
 #else
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
@@ -568,7 +568,7 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 	val |= 0xA5A500;
 	val |= old_enable & 0x1;
 	writel(val, slaveClockMgr_regs + IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-#elseif CONFIG_ARCH_RHEA
+#elif defined(CONFIG_ARCH_RHEA)
 	/* unlock slave clock manager */
 	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
 	old_enable = val & 0x1; 
