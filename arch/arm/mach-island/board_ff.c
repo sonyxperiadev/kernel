@@ -1213,13 +1213,39 @@ static struct i2c_board_info __initdata bma150_info[] =
    },
 };
 
-static char *andoroid_function_name[] =
-{
+static char *android_function_rndis[] = {
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis"
+#endif
+};
+
+static char *android_function_acm[] = {
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm"
+#endif
+};
+
+static char *android_function_adb_msc[] = {
 #ifdef CONFIG_USB_ANDROID_MASS_STORAGE
 	"usb_mass_storage",
 #endif
 #ifdef CONFIG_USB_ANDROID_ADB
 	"adb",
+#endif
+};
+
+static char *android_functions_all[] = {
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_ADB
+	"adb",
+#endif
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis",
+#endif
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
 #endif
 };
 
@@ -1232,6 +1258,11 @@ static char *andoroid_function_name[] =
 
 #define	VENDOR_ID		GOOGLE_VENDOR_ID
 #define	PRODUCT_ID		NEXUS_ONE_PROD_ID
+
+/* use a seprate PID for RNDIS */
+#define RNDIS_PRODUCT_ID	0x4e13
+#define ACM_PRODUCT_ID		0x8888
+
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
 	.nluns		=	1,
@@ -1248,11 +1279,35 @@ static struct platform_device android_mass_storage_device = {
 	}
 };
 
+static struct usb_ether_platform_data android_rndis_pdata = {
+        /* ethaddr FIXME */
+        .vendorID       = __constant_cpu_to_le16(VENDOR_ID),
+        .vendorDescr    = "Broadcom RNDIS",
+};
+
+static struct platform_device android_rndis_device = {
+        .name   = "rndis",
+        .id     = -1,
+        .dev    = {
+                .platform_data = &android_rndis_pdata,
+        },
+};
+
 static struct android_usb_product android_products[] = {
 	{
 		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(andoroid_function_name),
-		.functions	=	andoroid_function_name,
+		.num_functions	=	ARRAY_SIZE(android_function_adb_msc),
+		.functions	=	android_function_adb_msc,
+	},
+	{
+		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_rndis),
+		.functions	=	android_function_rndis,
+	},
+	{
+		.product_id	= 	__constant_cpu_to_le16(ACM_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_acm),
+		.functions	=	android_function_acm,
 	},
 };
 
@@ -1267,8 +1322,8 @@ static struct android_usb_platform_data android_usb_data = {
 	.num_products		=	ARRAY_SIZE(android_products),
 	.products		=	android_products,
 
-	.num_functions		=	ARRAY_SIZE(andoroid_function_name),
-	.functions		=	andoroid_function_name,
+	.num_functions		=	ARRAY_SIZE(android_functions_all),
+	.functions		=	android_functions_all,
 };
 
 static struct platform_device android_usb = {
@@ -1336,6 +1391,7 @@ static struct platform_device *board_devices[] __initdata = {
 	&island_ipc_device,
 	&board_gpio_keys_device,
 	&islands_leds_device,
+	&android_rndis_device,
 	&android_mass_storage_device,
 	&android_usb,
 	&android_pmem,
