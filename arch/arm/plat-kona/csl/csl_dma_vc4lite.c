@@ -735,6 +735,7 @@ static irqreturn_t bcm_vc4l_dma_interrupt(int irq, void *dev_id)
     CslDmaVc4lite_t *pdma = (CslDmaVc4lite_t *)&dmac;
     UInt8  chanNum;    
 
+    printk(KERN_ERR "DMA int hapened\n");
 #ifndef UNDER_LINUX
 	// disable the dma channel 1 interrupt
     IRQ_Disable(MM_DMA_CHAN1_IRQ);

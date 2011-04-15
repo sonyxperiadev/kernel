@@ -50,17 +50,34 @@ typedef unsigned char  UInt8;
 ** Note: Compiler optimizes away AND operation when reserved mask is 0.
 */
 
+#define BRCM_READ_REG(b,r) (readl( BRCM_REGADDR(b,r) ) & ~( BRCM_CONCAT( r, _RESERVED_MASK) ))
+
+#if 0
 #define BRCM_READ_REG(b,r)  ( ( *(volatile BRCM_REGTYPE(r) *) BRCM_REGADDR(b,r) &         \
                                 ~( BRCM_CONCAT( r, _RESERVED_MASK) ) ) )
+#endif
 
+#define BRCM_WRITE_REG(b,r,d) writel(( (d) & ~( BRCM_CONCAT( r, _RESERVED_MASK)) ), BRCM_REGADDR(b,r))
+
+#if 0
 #define BRCM_WRITE_REG(b,r,d) ( ( *(volatile BRCM_REGTYPE(r) *) BRCM_REGADDR(b,r) ) =      \
                                 ( (d) & ~( BRCM_CONCAT( r, _RESERVED_MASK)) ) )
+#endif
 
+#define BRCM_READ_REG_IDX(b,r,i) (readl( ((volatile BRCM_REGTYPE(r) *) BRCM_REGADDR(b,r)) + i ) &	\
+					~( BRCM_CONCAT( r, _RESERVED_MASK) ) )
+#if 0
 #define BRCM_READ_REG_IDX(b,r,i)  ( ( ((volatile BRCM_REGTYPE(r) *) BRCM_REGADDR(b,r))[i] &  \
                                     ~( BRCM_CONCAT( r, _RESERVED_MASK) ) ) )
+#endif
 
+#define BRCM_WRITE_REG_IDX(b,r,i,d)  (writel(( (d) & ~( BRCM_CONCAT( r, _RESERVED_MASK) ) ),	\
+				(((volatile BRCM_REGTYPE(r) *) BRCM_REGADDR(b,r)) + i )))
+
+#if 0
 #define BRCM_WRITE_REG_IDX(b,r,i,d) ( (((volatile BRCM_REGTYPE(r) *) BRCM_REGADDR(b,r))[i] ) \
                                 = ( (d) & ~( BRCM_CONCAT( r, _RESERVED_MASK) ) ) )
+#endif
 
 #define BRCM_READ_REG_FIELD(b,r,f)   ( ( BRCM_READ_REG(b,r) & BRCM_FIELDMASK(r,f) ) >> \
                                        BRCM_FIELDSHIFT(r,f) )

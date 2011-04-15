@@ -450,6 +450,7 @@ Int32 DISPDRV_Reset( Boolean force )
     rst2pin     = HAL_LCD_RESET_C;
     #endif
 
+    printk("rst0pin=%d rst1pin=%d rst2pin=%d\n", rst0pin, rst1pin, rst2pin);
 //    #define RST_DURATION_MS  10
 //    #define RST_HOLD_MS      1
 

@@ -18,6 +18,7 @@
 #include <linux/proc_fs.h>
 #include <linux/ipc/ipc.h>
 #include <linux/clk.h>
+#include <linux/regulator/consumer.h>
 
 #include <mach/io.h>
 
@@ -31,6 +32,7 @@
 #include "lcd/display_drv.h"
 
 extern DISPDRV_T* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable ( void );
+extern DISPDRV_T* DISP_DRV_BCM91008_ALEX_GetFuncTable( void );
 
 struct rhea_fb {
 	dma_addr_t phys_fbbase;
@@ -133,18 +135,6 @@ static int rhea_fb_set_par(struct fb_info *info)
 	return 0;
 }
 
-#if 0
-static irqreturn_t rhea_fb_interrupt(int irq, void *dev_id)
-{
-	struct rhea_fb *fb = (struct rhea_fb *)dev_id;
-	
-	/* Just declare that we got an interrupt */
-	up(&fb->wait_for_irq);
-
-	return IRQ_HANDLED;
-}
-#endif
-
 static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	int ret = 0;
@@ -181,30 +171,15 @@ static void rhea_fb_late_resume(android_early_suspend_t *h)
 }
 #endif
 
-void enable_smi_display_clks(void)
-{
-	struct clk *smi_axi;
-	struct clk *mm_dma;
-	struct clk *smi;
-
-	smi_axi = clk_get (NULL, "smi_axi_clk");
-	mm_dma = clk_get (NULL, "mm_dma_axi_clk");
-
-	smi = clk_get (NULL, "smi_clk");
-	BUG_ON (!smi_axi || !smi || !mm_dma);
-
-	clk_set_rate (smi, 250000000);
-	clk_enable (smi_axi);
-	clk_enable (smi);
-	clk_enable(mm_dma);
-
-}
-
 static int enable_display(struct rhea_fb *fb)
 {
 	int ret = 0;
 
+#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
+	fb->display_ops = DISP_DRV_BCM91008_ALEX_GetFuncTable();
+#else
 	fb->display_ops = DISP_DRV_NT35582_WVGA_SMI_GetFuncTable();
+#endif
 	fb->display_ops->init();
 	{
 		DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
@@ -214,17 +189,10 @@ static int enable_display(struct rhea_fb *fb)
 		 */
 		local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
 		local_DISPDRV_OPEN_PARM_T.busCh = 0;
-		//enable_smi_display_clks();
 		fb->display_ops->open((void *)&local_DISPDRV_OPEN_PARM_T, &fb->display_hdl);
 		fb->display_ops->start(fb->display_hdl);
 		fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_ON);
 	}
-#if 0
-	fb->display_info = fb->display_ops->get_info(fb->display_hdl);
-	lcdInfo.bitsPerPixel = 32;// this info. is not held in DISPDRV_INFO_T
-	lcdInfo.height = ptrDISPInfo->height;
-	lcdInfo.width = ptrDISPInfo->width;
-#endif
 	rheafb_info("RHEA display is enabled successfully\n");
 
 	return ret;
@@ -297,36 +265,6 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		goto thread_create_failed;
 	}
 	
-#if 0
-	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-	if(r == NULL) {
-		rheafb_error("Unable to get framebuffer memory resource\n");
-		ret = -ENODEV;
-		goto err_no_io_base;
-	}
-
-	rheafb_info("FB registers start-end (0x%08x)-(0x%08x)\n", r->start, r->end);
-
-	/* 
-	 * IPC driver puts virtual address here so we dont need to
-	 * use the __io_address()
-	 */
-	fb->reg_base = (void __iomem *)r->start;
-
-	fb->irq = platform_get_irq(pdev, 0);
-	if(fb->irq < 0) {
-		rheafb_error("Unable to get framebuffer irq resource\n");
-		ret = -ENODEV;
-		goto err_no_irq;
-	}
-	
-	ret = request_irq(fb->irq, rhea_fb_interrupt, IRQF_DISABLED,
-				"rhea fb interrupt", (void *)fb);
-	if (ret < 0) {
-		rheafb_error("Unable to register Interrupt for rhea FB\n");
-		goto err_no_irq;
-	}
-#endif
 	/* Hack
 	 * The screen info can only be obtained from the display driver;and, therefore, 
 	 * only then the frame buffer mem can be allocated.
@@ -335,7 +273,11 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	 * So either the display driver allocates the memory and pass the pointer to us, or
 	 * we allocate memory and pass into the display. 
 	 */
+#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
+	framesize = 640 * 360 * 4 * 2;
+#else
 	framesize = 480 * 800 * 2 * 2;
+#endif
 
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
 			framesize, &fb->phys_fbbase, GFP_KERNEL);
@@ -356,26 +298,52 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width; 
 	height = fb->display_info->height;
+#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
+	BUG_ON(width != 360 || height != 640);
+#else
 	BUG_ON(width != 480 || height != 800);
+#endif
 
 	fb->fb.fbops		= &rhea_fb_ops;
 	fb->fb.flags		= FBINFO_FLAG_DEFAULT;
 	fb->fb.pseudo_palette	= fb->cmap;
 	fb->fb.fix.type		= FB_TYPE_PACKED_PIXELS;
 	fb->fb.fix.visual	= FB_VISUAL_TRUECOLOR;
+#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
+	fb->fb.fix.line_length	= width * 4;
+#else
 	fb->fb.fix.line_length	= width * 2;
+#endif
 	fb->fb.fix.accel	= FB_ACCEL_NONE;
 	fb->fb.fix.ypanstep	= 1;
+	fb->fb.fix.xpanstep	= 4;
 
 	fb->fb.var.xres		= width;
 	fb->fb.var.yres		= height;
 	fb->fb.var.xres_virtual	= width;
 	fb->fb.var.yres_virtual	= height * 2;
+
+#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
+	fb->fb.var.bits_per_pixel = 32;
+#else
 	fb->fb.var.bits_per_pixel = 16;
+#endif
 	fb->fb.var.activate	= FB_ACTIVATE_NOW;
 	fb->fb.var.height	= height;
 	fb->fb.var.width	= width;
 
+#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
+	fb->fb.var.red.offset = 16;
+	fb->fb.var.red.length = 8;
+	fb->fb.var.green.offset = 8;
+	fb->fb.var.green.length = 8;
+	fb->fb.var.blue.offset = 0;
+	fb->fb.var.blue.length = 8;
+	fb->fb.var.transp.offset = 24;
+	fb->fb.var.transp.length = 8;
+
+	framesize = width * height * 4 * 2;
+#else
 	fb->fb.var.red.offset = 11;
 	fb->fb.var.red.length = 5;
 	fb->fb.var.green.offset = 5;
@@ -384,27 +352,9 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.var.blue.length = 5;
 
 	framesize = width * height * 2 * 2;
-
+#endif
 	fb->fb.fix.smem_start = fb->phys_fbbase;
 	fb->fb.fix.smem_len = framesize;
-
-#if 0
-	rheafb_debug("Requesting and mapping resource (0x%08x)-(0x%08x)\n", r->start, r->end);
-	fb->fbmem_res = request_mem_region(fb->phys_fbbase, framesize, "Framebuffer Memory");
-	if (fb->fbmem_res == NULL) {
-		ret = -ENOMEM;
-		rheafb_error("Unable to get fb memory resource\n");
-		goto err_get_fbmem_resource_failed;
-
-	}
-
-	fb->fb.screen_base = ioremap(fb->fbmem_res->start, resource_size(fb->fbmem_res)); 
-	if (fb->fb.screen_base == NULL) {
-		ret = -ENOMEM;
-		rheafb_error("Unable to ioremap fb memory resource\n");
-		goto err_ioremap_fbmem_failed;
-	}
-#endif
 
 	rheafb_debug("Framebuffer starts at phys[0x%08x], and virt[0x%08x]\n",
 			fb->phys_fbbase, (uint32_t)fb->fb.screen_base);
@@ -429,6 +379,14 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	}
 
 	rheafb_info("RHEA Framebuffer probe successfull\n");
+
+#ifdef CONFIG_LOGO
+	/*  Display the default logo/splash screen. */
+	fb_prepare_logo(&fb->fb, 0);
+	fb_show_logo(&fb->fb, 0);
+	fb->display_ops->update(fb->display_hdl, 0, NULL /* Callback */);
+#endif
+
 
 #ifdef CONFIG_ANDROID_POWER
 	fb->early_suspend.suspend = rhea_fb_early_suspend;
@@ -477,23 +435,6 @@ static struct platform_driver rhea_fb_driver = {
 	}
 };
 
-#if 0
-static struct resource board_rhea_fb_resource[] = {
-	[0] =
-	{
-	.start = PMU_BSC_BASE_ADDR,
-	.end = PMU_BSC_BASE_ADDR + BSC_CORE_REG_SIZE - 1,
-	.flags = IORESOURCE_MEM,
-	},
-	[1] = 
-	{
-	.start = BCM_INT_ID_PM_I2C,
-	.end = BCM_INT_ID_PM_I2C,
-	.flags = IORESOURCE_IRQ,
-	},
-};
-#endif
-
 static struct platform_device rhea_fb_device = {
 	.name    = "rhea_fb",
 	.id      = -1,
@@ -501,10 +442,6 @@ static struct platform_device rhea_fb_device = {
 		.dma_mask      = (u64 *) ~(u32)0,
 		.coherent_dma_mask   = ~(u32)0,
 	},
-#if 0
-	.resource = board_rhea_fb_resource,
-	.num_resources = ARRAY_SIZE(board_rhea_fb_resource),
-#endif
 };
 
 static int __init rhea_fb_init(void)

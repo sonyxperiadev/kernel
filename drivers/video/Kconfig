@@ -2252,15 +2252,6 @@ config FB_BROADSHEET
 	  and could also have been called by other names when coupled with
 	  a bridge adapter.
 
-config FB_BRCM_RHEA
-	tristate "Broadcom Rhea Platform Framebuffer support"
-	depends on FB && ARM && ARCH_RHEA
-	select FB_CFB_FILLRECT
-	select FB_CFB_COPYAREA
-	select FB_CFB_IMAGEBLIT
-	help
-	  This framebuffer device driver is for the Broadcom Rhea platform.
-
 source "drivers/video/omap/Kconfig"
 source "drivers/video/omap2/Kconfig"
 
@@ -2274,5 +2265,7 @@ endif
 if FB || SGI_NEWPORT_CONSOLE
 	source "drivers/video/logo/Kconfig"
 endif
+
+source "drivers/video/broadcom/Kconfig" 
 
 endmenu

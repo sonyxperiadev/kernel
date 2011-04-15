@@ -130,7 +130,6 @@ typedef struct {
 } DISPCTRL_REC_T, *pDISPCTRL_REC_T;
 
 
-Int32 DISPDRV_Reset( Boolean force );
 Int32 DISPDRV_AllocPhyAligned( 
     UInt32  size, 
     UInt32  align_size,  

@@ -49,8 +49,13 @@
 #endif
 
 // extended register access functions
+#define BRCM_READ_REG_IDX_FIELD_DMA(b,r,i,f) ((readl( ((volatile BRCM_REGTYPE(r) *) BRCM_REGADDR(b,r)) + i ) &	\
+				BRCM_FIELDMASK(r,f) ) >>  BRCM_FIELDSHIFT(r,f) )
+
+#if 0
 #define BRCM_READ_REG_IDX_FIELD_DMA(b,r,i,f)   ( (((volatile BRCM_REGTYPE(r) *) BRCM_REGADDR(b,r))[i] & BRCM_FIELDMASK(r,f) ) >> \
                                        BRCM_FIELDSHIFT(r,f) )
+#endif
 
 #define BRCM_WRITE_REG_IDX_FIELD_DMA(b,r,i,f,d)  (BRCM_WRITE_REG_IDX(b,r,i,  \
                              (( ((cUInt32)(d) << BRCM_FIELDSHIFT(r,f)) & BRCM_FIELDMASK(r,f)) | \
@@ -287,6 +292,7 @@ CHAL_DMA_VC4LITE_STATUS_t chal_dma_vc4lite_prepare_transfer(
             pCtrlBlkList = (ChalDmaVc4liteCtrlBlk_t*)pCtrlBlkList->nextCtrlBlk;
         pCtrlBlkList->intEnable = CHAL_DMA_VC4LITE_ENABLE;
     }
+    mb();
 
     // clean up the interrupt status
     BRCM_WRITE_REG_IDX(

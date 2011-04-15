@@ -357,7 +357,7 @@ cVoid chal_dsi_phy_afe_on ( CHAL_HANDLE handle, pCHAL_DSI_AFE_CFG afeCfg )
     CHAL_DSI_HANDLE pDev   = (CHAL_DSI_HANDLE) handle;
     cUInt32         afeVal  = 0;
     cUInt32         afeMask = 0;
-    cUInt32         i;
+    //cUInt32         i;
 
     afeMask =  DSI1_PHY_AFEC0_CTATADJ_MASK
              | DSI1_PHY_AFEC0_PTATADJ_MASK
@@ -380,6 +380,7 @@ cVoid chal_dsi_phy_afe_on ( CHAL_HANDLE handle, pCHAL_DSI_AFE_CFG afeCfg )
 //    if( afeCfg->afeDs2xClkEna )
 //        afeVal |= DSI_REG_FIELD_SET( DSI1_PHY_AFEC0, DDRCLK_EN, 1 );
 
+    rmb();
     afeVal |= DSI_REG_FIELD_SET( DSI1_PHY_AFEC0, PD_BG     , 0 );
     afeVal |= DSI_REG_FIELD_SET( DSI1_PHY_AFEC0, PD        , 0 );
     // for now, enable all clock outputs
@@ -389,10 +390,14 @@ cVoid chal_dsi_phy_afe_on ( CHAL_HANDLE handle, pCHAL_DSI_AFE_CFG afeCfg )
     afeVal |= DSI_REG_FIELD_SET( DSI1_PHY_AFEC0, RESET     , 1 );
 
     // PWR-UP & Reset
+    wmb();
     DSI_REG_WRITE_MASKED ( pDev->baseAddr, DSI1_PHY_AFEC0, afeMask, afeVal );
-    for ( i=0; i<100; i++ ) {}
-
+    
+    //for ( i=0; i<100; i++ ) {}
+    CHAL_DELAY_MS(2);
+    
     // remove reset
+    wmb();
     BRCM_WRITE_REG_FIELD ( pDev->baseAddr, DSI1_PHY_AFEC0, RESET, 0 );
 }
 
@@ -752,7 +757,8 @@ cVoid chal_dsi_on ( CHAL_HANDLE handle, pCHAL_DSI_MODE dsiMode )
            | DSI1_CTRL_HS_CLKC_MASK;
 
     ctrl = dsiMode->clkSel << DSI1_CTRL_HS_CLKC_SHIFT;
-    
+
+    rmb();
     if( dsiMode->enaRxCrc )
         ctrl |= DSI_REG_FIELD_SET( DSI1_CTRL, DISP_CRCC, 1 );
     if( dsiMode->enaRxEcc )
@@ -769,6 +775,7 @@ cVoid chal_dsi_on ( CHAL_HANDLE handle, pCHAL_DSI_MODE dsiMode )
 
     ctrl |= DSI_REG_FIELD_SET( DSI1_CTRL, DSI_EN, 1 );
     
+    wmb();
     DSI_REG_WRITE_MASKED ( pDev->baseAddr, DSI1_CTRL, mask, ctrl );
        
     // PHY-C  Configure & Enable D-PHY Interface
@@ -779,12 +786,14 @@ cVoid chal_dsi_on ( CHAL_HANDLE handle, pCHAL_DSI_MODE dsiMode )
            | DSI1_PHYC_PHY_CLANE_EN_MASK  
            | DSI1_PHYC_PHY_DLANE0_EN_MASK; 
 
+    rmb();
     if ( dsiMode->enaContClock )
         ctrl |= DSI_REG_FIELD_SET( DSI1_PHYC, TX_HSCLK_CONT, 1 );
     
     ctrl |= DSI_REG_FIELD_SET( DSI1_PHYC, PHY_CLANE_EN , 1 );
     ctrl |= DSI_REG_FIELD_SET( DSI1_PHYC, PHY_DLANE0_EN, 1 );
 
+    wmb();
     DSI_REG_WRITE_MASKED ( pDev->baseAddr, DSI1_PHYC, mask, ctrl );
 }
 
@@ -1305,7 +1314,7 @@ CHAL_DSI_RES_t chal_dsi_de1_send (
     cUInt32         dsi_DT       = 0;
     cUInt32         dcsCmndCount = 0;
    
-    if ( cmCfg->dcsCmnd != NULL )
+    if ( cmCfg->dcsCmnd != 0 )
         dcsCmndCount = 1;    
     
     //================================   

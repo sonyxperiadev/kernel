@@ -719,7 +719,7 @@ Int32 NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
 // Description:   Generic Reset To All DISPLAY Modules
 //                
 //*****************************************************************************
-Int32 DISPDRV_Reset( Boolean force )
+static Int32 DISPDRV_Reset( Boolean force )
 {
     UInt32          rst0pin     = 0;
     UInt32          rst1pin     = 0;

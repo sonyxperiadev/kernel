@@ -30,17 +30,20 @@
 #include <linux/string.h>
 #include <linux/workqueue.h>
 #include <linux/interrupt.h>
-#include "plat/mobcom_types.h"
-#include "plat/msconsts.h"
-#include "plat/osabstract/ostypes.h"
-#include "plat/osabstract/ostask.h"
-#include "plat/osabstract/ossemaphore.h"
-#include "plat/osabstract/osqueue.h"
-#include "plat/osabstract/osinterrupt.h"
-#include "mach/irqs.h"
-#include "mach/memory.h"
-#include "linux/kernel.h"
+#include <plat/mobcom_types.h>
+#include <plat/msconsts.h>
+#include <plat/osabstract/ostypes.h>
+#include <plat/osabstract/ostask.h>
+#include <plat/osabstract/ossemaphore.h>
+#include <plat/osabstract/osqueue.h>
+#include <plat/osabstract/osinterrupt.h>
+#include <mach/irqs.h>
+#include <mach/memory.h>
+#include <linux/kernel.h>
+#include <mach/io_map.h>
+
 #else
+
 #include <stdio.h>
 #include <string.h>
 #include "mobcom_types.h"
@@ -63,18 +66,18 @@
 #include "dma_drv.h"
 #else
 #ifdef UNDER_LINUX
-#include "plat/csl/csl_dma_vc4lite.h"
+#include <plat/csl/csl_dma_vc4lite.h>
 #else
 #include "csl_dma_vc4lite.h"
 #endif
 #endif
 
 #ifdef UNDER_LINUX
-#include "plat/chal/chal_common.h"
-#include "plat/chal/chal_dsi.h"
-#include "plat/chal/chal_clk.h"
-#include "plat/csl/csl_lcd.h"
-#include "plat/csl/csl_dsi.h"
+#include <plat/chal/chal_common.h>
+#include <plat/chal/chal_dsi.h>
+#include <plat/chal/chal_clk.h>
+#include <plat/csl/csl_lcd.h>
+#include <plat/csl/csl_dsi.h>
 
 extern void *videomemory;
 
@@ -105,11 +108,11 @@ extern void *videomemory;
 
 // DSI Core clk tree configuration / settings
 typedef struct {
-    float   hsPllReq_MHz;   // in:  PLL freq requested
+    UInt32   hsPllReq_MHz;   // in:  PLL freq requested
     UInt32  escClkIn_MHz;   // in:  ESC clk in requested
-    float   hsPllSet_MHz;   // out: PLL freq set
-    float   hsBitClk_MHz;   // out: end HS bit clock
-    float   escClk_MHz;     // out: ESC clk after req inDIV
+    UInt32   hsPllSet_MHz;   // out: PLL freq set
+    UInt32   hsBitClk_MHz;   // out: end HS bit clock
+    UInt32   escClk_MHz;     // out: ESC clk after req inDIV
     UInt32  hsClkDiv;       // out: HS  CLK Divider Register value 
     UInt32  escClkDiv;      // out: ESC CLK Divider Register value
     UInt32  hsPll_P1;       // out: ATHENA's PLL setting
@@ -212,8 +215,8 @@ static DSI_HANDLE_t         dsiBus[DSI_INST_COUNT];
 #define STACKSIZE_DSI           STACKSIZE_BASIC*5
 #define HISRSTACKSIZE_DSISTAT  (256 + RESERVED_STACK_FOR_LISR)
 
-static Boolean        cslDsiClkTreeInit( DSI_HANDLE dsiH, DSI_CLK_T hsClk, 
-                        DSI_CLK_T escClk );
+static Boolean        cslDsiClkTreeInit( DSI_HANDLE dsiH, const DSI_CLK_T *hsClk, 
+                        const DSI_CLK_T *escClk );
 
 #if (defined(_HERA_) || defined(_RHEA_))
 static Boolean        cslDsiClkTreeEna ( DSI_HANDLE dsiH, 
@@ -246,10 +249,14 @@ static UInt32         dsiIntStat;
 #define CSL_DSI0_IRQ        MM_DSI0_IRQ
 #define CSL_DSI1_IRQ        MM_DSI1_IRQ
 #endif
-#define CSL_DSI0_BASE_ADDR  HW_IO_PHYS_TO_VIRT(0x3C200000)
-#define CSL_DSI1_BASE_ADDR  HW_IO_PHYS_TO_VIRT(0x3C280000)
+
+#define CSL_DSI0_BASE_ADDR  KONA_DSI0_VA
+#define CSL_DSI1_BASE_ADDR  KONA_DSI1_VA
 
 #endif                                                 
+
+
+//#define printk(format, arg...)	do {   } while (0)
 
 //*****************************************************************************
 //
@@ -258,39 +265,27 @@ static UInt32         dsiIntStat;
 // Description:    DSI Controller 0 LISR 
 //
 //*****************************************************************************
-#ifdef UNDER_LINUX
+#ifdef __KERNEL__
 static irqreturn_t cslDsi0Stat_LISR ( int i, void * j)
 #else
 static void cslDsi0Stat_LISR ( void )
 #endif
 {
-    DSI_HANDLE dsiH = &dsiBus[0];
-    #ifdef UNDER_LINUX	
-	unsigned long flags;
-	#endif
+       DSI_HANDLE dsiH = &dsiBus[0];
     
     dsiIntStat = chal_dsi_get_int ( dsiH->chalH ); 
-    
-	#ifdef UNDER_LINUX
-	spin_lock_irqsave(&(dsiH->bcm_dsi_spin_Lock), flags);
-    disable_irq_nosync(dsiH->interruptId);
-	#else
-	IRQ_Disable ( dsiH->interruptId );
-	#endif
+   
+    if (dsiIntStat & ~CHAL_DSI_ISTAT_TXPKT1_DONE)
+	    printk(KERN_ERR "DSI int stat is 0x%08x\n", dsiIntStat);
+
     chal_dsi_ena_int ( dsiH->chalH, 0 );
     chal_dsi_clr_int ( dsiH->chalH, 0xFFFFFFFF );
-	#ifndef UNDER_LINUX
-    IRQ_Clear ( dsiH->interruptId );
-	#else
-	enable_irq(dsiH->interruptId);
-	spin_unlock_irqrestore(&(dsiH->bcm_dsi_spin_Lock), flags);
-	#endif
     
-    OSINTERRUPT_Trigger( dsiH->iHisr );
-	
-	#ifdef UNDER_LINUX
-	return IRQ_HANDLED;
-	#endif
+    OSSEMAPHORE_Release ( dsiH->semaInt );
+
+#ifdef __KERNEL__
+return IRQ_HANDLED;
+#endif
 }
 
 //*****************************************************************************
@@ -315,41 +310,24 @@ static void cslDsi0Stat_HISR ( void )
 // Description:    DSI Controller 1 LISR 
 //
 //*****************************************************************************
-#ifdef UNDER_LINUX
+#ifdef __KERNEL__
 static irqreturn_t cslDsi1Stat_LISR ( int i, void * j)
 #else
 static void cslDsi1Stat_LISR ( void )
 #endif
 {
     DSI_HANDLE dsiH = &dsiBus[1];
-    #ifdef UNDER_LINUX	
-	unsigned long flags;
-	#endif
 		
     dsiIntStat = chal_dsi_get_int ( dsiH->chalH ); 
 
-	#ifdef UNDER_LINUX
-	spin_lock_irqsave(&(dsiH->bcm_dsi_spin_Lock), flags);
-    disable_irq_nosync(dsiH->interruptId);
-	#else
-    IRQ_Disable ( dsiH->interruptId );
-	#endif
-	
     chal_dsi_ena_int(dsiH->chalH, 0);
     chal_dsi_clr_int(dsiH->chalH, 0xFFFFFFFF);
-	
-	#ifndef UNDER_LINUX
-	IRQ_Clear ( dsiH->interruptId );
-	#else
-	enable_irq(dsiH->interruptId);
-	spin_unlock_irqrestore(&(dsiH->bcm_dsi_spin_Lock), flags);
-	#endif
 
-    OSINTERRUPT_Trigger( dsiH->iHisr );	
+    OSSEMAPHORE_Release ( dsiH->semaInt );
 
-	#ifdef UNDER_LINUX
+#ifdef __KERNEL__
 	return IRQ_HANDLED;
-	#endif
+#endif
 }
 
 //*****************************************************************************
@@ -379,7 +357,7 @@ static void cslDsi1Stat_HISR ( void )
 static void cslDsi0EofDma ( DMA_VC4LITE_CALLBACK_STATUS status )
 {
     DSI_HANDLE dsiH = &dsiBus[0];
-    
+   
     if( status != DMA_VC4LITE_CALLBACK_SUCCESS )
     {
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsi0EofDma(): ERR DMA!\n\r");
@@ -659,12 +637,15 @@ Boolean cslDsiOsInit ( DSI_HANDLE dsiH )
             dsiH->bus ? "Dsi1Dma":"Dsi0Dma" );
     }
 
+#ifndef __KERNEL__
     // DSI Controller Interrupt
     dsiH->iHisr = OSINTERRUPT_Create( 
                         (IEntry_t)dsiH->hisr, 
                         dsiH->bus ? (IName_t)"Dsi1":(IName_t)"Dsi0",
                         IPRIORITY_MIDDLE, HISRSTACKSIZE_DSISTAT );
-	#ifdef UNDER_LINUX
+#endif
+
+#ifdef __KERNEL__
  	ret = request_irq(dsiH->interruptId, dsiH->lisr, IRQF_DISABLED |
 			    IRQF_NO_SUSPEND, "BRCM DSI CSL", NULL);
 	if (ret < 0) {
@@ -672,13 +653,13 @@ Boolean cslDsiOsInit ( DSI_HANDLE dsiH )
 		       __FUNCTION__, __FILE__, __LINE__, dsiH->interruptId);
 		goto free_irq;
 	}
-	#else
-    IRQ_Register ( dsiH->interruptId, dsiH->lisr );
-	#endif
+#else
+        IRQ_Register ( dsiH->interruptId, dsiH->lisr );
+#endif
 
     return ( res );
 
-#ifdef UNDER_LINUX
+#ifdef __KERNEL__
 free_irq:
 	free_irq(dsiH->interruptId, NULL);
     return ( res );
@@ -841,8 +822,8 @@ static CSL_LCD_RES_T cslDsiDmaStart ( DSI_UPD_REQ_MSG_T* updMsg )
     else
         dmaChInfo.dstID = DMA_VC4LITE_CLIENT_DSI0;
         
-//  dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_4;
-    dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_8;
+    dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_4;
+    //dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_8;
     dmaChInfo.xferMode     = DMA_VC4LITE_XFER_MODE_LINERA;
     dmaChInfo.dstStride    = 0;
     dmaChInfo.srcStride    = 0;
@@ -939,12 +920,17 @@ static CSL_LCD_RES_T cslDsiDmaStop ( DSI_UPD_REQ_MSG_T* updMsg )
 //*****************************************************************************
 static Boolean cslDsiClkTreeInit( 
     DSI_HANDLE      dsiH,
-    DSI_CLK_T       hsClk,   // HS  Input clock & Divider setting
-    DSI_CLK_T       escClk   // ESC Input clock & Divider setting
+    const DSI_CLK_T       *in_hsClk,   // HS  Input clock & Divider setting
+    const DSI_CLK_T       *in_escClk   // ESC Input clock & Divider setting
     )
 {
-    float hsClkSet;  // Base HS Clk Set ( PLL if available )
-    
+    UInt32 hsClkSet;  // Base HS Clk Set ( PLL if available )
+    DSI_CLK_T       hsClk = *in_hsClk; 
+    DSI_CLK_T       escClk = *in_escClk; 
+
+    printk(KERN_ERR "hsclk->clk=0x%08x  div=0x%08x, and esc->clk = 0x%08x and its div = 0x%08x\n",
+		hsClk.clkIn_MHz, hsClk.clkInDiv, escClk.clkIn_MHz, escClk.clkInDiv);
+		
     //--- H S  clock -------------------------------------------------------
 #if ( defined (_ATHENA_)  )
     if ( hsClk.clkIn_MHz  > 1000 )
@@ -971,14 +957,13 @@ static Boolean cslDsiClkTreeInit(
     }    
     // HERA, for now increments of HS by 26[Mbps]
     dsiH->clkCfg.hsPll_P1       = 1;  
-    dsiH->clkCfg.hsPll_N_int    = (UInt32)((float) hsClk.clkIn_MHz / 26);
-    dsiH->clkCfg.hsPll_N_frac   = (UInt32)((( (float)hsClk.clkIn_MHz / 26 ) 
-        - dsiH->clkCfg.hsPll_N_int) * (1<<20));
+    dsiH->clkCfg.hsPll_N_int    = hsClk.clkIn_MHz / 26;
+    dsiH->clkCfg.hsPll_N_frac   = ((hsClk.clkIn_MHz % 26)  * (1<<20)) / 26;
+   
+    printk(KERN_ERR " hspll int =%d and frac =%d\n",  dsiH->clkCfg.hsPll_N_int, dsiH->clkCfg.hsPll_N_frac);
+    hsClkSet = hsClk.clkIn_MHz;
     
-    hsClkSet = (float)26 * ((float)dsiH->clkCfg.hsPll_N_int 
-        + (float)dsiH->clkCfg.hsPll_N_frac/(1<<20));
-    
-    dsiH->clkCfg.hsPllReq_MHz = (float)hsClk.clkIn_MHz;
+    dsiH->clkCfg.hsPllReq_MHz = hsClk.clkIn_MHz;
     dsiH->clkCfg.hsPllSet_MHz = hsClkSet;
 #endif
         
@@ -1006,14 +991,14 @@ static Boolean cslDsiClkTreeInit(
 #endif    
     
     LCD_DBG ( LCD_DBG_ID, "[CSL DSI] INFO-HS -CLK: "
-        "InClk[%6.1f] InDiv[%d], InSet[%6.1f] => %6.1f[Mhz]\r\n",
-        (float)hsClk.clkIn_MHz, hsClk.clkInDiv, 
+        "InClk[%u] InDiv[%d], InSet[%u] => %u[Mhz]\r\n",
+        hsClk.clkIn_MHz, hsClk.clkInDiv, 
         hsClkSet              , dsiH->clkCfg.hsBitClk_MHz ); 
     
     //--- E S C  clock -----------------------------------------------------
     
 #if ( defined (_HERA_) || defined(_RHEA_))
-    if ( escClk.clkIn_MHz != 500 & escClk.clkIn_MHz != 312 )
+    if ( escClk.clkIn_MHz != 500 && escClk.clkIn_MHz != 312 )
     {
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeInit(): "
             "ERR ESC CLK In, Valid Input: 500 or 312[MHz]\r\n" ); 
@@ -1054,12 +1039,12 @@ static Boolean cslDsiClkTreeInit(
     else
         dsiH->clkCfg.escClkDiv = escClk.clkInDiv; 
         
-    dsiH->clkCfg.escClk_MHz = (float)escClk.clkIn_MHz / escClk.clkInDiv;
+    dsiH->clkCfg.escClk_MHz = escClk.clkIn_MHz / escClk.clkInDiv;
 #endif 
 
     LCD_DBG ( LCD_DBG_ID, "[CSL DSI] INFO-ESC-CLK: "
-        "InClk[%6.1f] InDiv[%d]                => %6.1f[Mhz]\r\n",
-        (float)escClk.clkIn_MHz, escClk.clkInDiv, dsiH->clkCfg.escClk_MHz ); 
+        "InClk[%u] InDiv[%d]                => %u[Mhz]\r\n",
+        escClk.clkIn_MHz, escClk.clkInDiv, dsiH->clkCfg.escClk_MHz ); 
 
     return ( TRUE );
 }
@@ -1157,6 +1142,7 @@ static Boolean cslDsiClkTreeEna( DSI_HANDLE dsiH )
 //*****************************************************************************
 static void cslAfeLdoOn ( DSI_HANDLE dsiH )
 {
+    wmb();
     if( dsiH->bus == 0 )
         *(volatile cUInt32 *)HW_IO_PHYS_TO_VIRT(0x3C004030)=0x00000005;
     else
@@ -1275,6 +1261,7 @@ static Boolean cslDsiClkTreeEna(
     }
 
     // enable wr acess to MM_CLK CCU registers
+    wmb();
     *MM_CLK_WR_ACCESS = 0x00A5A501; 
     
     if ( !dsiHeraPllOn )
@@ -1287,15 +1274,17 @@ static Boolean cslDsiClkTreeEna(
                    | MM_CLK_PLLDSIA_ENABLE        
                    | (dsiH->clkCfg.hsPll_P1    << 24) 
                    | (dsiH->clkCfg.hsPll_N_int << 8 );
-                   
+        
+	wmb();
         *dsiClkR[dsiH->bus].pDsiPllNint  = pllReg;    
         
         // wait for PLL to LOCK
         OSTASK_Sleep (TICKS_IN_MILLISECONDS (1) );
         
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
-            "INFO DSI PLL Set to %8.3f[MHz]\r\n", dsiH->clkCfg.hsPllSet_MHz ); 
+            "INFO DSI PLL Set to %u[MHz]\r\n", dsiH->clkCfg.hsPllSet_MHz ); 
         
+	rmb();
         if( !(*dsiClkR[dsiH->bus].pDsiPllNint & MM_CLK_PLLDSIA_LOCKED) )
         {
             LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
@@ -1307,6 +1296,7 @@ static Boolean cslDsiClkTreeEna(
     }
      
     //=== START AXI clk
+    wmb();
     *dsiClkR[dsiH->bus].pAxiClkEnaR = DSI_CLK_GATE_SW | DSI_CLK_SW_ENA;  
     
     //=== CFG ESC CLK & DSI Core HS TX clock
@@ -1315,6 +1305,7 @@ static Boolean cslDsiClkTreeEna(
     if ( (UInt32)(dsiH->clkCfg.hsBitClk_MHz / 2) <= CORE_CLK_MAX_MHZ )
     {
         dsiCoreClkSel = DSI_CORE_CLK_dsi0_txddrclk;
+	wmb();
         *pCoreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_2;
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
             "DSI CORE CLK SET TO ... BIT_CLK/2\r\n" ); 
@@ -1322,6 +1313,7 @@ static Boolean cslDsiClkTreeEna(
     else if ( (UInt32)(dsiH->clkCfg.hsBitClk_MHz / 4) <= CORE_CLK_MAX_MHZ )
     {
         dsiCoreClkSel = DSI_CORE_CLK_dsi0_txddrclk2;
+	wmb();
         *pCoreClkSel = CHAL_DSI_BIT_CLK_DIV_BY_4;
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
             "DSI CORE CLK SET TO ... BIT_CLK/4\r\n" ); 
@@ -1329,6 +1321,7 @@ static Boolean cslDsiClkTreeEna(
     else
     {
         dsiCoreClkSel = DSI_CORE_CLK_dsi0_tx0_bclkhs;
+	wmb();
         *pCoreClkSel  = CHAL_DSI_BIT_CLK_DIV_BY_8;
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiClkTreeEna(): "
             "DSI CORE CLK SET TO ... BIT_CLK/8\r\n" ); 
@@ -1340,19 +1333,23 @@ static Boolean cslDsiClkTreeEna(
         escClkInSel = ESC_CLK_IN_500_MHZ;  
    
     //--- STOP ESC CLK
+    wmb();
     *dsiClkR[dsiH->bus].pEscClkEnaR = DSI_CLK_GATE_SW | DSI_CLK_SW_DIS;  
     
     //--- RECONFIG ESC clk & Pixel Clk Selection
+    wmb();
     *dsiClkR[dsiH->bus].pDsiDiv  =    (dsiCoreClkSel              << 0)
                                     | (escClkInSel                << 4)
                                     | ((dsiH->clkCfg.escClkDiv-1) << 8) ;
         
     //--- START ESC clk
+    wmb();
     *dsiClkR[dsiH->bus].pEscClkEnaR = DSI_CLK_GATE_SW | DSI_CLK_SW_ENA;  
     
     // === START HS TX clock ( set PLL ch divider )
     // MM_CLK_PLL_CH_BYPASS  ( use 624 & o_pll_divider ? )
     // MM_CLK_PLL_CH_NORMAL  ( use PLL  ? )
+    wmb();
     *dsiClkR[dsiH->bus].pDsiPllChHsClkDiv  = 
                                       (dsiH->clkCfg.hsClkDiv << 0) 
                                     | MM_CLK_PLL_CH_LOAD_ENA 
@@ -1455,7 +1452,7 @@ static void cslDsiEnaIntEvent( DSI_HANDLE dsiH, UInt32 intEventMask )
 static void cslDsiDisInt ( DSI_HANDLE dsiH )
 {
 	#ifdef UNDER_LINUX
-    disable_irq(dsiH->interruptId);
+    //disable_irq(dsiH->interruptId);
 	#else
 	IRQ_Disable ( dsiH->interruptId );
 	#endif
@@ -1477,7 +1474,7 @@ static CSL_LCD_RES_T cslDsiWaitForInt( DSI_HANDLE dsiH, UInt32 tout_msec )
 {
     OSStatus_t      osRes;
     CSL_LCD_RES_T   res = CSL_LCD_OK;
-    
+
     osRes = OSSEMAPHORE_Obtain ( dsiH->semaInt, tout_msec );
 
     if ( osRes != OSSTATUS_SUCCESS )
@@ -2012,7 +2009,12 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
     updMsgCm.clientH = clientH; 
 
     // set TE mode
+#if 0
+     dsiChH->chalCmCfg.isTE = FALSE;
+#endif
     isTE = dsiChH->chalCmCfg.isTE;
+	WARN_ON(isTE == FALSE);
+
     chal_dsi_te_mode ( dsiH->chalH, dsiChH->teMode );
 
     // set DE1 ColorMode
@@ -2022,8 +2024,10 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 
     // DSI PACKET SIZE IN BYTEs
     dsiChH->chalCmCfg.pktSizeBytes = pktSizeBytes;
+    mb();
 
     // DMA config has to be after DSI enable ?
+#if 0
     if( (res = cslDsiDmaStart ( &updMsgCm )) != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] CSL_DSI_UpdateCmVc: "
@@ -2031,15 +2035,18 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
         if( !clientH->hasLock ) OSSEMAPHORE_Release ( dsiH->semaDsi );
         return ( res );    
     }
-    
+#endif
+
     if( dsiChH->dcsUseContinue && (pktCount > 1) )
     {
         // DCS START + DCS CONTINUE
         dsiChH->chalCmCfg.dcsCmnd  = dsiChH->dcsCmndStart;
         dsiChH->chalCmCfg.pktCount = 1;
 
+	mb();
         // send first line with START CMND using PKT ENG 1
         chal_dsi_de1_send ( dsiH->chalH, TX_PKT_ENG_1, &dsiChH->chalCmCfg );  
+        wmb();
 
         // send the rest of the frame with CONTINUE CMND
         dsiChH->chalCmCfg.dcsCmnd  = dsiChH->dcsCmndCont;
@@ -2052,10 +2059,24 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
         dsiChH->chalCmCfg.pktCount = pktCount;
     }
 
+    mb();
     // send rest of the frame 
-    cslDsiEnaIntEvent ( dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE );
+    //cslDsiEnaIntEvent ( dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE );
+     cslDsiEnaIntEvent( dsiH, (UInt32)(CHAL_DSI_ISTAT_TXPKT1_DONE | CHAL_DSI_ISTAT_ERR_CONT_LP1 | CHAL_DSI_ISTAT_ERR_CONT_LP0 |
+			CHAL_DSI_ISTAT_ERR_CONTROL | CHAL_DSI_ISTAT_ERR_SYNC_ESC));
+
     chal_dsi_de1_send ( dsiH->chalH, TX_PKT_ENG_0, &dsiChH->chalCmCfg );  
-    
+   
+    wmb();
+
+    if( (res = cslDsiDmaStart ( &updMsgCm )) != CSL_LCD_OK )
+    {
+        LCD_DBG ( LCD_DBG_ID, "[CSL DSI] CSL_DSI_UpdateCmVc: "
+            "ERR Failed To Start DMA!\n\r" ); 
+        if( !clientH->hasLock ) OSSEMAPHORE_Release ( dsiH->semaDsi );
+        return ( res );    
+    }
+
     // restore TE mode config - complex, simplify
     dsiChH->chalCmCfg.isTE = isTE;  
     
@@ -2213,7 +2234,8 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 
         // send first line with START CMND
 #ifdef __CSL_DSI_USE_INT__  
-        cslDsiEnaIntEvent( dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE );
+        cslDsiEnaIntEvent( dsiH, (UInt32)(CHAL_DSI_ISTAT_TXPKT1_DONE | CHAL_DSI_ISTAT_ERR_CONT_LP1 | CHAL_DSI_ISTAT_ERR_CONT_LP0 |
+			CHAL_DSI_ISTAT_ERR_CONTROL | CHAL_DSI_ISTAT_ERR_SYNC_ESC));
 #else
         chal_dsi_clr_status ( dsiH->chalH, 0xFFFFFFFF );
 #endif        
@@ -2242,7 +2264,10 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
     }
 
     // send rest of the frame 
-    cslDsiEnaIntEvent ( dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE );
+    //cslDsiEnaIntEvent ( dsiH, (UInt32)CHAL_DSI_ISTAT_TXPKT1_DONE );
+	cslDsiEnaIntEvent( dsiH, (UInt32)(CHAL_DSI_ISTAT_TXPKT1_DONE | CHAL_DSI_ISTAT_ERR_CONT_LP1 | CHAL_DSI_ISTAT_ERR_CONT_LP0 |
+			CHAL_DSI_ISTAT_ERR_CONTROL | CHAL_DSI_ISTAT_ERR_SYNC_ESC));
+
 
     chal_dsi_de1_send ( dsiH->chalH, TX_PKT_ENG_0, &dsiChH->chalCmCfg );  
     
@@ -2517,7 +2542,7 @@ CSL_DSI_CloseRet:
 // Description:    Init DSI Controller
 //
 //*****************************************************************************
-CSL_LCD_RES_T  CSL_DSI_Init ( pCSL_DSI_CFG dsiCfg )
+CSL_LCD_RES_T  CSL_DSI_Init ( const pCSL_DSI_CFG dsiCfg )
 {
     CSL_LCD_RES_T       res = CSL_LCD_OK;
     DSI_HANDLE          dsiH;
@@ -2613,7 +2638,7 @@ CSL_LCD_RES_T  CSL_DSI_Init ( pCSL_DSI_CFG dsiCfg )
 #endif
     
     // Init Values for HS/ESC Clock Trees 
-    if(!cslDsiClkTreeInit (dsiH, dsiCfg->hsBitClk, dsiCfg->escClk) )
+    if(!cslDsiClkTreeInit (dsiH, &dsiCfg->hsBitClk, &dsiCfg->escClk) )
     {
         LCD_DBG ( LCD_DBG_ID, 
             "[CSL DSI] CSL_DSI_Init(): ERROR HS/ESC Clk Init!\r\n" ); 
