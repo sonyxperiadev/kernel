@@ -34,14 +34,13 @@
 #include <mach/irqs.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
-
-#ifdef CONFIG_ARCH_ISLAND
-#include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>
-#else
+#ifdef CONFIG_ARCH_RHEA
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #endif
+#else
+#include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>
 #endif
 
 #include <asm/io.h>
@@ -53,7 +52,7 @@
 #define kona_set_reg_field(addr, mask, shift, val)      \
             do                                              \
             {                                               \
-               u32 tmp;                                \
+               uint32_t tmp;                                \
                tmp  = readl(addr);              \
                tmp &= ~(mask);                              \
                tmp |= (((val) << (shift)) & (mask));        \
@@ -526,10 +525,7 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 #ifdef CONFIG_PERIPHERAL_TIMER_FIX
 	void __iomem *rootClockMgr_regs = IOMEM(KONA_ROOT_CLK_VA);
 #endif
-#ifndef CONFIG_ARCH_SAMOA
-	u32 val, old_enable;
-#endif
-	u32 mask, rate_val;
+	uint32_t val, old_enable, mask, rate_val;
 
 	/* Slave timer only supports 32KHz and 1MHz */
 	if (rt == KHZ_32)
@@ -540,7 +536,36 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 		return -1;			
 
 	/* Adjust clock source to 1Mhz */
-#ifdef CONFIG_ARCH_ISLAND
+#ifdef CONFIG_ARCH_RHEA
+	/* unlock slave clock manager */
+	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	old_enable = val & 0x1;	
+	val &= 0x80000000;
+	val |= 0xA5A500 | 0x1;
+	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	
+	/* set the value */
+	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
+ 	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET, 
+		mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT,
+		rate_val);
+
+
+	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
+	writel(val | (1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT), 
+		slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
+
+	while(readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET) & 
+			(1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT))
+		;
+
+	/* restore slave clock manager */
+	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	val &= 0x80000000;
+	val |= 0xA5A500;
+	val |= old_enable & 0x1;
+	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+#else
 	/* unlock slave clock manager */
 	val = readl(slaveClockMgr_regs + IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
 	old_enable = val & 0x1; 
@@ -568,40 +593,6 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 	val |= 0xA5A500;
 	val |= old_enable & 0x1;
 	writel(val, slaveClockMgr_regs + IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-#elif defined(CONFIG_ARCH_RHEA)
-	/* unlock slave clock manager */
-	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-	old_enable = val & 0x1; 
-	val &= 0x80000000;
-	val |= 0xA5A500 | 0x1;
-	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-
-	/* set the value */
-	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
-	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET, 
-		mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT,
-		rate_val);
-
-	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
-	writel(val | (1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT), 
-		slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET);
-
-	while(readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_DIV_TRIG_OFFSET) & 
-			(1 << KPS_CLK_MGR_REG_DIV_TRIG_TIMERS_TRIGGER_SHIFT))
-		;
-
-	/* restore slave clock manager */
-	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-	val &= 0x80000000;
-	val |= 0xA5A500;
-	val |= old_enable & 0x1;
-	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
-#else
-	/* set the value */
-	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
-	kona_set_reg_field(slaveClockMgr_regs + KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET, 
-		mask, KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_SHIFT,
-		rate_val);
 #endif
 
 #ifdef CONFIG_GP_TIMER_CLOCK_OFF_FIX
