@@ -27,6 +27,7 @@
 #include <linux/io.h>
 #include <asm/clkdev.h>
 #include <mach/clock.h>
+#include <mach/brcm_ccu_clk_mgr_reg.h>
 #include <asm/io.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 
@@ -42,11 +43,40 @@
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_lock);
 
-int clk_debug;
+int clk_debug = 0;
+
+static int clk_init(struct clk *clk)
+{
+    int ret = 0;
+    unsigned long flags;
+
+    if (!clk || !clk->ops)
+	return -EINVAL;
+
+    if (clk->ops->init) {
+	spin_lock_irqsave(&clk_lock, flags);
+	ret = clk->ops->init(clk);
+	spin_unlock_irqrestore(&clk_lock, flags);
+    }
+
+    return ret;
+}
+
+int clk_register(struct clk_lookup *clk_lkup)
+{
+    int ret = 0;
+
+    ret = clk_init(clk_lkup->clk);
+    clkdev_add(clk_lkup);
+    return ret;
+}
 
 static int __clk_enable(struct clk *clk)
 {
 	int ret = 0;
+
+	if (!clk)
+		return -EINVAL;
 
 	if (!clk->ops || !clk->ops->enable)
 		return -EINVAL;
@@ -58,8 +88,9 @@ static int __clk_enable(struct clk *clk)
 	if (ret)
 		return ret;
 
-	if (clk->use_cnt++ == 0)
+	if (clk->use_cnt++ == 0) {
 		ret = clk->ops->enable(clk, 1);
+	}
 
 	return ret;
 }
@@ -69,7 +100,7 @@ int clk_enable(struct clk *clk)
 	int ret;
 	unsigned long flags;
 
-	if (!clk)
+	if (IS_ERR_OR_NULL(clk))
 		return -EINVAL;
 
 	spin_lock_irqsave(&clk_lock, flags);
@@ -97,7 +128,7 @@ void clk_disable(struct clk *clk)
 {
 	unsigned long flags;
 
-	if (!clk)
+	if (IS_ERR_OR_NULL(clk))
 		return;
 
 	spin_lock_irqsave(&clk_lock, flags);
@@ -110,8 +141,8 @@ unsigned long clk_get_rate(struct clk *clk)
 {
 	unsigned long flags, rate;
 
-	if (!clk || !clk->ops || !clk->ops->get_rate)
-		return 0;
+	if (IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->get_rate)
+		return -EINVAL;
 
 	spin_lock_irqsave(&clk_lock, flags);
 	rate = clk->ops->get_rate(clk);
@@ -124,7 +155,7 @@ long clk_round_rate(struct clk *clk, unsigned long rate)
 {
 	unsigned long flags, actual;
 
-	if (!clk || !clk->ops || !clk->ops->round_rate)
+	if (IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->round_rate)
 		return -EINVAL;
 
 	if (clk->use_cnt)
@@ -143,7 +174,7 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	unsigned long flags;
 	int ret;
 
-	if (!clk || !clk->ops || !clk->ops->set_rate)
+	if (IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->set_rate)
 		return -EINVAL;
 
 	if (clk->use_cnt)
@@ -162,7 +193,7 @@ struct clk *clk_get_parent(struct clk *clk)
 	struct clk *parent;
 	unsigned long flags;
 
-	if (!clk)
+	if (IS_ERR_OR_NULL(clk))
 		return NULL;
 
 	spin_lock_irqsave(&clk_lock, flags);
@@ -177,7 +208,7 @@ int clk_set_parent(struct clk *clk, struct clk *parent)
 	unsigned long flags;
 	struct clk *old_parent;
 
-	if (!clk || !parent || !clk->ops || !clk->ops->set_parent)
+	if (IS_ERR_OR_NULL(clk) || !parent || !clk->ops || !clk->ops->set_parent)
 		return -EINVAL;
 
 	/* if more than one user, parent is not allowed */
@@ -478,6 +509,7 @@ static unsigned long proc_clk_round_rate(struct clk *c, unsigned long rate)
 }
 
 struct clk_ops proc_clk_ops = {
+    	.init		= 	NULL,
 	.enable		=	proc_clk_enable,
 	.set_rate	=	proc_clk_set_rate,
 	.get_rate	=	proc_clk_get_rate,
@@ -491,6 +523,9 @@ static int peri_clk_enable(struct clk *c, int enable)
 	struct peri_clock *peri_clk = to_peri_clk(c);
 	void __iomem *base;
 
+	if (c->flags & AUTO_GATE)
+	    return -EPERM;
+
 	base = ioremap (peri_clk->ccu_clk_mgr_base, SZ_4K);
 	if (!base)
 		return -ENOMEM;
@@ -499,11 +534,13 @@ static int peri_clk_enable(struct clk *c, int enable)
 	writel(CLK_WR_ACCESS_PASSWORD, base + peri_clk->wr_access_offset);
 
 	if(enable) {
-		clk_dbg("%s %s set rate %lu div %lu ind %d parent %lu\n", __func__, c->name,
+		clk_dbg("%s %s rate %lu div %lu ind %d parent_rate %lu\n", __func__, c->name,
 			c->rate, c->div, c->src->sel, c->parent->rate);
 
 		/* clkgate */
 		reg = readl(base + peri_clk->clkgate_offset);
+		clk_dbg ("Before %s, %s gating reg(%p): 0x%08x\n",
+			enable?"enable":"disable", c->name, (base + peri_clk->clkgate_offset), reg);
 		reg |= peri_clk->clk_en_mask;
 		writel(reg, base + peri_clk->clkgate_offset);
 
@@ -524,17 +561,16 @@ static int peri_clk_enable(struct clk *c, int enable)
 		while(! (readl(base + peri_clk->clkgate_offset) & peri_clk->stprsts_mask));
 	}
 	else {
-		clk_dbg("%s disable clock %s\n", __func__, c->name);
-
 		/* clkgate */
 		reg = readl(base + peri_clk->clkgate_offset);
+		clk_dbg ("Before %s, %s gating reg(%p): 0x%08x\n",
+			enable?"enable":"disable", c->name, (base + peri_clk->clkgate_offset), reg);
 		reg &= ~peri_clk->clk_en_mask;
 		writel(reg, base + peri_clk->clkgate_offset);
 
 		/* wait for stop */
 		while((readl(base + peri_clk->clkgate_offset) & peri_clk->stprsts_mask));
 	}
-
 	/* disable access */
 	writel(0, base + peri_clk->wr_access_offset);
 
@@ -543,37 +579,177 @@ static int peri_clk_enable(struct clk *c, int enable)
 	return ret;
 }
 
+
+static unsigned long calc_pll_divisor(struct peri_clock *peri_clk, unsigned long
+req_rate, struct clk_rate_div *clk_rate_div)
+{
+    struct clk *c = &peri_clk->clk;
+    int i, ind = 0;
+    unsigned long diff = 0x7fffffff;
+    unsigned long div=0, pre_div=0, k, l;
+    unsigned long new_rate;
+
+    clk_dbg("%s clk:%s req_rate:%lu \n",__func__, c->name, req_rate);
+
+    for(ind=0;ind<c->src->total;ind++ )
+    {
+        if (c->src->parents[ind]->rate == req_rate)
+        {
+            clk_rate_div->sel = ind;
+            clk_rate_div->pre_div = 0;
+            clk_rate_div->div = 0;
+            return c->src->parents[ind]->rate;
+        }
+    }
+    for (i=0;i<c->src->total;i++) {
+	k = 1;
+	l = 1;
+	while(1)
+	{
+	    new_rate = c->src->parents[i]->rate/(k*l);
+	    if (new_rate < req_rate && abs(new_rate - req_rate) >= diff) {
+		break;
+	    }
+	    if (abs(new_rate - req_rate) < diff)
+	    {
+		diff = abs(new_rate - req_rate);
+		ind = i;
+		pre_div = k-1;
+		div = l-1;
+	    }
+	    if(peri_clk->pre_div_max == k && peri_clk->div_max == l)
+		break;
+	    if(peri_clk->pre_div_max == k && peri_clk->div_max > l)
+	    {
+		k = 1;
+		l++;
+	    } else
+	    	k++;
+	}
+    }
+    clk_dbg("%s After calc clk:%s div:%lu ; pre_div: %lu sel: %d\n",__func__, c->name, div, pre_div, ind);
+    clk_rate_div->sel = ind;
+    clk_rate_div->pre_div = pre_div;
+    clk_rate_div->div = div;
+    return (c->src->parents[ind]->rate/((div+1)*(pre_div+1)));
+}
+
+static unsigned long calc_pll_fractional_divisor(struct peri_clock *peri_clk, unsigned
+                long req_rate, struct clk_rate_div *clk_rate_div)
+{
+    struct clk *c = &peri_clk->clk;
+    unsigned long calc_rate;
+    unsigned long i, max_fraction;
+    unsigned long diff = 0x7fffffff;
+    unsigned long fraction = 0;
+
+    calc_rate = calc_pll_divisor(peri_clk, req_rate, clk_rate_div);
+
+    if (calc_rate < req_rate && clk_rate_div->pre_div > 0)
+	clk_rate_div->pre_div = clk_rate_div->pre_div -1;
+    else if (calc_rate < req_rate && clk_rate_div->div > 0)
+	clk_rate_div->div = clk_rate_div->div -1;
+    else if (calc_rate < req_rate)
+    {
+	clk_rate_div->fraction = 0;
+	return (c->src->parents[clk_rate_div->sel]->rate/
+		((clk_rate_div->div+1)*(clk_rate_div->pre_div+1)));
+    }
+    if (peri_clk->div_dithering <= 0)
+    {
+	clk_rate_div->fraction = 0;
+	return 	(c->src->parents[clk_rate_div->sel]->rate/
+	((clk_rate_div->div+1)*(clk_rate_div->pre_div+1)));
+    }
+    max_fraction = ~(0xFFFFFFFF << peri_clk->div_dithering) - 1;
+    for (i = 0; i <= max_fraction; i++)
+    {
+	calc_rate = (((c->src->parents[clk_rate_div->sel]->rate/100)*(max_fraction+1))/
+		((clk_rate_div->div+1)*(max_fraction+1)+i))*100;
+	if (calc_rate >= req_rate && (calc_rate-req_rate) < diff)
+	{
+	    diff = calc_rate - req_rate;
+	    fraction = i;
+	}
+	else
+	    break;
+    }
+
+    clk_rate_div->fraction = fraction;
+    return ((((c->src->parents[clk_rate_div->sel]->rate/100)*(max_fraction+1))/
+	((clk_rate_div->div+1)*(max_fraction+1)+ fraction))*100);
+
+}
+
+
 static int peri_clk_set_rate(struct clk *c, unsigned long rate)
 {
-	int ret = 0;
-	int i, ind = 0;
+	int ret = 0, reg;
+	int ind = 0;
 	unsigned long diff;
-	unsigned long new_rate=0, div=1;
+	unsigned long temp_rate=0, temp_div=1, temp_prediv=0, temp_fraction=0;
+	struct peri_clock *peri_clk = to_peri_clk(c);
+	unsigned int div_ctrl_val = 0;
+	void __iomem *base;
+	struct clk_rate_div clk_rate_div;
 
 	diff = rate;
+	clk_dbg("%s clk:%s rate to set:%lu \n",__func__, c->name, rate);
 
 	BUG_ON(!c->parent);
 	BUG_ON(!c->src || !c->src->total);
 
-	for (i=0; i<c->src->total;i++) {
-		/* round to the new rate */
-		div = c->src->parents[i]->rate / rate;
-		if(div==0)
-			div = 1;
-		new_rate = c->src->parents[i]->rate/div;
+	memset(&clk_rate_div, 0, sizeof(struct clk_rate_div));
+	if (peri_clk->div_dithering > 0)
+	    temp_rate = calc_pll_fractional_divisor(peri_clk, rate, &clk_rate_div);
+	else
+	    temp_rate = calc_pll_divisor(peri_clk, rate, &clk_rate_div);
 
-		/* get the min diff */
-		if(abs(new_rate-rate) < diff) {
-			diff = abs(new_rate-rate);
-			c->src->sel = i;
-			c->parent = c->src->parents[i];
-			c->rate = new_rate;
-			c->div = div;
-			ind = i;
-		}
+	c->src->sel = clk_rate_div.sel;
+	c->parent = c->src->parents[c->src->sel];
+	temp_div = clk_rate_div.div;
+	temp_prediv = clk_rate_div.pre_div;
+	temp_fraction = clk_rate_div.fraction;
+
+	clk_dbg("%s After calc clk:%s sel:%d parent_rate:%lu temp_div:%lu \
+	temp_prediv:%lu temp_fraction:%lu\n",__func__, c->name, c->src->sel,
+	c->src->parents[c->src->sel]->rate, temp_div, temp_prediv, temp_fraction);
+
+	if (peri_clk->div_mask) {
+	   if(peri_clk->div_dithering > 0)
+	       div_ctrl_val = (temp_div << (peri_clk->div_shift +
+	       	peri_clk->div_dithering)) | (temp_prediv << peri_clk->div_dithering);
+	   else
+	       div_ctrl_val = temp_div << peri_clk->div_shift;
 	}
+	if (peri_clk->pre_div_max) {
+	    div_ctrl_val = div_ctrl_val |
+	    	(temp_prediv << peri_clk->pre_div_shift);
+	}
+	if (peri_clk->pll_select_mask)
+	    div_ctrl_val |= (c->src->sel << peri_clk->pll_select_shift);
+	base = ioremap (peri_clk->ccu_clk_mgr_base, SZ_4K);
+	writel(CLK_WR_ACCESS_PASSWORD, base + peri_clk->wr_access_offset);
+	if (!base)
+		return -ENOMEM;
+	writel(div_ctrl_val, base + peri_clk->div_offset);
 
-	clk_dbg("%s %s set rate %lu div %lu ind %d parent %lu\n", __func__, c->name,
+	if (peri_clk->pre_trigger_mask)
+	    writel(peri_clk->pre_trigger_mask, base + peri_clk->div_trig_offset);
+	if (peri_clk->trigger_mask) {
+	    writel(peri_clk->trigger_mask, base + peri_clk->div_trig_offset);
+	    reg = readl(base + peri_clk->clkgate_offset);
+	    if (reg & peri_clk->stprsts_mask)
+		while(readl(base + peri_clk->div_trig_offset) &	peri_clk->trigger_mask);
+	}
+	/* disable access */
+	writel(0, base + peri_clk->wr_access_offset);
+	iounmap (base);
+
+	c->rate = temp_rate;
+	c->div = temp_div;
+
+	clk_dbg("At %s exit %s set rate %lu div %lu ind %d parent %lu\n", __func__, c->name,
 		c->rate, c->div, ind, c->parent->rate);
 	return ret;
 }
@@ -608,7 +784,42 @@ static unsigned long peri_clk_get_rate(struct clk *c)
 	return c->rate;
 }
 
+static int peri_clk_init(struct clk *clk)
+{
+    int ret=0, reg;
+    struct peri_clock *peri_clk = to_peri_clk(clk);
+    void __iomem *base;
+
+    base = ioremap (peri_clk->ccu_clk_mgr_base, SZ_4K);
+    if (!base)
+	return -ENOMEM;
+    /* enable access */
+    writel(CLK_WR_ACCESS_PASSWORD, base + peri_clk->wr_access_offset);
+    /* clkgate */
+    reg = readl(base + peri_clk->clkgate_offset);
+    if(clk->flags & DEFAULT_ACTIVE_CLK) {
+	if(reg & peri_clk->stprsts_mask)
+	    clk->use_cnt = clk->use_cnt + 1;
+    }
+    if (clk->flags & AUTO_GATE)
+	reg &= ~peri_clk->hw_sw_gating_mask;
+    else
+	reg |= peri_clk->hw_sw_gating_mask;
+
+    writel(reg, base + peri_clk->clkgate_offset);
+
+    /* disable access */
+    writel(0, base + peri_clk->wr_access_offset);
+    iounmap (base);
+
+    if ((clk->flags & ENABLE_ON_INIT))
+	clk->ops->enable(clk, 1);
+
+    return ret;
+}
+
 struct clk_ops peri_clk_ops = {
+    	.init		= 	peri_clk_init,
 	.enable		=	peri_clk_enable,
 	.set_rate	=	peri_clk_set_rate,
 	.get_rate	=	peri_clk_get_rate,
@@ -622,6 +833,7 @@ static int ccu_clk_enable(struct clk *c, int enable)
 	void __iomem *base;
 	int reg, ret = 0;
 
+	clk_dbg("%s enable: %d, ccu name:%s\n",__func__, enable, c->name);
 	base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
 	if (!base)
 		return -ENOMEM;
@@ -651,6 +863,13 @@ static int ccu_clk_enable(struct clk *c, int enable)
 	writel(0x7fffffff, base + ccu_clk->policy2_mask_offset);
 	writel(0x7fffffff, base + ccu_clk->policy3_mask_offset);
 
+	if (c->ccu_id == BCM2165x_HUB_CCU) {
+	    writel(0x7fffffff, base + ccu_clk->policy0_mask1_offset);
+	    writel(0x7fffffff, base + ccu_clk->policy1_mask1_offset);
+	    writel(0x7fffffff, base + ccu_clk->policy2_mask1_offset);
+	    writel(0x7fffffff, base + ccu_clk->policy3_mask1_offset);
+	}
+
 	/* start policy engine */
 	reg = readl(base + ccu_clk->policy_ctl_offset);
 	reg |= 5;
@@ -671,7 +890,141 @@ static unsigned long ccu_clk_get_rate(struct clk *c)
 	return 	c->rate;
 }
 
+static int trigger_active_load(struct clk *clk, void __iomem  *base)
+{
+    int val;
+    clk_dbg("%s\n", __func__);
+
+    if(clk == NULL || !base)
+	return -EINVAL;
+    /* Software update enable for policy related data */
+    writel (CCU_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK, base + CCU_CLK_MGR_REG_LVM_EN_OFFSET);
+    do {
+	val = readl (base + CCU_CLK_MGR_REG_LVM_EN_OFFSET);
+    } while (val & CCU_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK);
+
+    val = CCU_CLK_MGR_REG_POLICY_CTL_GO_MASK | CCU_CLK_MGR_REG_POLICY_CTL_GO_ATL_MASK;
+    writel (val, base + CCU_CLK_MGR_REG_POLICY_CTL_OFFSET);
+    /*polling ctrl go bit till its back to 0 */
+    do {
+	val = readl (base + CCU_CLK_MGR_REG_POLICY_CTL_OFFSET);
+    } while (val & CCU_CLK_MGR_REG_POLICY_CTL_GO_MASK);
+
+    return 0;
+}
+
+static int root_ccu_init(struct clk *clk)
+{
+    return 0;
+}
+
+static int hub_ccu_init(struct clk *clk)
+{
+    return 0;
+}
+
+static int aon_ccu_init(struct clk *clk)
+{
+    return 0;
+}
+
+static int mm_ccu_init(struct clk *clk)
+{
+    return 0;
+}
+
+static int proc_ccu_init(struct clk *clk)
+{
+    return 0;
+}
+
+/* CCU specific initialization should be done here.
+ * This is called during CCU init and should be before any clocks usage.
+ * 1. Set the CCU specific frequency policy
+ * 2. Intial gating policies??
+ */
+static int kona_master_ccu_init(struct clk *clk)
+{
+    int val;
+    void __iomem *base;
+    struct ccu_clock *ccu_clk = to_ccu_clk(clk);
+
+    base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
+    if(base)
+	return -ENOMEM;
+    writel(CLK_WR_ACCESS_PASSWORD, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+
+    val = (ccu_clk->freq_id) | (ccu_clk->freq_id << 8)
+    		| (ccu_clk->freq_id << 16) | (ccu_clk->freq_id << 24);
+    writel(val, base + CCU_CLK_MGR_REG_POLICY_FREQ_OFFSET);
+    trigger_active_load(clk, base);
+
+    writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+    iounmap (base);
+
+    return 0;
+}
+
+static int kona_slave_ccu_init(struct clk *clk)
+{
+    int val;
+    void __iomem *base;
+    struct ccu_clock *ccu_clk = to_ccu_clk(clk);
+
+    base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
+    if(base)
+	return -ENOMEM;
+    writel(CLK_WR_ACCESS_PASSWORD, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+
+    val = (ccu_clk->freq_id) | (ccu_clk->freq_id << 8)
+    		| (ccu_clk->freq_id << 16) | (ccu_clk->freq_id << 24);
+    writel(val, base + CCU_CLK_MGR_REG_POLICY_FREQ_OFFSET);
+    trigger_active_load(clk, base);
+
+    writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+    iounmap (base);
+
+    return 0;
+}
+
+
+static int ccu_init(struct clk *c)
+{
+    int ret = 0;
+
+    switch(c->ccu_id) {
+    int ret = 0;
+    case BCM2165x_ROOT_CCU:
+	ret = root_ccu_init(c);
+	break;
+    case BCM2165x_HUB_CCU:
+	ret = hub_ccu_init(c);
+	break;
+    case BCM2165x_AON_CCU:
+	ret = aon_ccu_init(c);
+	break;
+    case BCM2165x_MM_CCU:
+	ret = mm_ccu_init(c);
+	break;
+    case BCM2165x_KONA_MST_CCU:
+	ret = kona_master_ccu_init(c);
+	break;
+    case BCM2165x_PROC_CCU:
+	ret = proc_ccu_init(c);
+	break;
+    case BCM2165x_KONA_SLV_CCU:
+	ret = kona_slave_ccu_init(c);
+	break;
+    default:
+	clk_dbg("Invalid CCU ID\n");
+	ret = -EINVAL;
+    }
+
+    return ret;
+}
+
 struct clk_ops ccu_clk_ops = {
+    	.init		= 	ccu_init,
 	.enable		=	ccu_clk_enable,
 	.get_rate	=	ccu_clk_get_rate,
 };
@@ -692,16 +1045,18 @@ static int bus_clk_enable(struct clk *c, int enable)
 
 	/* enable gating */
 	reg = readl(base + bus_clk->clkgate_offset);
+	clk_dbg ("Before %s, %s gating reg(%p): 0x%08x\n", enable?"enable":"disable\n", c->name, (base + bus_clk->clkgate_offset), reg);
+	clk_dbg ("status_mask: 0x%08lx \n", bus_clk->stprsts_mask);
 	if (!!(reg&bus_clk->stprsts_mask) == !!enable)
 		clk_dbg ("%s already %s\n", c->name, enable?"enabled":"disabled");
 	else if (enable) {
-		reg |= bus_clk->hw_sw_gating_mask;
+	//	reg |= bus_clk->hw_sw_gating_mask;
 		reg |= bus_clk->clk_en_mask;
 		writel(reg, base + bus_clk->clkgate_offset);
 		while(! (readl(base + bus_clk->clkgate_offset) & bus_clk->stprsts_mask));
 	}
 	else {
-		reg |= bus_clk->hw_sw_gating_mask;
+	//	reg |= bus_clk->hw_sw_gating_mask;
 		reg &= ~bus_clk->clk_en_mask;
 		writel(reg, base + bus_clk->clkgate_offset);
 		while(readl(base + bus_clk->clkgate_offset) & bus_clk->stprsts_mask);
@@ -727,7 +1082,45 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 	return c->rate;
 }
 
+static int bus_clk_init(struct clk *clk)
+{
+    int ret=0, reg;
+    struct bus_clock *bus_clk = to_bus_clk(clk);
+    void __iomem *base;
+
+    if ((clk->flags & SW_GATE) && (clk->flags & AUTO_GATE))
+	return -EINVAL;
+    base = ioremap (bus_clk->ccu_clk_mgr_base, SZ_4K);
+    if (!base)
+	return -ENOMEM;
+    /* enable access */
+    writel(CLK_WR_ACCESS_PASSWORD, base + bus_clk->wr_access_offset);
+    /* clkgate */
+    reg = readl(base + bus_clk->clkgate_offset);
+    if(clk->flags & DEFAULT_ACTIVE_CLK) {
+	if(reg & bus_clk->stprsts_mask)
+	    clk->use_cnt = clk->use_cnt + 1;
+    }
+    if(clk->flags & SW_GATE) {
+	reg |= bus_clk->hw_sw_gating_mask;
+    }else if (clk->flags & AUTO_GATE)
+	reg &= ~bus_clk->hw_sw_gating_mask;
+
+    writel(reg, base + bus_clk->clkgate_offset);
+
+    /* disable access */
+    writel(0, base + bus_clk->wr_access_offset);
+    iounmap (base);
+
+    if ((clk->flags & ENABLE_ON_INIT))
+	bus_clk_enable(clk, 1);
+
+    return ret;
+}
+
+
 struct clk_ops bus_clk_ops = {
+    	.init		= 	bus_clk_init,
 	.enable		=	bus_clk_enable,
 	.get_rate	=	bus_clk_get_rate,
 };
@@ -739,6 +1132,7 @@ static int ref_clk_enable(struct clk *c, int enable)
 }
 
 struct clk_ops ref_clk_ops = {
+    	.init		= 	NULL,
 	.enable		=	ref_clk_enable,
 	.set_rate	=	common_set_rate,
 	.get_rate	=	common_get_rate,
@@ -747,6 +1141,21 @@ struct clk_ops ref_clk_ops = {
 };
 
 #ifdef CONFIG_DEBUG_FS
+
+static int test_func_invoke(void *data, u64 val)
+{
+    if (val == 1) {
+	clk_dbg("Test func invoked \n");
+    }
+    else
+	clk_dbg("Invalid value \n");
+
+    return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(test_func_fops, NULL, test_func_invoke, "%llu\n");
+
+
 static int clk_debug_get_rate(void *data, u64 *val)
 {
 	struct clk *clock = data;
@@ -765,6 +1174,66 @@ static int clk_debug_set_rate(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(clock_rate_fops, clk_debug_get_rate,
 	clk_debug_set_rate, "%llu\n");
 
+static int _get_clk_status(struct clk *c)
+{
+    struct peri_clock *peri_clk;
+    struct bus_clock *bus_clk;
+    int val;
+    int enabled = 0;
+    void __iomem *base ;
+
+
+	clk_dbg("%s clock id:: %d, clock end: %d \n", __func__, c->id, BCM2165x_CLK_END);
+    if(c->id < BCM2165x_CLK_END) {
+	peri_clk = to_peri_clk(c);
+	base = ioremap (peri_clk->ccu_clk_mgr_base, SZ_4K);
+	if (!base)
+	    return -ENOMEM;
+	val = readl(base + peri_clk->clkgate_offset);
+	clk_dbg("%s clock gate_reg: %p \n", c->name, (base + peri_clk->clkgate_offset));
+	enabled = val & peri_clk->stprsts_mask;
+	clk_dbg("status_mask: 0x%lx, clock enabled/disabled:%d \n", peri_clk->stprsts_mask, !!enabled);
+    } else {
+    	bus_clk = to_bus_clk(c);
+	base = ioremap (bus_clk->ccu_clk_mgr_base, SZ_4K);
+	if (!base)
+	    return -ENOMEM;
+	val = readl(base + bus_clk->clkgate_offset);
+	clk_dbg("%s bus clock gate_reg: %p \n", c->name, (base + bus_clk->clkgate_offset));
+	enabled = val & bus_clk->stprsts_mask;
+	clk_dbg("status_mask: 0x%lx, clock enabled/disabled:%d \n", bus_clk->stprsts_mask, !!enabled);
+    }
+    iounmap (base);
+    return !!enabled;
+}
+
+static int clk_debug_get_status(void *data, u64 *val)
+{
+    struct clk *clock = data;
+    *val = _get_clk_status(clock);
+    clk_dbg("%s is %s \n", clock->name, *val?"enabled":"disabled");
+
+    return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(clock_status_fops, clk_debug_get_status, NULL, "%llu\n");
+
+
+
+static int clk_debug_set_enable(void *data, u64 val)
+{
+    struct clk *clock = data;
+    if (val == 1)
+	clk_enable(clock);
+    else if (val == 0)
+	clk_disable(clock);
+    else
+	clk_dbg("Invalid value \n");
+
+    return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(clock_enable_fops, NULL, clk_debug_set_enable, "%llu\n");
 
 static int clk_parent_show(struct seq_file *seq, void *p)
 {
@@ -830,19 +1299,33 @@ int __init clock_debug_init(void)
 	if (!debugfs_create_u32("debug", 0644, dent_clk_root_dir, (int*)&clk_debug))
 		return -ENOMEM;
 
+	if (!debugfs_create_file("debug_func", 0644, dent_clk_root_dir, NULL, &test_func_fops))
+		return -ENOMEM;
+
 	return 0;
 }
 
 int __init clock_debug_add_clock(struct clk *c)
 {
-	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_div=0, *dent_usr_cnt=0, *dent_id=0,
-		      *dent_parent=0, *dent_source=0;
+	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_enable=0,
+		*dent_status=0, *dent_div=0, *dent_usr_cnt=0, *dent_id=0,
+		*dent_parent=0, *dent_source=0;
 	BUG_ON(!dent_clk_root_dir);
 
 	/* create root clock dir /clock/clk_a */
 	dent_clk_dir	=	debugfs_create_dir(c->name, dent_clk_root_dir);
 	if(!dent_clk_dir)
 		goto err;
+
+	/* file /clock/clk_a/enable */
+	dent_enable       =       debugfs_create_file("enable", 0644, dent_clk_dir, c, &clock_enable_fops);
+	if(!dent_enable)
+		goto err;
+
+	/* file /clock/clk_a/status */
+	dent_status     =       debugfs_create_file("status", 0644, dent_clk_dir, c, &clock_status_fops);
+	if(!dent_status)
+	     goto err;
 
 	/* file /clock/clk_a/rate */
 	dent_rate	=	debugfs_create_file("rate", 0644, dent_clk_dir, c, &clock_rate_fops);
