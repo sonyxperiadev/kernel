@@ -56,6 +56,11 @@
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
 #endif
+#ifdef CONFIG_DMAC_PL330
+#include <mach/irqs.h>
+#include <plat/pl330-pdata.h>
+#include <linux/dma-mapping.h>
+#endif
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_DEVICE_I2C_ADDR_1   0x0C
@@ -872,6 +877,30 @@ struct platform_device headset_device = {
 };
 #endif /* CONFIG_KONA_HEADSET */
 
+#ifdef CONFIG_DMAC_PL330
+static struct kona_pl330_data rhea_pl330_pdata =	{
+	/* Non Secure DMAC virtual base address */
+	.dmac_ns_base = KONA_DMAC_NS_VA,
+	/* Secure DMAC virtual base address */
+	.dmac_s_base = KONA_DMAC_S_VA,
+	/* # of PL330 dmac channels 'configurable' */
+	.num_pl330_chans = 8,
+	/* irq number to use */
+	.irq_base = BCM_INT_ID_RESERVED184,
+	/* # of PL330 Interrupt lines connected to GIC */
+	.irq_line_count = 8,
+};
+
+static struct platform_device pl330_dmac_device = {
+	.name = "kona-dmac-pl330",
+	.id = 0,
+	.dev = {
+		.platform_data = &rhea_pl330_pdata,
+		.coherent_dma_mask  = DMA_BIT_MASK(64),
+	},
+};
+#endif
+
 /* Rhea Ray specific platform devices */ 
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -880,6 +909,10 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 
 #ifdef CONFIG_KONA_HEADSET
 	&headset_device,
+#endif
+
+#ifdef CONFIG_DMAC_PL330
+	&pl330_dmac_device,
 #endif
 };
 

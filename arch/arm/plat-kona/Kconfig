@@ -55,5 +55,12 @@ config BCM_STM
 	help
 	  Say Y if you want to enable the Broadcom System Trace Module
 
+config DMAC_PL330
+	bool "PL330 DMAC driver support for Kona architecture"
+	depends on ARCH_RHEA
+	select PL330
+	help
+	 Support for PL330 DMA Controller driver for Rhea SOC/KONA architecture
+
 endmenu
 

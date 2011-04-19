@@ -27,3 +27,4 @@ obj-$(CONFIG_HAVE_CLK) += clock.o
 endif
 obj-$(CONFIG_MACH_RHEA_RAY) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY) += csl/
+obj-$(CONFIG_DMAC_PL330) += dmux.o dma.o

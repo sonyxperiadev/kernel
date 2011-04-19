@@ -220,7 +220,8 @@
  * For typical scenario, at 1word/burst, 10MB and 20MB xfers per req
  * should be enough for P<->M and M<->M respectively.
  */
-#define MCODE_BUFF_PER_REQ	256
+/*#define MCODE_BUFF_PER_REQ	256*/
+#define MCODE_BUFF_PER_REQ		512
 
 /*
  * Mark a _pl330_req as free.
@@ -879,6 +880,7 @@ static void _stop(struct pl330_thread *thrd)
 	_emit_KILL(0, insn);
 
 	/* Stop generating interrupts for SEV */
+	/*BRCM: INTEN reg is Secure APB only*/
 	writel(readl(regs + INTEN) & ~(1 << thrd->ev), regs + INTEN);
 
 	_execute_DBGINSN(thrd, insn, is_manager(thrd));
@@ -929,6 +931,7 @@ static bool _trigger(struct pl330_thread *thrd)
 	_emit_GO(0, insn, &go);
 
 	/* Set to generate interrupts for SEV */
+	/*BRCM: INTEN reg is Secure APB only*/
 	writel(readl(regs + INTEN) | (1 << thrd->ev), regs + INTEN);
 
 	/* Only manager can execute GO */
@@ -1437,6 +1440,7 @@ int pl330_update(const struct pl330_info *pi)
 	}
 
 	/* Check which event happened i.e, thread notified */
+	/*BRCM: ES reg is Secure APB only*/
 	val = readl(regs + ES);
 	if (pi->pcfg.num_events < 32
 			&& val & ~((1 << pi->pcfg.num_events) - 1)) {
@@ -1449,6 +1453,7 @@ int pl330_update(const struct pl330_info *pi)
 	for (ev = 0; ev < pi->pcfg.num_events; ev++) {
 		if (val & (1 << ev)) { /* Event occured */
 			struct pl330_thread *thrd;
+			/*BRCM: INTEN reg is Secure APB only*/
 			u32 inten = readl(regs + INTEN);
 			int active;
 
