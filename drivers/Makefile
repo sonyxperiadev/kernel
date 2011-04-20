@@ -6,7 +6,6 @@
 #
 
 obj-y				+= gpio/
-obj-y				+= alsa/
 obj-$(CONFIG_GENERIC_PWM)	+= pwm/
 obj-$(CONFIG_PCI)		+= pci/
 obj-$(CONFIG_PARISC)		+= parisc/

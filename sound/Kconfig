@@ -92,6 +92,8 @@ source "sound/spi/Kconfig"
 source "sound/mips/Kconfig"
 
 source "sound/sh/Kconfig"
+ 
+source "sound/caph/Kconfig"
 
 # the following will depend on the order of config.
 # here assuming USB is defined before ALSA

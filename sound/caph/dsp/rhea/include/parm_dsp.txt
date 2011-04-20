@@ -1,0 +1,826 @@
+//****************************************************************************
+//*
+//*     Copyright (c) 2007 Broadcom Corporation
+//*           All Rights Reserved
+//*
+//*           Broadcom Corporation
+//*           16215 Alton Parkway
+//*           P.O. Box 57013
+//*           Irvine, California 92619-7013
+//*
+//*		This program is the proprietary software of Broadcom Corporation
+//*		and/or its licensors, and may only be used, duplicated, modified
+//*		or distributed pursuant to the terms and conditions of a separate,
+//*		written license agreement executed between you and 
+//*		Broadcom (an "Authorized License").  
+//*		
+//*		Except as set forth in an Authorized License, Broadcom grants no 
+//*		license (express or implied), right to use, or waiver of any kind
+//*		with respect to the Software, and Broadcom expressly reserves all
+//*		rights in and to the Software and all intellectual property rights
+//*		therein.  IF YOU HAVE NO AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT
+//*		TO USE THIS SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY 
+//*		BROADCOM AND DISCONTINUE ALL USE OF THE SOFTWARE.  
+//* 
+//*		Except as expressly set forth in the Authorized License,
+//* 
+//*		1. This program, including its structure, sequence and
+//*		   organization, constitutes the valuable trade secrets of
+//*		   Broadcom, and you shall use all reasonable efforts to protect
+//*		   the confidentiality thereof, and to use this information only
+//*		   in connection with your use of Broadcom integrated circuit products.
+//* 
+//*		2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED
+//*		   "AS IS" AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, 
+//*		   REPRESENTATIONS OR WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY,
+//*		   OR OTHERWISE, WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY
+//*		   DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY,
+//*		   NONINFRINGEMENT, FITNESS FOR A PARTICULAR PURPOSE, LACK OF VIRUSES,
+//*		   ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR 
+//*		   CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE RISK ARISING
+//*		   OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
+//*
+//*		3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM
+//*		   OR ITS LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, 
+//*		   SPECIAL, INDIRECT, OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF
+//*		   OR IN ANY WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE 
+//*		   SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE POSSIBILITY OF
+//*		   SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS OF THE AMOUNT ACTUALLY
+//*		   PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER IS GREATER. 
+//*		   THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF 
+//*		   ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
+//*
+//****************************************************************************/
+//
+// Description:  Athena DSP system parameters
+//
+//******************************************************************************
+
+DEBUG_MODE	0x0000	// Controls DSP Profile output:
+					// 	DEBUG_DSP_PROFILER	= 0x0001,
+
+
+//*****************************************************************************
+//
+//			Adjacent channel interference adaptive filtering and DC offset
+//			correction parameters
+//
+//
+//*****************************************************************************
+THRESH_SNR_DIFF_ADJ_8PSK_ADAP_FILTER	19		// 8PSK threshold for adjacent channel interference detection. Should be adjusted with caution.
+THRESH_SNR_DIFF_ADJ_GMSK_ADAP_FILTER	16		// voice mode GMSK threshold for adjacent channel interference detection. Should be adjusted with caution.
+THRESH_SNR_PS_DIFF_ADJ_GMSK_ADAP_FILTER	24		// Packet data mode GMSK threshold for adjacent channel interference detection. Should be adjusted with caution.
+									  
+FLAG_ADAP_FILTER			1		// Enable/Disable adaptive adjacent channel interference filtering.
+FLAG_ADAP_DC				1		// Enable/Disable adaptive 8PSK DC offset correction.
+LENGTH_ADAP_FIR				15		// FIR filter length for adjacent channel interference filtering. Should not be adjusted.
+FIRST_PATH_TIMING			4		// Default first path timing used during the channel estimation process.  Should be adjusted with caution
+THRESH_SNR_DC_EST			277 320 355 389			// Thresholds for adjusting the weighting factor used for 8PSK DC offset correction.  Should be adjusted with caution.
+WGH_LMMSE_DC_EST			4158 6002 8114 9849 11069	// The weighting factor used for 8PSK DC offset correction.  Should be adjusted with caution.
+ADAP_FIR_DC_EST_GMSK		-39 32 124 -235 523 -2934 7763 22268 7763 -2934 523 -235 124 32 -39		// Adaptive FIR filter coefficients.  Should be adjusted with caution.
+ADAP_FIR_DC_EST_8PSK 		52 189 -328 646 -881 -2146 9269 19312 9269 -2146 -881 646 -328 189 52 	 // Adaptive FIR filter coefficients. Should be adjusted with caution.
+LSDCOFFSET_CANCEL_ENABLE 	0		 //	LS DC offset cancellation flag
+PRE_FILTER_BYPASS_ENABLE 	0		 //	pre filter for HT channel flag
+
+
+//****************************************************************************
+//
+//			8PSK RX system parameters
+//
+//****************************************************************************
+EQU_QUANT_SCALE_8PSK		12	// 8psk equalizer scaling factor	
+NUM_ACCUM_BLIND			3	// number of burst for blind detection 
+USF_SNR_THRESH_8PSK     	48	// 48 = 3dB * 16; 8psk usf threshold 
+LOOP_SNR_THRESH_8PSK		144	// 128 = 8dB * 16; 8psk tracking loop threshold
+SNR_THRESH_DB16_8PSK_TIMING	160	// SNR threshold for 8PSK time tracking loop
+FF_FREQ_DEROT_8PSK_ENABLE	1	// 8PSK feedforward freq correction
+
+
+//*****************************************************************************
+//
+//			AGC Loop Parameters
+//
+//*****************************************************************************
+AGC_LOOP_NOM			34		// Nominal index into the AGC gain table of 64 entries ( 0..63 ) 
+AGC_LOOP_TARGET			1024		// Target automatic gain control loop.  This is the ideal absolute power level to enter the ADC
+AGC_LOOP_SATDROP		-80		// Drop in AGC gain at the detection of saturation in the DSP dB16.  -160 == -10dB
+AGC_STEPUP_DCH			16      	// Dedicated mode automatic gain control step size dB16.  16 == 1 dB
+AGC_STEPUP_IDLE			80		// Idle mode automtic gain control step size in dB16, set to 5dB.   Alternative values are 160/256/320
+AGC_MAXSTEPUP_DB16_HR		16		// Half rate speech automatic gain control step size dB16.  16  == 1 dB
+AGC_SNR_THRESH_IDLE		-64		// Minimum SNR level in order to adjust the AGC control loop up or down 1 step size during Idle mode
+AGC_SNR_THRESH_DCH		64		// Minimum SNR level in order to adjust the AGC control loop up or down 1 step size during dedicated modes (e.g., GSM voice/ CSD)
+
+EQU_PWR				1400		// Threshold for determining if overflow has occurred in the RXLEV power measurement. Causes the AGC loop to be adjusted according to the detection of saturation
+
+
+//*****************************************************************************
+//
+//			Network Acquisition and frequency derotation parameters
+//
+//*****************************************************************************
+DEROT_SCALE			-7		// Scaling factor for the frequency derotation process. It is a constant and should not be adjusted
+DEROT_GMSK			-16384		// Derotation frequency for GMSK. It is a constant and should not be adjusted
+FCCH_BINSCALE			-5		// Scaling factor to avoid overflow during power calculations when determining if a valid FCCH burst has been detected
+FCCH_BIN			0		// Minimum threshold for determining if a valid FCCH burst has been detected. This should be adjusted with caution.
+FCCH_THRESH			-45		// Minimum threshold for determining if a valid FCCH burst has been detected. This should be adjusted with caution.
+FREQ_EST_MULT			3972		// These are scaling factors for estimating the frequency offset. Used during the initial network acquisition process when looking for the FCCH burst. 
+FREQ_EST_SHIFT			-14		// These are scaling factors for estimating the frequency offset. Used during the initial network acquisition process when looking for the FCCH burst. 
+SCH				-63		// Minimum threshold in order to declare that an SCH burst has been found
+
+
+//*****************************************************************************
+//
+//			Equalizer Control Parameters
+//
+//*****************************************************************************
+EQU_TARGET		9			// Equalizer input signal normalization value.  It is a constant and should not be adjusted
+EQU_K2			4			// Equalizer normalization factor.  It is a constant and should not be adjusted
+EQC_CORR_SIZE		18			// Channel estimation window size
+EQC_CENTER          	8			// Channel estimation center point within the window
+EQC_DISABLE32       	0x0011			// Selects 16 or 32 state equalizer for the normal and sch bursts. 0x0011 : 16 state EQ for Normal and SCH bursts. 0x0000 : 32 state EQ
+EQC_RANGE           	6			// Channel estimation length of channel impulse response
+EQC_REDUCE_RANGE    	2			// Reduces the channel estimation window size
+
+
+//*****************************************************************************
+//
+//			Time and Frequency Tracking Parameters
+//
+//*****************************************************************************
+EQU_SNR_IDLE		96			// Minimum SNR (dB16) in order to accumulate an individual burst measured time offset in QB during idle mode
+EQU_SNR_DCH			96			// Minimum SNR (dB16) in order to accumulate an individual burst measured time offset in QB during dedicated mode
+LEAK_SNR_IDLE		96			// Minimum SNR (dB16) in order to run the 2nd order part of the time tracking loop during Idle mode in dB16
+LEAK_SNR_DCH		96			// Minimum SNR (dB16) in order to run the 2nd order part of the time tracking loop during Dedicated mode in dB16
+EQU_SNR_CNTRL		40			// Minimum SNR (dB16) in order to accumulate an individual burst measured time offset in QB during RX control channel
+CONTINUOUS_SPEECH_BFI_THRESH	25	// Stop track if continuous speech BFI over this threshold
+#ifdef	tempInterface_DSP_PARAM_NCELL_FREQ_ERROR_LIMIT
+NCELL_FREQ_ERROR_LIMIT			400 // freq limit for ncell
+#endif
+//
+//
+//	<mode>		Different loop parameters for different operating modes: IDLE, SDCCH, TCH, NULLPAGE
+//	<type>		Denotes the channel
+//	<#samples>	Specifies the number of measurements to make before running the control loop
+//	<shift>		Scaling factor affecting the loop gain
+//	<mag_limit>	Maximum averaged time offset adjustment which can be made at each iteration of the time tracking control loop in QB
+//
+
+//              Mode  		Type  #samples shift mag_limit
+//              ===== 		===== ======== ===== =========
+TRACK_TIME      IDLE  		SCELL 4        -2    8			// QBC
+TRACK_TIME      IDLE  		NCELL 4        -2    12			// QBC
+TRACK_TIME      IDLE  		SCH   0        0     32767		// QBC
+TRACK_TIME      SDCCH 		SCELL 78      -1    1			// QBC
+TRACK_TIME      SDCCH 		NCELL 4        -2    12			// QBC
+TRACK_TIME      SDCCH 		SCH   0        0     32767		// QBC
+TRACK_TIME      TCH   		SCELL 78      -1    1			// 32nd-BC
+TRACK_TIME      TCH   		NCELL 4        -2    12			// QBC
+TRACK_TIME      TCH   		SCH   0        0     32767		// QBC
+TRACK_TIME      TCH_H  		SCELL 78      -1    1			// 32nd-BC
+TRACK_TIME      NULLPAGE	SCELL 1        -2    8			// QBC	// NULL paging mode
+TRACK_TIME      NULLPAGE	NCELL 4        -2    12			// QBC
+TRACK_TIME      NULLPAGE	SCH   0        0     32767		// QBC
+TRACK_TIME      TBF   		SCELL 16      -4    1			// QBC
+TRACK_TIME      TBF   		NCELL 4        -2    12			// QBC
+TRACK_TIME      TBF   		SCH   0        0     32767		// QBC
+//
+//
+//	<mode>			Different loop parameters for different operating modes: IDLE, SDCCH, TCH, NULLPAGE
+//	<err_mag>		Maximum allowable time offset in QB measured off of a single burst which can be accumulated
+//	<shift2>		Scaling factor affecting the 2nd order tracking loop gain
+//	<leak_thresh>		Provides a longer term adjustment to the time tracking loop
+//
+//              Mode  		err_mag shift2 leak_thresh
+//              ===== 		======= ====== ===========
+TRACK_TIME2     IDLE  		32767   0      0                  // QBC
+TRACK_TIME2     SDCCH 		32767   0      0                  // QBC
+TRACK_TIME2     TCH   		32767   -2     311                // 32nd-BC
+TRACK_TIME2     TCH_H  		32767   -2     311                // 32nd-BC
+TRACK_TIME2     NULLPAGE	32767   0      0                  // QBC
+TRACK_TIME2     TBF   		32767   0      0                  // QBC
+//
+//
+//	<mode>		Different loop parameters for different operating modes: IDLE, SDCCH, TCH, NULLPAGE
+//	'K1_xxxx' 	identifies the 1st order tracking loop parameters.  The combination of <K1_mult> and <K1_shift> constitute the loop gain for the 1st order loop
+//	'K2_xxxx' 	identifies the 2nd order tracking loop parameters.  The combination of <K2_mult> and <K2_shift> constitute the loop gain for the 2nd order loop
+//	<EnableAvg> 	EnableAvg determines if the control loop is run at the burst rate or block rate ( EnableAvg == YES )
+//
+//              Mode  		K1_mult K1_shift K2_mult K2_shift EnableAvg?
+//              ====  		======= ======== ======= ======== ==========
+TRACK_FREQ      IDLE  		1        0       0       -1       AVG_YES   
+TRACK_FREQ      SDCCH 		1       -2       0       -9       AVG_YES   
+TRACK_FREQ      TCH   		1       -3       1       -16      AVG_YES
+TRACK_FREQ      TCH_H  		1       -3       1       -16      AVG_YES
+TRACK_FREQ      NULLPAGE	1        0       0       -1       AVG_YES    
+TRACK_FREQ      TBF			1       -3       0       -1       AVG_YES 
+
+FREQ_LIMIT_FF			242 	 	// Feed-forward frequency correction limit for GMSK. ( 242 = (1000/SYM_RATE)*512*128 )
+FLAG_DC_FREQ_FF_GMSK		0x11		// Flag for GMSK DC & FF frequency corrrection; 0x0010: Enable FF frequency; 0x0001: Enable DC
+THRESH_TIMING_DIFF 		0x7FFF		// Threshold for adaptive selection of the number of GMSK EQ. ( 300 = 3*100 )
+FREQ_ADJ_STEPSIZE  17			// AFC step size for RFIC with 13 bits AFC DAC
+FREQ_LIMIT_FB			500		// Limit for burst-wise freq estimation 
+FREQ_MAX_ADJ_LOOP_CNT	6		// For 13 bits DAC, the freq DAC/LSB is 3~4Hz, limit to 18Hz in worst case
+
+//*****************************************************************************
+//
+//			Message Processor Configuration
+//
+//*****************************************************************************
+FACCH_THRESH            	64 		// Stealing flag sum FACCH detect threshold
+HALF_FACCH_THRESH           32 		// Stealing flag sum 1st part of half rate FACCH detect threshold
+HALF_FACCH_METRIC_SCALE		29		// Scale factor for metric bound of half rate 1st part FACCH <= 32
+
+MUTE_FACCH_NOISE_FR		 5			// number of FR blocks with audio ramping after FACCH
+MUTE_FACCH_NOISE_HR		 8			// number of HR blocks with audio ramping after FACCH
+
+USF_SNR_THRESH_GMSK			48		// 3dB * 16, SNR threshold for USF detection
+
+// EFR parameters
+BFI_SNR_THRESH          	28 		// 28 = 1.5dB * 16
+BFI_SNR_CNT_THRESH      	3  		// # of bursts that exceed threshold
+BFI_BEC_THRESH_VOICE		60 		// Bit error count threshold for voice
+BFI_BEC_THRESH_DTX			50 		// Bit error count threshold for DTX
+BFI_STEAL_BEC_THRESH_DATA   127		// 127 effectivly disables this in data mode
+
+// Full rate speech related BFI parameters used during periods of SPEECH
+BFI_THRESH_FR           	0x7fff		// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BER_REENCODE_BOUND_L_FR 	20  		// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+BER_REENCODE_BOUND_H_FR 	40  		// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+VIT_METRIC_BOUND_L_FR   	930     	// Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is set, UFI will be set
+VIT_METRIC_BOUND_H_FR   	980     	// Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC IS NOT set, UFI will NOT be set
+BFI_SNR_THRESH_DB16_FR  	32  		// Minimum acceptable SNR threshold used when determing BFI
+BFI_SNR_CNT_THRESH_FR   	3   		// Maximum number of bursts below BFI_SNR_THRESH_DB16_HR before declaring BFI
+SF_FR                   	5  			// Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+
+// Full rate speech related BFI parameters used during periods of DTX
+// In general the DTX related thresholds should be lower than the SPEECH
+// mode parameter values.
+BFI_THRESH_DTX_FR           0x7fff		// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BER_REENCODE_BOUND_L_DTX_FR 20  		// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+BER_REENCODE_BOUND_H_DTX_FR   40        	// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+VIT_METRIC_BOUND_L_DTX_FR     930             // Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC IS set, UFI will be set
+VIT_METRIC_BOUND_H_DTX_FR     980              // Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+BFI_SNR_THRESH_DB16_DTX_FR  64  		// Minimum acceptable SNR threshold used when determing BFI
+BFI_SNR_CNT_THRESH_DTX_FR   3   		// Maximum number of bursts below BFI_SNR_THRESH_DB16_HR before declaring BFI
+SF_DTX_FR                   10 			// Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+
+// Full rate speech related BFI parameters for MST
+MST_BFI_THRESH_FR   		 0x7fff		// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics	
+MST_BER_REENCODE_BOUND_L_FR	 20  		// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+MST_BER_REENCODE_BOUND_H_FR	 55  		// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+MST_VIT_METRIC_BOUND_L_FR  	  930    	// Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+MST_VIT_METRIC_BOUND_H_FR  	  980   	// Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+MST_BFI_SNR_THRESH_DB16_FR	 32  		// Minimum acceptable SNR threshold used when determing BFI
+MST_BFI_SNR_CNT_THRESH_FR  	 3   		// Maximum number of bursts below BFI_SNR_THRESH_DB16_HR before declaring BFI
+MST_SF_FR					 3  		// Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+
+BFI_VOCODER_METRIC_BOUND_M_FR 	8000	// high bound of metric to determine if the additional vocoder param needs to check
+BFI_VOCODER_REENCODE_BOUND_M_FR	40		// high bound of bec cnt to determine if the additional vocoder param needs to check
+BFI_VOCODER_METRIC_BOUND_H_FR 	12000	// high bound of metric to determine if the additional vocoder param needs to check
+BFI_VOCODER_REENCODE_BOUND_H_FR	40		// high bound of bec cnt to determine if the additional vocoder param needs to checks
+BFI_DELTA_AMP_SUM_TH_FR   		35		// threshold for sum of delta of block amplitude
+
+// Thresholds for determining RXQUAL values based on the calculated BER value 
+BER_QLEVEL0			262	// Upper limit for RXQUAL 0.  This is a fixed value 
+BER_QLEVEL1			524 	// Upper limit for RXQUAL 1.  This is a fixed value
+BER_QLEVEL2			1049 	// Upper limit for RXQUAL 2.  This is a fixed value
+BER_QLEVEL3			2097 	// Upper limit for RXQUAL 3.  This is a fixed value
+BER_QLEVEL4			4194 	// Upper limit for RXQUAL 4.  This is a fixed value
+BER_QLEVEL5			8389 	// Upper limit for RXQUAL 5.  This is a fixed value
+BER_QLEVEL6			16777	// Upper limit for RXQUAL 6.  This is a fixed value
+
+
+//*****************************************************************************
+//
+// 			Half Rate Speech Parameters
+//
+//*****************************************************************************
+
+// Half rate speech related BFI/UFI parameters used during periods of SPEECH
+UFI_THRESH_HR					0x7fff//100	// Threshold for declaring UFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BFI_THRESH_HR					0x7fff//170	// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BER_REENCODE_BOUND_L_HR			23	// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+BER_REENCODE_BOUND_H_HR			48	// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+VIT_METRIC_BOUND_L_HR			885   // Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is set, UFI will be set
+VIT_METRIC_BOUND_H_HR			960 	// Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC IS NOT set, UFI will NOT be set
+BFI_SNR_THRESH_DB16_HR			40	// Minimum acceptable SNR threshold used when determing BFI
+BFI_SNR_CNT_THRESH_HR			2	// Maximum number of bursts below BFI_SNR_THRESH_DB16_HR before declaring BFI
+SF_HR							4	// Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+
+// Half rate speech related BFI/UFI parameters used during periods of DTX
+// In general the DTX related thresholds should be lower than the SPEECH
+// mode parameter values.
+UFI_THRESH_DTX_HR				0x7fff//100	// Threshold for declaring UFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BFI_THRESH_DTX_HR				0x7fff//170	// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BER_REENCODE_BOUND_L_DTX_HR		23 	// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC IS NOT set, UFI will NOT be set
+BER_REENCODE_BOUND_H_DTX_HR		48	// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC is set, UFI will be set
+VIT_METRIC_BOUND_L_DTX_HR		885 // Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is set, UFI will be set
+VIT_METRIC_BOUND_H_DTX_HR	    960 // Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC IS NOT set, UFI will NOT be set
+BFI_SNR_THRESH_DB16_DTX_HR		40	// Minimum acceptable SNR threshold used when determing BFI
+BFI_SNR_CNT_THRESH_DTX_HR		2	// Maximum number of bursts below BFI_SNR_THRESH_DB16_HR before declaring BFI
+SF_DTX_HR						4	// Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+
+// Half rate speech related BFI/UFI parameters used during changing period of DTX and non DTX frames
+// In general the DTX related thresholds should be lower than the DTX
+
+UFI_THRESH_DTX_FLP_HR				0x7fff//1750	// Threshold for declaring UFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics,          
+BFI_THRESH_DTX_FLP_HR	          	0x7fff//1850	// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BER_REENCODE_BOUND_L_DTX_FLP_HR		23	// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+BER_REENCODE_BOUND_H_DTX_FLP_HR		48  //30	// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+VIT_METRIC_BOUND_L_DTX_FLP_HR  		885   //5319	// Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+VIT_METRIC_BOUND_H_DTX_FLP_HR  		960   //7069	// Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+BFI_SNR_THRESH_DB16_DTX_FLP_HR 		80	  // Minimum acceptable SNR threshold used when determing BFI
+BFI_SNR_CNT_THRESH_DTX_FLP_HR  		2	     // Maximum number of bursts below BFI_SNR_THRESH_DB16_HR before declaring BFI
+SF_DTX_FLP_HR                  		70  	 // Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+
+// HR SID frame detection parameters
+SID_THRESH0_HR				12	// Half rate speech SID frame detection related thresholds. SID_FLAG==0 above this threshold 
+SID_THRESH1_HR				4	// Half rate speech SID frame detection related thresholds. SID_FLAG==1 above this threshold AND SID_FLAG==2 if in between SID_THRESH0_HR and SID_THRESH1_HR
+
+
+//***********************************************************************************
+//
+//			AMR Full rate and AMR Half Rate Speech Parameters
+//
+//***********************************************************************************
+
+// AMR FS/HS system parameters
+// AMR FS speech in-band decoding probabilities. p_ALPHA, p_BETA, variance_INBAND. Should be adjusted with caution. 
+AFS						532		30		7												
+
+// AMR HS speech in-band decoding probabilities. p_ALPHA, p_BETA, variance_INBAND. Should be adjusted with caution. 
+AHS						532		30		6												
+
+// AMR FS speech mode detection metrics based on distance. AMR FR speech has 6 different modes. 
+//L_SID_UPDATE,H_SID_UPDATE, L_SID_FIRST,L_ONSET,L_RATSCCH,H_RATSCCH
+DISTANCE_AFS					795		1590	795		1710	795		1590					
+
+// AMR HS speech mode detection metrics based on distance. AMR HR speech has 8 different modes.
+// L_SID_UPDATE,H_SID_UPDATE,L_SID_UPDATE_INH,L_SID_FIRST_P1,L_SID_FIRST_INH,L_ONSET,L_RATSCCH,H_RATSCCH
+DISTANCE_AHS					795		1590	795		795 	795		1710	795		1590	
+
+
+//																											
+// AMR FS / HS, WFS speech related BFI/UFI parameters used during periods of SPEECH.  
+// There is a separate entry for all 17 supported modes
+//	 				afs12.2, afs10.2, afs7.95, afs7.4, afs6.7, afs5.9, afs5.15, afs4.75, ahs7.95, ahs7.4, ahs6.7, ahs5.9, ahs5.15, ahs4.75	wfs12.65 wfs8.85 wfs6.60
+//
+// Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is set, UFI will be set
+  METRIC_BOUND_L_WHOLE_SET  		920 	880 	770 	800 	700 	700 	700 	500 	960  	930  	920  	870  	860  	820		920	830	800	 
+// Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+  METRIC_BOUND_H_WHOLE_SET  		980 	940 	870 	800 	830 	820 	800 	800 	980 	980 	980 	960  	930  	900 	970	950	820
+// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+  REENCODE_BOUND_L_WHOLE_SET		26	45	75	75	70	70	90	60	4	5	10  10	16	30	40	60	80	
+// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+  REENCODE_BOUND_H_WHOLE_SET		85	75	90	90	100	105	120	150	28	23	30	33	40	44	80	100	125	
+// Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+SF_WHOLE_SET    				2     1     2     2     2     1     1     1     3     3     3     2     2	2	2	2	2   
+
+// Threshold for declaring UFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+UFI_TH_WHOLE_SET   				1244  1193   1209  1150  1092  1036  975  917   705   669   626   592  556   525	1000	1000	1000	
+
+// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BFI_TH_WHOLE_SET			0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	
+
+// Minimum acceptable SNR threshold used when determing BFI
+BFI_SNR_TH_DB16_WHOLE_SET		16  	16  	16  	16  	16  	16  	16  	16	16	16	16	16	16	16	16	16	16
+
+// Maximum number of bursts below BFI_SNR_TH_DB16_WHOLE_SET before declaring BFI
+BFI_SNR_CNT_TH_WHOLE_SET  		5     5     6     6     6     7     7     7     3     3   3   3     4     4		5	5	5		 		
+
+
+//
+// AMR FS / HS, WFS speech related BFI/UFI parameters used during periods of DTX.  
+// There is a separate entry for all 17 supported modes
+// In general the DTX related thresholds should be lower than the SPEECH
+// mode parameter values.
+// 				afs12.2, afs10.2, afs7.95, afs7.4, afs6.7, afs5.9, afs5.15, afs4.75, ahs7.95, ahs7.4, ahs6.7, ahs5.9, ahs5.15, ahs4.75	wfs12.65 wfs8.85 wfs6.60
+//
+// Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is set, UFI will be set
+  METRIC_BOUND_L_DTX_WHOLE_SET  	930 	880 	800 	800 	750 	750    700 	700 	960  	950  	930  	900  	870  	850		920	830	800 
+// Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+  METRIC_BOUND_H_DTX_WHOLE_SET	980 	940 	870 	800 	830 	820 	800 	800 	980 	980 	980 	960  	930  	900  	970	950	820
+
+// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+  REENCODE_BOUND_L_DTX_WHOLE_SET	26	45	75	75	70	70	90	60	4	5	10	10	16	20	40	60	80		
+
+// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+  REENCODE_BOUND_H_DTX_WHOLE_SET	85	75	90	90	100	105	120	150	28	23	30	33	40	44	80	100	125		
+
+// Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+SF_DTX_WHOLE_SET   				2     1     2     2     2     1     1     1     3     3     3     2     2	2	2	2	2		
+
+// Threshold for declaring UFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+UFI_TH_DTX_WHOLE_SET			1244  1193   1209  1150  1092  1036  975  917   705   669   626   592  556   525	1000	1000	1000	
+
+// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+BFI_TH_DTX_WHOLE_SET		0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	
+
+// Minimum acceptable SNR threshold used when determing BFI
+BFI_SNR_TH_DB16_DTX_WHOLE_SET	16  	16  	16  	16  	16  	16  	16  	16	16	16	16	16	16	16	16	16	16		
+
+// Maximum number of bursts below BFI_SNR_TH_DB16_DTX_WHOLE_SET before declaring BFI
+BFI_SNR_CNT_TH_DTX_WHOLE_SET  	5     5     6     6     6     7     7     7     3     3   3   3     4     4		5	5	5 		
+
+INBAND_DISTANCE_THRESH			50	// Maximum distance to accept AMR inband CMC when received block had a BFI. Should be adjusted with caution.
+
+
+
+GMSK_ONE_QBC_THRESH   6554
+GMSK_TWO_QBC_THRESH   32768
+8PSK_ONE_QBC_THRESH   6554
+8PSK_TWO_QBC_THRESH   32768
+
+
+
+//*****************************************************************************
+// 
+//			Audio alignment parameters
+// 
+//*****************************************************************************									
+AUDIO_ALIGN_OUT 	10 50	// Speaker alignment. This aligns the Speaker speech buffer index to be within sample 10 and 50 out of 160 on receipt of a new 20ms speech block
+AUDIO_ALIGN_IN  	10 50	// Microphone alignment. This aligns the Microphone speech buffer index to be within sample 10 and 50 out of 160 on receipt of a new 20ms speech block
+
+
+//*****************************************************************************
+// 
+//			IDLE mode NULL paging block parameters
+// 
+//*****************************************************************************
+NULL_PG_BLK_ERROR_CNT_TH		6	// Maximum number of errors to declare Null Paging mode
+NULL_PG_BLK_SAFE_BURST_SNR		160	// SNR Threshold under which Null paging mode cannot be used
+
+//*****************************************************************************
+// 
+//			MST parameters
+// 
+//*****************************************************************************
+MST_FLAG_EFR						1				
+MST_FLAG_AFS						1
+MST_FLAG_AHS						1
+MST_FLAG_CS1	 					1
+MST_BFI_SNR_THRESH_DB16				8
+MST_BFI_BEC_THRESH_DTX_EFR			60
+MST_BFI_BEC_THRESH_VOICE_EFR		80
+MST_EC_AFS	 						112
+MST_EC_AHS	 						112
+MST_EC_CS1	 						112
+MST_MAXCYC							15  //30
+MST_GLOBAMRTRS0						6
+MST_GLOBAMRTRS5	 					110
+MST_GLOBAMRTRS6	 					290
+MST_BER_FACTOR	 					1024			//normalized by 1024
+
+//
+// AMR FS / HS, WFS speech related BFI/UFI parameters used during periods of SPEECH with MST.  
+// There is a separate entry for all 17 supported modes
+//	 				afs12.2, afs10.2, afs7.95, afs7.4, afs6.7, afs5.9, afs5.15, afs4.75, ahs7.95, ahs7.4, ahs6.7, ahs5.9, ahs5.15, ahs4.75	wfs12.65 wfs8.85 wfs6.60
+//
+// Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+ MST_METRIC_BOUND_L_WHOLE_SET		920 880 770 800 700 680 700 500 960 945 930 895 860 830		920	830	800
+ 
+ 
+// Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+MST_METRIC_BOUND_H_WHOLE_SET		980 950 870 850 840 820 800 800 980 980 980 960 940 900 	970	950	820
+
+// Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
+MST_REENCODE_BOUND_L_WHOLE_SET	        26	45	75	75	75	70	90	60	4	5	8	14	20	30	40	60	80	
+
+// Re-encoded BEC upper boundary. Above this threshold if bfi flag based on CRC IS set UFI, will be set
+MST_REENCODE_BOUND_H_WHOLE_SET	         85      75      90      90      100     105     120     150     28      23      35      35      40      44	80	100	125
+
+// Normalisation factor for combining viterbi decoder final metric and re-encoded BEC metrics
+MST_SF_WHOLE_SET					2     1     2     2     1     1     1     1     2     2     2     2     2	2	2	2	2		
+
+// Threshold for declaring UFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+MST_UFI_TH_WHOLE_SET				540	515	550	517	485	455	420	388	361	336	306	284	258	237	1000	1000	1000				
+
+// Threshold for declaring BFI when exceeded. Compared against the combined viterbi decoder final metric and re-encoded BEC metrics
+MST_BFI_TH_WHOLE_SET			0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	0x7fff	
+
+// Minimum acceptable SNR threshold used when determing BFI
+MST_BFI_SNR_TH_DB16_WHOLE_SET		8  	8  	8  	8  	8  	8  	8  	8	8	8	8	8	8	8	8	8	8		
+
+// Maximum number of bursts below BFI_SNR_TH_DB16_WHOLE_SET before declaring BFI
+MST_BFI_SNR_CNT_TH_WHOLE_SET		5     5     6     6     6     7     7     7     3     3   3   3     4     4		5	5	5 		
+
+
+//*****************************************************************************
+// 
+//			SAIC flag and parameters
+// 
+//*****************************************************************************
+//SAIC_BURST_ENABLE			0x0001
+//SAIC_FRAME_ENABLE			0x0010
+//SAIC_BURST_SWITCH_ENABLE	0x0100
+//SAIC_FRAME_SWITCH_ENABLE	0x1000
+
+flag_SAIC							0x1111 
+
+snr_thresh_freq_est_SAIC				80
+saic_adap_rxlev						0x753
+saic_fp_le_DL_1						9
+saic_fp_le_DL_SNR_T_1					160
+saic_fp_le_DL_2						9
+saic_fp_le_DL_SNR_T_2					160
+saic_fp_le_DL_3						5
+saic_sw_fs_hi_SNR_T					9216//7680
+saic_sw_fs_hi_CN_period					4
+saic_sw_fs_hi_CN_T						0
+saic_sw_fs_hi_Profile_BP_T				0
+saic_sw_fs_hi_Profile_FP_T				0
+saic_sw_fs_lo_SNR_T					9216//7680
+saic_sw_fs_lo_CN_period					4
+saic_sw_fs_lo_CN_T						0
+saic_sw_fs_lo_Profile_BP_T				0
+saic_sw_fs_lo_Profile_FP_T				0
+saic_sw_hs_hi_SNR_T					9216//7680
+saic_sw_hs_hi_CN_period					4
+saic_sw_hs_hi_CN_T						0
+saic_sw_hs_hi_Profile_BP_T				0
+saic_sw_hs_hi_Profile_FP_T				0
+saic_sw_hs_lo_SNR_T					9216//7680
+saic_sw_hs_lo_CN_period					4
+saic_sw_hs_lo_CN_T						0
+saic_sw_hs_lo_Profile_BP_T				0
+saic_sw_hs_lo_Profile_FP_T				0
+saic_bp_snr_gain_th_FS				0
+saic_bp_snr_gain_th_HS				0
+saic_ps_snr_thr						32767
+saic_bp_snr_bias					0x38					//SNR computation bias due to SAIC BP
+
+flag_SAIC_ps_iter    			0x7FFF 	//flag controlling the new packet mode SAIC retraining algorithm		
+										//bit 0: enable/disable the new iteration routine
+										//bit 1~4: enable/disable the new iteration routine based on burst index 
+										//bit 5~9: enable/disable the new iteration routine based on slot index
+										//bit 10~14: enable/disable the new iteration routine based on slot index for last burst
+ 										//default: 5slots in all 4 bursts
+
+flag_SAIC_ps_iter_SNR_thr		0x2110	//bit0~11:SNR threshold running new packet mode SAIC retraining algorithm, 15dB 
+										//bit13: enable SAIC/2nd AMR  
+SAIC_filter_tap_length			10		//filter tap length for the new packet mode SAIC retraining algorithm
+SAIC_DL_SNR_th					0xA0	//SNR threshold determing which DL factor used, 10dB
+SAIC_lo_SNR_DL					100		//DL shift for low SNR channel
+SAIC_hi_SNR_DL					100		//DL shift for hi SNR channel
+SAIC_BP_timing					10		//BP timing offset
+SAIC_soft_th					0x1004		//retrain softbit thrshold
+SAIC_softBitScale				16		//softbit quantization
+
+SAIC_rx_DL_snr					0xc0  	//SNR threshold for DL factor, 12dB
+SAIC_rx_DL_hi					246		//DL at high SNR situation, 0.03/(2*PF_LEN_SB)*2^16
+SAIC_rx_DL_lo					82		//DL at low SNR situation, 0.01/(2*PF_LEN_SB)*2^16
+
+SAIC_BP_adap_ht3_rxlv_thr	 	23		// SAIC new adapation HT rxlv threshould
+SAIC_BP_adap_ht3_snr_thr 	 	240		// SAIC new adapation HT SNR threshould
+SAIC_BP_adap_ht3_timing_thr		300		// SAIC new adapation timing jitter threshould
+
+// SAIC bec bias
+// afs12.2, afs10.2, afs7.95, afs7.4, afs6.7, afs5.9, afs5.15, afs4.75, ahs7.95, ahs7.4, ahs6.7, ahs5.9, ahs5.15, ahs4.75 
+SAIC_BEC_BIAS_AMR_WHOLE_SET	 	10 	10	9	9	8	8	7	7	6	6	7	7	7	7	
+SAIC_bec_rxlv_thresh			15
+SAIC_bias_fr					5
+SAIC_bias_efr					5
+
+//*****************************************************************************
+// flag to enable mixed gmsk/8psk edge uplink, 
+// 0 legacy mode like 2132 
+// 1 8psk/gmsk dacs used no mixed modulation slots
+// 2 8psk/gmsk dacs used mixed modulation slots, 2 slot uplink class 10
+//*****************************************************************************
+
+flag_MIXED_TX			2
+
+
+//*****************************************************************************
+// 
+//			AMR code and pitch gains
+// 
+//*****************************************************************************
+//code gain: 1.0, 0.98, 0.98, 0.98, 0.98, 0.98, 0.7 
+//AMR_CGAIN    32767	32112	32112	32112	32112	32112	22937														
+
+//code gain: 1.00    0.85    0.70    0.55	0.40    0.25    0.10
+AMR_CGAIN 	32767 	27852 	22937 	18022	 13107 	8192 	3277														
+
+//pitch gain: 1.0, 0.98, 0.98, 0.8, 0.3, 0.2, 0.2 
+AMR_PGAIN    32767	32112	32112	26214	9830	6553	6553														
+
+// *************************************************************** //
+// *************************************************************** //
+// *************************************************************** //
+// old parm values, loaded but not used by chips later than 2133a1
+// *************************************************************** //
+// *************************************************************** //
+// *************************************************************** //
+COMPRESSOR_OUTPUT_GAIN_UL		64	64	64	64	256	64	64	64	64	// 128 = 6 dB, no  gain = 64, to get
+														// full scale signal adjust based 
+
+//COMPRESSOR_GAIN			-6	-7	-8	-9	-10	-11	-12
+COMPRESSOR_SCALE_UL			7318    6523    5813    5181    4618    4115    3668
+COMPRESSOR_THRESH_UL			9783    8231    6925    5827    4903    4125    3471
+
+
+COMPRESSOR_OUTPUT_GAIN			128 	128	128 	128	256 	64 	64 	64 	64	// 128 = 6 dB, no  gain = 64, to get full 
+														// scale signal adjust based on the 
+														// compressor_gain value
+COMPRESSOR_GAIN				6  	6  	6  	6  	12  	0  	6  	6  	6 	// dB, sign reversed, range 6, 12, 
+														// index into the table below, scale 
+														// and threshold
+//COMPRESSOR_GAIN			-6	-7	-8	-9	-10	-11	-12
+COMPRESSOR_SCALE			7318     6523    5813    5181    4618    4115    3668
+COMPRESSOR_THRESH			9783     8231    6925    5827    4903    4125    3471
+
+COMPRESSOR_ALPHA			8192 	8192 	8192 	8192 	8192 	8192  	8192 	8192 	8192			// attack time, rising volume
+COMPRESSOR_BETA				41   	41   	41   	41   	41   	41   	41   	41   	41   	// decay time, falling volume
+
+ECHO_NLP_MAX_SUPP			0 	0 	0 	0 	0 	0 	0  	0  	0  	// In dB
+
+
+ECHO_NLP_DTALK_UL_GAIN	   		0 	0 	0 	0 	0 	0	0	0	0	// In dB
+
+// uplink and downlink NLP gains depending on NLP state, self descriptive
+// values used to set output gain after noise suppressor or echo canceller depeding on enable flags
+ECHO_NLP_DTALK_DL_GAIN			64 	64 	64 	64 	64 	64 	64 	64 	64
+ECHO_NLP_DL_IDLE_UL_GAIN		64 	64 	64 	64 	64 	64 	64 	64 	64
+ECHO_NLP_UL_ACTIVE_DL_GAIN 	 	64 	64 	64 	64 	64 	64 	64 	64 	64
+ECHO_NLP_UL_IDLE_DL_GAIN		64 	64 	64 	64 	64 	64 	64 	64	64
+ECHO_NLP_DL_IDLE_DL_GAIN		64 	64 	64 	64 	64 	64 	64 	64 	64
+ECHO_NLP_UL_IDLE_UL_GAIN		64 	64 	64 	64 	64 	64 	64 	64 	64
+
+
+// the following parm values are used to decide if there is DOWNLINK voice activity 
+ECHO_NLP_RELATIVE_DL_ENERGY_DECAY	16	16	16	16	16	16	16	16	16
+ECHO_NLP_RELATIVE_DL_ENERGY_WINDOW	2	2	2	2	2	2 	2	2	2
+ECHO_NLP_RELATIVE_DL_W_THRESH		400 	400 	400 	400 	400 	400	400 	400 	400 
+ECHO_NLP_RELATIVE_DL_IDLE_UL_LOSS	188 	188 	188 	188 	188 	188	188 	188 	188 
+ECHO_NLP_DL_PERSISTENCE_THRESH		5000 	5000 	5000 	5000	5000 	5000	5000	5000 	5000	
+ECHO_NLP_DL_PERSISTENCE_LEAK		1	1	1	1	1	1	1	1	1
+
+// used by NLP state machine to decide if there is UPLINK voice activity
+ECHO_NLP_RELATIVE_UL_ACTIVE_DL_LOSS	-100 	-100 	-100 	-100 	-160 	320 	320 	320 	320
+ECHO_NLP_RELATIVE_UL_IDLE_DL_LOSS	8 	8 	8 	8 	8 	188	188	188	188 
+
+// number of frames before NLP state machine can exit double talk state
+ECHO_NLP_DTALK_HANG_COUNT		16 	16 	16 	16 	16 	16 	16 	16 	16 
+ECHO_NLP_UL_ACTIVE_HANG_COUNT		5 	5 	5 	5 	5 	5 	5 	5 	5
+
+//  hold the maximum uplink and downlink energy estimate over the last # of frames
+ECHO_NLP_UL_ENERGY_WINDOW		1 	1	 1 	1 	1 	1 	1 	1 	1
+ECHO_NLP_DL_ENERGY_WINDOW		1 	1 	1 	1 	1 	1	1 	1 	1
+
+// nlp_relative_offset used in energy computation and voice activity decision
+ECHO_NLP_RELATIVE_OFFSET_DL_ACTIVE	-100 	-100 	-100 	-100  	150 	-100	-100	-100	-100
+ECHO_NLP_RELATIVE_OFFSET_DTALK		-160 	-160 	-160 	-160 	0 	-160	-160	-160	-160
+ECHO_NLP_RELATIVE_OFFSET_UL_ACTIVE	-160 	-160 	-160 	-160 	0 	-160	-160	-160	-160
+
+// minimum energy values used with relative to make voice activity decisions
+ECHO_NLP_MIN_DL_PWR			100 	100 	100 	100 	100 	100		100 	100 	100		100 	100 	100 	100 	100 	100		100 	100 	100
+ECHO_NLP_MIN_UL_PWR			400 	400 	400 	400 	400 	400 	400 	400 	400		400 	400 	400 	400 	400 	400 	400 	400 	400
+
+ECHO_NLP_ENABLE				0 	0 	0 	0 	0 	0 	0 	0 	0	// 0-disable, 1-enable	NLP
+
+AUDIO_DL_IDLE_PGA_ADJ			0 	0 	0 	0 	0 	0 	0 	0 	0	// 0-disable, 1-enable
+AUDIO_NS_UL_IDLE_ADJ			0 	0 	0 	0 	0 	0 	0 	0 	0	// 0-disable, 1-enable
+
+// The De-emp and Pre-emp filt coefs are a matching set so as to not affect the uplink SFR.
+// These should always be updated together.  NOTE: A value of 0 for the coefs means the filter is bypassed in the DSP
+
+EC_PRE_EMP_FILT_COEF			0 	0 	0 	0 	0 	0 	0 	0 	0 
+EC_DE_EMP_FILT_COEF			0 	0 	0 	0 	0 	0 	0 	0 	0
+ECHO_NLP_UL_BRK_IN_THRESH	3500 3500 3500 3500 3500 3500 3500 3500 3500	// Threshold to detect onset of double talk
+ECHO_NLP_RELATIVE_OFFSET	0 0 0 0 0 0 0 0 0
+ECHO_NLP_CNG_SCALE		6			// scale factor for old CNG generation, only used if ECHO_CNG_ENABLE = 1
+// 				mode	Downlink Energy profile 
+ECHO_NLP_DL_GAIN_TABLE		0	350	450	550	650	750	850	
+ECHO_NLP_DL_GAIN_TABLE		1	350	450	550	650	750	850
+ECHO_NLP_DL_GAIN_TABLE		2	350	450	550	650	750	850
+ECHO_NLP_DL_GAIN_TABLE		3	350	450	550	650	750	850
+ECHO_NLP_DL_GAIN_TABLE		4	350	450	550	650	750	850
+ECHO_NLP_DL_GAIN_TABLE		5	350	450	550	650	750	850
+ECHO_NLP_DL_GAIN_TABLE		6	350	450	550	650	750	850
+ECHO_NLP_DL_GAIN_TABLE		7	350	450	550	650	750	850
+ECHO_NLP_DL_GAIN_TABLE		8	350	450	550	650	750	850
+// 				mode	Uplink Energy profile 
+ECHO_NLP_UL_GAIN_TABLE		0	700	700	700	800	900	13000
+ECHO_NLP_UL_GAIN_TABLE		1	700	700	700	800	900	13000
+ECHO_NLP_UL_GAIN_TABLE		2	700	700	700	800	900	13000
+ECHO_NLP_UL_GAIN_TABLE		3	700	700	700	800	900	13000
+ECHO_NLP_UL_GAIN_TABLE		4	700	700	700	800	900	13000
+ECHO_NLP_UL_GAIN_TABLE		5	700	700	700	800	900	13000
+ECHO_NLP_UL_GAIN_TABLE		6	700	700	700	800	900	13000
+ECHO_NLP_UL_GAIN_TABLE		7	700	700	700	800	900	13000
+ECHO_NLP_UL_GAIN_TABLE		8	700	700	700	800	900	13000
+
+ECHO_STABLE_COEF_THRESH		0	0xffff 0xffff		// defines upper limit on absolute sum of filter coefficents for stability
+ECHO_STABLE_COEF_THRESH		1	0xffff 0xffff 
+ECHO_STABLE_COEF_THRESH		2	0xffff 0xffff 
+ECHO_STABLE_COEF_THRESH		3	0xffff 0xffff 
+ECHO_STABLE_COEF_THRESH		4	0xffff 0xffff 
+ECHO_STABLE_COEF_THRESH		5	0xffff 0xffff 
+ECHO_STABLE_COEF_THRESH		6	0xffff 0xffff 
+ECHO_STABLE_COEF_THRESH		7	0xffff 0xffff 
+ECHO_STABLE_COEF_THRESH		8	0xffff 0xffff 
+
+// end of internal DSP echo canceller variables
+
+// Setup Echo canceller NLP CNG filter Coefficients
+//
+// Coefficient order:		mode	bx1    bx2    bx0    ax1    ax2    bx1    bx2    bx0    ax1    ax2
+ECHO_NLP_CNG_FILTER		0	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_NLP_CNG_FILTER		1	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_NLP_CNG_FILTER		2	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_NLP_CNG_FILTER		3	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_NLP_CNG_FILTER		4	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_NLP_CNG_FILTER		5	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_NLP_CNG_FILTER		6	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_NLP_CNG_FILTER		7	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_NLP_CNG_FILTER		8	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+
+// Setup Echo canceller far-in filter Coefficients
+//
+// Coefficient order:		mode	bx1    bx2    bx0    ax1    ax2    bx1    bx2    bx0    ax1    ax2
+ECHO_FAR_IN_FILTER		0 	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_FAR_IN_FILTER		1	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_FAR_IN_FILTER		2	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_FAR_IN_FILTER		3	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_FAR_IN_FILTER		4	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_FAR_IN_FILTER		5	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_FAR_IN_FILTER		6	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_FAR_IN_FILTER		7	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+ECHO_FAR_IN_FILTER		8	0x0000 0x0000 0x4000 0x0000 0x0000 0x0000 0x0000 0x4000 0x0000 0x0000   //Biquad 1/2
+
+ECHO_FAR_IN_FILTER_GAIN			16384	16384	16384	16384	16384	16384	16384	16384	16384	// gain is a function of the filter coefficients
+
+//Downlink AGC params
+AUDIO_AGC_DL_ENABLE   		0 	0 	0 	0 	0 	0 	0 	0 	0   	// 1 = enable. 0 = disable
+AUDIO_AGC_DL_STEP_UP  		1 	1 	1 	1 	1 	1 	1 	1 	1   	// AGC increases gain in 1dB steps when 
+									    	// energy is consistently below HI_THRESH
+AUDIO_AGC_DL_STEP_DOWN  	1 	1 	1 	1 	1 	1 	1 	1 	1   	// AGC reduces gain in 1dB steps when energy
+										// exceeds HI_THRESH
+AUDIO_AGC_DL_MAX_STEP_DOWN 	3 	3 	3 	3 	3 	3 	3 	3 	3   	// AGC reduces gain in 3dB steps when energy
+										// exceeds MAX_THRESH
+AUDIO_AGC_DL_MAX_THRESH  	1500 	1500 	1500 	1500 	1500 	1500 	1500 	1500 	1500 	// Max thresh. Energy above this level needs
+										// faster action from AGC
+AUDIO_AGC_DL_HI_THRESH  	1400 	1400 	1400 	1400 	1400 	1400 	1400 	1400 	1400 	// target energy
+AUDIO_AGC_DL_LOW_THRESH  	0 	0 	0 	0 	0 	0 	0 	0 	0
+AUDIO_AGC_DL_DECAY   		10 	10 	10 	10 	10 	10 	10 	10 	10  	// 200ms decay time
+AUDIO_AGC_DL_MAX_IDX  		15 	15 	15 	15 	15 	15 	15 	15 	15  	// 0db swing
+AUDIO_AGC_DL_MIN_IDX  		7 	7 	7 	7 	7 	7 	7 	7 	7    	// -6dB swing
+ 
+//Uplink AGC params
+AUDIO_AGC_UL_ENABLE   		0 	0 	0 	0 	0 	0 	0 	0 	0   	// 1 = enable. 0 = disable
+AUDIO_AGC_UL_STEP_UP  		1 	1 	1 	1 	1 	1 	1 	1 	1   	// AGC increases gain in 1dB steps when
+										// energy is consistently below HI_THRESH
+AUDIO_AGC_UL_STEP_DOWN  	1 	1 	1 	1 	1 	1 	1 	1 	1   	// AGC reduces gain in 1dB steps when energy
+										// exceeds HI_THRESH
+AUDIO_AGC_UL_MAX_STEP_DOWN 	3 	3 	3 	3 	3 	3 	3 	3 	3   	// AGC reduces gain in 3dB steps when energy
+										// exceeds MAX_THRESH
+AUDIO_AGC_UL_MAX_THRESH  	1500 	1500 	1500 	1500 	1500 	1500 	1500 	1500 	1500 	// Max thresh. Energy above this level needs 
+										// faster action from AGC
+AUDIO_AGC_UL_HI_THRESH  	1400 	1400 	1400 	1400 	1400 	1400 	1400 	1400 	1400 	// target energy
+AUDIO_AGC_UL_LOW_THRESH  	0 	0 	0 	0 	0 	0 	0 	0 	0
+AUDIO_AGC_UL_DECAY   		10 	10 	10 	10 	10 	10 	10 	10 	10  	// 200ms decay time
+AUDIO_AGC_UL_MAX_IDX  		15 	15 	15 	15 	15 	15 	15 	15 	15  	// 0db swing
+AUDIO_AGC_UL_MIN_IDX  		9 	9 	9 	9 	9 	9 	9 	9 	9   	// -6dB swing
+
+// *************************************************************** //
+// *************************************************************** //
+// *************************************************************** //
+// end of old parameters
+// *************************************************************** //
+// *************************************************************** //
+// *************************************************************** //
+// *************************************************************** //
+
+//*****************************************************************************
+// 
+//	set up biquad filter coefficients, 
+//	biquad  after gain stage: shared_echo_NLP_fast_downlink_volume_ctrl 
+//	and before compander
+// 
+//*****************************************************************************
+
+// Coefficient order:	bx1  	bx2    	bx0    	ax1    	ax2    	bx1    	bx2    	bx0    	ax1    	ax2
+COMP_BIQUAD_FILTER    0 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000  
+COMP_BIQUAD_FILTER    1 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
+COMP_BIQUAD_FILTER    2 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
+COMP_BIQUAD_FILTER    3 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
+COMP_BIQUAD_FILTER    4 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
+COMP_BIQUAD_FILTER    5 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
+COMP_BIQUAD_FILTER    6 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
+COMP_BIQUAD_FILTER    7 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
+COMP_BIQUAD_FILTER    8 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
+
+COMP_BIQUAD_GAIN		16384 	16384	16384	16384	16384	16384	16384	16384	16384	// gain is a function of the filter coefficients. Default is 16384
+
+
+
+//bx1  	bx2    	bx0    	ax1    	ax2    	bx1    	bx2    	bx0    	ax1    	ax2   Boost 3 KHz
+
+//0x0000 	0x0000 	0x2000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000   		0dB
+//0x17b8 	0x08b9 	0x1fac 	0xc7e0 	0xe923 	0x212c 	0x20d2 	0x4000 	0xdc9b 	0xe0e6   		3dB
+//0x0e67 	0x068d 	0x1fdb 	0xcd5c 	0xe921 	0x19f8 	0x218d 	0x4000 	0xe503 	0xe3d8   		6dB
+//0x07a7 	0x0532 	0x2036 	0xcea2 	0xe8c1 	0x1649 	0x2302 	0x4000 	0xe88a 	0xe6bb   		9dB
+//0x01cc 	0x03a0 	0x1a02 	0xe99f 	0xe8b9 	0x12e8 	0x251a 	0x4000 	0xced6 	0xe854   		12dB
+//0xfe59 	0x02dd 	0x151b 	0xe98e 	0xea01 	0x0f5c 	0x2773 	0x4000 	0xcec3 	0xe7f8   		15dB
+//0xfc3b 	0x028b 	0x1133 	0xe8fe 	0xeac8 	0x0bbb 	0x2a0f 	0x4000 	0xcea4 	0xe7b2   		18dB

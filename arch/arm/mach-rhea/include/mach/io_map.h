@@ -146,4 +146,16 @@
 #define KONA_UART_LLDEBUG_VA		KONA_UART0_VA
 #define KONA_UART_LLDEBUG_PA		UARTB_BASE_ADDR
 
+/* add for CAPH*/
+#define KONA_HUB_CLK_BASE_VA		  HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR) /* brcm_rdb_khub_clk_mgr_reg.h */
+#define KONA_AUDIOH_BASE_VA          HW_IO_PHYS_TO_VIRT(AUDIOH_BASE_ADDR) /* brcm_rdb_audioh.h */
+#define KONA_SDT_BASE_VA             HW_IO_PHYS_TO_VIRT(SDT_BASE_ADDR) /* brcm_rdb_sdt.h */
+#define KONA_SSP4_BASE_VA            HW_IO_PHYS_TO_VIRT(SSP4_BASE_ADDR) /* brcm_rdb_sspil.h */
+#define KONA_SSP3_BASE_VA            HW_IO_PHYS_TO_VIRT(SSP3_BASE_ADDR) /* brcm_rdb_sspil.h */
+#define KONA_SRCMIXER_BASE_VA        HW_IO_PHYS_TO_VIRT(SRCMIXER_BASE_ADDR) /* brcm_rdb_srcmixer.h */
+#define KONA_CFIFO_BASE_VA           HW_IO_PHYS_TO_VIRT(CFIFO_BASE_ADDR) /* brcm_rdb_cph_cfifo.h */
+#define KONA_AADMAC_BASE_VA          HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR) /* brcm_rdb_cph_aadmac.h */
+#define KONA_SSASW_BASE_VA           HW_IO_PHYS_TO_VIRT(SSASW_BASE_ADDR) /* brcm_rdb_cph_ssasw.h */
+#define KONA_AHINTC_BASE_VA          HW_IO_PHYS_TO_VIRT(AHINTC_BASE_ADDR) /* brcm_rdb_ahintc.h */
+
 #endif /* __RHEA_IO_MAP_H */
