@@ -17,5 +17,11 @@ config MACH_SAMOA_FPGA
 
 endchoice
 
+config MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+	bool "Enable run Samoa on Rhea Ray before bring-up"
+	depends on MACH_SAMOA_RAY
+	help
+	  Say Y if you want to test Samoa build on Rhea Ray. Will remove after bring-up
+
 endmenu
 

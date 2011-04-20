@@ -568,7 +568,16 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 #else
 #ifdef CONFIG_ARCH_SAMOA
 	/* unlock slave clock manager */
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+#define KPS_CLK_MGR_REG_WR_ACCESS_OFFSET 0
+	val = readl(slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	old_enable = val & 0x1;
+	val &= 0x80000000;
+	val |= 0xA5A500 | 0x1;
+	writel(val, slaveClockMgr_regs + KPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
+#else
 	/* Samoa kps_clk access control is different ... */
+#endif
 
 	/* set the value */
 	mask = KPS_CLK_MGR_REG_TIMERS_DIV_TIMERS_PLL_SELECT_MASK;
@@ -584,7 +593,10 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 			;
 
 	/* restore slave clock manager */
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+#else
 	/* Samoa ... */
+#endif
 #else
 	/* unlock slave clock manager */
 	val = readl(slaveClockMgr_regs + IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET);
