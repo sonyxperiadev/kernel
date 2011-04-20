@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Mon Apr 18 16:29:48 2011
+# Wed Apr 20 11:16:08 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -253,6 +253,9 @@ CONFIG_ARCH_KONA=y
 # CONFIG_ARCH_RHEA is not set
 CONFIG_ARCH_SAMOA=y
 CONFIG_KONA_DCACHE_INVALIDATION=y
+# CONFIG_KONA_TIMER_UNIT_TESTS is not set
+# CONFIG_BRCM_PROP_MODULES is not set
+# CONFIG_BCM_STM is not set
 
 #
 # Samoa SoC based Machine types
@@ -371,7 +374,7 @@ CONFIG_CMDLINE="console=ttyS0,115200n8 mem=96M"
 # CONFIG_FPE_FASTFPE is not set
 CONFIG_VFP=y
 CONFIG_VFPv3=y
-CONFIG_NEON=y
+# CONFIG_NEON is not set
 
 #
 # Userspace binary formats
@@ -552,6 +555,7 @@ CONFIG_INPUT_MISC=y
 # CONFIG_INPUT_UINPUT is not set
 # CONFIG_INPUT_GPIO is not set
 # CONFIG_INPUT_GPIO_ROTARY_ENCODER is not set
+# CONFIG_KONA_HEADSET is not set
 
 #
 # Hardware I/O ports
@@ -639,6 +643,7 @@ CONFIG_GPIO_SYSFS=y
 #
 # MODULbus GPIO expanders:
 #
+# CONFIG_GENERIC_PWM is not set
 # CONFIG_W1 is not set
 # CONFIG_POWER_SUPPLY is not set
 # CONFIG_HWMON is not set
