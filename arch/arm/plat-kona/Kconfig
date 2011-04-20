@@ -48,5 +48,12 @@ config BRCM_PROP_MODULES
 	default n
 	help
 	  Say Y if you want to include the Broadcom proprietary modules.
+
+config BCM_STM
+	bool "Enable System Trace Module"
+	default n
+	help
+	  Say Y if you want to enable the Broadcom System Trace Module
+
 endmenu
 

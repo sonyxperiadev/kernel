@@ -31,6 +31,7 @@
 
 #define KONA_AON_CLK_VA             HW_IO_PHYS_TO_VIRT( AON_CLK_BASE_ADDR )
 #define KONA_AON_RST_VA             HW_IO_PHYS_TO_VIRT( AON_RST_BASE_ADDR )
+#define KONA_ATBFILTER_VA           HW_IO_PHYS_TO_VIRT( ATBFILTER_BASE_ADDR )
 #define KONA_BSC1_VA                HW_IO_PHYS_TO_VIRT( BSC1_BASE_ADDR )			/* BSC I2C 1 interface  */
 #define KONA_BSC2_VA                HW_IO_PHYS_TO_VIRT( BSC2_BASE_ADDR )			/* BSC I2C 2 interface  */
 #define KONA_CHIPREG_VA             HW_IO_PHYS_TO_VIRT( CHIPREGS_BASE_ADDR )        /* CHIPREG Block */
@@ -38,6 +39,8 @@
 #define KONA_DMAC_NS_VA             HW_IO_PHYS_TO_VIRT( NONDMAC_BASE_ADDR )         /* Non-Secure DMA interface */
 #define KONA_DMAC_S_VA              HW_IO_PHYS_TO_VIRT( SECDMAC_BASE_ADDR )         /* Secure DMA interface */
 #define KONA_DMUX_VA                HW_IO_PHYS_TO_VIRT( DMUX_BASE_ADDR )            /* DMA DMUX */
+#define KONA_FIN_FUNNEL_VA          HW_IO_PHYS_TO_VIRT( FIN_FUNNEL_BASE_ADDR )
+#define KONA_FUNNEL_VA              HW_IO_PHYS_TO_VIRT( FUNNEL_BASE_ADDR )
 #define KONA_GICCPU_VA              HW_IO_PHYS_TO_VIRT( GICCPU_BASE_ADDR )          /* GIC CPU INTERFACE */
 #define KONA_GICDIST_VA             HW_IO_PHYS_TO_VIRT( GICDIST_BASE_ADDR )         /* GIC DISTRIBUTOR INTERFACE */
 #define KONA_GPIO2_VA               HW_IO_PHYS_TO_VIRT( GPIO2_BASE_ADDR )           /* GPIO 2 */
@@ -104,6 +107,9 @@
 #define KONA_SSP1_VA            	HW_IO_PHYS_TO_VIRT( SSP1_BASE_ADDR )
 #define KONA_SSP3_VA            	HW_IO_PHYS_TO_VIRT( SSP3_BASE_ADDR )
 
+#define KONA_STM_VA                 HW_IO_PHYS_TO_VIRT( STM_BASE_ADDR )
+#define KONA_SWSTM_VA               HW_IO_PHYS_TO_VIRT( SWSTM_BASE_ADDR )
+#define KONA_SWSTM_ST_VA            HW_IO_PHYS_TO_VIRT( SWSTM_ST_BASE_ADDR )
 #define KONA_SYSTEM_SWITCH_VA       HW_IO_PHYS_TO_VIRT( SYSSWITCH_BASE_ADDR )       /* System switch  */
 #define KONA_SYSTMR_VA              HW_IO_PHYS_TO_VIRT( TIMER_BASE_ADDR )           /* SYSTEM TIMER */
 #define KONA_TMR_HUB_VA             HW_IO_PHYS_TO_VIRT( HUB_TIMER_BASE_ADDR )       /* Hub timer */

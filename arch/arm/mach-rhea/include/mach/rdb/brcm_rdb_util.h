@@ -3,9 +3,11 @@
 
 // Register Access Macros:
 
+#ifndef _MOBCOM_TYPES_H_
 typedef unsigned long  UInt32;
 typedef unsigned short UInt16;
 typedef unsigned char  UInt8;
+#endif
 
 /*
 ** The following two macros create a "combine" routine which can be nested.
