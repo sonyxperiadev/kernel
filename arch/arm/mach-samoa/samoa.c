@@ -58,10 +58,17 @@ static void __init samoa_l2x0_init(void)
 {
 	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
 
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
 	/*
 	 * 32KB way size, 8-way associativity
 	 */
 	l2x0_init(l2cache_base, 0x00040000, 0xfff0ffff);
+#else
+	/*
+	 * 16KB way size, 8-way associativity
+	 */
+	l2x0_init(l2cache_base, 0x00020000, 0xfff0ffff);
+#endif
 }
 #endif
 
