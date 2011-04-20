@@ -226,6 +226,7 @@ static void __init samoa_ray_add_i2c_devices (void)
 
 static void enable_smi_display_clks(void)
 {
+#if 0
 	struct clk *smi_axi;
 	struct clk *mm_dma;
 	struct clk *smi;
@@ -242,6 +243,7 @@ static void enable_smi_display_clks(void)
 	clk_enable (smi_axi);
 	clk_enable (smi);
 	clk_enable(mm_dma);
+#endif
 }
 
 /* All Samoa Ray specific devices */ 
@@ -271,6 +273,7 @@ void __init board_map_io(void)
 	samoa_map_io();
 }
 
+/* use RHEA ID for now */
 MACHINE_START(RHEA, "SamoaRay")
 	.phys_io = IO_START,
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,

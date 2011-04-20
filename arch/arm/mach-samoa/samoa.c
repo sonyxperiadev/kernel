@@ -34,6 +34,8 @@
 #include <linux/mfd/bcm590xx/core.h>
 #include <mach/gpio.h>
 #include <mach/pinmux.h>
+#include <mach/kona.h>
+#include <mach/timer.h>
 
 static void samoa_poweroff(void)
 {
@@ -63,6 +65,23 @@ static void __init samoa_l2x0_init(void)
 }
 #endif
 
+/* GP Timer init code, common for all samoa based platforms */
+void __init samoa_timer_init (void)
+{
+	struct gp_timer_setup gpt_setup;
+
+	gpt_setup.name   = "slave-timer";
+	gpt_setup.ch_num = 0;
+	gpt_setup.rate   = GPT_MHZ_1;
+
+	/* Call the init function of timer module */
+	kona_timer_init(&gpt_setup);
+}
+
+struct sys_timer kona_timer = {
+	.init	= samoa_timer_init,
+};
+
 static int __init samoa_init(void)
 {
 	pm_power_off = samoa_poweroff;
@@ -73,9 +92,9 @@ static int __init samoa_init(void)
 #endif
 
 #ifdef CONFIG_HAVE_CLK
-	clock_init();
+	//clock_init();
 #endif
-	pinmux_init();
+	//pinmux_init();
 
 #ifdef CONFIG_GPIOLIB
 	/* samoa has 4 banks of GPIO pins */ 
