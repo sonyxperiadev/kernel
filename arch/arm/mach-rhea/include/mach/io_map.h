@@ -104,8 +104,8 @@
 #define KONA_SRAM_VA                HW_IO_PHYS_TO_VIRT( SPUM_S_BASE_ADDR )          /* INTERNAL SRAM (160kB) */
 
 #define KONA_SSP0_VA            	HW_IO_PHYS_TO_VIRT( SSP0_BASE_ADDR )
-#define KONA_SSP1_VA            	HW_IO_PHYS_TO_VIRT( SSP1_BASE_ADDR )
 #define KONA_SSP3_VA            	HW_IO_PHYS_TO_VIRT( SSP3_BASE_ADDR )
+#define KONA_SSP4_VA            	HW_IO_PHYS_TO_VIRT( SSP4_BASE_ADDR )
 
 #define KONA_STM_VA                 HW_IO_PHYS_TO_VIRT( STM_BASE_ADDR )
 #define KONA_SWSTM_VA               HW_IO_PHYS_TO_VIRT( SWSTM_BASE_ADDR )

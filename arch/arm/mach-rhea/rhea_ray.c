@@ -61,6 +61,7 @@
 #include <plat/pl330-pdata.h>
 #include <linux/dma-mapping.h>
 #endif
+#include <linux/spi/spi.h>
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
@@ -424,6 +425,24 @@ static struct platform_device pl330_dmac_device = {
 };
 #endif
 
+/*
+ * SPI board info for the slaves
+ */
+static struct spi_board_info spi_slave_board_info[] __initdata = {
+#ifdef CONFIG_SPI_SPIDEV
+	{
+	 .modalias = "spidev",	/* use spidev generic driver */
+	 .max_speed_hz = 13000000,	/* use max speed */
+	 .bus_num = 0,		/* framework bus number */
+	 .chip_select = 0,	/* for each slave */
+	 .platform_data = NULL,	/* no spi_driver specific */
+	 .irq = 0,		/* IRQ for this device */
+	 .mode = SPI_LOOP,	/* SPI mode 0 */
+	 },
+#endif
+	/* TODO: adding more slaves here */
+};
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -508,6 +527,9 @@ static void __init rhea_ray_add_devices(void)
 	platform_add_devices(rhea_ray_plat_devices, ARRAY_SIZE(rhea_ray_plat_devices));
 
 	rhea_ray_add_i2c_devices();
+
+	spi_register_board_info(spi_slave_board_info,
+				ARRAY_SIZE(spi_slave_board_info));
 }
 
 void __init board_init(void)

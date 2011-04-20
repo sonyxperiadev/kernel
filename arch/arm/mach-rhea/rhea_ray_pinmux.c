@@ -78,6 +78,12 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 
+	/* SSP0 */
+	PIN_CFG(SPI0FSS, SSP0SYN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SPI0CLK,  SSP0CK, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SPI0TXD,  SSP0DO, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SPI0RXD,  SSP0DI, 0, OFF,  ON, 0, 0, 8MA),
+
 	/* LCD */
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDRES, GPIO, 0, OFF, ON, 0, 0, 8MA),

@@ -46,6 +46,8 @@
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
 #include <asm/pmu.h>
+#include <linux/spi/spi.h>
+#include <plat/spi_kona.h>
 
 
 /*
@@ -401,6 +403,36 @@ static struct platform_device kona_pwm_device = {
                 .num_resources  = 1,
 } ;
 
+/* SPI configuration */
+static struct resource kona_sspi_spi0_resource[] = {
+	[0] = {
+                .start = SSP0_BASE_ADDR,
+                .end = SSP0_BASE_ADDR + SZ_4K - 1,
+                .flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SSP0,
+		.end = BCM_INT_ID_SSP0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct spi_kona_platform_data sspi_spi0_info = {
+	.enable_dma = 0,
+	.cs_line = 1,
+	.mode = SPI_LOOP | SPI_MODE_3,
+};
+
+static struct platform_device kona_sspi_spi0_device = {
+	.dev = {
+		.platform_data = &sspi_spi0_info,
+	},
+	.name = "kona_sspi_spi",
+	.id = 0,
+	.resource = kona_sspi_spi0_resource,
+	.num_resources  = ARRAY_SIZE(kona_sspi_spi0_resource),
+};
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -411,7 +443,8 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&android_mass_storage_device,
 	&android_usb,
 	&pmu_device,	
-	&kona_pwm_device,	
+	&kona_pwm_device,
+	&kona_sspi_spi0_device,
 };
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */

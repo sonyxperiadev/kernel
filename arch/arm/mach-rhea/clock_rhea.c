@@ -1259,14 +1259,6 @@ static int clock_module_temp_fixes(void)
     clk_enable(temp_clk);
     clk_put(temp_clk);
 
-    temp_clk = clk_get(NULL, "ssp0_apb_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "ssp0_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
     temp_clk = clk_get(NULL, "ssp0_audio_clk");
     clk_enable(temp_clk);
     clk_put(temp_clk);
