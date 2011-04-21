@@ -804,7 +804,6 @@ static int pl330_probe(struct platform_device *pdev)
 			irq--;
 			goto probe_err2;
 		}
-		enable_irq(irq);
 	}
 
 	ret = pl330_add(pl330_info);

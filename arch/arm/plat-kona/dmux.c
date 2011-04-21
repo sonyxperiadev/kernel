@@ -118,7 +118,6 @@ static const struct dmac_mux_map kona_dmux_map[] = {
 /* From Kona Memory Map */
 static unsigned long base_addr = KONA_DMUX_VA;
 static struct clk *dmux_clk = NULL;
-static struct clk *ccu_clk = NULL;
 
 enum dma_peri dmux_name_to_id(const char *name)
 {
