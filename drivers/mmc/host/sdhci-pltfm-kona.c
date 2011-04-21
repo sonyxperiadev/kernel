@@ -530,6 +530,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_reset;
 
+	host->mmc->caps |= MMC_CAP_8_BIT_DATA;
 	ret = sdhci_add_host(host);
 	if (ret)
 		goto err_reset;
