@@ -38,8 +38,8 @@
 #define PON_PRESS_DEB_OFFSET 0
 #define PON_RELEASE_DEB_OFFSET 3
 
-#define PON_PRESS_DEB_VAL 4 /* 500 ms */ 
-#define PON_RELEASE_DEB_VAL 4 /* 500 ms */ 
+#define PON_PRESS_DEB_VAL 3 /* 100 ms */
+#define PON_RELEASE_DEB_VAL 3 /* 100 ms */
 
 struct bcm59055_onkey_info {
 	struct input_dev	*idev;
@@ -64,7 +64,7 @@ static void bcm59055_onkey_handler(int irq, void *data)
 			dev_err(info->chip->dev, "Invalid IRQ %d\n", irq);
 			return;
 			break;
-	}		
+	}
 
 	input_report_key(info->idev, KEY_POWER, val);
 	input_sync(info->idev);
@@ -82,7 +82,7 @@ static int __devinit bcm59055_onkey_probe(struct platform_device *pdev)
 		dev_err(chip->dev, "Failed to allocate memory (%d bytes)\n", sizeof(struct bcm59055_onkey_info));
 		return -ENOMEM;
 	}
-	
+
 	info->idev = input_allocate_device();
 	if (!info->idev) {
 		dev_err(chip->dev, "Failed to allocate input dev\n");
@@ -96,30 +96,30 @@ static int __devinit bcm59055_onkey_probe(struct platform_device *pdev)
 	info->idev->evbit[0] = BIT_MASK(EV_KEY);
 	info->idev->keybit[BIT_WORD(KEY_POWER)] = BIT_MASK(KEY_POWER);
 	info->chip = chip;
-	
-	/* Request PRESSED and RELEASED interrupts. 
-	 */ 
+
+	/* Request PRESSED and RELEASED interrupts.
+	 */
     error = bcm590xx_request_irq(chip, BCM59055_IRQID_INT1_POK_PRESSED, true, bcm59055_onkey_handler, info);
 	if (error < 0) {
-		dev_err(chip->dev, "Failed to request bcm59055 IRQ %d: %d\n", 
+		dev_err(chip->dev, "Failed to request bcm59055 IRQ %d: %d\n",
 			BCM59055_IRQID_INT1_POK_PRESSED, error);
 		goto out_irq_pressed;
 	}
 
 	error = bcm590xx_request_irq(chip, BCM59055_IRQID_INT1_POK_RELEASED, true, bcm59055_onkey_handler, info);
 	if (error < 0) {
-		dev_err(chip->dev, "Failed to request bcm59055 IRQ %d: %d\n", 
+		dev_err(chip->dev, "Failed to request bcm59055 IRQ %d: %d\n",
 			BCM59055_IRQID_INT1_POK_RELEASED, error);
 		goto out_irq_released;
 	}
 
-	/* Adjust key press debounce time. 
+	/* Adjust key press debounce time.
 	 */
-	ctrl1 = bcm590xx_reg_read(SLAVE_ID0, BCM59055_REG_PONKEYCTRL1);	
+	ctrl1 = bcm590xx_reg_read(chip, BCM59055_REG_PONKEYCTRL1);
 	ctrl1 &= ~BCM59055_PONKEYCTRL1_DEB_MASK;
 	ctrl1 &= 0xFF;
 	ctrl1 |= (PON_PRESS_DEB_VAL << PON_PRESS_DEB_OFFSET) | (PON_RELEASE_DEB_VAL << PON_RELEASE_DEB_OFFSET);
-	bcm590xx_reg_write(SLAVE_ID0, BCM59055_REG_PONKEYCTRL1, (uint16_t) ctrl1);
+	bcm590xx_reg_write(chip, BCM59055_REG_PONKEYCTRL1, (uint16_t) ctrl1);
 
 	error = input_register_device(info->idev);
 	if (error) {
@@ -158,7 +158,7 @@ static int __devexit bcm59055_onkey_remove(struct platform_device *pdev)
 
 static struct platform_driver bcm59055_onkey_driver = {
 	.driver		= {
-		.name	= "bcm59055-onkey",
+		.name	= "bcm590xx-onkey",
 		.owner	= THIS_MODULE,
 	},
 	.probe		= bcm59055_onkey_probe,

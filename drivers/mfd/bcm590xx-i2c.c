@@ -21,131 +21,110 @@
 #include <linux/platform_device.h>
 #include <linux/mfd/bcm590xx/core.h>
 
-struct bcm590xx *g_bcm590xx = NULL ;
-static DEFINE_MUTEX(io_mutex);
-unsigned int g_alloc = 0 ;
-
-static s32 bcm590xx_i2c_read_device(struct bcm590xx *bcm590xx, enum SLAVE_ID slave, u8 reg)
+static int bcm590xx_i2c_read_device(struct bcm590xx *bcm590xx, char reg, int i)
 {
-    s32 retval = 0 ; 
-
-    if ( slave == SLAVE_ID0 )
-        retval = i2c_smbus_read_byte_data(bcm590xx->i2c_client_0, reg);
-    else if ( slave == SLAVE_ID1 )
-        retval = i2c_smbus_read_byte_data(bcm590xx->i2c_client_1, reg);
-    return retval ;
+	return i2c_smbus_read_byte_data(bcm590xx->i2c_client[i].client, reg);
 }
 
-static s32 bcm590xx_i2c_write_device(struct bcm590xx *bcm590xx, enum SLAVE_ID slave, u8 reg, u8 value)
+static int bcm590xx_i2c_mul_read_device(struct bcm590xx *bcm590xx, char reg, int len, u8 *val, int i)
 {
-    s32 retval = 0 ; 
-    
-    if ( slave == SLAVE_ID0 )
-        retval = i2c_smbus_write_byte_data(bcm590xx->i2c_client_0, reg, value);
-    else if ( slave == SLAVE_ID1 )
-        retval = i2c_smbus_write_byte_data(bcm590xx->i2c_client_1, reg, value);
-    return retval ;
+	int ret;
+	ret = i2c_smbus_read_i2c_block_data(bcm590xx->i2c_client[i].client, reg, len, val);
+	if (ret < len)
+		return -EIO;
+	return ret;
 }
 
-s32 bcm590xx_reg_read(enum SLAVE_ID slave, u8 reg) 
+// static int bcm590xx_i2c_write_device(struct bcm590xx *bcm590xx, char reg, int bytes, void *value)
+static int bcm590xx_i2c_write_device(struct bcm590xx *bcm590xx, char reg, int bytes, u8 value, int i)
 {
-    s32 retval = 0 ;
-    mutex_lock(&io_mutex);
-    retval = g_bcm590xx->read_dev(g_bcm590xx, slave, reg);    
-    mutex_unlock(&io_mutex);
-    return retval ; 
+	return i2c_smbus_write_byte_data(bcm590xx->i2c_client[i].client, reg, value);
 }
-EXPORT_SYMBOL_GPL(bcm590xx_reg_read);
 
-s32 bcm590xx_reg_write(enum SLAVE_ID slave, u8 reg, u8 val)
+static int bcm590xx_i2c_mul_write_device(struct bcm590xx *bcm590xx, char reg, int len, u8 *val, int i)
 {
-    s32 retval = 0 ;
-    mutex_lock(&io_mutex);
-    retval = g_bcm590xx->write_dev(g_bcm590xx, slave, reg, val);    
-    mutex_unlock(&io_mutex);
-    return retval ; 
+	int ret;
+	ret = i2c_smbus_write_i2c_block_data(bcm590xx->i2c_client[i].client, reg, len, val);
+	return ret;
 }
 
 static int bcm590xx_i2c_probe(struct i2c_client *i2c,
 			    const struct i2c_device_id *id)
 {
-    int ret = 0;
-    struct bcm590xx_platform_data *pdata = i2c->dev.platform_data;
+	struct bcm590xx *bcm590xx;
+	int ret = 0;
+	struct bcm590xx_platform_data *pdata = i2c->dev.platform_data;
 
-    printk(KERN_INFO "REG : bcm590xx_i2c_probe called \n"); 
+	printk("REG : bcm590xx_i2c_probe called \n");
 
-    if ( g_alloc == 0 ) 
-    {
-        g_bcm590xx = kzalloc(sizeof(struct bcm590xx), GFP_KERNEL);
-        if (g_bcm590xx == NULL) {
-            kfree(i2c);
-            return -ENOMEM;
-        }
-        g_alloc = 1 ; 
-    }
+	bcm590xx = kzalloc(sizeof(struct bcm590xx), GFP_KERNEL);
+	if (bcm590xx == NULL) {
+		kfree(i2c);
+		return -ENOMEM;
+	}
 
-    if ( pdata->slave == SLAVE_ID1)
-    {
-        g_bcm590xx->i2c_client_1 = i2c;
-    }
-    else if ( pdata->slave == SLAVE_ID0 )
-    {
-        i2c_set_clientdata(i2c, g_bcm590xx);
-        g_bcm590xx->dev = &i2c->dev;
-        g_bcm590xx->i2c_client_0 = i2c;
-        g_bcm590xx->irq = i2c->irq;
-        g_bcm590xx->read_dev = bcm590xx_i2c_read_device;
-        g_bcm590xx->write_dev = bcm590xx_i2c_write_device;
-        g_bcm590xx->pdata = pdata ;
+	i2c_set_clientdata(i2c, bcm590xx);
+	bcm590xx->dev = &i2c->dev;
+	bcm590xx->i2c_client[0].client = i2c;
+	bcm590xx->i2c_client[0].addr = i2c->addr;
+	bcm590xx->irq = i2c->irq;
+	bcm590xx->read_dev = bcm590xx_i2c_read_device;
+	bcm590xx->mul_read_dev = bcm590xx_i2c_mul_read_device;
+	bcm590xx->write_dev = bcm590xx_i2c_write_device;
+	bcm590xx->mul_write_dev = bcm590xx_i2c_mul_write_device;
+	bcm590xx->pdata = pdata ;
 
-        ret = bcm590xx_device_init(g_bcm590xx, i2c->irq, i2c->dev.platform_data);
-        if (ret < 0)
-            goto err;
-    }
+	ret = bcm590xx_device_init(bcm590xx, i2c->irq, i2c->dev.platform_data);
+	if (ret < 0)
+		goto err;
     return ret;
 
 
 err:
-    kfree(g_bcm590xx);
     return ret;
 }
 
 static int bcm590xx_i2c_remove(struct i2c_client *i2c)
 {
-    struct bcm590xx *bcm590xx = i2c_get_clientdata(i2c);
-    bcm590xx_device_exit(bcm590xx);
-    kfree(bcm590xx);
-    return 0;
+	struct bcm590xx *bcm590xx = i2c_get_clientdata(i2c);
+
+	bcm590xx_device_exit(bcm590xx);
+
+	return 0;
 }
 
 static const struct i2c_device_id bcm590xx_i2c_id[] = {
-    { "bcm590xx", 0 },
+       { "bcm59035", 0 },
+       { "bcm59038", 0 },
+       { "bcm59055", 0 },
+       /* for new supported chip add a entry here */
+       { }
 };
 MODULE_DEVICE_TABLE(i2c, bcm590xx_i2c_id);
 
 
 static struct i2c_driver bcm590xx_i2c_driver = {
-    .driver = {
-        .name = "bcm590xx",
-        .owner = THIS_MODULE,
-    },
-    .probe = bcm590xx_i2c_probe,
-    .remove = bcm590xx_i2c_remove,
-    .id_table = bcm590xx_i2c_id,
+	.driver = {
+		.name = "bcm590xx",
+		.owner = THIS_MODULE,
+	},
+	.probe = bcm590xx_i2c_probe,
+	.remove = bcm590xx_i2c_remove,
+	.id_table = bcm590xx_i2c_id,
 };
 
 static int __init bcm590xx_i2c_init(void)
 {
-    return i2c_add_driver(&bcm590xx_i2c_driver);
+	return i2c_add_driver(&bcm590xx_i2c_driver);
 }
 /* init early so consumer devices can complete system boot */
 subsys_initcall(bcm590xx_i2c_init);
 
 static void __exit bcm590xx_i2c_exit(void)
 {
-    i2c_del_driver(&bcm590xx_i2c_driver);
+	i2c_del_driver(&bcm590xx_i2c_driver);
 }
 module_exit(bcm590xx_i2c_exit);
 
-MODULE_DESCRIPTION("I2C support for the WM8350 AudioPlus PMIC");
+MODULE_DESCRIPTION("I2C support for the BCM590xx PMIC");
 MODULE_LICENSE("GPL");

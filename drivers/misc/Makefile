@@ -39,3 +39,4 @@ obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
 obj-$(CONFIG_INTER_PROCESSOR_COMM)	+= ipc.o
 obj-$(CONFIG_BRCM_MISC_DRIVERS) += vmcs_services/
+obj-$(CONFIG_BCM59055_AUDIO)	+= bcm59055-audio.o
