@@ -44,11 +44,10 @@
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #include <linux/i2c/qt602240_ts.h>
 #endif
+#include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #include <mach/kona.h>
 #include <mach/samoa.h>
 #include <asm/mach/map.h>
-#include <linux/mfd/bcm590xx/core.h>
-#include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/clk.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
@@ -261,6 +260,37 @@ static void __init samoa_ray_add_devices(void)
 
 void __init board_init(void)
 {
+    /* enable clocks before clock driver is ready */
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+#define KPS_CLK_MGR_REG_WR_ACCESS_OFFSET 0
+#define KPS_CLK_MGR_REG_POLICY_CTL_OFFSET 0xc
+#define KPS_CLK_MGR_REG_LVM_EN_OFFSET 0x34
+#define KPS_CLK_MGR_REG_POLICY3_MASK_OFFSET KPS_CLK_MGR_REG_KPS_POLICY3_MASK_OFFSET
+#define KPS_CLK_MGR_REG_POLICY3_MASK_BSC1_POLICY3_MASK_MASK KPS_CLK_MGR_REG_KPS_POLICY3_MASK_BSC1_POLICY3_MASK_MASK
+#define KPS_CLK_MGR_REG_POLICY3_MASK_BSC2_POLICY3_MASK_MASK KPS_CLK_MGR_REG_KPS_POLICY3_MASK_BSC2_POLICY3_MASK_MASK
+    // BSC1 & BSC2 clocks
+    printk(KERN_ERR "I2C: BSC1_CLKGATE=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC1_CLKGATE_OFFSET));
+    printk(KERN_ERR "I2C: BSC2_CLKGATE=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC2_CLKGATE_OFFSET));
+    writel(0xA5A501, (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_WR_ACCESS_OFFSET));
+    writel(readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_POLICY3_MASK_OFFSET) |
+       KPS_CLK_MGR_REG_POLICY3_MASK_BSC1_POLICY3_MASK_MASK |
+       KPS_CLK_MGR_REG_POLICY3_MASK_BSC2_POLICY3_MASK_MASK,
+       (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_POLICY3_MASK_OFFSET));
+    writel(0x1, (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_LVM_EN_OFFSET));
+    while ((readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_LVM_EN_OFFSET)&0x1) == 0x1 );
+    writel(0x5, (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_POLICY_CTL_OFFSET));
+    writel(0x30f, (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC1_CLKGATE_OFFSET));
+    writel(0x30f, (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC2_CLKGATE_OFFSET));
+    printk(KERN_ERR "I2C: WR_ACCESS=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_WR_ACCESS_OFFSET));
+    printk(KERN_ERR "I2C: BSC1_CLKGATE=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC1_CLKGATE_OFFSET));
+    printk(KERN_ERR "I2C: BSC2_CLKGATE=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC2_CLKGATE_OFFSET));
+    printk(KERN_ERR "I2C: BSC1_DIV=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC1_DIV_OFFSET));
+    printk(KERN_ERR "I2C: BSC2_DIV=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC2_DIV_OFFSET));
+
+#else
+    /* Samoa chip is diffeent */
+#endif
+
 	board_add_common_devices();
 	samoa_ray_add_devices();
 	return;

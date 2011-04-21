@@ -307,6 +307,23 @@ static struct resource board_i2c1_resource[] = {
 };
 
 
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+static struct resource board_pmu_bsc_resource[] = {
+	[0] =
+	{
+		.start = 0x3500D000,
+		.end = 0x3500D000 + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] =
+	{
+		.start = BCM_INT_ID_PM_I2C,
+		.end = BCM_INT_ID_PM_I2C,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+#endif
+
 static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	{ /* for BSC0 */
 		.speed = BSC_BUS_SPEED_50K,
@@ -318,6 +335,11 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
 	},
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+	{ /* for PMU */
+		.speed = BSC_BUS_SPEED_50K,
+	},
+#endif
 };
 
 static struct platform_device board_i2c_adap_devices[] =
@@ -341,6 +363,17 @@ static struct platform_device board_i2c_adap_devices[] =
 		},
 
 	},
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+	{  /* for PMU BSC */
+		.name = "bsc-i2c",
+		.id = 2,
+		.resource = board_pmu_bsc_resource,
+		.num_resources	= ARRAY_SIZE(board_pmu_bsc_resource),
+		.dev      = {
+			.platform_data = &bsc_i2c_cfg[2],
+		},
+	},
+#endif
 };
 
 
@@ -349,6 +382,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+	&board_i2c_adap_devices[2],    /* needed for PMU */
+#endif
 	&board_sdio1_device,
 	&board_sdio0_device,
 	&android_rndis_device,
