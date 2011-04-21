@@ -840,7 +840,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 
 		rc = bsc_get_clk (dev, hw_cfg);
 		if (rc)
-			goto err_free_clk;
+			goto err_free_dev_mem;
 		rc = bsc_enable_clk (dev);
 		if (rc)
 			goto err_free_clk;
@@ -856,7 +856,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	if (dev->speed >= BSC_BUS_SPEED_MAX) {
 		dev_err(&pdev->dev, "invalid bus speed parameter\n");
 		rc = -EFAULT;
-		goto err_release_mem_region;
+		goto err_disable_clk;
 	}
 
 	/* high speed */
@@ -872,15 +872,10 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	if (!dev->virt_base) {
 		dev_err(&pdev->dev, "ioremap of register space failed\n");
 		rc = -ENOMEM;
-		goto err_free_dev_mem;
+		goto err_disable_clk;
 	}
 
 	platform_set_drvdata(pdev, dev);
-
-	/*
-	* TODO: add core clock code in the future 13 MHz for normal and 104 MHz
-	* for high-speed
-	*/
 
 	/*
 	* Configure the BSC bus speed. If it's a high-speed device, it will start
@@ -974,6 +969,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 err_proc_term:
 	proc_term(pdev);
 
+err_free_irq:
+	free_irq(dev->irq, dev);
+
 err_bsc_deinit:
 	bsc_set_autosense((uint32_t)dev->virt_base, 0);
 	bsc_deinit((uint32_t)dev->virt_base);
@@ -982,15 +980,14 @@ err_bsc_deinit:
 
 	platform_set_drvdata(pdev, NULL);
 
-err_free_clk:
+err_disable_clk:
 	bsc_disable_clk(dev);
+
+err_free_clk:
 	bsc_put_clk(dev);
 
 err_free_dev_mem:
 	kfree(dev);
-
-err_free_irq:
-	free_irq(dev->irq, dev);
 
 err_release_mem_region:
 	release_mem_region(iomem->start, resource_size(iomem));
