@@ -433,6 +433,28 @@ static struct platform_device kona_sspi_spi0_device = {
 	.num_resources  = ARRAY_SIZE(kona_sspi_spi0_resource),
 };
 
+#ifdef CONFIG_SENSORS_KONA
+static struct resource board_tmon_resource[] = {
+	{	/* For Current Temperature */
+		.start = TMON_BASE_ADDR,
+		.end = TMON_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	{	/* For Temperature IRQ */
+		.start = BCM_INT_ID_TEMP_MON,
+		.end = BCM_INT_ID_TEMP_MON,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+struct platform_device tmon_device = {
+	.name = "kona-tmon",
+	.id = -1,
+	.resource = board_tmon_resource,
+	.num_resources = ARRAY_SIZE(board_tmon_resource),
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -445,6 +467,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&pmu_device,	
 	&kona_pwm_device,
 	&kona_sspi_spi0_device,
+#ifdef CONFIG_SENSORS_KONA
+	&tmon_device,
+#endif
 };
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */

@@ -300,6 +300,13 @@ config SENSORS_ATXP1
 	  This driver can also be built as a module.  If so, the module
 	  will be called atxp1.
 
+config SENSORS_KONA
+	tristate "Broadcom SoC Temperature Monitor"
+	depends on ARCH_KONA
+	help
+	  This driver provides support for the temperature monitor found
+	  in Broadcom SoCs based on the Kona architecture.
+
 config SENSORS_DS1621
 	tristate "Dallas Semiconductor DS1621 and DS1625"
 	depends on I2C
