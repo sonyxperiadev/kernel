@@ -143,7 +143,7 @@ static int can_start_charging(void* data)
 	return 1;
 }
 
-static struct mv_percent mv_percent_table[] = 
+static struct mv_percent mv_percent_table[] =
 {
     { 3800 , 5 },
     { 3850 , 25 },
@@ -165,19 +165,20 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	.init = bcm590xx_init_platform_hw,
-	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO | BCM590XX_USE_PONKEY,
+	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
+	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
 };
 
 
-static struct i2c_board_info __initdata pmu_info[] = 
+static struct i2c_board_info __initdata pmu_info[] =
 {
    {
-      I2C_BOARD_INFO("bcm59055", PMU_DEVICE_I2C_ADDR_0 ),	   
+      I2C_BOARD_INFO("bcm59055", PMU_DEVICE_I2C_ADDR_0 ),
       .irq = gpio_to_irq(PMU_IRQ_PIN),
-      .platform_data  = &bcm590xx_plat_data, 
+      .platform_data  = &bcm590xx_plat_data,
    },
 };
 
@@ -190,7 +191,7 @@ struct platform_device bcm_kp_device = {
 	.id = -1,
 };
 
-/*	Keymap for Ray board plug-in 64-key keypad. 
+/*	Keymap for Ray board plug-in 64-key keypad.
 	Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
 	GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
 	using pin GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
@@ -423,7 +424,7 @@ static struct platform_device pl330_dmac_device = {
 };
 #endif
 
-/* Rhea Ray specific platform devices */ 
+/* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
 	&bcm_kp_device,
@@ -438,7 +439,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #endif
 };
 
-/* Rhea Ray specific i2c devices */ 
+/* Rhea Ray specific i2c devices */
 static void __init rhea_ray_add_i2c_devices (void)
 {
 	/* 59055 on BSC - PMU */
@@ -496,7 +497,7 @@ static void enable_smi_display_clks(void)
 	clk_enable(mm_dma);
 }
 
-/* All Rhea Ray specific devices */ 
+/* All Rhea Ray specific devices */
 static void __init rhea_ray_add_devices(void)
 {
 	enable_smi_display_clks();

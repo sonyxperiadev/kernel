@@ -77,10 +77,14 @@ void bcm590xx_device_exit(struct bcm590xx *bcm590xx);
  */
 int bcm590xx_reg_read(struct bcm590xx *bcm590xx, int reg);
 int bcm590xx_reg_write(struct bcm590xx *bcm590xx, int reg, u16 val);
+int bcm590xx_mul_reg_read(struct bcm590xx *bcm590xx, int reg, u32 length, u8 *val);
+int bcm590xx_mul_reg_write(struct bcm590xx *bcm590xx, int reg, u32 length, u8 *val);
 
 int bcm590xx_request_irq(struct bcm590xx *bcm590xx, int irq, bool enable_irq,
 			 void (*handler) (int, void *), void *data) ;
 int bcm590xx_free_irq(struct bcm590xx *bcm590xx, int irq);
+int bcm590xx_enable_irq(struct bcm590xx *bcm590xx, int irq);
+int bcm590xx_disable_irq(struct bcm590xx *bcm590xx, int irq);
 
 void bcm59055_initialize_charging( struct bcm590xx *bcm59055 ) ;
 void bcm59055_start_charging(struct bcm590xx *bcm59055 ) ;

@@ -31,7 +31,7 @@ static int bcm590xx_i2c_mul_read_device(struct bcm590xx *bcm590xx, char reg, int
 	int ret;
 	ret = i2c_smbus_read_i2c_block_data(bcm590xx->i2c_client[i].client, reg, len, val);
 	if (ret < len)
-		return -EIO;
+	    return -EIO;
 	return ret;
 }
 

@@ -617,6 +617,10 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-regulator");
 	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_AUDIO)
 		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-audio");
+
+	if (bcm590xx->pdata->flag & BCM590XX_USE_RTC)
+		bcm590xx_client_dev_register(bcm590xx, "bcm59055-rtc");
+
 	printk("%s: SUCCESS\n", __func__);
 	return 0;
 err:
