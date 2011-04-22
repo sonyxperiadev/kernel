@@ -181,7 +181,6 @@ static int bcm59055_rtc_set_alarm(struct device *dev, struct rtc_wkalrm *alm)
 	int ret = 0, i;
 	u8 regval[7];
 	
-	alm->enabled = 1;
 	if (alm->enabled) {
 		pr_debug("%s: alm->year     = %d\n", __func__,
 			alm->time.tm_year);
