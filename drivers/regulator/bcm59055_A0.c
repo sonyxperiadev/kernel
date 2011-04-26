@@ -322,7 +322,7 @@ struct regulator_consumer_supply cam_supply[] = {
 };
 
 static struct regulator_init_data bcm59055_camldo_data = {
-.constraints = { .name = "camldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS |REGULATOR_CHANGE_MODE |  REGULATOR_CHANGE_VOLTAGE , .always_on = 0, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
+.constraints = { .name = "camldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS |REGULATOR_CHANGE_MODE |  REGULATOR_CHANGE_VOLTAGE , .always_on = 1, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
 .num_consumer_supplies = ARRAY_SIZE(cam_supply) ,
 .consumer_supplies = cam_supply ,
 };
@@ -339,7 +339,7 @@ struct regulator_consumer_supply hv1_supply[] = {
 };
 
 static struct regulator_init_data bcm59055_hv1ldo_data = {
-.constraints = { .name = "hv1ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS |REGULATOR_CHANGE_MODE |  REGULATOR_CHANGE_VOLTAGE , .always_on = 0, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
+.constraints = { .name = "hv1ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS |REGULATOR_CHANGE_MODE |  REGULATOR_CHANGE_VOLTAGE , .always_on = 1, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
 .num_consumer_supplies = ARRAY_SIZE(hv1_supply) ,
 .consumer_supplies = hv1_supply ,
 };
@@ -373,7 +373,7 @@ struct regulator_consumer_supply hv3_supply[] = {
 };
 
 static struct regulator_init_data bcm59055_hv3ldo_data = {
-.constraints = { .name = "hv3ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE , .always_on = 0, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
+.constraints = { .name = "hv3ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE , .always_on = 1, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
 .num_consumer_supplies = ARRAY_SIZE(hv3_supply) ,
 .consumer_supplies = hv3_supply ,
 };
@@ -390,7 +390,7 @@ struct regulator_consumer_supply hv4_supply[] = {
 };
 
 static struct regulator_init_data bcm59055_hv4ldo_data = {
-.constraints = { .name = "hv4ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE , .always_on = 0, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
+.constraints = { .name = "hv4ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE , .always_on = 1, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
 .num_consumer_supplies = ARRAY_SIZE(hv4_supply) ,
 .consumer_supplies = hv4_supply ,
 };
@@ -424,7 +424,7 @@ struct regulator_consumer_supply hv6_supply[] = {
 };
 
 static struct regulator_init_data bcm59055_hv6ldo_data = {
-.constraints = { .name = "hv6ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE , .always_on = 0, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
+.constraints = { .name = "hv6ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE , .always_on = 1, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
 .num_consumer_supplies = ARRAY_SIZE(hv6_supply) ,
 .consumer_supplies = hv6_supply ,
 };
@@ -441,7 +441,7 @@ struct regulator_consumer_supply hv7_supply[] = {
 };
 
 static struct regulator_init_data bcm59055_hv7ldo_data = {
-.constraints = { .name = "hv7ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE , .always_on = 0, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
+.constraints = { .name = "hv7ldo", .min_uV = 1300000, .max_uV = 3300000, .valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE , .always_on = 1, .valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY },
 .num_consumer_supplies = ARRAY_SIZE(hv7_supply) ,
 .consumer_supplies = hv7_supply ,
 };
