@@ -258,6 +258,13 @@ static void __init samoa_ray_add_devices(void)
 	samoa_ray_add_i2c_devices();
 }
 
+/* Stub clock API to allow drivers to build */
+void clk_disable(struct clk *clk) {;}
+int clk_enable(struct clk *clk) {return 1;}
+EXPORT_SYMBOL(clk_disable);
+EXPORT_SYMBOL(clk_enable);
+
+
 void __init board_init(void)
 {
     /* enable clocks before clock driver is ready */

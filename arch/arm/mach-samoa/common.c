@@ -327,13 +327,13 @@ static struct resource board_pmu_bsc_resource[] = {
 static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	{ /* for BSC0 */
 		.speed = BSC_BUS_SPEED_50K,
-		.bsc_clk = "bsc1_clk",
-		.bsc_apb_clk = "bsc1_apb_clk",
+		//.bsc_clk = "bsc1_clk",
+		//.bsc_apb_clk = "bsc1_apb_clk",
 	},
 	{ /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
-		.bsc_clk = "bsc2_clk",
-		.bsc_apb_clk = "bsc2_apb_clk",
+		//.bsc_clk = "bsc2_clk",
+		//.bsc_apb_clk = "bsc2_apb_clk",
 	},
 #ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
 	{ /* for PMU */

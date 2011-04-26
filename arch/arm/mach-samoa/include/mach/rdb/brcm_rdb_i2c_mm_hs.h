@@ -42,17 +42,34 @@
 #define    I2C_MM_HS_CS_EN_SHIFT                                          0
 #define    I2C_MM_HS_CS_EN_MASK                                           0x00000001
 
+#define    I2C_MM_HS_CS_CMD_CMD_NO_ACTION                                 0x00000000
+#define    I2C_MM_HS_CS_CMD_CMD_GEN_START                                 0x00000001
+#define    I2C_MM_HS_CS_CMD_CMD_GEN_STOP                                  0x00000002
+#define    I2C_MM_HS_CS_CMD_CMD_RD_A_BYTE                                 0x00000003
+#define    I2C_MM_HS_CS_ACK_CMD_GEN_START                                 0x00000000
+#define    I2C_MM_HS_CS_ACK_CMD_GEN_RESTART                               0x00000001
+#define    I2C_MM_HS_CS_EN_CMD_ENABLE_BSC                                 0x00000001
+#define    I2C_MM_HS_CS_EN_CMD_RST_BSC                                    0x00000000
+
 #define I2C_MM_HS_TIM_OFFSET                                              0x00000024
 #define I2C_MM_HS_TIM_TYPE                                                UInt32
 #define I2C_MM_HS_TIM_RESERVED_MASK                                       0xFFFFFF00
 #define    I2C_MM_HS_TIM_PRESCALE_SHIFT                                   6
 #define    I2C_MM_HS_TIM_PRESCALE_MASK                                    0x000000C0
+#define       I2C_MM_HS_TIM_PRESCALE_CMD_DIV8                             0x00000000
+#define       I2C_MM_HS_TIM_PRESCALE_CMD_DIV4                             0x00000001
+#define       I2C_MM_HS_TIM_PRESCALE_CMD_DIV2                             0x00000002
+#define       I2C_MM_HS_TIM_PRESCALE_CMD_NODIV                            0x00000003
 #define    I2C_MM_HS_TIM_P_SHIFT                                          3
 #define    I2C_MM_HS_TIM_P_MASK                                           0x00000038
 #define    I2C_MM_HS_TIM_NO_DIV_SHIFT                                     2
 #define    I2C_MM_HS_TIM_NO_DIV_MASK                                      0x00000004
 #define    I2C_MM_HS_TIM_DIV_SHIFT                                        0
 #define    I2C_MM_HS_TIM_DIV_MASK                                         0x00000003
+#define       I2C_MM_HS_TIM_DIV_CMD_DIV16                                 0x00000000
+#define       I2C_MM_HS_TIM_DIV_CMD_DIV8                                  0x00000001
+#define       I2C_MM_HS_TIM_DIV_CMD_DIV4                                  0x00000002
+#define       I2C_MM_HS_TIM_DIV_CMD_DIV2                                  0x00000003
 
 #define I2C_MM_HS_DAT_OFFSET                                              0x00000028
 #define I2C_MM_HS_DAT_TYPE                                                UInt32
