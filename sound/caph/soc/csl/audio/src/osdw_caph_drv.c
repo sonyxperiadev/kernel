@@ -76,17 +76,18 @@
 #include "chip_irq.h"
 #include "csl_caph_dma.h"
 #include "drv_caph.h"
+#include "irqs.h"
 
-typedef struct
-{
-    struct tasklet_struct	task;
-    CHAL_HANDLE             handle;
-} Caphdrv;
+//****************************************************************************
+// local variable definitions
+//****************************************************************************
+static struct work_struct audio_play;
 
-static Caphdrv caph_drv;
+//******************************************************************************
+// local function declarations
+//******************************************************************************
 
-
-static void caph_thread_proc(unsigned long data);
+static void worker_audio_playback(struct work_struct *work);
 static irqreturn_t caph_audio_isr(int irq, void *dev_id);
 
 //******************************************************************************
@@ -102,20 +103,12 @@ static irqreturn_t caph_audio_isr(int irq, void *dev_id);
 void CAPHIRQ_Init( )
 {
     int rc;
-	
     Log_DebugPrintf(LOGID_AUDIO, " CAPHIRQ_Init:  \n");
 
-    // initialize interrupt controller chal
-    // which INTC BASE address to use? 
-    caph_drv.handle = chal_caph_intc_init(AHINTC_BASE_ADDR1);
-    
-    //Create Tasklet
-    tasklet_init(&(caph_drv.task), caph_thread_proc,(unsigned long)(&caph_drv));
-
+	INIT_WORK(&audio_play,worker_audio_playback);
     //Plug in the ISR
-   // purpose of IRQF_DISABLED? should it be something else
     rc = request_irq(CAPH_NORM_IRQ, caph_audio_isr, IRQF_DISABLED,
-			 "caph-interrupt", &(caph_drv));
+			 "caph-interrupt", NULL);
 
     if (rc < 0) {
 	Log_DebugPrintf(LOGID_AUDIO,"CAPHIRQ_INIT: %s failed to attach interrupt, rc = %d\n",
@@ -123,7 +116,6 @@ void CAPHIRQ_Init( )
 		return;
     }
 
-    enable_irq(CAPH_NORM_IRQ);
 
 }
 
@@ -133,31 +125,30 @@ void CAPHIRQ_Init( )
 // Function Name:	caph_audio_isr
 //
 // Description:		This function is the Low Level ISR for the CAPH interrupt.
-//					It simply triggers the caph_thread_proc.
+//					It simply schedules the worker thread.
 //
 // Notes:
 //
 //******************************************************************************
 static irqreturn_t caph_audio_isr(int irq, void *dev_id)
 {
-	Caphdrv *dev	= dev_id;
-
-	tasklet_schedule(&dev->task);
+	schedule_work(&audio_play);
+	disable_irq_nosync(BCM_INT_ID_CAPH);
 	return IRQ_HANDLED;
 }
 
 //******************************************************************************
 //
-// Function Name:	caph_thread_proc
+// Function Name:	worker_audio_playback
 //
 // Description:		This function is the CAPH interrupt service routine.
 //
 // Notes:
 //
 //******************************************************************************
-static void caph_thread_proc(unsigned long data)
+static void worker_audio_playback(struct work_struct *work)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* caph_thread_proc \n\r");
-	csl_caph_dma_process_interrupt();
+   	printk(KERN_INFO "worker_audio_playback\n");
+    	csl_caph_dma_process_interrupt();
+	enable_irq(BCM_INT_ID_CAPH);
 }
-

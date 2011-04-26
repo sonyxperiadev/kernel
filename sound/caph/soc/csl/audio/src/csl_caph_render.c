@@ -180,7 +180,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
 	AP_SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
 #endif
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_render_configure:: streamID = 0x%x, sampleRate =0x%x, numChannels = 0x%x, numbBuffers = 0x%x, blockSize = 0x%x, bitsPerSample %d.\r\n", 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_configure:: streamID = 0x%x, sampleRate =0x%x, numChannels = 0x%x, numbBuffers = 0x%x, blockSize = 0x%x, bitsPerSample %d.\r\n", 
 					streamID, sampleRate, numChannels, numBlocks, blockSize, bitsPerSample));
 	
 	audDrv = GetDriverByType (streamID);
@@ -354,7 +354,7 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 	// will revisit this when sync with upper layer.
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE)
 	{	
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "DMARequest fill low half ch=0x%x \r\n", chnl));
+		//_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "DMARequest fill low half ch=0x%x \r\n", chnl));
 		csl_caph_dma_set_ddrfifo_status(chnl, CSL_CAPH_READY_LOW);
 		// for use with fpga test only. not needed for real case
 		//audDrv->bufDoneCb (audDrv->srcBuf, audDrv->srcBufSize, audDrv->streamID);
@@ -362,7 +362,7 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) &CSL_CAPH_READY_HIGH) == CSL_CAPH_READY_NONE)
 	{
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "DMARequest fill high half ch=0x%x \r\n", chnl));
+		//_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "DMARequest fill high half ch=0x%x \r\n", chnl));
 		csl_caph_dma_set_ddrfifo_status( chnl, CSL_CAPH_READY_HIGH);
 		// for use with fpga test only. not needed for real case
 		//audDrv->bufDoneCb (audDrv->srcBuf, audDrv->srcBufSize, audDrv->streamID);
@@ -386,7 +386,7 @@ static CSL_CAPH_STREAM_e CSL_GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH)
 {
 	CSL_CAPH_STREAM_e streamID = CSL_CAPH_STREAM_NONE;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "CSL_GetStreamIDByDmaCH:: dmaCH = 0x%x\n", dmaCH));
+	//_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "CSL_GetStreamIDByDmaCH:: dmaCH = 0x%x\n", dmaCH));
 
       switch (dmaCH)
       {

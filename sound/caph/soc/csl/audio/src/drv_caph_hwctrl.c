@@ -35,6 +35,7 @@ Broadcom's express prior written consent.
 #include "drv_caph.h"
 #include "drv_audio_common.h"
 #include "drv_caph_hwctrl.h"
+#include "osdw_caph_drv.h"
 
 #include "brcm_rdb_sysmap_a9.h"
 #include "brcm_rdb_khub_clk_mgr_reg.h"
@@ -66,12 +67,6 @@ Broadcom's express prior written consent.
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-#ifdef LMP_BUILD
-static Interrupt_t AUDDRV_HISR_HANDLE;
-static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
-static void AUDDRV_LISR(void);
-static void AUDDRV_HISR(void);
-#endif
 //****************************************************************************
 // local function declarations
 //****************************************************************************
@@ -81,38 +76,6 @@ static CSL_CAPH_STREAM_e AUDDRV_GetCSLStreamID(AUDDRV_STREAM_e streamID);
 //******************************************************************************
 // local function definitions
 //******************************************************************************
-
-#ifdef LMP_BUILD
-// ==========================================================================
-//
-// Function Name: void AUDDRV_LISR(void)
-//
-// Description: CAPH_NORM_IRQ LISR
-//
-// =========================================================================
-
-static void AUDDRV_LISR(void)
-{
-	IRQ_Disable(CAPH_NORM_IRQ);
-	OSINTERRUPT_Trigger(AUDDRV_HISR_HANDLE);
-}
-// ==========================================================================
-//
-// Function Name: void AUDDRV_HISR(void)
-//
-// Description:CAPH_NORM_IRQ HISR
-//
-// =========================================================================
-
-static void AUDDRV_HISR(void)
-{
-	csl_caph_dma_process_interrupt();
-
-	IRQ_Clear(CAPH_NORM_IRQ);
-	IRQ_Enable(CAPH_NORM_IRQ);
-    return;
-}
-#endif
 /****************************************************************************
 *
 *  Function Name: Result_t AUDDRV_HWControl_Init(void)
@@ -263,14 +226,7 @@ Result_t AUDDRV_HWControl_Init(void)
 
 #endif
 
-#ifdef LMP_BUILD
-	AUDDRV_HISR_HANDLE = OSINTERRUPT_Create( (IEntry_t)&AUDDRV_HISR, HISRNAME_CAPH, IPRIORITY_HIGH, HISRSTACKSIZE_CAPH);
-    
-    // Register the LISR to the IRQ.
-    IRQ_Register(CAPH_NORM_IRQ, AUDDRV_LISR);
-    IRQ_Clear(CAPH_NORM_IRQ);  
-    IRQ_Enable(CAPH_NORM_IRQ);  
-#endif
+    CAPHIRQ_Init();
 
     memset(&addr, 0, sizeof(CSL_CAPH_HWCTRL_BASE_ADDR_t));
     addr.cfifo_baseAddr = CFIFO_BASE_ADDR1;

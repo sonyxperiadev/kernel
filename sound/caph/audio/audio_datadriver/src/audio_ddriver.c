@@ -165,11 +165,9 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
             {
-                // initialize audvoc render
-                // should use CAPH device IDs and not AUDVOC
-		//aud_drv->stream_id = csl_audio_render_init (CSL_AUDVOC_DEV_NONE,CSL_AUDVOC_DEV_RENDER_AUDIO);
-		aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY,CSL_CAPH_DEV_EP);
-                audio_render_driver =  aud_drv;
+		   // we don't have info on sink here, move the init code before start
+ 		    aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY,CSL_CAPH_DEV_EP);
+	            audio_render_driver =  aud_drv;
             }
             break;
         case AUDIO_DRIVER_CAPT_HQ:
@@ -400,7 +398,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                  */
                 //((aud_drv->sample_rate/1000) * (aud_drv->num_channel) * 2 * (aud_drv->interrupt_period));  **period_size comes directly
                 block_size = aud_drv->interrupt_period;
-			    num_blocks = (aud_drv->ring_buffer_size/block_size);
+			    num_blocks = 2; //limitation for RHEA
 
                 // configure the render driver before starting
                 result_code = csl_audio_render_configure ( aud_drv->sample_rate, 
@@ -757,7 +755,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
 static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
 {
 
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_RenderDmaCallback::\n");
+    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_RenderDmaCallback::\n");
 
     if((audio_render_driver == NULL))
     {

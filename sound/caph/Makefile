@@ -12,8 +12,8 @@
 #*******************************************************************************************/
 
 #
-## Makefile for ALSA BRCM OMX
-#
+## Makefile for audio CAPH driver
+
 # -D USE_HAL_AUDIO_THREAD
 
 
@@ -56,6 +56,7 @@ EXTRA_CFLAGS += -I $(src)/soc/debug/public
 #Platform header files
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/
+EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/mach
 EXTRA_CFLAGS += -I ./drivers/char/broadcom/
 #EXTRA_CFLAGS += -I ./arch/arm/mach-island/include/
 #EXTRA_CFLAGS += -I ./arch/arm/mach-island/include/mach/

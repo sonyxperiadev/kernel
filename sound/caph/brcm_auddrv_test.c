@@ -53,22 +53,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_consts.h"
 #include "chal_types.h"
 #include "auddrv_def.h"
-//#include "brcm_rdb_sysmap.h"
-//#include "brcm_rdb_syscfg.h"
-//#include "shared.h"
-//#include "dspcmd.h"
-//#include "ripcmdq.h"
-//#include "ripisr.h"
-//#include "audio_consts.h"
-#ifdef LMP_BUILD
-#include "csl_aud_drv.h"
-#endif
-//#include "audio_vdriver.h"
-//#include "sysparm.h"
-//#include "ostask.h"
-//#include "audioapi_asic.h"
-//#include "audio_ipc.h"
-//#include "log.h"
+#include "log.h"
 #include "csl_caph.h"
 #include "drv_caph.h"
 #include "drv_audio_common.h"
@@ -76,30 +61,14 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_controller.h"
 #include "audio_ddriver.h"
 
-#if 0
-
-#include "mobcom_types.h"
-#include "resultcode.h"
-#include "audio_consts.h"
-#include "chal_types.h"
-
-#include "brcm_rdb_sysmap.h"
-#include "brcm_rdb_ahb_tl3r.h"
-#include "brcm_rdb_dsp_audio.h"
-#include "brcm_rdb_syscfg.h"
-#include "chal_audiomisc.h"
-#include "chal_audioaopath.h"
-
-// Include BRCM AAUD driver API header files
-#include "audio_controller.h"
-#include "audio_ddriver.h"
-
-//#include "bts_44k_s_short.h"
-//#include "sampleWAV16bit.h"
-//#include "lrefpip.h"
-//#include "dataref.h"
-#include "dataref1.h"
-
+#ifdef ENABLE_TESTDATA
+UInt8 samplePCM16_inaudiotest[] = {
+	#include "pcm_16_48khz_mono.txt"
+};
+#else
+UInt8 samplePCM16_inaudiotest[165856] = {
+       0
+};
 #endif
 
 
@@ -127,7 +96,6 @@ static AUDDRV_PathID ULPathID = 0;
 static AUDDRV_PathID DLPathID = 0;
 
 
-#if 0
 
 static int HandlePlayCommand();
 static int HandleCaptCommand();
@@ -141,7 +109,6 @@ void dump_audio_registers();
 
 static irqreturn_t audvoc_isr(int irq, void *dev_id);
 
-#endif
 
 
 //+++++++++++++++++++++++++++++++++++++++
@@ -196,7 +163,7 @@ ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev, struct device_attribute 
 											sgBrcm_auddrv_TestValues[2],
 											sgBrcm_auddrv_TestValues[3],
                                                                              sgBrcm_auddrv_TestValues[4]);
-              //HandlePlayCommand();
+              HandlePlayCommand();
     	      break;
         }
        case 2: //Aud_rec
@@ -775,7 +742,6 @@ static int HandleControlCommand()
 }
 #endif
 
-#if 0 
 static unsigned long current_ipbuffer_index = 0;
 static unsigned long dma_buffer_write_index = 0;
 
@@ -789,7 +755,6 @@ static int HandlePlayCommand()
     
     unsigned long copy_bytes;
     static AUDIO_DRIVER_HANDLE_t drv_handle = NULL;
-    //static AUDIO_DRIVER_BUFFER_t buf_param;
     static AUDIO_DRIVER_CONFIG_t drv_config;
     static dma_addr_t            dma_addr;
     static AUDCTRL_SPEAKER_t     spkr;
@@ -809,16 +774,6 @@ static int HandlePlayCommand()
             DEBUG(" Audio DDRIVER Open\n");
             drv_handle = AUDIO_DRIVER_Open(AUDIO_DRIVER_PLAY_AUDIO);
             DEBUG(" Audio DDRIVER Open Complete\n");
-
-#if 0 //enable this for direct interrupt- csl_aud_drv_hw.c file also needs to be changed along with this
-            // Temporory code
-            ret = request_irq(IRQ_AUDVOC, audvoc_isr, IRQF_DISABLED, "aud_voc", NULL);
-	        if (ret != 0) {
-		        DEBUG(("Failed to register ISR.\n"));
-		        return ret;
-	        }
-#endif
-            
         }
         break;
         case 2://configure playback device
@@ -828,8 +783,10 @@ static int HandlePlayCommand()
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)AUDIO_DRIVER_TEST_InterruptPeriodCB);
 
             // configure defaults
-            drv_config.sample_rate = AUDIO_SAMPLING_RATE_8000;
-            drv_config.num_channel = AUDIO_CHANNEL_STEREO;
+            
+            drv_config.sample_rate = AUDIO_SAMPLING_RATE_48000;
+            
+            drv_config.num_channel = AUDIO_CHANNEL_MONO;
             drv_config.bits_per_sample = AUDIO_16_BIT_PER_SAMPLE;
 
             if(sgBrcm_auddrv_TestValues[2] != 0)
@@ -847,8 +804,7 @@ static int HandlePlayCommand()
 
             //set the interrupt period
             period_bytes = period_ms * (drv_config.sample_rate/1000) * (drv_config.num_channel) * 2;
-            num_blocks =  PCM_TEST_MAX_PLAYBACK_BUF_BYTES/period_bytes;
-
+	    	num_blocks = 2; // for RHEA
             DEBUG("Period: ms=%d bytes=%d blocks:%d\n",period_ms,period_bytes,num_blocks);
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_INT_PERIOD,(void*)&period_bytes);
 
@@ -865,88 +821,68 @@ static int HandlePlayCommand()
 
             current_ipbuffer_index = 0;
             dma_buffer_write_index = 0;
-#if 1
-            // copy the buffer with data
-            if((num_blocks * period_bytes) <= sizeof(hqAudioTestBuf))
+
+            if((num_blocks * period_bytes) <= sizeof(samplePCM16_inaudiotest))
                 copy_bytes = (num_blocks * period_bytes);
             else
-                copy_bytes  = sizeof(hqAudioTestBuf);
-
-            src = ((char*)hqAudioTestBuf) + current_ipbuffer_index;
-            dest = buf_param.pBuf + dma_buffer_write_index;
-
-            //memset(buf_param.pBuf,0,PCM_TEST_MAX_PLAYBACK_BUF_BYTES);
-            memcpy(dest,src,copy_bytes);
-
-            current_ipbuffer_index += copy_bytes;
-
-            //if(current_ipbuffer_index >= sizeof(hqAudioTestBuf))
-             //   current_ipbuffer_index = 0;
-            
-            //memset(buf_param.pBuf,0xbaba,PCM_TEST_MAX_PLAYBACK_BUF_BYTES);
-#else
-           if(PCM_TEST_MAX_PLAYBACK_BUF_BYTES <= sizeof(samplePCM16_inaudiotest))
-                copy_bytes = PCM_TEST_MAX_PLAYBACK_BUF_BYTES;
-            else
                 copy_bytes  = sizeof(samplePCM16_inaudiotest);
-
-            //memset(buf_param.pBuf,0,PCM_TEST_MAX_PLAYBACK_BUF_BYTES);
-            memcpy(buf_param.pBuf,samplePCM16_inaudiotest,copy_bytes);
- 
-
-#endif
-
-            //set the buffer params
-            AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
-
-            //disable the voice path -- Just to be sure
-            //AUDCTRL_DisableTelephony(AUDIO_HW_NONE, AUDIO_HW_NONE, AUDCTRL_MIC_MAIN , AUDCTRL_SPK_HANDSET);
-
-            // clear anacr1
-           // *((UInt32 *) (SYSCFG_BASE_ADDR+SYSCFG_ANACR1_OFFSET)) = 0;
-
-            //dump_audio_registers();
-
+	
+            src = ((char*)samplePCM16_inaudiotest) + current_ipbuffer_index;
+            dest = buf_param.pBuf + dma_buffer_write_index;
+       
+            memcpy(dest,src,copy_bytes);
+	    
+            current_ipbuffer_index += copy_bytes;
+            
+	        //set the buffer params
+	    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
             DEBUG(" Audio DDRIVER Config Complete\n");
         }
         break;
         case 3: //Start the playback
             {
-                signed long timeout_jiffies = 2;
+		AUDDRV_DEVICE_e aud_dev = AUDDRV_DEV_EP; // EP is default now
 
                 DEBUG(" Start Playback\n");
                 spkr = sgBrcm_auddrv_TestValues[2];
 
                 AUDCTRL_SaveAudioModeFlag(spkr);
 
-
-                //AUDCTRL_EnablePlay(AUDIO_HW_NONE,
+		if (spkr == 0)// for rhea
+		{
+			// earpiece
+			aud_dev = AUDDRV_DEV_EP;  
+		}
+		else  if (spkr == 1)// for rhea
+		{
+			// headset
+			aud_dev = AUDIO_HW_HEADSET_OUT; 
+		}
+		else  if (spkr == 2)// for rhea
+		{
+			// ihf
+			aud_dev = AUDIO_HW_IHF_OUT;  
+		}	
                 AUDCTRL_EnablePlay(AUDIO_HW_MEM,
                                    AUDIO_HW_AUDIO_OUT,
                                    AUDIO_HW_NONE,
                                    spkr,
-				                   drv_config.num_channel,
+		                   drv_config.num_channel,
                                    drv_config.sample_rate
-				                    );
-
-               
+		                    );
+        
+	      	AUDCTRL_SetPlayVolume (AUDIO_HW_AUDIO_OUT, // for Audio 
+   	              			  spkr, 
+    					  AUDIO_GAIN_FORMAT_VOL_LEVEL, 
+					  0x001E, 0x001E); // 0x1E is 30 decimal. 0x001E for both L and R channels.
 
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,NULL);
+  
                 DEBUG("Playback started\n");
 
-                 
-#if 0                
-                do
-                {
-                    DEBUG("Waiting...%d \n",timeout_jiffies);
-                    //set_current_state(TASK_UNINTERRUPTIBLE);
-                    // wait for 10sec 128 jiffies = 1 sec
-                    timeout_jiffies = schedule_timeout (timeout_jiffies);
-                }while (timeout_jiffies > 0);
-
-                
-
+		//  Need to implement some sync mechanism
+	        OSTASK_Sleep(10000);
                 DEBUG(" Stop playback\n");
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
@@ -954,9 +890,8 @@ static int HandlePlayCommand()
                 //disable the playback path
                 AUDCTRL_DisablePlay(AUDIO_HW_NONE,AUDIO_HW_AUDIO_OUT,spkr);
 
-
                 AUDIO_DRIVER_Close(drv_handle);
-#endif
+
             }
             break;
         default:
@@ -971,37 +906,26 @@ static void AUDIO_DRIVER_TEST_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle
     char* src;
     char* dest;
 
-    DEBUG(" %lx: Playback Interrupt- jiffies=%d count_int=%d\n",jiffies,count_int++);
+    //DEBUG(" %lx: Playback Interrupt- jiffies=%d count_int=%d\n",jiffies,count_int++);
 
-#if 0
-    if((current_ipbuffer_index + period_bytes) >= sizeof(hqAudioTestBuf))
-        current_ipbuffer_index = 0;
-
-    src = ((char*)hqAudioTestBuf) + current_ipbuffer_index;
-#else
     if((current_ipbuffer_index + period_bytes) >= sizeof(samplePCM16_inaudiotest))
         current_ipbuffer_index = 0;
 
     src = ((char*)samplePCM16_inaudiotest) + current_ipbuffer_index;
-#endif
     dest = buf_param.pBuf + dma_buffer_write_index;
 
-    //memset(buf_param.pBuf,0,PCM_TEST_MAX_PLAYBACK_BUF_BYTES);
     memcpy(dest,src,period_bytes);
 
     current_ipbuffer_index += period_bytes;
     dma_buffer_write_index += period_bytes;
 
-    //if(current_ipbuffer_index >= sizeof(hqAudioTestBuf))
-     //   current_ipbuffer_index = 0;
-
     if(dma_buffer_write_index >= (num_blocks * period_bytes))
         dma_buffer_write_index = 0;
-    //dump_audio_registers();
     return;
 }
 
 
+#if 0
 static unsigned long current_capt_buffer_index = 0;
 static unsigned long capt_dma_buffer_read_index = 0;
 

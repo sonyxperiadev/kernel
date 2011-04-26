@@ -59,7 +59,6 @@
 #ifndef _OSDW_DSP_DRV_H_
 #define _OSDW_DSP_DRV_H_
 
-
-#include "mobcom_types.h"
+void CAPHIRQ_Init( void);
 
 #endif //_OSDW_DSP_DRV_H_
