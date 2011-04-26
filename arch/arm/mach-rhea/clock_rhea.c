@@ -26,6 +26,7 @@
 #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <linux/clk.h>
 #include <asm/io.h>
@@ -48,6 +49,7 @@ static struct proc_clock arm_clk = {
 	Reference clocks
 *****************************************************************************/
 DECLARE_REF_CLK (crystal,	CRYSTAL, 			26*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK (dummy,		DUMMY, 				0,		1,	0);
 DECLARE_REF_CLK (frac_1m,	FRAC_1M,			1*CLOCK_1M,		1,	0);
 DECLARE_REF_CLK (ref_96m_varVDD,	REF_96M_VARVDD,		96*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK (var_96m,	VAR_96M,			96*CLOCK_1M,	1,	0);
@@ -94,6 +96,17 @@ DECLARE_REF_CLK (testdebug,		TEST_DEBUG,		125*CLOCK_1M,	1,	0);
 /*****************************************************************************
 	Reference clocks
 *****************************************************************************/
+static struct ccu_clock root_ccu_clk = {
+		.clk	=	{
+			.name	=	"root_ccu_clk",
+			.ops	=	&ccu_clk_ops,
+			.ccu_id =       BCM2165x_ROOT_CCU,
+			.flags	=	BCM2165x_ROOT_CCU_FLAGS,
+		},
+		.ccu_clk_mgr_base	=	ROOT_CLK_BASE_ADDR,
+		.wr_access_offset	=	ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,
+};
+
 DECLARE_CCU_CLK(kpm_ccu, 2, KONA_MST, KPM, MASK,
 	26*CLOCK_1M,  52*CLOCK_1M, 104*CLOCK_1M, 156*CLOCK_1M,
 	156*CLOCK_1M, 208*CLOCK_1M, 312*CLOCK_1M, 312*CLOCK_1M);
@@ -494,7 +507,10 @@ DECLARE_BUS_CLK(ssp4_apb, SSP4, SSP4_APB, khub_ccu, HUB, KHUB,
 /* KPM peripheral */
 static struct clk *sdio_clk_src_tbl[] =
 {
-	name_to_clk(crystal),
+    /*parent as crystal is not working currently. SDIO clock is not getting
+     * stabilised with crystal clock. Hence this temp fix.*/
+/*	name_to_clk(crystal), */
+	name_to_clk(dummy),
 	name_to_clk(var_52m),
 	name_to_clk(ref_52m),
 	name_to_clk(var_96m),
@@ -959,6 +975,7 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	CLK_LK(usbh_48m),
 	CLK_LK(ref_cx40),
 /* CCUs */
+	CLK_LK(root_ccu),
 	CLK_LK(kpm_ccu),
 	CLK_LK(kps_ccu),
 	CLK_LK(mm_ccu),
@@ -1193,42 +1210,6 @@ static int clock_module_temp_fixes(void)
     * Temp fixes for clocks in Kona master CCU.
     **************************************************/
     temp_clk = clk_get(NULL, "usb_otg_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio1_sleep_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio1_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio1_ahb_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio2_sleep_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio2_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio2_ahb_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio3_sleep_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio3_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "sdio3_ahb_clk");
     clk_enable(temp_clk);
     clk_put(temp_clk);
 

@@ -709,6 +709,7 @@ unsigned long clock_get_xtal(void);
 enum {
     BCM2165x_CLK_ARM = 1,
     BCM2165x_CLK_CRYSTAL,
+    BCM2165x_CLK_DUMMY,
     BCM2165x_CLK_FRAC_1M,
     BCM2165x_CLK_REF_96M_VARVDD,
     BCM2165x_CLK_VAR_96M,

@@ -30,6 +30,7 @@
 #include <mach/brcm_ccu_clk_mgr_reg.h>
 #include <asm/io.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 
 #ifdef CONFIG_SMP
 #include <asm/cpu.h>
@@ -685,7 +686,6 @@ static unsigned long calc_pll_fractional_divisor(struct peri_clock *peri_clk, un
 static int peri_clk_set_rate(struct clk *c, unsigned long rate)
 {
 	int ret = 0, reg;
-	int ind = 0;
 	unsigned long diff;
 	unsigned long temp_rate=0, temp_div=1, temp_prediv=0, temp_fraction=0;
 	struct peri_clock *peri_clk = to_peri_clk(c);
@@ -747,10 +747,10 @@ static int peri_clk_set_rate(struct clk *c, unsigned long rate)
 	iounmap (base);
 
 	c->rate = temp_rate;
-	c->div = temp_div;
+	c->div = temp_div + 1;
 
-	clk_dbg("At %s exit %s set rate %lu div %lu ind %d parent %lu\n", __func__, c->name,
-		c->rate, c->div, ind, c->parent->rate);
+	clk_dbg("At %s exit %s set rate %lu div %lu sel %d parent %lu\n", __func__, c->name,
+		c->rate, c->div, c->src->sel, c->parent->rate);
 	return ret;
 }
 
@@ -834,6 +834,9 @@ static int ccu_clk_enable(struct clk *c, int enable)
 	int reg, ret = 0;
 
 	clk_dbg("%s enable: %d, ccu name:%s\n",__func__, enable, c->name);
+	if (c->ccu_id == BCM2165x_ROOT_CCU)
+	    return 0;
+
 	base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
 	if (!base)
 		return -ENOMEM;
@@ -886,6 +889,9 @@ static int ccu_clk_enable(struct clk *c, int enable)
 static unsigned long ccu_clk_get_rate(struct clk *c)
 {
 	struct ccu_clock *ccu_clk = to_ccu_clk(c);
+
+	if (c->ccu_id == BCM2165x_ROOT_CCU)
+	    return 0;
 	c->rate = ccu_clk->freq_tbl[ccu_clk->freq_id];
 	return 	c->rate;
 }
@@ -915,6 +921,24 @@ static int trigger_active_load(struct clk *clk, void __iomem  *base)
 
 static int root_ccu_init(struct clk *clk)
 {
+    void __iomem *base;
+    struct ccu_clock *ccu_clk = to_ccu_clk(clk);
+    base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
+    if(base)
+	return -ENOMEM;
+
+    clk_dbg ("%s \n", __func__);
+    writel(CLK_WR_ACCESS_PASSWORD, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+
+    // HWRHEA-877: var_312m_clk and var_96m_clk in rootCCU have wrong default
+    // pll_select vaules, SW should program rootccu VAR_312M_DIV/VAR_48M_DIV
+    // to use PLL1 clock instead of default PLL0i
+    writel (0x1, base  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+    writel (0x1, base + ROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
+
+    writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+    iounmap (base);
+
     return 0;
 }
 
