@@ -36,7 +36,7 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* BSC2 CLK This a hack for rhearay*/
 	PIN_BSC_CFG(GPIO22, LCD_SCL, 0x20),
-	/* BSC2 DAT*/	
+	/* BSC2 DAT*/
 	PIN_BSC_CFG(GPIO23, DMIC0CLK, 0x20),
 
 #if 0  /* To be update for SamoaRay*/
