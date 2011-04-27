@@ -28,14 +28,18 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 
 static struct __init pin_config board_pin_config[] = {
-	/* BSC1 */
-	PIN_BSC_CFG(BSC1CLK, BSC1CLK, 0x20),
-	PIN_BSC_CFG(BSC1DAT, BSC1DAT, 0x20),
 
-	/* BSC2 */
-	PIN_BSC_CFG(GPIO16, BSC2CLK, 0x20),
-	PIN_BSC_CFG(GPIO17, BSC2DAT, 0x20),
+	/* BSC1 CLK This a hack for rhearay*/
+	PIN_BSC_CFG(BSC1_DAT, BSC1_DAT, 0x20),
+	/* BSC1 DAT*/
+	PIN_BSC_CFG(BSC2_CLK, BSC2_CLK, 0x20),
 
+	/* BSC2 CLK This a hack for rhearay*/
+	PIN_BSC_CFG(GPIO22, LCD_SCL, 0x20),
+	/* BSC2 DAT*/	
+	PIN_BSC_CFG(GPIO23, DMIC0CLK, 0x20),
+
+#if 0  /* To be update for SamoaRay*/
 	/* PMU BSC */
 	PIN_BSC_CFG(PMBSCCLK, PMBSCCLK, 0x20),
 	PIN_BSC_CFG(PMBSCDAT, PMBSCDAT, 0x20),
@@ -105,17 +109,16 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO25, LCDD3, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO26, LCDD2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO27, LCDD1, 0, OFF, ON, 0, 0, 8MA),
+#endif
 
 };
 
 /* board level init */
 int __init pinmux_board_init(void)
 {
-#if 0
 	int i;
 	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
 		pinmux_set_pin_config(&board_pin_config[i]);
 
-#endif
 	return 0;
 }

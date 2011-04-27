@@ -101,7 +101,10 @@ static int __init samoa_init(void)
 #ifdef CONFIG_HAVE_CLK
 	//clock_init();
 #endif
-	//pinmux_init();
+
+#ifndef CONFIG_MACH_SAMOA_FPGA
+	pinmux_init();
+#endif
 
 #ifdef CONFIG_GPIOLIB
 	/* samoa has 4 banks of GPIO pins */ 
