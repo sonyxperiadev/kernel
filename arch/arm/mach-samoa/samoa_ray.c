@@ -260,9 +260,14 @@ static void __init samoa_ray_add_devices(void)
 
 /* Stub clock API to allow drivers to build */
 void clk_disable(struct clk *clk) {;}
-int clk_enable(struct clk *clk) {return 1;}
+int clk_enable(struct clk *clk) {return 0;}
+unsigned long clk_get_rate(struct clk *clk) {return 1000000;}
+int clk_set_rate(struct clk *clk, unsigned long rate) {return 0;}
 EXPORT_SYMBOL(clk_disable);
 EXPORT_SYMBOL(clk_enable);
+EXPORT_SYMBOL(clk_get_rate);
+EXPORT_SYMBOL(clk_set_rate);
+
 
 
 void __init board_init(void)
