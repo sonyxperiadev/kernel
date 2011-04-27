@@ -27,6 +27,7 @@
 #include <linux/io.h>
 #include <asm/clkdev.h>
 #include <mach/clock.h>
+#include <mach/io_map.h>
 #include <mach/brcm_ccu_clk_mgr_reg.h>
 #include <asm/io.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
@@ -791,8 +792,10 @@ static int peri_clk_init(struct clk *clk)
     void __iomem *base;
 
     base = ioremap (peri_clk->ccu_clk_mgr_base, SZ_4K);
-    if (!base)
+    if (!base) {
+	printk (KERN_INFO "%s ioremap error\n", __func__);
 	return -ENOMEM;
+    }
     /* enable access */
     writel(CLK_WR_ACCESS_PASSWORD, base + peri_clk->wr_access_offset);
     /* clkgate */
@@ -922,12 +925,8 @@ static int trigger_active_load(struct clk *clk, void __iomem  *base)
 static int root_ccu_init(struct clk *clk)
 {
     void __iomem *base;
-    struct ccu_clock *ccu_clk = to_ccu_clk(clk);
-    base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
-    if(base)
-	return -ENOMEM;
 
-    clk_dbg ("%s \n", __func__);
+    base = (void __iomem *)KONA_ROOT_CLK_VA;
     writel(CLK_WR_ACCESS_PASSWORD, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
 
     // HWRHEA-877: var_312m_clk and var_96m_clk in rootCCU have wrong default
@@ -935,9 +934,10 @@ static int root_ccu_init(struct clk *clk)
     // to use PLL1 clock instead of default PLL0i
     writel (0x1, base  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
     writel (0x1, base + ROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
+    writel (0x5, base + ROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET);
+    while(readl(base + ROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET));
 
     writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
-    iounmap (base);
 
     return 0;
 }
@@ -973,10 +973,7 @@ static int kona_master_ccu_init(struct clk *clk)
     void __iomem *base;
     struct ccu_clock *ccu_clk = to_ccu_clk(clk);
 
-    base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
-    if(base)
-	return -ENOMEM;
-    writel(CLK_WR_ACCESS_PASSWORD, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+    base = (void __iomem *)KONA_KPM_CLK_VA;
 
     val = (ccu_clk->freq_id) | (ccu_clk->freq_id << 8)
     		| (ccu_clk->freq_id << 16) | (ccu_clk->freq_id << 24);
@@ -984,7 +981,6 @@ static int kona_master_ccu_init(struct clk *clk)
     trigger_active_load(clk, base);
 
     writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
-    iounmap (base);
 
     return 0;
 }
@@ -995,9 +991,7 @@ static int kona_slave_ccu_init(struct clk *clk)
     void __iomem *base;
     struct ccu_clock *ccu_clk = to_ccu_clk(clk);
 
-    base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
-    if(base)
-	return -ENOMEM;
+    base = (void __iomem *)KONA_KPS_CLK_VA;
     writel(CLK_WR_ACCESS_PASSWORD, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
 
     val = (ccu_clk->freq_id) | (ccu_clk->freq_id << 8)
@@ -1006,7 +1000,6 @@ static int kona_slave_ccu_init(struct clk *clk)
     trigger_active_load(clk, base);
 
     writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
-    iounmap (base);
 
     return 0;
 }
@@ -1016,8 +1009,8 @@ static int ccu_init(struct clk *c)
 {
     int ret = 0;
 
+    clk_dbg ("%s %s\n", __func__, c->name);
     switch(c->ccu_id) {
-    int ret = 0;
     case BCM2165x_ROOT_CCU:
 	ret = root_ccu_init(c);
 	break;
@@ -1115,8 +1108,10 @@ static int bus_clk_init(struct clk *clk)
     if ((clk->flags & SW_GATE) && (clk->flags & AUTO_GATE))
 	return -EINVAL;
     base = ioremap (bus_clk->ccu_clk_mgr_base, SZ_4K);
-    if (!base)
+    if (!base) {
+	printk (KERN_INFO "%s ioremap error\n", __func__);
 	return -ENOMEM;
+    }
     /* enable access */
     writel(CLK_WR_ACCESS_PASSWORD, base + bus_clk->wr_access_offset);
     /* clkgate */
