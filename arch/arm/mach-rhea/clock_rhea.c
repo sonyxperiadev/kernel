@@ -507,10 +507,7 @@ DECLARE_BUS_CLK(ssp4_apb, SSP4, SSP4_APB, khub_ccu, HUB, KHUB,
 /* KPM peripheral */
 static struct clk *sdio_clk_src_tbl[] =
 {
-    /*parent as crystal is not working currently. SDIO clock is not getting
-     * stabilised with crystal clock. Hence this temp fix.*/
-/*	name_to_clk(crystal), */
-	name_to_clk(dummy),
+	name_to_clk(crystal),
 	name_to_clk(var_52m),
 	name_to_clk(ref_52m),
 	name_to_clk(var_96m),
