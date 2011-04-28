@@ -155,7 +155,7 @@ void AUDCTRL_EnableTelephony(
 
 	OSTASK_Sleep( 100 );
 	
-	//powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
+	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
 
 #if defined(WIN32)
 	{
@@ -195,7 +195,7 @@ void AUDCTRL_DisableTelephony(
 {
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_DisableTelephony \n" );
 
-	//powerOnExternalAmp( speaker, TelephonyUseExtSpkr, FALSE );
+	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, FALSE );
 	OSTASK_Sleep( 100 );
 
 	// The following is the sequence we need to follow
@@ -270,7 +270,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
 	}	
 		
 	OSTASK_Sleep( 100 );  //depending on switch to headset or off of headset, PMU is first off or last on.
-	//powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
+	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
 }
 
 //============================================================================

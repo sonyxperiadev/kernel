@@ -67,6 +67,15 @@ Broadcom's express prior written consent.
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
+#ifdef LMP_BUILD
+static Interrupt_t AUDDRV_HISR_HANDLE;
+static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
+static void AUDDRV_LISR(void);
+static void AUDDRV_HISR(void);
+#else
+#include "clk.h"
+static struct clk *clkID[MAX_AUDIO_CLOCK_NUM] = {NULL,NULL,NULL,NULL,NULL,NULL};
+#endif
 //****************************************************************************
 // local function declarations
 //****************************************************************************
@@ -88,33 +97,41 @@ Result_t AUDDRV_HWControl_Init(void)
     CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
    	printk(KERN_INFO "AUDDRV_HWControl_Init:: \n");
 
-#ifdef LMP_BUILD
-                                
-    //Enable CAPH clock.
-    id[0] = PRM_client_register("AUDIO_CAPH_DRV");
-    PRM_set_clock_state(id[0], RESOURCE_CAPH, CLOCK_ON);
-    PRM_set_clock_speed(id[0], RESOURCE_CAPH, 156000000);
+#ifndef LMP_BUILD
+//Enable CAPH clock.
+    clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
+    clk_enable(clkID[0]);
+    clk_set_rate(clkID[0], 156000000);
 
-	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP3, KHUB_SSP3_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
-    //id[1] = PRM_client_register("AUDIO_CAPH_SSP3_DRV");
-    //PRM_set_clock_state(id[1], RESOURCE_SSP3_AUDIO, CLOCK_ON);
-    //PRM_set_clock_speed(id[1], RESOURCE_SSP3_AUDIO, 26000000);
+	//clkID[1] = clk_get(NULL, "audioh_apb_clk");
+    //clk_enable(clkID[1]);
+    //clk_set_rate(clkID[1], 156000000);
+
+	clkID[1] = clk_get(NULL, "ssp3_audio_clk");
+    clk_enable(clkID[1]);
+    //clk_set_rate(clkID[1], 156000000);
     
 	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_2P4M_CLK, CLOCK_CLK_EN, clock_op_enable);
-    id[2] = PRM_client_register("AUDIO_AUDIOH1_DRV");
-    PRM_set_clock_state(id[2], RESOURCE_AUDIOH_2P4M, CLOCK_ON);
+    clkID[2] = clk_get(NULL, "audioh_2p4m_clk");
+    clk_enable(clkID[2]);
     // no need to set speed, it is fixed
-    //PRM_set_clock_speed(id[2], RESOURCE_AUDIOH_2P4M, 26000000);
-
+    //clk_set_rate(clkID[2], 26000000);
+                                
 	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_26M_CLK, CLOCK_CLK_EN, clock_op_enable);
-    id[3] = PRM_client_register("AUDIO_AUDIOH2_DRV");
-    PRM_set_clock_state(id[3], RESOURCE_AUDIOH, CLOCK_ON);
+    clkID[3] = clk_get(NULL,"audioh_26m_clk");
+    clk_enable(clkID[3]);
 	// no need to set the speed. it is fixed
-    //PRM_set_clock_speed(id[3], RESOURCE_AUDIOH, 26000000);
+    //clk_set_rate(clkID[3],  26000000);
 
 	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_156M_CLK, CLOCK_CLK_EN, clock_op_enable);
-    id[4] = PRM_client_register("AUDIO_AUDIOH3_DRV");
-    PRM_set_clock_state(id[4], RESOURCE_AUDIOH_156M, CLOCK_ON);
+    clkID[4] = clk_get(NULL,"audioh_156m_clk");
+    clk_enable(clkID[4]);
+    //clk_set_rate(clkID[4], 26000000);
+
+	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
+    clkID[5] = clk_get(NULL, "ssp4_audio_clk");
+    clk_enable(clkID[5]);
+    //clk_set_rate(clkID[5], 156000000);
 #else
     // hard code it.
 	UInt32 regVal;

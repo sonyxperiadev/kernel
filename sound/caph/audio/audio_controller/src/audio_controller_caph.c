@@ -77,12 +77,15 @@ ANY LIMITED REMEDY.
 #include "drv_audio_capture.h"
 #include "drv_audio_render.h"
 
-#ifdef LMP_BUILD
 #if !defined(NO_PMU)
-#include "hal_pmu.h"
-#include "hal_pmu_private.h"
+#ifdef PMU_BCM59055
+#include "linux/broadcom/bcm59055-audio.h"
+#elif PMU_MAX8986
+#include "linux/broadcom/max8986/max8986-audio.h"
 #endif
 #endif
+
+
 
 //=============================================================================
 // Public Variable declarations
@@ -256,13 +259,6 @@ static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 	{AUDCTRL_MIC_EANC_DIGI,		    AUDDRV_DEV_EANC_DIGI_MIC}
 };
 
-
-#ifdef LMP_BUILD
-#if !defined(NO_PMU)
-static PMU_HS_st_t pmu_hs;
-static PMU_IHF_st_t pmu_ihf;
-#endif
-#endif
 
 //static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
 
@@ -528,7 +524,7 @@ void AUDCTRL_EnablePlay(
     //Enable the PMU for HS/IHF.
     if ((sink == AUDIO_HW_HEADSET_OUT)||(sink == AUDIO_HW_IHF_OUT)) 
     {
-		//powerOnExternalAmp( spk, AudioUseExtSpkr, TRUE );
+		powerOnExternalAmp( spk, AudioUseExtSpkr, TRUE );
     }
 
 #if 0
@@ -585,7 +581,7 @@ void AUDCTRL_DisablePlay(
     //Disable the PMU for HS/IHF.
     if ((sink == AUDIO_HW_HEADSET_OUT)||(sink == AUDIO_HW_IHF_OUT)) 
     {
-		//powerOnExternalAmp( spk, AudioUseExtSpkr, FALSE );
+		powerOnExternalAmp( spk, AudioUseExtSpkr, FALSE );
     }
 }
 //============================================================================
@@ -656,7 +652,7 @@ void AUDCTRL_SetPlayVolume(
     (void) AUDDRV_HWControl_SetSinkGain(pathID, gainHW, gainHW2);
 
     // Set teh gain to the external amplifier
-    //SetGainOnExternalAmp(spk, &(gainMapping.gainPMU));
+    SetGainOnExternalAmp(spk, &(gainMapping.gainPMU));
 
     return;
 }
@@ -1182,7 +1178,7 @@ void AUDCTRL_SetAudioLoopback(
 	    {
             AUDCTRL_EnableRecord (audRecHw, audPlayHw, mic, AUDIO_CHANNEL_STEREO, 48000);
 	        if ((speaker == AUDCTRL_SPK_LOUDSPK)||(speaker == AUDCTRL_SPK_HEADSET))	
-	            //powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
+	            powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
 	        return;
 	    }
 
@@ -1226,7 +1222,7 @@ void AUDCTRL_SetAudioLoopback(
 	if ((speaker == AUDCTRL_SPK_LOUDSPK)
 	    ||(speaker == AUDCTRL_SPK_HEADSET))	
 	{
-	//powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	   
+		powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	   
 	} 
     } else {
         // Disable Analog Mic path
@@ -1246,36 +1242,40 @@ void AUDCTRL_SetAudioLoopback(
 	    {
             AUDCTRL_DisableRecord (audRecHw, audPlayHw, mic);
 	        if ((speaker == AUDCTRL_SPK_LOUDSPK)||(speaker == AUDCTRL_SPK_HEADSET))	
-	            //powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
+	            powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
 	        return;
 	    }
 
-	if((mic == AUDCTRL_MIC_DIGI1) 
-	   || (mic == AUDCTRL_MIC_DIGI2) 
-	   || (mic == AUDCTRL_MIC_DIGI3) 
-	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
-	   || (mic == AUDDRV_MIC_SPEECH_DIGI))		
-	{
-		// Enable power to digital microphone
-		//powerOnDigitalMic(FALSE);
-	}	
-	//Enable PMU for headset/IHF
-	if ((speaker == AUDCTRL_SPK_LOUDSPK)
-	    ||(speaker == AUDCTRL_SPK_HEADSET))	
-	//powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
+		if((mic == AUDCTRL_MIC_DIGI1) 
+		   || (mic == AUDCTRL_MIC_DIGI2) 
+		   || (mic == AUDCTRL_MIC_DIGI3) 
+		   || (mic == AUDCTRL_MIC_DIGI4) 
+		   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
+		   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
+		   || (mic == AUDDRV_MIC_SPEECH_DIGI))		
+		{
+			// Enable power to digital microphone
+			//powerOnDigitalMic(FALSE);
+		}	
+		//Enable PMU for headset/IHF
+		if ((speaker == AUDCTRL_SPK_LOUDSPK)
+			||(speaker == AUDCTRL_SPK_HEADSET))	
+		{
+			powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
+		}
 
-        memset(&hwCtrlConfig, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
-        pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
-        hwCtrlConfig.pathID = pathID;
-        (void) AUDDRV_HWControl_DisablePath(hwCtrlConfig);
+		memset(&hwCtrlConfig, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+		pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
+		hwCtrlConfig.pathID = pathID;
+		(void) AUDDRV_HWControl_DisablePath(hwCtrlConfig);
 
-	if ((source == AUDDRV_DEV_ANALOG_MIC) && ((sink == AUDDRV_DEV_EP) || (sink == AUDDRV_DEV_IHF)))
-        AUDDRV_SetAudioLoopback(enable_lpbk, audMic, audSpkr, 0);
+		if ((source == AUDDRV_DEV_ANALOG_MIC) && ((sink == AUDDRV_DEV_EP) || (sink == AUDDRV_DEV_IHF)))
+		{
+		    AUDDRV_SetAudioLoopback(enable_lpbk, audMic, audSpkr, 0);
+		}
 
-        //Remove this path to the path table.
-        AUDCTRL_RemoveFromTable(pathID);
+		 //Remove this path to the path table.
+		 AUDCTRL_RemoveFromTable(pathID);
     }
 }
 
@@ -1539,240 +1539,119 @@ static AUDDRV_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
     return SPKR_Mapping_Table[spkr].dev;
 }
 
-#if 0
-//============================================================================
-//
-// Function Name: GetDrvMic
-//
-// Description:   convert audio controller microphone enum to auddrv microphone enum
-//
-//============================================================================
-static AUDDRV_MIC_Enum_t GetDrvMic (AUDCTRL_MICROPHONE_t mic)
+
+
+/////////////////////////////////////////////////////////////////////////////////
+//  Start PMU code. Linux version only
+////////////////////////////////////////////////////////////////////////////////////
+
+#if defined(PMU_MAX8986)  //maxim change later
+
+typedef enum
 {
-	AUDDRV_MIC_Enum_t micSel=AUDDRV_MIC_MAIN;
+	PMU_HSGAIN_MUTE = -1,
+	PMU_HSGAIN_64DB_N = 0x00,
+	PMU_HSGAIN_60DB_N,
+	PMU_HSGAIN_56DB_N,
+	PMU_HSGAIN_52DB_N,
+	PMU_HSGAIN_48DB_N,
+	PMU_HSGAIN_44DB_N,
+	PMU_HSGAIN_40DB_N,
+	PMU_HSGAIN_37DB_N,
+	PMU_HSGAIN_34DB_N,
+	PMU_HSGAIN_31DB_N,
+	PMU_HSGAIN_28DB_N,
+	PMU_HSGAIN_25DB_N,
+	PMU_HSGAIN_22DB_N,
+	PMU_HSGAIN_19DB_N,
+	PMU_HSGAIN_16DB_N,
+	PMU_HSGAIN_14DB_N,
+	PMU_HSGAIN_12DB_N,
+	PMU_HSGAIN_10DB_N,
+	PMU_HSGAIN_8DB_N,
+	PMU_HSGAIN_6DB_N,
+	PMU_HSGAIN_4DB_N,
+	PMU_HSGAIN_2DB_N,
+    PMU_HSGAIN_1DB_N,
+    PMU_HSGAIN_0DB,
+    PMU_HSGAIN_1DB_P,
+    PMU_HSGAIN_2DB_P,
+    PMU_HSGAIN_3DB_P,
+    PMU_HSGAIN_4DB_P,
+    PMU_HSGAIN_4P5DB_P,
+    PMU_HSGAIN_5DB_P,
+    PMU_HSGAIN_5P5DB_P,
+    PMU_HSGAIN_6DB_P
+}PMU_HS_Gain_t;
 
-	// microphone selection. We hardcode microphone for headset,handset and loud right now. 
-	// Later, need to provide a configurable table.
-	switch (mic)
-	{
-		case AUDCTRL_MIC_MAIN:
-			micSel = AUDDRV_MIC_MAIN;
-			break;
-		case AUDCTRL_MIC_AUX:
-			micSel = AUDDRV_MIC_AUX;
-			break;
-
-		case AUDCTRL_MIC_DIGI1:
-			micSel = AUDDRV_MIC_DIGI1;
-			break;
-		case AUDCTRL_MIC_DIGI2:
-			micSel = AUDDRV_MIC_DIGI2;
-			break;
-		case AUDCTRL_DUAL_MIC_DIGI12:
-			micSel = AUDDRV_DUAL_MIC_DIGI12;
-			break;
-		case AUDCTRL_DUAL_MIC_DIGI21:
-			micSel = AUDDRV_DUAL_MIC_DIGI21;
-			break;
-		case AUDCTRL_DUAL_MIC_ANALOG_DIGI1:
-			micSel = AUDDRV_DUAL_MIC_ANALOG_DIGI1;
-			break;
-		case AUDCTRL_DUAL_MIC_ANALOG_DIGI2:
-			micSel = AUDDRV_DUAL_MIC_ANALOG_DIGI2;
-			break;
-
-		case AUDCTRL_MIC_BTM:
-			micSel = AUDDRV_MIC_PCM_IF;
-			break;
-		//case AUDCTRL_MIC_BTS:
-			//break;
-		case AUDCTRL_MIC_I2S:
-			break;
-
-		case AUDCTRL_MIC_USB:
-		default:
-			Log_DebugPrintf(LOGID_AUDIO,"GetDrvMic: Unsupported microphpne type. mic = 0x%x\n", mic);
-			break;
-	}
-
-	return micSel;
-}
-
-
-//============================================================================
-//
-// Function Name: GetDrvSpk
-//
-// Description:   convert audio controller speaker enum to auddrv speaker enum
-//
-//============================================================================
-static AUDDRV_MIXER_SPKR_Enum_t GetDrvSpk (AUDCTRL_SPEAKER_t speaker)
+typedef enum
 {
-	AUDDRV_MIXER_SPKR_Enum_t spkSel = AUDDRV_SPKR_NONE;
-
-	Log_DebugPrintf(LOGID_AUDIO,"GetDrvSpk: spk = 0x%x\n", speaker);
-
-	// speaker selection. We hardcode headset,handset and loud speaker right now. 
-	// Later, need to provide a configurable table.
-	switch (speaker)
-	{
-		case AUDCTRL_SPK_HANDSET:
-			spkSel = AUDDRV_MIXER2_SPKR_1R;
-			break;
-		case AUDCTRL_SPK_HEADSET:
-			spkSel = AUDDRV_MIXER34_SPKR_2LR;
-			break;
-		case AUDCTRL_SPK_LOUDSPK:
-			spkSel = AUDDRV_MIXER1_SPKR_1L;
-			break;
-		case AUDCTRL_SPK_BTM:
-			spkSel = AUDDRV_SPKR_PCM_IF;
-			break;
-		case AUDCTRL_SPK_BTS:
-			break;
-		
-		case AUDCTRL_SPK_I2S:
-			break;
-
-		case AUDCTRL_SPK_USB:
-			break;
-		default:
-			Log_DebugPrintf(LOGID_AUDIO,"GetDrvSpk: Unsupported Speaker type. spk = 0x%x\n", speaker);
-			break;
-	}
-
-	return spkSel;
-}
-
-#endif
-#ifdef LMP_BUILD
-#if !defined(NO_PMU) && ( defined( PMU_BCM59038) || defined( PMU_BCM59055 ) || defined( PMU_MAX8986) )
+    PMU_IHFGAIN_MUTE,
+	PMU_IHFGAIN_30DB_N=0x18,
+	PMU_IHFGAIN_26DB_N,
+	PMU_IHFGAIN_22DB_N,
+	PMU_IHFGAIN_18DB_N,
+	PMU_IHFGAIN_14DB_N,
+	PMU_IHFGAIN_12DB_N,
+	PMU_IHFGAIN_10DB_N,
+	PMU_IHFGAIN_8DB_N,
+	PMU_IHFGAIN_6DB_N,
+	PMU_IHFGAIN_4DB_N,
+	PMU_IHFGAIN_2DB_N,
+	PMU_IHFGAIN_0DB,
+	PMU_IHFGAIN_1DB_P,
+	PMU_IHFGAIN_2DB_P,
+	PMU_IHFGAIN_3DB_P,
+	PMU_IHFGAIN_4DB_P,
+    PMU_IHFGAIN_5DB_P,
+    PMU_IHFGAIN_6DB_P,
+    PMU_IHFGAIN_7DB_P,
+    PMU_IHFGAIN_8DB_P,
+    PMU_IHFGAIN_9DB_P,
+    PMU_IHFGAIN_10DB_P,
+    PMU_IHFGAIN_11DB_P,
+    PMU_IHFGAIN_12DB_P,
+    PMU_IHFGAIN_12P5DB_P,
+    PMU_IHFGAIN_13DB_P,
+    PMU_IHFGAIN_13P5DB_P,
+    PMU_IHFGAIN_14DB_P,
+    PMU_IHFGAIN_14P5DB_P,
+    PMU_IHFGAIN_15DB_P,
+    PMU_IHFGAIN_15P5DB_P,
+    PMU_IHFGAIN_16DB_P,
+    PMU_IHFGAIN_16P5DB_P,
+    PMU_IHFGAIN_17DB_P,
+    PMU_IHFGAIN_17P5DB_P,
+    PMU_IHFGAIN_18DB_P,
+    PMU_IHFGAIN_18P5DB_P,
+    PMU_IHFGAIN_19DB_P,
+    PMU_IHFGAIN_19P5DB_P,
+    PMU_IHFGAIN_20DB_P
+}PMU_IHF_Gain_t;
 
 static PMU_HS_Gain_t map2pmu_hs_gain( Int16 db_gain )
 {
-#if defined(PMU_MAX8986)
-
-	Log_DebugPrintf(LOGID_AUDIO,"map2pmu_hs_gain: gain = 0x%x\n", db_gain);
-
-	if ( db_gain== -19 ) 	return PMU_HSGAIN_19DB_N;
-	if ( db_gain== -18 || db_gain== -17 || db_gain== -16)		return PMU_HSGAIN_16DB_N;
-	if ( db_gain== -15 || db_gain== -14)		return PMU_HSGAIN_14DB_N;
-	if ( db_gain== -13 || db_gain== -12)		return PMU_HSGAIN_12DB_N;
-	if ( db_gain== -11 || db_gain== -10)		return PMU_HSGAIN_10DB_N;
-	if ( db_gain== -9 ||  db_gain== -8)		return PMU_HSGAIN_8DB_N;
-	if ( db_gain== -7 ||  db_gain== -6)		return PMU_HSGAIN_6DB_N;
-	if ( db_gain== -5 ||  db_gain== -4)		return PMU_HSGAIN_4DB_N;
-	if ( db_gain== -3 ||  db_gain== -2)		return PMU_HSGAIN_2DB_N;
-	if ( db_gain== -1 )		return PMU_HSGAIN_1DB_N;
-	if ( db_gain== 0 )		return PMU_HSGAIN_0DB;
-	if ( db_gain== 1 )		return PMU_HSGAIN_1DB_P;
-	if ( db_gain== 2 )		return PMU_HSGAIN_2DB_P;
-	if ( db_gain== 3 )		return PMU_HSGAIN_3DB_P;
-	if ( db_gain== 4 )		return PMU_HSGAIN_4DB_P;
-	// PMU_HSGAIN_4P5DB_P
-	if ( db_gain== 5 )		return PMU_HSGAIN_5DB_P;
-	// PMU_HSGAIN_5P5DB_P
-	if ( db_gain== 6 )		return PMU_HSGAIN_6DB_P;
-
-#else
-	if ( db_gain== -18 )  	return PMU_HSGAIN_18DB_N;
-	if ( db_gain== -17)  	return PMU_HSGAIN_17DB_N;
-	if ( db_gain== -16)		return PMU_HSGAIN_16DB_N;
-	if ( db_gain== -15) 	return PMU_HSGAIN_15DB_N;
-	if ( db_gain== -14)		return PMU_HSGAIN_14DB_N;
-	if ( db_gain== -13)		return PMU_HSGAIN_13DB_N;
-	if ( db_gain== -12)		return PMU_HSGAIN_12DB_N;
-	if ( db_gain== -11)		return PMU_HSGAIN_11DB_N;
-	if ( db_gain== -10)		return PMU_HSGAIN_10DB_N;
-	if ( db_gain== -9)		return PMU_HSGAIN_9DB_N;
-	if ( db_gain== -8)		return PMU_HSGAIN_8DB_N;
-	if ( db_gain== -7)		return PMU_HSGAIN_7DB_N;
-	if ( db_gain== -6)		return PMU_HSGAIN_6DB_N;
-	if ( db_gain== -5)		return PMU_HSGAIN_5DB_N;
-	if ( db_gain== -4)		return PMU_HSGAIN_4DB_N;
-	if ( db_gain== -3)		return PMU_HSGAIN_3DB_N;
-	if ( db_gain== -2)		return PMU_HSGAIN_2DB_N;
-#endif
 	
-	return PMU_HSGAIN_2DB_N;
+	return PMU_HSGAIN_5DB_P;
 }
 
 static PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain )
 {
-#if defined(PMU_MAX8986)	
-
-    Log_DebugPrintf(LOGID_AUDIO,"map2pmu_ihf_gain: gain = 0x%x\n", db_gain);
-
-    if ( db_gain== -33 || db_gain== -32 || db_gain== -31 || db_gain== -30 ) return PMU_IHFGAIN_30DB_N;
-    if ( db_gain== -29 || db_gain== -28 || db_gain== -27 || db_gain== -26 ) return PMU_IHFGAIN_26DB_N;
-    if ( db_gain== -25 || db_gain== -24 || db_gain== -23 || db_gain== -22 ) return PMU_IHFGAIN_22DB_N;
-	if ( db_gain== -21 || db_gain== -20 || db_gain== -19 || db_gain== -18 ) return PMU_IHFGAIN_18DB_N;
-	if ( db_gain== -17 || db_gain== -16 || db_gain== -15 || db_gain== -14 )	return PMU_IHFGAIN_14DB_N;
-	if ( db_gain== -13 || db_gain== -12 )	return PMU_IHFGAIN_12DB_N;
-	if ( db_gain== -11 || db_gain== -10 )	return PMU_IHFGAIN_10DB_N;
-	if ( db_gain== -9  || db_gain== -8 )		return PMU_IHFGAIN_8DB_N;
-	if ( db_gain== -7  || db_gain== -6 )		return PMU_IHFGAIN_6DB_N;
-	if ( db_gain== -5  || db_gain== -4 )		return PMU_IHFGAIN_4DB_N;
-	if ( db_gain== -3  || db_gain== -2 )		return PMU_IHFGAIN_2DB_N;
-	if ( db_gain== -1  || db_gain== 0 )		return PMU_IHFGAIN_0DB;
-	if ( db_gain== 1 )		return PMU_IHFGAIN_1DB_P;
-	if ( db_gain== 2 )		return PMU_IHFGAIN_2DB_P;
-	if ( db_gain== 3 )		return PMU_IHFGAIN_3DB_P;
-	if ( db_gain== 4 )		return PMU_IHFGAIN_4DB_P;
-	if ( db_gain== 5 )		return PMU_IHFGAIN_5DB_P;
-	if ( db_gain== 6 )		return PMU_IHFGAIN_6DB_P;
-	if ( db_gain== 7 )		return PMU_IHFGAIN_7DB_P;
-	if ( db_gain== 8 )		return PMU_IHFGAIN_8DB_P;
-	if ( db_gain== 9 )		return PMU_IHFGAIN_9DB_P;
-	if ( db_gain== 10 )		return PMU_IHFGAIN_10DB_P;
-	if ( db_gain== 11 )		return PMU_IHFGAIN_11DB_P;
-	if ( db_gain== 12 )		return PMU_IHFGAIN_12DB_P;
-	// PMU_IHFGAIN_12P5DB_P,
-    if ( db_gain== 13 )		return PMU_IHFGAIN_13DB_P;
-	// PMU_IHFGAIN_13P5DB_P,
-    if ( db_gain== 14 )		return PMU_IHFGAIN_14DB_P;
-	// PMU_IHFGAIN_14P5DB_P,
-    if ( db_gain== 15 )		return PMU_IHFGAIN_15DB_P;
-	// PMU_IHFGAIN_15P5DB_P,
-    if ( db_gain== 16 )		return PMU_IHFGAIN_16DB_P;
-	// PMU_IHFGAIN_16P5DB_P,
-    if ( db_gain== 17 )		return PMU_IHFGAIN_17DB_P;
-	// PMU_IHFGAIN_17P5DB_P,
-    if ( db_gain== 18 )		return PMU_IHFGAIN_18DB_P;
-	// PMU_IHFGAIN_18P5DB_P,
-    if ( db_gain== 19 )		return PMU_IHFGAIN_19DB_P;
-	// PMU_IHFGAIN_19P5DB_P,
-    if ( db_gain== 20 )		return PMU_IHFGAIN_20DB_P;
-
+	return PMU_IHFGAIN_6DB_P;//PMU_IHFGAIN_20DB_P;//PMU_IHFGAIN_6DB_P;//PMU_IHFGAIN_0DB ;//PMU_IHFGAIN_18P5DB_P;
+}
 #else
-	if ( db_gain== -18 )	return PMU_IHFGAIN_18DB_N;
-	if ( db_gain== -17 )	return PMU_IHFGAIN_16P5DB_N;
-	if ( db_gain== -16 )	return PMU_IHFGAIN_16DB_N;
-	if ( db_gain== -15 )	return PMU_IHFGAIN_15DB_N;
-	if ( db_gain== -14 )	return PMU_IHFGAIN_14DB_N;
-	if ( db_gain== -13 )	return PMU_IHFGAIN_13DB_N;
-	if ( db_gain== -12 )	return PMU_IHFGAIN_12DB_N;
-	if ( db_gain== -11 )	return PMU_IHFGAIN_11DB_N;
-	if ( db_gain== -10 )	return PMU_IHFGAIN_10DB_N;
-	if ( db_gain== -9 )		return PMU_IHFGAIN_9DB_N;
-	if ( db_gain== -8 )		return PMU_IHFGAIN_8DB_N;
-	if ( db_gain== -7 )		return PMU_IHFGAIN_7DB_N;
-	if ( db_gain== -6 )		return PMU_IHFGAIN_6DB_N;
-	if ( db_gain== -5 )		return PMU_IHFGAIN_5DB_N;
-	if ( db_gain== -4 )		return PMU_IHFGAIN_4DB_N;
-	if ( db_gain== -3 )		return PMU_IHFGAIN_3DB_N;
-	if ( db_gain== -2 )		return PMU_IHFGAIN_2DB_N;
-	if ( db_gain== -1 )		return PMU_IHFGAIN_1DB_N;
-	if ( db_gain== 0 )		return PMU_IHFGAIN_0DB;
-	if ( db_gain== 1 )		return PMU_IHFGAIN_1DB_P;
-	if ( db_gain== 2 )		return PMU_IHFGAIN_2DB_P;
-	if ( db_gain== 3 )		return PMU_IHFGAIN_3DB_P;
-	if ( db_gain>= 4 )		return PMU_IHFGAIN_4DB_P;
-#endif
-
-	return PMU_IHFGAIN_0DB;
+static int map2pmu_hs_gain( Int16 db_gain )
+{
+		
+	//return BCM59055_HSGAIN_3DB_N;
+    return 1;
 }
 
+static int map2pmu_ihf_gain( Int16 db_gain )
+{
+	//return BCM59055_IHFGAIN_0DB;
+    return 1;
+}
 #endif
 
 
@@ -1785,24 +1664,26 @@ static PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain )
 //============================================================================
 static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
 {
+	int hs_gain;
+    int hs_path;
+	int ihf_gain;
 #if !defined(NO_PMU)
 	Log_DebugPrintf(LOGID_AUDIO,
                     "SetGainOnExternalAmp, speaker = %d, gain=%d\n",
-                    speaker, *((PMU_IHF_Gain_t*)gain));
+                    speaker, *((int*)gain));
 
 	switch(speaker)
 	{
 		case AUDCTRL_SPK_HEADSET:
 		case AUDCTRL_SPK_TTY:
-		    pmu_hs.hs_power = TRUE;
-    		pmu_hs.hs_path = PMU_AUDIO_HS_BOTH;
-	    	pmu_hs.hs_gain = *((PMU_HS_Gain_t*)gain);
-		    HAL_EM_PMU_Ctrl_Private( EM_PMU_ACTION_HS_SET_GAIN, &pmu_hs, NULL);
+		    hs_path = PMU_AUDIO_HS_BOTH;
+	    	hs_gain = *((int*)gain);
+		    bcm59055_hs_set_gain( hs_path, hs_gain);
 			break;
 
 		case AUDCTRL_SPK_LOUDSPK:
-    		pmu_ihf.ihf_gain = *((PMU_IHF_Gain_t*)gain);
-	    	HAL_EM_PMU_Ctrl_Private( EM_PMU_ACTION_IHF_SET_GAIN, &pmu_ihf, NULL);
+    		ihf_gain = *((int*)gain);
+	    	bcm59055_ihf_set_gain( ihf_gain);
 			break;
 
 		default:
@@ -1907,16 +1788,11 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		if ( HS_IsOn != FALSE )
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu HS amp\n");
-			pmu_hs.hs_power = FALSE;
-			HAL_EM_PMU_Ctrl_Private( EM_PMU_ACTION_HS_POWER, &pmu_hs, NULL);
-            if (retValue == AUDCTRL_AMP_NO_ACTION) 
-            {
-                retValue = AUDCTRL_AMP_HS_TURN_OFF;
-            }
-            else if (retValue == AUDCTRL_AMP_IHF_TURN_OFF)
-            {
-                retValue = AUDCTRL_AMP_IHF_AND_HS_TURN_OFF;
-            }
+#ifdef PMU_BCM59055
+            bcm59055_hs_power(FALSE);
+#elif PMU_MAX8986
+            max8986_audio_hs_poweron(FALSE);
+#endif
 
 		}
 		HS_IsOn = FALSE;
@@ -1924,18 +1800,35 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	else
 	{
 		int i;
-		pmu_hs.hs_power = TRUE;
-		pmu_hs.hs_path = PMU_AUDIO_HS_BOTH;
+		int hs_path;	
+		int hs_gain;
+		int ifh_gain;
+		hs_path = PMU_AUDIO_HS_BOTH;
+#ifdef LMP_BUILD
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
-		pmu_hs.hs_gain = map2pmu_hs_gain( i );
+#else
+		// hardcode for test
+		i = 59;
+#endif
+		hs_gain = i;
 		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (HS on), telephonyUseHS = %d, audioUseHS= %d\n", telephonyUseHS, audioUseHS);
 
 		if ( HS_IsOn != TRUE )
 		{
-			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", pmu_hs.hs_gain);
-			HAL_EM_PMU_Ctrl_Private( EM_PMU_ACTION_HS_POWER, &pmu_hs, NULL);
+			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", hs_gain);
+#ifdef PMU_BCM59055
+            bcm59055_hs_power(TRUE);
+#elif PMU_MAX8986
+            max8986_audio_hs_poweron(TRUE);
+#endif
+
 		}
-		HAL_EM_PMU_Ctrl_Private( EM_PMU_ACTION_HS_SET_GAIN, &pmu_hs, NULL);
+#ifdef PMU_BCM59055
+		bcm59055_hs_set_gain(hs_path, hs_gain);
+#elif PMU_MAX8986
+            max8986_audio_hs_set_gain(hs_path, hs_gain);
+            max8986_set_input_preamp_gain(MAX8986_INPUTA, preamp_gain);
+#endif
 		HS_IsOn = TRUE;
 	}
 
@@ -1944,7 +1837,11 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		if ( IHF_IsOn != FALSE )
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu IHF amp\n");
-			HAL_EM_PMU_Ctrl_Private( EM_PMU_ACTION_IHF_POWER_DOWN, &pmu_ihf, NULL);
+#ifdef PMU_BCM59055
+            bcm59055_ihf_power(FALSE);
+#elif PMU_MAX8986
+            max8986_audio_hs_ihf_poweroff();
+#endif
             if (retValue == AUDCTRL_AMP_NO_ACTION) 
             {
                 retValue = AUDCTRL_AMP_IHF_TURN_OFF;
@@ -1959,16 +1856,31 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	else
 	{
 		int i;
+		int ihf_gain;
+#if LMP_BUILD
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
-		pmu_ihf.ihf_gain = map2pmu_ihf_gain( i );
+#else
+		// hardcode for test purpose
+		i  = 33;
+#endif
+		ihf_gain = i;
 		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (IHF on), telephonyUseIHF = %d, audioUseIHF= %d\n", telephonyUseIHF, audioUseIHF);
 
 		if ( IHF_IsOn != TRUE )
 		{
-			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu IHF amp, gain %d\n", pmu_ihf.ihf_gain);
-			HAL_EM_PMU_Ctrl_Private( EM_PMU_ACTION_IHF_POWER_UP, &pmu_ihf, NULL);
+			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu IHF amp, gain %d\n", ihf_gain);
+#ifdef PMU_BCM59055
+			bcm59055_ihf_power(TRUE);
+#elif PMU_MAX8986
+            max8986_audio_hs_ihf_poweron();
+#endif
 		}
-		HAL_EM_PMU_Ctrl_Private( EM_PMU_ACTION_IHF_SET_GAIN, &pmu_ihf, NULL);
+#ifdef PMU_BCM59055
+		bcm59055_ihf_set_gain(ihf_gain);
+#elif PMU_MAX8986
+            max8986_audio_hs_ihf_set_gain(ihf_gain);
+            max8986_set_input_preamp_gain(MAX8986_INPUTB, preamp_gain);
+#endif
 		IHF_IsOn = TRUE;
 	}
     Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp: retValue %d\n", retValue);
@@ -1991,13 +1903,13 @@ void powerOnDigitalMic(Boolean powerOn)
 	if (powerOn == TRUE)
 	{
 		// Enable power to digital microphone
-		PMU_SetLDOMode(PMU_HVLDO7CTRL,0);
+		//PMU_SetLDOMode(PMU_HVLDO7CTRL,0);
 	}
 	else //powerOn == FALSE
 	{
 		// Enable power to digital microphone
-		PMU_SetLDOMode(PMU_HVLDO7CTRL,1);
+		//PMU_SetLDOMode(PMU_HVLDO7CTRL,1);
 	}
 #endif
 }
-#endif
+

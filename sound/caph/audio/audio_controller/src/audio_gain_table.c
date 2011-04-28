@@ -53,7 +53,7 @@ ANY LIMITED REMEDY.
 #include "audio_consts.h"
 
 #ifdef PMU_BCM59055
-#include "pmu.h"
+#include "linux/broadcom/bcm59055-audio.h"
 #endif
 
 #include "audio_gain_table.h"

@@ -206,27 +206,24 @@ int BrcmCreateAuddrv_testSysFs(struct snd_card *card)
 static void __iomem *mappedMem = NULL;
 static int HandleControlCommand()
 {
-    //AUDDRV_SPKR_Enum_t     spkr;
-	AUDDRV_SPKR_Enum_t		spkr;
-	AUDDRV_MIC_Enum_t		mic;
+    AUDCTRL_SPEAKER_t		spkr;
+	AUDCTRL_MICROPHONE_t		mic;
     switch(sgBrcm_auddrv_TestValues[1])
     {
         case 1:// Initialize the audio controller
         {
             DEBUG(" Audio Controller Init\n");
             AUDCTRL_Init ();
-			//AUDDRV_HWControl_Init();
             DEBUG(" Audio Controller Init Complete\n");
         }
         break;
         case 2:// Start Hw loopback
         {
-            DEBUG(" Audio Loopback start\n");
-            //spkr = sgBrcm_auddrv_TestValues[2];
-            //AUDCTRL_SetAudioLoopback(1,AUDCTRL_MIC_MAIN,spkr);
-	    AUDDRV_SetAudioLoopback(TRUE, AUDDRV_MIC_ANALOG_MAIN, AUDDRV_SPKR_EP,0);
-					
-            DEBUG(" Audio loopback started\n");
+			Boolean onOff = sgBrcm_auddrv_TestValues[2];
+            mic = sgBrcm_auddrv_TestValues[3];
+			spkr = sgBrcm_auddrv_TestValues[4];
+			DEBUG(" Audio Loopback onOff = %d, from %d to %d\n", onOff, mic, spkr);
+            AUDCTRL_SetAudioLoopback(onOff,mic,spkr);
         }
         break;
         case 3:// Dump registers

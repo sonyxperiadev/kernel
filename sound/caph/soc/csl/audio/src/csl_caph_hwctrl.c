@@ -22,8 +22,6 @@ Broadcom's express prior written consent.
 #include "auddrv_def.h"
 #include "xassert.h"
 #include "log.h"
-//#include "chal_bmodem_intc_inc.h"
-#include "chal_audio.h"
 #include "chal_caph_audioh.h"
 #include "brcm_rdb_audioh.h"
 #include "csl_caph.h"
@@ -36,11 +34,13 @@ Broadcom's express prior written consent.
 #include "csl_caph_pcm_sspi.h"
 #ifdef UNDER_LINUX
 #include <mach/io_map.h>
-//#include <mach/hardware.h>
+//#include <mach/hardware.h>HW_IO_PHYS_TO_VIRT
 #endif
 
 //#define _DBG_(a)
 #define _DBG_(a) (a)
+
+#define VOICE_CALL_LOOPBACK_TEST 
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -760,7 +760,7 @@ static void csl_caph_hwctrl_ACIControl()
         ( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3500e0C4))) = (UInt32) (   0x0) );
 
 //enable AUXMIC, , others "0"
-        ( *((volatile UInt32 *) (0x3500e014)) = (UInt32) (   0x1) );
+        ( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3500e014))) = (UInt32) (   0x1) );
 #endif		
 }
 
@@ -3051,9 +3051,17 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	csl_caph_audioh_config(AUDDRV_PATH_ANALOGMIC_INPUT, (void *)&audioh_config);
     
     	    // start the modules in path
+#ifdef VOICE_CALL_LOOPBACK_TEST 
+		 //Do not send interrupt to DSP.
+		//Instead, route data back to SRCMixer MONO CH1, to bypass DSP.
+		( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502F050))) = (UInt32) (0x805DC990) );
+		( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502F054))) = (UInt32) (0x8000C900) );
 	    
-        	csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_MONO_CH2, CSL_CAPH_DSP);
 		
+		( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502C160))) = (UInt32) (0xFFFF7FFF) );
+#else
+        	csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_MONO_CH2, CSL_CAPH_DSP);
+#endif
         	csl_caph_switch_start_transfer(sw_config.chnl);
         	csl_caph_audioh_start(AUDDRV_PATH_ANALOGMIC_INPUT);
 	    }
@@ -6038,8 +6046,7 @@ void csl_caph_audio_loopback_control(CSL_CAPH_DEVICE_e speaker,
 	if(ctrl) 
 	{
 		chal_audio_audiotx_set_dac_ctrl(lp_handle,AUDIOH_DAC_CTRL_AUDIOTX_I_CLK_PD_MASK);
-		// commented temporarily as getting implicit declaration of function error
-		//chal_audio_audiotx_set_spare_bit(lp_handle);
+		chal_audio_audiotx_set_spare_bit(lp_handle);
 	}
 
 	else	chal_audio_audiotx_set_dac_ctrl(lp_handle,0x00);
