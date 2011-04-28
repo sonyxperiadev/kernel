@@ -105,7 +105,7 @@ void CAPHIRQ_Init( )
     int rc;
     Log_DebugPrintf(LOGID_AUDIO, " CAPHIRQ_Init:  \n");
 
-	INIT_WORK(&audio_play,worker_audio_playback);
+    INIT_WORK(&audio_play,worker_audio_playback);
     //Plug in the ISR
     rc = request_irq(CAPH_NORM_IRQ, caph_audio_isr, IRQF_DISABLED,
 			 "caph-interrupt", NULL);
@@ -115,8 +115,6 @@ void CAPHIRQ_Init( )
 		       __FUNCTION__, rc);
 		return;
     }
-
-
 }
 
 
@@ -132,8 +130,8 @@ void CAPHIRQ_Init( )
 //******************************************************************************
 static irqreturn_t caph_audio_isr(int irq, void *dev_id)
 {
-	schedule_work(&audio_play);
 	disable_irq_nosync(BCM_INT_ID_CAPH);
+	schedule_work(&audio_play);
 	return IRQ_HANDLED;
 }
 
