@@ -294,11 +294,11 @@
 #define BCM59055_IHFTOP_BYPASSPUP	0x20
 #define BCM59055_IHFTOP_BYPASS		0x40
 /* IHFLDO */
-#define BCM59055_IHFLDO_PUP			0x01
+#define BCM59055_IHFLDO_PUP		0x01
 
 /* IHFPOP */
-#define BCM59055_IHFPOP_EN			0x04
-#define BCM59055_IHFPOP_PUP			0x08
+#define BCM59055_IHFPOP_EN		0x04
+#define BCM59055_IHFPOP_PUP		0x08
 #define BCM59055_IHFPOP_FAST		0x10
 #define BCM59055_IHFPOP_BYPASS		0x20
 #define BCM59055_IHFPOP_AUTOSEQ		0x40
@@ -391,7 +391,7 @@
 #define PC2_IS_1_PC1_IS_0			4
 #define PC2_IS_1_PC1_IS_1			6
 
-#define EN_DIS_SHIFT				PC2_IS_1_PC1_IS_1
+#define PM_MODE_MASK				0x3
 
 #define BCM59055_MAX_INT_REGS			14
 #define BCM59055_MAX_INTMASK_REGS		14
@@ -399,23 +399,23 @@
 #define BCM59055_INT_REG_BASE			BCM59055_REG_INT1
 #define BCM59055_INT_MASK_REG_BASE		BCM59055_REG_INT1MSK
 
-#define BCM59055_INVALID_ADCVAL              0x04
-#define BCM59055_REG_ADCCTRL3_VALID_BITS     0x03
+#define BCM59055_INVALID_ADCVAL              	0x04
+#define BCM59055_REG_ADCCTRL3_VALID_BITS     	0x03
 
-#define BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET  2
+#define BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET  	2
 
-#define BCM59055_REG_MBCCTRL3_WAC_HOSTEN     1
-#define BCM59055_REG_MBCCTRL3_USB_HOSTEN     2
+#define BCM59055_REG_MBCCTRL3_WAC_HOSTEN     	1
+#define BCM59055_REG_MBCCTRL3_USB_HOSTEN     	2
 #define BCM59055_REG_MBCCTRL3_WAC_HAS_PRIORITY        1
 #define BCM59055_REG_MBCCTRL3_WAC_HAS_PRIORITY_SHIFT  2
 
-#define BCM59055_REG_MBCCTRL6_VFLOATMAX_4_2V  0x08
-#define BCM59055_REG_MBCCTRL8_ICCMAX_940MA    0x07
-#define BCM59055_REG_MBCCTRL9_SWUP_ON         0x01
+#define BCM59055_REG_MBCCTRL6_VFLOATMAX_4_2V  	0x08
+#define BCM59055_REG_MBCCTRL8_ICCMAX_940MA    	0x07
+#define BCM59055_REG_MBCCTRL9_SWUP_ON         	0x01
 
-#define BCM59055_REG_PWMLEDCTRL1 0x0
+#define BCM59055_REG_PWMLEDCTRL1 		0x0
 
-#define BCM59055_REG_PWMLEDCTRL1_HWSW_CNTRL_SW          0
+#define BCM59055_REG_PWMLEDCTRL1_HWSW_CNTRL_SW	0
 
 #define BCM59055_REG_PWMLEDCTRL1_PWMLED_PD_DISABLE        1
 #define BCM59055_REG_PWMLEDCTRL1_PWMLED_PD_DISABLE_SHIFT  1
@@ -505,13 +505,13 @@ typedef enum {
 
 struct bcm590xx;
 
-//struct bcm590xx_regulator_init_data ;
 
-void bcm590xx_register_details(void **reg_info) ;
-void bcm590xx_regulator_desc(void **info) ;
+void bcm590xx_register_details(void **reg_info);
+void bcm590xx_regulator_desc(void **info);
 int bcm590xx_num_regl(void);
 void* bcm590xx_get_initdata(void);
+unsigned int bcm590xx_ldo_or_sr(int id);
 
-void bcm59055_reg_init_dev_init(struct bcm590xx *bcm590xx)  ;
+void bcm59055_reg_init_dev_init(struct bcm590xx *bcm590xx) ;
 
 #endif

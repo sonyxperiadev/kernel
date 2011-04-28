@@ -70,7 +70,7 @@ int bcm590xx_reg_read(struct bcm590xx *bcm590xx, int reg)
 	mutex_lock(&bcm590xx->i2c_rw_lock);
 	err = bcm590xx->read_dev(bcm590xx, regAddr, i);
 	mutex_unlock(&bcm590xx->i2c_rw_lock);
-	return err ;
+	return err;
 
 }
 EXPORT_SYMBOL_GPL(bcm590xx_reg_read);
@@ -129,8 +129,8 @@ EXPORT_SYMBOL_GPL(bcm590xx_mul_reg_write);
 
 static	void bcm590xx_rd_cl_dis_intrs( struct bcm590xx *bcm590xx, int set_to_clear)
 {
-	unsigned int i = 0 ;
-	unsigned int temp = 0 ;
+	unsigned int i = 0;
+	unsigned int temp = 0;
 	printk("inside %s\n", __func__);
 	/*Read & clear all interrupts */
 	for (i = 0; i < BCM590XX_MAX_INT_REGS; i++) {
@@ -179,7 +179,7 @@ int bcm590xx_disable_irq(struct bcm590xx *bcm590xx, int irq)
 		printk("bcm590xx_disable_irq : PMU reg read error !!!\n");
 		return st;
 	}
-	reg_val = st ;
+	reg_val = st;
 	if (BCM590XX_INT_MASK_BIT)
 		reg_val |= (1 << IRQ_TO_REG_BIT(irq));
 	else
@@ -218,7 +218,7 @@ int bcm590xx_enable_irq(struct bcm590xx *bcm590xx, int irq)
 		printk( "bcm590xx_enable_irq : PMU reg read error !!!\n");
 		return st;
 	}
-	reg_val = st ;
+	reg_val = st;
 	if (BCM590XX_INT_MASK_BIT)
 		reg_val &= ~(1 << IRQ_TO_REG_BIT(irq));
 	else
@@ -300,7 +300,7 @@ static void bcm590xx_irq_workq(struct work_struct *work)
 
 	/* Read all interrupt status registers. All interrupt status registers are R&C */
 	for (i = 0; i < BCM590XX_MAX_INT_REGS; i++) {
-		intStatus[i] = bcm590xx_reg_read(bcm590xx, BCM590XX_INT_REG_BASE + i) ;
+		intStatus[i] = bcm590xx_reg_read(bcm590xx, BCM590XX_INT_REG_BASE + i);
 	}
 
 	mutex_lock(&bcm590xx->list_lock);
@@ -376,13 +376,13 @@ static void bcm590xx_dbg_usage(void)
 	printk(KERN_INFO "Usage:\n");
 	printk(KERN_INFO "Read a register: echo 0x0800 > /proc/pmu0\n");
 	printk(KERN_INFO
-		"Read multiple regs: echo 0x0800 -c 10 > /proc/pmu0\n");
+			"Read multiple regs: echo 0x0800 -c 10 > /proc/pmu0\n");
 	printk(KERN_INFO
-		"Write multiple regs: echo 0x0800 0xFF 0xFF > /proc/pmu0\n");
+			"Write multiple regs: echo 0x0800 0xFF 0xFF > /proc/pmu0\n");
 	printk(KERN_INFO
-		"Write single reg: echo 0x0800 0xFF > /proc/pmu0\n");
+			"Write single reg: echo 0x0800 0xFF > /proc/pmu0\n");
 	printk(KERN_INFO "Max number of regs in single write is :%d\n",
-		MAX_REGS_READ_WRITE);
+			MAX_REGS_READ_WRITE);
 	printk(KERN_INFO "Register address is encoded as follows:\n");
 	printk(KERN_INFO "0xSSRR, SS: i2c slave addr, RR: register addr\n");
 }
@@ -437,19 +437,19 @@ static int bcm590xx_dbg_parse_args(char *cmd, struct pmu_debug *dbg)
 	 * tok_count > 1, count_flag = true: to a multiple reg read operation.
 	 */
 	switch (tok_count) {
-	case 0:
-		return -EINVAL;
-	case 1:
-		dbg->read_write = PMUDBG_READ_REG;
-		dbg->len = 1;
-		break;
-	default:
-		if (count_flag == true) {
+		case 0:
+			return -EINVAL;
+		case 1:
 			dbg->read_write = PMUDBG_READ_REG;
-		} else {
-			dbg->read_write = PMUDBG_WRITE_REG;
-			dbg->len = i;
-		}
+			dbg->len = 1;
+			break;
+		default:
+			if (count_flag == true) {
+				dbg->read_write = PMUDBG_READ_REG;
+			} else {
+				dbg->read_write = PMUDBG_WRITE_REG;
+				dbg->len = i;
+			}
 	}
 
 	return 0;
@@ -532,7 +532,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 {
 	int ret, i=1;
 
-	printk("REG: bcm590xx_device_init called bcm590xx = 0x%x\n", (u32)bcm590xx) ;
+	printk("REG: bcm590xx_device_init called bcm590xx = 0x%x\n", (u32)bcm590xx);
 	while (i < BCM590XX_NUM_SLAVES) {
 		bcm590xx->i2c_client[i].addr = bcm590xx_slave[i-1];
 		bcm590xx->i2c_client[i].client =
@@ -543,7 +543,9 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 					bcm590xx->i2c_client[i].addr);
 		}
 		else
-			printk("%s: i2c client(0x%x) registered with slave id 0x%x\n", __func__, (unsigned int)bcm590xx->i2c_client[i].client, bcm590xx->i2c_client[i].addr );
+			printk("%s: i2c client(0x%x) registered with slave id 0x%x\n", __func__,
+					(unsigned int)bcm590xx->i2c_client[i].client,
+					bcm590xx->i2c_client[i].addr );
 		i++;
 	}
 	info = bcm590xx;
@@ -552,7 +554,8 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 	mutex_init(&bcm590xx->list_lock);
 	mutex_init(&bcm590xx->i2c_rw_lock);
 #ifdef DEBUG_ON
-	printk("%s: Slave at index 0 0x%x and at index 1 0x%x\n", __func__, bcm590xx->i2c_client[0].addr, bcm590xx->i2c_client[1].addr);
+	printk("%s: Slave at index 0 0x%x and at index 1 0x%x\n", __func__,
+			bcm590xx->i2c_client[0].addr, bcm590xx->i2c_client[1].addr);
 #endif
 	bcm590xx->pmu_workqueue = create_workqueue("pmu_events");
 	if (!bcm590xx->pmu_workqueue) {
@@ -582,7 +585,8 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 	}
 	// Register IRQ.
 	if (irq > 0) {
-		ret = request_irq(irq, pmu_irq_handler, IRQF_TRIGGER_FALLING, "pmu-bcm590xx", bcm590xx);
+		ret = request_irq(irq, pmu_irq_handler, IRQF_TRIGGER_FALLING,
+				"pmu-bcm590xx", bcm590xx);
 		if (ret) {
 			printk(KERN_ERR "%s can't get IRQ %d, ret %d\n", __func__, irq, ret);
 			goto err;
@@ -601,16 +605,17 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 
 #ifdef CONFIG_BATTERY_BCM59055
 	// Register battery device, so that battery probe function will be called.
-	ret = bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery") ;
+	ret = bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery");
 	if (ret < 0) {
-		printk(KERN_ERR "%s client_dev_register for bcm59055-battery failed %d\n", __func__, ret);
-		return ret ;
+		printk(KERN_ERR "%s client_dev_register for bcm59055-battery failed %d\n",
+				__func__, ret);
+		return ret;
 	}
 #endif
 
 	/* Register PowerOnKey device */
 	if (bcm590xx->pdata->flag & BCM590XX_USE_PONKEY)
-		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-onkey") ;
+		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-onkey");
 
 	/* Register Sub devices */
 	if (bcm590xx->pdata->flag & BCM590XX_USE_REGULATORS)
@@ -648,9 +653,6 @@ void bcm590xx_device_exit(struct bcm590xx *bcm590xx)
 			i2c_unregister_device(bcm590xx->i2c_client[i].client);
 		i++;
 	}
-	for (i = 0; i < ARRAY_SIZE(bcm590xx->pmic.pdev); i++)
-		platform_device_unregister(bcm590xx->pmic.pdev[i]);
-
 }
 EXPORT_SYMBOL_GPL(bcm590xx_device_exit);
 

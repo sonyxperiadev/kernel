@@ -48,29 +48,25 @@
 #define BCM590XX_TOTAL_IRQ			BCM59055_TOTAL_IRQ
 
 // For a new PMU add new header file here.
-
-#define NUM_BCM590XX_REGULATORS			15
+#define BCM590XX_MAX_REGULATOR			13
 
 // Register field values for regulator.
 #define LDO_NORMAL				0   // FOR LDO and Switchers it is NORMAL ( NM/NM1 for SRs).
 #define LDO_STANDBY				1   // FOR LDO and Swtichers it is STANDBY( LPM for SRs ).
 #define LDO_OFF					2   // OFF.
-#define LDO_RESERVED_SR_IDLE			3   // For LDO it is reserved. For CSR, IOSR, SDSR this is NM2 for SRs
+#define LDO_RESERVED_SR_FAST			3   // For LDO it is reserved. For CSR, IOSR, SDSR this is NM2 for SRs
+
+/*regualtor DSM settings */
+enum {
+	BCM590XX_REGL_LPM_IN_DSM,   /*if enabled, LPM in DSM (PC1 = 0)*/
+	BCM590XX_REGL_OFF_IN_DSM, /*if enabled, off in DSM (PC1 = 0)*/
+	BCM590XX_REGL_ON_IN_DSM,   /*if enabled, ON in DSM (PC1 = 0)*/
+};
+
 
 /* LDO or Switcher def */
 #define BCM590XX_LDO				0x10
 #define BCM590XX_SR				0x11
-
-/* LDO PMMode on PC2/PC1 values */
-#define OFF_PC2PC1_00				(10 << 0)
-#define ON_PC2PC1_00				(00 << 0)
-#define LPM_PC2PC1_00				(01 << 0)
-#define OFF_PC2PC1_01				(10 << 2)
-#define ON_PC2PC1_01				(00 << 2)
-#define LPM_PC2PC1_01				(01 << 2)
-#define OFF_PC2PC1_10				(10 << 4)
-#define ON_PC2PC1_10				(00 << 4)
-#define LPM_PC2PC1_10				(01 << 4)
 
 
 struct bcm590xx;
@@ -79,18 +75,13 @@ struct regulator_init_data;
 struct bcm590xx_regulator_init_data;
 
 enum {
-	BCM590XX_USE_REGULATORS   			=  (1 << 0),
-	BCM590XX_USE_RTC          			=  (1 << 1),
-	BCM590XX_USE_POWER        			=  (1 << 2),
-	BCM590XX_USE_PONKEY 				=  (1 << 3),
-	BCM590XX_ENABLE_DVS       			=  (1 << 4),
-	BCM590XX_REGISTER_POWER_OFF			=  (1 << 5),
-	BCM590XX_ENABLE_AUDIO				=  (1 << 6),
-};
-
-struct bcm590xx_pmic {
-	/* regulator devices */
-	struct platform_device *pdev[NUM_BCM590XX_REGULATORS];
+	BCM590XX_USE_REGULATORS   		=  (1 << 0),
+	BCM590XX_USE_RTC          		=  (1 << 1),
+	BCM590XX_USE_POWER        		=  (1 << 2),
+	BCM590XX_USE_PONKEY 			=  (1 << 3),
+	BCM590XX_ENABLE_DVS       		=  (1 << 4),
+	BCM590XX_REGISTER_POWER_OFF		=  (1 << 5),
+	BCM590XX_ENABLE_AUDIO			=  (1 << 6),
 };
 
 int bcm590xx_register_regulator(struct bcm590xx *bcm590xx, int reg,
@@ -100,27 +91,31 @@ struct bcm590xx_reg_info
 {
 	u32 reg_addr;      /* address of regulator control register for mode control */
 	u32 reg_addr_volt; /* address of control register to change voltage */
-	u32 en_dis_mask ;  /* Mask for enable/disable bits */
-	u32 en_dis_shift ; /* Shift for enable/disalbe bits */
+	u8 dsm;
 	u32 vout_mask;     /* Mask of bits in register */
 	u32 vout_shift;    /* Bit shift in register */
 	u32 *v_table;      /* Map for converting register voltage to register value */
 	u32 num_voltages;  /* Size of register map */
-	u32 mode ;
 };
 
 struct bcm590xx_regulator_init_data
 {
-	int regulator ; /* Regulator ID */
-	struct regulator_init_data   *initdata ;
-	u8 pm_mode_flag;
-} ;
+	int regulator; /* Regulator ID */
+	struct regulator_init_data   *initdata;
+	u8 dsm;
+};
 
-struct mv_percent   
+struct bcm590xx_regulator_pdata {
+	int num_regulator;
+	struct bcm590xx_regulator_init_data *init;
+	u8 default_pmmode[BCM590XX_MAX_REGULATOR];
+};
+
+struct mv_percent
 {
-    unsigned int mv ;
-    unsigned int percentage ;
-} ; 
+    unsigned int mv;
+    unsigned int percentage;
+};
 
 
 struct bcm590xx_battery_pdata {
@@ -132,8 +127,8 @@ struct bcm590xx_battery_pdata {
     u8 temp_adc_channel;
     u8 batt_level_count;
     // struct batt_level_table *batt_level_table;
-    struct mv_percent *vp_table ;
-    unsigned int vp_table_cnt ;
+    struct mv_percent *vp_table;
+    unsigned int vp_table_cnt;
 
     u16 temp_low_limit;
     u16 temp_high_limit;
@@ -164,5 +159,5 @@ struct bcm_pmu_irq {
 };
 
 // Needed for assignment in bcm59055_A0.c
-extern struct regulator_ops bcm590xxldo_ops ;
+extern struct regulator_ops bcm590xxldo_ops;
 #endif
