@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Sun Apr 24 19:39:02 2011
+# Fri Apr 29 14:50:21 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -261,7 +261,7 @@ CONFIG_KONA_DCACHE_INVALIDATION=y
 # CONFIG_KONA_TIMER_UNIT_TESTS is not set
 # CONFIG_BRCM_PROP_MODULES is not set
 CONFIG_BCM_STM=y
-CONFIG_DMAC_PL330=y
+# CONFIG_DMAC_PL330 is not set
 
 #
 # Rhea SoC based Machine types
@@ -304,7 +304,6 @@ CONFIG_CPU_HAS_PMU=y
 # CONFIG_ARM_ERRATA_458693 is not set
 # CONFIG_ARM_ERRATA_460075 is not set
 CONFIG_ARM_GIC=y
-CONFIG_PL330=y
 CONFIG_COMMON_CLKDEV=y
 # CONFIG_FIQ_DEBUGGER is not set
 
