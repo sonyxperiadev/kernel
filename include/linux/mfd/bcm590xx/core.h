@@ -25,7 +25,7 @@
 struct bcm590xx;
 struct bcm590xx_client {
 	struct i2c_client *client;
- 	u16 addr;
+	u16 addr;
 };
 enum {
 	BCM590XX_INITIALIZATION = 1,
@@ -37,10 +37,11 @@ enum {
  *        used by the platform to configure GPIO functions and similar.
  */
 struct bcm590xx_platform_data {
-		int (*init)(struct bcm590xx *bcm590xx, int flag);
-    	struct bcm590xx_battery_pdata *battery_pdata ;
-		struct bcm590xx_audio_pdata *audio_pdata;
-    	int flag;
+	int (*init)(struct bcm590xx *bcm590xx, int flag);
+	struct bcm590xx_battery_pdata *battery_pdata;
+	struct bcm590xx_audio_pdata *audio_pdata;
+	struct bcm590xx_regulator_pdata *regl_pdata;
+	int flag;
 };
 
 struct bcm590xx {
@@ -54,15 +55,13 @@ struct bcm590xx {
 
 	/* Interrupt handling */
 	struct mutex list_lock;
- 	struct mutex i2c_rw_lock;
+	struct mutex i2c_rw_lock;
 	int irq;
 	struct list_head irq_handlers;
 	struct work_struct work;
- 	struct workqueue_struct *pmu_workqueue;
+	struct workqueue_struct *pmu_workqueue;
 
-	/* Client devices */
-	struct bcm590xx_pmic pmic;
-	struct bcm590xx_platform_data  *pdata ;
+	struct bcm590xx_platform_data  *pdata;
 };
 
 
@@ -81,13 +80,13 @@ int bcm590xx_mul_reg_read(struct bcm590xx *bcm590xx, int reg, u32 length, u8 *va
 int bcm590xx_mul_reg_write(struct bcm590xx *bcm590xx, int reg, u32 length, u8 *val);
 
 int bcm590xx_request_irq(struct bcm590xx *bcm590xx, int irq, bool enable_irq,
-			 void (*handler) (int, void *), void *data) ;
+			 void (*handler) (int, void *), void *data);
 int bcm590xx_free_irq(struct bcm590xx *bcm590xx, int irq);
 int bcm590xx_enable_irq(struct bcm590xx *bcm590xx, int irq);
 int bcm590xx_disable_irq(struct bcm590xx *bcm590xx, int irq);
 
-void bcm59055_initialize_charging( struct bcm590xx *bcm59055 ) ;
-void bcm59055_start_charging(struct bcm590xx *bcm59055 ) ;
+void bcm59055_initialize_charging( struct bcm590xx *bcm59055 );
+void bcm59055_start_charging(struct bcm590xx *bcm59055 );
 void bcm590xx_shutdown(void);
 
 #endif

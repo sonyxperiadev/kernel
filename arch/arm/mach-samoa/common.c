@@ -239,6 +239,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.id = 0,
 		.data_pullup = 0,
 //		.cd_gpio = 106, FIXME
+//		.cd_gpio = SD_CARDDET_GPIO_PIN,
 		.devtype = SDIO_DEV_TYPE_SDMMC,
 		.peri_clk_name = "sdio1_clk",
 		.ahb_clk_name = "sdio1_ahb_clk",

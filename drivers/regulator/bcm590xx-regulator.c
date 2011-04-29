@@ -35,15 +35,15 @@
 
 #define DEBUG_ON
 
-static int bcm590xxldo_get_voltage(struct regulator_dev *rdev) ;
-static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv) ;
-static int bcm590xxldo_list_voltage(struct regulator_dev *rdev, unsigned index) ;
-static unsigned int bcm590xxreg_get_mode (struct regulator_dev *rdev) ;
-static int bcm590xxreg_set_mode(struct regulator_dev *rdev, unsigned mode) ;
-static int bcm590xxreg_get_status(struct regulator_dev *rdev) ;
-static int bcm590xxreg_disable(struct regulator_dev *rdev) ;
-static int bcm590xxreg_enable(struct regulator_dev *rdev) ;
-static int bcm590xxreg_is_enabled(struct regulator_dev *rdev) ;
+static int bcm590xxldo_get_voltage(struct regulator_dev *rdev);
+static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv);
+static int bcm590xxldo_list_voltage(struct regulator_dev *rdev, unsigned index);
+static unsigned int bcm590xxreg_get_mode (struct regulator_dev *rdev);
+static int bcm590xxreg_set_mode(struct regulator_dev *rdev, unsigned mode);
+static int bcm590xxreg_get_status(struct regulator_dev *rdev);
+static int bcm590xxreg_disable(struct regulator_dev *rdev);
+static int bcm590xxreg_enable(struct regulator_dev *rdev);
+static int bcm590xxreg_is_enabled(struct regulator_dev *rdev);
 
 /** voltage regulator details.  */
 struct regulator_ops bcm590xxldo_ops = {
@@ -58,9 +58,9 @@ struct regulator_ops bcm590xxldo_ops = {
 	.get_voltage	= bcm590xxldo_get_voltage,
 };
 
-struct bcm590xx_reg_info *bcm590xx_register_info;
-struct regulator_desc    *bcm590xx_info  ;
-struct bcm590xx_regulator_init_data *bcm590xx_regl_initdata;
+struct bcm590xx_reg_info		*bcm590xx_register_info;
+struct regulator_desc			*bcm590xx_info;
+struct bcm590xx_regulator_init_data	*bcm590xx_regl_initdata;
 
 
 struct bcm590xx_regl_priv {
@@ -69,14 +69,6 @@ struct bcm590xx_regl_priv {
 	struct regulator_dev *regl[];
 };
 
-static unsigned int bcm590xx_ldo_or_sr(struct regulator_dev *rdev )
-{
-	printk("inside %s: regl id %d\n", __func__, rdev_get_id(rdev));
-    if ( rdev_get_id(rdev) > BCM59055_SIMLDO ) { return BCM590XX_SR ; }
-	else { return BCM590XX_LDO ; }
-	return -EIO;
-}
-
 /* @is_enabled: Return 1 if the regulator is enabled, 0 if not.
  *		May also return negative errno.
 */
@@ -84,30 +76,21 @@ static int bcm590xxreg_is_enabled(struct regulator_dev *rdev)
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;
-	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
-	unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev) ;
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
 	int rc;
-	printk("Inside %s\n", __func__);
-	rc = bcm590xx_reg_read(bcm590xx, info->reg_addr) ;
+	rc = bcm590xx_reg_read(bcm590xx, info->reg_addr);
+	pr_debug("%s: ID %d Reg addr 0x%x - value 0x%x\n", __func__, rdev_get_id(rdev), info->reg_addr, rc);
 
-	if (rc < 0)
-	{
-		printk("bcm590xxldo_is_enabled : error reading regulator OPmode register.\n");
+	if (rc < 0) {
+		pr_info("bcm590xxldo_is_enabled : error reading regulator OPmode register.\n");
 		return rc;
 	}
 
-	rc = ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ;
-
-	if ( ldo_or_sr == BCM590XX_LDO )
-	{
-		if ( rc < LDO_OFF ) { return 1 ; }
-		else { return 0 ; }
-	}
-	else if ( ldo_or_sr == BCM590XX_SR )
-	{
-		if ( rc == LDO_OFF ) { return 0 ; }
-		else { return 1 ; }
-	}
+	rc = (rc >> PC2_IS_1_PC1_IS_1) & PM_MODE_MASK;
+	if (rc != LDO_OFF)
+		return 1;
+	if (rc == LDO_OFF)
+		return 0;
 	return -EIO;
 }
 
@@ -116,42 +99,28 @@ static int bcm590xxreg_enable(struct regulator_dev *rdev)
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;
-	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
-	unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev) ;
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
 	int rc;
-	printk("Inside %s\n", __func__);
-	rc = bcm590xx_reg_read(bcm590xx, info->reg_addr) ;
-
-	if (rc < 0)
-	{
-		printk("bcm590xxldo_enable : error reading regulator OPmode register.\n");
-		return rc;
+	pr_debug("Inside %s: ID %d\n", __func__, rdev_get_id(rdev));
+	/* Clear all PM modes to zero which means ON in all mode
+	 * We need to enable the regulator in PC2_IS_1_PC1_IS_1 and
+	 * PC2_IS_0_PC1_IS_1 state. Rest modes as BB in Deep Sleep.
+	 * values for DSM are taken from Board file */
+	rc = 0;
+	switch (info->dsm) {
+		case BCM590XX_REGL_LPM_IN_DSM:
+			rc |= (LDO_STANDBY << PC2_IS_0_PC1_IS_0) |
+				(LDO_STANDBY << PC2_IS_1_PC1_IS_0);
+			break;
+		case BCM590XX_REGL_OFF_IN_DSM:
+			rc |= (LDO_OFF << PC2_IS_0_PC1_IS_0) |
+				(LDO_OFF << PC2_IS_1_PC1_IS_0);
+		case BCM590XX_REGL_ON_IN_DSM:
+			/* has been taken care already */
+			break;
 	}
 
-	// In case of LDO always enable in LPM (1)
-	// In case of SR always enable in NM (0)
-	if ( ldo_or_sr == BCM590XX_LDO )
-	{
-		if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) < LDO_OFF ) { return 1 ; }  // Already enabled.
-		else
-		{
-			// return ( bcm590xx_reg_write(bcm590xx, info->reg_addr, ( ( rc & ~info->en_dis_mask  ) | LDO_STANDBY ) ) ) ;
-			rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) | ( LDO_NORMAL << info->en_dis_shift ) ;
-			rc |= bcm590xx_regl_initdata[rdev_get_id(rdev)].pm_mode_flag;
-			return ( bcm590xx_reg_write(bcm590xx, info->reg_addr, rc ) ) ;
-		}
-	}
-	else if ( ldo_or_sr == BCM590XX_SR )
-	{
-		if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) != LDO_OFF ) { return 1 ; }  // Already enabled.
-		else
-		{
-			// return ( bcm590xx_reg_write(bcm590xx, info->reg_addr, (  ( rc & ~info->en_dis_mask  ) | LDO_NORMAL ) ) ) ;
-			rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) | ( LDO_NORMAL << info->en_dis_shift ) ;
-			return ( bcm590xx_reg_write(bcm590xx, info->reg_addr, rc ) ) ;
-		}
-	}
-	return -EIO;
+	return bcm590xx_reg_write(bcm590xx, info->reg_addr, rc);
 }
 
 /* @disable: Configure the regulator as disabled. */
@@ -159,23 +128,16 @@ static int bcm590xxreg_disable(struct regulator_dev *rdev)
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;
-    struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
-	int rc;
-	printk("Inside %s\n", __func__);
-	rc = bcm590xx_reg_read(bcm590xx, info->reg_addr) ;
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
+	int rc = 0;
+	pr_debug("Inside %s: ID %d\n", __func__, rdev_get_id(rdev));
+	/* OFF in all PM Modes */
+	rc = (LDO_OFF << PC2_IS_0_PC1_IS_0) |
+		(LDO_OFF << PC2_IS_0_PC1_IS_1) |
+		(LDO_OFF << PC2_IS_1_PC1_IS_0) |
+		(LDO_OFF << PC2_IS_1_PC1_IS_1);
 
-	if (rc < 0)
-	{
-		printk("bcm590xxldo_enable : error reading regulator OPmode register.\n");
-		return rc;
-	}
-
-	if ( ( ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ) == LDO_OFF ) { return 1 ; }  // Already disabled.
-	else
-	{
-        rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) | ( LDO_OFF << info->en_dis_shift ) ;
-        return ( bcm590xx_reg_write(bcm590xx, info->reg_addr, rc ) ) ;
-	}
+	return  bcm590xx_reg_write(bcm590xx, info->reg_addr, rc);
 }
 
 /* @get_status: Return actual (not as-configured) status of regulator, as a
@@ -185,31 +147,29 @@ static int bcm590xxreg_get_status(struct regulator_dev *rdev)
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;
-    struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
-    unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev ) ;
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
+	unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev_get_id(rdev));
 	int rc;
-	printk("Inside %s\n", __func__);
-	rc = bcm590xx_reg_read(bcm590xx, info->reg_addr) ;
-
-	if (rc < 0)
-	{
+	rc = bcm590xx_reg_read(bcm590xx, info->reg_addr);
+	pr_debug("%s: ID %d Reg addr 0x%x - value 0x%x\n", __func__, rdev_get_id(rdev), info->reg_addr, rc);
+	if (rc < 0) {
 		printk("bcm590xxldo_is_enabled : error reading regulator OPmode register.\n");
 		return rc;
 	}
+	rc = (rc >> PC2_IS_1_PC1_IS_1) & PM_MODE_MASK;
 
-	rc = ( rc >> info->en_dis_shift ) & ( info->en_dis_mask ) ;
-
-    switch ( rc )
-	{
-        case LDO_NORMAL : { return REGULATOR_STATUS_NORMAL ; } // Normal setting.
-		case LDO_STANDBY : { return REGULATOR_STATUS_STANDBY ; }
-        case LDO_OFF     : { return REGULATOR_STATUS_OFF ; }
-		case LDO_RESERVED_SR_IDLE :
-        {
-            if ( ldo_or_sr == BCM590XX_SR ) { return REGULATOR_STATUS_IDLE ; }
-        }
-		default : { return -EINVAL ; }
+	switch ( rc ) {
+		case LDO_NORMAL:
+			return REGULATOR_STATUS_NORMAL;
+		case LDO_STANDBY:
+			return REGULATOR_STATUS_STANDBY;
+		case LDO_OFF:
+			return REGULATOR_STATUS_OFF;
+		case LDO_RESERVED_SR_FAST:
+			if (ldo_or_sr == BCM590XX_SR)
+				return REGULATOR_STATUS_FAST;
 	}
+	return -EINVAL;
 }
 
 /* @get_mode: Get the configured operating mode for the regulator. */
@@ -217,33 +177,31 @@ static unsigned int bcm590xxreg_get_mode (struct regulator_dev *rdev)
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;
-    struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
 
-    unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev ) ;
-    int rc;
-    printk("Inside %s, PM Mod reg 0%x\n", __func__, info->reg_addr);
-	rc = bcm590xx_reg_read(bcm590xx,info->reg_addr) ;
-	//printk("%s: Pm mode register value for regl id %d is 0x%x\n", __func__, rdev_get_id(rdev), rc);
-	if (rc < 0)
-	{
-		printk("bcm590xxldo_is_enabled : error reading regulator OPmode register.\n");
+	unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev_get_id(rdev));
+	int rc;
+	rc = bcm590xx_reg_read(bcm590xx,info->reg_addr);
+	pr_debug("%s: ID %d Reg addr 0x%x - value 0x%x\n", __func__, rdev_get_id(rdev), info->reg_addr, rc);
+	if (rc < 0) {
+		pr_info("bcm590xxldo_is_enabled : error reading regulator OPmode register.\n");
 		return rc;
 	}
-
 	// Get last 2 bits after read.
-	rc = ( rc >> info->en_dis_shift ) & ( info->en_dis_mask );
+	rc = (rc >> PC2_IS_1_PC1_IS_1) & PM_MODE_MASK;
 
-    switch ( rc )
-	{
-        case LDO_NORMAL : { return REGULATOR_MODE_NORMAL ; } // Normal setting.
-		case LDO_STANDBY : { return REGULATOR_MODE_STANDBY ; }
-        case LDO_OFF     : { return -EINVAL ; }  // Mode is not same as status. So return unknown.
-		case LDO_RESERVED_SR_IDLE :
-        {
-            if ( ldo_or_sr == BCM590XX_SR ) { return REGULATOR_MODE_IDLE ; }
-        }
-		default : { return -EINVAL ; }
+	switch ( rc ) {
+		case LDO_NORMAL:
+			return REGULATOR_MODE_NORMAL;
+		case LDO_STANDBY:
+			return REGULATOR_MODE_STANDBY;
+		case LDO_OFF:
+			return REGULATOR_MODE_IDLE;
+		case LDO_RESERVED_SR_FAST:
+			if (ldo_or_sr == BCM590XX_SR)
+				return REGULATOR_MODE_FAST;
 	}
+	return -EINVAL;
 }
 
 /*  @set_mode: Set the configured operating mode for the regulator. */
@@ -251,35 +209,36 @@ static int bcm590xxreg_set_mode(struct regulator_dev *rdev, unsigned mode)
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;
-    struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
-    unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev ) ;
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
+	unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev_get_id(rdev));
 	int rc;
-	printk("Inside %s\n", __func__);
-	rc = bcm590xx_reg_read(bcm590xx,info->reg_addr) ;
-
-	if (rc < 0)
-	{
-		printk("bcm590xxldo_is_enabled : error reading regulator OPmode register.\n");
+	pr_debug("Inside %s: ID %d\n", __func__, rdev_get_id(rdev));
+	rc = bcm590xx_reg_read(bcm590xx,info->reg_addr);
+	if (rc < 0) {
+		pr_info("bcm590xxldo_is_enabled : error reading regulator OPmode register.\n");
 		return rc;
 	}
-
-	// rc = ( rc >> info->en_dis_shift ) & ( ~info->en_dis_mask ) ;
 	// Clear up needed 2 bits after read.
-    rc = ( rc & ~(info->en_dis_mask << info->en_dis_shift) ) ;
+	rc &= ~((PM_MODE_MASK << PC2_IS_1_PC1_IS_1) | (PM_MODE_MASK <<PC2_IS_0_PC1_IS_1));
 
-    switch ( mode )
-	{
-        case REGULATOR_MODE_NORMAL :  { rc = rc | ( LDO_NORMAL << info->en_dis_shift ) ; break ; } // Normal setting.
-        case REGULATOR_MODE_STANDBY : { rc = rc | ( LDO_STANDBY << info->en_dis_shift ) ; break ; } // Standby setting.
-        case REGULATOR_MODE_IDLE :
-        {
-            if ( ldo_or_sr == BCM590XX_SR ) { rc = rc | ( LDO_RESERVED_SR_IDLE << info->en_dis_shift ); }
-			else if ( ldo_or_sr == BCM590XX_LDO ) { rc = rc | ( LDO_STANDBY << info->en_dis_shift ) ; }
-        }
-		default : { return -EINVAL ; }
+	switch (mode) {
+		case REGULATOR_MODE_NORMAL:
+			rc |= (LDO_NORMAL << PC2_IS_1_PC1_IS_1) |
+				(LDO_NORMAL << PC2_IS_0_PC1_IS_1);
+		case REGULATOR_MODE_STANDBY :
+			rc |= (LDO_STANDBY << PC2_IS_1_PC1_IS_1) |
+				(LDO_STANDBY << PC2_IS_0_PC1_IS_1);
+		case REGULATOR_MODE_IDLE:
+			rc |= (LDO_OFF << PC2_IS_1_PC1_IS_1) |
+				(LDO_OFF << PC2_IS_0_PC1_IS_1);
+		case REGULATOR_MODE_FAST:
+			if (ldo_or_sr == BCM590XX_SR)
+				rc |= (LDO_RESERVED_SR_FAST << PC2_IS_1_PC1_IS_1) |
+					(LDO_RESERVED_SR_FAST << PC2_IS_0_PC1_IS_1);
+		default : { return -EINVAL; }
 	}
 
-    return ( bcm590xx_reg_write(bcm590xx,info->reg_addr, rc ) ) ;
+	return bcm590xx_reg_write(bcm590xx,info->reg_addr, rc);
 }
 
 /* @list_voltage: Return one of the supported voltages, in microvolts; zero
@@ -290,9 +249,8 @@ static int bcm590xxreg_set_mode(struct regulator_dev *rdev, unsigned mode)
 
 static int bcm590xxldo_list_voltage(struct regulator_dev *rdev, unsigned index)
 {
-    struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
-
-	return ( info->v_table[index] ) ;
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
+	return ( info->v_table[index] );
 }
 
 /* @set_voltage: Set the voltage for the regulator within the range specified.
@@ -302,91 +260,91 @@ static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int m
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;
-    struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
-    unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev ) ;
-	unsigned int addr = 0 ;
-	unsigned int mode = 0 ;
-	int	rc;
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
+	unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev_get_id(rdev));
+	unsigned int addr = 0;
+	unsigned int mode = 0;
+	int	rc, uv;
 	int	ret;
-	printk("Inside %s\n", __func__);
-	for (rc = 0; rc < info->num_voltages ; rc++)
-	{
-        int uv = info->v_table[rc] ;
+	pr_debug("Inside %s: ID %d\n", __func__, rdev_get_id(rdev));
+	/* Find the proper voltage between MAX and MIN voltage */
+	for (rc = 0; rc < info->num_voltages; rc++) {
+		uv = info->v_table[rc];
+		if ((min_uv <= uv) && (uv <= max_uv))
+			break;
+	}
+	pr_debug("%s: selected uv is %d at rc %d\n", __func__, uv, rc);
+	if (rc == info->num_voltages) {
+		pr_info("%s: No Suitable voltage found\n", __func__);
+		return -EINVAL;
+	}
+	if (ldo_or_sr == BCM590XX_LDO)
+		addr = info->reg_addr_volt;
+	if (ldo_or_sr == BCM590XX_SR) {
+		// To Set voltage, first get mode you are in for case of CSR, IOSR, SDSR.
+		mode =  bcm590xxreg_get_mode(rdev);
 
-        if ( ( min_uv <= uv ) && ( uv <= max_uv )  )
-		{
-            if ( ldo_or_sr == BCM590XX_LDO )
-			{
-                addr = info->reg_addr_volt ;
-			}
-			else if ( ldo_or_sr == BCM590XX_SR )
-			{
-                // To Set voltage, first get mode you are in for case of CSR, IOSR, SDSR.
-                mode =  bcm590xxreg_get_mode (rdev) ;
-
-                switch ( mode )
-                {
-                    case REGULATOR_MODE_NORMAL  : { addr = info->reg_addr_volt ; break ; }     // NM1 setting.
-                    case REGULATOR_MODE_STANDBY : { addr = info->reg_addr_volt + 1 ; break ; } // LPM setting.
-                    case REGULATOR_MODE_IDLE    : { addr = info->reg_addr_volt + 2 ; break ; } // NM2 setting.
-                    default : { return -EINVAL ; }  // Other case for MODE val are not supported.
-                }
-			}
-
-			/* First read the register. */
-	        ret = bcm590xx_reg_read(bcm590xx,addr) ;
-            if (ret < 0)
-            {
-                printk("bcm590xxldo_set_voltage : error reading regulator control register.\n");
-                return ret;
-            }
-
-			rc = ( ret & (~(info->vout_mask)) )  | rc ;
-
-            return ( bcm590xx_reg_write(bcm590xx, addr, rc ) ) ;
+		switch (mode) {
+			case REGULATOR_MODE_NORMAL:
+				addr = info->reg_addr_volt;
+				break;
+			case REGULATOR_MODE_STANDBY:
+				addr = info->reg_addr_volt + 1;
+				break;
+			case REGULATOR_MODE_FAST:
+				addr = info->reg_addr_volt + 2;
+				break;
+			default:
+				return -EINVAL;
 		}
 	}
-	return -EDOM;
+	/* First read the register. */
+	ret = bcm590xx_reg_read(bcm590xx, addr);
+	if (ret < 0) {
+		pr_info("bcm590xxldo_set_voltage : error reading regulator control register.\n");
+		return ret;
+	}
+	rc = (ret & ~info->vout_mask) | (rc << info->vout_shift);
+	return bcm590xx_reg_write(bcm590xx, addr, rc);
 }
 
 static int bcm590xxldo_get_voltage(struct regulator_dev *rdev)
 {
 	struct bcm590xx_regl_priv *priv = rdev_get_drvdata(rdev);
 	struct bcm590xx	*bcm590xx = priv->bcm590xx;
-	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev) ;
-    unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev ) ;
-	unsigned int addr = 0 ;
-	unsigned int mode = 0 ;
-	int rc = 0 ;
-	printk("Inside %s\n", __func__);
-    if ( ldo_or_sr == BCM590XX_LDO )
-    {
-        addr = info->reg_addr_volt ;
-    }
-    else if ( ldo_or_sr == BCM590XX_SR )
-    {
-        // To Set voltage, first get mode you are in for case of CSR, IOSR, SDSR.
-        mode =  bcm590xxreg_get_mode (rdev) ;
-        switch ( mode )
-        {
-            case REGULATOR_MODE_NORMAL  : { addr = info->reg_addr_volt; break;}     // NM1 setting.
-            case REGULATOR_MODE_STANDBY : { addr = info->reg_addr_volt + 1; break;} // LPM setting.
-            case REGULATOR_MODE_IDLE    : { addr = info->reg_addr_volt + 2; break;} // NM2 setting.
-            default : { return -EINVAL ; }  // Other case for MODE val are not supported.
-        }
-    }
-	printk("%s: %s address is 0x%x\n", __func__, ((ldo_or_sr==0x10)?"LDO":"Switch"), addr);
-	rc = bcm590xx_reg_read(bcm590xx,addr) ;
+	struct bcm590xx_reg_info  *info = bcm590xx_register_info + rdev_get_id(rdev);
+	unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev_get_id(rdev));
+	unsigned int addr = 0;
+	unsigned int mode = 0;
+	int rc = 0;
+	pr_debug("Inside %s: ID %d\n", __func__, rdev_get_id(rdev));
+	if (ldo_or_sr == BCM590XX_LDO)
+		addr = info->reg_addr_volt;
 
-	if (rc < 0)
-	{
-		printk("bcm590xxldo_get_voltage : error reading regulator control register.\n");
+	if ( ldo_or_sr == BCM590XX_SR ) {
+		// To Set voltage, first get mode you are in for case of CSR, IOSR, SDSR.
+		mode =  bcm590xxreg_get_mode(rdev);
+		switch (mode) {
+			case REGULATOR_MODE_NORMAL:
+				addr = info->reg_addr_volt;
+				break;
+			case REGULATOR_MODE_STANDBY:
+				addr = info->reg_addr_volt + 1;
+				break;
+			case REGULATOR_MODE_FAST:
+				addr = info->reg_addr_volt + 2;
+				break;
+			default:
+				return -EINVAL;
+		}
+	}
+	rc = bcm590xx_reg_read(bcm590xx,addr);
+	if (rc < 0) {
+		pr_info("bcm590xxldo_get_voltage : error reading regulator control register.\n");
 		return rc;
 	}
-
-	rc = ( rc >> info->vout_shift ) & ( info->vout_mask ) ;
-
-	return (info->v_table[rc]) ;
+	rc = (rc >> info->vout_shift) & (info->vout_mask);
+	return (info->v_table[rc]);
 }
 
 static int bcm590xx_regulator_probe(struct platform_device *pdev)
@@ -394,58 +352,63 @@ static int bcm590xx_regulator_probe(struct platform_device *pdev)
 	//struct regulator_dev *rdev;
 	struct bcm590xx *bcm590xx = dev_get_drvdata(pdev->dev.parent);
 	struct bcm590xx_regl_priv *regl_priv;
-	int i, num;
-	printk("REG: bcm590xx_regulator_probe called - bcm590xx 0x%x\n", (u32)bcm590xx);
+	struct bcm590xx_regulator_pdata *regulator = bcm590xx->pdata->regl_pdata;
+	int i, ret=0;
+	pr_info("%s: - bcm590xx 0x%x\n", __func__, (u32)bcm590xx);
 
-	num = bcm590xx_num_regl();
-#ifdef DEBUG_ON
-	printk("%s: Number of regl %d\n", __func__, num);
-#endif
+	bcm590xx_register_details((void **)&bcm590xx_register_info);
+	bcm590xx_regulator_desc((void **)&bcm590xx_info);
+	bcm590xx_regl_initdata = regulator->init;
+
+	/* Set default values for all regulators */
+	for (i = 0; i < BCM590XX_MAX_REGULATOR; i++)
+		ret |= bcm590xx_reg_write(bcm590xx,
+				bcm590xx_register_info[i].reg_addr,
+				regulator->default_pmmode[i]);
+	if (ret) {
+		pr_info("%s: Failed to set default mode for regulators\n", __func__);
+		return -EIO;
+	}
+
 	regl_priv = kzalloc((sizeof(struct bcm590xx_regl_priv) +
-					num * sizeof(
-						struct regulator_dev *)),
-						GFP_KERNEL);
+				regulator->num_regulator * sizeof(
+					struct regulator_dev *)),
+			GFP_KERNEL);
 	if (unlikely(!regl_priv)) {
-			printk("%s: Could not create regl_priv\n", __func__);
-			return -ENOMEM;
+		pr_info("%s: Could not create regl_priv\n", __func__);
+		return -ENOMEM;
 	}
 
 	regl_priv->bcm590xx = bcm590xx;
-	regl_priv->num_regl = num;
-
-	bcm590xx_regl_initdata = (struct bcm590xx_regulator_init_data *)bcm590xx_get_initdata();
-	bcm590xx_register_details((void **)&bcm590xx_register_info);
-	bcm590xx_regulator_desc((void **)&bcm590xx_info);
+	regl_priv->num_regl = regulator->num_regulator;
 
 	/* register regulator */
 	for (i= 0; i < regl_priv->num_regl; i++) {
-#ifdef DEBUG_ON
-	printk("%s: %d regl name %s, id %d,\n", __func__, i, bcm590xx_info[i].name, bcm590xx_info[i].id);
-#endif
+		int index = bcm590xx_regl_initdata[i].regulator;
+		bcm590xx_register_info[index].dsm = bcm590xx_regl_initdata[i].dsm;
+		pr_debug("%s: %d regl name %s, id %d,Index %d, dsm %d\n", __func__, i,
+				bcm590xx_info[index].name, bcm590xx_info[index].id,
+				index, bcm590xx_regl_initdata[i].dsm);
 		regl_priv->regl[i] = regulator_register(
-			&bcm590xx_info[i],
-			&pdev->dev, bcm590xx_regl_initdata[i].initdata,
-			regl_priv);
+				&bcm590xx_info[index],
+				&pdev->dev, bcm590xx_regl_initdata[i].initdata,
+				regl_priv);
 	}
 	regulator_has_full_constraints();
-	/* register regulator IRQ here */
 	return 0;
 }
 
 static int bcm590xx_regulator_remove(struct platform_device *pdev)
 {
 	struct regulator_dev *rdev = platform_get_drvdata(pdev);
-	// struct bcm590xx *bcm590xx = rdev_get_drvdata(rdev);
-
 	regulator_unregister(rdev);
-
 	return 0;
 }
 
 static struct platform_driver bcm590xx_regulator_driver = {
-	.probe = bcm590xx_regulator_probe,
-	.remove = __devexit_p(bcm590xx_regulator_remove),
-	.driver		= {
+	.probe	= bcm590xx_regulator_probe,
+	.remove	= __devexit_p(bcm590xx_regulator_remove),
+	.driver	= {
 		.name	= "bcm590xx-regulator",
 	},
 };

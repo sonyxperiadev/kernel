@@ -21,24 +21,17 @@
 *
 ****************************************************************************/
 
-#ifndef _INC_MS_BASIC_TYPES_H_
-#define _INC_MS_BASIC_TYPES_H_
+#ifndef _MOBCOM_TYPES_H_
+#define _MOBCOM_TYPES_H_
 
-#include "brcm_rdb_util.h"
+
 /** @{ */
 
 #define _BSDTYPES_DEFINED
-#ifdef LMP_BUILD
-typedef unsigned char      u_char;
-typedef unsigned short     u_short;
-typedef unsigned long      u_long;
-#endif
 
-#ifdef LMP_BUILD
 typedef unsigned char      UInt8;	    ///< Unsigned character(8 bits Wide)
 typedef unsigned short     UInt16;	    ///< Unsigned Short(16 bits wide)
 typedef unsigned long      UInt32;  	///< Unsigned Long Integer(32 bits wide)
-#endif
 
 #ifdef __GNUC__
 typedef unsigned long long UInt64;

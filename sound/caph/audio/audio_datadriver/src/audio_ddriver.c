@@ -129,6 +129,113 @@ static void AUDIO_DRIVER_CaptureVoiceCallback(UInt32 buf_index);
 // Functions
 //=============================================================================
 
+static CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
+{
+      CSL_CAPH_DEVICE_e cslDev = CSL_CAPH_DEV_NONE;
+
+      switch (dev)
+      {
+        case AUDDRV_DEV_NONE:
+            cslDev = CSL_CAPH_DEV_NONE;
+            break;
+			
+         case AUDDRV_DEV_EP:
+            cslDev = CSL_CAPH_DEV_EP;
+            break;
+			
+         case AUDDRV_DEV_HS:
+            cslDev = CSL_CAPH_DEV_HS;
+            break;	
+			
+         case AUDDRV_DEV_IHF:
+            cslDev = CSL_CAPH_DEV_IHF;
+            break;
+			
+         case AUDDRV_DEV_VIBRA:
+            cslDev = CSL_CAPH_DEV_VIBRA;
+            break;
+			
+         case AUDDRV_DEV_FM_TX:
+            cslDev = CSL_CAPH_DEV_FM_TX;
+            break;
+			
+         case AUDDRV_DEV_BT_SPKR:
+            cslDev = CSL_CAPH_DEV_BT_SPKR;
+            break;	
+			
+         case AUDDRV_DEV_DSP:
+            cslDev = CSL_CAPH_DEV_DSP;
+            break;
+			
+         case AUDDRV_DEV_DIGI_MIC:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC;
+            break;
+
+
+         case AUDDRV_DEV_DIGI_MIC_L:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC_L;
+            break;
+
+         case AUDDRV_DEV_DIGI_MIC_R:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC_R;
+            break;
+			
+         case AUDDRV_DEV_EANC_DIGI_MIC:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC;
+            break;
+			
+         case AUDDRV_DEV_EANC_DIGI_MIC_L:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_L;
+            break;
+
+         case AUDDRV_DEV_EANC_DIGI_MIC_R:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_R;
+            break;
+
+         case AUDDRV_DEV_SIDETONE_INPUT:
+            cslDev = CSL_CAPH_DEV_SIDETONE_INPUT;
+            break;	
+			
+         case AUDDRV_DEV_EANC_INPUT:
+            cslDev = CSL_CAPH_DEV_EANC_INPUT;
+            break;
+			
+         case AUDDRV_DEV_ANALOG_MIC:
+            cslDev = CSL_CAPH_DEV_ANALOG_MIC;
+            break;
+			
+         case AUDDRV_DEV_HS_MIC:
+            cslDev = CSL_CAPH_DEV_HS_MIC;
+            break;
+			
+         case AUDDRV_DEV_BT_MIC:
+            cslDev = CSL_CAPH_DEV_BT_MIC;
+            break;	
+			
+         case AUDDRV_DEV_FM_RADIO:
+            cslDev = CSL_CAPH_DEV_FM_RADIO;
+            break;
+			
+         case AUDDRV_DEV_MEMORY:
+            cslDev = CSL_CAPH_DEV_MEMORY;
+            break;
+
+         case AUDDRV_DEV_SRCM:
+            cslDev = CSL_CAPH_DEV_SRCM;
+            break;
+		
+        case AUDDRV_DEV_DSP_throughMEM:
+            cslDev = CSL_CAPH_DEV_DSP_throughMEM;
+            break;
+    	    
+        default:
+		break;	
+    };
+
+    return cslDev;
+}
+
+
 //============================================================================
 //
 // Function Name: AUDIO_DRIVER_Open
@@ -165,17 +272,13 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
             {
-		   // we don't have info on sink here, move the init code before start
- 		    aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY,CSL_CAPH_DEV_EP);
 	            audio_render_driver =  aud_drv;
             }
             break;
         case AUDIO_DRIVER_CAPT_HQ:
             {
-		// commented. use CAPH macros appropriate and not AUDVOC
-                //aud_drv->stream_id = csl_audio_capture_init (CSL_AUDVOC_DEV_CAPTURE_AUDIO,CSL_AUDVOC_DEV_NONE);
-                audio_capture_driver = aud_drv;
-            }
+	           audio_capture_driver = aud_drv;
+			}
             break;
         case AUDIO_DRIVER_CAPT_VOICE:
             {
@@ -370,6 +473,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 {
     Result_t result_code = RESULT_ERROR;
 
+    AUDDRV_DEVICE_e *aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
 
     switch (ctrl_cmd)
@@ -392,23 +496,24 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::All Configuration is not set yet  \n"  );
                     return result_code;
                 }
+		aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY,AUDDRV_GetCSLDevice(*aud_dev));
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
                  * Number of blocks = buffer size/block size
                  *
                  */
                 //((aud_drv->sample_rate/1000) * (aud_drv->num_channel) * 2 * (aud_drv->interrupt_period));  **period_size comes directly
                 block_size = aud_drv->interrupt_period;
-			    num_blocks = 2; //limitation for RHEA
+		num_blocks = 2; //limitation for RHEA
 
                 // configure the render driver before starting
                 result_code = csl_audio_render_configure ( aud_drv->sample_rate, 
 						                      aud_drv->num_channel,
-                                              aud_drv->bits_per_sample,
+                			                              aud_drv->bits_per_sample,
 						                      aud_drv->ring_buffer_phy_addr,
 						                      num_blocks,
 						                      block_size,
 						                      (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
-                                              aud_drv->stream_id);
+                                        			      aud_drv->stream_id);
 
                 //start render
                 result_code = csl_audio_render_start (aud_drv->stream_id);
@@ -454,6 +559,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
+    AUDDRV_DEVICE_e *aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
 
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureCmd::%d \n",ctrl_cmd );
 
@@ -477,23 +583,23 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureCmd::All Configuration is not set yet  \n"  );
                     return result_code;
                 }
+                aud_drv->stream_id = csl_audio_capture_init (AUDDRV_GetCSLDevice(*aud_dev),CSL_CAPH_DEV_MEMORY);
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
                  * Number of blocks = buffer size/block size
                  *
                  */
-                //((aud_drv->sample_rate/1000) * (aud_drv->num_channel) * 2 * (aud_drv->interrupt_period));  **period_size comes directly
                 block_size = aud_drv->interrupt_period;
-			    num_blocks = (aud_drv->ring_buffer_size/block_size);
+		num_blocks = 2; //limitation for RHEA
 
                 // configure the render driver before starting
                 result_code = csl_audio_capture_configure ( aud_drv->sample_rate, 
 						                      aud_drv->num_channel,
-                                              aud_drv->bits_per_sample,
+                                              			      aud_drv->bits_per_sample,
 						                      aud_drv->ring_buffer_phy_addr,
 						                      num_blocks,
 						                      block_size,
 						                      (CSL_AUDCAPTURE_CB) AUDIO_DRIVER_CaptureDmaCallback,
-                                              aud_drv->stream_id);
+                                              			      aud_drv->stream_id);
 
                 //start capture
                 result_code = csl_audio_capture_start (aud_drv->stream_id);
@@ -783,7 +889,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
 static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
 {
 
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_CaptureDmaCallback::\n");
+    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_CaptureDmaCallback::\n");
 
 
     if((audio_capture_driver == NULL))

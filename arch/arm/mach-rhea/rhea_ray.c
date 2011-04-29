@@ -85,41 +85,23 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
-
-#define BCM590XX_REG_ENABLED  1
-#define BCM590XX_REG_DISABLED 0
-
-#define BCM59055_RFLDO_OTP_VAL     BCM590XX_REG_ENABLED
-#define BCM59055_CAMLDO_OTP_VAL    BCM590XX_REG_ENABLED
-#define BCM59055_HV1LDO_OTP_VAL    BCM590XX_REG_ENABLED
-#define BCM59055_HV2LDO_OTP_VAL    BCM590XX_REG_ENABLED
-#define BCM59055_HV3LDO_OTP_VAL    BCM590XX_REG_DISABLED
-#define BCM59055_HV4LDO_OTP_VAL    BCM590XX_REG_ENABLED
-#define BCM59055_HV5LDO_OTP_VAL    BCM590XX_REG_ENABLED
-#define BCM59055_HV6LDO_OTP_VAL    BCM590XX_REG_DISABLED
-#define BCM59055_HV7LDO_OTP_VAL    BCM590XX_REG_DISABLED
-#define BCM59055_SIMLDO_OTP_VAL    BCM590XX_REG_ENABLED
-#define BCM59055_CSR_OTP_VAL       BCM590XX_REG_ENABLED
-#define BCM59055_IOSR_OTP_VAL      BCM590XX_REG_ENABLED
-#define BCM59055_SDSR_OTP_VAL      BCM590XX_REG_ENABLED
-
 static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx, int flag)
 {
 	int ret;
-      printk("REG: pmu_init_platform_hw called \n") ;
+	printk("REG: pmu_init_platform_hw called \n") ;
 	switch (flag) {
- 	case BCM590XX_INITIALIZATION:
- 		ret = gpio_request(PMU_IRQ_PIN, "pmu_irq");
- 		if (ret < 0) {
- 			printk(KERN_ERR "%s unable to request GPIO pin %d\n", __FUNCTION__, PMU_IRQ_PIN);
- 			return ret ;
- 		}
-		gpio_direction_input(PMU_IRQ_PIN);
-		break;
-	default:
-		return -EPERM;
+		case BCM590XX_INITIALIZATION:
+			ret = gpio_request(PMU_IRQ_PIN, "pmu_irq");
+			if (ret < 0) {
+				printk(KERN_ERR "%s unable to request GPIO pin %d\n", __FUNCTION__, PMU_IRQ_PIN);
+				return ret ;
+			}
+			gpio_direction_input(PMU_IRQ_PIN);
+			break;
+		default:
+			return -EPERM;
 	}
-      return 0 ;
+	return 0 ;
 }
 
 #ifdef CONFIG_BATTERY_BCM59055
@@ -132,13 +114,13 @@ static int can_start_charging(void* data)
 	int cpu, usb_otg_int[4], i;
 	for_each_present_cpu(cpu)
 		usb_otg_int[cpu] =  kstat_irqs_cpu(
-		BCM_INT_ID_USB_HSOTG, cpu);
+				BCM_INT_ID_USB_HSOTG, cpu);
 
 	for (i=0; i<10; i++) {
 		schedule_timeout_interruptible(INTERVAL);
 		for_each_present_cpu(cpu)
 			if (usb_otg_int[cpu]!= kstat_irqs_cpu(
-				BCM_INT_ID_USB_HSOTG, cpu))
+						BCM_INT_ID_USB_HSOTG, cpu))
 				return 0;
 	}
 	return 1;
@@ -164,6 +146,50 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 };
 #endif
 
+/* Regulator registration */
+struct regulator_consumer_supply sim_supply[] = {
+	{ .supply = "sim_vcc" },
+};
+
+static struct regulator_init_data bcm59055_simldo_data = {
+	.constraints = {
+		.name = "simldo",
+		.min_uV = 1300000,
+		.max_uV = 3300000,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+			REGULATOR_CHANGE_VOLTAGE,
+		.always_on = 0,
+		.boot_on = 0,
+	},
+	.num_consumer_supplies = ARRAY_SIZE(sim_supply),
+	.consumer_supplies = sim_supply,
+};
+
+static struct bcm590xx_regulator_init_data bcm59055_regulators[] =
+{
+	{BCM59055_SIMLDO, &bcm59055_simldo_data, BCM590XX_REGL_LPM_IN_DSM},
+};
+
+static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
+	.num_regulator	= ARRAY_SIZE(bcm59055_regulators),
+	.init			= &bcm59055_regulators,
+	.default_pmmode = {
+		[BCM59055_RFLDO]	= 0x00,
+		[BCM59055_CAMLDO] 	= 0x00,
+		[BCM59055_HV1LDO]	= 0x00,
+		[BCM59055_HV2LDO]	= 0x00,
+		[BCM59055_HV3LDO]	= 0x00,
+		[BCM59055_HV4LDO]	= 0x00,
+		[BCM59055_HV5LDO]	= 0x00,
+		[BCM59055_HV6LDO]	= 0x00,
+		[BCM59055_HV7LDO]	= 0x00,
+		[BCM59055_SIMLDO]	= 0x00,
+		[BCM59055_CSR]		= 0x00,
+		[BCM59055_IOSR]		= 0x00,
+		[BCM59055_SDSR]		= 0x00,
+	},
+};
+
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	.init = bcm590xx_init_platform_hw,
 	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
@@ -171,16 +197,17 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
+	.regl_pdata = &bcm59055_regl_pdata,
 };
 
 
 static struct i2c_board_info __initdata pmu_info[] =
 {
-   {
-      I2C_BOARD_INFO("bcm59055", PMU_DEVICE_I2C_ADDR_0 ),
-      .irq = gpio_to_irq(PMU_IRQ_PIN),
-      .platform_data  = &bcm590xx_plat_data,
-   },
+	{
+		I2C_BOARD_INFO("bcm59055", PMU_DEVICE_I2C_ADDR_0 ),
+		.irq = gpio_to_irq(PMU_IRQ_PIN),
+		.platform_data  = &bcm590xx_plat_data,
+	},
 };
 
 #ifdef CONFIG_KEYBOARD_BCM
@@ -463,8 +490,8 @@ static void __init rhea_ray_add_i2c_devices (void)
 {
 	/* 59055 on BSC - PMU */
 	i2c_register_board_info(2,
-		pmu_info,
-		ARRAY_SIZE(pmu_info));
+			pmu_info,
+			ARRAY_SIZE(pmu_info));
 }
 
 static int __init rhea_ray_add_lateInit_devices (void)
