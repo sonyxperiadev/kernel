@@ -45,7 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define IRQ_GRAPHICS	BCM_INT_ID_RESERVED148
 
-#define V3D_DEBUG
+//#define V3D_DEBUG
 #ifdef V3D_DEBUG
 	#define dbg_print(fmt, arg...) \
 			printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
@@ -77,8 +77,7 @@ static irqreturn_t v3d_isr(int irq, void *dev_id)
 {
 	v3d_t *dev;
 
-	dbg_print("Got v3d interrupt: clear V3D interrupts\n");
-	writel ( 0xf, v3d_base + V3D_INTCTL_OFFSET);
+	dbg_print("Got v3d interrupt\n");
 	dev = (v3d_t *)dev_id;
 
 	up(&dev->irq_sem);
@@ -103,7 +102,7 @@ static int v3d_open(struct inode *inode, struct file *filp)
 	sema_init(&dev->irq_sem, 0);
 
 	ret = request_irq(IRQ_GRAPHICS, v3d_isr,
-			IRQF_DISABLED | IRQF_SHARED | IRQF_TRIGGER_RISING, V3D_DEV_NAME, dev);
+			IRQF_ONESHOT | IRQF_DISABLED | IRQF_TRIGGER_RISING, V3D_DEV_NAME, dev);
 	if (ret){
 		err_print("request_irq failed ret = %d\n", ret);
 		goto err;
@@ -209,6 +208,10 @@ static int v3d_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, u
 		}
 	  break;
 
+	   case V3D_IOCTL_EXIT_IRQ_WAIT:
+				up(&dev->irq_sem);
+		break;
+
 	default:
 		break;
 	}
@@ -262,7 +265,7 @@ static int setup_v3d_clock(void)
 	}
 
 	rate = clk_get_rate(v3d_clk);
-	dbg_print("v3d_clk_clk rate %lu\n", rate);
+	err_print("v3d_clk_clk rate %lu\n", rate);
 
 	return (rc);
 }
@@ -304,6 +307,7 @@ int __init v3d_init(void)
 	dbg_print("V3D Identification 0 = 0X%x\n", readl(v3d_base + V3D_IDENT0_OFFSET));
 	dbg_print("V3D Identification 1 = 0X%x\n", readl(v3d_base + V3D_IDENT1_OFFSET));
 	dbg_print("V3D Identification 2 = 0X%x\n", readl(v3d_base + V3D_IDENT2_OFFSET));
+	dbg_print("V3D register base address (remaped) = 0X%p\n", v3d_base);
 
 	return 0;
 
