@@ -15,17 +15,9 @@ comment "Haptic drivers"
 
 config HAPTIC_SAMSUNG_PWM
 	tristate "Haptic Support for SAMSUNG PWM-controlled motor (ISA1000)"
-	depends on HAPTIC_CLASS && (ARCH_S3C64XX || ARCH_S5PC1XX)
+	depends on HAPTIC_CLASS
 	help
 	  This options enables support for haptic connected to GPIO lines
-	  controlled by a PWM timer on SAMSUNG CPUs.
-
-comment "Haptic chips"
-
-config HAPTIC_ISA1200
-	tristate "Haptic Motor"
-	depends on HAPTIC_CLASS && I2C
-	help
-	  The ISA1200 is a high performance enhanced haptic motor driver
+	  controlled by a PWM timer.
 
 endif	# HAPTIC

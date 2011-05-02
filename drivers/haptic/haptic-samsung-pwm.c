@@ -16,7 +16,8 @@
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
 #include <linux/err.h>
-#include <linux/pwm.h>
+#include <linux/pwm/pwm.h>
+#include <linux/slab.h>
 #include <linux/timer.h>
 
 #include "haptic.h"
@@ -55,7 +56,7 @@ static void samsung_pwm_haptic_power_on(struct samsung_pwm_haptic *haptic)
 	if (gpio_is_valid(haptic->pdata->gpio))
 		gpio_set_value(haptic->pdata->gpio, 1);
 
-	pwm_enable(haptic->pwm);
+	pwm_start(haptic->pwm);
 }
 
 static void samsung_pwm_haptic_power_off(struct samsung_pwm_haptic *haptic)
@@ -67,13 +68,13 @@ static void samsung_pwm_haptic_power_off(struct samsung_pwm_haptic *haptic)
 	if (gpio_is_valid(haptic->pdata->gpio))
 		gpio_set_value(haptic->pdata->gpio, 0);
 
-	pwm_disable(haptic->pwm);
+	pwm_stop(haptic->pwm);
 }
 
 static int samsung_pwm_haptic_set_pwm_cycle(struct samsung_pwm_haptic *haptic)
 {
 	int duty = haptic_levels[haptic->level];
-	return pwm_config(haptic->pwm, duty, PWM_HAPTIC_PERIOD);
+	return pwm_set(haptic->pwm, PWM_HAPTIC_PERIOD, duty, 0);
 }
 
 static void samsung_pwm_haptic_work(struct work_struct *work)
@@ -273,7 +274,7 @@ static int samsung_pwm_haptic_probe(struct platform_device *pdev)
 		goto error_classdev;
 	}
 
-	haptic->pwm = pwm_request(pdata->pwm_timer, "haptic");
+	haptic->pwm = pwm_request(pdata->name, "haptic");
 	if (IS_ERR(haptic->pwm)) {
 		dev_err(&pdev->dev, "unable to request PWM for haptic\n");
 		ret = PTR_ERR(haptic->pwm);
@@ -305,7 +306,7 @@ error_gpio:
 error_enable:
 	sysfs_remove_group(&haptic->cdev.dev->kobj, &haptic_group);
 err_pwm:
-	pwm_free(haptic->pwm);
+	pwm_release(haptic->pwm);
 error_classdev:
 	haptic_classdev_unregister(&haptic->cdev);
 	kfree(haptic);

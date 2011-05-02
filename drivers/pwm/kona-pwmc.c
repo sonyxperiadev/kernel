@@ -267,6 +267,8 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
         || (!test_bit(PWM_CONFIG_STOP, &c->config_mask))) {
             kona_pwmc_start(ap, chan);
     }
+    if (test_bit(PWM_CONFIG_STOP, &c->config_mask))
+        kona_pwmc_stop(ap, chan);
 
     return 0;
 }
