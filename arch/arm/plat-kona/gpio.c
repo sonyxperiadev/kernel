@@ -170,6 +170,10 @@ static int kona_gpio_direction_output(struct gpio_chip *chip, unsigned gpio,
 	val |= GPIO_GPCTR0_IOTR_CMD_0UTPUT;
 	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
 
+	val = __raw_readl(reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
+	val = (value) ? (val | (1 << GPIO_BIT(gpio))) : (val & (~(1 << GPIO_BIT(gpio))));
+	__raw_writel(val, reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
+
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 
 	return 0;
