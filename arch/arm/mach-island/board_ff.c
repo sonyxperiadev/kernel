@@ -512,8 +512,10 @@ static struct platform_device island_sdio2_device = {
    },
 };
 
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
 void island_maxim_platform_hw_init_1(void ) ;
 void island_maxim_platform_hw_init_2(void ) ;
+#endif
 
 struct regulator_consumer_supply max8649_supply1 = { .supply = "vc_core" };
 struct regulator_init_data max8649_init_data1 = {
@@ -536,7 +538,9 @@ struct max8649_platform_data max8649_info1 = {
     .extclk	= 0,
     .ramp_timing = MAX8649_RAMP_32MV,
     .regulator = &max8649_init_data1 ,
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
     .init = island_maxim_platform_hw_init_1,
+#endif
 } ;
 
 struct platform_device max8649_vc1 =  {
@@ -579,7 +583,9 @@ struct max8649_platform_data max8649_info2 =
     .extclk		= 0,
     .ramp_timing	= MAX8649_RAMP_32MV,
     .regulator	= &max8649_init_data2 ,
+#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
     .init = island_maxim_platform_hw_init_2,
+#endif
 } ;
 
 struct platform_device max8649_vc2 =  {
@@ -944,8 +950,8 @@ static struct platform_device *board_devices[] __initdata = {
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
 	&board_i2c_adap_devices[3],
-	&island_sdio2_device,
 	&island_sdio1_device,
+	&island_sdio2_device,
 	&island_ipc_device,
 	&board_gpio_keys_device,
 	&islands_leds_device,
