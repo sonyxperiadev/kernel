@@ -31,7 +31,11 @@
 #include <mach/brcm_ccu_clk_mgr_reg.h>
 #include <asm/io.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
+#ifdef	CONFIG_ARCH_ISLAND
+#include <mach/rdb/brcm_rdb_iroot_clk_mgr_reg.h>
+#else
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
+#endif
 
 #ifdef CONFIG_SMP
 #include <asm/cpu.h>
@@ -932,10 +936,17 @@ static int root_ccu_init(struct clk *clk)
     // HWRHEA-877: var_312m_clk and var_96m_clk in rootCCU have wrong default
     // pll_select vaules, SW should program rootccu VAR_312M_DIV/VAR_48M_DIV
     // to use PLL1 clock instead of default PLL0i
+#ifdef	CONFIG_ARCH_ISLAND
+    writel (0x1, base  + IROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+    writel (0x1, base + IROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
+    writel (0x5, base + IROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET);
+    while(readl(base + IROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET));
+#else
     writel (0x1, base  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
     writel (0x1, base + ROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
     writel (0x5, base + ROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET);
     while(readl(base + ROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET));
+#endif
 
     writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
 

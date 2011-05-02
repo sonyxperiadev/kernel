@@ -25,20 +25,6 @@
 #include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>
 //#include <mach/rdb/brcm_rdb_pwrmgr.h>
 
-
-
-#define	DECLARE_REF_CLK(clk_name, clk_rate, clk_div, clk_parent)		\
-	static struct proc_clock clk_name##_clk = {				\
-		.clk	=	{						\
-			.name	=	__stringify(clk_name##_clk),		\
-			.parent	=	clk_parent,				\
-			.rate	=	clk_rate,				\
-			.div	=	clk_div,				\
-			.id	=	-1,					\
-			.ops	=	&ref_clk_ops,				\
-		},								\
-	}
-
 /* Proc clocks */
 static struct proc_clock arm_clk = {
 	.clk	=	{
@@ -54,42 +40,42 @@ static struct proc_clock arm_clk = {
 
 
 /* Ref clocks */
-DECLARE_REF_CLK		(crystal, 			26*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK		(frac_1m, 			1*CLOCK_1M,		1,	0);
-DECLARE_REF_CLK		(ref_96m_varVDD, 		96*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK		(var_96m, 			96*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK		(ref_96m, 			96*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK		(var_500m_varVDD, 		500*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(crystal, CRYSTAL, 			26*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(frac_1m, FRAC_1M,			1*CLOCK_1M,		1,	0);
+DECLARE_REF_CLK		(ref_96m_varVDD, REF_96M_VARVDD,		96*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(var_96m, VAR_96M,			96*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(ref_96m, REF_96M,			96*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(var_500m_varVDD, VAR_500M_VARVDD,		500*CLOCK_1M,	1,	0);
 
-DECLARE_REF_CLK		(ref_1m,	 		1*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK		(ref_32k, 			32*CLOCK_1K,	1,	0);
-DECLARE_REF_CLK		(misc_32k, 			32*CLOCK_1K,	1,	0);
+DECLARE_REF_CLK		(ref_1m,	REF_1M, 		1*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(ref_32k, REF_32K,			32*CLOCK_1K,	1,	0);
+DECLARE_REF_CLK		(misc_32k, MISC_32K,			32*CLOCK_1K,	1,	0);
 
-DECLARE_REF_CLK		(ref_312m, 			312*CLOCK_1M,	0,	0);
-DECLARE_REF_CLK		(ref_208m, 			208*CLOCK_1M,	0,	name_to_clk(ref_312m));
-DECLARE_REF_CLK		(ref_156m, 			156*CLOCK_1M,	2,	name_to_clk(ref_312m));
-DECLARE_REF_CLK		(ref_104m, 			104*CLOCK_1M,	3,	name_to_clk(ref_312m));
-DECLARE_REF_CLK		(ref_52m, 			52*CLOCK_1M,	2,	name_to_clk(ref_104m));
-DECLARE_REF_CLK		(ref_13m, 			13*CLOCK_1M,	4,	name_to_clk(ref_52m));
+DECLARE_REF_CLK		(ref_312m, REF_312M,			312*CLOCK_1M,	0,	0);
+DECLARE_REF_CLK		(ref_208m, REF_208M,			208*CLOCK_1M,	0,	name_to_clk(ref_312m));
+DECLARE_REF_CLK		(ref_156m, REF_156M,			156*CLOCK_1M,	2,	name_to_clk(ref_312m));
+DECLARE_REF_CLK		(ref_104m, REF_104M,			104*CLOCK_1M,	3,	name_to_clk(ref_312m));
+DECLARE_REF_CLK		(ref_52m, REF_52M,			52*CLOCK_1M,	2,	name_to_clk(ref_104m));
+DECLARE_REF_CLK		(ref_13m, REF_13M,			13*CLOCK_1M,	4,	name_to_clk(ref_52m));
 
-DECLARE_REF_CLK		(var_312m, 			312*CLOCK_1M,	0,	0);
-DECLARE_REF_CLK		(var_208m, 			208*CLOCK_1M,	0,	name_to_clk(var_312m));
-DECLARE_REF_CLK		(var_156m, 			156*CLOCK_1M,	2,	name_to_clk(var_312m));
-DECLARE_REF_CLK		(var_104m, 			104*CLOCK_1M,	3,	name_to_clk(var_312m));
-DECLARE_REF_CLK		(var_52m, 			52*CLOCK_1M,	2,	name_to_clk(var_104m));
-DECLARE_REF_CLK		(var_13m, 			13*CLOCK_1M,	4,	name_to_clk(var_52m));
+DECLARE_REF_CLK		(var_312m, VAR_312M,			312*CLOCK_1M,	0,	0);
+DECLARE_REF_CLK		(var_208m, VAR_208M,			208*CLOCK_1M,	0,	name_to_clk(var_312m));
+DECLARE_REF_CLK		(var_156m, VAR_156M,			156*CLOCK_1M,	2,	name_to_clk(var_312m));
+DECLARE_REF_CLK		(var_104m, VAR_104M,			104*CLOCK_1M,	3,	name_to_clk(var_312m));
+DECLARE_REF_CLK		(var_52m, VAR_52M,			52*CLOCK_1M,	2,	name_to_clk(var_104m));
+DECLARE_REF_CLK		(var_13m, VAR_13M,			13*CLOCK_1M,	4,	name_to_clk(var_52m));
 
-DECLARE_REF_CLK		(usbh_48m, 			48*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK		(ref_cx40, 			153600*CLOCK_1K,1,	0);	// FIXME
+DECLARE_REF_CLK		(usbh_48m, USBH_48M,			48*CLOCK_1M,	1,	0);
+DECLARE_REF_CLK		(ref_cx40, REF_CX40,			153600*CLOCK_1K,1,	0);	// FIXME
 /* CCU clock */
 /*****************************************************************************
 	Reference clocks
 *****************************************************************************/
-DECLARE_CCU_CLK(kpm_ccu, 2, KONA_MST, KPM,
+DECLARE_CCU_CLK(kpm_ccu, 2, KONA_MST, KPM, MASK,
 	26*CLOCK_1M,  52*CLOCK_1M, 104*CLOCK_1M, 156*CLOCK_1M,
 	156*CLOCK_1M, 208*CLOCK_1M, 312*CLOCK_1M, 312*CLOCK_1M);
 
-DECLARE_CCU_CLK(kps_ccu, 2, KONA_SLV, IKPS,
+DECLARE_CCU_CLK(kps_ccu, 2, KONA_SLV, IKPS, MASK,
 	26*CLOCK_1M,  52*CLOCK_1M,  78*CLOCK_1M, 104*CLOCK_1M,
 	156*CLOCK_1M, 156*CLOCK_1M);
 
@@ -117,19 +103,19 @@ DECLARE_BUS_CLK(sdio4_ahb, SDIO4, SDIO4_AHB, kpm_ccu, KONA_MST, KPM,
 	26*CLOCK_1M,  52*CLOCK_1M,  52*CLOCK_1M,  52*CLOCK_1M,
 	78*CLOCK_1M, 104*CLOCK_1M, 104*CLOCK_1M, 156*CLOCK_1M);
 
-DECLARE_BUS_CLK_NO_GATING(sdio1_sleep, SDIO1, SDIO1_SLEEP, kpm_ccu, KONA_MST, KPM,
+DECLARE_BUS_CLK_NO_GATING_SEL(sdio1_sleep, SDIO1, SDIO1_SLEEP, kpm_ccu, KONA_MST, KPM,
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K,
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K);
 
-DECLARE_BUS_CLK_NO_GATING(sdio2_sleep, SDIO2, SDIO2_SLEEP, kpm_ccu, KONA_MST, KPM,
+DECLARE_BUS_CLK_NO_GATING_SEL(sdio2_sleep, SDIO2, SDIO2_SLEEP, kpm_ccu, KONA_MST, KPM,
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K,
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K);
 
-DECLARE_BUS_CLK_NO_GATING(sdio3_sleep, SDIO3, SDIO3_SLEEP, kpm_ccu, KONA_MST, KPM,
+DECLARE_BUS_CLK_NO_GATING_SEL(sdio3_sleep, SDIO3, SDIO3_SLEEP, kpm_ccu, KONA_MST, KPM,
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K,
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K);
 
-DECLARE_BUS_CLK_NO_GATING(sdio4_sleep, SDIO4, SDIO4_SLEEP, kpm_ccu, KONA_MST, KPM,
+DECLARE_BUS_CLK_NO_GATING_SEL(sdio4_sleep, SDIO4, SDIO4_SLEEP, kpm_ccu, KONA_MST, KPM,
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K,
 	32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K, 32*CLOCK_1K);
 
@@ -150,7 +136,7 @@ DECLARE_BUS_CLK(spum_sec_apb, SPUM_SEC_APB, SPUM_SEC_APB, kps_ccu, KONA_SLV, IKP
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
 
-DECLARE_BUS_CLK_NO_GATING(apb1, APB1, APB1, kps_ccu, KONA_SLV, IKPS,
+DECLARE_BUS_CLK_NO_GATING_SEL(apb1, APB1, APB1, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
 
@@ -195,7 +181,7 @@ DECLARE_BUS_CLK(bsc2_apb, BSC2, BSC2_APB, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
 
-DECLARE_BUS_CLK_NO_GATING(apb2, APB2_REG, APB2_REG, kps_ccu, KONA_SLV, IKPS,
+DECLARE_BUS_CLK_NO_GATING_SEL(apb2, APB2_REG, APB2_REG, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
 
@@ -237,10 +223,10 @@ static struct clk_src sdio4_clk_src = {
 	.parents	=	sdio_clk_src_tbl,
 };
 
-DECLARE_PERI_CLK(sdio1, SDIO1, SDIO1, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
-DECLARE_PERI_CLK(sdio2, SDIO2, SDIO2, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
-DECLARE_PERI_CLK(sdio3, SDIO3, SDIO3, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
-DECLARE_PERI_CLK(sdio4, SDIO4, SDIO4, ref_52m, 26*CLOCK_1M, 2, KONA_MST, KPM, 0);
+DECLARE_PERI_CLK(sdio1, SDIO1, SDIO1, ref_52m, 26*CLOCK_1M, 2, DIV_TRIG, KONA_MST, KPM, 0);
+DECLARE_PERI_CLK(sdio2, SDIO2, SDIO2, ref_52m, 26*CLOCK_1M, 2, DIV_TRIG, KONA_MST, KPM, 0);
+DECLARE_PERI_CLK(sdio3, SDIO3, SDIO3, ref_52m, 26*CLOCK_1M, 2, DIV_TRIG, KONA_MST, KPM, 0);
+DECLARE_PERI_CLK(sdio4, SDIO4, SDIO4, ref_52m, 26*CLOCK_1M, 2, DIV_TRIG, KONA_MST, KPM, 0);
 
 /* KPS peripheral clock */
 static struct clk *bsc_clk_src_tbl[] =
@@ -264,8 +250,8 @@ static struct clk_src bsc2_clk_src = {
 	.parents	=	bsc_clk_src_tbl,
 };
 
-DECLARE_PERI_CLK_NO_DIV(bsc1, BSC1, ref_13m, 13*CLOCK_1M, KONA_SLV, IKPS);
-DECLARE_PERI_CLK_NO_DIV(bsc2, BSC2, ref_13m, 13*CLOCK_1M, KONA_SLV, IKPS);
+DECLARE_PERI_CLK_NO_DIV_COUNT(bsc1, BSC1, ref_13m, 13*CLOCK_1M, DIV_TRIG, KONA_SLV, IKPS);
+DECLARE_PERI_CLK_NO_DIV_COUNT(bsc2, BSC2, ref_13m, 13*CLOCK_1M, DIV_TRIG, KONA_SLV, IKPS);
 
 static struct clk *ssp_clk_src_tbl[] =
 {
@@ -281,7 +267,7 @@ static struct clk_src ssp0_clk_src = {
 	.sel		=	1,
 	.parents	=	ssp_clk_src_tbl,
 };
-DECLARE_PERI_CLK(ssp0, SSP0, SSP0, var_104m, 52*CLOCK_1M, 2, KONA_SLV, IKPS, 0);
+DECLARE_PERI_CLK(ssp0, SSP0, SSP0, var_104m, 52*CLOCK_1M, 2, DIV_TRIG, KONA_SLV, IKPS, 0);
 
 static struct clk *uart_clk_src_tbl[] =
 {
@@ -305,9 +291,9 @@ static struct clk_src uartb_clk_src = {
 	.sel		=	1,
 	.parents	=	uart_clk_src_tbl,
 };
-DECLARE_PERI_CLK(uartb3, UARTB3, UARTB3, var_156m, 13*CLOCK_1M, 12, KONA_SLV, IKPS, 8);
-DECLARE_PERI_CLK(uartb2, UARTB2, UARTB2, var_156m, 13*CLOCK_1M, 12, KONA_SLV, IKPS, 8);
-DECLARE_PERI_CLK(uartb, UARTB, UARTB, var_156m, 13*CLOCK_1M, 12, KONA_SLV, IKPS, 8);
+DECLARE_PERI_CLK(uartb3, UARTB3, UARTB3, var_156m, 13*CLOCK_1M, 12, DIV_TRIG, KONA_SLV, IKPS, 8);
+DECLARE_PERI_CLK(uartb2, UARTB2, UARTB2, var_156m, 13*CLOCK_1M, 12, DIV_TRIG, KONA_SLV, IKPS, 8);
+DECLARE_PERI_CLK(uartb, UARTB, UARTB, var_156m, 13*CLOCK_1M, 12, DIV_TRIG, KONA_SLV, IKPS, 8);
 
 static struct clk *timers_clk_src_tbl[] =
 {
@@ -320,7 +306,7 @@ static struct clk_src timers_clk_src = {
 	.sel		=	1,
 	.parents	=	timers_clk_src_tbl,
 };
-DECLARE_PERI_CLK_NO_DIV(timers, TIMERS, ref_32k, 32*CLOCK_1K, KONA_SLV, IKPS);
+DECLARE_PERI_CLK_NO_DIV_COUNT(timers, TIMERS, ref_32k, 32*CLOCK_1K, DIV_TRIG, KONA_SLV, IKPS);
 
 static struct clk *spum_clk_src_tbl[] =
 {
@@ -340,8 +326,8 @@ static struct clk_src spum_sec_clk_src = {
 	.parents	=	spum_clk_src_tbl,
 };
 
-DECLARE_PERI_CLK(spum_open, SPUM_OPEN, SPUM_OPEN, var_312m, 28*CLOCK_1M, 11, KONA_SLV, IKPS, 0);
-DECLARE_PERI_CLK(spum_sec, SPUM_SEC, SPUM_SEC, var_312m, 28*CLOCK_1M, 11, KONA_SLV, IKPS, 0);
+DECLARE_PERI_CLK(spum_open, SPUM_OPEN, SPUM_OPEN, var_312m, 28*CLOCK_1M, 11, DIV_TRIG, KONA_SLV, IKPS, 0);
+DECLARE_PERI_CLK(spum_sec, SPUM_SEC, SPUM_SEC, var_312m, 28*CLOCK_1M, 11, DIV_TRIG, KONA_SLV, IKPS, 0);
 
 
 /* table for registering clock */
