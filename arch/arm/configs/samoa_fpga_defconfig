@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Wed Apr 20 11:16:08 2011
+# Mon May  2 10:35:19 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -374,7 +374,7 @@ CONFIG_CMDLINE="console=ttyS0,115200n8 mem=96M"
 # CONFIG_FPE_FASTFPE is not set
 CONFIG_VFP=y
 CONFIG_VFPv3=y
-# CONFIG_NEON is not set
+CONFIG_NEON=y
 
 #
 # Userspace binary formats
@@ -647,6 +647,7 @@ CONFIG_GPIO_SYSFS=y
 # CONFIG_W1 is not set
 # CONFIG_POWER_SUPPLY is not set
 # CONFIG_HWMON is not set
+# CONFIG_HAPTIC is not set
 # CONFIG_THERMAL is not set
 # CONFIG_WATCHDOG is not set
 CONFIG_SSB_POSSIBLE=y
@@ -815,7 +816,6 @@ CONFIG_ANDROID_LOW_MEMORY_KILLER=y
 #
 # Texas Instruments shared transport line discipline
 #
-# CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA is not set
 
 #
 # File systems
