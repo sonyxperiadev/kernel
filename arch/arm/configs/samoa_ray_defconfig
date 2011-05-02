@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Tue Apr 26 11:32:37 2011
+# Mon May  2 10:25:42 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -314,7 +314,7 @@ CONFIG_COMMON_CLKDEV=y
 #
 CONFIG_TICK_ONESHOT=y
 CONFIG_NO_HZ=y
-CONFIG_HIGH_RES_TIMERS=y
+# CONFIG_HIGH_RES_TIMERS is not set
 CONFIG_GENERIC_CLOCKEVENTS_BUILD=y
 # CONFIG_SMP is not set
 CONFIG_VMSPLIT_3G=y
@@ -706,6 +706,7 @@ CONFIG_GPIO_SYSFS=y
 # CONFIG_W1 is not set
 # CONFIG_POWER_SUPPLY is not set
 # CONFIG_HWMON is not set
+# CONFIG_HAPTIC is not set
 # CONFIG_THERMAL is not set
 # CONFIG_WATCHDOG is not set
 CONFIG_SSB_POSSIBLE=y
