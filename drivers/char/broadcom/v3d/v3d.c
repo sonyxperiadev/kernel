@@ -34,6 +34,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_sysmap_a9.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_v3d.h>
+#include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/gpio.h>
 
 #define V3D_DEV_NAME	"v3d"
@@ -59,6 +60,7 @@ the GPL, without Broadcom's express prior written consent.
 static int v3d_major = V3D_DEV_MAJOR;
 static struct class *v3d_class;
 static void __iomem *v3d_base = NULL;
+static void __iomem *mm_rst_base = NULL;
 static struct clk *v3d_clk;
 
 //external pointer to the V3D memory
@@ -212,6 +214,32 @@ static int v3d_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, u
 				up(&dev->irq_sem);
 		break;
 
+	   case V3D_IOCTL_RESET:
+	   {
+				uint32_t value;
+
+				clk_disable(v3d_clk);
+				//Write the password to enable accessing other registers
+				writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT) | 
+					( 0x1 << MM_RST_MGR_REG_WR_ACCESS_RSTMGR_ACC_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
+	   
+				// Put V3D in reset state
+				value = readl( mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET );
+				value = value & ~( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+				writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+				
+				// Enable V3D 
+				value = value | ( 0x1 << MM_RST_MGR_REG_SOFT_RSTN0_V3D_SOFT_RSTN_SHIFT);
+				writel ( value , mm_rst_base + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET);
+				
+				//Write the password to disable accessing other registers
+				writel ( (0xA5A5 << MM_RST_MGR_REG_WR_ACCESS_PASSWORD_SHIFT), mm_rst_base + MM_RST_MGR_REG_WR_ACCESS_OFFSET);
+				
+				clk_enable(v3d_clk);
+
+	   }
+		break;
+
 	default:
 		break;
 	}
@@ -301,6 +329,12 @@ int __init v3d_init(void)
 	/* Map the V3D registers */
 	v3d_base = (void __iomem *)ioremap_nocache(RHEA_V3D_BASE_PERIPHERAL_ADDRESS, SZ_64K);
 	if (v3d_base == NULL)
+		goto err;
+
+	
+	/* Map the V3D registers */
+	mm_rst_base = (void __iomem *)ioremap_nocache(MM_RST_BASE_ADDR, SZ_4K);
+	if (mm_rst_base == NULL)
 		goto err;
 
 	/* Print out the V3D identification registers */
