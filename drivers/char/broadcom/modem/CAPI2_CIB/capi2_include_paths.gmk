@@ -1,0 +1,43 @@
+# include path definitions for CAPI2 CIB
+
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/cc/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/cp/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/ds/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/gen/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/lcs/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/msc/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/pch/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/phonebk/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/sim/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/sms/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/ss/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/capi2/xdr/
+
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/dataservices/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/modem/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/modem/capi/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/peripherals/pmu/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/peripherals/pmu/public/brcm/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/peripherals/pmu/public/thirdparty/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/soc/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/soc/debug/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/soc/os/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/soc/csl/bsp/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/cpps/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/em/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/hal/adc/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/hal/pmu/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/hal/rtc/public/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/util/public/
+
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/modem/capi/capirpc/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/modem/capi/capirpc/gen/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/sysrpc/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/sysrpc/gen/
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/sysinterface/sysrpc/public/
+
+EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/stubs
+
