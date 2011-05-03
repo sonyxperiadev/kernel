@@ -24,13 +24,13 @@ endchoice
 
 config GP_TIMER_CLOCK_OFF_FIX
 	bool "Enable the fix for general purpose timer clock off issue."
-	depends on ARCH_RHEA
+	depends on ARCH_RHEA || ARCH_SAMOA
 	help
 	  Say Y if you want to enable the general purpose timer clock off fix
 
 config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
-        depends on ARCH_RHEA || ARCH_ISLAND
+        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_SAMOA
         default y  
 	  
 config KONA_DCACHE_INVALIDATION

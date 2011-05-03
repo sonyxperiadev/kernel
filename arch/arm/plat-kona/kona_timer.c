@@ -634,6 +634,7 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 	 * 1MHz is from frac_1M. The 32KHz clock is from PMU and is always ON.
 	 */
 	if (rt == MHZ_1) {
+#ifndef CONFIG_ARCH_SAMOA
 		/* unlock root clock manager */
 		val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
 		old_enable = val & 0x1;	
@@ -666,6 +667,7 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 		val &= 0x80000000;
 		val |= 0xA5A500;
 		writel(val, slaveClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+#endif
 	}
 #endif
 	return 0;
