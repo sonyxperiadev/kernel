@@ -836,61 +836,12 @@ struct clk_ops peri_clk_ops = {
 
 static int ccu_clk_enable(struct clk *c, int enable)
 {
-	struct ccu_clock *ccu_clk = to_ccu_clk(c);
-	void __iomem *base;
-	int reg, ret = 0;
-
-	clk_dbg("%s enable: %d, ccu name:%s\n",__func__, enable, c->name);
-	if (c->ccu_id == BCM2165x_ROOT_CCU)
-	    return 0;
-
-	base = ioremap (ccu_clk->ccu_clk_mgr_base, SZ_4K);
-	if (!base)
-		return -ENOMEM;
-
-	if (!enable)
-		return -EINVAL;	/* CCU clock cannot shutdown */
-
-	/* enable access */
-	writel(CLK_WR_ACCESS_PASSWORD, base + ccu_clk->wr_access_offset);
-
-	/* config enable for policy engine */
-	writel(1, base + ccu_clk->lvm_en_offset);
-	while (readl(base + ccu_clk->lvm_en_offset) & 1);
-
-	/* freq ID */
-	if (!ccu_clk->freq_bit_shift)
-		ccu_clk->freq_bit_shift = 8;
-	reg = ccu_clk->freq_id |
-		(ccu_clk->freq_id << (ccu_clk->freq_bit_shift)) |
-		(ccu_clk->freq_id << (ccu_clk->freq_bit_shift * 2)) |
-		(ccu_clk->freq_id << (ccu_clk->freq_bit_shift * 3));
-	writel(reg, base + ccu_clk->policy_freq_offset);
-
-	/* enable all clock mask */
-	writel(0x7fffffff, base + ccu_clk->policy0_mask_offset);
-	writel(0x7fffffff, base + ccu_clk->policy1_mask_offset);
-	writel(0x7fffffff, base + ccu_clk->policy2_mask_offset);
-	writel(0x7fffffff, base + ccu_clk->policy3_mask_offset);
-
-	if (c->ccu_id == BCM2165x_HUB_CCU) {
-	    writel(0x7fffffff, base + ccu_clk->policy0_mask1_offset);
-	    writel(0x7fffffff, base + ccu_clk->policy1_mask1_offset);
-	    writel(0x7fffffff, base + ccu_clk->policy2_mask1_offset);
-	    writel(0x7fffffff, base + ccu_clk->policy3_mask1_offset);
-	}
-
-	/* start policy engine */
-	reg = readl(base + ccu_clk->policy_ctl_offset);
-	reg |= 5;
-	writel(reg, base + ccu_clk->policy_ctl_offset);
-	while (readl(base + ccu_clk->policy_ctl_offset) & 1);
-
-	/* disable access */
-	writel(0, base + ccu_clk->wr_access_offset);
-
-	iounmap (base);
-	return ret;
+    clk_dbg("%s enable: %d, ccu name:%s\n",__func__, enable, c->name);
+    if (c->ccu_id == BCM2165x_ROOT_CCU)
+	return 0;
+    
+    /* Add any CCU enable code here if needed */
+    return 0;
 }
 
 static unsigned long ccu_clk_get_rate(struct clk *c)
@@ -953,18 +904,86 @@ static int root_ccu_init(struct clk *clk)
     return 0;
 }
 
+static int ccu_common_init(struct clk *clk, void __iomem *base)
+{
+    struct ccu_clock *ccu_clk = to_ccu_clk(clk);
+    int reg, ret = 0;
+    clk_dbg("%s \n",__func__);
+
+    /* enable access */
+    writel(CLK_WR_ACCESS_PASSWORD, base + ccu_clk->wr_access_offset);
+
+    /* config enable for policy engine */
+    writel(1, base + ccu_clk->lvm_en_offset);
+    while (readl(base + ccu_clk->lvm_en_offset) & 1);
+
+    /* freq ID */
+    if (!ccu_clk->freq_bit_shift)
+	ccu_clk->freq_bit_shift = 8;
+
+    reg = ccu_clk->freq_id |
+    	(ccu_clk->freq_id << (ccu_clk->freq_bit_shift)) |
+	(ccu_clk->freq_id << (ccu_clk->freq_bit_shift * 2)) |
+	(ccu_clk->freq_id << (ccu_clk->freq_bit_shift * 3));
+
+    writel(reg, base + ccu_clk->policy_freq_offset);
+
+    /* enable all clock mask */
+    writel(0x7fffffff, base + ccu_clk->policy0_mask_offset);
+    writel(0x7fffffff, base + ccu_clk->policy1_mask_offset);
+    writel(0x7fffffff, base + ccu_clk->policy2_mask_offset);
+    writel(0x7fffffff, base + ccu_clk->policy3_mask_offset);
+
+    if (clk->ccu_id == BCM2165x_HUB_CCU) {
+	writel(0x7fffffff, base + ccu_clk->policy0_mask1_offset);
+	writel(0x7fffffff, base + ccu_clk->policy1_mask1_offset);
+	writel(0x7fffffff, base + ccu_clk->policy2_mask1_offset);
+	writel(0x7fffffff, base + ccu_clk->policy3_mask1_offset);
+    }
+    /* start policy engine */
+    reg = readl(base + ccu_clk->policy_ctl_offset);
+    reg |= 5;
+    writel(reg, base + ccu_clk->policy_ctl_offset);
+    while (readl(base + ccu_clk->policy_ctl_offset) & 1);
+    /* disable access */
+    writel(0, base + ccu_clk->wr_access_offset);
+
+    return ret;
+}
+
 static int hub_ccu_init(struct clk *clk)
 {
+    int ret;
+    void __iomem *base;
+
+    clk_dbg("%s \n",__func__);
+    base = (void __iomem *)KONA_HUB_CLK_VA;
+    ret = ccu_common_init(clk, base);
+
     return 0;
 }
 
 static int aon_ccu_init(struct clk *clk)
 {
+    int ret;
+    void __iomem *base;
+
+    clk_dbg("%s \n",__func__);
+    base = (void __iomem *)KONA_AON_CLK_VA;
+    ret = ccu_common_init(clk, base);
+
     return 0;
 }
 
 static int mm_ccu_init(struct clk *clk)
 {
+    int ret;
+    void __iomem *base;
+
+    clk_dbg("%s \n",__func__);
+    base = (void __iomem *)KONA_MM_CLK_VA;
+    ret = ccu_common_init(clk, base);
+
     return 0;
 }
 
@@ -976,45 +995,31 @@ static int proc_ccu_init(struct clk *clk)
 /* CCU specific initialization should be done here.
  * This is called during CCU init and should be before any clocks usage.
  * 1. Set the CCU specific frequency policy
- * 2. Intial gating policies??
+ * 2. Intial gating policies
  */
 static int kona_master_ccu_init(struct clk *clk)
 {
-    int val;
+    int ret;
     void __iomem *base;
-    struct ccu_clock *ccu_clk = to_ccu_clk(clk);
 
+    clk_dbg("%s \n",__func__);
     base = (void __iomem *)KONA_KPM_CLK_VA;
-
-    val = (ccu_clk->freq_id) | (ccu_clk->freq_id << 8)
-    		| (ccu_clk->freq_id << 16) | (ccu_clk->freq_id << 24);
-    writel(val, base + CCU_CLK_MGR_REG_POLICY_FREQ_OFFSET);
-    trigger_active_load(clk, base);
-
-    writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+    ret = ccu_common_init(clk, base);
 
     return 0;
 }
 
 static int kona_slave_ccu_init(struct clk *clk)
 {
-    int val;
+    int ret;
     void __iomem *base;
-    struct ccu_clock *ccu_clk = to_ccu_clk(clk);
 
+    clk_dbg("%s \n",__func__);
     base = (void __iomem *)KONA_KPS_CLK_VA;
-    writel(CLK_WR_ACCESS_PASSWORD, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
-
-    val = (ccu_clk->freq_id) | (ccu_clk->freq_id << 8)
-    		| (ccu_clk->freq_id << 16) | (ccu_clk->freq_id << 24);
-    writel(val, base + CCU_CLK_MGR_REG_POLICY_FREQ_OFFSET);
-    trigger_active_load(clk, base);
-
-    writel(0, base + CCU_CLK_MGR_REG_WR_ACCESS_OFFSET);
+    ret = ccu_common_init(clk, base);
 
     return 0;
 }
-
 
 static int ccu_init(struct clk *c)
 {
