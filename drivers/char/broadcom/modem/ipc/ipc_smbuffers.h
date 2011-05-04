@@ -21,7 +21,7 @@
 #define IPC_SmBuffers_h
 
 //#include "nandsdram_memmap.h"
-#include "platform_mconfig.h"
+#include <linux/broadcom/platform_mconfig.h>
 
 #define IPC_SmSize IPC_SIZE
 

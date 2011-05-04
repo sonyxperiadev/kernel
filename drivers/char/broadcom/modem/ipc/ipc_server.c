@@ -46,7 +46,7 @@
 #include "ipc_server_ccb.h"
 #include "ipc_debug.h"
 //#include "bcmlog.h"
-#include "platform_mconfig.h"
+#include <linux/broadcom/platform_mconfig.h>
 
 #include <mach/io_map.h>
 // for BINTC register offsets
