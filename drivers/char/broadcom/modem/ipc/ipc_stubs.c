@@ -22,6 +22,9 @@
 *
 ****************************************************************************/
 
+#include <linux/kernel.h>
+#include <linux/io.h>
+#include <linux/init.h>
 
 #include "ipc_stubs.h"
 //FixMe -- guojin
@@ -46,3 +49,42 @@ return 0;
 void ProcessCPCrashedDump(void *ptr)
 {
 }
+
+//JW, to do, hack
+Boolean IsBasicCapi2LoggingEnable(void)
+{
+	return false;
+}
+
+
+void CAPI2_Assert(char *expr, char *file, int line, int value)
+{
+    //KRIL_DEBUG(DBG_ERROR, "CAPI2_Assert::file:%s line:%d value:%d\n", file, line, value);
+#ifdef FUSE_IPC_CRASH_SUPPORT 
+    IPCCP_SetCPCrashedStatus(IPC_AP_ASSERT);
+#endif
+}
+
+#define MAX_BUF_SIZE 1024
+static char buf[MAX_BUF_SIZE];
+int RpcLog_DebugPrintf(char* fmt, ...)
+{
+#ifdef CONFIG_BRCM_UNIFIED_LOGGING
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, MAX_BUF_SIZE, fmt, ap);
+    va_end(ap);
+    KRIL_DEBUG(DBG_INFO, "TS[%ld]%s\n", TIMER_GetValue(), buf);
+#else
+    if(IsBasicCapi2LoggingEnable())
+    {
+        va_list ap;
+        va_start(ap, fmt);
+        vsnprintf(buf, MAX_BUF_SIZE, fmt, ap);
+        va_end(ap);
+        pr_info("TS[%ld]%s",TIMER_GetValue(),buf);
+    }
+#endif
+    return 1;
+}
+

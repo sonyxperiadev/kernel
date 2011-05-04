@@ -741,7 +741,7 @@ static int __init ATC_KERNEL_ModuleInit(void)
     }
 
     // Initialize AT RPC channel
-    ATC_ATRPCInit();
+    //ATC_ATRPCInit();
     
     ATC_KERNEL_TRACE(("exit ATC_KERNEL_ModuleInit()\n"));
     return 0;

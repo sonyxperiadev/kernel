@@ -45,16 +45,9 @@
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 #include "rpc_api.h"
-#include "ms_database_def.h"
-#include "ms_database_old.h"
-#include "ms_database_api.h"
-
-#include "common_sim.h"
-#include "sms_def.h"
 
 #include "rpc_ipc.h"
 
-#include "capi2_ds_api.h"
 #include "bcm_net_debug.h"
 
 #ifdef CONFIG_HAS_EARLYSUSPEND

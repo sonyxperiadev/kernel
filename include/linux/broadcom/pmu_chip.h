@@ -75,6 +75,12 @@
 #define BCM_PMU_IOCTL_SET_PWM_LO_PER      _IOW(BCM_PMU_MAGIC, BCM_PMU_CMD_SET_PWM_LO_PER, BCM_PMU_PWM_lo_per_t)
 #define BCM_PMU_IOCTL_SET_PWM_PWR_CTRL    _IOW(BCM_PMU_MAGIC, BCM_PMU_CMD_SET_PWM_PWR_CTRL, BCM_PMU_PWM_pwr_ctrl_t)
 
+//per lori: at_pmu.c requires an updated kernel/common/include/linux/broadcom/pmu_chip.h version.  For now, I just added the required defines to pmu_chip.h, and not the corresponding implementation. So, AT*MPMUTST commands won.t work properly.
+typedef struct {
+        unsigned long  reg;
+        unsigned short  val;
+} pmu_reg;
+
 typedef enum {
 	SIM_3POINT0VOLT = 0,
 	SIM_2POINT5VOLT,
