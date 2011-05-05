@@ -100,8 +100,9 @@ Result_t AUDDRV_HWControl_Init(void)
 #ifndef LMP_BUILD
 //Enable CAPH clock.
     clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
+	clk_set_rate(clkID[0], 156000000);
     clk_enable(clkID[0]);
-    clk_set_rate(clkID[0], 156000000);
+    
 
 	//clkID[1] = clk_get(NULL, "audioh_apb_clk");
     //clk_enable(clkID[1]);
@@ -282,7 +283,14 @@ Result_t AUDDRV_HWControl_DeInit(void)
 #endif	 
     csl_caph_hwctrl_deinit(); 
 
-#ifdef LMP_BUILD
+#ifndef LMP_BUILD
+	clk_disable(clkID[0]);
+	clk_disable(clkID[1]);
+	clk_disable(clkID[2]);
+	clk_disable(clkID[3]);
+	clk_disable(clkID[4]);
+	clk_disable(clkID[5]);
+#else
     //Disable CAPH clock.
     PRM_set_clock_state(id[0], RESOURCE_CAPH, CLOCK_OFF);
     PRM_client_deregister(id[0]);

@@ -1732,6 +1732,10 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		return retValue;
 	}
 	
+#ifdef PMU_BCM59055
+	if (use == TRUE)
+		bcm59055_audio_init(); 	//enable the audio PLL before power ON
+#endif
 
 
 	switch(speaker)
@@ -1857,7 +1861,7 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	{
 		int i;
 		int ihf_gain;
-#if LMP_BUILD
+#ifdef LMP_BUILD
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 #else
 		// hardcode for test purpose
@@ -1883,6 +1887,11 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 #endif
 		IHF_IsOn = TRUE;
 	}
+
+#ifdef PMU_BCM59055
+	if (use == FALSE)
+		bcm59055_audio_deinit();    //disable the audio PLL after power OFF
+#endif
     Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp: retValue %d\n", retValue);
 #endif    
 	return retValue;

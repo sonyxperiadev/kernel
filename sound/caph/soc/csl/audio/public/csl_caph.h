@@ -456,6 +456,19 @@ typedef enum
 }CSL_CAPH_SRCM_OUTSAMPLERATE_e;
 
 /**
+* CAPH SRCMixer Mixer gains
+******************************************************************************/
+typedef struct CSL_CAPH_SRCM_MIX_GAIN_t
+{
+	UInt16 mixInGainL;
+	UInt16 mixInGainR;
+	UInt16 mixOutGainL;
+	UInt16 mixOutGainR;
+	UInt16 mixOutCoarseGainL;
+	UInt16 mixOutCoarseGainR;
+}CSL_CAPH_SRCM_MIX_GAIN_t;
+
+/**
 * CAPH SRCMixer SRC/Mixing Route Configuration Parameters
 ******************************************************************************/
 typedef struct 
@@ -468,6 +481,7 @@ typedef struct
     UInt8 outThres;
     CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
     CSL_CAPH_DATAFORMAT_e outDataFmt;
+	CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
 }CSL_CAPH_SRCM_ROUTE_t;
 
 /**

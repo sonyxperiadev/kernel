@@ -306,7 +306,7 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 {
     AUDIO_DDRIVER_t*  aud_drv = (AUDIO_DDRIVER_t*)drv_handle;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Close::  \n"  );
+    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Close  \n"  );
 
     if(aud_drv == NULL)
     {
@@ -395,7 +395,7 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 {
     AUDIO_DDRIVER_t*  aud_drv = (AUDIO_DDRIVER_t*)drv_handle;
     Result_t result_code = RESULT_ERROR;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::  \n"  );
+    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::  \n"  );
 
     if(aud_drv == NULL)
     {
@@ -472,16 +472,17 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-
-    AUDDRV_DEVICE_e *aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
-
+	AUDDRV_DEVICE_e *aud_dev;
+	Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
     switch (ctrl_cmd)
     {
         case AUDIO_DRIVER_START:
             {
                 UInt32 block_size;
                 UInt32 num_blocks;
+						
+				if(pCtrlStruct != NULL)
+			    	aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||

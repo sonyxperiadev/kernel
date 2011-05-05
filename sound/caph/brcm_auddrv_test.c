@@ -880,44 +880,50 @@ static int HandlePlayCommand()
         break;
         case 4: //Start the playback
             {
-		AUDDRV_DEVICE_e aud_dev = AUDDRV_DEV_EP; // EP is default now
+				AUDDRV_DEVICE_e aud_dev = AUDDRV_DEV_EP; // EP is default now
+				AUDIO_HW_ID_t	audPlayHw = AUDIO_HW_EARPIECE_OUT;
 
                 DEBUG(" Start Playback\n");
                 spkr = sgBrcm_auddrv_TestValues[2];
 
                 AUDCTRL_SaveAudioModeFlag(spkr);
 
-		if (spkr == 0)// for rhea
-		{
-			// earpiece
-			aud_dev = AUDDRV_DEV_EP;  
-		}
-		else  if (spkr == 1)// for rhea
-		{
-			// headset
-			aud_dev = AUDIO_HW_HEADSET_OUT; 
-		}
-		else  if ((spkr == 2) || (spkr == 4)) // for rhea
-		{
-			// ihf
-			aud_dev = AUDIO_HW_IHF_OUT;  
-		}	
+				if (spkr == 0)// for rhea
+				{
+					// earpiece
+					aud_dev = AUDDRV_DEV_EP;  
+					audPlayHw = AUDIO_HW_EARPIECE_OUT;
+				}
+				else  if (spkr == 1)// for rhea
+				{
+					// headset
+					aud_dev = AUDDRV_DEV_HS; 
+					audPlayHw = AUDIO_HW_HEADSET_OUT;
+				}
+				else  if ((spkr == 2) || (spkr == 4)) // for rhea
+				{
+					// ihf
+					aud_dev = AUDDRV_DEV_IHF;  
+					audPlayHw = AUDIO_HW_IHF_OUT;
+				}	
                 AUDCTRL_EnablePlay(AUDIO_HW_MEM,
-                                   AUDIO_HW_AUDIO_OUT,
+                                   audPlayHw, 
                                    AUDIO_HW_NONE,
                                    spkr,
 		                   drv_config.num_channel,
                                    drv_config.sample_rate
 				                    );
 
-              	AUDCTRL_SetPlayVolume (AUDIO_HW_AUDIO_OUT, // for Audio 
+              	AUDCTRL_SetPlayVolume (audPlayHw,
    		     			spkr, 
     				   	AUDIO_GAIN_FORMAT_VOL_LEVEL, 
-				   	0x001E, 0x001E); // 0x1E is 30 decimal. 0x001E for both L and R channels.
+				   	0x00, 0x00); // 0 db for both L and R channels.
+				   	
 
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,&aud_dev);
                 DEBUG("Playback started\n");
+
 
 		//  Need to implement some sync mechanism
 	        OSTASK_Sleep(5000); 
@@ -926,7 +932,7 @@ static int HandlePlayCommand()
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
 
                 //disable the playback path
-                AUDCTRL_DisablePlay(AUDIO_HW_MEM,AUDIO_HW_AUDIO_OUT,spkr);
+                AUDCTRL_DisablePlay(AUDIO_HW_MEM,audPlayHw,spkr);
 
                 AUDIO_DRIVER_Close(drv_handle);
 
@@ -1091,11 +1097,25 @@ static int HandleCaptCommand()
 				     drv_config.num_channel,
                                      drv_config.sample_rate);
 
-		if(mic == 1) // for RHEA
+		if(mic == 1) //AUDCTRL_MIC_MAIN 
 		{
 			aud_dev = AUDDRV_DEV_ANALOG_MIC;
 		}
-	    // need to add other values
+		else if(mic == 2) //AUDCTRL_MIC_AUX
+		{
+			//aux mic
+			aud_dev = AUDDRV_DEV_HS_MIC;
+		}
+		else if(mic == 3) //AUDCTRL_MIC_DIGI1
+		{
+			// digi mic 1
+			aud_dev = AUDDRV_DEV_DIGI_MIC_L;
+		}
+		else if(mic == 4) //AUDCTRL_MIC_DIGI2
+		{
+			// digi mic 2
+			aud_dev = AUDDRV_DEV_DIGI_MIC_R;
+		}
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,&aud_dev);
                 
                 DEBUG("capture started\n");

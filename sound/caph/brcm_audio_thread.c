@@ -39,8 +39,8 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-
-
+#include "auddrv_def.h"
+#include "ossemaphore.h"
 #include "brcm_alsa.h"
 
 #include "brcm_audio_thread.h"
@@ -70,6 +70,7 @@ typedef	struct	_TMsgBrcmAudioCtrl
 	BRCM_AUDIO_ACTION_en_t			action_code;
 	BRCM_AUDIO_Control_Params_un_t		param;
 	void								*pCallBack;
+    int                                 block;
 
 }TMsgAudioCtrl, *PTMsgAudioCtrl;
 
@@ -80,10 +81,13 @@ typedef	struct	_TMsgBrcmAudioCtrl
 //----------------------------------------
 typedef	struct	_TAudioHalThreadData
 {
-	struct kfifo	*m_pkfifo;	//KFIFO to pass control parameters from audio HAL caller  to worker thread
+	struct kfifo	m_pkfifo;	//KFIFO to pass control parameters from audio HAL caller  to worker thread
 	spinlock_t	m_lock;		//spin lock to protect KFIFO access so that audio HAL can accept concurrent caller
 	struct work_struct mwork; //worker thread data structure
 	struct workqueue_struct *pWorkqueue_AudioControl;
+    Semaphore_t                     action_complete;
+    struct kfifo	m_pkfifo_out;
+	spinlock_t	m_lock_out;
 
 }TAudioControlThreadData, *PTAudioControlThreadData;
 
@@ -99,7 +103,8 @@ extern TIDChanOfCaptureDev	sgTableIDChannelOfCaptDev[];
 void AUDIO_Ctrl_Process(
 	BRCM_AUDIO_ACTION_en_t action_code,
 	void *arg_param,
-	void *callback
+	void *callback,
+    int block
 	);
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -114,14 +119,15 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 	while(1)
 	{
 		//get operation code from fifo
-		len = kfifo_get(sgThreadData.m_pkfifo, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl));
+		len = kfifo_out_locked(&sgThreadData.m_pkfifo, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock);		
+
 		if( (len != sizeof(TMsgAudioCtrl)) && (len!=0) )
-			DEBUG("Error AUDIO_Ctrl len=%d expected %d in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl), sgThreadData.m_pkfifo->in, sgThreadData.m_pkfifo->out);
+			DEBUG("Error AUDIO_Ctrl len=%d expected %d in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl), sgThreadData.m_pkfifo.in, sgThreadData.m_pkfifo.out);
 		if(len == 0) //FIFO empty sleep
 			return;
 		
 		//process the operation
-		AUDIO_Ctrl_Process(msgAudioCtrl.action_code, &msgAudioCtrl.param, msgAudioCtrl.pCallBack);
+		AUDIO_Ctrl_Process(msgAudioCtrl.action_code, &msgAudioCtrl.param, msgAudioCtrl.pCallBack,msgAudioCtrl.block);
 	}
 
 	return;
@@ -134,13 +140,17 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 int LaunchAudioCtrlThread(void)
 {
 	sgThreadData.m_lock =  SPIN_LOCK_UNLOCKED;
-	sgThreadData.m_pkfifo =  kfifo_alloc(KFIFO_SIZE, GFP_KERNEL, &sgThreadData.m_lock);
-	DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo->size);
+	
+	kfifo_alloc(&sgThreadData.m_pkfifo,KFIFO_SIZE, GFP_KERNEL);
+	DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo.size);
+    kfifo_alloc(&sgThreadData.m_pkfifo_out, KFIFO_SIZE, GFP_KERNEL);
+  	DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo_out.size);
 	INIT_WORK(&sgThreadData.mwork, AudioCtrlWorkThread);
 	
 	sgThreadData.pWorkqueue_AudioControl = create_workqueue("AudioCtrlWq");
 	if(!sgThreadData.pWorkqueue_AudioControl)
 		DEBUG("\n Error : Can not create work queue:AudioCtrlWq\n");
+    sgThreadData.action_complete = OSSEMAPHORE_Create(0,0);
 
 	return 0;
 }
@@ -157,7 +167,8 @@ int TerminateAudioHalThread(void)
 		flush_workqueue(sgThreadData.pWorkqueue_AudioControl);
 		destroy_workqueue(sgThreadData.pWorkqueue_AudioControl);
 	}
-	kfifo_free(sgThreadData.m_pkfifo);
+	kfifo_free(&sgThreadData.m_pkfifo);
+    kfifo_free(&sgThreadData.m_pkfifo_out);
 	return 0;
 }
 
@@ -171,12 +182,14 @@ int TerminateAudioHalThread(void)
 Result_t AUDIO_Ctrl_Trigger(
 	BRCM_AUDIO_ACTION_en_t action_code,
 	void *arg_param,
-	void *callback
+	void *callback,
+    int block
 	)
 {
 	TMsgAudioCtrl	msgAudioCtrl;
 	Result_t status = RESULT_OK;
 	unsigned int	len;
+    OSStatus_t  osStatus;
 
 	{
 		BRCM_AUDIO_Control_Params_un_t *paudioControlParam = (BRCM_AUDIO_Control_Params_un_t *)arg_param;
@@ -190,12 +203,36 @@ Result_t AUDIO_Ctrl_Trigger(
 	else
 		memset(&msgAudioCtrl.param, 0, sizeof(BRCM_AUDIO_Control_Params_un_t));
 	msgAudioCtrl.pCallBack = callback;
+    msgAudioCtrl.block = block;
 
-	len = kfifo_put(sgThreadData.m_pkfifo, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl));
+	len = kfifo_in_locked(&sgThreadData.m_pkfifo, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock);
 	if(len != sizeof(TMsgAudioCtrl))
 		DEBUG("Error AUDIO_Ctrl_Trigger len=%d expected %d \n", len, sizeof(TMsgAudioCtrl));
 
 	queue_work(sgThreadData.pWorkqueue_AudioControl, &sgThreadData.mwork);
+    if(block)
+    {
+        // wait for 10sec
+        osStatus = OSSEMAPHORE_Obtain(sgThreadData.action_complete,1280);
+        if(osStatus != OSSTATUS_SUCCESS)
+        {
+            DEBUG("AUDIO_Ctrl_Trigger Timeout=%d\r\n",osStatus);
+        }
+
+        while(1)
+	    {
+            //wait for output from output fifo
+		    len = kfifo_out_locked(&sgThreadData.m_pkfifo_out, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock_out);
+		    if( (len != sizeof(TMsgAudioCtrl)) && (len!=0) )
+			    DEBUG("Error AUDIO_Ctrl_Trigger len=%d expected %d in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl), sgThreadData.m_pkfifo_out.in, sgThreadData.m_pkfifo_out.out);
+		    if(len == 0) //FIFO empty sleep
+			    return;
+            if(arg_param)
+		        memcpy(arg_param,&msgAudioCtrl.param,  sizeof(BRCM_AUDIO_Control_Params_un_t));
+	        else
+		        memset(arg_param, 0, sizeof(BRCM_AUDIO_Control_Params_un_t));
+	    }
+    }
 	
 	return status;
 }
@@ -203,24 +240,47 @@ Result_t AUDIO_Ctrl_Trigger(
 void AUDIO_Ctrl_Process(
 	BRCM_AUDIO_ACTION_en_t action_code,
 	void *arg_param,
-	void *callback
+	void *callback,
+    int  block
 	)
 {
+   	TMsgAudioCtrl	msgAudioCtrl;
+	unsigned int	len;
 
+	DEBUG("AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
+	
     switch (action_code)
     {
+		case ACTION_AUD_OpenPlay:
+		{
+			BRCM_AUDIO_Param_Open_t* param_open = (BRCM_AUDIO_Param_Open_t*) arg_param;
+			
+			param_open->drv_handle = AUDIO_DRIVER_Open(sgTableIDChannelOfDev[param_open->substream_number].drv_type);
+		    if(param_open->drv_handle == NULL)
+    		{
+         		DEBUG("\n %lx:playback_open subdevice=%d failed\n",jiffies, param_open->substream_number);
+		        break;
+    		}
+
+		}
+		break;
+			
+		case ACTION_AUD_ClosePlay:
+		{
+			BRCM_AUDIO_Param_Close_t* param_close = (BRCM_AUDIO_Param_Close_t*) arg_param;
+			
+			AUDIO_DRIVER_Close(param_close->drv_handle);
+		}
+		break;
+					
         case ACTION_AUD_StartPlay:
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
             AUDCTRL_SaveAudioModeFlag( sgTableIDChannelOfDev[param_start->substream_number].speaker );
 
-
-
-            AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,NULL);
-
             // Enable the playback the path
-            AUDCTRL_EnablePlay(AUDIO_HW_NONE,
+            AUDCTRL_EnablePlay(AUDIO_HW_MEM, 
                                    sgTableIDChannelOfDev[param_start->substream_number].hw_id,
                                    AUDIO_HW_NONE,
                                    sgTableIDChannelOfDev[param_start->substream_number].speaker,
@@ -228,6 +288,12 @@ void AUDIO_Ctrl_Process(
                                    param_start->rate
 				    );
 
+			AUDCTRL_SetPlayVolume (sgTableIDChannelOfDev[param_start->substream_number].hw_id,
+					sgTableIDChannelOfDev[param_start->substream_number].speaker, 
+					AUDIO_GAIN_FORMAT_VOL_LEVEL, 
+					0x0000, 0x0000); //0DB 
+
+     		AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&sgTableIDChannelOfDev[param_start->substream_number].aud_dev);
 
         }
         break;
@@ -235,21 +301,23 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Stop_t* param_stop = (BRCM_AUDIO_Param_Stop_t*) arg_param;
 
+			 
+			 AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
+
              //disable the playback path
-             AUDCTRL_DisablePlay(AUDIO_HW_NONE,
+             AUDCTRL_DisablePlay(AUDIO_HW_MEM, 
                         sgTableIDChannelOfDev[param_stop->substream_number].hw_id,
                         sgTableIDChannelOfDev[param_stop->substream_number].speaker
                     );
 
-            AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
-
+			 DEBUG("AUDIO_Ctrl_Process Stop Playback completed \n");
         }
         break;
         case ACTION_AUD_PausePlay:
         {
             BRCM_AUDIO_Param_Pause_t* param_pause = (BRCM_AUDIO_Param_Pause_t*) arg_param;
             //disable the playback path
-             AUDCTRL_DisablePlay(AUDIO_HW_NONE,
+             AUDCTRL_DisablePlay(AUDIO_HW_MEM,	
                         sgTableIDChannelOfDev[param_pause->substream_number].hw_id,
                         sgTableIDChannelOfDev[param_pause->substream_number].speaker
                     );
@@ -264,7 +332,7 @@ void AUDIO_Ctrl_Process(
             AUDIO_DRIVER_Ctrl(param_resume->drv_handle,AUDIO_DRIVER_RESUME,NULL);
 
             // Enable the playback the path
-            AUDCTRL_EnablePlay(AUDIO_HW_NONE,
+            AUDCTRL_EnablePlay(AUDIO_HW_MEM,	
                                    sgTableIDChannelOfDev[param_resume->substream_number].hw_id,
                                    AUDIO_HW_NONE,
                                    sgTableIDChannelOfDev[param_resume->substream_number].speaker,
@@ -278,7 +346,7 @@ void AUDIO_Ctrl_Process(
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
             AUDCTRL_EnableRecord(sgTableIDChannelOfCaptDev[param_start->substream_number].hw_id,
-				                     AUDIO_HW_NONE,
+				                     AUDIO_HW_MEM,	
                                      sgTableIDChannelOfCaptDev[param_start->substream_number].mic,
 				                     param_start->channels,
                                      param_start->rate);
@@ -288,10 +356,8 @@ void AUDIO_Ctrl_Process(
                                   8,
                                   8);
 
-            AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,NULL);
-
-
-
+            AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&sgTableIDChannelOfCaptDev[param_start->substream_number].aud_dev);
+			
         }
         break;
         case ACTION_AUD_StopRecord:
@@ -301,13 +367,48 @@ void AUDIO_Ctrl_Process(
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
             AUDCTRL_DisableRecord(sgTableIDChannelOfCaptDev[param_stop->substream_number].hw_id,
-                                      AUDIO_HW_NONE,
+                                      AUDIO_HW_MEM,
                                       sgTableIDChannelOfCaptDev[param_stop->substream_number].mic);
 
         }
         break;
+		case ACTION_AUD_OpenRecord:
+		{
+         	BRCM_AUDIO_Param_Open_t* param_open = (BRCM_AUDIO_Param_Open_t*) arg_param;
+
+            param_open->drv_handle = AUDIO_DRIVER_Open(sgTableIDChannelOfCaptDev[param_open->substream_number].drv_type);
+
+            DEBUG("param_open->drv_handle -  0x%x \n",param_open->drv_handle);
+		
+		}
+	    break;
+		case ACTION_AUD_CloseRecord:
+		{
+			BRCM_AUDIO_Param_Close_t* param_close = (BRCM_AUDIO_Param_Close_t*) arg_param;
+			
+			AUDIO_DRIVER_Close(param_close->drv_handle);
+		}
+		break;
         default:
             DEBUG("Error AUDIO_Ctrl_Process Invalid acction command \n");
+    }
+    if(block)
+    {
+        // put the message in output fifo if waiting
+        msgAudioCtrl.action_code = action_code;
+	    if(arg_param)
+		    memcpy(&msgAudioCtrl.param, arg_param, sizeof(BRCM_AUDIO_Control_Params_un_t));
+	    else
+		    memset(&msgAudioCtrl.param, 0, sizeof(BRCM_AUDIO_Control_Params_un_t));
+	    msgAudioCtrl.pCallBack = callback;
+        msgAudioCtrl.block = block;
+
+        len = kfifo_in_locked(&sgThreadData.m_pkfifo_out, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock_out);
+        if(len != sizeof(TMsgAudioCtrl))
+		    DEBUG("Error AUDIO_Ctrl_Process len=%d expected %d \n", len, sizeof(TMsgAudioCtrl));
+        // release the semaphore 
+        OSSEMAPHORE_Release(sgThreadData.action_complete);
+
     }
 
 }

@@ -43,12 +43,12 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 
-//#include "mobcom_types.h"
-//#include "resultcode.h"
-//#include "audio_consts.h"
+#include "mobcom_types.h"
+#include "resultcode.h"
+#include "audio_consts.h"
 
 #include "brcm_alsa.h"
-//#include "brcm_audio_thread.h"
+#include "brcm_audio_thread.h"
 
 extern int  ControlDeviceNew(struct snd_card *card)
 
@@ -633,7 +633,7 @@ static int __devinit ALSAModuleInit(void)
         printk(KERN_INFO "platform_driver_register done:\n");
         
 #endif
-    //LaunchAudioCtrlThread();
+    LaunchAudioCtrlThread();
 
 #if KISHORE_COMMENT
     if ((err = register_chrdev(BCM_ALSA_PCG_MAJOR, "bcm_alsa_pcg", &bcmpcg_fops)) < 0)
@@ -690,7 +690,7 @@ static void __devexit ALSAModuleExit(void)
 	platform_driver_unregister(&sgPlatformDriver);
 
 	platform_device_unregister(&sgPlatformDevice);
-    //TerminateAudioHalThread();
+    TerminateAudioHalThread();
 	
 	// unInitialize the AUDIO device
 #if KISHORE_COMMENT

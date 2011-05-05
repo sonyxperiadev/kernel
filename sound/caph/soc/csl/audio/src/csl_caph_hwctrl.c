@@ -1149,9 +1149,15 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         {
             csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(audioPath.src_sampleRate);
             csl_caph_srcm_outsamplerate = csl_caph_srcmixer_get_srcm_outsamplerate(audioPath.snk_sampleRate);
-            
-            // 2. get SRC-Mixer in channel
-            audioPath.routeConfig.inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
+			if(audioPath.sink == CSL_CAPH_DEV_HS)
+			{
+				audioPath.routeConfig.inChnl = CSL_CAPH_SRCM_STEREO_CH5;	// go through stereo SRC channel  
+			}
+			else
+			{
+				audioPath.routeConfig.inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
+			}
+			csl_caph_srcmixer_set_inchnl_status(audioPath.routeConfig.inChnl);
             // 3. get SRC-Mixer in channel fifo
             chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(audioPath.routeConfig.inChnl);
             // 4. connect SRC-Mixer in channel fifo to SW
@@ -1165,7 +1171,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             if (audioPath.sink == CSL_CAPH_DEV_EP)
                 audioPath.routeConfig.outChnl = CSL_CAPH_SRCM_STEREO_CH2_L;
             else if (audioPath.sink == CSL_CAPH_DEV_HS)
-                audioPath.routeConfig.outChnl = CSL_CAPH_SRCM_STEREO_CH1_L;
+				audioPath.routeConfig.outChnl = CSL_CAPH_SRCM_STEREO_CH1;
             else if (audioPath.sink == CSL_CAPH_DEV_IHF)
                 audioPath.routeConfig.outChnl = CSL_CAPH_SRCM_STEREO_CH2_R;	
             
@@ -1187,11 +1193,12 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             }
             else if (audioPath.routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_48KHZ)
             {
+            	audioPath.routeConfig.mixGain.mixInGainL		= MIX_IN_PASS;
+				audioPath.routeConfig.mixGain.mixOutCoarseGainL	= BIT_SELECT;
+				audioPath.routeConfig.mixGain.mixInGainR		= MIX_IN_PASS;
+				audioPath.routeConfig.mixGain.mixOutCoarseGainR	= BIT_SELECT;
                 csl_caph_srcmixer_config_mix_route(audioPath.routeConfig);
-                // : set the mix in gain and gain step, moved in config for fpga test
-                //csl_caph_srcmixer_set_mixingain(audioPath.routeConfig.inChnl, audioPath.routeConfig.outChnl,  0x3fff, 0x3fff); 
-                // set the mix out gain, moved in config for fpga test
-                //csl_caph_srcmixer_set_mixoutgain(audioPath.routeConfig.outChnl, 0x1fff);			
+		
             }
             
             // set the SW trigger and dataformat

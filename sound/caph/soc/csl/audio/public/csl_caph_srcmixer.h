@@ -22,6 +22,28 @@ Broadcom's express prior written consent.
 #ifndef _CSL_CAPH_SRCMIXER_
 #define _CSL_CAPH_SRCMIXER_
 #include "chal_caph.h"
+
+
+/* Total number of input channels */
+#define MAX_INCHNLS 0x7
+/* Total number of single input channels */
+#define MAX_SINGLE_INCHNLS 0xA
+/* Total number of output channels */
+#define OUTCHNL_MAX_NUM_CHNL 0x5
+/* Bit Selection for Mixer Spkr gain */
+/* It will magnify the input by Bit_Select*6.02dB */
+#define BIT_SELECT 0x4
+/* Gain values to mute the mixer input path */
+#define MIX_IN_MUTE 0x0000
+/* Gain values to pass the mixer input path */
+/* adjustable to different gains. */
+#define MIX_IN_PASS 0x7FFF
+/* Mixer input gain steps */
+#define MIX_IN_GAINSTEP 0x7FFF
+#define MIX_IN_NO_GAINSTEP 0x0000
+/* SRCMixer Input FIFO threshold */
+#define INFIFO_NO_THRES	0x0
+
 /**
 *
 *  @brief  initialize the caph srcmixer block
