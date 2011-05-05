@@ -3302,8 +3302,25 @@ config NETCONSOLE_DYNAMIC
 	  at runtime through a userspace interface exported using configfs.
 	  See <file:Documentation/networking/netconsole.txt> for details.
 
+config BRCM_NETCONSOLE
+        tristate "Broadcom Network console logging support (EXPERIMENTAL)"
+        depends on EXPERIMENTAL
+        ---help---
+        If you want to log kernel messages over the network, enable this.
+        See <file:Documentation/networking/netconsole.txt> for details.
+
+config BRCM_NETCONSOLE_DYNAMIC
+        bool "Broadcom Dynamic reconfiguration of logging targets (EXPERIMENTAL)"
+        depends on BRCM_NETCONSOLE && SYSFS && EXPERIMENTAL
+        select CONFIGFS_FS
+        help
+          This option enables the ability to dynamically reconfigure target
+          parameters (interface, IP addresses, port numbers, MAC addresses)
+          at runtime through a userspace interface exported using configfs.
+          See <file:Documentation/networking/netconsole.txt> for details.
+
 config NETPOLL
-	def_bool NETCONSOLE
+	def_bool NETCONSOLE || BRCM_NETCONSOLE
 
 config NETPOLL_TRAP
 	bool "Netpoll traffic trapping"

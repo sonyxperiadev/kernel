@@ -13,3 +13,10 @@ config V3D
 	depends on BRCM_CHAR_DRIVERS
 	default BRCM_CHAR_DRIVERS
 
+config BRCM_FUSE_LOG
+       #tristate "Broadcom FUSE LOG drivers"
+       boolean "Broadcom FUSE LOG drivers"
+       default y
+       ---help---
+         Broadcom FUSE LOG drivers
+

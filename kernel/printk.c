@@ -753,6 +753,11 @@ static inline void printk_delay(void)
 	}
 }
 
+//#ifdef CONFIG_BRCM_UNIFIED_LOGGING
+/* Unified logging */
+#include "brcm_ulogging_printk.h"
+//#endif
+
 asmlinkage int vprintk(const char *fmt, va_list args)
 {
 	int printed_len = 0;
@@ -827,6 +832,10 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 		}
 	}
 
+//#ifdef CONFIG_BRCM_UNIFIED_LOGGING
+if (bcmlog_mtt_on == 1 && bcmlog_log_ulogging_id > 0)
+	BCMLOG_LogString(printk_buf, bcmlog_log_ulogging_id);
+//#endif
 	/*
 	 * Copy the output into log_buf.  If the caller didn't provide
 	 * appropriate log level tags, we insert them here

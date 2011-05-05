@@ -258,6 +258,9 @@ extern int __printk_ratelimit(const char *func);
 extern bool printk_timed_ratelimit(unsigned long *caller_jiffies,
 				   unsigned int interval_msec);
 
+extern int brcm_klogging(char *data, int length);
+extern void brcm_current_netcon_status(unsigned char status);
+
 extern int printk_delay_msec;
 
 /*
@@ -284,6 +287,8 @@ static inline int printk_ratelimit(void) { return 0; }
 static inline bool printk_timed_ratelimit(unsigned long *caller_jiffies, \
 					  unsigned int interval_msec)	\
 		{ return false; }
+static inline int brcm_klogging(char *data, int length){ return 0;}
+static inline void brcm_current_netcon_status(unsigned char status) {};
 
 /* No effect, but we still get type checking even in the !PRINTK case: */
 #define printk_once(x...) printk(x)
