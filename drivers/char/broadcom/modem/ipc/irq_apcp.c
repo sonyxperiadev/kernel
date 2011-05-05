@@ -29,6 +29,7 @@
 #include <linux/device.h>
 
 #include <asm/mach/irq.h>
+#include <mach/irqs.h>
 #include <mach/io_map.h>
 // for BINTC register offsets
 #include <mach/rdb/brcm_rdb_bintc.h>
@@ -127,10 +128,15 @@ static int intc_set_type(unsigned int irq, unsigned int flow_type)
 void intc_trigger_softirq(unsigned int irq)
 {
     void __iomem* base = (void __iomem *)( KONA_BINTC_BASE_ADDR);  
+    // convert to BModem IRQ
+    unsigned int birq = IRQ_TO_BMIRQ(irq);
     unsigned long flags;
-    
+	printk("intc_trigger_softirq\n");
     spin_lock_irqsave(&intc_lock, flags);
-    writel(1 << (irq & 31), base + INTC_SWIR(irq));
+    if ( birq >= 32 )
+        writel(1 << (birq - 32), base + BINTC_ISWIR1_OFFSET);
+    else
+        writel(1 << birq, base + BINTC_ISWIR0_OFFSET);
     spin_unlock_irqrestore(&intc_lock, flags);
 }
 
