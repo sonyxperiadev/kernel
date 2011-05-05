@@ -612,7 +612,9 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		return ret;
 	}
 #endif
-
+	/* Register ADC driver at the first */
+	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_ADC)
+		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-saradc");
 	/* Register PowerOnKey device */
 	if (bcm590xx->pdata->flag & BCM590XX_USE_PONKEY)
 		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-onkey");
@@ -625,7 +627,6 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 
 	if (bcm590xx->pdata->flag & BCM590XX_USE_RTC)
 		bcm590xx_client_dev_register(bcm590xx, "bcm59055-rtc");
-
 	printk("%s: SUCCESS\n", __func__);
 	return 0;
 err:

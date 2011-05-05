@@ -84,6 +84,7 @@ enum {
 	BCM590XX_ENABLE_DVS       		=  (1 << 4),
 	BCM590XX_REGISTER_POWER_OFF		=  (1 << 5),
 	BCM590XX_ENABLE_AUDIO			=  (1 << 6),
+	BCM590XX_ENABLE_ADC				=  (1 << 7),
 };
 
 int bcm590xx_register_regulator(struct bcm590xx *bcm590xx, int reg,
