@@ -975,6 +975,7 @@ static int aon_ccu_init(struct clk *clk)
     return 0;
 }
 
+#if !(defined(CONFIG_ARCH_ISLAND))
 static int mm_ccu_init(struct clk *clk)
 {
     int ret;
@@ -986,6 +987,7 @@ static int mm_ccu_init(struct clk *clk)
 
     return 0;
 }
+#endif /* !(defined(CONFIG_ARCH_ISLAND)) */
 
 static int proc_ccu_init(struct clk *clk)
 {
@@ -1037,7 +1039,9 @@ static int ccu_init(struct clk *c)
 	ret = aon_ccu_init(c);
 	break;
     case BCM2165x_MM_CCU:
+    	#if !(defined(CONFIG_ARCH_ISLAND))
 	ret = mm_ccu_init(c);
+	#endif
 	break;
     case BCM2165x_KONA_MST_CCU:
 	ret = kona_master_ccu_init(c);
