@@ -27,12 +27,6 @@
 #define __PLAT_KONA_TIMER_H
 
 /* Timer module specific data structures */
-enum timer_rate {
-	KHZ_32 = 0,
-	MHZ_1,
-	MHZ_19_5,
-};
-
 struct kona_timer;
 
 /* Channel specific data structures */
@@ -75,14 +69,14 @@ struct timer_ch_cfg {
  *  kona_timer_modules_init - Initialize the data structures
  *  that depcits the Kona timer modules
  */
-void kona_timer_modules_init (void);
+int kona_timer_modules_init (void);
 
 /*
  * kona_timer_module_set_rate - Set the speed in which a timer module should count
  * name - Name of the Timer to configure
  * rate - Speed 
  */
-int kona_timer_module_set_rate(char* name, enum timer_rate);
+int kona_timer_module_set_rate(char* name, unsigned int rate);
 
 /* 
  * kona_timer_module_get_rate - Get the speed in which a timer module is running

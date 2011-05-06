@@ -27,11 +27,14 @@
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/err.h>
+#include <linux/clk.h>
 
 #include <mach/kona_timer.h>
 #include <mach/io.h>
 #include <mach/io_map.h>
 #include <mach/irqs.h>
+#include <mach/clock.h>
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 #if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_SAMOA)
@@ -61,6 +64,7 @@
             } while(0)
 
 /* Data structures */
+
 struct kona_timer {
 	int    ch_num;
 	int    busy;
@@ -86,9 +90,10 @@ struct kona_timer_module {
 	spinlock_t lock;
 	int	num_of_timers;
 	char    name[255];
+	char	clk_name[255];
 	enum config_state cfg_state;
 	void __iomem *reg_base;
-	enum timer_rate rate;
+	unsigned long rate;
 };
 
 static struct kona_timer aon_hub_timer[NUM_OF_CHANNELS] = {
@@ -108,42 +113,69 @@ static struct kona_timer periph_timer[NUM_OF_CHANNELS] = {
 /* There are two instances of timer modules on Kona */
 static struct kona_timer_module timer_module_list[NUM_OF_TIMER_MODULES] = {
 	{ .pkt = &aon_hub_timer[0], .name = "aon-timer", .cfg_state = NOT_CONFIGURED, 
-	  .rate = 0, .num_of_timers = NUM_OF_CHANNELS, .reg_base = IOMEM(KONA_TMR_HUB_VA) },
+	  .rate = 0, .num_of_timers = NUM_OF_CHANNELS, .reg_base = IOMEM(KONA_TMR_HUB_VA), 
+	  .clk_name = "hub_timer_clk" 
+	},
 	{ .pkt = &periph_timer[0],  .name = "slave-timer", .cfg_state =	NOT_CONFIGURED,
-	  .rate = 0, .num_of_timers = NUM_OF_CHANNELS, .reg_base = IOMEM(KONA_SYSTMR_VA)  },
+	  .rate = 0, .num_of_timers = NUM_OF_CHANNELS, .reg_base = IOMEM(KONA_SYSTMR_VA),
+	  .clk_name = "timers_clk" 
+	},
 };
 
 /* Local static functions */
 static struct kona_timer_module * __get_timer_module(char *name);
-static int __config_aon_hub_timer_clock(unsigned int val);
-static int __config_slave_timer_clock(enum timer_rate rt);
+static int __config_aon_hub_timer_clock(unsigned int rt);
+static int __config_slave_timer_clock(unsigned int rt);
 static inline void __disable_all_channels(void __iomem *reg_base);
 static inline void __disable_channel(void __iomem *reg_base, int ch_num);
 static inline void __get_counter (void __iomem *reg_base, unsigned long *msw,
 	unsigned long *lsw);
 static irqreturn_t kona_timer_isr(int irq, void *dev_id);
 
-static struct irqaction hub_timer_irq = {
-	.name		= "Kona Hub Timer Tick",
-	.flags		= IRQF_DISABLED | IRQF_TIMER,
-	.dev_id		= &timer_module_list[0],
-	.handler	= kona_timer_isr,
+static struct irqaction hub_timer_irq[NUM_OF_CHANNELS] = {
+	{.name = "Hub-Timer-Ch0", .flags	= IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr 
+	},
+	{.name = "Hub-Timer-Ch1", .flags	= IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr 
+	},
+	{.name = "Hub-Timer-Ch2", .flags	= IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr 
+	},
+	{.name = "Hub-Timer-Ch3", .flags	= IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[0], .handler = kona_timer_isr 
+	},
 };
 
-static struct irqaction periph_timer_irq = {
-	.name		= "Kona Slave Timer Tick",
-	.flags		= IRQF_DISABLED | IRQF_TIMER,
-	.dev_id		= &timer_module_list[1],
-	.handler	= kona_timer_isr,
+static struct irqaction periph_timer_irq[NUM_OF_CHANNELS] = {
+	{.name = "Slave-Timer-Ch0", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr
+	},
+	{.name = "Slave-Timer-Ch1", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr
+	},
+	{.name = "Slave-Timer-Ch2", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr
+	},
+	{.name = "Slave-Timer-Ch3", .flags = IRQF_DISABLED | IRQF_TIMER,
+	 .dev_id = &timer_module_list[1], .handler = kona_timer_isr
+	},
 };
+
+static int kona_init_done = 0;
 
 /*
  *  kona_timer_modules_init - Initialize the data structures
  *  that depcits the Kona timer modules
  */
-void __init kona_timer_modules_init (void)
+int __init kona_timer_modules_init (void)
 {
 	int i;
+
+	if (kona_init_done != 0) {
+		pr_err("kona_timer_modules_init: Already initialized \n");
+		return -1;
+	}
 
 	for (i=0;i<NUM_OF_TIMER_MODULES;i++) {
 		spin_lock_init(&timer_module_list[i].lock);
@@ -151,7 +183,7 @@ void __init kona_timer_modules_init (void)
 	}
 
 	for (i=0;i<NUM_OF_CHANNELS;i++) {
-		setup_irq(aon_hub_timer[i].irq, &hub_timer_irq);
+		setup_irq(aon_hub_timer[i].irq, &hub_timer_irq[i]);
 		aon_hub_timer[i].cfg.arg = NULL;
 		aon_hub_timer[i].cfg.mode = 0;
 		aon_hub_timer[i].cfg.cb = NULL;
@@ -160,7 +192,7 @@ void __init kona_timer_modules_init (void)
 	}
 
 	for (i=0;i<NUM_OF_CHANNELS;i++) {
-		setup_irq(periph_timer[i].irq, &periph_timer_irq);
+		setup_irq(periph_timer[i].irq, &periph_timer_irq[i]);
 		periph_timer[i].cfg.arg = NULL;
 		periph_timer[i].cfg.mode = 0;
 		periph_timer[i].cfg.cb = NULL;
@@ -168,7 +200,8 @@ void __init kona_timer_modules_init (void)
 		periph_timer[i].ktm = &timer_module_list[1];
 	}
 
-	return;
+	kona_init_done = 1;
+	return 0;
 }
 EXPORT_SYMBOL(kona_timer_modules_init);
 
@@ -177,7 +210,7 @@ EXPORT_SYMBOL(kona_timer_modules_init);
  * name - Name of the Timer to configure
  * rate - Speed 
  */
-int kona_timer_module_set_rate(char* name, enum timer_rate rate)
+int kona_timer_module_set_rate(char* name, unsigned int rate)
 {
 	struct kona_timer_module *pktm = NULL;
 	int ret;
@@ -407,7 +440,9 @@ int kona_timer_free (struct kona_timer* kt)
 {
 	struct kona_timer_module *ktm;
 	unsigned long flags, i;
-
+#ifdef CONFIG_HAVE_CLK
+	struct clk *clk;
+#endif
 	if (NULL == kt)
 		return -1;
 
@@ -431,8 +466,17 @@ int kona_timer_free (struct kona_timer* kt)
 	/* All the timers are free (NOT BUSY) so move the 
 	 * timer module's state
 	 */
-	if (i == NUM_OF_CHANNELS) 
+	if (i == NUM_OF_CHANNELS) {
+
+#ifdef CONFIG_HAVE_CLK
+		clk = clk_get(NULL, ktm->clk_name);
+		if (IS_ERR_OR_NULL(clk))
+			pr_err("timer_free: clk_get failed, so clock manager is not up use local calls \r\n");
+		else
+			clk_disable(clk);
+#endif
 		ktm->cfg_state = CONFIGURED_FREE;	
+	}
 
 	spin_unlock_irqrestore (&ktm->lock, flags);
 
@@ -519,21 +563,53 @@ static struct kona_timer_module * __get_timer_module(char *name)
 	return 0;
 }
 
-static int  __config_slave_timer_clock(enum timer_rate rt)
+static int  __config_slave_timer_clock(unsigned int rt)
 {
 	void __iomem *slaveClockMgr_regs = IOMEM(KONA_SLV_CLK_VA);
 #ifdef CONFIG_PERIPHERAL_TIMER_FIX
 	void __iomem *rootClockMgr_regs = IOMEM(KONA_ROOT_CLK_VA);
 #endif
 	uint32_t val, old_enable, mask, rate_val;
+#ifdef CONFIG_HAVE_CLK
+	struct clk *clk;
+#endif
 
 	/* Slave timer only supports 32KHz and 1MHz */
-	if (rt == KHZ_32)
+	if (rt == 32000)
 		rate_val = 1;
-	else if (rt == MHZ_1)
+	else if (rt == 1000000)
 		rate_val = 0;
 	else
-		return -1;			
+		return -1;
+/*
+ * Protect the clock APIs in the CONFIG_HAVE_CLK macro.
+ * In case if the platform does not support clock manager we should still be
+ * able to boot up.
+ *
+ * The other point to handle is that, clock manager is initialized during
+ * "early_init" stage. But the system timer initialization happens before
+ * that. So if the clk mgr call fails we'll configure the clocks locally.
+ * If not we'll call the clk mgr APIs.
+ */
+#ifdef CONFIG_HAVE_CLK
+	clk = clk_get(NULL,"timers_apb_clk");
+	if (IS_ERR_OR_NULL(clk)) {
+		pr_err("clk_get failed, so clock manager is not up use local calls \r\n");
+		goto local_clk_cfg;
+	}
+	clk_enable(clk);
+
+	clk = clk_get(NULL, "timers_clk");
+	if (IS_ERR_OR_NULL(clk)) {
+		pr_err("clk_get failed, so clock manager is not up use local calls \r\n");
+		goto local_clk_cfg;
+	}
+	clk_set_rate(clk, rt);
+	clk_enable(clk);
+	return 0;
+#endif
+
+local_clk_cfg:
 
 	/* Adjust clock source to 1Mhz */
 #ifdef CONFIG_ARCH_RHEA
@@ -633,8 +709,8 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 	 * This fix is only for 1 MHz since the clock source for
 	 * 1MHz is from frac_1M. The 32KHz clock is from PMU and is always ON.
 	 */
-	if (rt == MHZ_1) {
 #ifndef CONFIG_ARCH_SAMOA
+	if (rate_val == 1) {
 		/* unlock root clock manager */
 		val = readl(rootClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
 		old_enable = val & 0x1;	
@@ -667,13 +743,13 @@ static int  __config_slave_timer_clock(enum timer_rate rt)
 		val &= 0x80000000;
 		val |= 0xA5A500;
 		writel(val, slaveClockMgr_regs + ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
-#endif
 	}
+#endif
 #endif
 	return 0;
 }
 
-static int  __config_aon_hub_timer_clock(unsigned int val)
+static int  __config_aon_hub_timer_clock(unsigned int rt)
 {
 	/*
 	 * The source of all the 3 clocks 32KHz, 1MHz and 19.5MHz
@@ -682,24 +758,92 @@ static int  __config_aon_hub_timer_clock(unsigned int val)
 	 * so all are ON
 	 */
 	void __iomem *reg_base = IOMEM(KONA_AON_CLK_VA);
-	unsigned reg;
+	unsigned long val, reg_val, old_enable; 
+#ifdef CONFIG_HAVE_CLK
+	struct clk *clk;
+#endif
+
+	/* AON timer only supports 32KHz, 1MHz and 19.5 MHz*/
+	switch (rt) {
+		case 32000:
+			/* 32 KHz */
+			val = 0;
+			break;
+		case 1000000:
+			/* 1 MHz */
+			val = 1;
+			break;
+		case 19500000:
+			/* 19.5 MHz */
+			val = 2;
+			break;
+		default:
+			pr_err("aon hub timer clock: Invalid value requested %d\r\n", rt);
+			return -1;
+	}
+
+/*
+ * Protect the clock APIs in the CONFIG_HAVE_CLK macro.
+ * In case if the platform does not support clock manager we should still be
+ * able to boot up.
+ *
+ * The other point to handle is that, clock manager is initialized during
+ * "early_init" stage. But the system timer initialization happens before
+ * that. So if the clk mgr call fails we'll configure the clocks locally.
+ * If not we'll call the clk mgr APIs.
+ */
+#ifdef CONFIG_HAVE_CLK
+	clk = clk_get(NULL,"hub_timer_apb_clk");
+	if (IS_ERR_OR_NULL(clk)) {
+		pr_err("clk_get failed, so clock manager is not up use local calls \r\n");
+		goto local_clk_cfg;
+	}
+	clk_enable(clk);
+
+	clk = clk_get(NULL,"hub_timer_clk");
+	if (IS_ERR_OR_NULL(clk)) {
+		pr_err("clk_get failed, so clock manager is not up use local calls \r\n");
+		goto local_clk_cfg;
+	}
+	clk_set_rate(clk,rt);
+	clk_enable(clk);
+	return 0;
+#endif
+
+local_clk_cfg:
+
+	/* unlock root clock manager */
+	reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	old_enable = reg_val & 0x1;	
+	reg_val &= 0x80000000;
+	reg_val |= 0xA5A500 | 0x1;
+	writel(reg_val, reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
 
 	/* 
 	 * Assumed that the timer rate enum has 
 	 * 32KHz - 0, 1MHz - 1 and 19.5MHz -2 
 	 */
-	 reg = readl(reg_base + KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET);
-	 reg &= ~KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_HUB_TIMER_PLL_SELECT_MASK;
-	 reg |= val;
-	 writel(val, reg_base + KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET);
+	 reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET);
+	 reg_val &= ~KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_HUB_TIMER_PLL_SELECT_MASK;
+	 reg_val |= val;
+	 writel(reg_val, reg_base + KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET);
 
-	/* 
-	 * Again, assuming that we need not perform gating here (On reset
-	 * the clocks are enabled). Once the clock manager code is up it 
-	 * will take care of disabling and enabling it.
-	 * And the appropriate function of the clock manager will be 
-	 * called from here.
-	 */
+
+	reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET);
+	writel(val | (1 << KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT), 
+		reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET);
+
+	while(readl(reg_base + KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET) & 
+			(1 << KHUBAON_CLK_MGR_REG_PERIPH_SEG_TRG_HUB_TIMER_TRIGGER_SHIFT))
+		;
+
+	/* disable access to root clock manager */
+	reg_val = readl(reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	reg_val &= 0x80000000;
+	reg_val |= 0xA5A500;
+	reg_val |= old_enable & 0x1;
+	writel(val, reg_base + KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET);
+
 	return 0;
 }
 

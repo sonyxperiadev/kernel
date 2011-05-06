@@ -36,11 +36,9 @@
 #include <mach/io_map.h>
 #include <mach/kona_timer.h>
 #include <mach/timer.h>
-#include <mach/rdb/brcm_rdb_glbtmr.h>
 
 static struct kona_timer *gpt_evt = NULL;
 static struct kona_timer *gpt_src = NULL;
-static void __iomem*	proftmr_regbase = IOMEM(KONA_PROFTMR_VA);
 
 static int gptimer_set_next_event(unsigned long clc,
 		struct clock_event_device *unused)
@@ -137,71 +135,30 @@ static int gptimer_interrupt_cb(void *dev)
 	return 0;
 }
 
-static void profile_timer_init(void __iomem *base)
-{
-	uint32_t reg;
-
-	/* Reset profile/global timer */
-	writel(0, base + GLBTMR_GLOB_CTRL_OFFSET);
-
-	/* Clear pending interrupts */
-	reg = readl(base + GLBTMR_GLOB_STATUS_OFFSET);
-	reg &= ~(GLBTMR_GLOB_STATUS_RESERVED_MASK);
-	reg |= (1 << GLBTMR_GLOB_STATUS_EVENT_G_SHIFT);
-	writel(reg, base + GLBTMR_GLOB_STATUS_OFFSET);
-
-	/* Enable profile timer now with
-	 * prescaler = 0, so timer freq = A9 PERIPHCLK 
-	 * IRQ disabled
-	 * Comapre disabled
-	 */
-
-	reg = readl(base + GLBTMR_GLOB_CTRL_OFFSET);
-	reg &= ~(GLBTMR_GLOB_CTRL_RESERVED_MASK);
-	reg |= (1 << GLBTMR_GLOB_CTRL_TIMER_EN_G_SHIFT);
-	writel(reg, base + GLBTMR_GLOB_CTRL_OFFSET);
-}
-
-static void
-profile_timer_get_counter(void __iomem *base, uint32_t *msw, uint32_t *lsw)
-{
-	/* Read 64-bit free running counter
-	 * 1. Read hi-word
-	 * 2. Read low-word
-	 * 3. Read hi-word again
-	 * 4.1 
-	 * 	if new hi-word is not equal to previously read hi-word, then
-	 * 	start from #1
-	 * 4.2
-	 * 	if new hi-word is equal to previously read hi-word then stop.
-	 */
-
-	while (1) {
-		*msw = readl(base + GLBTMR_GLOB_HI_OFFSET);
-		*lsw = readl(base + GLBTMR_GLOB_LOW_OFFSET);
-		if (*msw == readl(base + GLBTMR_GLOB_HI_OFFSET))
-			break;
-	}
-
-	return;
-}
 
 static void __init timers_init(struct gp_timer_setup *gpt_setup)
 {
 	struct timer_ch_cfg evt_tm_cfg;
 
-	kona_timer_modules_init ();
-	kona_timer_module_set_rate(gpt_setup->name, gpt_setup->rate);
+	if (kona_timer_modules_init () < 0) {
+		pr_err("timers_init: Unable to initialize kona timer modules \r\n");
+		return;
+	}
+
+	if (kona_timer_module_set_rate(gpt_setup->name, gpt_setup->rate) < 0) {
+		pr_err("timers_init: Unable to set the clock rate to %d	\r\n", gpt_setup->rate);
+		return;
+	}
 	
 	/* Initialize Event timer */
 	gpt_evt = kona_timer_request(gpt_setup->name, gpt_setup->ch_num);
 	if (gpt_evt == NULL) {
 		pr_err("timers_init: Unable to get GPT timer for event\r\n");
+		return;
 	}
 
 	pr_info("timers_init: === SYSTEM TIMER NAME: %s CHANNEL NUMBER %d \
-	RATE (0-32KHz, 1-1MHz) %d \r\n",gpt_setup->name, 
-	gpt_setup->ch_num, gpt_setup->rate);
+	RATE %d \r\n",gpt_setup->name, gpt_setup->ch_num, gpt_setup->rate);
 
 	evt_tm_cfg.mode =  MODE_ONESHOT;
 	evt_tm_cfg.arg = &clockevent_gptimer;
@@ -223,14 +180,10 @@ static void __init timers_init(struct gp_timer_setup *gpt_setup)
 	 */
 	 gpt_src = gpt_evt;
 
-	/* Initialize the profile timer */
-	proftmr_regbase = IOMEM(KONA_PROFTMR_VA);
-	profile_timer_init(proftmr_regbase);
-
 	return ;
 }
 
-void __init kona_timer_init(struct gp_timer_setup *gpt_setup)
+void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 {
 	timers_init(gpt_setup);
 	gptimer_clocksource_init();
@@ -238,54 +191,3 @@ void __init kona_timer_init(struct gp_timer_setup *gpt_setup)
 	gptimer_set_next_event((CLOCK_TICK_RATE / HZ), NULL);
 }
 
-
-/* Profile timer implementations */
-
-/* 
- * TODO: The below profile timer code is retained as it is.
- * The clock manager is not up yet, once its ready read the 
- * correct frequency from it.  
- *
- * Right now Global timer runs at 5000000 on FPGA (A9 PERIPHCLK)
- * Ideally, this should be derived by timer.prof_clk and
- * prescaler.
- */
-
-#define GLOBAL_TIMER_FREQ_HZ	(5000000) /* For FPGA only, (temp)*/
-timer_tick_rate_t timer_get_tick_rate(void)
-{
-	uint32_t prescaler;
-
-	prescaler = readl(proftmr_regbase + GLBTMR_GLOB_CTRL_OFFSET);
-	prescaler &= GLBTMR_GLOB_CTRL_PRESCALER_G_MASK;
-	prescaler >>= GLBTMR_GLOB_CTRL_PRESCALER_G_SHIFT;
-
-	return (GLOBAL_TIMER_FREQ_HZ / (1 + prescaler)); 
-}
-
-timer_tick_count_t timer_get_tick_count(void)
-{
-	uint32_t msw, lsw;
-	uint64_t tick;
-
-	profile_timer_get_counter(proftmr_regbase, &msw, &lsw);
-
-	tick = (((uint64_t)msw << 32) | ((uint64_t)lsw));
-
-	return (*(uint32_t *)(&tick));
-}
-
-timer_msec_t timer_ticks_to_msec(timer_tick_count_t ticks)
-{
-	return (ticks / (timer_get_tick_rate() / 1000));
-}
-
-timer_msec_t timer_get_msec(void)
-{
-	return timer_ticks_to_msec(timer_get_tick_count());
-}
-
-EXPORT_SYMBOL(timer_get_tick_count);
-EXPORT_SYMBOL(timer_ticks_to_msec);
-EXPORT_SYMBOL(timer_get_tick_rate);
-EXPORT_SYMBOL(timer_get_msec);
