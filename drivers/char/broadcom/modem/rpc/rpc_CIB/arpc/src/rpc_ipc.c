@@ -27,8 +27,8 @@
 #include "mobcom_types.h"
 #include "rpc_global.h"
 #ifndef UNDER_LINUX
-#include "ipcinterface.h"
-#include "ipcproperties.h"
+#include <linux/broadcom/ipcinterface.h>
+#include <linux/broadcom/ipcproperties.h>
 #else
 #include <linux/module.h>
 #define CSL_TYPES_H

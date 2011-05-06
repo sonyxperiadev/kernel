@@ -31,8 +31,8 @@
 
 #include "resultcode.h"
 #include "taskmsgs.h"
-#include "ipcinterface.h"
-#include "ipcproperties.h"
+#include <linux/broadcom/ipcinterface.h>
+#include <linux/broadcom/ipcproperties.h>
 
 #include "rpc_ipc.h"
 #include "xdr_porting_layer.h"
@@ -137,7 +137,6 @@ Result_t RPC_SendMsg(RPC_InternalMsg_t* rpcMsg)
 
 	RPC_PACKET_SetBufferLength(bufHandle, len);
 	RPC_PACKET_SendData(0, rpcInterfaceType, 0, bufHandle);
-
 	return result;
 }
 

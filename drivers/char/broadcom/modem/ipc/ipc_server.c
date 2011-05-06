@@ -289,7 +289,7 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 {
    //printk( KERN_ALERT  "[ipc]: ipcs_interrupt\n");
-   if((&g_ipc_info.intr_work)->func && g_ipc_info.ipc_state == 1)
+   if((&g_ipc_info.intr_work)->func )
    {
 #ifdef CONFIG_HAS_WAKELOCK
        wake_lock(&ipc_wake_lock);

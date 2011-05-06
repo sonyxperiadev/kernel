@@ -41,8 +41,8 @@
 
 #include "resultcode.h"
 #include "taskmsgs.h"
-#include "ipcinterface.h"
-#include "ipcproperties.h"
+#include <linux/broadcom/ipcinterface.h>
+#include <linux/broadcom/ipcproperties.h>
 
 #include "rpc_ipc.h"
 #include "xdr_porting_layer.h"
