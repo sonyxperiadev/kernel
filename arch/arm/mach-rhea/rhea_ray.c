@@ -62,6 +62,7 @@
 #include <linux/dma-mapping.h>
 #endif
 #include <linux/spi/spi.h>
+#include <mach/rdb/brcm_rdb_csr.h>
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
@@ -501,7 +502,7 @@ static int __init rhea_ray_add_lateInit_devices (void)
 
 	adapter = i2c_get_adapter(1);
 	if (!adapter) {
-		printk(KERN_ERR "can't get i2c adapter 1 %d\n");
+		printk(KERN_ERR "can't get i2c adapter 1\n");
 		return ENODEV;
 	}
 #ifdef CONFIG_GPIO_PCA953X
@@ -543,9 +544,28 @@ static void enable_smi_display_clks(void)
 	clk_enable(mm_dma);
 }
 
+static void boost_memc(void)
+{
+	volatile uint32_t hw_freq_chng_ctl;
+        volatile uint32_t hw_pwr_down_ctl;
+
+	writel(0x3, (KONA_MEMC0_NS_VA + CSR_MEMC_MAX_PWR_STATE_OFFSET));
+	writel(0x3, (KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET));
+	writel(0x3, (KONA_MEMC0_NS_VA + CSR_MODEM_MIN_PWR_STATE_OFFSET));
+
+	hw_freq_chng_ctl = readl(KONA_MEMC0_NS_VA + CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+	hw_freq_chng_ctl &= ~(CSR_HW_FREQ_CHANGE_CNTRL_HW_AUTO_PWR_TRANSITION_MASK);
+	writel(hw_freq_chng_ctl, (KONA_MEMC0_NS_VA + CSR_HW_FREQ_CHANGE_CNTRL_OFFSET));
+
+    	hw_pwr_down_ctl = readl(KONA_MEMC0_NS_VA + CSR_DDR_SW_POWER_DOWN_CONTROL_OFFSET);
+    	hw_pwr_down_ctl |= (1 << CSR_DDR_SW_POWER_DOWN_CONTROL_DISABLE_CLOCK_GATING_SHIFT);
+    	writel(hw_pwr_down_ctl, KONA_MEMC0_NS_VA + CSR_DDR_SW_POWER_DOWN_CONTROL_OFFSET);
+}
+
 /* All Rhea Ray specific devices */
 static void __init rhea_ray_add_devices(void)
 {
+	boost_memc();
 	enable_smi_display_clks();
 
 #ifdef CONFIG_KEYBOARD_BCM
