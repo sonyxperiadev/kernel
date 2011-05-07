@@ -1,0 +1,51 @@
+menu    "Hana SoC based Machine types"
+        depends on ARCH_HANA
+
+choice
+        prompt "Hana SoC based board type"
+        default MACH_HANA_TABLET
+
+config MACH_HANA_BASE
+        bool "Support Broadcom Hana base board"
+        help
+          Support for the Broadcom Hana base board.
+
+config MACH_HANA_SV
+        bool "Support Broadcom Hana SV board"
+        help
+          Support for the Broadcom Hana SV board.
+
+config MACH_HANA_TABLET
+        bool "Support Broadcom Hana Tablet board"
+        help
+          Support for the Broadcom Hana Tablet board.
+
+endchoice
+
+endmenu
+
+menu "Hana Configurations"
+
+config BCM_ZRELADDR
+	hex "Compressed ZREL ADDR"
+
+config BCM_RAM_BASE
+	hex "RAM base address"
+	help
+	 Set the physical base address of RAM
+
+config BCM_RAM_START_RESERVED_SIZE
+	hex "RAM start reserved memory size in bytes"
+	default 0
+	help
+	 Reserve memory at the start of RAM. This memory
+	 may be used for LCD frame buffer, DSP, etc. 
+
+config BCM_RAM_SIZE
+	hex "RAM size in bytes available"
+	default 0
+	help
+	 Total RAM available in bytes.
+
+endmenu
+

@@ -2959,3 +2959,7 @@ wlan_computer		MACH_WLAN_COMPUTER	WLAN_COMPUTER		2966
 bcm2708			ARCH_BCM2708		BCM2708			2708
 island			ARCH_ISLAND		ISLAND			2554
 rhea			ARCH_RHEA		RHEA   			2701
+hana_base            MACH_HANA_BASE       HANA_BASE            2701
+hana_sv              MACH_HANA_SV         HANA_SV              2701
+hana_tablet          MACH_HANA_TABLET     HANA_TABLET          2701
+

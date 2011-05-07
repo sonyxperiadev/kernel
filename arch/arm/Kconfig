@@ -875,6 +875,7 @@ source "arch/arm/plat-kona/Kconfig"
 source "arch/arm/mach-island/Kconfig"
 source "arch/arm/mach-rhea/Kconfig"
 source "arch/arm/mach-samoa/Kconfig"
+source "arch/arm/mach-hana/Kconfig"
 
 source "arch/arm/mach-ks8695/Kconfig"
 

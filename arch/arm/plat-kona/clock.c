@@ -951,6 +951,8 @@ static int ccu_common_init(struct clk *clk, void __iomem *base)
     return ret;
 }
 
+/* FIXME: gotta fix this!! */
+#if !(defined(CONFIG_ARCH_HANA))
 static int hub_ccu_init(struct clk *clk)
 {
     int ret;
@@ -962,6 +964,7 @@ static int hub_ccu_init(struct clk *clk)
 
     return 0;
 }
+#endif
 
 static int aon_ccu_init(struct clk *clk)
 {
@@ -975,7 +978,7 @@ static int aon_ccu_init(struct clk *clk)
     return 0;
 }
 
-#if !(defined(CONFIG_ARCH_ISLAND))
+#if !(defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_HANA))
 static int mm_ccu_init(struct clk *clk)
 {
     int ret;
@@ -1033,13 +1036,15 @@ static int ccu_init(struct clk *c)
 	ret = root_ccu_init(c);
 	break;
     case BCM2165x_HUB_CCU:
+	#ifndef CONFIG_ARCH_HANA
 	ret = hub_ccu_init(c);
+	#endif
 	break;
     case BCM2165x_AON_CCU:
 	ret = aon_ccu_init(c);
 	break;
     case BCM2165x_MM_CCU:
-    	#if !(defined(CONFIG_ARCH_ISLAND))
+	#if !(defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_HANA))
 	ret = mm_ccu_init(c);
 	#endif
 	break;

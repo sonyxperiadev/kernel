@@ -33,6 +33,7 @@
 
 #include <mach/hardware.h>
 #include <mach/irqs.h>
+#include <mach/io_map.h>
 
 void __init kona_init_irq(void)
 {

@@ -151,6 +151,7 @@ machine-$(CONFIG_ARCH_IOP13XX)		:= iop13xx
 machine-$(CONFIG_ARCH_IOP32X)		:= iop32x
 machine-$(CONFIG_ARCH_IOP33X)		:= iop33x
 machine-$(CONFIG_ARCH_ISLAND)           := island
+machine-$(CONFIG_ARCH_HANA)           := hana
 machine-$(CONFIG_ARCH_IXP2000)		:= ixp2000
 machine-$(CONFIG_ARCH_IXP23XX)		:= ixp23xx
 machine-$(CONFIG_ARCH_IXP4XX)		:= ixp4xx
