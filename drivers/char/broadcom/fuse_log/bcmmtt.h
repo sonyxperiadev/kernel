@@ -60,7 +60,7 @@ int BCMMTT_MakeMTTSignalHeader( unsigned short inPayloadSize, int inFrameHdrBufS
  *	@param	buflen	(in)	size of the destination buffer
  *	@return	int				frame length, or -1 on error
  **/
-int BCMMTT_FrameString( char* p_dest, char* p_src, int buflen ) ;
+int BCMMTT_FrameString( char* p_dest, const char* p_src, int buflen ) ;
 
 #ifdef __cplusplus
 }

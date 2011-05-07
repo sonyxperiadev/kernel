@@ -455,6 +455,8 @@ static int __init BCMLOG_ModuleInit(void)
 {
 	struct device *drvdata ;
 	int ret = 0;
+	extern void (*BrcmLogString)( const char* inLogString,
+                        unsigned short inSender );
 
 	g_module.console_msg_lvl = BCMLOG_CONSOLE_MSG_LVL ;
 	g_module.logdrv_class = NULL ;
@@ -499,22 +501,23 @@ static int __init BCMLOG_ModuleInit(void)
 
 //#ifdef CONFIG_BRCM_UNIFIED_LOGGING
 {
-	extern int bcmlog_mtt_on;
+//	extern int bcmlog_mtt_on;
 	extern unsigned short bcmlog_log_ulogging_id;
 
-	extern int brcm_retrive_early_printk();
+	extern int brcm_retrive_early_printk(void);
 
 	bcmlog_log_ulogging_id = BCMLOG_LOG_ULOGGING_ID;
 	BCMLOG_EnableLogId( bcmlog_log_ulogging_id, 1 ) ;
 	
 //	bcmlog_mtt_on = 1;
-	DWC_PRINTF("JUNWU BCMLOG_ModuleInit\n");
 
 	ret= brcm_retrive_early_printk();
 	if (ret < 0)
 	    printk("\n Printk->Mtt: Couldn't get early printk \n");
 }
 //#endif
+
+	BrcmLogString = BCMLOG_LogString;
 	return ret;
 }
 
@@ -578,7 +581,6 @@ static void LogString_Internal( const char* inLogString,
 		kfree( kbuf_mtt ) ;
 }
 
-
 /**
  *	Log null terminated string.
  *
@@ -593,24 +595,22 @@ void BCMLOG_LogString( const char* inLogString,
     // crash dump
 
 	char temp_LogString[512];
-	static int StringLength, i = 0, j = 0, k = 0;
+	static int StringLength, j = 0, k = 0;
 	if( !CpCrashDumpInProgress() && BCMLOG_LogIdIsEnabled( inSender ) )
 	{
        
 		StringLength = strlen (inLogString );
         	memset(temp_LogString, 0, 512);
                
-        	if ( StringLength >= 512 )
-        	{
-       			for (j = 0; j < StringLength; j++)
-               		{
-
-               			if ( inLogString[j] == '\n')
-                        	{
-                                                        
-                       			LogString_Internal( temp_LogString, inSender ) ;
-                                k = 0;
-                                memset(temp_LogString, 0, 512);                                 
+		if ( StringLength >= 512 )
+		{
+			for (j = 0; j < StringLength; j++)
+			{
+				if ( inLogString[j] == '\n')
+				{
+					LogString_Internal( temp_LogString, inSender ) ;
+					k = 0;
+                                	memset(temp_LogString, 0, 512);                                 
                         	}
                         	temp_LogString[k++] = inLogString[j];                           
 			}
@@ -874,7 +874,7 @@ static void LogSignal_Internal( unsigned int inSigCode,
  *	@param	size	(in)	message length
  *	@note	does not free the IPC message buffer
  **/
-void BCMLOG_HandleCpLogMsg( const char *buf, int size )
+void BCMLOG_HandleCpLogMsg( char *buf, int size )
 {
 	if( !CpCrashDumpInProgress( ) ) 
 	{
@@ -1036,29 +1036,6 @@ void BCMLOG_EndCpCrashDump(void)
 #endif
 }
 
-/**
- *	Output to RNDIS during CP crash dump.
- *
- *	@param	buf		(in)	message buffer
- *	@param	size	(in)	message length
- *	@note	During the RAM dump phase the log driver is sending large blocks
- *          of data to RNDIS faster than RNDIS can send the data to the host.  
- *          The send requests are being dropped.  This is solved by introducing
- *          a delay between RNDIS API calls.  
- *          
- *          This modification affects only the interface to RNDIS during CP crash 
- *          dump mode.
- **/
-static void brcm_klogging_crashdump( const char *buf, int size )
-{
-#ifdef CONFIG_USB_ETH_RNDIS
-	brcm_klogging( buf, size ) ;
-	{
-		unsigned long j = jiffies + HZ/128 ;
-		while( time_before( jiffies, j ) ) ;
-	}
-#endif
-}
 
 /**
  *	Handle CP crash dump data from IPC server.
@@ -1136,9 +1113,6 @@ void BCMLOG_HandleCpCrashMemDumpData( const char* inPhysAddr, int size )
 	UInt8* pChksum;
 	UInt16 chksum;
 	char tmpStr[255];
-    UInt8 frame_header[32];
-    int frameHdrSize;
-    UInt16 hdrCksum;
     void __iomem* MemDumpVAddr = NULL;
     UInt32 currPhysical = (UInt32)inPhysAddr;
     
@@ -1164,9 +1138,11 @@ void BCMLOG_HandleCpCrashMemDumpData( const char* inPhysAddr, int size )
 
 	// NOTE: this is mostly copied from DUMP_CompressedMemory()/DUMP_Signal() from CIB dump.c
 	n = 0;
-	for (p = MemDumpVAddr; p < MemDumpVAddr + size; p += (WORDS_PER_SIGNAL<<2), currPhysical+=(WORDS_PER_SIGNAL<<2))
+	for (p = (UInt32 )MemDumpVAddr; 
+		p < (UInt32)MemDumpVAddr + size; 
+		p += (WORDS_PER_SIGNAL<<2), currPhysical+=(WORDS_PER_SIGNAL<<2))
 	{
-		sz = MemDumpVAddr + size - p;
+		sz = (UInt32)MemDumpVAddr + size - p;
 		if (sz > (WORDS_PER_SIGNAL<<2)) sz = WORDS_PER_SIGNAL<<2;
 
 		// **FIXME** MAG doesn't appear to be needed under Android...

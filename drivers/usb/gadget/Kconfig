@@ -698,23 +698,7 @@ config USB_ETH
 	  Say "y" to link the driver statically, or "m" to build a
 	  dynamically linked module called "g_ether".
 
-config USB_ETH_RNDIS
-	bool "RNDIS support"
-	depends on USB_ETH
-	default y
-	help
-	   Microsoft Windows XP bundles the "Remote NDIS" (RNDIS) protocol,
-	   and Microsoft provides redistributable binary RNDIS drivers for
-	   older versions of Windows.
 
-	   If you say "y" here, the Ethernet gadget driver will try to provide
-	   a second device configuration, supporting RNDIS to talk to such
-	   Microsoft USB hosts.
-	   
-	   To make MS-Windows work with this, use Documentation/usb/linux.inf
-	   as the "driver info file".  For versions of MS-Windows older than
-	   XP, you'll need to download drivers from Microsoft's website; a URL
-	   is given in comments found in that info file.
 
 config USB_ETH_EEM
        bool "Ethernet Emulation Model (EEM) support"
@@ -904,6 +888,24 @@ config USB_ANDROID_MTP
 	depends on USB_ANDROID
 	help
 	  Provides Media Transfer Protocol (MTP) support for android gadget driver.
+
+config USB_ETH_RNDIS
+	boolean "RNDIS support as logging port"
+	depends on USB_ANDROID
+	help
+	   Microsoft Windows XP bundles the "Remote NDIS" (RNDIS) protocol,
+	   and Microsoft provides redistributable binary RNDIS drivers for
+	   older versions of Windows.
+
+	   If you say "y" here, the Ethernet gadget driver will try to provide
+	   a second device configuration, supporting RNDIS to talk to such
+	   Microsoft USB hosts.
+	   
+	   To make MS-Windows work with this, use Documentation/usb/linux.inf
+	   as the "driver info file".  For versions of MS-Windows older than
+	   XP, you'll need to download drivers from Microsoft's website; a URL
+	   is given in comments found in that info file.
+	   
 
 config USB_ANDROID_RNDIS
 	boolean "Android gadget RNDIS ethernet function"

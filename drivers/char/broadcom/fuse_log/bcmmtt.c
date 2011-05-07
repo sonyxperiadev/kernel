@@ -15,11 +15,12 @@
 
 #include <linux/kernel.h>
 #include <linux/broadcom/csl_types.h>
-//#include <plat/timer.h>
+//#include <timer.h>
 
 #include "bcmmtt.h"
 
-extern unsigned int timer_get_tick_count(void);
+//extern unsigned int timer_get_tick_count(void);
+extern unsigned int timer_get_msec(void);
 
 /**
  *	MTT frame constants
@@ -106,7 +107,7 @@ int BCMMTT_MakeMTTSignalHeader( unsigned short inPayloadSize, int inFrameHdrBufS
         return -1;
     }
     
-	trace_time_stamp = timer_get_tick_count() / 32;	
+	trace_time_stamp = timer_get_msec();	
 
 	pHbuf = outFrameHdrBuf;
 
@@ -137,7 +138,7 @@ int BCMMTT_MakeMTTSignalHeader( unsigned short inPayloadSize, int inFrameHdrBufS
  *	@param	buflen	(in)	size of the destination buffer
  *	@return	int				frame length, or -1 on error
  **/
-int BCMMTT_FrameString( char* p_dest, char* p_src, int buflen )
+int BCMMTT_FrameString( char* p_dest, const char* p_src, int buflen )
 {
 	int slen = MTTLOG_StringLen(p_src);
 	int n;
@@ -155,7 +156,7 @@ int BCMMTT_FrameString( char* p_dest, char* p_src, int buflen )
 		return 0 ;
 	}
 
-	systime = timer_get_tick_count() / 32 ;	
+	systime = timer_get_msec() ;	
 	
 	pSbuf = p_dest;
 

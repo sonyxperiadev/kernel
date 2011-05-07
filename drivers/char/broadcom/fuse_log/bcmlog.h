@@ -154,7 +154,7 @@ void BCMLOG_LogSignal( unsigned int inSigCode,
  *	@param	size	(in)	message length
  *	@note	does not free the IPC message buffer
  **/
-void BCMLOG_HandleCpLogMsg( const char *buf, int size ) ;
+void BCMLOG_HandleCpLogMsg( char *buf, int size ) ;
 
 /**
  *	Prepare to handle CP crash dump. During CP crash
@@ -198,7 +198,7 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString );
  **/
 #define BCMLOG_OUTDEV_NONE		0		///<	undefined or disabled
 #define BCMLOG_OUTDEV_PANIC		1		///<	panic partition / MTD
-#define BCMLOG_OUTDEV_SDCARD	2		///<	sdcard
+#define BCMLOG_OUTDEV_SDCARD		2		///<	sdcard
 #define BCMLOG_OUTDEV_RNDIS		3		///<	MTT/RNDIS
 #define BCMLOG_OUTDEV_UART		4		///<	UART
 #define BCMLOG_OUTDEV_ACM		5		///<	ACM/OBEX

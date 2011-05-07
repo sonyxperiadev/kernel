@@ -2,8 +2,6 @@ menu "Device Drivers"
 
 source "drivers/base/Kconfig"
 
-# source "drivers/char/broadcom/fuse_log/Kconfig"
-
 source "drivers/connector/Kconfig"
 
 source "drivers/mtd/Kconfig"
