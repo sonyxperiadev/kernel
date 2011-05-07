@@ -100,7 +100,7 @@ static irqreturn_t caph_audio_isr(int irq, void *dev_id);
 //
 //******************************************************************************
 
-void CAPHIRQ_Init( )
+void CAPHIRQ_Init( void )
 {
     int rc;
     Log_DebugPrintf(LOGID_AUDIO, " CAPHIRQ_Init:  \n");

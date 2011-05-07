@@ -70,7 +70,7 @@ typedef	struct
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {0};
+static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
 
 //****************************************************************************
 // local function declarations
@@ -100,7 +100,7 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_init::source=0x%x sink=0x%x.\n", source, sink));
 	if (source == CSL_CAPH_DEV_DSP) // any sink case? fixed the dmach for dsp
 	{
-		source == CSL_CAPH_DEV_DSP_throughMEM;
+		source = CSL_CAPH_DEV_DSP_throughMEM;
 		dmaCH = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH12);
 	}
 	else
@@ -193,7 +193,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
                                             audDrv->sink, 
                                             (CSL_CAPH_STREAM_e)audDrv->streamID)) 
 	{
-		 audio_xassert(0, audDrv->streamID);
+		 audio_xassert(0, (unsigned int)audDrv->streamID);
 		return RESULT_ERROR;
 	}
 	
@@ -219,7 +219,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
     stream.dmaCB = AUDIO_DMA_CB;
     if (RESULT_OK != csl_caph_hwctrl_RegisterStream(&stream))
 	{
-		audio_xassert(0, streamID);
+		audio_xassert(0, (unsigned int)streamID);
 		return RESULT_ERROR;
 	}
 	

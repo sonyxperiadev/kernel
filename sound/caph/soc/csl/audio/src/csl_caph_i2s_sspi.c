@@ -72,6 +72,7 @@ static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, CSL_I2S
 *  Description: config sspi pinmux
 *
 ****************************************************************************/
+#if 0 //disabled to remove gcc compile warnings
 static void csl_i2s_config_pinmux(UInt32 address)
 {	
     UInt32 regVal;
@@ -153,6 +154,7 @@ static void csl_i2s_config_pinmux(UInt32 address)
 
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_i2s_config_pinmux \n"); 
 }
+#endif
 /****************************************************************************
 *
 *  Function Name: csl_i2s_init(cUInt32 baseAddr)
@@ -162,7 +164,7 @@ static void csl_i2s_config_pinmux(UInt32 address)
 ****************************************************************************/
 CSL_HANDLE csl_i2s_init(cUInt32 baseAddr)
 {
-	CSL_HANDLE handle;
+	CSL_HANDLE handle = 0;
 #if 0
 	CSL_SSPI_HANDLE_T *pDevice;	
    	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_i2s_init \n");
@@ -413,7 +415,7 @@ UInt32 csl_i2s_get_rx1_fifo_data_port(CSL_HANDLE handle)
 	
 }
 
-
+#if 0 //disabled to remove gcc compile warnings
 /****************************************************************************
 *
 * NAME:  SSPI_hw_i2s_init
@@ -1174,4 +1176,4 @@ static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, CSL_I2S
 
     return SSPI_HW_NOERR;
 }
-
+#endif

@@ -711,6 +711,7 @@ Result_t AUDDRV_HWControl_ConfigSSP(UInt8 fm_port, UInt8 pcm_port)
 {
 	CSL_CAPH_SSP_Config_t sspConfig;
 
+	memset(&sspConfig, 0, sizeof(CSL_CAPH_SSP_Config_t));
 	sspConfig.fm_port = (CSL_CAPH_SSP_e)fm_port;
 	sspConfig.pcm_port = (CSL_CAPH_SSP_e)pcm_port;
 
@@ -813,7 +814,7 @@ Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_EnableVibrator \n");
 void AUDDRV_HWControl_VibratorStrength(UInt32 strength)
 {
 
-Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_VibratorStrength strength = 0x%x \n",strength);
+Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_VibratorStrength strength = 0x%lx \n",strength);
 
 	csl_caph_hwctrl_vibrator_strength(strength); 
 

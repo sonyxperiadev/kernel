@@ -85,8 +85,9 @@
 //static Interrupt_t rip_hisr;
 static Audio_ISR_Handler_t	client_Audio_ISR_Handler = NULL;
 static VPU_ProcessStatus_t	client_VPU_ProcessStatus = NULL;
-
+#if 0 //disabled to remove gcc warnings
 static AP_SharedMem_t 			*global_shared_mem = NULL;
+#endif
 
 typedef struct
 {
@@ -104,7 +105,7 @@ static irqreturn_t rip_isr(int irq, void *dev_id);
 //static void RIPISR_HISR(void);
 static UInt32 DSPDRV_GetSharedMemoryAddress(void);
 
-AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr();
+AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr(void);
 
 //******************************************************************************
 //
@@ -167,7 +168,7 @@ static UInt32 DSPDRV_GetSharedMemoryAddress( )
 {
 	UInt32 dsp_shared_mem;
 
-    dsp_shared_mem = SHAREDMEM_GetDsp_SharedMemPtr();
+    dsp_shared_mem = (UInt32)SHAREDMEM_GetDsp_SharedMemPtr();
 #if 0
     
     if(global_shared_mem == NULL)
@@ -269,7 +270,7 @@ void RIPISR_Register_AudioISR_Handler( Audio_ISR_Handler_t isr_cb )
 //******************************************************************************
 void RIPISR_Register_VPU_ProcessStatus( VPU_ProcessStatus_t hisr_cb )
 {
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP RIPISR_Register_VPU_ProcessStatus, 0x%x\n\r", hisr_cb);
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP RIPISR_Register_VPU_ProcessStatus, %p\n\r", hisr_cb);
 	client_VPU_ProcessStatus = hisr_cb;
 }
 

@@ -71,7 +71,7 @@ typedef	struct
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {0};
+static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
 
 //****************************************************************************
 // local function declarations
@@ -221,7 +221,7 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
                                             audDrv->sink, 
                                             (CSL_CAPH_STREAM_e)audDrv->streamID)) 
     {
-        audio_xassert(0, audDrv->streamID);
+        audio_xassert(0, (unsigned int)audDrv->streamID);
         return RESULT_ERROR;
     }
 	audDrv->dmaCB = csl_audio_capture_cb;
@@ -249,13 +249,13 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 
 	if(audDrv->source==CSL_CAPH_DEV_DSP && audDrv->sink==CSL_CAPH_DEV_MEMORY)
 	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_configure::USB call? reset src_sampleRate from %d to 8000.\r\n", stream.src_sampleRate);
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_configure::USB call? reset src_sampleRate from %ld to 8000.\r\n", stream.src_sampleRate);
 		stream.src_sampleRate = AUDIO_SAMPLING_RATE_8000;
 	}
 	
    if (RESULT_OK != csl_caph_hwctrl_RegisterStream(&stream))
     {
-        audio_xassert(0, streamID);
+        audio_xassert(0, (unsigned int)streamID);
         return RESULT_ERROR;
     }	
 	return RESULT_OK;
