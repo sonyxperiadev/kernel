@@ -29,6 +29,7 @@
 #ifdef UNDER_LINUX
 #include <linux/string.h>
 #include <linux/workqueue.h>
+#include <linux/time.h>
 #include <linux/interrupt.h>
 #include <plat/mobcom_types.h>
 #include <plat/msconsts.h>
@@ -357,7 +358,7 @@ static void cslDsi1Stat_HISR ( void )
 static void cslDsi0EofDma ( DMA_VC4LITE_CALLBACK_STATUS status )
 {
     DSI_HANDLE dsiH = &dsiBus[0];
-   
+  
     if( status != DMA_VC4LITE_CALLBACK_SUCCESS )
     {
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsi0EofDma(): ERR DMA!\n\r");
@@ -452,7 +453,7 @@ static void cslDsi0UpdateTask (void)
         
         if ( res == CSL_LCD_OK )
         {
-            res = cslDsiWaitForInt( dsiH, 100 );
+            res = cslDsiWaitForInt( dsiH, updMsg.updReq.timeOut_ms );
         } 
         else
         {
@@ -561,7 +562,7 @@ Boolean cslDsiOsInit ( DSI_HANDLE dsiH )
 	#ifdef UNDER_LINUX
 	int ret;
 	#endif
-    
+   
     // Update Request Queue
     dsiH->updReqQ = OSQUEUE_Create ( FLUSH_Q_SIZE, 
         sizeof(DSI_UPD_REQ_MSG_T), OSSUSPEND_PRIORITY);
@@ -796,8 +797,6 @@ static CSL_LCD_RES_T cslDsiDmaStart ( DSI_UPD_REQ_MSG_T* updMsg )
     Int32                       dmaCh;     
     UInt32                      width;
     UInt32                      height;
-    
-//    DMA_VC4LITE_CHANNEL_t       dmaCh;
         
     // Reserve Channel
     dmaCh = csl_dma_vc4lite_obtain_channel ( 
@@ -822,12 +821,12 @@ static CSL_LCD_RES_T cslDsiDmaStart ( DSI_UPD_REQ_MSG_T* updMsg )
     else
         dmaChInfo.dstID = DMA_VC4LITE_CLIENT_DSI0;
         
-    dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_4;
-    //dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_8;
+    //dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_4;
+    dmaChInfo.burstLen     = DMA_VC4LITE_BURST_LENGTH_8;
     dmaChInfo.xferMode     = DMA_VC4LITE_XFER_MODE_LINERA;
     dmaChInfo.dstStride    = 0;
     dmaChInfo.srcStride    = 0;
-    dmaChInfo.waitResponse = 1;
+    dmaChInfo.waitResponse = 0;
     dmaChInfo.callback     = (DMA_VC4LITE_CALLBACK_t)updMsg->dsiH->dma_cb;
 
     if ( csl_dma_vc4lite_config_channel( updMsg->dmaCh, &dmaChInfo) 
@@ -862,7 +861,8 @@ static CSL_LCD_RES_T cslDsiDmaStart ( DSI_UPD_REQ_MSG_T* updMsg )
             "ERR start DMA data transfer\r\n ");
         return CSL_LCD_DMA_ERR;
     }      
-    
+    mb();
+
     return ( result );
 }
 
@@ -1483,7 +1483,7 @@ static CSL_LCD_RES_T cslDsiWaitForInt( DSI_HANDLE dsiH, UInt32 tout_msec )
         
         if( osRes == OSSTATUS_TIMEOUT )
         {
-            LCD_DBG ( LCD_DBG_ID, "[CSL DSI] cslDsiWaitForInt: "
+            LCD_DBG ( LCD_DBG_ERR_ID, "[CSL DSI] cslDsiWaitForInt: "
                 "ERR Timed Out!\n\r" ); 
             res = CSL_LCD_OS_TOUT;
         }    
@@ -1974,7 +1974,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
     UInt32              pktCount;
     DSI_UPD_REQ_MSG_T   updMsgCm;
     Boolean             isTE;
-    
+
     dsiChH  = ( DSI_CM_HANDLE ) vcH;
     clientH = ( DSI_CLIENT ) dsiChH->client;
     dsiH    = ( DSI_HANDLE ) clientH->lcdH;
@@ -2009,9 +2009,6 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
     updMsgCm.clientH = clientH; 
 
     // set TE mode
-#if 0
-     dsiChH->chalCmCfg.isTE = FALSE;
-#endif
     isTE = dsiChH->chalCmCfg.isTE;
 	WARN_ON(isTE == FALSE);
 
@@ -2026,8 +2023,8 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
     dsiChH->chalCmCfg.pktSizeBytes = pktSizeBytes;
     mb();
 
-    // DMA config has to be after DSI enable ?
 #if 0
+    // DMA config has to be after DSI enable ?
     if( (res = cslDsiDmaStart ( &updMsgCm )) != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] CSL_DSI_UpdateCmVc: "
@@ -2046,7 +2043,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 	mb();
         // send first line with START CMND using PKT ENG 1
         chal_dsi_de1_send ( dsiH->chalH, TX_PKT_ENG_1, &dsiChH->chalCmCfg );  
-        wmb();
+        mb();
 
         // send the rest of the frame with CONTINUE CMND
         dsiChH->chalCmCfg.dcsCmnd  = dsiChH->dcsCmndCont;
@@ -2067,8 +2064,9 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
 
     chal_dsi_de1_send ( dsiH->chalH, TX_PKT_ENG_0, &dsiChH->chalCmCfg );  
    
-    wmb();
+    mb();
 
+#if 1
     if( (res = cslDsiDmaStart ( &updMsgCm )) != CSL_LCD_OK )
     {
         LCD_DBG ( LCD_DBG_ID, "[CSL DSI] CSL_DSI_UpdateCmVc: "
@@ -2076,6 +2074,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
         if( !clientH->hasLock ) OSSEMAPHORE_Release ( dsiH->semaDsi );
         return ( res );    
     }
+#endif
 
     // restore TE mode config - complex, simplify
     dsiChH->chalCmCfg.isTE = isTE;  
@@ -2090,7 +2089,7 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
             cslDsiDmaStop ( &updMsgCm );
             if( osStat == OSSTATUS_TIMEOUT )
             {
-                LCD_DBG ( LCD_DBG_ID, "[CSL DSI] CSL_DSI_UpdateCmVc: "
+                LCD_DBG ( LCD_DBG_ERR_ID, "[CSL DSI] CSL_DSI_UpdateCmVc: "
                     "ERR Timed Out Waiting For EOF DMA!\n\r" ); 
                 res = CSL_LCD_OS_TOUT;
             }    
@@ -2105,20 +2104,20 @@ CSL_LCD_RES_T CSL_DSI_UpdateCmVc (
         //wait for interface to drain
         if( res == CSL_LCD_OK )
         {
-            res = cslDsiWaitForInt( dsiH, 100 );
+            res = cslDsiWaitForInt( dsiH, req->timeOut_ms );
         }    
         else    
         {
             cslDsiWaitForInt( dsiH, 1 );        
         }
-            
+
         // clear   PKTC.Start
         chal_dsi_cmnd_start ( dsiH->chalH, TX_PKT_ENG_0, FALSE );
         // disable DE1
         chal_dsi_de1_enable ( dsiH->chalH, FALSE  );
         
         // cslDsiClearAllFifos ( dsiH );
-        
+
         if( !clientH->hasLock ) OSSEMAPHORE_Release ( dsiH->semaDsi );
     }    
     else

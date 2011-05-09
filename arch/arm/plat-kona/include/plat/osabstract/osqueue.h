@@ -25,6 +25,7 @@
 #include <linux/list.h>
 #include <linux/completion.h>
 #include <linux/hardirq.h>
+#include <linux/semaphore.h>
 
 #ifdef	__cplusplus
 extern "C"
@@ -61,7 +62,7 @@ struct QueueStruct_t {
 	UInt32 msg_size;
 	UInt32 max_entries;
 	struct mutex q_mutex;
-	struct completion msg_queued;
+	struct semaphore msg_queued;
 	struct QueueLLI_t q_list;
 };
 
@@ -89,7 +90,7 @@ static inline Queue_t OSQUEUE_Create(					// returns newly-created queue
 		new_queue->msg_size = msg_size;
 		new_queue->max_entries = entries;
 		mutex_init(&new_queue->q_mutex);
-		init_completion(&new_queue->msg_queued);
+		sema_init(&new_queue->msg_queued, 0);
 		INIT_LIST_HEAD(&new_queue->q_list.head);
 	}
 	return (Queue_t *)new_queue;
@@ -164,18 +165,18 @@ static inline OSStatus_t OSQUEUE_Pend(				// get message from the queue
 	if (in_interrupt())
 		return status;
 
-	if(list_empty(&queue->q_list.head) && !wait_for_completion_interruptible_timeout(&queue->msg_queued, timeout))
-		status = OSSTATUS_TIMEOUT;
+	do {
+		down(&queue->msg_queued);
+	} while (list_empty(&queue->q_list.head));
 
 
     if(mutex_lock_interruptible(&queue->q_mutex) != 0)
     {
         return status;
     }
-	memcpy(msg, (QMsg_t *)&(queue->q_list.msg_ptr), queue->msg_size);
-
+	memcpy(msg, container_of(queue->q_list.head.next, struct QueueLLI_t, head)->msg_ptr, queue->msg_size);
 	kfree(queue->q_list.msg_ptr);
-	list_del_init(&queue->q_list.head);
+	list_del_init(queue->q_list.head.next);
 	mutex_unlock(&queue->q_mutex);
 
 
@@ -225,7 +226,7 @@ static inline OSStatus_t OSQUEUE_PostGeneric( 					// internal method to post ms
 			}
 			memcpy((QMsg_t *)tmp->msg_ptr, msg, queue->msg_size);
 			mutex_unlock(&queue->q_mutex);
-			complete(&queue->msg_queued);
+			up(&queue->msg_queued);
 			status = OSSTATUS_SUCCESS;
 		}
 	}
