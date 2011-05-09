@@ -221,7 +221,7 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
                                             audDrv->sink, 
                                             (CSL_CAPH_STREAM_e)audDrv->streamID)) 
     {
-        audio_xassert(0, (unsigned int)audDrv->streamID);
+        audio_xassert(0, audDrv->streamID);
         return RESULT_ERROR;
     }
 	audDrv->dmaCB = csl_audio_capture_cb;
@@ -255,7 +255,7 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 	
    if (RESULT_OK != csl_caph_hwctrl_RegisterStream(&stream))
     {
-        audio_xassert(0, (unsigned int)streamID);
+        audio_xassert(0, streamID);
         return RESULT_ERROR;
     }	
 	return RESULT_OK;

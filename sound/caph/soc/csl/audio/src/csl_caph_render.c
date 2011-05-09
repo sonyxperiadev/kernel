@@ -193,7 +193,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
                                             audDrv->sink, 
                                             (CSL_CAPH_STREAM_e)audDrv->streamID)) 
 	{
-		 audio_xassert(0, (unsigned int)audDrv->streamID);
+		 audio_xassert(0, audDrv->streamID);
 		return RESULT_ERROR;
 	}
 	
@@ -219,7 +219,7 @@ Result_t csl_audio_render_configure(AUDIO_SAMPLING_RATE_t    sampleRate,
     stream.dmaCB = AUDIO_DMA_CB;
     if (RESULT_OK != csl_caph_hwctrl_RegisterStream(&stream))
 	{
-		audio_xassert(0, (unsigned int)streamID);
+		audio_xassert(0, streamID);
 		return RESULT_ERROR;
 	}
 	
