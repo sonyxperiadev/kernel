@@ -40,7 +40,11 @@ struct rhea_fb {
 	struct task_struct *thread;
 	struct semaphore thread_sem;
 	struct semaphore update_sem;
+	struct semaphore prev_buf_done_sem;
+	struct semaphore refresh_wait_sem;
 	atomic_t buff_idx;
+	atomic_t is_fb_registered;
+	atomic_t is_graphics_started;
 	int base_update_count;
 	int rotation;
 	struct fb_info fb;
@@ -52,6 +56,8 @@ struct rhea_fb {
 	android_early_suspend_t early_suspend;
 #endif
 };
+
+static struct rhea_fb *g_rhea_fb = NULL;
 
 static inline u32 convert_bitfield(int val, struct fb_bitfield *bf)
 {
@@ -135,6 +141,12 @@ static int rhea_fb_set_par(struct fb_info *info)
 	return 0;
 }
 
+static void rhea_display_done_cb(int status)
+{	
+	(void)status;
+	up(&g_rhea_fb->prev_buf_done_sem);
+}
+
 static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	int ret = 0;
@@ -148,9 +160,20 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 
 	rheafb_debug("RHEA %s with buff_idx =%d \n", __func__, buff_idx);
 
+	if (down_killable(&fb->update_sem))
+		return -EINTR;
+
 	atomic_set(&fb->buff_idx, buff_idx);
 
-	ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
+	if (!atomic_read(&fb->is_fb_registered)) {
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
+	} else {
+		atomic_set(&fb->is_graphics_started, 1);
+		down(&fb->prev_buf_done_sem);
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx,(DISPDRV_CB_T)rhea_display_done_cb);
+	}
+	
+	up(&fb->update_sem);
 
 	rheafb_debug("RHEA Display is updated once at %d time with yoffset=%d\n", fb->base_update_count, var->yoffset);
 
@@ -209,7 +232,6 @@ static int disable_display(struct rhea_fb *fb)
 	return ret;
 }
 
-
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
@@ -218,13 +240,17 @@ static int rhea_refresh_thread(void *arg)
 	down(&fb->thread_sem);
 
 	do {
-		fb->display_ops->update(fb->display_hdl, atomic_read(&fb->buff_idx), NULL /* Callback */);
+		if (atomic_read(&fb->is_graphics_started))
+			break;
+		down(&fb->update_sem);
+		fb->display_ops->update(fb->display_hdl, 0, NULL);
 		fb->base_update_count++;
-		rheafb_debug("RHEA Display is updated once at %d time with buffer idx=%d\n", fb->base_update_count, atomic_read(&fb->buff_idx));
-		ret = down_timeout(&fb->update_sem, msecs_to_jiffies(30));
+		up(&fb->update_sem);
+		rheafb_debug("RHEA Display is updated once inside the refreshing thread\n");
+		ret = down_timeout(&fb->refresh_wait_sem, msecs_to_jiffies(30));
 	} while (1);
 
-	up(&fb->thread_sem);
+	rheafb_debug("RHEA refresh thread is exiting!\n");
 	return 0;
 }
 
@@ -252,19 +278,25 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err_fb_alloc_failed;
 	}
+	g_rhea_fb = fb;
 
 	spin_lock_init(&fb->lock);
 	platform_set_drvdata(pdev, fb);
 
-	sema_init(&fb->thread_sem, 0);
-	sema_init(&fb->update_sem, 0);
+	sema_init(&fb->update_sem, 1);
 	atomic_set(&fb->buff_idx, 0);
+	atomic_set(&fb->is_fb_registered, 0);
+	sema_init(&fb->prev_buf_done_sem, 1);
+	atomic_set(&fb->is_graphics_started, 0);
+	sema_init(&fb->thread_sem, 0);
+	sema_init(&fb->refresh_wait_sem, 0);
+
 	fb->thread = kthread_run(rhea_refresh_thread, fb, "lcdrefresh_d");
 	if (IS_ERR(fb->thread)) {
 		ret = PTR_ERR(fb->thread);
 		goto thread_create_failed;
 	}
-	
+
 	/* Hack
 	 * The screen info can only be obtained from the display driver;and, therefore, 
 	 * only then the frame buffer mem can be allocated.
@@ -370,14 +402,15 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		rheafb_error("Can not enable the LCD!\n");
 		goto err_enable_display_failed;
 	}
-	//up(&fb->thread_sem);
 
 	ret = register_framebuffer(&fb->fb);
 	if (ret) {
 		rheafb_error("Framebuffer registration failed\n");
 		goto err_fb_register_failed;
 	}
+	up(&fb->thread_sem);
 
+	atomic_set(&fb->is_fb_registered, 1);
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
 #ifdef CONFIG_LOGO
