@@ -140,7 +140,6 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_AHINTC_BASE_VA, SZ_4K ),
 	IO_DESC(KONA_AUXMIC_VA, SZ_4K),
 	IO_DESC(KONA_AUDIOH_VA, SZ_4K),
-	IO_DESC(KONA_MEMC0_NS_VA, SZ_4K),
 };
 
 
