@@ -196,7 +196,7 @@ static void WriteToLogDev_SDCARD( void )
 
 static void WriteToLogDev_RNDIS( void )
 {
-#ifdef CONFIG_USB_ETH_RNDIS
+#ifdef CONFIG_BRCM_NETCONSOLE
 
 	if( g_netconsole_on )
 	{
@@ -421,7 +421,7 @@ int BCMLOG_OutputInit( void )
 
 
 	INIT_WORK( &g_devWrParms.wq, WriteToLogDev ) ;
-#ifdef CONFIG_USB_ETH_RNDIS
+#ifdef CONFIG_BRCM_NETCONSOLE
 
 	/*
 	 *	register flow control callback functions

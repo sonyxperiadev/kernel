@@ -962,7 +962,9 @@ struct net_device *gether_connect(struct gether *link)
 		netif_carrier_on(dev->net);
 		if (netif_running(dev->net)){
 			eth_start(dev, GFP_ATOMIC);
+#ifdef CONFIG_BRCM_NETCONSOLE			
 			brcm_current_netcon_status(USB_RNDIS_ON);
+#endif
 		} 
 
 	/* on error, disable any endpoints  */
@@ -1000,7 +1002,10 @@ void gether_disconnect(struct gether *link)
 
 	DBG(dev, "%s\n", __func__);
 
+#ifdef CONFIG_BRCM_NETCONSOLE			
 	brcm_current_netcon_status(USB_RNDIS_OFF);
+#endif
+
 	netif_stop_queue(dev->net);
 	netif_carrier_off(dev->net);
 
