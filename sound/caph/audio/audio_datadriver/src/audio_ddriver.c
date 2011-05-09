@@ -123,7 +123,6 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 
 static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id);
 static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id);
-static void AUDIO_DRIVER_CaptureVoiceCallback(UInt32 buf_index);
 
 //=============================================================================
 // Functions
@@ -306,7 +305,7 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
 void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 {
     AUDIO_DDRIVER_t*  aud_drv = (AUDIO_DDRIVER_t*)drv_handle;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Close::  \n"  );
+    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Close  \n"  );
 
     if(aud_drv == NULL)
     {
@@ -395,7 +394,7 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 {
     AUDIO_DDRIVER_t*  aud_drv = (AUDIO_DDRIVER_t*)drv_handle;
     Result_t result_code = RESULT_ERROR;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::  \n"  );
+    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::  \n"  );
 
     if(aud_drv == NULL)
     {
@@ -472,16 +471,17 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-
-    AUDDRV_DEVICE_e *aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
-
+	AUDDRV_DEVICE_e *aud_dev;
+	Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
     switch (ctrl_cmd)
     {
         case AUDIO_DRIVER_START:
             {
                 UInt32 block_size;
                 UInt32 num_blocks;
+						
+				if(pCtrlStruct != NULL)
+			    	aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
                 //check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
@@ -509,7 +509,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                 result_code = csl_audio_render_configure ( aud_drv->sample_rate, 
 						                      aud_drv->num_channel,
                 			                              aud_drv->bits_per_sample,
-						                      aud_drv->ring_buffer_phy_addr,
+						                      (UInt8 *)aud_drv->ring_buffer_phy_addr,
 						                      num_blocks,
 						                      block_size,
 						                      (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
@@ -595,7 +595,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                 result_code = csl_audio_capture_configure ( aud_drv->sample_rate, 
 						                      aud_drv->num_channel,
                                               			      aud_drv->bits_per_sample,
-						                      aud_drv->ring_buffer_phy_addr,
+						                      (UInt8 *)aud_drv->ring_buffer_phy_addr,
 						                      num_blocks,
 						                      block_size,
 						                      (CSL_AUDCAPTURE_CB) AUDIO_DRIVER_CaptureDmaCallback,
@@ -680,8 +680,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 dspif_VPU_record_set_cb (AUDIO_DRIVER_CaptureVoiceCallback);
              #endif   
 
-                /* **CAUTION: Check if we need to hardcode number of frames and handle the interrupt period seperately
-                /* Block size = interrupt_period
+         /* **CAUTION: Check if we need to hardcode number of frames and handle the interrupt period seperately
+                * Block size = interrupt_period
                  * Number of frames/block = interrupt_period / 320 (20ms worth of 8khz data)
                  *
                  */
@@ -697,7 +697,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 
                 if(left_over)
                 {
-                    Log_DebugPrintf(LOGID_AUDIO,"Period is not multiple of 20ms-%d  \n",left_over);
+                    Log_DebugPrintf(LOGID_AUDIO,"Period is not multiple of 20ms-%ld  \n",left_over);
                     num_frames++;  // increase frame count by 1 more so that we have all data when we signal
                 }
                 if(aud_drv->sample_rate == 16000)

@@ -24,6 +24,7 @@ Broadcom's express prior written consent.
 #include "brcm_rdb_util.h"
 #include "brcm_rdb_aci.h"
 #include "brcm_rdb_auxmic.h"
+#include "io_map.h"
 #include "brcm_rdb_padctrlreg.h"
 
 //****************************************************************************
@@ -440,26 +441,20 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 {
     cUInt32  regVal;
-    cUInt32   function = 0;
-
-
-
-
-
 
     /* Select the function for DMIC0_CLK */
     /* For function = 0 (alt_fn1), this will be set as DMIC1_CLK */
-    regVal = READ_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_DMIC0CLK_OFFSET));
+
+    regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DMIC0CLK_OFFSET));
     regVal &= (~PADCTRLREG_DMIC0CLK_PINSEL_DMIC0CLK_MASK);
- //   regVal |= (function << PADCTRLREG_DMIC0CLK_PINSEL_DMIC0CLK_SHIFT);
-    WRITE_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_DMIC0CLK_OFFSET), regVal);
+    WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DMIC0CLK_OFFSET), regVal);
 
     /* Select the function for DMIC0_DATA */
     /* For function = 0 (alt_fn1), this will be set as DMIC1_DATA */
-    regVal = READ_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_DMIC0DQ_OFFSET));
+    regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DMIC0DQ_OFFSET));
     regVal &= (~PADCTRLREG_DMIC0DQ_PINSEL_DMIC0DQ_MASK);
-//    regVal |= (function << PADCTRLREG_DMIC0DQ_PINSEL_DMIC0DQ_SHIFT);
-    WRITE_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_DMIC0DQ_OFFSET), regVal);
+    WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DMIC0DQ_OFFSET), regVal);
+
 
 }
 
@@ -482,19 +477,21 @@ cVoid chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
     cUInt32   function=4;
 
     /* Select the function for GPIO33 */
-    /* For function = 4 (alt_fn5), this will be set as DMIC2_CLK */
-    regVal = READ_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_GPIO33_OFFSET));
-    regVal &= (~PADCTRLREG_GPIO33_PINSEL_GPIO33_MASK);
-    regVal |= (function << PADCTRLREG_GPIO33_PINSEL_GPIO33_SHIFT);
-    WRITE_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_GPIO33_OFFSET), regVal);
 
-    /* Select the function for GPIO34 */
-    /* For function = 4 (alt_fn5), this will be set as DMIC2_DATA */
-    regVal = READ_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_GPIO34_OFFSET));
-    regVal &= (~PADCTRLREG_GPIO34_PINSEL_GPIO34_MASK);
-    regVal |= (function << PADCTRLREG_GPIO34_PINSEL_GPIO34_SHIFT);
-    WRITE_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_GPIO34_OFFSET), regVal);
-        /* For FPGA no pads are present */
+/* For function = 4 (alt_fn5), this will be set as DMIC2_CLK */
+regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO33_OFFSET));
+regVal &= (~PADCTRLREG_GPIO33_PINSEL_GPIO33_MASK);
+regVal |= (function << PADCTRLREG_GPIO33_PINSEL_GPIO33_SHIFT);
+WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO33_OFFSET), regVal);
+
+/* Select the function for GPIO34 */
+/* For function = 4 (alt_fn5), this will be set as DMIC2_DATA */
+regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO34_OFFSET));
+regVal &= (~PADCTRLREG_GPIO34_PINSEL_GPIO34_MASK);
+regVal |= (function << PADCTRLREG_GPIO34_PINSEL_GPIO34_SHIFT);
+WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO34_OFFSET), regVal);
+	/* For FPGA no pads are present */
+
 }
 #elif defined (_SAMOA_)
 //============================================================================

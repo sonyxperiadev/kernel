@@ -476,7 +476,6 @@ void csl_caph_audioh_start(int path_id)
 
 		case AUDDRV_PATH_HEADSET_OUTPUT:
 
-//			chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
 			if(path[path_id].sample_mode == AUDIO_CHANNEL_STEREO)
 			{
 				chnl_enable = CHAL_AUDIO_CHANNEL_LEFT | CHAL_AUDIO_CHANNEL_RIGHT;
@@ -488,6 +487,10 @@ void csl_caph_audioh_start(int path_id)
 			else if(path[path_id].sample_mode == AUDIO_CHANNEL_STEREO_RIGHT)
 			{
 				chnl_enable = CHAL_AUDIO_CHANNEL_RIGHT;
+			}
+			else if(path[path_id].sample_mode == AUDIO_CHANNEL_MONO)
+			{
+				chnl_enable = CHAL_AUDIO_CHANNEL_LEFT; 
 			}
 
 			chal_audio_hspath_enable(handle, chnl_enable);	

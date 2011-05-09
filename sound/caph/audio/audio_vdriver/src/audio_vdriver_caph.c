@@ -124,7 +124,6 @@ static Boolean bInVoiceCall = FALSE;
 
 static CB_GetAudioMode_t  client_GetAudioMode = NULL;
 static CB_SetAudioMode_t  client_SetAudioMode = NULL;
-static CB_SetMusicMode_t  client_SetMusicMode = NULL;
 
 //=============================================================================
 // Private function prototypes
@@ -149,7 +148,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 {
     AUDDRV_HWCTRL_CONFIG_t config;
 	Log_DebugPrintf(LOGID_AUDIO, 
-                    "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%d*\n\r", 
+                    "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%ld*\n\r", 
                     mic, speaker, sample_rate);
 
     memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
@@ -282,7 +281,7 @@ void AUDDRV_EnableDSPOutput (
 				)
 
 {
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_EnableDSPOutput mixer %d, invoicecall %d, sample_rate %d *\n\r", mixer_speaker_selection, inVoiceCall, sample_rate);
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_EnableDSPOutput mixer %d, invoicecall %d, sample_rate %ld *\n\r", mixer_speaker_selection, inVoiceCall, sample_rate);
 
 	OSTASK_Sleep( 5 );  //sometimes BBC video has no audio. This delay may help the mixer filter and mixer gain loading.
 	currVoiceSpkr = mixer_speaker_selection;
@@ -615,7 +614,7 @@ void AUDDRV_User_CtrlDSP ( AudioDrvUserParam_t audioDrvUserParam, void *user_CB,
 	if (user_CB != NULL)
 		sUserCB = user_CB;
 
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_User_CtrlDSP, UserCB = %x *\n\r", sUserCB);
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_User_CtrlDSP, UserCB = %lx *\n\r", (UInt32)sUserCB);
 	switch (audioDrvUserParam)
 	{
 		case AUDDRV_USER_GET_SPKPROT:

@@ -77,7 +77,6 @@ ANY LIMITED REMEDY.
 * @addtogroup AudioDriverGroup
 * @{
 */
-#define OSTASK_Sleep(x) 
 //=============================================================================
 // Public Variable declarations
 //=============================================================================

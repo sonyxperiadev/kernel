@@ -78,7 +78,7 @@ snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_caph.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_common.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_gain_table.o
 snd-brcm-omx-objs += audio/audio_datadriver/src/audio_ddriver.o
-#snd-brcm-omx-objs += brcm_audio_thread.o
+snd-brcm-omx-objs += brcm_audio_thread.o
 #snd-brcm-omx-objs += audio_stubs.o
 
 #CHAL Source Files

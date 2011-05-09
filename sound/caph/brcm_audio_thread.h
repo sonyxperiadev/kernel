@@ -25,12 +25,16 @@ the GPL, without Broadcom's express prior written consent.
 
 typedef enum
 {
+	ACTION_AUD_OpenPlay,		
+	ACTION_AUD_ClosePlay,		
 	ACTION_AUD_StartPlay,		
 	ACTION_AUD_StopPlay,	
 	ACTION_AUD_PausePlay,			
 	ACTION_AUD_ResumePlay,		
     ACTION_AUD_StartRecord,
     ACTION_AUD_StopRecord,
+    ACTION_AUD_OpenRecord,
+    ACTION_AUD_CloseRecord,
 	ACTION_AUD_TOTAL			
 } BRCM_AUDIO_ACTION_en_t;
 
@@ -66,11 +70,30 @@ typedef struct
 
 }BRCM_AUDIO_Param_Resume_t;
 
+typedef struct
+{
+    void*   drv_handle;
+    UInt32 substream_number;
+
+}BRCM_AUDIO_Param_Open_t;
+
+typedef struct
+{
+    void*   drv_handle;
+    UInt32 substream_number;
+
+}BRCM_AUDIO_Param_Close_t;
+
+
+
 typedef union{	
 	BRCM_AUDIO_Param_Start_t 			param_start;
     BRCM_AUDIO_Param_Stop_t 			param_stop;
 	BRCM_AUDIO_Param_Pause_t 			param_pause;
     BRCM_AUDIO_Param_Resume_t 			param_resume;
+	BRCM_AUDIO_Param_Open_t				parm_open;
+	BRCM_AUDIO_Param_Close_t			parm_close;
+	
 
 } BRCM_AUDIO_Control_Params_un_t; 
 
@@ -83,7 +106,8 @@ int TerminateAudioHalThread(void);
 Result_t AUDIO_Ctrl_Trigger(
 	BRCM_AUDIO_ACTION_en_t action_code,
 	void *arg_param,
-	void *callback
+	void *callback,
+	int block
 	);
 
 

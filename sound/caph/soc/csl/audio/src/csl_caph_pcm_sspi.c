@@ -83,7 +83,7 @@
 static chal_sspi_task_conf_t task_conf;
 static chal_sspi_seq_conf_t seq_conf;
 #endif
-
+#if 0 //disabled to remove gcc compile warnings
 //******************************************************************************
 //Function Definition
 //******************************************************************************
@@ -175,7 +175,7 @@ static void csl_pcm_config_pinmux(UInt32 address)
 
     Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_pcm_config_pinmux \n"); 
 }
-
+#endif
 //******************************************************************************
 //
 //  Function Name:	csl_pcm_init
@@ -185,7 +185,7 @@ static void csl_pcm_config_pinmux(UInt32 address)
 //******************************************************************************
 CSL_PCM_HANDLE csl_pcm_init(cUInt32 baseAddr)
 {
-    CSL_PCM_HANDLE handle;
+    CSL_PCM_HANDLE handle = 0;
 #if 0
 	CSL_PCM_HANDLE_t *pDevice;
 	

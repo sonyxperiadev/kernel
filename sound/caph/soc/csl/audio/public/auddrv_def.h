@@ -219,7 +219,7 @@ typedef enum {
 	AUDDRV_STATE_STOPPED
 } AUDDRV_STATE_Enum_t;
 
-#define audio_xassert(a, b) (Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%x.\r\n", __FUNCTION__, __LINE__, a, b))
+#define audio_xassert(a, b) (Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __FUNCTION__, __LINE__, a, (UInt32)b))
 
 #endif // _AUDDRV_DEF_
 

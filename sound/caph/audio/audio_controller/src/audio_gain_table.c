@@ -803,11 +803,11 @@ AUDTABL_GainMapping_t AUDTABL_getGainDistribution(AudioMode_t audioMode, UInt32 
                     return GainMapping_Table[i];
                 }
                 else
-                if((Int32)(GainMapping_Table[0].gainTotal) > (Int32)gainQ31)
+                if((Int32)(GainMapping_Table[1].gainTotal) > (Int32)gainQ31)
                 // the gain is smaller than the smallest gain in the table for Headset/IHF Mode
                 // return the smallest available gain
                 {
-                    return GainMapping_Table[0];
+                    return GainMapping_Table[1]; //index 0 defines the total gain. hence use index 1
                 }
                 else
                 if(GainMapping_Table[i+1].audioMode != audioMode)

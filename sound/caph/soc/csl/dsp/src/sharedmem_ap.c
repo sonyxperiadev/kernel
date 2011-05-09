@@ -47,10 +47,10 @@ Boolean at_mtst_event_logging = FALSE;
 #endif
 
 
-#pragma arm section zidata = "shared_rip_mem_sect"
-static AP_SharedMem_t			AP_shared_mememory;
+//#pragma arm section zidata = "shared_rip_mem_sect"
+static AP_SharedMem_t			AP_shared_mememory __attribute__((section("shared_rip_mem_sect")));
       
-#pragma arm section
+//#pragma arm section
 
 static AP_SharedMem_t 			*dsp_shared_mem = &AP_shared_mememory;		// Define pointers to global strcuture of the shared memory
 

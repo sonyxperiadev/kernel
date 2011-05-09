@@ -91,32 +91,24 @@ UInt8 playback_audiotest_srcmixer[165856] = {
 static int sgBrcm_auddrv_TestValues[BRCM_AUDDRV_TESTVAL];
 static char *sgBrcm_auddrv_TestName[]={"Aud_play","Aud_Rec","Aud_control"};
 
+#ifdef LMP_BUILD
 static void __iomem *ahb_audio_base = NULL;
+static irqreturn_t audvoc_isr(int irq, void *dev_id);
+#endif
  
 // SysFS interface to test the Audio driver level API
 ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev, struct device_attribute *attr, char *buf);
 ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev, struct device_attribute *attr,const char *buf, size_t count);
 static struct device_attribute Brcm_auddrv_Test_attrib = __ATTR(BrcmAud_DrvTest, 0644,  Brcm_auddrv_TestSysfs_show, Brcm_auddrv_TestSysfs_store);
 
-static int HandleControlCommand();
+static int HandleControlCommand(void);
 
-static AUDDRV_PathID ULPathID = 0;
-static AUDDRV_PathID DLPathID = 0;
-
-
-
-static int HandlePlayCommand();
-static int HandleCaptCommand();
+static int HandlePlayCommand(void);
+static int HandleCaptCommand(void);
 static void AUDIO_DRIVER_TEST_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle);
 static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle);
 
-void dump_audio_registers();
-
-
-
-
-static irqreturn_t audvoc_isr(int irq, void *dev_id);
-
+void dump_audio_registers(void);
 
 
 //+++++++++++++++++++++++++++++++++++++++
@@ -148,7 +140,6 @@ ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev, struct device_attribute *
 
 ssize_t Brcm_auddrv_TestSysfs_store(struct device *dev, struct device_attribute *attr,const char *buf, size_t count)
 {
-   	int i=0;
 	
 	if(5!= sscanf(buf, "%d %d %d %d %d",&sgBrcm_auddrv_TestValues[0], &sgBrcm_auddrv_TestValues[1], &sgBrcm_auddrv_TestValues[2], &sgBrcm_auddrv_TestValues[3],&sgBrcm_auddrv_TestValues[4]))
 	{
@@ -210,8 +201,7 @@ int BrcmCreateAuddrv_testSysFs(struct snd_card *card)
 }
 
 
-#if 1
-static void __iomem *mappedMem = NULL;
+
 static int HandleControlCommand()
 {
     AUDCTRL_SPEAKER_t		spkr;
@@ -240,10 +230,13 @@ static int HandleControlCommand()
             DEBUG(" Dump registers\n");
             //dump_audio_registers();
 			{
-				char MsgBuf[2408];
+				char *MsgBuf =  NULL;
+				MsgBuf = kmalloc(2408,GFP_KERNEL);
 
 				// map the audio base
-				/*if(mappedMem == NULL)
+				/*
+				static void __iomem *mappedMem = NULL;
+				if(mappedMem == NULL)
 				{
 					mappedMem = ioremap_nocache(KONA_HUB_CLK_BASE_VA, SZ_4K);
 					ioremap_nocache(KONA_BINTC_BASE_VA, SZ_4K);
@@ -264,7 +257,7 @@ static int HandleControlCommand()
 				}*/
 
 
-				sprintf( MsgBuf, "0x35026800 =0x%08x, 0x3502c910 =0x%08x, 0x3502c990 =0x%08x, 0x3502c900 =0x%08x,0x3502cc20 =0x%08x,0x35025800 =0x%08x, 0x34000a34 =0x%08x, 0x340004b0 =0x%08x, 0x3400000c =0x%08x, 0x3400047c =0x%08x, 0x34000a40=0x%08x\n",
+				sprintf( MsgBuf, "0x35026800 =0x%08lx, 0x3502c910 =0x%08lx, 0x3502c990 =0x%08lx, 0x3502c900 =0x%08lx,0x3502cc20 =0x%08lx,0x35025800 =0x%08lx, 0x34000a34 =0x%08lx, 0x340004b0 =0x%08lx, 0x3400000c =0x%08lx, 0x3400047c =0x%08lx, 0x34000a40=0x%08lx\n",
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x35026800))),
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502c910))),
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502c990))),
@@ -280,7 +273,7 @@ static int HandleControlCommand()
 
 				DEBUG(MsgBuf);
 
-				sprintf( MsgBuf, "0x3502f000 =0x%08x, 04 =0x%08x, 08 =0x%08x, 0c =0x%08x, 10 =0x%08x, 14 =0x%08x, 18 =0x%08x, 1c =0x%08x, 20 =0x%08x, 24 =0x%08x, 28 =0x%08x, 2c =0x%08x, 30 =0x%08x, 34 =0x%08x, 38 =0x%08x, 3c =0x%08x, 40 =0x%08x, 44 =0x%08x, 48 =0x%08x, 4c =0x%08x,50 =0x%08x, 54 =0x%08x, 58 =0x%08x, 5c =0x%08x \n",
+				sprintf( MsgBuf, "0x3502f000 =0x%08lx, 04 =0x%08lx, 08 =0x%08lx, 0c =0x%08lx, 10 =0x%08lx, 14 =0x%08lx, 18 =0x%08lx, 1c =0x%08lx, 20 =0x%08lx, 24 =0x%08lx, 28 =0x%08lx, 2c =0x%08lx, 30 =0x%08lx, 34 =0x%08lx, 38 =0x%08lx, 3c =0x%08lx, 40 =0x%08lx, 44 =0x%08lx, 48 =0x%08lx, 4c =0x%08lx,50 =0x%08lx, 54 =0x%08lx, 58 =0x%08lx, 5c =0x%08lx \n",
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502f000))),
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502f004))),
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502f008))),
@@ -314,7 +307,7 @@ static int HandleControlCommand()
 					UInt32 regAddr = 0x3502c000;
 					while (regAddr <= 0x3502cc34)
 					{
-						sprintf( MsgBuf, "srcMixer: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "srcMixer: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -328,7 +321,7 @@ static int HandleControlCommand()
 					UInt32 regAddr = 0x3502F000;
 					while (regAddr <= 0x3502F7FC)
 					{
-						sprintf( MsgBuf, "SSASW: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "SSASW: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -342,7 +335,7 @@ static int HandleControlCommand()
 					UInt32 regAddr = 0x34000008;
 					while (regAddr <= 0x34000024)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -352,7 +345,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000030;
 					while (regAddr <= 0x34000054)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -362,7 +355,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000100;
 					while (regAddr <= 0x34000100)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -372,7 +365,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000200;
 					while (regAddr <= 0x34000204)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -382,7 +375,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000300;
 					while (regAddr <= 0x34000304)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -392,7 +385,7 @@ static int HandleControlCommand()
 					regAddr = 0x3400030c;
 					while (regAddr <= 0x3400030c)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -402,7 +395,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000400;
 					while (regAddr <= 0x34000400)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -412,7 +405,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000408;
 					while (regAddr <= 0x3400040C)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -422,7 +415,7 @@ static int HandleControlCommand()
 					regAddr = 0x3400041c;
 					while (regAddr <= 0x3400041c)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -432,7 +425,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000430;
 					while (regAddr <= 0x34000430)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -442,7 +435,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000438;
 					while (regAddr <= 0x3400043c)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -452,7 +445,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000444;
 					while (regAddr <= 0x34000448)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -462,7 +455,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000450;
 					while (regAddr <= 0x34000450)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -472,7 +465,7 @@ static int HandleControlCommand()
 					regAddr = 0x3400045c;
 					while (regAddr <= 0x34000474)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -482,7 +475,7 @@ static int HandleControlCommand()
 					regAddr = 0x3400047c;
 					while (regAddr <= 0x34000484)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -492,7 +485,7 @@ static int HandleControlCommand()
 					regAddr = 0x3400048c;
 					while (regAddr <= 0x34000490)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -502,7 +495,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000498;
 					while (regAddr <= 0x34000498)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -512,7 +505,7 @@ static int HandleControlCommand()
 					regAddr = 0x340004a0;
 					while (regAddr <= 0x340004b0)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -522,7 +515,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000a00;
 					while (regAddr <= 0x34000a00)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -532,7 +525,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000a08;
 					while (regAddr <= 0x34000a0c)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -542,7 +535,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000a1c;
 					while (regAddr <= 0x34000a34)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -552,7 +545,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000a40;
 					while (regAddr <= 0x34000a40)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -562,7 +555,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000E00;
 					while (regAddr <= 0x34000e0c)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -572,7 +565,7 @@ static int HandleControlCommand()
 						regAddr = 0x34000E20;
 					while (regAddr <= 0x34000e28)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -582,7 +575,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000E40;
 					while (regAddr <= 0x34000e54)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -592,7 +585,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000E74;
 					while (regAddr <= 0x34000e74)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -602,7 +595,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000E84;
 					while (regAddr <= 0x34000e84)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -612,7 +605,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000Ec0;
 					while (regAddr <= 0x34000ec4)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -622,7 +615,7 @@ static int HandleControlCommand()
 					regAddr = 0x34000ED4;
 					while (regAddr <= 0x34000eD4)
 					{
-						sprintf( MsgBuf, "CLK: 0x%08x =0x%08x\n",
+						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
 										regAddr,
 										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
 										);
@@ -630,6 +623,7 @@ static int HandleControlCommand()
 						DEBUG(MsgBuf);
 					}
 				}
+				kfree(MsgBuf);
 			}
             DEBUG(" Dump registers done \n");
         }
@@ -690,46 +684,11 @@ static int HandleControlCommand()
 			}*/
             DEBUG(" Telephony disabled \n");
         }
-        break;
-        case 6:// switch to EP
-#if 0
-	{
-            UInt8* ahb_au_base;
-            ahb_au_base = (UInt8*)ahb_audio_base;
-        
-            DEBUG(" switch to EP\n");
-
-            *((volatile UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_INPUT_SEL_R_OFFSET)) = 0x0000;
-            *((volatile UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_INPUT_SEL_R_OFFSET)) = 0x4003;
-            *((volatile UInt32 *) (SYSCFG_BASE_ADDR+SYSCFG_ANACR0_OFFSET)) = 0x000060ca;
-            
-            DEBUG(" switch to EP done \n");
-        }
-#endif
-        break;
-#if 0
-        case 7:// switch to speaker
-        {
-            UInt8* ahb_au_base;
-            ahb_au_base = (UInt8*)ahb_audio_base;
-
-            DEBUG(" switch to SP\n");
-
-            *((volatile UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_INPUT_SEL_R_OFFSET)) = 0x4000;
-            *((volatile UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_INPUT_SEL_R_OFFSET)) = 0x0003;
-            
-            *((volatile UInt32 *) (SYSCFG_BASE_ADDR+SYSCFG_ANACR0_OFFSET)) = 0x000060d4;
-            
-            DEBUG(" switch to SP done \n");
-        }
-#endif
-        break;
-
-		case 8:// peek a register
+ 		case 8:// peek a register
         {
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
-			DEBUG(" peek a register, 0x%08x\n", regAddr);
-            DEBUG("		value = 0x%08x\n", *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))));
+			DEBUG(" peek a register, 0x%08lx\n", regAddr);
+            DEBUG("		value = 0x%08lx\n", *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))));
 		}
 		break;
 
@@ -738,15 +697,15 @@ static int HandleControlCommand()
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
 			UInt32 regVal = sgBrcm_auddrv_TestValues[3];
 			*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))) = regVal;
-            DEBUG(" poke a register, 0x%08x = 0x%08x\n", regAddr, *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))));
+            DEBUG(" poke a register, 0x%08lx = 0x%08lx\n", regAddr, *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))));
 		}
 		break;
 
         default:
             DEBUG(" Invalid Control Command\n");
     }
+	return 0;
 }
-#endif
 
 static unsigned long current_ipbuffer_index = 0;
 static unsigned long dma_buffer_write_index = 0;
@@ -768,8 +727,6 @@ static int HandlePlayCommand()
     char* src;
     char* dest;
 
-    //temp
-    int ret, irq; 
 
     switch(sgBrcm_auddrv_TestValues[1])
     {
@@ -832,7 +789,7 @@ static int HandlePlayCommand()
             if(sgBrcm_auddrv_TestValues[3] != 0)
                 drv_config.num_channel = sgBrcm_auddrv_TestValues[3];
 
-            DEBUG("Config:sr=%d nc=%d bs=%d \n",drv_config.sample_rate,drv_config.num_channel,drv_config.bits_per_sample);
+            DEBUG("Config:sr=%ld nc=%d bs=%ld \n",drv_config.sample_rate,drv_config.num_channel,drv_config.bits_per_sample);
             
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);
 
@@ -843,7 +800,7 @@ static int HandlePlayCommand()
             //set the interrupt period
             period_bytes = period_ms * (drv_config.sample_rate/1000) * (drv_config.num_channel) * 2;
 	    	num_blocks = 2; // for RHEA
-            DEBUG("Period: ms=%d bytes=%d blocks:%d\n",period_ms,period_bytes,num_blocks);
+            DEBUG("Period: ms=%ld bytes=%ld blocks:%ld\n",period_ms,period_bytes,num_blocks);
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_INT_PERIOD,(void*)&period_bytes);
 
             buf_param.buf_size = PCM_TEST_MAX_PLAYBACK_BUF_BYTES;
@@ -851,11 +808,11 @@ static int HandlePlayCommand()
             if(buf_param.pBuf == NULL)
             {
                 DEBUG("Cannot allocate Buffer \n");
-                return;
+                return 0;
             }
             buf_param.phy_addr = (UInt32)dma_addr;
 
-            DEBUG("virt_addr = 0x%x phy_addr=0x%x\n",buf_param.pBuf,(UInt32)dma_addr);
+            DEBUG("virt_addr = %s phy_addr=0x%lx\n",buf_param.pBuf,(UInt32)dma_addr);
 
             current_ipbuffer_index = 0;
             dma_buffer_write_index = 0;
@@ -872,7 +829,7 @@ static int HandlePlayCommand()
 	    
             current_ipbuffer_index += copy_bytes;
            
-	    DEBUG("copy_bytes %d",copy_bytes); 
+	    DEBUG("copy_bytes %ld",copy_bytes); 
 	        //set the buffer params
 	    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
             DEBUG(" Audio DDRIVER Config Complete\n");
@@ -880,44 +837,50 @@ static int HandlePlayCommand()
         break;
         case 4: //Start the playback
             {
-		AUDDRV_DEVICE_e aud_dev = AUDDRV_DEV_EP; // EP is default now
+				AUDDRV_DEVICE_e aud_dev = AUDDRV_DEV_EP; // EP is default now
+				AUDIO_HW_ID_t	audPlayHw = AUDIO_HW_EARPIECE_OUT;
 
                 DEBUG(" Start Playback\n");
                 spkr = sgBrcm_auddrv_TestValues[2];
 
                 AUDCTRL_SaveAudioModeFlag(spkr);
 
-		if (spkr == 0)// for rhea
-		{
-			// earpiece
-			aud_dev = AUDDRV_DEV_EP;  
-		}
-		else  if (spkr == 1)// for rhea
-		{
-			// headset
-			aud_dev = AUDIO_HW_HEADSET_OUT; 
-		}
-		else  if ((spkr == 2) || (spkr == 4)) // for rhea
-		{
-			// ihf
-			aud_dev = AUDIO_HW_IHF_OUT;  
-		}	
+				if (spkr == 0)// for rhea
+				{
+					// earpiece
+					aud_dev = AUDDRV_DEV_EP;  
+					audPlayHw = AUDIO_HW_EARPIECE_OUT;
+				}
+				else  if (spkr == 1)// for rhea
+				{
+					// headset
+					aud_dev = AUDDRV_DEV_HS; 
+					audPlayHw = AUDIO_HW_HEADSET_OUT;
+				}
+				else  if ((spkr == 2) || (spkr == 4)) // for rhea
+				{
+					// ihf
+					aud_dev = AUDDRV_DEV_IHF;  
+					audPlayHw = AUDIO_HW_IHF_OUT;
+				}	
                 AUDCTRL_EnablePlay(AUDIO_HW_MEM,
-                                   AUDIO_HW_AUDIO_OUT,
+                                   audPlayHw, 
                                    AUDIO_HW_NONE,
                                    spkr,
 		                   drv_config.num_channel,
                                    drv_config.sample_rate
 				                    );
 
-              	AUDCTRL_SetPlayVolume (AUDIO_HW_AUDIO_OUT, // for Audio 
+              	AUDCTRL_SetPlayVolume (audPlayHw,
    		     			spkr, 
     				   	AUDIO_GAIN_FORMAT_VOL_LEVEL, 
-				   	0x001E, 0x001E); // 0x1E is 30 decimal. 0x001E for both L and R channels.
+				   	0x00, 0x00); // 0 db for both L and R channels.
+				   	
 
 
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,&aud_dev);
                 DEBUG("Playback started\n");
+
 
 		//  Need to implement some sync mechanism
 	        OSTASK_Sleep(5000); 
@@ -926,7 +889,7 @@ static int HandlePlayCommand()
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
 
                 //disable the playback path
-                AUDCTRL_DisablePlay(AUDIO_HW_MEM,AUDIO_HW_AUDIO_OUT,spkr);
+                AUDCTRL_DisablePlay(AUDIO_HW_MEM,audPlayHw,spkr);
 
                 AUDIO_DRIVER_Close(drv_handle);
 
@@ -935,16 +898,13 @@ static int HandlePlayCommand()
         default:
             DEBUG(" Invalid Playback Command\n");
     }
-
+	return 0;
 }
 
-static int count_int = 0;
 static void AUDIO_DRIVER_TEST_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
 {
     char* src;
     char* dest;
-
-    //DEBUG(" %lx: Playback Interrupt- jiffies=%d count_int=%d\n",jiffies,count_int++);
 
     if((current_ipbuffer_index + period_bytes) >= TEST_BUF_SIZE)
         current_ipbuffer_index = 0;
@@ -974,8 +934,6 @@ static int HandleCaptCommand()
 {
 
     unsigned long period_ms;
-    
-    unsigned long copy_bytes;
     static AUDIO_DRIVER_HANDLE_t drv_handle = NULL;
     //static AUDIO_DRIVER_BUFFER_t buf_param;
     static AUDIO_DRIVER_CONFIG_t drv_config;
@@ -986,9 +944,6 @@ static int HandleCaptCommand()
     static AUDIO_DRIVER_TYPE_t drv_type = AUDIO_DRIVER_CAPT_HQ;
 
     static Boolean record_buf_allocated = 0;
-    //temp
-    int ret, irq;
-
 
     switch(sgBrcm_auddrv_TestValues[1])
     {
@@ -1029,7 +984,7 @@ static int HandleCaptCommand()
             if(sgBrcm_auddrv_TestValues[3] != 0)
                 drv_config.num_channel = sgBrcm_auddrv_TestValues[3];
 
-            DEBUG("Config:sr=%d nc=%d bs=%d \n",drv_config.sample_rate,drv_config.num_channel,drv_config.bits_per_sample);
+            DEBUG("Config:sr=%ld nc=%d bs=%ld \n",drv_config.sample_rate,drv_config.num_channel,drv_config.bits_per_sample);
             
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);
 
@@ -1041,7 +996,7 @@ static int HandleCaptCommand()
             capt_period_bytes = period_ms * (drv_config.sample_rate/1000) * (drv_config.num_channel) * 2;
             capt_num_blocks =  2; // limitation for RHEA
 
-            DEBUG("Period: ms=%d bytes=%d blocks:%d\n",period_ms,capt_period_bytes,capt_num_blocks);
+            DEBUG("Period: ms=%ld bytes=%ld blocks:%ld\n",period_ms,capt_period_bytes,capt_num_blocks);
             AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_INT_PERIOD,(void*)&capt_period_bytes);
 
 	    current_capt_buffer_index = 0;
@@ -1052,11 +1007,11 @@ static int HandleCaptCommand()
             if(capt_buf_param.pBuf == NULL)
             {
                 DEBUG("Cannot allocate Buffer \n");
-                return;
+                return 0;
             }
             capt_buf_param.phy_addr = (UInt32)dma_addr;
-
-            DEBUG("virt_addr = 0x%x phy_addr=0x%x\n",capt_buf_param.pBuf,(UInt32)dma_addr);
+            
+            DEBUG("virt_addr = %s phy_addr=0x%lx\n",capt_buf_param.pBuf,(UInt32)dma_addr);
 
             memset(capt_buf_param.pBuf,0,PCM_TEST_MAX_CAPTURE_BUF_BYTES);
             //set the buffer params
@@ -1091,11 +1046,25 @@ static int HandleCaptCommand()
 				     drv_config.num_channel,
                                      drv_config.sample_rate);
 
-		if(mic == 1) // for RHEA
+		if(mic == 1) //AUDCTRL_MIC_MAIN 
 		{
 			aud_dev = AUDDRV_DEV_ANALOG_MIC;
 		}
-	    // need to add other values
+		else if(mic == 2) //AUDCTRL_MIC_AUX
+		{
+			//aux mic
+			aud_dev = AUDDRV_DEV_HS_MIC;
+		}
+		else if(mic == 3) //AUDCTRL_MIC_DIGI1
+		{
+			// digi mic 1
+			aud_dev = AUDDRV_DEV_DIGI_MIC_L;
+		}
+		else if(mic == 4) //AUDCTRL_MIC_DIGI2
+		{
+			// digi mic 2
+			aud_dev = AUDDRV_DEV_DIGI_MIC_R;
+		}
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,&aud_dev);
                 
                 DEBUG("capture started\n");
@@ -1123,16 +1092,16 @@ static int HandleCaptCommand()
         default:
             DEBUG(" Invalid capture Command\n");
     }
+	return 0;
 
 }
 
-static int capt_count_int = 0;
 static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
 {
     char* src;
     char* dest;
 
-    //DEBUG(" %lx: capture Interrupt- %d\n",jiffies,capt_count_int++);
+    //DEBUG(" %lx: capture Interrupt- %d\n",jiffies);
 
     if((current_capt_buffer_index + capt_period_bytes) >= TEST_BUF_SIZE)
     {
@@ -1154,7 +1123,7 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_ha
     return;
 }
 
-#if 0
+#ifdef LMP_BUILD
 // Test code 
 
 //#define AHB_AUDIO_BASE_ADDR      0x30800000 
@@ -1332,7 +1301,6 @@ static irqreturn_t audvoc_isr(int irq, void *dev_id)
 
      //DEBUG("auvoc_isr \n");
    
-   DEBUG(" %lx: auvoc_isr- %d\n",jiffies,count_int++);
    if(ahb_audio_base != NULL)
    {
         ahb_au_base = (UInt8*)ahb_audio_base;

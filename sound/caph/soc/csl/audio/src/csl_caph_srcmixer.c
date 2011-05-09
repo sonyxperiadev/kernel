@@ -46,25 +46,6 @@ extern UInt8 srcmixer_fifo_thres2;
 //****************************************************************************
 // local macro declarations
 //****************************************************************************
-/* Total number of input channels */
-#define MAX_INCHNLS 0x7
-/* Total number of single input channels */
-#define MAX_SINGLE_INCHNLS 0xA
-/* Total number of output channels */
-#define OUTCHNL_MAX_NUM_CHNL 0x5
-/* Bit Selection for Mixer Spkr gain */
-/* It will magnify the input by Bit_Select*6.02dB */
-#define BIT_SELECT 0x4
-/* Gain values to mute the mixer input path */
-#define MIX_IN_MUTE 0x0000
-/* Gain values to pass the mixer input path */
-/* adjustable to different gains. */
-#define MIX_IN_PASS 0x7FFF
-/* Mixer input gain steps */
-#define MIX_IN_GAINSTEP 0x7FFF
-#define MIX_IN_NO_GAINSTEP 0x0000
-/* SRCMixer Input FIFO threshold */
-#define INFIFO_NO_THRES	0x0
 
 //****************************************************************************
 // local typedef declarations
@@ -779,7 +760,7 @@ void csl_caph_srcmixer_init(UInt32 baseAddress)
     //csl_caph_srcmixer_enable_all_spkrgain_slope(handle);
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_srcmixer_init:: baseAddress = 0x%x\n", 
+                    "csl_caph_srcmixer_init:: baseAddress = 0x%lx\n", 
                     baseAddress));
 	return;
 }
@@ -1088,67 +1069,62 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
     for (ch=MAX_SINGLE_INCHNLS; ch>0; ch--)
     {
         chnl = (inChnls>>(ch-1))&0x1;
-        if (!chnl)
-        {
-	    if (chalOutChnl & (UInt8)CAPH_M0_Left)
-	    {
-                chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1<<(ch-1), CAPH_M0_Left, MIX_IN_MUTE);
-	    }
-	    if (chalOutChnl & (UInt8)CAPH_M0_Right)
-	    {
-                chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1<<(ch-1), CAPH_M0_Right, MIX_IN_MUTE);
-	    }
-	    if (chalOutChnl & (UInt8)CAPH_M1_Left)
-	    {
-                chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1<<(ch-1), CAPH_M1_Left, MIX_IN_MUTE);
-	    }
-	    if (chalOutChnl & (UInt8)CAPH_M1_Right)
-	    {
-                chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1<<(ch-1), CAPH_M1_Right, MIX_IN_MUTE);
-	    }
-	    
-        }
-	else
-	{
-	    if (chalOutChnl & (UInt8)CAPH_M0_Left)
-	    {
-                chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M0_Left, MIX_IN_PASS);
-		chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M0_Left );
-		chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Left, BIT_SELECT);
-		chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, 
-				                     CAPH_M0_Left, MIX_IN_GAINSTEP);
-	    }
-	    if (chalOutChnl & (UInt8)CAPH_M0_Right)
-	    {
-                chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M0_Right, MIX_IN_PASS);
-		chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M0_Right );
-		chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Right, BIT_SELECT);
-		chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, 
-				                     CAPH_M0_Right, MIX_IN_GAINSTEP);
-		
-	    }	
-	    if (chalOutChnl & (UInt8)CAPH_M1_Left)
-	    {
-                chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M1_Left, MIX_IN_PASS);
-		chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M1_Left );
-		chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Left, BIT_SELECT);
-		chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, 
-				                     CAPH_M1_Left, MIX_IN_GAINSTEP);
-		
-	    }	
-	    if (chalOutChnl & (UInt8)CAPH_M1_Right)
-	    {
-                chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M1_Right, MIX_IN_PASS);
-		chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M1_Right );
-		chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Right, BIT_SELECT);
-		chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, 
-				                     CAPH_M1_Right, MIX_IN_GAINSTEP);
-		
-	    }	
-	    
-	}
-    }
-	return;
+		if(!(CAPH_SRCM_CH1<<(ch-1) & chalInChnl))
+		{
+			if (chalOutChnl & (UInt8)CAPH_M0_Left)
+			{
+				chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1<<(ch-1), CAPH_M0_Left, MIX_IN_MUTE);
+			}
+			if (chalOutChnl & (UInt8)CAPH_M0_Right)
+			{
+				chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1<<(ch-1), CAPH_M0_Right, MIX_IN_MUTE);
+			}
+			if (chalOutChnl & (UInt8)CAPH_M1_Left)
+			{
+				chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1<<(ch-1), CAPH_M1_Left, MIX_IN_MUTE);
+			}
+			if (chalOutChnl & (UInt8)CAPH_M1_Right)
+			{
+				chal_caph_srcmixer_set_mixingain(handle, CAPH_SRCM_CH1<<(ch-1), CAPH_M1_Right, MIX_IN_MUTE);
+			}
+		}
+		else
+		{
+			if (chalOutChnl & (UInt8)CAPH_M0_Left)
+			{
+				chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M0_Left, routeConfig.mixGain.mixInGainL);
+				chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M0_Left );
+				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Left, routeConfig.mixGain.mixOutCoarseGainL);
+				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M0_Left, MIX_IN_GAINSTEP);
+				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Left, routeConfig.mixGain.mixOutGainL); 
+			}
+			if (chalOutChnl & (UInt8)CAPH_M0_Right)
+			{
+				chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M0_Right, routeConfig.mixGain.mixInGainR);
+				chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M0_Right );
+				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Right, routeConfig.mixGain.mixOutCoarseGainR);
+				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M0_Right, MIX_IN_GAINSTEP);
+				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Right, routeConfig.mixGain.mixOutGainR);	
+			}	
+			if (chalOutChnl & (UInt8)CAPH_M1_Left)
+			{
+				chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M1_Left, routeConfig.mixGain.mixInGainL);
+				chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M1_Left );
+				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Left, routeConfig.mixGain.mixOutCoarseGainL);
+				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M1_Left, MIX_IN_GAINSTEP);
+				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Left, routeConfig.mixGain.mixOutGainL); 
+			}	
+			if (chalOutChnl & (UInt8)CAPH_M1_Right)
+			{
+				chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M1_Right, routeConfig.mixGain.mixInGainR);
+				chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M1_Right );
+				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Right, routeConfig.mixGain.mixOutCoarseGainR);
+				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M1_Right, MIX_IN_GAINSTEP);
+				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Right, routeConfig.mixGain.mixOutGainR);	
+			}	
+		}
+ 	 }
+  	 return;
 }
 
  // for fpga test

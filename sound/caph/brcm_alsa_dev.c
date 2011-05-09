@@ -43,12 +43,12 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 
-//#include "mobcom_types.h"
-//#include "resultcode.h"
-//#include "audio_consts.h"
+#include "mobcom_types.h"
+#include "resultcode.h"
+#include "audio_consts.h"
 
 #include "brcm_alsa.h"
-//#include "brcm_audio_thread.h"
+#include "brcm_audio_thread.h"
 
 extern int  ControlDeviceNew(struct snd_card *card)
 
@@ -96,10 +96,12 @@ int debug = 2;
 //
 static char *id = NULL;
 static int enable = 1;
-static int index = 0;
 
 //
 #if 0
+
+static int index = 0;
+
 module_param(index, int, 0444);
 MODULE_PARM_DESC(index, "Index value for Broadcom soundcard.");
 module_param(id, charp, 0444);
@@ -535,20 +537,6 @@ BCMPCG_ioctl(struct inode *inode, struct file *file,
 #endif
 
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: DeviceRelease
-//
-//  Description: 'release' call back function for platform device
-//
-//------------------------------------------------------------
-static void DeviceRelease(struct device *pdev)
-{
-       DEBUG("\n TO DO:DeviceRelease\n");
-}
-
-
-
 //Platform device structure
 static struct platform_device sgPlatformDevice =
 {
@@ -633,7 +621,7 @@ static int __devinit ALSAModuleInit(void)
         printk(KERN_INFO "platform_driver_register done:\n");
         
 #endif
-    //LaunchAudioCtrlThread();
+    LaunchAudioCtrlThread();
 
 #if KISHORE_COMMENT
     if ((err = register_chrdev(BCM_ALSA_PCG_MAJOR, "bcm_alsa_pcg", &bcmpcg_fops)) < 0)
@@ -690,7 +678,7 @@ static void __devexit ALSAModuleExit(void)
 	platform_driver_unregister(&sgPlatformDriver);
 
 	platform_device_unregister(&sgPlatformDevice);
-    //TerminateAudioHalThread();
+    TerminateAudioHalThread();
 	
 	// unInitialize the AUDIO device
 #if KISHORE_COMMENT

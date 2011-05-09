@@ -1213,11 +1213,11 @@ static int clock_module_temp_fixes(void)
    /***************************************************
     * Temp fixes for clocks in Kona slave CCU.
     **************************************************/
-    temp_clk = clk_get(NULL, "uartb_clk");
+    temp_clk = clk_get(NULL, "uartb_apb_clk");
     clk_enable(temp_clk);
     clk_put(temp_clk);
 
-    temp_clk = clk_get(NULL, "uartb_apb_clk");
+    temp_clk = clk_get(NULL, "uartb_clk");
     clk_enable(temp_clk);
     clk_put(temp_clk);
 

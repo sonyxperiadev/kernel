@@ -36,6 +36,7 @@
 #include <mach/pinmux.h>
 #include <mach/kona.h>
 #include <mach/timer.h>
+#include <mach/profile_timer.h>
 
 static void rhea_poweroff(void)
 {
@@ -70,12 +71,30 @@ void __init rhea_ray_timer_init (void)
 {
 	struct gp_timer_setup gpt_setup;
 
-	gpt_setup.name   = "slave-timer";
+	/*
+	 * IMPORTANT:
+	 * If we have to use slave-timer as system timer, two modifications are required 
+	 * 1) modify the name of timer as, gpt_setup.name = "slave-timer";
+	 * 2) By default when the clock manager comes up it disables most of
+	 *    the clock. So if we switch to slave-timer we should prevent the
+	 *    clock manager from doing this. So, modify plat-kona/include/mach/clock.h
+	 * 
+	 * By default aon-timer as system timer the following is the config
+	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
+         * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE)
+	 * 
+	 * change it as follows to use slave timer as system timer
+	 *
+	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE)
+         * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
+	 */
+	gpt_setup.name   = "aon-timer";
 	gpt_setup.ch_num = 0;
-	gpt_setup.rate   = GPT_MHZ_1;
-
+	gpt_setup.rate = CLOCK_TICK_RATE;
+	
 	/* Call the init function of timer module */
-	kona_timer_init(&gpt_setup);
+	gp_timer_init(&gpt_setup);
+	profile_timer_init(IOMEM(KONA_PROFTMR_VA));
 }
 
 struct sys_timer kona_timer = {
@@ -86,7 +105,7 @@ static int __init rhea_init(void)
 {
 	pm_power_off = rhea_poweroff;
 	arm_pm_restart = rhea_restart;
-	
+
 #ifdef CONFIG_CACHE_L2X0
 	rhea_l2x0_init();
 #endif

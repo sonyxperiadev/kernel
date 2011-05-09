@@ -308,7 +308,7 @@ Result_t AUDDRV_VoiceCapture_SetTransferParameters(
 	if (audDrv == NULL)
 		return RESULT_ERROR;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_VoiceCapture_SetTransferParameters:: type = 0x%x, callbackThreshold = 0x%x, interruptInterval = 0x%x\n", 
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_VoiceCapture_SetTransferParameters:: type = 0x%x, callbackThreshold = 0x%lx, interruptInterval = 0x%lx\n", 
 								audDrv->drvType, callbackThreshold, interruptInterval);
 	
 	msg.msgID = VOCAPTURE_MSG_SET_TRANSFER;
@@ -429,7 +429,7 @@ UInt32 AUDDRV_VoiceCapture_Read(
 	// wait for the data copy finished.
 	OSSEMAPHORE_Obtain (audDrv->addBufSema, TICKS_FOREVER);
 
-	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_VoiceCapture_ReadBuffer :: destBufCopied = 0x%x\n", audDrv->destBufCopied);
+	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_VoiceCapture_ReadBuffer :: destBufCopied = 0x%lx\n", audDrv->destBufCopied);
 
 	return audDrv->destBufCopied;
 }
@@ -807,7 +807,7 @@ static UInt32	CopyBufferFromQueue (VOCAPTURE_Drv_t *audDrv, UInt8 *buf, UInt32 s
 	{
 		// only callback if all data is copied
 		audDrv->bufDoneCb (buf, size, audDrv->drvType);
-		Log_DebugPrintf(LOGID_AUDIO, " CopyBufferFromQueue sends callback after AUDQUE_Read:: copied= 0x%x\n", copied);
+		Log_DebugPrintf(LOGID_AUDIO, " CopyBufferFromQueue sends callback after AUDQUE_Read:: copied= 0x%lx\n", copied);
 	}
 	
 	
@@ -819,7 +819,7 @@ static UInt32	CopyBufferFromQueue (VOCAPTURE_Drv_t *audDrv, UInt8 *buf, UInt32 s
 
 	if (audDrv->destBufCopied > 0)
 	{
-		Log_DebugPrintf(LOGID_AUDIO, " CopyBufferFromQueue :: destBufCopied = 0x%x, readPtr = 0x%x, writePtr = 0x%x\n", audDrv->destBufCopied, aq->readPtr, aq->writePtr);
+		Log_DebugPrintf(LOGID_AUDIO, " CopyBufferFromQueue :: destBufCopied = 0x%lx, readPtr = 0x%lx, writePtr = 0x%lx\n", audDrv->destBufCopied, (UInt32)aq->readPtr, (UInt32)aq->writePtr);
 	}
 
 	return copied;
@@ -901,7 +901,7 @@ static void ProcessSharedMemRequest (VOCAPTURE_Drv_t *audDrv, UInt16 bufIndex, U
 	// debug purpose
 	if (bottomSize < bufSize)
 	{
-		Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: hit bottom, bottomSize = %d, bufSize = %d\n", bottomSize, bufSize);
+		Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: hit bottom, bottomSize = %ld, bufSize = %ld\n", bottomSize, bufSize);
 	}
 	
 	// check if we have left to copy 
@@ -919,13 +919,13 @@ static void ProcessSharedMemRequest (VOCAPTURE_Drv_t *audDrv, UInt16 bufIndex, U
 		{
 			// we haven't copied all data, and will copy the left when 
 			// we get the next dsp callback.
-			Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: This should not happen. How big is the buffer size? destBufSize = 0x%x\n", audDrv->destBufSize);
+			Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: This should not happen. How big is the buffer size? destBufSize = 0x%lx\n", audDrv->destBufSize);
 		}	
 
 		audDrv->destBufCopied += copied;
 		if (audDrv->destBufCopied > 0)
 		{
-			Log_DebugPrintf(LOGID_AUDIO, " ProcessShareMemRequest :: destBufCopied = 0x%x, readPtr = 0x%x, writePtr = 0x%x\n", audDrv->destBufCopied, aq->readPtr, aq->writePtr);
+			Log_DebugPrintf(LOGID_AUDIO, " ProcessShareMemRequest :: destBufCopied = 0x%lx, readPtr = 0x%lx, writePtr = 0x%lx\n", audDrv->destBufCopied, (UInt32)aq->readPtr, (UInt32)aq->writePtr);
 		}
 	}
 }
@@ -1014,7 +1014,7 @@ static void CheckBufDoneUponStop (VOCAPTURE_Drv_t	*audDrv)
 	// we need to call the buffer done
 	if (audDrv->destBufCopied < audDrv->destBufSize)
 	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "%s Catch a pending bufDoneCB! total buffer size 0x%x, copied buffer size 0x%x.", __FUNCTION__, audDrv->destBufSize, audDrv->destBufCopied);
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "%s Catch a pending bufDoneCB! total buffer size 0x%lx, copied buffer size 0x%lx.", __FUNCTION__, audDrv->destBufSize, audDrv->destBufCopied);
 		audDrv->bufDoneCb (audDrv->destBuf, audDrv->destBufCopied, audDrv->drvType);
 	}
 }

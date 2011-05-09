@@ -32,8 +32,8 @@ Broadcom's express prior written consent.
 #include "dbg.h"
 #endif
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
+#define _DBG_(a)
+//#define _DBG_(a) (a)
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -70,7 +70,7 @@ typedef	struct
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {0};
+static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
 
 //****************************************************************************
 // local function declarations
@@ -100,7 +100,7 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_init::source=0x%x sink=0x%x.\n", source, sink));
 	if (source == CSL_CAPH_DEV_DSP) // any sink case? fixed the dmach for dsp
 	{
-		source == CSL_CAPH_DEV_DSP_throughMEM;
+		source = CSL_CAPH_DEV_DSP_throughMEM;
 		dmaCH = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH12);
 	}
 	else

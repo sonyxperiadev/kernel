@@ -44,6 +44,7 @@ enum {
     SW_GATE 			= (1 << 9),
     ENABLE_ON_INIT		= (1 << 10),
     DEFAULT_ACTIVE_CLK		= (1 << 11),
+    DISABLE_ON_INIT		= (1 << 12),
 };
 
 struct clk;
@@ -361,10 +362,10 @@ unsigned long clock_get_xtal(void);
 
 /**************************** Peripheral clock flags **************************/
 #define		BCM2165x_CLK_USB_OTG_FLAGS			(TYPE_PERI_CLK | SW_GATE)
-#define		BCM2165x_CLK_SDIO1_FLAGS			(TYPE_PERI_CLK | SW_GATE)
-#define		BCM2165x_CLK_SDIO2_FLAGS			(TYPE_PERI_CLK | SW_GATE)
-#define		BCM2165x_CLK_SDIO3_FLAGS			(TYPE_PERI_CLK | SW_GATE)
-#define		BCM2165x_CLK_SDIO4_FLAGS			(TYPE_PERI_CLK | SW_GATE)
+#define		BCM2165x_CLK_SDIO1_FLAGS			(TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
+#define		BCM2165x_CLK_SDIO2_FLAGS			(TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
+#define		BCM2165x_CLK_SDIO3_FLAGS			(TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
+#define		BCM2165x_CLK_SDIO4_FLAGS			(TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
 #define		BCM2165x_CLK_SSP0_FLAGS				(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB2_FLAGS			(TYPE_PERI_CLK | SW_GATE)
@@ -394,7 +395,7 @@ unsigned long clock_get_xtal(void);
 /**************************** Peripheral clock(No DIV) flags **************************/
 #define		BCM2165x_CLK_BSC1_FLAGS				(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_BSC2_FLAGS				(TYPE_PERI_CLK | SW_GATE)
-#define		BCM2165x_CLK_TIMERS_FLAGS			(TYPE_PERI_CLK | SW_GATE)
+#define		BCM2165x_CLK_TIMERS_FLAGS			(TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
 #define		BCM2165x_CLK_HUB_TIMER_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_TMON_1M_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 
