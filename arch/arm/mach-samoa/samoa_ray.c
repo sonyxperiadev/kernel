@@ -56,6 +56,7 @@
 #include <mach/bcm_keypad.h>
 #endif
 
+
 // keypad map
 #define BCM_KEY_ROW_0  0
 #define BCM_KEY_ROW_1  1
@@ -271,6 +272,38 @@ EXPORT_SYMBOL(clk_get_rate);
 EXPORT_SYMBOL(clk_set_rate);
 
 
+#ifndef CONFIG_MACH_SAMOA_FPGA
+#include <linux/broadcom/bcm_fuse_memmap.h>
+//#include <linux/broadcom/platform_mconfig.h>
+#define IPC_BASE 0x81E00000 // in platform_mconfig.h
+#define IPC_SIZE 0x00200000 // in platform_mconfig.h
+static void Comms_Start(void)
+{
+    void __iomem *apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
+    void __iomem *cp_boot_base;
+    
+    if (!apcp_shmem) {
+        printk(KERN_ERR "%s: ioremap shmem failed\n", __func__);
+        return;
+    }
+    /* clear first (9) 32-bit words in shared memory */
+    memset(apcp_shmem, 0, IPC_SIZE);
+    iounmap(apcp_shmem);
+
+    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
+    if (!cp_boot_base) {
+        printk(KERN_ERR "%s: ioremap error\n", __func__);
+        return;
+    }
+
+    /* Start the CP, Code taken from Nucleus BSP */
+    *(unsigned int *)(cp_boot_base+INIT_ADDRESS_OFFSET) =
+        *(unsigned int *)(cp_boot_base+MAIN_ADDRESS_OFFSET);
+
+    iounmap(cp_boot_base);
+    printk(KERN_ALERT "%s: modem (R4 COMMS) started....\n", __func__);
+}
+#endif
 
 void __init board_init(void)
 {
@@ -342,6 +375,10 @@ void __init board_init(void)
 
 	iounmap((void *)proc_clk_mgr_base_v);
 
+#ifndef CONFIG_MACH_SAMOA_FPGA
+	Comms_Start();
+#endif
+	
 	board_add_common_devices();
 	samoa_ray_add_devices();
 	return;
