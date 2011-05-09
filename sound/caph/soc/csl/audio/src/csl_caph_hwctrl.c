@@ -1116,7 +1116,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
 		
         // config cfifo	based on data format and sampling rate
@@ -1263,7 +1263,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             }
             else
             {
-                audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+                audio_xassert(0, audioPath.bitPerSample );
             }
 
             csl_caph_switch_config_channel(sw_config);
@@ -1336,7 +1336,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			}
 			else
 			{
-				audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+				audio_xassert(0, audioPath.bitPerSample );
 			}
 			// Save the fifo information
 			csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -1385,7 +1385,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			}
 			else
 			{
-				audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+				audio_xassert(0, audioPath.bitPerSample );
 			}
     		csl_caph_switch_config_channel(sw_config);
 			
@@ -1424,7 +1424,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			}
 			else
 			{
-				audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+				audio_xassert(0, audioPath.bitPerSample );
 			}
 			// Save the fifo information
 			csl_caph_hwctrl_SetPathFifo2(audioPath.pathID, fifo2);
@@ -1463,7 +1463,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			}
 			else
 			{
-				audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+				audio_xassert(0, audioPath.bitPerSample );
 			}
     		csl_caph_switch_config_channel(sw_config);
 			
@@ -1546,7 +1546,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			}
 			else
 			{
-				audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+				audio_xassert(0, audioPath.bitPerSample );
 			}
 			// Save the fifo information
 			csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -1578,7 +1578,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			}
 			else
 			{
-				audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+				audio_xassert(0, audioPath.bitPerSample );
 			}
     		csl_caph_switch_config_channel(sw_config);
 			
@@ -1628,7 +1628,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			}
 			else
 			{
-				audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+				audio_xassert(0, audioPath.bitPerSample );
 			}
 			// Save the fifo information
 			csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -1659,7 +1659,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			}
 			else
 			{
-				audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+				audio_xassert(0, audioPath.bitPerSample );
 			}
 			csl_caph_switch_config_channel(sw_config);
 			
@@ -1746,7 +1746,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -1778,7 +1778,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 		
@@ -1855,7 +1855,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -1887,7 +1887,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 
@@ -1942,7 +1942,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -1973,7 +1973,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 		
@@ -2043,7 +2043,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -2075,7 +2075,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 		
@@ -2135,7 +2135,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         else if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
         else
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
 
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -2162,7 +2162,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 
@@ -2217,7 +2217,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
         else
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
 
     	// config switch
 	csl_caph_switch_ch = csl_caph_switch_obtain_channel();
@@ -2249,7 +2249,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 
@@ -2312,7 +2312,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -2343,7 +2343,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 		
@@ -2408,7 +2408,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -2440,7 +2440,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 		
@@ -2505,7 +2505,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -2538,7 +2538,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 				
@@ -2590,7 +2590,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -2623,7 +2623,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 		
@@ -2701,7 +2701,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
 		
    	    // config cfifo	based on data format and sampling rate
@@ -2737,7 +2737,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 
@@ -2802,7 +2802,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
    	    {
-   		    audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+   		    audio_xassert(0, audioPath.bitPerSample );
    	    }
 	
     	csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(audioPath.src_sampleRate);
@@ -2893,7 +2893,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             }
             else
             {
-                audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+                audio_xassert(0, audioPath.bitPerSample );
             }
             // Save the fifo information
             csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -2924,7 +2924,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             }
             else
             {
-                audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+                audio_xassert(0, audioPath.bitPerSample );
             }
         	csl_caph_switch_config_channel(sw_config);
     				
@@ -2977,7 +2977,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	}
         	else
         	{
-        		audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+        		audio_xassert(0, audioPath.bitPerSample );
         	}
     
     	    // config srcm
@@ -3047,7 +3047,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	}
         	else
         	{
-        		audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+        		audio_xassert(0, audioPath.bitPerSample );
         	}
         	csl_caph_switch_config_channel(sw_config);
         			
@@ -3092,7 +3092,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             }
             else
             {
-                audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+                audio_xassert(0, audioPath.bitPerSample );
             }
             // Save the fifo information
             csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -3123,7 +3123,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             }
             else
             {
-                audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+                audio_xassert(0, audioPath.bitPerSample );
             }
         	csl_caph_switch_config_channel(sw_config);
     				
@@ -3176,7 +3176,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	}
         	else
         	{
-        		audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+        		audio_xassert(0, audioPath.bitPerSample );
         	}
     
     	    // config srcm
@@ -3240,7 +3240,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	}
         	else
         	{
-        		audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+        		audio_xassert(0, audioPath.bitPerSample );
         	}
         	csl_caph_switch_config_channel(sw_config);
         			
@@ -3334,7 +3334,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 
@@ -3377,7 +3377,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
             csl_caph_dataformat = CSL_CAPH_24BIT_MONO;
         else
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
     
         // config srcm
         csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(audioPath.src_sampleRate);
@@ -3446,7 +3446,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         else if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
             sw_config.dataFmt = CSL_CAPH_24BIT_MONO;
         else
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         csl_caph_switch_config_channel(sw_config);
        			
         // config audioh
@@ -3635,7 +3635,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 
@@ -3698,7 +3698,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             }
             else
             {
-                audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+                audio_xassert(0, audioPath.bitPerSample );
             }
             // Save the fifo information
             csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -3742,7 +3742,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             }
             else
             {
-                audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+                audio_xassert(0, audioPath.bitPerSample );
             }
         	csl_caph_switch_config_channel(sw_config);
     				
@@ -3810,7 +3810,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	}
         	else
         	{
-        		audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+        		audio_xassert(0, audioPath.bitPerSample );
         	}
     
     	    // config srcm
@@ -3887,7 +3887,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	}
         	else
         	{
-        		audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+        		audio_xassert(0, audioPath.bitPerSample );
         	}
         	csl_caph_switch_config_channel(sw_config);
         			
@@ -3953,7 +3953,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	}
         	else
         	{
-        		audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+        		audio_xassert(0, audioPath.bitPerSample );
         	}
     
     	        // config srcm
@@ -4045,7 +4045,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	}
         	else
         	{
-        		audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+        		audio_xassert(0, audioPath.bitPerSample );
         	}
         	csl_caph_switch_config_channel(sw_config);
         			
@@ -4263,7 +4263,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
     	csl_caph_switch_config_channel(sw_config);
 		      
@@ -4320,7 +4320,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         /*else
    	    {
-   		    audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+   		    audio_xassert(0, audioPath.bitPerSample );
    	    }*/
 	
     	csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(audioPath.src_sampleRate);
@@ -4378,7 +4378,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
         // Save the fifo information
         csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
@@ -4446,7 +4446,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
         else
         {
-            audio_xassert(0, (unsigned int)audioPath.bitPerSample );
+            audio_xassert(0, audioPath.bitPerSample );
         }
 		
         // config cfifo	based on data format and sampling rate

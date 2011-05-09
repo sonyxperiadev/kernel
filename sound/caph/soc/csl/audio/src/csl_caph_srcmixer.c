@@ -1528,7 +1528,7 @@ CSL_CAPH_SRCM_INSAMPLERATE_e csl_caph_srcmixer_get_srcm_insamplerate(AUDIO_SAMPL
 			srcm_sampleRate= CSL_CAPH_SRCMIN_48KHZ;
 			break; 			
         default:
-            audio_xassert(0, (unsigned int)sampleRate);
+            audio_xassert(0, sampleRate);
     }
 	return srcm_sampleRate;
 }
@@ -1557,7 +1557,7 @@ CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_get_srcm_outsamplerate(AUDIO_SAM
 			srcm_sampleRate= CSL_CAPH_SRCMOUT_48KHZ;
 			break; 			
         default:
-            audio_xassert(0, (unsigned int)sampleRate);
+            audio_xassert(0, sampleRate);
     }
 	return srcm_sampleRate;
 }
