@@ -14,8 +14,6 @@
 
 obj-y	:= mm.o arch.o clock.o
 
-obj-$(CONFIG_SMP)			+= smp.o headsmp.o
-
 obj-$(CONFIG_MACH_HANA_BASE) 	+= board_base.o
 CFLAGS_board_base.o += -Iarch/arm/mach-hana/hw_cfg/BASE
 

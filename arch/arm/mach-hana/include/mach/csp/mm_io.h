@@ -39,8 +39,12 @@
 
 #if defined( CONFIG_MMU )  /* uboot defines __KERNEL__ and CONFIG_MMU also so remove defined(__KERNEL__) from here */
 
+#ifndef IO_START_PA
     #define IO_START_PA (IO_BASE_ADDR)
+#endif
+#ifndef IO_START_VA
     #define IO_START_VA (VMALLOC_END) /* 512MB io space */
+#endif
 
     /* Physical to Virtual address conversion */
 

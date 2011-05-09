@@ -72,10 +72,10 @@ static struct map_desc hana_io_desc[] __initdata =
         IO_DESC( KONA_RNG_VA, SZ_4K ),
 
 	/*
- *         * This SCU region also covers MM_ADDR_IO_GICCPU,
- *                 * KONA_PROFTMR aka (GTIM) aka (GLB) aka knllog timer,
- *                         * and KONA_PTIM aka os tick timer
- *                                 */
+	 * This SCU region also covers MM_ADDR_IO_GICCPU,
+	 * KONA_PROFTMR aka (GTIM) aka (GLB) aka knllog timer,
+	 * and KONA_PTIM aka os tick timer
+	 */
         IO_DESC( KONA_SCU_VA, SZ_4K ),
         IO_DESC( KONA_SDIO1_VA, SZ_64K ),
         IO_DESC( KONA_SDIO2_VA, SZ_64K ),
