@@ -139,11 +139,12 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 //----------------------------------------------------------------
 int LaunchAudioCtrlThread(void)
 {
+	int ret;
 	sgThreadData.m_lock =  SPIN_LOCK_UNLOCKED;
 	
-	kfifo_alloc(&sgThreadData.m_pkfifo,KFIFO_SIZE, GFP_KERNEL);
+	ret = kfifo_alloc(&sgThreadData.m_pkfifo,KFIFO_SIZE, GFP_KERNEL);
 	DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo.size);
-    kfifo_alloc(&sgThreadData.m_pkfifo_out, KFIFO_SIZE, GFP_KERNEL);
+    ret = kfifo_alloc(&sgThreadData.m_pkfifo_out, KFIFO_SIZE, GFP_KERNEL);
   	DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo_out.size);
 	INIT_WORK(&sgThreadData.mwork, AudioCtrlWorkThread);
 	
@@ -152,7 +153,7 @@ int LaunchAudioCtrlThread(void)
 		DEBUG("\n Error : Can not create work queue:AudioCtrlWq\n");
     sgThreadData.action_complete = OSSEMAPHORE_Create(0,0);
 
-	return 0;
+	return ret;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -191,11 +192,7 @@ Result_t AUDIO_Ctrl_Trigger(
 	unsigned int	len;
     OSStatus_t  osStatus;
 
-	{
-		BRCM_AUDIO_Control_Params_un_t *paudioControlParam = (BRCM_AUDIO_Control_Params_un_t *)arg_param;
-		DEBUG("AudioHalThread action=%d\r\n", action_code);
-	}
-
+	DEBUG("AudioHalThread action=%d\r\n", action_code);
 
 	msgAudioCtrl.action_code = action_code;
 	if(arg_param)
@@ -226,7 +223,7 @@ Result_t AUDIO_Ctrl_Trigger(
 		    if( (len != sizeof(TMsgAudioCtrl)) && (len!=0) )
 			    DEBUG("Error AUDIO_Ctrl_Trigger len=%d expected %d in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl), sgThreadData.m_pkfifo_out.in, sgThreadData.m_pkfifo_out.out);
 		    if(len == 0) //FIFO empty sleep
-			    return;
+			    return status;
             if(arg_param)
 		        memcpy(arg_param,&msgAudioCtrl.param,  sizeof(BRCM_AUDIO_Control_Params_un_t));
 	        else
@@ -258,7 +255,7 @@ void AUDIO_Ctrl_Process(
 			param_open->drv_handle = AUDIO_DRIVER_Open(sgTableIDChannelOfDev[param_open->substream_number].drv_type);
 		    if(param_open->drv_handle == NULL)
     		{
-         		DEBUG("\n %lx:playback_open subdevice=%d failed\n",jiffies, param_open->substream_number);
+         		DEBUG("\n %lx:playback_open subdevice=%ld failed\n",jiffies, param_open->substream_number);
 		        break;
     		}
 
@@ -378,7 +375,7 @@ void AUDIO_Ctrl_Process(
 
             param_open->drv_handle = AUDIO_DRIVER_Open(sgTableIDChannelOfCaptDev[param_open->substream_number].drv_type);
 
-            DEBUG("param_open->drv_handle -  0x%x \n",param_open->drv_handle);
+            DEBUG("param_open->drv_handle -  0x%lx \n",(UInt32)param_open->drv_handle);
 		
 		}
 	    break;

@@ -22,6 +22,9 @@
  *
  */
 
+struct snd_pcm_substream;
+
+
 int snd_pcm_hw_param_first(struct snd_pcm_substream *pcm, 
 			   struct snd_pcm_hw_params *params,
 			   snd_pcm_hw_param_t var, int *dir);

@@ -40,8 +40,9 @@
 #include "audioapi_asic.h"
 #include "log.h"
 
+#ifdef LMP_BUILD
 static UInt8 audioClientId = 0;
-
+#endif
 
 //If this struct is changed then please change xdr_Audio_Params_t() also.
 typedef struct
@@ -118,7 +119,6 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 }
 
-#endif
 static Boolean AudioCopyPayload( MsgType_t msgType, 
 						 void* srcDataBuf, 
 						 UInt32 destBufSize,
@@ -126,7 +126,7 @@ static Boolean AudioCopyPayload( MsgType_t msgType,
 						 UInt32* outDestDataSize, 
 						 Result_t *outResult)
 {
-#if 0
+#ifdef LMP_BUILD
 	UInt32 len;
 
 	xassert(srcDataBuf != NULL, 0);
@@ -141,16 +141,19 @@ static Boolean AudioCopyPayload( MsgType_t msgType,
 		memcpy(destDataBuf, srcDataBuf, len);
 		return TRUE;
 	}
-	return FALSE;
 #endif
+	return FALSE;
+
 }
 
+#endif
 
 
 void Audio_InitRpc(void)
 {
+#ifdef LMP_BUILD
 	static int first_time = 1;
-#if 0
+
 	if(first_time)
 	{
 		RPC_Handle_t handle;
@@ -176,7 +179,7 @@ void Audio_InitRpc(void)
 
 /*************************************  AUDIO API CODE *******************************************************************/
 
-#if 0
+#ifdef LMP_BUILD
 void CAPI2_audio_control_generic(UInt32 tid, UInt8 clientID, Audio_Params_t* params)
 {
 	RPC_Msg_t msg;
@@ -223,12 +226,12 @@ bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp)
 
 UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4,UInt32 param5,UInt32 param6)
 {
-#if 0
+	UInt32 val = (UInt32)0;
+#ifdef LMP_BUILD
 	Audio_Params_t audioParam;
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
-	UInt32 val = (UInt32)0;
 
 	audioParam.param1 = param1;
 	audioParam.param2 = param2;
@@ -240,18 +243,20 @@ UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 pa
 	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
 	CAPI2_audio_control_generic(tid, audioClientId,&audioParam);
 	RPC_SyncWaitForResponse( tid,audioClientId, &ackResult, &msgType, NULL );
-	return val;
 #endif
+	return val;
+
 }
 
 UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4,UInt32 param5,UInt32 param6)
 {
-#if 0
+	UInt32 val = (UInt32)0;
+
+#ifdef LMP_BUILD
 	Audio_Params_t audioParam;
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
-	UInt32 val = (UInt32)0;
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* audio_control_dsp (AP) param1 %d, param2 %d param3 %d param4 %d *\n\r", param1, param2, param3, param4);
 
 	switch (param1)
@@ -330,8 +335,9 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 			break;
 	} 
 	
-	return val;
 #endif
+	return val;
+
 }
 
 #endif

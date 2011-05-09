@@ -271,7 +271,7 @@ static int GetControlItem(
 {
 	int i=0;
 	//DEBUG("\n%lx:GetControlItem",jiffies);
-	DEBUG("\n%lx:GetControlItem ctrl->private_value=%d",jiffies, kcontrol->private_value);
+	DEBUG("\n%lx:GetControlItem ctrl->private_value=%ld",jiffies, kcontrol->private_value);
 
 
 	if(kcontrol->private_value>=0 && kcontrol->private_value<BRCM_CTL_TOTAL)

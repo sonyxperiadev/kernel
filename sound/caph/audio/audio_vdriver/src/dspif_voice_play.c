@@ -67,7 +67,7 @@ Result_t dspif_VPU_play_start ( VORENDER_PLAYBACK_MODE_t	playbackMode,
 	VPlayBack_Buffer_t *pBuf;
 	SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
 
-	Log_DebugPrintf(LOGID_AUDIO, " dspif_VPU_play_start::Start VPU play, playbackMode = %d,  speechMode = %d, dataRate = %d, mixMode = %d\n", 
+	Log_DebugPrintf(LOGID_AUDIO, " dspif_VPU_play_start::Start VPU play, playbackMode = %d,  speechMode = %ld, dataRate = %ld, mixMode = %d\n", 
 							playbackMode, speechMode, dataRateSelection, mixMode);
 
 	// init the pingpong buffer 
@@ -135,7 +135,7 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 	arg0 = ARM2SP_BuildCommandArg0 (samplingRate, playbackMode, mixMode, numFramesPerInterrupt);
     
 						
-	Log_DebugPrintf(LOGID_AUDIO, " dspif_ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%x\n", 
+	Log_DebugPrintf(LOGID_AUDIO, " dspif_ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%lx\n", 
 						playbackMode, mixMode, arg0, instanceID);
 
 	if (instanceID == VORENDER_ARM2SP_INSTANCE1)
@@ -164,7 +164,7 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 // =========================================================================
 Result_t dspif_ARM2SP_play_stop ( UInt32 instanceID)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_stop::Stop ARM2SP voice play instanceID=0x%x\n", instanceID);
+	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_stop::Stop ARM2SP voice play instanceID=0x%lx\n", instanceID);
 	
 	if (instanceID == VORENDER_ARM2SP_INSTANCE1)
 		audio_control_dsp(DSPCMD_TYPE_COMMAND_SET_ARM2SP, 0, 0, 0, 0, 0);
@@ -185,7 +185,7 @@ Result_t dspif_ARM2SP_play_stop ( UInt32 instanceID)
 // =========================================================================
 Result_t dspif_ARM2SP_play_pause (UInt32 instanceID)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_pause: Pause ARM2SP voice play instanceID=0x%x \n", instanceID);
+	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_pause: Pause ARM2SP voice play instanceID=0x%lx \n", instanceID);
 
 	if (instanceID == VORENDER_ARM2SP_INSTANCE1)
 		audio_control_dsp(DSPCMD_TYPE_COMMAND_SET_ARM2SP, 0, 1, 0, 0, 0);
@@ -220,7 +220,7 @@ Result_t dspif_ARM2SP_play_resume( UInt32 instanceID,
 
 	arg0 = ARM2SP_BuildCommandArg0 (samplingRate, playbackMode, mixMode, numFramesPerInterrupt);
 		
-	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_resume: Resume ARM2SP voice play instanceID=0x%x \n", instanceID);
+	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_resume: Resume ARM2SP voice play instanceID=0x%lx \n", instanceID);
 
 	if (instanceID == VORENDER_ARM2SP_INSTANCE1)
 		audio_control_dsp(DSPCMD_TYPE_COMMAND_SET_ARM2SP, arg0, 1, 0, 0, 0);
@@ -240,7 +240,7 @@ Result_t dspif_ARM2SP_play_resume( UInt32 instanceID,
 // =========================================================================
 Result_t dspif_ARM2SP_play_flush( UInt32 instanceID)
 {
-	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_flush: Flush ARM2SP voice play instanceID=0x%x\n", instanceID);
+	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_flush: Flush ARM2SP voice play instanceID=0x%lx\n", instanceID);
 
 	if (instanceID == VORENDER_ARM2SP_INSTANCE1)
 		audio_control_dsp(DSPCMD_TYPE_COMMAND_SET_ARM2SP, 0, 0, 0, 0, 0);
@@ -271,7 +271,7 @@ Result_t dspif_AMRWB_play_start ( VORENDER_PLAYBACK_MODE_t	playbackMode,
 	SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
 	UInt16 output_buf_select = 0; // fifo0 [0 2], dsp index depends on output buf select
 	
-	Log_DebugPrintf(LOGID_AUDIO, " dspif_AMRWB_play_start::Start AMRWB play, playbackMode = %d,  speechMode = %d, dataRate = %d, mixMode = %d\n", 
+	Log_DebugPrintf(LOGID_AUDIO, " dspif_AMRWB_play_start::Start AMRWB play, playbackMode = %d,  speechMode = %ld, dataRate = %ld, mixMode = %d\n", 
 							playbackMode, speechMode, dataRateSelection, mixMode);
 
 	pSharedMem->shared_WB_AMR_Ctrl_state = (output_buf_select << 11) | (speechMode << 5);

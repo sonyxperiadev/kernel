@@ -108,9 +108,6 @@ int audio_init_complete = 0;
 
 #define	PCM_TOTAL_BUF_BYTES	(PCM_MAX_CAPTURE_BUF_BYTES+PCM_MAX_PLAYBACK_BUF_BYTES)
 
-#define TRUE 1
-#define FALSE 0
-
 void AUDIO_DRIVER_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle);
 void AUDIO_DRIVER_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle);
 
@@ -153,7 +150,7 @@ static struct snd_pcm_hardware brcm_capture_hw =
 	.periods_max = 2,
 };
 
-extern void dump_audio_registers();
+extern void dump_audio_registers(void);
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
@@ -206,7 +203,7 @@ static int PcmHwFree(
 )
 {
 	int res;
-	DEBUG("\n %lx:hw_free - stream=%x\n",jiffies, substream);
+	DEBUG("\n %lx:hw_free - stream=%lx\n",jiffies, (UInt32) substream);
 	flush_scheduled_work(); //flush the wait queue in case pending events in the queue are processed after device close
 	
 	//snd_pcm_stream_lock_irq(substream);
@@ -274,7 +271,7 @@ static int PcmPlaybackOpen(
 
     substream->runtime->private_data = drv_handle;
 
-    DEBUG("chip-0x%x substream-0x%x drv_handle-0x%x \n",chip,substream,drv_handle);
+    DEBUG("chip-0x%lx substream-0x%lx drv_handle-0x%lx \n",(UInt32)chip,(UInt32)substream,(UInt32)drv_handle);
 
 
 	DEBUG("\n %lx:playback_open subdevice=%d PCM_TOTAL_BUF_BYTES=%d\n",jiffies, substream->number, PCM_TOTAL_BUF_BYTES);
@@ -343,8 +340,8 @@ static int PcmPlaybackPrepare(
     AUDIO_DRIVER_CONFIG_t drv_config;
 
 
-	DEBUG("\nplayback_prepare period=%d period_size=%d bufsize=%d threshold=%d\n", runtime->periods, 
-			frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->buffer_size), runtime->stop_threshold);
+	DEBUG("\nplayback_prepare period=%d period_size=%d bufsize=%d threshold=%ld\n", runtime->periods, 
+			frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->buffer_size), (UInt32)runtime->stop_threshold);
 
     // This device is for voice call so open
     if(substream->number >= VOICE_CALL_SUB_DEVICE)
@@ -378,7 +375,7 @@ static int PcmPlaybackPrepare(
     buf_param.pBuf = runtime->dma_area;// virtual address
     buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
     
-    DEBUG("buf_size = %d pBuf=0x%x phy_addr=0x%x \n",runtime->dma_bytes,runtime->dma_area,runtime->dma_addr);
+    DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
 
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
 
@@ -407,7 +404,6 @@ static int PcmPlaybackTrigger(
 )
 {
 	int ret = 0;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
 
     int substream_number = substream->number ;
@@ -524,7 +520,7 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream * substream
 	return pos;
 }
 
-
+#ifdef LMP_BUILD
 static unsigned int sgpcm_capture_period_bytes[]={PCM_MIN_CAPTURE_PERIOD_BYTES, PCM_MIN_CAPTURE_PERIOD_BYTES*2, PCM_MIN_CAPTURE_PERIOD_BYTES*3, PCM_MIN_CAPTURE_PERIOD_BYTES*4};  //bytes
 static struct snd_pcm_hw_constraint_list sgpcm_capture_period_bytes_constraints_list = 
 {
@@ -532,6 +528,7 @@ static struct snd_pcm_hw_constraint_list sgpcm_capture_period_bytes_constraints_
 	.list  = sgpcm_capture_period_bytes,
 	.mask  = 0,
 };
+#endif
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
@@ -622,16 +619,15 @@ static int PcmCaptureClose(struct snd_pcm_substream * substream)
 static int PcmCapturePrepare(struct snd_pcm_substream * substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-    brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     unsigned long period_bytes;
     AUDIO_DRIVER_BUFFER_t buf_param;
     AUDIO_DRIVER_CONFIG_t drv_config;
 
 
-	DEBUG("\n %lx:capture_prepare: subdevice=%d rate =%d format =%d channel=%d dma_area=0x%x dma_bytes=%d period_bytes=%d avail_min=%d periods=%d buffer_size=%d\n",
+	DEBUG("\n %lx:capture_prepare: subdevice=%d rate =%d format =%d channel=%d dma_area=0x%x dma_bytes=%d period_bytes=%d avail_min=%d periods=%d buffer_size=%ld\n",
 		         jiffies,	substream->number, runtime->rate, runtime->format, runtime->channels, (unsigned int)runtime->dma_area, runtime->dma_bytes,
-		         frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->control->avail_min), runtime->periods, runtime->buffer_size);
+		         frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->control->avail_min), runtime->periods, (UInt32)runtime->buffer_size);
 	
 	g_brcm_alsa_chip->rate[1]         = runtime->rate;
 	g_brcm_alsa_chip->buffer_bytes[1] = runtime->dma_bytes;
@@ -654,7 +650,7 @@ static int PcmCapturePrepare(struct snd_pcm_substream * substream)
     buf_param.pBuf = runtime->dma_area;// virtual address
     buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
     
-    DEBUG("buf_size = %d pBuf=0x%x phy_addr=0x%x \n",runtime->dma_bytes,runtime->dma_area,runtime->dma_addr);
+    DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
 
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
 
@@ -682,8 +678,6 @@ static int PcmCaptureTrigger(
 	int cmd									//commands to handle
 )
 {
-    int ret = 0;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
 
     drv_handle = substream->runtime->private_data;
@@ -791,7 +785,6 @@ static void worker_pcm_play(struct work_struct *work)
 
     struct snd_pcm_substream * substream;
     struct snd_pcm_runtime *runtime;
-	int words;
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     AUDIO_DRIVER_TYPE_t    drv_type;
 
@@ -852,7 +845,6 @@ static void worker_pcm_capt(struct work_struct *work)
 
     struct snd_pcm_substream * substream;
     struct snd_pcm_runtime *runtime;
-	int words;
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     AUDIO_DRIVER_TYPE_t    drv_type;
 
@@ -909,7 +901,6 @@ void AUDIO_DRIVER_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
 {
 	struct snd_pcm_substream * substream = g_brcm_alsa_chip->substream[0];
     AUDIO_DRIVER_HANDLE_t  drv_handle_local;
-    AUDIO_DRIVER_TYPE_t    drv_type;
 
     drv_handle_local = substream->runtime->private_data;
 	
@@ -937,7 +928,6 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
 {
 	struct snd_pcm_substream * substream = g_brcm_alsa_chip->substream[1];
     AUDIO_DRIVER_HANDLE_t  drv_handle_local;
-    AUDIO_DRIVER_TYPE_t    drv_type;
 
     drv_handle_local = substream->runtime->private_data;
 	

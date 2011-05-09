@@ -96,10 +96,12 @@ int debug = 2;
 //
 static char *id = NULL;
 static int enable = 1;
-static int index = 0;
 
 //
 #if 0
+
+static int index = 0;
+
 module_param(index, int, 0444);
 MODULE_PARM_DESC(index, "Index value for Broadcom soundcard.");
 module_param(id, charp, 0444);
@@ -533,20 +535,6 @@ BCMPCG_ioctl(struct inode *inode, struct file *file,
 } /* lcd_ioctl */
 
 #endif
-
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: DeviceRelease
-//
-//  Description: 'release' call back function for platform device
-//
-//------------------------------------------------------------
-static void DeviceRelease(struct device *pdev)
-{
-       DEBUG("\n TO DO:DeviceRelease\n");
-}
-
 
 
 //Platform device structure
