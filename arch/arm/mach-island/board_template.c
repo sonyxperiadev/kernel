@@ -372,8 +372,6 @@ static void __init add_devices(void)
 
 static void __init board_init(void)
 {
-	island_init_machine();
-
 	/*
 	 * Add common platform devices that do not have board dependent HW
 	 * configurations

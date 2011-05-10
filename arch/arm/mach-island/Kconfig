@@ -44,6 +44,9 @@ menu "Platform Configurations"
 config BCM_ZRELADDR
 	hex "Compressed ZREL ADDR"
 
+config BCM_PARAMS_PHYS
+	hex "Address where tagged parameters are to be found"
+
 config BCM_RAM_BASE
 	hex "RAM base address"
 	help
@@ -55,12 +58,6 @@ config BCM_RAM_START_RESERVED_SIZE
 	help
 	 Reserve memory at the start of RAM. This memory
 	 may be used for LCD frame buffer, DSP, etc. 
-
-config BCM_RAM_SIZE
-	hex "RAM size in bytes available"
-	default 0
-	help
-	 Total RAM available in bytes.
 
 endmenu
 

@@ -1,2 +1,2 @@
 zreladdr-y      := $(CONFIG_BCM_ZRELADDR)
-params_phys-y   := 0x80000100
+params_phys-y   := $(CONFIG_BCM_PARAMS_PHYS)

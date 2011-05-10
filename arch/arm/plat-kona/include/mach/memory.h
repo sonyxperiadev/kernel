@@ -26,10 +26,12 @@
 #ifndef __PLAT_KONA_MEMORY_H
 #define __PLAT_KONA_MEMORY_H
 
-#define PHYS_OFFSET	(0x82000000)
+#include <mach/vmalloc.h>
+
+#define PHYS_OFFSET	(CONFIG_BCM_RAM_BASE+CONFIG_BCM_RAM_START_RESERVED_SIZE)
 
 #define IO_START_PA			(0x34000000) /* HUB clock manager reg base */
-#define IO_START_VA			(PAGE_OFFSET + 0x30000000)
+#define IO_START_VA			(VMALLOC_END)
 
 #ifndef HW_IO_PHYS_TO_VIRT
 #define HW_IO_PHYS_TO_VIRT(phys)	((phys) - IO_START_PA + IO_START_VA) 
