@@ -1861,9 +1861,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_fifo_pack(CHAL_HANDLE handle,
         FLD_SET(val, fifo_pack, 
                 SSPIL_FIFOTX_0_CONTROL_FIFOTX0_DATA_PACKING_SHIFT, 
                 SSPIL_FIFOTX_0_CONTROL_FIFOTX0_DATA_PACKING_MASK);
-        FLD_SET(val, fifo_pack,
-                SSPIL_FIFOTX_0_CONTROL_FIFOTX0_DATA_WRITE_SIZE_SHIFT,
-                SSPIL_FIFOTX_0_CONTROL_FIFOTX0_DATA_WRITE_SIZE_MASK);
     }
     else {
         reg = REG_FIFORX_CTL_ADDR(fifo_id, 
@@ -1872,9 +1869,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_fifo_pack(CHAL_HANDLE handle,
         FLD_SET(val, fifo_pack, 
                 SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_PACKING_SHIFT, 
                 SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_PACKING_MASK);
-        FLD_SET(val, fifo_pack,
-                SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_READ_SIZE_SHIFT,
-                SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_READ_SIZE_MASK);
     }
     CHAL_REG_WRITE32(reg, val);
         
@@ -2094,6 +2088,49 @@ CHAL_SSPI_STATUS_t chal_sspi_get_fifo_threshold(CHAL_HANDLE handle,
     return(CHAL_SSPI_STATUS_SUCCESS);
 }
 
+/****************************************************************************
+*
+*  Function Name: CHAL_SSPI_STATUS_t chal_sspi_set_fifo_data_size(
+*                                  CHAL_HANDLE handle,
+*                                  CHAL_SSPI_FIFO_ID_t fifo_id,
+*                                  CHAL_SSPI_FIFO_DATA_SIZE_t fifo_size)
+*
+*  Description: Set the FIFO data write size
+*
+****************************************************************************/
+CHAL_SSPI_STATUS_t chal_sspi_set_fifo_data_size(CHAL_HANDLE handle,
+                                           CHAL_SSPI_FIFO_ID_t fifo_id,
+                                           CHAL_SSPI_FIFO_DATA_SIZE_t fifo_size)
+{
+    CHAL_SSPI_HANDLE_t *pDevice = (CHAL_SSPI_HANDLE_t *)handle;
+    cUInt32 val = 0, reg = 0;
+
+    if(!handle)
+    {
+        chal_dprintf(CDBG_ERRO, "invalid argument\n");
+        return CHAL_SSPI_STATUS_ILLEGAL_HANDLE;
+    }
+
+    if(fifo_id >= SSPI_FIFO_ID_TX0) {
+        reg = REG_FIFOTX_CTL_ADDR(fifo_id-SSPI_FIFO_ID_TX0,
+                                 pDevice->base + SSPIL_FIFOTX_0_CONTROL_OFFSET);
+        val = CHAL_REG_READ32(reg);
+        FLD_SET(val, fifo_size,
+                SSPIL_FIFOTX_0_CONTROL_FIFOTX0_DATA_WRITE_SIZE_SHIFT,
+                SSPIL_FIFOTX_0_CONTROL_FIFOTX0_DATA_WRITE_SIZE_MASK);
+    }
+    else {
+        reg = REG_FIFORX_CTL_ADDR(fifo_id,
+                                pDevice->base + SSPIL_FIFORX_0_CONTROL_OFFSET);
+        val = CHAL_REG_READ32(reg);
+        FLD_SET(val, fifo_size,
+                SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_READ_SIZE_SHIFT,
+                SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_READ_SIZE_MASK);
+    }
+    CHAL_REG_WRITE32(reg, val);
+
+    return(CHAL_SSPI_STATUS_SUCCESS);
+}
 
 /****************************************************************************
 *

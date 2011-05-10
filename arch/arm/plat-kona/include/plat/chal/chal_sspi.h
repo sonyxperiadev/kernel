@@ -166,6 +166,15 @@ typedef enum {
 } CHAL_SSPI_FIFO_DATA_PACK_t;
 
 /**
+* SSPI FIFO data size
+******************************************************************************/
+typedef enum {
+    SSPI_FIFO_DATA_SIZE_32BIT,
+    SSPI_FIFO_DATA_SIZE_8BIT,
+    SSPI_FIFO_DATA_SIZE_16BIT,
+} CHAL_SSPI_FIFO_DATA_SIZE_t;
+
+/**
 * SSPI FIFO ID
 ******************************************************************************/
 typedef enum {
@@ -1065,6 +1074,20 @@ CHAL_SSPI_STATUS_t chal_sspi_get_fifo_pack(CHAL_HANDLE handle,
                                            CHAL_SSPI_FIFO_ID_t fifo_id, 
                                            uint32_t *fifo_pack);
 
+/**
+*
+*  @brief  Setup one of the three ways (32-bit, 16-bit or 8-bit) for data size
+*          in the logical FIFO
+*
+*  @param    handle    (in) SSPI CHAL handle
+*  @param    fifo_id   (in) the logical FIFO to configure
+*  @param    fifo_size (in) the data-size way to set for the FIFO
+*
+*  @return SSPI status
+******************************************************************************/
+CHAL_SSPI_STATUS_t chal_sspi_set_fifo_data_size(CHAL_HANDLE handle,
+                                           CHAL_SSPI_FIFO_ID_t fifo_id,
+                                           CHAL_SSPI_FIFO_DATA_SIZE_t fifo_size);
 
 /**
 *
