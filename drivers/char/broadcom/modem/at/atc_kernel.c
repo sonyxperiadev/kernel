@@ -40,6 +40,15 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/broadcom/bcm_major.h>
 
+//hack from Naveen to configure SIM, Gary will remove that once sysrpc
+//driver is ready
+#define  SYSRPC_NOTREADY
+#ifdef SYSRPC_NOTREADY
+#include <linux/regulator/consumer.h>
+#include <linux/regulator/driver.h>
+#define ONE_PT_EIGHT_VOLTS_IN_MICRO_VOLTS 1800000
+#endif
+
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"
@@ -164,6 +173,11 @@ static struct file_operations sFileOperations =
 #define ATC_KERNEL_TRACE(str) {}
 #endif
 
+#ifdef SYSRPC_NOTREADY
+#define ATC_KERNEL_TRACE2(str) printk str
+static int gRegulatorOpen = 0;
+static struct regulator* sim_regulator = NULL;
+#endif
 
 //======================================File operations==================================================
 //***************************************************************************
@@ -191,6 +205,40 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
 
     priv->mUserfile = filp;
     filp->private_data = priv;
+
+ //hack from Naveen to configure SIM, Gary will remove that once sysrpc
+//driver is ready
+#ifdef SYSRPC_NOTREADY
+    if(gRegulatorOpen == 0)
+    {
+        int ret=0;
+        //int simMicroVolts = 0;
+                                
+
+        //sim_regulator = regulator_get(NULL,"simldo");
+
+        sim_regulator = regulator_get(NULL,"sim_vcc");
+        if (IS_ERR(sim_regulator))
+        {
+            ATC_KERNEL_TRACE2(( "regulator_get FAIL\n") ) ;
+        }
+        else
+        {
+            gRegulatorOpen = 1;
+            ret = regulator_enable(sim_regulator); 
+            ATC_KERNEL_TRACE2(( "regulator_is_enabled = %d\n", ret) ) ;
+                                
+            ret = regulator_is_enabled(sim_regulator);
+            ATC_KERNEL_TRACE2(( "regulator_is_enabled = %d\n", ret) ) ;
+                                                
+            //regulator_set_mode(sim_regulator, REGULATOR_MODE_NORMAL);
+        }
+    }
+    else
+    {
+        ATC_KERNEL_TRACE2(( "**regulator already open\n") ) ;
+    }
+#endif
 
     return 0;
 }
