@@ -44,7 +44,6 @@ static void __exit sysrpc_exit( void )
 	if (g_sysrpc_procfile)
 		remove_proc_entry( SYSRPC_PROCFS_NAME, NULL); 
 
-	printk( KERN_ALERT "sysrpc_exit: called\n" ) ;
 }
 
 static void safe_strncat( char *dst, const char *src, int len )
@@ -57,33 +56,17 @@ static void safe_strncat( char *dst, const char *src, int len )
 	}
 }
 
-static int procfile_read(char *page, char **start, off_t offset, int count, int *eof, void *data)
+static int procfile_read(char *page, char **start, off_t offset, 
+	int count, int *eof, void *data)
 {
 	*page = 0 ;
-
-	safe_strncat( page, "SYSRPC: procfs read\n", count ) ;
-
 	*eof = 1 ;
-
 	return 1+strlen(page);
 }
 
-static int procfile_write(struct file *file, const char *buffer, unsigned long count,
-		   void *data)
+static int procfile_write(struct file *file, const char *buffer, 
+	unsigned long count, void *data)
 {
-	static int init = 0 ;
-
-	if( !init )
-	{
-		init = 1 ;
-		KRIL_SysRpc_Init( ) ;
-		printk( KERN_ALERT "SYSRPC: initialized\n") ;
-	}
-	else
-	{
-		printk( KERN_ALERT "SYSRPC: already initialized\n" ) ;
-	}
-
 	return count ;
 }
 

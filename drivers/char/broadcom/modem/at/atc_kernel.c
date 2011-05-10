@@ -42,7 +42,7 @@ the GPL, without Broadcom's express prior written consent.
 
 //hack from Naveen to configure SIM, Gary will remove that once sysrpc
 //driver is ready
-#define  SYSRPC_NOTREADY
+// #define  SYSRPC_NOTREADY
 #ifdef SYSRPC_NOTREADY
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
@@ -65,6 +65,8 @@ the GPL, without Broadcom's express prior written consent.
 #include "rpc_api.h"
 
 #include "atc_kernel.h"
+
+extern void KRIL_SysRpc_Init( void ) ;
 
 /**
  * Incoming AT command queue
@@ -193,6 +195,8 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
 {
     ATC_KERNEL_PrivData_t *priv;
 
+    static int sysrpc_initialized = 0 ;
+
     ATC_KERNEL_TRACE(( "ATC_KERNEL_Open\n") ) ;
 
     priv = kmalloc(sizeof(ATC_KERNEL_PrivData_t), GFP_KERNEL);
@@ -237,6 +241,12 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
     else
     {
         ATC_KERNEL_TRACE2(( "**regulator already open\n") ) ;
+    }
+#else
+    if( !sysrpc_initialized )
+    {
+	sysrpc_initialized = 1; 
+        KRIL_SysRpc_Init( ) ;
     }
 #endif
 
