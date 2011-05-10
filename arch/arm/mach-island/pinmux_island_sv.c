@@ -27,7 +27,19 @@
 #include <mach/pinmux.h>
 
 static struct __init pin_config board_pin_config[] = {
-	 /* SD/MMC */
+	/* BSC1 */
+        PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
+        PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
+
+        /* BSC2 */
+        PIN_BSC_CFG(BSC2_SCL, BSC2_SCL, 0x08),
+        PIN_BSC_CFG(BSC2_SDA, BSC2_SDA, 0x08),
+
+        /* PMU BSC */
+        PIN_BSC_CFG(PMU_SCL, PMU_SCL, 0x08),
+        PIN_BSC_CFG(PMU_SDA, PMU_SDA, 0x08),
+
+	/* SD/MMC */
         PIN_CFG(NAND_AD_5,    SDIO3_DATA_2, 0, OFF, OFF, 0, 0, 12MA),
         PIN_CFG(NAND_AD_4,    SDIO3_DATA_1, 0, OFF, OFF, 0, 0, 12MA),
         PIN_CFG(NAND_AD_3,    SDIO3_CMD,    0, OFF, OFF, 0, 0, 12MA),

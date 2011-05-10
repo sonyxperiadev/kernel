@@ -466,7 +466,7 @@ int __init clock_init(void)
 {
 	int i;
 	for (i=0; i<ARRAY_SIZE(island_clk_tbl); i++)
-		clkdev_add (&island_clk_tbl[i]);
+		clk_register(&island_clk_tbl[i]);
 
 	return 0;
 }

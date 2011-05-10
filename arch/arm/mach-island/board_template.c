@@ -21,6 +21,8 @@
 
 #include <linux/init.h>
 #include <linux/serial_8250.h>
+#include <linux/i2c.h>
+#include <linux/i2c-kona.h>
 
 #include <asm/memory.h>
 #include <asm/sizes.h>
@@ -35,9 +37,16 @@
 #include <mach/sdio_platform.h>
 #include <mach/irqs.h>
 #include <mach/kona.h>
+
 #include <sdio_settings.h>
+#include <i2c_settings.h>
 
 #include <mach/island.h>
+
+#if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
+#include <linux/i2c/egalax_i2c_ts.h>
+#include <egalax_i2c_ts_settings.h>
+#endif
 
 #ifndef ISLAND_BOARD_ID
 #error ISLAND_BOARD_ID needs to be defined in board_xxx.c
@@ -62,6 +71,19 @@
 #define PHYS_ADDR_SDIO1        SDIO2_BASE_ADDR
 #define PHYS_ADDR_SDIO2        SDIO3_BASE_ADDR
 #define SDIO_CORE_REG_SIZE     0x10000
+
+
+/* number of I2C adapters (hosts/masters) */
+#define MAX_I2C_ADAPS    3
+
+/*
+ * The BSC (I2C) index starts from 1 in CHAL, which is really not by
+ * convention. Re-define them here to avoid confusions
+ */
+#define PHYS_ADDR_BSC0         BSC1_BASE_ADDR
+#define PHYS_ADDR_BSC1         BSC2_BASE_ADDR
+#define PHYS_ADDR_BSC2         PMU_BSC_BASE_ADDR
+#define BSC_CORE_REG_SIZE      0x100
 
 static struct resource sdio0_resource[] = {
 	[0] = {
@@ -104,9 +126,9 @@ static struct resource sdio2_resource[] = {
 
 static struct sdio_platform_cfg sdio_param[] =
 #ifdef HW_SDIO_PARAM
-   HW_SDIO_PARAM;
+	HW_SDIO_PARAM;
 #else
-   NULL;
+	{};
 #endif
 
 static struct platform_device sdio_devices[MAX_SDIO_DEVICES] =
@@ -130,6 +152,100 @@ static struct platform_device sdio_devices[MAX_SDIO_DEVICES] =
       .num_resources    = ARRAY_SIZE(sdio1_resource),
    },
 };
+
+static struct bsc_adap_cfg i2c_adap_param[] =
+#ifdef HW_I2C_ADAP_PARAM
+	HW_I2C_ADAP_PARAM;
+#else
+	{};
+#endif
+
+static struct resource i2c0_resource[] = {
+   [0] =
+   {
+      .start = PHYS_ADDR_BSC0,
+      .end = PHYS_ADDR_BSC0 + BSC_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = 
+   {
+      .start = BCM_INT_ID_I2C0,
+      .end = BCM_INT_ID_I2C0,
+      .flags = IORESOURCE_IRQ,
+   },
+};
+
+static struct resource i2c1_resource[] = {
+   [0] =
+   {
+      .start = PHYS_ADDR_BSC1,
+      .end = PHYS_ADDR_BSC1 + BSC_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] = 
+   {
+      .start = BCM_INT_ID_I2C1,
+      .end = BCM_INT_ID_I2C1,
+      .flags = IORESOURCE_IRQ,
+   },
+};
+
+static struct resource i2c2_resource[] = {
+   [0] =
+   {
+      .start = PHYS_ADDR_BSC2,
+      .end = PHYS_ADDR_BSC2 + BSC_CORE_REG_SIZE - 1,
+      .flags = IORESOURCE_MEM,
+   },
+   [1] =
+   {
+      .start = BCM_INT_ID_PM_I2C,
+      .end = BCM_INT_ID_PM_I2C,
+      .flags = IORESOURCE_IRQ,
+   },
+};
+
+static struct platform_device i2c_adap_devices[MAX_I2C_ADAPS] =
+{
+   {  /* for BSC0 */
+      .name = "bsc-i2c",
+      .id = 0,
+      .resource = i2c0_resource,
+      .num_resources	= ARRAY_SIZE(i2c0_resource),
+   },
+   {  /* for BSC1 */
+      .name = "bsc-i2c",
+      .id = 1,
+      .resource = i2c1_resource,
+      .num_resources	= ARRAY_SIZE(i2c1_resource),
+   },
+   {  /* for PMBSC */
+      .name = "bsc-i2c",
+      .id = 2,
+      .resource = i2c2_resource,
+      .num_resources	= ARRAY_SIZE(i2c2_resource),
+   },
+};
+
+#if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
+static struct egalax_i2c_ts_cfg egalax_i2c_param =
+{
+	.id = -1,
+	.gpio = {
+		.reset = -1,
+		.event = -1,
+	},
+};
+
+static struct i2c_board_info egalax_i2c_boardinfo[] =
+{
+	{
+		.type = "egalax_i2c",
+		.addr = 0x04,
+		.platform_data = &egalax_i2c_param,
+	},
+};
+#endif
 
 static void __init add_sdio_device(void)
 {
@@ -203,14 +319,57 @@ static void __init add_sdio_device(void)
    }
 }
 
+static void __init add_i2c_device(void)
+{
+	unsigned int i, num_devices;
+
+	num_devices = ARRAY_SIZE(i2c_adap_param);
+	if (num_devices == 0)
+		return;
+	if (num_devices > MAX_I2C_ADAPS)
+ 		num_devices = MAX_I2C_ADAPS;
+
+	for (i = 0; i < num_devices; i++) {
+		/* DO NOT register the I2C device if it is disabled */
+		if (i2c_adap_param[i].disable == 1)
+		continue;
+
+		i2c_adap_devices[i].dev.platform_data = &i2c_adap_param[i];
+		platform_device_register(&i2c_adap_devices[i]);
+	}
+
+#if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
+#ifdef HW_EGALAX_I2C_BUS_ID
+	egalax_i2c_param.id = HW_EGALAX_I2C_BUS_ID;
+#endif
+
+#ifdef HW_EGALAX_GPIO_RESET
+	egalax_i2c_param.gpio.reset = HW_EGALAX_GPIO_RESET;
+#endif
+
+#ifdef HW_EGALAX_GPIO_EVENT
+	egalax_i2c_param.gpio.event = HW_EGALAX_GPIO_EVENT;
+#endif
+	
+	egalax_i2c_boardinfo[0].irq =
+		gpio_to_irq(egalax_i2c_param.gpio.event);
+
+	i2c_register_board_info(egalax_i2c_param.id, egalax_i2c_boardinfo,
+		ARRAY_SIZE(egalax_i2c_boardinfo));
+#endif
+}
+
 static void __init add_devices(void)
 {
 #ifdef HW_SDIO_PARAM
 	add_sdio_device();
 #endif
+
+#ifdef HW_I2C_ADAP_PARAM
+	add_i2c_device();
+#endif
 }
 
-#define board_init concatenate(ISLAND_BOARD_ID, _init)
 static void __init board_init(void)
 {
 	island_init_machine();
