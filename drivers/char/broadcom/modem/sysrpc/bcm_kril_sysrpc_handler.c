@@ -163,7 +163,7 @@ Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t* pReqMsg, UInt32 cmd, UInt32 addres
 #if 0 // gary
     CAPI2_FFS_Control(pReqMsg->tid, pReqMsg->clientID, cmd, address, offset, size);
 #endif // gary
-printk( KERN_ALERT "sysrpc: CAPI2_FFS_Control stub\n") ;
+    KRIL_SysRpc_SendFFSControlRsp(pReqMsg->tid, pReqMsg->clientID,0);
     
     return RESULT_OK;
 }
