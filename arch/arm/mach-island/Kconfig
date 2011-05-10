@@ -20,7 +20,47 @@ config MACH_ISLAND_FF
 	help
 	  Support for the Broadcom Island FF/DK board.
 	  
+config MACH_ISLAND_BASE
+        bool "Support Broadcom Island base board"
+        help
+          Support for the Broadcom Island base board.
+
+config MACH_ISLAND_SV
+        bool "Support Broadcom Island SV board"
+        help
+          Support for the Broadcom Island SV board.
+
+config MACH_ISLAND_TABLET
+        bool "Support Broadcom Island Tablet board"
+        help
+          Support for the Broadcom Island Tablet board.
+
 endchoice
+
+endmenu
+
+menu "Platform Configurations"
+
+config BCM_ZRELADDR
+	hex "Compressed ZREL ADDR"
+
+config BCM_RAM_BASE
+	hex "RAM base address"
+	help
+	 Set the physical base address of RAM
+
+config BCM_RAM_START_RESERVED_SIZE
+	hex "RAM start reserved memory size in bytes"
+	default 0
+	help
+	 Reserve memory at the start of RAM. This memory
+	 may be used for LCD frame buffer, DSP, etc. 
+
+config BCM_RAM_SIZE
+	hex "RAM size in bytes available"
+	default 0
+	help
+	 Total RAM available in bytes.
 
 endmenu
 

@@ -15,14 +15,17 @@
 * consent.
 *****************************************************************************/
 
+#include <linux/math64.h>
+
 #include <mach/clock.h>
 #include <asm/io.h>
-#include <linux/math64.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_sysmap_a9.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 //#include <mach/rdb/brcm_rdb_pwrmgr.h>
 
 /* Proc clocks */
@@ -57,6 +60,7 @@ DECLARE_REF_CLK		(ref_156m, REF_156M,			156*CLOCK_1M,	2,	name_to_clk(ref_312m));
 DECLARE_REF_CLK		(ref_104m, REF_104M,			104*CLOCK_1M,	3,	name_to_clk(ref_312m));
 DECLARE_REF_CLK		(ref_52m, REF_52M,			52*CLOCK_1M,	2,	name_to_clk(ref_104m));
 DECLARE_REF_CLK		(ref_13m, REF_13M,			13*CLOCK_1M,	4,	name_to_clk(ref_52m));
+DECLARE_REF_CLK (ref_26m,	REF_26M,			26*CLOCK_1M,	6,	name_to_clk(ref_156m));
 
 DECLARE_REF_CLK		(var_312m, VAR_312M,			312*CLOCK_1M,	0,	0);
 DECLARE_REF_CLK		(var_208m, VAR_208M,			208*CLOCK_1M,	0,	name_to_clk(var_312m));
@@ -78,6 +82,10 @@ DECLARE_CCU_CLK(kpm_ccu, 2, KONA_MST, KPM, MASK,
 DECLARE_CCU_CLK(kps_ccu, 2, KONA_SLV, IKPS, MASK,
 	26*CLOCK_1M,  52*CLOCK_1M,  78*CLOCK_1M, 104*CLOCK_1M,
 	156*CLOCK_1M, 156*CLOCK_1M);
+
+DECLARE_CCU_CLK(khubaon_ccu, 4, AON, KHUBAON, MASK1,
+         26*CLOCK_1M,  52*CLOCK_1M, 78*CLOCK_1M, 104*CLOCK_1M,
+        156*CLOCK_1M, CLOCK_UNUSED);
 
 /*****************************************************************************
 	Bus clocks
@@ -185,6 +193,11 @@ DECLARE_BUS_CLK_NO_GATING_SEL(apb2, APB2_REG, APB2_REG, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
 
+/* KHUBAON bus clocks  */
+
+DECLARE_BUS_CLK(pmu_bsc_apb, PMU_BSC, PMU_BSC_APB, khubaon_ccu, AON, KHUBAON,
+         26*CLOCK_1M,  52*CLOCK_1M, 78*CLOCK_1M, 104*CLOCK_1M,
+        156*CLOCK_1M, CLOCK_UNUSED);
 
 /*****************************************************************************
 	Peripheral clocks
@@ -329,45 +342,79 @@ static struct clk_src spum_sec_clk_src = {
 DECLARE_PERI_CLK(spum_open, SPUM_OPEN, SPUM_OPEN, var_312m, 28*CLOCK_1M, 11, DIV_TRIG, KONA_SLV, IKPS, 0);
 DECLARE_PERI_CLK(spum_sec, SPUM_SEC, SPUM_SEC, var_312m, 28*CLOCK_1M, 11, DIV_TRIG, KONA_SLV, IKPS, 0);
 
+/* KHUBAON peripheral clock */
+/* HUBAON clock -- Needs work around as the enable bit is in HUB_DIV register
+ * instead of HUB_CLKGATE*/
+/* APB6 clock -- Needs work around as the enable bit is in HUB_DIV register
+ * instead of APB6_CLKGATE*/
+
+static struct clk *pmu_bsc_clk_src_tbl[] =
+{
+        name_to_clk(crystal),
+        /*pmu_bsc_var clock is not defined in the clock tree..!! this need to
+         * be confirmed and then enabled */
+        /*name_to_clk(pmu_bsc_var), */
+        //name_to_clk(bbl_32k),
+};
+
+static struct clk_src pmu_bsc_clk_src = {
+        .total          =       ARRAY_SIZE(pmu_bsc_clk_src_tbl),
+        .sel            =       0,
+        .parents        =       pmu_bsc_clk_src_tbl,
+};
+
+DECLARE_PERI_CLK(pmu_bsc, PMU_BSC, PMU_BSC, crystal, 32*CLOCK_1K, 1, PERIPH_SEG_TRG, AON, KHUBAON, 0);
+
+/* KHUB peripheral clock */
+static struct clk *hub_clk_src_tbl[] =
+{
+	name_to_clk(crystal),
+	name_to_clk(var_312m),
+};
+
+static struct clk_src hub_clk_src = {
+	.total		=	ARRAY_SIZE(hub_clk_src_tbl),
+	.sel		=	1,
+	.parents	=	hub_clk_src_tbl,
+};
+
+DECLARE_PERI_CLK(hub, HUB, HUB, var_312m, 312*CLOCK_1M, 1, HUB_SEG_TRG, HUB, KHUB, 1);
 
 /* table for registering clock */
 struct clk_lookup island_clk_tbl[] =
 {
+#if 0
 	CLK_LK(arm),
+#endif
 
+	/* Reference clocks */
 	CLK_LK(crystal),
 	CLK_LK(frac_1m),
 	CLK_LK(ref_96m_varVDD),
 	CLK_LK(var_96m),
 	CLK_LK(ref_96m),
 	CLK_LK(var_500m_varVDD),
-
 	CLK_LK(ref_32k),
 	CLK_LK(misc_32k),
-
 	CLK_LK(ref_312m),
 	CLK_LK(ref_208m),
 	CLK_LK(ref_104m),
 	CLK_LK(ref_52m),
 	CLK_LK(ref_13m),
-
+	CLK_LK(ref_26m),
 	CLK_LK(var_312m),
 	CLK_LK(var_208m),
 	CLK_LK(var_156m),
 	CLK_LK(var_52m),
 	CLK_LK(var_13m),
-
 	CLK_LK(usbh_48m),
 	CLK_LK(ref_cx40),
 
-	CLK_LK(sdio1),
-	CLK_LK(sdio2),
-	CLK_LK(sdio3),
-	CLK_LK(sdio4),
+	/* CCUs */
+	CLK_LK(kpm_ccu),
+	CLK_LK(kps_ccu),
 
-	CLK_LK(bsc1),
-	CLK_LK(bsc2),
-
+	/* Bus clocks */
 	CLK_LK(sdio1_ahb),
 	CLK_LK(sdio2_ahb),
 	CLK_LK(sdio3_ahb),
@@ -378,36 +425,38 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(sdio4_sleep),
 	CLK_LK(bsc1_apb),
 	CLK_LK(bsc2_apb),
-
-	CLK_LK(kpm_ccu),
-	CLK_LK(kps_ccu),
-
-	CLK_LK(usb_otg),
-
+	CLK_LK(timers_apb),
+	CLK_LK(uartb_apb),
+	CLK_LK(uartb2_apb),
+	CLK_LK(uartb3_apb),
+	CLK_LK(pmu_bsc_apb),
 	CLK_LK(hsm_ahb),
 	CLK_LK(hsm_apb),
 	CLK_LK(spum_open_apb),
 	CLK_LK(spum_sec_apb),
+	CLK_LK(spum_open_apb),
+	CLK_LK(spum_sec_apb),
+	CLK_LK(dmac_mux_apb),
+	CLK_LK(ssp0_apb),
+	CLK_LK(pwm_apb),
+	CLK_LK(apb1),
+	CLK_LK(apb2),
 
+	/* Peripheral clocks */
+	CLK_LK(hub),
+	CLK_LK(sdio1),
+	CLK_LK(sdio2),
+	CLK_LK(sdio3),
+	CLK_LK(sdio4),
+	CLK_LK(bsc1),
+	CLK_LK(bsc2),
+	CLK_LK(usb_otg),
 	CLK_LK(uartb),
 	CLK_LK(uartb2),
 	CLK_LK(uartb3),
-	CLK_LK(uartb_apb),
-	CLK_LK(uartb2_apb),
-	CLK_LK(uartb3_apb),
-
-	CLK_LK(spum_open_apb),
-	CLK_LK(spum_sec_apb),
-	CLK_LK(apb1),
-	CLK_LK(timers_apb),
-	CLK_LK(ssp0_apb),
-	CLK_LK(dmac_mux_apb),
-
-	CLK_LK(pwm_apb),
+	CLK_LK(pmu_bsc),
 	CLK_LK(pwm),
-	CLK_LK(apb2),
 	CLK_LK(ssp0),
-
 	CLK_LK(timers),
 	CLK_LK(spum_open),
 	CLK_LK(spum_sec),

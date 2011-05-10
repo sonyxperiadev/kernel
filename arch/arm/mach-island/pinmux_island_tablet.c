@@ -22,95 +22,54 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
+#include <linux/kernel.h>
+#include <linux/init.h>
+#include <mach/pinmux.h>
 
-#ifndef __CHIP_PINMUX_H__
-#define __CHIP_PINMUX_H__
+static struct __init pin_config board_pin_config[] = {
+	/* BSC1 */
+        PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
+        PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
 
-/*
-*/
+        /* BSC2 */
+        PIN_BSC_CFG(BSC2_SCL, BSC2_SCL, 0x08),
+        PIN_BSC_CFG(BSC2_SDA, BSC2_SDA, 0x08),
 
-/* define ball name, generated from RDB */
-enum PIN_NAME {
-	PN_NAND_AD_5,
-	PN_NAND_AD_4,
-	PN_NAND_AD_3,
-	PN_NAND_AD_2,
-	PN_NAND_AD_1,
-	PN_NAND_AD_0,
+        /* PMU BSC */
+        PIN_BSC_CFG(PMU_SCL, PMU_SCL, 0x08),
+        PIN_BSC_CFG(PMU_SDA, PMU_SDA, 0x08),
 
-	PN_SDIO2_DATA_3,
-	PN_SDIO2_DATA_2,
-	PN_SDIO2_DATA_1,
-	PN_SDIO2_DATA_0,
-	PN_SDIO2_CMD,
-        PN_SDIO2_CLK,
+	/* SD/MMC */
+	PIN_CFG(NAND_AD_5,    SDIO3_DATA_2, 0, OFF, OFF, 0, 0, 12MA),
+	PIN_CFG(NAND_AD_4,    SDIO3_DATA_1, 0, OFF, OFF, 0, 0, 12MA),
+	PIN_CFG(NAND_AD_3,    SDIO3_CMD,    0, OFF, OFF, 0, 0, 12MA),
+	PIN_CFG(NAND_AD_2,    SDIO3_DATA_3, 0, OFF, OFF, 0, 0, 12MA),
+	PIN_CFG(NAND_AD_1,    SDIO3_CLK,    0, OFF, OFF, 0, 0, 12MA),
+	PIN_CFG(NAND_AD_0,    SDIO3_DATA_0, 0, OFF, OFF, 0, 0, 12MA),
 
-        PN_SDIO3_DATA_3,
-        PN_SDIO3_DATA_2,
-        PN_SDIO3_DATA_1,
-        PN_SDIO3_DATA_0,
-        PN_SDIO3_CMD,
-        PN_SDIO3_CLK,
+	/* eMMC */
+	PIN_CFG(SDIO2_DATA_3, SDIO2_DATA_3, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SDIO2_DATA_2, SDIO2_DATA_2, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SDIO2_DATA_1, SDIO2_DATA_1, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SDIO2_DATA_0, SDIO2_DATA_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SDIO2_CMD,    SDIO2_CMD,    0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(SDIO2_CLK,    SDIO2_CLK,    0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SDIO3_DATA_3, SDIO2_DATA_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(SDIO3_DATA_2, SDIO2_DATA_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(SDIO3_DATA_1, SDIO2_DATA_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(SDIO3_DATA_0, SDIO2_DATA_4, 0, OFF, OFF, 0, 0, 8MA),
 
-	PN_PMU_SCL,
-        PN_PMU_SDA,
-
-        PN_BSC2_SCL,
-        PN_BSC2_SDA,
-
-        PN_VC_CAM1_SCL,
-        PN_VC_CAM1_SDA,
-
-	PN_MAX
+	/* BSC */
+	PIN_CFG(PMU_SCL, PMU_SCL, 0, OFF, ON, 0, 0, 8MA),
+        PIN_CFG(PMU_SDA, PMU_SDA, 0, OFF, ON, 0, 0, 8MA),
 };
 
-/* define function name, order is not important */
-enum PIN_FUNC {
-	PF_RESERVED	=	0,
-	PF_GPIO,
+/* board level init */
+int __init pinmux_board_init(void)
+{
+	int i;
+	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
+		pinmux_set_pin_config(&board_pin_config[i]);
 
-	PF_NAND_AD_5,
-        PF_NAND_AD_4,
-        PF_NAND_AD_3,
-        PF_NAND_AD_2,
-        PF_NAND_AD_1,
-        PF_NAND_AD_0,
-	
-	PF_SDIO2_DATA_7,
-        PF_SDIO2_DATA_6,
-        PF_SDIO2_DATA_5,
-        PF_SDIO2_DATA_4,
-        PF_SDIO2_DATA_3,
-        PF_SDIO2_DATA_2,
-        PF_SDIO2_DATA_1,
-        PF_SDIO2_DATA_0,
-        PF_SDIO2_CMD,
-        PF_SDIO2_CLK,
-
-        PF_SDIO3_DATA_3,
-        PF_SDIO3_DATA_2,
-        PF_SDIO3_DATA_1,
-        PF_SDIO3_DATA_0,
-        PF_SDIO3_CMD,
-        PF_SDIO3_CLK,
-
-	PF_PMU_SCL,
-        PF_PMU_SDA,
-
-	PF_BSC1_SCL,
-        PF_BSC1_SDA,
-
-        PF_BSC2_SCL,
-        PF_BSC2_SDA,
-
-        PF_VC_CAM1_SCL,
-        PF_VC_CAM1_SDA,
-
-
-	PF_MAX
-};
-
-/* each Pin has up to 6 functions */
-#define	MAX_ALT_FUNC		6
-
-#endif /* __CHIP_PINMUX_H__ */
+	return 0;
+}
