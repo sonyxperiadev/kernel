@@ -383,9 +383,7 @@ DECLARE_PERI_CLK(hub, HUB, HUB, var_312m, 312*CLOCK_1M, 1, HUB_SEG_TRG, HUB, KHU
 /* table for registering clock */
 struct clk_lookup island_clk_tbl[] =
 {
-#if 0
 	CLK_LK(arm),
-#endif
 
 	/* Reference clocks */
 	CLK_LK(crystal),
@@ -466,7 +464,7 @@ int __init clock_init(void)
 {
 	int i;
 	for (i=0; i<ARRAY_SIZE(island_clk_tbl); i++)
-		clkdev_add (&island_clk_tbl[i]);
+		clk_register(&island_clk_tbl[i]);
 
 	return 0;
 }
