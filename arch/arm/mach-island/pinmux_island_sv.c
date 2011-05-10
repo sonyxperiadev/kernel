@@ -28,8 +28,8 @@
 
 static struct __init pin_config board_pin_config[] = {
 	/* BSC1 */
-        PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
-        PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
+ //       PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
+   //     PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
 
         /* BSC2 */
         PIN_BSC_CFG(BSC2_SCL, BSC2_SCL, 0x08),
