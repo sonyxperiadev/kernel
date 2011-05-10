@@ -10,8 +10,11 @@ MODULE_LICENSE("Dual BSD/GPL");
 
 #define CPDEBUG_PROCFS_NAME "cpdebug"
 
-int procfile_read(char *page, char **start, off_t offset, int count, int *eof, void *data) ;
-int procfile_write(struct file *file, const char *buffer, unsigned long count,		   void *data) ;
+static int procfile_read(char *page, char **start, 
+	off_t offset, int count, int *eof, void *data) ;
+
+static int procfile_write(struct file *file, const char *buffer, 
+	unsigned long count, void *data) ;
 
 static struct proc_dir_entry *g_cpdebug_procfile = 0 ;
 
@@ -105,7 +108,7 @@ static void safe_strncat( char *dst, const char *src, int len )
 	}
 }
 
-int procfile_read(char *page, char **start, off_t offset, int count, int *eof, void *data)
+static int procfile_read(char *page, char **start, off_t offset, int count, int *eof, void *data)
 {
 	char buf[80] ;
 	u16  idx ;
@@ -135,7 +138,7 @@ int procfile_read(char *page, char **start, off_t offset, int count, int *eof, v
 	return 1+strlen(page);
 }
 
-int procfile_write(struct file *file, const char *buffer, unsigned long count,
+static int procfile_write(struct file *file, const char *buffer, unsigned long count,
 		   void *data)
 {
 	static int cpdebug_started = 0 ;
