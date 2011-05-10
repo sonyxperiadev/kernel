@@ -247,6 +247,7 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
     {
 	sysrpc_initialized = 1; 
         KRIL_SysRpc_Init( ) ;
+        ATC_RegisterCPTerminal(0, TRUE);
     }
 #endif
 
