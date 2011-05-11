@@ -612,7 +612,10 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		return ret;
 	}
 #endif
-	/* Register ADC driver at the first */
+	/* Register FG driver */
+	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_FUELGAUGE)
+		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-fg");
+	/* Register ADC driver */
 	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_ADC)
 		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-saradc");
 	/* Register PowerOnKey device */
