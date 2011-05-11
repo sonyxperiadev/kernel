@@ -41,7 +41,6 @@
 #include <asm/gpio.h>
 
 #include <mach/kona.h>
-#include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <asm/io.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
@@ -51,6 +50,7 @@
 #include <linux/mfd/bcm590xx/pmic.h>
 
 #include <linux/smb380.h>
+#include "island.h"
 
 // #include <linux/regulator/machine.h>
 // #include <linux/regulator/consumer.h>

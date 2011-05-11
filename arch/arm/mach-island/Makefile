@@ -12,7 +12,7 @@
 # consent.
 #*****************************************************************************
 
-obj-y := io_map.o island.o ipc_chip.o island_pinmux.o
+obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
 
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o

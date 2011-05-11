@@ -45,7 +45,6 @@
 
 #include <mach/hardware.h>
 #include <mach/kona.h>
-#include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
@@ -63,6 +62,8 @@
 #include <linux/broadcom/ipcinterface.h>
 
 #include <linux/power_supply.h>
+
+#include "island.h"
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to

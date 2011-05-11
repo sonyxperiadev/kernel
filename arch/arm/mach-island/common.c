@@ -22,89 +22,58 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
-
-#include <linux/ipc/ipc_chip.h>
-#include <linux/irq.h>
-#include <linux/io.h>
+#include <linux/init.h>
+#include <linux/device.h>
 #include <linux/platform_device.h>
+#include <linux/serial_8250.h>
+#include <asm/mach-types.h>
+#include <mach/hardware.h>
+#include <mach/kona.h>
+#include <mach/rdb/brcm_rdb_uartb.h>
 
-#include <asm/bug.h>
+#define KONA_UART0_PA   UARTB_BASE_ADDR
+#define KONA_UART1_PA   UARTB2_BASE_ADDR
+#define KONA_UART2_PA   UARTB3_BASE_ADDR
+#define KONA_UART3_PA   UARTB4_BASE_ADDR
 
-#include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_ipcopen.h>
+#define UARTB_USR_OFFSET	0x0000007C
 
-#include "island.h"
+#define KONA_8250PORT(name)                                                   \
+{                                                                             \
+   .membase    = (void __iomem *)(KONA_##name##_VA),                          \
+   .mapbase    = (resource_size_t)(KONA_##name##_PA),                         \
+   .irq        = BCM_INT_ID_##name,                                           \
+   .uartclk    = 13000000,                                                    \
+   .regshift   = 2,                                                           \
+   .iotype     = UPIO_DWAPB,                                                  \
+   .type       = PORT_16550A,                                                 \
+   .flags      = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,          \
+   .private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET),   \
+}
 
-#define VC4_IPC_PHYS_ADDR_BASE	0x60040000UL
-#define ARM_IPC_PHYS_ADDR_BASE	0x34040000UL
-
-#define ISLAND_VC_IPC_BLOCK_PHYS_BASE		((ARM_IPC_PHYS_ADDR_BASE) + 0x0)
-#define ISLAND_VC_IPC_BLOCK_SIZE		(SZ_128K)
-
-static struct resource ipc_resource[] = {
-   [0] = {
-      .start = ISLAND_VC_IPC_BLOCK_PHYS_BASE,
-      .end =  (ISLAND_VC_IPC_BLOCK_PHYS_BASE) + (ISLAND_VC_IPC_BLOCK_SIZE) - 1,
-      .flags = IORESOURCE_MEM,
-   },
-   [1] = {
-      .start = BCM_INT_ID_IPC_OPEN,
-      .end = BCM_INT_ID_IPC_OPEN,
-      .flags = IORESOURCE_IRQ,
-   },
+static struct plat_serial8250_port uart_data[] = {
+	KONA_8250PORT(UART0),
+	KONA_8250PORT(UART1),
+	KONA_8250PORT(UART2),
+	KONA_8250PORT(UART3),
+	{ .flags = 0, },
 };
 
-
-static u32 gpu_to_host_phys_addr(u32 gpu_addr)
-{
-	WARN_ON(gpu_addr < (VC4_IPC_PHYS_ADDR_BASE));
-
-	return gpu_addr - (VC4_IPC_PHYS_ADDR_BASE) + (ARM_IPC_PHYS_ADDR_BASE);
-}
-
-static void clear_doorbell_irq(void)
-{
-
-}
-
-static void ring_doorbell_irq(void)
-{
-
-}
-
-static u32 read_and_ack_req_atomic(u32 virt_base)
-{
-	u32 req;
-
-	(void)virt_base;
-	req = readl((KONA_IPC_NS_VA) + (IPCOPEN_IPCASTATUS_OFFSET));
-	writel(req, (KONA_IPC_NS_VA) + (IPCOPEN_IPCACLR_OFFSET));
-	return req;
-}
-
-static void send_req_atomic(u32 req, u32 virt_base)
-{
-	(void)virt_base;
-	writel(req, (KONA_IPC_NS_VA) + (IPCOPEN_IPCASET_OFFSET));
-}
-
-static struct ipc_chip ipc_chip = {
-	32,
-	IRQ_IPC_0,
-	&gpu_to_host_phys_addr,
-	&clear_doorbell_irq,
-	&ring_doorbell_irq,
-	&read_and_ack_req_atomic,
-	&send_req_atomic,
-	NULL,
-	NULL,
-};
-
-struct platform_device island_ipc_device = {
-	.name = "IPC",
-	.resource = ipc_resource,
-	.num_resources = ARRAY_SIZE(ipc_resource),
+static struct platform_device board_serial_device = {
+	.name = "serial8250",
+	.id = PLAT8250_DEV_PLATFORM,
 	.dev = {
-		.platform_data = &ipc_chip,
+		.platform_data = uart_data,
 	},
 };
+
+/* Common devices among all Island boards */
+static struct platform_device *board_common_plat_devices[] __initdata = {
+	&board_serial_device,
+};
+
+void __init board_add_common_devices(void)
+{
+	platform_add_devices(board_common_plat_devices,
+			ARRAY_SIZE(board_common_plat_devices));
+}

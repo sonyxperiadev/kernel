@@ -24,7 +24,6 @@
 /************************************************************************************************/
 
 #include <linux/init.h>
-#include <linux/serial_8250.h>
 #include <linux/kernel.h>
 #include <linux/cpumask.h>
 #include <linux/mfd/bcm590xx/core.h>
@@ -33,55 +32,12 @@
 #include <asm/mach/map.h>
 #include <asm/hardware/cache-l2x0.h>
 
-#include <mach/island.h>
 #include <mach/io_map.h>
 #include <mach/clock.h>
 #include <mach/gpio.h>
 #include <mach/timer.h>
 #include <mach/kona.h>
 #include <mach/pinmux.h>
-#include <mach/rdb/brcm_rdb_uartb.h>
-
-
-#define KONA_UART0_PA   UARTB_BASE_ADDR
-#define KONA_UART1_PA   UARTB2_BASE_ADDR
-#define KONA_UART2_PA   UARTB3_BASE_ADDR
-#define KONA_UART3_PA   UARTB4_BASE_ADDR
-
-#define UARTB_USR_OFFSET	0x0000007C
-
-#define KONA_8250PORT(name)                                                   \
-{                                                                             \
-   .membase    = (void __iomem *)(KONA_##name##_VA),                          \
-   .mapbase    = (resource_size_t)(KONA_##name##_PA),                         \
-   .irq        = BCM_INT_ID_##name,                                           \
-   .uartclk    = 13000000,                                                    \
-   .regshift   = 2,                                                           \
-   .iotype     = UPIO_DWAPB,                                                  \
-   .type       = PORT_16550A,                                                 \
-   .flags      = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,          \
-   .private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET),   \
-}
-
-static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT(UART0),
-	KONA_8250PORT(UART1),
-	KONA_8250PORT(UART2),
-	KONA_8250PORT(UART3),
-	{ .flags = 0, },
-};
-
-static struct platform_device board_serial_device = {
-	.name = "serial8250",
-	.id = PLAT8250_DEV_PLATFORM,
-	.dev = {
-		.platform_data = uart_data,
-	},
-};
-
-static struct platform_device *board_devices[] __initdata = {
-	&board_serial_device,
-};
 
 static void island_poweroff(void)
 {
@@ -111,7 +67,7 @@ static void __init island_l2x0_init(void)
 }
 #endif
 
-void __init island_init(void)
+static void __init island_init(void)
 {
 	pm_power_off = island_poweroff;
 	arm_pm_restart = island_restart;
@@ -147,10 +103,3 @@ static void __init island_timer_init(void)
 struct sys_timer kona_timer = {
         .init   = island_timer_init,
 };
-
-void __init island_add_common_devices(void)
-{
-	platform_add_devices(board_devices, ARRAY_SIZE(board_devices));
-}
-
-

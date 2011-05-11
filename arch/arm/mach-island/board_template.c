@@ -41,12 +41,13 @@
 #include <sdio_settings.h>
 #include <i2c_settings.h>
 
-#include <mach/island.h>
-
 #if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
 #include <linux/i2c/egalax_i2c_ts.h>
 #include <egalax_i2c_ts_settings.h>
 #endif
+
+#include "island.h"
+#include "common.h"
 
 #ifndef ISLAND_BOARD_ID
 #error ISLAND_BOARD_ID needs to be defined in board_xxx.c
@@ -376,7 +377,7 @@ static void __init board_init(void)
 	 * Add common platform devices that do not have board dependent HW
 	 * configurations
 	 */
-	island_add_common_devices();
+	board_add_common_devices();
 
 	/* add devices with board dependent HW configurations */
 	add_devices();
