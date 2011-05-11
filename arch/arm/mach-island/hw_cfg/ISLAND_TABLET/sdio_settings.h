@@ -44,6 +44,7 @@
    { /* SDIO1 */ \
       .id = 1, \
       .data_pullup = 0, \
+	.is_8bit =1, \
       .peri_clk_name = "sdio2_clk", \
       .ahb_clk_name = "sdio2_ahb_clk", \
       .sleep_clk_name = "sdio2_sleep_clk", \
