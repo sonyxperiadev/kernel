@@ -38,26 +38,3 @@ config MACH_ISLAND_TABLET
 endchoice
 
 endmenu
-
-menu "Platform Configurations"
-
-config BCM_ZRELADDR
-	hex "Compressed ZREL ADDR"
-
-config BCM_PARAMS_PHYS
-	hex "Address where tagged parameters are to be found"
-
-config BCM_RAM_BASE
-	hex "RAM base address"
-	help
-	 Set the physical base address of RAM
-
-config BCM_RAM_START_RESERVED_SIZE
-	hex "RAM start reserved memory size in bytes"
-	default 0
-	help
-	 Reserve memory at the start of RAM. This memory
-	 may be used for LCD frame buffer, DSP, etc. 
-
-endmenu
-
