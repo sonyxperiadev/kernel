@@ -58,6 +58,9 @@
 #include <mach/bcm_keypad.h>
 #endif
 
+#define _SAMOA_  /* needed by platform_mconfig.h */
+#include <linux/broadcom/bcm_fuse_memmap.h>
+#include <linux/broadcom/platform_mconfig.h>
 
 // keypad map
 #define BCM_KEY_ROW_0  0
@@ -335,10 +338,6 @@ void __init board_configure(void)
 }
 
 #ifndef CONFIG_MACH_SAMOA_FPGA
-#include <linux/broadcom/bcm_fuse_memmap.h>
-//#include <linux/broadcom/platform_mconfig.h>
-#define IPC_BASE 0x81E00000 // in platform_mconfig.h
-#define IPC_SIZE 0x00200000 // in platform_mconfig.h
 static void Comms_Start(void)
 {
     void __iomem *apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
