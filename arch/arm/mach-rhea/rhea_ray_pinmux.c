@@ -73,8 +73,6 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 
@@ -97,6 +95,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT01, PTI_DAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(TRACEDT02, PTI_DAT2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
+		
+	/* Camera */
+	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),	
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),

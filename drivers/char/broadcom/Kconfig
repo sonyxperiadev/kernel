@@ -19,3 +19,15 @@ config BRCM_FUSE_LOG
 	default BRCM_CHAR_DRIVERS
 	--help---
 	  Broadcom FUSE LOG drivers
+	  
+    
+config ISP
+	tristate "ISP Driver"
+	depends on BRCM_CHAR_DRIVERS
+	default BRCM_CHAR_DRIVERS   
+
+config UNICAM
+	tristate "UNICAM Driver"
+	depends on BRCM_CHAR_DRIVERS
+	default BRCM_CHAR_DRIVERS 	
+
