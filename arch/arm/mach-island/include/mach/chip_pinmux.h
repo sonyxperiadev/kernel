@@ -31,6 +31,14 @@
 
 /* define ball name, generated from RDB */
 enum PIN_NAME {
+	/* WiFi SDIO */
+        PN_NORFLSH_AD_03,
+	PN_NORFLSH_AD_02,
+	PN_NORFLSH_AD_01,
+	PN_NORFLSH_AD_00,
+	PN_NORFLSH_RDY,
+	PN_NORFLSH_CLK_N,
+
 	PN_NAND_AD_5,
 	PN_NAND_AD_4,
 	PN_NAND_AD_3,
@@ -69,12 +77,26 @@ enum PIN_FUNC {
 	PF_RESERVED	=	0,
 	PF_GPIO,
 
+	PF_NORFLSH_AD_03,
+        PF_NORFLSH_AD_02,
+        PF_NORFLSH_AD_01,
+        PF_NORFLSH_AD_00,
+        PF_NORFLSH_RDY,
+        PF_NORFLSH_CLK_N,
+
 	PF_NAND_AD_5,
         PF_NAND_AD_4,
         PF_NAND_AD_3,
         PF_NAND_AD_2,
         PF_NAND_AD_1,
         PF_NAND_AD_0,
+
+	PF_SDIO1_DATA_3,
+        PF_SDIO1_DATA_2,
+        PF_SDIO1_DATA_1,
+        PF_SDIO1_DATA_0,
+        PF_SDIO1_CMD,
+        PF_SDIO1_CLK,
 	
 	PF_SDIO2_DATA_7,
         PF_SDIO2_DATA_6,

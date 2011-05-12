@@ -284,11 +284,10 @@ static void __init add_sdio_device(void)
 
       if (id < MAX_SDIO_DEVICES)
       {
-#if 0
          if (sdio_param[i].devtype == SDIO_DEV_TYPE_WIFI)
          {
             struct sdio_wifi_gpio_cfg *wifi_gpio =
-               &sdio_param[i].dev_option.wifi_gpio;
+               &sdio_param[i].wifi_gpio;
 
 #ifdef HW_WLAN_GPIO_RESET_PIN
             wifi_gpio->reset = HW_WLAN_GPIO_RESET_PIN;
@@ -311,8 +310,6 @@ static void __init add_sdio_device(void)
             wifi_gpio->host_wake = -1;
 #endif
          }
-#endif
-
          sdio_devices[id].dev.platform_data = &sdio_param[i];
          platform_device_register(&sdio_devices[id]);
       }
