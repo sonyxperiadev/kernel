@@ -2610,7 +2610,7 @@ fail_0:
 	return error;
 }
 
-module_init(dhd_module_init);
+late_initcall(dhd_module_init);
 module_exit(dhd_module_cleanup);
 
 /*
