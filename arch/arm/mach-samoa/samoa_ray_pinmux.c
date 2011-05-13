@@ -27,6 +27,10 @@
 #include "mach/pinmux.h"
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+#include <mach/io_map.h>
+#endif
+
 static struct __init pin_config board_pin_config[] = {
 
 #ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
@@ -95,6 +99,21 @@ int __init pinmux_board_init(void)
 	int i;
 	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
 		pinmux_set_pin_config(&board_pin_config[i]);
+
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+	{
+	// Pre-bringup Samoa pinmux does not initialize GPIO0-15.
+	// So hack it in here for Rhearay.
+	// Note: Rhea GPIO0-15 pad ctrl registers at 0x3c-7C.
+	//
+	volatile unsigned int *pc;
+	pc = (unsigned int *) (KONA_PAD_CTRL_VA + 0x3C); // first GPIO
+
+	for (i=0x3C; i<0x7C; i+=4,pc++) {
+		*pc = 0x123;  // keypad function selected
+	}
+	}
+#endif
 
 	return 0;
 }
