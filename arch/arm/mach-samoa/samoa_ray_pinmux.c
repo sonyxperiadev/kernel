@@ -27,6 +27,10 @@
 #include "mach/pinmux.h"
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+#include <mach/io_map.h>
+#endif
+
 static struct __init pin_config board_pin_config[] = {
 
 	/* BSC1 CLK This a hack for rhearay*/
@@ -38,6 +42,8 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_BSC_CFG(GPIO22, LCD_SCL, 0x20),
 	/* BSC2 DAT*/
 	PIN_BSC_CFG(GPIO23, DMIC0CLK, 0x20),
+
+
 
 #if 0  /* To be update for SamoaRay*/
 	/* PMU BSC */
@@ -68,15 +74,20 @@ static struct __init pin_config board_pin_config[] = {
 	/* GPIO74 for TCA9539 IO expander */
 	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
 
-	/*	Pinmux for keypad
-		Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
-		GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
-		using GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
-		GPIO15 */
+	/*	Pinmux for keypad (ready for SamoaRay bringup)
+		Keypad set up for full 8x8 matrix, but keymap defines only 12 keys. */
+	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO01, KEY_R1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO02, KEY_R2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO03, KEY_C0, 0, OFF, ON, 0, 0, 8MA),   // reminder: shuffled
 	PIN_CFG(GPIO04, KEY_R4, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO07, KEY_R3, 0, OFF, ON, 0, 0, 8MA),   // reminder: shuffled
+	PIN_CFG(GPIO08, KEY_R7, 0, OFF, ON, 0, 0, 8MA),   // reminder: shuffled
+	PIN_CFG(GPIO09, KEY_C1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO10, KEY_C2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO11, KEY_C3, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
@@ -91,14 +102,6 @@ static struct __init pin_config board_pin_config[] = {
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDSDA, LCDD0, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO00, LCDD15, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO01, LCDD14, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO02, LCDD13, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO03, LCDD12, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO08, LCDD11, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO09, LCDD10, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO10, LCDD9, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO11, LCDD8, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO18, LCDCS1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO19, LCDWE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO20, LCDRE, 0, OFF, ON, 0, 0, 8MA),
@@ -119,6 +122,21 @@ int __init pinmux_board_init(void)
 	int i;
 	for (i=0; i<ARRAY_SIZE(board_pin_config); i++)
 		pinmux_set_pin_config(&board_pin_config[i]);
+
+#ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
+	{
+	// Pre-bringup Samoa pinmux does not initialize GPIO0-15.
+	// So hack it in here for Rhearay.
+	// Note: Rhea GPIO0-15 pad ctrl registers at 0x3c-7C.
+	//
+	volatile unsigned int *pc;
+	pc = (unsigned int *) (KONA_PAD_CTRL_VA + 0x3C); // first GPIO
+
+	for (i=0x3C; i<0x7C; i+=4,pc++) {
+		*pc = 0x123;  // keypad function selected
+	}
+	}
+#endif
 
 	return 0;
 }
