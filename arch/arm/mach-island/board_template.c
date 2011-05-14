@@ -46,6 +46,11 @@
 #include <egalax_i2c_ts_settings.h>
 #endif
 
+#if defined(CONFIG_NET_ISLAND)
+#include <mach/net_platform.h>
+#include <net_settings.h>
+#endif
+
 #include "island.h"
 #include "common.h"
 
@@ -153,6 +158,32 @@ static struct platform_device sdio_devices[MAX_SDIO_DEVICES] =
       .num_resources    = ARRAY_SIZE(sdio1_resource),
    },
 };
+
+#if defined(CONFIG_NET_ISLAND)
+#define board_island_net_data concatenate(ISLAND_BOARD_ID, _island_net_data)
+static struct island_net_hw_cfg board_island_net_data =
+#ifdef HW_CFG_ISLAND_NET
+   HW_CFG_ISLAND_NET;
+#else
+{
+   .addrPhy0 = 0,
+   .addrPhy1 = 1,
+   .gpioPhy0 = -1,
+   .gpioPhy1 = -1,
+};
+#endif
+
+#define board_net_device concatenate(ISLAND_BOARD_ID, _net_device)
+static struct platform_device board_net_device =
+{
+   .name = "island-net",
+   .id = -1,
+   .dev =
+   {
+      .platform_data = &board_island_net_data,
+   },
+};
+#endif /* CONFIG_NET_ISLAND */
 
 static struct bsc_adap_cfg i2c_adap_param[] =
 #ifdef HW_I2C_ADAP_PARAM
@@ -365,6 +396,10 @@ static void __init add_devices(void)
 
 #ifdef HW_I2C_ADAP_PARAM
 	add_i2c_device();
+#endif
+
+#ifdef CONFIG_NET_ISLAND
+	platform_device_register(&board_net_device);
 #endif
 }
 

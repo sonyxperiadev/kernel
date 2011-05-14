@@ -170,7 +170,6 @@ void __init kona_timer_modules_init (void)
 
 	return;
 }
-EXPORT_SYMBOL(kona_timer_modules_init);
 
 /*
  * kona_timer_module_set_rate - Set the speed in which a timer module should count
