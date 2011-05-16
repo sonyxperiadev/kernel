@@ -418,7 +418,7 @@ static struct resource kona_sspi_spi0_resource[] = {
 };
 
 static struct spi_kona_platform_data sspi_spi0_info = {
-	.enable_dma = 0,
+	.enable_dma = 1,
 	.cs_line = 1,
 	.mode = SPI_LOOP | SPI_MODE_3,
 };
