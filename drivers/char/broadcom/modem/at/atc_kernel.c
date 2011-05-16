@@ -247,7 +247,7 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
     {
 	sysrpc_initialized = 1; 
         KRIL_SysRpc_Init( ) ;
-        ATC_RegisterCPTerminal(0, TRUE);
+        ATC_ATRPCInit();
     }
 #endif
 
@@ -800,7 +800,8 @@ static int __init ATC_KERNEL_ModuleInit(void)
     }
 
     // Initialize AT RPC channel
-    ATC_ATRPCInit();
+    // Delay initialization until Open, or else kernel fails to boot.
+//    ATC_ATRPCInit();
     
     ATC_KERNEL_TRACE(("exit ATC_KERNEL_ModuleInit()\n"));
     return 0;
