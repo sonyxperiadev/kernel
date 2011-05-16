@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Thu May  5 10:46:10 2011
+# Sun May 15 18:08:33 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -264,7 +264,7 @@ CONFIG_KONA_DCACHE_INVALIDATION=y
 #
 CONFIG_MACH_SAMOA_RAY=y
 # CONFIG_MACH_SAMOA_FPGA is not set
-CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY=y
+# CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY is not set
 
 #
 # Processor Type

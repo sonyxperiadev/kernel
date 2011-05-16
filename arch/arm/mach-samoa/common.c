@@ -72,7 +72,10 @@
 }
 
 static struct plat_serial8250_port uart_data[] = {
+#if !defined(CONFIG_MACH_SAMOA_RAY) || defined(CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY)
+	/* SamoaRay UARTA RX has problem. Don't register it for now */
 	KONA_8250PORT(UART0),
+#endif
 	KONA_8250PORT(UART1),
 	KONA_8250PORT(UART2),
 	{
