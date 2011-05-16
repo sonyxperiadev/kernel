@@ -50,6 +50,18 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_BSC_CFG(BSC2_CLK, BSC2_CLK, 0x20),
 	PIN_BSC_CFG(BSC2_DAT, BSC2_DAT, 0x20),
 
+	/* UARTA */
+	PIN_CFG(UARTA_CTS_N, UARTA_CTS_N, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(UARTA_RTS_N, UARTA_RTS_N, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(UARTA_RX, UARTA_RX, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(UARTA_TX, UARTA_TX, 0, OFF, ON, 0, 0, 8MA),
+
+	/* UARTB */
+	PIN_CFG(GPIO20, UB2TX, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO21, UB2RX, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO23, UB2CTSN, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO24, UB2RTSN, 0, OFF, ON, 0, 0, 8MA),
+
 	/* eMMC */
 	PIN_CFG(MMC_CLK, MMC1_CLK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(MMC_CMD, MMC1_CMD, 0, OFF, ON, 0, 0, 8MA),
@@ -63,15 +75,13 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(MMC_DAT1, MMC1_DAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(MMC_DAT0, MMC1_DAT0, 0, OFF, ON, 0, 0, 8MA),
 
-	/* Micro SD Muxed with JTAG*/
-	/*
+	/* Micro SD */
 	PIN_CFG(SD_CLK, MMC0_CLK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SD_CMD, MMC0_CMD, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SD_DAT3, MMC0_DAT3, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SD_DAT2, MMC0_DAT2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SD_DAT1, MMC0_DAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SD_DAT0, MMC0_DAT0, 0, OFF, ON, 0, 0, 8MA),
-    */
 
 	/*	Pinmux for keypad */
 	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
