@@ -5,15 +5,16 @@ EXTRA_CFLAGS += -D_RHEA_
 EXTRA_CFLAGS += -DCONFIG_BRCM_FUSE_IPC_CIB
 EXTRA_CFLAGS += -DBCM_INT_ID_RESERVED36=36
 
-obj-y += ipc_buffer.o
-obj-y += ipc_bufferpool.o
-obj-y += ipc_powersaving.o
-obj-y += ipc_queues.o
-obj-y += ipc_sharedmemory.o
-obj-y += ipc_smbuffers.o
-obj-y += ipc_trace.o
-obj-y += ipc_server.o
-obj-y += ipc_server_ccb.o
-obj-y += ipc_stubs.o
-obj-y += lnx_support.o
-obj-y += irq_apcp.o
+obj-$(CONFIG_BCM_MODEM) += \
+	ipc_buffer.o \
+	ipc_bufferpool.o \
+	ipc_powersaving.o \
+	ipc_queues.o \
+	ipc_sharedmemory.o \
+	ipc_smbuffers.o \
+	ipc_trace.o \
+	ipc_server.o \
+	ipc_server_ccb.o \
+	ipc_stubs.o \
+	lnx_support.o \
+	irq_apcp.o

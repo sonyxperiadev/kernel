@@ -62,7 +62,6 @@
 #include "meas_mgr.h"
 #include "sys_common_rpc.h"
 #include "sys_gen_rpc.h"
-#include "log.h"
 #include "sys_rpc.h"
 #ifndef UNDER_LINUX
 #include "xassert.h"

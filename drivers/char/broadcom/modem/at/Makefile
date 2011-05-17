@@ -11,4 +11,5 @@ EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/public/
 EXTRA_CFLAGS += -DRPC_INCLUDED
 EXTRA_CFLAGS += -DUNDER_LINUX
 
-obj-y += atc_kernel.o
+obj-$(CONFIG_BCM_MODEM) += \
+	atc_kernel.o

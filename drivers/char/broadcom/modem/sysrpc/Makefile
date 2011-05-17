@@ -23,7 +23,7 @@ EXTRA_CFLAGS += -DCONFIG_BRCM_FUSE_RIL_CIB
 EXTRA_CFLAGS += -DRPC_INCLUDED
 EXTRA_CFLAGS += -DUNDER_LINUX
 
-obj-y += \
+obj-$(CONFIG_BCM_MODEM) += \
 	sysrpc.o \
 	bcm_kril_sysrpc_handler.o \
 	sysrpc-capi/ \
