@@ -48,6 +48,9 @@ the GPL, without Broadcom's express prior written consent.
 
 #define MEM_SLOT_UNAVAILABLE		(0xFFFF)
 
+/* Always check for idle at every reset:  TODO: make this configurable? */
+#define V3D_RESET_IMPLIES_ASSERT_IDLE
+
 //#define V3D_DEBUG
 #ifdef V3D_DEBUG
 	#define dbg_print(fmt, arg...) \
@@ -155,11 +158,52 @@ static int setup_v3d_clock(void)
 	return (rc);
 }
 
+static void assert_idle_nolock(void)
+{
+	uint32_t pcs;
+	uint32_t srqcs;
+	uint8_t qpurqcc;
+	uint8_t qpurqcm;
+	bool not_idle;
+
+	pcs = readl(v3d_base + V3D_PCS_OFFSET);
+	srqcs = readl(v3d_base + V3D_SRQCS_OFFSET);
+	qpurqcc = (srqcs & V3D_SRQCS_QPURQCC_MASK) >> V3D_SRQCS_QPURQCC_SHIFT;
+	qpurqcm = (srqcs & V3D_SRQCS_QPURQCM_MASK) >> V3D_SRQCS_QPURQCM_SHIFT;
+
+	not_idle = ((pcs & V3D_PCS_RMACTIVE_MASK) != 0 ||
+		    (pcs & V3D_PCS_BMACTIVE_MASK) != 0 ||
+		    (srqcs & V3D_SRQCS_QPURQL_MASK) > 0 ||
+		    qpurqcc != qpurqcm);
+
+	if (not_idle)
+	{
+		err_print("v3d block is not idle\n");
+
+		dbg_print("v3d.c: pcs = 0x%08X\n", pcs);
+		dbg_print("v3d.c: srqcs = 0x%08X\n", srqcs);
+		dbg_print("v3d.c: qpurqcc = 0x%02X\n", qpurqcc);
+		dbg_print("v3d.c: qpurqcm = 0x%02X\n", qpurqcm);
+	}
+	BUG_ON(not_idle);
+}
+
+static void assert_v3d_is_idle(void)
+{
+	down(&v3d_state.work_lock);
+	assert_idle_nolock();
+	up(&v3d_state.work_lock);
+}
+
 static void reset_v3d(void)
 {
 	uint32_t value;
 
 	down(&v3d_state.work_lock);
+
+#ifdef V3D_RESET_IMPLIES_ASSERT_IDLE
+	assert_idle_nolock();
+#endif
 
 	clk_disable(v3d_clk);
 	//Write the password to enable accessing other registers
@@ -381,6 +425,12 @@ static int v3d_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, u
 			v3d_state.g_irq_sem = NULL;		//Free up the g_irq_sem
 			dev->v3d_acquired = 0;	//Not acquired anymore
 			up(&v3d_state.acquire_sem);		//V3D is up for grab
+		}
+		break;
+
+		case V3D_IOCTL_ASSERT_IDLE:
+		{
+			assert_v3d_is_idle();
 		}
 		break;
 
