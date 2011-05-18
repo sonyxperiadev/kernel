@@ -69,11 +69,10 @@ EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/csl/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/osabstract/
 
 obj-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)		+= snd-brcm-omx.o
-snd-brcm-omx-objs := brcm_alsa_dev.o 
+snd-brcm-omx-objs := caph_module.o 
 snd-brcm-omx-objs += brcm_auddrv_test.o
-snd-brcm-omx-objs += brcm_alsa_ctl.o
-snd-brcm-omx-objs += brcm_alsa_pcm.o
-snd-brcm-omx-objs += brcm_alsa_ctl.o
+snd-brcm-omx-objs += caph_ctl.o
+snd-brcm-omx-objs += caph_pcm.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_caph.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_common.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_gain_table.o

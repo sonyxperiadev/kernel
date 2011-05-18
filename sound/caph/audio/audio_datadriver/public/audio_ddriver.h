@@ -106,7 +106,16 @@ typedef struct AUDIO_DRIVER_BUFFER_t
 typedef void*  AUDIO_DRIVER_HANDLE_t;
 
 
-typedef void (*AUDIO_DRIVER_InterruptPeriodCB_t)( AUDIO_DRIVER_HANDLE_t drv_handle);
+typedef void (*AUDIO_DRIVER_InterruptPeriodCB_t)( void * p);
+
+typedef struct AUDIO_DRIVER_CallBackParams_t
+{
+	AUDIO_DRIVER_InterruptPeriodCB_t	pfCallBack;
+	void	*pPrivateData;
+
+}AUDIO_DRIVER_CallBackParams_t;
+
+
 
 /**
 *  @brief  This function is used to open the audio data driver

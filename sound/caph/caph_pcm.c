@@ -44,57 +44,27 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 
-#include "brcm_alsa.h"
-
-
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
+
 #include "auddrv_def.h"
-
-#include "brcm_audio_thread.h"
-
 // Include BRCM AAUD driver API header files
 #include "audio_controller.h"
 #include "audio_ddriver.h"
 
 #include "brcm_audio_devices.h"
+#include "brcm_audio_thread.h"
+#include "caph_common.h"
 
 
 #define VOICE_CALL_SUB_DEVICE 8
 
-TIDChanOfPlaybackDev	sgTableIDChannelOfDev[] = {
-	{AUDIO_DRIVER_PLAY_AUDIO, AUDIO_HW_EARPIECE_OUT, AUDCTRL_SPK_HANDSET, AUDDRV_DEV_EP},//earpiece  normal
-	{AUDIO_DRIVER_PLAY_RINGER, AUDIO_HW_EARPIECE_OUT, AUDCTRL_SPK_HANDSET, AUDDRV_DEV_EP},//earpiece ringtone
-	{AUDIO_DRIVER_PLAY_AUDIO, AUDIO_HW_IHF_OUT, AUDCTRL_SPK_LOUDSPK, AUDDRV_DEV_IHF},//spk normal
-	{AUDIO_DRIVER_PLAY_RINGER, AUDIO_HW_IHF_OUT, AUDCTRL_SPK_LOUDSPK, AUDDRV_DEV_IHF},//spk ringtone
-	{AUDIO_DRIVER_PLAY_AUDIO, AUDIO_HW_HEADSET_OUT, AUDCTRL_SPK_HEADSET, AUDDRV_DEV_HS},//headset  normal
-	{AUDIO_DRIVER_PLAY_RINGER, AUDIO_HW_HEADSET_OUT, AUDCTRL_SPK_HEADSET, AUDDRV_DEV_HS},//headset ringtone
-	{AUDIO_DRIVER_PLAY_BT, AUDIO_HW_AUDIO_OUT, AUDCTRL_SPK_BTM, AUDDRV_DEV_BT_SPKR},//bt headset  normal
-	{AUDIO_DRIVER_PLAY_BT, AUDIO_HW_AUDIO_OUT, AUDCTRL_SPK_BTM, AUDDRV_DEV_BT_SPKR}//bt headset ringtone
-};
-
-
-TIDChanOfCaptureDev	sgTableIDChannelOfCaptDev[] = {
-	{AUDIO_DRIVER_CAPT_HQ, AUDIO_HW_AUDIO_IN, AUDCTRL_MIC_MAIN,AUDDRV_DEV_ANALOG_MIC},
-	{AUDIO_DRIVER_CAPT_HQ, AUDIO_HW_AUDIO_IN, AUDCTRL_MIC_AUX,AUDDRV_DEV_HS_MIC},
-	{AUDIO_DRIVER_CAPT_HQ, AUDIO_HW_AUDIO_IN, AUDCTRL_MIC_DIGI1,AUDDRV_DEV_DIGI_MIC_L},
-	{AUDIO_DRIVER_CAPT_HQ, AUDIO_HW_AUDIO_IN, AUDCTRL_MIC_DIGI2,AUDDRV_DEV_DIGI_MIC_R},
-	{AUDIO_DRIVER_CAPT_VOICE, AUDIO_HW_VOICE_IN, AUDCTRL_MIC_MAIN,AUDDRV_DEV_ANALOG_MIC},//mic normal
-	{AUDIO_DRIVER_CAPT_VOICE, AUDIO_HW_VOICE_IN, AUDCTRL_MIC_AUX,AUDDRV_DEV_HS_MIC},//mic aux
-};
-
-static TIDChanOfVoiceCallDev	sgTableIDChannelOfVoiceCallDev[] = {
-	{AUDIO_HW_VOICE_IN, AUDCTRL_MIC_MAIN, AUDIO_HW_VOICE_OUT,AUDCTRL_SPK_LOUDSPK},//incall speaker
-    {AUDIO_HW_VOICE_IN, AUDCTRL_MIC_MAIN, AUDIO_HW_VOICE_OUT,AUDCTRL_SPK_HANDSET},//incall earpiece
-    {AUDIO_HW_VOICE_IN, AUDCTRL_MIC_AUX, AUDIO_HW_VOICE_OUT,AUDCTRL_SPK_HEADSET},//incall headset
-    {AUDIO_HW_VOICE_IN, AUDCTRL_MIC_BTM, AUDIO_HW_VOICE_OUT,AUDCTRL_SPK_BTM},//incall bt
-};
 
 
 int audio_init_complete = 0;
-#define	NUM_PLAYBACK_SUBDEVICE	(sizeof(sgTableIDChannelOfDev)/sizeof(sgTableIDChannelOfDev[0]))  + (sizeof(sgTableIDChannelOfVoiceCallDev)/sizeof(sgTableIDChannelOfVoiceCallDev[0]))
-#define	NUM_CAPTURE_SUBDEVICE	(sizeof(sgTableIDChannelOfCaptDev)/sizeof(sgTableIDChannelOfCaptDev[0]))  
+#define	NUM_PLAYBACK_SUBDEVICE	3
+#define	NUM_CAPTURE_SUBDEVICE	2
 
 
 // limitation for RHEA - only two blocks
@@ -108,7 +78,7 @@ int audio_init_complete = 0;
 
 #define	PCM_TOTAL_BUF_BYTES	(PCM_MAX_CAPTURE_BUF_BYTES+PCM_MAX_PLAYBACK_BUF_BYTES)
 
-void AUDIO_DRIVER_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle);
+void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate);
 void AUDIO_DRIVER_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle);
 
 
@@ -150,7 +120,7 @@ static struct snd_pcm_hardware brcm_capture_hw =
 	.periods_max = 2,
 };
 
-extern void dump_audio_registers(void);
+
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
@@ -164,30 +134,12 @@ static int PcmHwParams(
       struct snd_pcm_hw_params * hw_params
 )
 {
-    int err=0;
-//	DEBUG("\n %lx:hw_params %d\n",jiffies,(int)substream->stream);
+//	BCM_AUDIO_DEBUG("\n %lx:hw_params %d\n",jiffies,(int)substream->stream);
 	
-	DEBUG("\t params_access=%d params_format=%d  params_subformat=%d params_channels=%d params_rate=%d, buffer bytes=%d\n",
+	BCM_AUDIO_DEBUG("\t params_access=%d params_format=%d  params_subformat=%d params_channels=%d params_rate=%d, buffer bytes=%d\n",
 		 params_access(hw_params), params_format(hw_params), params_subformat(hw_params), params_channels(hw_params), params_rate(hw_params), params_buffer_bytes(hw_params));
 
-#if 0
-    err=snd_pcm_lib_preallocate_pages(substream,SNDRV_DMA_TYPE_DEV ,          //SNDRV_DMA_TYPE_CONTINUOUS,
-                                     NULL,
-                                     PCM_TOTAL_BUF_BYTES, PCM_TOTAL_BUF_BYTES);
-
-    if(err < 0)
-    {
-        DEBUG("Cannot pre allocate pages \n");
-        return err;
-    }
-#endif
-
-    err = snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(hw_params));
-
-    if(err < 0)
-        DEBUG("Cannot allocate pages \n");
-
-	return err; 
+	return snd_pcm_lib_malloc_pages(substream, params_buffer_bytes(hw_params));
 }
 
 
@@ -203,15 +155,14 @@ static int PcmHwFree(
 )
 {
 	int res;
-	DEBUG("\n %lx:hw_free - stream=%lx\n",jiffies, (UInt32) substream);
+	
+	BCM_AUDIO_DEBUG("\n %lx:hw_free - stream=%lx\n",jiffies, (UInt32) substream);
 	flush_scheduled_work(); //flush the wait queue in case pending events in the queue are processed after device close
 	
-	//snd_pcm_stream_lock_irq(substream);
 	res = snd_pcm_lib_free_pages(substream);
-    //snd_pcm_lib_preallocate_free(substream);
-	//snd_pcm_stream_unlock_irq(substream);
 	return res;
 }
+
 
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -233,7 +184,7 @@ static int PcmPlaybackOpen(
 	int err=0;
     int substream_number = substream->number ;
 
-    DEBUG("\n %lx:playback_open subdevice=%d PCM_TOTAL_BUF_BYTES=%d\n",jiffies, substream->number, PCM_TOTAL_BUF_BYTES);
+    BCM_AUDIO_DEBUG("\n %lx:playback_open subdevice=%d PCM_TOTAL_BUF_BYTES=%d\n",jiffies, substream->number, PCM_TOTAL_BUF_BYTES);
 
 
     if(audio_init_complete == 0)
@@ -242,39 +193,32 @@ static int PcmPlaybackOpen(
         audio_init_complete = 1;
     }
 
-    // This device is for voice call so just return
-    if(substream->number >= VOICE_CALL_SUB_DEVICE)
-    {
-//        DEBUG("\nEnable telephony \n");  
- //       AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,sgTableIDChannelOfVoiceCallDev[substream->number-VOICE_CALL_SUB_DEVICE].mic,sgTableIDChannelOfVoiceCallDev[substream->number-VOICE_CALL_SUB_DEVICE].speaker);
-        
-        //runtime->hw = brcm_playback_hw;	
-        //chip->substream[0] = substream;
-        //return err;
-
-        substream_number = (substream->number - VOICE_CALL_SUB_DEVICE) * 2;
-    }
-		
 	runtime->hw = brcm_playback_hw;	
-	chip->substream[0] = substream;
+	//chip->substream[0] = substream;
 
 	param_open.drv_handle = NULL;
-	param_open.substream_number = substream_number;
+	param_open.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
+	chip->streamCtl[substream_number].dev_prop.u.p.drv_type = AUDIO_DRIVER_PLAY_AUDIO;
+	chip->streamCtl[substream_number].pSubStream = substream;
+	
     //open the playback device
 	AUDIO_Ctrl_Trigger(ACTION_AUD_OpenPlay,&param_open,NULL,1); 
 	drv_handle = param_open.drv_handle;
-	if(drv_handle == NULL)
-   	{
-    	DEBUG("\n %lx:playback_open subdevice=%d failed\n",jiffies, substream_number);
-	    return -1;
-	}
+    if(drv_handle == NULL)
+    {
+    	BCM_AUDIO_DEBUG("\n %lx:playback_open subdevice=%d failed\n",jiffies, substream_number);
+        return -1;
+    }
 
     substream->runtime->private_data = drv_handle;
 
-    DEBUG("chip-0x%lx substream-0x%lx drv_handle-0x%lx \n",(UInt32)chip,(UInt32)substream,(UInt32)drv_handle);
+    BCM_AUDIO_DEBUG("chip-0x%lx substream-0x%lx drv_handle-0x%lx \n",(UInt32)chip,(UInt32)substream,(UInt32)drv_handle);
 
 
-	DEBUG("\n %lx:playback_open subdevice=%d PCM_TOTAL_BUF_BYTES=%d\n",jiffies, substream->number, PCM_TOTAL_BUF_BYTES);
+	BCM_AUDIO_DEBUG("\n %lx:playback_open subdevice=%d PCM_TOTAL_BUF_BYTES=%d\n",jiffies, substream->number, PCM_TOTAL_BUF_BYTES);
+
+	
+	chip->streamCtl[substream_number].stream_hw_ptr = 0;
 		
 	return err;
 }
@@ -289,32 +233,18 @@ static int PcmPlaybackOpen(
 static int PcmPlaybackClose(struct snd_pcm_substream * substream)
 {
 	BRCM_AUDIO_Param_Close_t param_close;
-
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 
-    
-	DEBUG("\n %lx:playback_close subdevice=%d\n",jiffies, substream->number);
+	BCM_AUDIO_DEBUG("\n %lx:playback_close subdevice=%d\n",jiffies, substream->number);
 
-    // This device is for voice call so stop the telephony path
-    if(substream->number >= VOICE_CALL_SUB_DEVICE)
-    {
-        DEBUG("\nDisable telephony \n");
-        AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,sgTableIDChannelOfVoiceCallDev[substream->number-VOICE_CALL_SUB_DEVICE].mic,sgTableIDChannelOfVoiceCallDev[substream->number-VOICE_CALL_SUB_DEVICE].speaker);
-        
-        //substream->runtime->private_data = NULL;
-	    //chip->substream[0] = NULL;
-        //return 0;
-    }
     
     param_close.drv_handle = substream->runtime->private_data;
-
+   
     //close the driver
 	AUDIO_Ctrl_Trigger(ACTION_AUD_ClosePlay,&param_close,NULL,1);
-   
+
     substream->runtime->private_data = NULL;
-
-	chip->substream[0] = NULL;
-
+	chip->streamCtl[substream->number].pSubStream = NULL;
 
 	return 0;
 }
@@ -333,38 +263,24 @@ static int PcmPlaybackPrepare(
 )
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+//	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     unsigned long period_bytes;
     AUDIO_DRIVER_BUFFER_t buf_param;
     AUDIO_DRIVER_CONFIG_t drv_config;
+	AUDIO_DRIVER_CallBackParams_t	cbParams;
 
 
-	DEBUG("\nplayback_prepare period=%d period_size=%d bufsize=%d threshold=%ld\n", runtime->periods, 
-			frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->buffer_size), (UInt32)runtime->stop_threshold);
-
-    // This device is for voice call so open
-    if(substream->number >= VOICE_CALL_SUB_DEVICE)
-    {
-        DEBUG("\nEnable telephony \n");  
-        AUDCTRL_SaveAudioModeFlag( sgTableIDChannelOfVoiceCallDev[substream->number-VOICE_CALL_SUB_DEVICE].speaker );
-        AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,sgTableIDChannelOfVoiceCallDev[substream->number-VOICE_CALL_SUB_DEVICE].mic,sgTableIDChannelOfVoiceCallDev[substream->number-VOICE_CALL_SUB_DEVICE].speaker);
-        //return 0;
-    }
-
-	chip->rate[0]         = runtime->rate;
-	chip->buffer_bytes[0] = runtime->dma_bytes;
-	chip->period_bytes[0] = frames_to_bytes(runtime, runtime->period_size);
-	chip->pcm_ptr[0] = 0;
-	chip->pcm_write_ptr[0] = 0;
-	chip->pcm_read_ptr[0]  = 0;
-	chip->last_pcm_rdptr[0] = 0;
+	BCM_AUDIO_DEBUG("\nplayback_prepare period=%d period_size=%d bufsize=%d threshold=%ld\n", runtime->periods, 
+			frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->buffer_size), runtime->stop_threshold);
 
     drv_handle = substream->runtime->private_data;
 
 
     //set the callback
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)AUDIO_DRIVER_InterruptPeriodCB);
+    cbParams.pfCallBack = AUDIO_DRIVER_InterruptPeriodCB;
+	cbParams.pPrivateData = (void *)substream;
+ 	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)&cbParams);
 
     //set the interrupt period
     period_bytes = frames_to_bytes(runtime, runtime->period_size);
@@ -375,17 +291,17 @@ static int PcmPlaybackPrepare(
     buf_param.pBuf = runtime->dma_area;// virtual address
     buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
     
-    DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
+    BCM_AUDIO_DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
 
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
 
     //Configure stream params  **** CAUTION:Check the mappng here
     drv_config.sample_rate = runtime->rate;
-	drv_config.num_channel = runtime->channels;
+    drv_config.num_channel = runtime->channels;
     drv_config.bits_per_sample = AUDIO_16_BIT_PER_SAMPLE;
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);
 
-//	DEBUG("\n%lx:playback_prepare period bytes=%d, periods =%d, buffersize=%d\n",jiffies, g_brcm_alsa_chip->period_bytes[0], runtime->periods, runtime->dma_bytes);
+//	BCM_AUDIO_DEBUG("\n%lx:playback_prepare period bytes=%d, periods =%d, buffersize=%d\n",jiffies, g_brcm_alsa_chip->period_bytes[0], runtime->periods, runtime->dma_bytes);
 	return 0;
 }
 
@@ -398,34 +314,53 @@ static int PcmPlaybackPrepare(
 //  Description: Command handling function
 //
 //------------------------------------------------------------
-static int PcmPlaybackTrigger(
-	struct snd_pcm_substream * substream,
-	int cmd
-)
+static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 {
 	int ret = 0;
+	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
-
     int substream_number = substream->number ;
+	Int32	*pSel;
 
     drv_handle = substream->runtime->private_data;
 
+	pSel = chip->streamCtl[substream_number].iLineSelect;
 
+	BCM_AUDIO_DEBUG("\n %lx:playback_trigger cmd=%d \n",jiffies,cmd);
 
-//	DEBUG("\n ALSA : PcmPlaybackTrigger \n");
-	DEBUG("\n %lx:playback_trigger cmd=%d untime->boundary=%d\n",jiffies,cmd, (int)substream->runtime->boundary );
+	//Update Sink, volume , mute info from mixer controls
+	if(pSel[0]==AUDCTRL_SPK_HANDSET)
+	{
+		chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_EARPIECE_OUT;
+		chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_EP;
+	}
+	else if(pSel[0]==AUDCTRL_SPK_HEADSET)
+	{
+		chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_HEADSET_OUT;
+		chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_HS;		
+	}
+	else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE) 
+	{
+		chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_IHF_OUT;
+		chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_IHF;		
+	}
+	else if(pSel[0]==AUDCTRL_SPK_BTM)
+	{
+		chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_MONO_BT_OUT;
+		chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_BT_SPKR;
+	}
+	else
+	{
+		BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %d ?\n", (int)pSel[0]);
+		chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_EARPIECE_OUT;
+		chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_EP;
+	}
 
-    if(substream->number >= VOICE_CALL_SUB_DEVICE)
-    {
-        
-        substream_number = (substream->number - VOICE_CALL_SUB_DEVICE) * 2;
-
-        DEBUG("\nVoice call - Nothing to do substream_number - %d\n",substream_number);  
-    }
+	chip->streamCtl[substream_number].dev_prop.u.p.speaker = pSel[0]; //FIXME, how to support multiple output
 
 	switch (cmd) 
-	{
-		case SNDRV_PCM_TRIGGER_START:
+		{
+			case SNDRV_PCM_TRIGGER_START:
 			/* do something to start the PCM engine */
 			{
                 BRCM_AUDIO_Param_Start_t param_start;
@@ -433,65 +368,65 @@ static int PcmPlaybackTrigger(
 				struct snd_pcm_runtime *runtime = substream->runtime;
 
                 param_start.drv_handle = drv_handle;
-                param_start.substream_number = substream_number;
+				param_start.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
                 param_start.channels = runtime->channels;
                 param_start.rate = runtime->rate;
+				param_start.vol[0] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[0];
+				param_start.vol[1] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[1];
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay,&param_start,NULL,0);
 
                 
 
 			}
-			break;
-		
-		case SNDRV_PCM_TRIGGER_STOP:
+				break;
+			
+			case SNDRV_PCM_TRIGGER_STOP:
             {
                 BRCM_AUDIO_Param_Stop_t param_stop;
 
                 param_stop.drv_handle = drv_handle;
-                param_stop.substream_number = substream_number;
+				param_stop.pdev_prop = &chip->streamCtl[substream_number].dev_prop;				
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StopPlay,&param_stop,NULL,0);
 
                 
             }
 
-			break;
+				break;
         case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
             {
-                //AUDCTRL_SaveAudioModeFlag( sgTableIDChannelOfDev[substream->number].speaker );
                 BRCM_AUDIO_Param_Pause_t param_pause;
 
                 param_pause.drv_handle = drv_handle;
-                param_pause.substream_number = substream_number;
-
+				param_pause.pdev_prop = &chip->streamCtl[substream_number].dev_prop;								
+	
                 AUDIO_Ctrl_Trigger(ACTION_AUD_PausePlay,&param_pause,NULL,0);
 			    
 	        }
-			break;
+				break;
     	
-        case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+			case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
             {
-                //AUDCTRL_SaveAudioModeFlag( sgTableIDChannelOfDev[substream->number].speaker );
     			BRCM_AUDIO_Param_Resume_t param_resume;
                 
 				struct snd_pcm_runtime *runtime = substream->runtime;
 
                 param_resume.drv_handle = drv_handle;
-                param_resume.substream_number = substream_number;
+				param_resume.pdev_prop = &chip->streamCtl[substream_number].dev_prop;								
                 param_resume.channels = runtime->channels;
                 param_resume.rate = runtime->rate;
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_ResumePlay,&param_resume,NULL,0);
 
             }
-			break;
+				break;
 		
 		
-		default:
-		return -EINVAL;
-	}
-	
+			default:
+			return -EINVAL;
+		}	
+
 	return ret;
 }
 
@@ -506,16 +441,15 @@ static int PcmPlaybackTrigger(
 static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream * substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-    snd_pcm_uframes_t pos;
+    snd_pcm_uframes_t pos=0;
+	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 
-	pos = g_brcm_alsa_chip->pcm_read_ptr[0] + g_brcm_alsa_chip->pcm_ptr[0];
+	pos = chip->streamCtl[substream->number].stream_hw_ptr;
 	if(pos<0)
 	{
 		pos += runtime->buffer_size;
 	}
 	pos %= runtime->buffer_size;
-//	DEBUG("PcmPlaybackPointer: hw_ptr=%d pcm_read_ptr=%d words appl_ptr=%d validPcmSize=%d buffersize=%d\n", runtime->status->hw_ptr, g_brcm_alsa_chip->pcm_read_ptr[0], (int)runtime->control->appl_ptr,
-//				runtime->control->appl_ptr-g_brcm_alsa_chip->pcm_read_ptr[0],  runtime->buffer_size);
 
 	return pos;
 }
@@ -541,11 +475,11 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 {
 	AUDIO_DRIVER_HANDLE_t  drv_handle;
 	BRCM_AUDIO_Param_Open_t param_open;
-    brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+//    brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int err=0;
 
-	DEBUG("\n ALSA : PcmCaptureOpen \n");
+	BCM_AUDIO_DEBUG("\n ALSA : PcmCaptureOpen \n");
 
     if(audio_init_complete == 0)
     {
@@ -554,11 +488,11 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
     }
 	
 	runtime->hw = brcm_capture_hw;	
-	chip->substream[1] = substream;
+	//chip->substream[1] = substream;
 
     //open the capture device
 	param_open.drv_handle = NULL;
-	param_open.substream_number = substream->number;
+//	param_open.substream_number = substream->number;
 	
 	AUDIO_Ctrl_Trigger(ACTION_AUD_OpenRecord,&param_open,NULL,1); 
 	
@@ -566,7 +500,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 
     if(drv_handle == NULL)
     {
-        DEBUG("\n %lx:capture_open subdevice=%d failed\n",jiffies, substream->number);
+        BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d failed\n",jiffies, substream->number);
         return -1;
     }
 
@@ -579,7 +513,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 	if (err<0)
 		return err;
 
-	DEBUG("\n %lx:capture_open subdevice=%d\n",jiffies, substream->number);
+	BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d\n",jiffies, substream->number);
 	return 0;
 
 }
@@ -594,17 +528,17 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 static int PcmCaptureClose(struct snd_pcm_substream * substream)
 {
 	BRCM_AUDIO_Param_Close_t param_close;
-    brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
-	
+//    brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+
     param_close.drv_handle = substream->runtime->private_data;
     //close the driver
 	AUDIO_Ctrl_Trigger(ACTION_AUD_CloseRecord,&param_close,NULL,1);
 
     substream->runtime->private_data = NULL;
     
-    chip->substream[1] = NULL;
+    //chip->substream[1] = NULL;
 	
-	DEBUG("\n %lx:capture_close subdevice=%d\n",jiffies, substream->number);
+	BCM_AUDIO_DEBUG("\n %lx:capture_close subdevice=%d\n",jiffies, substream->number);
 
 	return 0;
 }
@@ -619,27 +553,21 @@ static int PcmCaptureClose(struct snd_pcm_substream * substream)
 static int PcmCapturePrepare(struct snd_pcm_substream * substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
+//    brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     unsigned long period_bytes;
     AUDIO_DRIVER_BUFFER_t buf_param;
     AUDIO_DRIVER_CONFIG_t drv_config;
 
 
-	DEBUG("\n %lx:capture_prepare: subdevice=%d rate =%d format =%d channel=%d dma_area=0x%x dma_bytes=%d period_bytes=%d avail_min=%d periods=%d buffer_size=%ld\n",
+	BCM_AUDIO_DEBUG("\n %lx:capture_prepare: subdevice=%d rate =%d format =%d channel=%d dma_area=0x%x dma_bytes=%d period_bytes=%d avail_min=%d periods=%d buffer_size=%d\n",
 		         jiffies,	substream->number, runtime->rate, runtime->format, runtime->channels, (unsigned int)runtime->dma_area, runtime->dma_bytes,
-		         frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->control->avail_min), runtime->periods, (UInt32)runtime->buffer_size);
+		         frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->control->avail_min), runtime->periods, (int)runtime->buffer_size);
 	
-	g_brcm_alsa_chip->rate[1]         = runtime->rate;
-	g_brcm_alsa_chip->buffer_bytes[1] = runtime->dma_bytes;
-	g_brcm_alsa_chip->period_bytes[1] = frames_to_bytes(runtime, runtime->period_size);
-	g_brcm_alsa_chip->pcm_read_ptr[1]  = 0; 
-	g_brcm_alsa_chip->last_pcm_rdptr[1] = 0;
-
-
     drv_handle = substream->runtime->private_data;
 
     //set the callback
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)AUDIO_DRIVER_CaptInterruptPeriodCB);
+    //AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)AUDIO_DRIVER_CaptInterruptPeriodCB);
 
     //set the interrupt period
     period_bytes = frames_to_bytes(runtime, runtime->period_size);
@@ -650,7 +578,7 @@ static int PcmCapturePrepare(struct snd_pcm_substream * substream)
     buf_param.pBuf = runtime->dma_area;// virtual address
     buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
     
-    DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
+    BCM_AUDIO_DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
 
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
 
@@ -678,21 +606,25 @@ static int PcmCaptureTrigger(
 	int cmd									//commands to handle
 )
 {
+//	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
 
     drv_handle = substream->runtime->private_data;
-	DEBUG("\n %lx:capture_trigger subdevice=%d cmd=%d\n",jiffies,substream->number, cmd);
+	BCM_AUDIO_DEBUG("\n %lx:capture_trigger subdevice=%d cmd=%d\n",jiffies,substream->number, cmd);
   
 	switch (cmd) 
 	{
 		case SNDRV_PCM_TRIGGER_START:
             {
+				// set sink
+				// set mute
+				// set volume
                 BRCM_AUDIO_Param_Start_t param_start;
                 
 				struct snd_pcm_runtime *runtime = substream->runtime;
 
                 param_start.drv_handle = drv_handle;
-                param_start.substream_number = substream->number;
+//                param_start.substream_number = substream->number;
                 param_start.channels = runtime->channels;
                 param_start.rate = runtime->rate;
 
@@ -706,7 +638,7 @@ static int PcmCaptureTrigger(
                 BRCM_AUDIO_Param_Stop_t param_stop;
 
                 param_stop.drv_handle = drv_handle;
-                param_stop.substream_number = substream->number;
+//                param_stop.substream_number = substream->number;
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StopRecord,&param_stop,NULL,0); 
 
@@ -730,18 +662,11 @@ static int PcmCaptureTrigger(
 //------------------------------------------------------------
 static snd_pcm_uframes_t PcmCapturePointer(struct snd_pcm_substream * substream)
 {
-	struct snd_pcm_runtime *runtime = substream->runtime;
-	snd_pcm_uframes_t pos;
-	pos = (g_brcm_alsa_chip->pcm_read_ptr[1]% runtime->buffer_size);
-	//DEBUG("%lx:PcmCapturePointer pos=%d pcm_read_ptr=%d, buffer size = %d,\n",jiffies,pos,g_brcm_alsa_chip->pcm_read_ptr[1],runtime->buffer_size);
+//	struct snd_pcm_runtime *runtime = substream->runtime;
+	snd_pcm_uframes_t pos=0;
+//	pos = (g_brcm_alsa_chip->pcm_read_ptr[1]% runtime->buffer_size);
+	//BCM_AUDIO_DEBUG("%lx:PcmCapturePointer pos=%d pcm_read_ptr=%d, buffer size = %d,\n",jiffies,pos,g_brcm_alsa_chip->pcm_read_ptr[1],runtime->buffer_size);
 	return pos;
-}
-
-
-int PcmPlaybackAck(struct snd_pcm_substream *substream)
-{
-
-	return 0;
 }
 
 //Playback device operator
@@ -754,7 +679,6 @@ static struct snd_pcm_ops brcm_alsa_omx_pcm_playback_ops = {
    .prepare =     PcmPlaybackPrepare,
    .trigger =     PcmPlaybackTrigger,
    .pointer =     PcmPlaybackPointer,
-   .ack = PcmPlaybackAck,
 };
 
 //Capture device operator
@@ -770,6 +694,7 @@ static struct snd_pcm_ops brcm_alsa_omx_pcm_capture_ops = {
 };
 
 
+#if 0 ////WORKER_INTERRUPT_CALLBACK
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
 //  Function Name: worker_pcm_play
@@ -791,7 +716,7 @@ static void worker_pcm_play(struct work_struct *work)
 
 	if(pChip==NULL)
 	{
-		DEBUG("worker_pcm:unlikely to happen pChip==NULL \n");
+		BCM_AUDIO_DEBUG("worker_pcm:unlikely to happen pChip==NULL \n");
 		return ;
 	}
 
@@ -804,7 +729,7 @@ static void worker_pcm_play(struct work_struct *work)
 
     drv_handle = substream->runtime->private_data;
 
-    //DEBUG("\n %lx:worker_pcm_play \n",jiffies);
+    //BCM_AUDIO_DEBUG("\n %lx:worker_pcm_play \n",jiffies);
 
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_GET_DRV_TYPE,(void*)&drv_type);
 
@@ -825,7 +750,7 @@ static void worker_pcm_play(struct work_struct *work)
             }
             break;
         default:
-            DEBUG("Invalid driver type\n");
+            BCM_AUDIO_DEBUG("Invalid driver type\n");
             break;
     }
 }
@@ -851,7 +776,7 @@ static void worker_pcm_capt(struct work_struct *work)
 
 	if(pChip==NULL)
 	{
-		DEBUG("worker_pcm_capt:unlikely to happen pChip==NULL \n");
+		BCM_AUDIO_DEBUG("worker_pcm_capt:unlikely to happen pChip==NULL \n");
 		return ;
 	}
 
@@ -864,9 +789,7 @@ static void worker_pcm_capt(struct work_struct *work)
 
     drv_handle = substream->runtime->private_data;
 
-    //DEBUG("pChip-0x%x substream-0x%x drv_handle-0x%x \n",pChip,substream,drv_handle);
-
-    DEBUG("\n %lx:worker_pcm_capt \n",jiffies);
+    BCM_AUDIO_DEBUG("\n %lx:worker_pcm_capt \n",jiffies);
 
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_GET_DRV_TYPE,(void*)&drv_type);
 
@@ -885,43 +808,18 @@ static void worker_pcm_capt(struct work_struct *work)
             }
             break;
         default:
-            DEBUG("Invalid driver type\n");
+            BCM_AUDIO_DEBUG("Invalid driver type\n");
             break;
     }
+
 }
 
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: AUDIO_DRIVER_InterruptPeriodCB
-//
-//  Description: Playback inteerupt
-//
-//------------------------------------------------------------
-void AUDIO_DRIVER_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
-{
-	struct snd_pcm_substream * substream = g_brcm_alsa_chip->substream[0];
-    AUDIO_DRIVER_HANDLE_t  drv_handle_local;
-
-    drv_handle_local = substream->runtime->private_data;
-	
-    if(!substream)
-		return;
-
-    if(drv_handle_local != drv_handle)
-    {
-        DEBUG("Invalid Handle\n");
-        return;
-    }
-    // schedule the PCM playback worker thread
-    schedule_work(&g_brcm_alsa_chip->work_play);
-    return;
-}
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
 //  Function Name: AUDIO_DRIVER_CaptInterruptPeriodCB
 //
-//  Description: Capture inteerupt
+//  Description: Playback inteerupt
 //
 //------------------------------------------------------------
 void AUDIO_DRIVER_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
@@ -936,13 +834,71 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
 
     if(drv_handle_local != drv_handle)
     {
-        DEBUG("Invalid Handle\n");
+        BCM_AUDIO_DEBUG("Invalid Handle\n");
         return;
     }
     // schedule the PCM playback worker thread
     schedule_work(&g_brcm_alsa_chip->work_capt);
     return;
 }
+#endif //WORKER_INTERRUPT_CALLBACK
+
+
+//+++++++++++++++++++++++++++++++++++++++++++++++++++++
+//
+//  Function Name: AUDIO_DRIVER_InterruptPeriodCB
+//
+//  Description: Callback funtion when DMA done, running at worker thread context (worker_audio_playback)
+//
+//------------------------------------------------------------
+void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate) 
+{
+	struct snd_pcm_substream * substream = (struct snd_pcm_substream *)pPrivate;
+	AUDIO_DRIVER_HANDLE_t  drv_handle;
+	AUDIO_DRIVER_TYPE_t    drv_type;
+	struct snd_pcm_runtime *runtime;
+	brcm_alsa_chip_t *pChip = snd_pcm_substream_chip(substream);
+
+	runtime = substream->runtime;
+    drv_handle = substream->runtime->private_data;
+
+	BCM_AUDIO_DEBUG("AUDIO_DRIVER_InterruptPeriodCB type substream=%x\n", (unsigned int)pPrivate);
+
+	
+    if( (!substream) ||(!runtime) )
+    {
+    	BCM_AUDIO_DEBUG("Invalid substream %x or runtime %x\n", (unsigned int)substream, (unsigned int)runtime);
+		return;
+    }
+
+
+
+	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_GET_DRV_TYPE,(void*)&drv_type);
+
+	switch (drv_type)
+	{
+		case AUDIO_DRIVER_PLAY_VOICE:
+		case AUDIO_DRIVER_PLAY_AUDIO:
+		case AUDIO_DRIVER_PLAY_RINGER:
+			{
+				//update the PCM read pointer by period size
+				
+				pChip->streamCtl[substream->number].stream_hw_ptr += runtime->period_size;
+				if(pChip->streamCtl[substream->number].stream_hw_ptr>runtime->boundary)
+					pChip->streamCtl[substream->number].stream_hw_ptr -= runtime->boundary;
+				// send the period elapsed
+				snd_pcm_period_elapsed(substream);
+			}
+			break;
+		default:
+			BCM_AUDIO_DEBUG("Invalid driver type\n");
+			break;
+	}
+
+
+    return;
+}
+
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
@@ -956,14 +912,15 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 	struct snd_pcm *pcm;
 	int err = 0;
 	brcm_alsa_chip_t	*pChip;
+	struct snd_pcm_substream *substream;
 
 
-	err = snd_pcm_new(card, "Broadcom ALSA PCM", 0, NUM_PLAYBACK_SUBDEVICE, NUM_CAPTURE_SUBDEVICE, &pcm);
+	err = snd_pcm_new(card, "Broadcom CAPH", 0, NUM_PLAYBACK_SUBDEVICE, NUM_CAPTURE_SUBDEVICE, &pcm);
 	if (err<0)
 		return err;
     
     pcm->private_data = card->private_data;
-	strcpy(pcm->name, "Broadcom ALSA PCM");		
+	strcpy(pcm->name, "Broadcom CAPH PCM");		
     
 	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_PLAYBACK, &brcm_alsa_omx_pcm_playback_ops);
 	snd_pcm_set_ops(pcm, SNDRV_PCM_STREAM_CAPTURE, &brcm_alsa_omx_pcm_capture_ops);
@@ -971,32 +928,45 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 
 	pcm->info_flags = 0;
 
-#if 0
-	err=snd_pcm_lib_preallocate_pages_for_all(pcm,SNDRV_DMA_TYPE_CONTINUOUS ,          //SNDRV_DMA_TYPE_DEV,
-                                     snd_dma_continuous_data(GFP_KERNEL),
-                                     PCM_TOTAL_BUF_BYTES, PCM_TOTAL_BUF_BYTES);
-#endif
-	err=snd_pcm_lib_preallocate_pages_for_all(pcm,SNDRV_DMA_TYPE_DEV  ,          //SNDRV_DMA_TYPE_CONTINUOUS,
-                                     NULL,
-                                     PCM_TOTAL_BUF_BYTES, PCM_TOTAL_BUF_BYTES);
-
+	//pre-allocate memory for playback device
+	substream = pcm->streams[0].substream;
+	for (; substream; substream = substream->next)
+	{
+	
+		err=snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV, 0, PCM_MAX_PLAYBACK_BUF_BYTES, PCM_MAX_PLAYBACK_BUF_BYTES);
+		if(err)
+			BCM_AUDIO_DEBUG("\n Error : Error when allocate memory for playback device err=%d\n",err);
+	}
+	
+	//pre-allocate memory for capture device
+	substream = pcm->streams[1].substream;
+	for (; substream; substream = substream->next)
+	{
+		err=snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV, 0, PCM_MAX_CAPTURE_BUF_BYTES, PCM_MAX_CAPTURE_BUF_BYTES);
+		if(err)
+			BCM_AUDIO_DEBUG("\n Error : Error when allocate memory for capture device err=%d\n",err);
+	}
+	
 	pChip = (brcm_alsa_chip_t *)card->private_data;
+
+
+#if 0 //WORKER_CONTROL_INIT	
 	INIT_WORK(&pChip->work_play, worker_pcm_play);
     INIT_WORK(&pChip->work_capt, worker_pcm_capt);
     
-	if(err)
-		DEBUG("\n Error : PcmDeviceNew err=%d\n",err);
+#endif//WORKER_CONTROL_INIT
 
     // Initialize the audio controller
     if(audio_init_complete == 0)
     {
-		DEBUG("\n PcmDeviceNew : call AUDCTRL_Init\n");
+		BCM_AUDIO_DEBUG("\n PcmDeviceNew : call AUDCTRL_Init\n");
         AUDCTRL_Init ();
         audio_init_complete = 1;
     }
 
-	DEBUG("\n PcmDeviceNew : PcmDeviceNew err=%d\n",err);
+	BCM_AUDIO_DEBUG("\n PcmDeviceNew : PcmDeviceNew err=%d\n",err);
 	return err;
 	
 }
+
 

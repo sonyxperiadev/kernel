@@ -39,7 +39,7 @@ Broadcom's express prior written consent.
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+#ifndef	_DRV_CAPH_HWCTRL_
 typedef enum {
     AUDDRV_TYPE_TELEPHONY, 
     AUDDRV_TYPE_AUDIO_OUTPUT,
@@ -67,7 +67,7 @@ typedef enum {
     AUDDRV_MIXERTap_WB_INPUT,	//Wide band mixer tap
 	AUDDRV_INOUT_NUM
 } AUDDRV_InOut_Enum_t;
-
+#endif
 typedef enum {
 	AUDDRV_GAIN_SPKR_IHF,  //100mW,
 	AUDDRV_GAIN_SPKR_EP,  //100mW,

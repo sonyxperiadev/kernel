@@ -167,6 +167,7 @@ void AUDCTRL_EnableTelephony(
 	return;
 }
 
+//EXPORT_SYMBOL(AUDCTRL_EnableTelephony);
 
 void AUDCTRL_RateChangeTelephony( void )
 {
@@ -222,6 +223,7 @@ void AUDCTRL_DisableTelephony(
 	return;
 }
 
+//EXPORT_SYMBOL(AUDCTRL_DisableTelephony);
 //============================================================================
 //
 // Function Name: AUDCTRL_SetTelephonyMicSpkr

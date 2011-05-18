@@ -41,30 +41,30 @@ typedef enum
 typedef struct
 {
     void*   drv_handle;
-    UInt32 substream_number;
+    TIDChanOfDev	*pdev_prop;
     UInt32 channels;
     UInt32 rate;
-
+	Int32  vol[2];
 }BRCM_AUDIO_Param_Start_t;
 
 typedef struct
 {
     void*   drv_handle;
-    UInt32 substream_number;
+    TIDChanOfDev	*pdev_prop;
 
 }BRCM_AUDIO_Param_Stop_t;
 
 typedef struct
 {
     void*   drv_handle;
-    UInt32 substream_number;
+    TIDChanOfDev	*pdev_prop;
 
 }BRCM_AUDIO_Param_Pause_t;
 
 typedef struct
 {
     void*   drv_handle;
-    UInt32 substream_number;
+    TIDChanOfDev	*pdev_prop;
     UInt32 channels;
     UInt32 rate;
 
@@ -73,14 +73,14 @@ typedef struct
 typedef struct
 {
     void*   drv_handle;
-    UInt32 substream_number;
+    TIDChanOfDev	*pdev_prop;
 
 }BRCM_AUDIO_Param_Open_t;
 
 typedef struct
 {
     void*   drv_handle;
-    UInt32 substream_number;
+    TIDChanOfDev	*pdev_prop;
 
 }BRCM_AUDIO_Param_Close_t;
 

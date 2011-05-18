@@ -1083,11 +1083,14 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         audioPath = csl_caph_hwctrl_GetPath_FromPathID(pathID);
     }
 
+	Log_DebugPrintf(LOGID_SOC_AUDIO,"Enable path sink=%d \n", audioPath.sink);
+
     if (((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_EP))||
 	  ((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_HS))||
 	  ((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_IHF))||
 	  ((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_VIBRA)))
     {
+	    Log_DebugPrintf(LOGID_SOC_AUDIO,"Inside if - Enable path sink=%d \n", audioPath.sink);
         if (audioPath.sink == CSL_CAPH_DEV_HS)
             audioh_path = AUDDRV_PATH_HEADSET_OUTPUT;
         else if (audioPath.sink == CSL_CAPH_DEV_IHF)
@@ -1302,6 +1305,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             csl_caph_switch_start_transfer(audioPath.switchCH2);
         
         csl_caph_audioh_start(audioh_path);
+
+		Log_DebugPrintf(LOGID_SOC_AUDIO,"Start DMAC\n");
         csl_caph_dma_start_transfer(audioPath.dmaCH);
 
     }
@@ -2877,8 +2882,12 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else //AUDIOH-->SW-->SRC-->DSP
     if ((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)&&(audioPath.sink == CSL_CAPH_DEV_DSP))
     {
+		Log_DebugPrintf(LOGID_SOC_AUDIO,"EnablePath :  loopback analog mic to CSL_CAPH_DEV_DSP \n");
+
     	if (audioPath.src_sampleRate == audioPath.snk_sampleRate) //no src needed
     	{
+			Log_DebugPrintf(LOGID_SOC_AUDIO,"EnablePath :  No SRC required \n");
+
    		    // config cfifo
             if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
             {
@@ -2960,6 +2969,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     	}	
 	    else
 	    {
+	    	Log_DebugPrintf(LOGID_SOC_AUDIO,"EnablePath :   SRC required \n");
         	if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         	{
         		if (audioPath.chnlNum == AUDIO_CHANNEL_MONO)
@@ -3071,11 +3081,15 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 #endif
         	csl_caph_switch_start_transfer(sw_config.chnl);
         	csl_caph_audioh_start(AUDDRV_PATH_ANALOGMIC_INPUT);
+			Log_DebugPrintf(LOGID_SOC_AUDIO,"EnablePath :  Analog Mic input set \n");
 	    }
     }		
     else //AUDIOH-->SW-->SRC-->DSP
     if ((audioPath.source == CSL_CAPH_DEV_HS_MIC)&&(audioPath.sink == CSL_CAPH_DEV_DSP))
     {
+
+	
+		Log_DebugPrintf(LOGID_SOC_AUDIO,"EnablePath :  loopback hs mic to CSL_CAPH_DEV_DSP \n");
     	if (audioPath.src_sampleRate == audioPath.snk_sampleRate) //no src needed
     	{
    		    // config cfifo
@@ -3263,6 +3277,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     if ( (audioPath.source == CSL_CAPH_DEV_ANALOG_MIC) && ((audioPath.sink == CSL_CAPH_DEV_EP) ||
                                                        (audioPath.sink == CSL_CAPH_DEV_IHF)) )
     {
+
+		Log_DebugPrintf(LOGID_SOC_AUDIO,"EnablePath : Hw loopback analog mic to sink %d\n",audioPath.sink);
         if (audioPath.sink == CSL_CAPH_DEV_IHF)
 	{
       	    audioh_path = AUDDRV_PATH_IHF_OUTPUT;
@@ -3296,6 +3312,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     if ( (audioPath.source == CSL_CAPH_DEV_HS_MIC) && ((audioPath.sink == CSL_CAPH_DEV_EP) ||
                                                        (audioPath.sink == CSL_CAPH_DEV_IHF)) )
     {
+    
+		Log_DebugPrintf(LOGID_SOC_AUDIO,"EnablePath : Hw loopback hs mic to sink %d\n",audioPath.sink);
         // config switch
         csl_caph_switch_ch = csl_caph_switch_obtain_channel();
         // Save the switch channel information

@@ -47,5 +47,15 @@ typedef struct _TIDChanOfVoiceCallDev
 }TIDChanOfVoiceCallDev;
 
 
+typedef struct _TIDChanOfDev
+{
+	union {
+		TIDChanOfPlaybackDev	p;
+		TIDChanOfCaptureDev		c;
+		TIDChanOfVoiceCallDev	v;
+		}u;
+}TIDChanOfDev;
+
+
 
 #endif	//_BRCM_AUDIO_THREAD_H__

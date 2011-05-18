@@ -45,7 +45,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <mach/hardware.h>
 
-#include "brcm_alsa.h"
+//#include "brcm_alsa.h"
 
 
 #include "mobcom_types.h"
@@ -60,6 +60,8 @@ the GPL, without Broadcom's express prior written consent.
 #include "drv_caph_hwctrl.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
+#include "brcm_audio_devices.h"
+#include "caph_common.h"
 
 static UInt8 *samplePCM16_inaudiotest = NULL;
 static UInt16* record_test_buf = NULL;
@@ -684,6 +686,7 @@ static int HandleControlCommand()
 			}*/
             DEBUG(" Telephony disabled \n");
         }
+		break;
  		case 8:// peek a register
         {
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
@@ -1332,4 +1335,311 @@ static irqreturn_t audvoc_isr(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 	        
-#endif	        
+#endif	    
+
+
+#ifndef	EXCLUDE_AMR2SP_TEST
+
+//#include "mobcom_types.h"
+//#include "resultcode.h"
+//#include "ostask.h"
+#include "osqueue.h"
+#include "ossemaphore.h"
+#include "osheap.h"
+#include "msconsts.h"
+#include "shared.h"
+#include "audio_consts.h"
+#include "auddrv_def.h"
+#include "csl_aud_queue.h"
+#include "dspif_voice_play.h"
+#include "csl_vpu.h"
+#include "csl_arm2sp.h"
+#include "audio_vdriver_voice_play.h"
+#include "log.h"
+//#include "csl_aud_drv.h"
+#include "audio_vdriver.h"
+#include "osdal_os.h"
+
+
+//ARM2SP test
+static Semaphore_t		AUDDRV_BufDoneSema;
+
+static void AUDTST_VoicePlayback(UInt8 chan, UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6);
+
+// figure the audio mode and save it to audio controller.
+static AudioMode_t AUDTST_SaveModeFromChannel( AUDCTRL_SPEAKER_t spk )
+{
+#if defined(USE_NEW_AUDIO_PARAM)
+	//figure out audio mode and save it. 
+	AudioMode_t mode = AUDIO_MODE_INVALID;
+
+
+	switch (spk)
+	{
+	case AUDCTRL_SPK_HANDSET:
+	case AUDCTRL_SPK_HEADSET:
+	case AUDCTRL_SPK_HANDSFREE:
+	case AUDCTRL_SPK_BTM:
+	case AUDCTRL_SPK_LOUDSPK:
+	case AUDCTRL_SPK_TTY:
+	case AUDCTRL_SPK_HAC:
+	case AUDCTRL_SPK_USB:
+		mode = (AudioMode_t) spk;
+		AUDCTRL_SaveAudioModeFlag( mode, audio_app );
+		break;
+
+	case AUDCTRL_SPK_BTS:
+		mode = AUDIO_MODE_BLUETOOTH;
+		AUDCTRL_SaveAudioModeFlag( mode, audio_app );
+		break;
+
+	case AUDCTRL_SPK_I2S:
+		mode = AUDIO_MODE_INVALID;
+		break;
+#else
+	//figure out audio mode and save it. 
+	AudioMode_t mode = AUDIO_MODE_INVALID;
+
+	switch (spk)
+	{
+	case AUDCTRL_SPK_HANDSET:
+	case AUDCTRL_SPK_HEADSET:
+	case AUDCTRL_SPK_HANDSFREE:
+	case AUDCTRL_SPK_BTM:
+	case AUDCTRL_SPK_LOUDSPK:
+	case AUDCTRL_SPK_TTY:
+	case AUDCTRL_SPK_HAC:
+	case AUDCTRL_SPK_USB:
+		mode = (AudioMode_t) spk;
+		AUDCTRL_SaveAudioModeFlag( mode );
+		break;
+
+	case AUDCTRL_SPK_BTS:
+		mode = AUDIO_MODE_BLUETOOTH;
+		AUDCTRL_SaveAudioModeFlag( mode );
+		break;
+
+	case AUDCTRL_SPK_I2S:
+		mode = AUDIO_MODE_INVALID;
+		break;
+#endif
+	default:
+		break;
+	}
+
+	return mode;
+}
+
+static Boolean AUDDRV_BUFFER_DONE_CB (UInt8 *buf, UInt32 size, UInt32 streamID)
+{
+      Log_DebugPrintf(LOGID_AUDIO, "\n AUDDRV_BUFFER_DONE_CB streamID = 0x%x\n", streamID);
+	OSSEMAPHORE_Release (AUDDRV_BufDoneSema);
+	return TRUE;  //what does the return value mean?
+}
+
+
+// voice playback test including amrnb, pcm via VPU, ARM2SP, and amrwb playback 
+void AUDTST_VoicePlayback(UInt8 chan, UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6)
+{
+	{
+		VORENDER_TYPE_t	amrnb_or_wb = VORENDER_TYPE_PCM_VPU;
+		AUDIO_HW_ID_t		audPlayHw;
+		UInt32	totalSize = 0;
+		UInt8	*dataSrc;
+		UInt32	frameSize = 0;
+		UInt32	finishedSize;
+		//Boolean	isRunning;
+		UInt32 writeSize;
+		/*VP_Playback_Mode_t*/ VORENDER_PLAYBACK_MODE_t playbackMode;  //why keep duplicate enum? VORENDER_PLAYBACK_MODE_t
+		/*VP_PlaybackMix_Mode_t*/ VORENDER_VOICE_MIX_MODE_t mixMode;  //should delete the duplicate enum VORENDER_VOICE_MIX_MODE_t
+		AUDIO_SAMPLING_RATE_t	sr = AUDIO_SAMPLING_RATE_8000;
+		AUDCTRL_SPEAKER_t speaker = (AUDCTRL_SPEAKER_t) Val2; 
+		audPlayHw = AUDIO_HW_VOICE_OUT;
+
+//        if (record_test_buf == NULL) 
+//        {
+//            record_test_buf = (UInt16 *)AudioTest_Alloc(I2S_TEST_BUFSIZE*sizeof(UInt16), I2S_TEST_BUFNUM);
+//        }
+
+		if (Val3 == 0) // 0 = amrnb, 1 = vpu pcm, 2 = arm2sp pcm 8K, 3 = amrwb, 4 = arm2sp-2 pcm 8K, 5 = arm2sp pcm 16K, 6 = arm2sp-2 pcm 16K
+		{
+			amrnb_or_wb = VORENDER_TYPE_AMRNB;
+		}
+		else if (Val3 ==1)
+		{
+			amrnb_or_wb = VORENDER_TYPE_PCM_VPU;
+		}
+		else if(Val3 == 2)
+		{
+			amrnb_or_wb = VORENDER_TYPE_PCM_ARM2SP;
+		}
+		else if(Val3 == 3)
+		{
+			amrnb_or_wb = VORENDER_TYPE_AMRWB;
+		}
+		else if(Val3 == 4)
+		{
+			amrnb_or_wb = VORENDER_TYPE_PCM_ARM2SP2;
+		}
+		else if(Val3 == 5)
+		{
+			amrnb_or_wb = VORENDER_TYPE_PCM_ARM2SP;
+			sr = AUDIO_SAMPLING_RATE_16000;
+		}
+		else if(Val3 == 6)
+		{
+			amrnb_or_wb = VORENDER_TYPE_PCM_ARM2SP2;
+			sr = AUDIO_SAMPLING_RATE_16000;
+		}
+		// // for rhea from here
+		else  if (Val3 == 7)// for rhea
+		{
+			amrnb_or_wb = VORENDER_TYPE_PCM_ARM2SP;
+			// earpiece
+			audPlayHw = AUDIO_HW_EARPIECE_OUT;  
+		}
+		else  if (Val3 == 8)// for rhea
+		{
+			amrnb_or_wb = VORENDER_TYPE_PCM_ARM2SP;
+			// headset
+			audPlayHw = AUDIO_HW_HEADSET_OUT; 
+		}
+		else  if (Val3 == 9)// for rhea
+		{
+			amrnb_or_wb = VORENDER_TYPE_PCM_ARM2SP;
+			// ihf
+			audPlayHw = AUDIO_HW_IHF_OUT;  
+		}
+
+		{
+			Boolean		setTransfer = FALSE;
+			AUDIO_CHANNEL_NUM_t stereo = AUDIO_CHANNEL_MONO;
+			
+			// enable paht and set gain
+			AudioMode_t mode = AUDTST_SaveModeFromChannel( speaker);
+			if (amrnb_or_wb == VORENDER_TYPE_AMRWB || sr == AUDIO_SAMPLING_RATE_16000)
+			{	
+				sr = AUDIO_SAMPLING_RATE_16000;
+#if defined(USE_NEW_AUDIO_PARAM)
+				AUDCTRL_SaveAudioModeFlag ( (AudioMode_t) (mode + AUDIO_MODE_NUMBER), audio_app );
+#else
+				AUDCTRL_SaveAudioModeFlag ( (AudioMode_t) (mode + AUDIO_MODE_NUMBER) );
+#endif
+			}
+			
+			Log_DebugPrintf(LOGID_AUDIO, "\n richlu debug 1!, stereo =%d audPlayHw = %d\n", stereo, audPlayHw);
+		
+			if(Val3<7) AUDCTRL_EnablePlay (AUDIO_HW_DSP_VOICE, audPlayHw, AUDIO_HW_NONE, speaker, stereo, sr);//, NULL);
+			else AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET); //rhea cases.
+
+			AUDCTRL_SetPlayVolume (audPlayHw, 
+   					               speaker, 
+    							   AUDIO_GAIN_FORMAT_VOL_LEVEL, 
+	    						   0x001E, 0x001E); // 0x1E is 30 decimal. 0x001E for both L and R channels.
+			
+
+			// init driver
+			AUDDRV_VoiceRender_Init (amrnb_or_wb);
+
+			AUDDRV_VoiceRender_SetBufDoneCB (amrnb_or_wb, AUDDRV_BUFFER_DONE_CB);
+
+			playbackMode = (VORENDER_PLAYBACK_MODE_t) Val5;  //  1= dl, 2 = ul, 3 =both
+			mixMode = (VORENDER_VOICE_MIX_MODE_t) Val6; // 0 = none, 1= dl, 2 = ul, 3 =both
+
+			
+			if (Val6 == 10)
+			{
+				// set buffer transfer
+				setTransfer = TRUE;
+			}
+
+			if (Val4 == 0)
+			{
+				dataSrc = &samplePCM16_inaudiotest[0];
+				totalSize = sizeof (samplePCM16_inaudiotest);
+				frameSize = (sr * 2 * 2) / 50; // 20 ms seconds
+
+				// start writing data
+				AUDDRV_VoiceRender_SetConfig (amrnb_or_wb, playbackMode, mixMode, sr, VP_SPEECH_MODE_LINEAR_PCM_8K, 0 );
+			}
+			//playback standalone wb amr file
+#if 0			
+			else if (Val4 == 3)
+			{
+				dataSrc = &amrwb_file[0];
+				totalSize = sizeof (amrwb_file);
+				// for playback, we will try to deliver as many data as possible per each ripisr
+				frameSize = 0x2000; //frame size we copied to aq to be delivered to sharedmem
+
+				AUDDRV_VoiceRender_SetConfig (amrnb_or_wb, playbackMode, mixMode, sr, AUDIO_AMRWB_MIME, 0 );
+			}
+#endif			
+			else //playback the recorded buffer
+			{
+				//Not implemented
+			}
+
+
+			//isRunning = FALSE;
+			finishedSize = 0;
+			writeSize = 0;
+
+			AUDDRV_BufDoneSema = OSSEMAPHORE_Create(0, OSSUSPEND_PRIORITY);
+
+			Log_DebugPrintf(LOGID_AUDIO, "\n richlu debug 1!, totalSize = 0x%x\n", (unsigned int)totalSize);
+
+			AUDDRV_VoiceRender_Start (amrnb_or_wb);
+			//isRunning = TRUE;
+		}
+
+		
+		writeSize = frameSize;	
+		AUDDRV_VoiceRender_Write (amrnb_or_wb, dataSrc, writeSize);
+	
+		// The AUDDRV_BUFFER_DONE_CB callback will release the buffer size.
+		while (OSSEMAPHORE_Obtain(AUDDRV_BufDoneSema, 2*1000) == OSSTATUS_SUCCESS)
+		{
+
+			dataSrc += writeSize;
+			finishedSize += writeSize;
+
+			if (finishedSize >= totalSize)
+				break;
+
+			if (totalSize - finishedSize < frameSize)
+			{
+				writeSize = totalSize - finishedSize;
+			}
+			else
+			{
+				writeSize = frameSize;
+			}
+			AUDDRV_VoiceRender_Write (amrnb_or_wb, dataSrc, writeSize);
+
+			Log_DebugPrintf(LOGID_AUDIO, "\n richlu debug 2: writeSize = 0x%x, finishedSize = 0x%x\n", (unsigned int)writeSize, (unsigned int)finishedSize);
+
+		}
+	
+		Log_DebugPrintf(LOGID_AUDIO, "\n richlu debug 7: writeSize = 0x%x, finishedSize = 0x%x\n", (unsigned int)writeSize, (unsigned int)finishedSize);
+
+		// finish all the data
+		// stop the driver
+		AUDDRV_VoiceRender_Stop (amrnb_or_wb, TRUE); // TRUE= immediately stop
+
+		// need to give time to dsp to stop.
+		OSTASK_Sleep( 3 ); //make sure the path turned on
+		
+		AUDDRV_VoiceRender_Shutdown (amrnb_or_wb);
+
+		Log_DebugPrintf(LOGID_AUDIO, "\n  richlu debug 8: writeSize = 0x%x, finishedSize = 0x%x\n", (unsigned int)writeSize, (unsigned int)finishedSize);
+
+		// disable the hw
+		if(Val3<7) AUDCTRL_DisablePlay (AUDIO_HW_DSP_VOICE, audPlayHw,speaker);
+		else AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET); 
+
+		OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
+	}
+}
+
+
+#endif

@@ -77,6 +77,7 @@ typedef struct AUDIO_DDRIVER_t
 {
     AUDIO_DRIVER_TYPE_t                     drv_type;
     AUDIO_DRIVER_InterruptPeriodCB_t        pCallback;
+	void	*								pCBPrivate;
     UInt32                                  interrupt_period;
     AUDIO_SAMPLING_RATE_t                   sample_rate;
     AUDIO_CHANNEL_NUM_t		                num_channel;
@@ -790,13 +791,16 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
 
         case AUDIO_DRIVER_SET_CB:
             {
+				AUDIO_DRIVER_CallBackParams_t *pCbParams;
                 if(pCtrlStruct == NULL)
                 {
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr  \n"  );
                     return result_code;
                 }
                 //assign the call back
-                aud_drv->pCallback = (AUDIO_DRIVER_InterruptPeriodCB_t)pCtrlStruct;
+                pCbParams = (AUDIO_DRIVER_CallBackParams_t *)pCtrlStruct;
+                aud_drv->pCallback = pCbParams->pfCallBack;
+				aud_drv->pCBPrivate = pCbParams->pPrivateData;
                 result_code = RESULT_OK;
             }
             break;
@@ -870,7 +874,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
     }
     if(audio_render_driver->pCallback != NULL)
     {
-        audio_render_driver->pCallback(audio_render_driver);
+        audio_render_driver->pCallback(audio_render_driver->pCBPrivate);
     }
     else
         Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_RenderDmaCallback:: No callback registerd\n");
@@ -899,7 +903,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
     }
     if(audio_capture_driver->pCallback != NULL)
     {
-        audio_capture_driver->pCallback(audio_capture_driver);
+        audio_capture_driver->pCallback(audio_capture_driver->pCBPrivate);
     }
     else
         Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_CaptureDmaCallback:: No callback registerd\n");
