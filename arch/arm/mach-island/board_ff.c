@@ -777,6 +777,17 @@ static struct i2c_board_info __initdata bma150_info[] =
    },
 };
 
+#define AK8975_IRQ_PIN 155
+
+static struct i2c_board_info __initdata ak8975_info[] =
+{
+   {
+      I2C_BOARD_INFO("ak8975", 0x0C ),
+      .platform_data  = NULL,
+      .irq = gpio_to_irq(AK8975_IRQ_PIN),
+   },
+};
+
 static char *android_function_rndis[] = {
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis"
@@ -997,6 +1008,10 @@ static void __init board_add_devices(void)
    i2c_register_board_info(3,
                            bma150_info,
                            ARRAY_SIZE(bma150_info));
+
+	i2c_register_board_info(3,
+							ak8975_info,
+							ARRAY_SIZE(ak8975_info));
 }
 
 void __init pinmux_setup(void)
@@ -1016,6 +1031,13 @@ void __init pinmux_setup(void)
 	val = ( 3 << CHIPREG_SIM2_DET_PINSEL_2_0_SHIFT ) |
 		  ( 3 << CHIPREG_SIM2_DET_SEL_2_0_SHIFT )    ;
 	writel( val,  chipRegBase + CHIPREG_SIM2_DET_OFFSET ) ;
+
+	/* Setup pin muxing for compass data ready pin.
+	*/
+	val = ( 3 << CHIPREG_NORFLSH_AD_05_PINSEL_2_0_SHIFT ) |
+		  ( 3 << CHIPREG_NORFLSH_AD_05_SEL_2_0_SHIFT )	 ;
+	writel( val,  chipRegBase + CHIPREG_NORFLSH_AD_05_OFFSET ) ;
+
 }
 
 
