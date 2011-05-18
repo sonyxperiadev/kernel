@@ -298,10 +298,7 @@ EXPORT_SYMBOL(clk_enable);
 EXPORT_SYMBOL(clk_get_rate);
 EXPORT_SYMBOL(clk_set_rate);
 
-#define CLK_MGR_REG_WR_ACCESS_OFFSET 0
-#define CLK_MGR_REG_POLICY_CTL_OFFSET 0xc
-#define CLK_MGR_REG_LVM_EN_OFFSET     0x34
-void __init board_configure(void)
+void __init board_proc_clk_print(void)
 {
 	u32 proc_clk_mgr_base_v;
 	u32 bmdm_clk_mgr_base_v;
@@ -311,20 +308,37 @@ void __init board_configure(void)
 
 	/* print proc_clk set up by the boot loader */
 	printk(KERN_ERR "KPROC: FREQ=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET));
+	printk(KERN_ERR "KPROC: POLICY_CTL=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET));
 	printk(KERN_ERR "KPROC: PLLARMA=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
 	printk(KERN_ERR "KPROC: PLLARMB=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_PLLARMB_OFFSET));
 	printk(KERN_ERR "KPROC: PLLARMC=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_PLLARMC_OFFSET));
 	printk(KERN_ERR "KPROC: PLLARMCTRL5=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET));
 	printk(KERN_ERR "KPROC: ARM_DIV=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET));
 
+	/* registers needed ASIC team to debug A5 speed issue */
+	printk(KERN_ERR "KPROC: PL310_DIV=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_PL310_DIV_OFFSET));
+	printk(KERN_ERR "KPROC: PL310_TRIGGER=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_PL310_TRIGGER_OFFSET));
+	printk(KERN_ERR "KPROC: ACTIVITY_MON1=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_ACTIVITY_MON1_OFFSET));
+	printk(KERN_ERR "KPROC: CLKGATE_DBG=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_CLKGATE_DBG_OFFSET));
+	printk(KERN_ERR "KPROC: PB_CLKGATE_DBG1=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_APB_CLKGATE_DBG1_OFFSET));
+	printk(KERN_ERR "KPROC: POLICY_DBG=0x%x\n", readl(proc_clk_mgr_base_v+KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET));
+
 	/* print bmdm_clk set up by the boot loader */
 	printk(KERN_ERR "BMDM_CCU: FREQ=0x%x\n", readl(bmdm_clk_mgr_base_v+BMDM_CLK_MGR_REG_POLICY_FREQ_OFFSET));
 
+	iounmap((void *)proc_clk_mgr_base_v);
+	iounmap((void *)bmdm_clk_mgr_base_v);
+}
+
+#define CLK_MGR_REG_WR_ACCESS_OFFSET 0
+#define CLK_MGR_REG_POLICY_CTL_OFFSET 0xc
+#define CLK_MGR_REG_LVM_EN_OFFSET     0x34
+void __init board_configure(void)
+{
 	/* print hubaon_timer */
 	printk(KERN_ERR "HAON_CCU: HUB_TIMER_DIV=0x%x\n", readl(KONA_AON_CLK_VA+KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET));
 	/* print peri_timer */
 	printk(KERN_ERR "KPS_CCU: TIMERS_DIV=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_TIMERS_DIV_OFFSET));
-
 
 	/* enable SDIO2 (for SD card) clocks before clock driver is ready */
 	printk(KERN_ERR "SDIO1_CLKGATE =0x%x\n", readl(KONA_KPM_CLK_VA+KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET));
@@ -339,6 +353,9 @@ void __init board_configure(void)
 	writel(0x1f, (KONA_KPM_CLK_VA+KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET));
 	printk(KERN_ERR "SDIO1_CLKGATE =0x%x\n", readl(KONA_KPM_CLK_VA+KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET));
 	printk(KERN_ERR "SDIO1_DIV =0x%x\n", readl(KONA_KPM_CLK_VA+KPM_CLK_MGR_REG_SDIO1_DIV_OFFSET));
+
+	/* eMMC on SDIO2. Print clock*/
+	printk(KERN_ERR "SDIO2_CLKGATE =0x%x\n", readl(KONA_KPM_CLK_VA+KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET));
 	printk(KERN_ERR "SDIO2_DIV =0x%x\n", readl(KONA_KPM_CLK_VA+KPM_CLK_MGR_REG_SDIO2_DIV_OFFSET));
 
 	/* enable I2C clocks before clock driver is ready */
@@ -377,9 +394,6 @@ void __init board_configure(void)
 #ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
 	writel(0, (KONA_KPS_CLK_VA+CLK_MGR_REG_WR_ACCESS_OFFSET));
 #endif
-
-	iounmap((void *)proc_clk_mgr_base_v);
-	iounmap((void *)bmdm_clk_mgr_base_v);
 }
 
 #ifndef CONFIG_MACH_SAMOA_FPGA
@@ -414,6 +428,7 @@ static void Comms_Start(void)
 void __init board_init(void)
 {
 	/* remove this call later */
+	board_proc_clk_print();
 	board_configure();
 
 #ifndef CONFIG_MACH_SAMOA_FPGA
