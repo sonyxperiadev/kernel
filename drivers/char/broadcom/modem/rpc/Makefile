@@ -10,10 +10,10 @@ EXTRA_CFLAGS += -Ifs/cifs/
 EXTRA_CFLAGS += -DUNDER_LINUX
 EXTRA_CFLAGS += -DRPC_INCLUDED
 
-obj-y += \
+obj-$(CONFIG_BCM_MODEM) += \
 	fuse_rpc_main.o \
 	rpc_stubs.o \
-    rpc_CIB/arpc/src/ \
-    rpc_CIB/srpc/src/ \
-    rpc_CIB/xdr/src/  
+	rpc_CIB/arpc/src/ \
+	rpc_CIB/srpc/src/ \
+	rpc_CIB/xdr/src/ 
 

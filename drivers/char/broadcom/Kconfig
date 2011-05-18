@@ -31,3 +31,9 @@ config UNICAM
 	depends on BRCM_CHAR_DRIVERS
 	default BRCM_CHAR_DRIVERS 	
 
+config BCM_MODEM
+        tristate "Broadcom Modem Driver"
+        depends on BRCM_CHAR_DRIVERS
+        default BRCM_CHAR_DRIVERS
+        help
+          Broadcom Modem IPC drivers
