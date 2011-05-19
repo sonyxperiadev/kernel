@@ -16,9 +16,9 @@ config V3D
 config BRCM_FUSE_LOG
 	tristate "Broadcom FUSE LOG drivers"
 	depends on BRCM_CHAR_DRIVERS
-	default BRCM_CHAR_DRIVERS
+	default n
 	--help---
-	  Broadcom n LOG drivers
+	  Broadcom FUSE LOG drivers
 	  
     
 config ISP
@@ -34,6 +34,6 @@ config UNICAM
 config BCM_MODEM
         tristate "Broadcom Modem Driver"
         depends on BRCM_CHAR_DRIVERS
-        default BRCM_CHAR_DRIVERS
+        default n
         help
           Broadcom Modem IPC drivers
