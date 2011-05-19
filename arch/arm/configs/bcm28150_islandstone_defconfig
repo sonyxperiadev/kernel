@@ -865,6 +865,7 @@ CONFIG_BRCM_FUSE_LOG=y
 # CONFIG_V3D is not set
 # CONFIG_ISP is not set
 # CONFIG_UNICAM is not set
+# CONFIG_BCM_MODEM is not set
 # CONFIG_RAMOOPS is not set
 CONFIG_BCM_MDEC=y
 CONFIG_I2C=y
