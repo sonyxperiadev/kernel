@@ -417,7 +417,7 @@ static int __init ipcs_module_init(void)
   INIT_WORK(&g_ipc_info.cp_crash_dump_wq, ProcessCPCrashedDump);
   INIT_WORK(&g_ipc_info.intr_work, ipcs_intr_workqueue_process);
 
-  g_ipc_info.intr_workqueue = create_workqueue("ipc-wq");
+  g_ipc_info.intr_workqueue = create_singlethread_workqueue("ipc-wq");
   if (!g_ipc_info.intr_workqueue)
   {
     IPC_DEBUG(DBG_ERROR,"[ipc]: cannot create workqueue\n");
