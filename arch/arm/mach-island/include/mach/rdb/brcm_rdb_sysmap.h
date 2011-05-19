@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010 Broadcom Corporation                                                         */
+/*  Copyright 2011 Broadcom Corporation                                                         */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -22,7 +22,7 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /*                                                                                              */
-/*     Date     : Generated on 11/27/2010 23:54:19                                   */
+/*     Date     : Generated on 04/25/2011 11:06:08                                   */
 /*     RDB file : /projects/BIGISLAND/revA0                                                                    */
 /************************************************************************************************/
 

@@ -27,7 +27,7 @@
 #define __ISLAND_IO_MAP_H
 
 #include <asm/memory.h>
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_ehci.h>
 
 #define KONA_ACI_VA                 HW_IO_PHYS_TO_VIRT( ACI_BASE_ADDR )

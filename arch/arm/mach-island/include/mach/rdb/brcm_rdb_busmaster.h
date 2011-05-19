@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
+/*  Copyright 2011 Broadcom Corporation                                                         */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,17 +21,11 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/25/2011 11:6:8                                             */
-/*     RDB file : /projects/BIGISLAND/revA0                                                                   */
+/*     Date     :    Generated on 4/25/2011 11:6:8                                            */
+/*     RDB file : /projects/BIGISLAND/revA0                                                                    */
 /************************************************************************************************/
 
-#ifndef __BRCM_RDB_ESW_FLOW_H__
-#define __BRCM_RDB_ESW_FLOW_H__
 
-#define ESW_FLOW_RESERVE_TMP3_OFFSET                                      0x00000010
-#define ESW_FLOW_RESERVE_TMP3_TYPE                                        UInt8
-#define ESW_FLOW_RESERVE_TMP3_RESERVED_MASK                               0x000000FF
-
-#endif /* __BRCM_RDB_ESW_FLOW_H__ */
-
+#ifndef __BRCM_RDB_BUSMASTER_H__
+#define __BRCM_RDB_BUSMASTER_H__
 

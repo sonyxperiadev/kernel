@@ -19,7 +19,7 @@
 #include <asm/io.h>
 #include <linux/math64.h>
 #include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>

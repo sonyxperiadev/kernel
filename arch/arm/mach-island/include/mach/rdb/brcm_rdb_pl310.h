@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/27/2010 23:54:19                                             */
+/*     Date     : Generated on 4/25/2011 11:6:8                                             */
 /*     RDB file : /projects/BIGISLAND/revA0                                                                   */
 /************************************************************************************************/
 
@@ -353,6 +353,14 @@
 #define PL310_PREFETCH_OFFS_RESERVED_MASK                                 0xFFFFFFE0
 #define    PL310_PREFETCH_OFFS_PREFETCH_OFFSET_SHIFT                      0
 #define    PL310_PREFETCH_OFFS_PREFETCH_OFFSET_MASK                       0x0000001F
+
+#define PL310_PWR_CTRL_OFFSET                                             0x00000F80
+#define PL310_PWR_CTRL_TYPE                                               UInt32
+#define PL310_PWR_CTRL_RESERVED_MASK                                      0xFFFFFFFC
+#define    PL310_PWR_CTRL_DYN_CLK_EN_SHIFT                                1
+#define    PL310_PWR_CTRL_DYN_CLK_EN_MASK                                 0x00000002
+#define    PL310_PWR_CTRL_STBY_EN_SHIFT                                   0
+#define    PL310_PWR_CTRL_STBY_EN_MASK                                    0x00000001
 
 #endif /* __BRCM_RDB_PL310_H__ */
 

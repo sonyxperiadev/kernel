@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/27/2010 23:54:34                                             */
-/*     RDB file : /projects/DSP/revA0                                                                   */
+/*     Date     : Generated on 4/25/2011 11:6:8                                             */
+/*     RDB file : /projects/BIGISLAND/revA0                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_AHINTC_H__
@@ -34,7 +34,7 @@
 #define    AHINTC_AHINTC_CONTROL_AHINTC_SOFT_RESET_SHIFT                  31
 #define    AHINTC_AHINTC_CONTROL_AHINTC_SOFT_RESET_MASK                   0x80000000
 
-#define AHINTC_LEVELDETECT_0_OFFSET                                       0x00000020
+#define AHINTC_LEVELDETECT_0_OFFSET                                       0x00000040
 #define AHINTC_LEVELDETECT_0_TYPE                                         UInt32
 #define AHINTC_LEVELDETECT_0_RESERVED_MASK                                0x00000000
 #define    AHINTC_LEVELDETECT_0_LEVEL_CFIFO_CH16_1_SHIFT                  16
@@ -42,7 +42,7 @@
 #define    AHINTC_LEVELDETECT_0_LEVEL_AADMAC_CH16_1_SHIFT                 0
 #define    AHINTC_LEVELDETECT_0_LEVEL_AADMAC_CH16_1_MASK                  0x0000FFFF
 
-#define AHINTC_LEVELDETECT_1_OFFSET                                       0x00000022
+#define AHINTC_LEVELDETECT_1_OFFSET                                       0x00000044
 #define AHINTC_LEVELDETECT_1_TYPE                                         UInt32
 #define AHINTC_LEVELDETECT_1_RESERVED_MASK                                0x10480000
 #define    AHINTC_LEVELDETECT_1_LEVEL_MIXER1_OUTFIFO_SHIFT                31
@@ -84,7 +84,7 @@
 #define    AHINTC_LEVELDETECT_1_LEVEL_TAP_INCH4_1_SHIFT                   0
 #define    AHINTC_LEVELDETECT_1_LEVEL_TAP_INCH4_1_MASK                    0x0000000F
 
-#define AHINTC_STATUS_ARM_STD_0_OFFSET                                    0x00000040
+#define AHINTC_STATUS_ARM_STD_0_OFFSET                                    0x00000080
 #define AHINTC_STATUS_ARM_STD_0_TYPE                                      UInt32
 #define AHINTC_STATUS_ARM_STD_0_RESERVED_MASK                             0x00000000
 #define    AHINTC_STATUS_ARM_STD_0_STATUS_A_S_CFIFO_CH16_1_SHIFT          16
@@ -92,7 +92,7 @@
 #define    AHINTC_STATUS_ARM_STD_0_STATUS_A_S_AADMAC_CH16_1_SHIFT         0
 #define    AHINTC_STATUS_ARM_STD_0_STATUS_A_S_AADMAC_CH16_1_MASK          0x0000FFFF
 
-#define AHINTC_STATUS_ARM_STD_1_OFFSET                                    0x00000042
+#define AHINTC_STATUS_ARM_STD_1_OFFSET                                    0x00000084
 #define AHINTC_STATUS_ARM_STD_1_TYPE                                      UInt32
 #define AHINTC_STATUS_ARM_STD_1_RESERVED_MASK                             0x10480000
 #define    AHINTC_STATUS_ARM_STD_1_STATUS_A_S_MIXER1_OUTFIFO_SHIFT        31
@@ -134,7 +134,7 @@
 #define    AHINTC_STATUS_ARM_STD_1_STATUS_A_S_TAP_INCH4_1_SHIFT           0
 #define    AHINTC_STATUS_ARM_STD_1_STATUS_A_S_TAP_INCH4_1_MASK            0x0000000F
 
-#define AHINTC_STATUS_ARM_ERR_0_OFFSET                                    0x00000050
+#define AHINTC_STATUS_ARM_ERR_0_OFFSET                                    0x000000A0
 #define AHINTC_STATUS_ARM_ERR_0_TYPE                                      UInt32
 #define AHINTC_STATUS_ARM_ERR_0_RESERVED_MASK                             0x00000000
 #define    AHINTC_STATUS_ARM_ERR_0_STATUS_A_E_CFIFO_CH16_1_SHIFT          16
@@ -142,7 +142,7 @@
 #define    AHINTC_STATUS_ARM_ERR_0_STATUS_A_E_AADMAC_CH16_1_SHIFT         0
 #define    AHINTC_STATUS_ARM_ERR_0_STATUS_A_E_AADMAC_CH16_1_MASK          0x0000FFFF
 
-#define AHINTC_STATUS_ARM_ERR_1_OFFSET                                    0x00000052
+#define AHINTC_STATUS_ARM_ERR_1_OFFSET                                    0x000000A4
 #define AHINTC_STATUS_ARM_ERR_1_TYPE                                      UInt32
 #define AHINTC_STATUS_ARM_ERR_1_RESERVED_MASK                             0x10480000
 #define    AHINTC_STATUS_ARM_ERR_1_STATUS_A_E_MIXER1_OUTFIFO_SHIFT        31
@@ -184,7 +184,7 @@
 #define    AHINTC_STATUS_ARM_ERR_1_STATUS_A_E_TAP_INCH4_1_SHIFT           0
 #define    AHINTC_STATUS_ARM_ERR_1_STATUS_A_E_TAP_INCH4_1_MASK            0x0000000F
 
-#define AHINTC_STATUS_DSP_STD_0_OFFSET                                    0x00000060
+#define AHINTC_STATUS_DSP_STD_0_OFFSET                                    0x000000C0
 #define AHINTC_STATUS_DSP_STD_0_TYPE                                      UInt32
 #define AHINTC_STATUS_DSP_STD_0_RESERVED_MASK                             0x00000000
 #define    AHINTC_STATUS_DSP_STD_0_STATUS_D_S_CFIFO_CH16_1_SHIFT          16
@@ -192,7 +192,7 @@
 #define    AHINTC_STATUS_DSP_STD_0_STATUS_D_S_AADMAC_CH16_1_SHIFT         0
 #define    AHINTC_STATUS_DSP_STD_0_STATUS_D_S_AADMAC_CH16_1_MASK          0x0000FFFF
 
-#define AHINTC_STATUS_DSP_STD_1_OFFSET                                    0x00000062
+#define AHINTC_STATUS_DSP_STD_1_OFFSET                                    0x000000C4
 #define AHINTC_STATUS_DSP_STD_1_TYPE                                      UInt32
 #define AHINTC_STATUS_DSP_STD_1_RESERVED_MASK                             0x10480000
 #define    AHINTC_STATUS_DSP_STD_1_STATUS_D_S_MIXER1_OUTFIFO_SHIFT        31
@@ -234,7 +234,7 @@
 #define    AHINTC_STATUS_DSP_STD_1_STATUS_D_S_TAP_INCH4_1_SHIFT           0
 #define    AHINTC_STATUS_DSP_STD_1_STATUS_D_S_TAP_INCH4_1_MASK            0x0000000F
 
-#define AHINTC_STATUS_DSP_ERR_0_OFFSET                                    0x00000070
+#define AHINTC_STATUS_DSP_ERR_0_OFFSET                                    0x000000E0
 #define AHINTC_STATUS_DSP_ERR_0_TYPE                                      UInt32
 #define AHINTC_STATUS_DSP_ERR_0_RESERVED_MASK                             0x00000000
 #define    AHINTC_STATUS_DSP_ERR_0_STATUS_D_E_CFIFO_CH16_1_SHIFT          16
@@ -242,7 +242,7 @@
 #define    AHINTC_STATUS_DSP_ERR_0_STATUS_D_E_AADMAC_CH16_1_SHIFT         0
 #define    AHINTC_STATUS_DSP_ERR_0_STATUS_D_E_AADMAC_CH16_1_MASK          0x0000FFFF
 
-#define AHINTC_STATUS_DSP_ERR_1_OFFSET                                    0x00000072
+#define AHINTC_STATUS_DSP_ERR_1_OFFSET                                    0x000000E4
 #define AHINTC_STATUS_DSP_ERR_1_TYPE                                      UInt32
 #define AHINTC_STATUS_DSP_ERR_1_RESERVED_MASK                             0x10480000
 #define    AHINTC_STATUS_DSP_ERR_1_STATUS_D_E_MIXER1_OUTFIFO_SHIFT        31
@@ -284,7 +284,7 @@
 #define    AHINTC_STATUS_DSP_ERR_1_STATUS_D_E_TAP_INCH4_1_SHIFT           0
 #define    AHINTC_STATUS_DSP_ERR_1_STATUS_D_E_TAP_INCH4_1_MASK            0x0000000F
 
-#define AHINTC_CLEAR_ARM_STD_0_OFFSET                                     0x00000080
+#define AHINTC_CLEAR_ARM_STD_0_OFFSET                                     0x00000100
 #define AHINTC_CLEAR_ARM_STD_0_TYPE                                       UInt32
 #define AHINTC_CLEAR_ARM_STD_0_RESERVED_MASK                              0x00000000
 #define    AHINTC_CLEAR_ARM_STD_0_CLEAR_A_S_CFIFO_CH16_1_SHIFT            16
@@ -292,7 +292,7 @@
 #define    AHINTC_CLEAR_ARM_STD_0_CLEAR_A_S_AADMAC_CH16_1_SHIFT           0
 #define    AHINTC_CLEAR_ARM_STD_0_CLEAR_A_S_AADMAC_CH16_1_MASK            0x0000FFFF
 
-#define AHINTC_CLEAR_ARM_STD_1_OFFSET                                     0x00000082
+#define AHINTC_CLEAR_ARM_STD_1_OFFSET                                     0x00000104
 #define AHINTC_CLEAR_ARM_STD_1_TYPE                                       UInt32
 #define AHINTC_CLEAR_ARM_STD_1_RESERVED_MASK                              0x10480000
 #define    AHINTC_CLEAR_ARM_STD_1_CLEAR_A_S_MIXER1_OUTFIFO_SHIFT          31
@@ -334,7 +334,7 @@
 #define    AHINTC_CLEAR_ARM_STD_1_CLEAR_A_S_TAP_INCH4_1_SHIFT             0
 #define    AHINTC_CLEAR_ARM_STD_1_CLEAR_A_S_TAP_INCH4_1_MASK              0x0000000F
 
-#define AHINTC_CLEAR_ARM_ERR_0_OFFSET                                     0x00000090
+#define AHINTC_CLEAR_ARM_ERR_0_OFFSET                                     0x00000120
 #define AHINTC_CLEAR_ARM_ERR_0_TYPE                                       UInt32
 #define AHINTC_CLEAR_ARM_ERR_0_RESERVED_MASK                              0x00000000
 #define    AHINTC_CLEAR_ARM_ERR_0_CLEAR_A_E_CFIFO_CH16_1_SHIFT            16
@@ -342,7 +342,7 @@
 #define    AHINTC_CLEAR_ARM_ERR_0_CLEAR_A_E_AADMAC_CH16_1_SHIFT           0
 #define    AHINTC_CLEAR_ARM_ERR_0_CLEAR_A_E_AADMAC_CH16_1_MASK            0x0000FFFF
 
-#define AHINTC_CLEAR_ARM_ERR_1_OFFSET                                     0x00000092
+#define AHINTC_CLEAR_ARM_ERR_1_OFFSET                                     0x00000124
 #define AHINTC_CLEAR_ARM_ERR_1_TYPE                                       UInt32
 #define AHINTC_CLEAR_ARM_ERR_1_RESERVED_MASK                              0x10480000
 #define    AHINTC_CLEAR_ARM_ERR_1_CLEAR_A_E_MIXER1_OUTFIFO_SHIFT          31
@@ -384,7 +384,7 @@
 #define    AHINTC_CLEAR_ARM_ERR_1_CLEAR_A_E_TAP_INCH4_1_SHIFT             0
 #define    AHINTC_CLEAR_ARM_ERR_1_CLEAR_A_E_TAP_INCH4_1_MASK              0x0000000F
 
-#define AHINTC_CLEAR_DSP_STD_0_OFFSET                                     0x000000A0
+#define AHINTC_CLEAR_DSP_STD_0_OFFSET                                     0x00000140
 #define AHINTC_CLEAR_DSP_STD_0_TYPE                                       UInt32
 #define AHINTC_CLEAR_DSP_STD_0_RESERVED_MASK                              0x00000000
 #define    AHINTC_CLEAR_DSP_STD_0_CLEAR_D_S_CFIFO_CH16_1_SHIFT            16
@@ -392,7 +392,7 @@
 #define    AHINTC_CLEAR_DSP_STD_0_CLEAR_D_S_AADMAC_CH16_1_SHIFT           0
 #define    AHINTC_CLEAR_DSP_STD_0_CLEAR_D_S_AADMAC_CH16_1_MASK            0x0000FFFF
 
-#define AHINTC_CLEAR_DSP_STD_1_OFFSET                                     0x000000A2
+#define AHINTC_CLEAR_DSP_STD_1_OFFSET                                     0x00000144
 #define AHINTC_CLEAR_DSP_STD_1_TYPE                                       UInt32
 #define AHINTC_CLEAR_DSP_STD_1_RESERVED_MASK                              0x10480000
 #define    AHINTC_CLEAR_DSP_STD_1_CLEAR_D_S_MIXER1_OUTFIFO_SHIFT          31
@@ -434,7 +434,7 @@
 #define    AHINTC_CLEAR_DSP_STD_1_CLEAR_D_S_TAP_INCH4_1_SHIFT             0
 #define    AHINTC_CLEAR_DSP_STD_1_CLEAR_D_S_TAP_INCH4_1_MASK              0x0000000F
 
-#define AHINTC_CLEAR_DSP_ERR_0_OFFSET                                     0x000000B0
+#define AHINTC_CLEAR_DSP_ERR_0_OFFSET                                     0x00000160
 #define AHINTC_CLEAR_DSP_ERR_0_TYPE                                       UInt32
 #define AHINTC_CLEAR_DSP_ERR_0_RESERVED_MASK                              0x00000000
 #define    AHINTC_CLEAR_DSP_ERR_0_CLEAR_D_E_CFIFO_CH16_1_SHIFT            16
@@ -442,7 +442,7 @@
 #define    AHINTC_CLEAR_DSP_ERR_0_CLEAR_D_E_AADMAC_CH16_1_SHIFT           0
 #define    AHINTC_CLEAR_DSP_ERR_0_CLEAR_D_E_AADMAC_CH16_1_MASK            0x0000FFFF
 
-#define AHINTC_CLEAR_DSP_ERR_1_OFFSET                                     0x000000B2
+#define AHINTC_CLEAR_DSP_ERR_1_OFFSET                                     0x00000164
 #define AHINTC_CLEAR_DSP_ERR_1_TYPE                                       UInt32
 #define AHINTC_CLEAR_DSP_ERR_1_RESERVED_MASK                              0x10480000
 #define    AHINTC_CLEAR_DSP_ERR_1_CLEAR_D_E_MIXER1_OUTFIFO_SHIFT          31
@@ -484,7 +484,7 @@
 #define    AHINTC_CLEAR_DSP_ERR_1_CLEAR_D_E_TAP_INCH4_1_SHIFT             0
 #define    AHINTC_CLEAR_DSP_ERR_1_CLEAR_D_E_TAP_INCH4_1_MASK              0x0000000F
 
-#define AHINTC_ENABLE_ARM_STD_0_OFFSET                                    0x000000C0
+#define AHINTC_ENABLE_ARM_STD_0_OFFSET                                    0x00000180
 #define AHINTC_ENABLE_ARM_STD_0_TYPE                                      UInt32
 #define AHINTC_ENABLE_ARM_STD_0_RESERVED_MASK                             0x00000000
 #define    AHINTC_ENABLE_ARM_STD_0_ENABLE_A_S_CFIFO_CH16_1_SHIFT          16
@@ -492,7 +492,7 @@
 #define    AHINTC_ENABLE_ARM_STD_0_ENABLE_A_S_AADMAC_CH16_1_SHIFT         0
 #define    AHINTC_ENABLE_ARM_STD_0_ENABLE_A_S_AADMAC_CH16_1_MASK          0x0000FFFF
 
-#define AHINTC_ENABLE_ARM_STD_1_OFFSET                                    0x000000C2
+#define AHINTC_ENABLE_ARM_STD_1_OFFSET                                    0x00000184
 #define AHINTC_ENABLE_ARM_STD_1_TYPE                                      UInt32
 #define AHINTC_ENABLE_ARM_STD_1_RESERVED_MASK                             0x10480000
 #define    AHINTC_ENABLE_ARM_STD_1_ENABLE_A_S_MIXER1_OUTFIFO_SHIFT        31
@@ -534,7 +534,7 @@
 #define    AHINTC_ENABLE_ARM_STD_1_ENABLE_A_S_TAP_INCH4_1_SHIFT           0
 #define    AHINTC_ENABLE_ARM_STD_1_ENABLE_A_S_TAP_INCH4_1_MASK            0x0000000F
 
-#define AHINTC_ENABLE_ARM_ERR_0_OFFSET                                    0x000000D0
+#define AHINTC_ENABLE_ARM_ERR_0_OFFSET                                    0x000001A0
 #define AHINTC_ENABLE_ARM_ERR_0_TYPE                                      UInt32
 #define AHINTC_ENABLE_ARM_ERR_0_RESERVED_MASK                             0x00000000
 #define    AHINTC_ENABLE_ARM_ERR_0_ENABLE_A_E_CFIFO_CH16_1_SHIFT          16
@@ -542,7 +542,7 @@
 #define    AHINTC_ENABLE_ARM_ERR_0_ENABLE_A_E_AADMAC_CH16_1_SHIFT         0
 #define    AHINTC_ENABLE_ARM_ERR_0_ENABLE_A_E_AADMAC_CH16_1_MASK          0x0000FFFF
 
-#define AHINTC_ENABLE_ARM_ERR_1_OFFSET                                    0x000000D2
+#define AHINTC_ENABLE_ARM_ERR_1_OFFSET                                    0x000001A4
 #define AHINTC_ENABLE_ARM_ERR_1_TYPE                                      UInt32
 #define AHINTC_ENABLE_ARM_ERR_1_RESERVED_MASK                             0x104C0100
 #define    AHINTC_ENABLE_ARM_ERR_1_ENABLE_A_E_MIXER1_OUTFIFO_SHIFT        31
@@ -580,7 +580,7 @@
 #define    AHINTC_ENABLE_ARM_ERR_1_ENABLE_A_E_TAP_INCH4_1_SHIFT           0
 #define    AHINTC_ENABLE_ARM_ERR_1_ENABLE_A_E_TAP_INCH4_1_MASK            0x0000000F
 
-#define AHINTC_ENABLE_DSP_STD_0_OFFSET                                    0x000000E0
+#define AHINTC_ENABLE_DSP_STD_0_OFFSET                                    0x000001C0
 #define AHINTC_ENABLE_DSP_STD_0_TYPE                                      UInt32
 #define AHINTC_ENABLE_DSP_STD_0_RESERVED_MASK                             0x00000000
 #define    AHINTC_ENABLE_DSP_STD_0_ENABLE_D_S_CFIFO_CH16_1_SHIFT          16
@@ -588,7 +588,7 @@
 #define    AHINTC_ENABLE_DSP_STD_0_ENABLE_D_S_AADMAC_CH16_1_SHIFT         0
 #define    AHINTC_ENABLE_DSP_STD_0_ENABLE_D_S_AADMAC_CH16_1_MASK          0x0000FFFF
 
-#define AHINTC_ENABLE_DSP_STD_1_OFFSET                                    0x000000E2
+#define AHINTC_ENABLE_DSP_STD_1_OFFSET                                    0x000001C4
 #define AHINTC_ENABLE_DSP_STD_1_TYPE                                      UInt32
 #define AHINTC_ENABLE_DSP_STD_1_RESERVED_MASK                             0x10480000
 #define    AHINTC_ENABLE_DSP_STD_1_ENABLE_D_S_MIXER1_OUTFIFO_SHIFT        31
@@ -630,7 +630,7 @@
 #define    AHINTC_ENABLE_DSP_STD_1_ENABLE_D_S_TAP_INCH4_1_SHIFT           0
 #define    AHINTC_ENABLE_DSP_STD_1_ENABLE_D_S_TAP_INCH4_1_MASK            0x0000000F
 
-#define AHINTC_ENABLE_DSP_ERR_0_OFFSET                                    0x000000F0
+#define AHINTC_ENABLE_DSP_ERR_0_OFFSET                                    0x000001E0
 #define AHINTC_ENABLE_DSP_ERR_0_TYPE                                      UInt32
 #define AHINTC_ENABLE_DSP_ERR_0_RESERVED_MASK                             0x00000000
 #define    AHINTC_ENABLE_DSP_ERR_0_ENABLE_D_E_CFIFO_CH16_1_SHIFT          16
@@ -638,7 +638,7 @@
 #define    AHINTC_ENABLE_DSP_ERR_0_ENABLE_D_E_AADMAC_CH16_1_SHIFT         0
 #define    AHINTC_ENABLE_DSP_ERR_0_ENABLE_D_E_AADMAC_CH16_1_MASK          0x0000FFFF
 
-#define AHINTC_ENABLE_DSP_ERR_1_OFFSET                                    0x000000F2
+#define AHINTC_ENABLE_DSP_ERR_1_OFFSET                                    0x000001E4
 #define AHINTC_ENABLE_DSP_ERR_1_TYPE                                      UInt32
 #define AHINTC_ENABLE_DSP_ERR_1_RESERVED_MASK                             0x10480000
 #define    AHINTC_ENABLE_DSP_ERR_1_ENABLE_D_E_MIXER1_OUTFIFO_SHIFT        31
