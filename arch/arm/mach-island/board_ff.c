@@ -684,7 +684,7 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
         .batt_technology = POWER_SUPPLY_TECHNOLOGY_LION ,
 };
 #endif
-
+#if 0
 /* Regulator registration */
 struct regulator_consumer_supply sim_supply[] = {
 	{ .supply = "sim_vcc" },
@@ -708,10 +708,8 @@ static struct bcm590xx_regulator_init_data bcm59055_regulators[] =
 {
 	{BCM59055_SIMLDO, &bcm59055_simldo_data, BCM590XX_REGL_LPM_IN_DSM},
 };
-
+#endif
 static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
-	.num_regulator	= ARRAY_SIZE(bcm59055_regulators),
-	.init			= bcm59055_regulators,
 	.default_pmmode = {
 		[BCM59055_RFLDO]	= 0x00,
 		[BCM59055_CAMLDO] 	= 0x00,
