@@ -32,7 +32,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/delay.h>
 
 #include <linux/broadcom/unicam.h>
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_cam.h>
 

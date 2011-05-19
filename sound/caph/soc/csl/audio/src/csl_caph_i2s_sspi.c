@@ -31,7 +31,7 @@
 #include "csl_caph_i2s_sspi.h"
 #include "brcm_rdb_sspil.h"
 #include "brcm_rdb_padctrlreg.h"
-#include "brcm_rdb_sysmap_a9.h"
+#include "brcm_rdb_sysmap.h"
 #include "log.h"
 
 //===========================================================================

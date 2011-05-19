@@ -58,7 +58,7 @@
 #endif
 #include "csl_caph_pcm_sspi.h"
 #include "brcm_rdb_padctrlreg.h"
-#include "brcm_rdb_sysmap_a9.h"
+#include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_sspil.h"
 #include "log.h"
 

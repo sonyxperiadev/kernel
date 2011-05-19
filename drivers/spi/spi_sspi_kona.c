@@ -45,7 +45,7 @@
 #include <plat/spi_kona.h>
 #include <linux/dma-mapping.h>
 #include <mach/dma.h>
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 
 #define SSPI_MAX_TASK_LOOP	1023
 #define SSPI_TASK_TIME_OUT	500000

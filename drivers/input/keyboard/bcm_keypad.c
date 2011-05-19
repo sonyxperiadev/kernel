@@ -31,7 +31,7 @@
 #ifdef CONFIG_ARCH_SAMOA
 #include <mach/rdb/brcm_rdb_sysmap_a5.h>
 #else
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #endif
 #include <mach/rdb/brcm_rdb_util.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>

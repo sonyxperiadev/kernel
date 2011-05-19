@@ -22,7 +22,7 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /*                                                                                              */
-/*     Date     : Generated on 01/07/2011 14:24:48                                   */
+/*     Date     : Generated on 05/17/2011 00:56:25                                   */
 /*     RDB file : //RHEA/                                                                    */
 /************************************************************************************************/
 
@@ -124,6 +124,7 @@
 #define DSP_RST_BASE_ADDR         0x3A056F00 /* brcm_rdb_dsp_rst_mgr_reg.h */
 #define BMDM_PWRMGR_BASE_ADDR     0x3A057000 /* brcm_rdb_bmdm_pwrmgr.h */
 #define SLEEPTIMER3G_BASE_ADDR    0x3A059000 /* brcm_rdb_sleeptimer3g.h */
+#define FSCLKCAL_BASE_ADDR        0x3A05A000 /* brcm_rdb_fsclkcal.h */
 #define BMODEM_AONCFG_BASE_ADDR   0x3A05B000 /* brcm_rdb_bmodem_aoncfg.h */
 
 /**** WCDMA ****/

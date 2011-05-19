@@ -20,7 +20,7 @@
 
 #include <mach/clock.h>
 #include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>

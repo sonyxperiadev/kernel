@@ -26,7 +26,7 @@
 #include "plat/mobcom_types.h"
 #include "plat/osabstract/osinterrupt.h"
 #include "plat/osabstract/ossemaphore.h"
-#include "mach/rdb/brcm_rdb_sysmap_a9.h"
+#include "mach/rdb/brcm_rdb_sysmap.h"
 #include "plat/csl/csl_dma_vc4lite.h"
 #include "plat/chal/chal_dma_vc4lite.h"
 #include "plat/osdal_os.h"
