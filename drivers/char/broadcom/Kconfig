@@ -33,7 +33,7 @@ config UNICAM
 
 config BCM_MODEM
         tristate "Broadcom Modem Driver"
-        depends on BRCM_CHAR_DRIVERS
+        depends on BRCM_CHAR_DRIVERS && NET
         default n
         help
           Broadcom Modem IPC drivers
