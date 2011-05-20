@@ -92,37 +92,36 @@ void KRIL_SysRpc_Init( void )
         
         wake_lock_init(&sKrilSysRpcWakeLock, WAKE_LOCK_SUSPEND, "kril_sysrpc_wake_lock");
 
+        KRIL_DEBUG(DBG_INFO," calling SYS_InitRpc\n");
+        SYS_InitRpc();
+        
         // **FIXME** add this to actual module init? Need a way to shut it down as well...
         KRIL_DEBUG(DBG_ERROR,"calling regulator_get...\n");
         sim_regulator = regulator_get(NULL,"sim_vcc");
-        if ( sim_regulator > 0 )
-        {
-            KRIL_DEBUG(DBG_ERROR," regulator_get OK\n");
-        }
-        else
+        if (IS_ERR(sim_regulator))
         {
             KRIL_DEBUG(DBG_ERROR," **regulator_get FAILED %d\n", sim_regulator);
         }
-        
-        // **FIXME** workaround for SIM LDO being enabled on startup by the driver; this 
-        // just bumps up our ref count in the sim_regulator struct, so that the 
-        // regulator_disable() call below doesn't fail
-        KRIL_DEBUG(DBG_INFO," calling regulator_enable...\n");
-        ret = regulator_enable(sim_regulator);
-        KRIL_DEBUG(DBG_INFO," regulator_enable returned %d\n",ret);
+        else
+        {
+            KRIL_DEBUG(DBG_ERROR," regulator_get OK\n");
 
-        KRIL_DEBUG(DBG_INFO," calling SYS_InitRpc\n");
-        SYS_InitRpc();
+            // **FIXME** workaround for SIM LDO being enabled on startup by the driver; this 
+            // just bumps up our ref count in the sim_regulator struct, so that the 
+            // regulator_disable() call below doesn't fail
+            KRIL_DEBUG(DBG_INFO," calling regulator_enable...\n");
+            ret = regulator_enable(sim_regulator);
+            KRIL_DEBUG(DBG_INFO," regulator_enable returned %d\n",ret);
 
-        errCode = _HAL_EM_BATTMGR_RegisterEventCB( BATTMGR_EMPTY_BATT_EVENT, HandleBattMgrEmptyEvent );
-        KRIL_DEBUG(DBG_INFO," reg empty rtnd %d\n", (int)errCode );
+            errCode = _HAL_EM_BATTMGR_RegisterEventCB( BATTMGR_EMPTY_BATT_EVENT, HandleBattMgrEmptyEvent );
+            KRIL_DEBUG(DBG_INFO," reg empty rtnd %d\n", (int)errCode );
 
-        errCode = _HAL_EM_BATTMGR_RegisterEventCB( BATTMGR_LOW_BATT_EVENT, HandleBattMgrLowEvent );
-        KRIL_DEBUG(DBG_INFO," reg low rtnd %d\n", (int)errCode );
+            errCode = _HAL_EM_BATTMGR_RegisterEventCB( BATTMGR_LOW_BATT_EVENT, HandleBattMgrLowEvent );
+            KRIL_DEBUG(DBG_INFO," reg low rtnd %d\n", (int)errCode );
 
-        errCode = _HAL_EM_BATTMGR_RegisterEventCB( BATTMGR_BATTLEVEL_CHANGE_EVENT, HandleBattMgrLevelEvent );
-        KRIL_DEBUG(DBG_INFO," reg change rtnd %d\n", (int)errCode );
-
+            errCode = _HAL_EM_BATTMGR_RegisterEventCB( BATTMGR_BATTLEVEL_CHANGE_EVENT, HandleBattMgrLevelEvent );
+            KRIL_DEBUG(DBG_INFO," reg change rtnd %d\n", (int)errCode );
+        }
     }
 }
 

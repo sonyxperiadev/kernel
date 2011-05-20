@@ -46,6 +46,8 @@
 #include "ipc_server_ccb.h"
 #include "ipc_debug.h"
 //#include "bcmlog.h"
+
+#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/platform_mconfig.h>
 
 #include <mach/io_map.h>
@@ -285,10 +287,9 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
    }
 }
 
-
 static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 {
-   //printk( KERN_ALERT  "[ipc]: ipcs_interrupt\n");
+   //printk( KERN_ALERT  "[ipc]: ipcs_interrupt %x %x \n", BINTC_ISWIR1_CLR_OFFSET, BINTC_ISWIR0_CLR_OFFSET);
    if((&g_ipc_info.intr_work)->func )
    {
 #ifdef CONFIG_HAS_WAKELOCK
@@ -313,7 +314,6 @@ static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
             writel(1 << (birq-32), base + BINTC_ISWIR1_CLR_OFFSET/*0x34*/);
         else
             writel(1 << (birq), base + BINTC_ISWIR0_CLR_OFFSET /*0x24*/);
-
     }
 
   return IRQ_HANDLED;
@@ -382,12 +382,40 @@ static int __init ipcs_init(void *smbase, unsigned int size)
   return(0);
 }
 
+void Comms_Start(void)
+{
+    void __iomem *apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
+    if (!apcp_shmem) {
+        printk(KERN_ERR "%s: ioremap shmem failed\n", __func__);
+        return;
+    }
+    /* clear first (9) 32-bit words in shared memory */
+    memset(apcp_shmem, 0, IPC_SIZE);
+    iounmap(apcp_shmem);
+
+    void __iomem *cp_boot_base;
+
+    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
+    if (!cp_boot_base) {
+        printk(KERN_ERR "%s: ioremap error\n", __func__);
+        return;
+    }
+
+    /* Start the CP, Code taken from Nucleus BSP */
+    *(unsigned int *)(cp_boot_base+INIT_ADDRESS_OFFSET) = *(unsigned int *)(cp_boot_base+MAIN_ADDRESS_OFFSET);
+
+    iounmap(cp_boot_base);
+    printk(KERN_ALERT "%s: modem (R4 COMMS) started....\n", __func__);
+}
+
 static int __init ipcs_module_init(void)
 {
   int rc;
   
   printk( KERN_ALERT "[ipc]: ipcs_module_init start..\n");
   
+  Comms_Start();
+
   init_MUTEX_LOCKED(&g_ipc_info.ipc_sem);
 
   g_ipc_info.ipc_state = 0;
