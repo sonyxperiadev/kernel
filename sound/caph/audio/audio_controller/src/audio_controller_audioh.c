@@ -54,9 +54,6 @@ ANY LIMITED REMEDY.
 #include "audio_consts.h"
 #include "auddrv_def.h"
 #include "audio_gain_table.h"
-#ifdef LMP_BUILD
-#include "csl_aud_drv.h"
-#endif
 #include "audio_manager_commons.h"
 #include "audio_controller.h"
 #include "i2s.h"

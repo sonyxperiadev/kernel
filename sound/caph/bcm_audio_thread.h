@@ -11,14 +11,14 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************************/
 /**
-*    @file   brcm_audio_thread.h
+*    @file   bcm_audio_thread.h
 *    @brief  API declaration of hardware abstraction layer for Audio driver.
 *   This code is OS independent and Device independent for audio device control.
 ****************************************************************************/
 
 
-#ifndef _BRCM_AUDIO_THREAD_H__
-#define _BRCM_AUDIO_THREAD_H__
+#ifndef _BCM_AUDIO_THREAD_H__
+#define _BCM_AUDIO_THREAD_H__
 
 //! The higher layer calls this Audio hardware abstraction layer to perform the following actions. This is expandable
 //! if audio controller need to handle more requests.

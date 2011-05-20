@@ -74,9 +74,7 @@ extern char	G_EXTID ;			//swchen, 2007-05
 
 #else //#ifdef WIN32
 
-#ifdef LMP_BUILD
-#include "irqctrl.h"
-#endif
+
 
 //#include "gpio.h"
 #include "chip_version.h"

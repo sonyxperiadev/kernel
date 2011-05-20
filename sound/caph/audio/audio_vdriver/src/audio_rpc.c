@@ -18,15 +18,12 @@
 #include "taskmsgs.h"
 #include "ipcproperties.h"
 
-#ifdef LMP_BUILD
 #include "rpc_global.h"
 #include "rpc_ipc.h"
-#include "csl_aud_drv.h"
 #include "xdr_porting_layer.h"
 #include "xdr.h"
-#include "rpc_sync_api.h"
 #include "rpc_api.h"
-#endif
+#include "rpc_sync_api.h"
 
 #include "xassert.h"
 #include "audio_consts.h"
@@ -40,9 +37,7 @@
 #include "audioapi_asic.h"
 #include "log.h"
 
-#ifdef LMP_BUILD
 static UInt8 audioClientId = 0;
-#endif
 
 //If this struct is changed then please change xdr_Audio_Params_t() also.
 typedef struct
@@ -55,7 +50,6 @@ typedef struct
 	UInt32 param6;
 }Audio_Params_t;
 
-#if 0
 static bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp);
 #define _T(a) a
 
@@ -70,7 +64,6 @@ static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
 };
 
-#endif
 
 #if defined(FUSE_COMMS_PROCESSOR) 
 static Result_t SendAudioRspForRequest(RPC_Msg_t* req, MsgType_t msgType, void* payload)
@@ -87,7 +80,6 @@ static Result_t SendAudioRspForRequest(RPC_Msg_t* req, MsgType_t msgType, void* 
 }
 #endif
 
-#if 0
 void HandleAudioEventReqCb(RPC_Msg_t* pMsg, 
 						 ResultDataBufHandle_t dataBufHandle, 
 						 UInt32 userContextData)
@@ -126,7 +118,6 @@ static Boolean AudioCopyPayload( MsgType_t msgType,
 						 UInt32* outDestDataSize, 
 						 Result_t *outResult)
 {
-#ifdef LMP_BUILD
 	UInt32 len;
 
 	xassert(srcDataBuf != NULL, 0);
@@ -141,17 +132,14 @@ static Boolean AudioCopyPayload( MsgType_t msgType,
 		memcpy(destDataBuf, srcDataBuf, len);
 		return TRUE;
 	}
-#endif
 	return FALSE;
 
 }
 
-#endif
 
 
 void Audio_InitRpc(void)
 {
-#ifdef LMP_BUILD
 	static int first_time = 1;
 
 	if(first_time)
@@ -174,12 +162,10 @@ void Audio_InitRpc(void)
 		first_time = 0;
 		Log_DebugPrintf(LOGID_MISC, "Audio_InitRpc %d", audioClientId);
 	}
-#endif
 }
 
 /*************************************  AUDIO API CODE *******************************************************************/
 
-#ifdef LMP_BUILD
 void CAPI2_audio_control_generic(UInt32 tid, UInt8 clientID, Audio_Params_t* params)
 {
 	RPC_Msg_t msg;
@@ -221,13 +207,11 @@ bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp)
 		return FALSE;
 }
 
-#endif
 #if defined(FUSE_APPS_PROCESSOR) 
 
 UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4,UInt32 param5,UInt32 param6)
 {
 	UInt32 val = (UInt32)0;
-#ifdef LMP_BUILD
 	Audio_Params_t audioParam;
 	UInt32 tid;
 	MsgType_t msgType;
@@ -243,7 +227,6 @@ UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 pa
 	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
 	CAPI2_audio_control_generic(tid, audioClientId,&audioParam);
 	RPC_SyncWaitForResponse( tid,audioClientId, &ackResult, &msgType, NULL );
-#endif
 	return val;
 
 }
@@ -252,20 +235,17 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 {
 	UInt32 val = (UInt32)0;
 
-#ifdef LMP_BUILD
 	Audio_Params_t audioParam;
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* audio_control_dsp (AP) param1 %d, param2 %d param3 %d param4 %d *\n\r", param1, param2, param3, param4);
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* audio_control_dsp (AP) param1 %ld, param2 %ld param3 %ld param4 %ld *\n\r", param1, param2, param3, param4);
 
 	switch (param1)
 	{
 
-
 		case DSPCMD_TYPE_COMMAND_DIGITAL_SOUND:
 			VPRIPCMDQ_DigitalSound((UInt16)param2);
-			
 			break;
 
 		case DSPCMD_TYPE_COMMAND_SET_ARM2SP:
@@ -335,7 +315,6 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 			break;
 	} 
 	
-#endif
 	return val;
 
 }

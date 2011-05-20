@@ -60,9 +60,6 @@ ANY LIMITED REMEDY.
 //#include "ripcmdq.h"
 #include "ripisr.h"
 #include "audio_consts.h"
-#ifdef LMP_BUILD
-#include "csl_aud_drv.h"
-#endif
 //#include "sysparm.h"
 #include "ostask.h"
 #include "audioapi_asic.h"
@@ -159,7 +156,10 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     //DL
     config.streamID = AUDDRV_STREAM_NONE;
     config.pathID = 0;
-    config.source = AUDDRV_DEV_DSP;
+	if(speaker == AUDDRV_SPKR_IHF)
+		 config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
+	else
+	    config.source = AUDDRV_DEV_DSP;
     config.sink = AUDDRV_GetDRVDeviceFromSpkr(speaker);
     config.dmaCH = CSL_CAPH_DMA_NONE;    
     config.src_sampleRate = sample_rate;

@@ -18,9 +18,10 @@
 
 
 EXTRA_CFLAGS += -DUNDER_LINUX
-EXTRA_CFLAGS += -D _RHEA_  -D MSP -D FUSE_DUAL_PROCESSOR_ARCHITECTURE -D FUSE_APPS_PROCESSOR -D PMU_BCM59055 -D CHAL_NDEBUG_BUILD -D CHIP_REVISION=20 -D VPU_INCLUDED -D DEVELOPMENT_ONLY -D NDEBUG
+EXTRA_CFLAGS += -D _RHEA_  -D MSP -D FUSE_DUAL_PROCESSOR_ARCHITECTURE -D FUSE_APPS_PROCESSOR -D PMU_BCM59055 -D CHAL_NDEBUG_BUILD -D VPU_INCLUDED -D DEVELOPMENT_ONLY -D NDEBUG
 #Linux header files
 EXTRA_CFLAGS += -I ./include/linux/
+EXTRA_CFLAGS += -I ./include/linux/broadcom
 #Audio Controller header files
 EXTRA_CFLAGS += -I $(src)/common -I $(src)/audio/audio_controller -I $(src)/audio/audio_controller/public
 EXTRA_CFLAGS += -I $(src)/audio/audio_vdriver/public/
@@ -42,11 +43,7 @@ EXTRA_CFLAGS += -I $(src)/dsp/rhea/include/
 #SYSPARM Header files
 #EXTRA_CFLAGS += -I $(src)/sysinterface/sysparms/
 #RPC Header files
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/public/
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/arpc/inc/
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/srpc/inc/
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_rpc/rpc_CIB/xdr/inc/
-EXTRA_CFLAGS += -I ../modules/drivers/char/brcm/fuse_ril/CAPI2_CIB/public/
+EXTRA_CFLAGS += -I ./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
 #LOG Header files
 EXTRA_CFLAGS += -I $(src)/soc/debug/public
 #PMU Header files
@@ -70,14 +67,14 @@ EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/osabstract/
 
 obj-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)		+= snd-brcm-omx.o
 snd-brcm-omx-objs := caph_module.o 
-snd-brcm-omx-objs += brcm_auddrv_test.o
+snd-brcm-omx-objs += bcm_auddrv_test.o
 snd-brcm-omx-objs += caph_ctl.o
 snd-brcm-omx-objs += caph_pcm.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_caph.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_common.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_gain_table.o
 snd-brcm-omx-objs += audio/audio_datadriver/src/audio_ddriver.o
-snd-brcm-omx-objs += brcm_audio_thread.o
+snd-brcm-omx-objs += bcm_audio_thread.o
 #snd-brcm-omx-objs += audio_stubs.o
 
 #CHAL Source Files

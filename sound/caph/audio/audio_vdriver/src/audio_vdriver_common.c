@@ -60,10 +60,7 @@ ANY LIMITED REMEDY.
 #include "dspcmd.h"
 #include "ripisr.h"
 #include "audio_consts.h"
-#ifdef LMP_BUILD
-#include "csl_aud_drv.h"
-#include "ripcmdq.h"
-#endif
+//#include "ripcmdq.h"
 #include "drv_caph.h"
 #include "drv_caph_hwctrl.h"
 #include "audio_vdriver.h"
