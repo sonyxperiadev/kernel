@@ -896,6 +896,7 @@ void csl_caph_srcmixer_release_inchnl(CSL_CAPH_SRCM_INCHNL_e chnl)
     /* Clear Mixer output channel usage table for this input channel*/
     csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH1_L, chnl);
     csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH1_R, chnl);
+    csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH1, chnl);
     csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH2_L, chnl);
     csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH2_R, chnl);
 

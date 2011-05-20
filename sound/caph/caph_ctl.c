@@ -41,6 +41,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/control.h>
 #include <sound/pcm_params.h>
 #include <sound/pcm.h>
+#include <sound/asound.h>
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
@@ -51,7 +52,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_consts.h"
 #include "audio_ddriver.h"
 #include "audio_controller.h"
-#include "brcm_audio_devices.h"
+#include "bcm_audio_devices.h"
 #include "caph_common.h"
 
 
@@ -62,10 +63,9 @@ the GPL, without Broadcom's express prior written consent.
 //-------------------------------------------------------------------------------------------
 static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info * uinfo)
 {
-//	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
+
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
-//	int	dev = DEV_OF_CTL(priv);
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->value.integer.step = 1; 
@@ -85,11 +85,9 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 			break;
 		case CTL_STREAM_PANEL_PCMIN:
 		case CTL_STREAM_PANEL_VOIPIN:
-			//if Lound speaker
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0; //Q13.2
 			uinfo->value.integer.max = 170;//42.5<<2 FIXME
-			//if earpiece
 			break;
 		default:
 			break;
@@ -134,27 +132,101 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
 	Int32	*pVolume;
+	struct snd_pcm_substream *pStream=NULL;
+	Int32 *pCurSel;
+	
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
-	stream--;
-	pVolume = pChip->streamCtl[stream].ctlLine[dev].iVolume;
+	pVolume = pChip->streamCtl[stream-1].ctlLine[dev].iVolume;
 	
 	pVolume[0] = ucontrol->value.integer.value[0];
 	pVolume[1] = ucontrol->value.integer.value[1];
+
+	pCurSel = pChip->streamCtl[stream-1].currentLineSel;
+
 	//Apply Volume if the stream is running
 	switch(stream)
 	{
 		case CTL_STREAM_PANEL_PCMOUT1:
 		case CTL_STREAM_PANEL_PCMOUT2:
-		case CTL_STREAM_PANEL_VOIPOUT:			
-			AUDCTRL_SetPlayVolume (pChip->streamCtl[stream].dev_prop.u.p.hw_id,
-					pChip->streamCtl[stream].dev_prop.u.p.speaker, 
-					AUDIO_GAIN_FORMAT_Q13_2, 
+		case CTL_STREAM_PANEL_VOIPOUT:		
+		{
+			if(pChip->streamCtl[stream-1].pSubStream != NULL)
+				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+			else
+				break;
+
+			BCM_AUDIO_DEBUG("VolumeCtrlPut stream state = %d\n",pStream->runtime->status->state);
+
+			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
+			{
+				//call audio driver to set volume
+				BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+				AUDCTRL_SetPlayVolume (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
+					pChip->streamCtl[stream-1].dev_prop.u.p.speaker, 
+					AUDIO_GAIN_FORMAT_Q13_2,
 					pVolume[0], pVolume[1]);
-					
+			}			
+		}
 			break;
 		case CTL_STREAM_PANEL_VOICECALL:
-			break;
+		{
+			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[0] = %ld, pVolume[0] =%ld, pVolume[1]=%ld\n", pCurSel[0],pVolume[0],pVolume[1]);
+
+			//call audio driver to set volume				
+			switch(pCurSel[0])
+			{
+				case AUDCTRL_MIC_MAIN:
+				{
+					//set the playback volume/capture gain
+					if(pCurSel[1] == AUDCTRL_SPK_HANDSET)
+					{
+						AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
+													AUDCTRL_SPK_HANDSET, 
+													pVolume[1], //playback gain
+													AUDIO_GAIN_FORMAT_Q13_2);
+					}
+					else if(pCurSel[1] == AUDCTRL_SPK_HANDSFREE || pCurSel[1] == AUDCTRL_SPK_LOUDSPK)
+					{
+						AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
+														AUDCTRL_SPK_LOUDSPK, 
+														pVolume[1], //playback gain
+														AUDIO_GAIN_FORMAT_Q13_2);
+					}
+					AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_MAIN,pVolume[1]); //record gain
+					}
+				break;
+				case AUDCTRL_MIC_AUX:
+				{
+					AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
+													AUDCTRL_SPK_HEADSET, 
+													pVolume[1], //playback gain
+													AUDIO_GAIN_FORMAT_Q13_2);
+
+					AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_AUX,pVolume[1]); //record gain
+				}
+				break;
+			}						
+		}
+		break;
 		case CTL_STREAM_PANEL_PCMIN:
+		{
+			if(pChip->streamCtl[stream-1].pSubStream != NULL)
+				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+			else
+				break;
+
+			BCM_AUDIO_DEBUG("VolumeCtrlPut stream state = %d\n",pStream->runtime->status->state);
+
+			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
+			{
+				//call audio driver to set volume
+				BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetRecordGain pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+				AUDCTRL_SetRecordGain (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
+					pChip->streamCtl[stream-1].dev_prop.u.c.mic, 
+					pVolume[0], pVolume[1]);
+			}			
+		}
+		break;
 		case CTL_STREAM_PANEL_VOIPIN:
 			break;
 		default:
@@ -182,15 +254,14 @@ static int SelCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info 
 	stream--;
 	if(pChip->streamCtl[stream].iFlags & MIXER_STREAM_FLAGS_CAPTURE)
 	{
-		uinfo->value.integer.min = AUDCTRL_SPK_HANDSET;
-		uinfo->value.integer.max = AUDCTRL_SPK_VIBRA;//FIXME
+		uinfo->value.integer.min = AUDCTRL_MIC_MAIN;
+		uinfo->value.integer.max = AUDCTRL_MIC_TOTAL_COUNT;//FIXME
 	
 	}
 	else
 	{
-		//uinfo->value.integer.min = CTL_DEV_OUT_FIRST;
-		uinfo->value.integer.min = AUDCTRL_MIC_MAIN; // disabling the voice call path
-		uinfo->value.integer.max = AUDCTRL_MIC_TOTAL_COUNT;//FIXME
+		uinfo->value.integer.min = AUDCTRL_SPK_HANDSET; // disabling the voice call path
+		uinfo->value.integer.max = AUDCTRL_SPK_VIBRA;//FIXME
 	}
 	uinfo->value.integer.step = 1;
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -217,7 +288,6 @@ static int SelCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 
 	BCM_AUDIO_DEBUG("xnumid=%d xindex=%d", ucontrol->id.numid, ucontrol->id.index);
 
-	//May need to get the value from driver
 	ucontrol->value.integer.value[0] = pSel[0];
 	ucontrol->value.integer.value[1] = pSel[1];
 
@@ -236,61 +306,65 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
 	Int32	*pSel, *pCurSel;
+	struct snd_pcm_substream *pStream=NULL;
+	
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
-//	stream--;
 	pSel = pChip->streamCtl[stream-1].iLineSelect;
 
 	pSel[0] = ucontrol->value.integer.value[0];
 	pSel[1] = ucontrol->value.integer.value[1];
-	pCurSel =pChip->streamCtl[stream-1].currentLineSel;
-
-	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%d\n", (int)stream,(int)pSel[0]);
-	//Apply selection if the stream is running ?
+	pCurSel = pChip->streamCtl[stream-1].currentLineSel;
+	
+	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld\n", stream,pSel[0]);
+	
 	switch(stream)
-		{
+	{
 		case CTL_STREAM_PANEL_PCMOUT1: //pcmout 1
-
-			//if stream is not running
-			
-			   //return;
-			//else
-			   //call audio driver to set sink
-			
-		
 		case CTL_STREAM_PANEL_PCMOUT2: //pcmout 2
-			break;
+		{
+			if(pChip->streamCtl[stream-1].pSubStream != NULL)
+				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+			else
+				break; //stream is not running, return
+
+			BCM_AUDIO_DEBUG("SetCtrlput stream state = %d\n",pStream->runtime->status->state);
+
+			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED)
+			{
+				//call audio driver to set sink	
+			}
+		}
+		break;
 		case CTL_STREAM_PANEL_VOICECALL://voice call
 			{
 			if(pSel[0]==0)
 				//disable voice call
 				AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],pCurSel[1]);   
 			else
-				{
-				
-				//enable voicec call with sink
+			{				
+				//enable voice call with sink
 				switch(pSel[0])
-					{
+				{
 					case AUDCTRL_MIC_MAIN:
-						//route voice call to earpiece
+					{
+						//route voice call to earpiece or IHF
 						pCurSel[0] = AUDCTRL_MIC_MAIN;
-						pCurSel[1] = AUDCTRL_SPK_HANDSET;
-						AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],pCurSel[1]);
-						break;
-					//case CTL_DEV_OUT_IHF:
-						/* check if this is the valid use case. if so, which is the mic to be set
-						In case of voice call -DL, src - DSP, sink = IHF. But valid possible 
-						use case handled in EnablePath is src-DSPThroughMem and snk = IHF
-						*/
-						
-					//	break;
+						pCurSel[1] = pSel[1];
+						if(pCurSel[1] == AUDCTRL_SPK_HANDSET)
+							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],AUDCTRL_SPK_HANDSET);
+						else if(pCurSel[1] == AUDCTRL_SPK_HANDSFREE || pCurSel[1] == AUDCTRL_SPK_LOUDSPK)
+							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],AUDCTRL_SPK_LOUDSPK);
+					}
+					break;
 					case AUDCTRL_MIC_AUX:
-						
+					{
 						pCurSel[0] = AUDCTRL_MIC_AUX;
 						pCurSel[1] = AUDCTRL_SPK_HEADSET;
 						AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],pCurSel[1]);
-						break;
 					}
+					break;
 				}
+			 }
 			}
 			break;
 		default:
@@ -338,15 +412,120 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
-	Int32	*pMute;
+	Int32	*pMute, *pCurSel;
+	struct snd_pcm_substream *pStream=NULL;
+	
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
-	stream--;
-	pMute = pChip->streamCtl[stream].ctlLine[dev].iMute;
+	pMute = pChip->streamCtl[stream-1].ctlLine[dev].iMute;
 	
 	ucontrol->value.integer.value[0] = pMute[0];
 	ucontrol->value.integer.value[1] = pMute[1];
 
+	pCurSel = pChip->streamCtl[stream-1].currentLineSel;
+
 	//Apply mute is the stream is running
+	switch(stream)
+	{
+		case CTL_STREAM_PANEL_PCMOUT1:
+		case CTL_STREAM_PANEL_PCMOUT2:
+		case CTL_STREAM_PANEL_VOIPOUT:		
+			BCM_AUDIO_DEBUG("SwitchCtrlPut caling AUDCTRL_SetPlayMute pMute[0] =%ld, pMute[1]=%ld\n", pMute[0],pMute[1]);
+			AUDCTRL_SetPlayMute (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
+					pChip->streamCtl[stream-1].dev_prop.u.p.speaker, 
+					pMute[0]);  //currently driver doesnt handle Mute for left/right channels
+					
+			break;
+		case CTL_STREAM_PANEL_VOICECALL:
+			break;
+		case CTL_STREAM_PANEL_PCMIN:
+		case CTL_STREAM_PANEL_VOIPIN:
+			break;
+		default:
+			break;
+	}
+	switch(stream)
+	{
+		case CTL_STREAM_PANEL_PCMOUT1:
+		case CTL_STREAM_PANEL_PCMOUT2:
+		case CTL_STREAM_PANEL_VOIPOUT:		
+		{
+			if(pChip->streamCtl[stream-1].pSubStream != NULL)
+				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+			else
+				break;
+
+			BCM_AUDIO_DEBUG("SwitchCtrlPut stream state = %d\n",pStream->runtime->status->state);
+
+			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
+			{
+				//call audio driver to set mute
+				AUDCTRL_SetPlayMute (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
+						pChip->streamCtl[stream-1].dev_prop.u.p.speaker, 
+						pMute[0]);	//currently driver doesnt handle Mute for left/right channels
+			}			
+		}
+			break;
+		case CTL_STREAM_PANEL_VOICECALL:
+		{
+			BCM_AUDIO_DEBUG("SwitchCtrlPut caling AUDCTRL_SetPlayMute pCurSel[0] = %ld pMute[0] =%ld, pMute[1]=%ld\n", pCurSel[0], pMute[0],pMute[1]);
+
+			//call audio driver to set volume				
+			switch(pCurSel[0])
+			{
+				case AUDCTRL_MIC_MAIN:
+				{
+					//set the playback volume/capture gain
+					if(pCurSel[1] == AUDCTRL_SPK_HANDSET)
+					{
+						AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT,
+													AUDCTRL_SPK_HANDSET, 
+													pMute[0]);
+					}
+					else if(pCurSel[1] == AUDCTRL_SPK_HANDSFREE || pCurSel[1] == AUDCTRL_SPK_LOUDSPK)
+					{
+						AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT,
+													  AUDCTRL_SPK_LOUDSPK, 
+													  pMute[0]);
+
+					}
+					AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_MAIN,pMute[1]); //record mute
+				}
+				break;
+				case AUDCTRL_MIC_AUX:
+				{
+					AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT,
+												  AUDCTRL_SPK_HEADSET, 
+												  pMute[0]);
+
+					AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_AUX,pMute[1]); //record mute
+				}
+				break;
+			}						
+		}
+		break;
+		case CTL_STREAM_PANEL_PCMIN:
+		{
+			if(pChip->streamCtl[stream-1].pSubStream != NULL)
+				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+			else
+				break;
+
+			BCM_AUDIO_DEBUG("SwitchCtrlPut stream state = %d\n",pStream->runtime->status->state);
+
+			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
+			{
+				//call audio driver to set mute
+				AUDCTRL_SetRecordMute (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
+						pChip->streamCtl[stream-1].dev_prop.u.c.mic, 
+						pMute[0]);	//currently driver doesnt handle Mute for left/right channels
+			}			
+		}
+		break;
+		case CTL_STREAM_PANEL_VOIPIN:
+			break;
+		default:
+			break;
+	}
 
 	return 0;
 }
@@ -362,7 +541,7 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->count = 3;
 	uinfo->value.integer.min = 0;
-	uinfo->value.integer.max = 5;//FIXME
+	uinfo->value.integer.max = CAPH_MAX_CTRL_LINES;//FIXME
 	uinfo->value.integer.step = 1; 
 
 	return 0;
@@ -542,25 +721,25 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
 			.iTotalCtlLines = AUDCTRL_MIC_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
+			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
 			.strStreamName = "PCMIn",
 			.ctlLine = {
 						{.strName = "", .iVolume = {0,0},},						//AUDCTRL_MIC_UNDEFINED
-						{.strName = "Main Mic",		.iVolume = {12,12},}, 		//AUDCTRL_MIC_MAIN
-						{.strName = "AUX Mic",	.iVolume = {12,12},},			//AUDCTRL_MIC_AUX
-						{.strName = "Digital MIC 1",	.iVolume = {12,12},},	//AUDCTRL_MIC_DIGI1
-						{.strName = "Digital MIC 2",	.iVolume = {12,12},},	//AUDCTRL_MIC_DIGI2
-						{.strName = "Digital Mic 12",	.iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_DIGI12
-						{.strName = "Digital Mic 21",	.iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_DIGI21
+						{.strName = "Main Mic",		.iVolume = {28,28},}, 		//AUDCTRL_MIC_MAIN
+						{.strName = "AUX Mic",	.iVolume = {28,28},},			//AUDCTRL_MIC_AUX
+						{.strName = "Digital MIC 1",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI1
+						{.strName = "Digital MIC 2",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI2
+						{.strName = "Digital Mic 12",	.iVolume = {28,28},},	//AUDCTRL_DUAL_MIC_DIGI12
+						{.strName = "Digital Mic 21",	.iVolume = {28,28},},	//AUDCTRL_DUAL_MIC_DIGI21
 						{.strName = "MIC_ANALOG_DIGI1",	.iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_ANALOG_DIGI1
 						{.strName = "MIC_DIGI1_ANALOG", .iVolume = {0,0},},		//AUDCTRL_DUAL_MIC_DIGI1_ANALOG
-						{.strName = "BT SCO Mic",		.iVolume = {12,12},}, 	//AUDCTRL_MIC_BTM
+						{.strName = "BT SCO Mic",		.iVolume = {30,30},}, 	//AUDCTRL_MIC_BTM
 						{.strName = "",	.iVolume = {0,0},},						//AUDCTRL_MIC_USB
 						{.strName = "I2S",	.iVolume = {12,12},},				//AUDCTRL_MIC_I2S
-						{.strName = "MIC_DIGI3",	.iVolume = {12,12},},		//AUDCTRL_MIC_DIGI3
-						{.strName = "MIC_DIGI4",	.iVolume = {12,12},},		//AUDCTRL_MIC_DIGI4
-						{.strName = "MIC_SPEECH_DIGI",	.iVolume = {12,12},}, 	//AUDCTRL_MIC_SPEECH_DIGI
-						{.strName = "MIC_EANC_DIGI",	.iVolume = {12,12},}, 	//AUDCTRL_MIC_EANC_DIGI
+						{.strName = "MIC_DIGI3",	.iVolume = {30,30},},		//AUDCTRL_MIC_DIGI3
+						{.strName = "MIC_DIGI4",	.iVolume = {30,30},},		//AUDCTRL_MIC_DIGI4
+						{.strName = "MIC_SPEECH_DIGI",	.iVolume = {30,30},}, 	//AUDCTRL_MIC_SPEECH_DIGI
+						{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},}, 	//AUDCTRL_MIC_EANC_DIGI
 					},
 		},
 
@@ -568,7 +747,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
 			.iTotalCtlLines = AUDCTRL_MIC_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
+			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
 			.strStreamName = "VOIP In",
 			.ctlLine = {
 						{.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_UNDEFINED
@@ -640,7 +819,6 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		{
 			sprintf(gStrCtlNames[nIndex], "%s Capture Source", sgCaphStreamCtls[idx].strStreamName);
 			devSelect.name = gStrCtlNames[nIndex++];
-			//devSelect.name = "Capture Source";
 			devSelect.device = idx+1;//idx - 3 + CTL_STREAM_PANEL_PCMIN;
 			devSelect.private_value = CAPH_CTL_PRIVATE(devSelect.device, devSelect.subdevice, 0);
 		}
@@ -649,7 +827,6 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 			sprintf(gStrCtlNames[nIndex], "Call device");
 			devSelect.name = gStrCtlNames[nIndex++];
 		
-//			devSelect.name = "Call device";
 			devSelect.device = idx + 1; // CTL_STREAM_PANEL_FIRST;
 			devSelect.private_value = CAPH_CTL_PRIVATE(devSelect.device, devSelect.subdevice, 0);
 		}
@@ -658,7 +835,6 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 			sprintf(gStrCtlNames[nIndex], "%s Playback Sink", sgCaphStreamCtls[idx].strStreamName);
 			devSelect.name = gStrCtlNames[nIndex++];
 		
-//			devSelect.name = "Playback Sink";
 			devSelect.device = idx + 1; // CTL_STREAM_PANEL_FIRST;
 			devSelect.private_value = CAPH_CTL_PRIVATE(devSelect.device, devSelect.subdevice, 0);
 		}
@@ -668,7 +844,6 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 			return err;
 		}
 
-//		BCM_AUDIO_DEBUG("i=%d, j=%d ctl=%s", idx, j, devSelect.name);
 		//volume mute
 		for(j=0; j<sgCaphStreamCtls[idx].iTotalCtlLines; j++)
 		{
@@ -684,14 +859,12 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 			sprintf(gStrCtlNames[nIndex], "%s %s Gain", sgCaphStreamCtls[idx].strStreamName, sgCaphStreamCtls[idx].ctlLine[j].strName);
 			kctlVolume.name = gStrCtlNames[nIndex++];
 			
-			//ctlVolume.name = "Gain";
 			}
 			else
 			{
 				sprintf(gStrCtlNames[nIndex], "%s %s Volume", sgCaphStreamCtls[idx].strStreamName, sgCaphStreamCtls[idx].ctlLine[j].strName);
 				kctlVolume.name = gStrCtlNames[nIndex++];
 			
-//		kctlVolume.name = "Volume";
 			}
 
 
@@ -719,8 +892,6 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 				BCM_AUDIO_DEBUG("error to add mute for idx=%d j=%d err=%d\n", idx,j, err);			
 				return err;
 			}
-//			BCM_AUDIO_DEBUG("i=%d, j=%d ctl=%s", idx, j, kctlVolume.name);
-//			BCM_AUDIO_DEBUG("i=%d, j=%d ctl=%s\n", idx, j, kctlMute.name);
 		
 		}
 	}
@@ -756,52 +927,4 @@ void caphassert(const char *fcn, int line, const char *expr)
 	}
 }
 
-
-snd_pcm_state_t	PCMStreamStatus(struct snd_card *card, int device, int stream)
-{
-	struct snd_pcm *pcm;
-	struct snd_pcm_substream *substream;
-	int num=0, index=0, found;
-
-	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
-
-	switch (stream)
-	{
-		case CTL_STREAM_PANEL_PCMOUT1:
-		case CTL_STREAM_PANEL_PCMOUT2:
-		case CTL_STREAM_PANEL_VOIPOUT:
-			index = 0;	//PCM out
-			num = stream - CTL_STREAM_PANEL_PCMOUT1;
-			break;
-		case CTL_STREAM_PANEL_PCMIN:
-		case CTL_STREAM_PANEL_VOIPIN:
-			index = 1; //PCM in
-			num = stream - CTL_STREAM_PANEL_PCMIN;
-			break;
-		default:
-			//invalid
-			BCM_AUDIO_DEBUG("No PCM device for stream %d\n", stream);
-			break;
-	}
-
-	found = 0;
-	list_for_each_entry(pcm, &card->devices, list) {
-		if (pcm->card == card && pcm->device == device)
-		{
-			found = 1;
-			break;
-		}
-	}
-
-	if(found)
-	{
-		substream = pcm->streams[index].substream;
-		for (; substream; substream = substream->next)
-			if(num==substream->number)
-				return substream->runtime->status->state;
-	}
-
-	return SNDRV_PCM_STATE_DISCONNECTED;
-		
-}
 

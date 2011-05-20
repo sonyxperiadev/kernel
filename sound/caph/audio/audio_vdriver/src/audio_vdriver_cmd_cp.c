@@ -67,9 +67,6 @@
 #include "dspcmd.h"
 #include "ripcmdq.h"
 #include "volumectrl.h"
-#ifdef LMP_BUILD
-#include "csl_aud_drv.h"
-#endif
 #include "audio_vdriver.h"
 #include "log.h"
 

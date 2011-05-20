@@ -65,7 +65,7 @@
 #include "consts.h"
 #include "msconsts.h"
 #include "log.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "brcm_rdb_sysmap.h"
 #include "nandsdram_memmap.h"
 #include "osdw_caph_drv.h"
@@ -146,7 +146,7 @@ static irqreturn_t caph_audio_isr(int irq, void *dev_id)
 //******************************************************************************
 static void worker_audio_playback(struct work_struct *work)
 {
-   	printk(KERN_ERR "worker_audio_playback\n");
+   	printk(KERN_INFO "worker_audio_playback\n");
     	csl_caph_dma_process_interrupt();
 	enable_irq(BCM_INT_ID_CAPH);
 }

@@ -54,7 +54,7 @@ ANY LIMITED REMEDY.
 
 #include "audio_consts.h"
 #include "auddrv_def.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
 #include "csl_aud_drv.h"
 #endif
@@ -65,7 +65,7 @@ ANY LIMITED REMEDY.
 #include "audio_vdriver.h"
 #include "dspcmd.h"
 #include "audio_controller.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "i2s.h"
 #include "ostask.h"
 #endif

@@ -23,7 +23,7 @@ Broadcom's express prior written consent.
 #include "msconsts.h"
 #include "log.h"
 #include "osinterrupt.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "chip_irq.h"
 #include "irqctrl.h"
 #include "pm_prm.h"
@@ -67,7 +67,7 @@ Broadcom's express prior written consent.
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 static Interrupt_t AUDDRV_HISR_HANDLE;
 static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
 static void AUDDRV_LISR(void);
@@ -97,7 +97,7 @@ Result_t AUDDRV_HWControl_Init(void)
     CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
    	printk(KERN_INFO "AUDDRV_HWControl_Init:: \n");
 
-#ifndef LMP_BUILD
+#ifndef CONFIG_AUDIO_BUILD
 //Enable CAPH clock.
     clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 	clk_set_rate(clkID[0], 156000000);
@@ -272,7 +272,7 @@ Result_t AUDDRV_HWControl_DeInit(void)
 {
     Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_DeInit:: \n");
 
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 	// this is just for fpga test. in real code may not need this.
 	IRQ_Disable(CAPH_NORM_IRQ);
 	 if (AUDDRV_HISR_HANDLE )
@@ -283,7 +283,7 @@ Result_t AUDDRV_HWControl_DeInit(void)
 #endif	 
     csl_caph_hwctrl_deinit(); 
 
-#ifndef LMP_BUILD
+#ifndef CONFIG_AUDIO_BUILD
 	clk_disable(clkID[0]);
 	clk_disable(clkID[1]);
 	clk_disable(clkID[2]);

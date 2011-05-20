@@ -282,7 +282,7 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
             break;
         case AUDIO_DRIVER_CAPT_VOICE:
             {
-             #ifdef LMP_BUILD // no function available 
+             #ifdef CONFIG_AUDIO_BUILD // no function available 
 		 dspif_VPU_record_init ();
 	     #endif
                 audio_capture_driver = aud_drv;
@@ -336,7 +336,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
             break;
         case AUDIO_DRIVER_CAPT_VOICE:
             {
-		#ifdef LMP_BUILD
+		#ifdef CONFIG_AUDIO_BUILD
 		dspif_VPU_record_deinit (); // no function available
                 #endif
 		audio_capture_driver = NULL;
@@ -656,7 +656,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 frame_size;
                 UInt32 num_frames;
                 UInt32 left_over;
-               #ifdef LMP_BUILD
+               #ifdef CONFIG_AUDIO_BUILD
 		UInt32 speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_8K;
                #else
 		UInt32 speech_mode = 0;
@@ -677,7 +677,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 }
 
                 //set the callback
-             #ifdef LMP_BUILD // no function available 
+             #ifdef CONFIG_AUDIO_BUILD // no function available 
                 dspif_VPU_record_set_cb (AUDIO_DRIVER_CaptureVoiceCallback);
              #endif   
 
@@ -702,7 +702,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                     num_frames++;  // increase frame count by 1 more so that we have all data when we signal
                 }
                 if(aud_drv->sample_rate == 16000)
-                   #ifdef LMP_BUILD
+                   #ifdef CONFIG_AUDIO_BUILD
 		    speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_16K;
                    #else  
 		   speech_mode = 0;
@@ -734,7 +734,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
         case AUDIO_DRIVER_PAUSE:
             {
                 //pause capture
-             #ifdef LMP_BUILD // no function available 
+             #ifdef CONFIG_AUDIO_BUILD // no function available 
                 result_code = dspif_VPU_record_pause ();
              #endif
 	    }
@@ -742,7 +742,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
         case AUDIO_DRIVER_RESUME:
             {
                 //resume capture
-             #ifdef LMP_BUILD // no function available 
+             #ifdef CONFIG_AUDIO_BUILD // no function available 
                 result_code = dspif_VPU_record_resume ();
              #endif
 	    }
@@ -922,7 +922,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
 
 static void AUDIO_DRIVER_CaptureVoiceCallback(UInt32 buf_index)
 {
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
     Int32		dest_index, num_bytes_to_copy, split,end_size = 0;
 	UInt8 *	pdest_buf;
     UInt32      dst_buf_size,recv_size;

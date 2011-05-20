@@ -11,14 +11,14 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************************/
 /**
-*    @file   brcm_audio_devices.h
+*    @file   bcm_audio_devices.h
 *    @brief  API declaration of hardware abstraction layer for Audio driver.
 *   This code is OS independent and Device independent for audio device control.
 ****************************************************************************/
 
 
-#ifndef _BRCM_AUDIO_DEVICES_H__
-#define _BRCM_AUDIO_DEVICES_H__
+#ifndef _BCM_AUDIO_DEVICES_H__
+#define _BCM_AUDIO_DEVICES_H__
 
 typedef struct _TIDChanOfPlaybackDev
 {

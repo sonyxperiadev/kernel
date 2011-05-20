@@ -24,7 +24,7 @@
 #include <string.h>
 #include "mobcom_types.h"
 #include "chal_types.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "chal_sspi.h"
 #include "dbg.h"
 #endif

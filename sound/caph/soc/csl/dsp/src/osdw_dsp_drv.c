@@ -71,13 +71,14 @@
 #include "csl_dsp.h"
 //#include "osinterrupt.h"
 #include "nandsdram_memmap.h"
-#ifdef LMP_BUILD
+
 #include "brcm_rdb_sysmap.h"
-#endif
+
 #include "assert.h"
 #include "osdw_dsp_drv.h"
 #include "chal_intc_inc.h"
 #include "chip_irq.h"
+#include "vpu.h"
 
 //#include "sysmap_types.h"
 //#include "csl_sysmap.h"
@@ -122,22 +123,25 @@ void DSPDRV_Init( )
 	UInt32 dsp_shared_mem;
     int rc;
 
-#if !(defined(RHEA))  
+#ifdef CONFIG_AUDIO_BUILD
 	IRQ_EnableRIPInt();
 #endif
 	
 	Log_DebugPrintf(LOGID_AUDIO, " DSPDRV_Init:  \n");
 
-    // initialize interrupt controller chal
-#ifdef LMP_BUILD
-    // which INTC BASE address to use? is it DSP_INTC_BASE_ADDR?
-    dsp_drv.h = chal_intc_init(INTC_BASE_ADDR);
-#endif
+    dsp_drv.h = chal_intc_init(AHB_DSP_INTC_BASE_ADDR);
+
+	dsp_shared_mem = DSPDRV_GetSharedMemoryAddress();
+	
+	VPSHAREDMEM_Init(dsp_shared_mem);
+
+    enable_irq(BMIRQ23); 
+
     //Create Tasklet
     tasklet_init(&(dsp_drv.task), dsp_thread_proc,(unsigned long)(&dsp_drv));
 
     //Plug in the ISR
-	rc = request_irq(DSP2AP_IRQ, rip_isr, IRQF_DISABLED,
+	rc = request_irq(DSP2AP_IRQ, rip_isr, IRQF_DISABLED,		//enables  BMIRQ22
 			 "bcm215xx-dsp", &(dsp_drv));
 
 	if (rc < 0) {
@@ -145,12 +149,9 @@ void DSPDRV_Init( )
 		       __FUNCTION__, rc);
 		return;
 	}
-
-    enable_irq(DSP2AP_IRQ);
-
-	dsp_shared_mem = DSPDRV_GetSharedMemoryAddress();
-
-	VPSHAREDMEM_Init(dsp_shared_mem);
+#ifdef CONFIG_AUDIO_BUILD
+	VPU_Init ();
+#endif
 	return;
 }
 
@@ -169,19 +170,7 @@ static UInt32 DSPDRV_GetSharedMemoryAddress( )
 	UInt32 dsp_shared_mem;
 
     dsp_shared_mem = (UInt32)SHAREDMEM_GetDsp_SharedMemPtr();
-#if 0
-    
-    if(global_shared_mem == NULL)
-    {
-        global_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
-        if (!global_shared_mem) {
-            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping dsp shared memory failed\n\r");
-            return NULL;
-        }
-    }
-   //dsp_shared_mem = ((UInt8*)global_shared_mem + sizeof(NOT_USE_Dsp_SharedMem_t));
-	dsp_shared_mem = (UInt8*)global_shared_mem;
-#endif
+
 	return dsp_shared_mem;
 }
 
@@ -285,11 +274,9 @@ void RIPISR_Register_VPU_ProcessStatus( VPU_ProcessStatus_t hisr_cb )
 //******************************************************************************
 void VPSHAREDMEM_TriggerRIPInt()
 {
-#ifdef LMP_BUILD // defined in athena
-    Chal_Intc_ConfigReg_t config;
-    config.mICCR_field.mICCR_intrip = 1;
-    config.mICCR_dword = chal_intc_read_irq_config_reg(dsp_drv.h);
-    chal_intc_set_irq_config_reg( dsp_drv.h, config.mICCR_dword);
+#ifdef CONFIG_AUDIO_BUILD  // need to find for the equivalent API in LMP
+	IRQ_TriggerRIPInt();
+
 #endif
 }
 

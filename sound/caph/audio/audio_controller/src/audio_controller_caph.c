@@ -54,7 +54,7 @@ ANY LIMITED REMEDY.
 
 #include "audio_consts.h"
 #include "auddrv_def.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
 #include "ostask.h"
 #endif
@@ -265,7 +265,7 @@ static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #if !defined(NO_PMU)
 //on AP:
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
@@ -1642,7 +1642,7 @@ static PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain )
 	return PMU_IHFGAIN_6DB_P;//PMU_IHFGAIN_20DB_P;//PMU_IHFGAIN_6DB_P;//PMU_IHFGAIN_0DB ;//PMU_IHFGAIN_18P5DB_P;
 }
 #else
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 /* unused definitions */
 static int map2pmu_hs_gain( Int16 db_gain )
 {
@@ -1812,7 +1812,7 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		int hs_path;	
 		int hs_gain;
 		hs_path = PMU_AUDIO_HS_BOTH;
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 #else
 		// hardcode for test
@@ -1865,7 +1865,7 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	{
 		int i;
 		int ihf_gain;
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 #else
 		// hardcode for test purpose
