@@ -132,7 +132,7 @@ Result_t AUDDRV_HWControl_Init(void)
 	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
     clkID[5] = clk_get(NULL, "ssp4_audio_clk");
     clk_enable(clkID[5]);
-    //clk_set_rate(clkID[5], 156000000);
+    //clk_set_rate(clkID[5], 156000000);
 #else
     // hard code it.
 	UInt32 regVal;
