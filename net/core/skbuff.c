@@ -73,6 +73,9 @@
 static struct kmem_cache *skbuff_head_cache __read_mostly;
 static struct kmem_cache *skbuff_fclone_cache __read_mostly;
 
+extern unsigned short netpoll_skb_size(void);
+extern void netpoll_recycle_skbs(struct sk_buff *skb);
+
 static void sock_pipe_buf_release(struct pipe_inode_info *pipe,
 				  struct pipe_buffer *buf)
 {
@@ -415,6 +418,34 @@ static void skb_release_all(struct sk_buff *skb)
 }
 
 /**
+ *      recycle_skbs_process -  Process the skb which will be recycled.
+ *      @skb: buffer
+ *      @skb_size: minimum buffer size
+ *
+ */
+static void recycle_skbs_process(struct sk_buff *skb, int skb_size)
+{
+        struct skb_shared_info *shinfo;
+
+        skb_size = SKB_DATA_ALIGN(skb_size + NET_SKB_PAD);
+
+        skb_release_head_state(skb);
+        shinfo = skb_shinfo(skb);
+        atomic_set(&shinfo->dataref, 1);
+        shinfo->nr_frags = 0;
+        shinfo->gso_size = 0;
+        shinfo->gso_segs = 0;
+        shinfo->gso_type = 0;
+        shinfo->ip6_frag_id = 0;
+        shinfo->frag_list = NULL;
+
+        memset(skb, 0, offsetof(struct sk_buff, tail));
+        skb->data = skb->head + NET_SKB_PAD;
+        skb_reset_tail_pointer(skb);
+
+}
+
+/**
  *	__kfree_skb - private function
  *	@skb: buffer
  *
@@ -425,8 +456,17 @@ static void skb_release_all(struct sk_buff *skb)
 
 void __kfree_skb(struct sk_buff *skb)
 {
-	skb_release_all(skb);
-	kfree_skbmem(skb);
+	/* If the skb is with netpoll signature, we will recyle the skb buf to avoid to run out of memory.*/
+	if (skb->netpoll_signature == 0x12345678)
+	{
+		//printk("*");
+		recycle_skbs_process(skb,  netpoll_skb_size());
+		netpoll_recycle_skbs(skb);
+
+	} else {
+		skb_release_all(skb);
+		kfree_skbmem(skb);
+	}
 }
 EXPORT_SYMBOL(__kfree_skb);
 

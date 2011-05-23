@@ -162,15 +162,11 @@ void ipcs_cplog_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 /**
    @fn void ipcs_cplog_bd(IPC_Buffer ipc_buffer);
 */
-#if 0
 extern void BCMLOG_HandleCpLogMsg( const char *buf, int size ) ;
-#endif
 
 void ipcs_cplog_bd(IPC_Buffer ipc_buffer)
 {
-#if 0
 	BCMLOG_HandleCpLogMsg( (const char*)IPC_BufferDataPointer(ipc_buffer), IPC_BufferDataSize(ipc_buffer) ) ;
-#endif
 	IPC_FreeBuffer(ipc_buffer);
 }
 

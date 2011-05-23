@@ -585,19 +585,19 @@ static netdev_tx_t eth_start_xmit(struct sk_buff *skb,
 	 * or there's not enough space for extra headers we need
 	 */
 	if (skb->netpoll_signature != SKB_NETPOLL_SIGNATURE) {
-	if (dev->wrap) {
-		unsigned long	flags;
+		if (dev->wrap) {
+			unsigned long	flags;
 
-		spin_lock_irqsave(&dev->lock, flags);
-		if (dev->port_usb)
-			skb = dev->wrap(dev->port_usb, skb);
-		spin_unlock_irqrestore(&dev->lock, flags);
-		if (!skb)
-			goto drop;
-
-		length = skb->len;
+			spin_lock_irqsave(&dev->lock, flags);
+			if (dev->port_usb)
+				skb = dev->wrap(dev->port_usb, skb);
+			spin_unlock_irqrestore(&dev->lock, flags);
+			if (!skb)
+				goto drop;
+		}
 	}
-}
+    length = skb->len;
+
 	req->buf = skb->data;
 	req->context = skb;
 	req->complete = tx_complete;
