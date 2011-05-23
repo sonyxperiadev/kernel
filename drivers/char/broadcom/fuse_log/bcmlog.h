@@ -202,6 +202,7 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString );
 #define BCMLOG_OUTDEV_RNDIS		3		///<	MTT/RNDIS
 #define BCMLOG_OUTDEV_UART		4		///<	UART
 #define BCMLOG_OUTDEV_ACM		5		///<	ACM/OBEX
+#define BCMLOG_OUTDEV_STM               6		///<    STM	
 
 /**
  *	Get runtime log device

@@ -77,6 +77,10 @@ static void bld_device_status_str( char *buf, int len, char *label, int device )
 	case BCMLOG_OUTDEV_ACM:
 		safe_strncat( buf, "-> USB serial\n", len ) ;
 		break ;
+	case BCMLOG_OUTDEV_STM:
+                safe_strncat( buf, "-> STM\n", len ) ;
+                break ;
+
 	default:
 		safe_strncat( buf, "-> ERROR\n", len ) ;
 		break ;
@@ -107,6 +111,7 @@ static int proc_read(char *page, char **start, off_t offset, int count, int *eof
  *		g - APP crash dump -> disabled
  *		h - Save for reboot
  *		i - Restore defaults
+ *              s - STM logging
  **/
 static ssize_t proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {	
@@ -142,6 +147,10 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 			SetConfigDefaults( ) ;
 			BCMLOG_SaveConfig( 0 ) ;
 			break ;
+		case 's':      
+                        g_config.runlog_dev = BCMLOG_OUTDEV_STM;
+                        break ;
+
 		}
 	}
 

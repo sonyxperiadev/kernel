@@ -25,7 +25,7 @@
 #include <linux/types.h>
 #include <linux/time.h>
 #include <linux/rtc.h>
-
+#include "plat/mobcom_types.h"
 #include "bcmlog.h"
 #include "fifo.h"
 #include "output.h"
@@ -34,7 +34,7 @@
  *	extern declarations
  */
 extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks *_cb) ;
-
+extern int csl_StmSendBytes(void *data_ptr, int length);
 #ifdef CONFIG_USB_ETH_RNDIS
 
 /*
@@ -192,6 +192,26 @@ static void WriteToLogDev_SDCARD( void )
 	}
 
 	set_fs( oldfs ) ;
+}
+
+
+static void WriteToLogDev_STM( void )
+{
+	u32 nFifo ;
+
+	int nWrite ;
+
+	nFifo = BCMLOG_FifoGetNumContig( &g_fifo ) ;
+			
+	if( nFifo > MAX_FS_WRITE_SIZE )
+		nFifo = MAX_FS_WRITE_SIZE ;
+
+	if( nFifo > 0 )
+	{
+		nWrite = csl_StmSendBytes(BCMLOG_FifoGetData( &g_fifo ), nFifo);
+		BCMLOG_FifoRemove( &g_fifo, nWrite ) ;
+			
+	}
 }
 
 static void WriteToLogDev_RNDIS( void )
@@ -367,6 +387,10 @@ static void WriteToLogDev( struct work_struct *work )
 	case BCMLOG_OUTDEV_ACM:
 		WriteToLogDev_ACM( ) ;
 		break ;
+	
+	case BCMLOG_OUTDEV_STM:
+                WriteToLogDev_STM( ) ;
+                break ;
 
 	default:
 		break ;
