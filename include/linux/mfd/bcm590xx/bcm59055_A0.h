@@ -164,6 +164,10 @@
 	BCM590XX_REG_ENCODE(0xB9, BCM590XX_SLAVE1_I2C_ADDRESS)
 #define BCM59055_REG_CSRCTRL1			\
 	BCM590XX_REG_ENCODE(0xC0, BCM590XX_SLAVE1_I2C_ADDRESS)
+#define BCM59055_REG_CSRCTRL2			\
+	BCM590XX_REG_ENCODE(0xC1, BCM590XX_SLAVE1_I2C_ADDRESS)
+#define BCM59055_REG_CSRCTRL3			\
+	BCM590XX_REG_ENCODE(0xC3, BCM590XX_SLAVE1_I2C_ADDRESS)
 #define BCM59055_REG_IOSRCTRL1			\
 	BCM590XX_REG_ENCODE(0xC8, BCM590XX_SLAVE1_I2C_ADDRESS)
 #define BCM59055_REG_SDSRCTRL1			\
@@ -511,6 +515,7 @@ void bcm590xx_regulator_desc(void **info);
 int bcm590xx_num_regl(void);
 void* bcm590xx_get_initdata(void);
 unsigned int bcm590xx_ldo_or_sr(int id);
+int set_csr_volt(int nm, int lpm, int turbo, struct bcm590xx *bcm590xx);
 
 void bcm59055_reg_init_dev_init(struct bcm590xx *bcm590xx) ;
 

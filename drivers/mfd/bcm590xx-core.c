@@ -565,7 +565,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 	}
 
 	/* get BCM590XX revision and config mode */
-	ret = bcm590xx_reg_read(bcm590xx, BCM59055_REG_PMUID);
+	ret = bcm590xx_reg_read(bcm590xx, BCM590XX_REG_PMUID);
 	if (ret < 0) {
 		printk(KERN_ERR "Failed to read ID: %d\n", ret);
 		goto err;
@@ -660,9 +660,9 @@ void bcm590xx_shutdown(void)
 {
 	int host_ctrl1;
 
-	host_ctrl1 = bcm590xx_reg_read(info, BCM59055_REG_HOSTCTRL1);
-	host_ctrl1 |= 1 << BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET;
-	bcm590xx_reg_write(info, BCM59055_REG_HOSTCTRL1, (u8)host_ctrl1);
+	host_ctrl1 = bcm590xx_reg_read(info, BCM590XX_REG_HOSTCTRL1);
+	host_ctrl1 |= 1 << HOSTCTRL1_SHDWN_OFFSET;
+	bcm590xx_reg_write(info, BCM590XX_REG_HOSTCTRL1, (u8)host_ctrl1);
 }
 EXPORT_SYMBOL_GPL(bcm590xx_shutdown);
 

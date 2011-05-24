@@ -38,7 +38,7 @@
 
 
 
-
+#define BCM590XX_REG_PMUID				BCM59055_REG_PMUID
 #define BCM590XX_INT_MASK_BIT			1
 #define BCM590XX_MAX_INT_REGS			14
 #define BCM590XX_MAX_INTMASK_REGS		14
@@ -46,6 +46,8 @@
 #define BCM590XX_INT_REG_BASE			BCM59055_REG_INT1
 #define BCM590XX_INT_MASK_REG_BASE		BCM59055_REG_INT1MSK
 #define BCM590XX_TOTAL_IRQ			BCM59055_TOTAL_IRQ
+#define BCM590XX_REG_HOSTCTRL1			BCM59055_REG_HOSTCTRL1
+#define HOSTCTRL1_SHDWN_OFFSET			BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET
 
 // For a new PMU add new header file here.
 #define BCM590XX_MAX_REGULATOR			13
@@ -109,6 +111,9 @@ struct bcm590xx_regulator_pdata {
 	int num_regulator;
 	struct bcm590xx_regulator_init_data *init;
 	u8 default_pmmode[BCM590XX_MAX_REGULATOR];
+	int csr_nm_volt;
+	int csr_lpm_volt;
+	int csr_turbo_volt;
 };
 
 struct mv_percent

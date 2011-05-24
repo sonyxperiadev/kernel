@@ -225,19 +225,22 @@ static int bcm590xxreg_set_mode(struct regulator_dev *rdev, unsigned mode)
 		case REGULATOR_MODE_NORMAL:
 			rc |= (LDO_NORMAL << PC2_IS_1_PC1_IS_1) |
 				(LDO_NORMAL << PC2_IS_0_PC1_IS_1);
+			break;
 		case REGULATOR_MODE_STANDBY :
 			rc |= (LDO_STANDBY << PC2_IS_1_PC1_IS_1) |
 				(LDO_STANDBY << PC2_IS_0_PC1_IS_1);
+			break;
 		case REGULATOR_MODE_IDLE:
 			rc |= (LDO_OFF << PC2_IS_1_PC1_IS_1) |
 				(LDO_OFF << PC2_IS_0_PC1_IS_1);
+			break;
 		case REGULATOR_MODE_FAST:
 			if (ldo_or_sr == BCM590XX_SR)
 				rc |= (LDO_RESERVED_SR_FAST << PC2_IS_1_PC1_IS_1) |
 					(LDO_RESERVED_SR_FAST << PC2_IS_0_PC1_IS_1);
+			break;
 		default : { return -EINVAL; }
 	}
-
 	return bcm590xx_reg_write(bcm590xx,info->reg_addr, rc);
 }
 
@@ -381,7 +384,13 @@ static int bcm590xx_regulator_probe(struct platform_device *pdev)
 
 	regl_priv->bcm590xx = bcm590xx;
 	regl_priv->num_regl = regulator->num_regulator;
-
+	pr_info("%s: Set CSR VOLTAGE NM %d, LPM %d, NM2 %d\n", __func__,
+				regulator->csr_nm_volt, regulator->csr_lpm_volt, regulator->csr_turbo_volt);
+	if (set_csr_volt(regulator->csr_nm_volt, regulator->csr_lpm_volt,
+					regulator->csr_turbo_volt, bcm590xx)) {
+					kfree(regl_priv);
+					return -EIO;
+	}
 	/* register regulator */
 	for (i= 0; i < regl_priv->num_regl; i++) {
 		int index = bcm590xx_regl_initdata[i].regulator;
