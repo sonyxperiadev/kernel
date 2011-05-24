@@ -64,6 +64,9 @@
 #include <linux/dma-mapping.h>
 #endif
 #include <linux/spi/spi.h>
+#if defined (CONFIG_HAPTIC)
+#include <linux/haptic.h>
+#endif
 
 #define _RHEA_
 #include <linux/broadcom/bcm_fuse_memmap.h>
@@ -511,6 +514,29 @@ static struct platform_device android_pmem = {
 	},
 };
 
+#if defined (CONFIG_HAPTIC_SAMSUNG_PWM)
+void haptic_gpio_setup(void)
+{
+	/* Board specific configuration like pin mux & GPIO */
+}
+
+static struct haptic_platform_data haptic_control_data = {
+	/* PWM4 as vibrator signal */
+	.name = "kona_pwmc:4",
+	/* Invalid gpio for now, pass valid gpio number if connected */
+	.gpio = ARCH_NR_GPIOS,
+	.pwm_timer = 4,	/* 'not' being used with new PWM layer */
+	.setup_pin = haptic_gpio_setup,
+};
+
+struct platform_device haptic_pwm_device = {
+	.name   = "samsung_pwm_haptic",
+	.id     = -1,
+	.dev	=	 {	.platform_data = &haptic_control_data,}
+};
+
+#endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -525,6 +551,9 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&pl330_dmac_device,
 #endif
 	&android_pmem,
+#ifdef CONFIG_HAPTIC_SAMSUNG_PWM
+	&haptic_pwm_device,
+#endif
 };
 
 /* Rhea Ray specific i2c devices */
