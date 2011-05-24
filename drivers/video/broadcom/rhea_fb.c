@@ -19,6 +19,7 @@
 #include <linux/ipc/ipc.h>
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
+#include <linux/vt_kern.h>
 
 #include <mach/io.h>
 
@@ -240,19 +241,36 @@ static int rhea_refresh_thread(void *arg)
 	down(&fb->thread_sem);
 
 	do {
-		if (atomic_read(&fb->is_graphics_started))
-			break;
+		down(&fb->refresh_wait_sem);
 		down(&fb->update_sem);
 		fb->display_ops->update(fb->display_hdl, 0, NULL);
 		fb->base_update_count++;
 		up(&fb->update_sem);
-		rheafb_debug("RHEA Display is updated once inside the refreshing thread\n");
-		ret = down_timeout(&fb->refresh_wait_sem, msecs_to_jiffies(30));
 	} while (1);
 
 	rheafb_debug("RHEA refresh thread is exiting!\n");
 	return 0;
 }
+
+static int vt_notifier_call(struct notifier_block *blk,
+			    unsigned long code, void *_param)
+{	
+
+//	struct fb_info *info = registered_fb[con2fb_map[vc->vc_num]];
+	struct vt_notifier_param *param = _param;
+	struct vc_data *vc = param->vc;
+	switch (code) {
+	case VT_UPDATE:
+		up(&g_rhea_fb->refresh_wait_sem);
+		break;
+	}
+	
+}
+
+static struct notifier_block vt_notifier_block = {
+	.notifier_call = vt_notifier_call,
+};
+
 
 static struct fb_ops rhea_fb_ops = {
 	.owner          = THIS_MODULE,
@@ -413,6 +431,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_fb_registered, 1);
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
+	register_vt_notifier(&vt_notifier_block);
 #ifdef CONFIG_LOGO
 	/*  Display the default logo/splash screen. */
 	fb_prepare_logo(&fb->fb, 0);
