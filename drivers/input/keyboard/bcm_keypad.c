@@ -28,11 +28,7 @@
 #include <mach/bcm_keypad.h>
 #include <linux/slab.h>
 #ifndef _HERA_
-#ifdef CONFIG_ARCH_SAMOA
-#include <mach/rdb/brcm_rdb_sysmap_a5.h>
-#else
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
-#endif
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_util.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif

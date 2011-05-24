@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     Date     : Generated on 5/17/2011 0:56:25                                             */
 /*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
@@ -57,18 +57,6 @@
 #define PTMR_WD_TIMER_STATUS_RESERVED_MASK                                0xFFFFFFFE
 #define    PTMR_WD_TIMER_STATUS_EVENT_SHIFT                               0
 #define    PTMR_WD_TIMER_STATUS_EVENT_MASK                                0x00000001
-
-#define PTMR_WD_TIMER_COMP_LOW_OFFSET                                     0x00000010
-#define PTMR_WD_TIMER_COMP_LOW_TYPE                                       UInt32
-#define PTMR_WD_TIMER_COMP_LOW_RESERVED_MASK                              0x00000000
-#define    PTMR_WD_TIMER_COMP_LOW_LOWER_COMPARE_SHIFT                     0
-#define    PTMR_WD_TIMER_COMP_LOW_LOWER_COMPARE_MASK                      0xFFFFFFFF
-
-#define PTMR_WD_TIMER_COMP_HI_OFFSET                                      0x00000014
-#define PTMR_WD_TIMER_COMP_HI_TYPE                                        UInt32
-#define PTMR_WD_TIMER_COMP_HI_RESERVED_MASK                               0x00000000
-#define    PTMR_WD_TIMER_COMP_HI_HIGHER_COMPARE_SHIFT                     0
-#define    PTMR_WD_TIMER_COMP_HI_HIGHER_COMPARE_MASK                      0xFFFFFFFF
 
 #define PTMR_WD_WATCHDOG_LOAD_OFFSET                                      0x00000020
 #define PTMR_WD_WATCHDOG_LOAD_TYPE                                        UInt32

@@ -27,7 +27,7 @@
 #define __SAMOA_IO_MAP_H
 
 #include <asm/memory.h>
-#include <mach/rdb/brcm_rdb_sysmap_a5.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 
 /*
 Jian: to update for Samoa

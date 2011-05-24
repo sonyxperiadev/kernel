@@ -12,7 +12,7 @@ the GPL, without Broadcom's express prior written consent.
 *******************************************************************************************/
 /**
 *
-*   @file   brcm_auddrv_test.c
+*   @file   bcm_auddrv_test.c
 *
 *   @brief	This file contains SysFS interface for audio driver test cases
 *
@@ -45,8 +45,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <mach/hardware.h>
 
-//#include "brcm_alsa.h"
-
 
 #include "mobcom_types.h"
 #include "resultcode.h"
@@ -60,7 +58,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "drv_caph_hwctrl.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
-#include "brcm_audio_devices.h"
+#include "bcm_audio_devices.h"
 #include "caph_common.h"
 
 static UInt8 *samplePCM16_inaudiotest = NULL;
@@ -93,7 +91,7 @@ UInt8 playback_audiotest_srcmixer[165856] = {
 static int sgBrcm_auddrv_TestValues[BRCM_AUDDRV_TESTVAL];
 static char *sgBrcm_auddrv_TestName[]={"Aud_play","Aud_Rec","Aud_control"};
 
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 static void __iomem *ahb_audio_base = NULL;
 static irqreturn_t audvoc_isr(int irq, void *dev_id);
 #endif
@@ -107,8 +105,8 @@ static int HandleControlCommand(void);
 
 static int HandlePlayCommand(void);
 static int HandleCaptCommand(void);
-static void AUDIO_DRIVER_TEST_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle);
-static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle);
+static void AUDIO_DRIVER_TEST_InterruptPeriodCB(void *pPrivate);
+static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate);
 
 void dump_audio_registers(void);
 
@@ -729,6 +727,7 @@ static int HandlePlayCommand()
     static int src_used=0;
     char* src;
     char* dest;
+    AUDIO_DRIVER_CallBackParams_t	cbParams;
 
 
     switch(sgBrcm_auddrv_TestValues[1])
@@ -775,7 +774,10 @@ static int HandlePlayCommand()
         {
             DEBUG(" Audio DDRIVER Config\n");
             //set the callback
-            AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)AUDIO_DRIVER_TEST_InterruptPeriodCB);
+            //AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)AUDIO_DRIVER_TEST_InterruptPeriodCB);
+	    cbParams.pfCallBack = AUDIO_DRIVER_TEST_InterruptPeriodCB;
+	    cbParams.pPrivateData = (void *)drv_handle;
+ 	    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)&cbParams);
 
             // configure defaults
 		
@@ -904,7 +906,7 @@ static int HandlePlayCommand()
 	return 0;
 }
 
-static void AUDIO_DRIVER_TEST_InterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
+static void AUDIO_DRIVER_TEST_InterruptPeriodCB(void *pPrivate)
 {
     char* src;
     char* dest;
@@ -942,6 +944,7 @@ static int HandleCaptCommand()
     static AUDIO_DRIVER_CONFIG_t drv_config;
     static dma_addr_t            dma_addr;
     static AUDCTRL_MICROPHONE_t     mic = AUDCTRL_MIC_MAIN;
+    AUDIO_DRIVER_CallBackParams_t	cbParams;
  
    
     static AUDIO_DRIVER_TYPE_t drv_type = AUDIO_DRIVER_CAPT_HQ;
@@ -964,7 +967,9 @@ static int HandleCaptCommand()
         {
             DEBUG(" Audio Capture DDRIVER Config\n");
             //set the callback
-            AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)AUDIO_DRIVER_TEST_CaptInterruptPeriodCB);
+	    cbParams.pfCallBack = AUDIO_DRIVER_TEST_CaptInterruptPeriodCB;
+	    cbParams.pPrivateData = (void *)drv_handle;
+ 	    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)&cbParams);
 
             if(drv_type == AUDIO_DRIVER_CAPT_HQ)
             {
@@ -1099,7 +1104,7 @@ static int HandleCaptCommand()
 
 }
 
-static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_handle)
+static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
 {
     char* src;
     char* dest;
@@ -1126,7 +1131,7 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(AUDIO_DRIVER_HANDLE_t drv_ha
     return;
 }
 
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 // Test code 
 
 //#define AHB_AUDIO_BASE_ADDR      0x30800000 
@@ -1338,7 +1343,7 @@ static irqreturn_t audvoc_isr(int irq, void *dev_id)
 #endif	    
 
 
-#ifndef	EXCLUDE_AMR2SP_TEST
+#ifdef	CONFIG_AUDIO_AMR2SP_TEST
 
 //#include "mobcom_types.h"
 //#include "resultcode.h"
@@ -1356,7 +1361,6 @@ static irqreturn_t audvoc_isr(int irq, void *dev_id)
 #include "csl_arm2sp.h"
 #include "audio_vdriver_voice_play.h"
 #include "log.h"
-//#include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "osdal_os.h"
 
@@ -1432,7 +1436,7 @@ static AudioMode_t AUDTST_SaveModeFromChannel( AUDCTRL_SPEAKER_t spk )
 
 static Boolean AUDDRV_BUFFER_DONE_CB (UInt8 *buf, UInt32 size, UInt32 streamID)
 {
-      Log_DebugPrintf(LOGID_AUDIO, "\n AUDDRV_BUFFER_DONE_CB streamID = 0x%x\n", streamID);
+      Log_DebugPrintf(LOGID_AUDIO, "\n AUDDRV_BUFFER_DONE_CB streamID = 0x%lx\n", streamID);
 	OSSEMAPHORE_Release (AUDDRV_BufDoneSema);
 	return TRUE;  //what does the return value mean?
 }

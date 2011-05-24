@@ -66,7 +66,7 @@
 #include "plat/csl/csl_trace.h"
 //#include "sysmap_types.h"
 //#include "csl_sysmap.h"
-#include "mach/rdb/brcm_rdb_sysmap_a9.h"
+#include "mach/rdb/brcm_rdb_sysmap.h"
 // Lots of RDBs to setup the pads/funnels
 #include "mach/rdb/brcm_rdb_util.h"
 #include "mach/rdb/brcm_rdb_swstm.h"

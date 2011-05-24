@@ -32,15 +32,13 @@ Broadcom's express prior written consent.
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_i2s_sspi.h"
 #include "csl_caph_pcm_sspi.h"
+#include "csl_caph_gain.h"
 #ifdef UNDER_LINUX
 #include <mach/io_map.h>
-//#include <mach/hardware.h>HW_IO_PHYS_TO_VIRT
 #endif
 
 //#define _DBG_(a)
 #define _DBG_(a) (a)
-
-#define VOICE_CALL_LOOPBACK_TEST 
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -1083,14 +1081,11 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         audioPath = csl_caph_hwctrl_GetPath_FromPathID(pathID);
     }
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO,"Enable path sink=%d \n", audioPath.sink);
-
     if (((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_EP))||
 	  ((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_HS))||
 	  ((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_IHF))||
 	  ((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_VIBRA)))
     {
-	    Log_DebugPrintf(LOGID_SOC_AUDIO,"Inside if - Enable path sink=%d \n", audioPath.sink);
         if (audioPath.sink == CSL_CAPH_DEV_HS)
             audioh_path = AUDDRV_PATH_HEADSET_OUTPUT;
         else if (audioPath.sink == CSL_CAPH_DEV_IHF)
@@ -1148,13 +1143,35 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         }
 
         // caph srcmixer will be used
-        if (audioPath.src_sampleRate != audioPath.snk_sampleRate)
+		// temp fix :48KHz stereo to EP to use HW SRC mixer
+        if ((audioPath.src_sampleRate != audioPath.snk_sampleRate) || 
+			(audioPath.src_sampleRate == AUDIO_SAMPLING_RATE_48000 && 
+				audioPath.chnlNum == AUDIO_CHANNEL_STEREO && audioPath.sink == CSL_CAPH_DEV_EP))
         {
+			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnablePath :: go through SRC mixer\r\n"));
             csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(audioPath.src_sampleRate);
             csl_caph_srcm_outsamplerate = csl_caph_srcmixer_get_srcm_outsamplerate(audioPath.snk_sampleRate);
-			if(audioPath.sink == CSL_CAPH_DEV_HS)
+            
+            // 2. get SRC-Mixer in channel
+		
+			if(audioPath.src_sampleRate == AUDIO_SAMPLING_RATE_8000)
 			{
-				audioPath.routeConfig.inChnl = CSL_CAPH_SRCM_STEREO_CH5;	// go through stereo SRC channel  
+				audioPath.routeConfig.inChnl = CSL_CAPH_SRCM_MONO_CH3;			// go through SRC Mixer channel 3  
+			}
+			else if(audioPath.src_sampleRate == AUDIO_SAMPLING_RATE_16000)
+			{
+				audioPath.routeConfig.inChnl = CSL_CAPH_SRCM_MONO_CH4;			// go through SRC Mixer channel 4  
+			}
+			else if(audioPath.src_sampleRate == AUDIO_SAMPLING_RATE_44100)
+			{
+				if(audioPath.chnlNum == AUDIO_CHANNEL_MONO)
+					audioPath.routeConfig.inChnl = CSL_CAPH_SRCM_STEREO_CH5_L; //for testing
+				else
+					audioPath.routeConfig.inChnl = CSL_CAPH_SRCM_STEREO_CH5;		// go through stereo SRC channel 5 
+			}
+			else if(audioPath.src_sampleRate == AUDIO_SAMPLING_RATE_48000)
+			{
+				audioPath.routeConfig.inChnl = CSL_CAPH_SRCM_STEREO_PASS_CH1;	// go through pass through channel 1  
 			}
 			else
 			{
@@ -1305,8 +1322,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             csl_caph_switch_start_transfer(audioPath.switchCH2);
         
         csl_caph_audioh_start(audioh_path);
-
-		Log_DebugPrintf(LOGID_SOC_AUDIO,"Start DMAC\n");
         csl_caph_dma_start_transfer(audioPath.dmaCH);
 
     }
@@ -3068,7 +3083,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         	csl_caph_audioh_config(AUDDRV_PATH_ANALOGMIC_INPUT, (void *)&audioh_config);
     
     	    // start the modules in path
-#ifdef VOICE_CALL_LOOPBACK_TEST 
+#ifdef CONFIG_VOICE_LOOPBACK_TEST 
 		 //Do not send interrupt to DSP.
 		//Instead, route data back to SRCMixer MONO CH1, to bypass DSP.
 		( *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(0x3502F050))) = (UInt32) (0x805DC990) );
@@ -5618,7 +5633,12 @@ void csl_caph_hwctrl_SetSourceGain(CSL_CAPH_PathID pathID,
 
     switch(path.source)
     {
+        //temp fix to set the gain. need to port the latest code from RTOS
         case CSL_CAPH_DEV_DIGI_MIC:
+        case CSL_CAPH_DEV_DIGI_MIC_L:
+        case CSL_CAPH_DEV_DIGI_MIC_R:
+        case CSL_CAPH_DEV_ANALOG_MIC: 
+        case CSL_CAPH_DEV_HS_MIC:
             csl_caph_audioh_setgain(AUDDRV_PATH_ANALOGMIC_INPUT, gainL_mB, gainR_mB);
             break;
         default:

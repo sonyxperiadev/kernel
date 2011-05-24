@@ -50,7 +50,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "audio_controller.h"
 #include "audio_ddriver.h"
-#include "brcm_audio_devices.h"
+#include "bcm_audio_devices.h"
 
 #include "caph_common.h"
 
@@ -185,21 +185,6 @@ static int DriverResume(struct platform_device *pdev)
 
 //---------------------------------------------------------------------------
 // File opeations for audio logging
-
-
-//+++++++++++++++++++++++++++++++++++++++++++++++++++++
-//
-//  Function Name: DeviceRelease
-//
-//  Description: 'release' call back function for platform device
-//
-//------------------------------------------------------------
-//static void DeviceRelease(struct device *pdev)
-//{
-//       BCM_AUDIO_DEBUG("\n TO DO:DeviceRelease\n");
-//}
-
-
 
 //Platform device structure
 static struct platform_device sgPlatformDevice =

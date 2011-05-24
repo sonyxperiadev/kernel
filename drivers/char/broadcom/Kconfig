@@ -10,7 +10,7 @@ menuconfig BRCM_CHAR_DRIVERS
 
 config V3D
 	tristate "V3D Driver"
-	depends on BRCM_CHAR_DRIVERS
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
 	default n
 
 config BRCM_FUSE_LOG
@@ -23,17 +23,17 @@ config BRCM_FUSE_LOG
     
 config ISP
 	tristate "ISP Driver"
-	depends on BRCM_CHAR_DRIVERS
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
 	default n   
 
 config UNICAM
 	tristate "UNICAM Driver"
-	depends on BRCM_CHAR_DRIVERS
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
 	default n 	
 
 config BCM_MODEM
         tristate "Broadcom Modem Driver"
-        depends on BRCM_CHAR_DRIVERS
+        depends on BRCM_CHAR_DRIVERS && NET
         default n
         help
           Broadcom Modem IPC drivers

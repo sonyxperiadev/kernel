@@ -28,7 +28,7 @@ Broadcom's express prior written consent.
 #include "csl_caph_dma.h"
 #include "csl_caph_hwctrl.h"
 #include "csl_audio_capture.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "dbg.h"
 #endif
 

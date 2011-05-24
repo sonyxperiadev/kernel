@@ -61,9 +61,6 @@ ANY LIMITED REMEDY.
 #include "ripcmdq.h"
 #include "ripisr.h"
 #include "audio_consts.h"
-#ifdef LMP_BUILD
-#include "csl_aud_drv.h"
-#endif
 #include "audio_vdriver.h"
 #include "sysparm.h"
 #include "ostask.h"

@@ -25,7 +25,7 @@
 #include "plat/chal/chal_common.h"
 #include "plat/chal/chal_dma_vc4lite.h"
 #include "mach/rdb/brcm_rdb_dma.h"
-#include "mach/rdb/brcm_rdb_sysmap_a9.h"
+#include "mach/rdb/brcm_rdb_sysmap.h"
 #include "mach/rdb/brcm_rdb_util.h"
 #ifdef UNDER_LINUX
 #include "mach/memory.h"

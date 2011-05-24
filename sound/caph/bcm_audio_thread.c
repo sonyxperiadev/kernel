@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 *
 *****************************************************************************
 *
-*  brcm_audio_thread.c
+*  bcm_audio_thread.c
 *
 *  PURPOSE:
 *
@@ -43,17 +43,10 @@ the GPL, without Broadcom's express prior written consent.
 #include "ossemaphore.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
-// Include BRCM AAUD driver API header files
-#include "brcm_audio_devices.h"
-#include "brcm_audio_thread.h"
+#include "bcm_audio_devices.h"
+#include "bcm_audio_thread.h"
 #include "caph_common.h"
 
-
-
-/* ---- Functions ecported ---------------------------------------------------- */
-//int LaunchAudioHalThread(void);
-//int TerminateAudioHalThread(void);
-//Result_t HAL_AUDIO_Ctrl(	HAL_AUDIO_ACTION_en_t action_code,	void *arg_param,	void *callback	);
 
 
 /* ---- Data structure  ------------------------------------------------- */
@@ -334,20 +327,20 @@ void AUDIO_Ctrl_Process(
         break;
         case ACTION_AUD_StartRecord:
         {
-//            BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
+            BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
-  /*          AUDCTRL_EnableRecord(sgTableIDChannelOfCaptDev[param_start->substream_number].hw_id,
+
+            AUDCTRL_EnableRecord(param_start->pdev_prop->u.c.hw_id,
 				                     AUDIO_HW_MEM,	
-                                     sgTableIDChannelOfCaptDev[param_start->substream_number].mic,
+                                     param_start->pdev_prop->u.c.mic,
 				                     param_start->channels,
                                      param_start->rate);
+            AUDCTRL_SetRecordGain(param_start->pdev_prop->u.c.hw_id,
+                                  param_start->pdev_prop->u.c.mic,
+                                  param_start->vol[0],
+                                  param_start->vol[1]);
 
-            AUDCTRL_SetRecordGain(sgTableIDChannelOfCaptDev[param_start->substream_number].hw_id,
-                                  sgTableIDChannelOfCaptDev[param_start->substream_number].mic,
-                                  8,
-                                  8);
-
-            AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&sgTableIDChannelOfCaptDev[param_start->substream_number].aud_dev); */
+            AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.c.aud_dev); 
 			
         }
         break;
@@ -356,10 +349,10 @@ void AUDIO_Ctrl_Process(
             BRCM_AUDIO_Param_Stop_t* param_stop = (BRCM_AUDIO_Param_Stop_t*) arg_param;
                
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
-/*
-            AUDCTRL_DisableRecord(sgTableIDChannelOfCaptDev[param_stop->substream_number].hw_id,
+
+            AUDCTRL_DisableRecord(param_stop->pdev_prop->u.c.hw_id,
                                       AUDIO_HW_MEM,
-                                      sgTableIDChannelOfCaptDev[param_stop->substream_number].mic); */
+                                      param_stop->pdev_prop->u.c.mic); 
 
         }
         break;
@@ -367,7 +360,7 @@ void AUDIO_Ctrl_Process(
 		{
          	BRCM_AUDIO_Param_Open_t* param_open = (BRCM_AUDIO_Param_Open_t*) arg_param;
 
-            //param_open->drv_handle = AUDIO_DRIVER_Open(sgTableIDChannelOfCaptDev[param_open->substream_number].drv_type);
+            param_open->drv_handle = AUDIO_DRIVER_Open(param_open->pdev_prop->u.c.drv_type);
 
             BCM_AUDIO_DEBUG("param_open->drv_handle -  0x%lx \n",(UInt32)param_open->drv_handle);
 		

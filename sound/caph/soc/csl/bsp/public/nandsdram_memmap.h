@@ -41,9 +41,7 @@
 *    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
 *
 *****************************************************************************/
-#ifdef LMP_BUILD
-#include "platform_mconfig.h"
-#endif
+
 /*****************************************************************************
 *
 * Do NOT define physical ROM/RAM address in this file

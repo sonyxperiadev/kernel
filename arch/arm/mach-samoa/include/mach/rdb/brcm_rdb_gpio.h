@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/10/2011 22:27:55                                             */
+/*     Date     : Generated on 5/15/2011 11:41:39                                             */
 /*     RDB file : /projects/SAMOA/revA0                                                                   */
 /************************************************************************************************/
 
@@ -30,7 +30,15 @@
 
 #define GPIO_GPOR0_OFFSET                                                 0x00000000
 #define GPIO_GPOR0_TYPE                                                   UInt32
-#define GPIO_GPOR0_RESERVED_MASK                                          0xC0000000
+#define GPIO_GPOR0_RESERVED_MASK                                          0x00000000
+#define    GPIO_GPOR0_GPO_31_SHIFT                                        31
+#define    GPIO_GPOR0_GPO_31_MASK                                         0x80000000
+#define       GPIO_GPOR0_GPO_31_CMD_LOW                                   0x00000000
+#define       GPIO_GPOR0_GPO_31_CMD_HIGH                                  0x00000001
+#define    GPIO_GPOR0_GPO_30_SHIFT                                        30
+#define    GPIO_GPOR0_GPO_30_MASK                                         0x40000000
+#define       GPIO_GPOR0_GPO_30_CMD_LOW                                   0x00000000
+#define       GPIO_GPOR0_GPO_30_CMD_HIGH                                  0x00000001
 #define    GPIO_GPOR0_GPO_29_SHIFT                                        29
 #define    GPIO_GPOR0_GPO_29_MASK                                         0x20000000
 #define       GPIO_GPOR0_GPO_29_CMD_LOW                                   0x00000000
@@ -154,7 +162,7 @@
 
 #define GPIO_GPOR1_OFFSET                                                 0x00000004
 #define GPIO_GPOR1_TYPE                                                   UInt32
-#define GPIO_GPOR1_RESERVED_MASK                                          0x00E60018
+#define GPIO_GPOR1_RESERVED_MASK                                          0x00000000
 #define    GPIO_GPOR1_GPO_31_SHIFT                                        31
 #define    GPIO_GPOR1_GPO_31_MASK                                         0x80000000
 #define       GPIO_GPOR1_GPO_31_CMD_LOW                                   0x00000000
@@ -187,6 +195,18 @@
 #define    GPIO_GPOR1_GPO_24_MASK                                         0x01000000
 #define       GPIO_GPOR1_GPO_24_CMD_LOW                                   0x00000000
 #define       GPIO_GPOR1_GPO_24_CMD_HIGH                                  0x00000001
+#define    GPIO_GPOR1_GPO_23_SHIFT                                        23
+#define    GPIO_GPOR1_GPO_23_MASK                                         0x00800000
+#define       GPIO_GPOR1_GPO_23_CMD_LOW                                   0x00000000
+#define       GPIO_GPOR1_GPO_23_CMD_HIGH                                  0x00000001
+#define    GPIO_GPOR1_GPO_22_SHIFT                                        22
+#define    GPIO_GPOR1_GPO_22_MASK                                         0x00400000
+#define       GPIO_GPOR1_GPO_22_CMD_LOW                                   0x00000000
+#define       GPIO_GPOR1_GPO_22_CMD_HIGH                                  0x00000001
+#define    GPIO_GPOR1_GPO_21_SHIFT                                        21
+#define    GPIO_GPOR1_GPO_21_MASK                                         0x00200000
+#define       GPIO_GPOR1_GPO_21_CMD_LOW                                   0x00000000
+#define       GPIO_GPOR1_GPO_21_CMD_HIGH                                  0x00000001
 #define    GPIO_GPOR1_GPO_20_SHIFT                                        20
 #define    GPIO_GPOR1_GPO_20_MASK                                         0x00100000
 #define       GPIO_GPOR1_GPO_20_CMD_LOW                                   0x00000000
@@ -195,6 +215,14 @@
 #define    GPIO_GPOR1_GPO_19_MASK                                         0x00080000
 #define       GPIO_GPOR1_GPO_19_CMD_LOW                                   0x00000000
 #define       GPIO_GPOR1_GPO_19_CMD_HIGH                                  0x00000001
+#define    GPIO_GPOR1_GPO_18_SHIFT                                        18
+#define    GPIO_GPOR1_GPO_18_MASK                                         0x00040000
+#define       GPIO_GPOR1_GPO_18_CMD_LOW                                   0x00000000
+#define       GPIO_GPOR1_GPO_18_CMD_HIGH                                  0x00000001
+#define    GPIO_GPOR1_GPO_17_SHIFT                                        17
+#define    GPIO_GPOR1_GPO_17_MASK                                         0x00020000
+#define       GPIO_GPOR1_GPO_17_CMD_LOW                                   0x00000000
+#define       GPIO_GPOR1_GPO_17_CMD_HIGH                                  0x00000001
 #define    GPIO_GPOR1_GPO_16_SHIFT                                        16
 #define    GPIO_GPOR1_GPO_16_MASK                                         0x00010000
 #define       GPIO_GPOR1_GPO_16_CMD_LOW                                   0x00000000
@@ -243,6 +271,14 @@
 #define    GPIO_GPOR1_GPO_5_MASK                                          0x00000020
 #define       GPIO_GPOR1_GPO_5_CMD_LOW                                    0x00000000
 #define       GPIO_GPOR1_GPO_5_CMD_HIGH                                   0x00000001
+#define    GPIO_GPOR1_GPO_4_SHIFT                                         4
+#define    GPIO_GPOR1_GPO_4_MASK                                          0x00000010
+#define       GPIO_GPOR1_GPO_4_CMD_LOW                                    0x00000000
+#define       GPIO_GPOR1_GPO_4_CMD_HIGH                                   0x00000001
+#define    GPIO_GPOR1_GPO_3_SHIFT                                         3
+#define    GPIO_GPOR1_GPO_3_MASK                                          0x00000008
+#define       GPIO_GPOR1_GPO_3_CMD_LOW                                    0x00000000
+#define       GPIO_GPOR1_GPO_3_CMD_HIGH                                   0x00000001
 #define    GPIO_GPOR1_GPO_2_SHIFT                                         2
 #define    GPIO_GPOR1_GPO_2_MASK                                          0x00000004
 #define       GPIO_GPOR1_GPO_2_CMD_LOW                                    0x00000000
@@ -414,7 +450,15 @@
 
 #define GPIO_GPIR0_OFFSET                                                 0x00000020
 #define GPIO_GPIR0_TYPE                                                   UInt32
-#define GPIO_GPIR0_RESERVED_MASK                                          0xC0000000
+#define GPIO_GPIR0_RESERVED_MASK                                          0x00000000
+#define    GPIO_GPIR0_GPI_31_SHIFT                                        31
+#define    GPIO_GPIR0_GPI_31_MASK                                         0x80000000
+#define       GPIO_GPIR0_GPI_31_CMD_INPUT_LOW                             0x00000000
+#define       GPIO_GPIR0_GPI_31_CMD_INPUT_HIGH                            0x00000001
+#define    GPIO_GPIR0_GPI_30_SHIFT                                        30
+#define    GPIO_GPIR0_GPI_30_MASK                                         0x40000000
+#define       GPIO_GPIR0_GPI_30_CMD_INPUT_LOW                             0x00000000
+#define       GPIO_GPIR0_GPI_30_CMD_INPUT_HIGH                            0x00000001
 #define    GPIO_GPIR0_GPI_29_SHIFT                                        29
 #define    GPIO_GPIR0_GPI_29_MASK                                         0x20000000
 #define       GPIO_GPIR0_GPI_29_CMD_INPUT_LOW                             0x00000000
@@ -538,7 +582,7 @@
 
 #define GPIO_GPIR1_OFFSET                                                 0x00000024
 #define GPIO_GPIR1_TYPE                                                   UInt32
-#define GPIO_GPIR1_RESERVED_MASK                                          0x00E60018
+#define GPIO_GPIR1_RESERVED_MASK                                          0x00000000
 #define    GPIO_GPIR1_GPI_31_SHIFT                                        31
 #define    GPIO_GPIR1_GPI_31_MASK                                         0x80000000
 #define       GPIO_GPIR1_GPI_31_CMD_INPUT_LOW                             0x00000000
@@ -571,6 +615,18 @@
 #define    GPIO_GPIR1_GPI_24_MASK                                         0x01000000
 #define       GPIO_GPIR1_GPI_24_CMD_INPUT_LOW                             0x00000000
 #define       GPIO_GPIR1_GPI_24_CMD_INPUT_HIGH                            0x00000001
+#define    GPIO_GPIR1_GPI_23_SHIFT                                        23
+#define    GPIO_GPIR1_GPI_23_MASK                                         0x00800000
+#define       GPIO_GPIR1_GPI_23_CMD_INPUT_LOW                             0x00000000
+#define       GPIO_GPIR1_GPI_23_CMD_INPUT_HIGH                            0x00000001
+#define    GPIO_GPIR1_GPI_22_SHIFT                                        22
+#define    GPIO_GPIR1_GPI_22_MASK                                         0x00400000
+#define       GPIO_GPIR1_GPI_22_CMD_INPUT_LOW                             0x00000000
+#define       GPIO_GPIR1_GPI_22_CMD_INPUT_HIGH                            0x00000001
+#define    GPIO_GPIR1_GPI_21_SHIFT                                        21
+#define    GPIO_GPIR1_GPI_21_MASK                                         0x00200000
+#define       GPIO_GPIR1_GPI_21_CMD_INPUT_LOW                             0x00000000
+#define       GPIO_GPIR1_GPI_21_CMD_INPUT_HIGH                            0x00000001
 #define    GPIO_GPIR1_GPI_20_SHIFT                                        20
 #define    GPIO_GPIR1_GPI_20_MASK                                         0x00100000
 #define       GPIO_GPIR1_GPI_20_CMD_INPUT_LOW                             0x00000000
@@ -579,6 +635,14 @@
 #define    GPIO_GPIR1_GPI_19_MASK                                         0x00080000
 #define       GPIO_GPIR1_GPI_19_CMD_INPUT_LOW                             0x00000000
 #define       GPIO_GPIR1_GPI_19_CMD_INPUT_HIGH                            0x00000001
+#define    GPIO_GPIR1_GPI_18_SHIFT                                        18
+#define    GPIO_GPIR1_GPI_18_MASK                                         0x00040000
+#define       GPIO_GPIR1_GPI_18_CMD_INPUT_LOW                             0x00000000
+#define       GPIO_GPIR1_GPI_18_CMD_INPUT_HIGH                            0x00000001
+#define    GPIO_GPIR1_GPI_17_SHIFT                                        17
+#define    GPIO_GPIR1_GPI_17_MASK                                         0x00020000
+#define       GPIO_GPIR1_GPI_17_CMD_INPUT_LOW                             0x00000000
+#define       GPIO_GPIR1_GPI_17_CMD_INPUT_HIGH                            0x00000001
 #define    GPIO_GPIR1_GPI_16_SHIFT                                        16
 #define    GPIO_GPIR1_GPI_16_MASK                                         0x00010000
 #define       GPIO_GPIR1_GPI_16_CMD_INPUT_LOW                             0x00000000
@@ -627,6 +691,14 @@
 #define    GPIO_GPIR1_GPI_5_MASK                                          0x00000020
 #define       GPIO_GPIR1_GPI_5_CMD_INPUT_LOW                              0x00000000
 #define       GPIO_GPIR1_GPI_5_CMD_INPUT_HIGH                             0x00000001
+#define    GPIO_GPIR1_GPI_4_SHIFT                                         4
+#define    GPIO_GPIR1_GPI_4_MASK                                          0x00000010
+#define       GPIO_GPIR1_GPI_4_CMD_INPUT_LOW                              0x00000000
+#define       GPIO_GPIR1_GPI_4_CMD_INPUT_HIGH                             0x00000001
+#define    GPIO_GPIR1_GPI_3_SHIFT                                         3
+#define    GPIO_GPIR1_GPI_3_MASK                                          0x00000008
+#define       GPIO_GPIR1_GPI_3_CMD_INPUT_LOW                              0x00000000
+#define       GPIO_GPIR1_GPI_3_CMD_INPUT_HIGH                             0x00000001
 #define    GPIO_GPIR1_GPI_2_SHIFT                                         2
 #define    GPIO_GPIR1_GPI_2_MASK                                          0x00000004
 #define       GPIO_GPIR1_GPI_2_CMD_INPUT_LOW                              0x00000000
@@ -798,7 +870,15 @@
 
 #define GPIO_GPORS0_OFFSET                                                0x00000040
 #define GPIO_GPORS0_TYPE                                                  UInt32
-#define GPIO_GPORS0_RESERVED_MASK                                         0xC0000000
+#define GPIO_GPORS0_RESERVED_MASK                                         0x00000000
+#define    GPIO_GPORS0_GPO_SET_31_SHIFT                                   31
+#define    GPIO_GPORS0_GPO_SET_31_MASK                                    0x80000000
+#define       GPIO_GPORS0_GPO_SET_31_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORS0_GPO_SET_31_CMD_SET_GPO                          0x00000001
+#define    GPIO_GPORS0_GPO_SET_30_SHIFT                                   30
+#define    GPIO_GPORS0_GPO_SET_30_MASK                                    0x40000000
+#define       GPIO_GPORS0_GPO_SET_30_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORS0_GPO_SET_30_CMD_SET_GPO                          0x00000001
 #define    GPIO_GPORS0_GPO_SET_29_SHIFT                                   29
 #define    GPIO_GPORS0_GPO_SET_29_MASK                                    0x20000000
 #define       GPIO_GPORS0_GPO_SET_29_CMD_NO_EFFECT                        0x00000000
@@ -922,7 +1002,7 @@
 
 #define GPIO_GPORS1_OFFSET                                                0x00000044
 #define GPIO_GPORS1_TYPE                                                  UInt32
-#define GPIO_GPORS1_RESERVED_MASK                                         0x00E60018
+#define GPIO_GPORS1_RESERVED_MASK                                         0x00000000
 #define    GPIO_GPORS1_GPO_SET_31_SHIFT                                   31
 #define    GPIO_GPORS1_GPO_SET_31_MASK                                    0x80000000
 #define       GPIO_GPORS1_GPO_SET_31_CMD_NO_EFFECT                        0x00000000
@@ -955,6 +1035,18 @@
 #define    GPIO_GPORS1_GPO_SET_24_MASK                                    0x01000000
 #define       GPIO_GPORS1_GPO_SET_24_CMD_NO_EFFECT                        0x00000000
 #define       GPIO_GPORS1_GPO_SET_24_CMD_SET_GPO                          0x00000001
+#define    GPIO_GPORS1_GPO_SET_23_SHIFT                                   23
+#define    GPIO_GPORS1_GPO_SET_23_MASK                                    0x00800000
+#define       GPIO_GPORS1_GPO_SET_23_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORS1_GPO_SET_23_CMD_SET_GPO                          0x00000001
+#define    GPIO_GPORS1_GPO_SET_22_SHIFT                                   22
+#define    GPIO_GPORS1_GPO_SET_22_MASK                                    0x00400000
+#define       GPIO_GPORS1_GPO_SET_22_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORS1_GPO_SET_22_CMD_SET_GPO                          0x00000001
+#define    GPIO_GPORS1_GPO_SET_21_SHIFT                                   21
+#define    GPIO_GPORS1_GPO_SET_21_MASK                                    0x00200000
+#define       GPIO_GPORS1_GPO_SET_21_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORS1_GPO_SET_21_CMD_SET_GPO                          0x00000001
 #define    GPIO_GPORS1_GPO_SET_20_SHIFT                                   20
 #define    GPIO_GPORS1_GPO_SET_20_MASK                                    0x00100000
 #define       GPIO_GPORS1_GPO_SET_20_CMD_NO_EFFECT                        0x00000000
@@ -963,6 +1055,14 @@
 #define    GPIO_GPORS1_GPO_SET_19_MASK                                    0x00080000
 #define       GPIO_GPORS1_GPO_SET_19_CMD_NO_EFFECT                        0x00000000
 #define       GPIO_GPORS1_GPO_SET_19_CMD_SET_GPO                          0x00000001
+#define    GPIO_GPORS1_GPO_SET_18_SHIFT                                   18
+#define    GPIO_GPORS1_GPO_SET_18_MASK                                    0x00040000
+#define       GPIO_GPORS1_GPO_SET_18_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORS1_GPO_SET_18_CMD_SET_GPO                          0x00000001
+#define    GPIO_GPORS1_GPO_SET_17_SHIFT                                   17
+#define    GPIO_GPORS1_GPO_SET_17_MASK                                    0x00020000
+#define       GPIO_GPORS1_GPO_SET_17_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORS1_GPO_SET_17_CMD_SET_GPO                          0x00000001
 #define    GPIO_GPORS1_GPO_SET_16_SHIFT                                   16
 #define    GPIO_GPORS1_GPO_SET_16_MASK                                    0x00010000
 #define       GPIO_GPORS1_GPO_SET_16_CMD_NO_EFFECT                        0x00000000
@@ -1011,6 +1111,14 @@
 #define    GPIO_GPORS1_GPO_SET_5_MASK                                     0x00000020
 #define       GPIO_GPORS1_GPO_SET_5_CMD_NO_EFFECT                         0x00000000
 #define       GPIO_GPORS1_GPO_SET_5_CMD_SET_GPO                           0x00000001
+#define    GPIO_GPORS1_GPO_SET_4_SHIFT                                    4
+#define    GPIO_GPORS1_GPO_SET_4_MASK                                     0x00000010
+#define       GPIO_GPORS1_GPO_SET_4_CMD_NO_EFFECT                         0x00000000
+#define       GPIO_GPORS1_GPO_SET_4_CMD_SET_GPO                           0x00000001
+#define    GPIO_GPORS1_GPO_SET_3_SHIFT                                    3
+#define    GPIO_GPORS1_GPO_SET_3_MASK                                     0x00000008
+#define       GPIO_GPORS1_GPO_SET_3_CMD_NO_EFFECT                         0x00000000
+#define       GPIO_GPORS1_GPO_SET_3_CMD_SET_GPO                           0x00000001
 #define    GPIO_GPORS1_GPO_SET_2_SHIFT                                    2
 #define    GPIO_GPORS1_GPO_SET_2_MASK                                     0x00000004
 #define       GPIO_GPORS1_GPO_SET_2_CMD_NO_EFFECT                         0x00000000
@@ -1182,7 +1290,15 @@
 
 #define GPIO_GPORC0_OFFSET                                                0x00000060
 #define GPIO_GPORC0_TYPE                                                  UInt32
-#define GPIO_GPORC0_RESERVED_MASK                                         0xC0000000
+#define GPIO_GPORC0_RESERVED_MASK                                         0x00000000
+#define    GPIO_GPORC0_GPO_CLR_31_SHIFT                                   31
+#define    GPIO_GPORC0_GPO_CLR_31_MASK                                    0x80000000
+#define       GPIO_GPORC0_GPO_CLR_31_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORC0_GPO_CLR_31_CMD_CLR_GPO                          0x00000001
+#define    GPIO_GPORC0_GPO_CLR_30_SHIFT                                   30
+#define    GPIO_GPORC0_GPO_CLR_30_MASK                                    0x40000000
+#define       GPIO_GPORC0_GPO_CLR_30_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORC0_GPO_CLR_30_CMD_CLR_GPO                          0x00000001
 #define    GPIO_GPORC0_GPO_CLR_29_SHIFT                                   29
 #define    GPIO_GPORC0_GPO_CLR_29_MASK                                    0x20000000
 #define       GPIO_GPORC0_GPO_CLR_29_CMD_NO_EFFECT                        0x00000000
@@ -1306,7 +1422,7 @@
 
 #define GPIO_GPORC1_OFFSET                                                0x00000064
 #define GPIO_GPORC1_TYPE                                                  UInt32
-#define GPIO_GPORC1_RESERVED_MASK                                         0x00E60018
+#define GPIO_GPORC1_RESERVED_MASK                                         0x00000000
 #define    GPIO_GPORC1_GPO_CLR_31_SHIFT                                   31
 #define    GPIO_GPORC1_GPO_CLR_31_MASK                                    0x80000000
 #define       GPIO_GPORC1_GPO_CLR_31_CMD_NO_EFFECT                        0x00000000
@@ -1339,6 +1455,18 @@
 #define    GPIO_GPORC1_GPO_CLR_24_MASK                                    0x01000000
 #define       GPIO_GPORC1_GPO_CLR_24_CMD_NO_EFFECT                        0x00000000
 #define       GPIO_GPORC1_GPO_CLR_24_CMD_CLR_GPO                          0x00000001
+#define    GPIO_GPORC1_GPO_CLR_23_SHIFT                                   23
+#define    GPIO_GPORC1_GPO_CLR_23_MASK                                    0x00800000
+#define       GPIO_GPORC1_GPO_CLR_23_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORC1_GPO_CLR_23_CMD_CLR_GPO                          0x00000001
+#define    GPIO_GPORC1_GPO_CLR_22_SHIFT                                   22
+#define    GPIO_GPORC1_GPO_CLR_22_MASK                                    0x00400000
+#define       GPIO_GPORC1_GPO_CLR_22_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORC1_GPO_CLR_22_CMD_CLR_GPO                          0x00000001
+#define    GPIO_GPORC1_GPO_CLR_21_SHIFT                                   21
+#define    GPIO_GPORC1_GPO_CLR_21_MASK                                    0x00200000
+#define       GPIO_GPORC1_GPO_CLR_21_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORC1_GPO_CLR_21_CMD_CLR_GPO                          0x00000001
 #define    GPIO_GPORC1_GPO_CLR_20_SHIFT                                   20
 #define    GPIO_GPORC1_GPO_CLR_20_MASK                                    0x00100000
 #define       GPIO_GPORC1_GPO_CLR_20_CMD_NO_EFFECT                        0x00000000
@@ -1347,6 +1475,14 @@
 #define    GPIO_GPORC1_GPO_CLR_19_MASK                                    0x00080000
 #define       GPIO_GPORC1_GPO_CLR_19_CMD_NO_EFFECT                        0x00000000
 #define       GPIO_GPORC1_GPO_CLR_19_CMD_CLR_GPO                          0x00000001
+#define    GPIO_GPORC1_GPO_CLR_18_SHIFT                                   18
+#define    GPIO_GPORC1_GPO_CLR_18_MASK                                    0x00040000
+#define       GPIO_GPORC1_GPO_CLR_18_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORC1_GPO_CLR_18_CMD_CLR_GPO                          0x00000001
+#define    GPIO_GPORC1_GPO_CLR_17_SHIFT                                   17
+#define    GPIO_GPORC1_GPO_CLR_17_MASK                                    0x00020000
+#define       GPIO_GPORC1_GPO_CLR_17_CMD_NO_EFFECT                        0x00000000
+#define       GPIO_GPORC1_GPO_CLR_17_CMD_CLR_GPO                          0x00000001
 #define    GPIO_GPORC1_GPO_CLR_16_SHIFT                                   16
 #define    GPIO_GPORC1_GPO_CLR_16_MASK                                    0x00010000
 #define       GPIO_GPORC1_GPO_CLR_16_CMD_NO_EFFECT                        0x00000000
@@ -1395,6 +1531,14 @@
 #define    GPIO_GPORC1_GPO_CLR_5_MASK                                     0x00000020
 #define       GPIO_GPORC1_GPO_CLR_5_CMD_NO_EFFECT                         0x00000000
 #define       GPIO_GPORC1_GPO_CLR_5_CMD_CLR_GPO                           0x00000001
+#define    GPIO_GPORC1_GPO_CLR_4_SHIFT                                    4
+#define    GPIO_GPORC1_GPO_CLR_4_MASK                                     0x00000010
+#define       GPIO_GPORC1_GPO_CLR_4_CMD_NO_EFFECT                         0x00000000
+#define       GPIO_GPORC1_GPO_CLR_4_CMD_CLR_GPO                           0x00000001
+#define    GPIO_GPORC1_GPO_CLR_3_SHIFT                                    3
+#define    GPIO_GPORC1_GPO_CLR_3_MASK                                     0x00000008
+#define       GPIO_GPORC1_GPO_CLR_3_CMD_NO_EFFECT                         0x00000000
+#define       GPIO_GPORC1_GPO_CLR_3_CMD_CLR_GPO                           0x00000001
 #define    GPIO_GPORC1_GPO_CLR_2_SHIFT                                    2
 #define    GPIO_GPORC1_GPO_CLR_2_MASK                                     0x00000004
 #define       GPIO_GPORC1_GPO_CLR_2_CMD_NO_EFFECT                         0x00000000
@@ -1566,7 +1710,11 @@
 
 #define GPIO_ISR0_OFFSET                                                  0x00000080
 #define GPIO_ISR0_TYPE                                                    UInt32
-#define GPIO_ISR0_RESERVED_MASK                                           0xC0000000
+#define GPIO_ISR0_RESERVED_MASK                                           0x00000000
+#define    GPIO_ISR0_GPO_INT_31_SHIFT                                     31
+#define    GPIO_ISR0_GPO_INT_31_MASK                                      0x80000000
+#define    GPIO_ISR0_GPO_INT_30_SHIFT                                     30
+#define    GPIO_ISR0_GPO_INT_30_MASK                                      0x40000000
 #define    GPIO_ISR0_GPO_INT_29_SHIFT                                     29
 #define    GPIO_ISR0_GPO_INT_29_MASK                                      0x20000000
 #define    GPIO_ISR0_GPO_INT_28_SHIFT                                     28
@@ -1630,7 +1778,7 @@
 
 #define GPIO_ISR1_OFFSET                                                  0x00000084
 #define GPIO_ISR1_TYPE                                                    UInt32
-#define GPIO_ISR1_RESERVED_MASK                                           0x00E60018
+#define GPIO_ISR1_RESERVED_MASK                                           0x00000000
 #define    GPIO_ISR1_GPO_INT_31_SHIFT                                     31
 #define    GPIO_ISR1_GPO_INT_31_MASK                                      0x80000000
 #define    GPIO_ISR1_GPO_INT_30_SHIFT                                     30
@@ -1647,10 +1795,20 @@
 #define    GPIO_ISR1_GPO_INT_25_MASK                                      0x02000000
 #define    GPIO_ISR1_GPO_INT_24_SHIFT                                     24
 #define    GPIO_ISR1_GPO_INT_24_MASK                                      0x01000000
+#define    GPIO_ISR1_GPO_INT_23_SHIFT                                     23
+#define    GPIO_ISR1_GPO_INT_23_MASK                                      0x00800000
+#define    GPIO_ISR1_GPO_INT_22_SHIFT                                     22
+#define    GPIO_ISR1_GPO_INT_22_MASK                                      0x00400000
+#define    GPIO_ISR1_GPO_INT_21_SHIFT                                     21
+#define    GPIO_ISR1_GPO_INT_21_MASK                                      0x00200000
 #define    GPIO_ISR1_GPO_INT_20_SHIFT                                     20
 #define    GPIO_ISR1_GPO_INT_20_MASK                                      0x00100000
 #define    GPIO_ISR1_GPO_INT_19_SHIFT                                     19
 #define    GPIO_ISR1_GPO_INT_19_MASK                                      0x00080000
+#define    GPIO_ISR1_GPO_INT_18_SHIFT                                     18
+#define    GPIO_ISR1_GPO_INT_18_MASK                                      0x00040000
+#define    GPIO_ISR1_GPO_INT_17_SHIFT                                     17
+#define    GPIO_ISR1_GPO_INT_17_MASK                                      0x00020000
 #define    GPIO_ISR1_GPO_INT_16_SHIFT                                     16
 #define    GPIO_ISR1_GPO_INT_16_MASK                                      0x00010000
 #define    GPIO_ISR1_GPO_INT_15_SHIFT                                     15
@@ -1675,6 +1833,10 @@
 #define    GPIO_ISR1_GPO_INT_6_MASK                                       0x00000040
 #define    GPIO_ISR1_GPO_INT_5_SHIFT                                      5
 #define    GPIO_ISR1_GPO_INT_5_MASK                                       0x00000020
+#define    GPIO_ISR1_GPO_INT_4_SHIFT                                      4
+#define    GPIO_ISR1_GPO_INT_4_MASK                                       0x00000010
+#define    GPIO_ISR1_GPO_INT_3_SHIFT                                      3
+#define    GPIO_ISR1_GPO_INT_3_MASK                                       0x00000008
 #define    GPIO_ISR1_GPO_INT_2_SHIFT                                      2
 #define    GPIO_ISR1_GPO_INT_2_MASK                                       0x00000004
 #define    GPIO_ISR1_GPO_INT_1_SHIFT                                      1
@@ -1766,7 +1928,11 @@
 
 #define GPIO_IMR0_OFFSET                                                  0x000000A0
 #define GPIO_IMR0_TYPE                                                    UInt32
-#define GPIO_IMR0_RESERVED_MASK                                           0xC0000000
+#define GPIO_IMR0_RESERVED_MASK                                           0x00000000
+#define    GPIO_IMR0_GPO_INTMASK_31_SHIFT                                 31
+#define    GPIO_IMR0_GPO_INTMASK_31_MASK                                  0x80000000
+#define    GPIO_IMR0_GPO_INTMASK_30_SHIFT                                 30
+#define    GPIO_IMR0_GPO_INTMASK_30_MASK                                  0x40000000
 #define    GPIO_IMR0_GPO_INTMASK_29_SHIFT                                 29
 #define    GPIO_IMR0_GPO_INTMASK_29_MASK                                  0x20000000
 #define    GPIO_IMR0_GPO_INTMASK_28_SHIFT                                 28
@@ -1830,7 +1996,7 @@
 
 #define GPIO_IMR1_OFFSET                                                  0x000000A4
 #define GPIO_IMR1_TYPE                                                    UInt32
-#define GPIO_IMR1_RESERVED_MASK                                           0x00E60018
+#define GPIO_IMR1_RESERVED_MASK                                           0x00000000
 #define    GPIO_IMR1_GPO_INTMASK_31_SHIFT                                 31
 #define    GPIO_IMR1_GPO_INTMASK_31_MASK                                  0x80000000
 #define    GPIO_IMR1_GPO_INTMASK_30_SHIFT                                 30
@@ -1847,10 +2013,20 @@
 #define    GPIO_IMR1_GPO_INTMASK_25_MASK                                  0x02000000
 #define    GPIO_IMR1_GPO_INTMASK_24_SHIFT                                 24
 #define    GPIO_IMR1_GPO_INTMASK_24_MASK                                  0x01000000
+#define    GPIO_IMR1_GPO_INTMASK_23_SHIFT                                 23
+#define    GPIO_IMR1_GPO_INTMASK_23_MASK                                  0x00800000
+#define    GPIO_IMR1_GPO_INTMASK_22_SHIFT                                 22
+#define    GPIO_IMR1_GPO_INTMASK_22_MASK                                  0x00400000
+#define    GPIO_IMR1_GPO_INTMASK_21_SHIFT                                 21
+#define    GPIO_IMR1_GPO_INTMASK_21_MASK                                  0x00200000
 #define    GPIO_IMR1_GPO_INTMASK_20_SHIFT                                 20
 #define    GPIO_IMR1_GPO_INTMASK_20_MASK                                  0x00100000
 #define    GPIO_IMR1_GPO_INTMASK_19_SHIFT                                 19
 #define    GPIO_IMR1_GPO_INTMASK_19_MASK                                  0x00080000
+#define    GPIO_IMR1_GPO_INTMASK_18_SHIFT                                 18
+#define    GPIO_IMR1_GPO_INTMASK_18_MASK                                  0x00040000
+#define    GPIO_IMR1_GPO_INTMASK_17_SHIFT                                 17
+#define    GPIO_IMR1_GPO_INTMASK_17_MASK                                  0x00020000
 #define    GPIO_IMR1_GPO_INTMASK_16_SHIFT                                 16
 #define    GPIO_IMR1_GPO_INTMASK_16_MASK                                  0x00010000
 #define    GPIO_IMR1_GPO_INTMASK_15_SHIFT                                 15
@@ -1875,6 +2051,10 @@
 #define    GPIO_IMR1_GPO_INTMASK_6_MASK                                   0x00000040
 #define    GPIO_IMR1_GPO_INTMASK_5_SHIFT                                  5
 #define    GPIO_IMR1_GPO_INTMASK_5_MASK                                   0x00000020
+#define    GPIO_IMR1_GPO_INTMASK_4_SHIFT                                  4
+#define    GPIO_IMR1_GPO_INTMASK_4_MASK                                   0x00000010
+#define    GPIO_IMR1_GPO_INTMASK_3_SHIFT                                  3
+#define    GPIO_IMR1_GPO_INTMASK_3_MASK                                   0x00000008
 #define    GPIO_IMR1_GPO_INTMASK_2_SHIFT                                  2
 #define    GPIO_IMR1_GPO_INTMASK_2_MASK                                   0x00000004
 #define    GPIO_IMR1_GPO_INTMASK_1_SHIFT                                  1
@@ -1966,7 +2146,11 @@
 
 #define GPIO_IMRC0_OFFSET                                                 0x000000C0
 #define GPIO_IMRC0_TYPE                                                   UInt32
-#define GPIO_IMRC0_RESERVED_MASK                                          0xC0000000
+#define GPIO_IMRC0_RESERVED_MASK                                          0x00000000
+#define    GPIO_IMRC0_GPO_INTMRC_31_SHIFT                                 31
+#define    GPIO_IMRC0_GPO_INTMRC_31_MASK                                  0x80000000
+#define    GPIO_IMRC0_GPO_INTMRC_30_SHIFT                                 30
+#define    GPIO_IMRC0_GPO_INTMRC_30_MASK                                  0x40000000
 #define    GPIO_IMRC0_GPO_INTMRC_29_SHIFT                                 29
 #define    GPIO_IMRC0_GPO_INTMRC_29_MASK                                  0x20000000
 #define    GPIO_IMRC0_GPO_INTMRC_28_SHIFT                                 28
@@ -2030,7 +2214,7 @@
 
 #define GPIO_IMRC1_OFFSET                                                 0x000000C4
 #define GPIO_IMRC1_TYPE                                                   UInt32
-#define GPIO_IMRC1_RESERVED_MASK                                          0x00E60018
+#define GPIO_IMRC1_RESERVED_MASK                                          0x00000000
 #define    GPIO_IMRC1_GPO_INTMRC_31_SHIFT                                 31
 #define    GPIO_IMRC1_GPO_INTMRC_31_MASK                                  0x80000000
 #define    GPIO_IMRC1_GPO_INTMRC_30_SHIFT                                 30
@@ -2047,10 +2231,20 @@
 #define    GPIO_IMRC1_GPO_INTMRC_25_MASK                                  0x02000000
 #define    GPIO_IMRC1_GPO_INTMRC_24_SHIFT                                 24
 #define    GPIO_IMRC1_GPO_INTMRC_24_MASK                                  0x01000000
+#define    GPIO_IMRC1_GPO_INTMRC_23_SHIFT                                 23
+#define    GPIO_IMRC1_GPO_INTMRC_23_MASK                                  0x00800000
+#define    GPIO_IMRC1_GPO_INTMRC_22_SHIFT                                 22
+#define    GPIO_IMRC1_GPO_INTMRC_22_MASK                                  0x00400000
+#define    GPIO_IMRC1_GPO_INTMRC_21_SHIFT                                 21
+#define    GPIO_IMRC1_GPO_INTMRC_21_MASK                                  0x00200000
 #define    GPIO_IMRC1_GPO_INTMRC_20_SHIFT                                 20
 #define    GPIO_IMRC1_GPO_INTMRC_20_MASK                                  0x00100000
 #define    GPIO_IMRC1_GPO_INTMRC_19_SHIFT                                 19
 #define    GPIO_IMRC1_GPO_INTMRC_19_MASK                                  0x00080000
+#define    GPIO_IMRC1_GPO_INTMRC_18_SHIFT                                 18
+#define    GPIO_IMRC1_GPO_INTMRC_18_MASK                                  0x00040000
+#define    GPIO_IMRC1_GPO_INTMRC_17_SHIFT                                 17
+#define    GPIO_IMRC1_GPO_INTMRC_17_MASK                                  0x00020000
 #define    GPIO_IMRC1_GPO_INTMRC_16_SHIFT                                 16
 #define    GPIO_IMRC1_GPO_INTMRC_16_MASK                                  0x00010000
 #define    GPIO_IMRC1_GPO_INTMRC_15_SHIFT                                 15
@@ -2075,6 +2269,10 @@
 #define    GPIO_IMRC1_GPO_INTMRC_6_MASK                                   0x00000040
 #define    GPIO_IMRC1_GPO_INTMRC_5_SHIFT                                  5
 #define    GPIO_IMRC1_GPO_INTMRC_5_MASK                                   0x00000020
+#define    GPIO_IMRC1_GPO_INTMRC_4_SHIFT                                  4
+#define    GPIO_IMRC1_GPO_INTMRC_4_MASK                                   0x00000010
+#define    GPIO_IMRC1_GPO_INTMRC_3_SHIFT                                  3
+#define    GPIO_IMRC1_GPO_INTMRC_3_MASK                                   0x00000008
 #define    GPIO_IMRC1_GPO_INTMRC_2_SHIFT                                  2
 #define    GPIO_IMRC1_GPO_INTMRC_2_MASK                                   0x00000004
 #define    GPIO_IMRC1_GPO_INTMRC_1_SHIFT                                  1
@@ -2181,7 +2379,6 @@
 #define    GPIO_CTICTR_CTIMUX_MASK                                        0x000000FF
 
 #define GPIO_GPCTR0_OFFSET                                                0x00000100
-#define GPIO_GPCTR0_DBR_CMD_ENABLE                                        0x00000008
 #define GPIO_GPCTR0_TYPE                                                  UInt32
 #define GPIO_GPCTR0_RESERVED_MASK                                         0xFFFFFE06
 #define    GPIO_GPCTR0_DBR_SHIFT                                          5
@@ -2194,6 +2391,7 @@
 #define       GPIO_GPCTR0_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR0_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR0_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR0_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR0_ITR_SHIFT                                          3
 #define    GPIO_GPCTR0_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR0_ITR_CMD_NO_INT                                  0x00000000
@@ -2218,6 +2416,7 @@
 #define       GPIO_GPCTR1_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR1_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR1_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR1_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR1_ITR_SHIFT                                          3
 #define    GPIO_GPCTR1_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR1_ITR_CMD_NO_INT                                  0x00000000
@@ -2242,6 +2441,7 @@
 #define       GPIO_GPCTR2_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR2_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR2_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR2_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR2_ITR_SHIFT                                          3
 #define    GPIO_GPCTR2_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR2_ITR_CMD_NO_INT                                  0x00000000
@@ -2266,6 +2466,7 @@
 #define       GPIO_GPCTR3_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR3_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR3_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR3_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR3_ITR_SHIFT                                          3
 #define    GPIO_GPCTR3_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR3_ITR_CMD_NO_INT                                  0x00000000
@@ -2290,6 +2491,7 @@
 #define       GPIO_GPCTR4_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR4_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR4_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR4_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR4_ITR_SHIFT                                          3
 #define    GPIO_GPCTR4_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR4_ITR_CMD_NO_INT                                  0x00000000
@@ -2314,6 +2516,7 @@
 #define       GPIO_GPCTR5_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR5_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR5_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR5_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR5_ITR_SHIFT                                          3
 #define    GPIO_GPCTR5_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR5_ITR_CMD_NO_INT                                  0x00000000
@@ -2338,6 +2541,7 @@
 #define       GPIO_GPCTR6_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR6_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR6_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR6_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR6_ITR_SHIFT                                          3
 #define    GPIO_GPCTR6_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR6_ITR_CMD_NO_INT                                  0x00000000
@@ -2362,6 +2566,7 @@
 #define       GPIO_GPCTR7_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR7_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR7_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR7_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR7_ITR_SHIFT                                          3
 #define    GPIO_GPCTR7_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR7_ITR_CMD_NO_INT                                  0x00000000
@@ -2386,6 +2591,7 @@
 #define       GPIO_GPCTR8_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR8_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR8_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR8_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR8_ITR_SHIFT                                          3
 #define    GPIO_GPCTR8_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR8_ITR_CMD_NO_INT                                  0x00000000
@@ -2410,6 +2616,7 @@
 #define       GPIO_GPCTR9_DBR_CMD_32MS                                    0x00000005
 #define       GPIO_GPCTR9_DBR_CMD_64MS                                    0x00000006
 #define       GPIO_GPCTR9_DBR_CMD_128MS                                   0x00000007
+#define       GPIO_GPCTR9_DBR_CMD_ENABLE                                  0x00000008
 #define    GPIO_GPCTR9_ITR_SHIFT                                          3
 #define    GPIO_GPCTR9_ITR_MASK                                           0x00000018
 #define       GPIO_GPCTR9_ITR_CMD_NO_INT                                  0x00000000
@@ -2434,6 +2641,7 @@
 #define       GPIO_GPCTR10_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR10_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR10_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR10_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR10_ITR_SHIFT                                         3
 #define    GPIO_GPCTR10_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR10_ITR_CMD_NO_INT                                 0x00000000
@@ -2458,6 +2666,7 @@
 #define       GPIO_GPCTR11_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR11_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR11_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR11_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR11_ITR_SHIFT                                         3
 #define    GPIO_GPCTR11_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR11_ITR_CMD_NO_INT                                 0x00000000
@@ -2482,6 +2691,7 @@
 #define       GPIO_GPCTR12_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR12_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR12_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR12_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR12_ITR_SHIFT                                         3
 #define    GPIO_GPCTR12_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR12_ITR_CMD_NO_INT                                 0x00000000
@@ -2506,6 +2716,7 @@
 #define       GPIO_GPCTR13_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR13_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR13_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR13_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR13_ITR_SHIFT                                         3
 #define    GPIO_GPCTR13_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR13_ITR_CMD_NO_INT                                 0x00000000
@@ -2530,6 +2741,7 @@
 #define       GPIO_GPCTR14_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR14_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR14_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR14_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR14_ITR_SHIFT                                         3
 #define    GPIO_GPCTR14_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR14_ITR_CMD_NO_INT                                 0x00000000
@@ -2554,6 +2766,7 @@
 #define       GPIO_GPCTR15_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR15_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR15_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR15_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR15_ITR_SHIFT                                         3
 #define    GPIO_GPCTR15_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR15_ITR_CMD_NO_INT                                 0x00000000
@@ -2578,6 +2791,7 @@
 #define       GPIO_GPCTR16_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR16_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR16_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR16_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR16_ITR_SHIFT                                         3
 #define    GPIO_GPCTR16_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR16_ITR_CMD_NO_INT                                 0x00000000
@@ -2602,6 +2816,7 @@
 #define       GPIO_GPCTR17_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR17_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR17_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR17_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR17_ITR_SHIFT                                         3
 #define    GPIO_GPCTR17_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR17_ITR_CMD_NO_INT                                 0x00000000
@@ -2626,6 +2841,7 @@
 #define       GPIO_GPCTR18_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR18_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR18_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR18_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR18_ITR_SHIFT                                         3
 #define    GPIO_GPCTR18_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR18_ITR_CMD_NO_INT                                 0x00000000
@@ -2650,6 +2866,7 @@
 #define       GPIO_GPCTR19_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR19_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR19_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR19_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR19_ITR_SHIFT                                         3
 #define    GPIO_GPCTR19_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR19_ITR_CMD_NO_INT                                 0x00000000
@@ -2674,6 +2891,7 @@
 #define       GPIO_GPCTR20_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR20_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR20_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR20_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR20_ITR_SHIFT                                         3
 #define    GPIO_GPCTR20_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR20_ITR_CMD_NO_INT                                 0x00000000
@@ -2698,6 +2916,7 @@
 #define       GPIO_GPCTR21_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR21_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR21_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR21_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR21_ITR_SHIFT                                         3
 #define    GPIO_GPCTR21_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR21_ITR_CMD_NO_INT                                 0x00000000
@@ -2722,6 +2941,7 @@
 #define       GPIO_GPCTR22_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR22_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR22_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR22_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR22_ITR_SHIFT                                         3
 #define    GPIO_GPCTR22_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR22_ITR_CMD_NO_INT                                 0x00000000
@@ -2746,6 +2966,7 @@
 #define       GPIO_GPCTR23_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR23_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR23_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR23_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR23_ITR_SHIFT                                         3
 #define    GPIO_GPCTR23_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR23_ITR_CMD_NO_INT                                 0x00000000
@@ -2770,6 +2991,7 @@
 #define       GPIO_GPCTR24_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR24_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR24_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR24_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR24_ITR_SHIFT                                         3
 #define    GPIO_GPCTR24_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR24_ITR_CMD_NO_INT                                 0x00000000
@@ -2794,6 +3016,7 @@
 #define       GPIO_GPCTR25_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR25_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR25_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR25_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR25_ITR_SHIFT                                         3
 #define    GPIO_GPCTR25_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR25_ITR_CMD_NO_INT                                 0x00000000
@@ -2818,6 +3041,7 @@
 #define       GPIO_GPCTR26_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR26_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR26_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR26_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR26_ITR_SHIFT                                         3
 #define    GPIO_GPCTR26_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR26_ITR_CMD_NO_INT                                 0x00000000
@@ -2842,6 +3066,7 @@
 #define       GPIO_GPCTR27_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR27_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR27_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR27_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR27_ITR_SHIFT                                         3
 #define    GPIO_GPCTR27_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR27_ITR_CMD_NO_INT                                 0x00000000
@@ -2866,6 +3091,7 @@
 #define       GPIO_GPCTR28_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR28_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR28_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR28_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR28_ITR_SHIFT                                         3
 #define    GPIO_GPCTR28_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR28_ITR_CMD_NO_INT                                 0x00000000
@@ -2890,6 +3116,7 @@
 #define       GPIO_GPCTR29_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR29_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR29_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR29_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR29_ITR_SHIFT                                         3
 #define    GPIO_GPCTR29_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR29_ITR_CMD_NO_INT                                 0x00000000
@@ -2900,6 +3127,56 @@
 #define    GPIO_GPCTR29_IOTR_MASK                                         0x00000001
 #define       GPIO_GPCTR29_IOTR_CMD_0UTPUT                                0x00000000
 #define       GPIO_GPCTR29_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR30_OFFSET                                               0x00000178
+#define GPIO_GPCTR30_TYPE                                                 UInt32
+#define GPIO_GPCTR30_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR30_DBR_SHIFT                                         5
+#define    GPIO_GPCTR30_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR30_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR30_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR30_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR30_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR30_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR30_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR30_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR30_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR30_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR30_ITR_SHIFT                                         3
+#define    GPIO_GPCTR30_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR30_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR30_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR30_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR30_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR30_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR30_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR30_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR30_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR31_OFFSET                                               0x0000017C
+#define GPIO_GPCTR31_TYPE                                                 UInt32
+#define GPIO_GPCTR31_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR31_DBR_SHIFT                                         5
+#define    GPIO_GPCTR31_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR31_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR31_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR31_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR31_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR31_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR31_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR31_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR31_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR31_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR31_ITR_SHIFT                                         3
+#define    GPIO_GPCTR31_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR31_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR31_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR31_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR31_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR31_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR31_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR31_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR31_IOTR_CMD_INPUT                                 0x00000001
 
 #define GPIO_GPCTR32_OFFSET                                               0x00000180
 #define GPIO_GPCTR32_TYPE                                                 UInt32
@@ -2914,6 +3191,7 @@
 #define       GPIO_GPCTR32_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR32_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR32_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR32_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR32_ITR_SHIFT                                         3
 #define    GPIO_GPCTR32_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR32_ITR_CMD_NO_INT                                 0x00000000
@@ -2938,6 +3216,7 @@
 #define       GPIO_GPCTR33_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR33_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR33_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR33_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR33_ITR_SHIFT                                         3
 #define    GPIO_GPCTR33_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR33_ITR_CMD_NO_INT                                 0x00000000
@@ -2962,6 +3241,7 @@
 #define       GPIO_GPCTR34_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR34_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR34_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR34_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR34_ITR_SHIFT                                         3
 #define    GPIO_GPCTR34_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR34_ITR_CMD_NO_INT                                 0x00000000
@@ -2972,6 +3252,56 @@
 #define    GPIO_GPCTR34_IOTR_MASK                                         0x00000001
 #define       GPIO_GPCTR34_IOTR_CMD_0UTPUT                                0x00000000
 #define       GPIO_GPCTR34_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR35_OFFSET                                               0x0000018C
+#define GPIO_GPCTR35_TYPE                                                 UInt32
+#define GPIO_GPCTR35_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR35_DBR_SHIFT                                         5
+#define    GPIO_GPCTR35_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR35_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR35_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR35_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR35_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR35_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR35_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR35_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR35_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR35_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR35_ITR_SHIFT                                         3
+#define    GPIO_GPCTR35_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR35_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR35_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR35_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR35_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR35_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR35_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR35_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR35_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR36_OFFSET                                               0x00000190
+#define GPIO_GPCTR36_TYPE                                                 UInt32
+#define GPIO_GPCTR36_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR36_DBR_SHIFT                                         5
+#define    GPIO_GPCTR36_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR36_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR36_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR36_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR36_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR36_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR36_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR36_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR36_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR36_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR36_ITR_SHIFT                                         3
+#define    GPIO_GPCTR36_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR36_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR36_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR36_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR36_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR36_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR36_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR36_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR36_IOTR_CMD_INPUT                                 0x00000001
 
 #define GPIO_GPCTR37_OFFSET                                               0x00000194
 #define GPIO_GPCTR37_TYPE                                                 UInt32
@@ -2986,6 +3316,7 @@
 #define       GPIO_GPCTR37_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR37_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR37_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR37_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR37_ITR_SHIFT                                         3
 #define    GPIO_GPCTR37_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR37_ITR_CMD_NO_INT                                 0x00000000
@@ -3010,6 +3341,7 @@
 #define       GPIO_GPCTR38_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR38_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR38_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR38_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR38_ITR_SHIFT                                         3
 #define    GPIO_GPCTR38_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR38_ITR_CMD_NO_INT                                 0x00000000
@@ -3034,6 +3366,7 @@
 #define       GPIO_GPCTR39_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR39_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR39_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR39_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR39_ITR_SHIFT                                         3
 #define    GPIO_GPCTR39_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR39_ITR_CMD_NO_INT                                 0x00000000
@@ -3058,6 +3391,7 @@
 #define       GPIO_GPCTR40_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR40_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR40_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR40_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR40_ITR_SHIFT                                         3
 #define    GPIO_GPCTR40_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR40_ITR_CMD_NO_INT                                 0x00000000
@@ -3082,6 +3416,7 @@
 #define       GPIO_GPCTR41_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR41_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR41_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR41_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR41_ITR_SHIFT                                         3
 #define    GPIO_GPCTR41_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR41_ITR_CMD_NO_INT                                 0x00000000
@@ -3106,6 +3441,7 @@
 #define       GPIO_GPCTR42_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR42_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR42_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR42_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR42_ITR_SHIFT                                         3
 #define    GPIO_GPCTR42_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR42_ITR_CMD_NO_INT                                 0x00000000
@@ -3130,6 +3466,7 @@
 #define       GPIO_GPCTR43_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR43_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR43_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR43_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR43_ITR_SHIFT                                         3
 #define    GPIO_GPCTR43_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR43_ITR_CMD_NO_INT                                 0x00000000
@@ -3154,6 +3491,7 @@
 #define       GPIO_GPCTR44_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR44_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR44_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR44_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR44_ITR_SHIFT                                         3
 #define    GPIO_GPCTR44_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR44_ITR_CMD_NO_INT                                 0x00000000
@@ -3178,6 +3516,7 @@
 #define       GPIO_GPCTR45_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR45_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR45_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR45_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR45_ITR_SHIFT                                         3
 #define    GPIO_GPCTR45_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR45_ITR_CMD_NO_INT                                 0x00000000
@@ -3202,6 +3541,7 @@
 #define       GPIO_GPCTR46_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR46_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR46_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR46_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR46_ITR_SHIFT                                         3
 #define    GPIO_GPCTR46_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR46_ITR_CMD_NO_INT                                 0x00000000
@@ -3226,6 +3566,7 @@
 #define       GPIO_GPCTR47_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR47_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR47_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR47_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR47_ITR_SHIFT                                         3
 #define    GPIO_GPCTR47_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR47_ITR_CMD_NO_INT                                 0x00000000
@@ -3250,6 +3591,7 @@
 #define       GPIO_GPCTR48_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR48_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR48_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR48_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR48_ITR_SHIFT                                         3
 #define    GPIO_GPCTR48_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR48_ITR_CMD_NO_INT                                 0x00000000
@@ -3260,6 +3602,56 @@
 #define    GPIO_GPCTR48_IOTR_MASK                                         0x00000001
 #define       GPIO_GPCTR48_IOTR_CMD_0UTPUT                                0x00000000
 #define       GPIO_GPCTR48_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR49_OFFSET                                               0x000001C4
+#define GPIO_GPCTR49_TYPE                                                 UInt32
+#define GPIO_GPCTR49_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR49_DBR_SHIFT                                         5
+#define    GPIO_GPCTR49_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR49_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR49_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR49_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR49_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR49_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR49_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR49_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR49_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR49_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR49_ITR_SHIFT                                         3
+#define    GPIO_GPCTR49_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR49_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR49_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR49_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR49_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR49_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR49_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR49_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR49_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR50_OFFSET                                               0x000001C8
+#define GPIO_GPCTR50_TYPE                                                 UInt32
+#define GPIO_GPCTR50_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR50_DBR_SHIFT                                         5
+#define    GPIO_GPCTR50_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR50_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR50_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR50_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR50_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR50_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR50_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR50_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR50_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR50_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR50_ITR_SHIFT                                         3
+#define    GPIO_GPCTR50_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR50_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR50_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR50_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR50_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR50_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR50_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR50_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR50_IOTR_CMD_INPUT                                 0x00000001
 
 #define GPIO_GPCTR51_OFFSET                                               0x000001CC
 #define GPIO_GPCTR51_TYPE                                                 UInt32
@@ -3274,6 +3666,7 @@
 #define       GPIO_GPCTR51_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR51_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR51_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR51_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR51_ITR_SHIFT                                         3
 #define    GPIO_GPCTR51_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR51_ITR_CMD_NO_INT                                 0x00000000
@@ -3298,6 +3691,7 @@
 #define       GPIO_GPCTR52_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR52_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR52_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR52_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR52_ITR_SHIFT                                         3
 #define    GPIO_GPCTR52_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR52_ITR_CMD_NO_INT                                 0x00000000
@@ -3308,6 +3702,81 @@
 #define    GPIO_GPCTR52_IOTR_MASK                                         0x00000001
 #define       GPIO_GPCTR52_IOTR_CMD_0UTPUT                                0x00000000
 #define       GPIO_GPCTR52_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR53_OFFSET                                               0x000001D4
+#define GPIO_GPCTR53_TYPE                                                 UInt32
+#define GPIO_GPCTR53_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR53_DBR_SHIFT                                         5
+#define    GPIO_GPCTR53_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR53_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR53_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR53_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR53_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR53_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR53_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR53_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR53_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR53_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR53_ITR_SHIFT                                         3
+#define    GPIO_GPCTR53_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR53_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR53_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR53_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR53_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR53_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR53_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR53_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR53_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR54_OFFSET                                               0x000001D8
+#define GPIO_GPCTR54_TYPE                                                 UInt32
+#define GPIO_GPCTR54_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR54_DBR_SHIFT                                         5
+#define    GPIO_GPCTR54_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR54_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR54_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR54_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR54_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR54_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR54_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR54_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR54_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR54_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR54_ITR_SHIFT                                         3
+#define    GPIO_GPCTR54_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR54_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR54_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR54_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR54_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR54_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR54_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR54_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR54_IOTR_CMD_INPUT                                 0x00000001
+
+#define GPIO_GPCTR55_OFFSET                                               0x000001DC
+#define GPIO_GPCTR55_TYPE                                                 UInt32
+#define GPIO_GPCTR55_RESERVED_MASK                                        0xFFFFFE06
+#define    GPIO_GPCTR55_DBR_SHIFT                                         5
+#define    GPIO_GPCTR55_DBR_MASK                                          0x000001E0
+#define       GPIO_GPCTR55_DBR_CMD_1MS                                    0x00000000
+#define       GPIO_GPCTR55_DBR_CMD_2MS                                    0x00000001
+#define       GPIO_GPCTR55_DBR_CMD_4MS                                    0x00000002
+#define       GPIO_GPCTR55_DBR_CMD_8MS                                    0x00000003
+#define       GPIO_GPCTR55_DBR_CMD_16MS                                   0x00000004
+#define       GPIO_GPCTR55_DBR_CMD_32MS                                   0x00000005
+#define       GPIO_GPCTR55_DBR_CMD_64MS                                   0x00000006
+#define       GPIO_GPCTR55_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR55_DBR_CMD_ENABLE                                 0x00000008
+#define    GPIO_GPCTR55_ITR_SHIFT                                         3
+#define    GPIO_GPCTR55_ITR_MASK                                          0x00000018
+#define       GPIO_GPCTR55_ITR_CMD_NO_INT                                 0x00000000
+#define       GPIO_GPCTR55_ITR_CMD_RISING_EDGE                            0x00000001
+#define       GPIO_GPCTR55_ITR_CMD_FALLING_EDGE                           0x00000002
+#define       GPIO_GPCTR55_ITR_CMD_BOTH_EDGE                              0x00000003
+#define    GPIO_GPCTR55_IOTR_SHIFT                                        0
+#define    GPIO_GPCTR55_IOTR_MASK                                         0x00000001
+#define       GPIO_GPCTR55_IOTR_CMD_0UTPUT                                0x00000000
+#define       GPIO_GPCTR55_IOTR_CMD_INPUT                                 0x00000001
 
 #define GPIO_GPCTR56_OFFSET                                               0x000001E0
 #define GPIO_GPCTR56_TYPE                                                 UInt32
@@ -3322,6 +3791,7 @@
 #define       GPIO_GPCTR56_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR56_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR56_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR56_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR56_ITR_SHIFT                                         3
 #define    GPIO_GPCTR56_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR56_ITR_CMD_NO_INT                                 0x00000000
@@ -3346,6 +3816,7 @@
 #define       GPIO_GPCTR57_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR57_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR57_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR57_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR57_ITR_SHIFT                                         3
 #define    GPIO_GPCTR57_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR57_ITR_CMD_NO_INT                                 0x00000000
@@ -3370,6 +3841,7 @@
 #define       GPIO_GPCTR58_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR58_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR58_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR58_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR58_ITR_SHIFT                                         3
 #define    GPIO_GPCTR58_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR58_ITR_CMD_NO_INT                                 0x00000000
@@ -3394,6 +3866,7 @@
 #define       GPIO_GPCTR59_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR59_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR59_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR59_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR59_ITR_SHIFT                                         3
 #define    GPIO_GPCTR59_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR59_ITR_CMD_NO_INT                                 0x00000000
@@ -3418,6 +3891,7 @@
 #define       GPIO_GPCTR60_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR60_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR60_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR60_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR60_ITR_SHIFT                                         3
 #define    GPIO_GPCTR60_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR60_ITR_CMD_NO_INT                                 0x00000000
@@ -3442,6 +3916,7 @@
 #define       GPIO_GPCTR61_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR61_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR61_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR61_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR61_ITR_SHIFT                                         3
 #define    GPIO_GPCTR61_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR61_ITR_CMD_NO_INT                                 0x00000000
@@ -3466,6 +3941,7 @@
 #define       GPIO_GPCTR62_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR62_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR62_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR62_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR62_ITR_SHIFT                                         3
 #define    GPIO_GPCTR62_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR62_ITR_CMD_NO_INT                                 0x00000000
@@ -3490,6 +3966,7 @@
 #define       GPIO_GPCTR63_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR63_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR63_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR63_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR63_ITR_SHIFT                                         3
 #define    GPIO_GPCTR63_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR63_ITR_CMD_NO_INT                                 0x00000000
@@ -3514,6 +3991,7 @@
 #define       GPIO_GPCTR64_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR64_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR64_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR64_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR64_ITR_SHIFT                                         3
 #define    GPIO_GPCTR64_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR64_ITR_CMD_NO_INT                                 0x00000000
@@ -3538,6 +4016,7 @@
 #define       GPIO_GPCTR65_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR65_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR65_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR65_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR65_ITR_SHIFT                                         3
 #define    GPIO_GPCTR65_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR65_ITR_CMD_NO_INT                                 0x00000000
@@ -3562,6 +4041,7 @@
 #define       GPIO_GPCTR66_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR66_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR66_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR66_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR66_ITR_SHIFT                                         3
 #define    GPIO_GPCTR66_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR66_ITR_CMD_NO_INT                                 0x00000000
@@ -3586,6 +4066,7 @@
 #define       GPIO_GPCTR67_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR67_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR67_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR67_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR67_ITR_SHIFT                                         3
 #define    GPIO_GPCTR67_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR67_ITR_CMD_NO_INT                                 0x00000000
@@ -3610,6 +4091,7 @@
 #define       GPIO_GPCTR68_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR68_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR68_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR68_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR68_ITR_SHIFT                                         3
 #define    GPIO_GPCTR68_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR68_ITR_CMD_NO_INT                                 0x00000000
@@ -3634,6 +4116,7 @@
 #define       GPIO_GPCTR69_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR69_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR69_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR69_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR69_ITR_SHIFT                                         3
 #define    GPIO_GPCTR69_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR69_ITR_CMD_NO_INT                                 0x00000000
@@ -3658,6 +4141,7 @@
 #define       GPIO_GPCTR70_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR70_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR70_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR70_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR70_ITR_SHIFT                                         3
 #define    GPIO_GPCTR70_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR70_ITR_CMD_NO_INT                                 0x00000000
@@ -3682,6 +4166,7 @@
 #define       GPIO_GPCTR71_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR71_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR71_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR71_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR71_ITR_SHIFT                                         3
 #define    GPIO_GPCTR71_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR71_ITR_CMD_NO_INT                                 0x00000000
@@ -3706,6 +4191,7 @@
 #define       GPIO_GPCTR72_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR72_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR72_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR72_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR72_ITR_SHIFT                                         3
 #define    GPIO_GPCTR72_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR72_ITR_CMD_NO_INT                                 0x00000000
@@ -3730,6 +4216,7 @@
 #define       GPIO_GPCTR73_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR73_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR73_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR73_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR73_ITR_SHIFT                                         3
 #define    GPIO_GPCTR73_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR73_ITR_CMD_NO_INT                                 0x00000000
@@ -3754,6 +4241,7 @@
 #define       GPIO_GPCTR74_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR74_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR74_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR74_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR74_ITR_SHIFT                                         3
 #define    GPIO_GPCTR74_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR74_ITR_CMD_NO_INT                                 0x00000000
@@ -3778,6 +4266,7 @@
 #define       GPIO_GPCTR75_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR75_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR75_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR75_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR75_ITR_SHIFT                                         3
 #define    GPIO_GPCTR75_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR75_ITR_CMD_NO_INT                                 0x00000000
@@ -3802,6 +4291,7 @@
 #define       GPIO_GPCTR76_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR76_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR76_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR76_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR76_ITR_SHIFT                                         3
 #define    GPIO_GPCTR76_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR76_ITR_CMD_NO_INT                                 0x00000000
@@ -3826,6 +4316,7 @@
 #define       GPIO_GPCTR77_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR77_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR77_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR77_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR77_ITR_SHIFT                                         3
 #define    GPIO_GPCTR77_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR77_ITR_CMD_NO_INT                                 0x00000000
@@ -3850,6 +4341,7 @@
 #define       GPIO_GPCTR78_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR78_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR78_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR78_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR78_ITR_SHIFT                                         3
 #define    GPIO_GPCTR78_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR78_ITR_CMD_NO_INT                                 0x00000000
@@ -3874,6 +4366,7 @@
 #define       GPIO_GPCTR79_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR79_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR79_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR79_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR79_ITR_SHIFT                                         3
 #define    GPIO_GPCTR79_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR79_ITR_CMD_NO_INT                                 0x00000000
@@ -3898,6 +4391,7 @@
 #define       GPIO_GPCTR80_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR80_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR80_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR80_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR80_ITR_SHIFT                                         3
 #define    GPIO_GPCTR80_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR80_ITR_CMD_NO_INT                                 0x00000000
@@ -3922,6 +4416,7 @@
 #define       GPIO_GPCTR81_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR81_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR81_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR81_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR81_ITR_SHIFT                                         3
 #define    GPIO_GPCTR81_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR81_ITR_CMD_NO_INT                                 0x00000000
@@ -3946,6 +4441,7 @@
 #define       GPIO_GPCTR82_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR82_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR82_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR82_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR82_ITR_SHIFT                                         3
 #define    GPIO_GPCTR82_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR82_ITR_CMD_NO_INT                                 0x00000000
@@ -3970,6 +4466,7 @@
 #define       GPIO_GPCTR83_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR83_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR83_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR83_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR83_ITR_SHIFT                                         3
 #define    GPIO_GPCTR83_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR83_ITR_CMD_NO_INT                                 0x00000000
@@ -3994,6 +4491,7 @@
 #define       GPIO_GPCTR84_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR84_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR84_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR84_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR84_ITR_SHIFT                                         3
 #define    GPIO_GPCTR84_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR84_ITR_CMD_NO_INT                                 0x00000000
@@ -4018,6 +4516,7 @@
 #define       GPIO_GPCTR85_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR85_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR85_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR85_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR85_ITR_SHIFT                                         3
 #define    GPIO_GPCTR85_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR85_ITR_CMD_NO_INT                                 0x00000000
@@ -4042,6 +4541,7 @@
 #define       GPIO_GPCTR86_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR86_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR86_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR86_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR86_ITR_SHIFT                                         3
 #define    GPIO_GPCTR86_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR86_ITR_CMD_NO_INT                                 0x00000000
@@ -4066,6 +4566,7 @@
 #define       GPIO_GPCTR87_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR87_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR87_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR87_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR87_ITR_SHIFT                                         3
 #define    GPIO_GPCTR87_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR87_ITR_CMD_NO_INT                                 0x00000000
@@ -4090,6 +4591,7 @@
 #define       GPIO_GPCTR88_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR88_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR88_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR88_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR88_ITR_SHIFT                                         3
 #define    GPIO_GPCTR88_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR88_ITR_CMD_NO_INT                                 0x00000000
@@ -4114,6 +4616,7 @@
 #define       GPIO_GPCTR89_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR89_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR89_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR89_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR89_ITR_SHIFT                                         3
 #define    GPIO_GPCTR89_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR89_ITR_CMD_NO_INT                                 0x00000000
@@ -4138,6 +4641,7 @@
 #define       GPIO_GPCTR90_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR90_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR90_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR90_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR90_ITR_SHIFT                                         3
 #define    GPIO_GPCTR90_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR90_ITR_CMD_NO_INT                                 0x00000000
@@ -4162,6 +4666,7 @@
 #define       GPIO_GPCTR91_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR91_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR91_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR91_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR91_ITR_SHIFT                                         3
 #define    GPIO_GPCTR91_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR91_ITR_CMD_NO_INT                                 0x00000000
@@ -4186,6 +4691,7 @@
 #define       GPIO_GPCTR92_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR92_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR92_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR92_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR92_ITR_SHIFT                                         3
 #define    GPIO_GPCTR92_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR92_ITR_CMD_NO_INT                                 0x00000000
@@ -4210,6 +4716,7 @@
 #define       GPIO_GPCTR93_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR93_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR93_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR93_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR93_ITR_SHIFT                                         3
 #define    GPIO_GPCTR93_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR93_ITR_CMD_NO_INT                                 0x00000000
@@ -4234,6 +4741,7 @@
 #define       GPIO_GPCTR94_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR94_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR94_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR94_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR94_ITR_SHIFT                                         3
 #define    GPIO_GPCTR94_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR94_ITR_CMD_NO_INT                                 0x00000000
@@ -4258,6 +4766,7 @@
 #define       GPIO_GPCTR95_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR95_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR95_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR95_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR95_ITR_SHIFT                                         3
 #define    GPIO_GPCTR95_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR95_ITR_CMD_NO_INT                                 0x00000000
@@ -4282,6 +4791,7 @@
 #define       GPIO_GPCTR96_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR96_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR96_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR96_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR96_ITR_SHIFT                                         3
 #define    GPIO_GPCTR96_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR96_ITR_CMD_NO_INT                                 0x00000000
@@ -4306,6 +4816,7 @@
 #define       GPIO_GPCTR97_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR97_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR97_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR97_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR97_ITR_SHIFT                                         3
 #define    GPIO_GPCTR97_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR97_ITR_CMD_NO_INT                                 0x00000000
@@ -4330,6 +4841,7 @@
 #define       GPIO_GPCTR98_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR98_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR98_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR98_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR98_ITR_SHIFT                                         3
 #define    GPIO_GPCTR98_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR98_ITR_CMD_NO_INT                                 0x00000000
@@ -4354,6 +4866,7 @@
 #define       GPIO_GPCTR99_DBR_CMD_32MS                                   0x00000005
 #define       GPIO_GPCTR99_DBR_CMD_64MS                                   0x00000006
 #define       GPIO_GPCTR99_DBR_CMD_128MS                                  0x00000007
+#define       GPIO_GPCTR99_DBR_CMD_ENABLE                                 0x00000008
 #define    GPIO_GPCTR99_ITR_SHIFT                                         3
 #define    GPIO_GPCTR99_ITR_MASK                                          0x00000018
 #define       GPIO_GPCTR99_ITR_CMD_NO_INT                                 0x00000000
@@ -4378,6 +4891,7 @@
 #define       GPIO_GPCTR100_DBR_CMD_32MS                                  0x00000005
 #define       GPIO_GPCTR100_DBR_CMD_64MS                                  0x00000006
 #define       GPIO_GPCTR100_DBR_CMD_128MS                                 0x00000007
+#define       GPIO_GPCTR100_DBR_CMD_ENABLE                                0x00000008
 #define    GPIO_GPCTR100_ITR_SHIFT                                        3
 #define    GPIO_GPCTR100_ITR_MASK                                         0x00000018
 #define       GPIO_GPCTR100_ITR_CMD_NO_INT                                0x00000000
@@ -4391,7 +4905,15 @@
 
 #define GPIO_GPPLSR0_OFFSET                                               0x00000500
 #define GPIO_GPPLSR0_TYPE                                                 UInt32
-#define GPIO_GPPLSR0_RESERVED_MASK                                        0xC0000000
+#define GPIO_GPPLSR0_RESERVED_MASK                                        0x00000000
+#define    GPIO_GPPLSR0_GPIO_31_SHIFT                                     31
+#define    GPIO_GPPLSR0_GPIO_31_MASK                                      0x80000000
+#define       GPIO_GPPLSR0_GPIO_31_CMD_LOW                                0x00000000
+#define       GPIO_GPPLSR0_GPIO_31_CMD_HIGH                               0x00000001
+#define    GPIO_GPPLSR0_GPIO_30_SHIFT                                     30
+#define    GPIO_GPPLSR0_GPIO_30_MASK                                      0x40000000
+#define       GPIO_GPPLSR0_GPIO_30_CMD_LOW                                0x00000000
+#define       GPIO_GPPLSR0_GPIO_30_CMD_HIGH                               0x00000001
 #define    GPIO_GPPLSR0_GPIO_29_SHIFT                                     29
 #define    GPIO_GPPLSR0_GPIO_29_MASK                                      0x20000000
 #define       GPIO_GPPLSR0_GPIO_29_CMD_LOW                                0x00000000
@@ -4515,7 +5037,7 @@
 
 #define GPIO_GPPLSR1_OFFSET                                               0x00000504
 #define GPIO_GPPLSR1_TYPE                                                 UInt32
-#define GPIO_GPPLSR1_RESERVED_MASK                                        0x00E60018
+#define GPIO_GPPLSR1_RESERVED_MASK                                        0x00000000
 #define    GPIO_GPPLSR1_GPIO_31_SHIFT                                     31
 #define    GPIO_GPPLSR1_GPIO_31_MASK                                      0x80000000
 #define       GPIO_GPPLSR1_GPIO_31_CMD_LOW                                0x00000000
@@ -4548,6 +5070,18 @@
 #define    GPIO_GPPLSR1_GPIO_24_MASK                                      0x01000000
 #define       GPIO_GPPLSR1_GPIO_24_CMD_LOW                                0x00000000
 #define       GPIO_GPPLSR1_GPIO_24_CMD_HIGH                               0x00000001
+#define    GPIO_GPPLSR1_GPIO_23_SHIFT                                     23
+#define    GPIO_GPPLSR1_GPIO_23_MASK                                      0x00800000
+#define       GPIO_GPPLSR1_GPIO_23_CMD_LOW                                0x00000000
+#define       GPIO_GPPLSR1_GPIO_23_CMD_HIGH                               0x00000001
+#define    GPIO_GPPLSR1_GPIO_22_SHIFT                                     22
+#define    GPIO_GPPLSR1_GPIO_22_MASK                                      0x00400000
+#define       GPIO_GPPLSR1_GPIO_22_CMD_LOW                                0x00000000
+#define       GPIO_GPPLSR1_GPIO_22_CMD_HIGH                               0x00000001
+#define    GPIO_GPPLSR1_GPIO_21_SHIFT                                     21
+#define    GPIO_GPPLSR1_GPIO_21_MASK                                      0x00200000
+#define       GPIO_GPPLSR1_GPIO_21_CMD_LOW                                0x00000000
+#define       GPIO_GPPLSR1_GPIO_21_CMD_HIGH                               0x00000001
 #define    GPIO_GPPLSR1_GPIO_20_SHIFT                                     20
 #define    GPIO_GPPLSR1_GPIO_20_MASK                                      0x00100000
 #define       GPIO_GPPLSR1_GPIO_20_CMD_LOW                                0x00000000
@@ -4556,6 +5090,14 @@
 #define    GPIO_GPPLSR1_GPIO_19_MASK                                      0x00080000
 #define       GPIO_GPPLSR1_GPIO_19_CMD_LOW                                0x00000000
 #define       GPIO_GPPLSR1_GPIO_19_CMD_HIGH                               0x00000001
+#define    GPIO_GPPLSR1_GPIO_18_SHIFT                                     18
+#define    GPIO_GPPLSR1_GPIO_18_MASK                                      0x00040000
+#define       GPIO_GPPLSR1_GPIO_18_CMD_LOW                                0x00000000
+#define       GPIO_GPPLSR1_GPIO_18_CMD_HIGH                               0x00000001
+#define    GPIO_GPPLSR1_GPIO_17_SHIFT                                     17
+#define    GPIO_GPPLSR1_GPIO_17_MASK                                      0x00020000
+#define       GPIO_GPPLSR1_GPIO_17_CMD_LOW                                0x00000000
+#define       GPIO_GPPLSR1_GPIO_17_CMD_HIGH                               0x00000001
 #define    GPIO_GPPLSR1_GPIO_16_SHIFT                                     16
 #define    GPIO_GPPLSR1_GPIO_16_MASK                                      0x00010000
 #define       GPIO_GPPLSR1_GPIO_16_CMD_LOW                                0x00000000
@@ -4604,6 +5146,14 @@
 #define    GPIO_GPPLSR1_GPIO_5_MASK                                       0x00000020
 #define       GPIO_GPPLSR1_GPIO_5_CMD_LOW                                 0x00000000
 #define       GPIO_GPPLSR1_GPIO_5_CMD_HIGH                                0x00000001
+#define    GPIO_GPPLSR1_GPIO_4_SHIFT                                      4
+#define    GPIO_GPPLSR1_GPIO_4_MASK                                       0x00000010
+#define       GPIO_GPPLSR1_GPIO_4_CMD_LOW                                 0x00000000
+#define       GPIO_GPPLSR1_GPIO_4_CMD_HIGH                                0x00000001
+#define    GPIO_GPPLSR1_GPIO_3_SHIFT                                      3
+#define    GPIO_GPPLSR1_GPIO_3_MASK                                       0x00000008
+#define       GPIO_GPPLSR1_GPIO_3_CMD_LOW                                 0x00000000
+#define       GPIO_GPPLSR1_GPIO_3_CMD_HIGH                                0x00000001
 #define    GPIO_GPPLSR1_GPIO_2_SHIFT                                      2
 #define    GPIO_GPPLSR1_GPIO_2_MASK                                       0x00000004
 #define       GPIO_GPPLSR1_GPIO_2_CMD_LOW                                 0x00000000

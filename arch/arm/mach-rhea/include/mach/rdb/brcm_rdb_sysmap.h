@@ -22,77 +22,36 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /*                                                                                              */
-/*     Date     : Generated on 04/10/2011 22:27:55                                   */
-/*     RDB file : /projects/SAMOA/revA0                                                                    */
+/*     Date     : Generated on 05/17/2011 00:56:25                                   */
+/*     RDB file : //RHEA/                                                                    */
 /************************************************************************************************/
 
-/**** Samoa_Hub ****/
+/**** Hub ****/
 
 /**** APB5 ****/
 #define HUB_CLK_BASE_ADDR         0x34000000 /* brcm_rdb_khub_clk_mgr_reg.h */
 #define HUB_RST_BASE_ADDR         0x34000F00 /* brcm_rdb_khub_rst_mgr_reg.h */
+#define HUBSWITCH_BASE_ADDR       0x34001000 /* brcm_rdb_hubsw.h */
 #define MPU_BASE_ADDR             0x34002000 /* brcm_rdb_mpu.h */
+#define TMON_BASE_ADDR            0x34008000 /* brcm_rdb_tmon.h */
 #define SECTRAP7_BASE_ADDR        0x34009000 /* brcm_rdb_sectrap.h */
+#define SECTRAP4_BASE_ADDR        0x3400A000 /* brcm_rdb_sectrap.h */
 #define SECTRAP5_BASE_ADDR        0x3400B000 /* brcm_rdb_sectrap.h */
 #define HSI_BASE_ADDR             0x3400E000 /* brcm_rdb_hsi_apb.h */
 #define VARSPM_BASE_ADDR          0x3400F000 /* brcm_rdb_spm.h */
 
 /**** APB9 ****/
+#define AXITRACE19_BASE_ADDR      0x34010000 /* brcm_rdb_axitp2.h */
+#define AXITRACE11_BASE_ADDR      0x34011000 /* brcm_rdb_axitp2.h */
+#define AXITRACE12_BASE_ADDR      0x34012000 /* brcm_rdb_axitp2.h */
 #define ATBFILTER_BASE_ADDR       0x34016000 /* brcm_rdb_atbfilter.h */
 #define HUB_CTI_BASE_ADDR         0x34018000 /* brcm_rdb_cti.h */
 #define HUB_FUNNEL_BASE_ADDR      0x34019000 /* brcm_rdb_cstf.h */
+#define FIN_FUNNEL_BASE_ADDR      0x3401A000 /* brcm_rdb_cstf.h */
 #define STM_BASE_ADDR             0x3401B000 /* brcm_rdb_atb_stm.h */
 #define ETB_BASE_ADDR             0x3401D000 /* brcm_rdb_etb.h */
 #define ETB2AXI_BASE_ADDR         0x3401E000 /* brcm_rdb_etb2axi.h */
 #define TPIU_BASE_ADDR            0x3401F000 /* brcm_rdb_cstpiu.h */
-
-/**** APB10 ****/
-#define AUDIOH_BASE_ADDR          0x35020000 /* brcm_rdb_audioh.h */
-#define SDT_BASE_ADDR             0x35020800 /* brcm_rdb_sdt.h */
-#define ANA_AUDIO_REG_BASE_ADDR   0x35023000 /* brcm_rdb_ana_audio_reg.h */
-#define SSP4_BASE_ADDR            0x35028000 /* brcm_rdb_sspil.h */
-#define SSP3_BASE_ADDR            0x3502B000 /* brcm_rdb_sspil.h */
-#define SRCMIXER_BASE_ADDR        0x3502C000 /* brcm_rdb_srcmixer.h */
-#define CFIFO_BASE_ADDR           0x3502D000 /* brcm_rdb_cph_cfifo.h */
-#define AADMAC_BASE_ADDR          0x3502E000 /* brcm_rdb_cph_aadmac.h */
-#define SSASW_BASE_ADDR           0x3502F000 /* brcm_rdb_cph_ssasw.h */
-#define AHINTC_BASE_ADDR          0x3502F800 /* brcm_rdb_ahintc.h */
-
-/**** APB1 ****/
-#define UARTB_BASE_ADDR           0x3E000000 /* brcm_rdb_uartb.h */
-#define UARTB2_BASE_ADDR          0x3E001000 /* brcm_rdb_uartb.h */
-#define UARTB3_BASE_ADDR          0x3E002000 /* brcm_rdb_uartb.h */
-#define SSP0_BASE_ADDR            0x3E004000 /* brcm_rdb_sspil.h */
-#define SSP1_BASE_ADDR            0x3E005000 /* brcm_rdb_sspil.h */
-#define TIMER_BASE_ADDR           0x3E00D000 /* brcm_rdb_kona_gptimer.h */
-#define DMUX_BASE_ADDR            0x3E00E000 /* brcm_rdb_dmux.h */
-
-/**** APB2 ****/
-#define KONA_SLV_CLK_BASE_ADDR    0x3E011000 /* brcm_rdb_kps_clk_mgr_reg.h */
-#define KONA_SLV_RST_BASE_ADDR    0x3E011F00 /* brcm_rdb_kps_rst_mgr_reg.h */
-#define BSC1_BASE_ADDR            0x3E016000 /* brcm_rdb_i2c_mm_hs.h */
-#define BSC2_BASE_ADDR            0x3E017000 /* brcm_rdb_i2c_mm_hs.h */
-#define PWM_BASE_ADDR             0x3E01A000 /* brcm_rdb_pwm_top.h */
-
-/**** APB7 ****/
-#define SEC_RNG_BASE_ADDR         0x3E602000 /* brcm_rdb_rng.h */
-
-/**** APB4 ****/
-#define KONA_MST_CLK_BASE_ADDR    0x3F001000 /* brcm_rdb_kpm_clk_mgr_reg.h */
-#define KONA_MST_RST_BASE_ADDR    0x3F001F00 /* brcm_rdb_kpm_rst_mgr_reg.h */
-#define NONDMAC_BASE_ADDR         0x3F003000 /* brcm_rdb_non_dmac.h */
-#define SYSSWITCH_BASE_ADDR       0x3F004000 /* brcm_rdb_syssw.h */
-#define MASTERSW_BASE_ADDR        0x3F005000 /* brcm_rdb_mastersw.h */
-#define SECTRAP2_BASE_ADDR        0x3F006000 /* brcm_rdb_sectrap.h */
-#define SECTRAP3_BASE_ADDR        0x3F007000 /* brcm_rdb_sectrap.h */
-
-/**** AHB2 ****/
-#define HSOTG_BASE_ADDR           0x3F120000 /* brcm_rdb_hsotg.h */
-#define HSOTG_CTRL_BASE_ADDR      0x3F130000 /* brcm_rdb_hsotg_ctrl.h */
-#define SDIO1_BASE_ADDR           0x3F180000 /* brcm_rdb_emmcsdxc.h */
-#define SDIO2_BASE_ADDR           0x3F190000 /* brcm_rdb_emmcsdxc.h */
-
-/**** Samoa_AON_Hub ****/
 
 /**** APB6 ****/
 #define TZCFG_BASE_ADDR           0x35000000 /* brcm_rdb_konatzcfg.h */
@@ -114,6 +73,7 @@
 #define MEMC0_OPEN_DPHY_BASE_ADDR 0x35008800 /* brcm_rdb_dphy_csr.h */
 #define FMON_BASE_ADDR            0x3500B000 /* brcm_rdb_fmon.h */
 #define SECWD_BASE_ADDR           0x3500C000 /* brcm_rdb_secwatchdog.h */
+#define PMU_BSC_BASE_ADDR         0x3500D000 /* brcm_rdb_i2c_mm_hs.h */
 #define AUXMIC_BASE_ADDR          0x3500E000 /* brcm_rdb_auxmic.h */
 #define ACI_BASE_ADDR             0x3500E000 /* brcm_rdb_aci.h */
 #define SPM_BASE_ADDR             0x3500F000 /* brcm_rdb_spm.h */
@@ -121,25 +81,16 @@
 /**** Power_Manager ****/
 #define PWRMGR_BASE_ADDR          0x35010000 /* brcm_rdb_pwrmgr.h */
 
-/**** APB16 ****/
-#define OTP_BASE_ADDR             0x35080000 /* brcm_rdb_otp.h */
-#define OTP_PMU_GASKET_BASE_ADDR  0x35080000 /* brcm_rdb_otp_pmu_gasket.h */
-#define PMU_PMU_BASE_ADDR         0x35081000 /* brcm_rdb_pmu_pmu.h */
-#define PMU_FIFO_BASE_ADDR        0x35081000 /* brcm_rdb_pmu_fifo.h */
-#define PMU_CMP_BASE_ADDR         0x35081040 /* brcm_rdb_pmu_cmp.h */
-#define PMU_RTC_BASE_ADDR         0x35081080 /* brcm_rdb_pmu_rtc.h */
-#define PMU_INT_BASE_ADDR         0x350810C0 /* brcm_rdb_pmu_int.h */
-#define PMU_MBC_BASE_ADDR         0x35081140 /* brcm_rdb_pmu_mbc.h */
-#define PMU_DIGMBC_BASE_ADDR      0x35081180 /* brcm_rdb_pmu_digmbc.h */
-#define PMU_ADC_BASE_ADDR         0x35081200 /* brcm_rdb_pmu_adc.h */
-#define PMU_PWR_BASE_ADDR         0x35081280 /* brcm_rdb_pmu_pwr.h */
-#define PMU_CSR_BASE_ADDR         0x35081300 /* brcm_rdb_pmu_csr.h */
-#define PMU_DEB_BASE_ADDR         0x35081380 /* brcm_rdb_pmu_deb.h */
-#define PMU_CPD_BASE_ADDR         0x350813C0 /* brcm_rdb_pmu_cpd.h */
-#define PMU_FG_BASE_ADDR          0x35081700 /* brcm_rdb_pmu_fg.h */
-#define PMU_OTP_BASE_ADDR         0x35081780 /* brcm_rdb_pmu_otp.h */
-#define PMU_ENV_BASE_ADDR         0x350817C0 /* brcm_rdb_pmu_env.h */
-#define AONSW_BASE_ADDR           0x35082000 /* brcm_rdb_aonsw.h */
+/**** APB10 ****/
+#define AUDIOH_BASE_ADDR          0x35020000 /* brcm_rdb_audioh.h */
+#define SDT_BASE_ADDR             0x35020800 /* brcm_rdb_sdt.h */
+#define SSP4_BASE_ADDR            0x35028000 /* brcm_rdb_sspil.h */
+#define SSP3_BASE_ADDR            0x3502B000 /* brcm_rdb_sspil.h */
+#define SRCMIXER_BASE_ADDR        0x3502C000 /* brcm_rdb_srcmixer.h */
+#define CFIFO_BASE_ADDR           0x3502D000 /* brcm_rdb_cph_cfifo.h */
+#define AADMAC_BASE_ADDR          0x3502E000 /* brcm_rdb_cph_aadmac.h */
+#define SSASW_BASE_ADDR           0x3502F000 /* brcm_rdb_cph_ssasw.h */
+#define AHINTC_BASE_ADDR          0x3502F800 /* brcm_rdb_ahintc.h */
 
 /**** Comm_Subsystem ****/
 
@@ -152,6 +103,7 @@
 #define BMODEM_GICTR_BASE_ADDR    0x3A007000 /* brcm_rdb_gictr.h */
 #define BMODEM_SW_BASE_ADDR       0x3A00A000 /* brcm_rdb_modem_sw.h */
 #define COMMS_SW_BASE_ADDR        0x3A00B000 /* brcm_rdb_comms_sw.h */
+#define AXITP18_BASE_ADDR         0x3A00D000 /* brcm_rdb_axitp2.h */
 #define BMODEM_CTI_BASE_ADDR      0x3A00E000 /* brcm_rdb_cti.h */
 #define BMODEM_FUNNEL_BASE_ADDR   0x3A00F000 /* brcm_rdb_cstf.h */
 
@@ -180,7 +132,6 @@
 #define WCDMAMPD0_15_BASE_ADDR    0x3A108400 /* brcm_rdb_mpdxx_apb.h */
 #define WCDMAMPD0_30_BASE_ADDR    0x3A108500 /* brcm_rdb_mpdxx_apb.h */
 #define WCDMACM2_BASE_ADDR        0x3A108600 /* brcm_rdb_combiner2.h */
-#define WCDMAE2SS_BASE_ADDR       0x3A108B80 /* brcm_rdb_e2ss.h */
 #define WCDMASSYNC_BASE_ADDR      0x3A108C00 /* brcm_rdb_ssync_apb.h */
 #define WCDMAPSYNC_BASE_ADDR      0x3A109000 /* brcm_rdb_psync_for_10ppm.h */
 #define WCDMATX_BASE_ADDR         0x3A109100 /* brcm_rdb_tx.h */
@@ -205,7 +156,9 @@
 #define WCDMAHTDM_BASE_ADDR       0x3A10A100 /* brcm_rdb_hsdpa_turbo_decoder_module.h */
 #define WCDMASCCH_BASE_ADDR       0x3A10A200 /* brcm_rdb_hs_scch.h */
 #define WCDMAHARQ_BASE_ADDR       0x3A10A300 /* brcm_rdb_harq.h */
-#define WCDMAPSYCHIC_BASE_ADDR    0x3A10A700 /* brcm_rdb_psychic.h */
+#define WCDMATNYRAKE_4_BASE_ADDR  0x3A10A400 /* brcm_rdb_tiny_fng_core_top.h */
+#define WCDMATNYRAKE_5_BASE_ADDR  0x3A10A500 /* brcm_rdb_tiny_fng_core_top.h */
+#define WCDMATNYRAKE_6_BASE_ADDR  0x3A10A600 /* brcm_rdb_tiny_fng_core_top.h */
 #define WCDMARFIC_BASE_ADDR       0x3A10A780 /* brcm_rdb_rfic_mst.h */
 #define WCDMARFICBUFF_BASE_ADDR   0x3A10A800 /* brcm_rdb_rfic_reg_file.h */
 #define WCDMAMPD1_15_BASE_ADDR    0x3A10AA00 /* brcm_rdb_mpdxx_apb.h */
@@ -249,7 +202,12 @@
 #define AHB_DSP_TX_CONTROL_BASE_ADDR 0x3B800000 /* brcm_rdb_dsp_tx_control.h */
 #define AHB_DSP_TRACE_BASE_ADDR   0x3B800000 /* brcm_rdb_dsp_trace.h */
 
-/**** MM_Sub_System ****/
+/**** MM_Subsystem ****/
+#define ISP_BASE_ADDR             0x3C080000 /* brcm_rdb_isp.h */
+#define VCE_BASE_ADDR             0x3C100000 /* brcm_rdb_vce.h */
+#define SMI_BASE_ADDR             0x3C180000 /* brcm_rdb_smi.h */
+#define DSI0_BASE_ADDR            0x3C200000 /* brcm_rdb_dsi1.h */
+#define DSI1_BASE_ADDR            0x3C280000 /* brcm_rdb_dsi1.h */
 
 /**** APB12 ****/
 #define MM_CLK_BASE_ADDR          0x3C000000 /* brcm_rdb_mm_clk_mgr_reg.h */
@@ -258,41 +216,100 @@
 #define MM_TECTL_BASE_ADDR        0x3C002000 /* brcm_rdb_te.h */
 #define MM_SPI_BASE_ADDR          0x3C003000 /* brcm_rdb_spi.h */
 #define MM_CFG_BASE_ADDR          0x3C004000 /* brcm_rdb_mm_cfg.h */
-#define SMI_BASE_ADDR             0x3C007000 /* brcm_rdb_smi.h */
 #define MM_CSI0_BASE_ADDR         0x3C008000 /* brcm_rdb_cam.h */
 #define MM_DMA_BASE_ADDR          0x3C00A000 /* brcm_rdb_dma.h */
 #define MM_V3D_BASE_ADDR          0x3C00B000 /* brcm_rdb_v3d.h */
+#define MM_CTI_BASE_ADDR          0x3C00C000 /* brcm_rdb_cti.h */
+#define AXITRACE17_BASE_ADDR      0x3C00E000 /* brcm_rdb_axitp2.h */
 
-/**** APB17 ****/
-#define ISP_BASE_ADDR             0x3C010000 /* brcm_rdb_isp.h */
+/**** Apps_Subsystem ****/
+#define SPUM_NS_BASE_ADDR         0x3E300000 /* brcm_rdb_spum_axi.h */
+#define SPUM_S_BASE_ADDR          0x3E310000 /* brcm_rdb_spum_axi.h */
 
-/**** Samoa_processor ****/
+/**** SECURITY ****/
+#define SEC_PKA_BASE_ADDR         0x3E600000 /* brcm_rdb_pka.h */
+#define SEC_OTP_BASE_ADDR         0x3E601000 /* brcm_rdb_otp.h */
+#define SEC_RNG_BASE_ADDR         0x3E602000 /* brcm_rdb_rng.h */
+#define SEC_CFG_BASE_ADDR         0x3E605000 /* brcm_rdb_hsmcfg.h */
+#define SEC_SPUM_S_APB_BASE_ADDR  0x3E606000 /* brcm_rdb_spum_apb.h */
+#define SEC_SPUM_NS_APB_BASE_ADDR 0x3E607000 /* brcm_rdb_spum_apb.h */
+
+/**** Fabric ****/
+#define L2C_BASE_ADDR             0x3FF20000 /* brcm_rdb_pl310.h */
+
+/**** APB4 ****/
+#define KONA_MST_CLK_BASE_ADDR    0x3F001000 /* brcm_rdb_kpm_clk_mgr_reg.h */
+#define KONA_MST_RST_BASE_ADDR    0x3F001F00 /* brcm_rdb_kpm_rst_mgr_reg.h */
+#define SECDMAC_BASE_ADDR         0x3F002000 /* brcm_rdb_sec_dmac.h */
+#define NONDMAC_BASE_ADDR         0x3F003000 /* brcm_rdb_non_dmac.h */
+#define SYSSWITCH_BASE_ADDR       0x3F004000 /* brcm_rdb_syssw.h */
+#define MASTERSW_BASE_ADDR        0x3F005000 /* brcm_rdb_mastersw.h */
+#define SECTRAP2_BASE_ADDR        0x3F006000 /* brcm_rdb_sectrap.h */
+#define SECTRAP3_BASE_ADDR        0x3F007000 /* brcm_rdb_sectrap.h */
+
+/**** APB8 ****/
+#define GLOBPERF_BASE_ADDR        0x3F010000 /* brcm_rdb_globperf.h */
+#define AXITRACE2_BASE_ADDR       0x3F012000 /* brcm_rdb_axitp2.h */
+#define AXITRACE3_BASE_ADDR       0x3F013000 /* brcm_rdb_axitp2.h */
+#define FAB_FUNNEL1_BASE_ADDR     0x3F01E000 /* brcm_rdb_cstf.h */
+#define FAB_CTI_BASE_ADDR         0x3F01F000 /* brcm_rdb_cti.h */
+
+/**** AHB2 ****/
+#define HSOTG_BASE_ADDR           0x3F120000 /* brcm_rdb_hsotg.h */
+#define HSOTG_CTRL_BASE_ADDR      0x3F130000 /* brcm_rdb_hsotg_ctrl.h */
+#define FSHOST_BASE_ADDR          0x3F160000 /* brcm_rdb_fshost.h */
+#define FSHOST_CTRL_BASE_ADDR     0x3F170000 /* brcm_rdb_fshost_ctrl.h */
+#define SDIO1_BASE_ADDR           0x3F180000 /* brcm_rdb_emmcsdxc.h */
+#define SDIO2_BASE_ADDR           0x3F190000 /* brcm_rdb_emmcsdxc.h */
+#define SDIO3_BASE_ADDR           0x3F1A0000 /* brcm_rdb_emmcsdxc.h */
+
+/**** Processor ****/
 
 /**** APB0 ****/
 #define PROC_CLK_BASE_ADDR        0x3FE00000 /* brcm_rdb_kproc_clk_mgr_reg.h */
 #define PROC_RST_BASE_ADDR        0x3FE00F00 /* brcm_rdb_kproc_rst_mgr_reg.h */
 #define SECTRAP1_BASE_ADDR        0x3FE01000 /* brcm_rdb_sectrap.h */
 #define SECTRAP8_BASE_ADDR        0x3FE02000 /* brcm_rdb_sectrap.h */
-#define AXITRACE1_BASE_ADDR       0x3FE03000 /* brcm_rdb_axitp1.h */
+#define AXITRACE1_BASE_ADDR       0x3FE03000 /* brcm_rdb_axitp4.h */
+#define AXITRACE4_BASE_ADDR       0x3FE04000 /* brcm_rdb_axitp2.h */
 #define GICTR_BASE_ADDR           0x3FE05000 /* brcm_rdb_gictr.h */
 #define FUNNEL_BASE_ADDR          0x3FE06000 /* brcm_rdb_cstf.h */
+#define AXITRACE16_BASE_ADDR      0x3FE07000 /* brcm_rdb_axitp2.h */
 #define ACPSW_BASE_ADDR           0x3FE08000 /* brcm_rdb_acp_sw.h */
 #define SWSTM_BASE_ADDR           0x3FE09000 /* brcm_rdb_swstm.h */
 #define SWSTM_ST_BASE_ADDR        0x3FE0A000 /* brcm_rdb_swstm.h */
 #define PWRWDOG_BASE_ADDR         0x3FE0B000 /* brcm_rdb_pwrwdog.h */
-#define VAR2SPM_BASE_ADDR         0x3FE0C000 /* brcm_rdb_spm.h */
 
 /**** APB11 ****/
-#define A5CPU0_BASE_ADDR          0x3FE10000 /* brcm_rdb_a5cpu.h */
-#define A5PMU0_BASE_ADDR          0x3FE11000 /* brcm_rdb_a5pmu.h */
-#define A5ETM0_BASE_ADDR          0x3FE18000 /* brcm_rdb_a5etm.h */
-#define A5CTI0_BASE_ADDR          0x3FE1C000 /* brcm_rdb_cti.h */
+#define A9CPU0_BASE_ADDR          0x3FE10000 /* brcm_rdb_a9cpu.h */
+#define A9PMU0_BASE_ADDR          0x3FE11000 /* brcm_rdb_a9pmu.h */
+#define A9PTM0_BASE_ADDR          0x3FE18000 /* brcm_rdb_a9ptm.h */
+#define A9CTI0_BASE_ADDR          0x3FE1C000 /* brcm_rdb_cti.h */
 
-/**** A5_PRIVATE ****/
+/**** A9_PRIVATE ****/
 #define SCU_BASE_ADDR             0x3FF00000 /* brcm_rdb_scu.h */
 #define GICCPU_BASE_ADDR          0x3FF00100 /* brcm_rdb_giccpu.h */
 #define GTIM_BASE_ADDR            0x3FF00200 /* brcm_rdb_glbtmr.h */
 #define PTIM_BASE_ADDR            0x3FF00600 /* brcm_rdb_ptmr_wd.h */
 #define GICDIST_BASE_ADDR         0x3FF01000 /* brcm_rdb_gicdist.h */
-#define L2C_BASE_ADDR             0x3FF20000 /* brcm_rdb_pl310.h */
+
+/**** Slaves ****/
+
+/**** APB1 ****/
+#define UARTB_BASE_ADDR           0x3E000000 /* brcm_rdb_uartb.h */
+#define UARTB2_BASE_ADDR          0x3E001000 /* brcm_rdb_uartb.h */
+#define UARTB3_BASE_ADDR          0x3E002000 /* brcm_rdb_uartb.h */
+#define SSP0_BASE_ADDR            0x3E004000 /* brcm_rdb_sspil.h */
+#define TIMER_BASE_ADDR           0x3E00D000 /* brcm_rdb_kona_gptimer.h */
+#define DMUX_BASE_ADDR            0x3E00E000 /* brcm_rdb_dmux.h */
+
+/**** APB2 ****/
+#define KONA_SLV_CLK_BASE_ADDR    0x3E011000 /* brcm_rdb_kps_clk_mgr_reg.h */
+#define KONA_SLV_RST_BASE_ADDR    0x3E011F00 /* brcm_rdb_kps_rst_mgr_reg.h */
+#define BSC1_BASE_ADDR            0x3E016000 /* brcm_rdb_i2c_mm_hs.h */
+#define BSC2_BASE_ADDR            0x3E017000 /* brcm_rdb_i2c_mm_hs.h */
+#define PWM_BASE_ADDR             0x3E01A000 /* brcm_rdb_pwm_top.h */
+
+/**** AHB1 ****/
+#define MPHI_BASE_ADDR            0x3E130000 /* brcm_rdb_mphi.h */
 

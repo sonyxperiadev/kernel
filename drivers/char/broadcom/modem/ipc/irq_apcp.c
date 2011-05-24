@@ -131,7 +131,8 @@ void intc_trigger_softirq(unsigned int irq)
     // convert to BModem IRQ
     unsigned int birq = IRQ_TO_BMIRQ(irq);
     unsigned long flags;
-	printk("intc_trigger_softirq\n");
+	//removed printouts
+	//printk("intc_trigger_softirq\n");
     spin_lock_irqsave(&intc_lock, flags);
     if ( birq >= 32 )
         writel(1 << (birq - 32), base + BINTC_ISWIR1_OFFSET);

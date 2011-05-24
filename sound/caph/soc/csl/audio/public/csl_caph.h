@@ -346,8 +346,8 @@ typedef enum
     CSL_CAPH_TRIG_SSP4_TX1 = 0x45,
     CSL_CAPH_TRIG_SSP4_TX2 = 0x46,
     CSL_CAPH_TRIG_SSP4_TX3 = 0x47,    
-    CSL_CAPH_TRIG_PASSTHROUGH_CH2_FIFO_THRESMET = 0x50,
-    CSL_CAPH_TRIG_PASSTHROUGH_CH1_FIFO_THRESMET = 0x51,
+    CSL_CAPH_TRIG_PASSTHROUGH_CH1_FIFO_THRESMET = 0x50,
+    CSL_CAPH_TRIG_PASSTHROUGH_CH2_FIFO_THRESMET = 0x51,
     CSL_CAPH_TRIG_TAPSDOWN_CH1_NORM_INT = 0x52,
     CSL_CAPH_TRIG_TAPSDOWN_CH2_NORM_INT = 0x53,
     CSL_CAPH_TRIG_TAPSDOWN_CH3_NORM_INT = 0x54,
@@ -683,7 +683,7 @@ typedef enum
 //}CSL_CAPH_HWCTRL_INFO_t;
 
 
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 /**
 * CAPH Audio PathID for audio path. Used by Audio Controller
 ******************************************************************************/

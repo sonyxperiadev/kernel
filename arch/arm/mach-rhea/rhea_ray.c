@@ -52,6 +52,8 @@
 #include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/clk.h>
+#include <linux/android_pmem.h>
+#include <linux/bootmem.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
@@ -62,6 +64,9 @@
 #include <linux/dma-mapping.h>
 #endif
 #include <linux/spi/spi.h>
+#if defined (CONFIG_HAPTIC)
+#include <linux/haptic.h>
+#endif
 
 #define _RHEA_
 #include <linux/broadcom/bcm_fuse_memmap.h>
@@ -474,6 +479,64 @@ static struct spi_board_info spi_slave_board_info[] __initdata = {
 	/* TODO: adding more slaves here */
 };
 
+static unsigned long pmem_base = 0;
+static unsigned int pmem_size = SZ_16M;
+static int __init setup_pmem_pages(char *str)
+{
+	if(str){
+		pmem_size = memparse((const char *)str, NULL);
+	}
+	printk(KERN_INFO "PMEM size is  0x%08x Bytes\n", pmem_size);
+	pmem_base = virt_to_phys((void *)alloc_bootmem_pages(pmem_size));
+	if(!pmem_base)
+		printk(KERN_ERR "Failed to allocate the PMEM memory\n");
+	else
+		printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base); 
+	return 0;
+}
+__setup("pmem=", setup_pmem_pages);
+
+/* Allocate the top 16M of the DRAM for the pmem. */
+static struct android_pmem_platform_data android_pmem_data = {
+	.name = "pmem",
+	.start = 0x0,
+	.size = SZ_16M,
+	.no_allocator = 1,
+	.cached = 1,
+	.buffered = 1,
+};
+
+static struct platform_device android_pmem = {
+	.name 	= "android_pmem",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &android_pmem_data,
+	},
+};
+
+#if defined (CONFIG_HAPTIC_SAMSUNG_PWM)
+void haptic_gpio_setup(void)
+{
+	/* Board specific configuration like pin mux & GPIO */
+}
+
+static struct haptic_platform_data haptic_control_data = {
+	/* PWM4 as vibrator signal */
+	.name = "kona_pwmc:4",
+	/* Invalid gpio for now, pass valid gpio number if connected */
+	.gpio = ARCH_NR_GPIOS,
+	.pwm_timer = 4,	/* 'not' being used with new PWM layer */
+	.setup_pin = haptic_gpio_setup,
+};
+
+struct platform_device haptic_pwm_device = {
+	.name   = "samsung_pwm_haptic",
+	.id     = -1,
+	.dev	=	 {	.platform_data = &haptic_control_data,}
+};
+
+#endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -486,6 +549,10 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
+#endif
+	&android_pmem,
+#ifdef CONFIG_HAPTIC_SAMSUNG_PWM
+	&haptic_pwm_device,
 #endif
 };
 
@@ -505,7 +572,7 @@ static int __init rhea_ray_add_lateInit_devices (void)
 
 	adapter = i2c_get_adapter(1);
 	if (!adapter) {
-		printk(KERN_ERR "can't get i2c adapter 1 %d\n");
+		printk(KERN_ERR "can't get i2c adapter 1\n");
 		return ENODEV;
 	}
 #ifdef CONFIG_GPIO_PCA953X
@@ -552,6 +619,9 @@ static void __init rhea_ray_add_devices(void)
 {
 	enable_smi_display_clks();
 
+	android_pmem_data.start = (unsigned long)pmem_base;
+	android_pmem_data.size  = pmem_size;
+
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
 #endif
@@ -563,35 +633,8 @@ static void __init rhea_ray_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
-void Comms_Start(void)
-{
-	void __iomem *apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
-	if (!apcp_shmem) {
-		printk(KERN_ERR "%s: ioremap shmem failed\n", __func__);
-		return;
-	}
-	/* clear first (9) 32-bit words in shared memory */
-	memset(apcp_shmem, 0, IPC_SIZE);
-	iounmap(apcp_shmem);
-	
-	void __iomem *cp_boot_base;
-	
-	cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
-	if (!cp_boot_base) {
-		printk(KERN_ERR "%s: ioremap error\n", __func__);
-		return;
-	}
-	
-	/* Start the CP, Code taken from Nucleus BSP */
-	*(unsigned int *)(cp_boot_base+INIT_ADDRESS_OFFSET) = *(unsigned int *)(cp_boot_base+MAIN_ADDRESS_OFFSET);
-	
-	iounmap(cp_boot_base);
-	printk(KERN_ALERT "%s: modem (R4 COMMS) started....\n", __func__);
-}
-
 void __init board_init(void)
 {
-	Comms_Start();
 	board_add_common_devices();
 	rhea_ray_add_devices();
 	return;

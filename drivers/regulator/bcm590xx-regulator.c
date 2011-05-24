@@ -264,7 +264,7 @@ static int bcm590xxldo_set_voltage(struct regulator_dev *rdev, int min_uv, int m
 	unsigned int ldo_or_sr = bcm590xx_ldo_or_sr(rdev_get_id(rdev));
 	unsigned int addr = 0;
 	unsigned int mode = 0;
-	int	rc, uv;
+	int	rc, uv=0;
 	int	ret;
 	pr_debug("Inside %s: ID %d\n", __func__, rdev_get_id(rdev));
 	/* Find the proper voltage between MAX and MIN voltage */

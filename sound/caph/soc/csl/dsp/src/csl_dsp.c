@@ -69,10 +69,6 @@
 #include "memmap.h"
 
 
-#ifdef LMP_BUILD
-typedef        AP_SharedMem_t VPSharedMem_t;
-#endif
-
 VPSharedMem_t		   *vp_shared_mem;
 
 #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )

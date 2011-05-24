@@ -52,13 +52,13 @@
 #include "mobcom_types.h"
 #include "auddrv_def.h"
 #include "chal_types.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "chal_sspi.h"
 #include "dbg.h"
 #endif
 #include "csl_caph_pcm_sspi.h"
 #include "brcm_rdb_padctrlreg.h"
-#include "brcm_rdb_sysmap_a9.h"
+#include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_sspil.h"
 #include "log.h"
 
@@ -79,7 +79,7 @@
 //******************************************************************************
 // Local Definitions
 //******************************************************************************
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 static chal_sspi_task_conf_t task_conf;
 static chal_sspi_seq_conf_t seq_conf;
 #endif

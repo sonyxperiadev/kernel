@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2011 Broadcom Corporation                                                        */
+/*  Copyright 2011 Broadcom Corporation                                                         */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,38 +21,13 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     :    Generated on 1/7/2011 14:25:3                                            */
-/*     RDB file : //DSP/                                                                    */
+/*     Date     :    Generated on 5/17/2011 0:56:25                                            */
+/*     RDB file : //RHEA/                                                                    */
 /************************************************************************************************/
 
-#ifndef __REGISTERS_DSP_H__
-#define __REGISTERS_DSP_H__
 
-#include "brcm_rdb_aci.h"
-#include "brcm_rdb_ahintc.h"
-#include "brcm_rdb_audioh.h"
-#include "brcm_rdb_bintc.h"
-#include "brcm_rdb_cph_aadmac.h"
-#include "brcm_rdb_cph_cfifo.h"
-#include "brcm_rdb_cph_ssasw.h"
-#include "brcm_rdb_dsp_3wire_intf.h"
-#include "brcm_rdb_dsp_ac.h"
-#include "brcm_rdb_dsp_cipher.h"
-#include "brcm_rdb_dsp_cpmr.h"
-#include "brcm_rdb_dsp_digrf.h"
-#include "brcm_rdb_dsp_equalizer.h"
-#include "brcm_rdb_dsp_event_ctrl.h"
-#include "brcm_rdb_dsp_intc.h"
-#include "brcm_rdb_dsp_rfspi.h"
-#include "brcm_rdb_dsp_rf_gpo.h"
-#include "brcm_rdb_dsp_rx_control.h"
-#include "brcm_rdb_dsp_sys_timer.h"
-#include "brcm_rdb_dsp_tl3r.h"
-#include "brcm_rdb_dsp_trace.h"
-#include "brcm_rdb_dsp_tx_control.h"
-#include "brcm_rdb_sdt.h"
-#include "brcm_rdb_srcmixer.h"
-#include "brcm_rdb_sspi.h"
-#include "brcm_rdb_sspil.h"
+#ifndef __BRCM_RDB_BUSMASTER_H__
+#define __BRCM_RDB_BUSMASTER_H__
 
-#endif /* __REGISTERS_DSP_H__ */
+
+#endif
