@@ -94,6 +94,8 @@ struct eth_dev {
 
 	unsigned long		todo;
 #define	WORK_RX_MEMORY		0
+#define	WORK_BRCM_NETCONSOLE_ON		1
+#define	WORK_BRCM_NETCONSOLE_OFF	2
 
 	bool			zlp;
 	u8			host_mac[ETH_ALEN];
@@ -467,7 +469,15 @@ static void eth_work(struct work_struct *work)
 		if (netif_running(dev->net))
 			rx_fill(dev, GFP_KERNEL);
 	}
-
+#ifdef CONFIG_BRCM_NETCONSOLE
+	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_ON, &dev->todo)) {
+				brcm_current_netcon_status(USB_RNDIS_ON);
+	}
+	else if (test_and_clear_bit(WORK_BRCM_NETCONSOLE_OFF, &dev->todo)) {
+				brcm_current_netcon_status(USB_RNDIS_OFF);
+	}
+#endif
+	
 	if (dev->todo)
 		DBG(dev, "work done, flags = 0x%lx\n", dev->todo);
 }
@@ -895,7 +905,6 @@ void gether_cleanup(void)
 	the_dev = NULL;
 }
 
-
 /**
  * gether_connect - notify network layer that USB link is active
  * @link: the USB link, set up with endpoints, descriptors matching
@@ -963,7 +972,7 @@ struct net_device *gether_connect(struct gether *link)
 		if (netif_running(dev->net)){
 			eth_start(dev, GFP_ATOMIC);
 #ifdef CONFIG_BRCM_NETCONSOLE			
-			brcm_current_netcon_status(USB_RNDIS_ON);
+			defer_kevent(dev, WORK_BRCM_NETCONSOLE_ON);
 #endif
 		} 
 
@@ -1003,7 +1012,7 @@ void gether_disconnect(struct gether *link)
 	DBG(dev, "%s\n", __func__);
 
 #ifdef CONFIG_BRCM_NETCONSOLE			
-	brcm_current_netcon_status(USB_RNDIS_OFF);
+	defer_kevent(dev, WORK_BRCM_NETCONSOLE_OFF);
 #endif
 
 	netif_stop_queue(dev->net);
