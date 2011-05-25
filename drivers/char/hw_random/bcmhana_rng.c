@@ -38,101 +38,117 @@
 #include <linux/io.h>
 #include <mach/rdb/brcm_rdb_rng.h>
 
-#define ioclrbit32(addr, bits)  (iowrite32(addr, (ioread32(addr) & (~(bits)))))
-#define iosetbit32(addr, bits)  (iowrite32(addr, (ioread32(addr) | (bits))))
-
 DEFINE_MUTEX(lock); /* lock for data access */
 
 static atomic_t bus_is_probed;
 
 static void * baseAddr;
 
-/**
- *  @brief  set warmup cycle
- *  @param  none
- *  @return none
- *  @note
- *****************************************************************************/
-static void chal_rng_inline_warmup(uint32_t cycles)
+static void ioclrbit32(void *addr, unsigned int bits)
 {
-    iowrite32(baseAddr + RNG_STATUS_OFFSET, RNG_STATUS_RNG_WARM_CNT_MASK - (cycles & RNG_STATUS_RNG_WARM_CNT_MASK) );
+    iowrite32(ioread32(addr) & ~bits, addr);
+}
+
+static void iosetbit32(void *addr, unsigned int bits)
+{
+    iowrite32(ioread32(addr) | bits,  addr);
+}
+
+/**
+*  @brief  set warmup cycle
+*  @param  none
+*  @return none
+*  @note
+*****************************************************************************/
+static inline void chal_rng_inline_warmup(uint32_t cycles)
+{
+    iowrite32(RNG_STATUS_RNG_WARM_CNT_MASK - (cycles & RNG_STATUS_RNG_WARM_CNT_MASK), baseAddr + RNG_STATUS_OFFSET);
     while ( ( ioread32(baseAddr + RNG_STATUS_OFFSET) & RNG_STATUS_RNG_WARM_CNT_MASK ) != RNG_STATUS_RNG_WARM_CNT_MASK );
 }
 
 /**
- *  @brief  Start RNG block
- *  @param  none
- *  @return none
- *  @note
- *****************************************************************************/
-static void chal_rng_inline_enable(void)
+*  @brief  Stop RNG block
+*  @param  none
+*  @return none
+*  @note
+*****************************************************************************/
+static inline void chal_rng_inline_enable(void)
 {
-    iosetbit32(baseAddr + RNG_CTRL_OFFSET, RNG_CTRL_RNG_RBGEN_MASK);
+     iosetbit32(baseAddr + RNG_CTRL_OFFSET, RNG_CTRL_RNG_RBGEN_MASK);
 }
-
 /**
- *  @brief  Stop RNG block
- *  @param  none
- *  @return none
- *  @note
- *****************************************************************************/
-static void chal_rng_inline_disable(void)
+*  @brief  Stop RNG block
+*  @param  none
+*  @return none
+*  @note
+*****************************************************************************/
+static inline void chal_rng_inline_disable(void)
 {
     ioclrbit32(baseAddr + RNG_CTRL_OFFSET, RNG_CTRL_RNG_RBGEN_MASK);
 }
-
 /**
- *  @brief  Enable/Disable RNG RBG2X
- *  @param  enable   (in) 1 to enable, 0 to disable
- *  @return none
- *  @note
- *****************************************************************************/
-static void chal_rng_inline_rbg2x_enable(void)
+*  @brief  Enable/Disable RNG RBG2X
+*  @param  enable   (in) 1 to enable, 0 to disable
+*  @return none
+*  @note
+*****************************************************************************/
+static inline void chal_rng_inline_rbg2x_enable(void)
 {
-    iosetbit32(baseAddr + RNG_CTRL_OFFSET, RNG_CTRL_RNG_RBG2X_MASK);
+        iosetbit32(baseAddr + RNG_CTRL_OFFSET, RNG_CTRL_RNG_RBG2X_MASK);
 }
-
-// static void chal_rng_inline_rbg2x_disable(void)
-// {
-//     ioclrbit32(baseAddr + RNG_CTRL_OFFSET, RNG_CTRL_RNG_RBG2X_MASK);
-// }
-
-/**
- *  @brief  Configure RNG FF THRESH
- *  @param  ff_thresh   (in) ff threshold
- *  @return none
- *  @note
- *****************************************************************************/
-// static void chal_rng_inline_ff_thresh(uint8_t ff_thresh)
-// {
-//     uint32_t val = ioread32(baseAddr + RNG_FF_THRES_OFFSET);
-//     val &= ~RNG_FF_THRES_RNG_FF_THRESH_MASK;
-//     iowrite32(baseAddr + RNG_FF_THRES_OFFSET, val | ff_thresh);
-// }
-
-/**
- *  @brief  Enable/Disable RNG INTERRUPT
- *  @param  enable   (in) 1 to enable, 0 to disable
- *  @return none
- *  @note
- *****************************************************************************/
-// static void chal_rng_inline_int_enable(void)
-// {
-//     ioclrbit32(baseAddr + RNG_INT_MASK_OFFSET, RNG_INT_MASK_RNG_INT_OFF_MASK);
-// }
-static void chal_rng_inline_int_disable(void)
+static inline void chal_rng_inline_rbg2x_disable(void)
 {
-    iosetbit32(baseAddr + RNG_INT_MASK_OFFSET, RNG_INT_MASK_RNG_INT_OFF_MASK);
+        ioclrbit32(baseAddr + RNG_CTRL_OFFSET, RNG_CTRL_RNG_RBG2X_MASK);
+}
+/**
+*  @brief  Configure RNG FF THRESH
+*  @param  ff_thresh   (in) ff threshold
+*  @return none
+*  @note
+*****************************************************************************/
+static inline void chal_rng_inline_ff_thresh(uint8_t ff_thresh)
+{
+        uint32_t val = ioread32(baseAddr + RNG_FF_THRES_OFFSET);
+        val &= ~RNG_FF_THRES_RNG_FF_THRESH_MASK;
+        iowrite32(val | ff_thresh, baseAddr + RNG_FF_THRES_OFFSET);
+}
+/**
+*  @brief  Enable/Disable RNG INTERRUPT
+*  @param  enable   (in) 1 to enable, 0 to disable
+*  @return none
+*  @note
+*****************************************************************************/
+static inline void chal_rng_inline_int_enable(void)
+{
+        ioclrbit32(baseAddr + RNG_INT_MASK_OFFSET, RNG_INT_MASK_RNG_INT_OFF_MASK);
+}
+static inline void chal_rng_inline_int_disable(void)
+{
+        iosetbit32(baseAddr + RNG_INT_MASK_OFFSET, RNG_INT_MASK_RNG_INT_OFF_MASK);
 }
 
 /**
- *  @brief  RNG get number of valid words available
- *  @return Number of words available
- *  @note
- *****************************************************************************/
-static uint32_t chal_rng_inline_get_valid_words(void)
+*  @brief  RNG get number of valid words available
+*  @return Number of words available
+*  @note
+*****************************************************************************/
+static inline uint32_t chal_rng_inline_get_valid_words(void)
 {
     return ((ioread32(baseAddr + RNG_STATUS_OFFSET) & RNG_STATUS_RND_VAL_MASK) >> RNG_STATUS_RND_VAL_SHIFT);
+}
+
+/**
+*  @brief  RNG get value
+*  @param  pBuffer (in) Buffer to read data into
+*  @param  len (in) bytes of the data to be read
+*  @return Number of bytes actually read
+*  @note
+*****************************************************************************/
+static inline uint32_t chal_rng_inline_get_random_number( void )
+{
+   while ( chal_rng_inline_get_valid_words() == 0 );
+
+   return ioread32(baseAddr + RNG_DATA_OFFSET);
 }
 
 /**
@@ -148,21 +164,6 @@ static void chal_rng_inline_start(void)
     chal_rng_inline_int_disable();
     chal_rng_inline_warmup(0xfff);
 }
-
-/**
- *  @brief  RNG get value
- *  @param  pBuffer (in) Buffer to read data into
- *  @param  len (in) bytes of the data to be read
- *  @return Number of bytes actually read
- *  @note
- *****************************************************************************/
-static uint32_t chal_rng_inline_get_random_number(void)
-{
-    while ( chal_rng_inline_get_valid_words() == 0 );
-
-    return ioread32(baseAddr + RNG_DATA_OFFSET);
-}
-
 
 static int rng_data_present(struct hwrng *rng, int wait)
 {
@@ -221,7 +222,6 @@ static int __init rng_probe(struct platform_device *pdev)
         ret = -ENOMEM;
         goto err_out;
     }
-
 
     atomic_set(&bus_is_probed, 0);
 
