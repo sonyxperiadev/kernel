@@ -51,7 +51,7 @@ Boolean at_mtst_event_logging = FALSE;
 
 
 //#pragma arm section zidata = "shared_rip_mem_sect"
-static AP_SharedMem_t			AP_shared_mememory __attribute__((section("shared_rip_mem_sect")));
+//static AP_SharedMem_t			AP_shared_mememory __attribute__((section("shared_rip_mem_sect")));
       
 //#pragma arm section
 
@@ -83,7 +83,7 @@ static UInt32 amr_voice_counter =0;
 void AP_SHAREDMEM_Init()
 {
 	// Clear out shared memory
-	memset(&AP_shared_mememory, 0, sizeof(AP_SharedMem_t));
+//	memset(&AP_shared_mememory, 0, sizeof(AP_SharedMem_t));
 
 }
 

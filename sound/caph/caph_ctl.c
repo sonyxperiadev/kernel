@@ -288,6 +288,7 @@ static int SelCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 
 	BCM_AUDIO_DEBUG("xnumid=%d xindex=%d", ucontrol->id.numid, ucontrol->id.index);
 
+	//May need to get the value from driver
 	ucontrol->value.integer.value[0] = pSel[0];
 	ucontrol->value.integer.value[1] = pSel[1];
 
