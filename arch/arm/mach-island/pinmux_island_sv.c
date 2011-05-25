@@ -67,6 +67,34 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(SDIO3_DATA_2, SDIO2_DATA_6, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(SDIO3_DATA_1, SDIO2_DATA_5, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(SDIO3_DATA_0, SDIO2_DATA_4, 0, OFF, OFF, 0, 0, 8MA),
+
+	/* USB Host (ULPI) */
+        PIN_CFG(ULPI0_CLOCK,  ULPI0_CLOCK,  0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DATA_0, ULPI0_DATA_0, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DATA_1, ULPI0_DATA_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DATA_2, ULPI0_DATA_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DATA_3, ULPI0_DATA_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DATA_4, ULPI0_DATA_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DATA_5, ULPI0_DATA_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DATA_6, ULPI0_DATA_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DATA_7, ULPI0_DATA_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_DIR,    ULPI0_DIR,    0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_NXT,    ULPI0_NXT,    0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI0_STP,    ULPI0_STP,    0, OFF, OFF, 0, 1, 8MA),
+
+        /* USB Host (ULPI) */
+        PIN_CFG(ULPI1_CLOCK,  ULPI1_CLOCK,  0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DATA_0, ULPI1_DATA_0, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DATA_1, ULPI1_DATA_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DATA_2, ULPI1_DATA_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DATA_3, ULPI1_DATA_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DATA_4, ULPI1_DATA_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DATA_5, ULPI1_DATA_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DATA_6, ULPI1_DATA_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DATA_7, ULPI1_DATA_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_DIR,    ULPI1_DIR,    0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_NXT,    ULPI1_NXT,    0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(ULPI1_STP,    ULPI1_STP,    0, OFF, OFF, 0, 1, 8MA),
 };
 
 /* board level init */

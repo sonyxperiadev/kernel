@@ -20,6 +20,7 @@
  */
 
 #include <linux/init.h>
+#include <linux/dma-mapping.h>
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -34,12 +35,14 @@
 #include <asm/mach/map.h>
 #include <mach/hardware.h>
 
-#include <mach/sdio_platform.h>
 #include <mach/irqs.h>
 #include <mach/kona.h>
+#include <mach/sdio_platform.h>
+#include <mach/usbh_cfg.h>
 
 #include <sdio_settings.h>
 #include <i2c_settings.h>
+#include <usbh_settings.h>
 
 #if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
 #include <linux/i2c/egalax_i2c_ts.h>
@@ -85,6 +88,15 @@
 #define PHYS_ADDR_BSC1         BSC2_BASE_ADDR
 #define PHYS_ADDR_BSC2         PMU_BSC_BASE_ADDR
 #define BSC_CORE_REG_SIZE      0x100
+
+#define USBH_EHCI_CORE_REG_SIZE    0x90
+#define USBH_OHCI_CORE_REG_SIZE    0x1000
+#define USBH_DWC_REG_OFFSET        USBH_EHCI_CORE_REG_SIZE
+#define USBH_DWC_BASE_ADDR         (EHCI_BASE_ADDR + USBH_DWC_REG_OFFSET)
+#define USBH_DWC_CORE_REG_SIZE     0x20
+#define USBH_CTRL_REG_OFFSET       0x8000
+#define USBH_CTRL_BASE_ADDR        (EHCI_BASE_ADDR + USBH_CTRL_REG_OFFSET)
+#define USBH_CTRL_CORE_REG_SIZE    0x20
 
 static struct resource sdio0_resource[] = {
 	[0] = {
@@ -228,6 +240,86 @@ static struct platform_device i2c_adap_devices[MAX_I2C_ADAPS] =
    },
 };
 
+static struct usbh_cfg usbh_param =
+#ifdef HW_USBH_PARAM
+	HW_USBH_PARAM;
+#else
+	{};
+#endif
+
+static struct resource usbh_resource[] = {
+	[0] = {
+		.start = USBH_CTRL_BASE_ADDR,
+		.end = USBH_CTRL_BASE_ADDR + USBH_CTRL_CORE_REG_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device usbh_device =
+{
+	.name = "usbh",
+	.id = -1,
+	.resource = usbh_resource,
+	.num_resources = ARRAY_SIZE(usbh_resource),
+	.dev = {
+		.platform_data = &usbh_param,
+	},
+};
+
+static u64 ehci_dmamask = DMA_BIT_MASK(32);
+
+static struct resource usbh_ehci_resource[] = {
+	[0] = {
+		.start = EHCI_BASE_ADDR,
+		.end = EHCI_BASE_ADDR + USBH_EHCI_CORE_REG_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_ULPI_EHCI,
+		.end = BCM_INT_ID_ULPI_EHCI,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device usbh_ehci_device =
+{
+	.name = "bcm-ehci",
+	.id = 0,
+	.resource = usbh_ehci_resource,
+	.num_resources = ARRAY_SIZE(usbh_ehci_resource),
+	.dev = {
+		.dma_mask = &ehci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
+};
+
+static u64 ohci_dmamask = DMA_BIT_MASK(32);
+
+static struct resource usbh_ohci_resource[] = {
+	[0] = {
+		.start = OHCI_BASE_ADDR,
+		.end = OHCI_BASE_ADDR + USBH_OHCI_CORE_REG_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_ULPI_OHCI,
+		.end = BCM_INT_ID_ULPI_OHCI,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device usbh_ohci_device =
+{
+	.name = "bcm-ohci",
+	.id = 0,
+	.resource = usbh_ohci_resource,
+	.num_resources = ARRAY_SIZE(usbh_ohci_resource),
+	.dev = {
+		.dma_mask = &ohci_dmamask,
+		.coherent_dma_mask = DMA_BIT_MASK(32),
+	},
+};
+
 #if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
 static struct egalax_i2c_ts_cfg egalax_i2c_param =
 {
@@ -357,6 +449,17 @@ static void __init add_i2c_device(void)
 #endif
 }
 
+static void __init add_usbh_device(void)
+{
+	/*
+	 * Always register the low level USB host device before EHCI/OHCI
+	 * devices
+	 */
+	platform_device_register(&usbh_device);
+	platform_device_register(&usbh_ehci_device);
+	platform_device_register(&usbh_ohci_device);
+}
+
 static void __init add_devices(void)
 {
 #ifdef HW_SDIO_PARAM
@@ -366,6 +469,8 @@ static void __init add_devices(void)
 #ifdef HW_I2C_ADAP_PARAM
 	add_i2c_device();
 #endif
+
+	add_usbh_device();
 }
 
 static void __init board_init(void)

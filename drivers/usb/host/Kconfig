@@ -116,6 +116,20 @@ config USB_EHCI_FSL
 	---help---
 	  Variation of ARC USB block used in some Freescale chips.
 
+config USB_BCM_ISLAND
+	tristate "Support for Broadcom Island USB host"
+	depends on ARCH_ISLAND
+	---help---
+	  Enables support for Broadcom Island USB host low-level functions.
+
+config USB_EHCI_BCM
+        bool "Support for Broadcom on-chip EHCI USB controller"
+        depends on USB_EHCI_HCD && ARCH_ISLAND
+        select USB_EHCI_ROOT_HUB_TT
+        ---help---
+          Enables EHCI support for USB host controller on some Broadcom
+	  SOCs.
+
 config USB_EHCI_MXC
 	bool "Support for Freescale on-chip EHCI USB controller"
 	depends on USB_EHCI_HCD && ARCH_MXC
@@ -275,6 +289,13 @@ config USB_OHCI_HCD_SSB
 	  Broadcom based SSB bus.
 
 	  If unsure, say N.
+
+config USB_OHCI_BCM
+        bool "Support for Broadcom on-chip OHCI USB controller"
+        depends on USB_OHCI_HCD && ARCH_ISLAND
+        ---help---
+          Enables OHCI support for USB host controller on some Broadcom
+          SOCs.
 
 config USB_OHCI_BIG_ENDIAN_DESC
 	bool

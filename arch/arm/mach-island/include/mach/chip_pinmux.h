@@ -39,6 +39,32 @@ enum PIN_NAME {
 	PN_NORFLSH_RDY,
 	PN_NORFLSH_CLK_N,
 
+	PN_ULPI0_CLOCK,
+        PN_ULPI0_DATA_0,
+        PN_ULPI0_DATA_1,
+        PN_ULPI0_DATA_2,
+        PN_ULPI0_DATA_3,
+        PN_ULPI0_DATA_4,
+        PN_ULPI0_DATA_5,
+        PN_ULPI0_DATA_6,
+        PN_ULPI0_DATA_7,
+        PN_ULPI0_DIR,
+        PN_ULPI0_NXT,
+        PN_ULPI0_STP,
+
+	PN_ULPI1_CLOCK,  
+        PN_ULPI1_DATA_0, 
+        PN_ULPI1_DATA_1, 
+        PN_ULPI1_DATA_2, 
+        PN_ULPI1_DATA_3, 
+        PN_ULPI1_DATA_4, 
+        PN_ULPI1_DATA_5, 
+        PN_ULPI1_DATA_6, 
+        PN_ULPI1_DATA_7, 
+        PN_ULPI1_DIR,    
+        PN_ULPI1_NXT,    
+        PN_ULPI1_STP,    
+
 	PN_NAND_AD_5,
 	PN_NAND_AD_4,
 	PN_NAND_AD_3,
@@ -84,6 +110,33 @@ enum PIN_FUNC {
         PF_NORFLSH_RDY,
         PF_NORFLSH_CLK_N,
 
+	PF_ULPI0_CLOCK,
+        PF_ULPI0_DATA_0,
+        PF_ULPI0_DATA_1,
+        PF_ULPI0_DATA_2,
+        PF_ULPI0_DATA_3,
+        PF_ULPI0_DATA_4,
+        PF_ULPI0_DATA_5,
+        PF_ULPI0_DATA_6,
+        PF_ULPI0_DATA_7,
+        PF_ULPI0_DIR,
+        PF_ULPI0_NXT,
+        PF_ULPI0_STP,
+
+        PF_ULPI1_CLOCK,
+        PF_ULPI1_DATA_0,
+        PF_ULPI1_DATA_1,
+        PF_ULPI1_DATA_2,
+        PF_ULPI1_DATA_3,
+        PF_ULPI1_DATA_4,
+        PF_ULPI1_DATA_5,
+        PF_ULPI1_DATA_6,
+        PF_ULPI1_DATA_7,
+        PF_ULPI1_DIR,
+        PF_ULPI1_NXT,
+        PF_ULPI1_STP,
+
+
 	PF_NAND_AD_5,
         PF_NAND_AD_4,
         PF_NAND_AD_3,
@@ -127,7 +180,6 @@ enum PIN_FUNC {
 
         PF_VC_CAM1_SCL,
         PF_VC_CAM1_SDA,
-
 
 	PF_MAX
 };
