@@ -34,7 +34,10 @@
  *	extern declarations
  */
 extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks *_cb) ;
+#if defined(CONFIG_ARCH_RHEA)
 extern int csl_StmSendBytes(void *data_ptr, int length);
+#endif
+
 #ifdef CONFIG_USB_ETH_RNDIS
 
 /*
@@ -208,7 +211,9 @@ static void WriteToLogDev_STM( void )
 
 	if( nFifo > 0 )
 	{
+#if defined(CONFIG_ARCH_RHEA)
 		nWrite = csl_StmSendBytes(BCMLOG_FifoGetData( &g_fifo ), nFifo);
+#endif
 		BCMLOG_FifoRemove( &g_fifo, nWrite ) ;
 			
 	}
