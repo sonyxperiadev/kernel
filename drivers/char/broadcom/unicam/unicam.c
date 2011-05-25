@@ -36,16 +36,12 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <mach/rdb/brcm_rdb_cam.h>
 
-#define UNICAM_PRIMARY_SENSOR_ENABLE
-
-#ifdef UNICAM_PRIMARY_SENSOR_ENABLE
-    #include <mach/memory.h>
-    #include <mach/rdb/brcm_rdb_mm_cfg.h>
-    #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
-    #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
-    #include <mach/rdb/brcm_rdb_padctrlreg.h>
-    #include <mach/rdb/brcm_rdb_util.h>
-#endif
+#include <mach/memory.h>
+#include <mach/rdb/brcm_rdb_mm_cfg.h>
+#include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
+#include <mach/rdb/brcm_rdb_util.h>
 
 
 //TODO - define the major device ID
@@ -102,8 +98,10 @@ static unsigned int unicam_mempool_size;
 static int enable_unicam_clock(void);
 static void disable_unicam_clock(void);
 static void unicam_init_camera_intf(void);
-static void unicam_open_csi(unsigned int port, unsigned int gpio, unsigned int clk_src);
-static void unicam_close_csi(unsigned int port, unsigned int gpio, unsigned int clk_src);
+static void unicam_open_csi(unsigned int port, unsigned int clk_src);
+static void unicam_close_csi(unsigned int port, unsigned int clk_src);
+static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable);
+
 static inline unsigned int reg_read(void __iomem *, unsigned int reg);
 static inline void reg_write(void __iomem *, unsigned int reg, unsigned int value);
 
@@ -111,8 +109,6 @@ static irqreturn_t unicam_isr(int irq, void *dev_id)
 {
     unicam_t *dev;
     unsigned int value;
-	
-    dbg_print("Got unicam interrupt\n");
     
     value = reg_read(unicam_base, CAM_STA_OFFSET);
     reg_write(unicam_base, CAM_STA_OFFSET, value);	// enable access		
@@ -133,13 +129,13 @@ static int unicam_open(struct inode *inode, struct file *filp)
 
     filp->private_data = dev;
 	
-	dev->mempool.ptr = unicam_mempool_base;
-	dev->mempool.addr = virt_to_phys(dev->mempool.ptr);
-	dev->mempool.size = unicam_mempool_size;	
+    dev->mempool.ptr = unicam_mempool_base;
+    dev->mempool.addr = virt_to_phys(dev->mempool.ptr);
+    dev->mempool.size = unicam_mempool_size;
 
     sema_init(&dev->irq_sem, 0);
     
-	unicam_init_camera_intf();
+    unicam_init_camera_intf();
 
     ret = request_irq(IRQ_UNICAM, unicam_isr, IRQF_DISABLED | IRQF_SHARED, UNICAM_DEV_NAME, dev);
     if (ret){
@@ -182,7 +178,7 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
     } else if (vma->vm_pgoff != (dev->mempool.addr >> PAGE_SHIFT)) {
         pr_err("%s(): unicam_mmap failed\n", __FUNCTION__);
         return -EINVAL;
-	}	
+    }	
 
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
@@ -243,35 +239,47 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
     {        
         dbg_print("Obtain the Memory Pool Address\n");
         if (copy_to_user((mem_t*)arg, &(dev->mempool), sizeof(mem_t)))
-		    ret = -EPERM;
+            ret = -EPERM;
     }
     break;
 
     case UNICAM_IOCTL_OPEN_CSI0:
     {        
         dbg_print("Open unicam CSI0 port \n");
-        unicam_open_csi( CSI0_UNICAM_PORT, CSI0_UNICAM_GPIO, CSI0_UNICAM_CLK );
+        unicam_open_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
     }
     break;
 
     case UNICAM_IOCTL_CLOSE_CSI0:
     {        
         dbg_print("Close unicam CSI0 port \n");
-        unicam_close_csi( CSI0_UNICAM_PORT, CSI0_UNICAM_GPIO, CSI0_UNICAM_CLK );
+        unicam_close_csi(CSI0_UNICAM_PORT, CSI0_UNICAM_CLK);
     }
     break;
 
     case UNICAM_IOCTL_OPEN_CSI1:
     {        
         dbg_print("Open unicam CSI1 port \n");
-        unicam_open_csi( CSI1_UNICAM_PORT, CSI1_UNICAM_GPIO, CSI1_UNICAM_CLK );
+        unicam_open_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
     }
     break;
 
     case UNICAM_IOCTL_CLOSE_CSI1:
     {        
         dbg_print("close unicam CSI1 port \n");
-        unicam_close_csi( CSI1_UNICAM_PORT, CSI1_UNICAM_GPIO, CSI1_UNICAM_CLK );
+        unicam_close_csi(CSI1_UNICAM_PORT, CSI1_UNICAM_CLK);
+    }
+    break;
+
+    case UNICAM_IOCTL_CONFIG_SENSOR:
+    {
+        sensor_ctrl_t sensor_ctrl;
+        
+        dbg_print("Config Sensor \n");
+        if (copy_from_user(&sensor_ctrl, (sensor_ctrl_t*)arg,  sizeof(sensor_ctrl_t)))
+            ret = -EPERM;
+  
+        unicam_sensor_control(sensor_ctrl.sensor_id, sensor_ctrl.enable);
     }
     break;
 	
@@ -293,212 +301,190 @@ static struct file_operations unicam_fops =
 
 static inline unsigned int reg_read(void __iomem * base_addr, unsigned int reg)
 {
-	unsigned int flags;
+    unsigned int flags;
 
-	flags = ioread32(base_addr + reg);
-	return flags;
+    flags = ioread32(base_addr + reg);
+    return flags;
 }
 
 static inline void reg_write(void __iomem * base_addr, unsigned int reg, unsigned int value)
 {
-	iowrite32(value, base_addr + reg);
+    iowrite32(value, base_addr + reg);
 }
 
 static void unicam_init_camera_intf(void)
-{
-#ifdef UNICAM_PRIMARY_SENSOR_ENABLE
-    {
-//        unsigned int value;
-    
-        // Init GPIO's to off
-        gpio_request(CSI0_UNICAM_GPIO, "CAM_STNDBY0");
-        gpio_direction_output(CSI0_UNICAM_GPIO, 0);
-        gpio_set_value(CSI0_UNICAM_GPIO, 0);
-        gpio_request(CSI1_UNICAM_GPIO, "CAM_STNDBY1");
-        gpio_direction_output(CSI1_UNICAM_GPIO, 0);
-        gpio_set_value(CSI1_UNICAM_GPIO, 0);
-        msleep(10);
-    }
-#endif    
+{   
+    // Init GPIO's to off
+    gpio_request(CSI0_UNICAM_GPIO, "CAM_STNDBY0");
+    gpio_direction_output(CSI0_UNICAM_GPIO, 0);
+    gpio_set_value(CSI0_UNICAM_GPIO, 0);
+    gpio_request(CSI1_UNICAM_GPIO, "CAM_STNDBY1");
+    gpio_direction_output(CSI1_UNICAM_GPIO, 0);
+    gpio_set_value(CSI1_UNICAM_GPIO, 0);
+    msleep(10);
 }
 
-static void unicam_open_csi(unsigned int port, unsigned int gpio, unsigned int clk_src)
+static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 {
-#ifdef UNICAM_PRIMARY_SENSOR_ENABLE
-    {
-        unsigned int value;
-    
-        // Init GPIO's to off
-        gpio_set_value(gpio, 0);
-        msleep(10);
-    
-        if (port == 0)
-        {
-            // Set Camera CSI0 Phy & Clock Registers
-            reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A00000F);
-    
-            reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET, 0x00000888);	// csi0_rx0_bclkhs	
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_DIV_OFFSET, 0x00000040);
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET, 0x00000303);  // default value
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000303);	// ...	
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT)); // CSI0 trigger change	
-    		        
-            // Select Camera Phy AFE 0 
-            // AFE 0 Select:  CSI0 has PHY selection.
-            value = reg_read(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET) & 0x7fffffff;
-            reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	// enable access	
-        }
-        else
-        {
-            // Set Camera CSI1 Phy & Clock Registers
-            reg_write(mmcfg_base, MM_CFG_CSI1_LDO_CTL_OFFSET, 0x5A00000F);
-    
-            reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET, 0x00000888);	// csi1_rx0_bclkhs	
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_DIV_OFFSET, 0x00000040);
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET, 0x00000303);  // default value
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000303);	// ...	
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_SHIFT)); // CSI1 trigger change	
-    		        
-            // Select Camera Phy AFE 1 
-            // AFE 1 Select:  CSI0 has PHY selection.
-            value = reg_read(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET) | 0x80000000;
-            reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	// enable access	
-        } 
-        
-        if (clk_src == 0)
-        {                   
-            // Enable DIG0 clock out to sensor 
-            // Select DCLK1  ( bits 10:8 = 0x000 => DCLK1 , bits 2:0 = 3 => 8 mAmps strength
-            value = reg_read(padctl_base, PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
-            reg_write(padctl_base, PADCTRLREG_DCLK1_OFFSET, value);
-            
-            // Disable Dig Clk0
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
-            value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK);
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-            if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) != 0)
-            { 
-                err_print("DIGITAL_CH0_STPRSTS: Clk not Stopped\n");
-            }
-				
-            // Set Dig Clk0 Divider = 1 (13Mhz)
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG0_DIV_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG0_DIV_DIGITAL_CH0_DIV_SHIFT));
-
-            // Trigger Dig Clk0 
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_TRG_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH0_TRIGGER_SHIFT));
-            msleep(1);
-    
-            // Start Dig Clk0
-            value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) | (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_SHIFT);		
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-            msleep(1);
-            // Check Clock running
-            if ((reg_read(rootclk_base , ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) == 0 )  
-            { 
-                err_print("DIGITAL_CH0_STPRSTS: Clk not Started\n");
-            }
-        }
-        else  //if (clk_src == 1)
-        {                   
-            // Enable DIG1 clock out sensor 
-            // Select DCLK2  ( bits 10:8 = 0x000 => DCLK2 , bits 2:0 = 3 => 8 mAmps strength
-            value = reg_read(padctl_base, PADCTRLREG_GPIO32_OFFSET) & (~PADCTRLREG_GPIO32_PINSEL_GPIO32_MASK);
-            value |= (3 << PADCTRLREG_GPIO32_PINSEL_GPIO32_SHIFT);
-            reg_write(padctl_base, PADCTRLREG_GPIO32_OFFSET, value);
-            
-            // Disable Dig Clk1
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
-            value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_HW_SW_GATING_SEL_MASK);
-            value |= (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_HW_SW_GATING_SEL_SHIFT);
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-            if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) != 0)
-            { 
-                err_print("DIGITAL_CH1_STPRSTS: Clk not Stopped\n");
-            }
-				
-            // Set Dig Clk1 Divider = 1 (13Mhz)
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG1_DIV_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG1_DIV_DIGITAL_CH1_DIV_SHIFT));
-
-            // Trigger Dig Clk1 
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_TRG_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH1_TRIGGER_SHIFT));
-            msleep(1);
-    
-            // Start Dig Clk1
-            value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) | (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_SHIFT);		
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET, value);
-            msleep(1);
-            // Check Clock running
-            if ((reg_read(rootclk_base , ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) == 0 )  
-            { 
-                err_print("DIGITAL_CH1_STPRSTS: Clk not Started\n");
-            }
-        }
-        // Delay after clock starts before enabling Sensor 
-        msleep(10);
-        // Enable Primary Sensor
-        gpio_set_value(gpio, 1);
-        msleep(10);
+    // primary sensor 
+    if (sensor_id == 0) {
+        gpio_set_value(CSI0_UNICAM_GPIO, enable);
     }
-#endif    
+    // secondary sensor
+    else if (sensor_id == 1) {
+        gpio_set_value(CSI1_UNICAM_GPIO, enable);    
+    }
+    msleep(10);
 }
 
-static void unicam_close_csi(unsigned int port, unsigned int gpio, unsigned int clk_src)
+static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 {
-#ifdef UNICAM_PRIMARY_SENSOR_ENABLE
-    {
-        unsigned int value;
+    unsigned int value;
+   
+    if (port == 0) {
+        // Set Camera CSI0 Phy & Clock Registers
+        reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A00000F);
     
-        // Init GPIO's to off
-        gpio_set_value(gpio, 0);
-        msleep(10);
+        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET, 0x00000888);	// csi0_rx0_bclkhs	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_DIV_OFFSET, 0x00000040);
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET, 0x00000303);  // default value
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000303);	// ...	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT)); // CSI0 trigger change	
+    		        
+        // Select Camera Phy AFE 0 
+        // AFE 0 Select:  CSI0 has PHY selection.
+        value = reg_read(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET) & 0x7fffffff;
+        reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	// enable access	
+    }
+    else {
+        // Set Camera CSI1 Phy & Clock Registers
+        reg_write(mmcfg_base, MM_CFG_CSI1_LDO_CTL_OFFSET, 0x5A00000F);
     
-        if (port == 0)
-        {
-            // Disable Camera CSI0 Phy & Clock Registers
-            reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET, 0x00000302);  // default value
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000302);	// ...	
-        }
-        else
-        {
-            // Disable Camera CSI1 Phy & Clock Registers
-            reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET, 0x00000302);  // default value
-            reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000302);	// ...	
-        } 
+        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET, 0x00000888);	// csi1_rx0_bclkhs	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_DIV_OFFSET, 0x00000040);
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET, 0x00000303);  // default value
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000303);	// ...	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_SHIFT)); // CSI1 trigger change	
+    		        
+        // Select Camera Phy AFE 1 
+        // AFE 1 Select:  CSI0 has PHY selection.
+        value = reg_read(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET) | 0x80000000;
+        reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	// enable access	
+    }
         
-        if (clk_src == 0)
-        {                   
-            // Disable Dig Clk0
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
-            value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK);
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-            if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) != 0)
-            { 
-                err_print("DIGITAL_CH0_STPRSTS: Clk not Stopped\n");
-            }
+    if (clk_src == 0)
+    {                   
+        // Enable DIG0 clock out to sensor 
+        // Select DCLK1  ( bits 10:8 = 0x000 => DCLK1 , bits 2:0 = 3 => 8 mAmps strength
+        value = reg_read(padctl_base, PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
+        reg_write(padctl_base, PADCTRLREG_DCLK1_OFFSET, value);
+            
+        // Disable Dig Clk0
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
+        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK);
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
+        if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) != 0) { 
+            err_print("DIGITAL_CH0_STPRSTS: Clk not Stopped\n");
         }
-        else
-        {                   
-            // Disable Dig Clk1
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
-            value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
-            reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-            if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) != 0)
-            { 
-                err_print("DIGITAL_CH1_STPRSTS: Clk not Stopped\n");
-            }
+				
+        // Set Dig Clk0 Divider = 1 (13Mhz)
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG0_DIV_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG0_DIV_DIGITAL_CH0_DIV_SHIFT));
+
+        // Trigger Dig Clk0 
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_TRG_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH0_TRIGGER_SHIFT));
+        msleep(1);
+    
+        // Start Dig Clk0
+        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) | (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_SHIFT);		
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
+        msleep(1);
+            
+        // Check Clock running
+        if ((reg_read(rootclk_base , ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) == 0 ) { 
+            err_print("DIGITAL_CH0_STPRSTS: Clk not Started\n");
         }
     }
-#endif    
+    else  //if (clk_src == 1)
+    {                   
+        // Enable DIG1 clock out sensor 
+        // Select DCLK2  ( bits 10:8 = 0x000 => DCLK2 , bits 2:0 = 3 => 8 mAmps strength
+        value = reg_read(padctl_base, PADCTRLREG_GPIO32_OFFSET) & (~PADCTRLREG_GPIO32_PINSEL_GPIO32_MASK);
+        value |= (3 << PADCTRLREG_GPIO32_PINSEL_GPIO32_SHIFT);
+        reg_write(padctl_base, PADCTRLREG_GPIO32_OFFSET, value);
+            
+        // Disable Dig Clk1
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
+        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
+        value |= (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_HW_SW_GATING_SEL_SHIFT);
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
+        
+        if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) != 0) { 
+            err_print("DIGITAL_CH1_STPRSTS: Clk not Stopped\n");
+        }
+				
+        // Set Dig Clk1 Divider = 1 (13Mhz)
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG1_DIV_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG1_DIV_DIGITAL_CH1_DIV_SHIFT));
+ 
+        // Trigger Dig Clk1 
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_TRG_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH1_TRIGGER_SHIFT));
+        msleep(1);
+    
+        // Start Dig Clk1
+        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) | (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_SHIFT);		
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET, value);
+        msleep(1);
+        
+        // Check Clock running
+        if ((reg_read(rootclk_base , ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) == 0 ) { 
+            err_print("DIGITAL_CH1_STPRSTS: Clk not Started\n");
+        }
+    }
+}
+
+static void unicam_close_csi(unsigned int port, unsigned int clk_src)
+{
+    unsigned int value;
+    
+    if (port == 0) {
+        // Disable Camera CSI0 Phy & Clock Registers
+        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET, 0x00000302);  // default value
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000302);	// ...	
+    }
+    else {
+        // Disable Camera CSI1 Phy & Clock Registers
+        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET, 0x00000302);  // default value
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000302);	// ...	
+    } 
+        
+    if (clk_src == 0)
+    {                   
+        // Disable Dig Clk0
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
+        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK);
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
+        if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) != 0) { 
+            err_print("DIGITAL_CH0_STPRSTS: Clk not Stopped\n");
+        }
+    }
+    else {                   
+        // Disable Dig Clk1
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
+        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
+        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
+        if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) != 0) { 
+            err_print("DIGITAL_CH1_STPRSTS: Clk not Stopped\n");
+        }
+    }
 }
 
 
 static int enable_unicam_clock(void)
 {
-	unsigned long rate;
+    unsigned long rate;
     int ret;
 	
     unicam_clk = clk_get(NULL, "csi0_axi_clk");
@@ -513,13 +499,11 @@ static int enable_unicam_clock(void)
         return -EIO;
     }
 
-#if 0	
     ret = clk_set_rate(unicam_clk, 250000000);
     if (ret) {
         err_print("%s: error changing clock rate\n", __func__);
-        return -EIO;
+        //return -EIO;
     }
-#endif	
 
     rate = clk_get_rate(unicam_clk);
     dbg_print("unicam_clk_clk rate %lu\n", rate);
@@ -544,11 +528,11 @@ static int __init setup_unicam_mempool(char *str)
     if (!unicam_mempool_size) 
         unicam_mempool_size = UNICAM_MEM_POOL_SIZE;
 	
-	dbg_print("Allocating camera relocatable heap of size = %d\n", unicam_mempool_size);
-	unicam_mempool_base = alloc_bootmem_low_pages(unicam_mempool_size);
-	if( !unicam_mempool_base )
-		err_print("Failed to allocate relocatable heap memory\n");
-	return 0;
+    dbg_print("Allocating camera relocatable heap of size = %d\n", unicam_mempool_size);
+    unicam_mempool_base = alloc_bootmem_low_pages(unicam_mempool_size);
+    if( !unicam_mempool_base )
+        err_print("Failed to allocate relocatable heap memory\n");
+    return 0;
 }
 
 __setup("unicam_mem=", setup_unicam_mempool);
