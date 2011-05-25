@@ -49,6 +49,11 @@
 #include <egalax_i2c_ts_settings.h>
 #endif
 
+#if defined(CONFIG_NET_ISLAND)
+#include <mach/net_platform.h>
+#include <net_settings.h>
+#endif
+
 #include "island.h"
 #include "common.h"
 
@@ -165,6 +170,30 @@ static struct platform_device sdio_devices[MAX_SDIO_DEVICES] =
       .num_resources    = ARRAY_SIZE(sdio1_resource),
    },
 };
+
+#if defined(CONFIG_NET_ISLAND)
+static struct island_net_hw_cfg island_net_data =
+#ifdef HW_CFG_ISLAND_NET
+   HW_CFG_ISLAND_NET;
+#else
+{
+   .addrPhy0 = 0,
+   .addrPhy1 = 1,
+   .gpioPhy0 = -1,
+   .gpioPhy1 = -1,
+};
+#endif
+
+static struct platform_device net_device =
+{
+   .name = "island-net",
+   .id = -1,
+   .dev =
+   {
+      .platform_data = &island_net_data,
+   },
+};
+#endif /* CONFIG_NET_ISLAND */
 
 static struct bsc_adap_cfg i2c_adap_param[] =
 #ifdef HW_I2C_ADAP_PARAM
@@ -453,7 +482,7 @@ static void __init add_usbh_device(void)
 {
 	/*
 	 * Always register the low level USB host device before EHCI/OHCI
-	 * devices
+	 * devices. Also, always add EHCI device before OHCI
 	 */
 	platform_device_register(&usbh_device);
 	platform_device_register(&usbh_ehci_device);
@@ -471,6 +500,10 @@ static void __init add_devices(void)
 #endif
 
 	add_usbh_device();
+
+#ifdef CONFIG_NET_ISLAND
+	platform_device_register(&net_device);
+#endif
 }
 
 static void __init board_init(void)

@@ -210,6 +210,7 @@ obj-$(CONFIG_SNI_82596) += sni_82596.o
 obj-$(CONFIG_MVME16x_NET) += 82596.o
 obj-$(CONFIG_BVME6000_NET) += 82596.o
 obj-$(CONFIG_SC92031) += sc92031.o
+obj-$(CONFIG_NET_ISLAND) += island_net.o
 
 # This is also a 82596 and should probably be merged
 obj-$(CONFIG_LP486E) += lp486e.o

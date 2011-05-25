@@ -67,7 +67,7 @@ static void __init island_l2x0_init(void)
 }
 #endif
 
-static void __init island_init(void)
+static int __init island_init(void)
 {
 	pm_power_off = island_poweroff;
 	arm_pm_restart = island_restart;
@@ -84,8 +84,9 @@ static void __init island_init(void)
 
 	/* island has 6 banks of GPIO pins */ 
 	kona_gpio_init(6);
-}
 
+	return 0;
+}
 early_initcall(island_init);
 
 static void __init island_timer_init(void)
