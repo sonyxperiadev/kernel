@@ -603,33 +603,33 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 
 	enable_irq(irq);
 
-#ifdef CONFIG_BATTERY_BCM59055
-	// Register battery device, so that battery probe function will be called.
-	ret = bcm590xx_client_dev_register(bcm590xx, "bcm59055-battery");
-	if (ret < 0) {
-		printk(KERN_ERR "%s client_dev_register for bcm59055-battery failed %d\n",
-				__func__, ret);
-		return ret;
-	}
-#endif
+	ret = 0;
 	/* Register FG driver */
 	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_FUELGAUGE)
-		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-fg");
+		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-fg");
 	/* Register ADC driver */
 	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_ADC)
-		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-saradc");
+		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-saradc");
 	/* Register PowerOnKey device */
 	if (bcm590xx->pdata->flag & BCM590XX_USE_PONKEY)
-		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-onkey");
+		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-onkey");
 
 	/* Register Sub devices */
 	if (bcm590xx->pdata->flag & BCM590XX_USE_REGULATORS)
-		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-regulator");
+		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-regulator");
 	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_AUDIO)
-		bcm590xx_client_dev_register(bcm590xx, "bcm590xx-audio");
+		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-audio");
 
 	if (bcm590xx->pdata->flag & BCM590XX_USE_RTC)
-		bcm590xx_client_dev_register(bcm590xx, "bcm59055-rtc");
+		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm59055-rtc");
+
+	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_POWER)
+		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-power");
+
+	if (ret) {
+		pr_info("%s: Some sub device registration failed\n", __func__);
+		return ret;
+	}
 	printk("%s: SUCCESS\n", __func__);
 	return 0;
 err:

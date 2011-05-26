@@ -194,7 +194,7 @@ int bcm59055_saradc_read_data(int sel)
 	u8 regVal;
 	int regD1, regD2;
 	struct bcm590xx *bcm59055 = bcm59055_saradc->bcm59055;
-	pr_info("inside %s: Channel %d\n", __func__, sel);
+	pr_debug("inside %s: Channel %d\n", __func__, sel);
 
 	if (bcm59055_saradc->mode == SARADC_RTM_MODE) {
 		pr_info("%s: Can read any channel as RTM req is going on\n", __func__);

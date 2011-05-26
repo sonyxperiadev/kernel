@@ -48,6 +48,7 @@
 #include <linux/stringify.h>
 #include <linux/broadcom/bcm59055-fuelgauge.h>
 
+
 struct bcm59055_fg {
 	struct bcm590xx *bcm59055;
 	int mode;
@@ -70,6 +71,8 @@ int bcm59055_fg_enable(void)
 	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_FGCTRL1, reg);
 	if (!ret)
 		bcm59055_fg->enable = true;
+	else
+		pr_info("%s: Error enabling FG\n", __func__);
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_fg_enable);
@@ -89,6 +92,8 @@ int bcm59055_fg_disable(void)
 	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_FGCTRL1, reg);
 	if (!ret)
 			bcm59055_fg->enable = false;
+	else
+		pr_info("%s: Error disabling FG\n", __func__);
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_fg_disable);
@@ -266,7 +271,7 @@ int bcm59055_fg_read_accm(void)
 	val |= reg << 8;
 	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGACCM4);
 	val |= reg;
-	pr_info("%s: Accumulator value 0x%x\n", __func__, val);
+	pr_debug("%s: Accumulator value %d\n", __func__, val);
 	return val;
 }
 EXPORT_SYMBOL(bcm59055_fg_read_accm);

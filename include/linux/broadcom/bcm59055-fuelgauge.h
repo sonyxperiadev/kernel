@@ -31,6 +31,11 @@
 #define __BCM59055_FG_H__
 
 enum {
+	FAST_CALIBRATION = 0,
+	LONG_CALIBRATION,
+};
+
+enum {
 	CONTINUOUS_MODE,
 	SYNCHRONOUS_MODE,
 };
@@ -68,7 +73,7 @@ enum {
 
 /* EXPORTED FUNCTIONS */
 extern int bcm59055_fg_enable(void);
-extern int bcm59055_fg_disbale(void);
+extern int bcm59055_fg_disable(void);
 extern int bcm59055_fg_set_cont_mode(void);
 extern int bcm59055_fg_set_sync_mode(bool modulator_on);
 extern int bcm59055_fg_enable_modulator(bool enable);

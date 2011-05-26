@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Tue May 24 11:50:28 2011
+# Thu May 26 20:01:09 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -981,6 +981,7 @@ CONFIG_POWER_SUPPLY_DEBUG=y
 # CONFIG_BATTERY_DS2782 is not set
 # CONFIG_BATTERY_BQ27x00 is not set
 # CONFIG_BATTERY_MAX17040 is not set
+CONFIG_BATTERY_BCM59055=y
 CONFIG_HWMON=y
 # CONFIG_HWMON_VID is not set
 # CONFIG_HWMON_DEBUG_CHIP is not set
