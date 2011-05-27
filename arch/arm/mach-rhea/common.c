@@ -240,6 +240,18 @@ static struct resource board_sdio1_resource[] = {
 	},
 };
 
+static struct resource board_sdio2_resource[] = {
+	[0] = {
+		.start = SDIO3_BASE_ADDR,
+		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
 static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO0 */
 		.id = 0,
@@ -258,6 +270,15 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.peri_clk_name = "sdio2_clk",
 		.ahb_clk_name = "sdio2_ahb_clk",
 		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
+	},
+	{ /* SDIO2 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
 };
@@ -282,6 +303,15 @@ static struct platform_device board_sdio1_device = {
 	},
 };
 
+static struct platform_device board_sdio2_device = {
+	.name = "sdhci",
+	.id = 2,
+	.resource = board_sdio2_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[2],
+	},
+};
 static struct resource board_i2c0_resource[] = {
 	[0] =
 	{
@@ -476,6 +506,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
 	&board_sdio1_device,
 	&board_sdio0_device,
+	&board_sdio2_device,
 };
 
 void __init board_add_common_devices(void)
