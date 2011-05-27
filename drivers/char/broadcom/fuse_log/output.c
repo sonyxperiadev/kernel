@@ -28,6 +28,7 @@
 #include "plat/mobcom_types.h"
 #include "bcmlog.h"
 #include "fifo.h"
+#include "bcmmtt.h"
 #include "output.h"
 
 /*
@@ -39,12 +40,25 @@ extern int csl_StmSendBytes(void *data_ptr, int length);
 #endif
 
 #ifdef CONFIG_USB_ETH_RNDIS
+extern char obex_register_callbacks(struct obex_callbacks *_cb);	// for ACM logging
 
 /*
  *	forward declarations
  */
 static int netconsole_start_cb( void ) ;
 static int netconsole_stop_cb( void ) ;
+static int acm_start_cb( void ) ;
+static int acm_stop_cb( void ) ;
+
+#ifdef BCMLOG_DEBUG_FLAG
+unsigned  int g_malloc_sig_buf = 0;
+static int nospace = 0;
+static int noheader = 0;
+static int splitbuffer = 0;
+static int writefail = 0;
+static int n100=0;
+static unsigned int totalbyte = 0;
+#endif
 
 /**
  *	local vars
@@ -52,9 +66,30 @@ static int netconsole_stop_cb( void ) ;
 static char g_netconsole_on = 0 ;				//	flow control state for RNDIS, set/reset by flow control callbacks
 
 #endif
+static char g_acm_on = 0 ;					//	flow control state for ACM, set/reset by flow control callbacks
 
 #define BCMLOG_OUTPUT_FIFO_MAX_BYTES  65536		
 static BCMLOG_Fifo_t g_fifo ;					//	output fifo
+	
+
+/**
+ *	frame counter 
+ **/
+static unsigned char g_frame_counter = 0 ;
+
+struct acm_callbacks 
+{
+	/** Start function for role change */
+	int (*start) (void);
+	/** Stop Function for role change */
+	int (*stop) (void);	
+};
+
+static struct acm_callbacks _acm_cb =	//	ACM flow control callbacks
+{
+	.start = acm_start_cb,
+	.stop  = acm_stop_cb 
+} ;
 
 
 typedef struct 
@@ -63,6 +98,7 @@ typedef struct
 	int					outdev; 
 	int					prev_outdev; 
 	struct file			*file ;
+	struct file			*acm_file ;
 	u8					busy ;
 }	WriteToLogDevParms_t ;
 
@@ -103,6 +139,28 @@ static int netconsole_stop_cb( void )
 	return 0 ;
 }
 #endif
+
+/**
+ *	flow control callback for ACM (start flow), called when ACM
+ *	available to transport data
+ **/
+static int acm_start_cb( void )
+{
+	g_acm_on = 1 ;
+	printk( "BCMLOG: ACM device started\n" ) ;
+	return 0 ;
+}
+
+/**
+ *	flow control callback for ACM (stop flow), called when ACM
+ *	available to transport data
+ **/
+static int acm_stop_cb( void )
+{
+	g_acm_on = 0 ;
+	printk( "BCMLOG: ACM device stopped\n" ) ;
+	return 0 ;
+}
 
 /*
  *	Create a file name for logging, based on system time.
@@ -197,7 +255,6 @@ static void WriteToLogDev_SDCARD( void )
 	set_fs( oldfs ) ;
 }
 
-
 static void WriteToLogDev_STM( void )
 {
 	u32 nFifo ;
@@ -219,6 +276,52 @@ static void WriteToLogDev_STM( void )
 	}
 }
 
+#ifdef BCMLOG_DEBUG_FLAG
+static unsigned int nTotalout = 0;
+
+static void verifyRefCount(unsigned char *pBytes, unsigned long nBytes)
+{
+	static u32 i = 0;
+	static unsigned char frame_counter =0;
+	static unsigned char old_frame_counter =0 ;
+	static unsigned char firstsync  = 1;
+
+	unsigned char expect_counter;
+
+	while (i < nBytes)
+	{
+		if (pBytes[i] == MTTLOG_FrameSync0 && pBytes[i+1] == MTTLOG_FrameSync1)
+		{
+			if (firstsync)
+			{
+				frame_counter = old_frame_counter = pBytes[i+2];
+				firstsync  = 0;
+			} else
+			{
+				frame_counter = pBytes[i+2];
+				expect_counter = old_frame_counter+1;
+				if (frame_counter != expect_counter)
+				{
+					pr_info("BCMLOG: RefCount Skip!!!Time %d: %d, expect %d", 
+						(pBytes[i+4]<<24)|(pBytes[i+5]<<16)|(pBytes[i+6]<<8)|(pBytes[i+7]),
+						frame_counter, expect_counter);
+				}
+
+				old_frame_counter = frame_counter;
+			}
+			
+			i += (15 + (((unsigned short)(pBytes[i+10]))<<8) + (unsigned short)(pBytes[i+11]));
+		} else
+		{
+		 	i++;
+}
+	}
+
+	if (i>= nBytes)
+		i-= nBytes;
+}
+#endif
+
 static void WriteToLogDev_RNDIS( void )
 {
 #ifdef CONFIG_BRCM_NETCONSOLE
@@ -230,6 +333,7 @@ static void WriteToLogDev_RNDIS( void )
 		do
 		{
 			int nWrite ;
+			unsigned char* pData;
 
 			nFifo = BCMLOG_FifoGetNumContig( &g_fifo ) ;
 			
@@ -238,13 +342,22 @@ static void WriteToLogDev_RNDIS( void )
 
 			if( nFifo > 0 )
 			{
-				nWrite = brcm_klogging( BCMLOG_FifoGetData( &g_fifo ), nFifo ) ;
+				pData = BCMLOG_FifoGetData( &g_fifo );
+				nWrite = brcm_klogging(pData, nFifo ) ;
 				
 				if( nWrite > 0 )
+				{
+#ifdef BCMLOG_DEBUG_FLAG
+					verifyRefCount(pData, nWrite);
+					nTotalout += nWrite;
+#endif
 					BCMLOG_FifoRemove( &g_fifo, nWrite ) ;
+				}
 				
 				if( nWrite < nFifo )
+				{
 					nFifo = 0 ;
+				}
 			}
 		} while( nFifo > 0 );
 	}
@@ -325,6 +438,8 @@ static void WriteToLogDev_ACM( void )
 
 		if( IS_ERR( g_devWrParms.file ) )
 			g_devWrParms.file = 0 ;
+
+		g_devWrParms.acm_file = g_devWrParms.file;
 	}
 
 	/*
@@ -332,6 +447,7 @@ static void WriteToLogDev_ACM( void )
 	 */
 	if( g_devWrParms.file )
 	{
+		if (g_acm_on) {
 		u32 nFifo ;
 
 		do
@@ -361,14 +477,20 @@ static void WriteToLogDev_ACM( void )
 		} while( nFifo > 0 );
 	}
 
+	}
+
 	set_fs( oldfs ) ;
 }
 
+extern unsigned long AcquireOutputLock( void );
+extern void ReleaseOutputLock( unsigned long irql );
 static void WriteToLogDev( struct work_struct *work )
 {
+	unsigned long irql ;
+
 	if( g_devWrParms.prev_outdev != g_devWrParms.outdev )
 	{
-		if( g_devWrParms.file )
+		if( g_devWrParms.file && g_devWrParms.file!=g_devWrParms.acm_file )
 		{
 			filp_close( g_devWrParms.file ,NULL );
 			g_devWrParms.file = 0 ;
@@ -382,7 +504,11 @@ static void WriteToLogDev( struct work_struct *work )
 		break ;
 	
 	case BCMLOG_OUTDEV_RNDIS:
+		irql = AcquireOutputLock( ) ;
+
 		WriteToLogDev_RNDIS( ) ;
+		ReleaseOutputLock( irql ) ;
+
 		break ;
 
 	case BCMLOG_OUTDEV_UART:
@@ -402,27 +528,82 @@ static void WriteToLogDev( struct work_struct *work )
 	}
 
 	g_devWrParms.busy = 0 ;
+
 }
 
+unsigned long BCMLOG_GetFreeSize( void ) 
+{
+	return BCMLOG_FifoGetFreeSize(&g_fifo);
+}
 
 /**
  *	Output bytes to host
  *	@param  pBytes				(in)	pointer to user buffer
  *	@param	nBytes				(in)	number of bytes
  **/
-void BCMLOG_Output( unsigned char *pBytes, unsigned long nBytes )
+void BCMLOG_Output( unsigned char *pBytes, unsigned long nBytes , unsigned int might_has_mtthead)
 {
 	/*
 	 *	Add to FIFO.  If unable to add (FIFO full) then discard the message; there's nothing
 	 *	that can be done to save it.
 	 */
-	BCMLOG_FifoAdd( &g_fifo, pBytes, nBytes ) ;
+	unsigned int i = 0;
 
+	unsigned int wrotebyte;
+	
+	if (nBytes <= BCMLOG_FifoGetFreeSize(&g_fifo) && (nBytes > 0))
+	{
+		if (might_has_mtthead)
+		{
+			while (i+12 < nBytes)
+			{
+				if (pBytes[i] == MTTLOG_FrameSync0 && pBytes[i+1] == MTTLOG_FrameSync1)
+				{
+					pBytes[i+2] = g_frame_counter++;
+					pBytes[i+12] = (unsigned char)MTTLOG_Checksum16(&pBytes[i], 12);
+					i += (15 + (((unsigned short)(pBytes[i+10]))<<8) + (unsigned short)(pBytes[i+11]));
+				} else
+				{
+#ifdef BCMLOG_DEBUG_FLAG
+					noheader ++;
+#endif
+					break;
+				}
+			}
+		}
+
+		wrotebyte = BCMLOG_FifoAdd( &g_fifo, pBytes, nBytes );
+
+#ifdef BCMLOG_DEBUG_FLAG
+		if (wrotebyte != nBytes)
+		{
+			writefail ++;
+		}
+		totalbyte += wrotebyte;
+#endif		
+	} 
+#ifdef BCMLOG_DEBUG_FLAG
+
+	else if (g_netconsole_on)
+	{
+		nospace ++;
+	}
+
+	n100++; 
+	if (n100 == 100)
+	{
+		n100 = 0;
+		pr_info("nospc %d nohdr %d splt %d wrtfl %d nosigbuf %d", 
+			nospace, noheader, splitbuffer, writefail, g_malloc_sig_buf);
+		pr_info("IN %d OUT %d dif %d inFIFO %d", 
+			totalbyte, nTotalout, totalbyte-nTotalout, BCMLOG_FifoGetDataSize(&g_fifo));
+	}
+#endif	
 	/*
 	 *	If output worker thread is not busy then set up arguments and schedule it; otherwise
 	 *	we'll retry on the next output to run the thread.
 	 */
-	if( !g_devWrParms.busy /*&&BCMLOG_FifoNeedOutput( &g_fifo )*/ )
+	if( !g_devWrParms.busy )
 	{
 		g_devWrParms.busy   = 1; 
 		g_devWrParms.prev_outdev = g_devWrParms.outdev ;
@@ -456,7 +637,9 @@ int BCMLOG_OutputInit( void )
 	 *	register flow control callback functions
 	 */
 	g_netconsole_on = brcm_netconsole_register_callbacks( &_cb ) ;
+//	g_acm_on = obex_register_callbacks( &_acm_cb);
 
 #endif
 	return 0 ;
+
 }

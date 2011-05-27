@@ -80,7 +80,6 @@ static void bld_device_status_str( char *buf, int len, char *label, int device )
 	case BCMLOG_OUTDEV_STM:
                 safe_strncat( buf, "-> STM\n", len ) ;
                 break ;
-
 	default:
 		safe_strncat( buf, "-> ERROR\n", len ) ;
 		break ;
@@ -143,14 +142,13 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 		case 'h': 
 			BCMLOG_SaveConfig( 1 ) ;
 			break ;
+		case 's':      
+			g_config.runlog_dev = BCMLOG_OUTDEV_STM;
+                        break ;
 		case 'i': 
 			SetConfigDefaults( ) ;
 			BCMLOG_SaveConfig( 0 ) ;
 			break ;
-		case 's':      
-                        g_config.runlog_dev = BCMLOG_OUTDEV_STM;
-                        break ;
-
 		}
 	}
 

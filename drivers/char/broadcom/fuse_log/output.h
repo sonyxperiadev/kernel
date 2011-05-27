@@ -16,6 +16,8 @@
 #ifndef __BCMLOG_OUTPUT_H__
 #define __BCMLOG_OUTPUT_H__
 
+//#define BCMLOG_DEBUG_FLAG 1
+
 /**	
  *	Minimum and maximum number of bytes per RNDIS transfer.
  *
@@ -27,8 +29,10 @@
  *	Output bytes to host
  *	@param  pUserBuf			(in)	pointer to user buffer
  *	@param	userBufSz			(in)	number of bytes
+ *    @param  might_has_mtthead        (in) inside the user buffer, 1 if there might be one or more MTT header
+ *                                                           0 if there in no MTT header
  **/
-void BCMLOG_Output( unsigned char *pUserBuf, unsigned long userBufSz ) ;
+void BCMLOG_Output( unsigned char *pUserBuf, unsigned long userBufSz, unsigned int might_has_mtthead ) ;
 
 /**
  *	Initialize output module
