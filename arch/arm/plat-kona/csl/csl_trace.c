@@ -81,6 +81,7 @@
 #define xassert(e,v) ((e) ? (void)0 : printk("Assertion failed! %s, line=%d\n", __FILE__, __LINE__))
 #endif
 
+int csl_StmSendBytes(void *data_ptr, int length);
 //******************************************************************************
 // Constants Definition
 //******************************************************************************
@@ -1442,85 +1443,21 @@ static void csl_trace_set_stm_sw( UInt8 bit_mask, Boolean set )
 #endif // (CSL_TRACE_STM_SUPPORT)
 
 #ifdef UNDER_LINUX
-/*
- * Trace send bytes and STM macros from Sebastian
- */
 
-#define L_STM_BEGIN(trace_type, channel)                                    \
-{                                                                           \
-    Int8 data = trace_type;                                                 \
-    csl_trace_stm_write (channel, FALSE, 1, &data);                         \
-}
-
-
-#define L_STM_WRITE(channel, datalen, data)                                 \
-                 csl_trace_stm_write (channel, FALSE, datalen, data)
-
-
-#define L_STM_WRITE_TS(channel, datalen, data)                              \
-                 csl_trace_stm_write (channel, TRUE, datalen, data)
-
-#define  L_STM_TERMINATE(channel)                                           \
-       {                                                                    \
-           UInt8 data = 0;                                                  \
-           csl_trace_stm_write (channel, TRUE, 1, &data);                   \
-       }
-
-void XTRACE_SEND_BYTES(UInt16 length, void *data_ptr)
+int csl_StmSendBytes(void *data_ptr, int length)
 {
     UInt8 trace_type = 0x72; //make it configurable
-    UInt8 channel = 1;
-    unsigned long flags;
-    char data[256]; // length must be < 256-19 or this will overrun
+    UInt8 channel = 8;
+    UInt8 termination= 0;
 
-    //setup OST header (magic numbers copied from test script)
-    data[0] = 0x00;
-    data[1] = 0x00;
-    data[2] = 0x0c;
-    data[3] = 0x01;
-    data[4] = 0x00;
-    data[5] = 0x1f;
-    data[6] = 0xa5;
-    data[7] = 0xc3;
-    data[8] = 0xbb;
-    data[9] = 0x01;
-    data[10] = 0x00;
-    data[11] = 0x11;
-    data[12] = 0x66;
-    data[13] = 0xb3;
-    data[14] = 0x80;
-    data[15] = 0x02;
-    data[16] = 0x00;    // Length of
-    data[17] = 0x13;    // payload
-    data[18] = 0xe3;    //  CRC of payload
-
-    //copy in data_ptr
-    strncpy(&data[19], &((char*)data_ptr)[0], length);
-
-    local_irq_save(flags);
-    L_STM_BEGIN(trace_type, channel);
-    L_STM_WRITE(channel, (length + 19), data);
-    L_STM_TERMINATE(channel);
-    local_irq_restore(flags);
-}
-
-/*
- * Small test function to send data to BMTT via FIDO
- */
-
-static int __init csl_trace_test(void)
-{
-    char string[64] = "Broadcom Trace Test\n";
-
-    XTRACE_SEND_BYTES(20, &string[0]);
-
-    pr_info("Test Trace String %s\n", &string[0]);
-
-    return 0;
+    // send trace type to start STM message
+    csl_trace_stm_write (channel, FALSE, 1, &trace_type);
+    csl_trace_stm_write (channel, FALSE, length, data_ptr);
+    csl_trace_stm_write (channel, TRUE, 1, &termination);
+    
+    return length;
 }
 
 arch_initcall(csl_trace_init);
-
-late_initcall(csl_trace_test);
 
 #endif

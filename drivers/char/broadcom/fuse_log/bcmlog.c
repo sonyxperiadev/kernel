@@ -151,9 +151,6 @@ typedef struct
 	int					console_msg_lvl ;		///< console message level 
 	struct class		*logdrv_class ;			///< driver class 
  	spinlock_t			output_lock;			///< locks output stream to ensure sequential message output 
-#ifdef CONFIG_HAS_WAKELOCK
-	struct wake_lock	log_wake_lock;			///< wait lock for output processing
-#endif
 	int                 dumping_cp_crash_log;   ///< 1==dumping CP crash log, 0 otherwise
 }	BCMLOG_Module_t ;
 
@@ -210,12 +207,9 @@ static int CpCrashDumpInProgress( void )
  *	Acquire lock on output stream
  *	@return irql value to be passed to ReleaseOutputLock()
  **/
-static unsigned long AcquireOutputLock( void )
+unsigned long AcquireOutputLock( void )
 {
 	unsigned long irql ;
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock( &g_module.log_wake_lock ) ;
-#endif
 	spin_lock_irqsave( &g_module.output_lock, irql ) ;
 	return irql ;
 }
@@ -224,12 +218,9 @@ static unsigned long AcquireOutputLock( void )
  *	Release lock on output stream
  *	@param irql (in) value returned by AcquireOutputLock()
  **/
-static void ReleaseOutputLock( unsigned long irql )
+void ReleaseOutputLock( unsigned long irql )
 {
 	spin_unlock_irqrestore( &g_module.output_lock, irql ) ;
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_unlock( &g_module.log_wake_lock ) ;
-#endif
 }
 
 /**
@@ -310,7 +301,7 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 						break ;
 					}
 
-					kbuf_str = kmalloc( lcl->size, GFP_ATOMIC ) ;
+					kbuf_str = kmalloc( lcl->size+1, GFP_ATOMIC ) ;
 
 					if( !kbuf_str ) 
 					{
@@ -468,9 +459,6 @@ static int __init BCMLOG_ModuleInit(void)
 	}
 
 	spin_lock_init( &g_module.output_lock ) ;
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_init( &g_module.log_wake_lock, WAKE_LOCK_SUSPEND, "log_wake_lock");
-#endif
 	
     if (( ret = register_chrdev( BCM_LOG_MAJOR, BCMLOG_MODULE_NAME, &g_file_operations )) < 0 )
     {
@@ -529,9 +517,6 @@ static int __init BCMLOG_ModuleInit(void)
  **/
 static void __exit BCMLOG_ModuleExit(void)
 {
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_destroy( &g_module.log_wake_lock ) ;
-#endif
 }
 
 /**
@@ -573,13 +558,15 @@ static void LogString_Internal( const char* inLogString,
 
 	irql = AcquireOutputLock( ) ;
 	//	we are using a copy of string to be logged, always free the buffer when done
-	BCMLOG_Output( kbuf_mtt, mttFrameSize ) ;
+	
+	BCMLOG_Output( kbuf_mtt, mttFrameSize, 1 ) ;
 	
 	ReleaseOutputLock( irql ) ;
 
 	if( kbuf_mtt )
 		kfree( kbuf_mtt ) ;
 }
+
 
 /**
  *	Log null terminated string.
@@ -690,6 +677,9 @@ void BCMLOG_LogSignal( unsigned int inSigCode,
  *	@param	inCompress		(in)	if 0 send signal uncompressed, otherwise try to compress signal
  *
 **/
+
+extern unsigned long BCMLOG_GetFreeSize( void ) ;
+
 static void LogSignal_Internal( unsigned int inSigCode,
                                         void* inSigBuf,
                                         unsigned int inSigBufSize,
@@ -715,12 +705,7 @@ static void LogSignal_Internal( unsigned int inSigCode,
         // signal with no data
 
         // MTT header
-        frame_head_size = BCMMTT_MakeMTTSignalHeader( 6, (HWTRC_B_SIGNAL_HEADER_SIZE*2), frame_head );
-		if (frame_head_size < 0)
-		{
-		    BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "BCMMTT_MakeMTTSignalHeader failed\n" ) ;
-			return;
-		}
+        frame_head_size = BCMMTT_MakeMTTSignalHeader( 6, frame_head );
 
         // MTT payload
     	mtt_payload_size = 6;
@@ -742,12 +727,7 @@ static void LogSignal_Internal( unsigned int inSigCode,
 	    // signal with data to be sent uncompressed
 	    
 	    // MTT header
-    	frame_head_size = BCMMTT_MakeMTTSignalHeader( inSigBufSize + 7, (HWTRC_B_SIGNAL_HEADER_SIZE*2), frame_head  );
-		if (frame_head_size < 0)
-		{
-		    BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "BCMMTT_MakeMTTSignalHeader failed\n" ) ;
-			return;
-		}
+    	frame_head_size = BCMMTT_MakeMTTSignalHeader( inSigBufSize + 7, frame_head  );
 
         // MTT payload
 		mtt_payload_size = 7;
@@ -780,6 +760,11 @@ static void LogSignal_Internal( unsigned int inSigCode,
 		
 		if (compressedBuffer == NULL)
 		{
+#ifdef BCMLOG_DEBUG_FLAG
+			extern unsigned  int g_malloc_sig_buf;
+
+			g_malloc_sig_buf++;
+#endif
 		    BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "allocation error\n" ) ;
 			return;
 		}
@@ -787,15 +772,7 @@ static void LogSignal_Internal( unsigned int inSigCode,
 		compress_size = compress_memcpy((char *)compressedBuffer, (char *)inSigBuf, inSigBufSize);
 
 	    // MTT header
-    	frame_head_size = BCMMTT_MakeMTTSignalHeader( compress_size + 7, (HWTRC_B_SIGNAL_HEADER_SIZE*2), frame_head  );
-	
-		if (frame_head_size < 0)
-		{
-		    BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "BCMMTT_MakeMTTSignalHeader failed\n" ) ;
-            if( compressedBuffer )
-				kfree( compressedBuffer );
-			return;
-		}
+    	frame_head_size = BCMMTT_MakeMTTSignalHeader( compress_size + 7, frame_head  );
 
         // MTT payload
 		mtt_payload_size = 7;
@@ -840,22 +817,35 @@ static void LogSignal_Internal( unsigned int inSigCode,
     }
     else
     {
+    	UInt32 totallen, availlen;
+
         // regular logging -- multiple blocks
         // must be output contiguously
 		// so keep the 'output lock' until all are processedd
 	    unsigned long irql = AcquireOutputLock( ) ;
 				
+		totallen = frame_head_size + mtt_payload_size + frame_end_size + bufToSendSize;
+		availlen = BCMLOG_GetFreeSize();
+		if (availlen > totallen)
+		{
         // write out frame header...(located on stack; do not free when done)
-        BCMLOG_Output( frame_head, frame_head_size );
+		        BCMLOG_Output( frame_head, frame_head_size, 1 );
         // then payload...(located on stack; do not free when done)
-        BCMLOG_Output( mtt_payload, mtt_payload_size );
+		        BCMLOG_Output( mtt_payload, mtt_payload_size, 0 );
+				
         // then signal if applicable...
         if ( bufToSend && (bufToSendSize > 0) )
         {
-            BCMLOG_Output( bufToSend, bufToSendSize );
+		            BCMLOG_Output( bufToSend, bufToSendSize, 0 );
         }
+
         // then frame end (located on stack; do not free when done)
-        BCMLOG_Output( frame_end, frame_end_size );
+		        BCMLOG_Output( frame_end, frame_end_size , 0);
+		}
+#ifdef BCMLOG_DEBUG_FLAG
+		else
+			pr_info("Warning: want %d, have %d", totallen, availlen );
+#endif
 		
 		ReleaseOutputLock( irql ) ;
     }
@@ -874,12 +864,14 @@ static void LogSignal_Internal( unsigned int inSigCode,
  *	@param	size	(in)	message length
  *	@note	does not free the IPC message buffer
  **/
-void BCMLOG_HandleCpLogMsg( char *buf, int size )
+void BCMLOG_HandleCpLogMsg( const char *buf, int size )
 {
 	if( !CpCrashDumpInProgress( ) ) 
 	{
 		unsigned long irql = AcquireOutputLock( ) ;
-		BCMLOG_Output( buf, size ) ;
+
+		BCMLOG_Output( buf, size, 1 ) ;
+
 		ReleaseOutputLock( irql ) ;
 	}
 }

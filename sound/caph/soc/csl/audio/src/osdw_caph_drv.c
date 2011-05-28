@@ -146,7 +146,6 @@ static irqreturn_t caph_audio_isr(int irq, void *dev_id)
 //******************************************************************************
 static void worker_audio_playback(struct work_struct *work)
 {
-   	printk(KERN_INFO "worker_audio_playback\n");
     	csl_caph_dma_process_interrupt();
 	enable_irq(BCM_INT_ID_CAPH);
 }

@@ -126,6 +126,18 @@
 /* 32 ~ 64 ms gives appropriate debouncing */
 #define HW_KEYPAD_DEBOUNCE_TIME   KEYPAD_DEBOUNCE_64MS
 
+/*
+ * by convention, On Island
+ *     MAXIM LDO is numbered 0 and 1
+ *     BCM59055 LDO is numbered starting from 2
+ */
+#ifdef CONFIG_REGULATOR_MAX8649
+#define MAX8649_LDO_TOTAL	2
+#else
+#define MAX8649_LDO_TOTAL	0
+#endif
+#define BCM59055_LDO_OFFSET	MAX8649_LDO_TOTAL
+
 static struct resource board_i2c0_resource[] = {
 	[0] =
 	{
@@ -557,14 +569,14 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_rf = {
 };
 static struct platform_device bcm59055_uc_device_rf = {
 	.name = "reg-userspace-consumer",
-	.id = 0,
+	.id = 0 + BCM59055_LDO_OFFSET,
 	.dev = { .platform_data = &bcm59055_uc_data_rf, },
 };
 #endif
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_rf = {
 	.name = "reg-virt-consumer",
-	.id = 0,
+	.id = 0 + BCM59055_LDO_OFFSET,
 	.dev = { .platform_data = "rfldo_uc"  },
 };
 #endif
@@ -599,7 +611,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_cam = {
 
 static struct platform_device bcm59055_uc_device_cam = {
 	.name = "reg-userspace-consumer",
-	.id = 1,
+	.id = 1 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_cam
 	}
@@ -608,7 +620,7 @@ static struct platform_device bcm59055_uc_device_cam = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_cam = {
 	.name = "reg-virt-consumer",
-	.id = 1,
+	.id = 1 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "camldo_uc"
 	}
@@ -645,7 +657,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv1 = {
 
 static struct platform_device bcm59055_uc_device_hv1 = {
 	.name = "reg-userspace-consumer",
-	.id = 2,
+	.id = 2 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv1
 	},
@@ -654,7 +666,7 @@ static struct platform_device bcm59055_uc_device_hv1 = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv1 = {
 	.name = "reg-virt-consumer",
-	.id = 2,
+	.id = 2 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "hv1ldo_uc"
 	}
@@ -691,7 +703,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv2 = {
 
 static struct platform_device bcm59055_uc_device_hv2 = {
 	.name = "reg-userspace-consumer",
-	.id = 3,
+	.id = 3 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv2
 	}
@@ -700,7 +712,7 @@ static struct platform_device bcm59055_uc_device_hv2 = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv2 = {
 	.name = "reg-virt-consumer",
-	.id = 3,
+	.id = 3 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "hv2ldo_uc"
 	}
@@ -737,7 +749,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv3 = {
 
 static struct platform_device bcm59055_uc_device_hv3 = {
 	.name = "reg-userspace-consumer",
-	.id = 4,
+	.id = 4 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv3
 	},
@@ -746,7 +758,7 @@ static struct platform_device bcm59055_uc_device_hv3 = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv3 = {
 	.name = "reg-virt-consumer",
-	.id = 4,
+	.id = 4 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "hv3ldo_uc"
 	}
@@ -782,7 +794,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv4 = {
 };
 static struct platform_device bcm59055_uc_device_hv4 = {
 	.name = "reg-userspace-consumer",
-	.id = 5,
+	.id = 5 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv4
 	}
@@ -791,7 +803,7 @@ static struct platform_device bcm59055_uc_device_hv4 = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv4 = {
 	.name = "reg-virt-consumer",
-	.id = 5,
+	.id = 5 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "hv4ldo_uc"
 	}
@@ -828,7 +840,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv5 = {
 
 static struct platform_device bcm59055_uc_device_hv5 = {
 	.name = "reg-userspace-consumer",
-	.id = 6,
+	.id = 6 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv5
 	}
@@ -837,7 +849,7 @@ static struct platform_device bcm59055_uc_device_hv5 = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv5 = {
 	.name = "reg-virt-consumer",
-	.id = 6,
+	.id = 6 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "hv5ldo_uc"
 	}
@@ -874,7 +886,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv6 = {
 
 static struct platform_device bcm59055_uc_device_hv6 = {
 	.name = "reg-userspace-consumer",
-	.id = 7,
+	.id = 7 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv6
 	},
@@ -883,7 +895,7 @@ static struct platform_device bcm59055_uc_device_hv6 = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv6 = {
 	.name = "reg-virt-consumer",
-	.id = 7,
+	.id = 7 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "hv6ldo_uc"
 	}
@@ -920,7 +932,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv7 = {
 
 static struct platform_device bcm59055_uc_device_hv7 = {
 	.name = "reg-userspace-consumer",
-	.id = 8,
+	.id = 8 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv7
 	}
@@ -929,7 +941,7 @@ static struct platform_device bcm59055_uc_device_hv7 = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv7 = {
 	.name = "reg-virt-consumer",
-	.id = 8,
+	.id = 8 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "hv7ldo_uc"
 	}
@@ -966,7 +978,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_sim = {
 
 static struct platform_device bcm59055_uc_device_sim = {
 	.name = "reg-userspace-consumer",
-	.id = 9,
+	.id = 9 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_sim
 	}
@@ -975,7 +987,7 @@ static struct platform_device bcm59055_uc_device_sim = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_sim = {
 	.name = "reg-virt-consumer",
-	.id = 9,
+	.id = 9 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "simldo_uc"
 	},
@@ -1012,7 +1024,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_csr = {
 
 static struct platform_device bcm59055_uc_device_csr = {
 	.name = "reg-userspace-consumer",
-	.id = 10,
+	.id = 10 + BCM59055_LDO_OFFSET,
 	.dev = {
 		 .platform_data = &bcm59055_uc_data_csr
 	}
@@ -1021,7 +1033,7 @@ static struct platform_device bcm59055_uc_device_csr = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_csr = {
 	.name = "reg-virt-consumer",
-	.id = 10,
+	.id = 10 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "csr_uc"
 	},
@@ -1059,7 +1071,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_iosr = {
 
 static struct platform_device bcm59055_uc_device_iosr = {
 	.name = "reg-userspace-consumer",
-	.id = 11,
+	.id = 11 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_iosr
 	}
@@ -1068,7 +1080,7 @@ static struct platform_device bcm59055_uc_device_iosr = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_iosr = {
 	.name = "reg-virt-consumer",
-	.id = 11,
+	.id = 11 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "iosr_uc"
 	}
@@ -1105,7 +1117,7 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_sdsr = {
 
 static struct platform_device bcm59055_uc_device_sdsr = {
 	.name = "reg-userspace-consumer",
-	.id = 12,
+	.id = 12 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_sdsr
 	}
@@ -1114,7 +1126,7 @@ static struct platform_device bcm59055_uc_device_sdsr = {
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_sdsr = {
 	.name = "reg-virt-consumer",
-	.id = 12,
+	.id = 12 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = "sdsr_uc"
 	}

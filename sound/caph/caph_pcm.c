@@ -471,7 +471,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int err=0;
 
-	BCM_AUDIO_DEBUG("\n ALSA : PcmCaptureOpen substream->number = %d\n",CTL_STREAM_PANEL_PCMIN + substream->number);
+	BCM_AUDIO_DEBUG("\n ALSA : PcmCaptureOpen substream->number = %d\n",CTL_STREAM_PANEL_PCMIN - 1  + substream->number);
 
     if(audio_init_complete == 0)
     {
@@ -483,9 +483,9 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 
     //open the capture device
 	param_open.drv_handle = NULL;
-	param_open.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop;
-	chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.drv_type = AUDIO_DRIVER_CAPT_HQ;
-	chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].pSubStream = substream; //for capture
+	param_open.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop;
+	chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.drv_type = AUDIO_DRIVER_CAPT_HQ;
+	chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].pSubStream = substream; //for capture
 	
 	AUDIO_Ctrl_Trigger(ACTION_AUD_OpenRecord,&param_open,NULL,1); 
 	
@@ -493,7 +493,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 
     if(drv_handle == NULL)
     {
-        BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d failed\n",jiffies, CTL_STREAM_PANEL_PCMIN + substream->number);
+        BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d failed\n",jiffies, CTL_STREAM_PANEL_PCMIN - 1  + substream->number);
         return -1;
     }
 
@@ -524,9 +524,9 @@ static int PcmCaptureClose(struct snd_pcm_substream * substream)
 	AUDIO_Ctrl_Trigger(ACTION_AUD_CloseRecord,&param_close,NULL,1);
 
     substream->runtime->private_data = NULL;
-    chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].pSubStream = NULL;
+    chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].pSubStream = NULL;
 
-	DEBUG("\n %lx:capture_close subdevice=%d\n",jiffies, CTL_STREAM_PANEL_PCMIN + substream->number);
+	DEBUG("\n %lx:capture_close subdevice=%d\n",jiffies, CTL_STREAM_PANEL_PCMIN - 1  + substream->number);
 
 	return 0;
 }
@@ -549,7 +549,7 @@ static int PcmCapturePrepare(struct snd_pcm_substream * substream)
 	AUDIO_DRIVER_CallBackParams_t	cbParams;
 
 	BCM_AUDIO_DEBUG("\n %lx:capture_prepare: subdevice=%d rate =%d format =%d channel=%d dma_area=0x%x dma_bytes=%d period_bytes=%d avail_min=%d periods=%d buffer_size=%d\n",
-		         jiffies,	CTL_STREAM_PANEL_PCMIN + substream->number, runtime->rate, runtime->format, runtime->channels, (unsigned int)runtime->dma_area, runtime->dma_bytes,
+		         jiffies,	CTL_STREAM_PANEL_PCMIN - 1  + substream->number, runtime->rate, runtime->format, runtime->channels, (unsigned int)runtime->dma_area, runtime->dma_bytes,
 		         frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->control->avail_min), runtime->periods, (int)runtime->buffer_size);
 	
     drv_handle = substream->runtime->private_data;
@@ -602,40 +602,40 @@ static int PcmCaptureTrigger(
     Int32	*pSel;
 
     drv_handle = substream->runtime->private_data;
-	BCM_AUDIO_DEBUG("\n %lx:capture_trigger subdevice=%d cmd=%d\n",jiffies,CTL_STREAM_PANEL_PCMIN + substream->number, cmd);
+	BCM_AUDIO_DEBUG("\n %lx:capture_trigger subdevice=%d cmd=%d\n",jiffies,CTL_STREAM_PANEL_PCMIN - 1  + substream->number, cmd);
 
-	pSel = chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].iLineSelect;
+	pSel = chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].iLineSelect;
 
 	//Update Sink, volume , mute info from mixer controls
 	if(pSel[0]==AUDCTRL_MIC_MAIN)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
 		BCM_AUDIO_DEBUG("updated with main mic info \n");
 	}
 	else if(pSel[0]==AUDCTRL_MIC_AUX)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_HS_MIC;		
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_HS_MIC;		
 	}
 	else if(pSel[0]==AUDCTRL_MIC_DIGI1) 
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;		
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;		
 	}
 	else if(pSel[0]==AUDCTRL_MIC_DIGI2)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;
 	}
 	else
 	{
 		BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
 	}
 
-	chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop.u.c.mic = pSel[0];
+	chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.mic = pSel[0];
 	switch (cmd) 
 	{
 		case SNDRV_PCM_TRIGGER_START:
@@ -645,12 +645,12 @@ static int PcmCaptureTrigger(
 				struct snd_pcm_runtime *runtime = substream->runtime;
 
                 param_start.drv_handle = drv_handle;
-				param_start.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop;
+				param_start.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop;
                 param_start.channels = runtime->channels;
                 param_start.rate = runtime->rate;
 
-				param_start.vol[0] = chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].ctlLine[substream->number].iVolume[0];
-				param_start.vol[1] = chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].ctlLine[substream->number].iVolume[1];
+				param_start.vol[0] = chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].ctlLine[substream->number].iVolume[0];
+				param_start.vol[1] = chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].ctlLine[substream->number].iVolume[1];
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StartRecord,&param_start,NULL,0);
                 
@@ -662,7 +662,7 @@ static int PcmCaptureTrigger(
                 BRCM_AUDIO_Param_Stop_t param_stop;
 
                 param_stop.drv_handle = drv_handle;
-				param_stop.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN + substream->number].dev_prop;
+				param_stop.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop;
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StopRecord,&param_stop,NULL,0); 
 
