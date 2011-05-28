@@ -32,6 +32,7 @@
 
 #include "ipc_server_ccb.h"
 #include "ipc_debug.h"
+#include "bcmlog.h"
 
 #define IPC_SERVER_NAME_STR "ipcs-default"
 #define MAX_AP_ENDPOINTS 5
@@ -158,11 +159,6 @@ void ipcs_cplog_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
       (*g_clnt_info_tbl[EpLogApps].flow_ctrl_cb)(pool, event);
    }
 }
-
-/**
-   @fn void ipcs_cplog_bd(IPC_Buffer ipc_buffer);
-*/
-extern void BCMLOG_HandleCpLogMsg( const char *buf, int size ) ;
 
 void ipcs_cplog_bd(IPC_Buffer ipc_buffer)
 {
