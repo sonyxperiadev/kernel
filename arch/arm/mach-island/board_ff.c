@@ -64,17 +64,8 @@
 #include <linux/power_supply.h>
 
 #include "island.h"
+#include "common.h"
 
-/*
- * todo: 8250 driver has problem autodetecting the UART type -> have to
- * use FIXED type
- * confuses it as an XSCALE UART.  Problem seems to be that it reads
- * bit6 in IER as non-zero sometimes when it's supposed to be 0.
- */
-#define KONA_UART0_PA   UARTB_BASE_ADDR
-#define KONA_UART1_PA   UARTB2_BASE_ADDR
-#define KONA_UART2_PA   UARTB3_BASE_ADDR
-#define KONA_UART3_PA   UARTB4_BASE_ADDR
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
 #define KONA_SDIO2_PA   SDIO3_BASE_ADDR
@@ -84,19 +75,6 @@
 
 #define BCM_INT_ID_RESERVED131         (131 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED132         (132 + BCM_INT_ID_PPI_MAX)
-
-#define KONA_8250PORT(name)                                                 \
-{                                                                           \
-   .membase    = (void __iomem *)(KONA_##name##_VA),                        \
-   .mapbase    = (resource_size_t)(KONA_##name##_PA),                       \
-   .irq       = BCM_INT_ID_##name,                                          \
-   .uartclk    = 13000000,                                                  \
-   .regshift   = 2,                                                         \
-   .iotype       = UPIO_DWAPB,                                              \
-   .type       = PORT_16550A,                                               \
-   .flags       = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,       \
-   .private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET), \
-}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
 #define IS_MULTI_TOUCH  1
@@ -235,16 +213,6 @@ static struct platform_device board_i2c_adap_devices[] =
 		.resource = board_sspi_i2c_resource,
 		.num_resources = ARRAY_SIZE(board_sspi_i2c_resource),
 	},
-};
-
-static struct plat_serial8250_port uart_data[] = {
-   KONA_8250PORT(UART0),
-   KONA_8250PORT(UART1),
-   KONA_8250PORT(UART2),
-   KONA_8250PORT(UART3),
-   {
-      .flags      = 0,
-   },
 };
 
 static struct gpio_keys_button board_gpio_keys_button[] = {
@@ -396,14 +364,6 @@ static struct i2c_board_info __initdata mic_det_info[] =
    {  /* The codec's i2c slave address. */
       I2C_BOARD_INFO(MIC_DET_DRIVER_NAME, 0x1A),
       .platform_data = &mic_det_plat_data,
-   },
-};
-
-static struct platform_device board_serial_device = {
-   .name    = "serial8250",
-   .id      = PLAT8250_DEV_PLATFORM,
-   .dev     = {
-      .platform_data = uart_data,
    },
 };
 
@@ -945,7 +905,6 @@ void __init board_map_io(void)
 }
 
 static struct platform_device *board_devices[] __initdata = {
-	&board_serial_device,
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
@@ -1022,6 +981,11 @@ void __init pinmux_setup(void)
 void __init board_init(void)
 {
 	pinmux_setup();
+	/*
+	 * Add common platform devices that do not have board dependent HW
+	 * configurations
+	 */
+	board_add_common_devices();
 	board_add_devices();
 }
 

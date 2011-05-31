@@ -36,8 +36,6 @@
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 #define KONA_UART3_PA   UARTB4_BASE_ADDR
 
-#define UARTB_USR_OFFSET	0x0000007C
-
 #define KONA_8250PORT(name)                                                   \
 {                                                                             \
    .membase    = (void __iomem *)(KONA_##name##_VA),                          \
