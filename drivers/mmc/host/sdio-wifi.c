@@ -239,7 +239,6 @@ EXPORT_SYMBOL(bcm_sdiowl_term);
 
 static int __init sdio_wifi_init(void)
 {
-	PRINT_INFO("driver initialized\n");
 	return 0;
 }
 
