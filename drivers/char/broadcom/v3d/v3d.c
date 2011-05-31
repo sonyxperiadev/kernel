@@ -158,7 +158,7 @@ static int setup_v3d_clock(void)
 	return (rc);
 }
 
-static void assert_idle_nolock(void)
+static bool assert_idle_nolock(void)
 {
 	uint32_t pcs;
 	uint32_t srqcs;
@@ -185,7 +185,8 @@ static void assert_idle_nolock(void)
 		dbg_print("v3d.c: qpurqcc = 0x%02X\n", qpurqcc);
 		dbg_print("v3d.c: qpurqcm = 0x%02X\n", qpurqcm);
 	}
-	BUG_ON(not_idle);
+	
+	return not_idle;
 }
 
 static void assert_v3d_is_idle(void)
@@ -282,8 +283,18 @@ static int v3d_release(struct inode *inode, struct file *filp)
 	free_reloc_mem_slot(dev->mem_slot);
 
 	if(dev->v3d_acquired){
-		printk("\n\nUser dying with V3D acquired\n\n");
-		//Just free up the V3D HW. Then next user who acquire V3D will do a reset on it
+		err_print("\n\nUser dying with V3D acquired\nWait for HW to go idle\n");
+
+		//Userspace died with V3D acquired. The only safe thing is to wait for the
+		//V3D hardware to go idle before letting any other process touch it.
+		//Otherwise it can cause a AXI lockup or other bad things :-(
+		down(&v3d_state.work_lock);
+		while(assert_idle_nolock());
+		up(&v3d_state.work_lock);
+		err_print("V3D HW idle\n");
+		reset_v3d();
+
+		//Just free up the V3D HW
 		up(&v3d_state.acquire_sem);
 	}
 
