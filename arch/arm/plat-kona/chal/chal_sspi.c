@@ -439,31 +439,31 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
 
     mode = CHAL_REG_READ32(pDevice->base + SSPIL_CONTROL_OFFSET) & 
            SSPIL_CONTROL_SSPI_SLAVE_MASK;
+
+    // Get the idx of the first frame
+    while(!(*frm_bitmap & (1 << frm_idx)))
+        frm_idx++;
+
     switch(prot)
     {
     case SSPI_PROT_SPI_MODE0:
-        while(!(*frm_bitmap & (1 << frm_idx)))
-            frm_idx++;
         /*
          *  Default frame setup for SPI_MODE0: 
-         *  CS_SIZE 0x10, CS_ACTIVE 0x0, CS_IDLE_VALUE 0x1, SCLK_IDLE_VALUE 0x0,
-         *  TX_IDLE_VALUE 0x0, TXOEN_IDLE_VALUE 0x0
-         *  Set CS_SIZE 1 bit longer to meet the requirement that The low-to-high 
-         *  transition of the CS pin must occur during the SCK low time (Requirement 
-         *  of Programming Atmel Serial Flash)
+         *  CS_SIZE 0x10, CS_ACTIVE 0x0, CS_IDLE_VALUE 0x1,
+         *  SCLK_IDLE_VALUE 0x0, TX_IDLE_VALUE 0x0, TXOEN_IDLE_VALUE 0x0
          */
-        val = (((word_len * SSPI_MASTER_CLK_CYCLE_PER_BIT)+1) <<
+        val = ((word_len * SSPI_MASTER_CLK_CYCLE_PER_BIT) <<
                     SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_CS_SIZE_SHIFT) |
+              (0x2 << SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_CS_ACTIVE_SHIFT) |
               SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_CS_IDLE_VALUE_MASK;
         CHAL_REG_WRITE32(REG_FRAME_ADDR(frm_idx, 
                              pDevice->base + SSPIL_FRAME0_CS_IDLE_DEF_OFFSET),
                          val);
 
-        /* SCLK_START 0x1, SCLK_END 0x10, FIRST_ACTIVE_EDGE 0x1, SCLK_RATIO 1:2*/
-        val = (0x1 << SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_START_SHIFT) |
-              ((word_len * SSPI_MASTER_CLK_CYCLE_PER_BIT) <<
-                    SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_END_SHIFT) |
-              (0x1 << SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_SCLK_ACTIVE_EDGE_SHIFT);
+        /* SCLK_START 0x2, SCLK_END word_len * 2, SCLK_RATIO 1:2*/
+        val = (0x2 << SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_START_SHIFT) |
+              (((word_len * SSPI_MASTER_CLK_CYCLE_PER_BIT) + 1)<<
+                    SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_END_SHIFT);
         CHAL_REG_WRITE32(REG_FRAME_ADDR(frm_idx, 
                             pDevice->base + SSPIL_FRAME0_SCLK_DEF_OFFSET), 
                          val);
@@ -472,14 +472,15 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
          *  TXOEN_START 0x0, TXOEN_END 0x00, TX_WORD_LENGTH 0x7, TX_START 0x0, 
          *  TX_EXTENDED_RIGHT 0x0, TX_EXTENDED_LEFT 0x0
          */
-        val = (word_len-1) << SSPIL_FRAME0_TX_DEF_FRAME0_TX_WORD_LENGTH_SHIFT;
+        val = 0x1 << SSPIL_FRAME0_TX_DEF_FRAME0_TX_START_SHIFT;
+        val |= (word_len-1)<<SSPIL_FRAME0_TX_DEF_FRAME0_TX_WORD_LENGTH_SHIFT;
         CHAL_REG_WRITE32(REG_FRAME_ADDR(frm_idx, 
                             pDevice->base + SSPIL_FRAME0_TX_DEF_OFFSET),
                          val);
 
-        /* RX_WORD_LENGTH , 0x7, RX_START 0x1*/
+        /* RX_WORD_LENGTH word_len-1, RX_START 0x2*/
          val = ((word_len-1) << SSPIL_FRAME0_RX_DEF_FRAME0_RX_WORD_LENGTH_SHIFT) |
-              (0x1 << SSPIL_FRAME0_RX_DEF_FRAME0_RX_START_SHIFT);
+              (0x2 << SSPIL_FRAME0_RX_DEF_FRAME0_RX_START_SHIFT);
         CHAL_REG_WRITE32(REG_FRAME_ADDR(frm_idx, 
                             pDevice->base + SSPIL_FRAME0_RX_DEF_OFFSET), 
                          val);
@@ -490,9 +491,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
         return(CHAL_SSPI_STATUS_FAILURE);
 
     case SSPI_PROT_I2C:
-        while(!(*frm_bitmap & (1 << frm_idx))) {
-            frm_idx++;
-        }
         frm_idx0 = frm_idx;
         *frm_bitmap &= ~(1<<frm_idx++);
         if(!(*frm_bitmap))
@@ -511,7 +509,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
                             pDevice->base + SSPIL_FRAME0_CS_IDLE_DEF_OFFSET), 
                          val);
 
-        /* SCLK_START 2, SCLK_END 71, SCLK_RATIO 1:8*/
+        /* SCLK_START 2, SCLK_END 70, SCLK_RATIO 1:8*/
         val = (2 << SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_START_SHIFT) |
               (70 << SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_END_SHIFT) |
               (2 << SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_RATIO_SHIFT);
@@ -531,7 +529,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
                             pDevice->base + SSPIL_FRAME0_TX_DEF_OFFSET), 
                          val);
 
-        /* RX_WORD_LENGTH: 8, RX_START: 6 */
+        /* RX_WORD_LENGTH: 8, RX_START: 14 */
         val = ((word_len -1) << SSPIL_FRAME0_RX_DEF_FRAME0_RX_WORD_LENGTH_SHIFT) |
               (14 << SSPIL_FRAME0_RX_DEF_FRAME0_RX_START_SHIFT);
         CHAL_REG_WRITE32(REG_FRAME_ADDR(frm_idx0, 
@@ -548,7 +546,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
                             pDevice->base + SSPIL_FRAME0_CS_IDLE_DEF_OFFSET), 
                          val);
 
-        /* SCLK_START 2, SCLK_END 71, FIRST_ACTIVE_EDGE 1, SCLK_RATIO 1:8*/
+        /* SCLK_START 2, SCLK_END 70, FIRST_ACTIVE_EDGE 0, SCLK_RATIO 1:8*/
         val = (2 << SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_START_SHIFT) |
               (70 << SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_END_SHIFT) |
               (2 << SSPIL_FRAME0_SCLK_DEF_FRAME0_SCLK_RATIO_SHIFT);
@@ -578,8 +576,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
         break;
 
     case SSPI_PROT_I2S_MODE1:
-        while(!(*frm_bitmap & (1 << frm_idx)))
-            frm_idx++;
         /*
          *  TXOEN_IDLE_VALUE: 0, TX_IDLE_VALUE: 0, CS_IDLE_VALUE: 0, 
          *  CS_SIZE: 32, CS_ACTIVE: 0
@@ -619,8 +615,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
         break;
 
     case SSPI_PROT_I2S_MODE2:
-        while(!(*frm_bitmap & (1 << frm_idx)))
-            frm_idx++;
         if(!mode) {
             /*
              *  TXOEN_IDLE_VALUE: 0, TX_IDLE_VALUE: 0, CS_IDLE_VALUE: 0, 
@@ -636,7 +630,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
              */
             val = ((word_len + ext_bits) * SSPI_MASTER_CLK_CYCLE_PER_BIT) << 
                    SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_CS_SIZE_SHIFT |
-/* -da-                   SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_SCLK_ACTIVE_EDGE_MASK |*/
+                   SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_SCLK_ACTIVE_EDGE_MASK |
                    SSPIL_FRAME0_CS_IDLE_DEF_FRAME0_CS_IDLE_VALUE_MASK;
         }
         CHAL_REG_WRITE32(REG_FRAME_ADDR(frm_idx, 
@@ -674,8 +668,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
 
     case SSPI_PROT_MONO_16B_PCM:
     case SSPI_PROT_MONO_25B_PCM:
-        while(!(*frm_bitmap & (1 << frm_idx)))
-            frm_idx++;
         if(!mode) {
             /*
              *  TXOEN_IDLE_VALUE: 0, TX_IDLE_VALUE: 0, CS_IDLE_VALUE: 0, 
@@ -748,10 +740,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
 
     case SSPI_PROT_STEREO_16B_PCM:
     case SSPI_PROT_STEREO_25B_PCM:
-        while(!(*frm_bitmap & (1 << frm_idx))) {
-            frm_idx++;
-        }
-
         /*
          *  TXOEN_IDLE_VALUE: 0, TX_IDLE_VALUE: 0, CS_IDLE_VALUE: 0, 
          *  CS_SIZE: (16 + ext_bits)*2, CS_ACTIVE: 2
@@ -812,9 +800,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_frame(CHAL_HANDLE handle,
 
     case SSPI_PROT_3CHAN_16B_TDM_PCM:
     case SSPI_PROT_4CHAN_16B_TDM_PCM:
-        while(!(*frm_bitmap & (1 << frm_idx))) {
-            frm_idx++;
-        }
         frm_idx0 = frm_idx;
         *frm_bitmap &= ~(1<<frm_idx++);
         if(!(*frm_bitmap) && ext_bits)
@@ -1195,6 +1180,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_sequence(CHAL_HANDLE handle,
           (seq_conf->next_pc << SSPIL_SEQUENCE_0_SEQ0_NEXT_PC_SHIFT) |
           (seq_conf->rep_cnt << SSPIL_SEQUENCE_0_SEQ0_REPEAT_COUNT_SHIFT) |
           (seq_conf->frm_sel << SSPIL_SEQUENCE_0_SEQ0_FRAME_DEF_SEL_SHIFT) |
+          (seq_conf->clk_idle << SSPIL_SEQUENCE_0_SEQ0_CLK_IDLE_SHIFT) |
           (seq_conf->cs_activate << SSPIL_SEQUENCE_0_SEQ0_CS_ACTIVATE_SHIFT) |
           (seq_conf->cs_deactivate <<
            SSPIL_SEQUENCE_0_SEQ0_CS_DEACTIVATE_SHIFT) |
@@ -1290,8 +1276,7 @@ CHAL_SSPI_STATUS_t chal_sspi_set_task(CHAL_HANDLE handle,
          *  TASK0_FIFOERROR_STOP 0, TASK0_FIFO_BEH 1, 
          *  TASK0_SKIP 0, TASK0_ENABLE 1
          */
-        msb_val |= SSPIL_TASK0_DESC_MSB_TASK0_DO_ONCE_ONLY_MASK |
-                   SSPIL_TASK0_DESC_MSB_TASK0_FIFO_BEH_MASK |
+        msb_val |= SSPIL_TASK0_DESC_MSB_TASK0_FIFO_BEH_MASK |
                    SSPIL_TASK0_DESC_MSB_TASK0_ENABLE_MASK |
                    SSPIL_TASK0_DESC_MSB_TASK0_RESET_REPEATCOUNTER_MASK |
                    SSPIL_TASK0_DESC_MSB_TASK0_FIFO_BEH_MASK;
@@ -1304,7 +1289,6 @@ CHAL_SSPI_STATUS_t chal_sspi_set_task(CHAL_HANDLE handle,
         msb_val |= SSPIL_TASK0_DESC_MSB_TASK0_SCLK_IDLE_EXTENSION_MASK |
                    (2 << SSPIL_TASK0_DESC_MSB_TASK0_SCLK_SCLKOEN_SEL_SHIFT) | 
                    (2 << SSPIL_TASK0_DESC_MSB_TASK0_TX_TXOEN_SEL_SHIFT) |
-                   SSPIL_TASK0_DESC_MSB_TASK0_DO_ONCE_ONLY_MASK |
                    SSPIL_TASK0_DESC_MSB_TASK0_FIFO_BEH_MASK |
                    SSPIL_TASK0_DESC_MSB_TASK0_RESET_REPEATCOUNTER_MASK |
                    SSPIL_TASK0_DESC_MSB_TASK0_ENABLE_MASK;
@@ -1319,9 +1303,8 @@ CHAL_SSPI_STATUS_t chal_sspi_set_task(CHAL_HANDLE handle,
     case SSPI_PROT_STEREO_25B_PCM:
     case SSPI_PROT_3CHAN_16B_TDM_PCM:
     case SSPI_PROT_4CHAN_16B_TDM_PCM:
-        /* TX_TXOEN: 0, SCLK_SCLKOEN: 0*/
-        msb_val |= SSPIL_TASK0_DESC_MSB_TASK0_DO_ONCE_ONLY_MASK |
-                   SSPIL_TASK0_DESC_MSB_TASK0_RESET_REPEATCOUNTER_MASK |
+        // TX_TXOEN: 0, SCLK_SCLKOEN: 0
+        msb_val |= SSPIL_TASK0_DESC_MSB_TASK0_RESET_REPEATCOUNTER_MASK |
                    SSPIL_TASK0_DESC_MSB_TASK0_ENABLE_MASK;
 
         break;
@@ -1345,6 +1328,8 @@ CHAL_SSPI_STATUS_t chal_sspi_set_task(CHAL_HANDLE handle,
                 SSPIL_TASK0_DESC_MSB_TASK0_WBS_MASK : 0) |
                ((tk_conf->continuous) ?
                 SSPIL_TASK0_DESC_MSB_TASK0_CONTINUOUS_MASK : 0) |
+               ((tk_conf->not_do_once_only) ?
+                0 : SSPIL_TASK0_DESC_MSB_TASK0_DO_ONCE_ONLY_MASK) |
                (tk_conf->rx_sel << SSPIL_TASK0_DESC_MSB_TASK0_RX_SELECT_SHIFT) |
                (tk_conf->tx_sel << SSPIL_TASK0_DESC_MSB_TASK0_TX_SELECT_SHIFT) |
                (tk_conf->div_sel << SSPIL_TASK0_DESC_MSB_TASK0_CLK_SELECT_SHIFT);
@@ -2013,21 +1998,21 @@ CHAL_SSPI_STATUS_t chal_sspi_get_fifo_endian(CHAL_HANDLE handle,
 *  Description: Set the FIFI threshold before starting any task
 *
 ****************************************************************************/
-CHAL_SSPI_STATUS_t chal_sspi_set_fifo_threshold(CHAL_HANDLE handle, 
+CHAL_SSPI_STATUS_t chal_sspi_set_fifo_threshold(CHAL_HANDLE handle,
                                                 CHAL_SSPI_FIFO_ID_t fifo_id, 
                                                 uint32_t fifo_thres)
 {
     CHAL_SSPI_HANDLE_t *pDevice = (CHAL_SSPI_HANDLE_t *)handle;
     uint32_t val = 0, reg = 0;
 
-    if(!handle) 
+    if(!handle)
     {
         chal_dprintf(CDBG_ERRO, "invalid argument\n");
         return CHAL_SSPI_STATUS_ILLEGAL_HANDLE;
     }
 
     if(fifo_id >= SSPI_FIFO_ID_TX0) {
-        reg = REG_FIFOTX_THOLD_ADDR(fifo_id-SSPI_FIFO_ID_TX0, 
+        reg = REG_FIFOTX_THOLD_ADDR(fifo_id-SSPI_FIFO_ID_TX0,
                                 pDevice->base + SSPIL_FIFOTX_0_THRESHOLD_OFFSET);
         val = CHAL_REG_READ32(reg);
         FLD_SET(val, fifo_thres, 
@@ -2035,13 +2020,13 @@ CHAL_SSPI_STATUS_t chal_sspi_set_fifo_threshold(CHAL_HANDLE handle,
                 SSPIL_FIFOTX_0_THRESHOLD_FIFOTX0_TRESHOLD_MASK);
     }
     else {
-        reg = REG_FIFORX_THOLD_ADDR(fifo_id, 
+        reg = REG_FIFORX_THOLD_ADDR(fifo_id,
                                 pDevice->base + SSPIL_FIFORX_0_THRESHOLD_OFFSET);
         val = CHAL_REG_READ32(reg);
         FLD_SET(val, fifo_thres, 
                 SSPIL_FIFORX_0_THRESHOLD_FIFORX0_TRESHOLD_SHIFT, 
                 SSPIL_FIFORX_0_THRESHOLD_FIFORX0_TRESHOLD_MASK);
-    }        
+    }
     CHAL_REG_WRITE32(reg, val);
         
     return(CHAL_SSPI_STATUS_SUCCESS);
@@ -2128,6 +2113,47 @@ CHAL_SSPI_STATUS_t chal_sspi_set_fifo_data_size(CHAL_HANDLE handle,
                 SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_READ_SIZE_MASK);
     }
     CHAL_REG_WRITE32(reg, val);
+
+    return(CHAL_SSPI_STATUS_SUCCESS);
+}
+
+/****************************************************************************
+*
+*  Function Name: CHAL_SSPI_STATUS_t chal_sspi_get_fifo_data_size(
+*                                  CHAL_HANDLE handle,
+*                                  CHAL_SSPI_FIFO_ID_t fifo_id,
+*                                  uint32_t *fifo_pack)
+*
+*  Description: Get the FIFO data write size
+*
+****************************************************************************/
+CHAL_SSPI_STATUS_t chal_sspi_get_fifo_data_size(CHAL_HANDLE handle,
+                                             CHAL_SSPI_FIFO_ID_t fifo_id,
+                                           uint32_t *fifo_size)
+{
+    CHAL_SSPI_HANDLE_t *pDevice = (CHAL_SSPI_HANDLE_t *)handle;
+    uint32_t val = 0;
+
+    if(!handle || !fifo_size)
+    {
+        chal_dprintf(CDBG_ERRO, "invalid argument\n");
+        return CHAL_SSPI_STATUS_ILLEGAL_PARA;
+    }
+
+    if(fifo_id >= SSPI_FIFO_ID_TX0) {
+        val = CHAL_REG_READ32(REG_FIFOTX_CTL_ADDR(fifo_id-SSPI_FIFO_ID_TX0,
+                                pDevice->base + SSPIL_FIFOTX_0_CONTROL_OFFSET));
+        *fifo_size = FLD_GET(val,
+                             SSPIL_FIFOTX_0_CONTROL_FIFOTX0_DATA_WRITE_SIZE_SHIFT,
+                             SSPIL_FIFOTX_0_CONTROL_FIFOTX0_DATA_WRITE_SIZE_MASK);
+    }
+    else {
+        val = CHAL_REG_READ32(REG_FIFORX_CTL_ADDR(fifo_id,
+                                pDevice->base + SSPIL_FIFORX_0_CONTROL_OFFSET));
+        *fifo_size = FLD_GET(val,
+                             SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_READ_SIZE_SHIFT,
+                             SSPIL_FIFORX_0_CONTROL_FIFORX0_DATA_READ_SIZE_MASK);
+    }
 
     return(CHAL_SSPI_STATUS_SUCCESS);
 }
