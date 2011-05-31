@@ -1,1 +1,0 @@
-this file was created to test the new capi lmp branch under kernel/
