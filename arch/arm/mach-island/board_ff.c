@@ -28,7 +28,6 @@
 #include <linux/platform_device.h>
 #include <linux/sysdev.h>
 #include <linux/interrupt.h>
-#include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
 #include <linux/irq.h>
@@ -46,7 +45,6 @@
 
 #include <mach/hardware.h>
 #include <mach/kona.h>
-#include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
@@ -75,6 +73,9 @@
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 #define KONA_UART3_PA   UARTB4_BASE_ADDR
+#include "island.h"
+#include "common.h"
+
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
 #define KONA_SDIO2_PA   SDIO3_BASE_ADDR
@@ -84,19 +85,6 @@
 
 #define BCM_INT_ID_RESERVED131         (131 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED132         (132 + BCM_INT_ID_PPI_MAX)
-
-#define KONA_8250PORT(name)                                                 \
-{                                                                           \
-   .membase    = (void __iomem *)(KONA_##name##_VA),                        \
-   .mapbase    = (resource_size_t)(KONA_##name##_PA),                       \
-   .irq       = BCM_INT_ID_##name,                                          \
-   .uartclk    = 13000000,                                                  \
-   .regshift   = 2,                                                         \
-   .iotype       = UPIO_DWAPB,                                              \
-   .type       = PORT_16550A,                                               \
-   .flags       = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,       \
-   .private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET), \
-}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
 #define IS_MULTI_TOUCH  1
@@ -1583,7 +1571,6 @@ void __init board_map_io(void)
 }
 
 static struct platform_device *board_devices[] __initdata = {
-	&board_serial_device,
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
@@ -1676,6 +1663,11 @@ void __init pinmux_setup(void)
 void __init board_init(void)
 {
 	pinmux_setup();
+	/*
+	 * Add common platform devices that do not have board dependent HW
+	 * configurations
+	 */
+	board_add_common_devices();
 	board_add_devices();
 }
 

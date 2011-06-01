@@ -23,6 +23,7 @@
 #include <linux/leds.h>
 
 #include <linux/mmc/host.h>
+#define CONFIG_MMC_ARASAN_HOST_FIX
 
 #include "sdhci.h"
 
@@ -157,18 +158,17 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 		host->clock = 0;
 
 	/* Wait max 100 ms */
-	timeout = 100;
+	timeout = jiffies + msecs_to_jiffies(100);
 
 	/* hw clears the bit when it's done */
 	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & mask) {
-		if (timeout == 0) {
+		if (time_is_before_jiffies(timeout)) {
 			printk(KERN_ERR "%s: Reset 0x%x never completed.\n",
 				mmc_hostname(host->mmc), (int)mask);
 			sdhci_dumpregs(host);
 			return;
 		}
-		timeout--;
-		mdelay(1);
+		cpu_relax();
 	}
 
 	if (host->quirks & SDHCI_QUIRK_RESTORE_IRQS_AFTER_RESET)
@@ -626,10 +626,16 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_data *data)
 	}
 
 	if (count >= 0xF) {
+#ifndef CONFIG_MMC_BCM_SD
 		printk(KERN_WARNING "%s: Too large timeout requested!\n",
 			mmc_hostname(host->mmc));
+#endif
 		count = 0xE;
 	}
+#ifdef CONFIG_MMC_BCM_SD
+	/*Some cards require unusually large timeouts*/
+	count=0xE;
+#endif
 
 	return count;
 }
@@ -882,8 +888,11 @@ static void sdhci_send_command(struct sdhci_host *host, struct mmc_command *cmd)
 	WARN_ON(host->cmd);
 
 	/* Wait max 10 ms */
+#ifdef CONFIG_MMC_BCM_SD
+	timeout = 1000;
+#else
 	timeout = 10;
-
+#endif
 	mask = SDHCI_CMD_INHIBIT;
 	if ((cmd->data != NULL) || (cmd->flags & MMC_RSP_BUSY))
 		mask |= SDHCI_DATA_INHIBIT;
@@ -1117,10 +1126,7 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	else
 		present = sdhci_readl(host, SDHCI_PRESENT_STATE) &
 				SDHCI_CARD_PRESENT;
-	/* Force present = true for now, when SD-detection with GPIO works,
-	 * it should be removed */
-	present = true;
-	
+
 	if (!present || host->flags & SDHCI_DEVICE_DEAD) {
 		host->mrq->cmd->error = -ENOMEDIUM;
 		tasklet_schedule(&host->finish_tasklet);
@@ -1163,9 +1169,9 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	ctrl = sdhci_readb(host, SDHCI_HOST_CONTROL);
 
 	if (ios->bus_width == MMC_BUS_WIDTH_8)
-		ctrl |= SDHCI_CTRL_8BITBUS;
-	else
-		ctrl &= ~SDHCI_CTRL_8BITBUS;
+                ctrl |= SDHCI_CTRL_8BITBUS;
+        else
+                ctrl &= ~SDHCI_CTRL_8BITBUS;
 
 	if (ios->bus_width == MMC_BUS_WIDTH_4)
 		ctrl |= SDHCI_CTRL_4BITBUS;
@@ -1360,6 +1366,35 @@ static void sdhci_timeout_timer(unsigned long data)
 	spin_lock_irqsave(&host->lock, flags);
 
 	if (host->mrq) {
+#ifdef CONFIG_MMC_BCM_SD
+		/*
+		 * If timeout, re-send the command for maximum 5 retries. Refers to
+		 * the entry E5_2820A2 of BCM2820_A2_Errata_v1.1_CUSTOMER.doc
+		 */
+		if (host->cmd == NULL)
+ 		{
+			printk(KERN_ERR "%s: Timeout waiting for transfer complete interrupt. \n",
+					mmc_hostname(host->mmc));
+		}
+		else
+		{
+			if (host->cmd->retries >= 1)
+			{
+				struct mmc_command *cmd;
+				host->cmd->retries--;
+				cmd = host->cmd;
+				host->cmd = NULL;
+				sdhci_send_command(host, cmd);
+				spin_unlock_irqrestore(&host->lock, flags);
+				return;
+			}
+			else
+			{
+				printk(KERN_ERR "%s: Timeout waiting for command complete interrupt "
+								"after 5 retries. \n", mmc_hostname(host->mmc));
+			}
+		}
+#endif
 		printk(KERN_ERR "%s: Timeout waiting for hardware "
 			"interrupt.\n", mmc_hostname(host->mmc));
 		sdhci_dumpregs(host);
@@ -1893,7 +1928,15 @@ int sdhci_add_host(struct sdhci_host *host)
 	 * be larger than 64 KiB though.
 	 */
 	if (host->flags & SDHCI_USE_ADMA)
+#ifdef CONFIG_MMC_ARASAN_HOST_FIX
+	/* 
+	 * For Arasan's host, when doing hardware scatter/gather, each entry cannot
+	 * be larger than or equal to 64 KiB. 
+	 */
+		mmc->max_seg_size = 65535;
+#else
 		mmc->max_seg_size = 65536;
+#endif
 	else
 		mmc->max_seg_size = mmc->max_req_size;
 

@@ -23,6 +23,7 @@
 #include "sdhci-pltfm.h"
 
 #define PRINT_ERR(format, args...) printk(KERN_ERR "SDIO-Wifi: " format, ## args)
+#define PRINT_INFO(format, args...) printk(KERN_INFO "SDIO-Wifi: " format, ## args)
 
 struct sdio_wifi_dev
 {
@@ -53,9 +54,8 @@ void bcm_sdiowl_reset_b(int onoff)
    }
 
    gpio_set_value(wifi_gpio->reset, onoff);
-   
-   /* Insert delay - required for chip to wake up or enter reset */
-   //msleep(200);
+
+	msleep(200);
 }
 EXPORT_SYMBOL(bcm_sdiowl_reset_b);
 
@@ -82,11 +82,10 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
 {
    int rc;
 
+   PRINT_INFO("gpio pins reset:%d, req:%d wake:%d shutdown:%d\n",
+	gpio->reset, gpio->reg, gpio->host_wake, gpio->shutdown);
 
-   PRINT_ERR("All WIFI related GPIO pins reset:%d, req:%d wake:%d shutdown: %d \n", 
-		   gpio->reset, gpio->reg, gpio->host_wake,gpio->shutdown);
-
-   if (gpio->reg > 0)
+   if (gpio->reg >= 0)
    {
       rc = gpio_request(gpio->reg, "wl_reg_on");
       if (rc < 0)
@@ -94,12 +93,11 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          PRINT_ERR("unable to request reg GPIO pin %d\n", gpio->reg);
          return -EBUSY;
       }
-
       gpio_direction_output(gpio->reg, 1);
       gpio_set_value(gpio->reg, 1);
    }
 
-   if (gpio->reset > 0)
+   if (gpio->reset >= 0)
    {
       rc = gpio_request(gpio->reset, "wl_reset");
       if (rc < 0)
@@ -107,11 +105,11 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          PRINT_ERR("unable to request reset GPIO pin %d\n", gpio->reset);
          goto err_free_gpio_reg;
       }
-      //gpio_direction_output(gpio->reset, 0);
-      //gpio_set_value(gpio->reset, 1);
+      gpio_direction_output(gpio->reset, 1);
+      gpio_set_value(gpio->reset, 1);
    }
 
-   if (gpio->shutdown > 0)
+   if (gpio->shutdown >= 0)
    {
       rc = gpio_request(gpio->shutdown, "wl_shutdown");
       if (rc < 0)
@@ -171,7 +169,7 @@ static void wifi_gpio_free(struct sdio_wifi_gpio_cfg *gpio)
       gpio_free(gpio->host_wake);
 }
 
-static int __init sdio_wifi_init(void)
+int bcm_sdiowl_init(void)
 {
    int rc;
    struct sdio_wifi_dev *dev = &gDev;
@@ -201,12 +199,9 @@ static int __init sdio_wifi_init(void)
 
    atomic_set(&dev->dev_is_ready, 1);
 
-   if (dev->wifi_gpio->reset > 0)
-      gpio_direction_output(dev->wifi_gpio->reset, 0);
-
-   msleep(500);
+	/* reset the wifi chip */
+   bcm_sdiowl_reset_b(0);
    bcm_sdiowl_reset_b(1);
-   msleep(500);
    
    /* now, emulate the card insertion */
    rc = sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 1);
@@ -215,7 +210,10 @@ static int __init sdio_wifi_init(void)
       PRINT_ERR("sdio_card_emulate failed\n");
       goto err_free_gpio;
    }
-   return 0;
+
+	/* need to wait for the mmc device population to finish */
+	msleep(500);
+	return 0;
 
 err_free_gpio:
    atomic_set(&dev->dev_is_ready, 0);
@@ -223,9 +221,9 @@ err_free_gpio:
 
    return rc;
 }
+EXPORT_SYMBOL(bcm_sdiowl_init);
 
-#if 0
-static void __exit sdio_wifi_exit(void)
+void bcm_sdiowl_term(void)
 {
    struct sdio_wifi_dev *dev = &gDev;
 
@@ -237,13 +235,20 @@ static void __exit sdio_wifi_exit(void)
 
    dev->wifi_gpio = NULL;
 }
-#endif
+EXPORT_SYMBOL(bcm_sdiowl_term);
 
-late_initcall(sdio_wifi_init);
-#if 0
+static int __init sdio_wifi_init(void)
+{
+	return 0;
+}
+
+static void __exit sdio_wifi_exit(void)
+{
+}
+
+module_init(sdio_wifi_init);
 module_exit(sdio_wifi_exit);
-#endif
 
-MODULE_DESCRIPTION("Broadcom SDIO WiFi/BT Utility Driver");
+MODULE_DESCRIPTION("Broadcom SDIO WiFi/BT Control Driver");
 MODULE_AUTHOR("Broadcom");
 MODULE_LICENSE("GPL");

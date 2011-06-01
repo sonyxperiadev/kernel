@@ -28,7 +28,6 @@
 #include <linux/platform_device.h>
 #include <linux/sysdev.h>
 #include <linux/interrupt.h>
-#include <linux/serial_8250.h>
 
 #include <linux/i2c.h>
 #include <linux/irq.h>
@@ -41,7 +40,6 @@
 #include <asm/gpio.h>
 
 #include <mach/kona.h>
-#include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <asm/io.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
@@ -51,6 +49,8 @@
 #include <linux/mfd/bcm590xx/pmic.h>
 
 #include <linux/smb380.h>
+#include "island.h"
+#include "common.h"
 
 // #include <linux/regulator/machine.h>
 // #include <linux/regulator/consumer.h>
@@ -62,16 +62,6 @@
 
 #include <linux/regulator/max8649.h>
 
-/*
- * todo: 8250 driver has problem autodetecting the UART type -> have to 
- * use FIXED type
- * confuses it as an XSCALE UART.  Problem seems to be that it reads
- * bit6 in IER as non-zero sometimes when it's supposed to be 0.
- */
-#define KONA_UART0_PA   UARTB_BASE_ADDR
-#define KONA_UART1_PA   UARTB2_BASE_ADDR
-#define KONA_UART2_PA   UARTB3_BASE_ADDR
-#define KONA_UART3_PA   UARTB4_BASE_ADDR
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
 #define KONA_SDIO2_PA   SDIO3_BASE_ADDR
@@ -89,19 +79,6 @@ enum ALT_FUNC {
 
 #define GPIO_PULL_UP CHIPREG_GPIO_7_PUP_GPIO_7_MASK
 #define GPIO_DRIVE_STRENGTH 0x3 << CHIPREG_GPIO_7_SEL_2_0_SHIFT
-
-#define KONA_8250PORT(name)                                                   \
-{                                                                             \
-   .membase    = (void __iomem *)(KONA_##name##_VA),                          \
-   .mapbase    = (resource_size_t)(KONA_##name##_PA),                         \
-   .irq        = BCM_INT_ID_##name,                                           \
-   .uartclk    = 13000000,                                                    \
-   .regshift   = 2,                                                           \
-   .iotype     = UPIO_DWAPB,                                                  \
-   .type       = PORT_16550A,                                                 \
-   .flags      = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,          \
-   .private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET),   \
-}
 
 /*
  * GPIO pin for Touch screen pen down interrupt
@@ -183,16 +160,6 @@ static struct platform_device board_i2c_adap_devices[] =
       .id = 2,
       .resource = board_pmu_bsc_resource,
       .num_resources = ARRAY_SIZE(board_pmu_bsc_resource),
-   },
-};
-
-static struct plat_serial8250_port uart_data[] = {
-   KONA_8250PORT(UART0),
-   KONA_8250PORT(UART1),
-   KONA_8250PORT(UART2),
-   KONA_8250PORT(UART3),
-   {
-      .flags = 0,
    },
 };
 
@@ -278,14 +245,6 @@ static struct i2c_board_info __initdata tsc2007_info[] =
 };
 
 #endif
-
-static struct platform_device board_serial_device = {
-   .name = "serial8250",
-   .id = PLAT8250_DEV_PLATFORM,
-   .dev = {
-      .platform_data = uart_data,
-   },
-};
 
 #if 0
 static struct resource board_sdio0_resource[] = {
@@ -540,7 +499,6 @@ void __init board_map_io(void)
 }
 
 static struct platform_device *board_devices[] __initdata = {
-   &board_serial_device,
    &board_i2c_adap_devices[0],
    &board_i2c_adap_devices[1],
    &board_i2c_adap_devices[2],
@@ -635,6 +593,11 @@ void __init board_init(void)
                ( 3 << CHIPREG_SIM2_DET_SEL_2_0_SHIFT )    ;      // Set drive strength to 3.
    writel( val,  ( chipRegBase + CHIPREG_SIM2_DET_OFFSET ) ) ;
 #endif
+	/*
+	 * Add common platform devices that do not have board dependent HW
+	 * configurations
+	 */
+	board_add_common_devices();
 	board_add_devices();
 	return;
 }

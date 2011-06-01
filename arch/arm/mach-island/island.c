@@ -26,16 +26,19 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/cpumask.h>
-#include <mach/io_map.h>
+#include <linux/mfd/bcm590xx/core.h>
+
 #include <asm/io.h>
 #include <asm/mach/map.h>
 #include <asm/hardware/cache-l2x0.h>
+
+#include <mach/io_map.h>
 #include <mach/clock.h>
-#include <linux/mfd/bcm590xx/core.h>
 #include <mach/gpio.h>
 #include <mach/timer.h>
 #include <mach/kona.h>
 #include <mach/profile_timer.h>
+#include <mach/pinmux.h>
 
 static void island_poweroff(void)
 {
@@ -78,12 +81,13 @@ static int __init island_init(void)
 	clock_init();
 #endif
 
+	pinmux_init();
+
 	/* island has 6 banks of GPIO pins */ 
 	kona_gpio_init(6);
 
 	return 0;
 }
-
 early_initcall(island_init);
 
 static void __init island_timer_init(void)

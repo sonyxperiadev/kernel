@@ -46,6 +46,10 @@ struct sdio_platform_cfg {
 	* to 1
 	*/
 	unsigned int data_pullup;
+
+	/* for devices with 8-bit lines */
+	int is_8bit;
+
 	/* card detection GPIO, required for SD/MMC */
 	int cd_gpio;
 	enum sdio_devtype devtype;

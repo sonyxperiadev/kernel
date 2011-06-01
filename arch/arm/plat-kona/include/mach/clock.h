@@ -263,6 +263,8 @@ unsigned long clock_get_xtal(void);
 /**************************** BUS clock flags **************************/
 /* Under KPM CCU */
 #define		BCM2165x_CLK_USB_OTG_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
+#define		BCM2165x_CLK_USBH_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
+#define		BCM2165x_CLK_USBH_12M_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_SDIO4_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_SDIO3_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_SDIO2_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
@@ -353,8 +355,8 @@ unsigned long clock_get_xtal(void);
 /*TBD*/
 #define		BCM2165x_CLK_I2S_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_USB_IC_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
-#define		BCM2165x_CLK_EHCI_48M_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
-#define		BCM2165x_CLK_EHCI_12M_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
+//#define		BCM2165x_CLK_EHCI_48M_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
+//#define		BCM2165x_CLK_EHCI_12M_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_NAND_AHB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_AUDIOH_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_AUDIOH_156M_FLAGS			(TYPE_BUS_CLK | SW_GATE)
@@ -402,8 +404,8 @@ unsigned long clock_get_xtal(void);
 /*TBD*/
 #define		BCM2165x_CLK_DMAC_FLAGS				(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_NAND_FLAGS				(TYPE_PERI_CLK | SW_GATE)
-#define		BCM2165x_CLK_EHCI_12M_FLAGS			(TYPE_PERI_CLK | SW_GATE)
-#define		BCM2165x_CLK_EHCI_48M_FLAGS			(TYPE_PERI_CLK | SW_GATE)
+//#define		BCM2165x_CLK_EHCI_12M_FLAGS			(TYPE_PERI_CLK | SW_GATE)
+#define		BCM2165x_CLK_USBH_48M_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_USB_IC_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_I2S_FRAC_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_I2S_FLAGS				(TYPE_PERI_CLK | SW_GATE)
@@ -706,6 +708,32 @@ unsigned long clock_get_xtal(void);
 		.trigger_mask		=	pfx##_CLK_MGR_REG_##trigger##_##CLK_NAME##_TRIGGER_MASK,		\
 	}
 
+#define	DECLARE_PERI_CLK_FIXED_DIV(clk_name, NAME1, NAME2, clk_parent, clk_rate, trigger, ccu, pfx)	\
+	static struct peri_clock clk_name##_clk = {						\
+		.clk	=	{								\
+			.name	=	__stringify(clk_name##_clk),				\
+			.parent =	name_to_clk(clk_parent),				\
+			.rate	=	clk_rate,						\
+			.div	=	1,							\
+			.id	=	BCM2165x_CLK_##NAME2,					\
+			.ccu_id =       BCM2165x_##ccu##_CCU,					\
+			.flags	=	BCM2165x_CLK_##NAME2##_FLAGS,				\
+			.src	=	&clk_name##_clk_src,					\
+			.ops	=	&peri_clk_ops,						\
+		},										\
+		.ccu_clk_mgr_base	=	ccu##_CLK_BASE_ADDR,				\
+		.wr_access_offset	=	pfx##_CLK_MGR_REG_WR_ACCESS_OFFSET,		\
+		.clkgate_offset 	=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_OFFSET,	\
+		.div_offset		=	pfx##_CLK_MGR_REG_##NAME1##_DIV_OFFSET,	\
+		.div_trig_offset	=	pfx##_CLK_MGR_REG_##trigger##_OFFSET,		\
+		.stprsts_mask		=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_STPRSTS_MASK,		\
+		.hw_sw_gating_mask	=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_HW_SW_GATING_SEL_MASK,	\
+		.clk_en_mask		=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_CLK_EN_MASK,		\
+		.pll_select_mask	=	pfx##_CLK_MGR_REG_##NAME1##_DIV_##NAME2##_PLL_SELECT_MASK,	\
+		.pll_select_shift	=	pfx##_CLK_MGR_REG_##NAME1##_DIV_##NAME2##_PLL_SELECT_SHIFT,	\
+		.trigger_mask		=	pfx##_CLK_MGR_REG_##trigger##_##NAME2##_TRIGGER_MASK,	\
+	}
+
 /* BCM2165x clock Ids */
 enum {
     BCM2165x_CLK_ARM = 1,
@@ -812,8 +840,8 @@ enum {
     BCM2165x_CLK_SDIO2_SLEEP,
     BCM2165x_CLK_SDIO1_SLEEP,
     BCM2165x_CLK_USB_IC_AHB,
-    BCM2165x_CLK_EHCI_48M_AHB,
-    BCM2165x_CLK_EHCI_12M_AHB,
+    BCM2165x_CLK_USBH_12M,
+    BCM2165x_CLK_USBH_AHB,
     BCM2165x_CLK_USB_OTG_AHB,
     BCM2165x_CLK_NAND_AHB,
     BCM2165x_CLK_APB2_REG,

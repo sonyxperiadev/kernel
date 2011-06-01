@@ -20,6 +20,11 @@ config ARCH_SAMOA
 	help
 	  Support for the Broadcom Samoa SoC platform.
 
+config ARCH_HANA
+        bool "BROADCOM Hana SoC"
+        help
+          Support for the Broadcom Hana SoC platform.
+
 endchoice
 
 config GP_TIMER_CLOCK_OFF_FIX
@@ -30,13 +35,15 @@ config GP_TIMER_CLOCK_OFF_FIX
 
 config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
-        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_SAMOA
+        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_SAMOA || ARCH_HANA
         default y  
 	  
 config KONA_DCACHE_INVALIDATION
 	bool "Have Linux invalidate D-Cache"
+        default y  
 	help 
-	  Say Y if you want Linux to invalidate primary core D-Cache
+	  Say Y if you want Linux to invalidate primary core D-Cache during Linux
+	  decompression and boot.
 
 config KONA_TIMER_UNIT_TESTS
 	bool "Include Kona Timer unit test code"
@@ -68,5 +75,24 @@ config DMAC_KONA_PL330_SECURE_MODE
 	help
 	 	PL330 DMA driver operates in open mode by default. 
 		 Enable this option to operate PL330 in secure mode. 
+
+config BCM_ZRELADDR
+	hex "Compressed ZREL address"
+
+config BCM_PARAMS_PHYS
+	hex "Address where tagged parameters are to be found"
+
+config BCM_RAM_BASE
+	hex "RAM base address"
+	help
+	 Set the physical base address of RAM
+
+config BCM_RAM_START_RESERVED_SIZE
+	hex "RAM start reserved memory size in bytes"
+	default 0
+	help
+	 Reserve memory at the start of RAM. This memory
+	 may be used for LCD frame buffer, DSP, modem, etc.
+
 endmenu
 

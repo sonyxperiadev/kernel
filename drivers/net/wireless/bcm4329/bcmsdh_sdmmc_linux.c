@@ -29,13 +29,18 @@
 #include <sdio.h>	/* SDIO Specs */
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
-
 #include <linux/sched.h>	/* request_irq() */
+
+#include <dngl_stats.h>
+#include <dhd.h>
 
 #include <linux/mmc/core.h>
 #include <linux/mmc/card.h>
 #include <linux/mmc/sdio_func.h>
 #include <linux/mmc/sdio_ids.h>
+#include <linux/mmc/bcm_sdiowl.h>
+
+extern void dhd_customer_gpio_wlan_ctrl(int onoff);
 
 #if !defined(SDIO_VENDOR_ID_BROADCOM)
 #define SDIO_VENDOR_ID_BROADCOM		0x02d0
@@ -250,9 +255,21 @@ int sdio_function_init(void)
 	if (!gInstance)
 		return -ENOMEM;
 
+	error = bcm_sdiowl_init();
+	if (error) {
+		sd_err(("%s: bcm_sdiowl_start failed\n", __FUNCTION__));
+		kfree(gInstance);
+		return error;
+	}
+
+	/* Reset device and rescan so SDMMC does not get confused */
+        dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
+       	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
+
+        bcm_sdiowl_rescan();
+	
 	bzero(&sdmmc_dev, sizeof(sdmmc_dev));
 	error = sdio_register_driver(&bcmsdh_sdmmc_driver);
-
 
 	return error;
 }
@@ -265,9 +282,11 @@ void sdio_function_cleanup(void)
 {
 	sd_trace(("%s Enter\n", __FUNCTION__));
 
-
 	sdio_unregister_driver(&bcmsdh_sdmmc_driver);
+
+	bcm_sdiowl_term();
 
 	if (gInstance)
 		kfree(gInstance);
+
 }
