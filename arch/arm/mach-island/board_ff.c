@@ -63,16 +63,6 @@
 
 #include <linux/power_supply.h>
 
-/*
- * todo: 8250 driver has problem autodetecting the UART type -> have to
- * use FIXED type
- * confuses it as an XSCALE UART. Problem seems to be that it reads
- * bit6 in IER as non-zero sometimes when it's supposed to be 0.
- */
-#define KONA_UART0_PA   UARTB_BASE_ADDR
-#define KONA_UART1_PA   UARTB2_BASE_ADDR
-#define KONA_UART2_PA   UARTB3_BASE_ADDR
-#define KONA_UART3_PA   UARTB4_BASE_ADDR
 #include "island.h"
 #include "common.h"
 
@@ -231,16 +221,6 @@ static struct platform_device board_i2c_adap_devices[] =
 	},
 };
 
-static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT(UART0),
-	KONA_8250PORT(UART1),
-	KONA_8250PORT(UART2),
-	KONA_8250PORT(UART3),
-	{
-		.flags = 0,
-	},
-};
-
 static struct gpio_keys_button board_gpio_keys_button[] = {
 	{ KEY_HOME, 154, 1, "Home", EV_KEY, 0, 64},
 	{ KEY_SEARCH, 157, 1, "Search", EV_KEY, 0, 64},
@@ -389,14 +369,6 @@ static struct i2c_board_info __initdata mic_det_info[] =
 	{	/* The codec's i2c slave address. */
 		I2C_BOARD_INFO(MIC_DET_DRIVER_NAME, 0x1A),
 		.platform_data = &mic_det_plat_data,
-	},
-};
-
-static struct platform_device board_serial_device = {
-	.name	= "serial8250",
-	.id	= PLAT8250_DEV_PLATFORM,
-	.dev= {
-		.platform_data = uart_data,
 	},
 };
 
