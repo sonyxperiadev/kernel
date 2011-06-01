@@ -267,38 +267,6 @@ static struct i2c_board_info __initdata qt602240_info[] = {
 #define GPIO_TC3589X_GPIO_PIN      1  /* Configure BB gpio for IOexpander IRQ */
 #endif
 
-#if 0 //FIXME?
-static int tc3589x_platform_init_hw(struct i2c_client *client,
-		unsigned gpio, unsigned ngpio, void *context)
-{
-	int rc;
-#if 0
-	rc = gpio_request(GPIO_TC3589X_GPIO_PIN, "gpio_expander");
-	if (rc < 0)
-	{
-		printk(KERN_ERR "unable to request GPIO pin %d\n", GPIO_TC3589X_GPIO_PIN);
-		return rc;
-	}
-	gpio_direction_input(GPIO_TC3589X_GPIO_PIN);
-#endif
-	return 0;
-}
-
-static int tc3589x_platform_exit_hw(struct i2c_client *client,
-		unsigned gpio, unsigned ngpio, void *context)
-{
-	gpio_free(GPIO_TC3589X_GPIO_PIN);
-	return 0;
-}
-
-static struct tc3589x_platform_data board_expander_info = {
-	.gpio_base	= KONA_MAX_GPIO,
-	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
-	.setup		= tc3589x_platform_init_hw,
-	.teardown	= tc3589x_platform_exit_hw,
-};
-#endif
-
 static void tc3589x_init(struct tc3589x *tc3589x, unsigned int base)
 {
 	//FIXME? could move dev int setup to here?
