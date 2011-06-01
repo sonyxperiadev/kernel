@@ -266,6 +266,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO1 */
 		.id = 1,
 		.data_pullup = 0,
+		.is_8bit = 1,
 		.devtype = SDIO_DEV_TYPE_EMMC,
 		.peri_clk_name = "sdio2_clk",
 		.ahb_clk_name = "sdio2_ahb_clk",
