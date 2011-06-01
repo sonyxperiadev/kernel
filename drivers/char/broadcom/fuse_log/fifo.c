@@ -141,7 +141,7 @@ unsigned long BCMLOG_FifoAdd( BCMLOG_Fifo_t *pFifo, unsigned char *pSrcBuf, unsi
 unsigned long BCMLOG_FifoRemove( BCMLOG_Fifo_t *pFifo, unsigned long rmSize ) 
 {
 	unsigned long numRemoved = 0 ;
-#if BCMLOG_DEBUG_FLAG
+#ifdef BCMLOG_DEBUG_FLAG
 	unsigned long datasize;
 	
 	datasize = BCMLOG_FifoGetDataSize(pFifo);

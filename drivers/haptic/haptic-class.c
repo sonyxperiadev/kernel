@@ -38,7 +38,7 @@ static void haptic_update_value(struct haptic_classdev *haptic_cdev)
 
 #define ATTR_DEF_SHOW(name) \
 static ssize_t haptic_show_##name(struct class *class, \
-		char *buf) \
+		struct class_attribute *attr, char *buf) \
 { \
 	struct device *dev; \
 	struct haptic_classdev *haptic_cdev; \
@@ -56,7 +56,8 @@ static ssize_t haptic_show_##name(struct class *class, \
 
 #define ATTR_DEF_STORE(name) \
 static ssize_t haptic_store_##name(struct class *class, \
-		const char *buf, size_t count) \
+		struct class_attribute *attr, const char *buf, \
+                size_t count) \
 { \
 	struct device *dev; \
 	struct haptic_classdev *haptic_cdev; \
@@ -88,7 +89,7 @@ ATTR_DEF_SHOW(level_max);
 static CLASS_ATTR(level_max, 0444, haptic_show_level_max, NULL);
 
 static ssize_t haptic_show_value(struct class *class,
-		char *buf)
+	        struct class_attribute *attr, char *buf)
 {
 	struct device *dev;
 	struct haptic_classdev *haptic_cdev;
@@ -108,7 +109,8 @@ static ssize_t haptic_show_value(struct class *class,
 }
 
 static ssize_t haptic_store_value(struct class *class,
-		const char *buf, size_t count)
+		struct class_attribute *attr, const char *buf,
+                size_t count)
 {
 	struct device *dev;
 	struct haptic_classdev *haptic_cdev;

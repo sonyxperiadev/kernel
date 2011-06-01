@@ -40,7 +40,6 @@ extern int csl_StmSendBytes(void *data_ptr, int length);
 #endif
 
 #ifdef CONFIG_USB_ETH_RNDIS
-extern char obex_register_callbacks(struct obex_callbacks *_cb);	// for ACM logging
 
 /*
  *	forward declarations
@@ -637,7 +636,6 @@ int BCMLOG_OutputInit( void )
 	 *	register flow control callback functions
 	 */
 	g_netconsole_on = brcm_netconsole_register_callbacks( &_cb ) ;
-//	g_acm_on = obex_register_callbacks( &_acm_cb);
 
 #endif
 	return 0 ;

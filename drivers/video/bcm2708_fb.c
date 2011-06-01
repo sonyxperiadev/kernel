@@ -442,7 +442,6 @@ err_get_fbmem_resource_failed:
 err_enable_fb_failed:
 	free_irq(fb->irq, (void *)fb);
 err_no_irq:
-err_no_mem_region:
 err_no_io_base:
 	kfree(fb);
 err_fb_alloc_failed:

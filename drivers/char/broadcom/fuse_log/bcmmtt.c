@@ -164,7 +164,7 @@ int BCMMTT_FrameString( char* p_dest, const char* p_src, int buflen )
 	*pSbuf++ = slen >> 8 ;
 	*pSbuf++ = slen & 0xFF ;
 	
-	*pSbuf++;
+	pSbuf++;
 
 	while (*p_src)
 	{

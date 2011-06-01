@@ -310,7 +310,11 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 						break ;
 					}
 
-					copy_from_user( kbuf_str, lcl->str, lcl->size ) ;
+					if (copy_from_user(kbuf_str, lcl->str, lcl->size)) {
+						BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "bad userspace pointer\n" ) ;
+						rc = -1 ;
+						break ;
+					}
 					
 					kbuf_str[lcl->size] = 0 ;	//	this ensures the string is null terminated
 
@@ -382,8 +386,10 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 						}
         
 						// copy the signal from user space to kernel space
-						copy_from_user( kernelSigBuf, lcl->sigPtr, lcl->sigBufSize ) ;
-
+						if (copy_from_user(kernelSigBuf, lcl->sigPtr, lcl->sigBufSize)) {
+							rc = -1;
+							break;
+						}
 					}
     
 					// internal api for signal logging
@@ -864,7 +870,7 @@ static void LogSignal_Internal( unsigned int inSigCode,
  *	@param	size	(in)	message length
  *	@note	does not free the IPC message buffer
  **/
-void BCMLOG_HandleCpLogMsg( const char *buf, int size )
+void BCMLOG_HandleCpLogMsg( unsigned char *buf, int size )
 {
 	if( !CpCrashDumpInProgress( ) ) 
 	{

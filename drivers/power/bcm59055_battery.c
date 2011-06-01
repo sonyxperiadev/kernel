@@ -248,7 +248,6 @@ static void bcm59055_batt_lvl_wq(struct work_struct *work)
 
 static void bcm59055_start_charging(struct bcm590xx *bcm59055, int charger_type)
 {
-	int ret = 0;
 	int val = 0;
 	pr_debug("Inside %s\n", __func__);
 
@@ -270,8 +269,7 @@ static void bcm59055_start_charging(struct bcm590xx *bcm59055, int charger_type)
 			BCM59055_REG_PWMLEDCTRL1_PWM_FREQ_256_SHIFT) |
 		(BCM59055_REG_PWMLEDCTRL1_BREATHING_REPEAT <<
 		 	BCM59055_REG_PWMLEDCTRL1_BREATHING_REPEAT_SHIFT);
-	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_PWMLEDCTRL1, val);
-	if (ret != 0) {
+	if (bcm590xx_reg_write(bcm59055, BCM59055_REG_PWMLEDCTRL1, val)) {
 		pr_info("%s Configuring PMU LED failed \n", __func__ );
 	}
 #endif
@@ -279,7 +277,6 @@ static void bcm59055_start_charging(struct bcm590xx *bcm59055, int charger_type)
 
 static void bcm59055_stop_charging(struct bcm590xx *bcm59055, int charger_type)
 {
-	int ret = 0;
 	int val = 0;
 	pr_debug("Inside %s\n", __func__);
 
@@ -303,8 +300,7 @@ static void bcm59055_stop_charging(struct bcm590xx *bcm59055, int charger_type)
 		 	BCM59055_REG_PWMLEDCTRL1_PWMLED_PD_DISABLE_SHIFT) |
 		(BCM59055_REG_PWMLEDCTRL1_BREATHING_REPEAT <<
 		 	BCM59055_REG_PWMLEDCTRL1_BREATHING_REPEAT_SHIFT);
-	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_PWMLEDCTRL1, val);
-	if (ret != 0) {
+	if (bcm590xx_reg_write(bcm59055, BCM59055_REG_PWMLEDCTRL1, val)) {
 		pr_info("%s Configuring PMU LED failed \n", __func__ );
 	}
 #endif

@@ -334,7 +334,7 @@ static void zap_completion_queue(void)
 
 static struct sk_buff *find_skb(struct netpoll *np, int len, int reserve)
 {
-	int count = 0, qlen;
+	int count = 0;
 	struct sk_buff *skb;
 
 	zap_completion_queue();
