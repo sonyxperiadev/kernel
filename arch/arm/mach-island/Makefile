@@ -13,8 +13,10 @@
 #*****************************************************************************
 
 obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
+
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
 obj-$(CONFIG_NET_ISLAND) += ethHw.o ethHw_asm.o
+obj-$(CONFIG_PM) += pm.o
 
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o
 obj-$(CONFIG_MACH_ISLAND_BU) += board_bu.o
