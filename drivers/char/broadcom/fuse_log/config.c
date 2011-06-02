@@ -33,7 +33,8 @@ static struct proc_dir_entry *g_proc_dir_entry = NULL ;	///< procfs file
  **/
 static void SetConfigDefaults( void )
 {
-	g_config.logcat_dump_dev  = BCMLOG_OUTDEV_NONE ;	// logcat crash dump disabled
+	g_config.ap_crashlog_dev  = BCMLOG_OUTDEV_NONE ;
+	g_config.cp_crashlog_dev  = BCMLOG_OUTDEV_SDCARD ;
 #ifdef CONFIG_STM_DEFAULT
 	g_config.runlog_dev       = BCMLOG_OUTDEV_STM ;	        // run-time log to STM
 #else
@@ -82,8 +83,8 @@ static void bld_device_status_str( char *buf, int len, char *label, int device )
 		safe_strncat( buf, "-> USB serial\n", len ) ;
 		break ;
 	case BCMLOG_OUTDEV_STM:
-                safe_strncat( buf, "-> STM\n", len ) ;
-                break ;
+		safe_strncat( buf, "-> STM\n", len ) ;
+		break ;
 	default:
 		safe_strncat( buf, "-> ERROR\n", len ) ;
 		break ;
@@ -96,8 +97,9 @@ static void bld_device_status_str( char *buf, int len, char *label, int device )
 static int proc_read(char *page, char **start, off_t offset, int count, int *eof, void *data)
 {
 	*page = 0 ;
-	bld_device_status_str( page, count, "    BMTT logging", g_config.runlog_dev ) ;
-	bld_device_status_str( page, count, "  APP crash dump", g_config.logcat_dump_dev ) ;
+	bld_device_status_str( page, count, "  BMTT logging", g_config.runlog_dev ) ;
+	bld_device_status_str( page, count, "  AP crash dump", g_config.ap_crashlog_dev ) ;
+	bld_device_status_str( page, count, "  CP crash dump", g_config.cp_crashlog_dev ) ;
 	*eof = 1 ;
 	return 1+strlen( page ) ;
 }
@@ -135,13 +137,13 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 			g_config.runlog_dev = BCMLOG_OUTDEV_SDCARD ;
 			break ;
 		case 'e':	
-			g_config.logcat_dump_dev = BCMLOG_OUTDEV_PANIC ;
+			g_config.ap_crashlog_dev = BCMLOG_OUTDEV_PANIC ;
 			break ;
 		case 'f': 
-			g_config.logcat_dump_dev = BCMLOG_OUTDEV_SDCARD ;
+			g_config.ap_crashlog_dev = BCMLOG_OUTDEV_SDCARD ;
 			break ;
 		case 'g': 	
-			g_config.logcat_dump_dev = BCMLOG_OUTDEV_NONE ;
+			g_config.ap_crashlog_dev = BCMLOG_OUTDEV_NONE ;
 			break ;
 		case 'h': 
 			BCMLOG_SaveConfig( 1 ) ;
@@ -152,6 +154,18 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 		case 'i': 
 			SetConfigDefaults( ) ;
 			BCMLOG_SaveConfig( 0 ) ;
+			break ;
+		case 'j':
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_PANIC ;
+			break ;
+		case 'k':
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_SDCARD ;
+			break ;
+		case 'l':
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_NONE ;
+			break ;
+		case 'm':
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_RNDIS ;
 			break ;
 		}
 	}
@@ -343,6 +357,17 @@ int BCMLOG_GetRunlogDevice( void )
 {
 	return g_config.runlog_dev ;
 }
+
+int BCMLOG_GetCpCrashLogDevice( void )
+{
+	return g_config.cp_crashlog_dev ;
+}
+
+int BCMLOG_GetApCrashLogDevice( void )
+{
+	return g_config.ap_crashlog_dev ;
+}
+
 
 int BCMLOG_IsUSBLog(void)
 {

@@ -210,6 +210,8 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString );
  *	Get runtime log device
  **/
 int BCMLOG_GetRunlogDevice( void ) ;
+int BCMLOG_GetCpCrashLogDevice( void ) ;
+int BCMLOG_GetApCrashLogDevice( void ) ;
 
 #ifdef __cplusplus
 }
