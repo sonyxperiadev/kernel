@@ -39,6 +39,9 @@ extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks 
 extern int csl_StmSendBytes(void *data_ptr, int length);
 #endif
 
+static int acm_start_cb( void ) ;
+static int acm_stop_cb( void ) ;
+
 #ifdef CONFIG_USB_ETH_RNDIS
 
 /*
@@ -46,8 +49,6 @@ extern int csl_StmSendBytes(void *data_ptr, int length);
  */
 static int netconsole_start_cb( void ) ;
 static int netconsole_stop_cb( void ) ;
-static int acm_start_cb( void ) ;
-static int acm_stop_cb( void ) ;
 
 #ifdef BCMLOG_DEBUG_FLAG
 unsigned  int g_malloc_sig_buf = 0;
