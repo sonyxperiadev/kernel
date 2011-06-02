@@ -34,7 +34,11 @@ static struct proc_dir_entry *g_proc_dir_entry = NULL ;	///< procfs file
 static void SetConfigDefaults( void )
 {
 	g_config.logcat_dump_dev  = BCMLOG_OUTDEV_NONE ;	// logcat crash dump disabled
+#ifdef CONFIG_STM_DEFAULT
+	g_config.runlog_dev       = BCMLOG_OUTDEV_STM ;	        // run-time log to STM
+#else
 	g_config.runlog_dev       = BCMLOG_OUTDEV_RNDIS ;	// run-time log to RNDIS/MTT
+#endif
 }
 
 /**
