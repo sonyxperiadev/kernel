@@ -408,6 +408,7 @@ static void bcm59055_saradc_isr(int intr, void *data)
 		pr_info("%s: BCM59055_IRQID_INT9_RTM_UPPER_BOUND\n",
 			__func__);
 		saradc->upper_bound = 1;
+		break;
 	case BCM59055_IRQID_INT9_RTM_IGNORE:
 		pr_info("%s: BCM59055_IRQID_INT9_RTM_IGNORE\n", __func__);
 		/* This INT shouldn't be coming, taken care in driver code */
