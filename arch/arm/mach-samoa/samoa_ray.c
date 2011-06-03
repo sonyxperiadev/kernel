@@ -491,8 +491,7 @@ void __init board_map_io(void)
 	samoa_map_io();
 }
 
-/* use RHEA ID for now */
-MACHINE_START(RHEA, "SamoaRay")
+MACHINE_START(BCM21455, "SamoaRay")
 	.phys_io = IO_START,
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,
