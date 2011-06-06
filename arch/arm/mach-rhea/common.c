@@ -42,6 +42,7 @@
 #include <mach/rhea.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <linux/usb/android_composite.h>
+#include <linux/usb/brcm_composite.h>
 #include <asm/mach/map.h>
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
@@ -94,6 +95,22 @@ static struct platform_device board_serial_device = {
 	},
 };
 
+#define	BRCM_VENDOR_ID		0x0a5c
+#define	BIG_ISLAND_PRODUCT_ID	0x2816
+
+/* FIXME borrow Google Nexus One ID to use windows driver */
+#define	GOOGLE_VENDOR_ID	0x18d1
+#define	NEXUS_ONE_PROD_ID	0x0d02
+
+#define	VENDOR_ID		GOOGLE_VENDOR_ID
+#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
+
+/* use a seprate PID for RNDIS */
+#define RNDIS_PRODUCT_ID	0x4e13
+#define ACM_PRODUCT_ID		0x8888
+
+#ifdef CONFIG_USB_ANDROID
+
 static char *android_function_rndis[] = {
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis",
@@ -128,20 +145,6 @@ static char *android_functions_all[] = {
 	"acm",
 #endif
 };
-
-#define	BRCM_VENDOR_ID		0x0a5c
-#define	BIG_ISLAND_PRODUCT_ID	0x2816
-
-/* FIXME borrow Google Nexus One ID to use windows driver */
-#define	GOOGLE_VENDOR_ID	0x18d1
-#define	NEXUS_ONE_PROD_ID	0x0d02
-
-#define	VENDOR_ID		GOOGLE_VENDOR_ID
-#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
-
-/* use a seprate PID for RNDIS */
-#define RNDIS_PRODUCT_ID	0x4e13
-#define ACM_PRODUCT_ID		0x8888
 
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
@@ -213,6 +216,100 @@ static struct platform_device android_usb = {
 		.platform_data = &android_usb_data,
 	},
 };
+
+#endif /* CONFIG_USB_ANDROID */
+
+#ifdef CONFIG_USB_BRCM
+
+static char *brcm_function_rndis[] = {
+	"rndis",
+};
+
+static char *brcm_function_acm[] = {
+	"acm",
+};
+static char *brcm_function_msc[] = {
+	"usb_mass_storage",
+};
+
+static char *brcm_functions_all[] = {
+	"usb_mass_storage",
+	"rndis",
+	"acm",
+};
+
+
+static struct usb_mass_storage_platform_data brcm_mass_storage_pdata = {
+	.nluns		=	1,
+	.vendor		=	"Broadcom",
+	.product	=	"Rhea",
+	.release	=	0x0100
+};
+
+static struct platform_device brcm_mass_storage_device = {
+	.name	=	"usb_mass_storage",
+	.id	=	-1,
+	.dev	=	{
+		.platform_data	=	&brcm_mass_storage_pdata,
+	}
+};
+
+static struct usb_ether_platform_data brcm_rndis_pdata = {
+        /* ethaddr FIXME */
+        .vendorID       = __constant_cpu_to_le16(VENDOR_ID),
+        .vendorDescr    = "Broadcom RNDIS",
+};
+
+static struct platform_device brcm_rndis_device = {
+        .name   = "rndis",
+        .id     = -1,
+        .dev    = {
+                .platform_data = &brcm_rndis_pdata,
+        },
+};
+
+static struct brcm_usb_product brcm_products[] = {
+	{
+		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(brcm_function_msc),
+		.functions	=	brcm_function_msc,
+	},
+	{
+		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(brcm_function_rndis),
+		.functions	=	brcm_function_rndis,
+	},
+	{
+		.product_id	= 	__constant_cpu_to_le16(ACM_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(brcm_function_acm),
+		.functions	=	brcm_function_acm,
+	},
+};
+
+static struct brcm_usb_platform_data brcm_usb_data = {
+	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
+	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
+	.version		=	0,
+	.product_name		=	"Rhea",
+	.manufacturer_name	= 	"Broadcom",
+	.serial_number		=	"0123456789ABCDEF",
+
+	.num_products		=	ARRAY_SIZE(brcm_products),
+	.products		=	brcm_products,
+
+	.num_functions		=	ARRAY_SIZE(brcm_functions_all),
+	.functions		=	brcm_functions_all,
+};
+
+static struct platform_device brcm_usb = {
+	.name 	= "brcm_usb",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &brcm_usb_data,
+	},
+};
+
+#endif /* CONFIG_USB_BRCM */
 
 static struct resource board_sdio0_resource[] = {
 	[0] = {
@@ -492,9 +589,16 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
+#ifdef CONFIG_USB_ANDROID
 	&android_rndis_device,
 	&android_mass_storage_device,
 	&android_usb,
+#endif	
+#ifdef CONFIG_USB_BRCM
+	&brcm_rndis_device,
+	&brcm_mass_storage_device,
+	&brcm_usb,
+#endif	
 	&pmu_device,	
 	&kona_pwm_device,
 	&kona_sspi_spi0_device,

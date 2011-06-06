@@ -302,6 +302,13 @@
 #define FUNCTION_NAME		"usb_mass_storage"
 #endif
 
+#ifdef CONFIG_USB_BRCM
+#include <linux/usb/brcm_composite.h>
+#include <linux/platform_device.h>
+
+#define FUNCTION_NAME		"usb_mass_storage"
+#endif
+
 /*------------------------------------------------------------------------*/
 
 #define FSG_DRIVER_DESC		"Mass Storage Function"
@@ -415,7 +422,7 @@ struct fsg_config {
 
 	char			can_stall;
 
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+#if defined (CONFIG_USB_ANDROID_MASS_STORAGE) || defined (CONFIG_USB_BRCM)
 	struct platform_device *pdev;
 #endif
 };
@@ -2736,7 +2743,7 @@ static struct fsg_common *fsg_common_init(struct fsg_common *common,
 		curlun->removable = lcfg->removable;
 		curlun->dev.release = fsg_lun_release;
 
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+#if defined (CONFIG_USB_ANDROID_MASS_STORAGE) || defined (CONFIG_USB_BRCM)
 		/* use "usb_mass_storage" platform device as parent */
 		curlun->dev.parent = &cfg->pdev->dev;
 #else
@@ -3025,7 +3032,7 @@ static int fsg_add(struct usb_composite_dev *cdev,
 	if (unlikely(!fsg))
 		return -ENOMEM;
 
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+#if defined (CONFIG_USB_ANDROID_MASS_STORAGE) || defined (CONFIG_USB_BRCM)
 	fsg->function.name        = FUNCTION_NAME;
 #else
 	fsg->function.name        = FSG_DRIVER_DESC;
@@ -3205,4 +3212,65 @@ static int __init init(void)
 }module_init(init);
 
 #endif /* CONFIG_USB_ANDROID_MASS_STORAGE */
+
+#ifdef CONFIG_USB_BRCM
+
+static struct fsg_config fsg_cfg;
+
+static int fsg_probe(struct platform_device *pdev)
+{
+	struct usb_mass_storage_g_data *pdata = pdev->dev.platform_data;
+	int i, nluns;
+
+	printk(KERN_INFO "fsg_probe pdev: %p, pdata: %p\n", pdev, pdata);
+	if (!pdata)
+		return -1;
+
+	nluns = pdata->nluns;
+	if (nluns > FSG_MAX_LUNS)
+		nluns = FSG_MAX_LUNS;
+	fsg_cfg.nluns = nluns;
+	for (i = 0; i < nluns; i++)
+		fsg_cfg.luns[i].removable = 1;
+
+	fsg_cfg.vendor_name = pdata->vendor;
+	fsg_cfg.product_name = pdata->product;
+	fsg_cfg.release = pdata->release;
+	fsg_cfg.can_stall = 0;
+	fsg_cfg.pdev = pdev;
+
+	return 0;
+}
+
+static struct platform_driver fsg_platform_driver = {
+	.driver = { .name = FUNCTION_NAME, },
+	.probe = fsg_probe,
+};
+
+int mass_storage_bind_config(struct usb_configuration *c)
+{
+	struct fsg_common *common = fsg_common_init(NULL, c->cdev, &fsg_cfg);
+	if (IS_ERR(common))
+		return -1;
+	return fsg_add(c->cdev, c, common);
+}
+
+static struct brcm_usb_function mass_storage_function = {
+	.name = FUNCTION_NAME,
+	.bind_config = mass_storage_bind_config,
+};
+
+static int __init init(void)
+{
+	int		rc;
+	printk(KERN_INFO "f_mass_storage init\n");
+	rc = platform_driver_register(&fsg_platform_driver);
+	if (rc != 0)
+		return rc;
+	brcm_register_function(&mass_storage_function);
+	return 0;
+}module_init(init);
+
+#endif /* CONFIG_USB_BRCM_MASS_STORAGE */
+
 
