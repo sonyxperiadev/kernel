@@ -87,6 +87,10 @@ DECLARE_CCU_CLK(khubaon_ccu, 4, AON, KHUBAON, MASK1,
          26*CLOCK_1M,  52*CLOCK_1M, 78*CLOCK_1M, 104*CLOCK_1M,
         156*CLOCK_1M, CLOCK_UNUSED);
 
+DECLARE_CCU_CLK(khub_ccu, 4, AON, KHUBAON, MASK1,
+	26*CLOCK_1M,  52*CLOCK_1M, 78*CLOCK_1M, 104*CLOCK_1M,
+	156*CLOCK_1M, CLOCK_UNUSED);
+
 /*****************************************************************************
 	Bus clocks
 *****************************************************************************/
@@ -203,6 +207,15 @@ DECLARE_BUS_CLK_NO_GATING_SEL(apb2, APB2_REG, APB2_REG, kps_ccu, KONA_SLV, IKPS,
 DECLARE_BUS_CLK(pmu_bsc_apb, PMU_BSC, PMU_BSC_APB, khubaon_ccu, AON, KHUBAON,
          26*CLOCK_1M,  52*CLOCK_1M, 78*CLOCK_1M, 104*CLOCK_1M,
         156*CLOCK_1M, CLOCK_UNUSED);
+
+/* audioh_156m and audioh_2p4m clocks resemple BUS clock, hence declaring as
+ *  * bus clokc. */
+DECLARE_BUS_CLK(audioh_156m, AUDIOH, AUDIOH_156M, khub_ccu, HUB, KHUB,
+	156*CLOCK_1M,  156*CLOCK_1M, 156*CLOCK_1M, 156*CLOCK_1M,
+	156*CLOCK_1M, 156*CLOCK_1M, 156*CLOCK_1M, CLOCK_UNUSED);
+DECLARE_BUS_CLK(audioh_2p4m, AUDIOH, AUDIOH_2P4M, khub_ccu, HUB, KHUB,
+	2400*CLOCK_1K,  2400*CLOCK_1K, 2400*CLOCK_1K, 24*CLOCK_1K,
+	2400*CLOCK_1K, 24*CLOCK_1K, 2400*CLOCK_1K, CLOCK_UNUSED);
 
 /*****************************************************************************
 	Peripheral clocks
@@ -404,6 +417,61 @@ static struct clk_src hub_clk_src = {
 
 DECLARE_PERI_CLK(hub, HUB, HUB, var_312m, 312*CLOCK_1M, 1, HUB_SEG_TRG, HUB, KHUB, 1);
 
+static struct clk *caph_srcmixer_clk_src_tbl[] =
+{
+	name_to_clk(crystal),
+	name_to_clk(ref_312m),
+};
+
+static struct clk_src caph_srcmixer_clk_src = {
+	.total          =       ARRAY_SIZE(caph_srcmixer_clk_src_tbl),
+	.sel            =       1,
+	.parents        =       caph_srcmixer_clk_src_tbl,
+};
+
+DECLARE_PERI_CLK(caph_srcmixer, CAPH, CAPH_SRCMIXER, crystal, 26*CLOCK_1M, 1, PERIPH_SEG_TRG, HUB, KHUB, 0);
+
+static struct clk *ssp3_audio_clk_src_tbl[] = {
+	name_to_clk(crystal),
+	name_to_clk(ref_312m),
+	name_to_clk(ref_cx40),
+};
+
+static struct clk_src ssp3_audio_clk_src = {
+	.total          =       ARRAY_SIZE(ssp3_audio_clk_src_tbl),
+	.sel            =       1,
+	.parents        =       ssp3_audio_clk_src_tbl,
+};
+
+DECLARE_PERI_CLK_PRE_DIV2(ssp3_audio, SSP3, SSP3_AUDIO, SSP3_AUDIO, crystal, 26*CLOCK_1M, 1, PERIPH_SEG_TRG, HUB, KHUB, 0);
+
+static struct clk *ssp4_audio_clk_src_tbl[] = {
+	name_to_clk(crystal),
+	name_to_clk(ref_312m),
+	name_to_clk(ref_cx40),
+};
+
+static struct clk_src ssp4_audio_clk_src = {
+	.total          =       ARRAY_SIZE(ssp4_audio_clk_src_tbl),
+	.sel            =       1,
+	.parents        =       ssp4_audio_clk_src_tbl,
+};
+
+DECLARE_PERI_CLK_PRE_DIV2(ssp4_audio, SSP4, SSP4_AUDIO, SSP4_AUDIO, crystal, 26*CLOCK_1M, 1, PERIPH_SEG_TRG, HUB, KHUB, 0);
+
+static struct clk *audioh_26m_clk_src_tbl[] = {
+	name_to_clk(crystal),
+	name_to_clk(ref_26m),
+};
+
+static struct clk_src audioh_26m_clk_src = {
+	.total          =       ARRAY_SIZE(audioh_26m_clk_src_tbl),
+	.sel            =       0,
+	.parents        =       audioh_26m_clk_src_tbl,
+};
+
+DECLARE_PERI_CLK_NO_DIV_COUNT2(audioh_26m, AUDIOH_26M, AUDIOH, crystal, 26*CLOCK_1M, PERIPH_SEG_TRG, HUB, KHUB);
+
 /* table for registering clock */
 struct clk_lookup island_clk_tbl[] =
 {
@@ -484,6 +552,12 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(timers),
 	CLK_LK(spum_open),
 	CLK_LK(spum_sec),
+	CLK_LK(caph_srcmixer),
+	CLK_LK(ssp3_audio),
+	CLK_LK(ssp4_audio),
+	CLK_LK(audioh_156m),
+	CLK_LK(audioh_2p4m),
+	CLK_LK(audioh_26m),
 };
 
 int __init clock_init(void)
