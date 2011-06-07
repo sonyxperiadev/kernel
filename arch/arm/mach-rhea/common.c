@@ -506,8 +506,8 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
 	&board_sdio1_device,
-	&board_sdio0_device,
 	&board_sdio2_device,
+	&board_sdio0_device,
 };
 
 void __init board_add_common_devices(void)
