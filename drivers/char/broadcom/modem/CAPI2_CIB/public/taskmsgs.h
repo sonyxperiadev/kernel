@@ -2119,6 +2119,10 @@ typedef enum
 	MSG_AT_COMMAND_REQ			= MSG_GRP_INT_ATC+0x52,	///<Payload type {::AtCmdInfo_t}
 	MSG_AT_COMMAND_IND			= MSG_GRP_INT_ATC+0x53,	///<Payload type {::AtCmdInfo_t}
 	MSG_AT_REGISTER_REQ			= MSG_GRP_INT_ATC+0x54, 	///<Payload type {::AtRegisterInfo_t}//TASKMSGS_INCLUDE taskmsgs_usb.i
+	MSG_AT_TONE_REQ				= MSG_GRP_INT_ATC+0x55, 	///<Payload type {::AtToneInfo_t}
+	MSG_AT_AUDIO_REQ			= MSG_GRP_INT_ATC+0x56,		///<payload type {::Boolean}
+	MSG_AT_MICMUTE_REQ			= MSG_GRP_INT_ATC+0x57,		///<payload type {::Boolean}
+	MSG_AT_SPEAKERMUTE_REQ			= MSG_GRP_INT_ATC+0x58,		///<payload type {::Boolean}
 	//---------------------------------------------------------------
 	// MSG_GRP_DEV, MESSAGE GROUP FOR DEVICES (0x0700)
 	//---------------------------------------------------------------

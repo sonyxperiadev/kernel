@@ -67,7 +67,7 @@
 
 
 /** Maximum length of an AT command input line */
-#define AT_PARM_BUFFER_LEN 512
+#define AT_PARM_BUFFER_LEN 10240
 
 //-----------------------------------------------------------------------------
 //	Type definitions
