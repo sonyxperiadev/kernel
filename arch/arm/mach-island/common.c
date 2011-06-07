@@ -135,6 +135,34 @@ static struct platform_device wdt_device =
 };
 #endif
 
+#if defined(CONFIG_RTC_DRV_ISLAND)
+static struct resource rtc_device_resource[] = {
+    [0] = {
+        .start = BBL_BASE_ADDR,
+        .end   = BBL_BASE_ADDR + 0x24,
+        .flags = IORESOURCE_MEM,
+    },
+    [1] = {
+        .start = BCM_INT_ID_BBL0,
+        .end   = BCM_INT_ID_BBL0,
+        .flags = IORESOURCE_IRQ,
+    },
+    [2] = {
+        .start = BCM_INT_ID_BBL1,
+        .end   = BCM_INT_ID_BBL1,
+        .flags = IORESOURCE_IRQ,
+    },
+};
+
+static struct platform_device rtc_device =
+{
+   .name          = "bcmhana-rtc",
+   .id            = -1,
+   .resource	  = rtc_device_resource,
+   .num_resources = ARRAY_SIZE(rtc_device_resource),
+};
+#endif
+
 /* Common devices among all Island boards */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -146,6 +174,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_HW_RANDOM_BCMHANA)
         &rng_device,
+#endif
+#if defined(CONFIG_RTC_DRV_ISLAND)
+        &rtc_device,
 #endif
 };
 

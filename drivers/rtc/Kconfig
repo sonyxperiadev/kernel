@@ -757,6 +757,12 @@ config RTC_DRV_AT32AP700X
 	  Driver for the internal RTC (Realtime Clock) on Atmel AVR32
 	  AT32AP700x family processors.
 
+config RTC_DRV_ISLAND
+	tristate "AT32AP700X series RTC"
+	help
+	  Driver for the internal RTC (Realtime Clock) on Atmel AVR32
+	  AT32AP700x family processors.
+
 config RTC_DRV_AT91RM9200
 	tristate "AT91RM9200 or AT91SAM9RL"
 	depends on ARCH_AT91RM9200 || ARCH_AT91SAM9RL
