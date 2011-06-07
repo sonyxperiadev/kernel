@@ -21,6 +21,18 @@ config MFD_BCM_PMU590XX
 	help
 	  Support for the Broadcom PMIC.
 
+config MFD_BCMPMU
+	bool "MFD BCM PMU"
+	depends on MFD_CORE && I2C_BSC
+	help
+	  Support for Broadcom PMUs.
+
+config MFD_BCM59055
+	bool "PMU BCM59055 Support"
+	depends on MFD_BCMPMU
+	help
+	  This enables PMU driver to support BCM59055.
+
 config MFD_88PM860X
 	bool "Support Marvell 88PM8606/88PM8607"
 	depends on I2C=y && GENERIC_HARDIRQS

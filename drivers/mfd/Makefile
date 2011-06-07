@@ -72,3 +72,5 @@ obj-$(CONFIG_LPC_SCH)		+= lpc_sch.o
 obj-$(CONFIG_MFD_RDC321X)	+= rdc321x-southbridge.o
 obj-$(CONFIG_MFD_JANZ_CMODIO)	+= janz-cmodio.o
 obj-$(CONFIG_MFD_BCM_PMU590XX)  += bcm590xx-i2c.o bcm590xx-core.o
+obj-$(CONFIG_MFD_BCMPMU)	+= bcmpmu-i2c.o bcmpmu-core.o bcmpmu-irq.o
+obj-$(CONFIG_MFD_BCM59055)	+= bcmpmu-bcm59055-map.o
