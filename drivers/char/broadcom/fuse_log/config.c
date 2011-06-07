@@ -116,7 +116,11 @@ static int proc_read(char *page, char **start, off_t offset, int count, int *eof
  *		g - APP crash dump -> disabled
  *		h - Save for reboot
  *		i - Restore defaults
- *              s - STM logging
+ *		j - CP crash dump -> flash
+ *		k - CP crash dump -> SD card
+ *		l - CP crash dump -> disabled
+ *		m - CP crash dump -> RNDIS
+ *		s - STM logging
  **/
 static ssize_t proc_write(struct file *file, const char *buffer, unsigned long count, void *data)
 {	

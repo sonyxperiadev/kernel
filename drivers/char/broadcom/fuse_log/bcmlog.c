@@ -1108,6 +1108,7 @@ void BCMLOG_EndCpCrashDump(void)
  **/
 void BCMLOG_HandleCpCrashDumpData( const char *buf, int size )
 {
+	unsigned long irql;
     switch( BCMLOG_GetCpCrashLogDevice() ){
     case BCMLOG_OUTDEV_SDCARD:
 		if ( sDumpFile && sDumpFile->f_op && sDumpFile->f_op->write )
@@ -1119,7 +1120,9 @@ void BCMLOG_HandleCpCrashDumpData( const char *buf, int size )
 		BCMLOG_WriteMTD (buf, size);
 		break;
 	case BCMLOG_OUTDEV_RNDIS:
+	    irql = AcquireOutputLock( ) ;
 		BCMLOG_Output( buf, size, 0 );
+		ReleaseOutputLock( irql ) ;
 		break;
 	case BCMLOG_OUTDEV_NONE:
 		break;
@@ -1136,6 +1139,7 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString )
 {
 	int logStrSize;
 	int mttFrameSize;
+	unsigned long irql;
 
 	// include the NULL termination...
 	logStrSize = strlen(inLogString) + 1;
@@ -1166,7 +1170,9 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString )
 			BCMLOG_WriteMTD (kbuf_mtt, mttFrameSize);
 			break;
 		case BCMLOG_OUTDEV_RNDIS:
+			irql = AcquireOutputLock( ) ;
 			BCMLOG_Output( kbuf_mtt, mttFrameSize, 0 );
+			ReleaseOutputLock( irql ) ;
 			break;
 		case BCMLOG_OUTDEV_NONE:
 			break;
