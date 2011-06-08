@@ -83,6 +83,25 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SD_DAT1, MMC0_DAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SD_DAT0, MMC0_DAT0, 0, OFF, ON, 0, 0, 8MA),
 
+#ifdef CONFIG_KEYBOARD_TC3589X
+	/*	Pinmux for GPIOs */
+	PIN_CFG(GPIO00, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO01, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO02, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO03, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO04, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO05, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO06, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO07, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO08, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO09, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO10, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO11, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO12, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO13, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO14, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO15, GPIO, 0, OFF, ON, 0, 0, 8MA),
+#else
 	/*	Pinmux for keypad */
 	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO01, KEY_R1, 0, OFF, ON, 0, 0, 8MA),
@@ -101,6 +120,8 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 #endif
+
+#endif /* CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY */
 };
 
 /* board level init */

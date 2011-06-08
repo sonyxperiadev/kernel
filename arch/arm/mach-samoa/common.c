@@ -329,12 +329,12 @@ static struct resource board_sdio1_resource[] = {
 	},
 };
 
+#define SD_CARDDET_GPIO_PIN 15
 static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO0 */
 		.id = 0,
 		.data_pullup = 0,
-//		.cd_gpio = 106, FIXME
-//		.cd_gpio = SD_CARDDET_GPIO_PIN,
+		.cd_gpio = SD_CARDDET_GPIO_PIN,
 		.devtype = SDIO_DEV_TYPE_SDMMC,
 		.peri_clk_name = "sdio1_clk",
 		.ahb_clk_name = "sdio1_ahb_clk",
