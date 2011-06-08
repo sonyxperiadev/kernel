@@ -154,6 +154,7 @@ static ssize_t proc_write(struct file *file, const char *buffer, unsigned long c
 			break ;
 		case 's':      
 			g_config.runlog_dev = BCMLOG_OUTDEV_STM;
+			g_config.cp_crashlog_dev = BCMLOG_OUTDEV_STM;
                         break ;
 		case 'i': 
 			SetConfigDefaults( ) ;
