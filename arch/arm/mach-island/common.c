@@ -26,6 +26,7 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/serial_8250.h>
+#include <linux/island_keypad.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
 #include <mach/kona.h>
@@ -135,6 +136,51 @@ static struct platform_device wdt_device =
 };
 #endif
 
+#if defined(CONFIG_KEYBOARD_ISLAND)
+
+static struct KEYMAP board_keypad_keymap[] = {
+    { 0x01, '1' }, { 0x11, '2' }, { 0x21, '3' }, { 0x31, 'a' }, { 0x41, '(' }, { 0x51, 'e' }, { 0x61, 'U' },
+    { 0x02, '4' }, { 0x12, '5' }, { 0x22, '6' }, { 0x32, 'b' }, { 0x42, '>' }, { 0x52, 'L' }, { 0x62, 'C' },
+    { 0x03, '7' }, { 0x13, '8' }, { 0x23, '9' }, { 0x33, 'c' }, { 0x43, '<' }, { 0x53, 'f' }, { 0x63, 'D' },
+    { 0x04, '*' }, { 0x14, '0' }, { 0x24, '#' }, { 0x34, 'd' }, { 0x44, 'S' }, { 0x54, 'H' }, { 0x64, 'B' },
+};
+
+static unsigned int board_keypad_pwroff[] = { '*', '8', '6' };
+
+static struct KEYPAD_DATA board_keypad_param =
+{
+    .active_mode = 0,
+    .keymap      = board_keypad_keymap,
+    .keymap_cnt  = ARRAY_SIZE(board_keypad_keymap),
+    .pwroff      = board_keypad_pwroff,
+    .pwroff_cnt  = ARRAY_SIZE(board_keypad_pwroff),
+};
+
+static struct resource keypad_device_resource[] = {
+    [0] = {
+        .start = KEYPAD_BASE_ADDR,
+        .end   = KEYPAD_BASE_ADDR + 0xD0,
+        .flags = IORESOURCE_MEM,
+    },
+    [1] = {
+        .start = BCM_INT_ID_KEYPAD,
+        .end   = BCM_INT_ID_KEYPAD,
+        .flags = IORESOURCE_IRQ,
+    },
+};
+
+static struct platform_device keypad_device =
+{
+   .name          = "island-keypad",
+   .id            = -1,
+   .resource	  = keypad_device_resource,
+   .num_resources = ARRAY_SIZE(keypad_device_resource),
+   .dev = {
+      .platform_data = &board_keypad_param,
+   },
+};
+#endif
+
 #if defined(CONFIG_RTC_DRV_ISLAND)
 static struct resource rtc_device_resource[] = {
     [0] = {
@@ -177,6 +223,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_RTC_DRV_ISLAND)
         &rtc_device,
+#endif
+#if defined(CONFIG_KEYBOARD_ISLAND)
+        &keypad_device,
 #endif
 };
 

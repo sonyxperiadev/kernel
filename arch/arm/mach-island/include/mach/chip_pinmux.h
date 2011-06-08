@@ -31,7 +31,25 @@
 
 /* define ball name, generated from RDB */
 enum PIN_NAME {
-	/* WiFi SDIO */
+        /* Keypad */
+        PN_NORFLSH_AD_14,     // KP_ROW_OP_0
+	PN_NORFLSH_AD_13,     // KP_ROW_OP_1
+	PN_NORFLSH_AD_12,     // KP_ROW_OP_2
+	PN_NORFLSH_AD_11,     // KP_ROW_OP_3
+	PN_NORFLSH_AD_10,     // KP_ROW_OP_4
+	PN_NORFLSH_AD_09,     // KP_ROW_OP_5
+	PN_NORFLSH_AD_08,     // KP_ROW_OP_6
+
+        PN_NORFLSH_AD_04,     // KP_ROW_OP_0
+        PN_NORFLSH_ADLAT_EN,  // KP_COL_IP_1
+        PN_NORFLSH_AADLAT_EN, // KP_COL_IP_2
+        PN_NORFLSH_ADDR_20,   // KP_COL_IP_3
+        PN_NORFLSH_ADDR_21,   // KP_COL_IP_4
+        PN_NORFLSH_ADDR_22,   // KP_COL_IP_5
+        PN_NORFLSH_ADDR_23,   // KP_COL_IP_6
+	PN_NORFLSH_AD_07,     // KP_COL_IP_7
+
+        /* WiFi SDIO */
         PN_NORFLSH_AD_03,
 	PN_NORFLSH_AD_02,
 	PN_NORFLSH_AD_01,
@@ -102,6 +120,40 @@ enum PIN_NAME {
 enum PIN_FUNC {
 	PF_RESERVED	=	0,
 	PF_GPIO,
+
+        PF_NORFLSH_AD_14,
+	PF_NORFLSH_AD_13,
+	PF_NORFLSH_AD_12,
+	PF_NORFLSH_AD_11,
+	PF_NORFLSH_AD_10,
+	PF_NORFLSH_AD_09,
+	PF_NORFLSH_AD_08,
+
+        PF_NORFLSH_AD_04,
+        PF_NORFLSH_ADLAT_EN,
+        PF_NORFLSH_AADLAT_EN,
+        PF_NORFLSH_ADDR_20,
+        PF_NORFLSH_ADDR_21,
+        PF_NORFLSH_ADDR_22,
+        PF_NORFLSH_ADDR_23,
+	PF_NORFLSH_AD_07,
+
+        PF_KP_ROW_OP_0,
+	PF_KP_ROW_OP_1,
+	PF_KP_ROW_OP_2,
+	PF_KP_ROW_OP_3,
+	PF_KP_ROW_OP_4,
+	PF_KP_ROW_OP_5,
+	PF_KP_ROW_OP_6,
+
+        PF_KP_COL_IP_0,
+        PF_KP_COL_IP_1,
+        PF_KP_COL_IP_2,
+        PF_KP_COL_IP_3,
+        PF_KP_COL_IP_4,
+        PF_KP_COL_IP_5,
+        PF_KP_COL_IP_6,
+	PF_KP_COL_IP_7,
 
 	PF_NORFLSH_AD_03,
         PF_NORFLSH_AD_02,
