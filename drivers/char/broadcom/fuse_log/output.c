@@ -39,15 +39,16 @@ extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks 
 extern int csl_StmSendBytes(void *data_ptr, int length);
 #endif
 
-#ifdef CONFIG_USB_ETH_RNDIS
+static int acm_start_cb( void ) ;
+static int acm_stop_cb( void ) ;
+
+#if defined (CONFIG_USB_BRCM) || defined (CONFIG_USB_ANDROID_RNDIS)
 
 /*
  *	forward declarations
  */
 static int netconsole_start_cb( void ) ;
 static int netconsole_stop_cb( void ) ;
-static int acm_start_cb( void ) ;
-static int acm_stop_cb( void ) ;
 
 #ifdef BCMLOG_DEBUG_FLAG
 unsigned  int g_malloc_sig_buf = 0;
@@ -109,7 +110,7 @@ static WriteToLogDevParms_t g_devWrParms =		//	worker thread vars
 	.outdev			= BCMLOG_OUTDEV_NONE,
 } ;
 
-#ifdef CONFIG_USB_ETH_RNDIS
+#if defined (CONFIG_USB_BRCM) || defined (CONFIG_USB_ANDROID_RNDIS)
 
 static struct brcm_netconsole_callbacks _cb =	//	RNDIS flow control callbacks
 {

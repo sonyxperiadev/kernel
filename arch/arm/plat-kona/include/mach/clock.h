@@ -679,6 +679,42 @@ unsigned long clock_get_xtal(void);
 		.pre_trigger_mask	=	pfx##_CLK_MGR_REG_##trigger##_##NAME2##_PRE_TRIGGER_MASK,	\
 	}
 
+/* for clock gate and div register with different prefix
+ * see ssp3_audio in Island Khub
+ * */
+#define	DECLARE_PERI_CLK_PRE_DIV2(clk_name, NAME1, NAME2, NAME3, clk_parent, clk_rate, clk_div, trigger, ccu, pfx, dthr)	\
+	static struct peri_clock clk_name##_clk = {						\
+		.clk	=	{								\
+			.name	=	__stringify(clk_name##_clk),				\
+			.parent =	name_to_clk(clk_parent),				\
+			.rate	=	clk_rate,						\
+			.div	=	clk_div,						\
+			.id	=	BCM2165x_CLK_##NAME2,							\
+			.ccu_id =       BCM2165x_##ccu##_CCU,					\
+			.flags	=	BCM2165x_CLK_##NAME2##_FLAGS,				\
+			.src	=	&clk_name##_clk_src,					\
+			.ops	=	&peri_clk_ops,						\
+		},										\
+		.ccu_clk_mgr_base	=	ccu##_CLK_BASE_ADDR,				\
+		.wr_access_offset	=	pfx##_CLK_MGR_REG_WR_ACCESS_OFFSET,		\
+		.clkgate_offset 	=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_OFFSET,	\
+		.div_offset		=	pfx##_CLK_MGR_REG_##NAME1##_DIV_OFFSET,	\
+		.div_trig_offset	=	pfx##_CLK_MGR_REG_##trigger##_OFFSET,		\
+		.stprsts_mask		=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_STPRSTS_MASK,		\
+		.hw_sw_gating_mask	=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_HW_SW_GATING_SEL_MASK,	\
+		.clk_en_mask		=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_CLK_EN_MASK,		\
+		.div_mask		=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_DIV_MASK,		\
+		.div_shift		=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_DIV_SHIFT,		\
+		.div_max		=	CLK_##NAME2##_DIV_MAX,						\
+		.pre_div_mask		=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_PRE_DIV_MASK,		\
+		.pre_div_shift		=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_PRE_DIV_SHIFT,		\
+		.pre_div_max		=	CLK_##NAME2##_PREDIV_MAX,						\
+		.div_dithering		=	dthr,									\
+		.pll_select_mask	=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_PRE_PLL_SELECT_MASK,	\
+		.pll_select_shift	=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_PRE_PLL_SELECT_SHIFT,	\
+		.trigger_mask		=	pfx##_CLK_MGR_REG_##trigger##_##NAME2##_TRIGGER_MASK,	\
+		.pre_trigger_mask	=	pfx##_CLK_MGR_REG_##trigger##_##NAME2##_PRE_TRIGGER_MASK,	\
+	}
 
 /* declare a peripheral clock without divider count value. It will have source
  * selection*/
@@ -705,6 +741,32 @@ unsigned long clock_get_xtal(void);
 		.clk_en_mask		=	pfx##_CLK_MGR_REG_##CLK_NAME##_CLKGATE_##CLK_NAME##_CLK_EN_MASK,		\
 		.pll_select_mask	=	pfx##_CLK_MGR_REG_##CLK_NAME##_DIV_##CLK_NAME##_PLL_SELECT_MASK,	\
 		.pll_select_shift	=	pfx##_CLK_MGR_REG_##CLK_NAME##_DIV_##CLK_NAME##_PLL_SELECT_SHIFT,	\
+		.trigger_mask		=	pfx##_CLK_MGR_REG_##trigger##_##CLK_NAME##_TRIGGER_MASK,		\
+	}
+
+#define	DECLARE_PERI_CLK_NO_DIV_COUNT2(clk_name, CLK_NAME, NAME2, clk_parent, clk_rate, trigger, ccu, pfx)	\
+	static struct peri_clock clk_name##_clk = {						\
+		.clk	=	{								\
+			.name	=	__stringify(clk_name##_clk),				\
+			.parent =	name_to_clk(clk_parent),				\
+			.rate	=	clk_rate,						\
+			.div	=	1,							\
+			.id	=	BCM2165x_CLK_##CLK_NAME,				\
+			.ccu_id =       BCM2165x_##ccu##_CCU,					\
+			.flags	=	BCM2165x_CLK_##CLK_NAME##_FLAGS,				\
+			.src	=	&clk_name##_clk_src,					\
+			.ops	=	&peri_clk_ops,						\
+		},										\
+		.ccu_clk_mgr_base	=	ccu##_CLK_BASE_ADDR,				\
+		.wr_access_offset	=	pfx##_CLK_MGR_REG_WR_ACCESS_OFFSET,		\
+		.clkgate_offset 	=	pfx##_CLK_MGR_REG_##NAME2##_CLKGATE_OFFSET,	\
+		.div_offset		=	pfx##_CLK_MGR_REG_##NAME2##_DIV_OFFSET,	\
+		.div_trig_offset	=	pfx##_CLK_MGR_REG_##trigger##_OFFSET,		\
+		.stprsts_mask		=	pfx##_CLK_MGR_REG_##NAME2##_CLKGATE_##CLK_NAME##_STPRSTS_MASK,		\
+		.hw_sw_gating_mask	=	pfx##_CLK_MGR_REG_##NAME2##_CLKGATE_##CLK_NAME##_HW_SW_GATING_SEL_MASK,	\
+		.clk_en_mask		=	pfx##_CLK_MGR_REG_##NAME2##_CLKGATE_##CLK_NAME##_CLK_EN_MASK,		\
+		.pll_select_mask	=	pfx##_CLK_MGR_REG_##NAME2##_DIV_##CLK_NAME##_PLL_SELECT_MASK,	\
+		.pll_select_shift	=	pfx##_CLK_MGR_REG_##NAME2##_DIV_##CLK_NAME##_PLL_SELECT_SHIFT,	\
 		.trigger_mask		=	pfx##_CLK_MGR_REG_##trigger##_##CLK_NAME##_TRIGGER_MASK,		\
 	}
 

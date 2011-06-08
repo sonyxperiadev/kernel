@@ -27,8 +27,6 @@
 #include <linux/fs.h>
 #include <linux/file.h>
 #include <asm/uaccess.h>
-#include <linux/time.h>
-#include <linux/rtc.h>
 #include <linux/broadcom/ipcinterface.h>
 #include "ipc_sharedmemory.h"
 
@@ -82,13 +80,6 @@ typedef struct {
 #define MAX_RAMDUMP_BLOCKS  16
 static char assert_buf[ASSERT_BUF_SIZE];
 static T_CRASH_SUMMARY *dumped_crash_summary_ptr = NULL;
-
-// file that CP crash dump log will be written to
-#define CP_CRASH_DUMP_DIR               "/sdcard/"
-#define CP_CRASH_DUMP_BASE_FILE_NAME    "cp_crash_dump_"
-#define CP_CRASH_DUMP_FILE_EXT          ".bin"
-#define CP_CRASH_DUMP_MAX_LEN           100
-
 static int crashCount = 0;
 
 // maximum number of times we'll try to re-establish comms with
@@ -282,40 +273,7 @@ void DUMP_CP_assert_log(void)
 	UInt32 packetCount = 0;
     void __iomem *AssertLogVAddr = NULL;
     struct file* sdDumpFile = NULL;
-    mm_segment_t oldfs;
-    struct timespec ts;
-    struct rtc_time tm;
-    char assertFileName[CP_CRASH_DUMP_MAX_LEN];
     
-#ifndef CONFIG_BRCM_CP_CRASH_DUMP
-    // need to tell kernel that pointers from within the 
-    // kernel address space are valid (needed to do 
-    // file ops from kernel)
-    oldfs = get_fs();     
-    set_fs (KERNEL_DS); 
-
-    // get current time
-    getnstimeofday(&ts);
-    rtc_time_to_tm(ts.tv_sec, &tm);
-    snprintf(assertFileName, CP_CRASH_DUMP_MAX_LEN,
-            "%s%s%d_%02d_%02d_%02d_%02d_%02d%s",
-            CP_CRASH_DUMP_DIR,
-            CP_CRASH_DUMP_BASE_FILE_NAME,
-            tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
-            tm.tm_hour, tm.tm_min, tm.tm_sec,
-            CP_CRASH_DUMP_FILE_EXT );
-
-	sdDumpFile = filp_open( assertFileName, O_WRONLY|O_TRUNC|O_LARGEFILE|O_CREAT, 666);
-	if ( IS_ERR(sdDumpFile)  )
-	{
-		IPC_DEBUG(DBG_ERROR,"failed to open sdDumpFile %s\n", assertFileName);
-		sdDumpFile = NULL;
-	}
-	else
-	{
-		IPC_DEBUG(DBG_ERROR,"sdDumpFile %s opened OK\n",assertFileName);
-	}
-#endif     
     // put logging driver into crash dump mode; messages will be sent straight out to MTT via 
     // RNDIS (or dump file) instead of buffering in RING buffer (flood of crash dump info 
     // overloads ring buffer otherwise, and we lose a lot of crash dump info)
@@ -418,12 +376,6 @@ void DUMP_CP_assert_log(void)
     IPC_DEBUG(DBG_ERROR,"CP RAM dump complete\n");
     // resume normal logging activities...
     BCMLOG_EndCpCrashDump( );
-	
-    if ( sdDumpFile )
-    {
-        filp_close( sdDumpFile ,NULL );
-    }
-    set_fs (oldfs); 
     
     IPC_DEBUG(DBG_ERROR,"CP crash dump complete\n");
 

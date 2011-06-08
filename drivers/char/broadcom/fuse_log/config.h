@@ -22,7 +22,8 @@
 #define BCMLOG_CONFIG_PROC_FILE		"brcm_logcfg"				///<	/proc file to accept configuration changes
 
 typedef struct {
-	int				logcat_dump_dev ;							// must be at beginning of struct; see brcm/dumpd/dumpd.c
+	int				ap_crashlog_dev ;							// must be at beginning of struct; see brcm/dumpd/dumpd.c
+	int				cp_crashlog_dev ;
 	int				runlog_dev ;
 	unsigned long	id_enable[ 1 + BCMLOG_MAX_LOG_ID / BITS_PER_LONG ] ;
 }	BCMLOG_Config_t ;

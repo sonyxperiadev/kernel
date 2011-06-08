@@ -208,6 +208,20 @@ config REGULATOR_BCM_PMU59055
 	  This driver supports the voltage regulators provided by
 	  PMU 59055.
 
+config REGULATOR_BCMPMU
+	bool "BCM PMU Regulator"
+	depends on MFD_BCMPMU
+	help
+	  This driver supports the voltage regulators provided by
+	  this family of companion chips.
+
+config REGULATOR_BCM59055
+	bool "BCM59055 Regulator"
+	depends on MFD_BCMPMU && REGULATOR_BCMPMU
+	help
+	  This driver supports the voltage regulators provided by
+	  PMU 59055.
+
 config MAX8649_SUPPORT_CHANGE_VID_MODE
 	bool "Enable Maxim 8649 regulator to change voltage "
 	depends on REGULATOR_MAX8649
