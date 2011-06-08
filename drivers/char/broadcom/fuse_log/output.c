@@ -42,7 +42,7 @@ extern int csl_StmSendBytes(void *data_ptr, int length);
 static int acm_start_cb( void ) ;
 static int acm_stop_cb( void ) ;
 
-#ifdef CONFIG_USB_ETH_RNDIS
+#ifdef CONFIG_BRCM_NETCONSOLE
 
 /*
  *	forward declarations
@@ -110,7 +110,7 @@ static WriteToLogDevParms_t g_devWrParms =		//	worker thread vars
 	.outdev			= BCMLOG_OUTDEV_NONE,
 } ;
 
-#ifdef CONFIG_USB_ETH_RNDIS
+#ifdef CONFIG_BRCM_NETCONSOLE
 
 static struct brcm_netconsole_callbacks _cb =	//	RNDIS flow control callbacks
 {
