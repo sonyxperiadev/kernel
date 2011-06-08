@@ -319,21 +319,6 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	bcmpmu_read_irq_regs(idata);
 	bcmpmu_clear_irqs(bcmpmu);
 
-	/*for(j=0x840;j<=0x84d;j++)
-	{
-		bcmpmu->read_dev_drct(bcmpmu,0,j,&val,0xff);
-        printk(KERN_ERR "[0x%x]=0x%x\n",j,val);
-	}*/
-    for(j=0x8a0;j<=0x8d2;j++)
-	{
-		bcmpmu->read_dev_drct(bcmpmu,0,j,&val,0xff);
-        printk(KERN_ERR "[0x%x]=0x%x\n",j,val);
-	}
-	/*for(j=0xc00;j<=0xcff;j++)
-	{
-		bcmpmu->read_dev_drct(bcmpmu,1,j,&val,0xff);
-        printk(KERN_ERR "[0x%x]=0x%x\n",j,val);
-	}*/
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_irq_attr_group);
