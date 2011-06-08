@@ -39,8 +39,7 @@ Broadcom's express prior written consent.
 #include <net/udp.h>
 #include <asm/unaligned.h>
 #include <trace/events/napi.h>
-
-#if defined (CONFIG_USB_BRCM) || defined (CONFIG_USB_ANDROID_RNDIS)
+#ifdef CONFIG_USB_ETH_RNDIS
 #include "../../drivers/usb/gadget/rndis.h"
 #endif
 
@@ -48,7 +47,7 @@ Broadcom's express prior written consent.
  * We maintain a small pool of fully-sized skbs, to make sure the
  * message gets out even in extreme OOM situations.
  */
-#if defined (CONFIG_USB_BRCM) || defined (CONFIG_USB_ANDROID_RNDIS)
+#ifdef CONFIG_USB_ETH_RNDIS
 #define MAX_UDP_CHUNK 1400
 #else
 #define MAX_UDP_CHUNK 1460
@@ -64,7 +63,7 @@ static atomic_t trapped;
 #define NETPOLL_RX_ENABLED  1
 #define NETPOLL_RX_DROP     2
 
-#if defined (CONFIG_USB_BRCM) || defined (CONFIG_USB_ANDROID_RNDIS)
+#ifdef CONFIG_USB_ETH_RNDIS
 #define MAX_SKB_SIZE \
 		(MAX_UDP_CHUNK + sizeof(struct udphdr) + \
 				sizeof(struct iphdr) + sizeof(struct ethhdr) + \
@@ -445,7 +444,7 @@ void netpoll_send_udp(struct netpoll *np, const char *msg, int len)
 	udp_len = len + sizeof(*udph);
 	ip_len = eth_len = udp_len + sizeof(*iph);
 	total_len = eth_len + ETH_HLEN + NET_IP_ALIGN
-#if defined (CONFIG_USB_BRCM) || defined (CONFIG_USB_ANDROID_RNDIS)
+#ifdef CONFIG_USB_ETH_RNDIS
 		+ sizeof (struct rndis_packet_msg_type) /* reserved for the RNDIS header */
 #endif
 	;
@@ -494,7 +493,7 @@ void netpoll_send_udp(struct netpoll *np, const char *msg, int len)
 	memcpy(eth->h_source, np->dev->dev_addr, ETH_ALEN);
 	memcpy(eth->h_dest, np->remote_mac, ETH_ALEN);
 	/* Add RNDIS header here so we do not need to deal with on the ethernet driver */
-#if defined (CONFIG_USB_BRCM) || defined (CONFIG_USB_ANDROID_RNDIS)
+#ifdef CONFIG_USB_ETH_RNDIS
 	rndis_header = (void *) skb_push (skb, sizeof *rndis_header);
 	memset (rndis_header, 0, sizeof *rndis_header);
 	rndis_header->MessageType = __constant_cpu_to_le32(REMOTE_NDIS_PACKET_MSG);

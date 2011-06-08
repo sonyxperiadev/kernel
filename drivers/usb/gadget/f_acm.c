@@ -18,7 +18,6 @@
 #include <linux/kernel.h>
 #include <linux/device.h>
 #include <linux/usb/android_composite.h>
-#include <linux/usb/brcm_composite.h>
 
 #include "u_serial.h"
 #include "gadget_chips.h"
@@ -812,29 +811,3 @@ static int __init init(void)
 module_init(init);
 
 #endif /* CONFIG_USB_ANDROID_ACM */
-
-#ifdef CONFIG_USB_BRCM
-
-int acm_function_bind_config(struct usb_configuration *c)
-{
-	int ret = acm_bind_config(c, 0);
-	if (ret == 0)
-		gserial_setup(c->cdev->gadget, 1);
-	return ret;
-}
-
-static struct android_usb_function acm_function = {
-	.name = "acm",
-	.bind_config = acm_function_bind_config,
-};
-
-static int __init init(void)
-{
-	printk(KERN_INFO "f_acm init\n");
-	brcm_register_function(&acm_function);
-	return 0;
-}
-module_init(init);
-
-#endif /* CONFIG_USB_BRCM */
-
