@@ -66,10 +66,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "atc_kernel.h"
 
-#ifdef TEST_AUDIO_DRIVER
-#include "temp_audio_tel.h"
-#endif
-
 extern void KRIL_SysRpc_Init( void ) ;
 
 /**
@@ -280,9 +276,6 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
  *          ATC_KERNEL_SEND_AT_CMD    - arg is a pointer to type ATC_KERNEL_ATCmd_t,
  *                                which specifies the at channel and command.
  */
-#ifdef TEST_AUDIO_DRIVER
-static Boolean b_audio_path = FALSE;
-#endif
 
 static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 {
@@ -352,10 +345,6 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 struct list_head *entry;
                 AT_RespQueue_t *respItem = NULL;
 		  UInt16 len = ATC_KERNEL_RESULT_BUFFER_LEN_MAX - 1;
-#ifdef TEST_AUDIO_DRIVER
-		  Boolean onoff;
-		  UInt32	 msgId=0;
-#endif		  
                 
 		  ATC_KERNEL_TRACE(("cmd - ATC_KERNEL_Get_AT_RESP\n"));
 
@@ -378,14 +367,6 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 entry = sModule.mRespQueue.mList.next;
                 respItem = list_entry(entry, AT_RespQueue_t, mList);
 				
-#ifdef TEST_AUDIO_DRIVER
-		  msgId = respItem->mATResp.msgId;
-				
-		  if(msgId  == MSG_AT_AUDIO_REQ)
-		  {
-			onoff = *((Boolean *)(respItem->mATResp.buffPtr));
-		  }
-#endif		  
 		  atRespU.chan = respItem->mATResp.chan;
 		  atRespU.msgId = respItem->mATResp.msgId;
 		  atRespU.dataLen = respItem->mATResp.dataLen;
@@ -412,20 +393,6 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 
                 spin_unlock_irqrestore(&sModule.mRespLock, irql);
 				
-#ifdef TEST_AUDIO_DRIVER
-				
-		if(msgId== MSG_AT_AUDIO_REQ)
-		{
-			  if(onoff != b_audio_path)
-			  {
-			  	if(onoff)
-				  	AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET);
-				else
-					AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET);
-				b_audio_path = onoff;
-			  }
-		}
-#endif				
                 break;
             }
 
