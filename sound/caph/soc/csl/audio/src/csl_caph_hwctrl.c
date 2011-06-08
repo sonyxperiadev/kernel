@@ -40,6 +40,8 @@ Broadcom's express prior written consent.
 //#define _DBG_(a)
 #define _DBG_(a) (a)
 
+//#define CONFIG_VOICE_LOOPBACK_TEST
+
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -2860,6 +2862,12 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
        }
        else if (audioPath.routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_48KHZ)
        {
+       		// temp fix until we integrate the sysparm and latest code from RTOS for gain parameters
+           	audioPath.routeConfig.mixGain.mixInGainL		= MIX_IN_PASS;
+			audioPath.routeConfig.mixGain.mixOutCoarseGainL	= BIT_SELECT;
+			audioPath.routeConfig.mixGain.mixInGainR		= MIX_IN_PASS;
+			audioPath.routeConfig.mixGain.mixOutCoarseGainR	= BIT_SELECT;
+			
        	csl_caph_srcmixer_config_mix_route(audioPath.routeConfig);
        }
       
