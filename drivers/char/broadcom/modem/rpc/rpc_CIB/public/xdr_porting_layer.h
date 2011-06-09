@@ -22,11 +22,13 @@
 ****************************************************************************/
 #ifndef __XDR_PORTING_LAYER_H__
 #define __XDR_PORTING_LAYER_H__
-#ifdef UNDER_LINUX
+
+#ifdef LINUX_RPC_KERNEL
 #include <linux/slab.h>
 typedef int32_t bool_t;
 typedef int32_t enum_t;
 #else
+
 typedef signed char int8_t;
 typedef unsigned char u_int8_t;
 typedef short int16_t;
@@ -58,7 +60,7 @@ typedef unsigned long double u_longlong_t;
 #define TRUE (1)
 #endif
 
-#ifndef UNDER_LINUX
+#ifndef LINUX_RPC_KERNEL
 #define	UINT_MAX	0xffffffff
 #else
 #define	XDR_UINT_MAX	0xffffffff
@@ -80,7 +82,7 @@ typedef unsigned long double u_longlong_t;
 
 #define __dontcare__	-1
 
-#ifndef UNDER_LINUX
+#ifndef UNDER_LINUX_MODEM
 #ifdef __BIG_ENDIAN                                                               
 #define lswap()								// Not needed on big-endian machines */
 #define      htonl(l) (l)                                                         
@@ -100,27 +102,35 @@ extern unsigned long lswap(unsigned long l); /* swap bytes in 32 bit long */
 #define snprintf _snprintf
 #endif
 
-#ifdef UNDER_LINUX
+#ifdef LINUX_RPC_KERNEL
 #define mem_free(a,b)	kfree(a)
 #define mem_alloc(a)	kmalloc(a, GFP_KERNEL)
+
+#define strlen(a)		strlen(a)
 #else
 #define mem_free(a,b)	free(a)
 #define mem_alloc(a)	malloc(a)
-#endif
-
 #define strlen(a)		strlen(a)
+#endif
 #define warnx
 
-#ifndef UNDER_LINUX
+#ifndef LINUX_RPC_KERNEL
 #include <stdio.h>
 #include <stdlib.h>
 #endif
+
+#if defined(UNDER_LINUX) || defined(LINUX_RPC_KERNEL)
+	#ifndef NULL
+	#define NULL 0
+	#endif
+#endif
+
 
 #ifdef WIN32
 #include <malloc.h> /* for malloc/free */
 #include <memory.h> /* for memmove */
 #endif
-#ifndef UNDER_LINUX
+#ifndef LINUX_RPC_KERNEL
 #include <string.h> /* for strlen */
 #endif
 #endif /*  __XDR_PORTING_LAYER_H__ */

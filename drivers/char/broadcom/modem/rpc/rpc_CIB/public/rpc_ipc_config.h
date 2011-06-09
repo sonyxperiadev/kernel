@@ -45,14 +45,7 @@
 /* Increased from 1600 to allow 168 for header decompresion */
 #define CFG_RPC_PKTDATA_PKT_SIZE		(1600 + PDCP_MAX_HEADER_SIZE)
 
-#ifdef UNDER_LINUX
-//ftp consumes high mips during UL, because frequently calling netif on/off
-//since we have 64 buffer right now, make transmit start when free buffer
-//is 15, which should not affect the UL performace.
-#define CFG_RPC_PKT_START_THRESHOLD             15
-#else
-#define CFG_RPC_PKT_START_THRESHOLD             1
-#endif
+#define CFG_RPC_PKT_START_THRESHOLD		1
 #define CFG_RPC_PKT_END_THRESHOLD		    0
 
 #define CFG_RPC_CSDDATA_MAX_PACKETS	64

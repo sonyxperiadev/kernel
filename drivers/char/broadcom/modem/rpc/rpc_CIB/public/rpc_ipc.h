@@ -12,83 +12,37 @@
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
-/****************************************************************************/
-//! \file  rpc_ipc.h
-//! \brief RPC Interface to access raw interface to send/recv buffers across processor
-
 /**
-*   @defgroup   RPC_IPCApi   RPC-IPC API
-*   @brief      This group defines the interfaces to low level RPC functions. 
-*				These api's allow components to send packets of data from one processor to other.
-
-\section Usage
-         RPC_PACKET_RegisterDataInd() is called once for each interface to register Client's callback function.
-
-         RPC_PACKET_AllocateBuffer() is called to allocate the buffer which is later used in RPC_PACKET_SendData to send buffer
-
-         The Callback #RPC_PACKET_DataIndCallBackFunc_t is called when the data arrives from remote processor. User can call RPC_PACKET_FreeBuffer()
-         to free the buffer notified in callback.
-         
-         RPC_PACKET_GetBufferData() is used to get the raw pointer from buffer handle.
-	\msc
-		Client, "RPC-IPC", IPC;
-		Client rbox Client [label="Startup"];
-		"RPC-IPC"=>IPC [label="IPC_EndpointRegister (for all eps)"];
-		Client=>"RPC-IPC" [label="RPC_PACKET_RegisterDataInd(INTERFACE_CSD, cbk)", 
-								URL="\ref RPC_PACKET_RegisterDataInd()"];
-		Client rbox Client [label="Send"];
-		Client=>"RPC-IPC" [label="RPC_PACKET_AllocateBuffer(INTERFACE_CSD, size)", 
-								URL="\ref RPC_PACKET_AllocateBuffer()"];
-		"RPC-IPC"=>IPC [label="IPC_CreateBufferPool() On demand. Will be called for first time only"];
-		Client=>"RPC-IPC" [label="RPC_PACKET_SendData(bufHandle)", 
-								URL="\ref RPC_PACKET_SendData()"];
-		"RPC-IPC"=>IPC [label="IPC_SendBuffer(bufHandle)"];
-		Client rbox Client [label="Recv Msg"];
-		"RPC-IPC"<=IPC [label="CBK_Notify_Request(bufHandle)"];
-		Client<="RPC-IPC" [label="CBK(INTERFACE_CSD, bufHandle)"];
-		Client=>"RPC-IPC" [label="RPC_PACKET_FreeBuffer(bufHandle)", 
-								URL="\ref RPC_PACKET_FreeBuffer()"];
-	\endmsc
-****************************************************************************/
-
-
-/**
- * @addtogroup RPC_IPCApi
- * @{
- */
-
-
-//********************************************************************
-//!
-//!
-
-
-
+	@file
+	@brief RPC IPC API's
+*/
 #ifndef __RPC_IPC
 #define __RPC_IPC
 
+
+#define MAX_CHANNELS	10
+
+typedef enum
+{
+   RPC_APPS,
+   RPC_COMMS
+}RpcProcessorType_t;
 
 /**
 	RPC Packet Buffer Handle
 **/
 typedef void* PACKET_BufHandle_t;
 
-/**
-	RPC Interface Types
-**/
 typedef enum
 {
-	INTERFACE_RPC_TELEPHONY = 0,		///< Telephony related 
-	INTERFACE_RPC_DEFAULT = INTERFACE_RPC_TELEPHONY,		///<  Default interface 
-	INTERFACE_RPC_PMU,				///<  PMU related
-	INTERFACE_RPC_AUDIO,				///<  Audio related
-	INTERFACE_RPC_TOTAL,			///<  Number of rpc interface
+	INTERFACE_RPC_TELEPHONY = 0,		///< 
+	INTERFACE_RPC_DEFAULT = INTERFACE_RPC_TELEPHONY,		///< 
+	INTERFACE_RPC_PMU,			///< 
+	INTERFACE_RPC_AUDIO,				///< 
+	INTERFACE_RPC_TOTAL,
 }RPC_InterfaceType_t;
 
 
-/**
-	Packet Interface Types
-**/
 typedef enum
 {
 	INTERFACE_START = 0,
@@ -100,15 +54,11 @@ typedef enum
 	INTERFACE_TOTAL				///< total interfaces
 }PACKET_InterfaceType_t;
 
-/**
-	Use this macro to wait forever on IPC buffer allocation
-**/
+// Special values for MilliSeconds
 #define PKT_ALLOC_WAIT_FOREVER	~0
-
-/**
-	Use this macro to return NULL when IPC buffer allocation fail
-**/
 #define PKT_ALLOC_NOWAIT		 0
+
+#define BCM_RPC_VER	0x00010001
 
 /**
 RPC Flow Control Events
@@ -120,9 +70,6 @@ typedef enum
 } RPC_FlowCtrlEvent_t;
 
 
-/**
-RPC Error codes
-**/
 typedef enum
 {
 	RPC_RESULT_OK,
@@ -141,16 +88,26 @@ typedef enum
  	RPC_PROP_AP_IN_DEEPSLEEP,		///< 1 is deepsleep, 0 otherwise
 	RPC_PROP_ADC_MEASUREMENT,		///< 32bit measurement value
 	RPC_PROP_AP_TASKMSGS_READY,		///< 
+	RPC_PROP_AP_VERSION,		///< 
 	RPC_PROP_END_AP = IPC_PROPERTY_END_AP,
 
 	RPC_PROP_START_CP = IPC_PROPERTY_START_CP,			///< ( CP is Read/Write, AP is Read only )
  	RPC_PROP_CP_IN_DEEPSLEEP,		///< 1 is deepsleep, 0 otherwise
 	RPC_PROP_CP_TASKMSGS_READY,		///< 
+	RPC_PROP_CP_VERSION,		///< 
 	RPC_PROP_END_CP = IPC_PROPERTY_END_CP,
 
 	RPC_MAX_PROP_TYPE = IPC_NUM_OF_PROPERTIES,
 } RPC_PropType_t;
 
+//***************************************************************************************
+/**
+    Function to initialize IPC mechanism for RPC system ( Should be the first API to call )
+	@param		processorType (in) RPC_APPS or RPC_COMMS
+	@return		\n RESULT_OK for success,
+				\n RESULT_ERROR for failure
+**/
+RPC_Result_t RPC_SYS_EndPointRegister(RpcProcessorType_t processorType);
 
 //***************************************************************************************
 /**
@@ -169,20 +126,20 @@ typedef void (RPC_FlowControlCallbackFunc_t) (RPC_FlowCtrlEvent_t event, UInt8 c
 /**
     Function callback to receive data packets for Packet Data interfaceType
 	@param		interfaceType (in) Interface the packet was received
-	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD ( others interface is N/A)
+	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD
 	@param		dataBufHandle (in) Buffer handle. Use RPC_PACKET_GetBufferData and RPC_PACKET_GetBufferLength
 				 to get the actual data pointer and length.
 	@return
-			\n  RPC_RESULT_OK :  success dataBuf will be released after the call returns. Client MUST make copy.
-		  \n\n  RPC_RESULT_ERROR :  failure, dataBuf will be released after the call returns.
-			\n        In addtion RPC MAY initiate flow control to slow the downlink packet data ( TBD )
-		  \n\n  RPC_RESULT_PENDING : pending, The client decide to delay consuming packet,
+			\n  RESULT_OK :  success dataBuf will be released after the call returns. Client MUST make copy.
+		  \n\n  RESULT_ERROR :  failure, dataBuf will be released after the call returns.
+			\n        In addtion RPC MAY initiate flow control to slow the downlink packet data
+		  \n\n  RESULT_PENDING : pending, The client decide to delay consuming packet,
 			\n        in which case the buffer will NOT be relased by RPC after function return.
 			\n      The Client needs to call RPC_PACKET_FreeBuffer to free buffer later)
 	@note
 		The client can distinguish between different Primary PDP context session by channel for INTERFACE_PACKET.
 	@note
-		The data buffer is already mapped to calling thread process space ( virtual / kernal address space )
+		The data buffer is mapped to calling thread process space ( virtual / kernal address space )
 
 **/
 typedef RPC_Result_t (RPC_PACKET_DataIndCallBackFunc_t) (PACKET_InterfaceType_t interfaceType, UInt8 channel, PACKET_BufHandle_t dataBufHandle);
@@ -195,9 +152,9 @@ typedef RPC_Result_t (RPC_PACKET_DataIndCallBackFunc_t) (PACKET_InterfaceType_t 
 	@param		interfaceType (in) Specify interface to send/recv the packet
 	@param		dataIndFunc (in) callback function to inform the availability of the data.
 	@param		flowControlCb (in) callback function for flow control notification.
-	@return	Return RPC_RESULT_OK if the registration is successful. Otherwise RPC_RESULT_ERROR
+	@return	Return RESULT_OK if the registration is successful. Otherwise RESULT_ERROR
 	@note
-		The RPC currently supports parallem primary PDP data connections. The cid is used
+		The RPC currently supports simultaneous primary PDP data connections. The cid is used
 		to distinguish between different Primary PDP context sessions.
 **/
 RPC_Result_t RPC_PACKET_RegisterDataInd (UInt8 rpcClientID,
@@ -208,12 +165,12 @@ RPC_Result_t RPC_PACKET_RegisterDataInd (UInt8 rpcClientID,
 
 //***************************************************************************************
 /**
-    This function sends packet data to remote processor
+    This function sends packet data to the network(air interface).
 	@param		rpcClientID (in) Client ID
 	@param		interfaceType (in) Specify interface to send the packet
-	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD ( others interface is N/A)
-	@param		dataBufHandle (in) The buffer handle returned in RPC_PACKET_AllocateBuffer.
-	@return		RPC_RESULT_OK if the packet is copied to FIFO, RPC_RESULT_ERROR if FIFO is full
+	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD
+	@param		dataBufHandle (in) The buffer handle notified in the callback RPC_PACKET_DataIndCallBackFunc_t.
+	@return		RESULT_OK if the packet is copied to FIFO, RESULT_ERROR if FIFO is full
 	@note
 **/
 RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID, PACKET_InterfaceType_t interfaceType, UInt8 channel, PACKET_BufHandle_t dataBufHandle);
@@ -223,7 +180,7 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID, PACKET_InterfaceType_t inter
 /**
     This function allocates buffer for sending packet data.
 	@param		interfaceType (in) Specify interface to send the packet
-	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD ( others interface is N/A)
+	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD
 	@param		requiredSize (in) required packet size
 
 	@return		valid buffer handle OR NULL
@@ -234,9 +191,9 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBuffer(PACKET_InterfaceType_t interfaceTyp
 
 //***************************************************************************************
 /**
-    This function allocates buffer for sending packet data with wait time.
+    This function allocates buffer for sending packet data.
 	@param		interfaceType (in) Specify interface to send the packet
-	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD ( others interface is N/A)
+	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD
 	@param		requiredSize (in) required packet size
 	@param		waitTime (in) wait time in ms. PKT_ALLOC_WAIT_FOREVER or PKT_ALLOC_NOWAIT are also valid
 
@@ -253,7 +210,7 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferEx(PACKET_InterfaceType_t interfaceT
 	@param		channel (in) Context id for INTERFACE_PACKET OR Call Index for INTERFACE_CSD
 	@param		requiredSize (in) required packet size
 	@param		waitTime (in) wait time in ms. PKT_ALLOC_WAIT_FOREVER or PKT_ALLOC_NOWAIT are also valid
-	@param		cacheAlign (in) cache align size
+	@param		cache align (in) cache align size
 
 	@return		valid buffer handle OR NULL
 	@note
@@ -264,15 +221,15 @@ PACKET_BufHandle_t RPC_PACKET_AllocateBufferCacheAlign(PACKET_InterfaceType_t in
 //***************************************************************************************
 /**
     Free the packet passed in RPC_PACKET_DataIndCallBackFunc_t function.
-	The RPC_PACKET_DataIndCallBackFunc_t must return RPC_RESULT_PENDING to use this functionality
+	The RPC_PACKET_DataIndCallBackFunc_t must return RESULT_PENDING to use this functionality
 	@param	dataBufHandle (in) The buffer handle notified in the callback RPC_PACKET_DataIndCallBackFunc_t.
 
-	@return	Return RPC_RESULT_OK if buffer is valid. Otherwise RPC_RESULT_ERROR
+	@return	Return RESULT_OK if buffer is valid. Otherwise RESULT_ERROR
 
 	@note
 		Calling RPC_PACKET_FreeBuffer twice for same buffer will have unpredictable result
 	@note
-		NOT calling this function in timely manner, will result in buffer exhaustion and the client
+		Not calling this function in timely manner, will result in buffer exhaustion and the client
 		will stop receiving data. Packets will be dropped until the buffers are freed.
 **/
 RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle);
@@ -308,6 +265,16 @@ UInt32 RPC_PACKET_GetBufferLength(PACKET_BufHandle_t dataBufHandle);
 **/
 void RPC_PACKET_SetBufferLength(PACKET_BufHandle_t dataBufHandle, UInt32 bufferSize);
 
+
+
+RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t ptype);
+
+RPC_Result_t RPC_IPC_Init(RpcProcessorType_t ptype);
+
+//IPC_BufferPool RPC_InternalGetCmdPoolHandle(void);
+
+RpcProcessorType_t RPC_GetProcessorType(void);
+
 //***************************************************************************************
 /**
     This function returns aggregate free buffers for all channels.
@@ -319,41 +286,9 @@ void RPC_PACKET_SetBufferLength(PACKET_BufHandle_t dataBufHandle, UInt32 bufferS
 **/
 UInt32 RPC_PACKET_Get_Num_FreeBuffers(PACKET_InterfaceType_t interfaceType, UInt8 index);
 
-
-//***************************************************************************************
-/**
-    This function allows caller to set context per packet. The context could be simID ( 0,1,2) if the Modem support Dual SIM
-	@param		interfaceType (in) Specify packet interface.
-	@param		dataBufHandle (in) Buffer handle allocated using RPC_PACKET_AllocateBuffer or
-				the buffer handle notified in the callback RPC_PACKET_DataIndCallBackFunc_t.
-	@param		context (in) The context could be simID ( 0,1,2) and is set for every packet
-
-	@return	Return RPC_RESULT_OK if buffer is valid. Otherwise RPC_RESULT_ERROR
-			
-**/
 RPC_Result_t RPC_PACKET_SetContext(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle, UInt8 context);
 
-//***************************************************************************************
-/**
-    This function allows caller to get context per packet. The context could be simID ( 0,1,2) if the Modem support Dual SIM
-	@param		interfaceType (in) Specify packet interface.
-	@param		dataBufHandle (in) Buffer handle allocated using RPC_PACKET_AllocateBuffer or
-				the buffer handle notified in the callback RPC_PACKET_DataIndCallBackFunc_t.
-
-	@return	Return context ( 0,1,2 )
-			
-**/
 UInt8 RPC_PACKET_GetContext(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle);
-
-/**
-	Processor Identifier
-**/
-typedef enum
-{
-   RPC_APPS,
-   RPC_COMMS
-}RpcProcessorType_t;
-
 
 //***************************************************************************************
 /**
@@ -363,23 +298,16 @@ typedef enum
 				\n RESULT_ERROR for failure
 **/
 RPC_Result_t RPC_SYS_EndPointRegister(RpcProcessorType_t processorType);
-
-/** @} */
-
-/** \cond  */
-
-#define MAX_CHANNELS	10
-
-
-
-
-
 RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t ptype);
 
 RPC_Result_t RPC_IPC_Init(RpcProcessorType_t ptype);
 
 RpcProcessorType_t RPC_GetProcessorType(void);
+RPC_Result_t RPC_PACKET_SetContextEx(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle, UInt16 context);
 
-/** \endcond   */
+UInt16 RPC_PACKET_GetContextEx(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle);
 
+RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
+									PACKET_InterfaceType_t interfaceType,
+									RPC_PACKET_DataIndCallBackFunc_t dataIndFunc);
 #endif

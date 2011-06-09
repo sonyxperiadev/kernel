@@ -13,6 +13,23 @@
 *
 ****************************************************************************/
 
+#include <linux/sched.h>
+#include <linux/kernel.h> /* printk() */
+#include <linux/fs.h>	  /* everything... */
+#include <linux/errno.h>  /* error codes */
+#include <linux/delay.h>  /* udelay */
+#include <linux/slab.h>
+#include <linux/ioport.h>
+#include <linux/interrupt.h>
+#include <linux/workqueue.h>
+#include <linux/timer.h>
+#include <linux/poll.h>
+
+//#include <asm/io.h>
+//#include <asm/semaphore.h>
+//#include <asm/atomic.h>
+
+#include <linux/unistd.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/cdev.h>
@@ -22,17 +39,16 @@
 #include <asm/system.h>
 #include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/bcm_rpc.h>
-#include "mobcom_types.h"
-#include "rpc_global.h"
-
-#include "resultcode.h"
-#include "taskmsgs.h"
 #include <linux/broadcom/ipcinterface.h>
 #include <linux/broadcom/ipcproperties.h>
 
-#include "rpc_ipc.h"
+#include "mobcom_types.h"
+#include "resultcode.h"
+#include "taskmsgs.h"
+#include "consts.h"
 #include "xdr_porting_layer.h"
 #include "xdr.h"
+#include "rpc_ipc.h"
 #include "rpc_api.h"
 #include "rpc_internal_api.h"
 #include "rpc_debug.h"
@@ -55,6 +71,11 @@ static struct class *rpc_class;
 void BcmRpc_SetApSleep( bool inSleep )
 {
     RPC_SetProperty( RPC_PROP_AP_IN_DEEPSLEEP, (inSleep?1:0) );
+}
+
+void RPC_Assert(char *expr, char *file, int line, int value)
+{
+	printk("RPC Assert !!! (%s) file=%s line=%d val=%d \n",expr, file, line, value);
 }
 
 static int rpc_open(struct inode *inode, struct file *filp)

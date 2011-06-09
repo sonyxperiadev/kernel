@@ -27,10 +27,6 @@
 //******************************************************************************
 //	 			include block
 //******************************************************************************
-#ifndef UNDER_LINUX
-#include <stdio.h>
-#include "string.h"
-#endif
 
 #ifdef WIN32
 #define _WINSOCKAPI_
@@ -41,8 +37,8 @@
 
 #include "resultcode.h"
 #include "taskmsgs.h"
-#include <linux/broadcom/ipcinterface.h>
-#include <linux/broadcom/ipcproperties.h>
+#include "ipcinterface.h"
+#include "ipcproperties.h"
 
 #include "rpc_ipc.h"
 #include "xdr_porting_layer.h"
@@ -50,21 +46,12 @@
 #include "rpc_api.h"
 #include "rpc_internal_api.h"
 #include "rpc_sync_api.h"
-#ifndef UNDER_LINUX
+#ifndef LINUX_RPC_KERNEL
 #include "ostask.h"
 #include "osheap.h"
 #include "ossemaphore.h"
 #include "xassert.h"
-#if !defined(WIN32) && !defined(UNDER_CE) && !defined(UNDER_LINUX)
-#include "logapi.h"
-#endif
 #else
-// ostask abstraction doesn't currently support 
-// OSTASK_GetCurrentTask, so for now,
-// use our own implementations; once support 
-// for OSTASK_GetCurrentTask is added, we can just
-// uncomment the #include on the following line
-//#include <plat/osabstract/ostask.h>
 #include <plat/types.h>
 #include <plat/osabstract/ostypes.h>
 #include <plat/osabstract/ossemaphore.h>
@@ -76,6 +63,8 @@
 #define OSTASK_IsValidTask(x)  ( NULL != find_task_by_vpid(x) )
 #define OSTASK_Sleep(x)  msleep(x) 
 #endif
+
+
 
 //--------------------------------------------------------------------
 // Local Definitions

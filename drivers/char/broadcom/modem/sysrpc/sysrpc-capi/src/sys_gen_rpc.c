@@ -64,6 +64,7 @@
 #include "sys_gen_rpc.h"
 #include "sys_rpc.h"
 #ifndef UNDER_LINUX
+//#include "log.h"
 #include "xassert.h"
 #endif
 /********************************** End Hdr file generated contents ************************************************************/
@@ -1061,6 +1062,16 @@ bool_t xdr_SYS_AT_MTEST_Handler_Rsp_t(void* xdrs, SYS_AT_MTEST_Handler_Rsp_t *rs
 	 return xdr_MtestOutput_t(xdrs, &rsp->val);
 }
 #endif // gary
+bool_t xdr_SYS_AT_MTEST_Handler_Req_t(void* xdrs, SYS_AT_MTEST_Handler_Req_t *rsp)
+{
+	return FALSE;
+}
+
+bool_t xdr_SYS_AT_MTEST_Handler_Rsp_t(void* xdrs, SYS_AT_MTEST_Handler_Rsp_t *rsp)
+{
+	 return FALSE;
+}
+
 //***************** < 9 > **********************
 
 

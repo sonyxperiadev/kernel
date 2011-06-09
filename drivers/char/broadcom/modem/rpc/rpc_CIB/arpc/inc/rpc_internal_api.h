@@ -66,6 +66,7 @@ typedef struct
 	RPC_Msg_t		rootMsg;
 	RPC_MsgType_t	msgType;
 	UInt8			clientIndex;
+	UInt8			reqXdrClientId;
 } RPC_InternalMsg_t;
 
 typedef struct {

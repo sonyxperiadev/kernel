@@ -36,7 +36,6 @@
 #include "audio_consts.h"
 #include "pmu.h"
 #include "hal_pmu.h"
-#include "rtc.h"
 #include "i2c_drv.h"
 #include "hal_pmu_glue.h"
 #include "cpps_control.h"
@@ -72,23 +71,7 @@ XDR_ENUM_FUNC(HAL_ADC_Trg_en_t)
 XDR_ENUM_FUNC(MeasMgrDbaseResult_t)
 
 
-bool_t 
-xdr_RTCTime_t( XDR* xdrs, RTCTime_t* data)
-{
-	XDR_LOG(xdrs,"RTCTime_t")
 
-	if( _xdr_u_char(xdrs, &data->Sec,"Sec")	&&
-		_xdr_u_char(xdrs, &data->Min,"Min")	&&
-		_xdr_u_char(xdrs, &data->Hour,"Hour")	&&
-		_xdr_u_char(xdrs, &data->Week,"Week")	&&
-		_xdr_u_char(xdrs, &data->Day,"Day")	&&
-		_xdr_u_char(xdrs, &data->Month,"Month")	&&
-		_xdr_u_int16_t(xdrs, &data->Year,"Year")
-		)
-		return(TRUE);
-	else
-		return(FALSE);
-}
 
 bool_t xdr_SYS_ReqRep_t( XDR* xdrs, SYS_ReqRep_t* req, xdrproc_t proc)
 {

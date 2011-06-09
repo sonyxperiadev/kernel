@@ -20,25 +20,20 @@
 *	serialize/deserialize.
 *
 ****************************************************************************/
-#ifndef UNDER_LINUX
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h> /* for strlen */
-#endif
 #include "mobcom_types.h"
 #include "rpc_global.h"
 
 #include "resultcode.h"
 #include "taskmsgs.h"
-#include <linux/broadcom/ipcinterface.h>
-#include <linux/broadcom/ipcproperties.h>
+#include "ipcinterface.h"
+#include "ipcproperties.h"
 
 #include "rpc_ipc.h"
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 #include "rpc_api.h"
 #include "rpc_internal_api.h"
-#include "logapi.h"
+
 
 static UInt32** tableBase = NULL;
 

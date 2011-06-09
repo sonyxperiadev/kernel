@@ -51,7 +51,13 @@ extern UInt32 g_dwLogLEVEL;
 #define xassert(a,b)	assert(a)
 #endif
 
-#elif UNDER_LINUX
+#elif UNDER_LINUX_MODEM
+
+
+
+#ifndef NULL
+#define NULL 0
+#endif
 extern int RpcLog_DebugPrintf(char *fmt, ...);
 #define RPC_TRACE RpcLog_DebugPrintf
 #define RPC_TRACE_DETAIL RpcLog_DebugPrintf
@@ -60,14 +66,28 @@ extern int RpcLog_DebugPrintf(char *fmt, ...);
 
 #define DETAIL_LOG_ENABLED TRUE
 #define DETAIL_DATA_LOG_ENABLED TRUE
+
+#ifdef LINUX_RPC_KERNEL
 #define capi2_malloc(x)	kmalloc(x, GFP_KERNEL)
 #define capi2_free(x)	kfree(x)
+#else
+#define capi2_malloc(x)	malloc(x)
+#define capi2_free(x)	free(x)
+#endif
+
 extern Boolean IsBasicCapi2LoggingEnable(void);
 #define BASIC_LOG_ENABLED (IsBasicCapi2LoggingEnable())
 
-extern void CAPI2_Assert(char *expr, char *file, int line, int value);
-#define xassert(e,v) ((e) ? (void)0 : CAPI2_Assert(#e, __FILE__, __LINE__, (UInt32)v))
-#define assert(e) ((e) ? (void)0 : CAPI2_Assert(#e, __FILE__, __LINE__, 0))
+extern void RPC_Assert(char *expr, char *file, int line, int value);
+
+#undef xassert
+#undef assert
+#define __xassert_h
+
+#define xassert(e,v) ((e) ? (void)0 : RPC_Assert(#e, __FILE__, __LINE__, (UInt32)v))
+#define assert(e) ((e) ? (void)0 : RPC_Assert(#e, __FILE__, __LINE__, 0))
+//#define xassert(e,v)
+//#define assert(e)
 
 #else
 //Target

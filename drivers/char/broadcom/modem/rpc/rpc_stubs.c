@@ -70,3 +70,5 @@ Boolean SYS_IsRegisteredClientID(UInt8 clientID)
 	//Log_DebugPrintf(LOGID_MISC, "SYS_IsRegisteredClientID clientID=%d gClientIdIndex=%d gClientIdIndex2=%d", clientID, gSysClientIDs[clientID], gSysClientIDs[clientID+1]);
 	return (gSysClientIDs[clientID] > 0)?TRUE: FALSE;
 }
+
+

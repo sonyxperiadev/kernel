@@ -20,28 +20,21 @@
 *	serialize/deserialize.
 *
 ****************************************************************************/
-#ifndef UNDER_LINUX
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h> /* for strlen */
-#endif
 #include "mobcom_types.h"
 #include "rpc_global.h"
 
 #include "resultcode.h"
 #include "taskmsgs.h"
-#include <linux/broadcom/ipcinterface.h>
-#include <linux/broadcom/ipcproperties.h>
+#include "ipcinterface.h"
+#include "ipcproperties.h"
 
 #include "rpc_ipc.h"
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 #include "rpc_api.h"
 #include "rpc_internal_api.h"
-#if !defined(UNDER_LINUX)
 #include "xassert.h"
-#include "logapi.h"
-#endif
+
 
 XDR_ENUM_FUNC(Result_t)
 XDR_ENUM_FUNC(MsgType_t)
@@ -56,8 +49,8 @@ XDR_STRUCT_DECLARE(RPC_SimpleMsg_t)
 static RPC_XdrInfo_t ACK_dscrm[] = 
 {
 	/* Add phonebook message serialize/deserialize routine map */
-	{ MSG_CAPI2_ACK_RSP,_T("MSG_CAPI2_ACK_RSP"), (xdrproc_t)xdr_RPC_Ack_t, sizeof(RPC_Ack_t) },
-	{ MSG_RPC_SIMPLE_REQ_RSP,_T("MSG_RPC_SIMPLE_REQ_RSP"), (xdrproc_t)xdr_RPC_SimpleMsg_t, sizeof(RPC_SimpleMsg_t) },
+	{ MSG_CAPI2_ACK_RSP,_T("MSG_CAPI2_ACK_RSP"), (xdrproc_t)xdr_RPC_Ack_t, sizeof(RPC_Ack_t), 0 },
+	{ MSG_RPC_SIMPLE_REQ_RSP,_T("MSG_RPC_SIMPLE_REQ_RSP"), (xdrproc_t)xdr_RPC_SimpleMsg_t, sizeof(RPC_SimpleMsg_t), 0 },
 	/* Add other modules message to serialize/deserialize routine map */
 	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
 };
@@ -100,7 +93,6 @@ static bool_t xdr_RPC_Msg_t(XDR *xdrs, RPC_Msg_t* rpcMsg)
 		}
 		else
 		{
-			//Coverity[unchecked_value]
 			xdr_pointer(xdrs, (char**)&(rpcMsg->dataBuf), entry.xdrInfo->xdr_size, entry.xdrInfo->xdr_proc);
 		}
 
@@ -128,8 +120,9 @@ bool_t xdr_RPC_InternalMsg_t(XDR *xdrs, RPC_InternalMsg_t* val)
 {
 	if(XDR_ENUM(xdrs, &val->msgType, RPC_MsgType_t) &&
 		xdr_u_char(xdrs, &val->clientIndex) &&
-		xdr_RPC_Msg_t(xdrs, &val->rootMsg) )
+		xdr_RPC_Msg_t(xdrs, &val->rootMsg))
 	{
+		xdr_u_char(xdrs, &val->reqXdrClientId);
 		return TRUE;
 	}
 	xassert(0,val->rootMsg.msgId);

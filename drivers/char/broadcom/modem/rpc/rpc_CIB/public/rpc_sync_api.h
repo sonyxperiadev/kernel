@@ -24,30 +24,10 @@
 ****************************************************************************/
 /**
 
-*   @defgroup	RPC_SyncApi   RPC SYNC API   
+*   @defgroup   
 *
 *   @brief      This group defines the types and prototypes for the RPC SYNC fuctions.
 *	
-\msc
-		"AP Client", RPC, "CP Client";
-		"AP Client"=>RPC [label="RPC_SyncInitialize()", URL="\ref RPC_SyncInitialize()"];
-		"CP Client">>RPC [label="RPC_SyncInitialize()", URL="\ref RPC_SyncInitialize()"];
-		"AP Client"=>RPC [label="RPC_SyncRegisterClient()", URL="\ref RPC_SyncRegisterClient()"];
-		"CP Client">>RPC [label="RPC_SyncRegisterClient()", URL="\ref RPC_SyncRegisterClient()"];
-		"AP Client"=>RPC [label="RPC_SyncCreateTID()", URL="\ref RPC_SyncCreateTID()"];
-		"AP Client"=>RPC [label="RPC_SerializeReq()", URL="\ref RPC_SerializeReq()"];
-		RPC rbox RPC [label="Serialize, send IPC Msg, Deser msg"];
-		"AP Client":>RPC [label="RPC_SyncWaitForResponse()", URL="\ref RPC_SyncWaitForResponse()"];
-		"AP Client"=>RPC [label="CBK: Notify Request"];
-		"AP Client"=>"AP Client" [label="thread blocks"];
-		"CP Client"=>RPC [label="RPC_SendAckForRequest()", URL="\ref RPC_SendAckForRequest()"];
-		RPC rbox RPC [label="ARPC:Serialize, send IPC Msg, Deser msg"];
-		RPC rbox RPC [label="SRPC:Raise ACK Sem"];
-		"CP Client"=>RPC [label="RPC_SerializeRsp()", URL="\ref RPC_SerializeRsp()"];
-		RPC rbox RPC [label="ARPC:Serialize, send IPC Msg, Deser msg"];
-		RPC rbox RPC [label="SRPC:Copy Resp Data, Raise RSP Sem"];
-		"AP Client"=>"AP Client" [label="thread unblocks"];		
-\endmsc
 ****************************************************************************/
 
 #ifndef _RPC_SYNC_H_
@@ -61,32 +41,15 @@
 extern "C" {
 #endif
 /**
- * @addtogroup RPC_SyncApi
+ * @addtogroup 
  * @{
  */
 
-//**************************************************************************************
-/**
-	Function to initialize the RPC Sync. This component provides framework for blocking RPC -
-	communication between different processors.
-	@return		\n RESULT_OK for success, 
-				\n RESULT_ERROR for failure, 
-**/
-Result_t RPC_SyncInitialize(void);
-
 
 //**************************************************************************************
 /**
-	The callback to copy the payload data. This allows deep copy of payload data.
-	@param		msgType (in) Message Type
-	@param		srcDataBuf (in) The source buffer 
-	@param		destBufSize (in) Destination buffer size
-	@param		destDataBuf (in) Destination buffer
-	@param		outDestDataSize (out) Size of data copied to Destination buffer
-	@param		outResult (in) Copy Result_t
-	@return	TRUE on success or FALSE
-	@note
-		The callback is called when we receive the response from remote processor
+	The callback to copy the payload data
+	@return		Client ID 
 **/
 typedef Boolean (RPC_CopyPayLoad_t)( MsgType_t msgType, 
 									 void* srcDataBuf, 
@@ -96,29 +59,40 @@ typedef Boolean (RPC_CopyPayLoad_t)( MsgType_t msgType,
 									 Result_t* outResult);
 
 
+//**************************************************************************************
 /**
-	RPC Sync Init Params
+	Initialize the RPC Sync Framework.  
+	@param		timeout (in) Number of ticks to wait for emulator initialization
+	@return		\n RESULT_OK for success, 
+				\n RESULT_ERROR for failure, 
+	@note
+	This function will block until emulator is initialized or timeout duration has expired.
 **/
+
+//**************************************************************************************
+/**
+	Register new RPC Sync client.  
+	@return		Client ID 
+**/
+Result_t RPC_SyncInitialize(void);
+
 typedef struct
 {
-	RPC_CopyPayLoad_t* copyCb;	///< Pointer to callbak function for deep copy.
+	RPC_CopyPayLoad_t* copyCb;
 }RPC_SyncInitParams_t;
 
 //**************************************************************************************
 /**
-	Register new RPC Sync client.
-	@param		initParams (in) The initialization params for low level RPC ( Aysnc )
-	@param		syncInitParams (in) The initialization params for high level RPC ( Sync )
-	@return		Non Zero RPC_Handle_t
-	@note
-	The RPC_SyncRegisterClient() calls RPC_SYS_RegisterClient() internally.
+	Register new RPC Sync client.  
+	@return		Client ID 
 **/
 RPC_Handle_t RPC_SyncRegisterClient(RPC_InitParams_t*	initParams, RPC_SyncInitParams_t* syncInitParams);
 
+void RPC_SyncDeregisterClient( UInt8 inClientId );
 
 //**************************************************************************************
 /**
-	This function creates a unique TID for the calling client.
+	Prepare to issue a RPC request.
 	@param		data (in) pointer to buffer to store response
 	@param		size (in) size of response buffer
 	@return		transaction ID for request
@@ -133,7 +107,7 @@ UInt32 RPC_SyncCreateTID( void* data, Int32 size );
 
 //**************************************************************************************
 /**
-	This function block waits until we receive the response from remote processor.
+	Retrieve the response from a RPC function call. Note that this includes the ack result as well.
 	@param		tid (in) Transaction id for request.
 	@param		cid (in) Client id for request
 	@param		ack (out) Ack result for request
@@ -141,45 +115,28 @@ UInt32 RPC_SyncCreateTID( void* data, Int32 size );
 	@param		dataSize (out) Actual data size copied to response data buffer
 	
 	@return Result code of response.
-	@note
-		Note that this includes the ack result as well.
+	
 **/
 Result_t RPC_SyncWaitForResponse( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* ack, MsgType_t* msgType, UInt32* dataSize );
 
 
 //**************************************************************************************
 /**
-	The calling function can add callback ( or any data )  as TID. 
-	@param		val (in) Function pointer ( or any data ) to be used as part of TID
-	
-	@return Returns new TID which has associated val built into this TID.
+	Add ctx to tid. 
+	@param		val (in) context value to be added 
 
- 	@note
-		RPC Sync creates a TID from heap and client MUST call RPC_SyncDeleteCbkFromTid() later to avoid memory leak.
 **/
 UInt32 RPC_SyncAddCbkToTid( UInt32 val);
 
 
-//**************************************************************************************
-/**
-	The calling function can retrieve callback from TID. 
-	@param		tid (in) Transaction ID
-	
-	@return Function pointer ( or any data ) that is part of tid
+void RPC_SyncDeleteCbkFromTid(UInt32 tid);
 
-**/
 UInt32 RPC_SyncGetCbkFromTid(UInt32 tid);
 
-//**************************************************************************************
-/**
-	The calling function delete the callback ( or any data ) which is part of tid.
-	Delete any memory associated with this.
-	@param		tid (in) Transaction ID
-	
-	@return None
 
-**/
-void RPC_SyncDeleteCbkFromTid(UInt32 tid);
+UInt32 RPC_SyncSetTID(UInt32 tid, void* data, Int32 size );
+
+
 
 
 //**************************************************************************************
@@ -198,21 +155,13 @@ void RPC_SyncLockResponseBuffer(void);
 	Release the response buffer associated with the current task.
 **/
 void RPC_SyncReleaseResponseBuffer(void);
-/** @} */
-
-/** \cond  */
 
 
 // retrieve "main" client id
 UInt8 RPC_SyncGetClientId(void);
 
-//Obsolete
-UInt32 RPC_SyncSetTID(UInt32 tid, void* data, Int32 size );
 
-void RPC_SyncDeregisterClient( UInt8 inClientId );
-
-/** \endcond   */
-
+/** @} */
 #ifdef __cplusplus
 }
 #endif

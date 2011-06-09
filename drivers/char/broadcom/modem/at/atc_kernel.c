@@ -56,7 +56,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 
-#include "capi2_global.h"
+#include "rpc_global.h"
 #include "at_types.h"
 #include "at_rpc.h"
 
