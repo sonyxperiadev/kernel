@@ -3311,7 +3311,7 @@ config NETCONSOLE_DYNAMIC
 
 config BRCM_NETCONSOLE
         tristate "Broadcom Network console logging support (EXPERIMENTAL)"
-        depends on EXPERIMENTAL
+        depends on EXPERIMENTAL && (USB_ETH_RNDIS || USB_ANDROID_RNDIS)
         ---help---
         If you want to log kernel messages over the network, enable this.
         See <file:Documentation/networking/netconsole.txt> for details.
