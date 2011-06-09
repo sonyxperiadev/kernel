@@ -1668,12 +1668,16 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
 		case AUDCTRL_SPK_TTY:
 		    hs_path = PMU_AUDIO_HS_BOTH;
 	    	hs_gain = *((int*)gain);
+#ifdef CONFIG_BCM59055_AUDIO
 		    bcm59055_hs_set_gain( hs_path, hs_gain);
+#endif
 			break;
 
 		case AUDCTRL_SPK_LOUDSPK:
     		ihf_gain = *((int*)gain);
+#ifdef CONFIG_BCM59055_AUDIO
 	    	bcm59055_ihf_set_gain( ihf_gain);
+#endif
 			break;
 
 		default:
@@ -1724,7 +1728,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	
 #ifdef PMU_BCM59055
 	if (use == TRUE)
+#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_audio_init(); 	//enable the audio PLL before power ON
+#endif
 #endif
 
 
@@ -1783,7 +1789,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu HS amp\n");
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_hs_power(FALSE);
+#endif
 #elif defined(PMU_MAX8986)
             max8986_audio_hs_poweron(FALSE);
 #endif
@@ -1810,14 +1818,18 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", hs_gain);
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_hs_power(TRUE);
+#endif
 #elif defined(PMU_MAX8986)
             max8986_audio_hs_poweron(TRUE);
 #endif
 
 		}
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_hs_set_gain(hs_path, hs_gain);
+#endif
 #elif defined(PMU_MAX8986)
             max8986_audio_hs_set_gain(hs_path, hs_gain);
             max8986_set_input_preamp_gain(MAX8986_INPUTA, preamp_gain);
@@ -1831,7 +1843,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu IHF amp\n");
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_ihf_power(FALSE);
+#endif
 #elif defined(PMU_MAX8986)
             max8986_audio_hs_ihf_poweroff();
 #endif
@@ -1863,13 +1877,17 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu IHF amp, gain %d\n", ihf_gain);
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
 			bcm59055_ihf_power(TRUE);
+#endif
 #elif defined(PMU_MAX8986)
             max8986_audio_hs_ihf_poweron();
 #endif
 		}
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_ihf_set_gain(ihf_gain);
+#endif
 #elif defined(PMU_MAX8986)
             max8986_audio_hs_ihf_set_gain(ihf_gain);
             max8986_set_input_preamp_gain(MAX8986_INPUTB, preamp_gain);
@@ -1879,7 +1897,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 
 #ifdef PMU_BCM59055
 	if (use == FALSE)
+#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_audio_deinit();    //disable the audio PLL after power OFF
+#endif
 #endif
     Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp: retValue %d\n", retValue);
 #endif    
