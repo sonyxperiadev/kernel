@@ -503,11 +503,12 @@ void haptic_gpio_setup(void)
 }
 
 static struct haptic_platform_data haptic_control_data = {
-	/* PWM4 as vibrator signal */
-	.name = "kona_pwmc:4",
+	/* Haptic device name: can be device-specific name like ISA1000 */
+	.name = "pwm_vibra",
+	/* PWM interface name to request */
+	.pwm_name = "kona_pwmc:4",
 	/* Invalid gpio for now, pass valid gpio number if connected */
 	.gpio = ARCH_NR_GPIOS,
-	.pwm_timer = 4,	/* 'not' being used with new PWM layer */
 	.setup_pin = haptic_gpio_setup,
 };
 
