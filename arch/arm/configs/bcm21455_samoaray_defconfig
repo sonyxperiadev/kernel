@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Tue May 31 17:59:33 2011
+# Fri Jun 10 11:31:17 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -46,7 +46,10 @@ CONFIG_KERNEL_GZIP=y
 # CONFIG_SWAP is not set
 CONFIG_SYSVIPC=y
 CONFIG_SYSVIPC_SYSCTL=y
+# CONFIG_POSIX_MQUEUE is not set
 # CONFIG_BSD_PROCESS_ACCT is not set
+# CONFIG_TASKSTATS is not set
+# CONFIG_AUDIT is not set
 
 #
 # RCU Subsystem
@@ -416,6 +419,56 @@ CONFIG_ARCH_SUSPEND_POSSIBLE=y
 CONFIG_NET=y
 
 #
+# Networking options
+#
+# CONFIG_PACKET is not set
+# CONFIG_UNIX is not set
+# CONFIG_NET_KEY is not set
+# CONFIG_INET is not set
+CONFIG_ANDROID_PARANOID_NETWORK=y
+CONFIG_NET_ACTIVITY_STATS=y
+# CONFIG_NETWORK_SECMARK is not set
+# CONFIG_NETFILTER is not set
+# CONFIG_ATM is not set
+# CONFIG_BRIDGE is not set
+# CONFIG_VLAN_8021Q is not set
+# CONFIG_DECNET is not set
+# CONFIG_LLC2 is not set
+# CONFIG_IPX is not set
+# CONFIG_ATALK is not set
+# CONFIG_X25 is not set
+# CONFIG_LAPB is not set
+# CONFIG_WAN_ROUTER is not set
+# CONFIG_PHONET is not set
+# CONFIG_IEEE802154 is not set
+# CONFIG_NET_SCHED is not set
+# CONFIG_DCB is not set
+
+#
+# Network testing
+#
+# CONFIG_NET_PKTGEN is not set
+# CONFIG_HAMRADIO is not set
+# CONFIG_CAN is not set
+# CONFIG_IRDA is not set
+# CONFIG_BT is not set
+CONFIG_WIRELESS=y
+# CONFIG_CFG80211 is not set
+# CONFIG_LIB80211 is not set
+
+#
+# CFG80211 needs to be enabled for MAC80211
+#
+
+#
+# Some wireless drivers require a rate control algorithm
+#
+# CONFIG_WIMAX is not set
+# CONFIG_RFKILL is not set
+# CONFIG_NET_9P is not set
+# CONFIG_CAIF is not set
+
+#
 # Device Drivers
 #
 
@@ -432,6 +485,7 @@ CONFIG_EXTRA_FIRMWARE=""
 # CONFIG_DEBUG_DRIVER is not set
 # CONFIG_DEBUG_DEVRES is not set
 # CONFIG_SYS_HYPERVISOR is not set
+# CONFIG_CONNECTOR is not set
 # CONFIG_MTD is not set
 # CONFIG_PARPORT is not set
 CONFIG_BLK_DEV=y
@@ -441,11 +495,13 @@ CONFIG_BLK_DEV=y
 #
 # DRBD disabled because PROC_FS, INET or CONNECTOR not selected
 #
+# CONFIG_BLK_DEV_NBD is not set
 CONFIG_BLK_DEV_RAM=y
 CONFIG_BLK_DEV_RAM_COUNT=1
 CONFIG_BLK_DEV_RAM_SIZE=32768
 # CONFIG_BLK_DEV_XIP is not set
 # CONFIG_CDROM_PKTCDVD is not set
+# CONFIG_ATA_OVER_ETH is not set
 # CONFIG_MG_DISK is not set
 CONFIG_MISC_DEVICES=y
 # CONFIG_AD525X_DPOT is not set
@@ -504,6 +560,7 @@ CONFIG_SCSI_WAIT_SCAN=m
 #
 # CONFIG_SCSI_SPI_ATTRS is not set
 # CONFIG_SCSI_FC_ATTRS is not set
+# CONFIG_SCSI_ISCSI_ATTRS is not set
 # CONFIG_SCSI_SAS_LIBSAS is not set
 # CONFIG_SCSI_SRP_ATTRS is not set
 CONFIG_SCSI_LOWLEVEL=y
@@ -514,6 +571,8 @@ CONFIG_SCSI_LOWLEVEL=y
 # CONFIG_SCSI_OSD_INITIATOR is not set
 # CONFIG_ATA is not set
 # CONFIG_MD is not set
+# CONFIG_NETDEVICES is not set
+# CONFIG_ISDN is not set
 # CONFIG_PHONE is not set
 
 #
@@ -604,6 +663,7 @@ CONFIG_VT_HW_CONSOLE_BINDING=y
 CONFIG_DEVMEM=y
 CONFIG_DEVKMEM=y
 # CONFIG_SERIAL_NONSTANDARD is not set
+# CONFIG_N_GSM is not set
 
 #
 # Serial drivers
@@ -634,6 +694,7 @@ CONFIG_UNIX98_PTYS=y
 CONFIG_BRCM_CHAR_DRIVERS=y
 # CONFIG_V3D is not set
 CONFIG_BRCM_FUSE_LOG=y
+# CONFIG_STM_DEFAULT is not set
 # CONFIG_ISP is not set
 # CONFIG_UNICAM is not set
 CONFIG_BCM_MODEM=y
@@ -728,7 +789,32 @@ CONFIG_SSB_POSSIBLE=y
 #
 # CONFIG_SSB is not set
 CONFIG_MFD_SUPPORT=y
+CONFIG_MFD_CORE=y
+# CONFIG_MFD_BCM_PMU590XX is not set
+# CONFIG_MFD_BCMPMU is not set
+# CONFIG_MFD_88PM860X is not set
+# CONFIG_MFD_SM501 is not set
+# CONFIG_MFD_ASIC3 is not set
+# CONFIG_HTC_EGPIO is not set
+# CONFIG_HTC_PASIC3 is not set
+# CONFIG_HTC_I2CPLD is not set
+# CONFIG_TPS65010 is not set
+# CONFIG_TPS6507X is not set
+# CONFIG_TWL4030_CORE is not set
 CONFIG_MFD_TC3589X=y
+# CONFIG_MFD_TMIO is not set
+# CONFIG_MFD_T7L66XB is not set
+# CONFIG_MFD_TC6387XB is not set
+# CONFIG_MFD_TC6393XB is not set
+# CONFIG_PMIC_DA903X is not set
+# CONFIG_PMIC_ADP5520 is not set
+# CONFIG_MFD_MAX8925 is not set
+# CONFIG_MFD_WM8400 is not set
+# CONFIG_MFD_WM831X is not set
+# CONFIG_MFD_WM8350_I2C is not set
+# CONFIG_MFD_WM8994 is not set
+# CONFIG_MFD_PCF50633 is not set
+# CONFIG_ABX500_CORE is not set
 # CONFIG_REGULATOR is not set
 # CONFIG_MEDIA_SUPPORT is not set
 
@@ -760,6 +846,7 @@ CONFIG_FB=y
 # Frame buffer hardware drivers
 #
 # CONFIG_FB_S1D13XXX is not set
+# CONFIG_FB_TMIO is not set
 # CONFIG_FB_VIRTUAL is not set
 # CONFIG_FB_METRONOME is not set
 # CONFIG_FB_MB862XX is not set
@@ -925,11 +1012,13 @@ CONFIG_ANDROID_LOGGER=y
 CONFIG_ANDROID_TIMED_OUTPUT=y
 # CONFIG_ANDROID_TIMED_GPIO is not set
 CONFIG_ANDROID_LOW_MEMORY_KILLER=y
+# CONFIG_POHMELFS is not set
 
 #
 # RAR Register Driver
 #
 # CONFIG_IIO is not set
+# CONFIG_BATMAN_ADV is not set
 # CONFIG_FB_SM7XX is not set
 
 #
@@ -955,6 +1044,7 @@ CONFIG_FS_MBCACHE=y
 # CONFIG_FS_POSIX_ACL is not set
 # CONFIG_XFS_FS is not set
 # CONFIG_GFS2_FS is not set
+# CONFIG_OCFS2_FS is not set
 # CONFIG_BTRFS_FS is not set
 # CONFIG_NILFS2_FS is not set
 CONFIG_FILE_LOCKING=y
@@ -1000,6 +1090,7 @@ CONFIG_TMPFS=y
 # CONFIG_HUGETLB_PAGE is not set
 # CONFIG_CONFIGFS_FS is not set
 # CONFIG_MISC_FILESYSTEMS is not set
+CONFIG_NETWORK_FILESYSTEMS=y
 
 #
 # Partition Types
@@ -1190,3 +1281,4 @@ CONFIG_DECOMPRESS_GZIP=y
 CONFIG_HAS_IOMEM=y
 CONFIG_HAS_IOPORT=y
 CONFIG_HAS_DMA=y
+CONFIG_NLATTR=y
