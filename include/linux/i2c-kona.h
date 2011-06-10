@@ -19,6 +19,7 @@ enum bsc_bus_speed
 {
    BSC_BUS_SPEED_32K,
    BSC_BUS_SPEED_50K,
+   BSC_BUS_SPEED_100K,
    BSC_BUS_SPEED_230K,
    BSC_BUS_SPEED_380K,
    BSC_BUS_SPEED_400K,
@@ -47,4 +48,14 @@ struct bsc_adap_cfg
 	char *bsc_clk;
 	char *bsc_apb_clk;
 };
+
+/*  I2C slave platform data, for I2C slaves to specify the bus speed.
+ *  Note: This struct should be the first member if included as part
+ *  of the client specific platform data structure.
+ */
+struct i2c_slave_platform_data
+{
+	enum bsc_bus_speed i2c_speed;
+};
+
 #endif // _I2C_KONA_H_

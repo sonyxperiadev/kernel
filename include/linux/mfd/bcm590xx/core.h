@@ -21,6 +21,7 @@
 #include <linux/workqueue.h>
 #include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/platform_device.h>
+#include <linux/i2c-kona.h>
 
 struct bcm590xx;
 struct bcm590xx_client {
@@ -37,6 +38,7 @@ enum {
  *        used by the platform to configure GPIO functions and similar.
  */
 struct bcm590xx_platform_data {
+	struct i2c_slave_platform_data i2c_pdata;
 	int (*init)(struct bcm590xx *bcm590xx, int flag);
 	struct bcm590xx_battery_pdata *battery_pdata;
 	struct bcm590xx_audio_pdata *audio_pdata;
