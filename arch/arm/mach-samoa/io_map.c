@@ -102,6 +102,7 @@ static struct map_desc samoa_io_desc[] __initdata =
 	IO_DESC( KONA_MM_DMA_VA, SZ_4K),
 	IO_DESC( KONA_PAD_CTRL_VA, SZ_4K),
 	IO_DESC( KONA_PWRMGR_VA, SZ_32K),
+	IO_DESC( KONA_PMU_PMU_VA, SZ_4K),
 };
 
 
