@@ -57,7 +57,9 @@ enum PIN_NAME {
 	PN_NORFLSH_RDY,
 	PN_NORFLSH_CLK_N,
 
-	PN_ULPI0_CLOCK,
+	PN_SIM_DATA,
+
+        PN_ULPI0_CLOCK,
         PN_ULPI0_DATA_0,
         PN_ULPI0_DATA_1,
         PN_ULPI0_DATA_2,
@@ -120,6 +122,10 @@ enum PIN_NAME {
 enum PIN_FUNC {
 	PF_RESERVED	=	0,
 	PF_GPIO,
+
+	PF_SIM_DATA,
+        PF_PWM_O_2,
+        PF_VC_GPIO_7,
 
         PF_NORFLSH_AD_14,
 	PF_NORFLSH_AD_13,

@@ -90,6 +90,24 @@ static struct platform_device rng_device =
 };
 #endif
 
+#if defined(CONFIG_KONA_PWMC)
+static struct resource pwm_device_resource[] = {
+    [0] = {
+        .start = PWM_BASE_ADDR,
+        .end   = PWM_BASE_ADDR + 0x10,
+        .flags = IORESOURCE_MEM,
+    },
+};
+
+static struct platform_device pwm_device =
+{
+   .name          = "kona_pwmc",
+   .id            = -1,
+   .resource	  = pwm_device_resource,
+   .num_resources = ARRAY_SIZE(pwm_device_resource),
+};
+#endif
+
 #if defined(CONFIG_W1_MASTER_DS1WM)
 static struct resource d1w_device_resource[] = {
     [0] = {
@@ -223,6 +241,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_RTC_DRV_ISLAND)
         &rtc_device,
+#endif
+#if defined(CONFIG_KONA_PWMC)
+        &pwm_device,
 #endif
 #if defined(CONFIG_KEYBOARD_ISLAND)
         &keypad_device,
