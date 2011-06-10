@@ -34,7 +34,7 @@
 extern const uint bcmsdh_msglevel;
 
 #define BCMSDH_ERROR(x) printf x
-#define BCMSDH_INFO(x)	printf x
+#define BCMSDH_INFO(x)
 
 /* forward declarations */
 typedef struct bcmsdh_info bcmsdh_info_t;

@@ -28,6 +28,8 @@
 #ifndef __BCMLOG_H__
 #define __BCMLOG_H__
 
+#include <linux/file.h>
+
 #ifdef __cplusplus
 extern "C" 
 {
@@ -154,7 +156,7 @@ void BCMLOG_LogSignal( unsigned int inSigCode,
  *	@param	size	(in)	message length
  *	@note	does not free the IPC message buffer
  **/
-void BCMLOG_HandleCpLogMsg( char *buf, int size ) ;
+void BCMLOG_HandleCpLogMsg( unsigned char *buf, int size ) ;
 
 /**
  *	Prepare to handle CP crash dump. During CP crash
@@ -202,11 +204,14 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString );
 #define BCMLOG_OUTDEV_RNDIS		3		///<	MTT/RNDIS
 #define BCMLOG_OUTDEV_UART		4		///<	UART
 #define BCMLOG_OUTDEV_ACM		5		///<	ACM/OBEX
+#define BCMLOG_OUTDEV_STM               6		///<    STM	
 
 /**
  *	Get runtime log device
  **/
 int BCMLOG_GetRunlogDevice( void ) ;
+int BCMLOG_GetCpCrashLogDevice( void ) ;
+int BCMLOG_GetApCrashLogDevice( void ) ;
 
 #ifdef __cplusplus
 }

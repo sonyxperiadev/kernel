@@ -763,7 +763,7 @@ int bcmlog_mtt_on;
 unsigned short bcmlog_log_ulogging_id;
 
 /* ------------------------------------------------------------ */
-int brcm_retrive_early_printk()
+int brcm_retrive_early_printk(void)
 {
 	/* int printed_len = length; */
 	unsigned long flags;

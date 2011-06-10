@@ -423,6 +423,7 @@ static void skb_release_all(struct sk_buff *skb)
  *      @skb_size: minimum buffer size
  *
  */
+#ifdef CONFIG_BRCM_NETCONSOLE
 static void recycle_skbs_process(struct sk_buff *skb, int skb_size)
 {
         struct skb_shared_info *shinfo;
@@ -444,6 +445,7 @@ static void recycle_skbs_process(struct sk_buff *skb, int skb_size)
         skb_reset_tail_pointer(skb);
 
 }
+#endif /* #ifdef CONFIG_BRCM_NETCONSOLE */
 
 /**
  *	__kfree_skb - private function
@@ -456,10 +458,10 @@ static void recycle_skbs_process(struct sk_buff *skb, int skb_size)
 
 void __kfree_skb(struct sk_buff *skb)
 {
-	/* If the skb is with netpoll signature, we will recyle the skb buf to avoid to run out of memory.*/
+#ifdef CONFIG_BRCM_NETCONSOLE
+	/* If the skb has the netpoll signature, we will recycle the skb buf to avoid running out of memory.*/
 	if (skb->netpoll_signature == 0x12345678)
 	{
-		//printk("*");
 		recycle_skbs_process(skb,  netpoll_skb_size());
 		netpoll_recycle_skbs(skb);
 
@@ -467,6 +469,11 @@ void __kfree_skb(struct sk_buff *skb)
 		skb_release_all(skb);
 		kfree_skbmem(skb);
 	}
+#else
+	skb_release_all(skb);
+	kfree_skbmem(skb);
+#endif /* #ifdef CONFIG_BRCM_NETCONSOLE */
+
 }
 EXPORT_SYMBOL(__kfree_skb);
 

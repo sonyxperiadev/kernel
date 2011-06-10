@@ -46,10 +46,6 @@ return 0;
 }
 
 
-void ProcessCPCrashedDump(void *ptr)
-{
-}
-
 //JW, to do, hack
 Boolean IsBasicCapi2LoggingEnable(void)
 {

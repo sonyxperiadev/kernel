@@ -11,6 +11,19 @@
  * preserved in its entirety in all copies and derived works.
  */
 
+/*
+ * Frameworks:
+ *
+ *    - SMP:          Fully supported.    Locking is in place where necessary.
+ *    - GPIO:         Fully supported.    No GPIOs are used.
+ *    - MMU:          Fully supported.    Platform model with ioremap used.
+ *    - Dynamic /dev: Not applicable.
+ *    - Suspend:      Implemented.        Suspend and resume are implemented and should work.
+ *    - Clocks:       Not done.           Awaiting clock framework to be completed.
+ *    - Power:        Not done.
+ *
+ */
+
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -325,7 +338,7 @@ static struct w1_bus_master ds1wm_master = {
 	.search	    = ds1wm_search,
 };
 
-static int ds1wm_probe(struct platform_device *pdev)
+static int  __init ds1wm_probe(struct platform_device *pdev)
 {
 	struct ds1wm_data *ds1wm_data;
 	struct ds1wm_driver_data *plat;
@@ -426,7 +439,7 @@ static int ds1wm_resume(struct platform_device *pdev)
 #define ds1wm_resume NULL
 #endif
 
-static int ds1wm_remove(struct platform_device *pdev)
+static int __devexit ds1wm_remove(struct platform_device *pdev)
 {
 	struct ds1wm_data *ds1wm_data = platform_get_drvdata(pdev);
 
@@ -441,18 +454,21 @@ static int ds1wm_remove(struct platform_device *pdev)
 
 static struct platform_driver ds1wm_driver = {
 	.driver   = {
+		.owner	= THIS_MODULE,
 		.name = "ds1wm",
 	},
-	.probe    = ds1wm_probe,
-	.remove   = ds1wm_remove,
+	.remove   = __devexit_p(ds1wm_remove),
 	.suspend  = ds1wm_suspend,
 	.resume   = ds1wm_resume
 };
 
+static char banner[] __initdata = KERN_INFO
+    "DS1WM w1 busmaster driver - (c) 2004 Szabolcs Gyurko\n";
+
 static int __init ds1wm_init(void)
 {
-	printk("DS1WM w1 busmaster driver - (c) 2004 Szabolcs Gyurko\n");
-	return platform_driver_register(&ds1wm_driver);
+	printk(banner);
+	return platform_driver_probe(&ds1wm_driver, ds1wm_probe);
 }
 
 static void __exit ds1wm_exit(void)

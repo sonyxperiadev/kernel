@@ -201,6 +201,7 @@ static int max8649_is_enabled(struct regulator_dev *rdev)
 	return !((unsigned char)ret & MAX8649_EN_PD);
 }
 
+#if 0
 static int max8649_enable_time(struct regulator_dev *rdev)
 {
 	struct max8649_regulator_info *info = rdev_get_drvdata(rdev);
@@ -222,6 +223,7 @@ static int max8649_enable_time(struct regulator_dev *rdev)
 
 	return (voltage / rate);
 }
+#endif
 
 static int max8649_set_mode(struct regulator_dev *rdev, unsigned int mode)
 {
@@ -286,7 +288,9 @@ static struct regulator_ops max8649_dcdc_ops = {
 	.enable		= max8649_enable,
 	.disable	= max8649_disable,
 	.is_enabled	= max8649_is_enabled,
-	// .enable_time	= max8649_enable_time,
+#if 0
+	.enable_time	= max8649_enable_time,
+#endif
 	.set_mode	= max8649_set_mode,
 	.get_mode	= max8649_get_mode,
 

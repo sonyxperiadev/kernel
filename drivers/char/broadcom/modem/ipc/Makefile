@@ -5,6 +5,8 @@ EXTRA_CFLAGS += -D_RHEA_
 EXTRA_CFLAGS += -DCONFIG_BRCM_FUSE_IPC_CIB
 EXTRA_CFLAGS += -DBCM_INT_ID_RESERVED36=36
 
+EXTRA_CFLAGS += -I drivers/char/broadcom/fuse_log/
+
 obj-$(CONFIG_BCM_MODEM) += \
 	ipc_buffer.o \
 	ipc_bufferpool.o \
@@ -15,6 +17,7 @@ obj-$(CONFIG_BCM_MODEM) += \
 	ipc_trace.o \
 	ipc_server.o \
 	ipc_server_ccb.o \
+	ipc_crashsupport.o \
 	ipc_stubs.o \
 	lnx_support.o \
 	irq_apcp.o

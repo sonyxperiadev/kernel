@@ -89,13 +89,7 @@ typedef enum
 	DSPCMD_TYPE_CONFIG_EXPANDER,
 	DSPCMD_TYPE_CONFIG_ECHO_DUAL,
 	DSPCMD_TYPE_CONFIG_COMPANDER_FLAG,
-	// to be in sync with dspcmd.h included in CP image. 
-	/*
-	DSPCMD_TYPE_UPDATE_BLUETOOTH_FILTER_ENABLE_FLAG,
-	DSPCMD_TYPE_CONFIG_BLUETOOTH_FILTER,
-	DSPCMD_TYPE_UPDATE_COMP_BIQUAD_GAIN,
-	DSPCMD_TYPE_UPDATE_AND_CONFIG_COMP_FILTER,
-	*/
+	
 	DSPCMD_TYPE_CONTROL_ECHO_CANCELLATION,
 	DSPCMD_TYPE_EC_NS_ON,
 	DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff,
@@ -175,7 +169,7 @@ typedef struct
 	UInt16	value;
 } DspCmdRIPWritePRAM_t;
 
-typedef void (*SetCalibrationCb_t)(void);
+typedef void (*SetCalibrationCb_t)();
 
 typedef struct
 {
@@ -501,10 +495,6 @@ void DSPCMD_ConfigEC_NLP_Filter(
  UInt16 *coefs
 );
 
-void DSPCMD_UpdateBlueToothFilterEnableFlag(void);
-void DSPCMD_ConfigBlueToothFilter(void);
-void DSPCMD_UpdateCompBiquadGain(void);
-void DSPCMD_UpdateAndConfigCompFilter(void);
 
 /** @addtogroup DspCmdGroup
 	@{

@@ -20,7 +20,21 @@ config MACH_ISLAND_FF
 	help
 	  Support for the Broadcom Island FF/DK board.
 	  
+config MACH_ISLAND_BASE
+        bool "Support Broadcom Island base board"
+        help
+          Support for the Broadcom Island base board.
+
+config MACH_ISLAND_SV
+        bool "Support Broadcom Island SV board"
+        help
+          Support for the Broadcom Island SV board.
+
+config MACH_ISLAND_TABLET
+        bool "Support Broadcom Island Tablet board"
+        help
+          Support for the Broadcom Island Tablet board.
+
 endchoice
 
 endmenu
-

@@ -22,9 +22,9 @@
 typedef struct {
 	unsigned char		*buf_ptr ;			///< the buffer
 	unsigned long		 buf_sz ;			///< buffer size
-	unsigned long		 n_avail ;			///< number of available bytes
-	unsigned long		 idx_data ;			///< index of first data byte
-	unsigned long		 idx_free ;			///< index of first free byte
+//	unsigned long		 n_avail ;			///< number of available bytes
+	unsigned long		 idx_read ;			///< index of first data byte
+	unsigned long		 idx_write ;			///< index of first free byte
 }	BCMLOG_Fifo_t ;
 
 /**
@@ -34,6 +34,13 @@ typedef struct {
  *	@param	fifoBufSz		(in)	size of FIFO buffer in bytes
  **/
 void BCMLOG_FifoInit( BCMLOG_Fifo_t *pFifo, unsigned char *pFifoBuf, unsigned long fifoBufSz ) ;
+
+/**
+ *	Get free space log
+ *	@param	pFifo			(inout) the FIFO
+ *	@return	The size in byte that are free
+ **/
+unsigned long BCMLOG_FifoGetFreeSize( BCMLOG_Fifo_t *pFifo ) ;
 
 /**
  *	Get number of continguous data bytes
@@ -67,13 +74,8 @@ unsigned long BCMLOG_FifoAdd( BCMLOG_Fifo_t *pFifo, unsigned char *pSrcBuf, unsi
  **/
 unsigned long BCMLOG_FifoRemove( BCMLOG_Fifo_t *pFifo, unsigned long rmSize )  ;
 
-/**
- *	The buffer is used to hold data and avoid frequent output to peripherals.
- *	@param	pFifo			(inout)	the FIFO
- *	@return	0 if there is no need to invoke output
- *			otherwise it is the number of bytes needs output
- **/
-unsigned long BCMLOG_FifoNeedOutput( BCMLOG_Fifo_t *pFifo ) ;
+unsigned long BCMLOG_FifoGetDataSize( BCMLOG_Fifo_t *pFifo ) ;
+
 
 #endif // __BCMLOG_FIFO_H__
 

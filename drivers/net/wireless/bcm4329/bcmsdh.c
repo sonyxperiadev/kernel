@@ -41,7 +41,7 @@
 #include <sdio.h>	/* sdio spec */
 
 #define SDIOH_API_ACCESS_RETRY_LIMIT	3
-const uint bcmsdh_msglevel = BCMSDH_INFO_VAL;
+const uint bcmsdh_msglevel = BCMSDH_ERROR_VAL;
 
 
 struct bcmsdh_info

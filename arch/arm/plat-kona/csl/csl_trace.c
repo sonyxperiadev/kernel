@@ -1,46 +1,28 @@
-/*****************************************************************************
-*
-*    (c) 2001-2010 Broadcom Corporation
-*
-* This program is the proprietary software of Broadcom Corporation and/or
-* its licensors, and may only be used, duplicated, modified or distributed
-* pursuant to the terms and conditions of a separate, written license
-* agreement executed between you and Broadcom (an "Authorized License").
-* Except as set forth in an Authorized License, Broadcom grants no license
-* (express or implied), right to use, or waiver of any kind with respect to
-* the Software, and Broadcom expressly reserves all rights in and to the
-* Software and all intellectual property rights therein.
-* IF YOU HAVE NO AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS
-* SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE
-* ALL USE OF THE SOFTWARE.  
-*
-* Except as expressly set forth in the Authorized License,
-*
-* 1. This program, including its structure, sequence and organization,
-*    constitutes the valuable trade secrets of Broadcom, and you shall use all
-*    reasonable efforts to protect the confidentiality thereof, and to use
-*    this information only in connection with your use of Broadcom integrated
-*    circuit products.
-*
-* 2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
-*    AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR
-*    WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH
-*    RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL
-*    IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS
-*    FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS,
-*    QUIET ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU
-*    ASSUME THE ENTIRE RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-*
-* 3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS
-*    LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT,
-*    OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO
-*    YOUR USE OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN
-*    ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS
-*    OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER
-*    IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF
-*    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-*
-*****************************************************************************/
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
+
 /**
 *
 *  @file   csl_trace.c
@@ -81,6 +63,7 @@
 #define xassert(e,v) ((e) ? (void)0 : printk("Assertion failed! %s, line=%d\n", __FILE__, __LINE__))
 #endif
 
+int csl_StmSendBytes(void *data_ptr, int length);
 //******************************************************************************
 // Constants Definition
 //******************************************************************************
@@ -1442,85 +1425,21 @@ static void csl_trace_set_stm_sw( UInt8 bit_mask, Boolean set )
 #endif // (CSL_TRACE_STM_SUPPORT)
 
 #ifdef UNDER_LINUX
-/*
- * Trace send bytes and STM macros from Sebastian
- */
 
-#define L_STM_BEGIN(trace_type, channel)                                    \
-{                                                                           \
-    Int8 data = trace_type;                                                 \
-    csl_trace_stm_write (channel, FALSE, 1, &data);                         \
-}
-
-
-#define L_STM_WRITE(channel, datalen, data)                                 \
-                 csl_trace_stm_write (channel, FALSE, datalen, data)
-
-
-#define L_STM_WRITE_TS(channel, datalen, data)                              \
-                 csl_trace_stm_write (channel, TRUE, datalen, data)
-
-#define  L_STM_TERMINATE(channel)                                           \
-       {                                                                    \
-           UInt8 data = 0;                                                  \
-           csl_trace_stm_write (channel, TRUE, 1, &data);                   \
-       }
-
-void XTRACE_SEND_BYTES(UInt16 length, void *data_ptr)
+int csl_StmSendBytes(void *data_ptr, int length)
 {
     UInt8 trace_type = 0x72; //make it configurable
-    UInt8 channel = 1;
-    unsigned long flags;
-    char data[256]; // length must be < 256-19 or this will overrun
+    UInt8 channel = 8;
+    UInt8 termination= 0;
 
-    //setup OST header (magic numbers copied from test script)
-    data[0] = 0x00;
-    data[1] = 0x00;
-    data[2] = 0x0c;
-    data[3] = 0x01;
-    data[4] = 0x00;
-    data[5] = 0x1f;
-    data[6] = 0xa5;
-    data[7] = 0xc3;
-    data[8] = 0xbb;
-    data[9] = 0x01;
-    data[10] = 0x00;
-    data[11] = 0x11;
-    data[12] = 0x66;
-    data[13] = 0xb3;
-    data[14] = 0x80;
-    data[15] = 0x02;
-    data[16] = 0x00;    // Length of
-    data[17] = 0x13;    // payload
-    data[18] = 0xe3;    //  CRC of payload
-
-    //copy in data_ptr
-    strncpy(&data[19], &((char*)data_ptr)[0], length);
-
-    local_irq_save(flags);
-    L_STM_BEGIN(trace_type, channel);
-    L_STM_WRITE(channel, (length + 19), data);
-    L_STM_TERMINATE(channel);
-    local_irq_restore(flags);
-}
-
-/*
- * Small test function to send data to BMTT via FIDO
- */
-
-static int __init csl_trace_test(void)
-{
-    char string[64] = "Broadcom Trace Test\n";
-
-    XTRACE_SEND_BYTES(20, &string[0]);
-
-    pr_info("Test Trace String %s\n", &string[0]);
-
-    return 0;
+    // send trace type to start STM message
+    csl_trace_stm_write (channel, FALSE, 1, &trace_type);
+    csl_trace_stm_write (channel, FALSE, length, data_ptr);
+    csl_trace_stm_write (channel, TRUE, 1, &termination);
+    
+    return length;
 }
 
 arch_initcall(csl_trace_init);
-
-late_initcall(csl_trace_test);
 
 #endif

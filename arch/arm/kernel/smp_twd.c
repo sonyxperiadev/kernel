@@ -159,3 +159,9 @@ void twd_timer_stop(void)
 	__raw_writel(0, twd_base + TWD_TIMER_CONTROL);
 }
 #endif
+
+unsigned long twd_get_timer_rate(void)
+{
+	return twd_timer_rate;
+}
+EXPORT_SYMBOL(twd_get_timer_rate);

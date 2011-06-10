@@ -31,7 +31,7 @@
 #include <mach/brcm_ccu_clk_mgr_reg.h>
 #include <asm/io.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
-#ifdef	CONFIG_ARCH_ISLAND
+#if (defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_HANA))
 #include <mach/rdb/brcm_rdb_iroot_clk_mgr_reg.h>
 #else
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
@@ -868,6 +868,7 @@ static unsigned long ccu_clk_get_rate(struct clk *c)
 	return 	c->rate;
 }
 
+#if 0	/* FIXME: Unused for now */
 static int trigger_active_load(struct clk *clk, void __iomem  *base)
 {
     int val;
@@ -890,6 +891,7 @@ static int trigger_active_load(struct clk *clk, void __iomem  *base)
 
     return 0;
 }
+#endif
 
 static int root_ccu_init(struct clk *clk)
 {
@@ -901,7 +903,7 @@ static int root_ccu_init(struct clk *clk)
     // HWRHEA-877: var_312m_clk and var_96m_clk in rootCCU have wrong default
     // pll_select vaules, SW should program rootccu VAR_312M_DIV/VAR_48M_DIV
     // to use PLL1 clock instead of default PLL0i
-#ifdef	CONFIG_ARCH_ISLAND
+#if (defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_HANA))
     writel (0x1, base  + IROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
     writel (0x1, base + IROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
     writel (0x5, base + IROOT_CLK_MGR_REG_REFCLK_SEG_TRG_OFFSET);
@@ -989,7 +991,7 @@ static int aon_ccu_init(struct clk *clk)
     return 0;
 }
 
-#if !(defined(CONFIG_ARCH_ISLAND))
+#if !(defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_HANA))
 static int mm_ccu_init(struct clk *clk)
 {
     int ret;
@@ -1047,13 +1049,15 @@ static int ccu_init(struct clk *c)
 	ret = root_ccu_init(c);
 	break;
     case BCM2165x_HUB_CCU:
+	#ifndef CONFIG_ARCH_HANA
 	ret = hub_ccu_init(c);
+	#endif
 	break;
     case BCM2165x_AON_CCU:
 	ret = aon_ccu_init(c);
 	break;
     case BCM2165x_MM_CCU:
-    	#if !(defined(CONFIG_ARCH_ISLAND))
+	#if !(defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_HANA))
 	ret = mm_ccu_init(c);
 	#endif
 	break;

@@ -25,3 +25,9 @@ config BCM4329_NVRAM_PATH
 	default "/proc/calibration"
 	---help---
 	  Path to the calibration file.
+
+config BCM4329_KONA_SDIO
+	bool "Broadcom 4329 KONA SDIO support"
+	depends on BCM4329 && MMC_SDHCI_PLTFM_KONA
+	---help---
+	  This enables Broadcom KONA platform SDIO interface for the BCM4329 chip.

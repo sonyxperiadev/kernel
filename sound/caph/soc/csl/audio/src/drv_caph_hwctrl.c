@@ -23,6 +23,7 @@ Broadcom's express prior written consent.
 #include "msconsts.h"
 #include "log.h"
 #include "osinterrupt.h"
+#include "audio_plat_defconfig.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "chip_irq.h"
 #include "irqctrl.h"
@@ -97,7 +98,7 @@ Result_t AUDDRV_HWControl_Init(void)
     CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
    	printk(KERN_INFO "AUDDRV_HWControl_Init:: \n");
 
-#ifndef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_CLOCK
 //Enable CAPH clock.
     clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 	clk_set_rate(clkID[0], 156000000);

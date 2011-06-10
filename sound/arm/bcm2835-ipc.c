@@ -73,9 +73,9 @@ static irqreturn_t bcm2835_audio_irq(int irq, void *dev_id)
 
 	/* is it a control ack ? */
 	if (intstat & INTSTAT_CONTROL_MASK) {
-		audio_debug(" .. control ack\n");
 		uint32_t old_status = alsa_stream->status;
 		alsa_stream->status = readl(chip->reg_base + AUDIO_STATUS_OFFSET);
+		audio_debug(" .. control ack\n");
 		if (alsa_stream->control != alsa_stream->status) {
 			audio_alert("control (0x%08x) != status (0x%08x)\n",
 					alsa_stream->control, alsa_stream->status);
@@ -328,7 +328,6 @@ int bcm2835_audio_write(bcm2835_alsa_stream_t *alsa_stream, uint32_t count, void
 	struct list_head *p, *next;
 	bcm2835_audio_buffer_t *buffer;
 	AUDIO_FIFO_ENTRY_T entry;
-	unsigned long flags;
 	size_t copy_size;
 #ifdef DUMP_RAW_DATA
 	mm_segment_t old_fs;

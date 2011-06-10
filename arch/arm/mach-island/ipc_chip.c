@@ -32,7 +32,8 @@
 
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_ipcopen.h>
-#include <mach/island.h>
+
+#include "island.h"
 
 #define VC4_IPC_PHYS_ADDR_BASE	0x60040000UL
 #define ARM_IPC_PHYS_ADDR_BASE	0x34040000UL

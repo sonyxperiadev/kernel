@@ -139,16 +139,18 @@ static void ATC_HandleAtcEventRspCb(RPC_Msg_t* pMsg,
                                     ResultDataBufHandle_t dataBufHandle, 
                                     UInt32 userContextData);
 static Result_t ATC_RegisterCPTerminal(UInt8 chan, Boolean unsolicited);
-static void ATC_AddRespToQueue(const AtCmdInfo_t* atResp);
+static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void* atResp, UInt32 atRespLen);
+//static void ATC_AddRespToQueue(const AtCmdInfo_t* atResp);
 
 
 // XDR table for AT command serialization/deserialization
 static RPC_XdrInfo_t ATC_Prim_dscrm[] = {
 	
 	/* Add phonebook message serialize/deserialize routine map */
-	{ MSG_AT_COMMAND_REQ,"MSG_AT_COMMAND_REQ", (xdrproc_t) xdr_AtCmdInfo_t, sizeof(AtCmdInfo_t),0},
-	{ MSG_AT_COMMAND_IND,"MSG_AT_COMMAND_IND", (xdrproc_t)xdr_AtCmdInfo_t, sizeof(AtCmdInfo_t),0},
-	{ MSG_AT_REGISTER_REQ,"MSG_AT_REGISTER_REQ", (xdrproc_t)xdr_AtRegisterInfo_t, sizeof(AtRegisterInfo_t),0},
+	{ MSG_AT_COMMAND_REQ,"MSG_AT_COMMAND_REQ", (xdrproc_t) xdr_AtCmdInfo_t, sizeof(AtCmdInfo_t), AT_PARM_BUFFER_LEN},
+	{ MSG_AT_COMMAND_IND,"MSG_AT_COMMAND_IND", (xdrproc_t)xdr_AtCmdInfo_t, sizeof(AtCmdInfo_t), 8000},
+	{ MSG_AT_REGISTER_REQ,"MSG_AT_REGISTER_REQ", (xdrproc_t)xdr_AtRegisterInfo_t, sizeof(AtRegisterInfo_t), 0},
+	{ MSG_AT_AUDIO_REQ,"MSG_AT_AUDIO_REQ", (xdrproc_t)xdr_u_char, sizeof(Boolean), 0},
 	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
 };
 
@@ -274,6 +276,7 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
  *          ATC_KERNEL_SEND_AT_CMD    - arg is a pointer to type ATC_KERNEL_ATCmd_t,
  *                                which specifies the at channel and command.
  */
+
 static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 {
     int retVal = 0;
@@ -338,12 +341,18 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
         
         case ATC_KERNEL_Get_AT_RESP:
             {
-                ATC_KERNEL_ATResp_t* atRespU = (ATC_KERNEL_ATResp_t*)arg;
+                ATC_KERNEL_ATResp_t atRespU;
                 struct list_head *entry;
                 AT_RespQueue_t *respItem = NULL;
-				UInt16 len = ATC_KERNEL_RESULT_BUFFER_LEN_MAX - 1;
+		  UInt16 len = ATC_KERNEL_RESULT_BUFFER_LEN_MAX - 1;
                 
-				ATC_KERNEL_TRACE(("cmd - ATC_KERNEL_Get_AT_RESP\n"));
+		  ATC_KERNEL_TRACE(("cmd - ATC_KERNEL_Get_AT_RESP\n"));
+
+		  if (copy_from_user(&atRespU, (ATC_KERNEL_ATResp_t*)arg, sizeof(atRespU)))
+		  {
+			retVal = -1;
+			break;
+		  }
 
                 /* Get one resp from the queue */
                 spin_lock_irqsave( &sModule.mRespLock, irql ) ;
@@ -357,12 +366,12 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 
                 entry = sModule.mRespQueue.mList.next;
                 respItem = list_entry(entry, AT_RespQueue_t, mList);
-	
-				if (len > strlen(respItem->mATResp.fATRespStr))
-				{
-					len = strlen(respItem->mATResp.fATRespStr);
-				}	
-                if (copy_to_user(atRespU->fATRespStr, respItem->mATResp.fATRespStr, len+1) != 0)
+				
+		  atRespU.chan = respItem->mATResp.chan;
+		  atRespU.msgId = respItem->mATResp.msgId;
+		  atRespU.dataLen = respItem->mATResp.dataLen;
+		  
+                if (copy_to_user(atRespU.buffPtr, respItem->mATResp.buffPtr, respItem->mATResp.dataLen) != 0)
                 {
                     ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl() - copy_to_user() had error\n" ));
                     spin_unlock_irqrestore(&sModule.mRespLock, irql);
@@ -370,12 +379,20 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                     break;
                 }
 
+                if (copy_to_user(arg,  &atRespU, sizeof(ATC_KERNEL_ATResp_t)) != 0)
+                {
+                    ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl() - copy_to_user() had error\n" ));
+                    spin_unlock_irqrestore(&sModule.mRespLock, irql);
+                    retVal = -1;
+                    break;
+                }
+				
                 list_del(entry);
-				kfree(respItem->mATResp.fATRespStr);
+		  kfree(respItem->mATResp.buffPtr);
                 kfree(respItem);
 
                 spin_unlock_irqrestore(&sModule.mRespLock, irql);
-
+				
                 break;
             }
 
@@ -582,18 +599,34 @@ static void ATC_HandleAtcEventRspCb(RPC_Msg_t* pMsg,
 {
     ATC_KERNEL_TRACE(( "HandleAtcEventRspCb msg=0x%x clientID=%d\n",pMsg->msgId,0));
     
-    if(pMsg->msgId == MSG_AT_COMMAND_IND)
-	{
-		AtCmdInfo_t* atResponse = (AtCmdInfo_t*)pMsg->dataBuf;
+	switch(pMsg->msgId )
+    	{
+
+		case MSG_AT_COMMAND_IND:
+		{
+			AtCmdInfo_t* atResponse = (AtCmdInfo_t*)pMsg->dataBuf;
 		
-        ATC_KERNEL_TRACE(( " AT Response chnl:%d %s \n",atResponse->channel, atResponse->buffer));
+	        	ATC_KERNEL_TRACE(( " AT Response chnl:%d %s \n",atResponse->channel, atResponse->buffer));
         
-        ATC_AddRespToQueue( atResponse );
+			ATC_AddRespToQueue(atResponse->channel, pMsg->msgId, atResponse->buffer,  atResponse->len);
+			break;
+		}
+		
+		case MSG_AT_AUDIO_REQ:
+		{
+			Boolean* atResponse = (Boolean*)pMsg->dataBuf;
+			
+			ATC_KERNEL_TRACE(( " MSG_AT_AUDIO_REQ on/off:%d  \n", *atResponse));
+
+       
+			ATC_AddRespToQueue(0, pMsg->msgId, atResponse,  sizeof(Boolean));
+			break;
+		}
+		
+		default:
+        	ATC_KERNEL_TRACE(( " **Unexpected msg ID %d on AT channel\n",pMsg->msgId));
+			break;
 	}
-	else
-	{
-        ATC_KERNEL_TRACE(( " **Unexpected msg ID %d on AT channel\n",pMsg->msgId));
-    }
 
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
 }
@@ -626,12 +659,12 @@ static Result_t ATC_RegisterCPTerminal(UInt8 chan, Boolean unsolicited)
  *  
  *  @param atResp (in)  at response item
  */
-static void ATC_AddRespToQueue(const AtCmdInfo_t* atResp)
+static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void* atResp, UInt32 atRespLen)
 {
     AT_RespQueue_t* newRespQueueItem = NULL;
     unsigned long       irql ;
 
-    if( atResp->buffer == NULL )
+    if( atResp == NULL )
     {
         assert(0);
         return;
@@ -645,16 +678,17 @@ static void ATC_AddRespToQueue(const AtCmdInfo_t* atResp)
         return;
     }
 
-    newRespQueueItem->mATResp.fATRespStr = kmalloc(atResp->len+1, GFP_KERNEL);
-    if( !newRespQueueItem->mATResp.fATRespStr ) 
+    newRespQueueItem->mATResp.buffPtr = kmalloc(atRespLen, GFP_KERNEL);
+    if( !newRespQueueItem->mATResp.buffPtr ) 
     {
         ATC_KERNEL_TRACE(( "ATC_AddRespToQueue() Allocation error\n" ) );
 		kfree(newRespQueueItem);
         return;
     }
-    strncpy(newRespQueueItem->mATResp.fATRespStr, atResp->buffer, atResp->len);
-    newRespQueueItem->mATResp.fATRespStr[atResp->len]='\0';
-
+    newRespQueueItem->mATResp.chan = chan;
+    newRespQueueItem->mATResp.msgId = msgId;
+    newRespQueueItem->mATResp.dataLen= atRespLen;
+    memcpy((char*) newRespQueueItem->mATResp.buffPtr, atResp, atRespLen);
     //add to queue
     spin_lock_irqsave( &sModule.mRespLock, irql ) ;
     list_add_tail(&newRespQueueItem->mList, &sModule.mRespQueue.mList); 
@@ -700,7 +734,7 @@ static void ATC_Cleanup(void)
         AT_RespQueue_t *respEntry = NULL;
         respEntry = list_entry(listptr, AT_RespQueue_t, mList);
         list_del(listptr);
-		kfree(respEntry->mATResp.fATRespStr);
+		kfree(respEntry->mATResp.buffPtr);
         kfree(respEntry);
     }
 	spin_unlock_irqrestore( &sModule.mRespLock, irql ) ;

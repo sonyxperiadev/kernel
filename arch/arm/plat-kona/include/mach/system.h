@@ -29,7 +29,7 @@
 #include <linux/io.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_gicdist.h>
-#ifdef CONFIG_ARCH_ISLAND
+#if (defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_HANA))
 #include <mach/rdb/brcm_rdb_iroot_rst_mgr_reg.h>
 #else
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
@@ -54,7 +54,7 @@ static void arch_reset(char mode, const char *cmd)
 	 */
 	__raw_writel(0, KONA_GICDIST_VA + GICDIST_ENABLE_S_OFFSET);
 
-#ifdef CONFIG_ARCH_ISLAND
+#if (defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_HANA))
 	/* enable reset register access */
 	val  = __raw_readl(KONA_ROOT_RST_VA + IROOT_RST_MGR_REG_WR_ACCESS_OFFSET); 
 	val &= IROOT_RST_MGR_REG_WR_ACCESS_PRIV_ACCESS_MODE_MASK;		  /* retain access mode 	 */

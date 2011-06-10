@@ -2500,6 +2500,13 @@ config S6GMAC
 	  To compile this driver as a module, choose M here. The module
 	  will be called s6gmac.
 
+config NET_ISLAND
+	tristate "Broadcom Island Gigabit Ethernet support"
+	depends on ARCH_ISLAND
+	help
+	  This driver supports the on-chip Ethernet device on Island
+	  SoCs.
+
 source "drivers/net/stmmac/Kconfig"
 
 endif # NETDEV_1000
@@ -3304,7 +3311,7 @@ config NETCONSOLE_DYNAMIC
 
 config BRCM_NETCONSOLE
         tristate "Broadcom Network console logging support (EXPERIMENTAL)"
-        depends on EXPERIMENTAL
+        depends on EXPERIMENTAL && (USB_ETH_RNDIS || USB_ANDROID_RNDIS)
         ---help---
         If you want to log kernel messages over the network, enable this.
         See <file:Documentation/networking/netconsole.txt> for details.

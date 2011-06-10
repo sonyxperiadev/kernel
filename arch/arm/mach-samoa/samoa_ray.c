@@ -44,6 +44,10 @@
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #include <linux/i2c/qt602240_ts.h>
 #endif
+#ifdef CONFIG_GPIO_TC3589X
+#include <linux/mfd/tc3589x.h>
+#endif
+
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_bmdm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
@@ -62,6 +66,7 @@
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/platform_mconfig.h>
 
+#ifdef CONFIG_KEYBOARD_BCM
 // keypad map
 #define BCM_KEY_ROW_0  0
 #define BCM_KEY_ROW_1  1
@@ -82,7 +87,6 @@
 #define BCM_KEY_COL_7  7
 
 
-#ifdef CONFIG_KEYBOARD_BCM
 /*!
  * The keyboard definition structure.
  */
@@ -256,6 +260,41 @@ static struct i2c_board_info __initdata qt602240_info[] = {
 };
 #endif /* CONFIG_TOUCHSCREEN_QT602240 */
 
+#if defined(CONFIG_MFD_TC3589X) && defined(CONFIG_GPIO_TC3589X)
+#ifdef CONFIG_BCM_KEYBOARD
+#define GPIO_TC3589X_GPIO_PIN      22 /* Configure BB gpio for IOexpander IRQ */
+#else
+#define GPIO_TC3589X_GPIO_PIN      1  /* Configure BB gpio for IOexpander IRQ */
+#endif
+
+static void tc3589x_init(struct tc3589x *tc3589x, unsigned int base)
+{
+	//FIXME? could move dev int setup to here?
+}
+
+static struct tc3589x_gpio_platform_data tc3589x_gpio_data = {
+	.gpio_base	= KONA_MAX_GPIO,
+	.setup		= tc3589x_init,
+};
+
+static struct tc3589x_platform_data tc3589x_data = {
+	.block		= TC3589x_BLOCK_GPIO,
+	.gpio		= &tc3589x_gpio_data,
+	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
+};
+
+static struct i2c_board_info __initdata tc3589x_info[] = {
+	{
+		I2C_BOARD_INFO("tc3589x", 0x45),
+		.irq = gpio_to_irq(GPIO_TC3589X_GPIO_PIN),
+		.platform_data = &tc3589x_data,
+	},
+};
+
+#endif /* CONFIG_MFD_TC3589X && CONFIG_GPIO_TC3589X*/
+
+
+
 /* Samoa Ray specific platform devices */ 
 static struct platform_device *samoa_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -274,6 +313,11 @@ static void __init samoa_ray_add_i2c_devices (void)
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 	i2c_register_board_info(1, qt602240_info, ARRAY_SIZE(qt602240_info));
 #endif
+
+#ifdef CONFIG_MFD_TC3589X
+	i2c_register_board_info(1, tc3589x_info, ARRAY_SIZE(tc3589x_info));
+#endif
+
 }
 
 
@@ -447,8 +491,7 @@ void __init board_map_io(void)
 	samoa_map_io();
 }
 
-/* use RHEA ID for now */
-MACHINE_START(RHEA, "SamoaRay")
+MACHINE_START(BCM21455, "SamoaRay")
 	.phys_io = IO_START,
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,

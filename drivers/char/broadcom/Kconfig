@@ -20,6 +20,10 @@ config BRCM_FUSE_LOG
 	--help---
 	  Broadcom FUSE LOG drivers
 	  
+config STM_DEFAULT
+	tristate "STM Driver"
+	depends on BRCM_CHAR_DRIVERS
+	default n
     
 config ISP
 	tristate "ISP Driver"

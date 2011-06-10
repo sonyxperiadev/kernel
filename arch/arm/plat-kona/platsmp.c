@@ -30,7 +30,7 @@
  * control for which core is the next to come out of the secondary
  * boot "holding pen"
  */
-volatile int __cpuinitdata pen_release = -1;
+volatile int pen_release = -1;
 
 /* SCU base address */
 static void __iomem *scu_base = (void __iomem *)(KONA_SCU_VA);

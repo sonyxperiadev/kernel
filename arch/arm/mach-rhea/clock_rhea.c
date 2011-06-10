@@ -49,7 +49,6 @@ static struct proc_clock arm_clk = {
 	Reference clocks
 *****************************************************************************/
 DECLARE_REF_CLK (crystal,	CRYSTAL, 			26*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK (dummy,		DUMMY, 				0,		1,	0);
 DECLARE_REF_CLK (frac_1m,	FRAC_1M,			1*CLOCK_1M,		1,	0);
 DECLARE_REF_CLK (ref_96m_varVDD,	REF_96M_VARVDD,		96*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK (var_96m,	VAR_96M,			96*CLOCK_1M,	1,	0);

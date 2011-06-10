@@ -33,6 +33,8 @@
 #include <linux/slab.h>
 #include <linux/poll.h>
 #include <linux/broadcom/bcm_major.h>
+#include <linux/time.h>
+#include <linux/rtc.h>
 /*#include <linux/broadcom/ipc_server_ifc.h>
 */
 #include <linux/jiffies.h>
@@ -44,10 +46,8 @@
 #include <linux/fs.h>
 #include <asm/uaccess.h>
 
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
 #include <linux/mtd/mtd.h>
 #include <linux/broadcom/ipcinterface.h>
-#endif
 
 #include "bcmmtt.h"
 #include "bcmlog.h"
@@ -83,15 +83,20 @@ extern void DWC_PRINTF(char *format, ...);
 #define MEMORY_DUMP             ((P_log_general<<16)|1)
 
 #define	WORDS_PER_SIGNAL	0x400
+// file that CP crash dump log will be written to
+#define CP_CRASH_DUMP_DIR               "/sdcard/"
+#define CP_CRASH_DUMP_BASE_FILE_NAME    "cp_crash_dump_"
+#define CP_CRASH_DUMP_FILE_EXT          ".bin"
+#define CP_CRASH_DUMP_MAX_LEN           100
+
 static unsigned int compress_memcpy ( char* dest, char* src, unsigned short nbytes );
 static unsigned short Checksum16(unsigned char* data, unsigned long len);
 static UInt8* sMemDumpSignalBuf = NULL;
+mm_segment_t sCrashDumpFS;
 
 
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
 static struct mtd_info *mtd = NULL;
 static unsigned char *cp_buf = NULL;
-#endif
 
 /**
  *  Definitions used for logging binary signals
@@ -151,9 +156,6 @@ typedef struct
 	int					console_msg_lvl ;		///< console message level 
 	struct class		*logdrv_class ;			///< driver class 
  	spinlock_t			output_lock;			///< locks output stream to ensure sequential message output 
-#ifdef CONFIG_HAS_WAKELOCK
-	struct wake_lock	log_wake_lock;			///< wait lock for output processing
-#endif
 	int                 dumping_cp_crash_log;   ///< 1==dumping CP crash log, 0 otherwise
 }	BCMLOG_Module_t ;
 
@@ -210,12 +212,9 @@ static int CpCrashDumpInProgress( void )
  *	Acquire lock on output stream
  *	@return irql value to be passed to ReleaseOutputLock()
  **/
-static unsigned long AcquireOutputLock( void )
+unsigned long AcquireOutputLock( void )
 {
 	unsigned long irql ;
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock( &g_module.log_wake_lock ) ;
-#endif
 	spin_lock_irqsave( &g_module.output_lock, irql ) ;
 	return irql ;
 }
@@ -224,12 +223,9 @@ static unsigned long AcquireOutputLock( void )
  *	Release lock on output stream
  *	@param irql (in) value returned by AcquireOutputLock()
  **/
-static void ReleaseOutputLock( unsigned long irql )
+void ReleaseOutputLock( unsigned long irql )
 {
 	spin_unlock_irqrestore( &g_module.output_lock, irql ) ;
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_unlock( &g_module.log_wake_lock ) ;
-#endif
 }
 
 /**
@@ -310,7 +306,7 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 						break ;
 					}
 
-					kbuf_str = kmalloc( lcl->size, GFP_ATOMIC ) ;
+					kbuf_str = kmalloc( lcl->size+1, GFP_ATOMIC ) ;
 
 					if( !kbuf_str ) 
 					{
@@ -319,7 +315,11 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 						break ;
 					}
 
-					copy_from_user( kbuf_str, lcl->str, lcl->size ) ;
+					if (copy_from_user(kbuf_str, lcl->str, lcl->size)) {
+						BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "bad userspace pointer\n" ) ;
+						rc = -1 ;
+						break ;
+					}
 					
 					kbuf_str[lcl->size] = 0 ;	//	this ensures the string is null terminated
 
@@ -391,8 +391,10 @@ static long BCMLOG_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 						}
         
 						// copy the signal from user space to kernel space
-						copy_from_user( kernelSigBuf, lcl->sigPtr, lcl->sigBufSize ) ;
-
+						if (copy_from_user(kernelSigBuf, lcl->sigPtr, lcl->sigBufSize)) {
+							rc = -1;
+							break;
+						}
 					}
     
 					// internal api for signal logging
@@ -468,9 +470,6 @@ static int __init BCMLOG_ModuleInit(void)
 	}
 
 	spin_lock_init( &g_module.output_lock ) ;
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_init( &g_module.log_wake_lock, WAKE_LOCK_SUSPEND, "log_wake_lock");
-#endif
 	
     if (( ret = register_chrdev( BCM_LOG_MAJOR, BCMLOG_MODULE_NAME, &g_file_operations )) < 0 )
     {
@@ -529,9 +528,6 @@ static int __init BCMLOG_ModuleInit(void)
  **/
 static void __exit BCMLOG_ModuleExit(void)
 {
-#ifdef CONFIG_HAS_WAKELOCK
-	wake_lock_destroy( &g_module.log_wake_lock ) ;
-#endif
 }
 
 /**
@@ -573,13 +569,15 @@ static void LogString_Internal( const char* inLogString,
 
 	irql = AcquireOutputLock( ) ;
 	//	we are using a copy of string to be logged, always free the buffer when done
-	BCMLOG_Output( kbuf_mtt, mttFrameSize ) ;
+	
+	BCMLOG_Output( kbuf_mtt, mttFrameSize, 1 ) ;
 	
 	ReleaseOutputLock( irql ) ;
 
 	if( kbuf_mtt )
 		kfree( kbuf_mtt ) ;
 }
+
 
 /**
  *	Log null terminated string.
@@ -690,6 +688,9 @@ void BCMLOG_LogSignal( unsigned int inSigCode,
  *	@param	inCompress		(in)	if 0 send signal uncompressed, otherwise try to compress signal
  *
 **/
+
+extern unsigned long BCMLOG_GetFreeSize( void ) ;
+
 static void LogSignal_Internal( unsigned int inSigCode,
                                         void* inSigBuf,
                                         unsigned int inSigBufSize,
@@ -715,12 +716,7 @@ static void LogSignal_Internal( unsigned int inSigCode,
         // signal with no data
 
         // MTT header
-        frame_head_size = BCMMTT_MakeMTTSignalHeader( 6, (HWTRC_B_SIGNAL_HEADER_SIZE*2), frame_head );
-		if (frame_head_size < 0)
-		{
-		    BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "BCMMTT_MakeMTTSignalHeader failed\n" ) ;
-			return;
-		}
+        frame_head_size = BCMMTT_MakeMTTSignalHeader( 6, frame_head );
 
         // MTT payload
     	mtt_payload_size = 6;
@@ -742,12 +738,7 @@ static void LogSignal_Internal( unsigned int inSigCode,
 	    // signal with data to be sent uncompressed
 	    
 	    // MTT header
-    	frame_head_size = BCMMTT_MakeMTTSignalHeader( inSigBufSize + 7, (HWTRC_B_SIGNAL_HEADER_SIZE*2), frame_head  );
-		if (frame_head_size < 0)
-		{
-		    BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "BCMMTT_MakeMTTSignalHeader failed\n" ) ;
-			return;
-		}
+    	frame_head_size = BCMMTT_MakeMTTSignalHeader( inSigBufSize + 7, frame_head  );
 
         // MTT payload
 		mtt_payload_size = 7;
@@ -780,6 +771,11 @@ static void LogSignal_Internal( unsigned int inSigCode,
 		
 		if (compressedBuffer == NULL)
 		{
+#ifdef BCMLOG_DEBUG_FLAG
+			extern unsigned  int g_malloc_sig_buf;
+
+			g_malloc_sig_buf++;
+#endif
 		    BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "allocation error\n" ) ;
 			return;
 		}
@@ -787,15 +783,7 @@ static void LogSignal_Internal( unsigned int inSigCode,
 		compress_size = compress_memcpy((char *)compressedBuffer, (char *)inSigBuf, inSigBufSize);
 
 	    // MTT header
-    	frame_head_size = BCMMTT_MakeMTTSignalHeader( compress_size + 7, (HWTRC_B_SIGNAL_HEADER_SIZE*2), frame_head  );
-	
-		if (frame_head_size < 0)
-		{
-		    BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "BCMMTT_MakeMTTSignalHeader failed\n" ) ;
-            if( compressedBuffer )
-				kfree( compressedBuffer );
-			return;
-		}
+    	frame_head_size = BCMMTT_MakeMTTSignalHeader( compress_size + 7, frame_head  );
 
         // MTT payload
 		mtt_payload_size = 7;
@@ -840,22 +828,35 @@ static void LogSignal_Internal( unsigned int inSigCode,
     }
     else
     {
+    	UInt32 totallen, availlen;
+
         // regular logging -- multiple blocks
         // must be output contiguously
 		// so keep the 'output lock' until all are processedd
 	    unsigned long irql = AcquireOutputLock( ) ;
 				
+		totallen = frame_head_size + mtt_payload_size + frame_end_size + bufToSendSize;
+		availlen = BCMLOG_GetFreeSize();
+		if (availlen > totallen)
+		{
         // write out frame header...(located on stack; do not free when done)
-        BCMLOG_Output( frame_head, frame_head_size );
+		        BCMLOG_Output( frame_head, frame_head_size, 1 );
         // then payload...(located on stack; do not free when done)
-        BCMLOG_Output( mtt_payload, mtt_payload_size );
+		        BCMLOG_Output( mtt_payload, mtt_payload_size, 0 );
+				
         // then signal if applicable...
         if ( bufToSend && (bufToSendSize > 0) )
         {
-            BCMLOG_Output( bufToSend, bufToSendSize );
+		            BCMLOG_Output( bufToSend, bufToSendSize, 0 );
         }
+
         // then frame end (located on stack; do not free when done)
-        BCMLOG_Output( frame_end, frame_end_size );
+		        BCMLOG_Output( frame_end, frame_end_size , 0);
+		}
+#ifdef BCMLOG_DEBUG_FLAG
+		else
+			pr_info("Warning: want %d, have %d", totallen, availlen );
+#endif
 		
 		ReleaseOutputLock( irql ) ;
     }
@@ -874,20 +875,21 @@ static void LogSignal_Internal( unsigned int inSigCode,
  *	@param	size	(in)	message length
  *	@note	does not free the IPC message buffer
  **/
-void BCMLOG_HandleCpLogMsg( char *buf, int size )
+void BCMLOG_HandleCpLogMsg( unsigned char *buf, int size )
 {
 	if( !CpCrashDumpInProgress( ) ) 
 	{
 		unsigned long irql = AcquireOutputLock( ) ;
-		BCMLOG_Output( buf, size ) ;
+
+		BCMLOG_Output( buf, size, 1 ) ;
+
 		ReleaseOutputLock( irql ) ;
 	}
 }
 
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-
 void BCMLOG_WriteMTD( const char *buf, int size )
 {
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP
 	int ret = 0;
 	static int offs = KPANIC_CP_DUMP_OFFSET;
 	static int tot_size = 0;
@@ -975,9 +977,61 @@ final:
 	} else {
 		tot_size = 0;
 	}
+#endif
 }
 
+static void start_panic_crashlog( void )
+{
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP
+	mtd = get_mtd_device_nm(CONFIG_APANIC_PLABEL);
+	if (IS_ERR(mtd)) {
+		printk(KERN_ERR "failed to get MTD handle!!\n");
+		mtd = NULL;
+		return;
+	}
+
+	cp_buf = kmalloc(mtd->writesize, GFP_ATOMIC);
+	if (!cp_buf) {
+		printk(KERN_ERR "%s: kmalloc failed!!\n", __func__);
+		return;
+	}
+	memset(cp_buf, 0xff, mtd->writesize);
 #endif
+}
+
+static void start_sdcard_crashlog(struct file* inDumpFile )
+{
+	struct timespec ts;
+	struct rtc_time tm;
+	char assertFileName[CP_CRASH_DUMP_MAX_LEN];
+	// need to tell kernel that pointers from within the 
+	// kernel address space are valid (needed to do 
+	// file ops from kernel)
+	sCrashDumpFS = get_fs();
+	set_fs (KERNEL_DS);
+
+	// get current time
+	getnstimeofday(&ts);
+	rtc_time_to_tm(ts.tv_sec, &tm);
+	snprintf(assertFileName, CP_CRASH_DUMP_MAX_LEN,
+			"%s%s%d_%02d_%02d_%02d_%02d_%02d%s",
+			CP_CRASH_DUMP_DIR,
+			CP_CRASH_DUMP_BASE_FILE_NAME,
+			tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday,
+			tm.tm_hour, tm.tm_min, tm.tm_sec,
+			CP_CRASH_DUMP_FILE_EXT );
+
+	sDumpFile = filp_open( assertFileName, O_WRONLY|O_TRUNC|O_LARGEFILE|O_CREAT, 666);
+	if ( IS_ERR(sDumpFile)  )
+	{
+		BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "failed to open sdDumpFile %s\n", assertFileName);
+		sDumpFile = NULL;
+	}
+	else
+	{
+		BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "sdDumpFile %s opened OK\n",assertFileName);
+	}
+}
 
 /**
  *	Prepare to handle CP crash dump. During CP crash
@@ -993,26 +1047,21 @@ void BCMLOG_StartCpCrashDump( struct file* inDumpFile )
 {
     // note: don't need wakelock here as CP crash
     // dump is done under IPC wakelock
-    g_module.dumping_cp_crash_log = 1;   
-
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-	sDumpFile = 0 ;
-	mtd = get_mtd_device_nm(CONFIG_APANIC_PLABEL);
-	if (IS_ERR(mtd)) {
-		printk(KERN_ERR "failed to get MTD handle!!\n");
-		mtd = NULL;
-		return;
-	} 
-
-	cp_buf = kmalloc(mtd->writesize, GFP_ATOMIC);
-	if (!cp_buf) {
-		printk(KERN_ERR "%s: kmalloc failed!!\n", __func__);
-		return;
-	}
-	memset(cp_buf, 0xff, mtd->writesize);
-#else
+    g_module.dumping_cp_crash_log = 1;
 	sDumpFile = inDumpFile;
-#endif
+
+    switch( BCMLOG_GetCpCrashLogDevice() ){
+	case BCMLOG_OUTDEV_SDCARD:
+		start_sdcard_crashlog( inDumpFile );
+		break;
+	case BCMLOG_OUTDEV_PANIC:
+		BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "Panic CP Crash Log not supported\n" ) ;
+		start_panic_crashlog();
+		break;
+	case BCMLOG_OUTDEV_NONE:
+		BCMLOG_PRINTF( BCMLOG_CONSOLE_MSG_ERROR, "CP Crash Log no output selected\n" ) ;
+		break;
+    }
     // buffer for packaging up CP RAM dump blocks for crash log
     sMemDumpSignalBuf = kmalloc( (WORDS_PER_SIGNAL<<3), GFP_ATOMIC );
 }
@@ -1023,17 +1072,30 @@ void BCMLOG_StartCpCrashDump( struct file* inDumpFile )
 void BCMLOG_EndCpCrashDump(void)
 {
     g_module.dumping_cp_crash_log = 0;      
-    sDumpFile = NULL;
+
     if ( sMemDumpSignalBuf )
     {
         kfree( sMemDumpSignalBuf );   
     }
 
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-	BCMLOG_WriteMTD (NULL, 0);
-	if (cp_buf)
-		kfree(cp_buf);
-#endif
+    switch( BCMLOG_GetCpCrashLogDevice() ){
+	case BCMLOG_OUTDEV_SDCARD:
+		if ( sDumpFile )
+		{
+			filp_close( sDumpFile ,NULL );
+		}
+		set_fs (sCrashDumpFS);
+		sDumpFile = NULL;
+		break;
+	case BCMLOG_OUTDEV_PANIC:
+		BCMLOG_WriteMTD (NULL, 0);
+		if (cp_buf)
+			kfree(cp_buf);
+		break;
+	case BCMLOG_OUTDEV_NONE:
+		break;
+    }
+
 }
 
 
@@ -1046,15 +1108,30 @@ void BCMLOG_EndCpCrashDump(void)
  **/
 void BCMLOG_HandleCpCrashDumpData( const char *buf, int size )
 {
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-	BCMLOG_WriteMTD (buf, size);
-#else
-	if ( sDumpFile && sDumpFile->f_op && sDumpFile->f_op->write )
-	{
-		sDumpFile->f_op->write( sDumpFile, buf, size, &sDumpFile->f_pos );   
-	}
-#endif
-	
+	unsigned long irql;
+    switch( BCMLOG_GetCpCrashLogDevice() ){
+    case BCMLOG_OUTDEV_SDCARD:
+		if ( sDumpFile && sDumpFile->f_op && sDumpFile->f_op->write )
+		{
+			sDumpFile->f_op->write( sDumpFile, buf, size, &sDumpFile->f_pos );	 
+		}
+		break;
+	case BCMLOG_OUTDEV_PANIC:
+		BCMLOG_WriteMTD (buf, size);
+		break;
+	case BCMLOG_OUTDEV_RNDIS:
+	    irql = AcquireOutputLock( ) ;
+		BCMLOG_Output( buf, size, 0 );
+		ReleaseOutputLock( irql ) ;
+		break;
+	case BCMLOG_OUTDEV_STM:
+	    irql = AcquireOutputLock( ) ;
+		BCMLOG_Output( buf, size, 0 );
+		ReleaseOutputLock( irql ) ;
+		break;
+	case BCMLOG_OUTDEV_NONE:
+		break;
+    }
 }
 
 /**
@@ -1067,6 +1144,7 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString )
 {
 	int logStrSize;
 	int mttFrameSize;
+	unsigned long irql;
 
 	// include the NULL termination...
 	logStrSize = strlen(inLogString) + 1;
@@ -1086,14 +1164,29 @@ void BCMLOG_LogCPCrashDumpString( const char* inLogString )
 
 		mttFrameSize = BCMMTT_FrameString( kbuf_mtt, inLogString, mttFrameSize ) ;
 
-#ifdef CONFIG_BRCM_CP_CRASH_DUMP
-		BCMLOG_WriteMTD (kbuf_mtt, mttFrameSize);
-#else
-		if ( sDumpFile && sDumpFile->f_op && sDumpFile->f_op->write )
-		{
-			sDumpFile->f_op->write( sDumpFile, kbuf_mtt, mttFrameSize, &sDumpFile->f_pos );   
+		switch( BCMLOG_GetCpCrashLogDevice() ){
+		case BCMLOG_OUTDEV_SDCARD:
+			if ( sDumpFile && sDumpFile->f_op && sDumpFile->f_op->write )
+			{
+				sDumpFile->f_op->write( sDumpFile, kbuf_mtt, mttFrameSize, &sDumpFile->f_pos );   
+			}
+			break;
+		case BCMLOG_OUTDEV_PANIC:
+			BCMLOG_WriteMTD (kbuf_mtt, mttFrameSize);
+			break;
+		case BCMLOG_OUTDEV_RNDIS:
+			irql = AcquireOutputLock( ) ;
+			BCMLOG_Output( kbuf_mtt, mttFrameSize, 0 );
+			ReleaseOutputLock( irql ) ;
+			break;
+		case BCMLOG_OUTDEV_STM:
+			irql = AcquireOutputLock( ) ;
+			BCMLOG_Output( kbuf_mtt, mttFrameSize, 0 );
+			ReleaseOutputLock( irql ) ;
+			break;
+		case BCMLOG_OUTDEV_NONE:
+			break;
 		}
-#endif
 		kfree( kbuf_mtt ) ;
 	}
 }

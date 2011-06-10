@@ -28,7 +28,6 @@
 #include <linux/platform_device.h>
 #include <linux/sysdev.h>
 #include <linux/interrupt.h>
-#include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
 #include <linux/irq.h>
@@ -46,7 +45,6 @@
 
 #include <mach/hardware.h>
 #include <mach/kona.h>
-#include <mach/island.h>
 #include <mach/sdio_platform.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
@@ -65,16 +63,9 @@
 
 #include <linux/power_supply.h>
 
-/*
- * todo: 8250 driver has problem autodetecting the UART type -> have to
- * use FIXED type
- * confuses it as an XSCALE UART. Problem seems to be that it reads
- * bit6 in IER as non-zero sometimes when it's supposed to be 0.
- */
-#define KONA_UART0_PA   UARTB_BASE_ADDR
-#define KONA_UART1_PA   UARTB2_BASE_ADDR
-#define KONA_UART2_PA   UARTB3_BASE_ADDR
-#define KONA_UART3_PA   UARTB4_BASE_ADDR
+#include "island.h"
+#include "common.h"
+
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
 #define KONA_SDIO2_PA   SDIO3_BASE_ADDR
@@ -84,19 +75,6 @@
 
 #define BCM_INT_ID_RESERVED131         (131 + BCM_INT_ID_PPI_MAX)
 #define BCM_INT_ID_RESERVED132         (132 + BCM_INT_ID_PPI_MAX)
-
-#define KONA_8250PORT(name)                                                 \
-{                                                                           \
-   .membase    = (void __iomem *)(KONA_##name##_VA),                        \
-   .mapbase    = (resource_size_t)(KONA_##name##_PA),                       \
-   .irq       = BCM_INT_ID_##name,                                          \
-   .uartclk    = 13000000,                                                  \
-   .regshift   = 2,                                                         \
-   .iotype       = UPIO_DWAPB,                                              \
-   .type       = PORT_16550A,                                               \
-   .flags       = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,       \
-   .private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET), \
-}
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
 #define IS_MULTI_TOUCH  1
@@ -125,6 +103,18 @@
 
 /* 32 ~ 64 ms gives appropriate debouncing */
 #define HW_KEYPAD_DEBOUNCE_TIME   KEYPAD_DEBOUNCE_64MS
+
+/*
+ * by convention, On Island
+ *     MAXIM LDO is numbered 0 and 1
+ *     BCM59055 LDO is numbered starting from 2
+ */
+#ifdef CONFIG_REGULATOR_MAX8649
+#define MAX8649_LDO_TOTAL	2
+#else
+#define MAX8649_LDO_TOTAL	0
+#endif
+#define BCM59055_LDO_OFFSET	MAX8649_LDO_TOTAL
 
 static struct resource board_i2c0_resource[] = {
 	[0] =
@@ -228,16 +218,6 @@ static struct platform_device board_i2c_adap_devices[] =
 		.id = 3,
 		.resource = board_sspi_i2c_resource,
 		.num_resources = ARRAY_SIZE(board_sspi_i2c_resource),
-	},
-};
-
-static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT(UART0),
-	KONA_8250PORT(UART1),
-	KONA_8250PORT(UART2),
-	KONA_8250PORT(UART3),
-	{
-		.flags = 0,
 	},
 };
 
@@ -392,14 +372,6 @@ static struct i2c_board_info __initdata mic_det_info[] =
 	},
 };
 
-static struct platform_device board_serial_device = {
-	.name	= "serial8250",
-	.id	= PLAT8250_DEV_PLATFORM,
-	.dev= {
-		.platform_data = uart_data,
-	},
-};
-
 static struct resource board_sdio0_resource[] = {
 	[0] = {
 		.start = KONA_SDIO0_PA,
@@ -457,6 +429,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO1 */
 		.id = 1,
 		.data_pullup = 0,
+		.is_8bit = 1,
 		.devtype = SDIO_DEV_TYPE_EMMC,
 		.peri_clk_name = "sdio2_clk",
 		.ahb_clk_name = "sdio2_ahb_clk",
@@ -510,8 +483,8 @@ void island_maxim_platform_hw_init_1(void ) ;
 void island_maxim_platform_hw_init_2(void ) ;
 #endif
 
-#define BCM590XX_REG_ENABLED	1
-#define BCM590XX_REG_DISABLED	0
+#define BCM590XX_REG_ENABLED		1
+#define BCM590XX_REG_DISABLED		0
 
 #define BCM59055_RFLDO_OTP_VAL		BCM590XX_REG_ENABLED
 #define BCM59055_CAMLDO_OTP_VAL		BCM590XX_REG_ENABLED
@@ -523,74 +496,45 @@ void island_maxim_platform_hw_init_2(void ) ;
 #define BCM59055_HV6LDO_OTP_VAL		BCM590XX_REG_DISABLED
 #define BCM59055_HV7LDO_OTP_VAL		BCM590XX_REG_DISABLED
 #define BCM59055_SIMLDO_OTP_VAL		BCM590XX_REG_ENABLED
-#define BCM59055_CSR_OTP_VAL			BCM590XX_REG_ENABLED
-#define BCM59055_IOSR_OTP_VAL			BCM590XX_REG_ENABLED
-#define BCM59055_SDSR_OTP_VAL			BCM590XX_REG_ENABLED
+#define BCM59055_CSR_OTP_VAL		BCM590XX_REG_ENABLED
+#define BCM59055_IOSR_OTP_VAL		BCM590XX_REG_ENABLED
+#define BCM59055_SDSR_OTP_VAL		BCM590XX_REG_ENABLED
 
 /*********** RFLDO ***********/
-struct regulator_consumer_supply rf_supply = {
-	.supply = "rfldo_consumer_supply"
-} ;
 
-static struct regulator_init_data bcm59055_rfldo_data = {
-	.constraints = {
-		.name = "rfldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &rf_supply ,
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_rf = {
-	.supply = "rfldo_consumer_supply",
+	.supply = "rfldo_uc",
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_rf = {
-	.name = "bcm590xx",
+	.name = "rfldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_rf,
 	.init_on = BCM59055_RFLDO_OTP_VAL
 };
 static struct platform_device bcm59055_uc_device_rf = {
 	.name = "reg-userspace-consumer",
-	.id = 2,
+	.id = 0 + BCM59055_LDO_OFFSET,
 	.dev = { .platform_data = &bcm59055_uc_data_rf, },
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_rf = {
 	.name = "reg-virt-consumer",
-	.id = 2,
-	.dev = { .platform_data = "rfldo_consumer_supply" , },
+	.id = 0 + BCM59055_LDO_OFFSET,
+	.dev = { .platform_data = "rfldo_uc"  },
 };
-
+#endif
 /*********** CAMLDO **************/
-struct regulator_consumer_supply cam_supply = {
-	.supply = "camldo_consumer_supply"
-} ;
 
-static struct regulator_init_data bcm59055_camldo_data = {
-	.constraints = {
-		.name = "camldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS |REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &cam_supply ,
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_cam = {
-	.supply = "camldo_consumer_supply"
+	.supply = "camldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_cam = {
-	.name = "bcm590xx",
+	.name = "camldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_cam,
 	.init_on = BCM59055_CAMLDO_OTP_VAL
@@ -598,43 +542,30 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_cam = {
 
 static struct platform_device bcm59055_uc_device_cam = {
 	.name = "reg-userspace-consumer",
-	.id = 3,
+	.id = 1 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_cam
 	}
 };
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_cam = {
 	.name = "reg-virt-consumer",
-	.id = 3,
+	.id = 1 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "camldo_consumer_supply"
+		.platform_data = "camldo_uc"
 	}
 };
-
+#endif
 /*********** HV1LDO ***************/
-struct regulator_consumer_supply hv1_supply = {
-	.supply = "hv1ldo_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_hv1ldo_data = {
-	.constraints = {
-		.name = "hv1ldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS |REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1,
-	.consumer_supplies = &hv1_supply,
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_hv1 = {
-	.supply = "hv1ldo_consumer_supply"
+	.supply = "hv1ldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv1 = {
-	.name = "bcm590xx",
+	.name = "hv1ldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_hv1,
 	.init_on = BCM59055_HV1LDO_OTP_VAL
@@ -642,44 +573,30 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv1 = {
 
 static struct platform_device bcm59055_uc_device_hv1 = {
 	.name = "reg-userspace-consumer",
-	.id = 4,
+	.id = 2 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv1
 	},
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv1 = {
 	.name = "reg-virt-consumer",
-	.id = 4,
+	.id = 2 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "hv1ldo_consumer_supply"
+		.platform_data = "hv1ldo_uc"
 	}
 };
-
+#endif
 /*********** HV2LDO **************/
-struct regulator_consumer_supply hv2_supply = {
-	.supply = "hv2ldo_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_hv2ldo_data = {
-	.constraints = {
-		.name = "hv2ldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &hv2_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_hv2 = {
-	.supply = "hv2ldo_consumer_supply"
+	.supply = "hv2ldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv2 = {
-	.name = "bcm590xx",
+	.name = "hv2ldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_hv2,
 	.init_on = BCM59055_HV2LDO_OTP_VAL,
@@ -687,44 +604,30 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv2 = {
 
 static struct platform_device bcm59055_uc_device_hv2 = {
 	.name = "reg-userspace-consumer",
-	.id = 5,
+	.id = 3 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv2
 	}
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv2 = {
 	.name = "reg-virt-consumer",
-	.id = 5,
+	.id = 3 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "hv2ldo_consumer_supply"
+		.platform_data = "hv2ldo_uc"
 	}
 };
-
+#endif
 /*********** HV3LDO ********************/
-struct regulator_consumer_supply hv3_supply = {
-	.supply = "hv3ldo_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_hv3ldo_data = {
-	.constraints = {
-		.name = "hv3ldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &hv3_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_hv3 = {
-	.supply = "hv3ldo_consumer_supply"
+	.supply = "hv3ldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv3 = {
-	.name = "bcm590xx",
+	.name = "hv3ldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_hv3,
 	.init_on = BCM59055_HV3LDO_OTP_VAL,
@@ -732,88 +635,60 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv3 = {
 
 static struct platform_device bcm59055_uc_device_hv3 = {
 	.name = "reg-userspace-consumer",
-	.id = 6,
+	.id = 4 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv3
 	},
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv3 = {
 	.name = "reg-virt-consumer",
-	.id = 6,
+	.id = 4 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "hv3ldo_consumer_supply"
+		.platform_data = "hv3ldo_uc"
 	}
 };
-
+#endif
 /*********** HV4LDO ***************/
-struct regulator_consumer_supply hv4_supply = {
-	.supply = "hv4ldo_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_hv4ldo_data = {
-	.constraints = {
-		.name = "hv4ldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	 .consumer_supplies = &hv4_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_hv4 = {
-	.supply = "hv4ldo_consumer_supply"
+	.supply = "hv4ldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv4 = {
-	.name = "bcm590xx",
+	.name = "hv4ldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_hv4,
 	.init_on = BCM59055_HV4LDO_OTP_VAL
 };
 static struct platform_device bcm59055_uc_device_hv4 = {
 	.name = "reg-userspace-consumer",
-	.id = 7,
+	.id = 5 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv4
 	}
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv4 = {
 	.name = "reg-virt-consumer",
-	.id = 7,
+	.id = 5 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "hv4ldo_consumer_supply"
+		.platform_data = "hv4ldo_uc"
 	}
 };
-
+#endif
 /*********** HV5LDO ****************/
-struct regulator_consumer_supply hv5_supply = {
-	.supply = "hv5ldo_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_hv5ldo_data = {
-	.constraints = {
-		.name = "hv5ldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &hv5_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_hv5 = {
-	.supply = "hv5ldo_consumer_supply"
+	.supply = "hv5ldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv5 = {
-	.name = "bcm590xx",
+	.name = "hv5ldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_hv5,
 	.init_on = BCM59055_HV5LDO_OTP_VAL
@@ -821,44 +696,30 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv5 = {
 
 static struct platform_device bcm59055_uc_device_hv5 = {
 	.name = "reg-userspace-consumer",
-	.id = 8,
+	.id = 6 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv5
 	}
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv5 = {
 	.name = "reg-virt-consumer",
-	.id = 8,
+	.id = 6 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "hv5ldo_consumer_supply"
+		.platform_data = "hv5ldo_uc"
 	}
 };
-
+#endif
 /*********** HV6LDO *******************/
-struct regulator_consumer_supply hv6_supply = {
-	.supply = "hv6ldo_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_hv6ldo_data = {
-	.constraints = {
-		.name = "hv6ldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &hv6_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_hv6 = {
-	.supply = "hv6ldo_consumer_supply"
+	.supply = "hv6ldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv6 = {
-	.name = "bcm590xx",
+	.name = "hv6ldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_hv6,
 	.init_on = BCM59055_HV6LDO_OTP_VAL,
@@ -866,44 +727,30 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv6 = {
 
 static struct platform_device bcm59055_uc_device_hv6 = {
 	.name = "reg-userspace-consumer",
-	.id = 9,
+	.id = 7 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv6
 	},
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv6 = {
 	.name = "reg-virt-consumer",
-	.id = 9,
+	.id = 7 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "hv6ldo_consumer_supply"
+		.platform_data = "hv6ldo_uc"
 	}
 };
-
+#endif
 /*********** HV7LDO **************/
-struct regulator_consumer_supply hv7_supply = {
-	.supply = "hv7ldo_consumer_supply"
-} ;
 
-static struct regulator_init_data bcm59055_hv7ldo_data = {
-	.constraints = {
-		.name = "hv7ldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &hv7_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_hv7 = {
-	.supply = "hv7ldo_consumer_supply"
+	.supply = "hv7ldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_hv7 = {
-	.name = "bcm590xx",
+	.name = "hv7ldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_hv7,
 	.init_on = BCM59055_HV7LDO_OTP_VAL,
@@ -911,44 +758,30 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_hv7 = {
 
 static struct platform_device bcm59055_uc_device_hv7 = {
 	.name = "reg-userspace-consumer",
-	.id = 10,
+	.id = 8 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_hv7
 	}
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_hv7 = {
 	.name = "reg-virt-consumer",
-	.id = 10,
+	.id = 8 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "hv7ldo_consumer_supply"
+		.platform_data = "hv7ldo_uc"
 	}
 };
-
+#endif
 /*********** SIMLDO **************/
-struct regulator_consumer_supply sim_supply = {
-	.supply = "simldo_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_simldo_data = {
-	.constraints = {
-		.name = "simldo",
-		.min_uV = 1300000,
-		.max_uV = 3300000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &sim_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_sim = {
-	.supply = "simldo_consumer_supply"
+	.supply = "simldo_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_sim = {
-	.name = "bcm590xx",
+	.name = "simldo",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_sim,
 	.init_on = BCM59055_SIMLDO_OTP_VAL,
@@ -956,44 +789,30 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_sim = {
 
 static struct platform_device bcm59055_uc_device_sim = {
 	.name = "reg-userspace-consumer",
-	.id = 11,
+	.id = 9 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_sim
 	}
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_sim = {
 	.name = "reg-virt-consumer",
-	.id = 11,
+	.id = 9 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "simldo_consumer_supply"
+		.platform_data = "simldo_uc"
 	},
 };
-
+#endif
 /*********** CSR *************/
-struct regulator_consumer_supply csr_supply = {
-	.supply = "csr_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_csr_data = {
-	.constraints = {
-		.name = "csrldo",
-		.min_uV = 700000,
-		.max_uV = 1800000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &csr_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_csr = {
-	.supply = "csr_consumer_supply"
+	.supply = "csr_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_csr = {
-	.name = "bcm590xx",
+	.name = "csr",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_csr,
 	.init_on = BCM59055_CSR_OTP_VAL
@@ -1001,44 +820,31 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_csr = {
 
 static struct platform_device bcm59055_uc_device_csr = {
 	.name = "reg-userspace-consumer",
-	.id = 12,
+	.id = 10 + BCM59055_LDO_OFFSET,
 	.dev = {
 		 .platform_data = &bcm59055_uc_data_csr
 	}
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_csr = {
 	.name = "reg-virt-consumer",
-	.id = 12,
+	.id = 10 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "csr_consumer_supply"
+		.platform_data = "csr_uc"
 	},
 };
-
+#endif
 /*********** IOSR *************/
-struct regulator_consumer_supply iosr_supply = {
-	.supply = "iosr_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_iosr_data = {
-	.constraints = {
-		.name = "iosrldo",
-		.min_uV = 700000,
-		.max_uV = 1800000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &iosr_supply
-};
 
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_iosr = {
-	.supply = "iosr_consumer_supply"
+	.supply = "iosr_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_iosr = {
-	.name = "bcm590xx",
+	.name = "iosr",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_iosr,
 	.init_on = BCM59055_IOSR_OTP_VAL
@@ -1046,43 +852,30 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_iosr = {
 
 static struct platform_device bcm59055_uc_device_iosr = {
 	.name = "reg-userspace-consumer",
-	.id = 13,
+	.id = 11 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_iosr
 	}
 };
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_iosr = {
 	.name = "reg-virt-consumer",
-	.id = 13,
+	.id = 11 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "iosr_consumer_supply"
+		.platform_data = "iosr_uc"
 	}
 };
-
+#endif
 /*********** SDSR ***********/
-struct regulator_consumer_supply sdsr_supply = {
-	.supply = "sdsr_consumer_supply"
-};
 
-static struct regulator_init_data bcm59055_sdsr_data = {
-	.constraints = {
-		.name = "sdsrldo",
-		.min_uV = 700000,
-		.max_uV = 1800000,
-		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE ,
-		.always_on = 1,
-		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY
-	},
-	.num_consumer_supplies = 1 ,
-	.consumer_supplies = &sdsr_supply
-};
-
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_sdsr = {
-	.supply = "sdsr_consumer_supply"
+	.supply = "sdsr_uc"
 };
 
 static struct regulator_userspace_consumer_data bcm59055_uc_data_sdsr = {
-	.name = "bcm590xx",
+	.name = "sdsr",
 	.num_supplies = 1,
 	.supplies = &bcm59055_bd_sdsr,
 	.init_on = BCM59055_SDSR_OTP_VAL
@@ -1090,52 +883,57 @@ static struct regulator_userspace_consumer_data bcm59055_uc_data_sdsr = {
 
 static struct platform_device bcm59055_uc_device_sdsr = {
 	.name = "reg-userspace-consumer",
-	.id = 14,
+	.id = 12 + BCM59055_LDO_OFFSET,
 	.dev = {
 		.platform_data = &bcm59055_uc_data_sdsr
 	}
 };
-
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 static struct platform_device bcm59055_vc_device_sdsr = {
 	.name = "reg-virt-consumer",
-	.id = 14,
+	.id = 12 + BCM59055_LDO_OFFSET,
 	.dev = {
-		.platform_data = "sdsr_consumer_supply"
+		.platform_data = "sdsr_uc"
 	}
 };
+#endif
 
-struct bcm590xx_regulator_init_data bcm59055_regulators[] =
-{
-	[BCM59055_RFLDO]	= { BCM59055_RFLDO, &bcm59055_rfldo_data },
-	[BCM59055_CAMLDO] = { BCM59055_CAMLDO, &bcm59055_camldo_data },
-	[BCM59055_HV1LDO]	=	{ BCM59055_HV1LDO, &bcm59055_hv1ldo_data },
-	[BCM59055_HV2LDO]	=	{ BCM59055_HV2LDO, &bcm59055_hv2ldo_data },
-	[BCM59055_HV3LDO]	= { BCM59055_HV3LDO, &bcm59055_hv3ldo_data },
-	[BCM59055_HV4LDO]	=	{ BCM59055_HV4LDO, &bcm59055_hv4ldo_data },
-	[BCM59055_HV5LDO]	=	{ BCM59055_HV5LDO, &bcm59055_hv5ldo_data },
-	[BCM59055_HV6LDO]	=	{ BCM59055_HV6LDO, &bcm59055_hv6ldo_data },
-	[BCM59055_HV7LDO]	=	{ BCM59055_HV7LDO, &bcm59055_hv7ldo_data },
-	[BCM59055_SIMLDO]	=	{ BCM59055_SIMLDO, &bcm59055_simldo_data },
-	[BCM59055_CSR]		=	{ BCM59055_CSR, &bcm59055_csr_data },
-	[BCM59055_IOSR]		=	{ BCM59055_IOSR, &bcm59055_iosr_data },
-	[BCM59055_SDSR]		=	{BCM59055_SDSR, &bcm59055_sdsr_data }
-};
 
-struct platform_device *bcm59055_state_change_and_voltage_change_devices[] __initdata = {
-	&bcm59055_uc_device_rf , &bcm59055_vc_device_rf ,
-	&bcm59055_uc_device_cam , &bcm59055_vc_device_cam ,
-	&bcm59055_uc_device_hv1 , &bcm59055_vc_device_hv1 ,
-	&bcm59055_uc_device_hv2 , &bcm59055_vc_device_hv2 ,
-	&bcm59055_uc_device_hv3 , &bcm59055_vc_device_hv3 ,
-	&bcm59055_uc_device_hv4 , &bcm59055_vc_device_hv4 ,
-	&bcm59055_uc_device_hv5 , &bcm59055_vc_device_hv5 ,
-	&bcm59055_uc_device_hv6 , &bcm59055_vc_device_hv6 ,
-	&bcm59055_uc_device_hv7 , &bcm59055_vc_device_hv7 ,
-	&bcm59055_uc_device_sim , &bcm59055_vc_device_sim ,
-	&bcm59055_uc_device_csr , &bcm59055_vc_device_csr ,
-	&bcm59055_uc_device_iosr , &bcm59055_vc_device_iosr ,
-	&bcm59055_uc_device_sdsr , &bcm59055_vc_device_sdsr ,
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+struct platform_device *bcm59055_userspace_consumer_devices[] __initdata = {
+	&bcm59055_uc_device_rf,
+	&bcm59055_uc_device_cam,
+	&bcm59055_uc_device_hv1,
+	&bcm59055_uc_device_hv2,
+	&bcm59055_uc_device_hv3,
+	&bcm59055_uc_device_hv4,
+	&bcm59055_uc_device_hv5,
+	&bcm59055_uc_device_hv6,
+	&bcm59055_uc_device_hv7,
+	&bcm59055_uc_device_sim,
+	&bcm59055_uc_device_csr,
+	&bcm59055_uc_device_iosr,
+	&bcm59055_uc_device_sdsr
 };
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+struct platform_device *bcm59055_virtual_consumer_devices[] __initdata = {
+	&bcm59055_vc_device_rf,
+	&bcm59055_vc_device_cam,
+	&bcm59055_vc_device_hv1,
+	&bcm59055_vc_device_hv2,
+	&bcm59055_vc_device_hv3,
+	&bcm59055_vc_device_hv4,
+	&bcm59055_vc_device_hv5,
+	&bcm59055_vc_device_hv6,
+	&bcm59055_vc_device_hv7,
+	&bcm59055_vc_device_sim,
+	&bcm59055_vc_device_csr,
+	&bcm59055_vc_device_iosr,
+	&bcm59055_vc_device_sdsr,
+};
+#endif
 
 struct regulator_consumer_supply max8649_supply1 = {
 	.supply = "vc_core"
@@ -1160,11 +958,11 @@ struct max8649_platform_data max8649_info1 = {
 	.extclk	= 0,
 	.ramp_timing = MAX8649_RAMP_32MV,
 	.regulator = &max8649_init_data1 ,
-#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
+#if defined(CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE) && defined(CONFIG_REGULATOR_VIRTUAL_CONSUMER)
 	.init = island_maxim_platform_hw_init_1,
 #endif
 };
-
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 struct platform_device max8649_vc1 = {
 	.name = "reg-virt-consumer",
 	.id = 0,
@@ -1172,7 +970,7 @@ struct platform_device max8649_vc1 = {
 		.platform_data = "vc_core" ,
 	}
 };
-
+#endif
 struct i2c_board_info max_switch_info_1[] = {
 	[0] = {
 		.type		= "max8649",
@@ -1206,11 +1004,11 @@ struct max8649_platform_data max8649_info2 =
 	.extclk		= 0,
 	.ramp_timing	= MAX8649_RAMP_32MV,
 	.regulator	= &max8649_init_data2 ,
-#ifdef CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE
+#if defined(CONFIG_MAX8649_SUPPORT_CHANGE_VID_MODE) && defined(CONFIG_REGULATOR_VIRTUAL_CONSUMER)
 	.init = island_maxim_platform_hw_init_2,
 #endif
 } ;
-
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 struct platform_device max8649_vc2 = {
 	.name = "reg-virt-consumer",
 	.id = 1,
@@ -1218,6 +1016,7 @@ struct platform_device max8649_vc2 = {
 		.platform_data = "arm_core"
 	}
 };
+#endif
 
 struct i2c_board_info max_switch_info_2[] = {
 	[0] = {
@@ -1226,10 +1025,9 @@ struct i2c_board_info max_switch_info_2[] = {
 		.platform_data	= &max8649_info2
 	}
 };
-
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 struct platform_device *maxim_devices_1[] __initdata = { &max8649_vc1 } ;
 struct platform_device *maxim_devices_2[] __initdata = { &max8649_vc2 };
-
 void island_maxim_platform_hw_init_1(void )
 {
 	printk(KERN_INFO "REG: island_maxim_platform_hw_init for VC called\n") ;
@@ -1241,68 +1039,34 @@ void island_maxim_platform_hw_init_2(void )
 	printk(KERN_INFO "REG: island_maxim_platform_hw_init for ARM called \n") ;
 	platform_add_devices(maxim_devices_2, ARRAY_SIZE(maxim_devices_2));
 }
-
-#define PMU_DEVICE_I2C_ADDR_0	0x08
-#define PMU_DEVICE_I2C_ADDR_1	0x0C
-#define PMU_IRQ_PIN		10
-
-static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx, int flag)
-{
-	int ret;
-	printk(KERN_INFO "REG: pmu_init_platform_hw called \n") ;
-	switch (flag) {
-	case BCM590XX_INITIALIZATION:
-		ret = gpio_request(PMU_IRQ_PIN, "pmu_irq");
-		if (ret < 0) {
-			printk(KERN_ERR "%s unable to request GPIO pin %d\n", __FUNCTION__, PMU_IRQ_PIN);
-			return ret ;
-	}
-		gpio_direction_input(PMU_IRQ_PIN);
-		break;
-	default:
-		return -EPERM;
-	}
-	return 0;
-}
-
-static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
-	.num_regulator	= ARRAY_SIZE(bcm59055_regulators),
-	.default_pmmode = {
-		[BCM59055_RFLDO]	= 0x00,
-		[BCM59055_CAMLDO] 	= 0x00,
-		[BCM59055_HV1LDO]	= 0x00,
-		[BCM59055_HV2LDO]	= 0x00,
-		[BCM59055_HV3LDO]	= 0x00,
-		[BCM59055_HV4LDO]	= 0x00,
-		[BCM59055_HV5LDO]	= 0x00,
-		[BCM59055_HV6LDO]	= 0x00,
-		[BCM59055_HV7LDO]	= 0x00,
-		[BCM59055_SIMLDO]	= 0x00,
-		[BCM59055_CSR]		= 0x00,
-		[BCM59055_IOSR]		= 0x00,
-		[BCM59055_SDSR]		= 0x00,
-	},
-	.init	= bcm59055_regulators,
-};
-
-static struct bcm590xx_platform_data bcm590xx_plat_data = {
-	.init = bcm590xx_init_platform_hw,
-	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
-	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC,
-#ifdef CONFIG_BATTERY_BCM59055
-	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
-	.regl_pdata = &bcm59055_regl_pdata,
-};
 
-static struct i2c_board_info __initdata pmu_info[] =
+
+#ifdef CONFIG_BATTERY_BCM59055
+static struct mv_percent mv_percent_table[] =
 {
-	[0] = {
-		I2C_BOARD_INFO("bcm59055", PMU_DEVICE_I2C_ADDR_0 ),
-		.irq = gpio_to_irq(PMU_IRQ_PIN),
-		.platform_data = &bcm590xx_plat_data,
-	},
+    { 3800 , 5 },
+    { 3850 , 25 },
+    { 3900 , 50 },
+    { 3950 , 70 },
+    { 4000 , 90 },
+    { 4100 , 100 },
+} ;
+
+static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
+	.can_start_charging = can_start_charging,
+	.vp_table = mv_percent_table ,
+	.vp_table_cnt = ARRAY_SIZE(mv_percent_table) ,
+        .batt_min_volt = 3200 ,
+        .batt_max_volt = 4200 ,
+        .batt_technology = POWER_SUPPLY_TECHNOLOGY_LION ,
 };
+#endif
+
+
+
+
+
 
 #define BMA150_IRQ_PIN 120
 
@@ -1512,7 +1276,6 @@ void __init board_map_io(void)
 }
 
 static struct platform_device *board_devices[] __initdata = {
-	&board_serial_device,
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
@@ -1558,9 +1321,10 @@ static void __init board_add_devices(void)
 		max_switch_info_2,
 		ARRAY_SIZE(max_switch_info_2));
 
-	i2c_register_board_info(2,
+	/*i2c_register_board_info(2,
 		pmu_info,
-		ARRAY_SIZE(pmu_info));
+		ARRAY_SIZE(pmu_info));*/
+    board_pmu_init();
 
 	i2c_register_board_info(3,
 		bma150_info,
@@ -1569,6 +1333,12 @@ static void __init board_add_devices(void)
 	i2c_register_board_info(3,
 		ak8975_info,
 		ARRAY_SIZE(ak8975_info));
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+	platform_add_devices(bcm59055_userspace_consumer_devices, ARRAY_SIZE(bcm59055_userspace_consumer_devices));
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+	platform_add_devices(bcm59055_virtual_consumer_devices, ARRAY_SIZE(bcm59055_virtual_consumer_devices));
+#endif
 }
 
 void __init pinmux_setup(void)
@@ -1599,6 +1369,11 @@ void __init pinmux_setup(void)
 void __init board_init(void)
 {
 	pinmux_setup();
+	/*
+	 * Add common platform devices that do not have board dependent HW
+	 * configurations
+	 */
+	board_add_common_devices();
 	board_add_devices();
 }
 

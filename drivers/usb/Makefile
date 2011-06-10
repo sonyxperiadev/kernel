@@ -23,6 +23,7 @@ obj-$(CONFIG_USB_HWA_HCD)	+= host/
 obj-$(CONFIG_USB_ISP1760_HCD)	+= host/
 obj-$(CONFIG_USB_IMX21_HCD)	+= host/
 obj-$(CONFIG_USB_DWCOTG)        += host/
+obj-$(CONFIG_USB_BCM_ISLAND)	+= host/
 
 obj-$(CONFIG_USB_C67X00_HCD)	+= c67x00/
 

@@ -203,7 +203,6 @@ int __init kona_timer_modules_init (void)
 	kona_init_done = 1;
 	return 0;
 }
-EXPORT_SYMBOL(kona_timer_modules_init);
 
 /*
  * kona_timer_module_set_rate - Set the speed in which a timer module should count
@@ -569,7 +568,10 @@ static int  __config_slave_timer_clock(unsigned int rt)
 #ifdef CONFIG_PERIPHERAL_TIMER_FIX
 	void __iomem *rootClockMgr_regs = IOMEM(KONA_ROOT_CLK_VA);
 #endif
-	uint32_t val, old_enable, mask, rate_val;
+#if !defined(CONFIG_ARCH_SAMOA) || defined(CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY)
+	uint32_t old_enable;
+#endif
+	uint32_t val, mask, rate_val;
 #ifdef CONFIG_HAVE_CLK
 	struct clk *clk;
 #endif

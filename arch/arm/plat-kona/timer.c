@@ -37,6 +37,10 @@
 #include <mach/kona_timer.h>
 #include <mach/timer.h>
 
+#ifdef CONFIG_LOCAL_TIMERS
+#include <asm/smp_twd.h>
+#endif
+
 static struct kona_timer *gpt_evt = NULL;
 static struct kona_timer *gpt_src = NULL;
 
@@ -189,5 +193,9 @@ void __init gp_timer_init(struct gp_timer_setup *gpt_setup)
 	gptimer_clocksource_init();
 	gptimer_clockevents_init();
 	gptimer_set_next_event((CLOCK_TICK_RATE / HZ), NULL);
+
+#ifdef CONFIG_LOCAL_TIMERS
+	twd_base = IOMEM(KONA_PTIM_VA);
+#endif
 }
 

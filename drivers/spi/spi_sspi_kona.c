@@ -330,6 +330,10 @@ static int spi_kona_end_task(struct spi_device *spi,
 
 	/* task_conf struct initialization */
 	memset(&task_conf, 0, sizeof(task_conf));
+
+	/* seq_conf struct initialization */
+	memset(&seq_conf, 0, sizeof(seq_conf));
+
 	/* disable scheduler operation */
 	if (chal_sspi_enable_scheduler(chandle, 0))
 		return -EIO;
@@ -356,6 +360,7 @@ static int spi_kona_end_task(struct spi_device *spi,
 	seq_conf.rx_enable = FALSE;
 	seq_conf.cs_activate = 0;
 	seq_conf.cs_deactivate = 1;
+	seq_conf.clk_idle = 1; /* Do not send clk in this sequence */
 	seq_conf.pattern_mode = 0;
 	seq_conf.rep_cnt = 0;
 	seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;
@@ -396,6 +401,10 @@ static int spi_kona_config_task(struct spi_device *spi,
 
 	/* task_conf struct initialization */
 	memset(&task_conf, 0, sizeof(task_conf));
+
+	/* seq_conf struct initialization */
+	memset(&seq_conf, 0, sizeof(seq_conf));
+
 	/* disable scheduler operation */
 	if (chal_sspi_enable_scheduler(chandle, 0))
 		return -EIO;
@@ -448,6 +457,7 @@ static int spi_kona_config_task(struct spi_device *spi,
 	seq_conf.rx_enable = FALSE;
 	seq_conf.cs_activate = 0;
 	seq_conf.cs_deactivate = 1;
+	seq_conf.clk_idle = 1; /* Do not send clk in this sequence */
 	seq_conf.pattern_mode = 0;
 	seq_conf.rep_cnt = 0;
 	seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;

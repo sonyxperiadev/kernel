@@ -45,7 +45,7 @@
 #include "lnx_support.h"
 #include "ipc_server_ccb.h"
 #include "ipc_debug.h"
-//#include "bcmlog.h"
+#include "bcmlog.h"
 
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/platform_mconfig.h>
@@ -258,10 +258,9 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
         set_user_nice(current, -16);
     }
 
-#if 0
-#ifdef FUSE_IPC_CRASH_SUPPORT
    if(IpcCPCrashCheck())
    {
+#if 0 // MTD (flash/panic partition) not supported
 		if( BCMLOG_CPCRASH_MTD == BCMLOG_GetCpCrashDumpDevice() )
 		{
 			/* we kill AP when CP crashes */
@@ -270,6 +269,7 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 		}
 
 		else 
+#endif // 0
 		{
 			schedule_work(&g_ipc_info.cp_crash_dump_wq);
 		}
@@ -277,8 +277,6 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 		IPC_ProcessEvents();
    }
    else
-#endif
-#endif
    {
        IPC_ProcessEvents();  
 #ifdef CONFIG_HAS_WAKELOCK 
@@ -384,7 +382,10 @@ static int __init ipcs_init(void *smbase, unsigned int size)
 
 void Comms_Start(void)
 {
-    void __iomem *apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
+    void __iomem *apcp_shmem;
+    void __iomem *cp_boot_base;
+
+    apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
     if (!apcp_shmem) {
         printk(KERN_ERR "%s: ioremap shmem failed\n", __func__);
         return;
@@ -392,8 +393,6 @@ void Comms_Start(void)
     /* clear first (9) 32-bit words in shared memory */
     memset(apcp_shmem, 0, IPC_SIZE);
     iounmap(apcp_shmem);
-
-    void __iomem *cp_boot_base;
 
     cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
     if (!cp_boot_base) {

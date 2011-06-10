@@ -1061,6 +1061,12 @@ MODULE_LICENSE ("GPL");
 #define PLATFORM_DRIVER		ohci_hcd_da8xx_driver
 #endif
 
+#ifdef CONFIG_USB_OHCI_BCM
+#include "ohci-bcm.c"
+#define PLATFORM_DRIVER         ohci_bcm_driver
+#endif
+
+
 #if defined(CONFIG_CPU_SUBTYPE_SH7720) || \
     defined(CONFIG_CPU_SUBTYPE_SH7721) || \
     defined(CONFIG_CPU_SUBTYPE_SH7763) || \

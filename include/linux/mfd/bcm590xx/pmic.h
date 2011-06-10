@@ -38,7 +38,7 @@
 
 
 
-
+#define BCM590XX_REG_PMUID				BCM59055_REG_PMUID
 #define BCM590XX_INT_MASK_BIT			1
 #define BCM590XX_MAX_INT_REGS			14
 #define BCM590XX_MAX_INTMASK_REGS		14
@@ -46,6 +46,8 @@
 #define BCM590XX_INT_REG_BASE			BCM59055_REG_INT1
 #define BCM590XX_INT_MASK_REG_BASE		BCM59055_REG_INT1MSK
 #define BCM590XX_TOTAL_IRQ			BCM59055_TOTAL_IRQ
+#define BCM590XX_REG_HOSTCTRL1			BCM59055_REG_HOSTCTRL1
+#define HOSTCTRL1_SHDWN_OFFSET			BCM59055_REG_HOSTCTRL1_SHDWN_OFFSET
 
 // For a new PMU add new header file here.
 #define BCM590XX_MAX_REGULATOR			13
@@ -55,6 +57,8 @@
 #define LDO_STANDBY				1   // FOR LDO and Swtichers it is STANDBY( LPM for SRs ).
 #define LDO_OFF					2   // OFF.
 #define LDO_RESERVED_SR_FAST			3   // For LDO it is reserved. For CSR, IOSR, SDSR this is NM2 for SRs
+
+#define VOLTAGE_ADC_MAX_SAMPLE          6
 
 /*regualtor DSM settings */
 enum {
@@ -75,13 +79,16 @@ struct regulator_init_data;
 struct bcm590xx_regulator_init_data;
 
 enum {
-	BCM590XX_USE_REGULATORS   		=  (1 << 0),
-	BCM590XX_USE_RTC          		=  (1 << 1),
-	BCM590XX_USE_POWER        		=  (1 << 2),
-	BCM590XX_USE_PONKEY 			=  (1 << 3),
-	BCM590XX_ENABLE_DVS       		=  (1 << 4),
-	BCM590XX_REGISTER_POWER_OFF		=  (1 << 5),
-	BCM590XX_ENABLE_AUDIO			=  (1 << 6),
+	BCM590XX_USE_REGULATORS   		=	(1 << 0),
+	BCM590XX_USE_RTC          		=	(1 << 1),
+	BCM590XX_USE_POWER        		=	(1 << 2),
+	BCM590XX_USE_PONKEY 			=	(1 << 3),
+	BCM590XX_ENABLE_DVS       		=	(1 << 4),
+	BCM590XX_REGISTER_POWER_OFF		=	(1 << 5),
+	BCM590XX_ENABLE_AUDIO			=	(1 << 6),
+	BCM590XX_ENABLE_ADC				=	(1 << 7),
+	BCM590XX_ENABLE_FUELGAUGE		=	(1 << 8),
+	BCM590XX_ENABLE_POWER			=	(1 << 9),
 };
 
 int bcm590xx_register_regulator(struct bcm590xx *bcm590xx, int reg,
@@ -109,6 +116,9 @@ struct bcm590xx_regulator_pdata {
 	int num_regulator;
 	struct bcm590xx_regulator_init_data *init;
 	u8 default_pmmode[BCM590XX_MAX_REGULATOR];
+	int csr_nm_volt;
+	int csr_lpm_volt;
+	int csr_turbo_volt;
 };
 
 struct mv_percent
@@ -119,25 +129,20 @@ struct mv_percent
 
 
 struct bcm590xx_battery_pdata {
-    // struct charger_info usb;
-    // struct charger_info wac;
     u8 eoc_current;
-
-    u8 volt_adc_channel;
-    u8 temp_adc_channel;
-    u8 batt_level_count;
-    // struct batt_level_table *batt_level_table;
-    struct mv_percent *vp_table;
-    unsigned int vp_table_cnt;
-
+	int usb_cc;
+	int wac_cc;
     u16 temp_low_limit;
     u16 temp_high_limit;
 
     u16 batt_min_volt;
     u16 batt_max_volt;
+    /* this is to passed in unit of Coloumb */
+    u16 batt_max_capacity;
+    u8 batt_vol[VOLTAGE_ADC_MAX_SAMPLE];
+    u8 batt_adc[VOLTAGE_ADC_MAX_SAMPLE];
 
     u8 batt_technology;
-    int (*can_start_charging)(void*);
 };
 
 struct bcm590xx_audio_pdata {

@@ -1,0 +1,13 @@
+config BCM4329_FALCON
+	tristate "Broadcom 4329 wireless cards support"
+	depends on MMC
+	select WIRELESS_EXT
+	select WEXT_PRIV
+	---help---
+	  This module adds support for wireless adapters based on
+	  Broadcom 4329 chipset.
+
+	  This driver uses the kernel's wireless extensions subsystem.
+
+	  If you choose to build a module, it'll be called bcm4329_falcon. Say M if
+	  unsure.

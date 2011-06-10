@@ -1088,7 +1088,7 @@ static void __exit bsc_exit(void)
    remove_proc_entry(PROC_GLOBAL_PARENT_DIR, NULL);
 }
 
-module_init(bsc_init);
+arch_initcall(bsc_init);
 module_exit(bsc_exit);
 
 MODULE_AUTHOR("Broadcom");

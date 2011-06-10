@@ -16,6 +16,8 @@
 #include <linux/string.h>
 
 #include "fifo.h"
+#include <linux/kernel.h>
+#include "output.h"
 
 /**
  *	Initialize FIFO
@@ -27,9 +29,8 @@ void BCMLOG_FifoInit( BCMLOG_Fifo_t *pFifo, unsigned char *pFifoBuf, unsigned lo
 {
 	pFifo->buf_ptr	= pFifoBuf ;
 	pFifo->buf_sz	= fifoBufSz ;
-	pFifo->n_avail	= 0 ;
-	pFifo->idx_data	= 0 ;
-	pFifo->idx_free	= 0 ;
+	pFifo->idx_read	= 0 ;
+	pFifo->idx_write	= 0 ;
 }
 
 
@@ -42,16 +43,12 @@ unsigned long BCMLOG_FifoGetNumContig( BCMLOG_Fifo_t *pFifo )
 {
 	unsigned long numContig = 0 ;
 
-	if( pFifo->n_avail > 0 )
+if( pFifo->idx_read <= pFifo->idx_write )
 	{
-		if( pFifo->idx_data < pFifo->idx_free )
-		{
-			numContig = pFifo->n_avail ;
-		}
-		else
-		{
-			numContig = pFifo->buf_sz - pFifo->idx_data ;
-		}
+		numContig = pFifo->idx_write - pFifo->idx_read ;
+	} else 
+	{
+		numContig = pFifo->buf_sz - pFifo->idx_read ;
 	}
 
 	return numContig ;
@@ -64,7 +61,29 @@ unsigned long BCMLOG_FifoGetNumContig( BCMLOG_Fifo_t *pFifo )
  **/
 unsigned char* BCMLOG_FifoGetData( BCMLOG_Fifo_t *pFifo ) 
 {
-	return pFifo->n_avail > 0 ? pFifo->buf_ptr + pFifo->idx_data : 0 ;
+	return pFifo->buf_ptr + pFifo->idx_read ;
+}
+
+unsigned long BCMLOG_FifoGetDataSize( BCMLOG_Fifo_t *pFifo ) 
+{
+	unsigned long totalsize;
+	
+	if (pFifo->idx_read <= pFifo->idx_write)
+		totalsize = pFifo->idx_write -pFifo->idx_read;
+	else
+		totalsize = (pFifo->buf_sz - pFifo->idx_read) + (pFifo->idx_write);
+
+	return totalsize;
+}
+
+/**
+ *	Get free space log
+ *	@param	pFifo			(inout) the FIFO
+ *	@return	The size in byte that are free
+ **/
+unsigned long BCMLOG_FifoGetFreeSize( BCMLOG_Fifo_t *pFifo ) 
+{
+	return (pFifo->buf_sz - BCMLOG_FifoGetDataSize(pFifo)) - 1;
 }
 
 /**
@@ -79,50 +98,36 @@ unsigned long BCMLOG_FifoAdd( BCMLOG_Fifo_t *pFifo, unsigned char *pSrcBuf, unsi
 {
 	unsigned long numAdded = 0 ;
 
-	if( srcBufSz <= pFifo->buf_sz - pFifo->n_avail )
+	if( srcBufSz <= BCMLOG_FifoGetFreeSize(pFifo) )
 	{
 		numAdded = srcBufSz ;
 
-		if( pFifo->n_avail == 0 )
+		if( pFifo->idx_read > pFifo->idx_write )
 		{
-			memcpy( pFifo->buf_ptr, pSrcBuf, numAdded ) ;
-			pFifo->idx_data = 0 ;
-			pFifo->idx_free = numAdded ;
-			pFifo->n_avail  = numAdded ;
+			memcpy( pFifo->buf_ptr+pFifo->idx_write, pSrcBuf, numAdded ) ;
+			pFifo->idx_write += numAdded ;
 		}
-
 		else
 		{
-			if( pFifo->idx_data > pFifo->idx_free )
+			unsigned long nhi = pFifo->buf_sz - pFifo->idx_write ;
+			unsigned long nlo = numAdded - nhi ;
+
+			if( numAdded <= nhi )
 			{
-				memcpy( pFifo->buf_ptr+pFifo->idx_free, pSrcBuf, numAdded ) ;
-				pFifo->idx_free += numAdded ;
+				memcpy( pFifo->buf_ptr+pFifo->idx_write, pSrcBuf, numAdded ) ;
+				pFifo->idx_write += numAdded ;
 			}
 			else
 			{
-				unsigned long nhi = pFifo->buf_sz - pFifo->idx_free ;
-				unsigned long nlo = numAdded - nhi ;
-
-				if( numAdded <= nhi )
-				{
-					memcpy( pFifo->buf_ptr+pFifo->idx_free, pSrcBuf, numAdded ) ;
-					pFifo->idx_free += numAdded ;
-				}
-				else
-				{
-					memcpy( pFifo->buf_ptr+pFifo->idx_free, pSrcBuf, nhi ) ;
-					memcpy( pFifo->buf_ptr, pSrcBuf+nhi, nlo ) ;
-					pFifo->idx_free = nlo ;
-				}
+				memcpy( pFifo->buf_ptr+pFifo->idx_write, pSrcBuf, nhi ) ;
+				memcpy( pFifo->buf_ptr, pSrcBuf+nhi, nlo ) ;
+				pFifo->idx_write = nlo ;
 			}
-			pFifo->n_avail += numAdded ;
 		}
-			
-		pFifo->idx_data %= pFifo->buf_sz ;
-		pFifo->idx_free %= pFifo->buf_sz ;
+
+		pFifo->idx_write %= pFifo->buf_sz ;
 	}
-//else 
-//should increase a counter for log loss because of out of buffer 
+
 	return numAdded ;
 }
 
@@ -132,32 +137,25 @@ unsigned long BCMLOG_FifoAdd( BCMLOG_Fifo_t *pFifo, unsigned char *pSrcBuf, unsi
  *	@param	maxMsgs			(in)	max number of bytes to remove
  *	@return	number of bytes removed
  **/
+
 unsigned long BCMLOG_FifoRemove( BCMLOG_Fifo_t *pFifo, unsigned long rmSize ) 
 {
 	unsigned long numRemoved = 0 ;
-
-	if( pFifo->n_avail > 0 )
-	{
-		if( rmSize > pFifo->n_avail )
-			numRemoved = pFifo->n_avail ;
-
-		else
-			numRemoved = rmSize ;
-
-		pFifo->idx_data += numRemoved ;
-		pFifo->idx_data %= pFifo->buf_sz ;
-
-		pFifo->n_avail -= numRemoved ;
+#ifdef BCMLOG_DEBUG_FLAG
+	unsigned long datasize;
+	
+	datasize = BCMLOG_FifoGetDataSize(pFifo);
+	if( rmSize > datasize )
+	{	
+		pr_info("BCMLOG avail %d, removed %d", datasize, rmSize);
+		numRemoved = datasize ;
 	}
+	else
+#endif
+		numRemoved = rmSize ;
+
+	pFifo->idx_read += numRemoved ;
+	pFifo->idx_read %= pFifo->buf_sz ;
 
 	return numRemoved ;
-}
-
-unsigned long BCMLOG_FifoNeedOutput( BCMLOG_Fifo_t *pFifo ) 
-{
-	/* needs output if at least 1/2 buffer is used */
-	if (pFifo->n_avail > (pFifo->buf_sz>>1))
-		return pFifo->n_avail;
-	else
-		return 0;
 }

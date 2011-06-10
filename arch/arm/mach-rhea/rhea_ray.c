@@ -48,9 +48,11 @@
 #include <mach/kona.h>
 #include <mach/rhea.h>
 #include <asm/mach/map.h>
+#include <linux/power_supply.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
+#include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
 #include <linux/android_pmem.h>
 #include <linux/bootmem.h>
@@ -114,47 +116,21 @@ static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx, int flag)
 }
 
 #ifdef CONFIG_BATTERY_BCM59055
-/* wall charging and vbus are wired together on FF board
-     we monitor USB activity to make sure it is not USB cable that is inserted
- */
-static int can_start_charging(void* data)
-{
-#define INTERVAL (HZ/10)
-	int cpu, usb_otg_int[4], i;
-	for_each_present_cpu(cpu)
-		usb_otg_int[cpu] =  kstat_irqs_cpu(
-				BCM_INT_ID_USB_HSOTG, cpu);
-
-	for (i=0; i<10; i++) {
-		schedule_timeout_interruptible(INTERVAL);
-		for_each_present_cpu(cpu)
-			if (usb_otg_int[cpu]!= kstat_irqs_cpu(
-						BCM_INT_ID_USB_HSOTG, cpu))
-				return 0;
-	}
-	return 1;
-}
-
-static struct mv_percent mv_percent_table[] =
-{
-    { 3800 , 5 },
-    { 3850 , 25 },
-    { 3900 , 50 },
-    { 3950 , 70 },
-    { 4000 , 90 },
-    { 4100 , 100 },
-} ;
 
 static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
-	.can_start_charging = can_start_charging,
-	.vp_table = mv_percent_table ,
-	.vp_table_cnt = ARRAY_SIZE(mv_percent_table) ,
-        .batt_min_volt = 3200 ,
-        .batt_max_volt = 4200 ,
-        .batt_technology = POWER_SUPPLY_TECHNOLOGY_LION ,
+        .batt_min_volt = 3200,
+        .batt_max_volt = 4200,
+        .batt_technology = POWER_SUPPLY_TECHNOLOGY_LION,
+        .usb_cc = CURRENT_500_MA,
+        .wac_cc = CURRENT_900_MA,
+        /* 1500mA = 5400 coloumb
+         * 1Ah = 3600 coloumb
+        */
+        .batt_max_capacity = 5400,
 };
 #endif
 
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
 /* Regulator registration */
 struct regulator_consumer_supply sim_supply[] = {
 	{ .supply = "sim_vcc" },
@@ -181,7 +157,7 @@ static struct bcm590xx_regulator_init_data bcm59055_regulators[] =
 
 static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 	.num_regulator	= ARRAY_SIZE(bcm59055_regulators),
-	.init			= &bcm59055_regulators,
+	.init			= bcm59055_regulators,
 	.default_pmmode = {
 		[BCM59055_RFLDO]	= 0x00,
 		[BCM59055_CAMLDO] 	= 0x00,
@@ -198,15 +174,18 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 		[BCM59055_SDSR]		= 0x00,
 	},
 };
-
+#endif
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	.init = bcm590xx_init_platform_hw,
 	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
-	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC,
+	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC | BCM590XX_ENABLE_ADC |
+	BCM590XX_ENABLE_FUELGAUGE,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
 	.regl_pdata = &bcm59055_regl_pdata,
+#endif
 };
 
 
@@ -491,7 +470,7 @@ static int __init setup_pmem_pages(char *str)
 	if(!pmem_base)
 		printk(KERN_ERR "Failed to allocate the PMEM memory\n");
 	else
-		printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base); 
+		printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
 	return 0;
 }
 __setup("pmem=", setup_pmem_pages);
@@ -501,7 +480,7 @@ static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.start = 0x0,
 	.size = SZ_16M,
-	.no_allocator = 1,
+	.no_allocator = 0,
 	.cached = 1,
 	.buffered = 1,
 };

@@ -763,7 +763,7 @@ unsigned char brcm_get_netcon_status(void)
 struct delayed_work g_delay_workq_cb;
 #define DELAY_4_DHCP	3000 /* 3 seconds */
 
-static void brcm_trigger_logging(void)
+static void brcm_trigger_logging(struct work_struct *work)
 {
 	pr_info( "%s nt_enabled=%d\n",__func__, nt_enabled);
 	cur_rndis_status = TRUE;
@@ -795,7 +795,6 @@ void brcm_current_netcon_status(unsigned char status)
 	if (list_empty(&target_list)) {
 		nt = alloc_param_target(NULL);
 		if (IS_ERR(nt)) {
-			PTR_ERR(nt);
 			return;
 		}
 		
