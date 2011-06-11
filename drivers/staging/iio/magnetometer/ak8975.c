@@ -148,17 +148,7 @@ static int ak8975_read_data(struct i2c_client *client,
 	w_data[0] = reg;
 
 	msg[0].addr = client->addr;
-#ifdef CONFIG_I2C_BRCM_SSPI
-	/* Broadcom SSPI I2C driver currently does not support
-	 * I2C mangling protocol. 
-	 * The right way to implement this AK8975 driver is 
-	 * to use i2c_check_functionality() to check adapter's
-	 * functionality first. 
-	 */
-	msg[0].flags = 0;
-#else
 	msg[0].flags = I2C_M_NOSTART;	/* set repeated start and write */
-#endif
 	msg[0].len = 1;
 	msg[0].buf = w_data;
 
