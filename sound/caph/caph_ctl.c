@@ -108,7 +108,7 @@ static int VolumeCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
 	Int32	*pVolume;
-	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
+	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
 	pVolume = pChip->streamCtl[stream].ctlLine[dev].iVolume;
 
@@ -135,13 +135,13 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	struct snd_pcm_substream *pStream=NULL;
 	Int32 *pCurSel;
 	
-	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
+	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	pVolume = pChip->streamCtl[stream-1].ctlLine[dev].iVolume;
 	
 	pVolume[0] = ucontrol->value.integer.value[0];
 	pVolume[1] = ucontrol->value.integer.value[1];
 
-	pCurSel = pChip->streamCtl[stream-1].currentLineSel;
+	pCurSel = pChip->streamCtl[stream-1].iLineSelect;
 
 	//Apply Volume if the stream is running
 	switch(stream)
@@ -172,40 +172,9 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 		{
 			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[0] = %ld, pVolume[0] =%ld, pVolume[1]=%ld\n", pCurSel[0],pVolume[0],pVolume[1]);
 
-			//call audio driver to set volume				
-			switch(pCurSel[0])
-			{
-				case AUDCTRL_MIC_MAIN:
-				{
-					//set the playback volume/capture gain
-					if(pCurSel[1] == AUDCTRL_SPK_HANDSET)
-					{
-						AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
-													AUDCTRL_SPK_HANDSET, 
-													pVolume[1], //playback gain
-													AUDIO_GAIN_FORMAT_Q13_2);
-					}
-					else if(pCurSel[1] == AUDCTRL_SPK_HANDSFREE || pCurSel[1] == AUDCTRL_SPK_LOUDSPK)
-					{
-						AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
-														AUDCTRL_SPK_LOUDSPK, 
-														pVolume[1], //playback gain
-														AUDIO_GAIN_FORMAT_Q13_2);
-					}
-					AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_MAIN,pVolume[1]); //record gain
-					}
-				break;
-				case AUDCTRL_MIC_AUX:
-				{
-					AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
-													AUDCTRL_SPK_HEADSET, 
-													pVolume[1], //playback gain
-													AUDIO_GAIN_FORMAT_Q13_2);
-
-					AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_AUX,pVolume[1]); //record gain
-				}
-				break;
-			}						
+			//call audio driver to set gain/volume				
+			AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,pCurSel[0],pVolume[0]); //UL
+			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,	pCurSel[1], pVolume[1], AUDIO_GAIN_FORMAT_Q13_2);//DL
 		}
 		break;
 		case CTL_STREAM_PANEL_PCMIN:
@@ -250,12 +219,12 @@ static int SelCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info 
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);//kcontrol->id.device
 
-	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
+	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
 	if(pChip->streamCtl[stream].iFlags & MIXER_STREAM_FLAGS_CAPTURE)
 	{
 		uinfo->value.integer.min = AUDCTRL_MIC_MAIN;
-		uinfo->value.integer.max = AUDCTRL_MIC_TOTAL_COUNT;//FIXME
+		uinfo->value.integer.max = MIC_TOTAL_COUNT_FOR_USER;//FIXME
 	
 	}
 	else
@@ -282,7 +251,7 @@ static int SelCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
 	Int32	*pSel;
-	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
+	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
 	pSel = pChip->streamCtl[stream].iLineSelect;
 
@@ -306,15 +275,17 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
-	Int32	*pSel, *pCurSel;
+	Int32	*pSel, pCurSel[2];
 	struct snd_pcm_substream *pStream=NULL;
 	
-	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
+	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	pSel = pChip->streamCtl[stream-1].iLineSelect;
+	
+	pCurSel[0] = pSel[0]; //save current setting
+	pCurSel[1] = pSel[1];
 
 	pSel[0] = ucontrol->value.integer.value[0];
 	pSel[1] = ucontrol->value.integer.value[1];
-	pCurSel = pChip->streamCtl[stream-1].currentLineSel;
 	
 	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld\n", stream,pSel[0]);
 	
@@ -337,11 +308,11 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 		}
 		break;
 		case CTL_STREAM_PANEL_VOICECALL://voice call
-			{
-			if(pSel[0]==0)
-				//disable voice call
-				AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],pCurSel[1]);   
-			else
+			if(!pChip->iEnablePhoneCall)//if call is not enabled, we only update the sink and source inpSel, do nothing
+				break;
+			else if(pCurSel[0] == pSel[0] && pCurSel[1] == pSel[1]) //And even call is enabled, but source and sink are not changed, we  do nothing
+				break;
+			else //Swith source/sink
 			{				
 				//enable voice call with sink
 				switch(pSel[0])
@@ -349,24 +320,19 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 					case AUDCTRL_MIC_MAIN:
 					{
 						//route voice call to earpiece or IHF
-						pCurSel[0] = AUDCTRL_MIC_MAIN;
-						pCurSel[1] = pSel[1];
-						if(pCurSel[1] == AUDCTRL_SPK_HANDSET)
-							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],AUDCTRL_SPK_HANDSET);
-						else if(pCurSel[1] == AUDCTRL_SPK_HANDSFREE || pCurSel[1] == AUDCTRL_SPK_LOUDSPK)
-							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],AUDCTRL_SPK_LOUDSPK);
+						if(pSel[1] == AUDCTRL_SPK_HANDSET)
+							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],AUDCTRL_SPK_HANDSET);
+						else if(pSel[1] == AUDCTRL_SPK_LOUDSPK)
+							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],AUDCTRL_SPK_LOUDSPK);
 					}
 					break;
 					case AUDCTRL_MIC_AUX:
 					{
-						pCurSel[0] = AUDCTRL_MIC_AUX;
-						pCurSel[1] = AUDCTRL_SPK_HEADSET;
-						AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pCurSel[0],pCurSel[1]);
+						AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
 					}
 					break;
 				}
 			 }
-			}
 			break;
 		default:
 			break;
@@ -390,7 +356,7 @@ static int SwitchCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
 	Int32	*pMute;
-	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
+	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
 	pMute = pChip->streamCtl[stream].ctlLine[dev].iMute;
 
@@ -413,37 +379,16 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
-	Int32	*pMute, *pCurSel;
+	Int32	*pMute;
 	struct snd_pcm_substream *pStream=NULL;
 	
-	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<=CTL_STREAM_PANEL_LAST);
+	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	pMute = pChip->streamCtl[stream-1].ctlLine[dev].iMute;
 	
 	ucontrol->value.integer.value[0] = pMute[0];
 	ucontrol->value.integer.value[1] = pMute[1];
 
-	pCurSel = pChip->streamCtl[stream-1].currentLineSel;
-
 	//Apply mute is the stream is running
-	switch(stream)
-	{
-		case CTL_STREAM_PANEL_PCMOUT1:
-		case CTL_STREAM_PANEL_PCMOUT2:
-		case CTL_STREAM_PANEL_VOIPOUT:		
-			BCM_AUDIO_DEBUG("SwitchCtrlPut caling AUDCTRL_SetPlayMute pMute[0] =%ld, pMute[1]=%ld\n", pMute[0],pMute[1]);
-			AUDCTRL_SetPlayMute (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
-					pChip->streamCtl[stream-1].dev_prop.u.p.speaker, 
-					pMute[0]);  //currently driver doesnt handle Mute for left/right channels
-					
-			break;
-		case CTL_STREAM_PANEL_VOICECALL:
-			break;
-		case CTL_STREAM_PANEL_PCMIN:
-		case CTL_STREAM_PANEL_VOIPIN:
-			break;
-		default:
-			break;
-	}
 	switch(stream)
 	{
 		case CTL_STREAM_PANEL_PCMOUT1:
@@ -468,40 +413,8 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			break;
 		case CTL_STREAM_PANEL_VOICECALL:
 		{
-			BCM_AUDIO_DEBUG("SwitchCtrlPut caling AUDCTRL_SetPlayMute pCurSel[0] = %ld pMute[0] =%ld, pMute[1]=%ld\n", pCurSel[0], pMute[0],pMute[1]);
+			BCM_AUDIO_DEBUG("Unexpected SwitchCtrlPut caling AUDCTRL_SetPlayMute pMute[0] =%ld, pMute[1]=%ld\n", pMute[0],pMute[1]);
 
-			//call audio driver to set volume				
-			switch(pCurSel[0])
-			{
-				case AUDCTRL_MIC_MAIN:
-				{
-					//set the playback volume/capture gain
-					if(pCurSel[1] == AUDCTRL_SPK_HANDSET)
-					{
-						AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT,
-													AUDCTRL_SPK_HANDSET, 
-													pMute[0]);
-					}
-					else if(pCurSel[1] == AUDCTRL_SPK_HANDSFREE || pCurSel[1] == AUDCTRL_SPK_LOUDSPK)
-					{
-						AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT,
-													  AUDCTRL_SPK_LOUDSPK, 
-													  pMute[0]);
-
-					}
-					AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_MAIN,pMute[1]); //record mute
-				}
-				break;
-				case AUDCTRL_MIC_AUX:
-				{
-					AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT,
-												  AUDCTRL_SPK_HEADSET, 
-												  pMute[0]);
-
-					AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_AUX,pMute[1]); //record mute
-				}
-				break;
-			}						
 		}
 		break;
 		case CTL_STREAM_PANEL_PCMIN:
@@ -539,11 +452,57 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 //-------------------------------------------------------------------------------------------
 static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info * uinfo)
 {
-	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-	uinfo->count = 3;
-	uinfo->value.integer.min = 0;
-	uinfo->value.integer.max = CAPH_MAX_CTRL_LINES;//FIXME
-	uinfo->value.integer.step = 1; 
+	int priv = kcontrol->private_value;
+	int function = FUNC_OF_CTL(priv);
+	
+	switch(function)
+	{
+		case CTL_FUNCTION_LOOPBACK_TEST:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 3;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = CAPH_MAX_CTRL_LINES;//FIXME
+			uinfo->value.integer.step = 1; 
+			break;
+		case CTL_FUNCTION_PHONE_ENABLE:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+			uinfo->count = 1;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 1;
+			uinfo->value.integer.step = 1; 
+			break;
+		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+			uinfo->count = 2;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 1;
+			uinfo->value.integer.step = 1; 
+			break;
+		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 1;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 3;
+			uinfo->value.integer.step = 1; 
+			break;
+		case CTL_FUNCTION_FM_ENABLE:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+			uinfo->count = 1;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 1;
+			uinfo->value.integer.step = 1; 
+			break;
+		case CTL_FUNCTION_FM_FORMAT:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 2; //sample rate, stereo/mono
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 48000;
+			uinfo->value.integer.step = 1; 
+			break;
+		default:
+			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
+				break;
+	}
 
 	return 0;
 }
@@ -557,7 +516,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 {
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
-	int function = priv&0xFF;
+	int function = FUNC_OF_CTL(priv);
 
 	switch(function)
 	{
@@ -566,7 +525,21 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			ucontrol->value.integer.value[1] = pChip->pi32LoopBackTestParam[1];
 			ucontrol->value.integer.value[2] = pChip->pi32LoopBackTestParam[2];
 			break;
+		case CTL_FUNCTION_PHONE_ENABLE:
+			ucontrol->value.integer.value[0] = pChip->iEnablePhoneCall;
+			break;
+		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
+			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[0]; 
+			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[1]; 
+			break;
+		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			break;
+		case CTL_FUNCTION_FM_ENABLE:
+			break;
+		case CTL_FUNCTION_FM_FORMAT:
+			break;
 		default:
+			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
 			break;
 			
 	}
@@ -584,6 +557,8 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int function = priv&0xFF;
+	Int32	*pSel;
+
 
 	switch(function)
 	{
@@ -595,7 +570,54 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			//Do loopback test
 			AUDCTRL_SetAudioLoopback(pChip->pi32LoopBackTestParam[0],(AUDCTRL_MICROPHONE_t)pChip->pi32LoopBackTestParam[1],(AUDCTRL_SPEAKER_t)pChip->pi32LoopBackTestParam[2]);
 			break;
+		case CTL_FUNCTION_PHONE_ENABLE:
+			pChip->iEnablePhoneCall = ucontrol->value.integer.value[0];
+			pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect;
+
+			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_PHONE_ENABLE pSel[0] = %ld-%ld pMute[0] =%ld pMute[1] =%ld\n", pSel[0],pSel[1], pChip->iMutePhoneCall[0], pChip->iMutePhoneCall[1]);
+
+
+			if(!pChip->iEnablePhoneCall)
+				//disable voice call
+				AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);   
+			else
+			{				
+				//enable voice call with sink and source
+				AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
+			}
+			
+			break;
+		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
+			if( pChip->iEnablePhoneCall && (pChip->iMutePhoneCall[0] != ucontrol->value.integer.value[0]||pChip->iMutePhoneCall[1] != ucontrol->value.integer.value[1]) )
+			{
+				pChip->iMutePhoneCall[0] = ucontrol->value.integer.value[0]; 
+				pChip->iMutePhoneCall[1] = ucontrol->value.integer.value[1]; 
+
+				pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect;
+				
+				BCM_AUDIO_DEBUG("MiscCtrlPut pSel[0] = %ld pMute[0] =%ld pMute[1] =%ld\n", pSel[0], pChip->iMutePhoneCall[0], pChip->iMutePhoneCall[1]);
+			
+				//call audio driver to mute UL/DL
+				
+				AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT, pSel[1], pChip->iMutePhoneCall[1]);
+				AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,pSel[0],pChip->iMutePhoneCall[0]); //record mute
+			}
+			else
+			{
+				pChip->iMutePhoneCall[0] = ucontrol->value.integer.value[0]; 
+				pChip->iMutePhoneCall[1] = ucontrol->value.integer.value[1]; 
+			}
+			
+			
+			break;
+		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			break;
+		case CTL_FUNCTION_FM_ENABLE:
+			break;
+		case CTL_FUNCTION_FM_FORMAT:
+			break;
 		default:
+			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
 			break;
 	}
 
@@ -647,10 +669,68 @@ static const DECLARE_TLV_DB_SCALE(caph_db_scale_volume, -5000, 25, 0);
 	BRCM_MIXER_CTRL_GENERAL(SNDRV_CTL_ELEM_IFACE_MIXER, dev, subdev, xname, xindex, SNDRV_CTL_ELEM_ACCESS_READWRITE, 0, \
 	                        MiscCtrlInfo, MiscCtrlGet, MiscCtrlPut, 0,private_val)
 
+/*++++++++++++++++++++++++++++++++ Sink device and source devices
+{.strName = "Handset",	.iVolume = {12,12},},		//AUDCTRL_SPK_HANDSET 
+{.strName = "Headset",		.iVolume = {12,12},},	//AUDCTRL_SPK_HEADSET
+x{.strName = "Handsfree",	.iVolume = {12,12},},	//AUDCTRL_SPK_HANDSFREE
+{.strName = "BT SCO",	.iVolume = {12,12},},		//AUDCTRL_SPK_BTM
+{.strName = "Loud Speaker", .iVolume = {12,12},},	//AUDCTRL_SPK_LOUDSPK
+{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_TTY
+{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_HAC
+x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_USB
+x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
+{.strName = "I2S", .iVolume = {13,13},},			//AUDCTRL_SPK_I2S
+{.strName = "Speaker Vibra", .iVolume = {14,14},},	//AUDCTRL_SPK_VIBRA
 
 
+{.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_UNDEFINED
+{.strName = "Main Mic", 	.iVolume = {28,28},},		//AUDCTRL_MIC_MAIN
+{.strName = "AUX Mic",	.iVolume = {28,28},},			//AUDCTRL_MIC_AUX
+{.strName = "Digital MIC 1",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI1
+{.strName = "Digital MIC 2",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI2
+x{.strName = "Digital Mic 12",	.iVolume = {28,28},},	//AUDCTRL_DUAL_MIC_DIGI12
+x{.strName = "Digital Mic 21",	.iVolume = {28,28},},	//AUDCTRL_DUAL_MIC_DIGI21
+x{.strName = "MIC_ANALOG_DIGI1", .iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_ANALOG_DIGI1
+x{.strName = "MIC_DIGI1_ANALOG", .iVolume = {0,0},}, 	//AUDCTRL_DUAL_MIC_DIGI1_ANALOG
+{.strName = "BT SCO Mic",		.iVolume = {30,30},},	//AUDCTRL_MIC_BTM
+x{.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_USB
+{.strName = "I2S",	.iVolume = {12,12},},				//AUDCTRL_MIC_I2S
+x{.strName = "MIC_DIGI3",	.iVolume = {30,30},},		//AUDCTRL_MIC_DIGI3
+x{.strName = "MIC_DIGI4",	.iVolume = {30,30},},		//AUDCTRL_MIC_DIGI4
+x{.strName = "MIC_SPEECH_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_SPEECH_DIGI
+x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_EANC_DIGI
+
+--------------------------------------------------*/
+
+#define	BCM_CTL_SINK_LINES	{\
+						{.strName = "HNT",	.iVolume = {12,12},},		\
+						{.strName = "HST",		.iVolume = {12,12},}, 	\
+						{.strName = "HNF",	.iVolume = {12,12},},	\
+						{.strName = "BTM",	.iVolume = {12,12},},		\
+						{.strName = "SPK",	.iVolume = {12,12},},	\
+						{.strName = "TTY",	.iVolume = {0,0},}, 				\
+						{.strName = "HAC",	.iVolume = {0,0},}, 				\
+						{.strName = "",	.iVolume = {0,0},},					\
+						{.strName = "", .iVolume = {0,0},}, 				\
+						{.strName = "I2S", .iVolume = {13,13},}, 			\
+						{.strName = "VIB", .iVolume = {14,14},},	\
+					}
 
 
+#define	BCM_CTL_SRC_LINES	{ \
+						{.strName = "", .iVolume = {0,0},}, 		\
+						{.strName = "MIC", 	.iVolume = {28,28},},	\
+						{.strName = "AUX",	.iVolume = {28,28},},	\
+						{.strName = "DG1",	.iVolume = {28,28},},	\
+						{.strName = "DG2",	.iVolume = {28,28},},	\
+						{.strName = "",	.iVolume = {28,28},},		\
+						{.strName = "",	.iVolume = {28,28},},		\
+						{.strName = "", .iVolume = {12,12},},		\
+						{.strName = "", .iVolume = {0,0},}, 		\
+						{.strName = "BTM",		.iVolume = {30,30},},\
+						{.strName = "", .iVolume = {0,0},}, 		\
+						{.strName = "I2S",	.iVolume = {12,12},},	\
+					}
 
 
 //
@@ -661,40 +741,16 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
 			.iLineSelect = {AUDCTRL_SPK_HANDSET, AUDCTRL_SPK_HANDSET},
-			.strStreamName = "PCMOut 1",
-			.ctlLine = {
-						{.strName = "Handset",	.iVolume = {12,12},},		//AUDCTRL_SPK_HANDSET
-						{.strName = "Headset",		.iVolume = {12,12},}, 	//AUDCTRL_SPK_HEADSET
-						{.strName = "Handsfree",	.iVolume = {12,12},},	//AUDCTRL_SPK_HANDSFREE
-						{.strName = "BT SCO",	.iVolume = {12,12},},		//AUDCTRL_SPK_BTM
-						{.strName = "Loud Speaker",	.iVolume = {12,12},},	//AUDCTRL_SPK_LOUDSPK
-						{.strName = "",	.iVolume = {0,0},}, 				//AUDCTRL_SPK_TTY
-						{.strName = "",	.iVolume = {0,0},}, 				//AUDCTRL_SPK_HAC
-						{.strName = "",	.iVolume = {0,0},},					//AUDCTRL_SPK_USB
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
-						{.strName = "I2S", .iVolume = {13,13},}, 			//AUDCTRL_SPK_I2S
-						{.strName = "Speaker Vibra", .iVolume = {14,14},},	//AUDCTRL_SPK_VIBRA
-					},
+			.strStreamName = "P1",
+			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
 		//PCMOut2
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
 			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
-			.strStreamName = "PCMOut 2",
-			.ctlLine = {
-						{.strName = "Handset",	.iVolume = {12,12},},		//AUDCTRL_SPK_HANDSET
-						{.strName = "Headset",		.iVolume = {12,12},},	//AUDCTRL_SPK_HEADSET
-						{.strName = "Handsfree",	.iVolume = {12,12},},	//AUDCTRL_SPK_HANDSFREE
-						{.strName = "BT SCO",	.iVolume = {12,12},},		//AUDCTRL_SPK_BTM
-						{.strName = "Loud Speaker", .iVolume = {12,12},},	//AUDCTRL_SPK_LOUDSPK
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_TTY
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_HAC
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_USB
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
-						{.strName = "I2S", .iVolume = {13,13},},			//AUDCTRL_SPK_I2S
-						{.strName = "Speaker Vibra", .iVolume = {14,14},},	//AUDCTRL_SPK_VIBRA
-					},
+			.strStreamName = "P2",
+			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
 						
@@ -702,98 +758,49 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
 			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
-			.strStreamName = "VOIP Out",
-			.ctlLine = {
-						{.strName = "Handset",	.iVolume = {12,12},},		//AUDCTRL_SPK_HANDSET
-						{.strName = "Headset",		.iVolume = {12,12},},	//AUDCTRL_SPK_HEADSET
-						{.strName = "Handsfree",	.iVolume = {12,12},},	//AUDCTRL_SPK_HANDSFREE
-						{.strName = "BT SCO",	.iVolume = {12,12},},		//AUDCTRL_SPK_BTM
-						{.strName = "Loud Speaker", .iVolume = {12,12},},	//AUDCTRL_SPK_LOUDSPK
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_TTY
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_HAC
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_USB
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
-						{.strName = "I2S", .iVolume = {13,13},},			//AUDCTRL_SPK_I2S
-						{.strName = "Speaker Vibra", .iVolume = {14,14},},	//AUDCTRL_SPK_VIBRA
-					},
+			.strStreamName = "VO",
+			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
 		//PCM In
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
-			.iTotalCtlLines = AUDCTRL_MIC_TOTAL_COUNT,
+			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
 			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
-			.strStreamName = "PCMIn",
-			.ctlLine = {
-						{.strName = "", .iVolume = {0,0},},						//AUDCTRL_MIC_UNDEFINED
-						{.strName = "Main Mic",		.iVolume = {28,28},}, 		//AUDCTRL_MIC_MAIN
-						{.strName = "AUX Mic",	.iVolume = {28,28},},			//AUDCTRL_MIC_AUX
-						{.strName = "Digital MIC 1",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI1
-						{.strName = "Digital MIC 2",	.iVolume = {28,28},},	//AUDCTRL_MIC_DIGI2
-						{.strName = "Digital Mic 12",	.iVolume = {28,28},},	//AUDCTRL_DUAL_MIC_DIGI12
-						{.strName = "Digital Mic 21",	.iVolume = {28,28},},	//AUDCTRL_DUAL_MIC_DIGI21
-						{.strName = "MIC_ANALOG_DIGI1",	.iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_ANALOG_DIGI1
-						{.strName = "MIC_DIGI1_ANALOG", .iVolume = {0,0},},		//AUDCTRL_DUAL_MIC_DIGI1_ANALOG
-						{.strName = "BT SCO Mic",		.iVolume = {30,30},}, 	//AUDCTRL_MIC_BTM
-						{.strName = "",	.iVolume = {0,0},},						//AUDCTRL_MIC_USB
-						{.strName = "I2S",	.iVolume = {12,12},},				//AUDCTRL_MIC_I2S
-						{.strName = "MIC_DIGI3",	.iVolume = {30,30},},		//AUDCTRL_MIC_DIGI3
-						{.strName = "MIC_DIGI4",	.iVolume = {30,30},},		//AUDCTRL_MIC_DIGI4
-						{.strName = "MIC_SPEECH_DIGI",	.iVolume = {30,30},}, 	//AUDCTRL_MIC_SPEECH_DIGI
-						{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},}, 	//AUDCTRL_MIC_EANC_DIGI
-					},
+			.strStreamName = "C1",
+			.ctlLine = BCM_CTL_SRC_LINES,
 		},
 
 		//VOIP In
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
-			.iTotalCtlLines = AUDCTRL_MIC_TOTAL_COUNT,
+			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
 			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
-			.strStreamName = "VOIP In",
-			.ctlLine = {
-						{.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_UNDEFINED
-						{.strName = "Main Mic", 	.iVolume = {12,12},},		//AUDCTRL_MIC_MAIN
-						{.strName = "AUX Mic",	.iVolume = {12,12},},			//AUDCTRL_MIC_AUX
-						{.strName = "Digital MIC 1",	.iVolume = {12,12},},	//AUDCTRL_MIC_DIGI1
-						{.strName = "Digital MIC 2",	.iVolume = {12,12},},	//AUDCTRL_MIC_DIGI2
-						{.strName = "Digital Mic 12",	.iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_DIGI12
-						{.strName = "Digital Mic 21",	.iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_DIGI21
-						{.strName = "MIC_ANALOG_DIGI1",	.iVolume = {12,12},},	//AUDCTRL_DUAL_MIC_ANALOG_DIGI1
-						{.strName = "MIC_DIGI1_ANALOG", .iVolume = {0,0},},		//AUDCTRL_DUAL_MIC_DIGI1_ANALOG
-						{.strName = "BT SCO Mic",		.iVolume = {12,12},},	//AUDCTRL_MIC_BTM
-						{.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_USB
-						{.strName = "I2S",	.iVolume = {12,12},},				//AUDCTRL_MIC_I2S
-						{.strName = "MIC_DIGI3",	.iVolume = {12,12},},		//AUDCTRL_MIC_DIGI3
-						{.strName = "MIC_DIGI4",	.iVolume = {12,12},},		//AUDCTRL_MIC_DIGI4
-						{.strName = "MIC_SPEECH_DIGI",	.iVolume = {12,12},},	//AUDCTRL_MIC_SPEECH_DIGI
-						{.strName = "MIC_EANC_DIGI",	.iVolume = {12,12},},	//AUDCTRL_MIC_EANC_DIGI
-					},
+			.strStreamName = "C2",
+			.ctlLine = BCM_CTL_SRC_LINES,
 		},
 		//Voice call
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CALL,
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
+			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_SPK_HANDSET},
+			.strStreamName = "VC",
+			.ctlLine = BCM_CTL_SINK_LINES,
+		},		
+		//FM Radio
+		{
+			.iFlags = MIXER_STREAM_FLAGS_FM,
+			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
 			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
-			.strStreamName = "Voice Call",
-			.ctlLine = {
-						{.strName = "Handset",	.iVolume = {12,12},},		//AUDCTRL_SPK_HANDSET
-						{.strName = "Headset",		.iVolume = {12,12},},	//AUDCTRL_SPK_HEADSET
-						{.strName = "Handsfree",	.iVolume = {12,12},},	//AUDCTRL_SPK_HANDSFREE
-						{.strName = "BT SCO",	.iVolume = {12,12},},		//AUDCTRL_SPK_BTM
-						{.strName = "Loud Speaker", .iVolume = {12,12},},	//AUDCTRL_SPK_LOUDSPK
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_TTY
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_HAC
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_USB
-						{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
-						{.strName = "I2S", .iVolume = {13,13},},			//AUDCTRL_SPK_I2S
-						{.strName = "Speaker Vibra", .iVolume = {14,14},},	//AUDCTRL_SPK_VIBRA
-					},
+			.strStreamName = "FM",
+			.ctlLine = BCM_CTL_SINK_LINES,
 		},		
 
 	};
 
 #define	MAX_CTL_NUMS	130
-static char gStrCtlNames[MAX_CTL_NUMS][32]; 
+#define	MAX_CTL_NAME_LENGTH	44
+static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __initdata; // MAX_CTL_NAME_LENGTH]; 
 
 //*****************************************************************
 // Functiona Name: ControlDeviceNew
@@ -816,29 +823,12 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	{
 		//Selection
 		struct snd_kcontrol_new devSelect = BRCM_MIXER_CTRL_SELECTION(0, 0, 0, 0, 0); //1234567890
-		if(sgCaphStreamCtls[idx].iFlags & MIXER_STREAM_FLAGS_CAPTURE)
-		{
-			sprintf(gStrCtlNames[nIndex], "%s Capture Source", sgCaphStreamCtls[idx].strStreamName);
-			devSelect.name = gStrCtlNames[nIndex++];
-			devSelect.device = idx+1;//idx - 3 + CTL_STREAM_PANEL_PCMIN;
-			devSelect.private_value = CAPH_CTL_PRIVATE(devSelect.device, devSelect.subdevice, 0);
-		}
-		else if(sgCaphStreamCtls[idx].iFlags & MIXER_STREAM_FLAGS_CALL)
-		{
-			sprintf(gStrCtlNames[nIndex], "Call device");
-			devSelect.name = gStrCtlNames[nIndex++];
 		
-			devSelect.device = idx + 1; // CTL_STREAM_PANEL_FIRST;
-			devSelect.private_value = CAPH_CTL_PRIVATE(devSelect.device, devSelect.subdevice, 0);
-		}
-		else
-		{
-			sprintf(gStrCtlNames[nIndex], "%s Playback Sink", sgCaphStreamCtls[idx].strStreamName);
-			devSelect.name = gStrCtlNames[nIndex++];
+		sprintf(gStrCtlNames[nIndex], "%s-SEL", sgCaphStreamCtls[idx].strStreamName);
+		devSelect.name = gStrCtlNames[nIndex++];
+		devSelect.private_value = CAPH_CTL_PRIVATE(idx+1, 0, 0);
 		
-			devSelect.device = idx + 1; // CTL_STREAM_PANEL_FIRST;
-			devSelect.private_value = CAPH_CTL_PRIVATE(devSelect.device, devSelect.subdevice, 0);
-		}
+		CAPH_ASSERT(strlen(devSelect.name)<MAX_CTL_NAME_LENGTH);
 		if ((err = snd_ctl_add(card, snd_ctl_new1(&devSelect, pChip))) < 0)
 		{
 			BCM_AUDIO_DEBUG("Error to add devselect idx=%d\n", idx);
@@ -848,8 +838,8 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		//volume mute
 		for(j=0; j<sgCaphStreamCtls[idx].iTotalCtlLines; j++)
 		{
-			struct snd_kcontrol_new kctlVolume = BRCM_MIXER_CTRL_VOLUME(0, idx, 0, 0, 0);
-			struct snd_kcontrol_new kctlMute = BRCM_MIXER_CTRL_SWITCH(0, idx, "Mute", 0, 0);
+			struct snd_kcontrol_new kctlVolume = BRCM_MIXER_CTRL_VOLUME(0, 0, 0, 0, 0);
+			struct snd_kcontrol_new kctlMute = BRCM_MIXER_CTRL_SWITCH(0, 0, "Mute", 0, 0);
 
 			if(sgCaphStreamCtls[idx].ctlLine[j].strName[0]==0) //dummy line
 				continue;
@@ -857,41 +847,37 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 			if(sgCaphStreamCtls[idx].iFlags & MIXER_STREAM_FLAGS_CAPTURE)
 			{
 			
-			sprintf(gStrCtlNames[nIndex], "%s %s Gain", sgCaphStreamCtls[idx].strStreamName, sgCaphStreamCtls[idx].ctlLine[j].strName);
+			sprintf(gStrCtlNames[nIndex], "%s-%s-GAN", sgCaphStreamCtls[idx].strStreamName, sgCaphStreamCtls[idx].ctlLine[j].strName);
 			kctlVolume.name = gStrCtlNames[nIndex++];
 			
 			}
 			else
 			{
-				sprintf(gStrCtlNames[nIndex], "%s %s Volume", sgCaphStreamCtls[idx].strStreamName, sgCaphStreamCtls[idx].ctlLine[j].strName);
+				sprintf(gStrCtlNames[nIndex], "%s-%s-VOL", sgCaphStreamCtls[idx].strStreamName, sgCaphStreamCtls[idx].ctlLine[j].strName);
 				kctlVolume.name = gStrCtlNames[nIndex++];
 			
 			}
 
+			kctlVolume.private_value = CAPH_CTL_PRIVATE(idx+1, j, CTL_FUNCTION_VOL);
+			kctlMute.private_value = CAPH_CTL_PRIVATE(idx+1, j, CTL_FUNCTION_MUTE);
 
-			kctlVolume.device = idx+1;
-			kctlVolume.subdevice = j;
-			kctlVolume.private_value = CAPH_CTL_PRIVATE(kctlVolume.device, kctlVolume.subdevice, CTL_FUNCTION_VOL);
-
-			kctlMute.device = idx+1;
-			kctlMute.subdevice = j;
-			kctlMute.private_value = CAPH_CTL_PRIVATE(kctlMute.device, kctlMute.subdevice, CTL_FUNCTION_MUTE);
-
-			
+			CAPH_ASSERT(strlen(kctlVolume.name)<MAX_CTL_NAME_LENGTH);
 			if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlVolume, pChip))) < 0)
 			{
 				BCM_AUDIO_DEBUG("error to add volume for idx=%d j=%d err=%d \n", idx,j, err);
 				return err;
 			}
 
-
-			
-			sprintf(gStrCtlNames[nIndex], "%s %s Mute", sgCaphStreamCtls[idx].strStreamName, sgCaphStreamCtls[idx].ctlLine[j].strName);
-			kctlMute.name = gStrCtlNames[nIndex++];
-			if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlMute, pChip))) < 0)
+			if( 0 == (sgCaphStreamCtls[idx].iFlags & MIXER_STREAM_FLAGS_CALL) )//Not for voice call, voice call use only one MIC mute 
 			{
-				BCM_AUDIO_DEBUG("error to add mute for idx=%d j=%d err=%d\n", idx,j, err);			
-				return err;
+				sprintf(gStrCtlNames[nIndex], "%s-%s-MUT", sgCaphStreamCtls[idx].strStreamName, sgCaphStreamCtls[idx].ctlLine[j].strName);
+				kctlMute.name = gStrCtlNames[nIndex++];
+				CAPH_ASSERT(strlen(kctlMute.name)<MAX_CTL_NAME_LENGTH);			
+				if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlMute, pChip))) < 0)
+				{
+					BCM_AUDIO_DEBUG("error to add mute for idx=%d j=%d err=%d\n", idx,j, err);			
+					return err;
+				}
 			}
 		
 		}
@@ -899,16 +885,65 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 
    //MISC 
    {
-	   //Loopback Test control
-	   struct snd_kcontrol_new ctlLoopTest = BRCM_MIXER_CTRL_MISC(1, 1, "PCM Loopback Test", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_LOOPBACK_TEST) );
+   
+      //Loopback Test control
+	   struct snd_kcontrol_new ctlLoopTest = BRCM_MIXER_CTRL_MISC(0, 0, "LPT", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_LOOPBACK_TEST) );
+	   struct snd_kcontrol_new kctlCallEnable = BRCM_MIXER_CTRL_MISC(0, 0, "VC-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_ENABLE));
+	   struct snd_kcontrol_new kctlCallMute = BRCM_MIXER_CTRL_MISC(0, 0, "VC-MUT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_CALL_MIC_MUTE));
+	   
+	   struct snd_kcontrol_new kctlSpeechMixingOption1 = BRCM_MIXER_CTRL_MISC(0, 0, "P1-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
+	   struct snd_kcontrol_new kctlSpeechMixingOption2 = BRCM_MIXER_CTRL_MISC(0, 0, "P2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
+
+	   struct snd_kcontrol_new kctlFMEnable = BRCM_MIXER_CTRL_MISC(0, 0, "FM-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_FM_ENABLE));
+	   struct snd_kcontrol_new kctlFMFormat = BRCM_MIXER_CTRL_MISC(0, 0, "FM-FMT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_FM_FORMAT));
+
 			   
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlLoopTest, pChip))) < 0)
 	   {
 		   BCM_AUDIO_DEBUG("error to add loopback test control err=%d\n", err); 		   
 		   return err;
 	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlCallEnable, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add call enable control err=%d\n", err); 		   
+		   return err;
+	   }
+
+	   
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlCallMute, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add call mic mute control err=%d\n", err); 		   
+		   return err;
+	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlSpeechMixingOption1, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlSpeechMixingOption1.name, err);
+		   return err;
+	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlSpeechMixingOption2, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlSpeechMixingOption2.name, err);
+		   return err;
+	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlFMEnable, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlFMEnable.name,err);
+		   return err;
+	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlFMFormat, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlFMFormat.name, err);
+		   return err;
+	   }
+
    }
 
+	CAPH_ASSERT(nIndex<MAX_CTL_NUMS);
    return err;
 }
 

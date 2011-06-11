@@ -64,10 +64,13 @@ the GPL, without Broadcom's express prior written consent.
 
 #define	MIXER_STREAM_FLAGS_CAPTURE	0x00000001
 #define	MIXER_STREAM_FLAGS_CALL		0x00000002
+#define	MIXER_STREAM_FLAGS_FM		0x00000004
+
 
 #define	CAPH_MIXER_NAME_LENGTH		20	//Max length of a mixer name
-#define	CAPH_MAX_CTRL_LINES			((AUDCTRL_MIC_TOTAL_COUNT>AUDCTRL_SPK_TOTAL_COUNT)?AUDCTRL_MIC_TOTAL_COUNT:AUDCTRL_SPK_TOTAL_COUNT)
-#define	CAPH_MAX_PCM_STREAMS		6
+#define	MIC_TOTAL_COUNT_FOR_USER	AUDCTRL_MIC_DIGI3
+#define	CAPH_MAX_CTRL_LINES			((MIC_TOTAL_COUNT_FOR_USER>AUDCTRL_SPK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDCTRL_SPK_TOTAL_COUNT)
+#define	CAPH_MAX_PCM_STREAMS		7
 
 //Try to keep consistent with Android AudioSystem::audio_devices
 typedef	enum audio_devices {
@@ -123,7 +126,6 @@ typedef	struct _TPcm_Stream_Ctrls
 	Int32	 iLineSelect[2];	//Multiple selection, For playback sink, one bit represent one sink; for capture source, 
 	char strStreamName[CAPH_MIXER_NAME_LENGTH];
 	TCtrl_Line	ctlLine[CAPH_MAX_CTRL_LINES];
-	Int32	 currentLineSel[2];
 	snd_pcm_uframes_t	 stream_hw_ptr;
 	TIDChanOfDev	dev_prop;
 	void   *pSubStream;	
@@ -140,8 +142,10 @@ typedef struct brcm_alsa_chip
 	/* workqueue */
 	struct work_struct work_play;
     struct work_struct work_capt;
-	//loopback test
-	Int32	pi32LoopBackTestParam[3];
+
+	Int32	pi32LoopBackTestParam[3];	//loopback test
+	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
+	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
 } brcm_alsa_chip_t;
 
 
@@ -158,7 +162,8 @@ enum	CTL_STREAM_PANEL_t
 	CTL_STREAM_PANEL_PCMIN,
 	CTL_STREAM_PANEL_VOIPIN,
 	CTL_STREAM_PANEL_VOICECALL,
-	CTL_STREAM_PANEL_LAST=CTL_STREAM_PANEL_VOICECALL
+	CTL_STREAM_PANEL_FM,
+	CTL_STREAM_PANEL_LAST
 };
 
 
@@ -188,7 +193,11 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_VOL = 1,
 	CTL_FUNCTION_MUTE,
 	CTL_FUNCTION_LOOPBACK_TEST,
-	
+	CTL_FUNCTION_PHONE_ENABLE,
+	CTL_FUNCTION_PHONE_CALL_MIC_MUTE,
+	CTL_FUNCTION_SPEECH_MIXING_OPTION,
+	CTL_FUNCTION_FM_ENABLE,
+	CTL_FUNCTION_FM_FORMAT,
 };
 
 #define	CAPH_CTL_PRIVATE(dev, line, function) ((dev)<<16|(line)<<8|(function))
