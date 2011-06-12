@@ -32,6 +32,24 @@ extern "C" {
 *   @defgroup   RPC_SysApi   RPC API
 *   @brief      This group defines the interfaces to init RPC system
 *
+\msc
+		"AP Client", RPC, "CP Client";
+		"AP Client"=>RPC [label="RPC_SYS_Init()", URL="\ref RPC_SYS_Init()"];
+		"CP Client">>RPC [label="RPC_SYS_Init()", URL="\ref RPC_SYS_Init()"];
+		"CP Client"=>RPC [label="Handle=RPC_SYS_RegisterClient()", URL="\ref RPC_SYS_RegisterClient()"];
+		"AP Client">>RPC [label="Handle=RPC_SYS_RegisterClient", URL="\ref RPC_SYS_RegisterClient()"];
+		"AP Client"=>RPC [label="RPC_SYS_GetClientID(handle)", URL="\ref RPC_SYS_GetClientID()"];
+		"CP Client"=>RPC [label="RPC_SYS_GetClientID(handle)", URL="\ref RPC_SYS_GetClientID()"];
+		"AP Client"=>RPC [label="RPC_SerializeReq()", URL="\ref RPC_SerializeReq()"];
+		RPC rbox RPC [label="Serialize, send IPC Msg, Deser msg"];
+		"RPC"=>"CP Client" [label="CBK: Notify Request"];
+		"CP Client"=>RPC [label="RPC_SendAckForRequest()", URL="\ref RPC_SendAckForRequest()"];
+		RPC rbox RPC [label="Serialize, send IPC Msg, Deser msg"];
+		"RPC"=>"AP Client" [label="CBK: Notify Ack"];
+		"CP Client"=>RPC [label="RPC_SerializeRsp()", URL="\ref RPC_SerializeRsp()"];
+		RPC rbox RPC [label="Serialize, send IPC Msg, Deser msg"];
+		"RPC"=>"AP Client" [label="CBK: Notify Response"];
+\endmsc
 ****************************************************************************/
 
 
@@ -119,7 +137,7 @@ typedef void (RPC_ResponseCallbackFunc_t) (RPC_Msg_t* inMsg, ResultDataBufHandle
 	@param		tid (in) Transaction ID passed in the original request
 	@param		rpcClientID (in) Transaction ID
 	@param		ackResult (in ) See RPC_ACK_Result_t for more details.
-	@param		ackUsrData (in ) Can be used send pending flag to say the response may be delayed
+	@param		ackUsrData (in ) Can be used to send pending flag to (ex. if response may be delayed)
 	@return		None
 	@note
 
@@ -231,8 +249,6 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params);
 **/
 Boolean RPC_SYS_DeregisterClient(RPC_Handle_t handle);
 
-
-
 //***************************************************************************************
 /**
     Function to set system properties by either AP or CP based on the granted permission.
@@ -303,7 +319,6 @@ Boolean RPC_IsValidMsg(MsgType_t msgID);
 **/
 UInt32 RPC_GetMsgPayloadSize(MsgType_t msgID);
 
-Boolean RPC_SYS_BindClientID(RPC_Handle_t handle, UInt8 userClientID);
 
 //***************************************************************************************
 /**
@@ -317,17 +332,50 @@ Boolean RPC_SYS_BindClientID(RPC_Handle_t handle, UInt8 userClientID);
 **/
 Result_t RPC_SendSimpleMsg(UInt32 tid, UInt8 clientID, RPC_SimpleMsg_t* pMsg);
 
+//***************************************************************************************
+/**
+    Function to get ClientID from the RPC handle. This clientID will be used in all RPC request so 
+	that the response can be properly routed to calling clients.
+	@param	handle (in) RPC handle
+	@return	client ID
+	@note
+**/
+UInt8 RPC_SYS_GetClientID(RPC_Handle_t handle);
+
+//***************************************************************************************
+/**
+    Function to allow clients to force certain solicited messages as unsolicited messages.
+	@param	handle (in) RPC handle
+	@param	msgIds (in) Array of MsgType_t ( msgID's which are to be treated as unsolicited )
+	@param	listSize (in) size of msgIds ( Array size )
+	@return	TRUE on success or FALSE
+**/
+Boolean RPC_RegisterUnsolicitedMsgs(RPC_Handle_t handle, const UInt16 *msgIds, UInt8 listSize);
+
+//***************************************************************************************
+/**
+    Function to allow clients to receive notification/unsolicited messages from remote processor.
+	@param	handle (in) RPC handle
+	@param	bSet (in) TRUE means the notfications are sent client, FALSE otherwise.
+	@return	TRUE on success or FALSE
+**/
+Boolean RPC_EnableUnsolicitedMsgs(RPC_Handle_t handle, Boolean bSet);
+
 /** @} */
+
+/** \cond  */
 
 void test_rpc(int input1, int input2);
 
 XDR_ENUM_DECLARE(MsgType_t)
 
 UInt8 RPC_SYS_GetClientHandle(UInt8 userClientID);
-UInt8 RPC_SYS_GetClientID(RPC_Handle_t handle);
 Boolean RPC_SYS_isValidClientID(UInt8 userClientID);
-Boolean RPC_RegisterUnsolicitedMsgs(RPC_Handle_t handle, const UInt16 *msgIds, UInt8 listSize);
-Boolean RPC_EnableUnsolicitedMsgs(RPC_Handle_t handle, Boolean bSet);
+
+//Obsolete
+Boolean RPC_SYS_BindClientID(RPC_Handle_t handle, UInt8 userClientID);
+
+/** \endcond   */
 Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle);
 
 #ifdef __cplusplus

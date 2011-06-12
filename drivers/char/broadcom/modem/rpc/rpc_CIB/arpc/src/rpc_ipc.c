@@ -33,6 +33,9 @@
 #include <linux/module.h>
 #define CSL_TYPES_H
 #endif
+#if defined(CNEON_COMMON) && defined(FUSE_APPS_PROCESSOR)
+#include "ostask.h"
+#endif /* (CNEON_COMMON) && (FUSE_APPS_PROCESSOR) */
 
 //******************************************************************************
 //	 			Global defines
@@ -551,6 +554,10 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 	PACKET_InterfaceType_t itype;
 	Int8 index;
 
+#if defined(CNEON_COMMON) && defined(FUSE_APPS_PROCESSOR)
+	/* wait for CP RPC ready - need to find better way */
+	OSTASK_Sleep(TICKS_ONE_SECOND/10);
+#endif /* (CNEON_COMMON) && (FUSE_APPS_PROCESSOR) */
 	memset(ipcBufList, 0, sizeof(ipcBufList));
 
 	for(itype = INTERFACE_START; itype < INTERFACE_TOTAL;itype++)

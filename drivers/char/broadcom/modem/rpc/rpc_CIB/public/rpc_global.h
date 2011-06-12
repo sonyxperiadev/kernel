@@ -59,13 +59,16 @@ extern UInt32 g_dwLogLEVEL;
 #define NULL 0
 #endif
 extern int RpcLog_DebugPrintf(char *fmt, ...);
+extern int RpcLog_DetailLogEnabled();
+
 #define RPC_TRACE RpcLog_DebugPrintf
 #define RPC_TRACE_DETAIL RpcLog_DebugPrintf
 #define RPC_TRACE_INFO RpcLog_DebugPrintf
-#define RPC_TRACE_DATA_DETAIL RpcLog_DebugPrintf
+//#define RPC_TRACE_DATA_DETAIL RpcLog_DebugPrintf
+#define RPC_TRACE_DATA_DETAIL
 
-#define DETAIL_LOG_ENABLED TRUE
-#define DETAIL_DATA_LOG_ENABLED TRUE
+#define DETAIL_LOG_ENABLED (RpcLog_DetailLogEnabled())
+#define DETAIL_DATA_LOG_ENABLED (RpcLog_DetailLogEnabled())
 
 #ifdef LINUX_RPC_KERNEL
 #define capi2_malloc(x)	kmalloc(x, GFP_KERNEL)

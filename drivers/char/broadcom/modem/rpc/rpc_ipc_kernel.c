@@ -70,8 +70,8 @@ void kRpcDebugPrintf(char* fmt, ...);
 
 #define RPC_TRACE_TRACE_ON
 #ifdef RPC_TRACE_TRACE_ON
-//#define RPC_TRACE(str) kRpcDebugPrintf str
-#define RPC_TRACE(str) printk str
+#define RPC_TRACE(str) kRpcDebugPrintf str
+//#define RPC_TRACE(str) printk str
 #else
 #define RPC_TRACE(str) {}
 #endif
@@ -252,8 +252,9 @@ typedef struct
 
 LogDataElem_t gLogData[0xFF];
 
-UInt32 writeIndex = 0;
-UInt32 readIndex = 0;
+static UInt32 writeIndex = 0;
+static UInt32 readIndex = 0;
+static int gEnableKprint = 0;
 
 void kRpcDebugPrintf(char* fmt, ...)
 {
@@ -269,6 +270,19 @@ void kRpcDebugPrintf(char* fmt, ...)
 		vsnprintf(buf, (MAX_LOG_SIZE-1), fmt, ap);
 		va_end(ap);
 		writeIndex+=1;
+	}
+
+	if(gEnableKprint)
+	{
+		char templogData[MAX_LOG_SIZE];
+		va_list ap;
+
+		va_start(ap, fmt);
+		vsnprintf(templogData, (MAX_LOG_SIZE-1), fmt, ap);
+		va_end(ap);
+
+		printk("%s",templogData);
+
 	}
 	//printk("kwrite: w=%d r=%d\n",(int)writeIndex, (int)readIndex);
 }
@@ -435,6 +449,12 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel
 
 
 	msgId = RPC_PACKET_GetContextEx(INTERFACE_RPC_TELEPHONY, dataBufHandle);
+	
+	if(msgId == MSG_AT_COMMAND_IND && gNumActiveClients == 0)
+	{
+		RPC_TRACE(("k:RPC_ServerRxCbk: MSG_AT_COMMAND_IND Skipped interfaceType=%d dataBufHandle=0x%x channel=%d msgId=%x\n", (int)interfaceType, (int)dataBufHandle, channel, (int)msgId));
+		return RPC_RESULT_ERROR;
+	}
 
 	ret = RPC_IsRegisteredClient(channel, dataBufHandle);
 	if(ret)
@@ -896,6 +916,10 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 para
 		val1 = IPC_cb_ptr->Properties[RPC_PROP_AP_IN_DEEPSLEEP];
 
 		RPC_TRACE(("K:dumpIpcData: init_cp=%x init_cp=%x conf=%x val1=%x \n",(int)IPC_cb_ptr->Initialised[0], (int)IPC_cb_ptr->Initialised[1], (int)IPC_SmConfigured, (int)val1));
+	}
+	else if(ioc_param.cmd1 == 4)
+	{
+		gEnableKprint = ioc_param.cmd2;
 	}
 	
     if (copy_to_user((rpc_pkt_test_cmd_t*)param, &ioc_param, sizeof(rpc_pkt_test_cmd_t)) != 0)

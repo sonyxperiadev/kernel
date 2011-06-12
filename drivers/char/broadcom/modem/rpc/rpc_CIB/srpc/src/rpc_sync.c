@@ -27,7 +27,6 @@
 //******************************************************************************
 //	 			include block
 //******************************************************************************
-
 #ifdef WIN32
 #define _WINSOCKAPI_
 #endif
@@ -361,6 +360,90 @@ Result_t RPC_SyncWaitForResponse( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* ack, 
 	}
 
 	_DBG_(RPC_TRACE("RPC_SyncWaitForResponse tid=%d cid=%d msg=%d ack=%d pend=%d sz=%d rs=%d task=0x%x \r\n", 
+																						tid, cid, taskMap->msgType,
+																						taskMap->ack, taskMap->isResultPending,
+																						taskMap->rspSize, result,
+																						(UInt32)OSTASK_GetCurrentTask() ));
+
+	return result;
+}
+
+//**************************************************************************************
+/**
+	Retrieve the response from a RPC function call. Note that this includes the ack result as well.
+	@param		tid (in) Transaction id for request.
+	@param		cid (in) Client id for request
+	@param		ack (out) Ack result for request
+	@param		msgType (out) Message type of response.
+	@param		dataSize (out) Actual data size copied to response data buffer
+	@param		timeout (in) timer value
+	
+	@return Result code of response.
+	
+**/
+Result_t RPC_SyncWaitForResponseTimer( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* ack, MsgType_t* msgType, UInt32* dataSize, UInt32 timeout)
+{
+	OSStatus_t semaStatus;
+	Result_t result = RESULT_OK;
+	TaskRequestMap_t* taskMap = GetMapForCurrentTask();
+	assert(taskMap);
+
+	// wait to be signalled that request has been ack'd
+	semaStatus = OSSEMAPHORE_Obtain( taskMap->ackSema, (Ticks_t) timeout );
+	//If you see this assert then likely remote processor does not free the buffers.
+	//- Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
+	//- or Watchdog issue where CAPI2 Task does not get chance to run.
+	//- or Remote processor is completely DEAD
+
+	if(semaStatus == OSSTATUS_TIMEOUT)
+		return RESULT_TIMER_EXPIRED;
+	else if (semaStatus != OSSTATUS_SUCCESS)
+		return RESULT_ERROR;
+	
+	
+	*ack = taskMap->ack;
+
+	// request ack'd by comm proc?
+
+	if ( ACK_SUCCESS == taskMap->ack )
+	{
+		// synchronous response or error response from async api?
+		if ( !taskMap->isResultPending )
+		{
+			// yes, so wait to be signalled that response is ready
+			semaStatus = OSSEMAPHORE_Obtain( taskMap->rspSema, (Ticks_t) timeout );
+			//If you see this assert then likely remote processor does not free the buffers.
+			//- Likely cause is CAPI2 Task on remote processor is stuck waiting on a Queue.
+			//- or Watchdog issue where CAPI2 Task does not get chance to run.
+			//- or Remote processor is completely DEAD
+			if(semaStatus == OSSTATUS_TIMEOUT)
+				return RESULT_TIMER_EXPIRED;
+			else if (semaStatus != OSSTATUS_SUCCESS)
+				return RESULT_ERROR;
+
+			if ( msgType )
+			{
+				*msgType = taskMap->msgType;
+			}
+
+			if ( dataSize )
+			{
+				*dataSize = taskMap->rspSize;
+			}
+			
+			result = taskMap->result;
+		}
+		else
+		{
+			
+		}
+	}
+	else
+	{
+		return RESULT_ERROR;
+	}
+
+	_DBG_(RPC_TRACE("RPC_SyncWaitForResponseTimer tid=%d cid=%d msg=%d ack=%d pend=%d sz=%d rs=%d task=0x%x \r\n", 
 																						tid, cid, taskMap->msgType,
 																						taskMap->ack, taskMap->isResultPending,
 																						taskMap->rspSize, result,
