@@ -82,9 +82,11 @@ extern int bcm59055_fg_1point_cal(void);
 extern int bcm59055_fg_force_cal(void);
 extern int bcm59055_fg_set_comb_rate(int rate);
 extern int bcm59055_fg_init_read(void);
-extern int bcm59055_fg_read_accm(void);
-extern int bcm59055_fg_read_count(void);
+extern int bcm59055_fg_read_soc(u32 *fg_accm, u16 *fg_cnt, u16 *fg_sleep_cnt);
 extern int bcm59055_fg_reset(void);
-
+extern int bcm59055_fg_read_sample(void);
+extern int bcm59055_fg_write_gain_trim(u8 gain);
+extern int bcm59055_fg_write_offset_trim(u8 offset);
 
 #endif
+

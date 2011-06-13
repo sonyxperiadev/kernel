@@ -42,6 +42,10 @@ enum {
 	ADC_32KTEMP_CHANNEL,
 	ADC_PATEMP_CHANNEL,
 	ADC_ALS_CHANNEL,
+	ADC_BSI_CAL_L_CHANNEL,
+	ADC_NTC_CAL_L_CHANNEL,
+	ADC_NTC_CAL_H_CHANNEL,
+	ADC_BSI_CAL_H_CHANNEL,
 	ADC_NULL_CHANNEL
 };
 
@@ -121,5 +125,6 @@ extern int bcm59055_saradc_disable_ntc_block(void);
 extern int bcm59055_saradc_read_data(int sel);
 extern int bcm59055_saradc_request_rtm(saradc_rtm_callback_handler handler, int ch_sel, void *arg);
 extern int bcm59055_saradc_set_rtm_delay(int delay);
-
 #endif
+
+
