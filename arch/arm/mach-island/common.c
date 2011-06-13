@@ -151,6 +151,9 @@ static struct platform_device wdt_device =
    .id            = -1,
    .resource	  = wdt_device_resource,
    .num_resources = ARRAY_SIZE(wdt_device_resource),
+   .dev = {
+        .platform_data = "arm_periph_clk",
+    },
 };
 #endif
 

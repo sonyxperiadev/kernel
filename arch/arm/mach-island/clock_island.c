@@ -40,7 +40,8 @@ static struct proc_clock arm_clk = {
 	.proc_clk_mgr_base = PROC_CLK_BASE_ADDR,
 };
 
-
+/* ARM perhiperhal clock */
+DECLARE_REF_CLK         (arm_periph, ARM_PERIPH, 0, 2, name_to_clk(arm));
 
 /* Ref clocks */
 DECLARE_REF_CLK		(crystal, CRYSTAL, 			26*CLOCK_1M,	1,	0);
@@ -478,6 +479,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(arm),
 
 	/* Reference clocks */
+	CLK_LK(arm_periph),
 	CLK_LK(crystal),
 	CLK_LK(frac_1m),
 	CLK_LK(ref_96m_varVDD),
