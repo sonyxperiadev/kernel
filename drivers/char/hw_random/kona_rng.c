@@ -270,7 +270,7 @@ static int rng_resume(struct platform_device *dev)
 
 static struct platform_driver rng_driver = {
     .driver = {
-        .name = "bcmhana-rng",
+        .name = "kona_rng",
         .owner = THIS_MODULE,
     },
     .suspend   = rng_suspend,
@@ -278,7 +278,7 @@ static struct platform_driver rng_driver = {
     .remove    = __devexit_p(rng_remove),
 };
 
-static char banner[] __initdata = KERN_INFO "Broadcom RNG Driver\n";
+static char banner[] __initdata = KERN_INFO "Broadcom KONA RNG Driver\n";
 
 static int __init rng_init(void)
 {

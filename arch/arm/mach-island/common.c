@@ -67,7 +67,7 @@ static struct platform_device board_serial_device = {
 	},
 };
 
-#if defined(CONFIG_HW_RANDOM_BCMHANA)
+#if defined(CONFIG_HW_RANDOM_KONA)
 static struct resource rng_device_resource[] = {
     [0] = {
         .start = SEC_RNG_BASE_ADDR,
@@ -83,7 +83,7 @@ static struct resource rng_device_resource[] = {
 
 static struct platform_device rng_device =
 {
-   .name          = "bcmhana-rng",
+   .name          = "kona_rng",
    .id            = -1,
    .resource	  = rng_device_resource,
    .num_resources = ARRAY_SIZE(rng_device_resource),
@@ -236,7 +236,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #if defined(CONFIG_W1_MASTER_DS1WM)
         &d1w_device,
 #endif
-#if defined(CONFIG_HW_RANDOM_BCMHANA)
+#if defined(CONFIG_HW_RANDOM_KONA)
         &rng_device,
 #endif
 #if defined(CONFIG_RTC_DRV_ISLAND)
