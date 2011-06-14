@@ -59,11 +59,9 @@ typedef struct
  */
 typedef struct
 {
-	UInt8	chan;
-	UInt32	msgId;
-	UInt32	dataLen;
-	void*	buffPtr;						///<	at command response
+	char* fATRespStr;						///<	at command response
 }	ATC_KERNEL_ATResp_t ;
+
 
 #ifdef __cplusplus
 }
