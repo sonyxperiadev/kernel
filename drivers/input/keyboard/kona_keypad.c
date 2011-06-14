@@ -36,7 +36,7 @@
 #include <linux/uaccess.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
-#include <linux/island_keypad.h>
+#include <linux/kona_keypad.h>
 #include <linux/clk.h>
 
 #include <mach/rdb/brcm_rdb_keypad.h>
@@ -972,7 +972,7 @@ static int keypad_resume(struct platform_device *pdev)
 static struct platform_driver keypad_driver =
 {
    .driver = {
-      .name = "island-keypad",
+      .name = "kona_keypad",
       .owner = THIS_MODULE,
    },
    .remove = __devexit_p(keypad_remove),

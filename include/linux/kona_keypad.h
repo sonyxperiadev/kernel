@@ -1,7 +1,7 @@
 #ifndef _ISLAND_KEYPAD_H
 #define _ISLAND_KEYPAD_H
 
-#if defined(CONFIG_KEYBOARD_ISLAND)
+#if defined(CONFIG_KEYBOARD_KONA)
 
 #include <linux/clk.h>
 

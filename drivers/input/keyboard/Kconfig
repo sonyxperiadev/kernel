@@ -12,7 +12,7 @@ menuconfig INPUT_KEYBOARD
 
 if INPUT_KEYBOARD
 
-config KEYBOARD_ISLAND
+config KEYBOARD_KONA
 	tristate "KONA Keypad"
 	default n
 	help
