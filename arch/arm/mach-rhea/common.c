@@ -48,7 +48,8 @@
 #include <asm/pmu.h>
 #include <linux/spi/spi.h>
 #include <plat/spi_kona.h>
-
+#include <plat/chal/chal_trace.h>
+#include <trace/stm.h>
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
@@ -486,6 +487,23 @@ struct platform_device tmon_device = {
 };
 #endif
 
+#ifdef CONFIG_STM_TRACE
+static struct stm_platform_data stm_pdata = {
+	.regs_phys_base       = STM_BASE_ADDR,
+	.channels_phys_base   = SWSTM_BASE_ADDR,
+	.id_mask              = 0x0,   /* Skip ID check/match */
+	.final_funnel	      = CHAL_TRACE_FIN_FUNNEL,
+};
+
+struct platform_device kona_stm_device = {
+	.name = "stm",
+	.id = -1,
+	.dev = {
+	        .platform_data = &stm_pdata,
+	},
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -500,6 +518,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_sspi_spi0_device,
 #ifdef CONFIG_SENSORS_KONA
 	&tmon_device,
+#endif
+#ifdef CONFIG_STM_TRACE
+	&kona_stm_device,
 #endif
 };
 
