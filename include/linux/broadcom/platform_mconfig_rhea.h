@@ -160,18 +160,6 @@ extern "C" {
 
 #define MMU_L1L2_SIZE                                          0x00010000
 
-#define DSP_SH_BASE                            EXT_RAM_BASE_ADDR             // DSP sharedmem
-#define DSP_SH_SIZE                                            0x00064000  
-
-#define CP_SH_BASE                             DSP_SH_BASE                    
-#define CP_SH_SIZE                                             0x00020000    // 128k CP/DSP sharedmem
-
-#define AP_SH_BASE                             (DSP_SH_BASE+CP_SH_SIZE)    
-#define AP_SH_SIZE                                             0x00020000    // 128k  AP/DSP sharedmem
-
-#define IPC_BASE                               0x81E00000                    // 256kB IPC shared RAM
-#define IPC_SIZE                                               0x00200000
-
 #ifndef FUSE_AP_BSP
 #ifdef VMF_INCLUDE_NEW
 #define VMF_PAGE1_BASE                         0x81A00000
