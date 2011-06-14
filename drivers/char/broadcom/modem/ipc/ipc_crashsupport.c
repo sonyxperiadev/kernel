@@ -348,7 +348,6 @@ void DUMP_CP_assert_log(void)
 			break;
 		}
 		
-		IPC_DEBUG(DBG_INFO,"send packed size %d\n", (int) size ) ;
 		// send packet out to log (MTT via RNDIS or crash dump file)
 		BCMLOG_HandleCpCrashDumpData( (const char*)(p+2), size );
 
