@@ -14,25 +14,11 @@
 #include <linux/uaccess.h>
 #include <linux/debugfs.h>
 #include <trace/stm.h>
-
-/* STM Registers */
-#define STM_CR          (stm.virtbase)
-#define STM_MMC         (stm.virtbase + 0x008)
-#define STM_TER         (stm.virtbase + 0x010)
-#define STMPERIPHID0    (stm.virtbase + 0xFC0)
-#define STMPERIPHID1    (stm.virtbase + 0xFC8)
-#define STMPERIPHID2    (stm.virtbase + 0xFD0)
-#define STMPERIPHID3    (stm.virtbase + 0xFD8)
-#define STMPCELLID0     (stm.virtbase + 0xFE0)
-#define STMPCELLID1     (stm.virtbase + 0xFE8)
-#define STMPCELLID2     (stm.virtbase + 0xFF0)
-#define STMPCELLID3     (stm.virtbase + 0xFF8)
-
-#define STM_CLOCK_SHIFT 6
-#define STM_CLOCK_MASK  0x1C0
-
-/* Hardware mode for all sources */
-#define STM_MMC_DEFAULT            0xFFFFFFFF
+#ifdef CONFIG_BCM_STM
+#define CNEON_COMMON
+#include <plat/chal/chal_trace.h>
+#include <mach/hardware.h>
+#endif
 
 /* Max number of channels (multiple of 256) */
 #define STM_NUMBER_OF_CHANNEL      CONFIG_STM_NUMBER_OF_CHANNEL
@@ -42,24 +28,13 @@
 
 static struct stm_device {
 	const struct stm_platform_data *pdata;
-	void __iomem *virtbase;
 	/* Used to register the allocated channels */
 	DECLARE_BITMAP(ch_bitmap, STM_NUMBER_OF_CHANNEL);
 } stm;
 
-volatile struct stm_channel __iomem *stm_channels;
-
 static struct cdev cdev;
 static struct class *stm_class;
 static int stm_major;
-
-static DEFINE_SPINLOCK(lock);
-
-/* Middle value for clock divisor */
-static enum clock_div stm_clockdiv = STM_CLOCK_DIV8;
-
-/* Default value for STM output connection */
-static enum stm_connection_type stm_connection = STM_DEFAULT_CONNECTION;
 
 #define STM_BUFSIZE    256
 struct channel_data {
@@ -72,6 +47,273 @@ struct channel_data {
 static u64 stm_printk_buf[1024/sizeof(u64)];
 static arch_spinlock_t stm_buf_lock =
 	        (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
+
+#ifdef CONFIG_BCM_STM
+/* ATB ID definitions */
+enum {
+	ATB_ID_SW_STM_A9 = 1,
+	ATB_ID_SW_STM_R4 = 2,
+	ATB_ID_RESERVED1 = 3,
+	ATB_ID_RESERVED2 = 4,
+	ATB_ID_STM = 5,
+	ATB_ID_AXI1_READ = 6,
+	ATB_ID_AXI1_WRITE = 7,
+	ATB_ID_AXI2_READ = 8,
+	ATB_ID_AXI2_WRITE = 9,
+	ATB_ID_AXI3_READ = 10,
+	ATB_ID_AXI3_WRITE = 11,
+	ATB_ID_AXI4_READ = 12,
+	ATB_ID_AXI4_WRITE = 13,
+	ATB_ID_AXI5_READ = 14,
+	ATB_ID_AXI5_WRITE = 15,
+	ATB_ID_AXI6_READ = 16,
+	ATB_ID_AXI6_WRITE = 17,
+	ATB_ID_AXI7_READ = 18,
+	ATB_ID_AXI7_WRITE = 19,
+	ATB_ID_AXI8_READ = 20,
+	ATB_ID_AXI8_WRITE = 21,
+	ATB_ID_AXI9_READ = 22,
+	ATB_ID_AXI9_WRITE = 23,
+	ATB_ID_AXI10_READ = 24,
+	ATB_ID_AXI10_WRITE = 25,
+	ATB_ID_AXI11_READ = 26,
+	ATB_ID_AXI11_WRITE = 27,
+	ATB_ID_AXI12_READ = 28,
+	ATB_ID_AXI12_WRITE = 29,
+	ATB_ID_AXI13_READ = 30,
+	ATB_ID_AXI13_WRITE = 31,
+	ATB_ID_AXI14_READ = 32,
+	ATB_ID_AXI14_WRITE = 33,
+	ATB_ID_AXI15_READ = 34,
+	ATB_ID_AXI15_WRITE = 35,
+	ATB_ID_AXI16_READ = 36,
+	ATB_ID_AXI16_WRITE = 37,
+	ATB_ID_AXI17_READ = 38,
+	ATB_ID_AXI17_WRITE = 39,
+	ATB_ID_AXI18_READ = 40,
+	ATB_ID_AXI18_WRITE = 41,
+	ATB_ID_AXI19_READ = 42,
+	ATB_ID_AXI19_WRITE = 43,
+	ATB_ID_GIC_A9 = 44,
+	ATB_ID_GIC_R4 = 45,
+	ATB_ID_POWER_MGR = 46,
+	ATB_ID_MAX = 0x3F,	/* max 6bit ATB_ID */
+};
+
+/* STM and SWSTM on A9 will be initialized at boot loader. */
+#define ATB_ID_ODD(x) ((x<<1)|0x1) // 6bit ATB ID + 1bit (1)
+#define ATB_ID_EVEN(x) (x<<1) // 6bit ATB ID + 1bit (0)
+#define INVALID_FUNNEL CHAL_TRACE_MAX_FUNNEL
+#define LOCK_ACCESS_CODE 0xC5ACCE55
+
+static CHAL_TRACE_DEV_t trace_base_addr = {
+	.CHIPREGS_base = KONA_CHIPREG_VA,
+	.PWRMGR_base = KONA_PWRMGR_VA,
+	.FUNNEL_base[CHAL_TRACE_HUB_FUNNEL] = KONA_HUB_FUNNEL_VA,
+	.FUNNEL_base[CHAL_TRACE_FUNNEL] = KONA_FUNNEL_VA,
+	.FUNNEL_base[CHAL_TRACE_FIN_FUNNEL] = KONA_FIN_FUNNEL_VA,
+	.FUNNEL_base[CHAL_TRACE_FAB_FUNNEL1] = KONA_FAB_FUNNEL1_VA,
+	.FUNNEL_base[CHAL_TRACE_COMMS_FUNNEL] = KONA_BMODEM_FUNNEL_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE1] = KONA_AXITRACE1_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE2] = KONA_AXITRACE2_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE3] = KONA_AXITRACE3_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE4] = KONA_AXITRACE4_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE11] = KONA_AXITRACE11_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE12] = KONA_AXITRACE12_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE16] = KONA_AXITRACE16_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE17] = KONA_AXITRACE17_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE18] = KONA_AXITP18_VA,
+	.AXITRACE_base[CHAL_TRACE_AXITRACE19] = KONA_AXITRACE19_VA,
+	.CTI_base[CHAL_TRACE_HUB_CTI] = KONA_HUB_CTI_VA,
+	.CTI_base[CHAL_TRACE_MM_CTI] = KONA_MM_CTI_VA,
+	.CTI_base[CHAL_TRACE_FAB_CTI] = KONA_FAB_CTI_VA,
+	.CTI_base[CHAL_TRACE_A9CTI0] = KONA_A9CTI0_VA,
+	.CTI_base[CHAL_TRACE_R4_CTI] = KONA_BMODEM_CTI_VA,
+	.ETB_base = KONA_ETB_VA,
+	.ETB2AXI_base = KONA_ETB2AXI_VA,
+	.GLOBPERF_base = KONA_GLOBPERF_VA,
+	.ATB_STM_base = KONA_STM_VA,
+	.SW_STM_base[CHAL_TRACE_SWSTM] = KONA_SWSTM_VA,
+	.SW_STM_base[CHAL_TRACE_SWSTM_ST] = KONA_SWSTM_ST_VA,
+	.GICTR_base = KONA_GICTR_VA,
+};
+static CHAL_HANDLE kona_trace_handle = NULL;
+
+static int kona_trace_funnel_set_enable(CHAL_TRACE_FUNNEL_t funnel_type,
+					    uint8_t port_n, int enable)
+{
+	int status;
+
+	if (chal_trace_funnel_locked(kona_trace_handle, funnel_type)) {
+		chal_trace_funnel_set_lock_access(kona_trace_handle,
+					funnel_type, LOCK_ACCESS_CODE);
+	}
+
+	status = chal_trace_funnel_set_enable(kona_trace_handle,
+					funnel_type, port_n, enable);
+	return status;
+}
+
+static void kona_trace_set_stm_en(uint8_t bit, int set)
+{
+	uint32_t reg_high, reg_low;
+
+	reg_high = chal_trace_atb_stm_get_en(kona_trace_handle, 1);
+	reg_low = chal_trace_atb_stm_get_en(kona_trace_handle, 0);
+
+	if (bit < 32) {
+		if (set) {
+			reg_low |= (1 << bit);
+		} else {
+			reg_low &= ~(1 << bit);
+		}
+	} else if (bit < 64) {
+		if (set) {
+			reg_high |= (1 << (bit - 32));
+		} else {
+			reg_high &= ~(1 << (bit - 32));
+		}
+	}
+
+	chal_trace_atb_stm_set_en(kona_trace_handle, reg_low, reg_high);
+}
+
+static void kona_trace_set_stm_sw(uint8_t bit, int set)
+{
+	uint32_t reg_high, reg_low;
+
+	reg_high = chal_trace_atb_stm_get_sw(kona_trace_handle, 1);
+	reg_low = chal_trace_atb_stm_get_sw(kona_trace_handle, 0);
+
+	if (bit < 32) {
+		if (set) {
+			reg_low |= (1 << bit);
+		} else {
+			reg_low &= ~(1 << bit);
+		}
+	} else if (bit < 64) {
+		if (set) {
+			reg_high |= (1 << (bit - 32));
+		} else {
+			reg_high &= ~(1 << (bit - 32));
+		}
+	}
+
+	chal_trace_atb_stm_set_sw(kona_trace_handle, reg_low, reg_high);
+}
+
+int kona_trace_set_sw_stm(int on)
+{
+	int status = 0;
+
+	if (kona_trace_handle == NULL)
+		return -EIO;
+	if (on) {
+		/* SW STM Config */
+		chal_trace_sw_stm_set_config(kona_trace_handle,
+				CHAL_TRACE_SWSTM, 1, ATB_ID_SW_STM_A9);
+
+		/* Enable ARM Funnel port6 */
+		kona_trace_funnel_set_enable(CHAL_TRACE_FUNNEL, 6, 1);
+
+		/* Enable FINAL Funnel port 1 */
+		kona_trace_funnel_set_enable(stm.pdata->final_funnel, 1, 1);
+
+		/* Set Enable for SWSTM */
+		kona_trace_set_stm_en(ATB_ID_SW_STM_A9, 1);
+
+		/* Set SW for SWSTM */
+		kona_trace_set_stm_sw(ATB_ID_SW_STM_A9, 1);
+	} else {
+		/* Disable ARM Funnel port6 */
+		kona_trace_funnel_set_enable(CHAL_TRACE_FUNNEL, 6, 0);
+
+		/* Set Disable for SWSTM */
+		kona_trace_set_stm_en(ATB_ID_SW_STM_A9, 0);
+	}
+
+	return status;
+}
+
+static int __init kona_trace_init(void)
+{
+	int status = -EIO;
+
+	if (kona_trace_handle)
+		return 0;
+
+	chal_trace_init(&trace_base_addr);
+	kona_trace_handle = &trace_base_addr;
+
+	if (kona_trace_handle)
+		status = 0;
+	/* STM config */
+	/* 4 bits wide PTI output, always break, ATBID 0x0B */
+	chal_trace_atb_stm_set_config(kona_trace_handle, 0, 0, 1,
+				      ATB_ID_ODD(ATB_ID_STM));
+	/* Turn on the A9 SWSTM */
+	kona_trace_set_sw_stm(1);
+
+	return status;
+}
+
+int kona_trace_stm_write(int ch, int ts, size_t len, uint8_t* data)
+{
+	CHAL_TRACE_SWSTM_t st;
+
+	if (kona_trace_handle == NULL)
+		return -EIO;
+
+	if (!data)
+		return -EINVAL;
+
+	if (ts)
+		st = CHAL_TRACE_SWSTM_ST;
+	else
+		st = CHAL_TRACE_SWSTM;
+
+	/* Align start before writing 4 bytes at a time */
+	while ((len > 0) && (((uint32_t) data) & (sizeof(uint32_t) - 1))) {
+		chal_trace_sw_stm_write(kona_trace_handle, st, ch, 1, *data);
+		data++;
+		len--;
+	}
+
+	/* Write 4 bytes at a time while we can */
+	while (len >= 4) {
+		uint32_t tmp = 0;
+		tmp = ((((uint32_t) data[0]) << 24) |
+		       (((uint32_t) data[1]) << 16) |
+		       (((uint32_t) data[2]) << 8) |
+		       (((uint32_t) data[3]) << 0));
+		chal_trace_sw_stm_write(kona_trace_handle, st, ch, 4, tmp);
+		data += 4;
+		len -= 4;
+	}
+
+	/* Finish remaining bytes */
+	while (len > 0) {
+		chal_trace_sw_stm_write(kona_trace_handle, st, ch, 1, *data);
+		data++;
+		len--;
+	}
+
+	return 0;
+}
+
+int stm_trace_send_bytes(int channel, const void *data_ptr, size_t length)
+{
+	uint8_t trace_type = 0x72;	//make it configurable
+	uint8_t termination = 0;
+
+	// send trace type to start STM message
+	kona_trace_stm_write(channel, FALSE, 1, &trace_type);
+	kona_trace_stm_write(channel, FALSE, length, (uint8_t *)data_ptr);
+	kona_trace_stm_write(channel, TRUE, 1, &termination);
+
+	return length;
+}
+#endif
 
 int stm_alloc_channel(int offset)
 {
@@ -127,123 +369,9 @@ static int stm_release_channel(struct channel_data *ch_data, int channel)
 int stm_trace_buffer_onchannel(int channel,
 	                       const void *data, size_t length)
 {
-	int i, mod64;
-	volatile struct stm_channel __iomem *pch;
-
-	if (channel >= STM_NUMBER_OF_CHANNEL || !stm_channels)
-	        return 0;
-
-	pch = &stm_channels[channel];
-
-	/*  Align data pointer to u64 & time stamp last byte(s) */
-	mod64 = (int)data & 7;
-	i = length - 8 + mod64;
-	switch (mod64) {
-	case 0:
-	        if (i)
-	                pch->no_stamp64 = *(u64 *)data;
-	        else {
-	                pch->stamp64 = *(u64 *)data;
-	                return length;
-	        }
-	        data += 8;
-	        break;
-	case 1:
-	        pch->no_stamp8 = *(u8 *)data;
-	        pch->no_stamp16 = *(u16 *)(data+1);
-	        if (i)
-	                pch->no_stamp32 = *(u32 *)(data+3);
-	        else {
-	                pch->stamp32 = *(u32 *)(data+3);
-	                return length;
-	        }
-	        data += 7;
-	        break;
-	case 2:
-	        pch->no_stamp16 = *(u16 *)data;
-	        if (i)
-	                pch->no_stamp32 = *(u32 *)(data+2);
-	        else {
-	                pch->stamp32 = *(u32 *)(data+2);
-	                return length;
-	        }
-	        data += 6;
-	        break;
-	case 3:
-	        pch->no_stamp8 = *(u8 *)data;
-	        if (i)
-	                pch->no_stamp32 = *(u32 *)(data+1);
-	        else {
-	                pch->stamp32 = *(u32 *)(data+1);
-	                return length;
-	        }
-	        data += 5;
-	        break;
-	case 4:
-	        if (i)
-	                pch->no_stamp32 = *(u32 *)data;
-	        else {
-	                pch->stamp32 = *(u32 *)data;
-	                return length;
-	        }
-	        data += 4;
-	        break;
-	case 5:
-	        pch->no_stamp8 = *(u8 *)data;
-	        if (i)
-	                pch->no_stamp16 = *(u16 *)(data+1);
-	        else {
-	                pch->stamp16 = *(u16 *)(data+1);
-	                return length;
-	        }
-	        data += 3;
-	        break;
-	case 6:
-	        if (i)
-	                pch->no_stamp16 = *(u16 *)data;
-	        else {
-	                pch->stamp16 = *(u16 *)data;
-	                return length;
-	        }
-	        data += 2;
-	        break;
-	case 7:
-	        if (i)
-	                pch->no_stamp8 = *(u8 *)data;
-	        else {
-	                pch->stamp8 = *(u8 *)data;
-	                return length;
-	        }
-	        data++;
-	        break;
-	}
-	for (;;) {
-	        if (i > 8) {
-	                pch->no_stamp64 = *(u64 *)data;
-	                data += 8;
-	                i -= 8;
-	        } else if (i == 8) {
-	                pch->stamp64 = *(u64 *)data;
-	                break;
-	        } else if (i > 4) {
-	                pch->no_stamp32 = *(u32 *)data;
-	                data += 4;
-	                i -= 4;
-	        } else if (i == 4) {
-	                pch->stamp32 = *(u32 *)data;
-	                break;
-	        } else if (i > 2) {
-	                pch->no_stamp16 = *(u16 *)data;
-	                data += 2;
-	                i -= 2;
-	        } else if (i == 2) {
-	                pch->stamp16 = *(u16 *)data;
-	                break;
-	        } else {
-	                pch->stamp8 = *(u8 *)data;
-	                break;
-	        }
-	}
+#ifdef CONFIG_BCM_STM
+	stm_trace_send_bytes(channel, data, length);
+#endif
 	return length;
 }
 EXPORT_SYMBOL(stm_trace_buffer_onchannel);
@@ -310,80 +438,14 @@ static ssize_t stm_write(struct file *file, const char __user *buf,
 	return size;
 }
 
-static int stm_mmap(struct file *file, struct vm_area_struct *vma)
-{
-	/*
-	 * Don't allow a mapping that covers more than the STM channels
-	 */
-	if ((vma->vm_end - vma->vm_start) >
-	    STM_NUMBER_OF_CHANNEL*sizeof(struct stm_channel))
-	        return -EINVAL;
-
-	vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
-
-	if (io_remap_pfn_range(vma, vma->vm_start,
-	                stm.pdata->channels_phys_base>>PAGE_SHIFT,
-	                STM_NUMBER_OF_CHANNEL*sizeof(struct stm_channel),
-	                vma->vm_page_prot))
-	        return -EAGAIN;
-
-	return 0;
-}
-
 /* Enable the trace for given sources (bitfield) */
 static void stm_enable_src(unsigned int v)
 {
-	unsigned int cr_val;
-	spin_lock(&lock);
-	cr_val = readl(STM_CR);
-	cr_val &= ~STM_CLOCK_MASK;
-	writel(cr_val|(stm_clockdiv<<STM_CLOCK_SHIFT), STM_CR);
-	writel(v, STM_TER);
-	spin_unlock(&lock);
 }
 
 /* Disable all sources */
 static void stm_disable_src(void)
 {
-	writel(0x0, STM_CR);   /* stop clock */
-	writel(0x0, STM_TER);  /* Disable cores */
-}
-
-/* Set clock speed */
-static int stm_set_ckdiv(enum clock_div v)
-{
-	unsigned int val;
-
-	spin_lock(&lock);
-	val = readl(STM_CR);
-	val &= ~STM_CLOCK_MASK;
-	writel(val | ((v << STM_CLOCK_SHIFT) & STM_CLOCK_MASK), STM_CR);
-	spin_unlock(&lock);
-	stm_clockdiv = v;
-
-	return 0;
-}
-
-/* Return the control register */
-static inline unsigned int stm_get_cr(void)
-{
-	return readl(STM_CR);
-}
-
-/*
- * Set Trace MODE lossless/lossy (Software/Hardware)
- * each bit represent the corresponding mode of this source
- */
-static inline void stm_set_modes(unsigned int modes)
-{
-	writel(modes, STM_MMC);
-}
-
-/* Get Trace MODE lossless/lossy (Software/Hardware)
- * each bit represent the corresponding mode of this source */
-static inline unsigned int stm_get_modes(void)
-{
-	return readl(STM_MMC);
 }
 
 /* Count # of free channels */
@@ -410,13 +472,6 @@ static long stm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	struct channel_data *channel = file->private_data;
 
 	switch (cmd) {
-
-	case STM_CONNECTION:
-	        if (stm.pdata->stm_connection)
-	                stm.pdata->stm_connection(arg);
-	        stm_connection = arg;
-	        break;
-
 	case STM_DISABLE:
 	        stm_disable_src();
 	        break;
@@ -431,22 +486,6 @@ static long stm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
 	case STM_GET_CHANNEL_NO:
 	        err = put_user(channel->numero, (unsigned int *)arg);
-	        break;
-
-	case STM_SET_CLOCK_DIV:
-	        err = stm_set_ckdiv((enum clock_div) arg);
-	        break;
-
-	case STM_SET_MODE:
-	        stm_set_modes(arg);
-	        break;
-
-	case STM_GET_MODE:
-	        err = put_user(stm_get_modes(), (unsigned int *)arg);
-	        break;
-
-	case STM_GET_CTRL_REG:
-	        err = put_user(stm_get_cr(), (unsigned int *)arg);
 	        break;
 
 	case STM_ENABLE_SRC:
@@ -497,7 +536,6 @@ static const struct file_operations stm_fops = {
 	.llseek =               no_llseek,
 	.write =                stm_write,
 	.release =              stm_release,
-	.mmap =                 stm_mmap,
 };
 
 /*
@@ -518,21 +556,6 @@ static int __devinit stm_probe(struct platform_device *pdev)
 	cdev_init(&cdev, &stm_fops);
 	cdev.owner = THIS_MODULE;
 
-	stm_channels =
-	        ioremap_nocache(stm.pdata->channels_phys_base,
-	                STM_NUMBER_OF_CHANNEL*sizeof(*stm_channels));
-	if (stm_channels == NULL) {
-	        dev_err(&pdev->dev, "could not remap STM Msg register\n");
-	        return -ENODEV;
-	}
-
-	stm.virtbase = ioremap_nocache(stm.pdata->regs_phys_base, SZ_4K);
-	if (stm.virtbase == NULL) {
-	        retval = -EIO;
-	        dev_err(&pdev->dev, "could not remap STM Register\n");
-	        goto err_channels;
-	}
-
 	retval = cdev_add(&cdev, MKDEV(stm_major, 0), 1);
 	if (retval) {
 	        dev_err(&pdev->dev, "chardev registration failed\n");
@@ -542,27 +565,6 @@ static int __devinit stm_probe(struct platform_device *pdev)
 	if (IS_ERR(device_create(stm_class, &pdev->dev,
 	                         MKDEV(stm_major, 0), NULL, STM_DEV_NAME)))
 	        dev_err(&pdev->dev, "can't create device\n");
-
-	/* Check chip IDs if necessary */
-	if (stm.pdata->id_mask) {
-	        u32 periph_id, cell_id;
-
-	        periph_id = (readb(STMPERIPHID3)<<24) +
-	                         (readb(STMPERIPHID2)<<16) +
-	                         (readb(STMPERIPHID1)<<8) +
-	                         readb(STMPERIPHID0);
-	        cell_id = (readb(STMPCELLID3)<<24) +
-	                         (readb(STMPCELLID2)<<16) +
-	                         (readb(STMPCELLID1)<<8) +
-	                         readb(STMPCELLID0);
-	        /* Only warns if it isn't a ST-Ericsson supported one */
-	        if ((periph_id & stm.pdata->id_mask) != 0x00080dec ||
-	            cell_id != 0xb105f00d) {
-	                dev_warn(&pdev->dev, "STM-Trace IC not compatible\n");
-	                dev_warn(&pdev->dev, "periph_id=%x\n", periph_id);
-	                dev_warn(&pdev->dev, "pcell_id=%x\n", cell_id);
-	        }
-	}
 
 	/* Reserve channels if necessary */
 	if (stm.pdata->channels_reserved_sz) {
@@ -594,26 +596,19 @@ static int __devinit stm_probe(struct platform_device *pdev)
 	set_bit(CONFIG_STM_TRACE_BPRINTK_CHANNEL, stm.ch_bitmap);
 #endif
 
-	if (stm.pdata->stm_connection) {
-	        retval = stm.pdata->stm_connection(stm_connection);
-	        if (retval) {
-	                dev_err(&pdev->dev, "failed to connect STM output\n");
-	                goto err_channels;
-	        }
-	}
-
 	/* Enable STM Masters given in pdata */
 	if (stm.pdata->masters_enabled)
 	        stm_enable_src(stm.pdata->masters_enabled);
 
-	stm_set_modes(STM_MMC_DEFAULT); /* Set all sources in HW mode */
+#ifdef CONFIG_BCM_STM
+	kona_trace_init();
+#endif
 
 	dev_info(&pdev->dev, "STM-Trace driver probed successfully\n");
 	stm_printk("STM-Trace driver initialized\n");
 	return 0;
 
 err_channels:
-	iounmap(stm_channels);
 	return retval;
 }
 
@@ -622,12 +617,7 @@ static int __devexit stm_remove(struct platform_device *pdev)
 	device_destroy(stm_class, MKDEV(stm_major, 0));
 	cdev_del(&cdev);
 
-	if (stm.pdata->stm_connection)
-	        (void) stm.pdata->stm_connection(STM_DISCONNECT);
-
 	stm_disable_src();
-	iounmap(stm.virtbase);
-	iounmap(stm_channels);
 
 	return 0;
 }
@@ -653,69 +643,6 @@ EXPORT_SYMBOL(stm_printk);
  * Debugfs interface
  */
 
-static int stm_connection_show(void *data, u64 *val)
-{
-	*val = stm_connection;
-	return 0;
-}
-
-static int stm_connection_set(void *data, u64 val)
-{
-	if (stm.pdata->stm_connection) {
-	        stm_connection = val;
-	        stm.pdata->stm_connection(val);
-	}
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(stm_connection_fops, stm_connection_show,
-	        stm_connection_set, "%llu\n");
-
-static int stm_clockdiv_show(void *data, u64 *val)
-{
-	*val = stm_clockdiv;
-	return 0;
-}
-
-static int stm_clockdiv_set(void *data, u64 val)
-{
-	stm_set_ckdiv(val);
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(stm_clockdiv_fops, stm_clockdiv_show,
-	        stm_clockdiv_set, "%llu\n");
-
-static int stm_masters_enable_show(void *data, u64 *val)
-{
-	*val = readl(STM_TER);
-	return 0;
-}
-
-static int stm_masters_enable_set(void *data, u64 val)
-{
-	stm_enable_src(val);
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(stm_masters_enable_fops, stm_masters_enable_show,
-	        stm_masters_enable_set, "%08llx\n");
-
-static int stm_masters_modes_show(void *data, u64 *val)
-{
-	*val = stm_get_modes();
-	return 0;
-}
-
-static int stm_masters_modes_set(void *data, u64 val)
-{
-	stm_set_modes(val);
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(stm_masters_modes_fops, stm_masters_modes_show,
-	        stm_masters_modes_set, "%08llx\n");
-
 /* Count # of free channels */
 static int stm_free_channels_show(void *data, u64 *val)
 {
@@ -734,14 +661,6 @@ static __init int stm_init_debugfs(void)
 	if (!d_stm)
 	        return -ENOMEM;
 
-	(void) debugfs_create_file("connection",  S_IRUGO | S_IWUGO, d_stm,
-	                        NULL, &stm_connection_fops);
-	(void) debugfs_create_file("clockdiv", S_IRUGO | S_IWUGO, d_stm,
-	                        NULL, &stm_clockdiv_fops);
-	(void) debugfs_create_file("masters_enable", S_IRUGO | S_IWUGO, d_stm,
-	                        NULL, &stm_masters_enable_fops);
-	(void) debugfs_create_file("masters_modes", S_IRUGO | S_IWUGO, d_stm,
-	                        NULL, &stm_masters_modes_fops);
 	(void) debugfs_create_file("free_channels", S_IRUGO, d_stm,
 	                        NULL, &stm_free_channels_fops);
 	return 0;

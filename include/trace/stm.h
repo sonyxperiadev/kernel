@@ -13,6 +13,7 @@
 
 #define STM_DEV_NAME "stm"
 
+#ifndef CONFIG_BCM_STM
 /* One single channel mapping */
 struct stm_channel {
 	union {
@@ -44,6 +45,9 @@ enum clock_div {
 	STM_CLOCK_DIV14,
 	STM_CLOCK_DIV16,
 };
+#else
+int stm_trace_buffer(const void *data, size_t length);
+#endif
 
 /* ioctl commands */
 #define STM_CONNECTION            _IOW('t', 0, enum stm_connection_type)
@@ -76,9 +80,11 @@ struct stm_platform_data {
 	u32        masters_enabled;
 	const s16 *channels_reserved;
 	int        channels_reserved_sz;
+	int	   final_funnel;
 	int        (*stm_connection)(enum stm_connection_type);
 };
 
+#ifndef CONFIG_BCM_STM
 /* Channels base address */
 extern volatile struct stm_channel __iomem *stm_channels;
 
@@ -91,7 +97,18 @@ static inline void stm_trace_##size(int channel, __u##size data) \
 static inline void stm_tracet_##size(int channel, __u##size data) \
 { \
 	stm_channels[channel].stamp##size = data; \
+}
+#else
+#define DEFLLTFUN(size) \
+static inline void stm_trace_##size(int channel, __u##size data) \
+{ \
+	stm_trace_buffer(&data, size / 8); \
 } \
+static inline void stm_tracet_##size(int channel, __u##size data) \
+{ \
+	stm_trace_buffer(&data, size / 8); \
+}
+#endif
 
 DEFLLTFUN(8);
 DEFLLTFUN(16);
