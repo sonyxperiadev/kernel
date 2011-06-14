@@ -37,6 +37,7 @@
 #include <linux/ratelimit.h>
 #include <linux/kmsg_dump.h>
 #include <linux/syslog.h>
+#include <trace/stm.h>
 
 #include <asm/uaccess.h>
 
@@ -874,6 +875,9 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 #endif
 
 	p = printk_buf;
+
+	/* Send printk buffer to MIPI STM trace hardware too if enable */
+	stm_dup_printk(printk_buf, printed_len);
 
 	/* Do we have a loglevel in the string? */
 	if (p[0] == '<') {

@@ -542,10 +542,13 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 					with addr 0x%x\n", __func__,
 					bcm590xx->i2c_client[i].addr);
 		}
-		else
+		else	{
 			printk("%s: i2c client(0x%x) registered with slave id 0x%x\n", __func__,
 					(unsigned int)bcm590xx->i2c_client[i].client,
 					bcm590xx->i2c_client[i].addr );
+			/* NOTE: Attach pdata for handling i2c slave speed selection */
+			bcm590xx->i2c_client[i].client->dev.platform_data = pdata;
+		}
 		i++;
 	}
 	info = bcm590xx;

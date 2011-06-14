@@ -185,12 +185,15 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 static int get_batt_percentage(struct bcm59055_power *battery_data)
 {
 	int bat_capacity = 0;
+	u16 count, slp_count;
+	u32 accm;
+	int ret;
 	if (bcm59055_fg_offset_cal(FAST_CALIBRATION))
 		pr_info("%s: FAST Calibration for Fuel Gauge failed\n", __func__);
 	if (bcm59055_fg_init_read())
 		pr_info("%s: Fuel Gauge Read init failed\n", __func__);
-	bat_capacity = bcm59055_fg_read_accm();
-
+	ret = bcm59055_fg_read_soc(&accm, &count, &slp_count);
+	/* TODO: Need to calculate Batt Capacity */
 	pr_debug("%s: FG capacity %d\n", __func__, bat_capacity);
 	if (bat_capacity < 0) {
 		pr_debug("%s: Fuel Gauge Accumulator read failed\n", __func__);

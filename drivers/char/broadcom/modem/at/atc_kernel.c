@@ -276,7 +276,6 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
  *          ATC_KERNEL_SEND_AT_CMD    - arg is a pointer to type ATC_KERNEL_ATCmd_t,
  *                                which specifies the at channel and command.
  */
-
 static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 {
     int retVal = 0;

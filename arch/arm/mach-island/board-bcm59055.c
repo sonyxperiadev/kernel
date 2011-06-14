@@ -240,7 +240,7 @@ static struct regulator_init_data bcm59055_hv7ldo_data = {
 };
 
 struct regulator_consumer_supply sim_supply[] = {
-	{.supply = "simldo_uc"},
+	{.supply = "sim_vcc"},
 };
 static struct regulator_init_data bcm59055_simldo_data = {
 	.constraints = {

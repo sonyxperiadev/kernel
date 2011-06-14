@@ -294,7 +294,7 @@ config TOUCHSCREEN_PENMOUNT
 
 config TOUCHSCREEN_QT602240
 	tristate "QT602240 I2C Touchscreen"
-	depends on I2C
+	depends on I2C && GPIO_PCA953X
 	help
 	  Say Y here if you have the AT42QT602240/ATMXT224 I2C touchscreen
 	  connected to your system.

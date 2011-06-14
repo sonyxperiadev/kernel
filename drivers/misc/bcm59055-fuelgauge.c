@@ -252,46 +252,28 @@ int bcm59055_fg_init_read(void)
 }
 EXPORT_SYMBOL(bcm59055_fg_init_read);
 
-int bcm59055_fg_read_accm(void)
+#define SOC_READ_BYTE_MAX	8
+int bcm59055_fg_read_soc(u32 *fg_accm, u16 *fg_cnt, u16 *fg_sleep_cnt)
 {
 	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
-	u8 reg;
-	int val;
+	int reg[SOC_READ_BYTE_MAX];
+	int ret;
 	pr_debug("Inside %s\n", __func__);
 
-	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGACCM1);
-	if (!(reg & FGRDVALID)) {
+	ret = bcm590xx_mul_reg_read(bcm59055, BCM59055_REG_FGACCM1,
+			SOC_READ_BYTE_MAX, (u8 *)reg);
+	if (!(reg[0] & FGRDVALID)) {
 		pr_info("%s: Accumulator value is invalid..try later\n", __func__);
 		return -EINVAL;
 	}
-	val = reg << 24;
-	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGACCM2);
-	val |= reg << 16;
-	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGACCM3);
-	val |= reg << 8;
-	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGACCM4);
-	val |= reg;
-	pr_debug("%s: Accumulator value %d\n", __func__, val);
-	return val;
+	*fg_accm = ((reg[0] << 24) | (reg[1] << 16) | (reg[2] << 8) | reg[3]);
+	*fg_cnt = (reg[4] << 8) | reg[5];
+	*fg_sleep_cnt = (reg[6] << 8) | reg[7];
+	pr_debug("%s: Accm 0x%x, Count 0x%x, Sleep Count 0x%x\n", __func__,
+			*fg_accm, *fg_cnt, *fg_sleep_cnt);
+	return ret;
 }
-EXPORT_SYMBOL(bcm59055_fg_read_accm);
-
-int bcm59055_fg_read_count(void)
-{
-	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
-	u8 reg;
-	int val;
-	pr_debug("Inside %s\n", __func__);
-
-	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGCNT1);
-	val = reg << 8;
-	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGCNT2);
-	val |= reg;
-
-	pr_info("%s: Sample count %d\n", __func__, val);
-	return val;
-}
-EXPORT_SYMBOL(bcm59055_fg_read_count);
+EXPORT_SYMBOL(bcm59055_fg_read_soc);
 
 int bcm59055_fg_reset(void)
 {
@@ -306,6 +288,39 @@ int bcm59055_fg_reset(void)
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_fg_reset);
+
+int bcm59055_fg_read_sample(void)
+{
+	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
+	int reg[2], ret;
+	int val;
+	pr_debug("Inside %s\n", __func__);
+
+	ret = bcm590xx_mul_reg_read(bcm59055, BCM59055_REG_FGSMPL1, 2, (u8 *)reg);
+	if (ret < 0)
+		return ret;
+	val = (reg[0] << 8) | reg[1];
+	return val;
+}
+EXPORT_SYMBOL(bcm59055_fg_read_sample);
+
+int bcm59055_fg_write_gain_trim(u8 gain)
+{
+	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
+	pr_debug("Inside %s\n", __func__);
+
+	return bcm590xx_reg_write(bcm59055, BCM59055_REG_FGGAIN_TRIM, gain);
+}
+EXPORT_SYMBOL(bcm59055_fg_write_gain_trim);
+
+int bcm59055_fg_write_offset_trim(u8 offset)
+{
+	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
+	pr_debug("Inside %s\n", __func__);
+
+	return bcm590xx_reg_write(bcm59055, BCM59055_REG_FGOFFSET_TRIM, offset);
+}
+EXPORT_SYMBOL(bcm59055_fg_write_offset_trim);
 
 static int __devinit bcm59055_fg_probe(struct platform_device *pdev)
 {

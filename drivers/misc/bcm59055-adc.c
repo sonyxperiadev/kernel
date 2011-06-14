@@ -65,6 +65,7 @@ struct bcm59055_saradc {
 	bool upper_bound;
 	bool gsm_deb;
 	bool ntc_block;
+	struct mutex lock;
 	void *param;
 };
 
@@ -196,11 +197,6 @@ int bcm59055_saradc_read_data(int sel)
 	struct bcm590xx *bcm59055 = bcm59055_saradc->bcm59055;
 	pr_debug("inside %s: Channel %d\n", __func__, sel);
 
-	if (bcm59055_saradc->mode == SARADC_RTM_MODE) {
-		pr_info("%s: Can read any channel as RTM req is going on\n", __func__);
-		return -EPERM;
-	}
-
 	switch (sel) {
 	case ADC_VMBAT_CHANNEL:
 		regD1 = BCM59055_REG_ADCCTRL3;
@@ -282,6 +278,7 @@ int bcm59055_saradc_request_rtm(saradc_rtm_callback_handler cb_ptr,
 	int ret;
 	struct bcm590xx *bcm59055 = bcm59055_saradc->bcm59055;
 	pr_info("inside %s\n", __func__);
+	mutex_lock(&bcm59055_saradc->lock);
 
 	if (bcm59055_saradc->mode == SARADC_RTM_MODE) {
 		pr_info("%s: MODE is already in RTM\n", __func__);
@@ -393,6 +390,7 @@ static void bcm59055_saradc_isr(int intr, void *data)
 		bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DATA_RDY);	/* Disable RTM DATA RDY INT */
 		bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DURING_CON_MEAS);	/* Enable RTM WHILE CONT INT */
 		bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_UPPER_BOUND);	/* Enable RTM UPPER BOUND RDY INT */
+		mutex_unlock(&saradc->lock);
 		/* wait 40ms to complete one continuous conversion
 		 * before taking any more RTM request
 		*/
@@ -444,7 +442,7 @@ static int __devinit bcm59055_saradc_probe(struct platform_device *pdev)
 			__func__);
 		return -ENOMEM;
 	}
-
+	mutex_init(&saradc->lock);
 	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ADCCTRL1);
 	printk("%s: ADCCTRL1 = 0%x\n", __func__, regVal);
 	regVal &= BCM59055_ADCCTRL1_RTM_DISABLE;	/* Set RTM_mask=0. No RTM request will be taken */

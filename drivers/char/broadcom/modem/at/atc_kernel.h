@@ -65,6 +65,7 @@ typedef struct
 	void*	buffPtr;						///<	at command response
 }	ATC_KERNEL_ATResp_t ;
 
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

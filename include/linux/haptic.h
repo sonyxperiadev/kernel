@@ -75,7 +75,7 @@ extern void haptic_classdev_resume(struct haptic_classdev *haptic_cdev);
  */
 struct haptic_platform_data {
 	const char	*name;
-	int		pwm_timer;
+	const char	*pwm_name;
 	int		gpio;
 	void	(*setup_pin)(void);
 	u8		active_low;

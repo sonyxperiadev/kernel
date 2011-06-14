@@ -176,6 +176,7 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 };
 #endif
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
+	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
 	.init = bcm590xx_init_platform_hw,
 	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
 	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC | BCM590XX_ENABLE_ADC |
@@ -312,6 +313,7 @@ static int pca953x_platform_exit_hw(struct i2c_client *client,
 }
 
 static struct pca953x_platform_data board_expander_info = {
+	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_100K, },
 	.gpio_base	= KONA_MAX_GPIO,
 	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
 	.setup		= pca953x_platform_init_hw,
@@ -353,6 +355,7 @@ static void qt602240_platform_exit_hw(void)
 }
 
 static struct qt602240_platform_data qt602240_platform_data = {
+	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_100K, },
 	.x_line		= 17,
 	.y_line		= 11,
 	.x_size		= 800,
@@ -500,11 +503,12 @@ void haptic_gpio_setup(void)
 }
 
 static struct haptic_platform_data haptic_control_data = {
-	/* PWM4 as vibrator signal */
-	.name = "kona_pwmc:4",
+	/* Haptic device name: can be device-specific name like ISA1000 */
+	.name = "pwm_vibra",
+	/* PWM interface name to request */
+	.pwm_name = "kona_pwmc:4",
 	/* Invalid gpio for now, pass valid gpio number if connected */
 	.gpio = ARCH_NR_GPIOS,
-	.pwm_timer = 4,	/* 'not' being used with new PWM layer */
 	.setup_pin = haptic_gpio_setup,
 };
 
@@ -542,33 +546,16 @@ static void __init rhea_ray_add_i2c_devices (void)
 	i2c_register_board_info(2,
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
+	i2c_register_board_info(1,
+			pca953x_info,
+			ARRAY_SIZE(pca953x_info));
+	i2c_register_board_info(1,
+			qt602240_info,
+			ARRAY_SIZE(qt602240_info));
 }
 
 static int __init rhea_ray_add_lateInit_devices (void)
 {
-	struct i2c_adapter *adapter;
-	struct i2c_client *client;
-
-	adapter = i2c_get_adapter(1);
-	if (!adapter) {
-		printk(KERN_ERR "can't get i2c adapter 1\n");
-		return ENODEV;
-	}
-#ifdef CONFIG_GPIO_PCA953X
-	client = i2c_new_device(adapter, pca953x_info);
-	if (!client) {
-		printk(KERN_ERR "an't add i2c device for pca953x\n");
-	}
-#endif
-
-#ifdef CONFIG_TOUCHSCREEN_QT602240
-	client = i2c_new_device(adapter, qt602240_info);
-	if (!client) {
-		printk(KERN_ERR "an't add i2c device for qt602240\n");
-	}
-#endif
-	i2c_put_adapter(adapter);
-
 	board_add_sdio_devices();
 	return 0;
 }

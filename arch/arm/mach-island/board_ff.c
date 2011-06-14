@@ -37,6 +37,7 @@
 #include <linux/i2c/tango_s32.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
+#include <linux/akm8975.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -1097,16 +1098,24 @@ static struct i2c_board_info __initdata bma150_info[] =
 	}
 };
 
-#define AK8975_IRQ_PIN 155
+#define AKM8975_IRQ_PIN 155
 
-static struct i2c_board_info __initdata ak8975_info[] =
+static struct akm8975_platform_data akm8975_plat_data = {
+	.init = NULL, 
+	.exit = NULL, 
+	.power_on = NULL, 
+	.power_off = NULL,
+}; 
+
+static struct i2c_board_info __initdata akm8975_info[] =
 {
 	[0] = {
-		I2C_BOARD_INFO("ak8975", 0x0C ),
-		.platform_data = NULL,
-		.irq = gpio_to_irq(AK8975_IRQ_PIN),
+		I2C_BOARD_INFO("akm8975", 0x0C ),
+		.platform_data = &akm8975_plat_data,
+		.irq = gpio_to_irq(AKM8975_IRQ_PIN),
 	},
 };
+
 
 static char *android_function_rndis[] = {
 #ifdef CONFIG_USB_ANDROID_RNDIS
@@ -1331,8 +1340,9 @@ static void __init board_add_devices(void)
 		ARRAY_SIZE(bma150_info));
 
 	i2c_register_board_info(3,
-		ak8975_info,
-		ARRAY_SIZE(ak8975_info));
+		akm8975_info,
+		ARRAY_SIZE(akm8975_info));
+	
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 	platform_add_devices(bcm59055_userspace_consumer_devices, ARRAY_SIZE(bcm59055_userspace_consumer_devices));
 #endif
