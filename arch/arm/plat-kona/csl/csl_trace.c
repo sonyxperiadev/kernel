@@ -414,21 +414,6 @@ CSL_TRACE_ERR_CODE_t csl_trace_init ( void )
         {
             status = CSL_TRACE_OK;
         }
-#if defined (CSL_TRACE_STM_SUPPORT)
-#if defined(FUSE_APPS_PROCESSOR)
-#if defined (STM_INIT_FROM_CSL)
-        /* STM config */
-        /* 4 bits wide PTI output, always break, ATBID 0x0B */
-        chal_trace_atb_stm_set_config(csl_trace_handle, 0, 0, 1, ATB_ID_ODD(ATB_ID_STM));
-        /* Turn on the A9 SWSTM */
-        csl_trace_set_sw_stm (1);
-
-#endif //(STM_INIT_FROM_CSL)
-#else // defined(FUSE_APPS_PROCESSOR)
-        /* Turn on the R4 SWSTM */
-        csl_trace_set_sw_stm (1);
-#endif // defined(FUSE_APPS_PROCESSOR)
-#endif // (CSL_TRACE_STM_SUPPORT)
     }
 
 #ifdef UNDER_LINUX
@@ -1228,134 +1213,6 @@ static Boolean csl_trace_funnel_set_enable (CHAL_TRACE_FUNNEL_t funnel_type, cUI
 #endif // (CSL_TRACE_STM_SUPPORT) ||  (CSL_TRACE_AXI_TRACE_SUPPORT) ||  (CSL_TRACE_GIC_TRACE_SUPPORT) ||  (CSL_TRACE_PWRMGR_TRACE_SUPPORT)
 
 #if defined (CSL_TRACE_STM_SUPPORT)
-CSL_TRACE_ERR_CODE_t csl_trace_set_sw_stm( Boolean on )
-{
-    CSL_TRACE_ERR_CODE_t status = CSL_TRACE_OK;
-
-    if (csl_trace_handle == NULL)
-    {
-        status = CSL_TRACE_NO_INIT;
-    }
-    else
-    {
-        if (on)
-        {
-#if defined(FUSE_APPS_PROCESSOR)
-            /* SW STM Config */
-            chal_trace_sw_stm_set_config (csl_trace_handle, CHAL_TRACE_SWSTM, 1, ATB_ID_SW_STM_A9);
-        
-            /* Enable ARM Funnel port6 */
-            csl_trace_funnel_set_enable(CHAL_TRACE_FUNNEL, 6, 1);
-        
-#if defined (_RHEA_)
-            /* Enable FINAL Funnel port 1 */
-            csl_trace_funnel_set_enable(CHAL_TRACE_FIN_FUNNEL, 1, 1);
-#elif defined (_SAMOA_)
-            /* Enable HUB Funnel port 1 */
-            csl_trace_funnel_set_enable(CHAL_TRACE_HUB_FUNNEL, 1, 1);
-#endif
-    
-            /* Set Enable for SWSTM */
-            csl_trace_set_stm_en (ATB_ID_SW_STM_A9, 1);
-    
-            /* Set SW for SWSTM */
-            csl_trace_set_stm_sw(ATB_ID_SW_STM_A9, 1);
-#else
-            /* SW STM Config */
-            chal_trace_sw_stm_set_config (csl_trace_handle, CHAL_TRACE_SWSTM, 1, ATB_ID_SW_STM_R4);
-         
-            /* Enable BMODEM Funnel port3 */
-            csl_trace_funnel_set_enable(CHAL_TRACE_COMMS_FUNNEL, 3, 1);
-        
-#if defined (_RHEA_)
-            /* Enable FINAL Funnel port 4 */
-            csl_trace_funnel_set_enable(CHAL_TRACE_FIN_FUNNEL, 4, 1);
-#elif defined (_SAMOA_)
-            /* Enable HUB Funnel port 4 */
-            csl_trace_funnel_set_enable(CHAL_TRACE_HUB_FUNNEL, 4, 1);
-#endif
-    
-            /* Set Enable for R4 SWSTM */
-            csl_trace_set_stm_en (ATB_ID_SW_STM_R4, 1);
-    
-            /* Set SW for R4 SWSTM */
-            csl_trace_set_stm_sw(ATB_ID_SW_STM_R4, 1);
-#endif
-        }
-        else
-        {
-#if defined(FUSE_APPS_PROCESSOR)
-            /* Disable ARM Funnel port6 */
-            csl_trace_funnel_set_enable(CHAL_TRACE_FUNNEL, 6, 0);
-    
-            /* Set Disable for SWSTM */
-            csl_trace_set_stm_en (ATB_ID_SW_STM_A9, 0);
-#else
-            /* Disable BMODEM Funnel port3 */
-            csl_trace_funnel_set_enable(CHAL_TRACE_COMMS_FUNNEL, 3, 0);
-
-            /* Set Disable for SWSTM */
-            csl_trace_set_stm_en (ATB_ID_SW_STM_R4, 0);
-#endif
-        }
-    }
-
-    return status;
-}
-
-#ifdef CNEON_COMMON
-CSL_TRACE_ERR_CODE_t
-csl_trace_stm_write(UInt8 ch, Boolean ts, UInt32 len, UInt8 *data)
-{
-    CHAL_TRACE_SWSTM_t st;
-
-    if (csl_trace_handle == NULL)
-    {
-        return CSL_TRACE_NO_INIT;
-    }
-
-    if(!data)
-        return CSL_TRACE_INVALID_PARM;
-
-    if (ts)
-        st = CHAL_TRACE_SWSTM_ST;
-    else
-        st = CHAL_TRACE_SWSTM;
-
-    /* Align start before writing 4 bytes at a time */
-    while ((len > 0) && (((UInt32)data) & (sizeof (UInt32)-1)))
-    {
-        chal_trace_sw_stm_write (csl_trace_handle, st, ch, 1, *data);
-        data++;
-        len--;
-    }
-
-    /* Write 4 bytes at a time while we can */
-    while (len >= 4)
-    {
-        UInt32 tmp = 0;
-        tmp = ((((UInt32)data[0]) << 24) |
-               (((UInt32)data[1]) << 16) |
-               (((UInt32)data[2]) <<  8) |
-               (((UInt32)data[3]) <<  0));
-        chal_trace_sw_stm_write (csl_trace_handle, st, ch, 4, tmp);
-        data += 4;
-        len  -= 4;
-    }
-
-    /* Finish remaining bytes */
-    while (len > 0)
-    {
-        chal_trace_sw_stm_write (csl_trace_handle, st, ch, 1, *data);
-        data++;
-        len--;
-    }
-
-    return CSL_TRACE_OK;
-}
-#endif /* CNEON_COMMON */
-
-
 static void csl_trace_set_stm_en( UInt8 bit_mask, Boolean set )
 {
     UInt32 reg_high, reg_low;
@@ -1424,22 +1281,4 @@ static void csl_trace_set_stm_sw( UInt8 bit_mask, Boolean set )
 
 #endif // (CSL_TRACE_STM_SUPPORT)
 
-#ifdef UNDER_LINUX
-
-int csl_StmSendBytes(void *data_ptr, int length)
-{
-    UInt8 trace_type = 0x72; //make it configurable
-    UInt8 channel = 8;
-    UInt8 termination= 0;
-
-    // send trace type to start STM message
-    csl_trace_stm_write (channel, FALSE, 1, &trace_type);
-    csl_trace_stm_write (channel, FALSE, length, data_ptr);
-    csl_trace_stm_write (channel, TRUE, 1, &termination);
-    
-    return length;
-}
-
 arch_initcall(csl_trace_init);
-
-#endif

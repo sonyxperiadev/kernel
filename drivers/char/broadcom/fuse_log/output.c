@@ -25,6 +25,7 @@
 #include <linux/types.h>
 #include <linux/time.h>
 #include <linux/rtc.h>
+#include <trace/stm.h>
 #include "plat/mobcom_types.h"
 #include "bcmlog.h"
 #include "fifo.h"
@@ -35,9 +36,6 @@
  *	extern declarations
  */
 extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks *_cb) ;
-#if defined(CONFIG_ARCH_RHEA)
-extern int csl_StmSendBytes(void *data_ptr, int length);
-#endif
 
 static int acm_start_cb( void ) ;
 static int acm_stop_cb( void ) ;
@@ -268,8 +266,10 @@ static void WriteToLogDev_STM( void )
 
 	if( nFifo > 0 )
 	{
-#if defined(CONFIG_ARCH_RHEA)
-		nWrite = csl_StmSendBytes(BCMLOG_FifoGetData( &g_fifo ), nFifo);
+#if defined(CONFIG_STM_TRACE)
+#define FUSE_LOG_CHANNEL	8
+		nWrite = stm_trace_buffer_onchannel(FUSE_LOG_CHANNEL,
+				BCMLOG_FifoGetData( &g_fifo ), nFifo);
 #endif
 		BCMLOG_FifoRemove( &g_fifo, nWrite ) ;
 			
