@@ -16,11 +16,11 @@
  * Frameworks:
  *
  *    - SMP:          Fully supported.    Locking is in place where necessary.
- *    - GPIO:         Fully supported.    GPIOs reserved and released
+ *    - GPIO:         Not applicable.     No GPIOs used.
  *    - MMU:          Fully supported.    Platform model with ioremap used (mostly).
- *    - Dynamic /dev: Not applicable.
+ *    - Dynamic /dev: Not applicable.     Use Linux input sub-system.
  *    - Suspend:      Implemented.        Suspend and resume are implemented and should work.
- *    - Clocks:       Not done.           Awaiting clock framework to be completed.
+ *    - Clocks:       Fully supported.    Uses gpiokp clock.
  *    - Power:        Not done.
  *
  */
@@ -37,6 +37,7 @@
 #include <linux/io.h>
 #include <linux/gpio.h>
 #include <linux/island_keypad.h>
+#include <linux/clk.h>
 
 #include <mach/rdb/brcm_rdb_keypad.h>
 
@@ -402,6 +403,8 @@ typedef struct
 
     /* board dependent platform data */
     struct KEYPAD_DATA plat_data;
+
+    struct clk *clock;
 
     /* power off control */
     PWROFF_CTRL pwroff_ctrl;
@@ -829,6 +832,13 @@ static int __devinit keypad_probe(struct platform_device *pdev)
         goto err_keypad_shutdown;
     }
 
+    blkp->clock = clk_get(&pdev->dev, datap->clock);
+    if (blkp->clock < 0)
+    {
+        rc = -ENXIO;
+        goto err_keypad_shutdown;
+    }
+
     /* Interrupts are disabled and cleared during init */
     chal_keypad_init(blkp->regBaseAddr, &config);
 
@@ -851,6 +861,7 @@ static int __devinit keypad_probe(struct platform_device *pdev)
         goto err_keypad_shutdown;
     }
 
+    clk_enable(blkp->clock);
     printk(KERN_INFO "Keypad: driver initialized properly");
 
     /* now enable interrupts on keys that are defined in the keymap */
@@ -878,7 +889,9 @@ static int __devexit  keypad_remove(struct platform_device *pdev)
 {
    KEYPAD_BLK *blkp = platform_get_drvdata(pdev);
 
-   /* disable interrupts */
+   clk_disable(blkp->clock);
+
+    /* disable interrupts */
    chal_keypad_interrupt_disable_all(blkp->regBaseAddr);
 
    /* free the interrupt line */
@@ -893,6 +906,8 @@ static int __devexit  keypad_remove(struct platform_device *pdev)
    input_unregister_device(blkp->input);
    input_free_device(blkp->input);
 
+   clk_put(blkp->clock);
+
    platform_set_drvdata(pdev, NULL);
 
    return 0;
@@ -905,7 +920,8 @@ static int keypad_suspend(struct platform_device *pdev, pm_message_t state)
 
    atomic_set(&blkp->suspended, 1);
 
-   /* TODO: add more suspend support in the future */
+    clk_disable(blkp->clock);
+  /* TODO: add more suspend support in the future */
    return 0;
 }
 
@@ -915,6 +931,8 @@ static int keypad_resume(struct platform_device *pdev)
    KFIFO_CTRL *kfifo = &blkp->kfifo_ctrl;
    unsigned int i;
    unsigned long flags;
+
+   clk_enable(blkp->clock);
 
    /*
     * Need to protect the prev_status bitmask as it's also modified in the

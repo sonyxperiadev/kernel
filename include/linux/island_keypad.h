@@ -3,6 +3,8 @@
 
 #if defined(CONFIG_KEYBOARD_ISLAND)
 
+#include <linux/clk.h>
+
 /*
  * Keypad mapping
  */
@@ -33,6 +35,8 @@ struct KEYPAD_DATA
     /* key sets for powering off (reboot) Linux */
     unsigned int *pwroff;
     unsigned int pwroff_cnt;
+
+    const char *clock;
 };
 
 #endif

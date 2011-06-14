@@ -218,6 +218,10 @@ DECLARE_BUS_CLK(audioh_2p4m, AUDIOH, AUDIOH_2P4M, khub_ccu, HUB, KHUB,
 	2400*CLOCK_1K,  2400*CLOCK_1K, 2400*CLOCK_1K, 24*CLOCK_1K,
 	2400*CLOCK_1K, 24*CLOCK_1K, 2400*CLOCK_1K, CLOCK_UNUSED);
 
+DECLARE_BUS_CLK(gpiokp_apb,  GPIOKP , GPIOKP_APB,  khubaon_ccu, AON, KHUBAON,
+                26*CLOCK_1M, 52*CLOCK_1M, CLOCK_UNUSED, 52*CLOCK_1M,
+                78*CLOCK_1M, CLOCK_UNUSED);
+
 /*****************************************************************************
 	Peripheral clocks
 *****************************************************************************/
@@ -532,6 +536,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(dmac_mux_apb),
 	CLK_LK(ssp0_apb),
 	CLK_LK(pwm_apb),
+	CLK_LK(gpiokp_apb),
 	CLK_LK(apb1),
 	CLK_LK(apb2),
 

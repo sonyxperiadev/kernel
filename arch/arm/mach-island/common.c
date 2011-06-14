@@ -175,6 +175,7 @@ static struct KEYPAD_DATA board_keypad_param =
     .keymap_cnt  = ARRAY_SIZE(board_keypad_keymap),
     .pwroff      = board_keypad_pwroff,
     .pwroff_cnt  = ARRAY_SIZE(board_keypad_pwroff),
+    .clock       = "gpiokp_apb_clk",
 };
 
 static struct resource keypad_device_resource[] = {
