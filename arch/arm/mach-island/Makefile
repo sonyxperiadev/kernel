@@ -25,6 +25,8 @@ obj-$(CONFIG_MACH_ISLAND_FF) += board_ff.o pinmux_island_ff.o
 obj-$(CONFIG_MAP_SDMA) += chal/
 obj-$(CONFIG_MAP_SDMA) += sdmac.o dma_mmap.o dump-mem.o dma_mmap_test.o
 
+obj-$(CONFIG_IPC) += chal/
+
 obj-$(CONFIG_MACH_ISLAND_BASE) += board_base.o
 CFLAGS_board_base.o += -Iarch/arm/mach-island/hw_cfg/BASE
 

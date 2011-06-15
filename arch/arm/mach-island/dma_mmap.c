@@ -1132,7 +1132,7 @@ int dma_mmap_unmap
          case DMA_MMAP_TYPE_DMA:
          case DMA_MMAP_TYPE_KMALLOC:
          {
-             //BUG_ON( region->numSegmentsUsed == 1 );
+            BUG_ON( region->numSegmentsUsed != 1 );
 
             /*
              * On the ARM, dma_unmap_single does nothing, which is fine for
