@@ -726,6 +726,14 @@ typedef union hwcfg3_data {
 		unsigned synch_reset_type:1;
 		unsigned adp_supp:1;
 		unsigned otg_enable_hsic:1;
+		/* The "otg_ver_support" field is mis-named. The databook
+		 * describes this as "OTG_BC_SUPPORT", and indicates
+		 * whether or not Battery Charger support has been enabled
+		 * in the core. If it is set, then it does imply that the
+		 * OTG version has to be 2.0. However if it is not set,
+		 * it does not imply OTG 1.3. A case has been filed with
+		 * Synopsys for this and a STAR created.
+		 */
 		unsigned otg_ver_support:1;
 		unsigned otg_lpm_en:1;
 		unsigned dfifo_depth:16;

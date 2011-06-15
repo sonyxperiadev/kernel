@@ -2370,6 +2370,23 @@ void dwc_otg_pcd_remote_wakeup(dwc_otg_pcd_t * pcd, int set)
 	return;
 }
 
+void dwc_otg_pcd_disconnect(dwc_otg_pcd_t *pcd, int enable)
+{
+	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
+	dctl_data_t dctl = { 0 };
+
+	if (dwc_otg_is_device_mode(core_if)) {
+		dctl.d32 = dwc_read_reg32(&core_if->dev_if->dev_global_regs->dctl);
+		dctl.b.sftdiscon = enable ? 1 : 0;
+		dwc_write_reg32(&core_if->dev_if->dev_global_regs->dctl, dctl.d32);
+		DWC_PRINTF("Soft disconnect %s\n", enable ? "enabled" : "disabled" );
+	} else{
+		DWC_PRINTF("NOT SUPPORTED IN HOST MODE\n");
+	}
+	return;
+
+}
+
 void dwc_otg_pcd_disconnect_us(dwc_otg_pcd_t *pcd, int no_of_usecs)
 {
 	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);

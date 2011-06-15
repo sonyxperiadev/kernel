@@ -54,6 +54,12 @@
 #include <net_settings.h>
 #endif
 
+#if defined(CONFIG_MAX3353) || defined(CONFIG_MAX3353_MODULE)
+#include <otg_settings.h>
+#include <linux/i2c/max3353.h>
+#endif
+
+
 #include "island.h"
 #include "common.h"
 
@@ -102,6 +108,8 @@
 #define USBH_CTRL_REG_OFFSET       0x8000
 #define USBH_CTRL_BASE_ADDR        (EHCI_BASE_ADDR + USBH_CTRL_REG_OFFSET)
 #define USBH_CTRL_CORE_REG_SIZE    0x20
+
+#define OTG_CTRL_CORE_REG_SIZE     0x100
 
 static struct resource sdio0_resource[] = {
 	[0] = {
@@ -369,6 +377,42 @@ static struct i2c_board_info egalax_i2c_boardinfo[] =
 };
 #endif
 
+#if defined(CONFIG_MAX3353) || defined(CONFIG_MAX3353_MODULE)
+static struct max3353_platform_data max3353_info = {
+	.mode = HW_OTG_MAX3353_MODE,
+};
+
+static struct i2c_board_info max3353_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO(MAX3353_DRIVER_NAME, MAX3353_I2C_ADDR_BASE),
+		.platform_data  = &max3353_info,
+	},
+};
+#endif
+
+#if defined(CONFIG_KONA_OTG_CP) || defined(CONFIG_KONA_OTG_CP_MODULE)
+static struct resource otg_cp_resource[] = {
+	[0] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + OTG_CTRL_CORE_REG_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_USB_OTG_DRV_VBUS,
+		.end = BCM_INT_ID_USB_OTG_DRV_VBUS,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device otg_cp_device =
+{
+	.name = "kona-otg-cp",
+	.id = -1,
+	.resource = otg_cp_resource,
+	.num_resources = ARRAY_SIZE(otg_cp_resource),
+};
+#endif
+
 static void __init add_sdio_device(void)
 {
    unsigned int i, id, num_devices;
@@ -489,6 +533,27 @@ static void __init add_usbh_device(void)
 	platform_device_register(&usbh_ohci_device);
 }
 
+static void __init add_usb_otg_device(void)
+{
+#if defined(CONFIG_KONA_OTG_CP) || defined(CONFIG_KONA_OTG_CP_MODULE)
+	platform_device_register(&otg_cp_device);
+#endif
+
+#if defined(CONFIG_MAX3353) || defined(CONFIG_MAX3353_MODULE)
+#ifdef HW_OTG_MAX3353_I2C_BUS_ID
+	max3353_info.id = HW_OTG_MAX3353_I2C_BUS_ID;
+#else
+	max3353_info.id = -1;
+#endif
+#ifdef HW_OTG_MAX3353_GPIO_INT
+	max3353_info.irq_gpio_num = HW_OTG_MAX3353_GPIO_INT;
+#else
+	max3353_info.irq_gpio_num = -1;
+#endif
+	i2c_register_board_info(max3353_info.id, max3353_i2c_boardinfo, ARRAY_SIZE(max3353_i2c_boardinfo));
+#endif
+}
+
 static void __init add_devices(void)
 {
 #ifdef HW_SDIO_PARAM
@@ -500,6 +565,7 @@ static void __init add_devices(void)
 #endif
 
 	add_usbh_device();
+	add_usb_otg_device();
 
 #ifdef CONFIG_NET_ISLAND
 	platform_device_register(&net_device);
