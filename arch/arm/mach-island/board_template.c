@@ -33,10 +33,12 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
-#include <mach/hardware.h>
 
+#include <mach/hardware.h>
 #include <mach/irqs.h>
 #include <mach/kona.h>
+#include <mach/dma_mmap.h>
+#include <mach/sdma.h>
 #include <mach/sdio_platform.h>
 #include <mach/usbh_cfg.h>
 
@@ -508,6 +510,10 @@ static void __init add_devices(void)
 
 static void __init board_init(void)
 {
+#ifdef CONFIG_MAP_SDMA
+	dma_mmap_init();
+	sdma_init();
+#endif
 	/*
 	 * Add common platform devices that do not have board dependent HW
 	 * configurations
