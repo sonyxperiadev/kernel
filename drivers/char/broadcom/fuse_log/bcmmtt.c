@@ -18,6 +18,7 @@
 //#include <timer.h>
 
 #include "bcmmtt.h"
+#include "bcmlog.h"
 
 //extern unsigned int timer_get_tick_count(void);
 extern unsigned int timer_get_msec(void);
@@ -31,6 +32,9 @@ static const unsigned char MTTLOG_MttVersion	= 1 ;		///<	MTT version
 static const int           MTTLOG_NumFrameBytes = 15 ;		///<	number of frame (overhead) bytes
 static const int		   MTTLOG_FrameLenByte0 = 10 ;		///<	index of length byte 0
 static const int		   MTTLOG_FrameLenByte1 = 11 ;		///<	index of length byte 1
+
+static unsigned char cp_crash_frame_counter = 0;
+
 
 /**
  *	return length of null-terminated string
@@ -100,7 +104,12 @@ int BCMMTT_MakeMTTSignalHeader( unsigned short inPayloadSize, unsigned char* out
 
 	*pHbuf++ = MTTLOG_FrameSync0;
 	*pHbuf++ = MTTLOG_FrameSync1;
-	pHbuf++;
+
+	if (CpCrashDumpInProgress())
+		*pHbuf++ = cp_crash_frame_counter++;
+	else
+		pHbuf++;
+
 	*pHbuf++ = MTTLOG_MttVersion;
 	*pHbuf++ = trace_time_stamp>>24;
 	*pHbuf++ = (trace_time_stamp>>16)&0xFF;
@@ -112,6 +121,11 @@ int BCMMTT_MakeMTTSignalHeader( unsigned short inPayloadSize, unsigned char* out
 	*pHbuf++ = inPayloadSize>>8;
 	*pHbuf++ = inPayloadSize & 0xFF;
 	// done at logging driver to assure sequential increase of 
+	if (CpCrashDumpInProgress())
+	{
+		*pHbuf++ = MTTLOG_Checksum16( outFrameHdrBuf, 12 );
+	}
+	else
 	pHbuf++;
 
 	return (int)(pHbuf - outFrameHdrBuf);
@@ -150,7 +164,10 @@ int BCMMTT_FrameString( char* p_dest, const char* p_src, int buflen )
 
 	*pSbuf++ = MTTLOG_FrameSync0;
 	*pSbuf++ = MTTLOG_FrameSync1;
-	pSbuf++;
+	if (CpCrashDumpInProgress())
+		*pSbuf++ = cp_crash_frame_counter++;
+	else
+		pSbuf++;
 	*pSbuf++ = MTTLOG_MttVersion;
 
 	*pSbuf++ = ( systime >> 24 )        ;
@@ -164,7 +181,13 @@ int BCMMTT_FrameString( char* p_dest, const char* p_src, int buflen )
 	*pSbuf++ = slen >> 8 ;
 	*pSbuf++ = slen & 0xFF ;
 	
-	pSbuf++;
+	if (CpCrashDumpInProgress())
+	{
+		n = pSbuf - p_dest ;
+		*pSbuf++ = MTTLOG_Checksum16((unsigned char*)p_dest, n );
+	}
+	else
+		pSbuf++;
 
 	while (*p_src)
 	{

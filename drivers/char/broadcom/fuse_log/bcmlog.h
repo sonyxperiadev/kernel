@@ -53,6 +53,7 @@ extern "C"
 #define BCMLOG_LOG_ULOGGING_ID	1000		///<	Android unified logging (e.g., printk logging)
 #define BCMLOG_ANDROID_KRIL_BASIC	1001		///<Android KRIL logging for basic information
 #define BCMLOG_ANDROID_KRIL_DETAIL	1002		///<Android KRIL logging for detail information
+#define BCMLOG_MAX_ASCII_STRING_LENGTH 256	//MTT limit ASCII size to be 256
 
 /**
  *	miscellaneous definitions
@@ -194,6 +195,13 @@ void BCMLOG_HandleCpCrashMemDumpData( const char* address, int size );
  *
 **/
 void BCMLOG_LogCPCrashDumpString( const char* inLogString );
+
+/**
+ *	Check for CP crash dump in progres
+ *	@return	non-zero if CP crash dump in progress, else zero
+ **/
+int CpCrashDumpInProgress( void );
+
 
 /**
  *	Logging output devices.  
