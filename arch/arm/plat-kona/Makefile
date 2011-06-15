@@ -18,9 +18,7 @@ obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
 obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o
 obj-$(CONFIG_USB_GADGET_DWC_OTG) += lm.o 
 obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o 
-ifneq ($(CONFIG_ARCH_SAMOA),y)
 obj-$(CONFIG_HAVE_CLK) += clock.o
-endif
 obj-$(CONFIG_MACH_RHEA_RAY) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY) += csl/
 obj-$(CONFIG_MACH_SAMOA_RAY) += chal/

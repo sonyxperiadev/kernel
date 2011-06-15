@@ -100,6 +100,7 @@ Jian: to update for Samoa
 #define KONA_SYSTEM_SWITCH_VA       HW_IO_PHYS_TO_VIRT( SYSSWITCH_BASE_ADDR )       /* System switch  */
 #define KONA_SYSTMR_VA              HW_IO_PHYS_TO_VIRT( TIMER_BASE_ADDR )           /* SYSTEM TIMER */
 #define KONA_TMR_HUB_VA             HW_IO_PHYS_TO_VIRT( HUB_TIMER_BASE_ADDR )       /* Hub timer */
+#define KONA_HUB_CLK_VA             HW_IO_PHYS_TO_VIRT( HUB_CLK_BASE_ADDR )			/* Hub Clock */
 #define KONA_TZCFG_VA               HW_IO_PHYS_TO_VIRT( TZCFG_BASE_ADDR )
 #define KONA_UART0_VA               HW_IO_PHYS_TO_VIRT( UARTB_BASE_ADDR )           /* UART 0 */
 #define KONA_UART1_VA               HW_IO_PHYS_TO_VIRT( UARTB2_BASE_ADDR )          /* UART 1 */
@@ -109,15 +110,15 @@ Jian: to update for Samoa
 
 #define KONA_BINTC_BASE_ADDR        HW_IO_PHYS_TO_VIRT( BINTC_BASE_ADDR )           /* BModem Int Ctrlr Base Address */
 
-#define KONA_SMI_VA		    HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */	
+#define KONA_SMI_VA		    		HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */	
 
-#define KONA_MM_CLK_VA		    HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */	
+#define KONA_MM_CLK_VA		    	HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */	
+#define KONA_PROC_CLK_VA			HW_IO_PHYS_TO_VIRT( PROC_CLK_BASE_ADDR )		/* Processor Clock Manager */
+#define KONA_MM_TECTL_VA	    	HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
 
-#define KONA_MM_TECTL_VA	    HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
+#define KONA_MM_DMA_VA		   	 	HW_IO_PHYS_TO_VIRT( MM_DMA_BASE_ADDR )
 
-#define KONA_MM_DMA_VA		    HW_IO_PHYS_TO_VIRT( MM_DMA_BASE_ADDR )
-
-#define KONA_PWRMGR_VA		    HW_IO_PHYS_TO_VIRT( PWRMGR_BASE_ADDR )
+#define KONA_PWRMGR_VA		    	HW_IO_PHYS_TO_VIRT( PWRMGR_BASE_ADDR )
 
 #define KONA_PMU_PMU_VA		    HW_IO_PHYS_TO_VIRT( PMU_PMU_BASE_ADDR )
 
