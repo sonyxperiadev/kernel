@@ -40,6 +40,11 @@ endchoice
 config MAP_SDMA
 	bool "MAP SDMA and Memory Map"
 	help
-	  Support for the SDMA driver and its memory map utilities. 
+	  Support for the SDMA driver and its memory map utilities.
+
+config IPC
+	bool "Inter-Processor Communication (IPC)"
+	help
+	  Support for IPC.
 
 endmenu
