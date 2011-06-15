@@ -3,8 +3,6 @@
 
 #if defined(CONFIG_KEYBOARD_KONA)
 
-#include <linux/clk.h>
-
 /*
  * Keypad mapping
  */
