@@ -629,6 +629,9 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_POWER)
 		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-power");
 
+	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_USB_OTG)
+		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm_otg");
+
 	if (ret) {
 		pr_info("%s: Some sub device registration failed\n", __func__);
 		return ret;

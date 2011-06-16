@@ -180,7 +180,7 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	.init = bcm590xx_init_platform_hw,
 	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
 	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC | BCM590XX_ENABLE_ADC |
-	BCM590XX_ENABLE_FUELGAUGE,
+	BCM590XX_ENABLE_FUELGAUGE | BCM590XX_ENABLE_USB_OTG,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
