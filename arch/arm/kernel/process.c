@@ -220,6 +220,7 @@ void cpu_idle(void)
 
 	/* endless idle loop with no priority at all */
 	while (1) {
+		idle_notifier_call_chain(IDLE_START);
 		tick_nohz_idle_enter();
 		rcu_idle_enter();
 		ledtrig_cpu(CPU_LED_IDLE_START);
@@ -256,6 +257,7 @@ void cpu_idle(void)
 		ledtrig_cpu(CPU_LED_IDLE_END);
 		rcu_idle_exit();
 		tick_nohz_idle_exit();
+		idle_notifier_call_chain(IDLE_END);
 		schedule_preempt_disabled();
 	}
 }
