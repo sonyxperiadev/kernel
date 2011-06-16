@@ -14,11 +14,11 @@
 #ifndef CHAL_ICD_H__
 #define CHAL_ICD_H__
 
-#include <mach/csp/chal_types.h>
-#include <mach/csp/chal_defs.h>
-#include <csp/chal_int.h>
-#include <mach/csp/chal_common.h>
-#include <mach/csp/mm_io.h>
+#include <plat/chal/chal_types.h>
+#include <chal/bcmerr.h>
+#include <chal/chal_int.h>
+#include <plat/chal/chal_common.h>
+//#include <mach/csp/mm_io.h>
 
 #ifdef __cplusplus
 extern "C" {

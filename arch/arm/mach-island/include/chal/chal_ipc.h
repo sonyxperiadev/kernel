@@ -23,6 +23,7 @@ extern "C" {
 /* include file declarations */
 #include <plat/chal/chal_types.h>
 #include <plat/chal/chal_common.h>
+#include <chal/bcmerr.h>
 
 /******************************************************************************/
 /* macro declarations */
@@ -31,12 +32,6 @@ extern "C" {
 
 /******************************************************************************/
 /* typedef declarations */
-
-typedef enum{
-         BCM_SUCCESS = 0,
-         BCM_ERROR   = -1
-} BCM_ERR_CODE;
-
 
 typedef void* CHAL_IPC_HANDLE;
 
