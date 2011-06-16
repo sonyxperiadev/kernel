@@ -26,14 +26,6 @@
 #include <asm/memory.h>
 #include <mach/dma_mmap.h>
 
-#ifndef CONSISTENT_END
-#define CONSISTENT_END  (0xffe00000)
-#endif
-
-#ifndef CONSISTENT_BASE
-#define CONSISTENT_BASE (CONSISTENT_END - CONSISTENT_DMA_SIZE)
-#endif
-
 #define MAX_PROC_BUF_SIZE    256
 #define PROC_PARENT_DIR      "dma_mmap"
 #define PROC_ENTRY_DEBUG     "debug"
