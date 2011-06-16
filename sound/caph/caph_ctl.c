@@ -316,25 +316,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 			{	
 				// save the mode first. We should have a spk to mode conversion to handle WB modes.
 				AUDCTRL_SaveAudioModeFlag(pSel[1]);
-			
-				//enable voice call with sink
-				switch(pSel[0])
-				{
-					case AUDCTRL_MIC_MAIN:
-					{
-						//route voice call to earpiece or IHF
-						if(pSel[1] == AUDCTRL_SPK_HANDSET)
-							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],AUDCTRL_SPK_HANDSET);
-						else if(pSel[1] == AUDCTRL_SPK_LOUDSPK)
-							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],AUDCTRL_SPK_LOUDSPK);
-					}
-					break;
-					case AUDCTRL_MIC_AUX:
-					{
-						AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
-					}
-					break;
-				}
+				AUDCTRL_SetTelephonyMicSpkr(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
 			 }
 			break;
 		default:
@@ -764,7 +746,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
 			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
-			.strStreamName = "VO",
+			.strStreamName = "VD",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
@@ -777,7 +759,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 			.ctlLine = BCM_CTL_SRC_LINES,
 		},
 
-		//VOIP In
+		//Speech In
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
 			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
@@ -785,6 +767,15 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 			.strStreamName = "C2",
 			.ctlLine = BCM_CTL_SRC_LINES,
 		},
+		//VOIP In
+		{
+			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
+			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
+			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
+			.strStreamName = "VU",
+			.ctlLine = BCM_CTL_SRC_LINES,
+		},
+		
 		//Voice call
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CALL,
