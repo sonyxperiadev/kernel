@@ -19,18 +19,13 @@
 *   @brief  This file implements RPC system api functions
 *
 ****************************************************************************/
-#ifndef UNDER_LINUX
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h> /* for strlen */
-#endif
 #include "mobcom_types.h"
 #include "rpc_global.h"
 
 #include "resultcode.h"
 #include "taskmsgs.h"
-#include <linux/broadcom/ipcinterface.h>
-#include <linux/broadcom/ipcproperties.h>
+#include "ipcinterface.h"
+#include "ipcproperties.h"
 
 #include "rpc_ipc.h"
 #include "xdr_porting_layer.h"
@@ -38,10 +33,8 @@
 #include "rpc_api.h"
 #include "rpc_internal_api.h"
 #include "rpc_ipc.h"
-#ifndef UNDER_LINUX
-#include "xassert.h"
-#include "logapi.h"
-#endif
+
+
 
 RPC_FlowControlCallbackFunc_t*	stFlowControlCb = NULL;
 RpcProcessorType_t	gProcessorType = RPC_APPS;
@@ -181,18 +174,19 @@ RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params)
 
 	gClientMap[clientIndex] = *params;
 
-	RPC_PACKET_RegisterDataInd(0, (PACKET_InterfaceType_t)(gClientMap[clientIndex].iType), RPC_BufferDelivery, params->flowCb);
+	userClientID = SYS_GenClientID();
+
+	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient index=%d userClientID=%d", clientIndex, userClientID));
+
+	RPC_PACKET_RegisterDataInd(userClientID, (PACKET_InterfaceType_t)(gClientMap[clientIndex].iType), RPC_BufferDelivery, params->flowCb);
 
 	rpc_internal_xdr_init();
 	rpc_register_xdr(clientIndex, params->xdrtbl, params->table_size);
 
-	userClientID = SYS_GenClientID();
 
 	gClientIDs[userClientID] = clientIndex;
 	gClientIDMap[clientIndex] = userClientID;
 	gClientLocalMap[clientIndex].notifyUnsolicited = FALSE;
-
-	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient index=%d userClientID=%d", clientIndex, userClientID));
 
 	return (RPC_Handle_t)clientIndex;
 }
@@ -256,14 +250,44 @@ Boolean RPC_RegisterUnsolicitedMsgs(RPC_Handle_t handle, const UInt16 *msgIds, U
 	return rpc_lookup_set_mask(msgIds, listSize, RPC_XDR_INFO_MASK_UNSOLICITED);
 }
 
+Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle)
+{
+	Boolean ret = FALSE;
+
+	UInt8 xdrReqClient = RPC_PACKET_GetContext(INTERFACE_CAPI2, dataBufHandle);
+	UInt16 msgId = RPC_PACKET_GetContextEx(INTERFACE_CAPI2, dataBufHandle);
+	Boolean isValid = RPC_IsValidMsg((MsgType_t)msgId);
+	UInt8 clientHandle = RPC_SYS_GetClientHandle(channel);
+	UInt8 clientAckHandle = RPC_SYS_GetClientHandle(xdrReqClient);
+
+	if( msgId == MSG_CAPI2_ACK_RSP)
+	{
+		ret = (xdrReqClient > 0 && clientAckHandle > 0);
+	}
+	else if(msgId == MSG_AT_COMMAND_IND)
+	{
+		ret = FALSE;
+	}
+	else
+	{
+		if(channel > 0)
+			ret = (clientHandle != 0);
+		else
+			ret = isValid;
+	}
+	
+	_DBG_(RPC_TRACE("RPC_IsRegisteredClient[ret=%d] ch=%d xdrClient=%d msgId=0x%x validMsg=%d validClient=%d validAckClient=%d", ret, channel, xdrReqClient, msgId, isValid, clientHandle, clientAckHandle));
+	return ret;
+}
+
 UInt8 GetClientIndex(ResultDataBuffer_t* pDataBuf, Boolean* isUnsolicited)
 {
 	RPC_Msg_t* pMsg = &(pDataBuf->rsp.rootMsg);
 	//coverity[var_decl], entry will be initialized in the function rpc_fast_lookup() below
 	RPC_InternalXdrInfo_t entry;
-	bool_t ret;
+	bool_t ret = 0;
 	UInt8 index;
-
+	
 	*isUnsolicited = FALSE;
 
 	//Check if message is unsolicited
@@ -281,12 +305,12 @@ UInt8 GetClientIndex(ResultDataBuffer_t* pDataBuf, Boolean* isUnsolicited)
 
 	//Lookup index on registered clients
 	index = gClientIDs[pMsg->clientID];
-
+	
 	if(index > 0 && index < MAX_RPC_CLIENTS)
 		return index;
-
+	
 	index = 0;
-
+	
 	if(pDataBuf->rsp.rootMsg.msgId == MSG_CAPI2_ACK_RSP)
 	{
 		index = pDataBuf->rsp.clientIndex;
@@ -294,8 +318,8 @@ UInt8 GetClientIndex(ResultDataBuffer_t* pDataBuf, Boolean* isUnsolicited)
 	else
 	{
 		//Lookup clientIndex based on XDR table registered client
-	if(ret && entry.clientIndex < MAX_RPC_CLIENTS)
-	{
+		if(ret && entry.clientIndex < MAX_RPC_CLIENTS)
+		{
 			index = entry.clientIndex;
 	}
 	}
@@ -310,7 +334,7 @@ void RPC_DispatchMsg(ResultDataBuffer_t* pDataBuf)
 	int i;
 	
 	pDataBuf->refCount = 1;//set
-
+	
 	//Handle Ack first
 	if(pMsg->msgId == MSG_CAPI2_ACK_RSP)
 	{
@@ -326,7 +350,7 @@ void RPC_DispatchMsg(ResultDataBuffer_t* pDataBuf)
 	else
 	{
 		clientIndex = GetClientIndex(pDataBuf, &isUnsolicited);
-
+		
 		if(pDataBuf->rsp.msgType == RPC_TYPE_REQUEST)
 		{
 			if(gClientMap[clientIndex].reqCb != NULL)
@@ -337,13 +361,13 @@ void RPC_DispatchMsg(ResultDataBuffer_t* pDataBuf)
 		else //RPC_TYPE_RESPONSE
 		{
 			if(clientIndex > 0 && (pMsg->tid != 0 || pMsg->clientID != 0) && !(isUnsolicited))
-		{
-				_DBG_(RPC_TRACE_INFO("RPC_DispatchMsg Unicast msgId=0x%x cIndex=%d tid=%d cid=%d unsol=%d", pMsg->msgId, clientIndex, pMsg->tid, pMsg->clientID, isUnsolicited));
-			if(gClientMap[clientIndex].respCb != NULL)
 			{
-				(gClientMap[clientIndex].respCb)(pMsg, (ResultDataBufHandle_t)pDataBuf,gClientMap[clientIndex].userData);
+				_DBG_(RPC_TRACE_INFO("RPC_DispatchMsg Unicast msgId=0x%x cIndex=%d tid=%d cid=%d unsol=%d", pMsg->msgId, clientIndex, pMsg->tid, pMsg->clientID, isUnsolicited));
+				if(gClientMap[clientIndex].respCb != NULL)
+				{
+					(gClientMap[clientIndex].respCb)(pMsg, (ResultDataBufHandle_t)pDataBuf,gClientMap[clientIndex].userData);
+				}
 			}
-		}
 			else if((pMsg->tid == 0 && pMsg->clientID == 0) || isUnsolicited)//unsolicited
 			{
 				UInt32 numClients = 0;

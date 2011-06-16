@@ -19,33 +19,23 @@
 *   @brief  This file interface with IPC interface
 *
 ****************************************************************************/
-#ifndef UNDER_LINUX
-#include "string.h"
-#include "stdio.h"
-#endif
-#include "xassert.h"
+
+
 #include "mobcom_types.h"
 #include "rpc_global.h"
-#ifndef UNDER_LINUX
-#include <linux/broadcom/ipcinterface.h>
-#include <linux/broadcom/ipcproperties.h>
-#else
-#include <linux/module.h>
-#define CSL_TYPES_H
-#include <linux/broadcom/ipcinterface.h>
-#include <linux/broadcom/ipcproperties.h>
-#endif
+#include "ipcinterface.h"
+#include "ipcproperties.h"
 
 #include "rpc_ipc.h"
 #include "rpc_ipc_config.h"
-#ifdef UNDER_LINUX
-#include "xdr_porting_layer.h"
-#else
 #include "consts.h"
+#ifdef LINUX_RPC_KERNEL
+#include <linux/module.h>
+#define CSL_TYPES_H
 #endif
-#if !defined(WIN32) && !defined(UNDER_CE) && !defined(UNDER_LINUX)
-#include "logapi.h"
-#endif
+#if defined(CNEON_COMMON) && defined(FUSE_APPS_PROCESSOR)
+#include "ostask.h"
+#endif /* (CNEON_COMMON) && (FUSE_APPS_PROCESSOR) */
 
 //******************************************************************************
 //	 			Global defines
@@ -64,6 +54,7 @@ typedef struct
 	UInt8			ipc_buf_id[MAX_CHANNELS]; ///< Channel identifier for buffer pool ( cid or call index )
 	RPC_PACKET_DataIndCallBackFunc_t	*pktIndCb;	///< Callback for interface buffer delivery
 	RPC_FlowControlCallbackFunc_t		*flowControlCb; ///< Flow control callback
+	RPC_PACKET_DataIndCallBackFunc_t	*filterPktIndCb;	///< Callback for interface buffer delivery
 }RPC_IPCInfo_t;
 
 typedef struct
@@ -88,8 +79,17 @@ static Int8 rpcGetPoolIndex(PACKET_InterfaceType_t interfaceType, IPC_BufferPool
 static Int8 GetInterfaceType(IPC_EndpointId_T epId);
 static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event);
 static void RPC_BufferDelivery(IPC_Buffer bufHandle);
+Boolean RPC_SetProperty(RPC_PropType_t type, UInt32 value);
 
+#ifdef FUSE_COMMS_PROCESSOR
+#define RPC_PROP_VER						RPC_PROP_CP_VERSION
+#define RPC_REMOTE_PROP_VER					RPC_PROP_AP_VERSION
+#else
+#define RPC_PROP_VER						RPC_PROP_AP_VERSION
+#define RPC_REMOTE_PROP_VER					RPC_PROP_CP_VERSION
+#endif
 
+static UInt32 rpcVer = BCM_RPC_VER;
 //******************************************************************************
 //	 			Packet Data API Implementation
 //******************************************************************************
@@ -101,23 +101,36 @@ RPC_Result_t RPC_PACKET_RegisterDataInd (UInt8 rpcClientID,
 {
 	if (rpcClientID) {} //fixes compiler warnings
 
+	RPC_SetProperty(RPC_PROP_VER, rpcVer);
+
 	if(	dataIndFunc != NULL && interfaceType < INTERFACE_TOTAL)
 	{
-		int i = 0;
 
 		ipcInfoList[interfaceType].isInit = TRUE;
 		ipcInfoList[interfaceType].flowControlCb = flowControlCb;
 		ipcInfoList[interfaceType].pktIndCb = dataIndFunc;
 
-		for(i = 0; i < MAX_CHANNELS; i++)
-		{
-			ipcInfoList[interfaceType].ipc_buf_pool[i] = 0;
-			ipcInfoList[interfaceType].ipc_buf_id[i] = i+1;
-		}
 
 		return RPC_RESULT_OK;
 	}
 	return RPC_RESULT_ERROR;
+}
+
+RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
+									PACKET_InterfaceType_t interfaceType,
+									RPC_PACKET_DataIndCallBackFunc_t dataIndFunc)
+{
+	if (rpcClientID) {} //fixes compiler warnings
+
+	if(	dataIndFunc != NULL && interfaceType < INTERFACE_TOTAL)
+	{
+		ipcInfoList[interfaceType].isInit = TRUE;
+		ipcInfoList[interfaceType].filterPktIndCb = dataIndFunc;
+		return RPC_RESULT_OK;
+	}
+
+	return RPC_RESULT_ERROR;
+
 }
 
 RPC_Result_t RPC_PACKET_SetContext(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle, UInt8 context)
@@ -150,6 +163,34 @@ RPC_Result_t RPC_PACKET_SendData(UInt8 rpcClientID, PACKET_InterfaceType_t inter
 
 	return (ipcError == IPC_OK) ? RPC_RESULT_OK : RPC_RESULT_ERROR;
 }
+
+RPC_Result_t RPC_PACKET_SetContextEx(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle, UInt16 context)
+{
+	UInt8* pBuf = (UInt8*)IPC_BufferHeaderSizeSet((IPC_Buffer)dataBufHandle , 4);
+
+	if(pBuf)
+	{
+		pBuf[2] = (UInt8)(context & 0xFF);
+		pBuf[3] = (UInt8)((UInt16)((context & 0xFF00) >> 8));
+	}
+
+	return (pBuf) ? RPC_RESULT_OK : RPC_RESULT_ERROR;
+}
+
+UInt16 RPC_PACKET_GetContextEx(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle)
+{
+	UInt16 context = 0;
+	UInt8* pBuf = (UInt8*)IPC_BufferHeaderSizeSet((IPC_Buffer)dataBufHandle , 4);
+	
+	if(pBuf)
+	{
+		context = (pBuf[3] << 8);
+		context |= pBuf[2];
+	}
+
+	return context;
+}
+
 
 //******************************************************************************
 //	 			RPC PKT Buffer Management
@@ -399,11 +440,21 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 	IPC_EndpointId_T destId = IPC_BufferDestinationEndpointId(bufHandle);
 	Int8 type = GetInterfaceType(destId);
 
-	if(type != -1 && ipcInfoList[type].pktIndCb != NULL)
-		result = ipcInfoList[type].pktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
-	else
-		_DBG_(RPC_TRACE("RPC_BufferDelivery(%c) FAIL destIP=%d handle=%x",(gRpcProcType == RPC_COMMS)?'C':'A',destId, bufHandle));
+	if(type != -1)
+	{
+		if(ipcInfoList[type].filterPktIndCb != NULL)
+			result = ipcInfoList[type].filterPktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
+		else
+			result = RPC_RESULT_ERROR;
 
+		if(result == RPC_RESULT_ERROR)
+		{
+			if(ipcInfoList[type].pktIndCb != NULL)
+				result = ipcInfoList[type].pktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
+			else
+				_DBG_(RPC_TRACE("RPC_BufferDelivery(%c) FAIL destIP=%d handle=%x",(gRpcProcType == RPC_COMMS)?'C':'A',destId, bufHandle));
+		}
+	}
 
 	if(result != RPC_RESULT_PENDING)
 		IPC_FreeBuffer(bufHandle);
@@ -480,8 +531,6 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t rpcProcType)
 	{
 		IPC_EndpointRegister(IPC_EP_Capi2App,			RPC_FlowCntrl,	RPC_BufferDelivery, 4);
 		IPC_EndpointRegister(IPC_EP_PsAppData,			RPC_FlowCntrl,	RPC_BufferDelivery,4 + PDCP_MAX_HEADER_SIZE);
-//Owen VT test
-//#ifndef UNDER_LINUX
 		IPC_EndpointRegister(IPC_EP_CsdAppCSDData,		RPC_FlowCntrl,	RPC_BufferDelivery,4);
 #ifndef UNDER_LINUX
 #ifndef UNDER_CE //modify for WinMo UDP log
@@ -505,6 +554,10 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 	PACKET_InterfaceType_t itype;
 	Int8 index;
 
+#if defined(CNEON_COMMON) && defined(FUSE_APPS_PROCESSOR)
+	/* wait for CP RPC ready - need to find better way */
+	OSTASK_Sleep(TICKS_ONE_SECOND/10);
+#endif /* (CNEON_COMMON) && (FUSE_APPS_PROCESSOR) */
 	memset(ipcBufList, 0, sizeof(ipcBufList));
 
 	for(itype = INTERFACE_START; itype < INTERFACE_TOTAL;itype++)
@@ -556,7 +609,6 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 		}
 		else if(itype == INTERFACE_CSD)
 		{
-			//#ifndef UNDER_LINUX
 			for(index=0;index < MAX_CHANNELS;index++)
 			{
 				ipcBufList[itype].pkt_size[index]=CFG_RPC_CSDDATA_PKT_SIZE;
@@ -567,7 +619,6 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 			
 			ipcBufList[itype].srcEpId = (rpcProcType == RPC_COMMS)?IPC_EP_CsdCpCSDData:IPC_EP_CsdAppCSDData;
 			ipcBufList[itype].destEpId = (rpcProcType == RPC_COMMS)?IPC_EP_CsdAppCSDData:IPC_EP_CsdCpCSDData;
-			//#endif
 		}
 
 		else if(itype == INTERFACE_LOGGING)

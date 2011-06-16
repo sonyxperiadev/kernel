@@ -203,7 +203,7 @@ static struct file_operations g_file_operations =
  *	Check for CP crash dump in progres
  *	@return	non-zero if CP crash dump in progress, else zero
  **/
-static int CpCrashDumpInProgress( void )
+int CpCrashDumpInProgress( void )
 {
 	return ( g_module.dumping_cp_crash_log ) ? 1 : 0 ;
 }
@@ -586,34 +586,42 @@ static void LogString_Internal( const char* inLogString,
  *	@param	inSender		(in)	ID of sending task
  *
 **/
-void BCMLOG_LogString( const char* inLogString,
+void
+BCMLOG_LogString(const char *inLogString, 
                         unsigned short inSender )
 {
     // ignore logging requests if we're doing a CP 
     // crash dump
 
-	char temp_LogString[512];
-	static int StringLength, j = 0, k = 0;
-	if( !CpCrashDumpInProgress() && BCMLOG_LogIdIsEnabled( inSender ) )
-	{
-       
-		StringLength = strlen (inLogString );
-        	memset(temp_LogString, 0, 512);
-               
-		if ( StringLength >= 512 )
-		{
-			for (j = 0; j < StringLength; j++)
-			{
-				if ( inLogString[j] == '\n')
-				{
-					LogString_Internal( temp_LogString, inSender ) ;
+	char temp_LogString[BCMLOG_MAX_ASCII_STRING_LENGTH];
+	int StringLength, j = 0, k = 0;
+  
+	if (!CpCrashDumpInProgress() && BCMLOG_LogIdIsEnabled(inSender)) {
+
+		StringLength = strlen(inLogString);
+		memset(temp_LogString, 0, BCMLOG_MAX_ASCII_STRING_LENGTH);
+
+		if (StringLength >= BCMLOG_MAX_ASCII_STRING_LENGTH) {
+			for (j = 0; j < StringLength; j++) {
+				if (inLogString[j] == '\n') {
+					LogString_Internal(temp_LogString, inSender);
 					k = 0;
-                                	memset(temp_LogString, 0, 512);                                 
-                        	}
-                        	temp_LogString[k++] = inLogString[j];                           
+					memset(temp_LogString, 0, BCMLOG_MAX_ASCII_STRING_LENGTH);
+				} 
+				temp_LogString[k++] = inLogString[j];
+				if (k == BCMLOG_MAX_ASCII_STRING_LENGTH -1)	{
+					temp_LogString[k] = 0;
+					LogString_Internal(temp_LogString, inSender);
+					k = 0;
+					memset(temp_LogString, 0, BCMLOG_MAX_ASCII_STRING_LENGTH);
+				}
 			}
-        	} else
-        	{
+
+			if (k!=0) {
+				temp_LogString[k] = 0;
+				LogString_Internal(temp_LogString, inSender);
+			}
+		} else {
        			LogString_Internal( inLogString, inSender ) ;
         	}
 	}

@@ -45,6 +45,10 @@ UInt32 TIMER_GetValue(void)
 return 0;
 }
 
+int RpcLog_DetailLogEnabled()
+{
+	return 0;
+}
 
 //JW, to do, hack
 Boolean IsBasicCapi2LoggingEnable(void)

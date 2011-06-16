@@ -146,6 +146,20 @@ UInt32 RPC_SyncCreateTID( void* data, Int32 size );
 **/
 Result_t RPC_SyncWaitForResponse( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* ack, MsgType_t* msgType, UInt32* dataSize );
 
+//**************************************************************************************
+/**
+	Retrieve the response from a RPC function call. Note that this includes the ack result as well.
+	@param		tid (in) Transaction id for request.
+	@param		cid (in) Client id for request
+	@param		ack (out) Ack result for request
+	@param		msgType (out) Message type of response.
+	@param		dataSize (out) Actual data size copied to response data buffer
+	@param		timeout (in) timer value
+	
+	@return Result code of response.
+	
+**/
+Result_t RPC_SyncWaitForResponseTimer( UInt32 tid, UInt8 cid, RPC_ACK_Result_t* ack, MsgType_t* msgType, UInt32* dataSize, UInt32 timeout);
 
 //**************************************************************************************
 /**

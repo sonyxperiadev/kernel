@@ -376,7 +376,7 @@ Boolean RPC_SYS_isValidClientID(UInt8 userClientID);
 Boolean RPC_SYS_BindClientID(RPC_Handle_t handle, UInt8 userClientID);
 
 /** \endcond   */
-
+Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle);
 
 #ifdef __cplusplus
 }

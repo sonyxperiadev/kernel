@@ -504,6 +504,29 @@ struct platform_device kona_stm_device = {
 };
 #endif
 
+#if defined(CONFIG_HW_RANDOM_KONA)
+static struct resource rng_device_resource[] = {
+	[0] = {
+		.start = SEC_RNG_BASE_ADDR,
+		.end   = SEC_RNG_BASE_ADDR + 0x14,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SECURE_TRAP1,
+		.end   = BCM_INT_ID_SECURE_TRAP1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device rng_device =
+{
+	.name			= "kona_rng",
+	.id				= -1,
+	.resource	  = rng_device_resource,
+	.num_resources = ARRAY_SIZE(rng_device_resource),
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -521,6 +544,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
+#endif
+#if defined(CONFIG_HW_RANDOM_KONA)
+	&rng_device,
 #endif
 };
 

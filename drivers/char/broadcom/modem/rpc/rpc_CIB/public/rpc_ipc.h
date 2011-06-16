@@ -55,7 +55,7 @@
 /**
  * @addtogroup RPC_IPCApi
  * @{
- */
+*/
 
 
 //********************************************************************
@@ -110,6 +110,8 @@ typedef enum
 **/
 #define PKT_ALLOC_NOWAIT		 0
 
+#define BCM_RPC_VER	0x00010001
+
 /**
 RPC Flow Control Events
 **/
@@ -141,11 +143,13 @@ typedef enum
  	RPC_PROP_AP_IN_DEEPSLEEP,		///< 1 is deepsleep, 0 otherwise
 	RPC_PROP_ADC_MEASUREMENT,		///< 32bit measurement value
 	RPC_PROP_AP_TASKMSGS_READY,		///< 
+	RPC_PROP_AP_VERSION,		///< 
 	RPC_PROP_END_AP = IPC_PROPERTY_END_AP,
 
 	RPC_PROP_START_CP = IPC_PROPERTY_START_CP,			///< ( CP is Read/Write, AP is Read only )
  	RPC_PROP_CP_IN_DEEPSLEEP,		///< 1 is deepsleep, 0 otherwise
 	RPC_PROP_CP_TASKMSGS_READY,		///< 
+	RPC_PROP_CP_VERSION,		///< 
 	RPC_PROP_END_CP = IPC_PROPERTY_END_CP,
 
 	RPC_MAX_PROP_TYPE = IPC_NUM_OF_PROPERTIES,
@@ -379,6 +383,15 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t ptype);
 RPC_Result_t RPC_IPC_Init(RpcProcessorType_t ptype);
 
 RpcProcessorType_t RPC_GetProcessorType(void);
+
+RPC_Result_t RPC_PACKET_SetContextEx(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle, UInt16 context);
+
+UInt16 RPC_PACKET_GetContextEx(PACKET_InterfaceType_t interfaceType, PACKET_BufHandle_t dataBufHandle);
+
+RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
+									PACKET_InterfaceType_t interfaceType,
+									RPC_PACKET_DataIndCallBackFunc_t dataIndFunc);
+
 
 /** \endcond   */
 

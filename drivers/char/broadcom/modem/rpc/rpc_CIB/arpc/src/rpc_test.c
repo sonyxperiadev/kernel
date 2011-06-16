@@ -12,9 +12,7 @@
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
-#ifndef UNDER_LINUX
 #include "string.h"
-#endif
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"

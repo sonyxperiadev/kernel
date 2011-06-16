@@ -20,31 +20,20 @@
 *	serialize/deserialize.
 *
 ****************************************************************************/
-#ifndef UNDER_LINUX
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h> /* for strlen */
-#endif
-
 #include "mobcom_types.h"
 #include "rpc_global.h"
 
 #include "resultcode.h"
 #include "taskmsgs.h"
-#include <linux/broadcom/ipcinterface.h>
-#include <linux/broadcom/ipcproperties.h>
+#include "ipcinterface.h"
+#include "ipcproperties.h"
 
 #include "rpc_ipc.h"
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 #include "rpc_api.h"
 #include "rpc_internal_api.h"
-#ifndef UNDER_LINUX
 #include "xassert.h"
-#endif
-#if !defined(WIN32) && !defined(UNDER_CE) && !defined(UNDER_LINUX)
-#include "logapi.h"
-#endif
 
 #define MAX_MSG_STREAM_SIZE	2048
 
@@ -53,9 +42,6 @@
 static char log_buf[MAX_LOG_BUFFER_SIZE+100];
 #endif
 
-#ifdef UNDER_LINUX
-extern UInt32 RPC_GetMaxPktSize(PACKET_InterfaceType_t interfaceType, UInt32 size);
-#endif
 
 Result_t RPC_SerializeMsg(RPC_InternalMsg_t* rpcMsg, char* stream, UInt32 streamLen, UInt32 *outLen)
 {
@@ -103,6 +89,7 @@ Result_t RPC_SendMsg(RPC_InternalMsg_t* rpcMsg)
 	PACKET_BufHandle_t bufHandle;
 	//coverity[var_decl], "entry" will be inited in function rpc_fast_lookup()
 	RPC_InternalXdrInfo_t entry;
+	UInt8 cid;
 	UInt32 maxPktSize =0;
 	Result_t result = RESULT_OK;
 
@@ -116,6 +103,7 @@ Result_t RPC_SendMsg(RPC_InternalMsg_t* rpcMsg)
 	if(rpcMsg->msgType == RPC_TYPE_REQUEST)
 	{
 		rpcMsg->clientIndex = entry.clientIndex;
+		rpcMsg->reqXdrClientId = RPC_SYS_GetClientID((RPC_Handle_t)entry.clientIndex); 
 	}
 
 	rpcInterfaceType = RPC_GetInterfaceType((UInt8)entry.clientIndex);
@@ -136,7 +124,17 @@ Result_t RPC_SendMsg(RPC_InternalMsg_t* rpcMsg)
 	result = RPC_SerializeMsg(rpcMsg, stream, maxPktSize, &len);
 
 	RPC_PACKET_SetBufferLength(bufHandle, len);
-	RPC_PACKET_SendData(0, rpcInterfaceType, 0, bufHandle);
+
+	RPC_PACKET_SetContext(rpcInterfaceType, bufHandle, rpcMsg->reqXdrClientId);
+	RPC_PACKET_SetContextEx(rpcInterfaceType, bufHandle, rpcMsg->rootMsg.msgId);
+
+	cid = (rpcMsg->rootMsg.clientID == 0)?0xCD:rpcMsg->rootMsg.clientID;
+
+	RPC_PACKET_SendData(cid, rpcInterfaceType, cid, bufHandle);
+
+
+	_DBG_(RPC_TRACE("RPC_PACKET_SendData clientID=%d", rpcMsg->rootMsg.clientID));
+
 	return result;
 }
 
@@ -145,6 +143,7 @@ Result_t RPC_SerializeReq(RPC_Msg_t* rpcMsg)
 {
 	RPC_InternalMsg_t rpcInMsg;
 
+	memset(&rpcInMsg,0,sizeof(RPC_InternalMsg_t));
 	rpcInMsg.rootMsg = *rpcMsg;
 	rpcInMsg.msgType = RPC_TYPE_REQUEST;
 
@@ -155,6 +154,7 @@ Result_t RPC_SerializeRsp(RPC_Msg_t* rpcMsg)
 {
 	RPC_InternalMsg_t rpcInMsg;
 
+	memset(&rpcInMsg,0,sizeof(RPC_InternalMsg_t));
 	rpcInMsg.rootMsg = *rpcMsg;
 	rpcInMsg.msgType = RPC_TYPE_RESPONSE;
 
@@ -216,24 +216,25 @@ void RPC_SYSFreeResultDataBuffer(ResultDataBufHandle_t dataBufHandle)
 	{
 		--(dataBuf->refCount);
 		if(dataBuf->refCount == 0)
-	    {
-		    /* Free up the memory allocated during deserialization of the pointers */
-		    dataBuf->xdrs.x_op = XDR_FREE;
-		    xdr_RPC_InternalMsg_t( &dataBuf->xdrs, &dataBuf->rsp );
-		    xdr_destroy(&dataBuf->xdrs);
-            capi2_free(dataBuf);
-			//Coverity[deref_after_free]: Dereferencing freed pointer "dataBuf"
+		{
+			/* Free up the memory allocated during deserialization of the pointers */
+			dataBuf->xdrs.x_op = XDR_FREE;
+			xdr_RPC_InternalMsg_t( &dataBuf->xdrs, &dataBuf->rsp );
+			xdr_destroy(&dataBuf->xdrs);
+			capi2_free(dataBuf);
+			// coverity[deref_after_free]: Dereferencing freed pointer "dataBuf"
 			_DBG_(RPC_TRACE_INFO("RPC_SYSFreeResultDataBuffer ( FREE ) ref=%d", (dataBuf)?dataBuf->refCount:-1));
 		}
 	}
 }
 
 
-Result_t RPC_SendAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult, UInt32 ackUsrData, UInt8 clientIndex)
+Result_t RPC_SendAckEx(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult, UInt32 ackUsrData, UInt8 clientIndex, UInt8 reqXdrClientId)
 {
 	RPC_InternalMsg_t rpcInMsg;
 	RPC_Ack_t			RPC_Ack_Rsp;
 
+	memset(&rpcInMsg,0,sizeof(RPC_InternalMsg_t));
 	/* message specific */
 	RPC_Ack_Rsp.ackResult = ackResult;
 	RPC_Ack_Rsp.ackUsrData = ackUsrData;
@@ -244,18 +245,25 @@ Result_t RPC_SendAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult, UIn
 	rpcInMsg.rootMsg.clientID = clientID;
 	rpcInMsg.rootMsg.dataBuf = &RPC_Ack_Rsp;
 	rpcInMsg.clientIndex = clientIndex;
+	rpcInMsg.reqXdrClientId = reqXdrClientId;
 
 	rpcInMsg.msgType = RPC_TYPE_ACK;
 
 	return RPC_SendMsg(&rpcInMsg);
 }
 
+Result_t RPC_SendAck(UInt32 tid, UInt8 clientID, RPC_ACK_Result_t ackResult, UInt32 ackUsrData, UInt8 clientIndex)
+{
+	return RPC_SendAckEx(tid, clientID, ackResult, ackUsrData, clientIndex, 0);
+}
+
 Result_t RPC_SendAckForRequest(ResultDataBufHandle_t handle, UInt32 ackUsrData)
 {
+	//reqXdrClientId
 	ResultDataBuffer_t* dataBuf = (ResultDataBuffer_t*)handle;
 	if(dataBuf)
 	{
-		return RPC_SendAck(dataBuf->rsp.rootMsg.tid, dataBuf->rsp.rootMsg.clientID, ACK_SUCCESS, ackUsrData, dataBuf->rsp.clientIndex);
+		return RPC_SendAckEx(dataBuf->rsp.rootMsg.tid, dataBuf->rsp.rootMsg.clientID, ACK_SUCCESS, ackUsrData, dataBuf->rsp.clientIndex, dataBuf->rsp.reqXdrClientId);
 	}
 	return RESULT_ERROR;
 }

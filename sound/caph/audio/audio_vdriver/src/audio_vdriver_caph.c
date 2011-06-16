@@ -51,10 +51,12 @@
 #include "audio_ipc.h"
 #include "log.h"
 #include "csl_caph.h"
+#include "csl_apcmd.h"
 #include "drv_caph.h"
 #include "drv_audio_common.h"
 #include "drv_caph_hwctrl.h"
 #include "audio_vdriver.h"
+#include "platform_mconfig_rhea.h"
 
 /**
 *
@@ -141,16 +143,32 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     //DL
     config.streamID = AUDDRV_STREAM_NONE;
     config.pathID = 0;
-	if(speaker == AUDDRV_SPKR_IHF)
-		 config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
-	else
-	    config.source = AUDDRV_DEV_DSP;
     config.sink = AUDDRV_GetDRVDeviceFromSpkr(speaker);
     config.dmaCH = CSL_CAPH_DMA_NONE;    
     config.src_sampleRate = sample_rate;
     config.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;	
     config.chnlNum = AUDIO_CHANNEL_MONO;
     config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
+	if(speaker == AUDDRV_SPKR_IHF)
+	{
+        // special path for IHF voice call 
+        // need to use the physical address  
+        AP_SharedMem_t *ap_shared_mem_ptr = SHAREDMEM_GetDsp_SharedMemPtr();
+        UInt32 *memAddr = AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0])
+                                    - (UInt32)ap_shared_mem_ptr);
+
+        config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
+		config.source = AUDDRV_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
+        
+        AUDDRV_HWControl_SetDSPSharedMeMForIHF((UInt32)memAddr);
+        VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
+                            FALSE,
+                            FALSE);
+	}
+	else
+	{
+	    config.source = AUDDRV_DEV_DSP;
+	}
 
     DLPathID = AUDDRV_HWControl_EnablePath(config);
 
@@ -167,7 +185,11 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 
     ULPathID = AUDDRV_HWControl_EnablePath(config);
 #endif
-#endif    
+#endif   
+
+    // Set new filter coef.
+    AUDDRV_SetAudioMode( AUDDRV_GetAudioMode());
+ 
     return;
 }
 
@@ -201,6 +223,9 @@ void AUDDRV_Telephony_DeinitHW (void)
     config.pathID = DLPathID;
 
     (void)AUDDRV_HWControl_DisablePath(config);
+	VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
+							FALSE,
+							FALSE);
     DLPathID = 0;
 #endif
 #endif        

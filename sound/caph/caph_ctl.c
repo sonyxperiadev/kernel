@@ -313,7 +313,10 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 			else if(pCurSel[0] == pSel[0] && pCurSel[1] == pSel[1]) //And even call is enabled, but source and sink are not changed, we  do nothing
 				break;
 			else //Swith source/sink
-			{				
+			{	
+				// save the mode first. We should have a spk to mode conversion to handle WB modes.
+				AUDCTRL_SaveAudioModeFlag(pSel[1]);
+			
 				//enable voice call with sink
 				switch(pSel[0])
 				{
@@ -582,6 +585,9 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);   
 			else
 			{				
+				// save the mode first. We should have a spk to mode conversion to handle WB modes.
+				AUDCTRL_SaveAudioModeFlag(pSel[1]);
+			
 				//enable voice call with sink and source
 				AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
 			}
