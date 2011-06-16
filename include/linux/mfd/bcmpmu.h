@@ -196,6 +196,7 @@ enum bcmpmu_reg {
 	PMU_REG_HSPGA2_GAIN,
 	PMU_REG_PMUID,
 	PMU_REG_PMUREV,
+	PMU_REG_PLLCTRL,
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
