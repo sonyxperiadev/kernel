@@ -49,6 +49,26 @@
 #include <egalax_i2c_ts_settings.h>
 #endif
 
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+#include <linux/bma150.h>
+#include <sensors_bma150_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
+#include <linux/bh1715.h>
+#include <bh1715_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+#include <linux/mpu3050.h>
+#include <mpu3050_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#include <linux/bmp18x.h>
+#include <bmp18x_i2c_settings.h>
+#endif
+
 #if defined(CONFIG_NET_ISLAND)
 #include <mach/net_platform.h>
 #include <net_settings.h>
@@ -413,6 +433,71 @@ static struct platform_device otg_cp_device =
 };
 #endif
 
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+
+#define board_bma150_axis_change concatenate(ISLAND_BOARD_ID, _bma150_axis_change)
+
+#ifdef BMA150_DRIVER_AXIS_SETTINGS
+   static struct t_bma150_axis_change board_bma150_axis_change = BMA150_DRIVER_AXIS_SETTINGS;
+#endif
+
+static struct i2c_board_info __initdata i2c_bma150_info[] =
+{
+   {
+      I2C_BOARD_INFO(BMA150_DRIVER_NAME, BMA150_DRIVER_SLAVE_NUMBER_0x38),
+#ifdef BMA150_DRIVER_AXIS_SETTINGS
+      .platform_data  = &board_bma150_axis_change,
+#endif
+   }, 
+};
+#endif
+
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
+static struct i2c_board_info __initdata i2c_bh1715_info[] =
+{
+	{
+		I2C_BOARD_INFO(BH1715_DRV_NAME, BH1715_I2C_ADDR),
+	},
+};
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+
+#define board_mpu3050_data concatenate(ISLAND_BOARD_ID, _mpu3050_data)
+
+#ifdef MPU3050_DRIVER_AXIS_SETTINGS
+   static struct t_mpu3050_axis_change board_mpu3050_axis_change = MPU3050_DRIVER_AXIS_SETTINGS;
+#endif
+
+static struct mpu3050_platform_data board_mpu3050_data = 
+{ 
+   .gpio_irq_pin = MPU3050_GPIO_IRQ_PIN,
+   .scale        = MPU3050_SCALE,
+#ifdef MPU3050_DRIVER_AXIS_SETTINGS
+   .p_axis_change = &board_mpu3050_axis_change,
+#else
+   .p_axis_change = 0,
+#endif
+};
+
+static struct i2c_board_info __initdata i2c_mpu3050_info[] = 
+{
+	{
+		I2C_BOARD_INFO(MPU3050_DRV_NAME, MPU3050_I2C_ADDR),
+		.platform_data  = &board_mpu3050_data,
+	},
+};
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+static struct i2c_board_info __initdata i2c_bmp18x_info[] = 
+{
+	{
+		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
+	},
+};
+#endif
+
 static void __init add_sdio_device(void)
 {
    unsigned int i, id, num_devices;
@@ -519,6 +604,47 @@ static void __init add_i2c_device(void)
 
 	i2c_register_board_info(egalax_i2c_param.id, egalax_i2c_boardinfo,
 		ARRAY_SIZE(egalax_i2c_boardinfo));
+#endif
+
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+
+   i2c_register_board_info(
+#ifdef SENSORS_BMA150_I2C_BUS_ID
+      SENSORS_BMA150_I2C_BUS_ID,
+#else
+      -1,
+#endif
+      i2c_bma150_info, ARRAY_SIZE(i2c_bma150_info));
+#endif
+
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
+   i2c_register_board_info(
+#ifdef BH1715_I2C_BUS_ID
+      BH1715_I2C_BUS_ID,
+#else
+      -1,
+#endif
+      i2c_bh1715_info, ARRAY_SIZE(i2c_bh1715_info));
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+   i2c_register_board_info(
+#ifdef MPU3050_I2C_BUS_ID
+      MPU3050_I2C_BUS_ID,  
+#else
+      -1,
+#endif
+      i2c_mpu3050_info, ARRAY_SIZE(i2c_mpu3050_info));
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+			i2c_register_board_info(
+#ifdef BMP18X_I2C_BUS_ID
+      BMP18X_I2C_BUS_ID,
+#else
+      -1,
+#endif
+      i2c_bmp18x_info, ARRAY_SIZE(i2c_bmp18x_info));
 #endif
 }
 
