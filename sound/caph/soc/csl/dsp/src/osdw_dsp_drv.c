@@ -66,13 +66,13 @@
 #include "msconsts.h"
 #include "log.h"
 #include "sharedmem.h"
-//#include "memmap.h"
-//#include "csl_dsp_defs.h"
+
 #include "csl_dsp.h"
-//#include "osinterrupt.h"
+
 #include "nandsdram_memmap.h"
 
 #include "brcm_rdb_sysmap.h"
+#include "io_map.h"
 
 #include "assert.h"
 #include "osdw_dsp_drv.h"
@@ -80,15 +80,14 @@
 #include "chip_irq.h"
 #include "vpu.h"
 
-//#include "sysmap_types.h"
-//#include "csl_sysmap.h"
+#include "irqflags.h"
+#include "csl_apcmd.h"
+#include "chal_bmodem_intc_inc.h"
+#include "csl_arm2sp.h"
 
-//static Interrupt_t rip_hisr;
 static Audio_ISR_Handler_t	client_Audio_ISR_Handler = NULL;
 static VPU_ProcessStatus_t	client_VPU_ProcessStatus = NULL;
-#if 0 //disabled to remove gcc warnings
-static AP_SharedMem_t 			*global_shared_mem = NULL;
-#endif
+
 
 typedef struct
 {
@@ -98,15 +97,40 @@ typedef struct
 
 static Dspdrv dsp_drv;
 
+/* Local function declarations */
 
 static void dsp_thread_proc(unsigned long data);
 static irqreturn_t rip_isr(int irq, void *dev_id);
-
-//static void RIPISR_LISR(void);
-//static void RIPISR_HISR(void);
 static UInt32 DSPDRV_GetSharedMemoryAddress(void);
-
 AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr(void);
+
+/* Local function definitions */
+
+
+static void IRQ_Enable_BModem_Interrupt(InterruptId_t Id, UInt32 DstID)
+{
+    chal_bmintc_enable_interrupt(dsp_drv.h, DstID, (UInt32)IRQ_TO_BMIRQ(Id));
+    return;
+}
+
+static UInt32 IRQ_EnableRIPInt(void)
+{
+    chal_bmintc_enable_interrupt(dsp_drv.h, BINTC_OUT_DEST_AP2DSP, (UInt32)IRQ_TO_BMIRQ(AP_RIP_IRQ));
+        
+    return 1;
+}
+
+static void IRQ_TriggerRIPInt( void )
+{
+    chal_bmintc_set_soft_int(dsp_drv.h, (UInt32)IRQ_TO_BMIRQ(AP_RIP_IRQ));
+}
+
+static void IRQ_SoftInt_Clear(InterruptId_t Id)
+{
+	chal_bmintc_clear_soft_int(dsp_drv.h, IRQ_TO_BMIRQ(Id));
+	chal_bmintc_clear_interrupt(dsp_drv.h, IRQ_TO_BMIRQ(Id));
+}
+
 
 //******************************************************************************
 //
@@ -123,25 +147,22 @@ void DSPDRV_Init( )
 	UInt32 dsp_shared_mem;
     int rc;
 
-#ifdef CONFIG_AUDIO_BUILD
-	IRQ_EnableRIPInt();
-#endif
-	
 	Log_DebugPrintf(LOGID_AUDIO, " DSPDRV_Init:  \n");
 
-    dsp_drv.h = chal_intc_init(AHB_DSP_INTC_BASE_ADDR);
+    dsp_drv.h = chal_intc_init(KONA_BINTC_BASE_ADDR);
 
 	dsp_shared_mem = DSPDRV_GetSharedMemoryAddress();
 	
 	VPSHAREDMEM_Init(dsp_shared_mem);
 
-    enable_irq(BMIRQ23); 
-
-    //Create Tasklet
-    tasklet_init(&(dsp_drv.task), dsp_thread_proc,(unsigned long)(&dsp_drv));
+	//Create Tasklet
+	tasklet_init(&(dsp_drv.task), dsp_thread_proc,(unsigned long)(&dsp_drv));
+	
+	IRQ_EnableRIPInt();
+	IRQ_Enable_BModem_Interrupt(BMIRQ23, 6);
 
     //Plug in the ISR
-	rc = request_irq(DSP2AP_IRQ, rip_isr, IRQF_DISABLED,		//enables  BMIRQ22
+	rc = request_irq(COMMS_SUBS6_IRQ, rip_isr, IRQF_DISABLED,		//enables  IRQ198
 			 "bcm215xx-dsp", &(dsp_drv));
 
 	if (rc < 0) {
@@ -149,6 +170,7 @@ void DSPDRV_Init( )
 		       __FUNCTION__, rc);
 		return;
 	}
+
 #ifdef CONFIG_AUDIO_BUILD
 	VPU_Init ();
 #endif
@@ -188,7 +210,10 @@ static irqreturn_t rip_isr(int irq, void *dev_id)
 {
 	Dspdrv *dev	= dev_id;
 
+	disable_irq_nosync(COMMS_SUBS6_IRQ);
 	tasklet_schedule(&dev->task);
+	IRQ_SoftInt_Clear(BMIRQ23);	
+
 	return IRQ_HANDLED;
 }
 
@@ -208,6 +233,8 @@ static void dsp_thread_proc(unsigned long data)
 		//Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP dsp_thread_proc =0x%x\n\r", client_VPU_ProcessStatus);
 		client_VPU_ProcessStatus();
 	}
+ 
+    enable_irq(COMMS_SUBS6_IRQ);
 	
 }
 
@@ -274,11 +301,9 @@ void RIPISR_Register_VPU_ProcessStatus( VPU_ProcessStatus_t hisr_cb )
 //******************************************************************************
 void VPSHAREDMEM_TriggerRIPInt()
 {
-#ifdef CONFIG_AUDIO_BUILD  // need to find for the equivalent API in LMP
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* VPSHAREDMEM_TriggerRIPInt\n\r");
+
 	IRQ_TriggerRIPInt();
 
-#endif
 }
-
-
 

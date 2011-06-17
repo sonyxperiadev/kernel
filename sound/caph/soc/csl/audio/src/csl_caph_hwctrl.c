@@ -104,6 +104,7 @@ static CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
 static CSL_HANDLE fmHandleSSP = 0;
 static CSL_HANDLE pcmHandleSSP = 0;
 static Boolean fmRunning = FALSE;
+static Boolean fmLoopback = FALSE;
 static Boolean pcmRunning = FALSE;
 static Boolean ssp_bt_running = FALSE;
 static Boolean ssp_fm_running = FALSE;
@@ -796,10 +797,10 @@ void csl_caph_hwctrl_init(CSL_CAPH_HWCTRL_BASE_ADDR_t addr)
     csl_caph_srcmixer_init(addr.srcmixer_baseAddr);
     csl_caph_audioh_init(addr.audioh_baseAddr, addr.sdt_baseAddr);
 
-    // Initialize SSP3 port for FM.
-    fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp3_baseAddr);
-    // Initialize SSP4 port for PCM.
-    pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr.ssp4_baseAddr);
+    // Initialize SSP4 port for FM.
+    fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp4_baseAddr);
+    // Initialize SSP3 port for PCM.
+    pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr.ssp3_baseAddr);
 
 	return;
 }
@@ -2028,10 +2029,14 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             fm_config.trans_size = CSL_I2S_SSP_TSIZE;
             fm_config.prot = SSPI_HW_I2S_MODE2;
             fm_config.interleave = TRUE;
-            // For test, set SSP to support 8KHz, 16bit.
-   	    	fm_config.sampleRate = CSL_I2S_16BIT_8000HZ;
+   	    	fm_config.sampleRate = CSL_I2S_16BIT_48000HZ;
             csl_i2s_config(fmHandleSSP, &fm_config);
         }
+		else
+		{
+			fmLoopback = TRUE;
+		}
+
 	    // caph blocks start
    		csl_caph_cfifo_start_fifo(audioPath.fifo);
 	    csl_caph_dma_start_transfer(audioPath.dmaCH);
@@ -2131,8 +2136,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             fm_config.trans_size = CSL_I2S_SSP_TSIZE;
             fm_config.prot = SSPI_HW_I2S_MODE2;
             fm_config.interleave = TRUE;
-            // For test, set SSP to support 8KHz, 16bit.
-   		    fm_config.sampleRate = CSL_I2S_16BIT_8000HZ;
+  		    fm_config.sampleRate = CSL_I2S_16BIT_48000HZ;
             csl_i2s_config(fmHandleSSP, &fm_config);
         }
 	    // caph blocks start
@@ -2277,7 +2281,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
         // Get all the information from Table again.
         audioPath = csl_caph_hwctrl_GetPath_FromPathID(audioPath.pathID);
-
+	 
         // config ssp3
         if (fmRunning == FALSE)
         {        
@@ -2296,22 +2300,23 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             fm_config.sampleRate = CSL_I2S_16BIT_48000HZ;
             csl_i2s_config(fmHandleSSP, &fm_config); 
         }
-        
+       
         // config audioh
         audioh_config.sample_size = audioPath.bitPerSample;
         audioh_config.sample_pack = DATA_UNPACKED;
         audioh_config.sample_mode = audioPath.chnlNum;
-	csl_caph_audioh_config(audioh_path, (void *)&audioh_config);
+		csl_caph_audioh_config(audioh_path, (void *)&audioh_config);
 
         // caph blocks start
     	csl_caph_switch_start_transfer(audioPath.switchCH);
-	csl_caph_audioh_start(audioh_path);
+		csl_caph_audioh_start(audioh_path);
+	 
         if (fmRunning == FALSE)
         {
             csl_i2s_start(fmHandleSSP, &fm_config);
             fmRunning = TRUE;
         }        
-
+  
     }   
     else
     if ((audioPath.source == CSL_CAPH_DEV_BT_MIC)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY))
@@ -4782,6 +4787,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
             csl_i2s_stop_tx(fmHandleSSP);
             csl_i2s_stop_rx(fmHandleSSP);
             fmRunning = FALSE;
+			fmLoopback = FALSE;
         }
     }    
     else
@@ -4795,8 +4801,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         csl_caph_dma_disable_intr(path.dmaCH, CSL_CAPH_ARM);
 	    csl_caph_dma_stop_transfer(path.dmaCH);
         csl_caph_dma_release_channel(path.dmaCH);
-
-        if (fmRunning == TRUE)
+        if (fmRunning == TRUE && fmLoopback == FALSE)
         {
             csl_i2s_stop_tx(fmHandleSSP);
             csl_i2s_stop_rx(fmHandleSSP);            

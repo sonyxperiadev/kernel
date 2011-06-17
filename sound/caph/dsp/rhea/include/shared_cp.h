@@ -855,20 +855,21 @@ typedef enum
 	COMMAND_PRAM_WRITE,			// 0x25		( addr, value )
    /** \HR */
    /** \par Module
-    *                    Audio 
+    *                    Modem 
     *  \par Command Code         
     *                    0x26
     *  \par Description 
-    *       Enables VPU
+    *       Abort search
     *              
-    *              @param  None
+    *              @param  UInt16 arg0:  Search abort at slot number count 
+    *              @param  UInt16 arg1:  Search abort at frame count 
     */
-	NOT_USE_COMMAND_26,			// 0x26		( )
+	COMMAND_SRCH_ABORT,			// 0x26		( stop baseband search and its state machine at arg0 & arg1 specified slot & frame count)
 	COMMAND_GEN_TIMING_PULSE,	// 0x27		( frame_index, qbc_delay, qmcr_value )
 	COMMAND_TX_ABORT,			// 0x28		( buffer_index )
 	COMMAND_CLOSE_MS_LOOP,		// 0x29		( mode, rxindex0/txindex0, rxindex1/txindex1 )
 	COMMAND_OPEN_MS_LOOP,		// 0x2A		( )
-	NOT_USE_COMMAND_2B,			// 0x2B
+	COMMAND_SWITCH_AUDIO_PROFILE,// 0x2B	arg0 = Is_spkr_mode, arg1 = 0, arg2 = 0;
 	COMMAND_SYNC_OFFSET,		// 0x2C		( max_sync_offset )
 	COMMAND_RELOAD_TX_PARMS,	// 0x2D		( )
 	COMMAND_PWRCTRL_IDLE,		// 0x2E		( reset_cn_flag, idle_average, pb(dB) )
@@ -1021,24 +1022,7 @@ typedef enum
     COMMAND_FLAG_SAIC,			// 0x65		
     COMMAND_PATCH_ENABLE,		// 0x66	
 	COMMAND_WAKEUP_SMC,			// 0x67
-   /** \HR */
-   /** \par Module
-    *                    Audio 
-    *  \par Command Code         
-    *                    0x68
-    *  \par Description 
-    *      This command loads the coefficients of the various Biquad Filters
-    *
-    *              @param  UInt16 Load_Biquad_Coefficients_Of:
-    *                             - = 1: Load 10 coefficients for Bluetooth UL Double-Biquad filter from shared_bluetooth_ul_filter_coef \BR
-    *                             - = 2: Load 10 coefficients for Bluetooth DL Double-Biquad filter from shared_bluetooth_dl_filter_coef \BR
-    *                             - = 3: Load 10 coefficients for Echo Far-In filter from shared_echo_farIn_filt_coefs \BR
-    *                             - = 4: Load 10 coefficients for Compressor Pre-filter from shared_comp_filter_coef \BR
-    *
-    *              \see shared_bluetooth_ul_filter_coef, shared_bluetooth_dl_filter_coef, shared_echo_farIn_filt_coefs, 
-    *                   shared_comp_filter_coef
-    */
-	COMMAND_BIQUAD_FILT_COEFS,	// 0x68		( Biquad filter coef 0-9, arg0 = 1(Bluetooth UL), =2(Bluetooth DL), =3 (ECHO FARIN FILT), =4 (DL filter))
+	NOT_USE_COMMAND_68,			// 0x68
 	COMMAND_SET_PDMA,			// 0x69		( setup PDAM, arg0=ADDR_H, arg1=ADDR_L, arg2=LEN )	
 	COMMAND_START_PDMA,			// 0x6a		( lunch PDMA, arg0=PRAM_OFFSET )
 	COMMAND_SET_DDMA,			// 0x6b		( setup DDAM, arg0=ADDR_H, arg1=ADDR_L, arg2=LEN )
@@ -1257,7 +1241,7 @@ typedef enum
     *      \see sidetone_expander, shared_sidetone_expander_flag, Software_Sidetone
     */
 	COMMAND_INIT_SIDETONE_EXPANDER,		// 0x8f
-	COMMAND_INIT_BIQUAD_FILTER_MEMORY,	// 0x90
+	NOT_USE_COMMAND_90,					// 0x90
 	COMMAND_MUSIC_SUBBAND_SPEAKER_PROTECTION_VECTOR,	// 0x91 ( arg0 = music subband_speaker_protection_vector )
 	COMMAND_RESET_STACK_DEPTH_CHECK_RES,	// 0x92	( arg0 = 0: Disable stack depth checking, 1: Enable stack depth checking, 2: Upload Current minimum stack depth to shared memory )
 	COMMAND_GET_SHARED_MEM_SIZE,			// 0x93
@@ -1274,13 +1258,25 @@ typedef enum
 	NOT_USE_COMMAND_9E,						// 0x9E
 	NOT_USE_COMMAND_9F,						// 0x9F    
 #ifndef tempIntefrace_DSP_FEATURE_SP
-	  COMMAND_SP,		// 0xA0	  (enable) arg0 = 0 Disable, 1 enable; arg1 = oper_mode; arg2 = init flag
+	  COMMAND_SP,							// 0xA0	  (enable) arg0 = 0 Disable, 1 enable; arg1 = oper_mode; arg2 = init flag
 #else
 	  NOT_USE_COMMAND_A0,
 #endif
-	  COMMAND_ENABLE_DUAL_MIC,  //0xA1 (enable) arg0=0 Disable, 1 enable;
-	  COMMAND_QBC_STAR_STOPCNT,	//0xA2 (start/stop event timer QBC count) arg0=1 start; arg0=2 stop count; otherwise no effect on QBC count;
-	  COMMAND_DUAL_SIM_TRACK	//0xA3 (arg0=Kd, arg1=delta_limit, arg2= high byte is 2nd_sim_id & lower byte is delta_flag with zero means disabled)
+	COMMAND_ENABLE_DUAL_MIC,  				// 0xA1 (enable) arg0=0 Disable, 1 enable;
+	COMMAND_QBC_STAR_STOPCNT,				// 0xA2 (start/stop event timer QBC count) arg0=1 start; arg0=2 stop count; otherwise no effect on QBC count;
+	COMMAND_DUAL_SIM_TRACK,					// 0xA3 (arg0=Kd, arg1=delta_limit, arg2= high byte is 2nd_sim_id & lower byte is delta_flag with zero means disabled)
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0xA4
+    *  \par Description 
+    *       This command controls Downlink Noise Suppressor.
+    *              
+    *              @param  0 - disable, 1 - enable
+    *
+    */
+	COMMAND_DOWNLINK_NOISE_SUPPRESSION		// 0xA4 (arg0: 0 - disable, 1 - enable)
 } Command_t;
 /**
  * @}
@@ -2088,43 +2084,43 @@ EXTERN UInt16 shared_echo_NLP_timeout_val					SHARED_SEC_GEN_AUDIO;								// Ti
 /**
  * This gain is applied at the input of the Echo Canceller (to the microphone samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_input_gain		   			SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the output of the Echo Canceller (to the microphone samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_output_gain	   			SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the input of the Echo Canceller on the feed forward (DL) path (to the speaker samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_feed_forward_gain 			SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the input of the Echo Canceller (to the second microphone samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_mic2_input_gain		   	SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the output of the Echo Canceller (to the second microphone samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_mic2_output_gain	   	   	SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the input of the Echo Canceller on the feed forward (DL) path (to the speaker samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_mic2_feed_forward_gain    	SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the output of the pre-compressor filter on the DL path.
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 
 
@@ -2167,34 +2163,43 @@ EXTERN Int16 shared_ec_bulk_delay_buf[MAX_EC_BULK_DELAY_BUF_SIZE*2]		 SHARED_SEC
  * @addtogroup Audio_Gains_in_CP 
  * @{
  */
-EXTERN UInt16 shared_gain_slope							 	SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_ul_gain_slope						 	SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the input of the Uplink Noise suppressor.
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
-EXTERN UInt16 shared_noise_supp_input_gain					SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_ul_noise_supp_input_gain				SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the output of the Uplink Noise suppressor.
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
-EXTERN UInt16 shared_noise_supp_output_gain					SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_ul_noise_supp_output_gain				SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_dl_gain_slope						 	SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
-EXTERN Int16  shared_noise_max_supp_dB[24]					SHARED_SEC_GEN_AUDIO;								//Maximum amount of suppression by band in dBQ5
+EXTERN Int16  shared_ul_noise_max_supp_dB[24]				SHARED_SEC_GEN_AUDIO;								// Maximum amount of suppression by band in dBQ5
 EXTERN UInt16 shared_noise_supp_ul_min_pwr					SHARED_SEC_GEN_AUDIO;								/* Number of samples in a frame */
 EXTERN UInt16 shared_noise_spec_var[2]						SHARED_SEC_GEN_AUDIO;
-EXTERN Int16 shared_idev_thld								SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
-EXTERN Int16 shared_iupdate_thld 							SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
-EXTERN Int16 shared_ihyster_cnt_thld 						SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
-EXTERN UInt16 shared_update_cnt_thld						SHARED_SEC_GEN_AUDIO;
+EXTERN Int16 shared_ul_idev_thld							SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN Int16 shared_ul_iupdate_thld 						SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN Int16 shared_ul_ihyster_cnt_thld 					SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN UInt16 shared_ul_update_cnt_thld						SHARED_SEC_GEN_AUDIO;
 EXTERN Int16 shared_update_noise_flag						SHARED_SEC_GEN_AUDIO;								// TRUE==NS background noise estimate is being updated
 EXTERN Int16 shared_noise_output_power[5]					SHARED_SEC_GEN_AUDIO;								// Used for comfort noise generator noise floor estimation
 EXTERN Int16 shared_noise_output_data[320]	 				SHARED_SEC_GEN_AUDIO;								// Holds latest 20ms worth of Noise Suppressed data 
 
-
+/**************************************************
+//Shared memory used by Downlink Noise Suppressor
+***************************************************/ 
+EXTERN UInt16 shared_dl_noise_supp_enable					SHARED_SEC_GEN_AUDIO;								// 0-disable, 1-enable
+EXTERN Int16 shared_dl_noise_max_supp_dB[24]				SHARED_SEC_GEN_AUDIO;								// Maximum amount of suppression by band in dBQ5
+EXTERN Int16 shared_dl_idev_thld							SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN Int16 shared_dl_iupdate_thld 						SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN Int16 shared_dl_ihyster_cnt_thld 					SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN UInt16 shared_dl_update_cnt_thld						SHARED_SEC_GEN_AUDIO;
 
 /******************************************
 //Shared memory used by SB-NLP
@@ -2248,6 +2253,12 @@ EXTERN UInt16 shared_echoNlpParams_subband_nlp_UL_margin[24] SHARED_SEC_GEN_AUDI
 EXTERN UInt16 shared_echoNlpParams_subband_nlp_distortion_thresh[24] SHARED_SEC_GEN_AUDIO;						//
 EXTERN UInt16 shared_subband_nlp_dt_fine_control			 SHARED_SEC_GEN_AUDIO;
 
+//Shared memory used by Beta voice 2
+EXTERN UInt16 shared_nlp_distortion_coupling				 SHARED_SEC_GEN_AUDIO;								//NLP distortion coupling
+EXTERN UInt16 shared_reverb_time_constant					 SHARED_SEC_GEN_AUDIO;								//NLP reverb control time constant
+EXTERN UInt16 shared_reverb_level							 SHARED_SEC_GEN_AUDIO;								//NLP reverb control level
+
+EXTERN UInt16 shared_detection_threshold					 SHARED_SEC_GEN_AUDIO;								//Detection threshold used in path change 	
 EXTERN UInt16 shared_echo_nlp_min_dl_pwr					 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_echo_nlp_min_ul_pwr					 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_curr_dl_min_pwr						 SHARED_SEC_GEN_AUDIO;
@@ -2256,7 +2267,7 @@ EXTERN Int16  shared_curr_min_ul_sb_energy[24]			 	 SHARED_SEC_GEN_AUDIO;
 EXTERN Int16  shared_uplink_inst_block_pwr				     SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_echoNlp_expander_upper_limit_ul		 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_echoNlp_expander_upper_limit			 SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16 shared_audio_mode								 SHARED_SEC_GEN_AUDIO;
+
 
 /******************************************
 //Shared memory used by Compressor/Expander/
@@ -2265,7 +2276,6 @@ EXTERN UInt16 shared_audio_mode								 SHARED_SEC_GEN_AUDIO;
 
 EXTERN UInt16 shared_DL_compander_flag 	   		 			 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_DL_subband_compander_flag				 SHARED_SEC_GEN_AUDIO;								// Enable/Disable Subband compressor
-EXTERN UInt16 shared_DL_compander_biquad_flag 				 SHARED_SEC_GEN_AUDIO;								// Enable/disable the compander biquad
 EXTERN UInt16 shared_UL_compander_flag 			 			 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_compressor_alg							 SHARED_SEC_GEN_AUDIO;								// Flag to switch to run the interpolation based version instead of dB based version
 
@@ -2377,81 +2387,9 @@ EXTERN expander_parm	sidetone_expander			   		 SHARED_SEC_GEN_AUDIO;
 /** @} */
 /** @} */
 /**
- * @addtogroup Audio_Gains_in_CP
- * @{
- */
-/**
- * This is the gain of the Bluetooth Double-Biquad Filter in the downlink 
- * (right before the Limiter)
- *
- * \see shared_bluetooth_filter_enable, shared_bluetooth_dl_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_dl_biquad_gain		   		 SHARED_SEC_GEN_AUDIO;
-/**
- * This is the output gain after the Bluetooth Double-Biquad Filter in the downlink 
- * (right before the Limiter)
- *
- * \see shared_bluetooth_filter_enable, shared_bluetooth_dl_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_dl_biquad_output_gain		   		 SHARED_SEC_GEN_AUDIO;
-
-/**
- * This is the gain of the Bluetooth Double-Biquad Filter in the uplink 
- * (right after the High Pass Filter)
- *
- * \see shared_bluetooth_filter_enable, shared_bluetooth_ul_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_ul_biquad_gain		   		 		SHARED_SEC_GEN_AUDIO;
-/**
- * This is the output gain after the Bluetooth Double-Biquad Filter in the uplink 
- * 
- *
- * \see shared_bluetooth_filter_enable, shared_bluetooth_ul_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_ul_biquad_output_gain		   		 SHARED_SEC_GEN_AUDIO;
-
-/** @} */
-/**
  * @addtogroup Audio_Blocks_in_CP
  * @{
  */
-/**
- * @addtogroup Bluetooth_Double_BiQuad_Filters_in_UL_AND_DL
- * @{
- */
-/**
- * This variable enables 
- * - (== 1) the Bluetooth Double-Biquad Filter in the uplink (right after the High Pass Filter), and 
- * - (!= 0) the Bluetooth Double-Biquad Filter in the downlink (right before the Limiter). 
- *
- * \see shared_bluetooth_ul_biquad_gain, shared_bluetooth_ul_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- * \see shared_bluetooth_dl_biquad_gain, shared_bluetooth_dl_filter_coef
- */
-EXTERN UInt16	shared_bluetooth_filter_enable		   		 SHARED_SEC_GEN_AUDIO;
-/**
- * This array contains the coefficients of the Bluetooth Double-Biquad Filter in the downlink 
- * (right before the Limiter)
- *
- * \see shared_bluetooth_dl_biquad_gain, shared_bluetooth_filter_enable, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_dl_filter_coef[10]	   		 SHARED_SEC_GEN_AUDIO;
-/**
- * This array contains the coefficients of the Bluetooth Double-Biquad Filter in the uplink 
- * (right after the High Pass Filter)
- *
- * \see shared_bluetooth_ul_biquad_gain, shared_bluetooth_filter_enable, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_ul_filter_coef[10]	   		 SHARED_SEC_GEN_AUDIO;
-/** @} */
-/** @} */
-
-/** 
- * \ingroup Audio_Gains_in_CP 
- * 
- * This gain is applied at the input of the compressor pre-filter in the DL.
- */
-EXTERN UInt16	shared_comp_biquad_gain						 SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16	shared_comp_filter_coef[10]					 SHARED_SEC_GEN_AUDIO;
 /** 
  * @addtogroup Audio_Gains_in_CP 
  * @{
@@ -2490,21 +2428,6 @@ EXTERN Int16	shared_second_amr_out_gain_dl[5]			 SHARED_SEC_GEN_AUDIO;
  */
 EXTERN Int16	shared_second_amr_out_gain_ul[5]			 SHARED_SEC_GEN_AUDIO;
 /** 
- * This gain, is applied on the VPU playback path on the downlink path before going into record.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14, 
- * -   Int16 Target_Gain_in_Q14, 
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14) 
- * -   Int16 Reserved, 
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_speech_rec_gain_dl[5]				 SHARED_SEC_GEN_AUDIO;
-/** 
  * This gain, is applied on the VPU playback path on the uplink path before going into record.\BR
  * 
  * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
@@ -2523,54 +2446,6 @@ EXTERN Int16	shared_speech_rec_gain_ul[5]				 SHARED_SEC_GEN_AUDIO;
 /** 
  * The gain factor, shared_arm2speech_call_gain, is not used any more. */
 EXTERN UInt16	shared_arm2speech_call_gain					 SHARED_SEC_GEN_AUDIO;
-/** 
- * The gain factor, shared_arm2speech_call_gain_dl is applied on the shared_Arm2SP_InBuf[1280] PCM data 
- * on the downlink path (does not matter whether the ARM2SP data is added before or after audio processing.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14, 
- * -   Int16 Target_Gain_in_Q14, 
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14) 
- * -   Int16 Reserved, 
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech_call_gain_dl[5]			 SHARED_SEC_GEN_AUDIO;
-/** 
- * The gain factor, shared_arm2speech_call_gain_ul is applied on the shared_Arm2SP_InBuf[1280] PCM data 
- * on the uplink path (does not matter whether the ARM2SP data is added before or after audio processing.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech_call_gain_ul[5]			 SHARED_SEC_GEN_AUDIO;
-/** 
- * The gain factor, shared_arm2speech_call_gain_rec is applied on the ARM2SP PCM data 
- * getting recorded.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech_call_gain_rec[5]			 SHARED_SEC_GEN_AUDIO;
 /** 
  * The gain factor, shared_btnb_gain_dl is applied on the Bluetooth NB PCM data 
  * in the downlink path.\BR
@@ -2612,7 +2487,7 @@ EXTERN UInt16	shared_UL_audio_clip_level					 SHARED_SEC_GEN_AUDIO;
  * \ingroup Audio_Gains_in_CP 
  * This gain is applied at the input of the DL limiter (currently used only in the VoIP path).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  * 
  */
 EXTERN UInt16 shared_dl_clip_gain							 SHARED_SEC_GEN_AUDIO;								// Gain stage prior to the DL clipper
@@ -3177,7 +3052,7 @@ EXTERN UInt16 shared_stack_depth_check_res_buf[5]                          	SHAR
 EXTERN UInt32 shared_modem_logging_align_flag								SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_modem_logging_buf[1280]								SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_testpoint_data_buf[2048]                              	SHARED_SEC_DSP_DEBUG;                        // 32bit address Aligned Testpoint data buffer for implementing DSP testpoints via the ARM
-
+EXTERN UInt16 shared_modem_log_temp_buff[614]								SHARED_SEC_DSP_DEBUG;                        // 32bit address Aligned Testpoint data buffer for implementing DSP testpoints via the ARM
 EXTERN UInt16 shared_modem_logging_dsp_write_idx							SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_modem_logging_mcu_read_idx								SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_modem_logging_resvd_idx								SHARED_SEC_DSP_DEBUG;
@@ -3185,61 +3060,6 @@ EXTERN UInt16 shared_modem_logging_enable									SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_memory_size                                     		SHARED_SEC_DSP_DEBUG;            
 EXTERN UInt16 shared_access_kludge                                    		SHARED_SEC_DSP_DEBUG;
 
-/**
- * @addtogroup Audio_Gains_in_CP
- * @{
- */
-/** 
- * The gain factor, shared_arm2speech2_call_gain_dl is applied on the shared_Arm2SP2_InBuf[1280] PCM data 
- * on the downlink path (does not matter whether the ARM2SP2 data is added before or after audio processing.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech2_call_gain_dl[5]			 				SHARED_SEC_DSP_DEBUG;
-/** 
- * The gain factor, shared_arm2speech2_call_gain_ul is applied on the shared_Arm2SP2_InBuf[1280] PCM data 
- * on the uplink path (does not matter whether the ARM2SP2 data is added before or after audio processing.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech2_call_gain_ul[5]			 				SHARED_SEC_DSP_DEBUG;
-/** 
- * The gain factor, shared_arm2speech2_call_gain_rec is applied on the ARM2SP2 PCM data 
- * getting recorded.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech2_call_gain_rec[5]			 				SHARED_SEC_DSP_DEBUG;
-/**
- * @}
- */
 EXTERN UInt16 shared_g_sys_flag												SHARED_SEC_DSP_DEBUG;
 
 

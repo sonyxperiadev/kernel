@@ -500,7 +500,7 @@ typedef enum
 	NOT_USE_STATUS_36,					// 0x36
     NOT_USE_STATUS_37,					// 0x37	
 	STATUS_AUDIO_DEBUG_DATA_UPLOADED,	// 0x38
-	STATUS_AUDIO_STREAM_DATA_READY,		// 0x39 ( arg0 = shared_audio_stream_0_crtl, arg1 = shared_audio_stream_1_crtl )
+	NOT_USE_STATUS_39,					// 0x39 
 	STATUS_EPC,							// 0x3A ( arg0 = vit_burst_index, arg1 = epc_cmd, arg2 = epc_rxqual  )
     NOT_USE_STATUS_3B,					// 0x3B
 	STATUS_HQ_ADC_PAGE_DONE,			// 0x3C ( arg0 = HQ_ADC_page(data read page), arg1 = page_en(current page used by isr), arg2 = HQ_ADC_page_index )
@@ -516,11 +516,7 @@ typedef enum
 	STATUS_MODEM_DATA_READY,			// 0x46
 	STATUS_GPIO_MISMATCH,				// 0x47
 	NOT_USE_STATUS_48,					// 0x48
-#ifndef tempInterface_DSP_FEATURE_SP
-	STATUS_SP,
-#else
-	NOT_USE_STATUS_49,							// 0x49
-#endif
+	NOT_USE_STATUS_49,					// 0x49
 	STATUS_ASRB_LOOP,					// 0x4a ASRB loop sync status
 	STATUS_DSP_SYNC,					// 0x4b DSP sync status
 	STATUS_DSP_MIPI_WRITE,				// 0x4c DSP MIPI write finished
@@ -815,7 +811,7 @@ typedef enum
     AUDIO_STREAM_UL_DUAL_MIC_ADC_OUT	   = 0x3,
     AUDIO_STREAM_UL_MIC2_EQ_OUT			   = 0x31, 
     AUDIO_STREAM_UL_HPF_OUT                = 0x4, 
-    AUDIO_STREAM_UL_BT_BIQUAD_OUT          = 0x8, 
+    AUDIO_STREAM_UL_EC_IN          		   = 0x8, 
     AUDIO_STREAM_DL_EC_REF_OUT             = 0x10,
     AUDIO_STREAM_UL_EC_OUT                 = 0x20,
 	AUDIO_STREAM_UL_NOISE_REF_MIC_EC_OUT   = 0x22,
@@ -854,7 +850,8 @@ typedef enum
 	LOG_MODEM_DATA_DEROT_IQ,
 	LOG_MODEM_DATA_EQ_OUT,
 	LOG_MODEM_DATA_TSC_RAW_DATA,
-	LOG_MODEM_DATA_TSC_DEROT_DATA
+	LOG_MODEM_DATA_TSC_DEROT_DATA,
+	LOG_MODEM_DATA_SEARCH_TIME
 } Modem_CapturePoint_t;
 
 //******************************************************************************

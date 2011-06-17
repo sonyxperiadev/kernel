@@ -1252,7 +1252,9 @@ typedef enum
     */    
     VP_STATUS_MAIN_AMR_DONE,					// 0x15		( report main AMR encoder done, TX frame type, AMR mode, dtx_enable )	
 	VP_STATUS_CNC_EMERGENCY_CALL,				// 0x16		(  )
-	VP_STATUS_CNC_DETECTED						// 0x17		(  )
+	VP_STATUS_CNC_DETECTED,						// 0x17		(  )
+	VP_STATUS_VOIP_DL_DONE,						// 0x18		(  )
+	VP_STATUS_AUDIO_STREAM_DATA_READY			// 0x19 ( arg0 = shared_audio_stream_0_crtl, arg1 = shared_audio_stream_1_crtl, arg2 = audio_stream_buf_idx )
 } VPStatus_t;
 /**
  * @}
@@ -2213,6 +2215,167 @@ EXTERN UInt16 shared_cnc_init_flag											AP_SHARED_SEC_GEN_AUDIO;	// 1: init
 
 EXTERN VOIP_Buffer_t VOIP_DL_buf										 	AP_SHARED_SEC_GEN_AUDIO;
 EXTERN VOIP_Buffer_t VOIP_UL_buf										 	AP_SHARED_SEC_GEN_AUDIO;
+
+/**
+ * @addtogroup Audio_Gains
+ * @{
+ */
+
+/** 
+ * The gain factor, shared_inp_sp_gain_to_arm2sp_mixer_dl is applied on the downlink speech right before 
+ * either ARM2SP or ARM2SP2 or BTNB signals are "added" to the downlink (does not matter whether the 
+ * ARM2SP, ARM2SP2, BTRNB data is added before or after audio processing).\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 1.14 format).\BR
+ *
+ * @note This gain is only applied when ARM2SP, ARM2SP2 or BTNB are mixed in the downlink
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_inp_sp_gain_to_arm2sp_mixer_dl[5]			 				AP_SHARED_SEC_GEN_AUDIO;
+/** 
+ * The gain factor, shared_inp_sp_gain_to_arm2sp_mixer_ul is applied on the uplink speech right before 
+ * either ARM2SP or ARM2SP2 or BTNB or TONEUL signals are "added" to the uplink (does not matter whether the 
+ * ARM2SP, ARM2SP2, BTNB TONEUL data is added before or after audio processing).\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 1.14 format).\BR
+ *
+ * @note This gain is only applied when ARM2SP, ARM2SP2 or BTNB are mixed in the uplink
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_inp_sp_gain_to_arm2sp_mixer_ul[5]			 				AP_SHARED_SEC_GEN_AUDIO;
+
+/** 
+ * The gain factor, shared_arm2speech2_call_gain_dl is applied on the shared_Arm2SP2_InBuf[1280] PCM data 
+ * on the downlink path (does not matter whether the ARM2SP2 data is added before or after audio processing.\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_arm2speech2_call_gain_dl[5]			 				AP_SHARED_SEC_GEN_AUDIO;
+/** 
+ * The gain factor, shared_arm2speech2_call_gain_ul is applied on the shared_Arm2SP2_InBuf[1280] PCM data 
+ * on the uplink path (does not matter whether the ARM2SP2 data is added before or after audio processing.\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_arm2speech2_call_gain_ul[5]			 				AP_SHARED_SEC_GEN_AUDIO;
+/** 
+ * The gain factor, shared_arm2speech2_call_gain_rec is applied on the ARM2SP2 PCM data 
+ * getting recorded.\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_arm2speech2_call_gain_rec[5]			 				AP_SHARED_SEC_GEN_AUDIO;
+
+/** 
+ * The gain factor, shared_arm2speech_call_gain_dl is applied on the shared_Arm2SP_InBuf[1280] PCM data 
+ * on the downlink path (does not matter whether the ARM2SP data is added before or after audio processing.\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14, 
+ * -   Int16 Target_Gain_in_Q14, 
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14) 
+ * -   Int16 Reserved, 
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_arm2speech_call_gain_dl[5]			 AP_SHARED_SEC_GEN_AUDIO;
+/** 
+ * The gain factor, shared_arm2speech_call_gain_ul is applied on the shared_Arm2SP_InBuf[1280] PCM data 
+ * on the uplink path (does not matter whether the ARM2SP data is added before or after audio processing.\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_arm2speech_call_gain_ul[5]			 AP_SHARED_SEC_GEN_AUDIO;
+/** 
+ * The gain factor, shared_arm2speech_call_gain_rec is applied on the ARM2SP PCM data 
+ * getting recorded.\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14,
+ * -   Int16 Target_Gain_in_Q14,
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
+ * -   Int16 Reserved,
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_arm2speech_call_gain_rec[5]			 AP_SHARED_SEC_GEN_AUDIO;
+/** 
+ * This gain, is applied on the VPU playback path on the downlink path before going into record.\BR
+ * 
+ * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
+ *
+ * {
+ * -   Int16 Start_Gain_in_Q14, 
+ * -   Int16 Target_Gain_in_Q14, 
+ * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14) 
+ * -   Int16 Reserved, 
+ * -   Int16 Reserved \BR
+ * }
+ *
+ */
+EXTERN Int16	shared_speech_rec_gain_dl[5]				 AP_SHARED_SEC_GEN_AUDIO;
+
+/**
+ * @}
+ */
 
 EXTERN UInt16 shared_audio_stream_0_crtl									AP_SHARED_SEC_DIAGNOS;                        // Ctrl info specifying 1 out of N capture points for audio stream_0
 EXTERN UInt16 shared_audio_stream_1_crtl									AP_SHARED_SEC_DIAGNOS;                    	  // Ctrl info specifying 1 out of N capture points for audio stream_1

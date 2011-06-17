@@ -61,16 +61,16 @@ the GPL, without Broadcom's express prior written consent.
 #define DEBUG(args...)
 #endif
 
-
 #define	MIXER_STREAM_FLAGS_CAPTURE	0x00000001
 #define	MIXER_STREAM_FLAGS_CALL		0x00000002
 #define	MIXER_STREAM_FLAGS_FM		0x00000004
-
 
 #define	CAPH_MIXER_NAME_LENGTH		20	//Max length of a mixer name
 #define	MIC_TOTAL_COUNT_FOR_USER	AUDCTRL_MIC_DIGI3
 #define	CAPH_MAX_CTRL_LINES			((MIC_TOTAL_COUNT_FOR_USER>AUDCTRL_SPK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDCTRL_SPK_TOTAL_COUNT)
 #define	CAPH_MAX_PCM_STREAMS		8
+
+
 
 //Try to keep consistent with Android AudioSystem::audio_devices
 typedef	enum audio_devices {

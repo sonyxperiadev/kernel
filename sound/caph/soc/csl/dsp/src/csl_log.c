@@ -61,7 +61,10 @@
 #include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
+#include "resultcode.h"
 #include "csl_log.h"
+
+#include "log.h"
 
 extern VPSharedMem_t	*vp_shared_mem;
 
@@ -74,10 +77,13 @@ extern VPSharedMem_t	*vp_shared_mem;
 * 
 *   @param    streamNumber	(in)	stream number 1:4
 *   @param    controlInfo	(in)	control information
+*   @return   Result_t 				RESULT_OK or RESULT_ERROR
 *
 **********************************************************************/
-void CSL_LOG_Start(UInt16 streamNumber, UInt16 controlInfo)
+Result_t CSL_LOG_Start(UInt16 streamNumber, UInt16 controlInfo)
 {
+
+	Result_t res = RESULT_OK;
 
 	switch(streamNumber)
 	{
@@ -102,10 +108,11 @@ void CSL_LOG_Start(UInt16 streamNumber, UInt16 controlInfo)
 			break;
 
 		default:
-
+			res = RESULT_ERROR;
 			break;
 
 	}
+	return res;
 
 } // CSL_LOG_Start
 
@@ -116,10 +123,13 @@ void CSL_LOG_Start(UInt16 streamNumber, UInt16 controlInfo)
 *   CSL_LOG_Start stops audio logging for specified stream.
 * 
 *   @param    streamNumber	(in)	stream number 1:4
+*   @param    flag	(out)	shut down information
+*   @return   Result_t 				RESULT_OK or RESULT_ERROR
 *
 **********************************************************************/
-void CSL_LOG_Stop(UInt16 streamNumber)
+Result_t CSL_LOG_Stop(UInt16 streamNumber, UInt8 *flag)
 {
+	Result_t res = RESULT_OK;
 
 	switch(streamNumber)
 	{
@@ -144,11 +154,21 @@ void CSL_LOG_Stop(UInt16 streamNumber)
 			break;
 
 		default:
-
+			res = RESULT_ERROR;
 			break;
 
 	}
 
+	if ( vp_shared_mem->shared_audio_stream_0_crtl == 0
+		&& vp_shared_mem->shared_audio_stream_1_crtl == 0
+		&& vp_shared_mem->shared_audio_stream_2_crtl == 0
+		&& vp_shared_mem->shared_audio_stream_3_crtl == 0
+		)
+	{
+		*flag = 1; //inform to audio driver for shut down
+	}
+
+	return res;
 } // CSL_LOG_Stop
 
 
@@ -224,7 +244,7 @@ UInt32 CSL_LOG_Read(UInt16 streamNumber, UInt16 readIndex, UInt8 *outBuf, UInt16
 	{	//Sample rate is 16kHz
 		if(sampleRate == 16000)
 		{// PCM frame
-			size = LOG_WB_SIZE; //642
+			size = LOG_WB_SIZE-2; //642
 		}
 		//Sample rate is 8kHz
 		else
@@ -238,7 +258,14 @@ UInt32 CSL_LOG_Read(UInt16 streamNumber, UInt16 readIndex, UInt8 *outBuf, UInt16
 	/* get logging data */
 	memcpy(outBuf, ptr, size);
 
-	return size;
+	if(sampleRate == 16000)
+	{
+		*(outBuf+640) = (UInt8)(sampleRate&0xf);
+		*(outBuf+641) = (UInt8)((sampleRate>>4)&0xf);
+		return (size+2); //Sample rate is 16kHz
+	}
+	else
+		return size; //Sample rate is 8kHz
 
 } // CSL_LOG_Read
 

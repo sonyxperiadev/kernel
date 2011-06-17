@@ -153,7 +153,7 @@ Boolean VPSHAREDMEM_ReadStatusQ(			// Read an entry from the VPU status  queue
 	UInt8	status_out = vp_shared_mem->vp_shared_statusq_out;
 	UInt8	status_in = vp_shared_mem->vp_shared_statusq_in;
 
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
+	//Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
 	if ( status_out == status_in )
 	{
 		return FALSE;
@@ -166,7 +166,7 @@ Boolean VPSHAREDMEM_ReadStatusQ(			// Read an entry from the VPU status  queue
 		status_msg->arg1 = (UInt16)p->arg1;
 		status_msg->arg2 = (UInt16)p->arg2;
 		status_msg->arg3 = (UInt16)p->arg3;
-		Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
+		//Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
 
 		vp_shared_mem->vp_shared_statusq_out = ( status_out + 1 ) % VP_STATUSQ_SIZE;
 
