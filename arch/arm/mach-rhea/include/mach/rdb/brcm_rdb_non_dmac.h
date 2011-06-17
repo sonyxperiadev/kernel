@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     Date     : Generated on 5/17/2011 0:56:25                                             */
 /*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
@@ -43,18 +43,6 @@
 #define NON_DMAC_DPC_RESERVED_MASK                                        0x00000000
 #define    NON_DMAC_DPC_PC_MGR_SHIFT                                      0
 #define    NON_DMAC_DPC_PC_MGR_MASK                                       0xFFFFFFFF
-
-#define NON_DMAC_INTEN_OFFSET                                             0x00000020
-#define NON_DMAC_INTEN_TYPE                                               UInt32
-#define NON_DMAC_INTEN_RESERVED_MASK                                      0x00000000
-#define    NON_DMAC_INTEN_EVENT_IRQ_SELECT_SHIFT                          0
-#define    NON_DMAC_INTEN_EVENT_IRQ_SELECT_MASK                           0xFFFFFFFF
-
-#define NON_DMAC_ES_OFFSET                                                0x00000024
-#define NON_DMAC_ES_TYPE                                                  UInt32
-#define NON_DMAC_ES_RESERVED_MASK                                         0x00000000
-#define    NON_DMAC_ES_DMASEV_ACTIVE_SHIFT                                0
-#define    NON_DMAC_ES_DMASEV_ACTIVE_MASK                                 0xFFFFFFFF
 
 #define NON_DMAC_INTSTATUS_OFFSET                                         0x00000028
 #define NON_DMAC_INTSTATUS_TYPE                                           UInt32

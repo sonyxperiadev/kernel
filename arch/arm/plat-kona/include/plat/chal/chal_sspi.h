@@ -166,6 +166,15 @@ typedef enum {
 } CHAL_SSPI_FIFO_DATA_PACK_t;
 
 /**
+* SSPI FIFO data size
+******************************************************************************/
+typedef enum {
+    SSPI_FIFO_DATA_SIZE_32BIT,
+    SSPI_FIFO_DATA_SIZE_8BIT,
+    SSPI_FIFO_DATA_SIZE_16BIT,
+} CHAL_SSPI_FIFO_DATA_SIZE_t;
+
+/**
 * SSPI FIFO ID
 ******************************************************************************/
 typedef enum {
@@ -305,9 +314,10 @@ typedef struct {
     CHAL_SSPI_CLK_DIVIDER_t div_sel;
     uint32_t continuous;
     uint32_t wait_before_start;
+    uint32_t not_do_once_only;
     uint32_t loop_cnt;
     uint32_t seq_ptr;
-    uint32_t    init_cond_mask;
+    uint32_t init_cond_mask;
 } chal_sspi_task_conf_t;
 
 /**
@@ -329,6 +339,7 @@ typedef struct {
     uint32_t next_pc            :5;
     uint32_t rep_cnt            :8;
     uint32_t frm_sel            :3;
+    uint32_t clk_idle           :1;
     uint32_t cs_activate        :1;
     uint32_t cs_deactivate      :1;
     uint32_t tx_enable          :1;
@@ -1065,6 +1076,36 @@ CHAL_SSPI_STATUS_t chal_sspi_get_fifo_pack(CHAL_HANDLE handle,
                                            CHAL_SSPI_FIFO_ID_t fifo_id, 
                                            uint32_t *fifo_pack);
 
+/**
+*
+*  @brief  Setup one of the three ways (32-bit, 16-bit or 8-bit) for data size
+*          in the logical FIFO
+*
+*  @param    handle    (in) SSPI CHAL handle
+*  @param    fifo_id   (in) the logical FIFO to configure
+*  @param    fifo_size (in) the data-size way to set for the FIFO
+*
+*  @return SSPI status
+******************************************************************************/
+CHAL_SSPI_STATUS_t chal_sspi_set_fifo_data_size(CHAL_HANDLE handle,
+                                           CHAL_SSPI_FIFO_ID_t fifo_id,
+                                           CHAL_SSPI_FIFO_DATA_SIZE_t fifo_size);
+
+
+/**
+*
+*  @brief  Get the currently configured data-size way for the specified 
+*          logical FIFO
+*
+*  @param    handle    (in) SSPI CHAL handle
+*  @param    fifo_id   (in) the logical FIFO to get the data-packing way
+*  @param    fifo_size (out) the data-size way currently configured
+*
+*  @return SSPI status
+******************************************************************************/
+CHAL_SSPI_STATUS_t chal_sspi_get_fifo_data_size(CHAL_HANDLE handle, 
+                                           CHAL_SSPI_FIFO_ID_t fifo_id, 
+                                           uint32_t *fifo_size);
 
 /**
 *

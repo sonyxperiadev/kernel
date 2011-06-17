@@ -441,8 +441,6 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 {
     cUInt32  regVal;
-    cUInt32   function = 0;
-
 
     /* Select the function for DMIC0_CLK */
     /* For function = 0 (alt_fn1), this will be set as DMIC1_CLK */

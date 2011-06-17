@@ -26,7 +26,7 @@
 #include <linux/init.h>
 
 #include <mach/pinmux.h>
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 
 #define	PIN_DESC(ball, alt1, alt2, alt3, alt4, alt5, alt6)	 	\

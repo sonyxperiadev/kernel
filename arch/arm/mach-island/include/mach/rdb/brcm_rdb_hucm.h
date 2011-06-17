@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/27/2010 23:54:19                                             */
+/*     Date     : Generated on 4/25/2011 11:6:8                                             */
 /*     RDB file : /projects/BIGISLAND/revA0                                                                   */
 /************************************************************************************************/
 
@@ -118,9 +118,9 @@
 
 #define HUCM_CM_ERNTI_OFFSET                                              0x00000030
 #define HUCM_CM_ERNTI_TYPE                                                UInt32
-#define HUCM_CM_ERNTI_RESERVED_MASK                                       0x00000000
+#define HUCM_CM_ERNTI_RESERVED_MASK                                       0xFFFF0000
 #define    HUCM_CM_ERNTI_CM_ERNTI_SHIFT                                   0
-#define    HUCM_CM_ERNTI_CM_ERNTI_MASK                                    0xFFFFFFFF
+#define    HUCM_CM_ERNTI_CM_ERNTI_MASK                                    0x0000FFFF
 
 #endif /* __BRCM_RDB_HUCM_H__ */
 

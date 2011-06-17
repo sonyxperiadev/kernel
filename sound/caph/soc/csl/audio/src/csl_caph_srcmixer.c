@@ -760,7 +760,7 @@ void csl_caph_srcmixer_init(UInt32 baseAddress)
     //csl_caph_srcmixer_enable_all_spkrgain_slope(handle);
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_srcmixer_init:: baseAddress = 0x%x\n", 
+                    "csl_caph_srcmixer_init:: baseAddress = 0x%lx\n", 
                     baseAddress));
 	return;
 }
@@ -896,6 +896,7 @@ void csl_caph_srcmixer_release_inchnl(CSL_CAPH_SRCM_INCHNL_e chnl)
     /* Clear Mixer output channel usage table for this input channel*/
     csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH1_L, chnl);
     csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH1_R, chnl);
+    csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH1, chnl);
     csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH2_L, chnl);
     csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_STEREO_CH2_R, chnl);
 

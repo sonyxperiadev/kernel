@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     Date     : Generated on 5/17/2011 0:56:25                                             */
 /*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
@@ -30,7 +30,17 @@
 
 #define SPI_CS_OFFSET                                                     0x00000000
 #define SPI_CS_TYPE                                                       UInt32
-#define SPI_CS_RESERVED_MASK                                              0xFFE0F803
+#define SPI_CS_RESERVED_MASK                                              0xFC000000
+#define    SPI_CS_LEN_LONG_SHIFT                                          25
+#define    SPI_CS_LEN_LONG_MASK                                           0x02000000
+#define    SPI_CS_DMA_LEN_SHIFT                                           24
+#define    SPI_CS_DMA_LEN_MASK                                            0x01000000
+#define    SPI_CS_CSPOL2_SHIFT                                            23
+#define    SPI_CS_CSPOL2_MASK                                             0x00800000
+#define    SPI_CS_CSPOL1_SHIFT                                            22
+#define    SPI_CS_CSPOL1_MASK                                             0x00400000
+#define    SPI_CS_CSPOL0_SHIFT                                            21
+#define    SPI_CS_CSPOL0_MASK                                             0x00200000
 #define    SPI_CS_RXF_SHIFT                                               20
 #define    SPI_CS_RXF_MASK                                                0x00100000
 #define    SPI_CS_RXR_SHIFT                                               19
@@ -41,6 +51,16 @@
 #define    SPI_CS_RXD_MASK                                                0x00020000
 #define    SPI_CS_DONE_SHIFT                                              16
 #define    SPI_CS_DONE_MASK                                               0x00010000
+#define    SPI_CS_TE_EN_SHIFT                                             15
+#define    SPI_CS_TE_EN_MASK                                              0x00008000
+#define    SPI_CS_LMONO_SHIFT                                             14
+#define    SPI_CS_LMONO_MASK                                              0x00004000
+#define    SPI_CS_LEN_SHIFT                                               13
+#define    SPI_CS_LEN_MASK                                                0x00002000
+#define    SPI_CS_REN_SHIFT                                               12
+#define    SPI_CS_REN_MASK                                                0x00001000
+#define    SPI_CS_ADCS_SHIFT                                              11
+#define    SPI_CS_ADCS_MASK                                               0x00000800
 #define    SPI_CS_INTR_SHIFT                                              10
 #define    SPI_CS_INTR_MASK                                               0x00000400
 #define    SPI_CS_INTD_SHIFT                                              9
@@ -57,12 +77,14 @@
 #define    SPI_CS_CPOL_MASK                                               0x00000008
 #define    SPI_CS_CPHA_SHIFT                                              2
 #define    SPI_CS_CPHA_MASK                                               0x00000004
+#define    SPI_CS_CS_SHIFT                                                0
+#define    SPI_CS_CS_MASK                                                 0x00000003
 
 #define SPI_FIFO_OFFSET                                                   0x00000004
 #define SPI_FIFO_TYPE                                                     UInt32
-#define SPI_FIFO_RESERVED_MASK                                            0xFFFFFF00
+#define SPI_FIFO_RESERVED_MASK                                            0x00000000
 #define    SPI_FIFO_DATA_SHIFT                                            0
-#define    SPI_FIFO_DATA_MASK                                             0x000000FF
+#define    SPI_FIFO_DATA_MASK                                             0xFFFFFFFF
 
 #define SPI_CLK_OFFSET                                                    0x00000008
 #define SPI_CLK_TYPE                                                      UInt32
@@ -81,6 +103,18 @@
 #define SPI_LTOH_RESERVED_MASK                                            0xFFFFFFF0
 #define    SPI_LTOH_TOH_SHIFT                                             0
 #define    SPI_LTOH_TOH_MASK                                              0x0000000F
+
+#define SPI_DC_OFFSET                                                     0x00000014
+#define SPI_DC_TYPE                                                       UInt32
+#define SPI_DC_RESERVED_MASK                                              0x00000000
+#define    SPI_DC_RPANIC_SHIFT                                            24
+#define    SPI_DC_RPANIC_MASK                                             0xFF000000
+#define    SPI_DC_RDREQ_SHIFT                                             16
+#define    SPI_DC_RDREQ_MASK                                              0x00FF0000
+#define    SPI_DC_TPANIC_SHIFT                                            8
+#define    SPI_DC_TPANIC_MASK                                             0x0000FF00
+#define    SPI_DC_TDREQ_SHIFT                                             0
+#define    SPI_DC_TDREQ_MASK                                              0x000000FF
 
 #endif /* __BRCM_RDB_SPI_H__ */
 

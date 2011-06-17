@@ -73,8 +73,6 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 
@@ -83,6 +81,15 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SPI0CLK,  SSP0CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SPI0TXD,  SSP0DO, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SPI0RXD,  SSP0DI, 0, OFF,  ON, 0, 0, 8MA),
+
+	/* SSP3 - PCM
+	   SSP3 pinmux is set since keypad also check the same pins currently */
+
+	/* SSP4 - I2S */
+	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),
 
 	/* LCD */
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
@@ -97,6 +104,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT01, PTI_DAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(TRACEDT02, PTI_DAT2, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
+		
+	/* Camera */
+	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),	
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),

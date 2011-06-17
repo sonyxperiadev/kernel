@@ -12,6 +12,7 @@
 
 #ifndef __LINUX_QT602240_TS_H
 #define __LINUX_QT602240_TS_H
+#include <linux/i2c-kona.h>
 
 /* Orient */
 #define QT602240_NORMAL			0x0
@@ -25,6 +26,7 @@
 
 /* The platform data for the AT42QT602240/ATMXT224 touchscreen driver */
 struct qt602240_platform_data {
+	struct i2c_slave_platform_data i2c_pdata;
 	unsigned int x_line;
 	unsigned int y_line;
 	unsigned int x_size;

@@ -48,10 +48,14 @@
 #include <mach/kona.h>
 #include <mach/rhea.h>
 #include <asm/mach/map.h>
+#include <linux/power_supply.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
+#include <linux/broadcom/bcm59055-power.h>
 #include <linux/clk.h>
+#include <linux/android_pmem.h>
+#include <linux/bootmem.h>
 #include "common.h"
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
@@ -62,6 +66,13 @@
 #include <linux/dma-mapping.h>
 #endif
 #include <linux/spi/spi.h>
+#if defined (CONFIG_HAPTIC)
+#include <linux/haptic.h>
+#endif
+
+#define _RHEA_
+#include <linux/broadcom/bcm_fuse_memmap.h>
+#include <linux/broadcom/platform_mconfig.h>
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
@@ -105,47 +116,21 @@ static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx, int flag)
 }
 
 #ifdef CONFIG_BATTERY_BCM59055
-/* wall charging and vbus are wired together on FF board
-     we monitor USB activity to make sure it is not USB cable that is inserted
- */
-static int can_start_charging(void* data)
-{
-#define INTERVAL (HZ/10)
-	int cpu, usb_otg_int[4], i;
-	for_each_present_cpu(cpu)
-		usb_otg_int[cpu] =  kstat_irqs_cpu(
-				BCM_INT_ID_USB_HSOTG, cpu);
-
-	for (i=0; i<10; i++) {
-		schedule_timeout_interruptible(INTERVAL);
-		for_each_present_cpu(cpu)
-			if (usb_otg_int[cpu]!= kstat_irqs_cpu(
-						BCM_INT_ID_USB_HSOTG, cpu))
-				return 0;
-	}
-	return 1;
-}
-
-static struct mv_percent mv_percent_table[] =
-{
-    { 3800 , 5 },
-    { 3850 , 25 },
-    { 3900 , 50 },
-    { 3950 , 70 },
-    { 4000 , 90 },
-    { 4100 , 100 },
-} ;
 
 static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
-	.can_start_charging = can_start_charging,
-	.vp_table = mv_percent_table ,
-	.vp_table_cnt = ARRAY_SIZE(mv_percent_table) ,
-        .batt_min_volt = 3200 ,
-        .batt_max_volt = 4200 ,
-        .batt_technology = POWER_SUPPLY_TECHNOLOGY_LION ,
+        .batt_min_volt = 3200,
+        .batt_max_volt = 4200,
+        .batt_technology = POWER_SUPPLY_TECHNOLOGY_LION,
+        .usb_cc = CURRENT_500_MA,
+        .wac_cc = CURRENT_900_MA,
+        /* 1500mA = 5400 coloumb
+         * 1Ah = 3600 coloumb
+        */
+        .batt_max_capacity = 5400,
 };
 #endif
 
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
 /* Regulator registration */
 struct regulator_consumer_supply sim_supply[] = {
 	{ .supply = "sim_vcc" },
@@ -172,7 +157,7 @@ static struct bcm590xx_regulator_init_data bcm59055_regulators[] =
 
 static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 	.num_regulator	= ARRAY_SIZE(bcm59055_regulators),
-	.init			= &bcm59055_regulators,
+	.init			= bcm59055_regulators,
 	.default_pmmode = {
 		[BCM59055_RFLDO]	= 0x00,
 		[BCM59055_CAMLDO] 	= 0x00,
@@ -189,15 +174,19 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 		[BCM59055_SDSR]		= 0x00,
 	},
 };
-
+#endif
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
+	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
 	.init = bcm590xx_init_platform_hw,
 	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
-	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC,
+	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC | BCM590XX_ENABLE_ADC |
+	BCM590XX_ENABLE_FUELGAUGE,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
 	.regl_pdata = &bcm59055_regl_pdata,
+#endif
 };
 
 
@@ -324,6 +313,7 @@ static int pca953x_platform_exit_hw(struct i2c_client *client,
 }
 
 static struct pca953x_platform_data board_expander_info = {
+	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_100K, },
 	.gpio_base	= KONA_MAX_GPIO,
 	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
 	.setup		= pca953x_platform_init_hw,
@@ -365,6 +355,7 @@ static void qt602240_platform_exit_hw(void)
 }
 
 static struct qt602240_platform_data qt602240_platform_data = {
+	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_100K, },
 	.x_line		= 17,
 	.y_line		= 11,
 	.x_size		= 800,
@@ -470,6 +461,65 @@ static struct spi_board_info spi_slave_board_info[] __initdata = {
 	/* TODO: adding more slaves here */
 };
 
+static unsigned long pmem_base = 0;
+static unsigned int pmem_size = SZ_16M;
+static int __init setup_pmem_pages(char *str)
+{
+	if(str){
+		pmem_size = memparse((const char *)str, NULL);
+	}
+	printk(KERN_INFO "PMEM size is  0x%08x Bytes\n", pmem_size);
+	pmem_base = virt_to_phys((void *)alloc_bootmem_pages(pmem_size));
+	if(!pmem_base)
+		printk(KERN_ERR "Failed to allocate the PMEM memory\n");
+	else
+		printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
+	return 0;
+}
+__setup("pmem=", setup_pmem_pages);
+
+/* Allocate the top 16M of the DRAM for the pmem. */
+static struct android_pmem_platform_data android_pmem_data = {
+	.name = "pmem",
+	.start = 0x0,
+	.size = SZ_16M,
+	.no_allocator = 0,
+	.cached = 1,
+	.buffered = 1,
+};
+
+static struct platform_device android_pmem = {
+	.name 	= "android_pmem",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &android_pmem_data,
+	},
+};
+
+#if defined (CONFIG_HAPTIC_SAMSUNG_PWM)
+void haptic_gpio_setup(void)
+{
+	/* Board specific configuration like pin mux & GPIO */
+}
+
+static struct haptic_platform_data haptic_control_data = {
+	/* Haptic device name: can be device-specific name like ISA1000 */
+	.name = "pwm_vibra",
+	/* PWM interface name to request */
+	.pwm_name = "kona_pwmc:4",
+	/* Invalid gpio for now, pass valid gpio number if connected */
+	.gpio = ARCH_NR_GPIOS,
+	.setup_pin = haptic_gpio_setup,
+};
+
+struct platform_device haptic_pwm_device = {
+	.name   = "samsung_pwm_haptic",
+	.id     = -1,
+	.dev	=	 {	.platform_data = &haptic_control_data,}
+};
+
+#endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -483,6 +533,10 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
 #endif
+	&android_pmem,
+#ifdef CONFIG_HAPTIC_SAMSUNG_PWM
+	&haptic_pwm_device,
+#endif
 };
 
 /* Rhea Ray specific i2c devices */
@@ -492,33 +546,16 @@ static void __init rhea_ray_add_i2c_devices (void)
 	i2c_register_board_info(2,
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
+	i2c_register_board_info(1,
+			pca953x_info,
+			ARRAY_SIZE(pca953x_info));
+	i2c_register_board_info(1,
+			qt602240_info,
+			ARRAY_SIZE(qt602240_info));
 }
 
 static int __init rhea_ray_add_lateInit_devices (void)
 {
-	struct i2c_adapter *adapter;
-	struct i2c_client *client;
-
-	adapter = i2c_get_adapter(1);
-	if (!adapter) {
-		printk(KERN_ERR "can't get i2c adapter 1 %d\n");
-		return ENODEV;
-	}
-#ifdef CONFIG_GPIO_PCA953X
-	client = i2c_new_device(adapter, pca953x_info);
-	if (!client) {
-		printk(KERN_ERR "an't add i2c device for pca953x\n");
-	}
-#endif
-
-#ifdef CONFIG_TOUCHSCREEN_QT602240
-	client = i2c_new_device(adapter, qt602240_info);
-	if (!client) {
-		printk(KERN_ERR "an't add i2c device for qt602240\n");
-	}
-#endif
-	i2c_put_adapter(adapter);
-
 	board_add_sdio_devices();
 	return 0;
 }
@@ -547,6 +584,9 @@ static void enable_smi_display_clks(void)
 static void __init rhea_ray_add_devices(void)
 {
 	enable_smi_display_clks();
+
+	android_pmem_data.start = (unsigned long)pmem_base;
+	android_pmem_data.size  = pmem_size;
 
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;

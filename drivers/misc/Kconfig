@@ -413,6 +413,19 @@ config BCM59055_AUDIO
 	---help---
 	 BCM59055 PMU Audio driver
 
+config BCM59055_SARADC
+	tristate "BCM59055 PMU ADC driver"
+	depends on MFD_BCM_PMU590XX
+	---help---
+	 BCM59055 PMU ADC driver
+
+config BCM59055_FUELGAUGE
+	tristate "BCM59055 PMU Fuel Gauge driver"
+	depends on MFD_BCM_PMU590XX
+	---help---
+	 BCM59055 PMU Fuel Gauge driver
+
+source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

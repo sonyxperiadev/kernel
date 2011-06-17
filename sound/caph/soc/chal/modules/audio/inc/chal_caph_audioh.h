@@ -25,7 +25,7 @@ Broadcom's express prior written consent.
 #define _CHAL_HERA_AUDIO_
 
 #include "chal_types.h"
-#include "brcm_rdb_sysmap_a9.h"
+#include "brcm_rdb_sysmap.h"
 
 /**
 * defines

@@ -139,7 +139,7 @@ static void pl330_req_callback(void *token, enum pl330_op_err err)
 	struct pl330_chan_desc *c =
 	    container_of(r, struct pl330_chan_desc, req);
 
-	printk("\n----> %s ()\n", __func__);
+	//printk("--> pl330 drv callback\n");
 	if (c && c->xfer_callback) {
 		switch (err) {
 		case PL330_ERR_NONE:
@@ -163,7 +163,7 @@ static void pl330_req_callback(void *token, enum pl330_op_err err)
 int dma_request_chan(unsigned int *chan, const char *name)
 {
 	int ch, err = -1;
-	enum dma_peri peri;
+	enum dma_peri peri = KONA_DMACH_INVALID;
 	u8 pri_id;
 	void *pl330_chan_id = NULL;
 	struct pl330_chan_desc *cdesc = NULL;
@@ -358,25 +358,26 @@ int dma_setup_transfer(unsigned int chan,
 	struct pl330_reqcfg *config;
 	struct pl330_xfer *xfer;
 	struct pl330_chan_desc *c;
-	int err = -1;
+	int err = -1, bl, bs, w;
 
 	if (!xfer_size)
 		goto err1;
 
 	/* DMA transfer direction */
 	switch (control & DMA_DIRECTION_MASK) {
-		/* Peripheral transfers with DMAC flow control are
-		 * treated as Mem to Mem transfers at PL330 microcode level.
+		/* Peripheral DMA is handled with PRI handshake using DMAC flow control.
+		 * Peripheral flow control is not supported at PL330 microcode level
+		 * in low-level PL330 driver.
 		 */
 	case DMA_DIRECTION_MEM_TO_MEM:
-	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_DMAC:
-	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_DMAC:
 		rqtype = MEMTOMEM;
 		break;
-	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI:
+	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_DMAC:
+	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI:	/*fall back to DMAC FCTRL */
 		rqtype = MEMTODEV;
 		break;
-	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI:
+	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_DMAC:
+	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI:	/*fall back to DMAC FCTRL */
 		rqtype = DEVTOMEM;
 		break;
 	case DMA_DIRECTION_DEV_TO_DEV:
@@ -388,12 +389,57 @@ int dma_setup_transfer(unsigned int chan,
 	if (rqtype == DEVTODEV)
 		goto err1;
 
-	/* Burst size max is 64 bit(AXI), not supporting >64 bit burst size */
-	if ((cfg & DMA_CFG_BURST_SIZE_MASK) > DMA_CFG_BURST_SIZE_8)
+	/* Burst size */
+	bs = cfg & DMA_CFG_BURST_SIZE_MASK;
+
+	if (bs > DMA_CFG_BURST_SIZE_8) {
+		dev_err(dmac->pi->dev,
+			"Burst Length > 64 bits not supported\n");
 		goto err1;
+	}
+
+	switch (bs) {
+	case DMA_CFG_BURST_SIZE_1:
+		w = 1;
+		break;
+	case DMA_CFG_BURST_SIZE_2:
+		w = 2;
+		break;
+	case DMA_CFG_BURST_SIZE_4:
+		w = 4;
+		break;
+	case DMA_CFG_BURST_SIZE_8:
+	default:
+		w = 8;
+		break;
+	};
+
+	/* Burst Length */
+	bl = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> DMA_CFG_BURST_LENGTH_SHIFT)
+	      + 1);
+
+	/* checking xfer size alignment */
+	if (xfer_size % (bl * w)) {
+		dev_err(dmac->pi->dev,
+			"xfer size not aligned to burst size x burst len\n");
+		goto err1;
+	}
+
+	/* check buffer address alignment */
+	if (src_addr % w) {
+		dev_err(dmac->pi->dev,
+			"src buffer is not aligned to brst size\n");
+		goto err1;
+	}
+	if (dst_addr % w) {
+		dev_err(dmac->pi->dev,
+			"dst buffer is not aligned to brst size\n");
+		goto err1;
+	}
 
 	spin_lock_irqsave(&lock, flags);
 
+	/* Get channel descriptor */
 	c = chan_id_to_cdesc(chan);
 	if (!c) {
 		spin_unlock_irqrestore(&lock, flags);
@@ -432,20 +478,25 @@ int dma_setup_transfer(unsigned int chan,
 	/* configuration options */
 	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
 	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
+
 	/* Burst size */
-	config->brst_size = (cfg & DMA_CFG_BURST_SIZE_MASK) >> 1;
+	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
 	/* Burst Length */
-	config->brst_len = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> 4) + 1);
+	config->brst_len = bl;
 
 	/* default settings:  Noncacheable, nonbufferable, no swapping */
 	config->scctl = SCCTRL0;
 	config->dcctl = DCCTRL0;
 	config->swap = SWAP_NO;
 
-	/* TrustZone security AXPROT[2:0} = 000 */
-	config->insnaccess = false;	/* tied LOW */
-	config->nonsecure = false;	/* DMAC boots in Secure Mode */
+	/* TrustZone Security level for DMA transactions: AXPROT[2:0] */
+	config->insnaccess = false;
 	config->privileged = false;
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
+	config->nonsecure = false;	/* Secure Mode */
+#else
+	config->nonsecure = true;	/* Open Mode */
+#endif
 
 	xfer->src_addr = src_addr;
 	xfer->dst_addr = dst_addr;
@@ -483,28 +534,29 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	unsigned long flags;
 	enum pl330_reqtype rqtype;
 	struct pl330_reqcfg *config;
-	struct pl330_xfer *xfer_front, *nxt, *priv;
+	struct pl330_xfer *xfer_front, *nxt = NULL, *priv = NULL;
 	struct pl330_chan_desc *c;
 	struct dma_transfer_list *lli;
-	int err = -1;
+	int err = -1, bl, bs, w;
 
 	if (!head)
 		return -1;
 
 	/* DMA transfer direction */
 	switch (control & DMA_DIRECTION_MASK) {
-		/* Peripheral transfers with DMAC flow control are
-		 * treated as Mem to Mem transfers at PL330 microcode level.
+		/* Peripheral transfers are always handled with DMAC flow control.
+		 * Peripheral flow control is not supported at PL330 microcode level
+		 * in low-level PL330 driver.
 		 */
 	case DMA_DIRECTION_MEM_TO_MEM:
-	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_DMAC:
-	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_DMAC:
 		rqtype = MEMTOMEM;
 		break;
-	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI:
+	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_DMAC:
+	case DMA_DIRECTION_MEM_TO_DEV_FLOW_CTRL_PERI:	/*fall back to DMAC FCTRL */
 		rqtype = MEMTODEV;
 		break;
-	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI:
+	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_DMAC:
+	case DMA_DIRECTION_DEV_TO_MEM_FLOW_CTRL_PERI:	/*fall back to DMAC FCTRL */
 		rqtype = DEVTOMEM;
 		break;
 	case DMA_DIRECTION_DEV_TO_DEV:
@@ -516,17 +568,41 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	if (rqtype == DEVTODEV)
 		goto err1;
 
-	/* Burst size max is 64 bit(AXI), not supporting > 64 bit burst size */
-	if ((cfg & DMA_CFG_BURST_SIZE_MASK) > DMA_CFG_BURST_SIZE_8)
+	/* Burst size */
+	bs = cfg & DMA_CFG_BURST_SIZE_MASK;
+
+	if (bs > DMA_CFG_BURST_SIZE_8) {
+		dev_err(dmac->pi->dev,
+			"Burst Length > 64 bits not supported\n");
 		goto err1;
+	}
+
+	switch (bs) {
+	case DMA_CFG_BURST_SIZE_1:
+		w = 1;
+		break;
+	case DMA_CFG_BURST_SIZE_2:
+		w = 2;
+		break;
+	case DMA_CFG_BURST_SIZE_4:
+		w = 4;
+		break;
+	case DMA_CFG_BURST_SIZE_8:
+	default:
+		w = 8;
+		break;
+	};
+
+	/* Burst Length */
+	bl = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> DMA_CFG_BURST_LENGTH_SHIFT)
+	      + 1);
 
 	spin_lock_irqsave(&lock, flags);
 
+	/* Get channel descriptor */
 	c = chan_id_to_cdesc(chan);
-	if (!c) {
-		spin_unlock_irqrestore(&lock, flags);
+	if (!c)
 		goto err1;
-	}
 
 	if (c->in_use || c->is_setup) {
 		dev_info(dmac->pi->dev,
@@ -554,20 +630,25 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 	/* configuration options */
 	config->src_inc = (cfg & DMA_CFG_SRC_ADDR_INCREMENT) ? 1 : 0;
 	config->dst_inc = (cfg & DMA_CFG_DST_ADDR_INCREMENT) ? 1 : 0;
+
 	/* Burst size */
-	config->brst_size = (cfg & DMA_CFG_BURST_SIZE_MASK) >> 1;
+	config->brst_size = bs >> DMA_CFG_BURST_SIZE_SHIFT;
 	/* Burst Length */
-	config->brst_len = (((cfg & DMA_CFG_BURST_LENGTH_MASK) >> 4) + 1);
+	config->brst_len = bl;
 
 	/* default settings:  Noncacheable, nonbufferable, no swapping */
 	config->scctl = SCCTRL0;
 	config->dcctl = DCCTRL0;
 	config->swap = SWAP_NO;
 
-	/* TrustZone security AXPROT[2:0} = 000 */
-	config->insnaccess = false;	/* tied LOW */
-	config->nonsecure = false;	/* DMAC boots in Secure Mode */
-	config->privileged = false;	/* AXPROT[2:0] = 000 */
+	/* TrustZone Security level for DMA transactions: AXPROT[2:0] */
+	config->insnaccess = false;
+	config->privileged = false;
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
+	config->nonsecure = false;	/* Secure Mode */
+#else
+	config->nonsecure = true;	/* Open Mode */
+#endif
 
 	/* Generate xfer list based on linked list passed */
 	xfer_front = NULL;
@@ -575,6 +656,26 @@ int dma_setup_transfer_list(unsigned int chan, struct list_head *head,
 
 		if (!lli->xfer_size)
 			continue;
+
+		/* checking xfer size alignment */
+		if (lli->xfer_size % (bl * w)) {
+			dev_err(dmac->pi->dev,
+				"LLI xfer size not aligned to burst size x burst len\n");
+			goto err2;
+		}
+
+		/* check buffer address alignment */
+		if (lli->srcaddr % w) {
+			dev_err(dmac->pi->dev,
+				"src buffer is not aligned to brst size\n");
+			goto err2;
+		}
+
+		if (lli->dstaddr % w) {
+			dev_err(dmac->pi->dev,
+				"dst buffer is not aligned to brst size\n");
+			goto err2;
+		}
 
 		nxt = (struct pl330_xfer *)kzalloc(sizeof(*nxt), GFP_KERNEL);
 		if (!nxt) {
@@ -744,7 +845,7 @@ int dma_free_callback(unsigned int chan)
 
 static irqreturn_t pl330_irq_handler(int irq, void *data)
 {
-	printk("\n-----> %s(): irq = %d\n", __func__, irq);
+	//printk("\nPL330 IRQ #%d\n",irq);
 	if (pl330_update(data))
 		return IRQ_HANDLED;
 	else
@@ -788,10 +889,12 @@ static int pl330_probe(struct platform_device *pdev)
 	pl330_info->client_data = NULL;
 	pl330_info->dev = &pdev->dev;
 
-	/* Currently DMAC works in secure mode, non-secure mode in progress */
-	/*pl330_info->base = (void __iomem *)pl330_pdata->dmac_ns_base; */
+	/* DMAC APB base address, for secure and open modes */
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	pl330_info->base = (void __iomem *)pl330_pdata->dmac_s_base;
-
+#else
+	pl330_info->base = (void __iomem *)pl330_pdata->dmac_ns_base;
+#endif
 	/*  Get the first IRQ line */
 	irq_start = pl330_pdata->irq_base;
 	irq = irq_start;

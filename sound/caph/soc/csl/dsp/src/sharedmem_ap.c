@@ -36,6 +36,9 @@
 #include "xassert.h"
 #include "log.h"
 
+#include "io.h"
+#include "platform_mconfig_rhea.h"
+
 #if defined(DEVELOPMENT_ONLY)
 UInt16 at_mdsptst_audio_logging = FALSE;
 UInt16 at_mtst_track_logging =FALSE;
@@ -47,17 +50,18 @@ Boolean at_mtst_event_logging = FALSE;
 #endif
 
 
-#pragma arm section zidata = "shared_rip_mem_sect"
-static AP_SharedMem_t			AP_shared_mememory;
+//#pragma arm section zidata = "shared_rip_mem_sect"
+//static AP_SharedMem_t			AP_shared_mememory __attribute__((section("shared_rip_mem_sect")));
       
-#pragma arm section
-
-static AP_SharedMem_t 			*dsp_shared_mem = &AP_shared_mememory;		// Define pointers to global strcuture of the shared memory
+//#pragma arm section
 
 
-static AP_SharedMem_t			*shared_mem	= &AP_shared_mememory; 
-static AP_SharedMem_t 			*pg27_shared_mem = &AP_shared_mememory;
-static AP_SharedMem_t 			*pg28_shared_mem = &AP_shared_mememory;
+static AP_SharedMem_t 			*dsp_shared_mem = NULL;
+static AP_SharedMem_t 			*global_shared_mem = NULL;
+
+static AP_SharedMem_t			*shared_mem	= NULL; 
+static AP_SharedMem_t 			*pg27_shared_mem = NULL;
+static AP_SharedMem_t 			*pg28_shared_mem = NULL;
 
 static UInt8 AMR_Codec_Mode_Good = 7;
 #if defined(UMTS) && defined(DEVELOPMENT_ONLY)
@@ -79,7 +83,7 @@ static UInt32 amr_voice_counter =0;
 void AP_SHAREDMEM_Init()
 {
 	// Clear out shared memory
-	memset(&AP_shared_mememory, 0, sizeof(AP_SharedMem_t));
+//	memset(&AP_shared_mememory, 0, sizeof(AP_SharedMem_t));
 
 }
 
@@ -96,6 +100,16 @@ void AP_SHAREDMEM_Init()
 
 AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()		// Return pointer to 32-bit aligned shared memory
 {
+		if(global_shared_mem == NULL)
+		{
+			global_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+			if (!global_shared_mem) {
+				Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping dsp shared memory failed\n\r");
+				return NULL;
+			}
+	   }
+		dsp_shared_mem = global_shared_mem;
+
 	return dsp_shared_mem;
 }	
 
@@ -116,6 +130,15 @@ AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()		// Return pointer to 32-bit ali
 
 AP_SharedMem_t *SHAREDMEM_GetSharedMemPtr()// Return pointer to shared memory
 {
+	 if(global_shared_mem == NULL)
+	 {
+		 global_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		 if (!global_shared_mem) {
+			 Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping shared memory failed\n\r");
+			 return NULL;
+		 }
+	}
+	shared_mem = global_shared_mem;
 
 	return shared_mem;
 
@@ -135,6 +158,16 @@ AP_SharedMem_t *SHAREDMEM_GetSharedMemPtr()// Return pointer to shared memory
 
 AP_SharedMem_t *SHAREDMEM_GetPage27SharedMemPtr()// Return pointer to page 27 shared memory
 {
+    if(global_shared_mem == NULL)
+    {
+        global_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+        if (!global_shared_mem) {
+            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping shared memory failed\n\r");
+            return NULL;
+        }
+    }
+   	pg27_shared_mem = global_shared_mem;
+	
 	return pg27_shared_mem;
 }	
 
@@ -150,7 +183,17 @@ AP_SharedMem_t *SHAREDMEM_GetPage27SharedMemPtr()// Return pointer to page 27 sh
 
 AP_SharedMem_t *SHAREDMEM_GetPage28SharedMemPtr()// Return pointer to page 28 shared memory
 {
-	return pg28_shared_mem;
+	if(global_shared_mem == NULL)
+	   {
+		   global_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		   if (!global_shared_mem) {
+			   Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping shared memory failed\n\r");
+			   return NULL;
+		   }
+	  }
+	  pg28_shared_mem = global_shared_mem;
+	  
+	  return pg28_shared_mem;
 }	
 
 

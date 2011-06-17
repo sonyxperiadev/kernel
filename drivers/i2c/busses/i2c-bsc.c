@@ -71,6 +71,9 @@ struct bsc_i2c_dev
 	/* I2C bus speed */
 	enum bsc_bus_speed speed;
 
+	/* Current I2C bus speed configured */
+	enum bsc_bus_speed current_speed;
+
 	/* the 8-bit master code (0000 1XXX, 0x08) used for high speed mode */
 	unsigned char mastercode;
 
@@ -109,6 +112,7 @@ static const unsigned int gBusSpeedTable[BSC_SPD_MAXIMUM] =
 {
    BSC_SPD_32K,
    BSC_SPD_50K,
+   BSC_SPD_100K,
    BSC_SPD_230K,
    BSC_SPD_380K,
    BSC_SPD_400K,
@@ -504,6 +508,24 @@ static int bsc_xfer_do_addr(struct i2c_adapter *adapter, struct i2c_msg *msg)
    return 0;
 }
 
+static int __bsc_i2c_get_client(struct device *dev, void *addrp)
+{
+    struct i2c_client *client = i2c_verify_client(dev);
+    int addr = *(int *)addrp;
+
+    if (client && client->addr == addr)
+        return true;
+
+    return 0;
+}
+
+static struct device *bsc_i2c_get_client(struct i2c_adapter *adapter,
+                         int addr)
+{
+    return device_find_child(&adapter->dev, &addr,
+                 __bsc_i2c_get_client);
+}
+
 /*
  * Master tranfer function
  */
@@ -512,10 +534,49 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 {
    struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
    struct i2c_msg *pmsg;
+   struct i2c_slave_platform_data *pd = NULL;
+   struct device *d = NULL;
+   struct i2c_client * client = NULL;
    int rc;
    unsigned short i, nak_ok;
+   enum bsc_bus_speed set_speed;
+
+   d = bsc_i2c_get_client(adapter,  msgs[0].addr);
+   if (d) {
+      client = i2c_verify_client(d);
+      pd = (struct i2c_slave_platform_data *)client->dev.platform_data;
+      if (pd)	{
+         dev_dbg(dev->dev, "i2c addr=0x%x, speed=0x%x\n",
+                             client->addr, pd->i2c_speed);
+      /* Need to enable turbo mode for High speed */
+      if (pd->i2c_speed < BSC_BUS_SPEED_HS)
+          set_speed = pd->i2c_speed;
+      else
+          set_speed = dev->speed;	/* default speed */
+      } else {
+          dev_dbg(dev->dev,"i2c addr=0x%x No platform data!\n",client->addr);
+          set_speed = dev->speed;	/* default speed */
+      }
+   } else	{
+          dev_err(dev->dev, "ERROR! No i2c client with i2c addr=0x%x\n",
+                                                           msgs[0].addr);
+         set_speed = dev->speed;	/* default speed */
+   }
 
    down(&dev->xfer_lock);
+
+    /* high speed */
+    if (set_speed == BSC_BUS_SPEED_HS || set_speed == BSC_BUS_SPEED_HS_FPGA)
+        dev->high_speed_mode = 1;
+    else
+        dev->high_speed_mode = 0;
+
+   /* If High speed mode, start with default speed */
+   if ((!dev->high_speed_mode) && (set_speed != dev->current_speed))	{
+      bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[set_speed]);
+      dev->current_speed = set_speed;
+	}
+
 
    /* send start command */
    rc = bsc_xfer_start(adapter);
@@ -887,6 +948,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	*/
 	bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[dev->speed]);
 
+	/* curent speed configured */
+	dev->current_speed = dev->speed;
+
 	/* init I2C controller */
 	isl_bsc_init((uint32_t)dev->virt_base);
 
@@ -1088,7 +1152,7 @@ static void __exit bsc_exit(void)
    remove_proc_entry(PROC_GLOBAL_PARENT_DIR, NULL);
 }
 
-module_init(bsc_init);
+arch_initcall(bsc_init);
 module_exit(bsc_exit);
 
 MODULE_AUTHOR("Broadcom");

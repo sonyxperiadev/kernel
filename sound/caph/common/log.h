@@ -51,9 +51,5 @@ typedef enum
 
 #define L1_LOGV Log_DebugPrintf
 
-#define dprintf(logID,fmt,args...) 
-
-
-
 #endif
 

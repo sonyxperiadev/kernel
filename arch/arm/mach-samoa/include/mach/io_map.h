@@ -27,7 +27,7 @@
 #define __SAMOA_IO_MAP_H
 
 #include <asm/memory.h>
-#include <mach/rdb/brcm_rdb_sysmap_a5.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 
 /*
 Jian: to update for Samoa
@@ -118,6 +118,8 @@ Jian: to update for Samoa
 #define KONA_MM_DMA_VA		    HW_IO_PHYS_TO_VIRT( MM_DMA_BASE_ADDR )
 
 #define KONA_PWRMGR_VA		    HW_IO_PHYS_TO_VIRT( PWRMGR_BASE_ADDR )
+
+#define KONA_PMU_PMU_VA		    HW_IO_PHYS_TO_VIRT( PMU_PMU_BASE_ADDR )
 
 #define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */ 
 

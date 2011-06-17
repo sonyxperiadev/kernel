@@ -20,7 +20,7 @@
 
 #include <mach/clock.h>
 #include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_mm_clk_mgr_reg.h>
@@ -49,7 +49,6 @@ static struct proc_clock arm_clk = {
 	Reference clocks
 *****************************************************************************/
 DECLARE_REF_CLK (crystal,	CRYSTAL, 			26*CLOCK_1M,	1,	0);
-DECLARE_REF_CLK (dummy,		DUMMY, 				0,		1,	0);
 DECLARE_REF_CLK (frac_1m,	FRAC_1M,			1*CLOCK_1M,		1,	0);
 DECLARE_REF_CLK (ref_96m_varVDD,	REF_96M_VARVDD,		96*CLOCK_1M,	1,	0);
 DECLARE_REF_CLK (var_96m,	VAR_96M,			96*CLOCK_1M,	1,	0);

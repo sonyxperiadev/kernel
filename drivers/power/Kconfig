@@ -151,7 +151,7 @@ config BATTERY_BCM2708
 
 config BATTERY_BCM59055
 	tristate "BCM59055 Battery support"
-	depends on ARCH_ISLAND
+	depends on MFD_BCM_PMU590XX
 	help
 	  A battery driver for PMU59055. 
 endif # POWER_SUPPLY

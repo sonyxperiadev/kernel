@@ -21,10 +21,16 @@
 #define EXPANDED_GPIOS		16
 #define ARCH_NR_GPIOS		(KONA_MAX_GPIO+EXPANDED_GPIOS)
 #else
+#ifdef CONFIG_GPIO_TC3589X
+#define EXPANDED_GPIOS		24
+#define ARCH_NR_GPIOS		(KONA_MAX_GPIO+EXPANDED_GPIOS)
+#else
 #define ARCH_NR_GPIOS		KONA_MAX_GPIO
+#endif
 #endif
 
 #include <asm-generic/gpio.h>
+#include <mach/irqs.h>
 
 #define gpio_get_value(gpio)		 __gpio_get_value(gpio)
 #define gpio_set_value(gpio,value)  __gpio_set_value(gpio,value)

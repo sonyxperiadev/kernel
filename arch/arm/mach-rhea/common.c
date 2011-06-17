@@ -48,7 +48,8 @@
 #include <asm/pmu.h>
 #include <linux/spi/spi.h>
 #include <plat/spi_kona.h>
-
+#include <plat/chal/chal_trace.h>
+#include <trace/stm.h>
 
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
@@ -240,6 +241,18 @@ static struct resource board_sdio1_resource[] = {
 	},
 };
 
+static struct resource board_sdio2_resource[] = {
+	[0] = {
+		.start = SDIO3_BASE_ADDR,
+		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
 static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO0 */
 		.id = 0,
@@ -254,10 +267,20 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO1 */
 		.id = 1,
 		.data_pullup = 0,
+		.is_8bit = 1,
 		.devtype = SDIO_DEV_TYPE_EMMC,
 		.peri_clk_name = "sdio2_clk",
 		.ahb_clk_name = "sdio2_ahb_clk",
 		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
+	},
+	{ /* SDIO2 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
 };
@@ -282,6 +305,15 @@ static struct platform_device board_sdio1_device = {
 	},
 };
 
+static struct platform_device board_sdio2_device = {
+	.name = "sdhci",
+	.id = 2,
+	.resource = board_sdio2_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[2],
+	},
+};
 static struct resource board_i2c0_resource[] = {
 	[0] =
 	{
@@ -418,7 +450,7 @@ static struct resource kona_sspi_spi0_resource[] = {
 };
 
 static struct spi_kona_platform_data sspi_spi0_info = {
-	.enable_dma = 0,
+	.enable_dma = 1,
 	.cs_line = 1,
 	.mode = SPI_LOOP | SPI_MODE_3,
 };
@@ -455,6 +487,46 @@ struct platform_device tmon_device = {
 };
 #endif
 
+#ifdef CONFIG_STM_TRACE
+static struct stm_platform_data stm_pdata = {
+	.regs_phys_base       = STM_BASE_ADDR,
+	.channels_phys_base   = SWSTM_BASE_ADDR,
+	.id_mask              = 0x0,   /* Skip ID check/match */
+	.final_funnel	      = CHAL_TRACE_FIN_FUNNEL,
+};
+
+struct platform_device kona_stm_device = {
+	.name = "stm",
+	.id = -1,
+	.dev = {
+	        .platform_data = &stm_pdata,
+	},
+};
+#endif
+
+#if defined(CONFIG_HW_RANDOM_KONA)
+static struct resource rng_device_resource[] = {
+	[0] = {
+		.start = SEC_RNG_BASE_ADDR,
+		.end   = SEC_RNG_BASE_ADDR + 0x14,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SECURE_TRAP1,
+		.end   = BCM_INT_ID_SECURE_TRAP1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device rng_device =
+{
+	.name			= "kona_rng",
+	.id				= -1,
+	.resource	  = rng_device_resource,
+	.num_resources = ARRAY_SIZE(rng_device_resource),
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -470,11 +542,18 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_SENSORS_KONA
 	&tmon_device,
 #endif
+#ifdef CONFIG_STM_TRACE
+	&kona_stm_device,
+#endif
+#if defined(CONFIG_HW_RANDOM_KONA)
+	&rng_device,
+#endif
 };
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
 	&board_sdio1_device,
+	&board_sdio2_device,
 	&board_sdio0_device,
 };
 

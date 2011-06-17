@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/27/2010 23:54:34                                             */
-/*     RDB file : /projects/DSP/revA0                                                                   */
+/*     Date     : Generated on 4/25/2011 11:6:8                                             */
+/*     RDB file : /projects/BIGISLAND/revA0                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_CPH_AADMAC_H__
@@ -34,7 +34,7 @@
 #define    CPH_AADMAC_CH1_AADMAC_CR_1_CH1_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH1_AADMAC_CR_1_CH1_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH1_AADMAC_CR_2_OFFSET                                 0x00000002
+#define CPH_AADMAC_CH1_AADMAC_CR_2_OFFSET                                 0x00000004
 #define CPH_AADMAC_CH1_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH1_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH1_AADMAC_CR_2_CH1_SW_READY_HIGH_SHIFT             31
@@ -54,7 +54,7 @@
 #define    CPH_AADMAC_CH1_AADMAC_CR_2_CH1_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH1_AADMAC_CR_2_CH1_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH1_AADMAC_SR_1_OFFSET                                 0x00000004
+#define CPH_AADMAC_CH1_AADMAC_SR_1_OFFSET                                 0x00000008
 #define CPH_AADMAC_CH1_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH1_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_HW_READY_HIGH_SHIFT             21
@@ -66,13 +66,13 @@
 #define    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH1_AADMAC_SR_1_CH1_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH2_AADMAC_CR_1_OFFSET                                 0x00000008
+#define CPH_AADMAC_CH2_AADMAC_CR_1_OFFSET                                 0x00000010
 #define CPH_AADMAC_CH2_AADMAC_CR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH2_AADMAC_CR_1_RESERVED_MASK                          0x00000000
 #define    CPH_AADMAC_CH2_AADMAC_CR_1_CH2_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH2_AADMAC_CR_1_CH2_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH2_AADMAC_CR_2_OFFSET                                 0x0000000A
+#define CPH_AADMAC_CH2_AADMAC_CR_2_OFFSET                                 0x00000014
 #define CPH_AADMAC_CH2_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH2_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH2_AADMAC_CR_2_CH2_SW_READY_HIGH_SHIFT             31
@@ -92,7 +92,7 @@
 #define    CPH_AADMAC_CH2_AADMAC_CR_2_CH2_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH2_AADMAC_CR_2_CH2_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH2_AADMAC_SR_1_OFFSET                                 0x0000000C
+#define CPH_AADMAC_CH2_AADMAC_SR_1_OFFSET                                 0x00000018
 #define CPH_AADMAC_CH2_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH2_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH2_AADMAC_SR_1_CH2_HW_READY_HIGH_SHIFT             21
@@ -104,13 +104,13 @@
 #define    CPH_AADMAC_CH2_AADMAC_SR_1_CH2_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH2_AADMAC_SR_1_CH2_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH3_AADMAC_CR_1_OFFSET                                 0x00000010
+#define CPH_AADMAC_CH3_AADMAC_CR_1_OFFSET                                 0x00000020
 #define CPH_AADMAC_CH3_AADMAC_CR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH3_AADMAC_CR_1_RESERVED_MASK                          0x00000000
 #define    CPH_AADMAC_CH3_AADMAC_CR_1_CH3_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH3_AADMAC_CR_1_CH3_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH3_AADMAC_CR_2_OFFSET                                 0x00000012
+#define CPH_AADMAC_CH3_AADMAC_CR_2_OFFSET                                 0x00000024
 #define CPH_AADMAC_CH3_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH3_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH3_AADMAC_CR_2_CH3_SW_READY_HIGH_SHIFT             31
@@ -130,7 +130,7 @@
 #define    CPH_AADMAC_CH3_AADMAC_CR_2_CH3_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH3_AADMAC_CR_2_CH3_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH3_AADMAC_SR_1_OFFSET                                 0x00000014
+#define CPH_AADMAC_CH3_AADMAC_SR_1_OFFSET                                 0x00000028
 #define CPH_AADMAC_CH3_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH3_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH3_AADMAC_SR_1_CH3_HW_READY_HIGH_SHIFT             21
@@ -142,13 +142,13 @@
 #define    CPH_AADMAC_CH3_AADMAC_SR_1_CH3_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH3_AADMAC_SR_1_CH3_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH4_AADMAC_CR_1_OFFSET                                 0x00000018
+#define CPH_AADMAC_CH4_AADMAC_CR_1_OFFSET                                 0x00000030
 #define CPH_AADMAC_CH4_AADMAC_CR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH4_AADMAC_CR_1_RESERVED_MASK                          0x00000000
 #define    CPH_AADMAC_CH4_AADMAC_CR_1_CH4_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH4_AADMAC_CR_1_CH4_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH4_AADMAC_CR_2_OFFSET                                 0x0000001A
+#define CPH_AADMAC_CH4_AADMAC_CR_2_OFFSET                                 0x00000034
 #define CPH_AADMAC_CH4_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH4_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH4_AADMAC_CR_2_CH4_SW_READY_HIGH_SHIFT             31
@@ -168,7 +168,7 @@
 #define    CPH_AADMAC_CH4_AADMAC_CR_2_CH4_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH4_AADMAC_CR_2_CH4_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH4_AADMAC_SR_1_OFFSET                                 0x0000001C
+#define CPH_AADMAC_CH4_AADMAC_SR_1_OFFSET                                 0x00000038
 #define CPH_AADMAC_CH4_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH4_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH4_AADMAC_SR_1_CH4_HW_READY_HIGH_SHIFT             21
@@ -180,13 +180,13 @@
 #define    CPH_AADMAC_CH4_AADMAC_SR_1_CH4_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH4_AADMAC_SR_1_CH4_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH5_AADMAC_CR_1_OFFSET                                 0x00000020
+#define CPH_AADMAC_CH5_AADMAC_CR_1_OFFSET                                 0x00000040
 #define CPH_AADMAC_CH5_AADMAC_CR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH5_AADMAC_CR_1_RESERVED_MASK                          0x00000000
 #define    CPH_AADMAC_CH5_AADMAC_CR_1_CH5_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH5_AADMAC_CR_1_CH5_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH5_AADMAC_CR_2_OFFSET                                 0x00000022
+#define CPH_AADMAC_CH5_AADMAC_CR_2_OFFSET                                 0x00000044
 #define CPH_AADMAC_CH5_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH5_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH5_AADMAC_CR_2_CH5_SW_READY_HIGH_SHIFT             31
@@ -206,7 +206,7 @@
 #define    CPH_AADMAC_CH5_AADMAC_CR_2_CH5_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH5_AADMAC_CR_2_CH5_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH5_AADMAC_SR_1_OFFSET                                 0x00000024
+#define CPH_AADMAC_CH5_AADMAC_SR_1_OFFSET                                 0x00000048
 #define CPH_AADMAC_CH5_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH5_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH5_AADMAC_SR_1_CH5_HW_READY_HIGH_SHIFT             21
@@ -218,13 +218,13 @@
 #define    CPH_AADMAC_CH5_AADMAC_SR_1_CH5_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH5_AADMAC_SR_1_CH5_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH6_AADMAC_CR_1_OFFSET                                 0x00000028
+#define CPH_AADMAC_CH6_AADMAC_CR_1_OFFSET                                 0x00000050
 #define CPH_AADMAC_CH6_AADMAC_CR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH6_AADMAC_CR_1_RESERVED_MASK                          0x00000000
 #define    CPH_AADMAC_CH6_AADMAC_CR_1_CH6_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH6_AADMAC_CR_1_CH6_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH6_AADMAC_CR_2_OFFSET                                 0x0000002A
+#define CPH_AADMAC_CH6_AADMAC_CR_2_OFFSET                                 0x00000054
 #define CPH_AADMAC_CH6_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH6_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH6_AADMAC_CR_2_CH6_SW_READY_HIGH_SHIFT             31
@@ -244,7 +244,7 @@
 #define    CPH_AADMAC_CH6_AADMAC_CR_2_CH6_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH6_AADMAC_CR_2_CH6_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH6_AADMAC_SR_1_OFFSET                                 0x0000002C
+#define CPH_AADMAC_CH6_AADMAC_SR_1_OFFSET                                 0x00000058
 #define CPH_AADMAC_CH6_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH6_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH6_AADMAC_SR_1_CH6_HW_READY_HIGH_SHIFT             21
@@ -256,13 +256,13 @@
 #define    CPH_AADMAC_CH6_AADMAC_SR_1_CH6_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH6_AADMAC_SR_1_CH6_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH7_AADMAC_CR_1_OFFSET                                 0x00000030
+#define CPH_AADMAC_CH7_AADMAC_CR_1_OFFSET                                 0x00000060
 #define CPH_AADMAC_CH7_AADMAC_CR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH7_AADMAC_CR_1_RESERVED_MASK                          0x00000000
 #define    CPH_AADMAC_CH7_AADMAC_CR_1_CH7_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH7_AADMAC_CR_1_CH7_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH7_AADMAC_CR_2_OFFSET                                 0x00000032
+#define CPH_AADMAC_CH7_AADMAC_CR_2_OFFSET                                 0x00000064
 #define CPH_AADMAC_CH7_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH7_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH7_AADMAC_CR_2_CH7_SW_READY_HIGH_SHIFT             31
@@ -282,7 +282,7 @@
 #define    CPH_AADMAC_CH7_AADMAC_CR_2_CH7_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH7_AADMAC_CR_2_CH7_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH7_AADMAC_SR_1_OFFSET                                 0x00000034
+#define CPH_AADMAC_CH7_AADMAC_SR_1_OFFSET                                 0x00000068
 #define CPH_AADMAC_CH7_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH7_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH7_AADMAC_SR_1_CH7_HW_READY_HIGH_SHIFT             21
@@ -294,13 +294,13 @@
 #define    CPH_AADMAC_CH7_AADMAC_SR_1_CH7_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH7_AADMAC_SR_1_CH7_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH8_AADMAC_CR_1_OFFSET                                 0x00000038
+#define CPH_AADMAC_CH8_AADMAC_CR_1_OFFSET                                 0x00000070
 #define CPH_AADMAC_CH8_AADMAC_CR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH8_AADMAC_CR_1_RESERVED_MASK                          0x00000000
 #define    CPH_AADMAC_CH8_AADMAC_CR_1_CH8_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH8_AADMAC_CR_1_CH8_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH8_AADMAC_CR_2_OFFSET                                 0x0000003A
+#define CPH_AADMAC_CH8_AADMAC_CR_2_OFFSET                                 0x00000074
 #define CPH_AADMAC_CH8_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH8_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH8_AADMAC_CR_2_CH8_SW_READY_HIGH_SHIFT             31
@@ -320,7 +320,7 @@
 #define    CPH_AADMAC_CH8_AADMAC_CR_2_CH8_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH8_AADMAC_CR_2_CH8_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH8_AADMAC_SR_1_OFFSET                                 0x0000003C
+#define CPH_AADMAC_CH8_AADMAC_SR_1_OFFSET                                 0x00000078
 #define CPH_AADMAC_CH8_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH8_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH8_AADMAC_SR_1_CH8_HW_READY_HIGH_SHIFT             21
@@ -332,13 +332,13 @@
 #define    CPH_AADMAC_CH8_AADMAC_SR_1_CH8_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH8_AADMAC_SR_1_CH8_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH9_AADMAC_CR_1_OFFSET                                 0x00000040
+#define CPH_AADMAC_CH9_AADMAC_CR_1_OFFSET                                 0x00000080
 #define CPH_AADMAC_CH9_AADMAC_CR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH9_AADMAC_CR_1_RESERVED_MASK                          0x00000000
 #define    CPH_AADMAC_CH9_AADMAC_CR_1_CH9_AADMAC_BASE_SHIFT               0
 #define    CPH_AADMAC_CH9_AADMAC_CR_1_CH9_AADMAC_BASE_MASK                0xFFFFFFFF
 
-#define CPH_AADMAC_CH9_AADMAC_CR_2_OFFSET                                 0x00000042
+#define CPH_AADMAC_CH9_AADMAC_CR_2_OFFSET                                 0x00000084
 #define CPH_AADMAC_CH9_AADMAC_CR_2_TYPE                                   UInt32
 #define CPH_AADMAC_CH9_AADMAC_CR_2_RESERVED_MASK                          0x38000000
 #define    CPH_AADMAC_CH9_AADMAC_CR_2_CH9_SW_READY_HIGH_SHIFT             31
@@ -358,7 +358,7 @@
 #define    CPH_AADMAC_CH9_AADMAC_CR_2_CH9_AADMAC_WRAP_SHIFT               0
 #define    CPH_AADMAC_CH9_AADMAC_CR_2_CH9_AADMAC_WRAP_MASK                0x0000FFFF
 
-#define CPH_AADMAC_CH9_AADMAC_SR_1_OFFSET                                 0x00000044
+#define CPH_AADMAC_CH9_AADMAC_SR_1_OFFSET                                 0x00000088
 #define CPH_AADMAC_CH9_AADMAC_SR_1_TYPE                                   UInt32
 #define CPH_AADMAC_CH9_AADMAC_SR_1_RESERVED_MASK                          0xFFC00000
 #define    CPH_AADMAC_CH9_AADMAC_SR_1_CH9_HW_READY_HIGH_SHIFT             21
@@ -370,13 +370,13 @@
 #define    CPH_AADMAC_CH9_AADMAC_SR_1_CH9_AADMAC_CURRENT_MEM_PNTR_SHIFT   0
 #define    CPH_AADMAC_CH9_AADMAC_SR_1_CH9_AADMAC_CURRENT_MEM_PNTR_MASK    0x0000FFFF
 
-#define CPH_AADMAC_CH10_AADMAC_CR_1_OFFSET                                0x00000048
+#define CPH_AADMAC_CH10_AADMAC_CR_1_OFFSET                                0x00000090
 #define CPH_AADMAC_CH10_AADMAC_CR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH10_AADMAC_CR_1_RESERVED_MASK                         0x00000000
 #define    CPH_AADMAC_CH10_AADMAC_CR_1_CH10_AADMAC_BASE_SHIFT             0
 #define    CPH_AADMAC_CH10_AADMAC_CR_1_CH10_AADMAC_BASE_MASK              0xFFFFFFFF
 
-#define CPH_AADMAC_CH10_AADMAC_CR_2_OFFSET                                0x0000004A
+#define CPH_AADMAC_CH10_AADMAC_CR_2_OFFSET                                0x00000094
 #define CPH_AADMAC_CH10_AADMAC_CR_2_TYPE                                  UInt32
 #define CPH_AADMAC_CH10_AADMAC_CR_2_RESERVED_MASK                         0x38000000
 #define    CPH_AADMAC_CH10_AADMAC_CR_2_CH10_SW_READY_HIGH_SHIFT           31
@@ -396,7 +396,7 @@
 #define    CPH_AADMAC_CH10_AADMAC_CR_2_CH10_AADMAC_WRAP_SHIFT             0
 #define    CPH_AADMAC_CH10_AADMAC_CR_2_CH10_AADMAC_WRAP_MASK              0x0000FFFF
 
-#define CPH_AADMAC_CH10_AADMAC_SR_1_OFFSET                                0x0000004C
+#define CPH_AADMAC_CH10_AADMAC_SR_1_OFFSET                                0x00000098
 #define CPH_AADMAC_CH10_AADMAC_SR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH10_AADMAC_SR_1_RESERVED_MASK                         0xFFC00000
 #define    CPH_AADMAC_CH10_AADMAC_SR_1_CH10_HW_READY_HIGH_SHIFT           21
@@ -408,13 +408,13 @@
 #define    CPH_AADMAC_CH10_AADMAC_SR_1_CH10_AADMAC_CURRENT_MEM_PNTR_SHIFT 0
 #define    CPH_AADMAC_CH10_AADMAC_SR_1_CH10_AADMAC_CURRENT_MEM_PNTR_MASK  0x0000FFFF
 
-#define CPH_AADMAC_CH11_AADMAC_CR_1_OFFSET                                0x00000050
+#define CPH_AADMAC_CH11_AADMAC_CR_1_OFFSET                                0x000000A0
 #define CPH_AADMAC_CH11_AADMAC_CR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH11_AADMAC_CR_1_RESERVED_MASK                         0x00000000
 #define    CPH_AADMAC_CH11_AADMAC_CR_1_CH11_AADMAC_BASE_SHIFT             0
 #define    CPH_AADMAC_CH11_AADMAC_CR_1_CH11_AADMAC_BASE_MASK              0xFFFFFFFF
 
-#define CPH_AADMAC_CH11_AADMAC_CR_2_OFFSET                                0x00000052
+#define CPH_AADMAC_CH11_AADMAC_CR_2_OFFSET                                0x000000A4
 #define CPH_AADMAC_CH11_AADMAC_CR_2_TYPE                                  UInt32
 #define CPH_AADMAC_CH11_AADMAC_CR_2_RESERVED_MASK                         0x38000000
 #define    CPH_AADMAC_CH11_AADMAC_CR_2_CH11_SW_READY_HIGH_SHIFT           31
@@ -434,7 +434,7 @@
 #define    CPH_AADMAC_CH11_AADMAC_CR_2_CH11_AADMAC_WRAP_SHIFT             0
 #define    CPH_AADMAC_CH11_AADMAC_CR_2_CH11_AADMAC_WRAP_MASK              0x0000FFFF
 
-#define CPH_AADMAC_CH11_AADMAC_SR_1_OFFSET                                0x00000054
+#define CPH_AADMAC_CH11_AADMAC_SR_1_OFFSET                                0x000000A8
 #define CPH_AADMAC_CH11_AADMAC_SR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH11_AADMAC_SR_1_RESERVED_MASK                         0xFFC00000
 #define    CPH_AADMAC_CH11_AADMAC_SR_1_CH11_HW_READY_HIGH_SHIFT           21
@@ -446,13 +446,13 @@
 #define    CPH_AADMAC_CH11_AADMAC_SR_1_CH11_AADMAC_CURRENT_MEM_PNTR_SHIFT 0
 #define    CPH_AADMAC_CH11_AADMAC_SR_1_CH11_AADMAC_CURRENT_MEM_PNTR_MASK  0x0000FFFF
 
-#define CPH_AADMAC_CH12_AADMAC_CR_1_OFFSET                                0x00000058
+#define CPH_AADMAC_CH12_AADMAC_CR_1_OFFSET                                0x000000B0
 #define CPH_AADMAC_CH12_AADMAC_CR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH12_AADMAC_CR_1_RESERVED_MASK                         0x00000000
 #define    CPH_AADMAC_CH12_AADMAC_CR_1_CH12_AADMAC_BASE_SHIFT             0
 #define    CPH_AADMAC_CH12_AADMAC_CR_1_CH12_AADMAC_BASE_MASK              0xFFFFFFFF
 
-#define CPH_AADMAC_CH12_AADMAC_CR_2_OFFSET                                0x0000005A
+#define CPH_AADMAC_CH12_AADMAC_CR_2_OFFSET                                0x000000B4
 #define CPH_AADMAC_CH12_AADMAC_CR_2_TYPE                                  UInt32
 #define CPH_AADMAC_CH12_AADMAC_CR_2_RESERVED_MASK                         0x38000000
 #define    CPH_AADMAC_CH12_AADMAC_CR_2_CH12_SW_READY_HIGH_SHIFT           31
@@ -472,7 +472,7 @@
 #define    CPH_AADMAC_CH12_AADMAC_CR_2_CH12_AADMAC_WRAP_SHIFT             0
 #define    CPH_AADMAC_CH12_AADMAC_CR_2_CH12_AADMAC_WRAP_MASK              0x0000FFFF
 
-#define CPH_AADMAC_CH12_AADMAC_SR_1_OFFSET                                0x0000005C
+#define CPH_AADMAC_CH12_AADMAC_SR_1_OFFSET                                0x000000B8
 #define CPH_AADMAC_CH12_AADMAC_SR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH12_AADMAC_SR_1_RESERVED_MASK                         0xFFC00000
 #define    CPH_AADMAC_CH12_AADMAC_SR_1_CH12_HW_READY_HIGH_SHIFT           21
@@ -484,13 +484,13 @@
 #define    CPH_AADMAC_CH12_AADMAC_SR_1_CH12_AADMAC_CURRENT_MEM_PNTR_SHIFT 0
 #define    CPH_AADMAC_CH12_AADMAC_SR_1_CH12_AADMAC_CURRENT_MEM_PNTR_MASK  0x0000FFFF
 
-#define CPH_AADMAC_CH13_AADMAC_CR_1_OFFSET                                0x00000060
+#define CPH_AADMAC_CH13_AADMAC_CR_1_OFFSET                                0x000000C0
 #define CPH_AADMAC_CH13_AADMAC_CR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH13_AADMAC_CR_1_RESERVED_MASK                         0x00000000
 #define    CPH_AADMAC_CH13_AADMAC_CR_1_CH13_AADMAC_BASE_SHIFT             0
 #define    CPH_AADMAC_CH13_AADMAC_CR_1_CH13_AADMAC_BASE_MASK              0xFFFFFFFF
 
-#define CPH_AADMAC_CH13_AADMAC_CR_2_OFFSET                                0x00000062
+#define CPH_AADMAC_CH13_AADMAC_CR_2_OFFSET                                0x000000C4
 #define CPH_AADMAC_CH13_AADMAC_CR_2_TYPE                                  UInt32
 #define CPH_AADMAC_CH13_AADMAC_CR_2_RESERVED_MASK                         0x38000000
 #define    CPH_AADMAC_CH13_AADMAC_CR_2_CH13_SW_READY_HIGH_SHIFT           31
@@ -510,7 +510,7 @@
 #define    CPH_AADMAC_CH13_AADMAC_CR_2_CH13_AADMAC_WRAP_SHIFT             0
 #define    CPH_AADMAC_CH13_AADMAC_CR_2_CH13_AADMAC_WRAP_MASK              0x0000FFFF
 
-#define CPH_AADMAC_CH13_AADMAC_SR_1_OFFSET                                0x00000064
+#define CPH_AADMAC_CH13_AADMAC_SR_1_OFFSET                                0x000000C8
 #define CPH_AADMAC_CH13_AADMAC_SR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH13_AADMAC_SR_1_RESERVED_MASK                         0xFFC00000
 #define    CPH_AADMAC_CH13_AADMAC_SR_1_CH13_HW_READY_HIGH_SHIFT           21
@@ -522,13 +522,13 @@
 #define    CPH_AADMAC_CH13_AADMAC_SR_1_CH13_AADMAC_CURRENT_MEM_PNTR_SHIFT 0
 #define    CPH_AADMAC_CH13_AADMAC_SR_1_CH13_AADMAC_CURRENT_MEM_PNTR_MASK  0x0000FFFF
 
-#define CPH_AADMAC_CH14_AADMAC_CR_1_OFFSET                                0x00000068
+#define CPH_AADMAC_CH14_AADMAC_CR_1_OFFSET                                0x000000D0
 #define CPH_AADMAC_CH14_AADMAC_CR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH14_AADMAC_CR_1_RESERVED_MASK                         0x00000000
 #define    CPH_AADMAC_CH14_AADMAC_CR_1_CH14_AADMAC_BASE_SHIFT             0
 #define    CPH_AADMAC_CH14_AADMAC_CR_1_CH14_AADMAC_BASE_MASK              0xFFFFFFFF
 
-#define CPH_AADMAC_CH14_AADMAC_CR_2_OFFSET                                0x0000006A
+#define CPH_AADMAC_CH14_AADMAC_CR_2_OFFSET                                0x000000D4
 #define CPH_AADMAC_CH14_AADMAC_CR_2_TYPE                                  UInt32
 #define CPH_AADMAC_CH14_AADMAC_CR_2_RESERVED_MASK                         0x38000000
 #define    CPH_AADMAC_CH14_AADMAC_CR_2_CH14_SW_READY_HIGH_SHIFT           31
@@ -548,7 +548,7 @@
 #define    CPH_AADMAC_CH14_AADMAC_CR_2_CH14_AADMAC_WRAP_SHIFT             0
 #define    CPH_AADMAC_CH14_AADMAC_CR_2_CH14_AADMAC_WRAP_MASK              0x0000FFFF
 
-#define CPH_AADMAC_CH14_AADMAC_SR_1_OFFSET                                0x0000006C
+#define CPH_AADMAC_CH14_AADMAC_SR_1_OFFSET                                0x000000D8
 #define CPH_AADMAC_CH14_AADMAC_SR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH14_AADMAC_SR_1_RESERVED_MASK                         0xFFC00000
 #define    CPH_AADMAC_CH14_AADMAC_SR_1_CH14_HW_READY_HIGH_SHIFT           21
@@ -560,13 +560,13 @@
 #define    CPH_AADMAC_CH14_AADMAC_SR_1_CH14_AADMAC_CURRENT_MEM_PNTR_SHIFT 0
 #define    CPH_AADMAC_CH14_AADMAC_SR_1_CH14_AADMAC_CURRENT_MEM_PNTR_MASK  0x0000FFFF
 
-#define CPH_AADMAC_CH15_AADMAC_CR_1_OFFSET                                0x00000070
+#define CPH_AADMAC_CH15_AADMAC_CR_1_OFFSET                                0x000000E0
 #define CPH_AADMAC_CH15_AADMAC_CR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH15_AADMAC_CR_1_RESERVED_MASK                         0x00000000
 #define    CPH_AADMAC_CH15_AADMAC_CR_1_CH15_AADMAC_BASE_SHIFT             0
 #define    CPH_AADMAC_CH15_AADMAC_CR_1_CH15_AADMAC_BASE_MASK              0xFFFFFFFF
 
-#define CPH_AADMAC_CH15_AADMAC_CR_2_OFFSET                                0x00000072
+#define CPH_AADMAC_CH15_AADMAC_CR_2_OFFSET                                0x000000E4
 #define CPH_AADMAC_CH15_AADMAC_CR_2_TYPE                                  UInt32
 #define CPH_AADMAC_CH15_AADMAC_CR_2_RESERVED_MASK                         0x38000000
 #define    CPH_AADMAC_CH15_AADMAC_CR_2_CH15_SW_READY_HIGH_SHIFT           31
@@ -586,7 +586,7 @@
 #define    CPH_AADMAC_CH15_AADMAC_CR_2_CH15_AADMAC_WRAP_SHIFT             0
 #define    CPH_AADMAC_CH15_AADMAC_CR_2_CH15_AADMAC_WRAP_MASK              0x0000FFFF
 
-#define CPH_AADMAC_CH15_AADMAC_SR_1_OFFSET                                0x00000074
+#define CPH_AADMAC_CH15_AADMAC_SR_1_OFFSET                                0x000000E8
 #define CPH_AADMAC_CH15_AADMAC_SR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH15_AADMAC_SR_1_RESERVED_MASK                         0xFFC00000
 #define    CPH_AADMAC_CH15_AADMAC_SR_1_CH15_HW_READY_HIGH_SHIFT           21
@@ -598,13 +598,13 @@
 #define    CPH_AADMAC_CH15_AADMAC_SR_1_CH15_AADMAC_CURRENT_MEM_PNTR_SHIFT 0
 #define    CPH_AADMAC_CH15_AADMAC_SR_1_CH15_AADMAC_CURRENT_MEM_PNTR_MASK  0x0000FFFF
 
-#define CPH_AADMAC_CH16_AADMAC_CR_1_OFFSET                                0x00000078
+#define CPH_AADMAC_CH16_AADMAC_CR_1_OFFSET                                0x000000F0
 #define CPH_AADMAC_CH16_AADMAC_CR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH16_AADMAC_CR_1_RESERVED_MASK                         0x00000000
 #define    CPH_AADMAC_CH16_AADMAC_CR_1_CH16_AADMAC_BASE_SHIFT             0
 #define    CPH_AADMAC_CH16_AADMAC_CR_1_CH16_AADMAC_BASE_MASK              0xFFFFFFFF
 
-#define CPH_AADMAC_CH16_AADMAC_CR_2_OFFSET                                0x0000007A
+#define CPH_AADMAC_CH16_AADMAC_CR_2_OFFSET                                0x000000F4
 #define CPH_AADMAC_CH16_AADMAC_CR_2_TYPE                                  UInt32
 #define CPH_AADMAC_CH16_AADMAC_CR_2_RESERVED_MASK                         0x38000000
 #define    CPH_AADMAC_CH16_AADMAC_CR_2_CH16_SW_READY_HIGH_SHIFT           31
@@ -624,7 +624,7 @@
 #define    CPH_AADMAC_CH16_AADMAC_CR_2_CH16_AADMAC_WRAP_SHIFT             0
 #define    CPH_AADMAC_CH16_AADMAC_CR_2_CH16_AADMAC_WRAP_MASK              0x0000FFFF
 
-#define CPH_AADMAC_CH16_AADMAC_SR_1_OFFSET                                0x0000007C
+#define CPH_AADMAC_CH16_AADMAC_SR_1_OFFSET                                0x000000F8
 #define CPH_AADMAC_CH16_AADMAC_SR_1_TYPE                                  UInt32
 #define CPH_AADMAC_CH16_AADMAC_SR_1_RESERVED_MASK                         0xFFC00000
 #define    CPH_AADMAC_CH16_AADMAC_SR_1_CH16_HW_READY_HIGH_SHIFT           21
@@ -636,31 +636,31 @@
 #define    CPH_AADMAC_CH16_AADMAC_SR_1_CH16_AADMAC_CURRENT_MEM_PNTR_SHIFT 0
 #define    CPH_AADMAC_CH16_AADMAC_SR_1_CH16_AADMAC_CURRENT_MEM_PNTR_MASK  0x0000FFFF
 
-#define CPH_AADMAC_CH1_AADMAC_TS_OFFSET                                   0x00000080
+#define CPH_AADMAC_CH1_AADMAC_TS_OFFSET                                   0x00000100
 #define CPH_AADMAC_CH1_AADMAC_TS_TYPE                                     UInt32
 #define CPH_AADMAC_CH1_AADMAC_TS_RESERVED_MASK                            0xFF000000
 #define    CPH_AADMAC_CH1_AADMAC_TS_AADMAC_TSTAMP_CH1_SHIFT               0
 #define    CPH_AADMAC_CH1_AADMAC_TS_AADMAC_TSTAMP_CH1_MASK                0x00FFFFFF
 
-#define CPH_AADMAC_CH2_AADMAC_TS_OFFSET                                   0x00000082
+#define CPH_AADMAC_CH2_AADMAC_TS_OFFSET                                   0x00000104
 #define CPH_AADMAC_CH2_AADMAC_TS_TYPE                                     UInt32
 #define CPH_AADMAC_CH2_AADMAC_TS_RESERVED_MASK                            0xFF000000
 #define    CPH_AADMAC_CH2_AADMAC_TS_AADMAC_TSTAMP_CH2_SHIFT               0
 #define    CPH_AADMAC_CH2_AADMAC_TS_AADMAC_TSTAMP_CH2_MASK                0x00FFFFFF
 
-#define CPH_AADMAC_CH3_AADMAC_TS_OFFSET                                   0x00000084
+#define CPH_AADMAC_CH3_AADMAC_TS_OFFSET                                   0x00000108
 #define CPH_AADMAC_CH3_AADMAC_TS_TYPE                                     UInt32
 #define CPH_AADMAC_CH3_AADMAC_TS_RESERVED_MASK                            0xFF000000
 #define    CPH_AADMAC_CH3_AADMAC_TS_AADMAC_TSTAMP_CH3_SHIFT               0
 #define    CPH_AADMAC_CH3_AADMAC_TS_AADMAC_TSTAMP_CH3_MASK                0x00FFFFFF
 
-#define CPH_AADMAC_CH4_AADMAC_TS_OFFSET                                   0x00000086
+#define CPH_AADMAC_CH4_AADMAC_TS_OFFSET                                   0x0000010C
 #define CPH_AADMAC_CH4_AADMAC_TS_TYPE                                     UInt32
 #define CPH_AADMAC_CH4_AADMAC_TS_RESERVED_MASK                            0xFF000000
 #define    CPH_AADMAC_CH4_AADMAC_TS_AADMAC_TSTAMP_CH4_SHIFT               0
 #define    CPH_AADMAC_CH4_AADMAC_TS_AADMAC_TSTAMP_CH4_MASK                0x00FFFFFF
 
-#define CPH_AADMAC_CH1_2_EXTENDED_WRAP_OFFSET                             0x00000088
+#define CPH_AADMAC_CH1_2_EXTENDED_WRAP_OFFSET                             0x00000110
 #define CPH_AADMAC_CH1_2_EXTENDED_WRAP_TYPE                               UInt32
 #define CPH_AADMAC_CH1_2_EXTENDED_WRAP_RESERVED_MASK                      0xFFFF0000
 #define    CPH_AADMAC_CH1_2_EXTENDED_WRAP_CH2_AADMAC_WRAP_HIGH_SHIFT      8
