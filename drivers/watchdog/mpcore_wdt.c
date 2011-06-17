@@ -197,17 +197,21 @@ static void mpcore_wdt_dispatcher(void (*func)(struct work_struct *work), struct
 
 static void mpcore_wdt_start(struct mpcore_wdt *wdt)
 {
-        mpcore_wdt_dispatcher(mpcore_wdt_start_worker, wdt);
+	mpcore_wdt_dispatcher(mpcore_wdt_start_worker, wdt);
 }
 
 static void mpcore_wdt_stop(struct mpcore_wdt *wdt)
 {
-        mpcore_wdt_dispatcher(mpcore_wdt_stop_worker, wdt);
+	mpcore_wdt_dispatcher(mpcore_wdt_stop_worker, wdt);
 }
 
 static void mpcore_wdt_keepalive(struct mpcore_wdt *wdt)
 {
-        mpcore_wdt_dispatcher(mpcore_wdt_keepalive_worker, wdt);
+	/* Do nothing if watchdog isn't on. IOCTL might have turned it off */
+	/* and we shouldn't just reenable it becuase we got pinged.        */
+	if (test_bit(1, &wdt->timer_alive)) {
+		mpcore_wdt_dispatcher(mpcore_wdt_keepalive_worker, wdt);
+	}
 }
 
 static int mpcore_wdt_set_heartbeat(int t)
@@ -228,6 +232,9 @@ static int mpcore_wdt_open(struct inode *inode, struct file *file)
 
 	if (test_and_set_bit(0, &wdt->timer_alive))
 		return -EBUSY;
+
+        /* Track watchdog on separately from dev open. */
+        set_bit(1, &wdt->timer_alive);
 
         if (nowayout)
 		__module_get(THIS_MODULE);
@@ -250,9 +257,11 @@ static int mpcore_wdt_release(struct inode *inode, struct file *file)
 	 *	Shut off the timer.
 	 * 	Lock it in if it's a module and we set nowayout
 	 */
-	if (wdt->expect_close == 42)
+	if (wdt->expect_close == 42) {
 		mpcore_wdt_stop(wdt);
-	else {
+		clear_bit(1, &wdt->timer_alive);
+	}
+        else {
 		dev_printk(KERN_CRIT, wdt->dev,
 				"unexpected close, not stopping watchdog!\n");
 		mpcore_wdt_keepalive(wdt);
@@ -332,10 +341,12 @@ static long mpcore_wdt_ioctl(struct file *file, unsigned int cmd,
 	case WDIOC_SETOPTIONS:
 		ret = -EINVAL;
 		if (uarg.i & WDIOS_DISABLECARD) {
+			clear_bit(1, &wdt->timer_alive);
 			mpcore_wdt_stop(wdt);
 			ret = 0;
 		}
 		if (uarg.i & WDIOS_ENABLECARD) {
+			set_bit(1, &wdt->timer_alive);
 			mpcore_wdt_start(wdt);
 			ret = 0;
 		}
@@ -513,7 +524,7 @@ static int __devexit mpcore_wdt_remove(struct platform_device *dev)
 	return 0;
 }
 
-// #ifdef CONFIG_PM
+#ifdef CONFIG_PM
 static int mpcore_wdt_suspend(struct platform_device *dev, pm_message_t msg)
 {
         struct mpcore_wdt *wdt = platform_get_drvdata(dev);
@@ -527,15 +538,15 @@ static int mpcore_wdt_resume(struct platform_device *dev)
         struct mpcore_wdt *wdt = platform_get_drvdata(dev);
         clk_enable(wdt->clock);
         /* re-activate timer */
-        if (test_bit(0, &wdt->timer_alive)) {
+        if (test_bit(1, &wdt->timer_alive)) {
                 mpcore_wdt_start(wdt);
         }
         return 0;
 }
-// #else
-// #define mpcore_wdt_suspend    NULL
-// #define mpcore_wdt_resume     NULL
-// #endif
+#else
+#define mpcore_wdt_suspend    NULL
+#define mpcore_wdt_resume     NULL
+#endif
 
 /* work with hotplug and coldplug */
 MODULE_ALIAS("platform:mpcore_wdt");
