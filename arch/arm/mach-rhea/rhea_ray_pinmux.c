@@ -84,6 +84,11 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SSP3 - PCM
 	   SSP3 pinmux is set since keypad also check the same pins currently */
+    PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
+    PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
+    PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
+    PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
+
 
 	/* SSP4 - I2S */
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
@@ -92,10 +97,13 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),
 
 	/* LCD */
-	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+    PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDRES, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	/* conflicts with SSP4 */
+	/*
 	PIN_CFG(DCLK4, GPIO, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, GPIO, 0, OFF, ON, 0, 0, 8MA),
+    */
 
 	/* STM trace - PTI */
 	PIN_CFG(TRACECLK, PTI_CLK, 0, OFF, ON, 0, 0, 8MA),
@@ -132,8 +140,11 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO27, LCDD1, 0, OFF, ON, 0, 0, 8MA),
 
 	/* PWM config - PWM4, PWM5*/
-	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
+	/* conflicts with SSP4 */
+    /*
+    PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
+    PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
+    */
 
 };
 
