@@ -122,6 +122,8 @@ Jian: to update for Samoa
 
 #define KONA_PMU_PMU_VA		    HW_IO_PHYS_TO_VIRT( PMU_PMU_BASE_ADDR )
 
+#define KONA_PMU_PMU_VA		    HW_IO_PHYS_TO_VIRT( PMU_PMU_BASE_ADDR )
+
 #define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */ 
 
 #define KONA_UART_LLDEBUG_VA		KONA_UART0_VA
