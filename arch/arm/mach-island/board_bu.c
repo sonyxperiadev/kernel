@@ -289,21 +289,39 @@ static struct resource board_sdio2_resource[] = {
 
 static struct sdio_platform_cfg board_sdio_param[] = {
    { /* SDIO0 */
-      .id = 0,
-      .data_pullup = 0,
-      .devtype = SDIO_DEV_TYPE_WIFI,
-   },
-   { /* SDIO1 */
-      .id = 1,
-      .data_pullup = 0,
-      .devtype = SDIO_DEV_TYPE_EMMC,
-   },
-   { /* SDIO2 */
-      .id = 2,
-      .data_pullup = 0,
-      .cd_gpio = 106,
-      .devtype = SDIO_DEV_TYPE_SDMMC,
-   },
+		.id = 0,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 179,
+			.reg		= 177,
+			.host_wake	= 178,
+		},
+		.peri_clk_name = "sdio1_clk",
+		.ahb_clk_name = "sdio1_ahb_clk",
+		.sleep_clk_name = "sdio1_sleep_clk",
+		.peri_clk_rate = 20000000,
+	},
+	{ /* SDIO1 */
+		.id = 1,
+		.data_pullup = 0,
+		.is_8bit = 1,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.peri_clk_name = "sdio2_clk",
+		.ahb_clk_name = "sdio2_ahb_clk",
+		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
+	},
+	{ /* SDIO2 */
+		.id = 2,
+		.data_pullup = 0,
+		.cd_gpio = 106,
+		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
 };
 
 static struct platform_device island_sdio1_device = {
@@ -502,8 +520,9 @@ static struct platform_device *board_devices[] __initdata = {
    &board_i2c_adap_devices[0],
    &board_i2c_adap_devices[1],
    &board_i2c_adap_devices[2],
-   &island_sdio2_device,
-   &island_sdio1_device,
+	&island_sdio1_device,
+	&island_sdio2_device,
+
    &island_ipc_device,
 };
 

@@ -573,6 +573,18 @@ static void rndis_disable(struct usb_function *f)
 	rndis->notify->driver_data = NULL;
 }
 
+#ifdef CONFIG_BRCM_NETCONSOLE
+static void rndis_suspend(struct usb_function *f)
+{
+	struct f_rndis		*rndis = func_to_rndis(f);
+	struct usb_composite_dev *cdev = f->config->cdev;
+
+	DBG(cdev, "rndis suspend\n");
+	gether_disconnect(&rndis->port);
+}
+
+#endif //#ifdef CONFIG_BRCM_NETCONSOLE
+
 /*-------------------------------------------------------------------------*/
 
 /*
@@ -864,6 +876,9 @@ rndis_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN])
 	rndis->port.func.set_alt = rndis_set_alt;
 	rndis->port.func.setup = rndis_setup;
 	rndis->port.func.disable = rndis_disable;
+#ifdef CONFIG_BRCM_NETCONSOLE
+	rndis->port.func.suspend = rndis_suspend;
+#endif
 
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	/* start disabled */
