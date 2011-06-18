@@ -79,6 +79,13 @@
 #include <linux/i2c/max3353.h>
 #endif
 
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#include <leds_gpio_settings.h>
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <gpio_keys_settings.h>
+#endif
 
 #include "island.h"
 #include "common.h"
@@ -410,6 +417,28 @@ static struct i2c_board_info max3353_i2c_boardinfo[] = {
 };
 #endif
 
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#define board_leds_gpio_device concatenate(BCMHANA_BOARD_ID, _leds_gpio_device)
+static struct platform_device board_leds_gpio_device = {
+   .name = "leds-gpio",
+   .id = -1,
+   .dev = {
+      .platform_data = &leds_gpio_data,
+   },
+};
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#define board_gpio_keys_device concatenate(BCMHANA_BOARD_ID, _gpio_keys_device)
+static struct platform_device board_gpio_keys_device = {
+   .name = "gpio-keys",
+   .id = -1,
+   .dev = {
+      .platform_data = &gpio_keys_data,
+   },
+};
+#endif
+
 #if defined(CONFIG_KONA_OTG_CP) || defined(CONFIG_KONA_OTG_CP_MODULE)
 static struct resource otg_cp_resource[] = {
 	[0] = {
@@ -648,6 +677,22 @@ static void __init add_i2c_device(void)
 #endif
 }
 
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#define board_add_led_device concatenate(BCMHANA_BOARD_ID, _add_led_device)
+static void __init board_add_led_device(void)
+{
+   platform_device_register(&board_leds_gpio_device);
+}
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#define board_add_keys_device concatenate(BCMHANA_BOARD_ID, _add_keyboard_device)
+static void __init board_add_keys_device(void)
+{
+   platform_device_register(&board_gpio_keys_device);
+}
+#endif
+
 static void __init add_usbh_device(void)
 {
 	/*
@@ -688,6 +733,14 @@ static void __init add_devices(void)
 
 #ifdef HW_I2C_ADAP_PARAM
 	add_i2c_device();
+#endif
+
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+        board_add_led_device();
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+        board_add_keys_device();
 #endif
 
 	add_usbh_device();
