@@ -255,9 +255,10 @@ Result_t AUDDRV_HWControl_Init(void)
     addr.srcmixer_baseAddr = SRCMIXER_BASE_ADDR1;
     addr.audioh_baseAddr = AUDIOH_BASE_ADDR1;
     addr.sdt_baseAddr = SDT_BASE_ADDR1;
-	// swapped sspi3 and sspi4 for bt integration test. will change back with bt side
-    addr.ssp3_baseAddr = SSP4_BASE_ADDR1;
-    addr.ssp4_baseAddr = SSP3_BASE_ADDR1;
+
+    addr.ssp3_baseAddr = SSP3_BASE_ADDR1;
+    addr.ssp4_baseAddr = SSP4_BASE_ADDR1;
+	
     csl_caph_hwctrl_init(addr);
 	return RESULT_OK;
 }

@@ -330,6 +330,8 @@ static void __init samoa_ray_add_devices(void)
 	platform_add_devices(samoa_ray_plat_devices, ARRAY_SIZE(samoa_ray_plat_devices));
 
 	samoa_ray_add_i2c_devices();
+	
+	board_pmu_init();
 }
 
 /* Stub clock API to allow drivers to build */

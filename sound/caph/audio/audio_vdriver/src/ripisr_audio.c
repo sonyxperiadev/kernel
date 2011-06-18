@@ -39,10 +39,8 @@
 #include "osqueue.h"
 #include "audio_consts.h"
 #include "auddrv_def.h"
-#ifdef VPU_INCLUDED
-#include "mti_trace.h"
-#endif
-#include "dbg.h"
+#include "resultcode.h"
+
 #include "shared.h"
 #include "vpu.h"
 #include "dspif_voice_play.h"
@@ -51,7 +49,9 @@
 #include "audio_vdriver_voice_record.h"
 #include "audio_vdriver_voif.h"
 #include "audio_vdriver_usb.h"
-#include "csl_aud_drv.h"
+
+#include "drv_caph.h"
+#include "drv_caph_hwctrl.h"
 #include "audio_vdriver.h"
 #include "auddrv_audlog.h"
 #include "msconsts.h"
@@ -256,16 +256,6 @@ void AP_Audio_ISR_Handler(StatQ_t status_msg)
 #endif // #ifdef AUDIO_DRIVER_HQ_ENABLED
 
 
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
-
-		case STATUS_AUDIO_STREAM_DATA_READY:
-		{
-			AUDLOG_ProcessLogChannel((StatQ_t*)&status_msg);
-			break;		
-		}
-#endif
-
-
 		default:
 			_DBG_(Log_DebugPrintf(LOGID_AUDIO, "Unknown Interrupt!\r\n"));
 			break;
@@ -314,7 +304,9 @@ void AP_VPU_ProcessStatus( void )	// Process  VP status queue
 			case VP_STATUS_USB_HEADSET_BUFFER:
 			{
 				//Log_DebugPrintf(LOGID_AUDIO, "AP_VPU_ProcessStatus  to call AUDDRV_USB_HandleDSPInt arg0=%x, arg1=%x, arg2=%x,\n",status_msg.arg0, status_msg.arg1, status_msg.arg2);
+#ifdef CONFIG_AUDIO_BUILD
 				AUDDRV_USB_HandleDSPInt(status_msg.arg0, status_msg.arg1, status_msg.arg2);
+#endif
 				break;
 			}
 
@@ -329,7 +321,9 @@ void AP_VPU_ProcessStatus( void )	// Process  VP status queue
 			case VP_STATUS_VOIF_BUFFER_READY:
 			{
 				//Log_DebugPrintf(LOGID_AUDIO, "AP_VPU_ProcessStatus  to call VOIF_ISR_Handler\n");
+#ifdef CONFIG_AUDIO_BUILD
 				VOIF_ISR_Handler (status_msg.arg0, status_msg.arg1);
+#endif
 				break;
 			}
 
@@ -365,7 +359,9 @@ void AP_VPU_ProcessStatus( void )	// Process  VP status queue
 				msg.arg2 = status_msg.arg2;
 
 				//Log_DebugPrintf(LOGID_AUDIO, "AP_VPU_ProcessStatus  to call VPU_ProcessStatusMainAMRDone\n");
+#ifdef CONFIG_AUDIO_BUILD
 				VPU_ProcessStatusMainAMRDone(msg);
+#endif
 				break;
 			}
 
@@ -377,6 +373,13 @@ void AP_VPU_ProcessStatus( void )	// Process  VP status queue
 			break;
 		}
 #endif
+
+			
+					case VP_STATUS_AUDIO_STREAM_DATA_READY:
+					{
+						AUDLOG_ProcessLogChannel(&status_msg);
+						break;		
+					}
 
 			default:
 				break;

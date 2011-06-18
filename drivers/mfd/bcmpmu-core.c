@@ -27,6 +27,12 @@
 
 #include <linux/mfd/bcmpmu.h>
 
+/* To test SIM */
+#ifdef CONFIG_MFD_BCMSAMOA
+#include <mach/io_map.h>
+#include <linux/io.h>
+#endif
+
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -380,6 +386,7 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
 	int *envregs;
+	unsigned int regaddr, rval;
 
 	pcore = kzalloc(sizeof(struct bcmpmu_core_data), GFP_KERNEL);
 	if (pcore == NULL) {
@@ -416,6 +423,32 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 
 	bcmpmu_register_init(bcmpmu);
 
+#ifdef CONFIG_MFD_BCMSAMOA
+	/* Remove this later - START */
+	regaddr = KONA_SIMI_VA + 0x6C;
+	/* Read before write */
+	rval = __raw_readl(regaddr);
+	printk("bcmpmu_apb_write_device: read value = 0x%X\n", rval);
+	rval = rval | 0x1;
+		
+	printk("bcmpmu_apb_write_device: write value = 0x%X\n", rval);
+	
+	/* write */
+	__raw_writel(rval, regaddr);
+	
+	regaddr = KONA_SIMI2_VA + 0x6C;
+	/* Read before write */
+	rval = __raw_readl(regaddr);
+	printk("bcmpmu_apb_write_device: read value = 0x%X\n", rval);
+	rval = rval | 0x1;
+		
+	printk("bcmpmu_apb_write_device: write value = 0x%X\n", rval);
+	
+	/* write */
+	__raw_writel(rval, regaddr);
+	/* Remove this later - END */
+	
+#endif
 	misc_register(&bcmpmu_device);
 
 #ifdef CONFIG_DEBUG_FS

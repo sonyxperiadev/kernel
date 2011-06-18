@@ -806,7 +806,7 @@ void AUDCTRL_EnableRecord(
 	   || (mic == AUDCTRL_MIC_DIGI4) 
 	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
 	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
-	   || (mic == AUDDRV_MIC_SPEECH_DIGI))		
+	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	{
 		// Enable power to digital microphone
 		//powerOnDigitalMic(TRUE);
@@ -814,7 +814,7 @@ void AUDCTRL_EnableRecord(
 
 	if(mic==AUDCTRL_DUAL_MIC_DIGI12 
 			|| mic==AUDCTRL_DUAL_MIC_DIGI21 
-			|| mic==AUDDRV_MIC_SPEECH_DIGI)
+			|| mic==AUDCTRL_MIC_SPEECH_DIGI)
 	{
 		AUDCTRL_EnableRecordMono(src, sink, AUDCTRL_MIC_DIGI1, AUDIO_CHANNEL_MONO, sr);
 		AUDCTRL_EnableRecordMono(src, sink, AUDCTRL_MIC_DIGI2, AUDIO_CHANNEL_MONO, sr);

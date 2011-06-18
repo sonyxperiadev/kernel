@@ -130,17 +130,6 @@ Result_t AUDDRV_AudLog_Init( void );
 //Shut down driver internal variables and task queue. 
 Result_t AUDDRV_AudLog_Shutdown( void );
 
-//when driver finished the data in the buffer, driver generates this callback to let client use the buffer.
-
-Result_t AUDDRV_AudLog_SetBufDoneCB (AUDLOG_CB_FUNC bufDone_cb);
-
-
-//Read audio data from driver. 
-UInt32 AUDDRV_AudLog_Read( 
-                    UInt8*     pBuf,
-                    UInt32	   nSize
-					);
-
 Result_t AUDDRV_AudLog_Start ( 
 							  UInt32 log_stream,
 							  UInt32 log_capture_point,
@@ -148,16 +137,9 @@ Result_t AUDDRV_AudLog_Start (
 							  char *filename
 							  );
 
-Result_t AUDDRV_AudLog_Pause ( void );
-
-Result_t AUDDRV_AudLog_Resume( void );
-
 Result_t AUDDRV_AudLog_Stop( UInt32 log_stream );
 
-Result_t AUDDRV_AudLog_StartRetrieveFile( char *filename );
-Result_t AUDDRV_AudLog_StopRetrieveFile( void );
-
-void AUDLOG_ProcessLogChannel( StatQ_t * msg);
+void AUDLOG_ProcessLogChannel(VPStatQ_t * msg);
 
 #ifdef __cplusplus
 }

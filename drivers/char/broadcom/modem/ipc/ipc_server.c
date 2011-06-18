@@ -348,12 +348,35 @@ int __init ipc_ipc_init(void *smbase, unsigned int size)
    return(0);
 }
 
+extern int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu);
+
+void WaitForCpIpc (void* pSmBase)
+{
+	int k = 0, ret = 0;
+
+    printk( KERN_ALERT  "ipcs_init Waiting for CP IPC to init ....\n");
+	while ( (ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU )) == 0)
+	{
+//		for (i=0; i<2048; i++);	// do not fight for accessing shared memory
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout (100);
+		k++;
+	}
+    printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+}
+
+
+
 /**
    static int ipcs_init(void *smbase, unsigned int size)
  */
 static int __init ipcs_init(void *smbase, unsigned int size)
 {
-   int rc = 0;
+  int rc = 0;
+  IPC_Boolean ret = 0;
+
+  //Wait for CP to initialize
+  WaitForCpIpc(smbase);
 
    //Initialize OS specific callbacks with the IPC lib
   rc = ipc_ipc_init(smbase, size);

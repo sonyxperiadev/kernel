@@ -121,9 +121,9 @@ void AUDDRV_Init( void )
 	// create the IPC here because it will take some time. Otherwise, the first IPC message will take long time.
 	//IPC_Audio_Create_BufferPool();
 
-	//RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &AP_Audio_ISR_Handler );  //not used in runtime?
+	RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &AP_Audio_ISR_Handler );  
 #ifdef VPU_INCLUDED
-	//RIPISR_Register_VPU_ProcessStatus( (VPU_ProcessStatus_t) &AP_VPU_ProcessStatus );   //not used in runtime?
+	RIPISR_Register_VPU_ProcessStatus( (VPU_ProcessStatus_t) &AP_VPU_ProcessStatus );   
 #endif
 
 	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
@@ -138,9 +138,9 @@ void AUDDRV_Init( void )
 
 #if !defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 		// ATHENA_EDGE_CP_STANDALONE build
-	//RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &AP_Audio_ISR_Handler );  //not used in runtime?
+	RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &AP_Audio_ISR_Handler );  
 	#ifdef VPU_INCLUDED
-	//RIPISR_Register_VPU_ProcessStatus( (VPU_ProcessStatus_t) &AP_VPU_ProcessStatus );   //not used in runtime?
+	RIPISR_Register_VPU_ProcessStatus( (VPU_ProcessStatus_t) &AP_VPU_ProcessStatus );  
 	#endif
 
 	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );

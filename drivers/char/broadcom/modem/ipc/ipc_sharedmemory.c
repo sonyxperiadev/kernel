@@ -673,6 +673,24 @@ void IPC_Initialise
 
 }
 
+
+int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu)
+{
+	UInt32 crash_code;
+	volatile IPC_SmControl_T * pSmControl = (volatile IPC_SmControl_T *) pSmBase;
+
+	if (pSmControl->Initialised [IPC_CPU_ID_INDEX(IPC_OTHER_CPU [Cpu])] != IPC_SmConfigured)
+	{
+		crash_code = pSmControl->CrashCode;
+		if (crash_code != IPC_CP_NOT_CRASHED && crash_code < IPC_CP_MAX_CRASH_CODE && pSmControl->CrashDump != NULL)
+		{
+			return -1;
+		}
+		return 0;
+	}
+	return 1;
+}
+
 //**************************************************
 void IPC_Configured (void)
 {
@@ -694,6 +712,7 @@ void IPC_Configured (void)
 		(*SmLocalControl.IPCInitialisedFunction) ();
 		RAISE_INTERRUPT;
 	}
+
 }
 
 //============================================================
