@@ -25,3 +25,4 @@ obj-$(CONFIG_MACH_SAMOA_RAY) += chal/
 # SAMOA RAY bringup only has keypad at this point, so no CSL
 #obj-$(CONFIG_MACH_SAMOA_RAY) += csl/
 obj-$(CONFIG_DMAC_PL330) += dmux.o dma.o
+obj-$(CONFIG_KONA_CPU_PM_HANDLER) += kona_pm.o
