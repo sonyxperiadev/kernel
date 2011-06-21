@@ -24,7 +24,6 @@
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
-#include <linux/broadcom/bcmblt-rfkill.h>
 
 #include <asm/memory.h>
 #include <asm/sizes.h>
@@ -44,9 +43,15 @@
 #include <mach/usbh_cfg.h>
 
 #include <sdio_settings.h>
-#include <bcmblt_rfkill_settings.h>
+
 #include <i2c_settings.h>
 #include <usbh_settings.h>
+
+#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
+#include <linux/broadcom/bcmblt-rfkill.h>
+#include <bcmblt_rfkill_settings.h>
+#endif
+
 
 #if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
 #include <linux/i2c/egalax_i2c_ts.h>
