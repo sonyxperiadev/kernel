@@ -241,6 +241,15 @@ config EFI_PARTITION
 	  Say Y here if you would like to use hard disks under Linux which
 	  were partitioned using EFI GPT.
 
+config BRCM_EFI_PARTNAME_FIX
+	bool "Add the fix to display EFI partition names properly"
+	depends on EFI_PARTITION
+	help
+	   By default only the first character of the partition name is
+	   displayed, stored in the kernel data structure. Say Y here if you
+	   want to include the hack to display the full partition name. This
+	   is a temporary hack and a proper fix is done on 2.6.39 kernel.
+
 config SYSV68_PARTITION
 	bool "SYSV68 partition table support" if PARTITION_ADVANCED
 	default y if VME

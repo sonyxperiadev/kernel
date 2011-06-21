@@ -605,6 +605,11 @@ int efi_partition(struct parsed_partitions *state)
 	u32 i;
 	unsigned ssz = bdev_logical_block_size(state->bdev) / 512;
 
+#ifdef CONFIG_BRCM_EFI_PARTNAME_FIX
+	u32 j,k; 
+	char *p;
+#endif
+
 	if (!find_valid_gpt(state, &gpt, &ptes) || !gpt || !ptes) {
 		kfree(gpt);
 		kfree(ptes);
@@ -621,11 +626,31 @@ int efi_partition(struct parsed_partitions *state)
 		if (!is_pte_valid(&ptes[i], last_lba(state->bdev)))
 			continue;
 
+/*
+ * The boot loader SW updates the partition name using wide char
+ * representation. That is an extra 0 will be added after each ASCII. But
+ * in this code, standard string operations like strnlen is used that will 
+ * always return the string length as 1. So only the first character of the
+ * partition name read from the block device is added by put_named_partition.
+ * The unwanted 0s are removed by this fix (to convert wide chars to char) so
+ * that the subsequent code can used standard ASCII string functions for
+ * string maniputations.
+ */
+#ifdef CONFIG_BRCM_EFI_PARTNAME_FIX
+		pr_debug ("\r\n DUMPING THE PARTITION NAME of size %d \r\n",(u32)size);
+		p = ptes[i].partition_name;
+		for (k=1,j=2;j<size-2;j+=2,k++) {
+			p[k] = p[j];
+			if (p[j] == 0)
+				break;
+		}
+#endif
 		put_named_partition(state, i+1, start * ssz, size * ssz,
 				   (const char *) ptes[i].partition_name,
 				    strnlen((const char *)
 					    ptes[i].partition_name,
 					    sizeof(ptes[i].partition_name)));
+
 
 		/* If this is a RAID volume, tell md */
 		if (!efi_guidcmp(ptes[i].partition_type_guid,
