@@ -96,6 +96,11 @@
 #include <gpio_keys_settings.h>
 #endif
 
+#if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
+#include <linux/kona_keypad.h>
+#include <keymap_settings.h>
+#endif
+
 #include "island.h"
 #include "common.h"
 
@@ -448,6 +453,52 @@ static struct platform_device board_gpio_keys_device = {
 };
 #endif
 
+#if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
+
+#define board_keypad_keymap concatenate(ISLAND_BOARD_ID, _keypad_keymap)
+static struct KEYMAP board_keypad_keymap[] = HW_DEFAULT_KEYMAP;
+
+#define board_keypad_pwroff concatenate(ISLAND_BOARD_ID, _keypad_pwroff)
+static unsigned int board_keypad_pwroff[] = HW_DEFAULT_POWEROFF;
+
+#define board_keypad_param concatenate(ISLAND_BOARD_ID, _keypad_param)
+static struct KEYPAD_DATA board_keypad_param =
+{
+    .active_mode = 0,
+    .keymap      = board_keypad_keymap,
+    .keymap_cnt  = ARRAY_SIZE(board_keypad_keymap),
+    .pwroff      = board_keypad_pwroff,
+    .pwroff_cnt  = ARRAY_SIZE(board_keypad_pwroff),
+    .clock       = "gpiokp_apb_clk",
+};
+
+#define board_keypad_device_resource concatenate(ISLAND_BOARD_ID, _keypad_device_resource)
+static struct resource board_keypad_device_resource[] = {
+    [0] = {
+        .start = KEYPAD_BASE_ADDR,
+        .end   = KEYPAD_BASE_ADDR + 0xD0,
+        .flags = IORESOURCE_MEM,
+    },
+    [1] = {
+        .start = BCM_INT_ID_KEYPAD,
+        .end   = BCM_INT_ID_KEYPAD,
+        .flags = IORESOURCE_IRQ,
+    },
+};
+
+#define board_keypad_device concatenate(ISLAND_BOARD_ID, _keypad_device)
+static struct platform_device board_keypad_device =
+{
+   .name          = "kona_keypad",
+   .id            = -1,
+   .resource      = board_keypad_device_resource,
+   .num_resources = ARRAY_SIZE(board_keypad_device_resource),
+   .dev = {
+      .platform_data = &board_keypad_param,
+   },
+};
+#endif
+
 #if defined(CONFIG_KONA_OTG_CP) || defined(CONFIG_KONA_OTG_CP_MODULE)
 static struct resource otg_cp_resource[] = {
 	[0] = {
@@ -727,6 +778,15 @@ static void __init board_add_keys_device(void)
 }
 #endif
 
+#if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
+#define board_add_keyboard_kona concatenate(ISLAND_BOARD_ID, _add_keyboard_kona)
+static void __init board_add_keyboard_kona(void)
+{
+   platform_device_register(&board_keypad_device);
+}
+#endif
+
+
 static void __init add_usbh_device(void)
 {
 	/*
@@ -775,6 +835,10 @@ static void __init add_devices(void)
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
         board_add_keys_device();
+#endif
+
+#if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
+        board_add_keyboard_kona();
 #endif
 
 #if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
