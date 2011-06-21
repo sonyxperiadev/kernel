@@ -1,7 +1,7 @@
 #
 # Makefile for the Synopsis DWC OTG driver
 #
-DWC_COMMON_PORT_DIR	:= $(PWD)/drivers/usb/gadget/dwc_otg/dwc_common_port
+DWC_COMMON_PORT_DIR	:= drivers/usb/gadget/dwc_otg/dwc_common_port
 
 EXTRA_CFLAGS	+=  -DLM_INTERFACE -DDWC_LINUX
 EXTRA_CFLAGS	+=   -I$(DWC_COMMON_PORT_DIR)
