@@ -98,6 +98,7 @@ Result_t AUDDRV_HWControl_Init(void)
     CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
    	printk(KERN_INFO "AUDDRV_HWControl_Init:: \n");
 
+#if !(defined(_SAMOA_))
 //Enable CAPH clock.
     clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 	clk_set_rate(clkID[0], 156000000);
@@ -136,6 +137,7 @@ Result_t AUDDRV_HWControl_Init(void)
     clk_enable(clkID[5]);
     //clk_set_rate(clkID[5], 156000000);
 #endif
+#endif // !defined(_SAMOA_)
 
     CAPHIRQ_Init();
 
@@ -178,12 +180,14 @@ Result_t AUDDRV_HWControl_DeInit(void)
     csl_caph_hwctrl_deinit(); 
 
 #ifndef CONFIG_AUDIO_BUILD
+#if !defined(_SAMOA_)
 	clk_disable(clkID[0]);
 	clk_disable(clkID[1]);
 	clk_disable(clkID[2]);
 	clk_disable(clkID[3]);
 	clk_disable(clkID[4]);
 	clk_disable(clkID[5]);
+#endif
 #else
     //Disable CAPH clock.
     PRM_set_clock_state(id[0], RESOURCE_CAPH, CLOCK_OFF);
