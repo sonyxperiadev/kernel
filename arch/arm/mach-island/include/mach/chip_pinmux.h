@@ -115,6 +115,38 @@ enum PIN_NAME {
         PN_VC_CAM1_SCL,
         PN_VC_CAM1_SDA,
 
+	PN_LCD_R_7,
+        PN_LCD_R_6,
+        PN_LCD_R_5,
+        PN_LCD_R_4,
+        PN_LCD_R_3,
+        PN_LCD_R_2,
+        PN_LCD_R_1,
+        PN_LCD_R_0,
+
+        PN_LCD_G_7,
+        PN_LCD_G_6,
+        PN_LCD_G_5,
+        PN_LCD_G_4,
+        PN_LCD_G_3,
+        PN_LCD_G_2,
+        PN_LCD_G_1,
+        PN_LCD_G_0,
+
+        PN_LCD_B_7,
+        PN_LCD_B_6,
+        PN_LCD_B_5,
+        PN_LCD_B_4,
+        PN_LCD_B_3,
+        PN_LCD_B_2,
+        PN_LCD_B_1,
+        PN_LCD_B_0,
+
+        PN_LCD_HSYNC, 
+        PN_LCD_VSYNC,
+        PN_LCD_OE,  
+        PN_LCD_PCLK,
+
 	PN_MAX
 };
 
@@ -238,6 +270,38 @@ enum PIN_FUNC {
 
         PF_VC_CAM1_SCL,
         PF_VC_CAM1_SDA,
+
+	PF_LCD_R_7,
+        PF_LCD_R_6,
+        PF_LCD_R_5,
+        PF_LCD_R_4,
+        PF_LCD_R_3,
+        PF_LCD_R_2,
+        PF_LCD_R_1,
+        PF_LCD_R_0,
+
+        PF_LCD_G_7,
+        PF_LCD_G_6,
+        PF_LCD_G_5,
+        PF_LCD_G_4,
+        PF_LCD_G_3,
+        PF_LCD_G_2,
+        PF_LCD_G_1,
+        PF_LCD_G_0,
+
+        PF_LCD_B_7,
+        PF_LCD_B_6,
+        PF_LCD_B_5,
+        PF_LCD_B_4,
+        PF_LCD_B_3,
+        PF_LCD_B_2,
+        PF_LCD_B_1,
+        PF_LCD_B_0,
+
+        PF_LCD_HSYNC,
+        PF_LCD_VSYNC,
+        PF_LCD_OE,
+        PF_LCD_PCLK,
 
 	PF_MAX
 };
