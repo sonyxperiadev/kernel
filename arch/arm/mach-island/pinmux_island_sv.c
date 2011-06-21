@@ -115,6 +115,39 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(ULPI1_DIR,    ULPI1_DIR,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(ULPI1_NXT,    ULPI1_NXT,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(ULPI1_STP,    ULPI1_STP,    0, OFF, OFF, 0, 1, 8MA),
+
+	/* LCD */
+	PIN_CFG(LCD_R_7, LCD_R_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_6, LCD_R_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_5, LCD_R_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_4, LCD_R_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_3, LCD_R_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_2, LCD_R_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_1, LCD_R_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_0, LCD_R_0, 0, OFF, OFF, 0, 0, 8MA),
+
+        PIN_CFG(LCD_G_7, LCD_G_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_6, LCD_G_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_5, LCD_G_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_4, LCD_G_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_3, LCD_G_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_2, LCD_G_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_1, LCD_G_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_0, LCD_G_0, 0, OFF, OFF, 0, 0, 8MA),
+
+        PIN_CFG(LCD_B_7, LCD_B_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_6, LCD_B_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_5, LCD_B_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_4, LCD_B_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_3, LCD_B_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_2, LCD_B_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_1, LCD_B_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_0, LCD_B_0, 0, OFF, OFF, 0, 0, 8MA),
+
+        PIN_CFG(LCD_HSYNC, LCD_HSYNC, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_VSYNC, LCD_VSYNC, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_OE,    LCD_OE,    0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_PCLK,  LCD_PCLK,  0, OFF, OFF, 0, 0, 8MA),
 };
 
 /* board level init */
