@@ -542,7 +542,7 @@ CONFIG_WIRELESS_EXT_SYSFS=y
 # Some wireless drivers require a rate control algorithm
 #
 # CONFIG_WIMAX is not set
-# CONFIG_RFKILL is not set
+CONFIG_RFKILL=y
 # CONFIG_NET_9P is not set
 # CONFIG_CAIF is not set
 
@@ -1422,3 +1422,9 @@ CONFIG_SENSORS_BH1715=m
 CONFIG_SENSORS_MPU3050=m
 CONFIG_BMP18X=m
 CONFIG_BMP18X_I2C=m
+
+#
+# BRCM Bluetooth
+#
+CONFIG_BCMBLT_RFKILL=m
+CONFIG_BTHID=m

@@ -49,3 +49,5 @@ obj-$(CONFIG_BRCM_MISC_DRIVERS) += vmcs_services/
 obj-$(CONFIG_BCM59055_AUDIO)	+= bcm59055-audio.o
 obj-$(CONFIG_BCM59055_SARADC)	+= bcm59055-adc.o
 obj-$(CONFIG_BCM59055_FUELGAUGE)+= bcm59055-fuelgauge.o
+obj-$(CONFIG_BCMBLT_RFKILL)	+= bcmblt-rfkill.o
+obj-$(CONFIG_BTHID)		+= bthid.o

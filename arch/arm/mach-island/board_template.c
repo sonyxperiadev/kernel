@@ -24,6 +24,7 @@
 #include <linux/serial_8250.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
+#include <linux/broadcom/bcmblt-rfkill.h>
 
 #include <asm/memory.h>
 #include <asm/sizes.h>
@@ -43,6 +44,7 @@
 #include <mach/usbh_cfg.h>
 
 #include <sdio_settings.h>
+#include <bcmblt_rfkill_settings.h>
 #include <i2c_settings.h>
 #include <usbh_settings.h>
 
@@ -420,7 +422,7 @@ static struct i2c_board_info max3353_i2c_boardinfo[] = {
 #endif
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
-#define board_leds_gpio_device concatenate(BCMHANA_BOARD_ID, _leds_gpio_device)
+#define board_leds_gpio_device concatenate(ISLAND_BOARD_ID, _leds_gpio_device)
 static struct platform_device board_leds_gpio_device = {
    .name = "leds-gpio",
    .id = -1,
@@ -431,7 +433,7 @@ static struct platform_device board_leds_gpio_device = {
 #endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-#define board_gpio_keys_device concatenate(BCMHANA_BOARD_ID, _gpio_keys_device)
+#define board_gpio_keys_device concatenate(ISLAND_BOARD_ID, _gpio_keys_device)
 static struct platform_device board_gpio_keys_device = {
    .name = "gpio-keys",
    .id = -1,
@@ -527,6 +529,31 @@ static struct i2c_board_info __initdata i2c_bmp18x_info[] =
 		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
 	},
 };
+#endif
+
+#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
+#define board_bcmblt_rfkill_cfg concatenate(ISLAND_BOARD_ID, _bcmblt_rfkill_cfg)
+static struct bcmblt_rfkill_platform_data board_bcmblt_rfkill_cfg =
+{
+#ifdef BCMBLT_RFKILL_GPIO
+   .gpio = BCMBLT_RFKILL_GPIO,
+#endif
+};
+#define board_bcmblt_rfkill_device concatenate(ISLAND_BOARD_ID, _bcmblt_rfkill_device)
+static struct platform_device board_bcmblt_rfkill_device = 
+{
+   .name = "bcmblt-rfkill",
+   .id = 1,
+   .dev =
+   {
+      .platform_data = &board_bcmblt_rfkill_cfg,
+   },
+}; 
+
+static void __init board_add_bcmblt_rfkill_device(void)
+{
+   platform_device_register(&board_bcmblt_rfkill_device);
+}
 #endif
 
 static void __init add_sdio_device(void)
@@ -680,7 +707,7 @@ static void __init add_i2c_device(void)
 }
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
-#define board_add_led_device concatenate(BCMHANA_BOARD_ID, _add_led_device)
+#define board_add_led_device concatenate(ISLAND_BOARD_ID, _add_led_device)
 static void __init board_add_led_device(void)
 {
    platform_device_register(&board_leds_gpio_device);
@@ -688,7 +715,7 @@ static void __init board_add_led_device(void)
 #endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
-#define board_add_keys_device concatenate(BCMHANA_BOARD_ID, _add_keyboard_device)
+#define board_add_keys_device concatenate(ISLAND_BOARD_ID, _add_keyboard_device)
 static void __init board_add_keys_device(void)
 {
    platform_device_register(&board_gpio_keys_device);
@@ -743,6 +770,10 @@ static void __init add_devices(void)
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
         board_add_keys_device();
+#endif
+
+#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
+        board_add_bcmblt_rfkill_device();
 #endif
 
 	add_usbh_device();
