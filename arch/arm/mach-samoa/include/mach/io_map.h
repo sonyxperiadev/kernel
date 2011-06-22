@@ -105,6 +105,7 @@ Jian: to update for Samoa
 #define KONA_UART0_VA               HW_IO_PHYS_TO_VIRT( UARTB_BASE_ADDR )           /* UART 0 */
 #define KONA_UART1_VA               HW_IO_PHYS_TO_VIRT( UARTB2_BASE_ADDR )          /* UART 1 */
 #define KONA_UART2_VA               HW_IO_PHYS_TO_VIRT( UARTB3_BASE_ADDR )          /* UART 2 */
+#define KONA_MST_CLK_BASE_VA      HW_IO_PHYS_TO_VIRT( KONA_MST_CLK_BASE_ADDR )      /* Master Clock Base */
 #define KONA_USB_HSOTG_VA           HW_IO_PHYS_TO_VIRT( HSOTG_BASE_ADDR )           /* USB OTG */
 #define KONA_USB_HSOTG_CTRL_VA      HW_IO_PHYS_TO_VIRT( HSOTG_CTRL_BASE_ADDR )      /* USB OTG Control */
 

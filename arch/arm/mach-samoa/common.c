@@ -129,6 +129,7 @@ static char *android_functions_all[] = {
 /* FIXME borrow Google Nexus One ID to use windows driver */
 #define	GOOGLE_VENDOR_ID	0x18d1
 #define	NEXUS_ONE_PROD_ID	0x0d02
+#define   BRCM_ADB_PROD_ID		0x0002
 
 #define	VENDOR_ID		GOOGLE_VENDOR_ID
 #define	PRODUCT_ID		NEXUS_ONE_PROD_ID
@@ -136,7 +137,7 @@ static char *android_functions_all[] = {
 /* use a seprate PID for RNDIS */
 #define RNDIS_PRODUCT_ID	0x4e13
 #define ACM_PRODUCT_ID		0x8888
-
+#define BRCM_RNDIS_PROD_ID 0xABCD
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
 	.nluns		=	1,
@@ -169,12 +170,12 @@ static struct platform_device android_rndis_device = {
 
 static struct android_usb_product android_products[] = {
 	{
-		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
+		.product_id	= 	__constant_cpu_to_le16(BRCM_ADB_PROD_ID),
 		.num_functions	=	ARRAY_SIZE(android_function_adb_msc),
 		.functions	=	android_function_adb_msc,
 	},
 	{
-		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
+		.product_id	= 	__constant_cpu_to_le16(BRCM_RNDIS_PROD_ID),
 		.num_functions	=	ARRAY_SIZE(android_function_rndis),
 		.functions	=	android_function_rndis,
 	},
@@ -186,7 +187,7 @@ static struct android_usb_product android_products[] = {
 };
 
 static struct android_usb_platform_data android_usb_data = {
-	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
+	.vendor_id		= 	__constant_cpu_to_le16(BRCM_VENDOR_ID),
 	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
 	.version		=	0,
 	.product_name		=	"Samoa",
