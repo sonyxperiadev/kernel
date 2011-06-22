@@ -50,14 +50,12 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(NORFLSH_AD_10,     KP_ROW_OP_4, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(NORFLSH_AD_09,     KP_ROW_OP_5, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(NORFLSH_AD_08,     KP_ROW_OP_6, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(NORFLSH_AD_04,     KP_COL_IP_0, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADLAT_EN,  KP_COL_IP_1, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AADLAT_EN, KP_COL_IP_2, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADDR_20,   KP_COL_IP_3, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADDR_21,   KP_COL_IP_4, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADDR_22,   KP_COL_IP_5, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADDR_23,   KP_COL_IP_6, 0, OFF, OFF, 0, 0, 8MA),
-	PIN_CFG(NORFLSH_AD_07,     KP_COL_IP_7, 0, OFF, OFF, 0, 0, 8MA),
 
 	/* WiFi SDIO */
         PIN_CFG(NORFLSH_AD_03, SDIO1_DATA_3, 0, OFF, ON, 0, 0, 2MA),
