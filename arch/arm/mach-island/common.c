@@ -211,13 +211,13 @@ static struct resource rtc_device_resource[] = {
         .flags = IORESOURCE_MEM,
     },
     [1] = {
-        .start = BCM_INT_ID_BBL0,
-        .end   = BCM_INT_ID_BBL0,
+        .start = BCM_INT_ID_BBL1,
+        .end   = BCM_INT_ID_BBL1,
         .flags = IORESOURCE_IRQ,
     },
     [2] = {
-        .start = BCM_INT_ID_BBL1,
-        .end   = BCM_INT_ID_BBL1,
+        .start = BCM_INT_ID_BBL2,
+        .end   = BCM_INT_ID_BBL2,
         .flags = IORESOURCE_IRQ,
     },
 };

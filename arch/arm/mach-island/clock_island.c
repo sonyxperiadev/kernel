@@ -191,6 +191,10 @@ DECLARE_BUS_CLK(pwm, PWM, PWM, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,
 	 26*CLOCK_1M,  26*CLOCK_1M);
 
+DECLARE_BUS_CLK(bbl_apb, BBL, BBL_REG_APB, kps_ccu, KONA_SLV, IKPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
+
 DECLARE_BUS_CLK(bsc1_apb, BSC1, BSC1_APB, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
@@ -522,6 +526,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(sdio4_sleep),
 	CLK_LK(bsc1_apb),
 	CLK_LK(bsc2_apb),
+	CLK_LK(bbl_apb),
 	CLK_LK(timers_apb),
 	CLK_LK(uartb_apb),
 	CLK_LK(uartb2_apb),
