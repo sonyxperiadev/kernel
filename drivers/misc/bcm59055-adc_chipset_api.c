@@ -1052,7 +1052,7 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 	/*struct adc_debug dbg;*/
 	char cmd[MAX_USER_INPUT_LEN];
 	/*int ret, i;*/
-	int vbat_raw, vbat_unit;
+	int adc_raw, adc_unit;
 
 	pr_info("%s\n", __func__);
 
@@ -1071,10 +1071,20 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 		cmd[len - 1] = '\0';
 
 	if (strcmp (cmd, "VBAT_UNIT") == 0) {
-		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_VBAT, &vbat_raw, NULL, NULL);
-		vbat_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_VBAT, vbat_raw);
-		printk(KERN_INFO "%s: VBAT: Raw %d, unit %d mV\n", __func__, vbat_raw, vbat_unit);
+		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_VBAT, &adc_raw, NULL, NULL);
+		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_VBAT, adc_raw);
+		printk(KERN_INFO "%s: VBAT: Raw %d, unit %d mV\n", __func__, adc_raw, adc_unit);
 	
+	}
+	else if (strcmp(cmd, "BSI_UNIT") == 0) {
+		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_BSI, &adc_raw, NULL, NULL);
+		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_BSI, adc_raw);
+		printk(KERN_INFO "%s: BSI: Raw %d, unit %d HOhm\n", __func__, adc_raw, adc_unit);
+	}
+	else if (strcmp(cmd, "BTEMP_UNIT") == 0) {
+		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_BTEMP, &adc_raw, NULL, NULL);
+		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_BTEMP, adc_raw);
+		printk(KERN_INFO "%s: BTEMP: Raw %d, unit %d K\n", __func__, adc_raw, adc_unit);
 	}
 
 
