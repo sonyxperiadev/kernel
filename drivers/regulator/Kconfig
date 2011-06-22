@@ -235,6 +235,13 @@ config REGULATOR_BCM59055
 	  This driver supports the voltage regulators provided by
 	  PMU 59055.
 
+config REGULATOR_TPS728XX
+	bool "TPS28XX Regulator"
+	depends on ARCH_REQUIRE_GPIOLIB
+	help
+	  This driver supports the voltage regulators provided by
+	  TPS728XX.
+
 config MAX8649_SUPPORT_CHANGE_VID_MODE
 	bool "Enable Maxim 8649 regulator to change voltage "
 	depends on REGULATOR_MAX8649

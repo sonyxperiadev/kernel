@@ -37,6 +37,7 @@ obj-$(CONFIG_REGULATOR_BCMPMU)  += bcmpmu-regulator.o
 obj-$(CONFIG_REGULATOR_BCMSAMOA)  += bcmpmu-rgltr-samoa.o
 obj-$(CONFIG_REGULATOR_BCMPMU) += bcmpmu-regulator.o
 obj-$(CONFIG_REGULATOR_BCM59055) += bcmpmu-rgltr-bcm59055.o
+obj-$(CONFIG_REGULATOR_TPS728XX) += tps728xx-regulator.o
 		
 
 ccflags-$(CONFIG_REGULATOR_DEBUG) += -DDEBUG
