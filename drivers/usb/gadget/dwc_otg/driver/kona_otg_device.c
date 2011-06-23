@@ -37,7 +37,9 @@
 #include <mach/irqs.h>
 #include <linux/clk.h>
 #include <mach/io_map.h>
+#ifdef CONFIG_ARCH_SAMOA
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
+#endif
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_hsotg.h>
 
@@ -139,7 +141,8 @@ static int __init dwc_otg_device_init(void)
 		unsigned long rate;
 
 		printk("\n%s: Setting up USB OTG PHY and Clock\n", __func__);
-#if 0
+
+#ifndef CONFIG_ARCH_SAMOA
 		otg_clk = clk_get(NULL, "usb_otg_clk");
 		if (!otg_clk) {
 			printk("%s: error get clock\n", __func__);
@@ -153,8 +156,6 @@ static int __init dwc_otg_device_init(void)
 		}
 		rate = clk_get_rate(otg_clk);
 		printk("usb_otg_clk rate %lu\n", rate);
-
-	
 #else
 
  	base = (void __iomem *)KONA_MST_CLK_BASE_VA;
