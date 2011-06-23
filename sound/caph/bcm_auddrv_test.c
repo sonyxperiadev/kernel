@@ -705,6 +705,7 @@ static int HandleControlCommand()
 		}
 		break;
 
+#if !(defined(_SAMOA_))
         case 10: // hard code caph clocks, sometimes clock driver is not working well
         {
             // hard code it.
@@ -810,10 +811,10 @@ static int HandleControlCommand()
 
 
             //( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET)) = (UInt32)0x0000ffaa);
-        
 
         }
         break;
+#endif        
 
         default:
             DEBUG(" Invalid Control Command\n");
