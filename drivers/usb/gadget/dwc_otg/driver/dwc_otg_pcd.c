@@ -1093,9 +1093,6 @@ dwc_otg_pcd_t *dwc_otg_pcd_init(dwc_otg_core_if_t * core_if)
 {
 	dwc_otg_pcd_t *pcd = NULL;
 	dwc_otg_dev_if_t *dev_if;
-	extern int bcmlog_mtt_on;
-
-       bcmlog_mtt_on = 1;
 
 	/*
 	 * Allocate PCD structure
