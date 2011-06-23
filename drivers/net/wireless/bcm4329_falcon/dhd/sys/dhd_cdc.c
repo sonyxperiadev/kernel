@@ -101,13 +101,18 @@ dhdcdc_msg(dhd_pub_t *dhd)
 static int
 dhdcdc_cmplt(dhd_pub_t *dhd, uint32 id, uint32 len)
 {
-	int ret;
+	int ret = 1;
 	int cdc_len = len+sizeof(cdc_ioctl_t);
 	dhd_prot_t *prot = dhd->prot;
+	void *old_cmn;
+	old_cmn = dhd->cmn;
 
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
 
 	do {
+		if (dhd->cmn == NULL)
+			break;
+
 		ret = dhd_bus_rxctl(dhd->bus, (uchar*)&prot->msg, cdc_len);
 		if (ret < 0)
 			break;
@@ -166,7 +171,11 @@ dhdcdc_query_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uin
 retry:
 	/* wait for interrupt and get first fragment */
 	if ((ret = dhdcdc_cmplt(dhd, prot->reqid, len)) < 0)
+	{
+		DHD_ERROR(("%s: wait failed, cmd=%d %s\n", __FUNCTION__, cmd,
+			(cmd == WLC_SET_VAR || cmd == WLC_GET_VAR) ? (char*)buf : "."));
 		goto done;
+	}
 
 	flags = ltoh32(msg->flags);
 	id = (flags & CDCF_IOC_ID_MASK) >> CDCF_IOC_ID_SHIFT;
@@ -234,7 +243,11 @@ dhdcdc_set_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len, uint8
 	}
 
 	if ((ret = dhdcdc_cmplt(dhd, prot->reqid, len)) < 0)
+	{
+		DHD_ERROR(("%s: wait failed, cmd=%d %s\n", __FUNCTION__, cmd,
+			(cmd == WLC_SET_VAR || cmd == WLC_GET_VAR) ? (char*)buf : "."));
 		goto done;
+	}
 
 	flags = ltoh32(msg->flags);
 	id = (flags & CDCF_IOC_ID_MASK) >> CDCF_IOC_ID_SHIFT;
@@ -268,6 +281,11 @@ dhd_prot_ioctl(dhd_pub_t *dhd, int ifidx, wl_ioctl_t * ioc, void * buf, int len)
 
 	if (dhd->busstate == DHD_BUS_DOWN) {
 		DHD_ERROR(("%s : bus is down. we have nothing to do\n", __FUNCTION__));
+		goto done;
+	}
+
+	if (dhd->cmn == NULL) {
+		DHD_ERROR(("%s : dhd is down\n", __FUNCTION__));
 		goto done;
 	}
 

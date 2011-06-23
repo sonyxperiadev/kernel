@@ -1676,7 +1676,11 @@ wl_control_wl_start(struct net_device *dev)
 		sdioh_start(NULL, 0);
 #endif
 
-		ret = dhd_dev_reset(dev, 0);
+		/* dhd_dev_reset always returns 1 whle Android is expecting
+		 * a return code of 0 when starting the SoftAP. So, ignore
+		 * dhd_dev_reset's return code. -don
+		*/
+		dhd_dev_reset(dev, 0);
 
 #if defined(BCMLXSDMMC)
 		sdioh_start(NULL, 1);
@@ -2288,9 +2292,6 @@ wl_iw_set_freq(
 	}
 
 	chan = htod32(chan);
-
-	if ((error = dev_wlc_ioctl(dev, WLC_SET_CHANNEL, &chan, sizeof(chan))))
-		return error;
 
 	if ((error = dev_wlc_ioctl(dev, WLC_SET_CHANNEL, &chan, sizeof(chan)))) {
 		WL_ERROR(("%s: SIOCGIWFREQ (channel = %d) failed\n", dev->name, chan));
@@ -5548,10 +5549,24 @@ wl_iw_set_wpaauth(
 		else if (paramval == IW_AUTH_ALG_SHARED_KEY)
 			val = 1;
 		else if (paramval == (IW_AUTH_ALG_OPEN_SYSTEM | IW_AUTH_ALG_SHARED_KEY))
+#if 0 	/* 
+	 * This is a temp. workaround for FALCON_REL_5_90_125... Here are the details:
+	 *   ROMTERM3 firmware does not recognize open+shared for the iovar "auth".
+	 *   ROMTERM3 firmware requires ioctl WLC_SET_AUTH val = 3 (DOT11_OPEN_SHARED).
+	 *   FALCON firmware requires ioctl WLC_SET_AUTH val = 2 (WL_AUTH_OPEN_SHARED)
+	 *   or iovar "auth" val = 2 (WL_AUTH_OPEN_SHARED). 
+	 */
 			val = 2;
 		else
 			error = 1;
 		if (!error && (error = dev_wlc_intvar_set(dev, "auth", val)))
+#else
+			val = 3;
+		else
+			error = 1;
+		if (!error && (error = dev_wlc_ioctl(dev, WLC_SET_AUTH, &val,
+			sizeof(val))))
+#endif
 			return error;
 		break;
 
@@ -6426,6 +6441,14 @@ set_ap_cfg(struct net_device *dev, struct ap_profile *ap)
 {
 	int updown = 0;
 	int channel = 0;
+	/*
+	 * Disable ARP Off loading for Android's SoftAP. -don
+	 */
+	int arpoe = 0;
+	/*
+	 * Disable PM for Android SoftAP. -don
+	 */
+	int pm_local = PM_OFF;
 
 	wlc_ssid_t ap_ssid;
 	int max_assoc = 8;
@@ -6511,6 +6534,24 @@ set_ap_cfg(struct net_device *dev, struct ap_profile *ap)
 		WL_TRACE(("\n>in %s: apsta set result: %d \n", __FUNCTION__, res));
 #endif 
 
+		/* Disable PM when running as a SoftAP as recommended by DLO. */
+		if ((res = dev_wlc_ioctl(dev, WLC_SET_PM, &pm_local, sizeof(pm_local))) < 0) {
+			WL_ERROR(("%s apsta could not disable PM (res=%d)\n", __FUNCTION__, res));
+		} else {
+			WL_ERROR(("%s apsta disabled PM\n", __FUNCTION__));
+		}	
+
+		/* Disable ARP offload as it doesn't work with Android's SoftAP */
+		iolen = wl_bssiovar_mkbuf("arpoe",
+			bsscfg_index,  &arpoe, sizeof(arpoe)+4,
+			buf, sizeof(buf), &mkvar_err);
+		ASSERT(iolen);
+		if ((res = dev_wlc_ioctl(dev, WLC_SET_VAR, buf, iolen)) < 0) {
+			WL_ERROR(("%s apsta could not disable ARP OE (res=%d)\n", __FUNCTION__, res));
+		} else {
+			WL_ERROR(("%s apsta disabled ARP OE\n", __FUNCTION__));
+		}
+
 		updown = 1;
 		if ((res = dev_wlc_ioctl(dev, WLC_UP, &updown, sizeof(updown))) < 0) {
 			WL_ERROR(("%s fail to set apsta \n", __FUNCTION__));
@@ -6549,7 +6590,11 @@ set_ap_cfg(struct net_device *dev, struct ap_profile *ap)
 	ASSERT(iolen);
 	if ((res = dev_wlc_ioctl(dev, WLC_SET_VAR, buf, iolen)) < 0) {
 		WL_ERROR(("%s failed to set 'closednet'for apsta \n", __FUNCTION__));
-		goto fail;
+		/*
+		 * This ioctl() is currently unsupported.
+		 * For Android SoftAP, don't treat this as a failure. -don
+		 */
+		//goto fail;
 	}
 
 	
@@ -6576,7 +6621,11 @@ set_ap_cfg(struct net_device *dev, struct ap_profile *ap)
 	max_assoc = ap->max_scb;
 	if ((res = dev_wlc_intvar_set(dev, "maxassoc", max_assoc))) {
 		WL_ERROR(("%s fail to set maxassoc\n", __FUNCTION__));
-		goto fail;
+		/*
+		 * This ioctl() is currently unsupported.
+		 * For Android SoftAP, don't treat this as a failure. -don
+		 */ 
+		// goto fail;
 	}
 
 	ap_ssid.SSID_len = strlen(ap->ssid);
