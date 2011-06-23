@@ -512,8 +512,7 @@ static void __exit otp_cp_module_exit(void)
 {
 	platform_driver_unregister(&otg_cp_driver);
 }
-
-module_init(otg_cp_module_init);
+subsys_initcall(otg_cp_module_init);
 module_exit(otp_cp_module_exit);
 
 MODULE_AUTHOR("Broadcom");
