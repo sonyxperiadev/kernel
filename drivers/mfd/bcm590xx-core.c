@@ -611,7 +611,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_FUELGAUGE)
 		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-fg");
 	/* Register ADC driver */
-	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_ADC)
+	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_ADC) 
 		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-saradc");
 	/* Register PowerOnKey device */
 	if (bcm590xx->pdata->flag & BCM590XX_USE_PONKEY)
@@ -628,6 +628,10 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 
 	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_POWER)
 		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-power");
+
+#ifdef CONFIG_BCM59055_ADC_CHIPSET_API
+	ret |= bcm590xx_client_dev_register(bcm590xx, "bcm59055-adc_chipset_api");
+#endif
 
 	if (ret) {
 		pr_info("%s: Some sub device registration failed\n", __func__);

@@ -427,7 +427,7 @@ config BCM59055_FUELGAUGE
 
 config BCM59055_ADC_CHIPSET_API
 	tristate "BCM59055 ADC chipset API driver"
-	depends on MFD_BCM_PMU590XX
+	depends on BCM59055_SARADC && BCM59055_FUELGAUGE
 	default n
 	---help---
 	 BCM59055 ADC chispet API driver 
