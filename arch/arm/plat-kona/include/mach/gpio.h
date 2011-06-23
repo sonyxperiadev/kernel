@@ -15,6 +15,8 @@
 #ifndef __PLAT_GPIO_H
 #define __PLAT_GPIO_H
 
+#include <linux/init.h>
+
 #define   KONA_MAX_GPIO   192
 
 #ifdef CONFIG_GPIO_PCA953X
