@@ -75,6 +75,7 @@ typedef struct
   struct work_struct cp_crash_dump_wq;
   struct work_struct intr_work;
   struct workqueue_struct *intr_workqueue;
+  struct workqueue_struct *crash_dump_workqueue;
   void __iomem *apcp_shmem;
 }ipcs_info_t;
 
@@ -260,17 +261,24 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 
    if(IpcCPCrashCheck())
    {
+		switch(BCMLOG_GetCpCrashLogDevice()) {
 #if 0 // MTD (flash/panic partition) not supported
-		if( BCMLOG_CPCRASH_MTD == BCMLOG_GetCpCrashDumpDevice() )
-		{
+		case BCMLOG_CPCRASH_MTD:
 			/* we kill AP when CP crashes */
-			printk( KERN_ALERT  "Crashing AP now...\n\n");
+			printk( KERN_ALERT	"Crashing AP now...\n\n");
 			abort();  
-		}
-
-		else 
+			break;
 #endif // 0
-		{
+		case BCMLOG_OUTDEV_RNDIS:
+			//Using RNDIS causes work queue event/0 lock up so it needs its own thread
+			g_ipc_info.crash_dump_workqueue = create_singlethread_workqueue("dump-wq");
+			if (!g_ipc_info.crash_dump_workqueue)
+			{
+			  IPC_DEBUG(DBG_ERROR,"[ipc]: cannot create cp crash dump workqueue\n");
+			}
+			queue_work(g_ipc_info.crash_dump_workqueue, &g_ipc_info.cp_crash_dump_wq);
+			break;
+		default:
 			schedule_work(&g_ipc_info.cp_crash_dump_wq);
 		}
 
