@@ -37,9 +37,6 @@
 #include <mach/irqs.h>
 #include <linux/clk.h>
 #include <mach/io_map.h>
-#ifdef CONFIG_ARCH_SAMOA
-#include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
-#endif
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_hsotg.h>
 
@@ -54,7 +51,6 @@
 #define	PHY_MODE_OTG		2
 #define	PHY_MODE_DEVICE		1
 #define	PHY_MODE_HOST		0
-#define	CLK_WR_ACCESS_PASSWORD	0x00A5A501
 #define	BC11_OVR_KEY		0x2AAB
 
 /* ---- Private Function Prototypes -------------------------------------- */
@@ -126,7 +122,6 @@ static void __exit dwc_otg_device_exit(void)
  ***************************************************************************/
 static int __init dwc_otg_device_init(void)
 {
-    void __iomem *base;
 	int rc;
 
 	if ( lmdev != NULL ) {
@@ -156,46 +151,8 @@ static int __init dwc_otg_device_init(void)
 		}
 		rate = clk_get_rate(otg_clk);
 		printk("usb_otg_clk rate %lu\n", rate);
-#else
-
- 	base = (void __iomem *)KONA_MST_CLK_BASE_VA;
-
-	writel(CLK_WR_ACCESS_PASSWORD, base);
-
-	writel(KPM_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK, base+KPM_CLK_MGR_REG_LVM_EN_OFFSET);
-	while (readl(base+KPM_CLK_MGR_REG_LVM_EN_OFFSET)&KPM_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK);
-
-	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
-	val |=KPM_CLK_MGR_REG_KPM_POLICY0_MASK_USBH_POLICY0_MASK_MASK;
-	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
-
-	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY1_MASK_OFFSET);
-	val |=KPM_CLK_MGR_REG_KPM_POLICY1_MASK_USBH_POLICY1_MASK_MASK;
-	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY1_MASK_OFFSET);
-
-	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
-	val |=KPM_CLK_MGR_REG_KPM_POLICY2_MASK_USBH_POLICY2_MASK_MASK;
-	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY2_MASK_OFFSET);
-
-	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY3_MASK_OFFSET);
-	val |=KPM_CLK_MGR_REG_KPM_POLICY3_MASK_USBH_POLICY3_MASK_MASK;
-	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY3_MASK_OFFSET);
-
-	val = readl(base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET);
-	val |=KPM_CLK_MGR_REG_POLICY_CTL_GO_MASK|KPM_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK;
-	writel(val, base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET);
-
-	while (readl(base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET)&KPM_CLK_MGR_REG_POLICY_CTL_GO_MASK);
-
-	val = readl(base+KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_OFFSET);
-	val |=KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_USBH_AHB_CLK_EN_MASK;
-	writel(val, base+KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_OFFSET);
-
-	writel(CLK_WR_ACCESS_PASSWORD&KPM_CLK_MGR_REG_WR_ACCESS_RESERVED_MASK, base);
-
-	printk("%s: Clock Enable Done\n", __func__);
-    
 #endif
+
 		/* map base address */
 		hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
 		if (!hsotg_ctrl_base) {
