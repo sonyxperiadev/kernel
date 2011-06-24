@@ -27,9 +27,9 @@
 #include <mach/pinmux.h>
 
 static struct __init pin_config board_pin_config[] = {
-	/* BSC1 */
- //       PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
-   //     PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
+	/* VC camera */
+	PIN_CFG(NORFLSH_CE1_N,   VC_GPIO_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NORFLSH_ADDR_19, VC_GPIO_1, 0, OFF, OFF, 0, 0, 8MA),
 
         /* BSC2 */
         PIN_BSC_CFG(BSC2_SCL, BSC2_SCL, 0x08),
@@ -66,6 +66,13 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(NORFLSH_AD_00, SDIO1_CMD,    0, OFF, ON, 0, 0, 2MA),
         PIN_CFG(NORFLSH_RDY,   SDIO1_DATA_1, 0, OFF, ON, 0, 0, 2MA),
         PIN_CFG(NORFLSH_CLK_N, SDIO1_DATA_2, 0, OFF, ON, 0, 0, 2MA),
+
+	/* VC4 JTAG */
+	PIN_CFG(NAND_RDY_1, VC_TRSTB, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_CLE,   VC_TCK,   0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NAND_ALE,   VC_TDI,   0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NAND_OEN,   VC_TDO,   0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NAND_WEN,   VC_TMS,   0, OFF, OFF, 0, 0, 8MA),
 
 	/* SD/MMC */
         PIN_CFG(NAND_AD_5,    SDIO3_DATA_2, 0, OFF, OFF, 0, 0, 12MA),
@@ -116,6 +123,14 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(ULPI1_NXT,    ULPI1_NXT,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(ULPI1_STP,    ULPI1_STP,    0, OFF, OFF, 0, 1, 8MA),
 
+	/* VC CAM1 I2C */
+	PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
+	PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
+
+	/* VC HDMI I2C */
+	PIN_BSC_CFG(HDMI_SCL, HDMI_SCL, 0x08),
+	PIN_BSC_CFG(HDMI_SDA, HDMI_SDA, 0x08),
+
 	/* LCD */
 	PIN_CFG(LCD_R_7, LCD_R_7, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(LCD_R_6, LCD_R_6, 0, OFF, OFF, 0, 0, 8MA),
@@ -148,6 +163,10 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(LCD_VSYNC, LCD_VSYNC, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(LCD_OE,    LCD_OE,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(LCD_PCLK,  LCD_PCLK,  0, OFF, OFF, 0, 0, 8MA),
+
+	/* VC GP clock */
+	PIN_CFG(GPIO_3, VC_GPCLK_0, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(GPIO_2, VC_GPCLK_1, 0, OFF, OFF, 0, 0, 8MA),
 };
 
 /* board level init */
