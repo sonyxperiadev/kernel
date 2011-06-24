@@ -55,7 +55,6 @@ static struct regulator_desc regl_desc = {
 static int tps728xx_regulator_enable(struct regulator_dev *rdev)
 {
 	struct tps728xx *tps728xx = rdev_get_drvdata(rdev);
-	int status;
 	pr_info("Inside %s\n", __func__);
 	if (tps728xx->enable_gpio < 0) {
 		/* If LDO EN line is not muxed with a GPIO then user of this LDO
@@ -72,7 +71,6 @@ static int tps728xx_regulator_enable(struct regulator_dev *rdev)
 static int tps728xx_regulator_disable(struct regulator_dev *rdev)
 {
 	struct tps728xx *tps728xx = rdev_get_drvdata(rdev);
-	int status;
 	pr_info("Inside %s\n", __func__);
 	if (tps728xx->enable_gpio < 0) {
 		/* If LDO EN line is not muxed with a GPIO then user of this LDO
@@ -110,7 +108,6 @@ static int tps728xx_regulator_set_voltage(struct regulator_dev *rdev,
 						int min_uV, int max_uV)
 {
 	struct tps728xx *tps728xx = rdev_get_drvdata(rdev);
-	int status;
 	u8 val = -1;
 
 	pr_info("Inside %s: minUv %d, maxuV %d\n", __func__, min_uV, max_uV);

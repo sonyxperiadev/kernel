@@ -137,6 +137,7 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 /* Regulator registration */
 struct regulator_consumer_supply sim_supply[] = {
 	{ .supply = "sim_vcc" },
+	{ .supply = "simldo_uc" },
 };
 
 static struct regulator_init_data bcm59055_simldo_data = {
@@ -177,6 +178,37 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 		[BCM59055_SDSR]		= 0x00,
 	},
 };
+
+/* Register userspace and virtual consumer for SIMLDO */
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+static struct regulator_bulk_data bcm59055_bd_sim = {
+	.supply = "simldo_uc",
+};
+
+static struct regulator_userspace_consumer_data bcm59055_uc_data_sim = {
+	.name = "simldo",
+	.num_supplies = 1,
+	.supplies = &bcm59055_bd_sim,
+	.init_on = 0
+};
+
+static struct platform_device bcm59055_uc_device_sim = {
+	.name = "reg-userspace-consumer",
+	.id = BCM59055_SIMLDO,
+	.dev = {
+		.platform_data = &bcm59055_uc_data_sim,
+	},
+};
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+static struct platform_device bcm59055_vc_device_sim = {
+	.name = "reg-virt-consumer",
+	.id = BCM59055_SIMLDO,
+	.dev = {
+		.platform_data = "simldo_uc"
+	},
+};
+#endif
 #endif
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
@@ -530,8 +562,10 @@ struct platform_device haptic_pwm_device = {
 #ifdef CONFIG_GPIO_PCA953X
 #define GPIO_SIM2LDOVSET	(KONA_MAX_GPIO + 7)
 #endif
+#define TPS728XX_REGL_ID        (BCM59055_MAX_LDO + 0)
 struct regulator_consumer_supply sim2_supply[] = {
 	{ .supply = "sim2_vcc" },
+	{ .supply = "sim2ldo_uc" },
 };
 
 static struct regulator_init_data tps728xx_regl_initdata = {
@@ -563,6 +597,37 @@ struct platform_device tps728xx_device = {
 		.platform_data = &tps728xx_data,
 	},
 };
+
+/* Register userspace and virtual consumer for SIM2LDO */
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+static struct regulator_bulk_data tps728xx_bd_sim2 = {
+	.supply = "sim2ldo_uc",
+};
+
+static struct regulator_userspace_consumer_data tps728xx_uc_data_sim2 = {
+	.name = "sim2ldo",
+	.num_supplies = 1,
+	.supplies = &tps728xx_bd_sim2,
+	.init_on = 0
+};
+
+static struct platform_device tps728xx_uc_device_sim2 = {
+	.name = "reg-userspace-consumer",
+	.id = TPS728XX_REGL_ID,
+	.dev = {
+		.platform_data = &tps728xx_uc_data_sim2,
+	},
+};
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+static struct platform_device tps728xx_vc_device_sim2 = {
+	.name = "reg-virt-consumer",
+	.id = TPS728XX_REGL_ID,
+	.dev = {
+		.platform_data = "sim2ldo_uc"
+	},
+};
+#endif
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
 /* Rhea Ray specific platform devices */
@@ -582,10 +647,36 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
+/* TPS728XX device registration */
 #ifdef CONFIG_REGULATOR_TPS728XX
 	&tps728xx_device,
 #endif
 };
+
+/* Add all userspace regulator consumer devices here */
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+struct platform_device *rhea_ray_userspace_consumer_devices[] __initdata = {
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
+	&bcm59055_uc_device_sim,
+#endif
+#ifdef CONFIG_REGULATOR_TPS728XX
+	&tps728xx_uc_device_sim2,
+#endif
+};
+#endif
+
+/* Add all virtual regulator consumer devices here */
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
+	&bcm59055_vc_device_sim,
+#endif
+#ifdef CONFIG_REGULATOR_TPS728XX
+	&tps728xx_vc_device_sim2,
+#endif
+};
+#endif
+
 
 /* Rhea Ray specific i2c devices */
 static void __init rhea_ray_add_i2c_devices (void)
@@ -642,6 +733,12 @@ static void __init rhea_ray_add_devices(void)
 	platform_add_devices(rhea_ray_plat_devices, ARRAY_SIZE(rhea_ray_plat_devices));
 
 	rhea_ray_add_i2c_devices();
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+	platform_add_devices(rhea_ray_userspace_consumer_devices, ARRAY_SIZE(rhea_ray_userspace_consumer_devices));
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+	platform_add_devices(rhea_ray_virtual_consumer_devices, ARRAY_SIZE(rhea_ray_virtual_consumer_devices));
+#endif
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));

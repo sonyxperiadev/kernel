@@ -523,6 +523,7 @@
 #define BCM59055_CSR				10
 #define BCM59055_IOSR				11
 #define BCM59055_SDSR				12
+#define BCM59055_MAX_LDO			13
 
 #define PC2_IS_0_PC1_IS_0			0
 #define PC2_IS_0_PC1_IS_1			2
