@@ -44,6 +44,9 @@
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #include <linux/i2c/qt602240_ts.h>
 #endif
+#ifdef CONFIG_REGULATOR_TPS728XX
+#include <linux/regulator/tps728xx.h>
+#endif
 #include <mach/kona_headset_pd.h>
 #include <mach/kona.h>
 #include <mach/rhea.h>
@@ -180,7 +183,7 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	.init = bcm590xx_init_platform_hw,
 	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
 	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC | BCM590XX_ENABLE_ADC |
-	BCM590XX_ENABLE_FUELGAUGE,
+	BCM590XX_ENABLE_FUELGAUGE | BCM590XX_ENABLE_USB_OTG,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
@@ -520,6 +523,48 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
+#if defined (CONFIG_REGULATOR_TPS728XX)
+#ifdef CONFIG_MACH_RHEA_RAY
+#define GPIO_SIM2LDO_EN		99
+#endif
+#ifdef CONFIG_GPIO_PCA953X
+#define GPIO_SIM2LDOVSET	(KONA_MAX_GPIO + 7)
+#endif
+struct regulator_consumer_supply sim2_supply[] = {
+	{ .supply = "sim2_vcc" },
+};
+
+static struct regulator_init_data tps728xx_regl_initdata = {
+	.constraints = {
+		.name = "sim2ldo",
+		.min_uV = 1300000,
+		.max_uV = 3300000,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+			REGULATOR_CHANGE_VOLTAGE,
+		.always_on = 0,
+		.boot_on = 0,
+	},
+	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
+	.consumer_supplies = sim2_supply,
+};
+
+struct tps728xx_plat_data tps728xx_data = {
+	.gpio_vset	= GPIO_SIM2LDOVSET,
+	.gpio_en	= GPIO_SIM2LDO_EN,
+	.vout0		= 1800000,
+	.vout1		= 3100000,
+	.initdata	= &tps728xx_regl_initdata,
+};
+
+struct platform_device tps728xx_device = {
+	.name = "tps728xx-regulator",
+	.id = -1,
+	.dev	=	{
+		.platform_data = &tps728xx_data,
+	},
+};
+#endif /* CONFIG_REGULATOR_TPS728XX*/
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -536,6 +581,9 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&android_pmem,
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
+#endif
+#ifdef CONFIG_REGULATOR_TPS728XX
+	&tps728xx_device,
 #endif
 };
 

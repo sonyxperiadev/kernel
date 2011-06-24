@@ -37,7 +37,6 @@
 #include <mach/irqs.h>
 #include <linux/clk.h>
 #include <mach/io_map.h>
-
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_hsotg.h>
 
@@ -52,7 +51,6 @@
 #define	PHY_MODE_OTG		2
 #define	PHY_MODE_DEVICE		1
 #define	PHY_MODE_HOST		0
-
 #define	BC11_OVR_KEY		0x2AAB
 
 /* ---- Private Function Prototypes -------------------------------------- */
@@ -129,9 +127,9 @@ static int __init dwc_otg_device_init(void)
 	if ( lmdev != NULL ) {
 		rc = -EBUSY;
 	}
-	else if ( fshost ) {
-		rc = dwc_otg_device_register (BCM_INT_ID_USB_FSHOST, FSHOST_BASE_ADDR);
-	}
+//	else if ( fshost ) {
+//		rc = dwc_otg_device_register (BCM_INT_ID_USB_FSHOST, FSHOST_BASE_ADDR);
+//	}
 	else {
 		void __iomem *hsotg_ctrl_base;
 		int val;
@@ -139,6 +137,7 @@ static int __init dwc_otg_device_init(void)
 
 		printk("\n%s: Setting up USB OTG PHY and Clock\n", __func__);
 
+#ifndef CONFIG_ARCH_SAMOA
 		otg_clk = clk_get(NULL, "usb_otg_clk");
 		if (!otg_clk) {
 			printk("%s: error get clock\n", __func__);
@@ -152,6 +151,7 @@ static int __init dwc_otg_device_init(void)
 		}
 		rate = clk_get_rate(otg_clk);
 		printk("usb_otg_clk rate %lu\n", rate);
+#endif
 
 		/* map base address */
 		hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);

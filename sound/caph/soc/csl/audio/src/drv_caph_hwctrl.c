@@ -74,6 +74,7 @@ static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
 static void AUDDRV_LISR(void);
 static void AUDDRV_HISR(void);
 #else
+#include "clock.h"
 #include "clk.h"
 static struct clk *clkID[MAX_AUDIO_CLOCK_NUM] = {NULL,NULL,NULL,NULL,NULL,NULL};
 #endif
@@ -101,6 +102,13 @@ Result_t AUDDRV_HWControl_Init(void)
 #if !(defined(_SAMOA_))
 //Enable CAPH clock.
     clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
+#ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
+                                This is a workaround before a solution from clock */
+    if ( clkID[0]->use_cnt )
+    {
+        clk_disable(clkID[0]);
+    }
+#endif
 	clk_set_rate(clkID[0], 156000000);
     clk_enable(clkID[0]);
     

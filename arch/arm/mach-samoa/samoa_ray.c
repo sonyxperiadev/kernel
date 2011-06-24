@@ -393,6 +393,9 @@ void __init board_proc_clk_print(void)
 #define CLK_MGR_REG_LVM_EN_OFFSET     0x34
 void __init board_configure(void)
 {
+    void __iomem *base;
+    int val;
+
 	/* print hubaon_timer */
 	printk(KERN_ERR "HAON_CCU: HUB_TIMER_DIV=0x%x\n", readl(KONA_AON_CLK_VA+KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET));
 	/* print peri_timer */
@@ -528,6 +531,45 @@ void __init board_configure(void)
 #ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
 	writel(0, (KONA_KPS_CLK_VA+CLK_MGR_REG_WR_ACCESS_OFFSET));
 #endif
+	/* turn on USB clock */
+ 	base = (void __iomem *)KONA_MST_CLK_BASE_VA;
+
+	writel(0x00A5A501, base);
+
+	writel(KPM_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK, base+KPM_CLK_MGR_REG_LVM_EN_OFFSET);
+	while (readl(base+KPM_CLK_MGR_REG_LVM_EN_OFFSET)&KPM_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK);
+
+	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
+	val |=KPM_CLK_MGR_REG_KPM_POLICY0_MASK_USBH_POLICY0_MASK_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
+
+	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY1_MASK_OFFSET);
+	val |=KPM_CLK_MGR_REG_KPM_POLICY1_MASK_USBH_POLICY1_MASK_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY1_MASK_OFFSET);
+
+	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
+	val |=KPM_CLK_MGR_REG_KPM_POLICY2_MASK_USBH_POLICY2_MASK_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY2_MASK_OFFSET);
+
+	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY3_MASK_OFFSET);
+	val |=KPM_CLK_MGR_REG_KPM_POLICY3_MASK_USBH_POLICY3_MASK_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY3_MASK_OFFSET);
+
+	val = readl(base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET);
+	val |=KPM_CLK_MGR_REG_POLICY_CTL_GO_MASK|KPM_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET);
+
+	while (readl(base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET)&KPM_CLK_MGR_REG_POLICY_CTL_GO_MASK);
+
+	val = readl(base+KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_OFFSET);
+	val |=KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_USBH_AHB_CLK_EN_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_OFFSET);
+
+	writel(0x00A5A500, base);
+
+	printk("%s: USB Clock Enable Done\n", __func__);
+    
+
 }
 
 #ifndef CONFIG_MACH_SAMOA_FPGA

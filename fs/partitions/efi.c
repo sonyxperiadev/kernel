@@ -96,6 +96,7 @@
 #include <linux/crc32.h>
 #include <linux/math64.h>
 #include <linux/slab.h>
+#include <linux/nls.h>
 #include "check.h"
 #include "efi.h"
 
@@ -600,17 +601,19 @@ static int find_valid_gpt(struct parsed_partitions *state, gpt_header **gpt,
  */
 int efi_partition(struct parsed_partitions *state)
 {
+	char* partition_name = NULL;
 	gpt_header *gpt = NULL;
 	gpt_entry *ptes = NULL;
 	u32 i;
 	unsigned ssz = bdev_logical_block_size(state->bdev) / 512;
 
-#ifdef CONFIG_BRCM_EFI_PARTNAME_FIX
-	u32 j,k; 
-	char *p;
-#endif
+	partition_name = kzalloc(sizeof(ptes->partition_name), GFP_KERNEL);
+
+	if (!partition_name)
+		return 0;
 
 	if (!find_valid_gpt(state, &gpt, &ptes) || !gpt || !ptes) {
+		kfree(partition_name);
 		kfree(gpt);
 		kfree(ptes);
 		return 0;
@@ -619,6 +622,7 @@ int efi_partition(struct parsed_partitions *state)
 	pr_debug("GUID Partition Table is valid!  Yea!\n");
 
 	for (i = 0; i < le32_to_cpu(gpt->num_partition_entries) && i < state->limit-1; i++) {
+		int partition_name_len;
 		u64 start = le64_to_cpu(ptes[i].starting_lba);
 		u64 size = le64_to_cpu(ptes[i].ending_lba) -
 			   le64_to_cpu(ptes[i].starting_lba) + 1ULL;
@@ -626,37 +630,22 @@ int efi_partition(struct parsed_partitions *state)
 		if (!is_pte_valid(&ptes[i], last_lba(state->bdev)))
 			continue;
 
-/*
- * The boot loader SW updates the partition name using wide char
- * representation. That is an extra 0 will be added after each ASCII. But
- * in this code, standard string operations like strnlen is used that will 
- * always return the string length as 1. So only the first character of the
- * partition name read from the block device is added by put_named_partition.
- * The unwanted 0s are removed by this fix (to convert wide chars to char) so
- * that the subsequent code can used standard ASCII string functions for
- * string maniputations.
- */
-#ifdef CONFIG_BRCM_EFI_PARTNAME_FIX
-		pr_debug ("\r\n DUMPING THE PARTITION NAME of size %d \r\n",(u32)size);
-		p = ptes[i].partition_name;
-		for (k=1,j=2;j<size-2;j+=2,k++) {
-			p[k] = p[j];
-			if (p[j] == 0)
-				break;
-		}
-#endif
-		put_named_partition(state, i+1, start * ssz, size * ssz,
-				   (const char *) ptes[i].partition_name,
-				    strnlen((const char *)
-					    ptes[i].partition_name,
-					    sizeof(ptes[i].partition_name)));
+		partition_name_len = utf16s_to_utf8s(ptes[i].partition_name,
+						     sizeof(ptes[i].partition_name),
+						     UTF16_LITTLE_ENDIAN,
+						     partition_name,
+                                                     sizeof(ptes[i].partition_name));
 
+		put_named_partition(state, i+1, start * ssz, size * ssz,
+				   (const char *) partition_name,
+				   partition_name_len);
 
 		/* If this is a RAID volume, tell md */
 		if (!efi_guidcmp(ptes[i].partition_type_guid,
 				 PARTITION_LINUX_RAID_GUID))
 			state->parts[i + 1].flags = ADDPART_FLAG_RAID;
 	}
+	kfree(partition_name);
 	kfree(ptes);
 	kfree(gpt);
 	printk("\n");
