@@ -113,7 +113,7 @@
  	Default value: 	180000 for B1.2 and onwards, 220000 for previous
 					In dalton, no external components are used for VBAT channel
 */
-#define VENDOR_ADC_VBAT_SCALE_UVPERBITS 4883
+#define VENDOR_ADC_VBAT_SCALE_UVPERBITS 4687
 
 /*
 	VENDOR_ADC_BSI_CHANNEL
