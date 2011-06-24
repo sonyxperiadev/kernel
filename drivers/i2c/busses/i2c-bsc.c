@@ -448,6 +448,8 @@ static int bsc_xfer_try_address(struct i2c_adapter *adapter,
    {
       dev_err(dev->dev, "tried %u times to contact slave device at 0x%02x "
             "but no luck success=%d rc=%d\n", i + 1, addr >> 1, success, rc);
+
+      rc = -EREMOTEIO;
    }
 
    return rc;
