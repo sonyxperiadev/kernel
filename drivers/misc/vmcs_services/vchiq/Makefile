@@ -50,7 +50,6 @@ vc-vchiq-objs := \
     $(BRCM_VIDEOCORE_ROOT)/src/interface/vchiq_arm_bi/vchiq_memdrv.o \
     $(BRCM_VIDEOCORE_ROOT)/src/interface/vchiq_arm_bi/vchiq_shim.o \
     $(BRCM_VIDEOCORE_ROOT)/src/interface/vchiq_arm_bi/vchiq_util.o \
-    vchiq_dummy.o
 
 endif
 
