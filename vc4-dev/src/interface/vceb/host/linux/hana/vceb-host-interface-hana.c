@@ -138,101 +138,69 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
      */
 
     state->ipcHandle = chal_ipc_config( NULL );
-#if 0
-    /*
-     * Initialize the GPIO MUX settings so that the LCD will work.
-     */
+    /* gpio pin mux is setup as part of the board configuration */
+    /* we will have to request the non muxed gpio pins here and set it to the appropriate values */
 
-    if ( platform_data->gpiomux_lcd_group >= 0 )
+    /* request HDMI hot plug gpio */
+ #define HDMI_HOT_PLUG    62
+    if (( rc = gpio_request( HDMI_HOT_PLUG, "hdmi_hot_plug" )) != 0 )
     {
-        gpiomux_rc = gpiomux_requestGroup( platform_data->gpiomux_lcd_group,
-                                           platform_data->gpiomux_lcd_id, 
-                                           platform_data->gpiomux_lcd_label );
-        if ( gpiomux_rc != gpiomux_rc_SUCCESS )
-        {
-            printk( KERN_ERR "%s: Request to mux gpio pins for vc dpi (LCD) failed: %d\n",
-                    __func__, gpiomux_rc );
-            return -ENODEV;
-        }
-    }
-
-    /*
-     * Setup the gpio mux for the videocore JTAG
-     */
-
-    if ( platform_data->gpiomux_jtag_group >= 0 )
-    {
-        gpiomux_rc = gpiomux_requestGroup( platform_data->gpiomux_jtag_group,
-                                           platform_data->gpiomux_jtag_id,
-                                           platform_data->gpiomux_jtag_label );
-        if ( gpiomux_rc != gpiomux_rc_SUCCESS )
-        {
-            printk( KERN_ERR "%s: Request to mux gpio pins for vc jtag failed: %d\n",
-                    __func__, gpiomux_rc );
-            return -ENODEV;
-        }
-    }
-
-    /*
-     * Setup the gpio mux for the HDMI pins
-     */
-
-    gpiomux_rc = gpiomux_requestGroup( gpiomux_group_vc_hdmi, 0, "VC HDMI" );
-    if ( gpiomux_rc != gpiomux_rc_SUCCESS )
-    {
-        printk( KERN_ERR "%s: Request to mux gpio pins for vc hdmi failed: %d\n",
-                __func__, gpiomux_rc );
+        printk( KERN_ERR "%s: gpio_request( %d, 'hdmi_hot_plug' ) failed: %d\n", 
+                __func__, HDMI_HOT_PLUG, rc );
         return -ENODEV;
     }
     //explicitly set the direction for GPIO pins that are muxed to the host
     gpio_direction_input( 62 );   //HDMI_HOT_DETECT
-
-    gpiomux_rc = gpiomux_i2c_requestGroup( gpiomux_group_i2c, 4, "VC HDMI I2C" );
-    if ( gpiomux_rc != gpiomux_rc_SUCCESS )
+    
+#define CAM1_PWR_EN  50
+#define CAM1_RST_B   51
+#define CAM2_GPIO2   168
+#define CAM2_GPIO1   169
+#define CAM2_RST_B   170
+#define CAM2_GPIO0   174
+    if (( rc = gpio_request( CAM1_PWR_EN, "cam1_pwr_en" )) != 0 )
     {
-        printk( KERN_ERR "%s: Request to mux gpio pins for vc hdmi i2c failed: %d\n",
-               __func__, gpiomux_rc );
-        return -ENODEV;
+       printk( KERN_ERR "%s: gpio_request( %d, 'cam1_pwr_en' ) failed: %d\n",
+               __func__, CAM1_PWR_EN, rc );
+       return -ENODEV;
     }
-    
-    /*
-    * Setup the gpio mux for the camera I2C pins
-    */
-    
-    gpiomux_rc = gpiomux_i2c_requestGroup( gpiomux_group_i2c, 3, "VC CAM1 I2C" );
-    if ( gpiomux_rc != gpiomux_rc_SUCCESS )
+    if (( rc = gpio_request( CAM1_RST_B, "cam1_rst_b" )) != 0 )
     {
-        printk( KERN_ERR "%s: Request to mux gpio pins for vc cam1 i2c failed: %d\n",
-               __func__, gpiomux_rc );
-        return -ENODEV;
+       printk( KERN_ERR "%s: gpio_request( %d, 'cam1_rst_b' ) failed: %d\n",
+               __func__, CAM1_RST_B, rc );
+       return -ENODEV;
     }
-    
-    /*
-    * Setup the gpio mux for the camera non-i2c pins
-    */
-    
-    gpiomux_rc = gpiomux_requestGroup( gpiomux_group_vc_gpclk, 0, "VC GPCLK" );
-    if ( gpiomux_rc != gpiomux_rc_SUCCESS )
+    if (( rc = gpio_request( CAM2_RST_B, "cam2_rst_b" )) != 0 )
     {
-        printk( KERN_ERR "%s: Request to mux gpio pins for vc gpclk failed: %d\n",
-               __func__, gpiomux_rc );
-        return -ENODEV;
-    }
-    
-    gpiomux_rc = gpiomux_requestGroup( gpiomux_group_vc_cam, 0, "VC CAM" );
-    if ( gpiomux_rc != gpiomux_rc_SUCCESS )
+       printk( KERN_ERR "%s: gpio_request( %d, 'cam2_rst_b' ) failed: %d\n",
+               __func__, CAM2_RST_B, rc );
+       return -ENODEV;
+    }    
+    if (( rc = gpio_request( CAM2_GPIO2, "cam2_gpio2" )) != 0 )
     {
-        printk( KERN_ERR "%s: Request to mux gpio pins for vc cam failed: %d\n",
-               __func__, gpiomux_rc );
-        return -ENODEV;
+       printk( KERN_ERR "%s: gpio_request( %d, 'cam2_gpio2' ) failed: %d\n",
+               __func__, CAM2_GPIO2, rc );
+       return -ENODEV;
     }
+    if (( rc = gpio_request( CAM2_GPIO1, "cam2_gpio1" )) != 0 )
+    {
+       printk( KERN_ERR "%s: gpio_request( %d, 'cam2_gpio1' ) failed: %d\n",
+               __func__, CAM2_GPIO1, rc );
+       return -ENODEV;
+    }
+    if (( rc = gpio_request( CAM2_GPIO0, "cam2_gpio0" )) != 0 )
+    {
+       printk( KERN_ERR "%s: gpio_request( %d, 'cam2_gpio0' ) failed: %d\n",
+               __func__, CAM2_GPIO0, rc );
+       return -ENODEV;
+    }     
     
     //explicitly set the direction for GPIO pins that are muxed to the host
     gpio_direction_output( 50, 1 );    //CAM1_PWR_EN/CAM1_WP
     gpio_direction_output( 51, 0 );    //CAM1_RST_B
     gpio_direction_output( 169, 0 );   //CAM2_GPIO1
     gpio_direction_output( 170, 0 );   //CAM2_RST_B
-#endif
+
     {
         /*
          * Set the entire SRAM to be unsecure. The API only allows is to do 4K at a time 
