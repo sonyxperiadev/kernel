@@ -3,6 +3,7 @@ BRCM_VIDEOCORE_FIRMWARE_DIR  ?=  $(ANDROID_BUILD_TOP)/hardware/broadcom/videocor
 
 
 VCHIQ_FLAVOUR := vchiq_arm_bi
+VCHIQ_TEST ?= 0
 
 EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2 -Wno-declaration-after-statement -Wno-parentheses
 
@@ -53,4 +54,7 @@ vc-vchiq-objs := \
 
 endif
 
+ifeq ($(VCHIQ_TEST),1)
+vc-vchiq-objs += vchiq_test.o
+endif
 
