@@ -11,20 +11,22 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
-/*
- * Broadcom Bluetooth rfkill power control via GPIO
- *
- */
 
-#ifndef _LINUX_BCMBLT_RFKILL_H
-#define _LINUX_BCMBLT_RFKILL_H
+//
+//---------------------------------------------------------------------------
+//
+// Design-specific hardware configuration interface file.
+//
+//---------------------------------------------------------------------------
+#ifndef DOCK_SETTINGS_H
+#define DOCK_SETTINGS_H
 
-#include <linux/rfkill.h>
+// ---- Include Files ----------------------------------------
 
-struct bcmblt_rfkill_platform_data {
-	int gpio;
+// ---- Constants and Types ----------------------------------
+#define GPIO_DOCKING_STATION_POWER_3_3V		115
 
-	struct rfkill *rfkill;  /* for driver only */
-};
+// ---- Variable Externs -------------------------------------
+// ---- Function Prototypes ----------------------------------
 
-#endif
+#endif /* DOCK_SETTINGS_H */

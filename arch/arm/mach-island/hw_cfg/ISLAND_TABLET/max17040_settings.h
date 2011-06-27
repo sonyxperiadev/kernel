@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -11,20 +11,13 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
-/*
- * Broadcom Bluetooth rfkill power control via GPIO
- *
- */
 
-#ifndef _LINUX_BCMBLT_RFKILL_H
-#define _LINUX_BCMBLT_RFKILL_H
+#ifndef MAX17040_I2C_SETTINGS_H
+#define MAX17040_I2C_SETTINGS_H
 
-#include <linux/rfkill.h>
+/* connected to BSC0 */
+#define HW_MAX17040_I2C_BUS_ID    1
+#define HW_MAX17040_SLAVE_ADDR    0x36
+#define HW_MAX17040_DRIVER_NAME   "max17040"
 
-struct bcmblt_rfkill_platform_data {
-	int gpio;
-
-	struct rfkill *rfkill;  /* for driver only */
-};
-
-#endif
+#endif /* MAX17040_I2C_SETTINGS_H */

@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -11,20 +11,22 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
+
+#ifndef ADC121C021_I2C_SETTINGS_H
+#define ADC121C021_I2C_SETTINGS_H
+
 /*
- * Broadcom Bluetooth rfkill power control via GPIO
- *
+ * Refer to include/linux/broadcom/adc121c021_driver.h for details
  */
 
-#ifndef _LINUX_BCMBLT_RFKILL_H
-#define _LINUX_BCMBLT_RFKILL_H
+/* connected to BSC0 */
+#define HW_ADC121C021_I2C_BUS_ID    1
 
-#include <linux/rfkill.h>
+/* use GPIO0 to signal the host processor for battery alerts */
+#define HW_ADC121C021_GPIO_EVENT    18 /* GPIO #18 */
 
-struct bcmblt_rfkill_platform_data {
-	int gpio;
+#define HW_ADC121C021_BYTES_TO_READ 2
 
-	struct rfkill *rfkill;  /* for driver only */
-};
-
-#endif
+#define HW_ADC121C021_RESISTOR_1    158
+#define HW_ADC121C021_RESISTOR_2    100
+#endif /* ADC121C021_I2C_SETTINGS_H */

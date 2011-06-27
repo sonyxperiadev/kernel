@@ -442,6 +442,22 @@ config WL127X_RFKILL
 	 Creates an rfkill entry in sysfs for power control of Bluetooth
 	 TI wl127x chips.
 
+config BCMBLT_RFKILL
+	tristate "Broadcom Bluetooth RFKILL"
+	depends on RFKILL
+	default n
+	---help---
+	This driver adds support for rfkill for Broadcom bluetooth
+	devices.
+
+config BTHID
+	tristate "Bluetooth HID"
+	depends on HID
+	default n
+	---help---
+	This driver adds support for HID for Broadcom bluetooth
+	devices.
+
 config APANIC
 	bool "Android kernel panic diagnostics driver"
 	default n
@@ -480,6 +496,20 @@ config BCM59055_FUELGAUGE
 	depends on MFD_BCM_PMU590XX
 	---help---
 	 BCM59055 PMU Fuel Gauge driver
+
+config MONITOR_ADC121C021_I2C
+	tristate "ADC121C021 Battery Monitor"
+	depends on I2C
+	help
+	 Say Y here if you want to support a ADC121C021 battery monitor.
+	 If unsure, say N.
+
+config MONITOR_BQ27541_I2C
+	tristate "BQ27541 Battery Monitor"
+	depends on I2C
+	help
+	 Say Y here if you want to support BQ27541 battery monitor.
+	 If unsure, say N.
 
 source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"

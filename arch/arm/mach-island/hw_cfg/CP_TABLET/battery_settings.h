@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2006 - 2011 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -11,20 +11,12 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
-/*
- * Broadcom Bluetooth rfkill power control via GPIO
- *
- */
 
-#ifndef _LINUX_BCMBLT_RFKILL_H
-#define _LINUX_BCMBLT_RFKILL_H
+#ifndef BATTERY_SETTINGS_H
+#define BATTERY_SETTINGS_H
 
-#include <linux/rfkill.h>
-
-struct bcmblt_rfkill_platform_data {
-	int gpio;
-
-	struct rfkill *rfkill;  /* for driver only */
-};
+/* determine which GPIO pins are used for Battery Charging circuit */
+#define HW_BATTERY_CTL_PWR          85 /* GPIO #85 */
+#define HW_BATTERY_ACP_SHDN        181 /* GPIO #181 */
 
 #endif

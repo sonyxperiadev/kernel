@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2006 - 2011 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -11,20 +11,27 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
-/*
- * Broadcom Bluetooth rfkill power control via GPIO
- *
- */
 
-#ifndef _LINUX_BCMBLT_RFKILL_H
-#define _LINUX_BCMBLT_RFKILL_H
+#ifndef KEYMAP_SETTINGS_H
+#define KEYMAP_SETTINGS_H
 
-#include <linux/rfkill.h>
+#define HW_DEFAULT_KEYMAP \
+{ \
+   { 0x01, 115 }, /* VOL_UP */ \
+   { 0x11, 114 }, /* VOL_DOWN */ \
+   { 0x21, 102 }, /* HOME */ \
+   { 0x31, 158 }, /* BACK */ \
+   { 0x41, 59  }, /* MENU */ \
+   { 0x02, 108 }, /* DOWN */ \
+   { 0x12, 105 }, /* LEFT */ \
+   { 0x22, 103 }, /* UP */ \
+   { 0x32, 232 }, /* OK (CENTER) */ \
+   { 0x42, 106 }, /* RIGHT */ \
+   { 0x03, 231 }, /* DIAL */ \
+   { 0x13, 107 }, /* HANG_UP */ \
+   { 0x23, 127 }, /* SEARCH */ \
+}
 
-struct bcmblt_rfkill_platform_data {
-	int gpio;
-
-	struct rfkill *rfkill;  /* for driver only */
-};
+#define HW_DEFAULT_POWEROFF { } /* Power button uses gpio-keys driver */
 
 #endif
