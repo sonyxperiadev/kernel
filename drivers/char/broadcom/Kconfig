@@ -13,3 +13,10 @@ config V3D
 	depends on BRCM_CHAR_DRIVERS
 	default BRCM_CHAR_DRIVERS
 
+config BCM_AMXR
+   bool "Audio Mixer Driver support"
+   select BCM_GOS
+   default y
+   ---help---
+   Say Y to enable the Audio Mixer Driver to support interconnecting
+   audio samples between kernel objects.
