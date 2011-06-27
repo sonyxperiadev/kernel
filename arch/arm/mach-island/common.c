@@ -36,7 +36,7 @@
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 #define KONA_UART3_PA   UARTB4_BASE_ADDR
 
-#define KONA_8250PORT(name)                                                   \
+#define KONA_8250PORT(name,clk)                                                   \
 {                                                                             \
    .membase    = (void __iomem *)(KONA_##name##_VA),                          \
    .mapbase    = (resource_size_t)(KONA_##name##_PA),                         \
@@ -47,13 +47,14 @@
    .type       = PORT_16550A,                                                 \
    .flags      = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,          \
    .private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET),   \
+   .clk_name	= clk,	\
 }
 
 static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT(UART0),
-	KONA_8250PORT(UART1),
-	KONA_8250PORT(UART2),
-	KONA_8250PORT(UART3),
+	KONA_8250PORT(UART0,"uartb_clk"),
+	KONA_8250PORT(UART1,"uartb2_clk"),
+	KONA_8250PORT(UART2,"uartb3_clk"),
+	KONA_8250PORT(UART3,NULL),
 	{ .flags = 0, },
 };
 
