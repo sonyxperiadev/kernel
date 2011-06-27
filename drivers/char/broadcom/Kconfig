@@ -41,3 +41,10 @@ config BCM_MODEM
         default n
         help
           Broadcom Modem IPC drivers
+
+config GPIO_USER_MODE_SUPPORT
+	tristate "Broadcom GPIO User Mode Support"
+	depends on BRCM_CHAR_DRIVERS
+	default n
+	help
+	  Say y to turn on support for GPIO in user mode
