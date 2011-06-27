@@ -211,6 +211,11 @@ static struct platform_device bcm59055_vc_device_sim = {
 #endif
 #endif
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
+	/*
+	 * PMU in Fast mode. Once the Rhea clock changes are in place,
+	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
+	 */
+	/*.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_HS, },*/
 	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
 	.init = bcm590xx_init_platform_hw,
 	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
