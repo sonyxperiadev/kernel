@@ -274,6 +274,7 @@ enum
 };
 
 struct clk;
+struct pwr_island;
 
 /**
  * struct gen_clk_ops - standard clock operations
@@ -369,7 +370,7 @@ struct proc_clock {
 
 struct ccu_clk {
 	struct clk	clk;
-
+	struct pwr_island* pi;
 	struct list_head peri_list;
 	struct list_head bus_list;
 

@@ -28,6 +28,7 @@
 #include <asm/clkdev.h>
 #include <plat/clock.h>
 #include <asm/io.h>
+#include<plat/pwr_island_mgr.h>
 
 #ifdef CONFIG_SMP
 #include <asm/cpu.h>
@@ -484,11 +485,34 @@ EXPORT_SYMBOL(ccu_get_active_policy);
 
 /*Generic ccu ops functions*/
 
-static int ccu_clk_enable(struct clk *c, int enable)
+static int ccu_clk_enable(struct clk *clk, int enable)
 {
 	int ret = 0;
-	clk_dbg("%s enable: %d, ccu name:%s\n",__func__, enable, c->name);
-	/* Add Power Domain mgmnt code here	*/
+	struct ccu_clk * ccu_clk;
+
+	if(clk->clk_type != CLK_TYPE_CCU)
+		return -EPERM;
+
+	ccu_clk = to_ccu_clk(clk);
+
+	clk_dbg("%s enable: %d, ccu name:%s\n",__func__, enable, clk->name);
+
+
+	if(enable)
+	{
+		clk->use_cnt++;
+	}
+	else
+	{
+		//BUG_ON(clk->use_cnt == 0);
+		if(!clk->use_cnt)
+			return 0;
+		clk->use_cnt--;
+	}
+
+	//BUG_ON(!ccu_clk->pi || !ccu_clk->pi->ops->enable);
+	if(ccu_clk->pi && ccu_clk->pi->ops->enable)
+		ccu_clk->pi->ops->enable(ccu_clk->pi,enable);
 	return ret;
 }
 
