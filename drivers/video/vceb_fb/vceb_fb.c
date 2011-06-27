@@ -1,3 +1,17 @@
+/*****************************************************************************
+* Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
+*****************************************************************************/
+
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/time.h>
@@ -16,8 +30,14 @@
 #include <linux/platform_device.h>
 #include <linux/uaccess.h>
 #include <linux/proc_fs.h>
+#include <linux/console.h>
+
+#if defined( CONFIG_FB_VCEB_USE_BOOTMEMHEAP )
+#include <linux/broadcom/bootmemheap.h>
+#endif
 
 #include <video/vceb_fb.h>
+#include "vceb_linux_boot_mode.h"
 
 #ifdef CONFIG_ANDROID_POWER
 #include <linux/android_power.h>
@@ -30,18 +50,30 @@
 
 /* define HAVE_FB_REFRESH_THREAD */
 
-#ifdef CONFIG_MACH_MAPPHONE
-#define VCEB_SCREEN1_WIDTH	480
-#define VCEB_SCREEN1_HEIGHT	854
-#else
-#define VCEB_SCREEN1_WIDTH	800
-#define VCEB_SCREEN1_HEIGHT	480
+#if !defined( CONFIG_FB_VCEB_SCREEN1_WIDTH )
+#   error CONFIG_FB_VCEB_SCREEN1_WIDTH not defined
+#endif
+#if !defined( CONFIG_FB_VCEB_SCREEN1_HEIGHT )
+#   error CONFIG_FB_VCEB_SCREEN1_HEIGHT not defined
+#endif
+#if !defined( CONFIG_FB_VCEB_BPP )
+#   error CONFIG_FB_VCEB_BPP not defined
+#endif
+#if !defined( CONFIG_FB_VCEB_NUM_FRAMEBUFFERS )
+#   error CONFIG_FB_VCEB_NUM_FRAMEBUFFERS not defined
 #endif
 
-#define VCEB_SCREEN2_WIDTH	640
-#define VCEB_SCREEN2_HEIGHT	480
-
 #define VCEB_FPS              60
+
+#if !defined( CONFIG_FB_VCEB_NUM_FRAMEBUFFERS )
+#   define CONFIG_FB_VCEB_NUM_FRAMEBUFFERS 2
+#endif
+
+#if !defined( CONFIG_FB_VCEB_BPP )
+#   define  CONFIG_FB_VCEB_BPP  16
+#endif
+
+static int vceb_fb_probe_called = 0;
 
 static struct vceb_fb *fb_global_hack;
 
@@ -61,11 +93,16 @@ struct vceb_screen_info {
 
 struct vceb_fb {
 	struct device *dev;
+	VCEB_INSTANCE_T instance;
 #ifdef CONFIG_ANDROID_POWER
 	android_early_suspend_t early_suspend;
 #endif
 	struct vceb_screen_info *screen1;
 	struct vceb_screen_info *screen2;
+#if ( defined(CONFIG_PM) && !defined(CONFIG_ANDROID_POWER) )
+	VCEB_FB_VCHIQ_SUSPEND_CB_T suspend_cb;
+	VCEB_FB_VCHIQ_RESUME_CB_T resume_cb;
+#endif
 };
 
 static inline struct vceb_screen_info *to_screen_info(struct fb_info *info)
@@ -105,8 +142,8 @@ vceb_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info)
 	uint32_t width, height;
 
 	screen = to_screen_info(info);
-	width = screen->screen_num ? VCEB_SCREEN2_WIDTH : VCEB_SCREEN1_WIDTH;
-	height = screen->screen_num ? VCEB_SCREEN2_HEIGHT : VCEB_SCREEN1_HEIGHT;
+	width = screen->screen_num ? CONFIG_FB_VCEB_SCREEN2_WIDTH : CONFIG_FB_VCEB_SCREEN1_WIDTH;
+	height = screen->screen_num ? CONFIG_FB_VCEB_SCREEN2_HEIGHT : CONFIG_FB_VCEB_SCREEN1_HEIGHT;
 
 	/*  check for rotation */
 	if ((var->rotate & 1) != (info->var.rotate & 1)) {
@@ -169,7 +206,7 @@ static int vceb_fb_set_par(struct fb_info *info)
 		return 0;
 
 	if (info->var.rotate & 3)
-		info->fix.line_length = info->var.xres * 2;
+		info->fix.line_length = VCEB_ROUND_UP_WH( info->var.xres ) * info->var.bits_per_pixel / 8;
 
 	return 0;
 }
@@ -179,8 +216,10 @@ vceb_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 {
 	int success = 0 ;
 	struct vceb_screen_info *scrn = to_screen_info(info);
-	uint32_t offset = scrn->fb.var.xres * 2 * var->yoffset;
+	uint32_t offset = var->xres * ( var->bits_per_pixel / 8 ) * var->yoffset;
 	void *data = (void *)(scrn->fb.screen_base + offset);
+    struct vceb_fb *fb = info->par;
+	VCEB_RBG_FORMAT_T rgb_format = VCEB_RBG_FORMAT_MIN;
 
 	if (!atomic_read(&scrn->vmcs_fb_opened)) {
 		if (scrn->ops) {
@@ -210,13 +249,34 @@ vceb_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *info)
 					scrn->callback_param,
 					scrn->screen_num,
 					info);
-	} else if (scrn->screen_num == 0) {
-		/* Block until data is updated */
-		vceb_framebuffer_overlay_set(data, VCEB_RBG_FORMAT_RGB565, 0,
-				VCEB_SCREEN1_WIDTH, VCEB_SCREEN1_HEIGHT,
-				VCEB_ALIGN_CENTRE);
-	}
+	} 
+    else if (scrn->screen_num == 0) {
+		/* Determine the RGB format based on the bits per pixel */
+		switch (var->bits_per_pixel) {
+		case 16:
+			rgb_format = VCEB_RBG_FORMAT_RGB565;
+			break;
+		case 24:
+			rgb_format = VCEB_RBG_FORMAT_RGB888;
+			break;
+		case 32:
+			rgb_format = VCEB_RBG_FORMAT_BGRA8888;
+			break;
+		default:
+			printk(KERN_ERR "%s: Unsupported RGB format\n", __func__); 
+		}
 
+		if (rgb_format != VCEB_RBG_FORMAT_MIN) { 
+			/* Block until data is updated */
+			vceb_framebuffer_overlay_set(fb->instance,
+					data,
+					rgb_format,
+					0x0001,
+					CONFIG_FB_VCEB_SCREEN1_WIDTH,
+					CONFIG_FB_VCEB_SCREEN1_HEIGHT,
+					VCEB_ALIGN_CENTRE);
+		}
+	}
 
    return success;
 }
@@ -270,7 +330,7 @@ out:
 		atomic_inc(&scrn->f_count);
 		ret = 0;
 	} else {
-		printk(KERN_WARNING"%s : FB open failed (ret=%d)\n", __func__, ret);
+		printk(KERN_WARNING"%s : FB open failed\n", __func__);
 	}
 
 	return ret;
@@ -280,6 +340,7 @@ static int vceb_fb_release(struct fb_info *info, int user)
 {
 	struct vceb_screen_info *scrn = to_screen_info(info);
 	int ret = 0;
+
 	if (atomic_dec_and_test(&scrn->f_count)) {
 
 		if (scrn->ops && atomic_read(&scrn->vmcs_fb_opened) && !scrn->keep_vmcs_res) {
@@ -294,28 +355,10 @@ static int vceb_fb_release(struct fb_info *info, int user)
 	return ret;
 }
 
-static int bcm2708_fb_mmap(struct fb_info *info,
-		       struct vm_area_struct *vma)
-{
-	struct vceb_screen_info *fb =  to_screen_info(info);
-	unsigned long len, off = vma->vm_pgoff << PAGE_SHIFT;
-	int ret = -EINVAL;
-
-	len = info->fix.smem_len;
-
-	if (off <= len && vma->vm_end - vma->vm_start <= len - off)
-		ret = dma_mmap_writecombine(NULL, vma,
-					    fb->fb.screen_base,
-					    fb->fb.fix.smem_start,
-					    fb->fb.fix.smem_len);
-
-	return ret;
-}
-
 static struct fb_ops vceb_fb_ops = {
 	.owner          = THIS_MODULE,
-	.fb_open	= vceb_fb_open,
-	.fb_release	= vceb_fb_release,
+	.fb_open        = vceb_fb_open,
+	.fb_release     = vceb_fb_release,
 	.fb_check_var   = vceb_fb_check_var,
 	.fb_set_par     = vceb_fb_set_par,
 	.fb_setcolreg   = vceb_fb_setcolreg,
@@ -323,7 +366,6 @@ static struct fb_ops vceb_fb_ops = {
 	.fb_fillrect    = cfb_fillrect,
 	.fb_copyarea    = cfb_copyarea,
 	.fb_imageblit   = cfb_imageblit,
-	.fb_mmap	= bcm2708_fb_mmap,
 };
 
 static int init_fb_screen(struct vceb_fb *fb, uint32_t screen)
@@ -335,11 +377,11 @@ static int init_fb_screen(struct vceb_fb *fb, uint32_t screen)
 	uint32_t width, height;
 
 	if (screen != 0 && screen != 2)
-			return success;
+		return success;
 
 	scrn_info = kzalloc(sizeof(*scrn_info), GFP_KERNEL);
 	if (!scrn_info)
-			return -ENOMEM;
+		return -ENOMEM;
 
 	if (screen)
 		fb->screen2 = scrn_info;
@@ -347,9 +389,10 @@ static int init_fb_screen(struct vceb_fb *fb, uint32_t screen)
 		fb->screen1 = scrn_info;
 
 	scrn_info->screen_num = screen;
+	scrn_info->fb.par = fb;
 
-	width = screen ? VCEB_SCREEN2_WIDTH : VCEB_SCREEN1_WIDTH;
-	height = screen ? VCEB_SCREEN2_HEIGHT : VCEB_SCREEN1_HEIGHT;
+	width = screen ? CONFIG_FB_VCEB_SCREEN2_WIDTH : CONFIG_FB_VCEB_SCREEN1_WIDTH;
+	height = screen ? CONFIG_FB_VCEB_SCREEN2_HEIGHT : CONFIG_FB_VCEB_SCREEN1_HEIGHT;
 
 	atomic_set(&scrn_info->f_count, 0);
 	atomic_set(&scrn_info->vmcs_fb_opened, 0);
@@ -361,42 +404,69 @@ static int init_fb_screen(struct vceb_fb *fb, uint32_t screen)
 	scrn_info->fb.pseudo_palette = scrn_info->cmap;
 	scrn_info->fb.fix.type = FB_TYPE_PACKED_PIXELS;
 	scrn_info->fb.fix.visual = FB_VISUAL_TRUECOLOR;
-	scrn_info->fb.fix.line_length = width * 2;
-	scrn_info->fb.fix.accel	= FB_ACCEL_NONE;
+	scrn_info->fb.fix.accel = FB_ACCEL_NONE;
 	scrn_info->fb.fix.ypanstep = 1;
 
 	scrn_info->fb.var.xres = width;
 	scrn_info->fb.var.yres = height;
 	scrn_info->fb.var.xres_virtual = width;
 	scrn_info->fb.var.rotate = 0;
+	scrn_info->fb.var.yres_virtual = height;
+	if ( screen == 0 )
+	{
+	    scrn_info->fb.var.yres_virtual *= CONFIG_FB_VCEB_NUM_FRAMEBUFFERS;
+	}
 
-	if (!screen)
-		scrn_info->fb.var.yres_virtual	= height * 2;
-	else
-		scrn_info->fb.var.yres_virtual	= height;
-
-	scrn_info->fb.var.bits_per_pixel = 16;
+	scrn_info->fb.var.bits_per_pixel = CONFIG_FB_VCEB_BPP;
 	scrn_info->fb.var.activate = FB_ACTIVATE_NOW;
 	scrn_info->fb.var.height = 90;
 	scrn_info->fb.var.width	= 90;
-	scrn_info->fb.var.red.offset = 11;
-	scrn_info->fb.var.red.length = 5;
-	scrn_info->fb.var.green.offset = 5;
-	scrn_info->fb.var.green.length = 6;
-	scrn_info->fb.var.blue.offset = 0;
-	scrn_info->fb.var.blue.length = 5;
 
-	if (!screen)
-		/* Double the size of framebuffer */
-		framesize = width * height * 2 * 2;
+	if ( scrn_info->fb.var.bits_per_pixel == 16 )
+	{
+	    scrn_info->fb.fix.line_length = VCEB_ROUND_UP_WH( width ) * 2;
+	    scrn_info->fb.var.red.offset = 11;
+	    scrn_info->fb.var.red.length = 5;
+	    scrn_info->fb.var.green.offset = 5;
+	    scrn_info->fb.var.green.length = 6;
+	    scrn_info->fb.var.blue.offset = 0;
+	    scrn_info->fb.var.blue.length = 5;
+	}
 	else
-		framesize = width * height * 2;
+	{
+	    scrn_info->fb.fix.line_length = VCEB_ROUND_UP_WH( width ) * 4;
+	    scrn_info->fb.var.red.offset = 16;
+	    scrn_info->fb.var.red.length = 8;
+	    scrn_info->fb.var.green.offset = 8;
+	    scrn_info->fb.var.green.length = 8;
+	    scrn_info->fb.var.blue.offset = 0;
+	    scrn_info->fb.var.blue.length = 8;
+	    scrn_info->fb.var.transp.offset = 24;
+	    scrn_info->fb.var.transp.length = 8;
+	}
 
+	framesize = VCEB_ROUND_UP_WH( width ) * VCEB_ROUND_UP_WH( height )
+              * scrn_info->fb.var.bits_per_pixel / 8;
+	if ( screen == 0 )
+	{
+	    framesize *= CONFIG_FB_VCEB_NUM_FRAMEBUFFERS;
+	}
+
+#if defined( CONFIG_FB_VCEB_USE_BOOTMEMHEAP )
+	{
+	    char allocnamebuf[16];
+
+	    sprintf(allocnamebuf, "vceb_fb_%d", screen);
+	    scrn_info->fb.screen_base = bootmemheap_alloc(allocnamebuf, framesize);
+	    fbpaddr = virt_to_phys(scrn_info->fb.screen_base);
+	}
+#else
 	scrn_info->fb.screen_base = dma_alloc_writecombine(fb->dev, framesize,
-							&fbpaddr, GFP_KERNEL);
-
-	printk(KERN_INFO "allocating frame buffer %d * %d, got %p\n",
-			width, height, scrn_info->fb.screen_base);
+	                                                   &fbpaddr, GFP_KERNEL);
+#endif
+	printk( KERN_INFO "allocating frame buffer %d * %d %d bpp screen = %d, got %p\n",
+	        width, height, scrn_info->fb.var.bits_per_pixel, 
+	        screen, scrn_info->fb.screen_base);
 
 	if (scrn_info->fb.screen_base == 0)
 		return -ENOMEM;
@@ -408,9 +478,15 @@ static int init_fb_screen(struct vceb_fb *fb, uint32_t screen)
 
 	if (success) {
 		printk(KERN_ERR "vceb_fb - err_fb_set_var_failed\n");
+#if defined( CONFIG_FB_VCEB_USE_BOOTMEMHEAP )
+		/*
+		 * No free required with bootmemheap
+		 */
+#else
 		dma_free_writecombine(fb->dev, framesize,
-						scrn_info->fb.screen_base,
-						scrn_info->fb.fix.smem_start);
+		                      scrn_info->fb.screen_base,
+		                      scrn_info->fb.fix.smem_start);
+#endif
 	}
 
 	return success;
@@ -429,23 +505,29 @@ static void delete_fb_screen(struct vceb_fb *fb, uint32_t screen)
 		return;
 	}
 
-	width = screen ? VCEB_SCREEN2_WIDTH : VCEB_SCREEN1_WIDTH;
-	height = screen ? VCEB_SCREEN2_HEIGHT : VCEB_SCREEN1_HEIGHT;
-	if (!screen)
-		framesize = width * height * 2 * 2;
-	else
-		framesize = width * height * 2;
+	width = screen ? CONFIG_FB_VCEB_SCREEN2_WIDTH : CONFIG_FB_VCEB_SCREEN1_WIDTH;
+	height = screen ? CONFIG_FB_VCEB_SCREEN2_HEIGHT : CONFIG_FB_VCEB_SCREEN1_HEIGHT;
+	framesize = width * height * scrn_info->fb.var.bits_per_pixel / 8;
+	if ( screen == 0 )
+	{
+	    framesize *= CONFIG_FB_VCEB_NUM_FRAMEBUFFERS;
+	}  
 
+#if defined( CONFIG_FB_VCEB_USE_BOOTMEMHEAP )
+	/*
+	 * No free required with bootmemheap
+	 */
+#else
 	dma_free_writecombine(fb->dev, framesize, scrn_info->fb.screen_base,
 						scrn_info->fb.fix.smem_start);
-
+#endif
 	kfree(scrn_info);
 }
 
 static int
 vmcs_keepres_dummy_read_proc(char *buf, char **start, off_t offset, int count, int *eof, void *data)
 {
- 	int len = 0;
+	int len = 0;
 
 
 	if (offset > 0) {
@@ -579,7 +661,9 @@ static int vceb_fb_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct vceb_fb *fb;
+	int skip_pan = 0;
 
+    vceb_fb_probe_called = 1;
 	printk(KERN_ERR "vceb_fb_probe\n");
 
 	fb = kzalloc(sizeof(*fb), GFP_KERNEL);
@@ -596,17 +680,40 @@ static int vceb_fb_probe(struct platform_device *pdev)
 	/* store a nasty global pointer to this data */
 	fb_global_hack = fb;
 
+
+	// Assume that the display is on the first instance.
+	fb->instance = vceb_get_first_instance();
+	if ( fb->instance == NULL )
+	{
+        ret = -ENODEV;
+	    printk( KERN_ERR "%s: No vceb instance found\n", __func__ );
+	    goto err_vceb_init;
+	}
+
 	/*
 	 * VCEB init - no_reset
 	 */
 
-	vceb_initialise(0);
+    if ( vceb_bootloader_boot() || vceb_jtag_boot() )
+    {
+	    // The videocore was booted by the bootloader or via jtag - Don't reset
 
-	/* enable overlay, if this fails, FB is not going to work at all */
-	ret = vceb_framebuffer_overlay_enable(1);
-	if (ret) {
-		printk(KERN_ERR"VCEB overlay enable failed\n");
-		goto err_vceb_init;
+	     vceb_initialise(fb->instance,1); /* "init" with noreset of videocore */
+
+	     /* enable overlay, if this fails, FB is not going to work at all */
+	     ret = vceb_framebuffer_overlay_enable(fb->instance, 1);
+	     if (ret) {
+	         printk(KERN_ERR"VCEB overlay enable failed\n");
+	         goto err_vceb_init;
+	     }
+	}
+	else
+	{
+	     // The videocore hasn't otherwise been loaded - so we can't do
+	     // anything right now - it will get initialized when the startup
+	     // scripts run.
+
+	     skip_pan = 1;
 	}
 
 	ret = vceb_fb_add_framebuffer(fb, 0);
@@ -619,6 +726,27 @@ static int vceb_fb_probe(struct platform_device *pdev)
 	android_register_early_suspend(&fb->early_suspend);
 #endif
 
+#ifdef CONFIG_LOGO
+	if (!fb_prepare_logo(&fb->screen1->fb, FB_ROTATE_UR)) {
+		printk(KERN_ERR "%s: error preparing logo\n", __func__);
+	}
+	else {
+		fb_set_cmap(&fb->screen1->fb.cmap, &fb->screen1->fb);
+
+		if (!fb_show_logo(&fb->screen1->fb, FB_ROTATE_UR)) {
+			printk(KERN_ERR "%s: error showing logo\n", __func__);
+		}
+		else 
+		if ( !skip_pan )
+		{
+			/* Pan the framebuffer to show the logo */
+			if (fb_pan_display(&fb->screen1->fb, &fb->screen1->fb.var))
+			{
+				printk(KERN_ERR "%s: error panning framebuffer\n", __func__);
+			}
+		}
+	}
+#endif
 
 	printk(KERN_ERR "vceb_fb_probe - succeeded!\n");
 
@@ -648,6 +776,81 @@ static int vceb_fb_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#if 0 // This code doesn't seem to be used anywhere
+#if ( defined(CONFIG_PM) && !defined(CONFIG_ANDROID_POWER) )
+
+/*
+ * This is very hacky, but we do not have an appropriate header file for these
+ * functions yet (source code located in: /driver/char/broadcom/vchiq)
+ */
+extern int vceb_host_interface_clk_enable(void);
+extern int vceb_host_interface_clk_disable(void);
+
+/*
+ * This routine assumes that by the time it gets executed, lcd_update has
+ * completed and will not re-engage until lcd_resume is done
+ */
+static int vceb_fb_suspend(struct platform_device *pdev, pm_message_t mesg)
+{
+	struct vceb_fb *fb = platform_get_drvdata(pdev);
+
+   if (!fb->suspend_cb || !fb->resume_cb)
+      return -EINVAL;
+
+   /*
+    * We have the low-level LCD and GE drivers handle their own suspend, so
+    * here we just need to notify the Linux framebuffer subsystem and that's
+    * it
+    */
+   acquire_console_sem();
+   if (fb->screen1)
+   {
+      fb_set_suspend(&(fb->screen1->fb), 1);
+   }
+   if (fb->screen2)
+   {
+      fb_set_suspend(&(fb->screen2->fb), 1);
+   }
+   release_console_sem();
+
+   fb->suspend_cb();
+
+   return vceb_host_interface_clk_disable();
+}
+
+static int vceb_fb_resume(struct platform_device *pdev)
+{
+   int rc;
+   struct vceb_fb *fb = platform_get_drvdata(pdev);
+
+   if (!fb->suspend_cb || !fb->resume_cb)
+      return -EINVAL;
+
+   rc = vceb_host_interface_clk_enable();
+   if (rc < 0)
+      return rc;
+
+   fb->resume_cb();
+
+   acquire_console_sem();
+   if (fb->screen1)
+   {
+      fb_set_suspend(&(fb->screen1->fb), 0);
+   }
+   if (fb->screen2)
+   {
+      fb_set_suspend(&(fb->screen2->fb), 0);
+   }
+   release_console_sem();
+
+   return 0;
+}
+#else
+#define vceb_fb_suspend    NULL
+#define vceb_fb_resume     NULL
+#endif
+#endif
+
 static struct platform_driver vceb_fb_driver = {
 	.probe		= vceb_fb_probe,
 	.remove		= vceb_fb_remove,
@@ -658,9 +861,31 @@ static struct platform_driver vceb_fb_driver = {
 
 static int __init vceb_fb_init(void)
 {
-	printk(KERN_INFO"vceb_fb_init\n");
+   int rc;
 
-	return platform_driver_register(&vceb_fb_driver);
+   printk(KERN_INFO "vceb_fb_init\n");
+   if ( vceb_skip_boot() )
+   {
+      // We've been requested not to boot the videocore (user wants to skip using
+      // the videocore entirely)
+
+      printk( KERN_INFO "vc-boot-mode == skip - not initializing videocore.\n" );
+      return 0;
+   }
+   rc = platform_driver_register(&vceb_fb_driver);
+   if ( rc < 0 )
+   {
+       printk( KERN_ERR "%s: platform_driver_register failed: %d\n", __func__, rc );
+       return rc;
+   }
+
+   if ( !vceb_fb_probe_called )
+   {
+       printk( KERN_ERR "%s: vceb_fb_probe wasn't called - missing vceb_fb platform device\n", 
+               __func__ );
+       return -ENODEV;
+   }
+   return 0;
 }
 
 static void __exit vceb_fb_exit(void)
@@ -702,7 +927,7 @@ int vceb_fb_register_callbacks(uint32_t screen, struct vmcs_fb_ops *ops,
 	int32_t success = 0;
 	struct vceb_screen_info *scrn_info;
 
-	printk(KERN_ERR "vceb_fb_register_callbacks\n");
+	printk(KERN_ERR "%s\n", __func__);
 
 	if (screen != 0 && screen != 2)
 		return -ENOENT;
@@ -749,15 +974,6 @@ int vceb_fb_register_callbacks(uint32_t screen, struct vmcs_fb_ops *ops,
 	scrn_info->ops = ops;
 	scrn_info->callback_param = callback_param;
 
-	/* If we registered vmcs_fb callback successfully,
-	 * send an update to show current framebuffer on the screen
-	 */
-	/* FIXME: For now, we only send current fb update here if screen is 0,
-	 * i.e. screen is main LCD
-	 */
-	if ((screen == 0) && (ops != NULL))
-		vceb_fb_pan_display(&scrn_info->fb.var, &scrn_info->fb);
-
 	printk(KERN_ERR "vceb_fb_""%s""_callbacks OK!\n",
 			scrn_info->ops ? "register" : "unregister");
 
@@ -788,5 +1004,50 @@ void vceb_fb_bus_connected(uint32_t keep_vmcsfb)
 }
 EXPORT_SYMBOL(vceb_fb_bus_connected);
 
+#if ( defined(CONFIG_PM) && !defined(CONFIG_ANDROID_POWER) )
+int32_t vceb_fb_register_vchiq_suspend_cb(VCEB_FB_VCHIQ_SUSPEND_CB_T callback)
+{
+   int32_t success = -1;
+   printk( KERN_ERR "vceb_fb_register_vchiq_suspend_cb\n");
+
+   if (!fb_global_hack)
+      return success;
+
+   if (fb_global_hack->suspend_cb)
+      return success;
+
+   fb_global_hack->suspend_cb = callback;
+
+   success = 0;
+
+   return success;
+}
+EXPORT_SYMBOL(vceb_fb_register_vchiq_suspend_cb);
+
+int32_t vceb_fb_register_vchiq_resume_cb(VCEB_FB_VCHIQ_RESUME_CB_T callback)
+{
+   int32_t success = -1;
+   printk( KERN_ERR "vceb_fb_register_vchiq_resume_cb\n");
+
+   if (!fb_global_hack)
+      return success;
+
+   if (fb_global_hack->resume_cb)
+      return success;
+
+   fb_global_hack->resume_cb = callback;
+
+   success = 0;
+
+   return success;
+}
+EXPORT_SYMBOL(vceb_fb_register_vchiq_resume_cb);
+#endif
+
 module_init(vceb_fb_init);
 module_exit(vceb_fb_exit);
+
+MODULE_AUTHOR("Broadcom");
+MODULE_DESCRIPTION("VCEB Framebuffer Driver");
+MODULE_LICENSE("GPL");
+
