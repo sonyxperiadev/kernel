@@ -792,6 +792,8 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	BUG_ON(!peri_clk->ccu_clk || (peri_clk->clk_gate_offset == 0));
 	BUG_ON( !peri_clk->clk_en_mask && !CLK_FLG_ENABLED(clk,AUTO_GATE));
 
+	if(enable)
+	    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
 	/*Make sure that all dependent & src clks are enabled/disabled*/
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++)
 	{
@@ -864,6 +866,8 @@ static int peri_clk_enable(struct clk* clk, int enable)
 enable_done:
 	/* disable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk,false);
+	if(!enable)
+	    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 0);
 	return 0;
 }
 
@@ -1402,6 +1406,9 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	clk_dbg("%s -- %s to be %s\n", __func__, clk->name, enable?"enabled":"disabled");
 
 	bus_clk = to_bus_clk(clk);
+
+	if(enable)
+	    bus_clk->ccu_clk->clk.ops->enable(&bus_clk->ccu_clk->clk, 1);
 	if((bus_clk->clk_gate_offset == 0) || (bus_clk->clk_en_mask == 0))
 			return -EPERM;
 			/*Make sure that all dependent & src clks are enabled/disabled*/
@@ -1460,6 +1467,8 @@ static int bus_clk_enable(struct clk *clk, int enable)
 						/* disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);
 enable_done:
+	if(!enable)
+	    bus_clk->ccu_clk->clk.ops->enable(&bus_clk->ccu_clk->clk, 0);
 	return 0;
 }
 
