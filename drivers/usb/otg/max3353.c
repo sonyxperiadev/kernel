@@ -899,7 +899,7 @@ static int __init max3353_init(void)
 {
 	return i2c_add_driver(&max3353_i2c_driver);
 }
-subsys_initcall(max3353_init);
+subsys_initcall_sync(max3353_init);
 
 static void __exit max3353_exit(void)
 {
