@@ -39,6 +39,21 @@ static struct __init pin_config board_pin_config[] = {
        	PIN_BSC_CFG(PMU_SCL, PMU_SCL, 0x08),
        	PIN_BSC_CFG(PMU_SDA, PMU_SDA, 0x08),
 
+        /* Keypad */
+        PIN_CFG(NORFLSH_AD_14,     KP_ROW_OP_0, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_13,     KP_ROW_OP_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_12,     KP_ROW_OP_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_11,     KP_ROW_OP_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_10,     KP_ROW_OP_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_09,     KP_ROW_OP_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AD_08,     KP_ROW_OP_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADLAT_EN,  KP_COL_IP_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AADLAT_EN, KP_COL_IP_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADDR_20,   KP_COL_IP_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADDR_21,   KP_COL_IP_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADDR_22,   KP_COL_IP_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADDR_23,   KP_COL_IP_6, 0, OFF, OFF, 0, 0, 8MA),
+
 	/* WiFi SDIO */
 	PIN_CFG(NORFLSH_AD_03, SDIO1_DATA_3, 0, OFF, ON, 0, 0, 2MA),
 	PIN_CFG(NORFLSH_AD_02, SDIO1_CLK,    0, OFF, ON, 0, 0, 2MA),

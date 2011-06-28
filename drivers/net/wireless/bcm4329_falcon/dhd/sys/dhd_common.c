@@ -1411,8 +1411,8 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	uint power_mode = PM_FAST;
 	uint32 dongle_align = DHD_SDALIGN;
 	uint32 glom = 0;
-	int arpoe = 1;
-	int arp_ol = 0xf;
+	int arpoe = (dhd_arp_enable == TRUE) ? 1 : 0;
+	int arp_ol = dhd_arp_mode;
 	int scan_assoc_time = 40;
 	int scan_unassoc_time = 80;
 	const char 				*str;

@@ -289,29 +289,6 @@ config FB_PM2_FIFO_DISCONNECT
 	help
 	  Support the Permedia2 FIFO disconnect feature.
 
-config FB_BCM2708
-	tristate "BCM2708 framebuffer support"
-	depends on FB && ARM && (ARCH_BCM2708 || ARCH_ISLAND)
-	select FB_CFB_FILLRECT
-	select FB_CFB_COPYAREA
-	select FB_CFB_IMAGEBLIT
-	help
-	  This framebuffer device driver is for the BCM2708 framebuffer.
-	  If you want to compile this as a module (=code which can be
-	  inserted into and removed from the running kernel), say M
-	  here and read <file:Documentation/kbuild/modules.txt>.  The module
-	  will be called bcm2708_fb.
-
-config FB_VCEB
-        tristate "VideoCore Early Boot frame buffer support"
-        depends on FB && BRCM_VIDEOCORE_SERVICES
-        select FB_CFB_FILLRECT
-        select FB_CFB_COPYAREA
-        select FB_CFB_IMAGEBLIT
-        select LCD_API
-        ---help---
-          Support for the VideoCore Early Boot framebuffer.
-
 config FB_ARMCLCD
 	tristate "ARM PrimeCell PL110 support"
 	depends on FB && ARM && ARM_AMBA
@@ -2124,6 +2101,61 @@ config FB_DA8XX
 	  found on DA8xx/OMAP-L1xx SoCs.
 	  If unsure, say N.
 
+config FB_VCEB
+        tristate "LCD frame buffer support"
+        depends on FB
+        select FB_CFB_FILLRECT
+        select FB_CFB_COPYAREA
+        select FB_CFB_IMAGEBLIT
+        ---help---
+          Support for the VC framebuffer on the Broadcom reference
+          phone. Uses the VCHIQ stack.
+
+          Say Y here to enable kernel support for the framebuffer.
+
+config FB_VCEB_NUM_FRAMEBUFFERS
+        int "Number of framebuffers to allocate on host"
+        default 2
+        depends on FB_VCEB
+        help
+          Sets the number of framebuffers which are allocated on
+          the host. Only 1 is really needed, but some application
+          code, like Direct-FB works better with 2.
+
+config FB_VCEB_USE_BOOTMEMHEAP
+        bool "Use bootmemheap to allocate framebuffer memory"
+        default n
+        depends on FB_VCEB
+        help
+          Determine whether bootmemheap is used to allocate the framebuffer
+          memory. If bootmemheap is not enable, then one of the dma_alloc_xxx
+          functions is used instead.
+
+config FB_VCEB_BPP
+        int "Sets the bits per pixel to be used with the framebuffer"
+        default 16
+        depends on FB_VCEB
+
+config FB_VCEB_SCREEN1_WIDTH
+        int "Sets the width of the LCD, in pixels"
+        default 800
+        depends on FB_VCEB
+        
+config FB_VCEB_SCREEN1_HEIGHT
+        int "Sets the height of the LCD, in pixels"
+        default 480
+        depends on FB_VCEB
+        
+config FB_VCEB_SCREEN2_WIDTH
+        int "Sets the width of the HDMI output, in pixels"
+        default 640
+        depends on FB_VCEB
+        
+config FB_VCEB_SCREEN2_HEIGHT
+        int "Sets the height of the HDMI output, in pixels"
+        default 480
+        depends on FB_VCEB
+        
 config FB_VIRTUAL
 	tristate "Virtual Frame Buffer support (ONLY FOR TESTING!)"
 	depends on FB
