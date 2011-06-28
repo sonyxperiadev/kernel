@@ -17,11 +17,12 @@ Broadcom's express prior written consent.
 *  @brief  chal layer driver for caph audioh device driver
 *
 ****************************************************************************/
-
+#include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
 #include "brcm_rdb_audioh.h"
 #include "brcm_rdb_util.h"
+#include "xassert.h"
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -168,6 +169,32 @@ cVoid chal_audio_vinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 disable)
 
     return;
 
+}
+
+
+
+//============================================================================
+//
+// Function Name: UInt8 chal_audio_vinpath_digi_mic_enable_read(
+// 					CHAL_HANDLE handle)
+//
+// Description:  Get the digital microphone enable status
+//
+// Parameters:   handle      : the voice input path handle.
+// Return:       status        : bit0 - digital microphone 1
+//                             : bit1 - digital microphone 2
+//============================================================================
+UInt8 chal_audio_vinpath_digi_mic_enable_read(CHAL_HANDLE handle)
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    cUInt32 reg_val = 0x0;
+
+    reg_val = BRCM_READ_REG(base, AUDIOH_ADC_CTL);
+
+    reg_val &= AUDIOH_ADC_CTL_DMIC1_EN_MASK|AUDIOH_ADC_CTL_DMIC2_EN_MASK;
+    reg_val >>= AUDIOH_ADC_CTL_DMIC1_EN_SHIFT;
+
+    return (UInt8) reg_val;
 }
 
 //============================================================================
@@ -727,9 +754,9 @@ cVoid chal_audio_vinpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean 
 
 //============================================================================
 //
-// Function Name: cVoid chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle,UInt32 dmic3_scale, UInt32 dmic4_scale)
+// Function Name: cVoid chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle, UInt32 dmic1_coarse_scale, UInt32 dmic1_fine_scale, UInt32 dmic2_coarse_scale, UInt32 dmic2_fine_scale)
 //
-// Description:  Set the CIC fine scale for the Digital MIC 1 & 2
+// Description:  Set the CIC coarse/fine scale for the Digital MIC 1 & 2
 //
 // Parameters:   handle  the voice input path handle.
 //
@@ -737,20 +764,91 @@ cVoid chal_audio_vinpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean 
 //
 //============================================================================
 
-cVoid chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle, UInt32 dmic1_scale, UInt32 dmic2_scale)
+cVoid chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle, 
+		UInt32 dmic1_coarse_scale, 
+		UInt32 dmic1_fine_scale, 
+		UInt32 dmic2_coarse_scale, 
+		UInt32 dmic2_fine_scale)
 {
     cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    UInt32 value = 0;
+    // Read VIN path FIFO status
+    value = BRCM_READ_REG(base, AUDIOH_VIN_FILTER_CTRL);
 
-    dmic1_scale &= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_MASK|AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_MASK);
-    dmic2_scale <<= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_SHIFT);
-    dmic2_scale &= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_MASK|AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_MASK);
+    value &= ~(AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_MASK|AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_MASK|AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_MASK|AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_MASK);
+    dmic1_coarse_scale <<= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_SHIFT);
+    dmic1_fine_scale <<= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_SHIFT);
+    dmic2_coarse_scale <<= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_SHIFT);
+    dmic2_fine_scale <<= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_SHIFT);
+    value |= (dmic1_coarse_scale|dmic1_fine_scale|dmic2_coarse_scale|dmic2_fine_scale);
 
     /* Set the required setting */
-    BRCM_WRITE_REG(base,  AUDIOH_VIN_FILTER_CTRL, (dmic1_scale|dmic2_scale));
+    BRCM_WRITE_REG(base,  AUDIOH_VIN_FILTER_CTRL, value);
 
     return;
 }
 
+
+//============================================================================
+//
+// Function Name: cVoid chal_audio_vinpath_set_each_cic_scale(
+// 				CHAL_HANDLE handle, 
+// 				CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
+// 				UInt32 gain)
+//
+// Description:  Set the each CIC coarse/fine scale for the Digital MIC 1 & 2
+//
+// Parameters:   handle  the voice input path handle.
+//               micGainSelect  the exact mic gain
+//               gain  the gain
+//
+// Return:       None.
+//
+//============================================================================
+
+cVoid chal_audio_vinpath_set_each_cic_scale(CHAL_HANDLE handle, 
+		CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
+		UInt32 gain) 
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    UInt32 value = 0;
+    // Read VIN path FIFO status
+    value = BRCM_READ_REG(base, AUDIOH_VIN_FILTER_CTRL);
+    switch(micGainSelect)
+    {
+        case CAPH_AUDIOH_MIC1_COARSE_GAIN:
+            value &= ~(AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_MASK);
+            gain <<= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_BIT_SEL_SHIFT);
+            value |= gain;
+	    break;
+
+        case CAPH_AUDIOH_MIC1_FINE_GAIN:
+            value &= ~(AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_MASK);
+            gain <<= (AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_SHIFT);
+            value |= gain;
+	    break;
+
+        case CAPH_AUDIOH_MIC2_COARSE_GAIN:
+            value &= ~(AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_MASK);
+            gain <<= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_SHIFT);
+            value |= gain;
+	    break;
+
+        case CAPH_AUDIOH_MIC2_FINE_GAIN:
+            value &= ~(AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_MASK);
+            gain <<= (AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_FINE_SCL_SHIFT);
+            value |= gain;
+	    break;
+	    
+	default:
+	    xassert(0, micGainSelect);
+    }
+	    
+    /* Set the required setting */
+    BRCM_WRITE_REG(base,  AUDIOH_VIN_FILTER_CTRL, value);
+
+    return;
+}
 
 
 //============================================================================

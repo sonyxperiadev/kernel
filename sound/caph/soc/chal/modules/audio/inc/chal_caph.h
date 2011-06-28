@@ -107,6 +107,7 @@ typedef enum
 ******************************************************************************/
 typedef enum
 {
+    CAPH_SRCM_TAP_OUTCH_NONE = 0x00,
     CAPH_SRCM_TAP_OUTCH1 = 0x01,
     CAPH_SRCM_TAP_OUTCH2 = 0x02,
     CAPH_SRCM_TAP_OUTCH3 = 0x04,
@@ -194,7 +195,8 @@ typedef enum
     CAPH_SWITCH_CH15 = 0x4000,
     CAPH_SWITCH_CH16 = 0x8000,
 } CAPH_SWITCH_CHNL_e;
-
+/* define the max number of available Switch channels */
+#define CAPH_SWITCH_CHNL_NUM    16
 /**
 *  CAPH DST status
 ******************************************************************************/
@@ -383,8 +385,20 @@ typedef enum
 } CAPH_SRCMixer_FILT_TYPE_e;
 
 /**
-*  Add macros to RDB file
+*  CAPH audioH mic gain. For audio tuning purpose only.
 ******************************************************************************/
+typedef enum
+{
+    CAPH_AUDIOH_NONE_MIC_GAIN,
+    CAPH_AUDIOH_MIC1_COARSE_GAIN,
+    CAPH_AUDIOH_MIC1_FINE_GAIN,
+    CAPH_AUDIOH_MIC2_COARSE_GAIN,
+    CAPH_AUDIOH_MIC2_FINE_GAIN,
+    CAPH_AUDIOH_MIC3_COARSE_GAIN,
+    CAPH_AUDIOH_MIC3_FINE_GAIN,
+    CAPH_AUDIOH_MIC4_COARSE_GAIN,
+    CAPH_AUDIOH_MIC4_FINE_GAIN,
+} CAPH_AUDIOH_MIC_GAIN_e;
 
 #endif // _CHAL_CAPH_
 

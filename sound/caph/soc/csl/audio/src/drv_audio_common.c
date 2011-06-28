@@ -201,6 +201,8 @@ AUDDRV_DEVICE_e AUDDRV_GetDRVDeviceFromMic (AUDDRV_MIC_Enum_t mic)
             break;
 			
          case AUDDRV_MIC_SPEECH_DIGI:
+         case AUDDRV_DUAL_MIC_DIGI12:
+         case AUDDRV_DUAL_MIC_DIGI21:
             dev = AUDDRV_DEV_DIGI_MIC;
             break;
 			
@@ -227,6 +229,11 @@ AUDDRV_DEVICE_e AUDDRV_GetDRVDeviceFromMic (AUDDRV_MIC_Enum_t mic)
          case AUDDRV_MIC_PCM_IF:
             dev = AUDDRV_DEV_BT_MIC;
             break;
+
+         case AUDDRV_MIC_USB_IF:
+            dev = AUDDRV_DEV_MEMORY;
+            break;
+
 
         default:
            // xassert(0, dev);
@@ -274,7 +281,11 @@ AUDDRV_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDDRV_SPKR_Enum_t spkr)
          case AUDDRV_SPKR_PCM_IF:
             dev = AUDDRV_DEV_BT_SPKR;
             break;
-			
+		
+         case AUDDRV_SPKR_USB_IF:
+            dev = AUDDRV_DEV_MEMORY;
+            break;
+
         default:
             xassert(0, dev);
 		break;	
@@ -344,12 +355,12 @@ CSL_AUDIO_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
 *  Description: read the DSP UL gain
 *
 ****************************************************************************/
-UInt16 AUDDRV_GetDSPULGain(AUDDRV_DEVICE_e mic, Int16 gain)
+Int16 AUDDRV_GetDSPULGain(AUDDRV_DEVICE_e mic, Int16 gain)
 {
-    csl_caph_MicDSP_Gain_t outGain;
+    csl_caph_Mic_Gain_t outGain;
     csl_caph_MIC_Path_e cslMic = MIC_ANALOG_HEADSET;
 
-    memset(&outGain, 0, sizeof(csl_caph_MicDSP_Gain_t));
+    memset(&outGain, 0, sizeof(csl_caph_Mic_Gain_t));
     switch (mic)
     {
 	    case AUDDRV_DEV_ANALOG_MIC:
@@ -372,24 +383,134 @@ UInt16 AUDDRV_GetDSPULGain(AUDDRV_DEVICE_e mic, Int16 gain)
     }
 
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPULGain::mic=0x%x, gain=0x%x\n", mic, gain));
-    outGain = csl_caph_gain_GetMicDSPGain(cslMic, gain);
+    outGain = csl_caph_gain_GetMicGain(cslMic, gain);
     return outGain.micDSPULGain;
 }
 
 /****************************************************************************
 *
-*  Function Name: UInt16 AUDDRV_GetDSPDLGain(
-*                                         AUDDRV_DEVICE_e mic, UInt16 gain)
+*  Function Name: Int16 AUDDRV_GetDSPDLGain_Q1_14(
+*                                         AUDDRV_DEVICE_e mic, Int16 gain)
 *
-*  Description: read the DSP DL gain
+*  Description: read the DSP DL gain in dB in Q1.14
 *
 ****************************************************************************/
-UInt16 AUDDRV_GetDSPDLGain(AUDDRV_DEVICE_e spkr, Int16 gain)
+Int16 AUDDRV_GetDSPDLGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain)
 {
-    csl_caph_SpkrDSP_Gain_t outGain;
+    csl_caph_Spkr_Gain_t outGain;
     csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
 
-    memset(&outGain, 0, sizeof(csl_caph_SpkrDSP_Gain_t));
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case AUDDRV_DEV_EP:
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+	    
+	    case AUDDRV_DEV_HS:
+	    case AUDDRV_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS_DSP;
+		    break;
+
+
+	    case AUDDRV_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+
+	    case AUDDRV_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+
+    }
+
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPDLGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain));
+    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
+    return outGain.spkrDSPDLGain;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: Int16 AUDDRV_GetDSPDLGain(
+*                                         AUDDRV_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the DSP DL gain in mdB in Q15
+*
+****************************************************************************/
+Int16 AUDDRV_GetDSPDLGain(AUDDRV_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case AUDDRV_DEV_EP:
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+	    
+	    case AUDDRV_DEV_HS:
+	    case AUDDRV_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS_DSP;
+		    break;
+
+	    case AUDDRV_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+
+	    case AUDDRV_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+
+    }
+
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPDLGain::spkr=0x%x, gain=0x%x\n", spkr, gain));
+    outGain = csl_caph_gain_GetSpkrGain(cslSpkr, gain);
+    return outGain.spkrDSPDLGain;
+}
+
+
+
+/****************************************************************************
+*
+*  Function Name: Int16 AUDDRV_GetHWDLGain(
+*                                         AUDDRV_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the HW DL gain in Q13.2
+*
+****************************************************************************/
+Int16 AUDDRV_GetHWDLGain(AUDDRV_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
 
     switch (spkr)
     {
@@ -398,11 +519,8 @@ UInt16 AUDDRV_GetDSPDLGain(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
-		    cslSpkr = SPKR_HS;
-		    break;
-
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF;
+		    cslSpkr = SPKR_IHF_HS;
 		    break;
 
 	    case AUDDRV_DEV_BT_SPKR:
@@ -428,7 +546,175 @@ UInt16 AUDDRV_GetDSPDLGain(AUDDRV_DEVICE_e spkr, Int16 gain)
     }
 
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPDLGain::spkr=0x%x, gain=0x%x\n", spkr, gain));
-    outGain = csl_caph_gain_GetSpkrDSPGain(cslSpkr, gain);
-    return outGain.spkrDSPDLGain;
+    outGain = csl_caph_gain_GetSpkrGain(cslSpkr, gain);
+    return outGain.spkrHWGain;
 }
+
+
+
+/****************************************************************************
+*
+*  Function Name: Int16 AUDDRV_GetHWDLGain_Q1_14(
+*                                         AUDDRV_DEVICE_e mic, Int16 gain)
+*
+*  Description: read the HW DL gain in dB in Q1.14
+*
+****************************************************************************/
+Int16 AUDDRV_GetHWDLGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case AUDDRV_DEV_EP:
+		    cslSpkr = SPKR_EP;
+		    break;
+	    
+	    case AUDDRV_DEV_HS:
+	    case AUDDRV_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS;
+		    break;
+
+
+	    case AUDDRV_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+	    case AUDDRV_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+    }
+
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetHWDLGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain));
+    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
+    return outGain.spkrHWGain;
+}
+
+
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetPMUGain(
+*                                         AUDDRV_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the DSP DL gain in mdB in Q15
+*
+****************************************************************************/
+UInt16 AUDDRV_GetPMUGain(AUDDRV_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case AUDDRV_DEV_EP:
+		    cslSpkr = SPKR_EP;
+		    break;
+	    
+	    case AUDDRV_DEV_HS:
+	    case AUDDRV_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS;
+		    break;
+
+	    case AUDDRV_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+	    case AUDDRV_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+    }
+
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetPMUGain::spkr=0x%x, gain=0x%x\n", spkr, gain));
+    outGain = csl_caph_gain_GetSpkrGain(cslSpkr, gain);
+    return outGain.spkrPMUGain;
+}
+
+
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetPMUGain_Q1_14(
+*                                         AUDDRV_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the DSP DL gain in dB in Q1.14
+*
+****************************************************************************/
+UInt16 AUDDRV_GetPMUGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case AUDDRV_DEV_EP:
+		    cslSpkr = SPKR_EP;
+		    break;
+	    
+	    case AUDDRV_DEV_HS:
+	    case AUDDRV_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS;
+		    break;
+
+
+	    case AUDDRV_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+	    case AUDDRV_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+    }
+
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetPMUGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain));
+    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
+    return outGain.spkrPMUGain;
+}
+
 

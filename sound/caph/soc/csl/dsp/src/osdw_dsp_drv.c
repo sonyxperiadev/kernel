@@ -78,7 +78,7 @@
 #include "osdw_dsp_drv.h"
 #include "chal_intc_inc.h"
 #include "chip_irq.h"
-#include "vpu.h"
+#include "csl_vpu.h"
 
 #include "irqflags.h"
 #include "csl_apcmd.h"
@@ -171,9 +171,8 @@ void DSPDRV_Init( )
 		return;
 	}
 
-#ifdef CONFIG_AUDIO_BUILD
-	VPU_Init ();
-#endif
+	CSL_VPU_Enable();
+
 	return;
 }
 
@@ -228,12 +227,9 @@ static irqreturn_t rip_isr(int irq, void *dev_id)
 //******************************************************************************
 static void dsp_thread_proc(unsigned long data)
 {
-	if(client_VPU_ProcessStatus != NULL)
-	{
-		//Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP dsp_thread_proc =0x%x\n\r", client_VPU_ProcessStatus);
-		client_VPU_ProcessStatus();
-	}
- 
+	//Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP dsp_thread_proc \n\r");
+	AP_ProcessStatus();
+	 
     enable_irq(COMMS_SUBS6_IRQ);
 	
 }

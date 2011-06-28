@@ -113,7 +113,7 @@ typedef enum {
 	AUDDRV_MUTE_MIXERTap_WB_L,
 	AUDDRV_MUTE_MIXERTap_WB_R,
 } AUDDRV_MUTE_Enum_t;
-
+/*
 typedef enum {
 	AUDDRV_VoiceDAC,
 	AUDDRV_VoiceADC,
@@ -135,6 +135,7 @@ typedef enum {
 	AUDDRV_Mixer3_MPMALDCENABLE,
 	AUDDRV_Mixer4_MPMALDCENABLE
 } AUDDRV_Filter_Enum_t;
+*/
 
 typedef enum {
 	AUDDRV_REASON_HW_CTRL,
@@ -175,7 +176,8 @@ void AUDDRV_SPKRInit (
 *  @brief  Enable hardware audio path
 *
 *  @param  mixer_speaker_selection	(in) mixer identifier
-*  @param  sample_rate				(in) sample rate of HW
+*  @param  sample_rate			(in) sample rate of HW
+*  @param  pData			(out) pass some needed data.
 *
 *  @return none
 *
@@ -183,7 +185,8 @@ void AUDDRV_SPKRInit (
 void AUDDRV_Telephony_InitHW (
 			  AUDDRV_MIC_Enum_t      mic,
 			  AUDDRV_SPKR_Enum_t     speaker,
-			  AUDIO_SAMPLING_RATE_t  sample_rate
+			  AUDIO_SAMPLING_RATE_t  sample_rate,
+			  void* pData
 			  );
 
 /**
@@ -194,7 +197,7 @@ void AUDDRV_Telephony_InitHW (
 *  @return none
 *
 ****************************************************************************/
-void AUDDRV_Telephony_DeinitHW( void );
+void AUDDRV_Telephony_DeinitHW( void *pData );
 
 /**
 *  @brief  Enable hardware audio output path

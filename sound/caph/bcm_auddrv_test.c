@@ -982,12 +982,14 @@ static int HandlePlayCommand()
 					aud_dev = AUDDRV_DEV_IHF;  
 					audPlayHw = AUDIO_HW_IHF_OUT;
 				}	
+		UInt32 testint=0;
                 AUDCTRL_EnablePlay(AUDIO_HW_MEM,
                                    audPlayHw, 
                                    AUDIO_HW_NONE,
                                    spkr,
 		                   drv_config.num_channel,
-                                   drv_config.sample_rate
+                                   drv_config.sample_rate,
+				   &testint
 				                    );
 
               	AUDCTRL_SetPlayVolume (audPlayHw,
@@ -1008,7 +1010,7 @@ static int HandlePlayCommand()
                 AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
 
                 //disable the playback path
-                AUDCTRL_DisablePlay(AUDIO_HW_MEM,audPlayHw,spkr);
+                AUDCTRL_DisablePlay(AUDIO_HW_MEM,audPlayHw,spkr,testint);
 
                 AUDIO_DRIVER_Close(drv_handle);
 
@@ -1144,7 +1146,7 @@ static int HandleCaptCommand()
         break;
         case 3: //Start the capture
             {
-                AUDIO_HW_ID_t           hw_id = AUDIO_HW_AUDIO_IN;
+                AUDIO_HW_ID_t           hw_id = AUDIO_HW_NONE;
 		AUDDRV_DEVICE_e aud_dev = AUDDRV_DEV_ANALOG_MIC;
 
 		if(!record_buf_allocated)

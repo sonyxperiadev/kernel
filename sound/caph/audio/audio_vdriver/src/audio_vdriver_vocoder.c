@@ -44,12 +44,15 @@
 #include "shared.h"
 #include "audio_consts.h"
 #include "auddrv_def.h"
+#include "drv_caph.h"
+#ifdef CONFIG_AUDIO_BUILD
+#include "sysparm.h"
+#endif
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "dspcmd.h"
 #include "csl_aud_queue.h"
 #include "audio_vdriver_vocoder.h"
-#include "vpu.h"
 #include "log.h"
 
 #if defined (_ATHENA_) || defined (_RHEA_)
@@ -64,14 +67,16 @@
 //
 // local defines
 //
+typedef Boolean (*VPUFillFramesCB_t)(UInt8 *pBuf, UInt32 nSize);
+typedef Boolean (*VPUDumpFramesCB_t)(UInt8 *pBuf, UInt32 nSize);
 
 #define VT_MAX_FRAME_LEN	(31 + AUDQUE_MARGIN)
 
 static const UInt8 sVtAmrLen[16] = { 13, 14, 16, 18, 19, 21, 26, 31,
 											  6,  6,  6,  6,  0,  0,  0,  1 };	
 
-static const UInt8	sVtSilenceFrameSize = 1;
-static UInt8 sVtSilenceFrame[1] = {0x0f}; // vt silence 0x0f, amr-nb silence 0x7c
+//static const UInt8	sVtSilenceFrameSize = 1;
+//static UInt8 sVtSilenceFrame[1] = {0x0f}; // vt silence 0x0f, amr-nb silence 0x7c
 
 
 //
@@ -465,7 +470,7 @@ static void VOCODER_TaskEntry ( void)
 					break;
 
 				case VOCODER_MSG_STOP:
-					VPU_StopTelelphony();
+//					VPU_StopTelelphony();
 					CheckBufDoneUponStop(audDrv);
 					Log_DebugPrintf(LOGID_AUDIO, " VOCODER_TaskEntry::Stop .\n");
 					OSSEMAPHORE_Release (audDrv->stopSema);
@@ -611,8 +616,8 @@ static void ProcessDlRequest(VOCODER_Drv_t *audDrv, UInt8 *pDst, UInt32 nFrames)
 		// Should insert silence frame, return for debug now
 		Log_DebugPrintf(LOGID_AUDIO, "ProcessDlRequest :: insert silence...\n");
 		amrMode = 0x0f;
-		VPU_StartMainAMRDecodeEncode((VP_Mode_AMR_t)amrMode, &sVtSilenceFrame[0], sVtSilenceFrameSize, (VP_Mode_AMR_t)(audDrv->config.dataRateSelection), FALSE);				   
-		VPU_VT_Clear();
+//		VPU_StartMainAMRDecodeEncode((VP_Mode_AMR_t)amrMode, &sVtSilenceFrame[0], sVtSilenceFrameSize, (VP_Mode_AMR_t)(audDrv->config.dataRateSelection), FALSE);				   
+//		VPU_VT_Clear();
 	}
 	else
 	{
@@ -625,8 +630,8 @@ static void ProcessDlRequest(VOCODER_Drv_t *audDrv, UInt8 *pDst, UInt32 nFrames)
 		{
 			Log_DebugPrintf(LOGID_AUDIO, "corrupt VT DL frame, amrMode = 0x%x\r\n", amrMode);
 			amrMode = 0x0f;
-			VPU_StartMainAMRDecodeEncode((VP_Mode_AMR_t)amrMode, &sVtSilenceFrame[0], sVtSilenceFrameSize, (VP_Mode_AMR_t)(audDrv->config.dataRateSelection), FALSE);				   
-			VPU_VT_Clear();
+//			VPU_StartMainAMRDecodeEncode((VP_Mode_AMR_t)amrMode, &sVtSilenceFrame[0], sVtSilenceFrameSize, (VP_Mode_AMR_t)(audDrv->config.dataRateSelection), FALSE);				   
+//			VPU_VT_Clear();
 		}
 		else
 		{
@@ -644,8 +649,8 @@ static void ProcessDlRequest(VOCODER_Drv_t *audDrv, UInt8 *pDst, UInt32 nFrames)
 				}
 			}*/
 			
-			VPU_StartMainAMRDecodeEncode((VP_Mode_AMR_t)amrMode, readPtr, dlSize, (VP_Mode_AMR_t)(audDrv->config.dataRateSelection), FALSE);				   
-			VPU_VT_Clear();
+//			VPU_StartMainAMRDecodeEncode((VP_Mode_AMR_t)amrMode, readPtr, dlSize, (VP_Mode_AMR_t)(audDrv->config.dataRateSelection), FALSE);				   
+//			VPU_VT_Clear();
 			// update the readPtr
 			AUDQUE_UpdateReadPtrWithSize (aq, VT_MAX_FRAME_LEN);
 		}
@@ -796,6 +801,7 @@ static Boolean AP_VPU_StartTelephony(
 	audio_control_dsp( DSPCMD_TYPE_COMMAND_DSP_AUDIO_ALIGN, 1, 0, 0, 0, 0 );
 #endif
 
+#if 0
 	return VPU_StartTelephony(
 		telephony_dump_cb,
 		telephony_fill_cb,
@@ -803,6 +809,9 @@ static Boolean AP_VPU_StartTelephony(
 		dtx_mode,	// Turn DTX on (TRUE) or off (FALSE)
 		amr_if2_enable	 // Select AMR IF1 (FALSE) or IF2 (TRUE) format
 	);
+#else
+	return TRUE;
+#endif
 }
 
 #endif

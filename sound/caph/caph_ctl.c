@@ -51,10 +51,13 @@ the GPL, without Broadcom's express prior written consent.
 #include "auddrv_def.h"
 #include "audio_consts.h"
 #include "audio_ddriver.h"
+#include "drv_caph.h"
+#include "csl_aud_drv.h"
+#include "audio_vdriver.h"
+
 #include "audio_controller.h"
 #include "bcm_audio_devices.h"
 #include "caph_common.h"
-
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
@@ -173,7 +176,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[0] = %ld, pVolume[0] =%ld, pVolume[1]=%ld\n", pCurSel[0],pVolume[0],pVolume[1]);
 
 			//call audio driver to set gain/volume				
-			AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,pCurSel[0],pVolume[0]); //UL
+					AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_MAIN,pVolume[1],AUDIO_GAIN_FORMAT_Q13_2); //record gain
 			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,	pCurSel[1], pVolume[1], AUDIO_GAIN_FORMAT_Q13_2);//DL
 		}
 		break;

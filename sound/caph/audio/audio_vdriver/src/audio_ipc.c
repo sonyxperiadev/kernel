@@ -27,7 +27,6 @@
 #include "sysparm.h"
 #include "memmap.h"
 #include "audio_ipc.h"
-#include "vpu.h"
 #include "log.h"
 #include "assert.h"
 

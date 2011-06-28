@@ -121,28 +121,28 @@ Result_t AUDDRV_HWControl_ResumePath(AUDDRV_HWCTRL_CONFIG_t config);
 *  @brief  Set the gain for the sink
 *
 *  @param   pathID  (in) path handle of HW path
-*  @param   gainL_mB  (in) L-Ch Gain in mB
-*  @param   gainR_mB  (in) R-Ch Gain in mB
+*  @param   gainL_mB  (in) L-Ch Gain in Q13.2
+*  @param   gainR_mB  (in) R-Ch Gain in Q13.2
 *
 *  @return Result_t status
 *****************************************************************************/
 Result_t AUDDRV_HWControl_SetSinkGain(AUDDRV_PathID pathID, 
-                                      UInt32 gainL_mB,
-                                      UInt32 gainR_mB);
+                                      UInt16 gainL,
+                                      UInt16 gainR);
 
 /**
 *
 *  @brief  Set the gain for the source
 *
 *  @param   pathID  (in) path handle of HW path
-*  @param   gainL_mB  (in) L-Ch Gain in mB
-*  @param   gainR_mB  (in) R-Ch Gain in mB
+*  @param   gainL_mB  (in) L-Ch Gain in Q13.2
+*  @param   gainR_mB  (in) R-Ch Gain in Q13.2
 *
 *  @return Result_t status
 *****************************************************************************/
 Result_t AUDDRV_HWControl_SetSourceGain(AUDDRV_PathID pathID, 
-                                        UInt32 gainL_mB,
-                                        UInt32 gainR_mB);
+                                        UInt16 gainL,
+                                        UInt16 gainR);
 
 /**
 *
@@ -259,31 +259,31 @@ Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
 *
 *  @brief  Enable the Sidetone path
 *
-*  @param  void
+*  @param  HW path ID
 *
 *  @return Result_t status
 *****************************************************************************/
-Result_t AUDDRV_HWControl_EnableSideTone(void);
+Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audioMode);
 
 /**
 *
 *  @brief  Disable the Sidetone path
 *
-*  @param  void
+*  @param  HW path ID
 *
 *  @return Result_t status
 *****************************************************************************/
-Result_t AUDDRV_HWControl_DisableSideTone(void);
+Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audioMode);
 
 /**
 *
 *  @brief  Set the sidetone gain
 *
-*  @param  gain_mB (in) the gain in mB
+*  @param  gain (in) the gain
 *
 *  @return Result_t status
 *****************************************************************************/
-Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain_mB);
+Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain);
 
 
 /**
@@ -317,6 +317,16 @@ Result_t AUDDRV_HWControl_DisableEANC(void);
 *  @return Result_t status
 *****************************************************************************/
 Result_t AUDDRV_HWControl_ConfigSSP(UInt8 fm_port, UInt8 pcm_port);
+
+/**
+*
+*  @brief  configure ssp tdm mode
+*
+*  @param  status tdm mode status
+*
+*  @return none
+*****************************************************************************/
+void AUDDRV_HWControl_SetSspTdmMode(Boolean status);
 
 /**
 *
@@ -381,6 +391,50 @@ void AUDDRV_HWControl_VibratorStrength(UInt32 strength);
 *****************************************************************************/
 Result_t AUDDRV_HWControl_SetDSPSharedMeMForIHF(UInt32 addr);
 
+/**
+*
+*  @brief Set Mixing gain in HW Mixer.
+*
+*  @param   pathID  (in) path handle of HW path
+*  @param  fineGainL  mixer L-ch output fine gain in register value format
+*  @param  coarseGainL  mixer L-ch output coarse gain in register value format
+*  @param  fineGainR  mixer R-ch output fine gain in register value format
+*  @param  coarseGainR  mixer R-ch output coarse gain in register value format
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t AUDDRV_HWControl_SetMixOutputGain(AUDDRV_PathID pathID, 
+						UInt32 fineGainL, 
+ 						UInt32 coarseGainL,
+ 						UInt32 fineGainR,
+  						UInt32 coarseGainR);
+
+
+/**
+*
+*  @brief Set Mixing gain in HW Mixer.
+*
+*  @param   pathID  (in) path handle of HW path
+*  @param  gainL  mixer L-ch input gain in Q13.2 format
+*  @param  gainL  mixer R-ch input gain in Q13.2 format
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t AUDDRV_HWControl_SetMixingGain(AUDDRV_PathID pathID, 
+						UInt32 gainL, 
+ 						UInt32 gainR);
+
+/**
+*
+*  @brief Set Hw gain. For audio tuning purpose only.
+*
+*  @param  hw   hw gain selection
+*  @param  gain  hw gain
+*  @param  dev   Output path EP/IHF/HS if available.
+*
+*  @return Result_t status
+*****************************************************************************/
+void  AUDDRV_HWControl_SetHWGain(AUDDRV_HW_GAIN_e hw, UInt32 gain, AUDDRV_DEVICE_e dev);
 /********************************************************************
 *  @brief  Register up callback for getting audio mode
 *

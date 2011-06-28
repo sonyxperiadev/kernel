@@ -23,6 +23,12 @@ Broadcom's express prior written consent.
 
 
 typedef enum {
+	AUDDRV_MIC1 = 0x1,
+	AUDDRV_MIC2 = 0x2,
+	AUDDRV_SPEAKER = 0x4
+} AUDDRV_DSPFILTER_DEVICE_Enum_t;
+
+typedef enum {
     AUDDRV_MIC_NONE,
 
 #ifdef _HERA_
@@ -51,6 +57,7 @@ typedef enum {
 
 	AUDDRV_MIC_PCM_IF,
     AUDDRV_MIC_USB_IF,
+    AUDDRV_MIC_NOISE_CANCEL,
 	AUDDRV_MIC_TOTAL_NUM
 } AUDDRV_MIC_Enum_t;
 
@@ -76,6 +83,37 @@ typedef enum
 	AUDDRV_SPKR_USB_IF,
 	AUDDRV_SPKR_TOTAL_NUM
 } AUDDRV_SPKR_Enum_t;
+
+
+typedef enum {
+	//For Athena
+	AUDDRV_VoiceDAC,
+	AUDDRV_VoiceADC,
+	AUDDRV_AEQ,
+	AUDDRV_AEQPATHGAIN,
+	AUDDRV_AEQPATHOFST,
+	AUDDRV_AFIR,
+	AUDDRV_PEQ,
+	AUDDRV_PEQPATHGAIN,
+	AUDDRV_PEQPATHOFST,
+	AUDDRV_PIIR,
+	AUDDRV_Mixer1_MPMIIR,
+	AUDDRV_Mixer2_MPMIIR,
+	AUDDRV_Mixer3_MPMIIR,
+	AUDDRV_Mixer4_MPMIIR,
+	AUDDRV_Mixer_BIQUAD_CFG,
+	AUDDRV_Mixer1_MPMALDCENABLE,
+	AUDDRV_Mixer2_MPMALDCENABLE,
+	AUDDRV_Mixer3_MPMALDCENABLE,
+	AUDDRV_Mixer4_MPMALDCENABLE,
+
+	//For Rhea and Samoa
+	AUDDRV_Voice_Mic1_EQ,
+	AUDDRV_Voice_Mic2_EQ,
+	AUDDRV_Voice_Speaker_EQ,
+	AUDDRV_HW_Sidetone_EQ
+
+} AUDDRV_Filter_Enum_t;
 
 //for athena:
 //#define AUDDRV_MIXER1_SPKR_1L AUDDRV_SPKR_IHF
@@ -123,6 +161,38 @@ typedef enum
 	AUDDRV_DEV_SRCM,  /*SRCMixer*/
 	AUDDRV_DEV_DSP_throughMEM,  /*DSP connection through Shared mem*/
 }AUDDRV_DEVICE_e;
+
+
+
+//Define the other mic which is used for Noise Cancellation.
+//It is product-dependent.
+#define MIC_NOISE_CANCEL AUDDRV_DEV_EANC_DIGI_MIC_R
+
+
+
+/**
+* CAPH HW gain. For tuning purpose only
+******************************************************************************/
+typedef enum
+{
+	AUDDRV_AMIC_PGA_GAIN,
+	AUDDRV_AMIC_DGA_COARSE_GAIN,
+	AUDDRV_AMIC_DGA_FINE_GAIN,
+	AUDDRV_DMIC1_DGA_COARSE_GAIN,
+	AUDDRV_DMIC1_DGA_FINE_GAIN,
+	AUDDRV_DMIC2_DGA_COARSE_GAIN,
+	AUDDRV_DMIC2_DGA_FINE_GAIN,
+	AUDDRV_DMIC3_DGA_COARSE_GAIN,
+	AUDDRV_DMIC3_DGA_FINE_GAIN,
+	AUDDRV_DMIC4_DGA_COARSE_GAIN,
+	AUDDRV_DMIC4_DGA_FINE_GAIN,
+	AUDDRV_SRCM_INPUT_GAIN_L,
+	AUDDRV_SRCM_OUTPUT_COARSE_GAIN_L,
+	AUDDRV_SRCM_OUTPUT_FINE_GAIN_L,
+	AUDDRV_SRCM_INPUT_GAIN_R,
+	AUDDRV_SRCM_OUTPUT_COARSE_GAIN_R,
+	AUDDRV_SRCM_OUTPUT_FINE_GAIN_R,
+} AUDDRV_HW_GAIN_e;
 
 #if defined (_ATHENA_)
 

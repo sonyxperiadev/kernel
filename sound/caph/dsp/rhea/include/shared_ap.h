@@ -1903,7 +1903,7 @@ EXTERN VR_Frame_AMR_WB_t AP_UL_MainAMR_buf    				   AP_SHARED_SEC_GEN_AUDIO; //
  * recording. The buffer is used as ping-pong buffer, each with 2/4-speech frame 
  * (4*160) or (2*320).
  */ 
-EXTERN UInt16    shared_Arm2SP_InBuf[ARM2SP_INPUT_SIZE]    					AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16    shared_Arm2SP_InBuf[ARM2SP_INPUT_SIZE_48K]    					AP_SHARED_SEC_GEN_AUDIO;
 /**
  * This flag indicates the end of the transfer of data from the ARM to the DSP.
  * The transfer of data by ARM2SP interface can be disabled by setting 
@@ -1933,7 +1933,7 @@ EXTERN UInt16    shared_Arm2SP_InBuf_out                   					AP_SHARED_SEC_GE
  * recording. The buffer is used as ping-pong buffer, each with 2/4-speech frame 
  * (4*160) or (2*320).
  */ 
-EXTERN UInt16 shared_Arm2SP2_InBuf[ARM2SP_INPUT_SIZE]    					AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_Arm2SP2_InBuf[ARM2SP_INPUT_SIZE_48K]    					AP_SHARED_SEC_GEN_AUDIO;
 /**
  * This flag indicates the end of the transfer of data from the ARM to the DSP.
  * The transfer of data by ARM2SP2 interface can be disabled by setting 

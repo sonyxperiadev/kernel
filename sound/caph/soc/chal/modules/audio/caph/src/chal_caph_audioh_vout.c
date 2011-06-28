@@ -18,6 +18,7 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
+#include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
 #include "brcm_rdb_audioh.h"
@@ -95,6 +96,12 @@ cVoid chal_audio_earpath_enable(CHAL_HANDLE handle, cUInt16 enable)
     cUInt32 reg_val;
     cUInt32 Channl_Ctrl = 0x00000000;
 
+    /* Provide the amplification */
+    reg_val = BRCM_READ_REG(base, AUDIOH_DAC_CTRL);
+    reg_val &= ~(AUDIOH_DAC_CTRL_AUDIOTX_SPARE_BIT_MASK);
+    reg_val |= 0x1<<AUDIOH_DAC_CTRL_AUDIOTX_SPARE_BIT_SHIFT;
+    BRCM_WRITE_REG(base,  AUDIOH_DAC_CTRL, reg_val);
+
     if(enable == CHAL_AUDIO_ENABLE)
     {
         Channl_Ctrl |= AUDIOH_DAC_CTL_VOUT_ENABLE_MASK;
@@ -108,15 +115,8 @@ cVoid chal_audio_earpath_enable(CHAL_HANDLE handle, cUInt16 enable)
     reg_val &= ~(AUDIOH_DAC_CTL_VOUT_ENABLE_MASK);
     reg_val |= Channl_Ctrl;
 
-
     /* Set the required setting */
     BRCM_WRITE_REG(base,  AUDIOH_DAC_CTL, reg_val);
-
-    /* Provide the amplification */
-    reg_val = BRCM_READ_REG(base, AUDIOH_DAC_CTRL);
-    reg_val &= ~(AUDIOH_DAC_CTRL_AUDIOTX_SPARE_BIT_MASK);
-    reg_val |= 0x1<<AUDIOH_DAC_CTRL_AUDIOTX_SPARE_BIT_SHIFT;
-    BRCM_WRITE_REG(base,  AUDIOH_DAC_CTRL, reg_val);
 
     return;
 }
@@ -247,11 +247,14 @@ cVoid chal_audio_earpath_set_gain(CHAL_HANDLE handle, cUInt32 gain)
     cUInt32     reg_val;
     cUInt32     base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
 
+#if 0
     reg_val = BRCM_READ_REG(base, AUDIOH_EP_DAC_CTRL);
 
     /* Mask the gain bits */
     reg_val &= 0xFE7FFFFF;
     reg_val |= ((gain&0x03) << 23);
+#endif
+	reg_val = 0x100A00;  // Hard code for now, based on value provided by ASIC team.
 
     /* Set the required setting */
     BRCM_WRITE_REG(base,  AUDIOH_EP_DAC_CTRL, reg_val);

@@ -64,7 +64,8 @@ AUDDRV_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDDRV_SPKR_Enum_t spkr);
 *
 *  @return DSP gain in Q1.14
 *****************************************************************************/
-UInt16 AUDDRV_GetDSPULGain(AUDDRV_DEVICE_e mic, Int16 gain);
+Int16 AUDDRV_GetDSPULGain(AUDDRV_DEVICE_e mic, Int16 gain);
+
 
 /**
 *
@@ -72,8 +73,65 @@ UInt16 AUDDRV_GetDSPULGain(AUDDRV_DEVICE_e mic, Int16 gain);
 *
 *  @param  AUDDRV_DEVICE_e (in) Driver speaker selection
 *
-*  @return DSP gain in Q1.14
+*  @return DSP gain in dB in Q1.14
 *****************************************************************************/
-UInt16 AUDDRV_GetDSPDLGain(AUDDRV_DEVICE_e spkr, Int16 gain);
+Int16 AUDDRV_GetDSPDLGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain);
+
+/**
+*
+*  @brief  Get the DSP DL gain
+*
+*  @param  AUDDRV_DEVICE_e (in) Driver speaker selection
+*
+*  @return DSP gain in mdB in Q15
+*****************************************************************************/
+Int16 AUDDRV_GetDSPDLGain(AUDDRV_DEVICE_e spkr, Int16 gain);
+
+
+/**
+*
+*  @brief  Get the HW DL gain
+*
+*  @param  spkr (in) Driver speaker selection
+*  @param  gain (in) Gain in Q1.14 
+*
+*  @return HW gain
+*****************************************************************************/
+Int16 AUDDRV_GetHWDLGain(AUDDRV_DEVICE_e spkr, Int16 gain);
+
+/**
+*
+*  @brief  Get the HW DL gain
+*
+*  @param  spkr (in) Driver speaker selection
+*  @param  gain (in) Gain in Q1.14 
+*
+*  @return HW gain
+*****************************************************************************/
+Int16 AUDDRV_GetHWDLGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain);
+
+
+/**
+*
+*  @brief  Get the PMU gain
+*
+*  @param  AUDDRV_DEVICE_e (in) Driver speaker selection
+*
+*  @return PMU gain
+*****************************************************************************/
+UInt16 AUDDRV_GetPMUGain(AUDDRV_DEVICE_e spkr, Int16 gain);
+
+
+
+/**
+*
+*  @brief  Get the PMU gain
+*
+*  @param  AUDDRV_DEVICE_e (in) Driver speaker selection
+*
+*  @return PMU gain
+*****************************************************************************/
+UInt16 AUDDRV_GetPMUGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain);
+
 #endif // _DRV_AUDIO_COMMON_
 

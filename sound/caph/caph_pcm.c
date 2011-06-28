@@ -49,9 +49,13 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_consts.h"
 
 #include "auddrv_def.h"
+#include "drv_caph.h"
+#include "csl_aud_drv.h"
+#include "audio_vdriver.h"
 // Include BRCM AAUD driver API header files
 #include "audio_controller.h"
 #include "audio_ddriver.h"
+
 
 #include "bcm_audio_devices.h"
 #include "bcm_audio_thread.h"
@@ -617,23 +621,23 @@ static int PcmCaptureTrigger(
 	//Update Sink, volume , mute info from mixer controls
 	if(pSel[0]==AUDCTRL_MIC_MAIN)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
 		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
 		BCM_AUDIO_DEBUG("updated with main mic info \n");
 	}
 	else if(pSel[0]==AUDCTRL_MIC_AUX)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
 		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_HS_MIC;		
 	}
 	else if(pSel[0]==AUDCTRL_MIC_DIGI1) 
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
 		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;		
 	}
 	else if(pSel[0]==AUDCTRL_MIC_DIGI2)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
 		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;
 	}
 	else if(pSel[0]==AUDCTRL_MIC_I2S)
@@ -644,7 +648,7 @@ static int PcmCaptureTrigger(
 	else
 	{
 		BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_AUDIO_IN;
+		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
 		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
 	}
 

@@ -18,6 +18,7 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
+#include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
 #include "brcm_rdb_audioh.h"
@@ -232,7 +233,13 @@ cVoid chal_audio_ihfpath_mute(CHAL_HANDLE handle,  Boolean mute)
 
 cVoid chal_audio_ihfpath_set_gain(CHAL_HANDLE handle, cUInt32 gain)
 {
+    cUInt32     reg_val;
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
 
+    reg_val = 0x100A00; // Hard code based on value provided by ASIC team
+
+    /* Set the required setting */
+    BRCM_WRITE_REG(base,  AUDIOH_IHF_DAC_CTRL, reg_val);
     return;
 }
 
@@ -848,6 +855,32 @@ cVoid chal_audio_ihfpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean 
     return;
 }
 
+
+
+//============================================================================
+//
+// Function Name: cVoid chal_audio_ihfpath_set_dac_pwr(CHAL_HANDLE handle,
+//                                    cUInt16 enable_chan)
+//
+// Description:  Set DAC power for the IHF DAC
+//
+// Parameters:   handle     - audio chal handle.
+//               enable_chan   - Specifies which DAC channel power need to be enabled or disabled
+// Return:       UInt8 DAC channel powerdown values.
+//
+//============================================================================
+
+UInt8 chal_audio_ihfpath_get_dac_pwr(CHAL_HANDLE handle)
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    cUInt32 reg_value = 0;
+
+    reg_value = BRCM_READ_REG(base, AUDIOH_IHF_PWR);
+    reg_value &= AUDIOH_IHF_PWR_AUDIOTX_IHF_DACL_PD_MASK
+	    	|AUDIOH_IHF_PWR_AUDIOTX_IHF_DACR_PD_MASK;
+    reg_value >>= AUDIOH_HS_PWR_AUDIOTX_HS_DACL_PD_SHIFT;
+    return (UInt8)reg_value;
+}
 
 //============================================================================
 //

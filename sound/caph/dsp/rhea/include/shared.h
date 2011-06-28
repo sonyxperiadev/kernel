@@ -148,6 +148,7 @@
 #define NONINTERL_PER_CH_AUDIO_SIZE_PER_PAGE    ((UInt16) 2048)
 //Arm2SP
 #define ARM2SP_INPUT_SIZE          ((UInt16) 1280  )      //max size of input of Arm2SP (160*8) 8 PCM speech frames
+#define ARM2SP_INPUT_SIZE_48K      ((UInt16) 3840  )      //
 
 #define DSP_SYNC_LIST_SIZE		   			 24		// # of cells that can be sync'ed
 
@@ -185,11 +186,12 @@
 //bit field for arg2 of	COMMAND_POLYRINGER_STARTPLAY,	// 0x5d	( Polyringer Play )	//pr_outdir = arg2;
 #define	ARM2SP_DL_ENABLE_MASK	0x0001
 #define	ARM2SP_UL_ENABLE_MASK	0x0002
-
+#define	ARM2SP_48K				0x0004				//bit2=[0,1]=[not_48K, 48K]
 #define	ARM2SP_TONE_RECODED		0x0008				//bit3=1, record the tone, otherwise record UL and/or DL
 #define	ARM2SP_UL_MIX			0x0010				//should set MIX or OVERWRITE, otherwise but not both, MIX wins
 #define	ARM2SP_UL_OVERWRITE		0x0020
 #define	ARM2SP_UL_BEFORE_PROC	0x0040				//bit6=1, play PCM before UL audio processing; default bit6=0
+#define	ARM2SP_MONO_ST			0x0080				//bit7=[0,1]=[MONO,STEREO] (not used if not 48k)				
 #define	ARM2SP_DL_MIX			0x0100
 #define	ARM2SP_DL_OVERWRITE		0x0200
 #define	ARM2SP_DL_AFTER_PROC	0x0400				//bit10=1, play PCM after DL audio processing; default bit10=0
@@ -1134,6 +1136,16 @@ Int16    step2;
 Int16    step3;
 Int16    step4;
 } Shared_Compressor_t;
+
+
+typedef	struct
+{
+
+	UInt16			g2t2;
+	UInt16          env;
+	Int16			g1lin;
+} Shared_Smart_Compressor_t;
+
 
 // Pre-store OV parameters to save run-time calculations
 typedef struct {
