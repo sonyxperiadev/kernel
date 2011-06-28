@@ -129,6 +129,11 @@
 #include <dock_settings.h>
 #endif
 
+#if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
+#include <gps_settings.h>
+#include <linux/broadcom/gps.h>
+#endif
+
 #include "island.h"
 #include "common.h"
 
@@ -523,6 +528,21 @@ static struct platform_device board_keypad_device =
    .num_resources = ARRAY_SIZE(board_keypad_device_resource),
    .dev = {
       .platform_data = &board_keypad_param,
+   },
+};
+#endif
+
+#if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
+#define board_hana_gps_info concatenate(BCMHANA_BOARD_ID, _board_hana_gps_info)
+static struct gps_platform_data board_hana_gps_info = GPS_PLATFORM_DATA_SETTINGS;
+
+#define platform_device_gps concatenate(BCMHANA_BOARD_ID, _platform_device_gps)
+static struct platform_device platform_device_gps = 
+{
+   .name = "gps",
+   .id = -1,
+   .dev = {
+      .platform_data = &board_hana_gps_info,
    },
 };
 #endif
@@ -1002,6 +1022,11 @@ static void __init add_devices(void)
 #ifdef CONFIG_NET_ISLAND
 	platform_device_register(&net_device);
 #endif
+
+#if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
+   platform_device_register(&platform_device_gps);
+#endif
+
 }
 
 static void __init board_init(void)
