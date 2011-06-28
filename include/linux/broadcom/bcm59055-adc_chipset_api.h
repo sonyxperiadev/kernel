@@ -1,17 +1,37 @@
-/*******************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
-*
-*       @file   include/linux/broadcom/bcm59055-adc_chipset_api.h
-*
-* Unless you and Broadcom execute a separate written software license agreement
-* governing use of this software, this software is licensed to you under the
-* terms of the GNU General Public License version 2, available at
-* http://www.gnu.org/copyleft/gpl.html (the "GPL").
-*
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a license
-* other than the GPL, without Broadcom's express prior written consent.
-*******************************************************************************/
+/*
+Nokia/D/CT/SASW/BBC
+CONFIDENTIAL
+Deliverable software
+
+
+
+            adc_chipset_api.h
+            ----------------------------
+
+            SW Include Document - ANSI C
+
+
+
+Document identification and location in Synergy/CM
+
+Database:            co1core
+
+Object (this information is substituted by Synergy/CM):
+    %name:           adc_chipset_api.h %
+    %cvtype:         incl %
+    %instance:       co1core_1 %
+    %version:        co1core2#7.0 %
+    %date_modified:  Thu Dec 16 12:00:00 2010 %
+
+Copyright (c) Nokia. This material, including documentation and any related
+computer programs, is protected by copyright controlled by Nokia.
+All rights are reserved. Copying, including reproducing, storing, adapting or
+translating, any or all of this material requires the prior written consent
+of Nokia. This material also contains confidential information, which may not
+be disclosed to others without the prior written consent of Nokia.
+
+------------------------------------------------------------------------------
+*/
 
 
 #ifndef ADC_CHIPSET_API_H

@@ -36,7 +36,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #ifdef CONFIG_ARCH_RHEA
 #define	CONFIG_DEPENDENCY_READY_CAPI
-#define	CONFIG_DEPENDENCY_READY_CLOCK
+#define	CONFIG_DEPENDENCY_ENABLE_SSP34
 #define	CONFIG_DEPENDENCY_READY_PMU
 //#define	CONFIG_DEPENDENCY_READY_SYSPARM
 #endif
@@ -44,7 +44,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #ifdef CONFIG_ARCH_ISLAND
 #define	CONFIG_DEPENDENCY_READY_CAPI
-//#define	CONFIG_DEPENDENCY_READY_CLOCK
+//#define CONFIG_DEPENDENCY_ENABLE_SSP34
 //#define	CONFIG_DEPENDENCY_READY_PMU
 //#define	CONFIG_DEPENDENCY_READY_SYSPARM
 #endif
@@ -52,7 +52,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #ifdef CONFIG_ARCH_SAMOA
 //#define	CONFIG_DEPENDENCY_READY_CAPI
-#define	CONFIG_DEPENDENCY_READY_CLOCK
+//#define	CONFIG_DEPENDENCY_ENABLE_SSP34
 //#define	CONFIG_DEPENDENCY_READY_PMU
 //#define	CONFIG_DEPENDENCY_READY_SYSPARM
 #endif

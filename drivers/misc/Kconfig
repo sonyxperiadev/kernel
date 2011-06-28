@@ -425,12 +425,20 @@ config BCM59055_FUELGAUGE
 	---help---
 	 BCM59055 PMU Fuel Gauge driver
 
+config BCM59055_ADC_CHIPSET_API
+	tristate "BCM59055 ADC chipset API driver"
+	depends on BCM59055_SARADC && BCM59055_FUELGAUGE
+	default n
+	---help---
+	 BCM59055 ADC chispet API driver 
+
 config BCMPMU_AUDIO
         tristate "BCM PMU Audio Driver"
         depends on MFD_BCMPMU
         help
           If you say Y to support Audio drive on BCM PMUs.
 	  
+
 source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"

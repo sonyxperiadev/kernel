@@ -57,7 +57,7 @@
 * @{
 */
 
-#if defined (_ATHENA_) || defined (_RHEA_)
+#if defined (_ATHENA_) || defined (_RHEA_) || defined (_SAMOA_)
 
 //
 // local defines

@@ -43,12 +43,12 @@
 #define PMU_BASE_ADDR			KONA_PMU_PMU_VA /* TODO - find out from Mehran */
 
 static const struct bcmpmu_rw_data register_init_data[] = {
-	{.map=0, .addr=0x284, .val=0x2000, .mask=0xFFFF},
+	{.map=0, .addr=0x284, .val=0x0, .mask=0xFFFF},
 	{.map=0, .addr=0x288, .val=0x0, .mask=0xFF},
 	{.map=0, .addr=0x28c, .val=0x0, .mask=0xFF},
-	{.map=0, .addr=0x290, .val=0x1800, .mask=0xFFFF},
-	{.map=0, .addr=0x294, .val=0x7100, .mask=0xFFFF},
-	{.map=0, .addr=0x298, .val=0x4000, .mask=0xFFFF},
+	{.map=0, .addr=0x290, .val=0x0, .mask=0xFFFF},
+	{.map=0, .addr=0x294, .val=0x5800, .mask=0xFFFF},
+	{.map=0, .addr=0x298, .val=0x5800, .mask=0xFFFF},
 	{.map=0, .addr=0x29c, .val=0x0, .mask=0xFF},
 };
 
@@ -333,7 +333,6 @@ static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
 	for (i = 0; i <ARRAY_SIZE(bcmpmu_client_devices); i++)
 		bcmpmu_client_devices[i]->dev.platform_data = bcmpmu;
 	platform_add_devices(bcmpmu_client_devices, ARRAY_SIZE(bcmpmu_client_devices));
-
 	return 0;
 }
 
@@ -341,7 +340,6 @@ static int __init bcmpmu_exit_platform_hw(struct bcmpmu *bcmpmu)
 {
 	printk("REG: pmu_init_platform_hw called \n");
 	bcmpmu_reg_dev_exit(bcmpmu);
-
 	return 0;
 }
 

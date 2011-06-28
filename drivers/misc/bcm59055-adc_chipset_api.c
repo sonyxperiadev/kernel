@@ -458,19 +458,19 @@ static struct adc_channels_t * hal_adc_map_channel (struct adc_channels_t * chan
 		break;
 #endif
 #ifdef VENDOR_ADC_BSI_COMP_CHANNELS
-	case BRCM_ADDON_HAL_ADC_CHIPSET_BSI_CMP_1:
+	case HAL_ADC_CHIPSET_VENDOR_CH_0:
 		pchan = &channel_array [VENDOR_ADC_BSI_COMP_CHANNEL_1];	
 		pchan->unit.unit = adc_unit_bom;
 		break;
-	case BRCM_ADDON_HAL_ADC_CHIPSET_BSI_CMP_2:
+	case HAL_ADC_CHIPSET_VENDOR_CH_1:
 		pchan = &channel_array [VENDOR_ADC_BSI_COMP_CHANNEL_2];	
 		pchan->unit.unit = adc_unit_bom;
 		break;
-	case BRCM_ADDON_HAL_ADC_CHIPSET_ADC_CMP_1:
+	case HAL_ADC_CHIPSET_VENDOR_CH_2:
 		pchan = &channel_array [VENDOR_ADC_ADC_COMP_CHANNEL_1];	
 		pchan->unit.unit = adc_unit_bom;
 		break;
-	case BRCM_ADDON_HAL_ADC_CHIPSET_ADC_CMP_2:
+	case HAL_ADC_CHIPSET_VENDOR_CH_3:
 		pchan = &channel_array [VENDOR_ADC_ADC_COMP_CHANNEL_2];	
 		pchan->unit.unit = adc_unit_bom;
 		break;
@@ -500,6 +500,7 @@ static u16 read_hk_adc (int physical_channel)
 		return 0;
 }
 
+#if 0
 static u16 read_rtm_adc (int physical_channel)
 {
 	int reading;
@@ -515,7 +516,7 @@ static u16 read_rtm_adc (int physical_channel)
 	else 
 		return 0;
 }
-
+#endif
 
 
 int bcm59055_hal_adc_raw_read (u8 channel, u32* value, HAL_ADC_CALLBACK adc_handler, void* context)
@@ -531,7 +532,7 @@ int bcm59055_hal_adc_raw_read (u8 channel, u32* value, HAL_ADC_CALLBACK adc_hand
  {
 	struct adc_channels_t * pchan;
 	u32 reading, overflow;
-	int status = HAL_ADC_ERR_SUCCESS, i;
+	int status = HAL_ADC_ERR_SUCCESS;
 #if 0
 	static u32 ibat_last_sample_time = 0;
 	u32 current_time;
@@ -1051,7 +1052,7 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 	/*struct adc_debug dbg;*/
 	char cmd[MAX_USER_INPUT_LEN];
 	/*int ret, i;*/
-	int vbat_raw, vbat_unit;
+	int adc_raw, adc_unit;
 
 	pr_info("%s\n", __func__);
 
@@ -1070,10 +1071,20 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 		cmd[len - 1] = '\0';
 
 	if (strcmp (cmd, "VBAT_UNIT") == 0) {
-		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_VBAT, &vbat_raw, NULL, NULL);
-		vbat_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_VBAT, vbat_raw);
-		printk(KERN_INFO "%s: VBAT: Raw %d, unit %d mV\n", __func__, vbat_raw, vbat_unit);
+		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_VBAT, &adc_raw, NULL, NULL);
+		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_VBAT, adc_raw);
+		printk(KERN_INFO "%s: VBAT: Raw %d, unit %d mV\n", __func__, adc_raw, adc_unit);
 	
+	}
+	else if (strcmp(cmd, "BSI_UNIT") == 0) {
+		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_BSI, &adc_raw, NULL, NULL);
+		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_BSI, adc_raw);
+		printk(KERN_INFO "%s: BSI: Raw %d, unit %d HOhm\n", __func__, adc_raw, adc_unit);
+	}
+	else if (strcmp(cmd, "BTEMP_UNIT") == 0) {
+		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_BTEMP, &adc_raw, NULL, NULL);
+		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_BTEMP, adc_raw);
+		printk(KERN_INFO "%s: BTEMP: Raw %d, unit %d K\n", __func__, adc_raw, adc_unit);
 	}
 
 
@@ -1115,6 +1126,7 @@ static int __devinit bcm59055_adc_chipset_api_probe(struct platform_device *pdev
 	/* Make sure fuel gauge is active. So far we don't care about return value */
 	bcm59055_fg_enable ();
 	bcm59055_fg_offset_cal (false);
+	/* When we get calibraion data, call driver to set the value */
 
 	proc_create_data("adc_chipset_api", S_IRWXUGO, NULL, &bcm59055_adc_chipset_ops, bcm59055_adc_chipset_api);
 

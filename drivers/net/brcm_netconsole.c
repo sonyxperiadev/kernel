@@ -918,43 +918,49 @@ int brcm_klogging(char *data, int length)
 {
 
 	int frag, left, len_sent = 0;	
-        unsigned long flags;
-        struct brcm_netconsole_target *nt;
-        const char *tmp;
-	
-	 /* Avoid taking lock and disabling interrupts unnecessarily */
-        if (list_empty(&target_list))
-                return len_sent;
-	
-	spin_lock_irqsave(&target_list_lock, flags);
-        list_for_each_entry(nt, &target_list, list) {
-                brcm_netconsole_target_get(nt);
-                if (nt->enabled && netif_running(nt->np.dev) && netif_carrier_ok(nt->np.dev)) {
+	unsigned long flags;
+	struct brcm_netconsole_target *nt;
+	const char *tmp;
 
-			  if (netpoll_free_memory() == 0) {
-			  	pr_info("brcm_netconsole_klogging: out of memory.....");
+	/* Avoid taking lock and disabling interrupts unnecessarily */
+	if (list_empty(&target_list))
+		return len_sent;
+
+	spin_lock_irqsave(&target_list_lock, flags);
+	list_for_each_entry(nt, &target_list, list) {
+		brcm_netconsole_target_get(nt);
+		if (nt->enabled && netif_running(nt->np.dev) && netif_carrier_ok(nt->np.dev)) {
+
+			if (netpoll_free_memory() == 0) {
+				pr_info("brcm_netconsole_klogging: out of memory.....\n");
 				spin_unlock_irqrestore(&target_list_lock, flags);
 				return 0;
-			  }
-                        /*
-                         * We nest this inside the for-each-target loop above
-                         * so that we're able to get as much logging out to
-                         * at least one target if we die inside here, instead
-                         * of unnecessarily keeping all targets in lock-step.
-                         */
-                        tmp = data;
+			}
+			/*
+			* We nest this inside the for-each-target loop above
+			* so that we're able to get as much logging out to
+			* at least one target if we die inside here, instead
+			* of unnecessarily keeping all targets in lock-step.
+			*/
+			tmp = data;
 
-                        for (left = length; left;) {
-                                frag = min(left, MAX_PRINT_CHUNK);
-                                netpoll_send_udp(&nt->np, tmp, frag);
-                                tmp += frag;
-                                left -= frag;
+			for (left = length; left;) {
+				frag = min(left, MAX_PRINT_CHUNK);
+				if (frag > netpoll_free_memory()) {
+					pr_info("brcm_klogging not enough mem to send req:%d left:%d\n",
+						frag, netpoll_free_memory());
+						goto end_of_send;
+				}
+				netpoll_send_udp(&nt->np, tmp, frag);
+				tmp += frag;
+				left -= frag;
 				len_sent += frag;
-                        }
-                }		  
-                brcm_netconsole_target_put(nt);
-        }
-        spin_unlock_irqrestore(&target_list_lock, flags);
+			}
+		}
+end_of_send:
+		brcm_netconsole_target_put(nt);
+	}
+	spin_unlock_irqrestore(&target_list_lock, flags);
 	return len_sent;
 }
 

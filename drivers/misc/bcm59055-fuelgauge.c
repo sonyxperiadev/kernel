@@ -226,7 +226,7 @@ int bcm59055_fg_set_comb_rate(int rate)
 	u8 reg;
 	int ret;
 	pr_debug("Inside %s\n", __func__);
-	if (rate < FG_COMB_RATE_2HZ && rate > FG_COMB_RATE_16HZ) {
+	if (rate < FG_COMB_RATE_2HZ || rate > FG_COMB_RATE_16HZ) {
 		pr_info("%s: Invalid rate\n", __func__);
 		return -EINVAL;
 	}
@@ -256,7 +256,7 @@ EXPORT_SYMBOL(bcm59055_fg_init_read);
 int bcm59055_fg_read_soc(u32 *fg_accm, u16 *fg_cnt, u16 *fg_sleep_cnt)
 {
 	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
-	int reg[SOC_READ_BYTE_MAX];
+	u8 reg[SOC_READ_BYTE_MAX];
 	int ret;
 	pr_debug("Inside %s\n", __func__);
 
@@ -292,7 +292,7 @@ EXPORT_SYMBOL(bcm59055_fg_reset);
 int bcm59055_fg_read_sample(void)
 {
 	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
-	int reg[2], ret;
+	u8 reg[2], ret;
 	int val;
 	pr_debug("Inside %s\n", __func__);
 
@@ -303,6 +303,20 @@ int bcm59055_fg_read_sample(void)
 	return val;
 }
 EXPORT_SYMBOL(bcm59055_fg_read_sample);
+
+int bcm59055_fg_set_fgfrzsmpl(void)
+{
+	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
+	u8 reg;
+	int ret;
+	pr_debug("Inside %s\n", __func__);
+
+	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGCTRL2);
+	reg |= FGFRZSMPL;
+	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_FGCTRL2, reg);
+	return ret;
+}
+EXPORT_SYMBOL(bcm59055_fg_set_fgfrzsmpl);
 
 int bcm59055_fg_write_gain_trim(u8 gain)
 {
