@@ -5128,6 +5128,20 @@ int dwc_otg_set_param_host_nperio_tx_fifo_size(dwc_otg_core_if_t * core_if,
 		return -DWC_E_INVALID;
 	}
 
+	/* FIXME: This is a temporary workaround that removes the check against
+	 * maximum allowed host non-periodic TX FIFO size, which is given by
+	 * the GNPTXFSIZ reset value.
+	 *
+	 * Although GNPTXFSIZ is a global register it has different reset
+	 * values for device and host mode. If the USB core is in device mode
+	 * during DWC OTG driver initialization, the driver will incorrectly
+	 * use the device mode reset value as the maximum allowed host
+	 * non-periodic TX FIFO size.
+	 *
+	 * DWC OTG driver should be modified so that this function is only
+	 * called when USB core is in host mode.
+	 */
+#if 0
 	if (val > (dwc_read_reg32(&core_if->core_global_regs->gnptxfsiz) >> 16)) {
 		if (dwc_otg_param_initialized
 		    (core_if->core_params->host_nperio_tx_fifo_size)) {
@@ -5140,6 +5154,7 @@ int dwc_otg_set_param_host_nperio_tx_fifo_size(dwc_otg_core_if_t * core_if,
 		     16);
 		retval = -DWC_E_INVALID;
 	}
+#endif
 
 	core_if->core_params->host_nperio_tx_fifo_size = val;
 	return retval;
