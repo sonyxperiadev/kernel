@@ -53,7 +53,7 @@ config BCM_HALAUDIO
     bool "HAL Audio Driver support"
     select BCM_AMXR
     select BCM_GOS
-    default y
+    default n
     ---help---
     Say Y to enable HAL Audio Driver support which is used to control
     audio hardware.

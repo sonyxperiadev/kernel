@@ -8,4 +8,4 @@ obj-y += isp/
 obj-y += unicam/
 obj-$(CONFIG_GPIO_USER_MODE_SUPPORT)	+= user-gpio.o
 
-obj-$(CONFIG_BCM_HALAUDIO)             += halaudio/ halaudio_drivers/
+obj-$(CONFIG_BCM_HALAUDIO)             += halaudio/
