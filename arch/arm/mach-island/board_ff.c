@@ -67,6 +67,12 @@
 #include "island.h"
 #include "common.h"
 
+#include <mach/io_map.h>
+#include <mach/aram_layout.h>
+
+#include <linux/vchiq_platform_data_hana.h>
+#include <linux/vchiq_platform_data_memdrv_hana.h>
+
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
 #define KONA_SDIO2_PA   SDIO3_BASE_ADDR
@@ -1066,8 +1072,30 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 
 
 
+#define IPC_SHARED_CHANNEL_VIRT     ( KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
+#define IPC_SHARED_CHANNEL_PHYS     ( INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 
+static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
+    .memdrv = {
+        .common = {
+            .instance_name = "display",
+            .dev_type      = VCHIQ_DEVICE_TYPE_SHARED_MEM,
+        },
+        .sharedMemVirt  = (void *)(IPC_SHARED_CHANNEL_VIRT),
+        .sharedMemPhys  = IPC_SHARED_CHANNEL_PHYS,
+    },
+    .ipcIrq                =  BCM_INT_ID_IPC_OPEN,
+};
 
+static struct platform_device vchiq_display_device = {
+    .name = "vchiq_memdrv_hana",
+    .id = 0,
+    .dev = {
+        .platform_data = &vchiq_display_data_memdrv_hana,
+    },
+};
+
+struct platform_device * vchiq_devices[] __initdata = {&vchiq_display_device};
 
 #define BMA150_IRQ_PIN 120
 
@@ -1349,6 +1377,9 @@ static void __init board_add_devices(void)
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 	platform_add_devices(bcm59055_virtual_consumer_devices, ARRAY_SIZE(bcm59055_virtual_consumer_devices));
 #endif
+
+   platform_add_devices( vchiq_devices, ARRAY_SIZE( vchiq_devices ) );
+
 }
 
 void __init pinmux_setup(void)
