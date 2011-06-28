@@ -40,6 +40,10 @@
 #include <asm/mach/irq.h>
 #include <asm/mach/time.h>
 
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+#include <linux/broadcom/knllog.h>
+#endif
+
 /*
  * No architecture-specific irq_finish function defined in arm/arch/irqs.h.
  */
@@ -105,6 +109,9 @@ unlock:
 asmlinkage void __exception asm_do_IRQ(unsigned int irq, struct pt_regs *regs)
 {
 	struct pt_regs *old_regs = set_irq_regs(regs);
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+	struct irq_desc *desc;
+#endif
 
 	irq_enter();
 
@@ -117,8 +124,18 @@ asmlinkage void __exception asm_do_IRQ(unsigned int irq, struct pt_regs *regs)
 			printk(KERN_WARNING "Bad IRQ%u\n", irq);
 		ack_bad_irq(irq);
 	} else {
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+		desc = irq_desc + irq;
+		if (gKnllogIrqSchedEnable & KNLLOG_IRQ)
+			KNLLOG("in  [%d] (0x%x)\n", irq, (int)desc);
+#endif
 		generic_handle_irq(irq);
 	}
+
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+	if (gKnllogIrqSchedEnable & KNLLOG_IRQ)
+		KNLLOG("out [%d] (0x%x)\n", irq, (int)desc);
+#endif
 
 	/* AT91 specific workaround */
 	irq_finish(irq);

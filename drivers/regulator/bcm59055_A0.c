@@ -14,7 +14,7 @@
 *****************************************************************************/
 
 #include <linux/regulator/driver.h>
-#include <linux/mfd/bcm590xx/bcm59055_A0.h>
+#include <linux/mfd/bcm590xx/core.h>
 
 /** Voltage in micro volts */
 u32 bcm59055_ldo_v_table[] =
@@ -31,34 +31,38 @@ u32 bcm59055_ldo_v_table[] =
 
 u32 bcm59055_sr_v_table[] =
 {
-	700000,  /* 0x0000 */
-	800000,  /* 0x0001 */
-	860000,  /* 0x0010 */
-	880000,  /* 0x0011 */
-	900000,  /* 0x0100 */
-	920000,  /* 0x0101 */
-	940000,  /* 0x0110 */
-	960000,  /* 0x0111 */
-	980000,  /* 0x1000 */
-	1000000,  /* 0x1001 */
-	1020000,  /* 0x1010 */
-	1040000,  /* 0x1011 */
-	1060000,
-	1080000,
-	1100000,
-	1120000,
-	1140000,
-	1160000,
-	1180000,
-	1200000,
-	1220000,
-	1240000,
-	1260000,
-	1280000,
-	1300000,
-	1320000,
-	1340000,
-	1800000,
+	700000,  /* 0x00 */
+	800000,  /* 0x01 */
+	860000,  /* 0x02 */
+	880000,  /* 0x03 */
+	900000,  /* 0x04 */
+	920000,  /* 0x05 */
+	940000,  /* 0x06 */
+	960000,  /* 0x07 */
+	980000,  /* 0x08 */
+	1000000, /* 0x09 */
+	1020000, /* 0x0A */
+	1040000, /* 0x0B */
+	1060000, /* 0x0C */
+	1080000, /* 0x0D */
+	1100000, /* 0x0E */
+	1120000, /* 0x0F */
+	1140000, /* 0x10 */
+	1160000, /* 0x11 */
+	1180000, /* 0x12 */
+	1200000, /* 0x13 */
+	1220000, /* 0x14 */
+	1240000, /* 0x15 */
+	1260000, /* 0x16 */
+	1280000, /* 0x17 */
+	1300000, /* 0x18 */
+	1320000, /* 0x19 */
+	1340000, /* 0x1A */
+	1800000, /* 0x1B */
+	1200000, /* 0x1C */
+	1200000, /* 0x1D */
+	1200000, /* 0x1E */
+	1200000, /* 0x1F */
 };
 
 static struct regulator_desc bcm59055_info[BCM590XX_MAX_REGULATOR] =
@@ -298,3 +302,32 @@ unsigned int bcm590xx_ldo_or_sr(int id)
 	return -EIO;
 }
 
+int set_csr_volt(int nm, int lpm, int turbo, struct bcm590xx *bcm590xx)
+{
+	u8 val, mask = 0x1F;
+	int ret = 0;
+	int reg = BCM59055_REG_CSRCTRL1;
+	if (nm > 0) {
+		val = bcm590xx_reg_read(bcm590xx, reg);
+		val &= ~mask;
+		val |= (nm & mask);
+		ret = bcm590xx_reg_write(bcm590xx, reg, val);
+	}
+	reg++;
+	if (lpm > 0) {
+		val = bcm590xx_reg_read(bcm590xx, reg);
+		val &= ~mask;
+		val |= (nm & mask);
+		ret |= bcm590xx_reg_write(bcm590xx, reg, val);
+	}
+	reg++;
+	if (turbo > 0) {
+		val = bcm590xx_reg_read(bcm590xx, reg);
+		val &= ~mask;
+		val |= (nm & mask);
+		ret |= bcm590xx_reg_write(bcm590xx, reg, val);
+	}
+	if (ret)
+		pr_info("%s: ERROR writing CSR voltages ERROR CODE %d\n", __func__, ret);
+	return ret;
+}

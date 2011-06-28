@@ -26,7 +26,6 @@ Broadcom's express prior written consent.
 #include "auddrv_def.h"
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
-#include "pmu.h"
 #include "log.h"
 
 //****************************************************************************

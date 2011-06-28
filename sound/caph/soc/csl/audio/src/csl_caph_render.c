@@ -28,7 +28,7 @@ Broadcom's express prior written consent.
 #include "csl_caph_dma.h"
 #include "csl_caph_hwctrl.h"
 #include "csl_audio_render.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "dbg.h"
 #endif
 
@@ -70,7 +70,7 @@ typedef	struct
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {0};
+static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
 
 //****************************************************************************
 // local function declarations
@@ -100,7 +100,7 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_init::source=0x%x sink=0x%x.\n", source, sink));
 	if (source == CSL_CAPH_DEV_DSP) // any sink case? fixed the dmach for dsp
 	{
-		source == CSL_CAPH_DEV_DSP_throughMEM;
+		source = CSL_CAPH_DEV_DSP_throughMEM;
 		dmaCH = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH12);
 	}
 	else

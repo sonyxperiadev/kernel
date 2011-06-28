@@ -76,7 +76,7 @@ Result_t dspif_VPU_record_start ( VOCAPTURE_RECORD_MODE_t	recordMode,
 			numFramesPerInterrupt = 4;
 
 	VPRIPCMDQ_StartCallRecording((UInt8)recordMode, (UInt8)numFramesPerInterrupt, (UInt16)encodingMode);
-	Log_DebugPrintf(LOGID_AUDIO, " : dspif_VPU_record_start::Start capture, encodingMode = 0x%x, recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x, speechMode = 0x%x, dataRate = 0x%x\n", 
+	Log_DebugPrintf(LOGID_AUDIO, " : dspif_VPU_record_start::Start capture, encodingMode = 0x%x, recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x, speechMode = 0x%lx, dataRate = 0x%lx\n", 
 							encodingMode, recordMode, procEnable, dtxEnable, speechMode, dataRate);
 	
 	return RESULT_OK;

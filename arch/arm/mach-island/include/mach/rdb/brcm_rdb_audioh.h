@@ -1,6 +1,6 @@
 /************************************************************************************************/
 /*                                                                                              */
-/*  Copyright 2010  Broadcom Corporation                                                        */
+/*  Copyright 2011  Broadcom Corporation                                                        */
 /*                                                                                              */
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 11/27/2010 23:54:34                                             */
-/*     RDB file : /projects/DSP/revA0                                                                   */
+/*     Date     : Generated on 4/25/2011 11:6:8                                             */
+/*     RDB file : /projects/BIGISLAND/revA0                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_AUDIOH_H__
@@ -90,7 +90,7 @@
 #define       AUDIOH_DAC_CTL_STEREO_R_ENABLE_CMD_START_STEREO_R           0x00000001
 #define       AUDIOH_DAC_CTL_STEREO_R_ENABLE_CMD_STOP_STEREO_R            0x00000000
 
-#define AUDIOH_ADC_CTL_OFFSET                                             0x00000002
+#define AUDIOH_ADC_CTL_OFFSET                                             0x00000004
 #define AUDIOH_ADC_CTL_TYPE                                               UInt32
 #define AUDIOH_ADC_CTL_RESERVED_MASK                                      0xEEE00820
 #define    AUDIOH_ADC_CTL_AMIC_CLK_PHASE_SHIFT                            28
@@ -142,7 +142,7 @@
 #define       AUDIOH_ADC_CTL_DMIC1_EN_CMD_DMIC1_EN_DISABLE                0x00000000
 #define       AUDIOH_ADC_CTL_DMIC1_EN_CMD_DMIC1_EN_ENABLE                 0x00000001
 
-#define AUDIOH_DMA_CTL_OFFSET                                             0x00000004
+#define AUDIOH_DMA_CTL_OFFSET                                             0x00000008
 #define AUDIOH_DMA_CTL_TYPE                                               UInt32
 #define AUDIOH_DMA_CTL_RESERVED_MASK                                      0xFFFFFC80
 #define    AUDIOH_DMA_CTL_NVINL_DMA_EN_SHIFT                              9
@@ -182,7 +182,7 @@
 #define       AUDIOH_DMA_CTL_STEREO_DMA_EN_CMD_STEREO_DMA_EN_DISABLE      0x00000000
 #define       AUDIOH_DMA_CTL_STEREO_DMA_EN_CMD_STEREO_DMA_EN_ENABLE       0x00000001
 
-#define AUDIOH_AUDIO_INT_STATUS_OFFSET                                    0x00000006
+#define AUDIOH_AUDIO_INT_STATUS_OFFSET                                    0x0000000C
 #define AUDIOH_AUDIO_INT_STATUS_TYPE                                      UInt32
 #define AUDIOH_AUDIO_INT_STATUS_RESERVED_MASK                             0xFFF08080
 #define    AUDIOH_AUDIO_INT_STATUS_NVIN_FIFOL_ERR_SHIFT                   19
@@ -222,7 +222,7 @@
 #define    AUDIOH_AUDIO_INT_STATUS_STEREO_INT_SHIFT                       0
 #define    AUDIOH_AUDIO_INT_STATUS_STEREO_INT_MASK                        0x00000001
 
-#define AUDIOH_AUDIO_INTC_OFFSET                                          0x00000008
+#define AUDIOH_AUDIO_INTC_OFFSET                                          0x00000010
 #define AUDIOH_AUDIO_INTC_TYPE                                            UInt32
 #define AUDIOH_AUDIO_INTC_RESERVED_MASK                                   0xFFF08080
 #define    AUDIOH_AUDIO_INTC_NVIN_FIFOL_ERRINT_EN_SHIFT                   19
@@ -280,7 +280,7 @@
 #define       AUDIOH_AUDIO_INTC_STEREO_INTEN_CMD_STEREO_INT_DISABLE       0x00000000
 #define       AUDIOH_AUDIO_INTC_STEREO_INTEN_CMD_STEREO_INT_ENABLE        0x00000001
 
-#define AUDIOH_AUDIO_API_OFFSET                                           0x0000000A
+#define AUDIOH_AUDIO_API_OFFSET                                           0x00000014
 #define AUDIOH_AUDIO_API_TYPE                                             UInt32
 #define AUDIOH_AUDIO_API_RESERVED_MASK                                    0xFFFFF8E0
 #define    AUDIOH_AUDIO_API_VOUT_API_ATT_SHIFT                            10
@@ -300,7 +300,7 @@
 #define    AUDIOH_AUDIO_API_STEREO_API_EN_SHIFT                           0
 #define    AUDIOH_AUDIO_API_STEREO_API_EN_MASK                            0x00000001
 
-#define AUDIOH_STEREO_FIFO_CTRL_OFFSET                                    0x00000010
+#define AUDIOH_STEREO_FIFO_CTRL_OFFSET                                    0x00000020
 #define AUDIOH_STEREO_FIFO_CTRL_TYPE                                      UInt32
 #define AUDIOH_STEREO_FIFO_CTRL_RESERVED_MASK                             0xFFFF8000
 #define    AUDIOH_STEREO_FIFO_CTRL_STEREO_FIFO_MONO_SHIFT                 14
@@ -316,7 +316,7 @@
 #define    AUDIOH_STEREO_FIFO_CTRL_STEREO_FIFO_THRES_SHIFT                0
 #define    AUDIOH_STEREO_FIFO_CTRL_STEREO_FIFO_THRES_MASK                 0x0000007F
 
-#define AUDIOH_IHF_FIFO_CTRL_OFFSET                                       0x00000012
+#define AUDIOH_IHF_FIFO_CTRL_OFFSET                                       0x00000024
 #define AUDIOH_IHF_FIFO_CTRL_TYPE                                         UInt32
 #define AUDIOH_IHF_FIFO_CTRL_RESERVED_MASK                                0xFFFF8000
 #define    AUDIOH_IHF_FIFO_CTRL_IHF_FIFO_MONO_SHIFT                       14
@@ -332,7 +332,7 @@
 #define    AUDIOH_IHF_FIFO_CTRL_IHF_FIFO_THRES_SHIFT                      0
 #define    AUDIOH_IHF_FIFO_CTRL_IHF_FIFO_THRES_MASK                       0x0000007F
 
-#define AUDIOH_VOUT_FIFO_CTRL_OFFSET                                      0x00000014
+#define AUDIOH_VOUT_FIFO_CTRL_OFFSET                                      0x00000028
 #define AUDIOH_VOUT_FIFO_CTRL_TYPE                                        UInt32
 #define AUDIOH_VOUT_FIFO_CTRL_RESERVED_MASK                               0xFFFFC000
 #define    AUDIOH_VOUT_FIFO_CTRL_VOUT_FIFO_24BIT_SHIFT                    13
@@ -346,7 +346,7 @@
 #define    AUDIOH_VOUT_FIFO_CTRL_VOUT_FIFO_THRES_SHIFT                    0
 #define    AUDIOH_VOUT_FIFO_CTRL_VOUT_FIFO_THRES_MASK                     0x0000007F
 
-#define AUDIOH_VIBRA_FIFO_CTRL_OFFSET                                     0x00000016
+#define AUDIOH_VIBRA_FIFO_CTRL_OFFSET                                     0x0000002C
 #define AUDIOH_VIBRA_FIFO_CTRL_TYPE                                       UInt32
 #define AUDIOH_VIBRA_FIFO_CTRL_RESERVED_MASK                              0xFFFE8000
 #define    AUDIOH_VIBRA_FIFO_CTRL_VIBRA_FIFO_BYPASS_SHIFT                 16
@@ -366,7 +366,7 @@
 #define    AUDIOH_VIBRA_FIFO_CTRL_VIBRA_FIFO_THRES_SHIFT                  0
 #define    AUDIOH_VIBRA_FIFO_CTRL_VIBRA_FIFO_THRES_MASK                   0x0000007F
 
-#define AUDIOH_EANC_FIFO_CTRL_OFFSET                                      0x00000018
+#define AUDIOH_EANC_FIFO_CTRL_OFFSET                                      0x00000030
 #define AUDIOH_EANC_FIFO_CTRL_TYPE                                        UInt32
 #define AUDIOH_EANC_FIFO_CTRL_RESERVED_MASK                               0xFFFFC000
 #define    AUDIOH_EANC_FIFO_CTRL_EANC_FIFO_24BIT_SHIFT                    13
@@ -380,7 +380,7 @@
 #define    AUDIOH_EANC_FIFO_CTRL_EANC_FIFO_THRES_SHIFT                    0
 #define    AUDIOH_EANC_FIFO_CTRL_EANC_FIFO_THRES_MASK                     0x0000007F
 
-#define AUDIOH_VIN_FIFO_CTRL_OFFSET                                       0x0000001A
+#define AUDIOH_VIN_FIFO_CTRL_OFFSET                                       0x00000034
 #define AUDIOH_VIN_FIFO_CTRL_TYPE                                         UInt32
 #define AUDIOH_VIN_FIFO_CTRL_RESERVED_MASK                                0xFFFE8000
 #define    AUDIOH_VIN_FIFO_CTRL_SIDETONE_SEL_SHIFT                        16
@@ -398,7 +398,7 @@
 #define    AUDIOH_VIN_FIFO_CTRL_VIN_FIFO_THRES_SHIFT                      0
 #define    AUDIOH_VIN_FIFO_CTRL_VIN_FIFO_THRES_MASK                       0x0000007F
 
-#define AUDIOH_NVIN_FIFO_CTRL_OFFSET                                      0x0000001C
+#define AUDIOH_NVIN_FIFO_CTRL_OFFSET                                      0x00000038
 #define AUDIOH_NVIN_FIFO_CTRL_TYPE                                        UInt32
 #define AUDIOH_NVIN_FIFO_CTRL_RESERVED_MASK                               0xFFFC8000
 #define    AUDIOH_NVIN_FIFO_CTRL_SIDETONE_SEL_R_SHIFT                     17
@@ -418,7 +418,7 @@
 #define    AUDIOH_NVIN_FIFO_CTRL_NVIN_FIFO_THRES_SHIFT                    0
 #define    AUDIOH_NVIN_FIFO_CTRL_NVIN_FIFO_THRES_MASK                     0x0000007F
 
-#define AUDIOH_STEREO_FIFO_STATUS_OFFSET                                  0x0000001E
+#define AUDIOH_STEREO_FIFO_STATUS_OFFSET                                  0x0000003C
 #define AUDIOH_STEREO_FIFO_STATUS_TYPE                                    UInt32
 #define AUDIOH_STEREO_FIFO_STATUS_RESERVED_MASK                           0xFFFFE000
 #define    AUDIOH_STEREO_FIFO_STATUS_STEREO_FIFO_NEAR_FULL_SHIFT          12
@@ -434,7 +434,7 @@
 #define    AUDIOH_STEREO_FIFO_STATUS_STEREO_FIFO_ENTRY_SHIFT              0
 #define    AUDIOH_STEREO_FIFO_STATUS_STEREO_FIFO_ENTRY_MASK               0x000000FF
 
-#define AUDIOH_IHF_FIFO_STATUS_OFFSET                                     0x00000020
+#define AUDIOH_IHF_FIFO_STATUS_OFFSET                                     0x00000040
 #define AUDIOH_IHF_FIFO_STATUS_TYPE                                       UInt32
 #define AUDIOH_IHF_FIFO_STATUS_RESERVED_MASK                              0xFFFFE000
 #define    AUDIOH_IHF_FIFO_STATUS_IHF_FIFO_NEAR_FULL_SHIFT                12
@@ -450,7 +450,7 @@
 #define    AUDIOH_IHF_FIFO_STATUS_IHF_FIFO_ENTRY_SHIFT                    0
 #define    AUDIOH_IHF_FIFO_STATUS_IHF_FIFO_ENTRY_MASK                     0x000000FF
 
-#define AUDIOH_VOUT_FIFO_STATUS_OFFSET                                    0x00000022
+#define AUDIOH_VOUT_FIFO_STATUS_OFFSET                                    0x00000044
 #define AUDIOH_VOUT_FIFO_STATUS_TYPE                                      UInt32
 #define AUDIOH_VOUT_FIFO_STATUS_RESERVED_MASK                             0xFFFFE000
 #define    AUDIOH_VOUT_FIFO_STATUS_VOUT_FIFO_NEAR_FULL_SHIFT              12
@@ -466,7 +466,7 @@
 #define    AUDIOH_VOUT_FIFO_STATUS_VOUT_FIFO_ENTRY_SHIFT                  0
 #define    AUDIOH_VOUT_FIFO_STATUS_VOUT_FIFO_ENTRY_MASK                   0x000000FF
 
-#define AUDIOH_VIBRA_FIFO_STATUS_OFFSET                                   0x00000024
+#define AUDIOH_VIBRA_FIFO_STATUS_OFFSET                                   0x00000048
 #define AUDIOH_VIBRA_FIFO_STATUS_TYPE                                     UInt32
 #define AUDIOH_VIBRA_FIFO_STATUS_RESERVED_MASK                            0xFFFFE000
 #define    AUDIOH_VIBRA_FIFO_STATUS_VIBRA_FIFO_NEAR_FULL_SHIFT            12
@@ -482,7 +482,7 @@
 #define    AUDIOH_VIBRA_FIFO_STATUS_VIBRA_FIFO_ENTRY_SHIFT                0
 #define    AUDIOH_VIBRA_FIFO_STATUS_VIBRA_FIFO_ENTRY_MASK                 0x000000FF
 
-#define AUDIOH_EANC_FIFO_STATUS_OFFSET                                    0x00000026
+#define AUDIOH_EANC_FIFO_STATUS_OFFSET                                    0x0000004C
 #define AUDIOH_EANC_FIFO_STATUS_TYPE                                      UInt32
 #define AUDIOH_EANC_FIFO_STATUS_RESERVED_MASK                             0xFFFFE000
 #define    AUDIOH_EANC_FIFO_STATUS_EANC_FIFO_NEAR_FULL_SHIFT              12
@@ -498,7 +498,7 @@
 #define    AUDIOH_EANC_FIFO_STATUS_EANC_FIFO_ENTRY_SHIFT                  0
 #define    AUDIOH_EANC_FIFO_STATUS_EANC_FIFO_ENTRY_MASK                   0x000000FF
 
-#define AUDIOH_VIN_FIFOR_STATUS_OFFSET                                    0x00000028
+#define AUDIOH_VIN_FIFOR_STATUS_OFFSET                                    0x00000050
 #define AUDIOH_VIN_FIFOR_STATUS_TYPE                                      UInt32
 #define AUDIOH_VIN_FIFOR_STATUS_RESERVED_MASK                             0xFFFFE000
 #define    AUDIOH_VIN_FIFOR_STATUS_VIN_FIFOR_NEAR_FULL_SHIFT              12
@@ -514,7 +514,7 @@
 #define    AUDIOH_VIN_FIFOR_STATUS_VIN_FIFOR_ENTRY_SHIFT                  0
 #define    AUDIOH_VIN_FIFOR_STATUS_VIN_FIFOR_ENTRY_MASK                   0x000000FF
 
-#define AUDIOH_NVIN_FIFOR_STATUS_OFFSET                                   0x0000002A
+#define AUDIOH_NVIN_FIFOR_STATUS_OFFSET                                   0x00000054
 #define AUDIOH_NVIN_FIFOR_STATUS_TYPE                                     UInt32
 #define AUDIOH_NVIN_FIFOR_STATUS_RESERVED_MASK                            0xFFFFE000
 #define    AUDIOH_NVIN_FIFOR_STATUS_NVIN_FIFOR_NEAR_FULL_SHIFT            12
@@ -530,7 +530,7 @@
 #define    AUDIOH_NVIN_FIFOR_STATUS_NVIN_FIFOR_ENTRY_SHIFT                0
 #define    AUDIOH_NVIN_FIFOR_STATUS_NVIN_FIFOR_ENTRY_MASK                 0x000000FF
 
-#define AUDIOH_VIN_FIFOL_STATUS_OFFSET                                    0x0000002C
+#define AUDIOH_VIN_FIFOL_STATUS_OFFSET                                    0x00000058
 #define AUDIOH_VIN_FIFOL_STATUS_TYPE                                      UInt32
 #define AUDIOH_VIN_FIFOL_STATUS_RESERVED_MASK                             0xFFFFE000
 #define    AUDIOH_VIN_FIFOL_STATUS_VIN_FIFOL_NEAR_FULL_SHIFT              12
@@ -546,7 +546,7 @@
 #define    AUDIOH_VIN_FIFOL_STATUS_VIN_FIFOL_ENTRY_SHIFT                  0
 #define    AUDIOH_VIN_FIFOL_STATUS_VIN_FIFOL_ENTRY_MASK                   0x000000FF
 
-#define AUDIOH_NVIN_FIFOL_STATUS_OFFSET                                   0x0000002E
+#define AUDIOH_NVIN_FIFOL_STATUS_OFFSET                                   0x0000005C
 #define AUDIOH_NVIN_FIFOL_STATUS_TYPE                                     UInt32
 #define AUDIOH_NVIN_FIFOL_STATUS_RESERVED_MASK                            0xFFFFE000
 #define    AUDIOH_NVIN_FIFOL_STATUS_NVIN_FIFOL_NEAR_FULL_SHIFT            12
@@ -562,7 +562,7 @@
 #define    AUDIOH_NVIN_FIFOL_STATUS_NVIN_FIFOL_ENTRY_SHIFT                0
 #define    AUDIOH_NVIN_FIFOL_STATUS_NVIN_FIFOL_ENTRY_MASK                 0x000000FF
 
-#define AUDIOH_ADCPATH_GLOBAL_CTRL_OFFSET                                 0x00000030
+#define AUDIOH_ADCPATH_GLOBAL_CTRL_OFFSET                                 0x00000060
 #define AUDIOH_ADCPATH_GLOBAL_CTRL_TYPE                                   UInt32
 #define AUDIOH_ADCPATH_GLOBAL_CTRL_RESERVED_MASK                          0xFFFFFEFE
 #define    AUDIOH_ADCPATH_GLOBAL_CTRL_FIFO_GLOBAL_CLEAR_SHIFT             8
@@ -570,7 +570,7 @@
 #define    AUDIOH_ADCPATH_GLOBAL_CTRL_GLOABAL_EN_SHIFT                    0
 #define    AUDIOH_ADCPATH_GLOBAL_CTRL_GLOABAL_EN_MASK                     0x00000001
 
-#define AUDIOH_VIN_FILTER_CTRL_OFFSET                                     0x0000003A
+#define AUDIOH_VIN_FILTER_CTRL_OFFSET                                     0x00000074
 #define AUDIOH_VIN_FILTER_CTRL_TYPE                                       UInt32
 #define AUDIOH_VIN_FILTER_CTRL_RESERVED_MASK                              0x80008000
 #define    AUDIOH_VIN_FILTER_CTRL_DMIC2_CIC_BIT_SEL_SHIFT                 29
@@ -582,7 +582,7 @@
 #define    AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_SHIFT                0
 #define    AUDIOH_VIN_FILTER_CTRL_DMIC1_CIC_FINE_SCL_MASK                 0x00001FFF
 
-#define AUDIOH_NVIN_FILTER_CTRL_OFFSET                                    0x0000003C
+#define AUDIOH_NVIN_FILTER_CTRL_OFFSET                                    0x00000078
 #define AUDIOH_NVIN_FILTER_CTRL_TYPE                                      UInt32
 #define AUDIOH_NVIN_FILTER_CTRL_RESERVED_MASK                             0x80008000
 #define    AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_SHIFT                29
@@ -594,7 +594,7 @@
 #define    AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_SHIFT               0
 #define    AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_MASK                0x00001FFF
 
-#define AUDIOH_LOOPBACK_CTRL_OFFSET                                       0x0000003E
+#define AUDIOH_LOOPBACK_CTRL_OFFSET                                       0x0000007C
 #define AUDIOH_LOOPBACK_CTRL_TYPE                                         UInt32
 #define AUDIOH_LOOPBACK_CTRL_RESERVED_MASK                                0xFFFFFE08
 #define    AUDIOH_LOOPBACK_CTRL_VOUT_LOOPBACK_SHIFT                       8
@@ -612,7 +612,7 @@
 #define    AUDIOH_LOOPBACK_CTRL_LOOPBACK_EN_SHIFT                         0
 #define    AUDIOH_LOOPBACK_CTRL_LOOPBACK_EN_MASK                          0x00000001
 
-#define AUDIOH_VIBRA_SDM_CTRL_OFFSET                                      0x00000040
+#define AUDIOH_VIBRA_SDM_CTRL_OFFSET                                      0x00000080
 #define AUDIOH_VIBRA_SDM_CTRL_TYPE                                        UInt32
 #define AUDIOH_VIBRA_SDM_CTRL_RESERVED_MASK                               0xFFFFFFC0
 #define    AUDIOH_VIBRA_SDM_CTRL_SDM_SAMPLE_EDGE_SHIFT                    5
@@ -626,7 +626,7 @@
 #define    AUDIOH_VIBRA_SDM_CTRL_SDM_PWDDIG_SHIFT                         0
 #define    AUDIOH_VIBRA_SDM_CTRL_SDM_PWDDIG_MASK                          0x00000001
 
-#define AUDIOH_VOUT_SDM_COEF_OFFSET                                       0x00000050
+#define AUDIOH_VOUT_SDM_COEF_OFFSET                                       0x000000A0
 #define AUDIOH_VOUT_SDM_COEF_TYPE                                         UInt32
 #define AUDIOH_VOUT_SDM_COEF_RESERVED_MASK                                0x00000000
 #define    AUDIOH_VOUT_SDM_COEF_VOUT_SDM_COEF1_SHIFT                      16
@@ -634,7 +634,7 @@
 #define    AUDIOH_VOUT_SDM_COEF_VOUT_SDM_COEF0_SHIFT                      0
 #define    AUDIOH_VOUT_SDM_COEF_VOUT_SDM_COEF0_MASK                       0x0000FFFF
 
-#define AUDIOH_STEREO_SDM_COEF_L_OFFSET                                   0x00000052
+#define AUDIOH_STEREO_SDM_COEF_L_OFFSET                                   0x000000A4
 #define AUDIOH_STEREO_SDM_COEF_L_TYPE                                     UInt32
 #define AUDIOH_STEREO_SDM_COEF_L_RESERVED_MASK                            0x00000000
 #define    AUDIOH_STEREO_SDM_COEF_L_STEREO_SDM_COEF1_L_SHIFT              16
@@ -642,7 +642,7 @@
 #define    AUDIOH_STEREO_SDM_COEF_L_STEREO_SDM_COEF0_L_SHIFT              0
 #define    AUDIOH_STEREO_SDM_COEF_L_STEREO_SDM_COEF0_L_MASK               0x0000FFFF
 
-#define AUDIOH_STEREO_SDM_COEF_R_OFFSET                                   0x00000054
+#define AUDIOH_STEREO_SDM_COEF_R_OFFSET                                   0x000000A8
 #define AUDIOH_STEREO_SDM_COEF_R_TYPE                                     UInt32
 #define AUDIOH_STEREO_SDM_COEF_R_RESERVED_MASK                            0x00000000
 #define    AUDIOH_STEREO_SDM_COEF_R_STEREO_SDM_COEF1_R_SHIFT              16
@@ -650,7 +650,7 @@
 #define    AUDIOH_STEREO_SDM_COEF_R_STEREO_SDM_COEF0_R_SHIFT              0
 #define    AUDIOH_STEREO_SDM_COEF_R_STEREO_SDM_COEF0_R_MASK               0x0000FFFF
 
-#define AUDIOH_IHF_SDM_COEF_L_OFFSET                                      0x00000056
+#define AUDIOH_IHF_SDM_COEF_L_OFFSET                                      0x000000AC
 #define AUDIOH_IHF_SDM_COEF_L_TYPE                                        UInt32
 #define AUDIOH_IHF_SDM_COEF_L_RESERVED_MASK                               0x00000000
 #define    AUDIOH_IHF_SDM_COEF_L_IHF_SDM_COEF1_L_SHIFT                    16
@@ -658,7 +658,7 @@
 #define    AUDIOH_IHF_SDM_COEF_L_IHF_SDM_COEF0_L_SHIFT                    0
 #define    AUDIOH_IHF_SDM_COEF_L_IHF_SDM_COEF0_L_MASK                     0x0000FFFF
 
-#define AUDIOH_IHF_SDM_COEF_R_OFFSET                                      0x00000058
+#define AUDIOH_IHF_SDM_COEF_R_OFFSET                                      0x000000B0
 #define AUDIOH_IHF_SDM_COEF_R_TYPE                                        UInt32
 #define AUDIOH_IHF_SDM_COEF_R_RESERVED_MASK                               0x00000000
 #define    AUDIOH_IHF_SDM_COEF_R_IHF_SDM_COEF1_R_SHIFT                    16
@@ -666,7 +666,7 @@
 #define    AUDIOH_IHF_SDM_COEF_R_IHF_SDM_COEF0_R_SHIFT                    0
 #define    AUDIOH_IHF_SDM_COEF_R_IHF_SDM_COEF0_R_MASK                     0x0000FFFF
 
-#define AUDIOH_SDM_DITHER_CTL_OFFSET                                      0x0000005A
+#define AUDIOH_SDM_DITHER_CTL_OFFSET                                      0x000000B4
 #define AUDIOH_SDM_DITHER_CTL_TYPE                                        UInt32
 #define AUDIOH_SDM_DITHER_CTL_RESERVED_MASK                               0xFE000000
 #define    AUDIOH_SDM_DITHER_CTL_STEREO_DRSUPPLY_DELAY_SHIFT              20
@@ -702,7 +702,7 @@
 #define    AUDIOH_SDM_DITHER_CTL_STEREO_DITHER_EN_L_SHIFT                 0
 #define    AUDIOH_SDM_DITHER_CTL_STEREO_DITHER_EN_L_MASK                  0x00000001
 
-#define AUDIOH_STEREO_DITHER_POLY_L_OFFSET                                0x0000005C
+#define AUDIOH_STEREO_DITHER_POLY_L_OFFSET                                0x000000B8
 #define AUDIOH_STEREO_DITHER_POLY_L_TYPE                                  UInt32
 #define AUDIOH_STEREO_DITHER_POLY_L_RESERVED_MASK                         0x00000000
 #define    AUDIOH_STEREO_DITHER_POLY_L_STEREO_DITHER_SET_L_SHIFT          31
@@ -710,13 +710,13 @@
 #define    AUDIOH_STEREO_DITHER_POLY_L_STEREO_DITHER_POLY_L_SHIFT         0
 #define    AUDIOH_STEREO_DITHER_POLY_L_STEREO_DITHER_POLY_L_MASK          0x7FFFFFFF
 
-#define AUDIOH_STEREO_DITHER_SEED_L_OFFSET                                0x0000005E
+#define AUDIOH_STEREO_DITHER_SEED_L_OFFSET                                0x000000BC
 #define AUDIOH_STEREO_DITHER_SEED_L_TYPE                                  UInt32
 #define AUDIOH_STEREO_DITHER_SEED_L_RESERVED_MASK                         0x80000000
 #define    AUDIOH_STEREO_DITHER_SEED_L_STEREO_DITHER_SEED_L_SHIFT         0
 #define    AUDIOH_STEREO_DITHER_SEED_L_STEREO_DITHER_SEED_L_MASK          0x7FFFFFFF
 
-#define AUDIOH_STEREO_DITHER_POLY_R_OFFSET                                0x00000060
+#define AUDIOH_STEREO_DITHER_POLY_R_OFFSET                                0x000000C0
 #define AUDIOH_STEREO_DITHER_POLY_R_TYPE                                  UInt32
 #define AUDIOH_STEREO_DITHER_POLY_R_RESERVED_MASK                         0x00000000
 #define    AUDIOH_STEREO_DITHER_POLY_R_STEREO_DITHER_SET_R_SHIFT          31
@@ -724,13 +724,13 @@
 #define    AUDIOH_STEREO_DITHER_POLY_R_STEREO_DITHER_POLY_R_SHIFT         0
 #define    AUDIOH_STEREO_DITHER_POLY_R_STEREO_DITHER_POLY_R_MASK          0x7FFFFFFF
 
-#define AUDIOH_STEREO_DITHER_SEED_R_OFFSET                                0x00000062
+#define AUDIOH_STEREO_DITHER_SEED_R_OFFSET                                0x000000C4
 #define AUDIOH_STEREO_DITHER_SEED_R_TYPE                                  UInt32
 #define AUDIOH_STEREO_DITHER_SEED_R_RESERVED_MASK                         0x80000000
 #define    AUDIOH_STEREO_DITHER_SEED_R_STEREO_DITHER_SEED_R_SHIFT         0
 #define    AUDIOH_STEREO_DITHER_SEED_R_STEREO_DITHER_SEED_R_MASK          0x7FFFFFFF
 
-#define AUDIOH_IHF_DITHER_POLY_L_OFFSET                                   0x00000064
+#define AUDIOH_IHF_DITHER_POLY_L_OFFSET                                   0x000000C8
 #define AUDIOH_IHF_DITHER_POLY_L_TYPE                                     UInt32
 #define AUDIOH_IHF_DITHER_POLY_L_RESERVED_MASK                            0x00000000
 #define    AUDIOH_IHF_DITHER_POLY_L_IHF_DITHER_SET_L_SHIFT                31
@@ -738,13 +738,13 @@
 #define    AUDIOH_IHF_DITHER_POLY_L_IHF_DITHER_POLY_L_SHIFT               0
 #define    AUDIOH_IHF_DITHER_POLY_L_IHF_DITHER_POLY_L_MASK                0x7FFFFFFF
 
-#define AUDIOH_IHF_DITHER_SEED_L_OFFSET                                   0x00000066
+#define AUDIOH_IHF_DITHER_SEED_L_OFFSET                                   0x000000CC
 #define AUDIOH_IHF_DITHER_SEED_L_TYPE                                     UInt32
 #define AUDIOH_IHF_DITHER_SEED_L_RESERVED_MASK                            0x80000000
 #define    AUDIOH_IHF_DITHER_SEED_L_IHF_DITHER_SEED_L_SHIFT               0
 #define    AUDIOH_IHF_DITHER_SEED_L_IHF_DITHER_SEED_L_MASK                0x7FFFFFFF
 
-#define AUDIOH_IHF_DITHER_POLY_R_OFFSET                                   0x00000068
+#define AUDIOH_IHF_DITHER_POLY_R_OFFSET                                   0x000000D0
 #define AUDIOH_IHF_DITHER_POLY_R_TYPE                                     UInt32
 #define AUDIOH_IHF_DITHER_POLY_R_RESERVED_MASK                            0x00000000
 #define    AUDIOH_IHF_DITHER_POLY_R_IHF_DITHER_SET_R_SHIFT                31
@@ -752,13 +752,13 @@
 #define    AUDIOH_IHF_DITHER_POLY_R_IHF_DITHER_POLY_R_SHIFT               0
 #define    AUDIOH_IHF_DITHER_POLY_R_IHF_DITHER_POLY_R_MASK                0x7FFFFFFF
 
-#define AUDIOH_IHF_DITHER_SEED_R_OFFSET                                   0x0000006A
+#define AUDIOH_IHF_DITHER_SEED_R_OFFSET                                   0x000000D4
 #define AUDIOH_IHF_DITHER_SEED_R_TYPE                                     UInt32
 #define AUDIOH_IHF_DITHER_SEED_R_RESERVED_MASK                            0x80000000
 #define    AUDIOH_IHF_DITHER_SEED_R_IHF_DITHER_SEED_R_SHIFT               0
 #define    AUDIOH_IHF_DITHER_SEED_R_IHF_DITHER_SEED_R_MASK                0x7FFFFFFF
 
-#define AUDIOH_VOUT_DITHER_POLY_OFFSET                                    0x00000078
+#define AUDIOH_VOUT_DITHER_POLY_OFFSET                                    0x000000F0
 #define AUDIOH_VOUT_DITHER_POLY_TYPE                                      UInt32
 #define AUDIOH_VOUT_DITHER_POLY_RESERVED_MASK                             0x00000000
 #define    AUDIOH_VOUT_DITHER_POLY_VOUT_DITHER_SET_SHIFT                  31
@@ -766,13 +766,13 @@
 #define    AUDIOH_VOUT_DITHER_POLY_VOUT_DITHER_POLY_SHIFT                 0
 #define    AUDIOH_VOUT_DITHER_POLY_VOUT_DITHER_POLY_MASK                  0x7FFFFFFF
 
-#define AUDIOH_VOUT_DITHER_SEED_OFFSET                                    0x0000007A
+#define AUDIOH_VOUT_DITHER_SEED_OFFSET                                    0x000000F4
 #define AUDIOH_VOUT_DITHER_SEED_TYPE                                      UInt32
 #define AUDIOH_VOUT_DITHER_SEED_RESERVED_MASK                             0x80000000
 #define    AUDIOH_VOUT_DITHER_SEED_VOUT_DITHER_SEED_SHIFT                 0
 #define    AUDIOH_VOUT_DITHER_SEED_VOUT_DITHER_SEED_MASK                  0x7FFFFFFF
 
-#define AUDIOH_HS_DRIVER_SUPPLY_CTRL_OFFSET                               0x0000007C
+#define AUDIOH_HS_DRIVER_SUPPLY_CTRL_OFFSET                               0x000000F8
 #define AUDIOH_HS_DRIVER_SUPPLY_CTRL_TYPE                                 UInt32
 #define AUDIOH_HS_DRIVER_SUPPLY_CTRL_RESERVED_MASK                        0xFFFF008C
 #define    AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_LAG_SHIFT                   8
@@ -784,13 +784,13 @@
 #define    AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_POLARITY_SHIFT              0
 #define    AUDIOH_HS_DRIVER_SUPPLY_CTRL_HS_DS_POLARITY_MASK               0x00000001
 
-#define AUDIOH_HS_DRIVER_SUPPLY_TH_OFFSET                                 0x0000007E
+#define AUDIOH_HS_DRIVER_SUPPLY_TH_OFFSET                                 0x000000FC
 #define AUDIOH_HS_DRIVER_SUPPLY_TH_TYPE                                   UInt32
 #define AUDIOH_HS_DRIVER_SUPPLY_TH_RESERVED_MASK                          0xFF000000
 #define    AUDIOH_HS_DRIVER_SUPPLY_TH_HS_DS_THRES_SHIFT                   0
 #define    AUDIOH_HS_DRIVER_SUPPLY_TH_HS_DS_THRES_MASK                    0x00FFFFFF
 
-#define AUDIOH_AUDIOTX_ISO_OFFSET                                         0x00000080
+#define AUDIOH_AUDIOTX_ISO_OFFSET                                         0x00000100
 #define AUDIOH_AUDIOTX_ISO_TYPE                                           UInt32
 #define AUDIOH_AUDIOTX_ISO_RESERVED_MASK                                  0xFFFFFFFC
 #define    AUDIOH_AUDIOTX_ISO_AUDIOTX_ISO_IN_SHIFT                        1
@@ -798,13 +798,13 @@
 #define    AUDIOH_AUDIOTX_ISO_AUDIOTX_ISO_OUT_SHIFT                       0
 #define    AUDIOH_AUDIOTX_ISO_AUDIOTX_ISO_OUT_MASK                        0x00000001
 
-#define AUDIOH_EP_DAC_CTRL_OFFSET                                         0x00000082
+#define AUDIOH_EP_DAC_CTRL_OFFSET                                         0x00000104
 #define AUDIOH_EP_DAC_CTRL_TYPE                                           UInt32
 #define AUDIOH_EP_DAC_CTRL_RESERVED_MASK                                  0x00000000
 #define    AUDIOH_EP_DAC_CTRL_AUDIOTX_EP_CTRL_SHIFT                       0
 #define    AUDIOH_EP_DAC_CTRL_AUDIOTX_EP_CTRL_MASK                        0xFFFFFFFF
 
-#define AUDIOH_EP_PWR_OFFSET                                              0x00000084
+#define AUDIOH_EP_PWR_OFFSET                                              0x00000108
 #define AUDIOH_EP_PWR_TYPE                                                UInt32
 #define AUDIOH_EP_PWR_RESERVED_MASK                                       0xFFFFFFEA
 #define    AUDIOH_EP_PWR_AUDIOTX_EP_RESET_SHIFT                           4
@@ -814,7 +814,7 @@
 #define    AUDIOH_EP_PWR_AUDIOTX_EP_DAC_PD_SHIFT                          0
 #define    AUDIOH_EP_PWR_AUDIOTX_EP_DAC_PD_MASK                           0x00000001
 
-#define AUDIOH_EP_DRV_OFFSET                                              0x00000086
+#define AUDIOH_EP_DRV_OFFSET                                              0x0000010C
 #define AUDIOH_EP_DRV_TYPE                                                UInt32
 #define AUDIOH_EP_DRV_RESERVED_MASK                                       0xFFFF7E00
 #define    AUDIOH_EP_DRV_AUDIOTX_EP_DRV_SPAREBIT_SHIFT                    15
@@ -828,7 +828,7 @@
 #define    AUDIOH_EP_DRV_AUDIOTX_EP_DRV_PD_SHIFT                          0
 #define    AUDIOH_EP_DRV_AUDIOTX_EP_DRV_PD_MASK                           0x00000001
 
-#define AUDIOH_AUDIOTX_SR_OFFSET                                          0x00000088
+#define AUDIOH_AUDIOTX_SR_OFFSET                                          0x00000110
 #define AUDIOH_AUDIOTX_SR_TYPE                                            UInt32
 #define AUDIOH_AUDIOTX_SR_RESERVED_MASK                                   0xFFFFFC00
 #define    AUDIOH_AUDIOTX_SR_AUDIOTX_SR_SLOPTECTRL_SHIFT                  8
@@ -850,13 +850,13 @@
 #define    AUDIOH_AUDIOTX_SR_AUDIOTX_SR_PUP_ED_DRV_TRIG_SHIFT             0
 #define    AUDIOH_AUDIOTX_SR_AUDIOTX_SR_PUP_ED_DRV_TRIG_MASK              0x00000001
 
-#define AUDIOH_HS_DAC_CTRL_OFFSET                                         0x0000008A
+#define AUDIOH_HS_DAC_CTRL_OFFSET                                         0x00000114
 #define AUDIOH_HS_DAC_CTRL_TYPE                                           UInt32
 #define AUDIOH_HS_DAC_CTRL_RESERVED_MASK                                  0x00000000
 #define    AUDIOH_HS_DAC_CTRL_AUDIOTX_HS_CTRL_SHIFT                       0
 #define    AUDIOH_HS_DAC_CTRL_AUDIOTX_HS_CTRL_MASK                        0xFFFFFFFF
 
-#define AUDIOH_HS_PWR_OFFSET                                              0x0000008C
+#define AUDIOH_HS_PWR_OFFSET                                              0x00000118
 #define AUDIOH_HS_PWR_TYPE                                                UInt32
 #define AUDIOH_HS_PWR_RESERVED_MASK                                       0xFFFFFFE8
 #define    AUDIOH_HS_PWR_AUDIOTX_HS_RESET_SHIFT                           4
@@ -868,13 +868,13 @@
 #define    AUDIOH_HS_PWR_AUDIOTX_HS_DACL_PD_SHIFT                         0
 #define    AUDIOH_HS_PWR_AUDIOTX_HS_DACL_PD_MASK                          0x00000001
 
-#define AUDIOH_IHF_DAC_CTRL_OFFSET                                        0x0000008E
+#define AUDIOH_IHF_DAC_CTRL_OFFSET                                        0x0000011C
 #define AUDIOH_IHF_DAC_CTRL_TYPE                                          UInt32
 #define AUDIOH_IHF_DAC_CTRL_RESERVED_MASK                                 0x00000000
 #define    AUDIOH_IHF_DAC_CTRL_AUDIOTX_IHF_CTRL_SHIFT                     0
 #define    AUDIOH_IHF_DAC_CTRL_AUDIOTX_IHF_CTRL_MASK                      0xFFFFFFFF
 
-#define AUDIOH_IHF_PWR_OFFSET                                             0x00000090
+#define AUDIOH_IHF_PWR_OFFSET                                             0x00000120
 #define AUDIOH_IHF_PWR_TYPE                                               UInt32
 #define AUDIOH_IHF_PWR_RESERVED_MASK                                      0xFFFFFFEC
 #define    AUDIOH_IHF_PWR_AUDIOTX_IHF_RESET_SHIFT                         4
@@ -884,7 +884,7 @@
 #define    AUDIOH_IHF_PWR_AUDIOTX_IHF_DACL_PD_SHIFT                       0
 #define    AUDIOH_IHF_PWR_AUDIOTX_IHF_DACL_PD_MASK                        0x00000001
 
-#define AUDIOH_DAC_CTRL_OFFSET                                            0x00000092
+#define AUDIOH_DAC_CTRL_OFFSET                                            0x00000124
 #define AUDIOH_DAC_CTRL_TYPE                                              UInt32
 #define AUDIOH_DAC_CTRL_RESERVED_MASK                                     0x000000C0
 #define    AUDIOH_DAC_CTRL_AUDIOTX_I_CLK_INV_SHIFT                        31
@@ -900,7 +900,7 @@
 #define    AUDIOH_DAC_CTRL_AUDIOTX_TEST_EN_SHIFT                          0
 #define    AUDIOH_DAC_CTRL_AUDIOTX_TEST_EN_MASK                           0x00000003
 
-#define AUDIOH_VIBRA_CTRL_OFFSET                                          0x000000A0
+#define AUDIOH_VIBRA_CTRL_OFFSET                                          0x00000140
 #define AUDIOH_VIBRA_CTRL_TYPE                                            UInt32
 #define AUDIOH_VIBRA_CTRL_RESERVED_MASK                                   0x00FC8CC2
 #define    AUDIOH_VIBRA_CTRL_ANA_VIBRA_SPARE_BIT_SHIFT                    24
@@ -924,7 +924,7 @@
 #define    AUDIOH_VIBRA_CTRL_ANA_VIBRA_PD_SHIFT                           0
 #define    AUDIOH_VIBRA_CTRL_ANA_VIBRA_PD_MASK                            0x00000001
 
-#define AUDIOH_MIN_PHASE_OFFSET                                           0x000000A2
+#define AUDIOH_MIN_PHASE_OFFSET                                           0x00000144
 #define AUDIOH_MIN_PHASE_TYPE                                             UInt32
 #define AUDIOH_MIN_PHASE_RESERVED_MASK                                    0xFFFFFF00
 #define    AUDIOH_MIN_PHASE_DMIC4_MIN_PHASE_SHIFT                         7
@@ -944,7 +944,7 @@
 #define    AUDIOH_MIN_PHASE_EP_MIN_PHASE_SHIFT                            0
 #define    AUDIOH_MIN_PHASE_EP_MIN_PHASE_MASK                             0x00000001
 
-#define AUDIOH_AUDIORX_VRX1_OFFSET                                        0x00000100
+#define AUDIOH_AUDIORX_VRX1_OFFSET                                        0x00000200
 #define AUDIOH_AUDIORX_VRX1_TYPE                                          UInt32
 #define AUDIOH_AUDIORX_VRX1_RESERVED_MASK                                 0xF3C0E000
 #define    AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_SHIFT                27
@@ -972,7 +972,7 @@
 #define    AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_SHIFT                    0
 #define    AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK                     0x00000001
 
-#define AUDIOH_AUDIORX_VRX2_OFFSET                                        0x00000102
+#define AUDIOH_AUDIORX_VRX2_OFFSET                                        0x00000204
 #define AUDIOH_AUDIORX_VRX2_TYPE                                          UInt32
 #define AUDIOH_AUDIORX_VRX2_RESERVED_MASK                                 0xFE7888CC
 #define    AUDIOH_AUDIORX_VRX2_AUDIORX_VRX_ADCIDACCTRL_SHIFT              23
@@ -988,7 +988,7 @@
 #define    AUDIOH_AUDIORX_VRX2_AUDIORX_VRX_GMCMICTRL_SHIFT                0
 #define    AUDIOH_AUDIORX_VRX2_AUDIORX_VRX_GMCMICTRL_MASK                 0x00000003
 
-#define AUDIOH_AUDIORX_VREF_OFFSET                                        0x00000104
+#define AUDIOH_AUDIORX_VREF_OFFSET                                        0x00000208
 #define AUDIOH_AUDIORX_VREF_TYPE                                          UInt32
 #define AUDIOH_AUDIORX_VREF_RESERVED_MASK                                 0xFFFFFFF8
 #define    AUDIOH_AUDIORX_VREF_AUDIORX_VREF_POWERCYCLE_SHIFT              2
@@ -998,7 +998,7 @@
 #define    AUDIOH_AUDIORX_VREF_AUDIORX_VREF_PWRUP_SHIFT                   0
 #define    AUDIOH_AUDIORX_VREF_AUDIORX_VREF_PWRUP_MASK                    0x00000001
 
-#define AUDIOH_AUDIORX_VMIC_OFFSET                                        0x00000106
+#define AUDIOH_AUDIORX_VMIC_OFFSET                                        0x0000020C
 #define AUDIOH_AUDIORX_VMIC_TYPE                                          UInt32
 #define AUDIOH_AUDIORX_VMIC_RESERVED_MASK                                 0x0000FCC8
 #define    AUDIOH_AUDIORX_VMIC_AUDIORX_SPARE_SHIFT                        16
@@ -1014,7 +1014,7 @@
 #define    AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_BIAS_GND_SHIFT                 0
 #define    AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_BIAS_GND_MASK                  0x00000001
 
-#define AUDIOH_AUDIORX_BIAS_OFFSET                                        0x00000108
+#define AUDIOH_AUDIORX_BIAS_OFFSET                                        0x00000210
 #define AUDIOH_AUDIORX_BIAS_TYPE                                          UInt32
 #define AUDIOH_AUDIORX_BIAS_RESERVED_MASK                                 0xC0000008
 #define    AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_CTRL_SHIFT                    4
@@ -1024,7 +1024,7 @@
 #define    AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_SHIFT                   0
 #define    AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK                    0x00000001
 
-#define AUDIOH_AUDIORX_CTRL_OFFSET                                        0x0000010A
+#define AUDIOH_AUDIORX_CTRL_OFFSET                                        0x00000214
 #define AUDIOH_AUDIORX_CTRL_TYPE                                          UInt32
 #define AUDIOH_AUDIORX_CTRL_RESERVED_MASK                                 0xFFFFFFFC
 #define    AUDIOH_AUDIORX_CTRL_AUDIORX_ISO_OUT_SHIFT                      1
@@ -1032,7 +1032,7 @@
 #define    AUDIOH_AUDIORX_CTRL_AUDIORX_ISO_IN_SHIFT                       0
 #define    AUDIOH_AUDIORX_CTRL_AUDIORX_ISO_IN_MASK                        0x00000001
 
-#define AUDIOH_EANC_CTL_OFFSET                                            0x00000180
+#define AUDIOH_EANC_CTL_OFFSET                                            0x00000300
 #define AUDIOH_EANC_CTL_TYPE                                              UInt32
 #define AUDIOH_EANC_CTL_RESERVED_MASK                                     0xFFFF8CE0
 #define    AUDIOH_EANC_CTL_VOUT_EANC_ENABLE_SHIFT                         14
@@ -1054,7 +1054,7 @@
 #define    AUDIOH_EANC_CTL_EANC_AFIR_CO_SET_SHIFT                         0
 #define    AUDIOH_EANC_CTL_EANC_AFIR_CO_SET_MASK                          0x00000001
 
-#define AUDIOH_EANC_TAPS_OFFSET                                           0x00000182
+#define AUDIOH_EANC_TAPS_OFFSET                                           0x00000304
 #define AUDIOH_EANC_TAPS_TYPE                                             UInt32
 #define AUDIOH_EANC_TAPS_RESERVED_MASK                                    0xFFFF8888
 #define    AUDIOH_EANC_TAPS_EANC_DACCIC_TAPS_SHIFT                        12
@@ -1066,7 +1066,7 @@
 #define    AUDIOH_EANC_TAPS_EANC_UIIR_TAPS_SHIFT                          0
 #define    AUDIOH_EANC_TAPS_EANC_UIIR_TAPS_MASK                           0x00000007
 
-#define AUDIOH_EANC_SHIFT_CTRL_OFFSET                                     0x00000184
+#define AUDIOH_EANC_SHIFT_CTRL_OFFSET                                     0x00000308
 #define AUDIOH_EANC_SHIFT_CTRL_TYPE                                       UInt32
 #define AUDIOH_EANC_SHIFT_CTRL_RESERVED_MASK                              0x0000F0C0
 #define    AUDIOH_EANC_SHIFT_CTRL_EANC_WRAP_A_SHIFT                       16
@@ -1078,7 +1078,7 @@
 #define    AUDIOH_EANC_SHIFT_CTRL_EANC_AIIR_OUTSHIFT_SHIFT                0
 #define    AUDIOH_EANC_SHIFT_CTRL_EANC_AIIR_OUTSHIFT_MASK                 0x0000000F
 
-#define AUDIOH_EANC_CIC_GAIN_OFFSET                                       0x00000186
+#define AUDIOH_EANC_CIC_GAIN_OFFSET                                       0x0000030C
 #define AUDIOH_EANC_CIC_GAIN_TYPE                                         UInt32
 #define AUDIOH_EANC_CIC_GAIN_RESERVED_MASK                                0x80008000
 #define    AUDIOH_EANC_CIC_GAIN_EANC_DCIC_GAIN_SHIFT                      16
@@ -1086,127 +1086,127 @@
 #define    AUDIOH_EANC_CIC_GAIN_EANC_UCIC_GAIN_SHIFT                      0
 #define    AUDIOH_EANC_CIC_GAIN_EANC_UCIC_GAIN_MASK                       0x00007FFF
 
-#define AUDIOH_EANC_DIIR_SHIFT_H_OFFSET                                   0x00000188
+#define AUDIOH_EANC_DIIR_SHIFT_H_OFFSET                                   0x00000310
 #define AUDIOH_EANC_DIIR_SHIFT_H_TYPE                                     UInt32
 #define AUDIOH_EANC_DIIR_SHIFT_H_RESERVED_MASK                            0xFF000000
 #define    AUDIOH_EANC_DIIR_SHIFT_H_EANC_DIIR_SHIFT_H_SHIFT               0
 #define    AUDIOH_EANC_DIIR_SHIFT_H_EANC_DIIR_SHIFT_H_MASK                0x00FFFFFF
 
-#define AUDIOH_EANC_DIIR_SHIFT_L_OFFSET                                   0x0000018A
+#define AUDIOH_EANC_DIIR_SHIFT_L_OFFSET                                   0x00000314
 #define AUDIOH_EANC_DIIR_SHIFT_L_TYPE                                     UInt32
 #define AUDIOH_EANC_DIIR_SHIFT_L_RESERVED_MASK                            0xFF000000
 #define    AUDIOH_EANC_DIIR_SHIFT_L_EANC_DIIR_SHIFT_L_SHIFT               0
 #define    AUDIOH_EANC_DIIR_SHIFT_L_EANC_DIIR_SHIFT_L_MASK                0x00FFFFFF
 
-#define AUDIOH_EANC_AIIR_SHIFT_H_OFFSET                                   0x0000018C
+#define AUDIOH_EANC_AIIR_SHIFT_H_OFFSET                                   0x00000318
 #define AUDIOH_EANC_AIIR_SHIFT_H_TYPE                                     UInt32
 #define AUDIOH_EANC_AIIR_SHIFT_H_RESERVED_MASK                            0xFF000000
 #define    AUDIOH_EANC_AIIR_SHIFT_H_EANC_AIIR_SHIFT_H_SHIFT               0
 #define    AUDIOH_EANC_AIIR_SHIFT_H_EANC_AIIR_SHIFT_H_MASK                0x00FFFFFF
 
-#define AUDIOH_EANC_AIIR_SHIFT_L_OFFSET                                   0x0000018E
+#define AUDIOH_EANC_AIIR_SHIFT_L_OFFSET                                   0x0000031C
 #define AUDIOH_EANC_AIIR_SHIFT_L_TYPE                                     UInt32
 #define AUDIOH_EANC_AIIR_SHIFT_L_RESERVED_MASK                            0xFF000000
 #define    AUDIOH_EANC_AIIR_SHIFT_L_EANC_AIIR_SHIFT_L_SHIFT               0
 #define    AUDIOH_EANC_AIIR_SHIFT_L_EANC_AIIR_SHIFT_L_MASK                0x00FFFFFF
 
-#define AUDIOH_EANC_UIIR_SHIFT_H_OFFSET                                   0x00000190
+#define AUDIOH_EANC_UIIR_SHIFT_H_OFFSET                                   0x00000320
 #define AUDIOH_EANC_UIIR_SHIFT_H_TYPE                                     UInt32
 #define AUDIOH_EANC_UIIR_SHIFT_H_RESERVED_MASK                            0xFF000000
 #define    AUDIOH_EANC_UIIR_SHIFT_H_EANC_UIIR_SHIFT_H_SHIFT               0
 #define    AUDIOH_EANC_UIIR_SHIFT_H_EANC_UIIR_SHIFT_H_MASK                0x00FFFFFF
 
-#define AUDIOH_EANC_UIIR_SHIFT_L_OFFSET                                   0x00000192
+#define AUDIOH_EANC_UIIR_SHIFT_L_OFFSET                                   0x00000324
 #define AUDIOH_EANC_UIIR_SHIFT_L_TYPE                                     UInt32
 #define AUDIOH_EANC_UIIR_SHIFT_L_RESERVED_MASK                            0xFF000000
 #define    AUDIOH_EANC_UIIR_SHIFT_L_EANC_UIIR_SHIFT_L_SHIFT               0
 #define    AUDIOH_EANC_UIIR_SHIFT_L_EANC_UIIR_SHIFT_L_MASK                0x00FFFFFF
 
-#define AUDIOH_EANC_AIIR_DDELAY_ENABLE_OFFSET                             0x00000196
+#define AUDIOH_EANC_AIIR_DDELAY_ENABLE_OFFSET                             0x0000032C
 #define AUDIOH_EANC_AIIR_DDELAY_ENABLE_TYPE                               UInt32
 #define AUDIOH_EANC_AIIR_DDELAY_ENABLE_RESERVED_MASK                      0xFFFFFFFE
 #define    AUDIOH_EANC_AIIR_DDELAY_ENABLE_EANC_AIIR_DDELAY_ENABLE_SHIFT   0
 #define    AUDIOH_EANC_AIIR_DDELAY_ENABLE_EANC_AIIR_DDELAY_ENABLE_MASK    0x00000001
 
-#define AUDIOH_EANC_FIRX2_SCALE_OFFSET                                    0x00000198
+#define AUDIOH_EANC_FIRX2_SCALE_OFFSET                                    0x00000330
 #define AUDIOH_EANC_FIRX2_SCALE_TYPE                                      UInt32
 #define AUDIOH_EANC_FIRX2_SCALE_RESERVED_MASK                             0xFF000000
 #define    AUDIOH_EANC_FIRX2_SCALE_EANC_FIRX2_SCALE_SHIFT                 0
 #define    AUDIOH_EANC_FIRX2_SCALE_EANC_FIRX2_SCALE_MASK                  0x00FFFFFF
 
-#define AUDIOH_EANC_CO_AIIR_OFFSET                                        0x00000200
+#define AUDIOH_EANC_CO_AIIR_OFFSET                                        0x00000400
 #define AUDIOH_EANC_CO_AIIR_TYPE                                          UInt32
 #define AUDIOH_EANC_CO_AIIR_RESERVED_MASK                                 0xFF000000
 #define    AUDIOH_EANC_CO_AIIR_EANC_CO_AIIR_SHIFT                         0
 #define    AUDIOH_EANC_CO_AIIR_EANC_CO_AIIR_MASK                          0x00FFFFFF
 
-#define AUDIOH_EANC_CO_AFIR_OFFSET                                        0x00000240
+#define AUDIOH_EANC_CO_AFIR_OFFSET                                        0x00000480
 #define AUDIOH_EANC_CO_AFIR_TYPE                                          UInt32
 #define AUDIOH_EANC_CO_AFIR_RESERVED_MASK                                 0x00000000
 #define    AUDIOH_EANC_CO_AFIR_EANC_CO_AFIR_SHIFT                         0
 #define    AUDIOH_EANC_CO_AFIR_EANC_CO_AFIR_MASK                          0xFFFFFFFF
 
-#define AUDIOH_EANC_CO_DIIR_OFFSET                                        0x00000280
+#define AUDIOH_EANC_CO_DIIR_OFFSET                                        0x00000500
 #define AUDIOH_EANC_CO_DIIR_TYPE                                          UInt32
 #define AUDIOH_EANC_CO_DIIR_RESERVED_MASK                                 0xFF000000
 #define    AUDIOH_EANC_CO_DIIR_EANC_CO_DIIR_SHIFT                         0
 #define    AUDIOH_EANC_CO_DIIR_EANC_CO_DIIR_MASK                          0x00FFFFFF
 
-#define AUDIOH_EANC_CO_UIIR_OFFSET                                        0x000002C0
+#define AUDIOH_EANC_CO_UIIR_OFFSET                                        0x00000580
 #define AUDIOH_EANC_CO_UIIR_TYPE                                          UInt32
 #define AUDIOH_EANC_CO_UIIR_RESERVED_MASK                                 0xFF000000
 #define    AUDIOH_EANC_CO_UIIR_EANC_CO_UIIR_SHIFT                         0
 #define    AUDIOH_EANC_CO_UIIR_EANC_CO_UIIR_MASK                          0x00FFFFFF
 
-#define AUDIOH_STEREO_FIFO_DATA_OFFSET                                    0x00002400
+#define AUDIOH_STEREO_FIFO_DATA_OFFSET                                    0x00004800
 #define AUDIOH_STEREO_FIFO_DATA_TYPE                                      UInt32
 #define AUDIOH_STEREO_FIFO_DATA_RESERVED_MASK                             0x00000000
 #define    AUDIOH_STEREO_FIFO_DATA_STEREO_DATA_SHIFT                      0
 #define    AUDIOH_STEREO_FIFO_DATA_STEREO_DATA_MASK                       0xFFFFFFFF
 
-#define AUDIOH_IHF_FIFO_DATA_OFFSET                                       0x00002800
+#define AUDIOH_IHF_FIFO_DATA_OFFSET                                       0x00005000
 #define AUDIOH_IHF_FIFO_DATA_TYPE                                         UInt32
 #define AUDIOH_IHF_FIFO_DATA_RESERVED_MASK                                0x00000000
 #define    AUDIOH_IHF_FIFO_DATA_IHF_DATA_SHIFT                            0
 #define    AUDIOH_IHF_FIFO_DATA_IHF_DATA_MASK                             0xFFFFFFFF
 
-#define AUDIOH_VOUT_FIFO_DATA_OFFSET                                      0x00002C00
+#define AUDIOH_VOUT_FIFO_DATA_OFFSET                                      0x00005800
 #define AUDIOH_VOUT_FIFO_DATA_TYPE                                        UInt32
-#define AUDIOH_VOUT_FIFO_DATA_RESERVED_MASK                               0x00000000
+#define AUDIOH_VOUT_FIFO_DATA_RESERVED_MASK                               0xFF000000
 #define    AUDIOH_VOUT_FIFO_DATA_VOUT_DATA_SHIFT                          0
-#define    AUDIOH_VOUT_FIFO_DATA_VOUT_DATA_MASK                           0xFFFFFFFF
+#define    AUDIOH_VOUT_FIFO_DATA_VOUT_DATA_MASK                           0x00FFFFFF
 
-#define AUDIOH_VIBRA_FIFO_DATA_OFFSET                                     0x00003000
+#define AUDIOH_VIBRA_FIFO_DATA_OFFSET                                     0x00006000
 #define AUDIOH_VIBRA_FIFO_DATA_TYPE                                       UInt32
-#define AUDIOH_VIBRA_FIFO_DATA_RESERVED_MASK                              0x00000000
+#define AUDIOH_VIBRA_FIFO_DATA_RESERVED_MASK                              0xFFFF0000
 #define    AUDIOH_VIBRA_FIFO_DATA_VIBRA_DATA_SHIFT                        0
-#define    AUDIOH_VIBRA_FIFO_DATA_VIBRA_DATA_MASK                         0xFFFFFFFF
+#define    AUDIOH_VIBRA_FIFO_DATA_VIBRA_DATA_MASK                         0x0000FFFF
 
-#define AUDIOH_VIN_FIFOR_DATA0_OFFSET                                     0x00003400
+#define AUDIOH_VIN_FIFOR_DATA0_OFFSET                                     0x00006800
 #define AUDIOH_VIN_FIFOR_DATA0_TYPE                                       UInt32
 #define AUDIOH_VIN_FIFOR_DATA0_RESERVED_MASK                              0x00000000
 #define    AUDIOH_VIN_FIFOR_DATA0_VIN_DATAR_SHIFT                         0
 #define    AUDIOH_VIN_FIFOR_DATA0_VIN_DATAR_MASK                          0xFFFFFFFF
 
-#define AUDIOH_VIN_FIFOL_DATA0_OFFSET                                     0x00003600
+#define AUDIOH_VIN_FIFOL_DATA0_OFFSET                                     0x00006C00
 #define AUDIOH_VIN_FIFOL_DATA0_TYPE                                       UInt32
 #define AUDIOH_VIN_FIFOL_DATA0_RESERVED_MASK                              0x00000000
 #define    AUDIOH_VIN_FIFOL_DATA0_VIN_DATAL_SHIFT                         0
 #define    AUDIOH_VIN_FIFOL_DATA0_VIN_DATAL_MASK                          0xFFFFFFFF
 
-#define AUDIOH_NVIN_FIFOR_DATA0_OFFSET                                    0x00003800
+#define AUDIOH_NVIN_FIFOR_DATA0_OFFSET                                    0x00007000
 #define AUDIOH_NVIN_FIFOR_DATA0_TYPE                                      UInt32
 #define AUDIOH_NVIN_FIFOR_DATA0_RESERVED_MASK                             0x00000000
 #define    AUDIOH_NVIN_FIFOR_DATA0_NVIN_DATAR_SHIFT                       0
 #define    AUDIOH_NVIN_FIFOR_DATA0_NVIN_DATAR_MASK                        0xFFFFFFFF
 
-#define AUDIOH_NVIN_FIFOL_DATA0_OFFSET                                    0x00003A00
+#define AUDIOH_NVIN_FIFOL_DATA0_OFFSET                                    0x00007400
 #define AUDIOH_NVIN_FIFOL_DATA0_TYPE                                      UInt32
 #define AUDIOH_NVIN_FIFOL_DATA0_RESERVED_MASK                             0x00000000
 #define    AUDIOH_NVIN_FIFOL_DATA0_NVIN_DATAL_SHIFT                       0
 #define    AUDIOH_NVIN_FIFOL_DATA0_NVIN_DATAL_MASK                        0xFFFFFFFF
 
-#define AUDIOH_EANC_FIFO_DATA_OFFSET                                      0x00003C00
+#define AUDIOH_EANC_FIFO_DATA_OFFSET                                      0x00007800
 #define AUDIOH_EANC_FIFO_DATA_TYPE                                        UInt32
 #define AUDIOH_EANC_FIFO_DATA_RESERVED_MASK                               0x00000000
 #define    AUDIOH_EANC_FIFO_DATA_EANC_DATA_SHIFT                          0

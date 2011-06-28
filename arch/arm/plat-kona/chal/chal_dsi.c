@@ -27,7 +27,7 @@
 
 #include "plat/chal/chal_common.h"
 #include "plat/chal/chal_dsi.h"
-#include "mach/rdb/brcm_rdb_sysmap_a9.h"
+#include "mach/rdb/brcm_rdb_sysmap.h"
 #include "mach/rdb/brcm_rdb_dsi1.h"
 
 #include "mach/rdb/brcm_rdb_util.h"

@@ -41,83 +41,106 @@
 #define DMUX_CHAN_INVALID     	0xF
 #define DMUX_PERI_INVALID    	0x7F
 
-/* DMAC MUX mappings for the Kona architecture */
+/* DMUX device */
+struct kona_dmux_dev {
+	unsigned long base_addr;
+	struct clk *dmux_clk;
+};
+
+static struct kona_dmux_dev dmux;
+
+/* DMAC MUX map for the Kona architecture */
 struct dmac_mux_map {
 	char *name;		/* Name of peripheral channel */
 	enum dma_peri id;	/* peripheral ID, virtual DMA channel ID */
 	enum dmac_mux mux;	/* MUX setting to alloc the peripheral */
 };
 
+/******************************************************************************
+ * This array gathers info needed by DMUX logic to map peripherals. 
+ *
+ *  name: 	Peripheral name, every machine defines it's own set of channels.
+ *  id: 	virtual channels for Kona architecture, defined in plat/dmux.h
+ *  mux: 	MUX values for Kona architecture, defined in plat/dmux.h
+ *
+ * This array is defined for RHEA architecture, a superset. 
+ * For other Kona implementations like Samoa, it is assumed that 
+ * mach specific dma.h file will define the channel names, and  
+ * define 'kona_dmux_map' for that specific architecture. 
+ * This approach makes DMA drive API independent of arch specific details. 
+ *
+******************************************************************************/
 static const struct dmac_mux_map kona_dmux_map[] = {
-	{.name = "UARTB_A",.id = KONA_DMACH_UARTB_A,.mux = KONA_DMUX_UARTB_A},
-	{.name = "UARTB_B",.id = KONA_DMACH_UARTB_B,.mux = KONA_DMUX_UARTB_B},
-	{.name = "UARTB2_A",.id = KONA_DMACH_UARTB2_A,.mux =
+	{.name = DMA_CHAN_UARTB_A,.id = KONA_DMACH_UARTB_A,.mux =
+	 KONA_DMUX_UARTB_A},
+	{.name = DMA_CHAN_UARTB_B,.id = KONA_DMACH_UARTB_B,.mux =
+	 KONA_DMUX_UARTB_B},
+	{.name = DMA_CHAN_UARTB2_A,.id = KONA_DMACH_UARTB2_A,.mux =
 	 KONA_DMUX_UARTB2_A},
-	{.name = "UARTB2_B",.id = KONA_DMACH_UARTB2_B,.mux =
+	{.name = DMA_CHAN_UARTB2_B,.id = KONA_DMACH_UARTB2_B,.mux =
 	 KONA_DMUX_UARTB2_B},
-	{.name = "UARTB3_A",.id = KONA_DMACH_UARTB3_A,.mux =
+	{.name = DMA_CHAN_UARTB3_A,.id = KONA_DMACH_UARTB3_A,.mux =
 	 KONA_DMUX_UARTB3_A},
-	{.name = "UARTB3_B",.id = KONA_DMACH_UARTB3_B,.mux =
+	{.name = DMA_CHAN_UARTB3_B,.id = KONA_DMACH_UARTB3_B,.mux =
 	 KONA_DMUX_UARTB3_B},
-	{.name = "SSP_0A_RX0",.id = KONA_DMACH_SSP_0A_RX0,.mux =
+	{.name = DMA_CHAN_SSP_0A_RX0,.id = KONA_DMACH_SSP_0A_RX0,.mux =
 	 KONA_DMUX_SSP_0A_RX0},
-	{.name = "SSP_0B_TX0",.id = KONA_DMACH_SSP_0B_TX0,.mux =
+	{.name = DMA_CHAN_SSP_0B_TX0,.id = KONA_DMACH_SSP_0B_TX0,.mux =
 	 KONA_DMUX_SSP_0B_TX0},
-	{.name = "SSP_0C_RX1",.id = KONA_DMACH_SSP_0C_RX1,.mux =
+	{.name = DMA_CHAN_SSP_0C_RX1,.id = KONA_DMACH_SSP_0C_RX1,.mux =
 	 KONA_DMUX_SSP_0C_RX1},
-	{.name = "SSP_0D_TX1",.id = KONA_DMACH_SSP_0D_TX1,.mux =
+	{.name = DMA_CHAN_SSP_0D_TX1,.id = KONA_DMACH_SSP_0D_TX1,.mux =
 	 KONA_DMUX_SSP_0D_TX1},
-	{.name = "SSP_1A_RX0",.id = KONA_DMACH_SSP_1A_RX0,.mux =
+	{.name = DMA_CHAN_SSP_1A_RX0,.id = KONA_DMACH_SSP_1A_RX0,.mux =
 	 KONA_DMUX_SSP_1A_RX0},
-	{.name = "SSP_1B_TX0",.id = KONA_DMACH_SSP_1B_TX0,.mux =
+	{.name = DMA_CHAN_SSP_1B_TX0,.id = KONA_DMACH_SSP_1B_TX0,.mux =
 	 KONA_DMUX_SSP_1B_TX0},
-	{.name = "SSP_1C_RX1",.id = KONA_DMACH_SSP_1C_RX1,.mux =
+	{.name = DMA_CHAN_SSP_1C_RX1,.id = KONA_DMACH_SSP_1C_RX1,.mux =
 	 KONA_DMUX_SSP_1C_RX1},
-	{.name = "SSP_1D_TX1",.id = KONA_DMACH_SSP_1D_TX1,.mux =
+	{.name = DMA_CHAN_SSP_1D_TX1,.id = KONA_DMACH_SSP_1D_TX1,.mux =
 	 KONA_DMUX_SSP_1D_TX1},
-	{.name = "HSIA",.id = KONA_DMACH_HSIA,.mux = KONA_DMUX_HSIA},
-	{.name = "HSIB",.id = KONA_DMACH_HSIB,.mux = KONA_DMUX_HSIB},
-	{.name = "HSIC",.id = KONA_DMACH_HSIC,.mux = KONA_DMUX_HSIC},
-	{.name = "HSID",.id = KONA_DMACH_HSID,.mux = KONA_DMUX_HSID},
-	{.name = "EANC",.id = KONA_DMACH_EANC,.mux = KONA_DMUX_EANC},
-	{.name = "STEREO",.id = KONA_DMACH_STEREO,.mux = KONA_DMUX_STEREO},
-	{.name = "NVIN",.id = KONA_DMACH_NVIN,.mux = KONA_DMUX_NVIN},
-	{.name = "VIN",.id = KONA_DMACH_VIN,.mux = KONA_DMUX_VIN},
-	{.name = "VIBRA",.id = KONA_DMACH_VIBRA,.mux = KONA_DMUX_VIBRA},
-	{.name = "IHF_0",.id = KONA_DMACH_IHF_0,.mux = KONA_DMUX_IHF_0},
-	{.name = "VOUT",.id = KONA_DMACH_VOUT,.mux = KONA_DMUX_VOUT},
-	{.name = "SLIMA",.id = KONA_DMACH_SLIMA,.mux = KONA_DMUX_SLIMA},
-	{.name = "SLIMB",.id = KONA_DMACH_SLIMB,.mux = KONA_DMUX_SLIMB},
-	{.name = "SLIMC",.id = KONA_DMACH_SLIMC,.mux = KONA_DMUX_SLIMC},
-	{.name = "SLIMD",.id = KONA_DMACH_SLIMD,.mux = KONA_DMUX_SLIMD},
-	{.name = "SIM_A",.id = KONA_DMACH_SIM_A,.mux = KONA_DMUX_SIM_A},
-	{.name = "SIM_B",.id = KONA_DMACH_SIM_B,.mux = KONA_DMUX_SIM_B},
-	{.name = "SIM2_A",.id = KONA_DMACH_SIM2_A,.mux = KONA_DMUX_SIM2_A},
-	{.name = "SIM2_B",.id = KONA_DMACH_SIM2_B,.mux = KONA_DMUX_SIM2_B},
-	{.name = "IHF_1",.id = KONA_DMACH_IHF_1,.mux = KONA_DMUX_IHF_1},
-	{.name = "SP_2A_RX0",.id = KONA_DMACH_SSP_2A_RX0,.mux =
+	{.name = DMA_CHAN_HSIA,.id = KONA_DMACH_HSIA,.mux = KONA_DMUX_HSIA},
+	{.name = DMA_CHAN_HSIB,.id = KONA_DMACH_HSIB,.mux = KONA_DMUX_HSIB},
+	{.name = DMA_CHAN_HSIC,.id = KONA_DMACH_HSIC,.mux = KONA_DMUX_HSIC},
+	{.name = DMA_CHAN_HSID,.id = KONA_DMACH_HSID,.mux = KONA_DMUX_HSID},
+	{.name = DMA_CHAN_EANC,.id = KONA_DMACH_EANC,.mux = KONA_DMUX_EANC},
+	{.name = DMA_CHAN_STEREO,.id = KONA_DMACH_STEREO,.mux =
+	 KONA_DMUX_STEREO},
+	{.name = DMA_CHAN_NVIN,.id = KONA_DMACH_NVIN,.mux = KONA_DMUX_NVIN},
+	{.name = DMA_CHAN_VIN,.id = KONA_DMACH_VIN,.mux = KONA_DMUX_VIN},
+	{.name = DMA_CHAN_VIBRA,.id = KONA_DMACH_VIBRA,.mux = KONA_DMUX_VIBRA},
+	{.name = DMA_CHAN_IHF_0,.id = KONA_DMACH_IHF_0,.mux = KONA_DMUX_IHF_0},
+	{.name = DMA_CHAN_VOUT,.id = KONA_DMACH_VOUT,.mux = KONA_DMUX_VOUT},
+	{.name = DMA_CHAN_SLIMA,.id = KONA_DMACH_SLIMA,.mux = KONA_DMUX_SLIMA},
+	{.name = DMA_CHAN_SLIMB,.id = KONA_DMACH_SLIMB,.mux = KONA_DMUX_SLIMB},
+	{.name = DMA_CHAN_SLIMC,.id = KONA_DMACH_SLIMC,.mux = KONA_DMUX_SLIMC},
+	{.name = DMA_CHAN_SLIMD,.id = KONA_DMACH_SLIMD,.mux = KONA_DMUX_SLIMD},
+	{.name = DMA_CHAN_SIM_A,.id = KONA_DMACH_SIM_A,.mux = KONA_DMUX_SIM_A},
+	{.name = DMA_CHAN_SIM_B,.id = KONA_DMACH_SIM_B,.mux = KONA_DMUX_SIM_B},
+	{.name = DMA_CHAN_SIM2_A,.id = KONA_DMACH_SIM2_A,.mux =
+	 KONA_DMUX_SIM2_A},
+	{.name = DMA_CHAN_SIM2_B,.id = KONA_DMACH_SIM2_B,.mux =
+	 KONA_DMUX_SIM2_B},
+	{.name = DMA_CHAN_IHF_1,.id = KONA_DMACH_IHF_1,.mux = KONA_DMUX_IHF_1},
+	{.name = DMA_CHAN_SP_2A_RX0,.id = KONA_DMACH_SSP_2A_RX0,.mux =
 	 KONA_DMUX_SSP_2A_RX0},
-	{.name = "SSP_2B_TX0",.id = KONA_DMACH_SSP_2B_TX0,.mux =
+	{.name = DMA_CHAN_SSP_2B_TX0,.id = KONA_DMACH_SSP_2B_TX0,.mux =
 	 KONA_DMUX_SSP_2B_TX0},
-	{.name = "SSP_2C_RX1",.id = KONA_DMACH_SSP_2C_RX1,.mux =
+	{.name = DMA_CHAN_SSP_2C_RX1,.id = KONA_DMACH_SSP_2C_RX1,.mux =
 	 KONA_DMUX_SSP_2C_RX1},
-	{.name = "SSP_2D_TX1",.id = KONA_DMACH_SSP_2D_TX1,.mux =
+	{.name = DMA_CHAN_SSP_2D_TX1,.id = KONA_DMACH_SSP_2D_TX1,.mux =
 	 KONA_DMUX_SSP_2D_TX1},
-	{.name = "SPUM_SecureA",.id = KONA_DMACH_SPUM_SecureA,.mux =
+	{.name = DMA_CHAN_SPUM_SecureA,.id = KONA_DMACH_SPUM_SecureA,.mux =
 	 KONA_DMUX_SPUM_SecureA},
-	{.name = "SPUM_SecureB",.id = KONA_DMACH_SPUM_SecureB,.mux =
+	{.name = DMA_CHAN_SPUM_SecureB,.id = KONA_DMACH_SPUM_SecureB,.mux =
 	 KONA_DMUX_SPUM_SecureB},
-	{.name = "SPUM_OpenA",.id = KONA_DMACH_SPUM_OpenA,.mux =
+	{.name = DMA_CHAN_SPUM_OpenA,.id = KONA_DMACH_SPUM_OpenA,.mux =
 	 KONA_DMUX_SPUM_OpenA},
-	{.name = "SPUM_OpenB",.id = KONA_DMACH_SPUM_OpenB,.mux =
+	{.name = DMA_CHAN_SPUM_OpenB,.id = KONA_DMACH_SPUM_OpenB,.mux =
 	 KONA_DMUX_SPUM_OpenB},
 	{.name = NULL,.id = KONA_DMA_MAX_CHANNELS,.mux = KONA_DMUX_INVALID}
 	/* Termination */
 };
-
-/* From Kona Memory Map */
-static unsigned long base_addr = KONA_DMUX_VA;
-static struct clk *dmux_clk = NULL;
 
 enum dma_peri dmux_name_to_id(const char *name)
 {
@@ -132,8 +155,6 @@ enum dma_peri dmux_name_to_id(const char *name)
 	return KONA_DMACH_INVALID;
 }
 
-EXPORT_SYMBOL(dmux_name_to_id);
-
 int dmux_id_to_name(enum dma_peri peri, char *pname)
 {
 	if (peri < KONA_DMA_MAX_CHANNELS) {
@@ -143,32 +164,25 @@ int dmux_id_to_name(enum dma_peri peri, char *pname)
 	return -1;
 }
 
-EXPORT_SYMBOL(dmux_id_to_name);
-
 int dmux_sema_protect(void)
 {
-	/*FIXME: rtos code contradicts with TRM */
-	if (readl(base_addr + DMUX_SEMAPHORE_OFFSET) == 0)
+	if (readl(dmux.base_addr + DMUX_SEMAPHORE_OFFSET) == 0)
 		return 0;
 	else
 		return -1;
 }
 
-EXPORT_SYMBOL(dmux_sema_protect);
-
 int dmux_sema_unprotect(void)
 {
-	writel(1, base_addr + DMUX_SEMAPHORE_OFFSET);
+	writel(1, dmux.base_addr + DMUX_SEMAPHORE_OFFSET);
 	return 0;
 }
-
-EXPORT_SYMBOL(dmux_sema_unprotect);
 
 int dmux_alloc_channel(u32 * pchan)
 {
 	u32 channel;
 
-	channel = readl(base_addr + DMUX_CHAN_ALLOC_DEALLOC_OFFSET);
+	channel = readl(dmux.base_addr + DMUX_CHAN_ALLOC_DEALLOC_OFFSET);
 	channel &= DMUX_CHAN_ALLOC_DEALLOC_CHANNEL_AD_MASK;
 
 	if (channel != DMUX_CHAN_INVALID) {
@@ -178,15 +192,11 @@ int dmux_alloc_channel(u32 * pchan)
 	return -1;
 }
 
-EXPORT_SYMBOL(dmux_alloc_channel);
-
 int dmux_release_channel(u32 channel)
 {
-	writel(channel, base_addr + DMUX_CHAN_ALLOC_DEALLOC_OFFSET);
+	writel(channel, dmux.base_addr + DMUX_CHAN_ALLOC_DEALLOC_OFFSET);
 	return 0;
 }
-
-EXPORT_SYMBOL(dmux_release_channel);
 
 int dmux_alloc_peripheral(u32 channel, enum dma_peri peri, u8 * peri_req_id)
 {
@@ -201,11 +211,12 @@ int dmux_alloc_peripheral(u32 channel, enum dma_peri peri, u8 * peri_req_id)
 		return -1;
 	}
 
-	writel(peri_reg_val, base_addr + DMUX_PER_0_OFFSET + channel * 4);
+	writel(peri_reg_val, dmux.base_addr + DMUX_PER_0_OFFSET + channel * 4);
 
 	/*FIXME: wait loop, timeout is taken from RTOS!!! */
 	do {
-		read_reg = readl(base_addr + DMUX_PER_0_OFFSET + channel * 4);
+		read_reg =
+		    readl(dmux.base_addr + DMUX_PER_0_OFFSET + channel * 4);
 		if ((read_reg & ~DMUX_PER_0_RESERVED_MASK) == peri_reg_val) {
 			if (peri_req_id) {
 				*peri_req_id = 2 * channel;
@@ -216,8 +227,6 @@ int dmux_alloc_peripheral(u32 channel, enum dma_peri peri, u8 * peri_req_id)
 
 	return -1;
 }
-
-EXPORT_SYMBOL(dmux_alloc_peripheral);
 
 int dmux_alloc_multi_peripheral(u32 channel,
 				enum dma_peri a,
@@ -244,11 +253,12 @@ int dmux_alloc_multi_peripheral(u32 channel,
 							 DMUX_PER_0_PER_B_0_SHIFT);
 	}
 
-	writel(peri_reg_val, base_addr + DMUX_PER_0_OFFSET + channel * 4);
+	writel(peri_reg_val, dmux.base_addr + DMUX_PER_0_OFFSET + channel * 4);
 
 	/*FIXME: wait loop, timeout is taken from RTOS!!! */
 	do {
-		read_reg = readl(base_addr + DMUX_PER_0_OFFSET + channel * 4);
+		read_reg =
+		    readl(dmux.base_addr + DMUX_PER_0_OFFSET + channel * 4);
 		if ((read_reg & ~DMUX_PER_0_RESERVED_MASK) == peri_reg_val) {
 			if (dst_id)
 				*dst_id = 2 * channel;
@@ -261,36 +271,35 @@ int dmux_alloc_multi_peripheral(u32 channel,
 	return -1;
 }
 
-EXPORT_SYMBOL(dmux_alloc_multi_peripheral);
-
 int dmux_dealloc_peripheral(u32 channel)
 {
 	channel &= DMUX_PER_DEALLOC_CHANNEL_P_MASK;
-	writel(channel, base_addr + DMUX_PER_DEALLOC_OFFSET);
+	writel(channel, dmux.base_addr + DMUX_PER_DEALLOC_OFFSET);
 
 	return 0;
 }
-
-EXPORT_SYMBOL(dmux_dealloc_peripheral);
 
 __init int dmux_init(void)
 {
 
 	printk("DMAC MUX Init\n");
 
+	/* Set DMUX base address */
+	dmux.base_addr = KONA_DMUX_VA;
+
 	/* get the clocks going */
-	dmux_clk = clk_get(NULL, "dmac_mux_apb_clk");
-	if (!dmux_clk) {
+	dmux.dmux_clk = clk_get(NULL, "dmac_mux_apb_clk");
+	if (!dmux.dmux_clk) {
 		printk("Failed to get the dmac_mux_apb_clk!!!\n");
 		return -1;
 	}
-	clk_enable(dmux_clk);
+	clk_enable(dmux.dmux_clk);
 	return 0;
 }
 
 __exit void dmux_exit(void)
 {
-	clk_disable(dmux_clk);
+	clk_disable(dmux.dmux_clk);
 	return;
 }
 

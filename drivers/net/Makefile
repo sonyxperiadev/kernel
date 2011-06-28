@@ -286,6 +286,7 @@ obj-$(CONFIG_ETRAX_ETHERNET) += cris/
 obj-$(CONFIG_ENP2611_MSF_NET) += ixp2000/
 
 obj-$(CONFIG_NETCONSOLE) += netconsole.o
+obj-$(CONFIG_BRCM_NETCONSOLE) += brcm_netconsole.o
 
 obj-$(CONFIG_FS_ENET) += fs_enet/
 

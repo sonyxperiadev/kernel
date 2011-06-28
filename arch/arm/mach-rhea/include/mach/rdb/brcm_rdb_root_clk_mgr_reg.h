@@ -21,7 +21,7 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/7/2011 14:24:48                                             */
+/*     Date     : Generated on 5/17/2011 0:56:25                                             */
 /*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
@@ -740,32 +740,6 @@
 #define    ROOT_CLK_MGR_REG_CRYSTAL_STRTDLY_PRIV_ACCESS_MODE_MASK         0x80000000
 #define    ROOT_CLK_MGR_REG_CRYSTAL_STRTDLY_CRYSTAL_CLK_STARTUP_TC_SHIFT  0
 #define    ROOT_CLK_MGR_REG_CRYSTAL_STRTDLY_CRYSTAL_CLK_STARTUP_TC_MASK   0x000000FF
-
-#define ROOT_CLK_MGR_REG_FRAC_1M_DIV_OFFSET                               0x00000E00
-#define ROOT_CLK_MGR_REG_FRAC_1M_DIV_TYPE                                 UInt32
-#define ROOT_CLK_MGR_REG_FRAC_1M_DIV_RESERVED_MASK                        0x7F800000
-#define    ROOT_CLK_MGR_REG_FRAC_1M_DIV_PRIV_ACCESS_MODE_SHIFT            31
-#define    ROOT_CLK_MGR_REG_FRAC_1M_DIV_PRIV_ACCESS_MODE_MASK             0x80000000
-#define    ROOT_CLK_MGR_REG_FRAC_1M_DIV_FRAC_1M_DIV_OVERRIDE_SHIFT        22
-#define    ROOT_CLK_MGR_REG_FRAC_1M_DIV_FRAC_1M_DIV_OVERRIDE_MASK         0x00400000
-#define    ROOT_CLK_MGR_REG_FRAC_1M_DIV_FRAC_1M_DIV_SHIFT                 0
-#define    ROOT_CLK_MGR_REG_FRAC_1M_DIV_FRAC_1M_DIV_MASK                  0x003FFFFF
-
-#define ROOT_CLK_MGR_REG_FRAC_1M_TRG_OFFSET                               0x00000E04
-#define ROOT_CLK_MGR_REG_FRAC_1M_TRG_TYPE                                 UInt32
-#define ROOT_CLK_MGR_REG_FRAC_1M_TRG_RESERVED_MASK                        0x7FFFFFFE
-#define    ROOT_CLK_MGR_REG_FRAC_1M_TRG_PRIV_ACCESS_MODE_SHIFT            31
-#define    ROOT_CLK_MGR_REG_FRAC_1M_TRG_PRIV_ACCESS_MODE_MASK             0x80000000
-#define    ROOT_CLK_MGR_REG_FRAC_1M_TRG_FRAC_1M_TRIGGER_SHIFT             0
-#define    ROOT_CLK_MGR_REG_FRAC_1M_TRG_FRAC_1M_TRIGGER_MASK              0x00000001
-
-#define ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_OFFSET                      0x00000E08
-#define ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_TYPE                        UInt32
-#define ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_RESERVED_MASK               0x7FFFFFFE
-#define    ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_PRIV_ACCESS_MODE_SHIFT   31
-#define    ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_PRIV_ACCESS_MODE_MASK    0x80000000
-#define    ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_FRAC_1M_TRIGGER_OVERRIDE_SHIFT 0
-#define    ROOT_CLK_MGR_REG_FRAC_1M_TRG_OVERRIDE_FRAC_1M_TRIGGER_OVERRIDE_MASK 0x00000001
 
 #define ROOT_CLK_MGR_REG_CLKMON_OFFSET                                    0x00000E0C
 #define ROOT_CLK_MGR_REG_CLKMON_TYPE                                      UInt32

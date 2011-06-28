@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 1/7/2011 14:25:3                                             */
-/*     RDB file : //DSP/                                                                   */
+/*     Date     : Generated on 5/17/2011 0:56:25                                             */
+/*     RDB file : //RHEA/                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_DSP_TRACE_H__

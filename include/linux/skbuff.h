@@ -45,6 +45,8 @@
 #define SKB_MAX_HEAD(X)		(SKB_MAX_ORDER((X), 0))
 #define SKB_MAX_ALLOC		(SKB_MAX_ORDER(0, 2))
 
+#define SKB_NETPOLL_SIGNATURE	0x12345678
+
 /* A. Checksumming of received packets by device.
  *
  *	NONE: device failed to checksum this packet.
@@ -414,7 +416,8 @@ struct sk_buff {
 				*data;
 	unsigned int		truesize;
 	atomic_t		users;
-};
+	unsigned int			netpoll_signature;
+	};
 
 #ifdef __KERNEL__
 /*

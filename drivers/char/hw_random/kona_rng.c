@@ -197,7 +197,7 @@ int rng_data_read(struct hwrng *rng, u32 *data)
 EXPORT_SYMBOL(rng_data_read);
 
 static struct hwrng rng_ops = {
-    .name = "bcmhana",
+    .name = "bcmkona",
     .data_present = rng_data_present,
     .data_read = rng_data_read,
 };

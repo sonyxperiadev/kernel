@@ -452,7 +452,6 @@ static int bcm91008_alex_IoCtlRd(
     UInt8               txData[1];  // DCS Rd Command
     UInt32              reg;
     UInt8 *             pRxBuff = (UInt8*)acc->pBuff;
-    char                dsiE[100];
     Int32               res = 0;
     CSL_LCD_RES_T       cslRes;
     
@@ -900,8 +899,7 @@ Int32 BCM91008_ALEX_PowerControl (
                     bcm91008_alex_WrCmndP1 (drvH, 0x51, 0x80);  
                     
                     // MADCTL - Invert, disp is mounted so RB is at UL position
-                    bcm91008_alex_WrCmndP1 
-                        ( drvH, MIPI_DCS_SET_ADDRESS_MODE, 0xC0 );  
+                    bcm91008_alex_WrCmndP1 ( drvH, MIPI_DCS_SET_ADDRESS_MODE, 0xd4 );  
                     
                     // TE, VSYNC only mode    
                     bcm91008_alex_WrCmndP1 ( drvH, MIPI_DCS_SET_TEAR_ON, 0 );  

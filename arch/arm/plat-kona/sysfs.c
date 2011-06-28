@@ -73,7 +73,7 @@ kona_timer_module_cfg(struct device *dev, struct device_attribute *attr,
 
 	if (sscanf(buf, "%s %d", name, &rate) == 2) {
 
-		pr_info("timer name:%s rate(0-32KHz, 1-1MHz, 2-19.5MHz):%d \r\n", name, rate);
+		pr_info("timer name:%s rate %d \r\n", name, rate);
 
 		/* 
 		 * Assuming that kona_timer_modules_init has happend already (this is
@@ -92,7 +92,7 @@ kona_timer_module_cfg(struct device *dev, struct device_attribute *attr,
 	}		
 
 	pr_info("\r\nusage: echo [timer_name(aon-timer/slave-timer)]"
-	"[rate (0-32KHz, 1-1MHz, 2-19.5MHz)] > /sys/bcm/timer_module_cfg \r\n");
+	"[rate 32000 (32KHz), 1000000 (1MHz), 19500000 (19.5MHz)] > /sys/bcm/timer_module_cfg \r\n");
 
 	return -EINVAL;
 }

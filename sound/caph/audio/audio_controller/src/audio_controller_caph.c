@@ -1,43 +1,28 @@
-/******************************************************************************
-Copyright 2009-2010 Broadcom Corporation.  All rights reserved.
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 
-This program is the proprietary software of Broadcom Corporation and/or its 
-licensors, and may only be used, duplicated, modified or distributed pursuant 
-to the terms and conditions of a separate, written license agreement executed 
-between you and Broadcom (an "Authorized License").
-
-Except as set forth in an Authorized License, Broadcom grants no license
-(express or implied), right to use, or waiver of any kind with respect to the 
-Software, and Broadcom expressly reserves all rights in and to the Software and 
-all intellectual property rights therein.  IF YOU HAVE NO AUTHORIZED LICENSE, 
-THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY 
-NOTIFY BROADCOM AND DISCONTINUE ALL USE OF THE SOFTWARE.
-  
- Except as expressly set forth in the Authorized License,
-1. This program, including its structure, sequence and organization, 
-constitutes the valuable trade secrets of Broadcom, and you shall use all 
-reasonable efforts to protect the confidentiality thereof, and to use this 
-information only in connection with your use of Broadcom integrated circuit 
-products.
-
-2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS" 
-AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR 
-WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT TO 
-THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL IMPLIED WARRANTIES 
-OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR PURPOSE, 
-LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION 
-OR CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE RISK ARISING OUT OF 
-USE OR PERFORMANCE OF THE SOFTWARE.
-
-3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS 
-LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR 
-EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO YOUR USE 
-OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE 
-POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS OF THE AMOUNT 
-ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE 
-LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF 
-ANY LIMITED REMEDY.
-******************************************************************************/
 /**
 *
 * @file   audio_controller_caph.c
@@ -54,7 +39,7 @@ ANY LIMITED REMEDY.
 
 #include "audio_consts.h"
 #include "auddrv_def.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
 #include "ostask.h"
 #endif
@@ -80,7 +65,7 @@ ANY LIMITED REMEDY.
 #if !defined(NO_PMU)
 #ifdef PMU_BCM59055
 #include "linux/broadcom/bcm59055-audio.h"
-#elif PMU_MAX8986
+#elif defined(PMU_MAX8986)
 #include "linux/broadcom/max8986/max8986-audio.h"
 #endif
 #endif
@@ -265,7 +250,7 @@ static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #if !defined(NO_PMU)
 //on AP:
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
@@ -605,7 +590,7 @@ void AUDCTRL_SetPlayVolume(
     AudioMode_t audioMode = AUDIO_MODE_INVALID;
 
     gainHW = gainHW2 = 0;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: Set Play Volume. sink = 0x%x,  spk = 0x%x, vol = 0x%x\n", sink, spk, vol_left);
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: Set Play Volume. sink = 0x%x,  spk = 0x%x, vol = 0x%lx\n", sink, spk, vol_left);
     
     memset(&gainMapping, 0, sizeof(AUDTABL_GainMapping_t));
     switch(sink)
@@ -812,7 +797,7 @@ void AUDCTRL_EnableRecord(
 				)
 {
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_EnableRecord: src = 0x%x, sink = 0x%x,  mic = 0x%x, sr %d\n",
+                    "AUDCTRL_EnableRecord: src = 0x%x, sink = 0x%x,  mic = 0x%x, sr %ld\n",
                     src, sink, mic, sr);
 
 	if((mic == AUDCTRL_MIC_DIGI1) 
@@ -993,7 +978,7 @@ void AUDCTRL_SetRecordGain(
     AUDDRV_PathID pathID = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_SetRecordGain: src = 0x%x,  mic = 0x%x, gainL = 0x%x, gainR = 0x%x\n", src, mic, gainL, gainR);
+                    "AUDCTRL_SetRecordGain: src = 0x%x,  mic = 0x%x, gainL = 0x%lx, gainR = 0x%lx\n", src, mic, gainL, gainR);
 
 	if(src == AUDIO_HW_STEREO_BT_IN || src == AUDIO_HW_USB_IN)
 		return;
@@ -1080,6 +1065,8 @@ void AUDCTRL_SetAudioLoopback(
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: speaker = %d\n", speaker);
 
     source = sink = AUDDRV_DEV_NONE;
+	audPlayHw = audRecHw = AUDIO_HW_NONE;
+	
     switch (mic)
     {
         case AUDCTRL_MIC_MAIN:
@@ -1640,6 +1627,8 @@ static PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain )
 	return PMU_IHFGAIN_6DB_P;//PMU_IHFGAIN_20DB_P;//PMU_IHFGAIN_6DB_P;//PMU_IHFGAIN_0DB ;//PMU_IHFGAIN_18P5DB_P;
 }
 #else
+#ifdef CONFIG_AUDIO_BUILD
+/* unused definitions */
 static int map2pmu_hs_gain( Int16 db_gain )
 {
 		
@@ -1652,6 +1641,7 @@ static int map2pmu_ihf_gain( Int16 db_gain )
 	//return BCM59055_IHFGAIN_0DB;
     return 1;
 }
+#endif
 #endif
 
 
@@ -1678,12 +1668,16 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
 		case AUDCTRL_SPK_TTY:
 		    hs_path = PMU_AUDIO_HS_BOTH;
 	    	hs_gain = *((int*)gain);
+#ifdef CONFIG_BCM59055_AUDIO
 		    bcm59055_hs_set_gain( hs_path, hs_gain);
+#endif
 			break;
 
 		case AUDCTRL_SPK_LOUDSPK:
     		ihf_gain = *((int*)gain);
+#ifdef CONFIG_BCM59055_AUDIO
 	    	bcm59055_ihf_set_gain( ihf_gain);
+#endif
 			break;
 
 		default:
@@ -1734,7 +1728,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	
 #ifdef PMU_BCM59055
 	if (use == TRUE)
+#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_audio_init(); 	//enable the audio PLL before power ON
+#endif
 #endif
 
 
@@ -1793,8 +1789,10 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu HS amp\n");
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_hs_power(FALSE);
-#elif PMU_MAX8986
+#endif
+#elif defined(PMU_MAX8986)
             max8986_audio_hs_poweron(FALSE);
 #endif
 
@@ -1806,9 +1804,8 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		int i;
 		int hs_path;	
 		int hs_gain;
-		int ifh_gain;
 		hs_path = PMU_AUDIO_HS_BOTH;
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 #else
 		// hardcode for test
@@ -1821,15 +1818,19 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", hs_gain);
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_hs_power(TRUE);
-#elif PMU_MAX8986
+#endif
+#elif defined(PMU_MAX8986)
             max8986_audio_hs_poweron(TRUE);
 #endif
 
 		}
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_hs_set_gain(hs_path, hs_gain);
-#elif PMU_MAX8986
+#endif
+#elif defined(PMU_MAX8986)
             max8986_audio_hs_set_gain(hs_path, hs_gain);
             max8986_set_input_preamp_gain(MAX8986_INPUTA, preamp_gain);
 #endif
@@ -1842,8 +1843,10 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu IHF amp\n");
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_ihf_power(FALSE);
-#elif PMU_MAX8986
+#endif
+#elif defined(PMU_MAX8986)
             max8986_audio_hs_ihf_poweroff();
 #endif
             if (retValue == AUDCTRL_AMP_NO_ACTION) 
@@ -1861,7 +1864,7 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	{
 		int i;
 		int ihf_gain;
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 #else
 		// hardcode for test purpose
@@ -1874,14 +1877,18 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu IHF amp, gain %d\n", ihf_gain);
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
 			bcm59055_ihf_power(TRUE);
-#elif PMU_MAX8986
+#endif
+#elif defined(PMU_MAX8986)
             max8986_audio_hs_ihf_poweron();
 #endif
 		}
 #ifdef PMU_BCM59055
+#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_ihf_set_gain(ihf_gain);
-#elif PMU_MAX8986
+#endif
+#elif defined(PMU_MAX8986)
             max8986_audio_hs_ihf_set_gain(ihf_gain);
             max8986_set_input_preamp_gain(MAX8986_INPUTB, preamp_gain);
 #endif
@@ -1890,7 +1897,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 
 #ifdef PMU_BCM59055
 	if (use == FALSE)
+#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_audio_deinit();    //disable the audio PLL after power OFF
+#endif
 #endif
     Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp: retValue %d\n", retValue);
 #endif    

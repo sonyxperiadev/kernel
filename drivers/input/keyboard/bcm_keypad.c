@@ -28,7 +28,7 @@
 #include <mach/bcm_keypad.h>
 #include <linux/slab.h>
 #ifndef _HERA_
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_util.h>
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif

@@ -1,46 +1,28 @@
-/*****************************************************************************
-*
-*    (c) 2009 Broadcom Corporation
-*
-* This program is the proprietary software of Broadcom Corporation and/or
-* its licensors, and may only be used, duplicated, modified or distributed
-* pursuant to the terms and conditions of a separate, written license
-* agreement executed between you and Broadcom (an "Authorized License").
-* Except as set forth in an Authorized License, Broadcom grants no license
-* (express or implied), right to use, or waiver of any kind with respect to
-* the Software, and Broadcom expressly reserves all rights in and to the
-* Software and all intellectual property rights therein.
-* IF YOU HAVE NO AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS
-* SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE
-* ALL USE OF THE SOFTWARE.  
-*
-* Except as expressly set forth in the Authorized License,
-*
-* 1. This program, including its structure, sequence and organization,
-*    constitutes the valuable trade secrets of Broadcom, and you shall use all
-*    reasonable efforts to protect the confidentiality thereof, and to use
-*    this information only in connection with your use of Broadcom integrated
-*    circuit products.
-*
-* 2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
-*    AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR
-*    WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH
-*    RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL
-*    IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS
-*    FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS,
-*    QUIET ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU
-*    ASSUME THE ENTIRE RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-*
-* 3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS
-*    LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT,
-*    OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO
-*    YOUR USE OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN
-*    ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS
-*    OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER
-*    IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF
-*    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-*
-*****************************************************************************/
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
+
 /**
 *
 *   @file   audio_vdriver_voice_record.c
@@ -308,7 +290,7 @@ Result_t AUDDRV_VoiceCapture_SetTransferParameters(
 	if (audDrv == NULL)
 		return RESULT_ERROR;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_VoiceCapture_SetTransferParameters:: type = 0x%x, callbackThreshold = 0x%x, interruptInterval = 0x%x\n", 
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_VoiceCapture_SetTransferParameters:: type = 0x%x, callbackThreshold = 0x%lx, interruptInterval = 0x%lx\n", 
 								audDrv->drvType, callbackThreshold, interruptInterval);
 	
 	msg.msgID = VOCAPTURE_MSG_SET_TRANSFER;
@@ -429,7 +411,7 @@ UInt32 AUDDRV_VoiceCapture_Read(
 	// wait for the data copy finished.
 	OSSEMAPHORE_Obtain (audDrv->addBufSema, TICKS_FOREVER);
 
-	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_VoiceCapture_ReadBuffer :: destBufCopied = 0x%x\n", audDrv->destBufCopied);
+	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_VoiceCapture_ReadBuffer :: destBufCopied = 0x%lx\n", audDrv->destBufCopied);
 
 	return audDrv->destBufCopied;
 }
@@ -807,7 +789,7 @@ static UInt32	CopyBufferFromQueue (VOCAPTURE_Drv_t *audDrv, UInt8 *buf, UInt32 s
 	{
 		// only callback if all data is copied
 		audDrv->bufDoneCb (buf, size, audDrv->drvType);
-		Log_DebugPrintf(LOGID_AUDIO, " CopyBufferFromQueue sends callback after AUDQUE_Read:: copied= 0x%x\n", copied);
+		Log_DebugPrintf(LOGID_AUDIO, " CopyBufferFromQueue sends callback after AUDQUE_Read:: copied= 0x%lx\n", copied);
 	}
 	
 	
@@ -819,7 +801,7 @@ static UInt32	CopyBufferFromQueue (VOCAPTURE_Drv_t *audDrv, UInt8 *buf, UInt32 s
 
 	if (audDrv->destBufCopied > 0)
 	{
-		Log_DebugPrintf(LOGID_AUDIO, " CopyBufferFromQueue :: destBufCopied = 0x%x, readPtr = 0x%x, writePtr = 0x%x\n", audDrv->destBufCopied, aq->readPtr, aq->writePtr);
+		Log_DebugPrintf(LOGID_AUDIO, " CopyBufferFromQueue :: destBufCopied = 0x%lx, readPtr = 0x%lx, writePtr = 0x%lx\n", audDrv->destBufCopied, (UInt32)aq->readPtr, (UInt32)aq->writePtr);
 	}
 
 	return copied;
@@ -901,7 +883,7 @@ static void ProcessSharedMemRequest (VOCAPTURE_Drv_t *audDrv, UInt16 bufIndex, U
 	// debug purpose
 	if (bottomSize < bufSize)
 	{
-		Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: hit bottom, bottomSize = %d, bufSize = %d\n", bottomSize, bufSize);
+		Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: hit bottom, bottomSize = %ld, bufSize = %ld\n", bottomSize, bufSize);
 	}
 	
 	// check if we have left to copy 
@@ -919,13 +901,13 @@ static void ProcessSharedMemRequest (VOCAPTURE_Drv_t *audDrv, UInt16 bufIndex, U
 		{
 			// we haven't copied all data, and will copy the left when 
 			// we get the next dsp callback.
-			Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: This should not happen. How big is the buffer size? destBufSize = 0x%x\n", audDrv->destBufSize);
+			Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: This should not happen. How big is the buffer size? destBufSize = 0x%lx\n", audDrv->destBufSize);
 		}	
 
 		audDrv->destBufCopied += copied;
 		if (audDrv->destBufCopied > 0)
 		{
-			Log_DebugPrintf(LOGID_AUDIO, " ProcessShareMemRequest :: destBufCopied = 0x%x, readPtr = 0x%x, writePtr = 0x%x\n", audDrv->destBufCopied, aq->readPtr, aq->writePtr);
+			Log_DebugPrintf(LOGID_AUDIO, " ProcessShareMemRequest :: destBufCopied = 0x%lx, readPtr = 0x%lx, writePtr = 0x%lx\n", audDrv->destBufCopied, (UInt32)aq->readPtr, (UInt32)aq->writePtr);
 		}
 	}
 }
@@ -1014,7 +996,7 @@ static void CheckBufDoneUponStop (VOCAPTURE_Drv_t	*audDrv)
 	// we need to call the buffer done
 	if (audDrv->destBufCopied < audDrv->destBufSize)
 	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "%s Catch a pending bufDoneCB! total buffer size 0x%x, copied buffer size 0x%x.", __FUNCTION__, audDrv->destBufSize, audDrv->destBufCopied);
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "%s Catch a pending bufDoneCB! total buffer size 0x%lx, copied buffer size 0x%lx.", __FUNCTION__, audDrv->destBufSize, audDrv->destBufCopied);
 		audDrv->bufDoneCb (audDrv->destBuf, audDrv->destBufCopied, audDrv->drvType);
 	}
 }

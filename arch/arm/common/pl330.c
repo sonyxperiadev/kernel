@@ -369,9 +369,14 @@ static inline bool is_manager(struct pl330_thread *thrd)
 /* If manager of the thread is in Non-Secure mode */
 static inline bool _manager_ns(struct pl330_thread *thrd)
 {
+/* BRCM: No manager thread, security based on APB interface */
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	struct pl330_dmac *pl330 = thrd->dmac;
 
 	return (pl330->pinfo->pcfg.mode & DMAC_MODE_NS) ? true : false;
+#else
+	return true;
+#endif
 }
 
 static inline u32 get_id(struct pl330_info *pi, u32 off)
@@ -782,6 +787,8 @@ static inline void _execute_DBGINSN(struct pl330_thread *thrd,
 
 static inline u32 _state(struct pl330_thread *thrd)
 {
+/* BRCM: Cant determine the state machine in open mode!!!*/
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	void __iomem *regs = thrd->dmac->pinfo->base;
 	u32 val;
 
@@ -836,12 +843,16 @@ static inline u32 _state(struct pl330_thread *thrd)
 	default:
 		return PL330_STATE_INVALID;
 	}
+#else
+	return PL330_STATE_STOPPED;
+#endif
 }
 
 /* If the request 'req' of thread 'thrd' is currently active */
 static inline bool _req_active(struct pl330_thread *thrd,
 		struct _pl330_req *req)
 {
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	void __iomem *regs = thrd->dmac->pinfo->base;
 	u32 buf = req->mc_bus, pc = readl(regs + CPC(thrd->id));
 
@@ -849,6 +860,9 @@ static inline bool _req_active(struct pl330_thread *thrd,
 		return false;
 
 	return (pc >= buf && pc <= buf + req->mc_len) ? true : false;
+#else
+	return true;
+#endif
 }
 
 /* Returns 0 if the thread is inactive, ID of active req + 1 otherwise */
@@ -865,7 +879,9 @@ static inline unsigned _thrd_active(struct pl330_thread *thrd)
 
 static void _stop(struct pl330_thread *thrd)
 {
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	void __iomem *regs = thrd->dmac->pinfo->base;
+#endif
 	u8 insn[6] = {0, 0, 0, 0, 0, 0};
 
 	if (_state(thrd) == PL330_STATE_FAULT_COMPLETING)
@@ -880,8 +896,10 @@ static void _stop(struct pl330_thread *thrd)
 	_emit_KILL(0, insn);
 
 	/* Stop generating interrupts for SEV */
-	/*BRCM: INTEN reg is Secure APB only*/
+	 /* BRCM: non-secure mode, INTEN is set once in ABI */
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	writel(readl(regs + INTEN) & ~(1 << thrd->ev), regs + INTEN);
+#endif
 
 	_execute_DBGINSN(thrd, insn, is_manager(thrd));
 }
@@ -889,7 +907,9 @@ static void _stop(struct pl330_thread *thrd)
 /* Start doing req 'idx' of thread 'thrd' */
 static bool _trigger(struct pl330_thread *thrd)
 {
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	void __iomem *regs = thrd->dmac->pinfo->base;
+#endif
 	struct _pl330_req *req;
 	struct pl330_req *r;
 	struct _arg_GO go;
@@ -915,10 +935,14 @@ static bool _trigger(struct pl330_thread *thrd)
 
 	if (r->cfg)
 		ns = r->cfg->nonsecure ? 1 : 0;
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	else if (readl(regs + CS(thrd->id)) & CS_CNS)
 		ns = 1;
 	else
 		ns = 0;
+#else
+		ns = 1;
+#endif
 
 	/* See 'Abort Sources' point-4 at Page 2-25 */
 	if (_manager_ns(thrd) && !ns)
@@ -931,8 +955,10 @@ static bool _trigger(struct pl330_thread *thrd)
 	_emit_GO(0, insn, &go);
 
 	/* Set to generate interrupts for SEV */
-	/*BRCM: INTEN reg is Secure APB only*/
+	 /* BRCM: non-secure mode, INTEN is set once in ABI */
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	writel(readl(regs + INTEN) | (1 << thrd->ev), regs + INTEN);
+#endif
 
 	/* Only manager can execute GO */
 	_execute_DBGINSN(thrd, insn, true);
@@ -992,10 +1018,14 @@ static inline int _ldst_devtomem(unsigned dry_run, u8 buf[],
 		const struct _xfer_spec *pxs, int cyc)
 {
 	int off = 0;
+	enum pl330_cond c = SINGLE;
+
+	if (pxs->r->cfg->brst_size)
+		c = BURST;
 
 	while (cyc--) {
-		off += _emit_WFP(dry_run, &buf[off], SINGLE, pxs->r->peri);
-		off += _emit_LDP(dry_run, &buf[off], SINGLE, pxs->r->peri);
+		off += _emit_WFP(dry_run, &buf[off], c, pxs->r->peri);
+		off += _emit_LDP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_ST(dry_run, &buf[off], ALWAYS);
 		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
 	}
@@ -1007,11 +1037,15 @@ static inline int _ldst_memtodev(unsigned dry_run, u8 buf[],
 		const struct _xfer_spec *pxs, int cyc)
 {
 	int off = 0;
+	enum pl330_cond c = SINGLE;
+
+	if (pxs->r->cfg->brst_size)
+		c = BURST;
 
 	while (cyc--) {
-		off += _emit_WFP(dry_run, &buf[off], SINGLE, pxs->r->peri);
+		off += _emit_WFP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_LD(dry_run, &buf[off], ALWAYS);
-		off += _emit_STP(dry_run, &buf[off], SINGLE, pxs->r->peri);
+		off += _emit_STP(dry_run, &buf[off], c, pxs->r->peri);
 		off += _emit_FLUSHP(dry_run, &buf[off], pxs->r->peri);
 	}
 
@@ -1441,6 +1475,7 @@ int pl330_update(const struct pl330_info *pi)
 
 	/* Check which event happened i.e, thread notified */
 	/*BRCM: ES reg is Secure APB only*/
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 	val = readl(regs + ES);
 	if (pi->pcfg.num_events < 32
 			&& val & ~((1 << pi->pcfg.num_events) - 1)) {
@@ -1449,18 +1484,26 @@ int pl330_update(const struct pl330_info *pi)
 		ret = 1;
 		goto updt_exit;
 	}
+#else
+	/* Read INTSTATUS to check channel interrupts */
+	val = readl(regs + INTSTATUS);
+#endif
 
 	for (ev = 0; ev < pi->pcfg.num_events; ev++) {
 		if (val & (1 << ev)) { /* Event occured */
 			struct pl330_thread *thrd;
-			/*BRCM: INTEN reg is Secure APB only*/
-			u32 inten = readl(regs + INTEN);
 			int active;
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
+			u32 inten = readl(regs + INTEN);
 
 			/* Clear the event */
 			if (inten & (1 << ev))
 				writel(1 << ev, regs + INTCLR);
-
+#else
+			/* clear the inetrrupt */
+			writel(1 << ev, regs + INTCLR);
+#endif
+ 
 			ret = 1;
 
 			id = pl330->events[ev];
@@ -1496,7 +1539,9 @@ int pl330_update(const struct pl330_info *pi)
 		spin_lock_irqsave(&pl330->lock, flags);
 	}
 
+#ifdef CONFIG_DMAC_KONA_PL330_SECURE_MODE
 updt_exit:
+#endif
 	spin_unlock_irqrestore(&pl330->lock, flags);
 
 	if (pl330->dmac_tbd.reset_dmac

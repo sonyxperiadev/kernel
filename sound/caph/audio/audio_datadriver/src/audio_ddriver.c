@@ -1,43 +1,28 @@
-/******************************************************************************
-Copyright 2009 Broadcom Corporation.  All rights reserved.
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 
-This program is the proprietary software of Broadcom Corporation and/or its 
-licensors, and may only be used, duplicated, modified or distributed pursuant 
-to the terms and conditions of a separate, written license agreement executed 
-between you and Broadcom (an "Authorized License").
-
-Except as set forth in an Authorized License, Broadcom grants no license
-(express or implied), right to use, or waiver of any kind with respect to the 
-Software, and Broadcom expressly reserves all rights in and to the Software and 
-all intellectual property rights therein.  IF YOU HAVE NO AUTHORIZED LICENSE, 
-THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY 
-NOTIFY BROADCOM AND DISCONTINUE ALL USE OF THE SOFTWARE.
-  
- Except as expressly set forth in the Authorized License,
-1. This program, including its structure, sequence and organization, 
-constitutes the valuable trade secrets of Broadcom, and you shall use all 
-reasonable efforts to protect the confidentiality thereof, and to use this 
-information only in connection with your use of Broadcom integrated circuit 
-products.
-
-2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS" 
-AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR 
-WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT TO 
-THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL IMPLIED WARRANTIES 
-OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR PURPOSE, 
-LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION 
-OR CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE RISK ARISING OUT OF 
-USE OR PERFORMANCE OF THE SOFTWARE.
-
-3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS 
-LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR 
-EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO YOUR USE 
-OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE 
-POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS OF THE AMOUNT 
-ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE 
-LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF 
-ANY LIMITED REMEDY.
-******************************************************************************/
 /**
 *
 * @file   audio_ddriver.c
@@ -77,6 +62,7 @@ typedef struct AUDIO_DDRIVER_t
 {
     AUDIO_DRIVER_TYPE_t                     drv_type;
     AUDIO_DRIVER_InterruptPeriodCB_t        pCallback;
+	void	*								pCBPrivate;
     UInt32                                  interrupt_period;
     AUDIO_SAMPLING_RATE_t                   sample_rate;
     AUDIO_CHANNEL_NUM_t		                num_channel;
@@ -123,7 +109,6 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 
 static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id);
 static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id);
-static void AUDIO_DRIVER_CaptureVoiceCallback(UInt32 buf_index);
 
 //=============================================================================
 // Functions
@@ -282,7 +267,7 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
             break;
         case AUDIO_DRIVER_CAPT_VOICE:
             {
-             #ifdef LMP_BUILD // no function available 
+             #ifdef CONFIG_AUDIO_BUILD // no function available 
 		 dspif_VPU_record_init ();
 	     #endif
                 audio_capture_driver = aud_drv;
@@ -336,7 +321,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
             break;
         case AUDIO_DRIVER_CAPT_VOICE:
             {
-		#ifdef LMP_BUILD
+		#ifdef CONFIG_AUDIO_BUILD
 		dspif_VPU_record_deinit (); // no function available
                 #endif
 		audio_capture_driver = NULL;
@@ -510,7 +495,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                 result_code = csl_audio_render_configure ( aud_drv->sample_rate, 
 						                      aud_drv->num_channel,
                 			                              aud_drv->bits_per_sample,
-						                      aud_drv->ring_buffer_phy_addr,
+						                      (UInt8 *)aud_drv->ring_buffer_phy_addr,
 						                      num_blocks,
 						                      block_size,
 						                      (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
@@ -596,7 +581,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                 result_code = csl_audio_capture_configure ( aud_drv->sample_rate, 
 						                      aud_drv->num_channel,
                                               			      aud_drv->bits_per_sample,
-						                      aud_drv->ring_buffer_phy_addr,
+						                      (UInt8 *)aud_drv->ring_buffer_phy_addr,
 						                      num_blocks,
 						                      block_size,
 						                      (CSL_AUDCAPTURE_CB) AUDIO_DRIVER_CaptureDmaCallback,
@@ -656,7 +641,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 frame_size;
                 UInt32 num_frames;
                 UInt32 left_over;
-               #ifdef LMP_BUILD
+               #ifdef CONFIG_AUDIO_BUILD
 		UInt32 speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_8K;
                #else
 		UInt32 speech_mode = 0;
@@ -677,12 +662,12 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 }
 
                 //set the callback
-             #ifdef LMP_BUILD // no function available 
+             #ifdef CONFIG_AUDIO_BUILD // no function available 
                 dspif_VPU_record_set_cb (AUDIO_DRIVER_CaptureVoiceCallback);
              #endif   
 
-                /* **CAUTION: Check if we need to hardcode number of frames and handle the interrupt period seperately
-                /* Block size = interrupt_period
+         /* **CAUTION: Check if we need to hardcode number of frames and handle the interrupt period seperately
+                * Block size = interrupt_period
                  * Number of frames/block = interrupt_period / 320 (20ms worth of 8khz data)
                  *
                  */
@@ -698,11 +683,11 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 
                 if(left_over)
                 {
-                    Log_DebugPrintf(LOGID_AUDIO,"Period is not multiple of 20ms-%d  \n",left_over);
+                    Log_DebugPrintf(LOGID_AUDIO,"Period is not multiple of 20ms-%ld  \n",left_over);
                     num_frames++;  // increase frame count by 1 more so that we have all data when we signal
                 }
                 if(aud_drv->sample_rate == 16000)
-                   #ifdef LMP_BUILD
+                   #ifdef CONFIG_AUDIO_BUILD
 		    speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_16K;
                    #else  
 		   speech_mode = 0;
@@ -734,7 +719,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
         case AUDIO_DRIVER_PAUSE:
             {
                 //pause capture
-             #ifdef LMP_BUILD // no function available 
+             #ifdef CONFIG_AUDIO_BUILD // no function available 
                 result_code = dspif_VPU_record_pause ();
              #endif
 	    }
@@ -742,7 +727,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
         case AUDIO_DRIVER_RESUME:
             {
                 //resume capture
-             #ifdef LMP_BUILD // no function available 
+             #ifdef CONFIG_AUDIO_BUILD // no function available 
                 result_code = dspif_VPU_record_resume ();
              #endif
 	    }
@@ -791,13 +776,16 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
 
         case AUDIO_DRIVER_SET_CB:
             {
+				AUDIO_DRIVER_CallBackParams_t *pCbParams;
                 if(pCtrlStruct == NULL)
                 {
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr  \n"  );
                     return result_code;
                 }
                 //assign the call back
-                aud_drv->pCallback = (AUDIO_DRIVER_InterruptPeriodCB_t)pCtrlStruct;
+                pCbParams = (AUDIO_DRIVER_CallBackParams_t *)pCtrlStruct;
+                aud_drv->pCallback = pCbParams->pfCallBack;
+				aud_drv->pCBPrivate = pCbParams->pPrivateData;
                 result_code = RESULT_OK;
             }
             break;
@@ -871,7 +859,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
     }
     if(audio_render_driver->pCallback != NULL)
     {
-        audio_render_driver->pCallback(audio_render_driver);
+        audio_render_driver->pCallback(audio_render_driver->pCBPrivate);
     }
     else
         Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_RenderDmaCallback:: No callback registerd\n");
@@ -900,7 +888,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
     }
     if(audio_capture_driver->pCallback != NULL)
     {
-        audio_capture_driver->pCallback(audio_capture_driver);
+        audio_capture_driver->pCallback(audio_capture_driver->pCBPrivate);
     }
     else
         Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_CaptureDmaCallback:: No callback registerd\n");
@@ -919,7 +907,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
 
 static void AUDIO_DRIVER_CaptureVoiceCallback(UInt32 buf_index)
 {
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
     Int32		dest_index, num_bytes_to_copy, split,end_size = 0;
 	UInt8 *	pdest_buf;
     UInt32      dst_buf_size,recv_size;

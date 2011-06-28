@@ -1,54 +1,28 @@
-//*********************************************************************
-//
-//	Copyright © 2000-2008 Broadcom Corporation
-//
-//	This program is the proprietary software of Broadcom Corporation
-//	and/or its licensors, and may only be used, duplicated, modified
-//	or distributed pursuant to the terms and conditions of a separate,
-//	written license agreement executed between you and Broadcom (an
-//	"Authorized License").  Except as set forth in an Authorized
-//	License, Broadcom grants no license (express or implied), right
-//	to use, or waiver of any kind with respect to the Software, and
-//	Broadcom expressly reserves all rights in and to the Software and
-//	all intellectual property rights therein.  IF YOU HAVE NO
-//	AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE
-//	IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE
-//	ALL USE OF THE SOFTWARE.
-//
-//	Except as expressly set forth in the Authorized License,
-//
-//	1.	This program, including its structure, sequence and
-//		organization, constitutes the valuable trade secrets
-//		of Broadcom, and you shall use all reasonable efforts
-//		to protect the confidentiality thereof, and to use
-//		this information only in connection with your use
-//		of Broadcom integrated circuit products.
-//
-//	2.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE
-//		IS PROVIDED "AS IS" AND WITH ALL FAULTS AND BROADCOM
-//		MAKES NO PROMISES, REPRESENTATIONS OR WARRANTIES,
-//		EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE,
-//		WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY
-//		DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE,
-//		MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A
-//		PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR
-//		COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR
-//		CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE
-//		RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-//
-//	3.	TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT
-//		SHALL BROADCOM OR ITS LICENSORS BE LIABLE FOR
-//		(i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR
-//		EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY
-//		WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE
-//		SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE
-//		POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN
-//		EXCESS OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE
-//		ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE
-//		LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE
-//		OF ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-//
-//***************************************************************************
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
+
 /**
 *
 *   @file   taskmsgs.h
@@ -75,11 +49,11 @@
 #define  MAX_CLIENT_NUM						30		///< 5 tasks in platform (atc, bluetooth, dlink, stk ds, test MMI) using
 													///< SYS_RegisterForMSEvent(), leaving 5 more clients for MMI/application use
 
-//--- Internal/Reserved Client ID (200-255) ----------
-#define	STK_CLIENT_ID  						 200	///< STK Client Identifier
-#define	MNCC_CLIENT_ID  					 201	///< MNCC Client Identifier
-#define DEFAULT_CLIENT_ID					 202	///< Internal default Client Identifier
-#define MT_USSD_CLIENT_ID					 203	///< client ID assigned when a MT USSD is received.(for ATC use)
+//--- Internal/Reserved Client ID (1-63) ----------
+#define	STK_CLIENT_ID  						 1	///< STK Client Identifier
+#define	MNCC_CLIENT_ID  					 2	///< MNCC Client Identifier
+#define DEFAULT_CLIENT_ID					15  ///< Internal default Client Identifier
+#define MT_USSD_CLIENT_ID					17	///< client ID assigned when a MT USSD is received.(for ATC use)
 
 //--- External Client Identifiers (64-on) ---------
 
@@ -168,8 +142,6 @@ typedef enum
 	MSG_GRP_CAPI2_GEN_D			= 0x4D00,
 	MSG_GRP_CAPI2_GEN_E			= 0x4E00,
 	MSG_GRP_CAPI2_GEN_F			= 0x4F00,
-
-	MSG_GRP_RTC					= 0x5000,
 
 	MSG_GRP_SIMULATOR_0 		= 0x6000,
 	MSG_GRP_SIMULATOR_1 		= 0x6100,
@@ -1681,6 +1653,7 @@ typedef enum
 //*****************************************************************************
 //*****************************************************************************
 
+	MSG_SMS_USR_DATA_IND		= MSG_GRP_INT_SMS_SS+0x01,
 	MSG_SMS_PARM_CHECK_RSP		= MSG_GRP_INT_SMS_SS+0x02,	///<Payload type {::SmsParmCheckRsp_t}
 	MSG_SMS_REPORT_IND			= MSG_GRP_INT_SMS_SS+0x03,	///<Payload type {::SmsReportInd_t}
 	MSG_SMS_MEM_AVAIL_RSP		= MSG_GRP_INT_SMS_SS+0x04,	///<Payload type {::T_MN_TP_SMS_RSP}
@@ -2123,12 +2096,15 @@ typedef enum
 	/// From platform to LCS task. RRC reset position stored information
 	MSG_LCS_RRC_RESET_POS_STORED_INFO_IND				 	= MSG_GRP_LCS+0x88, ///<Payload type {::ClientInfo_t}
 //TASKMSGS_INCLUDE taskmsgs_atc.i
-	MSG_SMS_USR_DATA_IND		= MSG_GRP_INT_SMS_SS+0x01,
 
 	MSG_AT_CMD_STR				= MSG_GRP_INT_ATC+0x35,	///<Payload type {::}
 	MSG_AT_COMMAND_REQ			= MSG_GRP_INT_ATC+0x52,	///<Payload type {::AtCmdInfo_t}
 	MSG_AT_COMMAND_IND			= MSG_GRP_INT_ATC+0x53,	///<Payload type {::AtCmdInfo_t}
-//TASKMSGS_INCLUDE taskmsgs_usb.i
+	MSG_AT_REGISTER_REQ			= MSG_GRP_INT_ATC+0x54, 	///<Payload type {::AtRegisterInfo_t}//TASKMSGS_INCLUDE taskmsgs_usb.i
+	MSG_AT_TONE_REQ				= MSG_GRP_INT_ATC+0x55, 	///<Payload type {::AtToneInfo_t}
+	MSG_AT_AUDIO_REQ			= MSG_GRP_INT_ATC+0x56,		///<payload type {::Boolean}
+	MSG_AT_MICMUTE_REQ			= MSG_GRP_INT_ATC+0x57,		///<payload type {::Boolean}
+	MSG_AT_SPEAKERMUTE_REQ			= MSG_GRP_INT_ATC+0x58,		///<payload type {::Boolean}
 	//---------------------------------------------------------------
 	// MSG_GRP_DEV, MESSAGE GROUP FOR DEVICES (0x0700)
 	//---------------------------------------------------------------
@@ -3715,10 +3691,6 @@ typedef enum
 	**/
 	MSG_SIM_RESTRICTED_ACCESS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xE2,	///<Payload type {::CAPI2_SimApi_SubmitRestrictedAccessReq_Req_t}
 	 /** 
-	api is CAPI2_ADCMGR_Start 
-	**/
-	MSG_ADC_START_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xF6,	///<Payload type {::CAPI2_ADCMGR_Start_Req_t}
-	 /** 
 	api is CAPI2_MS_GetSystemRAT 
 	**/
 	MSG_MS_GET_SYSTEM_RAT_REQ  = MSG_GRP_CAPI2_GEN_0 + 0xFA,
@@ -3922,18 +3894,6 @@ typedef enum
 	payload is ::Boolean 
 	**/
 	MSG_PBK_GET_FDN_CHECK_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x12F,	///<Payload type {::Boolean}
-	 /** 
-	api is CAPI2_PMU_Battery_Register 
-	**/
-	MSG_PMU_BATT_LEVEL_REGISTER_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x130,	///<Payload type {::CAPI2_PMU_Battery_Register_Req_t}
-	 /** 
-	payload is ::HAL_EM_BATTMGR_ErrorCode_en_t 
-	**/
-	MSG_PMU_BATT_LEVEL_REGISTER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x131,	///<Payload type {::HAL_EM_BATTMGR_ErrorCode_en_t}
-	 /** 
-	payload is ::HAL_EM_BatteryLevel_t 
-	**/
-	MSG_PMU_BATT_LEVEL_IND  = MSG_GRP_CAPI2_GEN_0 + 0x133,	///<Payload type {::HAL_EM_BatteryLevel_t}
 	 /** 
 	api is CAPI2_SmsApi_SendMemAvailInd 
 	**/
@@ -4227,14 +4187,6 @@ typedef enum
 	**/
 	MSG_DIAG_MEASURE_REPORT_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x18D,
 	 /** 
-	api is CAPI2_PMU_BattChargingNotification 
-	**/
-	MSG_PMU_BATT_CHARGING_NOTIFICATION_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x18E,	///<Payload type {::CAPI2_PMU_BattChargingNotification_Req_t}
-	 /** 
-	payload is void 
-	**/
-	MSG_PMU_BATT_CHARGING_NOTIFICATION_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x18F,
-	 /** 
 	api is CAPI2_MsDbApi_InitCallCfg 
 	**/
 	MSG_MS_INITCALLCFG_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x190,
@@ -4309,7 +4261,11 @@ typedef enum
 	 /** 
 	api is CAPI2_SmsApi_StartCellBroadcastWithChnlReq 
 	**/
-	MSG_SMS_CB_START_STOP_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1A6,	///<Payload type {::CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t}
+	MSG_SMS_START_CB_WITHCHNL_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x1A6,	///<Payload type {::CAPI2_SmsApi_StartCellBroadcastWithChnlReq_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_SMS_START_CB_WITHCHNL_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x1A7,
 	 /** 
 	api is CAPI2_SmsApi_SetMoSmsTpMr 
 	**/
@@ -6003,13 +5959,13 @@ typedef enum
 	**/
 	MSG_SYSPARAM_DSF_VER_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x399,	///<Payload type {void}
 	 /** 
-	api is CAPI2_USimApi_GetUst 
+	api is CAPI2_USimApi_GetUstData 
 	**/
 	MSG_USIM_UST_DATA_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x39A,
 	 /** 
-	payload is ::UInt8 
+	payload is void 
 	**/
-	MSG_USIM_UST_DATA_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x39B,	///<Payload type {::UInt8}
+	MSG_USIM_UST_DATA_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x39B,	///<Payload type {void}
 	 /** 
 	api is CAPI2_PATCH_GetRevision 
 	**/

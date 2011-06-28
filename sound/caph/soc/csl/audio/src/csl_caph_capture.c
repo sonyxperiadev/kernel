@@ -28,7 +28,7 @@ Broadcom's express prior written consent.
 #include "csl_caph_dma.h"
 #include "csl_caph_hwctrl.h"
 #include "csl_audio_capture.h"
-#ifdef LMP_BUILD
+#ifdef CONFIG_AUDIO_BUILD
 #include "dbg.h"
 #endif
 
@@ -71,7 +71,7 @@ typedef	struct
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {0};
+static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
 
 //****************************************************************************
 // local function declarations
@@ -249,7 +249,7 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 
 	if(audDrv->source==CSL_CAPH_DEV_DSP && audDrv->sink==CSL_CAPH_DEV_MEMORY)
 	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_configure::USB call? reset src_sampleRate from %d to 8000.\r\n", stream.src_sampleRate);
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_configure::USB call? reset src_sampleRate from %ld to 8000.\r\n", stream.src_sampleRate);
 		stream.src_sampleRate = AUDIO_SAMPLING_RATE_8000;
 	}
 	

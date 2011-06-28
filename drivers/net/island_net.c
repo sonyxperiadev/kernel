@@ -1802,7 +1802,8 @@ FUNC_ENTRY();
 	dev->ethtool_ops = &bcm_ethtool_ops;
 #endif
 #ifdef CONFIG_NET_POLL_CONTROLLER
-	dev->poll_controller = bcmhana_net_poll_controller;
+	// !!! FIXME
+	//dev->poll_controller = bcmhana_net_poll_controller;
 #endif
 	/* Assign Rx interrupt even though both Rx and Tx interrupts are required.
 	*  This is for informational purposes only

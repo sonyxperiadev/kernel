@@ -1,43 +1,28 @@
-/******************************************************************************
-Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 
-This program is the proprietary software of Broadcom Corporation and/or its 
-licensors, and may only be used, duplicated, modified or distributed pursuant 
-to the terms and conditions of a separate, written license agreement executed 
-between you and Broadcom (an "Authorized License").
-
-Except as set forth in an Authorized License, Broadcom grants no license
-(express or implied), right to use, or waiver of any kind with respect to the 
-Software, and Broadcom expressly reserves all rights in and to the Software and 
-all intellectual property rights therein.  IF YOU HAVE NO AUTHORIZED LICENSE, 
-THEN YOU HAVE NO RIGHT TO USE THIS SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY 
-NOTIFY BROADCOM AND DISCONTINUE ALL USE OF THE SOFTWARE.
-  
- Except as expressly set forth in the Authorized License,
-1. This program, including its structure, sequence and organization, 
-constitutes the valuable trade secrets of Broadcom, and you shall use all 
-reasonable efforts to protect the confidentiality thereof, and to use this 
-information only in connection with your use of Broadcom integrated circuit 
-products.
-
-2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS" 
-AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR 
-WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH RESPECT TO 
-THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL IMPLIED WARRANTIES 
-OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS FOR A PARTICULAR PURPOSE, 
-LACK OF VIRUSES, ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION 
-OR CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE RISK ARISING OUT OF 
-USE OR PERFORMANCE OF THE SOFTWARE.
-
-3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS 
-LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT, OR 
-EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO YOUR USE 
-OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE 
-POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS OF THE AMOUNT 
-ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER IS GREATER. THESE 
-LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF ESSENTIAL PURPOSE OF 
-ANY LIMITED REMEDY.
-******************************************************************************/
 /**
 *
 * @file   audio_vdriver_caph.c
@@ -60,9 +45,6 @@ ANY LIMITED REMEDY.
 //#include "ripcmdq.h"
 #include "ripisr.h"
 #include "audio_consts.h"
-#ifdef LMP_BUILD
-#include "csl_aud_drv.h"
-#endif
 //#include "sysparm.h"
 #include "ostask.h"
 #include "audioapi_asic.h"
@@ -124,7 +106,6 @@ static Boolean bInVoiceCall = FALSE;
 
 static CB_GetAudioMode_t  client_GetAudioMode = NULL;
 static CB_SetAudioMode_t  client_SetAudioMode = NULL;
-static CB_SetMusicMode_t  client_SetMusicMode = NULL;
 
 //=============================================================================
 // Private function prototypes
@@ -149,7 +130,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 {
     AUDDRV_HWCTRL_CONFIG_t config;
 	Log_DebugPrintf(LOGID_AUDIO, 
-                    "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%d*\n\r", 
+                    "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%ld*\n\r", 
                     mic, speaker, sample_rate);
 
     memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
@@ -160,7 +141,10 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     //DL
     config.streamID = AUDDRV_STREAM_NONE;
     config.pathID = 0;
-    config.source = AUDDRV_DEV_DSP;
+	if(speaker == AUDDRV_SPKR_IHF)
+		 config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
+	else
+	    config.source = AUDDRV_DEV_DSP;
     config.sink = AUDDRV_GetDRVDeviceFromSpkr(speaker);
     config.dmaCH = CSL_CAPH_DMA_NONE;    
     config.src_sampleRate = sample_rate;
@@ -282,7 +266,7 @@ void AUDDRV_EnableDSPOutput (
 				)
 
 {
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_EnableDSPOutput mixer %d, invoicecall %d, sample_rate %d *\n\r", mixer_speaker_selection, inVoiceCall, sample_rate);
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_EnableDSPOutput mixer %d, invoicecall %d, sample_rate %ld *\n\r", mixer_speaker_selection, inVoiceCall, sample_rate);
 
 	OSTASK_Sleep( 5 );  //sometimes BBC video has no audio. This delay may help the mixer filter and mixer gain loading.
 	currVoiceSpkr = mixer_speaker_selection;
@@ -615,7 +599,7 @@ void AUDDRV_User_CtrlDSP ( AudioDrvUserParam_t audioDrvUserParam, void *user_CB,
 	if (user_CB != NULL)
 		sUserCB = user_CB;
 
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_User_CtrlDSP, UserCB = %x *\n\r", sUserCB);
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_User_CtrlDSP, UserCB = %lx *\n\r", (UInt32)sUserCB);
 	switch (audioDrvUserParam)
 	{
 		case AUDDRV_USER_GET_SPKPROT:

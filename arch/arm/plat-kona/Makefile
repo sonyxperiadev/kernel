@@ -12,7 +12,7 @@
 # consent.
 #*****************************************************************************
 
-obj-y := irq.o kona_timer.o timer.o pinmux.o sysfs.o
+obj-y := irq.o kona_timer.o timer.o profile_timer.o pinmux.o sysfs.o
 obj-$(CONFIG_SMP) += headsmp.o platsmp.o
 obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
 obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o
@@ -23,4 +23,7 @@ obj-$(CONFIG_HAVE_CLK) += clock.o
 endif
 obj-$(CONFIG_MACH_RHEA_RAY) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY) += csl/
+obj-$(CONFIG_MACH_SAMOA_RAY) += chal/
+# SAMOA RAY bringup only has keypad at this point, so no CSL
+#obj-$(CONFIG_MACH_SAMOA_RAY) += csl/
 obj-$(CONFIG_DMAC_PL330) += dmux.o dma.o

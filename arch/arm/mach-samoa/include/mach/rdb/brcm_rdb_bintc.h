@@ -21,8 +21,8 @@
 /*     way with any other Broadcom software provided under a license other than the GPL,        */
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
-/*     Date     : Generated on 4/10/2011 22:28:10                                             */
-/*     RDB file : /projects/DSP/revA0                                                                   */
+/*     Date     : Generated on 5/15/2011 11:41:39                                             */
+/*     RDB file : /projects/SAMOA/revA0                                                                   */
 /************************************************************************************************/
 
 #ifndef __BRCM_RDB_BINTC_H__

@@ -15,7 +15,7 @@ obj-$(CONFIG_HTC_I2CPLD)	+= htc-i2cpld.o
 obj-$(CONFIG_MFD_DAVINCI_VOICECODEC)	+= davinci_voicecodec.o
 obj-$(CONFIG_MFD_DM355EVM_MSP)	+= dm355evm_msp.o
 
-obj-$(CONFIG_MFD_TC35892)	+= tc35892.o
+obj-$(CONFIG_MFD_TC3589X)	+= tc3589x.o
 obj-$(CONFIG_MFD_T7L66XB)	+= t7l66xb.o tmio_core.o
 obj-$(CONFIG_MFD_TC6387XB)	+= tc6387xb.o tmio_core.o
 obj-$(CONFIG_MFD_TC6393XB)	+= tc6393xb.o tmio_core.o
@@ -72,3 +72,5 @@ obj-$(CONFIG_LPC_SCH)		+= lpc_sch.o
 obj-$(CONFIG_MFD_RDC321X)	+= rdc321x-southbridge.o
 obj-$(CONFIG_MFD_JANZ_CMODIO)	+= janz-cmodio.o
 obj-$(CONFIG_MFD_BCM_PMU590XX)  += bcm590xx-i2c.o bcm590xx-core.o
+obj-$(CONFIG_MFD_BCMPMU)	+= bcmpmu-i2c.o bcmpmu-core.o bcmpmu-irq.o
+obj-$(CONFIG_MFD_BCM59055)	+= bcmpmu-bcm59055-map.o

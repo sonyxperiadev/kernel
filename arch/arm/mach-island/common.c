@@ -26,7 +26,7 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/serial_8250.h>
-#include <linux/island_keypad.h>
+#include <linux/kona_keypad.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
 #include <mach/kona.h>
@@ -151,10 +151,13 @@ static struct platform_device wdt_device =
    .id            = -1,
    .resource	  = wdt_device_resource,
    .num_resources = ARRAY_SIZE(wdt_device_resource),
+   .dev = {
+        .platform_data = "arm_periph_clk",
+    },
 };
 #endif
 
-#if defined(CONFIG_KEYBOARD_ISLAND)
+#if defined(CONFIG_KEYBOARD_KONA)
 
 static struct KEYMAP board_keypad_keymap[] = {
     { 0x01, '1' }, { 0x11, '2' }, { 0x21, '3' }, { 0x31, 'a' }, { 0x41, '(' }, { 0x51, 'e' }, { 0x61, 'U' },
@@ -172,6 +175,7 @@ static struct KEYPAD_DATA board_keypad_param =
     .keymap_cnt  = ARRAY_SIZE(board_keypad_keymap),
     .pwroff      = board_keypad_pwroff,
     .pwroff_cnt  = ARRAY_SIZE(board_keypad_pwroff),
+    .clock       = "gpiokp_apb_clk",
 };
 
 static struct resource keypad_device_resource[] = {
@@ -189,7 +193,7 @@ static struct resource keypad_device_resource[] = {
 
 static struct platform_device keypad_device =
 {
-   .name          = "island-keypad",
+   .name          = "kona_keypad",
    .id            = -1,
    .resource	  = keypad_device_resource,
    .num_resources = ARRAY_SIZE(keypad_device_resource),
@@ -245,7 +249,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #if defined(CONFIG_KONA_PWMC)
         &pwm_device,
 #endif
-#if defined(CONFIG_KEYBOARD_ISLAND)
+#if defined(CONFIG_KEYBOARD_KONA)
         &keypad_device,
 #endif
 };

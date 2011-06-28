@@ -1,46 +1,28 @@
-/*****************************************************************************
-*
-*    (c) 2009 - 2011 Broadcom Corporation
-*
-* This program is the proprietary software of Broadcom Corporation and/or
-* its licensors, and may only be used, duplicated, modified or distributed
-* pursuant to the terms and conditions of a separate, written license
-* agreement executed between you and Broadcom (an "Authorized License").
-* Except as set forth in an Authorized License, Broadcom grants no license
-* (express or implied), right to use, or waiver of any kind with respect to
-* the Software, and Broadcom expressly reserves all rights in and to the
-* Software and all intellectual property rights therein.
-* IF YOU HAVE NO AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT TO USE THIS
-* SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY BROADCOM AND DISCONTINUE
-* ALL USE OF THE SOFTWARE.  
-*
-* Except as expressly set forth in the Authorized License,
-*
-* 1. This program, including its structure, sequence and organization,
-*    constitutes the valuable trade secrets of Broadcom, and you shall use all
-*    reasonable efforts to protect the confidentiality thereof, and to use
-*    this information only in connection with your use of Broadcom integrated
-*    circuit products.
-*
-* 2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED "AS IS"
-*    AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES, REPRESENTATIONS OR
-*    WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY, OR OTHERWISE, WITH
-*    RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY DISCLAIMS ANY AND ALL
-*    IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY, NONINFRINGEMENT, FITNESS
-*    FOR A PARTICULAR PURPOSE, LACK OF VIRUSES, ACCURACY OR COMPLETENESS,
-*    QUIET ENJOYMENT, QUIET POSSESSION OR CORRESPONDENCE TO DESCRIPTION. YOU
-*    ASSUME THE ENTIRE RISK ARISING OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-*
-* 3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM OR ITS
-*    LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL, SPECIAL, INDIRECT,
-*    OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF OR IN ANY WAY RELATING TO
-*    YOUR USE OF OR INABILITY TO USE THE SOFTWARE EVEN IF BROADCOM HAS BEEN
-*    ADVISED OF THE POSSIBILITY OF SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS
-*    OF THE AMOUNT ACTUALLY PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER
-*    IS GREATER. THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF
-*    ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-*
-*****************************************************************************/
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
+
 /**
 *
 *   @file   audio_vdriver_voice_play.c
@@ -157,7 +139,7 @@ typedef	struct VORENDER_Drv_t
 // local variables
 //
 static VORENDER_Drv_t	sVPU_Drv = { 0 };
-static VORENDER_Drv_t	sARM2SP_Drv[VORENDER_ARM2SP_INSTANCE_TOTAL] = { 0 };
+static VORENDER_Drv_t	sARM2SP_Drv[VORENDER_ARM2SP_INSTANCE_TOTAL] = { {0} };
 static VORENDER_Drv_t	sAMRWB_Drv = { 0 };
 
 static UInt16 dsp_readIndex;
@@ -334,7 +316,7 @@ Result_t AUDDRV_VoiceRender_SetTransferParameters(
 	if (audDrv == NULL)
 		return RESULT_ERROR;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_VoiceRender_SetTransferParameters:: type = 0x%x, callbackThreshold = 0x%x, interruptInterval = 0x%x\n", 
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_VoiceRender_SetTransferParameters:: type = 0x%x, callbackThreshold = 0x%lx, interruptInterval = 0x%lx\n", 
 								audDrv->drvType, callbackThreshold, interruptInterval);
 	
 	msg.msgID = VORENDER_MSG_SET_TRANSFER;
@@ -453,7 +435,7 @@ UInt32 AUDDRV_VoiceRender_Write(
 	// wait for the data copy finished.
 	OSSEMAPHORE_Obtain (audDrv->addBufSema, TICKS_FOREVER);
 
-	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_VoiceRender_Write :: srcBufCopied = 0x%x\n", audDrv->srcBufCopied);
+	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_VoiceRender_Write :: srcBufCopied = 0x%lx\n", audDrv->srcBufCopied);
 
 	return audDrv->srcBufCopied;
 }
@@ -623,7 +605,7 @@ UInt32 AUDDRV_VoiceRender_GetQueueLoad(VORENDER_TYPE_t      type)
 
 	load = AUDQUE_GetLoad(audDrv->audQueue);
 	
-	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_VoiceRender_GetQueueLoad::type = 0x%x, audDrv->type = 0x%x, load = 0x%x\n", type, audDrv->drvType, load);
+	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_VoiceRender_GetQueueLoad::type = 0x%x, audDrv->type = 0x%x, load = 0x%lx\n", type, audDrv->drvType, load);
 
 	return load;
 }
@@ -765,7 +747,7 @@ static void VPU_Render_TaskEntry (void)
 		status = OSQUEUE_Pend( audDrv->msgQueue, (QMsg_t *)&msg, TICKS_FOREVER );
 		if (status == OSSTATUS_SUCCESS)
 		{
-			Log_DebugPrintf(LOGID_AUDIO, " VPU_Render_TaskEntry::msgID = 0x%x. parm1 = 0x%x, parm2 = 0x%x\n", 
+			Log_DebugPrintf(LOGID_AUDIO, " VPU_Render_TaskEntry::msgID = 0x%x. parm1 = 0x%lx, parm2 = 0x%lx\n", 
 											msg.msgID, msg.parm1, msg.parm2);
 
 			switch (msg.msgID)
@@ -792,7 +774,7 @@ static void VPU_Render_TaskEntry (void)
 												audDrv->config.dataRateSelection, // used by AMRNB and AMRWB
 												audDrv->numFramesPerInterrupt);
 
-						Log_DebugPrintf(LOGID_AUDIO, " VPU_Render_TaskEntry::Start render, playbackMode = 0x%x,  speechMode = 0x%x, dataRate = 0x%x, mixMode = 0x%x\n", 
+						Log_DebugPrintf(LOGID_AUDIO, " VPU_Render_TaskEntry::Start render, playbackMode = 0x%x,  speechMode = 0x%lx, dataRate = 0x%lx, mixMode = 0x%x\n", 
 							audDrv->config.playbackMode, audDrv->config.speechMode, audDrv->config.dataRateSelection, audDrv->config.mixMode);
 					}
 				
@@ -866,7 +848,7 @@ static void ARM2SP_Render_TaskEntry (void* arg)
 		status = OSQUEUE_Pend( audDrv->msgQueue, (QMsg_t *)&msg, TICKS_FOREVER );
 		if (status == OSSTATUS_SUCCESS)
 		{
-			Log_DebugPrintf(LOGID_AUDIO, " ARM2SP_Render_TaskEntry::msgID = 0x%x. parm1 = 0x%x, parm2 = 0x%x\n", 
+			Log_DebugPrintf(LOGID_AUDIO, " ARM2SP_Render_TaskEntry::msgID = 0x%x. parm1 = 0x%lx, parm2 = 0x%lx\n", 
 											msg.msgID, msg.parm1, msg.parm2);
 			switch (msg.msgID)
 			{
@@ -1112,12 +1094,12 @@ static UInt32	CopyBufferToQueue (VORENDER_Drv_t *audDrv, UInt8 *buf, UInt32 size
 	audDrv->srcBufSize = size;
 	audDrv->srcBufCopied = copied;
 
-	Log_DebugPrintf(LOGID_AUDIO, "CopyBufferToQueue :: srcBufCopied = 0x%x, readPtr = 0x%x, writePtr = 0x%x\n", audDrv->srcBufCopied, aq->readPtr, aq->writePtr);
+	Log_DebugPrintf(LOGID_AUDIO, "CopyBufferToQueue :: srcBufCopied = 0x%lx, readPtr = %s, writePtr = %s\n", audDrv->srcBufCopied, aq->readPtr, aq->writePtr);
 
 	// deliver the data to dsp when data is available.
 	if (audDrv->drvType == VORENDER_TYPE_AMRWB)
 	{
-		Log_DebugPrintf(LOGID_AUDIO, "CopyBufferToQueue :: qload=0x%x, readIndex=0x%x\n",AUDQUE_GetLoad(aq), dsp_readIndex);
+		Log_DebugPrintf(LOGID_AUDIO, "CopyBufferToQueue :: qload=0x%lx, readIndex=0x%x\n",AUDQUE_GetLoad(aq), dsp_readIndex);
 		ProcessSharedMemRequest (audDrv, 0, dsp_readIndex);
 	}
 
@@ -1145,7 +1127,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 				// ringbufer underflow. upper layer software should not let this happen, but let's still handle it.
 				// Insert silence. Need create dspif_insertSlience function to handle it.
 
-				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %d, bufSize = %d \n", qLoad, audDrv->bufferSize_inBytes);
+				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %ld, bufSize = %ld \n", qLoad, audDrv->bufferSize_inBytes);
 			}
 			else
 			{
@@ -1177,7 +1159,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 				// ringbufer underflow. upper layer software should not let this happen, but let's still handle it.
 				// Insert silence. Need create dspif_insertSlience function to handle it.
 
-				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %d, bufSize = %d \n", qLoad, audDrv->bufferSize_inBytes);
+				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %ld, bufSize = %ld \n", qLoad, audDrv->bufferSize_inBytes);
 			}
 			else
 			{
@@ -1209,7 +1191,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 				// ringbufer underflow. upper layer software should not let this happen, but let's still handle it.
 				// Insert silence. Need create dspif_insertSlience function to handle it.
 
-				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %d, bufSize = %d \n", qLoad, audDrv->bufferSize_inBytes);
+				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %ld, bufSize = %ld \n", qLoad, audDrv->bufferSize_inBytes);
 			}
 			else
 			{
@@ -1238,7 +1220,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 				// ringbufer underflow. upper layer software should not let this happen, but let's still handle it.
 				// Insert silence. Need create dspif_insertSlience function to handle it.
 
-				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %d, bufSize = %d \n", qLoad, audDrv->bufferSize_inBytes);
+				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %ld, bufSize = %ld \n", qLoad, audDrv->bufferSize_inBytes);
 			}
 			else
 			{
@@ -1269,7 +1251,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 			}
 			else
 			{
-				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest:: bottomSize %d, qLoad %d WRAP AROUND AMRWB!!! \n", bottomSize, qLoad );
+				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest:: bottomSize %ld, qLoad %ld WRAP AROUND AMRWB!!! \n", bottomSize, qLoad );
 
 				sentSize = CSL_MMVPU_WriteAMRWB( AUDQUE_GetReadPtr(aq), bottomSize, 0, readIndex );
 				AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
@@ -1295,7 +1277,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 	// debug purpose
 	if (bottomSize < audDrv->bufferSize_inBytes)
 	{
-		Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: hit bottom, bottomSize = %d, bufSize = %d\n", bottomSize, audDrv->bufferSize_inBytes);
+		Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest:: hit bottom, bottomSize = %ld, bufSize = %ld\n", bottomSize, audDrv->bufferSize_inBytes);
 	}
 
 	// check if we have leftover to copy 
@@ -1312,7 +1294,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 		{
 			// we haven't copied all data, and will copy the left when 
 			// we get the next dsp callback.
-			Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest::  Large render buffer size! srcBufSize = 0x%x\n", audDrv->srcBufSize);
+			Log_DebugPrintf(LOGID_AUDIO, "	ProcessShareMemRequest::  Large render buffer size! srcBufSize = 0x%lx\n", audDrv->srcBufSize);
 		}	
 
 		audDrv->srcBufCopied += copied;
@@ -1323,7 +1305,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 	{
 		if (AUDQUE_GetLoad(aq) <= audDrv->bufferSize_inBytes)
 		{
-			Log_DebugPrintf(LOGID_AUDIO, "ProcessShareMemRequest :: process callback., finished last byte in queue. readPtr = 0x%x, writePtr = 0x%x\n", aq->readPtr, aq->writePtr);
+			Log_DebugPrintf(LOGID_AUDIO, "ProcessShareMemRequest :: process callback., finished last byte in queue. readPtr = 0x%lx, writePtr = 0x%lx\n", (UInt32)aq->readPtr, (UInt32)aq->writePtr);
 
 			// callback with 0 bytes.
 			audDrv->bufDoneCb (NULL, 0, audDrv->drvType);	
@@ -1411,7 +1393,7 @@ static Result_t ConfigAudDrv (VORENDER_Drv_t *audDrv,
 	audDrv->ringBuffer = (UInt8 *)OSHEAP_Alloc (audDrv->bufferNum*audDrv->bufferSize_inBytes);
 	audDrv->audQueue = AUDQUE_Create (audDrv->ringBuffer, audDrv->bufferNum, audDrv->bufferSize_inBytes);
 
-	Log_DebugPrintf(LOGID_AUDIO, " ConfigAudDrv::audio driver type drvType = 0x%x, bufferSize_inBytes = 0x%x, bufferNum = 0x%x\n", 
+	Log_DebugPrintf(LOGID_AUDIO, " ConfigAudDrv::audio driver type drvType = 0x%x, bufferSize_inBytes = 0x%lx, bufferNum = 0x%lx\n", 
 							audDrv->drvType, audDrv->bufferSize_inBytes, audDrv->bufferNum);
 
 	return RESULT_OK;
@@ -1432,7 +1414,7 @@ static void CheckBufDoneUponStop (VORENDER_Drv_t	*audDrv)
 	// we need to call the buffer done
 	if (audDrv->srcBufCopied < audDrv->srcBufSize)
 	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "%s Catch a pending bufDoneCB! total buffer size 0x%x, copied buffer size 0x%x.", __FUNCTION__, audDrv->srcBufSize, audDrv->srcBufCopied);
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "%s Catch a pending bufDoneCB! total buffer size 0x%lx, copied buffer size 0x%lx.", __FUNCTION__, audDrv->srcBufSize, audDrv->srcBufCopied);
 		audDrv->bufDoneCb (audDrv->srcBuf, audDrv->srcBufCopied, audDrv->drvType);
 	}
 }
