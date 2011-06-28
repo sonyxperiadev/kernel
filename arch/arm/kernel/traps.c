@@ -34,6 +34,17 @@
 #include "ptrace.h"
 #include "signal.h"
 
+#ifdef CONFIG_BCM_KNLLOG_SUPPORT
+#include <linux/broadcom/knllog.h>
+
+static int __init logstart(void)
+{
+	knllog_init();
+	return 0;
+}
+subsys_initcall(logstart);
+#endif
+
 static const char *handler[]= { "prefetch abort", "data abort", "address exception", "interrupt" };
 
 #ifdef CONFIG_DEBUG_USER
@@ -271,6 +282,10 @@ void die(const char *str, struct pt_regs *regs, int err)
 	spin_lock_irq(&die_lock);
 	console_verbose();
 	bust_spinlocks(1);
+#ifdef CONFIG_BCM_KNLLOG_SUPPORT
+	local_irq_disable();
+	knllog_dump();
+#endif
 	ret = __die(str, err, thread, regs);
 
 	if (regs && kexec_should_crash(thread->task))

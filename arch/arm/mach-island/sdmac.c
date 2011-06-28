@@ -42,7 +42,7 @@
 #include <chal/chal_dmux.h>
 
 #ifdef CONFIG_BCM_KNLLOG_IRQ
-//#include <linux/broadcom/knllog.h>
+#include <linux/broadcom/knllog.h>
 #endif
 
 /* ---- Public Variables ------------------------------------------------- */
@@ -1623,7 +1623,7 @@ int sdma_start_transfer
    spin_lock_irqsave( &gHwDmaLock, flags );
 
    /* And kick off the transfer */
-  // devAttr->transferStartTime = timer_get_tick_count();
+   devAttr->transferStartTime = timer_get_tick_count();
 
 #ifdef CONFIG_BCM_KNLLOG_IRQ
    if ( gKnllogIrqSchedEnable & KNLLOG_DMA )

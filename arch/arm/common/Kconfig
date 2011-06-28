@@ -84,3 +84,17 @@ config FIQ_DEBUGGER_CONSOLE
 	help
 	  Enables a console so that printk messages are displayed on
 	  the debugger serial port as the occur.
+
+config BCM_KNLLOG_SUPPORT
+	bool "Kernel Log Support"
+	depends on ARCH_KONA
+	default n
+	help
+	  Enables Broadcom kernel log support.
+
+config BCM_KNLLOG_IRQ
+	bool "Kernel Log IRQ Debugging"
+	depends on BCM_KNLLOG_SUPPORT
+	default n
+	help
+	  Enables logging of IRQs, tasks, and tasklets in Broadcom kernel log.
