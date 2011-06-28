@@ -622,10 +622,7 @@ static struct platform_driver gps_driver = {
 
 static int __init gps_mod_init(void)
 {
-    //gpiomux_rc_e   gpiorc;
-    //int gpiorc = 0;
     int     rc = 0;
-    //static int firsttime = 1;
 
     rc = platform_driver_register(&gps_driver);
     if (rc) 

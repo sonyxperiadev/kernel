@@ -1155,19 +1155,5 @@ config BCM_MDEC
 	---help---
 	  BRCM multimeida codec kernel driver for Island architecture.
 
-config BCM_GPS
-    tristate "GPS support"
-	default n
-    ---help---
-        Select this to include GPS support for BCMHANA
-
-        If unsure, say N.
-		
-config BCM_GPS_UART
-	int "GPS UART"	
-	depends on BCM_GPS
-	--help---
-		GPS UART port no e.g. 0,1,2,3 to be used 
-
 endmenu
 
