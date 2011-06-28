@@ -58,3 +58,10 @@ ifeq ($(VCHIQ_TEST),1)
 vc-vchiq-objs += vchiq_test.o
 endif
 
+obj-y += vchiq-memdrv-hana.o
+
+vchiq-memdrv-hana-objs := \
+    $(BRCM_VIDEOCORE_ROOT)/src/interface/vchiq_arm_bi/vchiq_memdrv_hana.o
+
+
+
