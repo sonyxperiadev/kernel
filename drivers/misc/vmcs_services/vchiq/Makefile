@@ -1,5 +1,5 @@
 BRCM_VIDEOCORE_ROOT = ../../../../../hardware/broadcom/videocore
-BRCM_VIDEOCORE_FIRMWARE_DIR  ?=  $(ANDROID_BUILD_TOP)/hardware/broadcom/videocore/src
+BRCM_VIDEOCORE_FIRMWARE_DIR  ?=  $(TOP)/hardware/broadcom/videocore/src
 
 
 VCHIQ_FLAVOUR := vchiq_arm_bi
