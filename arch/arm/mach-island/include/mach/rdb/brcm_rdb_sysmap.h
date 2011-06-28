@@ -76,6 +76,9 @@
 #define ETB2AXI_BASE_ADDR         0x3401E000 /* brcm_rdb_etb2axi.h */
 #define TPIU_BASE_ADDR            0x3401F000 /* brcm_rdb_cstpiu.h */
 
+/**** Internal SRAM ****/
+#define INT_SRAM_BASE             0x34040000 /* Internal SRAM (160 KB) */
+
 /**** AONHub ****/
 
 /**** APB6 ****/
@@ -389,3 +392,5 @@
 #define PTIM_BASE_ADDR            0x3FF00600 /* brcm_rdb_ptmr_wd.h */
 #define GICDIST_BASE_ADDR         0x3FF01000 /* brcm_rdb_gicdist.h */
 
+/**** VC EMI ****/
+#define VC_EMI                    0x40000000 /* VC4 EMI */

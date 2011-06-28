@@ -26,6 +26,7 @@
 #include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/cpumask.h>
+#include <linux/syscalls.h>
 #include <linux/mfd/bcm590xx/core.h>
 
 #include <asm/io.h>
@@ -127,3 +128,7 @@ static void __init island_timer_init(void)
 struct sys_timer kona_timer = {
         .init   = island_timer_init,
 };
+
+EXPORT_SYMBOL( sys_open );
+EXPORT_SYMBOL( sys_read );
+

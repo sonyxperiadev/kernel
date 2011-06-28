@@ -43,11 +43,17 @@
 #include <mach/hardware.h>
 #include <mach/io.h>
 #include <mach/io_map.h>
+#include <mach/aram_layout.h>
 
 #define IO_DESC(va, sz) { .virtual = va, \
                           .pfn = __phys_to_pfn(HW_IO_VIRT_TO_PHYS(va)), \
                           .length = sz, \
                           .type = MT_DEVICE }
+
+#define MEM_DESC(va, sz) { .virtual = va, \
+                          .pfn = __phys_to_pfn(HW_IO_VIRT_TO_PHYS(va)), \
+                          .length = sz, \
+                          .type = MT_MEMORY }
 
 
 static struct map_desc island_io_desc[] __initdata =
@@ -102,6 +108,17 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_SPUM_S_VA, SZ_64K ),
 	IO_DESC( KONA_SPUM_APB_NS_VA, SZ_4K ),
 	IO_DESC( KONA_SPUM_APB_S_VA, SZ_4K ),
+
+
+    /*
+     * See include/mach/aram_layout.h for SRAM layout. 
+     * PM requires its portion to be MEM_DESC, and VC requires 
+     * its portion to be IO_DESC. 
+     */
+
+    MEM_DESC( BCMHANA_ARAM_PM_START, BCMHANA_ARAM_PM_MM_SIZE ), /*  32K */
+    IO_DESC(  BCMHANA_ARAM_VC_START, BCMHANA_ARAM_VC_MM_SIZE ),  /* 128K */
+
 	IO_DESC( KONA_SRAM_VA, SZ_256K ),
 	IO_DESC( KONA_KPS_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_SSP0_VA, SZ_4K ),
@@ -121,6 +138,8 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_USB_HOST_EHCI_VA, SZ_256 ),	/* Includes DWC specific registers, otherwise could use SZ_128 if was def'd */
 	IO_DESC( KONA_USB_HOST_OHCI_VA, SZ_256 ),	/* Could really use SZ_128 if was def'd */
 	IO_DESC( KONA_USB_HSOTG_CTRL_VA, SZ_4K ),
+
+   IO_DESC( KONA_VC_EMI, SZ_128M ),
 	
 	/* add for CAPH*/
 	IO_DESC( KONA_HUB_CLK_BASE_VA, SZ_4K ),

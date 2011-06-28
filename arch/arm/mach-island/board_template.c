@@ -95,6 +95,15 @@
 #include <gpio_keys_settings.h>
 #endif
 
+#if defined(CONFIG_VC_VCHIQ) || defined(CONFIG_VC_VCHIQ_MODULE)
+#include <mach/io_map.h>
+#include <mach/aram_layout.h>
+
+#include <linux/vceb_platform_data_hana.h>
+#include <linux/vchiq_platform_data_hana.h>
+#include <linux/vchiq_platform_data_memdrv_hana.h>
+#endif
+
 #if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
 #include <linux/kona_keypad.h>
 #include <keymap_settings.h>
@@ -570,6 +579,137 @@ static struct platform_device otg_cp_device =
 };
 #endif
 
+#if defined(CONFIG_VC_VCHIQ) || defined(CONFIG_VC_VCHIQ_MODULE)
+
+/****************************************************************************
+*
+*   VCEB display device
+*
+***************************************************************************/
+
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE ) \
+ || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
+
+/* Internal videocore is defined - Assume that it's for display */
+
+#define  VCEB_DISPLAY_DEVICE
+
+static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
+{
+    .create_params =
+    {
+        .instance_name = "display",
+        .videocore_param = "vca",
+        .host_param = &vceb_hana_display_data,
+    },
+
+    .vcMemAddr          = KONA_VC_EMI,
+    .vcSramAddr         = KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET,
+
+    .bootFromKernel     = 1,
+#if 0
+    /* commenting out for the time being since GPIO mux group is hardcoded for the time being */
+    .gpiomux_lcd_group  = gpiomux_group_vc_dpi_rgb,
+    .gpiomux_lcd_id     = 0,
+    .gpiomux_lcd_label  = "vc-lcd",
+
+    .gpiomux_jtag_group  = gpiomux_group_vc_jtag,
+    .gpiomux_jtag_id     = 0,
+    .gpiomux_jtag_label  = "vc-jtag",
+#endif
+};
+
+static struct platform_device vceb_display_device = {
+   .name = "vceb_hana",
+   .id = 0,
+    .dev = {
+       .platform_data = &vceb_hana_display_data,
+    },
+};
+
+#endif
+/****************************************************************************
+*
+*   VCHIQ display device
+*
+***************************************************************************/
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE )
+
+/*
+ * Internal videocore using the vchiq_arm stack
+ */
+
+#define  VCHIQ_DISPLAY_DEVICE
+
+#define IPC_SHARED_CHANNEL_VIRT     ( KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
+#define IPC_SHARED_CHANNEL_PHYS     ( INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
+
+static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
+    .memdrv = {
+        .common = {
+            .instance_name = "display",
+            .dev_type      = VCHIQ_DEVICE_TYPE_SHARED_MEM,
+        },
+        .sharedMemVirt  = (void *)(IPC_SHARED_CHANNEL_VIRT),
+        .sharedMemPhys  = IPC_SHARED_CHANNEL_PHYS,
+    },
+    .ipcIrq                =  BCM_INT_ID_IPC_OPEN,
+};
+
+static struct platform_device vchiq_display_device = {
+    .name = "vchiq_memdrv_hana",
+    .id = 0,
+    .dev = {
+        .platform_data = &vchiq_display_data_memdrv_hana,
+    },
+};
+
+#elif defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
+
+/*
+ * Internal videocore using the vchiq stack.
+ */
+
+#define  VCHIQ_DISPLAY_DEVICE
+
+static VCHIQ_PLATFORM_DATA_HANA_T vchiq_display_data_shared_mem = {
+    .common = {
+        .instance_name  = "display",
+        .dev_type       = VCHIQ_DEVICE_TYPE_HOST_PORT,
+    },
+};
+
+static struct platform_device vchiq_display_device = {
+    .name = "vchiq_busdrv_sharedmem",
+    .id = 0,
+    .dev = {
+        .platform_data = &vchiq_display_data_shared_mem,
+    },
+};
+
+#endif
+
+/****************************************************************************
+*
+*   VCEB framebuffer device
+*
+***************************************************************************/
+
+#if defined( CONFIG_FB_VCEB ) || defined( CONFIG_FB_VCEB_MODULE )
+
+#define VCEB_FB_DEVICE
+
+static struct platform_device vceb_fb_device = {
+   .name = "vceb_fb",
+   .id = -1,
+};
+#endif  /* CONFIG_FB_VCEB */
+
+struct platform_device * vchiq_devices[] __initdata = { &vceb_display_device, &vchiq_display_device, &vceb_fb_device };
+
+#endif  /* CONFIG_VC_VCHIQ */
+
+
 #if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
 
 #define board_bma150_axis_change concatenate(ISLAND_BOARD_ID, _bma150_axis_change)
@@ -1027,6 +1167,9 @@ static void __init add_devices(void)
    platform_device_register(&platform_device_gps);
 #endif
 
+#if defined(CONFIG_VC_VCHIQ) || defined(CONFIG_VC_VCHIQ_MODULE)
+   platform_add_devices( vchiq_devices, ARRAY_SIZE( vchiq_devices ) );
+#endif
 }
 
 static void __init board_init(void)
