@@ -764,7 +764,7 @@ static int __devinit keypad_probe(struct platform_device *pdev)
 
     /* register the input device */
     set_bit(EV_KEY, input->evbit);
-    input->name = "keypad";
+    input->name = "kona-keypad";
     input->phys = "keypad/input0";
     input->dev.parent = &pdev->dev;
     input->id.bustype = BUS_HOST;
