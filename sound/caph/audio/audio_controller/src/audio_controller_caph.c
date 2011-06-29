@@ -70,8 +70,8 @@
 #if !defined(NO_PMU)
 #ifdef PMU_BCM59055
 #include "linux/broadcom/bcm59055-audio.h"
-#elif defined(PMU_MAX8986)
-#include "linux/broadcom/max8986/max8986-audio.h"
+#elif defined(CONFIG_BCMPMU_AUDIO)
+#include "bcmpmu_audio.h"
 #endif
 #endif
 
@@ -2573,6 +2573,8 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
 	    	hs_gain = *((int*)gain);
 #ifdef CONFIG_BCM59055_AUDIO
 		    bcm59055_hs_set_gain( hs_path, hs_gain);
+#elif defined(CONFIG_BCMPMU_AUDIO)
+		    bcmpmu_hs_set_gain( hs_path, hs_gain);
 #endif
 			break;
 
@@ -2580,6 +2582,8 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
     		ihf_gain = *((int*)gain);
 #ifdef CONFIG_BCM59055_AUDIO
 	    	bcm59055_ihf_set_gain( ihf_gain);
+#elif defined(CONFIG_BCMPMU_AUDIO)
+	    	bcmpmu_ihf_set_gain( ihf_gain);
 #endif
 			break;
 
@@ -2639,11 +2643,11 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 //  Required ! Linux version only
 ////////////////////////////////////////////////////////////////////////////////////
 	
-#ifdef PMU_BCM59055
 	if (use == TRUE)
-#ifdef CONFIG_BCM59055_AUDIO
+#ifdef PMU_BCM59055
 		bcm59055_audio_init(); 	//enable the audio PLL before power ON
-#endif
+#elif defined(CONFIG_BCMPMU_AUDIO)
+        bcmpmu_audio_init();
 #endif
 
 
@@ -2723,11 +2727,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 ////////////////////////////////////////////////////////////////////////////////////
 			
 #ifdef PMU_BCM59055
-#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_hs_power(FALSE);
-#endif
-#elif defined(PMU_MAX8986)
-            max8986_audio_hs_poweron(FALSE);
+#elif defined(CONFIG_BCMPMU_AUDIO)
+            bcmpmu_hs_power(FALSE);
 #endif
 
 /////////////////////////////////////////////////////////////////////////////////
@@ -2761,21 +2763,16 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", hs_gain);
 #ifdef PMU_BCM59055
-#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_hs_power(TRUE);
-#endif
-#elif defined(PMU_MAX8986)
-            max8986_audio_hs_poweron(TRUE);
+#elif defined(CONFIG_BCMPMU_AUDIO)
+            bcmpmu_hs_power(TRUE);
 #endif
 
 		}
 #ifdef PMU_BCM59055
-#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_hs_set_gain(hs_path, hs_gain);
-#endif
-#elif defined(PMU_MAX8986)
-            max8986_audio_hs_set_gain(hs_path, hs_gain);
-            max8986_set_input_preamp_gain(MAX8986_INPUTA, preamp_gain);
+#elif defined(CONFIG_BCMPMU_AUDIO)
+		bcmpmu_hs_set_gain(hs_path, hs_gain);
 #endif
 		HS_IsOn = TRUE;
 	}
@@ -2786,11 +2783,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu IHF amp\n");
 #ifdef PMU_BCM59055
-#ifdef CONFIG_BCM59055_AUDIO
             bcm59055_ihf_power(FALSE);
-#endif
-#elif defined(PMU_MAX8986)
-            max8986_audio_hs_ihf_poweroff();
+#elif defined(CONFIG_BCMPMU_AUDIO)
+            bcmpmu_ihf_power(FALSE);
 #endif
             if (retValue == AUDCTRL_AMP_NO_ACTION) 
             {
@@ -2820,29 +2815,24 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu IHF amp, gain %d\n", ihf_gain);
 #ifdef PMU_BCM59055
-#ifdef CONFIG_BCM59055_AUDIO
 			bcm59055_ihf_power(TRUE);
-#endif
-#elif defined(PMU_MAX8986)
-            max8986_audio_hs_ihf_poweron();
+#elif defined(CONFIG_BCMPMU_AUDIO)
+			bcmpmu_ihf_power(TRUE);
 #endif
 		}
 #ifdef PMU_BCM59055
-#ifdef CONFIG_BCM59055_AUDIO
 		bcm59055_ihf_set_gain(ihf_gain);
-#endif
-#elif defined(PMU_MAX8986)
-            max8986_audio_hs_ihf_set_gain(ihf_gain);
-            max8986_set_input_preamp_gain(MAX8986_INPUTB, preamp_gain);
+#elif defined(CONFIG_BCMPMU_AUDIO)
+		bcmpmu_ihf_set_gain(ihf_gain);
 #endif
 		IHF_IsOn = TRUE;
 	}
 
-#ifdef PMU_BCM59055
 	if (use == FALSE)
-#ifdef CONFIG_BCM59055_AUDIO
+#ifdef PMU_BCM59055
 		bcm59055_audio_deinit();    //disable the audio PLL after power OFF
-#endif
+#elif defined(CONFIG_BCMPMU_AUDIO)
+		bcmpmu_audio_deinit();    //disable the audio PLL after power OFF
 #endif
     Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp: retValue %d\n", retValue);
 #endif    

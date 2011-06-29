@@ -39,6 +39,8 @@
 
 #ifdef PMU_BCM59055
 #include "linux/broadcom/bcm59055-audio.h"
+#elif defined(CONFIG_BCMPMU_AUDIO)
+#include "bcmpmu_audio.h"
 #endif
 
 #include "audio_gain_table.h"
@@ -166,7 +168,6 @@ AUDTABL_SlopGain_LUT_t slopGain_lut[]=
 
 static AUDTABL_GainMapping_t GainMapping_Table[] =
 {
-#ifdef PMU_BCM59055
 	//Audio Mode        // Total Gain(miliBel)   // Gain in PMU    // Gain in AudioHW(miliBel)
 /* Earpiece Mode */    
 	{AUDIO_MODE_HANDSET,     TOTAL_GAIN,          NO_PMU_NEEDED,       TOTAL_GAIN},
@@ -655,12 +656,6 @@ static AUDTABL_GainMapping_t GainMapping_Table[] =
 	{AUDIO_MODE_SPEAKERPHONE,	/*59.00dB*/ 0x170c,	PMU_IHFGAIN_4DB_P,	0x157c},
 	{AUDIO_MODE_SPEAKERPHONE,	/*59.50dB*/ 0x173e,	PMU_IHFGAIN_4DB_P,	0x15ae},
 	{AUDIO_MODE_SPEAKERPHONE,	/*60.00dB*/ 0x1770,	PMU_IHFGAIN_4DB_P,	0x15e0},
-#else
-/* Headset Mode */    
-	{AUDIO_MODE_HEADSET,	TOTAL_GAIN,	NO_PMU_NEEDED,	TOTAL_GAIN},
-/* IHF Speaker Mode */    
-	{AUDIO_MODE_SPEAKERPHONE,	TOTAL_GAIN,	NO_PMU_NEEDED,	TOTAL_GAIN},
-#endif
     
 /* Earpiece Mode */    
 	{AUDIO_MODE_HANDSFREE,     TOTAL_GAIN,          NO_PMU_NEEDED,       TOTAL_GAIN},
