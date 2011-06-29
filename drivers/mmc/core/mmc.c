@@ -256,6 +256,14 @@ static int mmc_read_ext_csd(struct mmc_card *card)
 	switch (ext_csd[EXT_CSD_CARD_TYPE] & EXT_CSD_CARD_TYPE_MASK) {
 	case EXT_CSD_CARD_TYPE_52 | EXT_CSD_CARD_TYPE_26:
 		card->ext_csd.hs_max_dtr = 52000000;
+#ifdef CONFIG_MMC_BCM_SD
+		/* This eMMC chipset doesn't work at 52MHz. */
+		if (card->cid.manfid == 0x13 && card->cid.oemid == 0x100 &&
+                    card->cid.month  == 4    && card->cid.year  == 2011)
+		{
+			card->ext_csd.hs_max_dtr = 26000000;
+		}
+#endif
 		break;
 	case EXT_CSD_CARD_TYPE_26:
 		card->ext_csd.hs_max_dtr = 26000000;
