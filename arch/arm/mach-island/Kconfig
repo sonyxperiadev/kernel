@@ -42,6 +42,16 @@ config MAP_SDMA
 	help
 	  Support for the SDMA driver and its memory map utilities.
 
+config MAP_AADMA
+   bool "MAP CAPH AADMA"
+   help
+      Support for the CAPH Audio Asynchronous DMA driver
+
+config MAP_SSASW
+   bool "MAP CAPH SSASW"
+   help
+      Support for the CAPH Synchronous Audio Switch driver
+
 config IPC
 	bool "Inter-Processor Communication (IPC)"
 	help

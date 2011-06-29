@@ -3,12 +3,9 @@
 
 // Register Access Macros:
 
-/*
- * FIXME conflict with some CHAL header files
 typedef unsigned long  UInt32;
 typedef unsigned short UInt16;
 typedef unsigned char  UInt8;
-*/
 
 /*
 ** The following two macros create a "combine" routine which can be nested.
