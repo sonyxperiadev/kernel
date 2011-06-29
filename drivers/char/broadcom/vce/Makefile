@@ -1,5 +1,5 @@
-#Default compile as module
-CONFIG_VCE	?= m
+# Don't compile VCE driver by default
+CONFIG_VCE	?= n
 
 #Build flags
 EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2
