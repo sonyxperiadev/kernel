@@ -32,9 +32,9 @@
 
 #define MPU3050_DRIVER_AXIS_SETTINGS \
 { \
-   .x_change = x_dir_rev, \
-   .y_change = y_dir, \
-   .z_change = z_dir_rev, \
+   .x_change = gyro_x_dir_rev, \
+   .y_change = gyro_y_dir, \
+   .z_change = gyro_z_dir_rev, \
 }
 
 #endif /* MPU3050_I2C_SETTINGS_H */
