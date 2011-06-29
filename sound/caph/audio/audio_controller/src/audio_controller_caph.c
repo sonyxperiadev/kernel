@@ -2569,11 +2569,12 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
 	{
 		case AUDCTRL_SPK_HEADSET:
 		case AUDCTRL_SPK_TTY:
-		    hs_path = PMU_AUDIO_HS_BOTH;
 	    	hs_gain = *((int*)gain);
 #ifdef CONFIG_BCM59055_AUDIO
+		    hs_path = PMU_AUDIO_HS_BOTH;
 		    bcm59055_hs_set_gain( hs_path, hs_gain);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+		    hs_path = PMU_AUDIO_HS_BOTH;
 		    bcmpmu_hs_set_gain( hs_path, hs_gain);
 #endif
 			break;
@@ -2749,7 +2750,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		int i;
 		int hs_path;	
 		int hs_gain;
+#if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
 		hs_path = PMU_AUDIO_HS_BOTH;
+#endif
 #ifdef CONFIG_AUDIO_BUILD
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 #else
