@@ -264,6 +264,8 @@ CONFIG_MACH_ISLAND_SV=y
 # CONFIG_MACH_ISLAND_TABLET is not set
 CONFIG_MAP_SDMA=y
 CONFIG_IPC=y
+# CONFIG_MAP_AADMA is not set
+# CONFIG_MAP_SSASW is not set
 
 #
 # Processor Type
