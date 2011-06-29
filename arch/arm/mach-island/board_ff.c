@@ -1319,7 +1319,7 @@ static struct platform_device *board_devices[] __initdata = {
 	&board_i2c_adap_devices[3],
 	&island_sdio1_device,
 	&island_sdio2_device,
-	&island_ipc_device,
+//	&island_ipc_device,
 	&board_gpio_keys_device,
 	&islands_leds_device,
 	&android_rndis_device,
