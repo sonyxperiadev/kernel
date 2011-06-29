@@ -48,7 +48,15 @@ config GPIO_USER_MODE_SUPPORT
 	default n
 	help
 	  Say y to turn on support for GPIO in user mode
-
+	  
+config BCM_AMXR
+   bool "Audio Mixer Driver support"
+   select BCM_GOS
+   default y
+   ---help---
+   Say Y to enable the Audio Mixer Driver to support interconnecting
+   audio samples between kernel objects.
+   
 config BCM_HALAUDIO
     bool "HAL Audio Driver support"
     select BCM_AMXR
