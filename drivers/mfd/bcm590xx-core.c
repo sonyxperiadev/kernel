@@ -606,39 +606,12 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 
 	enable_irq(irq);
 
-	ret = 0;
-	/* Register FG driver */
-	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_FUELGAUGE)
-		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-fg");
-	/* Register ADC driver */
-	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_ADC) 
-		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-saradc");
-	/* Register PowerOnKey device */
-	if (bcm590xx->pdata->flag & BCM590XX_USE_PONKEY)
-		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-onkey");
-
-	/* Register Sub devices */
-	if (bcm590xx->pdata->flag & BCM590XX_USE_REGULATORS)
-		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-regulator");
-	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_AUDIO)
-		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-audio");
-
-	if (bcm590xx->pdata->flag & BCM590XX_USE_RTC)
-		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm59055-rtc");
-
-	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_POWER)
-		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm590xx-power");
-
-	if (bcm590xx->pdata->flag & BCM590XX_ENABLE_USB_OTG)
-		ret |= bcm590xx_client_dev_register(bcm590xx, "bcm_otg");
-
-#ifdef CONFIG_BCM59055_ADC_CHIPSET_API
-	ret |= bcm590xx_client_dev_register(bcm590xx, "bcm59055-adc_chipset_api");
-#endif
-
-	if (ret) {
-		pr_info("%s: Some sub device registration failed\n", __func__);
-		return ret;
+	/* register all subdevices */
+	for (i = 0; i < pdata->clients_num; i++) {
+		ret = bcm590xx_client_dev_register(info, pdata->clients[i]);
+		if (ret < 0)
+			pr_err("failed to add `%s', err=%d\n",
+					pdata->clients[i], ret);
 	}
 	printk("%s: SUCCESS\n", __func__);
 	return 0;
