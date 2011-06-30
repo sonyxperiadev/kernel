@@ -63,7 +63,7 @@
 	.membase    = (void __iomem *)(KONA_##name##_VA), 	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),    	\
 	.irq	    = BCM_INT_ID_##name,               		\
-	.uartclk    = 26000000,					\
+	.uartclk    = 13000000,					\
 	.regshift   = 2,					\
 	.iotype	    = UPIO_DWAPB,					\
 	.type	    = PORT_16550A,          			\
