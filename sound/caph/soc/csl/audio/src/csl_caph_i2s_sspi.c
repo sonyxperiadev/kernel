@@ -54,116 +54,15 @@
 
 static chal_sspi_task_conf_t tk_conf;
 static chal_sspi_seq_conf_t seq_conf;
-static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config);
-static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config);
-static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config);
-static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config);
-#if 0
-//===========================================================================
-// static function declarations
-// 
-/****************************************************************************
-*
-*  Function Name: csl_i2s_config_pinmux(UInt32 address)
-*
-*  Description: config sspi pinmux
-*
-****************************************************************************/
-static void csl_i2s_config_pinmux(UInt32 address)
-{	
-#ifndef CENTRALIZED_PADCTRL
-    UInt32 regVal;
+static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
+										 CSL_I2S_CONFIG_t *config);
+static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle,
+												CSL_I2S_CONFIG_t *config);
+static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle,
+											   CSL_I2S_CONFIG_t *config);
+static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle,
+													  CSL_I2S_CONFIG_t *config);
 
-    //Log_DebugPrintf((LOGID_SOC_AUDIO, "+csl_i2s_config_pinmux \n"));
-
-#define PIN_MUX_ALT0    0
-#define PIN_MUX_ALT1    (1 << (PADCTRLREG_GPIO93_PINSEL_GPIO93_SHIFT))
-#define PIN_MUX_ALT2    (2 << (PADCTRLREG_GPIO93_PINSEL_GPIO93_SHIFT))
-#define PIN_MUX_ALT3    (3 << (PADCTRLREG_GPIO93_PINSEL_GPIO93_SHIFT))
-#define PIN_MUX_ALT4    (4 << (PADCTRLREG_GPIO93_PINSEL_GPIO93_SHIFT))
-#define PIN_MUX_ALT5    (5 << (PADCTRLREG_GPIO93_PINSEL_GPIO93_SHIFT))
-
-#define  READ_REG32(reg)             ( *((volatile int *) (reg)) )
-#define  WRITE_REG32(reg, value)     ( *((volatile int *) (reg)) = (int) (value) )
-#define  MASK_REG32(reg, mask)   (WRITE_REG32((reg), (READ_REG32((reg)) & (~(mask)))))
-    if (address == SSP4_BASE_ADDR) {
-        // Set pin share for SSP4. Keep this code in case FM is configured to use SSP4.
-        // SSP4-FS
-        regVal = (READ_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO94_OFFSET) &
-                    (~(PADCTRLREG_GPIO94_PINSEL_GPIO94_MASK | PADCTRLREG_GPIO94_PUP_GPIO94_MASK |
-                       PADCTRLREG_GPIO94_IND_GPIO94_MASK))) | PIN_MUX_ALT2;
-        WRITE_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO94_OFFSET, regVal);
-
-        // SSP4-CLK
-        regVal = (READ_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO32_OFFSET) &
-                    (~(PADCTRLREG_GPIO32_PINSEL_GPIO32_MASK | PADCTRLREG_GPIO32_PUP_GPIO32_MASK |
-                       PADCTRLREG_GPIO32_IND_GPIO32_MASK))) | PIN_MUX_ALT2;
-        WRITE_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO32_OFFSET, regVal);
-
-        // SSP4-TX
-        regVal = (READ_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_DCLK4_OFFSET) &
-                    (~(PADCTRLREG_DCLK4_PINSEL_DCLK4_MASK |
-                       PADCTRLREG_DCLK4_PUP_DCLK4_MASK))) |
-                    PADCTRLREG_DCLK4_IND_DCLK4_MASK |
-                    PADCTRLREG_DCLK4_HYS_EN_DCLK4_MASK |
-                    PIN_MUX_ALT2;
-        WRITE_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_DCLK4_OFFSET, regVal);
-
-        // SSP4-RX
-        regVal = (READ_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_DCLKREQ4_OFFSET) &
-                    (~(PADCTRLREG_DCLKREQ4_PINSEL_DCLKREQ4_MASK |
-                       PADCTRLREG_DCLKREQ4_PUP_DCLKREQ4_MASK))) |
-                    PADCTRLREG_DCLKREQ4_HYS_EN_DCLKREQ4_MASK |
-                    PIN_MUX_ALT2;
-        WRITE_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_DCLKREQ4_OFFSET, regVal);
-	//	Log_DebugPrintf((LOGID_SOC_AUDIO, "csl_i2s_config_pinmux: SSP4 \n")); 
-	}
-	else if (address == SSP3_BASE_ADDR) {
-       // Set pin share for SSP3
-        // SYN
-        regVal = (READ_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO15_OFFSET) &
-                    (~(PADCTRLREG_GPIO15_PINSEL_GPIO15_MASK | PADCTRLREG_GPIO15_PUP_GPIO15_MASK |
-                       PADCTRLREG_GPIO15_IND_GPIO15_MASK))) | PIN_MUX_ALT4;
-        WRITE_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO15_OFFSET, regVal);
-
-        // CLK
-        regVal = (READ_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO14_OFFSET) &
-                    (~(PADCTRLREG_GPIO14_PINSEL_GPIO14_MASK | PADCTRLREG_GPIO14_PUP_GPIO14_MASK |
-                       PADCTRLREG_GPIO14_IND_GPIO14_MASK))) | PIN_MUX_ALT4;
-        WRITE_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO14_OFFSET, regVal);
-
-        // DO
-        regVal = (READ_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO07_OFFSET) &
-                    (~(PADCTRLREG_GPIO07_PINSEL_GPIO07_MASK | PADCTRLREG_GPIO07_PUP_GPIO07_MASK |
-                       PADCTRLREG_GPIO07_IND_GPIO07_MASK))) | PIN_MUX_ALT4;
-        WRITE_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO07_OFFSET, regVal);
-
-        // DI
-        regVal = (READ_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO06_OFFSET) &
-                    (~(PADCTRLREG_GPIO06_PINSEL_GPIO06_MASK | PADCTRLREG_GPIO06_PUP_GPIO06_MASK |
-                       PADCTRLREG_GPIO06_IND_GPIO06_MASK))) | PIN_MUX_ALT4;
-        WRITE_REG32(PAD_CTRL_BASE_ADDR + PADCTRLREG_GPIO06_OFFSET, regVal);
-		//Log_DebugPrintf((LOGID_SOC_AUDIO, "csl_i2s_config_pinmux: SSP3 \n")); 
-	}
-	else{
-		//Log_DebugPrintf((LOGID_SOC_AUDIO, "csl_i2s_config_pinmux: Wrong SSP, not support yet \n")); 
-	}
-
-    //Log_DebugPrintf((LOGID_SOC_AUDIO, "-csl_i2s_config_pinmux \n")); 
-#else //#ifndef CENTRALIZED_PADCTRL
-    if(address == SSP4_BASE_ADDR) 
-    {
-        // Set HYS_EN here until GENIO updated to cover it
-
-        // SSP4-TX
-        ( *((volatile int *) (PAD_CTRL_BASE_ADDR + PADCTRLREG_DCLK4_OFFSET)) ) |= PADCTRLREG_DCLK4_HYS_EN_DCLK4_MASK;
-
-        // SSP4-RX
-        ( *((volatile int *) (PAD_CTRL_BASE_ADDR + PADCTRLREG_DCLKREQ4_OFFSET)) ) |= PADCTRLREG_DCLKREQ4_HYS_EN_DCLKREQ4_MASK;
-    }
-#endif //#ifndef CENTRALIZED_PADCTRL
-}
-#endif
 /****************************************************************************
 *
 *  Function Name: csl_i2s_init(cUInt32 baseAddr)
@@ -173,15 +72,14 @@ static void csl_i2s_config_pinmux(UInt32 address)
 ****************************************************************************/
 CSL_HANDLE csl_i2s_init(cUInt32 baseAddr)
 {
-	CSL_HANDLE handle;
+	CSL_HANDLE handle = 0;
 	CSL_SSPI_HANDLE_T *pDevice;	
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_i2s_init \n");
 
     handle = chal_sspi_init(baseAddr);
 	pDevice = (CSL_SSPI_HANDLE_T *)handle;
-	//csl_i2s_config_pinmux(baseAddr);
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "base address in csl 0x%x \r\n",(unsigned int)pDevice->base);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "base address in csl 0x%x \r\n",
+					(unsigned int)pDevice->base);
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_i2s_init \r\n");
 
 	return handle;
@@ -203,15 +101,16 @@ void csl_i2s_deinit(CSL_HANDLE handle)
 
 /****************************************************************************
 *
-*  Function Name: csl_i2s_config(CSL_HANDLE handle,CSL_I2S_CONFIG_t *config, 
-*					CSL_I2S_CONFIG_TX_t *configTx, CSL_I2S_CONFIG_RX_t *configRx)
+*  Function Name: csl_i2s_config(CSL_HANDLE handle,
+								 CSL_I2S_CONFIG_t *config,
+*								 CSL_I2S_CONFIG_TX_t *configTx,
+*								 CSL_I2S_CONFIG_RX_t *configRx)
 *
 *  Description: Funtion to config SSPI as I2S
 *
 ****************************************************************************/
 void csl_i2s_config(CSL_HANDLE handle,CSL_I2S_CONFIG_t *config)
 {
-//	UInt32 dma_trans_size=4096;
 	CSL_SSPI_HANDLE_T *pDevice = NULL;
     SSPI_hw_status_t status=SSPI_HW_NOERR;
 
@@ -425,9 +324,10 @@ UInt32 csl_i2s_get_rx1_fifo_data_port(CSL_HANDLE handle)
 *  Notes:
 *
 ****************************************************************************/
-static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
+static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
+										 CSL_I2S_CONFIG_t *config)
 {
-    cUInt32 frmMask = 1;
+	uint32_t frmMask = 1, word_len = 16;
     CHAL_SSPI_PROT_t mode;
 //	CHAL_SSPI_CLK_SRC_t clk_source;
 	CHAL_SSPI_FIFO_DATA_PACK_t fifo_pack;
@@ -507,6 +407,7 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *co
     chal_sspi_set_fifo_size(handle, SSPI_FIFO_ID_TX2, SSPI_FIFO_SIZE_NONE);
     chal_sspi_set_fifo_size(handle, SSPI_FIFO_ID_TX3, SSPI_FIFO_SIZE_NONE);
 
+		word_len = 16;
     chal_sspi_set_fifo_pack(handle, SSPI_FIFO_ID_RX0, fifo_pack);
     chal_sspi_set_fifo_pack(handle, SSPI_FIFO_ID_RX1, fifo_pack);
     chal_sspi_set_fifo_pack(handle, SSPI_FIFO_ID_TX0, fifo_pack);
@@ -520,15 +421,22 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *co
     chal_sspi_set_mode(handle, SSPI_MODE_MASTER);
     chal_sspi_enable(handle, 1);
 
-    chal_sspi_set_fifo_threshold(handle,(config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0,0x10);
-    chal_sspi_set_fifo_threshold(handle,(config->rx_ena) ? SSPI_FIFO_ID_RX1 : SSPI_FIFO_ID_TX1,0x10);
+	chal_sspi_set_fifo_threshold(handle,
+				(config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0,0x10);
+	chal_sspi_set_fifo_threshold(handle,
+				(config->rx_ena) ? SSPI_FIFO_ID_RX1 : SSPI_FIFO_ID_TX1,0x10);
 
-    chal_sspi_set_fifo_pio_threshhold(handle,(config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0, 0x3, 0x3);
-    chal_sspi_set_fifo_pio_threshhold(handle,(config->rx_ena) ? SSPI_FIFO_ID_RX1 : SSPI_FIFO_ID_TX1, 0x3, 0x3);
+	chal_sspi_set_fifo_pio_threshhold(handle,
+				(config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0,
+				0x3, 0x3);
+	chal_sspi_set_fifo_pio_threshhold(handle,
+				(config->rx_ena) ? SSPI_FIFO_ID_RX1 : SSPI_FIFO_ID_TX1,
+				0x3, 0x3);
     
     tk_conf.chan_sel = SSPI_CHAN_SEL_CHAN0;
     tk_conf.cs_sel = SSPI_CS_SEL_CS0;
-    tk_conf.rx_sel = (config->tx_loopback_ena) ? SSPI_RX_SEL_COPY_TX0 : SSPI_RX_SEL_RX0;
+	tk_conf.rx_sel = (config->tx_loopback_ena) ? SSPI_RX_SEL_COPY_TX0
+											   : SSPI_RX_SEL_RX0;
     tk_conf.tx_sel = SSPI_TX_SEL_TX0;
     tk_conf.div_sel = SSPI_CLK_DIVIDER0;
     tk_conf.seq_ptr = 0;
@@ -541,10 +449,10 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *co
         tk_conf.loop_cnt = (config->trans_size >> 1) - 1;
         tk_conf.continuous = 0;
     }
-    tk_conf.init_cond_mask = (config->rx_ena) ? (SSPI_TASK_INIT_COND_THRESHOLD_RX0 |
-                                         SSPI_TASK_INIT_COND_THRESHOLD_RX1) :
-                                      (SSPI_TASK_INIT_COND_THRESHOLD_TX0 |
-                                       SSPI_TASK_INIT_COND_THRESHOLD_TX1);
+	tk_conf.init_cond_mask = (config->rx_ena) ?
+		(SSPI_TASK_INIT_COND_THRESHOLD_RX0 | SSPI_TASK_INIT_COND_THRESHOLD_RX1)
+											  :
+		(SSPI_TASK_INIT_COND_THRESHOLD_TX0 |SSPI_TASK_INIT_COND_THRESHOLD_TX1);
     tk_conf.wait_before_start = 1;
 
     if(chal_sspi_set_task(handle, 0, mode, &tk_conf))
@@ -598,7 +506,7 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *co
     if(chal_sspi_set_sequence(handle, 2, mode, &seq_conf))
         return(SSPI_HW_ERR_SEQUENCE);
 
-    if(chal_sspi_set_frame(handle, &frmMask, mode, 16, 0))
+    if(chal_sspi_set_frame(handle, &frmMask, mode, word_len, 0))
         return(SSPI_HW_ERR_FRAME);
 
 
@@ -623,9 +531,10 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *co
 *  Notes:
 *
 ****************************************************************************/
-static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
+static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle,
+												CSL_I2S_CONFIG_t *config)
 {
-    cUInt32 frmMask = 1;
+	uint32_t frmMask = 1, word_len = 16;
     CHAL_SSPI_PROT_t mode;
 //	CHAL_SSPI_CLK_SRC_t clk_source;
 //	CHAL_SSPI_FIFO_DATA_PACK_t fifo_pack;
@@ -735,8 +644,10 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle, CSL_I2S_CONFI
 //                                 (config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0,
 //                                 0x10);
 
-    chal_sspi_set_fifo_pio_threshhold(handle,(config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0, 0x3, 0x3);
-    chal_sspi_set_fifo_pio_threshhold(handle,(config->rx_ena) ? SSPI_FIFO_ID_RX1 : SSPI_FIFO_ID_TX1, 0x3, 0x3);
+    chal_sspi_set_fifo_pio_threshhold(handle,
+		(config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0, 0x3, 0x3);
+    chal_sspi_set_fifo_pio_threshhold(handle,
+		(config->rx_ena) ? SSPI_FIFO_ID_RX1 : SSPI_FIFO_ID_TX1, 0x3, 0x3);
 
 
    if(config->tx_ena) 
@@ -758,15 +669,15 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle, CSL_I2S_CONFI
         tk_conf.loop_cnt = (config->trans_size >> 1) - 1;
         tk_conf.continuous = 0;
     }
-    tk_conf.init_cond_mask = (config->rx_ena) ? SSPI_TASK_INIT_COND_THRESHOLD_RX0
-                                             : SSPI_TASK_INIT_COND_THRESHOLD_TX0;
+    tk_conf.init_cond_mask = (config->rx_ena) ? 
+								SSPI_TASK_INIT_COND_THRESHOLD_RX0 :
+                                SSPI_TASK_INIT_COND_THRESHOLD_TX0;
     tk_conf.wait_before_start = 1;
 
     if(chal_sspi_set_task(handle, 0, mode, &tk_conf))
         return(SSPI_HW_ERR_TASK);
 
-    switch(config->prot)
-    {
+	switch(config->prot) {
     case SSPI_HW_I2S_MODE1:
     case SSPI_HW_I2S_MODE2:
         if(config->prot == SSPI_HW_I2S_MODE1)
@@ -774,8 +685,10 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle, CSL_I2S_CONFI
         else
             mode = SSPI_PROT_I2S_MODE2;
 
-        seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) ? 1 : 0;
-        seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) ? 1 : 0;
+        seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) 
+								? 1 : 0;
+        seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) 
+								? 1 : 0;
         seq_conf.cs_activate = 1;
         seq_conf.cs_deactivate = 0;
         seq_conf.pattern_mode = 0;
@@ -790,8 +703,10 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle, CSL_I2S_CONFI
         if(chal_sspi_set_sequence(handle, 0, mode, &seq_conf))
             return(SSPI_HW_ERR_SEQUENCE);
 
-        seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) ? 1 : 0;
-        seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) ? 1 : 0;
+        seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) 
+								? 1 : 0;
+        seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) 
+								? 1 : 0;
         seq_conf.cs_activate = 0;
         seq_conf.cs_deactivate = 1;
         seq_conf.pattern_mode = 0;
@@ -822,7 +737,7 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle, CSL_I2S_CONFI
         if(chal_sspi_set_sequence(handle, 2, mode, &seq_conf))
             return(SSPI_HW_ERR_SEQUENCE);
 
-        if(chal_sspi_set_frame(handle, &frmMask, mode, 16, 0))
+        if(chal_sspi_set_frame(handle, &frmMask, mode, word_len, 0))
             return(SSPI_HW_ERR_FRAME);
 
         break;
@@ -851,9 +766,10 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle, CSL_I2S_CONFI
 *  Notes:
 *
 ****************************************************************************/
-static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
+static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle, 
+												CSL_I2S_CONFIG_t *config)
 {
-    cUInt32 frmMask = 1;
+	uint32_t frmMask = 1, word_len = 16;
     CHAL_SSPI_PROT_t mode;
 
     if(config->prot == SSPI_HW_I2S_MODE1)
@@ -915,7 +831,8 @@ static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle, CSL_I2S_CONFIG
     tk_conf.loop_cnt = 0;
     tk_conf.continuous = 1;
     tk_conf.init_cond_mask = (config->tx_ena) ?
-        (SSPI_TASK_INIT_COND_THRESHOLD_TX0 | SSPI_TASK_INIT_COND_THRESHOLD_TX1) : 0;
+        (SSPI_TASK_INIT_COND_THRESHOLD_TX0 | SSPI_TASK_INIT_COND_THRESHOLD_TX1) 
+		: 0;
     if(config->tx_ena)
         tk_conf.wait_before_start = 1;
     else
@@ -942,8 +859,10 @@ static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle, CSL_I2S_CONFIG
     if(chal_sspi_set_sequence(handle, 0, SSPI_PROT_I2S_MODE2, &seq_conf))
         return(SSPI_HW_ERR_SEQUENCE);
 
-    seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) ? TRUE : FALSE;
-    seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) ? TRUE : FALSE;
+    seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) 
+							? TRUE : FALSE;
+    seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) 
+							? TRUE : FALSE;
     seq_conf.cs_activate = 1;
     seq_conf.cs_deactivate = 0;
     seq_conf.pattern_mode = 0;
@@ -958,8 +877,10 @@ static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle, CSL_I2S_CONFIG
     if(chal_sspi_set_sequence(handle, 1, SSPI_PROT_I2S_MODE2, &seq_conf))
         return(SSPI_HW_ERR_SEQUENCE);
 
-    seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) ? TRUE : FALSE;
-    seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) ? TRUE : FALSE;
+    seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) 
+							? TRUE : FALSE;
+    seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) 
+							? TRUE : FALSE;
     seq_conf.cs_activate = 0;
     seq_conf.cs_deactivate = 1;
     seq_conf.pattern_mode = 0;
@@ -1014,9 +935,10 @@ static SSPI_hw_status_t SSPI_hw_i2s_slave_init(CSL_HANDLE handle, CSL_I2S_CONFIG
 *  Notes:
 *
 ****************************************************************************/
-static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, CSL_I2S_CONFIG_t *config)
+static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, 
+														CSL_I2S_CONFIG_t *config)
 {
-    cUInt32 frmMask = 1;
+	uint32_t frmMask = 1, word_len = 16;
     CHAL_SSPI_PROT_t mode;
 
     if(config->prot == SSPI_HW_I2S_MODE1)
@@ -1052,8 +974,10 @@ static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, CSL_I2S
     chal_sspi_set_fifo_size(handle, SSPI_FIFO_ID_TX2, SSPI_FIFO_SIZE_NONE);
     chal_sspi_set_fifo_size(handle, SSPI_FIFO_ID_TX3, SSPI_FIFO_SIZE_NONE);
 
-    chal_sspi_set_fifo_pack(handle, SSPI_FIFO_ID_RX0, SSPI_FIFO_DATA_PACK_16BIT);
-    chal_sspi_set_fifo_pack(handle, SSPI_FIFO_ID_TX0, SSPI_FIFO_DATA_PACK_16BIT);
+    chal_sspi_set_fifo_pack(handle, SSPI_FIFO_ID_RX0, 
+									SSPI_FIFO_DATA_PACK_16BIT);
+    chal_sspi_set_fifo_pack(handle, SSPI_FIFO_ID_TX0, 
+									SSPI_FIFO_DATA_PACK_16BIT);
 
     chal_sspi_set_clk_divider(handle, SSPI_CLK_DIVIDER0, 0);
     chal_sspi_set_clk_divider(handle, SSPI_CLK_DIVIDER1, 1);
@@ -1104,8 +1028,10 @@ static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, CSL_I2S
     if(chal_sspi_set_sequence(handle, 0, mode, &seq_conf))
         return(SSPI_HW_ERR_SEQUENCE);
 
-	seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) ? TRUE : FALSE;
-    seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) ? TRUE : FALSE;
+	seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena)
+						 ? TRUE : FALSE;
+    seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena)
+						 ? TRUE : FALSE;
     seq_conf.cs_activate = 1;
     seq_conf.cs_deactivate = 0;
     seq_conf.pattern_mode = 0;
@@ -1120,8 +1046,10 @@ static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, CSL_I2S
     if(chal_sspi_set_sequence(handle, 1, mode, &seq_conf))
         return(SSPI_HW_ERR_SEQUENCE);
 
-    seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena) ? TRUE : FALSE;
-    seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena) ? TRUE : FALSE;
+    seq_conf.tx_enable = (config->tx_ena || config->rx_loopback_ena)
+						 ? TRUE : FALSE;
+    seq_conf.rx_enable = (config->rx_ena || config->tx_loopback_ena)
+						 ? TRUE : FALSE;
     seq_conf.cs_activate = 0;
     seq_conf.cs_deactivate = 1;
     seq_conf.pattern_mode = 0;
@@ -1152,7 +1080,7 @@ static SSPI_hw_status_t SSPI_hw_interleave_slave_init(CSL_HANDLE handle, CSL_I2S
     if(chal_sspi_set_sequence(handle, 3, mode, &seq_conf))
         return(SSPI_HW_ERR_SEQUENCE);
 
-    if(chal_sspi_set_frame(handle, &frmMask, mode, 16, 0))
+    if(chal_sspi_set_frame(handle, &frmMask, mode, word_len, 0))
         return(SSPI_HW_ERR_FRAME);
 
     return SSPI_HW_NOERR;
