@@ -38,6 +38,8 @@
 #include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
 #include <linux/akm8975.h>
+#include <mach/dma_mmap.h>
+#include <mach/sdma.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -1410,6 +1412,8 @@ void __init pinmux_setup(void)
 void __init board_init(void)
 {
 	pinmux_setup();
+	dma_mmap_init();
+	sdma_init();	
 	/*
 	 * Add common platform devices that do not have board dependent HW
 	 * configurations
