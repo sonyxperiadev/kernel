@@ -182,9 +182,7 @@ typedef struct
     cUInt32 HUBOCP2ATB_base; // HUBOCP2ATB register block (Hub.APB9)
 #endif //_HERA_
     cUInt32 GICTR_base; // GIC Trace (Apps_Subsystem.Processor.APB0)
-#ifdef CNEON_COMMON
     cUInt32 CHIPREGS_base; // CHIPREGS Block 
-#endif /* CNEON_COMMON */
     cUInt32 PWRMGR_base; // PWRMGR Block  (Hub.Power_Manager)
     cUInt32 FUNNEL_base[CHAL_TRACE_MAX_FUNNEL];
     cUInt32 AXITRACE_base[CHAL_TRACE_MAX_AXITRACE];
