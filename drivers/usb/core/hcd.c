@@ -2138,9 +2138,7 @@ struct usb_hcd *usb_create_hcd (const struct hc_driver *driver,
 		return NULL;
 	}
 
-#ifndef CONFIG_USB_OTG_UTILS
 	dev_set_drvdata(dev, hcd);
-#endif
 
 	kref_init(&hcd->kref);
 
