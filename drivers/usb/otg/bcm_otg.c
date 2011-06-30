@@ -104,22 +104,6 @@ static void bcm_otg_set_vbus(struct bcm_otg_data *otg_data,
 	}
 }
 
-static void bcm_otg_phy_set_non_driving(struct bcm_otg_data *otg_data, bool on)
-{
-	unsigned long reg;
-	void *hsotg_ctrl_base = otg_data->hsotg_ctrl_base;
-
-	/* set Phy to driving mode */
-	reg = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-
-	if (on)
-		reg |= HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
-	else
-		reg &= ~HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
-
-	writel(reg, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-}
-
 static ssize_t bcm_otg_host_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
 {
@@ -164,36 +148,6 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 
 static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcm_otg_host_show,
 		   bcm_otg_host_store);
-
-/**
- * Show if OTG init is already done
- */
-static ssize_t bcmotginit_status(struct device *dev,
-			struct device_attribute *attr, char *buf)
-{
-	struct bcm_otg_data *otg_data = dev_get_drvdata(dev);
-
-	return sprintf(buf, "%s\n", otg_data->otg_init_done ? "1" : "0");
-}
-
-/**
- * Do OTG init. Currently only for SRP
- */
-static ssize_t do_bcmotginit(struct device *dev,
-			 struct device_attribute *attr,
-			 const char *buf, size_t count)
-{
-	struct bcm_otg_data *otg_data = dev_get_drvdata(dev);
-
-	bcm_otg_phy_set_vbus_stat(otg_data, false);
-	bcm_otg_phy_set_non_driving(otg_data, true);
-	msleep(100); //This is just a placeholder to show that we would need a delay to let Vbus go off if it was on. In our test, we are doing this without Vbus on so it doesn't need to be big value
-	bcm_otg_phy_set_non_driving(otg_data, false);
-	otg_data->otg_init_done = true;
-	return count;
-}
-
-DEVICE_ATTR(bcmotginit, S_IRUGO | S_IWUSR, bcmotginit_status, do_bcmotginit);
 
 static int __devinit bcm_otg_probe(struct platform_device *pdev)
 {
@@ -242,13 +196,6 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 		goto Error_bcm_otg_probe;
 	}
 
-	error = device_create_file(&pdev->dev, &dev_attr_bcmotginit);
-	if (error)
-	{
-		dev_warn(&pdev->dev, "Failed to create SRP test file\n");
-		goto Error_bcm_otg_probe;
-	}
-
 	dev_info(&pdev->dev, "Probing successful\n");
 	return 0;
 
@@ -264,7 +211,6 @@ static int __exit bcm_otg_remove(struct platform_device *pdev)
 	struct bcm_otg_data *otg_data = platform_get_drvdata(pdev);
 
 	device_remove_file(otg_data->dev, &dev_attr_host);
-	device_remove_file(&pdev->dev, &dev_attr_bcmotginit);
 
 	iounmap(otg_data->hsotg_ctrl_base);
 	clk_put(otg_data->otg_clk);
