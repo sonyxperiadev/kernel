@@ -118,7 +118,7 @@ void AUDDRV_Init( void )
 #if defined(FUSE_APPS_PROCESSOR)
 
 	/* register DSP VPU status processing handlers */
-#ifdef CONFIG_SAMOA
+#ifndef _SAMOA_
 	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
 #endif	
@@ -128,7 +128,7 @@ void AUDDRV_Init( void )
 	CSL_RegisterVoIPStatusHandler((VoIPStatusCB_t)&VOIP_ProcessVOIPDLDone);
 	CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);
 #endif	
-#ifdef CONFIG_SAMOA
+#ifndef _SAMOA_
 	CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);
 	CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);
 #endif
