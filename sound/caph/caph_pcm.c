@@ -62,6 +62,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "shared.h"
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
+#include "csl_audio_render.h"
 
 #define VOICE_CALL_SUB_DEVICE 8
 
@@ -73,9 +74,9 @@ int audio_init_complete = 0;
 
 
 // limitation for RHEA - only two blocks
-#define	PCM_MAX_PLAYBACK_BUF_BYTES			(32*1024)
-#define	PCM_MIN_PLAYBACK_PERIOD_BYTES		(16*1024)
-#define	PCM_MAX_PLAYBACK_PERIOD_BYTES		PCM_MIN_PLAYBACK_PERIOD_BYTES
+#define	PCM_MAX_PLAYBACK_BUF_BYTES			(64*1024)
+#define	PCM_MIN_PLAYBACK_PERIOD_BYTES		(256)
+#define	PCM_MAX_PLAYBACK_PERIOD_BYTES		(PCM_MAX_PLAYBACK_BUF_BYTES/2)
 
 #define	PCM_MAX_CAPTURE_BUF_BYTES       (32 * 1024) 
 #define	PCM_MIN_CAPTURE_PERIOD_BYTES    (16 * 1024)  
@@ -100,7 +101,7 @@ static struct snd_pcm_hardware brcm_playback_hw =
 	.rate_max = 48000,
 	.channels_min = 1,
 	.channels_max = 2,
-	.buffer_bytes_max = PCM_MAX_PLAYBACK_BUF_BYTES, //shared memory buffer
+	.buffer_bytes_max = PCM_MAX_PLAYBACK_BUF_BYTES,
 	.period_bytes_min = PCM_MIN_PLAYBACK_PERIOD_BYTES,
 	.period_bytes_max = PCM_MAX_PLAYBACK_PERIOD_BYTES, //half shared memory buffer
 	.periods_min = 2,
@@ -275,8 +276,8 @@ static int PcmPlaybackPrepare(
 	AUDIO_DRIVER_CallBackParams_t	cbParams;
 
 
-	BCM_AUDIO_DEBUG("\nplayback_prepare period=%d period_size=%d bufsize=%d threshold=%ld\n", runtime->periods, 
-			frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->buffer_size), runtime->stop_threshold);
+	BCM_AUDIO_DEBUG("\nplayback_prepare period=%d period_size=%d bufsize=%d threshold=%ld frame_bits %ld\n", runtime->periods, 
+			runtime->period_size, runtime->buffer_size, runtime->stop_threshold, runtime->frame_bits);
 
     drv_handle = substream->runtime->private_data;
 
@@ -451,8 +452,12 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream * substream
 	struct snd_pcm_runtime *runtime = substream->runtime;
     snd_pcm_uframes_t pos=0;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
-
-	pos = chip->streamCtl[substream->number].stream_hw_ptr;
+	UInt16	dmaPointer;
+	dmaPointer = csl_audio_render_get_current_position( StreamIdOfDriver(runtime->private_data));
+	if(	bytes_to_frames(runtime, dmaPointer)>=runtime->period_size)
+		BCM_AUDIO_DEBUG("Error unexpected: PcmPlaybackPointer hw_ptr = %ld dmaptr= %d, pos = %d \n",chip->streamCtl[substream->number].stream_hw_ptr, dmaPointer, pos);
+	dmaPointer = 0; //FIXME: remove this line after MEM PTR clarify by ASIC team
+	pos = chip->streamCtl[substream->number].stream_hw_ptr + bytes_to_frames(runtime, dmaPointer);
 	if(pos<0)
 	{
 		pos += runtime->buffer_size;

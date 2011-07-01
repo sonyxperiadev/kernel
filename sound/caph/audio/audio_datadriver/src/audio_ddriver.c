@@ -114,6 +114,14 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id);
 // Functions
 //=============================================================================
 
+UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
+{
+	AUDIO_DDRIVER_t *ph=(AUDIO_DDRIVER_t *)h;
+	return ph->stream_id;
+}
+
+
+
 static int	SetPlaybackStreamHandle(AUDIO_DDRIVER_t* h)
 {
 	if(h->stream_id>CSL_CAPH_STREAM_TOTAL)
