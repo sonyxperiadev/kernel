@@ -931,7 +931,7 @@ void AUDCTRL_DisablePlay(
 	if(inPathID==0) pathID = AUDCTRL_GetPathIDFromTableWithSrcSink(src, sink, spk, AUDCTRL_MIC_UNDEFINED);
 	else pathID = inPathID; //do not search for it if pathID is provided, this is to support multi streams to the same destination.
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_DisablePlay: src = 0x%x, sink = 0x%x, spk = 0x%x, pathID %d:%d.\r\n", 
+                    "AUDCTRL_DisablePlay: src = 0x%x, sink = 0x%x, spk = 0x%x, pathID %d:%ld.\r\n", 
                     src, sink,  spk, pathID, inPathID);
 	
     if(pathID == 0)
@@ -1503,7 +1503,7 @@ static void AUDCTRL_SetRecordGainMono(
     AUDDRV_PathID pathID = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_SetRecordGainMono: src = 0x%x,  mic = 0x%x, gainL = 0x%x, gainR = 0x%x\n", src, mic, gainL, gainR);
+                    "AUDCTRL_SetRecordGainMono: src = 0x%x,  mic = 0x%x, gainL = 0x%lx, gainR = 0x%lx\n", src, mic, gainL, gainR);
 
 	if( src == AUDIO_HW_USB_IN)
 		return;
@@ -1535,7 +1535,7 @@ void AUDCTRL_SetRecordGain(
 				)
 {
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_SetRecordGain: src = 0x%x,  mic = 0x%x, gainL = 0x%x, gainR = 0x%x\n", src, mic, gainL, gainR);
+                    "AUDCTRL_SetRecordGain: src = 0x%x,  mic = 0x%x, gainL = 0x%lx, gainR = 0x%lx\n", src, mic, gainL, gainR);
 
 	if(mic==AUDCTRL_DUAL_MIC_DIGI12 || mic==AUDCTRL_DUAL_MIC_DIGI21 || mic==AUDCTRL_MIC_SPEECH_DIGI)
 	{
@@ -2420,128 +2420,6 @@ static AUDDRV_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
 }
 
 #endif //defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
-
-
-/////////////////////////////////////////////////////////////////////////////////
-//  Start PMU code. Linux version only
-////////////////////////////////////////////////////////////////////////////////////
-
-#if defined(PMU_MAX8986)  //maxim change later
-
-typedef enum
-{
-	PMU_HSGAIN_MUTE = -1,
-	PMU_HSGAIN_64DB_N = 0x00,
-	PMU_HSGAIN_60DB_N,
-	PMU_HSGAIN_56DB_N,
-	PMU_HSGAIN_52DB_N,
-	PMU_HSGAIN_48DB_N,
-	PMU_HSGAIN_44DB_N,
-	PMU_HSGAIN_40DB_N,
-	PMU_HSGAIN_37DB_N,
-	PMU_HSGAIN_34DB_N,
-	PMU_HSGAIN_31DB_N,
-	PMU_HSGAIN_28DB_N,
-	PMU_HSGAIN_25DB_N,
-	PMU_HSGAIN_22DB_N,
-	PMU_HSGAIN_19DB_N,
-	PMU_HSGAIN_16DB_N,
-	PMU_HSGAIN_14DB_N,
-	PMU_HSGAIN_12DB_N,
-	PMU_HSGAIN_10DB_N,
-	PMU_HSGAIN_8DB_N,
-	PMU_HSGAIN_6DB_N,
-	PMU_HSGAIN_4DB_N,
-	PMU_HSGAIN_2DB_N,
-    PMU_HSGAIN_1DB_N,
-    PMU_HSGAIN_0DB,
-    PMU_HSGAIN_1DB_P,
-    PMU_HSGAIN_2DB_P,
-    PMU_HSGAIN_3DB_P,
-    PMU_HSGAIN_4DB_P,
-    PMU_HSGAIN_4P5DB_P,
-    PMU_HSGAIN_5DB_P,
-    PMU_HSGAIN_5P5DB_P,
-    PMU_HSGAIN_6DB_P
-}PMU_HS_Gain_t;
-
-typedef enum
-{
-    PMU_IHFGAIN_MUTE,
-	PMU_IHFGAIN_30DB_N=0x18,
-	PMU_IHFGAIN_26DB_N,
-	PMU_IHFGAIN_22DB_N,
-	PMU_IHFGAIN_18DB_N,
-	PMU_IHFGAIN_14DB_N,
-	PMU_IHFGAIN_12DB_N,
-	PMU_IHFGAIN_10DB_N,
-	PMU_IHFGAIN_8DB_N,
-	PMU_IHFGAIN_6DB_N,
-	PMU_IHFGAIN_4DB_N,
-	PMU_IHFGAIN_2DB_N,
-	PMU_IHFGAIN_0DB,
-	PMU_IHFGAIN_1DB_P,
-	PMU_IHFGAIN_2DB_P,
-	PMU_IHFGAIN_3DB_P,
-	PMU_IHFGAIN_4DB_P,
-    PMU_IHFGAIN_5DB_P,
-    PMU_IHFGAIN_6DB_P,
-    PMU_IHFGAIN_7DB_P,
-    PMU_IHFGAIN_8DB_P,
-    PMU_IHFGAIN_9DB_P,
-    PMU_IHFGAIN_10DB_P,
-    PMU_IHFGAIN_11DB_P,
-    PMU_IHFGAIN_12DB_P,
-    PMU_IHFGAIN_12P5DB_P,
-    PMU_IHFGAIN_13DB_P,
-    PMU_IHFGAIN_13P5DB_P,
-    PMU_IHFGAIN_14DB_P,
-    PMU_IHFGAIN_14P5DB_P,
-    PMU_IHFGAIN_15DB_P,
-    PMU_IHFGAIN_15P5DB_P,
-    PMU_IHFGAIN_16DB_P,
-    PMU_IHFGAIN_16P5DB_P,
-    PMU_IHFGAIN_17DB_P,
-    PMU_IHFGAIN_17P5DB_P,
-    PMU_IHFGAIN_18DB_P,
-    PMU_IHFGAIN_18P5DB_P,
-    PMU_IHFGAIN_19DB_P,
-    PMU_IHFGAIN_19P5DB_P,
-    PMU_IHFGAIN_20DB_P
-}PMU_IHF_Gain_t;
-
-static PMU_HS_Gain_t map2pmu_hs_gain( Int16 db_gain )
-{
-	
-	return PMU_HSGAIN_5DB_P;
-}
-
-static PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain )
-{
-	return PMU_IHFGAIN_6DB_P;//PMU_IHFGAIN_20DB_P;//PMU_IHFGAIN_6DB_P;//PMU_IHFGAIN_0DB ;//PMU_IHFGAIN_18P5DB_P;
-}
-#else
-#ifdef CONFIG_AUDIO_BUILD
-/* unused definitions */
-static int map2pmu_hs_gain( Int16 db_gain )
-{
-		
-	//return BCM59055_HSGAIN_3DB_N;
-    return 1;
-}
-
-static int map2pmu_ihf_gain( Int16 db_gain )
-{
-	//return BCM59055_IHFGAIN_0DB;
-    return 1;
-}
-#endif
-#endif
-
-
-/////////////////////////////////////////////////////////////////////////////////
-//  End PMU code. Linux version only
-////////////////////////////////////////////////////////////////////////////////////
 
 //============================================================================
 //

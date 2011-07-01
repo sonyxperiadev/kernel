@@ -437,18 +437,18 @@ void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t* cf)
 
 UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
 {
+	UInt32 val = (UInt32)0;
 #ifdef CONFIG_AUDIO_BUILD
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
-	UInt32 val = (UInt32)0;
 	Log_DebugPrintf(LOGID_AUDIO, "audio_cmf_filter (AP) ");
 
 	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
 	CAPI2_audio_cmf_filter(tid, audioClientId,cf);
 	RPC_SyncWaitForResponse( tid,audioClientId, &ackResult, &msgType, NULL );
+#endif
 	return val;
-#endif	
 }
 
 #endif

@@ -160,16 +160,10 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 	UInt32 dev = 0;
     AudioMode_t mode = AUDIO_MODE_HANDSET;
 
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))    
-    UInt32 *memAddr = 0;
-
-#endif
-#endif    
     pData = pData;
     mode = mode; 
     Log_DebugPrintf(LOGID_AUDIO, 
-                    "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%d*\n\r", 
+                    "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%ld*\n\r", 
                     mic, speaker, sample_rate);
 	
     memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
@@ -219,8 +213,8 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
         // need to use the physical address  
 		// Linux only change
         AP_SharedMem_t *ap_shared_mem_ptr = SHAREDMEM_GetDsp_SharedMemPtr();
-        UInt32 *memAddr = AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0])
-                                    - (UInt32)ap_shared_mem_ptr);
+        UInt32 *memAddr = (UInt32 *)(AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0])
+				- (UInt32)ap_shared_mem_ptr));
 
         config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		config.source = AUDDRV_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
@@ -1258,7 +1252,9 @@ Boolean AUDDRV_IsDualMicEnabled(void)
     AudioMode_t mode = AUDIO_MODE_HANDSET;
     mode = AUDDRV_GetAudioMode();
     return (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);
-#endif		
+#else
+	return FALSE; /* remove when above CONFIG_AUDIO_BUILD enabled */
+#endif
 }
 #ifdef CONFIG_AUDIO_BUILD
 

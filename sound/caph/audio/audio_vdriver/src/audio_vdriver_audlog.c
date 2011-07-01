@@ -170,10 +170,9 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 {
 	int n;
 
-	UInt16 size;    //number of 16-bit words
+	UInt16 size = 0;    //number of 16-bit words
 	UInt16 stream;  //the stream number: 1, 2, 3, 4
 	UInt16 sender;  //the capture point
-	AUDLOG_CB_INFO	log_cb_info;
 
 	for(n = 0; n < LOG_STREAM_NUMBER; n++)
 	{
@@ -191,7 +190,7 @@ void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 					BCMLOG_LogSignal(DSP_DATA, (UInt16 *)loggingbuf, size, stream, sender);	// send binary data to log port. The size is number of bytes (for MTT).
 				}
 				else{
-					Log_DebugPrintf(LOGID_AUDIO, "!!!!!! Err ptr = 0x%p size=%ld stream=%d sender=%d", loggingbuf, size, stream, sender);
+					Log_DebugPrintf(LOGID_AUDIO, "!!!!!! Err ptr = 0x%p size=%d stream=%d sender=%d", loggingbuf, size, stream, sender);
 				}
 			}
 			else

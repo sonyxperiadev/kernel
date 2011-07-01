@@ -68,7 +68,6 @@ Broadcom's express prior written consent.
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static Boolean alreadyInitialzed = FALSE;
 static Boolean hwClkEnabled = FALSE;
 
 #ifdef CONFIG_AUDIO_BUILD
@@ -77,8 +76,6 @@ static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
 //****************************************************************************
 // local function declarations
 //****************************************************************************
-static void AUDDRV_LISR(void);
-static void AUDDRV_HISR(void);
 static void AUDDRV_ControlHWClock(Boolean enable);
 #else
 #include "clock.h"
@@ -94,42 +91,6 @@ static CSL_CAPH_HW_GAIN_e AUDDRV_GetCSLHWGainSelect(AUDDRV_HW_GAIN_e hw);
 //******************************************************************************
 // local function definitions
 //******************************************************************************
-
-// ==========================================================================
-//
-// Function Name: void AUDDRV_LISR(void)
-//
-// Description: CAPH_NORM_IRQ LISR
-//
-// =========================================================================
-
-static void AUDDRV_LISR(void)
-{
-#ifdef CONFIG_AUDIO_BUILD
-
-	IRQ_Disable(CAPH_NORM_IRQ);
-	OSINTERRUPT_Trigger(AUDDRV_HISR_HANDLE);
-#endif
-}
-// ==========================================================================
-//
-// Function Name: void AUDDRV_HISR(void)
-//
-// Description:CAPH_NORM_IRQ HISR
-//
-// =========================================================================
-
-static void AUDDRV_HISR(void)
-{
-	csl_caph_dma_process_interrupt();
-#ifdef CONFIG_AUDIO_BUILD
-
-	IRQ_Clear(CAPH_NORM_IRQ);
-	IRQ_Enable(CAPH_NORM_IRQ);
-#endif
-    return;
-}
-
 
 // ==========================================================================
 //
@@ -796,7 +757,8 @@ Result_t AUDDRV_HWControl_SetDSPSharedMeMForIHF(UInt32 addr)
 Result_t AUDDRV_HWControl_ConfigSSP(UInt8 fm_port, UInt8 pcm_port)
 {
 	CSL_CAPH_SSP_Config_t sspConfig;
-
+	memset(&sspConfig, 0, sizeof(CSL_CAPH_SSP_Config_t));
+	
 	sspConfig.fm_port = (CSL_CAPH_SSP_e)fm_port;
 	sspConfig.pcm_port = (CSL_CAPH_SSP_e)pcm_port;
 

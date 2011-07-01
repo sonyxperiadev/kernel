@@ -111,5 +111,14 @@ Result_t csl_audio_render_pause (UInt32 streamID);
 *****************************************************************************/
 Result_t csl_audio_render_resume (UInt32 streamID);
 
+/**
+*
+*  @brief  get current position for this stream
+*
+*  @param   streamID  (in) render audio stream id
+*
+*  @return UInt16 currmemptr in SR  
+*****************************************************************************/
+UInt16 csl_audio_render_get_current_position (UInt32 streamID);
 #endif // _CSL_AUDIO_RENDER_
 

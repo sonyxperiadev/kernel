@@ -517,7 +517,7 @@ void csl_caph_switch_init(UInt32 baseAddress)
     handle = chal_caph_switch_init(baseAddress);
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_switch_Init:: baseAddress = 0x%x\n", 
+                    "csl_caph_switch_Init:: baseAddress = 0x%lx\n", 
                     baseAddress));
 	return;
 }
@@ -602,7 +602,7 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
 
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_config_channel:: \n"));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_switch_config_channel:: chnl = 0x%x, srcAddr = 0x%x, dstcAddr = 0x%x, dataFmt = 0x%x, trigger = 0x%x\n", 
+                    "csl_caph_switch_config_channel:: chnl = 0x%x, srcAddr = 0x%lx, dstcAddr = 0x%lx, dataFmt = 0x%x, trigger = 0x%x\n", 
                     chnl_config.chnl, 
                     chnl_config.FIFO_srcAddr, 
                     chnl_config.FIFO_dstAddr, 
@@ -666,7 +666,7 @@ Result_t csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAdd
 
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_add_dst:: \n"));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_switch_add_dst:: chnl = 0x%x, dstcAddr = 0x%x\n",
+                    "csl_caph_switch_add_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
                     chnl, FIFO_dstAddr));
     /* Get cHAL Channel */
     chal_chnl = csl_caph_switch_get_chalchnl(chnl);
@@ -693,7 +693,7 @@ void csl_caph_switch_remove_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_switch_remove_dst:: chnl = 0x%x, dstcAddr = 0x%x\n",
+                    "csl_caph_switch_remove_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
                     chnl, FIFO_dstAddr));
     /* Get cHAL Channel */
     chal_chnl = csl_caph_switch_get_chalchnl(chnl);

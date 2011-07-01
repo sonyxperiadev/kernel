@@ -821,7 +821,7 @@ void csl_caph_srcmixer_init(UInt32 baseAddress)
     //csl_caph_srcmixer_enable_all_spkrgain_slope(handle);
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_srcmixer_init:: baseAddress = 0x%x\n", 
+                    "csl_caph_srcmixer_init:: baseAddress = 0x%lx\n", 
                     baseAddress));
 	return;
 }

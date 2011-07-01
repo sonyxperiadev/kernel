@@ -468,3 +468,27 @@ static CSL_CAPH_STREAM_e CSL_GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH)
 	return streamID;
 }
 
+// ==========================================================================
+//
+// Function Name: csl_audio_render_get_current_position
+//
+// Description: Get the current render position for this streamID
+//
+// =========================================================================
+UInt16 csl_audio_render_get_current_position (UInt32 streamID)
+{
+	CSL_CAPH_Drv_t	*audDrv = NULL;
+
+	if (streamID != CSL_CAPH_STREAM_NONE)
+		audDrv = &sCaphDrv[streamID];
+	else
+	{	
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "%s :: Unknown streamID = 0x%x\n", __FILE__, streamID));
+		return NULL; /*audio_xassert(0, streamID);*/
+	}
+	
+	if (audDrv->dmaCH != CSL_CAPH_DMA_NONE )
+	    return csl_caph_dma_read_currmempointer(audDrv->dmaCH);
+	else
+		return NULL; /* audio_xassert(0, audDrv->dmaCH);*/
+}

@@ -1223,7 +1223,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 				// ringbufer underflow. upper layer software should not let this happen, but let's still handle it.
 				// Insert silence. Need create dspif_insertSlience function to handle it.
 
-				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %d, bufSize = %d \n", qLoad, audDrv->bufferSize_inBytes);
+				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %ld, bufSize = %ld \n", qLoad, audDrv->bufferSize_inBytes);
 			}
 			else
 			{

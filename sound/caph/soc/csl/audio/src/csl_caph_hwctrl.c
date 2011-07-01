@@ -891,7 +891,7 @@ static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
     UInt8 i = 0;
     UInt8 j = 0;
    	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_hwctrl_addHWResource::fifo=0x%x, pathID=0x%x\n",
+                    "csl_caph_hwctrl_addHWResource::fifo=0x%lx, pathID=0x%x\n",
                     fifoAddr, pathID));
     if (fifoAddr == 0x0) return;
     for (j=0; j<CSL_CAPH_FIFO_MAX_NUM; j++)
@@ -945,7 +945,7 @@ static void csl_caph_hwctrl_removeHWResource(UInt32 fifoAddr,
     UInt8 j = 0;
     UInt8 i = 0;
    	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_hwctrl_removeHWResource::fifo=0x%x, pathID=0x%x\n",
+                    "csl_caph_hwctrl_removeHWResource::fifo=0x%lx, pathID=0x%x\n",
                     fifoAddr, pathID));
     if (fifoAddr == 0x0) return;
     for (j=0; j<CSL_CAPH_FIFO_MAX_NUM; j++)
@@ -981,7 +981,7 @@ static Boolean csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
     UInt8 j = 0;
     UInt8 i = 0;
    	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_hwctrl_readHWResource::fifo=0x%x, myPathID=0x%x\n",
+                    "csl_caph_hwctrl_readHWResource::fifo=0x%lx, myPathID=0x%x\n",
                     fifoAddr, myPathID));
     if (fifoAddr == 0x0) return FALSE;
     if (myPathID == 0) audio_xassert(0, myPathID);
@@ -1879,10 +1879,10 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
     }
     else
-    if ((audioPath.source == CSL_CAPH_DEV_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY)
-		||(audioPath.source == CSL_CAPH_DEV_DIGI_MIC_L)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY) 
-		||(audioPath.source == CSL_CAPH_DEV_DIGI_MIC_R)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY) 
-        ||(audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY))
+		if (((audioPath.source == CSL_CAPH_DEV_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY))
+			||((audioPath.source == CSL_CAPH_DEV_DIGI_MIC_L)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY)) 
+			||((audioPath.source == CSL_CAPH_DEV_DIGI_MIC_R)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY)) 
+			||((audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY)))
     {
 		if(audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)
 		{
@@ -4222,8 +4222,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	
     }
     else
-    if ((audioPath.source == CSL_CAPH_DEV_DIGI_MIC_L)&&(audioPath.sink == CSL_CAPH_DEV_DSP)
-    	||(audioPath.source == CSL_CAPH_DEV_DIGI_MIC_R)&&(audioPath.sink == CSL_CAPH_DEV_DSP))
+		if (((audioPath.source == CSL_CAPH_DEV_DIGI_MIC_L)&&(audioPath.sink == CSL_CAPH_DEV_DSP))
+			||((audioPath.source == CSL_CAPH_DEV_DIGI_MIC_R)&&(audioPath.sink == CSL_CAPH_DEV_DSP)))
     {
     	if (audioPath.src_sampleRate == audioPath.snk_sampleRate) //no src needed
     	{
@@ -4451,8 +4451,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	    }
     }
     else
-    if ((audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)&&(audioPath.sink == CSL_CAPH_DEV_DSP)
-    	||(audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)&&(audioPath.sink == CSL_CAPH_DEV_DSP))
+		if (((audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)&&(audioPath.sink == CSL_CAPH_DEV_DSP))
+			||((audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)&&(audioPath.sink == CSL_CAPH_DEV_DSP)))
     {
        	if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
        	{
@@ -5322,10 +5322,10 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         csl_caph_hwctrl_closeAudioH(path.source, path.pathID);
     }    
     else
-    if ((path.source == CSL_CAPH_DEV_ANALOG_MIC)&&(path.sink == CSL_CAPH_DEV_MEMORY)
-	|| (path.source == CSL_CAPH_DEV_HS_MIC)&&(path.sink == CSL_CAPH_DEV_MEMORY)
-	||(path.source == CSL_CAPH_DEV_DIGI_MIC_L)&&(path.sink == CSL_CAPH_DEV_MEMORY)
-	||(path.source == CSL_CAPH_DEV_DIGI_MIC_R)&&(path.sink == CSL_CAPH_DEV_MEMORY))
+		if (((path.source == CSL_CAPH_DEV_ANALOG_MIC)&&(path.sink == CSL_CAPH_DEV_MEMORY))
+			|| ((path.source == CSL_CAPH_DEV_HS_MIC)&&(path.sink == CSL_CAPH_DEV_MEMORY))
+			||((path.source == CSL_CAPH_DEV_DIGI_MIC_L)&&(path.sink == CSL_CAPH_DEV_MEMORY))
+			||((path.source == CSL_CAPH_DEV_DIGI_MIC_R)&&(path.sink == CSL_CAPH_DEV_MEMORY)))
     {
 	    // Stop DMA transfer, release channe
         csl_caph_hwctrl_closeDMA(path.dmaCH, path.pathID);
@@ -6664,7 +6664,7 @@ void csl_caph_hwctrl_vibrator_strength(int strength)
 {
 
 
-   _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_vibrator_strength strength = 0x%lx \n",strength));
+   _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_vibrator_strength strength = 0x%x \n",strength));
 
 	chal_audio_vibra_write_fifo(lp_handle, (UInt32 *)(&strength), 1, TRUE);
 
@@ -6924,7 +6924,7 @@ UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVIC
 			count++;
 		}
 	}
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_CountSameSrcSink src %d, sink %d, total %d.\r\n", source, sink, count);
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_CountSameSrcSink src %d, sink %d, total %ld.\r\n", source, sink, count);
 	return count;
 }
 
