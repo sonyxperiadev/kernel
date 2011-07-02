@@ -501,6 +501,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int function = FUNC_OF_CTL(priv);
+	int	stream = STREAM_OF_CTL(priv);
 
 	switch(function)
 	{
@@ -514,9 +515,10 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
 			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[0]; 
-			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[1]; 
+			ucontrol->value.integer.value[1] = pChip->iMutePhoneCall[1]; 
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			ucontrol->value.integer.value[0] = pChip->pi32SpeechMixOption[stream-1]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
@@ -542,6 +544,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	int priv = kcontrol->private_value;
 	int function = priv&0xFF;
 	Int32	*pSel;
+	int	stream = STREAM_OF_CTL(priv);
 
 
 	switch(function)
@@ -598,6 +601,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			pChip->pi32SpeechMixOption[stream-1] = ucontrol->value.integer.value[0]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
