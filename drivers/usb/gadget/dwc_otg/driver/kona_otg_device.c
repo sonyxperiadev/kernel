@@ -176,6 +176,35 @@ static ssize_t do_konaotginit(struct device *dev,
 
 DEVICE_ATTR(konaotginit, S_IWUSR, NULL, do_konaotginit);
 
+static ssize_t dump_konahsotgctrl(struct device *dev, 
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	void __iomem *hsotg_ctrl_base;
+
+	/* map base address */
+	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+	if (!hsotg_ctrl_base) {
+		return -ENOMEM;
+	}
+	printk("\nusbotgcontrol: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
+	printk("\nphy_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET));
+	printk("\nphy_p1ctl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET));
+	printk("\nbc11_status: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_STATUS_OFFSET));
+	printk("\nbc11_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET));
+	printk("\ntp_in: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_IN_OFFSET));
+	printk("\ntp_out: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_OUT_OFFSET));
+	printk("\nphy_ctrl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CTRL_OFFSET));
+	printk("\nusbreg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBREG_OFFSET));
+	printk("\nusbproben: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBPROBEN_OFFSET));
+
+	/* unmap base address */
+	iounmap(hsotg_ctrl_base);
+
+	return sprintf(buf, "\nkonahsotgctrl register dump");
+}
+DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
+
 /****************************************************************************
  *
  ***************************************************************************/
@@ -322,6 +351,9 @@ static int __init dwc_otg_device_init(void)
 
 		if (NULL != lmdev)
 			rc = device_create_file(&lmdev->dev, &dev_attr_konaotginit);
+
+		if (!rc)
+			rc = device_create_file(&lmdev->dev, &dev_attr_konahsotgctrldump);
 
 		/* unmap base address */
 		iounmap(hsotg_ctrl_base);
