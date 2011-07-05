@@ -35,6 +35,11 @@ config MACH_ISLAND_TABLET
         help
           Support for the Broadcom Island Tablet board.
 
+config MACH_ISLAND_TABLET_28160
+        bool "Support Broadcom Island 28160 Tablet board"
+        help
+          Support for the Broadcom Island 28160 Tablet board.
+
 endchoice
 
 config MAP_SDMA

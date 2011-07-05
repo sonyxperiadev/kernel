@@ -48,3 +48,9 @@ CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
 
+obj-$(CONFIG_MACH_ISLAND_TABLET_28160) += board_tablet.o pinmux_island_tablet_28160.o
+CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
+-Iarch/arm/mach-island/hw_cfg/BASE \
+-Ivc4-dev/src/interface/vceb/host \
+-Ivc4-dev/src/interface/vceb/host/linux 
+
