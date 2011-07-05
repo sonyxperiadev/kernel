@@ -52,17 +52,26 @@ Broadcom's express prior written consent.
 // local typedef declarations
 //****************************************************************************
 
-
+typedef struct CSL_CAPH_SWITCH_DST_STATUS_t
+{
+    CAPH_SWITCH_CHNL_e chal_chnl;
+    CAPH_DST_STATUS_e dstStatus;
+}CSL_CAPH_SWITCH_DST_STATUS_t;
 
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
 static CHAL_HANDLE handle = 0x0;
 
+static CSL_CAPH_SWITCH_DST_STATUS_t dstStatusTable[CAPH_SWITCH_CHNL_NUM];
+
 //****************************************************************************
 // local function declarations
 //****************************************************************************
-
+static void csl_caph_switch_initDSTStatus(void);
+static CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl);
+static void csl_caph_switch_setDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl,
+                                            CAPH_DST_STATUS_e dstStatus);
 static CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_get_cslchnl(CAPH_SWITCH_CHNL_e chal_chnl);
 static CAPH_SWITCH_CHNL_e csl_caph_switch_get_chalchnl(CSL_CAPH_SWITCH_CHNL_e chnl);
 static CAPH_SWITCH_TRIGGER_e csl_caph_switch_get_trigger(CSL_CAPH_SWITCH_TRIGGER_e trigger);
@@ -70,6 +79,73 @@ static CAPH_SWITCH_TRIGGER_e csl_caph_switch_get_trigger(CSL_CAPH_SWITCH_TRIGGER
 //******************************************************************************
 // local function definitions
 //******************************************************************************
+
+
+/****************************************************************************
+*  Function Name: void csl_caph_switch_initDSTStatus(void)
+*
+*  Description: Initialize the status Table of DST fifo of all SWITCH channels
+*
+****************************************************************************/
+static void csl_caph_switch_initDSTStatus(void)
+{
+    Int8 i = 0;
+    memset(&dstStatusTable, 0, 
+            sizeof(CSL_CAPH_SWITCH_DST_STATUS_t)*CAPH_SWITCH_CHNL_NUM);
+    for (i=0; i<(Int8)CAPH_SWITCH_CHNL_NUM; i++)
+    {
+        dstStatusTable[i].chal_chnl = (CAPH_SWITCH_CHNL_e)(0x0001<<i);
+    }
+    return;
+}
+
+/****************************************************************************
+*  Function Name: void csl_caph_switch_setDSTStatus(
+*                                         CAPH_SWITCH_CHNL_e chal_chnl,
+*                                         CAPH_DST_STATUS_e dstStatus)
+*
+*  Description: Update the status of DST fifo of one SWITCH channel
+*
+****************************************************************************/
+static void csl_caph_switch_setDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl,
+                                            CAPH_DST_STATUS_e dstStatus)
+{
+    Int8 i = 0;
+    for (i=0; i<(Int8)CAPH_SWITCH_CHNL_NUM; i++)
+    {
+        if(dstStatusTable[i].chal_chnl == chal_chnl)
+            dstStatusTable[i].dstStatus = dstStatus;
+    }
+    //Should not run to here.
+    audio_xassert(0, chal_chnl);
+    return;
+}
+
+
+/****************************************************************************
+*  Function Name: CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(
+*                                         CAPH_SWITCH_CHNL_e chal_chnl)
+*
+*  Description: Get the status of DST fifo of one SWITCH channel
+*
+****************************************************************************/
+static CAPH_DST_STATUS_e csl_caph_switch_getDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl)
+{
+    Int8 i = 0;
+    for (i=0; i<(Int8)CAPH_SWITCH_CHNL_NUM; i++)
+    {
+        if(dstStatusTable[i].chal_chnl == chal_chnl)
+            return dstStatusTable[i].dstStatus;
+    }
+    //Should not run to here.
+    audio_xassert(0, chal_chnl);
+    return CAPH_DST_OK;
+}
+
+
+
+
+
 /****************************************************************************
 *  Function Name: CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_get_cslchnl(
 *                                         CAPH_SWITCH_CHNL_e chal_chnl)
@@ -437,6 +513,7 @@ void csl_caph_switch_init(UInt32 baseAddress)
 {
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_init:: \n"));
 
+    csl_caph_switch_initDSTStatus();
     handle = chal_caph_switch_init(baseAddress);
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
@@ -510,16 +587,18 @@ void csl_caph_switch_release_channel(CSL_CAPH_SWITCH_CHNL_e chnl)
 
 /****************************************************************************
 *
-*  Function Name:void csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t chnl_config)
+*  Function Name:CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t chnl_config)
 *
 *  Description: configure CAPH switch channel
 *
 ****************************************************************************/
-void csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t chnl_config)    
+CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t chnl_config)    
 {
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
     CAPH_DATA_FORMAT_e chal_dataFormat = CAPH_MONO_16BIT;
     CAPH_SWITCH_TRIGGER_e chal_trig = CAPH_VOID;
+    CAPH_DST_STATUS_e dstStatus = CAPH_DST_OK;
+    CSL_CAPH_SWITCH_STATUS_e status = CSL_CAPH_SWITCH_OWNER;
 
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_config_channel:: \n"));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
@@ -535,8 +614,18 @@ void csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t chnl_config)
     /* Select Source for this channel */
     chal_caph_switch_select_src(handle, chal_chnl, (UInt16)(chnl_config.FIFO_srcAddr));
     /* Add Dst for this channel */
-    chal_caph_switch_add_dst(handle, chal_chnl, (UInt16)(chnl_config.FIFO_dstAddr));
-	
+    dstStatus = chal_caph_switch_add_dst(handle, chal_chnl, (UInt16)(chnl_config.FIFO_dstAddr));
+	csl_caph_switch_setDSTStatus(chal_chnl, dstStatus);
+
+    /* If the DST is already being used by other channels
+     * Do not set the switch channel anymore.
+     */
+    if (dstStatus != CAPH_DST_OK)
+    {
+        chal_caph_switch_free_channel(handle, chal_chnl);
+        status = CSL_CAPH_SWITCH_BORROWER;
+        return status;
+    }
     /* Set data format */
     switch (chnl_config.dataFmt)
     {
@@ -560,7 +649,7 @@ void csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t chnl_config)
     chal_trig = csl_caph_switch_get_trigger(chnl_config.trigger);
     chal_caph_switch_select_trigger(handle, chal_chnl, chal_trig);
  
-	return;
+	return status;
 }
 
 /****************************************************************************
@@ -582,7 +671,7 @@ Result_t csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAdd
     /* Get cHAL Channel */
     chal_chnl = csl_caph_switch_get_chalchnl(chnl);
     /* Add one more destination for this channel */
-    if (CAPH_DST_OK == chal_caph_switch_add_dst(handle, chal_chnl, (UInt16)FIFO_dstAddr))
+    if (CAPH_DST_OK != chal_caph_switch_add_dst(handle, chal_chnl, (UInt16)FIFO_dstAddr))
     {
     	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_add_dst:: FAIL\n"));
         return RESULT_ERROR;
@@ -603,7 +692,6 @@ void csl_caph_switch_remove_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr
 {
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_remove_dst:: \n"));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_switch_remove_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
                     chnl, FIFO_dstAddr));
@@ -626,11 +714,17 @@ void csl_caph_switch_start_transfer(CSL_CAPH_SWITCH_CHNL_e chnl)
 {
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_start_transfer:: \n"));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_switch_start_transfer:: chnl = 0x%x\n", chnl));
     /* Get cHAL Channel */
     chal_chnl = csl_caph_switch_get_chalchnl(chnl);
+    /* Check whether DST of the switch channel is defined properly */
+    if (csl_caph_switch_getDSTStatus(chal_chnl) != CAPH_DST_OK)
+    {
+        /* Clear the status table and return without enabling */
+        csl_caph_switch_setDSTStatus(chal_chnl, CAPH_DST_OK);
+        return;
+    }
     /* Start this channel */
     chal_caph_switch_enable(handle, chal_chnl);
 

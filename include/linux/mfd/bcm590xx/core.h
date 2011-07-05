@@ -43,7 +43,8 @@ struct bcm590xx_platform_data {
 	struct bcm590xx_battery_pdata *battery_pdata;
 	struct bcm590xx_audio_pdata *audio_pdata;
 	struct bcm590xx_regulator_pdata *regl_pdata;
-	int flag;
+	const char **clients;
+	size_t clients_num;
 };
 
 struct bcm590xx {

@@ -61,6 +61,10 @@ static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	{ MSG_AUDIO_CTRL_GENERIC_RSP,_T("MSG_AUDIO_CTRL_GENERIC_RSP"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
 	{ MSG_AUDIO_CTRL_DSP_REQ,_T("MSG_AUDIO_CTRL_DSP_REQ"), (xdrproc_t) xdr_Audio_Params_t,  sizeof( Audio_Params_t ), 0},
 	{ MSG_AUDIO_CTRL_DSP_RSP,_T("MSG_AUDIO_CTRL_DSP_RSP"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
+#ifdef CONFIG_AUDIO_BUILD	
+	{ MSG_AUDIO_COMP_FILTER_REQ,_T("MSG_AUDIO_COMP_FILTER_REQ"), (xdrproc_t)xdr_AudioCompfilter_t, sizeof( AudioCompfilter_t ), 0 },
+	{ MSG_AUDIO_COMP_FILTER_RSP,_T("MSG_AUDIO_COMP_FILTER_RSP"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
+#endif	
 	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
 };
 
@@ -78,6 +82,46 @@ static Result_t SendAudioRspForRequest(RPC_Msg_t* req, MsgType_t msgType, void* 
 	
 	return RPC_SerializeRsp(&rsp);
 }
+#endif
+#ifdef CONFIG_AUDIO_BUILD
+#if defined(FUSE_APPS_PROCESSOR)
+void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
+                            ResultDataBufHandle_t dataBufHandle,
+                            UInt32 userContextData)
+{
+    if ( pMsg->tid == 0 )
+    {
+        if (MSG_CALL_STATUS_IND == pMsg->msgId )
+        {
+            UInt32 len;
+            void* dataBuf;
+            CallStatusMsg_t* p = NULL;
+            //CAPI2_ReqRep_t * const reqRep = (CAPI2_ReqRep_t*)pMsg->dataBuf;
+
+            Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : ===pMsg->tid=0x%x, pMsg->clientID=0x%x, pMsg->msgId=0x%x \r\n",(unsigned int)pMsg->tid, pMsg->clientID, pMsg->msgId);
+
+            CAPI2_GetPayloadInfo(pMsg->dataBuf, pMsg->msgId, &dataBuf, &len);
+
+            p = (CallStatusMsg_t*)dataBuf;
+
+            Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : codecid=0x%x, callstatus=0x%x \r\n",p->codecId, p->callstatus);
+
+            if ((p->codecId) != 0 && p->callstatus == CC_CALL_SYNC_IND)
+            {
+                AUDDRV_RequestRateChange(p->codecId);
+            }
+
+        }
+    }
+
+    if ( dataBufHandle )
+    {
+        RPC_SYSFreeResultDataBuffer(dataBufHandle);
+    }
+    else
+        Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : dataBufHandle is NULL \r\n");
+}
+#endif
 #endif
 
 void HandleAudioEventReqCb(RPC_Msg_t* pMsg, 
@@ -103,6 +147,15 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		UInt32 val = audio_control_dsp(p->param1,p->param2,p->param3,p->param4,p->param5,p->param6);
 		
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_CTRL_DSP_RSP, &val);
+#ifdef CONFIG_AUDIO_BUILD	
+	}
+	else if(pMsg->msgId == MSG_AUDIO_COMP_FILTER_REQ)
+	{
+		AudioCompfilter_t* p = (AudioCompfilter_t*)pMsg->dataBuf;
+		UInt32 val = audio_cmf_filter(p);
+		
+		SendAudioRspForRequest(pMsg, MSG_AUDIO_COMP_FILTER_RSP, &val);
+#endif
 	}
 	else
 		xassert(0, pMsg->msgId);
@@ -206,7 +259,56 @@ bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp)
 	else
 		return FALSE;
 }
+#ifdef CONFIG_AUDIO_BUILD
+bool_t xdr_DlCompfilter_t(void* xdrs, EQDlCompfilter_t *rsp)
+{
+	XDR_LOG(xdrs,"EQDlCompfilter_t")
 
+	if(
+		xdr_vector(xdrs, (char *)(void *)&(rsp->dl_coef_fw_8k), 12*3, sizeof(Int32), (xdrproc_t)xdr_Int32) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->dl_coef_bw_8k), 12*2, sizeof(Int32), (xdrproc_t)xdr_Int32) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->dl_comp_filter_gain_8k), 12, sizeof(Int16), (xdrproc_t)xdr_int16_t) &&
+		xdr_Int32(xdrs, &rsp->dl_output_bit_select_8k) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->dl_coef_fw_16k), 12*3, sizeof(Int32), (xdrproc_t)xdr_Int32) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->dl_coef_bw_16k), 12*2, sizeof(Int32), (xdrproc_t)xdr_Int32) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->dl_comp_filter_gain_16k), 12, sizeof(Int16), (xdrproc_t)xdr_int16_t) &&
+		xdr_UInt16(xdrs, &rsp->dl_nstage_filter) &&
+	1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+bool_t xdr_UlCompfilter_t(void* xdrs, EQUlCompfilter_t *rsp)
+{
+	XDR_LOG(xdrs,"EQUlCompfilter_t")
+
+	if(
+		xdr_vector(xdrs, (char *)(void *)&(rsp->ul_coef_fw_8k), 12*3, sizeof(Int32), (xdrproc_t)xdr_Int32) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->ul_coef_bw_8k), 12*2, sizeof(Int32), (xdrproc_t)xdr_Int32) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->ul_comp_filter_gain_8k), 12, sizeof(Int16), (xdrproc_t)xdr_int16_t) &&
+		xdr_Int32(xdrs, &rsp->ul_output_bit_select_8k) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->ul_coef_fw_16k), 12*3, sizeof(Int32), (xdrproc_t)xdr_Int32) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->ul_coef_bw_16k), 12*2, sizeof(Int32), (xdrproc_t)xdr_Int32) &&
+		xdr_vector(xdrs, (char *)(void *)&(rsp->ul_comp_filter_gain_16k), 12, sizeof(Int16), (xdrproc_t)xdr_int16_t) &&
+		xdr_UInt16(xdrs, &rsp->ul_nstage_filter) &&
+	1)
+		return TRUE;
+	else
+		return FALSE;
+}
+
+bool_t xdr_AudioCompfilter_t(void* xdrs, AudioCompfilter_t *rsp)
+{
+	XDR_LOG(xdrs,"AudioCompfilter_t")
+
+	if( xdr_DlCompfilter_t(xdrs, &rsp->dl) &&
+		xdr_UlCompfilter_t(xdrs, &rsp->ul))
+		return TRUE;
+	else
+		return FALSE;
+}
+#endif
 #if defined(FUSE_APPS_PROCESSOR) 
 
 UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4,UInt32 param5,UInt32 param6)
@@ -317,6 +419,36 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 	
 	return val;
 
+}
+
+void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t* cf)
+{
+#ifdef CONFIG_AUDIO_BUILD
+	RPC_Msg_t msg;
+	
+	msg.msgId = MSG_AUDIO_COMP_FILTER_REQ;
+	msg.tid = tid;
+	msg.clientID = clientID;
+	msg.dataBuf = (void*)cf;
+	msg.dataLen = 0;
+	RPC_SerializeReq(&msg);
+#endif	
+}
+
+UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
+{
+	UInt32 val = (UInt32)0;
+#ifdef CONFIG_AUDIO_BUILD
+	UInt32 tid;
+	MsgType_t msgType;
+	RPC_ACK_Result_t ackResult;
+	Log_DebugPrintf(LOGID_AUDIO, "audio_cmf_filter (AP) ");
+
+	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
+	CAPI2_audio_cmf_filter(tid, audioClientId,cf);
+	RPC_SyncWaitForResponse( tid,audioClientId, &ackResult, &msgType, NULL );
+#endif
+	return val;
 }
 
 #endif

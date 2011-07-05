@@ -117,6 +117,65 @@ static void __exit dwc_otg_device_exit(void)
 	}
 }
 
+static void kona_otg_phy_set_vbus_stat(void *hsotg_ctrl_base, bool on)
+{
+	unsigned long val;
+
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+
+	if (on) {
+		val |= (HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK);
+	} else {
+		val &= ~(HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
+			 HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK);
+	}
+
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+}
+
+static void kona_otg_phy_set_non_driving(void *hsotg_ctrl_base, bool on)
+{
+	unsigned long val;
+
+	/* set Phy to driving mode */
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	if (on)
+		val |= HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
+	else
+		val &= ~HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
+
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+}
+
+/**
+ * Do OTG init. Currently only for testing dataline pulsing when Vbus is off
+ */
+static ssize_t do_konaotginit(struct device *dev,
+			 struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	void __iomem *hsotg_ctrl_base;
+
+	/* map base address */
+	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+	if (!hsotg_ctrl_base) {
+		return -ENOMEM;
+	}
+
+	kona_otg_phy_set_vbus_stat(hsotg_ctrl_base, false);
+	kona_otg_phy_set_non_driving(hsotg_ctrl_base, true);
+	kona_otg_phy_set_non_driving(hsotg_ctrl_base, false);
+
+	/* unmap base address */
+	iounmap(hsotg_ctrl_base);
+	return count;
+	
+}
+
+DEVICE_ATTR(konaotginit, S_IWUSR, NULL, do_konaotginit);
+
 /****************************************************************************
  *
  ***************************************************************************/
@@ -260,6 +319,9 @@ static int __init dwc_otg_device_init(void)
 		}
 #endif
 		rc = dwc_otg_device_register(BCM_INT_ID_USB_HSOTG, HSOTG_BASE_ADDR);
+
+		if (NULL != lmdev)
+			rc = device_create_file(&lmdev->dev, &dev_attr_konaotginit);
 
 		/* unmap base address */
 		iounmap(hsotg_ctrl_base);

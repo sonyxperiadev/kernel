@@ -39,6 +39,8 @@
 
 #ifdef PMU_BCM59055
 #include "linux/broadcom/bcm59055-audio.h"
+#elif defined(CONFIG_BCMPMU_AUDIO)
+#include "bcmpmu_audio.h"
 #endif
 
 #include "audio_gain_table.h"
@@ -166,7 +168,7 @@ AUDTABL_SlopGain_LUT_t slopGain_lut[]=
 
 static AUDTABL_GainMapping_t GainMapping_Table[] =
 {
-#ifdef PMU_BCM59055
+#if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
 	//Audio Mode        // Total Gain(miliBel)   // Gain in PMU    // Gain in AudioHW(miliBel)
 /* Earpiece Mode */    
 	{AUDIO_MODE_HANDSET,     TOTAL_GAIN,          NO_PMU_NEEDED,       TOTAL_GAIN},
@@ -657,11 +659,10 @@ static AUDTABL_GainMapping_t GainMapping_Table[] =
 	{AUDIO_MODE_SPEAKERPHONE,	/*60.00dB*/ 0x1770,	PMU_IHFGAIN_4DB_P,	0x15e0},
 #else
 /* Headset Mode */    
-	{AUDIO_MODE_HEADSET,	TOTAL_GAIN,	NO_PMU_NEEDED,	TOTAL_GAIN},
+	{AUDIO_MODE_HEADSET,     TOTAL_GAIN,          NO_PMU_NEEDED,       TOTAL_GAIN},
 /* IHF Speaker Mode */    
-	{AUDIO_MODE_SPEAKERPHONE,	TOTAL_GAIN,	NO_PMU_NEEDED,	TOTAL_GAIN},
+	{AUDIO_MODE_SPEAKERPHONE,     TOTAL_GAIN,          NO_PMU_NEEDED,       TOTAL_GAIN},
 #endif
-    
 /* Earpiece Mode */    
 	{AUDIO_MODE_HANDSFREE,     TOTAL_GAIN,          NO_PMU_NEEDED,       TOTAL_GAIN},
 	{AUDIO_MODE_BLUETOOTH,     TOTAL_GAIN,          NO_PMU_NEEDED,       TOTAL_GAIN},
@@ -788,11 +789,12 @@ AUDTABL_GainMapping_t AUDTABL_getGainDistribution(AudioMode_t audioMode, UInt32 
                     return GainMapping_Table[i];
                 }
                 else
-                if((Int32)(GainMapping_Table[1].gainTotal) > (Int32)gainQ31)
+				//index 0 defines the total gain. hence use index 1
+                if((Int32)(GainMapping_Table[0].gainTotal) > (Int32)gainQ31)
                 // the gain is smaller than the smallest gain in the table for Headset/IHF Mode
                 // return the smallest available gain
                 {
-                    return GainMapping_Table[1]; //index 0 defines the total gain. hence use index 1
+                    return GainMapping_Table[0];
                 }
                 else
                 if(GainMapping_Table[i+1].audioMode != audioMode)

@@ -65,23 +65,24 @@
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
 #endif
 
-#define KONA_8250PORT(name)				\
+#define KONA_8250PORT(name,clk)				\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA), 	\
 	.mapbase    = (resource_size_t)(KONA_##name##_PA),    	\
 	.irq	    = BCM_INT_ID_##name,               		\
-	.uartclk    = 13000000,					\
+	.uartclk    = 26000000,					\
 	.regshift   = 2,					\
 	.iotype	    = UPIO_DWAPB,					\
 	.type	    = PORT_16550A,          			\
 	.flags	    = UPF_BOOT_AUTOCONF | UPF_FIXED_TYPE | UPF_SKIP_TEST,	\
 	.private_data = (void __iomem *)((KONA_##name##_VA) + UARTB_USR_OFFSET), \
+	.clk_name = clk,	\
 }
 
 static struct plat_serial8250_port uart_data[] = {
-	KONA_8250PORT(UART0),
-	KONA_8250PORT(UART1),
-	KONA_8250PORT(UART2),
+	KONA_8250PORT(UART0,"uartb_clk"),
+	KONA_8250PORT(UART1,"uartb2_clk"),
+	KONA_8250PORT(UART2,"uartb3_clk"),
 	{
 		.flags		= 0,
 	},
@@ -372,6 +373,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	},
 	{ /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
+		.bsc_clk = "pmu_bsc_clk",
 	},
 };
 

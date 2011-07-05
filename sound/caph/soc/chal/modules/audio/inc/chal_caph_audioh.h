@@ -26,6 +26,7 @@ Broadcom's express prior written consent.
 
 #include "chal_types.h"
 #include "brcm_rdb_sysmap.h"
+#include "chal_caph.h"
 
 /**
 * defines
@@ -199,6 +200,16 @@ extern  void chal_audio_vinpath_digi_mic_enable(CHAL_HANDLE handle, cUInt16 enab
 *****************************************************************************/
 extern  void chal_audio_vinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 disable);
 
+
+/**
+*
+*  @brief  Get vinpath digital Mic enabling status
+*
+*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
+*
+*  @return UInt8 status (out) digital mic enabling status
+*****************************************************************************/
+extern UInt8 chal_audio_vinpath_digi_mic_enable_read(CHAL_HANDLE handle);
 
 /**
 *
@@ -401,14 +412,36 @@ extern  cUInt32 chal_audio_vinpath_read_int_status(CHAL_HANDLE handle);
 *  @brief  set CIC scale parameters for vinpath
 *
 *  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dmic1_scale       (in) specifies the CIC scale for Digital MIC 1
-*  @param  dmic2_scale       (in) specifies the CIC scale for Digital MIC 2
+*  @param  dmic1_coarse_scale   (in) the CIC coarse scale for Digital MIC 1
+*  @param  dmic1_fine_scale     (in) the CIC fine scale for Digital MIC 1
+*  @param  dmic2_coarse_scale   (in) the CIC coarse scale for Digital MIC 2
+*  @param  dmic2_fine_scale     (in) the CIC fine scale for Digital MIC 2
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle, UInt32 dmic1_scale, UInt32 dmic2_scale);
+extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle, 
+		UInt32 dmic1_coarse_scale, 
+		UInt32 dmic1_fine_scale, 
+		UInt32 dmic2_coarse_scale, 
+		UInt32 dmic2_fine_scale);
 
+
+
+/**
+*
+*  @brief  set each CIC scale parameters for vinpath
+*
+*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  micGainSelect	(in) the each mic gain selection.
+*  @param  gain			(in) the CIC scale
+*
+*
+*  @return none
+*****************************************************************************/
+extern void chal_audio_vinpath_set_each_cic_scale(CHAL_HANDLE handle,
+						CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
+						UInt32 gain);
 /**
 *
 *  @brief  enable/disable sidetone data for vinpath FIFO
@@ -473,6 +506,18 @@ extern  void chal_audio_nvinpath_digi_mic_enable(CHAL_HANDLE handle, cUInt16 ena
 *  @return none
 *****************************************************************************/
 extern  void chal_audio_nvinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 disable);
+
+
+/**
+*
+*  @brief  Get nvinpath digital Mic enabling status
+*
+*  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
+*
+*  @return UInt8 status (out) digital mic enabling status
+*****************************************************************************/
+extern UInt8 chal_audio_nvinpath_digi_mic_enable_read(CHAL_HANDLE handle);
+
 
 /**
 *
@@ -678,13 +723,36 @@ extern  cUInt32 chal_audio_nvinpath_read_int_status(CHAL_HANDLE handle);
 *  @brief  set CIC scale parameters for Noise vinpath
 *
 *  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
-*  @param  dmic3_scale       (in) specifies the CIC scale for Digital MIC 3
-*  @param  dmic4_scale       (in) specifies the CIC scale for Digital MIC 4
+*  @param  dmic3_coarse_scale   (in) the CIC coarse scale for Digital MIC 3
+*  @param  dmic3_fine_scale     (in) the CIC fine scale for Digital MIC 3
+*  @param  dmic4_coarse_scale   (in) the CIC coarse scale for Digital MIC 4
+*  @param  dmic4_fine_scale     (in) the CIC fine scale for Digital MIC 4
 *
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle, UInt32 dmic3_scale, UInt32 dmic4_scale);
+extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle, 
+		UInt32 dmic3_coarse_scale, 
+		UInt32 dmic3_fine_scale, 
+		UInt32 dmic4_coarse_scale, 
+		UInt32 dmic4_fine_scale);
+
+
+
+/**
+*
+*  @brief  set each CIC scale parameters for nvinpath
+*
+*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  micGainSelect	(in) the each mic gain selection.
+*  @param  gain			(in) the CIC scale
+*
+*
+*  @return none
+*****************************************************************************/
+extern void chal_audio_nvinpath_set_each_cic_scale(CHAL_HANDLE handle,
+								CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
+															UInt32 gain);
 
 /**
 *
@@ -1262,6 +1330,17 @@ extern  void chal_audio_ihfpath_sdm_set_coef(CHAL_HANDLE handle, cUInt32 hs_coef
 *  @return none
 *****************************************************************************/
 extern  cVoid chal_audio_ihfpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable_chan);
+
+
+/**
+*
+*  @brief  Get the statuc of IHF DAC
+*
+*  @param  handle (in) this AUDIO chal handle got through chal_audio_init() function
+*
+*  @return UInt8 (out) status of IHF path DAC pwr
+*****************************************************************************/
+extern UInt8 chal_audio_ihfpath_get_dac_pwr(CHAL_HANDLE handle);
 
 /**
 *
@@ -2153,11 +2232,10 @@ extern  void chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable);
 *
 *  @param  handle           (in) this AUDIO chal handle got through chal_audio_init() function
 *  @param  coeff              (in) this specify the location where filter coefficients are located
-*  @param  length            (in) this specify the size of the filter coefficients
 *
 *  @return none
 *****************************************************************************/
-extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length );
+extern  void chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff);
 
 /**
 *
@@ -2493,6 +2571,7 @@ extern  cUInt32 chal_audio_audiotx_get_dac_ctrl(CHAL_HANDLE handle);
 *  @return none
 *****************************************************************************/
 extern cVoid chal_audio_audiotx_set_spare_bit(CHAL_HANDLE handle);
+
 /**
 * Analog Microphone functions
 *****************************************************************************/

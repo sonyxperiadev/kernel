@@ -1010,7 +1010,42 @@ typedef enum
     */    
     COMMAND_MAIN_AMR_RUN,		// 0x5a		( run main AMR vocoder during GSM idle to support WCDMA voice call, arg0=UL AMR codec mode request )
     COMMAND_AUDIO_ALIGNMENT,	// 0x5b		( align audio input and/or output buffer, arg0: input buf, arg1: output buf )
-	COMMAND_VOICE_FILTER_COEFS,	// 0x5c		( )
+    /** \HR */
+    /** \par Module
+     *                    Audio
+     *  \par Command Code
+     *                    0x5c
+     *  \par Description
+     *  This command enables/disables Transducer Equalizer filters in the DSP.
+     *  This command must be sent prior enabling the speech audio for 16/8K sampling rate to turn ON the
+     *  following Filters:
+     *  -	Main MIC UL filter
+     *  -	Aux Mic (second MIC) UL filter
+     *  -	DL SPKR filter
+     *  The internal memory of the DSP is initialized to proceed with filtering.
+     *
+     *  The command reads the filter settings for the filters from the shared memory.
+     *
+     *  \note The parameters must be present in the shared memory before this command is sent.
+     *
+     *  Optional initialization of the filter states can be controlled by this command.
+     *  This command can be sent at least ONCE per audio mode.
+     *  If the audio mode changes and therefore setting of the filters, the command must be resent to
+     *  inform DSP that an updating of the filter settings needed.
+     *
+     *              @param  UInt16 Init: \BR
+     *                             {bit2 - ulaux_comp_filter_Init_flag \BR
+     *                              bit1 - ul_comp_filter_Init_flag \BR
+     *                              bit0 - dl_comp_filter_Init_flag} \BR
+     *              @param  UInt16 Enable: \BR
+     *                             {bit2 - ulaux_comp_filter_Enable_flag \BR
+     *                              bit1 - ul_comp_filter_Enable_flag \BR
+     *                              bit0 - dl_comp_filter_Enable_flag} \BR
+     *              @param  UInt16 Test_flag = 0xbeab - Initializes the filters with some default values.
+     *
+     *   \sa Transducer_EQ
+     */
+    COMMAND_VOICE_FILTER_COEFS,	// 0x5c		( )
 	COMMAND_POLYRINGER_STARTPLAY,	// 0x5d	( Polyringer Play )
 	COMMAND_POLYRINGER_CANCELPLAY,	// 0x5e	( Polyringer Cancel )
     COMMAND_MST_FLAG_EFR,		// 0x5f		( value(0,1,2,3,4,7,9) )
@@ -2350,6 +2385,7 @@ EXTERN OmegaVoice_t	shared_omega_voice_mem						SHARED_SEC_GEN_AUDIO;
 EXTERN AlphaVoice_t	shared_alpha_voice_mem						SHARED_SEC_GEN_AUDIO;
 EXTERN KappaVoice_t	shared_kappa_voice_mem						SHARED_SEC_GEN_AUDIO;
 EXTERN Shared_Compressor_t	compress_ul_g2t2					SHARED_SEC_GEN_AUDIO;
+EXTERN Shared_Smart_Compressor_t shared_smart_compressor		SHARED_SEC_GEN_AUDIO;
 // following "informational" values written by the noise
 // suppressor when enabled in shared_ns_control
 
@@ -2626,7 +2662,27 @@ EXTERN UInt16 audio_input_16k_buf[1280]						  SHARED_SEC_GEN_AUDIO;
 /**
  * \note THIS BUFFER IS NOT BEING USED AND CAN BE REMOVED !!!!!
  */
-EXTERN UInt16 shared_encoder_InputBuffer[AUDIO_SIZE_PER_PAGE-1280] SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_encoder_InputBuffer[AUDIO_SIZE_PER_PAGE-1294] SHARED_SEC_GEN_AUDIO;
+
+/** 
+ * @}
+ */
+/** 
+ * @addtogroup Audio_Gains_in_CP 
+ * @{
+ */
+/** 
+ * 
+ * 
+ * 
+ * pass usf info from dsp to arm. to ne used for logging \BR
+ *
+ */
+/** 
+ * @}
+ */
+
+EXTERN Int16  shared_usf_debug_info[14]							     SHARED_SEC_GEN_AUDIO;
 
 /** 
  * @}
@@ -2934,15 +2990,18 @@ EXTERN Int16 shared_dmic_init[200]											SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_wb_mm_output_gain[5]									SHARED_SEC_GEN_AUDIO;
 
 /**
+ * \defgroup Transducer_EQ
  * This memory section describes the setting of the voice compensation filter for 16/8K Voice only.
  * The filter is the form DF2 and programmable stages for UL and DL and Aux Ul for the second MIC path.
  * The memory is as follows:
+ *							Coef Fwd B[][] -> B0, B1, B2
+ *							Coef Bwd A[][] -> A1, A2
  * 							input gain[]
- *							Coef Fwd B[][]
- *							Coef Bwd A[][]
  *							OutputSelect
  *							Maximum IIR Stage supported = 12 in each direction
- * WARNING DO NOT CHANGE THE ORDER. it will break the order of the copy for swapping ext<->int memory.
+ * \note WARNING DO NOT CHANGE THE ORDER. it will break the order of the copy for swapping ext<->int memory.
+ * @{
+ *
  */
 
 EXTERN Int32  shared_dl_coef_fw_8k[12][3]									SHARED_SEC_GEN_AUDIO;
@@ -2985,7 +3044,9 @@ EXTERN UInt16 shared_dl_nstage_filter										SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_ul_nstage_filter										SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_ul_Auxnstage_filter									SHARED_SEC_GEN_AUDIO;
 
-
+/**
+ * @}
+ */
 
 EXTERN UInt16 shared_DTMF_SV_tone_scale_mode	   							SHARED_SEC_GEN_AUDIO;			 // 1: new mode (sacle factor coming from arm); 0: old mode (DSP set scale factor)
 EXTERN UInt16 shared_RF_test_buf_ind                    					SHARED_SEC_DIAGNOS;

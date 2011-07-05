@@ -41,6 +41,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_consts.h"
 #include "auddrv_def.h"
 #include "ossemaphore.h"
+#include "drv_caph.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"
@@ -269,7 +270,7 @@ void AUDIO_Ctrl_Process(
                                    AUDIO_HW_NONE,
                                    param_start->pdev_prop->u.p.speaker,
 				                   param_start->channels,
-                                   param_start->rate
+                                   param_start->rate, NULL
 				    );
 
 			AUDCTRL_SetPlayVolume (param_start->pdev_prop->u.p.hw_id,
@@ -291,7 +292,7 @@ void AUDIO_Ctrl_Process(
            //disable the playback path
              AUDCTRL_DisablePlay(AUDIO_HW_MEM, 
                         param_stop->pdev_prop->u.p.hw_id,
-                        param_stop->pdev_prop->u.p.speaker
+                        param_stop->pdev_prop->u.p.speaker,0
                     );
 
 			 BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process Stop Playback completed \n");
@@ -303,7 +304,7 @@ void AUDIO_Ctrl_Process(
             //disable the playback path
              AUDCTRL_DisablePlay(AUDIO_HW_MEM,	
                         param_pause->pdev_prop->u.p.hw_id,
-                        param_pause->pdev_prop->u.p.speaker
+                        param_pause->pdev_prop->u.p.speaker,0
                     ); 
             AUDIO_DRIVER_Ctrl(param_pause->drv_handle,AUDIO_DRIVER_PAUSE,NULL);
         }
@@ -321,7 +322,7 @@ void AUDIO_Ctrl_Process(
                                    AUDIO_HW_NONE,
                                    param_resume->pdev_prop->u.p.speaker,
 				                   param_resume->channels,
-                                   param_resume->rate
+                                   param_resume->rate, NULL
 				    );
         }
         break;

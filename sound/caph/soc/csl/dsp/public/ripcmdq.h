@@ -414,5 +414,16 @@ void RIPCMDQ_SetVoiceDtx(Boolean enable);
 
 void RIPCMDQ_CompFilterCtrl(UInt16 ResetUlFilterState, UInt16 ResetUlAuxFilterState, UInt16 ResetDlFilterState,UInt16 MainMicCtrl, UInt16 AuxMicCtrl, UInt16 DlSpkCtrl);
 
+//*********************************************************************
+/**
+*
+*   RIPCMDQ_ControlDownlinkNoiseSuppression controls Downlink Noise Suppressor.
+*
+*   @param    control				(in)	0 - disable, 1 - enable
+* 
+**********************************************************************/
+void RIPCMDQ_ControlDownlinkNoiseSuppression(Boolean control);
+
+void RIPCMDQ_AbortSearch(UInt16 abort_slot,  UInt16 abort_frame);
 
 #endif	//_RIPCMDQ_H_

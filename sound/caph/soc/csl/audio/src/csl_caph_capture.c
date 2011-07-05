@@ -112,11 +112,7 @@ UInt32 csl_audio_capture_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink
 	{
 		sink = CSL_CAPH_DEV_DSP_throughMEM;
 		dmaCHs.dmaCH = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH14);
-	}
-	else if ((source == CSL_CAPH_DEV_EANC_DIGI_MIC)&& (sink == CSL_CAPH_DEV_DSP))
-	{
-		sink = CSL_CAPH_DEV_DSP_throughMEM;
-            dmaCHs.dmaCH2 = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH15);	
+                dmaCHs.dmaCH2 = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH15);	
 	}
 	else if ((source == CSL_CAPH_DEV_EANC_INPUT)&& (sink == CSL_CAPH_DEV_DSP))
 	{

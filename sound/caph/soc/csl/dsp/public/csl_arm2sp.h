@@ -67,6 +67,30 @@
  * @{
  */
 
+#define MAX_ARM2SP_DL_GAIN			(1<<14)		/* unity gain in DSP Q1.14 format */
+#define MIN_ARM2SP_DL_GAIN			0
+
+#define MAX_ARM2SP_UL_GAIN			((2<<14)-1)	/* 6dB in DSP Q1.14 format */
+#define MIN_ARM2SP_UL_GAIN			0
+
+#define MAX_ARM2SP2_DL_GAIN			(1<<14)		/* unity gain in DSP Q1.14 format */
+#define MIN_ARM2SP2_DL_GAIN			0
+
+#define MAX_ARM2SP2_UL_GAIN			((2<<14)-1)	/* 6dB in DSP Q1.14 format */
+#define MIN_ARM2SP2_UL_GAIN			0
+
+#define MAX_ARM2SP_CALL_REC_GAIN	((2<<14)-1)	/* 6dB in DSP Q1.14 format */
+#define MIN_ARM2SP_CALL_REC_GAIN	0
+
+#define MAX_ARM2SP2_CALL_REC_GAIN	((2<<14)-1)	/* 6dB in DSP Q1.14 format */
+#define MIN_ARM2SP2_CALL_REC_GAIN	0
+
+#define MAX_INP_SP_TO_ARM2SP_MIXER_DL_GAIN  (1<<14)		/* unity gain in DSP Q1.14 format */
+#define MIN_INP_SP_TO_ARM2SP_MIXER_DL_GAIN  0
+                                          
+#define MAX_INP_SP_TO_ARM2SP_MIXER_UL_GAIN  ((2<<14)-1)	/* 6dB in DSP Q1.14 format */
+#define MIN_INP_SP_TO_ARM2SP_MIXER_UL_GAIN  0
+
 // ---- Function Declarations -----------------------------------------
 //*********************************************************************
 /**
@@ -85,10 +109,11 @@ void CSL_ARM2SP_Init(void);
 *   @param    inBuf			(in)	source buffer
 *   @param    inSize		(in)	data size to write
 *   @param    writeIndex	(in)	index of ping-pong buffer
+*   @param    in48K			(in)	48K signal?
 *   @return   UInt32				number of bytes written to the buffer
 *
 **********************************************************************/
-UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex);
+UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K);
 
 //*********************************************************************
 /**
@@ -107,10 +132,180 @@ void CSL_ARM2SP2_Init(void);
 *   @param    inBuf			(in)	source buffer
 *   @param    inSize		(in)	data size to write
 *   @param    writeIndex	(in)	index of ping-pong buffer
+*   @param    in48K			(in)	48K signal?
 *   @return   UInt32				number of bytes written to the buffer
 *
 **********************************************************************/
-UInt32 CSL_ARM2SP2_Write(UInt8 *inBuf, UInt32 inSize_inBytes, UInt16 writeIndex);
+UInt32 CSL_ARM2SP2_Write(UInt8 *inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetARM2SpeechULGain sets ARM2SP downlink gain.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 0 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetARM2SpeechDLGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteARM2SpeechDL mutes ARM2SP downlink.
+*
+* 
+**********************************************************************/
+void CSL_MuteARM2SpeechDL(void);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetARM2SpeechULGain sets ARM2SP uplink gain.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetARM2SpeechULGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteARM2SpeechUL mutes ARM2SP uplink.
+*
+* 
+**********************************************************************/
+void CSL_MuteARM2SpeechUL(void);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetARM2Speech2DLGain sets ARM2SP2 downlink gain.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 0 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetARM2Speech2DLGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteARM2Speec2hDL mutes ARM2SP2 downlink.
+*
+* 
+**********************************************************************/
+void CSL_MuteARM2Speech2DL(void);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetARM2Speech2ULGain sets ARM2SP2 uplink gain.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetARM2Speech2ULGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteARM2Speech2UL mutes ARM2SP2 uplink.
+*
+* 
+**********************************************************************/
+void CSL_MuteARM2Speech2UL(void);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetInpSpeechToARM2SpeechMixerDLGain sets Downlink Input Speech 
+*   Gain to ARM2SP mixer.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 0 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetInpSpeechToARM2SpeechMixerDLGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteInpSpeechToARM2SpeechMixerDL mutes Downlink Input Speech 
+*   to ARM2SP mixer.
+*
+*   @param    None
+*   @return   None
+* 
+**********************************************************************/
+void CSL_MuteInpSpeechToARM2SpeechMixerDL(void);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetInpSpeechToARM2SpeechMixerULGain sets Uplink Input Speech 
+*   Gain to ARM2SP mixer.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetInpSpeechToARM2SpeechMixerULGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteInpSpeechToARM2SpeechMixerUL mutes Uplink Input Speech 
+*   to ARM2SP mixer.
+*
+*   @param    None
+*   @return   None
+* 
+**********************************************************************/
+void CSL_MuteInpSpeechToARM2SpeechMixerUL(void);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetARM2SpeechCallRecordGain sets ARM2SP Call Record gain.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetARM2SpeechCallRecordGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteARM2SpeechCallRecord mutes ARM2SP Call Record 
+*
+* 
+**********************************************************************/
+void CSL_MuteARM2SpeechCallRecord(void);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetARM2Speech2CallRecordGain sets ARM2SP2 Call Record gain.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetARM2Speech2CallRecordGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteARM2Speech2CallRecord mutes ARM2SP2 Call Record 
+*
+* 
+**********************************************************************/
+void CSL_MuteARM2Speech2CallRecord(void);
+
 
 /** @} */
 

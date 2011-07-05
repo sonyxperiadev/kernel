@@ -18,6 +18,21 @@
  *  membase is an 'ioremapped' cookie.
  */
 
+/*******************************************************************************
+* Copyright 2010 Broadcom Corporation.  All rights reserved.
+*
+*   @file   drivers/serial/8250.c
+*
+* Unless you and Broadcom execute a separate written software license agreement
+* governing use of this software, this software is licensed to you under the
+* terms of the GNU General Public License version 2, available at
+* http://www.gnu.org/copyleft/gpl.html (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a license
+* other than the GPL, without Broadcom's express prior written consent.
+*******************************************************************************/
+
 #if defined(CONFIG_SERIAL_8250_CONSOLE) && defined(CONFIG_MAGIC_SYSRQ)
 #define SUPPORT_SYSRQ
 #endif
@@ -39,6 +54,7 @@
 #include <linux/nmi.h>
 #include <linux/mutex.h>
 #include <linux/slab.h>
+#include <linux/clk.h>
 
 #include <asm/io.h>
 #include <asm/irq.h>
@@ -134,6 +150,7 @@ struct uart_8250_port {
 	struct uart_port	port;
 	struct timer_list	timer;		/* "no irq" timer */
 	struct list_head	list;		/* ports on this IRQ */
+	struct clk      	*clk;
 	unsigned short		capabilities;	/* port capabilities */
 	unsigned short		bugs;		/* port bugs */
 	unsigned int		tx_loadsz;	/* transmit fifo load size */
@@ -2229,6 +2246,56 @@ static unsigned int serial8250_get_divisor(struct uart_port *port, unsigned int 
 	return quot;
 }
 
+/*
+ * Routine which returns the proper uart input clock for the
+ * required baud rate.
+ *
+ * Note: The baud_table needs to be kept in sync with the
+ * include/asm/termbits.h file.
+ */
+static const speed_t uartclk_table[] = {
+    26000000, 26000000,		/* B0, B50 */
+	26000000, 26000000,		/* B75, B110 */
+    26000000, 26000000,		/* B134, B150 */
+	26000000, 26000000,		/* B200, B300 */
+    26000000, 26000000,		/* B600, B1200 */
+    26000000, 26000000,		/* B1800, B2400 */
+    26000000, 26000000,		/* B4800, B9600 */
+	26000000, 26000000,		/* B19200, B38400 */
+    26000000, 26000000,		/* B57600, B115200 */
+	26000000, 156000000,	/* B230400, B460800 */
+    156000000, 156000000,	/* B500000, B576000 */
+	156000000, 156000000,	/* B921600, B1000000 */
+    156000000, 156000000,  	/* B1152000, B1500000 */
+	156000000, 156000000,  	/* B2000000, B2500000 */
+    156000000, 156000000,  	/* B3000000, B3500000 */
+	156000000,				/* B4000000 */
+};
+
+static void
+uart_fix_clock_rate(struct uart_port *port, struct ktermios *termios)
+{
+        struct uart_8250_port *up = (struct uart_8250_port *)port;
+        speed_t uart_clk;
+        speed_t cbaud = termios->c_cflag & CBAUD;
+        if (cbaud & CBAUDEX) {
+                cbaud &= ~CBAUDEX;
+                if (cbaud < 1 || cbaud + 15 > ARRAY_SIZE(uartclk_table))
+                   termios->c_cflag &= ~CBAUDEX;
+                else
+                   cbaud += 15;
+        }
+        uart_clk = uartclk_table[cbaud];
+
+        if (port->uartclk != uart_clk) {
+                clk_disable(up->clk);
+                clk_set_rate(up->clk, uart_clk);
+                clk_enable(up->clk);
+                port->uartclk = clk_get_rate(up->clk);
+        }
+}
+
+
 static void
 serial8250_set_termios(struct uart_port *port, struct ktermios *termios,
 		       struct ktermios *old)
@@ -2268,6 +2335,12 @@ serial8250_set_termios(struct uart_port *port, struct ktermios *termios,
 	/*
 	 * Ask the core to calculate the divisor for us.
 	 */
+#ifdef CONFIG_ARCH_SAMOA
+	printk("Samoa UART clock is now fixed at %d\n", port->uartclk);
+#else
+	uart_fix_clock_rate(port, termios);
+#endif
+
 	baud = uart_get_baud_rate(port, termios, old,
 				  port->uartclk / 16 / 0xffff,
 				  port->uartclk / 16);
@@ -2996,7 +3069,7 @@ static int __devinit serial8250_probe(struct platform_device *dev)
 		port.serial_out		= p->serial_out;
 		port.dev		= &dev->dev;
 		port.irqflags		|= irqflag;
-		ret = serial8250_register_port(&port);
+		ret = serial8250_register_port(&port, p->clk_name);
 		if (ret < 0) {
 			dev_err(&dev->dev, "unable to register port at index %d "
 				"(IO%lx MEM%llx IRQ%d): %d\n", i,
@@ -3120,7 +3193,8 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
  *
  *	On success the port is ready to use and the line number is returned.
  */
-int serial8250_register_port(struct uart_port *port)
+int serial8250_register_port(struct uart_port *port,
+	const unsigned char * clk_name)
 {
 	struct uart_8250_port *uart;
 	int ret = -ENOSPC;
@@ -3134,6 +3208,21 @@ int serial8250_register_port(struct uart_port *port)
 	if (uart) {
 		uart_remove_one_port(&serial8250_reg, &uart->port);
 
+#ifndef CONFIG_ARCH_SAMOA
+        uart->clk = clk_get(uart->port.dev, clk_name);
+        if (IS_ERR(uart->clk))
+            return PTR_ERR(uart->clk);
+
+		/*
+		 * Ensure to disable clocks, before changing the rate.
+		 *clock may be ON for console port for low level debug prints.
+		 */
+        clk_disable(uart->clk);
+        clk_set_rate(uart->clk, port->uartclk);
+        clk_enable(uart->clk);
+
+        uart->port.uartclk  	= clk_get_rate(uart->clk);
+#endif
 		uart->port.iobase       = port->iobase;
 		uart->port.membase      = port->membase;
 		uart->port.irq          = port->irq;

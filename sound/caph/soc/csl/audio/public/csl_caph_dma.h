@@ -184,22 +184,25 @@ void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_
 void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
 /**
 *
-*  @brief  disable caph pcm(ssp4) intr  
+*  @brief  enable caph pcm intr  
 *
 *  @param   csl_owner  (in) owner of this caph pcm channel
+*  @param   csl_sspid  (in) ssp of this caph pcm channel
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner);
+void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid);
 /**
 *
-*  @brief  disable caph pcm(ssp4) intr  
+*  @brief  disable caph pcm intr  
 *
 *  @param   csl_owner  (in) owner of this caph pcm channel
+*  @param   csl_sspid  (in) ssp of this caph pcm channel
+*
 *
 *  @return void
 *****************************************************************************/
-void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner);
+void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid);
 /**
 *
 *  @brief  get caph dma intr 
@@ -290,5 +293,37 @@ CSL_CAPH_DMA_CHNL_FIFO_STATUS_e csl_caph_dma_get_ddrfifo_status(CSL_CAPH_DMA_CHN
 *****************************************************************************/
 void csl_caph_dma_clr_ddrfifo_status(CSL_CAPH_DMA_CHNL_e chnl);
 
+/**
+*
+*  @brief  read the dma req count
+*
+*  @param   chnl  (in) caph dma channel
+*
+*  @return reqcount readings
+*****************************************************************************/
+
+UInt8 csl_caph_dma_read_reqcount(CSL_CAPH_DMA_CHNL_e chnl);
+
+/**
+*
+*  @brief  read current mem pointer
+*
+*  @param   chnl  (in) caph dma channel
+*
+*  @return current mem pointer
+*****************************************************************************/
+
+UInt16 csl_caph_dma_read_currmempointer(CSL_CAPH_DMA_CHNL_e chnl);
+
+/**
+*
+*  @brief  read dma channel time stamp
+*
+*  @param   chnl  (in) caph dma channel
+*
+*  @return time stamp
+*****************************************************************************/
+
+UInt32 csl_caph_dma_read_timestamp(CSL_CAPH_DMA_CHNL_e chnl);
 #endif // _CSL_CAPH_DMA_
 

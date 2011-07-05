@@ -40,13 +40,16 @@
 #include "osheap.h"
 #include "msconsts.h"
 #include "shared.h"
+
+#include "auddrv_def.h"
 #include "audio_consts.h"
+#include "audio_ddriver.h"
+#include "drv_caph.h"
+#include "csl_aud_drv.h"
+#include "audio_vdriver.h"
 #include "csl_aud_queue.h"
 #include "auddrv_audlog.h"
 #include "audio_controller.h"
-#include "auddrv_def.h"
-#include "audio_ddriver.h"
-#include "bcm_audio_devices.h"
 #include "log_sig_code.h"
 #include "log.h"
 
@@ -162,37 +165,14 @@ Result_t AUDDRV_AudLog_Init( void  )
 
 
 // ISR to handle STATUS_AUDIO_STREAM_DATA_READY from DSP
-// called from AP AP_Audio_ISR_Handler (status = STATUS_AUDIO_STREAM_DATA_READY
-void AUDLOG_ProcessLogChannel(VPStatQ_t *msg)
+// called from AP AP_Audio_ISR_Handler (status = STATUS_AUDIO_STREAM_DATA_READY)
+void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx)
 {
 	int n;
 
-	UInt16	audio_stream_buffer_idx;
-	UInt32 size=0;    //number of 16-bit words
-	UInt16 stream=0;  //the stream number: 1, 2, 3, 4
-	UInt16 sender=0;  //the capture point
-
-
-	LOG_FRAME_t *log_cb_info_ks_ptr = NULL;
-
-
-	//Log_DebugPrintf(LOGID_AUDIO, "msg->arg0 = 0x%x, msg->arg1=0x%x, msg->arg2=0x%x \r\n",msg->arg0, msg->arg1, msg->arg2 );
-
-	audio_stream_buffer_idx	= msg->arg2; //ping pong buffer index, 0 or 1
-
-	if ( sLogInfo.log_consumer[0] == LOG_TO_FLASH
-		|| sLogInfo.log_consumer[1] == LOG_TO_FLASH
-		|| sLogInfo.log_consumer[2] == LOG_TO_FLASH
-		|| sLogInfo.log_consumer[3] == LOG_TO_FLASH
-		) 
-        {
-        	if (bcmlog_stream_ptr != NULL)
-            {
-            	// memset mmap buffer to clean data from last interrupt
-                memset(bcmlog_stream_area, 0, (sizeof(LOG_FRAME_t) *4));
-                log_cb_info_ks_ptr = (LOG_FRAME_t *) bcmlog_stream_area;
-            }
-        }
+	UInt16 size = 0;    //number of 16-bit words
+	UInt16 stream;  //the stream number: 1, 2, 3, 4
+	UInt16 sender;  //the capture point
 
 	for(n = 0; n < LOG_STREAM_NUMBER; n++)
 	{
@@ -210,15 +190,15 @@ void AUDLOG_ProcessLogChannel(VPStatQ_t *msg)
 					BCMLOG_LogSignal(DSP_DATA, (UInt16 *)loggingbuf, size, stream, sender);	// send binary data to log port. The size is number of bytes (for MTT).
 				}
 				else{
-					Log_DebugPrintf(LOGID_AUDIO, "!!!!!! Err ptr = 0x%p size=%ld stream=%d sender=%d", loggingbuf, size, stream, sender);
+					Log_DebugPrintf(LOGID_AUDIO, "!!!!!! Err ptr = 0x%p size=%d stream=%d sender=%d", loggingbuf, size, stream, sender);
 				}
 			}
 			else
 			if (bcmlog_stream_ptr != NULL)
             {
-	            memcpy(log_cb_info_ks_ptr[n].log_msg,(UInt16 *)loggingbuf, size/2); // copy 81 bytes of data
-                log_cb_info_ks_ptr[n].log_capture_control = sender;
-                log_cb_info_ks_ptr[n].stream_index = stream;
+	         //   memcpy(log_cb_info_ks_ptr[n].log_msg,(UInt16 *)loggingbuf, size/2); // copy 81 bytes of data
+               // log_cb_info_ks_ptr[n].log_capture_control = sender;
+                //log_cb_info_ks_ptr[n].stream_index = stream;
 			}
 		}
 	}

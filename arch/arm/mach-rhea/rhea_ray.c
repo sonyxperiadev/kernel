@@ -179,6 +179,33 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 	},
 };
 
+static const char *pmu_clients[] = {
+#ifdef CONFIG_INPUT_BCM59055_ONKEY
+	"bcm590xx-onkey",
+#endif
+#ifdef CONFIG_BCM59055_FUELGAUGE
+	"bcm590xx-fg",
+#endif
+#ifdef CONFIG_BCM59055_SARADC
+	"bcm590xx-saradc",
+#endif
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
+	"bcm590xx-regulator",
+#endif
+#ifdef CONFIG_BCM59055_AUDIO
+	"bcm590xx-audio",
+#endif
+#ifdef CONFIG_RTC_DRV_BCM59055
+	"bcm59055-rtc",
+#endif
+#ifdef CONFIG_BATTERY_BCM59055
+	"bcm590xx-power",
+#endif
+#ifdef CONFIG_BCM59055_ADC_CHIPSET_API
+	"bcm59055-adc_chipset_api",
+#endif
+};
+
 /* Register userspace and virtual consumer for SIMLDO */
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 static struct regulator_bulk_data bcm59055_bd_sim = {
@@ -211,17 +238,21 @@ static struct platform_device bcm59055_vc_device_sim = {
 #endif
 #endif
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
+	/*
+	 * PMU in Fast mode. Once the Rhea clock changes are in place,
+	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
+	 */
+	/*.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_HS, },*/
 	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
 	.init = bcm590xx_init_platform_hw,
-	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
-	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC | BCM590XX_ENABLE_ADC |
-	BCM590XX_ENABLE_FUELGAUGE | BCM590XX_ENABLE_USB_OTG,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
 #ifdef CONFIG_REGULATOR_BCM_PMU59055
 	.regl_pdata = &bcm59055_regl_pdata,
 #endif
+	.clients = pmu_clients,
+	.clients_num = ARRAY_SIZE(pmu_clients),
 };
 
 

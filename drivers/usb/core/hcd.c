@@ -2137,7 +2137,9 @@ struct usb_hcd *usb_create_hcd (const struct hc_driver *driver,
 		dev_dbg (dev, "hcd alloc failed\n");
 		return NULL;
 	}
+
 	dev_set_drvdata(dev, hcd);
+
 	kref_init(&hcd->kref);
 
 	usb_bus_init(&hcd->self);

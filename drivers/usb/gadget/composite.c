@@ -318,8 +318,11 @@ static int config_buf(struct usb_configuration *config,
 	/* wTotalLength and bNumInterfaces are written later */
 	c->bConfigurationValue = config->bConfigurationValue;
 	c->iConfiguration = config->iConfiguration;
-	c->bmAttributes = USB_CONFIG_ATT_ONE | config->bmAttributes;
-	c->bMaxPower = config->bMaxPower ? : (CONFIG_USB_GADGET_VBUS_DRAW / 2);
+	c->bmAttributes = USB_CONFIG_ATT_ONE | config->bmAttributes; 
+/*	c->bMaxPower = config->bMaxPower ? : (CONFIG_USB_GADGET_VBUS_DRAW / 2);   */
+/*   Hard code the Max current draw to 100 mA for the time being to get DTM Device Framework CV Test passed. 
+      Will revisit when the PMU driver/API fully enabled */
+	c->bMaxPower = 50;
 
 	/* There may be e.g. OTG descriptors */
 	if (config->descriptors) {

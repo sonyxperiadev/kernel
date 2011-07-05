@@ -42,22 +42,15 @@ typedef enum AUDIO_HW_ID_t
 	AUDIO_HW_NONE,
 	AUDIO_HW_MEM,
 	AUDIO_HW_VOICE_OUT,			
-	AUDIO_HW_AUDIO_OUT,
-	AUDIO_HW_PLR_OUT,			
 	AUDIO_HW_MONO_BT_OUT,	
-	AUDIO_HW_STEREO_BT_OUT,		
+	AUDIO_HW_STEREO_BT_OUT,
 	AUDIO_HW_USB_OUT,	
 	AUDIO_HW_I2S_OUT,		
 	AUDIO_HW_VOICE_IN,
-	AUDIO_HW_AUDIO_IN,			
 	AUDIO_HW_MONO_BT_IN,		
-	AUDIO_HW_STEREO_BT_IN,		
 	AUDIO_HW_USB_IN,	
 	AUDIO_HW_I2S_IN,
-	AUDIO_HW_TAP_VOICE,
-	AUDIO_HW_TAP_AUDIO,
 	AUDIO_HW_DSP_VOICE,
-	AUDIO_HW_DSP_TONE,
     AUDIO_HW_EARPIECE_OUT,
     AUDIO_HW_HEADSET_OUT,
     AUDIO_HW_IHF_OUT,
@@ -73,12 +66,12 @@ typedef enum AUDCTRL_SPEAKER_t
 	AUDCTRL_SPK_HANDSET,
 	AUDCTRL_SPK_HEADSET,
 	AUDCTRL_SPK_HANDSFREE,
-	AUDCTRL_SPK_BTM,
+	AUDCTRL_SPK_BTM,  //Bluetooth HFP
 	AUDCTRL_SPK_LOUDSPK,
 	AUDCTRL_SPK_TTY,
 	AUDCTRL_SPK_HAC,	
 	AUDCTRL_SPK_USB,
-	AUDCTRL_SPK_BTS,
+	AUDCTRL_SPK_BTS,  //Bluetooth A2DP
 	AUDCTRL_SPK_I2S,
 	AUDCTRL_SPK_VIBRA,
 	AUDCTRL_SPK_UNDEFINED,
@@ -104,6 +97,7 @@ typedef enum AUDCTRL_MIC_Enum_t
 	AUDCTRL_MIC_DIGI4, //Only for loopback path
 	AUDCTRL_MIC_SPEECH_DIGI, //Digital Mic1/Mic2 in recording/Normal Quality Voice call.
 	AUDCTRL_MIC_EANC_DIGI, //Digital Mic1/2/3/4 for Supreme Quality Voice Call.
+    AUDCTRL_MIC_NOISE_CANCEL, //Mic for noise cancellation. Used in Dual mic case.
     AUDCTRL_MIC_TOTAL_COUNT
 } AUDCTRL_MIC_Enum_t;
 
@@ -124,6 +118,38 @@ typedef enum {
    PolyUseExtSpkr
 } ExtSpkrUsage_en_t;
 
+
+typedef enum AUDCTRL_MIX_SELECT_t
+{
+    AUDCTRL_MIX_EAR_TONE = 0x0001,
+    AUDCTRL_MIX_EAR_DL = 0x0002,
+    AUDCTRL_MIX_EAR_SPEECH_PLAY = 0x0004,
+    AUDCTRL_MIX_EAR_AUDIO_PLAY = 0x0008,
+    AUDCTRL_MIX_EAR_MIC_TO_EAR = 0x0010,
+    AUDCTRL_MIX_EAR_TO_AUDIO_REC = 0x0020,
+    AUDCTRL_MIX_UL_MIC = 0x0040,
+    AUDCTRL_MIX_UL_TONE = 0x0080,
+    AUDCTRL_MIX_UL_SPEECH_PLAY = 0x0100,
+    AUDCTRL_MIX_UL_AUDIO_PLAY = 0x0200,
+    AUDCTRL_MIX_SPEECH_REC_MIC = 0x0400,
+    AUDCTRL_MIX_SPEECH_REC_DL = 0x0800,
+    AUDCTRL_MIX_SPEECH_REC_TONE = 0x1000,
+    AUDCTRL_MIX_AUDIO_REC_MIC = 0x2000,
+    AUDCTRL_MIX_HQ_REC_MIC = 0x4000
+} AUDCTRL_MIX_SELECT_t;
+
+
+typedef struct
+{
+    AUDDRV_PathID           pathID;
+	AUDIO_HW_ID_t			src;
+	AUDIO_HW_ID_t			sink;
+	AUDCTRL_MICROPHONE_t	mic;
+	AUDCTRL_SPEAKER_t		spk;
+	AUDIO_CHANNEL_NUM_t		numCh;
+	AUDIO_SAMPLING_RATE_t	sr;
+} AUDCTRL_Config_t;
+
 /**
 *  @brief  This function is the Init entry point for Audio Controller 
 *
@@ -133,6 +159,16 @@ typedef enum {
 *
 ****************************************************************************/
 void AUDCTRL_Init (void);
+
+/**
+*  @brief  This function is to shut down Audio Controller
+*
+*  @param  none
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_Shutdown (void);
 
 /**
 *  @brief  This function controls the power on/off of external
@@ -184,7 +220,16 @@ void AUDCTRL_EnableTelephony(
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_RateChangeTelephony( void );
+void AUDCTRL_RateChangeTelephony( UInt32 sampleRate );
+
+/**
+*  @brief  Get voice call sample rate
+*
+*
+*  @return voice call sample rate
+*
+****************************************************************************/
+UInt32 AUDCTRL_RateGetTelephony( void );
 
 /**
 *  @brief  Disable telephony audio path in HW and DSP
@@ -260,7 +305,8 @@ void AUDCTRL_SetTelephonySpkrMute(
 *
 *  @param  dlSink	(in)  downlink sink
 *  @param  mic		(in)  microphone selection
-*  @param  speaker	(in)  speaker selection
+*  @param  gain	(in)  gain
+*  @param  gain_format	(in)  gain format
 *
 *  @return none
 *
@@ -268,7 +314,8 @@ void AUDCTRL_SetTelephonySpkrMute(
 void AUDCTRL_SetTelephonyMicGain(
 				AUDIO_HW_ID_t			ulSrc,
 				AUDCTRL_MICROPHONE_t	mic,
-				Int16					gain
+				Int16					gain,
+                AUDIO_GAIN_FORMAT_t     gain_format
 				);
 
 /**
@@ -361,6 +408,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode );
 *  @param  spk	(in)  speaker selection
 *  @param  numCh	(in)  stereo, momo
 *  @param  sr	(in)  sample rate
+*  @param  pPathID	(in)  to return pathID
 *
 *  @return none
 *
@@ -371,7 +419,8 @@ void AUDCTRL_EnablePlay(
 				AUDIO_HW_ID_t			tap,
 				AUDCTRL_SPEAKER_t		spk,
 				AUDIO_CHANNEL_NUM_t		numCh,
-				AUDIO_SAMPLING_RATE_t	sr
+				AUDIO_SAMPLING_RATE_t	sr,
+				UInt32					*pPathID
 				);
 
 /********************************************************************
@@ -380,6 +429,7 @@ void AUDCTRL_EnablePlay(
 *  @param  src	(in)  playback source 
 *  @param  sink	(in)  playback sink
 *  @param  speaker	(in)  speaker selection
+*  @param  pathID	(in)  the pathID returned by CSL HW controller.
 *
 *  @return none
 *
@@ -387,7 +437,8 @@ void AUDCTRL_EnablePlay(
 void AUDCTRL_DisablePlay(
 				AUDIO_HW_ID_t			src,
 				AUDIO_HW_ID_t			sink,
-				AUDCTRL_SPEAKER_t		spk
+				AUDCTRL_SPEAKER_t		spk,
+				UInt32					pathID
 				);
 
 /********************************************************************
@@ -552,6 +603,42 @@ void AUDCTRL_SetTapGain(
 				UInt32					gain
 				);
 
+
+/**
+*  @brief  Set Mixing gain in DSP/HW
+*
+*  @param  src	(in)  
+*  @param  sink	(in)  
+*  @param  mic	(in)  microphone selection
+*  @param  spk	(in)  speaker selection
+*  @param  mixSelect	(in)  Mixing selection
+*  @param  isDSPGain	(in)  DSP provides the mixing.
+*  @param  dspSpeechProcessingNeeded	(in)  needs DSP Speech processing.
+*  @param  gain	(in)  
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
+			AUDIO_HW_ID_t sink,
+			AUDCTRL_MICROPHONE_t mic,
+			AUDCTRL_SPEAKER_t spk,
+			AUDCTRL_MIX_SELECT_t mixSelect,
+			Boolean isDSPGain,
+			Boolean dspSpeechProcessingNeeded,			
+			UInt32 gain);
+
+
+/**
+*  @brief  Set External amplifier gain
+*
+*  @param  gain	(in)  
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SetGainOnExternalAmp(UInt32 gain);
+
 /********************************************************************
 *  @brief  mute/unmute a record path
 *
@@ -612,6 +699,36 @@ void AUDCTRL_SetAudioLoopback(
 							AUDCTRL_MICROPHONE_t	mic,
 							AUDCTRL_SPEAKER_t		speaker
 							);
+/********************************************************************
+*  @brief  Get a path configratio from the Table
+*
+*  @param  pathID (in)  the audio path ID 
+*
+*  @return data configraton. 
+*
+****************************************************************************/
+AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID);
+
+
+/********************************************************************
+*  @brief  Remove a path from the Table
+*
+*  @param  pathID (in)  the audio path ID 
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_RemoveFromTable(AUDDRV_PathID pathID);
+
+/********************************************************************
+*  @brief  Add a path to the Table
+*
+*  @param  data (in)  the pointer to audio path data 
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_AddToTable(AUDCTRL_Config_t* data);
 
 /********************************************************************
 *  @brief  enable or disable audio HW loopback
@@ -660,6 +777,15 @@ void AUDCTRL_SetAMRVolume_UL(UInt16 uVol);
 ****************************************************************************/
 void AUDCTRL_ConfigSSP(UInt8 fm_port, UInt8 pcm_port);
 
+/********************************************************************
+*  @brief  Control ssp tdm mode
+*
+*  @param  status ssp tdm status
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SetSspTdmMode(Boolean status);
 
 /********************************************************************
 *  @brief  Enable bypass mode for vibrator
@@ -696,4 +822,45 @@ void  AUDCTRL_DisableBypassVibra(void);
 void  AUDCTRL_SetBypassVibraStrength(UInt32 Strength, int direction);
 
 
+/********************************************************************
+*  @brief  Convert audio controller microphone enum to auddrv microphone enum
+*
+*  @param  Audio controller microphone enum.
+*
+*  @return AudDrv microphone enum
+*
+****************************************************************************/
+AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic);
+
+/********************************************************************
+*  @brief  Convert audio controller speaker enum to auddrv speaker enum
+*
+*  @param  Audio controller speaker enum.
+*
+*  @return AudDrv speaker enum
+*
+****************************************************************************/
+AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
+#ifdef CONFIG_AUDIO_BUILD
+#if !defined(NO_PMU) && ( defined( PMU_BCM59038) || defined( PMU_BCM59055 ) || defined( PMU_MAX8986) )
+/********************************************************************
+*  @brief  Convert Headset gain dB value to PMU-format gain value
+*
+*  @param  Headset gain dB galue
+*
+*  @return PMU_HS_Gain_t PMU-format gain value
+*
+****************************************************************************/
+PMU_HS_Gain_t map2pmu_hs_gain( Int16 db_gain );
+/********************************************************************
+*  @brief  Convert IHF gain dB value to PMU-format gain value
+*
+*  @param  IHF gain dB galue
+*
+*  @return PMU_HS_Gain_t PMU-format gain value
+*
+****************************************************************************/
+PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain );
+#endif
+#endif
 #endif //#define __AUDIO_CONTROLLER_H__

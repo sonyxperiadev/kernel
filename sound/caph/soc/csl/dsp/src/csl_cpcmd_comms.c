@@ -1334,29 +1334,8 @@ void RIPCMDQ_HS_VOCODER_Done(
 }
 #endif
 
-//******************************************************************************
-//
-// Function Name:	Set Noise suppression
-//
-// Description:		Set COMMAND_NOISE_SUPPRESSION
-//
-// Notes:
-//
-//******************************************************************************
-void RIPCMDQ_CTM_Ready( 
-	UInt16 dummy
-	)
-{
 
-	CmdQ_t 	msg;
 
-	msg.cmd = COMMAND_CTM_READY;
-	msg.arg0 = dummy;
-	msg.arg1 = 0;
-	msg.arg2 = 0;
-	
-	SHAREDMEM_PostCmdQ(&msg);
-}
 
 
 void RIPCMDQ_WakeupDSP(UInt16 threshold, UInt16 fcrnew)
@@ -1501,4 +1480,18 @@ void RIPCMDQ_EnableRFTxTest( UInt16 mode )
 #endif
 }
 #endif
+
+
+void RIPCMDQ_AbortSearch(UInt16 abort_slot,  UInt16 abort_frame)
+{
+	CmdQ_t msg;
+
+	msg.cmd = COMMAND_SRCH_ABORT; 			
+	
+	msg.arg0 = abort_slot;
+	msg.arg1 = abort_frame;
+	msg.arg2 = 0;
+						
+	SHAREDMEM_PostCmdQ( &msg );
+}
 

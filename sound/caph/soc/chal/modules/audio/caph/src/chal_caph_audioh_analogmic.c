@@ -18,8 +18,10 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
+#include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
+#include "brcm_rdb_sysmap.h"
 #include "brcm_rdb_audioh.h"
 #include "brcm_rdb_util.h"
 #include "brcm_rdb_aci.h"
@@ -175,20 +177,20 @@ cVoid chal_audio_mic_pga(CHAL_HANDLE handle, int gain)
 //============================================================================
 cVoid chal_audio_mic_mute(CHAL_HANDLE handle, Boolean mute_ctrl)
 {
-
-	int mute = mute_ctrl;
-	
     cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
     cUInt32 reg_val;
 
 	reg_val  = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
-	reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_ADCRST_MASK | AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
-	reg_val |= (mute << AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_ADCRST_SHIFT);
+	reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_ADCRST_MASK);
 
-	if(mute)
+	if(mute_ctrl == TRUE)
 	{
-		reg_val |= AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK;
+    	reg_val |= AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_ADCRST_MASK;
 	}
+    else
+    {
+    	reg_val &=~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_ADCRST_MASK);
+    }
 
 	BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VRX1, reg_val);
 
@@ -264,8 +266,12 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
         reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
         reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
         reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
+#if (defined(_RHEA_) && (CHIP_REVISION == 20))
+		//nothing
+#else
         reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
         reg_val |= (3 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
+#endif
         BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VMIC, reg_val);
 
         // power up AUDIORX_REF, others "0"
@@ -289,8 +295,12 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
         reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
         reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
         reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
+#if (defined(_RHEA_) && (CHIP_REVISION == 20))
+		//nothing
+#else
         reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
         reg_val |= (0 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
+#endif
         BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VMIC, reg_val);
 
         //5.  turn off everything
@@ -369,8 +379,12 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
         reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
         reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
         reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
+#if (defined(_RHEA_) && (CHIP_REVISION == 20))
+		//nothing
+#else
         reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
         reg_val |= (3 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
+#endif
         BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VMIC, reg_val);
 
         // power up AUDIORX_REF, others "0"
@@ -394,8 +408,12 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
         reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
         reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
         reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
+#if (defined(_RHEA_) && (CHIP_REVISION == 20))
+		//nothing
+#else
         reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
         reg_val |= (0 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
+#endif
         BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VMIC, reg_val);
 
         //5.  turn off everything
@@ -440,22 +458,26 @@ cVoid chal_audio_hs_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 
 cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 {
+#ifndef CENTRALIZED_PADCTRL
     cUInt32  regVal;
+    cUInt32   function = 0x4;
 
+    if (pwronoff == TRUE)
+	function = 0x0;
     /* Select the function for DMIC0_CLK */
     /* For function = 0 (alt_fn1), this will be set as DMIC1_CLK */
-
     regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DMIC0CLK_OFFSET));
     regVal &= (~PADCTRLREG_DMIC0CLK_PINSEL_DMIC0CLK_MASK);
+    regVal |= (function << PADCTRLREG_DMIC0CLK_PINSEL_DMIC0CLK_SHIFT);
     WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DMIC0CLK_OFFSET), regVal);
 
     /* Select the function for DMIC0_DATA */
     /* For function = 0 (alt_fn1), this will be set as DMIC1_DATA */
     regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DMIC0DQ_OFFSET));
     regVal &= (~PADCTRLREG_DMIC0DQ_PINSEL_DMIC0DQ_MASK);
+    regVal |= (function << PADCTRLREG_DMIC0DQ_PINSEL_DMIC0DQ_SHIFT);
     WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_DMIC0DQ_OFFSET), regVal);
-
-
+#endif //#ifndef CENTRALIZED_PADCTRL
 }
 
 //============================================================================
@@ -473,25 +495,28 @@ cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 
 cVoid chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 {
+#ifndef CENTRALIZED_PADCTRL
     cUInt32  regVal;
-    cUInt32   function=4;
+    cUInt32  function = 0x0;
 
+    if (pwronoff == TRUE)
+	function = 0x4;
+ 
     /* Select the function for GPIO33 */
-
-/* For function = 4 (alt_fn5), this will be set as DMIC2_CLK */
+    /* For function = 4 (alt_fn5), this will be set as DMIC2_CLK */
 regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO33_OFFSET));
-regVal &= (~PADCTRLREG_GPIO33_PINSEL_GPIO33_MASK);
-regVal |= (function << PADCTRLREG_GPIO33_PINSEL_GPIO33_SHIFT);
+    regVal &= (~PADCTRLREG_GPIO33_PINSEL_GPIO33_MASK);
+    regVal |= (function << PADCTRLREG_GPIO33_PINSEL_GPIO33_SHIFT);
 WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO33_OFFSET), regVal);
 
-/* Select the function for GPIO34 */
-/* For function = 4 (alt_fn5), this will be set as DMIC2_DATA */
+    /* Select the function for GPIO34 */
+    /* For function = 4 (alt_fn5), this will be set as DMIC2_DATA */
 regVal = READ_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO34_OFFSET));
-regVal &= (~PADCTRLREG_GPIO34_PINSEL_GPIO34_MASK);
-regVal |= (function << PADCTRLREG_GPIO34_PINSEL_GPIO34_SHIFT);
+    regVal &= (~PADCTRLREG_GPIO34_PINSEL_GPIO34_MASK);
+    regVal |= (function << PADCTRLREG_GPIO34_PINSEL_GPIO34_SHIFT);
 WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO34_OFFSET), regVal);
-	/* For FPGA no pads are present */
-
+        /* For FPGA no pads are present */
+#endif //#ifndef CENTRALIZED_PADCTRL
 }
 #elif defined (_SAMOA_)
 //============================================================================
@@ -509,6 +534,7 @@ WRITE_REG32((KONA_PAD_CTRL_VA+PADCTRLREG_GPIO34_OFFSET), regVal);
 
 cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 {
+#ifndef CENTRALIZED_PADCTRL
     cUInt32  regVal;
     cUInt32   function = 1;	
     /* Select the function for GPIO23 */
@@ -524,6 +550,7 @@ cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
     regVal &= (~PADCTRLREG_GPIO24_PINSEL_GPIO24_MASK);
     regVal |= (function << PADCTRLREG_GPIO24_PINSEL_GPIO24_SHIFT);
     WRITE_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_GPIO24_OFFSET), regVal);
+#endif //#ifndef CENTRALIZED_PADCTRL
 }
 
 //============================================================================
@@ -541,6 +568,7 @@ cVoid chal_audio_dmic1_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 
 cVoid chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 {
+#ifndef CENTRALIZED_PADCTRL
     cUInt32  regVal;
     cUInt32   function=1;
 
@@ -557,6 +585,7 @@ cVoid chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
     regVal &= (~PADCTRLREG_GPIO18_PINSEL_GPIO18_MASK);
     regVal |= (function << PADCTRLREG_GPIO18_PINSEL_GPIO18_SHIFT);
     WRITE_REG32((PAD_CTRL_BASE_ADDR+PADCTRLREG_GPIO18_OFFSET), regVal);
+#endif //#ifndef CENTRALIZED_PADCTRL
 }
 #endif
 

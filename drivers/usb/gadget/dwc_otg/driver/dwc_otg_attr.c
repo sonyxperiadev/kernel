@@ -662,7 +662,8 @@ static ssize_t srp_store(struct device *_dev,
 #elif defined (PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = dev_get_drvdata(_dev);
 #endif
-	dwc_otg_pcd_initiate_srp(otg_dev->pcd);
+	if (NULL != otg_dev->pcd)
+		dwc_otg_pcd_initiate_srp(otg_dev->pcd);
 #endif
 	return count;
 }

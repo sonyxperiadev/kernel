@@ -56,6 +56,7 @@ typedef struct
     AUDIO_SAMPLING_RATE_t snk_sampleRate;	
     AUDIO_CHANNEL_NUM_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+    CSL_CAPH_SRCM_MIX_GAIN_t mixGain;        
 }AUDDRV_HWCTRL_CONFIG_t;
 /**
 * CAPH HW filters
