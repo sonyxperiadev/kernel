@@ -64,6 +64,7 @@
 #define _CHAL_AUDIO_
 
 #include <plat/chal/chal_types.h>
+#include <plat/chal/chal_common.h>
 #include <mach/rdb/brcm_rdb_audioh.h>
 
 /**

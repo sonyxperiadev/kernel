@@ -33,6 +33,8 @@ obj-$(CONFIG_MAP_SSASW) += ssasw.o
 
 obj-$(CONFIG_IPC) += chal/
 
+obj-$(CONFIG_MACH_ISLAND_AUDIOH_CHAL) += chal/
+
 obj-$(CONFIG_MACH_ISLAND_BASE) += board_base.o
 CFLAGS_board_base.o += -Iarch/arm/mach-island/hw_cfg/BASE
 

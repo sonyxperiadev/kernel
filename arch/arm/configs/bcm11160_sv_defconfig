@@ -2,6 +2,7 @@
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
 # Tue Jul  5 09:20:41 2011
+# Tue Jul  5 14:53:13 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -266,6 +267,7 @@ CONFIG_MACH_ISLAND_SV=y
 CONFIG_MAP_SDMA=y
 # CONFIG_MAP_AADMA is not set
 # CONFIG_MAP_SSASW is not set
+# CONFIG_MAP_ISLAND_AUDIOH_CHAL is not set
 CONFIG_IPC=y
 
 #

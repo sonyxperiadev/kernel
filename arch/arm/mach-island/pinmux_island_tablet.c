@@ -185,6 +185,9 @@ static struct __init pin_config board_pin_config[] = {
    PIN_CFG( UARTB4_URXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
    PIN_CFG( NORFLSH_AD_08, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
 
+   /* BT GPIO */
+   PIN_CFG( NORFLSH_CE0_N, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( NORFLSH_AD_05, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
 
 };
 

@@ -57,6 +57,11 @@ config MAP_SSASW
    help
       Support for the CAPH Synchronous Audio Switch driver
 
+config MAP_ISLAND_AUDIOH_CHAL
+   bool "MAP AUDIOH CHAL"
+   help
+      Support for CHAL libraries for Audio Hub on Island
+
 config IPC
 	bool "Inter-Processor Communication (IPC)"
 	help
