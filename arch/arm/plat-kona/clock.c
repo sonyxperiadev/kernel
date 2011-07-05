@@ -823,7 +823,8 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	{
 		if(clk->dep_clks[inx]->ops && clk->dep_clks[inx]->ops->enable)
 		{
-			clk_dbg("%s, Enabling dependant clock %s \n",__func__, clk->dep_clks[inx]->name);
+			clk_dbg("%s, %s dependant clock %s \n",__func__,
+				enable?"Enabling":"Disabling",clk->dep_clks[inx]->name);
 			clk->dep_clks[inx]->ops->enable(clk->dep_clks[inx],enable);
 		}
 	}
@@ -834,7 +835,8 @@ static int peri_clk_enable(struct clk* clk, int enable)
 		BUG_ON(!src_clk);
 		if(src_clk->ops && src_clk->ops->enable)
 			src_clk->ops->enable(src_clk,enable);
-		clk_dbg("%s, after enabling source clock \n",__func__);
+		clk_dbg("%s, after %s source clock \n",__func__,
+		enable?"enabling":"disabling");
 	}
 	/* enable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk, true);
@@ -1184,6 +1186,8 @@ static int peri_clk_init(struct clk* clk)
 
 	/* enable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk, true);
+	if(peri_clk_get_gating_status(peri_clk) == 1)
+	    clk->use_cnt = 1;
 
 	if(PERI_SRC_CLK_VALID(peri_clk))
 	{
@@ -1237,6 +1241,8 @@ static int peri_clk_init(struct clk* clk)
 			clk->ops->enable(clk, 0);
 		}
 	}
+	if(peri_clk_get_gating_status(peri_clk) == 1)
+	    clk->use_cnt = 1;
 	/* Disable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk, false);
 	clk->init = 1;
@@ -1336,6 +1342,19 @@ struct gen_clk_ops gen_peri_clk_ops =
 	.get_rate	=	peri_clk_get_rate,
 	.round_rate	=	peri_clk_round_rate,
 };
+
+static int ref_clk_get_gating_status(struct ref_clk *ref_clk)
+{
+	u32 reg_val;
+
+	if(!ref_clk->clk_gate_offset || !ref_clk->stprsts_mask)
+		return -EINVAL;
+	reg_val = readl(CCU_REG_ADDR(ref_clk->ccu_clk, ref_clk->clk_gate_offset));
+
+	return GET_BIT_USING_MASK(reg_val, ref_clk->stprsts_mask);
+}
+EXPORT_SYMBOL(ref_clk_get_gating_status);
+
 
 int bus_clk_get_gating_ctrl(struct bus_clk * bus_clk)
 {
@@ -1509,7 +1528,8 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 	{
 		if(!bus_clk->src_clk || !bus_clk->src_clk->ops || !bus_clk->src_clk->ops->get_rate)
 		{
-			c->rate = 0;
+		    clk_dbg("This bus clock freq depends on internal dividers\n");
+		    c->rate = 0;
 		}
 		c->rate =  bus_clk->src_clk->ops->get_rate(bus_clk->src_clk);
 		return c->rate;
@@ -1517,8 +1537,10 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 	current_policy = ccu_get_active_policy(ccu_clk);
 
 	freq_id = ccu_get_freq_policy(ccu_clk, current_policy);
-	clk_dbg("freq_id is found to be %d\n", freq_id);
+	clk_dbg("current_policy: %d freq_id %d freq_tbl_index :%d\n",
+			current_policy, freq_id, bus_clk->freq_tbl_index);
 	c->rate = ccu_clk->freq_tbl[freq_id][bus_clk->freq_tbl_index];
+	clk_dbg("clock rate: %ld\n", (long int)c->rate);
 	return c->rate;
 }
 
@@ -1544,6 +1566,8 @@ static int bus_clk_init(struct clk *clk)
 	}
 	/* Enable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, true);
+	if(bus_clk_get_gating_status(bus_clk) == 1)
+	    clk->use_cnt = 1;
 	if(bus_clk->hyst_val_mask)
 		bus_clk_hyst_enable(bus_clk,HYST_ENABLE & clk->flags,
 						 (clk->flags & HYST_HIGH) ? CLK_HYST_HIGH: CLK_HYST_LOW);
@@ -1555,7 +1579,7 @@ static int bus_clk_init(struct clk *clk)
 		bus_clk_set_gating_ctrl(bus_clk, CLK_GATING_SW);
 
 	BUG_ON(CLK_FLG_ENABLED(clk,ENABLE_ON_INIT) && CLK_FLG_ENABLED(clk,DISABLE_ON_INIT));
-
+	
 	if(CLK_FLG_ENABLED(clk,ENABLE_ON_INIT))
 	{
 		if(clk->ops->enable)
@@ -1568,6 +1592,9 @@ static int bus_clk_init(struct clk *clk)
 		if(clk->ops->enable)
 			clk->ops->enable(clk, 0);
 	}
+
+	if(bus_clk_get_gating_status(bus_clk) == 1)
+	    clk->use_cnt = 1;
 	/* Disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);
 	clk->init = 1;
@@ -1641,6 +1668,7 @@ static int _get_clk_status(struct clk *c)
 {
 	struct peri_clk *peri_clk;
 	struct bus_clk *bus_clk;
+	struct ref_clk *ref_clk;
 	int enabled = 0;
 
 	clk_dbg("%s clock id:: %d\n",__func__,c->id);
@@ -1654,8 +1682,15 @@ static int _get_clk_status(struct clk *c)
 		bus_clk = to_bus_clk(c);
 		enabled = bus_clk_get_gating_status(bus_clk);
 	}
-
-	clk_dbg("clock %s \n", enabled?"enabled":"disabled");
+	else if(c->clk_type == CLK_TYPE_REF)
+	{
+		ref_clk = to_ref_clk(c);
+		enabled = ref_clk_get_gating_status(ref_clk);
+	}
+	if(enabled < 0)
+	    clk_dbg("Status register not available for clock %s\n", c->name);
+	else
+	    clk_dbg("clock %s \n", enabled?"enabled":"disabled");
 	return enabled;
 }
 
@@ -1663,7 +1698,8 @@ static int clk_debug_get_status(void *data, u64 *val)
 {
 	struct clk *clock = data;
 	*val = _get_clk_status(clock);
-	clk_dbg("%s is %s \n", clock->name, *val?"enabled":"disabled");
+	if (*val >= 0)
+	    clk_dbg("%s is %s \n", clock->name, *val?"enabled":"disabled");
 
 	return 0;
 }
@@ -1689,17 +1725,36 @@ static int clk_parent_show(struct seq_file *seq, void *p)
 {
 	struct clk *clock = seq->private;
 	struct peri_clk *peri_clk;
-	if(clock->clk_type != CLK_TYPE_PERI)
-		seq_printf(seq, "no source for BUS clock - %s\n", clock->name);
-
-	peri_clk = to_peri_clk(clock);
-	seq_printf(seq, "name   -- %s\n", clock->name);
-	if((peri_clk->src_clk.count > 0) && (peri_clk->src_clk.src_inx < peri_clk->src_clk.count))
-		seq_printf(seq, "parent -- %s\n",
-				   peri_clk->src_clk.clk[peri_clk->src_clk.src_inx]->name);
-	else
-		seq_printf(seq, "parent -- NULL\n");
-
+	struct bus_clk *bus_clk;
+	struct ref_clk *ref_clk;
+	switch(clock->clk_type) {
+	    case CLK_TYPE_PERI:
+	    	peri_clk = to_peri_clk(clock);
+		seq_printf(seq, "name   -- %s\n", clock->name);
+		if((peri_clk->src_clk.count > 0) && (peri_clk->src_clk.src_inx < peri_clk->src_clk.count))
+		    seq_printf(seq, "parent -- %s\n", peri_clk->src_clk.clk[peri_clk->src_clk.src_inx]->name);
+		else
+		    seq_printf(seq, "parent -- NULL\n");
+	    	break;
+	    case CLK_TYPE_BUS:
+	    	bus_clk = to_bus_clk(clock);
+		seq_printf(seq, "name   -- %s\n", clock->name);
+		if (bus_clk->freq_tbl_index < 0)
+		    seq_printf(seq, "parent -- %s\n", bus_clk->src_clk->name);
+		else
+		    seq_printf(seq, "parent derived from internal bus\n");
+	    	break;
+	    case CLK_TYPE_REF:
+	    	ref_clk = to_ref_clk(clock);
+		seq_printf(seq, "name   -- %s\n", clock->name);
+		if ((ref_clk->src_clk.count > 0) && (ref_clk->src_clk.src_inx < ref_clk->src_clk.count))
+		    seq_printf(seq, "parent -- %s\n", ref_clk->src_clk.clk[ref_clk->src_clk.src_inx]->name);
+		else
+		    seq_printf(seq, "Derived from %s ccu\n", ref_clk->ccu_clk->clk.name);
+	    	break;
+	    default:
+	    	return -EINVAL;
+	}
 	return 0;
 }
 
@@ -1720,22 +1775,42 @@ static int clk_source_show(struct seq_file *seq, void *p)
 {
 	struct clk *clock = seq->private;
 	struct peri_clk *peri_clk;
-	if(clock->clk_type != CLK_TYPE_PERI)
-		seq_printf(seq, "no source for BUS clock - %s\n", clock->name);
-
-	peri_clk = to_peri_clk(clock);
-
-	if(peri_clk->src_clk.count > 0)
-	{
-		int i;
-		seq_printf(seq, "clock source for %s\n", clock->name);
-		for (i=0; i<peri_clk->src_clk.count; i++)
+	struct bus_clk *bus_clk;
+	struct ref_clk *ref_clk;
+	switch(clock->clk_type) {
+	case CLK_TYPE_PERI:
+		peri_clk = to_peri_clk(clock);
+		if(peri_clk->src_clk.count > 0)
 		{
+		    int i;
+		    seq_printf(seq, "clock source for %s\n", clock->name);
+		    for (i=0; i<peri_clk->src_clk.count; i++)
+		    {
 			seq_printf(seq, "%d   %s\n", i, peri_clk->src_clk.clk[i]->name);
+		    }
 		}
+		else
+		    seq_printf(seq, "no source for %s\n", clock->name);
+		break;
+	case CLK_TYPE_BUS:
+		bus_clk = to_bus_clk(clock);
+		if (bus_clk->freq_tbl_index < 0)
+		    seq_printf(seq, "source for %s is %s\n", clock->name, bus_clk->src_clk->name);
+		else
+		    seq_printf(seq, "%s derived from %s CCU\n", clock->name, bus_clk->ccu_clk->clk.name);
+		break;
+	case CLK_TYPE_REF:
+		ref_clk = to_ref_clk(clock);
+		if ((ref_clk->src_clk.count > 0) && (ref_clk->src_clk.src_inx < ref_clk->src_clk.count))
+		    seq_printf(seq, "parent -- %s\n", ref_clk->src_clk.clk[ref_clk->src_clk.src_inx]->name);
+		else
+		    seq_printf(seq, "%s derived from %s CCU\n", clock->name,
+		    ref_clk->ccu_clk->clk.name);
+		break;
+	default:
+		return -EINVAL;
 	}
-	else
-		seq_printf(seq, "no source for %s\n", clock->name);
+		    
 	return 0;
 }
 
@@ -1772,7 +1847,9 @@ int __init clock_debug_init(void)
 int __init clock_debug_add_clock(struct clk *c)
 {
 	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_enable=0,
-										*dent_status=0, *dent_div=0, *dent_usr_cnt=0, *dent_id=0,
+										*dent_status=0,
+										*dent_div=0,
+										*dent_use_cnt=0, *dent_id=0,
 												*dent_parent=0, *dent_source=0;
 	BUG_ON(!dent_clk_root_dir);
 
@@ -1801,9 +1878,9 @@ int __init clock_debug_add_clock(struct clk *c)
 	if(!dent_div)
 		goto err;
 #endif
-	/* file /clock/clk_a/usr_cnt */
-	dent_usr_cnt	=	debugfs_create_u32("usr_cnt", 0444, dent_clk_dir, (unsigned int*)&c->use_cnt);
-	if(!dent_usr_cnt)
+	/* file /clock/clk_a/use_cnt */
+	dent_use_cnt	=	debugfs_create_u32("use_cnt", 0444, dent_clk_dir, (unsigned int*)&c->use_cnt);
+	if(!dent_use_cnt)
 		goto err;
 
 	/* file /clock/clk_a/id */
@@ -1826,7 +1903,7 @@ int __init clock_debug_add_clock(struct clk *c)
 err:
 	debugfs_remove(dent_rate);
 	debugfs_remove(dent_div);
-	debugfs_remove(dent_usr_cnt);
+	debugfs_remove(dent_use_cnt);
 	debugfs_remove(dent_id);
 	debugfs_remove(dent_parent);
 	debugfs_remove(dent_source);

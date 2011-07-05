@@ -451,6 +451,7 @@ struct ref_clk {
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
 	struct clk_div  clk_div;
+	struct src_clk	src_clk;
 
 };
 
