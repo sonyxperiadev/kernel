@@ -42,6 +42,11 @@ config MACH_ISLAND_TABLET_28160
 
 endchoice
 
+config MAP_LITTLE_ISLAND_MODE
+        bool "LITTLE ISLAND Mode"
+        help
+          Support the Little Island mode.
+
 config MAP_SDMA
 	bool "MAP SDMA and Memory Map"
 	help

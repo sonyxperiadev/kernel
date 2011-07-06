@@ -149,8 +149,21 @@
 #define KONA_SSASW_BASE_VA           HW_IO_PHYS_TO_VIRT(SSASW_BASE_ADDR) /* brcm_rdb_cph_ssasw.h */
 #define KONA_AHINTC_BASE_VA          HW_IO_PHYS_TO_VIRT(AHINTC_BASE_ADDR) /* brcm_rdb_ahintc.h */
 
-#define KONA_KPS_CLK_VA             HW_IO_PHYS_TO_VIRT( KONA_SLV_CLK_BASE_ADDR )
+#define KONA_KPS_CLK_VA              HW_IO_PHYS_TO_VIRT( KONA_SLV_CLK_BASE_ADDR )
 
-#define KONA_VC_EMI                 HW_IO_PHYS_TO_VIRT( VC_EMI )
+#if defined(CONFIG_MAP_LITTLE_ISLAND_MODE)
+/*
+ * For LI we are temporarily using a custom I/O mapping for videocore memory.
+ * The videocore in LI lives in a chunk of reserved DDR3 instead of LPDDR2,
+ * but for simplicity we map the DDR3 memory to the same location as where
+ * the LPDDR2 would be. As such, when we define MM_IO_BASE_VC_EMI we need to
+ * use the physical address of LPDDR2 (0x40000000) instead of that of DDR3
+ * (0x80000000).
+ */
+#define KONA_VC_EMI                  HW_IO_PHYS_TO_VIRT(  0x40000000 )
+#else
+#define KONA_VC_EMI                  HW_IO_PHYS_TO_VIRT( VC_EMI )
+#endif
+
 
 #endif /* __ISLAND_IO_MAP_H */
