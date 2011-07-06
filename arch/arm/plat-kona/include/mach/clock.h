@@ -95,7 +95,8 @@ struct clk {
 
 	unsigned long	rate;		/* in HZ */
 	unsigned long	div;		/* programmable divider. 0 means fixed ratio to parent clock */
-	unsigned long	pre_div;		/* programmable divider. 0 means fixed ratio to parent clock */
+	unsigned long	pre_div;	/* programmable divider. 0 means fixed ratio to parent clock */
+	unsigned long	fraction;
 
 	struct clk_src	*src;
 	struct clk_ops	*ops;
@@ -282,6 +283,7 @@ unsigned long clock_get_xtal(void);
 #define		BCM2165x_CLK_TIMERS_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_SSP0_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_DMAC_MUX_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
+#define         BCM2165x_CLK_UARTB4_APB_FLAGS                   (TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB3_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB2_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
@@ -373,6 +375,7 @@ unsigned long clock_get_xtal(void);
 #define		BCM2165x_CLK_UARTB_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB2_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB3_FLAGS			(TYPE_PERI_CLK | SW_GATE)
+#define         BCM2165x_CLK_UARTB4_FLAGS                       (TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_SPUM_OPEN_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_SPUM_SEC_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_SMI_FLAGS				(TYPE_PERI_CLK | SW_GATE)
@@ -457,6 +460,10 @@ unsigned long clock_get_xtal(void);
 #define		CLK_UARTB3_DIV_MAX				0xF
 #define		CLK_UARTB3_PREDIV_MAX				1
 #define		CLK_UARTB3_FRACTION_MAX				0xFF
+
+#define         CLK_UARTB4_DIV_MAX                              0xF
+#define         CLK_UARTB4_PREDIV_MAX                           1
+#define         CLK_UARTB4_FRACTION_MAX                         0xFF
 
 #define		CLK_TIMERS_DIV_MAX				1
 #define		CLK_TIMERS_PREDIV_MAX				1
@@ -860,6 +867,7 @@ enum {
     BCM2165x_CLK_UARTB,
     BCM2165x_CLK_UARTB2,
     BCM2165x_CLK_UARTB3,
+    BCM2165x_CLK_UARTB4,
     BCM2165x_CLK_TIMERS,
     BCM2165x_CLK_SPUM_OPEN,
     BCM2165x_CLK_SPUM_SEC,
@@ -887,6 +895,7 @@ enum {
 
     BCM2165x_CLK_END, /*End of functional clocks*/
     /*Bus clock IDs -- For internal use only */
+    BCM2165x_CLK_UARTB4_APB,
     BCM2165x_CLK_UARTB3_APB,
     BCM2165x_CLK_UARTB2_APB,
     BCM2165x_CLK_UARTB_APB,
