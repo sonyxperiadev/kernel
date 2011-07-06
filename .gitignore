@@ -87,3 +87,4 @@ GTAGS
 
 #brcm
 initramfs
+vcos_version.c
