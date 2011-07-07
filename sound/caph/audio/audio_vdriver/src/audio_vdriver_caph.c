@@ -76,8 +76,6 @@
 //=============================================================================
 #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR) && defined(IPC_AUDIO))
 extern void CP_Audio_ISR_Handler(StatQ_t status_msg);
-#else
-extern void AP_Audio_ISR_Handler(StatQ_t status_msg);
 #endif
 
 #if !(defined(FUSE_APPS_PROCESSOR) && (defined(IPC_FOR_BSP_ONLY) || defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)))
@@ -85,11 +83,6 @@ extern void AP_Audio_ISR_Handler(StatQ_t status_msg);
 extern void IPC_Audio_Create_BufferPool( void );
 #endif
 
-#ifdef VPU_INCLUDED
-#if !(defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR) )
-extern void AP_VPU_ProcessStatus( void );
-#endif
-#endif
 
 typedef void (*AUDDRV_User_CB) (UInt32 param1, UInt32 param2, UInt32 param3);
 

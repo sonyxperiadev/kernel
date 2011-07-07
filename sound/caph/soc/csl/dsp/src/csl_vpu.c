@@ -57,7 +57,6 @@
 *
 ****************************************************************************/
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
 #include "csl_vpu.h"
@@ -67,7 +66,7 @@
 #define MAX_DL_SP_REC_GAIN	((2<<14)-1)	/* 6dB in DSP Q1.14 format */
 #define MIN_DL_SP_REC_GAIN	0
 
-extern VPSharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t	*vp_shared_mem;
 
 
 //*********************************************************************

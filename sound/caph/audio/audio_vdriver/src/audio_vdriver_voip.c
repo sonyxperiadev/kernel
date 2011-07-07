@@ -54,6 +54,7 @@
 #include "csl_aud_queue.h"
 #include "audio_vdriver_voip.h"
 #include "audio_vdriver.h"
+#include "csl_voip.h"
 #include "vpu.h"
 #include "log.h"
 
@@ -225,7 +226,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 	static VP_Mode_AMR_t prev_amr_mode = (VP_Mode_AMR_t)0xffff;
 
 	// decode the next downlink AMR speech data from application
-	SHAREDMEM_WriteDL_VoIP_Data((UInt16)decode_amr_mode, (UInt16 *)pBuf);
+	CSL_WriteDLVoIPData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
 
 	// signal DSP to start AMR decoding and encoding
 	TRACE_Printf_Sio( "=====VoIP_StartMainAMRDecodeEncode UL codecType=0x%x, send VP_COMMAND_MAIN_AMR_RUN to DSP", encode_amr_mode);
@@ -256,7 +257,7 @@ void AP_ProcessStatusMainAMRDone(UInt16 codecType)
 	// pBuf is to point the start of the encoded speech data buffer
 	if (DumpVOIPFramesCB) 
 	{
-		SHAREDMEM_ReadUL_VoIP_Data(codecType, Buf);
+		CSL_ReadULVoIPData(codecType, Buf);
 		DumpVOIPFramesCB((UInt8*)Buf, 0);
 	}
 

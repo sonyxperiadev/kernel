@@ -56,15 +56,13 @@
 *   @brief  This file contains CSL (DSP) API to audio logging interface
 *
 ****************************************************************************/
-
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
 #include "resultcode.h"
 #include "csl_log.h"
 
-extern VPSharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t	*vp_shared_mem;
 
 
 

@@ -64,7 +64,6 @@
 #include "log.h"
 #include "shared.h"
 #include "shared_cp.h"
-#include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
 #include "memmap.h"
 #include "csl_cpdspaudio.h"

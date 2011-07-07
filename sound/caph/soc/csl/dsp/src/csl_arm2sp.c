@@ -56,7 +56,6 @@
 *   @brief  This file contains CSL (DSP) API to ARM2SP interface
 *
 ****************************************************************************/
-
 #include <string.h>
 #include "assert.h"
 #include "mobcom_types.h"
@@ -64,7 +63,7 @@
 #include "csl_arm2sp.h"
 #include "csl_dsp_common_util.h"
 
-extern VPSharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t	*vp_shared_mem;
 
 //*********************************************************************
 /**
@@ -99,7 +98,7 @@ UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, 
 	UInt32  halfBufSize_inBytes;
 	UInt32	totalCopied_bytes;
 
-	bufSize_inWords = (in48K == TRUE)? ARM2SP_INPUT_SIZE*3 : ARM2SP_INPUT_SIZE;  //in number of words.
+	bufSize_inWords = (in48K == TRUE)? ARM2SP_INPUT_SIZE_48K : ARM2SP_INPUT_SIZE;  //in number of words.
 	halfBufSize_inBytes = bufSize_inWords; // in number of bytes
 		
 	//beginning of the buffer or the half point in the buffer.
@@ -148,7 +147,7 @@ UInt32 CSL_ARM2SP2_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex,
 	UInt32  halfBufSize_inBytes;
 	UInt32	totalCopied_bytes;
 
-	bufSize_inWords = (in48K == TRUE)? ARM2SP_INPUT_SIZE*3 : ARM2SP_INPUT_SIZE;  //in number of words.
+	bufSize_inWords = (in48K == TRUE)? ARM2SP_INPUT_SIZE_48K : ARM2SP_INPUT_SIZE;  //in number of words.
 	halfBufSize_inBytes = bufSize_inWords; // in number of bytes
 		
 	//beginning of the buffer or the half point in the buffer.

@@ -34,6 +34,8 @@
 #include "mobcom_types.h"
 #include "consts.h"
 
+#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR))
+
 #ifdef DEFINE_FIQ_MEM
 #	define	FIQEXTERN
 #else
@@ -62,6 +64,8 @@ void RIPISR_Register_VPU_ProcessStatus( VPU_ProcessStatus_t hisr_cb );
 //will figure out how to avoid vpu.c call this function.
 //and remove this from public interface...
 void Audio_ISR_Handler(StatQ_t msg);
+
+#endif
 		
 #endif
 

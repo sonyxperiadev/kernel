@@ -135,6 +135,24 @@ typedef struct
 	Int16 array4[4];											   
 } dummy4_input_t;										
 
+typedef struct
+{
+    UInt16 cmd;
+    UInt16 arg0;
+    UInt16 arg1;
+    UInt16 arg2;
+} VPCmdQ_t;
+
+typedef struct
+{
+    UInt16 status;
+    UInt16 arg0;
+    UInt16 arg1;
+    UInt16 arg2;
+    UInt16 arg3;
+} VPStatQ_t;
+
+
 // VOIP data struct and defines
 typedef enum
 {
@@ -161,6 +179,129 @@ typedef struct 		 				//  Data block of voice recording
 		VR_Frame_AMR_WB_t frame_amr_wb;		//voip mode 6: AMR-WB
 	} voip_frame;
 } VOIP_Buffer_t;        
+
+//******************************************************************************
+//
+//        Data structure for voice recording
+//
+//******************************************************************************
+
+typedef struct 		 				//  Data block of voice recording
+{                    
+	UInt16	vp_speech_mode;			///< FR/EFR/AMR/Linear PCM speech mode
+	UInt16	nb_frame;				///< Number of vectors
+	union
+	{
+		VR_Frame_FR_t	vectors_fr[RECORDING_FRAME_PER_BLOCK];
+		VR_Frame_EFR_t	vectors_efr[RECORDING_FRAME_PER_BLOCK_EFR];	
+		VR_Lin_PCM_t	vectors_lin_PCM[RECORDING_FRAME_PER_BLOCK_LPCM];
+		VR_Frame_AMR_t	vectors_amr[RECORDING_FRAME_PER_BLOCK_AMR];	
+	}vr_frame;
+} VRecording_Buffer_t;        
+
+//******************************************************************************
+//
+//        Data structure for voice playback
+//
+//******************************************************************************
+
+typedef struct 		 				//  Data block of voice playback
+{                    
+	UInt16	vp_speech_mode;			// FR/EFR/AMR/Linear PCM speech mode
+	UInt16	nb_frame;				// Number of vectors
+	union
+	{
+		VR_Frame_FR_t	vectors_fr[PLAYBACK_FRAME_PER_BLOCK];
+		VR_Frame_EFR_t	vectors_efr[PLAYBACK_FRAME_PER_BLOCK_EFR];	
+		VR_Lin_PCM_t	vectors_lin_PCM[PLAYBACK_FRAME_PER_BLOCK_LPCM];
+		VR_Frame_AMR_t	vectors_amr[RECORDING_FRAME_PER_BLOCK_AMR];	
+	}vp_frame;
+} VPlayBack_Buffer_t;
+
+//******************************************************************************
+//
+//		Data structures for voice recording and playback
+//
+//******************************************************************************
+
+typedef struct
+{
+	VRecording_Buffer_t vr_buf[2];	// Voice recording (ping-pong) buffer
+	VPlayBack_Buffer_t vp_buf[2];   // Voice playback (ping-pong) buffer
+} shared_voice_buf_t;				// buffer for voice recording and playback
+
+
+
+//******************************************************************************
+// Shared memory enumerations
+//******************************************************************************
+
+typedef enum
+{
+    RECORD_NONE = 0,
+    MICROPHONE_ONLY = 1,
+    FROM_CHANNEL_ONLY = 2,
+    MICROPHONE_AND_CHANNEL = 3
+} VP_Record_Mode_t;
+
+typedef enum
+{
+    PLAYBACK_NONE = 0,
+    SPEAKER_EAR_PIECE_ONLY = 1,
+    OVER_THE_CHANNEL_ONLY = 2,
+    SPEAKER_EAR_PIECE_AND_CHANNEL = 3,
+    AMR_TONE_DECODE = 4,
+    AMR_TONE_DECODE_2_MICROPHONE_ONLY = 5
+} VP_Playback_Mode_t;
+
+    
+typedef enum
+{
+    MIX_NONE = 0,                                // mix none
+    MIX_SPEAKER_EAR_PIECE_ONLY = 1,              // mix vpu decodering with dnlink, send to speaker
+    MIX_OVER_THE_CHANNEL_ONLY = 2,               // mix vpu decodering with microphone, send to uplink
+    MIX_SPEAKER_EAR_PIECE_AND_CHANNEL = 3        // mix vpu decodering with both, send respectively
+} VP_PlaybackMix_Mode_t;
+
+typedef enum
+{
+    VP_MODE_IDLE,
+    VP_MODE_RECOGNITION,                         // **NOT USED ANYMORE**
+    VP_MODE_TRAINING,                            // **NOT USED ANYMORE**
+    VP_MODE_RECOG_PLAYBACK,                      // **NOT USED ANYMORE**
+    VP_MODE_MEMO_RECORDING,
+    VP_MODE_CALL_RECORDING,
+    VP_MODE_RECORDING_PLAYBACK,
+    VP_MODE_RECORD_AND_PLAYBACK_NOT_USED,
+    VP_MODE_NULL_FRAME_INT
+}VPMode_t;
+
+typedef enum
+{
+    PR_MODE_IDLE,
+    PR_MODE_PLAY
+}PRMode_t;
+
+typedef enum
+{
+    PR_OUTMODE_FIFO = 0,
+    PR_OUTMODE_8KHZ = 1
+}PROUTMode_t;
+
+typedef enum
+{
+    PR_OUTDIR_STEREO_PR_HW = 0,                        //default, backward compatiable
+    PR_OUTDIR_SPEAKER_EAR_PIECE_ONLY = 1,            //only work with PR_OUTMODE_8KHZ
+    PR_OUTDIR_OVER_THE_CHANNEL_ONLY = 2,            //only work with PR_OUTMODE_8KHZ
+    PR_OUTDIR_SPEAKER_EAR_PIECE_AND_CHANNEL = 3        //only work with PR_OUTMODE_8KHZ
+}PROUTDir_t;
+
+typedef enum
+{
+    SRC_0 = 0,                                        //no SRC
+    SRC_48K8K = 1,                                    //SRC 48KHz to 8KHz
+    SRC_48K16K = 2                                    //SRC 48KHz to 16KHz
+}SampleRateC_t;
 
 
 
@@ -2397,34 +2538,12 @@ EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_S
 
 #ifdef MSP
 
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
 typedef        AP_SharedMem_t SharedMem_t;
-typedef        AP_SharedMem_t Unpaged_SharedMem_t;  
-typedef        AP_SharedMem_t PAGE1_SharedMem_t  ;
-typedef        AP_SharedMem_t PAGE5_SharedMem_t  ;
-typedef 	   AP_SharedMem_t PAGE6_SharedMem_t  ;
 typedef        AP_SharedMem_t VPSharedMem_t;
-typedef        AP_SharedMem_t PAGE27_SharedMem_t;
-typedef        AP_SharedMem_t PAGE28_SharedMem_t;
 
-void SHAREDMEM_PostCmdQ(                // Post an entry to the command queue
-    CmdQ_t *cmd_msg                        // Entry to post
-    );
-
-Boolean VPSHAREDMEM_ReadStatusQ(        // Read an entry from the command queue
-    VPStatQ_t *status_msg                // Entry from queue
-    );                                    // TRUE, if entry is available
-
-
-SharedMem_t             *SHAREDMEM_GetSharedMemPtr( void );// Return pointer to shared memory
-PAGE27_SharedMem_t      *SHAREDMEM_GetPage27SharedMemPtr(void);// Return pointer to Page27 shared memory
-PAGE28_SharedMem_t      *SHAREDMEM_GetPage28SharedMemPtr(void);// Return pointer to Page28 shared memory
-AP_SharedMem_t         	*SHAREDMEM_GetDsp_SharedMemPtr( void );                    // Return pointer to shared memory
+AP_SharedMem_t  *SHAREDMEM_GetDsp_SharedMemPtr(void);                    // Return pointer to shared memory
 
 extern  AP_SharedMem_t    *vp_shared_mem;
-#endif    // #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
-
-void AP_SHAREDMEM_Init(void);
 
 #endif // #ifdef MSP
 

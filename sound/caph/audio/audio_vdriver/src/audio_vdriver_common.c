@@ -54,17 +54,9 @@
 //#include "ostask.h"
 #include "audioapi_asic.h"
 #include "log.h"
-
+#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
 #include "csl_dsp.h"
-
-/**
-*
-* @addtogroup AudioDriverGroup
-* @{
-*/
-//=============================================================================
-// Public Variable declarations
-//=============================================================================
+#endif
 
 extern void VPU_Capture_Request(UInt16 bufferIndex);
 extern void VPU_Render_Request(UInt16 bufferIndex);

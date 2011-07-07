@@ -207,4 +207,21 @@ void CSL_RegisterAudioLogHandler(AudioLogStatusCB_t callbackFunction);
 **********************************************************************/
 void AP_ProcessStatus(void);
 
+/*****************************************************************************************/
+/**
+* 
+* Function Name: AUDIO_Return_IHF_48kHz_buffer_base_address
+*
+*   @note     This function returns the base address to the shared memory buffer where
+*             the ping-pong 48kHz data would be stored for AADMAC to pick them up
+*             for IHF case. This base address needs to be programmed to the 
+*             AADMAC_CTRL1 register.
+*                                                                                         
+*   @return   ptr (UInt32 *) Pointer to the base address of shared memory ping-pong buffer 
+*                            for transferring 48kHz speech data from DSP to AADMAC for IHF.
+*
+**/
+/*******************************************************************************************/
+UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void);
+
 #endif //_CSL_DSP_H_
