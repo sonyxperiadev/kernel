@@ -1248,7 +1248,7 @@ static int peri_clk_init(struct clk* clk)
 	if(peri_clk_get_gating_status(peri_clk) == 1) {
 	    clk->use_cnt = 1;
 	    if (need_status_update && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU))
-		peri_clk->ccu_clk->clk.use_cnt++;
+		peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
 	}
 	/* Disable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk, false);
@@ -1602,11 +1602,10 @@ static int bus_clk_init(struct clk *clk)
 	} else
 		need_status_update = 1;
 	
-
 	if(bus_clk_get_gating_status(bus_clk) == 1) {
 	    clk->use_cnt = 1;
 	    if (need_status_update && !(clk->flags & AUTO_GATE) &&(clk->flags & NOTIFY_STATUS_TO_CCU))
-		bus_clk->ccu_clk->clk.use_cnt++;
+		bus_clk->ccu_clk->clk.ops->enable(&bus_clk->ccu_clk->clk, 1);
 	}
 	/* Disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);

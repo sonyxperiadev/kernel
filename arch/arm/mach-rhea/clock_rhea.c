@@ -3330,7 +3330,7 @@ static struct peri_clk CLK_NAME(uartb) = {
 				},
 	.src_clk = {
 					.count = 3,
-					.src_inx = 0,
+					.src_inx = 1,
 					.clk = uartb_peri_clk_src_list,
 				},
 };
@@ -3372,7 +3372,7 @@ static struct peri_clk CLK_NAME(uartb2) = {
 				},
 	.src_clk = {
 					.count = 3,
-					.src_inx = 0,
+					.src_inx = 1,
 					.clk = uartb2_peri_clk_src_list,
 				},
 };
@@ -3414,7 +3414,7 @@ static struct peri_clk CLK_NAME(uartb3) = {
 				},
 	.src_clk = {
 					.count = 3,
-					.src_inx = 0,
+					.src_inx = 1,
 					.clk = uartb3_peri_clk_src_list,
 				},
 };
