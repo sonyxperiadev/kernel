@@ -435,7 +435,7 @@ static int bsc_xfer_try_address(struct i2c_adapter *adapter,
    
       /* no luck, let's keep trying */
       rc = bsc_xfer_stop(adapter);
-      if (rc < 0)
+      if (rc < 0 || i >= retries)
          break;
 
       rc = bsc_xfer_start(adapter);
