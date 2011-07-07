@@ -5923,6 +5923,17 @@ int dwc_otg_set_param_otg_ver(dwc_otg_core_if_t * core_if,
 		return -DWC_E_INVALID;
 	}
 
+	/*
+ 	 * There are a couple of things wrong here. Firstly, the
+ 	 * "otg_ver_support" field is mis-named. The databook describes this as
+ 	 * "OTG_BC_SUPPORT", and indicates whether or not Battery Charger
+ 	 * support has been enabled in the core. If it is set, then it does
+ 	 * imply that the OTG version has to be 2.0. However if it is not set,
+ 	 * it does not imply OTG 1.3, which is what was incorrectly being
+ 	 * assumed below. A case has been filed with Synopsys for this and a
+ 	 * STAR created. For now, just disable this check.
+ 	 */
+#if 0
 	if (val && (core_if->hwcfg3.b.otg_ver_support == 0)) {
 		if (dwc_otg_param_initialized(core_if->core_params->otg_ver)) {
 			DWC_ERROR("%d invalid for parameter otg_ver. Check HW configuration.\n",
@@ -5931,6 +5942,7 @@ int dwc_otg_set_param_otg_ver(dwc_otg_core_if_t * core_if,
 		retval = -DWC_E_INVALID;
 		val = 0;
 	}
+#endif
 	core_if->core_params->otg_ver = val;
 	return retval;
 }

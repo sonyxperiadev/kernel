@@ -75,5 +75,24 @@ config USB_BCM_OTG
        select USB_OTG_UTILS
        help
          Enable this to support Broadcom USB OTG transceiver
+config KONA_OTG_CP
+	tristate "Kona OTG Control"
+	depends on ARCH_KONA
+	select USB_OTG_UTILS
+	help
+	 Enable this to support dynamic USB OTG (host/device) on Kona based
+	 chips.
+
+
+config MAX3353
+	tristate "MAX3353 OTG Charge Pump"
+	depends on I2C && KONA_OTG_CP
+	help
+	 If you say yes here you get support for the Maxim MAX3353 USB OTG
+	 charge pump with Switchable pullup/pulldown registers under the Kona
+	 OTG framework.
+ 
+	 This driver can also be built as a module. If so, the module
+	 will be called max3353.
 
 endif # USB || OTG

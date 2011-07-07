@@ -1,7 +1,7 @@
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
-
+obj-$(CONFIG_BCM_VCHIQ_VC04)		+= vc04_services/
 obj-$(CONFIG_IBM_ASM)		+= ibmasm/
 obj-$(CONFIG_AD525X_DPOT)	+= ad525x_dpot.o
 obj-$(CONFIG_AD525X_DPOT_I2C)	+= ad525x_dpot-i2c.o
@@ -25,6 +25,12 @@ obj-$(CONFIG_CS5535_MFGPT)	+= cs5535-mfgpt.o
 obj-$(CONFIG_HP_ILO)		+= hpilo.o
 obj-$(CONFIG_ISL29003)		+= isl29003.o
 obj-$(CONFIG_SENSORS_TSL2550)	+= tsl2550.o
+obj-$(CONFIG_SENSORS_BH1715)	+= bh1715.o
+obj-$(CONFIG_SENSORS_BMA150)	+= bma150.o
+obj-$(CONFIG_SENSORS_MPU3050)	+= mpu3050.o
+obj-$(CONFIG_BMP18X) += bmp18x-core.o
+obj-$(CONFIG_BMP18X_I2C) += bmp18x-i2c.o
+obj-$(CONFIG_BMP18X_SPI) += bmp18x-spi.o
 obj-$(CONFIG_EP93XX_PWM)	+= ep93xx_pwm.o
 obj-$(CONFIG_DS1682)		+= ds1682.o
 obj-$(CONFIG_TI_DAC7512)	+= ti_dac7512.o
@@ -45,3 +51,7 @@ obj-$(CONFIG_BCM59055_SARADC)	+= bcm59055-adc.o
 obj-$(CONFIG_BCM59055_FUELGAUGE)+= bcm59055-fuelgauge.o
 obj-$(CONFIG_BCM59055_ADC_CHIPSET_API)+= bcm59055-adc_chipset_api.o
 obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu_audio.o
+obj-$(CONFIG_BCMBLT_RFKILL)	+= bcmblt-rfkill.o
+obj-$(CONFIG_BTHID)		+= bthid.o
+obj-$(CONFIG_MONITOR_ADC121C021_I2C)	+= adc121c021_driver.o
+obj-$(CONFIG_MONITOR_BQ27541_I2C)	+= bq27541.o

@@ -40,7 +40,8 @@ static struct proc_clock arm_clk = {
 	.proc_clk_mgr_base = PROC_CLK_BASE_ADDR,
 };
 
-
+/* ARM perhiperhal clock */
+DECLARE_REF_CLK         (arm_periph, ARM_PERIPH, 0, 2, name_to_clk(arm));
 
 /* Ref clocks */
 DECLARE_REF_CLK		(crystal, CRYSTAL, 			26*CLOCK_1M,	1,	0);
@@ -216,6 +217,10 @@ DECLARE_BUS_CLK(audioh_156m, AUDIOH, AUDIOH_156M, khub_ccu, HUB, KHUB,
 DECLARE_BUS_CLK(audioh_2p4m, AUDIOH, AUDIOH_2P4M, khub_ccu, HUB, KHUB,
 	2400*CLOCK_1K,  2400*CLOCK_1K, 2400*CLOCK_1K, 24*CLOCK_1K,
 	2400*CLOCK_1K, 24*CLOCK_1K, 2400*CLOCK_1K, CLOCK_UNUSED);
+
+DECLARE_BUS_CLK(gpiokp_apb,  GPIOKP , GPIOKP_APB,  khubaon_ccu, AON, KHUBAON,
+                26*CLOCK_1M, 52*CLOCK_1M, CLOCK_UNUSED, 52*CLOCK_1M,
+                78*CLOCK_1M, CLOCK_UNUSED);
 
 /*****************************************************************************
 	Peripheral clocks
@@ -478,6 +483,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(arm),
 
 	/* Reference clocks */
+	CLK_LK(arm_periph),
 	CLK_LK(crystal),
 	CLK_LK(frac_1m),
 	CLK_LK(ref_96m_varVDD),
@@ -530,6 +536,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(dmac_mux_apb),
 	CLK_LK(ssp0_apb),
 	CLK_LK(pwm_apb),
+	CLK_LK(gpiokp_apb),
 	CLK_LK(apb1),
 	CLK_LK(apb2),
 

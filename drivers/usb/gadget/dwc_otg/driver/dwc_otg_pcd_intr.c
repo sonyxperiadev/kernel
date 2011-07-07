@@ -588,6 +588,7 @@ void dwc_otg_pcd_stop(dwc_otg_pcd_t * pcd)
 	DWC_DEBUGPL(DBG_PCDV, "%s() \n", __func__);
 	/* don't disconnect drivers more than once */
 	if (pcd->ep0state == EP0_DISCONNECT) {
+		DWC_SPINUNLOCK(pcd->lock);
 		DWC_DEBUGPL(DBG_ANY, "%s() Already Disconnected\n", __func__);
 		return;
 	}

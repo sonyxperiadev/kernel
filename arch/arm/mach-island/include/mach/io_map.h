@@ -108,6 +108,8 @@
 #define KONA_SPUM_APB_S_VA          HW_IO_PHYS_TO_VIRT( SEC_SPUM_S_APB_BASE_ADDR )  /* Secure APB interface */
 #define KONA_SRAM_VA                HW_IO_PHYS_TO_VIRT( SPUM_S_BASE_ADDR )          /* INTERNAL SRAM (160kB) */
 
+#define KONA_INT_SRAM_BASE          HW_IO_PHYS_TO_VIRT( INT_SRAM_BASE )
+
 #define KONA_SSP0_VA            	HW_IO_PHYS_TO_VIRT( SSP0_BASE_ADDR )
 #define KONA_SSP2_VA            	HW_IO_PHYS_TO_VIRT( SSP2_BASE_ADDR )
 #define KONA_SSP3_VA            	HW_IO_PHYS_TO_VIRT( SSP3_BASE_ADDR )
@@ -148,5 +150,7 @@
 #define KONA_AHINTC_BASE_VA          HW_IO_PHYS_TO_VIRT(AHINTC_BASE_ADDR) /* brcm_rdb_ahintc.h */
 
 #define KONA_KPS_CLK_VA             HW_IO_PHYS_TO_VIRT( KONA_SLV_CLK_BASE_ADDR )
+
+#define KONA_VC_EMI                 HW_IO_PHYS_TO_VIRT( VC_EMI )
 
 #endif /* __ISLAND_IO_MAP_H */

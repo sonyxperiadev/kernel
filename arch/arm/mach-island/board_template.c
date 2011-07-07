@@ -33,25 +33,114 @@
 #include <asm/mach-types.h>
 #include <asm/mach/arch.h>
 #include <asm/mach/map.h>
-#include <mach/hardware.h>
 
+#include <mach/hardware.h>
 #include <mach/irqs.h>
 #include <mach/kona.h>
+#include <mach/dma_mmap.h>
+#include <mach/sdma.h>
 #include <mach/sdio_platform.h>
 #include <mach/usbh_cfg.h>
 
 #include <sdio_settings.h>
+
 #include <i2c_settings.h>
 #include <usbh_settings.h>
+
+#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
+#include <linux/broadcom/bcmblt-rfkill.h>
+#include <bcmblt_rfkill_settings.h>
+#endif
 
 #if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
 #include <linux/i2c/egalax_i2c_ts.h>
 #include <egalax_i2c_ts_settings.h>
 #endif
 
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+#include <linux/bma150.h>
+#include <sensors_bma150_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
+#include <linux/bh1715.h>
+#include <bh1715_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+#include <linux/mpu3050.h>
+#include <mpu3050_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+#include <linux/bmp18x.h>
+#include <bmp18x_i2c_settings.h>
+#endif
+
 #if defined(CONFIG_NET_ISLAND)
 #include <mach/net_platform.h>
 #include <net_settings.h>
+#endif
+
+#if defined(CONFIG_MAX3353) || defined(CONFIG_MAX3353_MODULE)
+#include <otg_settings.h>
+#include <linux/i2c/max3353.h>
+#endif
+
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#include <leds_gpio_settings.h>
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <gpio_keys_settings.h>
+#endif
+
+#if defined(CONFIG_VC_VCHIQ) || defined(CONFIG_VC_VCHIQ_MODULE)
+#include <mach/io_map.h>
+#include <mach/aram_layout.h>
+
+#include <linux/vceb_platform_data_hana.h>
+#include <linux/vchiq_platform_data_hana.h>
+#include <linux/vchiq_platform_data_memdrv_hana.h>
+#endif
+
+#if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
+#include <linux/kona_keypad.h>
+#include <keymap_settings.h>
+#endif
+
+#if defined(CONFIG_MONITOR_ADC121C021_I2C)  || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
+#include <linux/broadcom/adc121c021_driver.h>
+#include <adc121c021_settings.h>
+#include <battery_settings.h>
+#endif
+
+#if defined(CONFIG_MONITOR_BQ27541_I2C) || defined(CONFIG_MONITOR_BQ27541_I2C_MODULE)
+#include <linux/broadcom/bq27541.h>
+#include <bq27541_i2c_settings.h>
+#endif
+
+#if defined(CONFIG_BATTERY_MAX17040) || defined(CONFIG_BATTERY_MAX17040_MODULE)
+#include <linux/max17040_battery.h>
+#include <max17040_settings.h>
+#endif
+
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+#include <linux/broadcom/cmp_battery_multi.h>
+#include <battery_settings.h>
+#endif
+ 
+#if defined(CONFIG_BCM_CMP_BATTERY_BQ24616) || defined(CONFIG_BCM_CMP_BATTERY_BQ24616_MODULE)
+#include <linux/broadcom/cmp_battery_bq24616.h>
+#include <battery_settings.h>
+/* Until proper solution for docking station is found, compal docking station is
+   handled in bq24616 battery driver */
+#include <dock_settings.h>
+#endif
+
+#if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
+#include <gps_settings.h>
+#include <linux/broadcom/gps.h>
 #endif
 
 #include "island.h"
@@ -102,6 +191,8 @@
 #define USBH_CTRL_REG_OFFSET       0x8000
 #define USBH_CTRL_BASE_ADDR        (EHCI_BASE_ADDR + USBH_CTRL_REG_OFFSET)
 #define USBH_CTRL_CORE_REG_SIZE    0x20
+
+#define OTG_CTRL_CORE_REG_SIZE     0x100
 
 static struct resource sdio0_resource[] = {
 	[0] = {
@@ -369,6 +460,429 @@ static struct i2c_board_info egalax_i2c_boardinfo[] =
 };
 #endif
 
+#if defined(CONFIG_MAX3353) || defined(CONFIG_MAX3353_MODULE)
+static struct max3353_platform_data max3353_info = {
+	.mode = HW_OTG_MAX3353_MODE,
+};
+
+static struct i2c_board_info max3353_i2c_boardinfo[] = {
+	{
+		I2C_BOARD_INFO(MAX3353_DRIVER_NAME, MAX3353_I2C_ADDR_BASE),
+		.platform_data  = &max3353_info,
+	},
+};
+#endif
+
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#define board_leds_gpio_device concatenate(ISLAND_BOARD_ID, _leds_gpio_device)
+static struct platform_device board_leds_gpio_device = {
+   .name = "leds-gpio",
+   .id = -1,
+   .dev = {
+      .platform_data = &leds_gpio_data,
+   },
+};
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#define board_gpio_keys_device concatenate(ISLAND_BOARD_ID, _gpio_keys_device)
+static struct platform_device board_gpio_keys_device = {
+   .name = "gpio-keys",
+   .id = -1,
+   .dev = {
+      .platform_data = &gpio_keys_data,
+   },
+};
+#endif
+
+#if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
+
+#define board_keypad_keymap concatenate(ISLAND_BOARD_ID, _keypad_keymap)
+static struct KEYMAP board_keypad_keymap[] = HW_DEFAULT_KEYMAP;
+
+#define board_keypad_pwroff concatenate(ISLAND_BOARD_ID, _keypad_pwroff)
+static unsigned int board_keypad_pwroff[] = HW_DEFAULT_POWEROFF;
+
+#define board_keypad_param concatenate(ISLAND_BOARD_ID, _keypad_param)
+static struct KEYPAD_DATA board_keypad_param =
+{
+    .active_mode = 0,
+    .keymap      = board_keypad_keymap,
+    .keymap_cnt  = ARRAY_SIZE(board_keypad_keymap),
+    .pwroff      = board_keypad_pwroff,
+    .pwroff_cnt  = ARRAY_SIZE(board_keypad_pwroff),
+    .clock       = "gpiokp_apb_clk",
+};
+
+#define board_keypad_device_resource concatenate(ISLAND_BOARD_ID, _keypad_device_resource)
+static struct resource board_keypad_device_resource[] = {
+    [0] = {
+        .start = KEYPAD_BASE_ADDR,
+        .end   = KEYPAD_BASE_ADDR + 0xD0,
+        .flags = IORESOURCE_MEM,
+    },
+    [1] = {
+        .start = BCM_INT_ID_KEYPAD,
+        .end   = BCM_INT_ID_KEYPAD,
+        .flags = IORESOURCE_IRQ,
+    },
+};
+
+#define board_keypad_device concatenate(ISLAND_BOARD_ID, _keypad_device)
+static struct platform_device board_keypad_device =
+{
+   .name          = "kona_keypad",
+   .id            = -1,
+   .resource      = board_keypad_device_resource,
+   .num_resources = ARRAY_SIZE(board_keypad_device_resource),
+   .dev = {
+      .platform_data = &board_keypad_param,
+   },
+};
+#endif
+
+#if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
+#define board_hana_gps_info concatenate(ISLAND_BOARD_ID, _board_hana_gps_info)
+static struct gps_platform_data board_hana_gps_info = GPS_PLATFORM_DATA_SETTINGS;
+
+#define platform_device_gps concatenate(ISLAND_BOARD_ID, _platform_device_gps)
+static struct platform_device platform_device_gps = 
+{
+   .name = "gps",
+   .id = -1,
+   .dev = {
+      .platform_data = &board_hana_gps_info,
+   },
+};
+#endif
+
+#if defined(CONFIG_KONA_OTG_CP) || defined(CONFIG_KONA_OTG_CP_MODULE)
+static struct resource otg_cp_resource[] = {
+	[0] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + OTG_CTRL_CORE_REG_SIZE - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_USB_OTG_DRV_VBUS,
+		.end = BCM_INT_ID_USB_OTG_DRV_VBUS,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device otg_cp_device =
+{
+	.name = "kona-otg-cp",
+	.id = -1,
+	.resource = otg_cp_resource,
+	.num_resources = ARRAY_SIZE(otg_cp_resource),
+};
+#endif
+
+#if defined(CONFIG_VC_VCHIQ) || defined(CONFIG_VC_VCHIQ_MODULE)
+
+/****************************************************************************
+*
+*   VCEB display device
+*
+***************************************************************************/
+
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE ) \
+ || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
+
+/* Internal videocore is defined - Assume that it's for display */
+
+#define  VCEB_DISPLAY_DEVICE
+
+static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
+{
+    .create_params =
+    {
+        .instance_name = "display",
+        .videocore_param = "vca",
+        .host_param = &vceb_hana_display_data,
+    },
+
+    .vcMemAddr          = KONA_VC_EMI,
+    .vcSramAddr         = KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET,
+
+    .bootFromKernel     = 1,
+#if 0
+    /* commenting out for the time being since GPIO mux group is hardcoded for the time being */
+    .gpiomux_lcd_group  = gpiomux_group_vc_dpi_rgb,
+    .gpiomux_lcd_id     = 0,
+    .gpiomux_lcd_label  = "vc-lcd",
+
+    .gpiomux_jtag_group  = gpiomux_group_vc_jtag,
+    .gpiomux_jtag_id     = 0,
+    .gpiomux_jtag_label  = "vc-jtag",
+#endif
+};
+
+static struct platform_device vceb_display_device = {
+   .name = "vceb_hana",
+   .id = 0,
+    .dev = {
+       .platform_data = &vceb_hana_display_data,
+    },
+};
+
+#endif
+/****************************************************************************
+*
+*   VCHIQ display device
+*
+***************************************************************************/
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE )
+
+/*
+ * Internal videocore using the vchiq_arm stack
+ */
+
+#define  VCHIQ_DISPLAY_DEVICE
+
+#define IPC_SHARED_CHANNEL_VIRT     ( KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
+#define IPC_SHARED_CHANNEL_PHYS     ( INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
+
+static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
+    .memdrv = {
+        .common = {
+            .instance_name = "display",
+            .dev_type      = VCHIQ_DEVICE_TYPE_SHARED_MEM,
+        },
+        .sharedMemVirt  = (void *)(IPC_SHARED_CHANNEL_VIRT),
+        .sharedMemPhys  = IPC_SHARED_CHANNEL_PHYS,
+    },
+    .ipcIrq                =  BCM_INT_ID_IPC_OPEN,
+};
+
+static struct platform_device vchiq_display_device = {
+    .name = "vchiq_memdrv_hana",
+    .id = 0,
+    .dev = {
+        .platform_data = &vchiq_display_data_memdrv_hana,
+    },
+};
+
+#elif defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
+
+/*
+ * Internal videocore using the vchiq stack.
+ */
+
+#define  VCHIQ_DISPLAY_DEVICE
+
+static VCHIQ_PLATFORM_DATA_HANA_T vchiq_display_data_shared_mem = {
+    .common = {
+        .instance_name  = "display",
+        .dev_type       = VCHIQ_DEVICE_TYPE_HOST_PORT,
+    },
+};
+
+static struct platform_device vchiq_display_device = {
+    .name = "vchiq_busdrv_sharedmem",
+    .id = 0,
+    .dev = {
+        .platform_data = &vchiq_display_data_shared_mem,
+    },
+};
+
+#endif
+
+/****************************************************************************
+*
+*   VCEB framebuffer device
+*
+***************************************************************************/
+
+#if defined( CONFIG_FB_VCEB ) || defined( CONFIG_FB_VCEB_MODULE )
+
+#define VCEB_FB_DEVICE
+
+static struct platform_device vceb_fb_device = {
+   .name = "vceb_fb",
+   .id = -1,
+};
+#endif  /* CONFIG_FB_VCEB */
+
+struct platform_device * vchiq_devices[] __initdata = { &vceb_display_device, &vchiq_display_device, &vceb_fb_device };
+
+#endif  /* CONFIG_VC_VCHIQ */
+
+
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+
+#define board_bma150_axis_change concatenate(ISLAND_BOARD_ID, _bma150_axis_change)
+
+#ifdef BMA150_DRIVER_AXIS_SETTINGS
+   static struct t_bma150_axis_change board_bma150_axis_change = BMA150_DRIVER_AXIS_SETTINGS;
+#endif
+
+static struct i2c_board_info __initdata i2c_bma150_info[] =
+{
+   {
+      I2C_BOARD_INFO(BMA150_DRIVER_NAME, BMA150_DRIVER_SLAVE_NUMBER_0x38),
+#ifdef BMA150_DRIVER_AXIS_SETTINGS
+      .platform_data  = &board_bma150_axis_change,
+#endif
+   }, 
+};
+#endif
+
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
+static struct i2c_board_info __initdata i2c_bh1715_info[] =
+{
+	{
+		I2C_BOARD_INFO(BH1715_DRV_NAME, BH1715_I2C_ADDR),
+	},
+};
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+
+#define board_mpu3050_data concatenate(ISLAND_BOARD_ID, _mpu3050_data)
+
+#ifdef MPU3050_DRIVER_AXIS_SETTINGS
+   static struct t_mpu3050_axis_change board_mpu3050_axis_change = MPU3050_DRIVER_AXIS_SETTINGS;
+#endif
+
+static struct mpu3050_platform_data board_mpu3050_data = 
+{ 
+   .gpio_irq_pin = MPU3050_GPIO_IRQ_PIN,
+   .scale        = MPU3050_SCALE,
+#ifdef MPU3050_DRIVER_AXIS_SETTINGS
+   .p_axis_change = &board_mpu3050_axis_change,
+#else
+   .p_axis_change = 0,
+#endif
+};
+
+static struct i2c_board_info __initdata i2c_mpu3050_info[] = 
+{
+	{
+		I2C_BOARD_INFO(MPU3050_DRV_NAME, MPU3050_I2C_ADDR),
+		.platform_data  = &board_mpu3050_data,
+	},
+};
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+static struct i2c_board_info __initdata i2c_bmp18x_info[] = 
+{
+	{
+		I2C_BOARD_INFO(BMP18X_NAME, BMP18X_I2C_ADDRESS),
+	},
+};
+#endif
+
+#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
+#define board_bcmblt_rfkill_cfg concatenate(ISLAND_BOARD_ID, _bcmblt_rfkill_cfg)
+static struct bcmblt_rfkill_platform_data board_bcmblt_rfkill_cfg =
+{
+#ifdef BCMBLT_RFKILL_GPIO
+   .gpio = BCMBLT_RFKILL_GPIO,
+#endif
+};
+#define board_bcmblt_rfkill_device concatenate(ISLAND_BOARD_ID, _bcmblt_rfkill_device)
+static struct platform_device board_bcmblt_rfkill_device = 
+{
+   .name = "bcmblt-rfkill",
+   .id = 1,
+   .dev =
+   {
+      .platform_data = &board_bcmblt_rfkill_cfg,
+   },
+}; 
+
+static void __init board_add_bcmblt_rfkill_device(void)
+{
+   platform_device_register(&board_bcmblt_rfkill_device);
+}
+#endif
+
+
+#if defined(CONFIG_MONITOR_ADC121C021_I2C) || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
+
+#define board_adc121c021_i2c_param concatenate(ISLAND_BOARD_ID, _adc121c021_i2c_param)
+static struct I2C_ADC121C021_t board_adc121c021_i2c_param;
+
+#define board_adc121c021_i2c_boardinfo concatenate(ISLAND_BOARD_ID, _adc121c021_i2c_boardinfo)
+static struct i2c_board_info board_adc121c021_i2c_boardinfo[] =
+{
+   {
+      .type = I2C_ADC121C021_DRIVER_NAME,          /* "adc121c021_i2c_drvr" */
+      .addr = I2C_ADC121C021_DRIVER_SLAVE_NUMBER,  /* 0x54                  */
+      .platform_data = &board_adc121c021_i2c_param,
+   },
+};
+#endif
+
+#if defined(CONFIG_MONITOR_BQ27541_I2C) || defined(CONFIG_MONITOR_BQ27541_I2C_MODULE)
+#define board_bq27541_i2c_boardinfo concatenate(ISLAND_BOARD_ID, _bq27541_i2c_boardinfo)
+static struct i2c_board_info board_bq27541_i2c_boardinfo[] =
+{
+   {
+      .type = I2C_BQ27541_DRIVER_NAME,          /* "bq27541_i2c_drvr" */
+      .addr = I2C_BQ27541_DRIVER_SLAVE_NUMBER,  /* 0x55               */
+   },
+};
+#endif
+
+#if defined(CONFIG_BATTERY_MAX17040) || defined(CONFIG_BATTERY_MAX17040_MODULE)
+#define board_hana_max17040_info concatenate(ISLAND_BOARD_ID, _hana_max17040_info)
+static struct max17040_platform_data board_hana_max17040_info = 
+{     /* Function pointers used to discover battery or AC power status using GPIOs */
+      .battery_online = NULL,
+      .charger_online = NULL,
+      .charger_enable = NULL,
+};
+
+#define board_max17040_i2c_boardinfo concatenate(ISLAND_BOARD_ID, _max17040_i2c_boardinfo)
+static struct i2c_board_info board_max17040_i2c_boardinfo[] =
+{
+   {
+      .type = HW_MAX17040_DRIVER_NAME,             /* "max17040" */
+      .addr = HW_MAX17040_SLAVE_ADDR,              /* 0x36       */  
+      .platform_data = &board_hana_max17040_info,
+   },
+};
+#endif
+
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+#define board_hana_cmp_battery_multi_info concatenate(ISLAND_BOARD_ID, _board_hana_cmp_battery_multi_info)
+static struct cbm_platform_data board_hana_cmp_battery_multi_info = CMP_BATTERY_MULTI_SETTINGS;
+
+#define board_battery_multi concatenate(ISLAND_BOARD_ID, _board_battery_multi)
+static struct platform_device board_battery_multi = 
+{
+   .name = "cmp-battery",
+   .id = -1,
+   .dev = {
+      .platform_data = &board_hana_cmp_battery_multi_info,
+   },
+};
+#endif
+
+#if defined(CONFIG_BCM_CMP_BATTERY_BQ24616) || defined(CONFIG_BCM_CMP_BATTERY_BQ24616_MODULE)
+#define battery_bq24616_data concatenate(ISLAND_BOARD_ID, _battery_bq24616_data)
+static struct battery_bq24616_cfg battery_bq24616_data = 
+{
+    .gpio_ctl_pwr = HW_BATTERY_CTL_PWR,
+    .gpio_acp_shd = HW_BATTERY_ACP_SHDN,
+    .gpio_docking_station_power_3_3v = GPIO_DOCKING_STATION_POWER_3_3V,
+};
+
+#define board_battery_bq24616 concatenate(ISLAND_BOARD_ID, _board_battery_bq24616)
+static struct platform_device board_battery_bq24616 = 
+{
+   .name = "cmp-battery",
+   .id = -1,
+   .dev = {
+      .platform_data = &battery_bq24616_data,
+   },
+};
+#endif
+
 static void __init add_sdio_device(void)
 {
    unsigned int i, id, num_devices;
@@ -476,7 +990,105 @@ static void __init add_i2c_device(void)
 	i2c_register_board_info(egalax_i2c_param.id, egalax_i2c_boardinfo,
 		ARRAY_SIZE(egalax_i2c_boardinfo));
 #endif
+
+#if defined(CONFIG_SENSORS_BMA150) || defined(CONFIG_SENSORS_BMA150_MODULE)
+
+   i2c_register_board_info(
+#ifdef SENSORS_BMA150_I2C_BUS_ID
+      SENSORS_BMA150_I2C_BUS_ID,
+#else
+      -1,
+#endif
+      i2c_bma150_info, ARRAY_SIZE(i2c_bma150_info));
+#endif
+
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
+   i2c_register_board_info(
+#ifdef BH1715_I2C_BUS_ID
+      BH1715_I2C_BUS_ID,
+#else
+      -1,
+#endif
+      i2c_bh1715_info, ARRAY_SIZE(i2c_bh1715_info));
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+   i2c_register_board_info(
+#ifdef MPU3050_I2C_BUS_ID
+      MPU3050_I2C_BUS_ID,  
+#else
+      -1,
+#endif
+      i2c_mpu3050_info, ARRAY_SIZE(i2c_mpu3050_info));
+#endif
+
+#if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
+			i2c_register_board_info(
+#ifdef BMP18X_I2C_BUS_ID
+      BMP18X_I2C_BUS_ID,
+#else
+      -1,
+#endif
+      i2c_bmp18x_info, ARRAY_SIZE(i2c_bmp18x_info));
+#endif
+
+#if defined(CONFIG_MONITOR_ADC121C021_I2C)  || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
+   board_adc121c021_i2c_param.id                = HW_ADC121C021_I2C_BUS_ID; 
+   board_adc121c021_i2c_param.gpio_irq_pin      = HW_ADC121C021_GPIO_EVENT;
+   board_adc121c021_i2c_param.num_bytes_to_read = HW_ADC121C021_BYTES_TO_READ;
+   board_adc121c021_i2c_param.i2c_slave_address = I2C_ADC121C021_DRIVER_SLAVE_NUMBER;
+   board_adc121c021_i2c_param.battery_max_voltage = HW_BATTERY_MAX_VOLTAGE;
+   board_adc121c021_i2c_param.battery_min_voltage = HW_BATTERY_MIN_VOLTAGE;
+   board_adc121c021_i2c_param.resistor_1          = HW_ADC121C021_RESISTOR_1;
+   board_adc121c021_i2c_param.resistor_2          = HW_ADC121C021_RESISTOR_2;
+
+   printk("board_template.c %s() IRQ pin %d\n", __FUNCTION__, board_adc121c021_i2c_param.gpio_irq_pin);
+   board_adc121c021_i2c_boardinfo[0].irq = 
+       gpio_to_irq(board_adc121c021_i2c_param.gpio_irq_pin);
+
+   i2c_register_board_info(board_adc121c021_i2c_param.id,
+                           board_adc121c021_i2c_boardinfo,
+                           ARRAY_SIZE(board_adc121c021_i2c_boardinfo));         
+#endif
+
+#if defined(CONFIG_MONITOR_BQ27541_I2C) || defined(CONFIG_MONITOR_BQ27541_I2C_MODULE)
+   i2c_register_board_info(HW_BQ27541_I2C_BUS_ID,
+                           board_bq27541_i2c_boardinfo,
+                           ARRAY_SIZE(board_bq27541_i2c_boardinfo));
+#endif
+
+#if defined(CONFIG_BATTERY_MAX17040) || defined(CONFIG_BATTERY_MAX17040_MODULE)
+   i2c_register_board_info(HW_MAX17040_I2C_BUS_ID,
+                           board_max17040_i2c_boardinfo,
+                           ARRAY_SIZE(board_max17040_i2c_boardinfo));
+#endif
+
 }
+
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#define board_add_led_device concatenate(ISLAND_BOARD_ID, _add_led_device)
+static void __init board_add_led_device(void)
+{
+   platform_device_register(&board_leds_gpio_device);
+}
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#define board_add_keys_device concatenate(ISLAND_BOARD_ID, _add_keyboard_device)
+static void __init board_add_keys_device(void)
+{
+   platform_device_register(&board_gpio_keys_device);
+}
+#endif
+
+#if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
+#define board_add_keyboard_kona concatenate(ISLAND_BOARD_ID, _add_keyboard_kona)
+static void __init board_add_keyboard_kona(void)
+{
+   platform_device_register(&board_keypad_device);
+}
+#endif
+
 
 static void __init add_usbh_device(void)
 {
@@ -489,6 +1101,27 @@ static void __init add_usbh_device(void)
 	platform_device_register(&usbh_ohci_device);
 }
 
+static void __init add_usb_otg_device(void)
+{
+#if defined(CONFIG_KONA_OTG_CP) || defined(CONFIG_KONA_OTG_CP_MODULE)
+	platform_device_register(&otg_cp_device);
+#endif
+
+#if defined(CONFIG_MAX3353) || defined(CONFIG_MAX3353_MODULE)
+#ifdef HW_OTG_MAX3353_I2C_BUS_ID
+	max3353_info.id = HW_OTG_MAX3353_I2C_BUS_ID;
+#else
+	max3353_info.id = -1;
+#endif
+#ifdef HW_OTG_MAX3353_GPIO_INT
+	max3353_info.irq_gpio_num = HW_OTG_MAX3353_GPIO_INT;
+#else
+	max3353_info.irq_gpio_num = -1;
+#endif
+	i2c_register_board_info(max3353_info.id, max3353_i2c_boardinfo, ARRAY_SIZE(max3353_i2c_boardinfo));
+#endif
+}
+
 static void __init add_devices(void)
 {
 #ifdef HW_SDIO_PARAM
@@ -499,15 +1132,52 @@ static void __init add_devices(void)
 	add_i2c_device();
 #endif
 
+#if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+        board_add_led_device();
+#endif
+
+#if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+        board_add_keys_device();
+#endif
+
+#if defined(CONFIG_KEYBOARD_KONA) || defined(CONFIG_KEYBOARD_KONA_MODULE)
+        board_add_keyboard_kona();
+#endif
+
+#if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
+        board_add_bcmblt_rfkill_device();
+#endif
+
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+        platform_device_register(&board_battery_multi);
+#endif
+
+#if defined(CONFIG_BCM_CMP_BATTERY_BQ24616) || defined(CONFIG_BCM_CMP_BATTERY_BQ24616_MODULE)
+        platform_device_register(&board_battery_bq24616);
+#endif
+
 	add_usbh_device();
+	add_usb_otg_device();
 
 #ifdef CONFIG_NET_ISLAND
 	platform_device_register(&net_device);
+#endif
+
+#if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
+   platform_device_register(&platform_device_gps);
+#endif
+
+#if defined(CONFIG_VC_VCHIQ) || defined(CONFIG_VC_VCHIQ_MODULE)
+   platform_add_devices( vchiq_devices, ARRAY_SIZE( vchiq_devices ) );
 #endif
 }
 
 static void __init board_init(void)
 {
+#ifdef CONFIG_MAP_SDMA
+	dma_mmap_init();
+	sdma_init();
+#endif
 	/*
 	 * Add common platform devices that do not have board dependent HW
 	 * configurations

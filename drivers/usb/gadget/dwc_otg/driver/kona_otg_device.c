@@ -66,9 +66,10 @@ static unsigned int otghost = 0;
 #else
 static unsigned int otghost = 1;
 #endif
+static unsigned int otgdevice = 0;
+
 static struct lm_device *lmdev = NULL;
 static struct clk *otg_clk;
-
 
 /*-------------------------------------------------------------------------*/
 
@@ -82,6 +83,9 @@ MODULE_PARM_DESC(fshost, "Load FSHOST device instead of HSOTG device");
 
 module_param( otghost, uint, 0644 );
 MODULE_PARM_DESC(otghost, "Force OTG host mode - Needed for FPGA v6.n images and later");
+
+module_param( otgdevice, uint, 0644 );
+MODULE_PARM_DESC(otgdevice, "Force OTG device mode - Needed for FPGA v6.n images and later");
 
 MODULE_DESCRIPTION("DWC OTG Device");
 MODULE_LICENSE("GPL");
@@ -297,8 +301,8 @@ static int __init dwc_otg_device_init(void)
 		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
 
 		schedule_timeout_interruptible(HZ/10);
-
-		if ( otghost ){
+		
+		if (otghost) {
 			printk(KERN_WARNING "%s: Set HSOTG_CTRL register for host mode\n", __func__);
 
 			val = HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
@@ -315,8 +319,7 @@ static int __init dwc_otg_device_init(void)
 				HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK |
 				HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
 			writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-		}
-		else {
+		} else if (otgdevice) {
 			printk(KERN_WARNING "%s: Set HSOTG_CTRL register for device mode\n", __func__);
 
 			val= HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
@@ -335,7 +338,16 @@ static int __init dwc_otg_device_init(void)
 				HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
 			writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
+		} else {
+			val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+                        val |= (HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
+                                 HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK);
+                         writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 		}
+
+		printk(KERN_WARNING "%s: HSOTG_CTRL_USBOTGCONTROL register=0x%08x\n",
+			__func__, readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
+		
 		schedule_timeout_interruptible(HZ/10*3);
 
 #if 0

@@ -13,20 +13,32 @@
 #*****************************************************************************
 
 obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
+
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
 obj-$(CONFIG_NET_ISLAND) += ethHw.o ethHw_asm.o
+obj-$(CONFIG_PM) += pm.o
 
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o
 obj-$(CONFIG_MACH_ISLAND_BU) += board_bu.o pinmux_island_bu.o
 obj-$(CONFIG_MACH_ISLAND_FF) += board_ff.o pinmux_island_ff.o board-bcm59055.o
+
+obj-$(CONFIG_MAP_SDMA) += chal/
+obj-$(CONFIG_MAP_SDMA) += sdmac.o dma_mmap.o dump-mem.o dma_mmap_test.o
+
+obj-$(CONFIG_IPC) += chal/
 
 obj-$(CONFIG_MACH_ISLAND_BASE) += board_base.o
 CFLAGS_board_base.o += -Iarch/arm/mach-island/hw_cfg/BASE
 
 obj-$(CONFIG_MACH_ISLAND_SV) += board_sv.o pinmux_island_sv.o
 CFLAGS_board_sv.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_SV \
--Iarch/arm/mach-island/hw_cfg/BASE
+-Iarch/arm/mach-island/hw_cfg/BASE \
+-Ivc4-dev/src/interface/vceb/host \
+-Ivc4-dev/src/interface/vceb/host/linux 
 
 obj-$(CONFIG_MACH_ISLAND_TABLET) += board_tablet.o pinmux_island_tablet.o
 CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
--Iarch/arm/mach-island/hw_cfg/BASE
+-Iarch/arm/mach-island/hw_cfg/BASE \
+-Ivc4-dev/src/interface/vceb/host \
+-Ivc4-dev/src/interface/vceb/host/linux 
+
