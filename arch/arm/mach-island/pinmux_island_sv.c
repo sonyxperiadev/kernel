@@ -27,9 +27,9 @@
 #include <mach/pinmux.h>
 
 static struct __init pin_config board_pin_config[] = {
-	/* BSC1 */
- //       PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
-   //     PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
+	/* VC camera */
+	PIN_CFG(NORFLSH_CE1_N,   VC_GPIO_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NORFLSH_ADDR_19, VC_GPIO_1, 0, OFF, OFF, 0, 0, 8MA),
 
         /* BSC2 */
         PIN_BSC_CFG(BSC2_SCL, BSC2_SCL, 0x08),
@@ -39,6 +39,24 @@ static struct __init pin_config board_pin_config[] = {
         PIN_BSC_CFG(PMU_SCL, PMU_SCL, 0x08),
         PIN_BSC_CFG(PMU_SDA, PMU_SDA, 0x08),
 
+        /* PWM */
+        PIN_CFG(SIM_DATA,          PWM_O_2,     0, OFF, OFF, 0, 0, 8MA),
+
+        /* Keypad */
+        PIN_CFG(NORFLSH_AD_14,     KP_ROW_OP_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NORFLSH_AD_13,     KP_ROW_OP_1, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NORFLSH_AD_12,     KP_ROW_OP_2, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NORFLSH_AD_11,     KP_ROW_OP_3, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NORFLSH_AD_10,     KP_ROW_OP_4, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NORFLSH_AD_09,     KP_ROW_OP_5, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NORFLSH_AD_08,     KP_ROW_OP_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADLAT_EN,  KP_COL_IP_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_AADLAT_EN, KP_COL_IP_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADDR_20,   KP_COL_IP_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADDR_21,   KP_COL_IP_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADDR_22,   KP_COL_IP_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NORFLSH_ADDR_23,   KP_COL_IP_6, 0, OFF, OFF, 0, 0, 8MA),
+
 	/* WiFi SDIO */
         PIN_CFG(NORFLSH_AD_03, SDIO1_DATA_3, 0, OFF, ON, 0, 0, 2MA),
         PIN_CFG(NORFLSH_AD_02, SDIO1_CLK,    0, OFF, ON, 0, 0, 2MA),
@@ -46,6 +64,13 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(NORFLSH_AD_00, SDIO1_CMD,    0, OFF, ON, 0, 0, 2MA),
         PIN_CFG(NORFLSH_RDY,   SDIO1_DATA_1, 0, OFF, ON, 0, 0, 2MA),
         PIN_CFG(NORFLSH_CLK_N, SDIO1_DATA_2, 0, OFF, ON, 0, 0, 2MA),
+
+	/* VC4 JTAG */
+	PIN_CFG(NAND_RDY_1, VC_TRSTB, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(NAND_CLE,   VC_TCK,   0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NAND_ALE,   VC_TDI,   0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NAND_OEN,   VC_TDO,   0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(NAND_WEN,   VC_TMS,   0, OFF, OFF, 0, 0, 8MA),
 
 	/* SD/MMC */
         PIN_CFG(NAND_AD_5,    SDIO3_DATA_2, 0, OFF, OFF, 0, 0, 12MA),
@@ -95,6 +120,51 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(ULPI1_DIR,    ULPI1_DIR,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(ULPI1_NXT,    ULPI1_NXT,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(ULPI1_STP,    ULPI1_STP,    0, OFF, OFF, 0, 1, 8MA),
+
+	/* VC CAM1 I2C */
+	PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
+	PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
+
+	/* VC HDMI I2C */
+	PIN_BSC_CFG(HDMI_SCL, HDMI_SCL, 0x08),
+	PIN_BSC_CFG(HDMI_SDA, HDMI_SDA, 0x08),
+
+	/* LCD */
+	PIN_CFG(LCD_R_7, LCD_R_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_6, LCD_R_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_5, LCD_R_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_4, LCD_R_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_3, LCD_R_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_2, LCD_R_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_1, LCD_R_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_R_0, LCD_R_0, 0, OFF, OFF, 0, 0, 8MA),
+
+        PIN_CFG(LCD_G_7, LCD_G_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_6, LCD_G_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_5, LCD_G_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_4, LCD_G_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_3, LCD_G_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_2, LCD_G_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_1, LCD_G_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_G_0, LCD_G_0, 0, OFF, OFF, 0, 0, 8MA),
+
+        PIN_CFG(LCD_B_7, LCD_B_7, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_6, LCD_B_6, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_5, LCD_B_5, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_4, LCD_B_4, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_3, LCD_B_3, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_2, LCD_B_2, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_1, LCD_B_1, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_B_0, LCD_B_0, 0, OFF, OFF, 0, 0, 8MA),
+
+        PIN_CFG(LCD_HSYNC, LCD_HSYNC, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_VSYNC, LCD_VSYNC, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_OE,    LCD_OE,    0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(LCD_PCLK,  LCD_PCLK,  0, OFF, OFF, 0, 0, 8MA),
+
+	/* VC GP clock */
+	PIN_CFG(GPIO_3, VC_GPCLK_0, 0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(GPIO_2, VC_GPCLK_1, 0, OFF, OFF, 0, 0, 8MA),
 };
 
 /* board level init */

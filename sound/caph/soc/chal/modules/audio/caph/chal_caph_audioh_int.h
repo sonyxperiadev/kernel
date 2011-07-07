@@ -24,7 +24,6 @@ Broadcom's express prior written consent.
 #ifndef _CHAL_CAPH_AUDIOH_INT_
 #define _CHAL_CAPH_AUDIOH_INT_
 
-#include "chal_types.h"
 /**
 *Internal defines
 ******************************************************************************/

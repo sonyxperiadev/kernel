@@ -57,12 +57,30 @@
 *
 ****************************************************************************/
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
 #include "csl_vpu.h"
+#include "csl_apcmd.h"
+#include "csl_dsp_common_util.h"
 
-extern VPSharedMem_t	*vp_shared_mem;
+#define MAX_DL_SP_REC_GAIN	((2<<14)-1)	/* 6dB in DSP Q1.14 format */
+#define MIN_DL_SP_REC_GAIN	0
+
+extern AP_SharedMem_t	*vp_shared_mem;
+
+
+//*********************************************************************
+/**
+*
+*   CSL_VPU_Enable enables VPU interface.
+*
+* 
+**********************************************************************/
+void CSL_VPU_Enable(void)					
+{
+	VPRIPCMDQ_VPUEnable();
+
+}
 
 
 //*********************************************************************
@@ -271,6 +289,68 @@ UInt32 CSL_VPU_WriteAMRNB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, VP_Spe
 	return totalCopied;
 
 } // CSL_VPU_WriteAMRNB
+
+//*********************************************************************
+/**
+*
+*   CSL_SetDlSpeechRecGain sets DL Speech Record gain.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetDlSpeechRecGain(Int16 mBGain)
+{
+ Boolean result = FALSE;
+ UInt32 scale;
+ UInt16 gain;
+ UInt16 i;
+
+	/* convert millibel value to fixed point scale factor */
+	scale = CSL_ConvertMillibel2Scale(mBGain);
+
+	/* adjust DL scale factor to DSP Q1.14 format */
+	scale>>=(GAIN_FRACTION_BITS_NUMBER-14);
+	
+	gain = (UInt16)scale;
+
+	/* limit gain to DSP range */
+	if(gain > MAX_DL_SP_REC_GAIN) 
+	{
+		gain = MAX_DL_SP_REC_GAIN;
+
+		result = TRUE;
+
+	}
+
+	for(i = 0; i < 5; i++)
+	{
+		vp_shared_mem->shared_speech_rec_gain_dl[i] = gain;
+
+	}
+
+	return result;
+
+} // CSL_SetDlSpeechRecGain
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteDlSpeechRec mutes DL Speech Record 
+*
+* 
+**********************************************************************/
+void CSL_MuteDlSpeechRec(void)
+{
+ UInt16 i;
+
+	for(i = 0; i < 5; i++)
+	{
+		vp_shared_mem->shared_speech_rec_gain_dl[i] = MIN_DL_SP_REC_GAIN;
+
+	}
+
+} // CSL_MuteDlSpeechRec
 
 
 //*********************************************************************

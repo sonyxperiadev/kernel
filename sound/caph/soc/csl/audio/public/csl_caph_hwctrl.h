@@ -90,28 +90,28 @@ Result_t csl_caph_hwctrl_ResumePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 *  @brief  Set the gain for the sink
 *
 *  @param   pathID  (in) path handle of HW path
-*  @param   gainL_mB  (in) L-Ch Gain in mB
-*  @param   gainR_mB  (in) R-Ch Gain in mB
+*  @param   gainL  (in) L-Ch Gain in Q13.2
+*  @param   gainR  (in) R-Ch Gain in Q13.2
 *
 *  @return
 *****************************************************************************/
 void csl_caph_hwctrl_SetSinkGain(CSL_CAPH_PathID pathID, 
-                                      UInt32 gainL_mB,
-                                      UInt32 gainR_mB);
+                                      UInt16 gainL,
+                                      UInt16 gainR);
 
 /**
 *
 *  @brief  Set the gain for the source
 *
 *  @param   pathID  (in) path handle of HW path
-*  @param   gainL_mB  (in) L-Ch Gain in mB
-*  @param   gainR_mB  (in) R-Ch Gain in mB
+*  @param   gainL  (in) L-Ch Gain in Q13.2
+*  @param   gainR  (in) R-Ch Gain in Q13.2
 *
 *  @return
 *****************************************************************************/
 void csl_caph_hwctrl_SetSourceGain(CSL_CAPH_PathID pathID,
-                                        UInt32 gainL_mB,
-                                        UInt32 gainR_mB);
+                                        UInt16 gainL,
+                                        UInt16 gainR);
 
 /**
 *
@@ -307,93 +307,181 @@ AUDIO_BITS_PER_SAMPLE_t csl_caph_hwctrl_GetDataFormat(CSL_CAPH_STREAM_e streamID
 
 /****************************************************************************
 *
-* Function Name: void csl_caph_audio_loopback_control( CSL_CAPH_DEVICE_e speaker, 
-*													int path, Boolean ctrl)
+*  @brief control microphone loop back to output path
 *
+*  @param speaker (in) output speaker
+*  @param ctrl (in)  control to loop back 
+*			   TRUE - enable loop back in path,
+*			   FALSE - disbale loop back in path
+*  @param path (in)  internal loopback path
 *
-* Description:   CLS control microphone loop back to output path
-*
-* Parameters:    
-*				 spekaer : output speaker
-*				 ctrl    : control to loop back 
-*						   TRUE - enable loop back in path,
-*						   FALSE - disbale loop back in path
-*                path    : internal loopback path
-*
-* Return:       none
-
+*  @return
 ****************************************************************************/
 
 void csl_caph_audio_loopback_control(CSL_CAPH_DEVICE_e speaker, 
-									int path, 
-									Boolean ctrl);
-
+				int path, 
+				Boolean ctrl);
 
 
 /****************************************************************************
 *
-* Function Name: void csl_caph_hwctrl_setDSPSharedMemForIHF(UInt32 addr)
+*  @brief Set the shared memory address for DL played to IHF
 *
+*  @param    addr (in) memory address
 *
-* Description:   Set the shared memory address for DL played to IHF
-*
-* Parameters:    
-*				 addr : memory address
-*
-* Return:       none
-
+*  @return
 ****************************************************************************/
 void csl_caph_hwctrl_setDSPSharedMemForIHF(UInt32 addr);
 
 /****************************************************************************
 *
-* Function Name: void csl_caph_hwctrl_ConfigSSP(UInt32 addr)
+*  @brief   Configure fm/pcm port 
 *
+*  @param    sspConfig (in) fm/pcm port configuration info
 *
-* Description:   Configure fm/pcm port
-*
-* Parameters:   
-*		sspConfig : fm/pcm port configuration info
-*
-* Return:       none
-
+*  @return
 ****************************************************************************/
 void csl_caph_hwctrl_ConfigSSP(CSL_CAPH_SSP_Config_t sspConfig);
 
 
 /****************************************************************************
 *
-* Function Name: void csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_MODE_Enum_t mode, Boolean enable_vibrator)
+*  @brief   control vibrator on CSL  
+* 
 *
+*  @param    mode (in)  vibrator mode
+*  @param    enable_vibrator (in) control to loop back 
+*				   TRUE  - enable vibrator,
+*				   FALSE - disbale vibrator
 *
-* Description:   control vibrator on CSL  
-*
-* Parameters:    
-*				 enable_vibrator    : control to loop back 
-*						   TRUE  - enable vibrator,
-*						   FALSE - disbale vibrator
-*
-* Return:       none
-
+*  @return
 ****************************************************************************/
 
 void csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_MODE_Enum_t mode, Boolean enable_vibrator); 
 
 /****************************************************************************
 *
-* Function Name: void csl_caph_hwctrl_vibrator_strength(int strength) 
+*  @brief   control vibrator strength on CSL  
 *
-*
-* Description:   control vibrator strength on CSL  
-*
-* Parameters:    
-*				 strength  :  strength value to vibrator
-*
-* Return:       none
-
+*  @param    strength (in)  strength value to vibrator
+*  @return
 ****************************************************************************/
 
 void csl_caph_hwctrl_vibrator_strength(int strength); 
+
+
+
+/****************************************************************************
+*
+*  @brief   Enable/Disable a HW Sidetone path  
+*
+*  @param    config (in)  HW path Configuration info
+*  @param    ctrl (in)  Enable/Disable
+*  @return
+****************************************************************************/
+
+void csl_caph_hwctrl_EnableSidetone(CSL_CAPH_HWCTRL_CONFIG_t config,
+						Boolean ctrl);
+
+
+
+/****************************************************************************
+*
+*  @brief   Load filter coeff for sidetone filte  
+*
+*  @param    coeff (in)  Filter coeff
+*  @return
+*
+****************************************************************************/
+
+void csl_caph_hwctrl_ConfigSidetoneFilter(UInt32 *coeff);
+
+
+/****************************************************************************
+*
+*  @brief   Set sidetone gain
+*
+*  @param   gain  (in) sidetone gain
+*
+*  @return
+****************************************************************************/
+
+void csl_caph_hwctrl_SetSidetoneGain(UInt32 gain);	
+
+/****************************************************************************
+*
+*  @brief  Set Mixing gain in HW mixer
+*
+*  @param   pathID  (in) path handle of HW path
+*  @param   gainL  (in) Mixer L-ch input gain in Q13.2
+*  @param   gainR  (in) Mixer R-ch input gain in Q13.2
+*
+*  @return
+****************************************************************************/
+void csl_caph_hwctrl_SetMixingGain(CSL_CAPH_PathID pathID, 
+  						UInt32 gainL, 
+ 						UInt32 gainR);
+
+
+/****************************************************************************
+*
+*  @brief  Set Mixer output gain in HW mixer
+*
+*  @param   pathID  (in) path handle of HW path
+*  @param   fineGainL  (in) Mixer L-ch output fine gain in Register value
+*  @param   coarseGainL  (in) Mixer L-ch output coarse gain in Register value
+*  @param   fineGainR  (in) Mixer R-ch output fine gain in Register value
+*  @param   coarseGainR  (in) Mixer R<S-Del>L-ch output coarse gain in Register value
+*
+*  @return
+****************************************************************************/
+void csl_caph_hwctrl_SetMixOutGain(CSL_CAPH_PathID pathID, 
+                                      UInt32 fineGainL,
+                                      UInt32 coarseGainL,
+				      UInt32 fineGainR,
+                                      UInt32 coarseGainR);
+/****************************************************************************
+*
+*  @brief  Set Hw gain. For audio tuning purpose only.
+*
+*  @param   hw (in) which hw gain to set
+*  @param   gain  (in) Mixing gain
+*  @param   dev  (in) device
+*
+*  @return
+****************************************************************************/
+void csl_caph_hwctrl_SetHWGain(CSL_CAPH_HW_GAIN_e hw, 
+		UInt32 gain, 
+		CSL_CAPH_DEVICE_e dev);
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_CountSameSrcSink
+*
+*  Description: count paths with the same source and sink.
+*
+****************************************************************************/
+UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink);
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetSspTdmMode
+*
+*  Description: control the ssp tdm feature
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
+
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_allPathsDisabled
+*
+*  Description: Check whether all paths are disabled.
+*
+****************************************************************************/
+Boolean csl_caph_hwctrl_allPathsDisabled(void);
+
 
 #endif // _CSL_CAPH_HWCTRL_
 

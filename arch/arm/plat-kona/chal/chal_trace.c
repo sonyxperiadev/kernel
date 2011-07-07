@@ -22,7 +22,6 @@
 ****************************************************************************/
 
 #define UNDER_LINUX // Only supports Rhea
-#define CNEON_COMMON
 #define FUSE_APPS_PROCESSOR
 
 #include "plat/chal/chal_common.h"
@@ -48,9 +47,7 @@
 #if !defined(_HERA_)
 #include "mach/rdb/brcm_rdb_atb_stm.h"
 #include "mach/rdb/brcm_rdb_swstm.h"
-#ifdef CNEON_COMMON
 #include "mach/rdb/brcm_rdb_chipreg.h"
-#endif /* CNEON_COMMON */
 #endif // !defined(_HERA_)
 
 //==============================================================================
@@ -87,14 +84,12 @@ cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr)
 {
     chal_dprintf(CDBG_INFO, "chal_trace_init\n");
 
-#ifdef CNEON_COMMON
     /* Hack to ungate PTI & TPIU clocks */
 
     BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
                          CHIPREG_PERIPH_SPARE_CONTROL1, PTI_CLK_IS_IDLE, 0);
     BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
                          CHIPREG_PERIPH_SPARE_CONTROL1, TPIU_CLK_IS_IDLE, 0);
-#endif /* CNEON_COMMON */
 
     /* Do nothing */
     return TRUE;

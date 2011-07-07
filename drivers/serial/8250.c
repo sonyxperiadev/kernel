@@ -2335,7 +2335,12 @@ serial8250_set_termios(struct uart_port *port, struct ktermios *termios,
 	/*
 	 * Ask the core to calculate the divisor for us.
 	 */
+#ifdef CONFIG_ARCH_SAMOA
+	printk("Samoa UART clock is now fixed at %d\n", port->uartclk);
+#else
 	uart_fix_clock_rate(port, termios);
+#endif
+
 	baud = uart_get_baud_rate(port, termios, old,
 				  port->uartclk / 16 / 0xffff,
 				  port->uartclk / 16);
@@ -3203,6 +3208,7 @@ int serial8250_register_port(struct uart_port *port,
 	if (uart) {
 		uart_remove_one_port(&serial8250_reg, &uart->port);
 
+#ifndef CONFIG_ARCH_SAMOA
         uart->clk = clk_get(uart->port.dev, clk_name);
         if (IS_ERR(uart->clk))
             return PTR_ERR(uart->clk);
@@ -3216,6 +3222,7 @@ int serial8250_register_port(struct uart_port *port,
         clk_enable(uart->clk);
 
         uart->port.uartclk  	= clk_get_rate(uart->clk);
+#endif
 		uart->port.iobase       = port->iobase;
 		uart->port.membase      = port->membase;
 		uart->port.irq          = port->irq;

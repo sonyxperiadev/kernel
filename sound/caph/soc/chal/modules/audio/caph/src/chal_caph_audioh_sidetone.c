@@ -18,6 +18,7 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
+#include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
 #include "brcm_rdb_audioh.h"
@@ -111,12 +112,11 @@ cVoid chal_audio_stpath_enable(CHAL_HANDLE handle, cUInt16 enable)
 //
 // Parameters:   handle - audio chal handle.
 //                 *src   - the coefficient buffer
-//                 length - the coefficient length
 // Return:       None.
 //
 //============================================================================
 
-cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff, cUInt32 length )
+cVoid chal_audio_stpath_load_filter(CHAL_HANDLE handle, cUInt32 *coeff )
 {
     cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->sdt_base;
     cUInt32      index;

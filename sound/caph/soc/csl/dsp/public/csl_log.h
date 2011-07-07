@@ -80,7 +80,7 @@
 * 
 *   @param    streamNumber	(in)	stream number 1:4
 *   @param    controlInfo	(in)	control information
-*   @return   Result_t				RESULT_OK or RESULT_ERROR
+*   @return   Result_t			RESULT_ERROR or RESULT_OK
 *
 **********************************************************************/
 Result_t CSL_LOG_Start(UInt16 streamNumber, UInt16 controlInfo);
@@ -91,8 +91,8 @@ Result_t CSL_LOG_Start(UInt16 streamNumber, UInt16 controlInfo);
 *   CSL_LOG_Start stops audio logging for specified stream.
 * 
 *   @param    streamNumber	(in)	stream number 1:4
-*   @param    flag			(out)	audio  shut down information
-*   @return   Result_t				RESULT_OK or RESULT_ERROR
+*   @param    flag		(out)	shut down information   
+*   @return   Result_t			RESULT_ERROR or RESULT_OK
 *
 **********************************************************************/
 Result_t CSL_LOG_Stop(UInt16 streamNumber, UInt8 *flag);

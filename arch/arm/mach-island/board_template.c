@@ -542,10 +542,10 @@ static struct platform_device board_keypad_device =
 #endif
 
 #if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
-#define board_hana_gps_info concatenate(BCMHANA_BOARD_ID, _board_hana_gps_info)
+#define board_hana_gps_info concatenate(ISLAND_BOARD_ID, _board_hana_gps_info)
 static struct gps_platform_data board_hana_gps_info = GPS_PLATFORM_DATA_SETTINGS;
 
-#define platform_device_gps concatenate(BCMHANA_BOARD_ID, _platform_device_gps)
+#define platform_device_gps concatenate(ISLAND_BOARD_ID, _platform_device_gps)
 static struct platform_device platform_device_gps = 
 {
    .name = "gps",

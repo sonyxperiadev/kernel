@@ -373,6 +373,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	},
 	{ /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
+		.bsc_clk = "pmu_bsc_clk",
 	},
 };
 

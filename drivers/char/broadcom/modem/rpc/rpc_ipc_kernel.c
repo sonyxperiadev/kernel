@@ -456,6 +456,14 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel
 		return RPC_RESULT_ERROR;
 	}
 
+	
+	if(msgId == MSG_RPC_SIMPLE_REQ_RSP)
+	{
+		RPC_TRACE(("k:RPC_ServerRxCbk: MSG_RPC_SIMPLE_REQ_RSP Skipped \n"));
+		return RPC_RESULT_ERROR;
+	}
+
+
 	ret = RPC_IsRegisteredClient(channel, dataBufHandle);
 	if(ret)
 	{

@@ -18,6 +18,7 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
+#include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
 #include "brcm_rdb_audioh.h"
@@ -232,6 +233,13 @@ cVoid chal_audio_hspath_mute(CHAL_HANDLE handle,  Boolean mute)
 
 cVoid chal_audio_hspath_set_gain(CHAL_HANDLE handle, cUInt32 gain)
 {
+    cUInt32     reg_val;
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+
+    reg_val = 0x100A00; // Might need to add in sysparm.
+
+    /* Set the required setting */
+    BRCM_WRITE_REG(base, AUDIOH_HS_DAC_CTRL, reg_val);
 
     return;
 }

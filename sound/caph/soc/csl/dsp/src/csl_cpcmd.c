@@ -72,7 +72,6 @@
 #include "mti_trace.h"
 #include "dspcmd.h"
 #include "log.h"
-#include "csl_dsp.h"
 
 static Boolean is_audio_on = FALSE;
 static Boolean is_ul_on = FALSE;
@@ -615,6 +614,11 @@ static void RIPCMDQ_Connect_local(
 	//WE (CP) SHOULD DO NOISE SUPPRESSION EVEN IF AUDIO CONTROL IS DONE BY AP!!!
 	if ( Uplink ) RIPCMDQ_ConfigNoiseSuppression( SYSPARM_IsNSEnabled() );
 	else RIPCMDQ_ConfigNoiseSuppression( 0 );
+
+	if(Downlink) 
+		RIPCMDQ_ControlDownlinkNoiseSuppression(SYSPARM_IsDownlinkNSEnabled());
+	else 
+		RIPCMDQ_ControlDownlinkNoiseSuppression(FALSE);
 #endif// DSP_COMMS_INCLUDED
 
 #endif
@@ -1381,7 +1385,7 @@ void RIPCMDQ_CompFilterCtrl(UInt16 ResetUlFilterState, UInt16 ResetUlAuxFilterSt
  CmdQ_t  msg;
  UInt16 arg0, arg1;
 
-	arg0 = (( ResetDlFilterState & 0x1) |((ResetUlFilterState<<1) & 0x2) | ((ResetUlFilterState<<2) & 0x4));
+	arg0 = (( ResetDlFilterState & 0x1) |((ResetUlFilterState<<1) & 0x2) | ((ResetUlAuxFilterState<<2) & 0x4));
 	arg1 = (((DlSpkCtrl & 0x1)) | ((MainMicCtrl<<1) & 0x2) | ((AuxMicCtrl<<2) & 0x4));
  
 	msg.cmd = COMMAND_VOICE_FILTER_COEFS;
@@ -1392,4 +1396,22 @@ void RIPCMDQ_CompFilterCtrl(UInt16 ResetUlFilterState, UInt16 ResetUlAuxFilterSt
 
 }
 
+//*********************************************************************
+/**
+*
+*   RIPCMDQ_ControlDownlinkNoiseSuppression controls Downlink Noise Suppressor.
+*
+*   @param    control				(in)	0 - disable, 1 - enable
+* 
+**********************************************************************/
+void RIPCMDQ_ControlDownlinkNoiseSuppression(Boolean control)
+{
+ CmdQ_t  msg;
+        
+    msg.cmd = COMMAND_DOWNLINK_NOISE_SUPPRESSION;
+    msg.arg0 = control;
+	msg.arg1 = 0;
+	msg.arg2 = 0;
+    SHAREDMEM_PostCmdQ(&msg);
 
+}

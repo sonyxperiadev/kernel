@@ -47,6 +47,8 @@ extern void PoressDeviceNotifyCallbackFun(UInt32 msgType, void* dataBuf, UInt32 
 static void HandleBattMgrEmptyEvent( void );
 static void HandleBattMgrLowEvent( void );
 static void HandleBattMgrLevelEvent( UInt16 level, UInt16 adc_avg, UInt16 total_levels );
+static void KRIL_SysRpc_OpenRegulator(PMU_SIMLDO_t ldo);
+
 
 #define THREE_VOLTS_IN_MICRO_VOLTS 3000000
 #define THREE_PT_THREE_VOLTS_IN_MICRO_VOLTS 3300000
@@ -54,7 +56,18 @@ static void HandleBattMgrLevelEvent( UInt16 level, UInt16 adc_avg, UInt16 total_
 #define TWO_PT_FIVE_VOLTS_IN_MICRO_VOLTS 2500000
 #define ONE_PT_EIGHT_VOLTS_IN_MICRO_VOLTS 1800000
 
-static struct regulator* sim_regulator = NULL;
+typedef struct
+{
+	struct regulator*	handle;
+	Boolean				isSimInit;
+	PMU_SIMLDO_t		simLdo;
+	char				devName[64];
+}RegulatorInfo_t;
+
+RegulatorInfo_t gRegulatorList[2]={{NULL, FALSE, SIMLDO1,"sim_vcc"},
+									{NULL, FALSE, SIMLDO2,"sim2_vcc"} };
+
+#define REG_INDEX(a) (a == SIMLDO2)?1:0
 
 typedef struct
 {
@@ -85,7 +98,6 @@ void KRIL_SysRpc_Init( void )
 
     if ( !inited )
     {
-        int ret;
         UInt16 battLvl;
         
         HAL_EM_BATTMGR_ErrorCode_en_t errCode;
@@ -95,24 +107,13 @@ void KRIL_SysRpc_Init( void )
         KRIL_DEBUG(DBG_INFO," calling SYS_InitRpc\n");
         SYS_InitRpc();
         
-        // **FIXME** add this to actual module init? Need a way to shut it down as well...
-        KRIL_DEBUG(DBG_ERROR,"calling regulator_get...\n");
-        sim_regulator = regulator_get(NULL,"sim_vcc");
-        if (IS_ERR(sim_regulator))
-        {
-            KRIL_DEBUG(DBG_ERROR," **regulator_get FAILED %d\n", sim_regulator);
-        }
-        else
-        {
-            KRIL_DEBUG(DBG_ERROR," regulator_get OK\n");
 
-            // **FIXME** workaround for SIM LDO being enabled on startup by the driver; this 
-            // just bumps up our ref count in the sim_regulator struct, so that the 
-            // regulator_disable() call below doesn't fail
-            KRIL_DEBUG(DBG_INFO," calling regulator_enable...\n");
-            ret = regulator_enable(sim_regulator);
-            KRIL_DEBUG(DBG_INFO," regulator_enable returned %d\n",ret);
+		KRIL_SysRpc_OpenRegulator(SIMLDO1);
+		KRIL_SysRpc_OpenRegulator(SIMLDO2);
 
+
+        if(!IS_ERR(gRegulatorList[REG_INDEX(SIMLDO1)].handle))
+        {
             errCode = _HAL_EM_BATTMGR_RegisterEventCB( BATTMGR_EMPTY_BATT_EVENT, HandleBattMgrEmptyEvent );
             KRIL_DEBUG(DBG_INFO," reg empty rtnd %d\n", (int)errCode );
 
@@ -123,6 +124,26 @@ void KRIL_SysRpc_Init( void )
             KRIL_DEBUG(DBG_INFO," reg change rtnd %d\n", (int)errCode );
         }
     }
+}
+
+void KRIL_SysRpc_OpenRegulator(PMU_SIMLDO_t ldo)
+{
+	int ret;
+	RegulatorInfo_t* curReg = &gRegulatorList[REG_INDEX(ldo)];
+
+	curReg->handle = regulator_get(NULL,curReg->devName);
+	if (IS_ERR(curReg->handle))
+	{
+		KRIL_DEBUG(DBG_ERROR," **regulator_get (dev=%s) FAILED h=%x\n", curReg->devName, curReg->handle);
+	}
+	else
+	{
+		// **FIXME** workaround for SIM LDO being enabled on startup by the driver; this 
+		// just bumps up our ref count in the sim_regulator struct, so that the 
+		// regulator_disable() call below doesn't fail
+	    ret = regulator_enable(curReg->handle);
+		KRIL_DEBUG(DBG_ERROR," **regulator_get (dev=%s) PASS handle=%x ret=%d\n", curReg->devName, curReg->handle, ret);
+	}
 }
 
 // ******************************************************************************
@@ -183,25 +204,26 @@ Result_t Handle_CAPI2_CP2AP_PedestalMode_Control(RPC_Msg_t* pReqMsg, UInt32 enab
     return result;
 }
 
-static Boolean gSimInited = FALSE;
-
 Result_t Handle_CAPI2_PMU_IsSIMReady(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo)
 {
     Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
     int ret=0;
+	RegulatorInfo_t* curReg = &gRegulatorList[REG_INDEX(simldo)];
     
-    KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_IsSIMReady\n");
-    ret = regulator_is_enabled(sim_regulator);
-    KRIL_DEBUG(DBG_ERROR," regulator_is_enabled return %d\n", ret);
+	if(!IS_ERR(curReg->handle))
+	{
+		KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_IsSIMReady ldo=%d handle=%x\n\n", simldo, curReg->handle);
+		ret = regulator_is_enabled(curReg->handle);
+		KRIL_DEBUG(DBG_ERROR," regulator_is_enabled return %d\n", ret);
+	}
     
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
-	data.req_rep_u.CAPI2_PMU_IsSIMReady_Rsp.val = gSimInited; //(Boolean)(regulator_is_enabled > 0);
-
+	data.req_rep_u.CAPI2_PMU_IsSIMReady_Rsp.val = curReg->isSimInit; //(Boolean)(regulator_is_enabled > 0);
 	data.result = result;
 	Send_SYS_RspForRequest(pReqMsg, MSG_PMU_IS_SIM_READY_RSP, &data);
 
-    KRIL_DEBUG(DBG_ERROR," Handle_CAPI2_PMU_IsSIMReady DONE %d\n", (int)gSimInited);
+    KRIL_DEBUG(DBG_ERROR," Handle_CAPI2_PMU_IsSIMReady DONE active=%d\n", (int)curReg->isSimInit);
     return result;
 }
 
@@ -211,8 +233,19 @@ Result_t Handle_CAPI2_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, P
     Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
     int simMicroVolts = 0;
+	RegulatorInfo_t* curReg = &gRegulatorList[REG_INDEX(simldo)];
+	
+	memset(&data, 0, sizeof(SYS_ReqRep_t));
+	data.result = result;
+
+	if(IS_ERR(curReg->handle))
+	{
+		KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_ActivateSIM Invalid Handle ldo=%d handle=%x active=%d\n", simldo, curReg->handle, curReg->isSimInit);
+		Send_SYS_RspForRequest(pReqMsg, MSG_PMU_ACTIVATE_SIM_RSP, &data);
+	    return result;
+	}
     
-    KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_ActivateSIM\n");
+    KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_ActivateSIM ldo=%d handle=%x active=%d\n", simldo, curReg->handle, curReg->isSimInit);
     
     switch (volt)
     {
@@ -262,16 +295,16 @@ Result_t Handle_CAPI2_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, P
         
         case PMU_SIM0P0Volt:
         {
-            int enabled = regulator_is_enabled(sim_regulator);
+            int enabled = regulator_is_enabled(curReg->handle);
             KRIL_DEBUG(DBG_ERROR," ** PMU_SIM0P0Volt - regulator_is_enabled returned %d\n", enabled);
             
             simMicroVolts = 0;
-            gSimInited = FALSE;
+            curReg->isSimInit = FALSE;
             if ( enabled > 0 )
             {
                 int ret;
                 KRIL_DEBUG(DBG_ERROR," ** PMU_SIM0P0Volt - turn off regulator (FORCE)\n");
-                ret = regulator_disable(sim_regulator);
+                ret = regulator_disable(curReg->handle);
                 KRIL_DEBUG(DBG_ERROR," regulator_disable returned 0x%x\n", ret);
  
             }
@@ -279,9 +312,9 @@ Result_t Handle_CAPI2_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, P
             {
                 //int ret;
                 KRIL_DEBUG(DBG_ERROR," ** PMU_SIM0P0Volt - regulator not enabled, do nothing...\n");
-                //ret = regulator_enable(sim_regulator);
+                //ret = regulator_enable(curReg->handle);
                 //KRIL_DEBUG(DBG_ERROR," regulator_enable returned 0x%x\n", ret);
-                //ret = regulator_disable(sim_regulator);
+                //ret = regulator_disable(curReg->handle);
                 //KRIL_DEBUG(DBG_ERROR," regulator_disable returned 0x%x\n", ret);
             }
            break;
@@ -295,22 +328,21 @@ Result_t Handle_CAPI2_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, P
             
     }
     
-	memset(&data, 0, sizeof(SYS_ReqRep_t));
 	
 	if ( simMicroVolts > 0 )
 	{
-        int ret = regulator_set_voltage(sim_regulator,simMicroVolts,simMicroVolts);
+        int ret = regulator_set_voltage(curReg->handle,simMicroVolts,simMicroVolts);
         KRIL_DEBUG(DBG_ERROR," regulator_set_voltage returned %d\n", ret);
-        if ( regulator_is_enabled(sim_regulator) > 0 )
+        if ( regulator_is_enabled(curReg->handle) > 0 )
         {
             KRIL_DEBUG(DBG_ERROR," regulator already enabled \n");
         }
         else
         {
-            ret = regulator_enable(sim_regulator);
+            ret = regulator_enable(curReg->handle);
             KRIL_DEBUG(DBG_ERROR," regulator_enable returned %d\n", ret);
         }
-        gSimInited = TRUE;
+        curReg->isSimInit = TRUE;
 	}
 	//PMU_ActivateSIM(volt);
 

@@ -48,6 +48,8 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "auddrv_def.h"
+#include "drv_caph.h"
+
 
 #include "audio_controller.h"
 #include "audio_ddriver.h"

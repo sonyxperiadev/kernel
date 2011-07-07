@@ -60,6 +60,9 @@
 
 #if !defined(NO_PMU)
 #if defined(EXTERNAL_AMP_CONTROL)
+#ifdef CONFIG_AUDIO_BUILD
+#include "pmu.h"
+#endif
 #include "hal_pmu.h"
 #include "hal_pmu_private.h"
 #endif
@@ -69,13 +72,11 @@
 // Public Variable declarations
 //=============================================================================
 AUDDRV_SPKR_Enum_t voiceCallSpkr = AUDDRV_SPKR_NONE;
-
+extern AUDDRV_PathID_t telephonyPathID;
 //=============================================================================
 // Private Type and Constant declarations
 //=============================================================================
 
-static AUDDRV_MIC_Enum_t	GetDrvMic (AUDCTRL_MICROPHONE_t mic);
-static AUDDRV_SPKR_Enum_t   GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
 
 static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
 #if defined(USE_NEW_AUDIO_PARAM)
@@ -88,127 +89,25 @@ static AudioApp_t stAudioApp = AUDIO_APP_VOICE_CALL;
 //=============================================================================
 // Functions
 //=============================================================================
-
-//============================================================================
-//
-// Function Name: AUDCTRL_EnableTelephony
-//
-// Description:   Enable telephonly path, both ul and dl
-//
-//============================================================================
-void AUDCTRL_EnableTelephony(
-				AUDIO_HW_ID_t			ulSrc_not_used,
-				AUDIO_HW_ID_t			dlSink_not_used,
-				AUDCTRL_MICROPHONE_t	mic,
-				AUDCTRL_SPEAKER_t		speaker
-				)
-{
-	AUDDRV_MIC_Enum_t	micSel;
-	AUDDRV_SPKR_Enum_t	spkSel;
-	
-	// mic selection. 
-	micSel = GetDrvMic (mic);
-
-	// speaker selection. We hardcode headset,handset and loud speaker right now. 
-	// Later, need to provide a configurable table.
-	spkSel = GetDrvSpk (speaker);
-
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_EnableTelephony::  spkSel %d, micSel %d \n", spkSel, micSel );
-
-	if((mic == AUDCTRL_MIC_DIGI1) 
-	   || (mic == AUDCTRL_MIC_DIGI2) 
-	   || (mic == AUDCTRL_MIC_DIGI3) 
-	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
-	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))
-		
-	{
-		// Enable power to digital microphone
-		//powerOnDigitalMic(TRUE);
-	}	
-
-	// This function follows the sequence and enables DSP audio, HW input path and output path.
-	AUDDRV_Telephony_Init ( micSel, spkSel );
-	voiceCallSpkr = spkSel;
-
-	// in case it was muted from last voice call,
-	//AUDCTRL_SetTelephonySpkrMute (dlSink, speaker, FALSE); 
-	// in case it was muted from last voice call,
-	//AUDCTRL_SetTelephonyMicMute (ulSrc, mic, FALSE); 
-
-
-	OSTASK_Sleep( 100 );
-	
-	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
-
-#if defined(WIN32)
-	{
-		extern int modeVoiceCall;
-		if(!modeVoiceCall) 
-			modeVoiceCall=1;
-	} 
-#endif
-	return;
-}
-
-//EXPORT_SYMBOL(AUDCTRL_EnableTelephony);
-
-void AUDCTRL_RateChangeTelephony( void )
+void AUDCTRL_RateChangeTelephony( UInt32 sampleRate )
 {
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_RateChangeTelephony::  stAudioMode %d \n",stAudioMode);
 
 	AUDCTRL_SetAudioMode ( stAudioMode );
 
 	// This function follows the sequence and enables DSP audio, HW input path and output path.
-	AUDDRV_Telephony_RateChange();
+	AUDDRV_Telephony_RateChange(sampleRate);
 
 }
 
-//============================================================================
-//
-// Function Name: AUDCTRL_DisableTelephony
-//
-// Description:   disable telephony path, both dl and ul
-//
-//============================================================================
-void AUDCTRL_DisableTelephony(
-				AUDIO_HW_ID_t			ulSrc_not_used,
-				AUDIO_HW_ID_t			dlSink_not_used,
-				AUDCTRL_MICROPHONE_t	mic,
-				AUDCTRL_SPEAKER_t		speaker
-				)
+//=============================================================================
+// Functions
+//=============================================================================
+UInt32 AUDCTRL_RateGetTelephony()
 {
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_DisableTelephony \n" );
-
-	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, FALSE );
-	OSTASK_Sleep( 100 );
-
-	// The following is the sequence we need to follow
-	AUDDRV_Telephony_Deinit ();
-	voiceCallSpkr = AUDDRV_SPKR_NONE;
-	if((mic == AUDCTRL_MIC_DIGI1) 
-	   || (mic == AUDCTRL_MIC_DIGI2) 
-	   || (mic == AUDCTRL_MIC_DIGI3) 
-	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
-	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))
-	{
-		// Disable power to digital microphone
-		//powerOnDigitalMic(FALSE);
-	}	
-#if defined(WIN32)
-	{
-		extern int modeVoiceCall;
-		if(modeVoiceCall) 
-			modeVoiceCall=0;
-	} 
-#endif
-	return;
+	return AUDDRV_Telephone_GetSampleRate();
 }
 
-//EXPORT_SYMBOL(AUDCTRL_DisableTelephony);
 //============================================================================
 //
 // Function Name: AUDCTRL_SetTelephonyMicSpkr
@@ -226,17 +125,131 @@ void AUDCTRL_SetTelephonyMicSpkr(
 {
 	AUDDRV_MIC_Enum_t	micSel; 
 	AUDDRV_SPKR_Enum_t	spkSel;
+    AUDDRV_PathID_t myTelephonyPathID;
+	AUDCTRL_Config_t data;
 	
-	micSel = GetDrvMic (mic);
-	spkSel = GetDrvSpk (speaker);
+    memcpy(&myTelephonyPathID, &telephonyPathID, sizeof(AUDDRV_PathID_t));
+    memset(&data, 0, sizeof(AUDCTRL_Config_t));
+	micSel = AUDCTRL_GetDrvMic (mic);
+	spkSel = AUDCTRL_GetDrvSpk (speaker);
 
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonyMicSpkr::  spkSel %d, micSel %d \n", spkSel, micSel );
 
+#if defined(_ATHENA_)	
 	//driver needs to know mode!
 	if(stAudioMode == AUDIO_MODE_USB) AUDCTRL_SetAudioMode ( AUDIO_MODE_HANDSET ); //hw
 	else AUDCTRL_SetAudioMode ( stAudioMode );
+#else
+	AUDCTRL_SaveAudioModeFlag(stAudioMode);	
+#endif
+	AUDDRV_Telephony_SelectMicSpkr ( micSel, spkSel, 
+			(void*)(&myTelephonyPathID) );
+    if (telephonyPathID.dlPathID != myTelephonyPathID.dlPathID)
+    {
+        //Remove the old pathID from the table.
+  	    AUDCTRL_RemoveFromTable(telephonyPathID.dlPathID);
+        telephonyPathID.dlPathID = myTelephonyPathID.dlPathID;
+        if (telephonyPathID.dlPathID != 0)
+        {
+    	    //Save DL path to the path table.
+	        data.pathID = telephonyPathID.dlPathID;
+	        data.src = AUDIO_HW_NONE;
+	        data.sink = dlSink_not_used;
+   	        data.mic = AUDCTRL_MIC_UNDEFINED;
+	        data.spk = speaker;
+	        data.numCh = AUDIO_CHANNEL_NUM_NONE;
+	        data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+	        AUDCTRL_AddToTable(&data);
+        }
+    }
+    //If the pathID remains no changed, It may be caused by the CSL
+    //layer assigns the same PathID to this new path.
+    //So we need to compare the speaker of this new path with
+    //the speaker of the old path.
+    else
+    {
+        data = AUDCTRL_GetFromTable(myTelephonyPathID.dlPathID);
+	    if (speaker != data.spk)
+        {
+      	    AUDCTRL_RemoveFromTable(telephonyPathID.dlPathID);
+            telephonyPathID.dlPathID = myTelephonyPathID.dlPathID;
+            if (telephonyPathID.dlPathID != 0)
+            {
+    	        //Save DL path to the path table.
+	            data.pathID = telephonyPathID.dlPathID;
+	            data.src = AUDIO_HW_NONE;
+	            data.sink = dlSink_not_used;
+   	            data.mic = AUDCTRL_MIC_UNDEFINED;
+	            data.spk = speaker;
+	            data.numCh = AUDIO_CHANNEL_NUM_NONE;
+	            data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+	            AUDCTRL_AddToTable(&data);
+            }
+        }
+    }
+    if (telephonyPathID.ulPathID != myTelephonyPathID.ulPathID)
+    {
+        //Remove the old pathID from the table.
+  	    AUDCTRL_RemoveFromTable(telephonyPathID.ulPathID);
+        telephonyPathID.ulPathID = myTelephonyPathID.ulPathID;
+        if (telephonyPathID.ulPathID != 0)
+        {
+	        //Save UL path to the path table.
+    	    data.pathID = telephonyPathID.ulPathID;
+	        data.src = ulSrc_not_used;
+	        data.sink = AUDIO_HW_NONE;
+   	        data.mic = mic;
+	        data.spk = AUDCTRL_SPK_UNDEFINED;
+	        data.numCh = AUDIO_CHANNEL_NUM_NONE;
+	        data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+	        AUDCTRL_AddToTable(&data);
+        }
+    }
+    //If the pathID remains no changed, It may be caused by the CSL
+    //layer assigns the same PathID to this new path.
+    //So we need to compare the mic of this new path with
+    //the mic of the old path.
+    else
+    {
+        data = AUDCTRL_GetFromTable(myTelephonyPathID.ulPathID);
+	    if (mic != data.mic)
+        {
+   	        AUDCTRL_RemoveFromTable(telephonyPathID.ulPathID);
+            telephonyPathID.ulPathID = myTelephonyPathID.ulPathID;
+            if (telephonyPathID.ulPathID != 0)
+            {
+	            //Save UL path to the path table.
+    	        data.pathID = telephonyPathID.ulPathID;
+	            data.src = ulSrc_not_used;
+	            data.sink = AUDIO_HW_NONE;
+   	            data.mic = mic;
+	            data.spk = AUDCTRL_SPK_UNDEFINED;
+	            data.numCh = AUDIO_CHANNEL_NUM_NONE;
+	            data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+	            AUDCTRL_AddToTable(&data);
+            }
+        }
+    }
 
-	AUDDRV_Telephony_SelectMicSpkr ( micSel, spkSel );
+	if (telephonyPathID.ul2PathID != myTelephonyPathID.ul2PathID)
+    {
+        //Remove the old pathID from the table.
+  	    AUDCTRL_RemoveFromTable(telephonyPathID.ul2PathID);
+        telephonyPathID.ul2PathID = myTelephonyPathID.ul2PathID;
+        if (telephonyPathID.ul2PathID != 0)
+        {
+	        //Save UL path to the path table.
+            data.pathID = telephonyPathID.ul2PathID;
+	        data.src = ulSrc_not_used;
+	        data.sink = AUDIO_HW_NONE;
+    	    data.mic = AUDCTRL_MIC_NOISE_CANCEL;
+	        data.spk = AUDCTRL_SPK_UNDEFINED;
+	        data.numCh = AUDIO_CHANNEL_NUM_NONE;
+	        data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
+	        AUDCTRL_AddToTable(&data);
+        }
+    }
+
 	voiceCallSpkr = spkSel;
 	//need to think about better design!!  do mode switch after EC off, mic mute, etc.
 	if((mic == AUDCTRL_MIC_DIGI1) 
@@ -247,65 +260,22 @@ void AUDCTRL_SetTelephonyMicSpkr(
 	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))
 	{
+#ifdef CONFIG_AUDIO_BUILD
 		// Enable power to digital microphone
-		//powerOnDigitalMic(TRUE);
+		powerOnDigitalMic(TRUE);
+#endif	
 	}	
 	else
 	{
+#ifdef CONFIG_AUDIO_BUILD	
 		// Disable power to digital microphone
-		//powerOnDigitalMic(FALSE);
+		powerOnDigitalMic(FALSE);
+#endif
 	}	
 		
 	OSTASK_Sleep( 100 );  //depending on switch to headset or off of headset, PMU is first off or last on.
 	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
 }
-
-//============================================================================
-//
-// Function Name: AUDCTRL_SetTelephonySpkrMute
-//
-// Description:   mute/unmute the dl of telephony path
-//
-//============================================================================
-void AUDCTRL_SetTelephonySpkrMute(
-				AUDIO_HW_ID_t			dlSink_not_used,
-				AUDCTRL_SPEAKER_t		spk,
-				Boolean					mute
-				)
-{
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrMute: mute = 0x%x\n",  mute);
-#if defined(_ATHENA_) || defined(_RHEA_)
-	if(mute)
-		audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
-	else
-		audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkUnmute, 0, 0, 0, 0, 0);
-#endif
-}
-
-
-
-//============================================================================
-//
-// Function Name: AUDCTRL_SetTelephonyMicMute
-//
-// Description:   mute/unmute ul of telephony path
-//
-//============================================================================
-void AUDCTRL_SetTelephonyMicMute(
-				AUDIO_HW_ID_t			ulSrc_not_used,
-				AUDCTRL_MICROPHONE_t	mic,
-				Boolean					mute
-				)
-{
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonyMicMute: mute = 0x%x\n",  mute);
-#if defined(_ATHENA_) || defined(_RHEA_)
-	if(mute)
-		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
-	else
-		audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
-#endif
-}
-
 //============================================================================
 //
 // Function Name: AUDCTRL_SetAMRVolume_DL
@@ -410,7 +380,7 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 {
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d\n",  mode);
 	AUDCTRL_SaveAudioModeFlag( mode );
-	AUDDRV_SetAudioMode( mode );
+	AUDDRV_SetAudioMode( mode, AUDDRV_MIC1|AUDDRV_MIC2|AUDDRV_SPEAKER);
 }
 #endif
 
@@ -420,12 +390,12 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 
 //============================================================================
 //
-// Function Name: GetDrvMic
+// Function Name: AUDCTRL_GetDrvMic
 //
 // Description:   convert audio controller microphone enum to auddrv microphone enum
 //
 //============================================================================
-static AUDDRV_MIC_Enum_t GetDrvMic (AUDCTRL_MICROPHONE_t mic)
+AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic)
 {
 	AUDDRV_MIC_Enum_t micSel=AUDDRV_MIC_ANALOG_MAIN;
 
@@ -474,8 +444,13 @@ static AUDDRV_MIC_Enum_t GetDrvMic (AUDCTRL_MICROPHONE_t mic)
 			micSel = AUDDRV_MIC_USB_IF;
 			break;
 
+		case AUDCTRL_MIC_NOISE_CANCEL:
+			micSel = AUDDRV_MIC_NOISE_CANCEL;
+			break;
+
+
 		default:
-			Log_DebugPrintf(LOGID_AUDIO,"GetDrvMic: Unsupported microphpne type. mic = 0x%x\n", mic);
+			Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetDrvMic: Unsupported microphpne type. mic = 0x%x\n", mic);
 			break;
 	}
 
@@ -485,12 +460,12 @@ static AUDDRV_MIC_Enum_t GetDrvMic (AUDCTRL_MICROPHONE_t mic)
 
 //============================================================================
 //
-// Function Name: GetDrvSpk
+// Function Name: AUDCTRL_GetDrvSpk
 //
 // Description:   convert audio controller speaker enum to auddrv speaker enum
 //
 //============================================================================
-static AUDDRV_SPKR_Enum_t GetDrvSpk (AUDCTRL_SPEAKER_t speaker)
+AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker)
 {
 	AUDDRV_SPKR_Enum_t spkSel = AUDDRV_SPKR_NONE;
 

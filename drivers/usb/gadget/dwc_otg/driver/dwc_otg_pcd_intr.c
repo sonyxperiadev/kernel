@@ -588,6 +588,7 @@ void dwc_otg_pcd_stop(dwc_otg_pcd_t * pcd)
 	DWC_DEBUGPL(DBG_PCDV, "%s() \n", __func__);
 	/* don't disconnect drivers more than once */
 	if (pcd->ep0state == EP0_DISCONNECT) {
+		DWC_SPINUNLOCK(pcd->lock);
 		DWC_DEBUGPL(DBG_ANY, "%s() Already Disconnected\n", __func__);
 		return;
 	}
@@ -1451,7 +1452,7 @@ static inline void do_set_feature(dwc_otg_pcd_t * pcd)
 
 		default:
 			ep0_do_stall(pcd, -DWC_E_NOT_SUPPORTED);
-			break;
+			return;
 			
 		}
 		do_setup_in_status_phase(pcd);
@@ -1503,7 +1504,7 @@ static inline void do_clear_feature(dwc_otg_pcd_t * pcd)
 
 		default:
 			ep0_do_stall(pcd, -DWC_E_NOT_SUPPORTED);
-			break;
+			return;
 		}
 		do_setup_in_status_phase(pcd);
 		break;

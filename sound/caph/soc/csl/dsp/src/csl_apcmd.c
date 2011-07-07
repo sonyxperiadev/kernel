@@ -56,9 +56,8 @@
 *   @brief  This file contains AP command interface to DSP.
 *
 ****************************************************************************/
-
 #include "mobcom_types.h"
-#include "sharedmem.h"
+#include "shared.h"
 #include "csl_dsp.h"
 #include "csl_apcmd.h"
 
@@ -575,10 +574,12 @@ void VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(Boolean enable, Boolean interrupt_ena
 
   msg.cmd = VP_COMMAND_48KHZ_SPEAKER_OUTPUT_ENABLE;
   msg.arg0 = ( (UInt16)enable | ( ((UInt16)interrupt_enabled)<<1 ) | ( ((UInt16)stereo_enabled)<<2 ) );
+  msg.arg1 = 0;
+  msg.arg2 = 0;
+
   VPSHAREDMEM_PostCmdQ( &msg );
 
 }
-
 
 
 

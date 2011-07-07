@@ -34,6 +34,7 @@ struct bcm_otg_data {
 	struct bcm590xx *bcm590xx;
 	struct otg_transceiver xceiver;
 	bool host;
+	bool otg_init_done;
 	struct clk *otg_clk;
 	void *hsotg_ctrl_base;
 };
@@ -150,6 +151,7 @@ static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcm_otg_host_show,
 
 static int __devinit bcm_otg_probe(struct platform_device *pdev)
 {
+	int error = 0;
 	struct bcm_otg_data *otg_data;
 	struct bcm590xx *bcm590xx = dev_get_drvdata(pdev->dev.parent);
 
@@ -186,12 +188,22 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, otg_data);
 
-	if (device_create_file(&pdev->dev, &dev_attr_host))
+	error = device_create_file(&pdev->dev, &dev_attr_host);
+
+	if (error)
+	{
 		dev_warn(&pdev->dev, "Failed to create HOST file\n");
+		goto Error_bcm_otg_probe;
+	}
 
 	dev_info(&pdev->dev, "Probing successful\n");
-
 	return 0;
+
+Error_bcm_otg_probe:
+	iounmap(otg_data->hsotg_ctrl_base);
+	clk_put(otg_data->otg_clk);
+	kfree(otg_data);
+	return error;
 }
 
 static int __exit bcm_otg_remove(struct platform_device *pdev)
@@ -199,6 +211,7 @@ static int __exit bcm_otg_remove(struct platform_device *pdev)
 	struct bcm_otg_data *otg_data = platform_get_drvdata(pdev);
 
 	device_remove_file(otg_data->dev, &dev_attr_host);
+
 	iounmap(otg_data->hsotg_ctrl_base);
 	clk_put(otg_data->otg_clk);
 	kfree(otg_data);

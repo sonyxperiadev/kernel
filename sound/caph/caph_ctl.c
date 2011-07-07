@@ -45,16 +45,15 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
-
-
 #include "mobcom_types.h"
 #include "auddrv_def.h"
 #include "audio_consts.h"
 #include "audio_ddriver.h"
+#include "drv_caph.h"
+
 #include "audio_controller.h"
 #include "bcm_audio_devices.h"
 #include "caph_common.h"
-
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
@@ -173,7 +172,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[0] = %ld, pVolume[0] =%ld, pVolume[1]=%ld\n", pCurSel[0],pVolume[0],pVolume[1]);
 
 			//call audio driver to set gain/volume				
-			AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,pCurSel[0],pVolume[0]); //UL
+					AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_MAIN,pVolume[1],AUDIO_GAIN_FORMAT_Q13_2); //record gain
 			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,	pCurSel[1], pVolume[1], AUDIO_GAIN_FORMAT_Q13_2);//DL
 		}
 		break;
@@ -502,6 +501,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int function = FUNC_OF_CTL(priv);
+	int	stream = STREAM_OF_CTL(priv);
 
 	switch(function)
 	{
@@ -515,9 +515,10 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
 			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[0]; 
-			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[1]; 
+			ucontrol->value.integer.value[1] = pChip->iMutePhoneCall[1]; 
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			ucontrol->value.integer.value[0] = pChip->pi32SpeechMixOption[stream-1]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
@@ -543,6 +544,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	int priv = kcontrol->private_value;
 	int function = priv&0xFF;
 	Int32	*pSel;
+	int	stream = STREAM_OF_CTL(priv);
 
 
 	switch(function)
@@ -599,6 +601,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			pChip->pi32SpeechMixOption[stream-1] = ucontrol->value.integer.value[0]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;

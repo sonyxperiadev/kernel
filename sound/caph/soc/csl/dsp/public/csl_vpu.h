@@ -73,6 +73,15 @@
 //*********************************************************************
 /**
 *
+*   CSL_VPU_Enable enables VPU interface.
+*
+* 
+**********************************************************************/
+void CSL_VPU_Enable(void);
+
+//*********************************************************************
+/**
+*
 *   CSL_VPU_Init initializes VPU interface.
 *
 *   @param    speechMode			(in)	speech mode (codec and sample rate)
@@ -136,6 +145,26 @@ UInt32 CSL_VPU_ReadAMRNB(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex);
 *
 **********************************************************************/
 UInt32 CSL_VPU_WriteAMRNB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, VP_Speech_Mode_t speechMode, UInt32 numFramesPerInterrupt);
+
+//*********************************************************************
+/**
+*
+*   CSL_SetDlSpeechRecGain sets DL Speech Record gain.
+*
+*   @param    mBGain				(in)	gain in millibels (min = -8430 millibel, max = 600 millibel)
+*   @return   Boolean				TRUE if value is out of limits
+* 
+**********************************************************************/
+Boolean CSL_SetDlSpeechRecGain(Int16 mBGain);
+
+//*********************************************************************
+/**
+*
+*   CSL_MuteDlSpeechRec mutes DL Speech Record 
+*
+* 
+**********************************************************************/
+void CSL_MuteDlSpeechRec(void);
 
 //*********************************************************************
 /**

@@ -18,6 +18,8 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 
+#include "xassert.h"
+#include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
 #include "brcm_rdb_audioh.h"
@@ -119,12 +121,12 @@ cVoid chal_audio_nvinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 disable)
 
     if(disable&CHAL_AUDIO_CHANNEL_LEFT)
     {
-       reg_val &= ~(AUDIOH_ADC_CTL_DMIC1_EN_MASK);
+       reg_val &= ~(AUDIOH_ADC_CTL_DMIC3_EN_MASK);
     }
 
     if(disable&CHAL_AUDIO_CHANNEL_RIGHT)
     {
-       reg_val &= ~(AUDIOH_ADC_CTL_DMIC2_EN_MASK);
+       reg_val &= ~(AUDIOH_ADC_CTL_DMIC4_EN_MASK);
     }
 
     /* Set the required setting */
@@ -135,6 +137,29 @@ cVoid chal_audio_nvinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 disable)
 }
 
 
+//============================================================================
+//
+// Function Name: UInt8 chal_audio_nvinpath_digi_mic_enable_read(
+// 					CHAL_HANDLE handle)
+//
+// Description:  Get the digital microphone enable status
+//
+// Parameters:   handle      : the voice input path handle.
+// Return:       status        : bit0 - digital microphone 3
+//                             : bit1 - digital microphone 4
+//============================================================================
+UInt8 chal_audio_nvinpath_digi_mic_enable_read(CHAL_HANDLE handle)
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    cUInt32 reg_val = 0x0;
+
+    reg_val = BRCM_READ_REG(base, AUDIOH_ADC_CTL);
+
+    reg_val &= AUDIOH_ADC_CTL_DMIC3_EN_MASK|AUDIOH_ADC_CTL_DMIC4_EN_MASK;
+    reg_val >>= AUDIOH_ADC_CTL_DMIC3_EN_SHIFT;
+
+    return (UInt8) reg_val;
+}
 //============================================================================
 //
 // Function Name: cVoid chal_audio_nvinpath_int_enable(CHAL_HANDLE handle,
@@ -701,9 +726,9 @@ cVoid chal_audio_nvinpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean
 
 //============================================================================
 //
-// Function Name: cVoid chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,UInt32 dmic3_scale, UInt32 dmic4_scale)
+// Function Name: cVoid chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,  UInt32 dmic3_coarse_scale, UInt32 dmic3_fine_scale, UInt32 dmic4_coarse_scale, UInt32 dmic4_fine_scale)
 //
-// Description:  Set the CIC fine scale for the Digital MIC 3 & 4
+// Description:  Set the CIC coarse/fine scale for the Digital MIC 3 & 4
 //
 // Parameters:   handle  the noise voice input path handle.
 //
@@ -711,16 +736,85 @@ cVoid chal_audio_nvinpath_int_clear(CHAL_HANDLE handle, Boolean thr_int, Boolean
 //
 //============================================================================
 
-cVoid chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle, UInt32 dmic3_scale, UInt32 dmic4_scale)
+cVoid chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,  UInt32 dmic3_coarse_scale, UInt32 dmic3_fine_scale, UInt32 dmic4_coarse_scale, UInt32 dmic4_fine_scale)
 {
-    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
 
-    dmic3_scale &= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_MASK|AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_MASK);
-    dmic4_scale <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_SHIFT);
-    dmic4_scale &= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_MASK|AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_MASK);
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    UInt32 value = 0;
+    // Read VIN path FIFO status
+    value = BRCM_READ_REG(base, AUDIOH_NVIN_FILTER_CTRL);
+
+    value &= ~(AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_MASK|AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_MASK|AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_MASK|AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_MASK);
+    dmic3_coarse_scale <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_SHIFT);
+    dmic3_fine_scale <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_SHIFT);
+    dmic4_coarse_scale <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_SHIFT);
+    dmic4_fine_scale <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_SHIFT);
+    value |= (dmic3_coarse_scale|dmic3_fine_scale|dmic4_coarse_scale|dmic4_fine_scale);
 
     /* Set the required setting */
-    BRCM_WRITE_REG(base,  AUDIOH_NVIN_FILTER_CTRL, (dmic4_scale|dmic3_scale));
+    BRCM_WRITE_REG(base,  AUDIOH_NVIN_FILTER_CTRL, value);
+
+    return;
+}
+
+
+//============================================================================
+//
+// Function Name: cVoid chal_audio_nvinpath_set_each_cic_scale(
+// 				CHAL_HANDLE handle, 
+// 				CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
+// 				UInt32 gain)
+//
+// Description:  Set the each CIC coarse/fine scale for the Digital MIC 3 & 4
+// 
+// Parameters:   handle  the voice input path handle.
+//               micGainSelect  the exact mic gain
+//               gain  the gain
+//
+// Return:       None.
+//
+//============================================================================
+
+cVoid chal_audio_nvinpath_set_each_cic_scale(CHAL_HANDLE handle, 
+		CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
+		UInt32 gain) 
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    UInt32 value = 0;
+    // Read VIN path FIFO status
+    value = BRCM_READ_REG(base, AUDIOH_NVIN_FILTER_CTRL);
+    switch(micGainSelect)
+    {
+        case CAPH_AUDIOH_MIC3_COARSE_GAIN:
+            value &= ~(AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_MASK);
+            gain <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_BIT_SEL_SHIFT);
+            value |= gain;
+	    break;
+
+        case CAPH_AUDIOH_MIC3_FINE_GAIN:
+            value &= ~(AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_MASK);
+            gain <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC3_CIC_FINE_SCL_SHIFT);
+            value |= gain;
+	    break;
+
+        case CAPH_AUDIOH_MIC4_COARSE_GAIN:
+            value &= ~(AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_MASK);
+            gain <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_BIT_SEL_SHIFT);
+            value |= gain;
+	    break;
+
+        case CAPH_AUDIOH_MIC4_FINE_GAIN:
+            value &= ~(AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_MASK);
+            gain <<= (AUDIOH_NVIN_FILTER_CTRL_DMIC4_CIC_FINE_SCL_SHIFT);
+            value |= gain;
+	    break;
+	    
+	default:
+	    xassert(0, micGainSelect);
+    }
+	    
+    /* Set the required setting */
+    BRCM_WRITE_REG(base,  AUDIOH_NVIN_FILTER_CTRL, value);
 
     return;
 }

@@ -31,7 +31,6 @@ Broadcom's express prior written consent.
 #include "osheap.h"	
 #include "log.h"
 #include "xassert.h"
-#include "assert.h"
 #include "csl_aud_queue.h"
 
 //#define _DBG_(a)

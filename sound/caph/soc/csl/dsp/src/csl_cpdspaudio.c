@@ -64,7 +64,6 @@
 #include "log.h"
 #include "shared.h"
 #include "shared_cp.h"
-#include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
 #include "memmap.h"
 #include "csl_cpdspaudio.h"
@@ -113,6 +112,28 @@ void CSL_INITCOMP_UlFilter( UlCompfilter_t *Compfilter, UInt16 Nstage)
 
 	cp_shared_mem->shared_ul_nstage_filter = Compfilter->ul_nstage_filter;
 
+// Reformat
+
+cp_shared_mem->shared_ul_output_bit_select_8k = 57-cp_shared_mem->shared_ul_output_bit_select_8k-16;
+cp_shared_mem->shared_ul_output_bit_select_16k = 57-cp_shared_mem->shared_ul_output_bit_select_16k-16;
+
+for(i = 0; i <12; i++)
+   {
+	if(cp_shared_mem->shared_ul_comp_filter_gain_8k[i] >15)
+	 cp_shared_mem->shared_ul_comp_filter_gain_8k[i] = (15-cp_shared_mem->shared_ul_comp_filter_gain_8k[i]);
+		   
+	if(cp_shared_mem->shared_ul_comp_filter_gain_16k[i] >15)
+	 cp_shared_mem->shared_ul_comp_filter_gain_16k[i] = (15-cp_shared_mem->shared_ul_comp_filter_gain_16k[i]);
+
+}
+
+
+
+
+
+
+	
+
 }
 
 
@@ -134,7 +155,7 @@ void CSL_INITCOMP_UlAuxFilter( UlAuxCompfilter_t *Compfilter, UInt16 Nstage)
  for( i = 0; i < Nstage; i++)
 	 cp_shared_mem->shared_ul_Auxcomp_filter_gain_8k[i] = Compfilter->ul_Auxcomp_filter_gain_8k[i];
  
- 	cp_shared_mem->shared_ul_Auxoutput_bit_select_8k = -Compfilter->ul_Auxoutput_bit_select_8k;
+ 	cp_shared_mem->shared_ul_Auxoutput_bit_select_8k = Compfilter->ul_Auxoutput_bit_select_8k;
 
 
 
@@ -155,6 +176,20 @@ void CSL_INITCOMP_UlAuxFilter( UlAuxCompfilter_t *Compfilter, UInt16 Nstage)
 
 
 	cp_shared_mem->shared_ul_Auxnstage_filter = Compfilter->ul_Auxnstage_filter;
+
+cp_shared_mem->shared_ul_Auxoutput_bit_select_8k = 57-cp_shared_mem->shared_ul_Auxoutput_bit_select_8k-16;
+cp_shared_mem->shared_ul_Auxoutput_bit_select_16k = 57-cp_shared_mem->shared_ul_Auxoutput_bit_select_16k-16;
+
+for(i = 0; i <12; i++)
+   {
+
+	if(cp_shared_mem->shared_ul_Auxcomp_filter_gain_8k[i] >15)
+	 cp_shared_mem->shared_ul_Auxcomp_filter_gain_8k[i] = (15-cp_shared_mem->shared_ul_Auxcomp_filter_gain_8k[i]);
+		   
+	if(cp_shared_mem->shared_ul_Auxcomp_filter_gain_16k[i] >15)
+	 cp_shared_mem->shared_ul_Auxcomp_filter_gain_16k[i] = (15-cp_shared_mem->shared_ul_Auxcomp_filter_gain_16k[i]);
+
+}
 
 
 
@@ -205,6 +240,20 @@ void CSL_INITCOMP_DlFilter( DlCompfilter_t *Compfilter, UInt16 Nstage)
 	cp_shared_mem->shared_dl_nstage_filter = Compfilter->dl_nstage_filter;
 
 
+cp_shared_mem->shared_dl_output_bit_select_8k = 57-cp_shared_mem->shared_dl_output_bit_select_8k-16;
+cp_shared_mem->shared_dl_output_bit_select_16k = 57-cp_shared_mem->shared_dl_output_bit_select_16k-16;
+
+
+
+for(i = 0; i <12; i++)
+   {
+	if(cp_shared_mem->shared_dl_comp_filter_gain_8k[i] >15)
+	 cp_shared_mem->shared_dl_comp_filter_gain_8k[i] = (15-cp_shared_mem->shared_dl_comp_filter_gain_8k[i]);
+		   
+	if(cp_shared_mem->shared_dl_comp_filter_gain_16k[i] >15)
+	 cp_shared_mem->shared_dl_comp_filter_gain_16k[i] = (15-cp_shared_mem->shared_dl_comp_filter_gain_16k[i]);
+
+   }
 
 
 

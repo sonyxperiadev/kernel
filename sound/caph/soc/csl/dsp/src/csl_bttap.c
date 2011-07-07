@@ -56,14 +56,13 @@
 *   @brief  This file contains CSL (DSP) API to BT TAP interface
 *
 ****************************************************************************/
-
 #include <string.h>
 #include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
 #include "csl_bttap.h"
 
-extern VPSharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t	*vp_shared_mem;
 
 //*********************************************************************
 /**

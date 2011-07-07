@@ -56,17 +56,13 @@
 *   @brief  This file contains CSL (DSP) API to audio logging interface
 *
 ****************************************************************************/
-
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
 #include "resultcode.h"
 #include "csl_log.h"
 
-#include "log.h"
-
-extern VPSharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t	*vp_shared_mem;
 
 
 
@@ -77,7 +73,6 @@ extern VPSharedMem_t	*vp_shared_mem;
 * 
 *   @param    streamNumber	(in)	stream number 1:4
 *   @param    controlInfo	(in)	control information
-*   @return   Result_t 				RESULT_OK or RESULT_ERROR
 *
 **********************************************************************/
 Result_t CSL_LOG_Start(UInt16 streamNumber, UInt16 controlInfo)
@@ -123,8 +118,6 @@ Result_t CSL_LOG_Start(UInt16 streamNumber, UInt16 controlInfo)
 *   CSL_LOG_Start stops audio logging for specified stream.
 * 
 *   @param    streamNumber	(in)	stream number 1:4
-*   @param    flag	(out)	shut down information
-*   @return   Result_t 				RESULT_OK or RESULT_ERROR
 *
 **********************************************************************/
 Result_t CSL_LOG_Stop(UInt16 streamNumber, UInt8 *flag)

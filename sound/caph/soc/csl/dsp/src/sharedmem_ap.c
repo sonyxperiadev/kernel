@@ -621,7 +621,7 @@ void SHAREDMEM_WriteDL_VoIP_Data(UInt16 codec_type, UInt16 *pSrc)
 	UInt16 data_len = 0;
 
 	index = (codec_type & 0xf000) >> 12;
-	if (index > 6)
+	if (index >= 6)
 	{
   		Log_DebugPrintf( LOGID_SOC_AUDIO,"=====SHAREDMEM_WriteUL_VoIP_Data, invalid codec type!!!\r\n");
 	}
@@ -649,7 +649,7 @@ UInt8 SHAREDMEM_ReadUL_VoIP_Data(UInt16 codec_type, UInt16 *pDst)
 	UInt16 data_len = 0;
 
 	index = (codec_type & 0xf000) >> 12;
-	if (index > 6)
+	if (index >= 6)
 	{
   		Log_DebugPrintf( LOGID_SOC_AUDIO,"=====SHAREDMEM_ReadUL_VoIP_Data, invalid codec type!!!\r\n");
 	}

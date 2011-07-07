@@ -118,6 +118,7 @@ Result_t AUDDRV_VoiceRender_SetTransferParameters(
 *	@param	samplingRate	the PCM data sampling rate
 *	@param	speedMode	specify the voice data encoding format
 *	@param	dataRateSelection	specify the bitrate of the encoded voice data
+*	@param	numChannels		specify the number of channels
 *	@return	Result_t
 *	@note	
 **************************************************************************/
@@ -127,8 +128,9 @@ Result_t AUDDRV_VoiceRender_SetConfig(
 						VORENDER_VOICE_MIX_MODE_t   mixMode,
 						AUDIO_SAMPLING_RATE_t		samplingRate,
 						UInt32						speechMode, // used by AMRNB and AMRWB     
-						UInt32						dataRateSelection // used by AMRNB and AMRWB
-					);
+						UInt32						dataRateSelection, // used by AMRNB and AMRWB
+						AUDIO_CHANNEL_NUM_t			numChannels
+						);
 
 
 
@@ -223,9 +225,9 @@ Result_t AUDDRV_VoiceRender_FlushBuffer(VORENDER_TYPE_t      type);
 **************************************************************************/
 UInt32 AUDDRV_VoiceRender_GetQueueLoad(VORENDER_TYPE_t      type);
 
-void ARM2SP_Render_Request(VPStatQ_t reqMsg);
-void ARM2SP2_Render_Request(VPStatQ_t reqMsg);
-void AMRWB_Render_Request(VPStatQ_t reqMsg);
+void ARM2SP_Render_Request(UInt16 bufferPosition);
+void ARM2SP2_Render_Request(UInt16 bufferPosition);
+void AMRWB_Render_Request(UInt16 status, UInt16 dsp_read_index, UInt16 dsp_write_index);
 
 #ifdef __cplusplus
 }

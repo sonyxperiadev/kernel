@@ -43,6 +43,7 @@
 #define SYSCFG_BASE_ADDR      0x08880000      /* SYSCFG core */
 #include "shared.h"
 #include "dspcmd.h"
+
 #include "ripisr.h"
 #include "audio_consts.h"
 //#include "ripcmdq.h"
@@ -53,31 +54,20 @@
 //#include "ostask.h"
 #include "audioapi_asic.h"
 #include "log.h"
-
-/**
-*
-* @addtogroup AudioDriverGroup
-* @{
-*/
-//=============================================================================
-// Public Variable declarations
-//=============================================================================
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR) && defined(IPC_AUDIO))
-extern void CP_Audio_ISR_Handler(StatQ_t status_msg);
-#else
-extern void AP_Audio_ISR_Handler(StatQ_t status_msg);
+#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
+#include "csl_dsp.h"
 #endif
 
-#if !(defined(FUSE_APPS_PROCESSOR) && (defined(IPC_FOR_BSP_ONLY) || defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)))
-#else
-extern void IPC_Audio_Create_BufferPool( void );
-#endif
-
-#ifdef VPU_INCLUDED
-#if !(defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR) )
-extern void AP_VPU_ProcessStatus( void );
-#endif
-#endif
+extern void VPU_Capture_Request(UInt16 bufferIndex);
+extern void VPU_Render_Request(UInt16 bufferIndex);
+extern Result_t AUDDRV_USB_HandleDSPInt(UInt16 arg0, UInt16 inBuf, UInt16 outBuf);
+extern void VOIF_ISR_Handler (UInt32 bufferIndex, UInt32 samplingRate);
+extern void ARM2SP_Render_Request(UInt16 bufferPosition);
+extern void ARM2SP2_Render_Request(UInt16 bufferPosition);
+extern void AP_ProcessStatusMainAMRDone(UInt16 codecType);
+extern void VOIP_ProcessVOIPDLDone(void);
+extern void AUDDRV_User_HandleDSPInt(UInt32 param1, UInt32 param2, UInt32 param3);
+extern void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
 
 extern AUDDRV_MIC_Enum_t   currVoiceMic;   //used in pcm i/f control. assume one mic, one spkr.
 extern AUDDRV_SPKR_Enum_t  currVoiceSpkr;  //used in pcm i/f control. assume one mic, one spkr.
@@ -89,6 +79,7 @@ extern Boolean inVoiceCall;
 Boolean voicePlayOutpathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN
 Boolean controlFlagForCustomGain = FALSE;
 
+static UInt32 voiceCallSampleRate = 8000;  // defalut to 8K Hz
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -118,43 +109,65 @@ void AUDDRV_Init( void )
 
 #if defined(FUSE_APPS_PROCESSOR)
 
-	// create the IPC here because it will take some time. Otherwise, the first IPC message will take long time.
-	//IPC_Audio_Create_BufferPool();
-
-	RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &AP_Audio_ISR_Handler );  
-#ifdef VPU_INCLUDED
-	RIPISR_Register_VPU_ProcessStatus( (VPU_ProcessStatus_t) &AP_VPU_ProcessStatus );   
+	/* register DSP VPU status processing handlers */
+#ifndef _SAMOA_
+	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
+	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
+#endif	
+#ifdef CONFIG_AUDIO_BUILD
+	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
+	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_ISR_Handler);
+	CSL_RegisterVoIPStatusHandler((VoIPStatusCB_t)&VOIP_ProcessVOIPDLDone);
+	CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);
+#endif	
+#ifndef _SAMOA_
+	CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);
+	CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);
 #endif
+#if defined(ENABLE_SPKPROT)
+	CSL_RegisterUserStatusHandler((UserStatusCB_t)&AUDDRV_User_HandleDSPInt);
+#endif
+	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
 
 	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
 	AUDDRV_RegisterCB_setAudioMode( (CB_SetAudioMode_t) &AUDDRV_SetAudioMode );
 	AUDDRV_RegisterCB_setMusicMode( (CB_SetMusicMode_t) &AUDDRV_SetMusicMode );
 
-	// Add for linux
 	Audio_InitRpc();
 
 #else  //#if defined(FUSE_APPS_PROCESSOR)
 
 
 #if !defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-		// ATHENA_EDGE_CP_STANDALONE build
-	RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &AP_Audio_ISR_Handler );  
-	#ifdef VPU_INCLUDED
-	RIPISR_Register_VPU_ProcessStatus( (VPU_ProcessStatus_t) &AP_VPU_ProcessStatus );  
-	#endif
-
 	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
 	AUDDRV_RegisterCB_setAudioMode( (CB_SetAudioMode_t) &AUDDRV_SetAudioMode );
 	AUDDRV_RegisterCB_setMusicMode( (CB_SetMusicMode_t) &AUDDRV_SetMusicMode );
-
-#else
-	//RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &CP_Audio_ISR_Handler );
-
 #endif
 
 #endif	
 }
 
+
+//*********************************************************************
+//
+//   Shutdown audio driver task
+//   
+//   @return    void
+//   @note                        
+//**********************************************************************/
+void AUDDRV_Shutdown(void)
+{  
+#if 0 
+    if (sAudDrv.isRunning == FALSE)
+        return;
+
+    OSTASK_Destroy(sAudDrv.task);
+
+    OSQUEUE_Destroy(sAudDrv.msgQueue);
+
+    sAudDrv.isRunning = FALSE;
+#endif
+}
 
 // CSL driver will send a DSP_ENABLE_DIGITAL_SOUND?? cmd to DSP, 
 // But ARM code (audio controller) turns on/off PCM interface.
@@ -169,12 +182,15 @@ void AUDDRV_Init( void )
 
 //Prepare DSP before turn on hardware audio path for voice call.
 //  This is part of the control sequence for starting telephony audio.
-void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic, AUDDRV_SPKR_Enum_t speaker )
+void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic, 
+		AUDDRV_SPKR_Enum_t speaker,
+	        void *pData)
 {
 	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_Init");
 
 	currVoiceMic = mic;
 	currVoiceSpkr = speaker;
+	pData = pData;
 
 #if defined(FUSE_APPS_PROCESSOR)&&!defined(BSP_ONLY_BUILD)
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_Init AP  mic %d, spkr %d *\n\r", mic, speaker);
@@ -197,9 +213,15 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic, AUDDRV_SPKR_Enum_t speaker 
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
 	
 	if( AUDDRV_GetAudioMode() >= AUDIO_MODE_NUMBER )
-		AUDDRV_Telephony_InitHW ( mic, speaker, AUDIO_SAMPLING_RATE_16000 );
+		AUDDRV_Telephony_InitHW ( mic, 
+				speaker, 
+				AUDIO_SAMPLING_RATE_16000,
+			      	pData);
 	else
-		AUDDRV_Telephony_InitHW ( mic, speaker, AUDIO_SAMPLING_RATE_8000 );
+		AUDDRV_Telephony_InitHW ( mic, 
+				speaker, 
+				AUDIO_SAMPLING_RATE_8000,
+			       	pData);
 
 	//after AUDDRV_Telephony_InitHW to make SRST.
 	AUDDRV_SetVCflag(TRUE);  //let HW control logic know.
@@ -243,7 +265,7 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic, AUDDRV_SPKR_Enum_t speaker 
 //
 //=============================================================================
 
-void AUDDRV_Telephony_RateChange( void )
+void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 {
 	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_RateChange");
 
@@ -252,6 +274,8 @@ void AUDDRV_Telephony_RateChange( void )
 #else
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_RateChange CP *\n\r");
 #endif
+
+	voiceCallSampleRate = sampleRate;  //remember the rate for current call. (or for the incoming call in ring state.)
 
 	if ( AUDDRV_GetVCflag() )
 	{
@@ -264,7 +288,7 @@ void AUDDRV_Telephony_RateChange( void )
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
 	//need to know the mode!  need to set HW to 16Khz.
-	AUDDRV_SetAudioMode( AUDDRV_GetAudioMode());
+	AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), 0);
 
 	//AUDDRV_Enable_Output (AUDDRV_VOICE_OUTPUT, speaker, TRUE, AUDIO_SAMPLING_RATE_8000);
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
@@ -285,6 +309,19 @@ void AUDDRV_Telephony_RateChange( void )
 	return;
 }
 
+
+//=============================================================================
+//
+// Function Name: AUDDRV_Telephone_GetSampleRate
+//
+// Description:   Get the sample rate for voice call
+//
+//=============================================================================
+UInt32 AUDDRV_Telephone_GetSampleRate()
+{
+	return voiceCallSampleRate;
+}
+
 //=============================================================================
 //
 // Function Name: AUDDRV_Telephony_Deinit
@@ -295,7 +332,7 @@ void AUDDRV_Telephony_RateChange( void )
 
 //Prepare DSP before turn off hardware audio path for voice call. 
 // This is part of the control sequence for ending telephony audio.
-void AUDDRV_Telephony_Deinit (void )
+void AUDDRV_Telephony_Deinit (void *pData)
 {
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_Deinit voicePlayOutpathEnabled = %d*\n\r", voicePlayOutpathEnabled);
 	
@@ -319,7 +356,7 @@ void AUDDRV_Telephony_Deinit (void )
 
 		OSTASK_Sleep( 3 ); //make sure audio is off
 
-		AUDDRV_Telephony_DeinitHW( );
+		AUDDRV_Telephony_DeinitHW(pData);
 	}
 
 	if (AUDIO_CHNL_BLUETOOTH == AUDDRV_GetAudioMode() )

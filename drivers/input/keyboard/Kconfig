@@ -12,6 +12,12 @@ menuconfig INPUT_KEYBOARD
 
 if INPUT_KEYBOARD
 
+config KEYBOARD_KONA
+	tristate "KONA Keypad"
+	default n
+	help
+	  Say Y to enable the KONA keypad driver
+
 config KEYBOARD_AAED2000
 	tristate "AAED-2000 keyboard"
 	depends on MACH_AAED2000

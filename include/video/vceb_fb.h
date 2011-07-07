@@ -1,5 +1,22 @@
+/*****************************************************************************
+* Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
+*****************************************************************************/
+
 #ifndef VCEB_FB_H_
 #define VCEB_FB_H_
+
+#include <linux/fb.h>   // for struct fb_info
+#include "vceb.h"
 
 enum vcebfb_display_type {
 	VCEB_DISPLAY_TYPE_3_2 = 0,
@@ -18,42 +35,16 @@ struct vcebfb_platform_data {
 
 
 /*
- * enum of the RGB buffer formats supported
+ * When we allocate a resource on the videocore, it takes the width and height 
+ * that we pass in and rounds them up to the next multiple of 16 (at least 
+ * for the 16-bit and 32-bit formats that we use). 
+ *  
+ * In order for the data we send down via vc_dispmanx_resource_write_data 
+ * to be compatible, we need to round up our dimentions to the next multiple 
+ * of 16. 
  */
-typedef enum
-{
-   VCEB_RBG_FORMAT_MIN = 0,
 
-   //Note - all RGB formats are descibed in little endian
-   //where n[0] is the lowest physical address
-   VCEB_RBG_FORMAT_RGB565, //R[0], G[1+0], B[1]
-   VCEB_RBG_FORMAT_RGB888, //R[0], G[1], B[2]
-   VCEB_RBG_FORMAT_RGBA8888, //R[0], G[1], B[2], A[3]
-   VCEB_RBG_FORMAT_BGRA8888, //R[0], G[1], B[2], A[3]
-
-   VCEB_RBG_FORMAT_MAX
-   
-} VCEB_RBG_FORMAT_T;
-
-//alignment options for putting the overlay on the screen
-typedef enum
-{
-   VCEB_ALIGN_MIN = 0,
-
-   VCEB_ALIGN_CENTRE,
-   VCEB_ALIGN_STRETCH_FULLSCREEN,
-   VCEB_ALIGN_BOTTOM_RIGHT,
-
-   VCEB_ALIGN_MAX
-   
-} VCEB_ALIGN_T;
-
-extern int32_t vceb_framebuffer_overlay_set(const void * const data,
-					const VCEB_RBG_FORMAT_T rbg_format,
-					const uint32_t transparent_colour,
-					const uint16_t width,
-					const uint16_t height,
-					const VCEB_ALIGN_T alignment);
+#define VCEB_ROUND_UP_WH(wh)  (((wh) + 15) & ~15)
 
 /*
  * function to register a callback that fires whenever
@@ -77,14 +68,22 @@ extern int vceb_fb_register_callbacks(uint32_t screen, struct vmcs_fb_ops *ops,
 
 extern void vceb_fb_bus_connected(uint32_t keep_vmcs_res);
 
-extern int32_t vceb_initialise(const uint32_t noreset);
+#if ( defined(CONFIG_PM) && !defined(CONFIG_ANDROID_POWER) )
 
 /*
-extern int32_t vceb_initialise(const uint32_t noreset,
-				enum vcebfb_display_type display_type,
-				enum vcebfb_gpmc_address gpmc_address);
-*/
+ * The following are used for suspend/resume on non-Androind platforms
+ */
 
-extern int32_t vceb_framebuffer_overlay_enable(const uint32_t enable);
+typedef int (*VCEB_FB_VCHIQ_SUSPEND_CB_T)(void);
+typedef int (*VCEB_FB_VCHIQ_RESUME_CB_T)(void);
+
+extern int32_t vceb_fb_register_vchiq_suspend_cb(VCEB_FB_VCHIQ_SUSPEND_CB_T callback);
+extern int32_t vceb_fb_register_vchiq_resume_cb(VCEB_FB_VCHIQ_RESUME_CB_T callback);
+
+#endif
+
+#if defined( CONFIG_FB_VCEB_USE_BOOTMEMHEAP )
+extern size_t vceb_bootmemheap_calc_fb_mem( void );
+#endif
 
 #endif /* VCEB_FB_H_ */
