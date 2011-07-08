@@ -53,7 +53,7 @@
 #define MEM_DESC(va, sz) { .virtual = va, \
                           .pfn = __phys_to_pfn(HW_IO_VIRT_TO_PHYS(va)), \
                           .length = sz, \
-                          .type = MT_MEMORY }
+                          .type = MT_MEMORY_NONCACHED }
 
 
 static struct map_desc island_io_desc[] __initdata =
@@ -109,15 +109,13 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_SPUM_APB_NS_VA, SZ_4K ),
 	IO_DESC( KONA_SPUM_APB_S_VA, SZ_4K ),
 
-
-    /*
-     * See include/mach/aram_layout.h for SRAM layout. 
-     * PM requires its portion to be MEM_DESC, and VC requires 
-     * its portion to be IO_DESC. 
-     */
-
-    MEM_DESC( BCMHANA_ARAM_PM_START, BCMHANA_ARAM_PM_MM_SIZE ), /*  32K */
-    IO_DESC(  BCMHANA_ARAM_VC_START, BCMHANA_ARAM_VC_MM_SIZE ),  /* 128K */
+	/*
+	 * See include/mach/aram_layout.h for SRAM layout.
+	 * PM requires its portion to be MEM_DESC, and VC requires
+	 * its portion to be IO_DESC.
+	 */
+	MEM_DESC( BCMHANA_ARAM_PM_START, BCMHANA_ARAM_PM_MM_SIZE ), /*  32K */
+	IO_DESC(  BCMHANA_ARAM_VC_START, BCMHANA_ARAM_VC_MM_SIZE ),  /* 128K */
 
 	IO_DESC( KONA_SRAM_VA, SZ_256K ),
 	IO_DESC( KONA_KPS_CLK_VA, SZ_4K ),
