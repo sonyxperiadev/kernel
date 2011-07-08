@@ -10,6 +10,11 @@ config MACH_RHEA_RAY
 	help
 	  Support for the Broadcom Rhea Ray board.
 
+config MACH_RHEA_RAY_EDN1X
+	bool "Support Broadcom Rhea Ray EDN1X board"
+	help
+	  Support for the Broadcom Rhea Ray EDN1X board.
+
 config MACH_HERA_RAY
         bool "Support Broadcom Hera Ray board"
         help

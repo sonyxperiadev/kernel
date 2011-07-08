@@ -61,9 +61,13 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT1, SDDAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 
+#ifdef CONFIG_RHEA_RAY_EDN1X
+	/* GPIO121 for TCA9539 IO expander */
+	PIN_CFG(ICUSBDP, GPIO, 0, OFF, ON, 0, 0, 8MA),
+#else
 	/* GPIO74 for TCA9539 IO expander */
 	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
-
+#endif
 	/*	Pinmux for keypad
 		Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
 		GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
@@ -71,10 +75,12 @@ static struct __init pin_config board_pin_config[] = {
 		GPIO15 */
 	PIN_CFG(GPIO04, KEY_R4, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 
 	/* SSP0 */
 	PIN_CFG(SPI0FSS, SSP0SYN, 0, OFF, OFF, 0, 0, 8MA),
@@ -114,8 +120,8 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
 		
 	/* Camera */
-	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),	
+//	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
+//	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),	
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),

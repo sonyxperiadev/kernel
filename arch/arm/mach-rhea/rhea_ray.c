@@ -356,7 +356,13 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #endif
 
 #ifdef CONFIG_GPIO_PCA953X
+
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#define GPIO_PCA953X_GPIO_PIN      121 /* Configure pad MMC1DAT4 to GPIO74 */
+#else
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
+#endif
+
 static int pca953x_platform_init_hw(struct i2c_client *client,
 		unsigned gpio, unsigned ngpio, void *context)
 {
@@ -587,7 +593,7 @@ struct platform_device haptic_pwm_device = {
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
-#ifdef CONFIG_MACH_RHEA_RAY
+#if defined (CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X

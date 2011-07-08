@@ -16,3 +16,4 @@ obj-y := io_map.o rhea.o common.o rhea_pinmux.o
 obj-$(CONFIG_ARCH_RHEA) += clock_rhea.o
 obj-$(CONFIG_MACH_HERA_RAY) += hera_ray.o
 obj-$(CONFIG_MACH_RHEA_RAY) += rhea_ray.o rhea_ray_pinmux.o
+obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += rhea_ray.o rhea_ray_pinmux.o
