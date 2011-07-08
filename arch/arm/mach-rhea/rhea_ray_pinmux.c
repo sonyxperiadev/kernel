@@ -70,9 +70,9 @@ static struct __init pin_config board_pin_config[] = {
 #endif
 	/*	Pinmux for keypad
 		Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
-		GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
-		using GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
-		GPIO15 */
+		GPIO08, GPIO09, GPIO10, GPIO11 and SSP3 has used GPIO06,
+		GPIO07, GPIO14, GPIO15, Keypad now is set as 2x2 matric by
+		using GPIO04, GPIO05, GPIO12, GPIO13 */
 	PIN_CFG(GPIO04, KEY_R4, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
@@ -120,6 +120,8 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
 		
 	/* Camera */
+	/* Camera pinmux is disabled for now since keypad needs
+	   these GPIO pins to support 4 keys for android */
 //	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
 //	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),	
 
