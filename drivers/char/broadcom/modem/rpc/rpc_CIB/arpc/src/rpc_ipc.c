@@ -357,12 +357,12 @@ void RPC_PACKET_SetBufferLength(PACKET_BufHandle_t dataBufHandle, UInt32 bufferS
 
 RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 {
+	_DBG_(RPC_TRACE("RPC_PACKET_FreeBuffer (FREE) h=%d\r\n"));
 	IPC_FreeBuffer((IPC_Buffer)dataBufHandle);
 
 	return RPC_RESULT_OK;
 }
 
-extern void tempOutRpcStr(char* buf, int p1, int p2, int p3);
 
 RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle, UInt8 rpcClientID)
 {
@@ -370,7 +370,7 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle, UInt8 rpc
 
 	if(refCount == 0)
 	{
-		tempOutRpcStr("I:RPC_PACKET_FreeBufferEx ERROR ",(int)dataBufHandle, refCount, rpcClientID);
+		_DBG_(RPC_TRACE("RPC_PACKET_FreeBufferEx ERROR h=%d, cid=%d\r\n", (int)dataBufHandle, rpcClientID));
 		return RPC_RESULT_ERROR;
 	}
 
@@ -379,11 +379,11 @@ RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle, UInt8 rpc
 
 	if(refCount == 0)
 	{
-		//tempOutRpcStr("I:RPC_PACKET_FreeBufferEx (FREE) ",(int)dataBufHandle, (refCount+1), rpcClientID);
+		_DBG_(RPC_TRACE("RPC_PACKET_FreeBufferEx (FREE) h=%d, cid=%d\r\n", (int)dataBufHandle, rpcClientID));
 		IPC_FreeBuffer((IPC_Buffer)dataBufHandle);
 	}
-//	else
-//		tempOutRpcStr("I:RPC_PACKET_FreeBufferEx (VALID) ",(int)dataBufHandle, (refCount+1), rpcClientID);
+	else
+		_DBG_(RPC_TRACE("RPC_PACKET_FreeBufferEx h=%d, ref=%d, cid=%d\r\n", (int)dataBufHandle, refCount, rpcClientID));
 
 	return RPC_RESULT_OK;
 }
@@ -394,7 +394,7 @@ UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle, UInt8 rpc
 
 	IPC_BufferUserParameterSet ((IPC_Buffer)dataBufHandle, (++refCount));
 
-//	tempOutRpcStr("I:RPC_PACKET_IncrementBufferRef ",(int)dataBufHandle, refCount, rpcClientID);
+	_DBG_(RPC_TRACE("RPC_PACKET_IncrementBufferRef h=%d, ref=%d, cid%d\r\n", (int)dataBufHandle, refCount, rpcClientID));
 
 	return refCount;
 }
@@ -479,7 +479,7 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 
 	if(type != -1)
 	{
-		//tempOutRpcStr("I:RPC_BufferDelivery ( new pkt)  ",(int)bufHandle, 0, 0);
+		_DBG_(RPC_TRACE("RPC_BufferDelivery (NEW) h=%d\r\n",(int)bufHandle));
 
 		if(ipcInfoList[type].pktIndCb != NULL)
 			result = ipcInfoList[type].pktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
@@ -490,7 +490,6 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 		{
 			if(ipcInfoList[type].filterPktIndCb != NULL)
 			{
-				//tempOutRpcStr("I:RPC_BufferDelivery ( User pkt)  ",(int)bufHandle, 0, 0);
 				result = ipcInfoList[type].filterPktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
 			}
 			else
@@ -502,7 +501,6 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 	if(result != RPC_RESULT_PENDING)
 	{
 		IPC_FreeBuffer(bufHandle);
-		//tempOutRpcStr("I:RPC_BufferDelivery ( unused pkt)  ",(int)bufHandle, 0, 0);
 	}
 }
 

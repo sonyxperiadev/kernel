@@ -67,6 +67,7 @@ MODULE_LICENSE("GPL");
 
 ////////////////////////////////////////////
 void kRpcDebugPrintf(char* fmt, ...);
+ssize_t kRpcReadLogData(char *destBuf, size_t len);
 
 #define RPC_TRACE_TRACE_ON
 #ifdef RPC_TRACE_TRACE_ON
@@ -111,6 +112,7 @@ typedef struct
 RpcClientInfo_t* gRpcClientList[0xFF]={0};
 static int gAvailData = 0;
 static int gNumActiveClients = 0;
+static int gEnableKprint = 0;
 
 
 /**
@@ -260,73 +262,15 @@ static int rpcipc_release(struct inode *inode, struct file *file)
     return 0;
 }
 
-#define MAX_LOG_SIZE 128
-typedef struct
-{
-	char logData[MAX_LOG_SIZE];
-}LogDataElem_t;
-
-LogDataElem_t gLogData[0xFF];
-
-static UInt32 writeIndex = 0;
-static UInt32 readIndex = 0;
-static int gEnableKprint = 0;
-
-void kRpcDebugPrintf(char* fmt, ...)
-{
-	if(0)
-	{
-		va_list ap;
-		char* buf;
-		unsigned char index = 0;
-		index = (0xFF & writeIndex);
-
-		buf = gLogData[index].logData;
-		va_start(ap, fmt);
-		vsnprintf(buf, (MAX_LOG_SIZE-1), fmt, ap);
-		va_end(ap);
-		writeIndex+=1;
-	}
-
-	if(gEnableKprint)
-	{
-		char templogData[MAX_LOG_SIZE];
-		va_list ap;
-
-		va_start(ap, fmt);
-		vsnprintf(templogData, (MAX_LOG_SIZE-1), fmt, ap);
-		va_end(ap);
-
-		printk("%s",templogData);
-
-	}
-	//printk("kwrite: w=%d r=%d\n",(int)writeIndex, (int)readIndex);
-}
-
 
 ssize_t rpcipc_read(struct file *filep, char __user *buf, size_t len, loff_t *off)
 {
-	//if(readIndex < writeIndex)
-	if(0)
-	{
-		size_t i;
-		char* logbuf;
-		unsigned char index = (0xFF & readIndex);
-		int logsize;
-		logbuf = gLogData[index].logData;
-		logsize = strlen(logbuf);
-		i = min_t(size_t, len, logsize);
-		readIndex += 1;
-		//printk("kread: w=%d r=%d\n",(int)writeIndex, (int)readIndex);
-		return copy_to_user(buf, logbuf, i) ? -EFAULT : i;
-	}
-	return 0;
+	return kRpcReadLogData(buf, len);
 }
 
 ssize_t rpcipc_write(struct file *filep, const char __user *buf, size_t len, loff_t *off)
 {
-	size_t i = min_t(size_t, len, TEMP_STR_LEN);
-	return copy_from_user(gTempStr, buf, i) ? -EFAULT : i;
+	return -EFAULT;
 }
 
 static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
@@ -458,7 +402,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel
 	Boolean ret;
 	RpcClientInfo_t *cInfo;
 	UInt8 clientId, k;
-	UInt16 msgId;
+	UInt16 msgId = 0;
 
 	if( interfaceType != INTERFACE_RPC_TELEPHONY ||	channel == 0)
 	{
@@ -869,6 +813,10 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param
 	else if(ioc_param.type == RPC_PROXY_INFO_GET_CID)
 	{
 		ioc_param.outParam = (unsigned char)SYS_GenClientID();
+	}
+	else if(ioc_param.type == RPC_PROXY_INFO_RELEASE_CID)
+	{
+		SYS_ReleaseClientID((UInt8)ioc_param.input1);
 	}
 	else if(ioc_param.type == RPC_PROXY_INFO_GET_MAX_IPC_SIZE)
 	{

@@ -54,6 +54,7 @@
 
 static unsigned char gClientIdIndex = 0;
 unsigned char gSysClientIDs[255]={0};
+void kRpcDebugPrintf(char* fmt, ...);
 
 // ******************************************************************************
 /**	
@@ -68,7 +69,7 @@ unsigned char SYS_GenClientID(void)
 {
 	unsigned char clientID, i;
 	
-	printk("SYS_GenClientID first=%d current=%d",FIRST_USER_CLIENT_ID, gClientIdIndex);
+	kRpcDebugPrintf("SYS_GenClientID current=%d",(FIRST_USER_CLIENT_ID + gClientIdIndex));
 
 	clientID = FIRST_USER_CLIENT_ID + gClientIdIndex;
 
@@ -99,10 +100,10 @@ void SYS_ReleaseClientID(unsigned char clientID)
 	{
 		gSysClientIDs[clientID] = 0;
 	
-		printk("SYS_ReleaseClientID released id=%d",clientID);
+		kRpcDebugPrintf("SYS_ReleaseClientID released id=%d",clientID);
 	}
 	else
-		printk("SYS_ReleaseClientID (Not found) id=%d",clientID);
+		kRpcDebugPrintf("SYS_ReleaseClientID (Not found) id=%d",clientID);
 
 }
 
@@ -122,7 +123,177 @@ Boolean SYS_IsRegisteredClientID(UInt8 clientID)
 }
 
 
-void tempOutRpcStr(char* buf, int p1, int p2)
+
+/************************************** Ring Buffer Logging ************************************************/
+#define MAX_VAL 0xFF
+#define MAX_LOG_SIZE 128
+typedef struct
 {
-	printk("%s h=0x%x v=%d\n",buf, p1, p2);
+    UInt32 id;
+	char logData[MAX_LOG_SIZE];
+}LogDataElem_t;
+
+spinlock_t  mLogLock;
+LogDataElem_t gLogData[MAX_VAL];
+
+
+#define INC_INDEX(x) ( (x+1) >= MAX_VAL )?0:(x+1)
+
+typedef struct
+{
+	int ri;
+	int wi;
+	int isAvail;
+}mRingBuffer_t;
+
+mRingBuffer_t gLogBuffer={0};
+
+void InitRingBuffer()
+{
+	static int first_time = 1;
+	if(first_time)
+	{
+		first_time = 0;
+		spin_lock_init( &mLogLock ) ;
+	}
 }
+
+int getNextWriteIndex(mRingBuffer_t *p)
+{
+	unsigned long       irql ;
+	int cur_wi;
+
+	InitRingBuffer();
+	spin_lock_irqsave( &mLogLock, irql ) ;
+	if(p->wi == p->ri && p->isAvail)
+	{
+		p->ri = INC_INDEX(p->ri);
+	}
+
+	cur_wi = p->wi;
+	
+	p->wi = INC_INDEX(p->wi);
+	p->isAvail = 1;
+	spin_unlock_irqrestore( &mLogLock, irql ) ;    
+	return cur_wi;
+}
+
+int peekNextReadIndex(mRingBuffer_t *p)
+{
+	unsigned long       irql ;
+	int cur_ri;
+	InitRingBuffer();
+	spin_lock_irqsave( &mLogLock, irql ) ;
+	if( p->ri == p->wi && p->isAvail == 0)
+	{
+		spin_unlock_irqrestore( &mLogLock, irql ) ;    
+		return -1;
+	}
+	cur_ri = p->ri;
+	spin_unlock_irqrestore( &mLogLock, irql ) ;    
+	return cur_ri;
+}
+
+int getNextReadIndex(mRingBuffer_t *p)
+{
+	unsigned long       irql ;
+	int cur_ri;
+
+	InitRingBuffer();
+	spin_lock_irqsave( &mLogLock, irql ) ;
+	if( p->ri == p->wi && p->isAvail == 0)
+	{
+		spin_unlock_irqrestore( &mLogLock, irql ) ;    
+		return -1;
+	}
+	
+	cur_ri = p->ri;
+	
+	p->ri = INC_INDEX(p->ri);
+
+	if(p->ri == p->wi)
+	{
+		p->isAvail = 0;
+	}
+	spin_unlock_irqrestore( &mLogLock, irql ) ;    
+	return cur_ri;
+}
+
+
+void kRpcDebugPrintf(char* fmt, ...)
+{
+	va_list ap;
+	char* buf;
+	int index = 0;
+	
+	index = getNextWriteIndex(&gLogBuffer);
+
+	buf = gLogData[index].logData;
+	va_start(ap, fmt);
+	vsnprintf(buf, (MAX_LOG_SIZE-1), fmt, ap);
+	va_end(ap);
+	//printk("Write: w:%d r:%d\n",gLogBuffer.wi,gLogBuffer.ri);
+}
+
+ssize_t kRpcReadLogData(char *destBuf, size_t len)
+{
+	ssize_t ret = 0;
+	int index = 0;
+
+	index = peekNextReadIndex(&gLogBuffer);
+
+	if(index != -1)
+	{
+		size_t i;
+		char* logbuf;
+		int logsize;
+		logbuf = gLogData[index].logData;
+		logsize = strlen(logbuf);
+		i = min_t(size_t, len, logsize);
+		ret = copy_to_user(destBuf, logbuf, i) ? -EFAULT : i;
+		getNextReadIndex(&gLogBuffer);
+		//printk("Read: w:%d r:%d\n",gLogBuffer.wi,gLogBuffer.ri);
+	}
+
+	return ret;
+}
+
+int RpcLog_DetailLogEnabled()
+{
+	return 0;
+}
+
+//JW, to do, hack
+Boolean IsBasicCapi2LoggingEnable(void)
+{
+	return true;
+}
+
+#define MAX_BUF_SIZE 1024
+static char buf[MAX_BUF_SIZE];
+int RpcLog_DebugPrintf(char* fmt, ...)
+{
+#ifdef CONFIG_BRCM_UNIFIED_LOGGING
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, MAX_BUF_SIZE, fmt, ap);
+    va_end(ap);
+    KRIL_DEBUG(DBG_INFO, "TS[%ld]%s\n", TIMER_GetValue(), buf);
+#else
+    if(IsBasicCapi2LoggingEnable())
+    {
+		va_list ap;
+		char* buf;
+		int index = 0;
+		
+		index = getNextWriteIndex(&gLogBuffer);
+
+		buf = gLogData[index].logData;
+		va_start(ap, fmt);
+		vsnprintf(buf, (MAX_LOG_SIZE-1), fmt, ap);
+		va_end(ap);
+    }
+#endif
+    return 1;
+}
+

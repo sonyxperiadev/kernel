@@ -43,6 +43,7 @@ extern Boolean xdr_main_init(void);
 
 static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType, UInt8 index, PACKET_BufHandle_t dataBufHandle);
 UInt8 GetClientIndex(ResultDataBuffer_t* pDataBuf, Boolean* isUnsolicited);
+void SYS_ReleaseClientID(unsigned char clientID);
 
 
 
@@ -180,23 +181,40 @@ Boolean RPC_SYS_isValidClientID(UInt8 userClientID)
 	return FALSE;
 }
 
+static int RPC_FindUnsedSlot()
+{
+	UInt8 i;
+
+	for(i=1;i<MAX_RPC_CLIENTS;i++)
+	{
+		if(gClientIDMap[i] == 0)
+			return i;
+	}
+	return -1;
+}
+
 RPC_Handle_t RPC_SYS_RegisterClient(const RPC_InitParams_t *params) 
 {
 	UInt8 userClientID;
 	UInt8 clientIndex = 0;
+	int index;
+
+	index = RPC_FindUnsedSlot();
+	if(index == -1)
+	{
+		_DBG_(RPC_TRACE("RPC_SYS_RegisterClient ERROR Max clients reached"));
+		return (RPC_Handle_t)NULL;
+	}
 
 	gClientIndex++;
 
-	clientIndex = gClientIndex;
-
-	if(clientIndex >= MAX_RPC_CLIENTS)
-		return (RPC_Handle_t)NULL;
+	clientIndex = index;
 
 	gClientMap[clientIndex] = *params;
 
 	userClientID = SYS_GenClientID();
 
-	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient index=%d userClientID=%d", clientIndex, userClientID));
+	_DBG_(RPC_TRACE("RPC_SYS_RegisterClient index=%d userClientID=%d gClientIndex=%d", clientIndex, userClientID, gClientIndex));
 
 	RPC_PACKET_RegisterDataInd(userClientID, (PACKET_InterfaceType_t)(gClientMap[clientIndex].iType), RPC_BufferDelivery, params->flowCb);
 
@@ -233,12 +251,16 @@ Boolean RPC_SYS_LookupXdr(UInt8 clientIndex, UInt16 index, XdrClientInfo_t* clie
 Boolean RPC_SYS_DeregisterClient(RPC_Handle_t handle)
 {
 	UInt8 index = (UInt8)handle;
+	
+	_DBG_(RPC_TRACE("RPC_SYS_DeregisterClient handle=%d userClientID=%d", handle, gClientIDMap[index]));
 
 	if(index < MAX_RPC_CLIENTS)
 	{
 		memset(&gClientMap[index],0,sizeof(RPC_InitParams_t));
 		if(index == gClientIndex)
 			gClientIndex--;
+		SYS_ReleaseClientID(gClientIDMap[index]);
+		gClientIDMap[index] = 0;
 		return TRUE;
 	}
 	return FALSE;
