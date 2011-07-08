@@ -21,7 +21,28 @@
 *
 *
 ****************************************************************************/
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/mm.h>
+#include <linux/module.h>
+#include <linux/cdev.h>
+#include <linux/device.h>
 
+#include <linux/fs.h>
+#include <linux/fcntl.h>
+#include <linux/list.h>
+#include <linux/ioctl.h>
+#include <linux/types.h>
+#include <linux/unistd.h>
+#include <linux/errno.h>
+#include <linux/wait.h>
+#include <linux/sched.h>
+#include <linux/poll.h>
+#include <linux/slab.h>
+#include <linux/jiffies.h> 
+#include <asm/pgtable.h>
+#include <linux/io.h>
 
 #include "mobcom_types.h"
 
@@ -45,15 +66,44 @@ unsigned char gSysClientIDs[255]={0};
 ********************************************************************************/
 unsigned char SYS_GenClientID(void)
 {
-	unsigned char clientID;
+	unsigned char clientID, i;
 	
+	printk("SYS_GenClientID first=%d current=%d",FIRST_USER_CLIENT_ID, gClientIdIndex);
+
 	clientID = FIRST_USER_CLIENT_ID + gClientIdIndex;
 
+	for(i=FIRST_USER_CLIENT_ID;i<(FIRST_USER_CLIENT_ID + gClientIdIndex);i++)
+	{
+		if(gSysClientIDs[i] == 0)
+		{
+			gSysClientIDs[i] = 1;
+	
+			printk("SYS_GenClientID Found free slot=%d",i);
+			return i;
+		}
+	}
+
 	gSysClientIDs[clientID] = 1;
+
+	printk("SYS_GenClientID Add new slot=%d",clientID);
 
 	gClientIdIndex++;
 
 	return clientID;
+}
+
+
+void SYS_ReleaseClientID(unsigned char clientID)
+{
+	if(clientID >= FIRST_USER_CLIENT_ID && clientID < (FIRST_USER_CLIENT_ID + gClientIdIndex) )
+	{
+		gSysClientIDs[clientID] = 0;
+	
+		printk("SYS_ReleaseClientID released id=%d",clientID);
+	}
+	else
+		printk("SYS_ReleaseClientID (Not found) id=%d",clientID);
+
 }
 
 // ******************************************************************************
@@ -72,3 +122,7 @@ Boolean SYS_IsRegisteredClientID(UInt8 clientID)
 }
 
 
+void tempOutRpcStr(char* buf, int p1, int p2)
+{
+	printk("%s h=0x%x v=%d\n",buf, p1, p2);
+}

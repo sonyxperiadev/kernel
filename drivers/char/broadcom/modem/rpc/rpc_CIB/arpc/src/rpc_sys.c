@@ -42,6 +42,7 @@ RPC_EventCallbackFunc_t* stEventCb = NULL;
 extern Boolean xdr_main_init(void);
 
 static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType, UInt8 index, PACKET_BufHandle_t dataBufHandle);
+UInt8 GetClientIndex(ResultDataBuffer_t* pDataBuf, Boolean* isUnsolicited);
 
 
 
@@ -74,6 +75,7 @@ Result_t RPC_SYS_Init(RPC_EventCallbackFunc_t eventCb)
 
 void RPC_HandleEvent(void* eventHandle)
 {
+	UInt8 clientId = 0;
 	ResultDataBuffer_t*  dataBuf;
 	Result_t res = RESULT_OK;
 	
@@ -88,6 +90,9 @@ void RPC_HandleEvent(void* eventHandle)
 
 		if(res == RESULT_OK)
 		{
+			Boolean isUnsolicited;
+			UInt8 clientIndex = GetClientIndex(dataBuf, &isUnsolicited);
+			clientId = RPC_SYS_GetClientID(clientIndex);
 			RPC_DispatchMsg(dataBuf);
 		}
 		else
@@ -96,19 +101,30 @@ void RPC_HandleEvent(void* eventHandle)
 		}
 	}
 
-	RPC_PACKET_FreeBuffer(bufHandle);
+	RPC_PACKET_FreeBufferEx(bufHandle, clientId);
 }
 
 static RPC_Result_t RPC_BufferDelivery(PACKET_InterfaceType_t interfaceType, UInt8 index, PACKET_BufHandle_t dataBufHandle)
 {
 	if (interfaceType || index) { }  //fixes compiler warnings
 
-	if(stEventCb)
-		stEventCb((void*)dataBufHandle);
-	else
-		RPC_HandleEvent((void*)dataBufHandle);
+	if(index == 0xCD)
+	{
+		index = 0;
+	}
 
-	return RPC_RESULT_PENDING;
+	if(RPC_IsRegisteredClient(index, dataBufHandle))
+	{
+		RPC_PACKET_IncrementBufferRef(dataBufHandle,index);
+
+		if(stEventCb)
+			stEventCb((void*)dataBufHandle);
+		else
+			RPC_HandleEvent((void*)dataBufHandle);
+
+		return RPC_RESULT_PENDING;
+	}
+	return RPC_RESULT_ERROR;
 }
 
 
@@ -270,12 +286,12 @@ Boolean RPC_IsRegisteredClient(UInt8 channel, PACKET_BufHandle_t dataBufHandle)
 	}
 	else if(msgId == MSG_AT_COMMAND_IND)
 	{
-		ret = FALSE;
+		ret = TRUE;
 	}
 	else
 	{
 		if(channel > 0)
-			ret = (clientHandle != 0);
+			ret = (clientHandle != 0)?TRUE:FALSE;
 		else
 			ret = isValid;
 	}

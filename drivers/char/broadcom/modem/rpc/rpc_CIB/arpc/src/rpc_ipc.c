@@ -355,13 +355,49 @@ void RPC_PACKET_SetBufferLength(PACKET_BufHandle_t dataBufHandle, UInt32 bufferS
 	IPC_BufferSetDataSize((IPC_Buffer)dataBufHandle, bufferSize);
 }
 
-
 RPC_Result_t RPC_PACKET_FreeBuffer(PACKET_BufHandle_t dataBufHandle)
 {
 	IPC_FreeBuffer((IPC_Buffer)dataBufHandle);
+
 	return RPC_RESULT_OK;
 }
 
+extern void tempOutRpcStr(char* buf, int p1, int p2, int p3);
+
+RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle, UInt8 rpcClientID)
+{
+	IPC_U32 refCount = IPC_BufferUserParameterGet ((IPC_Buffer)dataBufHandle);
+
+	if(refCount == 0)
+	{
+		tempOutRpcStr("I:RPC_PACKET_FreeBufferEx ERROR ",(int)dataBufHandle, refCount, rpcClientID);
+		return RPC_RESULT_ERROR;
+	}
+
+	--refCount;
+	IPC_BufferUserParameterSet ((IPC_Buffer)dataBufHandle, refCount);
+
+	if(refCount == 0)
+	{
+		//tempOutRpcStr("I:RPC_PACKET_FreeBufferEx (FREE) ",(int)dataBufHandle, (refCount+1), rpcClientID);
+		IPC_FreeBuffer((IPC_Buffer)dataBufHandle);
+	}
+//	else
+//		tempOutRpcStr("I:RPC_PACKET_FreeBufferEx (VALID) ",(int)dataBufHandle, (refCount+1), rpcClientID);
+
+	return RPC_RESULT_OK;
+}
+
+UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle, UInt8 rpcClientID)
+{
+	IPC_U32 refCount = IPC_BufferUserParameterGet ((IPC_Buffer)dataBufHandle);
+
+	IPC_BufferUserParameterSet ((IPC_Buffer)dataBufHandle, (++refCount));
+
+//	tempOutRpcStr("I:RPC_PACKET_IncrementBufferRef ",(int)dataBufHandle, refCount, rpcClientID);
+
+	return refCount;
+}
 
 //******************************************************************************
 //	 			RPC Callback Implementation
@@ -440,24 +476,34 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 	IPC_EndpointId_T destId = IPC_BufferDestinationEndpointId(bufHandle);
 	Int8 type = GetInterfaceType(destId);
 
+
 	if(type != -1)
 	{
-		if(ipcInfoList[type].filterPktIndCb != NULL)
-			result = ipcInfoList[type].filterPktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
-		else
-			result = RPC_RESULT_ERROR;
+		//tempOutRpcStr("I:RPC_BufferDelivery ( new pkt)  ",(int)bufHandle, 0, 0);
 
-		if(result == RPC_RESULT_ERROR)
+		if(ipcInfoList[type].pktIndCb != NULL)
+			result = ipcInfoList[type].pktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
+		else
+			_DBG_(RPC_TRACE("RPC_BufferDelivery(%c) FAIL destIP=%d handle=%x",(gRpcProcType == RPC_COMMS)?'C':'A',destId, bufHandle));
+
+		if(result != RPC_RESULT_PENDING)
 		{
-			if(ipcInfoList[type].pktIndCb != NULL)
-				result = ipcInfoList[type].pktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
+			if(ipcInfoList[type].filterPktIndCb != NULL)
+			{
+				//tempOutRpcStr("I:RPC_BufferDelivery ( User pkt)  ",(int)bufHandle, 0, 0);
+				result = ipcInfoList[type].filterPktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
+			}
 			else
-				_DBG_(RPC_TRACE("RPC_BufferDelivery(%c) FAIL destIP=%d handle=%x",(gRpcProcType == RPC_COMMS)?'C':'A',destId, bufHandle));
+				result = RPC_RESULT_ERROR;
 		}
+
 	}
 
 	if(result != RPC_RESULT_PENDING)
+	{
 		IPC_FreeBuffer(bufHandle);
+		//tempOutRpcStr("I:RPC_BufferDelivery ( unused pkt)  ",(int)bufHandle, 0, 0);
+	}
 }
 
 //******************************************************************************
