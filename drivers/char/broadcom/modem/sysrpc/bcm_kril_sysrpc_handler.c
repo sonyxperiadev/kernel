@@ -277,13 +277,13 @@ Result_t Handle_CAPI2_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, P
 		 }
  #endif // PMU_MAX8986
 
-        case PMU_SIM2P5Volt:
+/*        case PMU_SIM2P5Volt:
         {
             KRIL_DEBUG(DBG_ERROR," PMU_SIM2P5Volt\n");
             // 2.5 V SIM
             simMicroVolts = TWO_PT_FIVE_VOLTS_IN_MICRO_VOLTS;
             break;
-        }
+        }*/
         
         case PMU_SIM1P8Volt:
         {

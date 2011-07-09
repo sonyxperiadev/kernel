@@ -754,13 +754,13 @@ typedef enum{
 #ifndef UNDER_LINUX
 typedef struct
 {
-	EM_PMU_EOCS_en_t current;			///< End of Charge Current selection
+	EM_PMU_EOCS_en_t current2;			///< End of Charge Current selection
 } HAL_EM_PMU_Action_CtrlEOCCurrent_st_t;
 #endif
 #else
 typedef struct
 {
-	UInt8 current;			///< End of Charge Current selection
+	UInt8 current2;			///< End of Charge Current selection
 } HAL_EM_PMU_Action_CtrlEOCCurrent_st_t;
 #endif
 

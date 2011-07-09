@@ -1,10 +1,6 @@
 #EXTRA_CFLAGS := -Werror
 
-ifdef CONFIG_MFD_MAX8986
-EXTRA_CFLAGS += -DPMU_MAX8986
-else
-EXTRA_CFLAGS += -DPMU_BCM59038
-endif
+EXTRA_CFLAGS += -DPMU_BCM59055
 
 include drivers/char/broadcom/modem/public/msp_include_paths.gmk
 
