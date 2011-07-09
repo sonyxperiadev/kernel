@@ -395,6 +395,12 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 break;
             }
 
+        case ATC_KERNEL_FORCE_ASSERT_CMD:
+            ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl() - ATC_KERNEL_FORCE_ASSERT_CMD\n" ));
+            // trigger crash instantly
+            panic("Forced assertion");
+            break;
+
         default:
             retVal = -1 ;
             break ;

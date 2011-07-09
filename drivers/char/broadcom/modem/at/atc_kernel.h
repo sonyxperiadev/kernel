@@ -39,6 +39,7 @@ extern "C"
  **/
 #define ATC_KERNEL_SEND_AT_CMD		100					///<	Send AT command to CP 
 #define ATC_KERNEL_Get_AT_RESP		101					///<	Get AT command resp from CP 
+#define ATC_KERNEL_FORCE_ASSERT_CMD	102					///<	Force an AP assertion (kernel panic)
 
 #define ATC_KERNEL_RESULT_BUFFER_LEN_MAX 1000	///< result max byte
 
