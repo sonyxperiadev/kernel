@@ -79,6 +79,14 @@ config BCM_HALAUDIO
       Say Y to enable HAL Audio Driver support which is used to control
       audio hardware.
 
+config BCM_HALAUDIO_CORE
+    tristate "HAL Audio core framework support"
+    depends on BRCM_CHAR_DRIVERS && BCM_HALAUDIO
+    default n
+    help
+      Select m to build HAL Audio core framework module which is used to control
+      audio hardware.      
+
 config BCM_HALAUDIO_AUDIOH_ISLAND
     tristate "HAL Audio Audio Hub driver for the Island Chip family"
     depends on ARCH_ISLAND

@@ -13,6 +13,7 @@ all:
 
 else
 
+obj-$(CONFIG_BCM_HALAUDIO_CORE) += halaudio_core/
 obj-$(CONFIG_BCM_HALAUDIO) += \
    halaudio_api.o halaudio_lib.o
 

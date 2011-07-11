@@ -41,11 +41,17 @@
 #include <mach/sdma.h>
 #include <mach/sdio_platform.h>
 #include <mach/usbh_cfg.h>
+#include <mach/halaudio_audioh_platform.h>
+#include <mach/halaudio_pcm_platform.h>
 
 #include <sdio_settings.h>
 
 #include <i2c_settings.h>
 #include <usbh_settings.h>
+
+#include <halaudio_settings.h>
+#include <halaudio_audioh_settings.h>
+#include <halaudio_pcm_settings.h>
 
 #if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
 #include <linux/broadcom/bcmblt-rfkill.h>
@@ -1122,6 +1128,129 @@ static void __init add_usb_otg_device(void)
 #endif
 }
 
+#define board_halaudio_dev_list concatenate(ISLAND_BOARD_ID, _halaudio_dev_list)
+static HALAUDIO_DEV_CFG board_halaudio_dev_list[] =
+#ifdef HALAUDIO_DEV_LIST
+   HALAUDIO_DEV_LIST;
+#else
+   NULL;
+#endif
+
+#define board_halaudio_cfg concatenate(ISLAND_BOARD_ID, _halaudio_cfg)
+static HALAUDIO_CFG board_halaudio_cfg;
+
+#define board_halaudio_device concatenate(ISLAND_BOARD_ID, _halaudio_device)
+static struct platform_device board_halaudio_device =
+{
+   .name = "bcm-halaudio",
+   .id = -1, /* to indicate there's only one such device */
+   .dev =
+   {
+      .platform_data = &board_halaudio_cfg,
+   },
+};
+
+#define board_halaudio_audio_info concatenate(ISLAND_BOARD_ID, _halaudio_audioh_info)
+static HALAUDIO_AUDIOH_PLATFORM_INFO board_halaudio_audioh_info =
+{
+   .spk_en_gpio =
+   {
+#ifdef HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_LEFT_EN
+      .handsfree_left_en = HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_LEFT_EN,
+#else
+      .handsfree_left_en = -1,
+#endif
+#ifdef HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_RIGHT_EN
+      .handsfree_right_en = HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_RIGHT_EN,
+#else
+      .handsfree_right_en = -1,
+#endif
+
+#ifdef HALAUDIO_AUDIOH_SETTINGS_GPIO_HEADSET_EN
+      .headset_en = HALAUDIO_AUDIOH_SETTINGS_GPIO_HEADSET_EN,
+#else
+      .headset_en = -1,
+#endif
+   },
+};
+
+#define board_halaudio_audioh_device concatenate(ISLAND_BOARD_ID, _halaudio_audioh_device)
+static struct platform_device board_halaudio_audioh_device =
+{
+   .name = "bcm-halaudio-audioh",
+   .id = -1, /* to indicate there's only one such device */
+   .dev =
+   {
+      .platform_data = &board_halaudio_audioh_info,
+   },
+};
+
+#define board_halaudio_pcm_info concatenate(ISLAND_BOARD_ID, _halaudio_pcm_info)
+static HALAUDIO_PCM_PLATFORM_INFO board_halaudio_pcm_info =
+{
+#ifdef HALAUDIO_PCM_SETTINGS_CORE_ID_SELECT
+   .core_id_select = HALAUDIO_PCM_SETTINGS_CORE_ID_SELECT,
+#else
+   .core_id_select = -1,
+#endif
+#ifdef HALAUDIO_PCM_SETTINGS_CHANS_SUPPORTED
+   .channels = HALAUDIO_PCM_SETTINGS_CHANS_SUPPORTED,
+#endif
+#ifdef HALAUDIO_PCM_SETTINGS_CHAN_SELECT
+   .channel_select = HALAUDIO_PCM_SETTINGS_CHAN_SELECT,
+#endif
+   .bt_gpio =
+   {
+#ifdef HALAUDIO_PCM_SETTINGS_GPIO_BT_RST_B
+      .rst_b = HALAUDIO_PCM_SETTINGS_GPIO_BT_RST_B,
+#else
+      .rst_b = -1,
+#endif
+#ifdef HALAUDIO_PCM_SETTINGS_GPIO_BT_VREG_CTL
+      .vreg_ctl = HALAUDIO_PCM_SETTINGS_GPIO_BT_VREG_CTL,
+#else
+      .vreg_ctl = -1,
+#endif
+#ifdef HALAUDIO_PCM_SETTINGS_GPIO_BT_WAKE
+      .wake = HALAUDIO_PCM_SETTINGS_GPIO_BT_WAKE,
+#else
+      .wake = -1,
+#endif
+   },
+#ifdef HALAUDIO_PCM_SETTINGS_BT_REQ_UART_GPIO_GROUP
+   .bt_req_uart_gpio_group = HALAUDIO_PCM_SETTINGS_BT_REQ_UART_GPIO_GROUP,
+#else
+   .bt_req_uart_gpio_group = -1,
+#endif
+};
+
+#ifndef HALAUDIO_PCM_SETTINGS_GPIO_BT_RST_B
+#define BT_SUPPORT    0
+#else
+#define BT_SUPPORT    1
+#endif
+
+#define board_halaudio_pcm_device concatenate(ISLAND_BOARD_ID, _halaudio_pcm_device)
+static struct platform_device board_halaudio_pcm_device =
+{
+   .name = "bcm-halaudio-pcm",
+   .id = -1, /* to indicate there's only one such device */
+   .dev =
+   {
+      .platform_data = &board_halaudio_pcm_info,
+   },
+};
+
+#define board_add_halaudio_device concatenate(ISLAND_BOARD_ID, _add_halaudio_device)
+static void __init board_add_halaudio_device(void)
+{
+   board_halaudio_cfg.numdev = ARRAY_SIZE(board_halaudio_dev_list);
+   board_halaudio_cfg.devlist = board_halaudio_dev_list;
+   platform_device_register(&board_halaudio_device);
+   platform_device_register(&board_halaudio_audioh_device);
+   platform_device_register(&board_halaudio_pcm_device);
+}
+
 static void __init add_devices(void)
 {
 #ifdef HW_SDIO_PARAM
@@ -1158,6 +1287,8 @@ static void __init add_devices(void)
 
 	add_usbh_device();
 	add_usb_otg_device();
+
+   board_add_halaudio_device();
 
 #ifdef CONFIG_NET_ISLAND
 	platform_device_register(&net_device);

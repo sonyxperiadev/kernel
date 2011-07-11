@@ -2876,6 +2876,7 @@ static int audiohExit( void )
    aadma_exit();
 
    clk_disable( gAudiohClk );
+   clk_put( gAudiohClk );
 
    free_irq( BCM_INT_ID_AUDIO, gAudioh.ch );
 
@@ -4489,15 +4490,21 @@ static int audioh_probe( struct platform_device *pdev )
    int err;
    HALAUDIO_AUDIOH_PLATFORM_INFO *info;
 
-   gAudiohClk = clk_get( &pdev->dev, "audioh_26m" );
+   gAudiohClk = clk_get( &pdev->dev, "audioh_26m_clk" );
 
+   if( !gAudiohClk )
+   {
+      printk( KERN_ERR "%s: failed to get audioh clock!\n", __FUNCTION__ );
+      return -EINVAL;
+   }
+#if 0
    err = clk_enable( gAudiohClk );
    if( err )
    {
-      printk( KERN_ERR "%s: failed to initialize audioh clock %d!\n", __FUNCTION__, err );
+      printk( KERN_ERR "%s: failed to enable audioh clock %d!\n", __FUNCTION__, err );
       return err;
    }
-
+#endif
    /* Grab platform configuration */
    if ( pdev->dev.platform_data == NULL )
    {
@@ -4539,6 +4546,8 @@ static int __exit audioh_remove( struct platform_device *pdev )
    (void)pdev;
    halAudioDelInterface( gInterfHandle );
    audioh_platform_exit( info );
+   clk_disable( gAudiohClk );
+   clk_put( gAudiohClk );
 
    return 0;
 }
