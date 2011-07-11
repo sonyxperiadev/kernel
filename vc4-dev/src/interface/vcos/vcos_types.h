@@ -2,11 +2,6 @@
 Copyright (c) 2009 Broadcom Europe Limited.
 All rights reserved.
 
-Project  :  vcfw
-Module   :  osal
-File     :  $RCSfile: $
-Revision :  $Revision$
-
 FILE DESCRIPTION
 VideoCore OS Abstraction Layer - basic types
 =============================================================================*/

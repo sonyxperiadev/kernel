@@ -15,7 +15,6 @@
 #ifndef __VC_VCHI_SM_H__INCLUDED__
 #define __VC_VCHI_SM_H__INCLUDED__
 
-//#include "vchost_config.h"
 #include "interface/vchi/vchi.h"
 #include "interface/vcos/vcos.h"
 

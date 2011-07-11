@@ -51,9 +51,7 @@
 #include <linux/fb.h>
 #include <linux/mm.h>
 
-#include <mach/io_map.h>
-
-//#include <linux/videocore/vc_boot_mode.h>
+#include <linux/videocore/vc_mem.h>
 
 #include "interface/vcos/vcos.h"
 #include "vc_vchi_fb.h"
@@ -406,8 +404,8 @@ static int vc_fb_open( struct fb_info *fb_info,
       vc_addr = (uint32_t)alloc_result.res_mem & 0x3FFFFFFF;
 
       // Then use the offset to calculate the virtual and physical addresses
-      fb_info->screen_base = (void *)(vc_addr + KONA_VC_EMI);
-      fb_info->fix.smem_start = (unsigned long)(vc_addr + VC_EMI);
+      fb_info->screen_base = (void *)(vc_addr + mm_vc_mem_virt_addr);
+      fb_info->fix.smem_start = (unsigned long)(vc_addr + mm_vc_mem_phys_addr);
       fb_info->fix.smem_len = alloc_result.frame_bytes * alloc.num_frames;
       fb_info->fix.line_length = alloc_result.line_bytes;
 
@@ -966,16 +964,6 @@ static int __init vc_fb_init( void )
 
    LOG_INFO( "%s: start", __func__ );
 
-#if 0
-   if ( vc_boot_mode_skip() )
-   {
-      LOG_INFO( "%s: vc-boot-mode == skip - not initializing videocore",
-                __func__ );
-
-      ret = -ENODEV;
-      goto out;
-   }
-#endif
    //TODO Check that there is at least one videocore instance
 
    // Allocate memory for the state structure

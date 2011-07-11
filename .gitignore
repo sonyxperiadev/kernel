@@ -31,6 +31,7 @@ modules.builtin
 *.lzo
 *.patch
 *.gcno
+*.backup
 
 #
 # Top-level generic files
@@ -88,3 +89,6 @@ GTAGS
 #brcm
 initramfs
 vcos_version.c
+bcm-kernel-build
+bcm-kernel-headers
+
