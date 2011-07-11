@@ -47,7 +47,9 @@ struct rhea_fb {
 	struct semaphore thread_sem;
 	struct semaphore update_sem;
 	struct semaphore prev_buf_done_sem;
+#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
 	struct semaphore refresh_wait_sem;
+#endif
 	atomic_t buff_idx;
 	atomic_t is_fb_registered;
 	atomic_t is_graphics_started;
@@ -254,6 +256,7 @@ static int disable_display(struct rhea_fb *fb)
 	return ret;
 }
 
+#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
@@ -288,6 +291,7 @@ static struct notifier_block vt_notifier_block = {
 	.notifier_call = vt_notifier_call,
 };
 
+#endif /* !CONFIG_MACH_RHEA_RAY_EDN1X */
 
 static struct fb_ops rhea_fb_ops = {
 	.owner          = THIS_MODULE,
@@ -324,6 +328,8 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	sema_init(&fb->prev_buf_done_sem, 1);
 	atomic_set(&fb->is_graphics_started, 0);
 	sema_init(&fb->thread_sem, 0);
+
+#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
 	sema_init(&fb->refresh_wait_sem, 0);
 
 	fb->thread = kthread_run(rhea_refresh_thread, fb, "lcdrefresh_d");
@@ -331,6 +337,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		ret = PTR_ERR(fb->thread);
 		goto thread_create_failed;
 	}
+#endif
 
 	/* Hack
 	 * The screen info can only be obtained from the display driver;and, therefore, 
@@ -454,7 +461,10 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_fb_registered, 1);
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
+#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
 	register_vt_notifier(&vt_notifier_block);
+#endif
+
 #ifdef CONFIG_LOGO
 	/*  Display the default logo/splash screen. */
 	fb_prepare_logo(&fb->fb, 0);
@@ -476,9 +486,12 @@ err_set_var_failed:
 	dma_free_writecombine(&pdev->dev, fb->fb.fix.smem_len,
 			      fb->fb.screen_base, fb->fb.fix.smem_start);
 	disable_display(fb);
+
 err_enable_display_failed:
 err_fbmem_alloc_failed:
+#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
 thread_create_failed:
+#endif
 	kfree(fb);
 err_fb_alloc_failed:
 	rheafb_alert("RHEA Framebuffer probe FAILED !!\n");
