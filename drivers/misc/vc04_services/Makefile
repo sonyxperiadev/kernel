@@ -7,8 +7,8 @@
 
 obj-y   += vcos/
 obj-y 	+= vchiq/
-obj-y   += vmcs_fb/
-obj-y 	+= vmcs_sm/
+#obj-y   += vmcs_fb/
+#obj-y 	+= vmcs_sm/
 
-obj-y	+= ../../../vc4-dev/src/interface/vceb/host/linux/
+#obj-y	+= ../../../vc4-dev/src/interface/vceb/host/linux/
 
