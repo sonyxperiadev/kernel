@@ -28,7 +28,7 @@
 #include <asm/clkdev.h>
 #include <plat/clock.h>
 #include <asm/io.h>
-#include<plat/pwr_island_mgr.h>
+#include<plat/pi_mgr.h>
 
 #ifdef CONFIG_SMP
 #include <asm/cpu.h>
@@ -510,9 +510,12 @@ static int ccu_clk_enable(struct clk *clk, int enable)
 		clk->use_cnt--;
 	}
 
-	//BUG_ON(!ccu_clk->pi || !ccu_clk->pi->ops->enable);
-	if(ccu_clk->pi && ccu_clk->pi->ops->enable)
-		ccu_clk->pi->ops->enable(ccu_clk->pi,enable);
+	if(ccu_clk->pi_id != -1)
+	{
+		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
+		BUG_ON(!pi);
+		pi_enable(pi,enable);
+	}
 	return ret;
 }
 
@@ -818,7 +821,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 
 	if((enable) && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU))
 	    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
-	
+
 	/*Make sure that all dependent & src clks are enabled/disabled*/
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++)
 	{
@@ -1244,7 +1247,7 @@ static int peri_clk_init(struct clk* clk)
 		}
 	}else
 	    need_status_update = 1;
-	
+
 	if(peri_clk_get_gating_status(peri_clk) == 1) {
 	    clk->use_cnt = 1;
 	    if (need_status_update && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU))
@@ -1587,7 +1590,7 @@ static int bus_clk_init(struct clk *clk)
 		bus_clk_set_gating_ctrl(bus_clk, CLK_GATING_SW);
 
 	BUG_ON(CLK_FLG_ENABLED(clk,ENABLE_ON_INIT) && CLK_FLG_ENABLED(clk,DISABLE_ON_INIT));
-	
+
 	if(CLK_FLG_ENABLED(clk,ENABLE_ON_INIT))
 	{
 		if(clk->ops->enable)
@@ -1601,7 +1604,7 @@ static int bus_clk_init(struct clk *clk)
 			clk->ops->enable(clk, 0);
 	} else
 		need_status_update = 1;
-	
+
 	if(bus_clk_get_gating_status(bus_clk) == 1) {
 	    clk->use_cnt = 1;
 	    if (need_status_update && !(clk->flags & AUTO_GATE) &&(clk->flags & NOTIFY_STATUS_TO_CCU))
@@ -1822,7 +1825,7 @@ static int clk_source_show(struct seq_file *seq, void *p)
 	default:
 		return -EINVAL;
 	}
-		    
+
 	return 0;
 }
 

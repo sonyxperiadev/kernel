@@ -106,28 +106,32 @@ static int pi_set_policy(struct pi *pi, u32 policy)
 
 	if(!res)
 	{
-		if(pi->ops && pi->ops->change_notify)
-			pi->ops->change_notify(pi,cfg.policy);
+		pi_change_notify(pi,cfg.policy);
 	}
 	return res;
 }
 
-static int pi_init(struct pi *pi)
+static int pi_def_init(struct pi *pi)
 {
 	pr_info("%s:%s\n",__func__,pi->name);
 	spin_lock(&pi_mgr_lock);
-	if(pi->flags & PI_DISABLE_ON_INIT)
+	if(pi->pi_state[PI_MGR_ACTIVE_STATE_INX].id != PI_MGR_STATE_UNSUPPORTED)
 	{
-		pi_set_policy(pi,pi->pi_state[pi->state_allowed].state_policy);
+		if(pi->flags & PI_DISABLE_ON_INIT)
+		{
+			pi_set_policy(pi,pi->pi_state[pi->state_allowed].state_policy);
+		}
+		else
+		{
+			pi_set_policy(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy);
+		}
+		pwr_mgr_pi_set_wakeup_override(pi->id,false);
 	}
-	else
-		pi_set_policy(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy);
-	pwr_mgr_pi_set_wakeup_override(pi->id,false);
 	spin_unlock(&pi_mgr_lock);
 	return 0;
 }
 
-static int pi_enable(struct pi *pi, int enable)
+static int pi_def_enable(struct pi *pi, int enable)
 {
 	u32 policy;
 
@@ -151,8 +155,8 @@ done:
 }
 
 struct pi_ops gen_pi_ops = {
-	.init = pi_init,
-	.enable = pi_enable,
+	.init = pi_def_init,
+	.enable = pi_def_enable,
 	.change_notify = NULL,
 };
 
@@ -315,33 +319,36 @@ int pi_mgr_register(struct pi* pi)
 	pi_mgr.pi_list[pi->id] = pi;
 	pi_mgr.pi_count++;
 
-	qos = &pi_mgr.qos[pi->id];
-	BLOCKING_INIT_NOTIFIER_HEAD(&qos->notifiers);
-	plist_head_init(&qos->requests,&pi_mgr_list_lock);
-	for(inx = 0; inx < PI_MGR_MAX_STATE_ALLOWED &&
-			pi->pi_state[inx].id != PI_MGR_STATE_UNSUPPORTED; inx++);
-	BUG_ON(inx == PI_MGR_MAX_STATE_ALLOWED);
-	qos->default_latency = pi->pi_state[inx].hw_wakeup_latency;
+	if((pi->flags & PI_NO_QOS) == 0)
+	{
+		qos = &pi_mgr.qos[pi->id];
+		BLOCKING_INIT_NOTIFIER_HEAD(&qos->notifiers);
+		plist_head_init(&qos->requests,&pi_mgr_list_lock);
+		for(inx = 0; inx < PI_MGR_MAX_STATE_ALLOWED &&
+				pi->pi_state[inx].id != PI_MGR_STATE_UNSUPPORTED; inx++);
+		BUG_ON(inx == PI_MGR_MAX_STATE_ALLOWED);
+		qos->default_latency = pi->pi_state[inx].hw_wakeup_latency;
+	}
 
-	dfs = &pi_mgr.dfs[pi->id];
-	BLOCKING_INIT_NOTIFIER_HEAD(&dfs->notifiers);
-	plist_head_init(&dfs->requests,&pi_mgr_list_lock);
+	if((pi->flags & PI_NO_DFS) == 0)
+	{
+		dfs = &pi_mgr.dfs[pi->id];
+		BLOCKING_INIT_NOTIFIER_HEAD(&dfs->notifiers);
+		plist_head_init(&dfs->requests,&pi_mgr_list_lock);
 
-	BUG_ON(pi->opp_active >= PI_OPP_MAX);
-	dfs->default_opp = pi->opp_active;
+		BUG_ON(pi->opp_active >= PI_OPP_MAX);
+		dfs->default_opp = pi->opp_active;
 
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
-	pi_set_policy(pi, pi->opp[pi->opp_active]);
-	pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy = pi->opp[pi->opp_active];
+		pi_set_policy(pi, pi->opp[pi->opp_active]);
+		pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy = pi->opp[pi->opp_active];
 #else
-	pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
-					pi->opp[pi->opp_active]);
+		pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
+						pi->opp[pi->opp_active]);
 #endif
+	}
 
 	spin_unlock(&pi_mgr_lock);
-
-	if(pi->ops && pi->ops->init)
-		pi->ops->init(pi);
 
 	return 0;
 }
@@ -350,14 +357,20 @@ EXPORT_SYMBOL(pi_mgr_register);
 struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id, u32 lat_value)
 {
 	struct pi_mgr_qos_node* node;
-	if(!pi_mgr.init)
+	if(unlikely(!pi_mgr.init))
 	{
 		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
 		return NULL;
 	}
-	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
+	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
 	{
 		pr_info("%s:ERROR - invalid pid\n",__func__);
+		return NULL;
+	}
+
+	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
+	{
+		pr_info("%s:ERROR - QOS not supported for this PI\n",__func__);
 		return NULL;
 	}
 
@@ -413,16 +426,22 @@ EXPORT_SYMBOL(pi_mgr_qos_request_remove);
 
 int pi_mgr_qos_add_notifier(u32 pi_id, struct notifier_block *notifier)
 {
-	if(!pi_mgr.init)
+	if(unlikely(!pi_mgr.init))
 	{
 		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
-	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
+	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
 	{
 		pr_info("%s:ERROR - invalid pid\n",__func__);
 		return -EINVAL;
 	}
+	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
+	{
+		pr_info("%s:ERROR - QOS not supported for this PI\n",__func__);
+		return -EINVAL;;
+	}
+
 
 	return blocking_notifier_chain_register(
 			&pi_mgr.qos[pi_id].notifiers, notifier);
@@ -431,15 +450,20 @@ EXPORT_SYMBOL_GPL(pi_mgr_qos_add_notifier);
 
 int pi_mgr_qos_remove_notifier(u32 pi_id, struct notifier_block *notifier)
 {
-	if(!pi_mgr.init)
+	if(unlikely(!pi_mgr.init))
 	{
 		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
-	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
+	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
 	{
 		pr_info("%s:ERROR - invalid pid\n",__func__);
 		return -EINVAL;
+	}
+	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
+	{
+		pr_info("%s:ERROR - QOS not supported for this PI\n",__func__);
+		return -EINVAL;;
 	}
 
 	return blocking_notifier_chain_unregister(
@@ -461,6 +485,11 @@ struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32
 	if(pi_id >= PI_MGR_PI_ID_MAX || (pi = pi_mgr.pi_list[pi_id]) == NULL)
 	{
 		pr_info("%s:ERROR - invalid pid\n",__func__);
+		return NULL;
+	}
+	if(unlikely(pi->flags & PI_NO_DFS))
+	{
+		pr_info("%s:ERROR - DFS not supported for this PI\n",__func__);
 		return NULL;
 	}
 
@@ -534,6 +563,12 @@ int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier)
 		return -EINVAL;
 	}
 
+	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))
+	{
+		pr_info("%s:ERROR - DFS not supported for this PI\n",__func__);
+		return -EINVAL;;
+	}
+
 	return blocking_notifier_chain_register(
 			&pi_mgr.dfs[pi_id].notifiers, notifier);
 }
@@ -552,6 +587,12 @@ int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier)
 		pr_info("%s:ERROR - invalid pid\n",__func__);
 		return -EINVAL;
 	}
+	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))
+	{
+		pr_info("%s:ERROR - DFS not supported for this PI\n",__func__);
+		return -EINVAL;;
+	}
+
 
 	return blocking_notifier_chain_unregister(
 			&pi_mgr.dfs[pi_id].notifiers, notifier);
@@ -561,7 +602,7 @@ EXPORT_SYMBOL_GPL(pi_mgr_dfs_remove_notifier);
 
 
 
-const struct pi* pi_mgr_get(int pi_id)
+struct pi* pi_mgr_get(int pi_id)
 {
 	pr_info("%s: id:%d\n",__func__,pi_id);
 	if(!pi_mgr.init)

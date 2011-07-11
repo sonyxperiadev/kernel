@@ -26,7 +26,9 @@ struct pi_mgr_dfs_node;
 enum
 {
 	PI_DISABLE_ON_INIT  = (1 << 0),
-	PI_ARM_CORE  		= (1 << 1),
+	PI_ARM_CORE  		= (1 << 2),
+	PI_NO_QOS			= (1 << 3),
+	PI_NO_DFS			= (1 << 4),
 };
 
 struct pm_pi_info
@@ -71,7 +73,7 @@ struct pi_ops
 {
 	int	(*init)(struct pi *pi);
 	int	(*enable)(struct pi *pi, int enable);
-	int (*change_notify)(struct pi *pi, int state);
+	int (*change_notify)(struct pi *pi, int policy);
 };
 
 
@@ -91,7 +93,12 @@ int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier);
 int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier);
 
 int pi_mgr_register(struct pi* pi);
-const struct pi* pi_mgr_get(int pi_id);
+struct pi* pi_mgr_get(int pi_id);
 int pi_mgr_init(void);
+
+
+#define pi_init(pi) if((pi)->ops && (pi)->ops->init) (pi)->ops->init(pi)
+#define pi_enable(pi,en) if((pi)->ops && (pi)->ops->enable) (pi)->ops->enable(pi,en)
+#define pi_change_notify(pi,p) if((pi)->ops && (pi)->ops->change_notify) (pi)->ops->change_notify(pi,p)
 
 #endif /*__POWER_ISLAND_MGR_H__*/

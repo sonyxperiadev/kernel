@@ -267,6 +267,36 @@ static struct pi sub_sys_pi =
 		.ops = &gen_pi_ops,
 	};
 
+/*MODEM CCU -  ADDED for initializing EVENT table only*/
+static struct pi_state modem_states[] =
+		{
+			PI_STATE(PI_MGR_STATE_UNSUPPORTED,0,0),
+
+		};
+
+
+static struct pi modem_pi =
+	{
+		.name = "modem",
+		.id = PI_MGR_PI_ID_MODEM,
+		.flags = PI_NO_DFS | PI_NO_QOS,
+		.pi_state = modem_states,
+		.pi_info =
+				{
+					.policy_reg_offset = PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET,
+					.ac_shift = PWRMGR_LCDTE_VI_ARM_CORE_POLICY_LCDTE_PI_MODEM_PM_AC_SHIFT,
+					.atl_shift = PWRMGR_LCDTE_VI_ARM_CORE_POLICY_LCDTE_PI_MODEM_PM_ATL_SHIFT,
+					.pm_policy_shift = PWRMGR_LCDTE_VI_ARM_CORE_POLICY_LCDTE_PI_MODEM_PM_POLICY_SHIFT,
+
+					.fixed_vol_map_mask = PWRMGR_FIXED_VOLTAGE_MAP_VI_MODEM_FIXED_VOLTAGE_MAP_SHIFT,
+					.vi_to_vOx_map_mask = PWRMGR_VI_TO_VO0_MAP_VI_MODEM_TO_VO0_MAP_MASK,
+					.wakeup_overide_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_MODEM_WAKEUP_OVERRIDE_MASK,
+					.counter_reg_offset = PWRMGR_PI_MODEM_ON_COUNTER_OFFSET,
+					.rtn_clmp_dis_mask = PWRMGR_PI_DEFAULT_POWER_STATE_PI_MODEM_RETENTION_CLAMP_DISABLE_MASK,
+				},
+		.ops = NULL,
+	};
+
 
 
 void __init rhea_pi_mgr_init()
@@ -278,7 +308,8 @@ void __init rhea_pi_mgr_init()
 		&mm_pi,
 		&hub_pi,
 		&aon_pi,
-		&sub_sys_pi
+		&sub_sys_pi,
+		&modem_pi
 
 	};
 	pi_mgr_init();

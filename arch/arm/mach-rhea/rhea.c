@@ -30,6 +30,7 @@
 #include <asm/io.h>
 #include <asm/mach/map.h>
 #include <asm/hardware/cache-l2x0.h>
+#include <mach/pwr_mgr.h>
 #include <mach/clock.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <mach/gpio.h>
@@ -116,6 +117,9 @@ static int __init rhea_init(void)
 	/* rhea has 4 banks of GPIO pins */
 	kona_gpio_init(4);
 #endif
+
+	rhea_pwr_mgr_init();
+	rhea_clock_init();
 
 	return 0;
 }

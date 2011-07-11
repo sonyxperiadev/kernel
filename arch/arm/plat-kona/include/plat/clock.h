@@ -254,11 +254,11 @@ enum {
     RATE_FIXED			= (1 << 7), /*used for peri ...clk set/get rate functions uses .rate field*/
     NOTIFY_STATUS_TO_CCU	= (1 << 8),
     DONOT_NOTIFY_STATUS_TO_CCU	= (1 << 9),
-    
+
     /* CCU specific flags */
     CCU_TARGET_LOAD		= (1 << 16),
     CCU_TARGET_AC		= (1 << 17),
-    
+
     /*Ref clk flags*/
     CLK_RATE_FIXED		= (1<<24),
 
@@ -276,7 +276,6 @@ enum
 };
 
 struct clk;
-struct pwr_island;
 
 /**
  * struct gen_clk_ops - standard clock operations
@@ -372,7 +371,7 @@ struct proc_clock {
 
 struct ccu_clk {
 	struct clk	clk;
-	struct pwr_island* pi;
+	int pi_id;
 	struct list_head peri_list;
 	struct list_head bus_list;
 
