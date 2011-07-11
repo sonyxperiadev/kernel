@@ -3,9 +3,11 @@ EXTRA_CFLAGS := -fno-inline -Wno-multichar -O0
 
 obj-y += v3d/
 obj-y += vce/
-obj-y += fuse_log/
-obj-y += modem/
-obj-y += isp/
-obj-y += unicam/
+ifneq ($(CONFIG_MACH_RHEA_RAY_EDN1X),y)
+	obj-y += fuse_log/
+	obj-y += modem/
+	obj-y += isp/
+	obj-y += unicam/
+endif
 obj-$(CONFIG_BCM_GPS)    	 += gps.o
 obj-$(CONFIG_GPIO_USER_MODE_SUPPORT)	+= user-gpio.o
