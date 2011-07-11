@@ -77,10 +77,10 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 
 	/* SSP0 */
 	PIN_CFG(SPI0FSS, SSP0SYN, 0, OFF, OFF, 0, 0, 8MA),
@@ -90,26 +90,27 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SSP3 - PCM
 	   SSP3 pinmux is set since keypad also check the same pins currently */
-    PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
-    PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
-    PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
-    PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
-
+#if 0 //Disable SSPI3 to free the pins for Keypad
+	PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
+#endif
 
 	/* SSP4 - I2S */
+#if 0 //Disable SSPI4 to free the pins for LCD
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),
+#endif
 
 	/* LCD */
-    PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDRES, GPIO, 0, OFF, ON, 0, 0, 8MA),
 	/* conflicts with SSP4 */
-	/*
 	PIN_CFG(DCLK4, GPIO, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, GPIO, 0, OFF, ON, 0, 0, 8MA),
-    */
 
 	/* STM trace - PTI */
 	PIN_CFG(TRACECLK, PTI_CLK, 0, OFF, ON, 0, 0, 8MA),
@@ -120,10 +121,8 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
 		
 	/* Camera */
-	/* Camera pinmux is disabled for now since keypad needs
-	   these GPIO pins to support 4 keys for android */
-//	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
-//	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),	
+	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
@@ -149,10 +148,9 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* PWM config - PWM4, PWM5*/
 	/* conflicts with SSP4 */
-    /*
-    PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
-    PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
-    */
+	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
+
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
 	PIN_CFG(GPS_CALREQ, GPIO, 0, OFF, ON, 0, 0, 8MA),
 
