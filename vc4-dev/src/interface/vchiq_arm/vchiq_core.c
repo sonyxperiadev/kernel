@@ -1919,9 +1919,12 @@ vchiq_queue_message(VCHIQ_SERVICE_HANDLE_T handle,
 
    for (i = 0; i < (unsigned int)count; i++)
    {
-      if (elements[i].data == NULL)
-         return VCHIQ_ERROR;
-      size += elements[i].size;
+      if (elements[i].size)
+      {
+         if (elements[i].data == NULL)
+            return VCHIQ_ERROR;
+         size += elements[i].size;
+      }
    }
 
    if (size > VCHIQ_MAX_MSG_SIZE)

@@ -143,6 +143,8 @@ typedef struct
 
    SM_STATS_T          deceased[END_ALL];
    SM_STATS_T          terminated[END_ALL];
+   uint32_t            res_deceased_cnt;
+   uint32_t            res_terminated_cnt;
 
    VCOS_CFG_ENTRY_T    guid_shift_cfg_entry;
    uint32_t            guid_shift;     // Magic value for shifting GUID to make this driver
@@ -419,10 +421,12 @@ static void vc_sm_resource_deceased( SM_RESOURCE_T *p_res, int terminated )
             if ( terminated )
             {
                sm_state->terminated[ ix ] += p_res->res_stats[ ix ];
+               sm_state->res_terminated_cnt++;
             }
             else
             {
                sm_state->deceased[ ix ] += p_res->res_stats[ ix ];
+               sm_state->res_deceased_cnt++;
             }
          }
       }
@@ -936,41 +940,54 @@ static int vc_sm_statistics_proc_read( char *buf,
    int ix;
    SM_PRIV_DATA_T *file_data;
    SM_RESOURCE_T *resource;
+   int res_count = 0;
 
+   /* Global state tracked statistics.
+   */
    if ( (sm_state != NULL) && (data == NULL) )
    {
       len += sprintf( buf + len, "\nDeceased Resources Statistics\n" );
 
-      len += sprintf( buf + len, "\nNatural Cause\n" );
+      len += sprintf( buf + len, "\nNatural Cause (%u occurences)\n",
+                      sm_state->res_deceased_cnt );
       for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
       {
          len += sprintf( buf + len, "                %u\t%s\n",
                          sm_state->deceased[ ix ],
                          sm_stats_human_read[ ix ] );
       }
-      len += sprintf( buf + len, "\n     FAILURE\n" );
+      len += sprintf( buf + len, "\n" );
       for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
       {
-         len += sprintf( buf + len, "                %u\t%s\n",
-                         sm_state->deceased[ ix + END_ATTEMPT ],
-                         sm_stats_human_read[ ix ] );
+         if ( sm_state->deceased[ ix + END_ATTEMPT ] > 0 )
+         {
+            len += sprintf( buf + len, "                %u\tFAILED %s\n",
+                            sm_state->deceased[ ix + END_ATTEMPT ],
+                            sm_stats_human_read[ ix ] );
+         }
       }
 
-      len += sprintf( buf + len, "\nForcefull\n" );
+      len += sprintf( buf + len, "\nForcefull (%u occurences)\n",
+                      sm_state->res_terminated_cnt );
       for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
       {
          len += sprintf( buf + len, "                %u\t%s\n",
                          sm_state->terminated[ ix ],
                          sm_stats_human_read[ ix ] );
       }
-      len += sprintf( buf + len, "\n     FAILURE\n" );
+      len += sprintf( buf + len, "\n" );
       for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
       {
-         len += sprintf( buf + len, "                %u\t%s\n",
-                         sm_state->terminated[ ix + END_ATTEMPT ],
-                         sm_stats_human_read[ ix ] );
+         if ( sm_state->terminated[ ix + END_ATTEMPT ] > 0 )
+         {
+            len += sprintf( buf + len, "                %u\tFAILED %s\n",
+                            sm_state->terminated[ ix + END_ATTEMPT ],
+                            sm_stats_human_read[ ix ] );
+         }
       }
    }
+   /* Per process statistics.
+   */
    else if ( data != NULL )
    {
       file_data = data;
@@ -984,6 +1001,8 @@ static int vc_sm_statistics_proc_read( char *buf,
             break;
          }
 
+         res_count++;
+
          len += sprintf( buf + len, "\nGUID:         0x%x\n\n", resource->res_guid );
          for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
          {
@@ -991,16 +1010,21 @@ static int vc_sm_statistics_proc_read( char *buf,
                             resource->res_stats[ ix ],
                             sm_stats_human_read[ ix ] );
          }
-         len += sprintf( buf + len, "\n     FAILURE\n" );
+         len += sprintf( buf + len, "\n" );
          for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
          {
-            len += sprintf( buf + len, "                %u\t%s\n",
-                            resource->res_stats[ ix + END_ATTEMPT ],
-                            sm_stats_human_read[ ix ] );
+            if ( resource->res_stats[ ix + END_ATTEMPT ] > 0 )
+            {
+               len += sprintf( buf + len, "                %u\tFAILED %s\n",
+                               resource->res_stats[ ix + END_ATTEMPT ],
+                               sm_stats_human_read[ ix ] );
+            }
          }
 
          resource = resource->next;
       }
+
+      len += sprintf( buf + len, "\nResources Count %d\n", res_count );
    }
 
    *eof = 1;

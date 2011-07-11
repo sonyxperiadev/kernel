@@ -270,7 +270,7 @@ static int __init vc_mem_init( void )
 
     printk( "vc-mem: mm_vc_mem_phys_addr = 0x%08lx\n", mm_vc_mem_phys_addr );
     printk( "vc-mem: mm_vc_mem_virt_addr = 0x%08lx\n", mm_vc_mem_virt_addr );
-    printk( "vc-mem: mm_vc_mem_size      = 0x%08x (%u MiB)\n", 
+    printk( "vc-mem: mm_vc_mem_size      = 0x%08x (%u MiB)\n",
             mm_vc_mem_size, mm_vc_mem_size / (1024 * 1024));
 
     if (( rc = alloc_chrdev_region( &vc_mem_devnum, 0, 1, DRIVER_NAME )) < 0 )

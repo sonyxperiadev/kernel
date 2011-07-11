@@ -243,7 +243,6 @@ static void event_flags_timer_expired(void *cxt)
    VCOS_THREAD_T *thread = 0;
 
    vcos_assert(waitreq);
-   vcos_assert(flags);
 
 #ifdef VCOS_TIMERS_UNSAFE
    if (waitreq->magic != WAITREQ_MAGIC)
@@ -256,6 +255,7 @@ static void event_flags_timer_expired(void *cxt)
    }
 #endif
 
+   vcos_assert(flags);
    vcos_mutex_lock(&flags->lock);
 
    /* walk the list of waiting threads on this event group, and remove
