@@ -61,7 +61,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT1, SDDAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 
-#ifdef CONFIG_RHEA_RAY_EDN1X
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	/* GPIO121 for TCA9539 IO expander */
 	PIN_CFG(ICUSBDP, GPIO, 0, OFF, ON, 0, 0, 8MA),
 #else
@@ -90,7 +90,7 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SSP3 - PCM
 	   SSP3 pinmux is set since keypad also check the same pins currently */
-#if 0 //Disable SSPI3 to free the pins for Keypad
+#ifdef CONFIG_MACH_RHEA_RAY
 	PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
@@ -98,7 +98,7 @@ static struct __init pin_config board_pin_config[] = {
 #endif
 
 	/* SSP4 - I2S */
-#if 0 //Disable SSPI4 to free the pins for LCD
+#ifdef CONFIG_MACH_RHEA_RAY
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
@@ -108,9 +108,11 @@ static struct __init pin_config board_pin_config[] = {
 	/* LCD */
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDRES, GPIO, 0, OFF, ON, 0, 0, 8MA),
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	/* conflicts with SSP4 */
 	PIN_CFG(DCLK4, GPIO, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, GPIO, 0, OFF, ON, 0, 0, 8MA),
+#endif
 
 	/* STM trace - PTI */
 	PIN_CFG(TRACECLK, PTI_CLK, 0, OFF, ON, 0, 0, 8MA),
@@ -147,9 +149,11 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO27, LCDD1, 0, OFF, ON, 0, 0, 8MA),
 
 	/* PWM config - PWM4, PWM5*/
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	/* conflicts with SSP4 */
 	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
+#endif
 
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
 	PIN_CFG(GPS_CALREQ, GPIO, 0, OFF, ON, 0, 0, 8MA),
