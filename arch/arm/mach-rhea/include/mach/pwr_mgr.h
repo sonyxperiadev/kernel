@@ -132,4 +132,6 @@ enum {
 
 };
 
+void rhea_pwr_mgr_init(void);
+
 #endif /*__RHEA_PWR_MNGR_H__*/

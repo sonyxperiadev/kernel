@@ -8,10 +8,15 @@
 #include <mach/pi_mgr.h>
 
 #define PI_MGR_QOS_DEFAULT_VALUE 	0xFFFFFFFF
-#define PI_MGR_STATE_UNSUPPORTED	0xFFFFFFFF
+#define PI_MGR_STATE_UNSUPPORTED 	0xFFFFFFFF
 #define PI_OPP_UNSUPPORTED			0xFFFF
 
 #define PI_MGR_ACTIVE_STATE_INX		0
+
+#ifndef PI_MGR_MAX_STATE_ALLOWED
+#define PI_MGR_MAX_STATE_ALLOWED 10
+#endif
+
 
 struct pi_ops;
 struct pi_mgr_qos_node;
@@ -21,6 +26,7 @@ struct pi_mgr_dfs_node;
 enum
 {
 	PI_DISABLE_ON_INIT  = (1 << 0),
+	PI_ARM_CORE  		= (1 << 1),
 };
 
 struct pm_pi_info
@@ -40,6 +46,7 @@ struct pm_pi_info
 
 struct pi_state
 {
+	u32 id;
 	u32 state_policy;
 	u32 hw_wakeup_latency;
 };
@@ -55,7 +62,7 @@ struct pi
 	u16 opp_active;
 	u16 sw_event_id;
 	u16	opp[PI_OPP_MAX];
-	struct pi_state pi_state[PI_STATE_MAX];
+	struct pi_state* pi_state;
 	struct pm_pi_info pi_info;
 	struct pi_ops* ops;
 };

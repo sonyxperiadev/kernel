@@ -98,7 +98,7 @@ static int pi_set_policy(struct pi *pi, u32 policy)
 	int res;
 	/*TBD - ac & atl should not be hardcoded -- NEED tO REVISIT*/
 	cfg.ac = 1;
-	cfg.atl  = 1;
+	cfg.atl  = 0;
 	cfg.policy = policy;
 	pr_info("%s:%s: %d event policy => %x \n",
 				__func__, pi->name, pi->sw_event_id,cfg.policy);
@@ -120,6 +120,9 @@ static int pi_init(struct pi *pi)
 	{
 		pi_set_policy(pi,pi->pi_state[pi->state_allowed].state_policy);
 	}
+	else
+		pi_set_policy(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy);
+	pwr_mgr_pi_set_wakeup_override(pi->id,false);
 	spin_unlock(&pi_mgr_lock);
 	return 0;
 }
@@ -233,6 +236,7 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 {
 	u32 old_val, new_val;
 	int i;
+	int found = 0;
 	struct pi_mgr_qos_object* qos = &pi_mgr.qos[pi_id];
 	struct pi *pi = pi_mgr.pi_list[pi_id];
 
@@ -265,26 +269,28 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 					     (unsigned long)new_val,
 					     NULL);
 
-		pi->state_allowed = PI_MGR_STATE_UNSUPPORTED;
 		if(new_val <= pi->pi_state[0].hw_wakeup_latency)
 			pi->state_allowed = 0;
 		else
 		{
-			for(i = 1; i < PI_STATE_MAX &&
-				pi->pi_state[i].hw_wakeup_latency != PI_MGR_STATE_UNSUPPORTED; i++)
+			for(i = 1; i < PI_MGR_MAX_STATE_ALLOWED &&
+				pi->pi_state[i].id != PI_MGR_STATE_UNSUPPORTED; i++)
 			{
 				if(new_val >= pi->pi_state[i-1].hw_wakeup_latency &&
 					new_val < pi->pi_state[i].hw_wakeup_latency)
 				{
 					pi->state_allowed = i-1;
+					found = 1;
 					break;
 				}
 			}
-			if(pi->state_allowed == PI_MGR_STATE_UNSUPPORTED)
-				pi->state_allowed = i -1;
+			BUG_ON(i == PI_MGR_MAX_STATE_ALLOWED);
+			if(!found)
+				pi->state_allowed = i-1;
 		}
 		/*TODO - Notify pm_qos for ARM core CCU*/
 	}
+	pr_info("%s:%s state allowed = %d\n",__func__,pi->name,pi->state_allowed);
 
 	return new_val;
 }
@@ -312,9 +318,9 @@ int pi_mgr_register(struct pi* pi)
 	qos = &pi_mgr.qos[pi->id];
 	BLOCKING_INIT_NOTIFIER_HEAD(&qos->notifiers);
 	plist_head_init(&qos->requests,&pi_mgr_list_lock);
-	for(inx = PI_STATE_MAX-1; inx >= 0 &&
-			pi->pi_state[inx].hw_wakeup_latency == PI_MGR_STATE_UNSUPPORTED; inx--);
-	BUG_ON(inx < 0);
+	for(inx = 0; inx < PI_MGR_MAX_STATE_ALLOWED &&
+			pi->pi_state[inx].id != PI_MGR_STATE_UNSUPPORTED; inx++);
+	BUG_ON(inx == PI_MGR_MAX_STATE_ALLOWED);
 	qos->default_latency = pi->pi_state[inx].hw_wakeup_latency;
 
 	dfs = &pi_mgr.dfs[pi->id];
