@@ -76,12 +76,15 @@ static int pi_set_ccu_freq(struct pi *pi, u32 policy, u16 freq)
 
 	for(inx =0; pi->ccu_id[inx];inx++)
 	{
+		pr_info("%s:pi:%s clock str:%s\n",__func__,pi->name,
+				pi->ccu_id[inx]);
+
 		clk = clk_get(NULL,pi->ccu_id[inx]);
 		BUG_ON(clk == 0 || IS_ERR(clk));
 		pr_info("%s:%s clock %x policy freq => %d\n",__func__,
 				clk->name,policy,freq);
 
-		if((res = ccu_set_freq_policy(to_ccu_clk(clk),policy,freq)) != 0)
+		if((res = ccu_set_freq_policy(to_ccu_clk(clk),CCU_POLICY(policy),freq)) != 0)
 		{
 			pr_info("%s:ccu_set_freq_policy failed\n",__func__);
 
@@ -113,19 +116,67 @@ static int pi_set_policy(struct pi *pi, u32 policy)
 
 static int pi_def_init(struct pi *pi)
 {
+	struct pi_mgr_qos_object* qos;
+	struct pi_mgr_dfs_object* dfs;
+	int inx;
+	struct clk* clk;
+
 	pr_info("%s:%s\n",__func__,pi->name);
+	if(pi->init)
+		return 0;
 	spin_lock(&pi_mgr_lock);
+	pi->init = 1;
+
+	/* Make sure that CCUs are initialized*/
+	for(inx =0; pi->ccu_id[inx];inx++)
+	{
+		clk = clk_get(NULL,pi->ccu_id[inx]);
+		BUG_ON(clk == 0 || IS_ERR(clk));
+		clk_init(clk);
+	}
+
+	if((pi->flags & PI_NO_QOS) == 0)
+	{
+		qos = &pi_mgr.qos[pi->id];
+		BLOCKING_INIT_NOTIFIER_HEAD(&qos->notifiers);
+		plist_head_init(&qos->requests,&pi_mgr_list_lock);
+		for(inx = 0; inx < PI_MGR_MAX_STATE_ALLOWED &&
+				pi->pi_state[inx].id != PI_MGR_STATE_UNSUPPORTED; inx++);
+		BUG_ON(inx == PI_MGR_MAX_STATE_ALLOWED);
+		qos->default_latency = pi->pi_state[inx].hw_wakeup_latency;
+	}
+
+	if((pi->flags & PI_NO_DFS) == 0)
+	{
+		dfs = &pi_mgr.dfs[pi->id];
+		BLOCKING_INIT_NOTIFIER_HEAD(&dfs->notifiers);
+		plist_head_init(&dfs->requests,&pi_mgr_list_lock);
+
+		BUG_ON(pi->opp_active >= PI_OPP_MAX);
+		dfs->default_opp = pi->opp_active;
+
+#ifdef CONFIG_CHANGE_POLICY_FOR_DFS
+		pi_set_policy(pi, pi->opp[pi->opp_active]);
+		pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy = pi->opp[pi->opp_active];
+#else
+		pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
+						pi->opp[pi->opp_active]);
+#endif
+	}
+
 	if(pi->pi_state[PI_MGR_ACTIVE_STATE_INX].id != PI_MGR_STATE_UNSUPPORTED)
 	{
 		if(pi->flags & PI_DISABLE_ON_INIT)
 		{
+			pr_info("%s: calling pi_set_policy-- policy = %d\n",__func__,pi->pi_state[pi->state_allowed].state_policy);
 			pi_set_policy(pi,pi->pi_state[pi->state_allowed].state_policy);
 		}
 		else
 		{
+			pr_info("%s: calling pi_set_policy-- policy = %d\n",__func__,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy);
 			pi_set_policy(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy);
 		}
-		pwr_mgr_pi_set_wakeup_override(pi->id,false);
+		pwr_mgr_pi_set_wakeup_override(pi->id,true/*clear*/);
 	}
 	spin_unlock(&pi_mgr_lock);
 	return 0;
@@ -135,12 +186,13 @@ static int pi_def_enable(struct pi *pi, int enable)
 {
 	u32 policy;
 
+	pr_info("%s: enable:%d usageCount:%d\n",__func__,enable,pi->usg_cnt);
 	spin_lock(&pi_mgr_lock);
 	if(enable)
 	{
 		if(pi->usg_cnt++ != 0)
 			goto done;
-		policy = PI_MGR_ACTIVE_STATE_INX;
+		policy = pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy;
 	}
 	else
 	{
@@ -148,6 +200,7 @@ static int pi_def_enable(struct pi *pi, int enable)
 			goto done;
 		policy = pi->pi_state[pi->state_allowed].state_policy;
 	}
+	pr_info("%s: calling pi_set_policy-- policy = %d pi->state_allowed = %d\n",__func__,policy,pi->state_allowed);
 	pi_set_policy(pi,policy);
 done:
 	spin_unlock(&pi_mgr_lock);
@@ -301,9 +354,6 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 
 int pi_mgr_register(struct pi* pi)
 {
-	struct pi_mgr_qos_object* qos;
-	struct pi_mgr_dfs_object* dfs;
-	int inx;
 	pr_info("%s:name:%s id:%d\n",__func__,pi->name,pi->id);
 	if(!pi_mgr.init)
 	{
@@ -318,35 +368,6 @@ int pi_mgr_register(struct pi* pi)
 	spin_lock(&pi_mgr_lock);
 	pi_mgr.pi_list[pi->id] = pi;
 	pi_mgr.pi_count++;
-
-	if((pi->flags & PI_NO_QOS) == 0)
-	{
-		qos = &pi_mgr.qos[pi->id];
-		BLOCKING_INIT_NOTIFIER_HEAD(&qos->notifiers);
-		plist_head_init(&qos->requests,&pi_mgr_list_lock);
-		for(inx = 0; inx < PI_MGR_MAX_STATE_ALLOWED &&
-				pi->pi_state[inx].id != PI_MGR_STATE_UNSUPPORTED; inx++);
-		BUG_ON(inx == PI_MGR_MAX_STATE_ALLOWED);
-		qos->default_latency = pi->pi_state[inx].hw_wakeup_latency;
-	}
-
-	if((pi->flags & PI_NO_DFS) == 0)
-	{
-		dfs = &pi_mgr.dfs[pi->id];
-		BLOCKING_INIT_NOTIFIER_HEAD(&dfs->notifiers);
-		plist_head_init(&dfs->requests,&pi_mgr_list_lock);
-
-		BUG_ON(pi->opp_active >= PI_OPP_MAX);
-		dfs->default_opp = pi->opp_active;
-
-#ifdef CONFIG_CHANGE_POLICY_FOR_DFS
-		pi_set_policy(pi, pi->opp[pi->opp_active]);
-		pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy = pi->opp[pi->opp_active];
-#else
-		pi_set_ccu_freq(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy,
-						pi->opp[pi->opp_active]);
-#endif
-	}
 
 	spin_unlock(&pi_mgr_lock);
 

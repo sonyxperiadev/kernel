@@ -44,7 +44,7 @@ static DEFINE_SPINLOCK(clk_lock);
 
 int clk_debug = 1;
 
-static int clk_init(struct clk *clk)
+int clk_init(struct clk *clk)
 {
 	int ret = 0;
 	unsigned long flags;
@@ -64,13 +64,18 @@ static int clk_init(struct clk *clk)
 	return ret;
 }
 
-int clk_register(struct clk_lookup *clk_lkup)
+int clk_register(struct clk_lookup *clk_lkup,int num_clks)
 {
     int ret = 0;
+	int i;
 
-	ret = clk_init(clk_lkup->clk);
-	clkdev_add(clk_lkup);
-	clk_dbg("clock registerd - %s\n", clk_lkup->clk->name);
+	for(i = 0; i < num_clks; i++)
+	{
+		clkdev_add(&clk_lkup[i]);
+		clk_dbg("clock registered - %s\n",clk_lkup[i].clk->name);
+	}
+	for(i = 0; i < num_clks; i++)
+		ret |= clk_init(clk_lkup[i].clk);
 	return ret;
 }
 
@@ -532,6 +537,7 @@ static int ccu_clk_init(struct clk* clk)
 		return 0;
 
 	ccu_clk = to_ccu_clk(clk);
+
 	BUG_ON (ccu_clk->freq_count > MAX_CCU_FREQ_COUNT);
 	clk_dbg("%s - %s\n",__func__, clk->name);
 
@@ -585,6 +591,14 @@ static int ccu_clk_init(struct clk* clk)
 	ccu_write_access_enable(ccu_clk, false);
 
 	clk->init = 1;
+
+	if(ccu_clk->pi_id != -1)
+	{
+		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
+		BUG_ON(!pi);
+		pi_init(pi);
+	}
+
 	return 0;
 }
 
@@ -1090,6 +1104,9 @@ static int peri_clk_set_rate(struct clk* clk, u32 rate)
 		return -EPERM;
 
 	peri_clk = to_peri_clk(clk);
+
+	clk_dbg("%s : %s\n",
+			__func__, clk->name);
 
 	if(CLK_FLG_ENABLED(clk,RATE_FIXED))
 	{

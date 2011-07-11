@@ -4643,19 +4643,11 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 
 int __init rhea_clock_init(void)
 {
-    int i;
 
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 
-    for (i=0; i<ARRAY_SIZE(rhea_clk_tbl); i++)
-		clk_register(&rhea_clk_tbl[i]);
-
-     /*********************  TEMPORARY *************************************
-     * Work arounds for clock module . this could be because of ASIC
-     * errata or other limitations or special requirements.
-     * -- To be revised based on future fixes.
-     *********************************************************************/
-    /*clock_module_temp_fixes(); */
+	if(clk_register(rhea_clk_tbl,ARRAY_SIZE(rhea_clk_tbl)))
+		printk(KERN_INFO "%s clk_register failed !!!!\n", __func__);
 
     return 0;
 }

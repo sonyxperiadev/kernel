@@ -74,6 +74,8 @@
 
 #define PM_POLICY_MASK	0x7
 
+#define CCU_POLICY(policy) ((policy) & 0x3)
+
 /*I2C commands - 4 bits*/
 
 enum
@@ -129,7 +131,7 @@ enum pc_pin
 
 enum
 {
-	PM_PMU_I2C,
+	PM_PMU_I2C = (1 << 0),
 
 };
 

@@ -118,8 +118,6 @@ static int __init rhea_init(void)
 	kona_gpio_init(4);
 #endif
 
-	rhea_pwr_mgr_init();
-	rhea_clock_init();
 
 	return 0;
 }

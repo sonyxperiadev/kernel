@@ -511,7 +511,8 @@ int clock_debug_add_clock(struct clk *c);
 #define	clock_debug_add_clock(clk) do {} while(0)
 #endif
 
-int clk_register(struct clk_lookup *clk_lkup);
+int clk_init(struct clk* clk);
+int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
 
 #if defined(DEBUG)

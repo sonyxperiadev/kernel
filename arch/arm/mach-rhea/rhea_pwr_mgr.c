@@ -32,6 +32,7 @@
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
 
+#include<mach/clock.h>
 #include<plat/pi_mgr.h>
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
@@ -40,6 +41,7 @@
 struct pwr_mgr_info rhea_pwr_mgr_info = {
 	.num_pi = PI_MGR_PI_ID_MAX,
 	.base_addr = KONA_PWRMGR_VA,
+	.flags = PM_PMU_I2C,
 };
 
 struct rhea_event_table
@@ -101,7 +103,7 @@ static const struct i2c_cmd i2c_cmd[] = {
 							{WAIT_TIMER,0x08},	//11 - Wait..
 							{I2C_VAR,0},		//12 - Data - Write the requested voltage
 							{WAIT_TIMER,0x50},	//13 - Wait..
-							{SET_PC_PINS,0xC0},	//14 - Set PC3/4 to 1 to signal End of transaction
+							{SET_PC_PINS,0xCC},	//14 - Set PC3/4 to 1 to signal End of transaction
 							{END,0},			//15 - End
 							{REG_ADDR,0},		//16 - NOP
 							{REG_ADDR,0},		//17 - NOP
@@ -177,7 +179,7 @@ static const u8 voltage_lookup[] = {
 
 
 
-void __init rhea_pwr_mgr_init()
+int __init rhea_pwr_mgr_init()
 {
 	struct v0x_spec_i2c_cmd_ptr v_ptr;
 	int i;
@@ -194,7 +196,19 @@ void __init rhea_pwr_mgr_init()
 	v_ptr.zerov_ptr = 45; /*Not used for Rhea*/
 
 	pwr_mgr_init(&rhea_pwr_mgr_info);
-	/*Init I2c seq*/
+	rhea_pi_mgr_init();
+
+	/*MM override is not set by default*/
+	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,false/*clear*/);
+
+		/*Done in two steps to skip DUMMY_EVENT*/
+	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
+	pwr_mgr_event_clear_events(USBOTG_EVENT,EVENT_ID_ALL);
+
+	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
+	pwr_mgr_event_set(SOFTWARE_0_EVENT,1);
+
+		/*Init I2c seq*/
 	pwr_mgr_pm_i2c_enable(false);
 	/*Program I2C sequencer*/
 	pwr_mgr_pm_i2c_cmd_write(i2c_cmd,ARRAY_SIZE(i2c_cmd));
@@ -204,14 +218,6 @@ void __init rhea_pwr_mgr_init()
 	pwr_mgr_set_v0x_specific_i2c_cmd_ptr(VOLT0,&v_ptr);
 	pwr_mgr_pm_i2c_enable(true);
 
-	/*Done in two steps to skip DUMMY_EVENT*/
-	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT,EVENT_ID_ALL);
-
-	/*Init PI*/
-	rhea_pi_mgr_init();
-	/*MM override is not set by default*/
-	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,true);
 	/*Init event table*/
 	for(i = 0; i < ARRAY_SIZE(event_table);i++)
 	{
@@ -236,6 +242,10 @@ void __init rhea_pwr_mgr_init()
 		pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_MM,&cfg);
 	}
 	/*Init all PIs*/
+
+	rhea_clock_init();
+
+
 	for(i = 0; i < PI_MGR_PI_ID_MODEM;i++)
 	{
 		pi = pi_mgr_get(i);
@@ -243,5 +253,7 @@ void __init rhea_pwr_mgr_init()
 		pi_init(pi);
 	}
 
+return 0;
 }
-EXPORT_SYMBOL(rhea_pwr_mgr_init);
+//EXPORT_SYMBOL(rhea_pwr_mgr_init);
+early_initcall(rhea_pwr_mgr_init);

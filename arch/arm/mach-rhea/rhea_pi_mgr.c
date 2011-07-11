@@ -71,11 +71,11 @@ static struct pi arm_core_pi =
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
 		.opp =  {
-					[PI_OPP_ECONOMY] = 200,
-					[PI_OPP_NORMAL] = 300,
-					[PI_OPP_TURBO] = 712,
+					[PI_OPP_ECONOMY] = 3,
+					[PI_OPP_NORMAL] = 6,
+					[PI_OPP_TURBO] = 7,
 				},
-		.sw_event_id = SOFTWARE_2_EVENT,
+		.sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET,
@@ -109,18 +109,18 @@ static struct pi mm_pi =
 	{
 		.name = "mm",
 		.id = PI_MGR_PI_ID_MM,
-		.flags = PI_DISABLE_ON_INIT,
+		//.flags = PI_DISABLE_ON_INIT,
 		.ccu_id = mm_ccu,
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = mm_states,
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
 		.opp =  {
-					[PI_OPP_ECONOMY] = 200,
-					[PI_OPP_NORMAL] = 300,
-					[PI_OPP_TURBO] = 712,
+					[PI_OPP_ECONOMY] = 1,
+					[PI_OPP_NORMAL] = 1,
+					[PI_OPP_TURBO] = 1,
 				},
-		.sw_event_id = SOFTWARE_1_EVENT,
+		.sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_MM_POLICY_OFFSET,
@@ -159,11 +159,11 @@ static struct pi hub_pi =
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
 		.opp =  {
-					[PI_OPP_ECONOMY] = 200,
-					[PI_OPP_NORMAL] = 300,
-					[PI_OPP_TURBO] = 712,
+					[PI_OPP_ECONOMY] = 2,
+					[PI_OPP_NORMAL] = 2,
+					[PI_OPP_TURBO] = 2,
 				},
-		.sw_event_id = SOFTWARE_1_EVENT,
+		.sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET,
@@ -203,11 +203,11 @@ static struct pi aon_pi =
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
 		.opp =  {
-					[PI_OPP_ECONOMY] = 200,
-					[PI_OPP_NORMAL] = 300,
-					[PI_OPP_TURBO] = 712,
+					[PI_OPP_ECONOMY] = 4,
+					[PI_OPP_NORMAL] = 4,
+					[PI_OPP_TURBO] = 4,
 				},
-		.sw_event_id = SOFTWARE_1_EVENT,
+		.sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET,
@@ -246,11 +246,11 @@ static struct pi sub_sys_pi =
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
 		.opp =  {
-					[PI_OPP_ECONOMY] = 200,
-					[PI_OPP_NORMAL] = 300,
-					[PI_OPP_TURBO] = 712,
+					[PI_OPP_ECONOMY] = 2,
+					[PI_OPP_NORMAL] = 2,
+					[PI_OPP_TURBO] = 2,
 				},
-		.sw_event_id = SOFTWARE_1_EVENT,
+		.sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET,
@@ -315,7 +315,11 @@ void __init rhea_pi_mgr_init()
 	pi_mgr_init();
 
 	for(i = 0; i < ARRAY_SIZE(pi_list);i++)
+	{
+		pr_info("%s: PI:%s state[0] = %x %x\n",__func__,pi_list[i]->name,
+			pi_list[i]->pi_state[1].id,pi_list[i]->pi_state[1].state_policy);
 		pi_mgr_register(pi_list[i]);
+	}
 
 }
 EXPORT_SYMBOL(rhea_pi_mgr_init);

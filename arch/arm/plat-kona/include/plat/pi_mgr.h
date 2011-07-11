@@ -9,7 +9,7 @@
 
 #define PI_MGR_QOS_DEFAULT_VALUE 	0xFFFFFFFF
 #define PI_MGR_STATE_UNSUPPORTED 	0xFFFFFFFF
-#define PI_OPP_UNSUPPORTED			0xFFFF
+#define PI_OPP_UNSUPPORTED		0xFFFF
 
 #define PI_MGR_ACTIVE_STATE_INX		0
 
@@ -25,10 +25,10 @@ struct pi_mgr_dfs_node;
 
 enum
 {
-	PI_DISABLE_ON_INIT  = (1 << 0),
-	PI_ARM_CORE  		= (1 << 2),
-	PI_NO_QOS			= (1 << 3),
-	PI_NO_DFS			= (1 << 4),
+	PI_DISABLE_ON_INIT  	= (1 << 0),
+	PI_ARM_CORE		= (1 << 2),
+	PI_NO_QOS		= (1 << 3),
+	PI_NO_DFS		= (1 << 4),
 };
 
 struct pm_pi_info
@@ -60,6 +60,7 @@ struct pi
 	char** ccu_id;
 	u32 id;
 	u32 state_allowed;
+	bool init;
 	u16 usg_cnt;
 	u16 opp_active;
 	u16 sw_event_id;
