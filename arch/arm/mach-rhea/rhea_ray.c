@@ -204,6 +204,9 @@ static const char *pmu_clients[] = {
 #ifdef CONFIG_BCM59055_ADC_CHIPSET_API
 	"bcm59055-adc_chipset_api",
 #endif
+#ifdef CONFIG_USB_BCM_OTG
+	"bcm_otg",
+#endif
 };
 
 /* Register userspace and virtual consumer for SIMLDO */
