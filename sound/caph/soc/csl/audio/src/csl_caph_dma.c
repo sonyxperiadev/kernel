@@ -769,7 +769,7 @@ void csl_caph_intc_enable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_A
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
 
-	chnl = csl_caph_srcmixer_get_chal_inchnl(csl_chnl);
+	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
 	
 	chal_caph_intc_enable_tap_intr(intc_handle, (cUInt8)chnl, owner);
 
@@ -794,7 +794,7 @@ void csl_caph_intc_disable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
 	
-	chnl = csl_caph_srcmixer_get_chal_inchnl(csl_chnl);
+	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
 
 	chal_caph_intc_disable_tap_intr(intc_handle, (cUInt8)chnl, owner);
 
@@ -819,7 +819,7 @@ void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
 
-	chnl = csl_caph_srcmixer_get_chal_inchnl(csl_chnl);
+	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
 	
 	chal_caph_intc_enable_tapout_intr(intc_handle, (cUInt8)chnl, owner);
 
@@ -844,7 +844,7 @@ void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
 	
-	chnl = csl_caph_srcmixer_get_chal_inchnl(csl_chnl);
+	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
 
 	chal_caph_intc_disable_tapout_intr(intc_handle, (cUInt8)chnl, owner);
 
@@ -853,12 +853,12 @@ void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner)
+*  Function Name: void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
 *
 *  Description: enable pcm intr
 *
 ****************************************************************************/
-void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner)
+void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
@@ -866,18 +866,24 @@ void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner)
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
-	// changed to use ssp3 for bt integration test. will change back with bt side
-    chal_caph_intc_enable_ssp_intr(intc_handle, 1, owner);
+	
+	if (csl_sspid == CSL_CAPH_SSP_3)
+    	chal_caph_intc_enable_ssp_intr(intc_handle, 1, owner);
+	else if (csl_sspid == CSL_CAPH_SSP_4)
+		chal_caph_intc_enable_ssp_intr(intc_handle, 2, owner);
+	else
+		// should not get here.
+		xassert(0, csl_sspid);
 }
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner)
+*  Function Name: void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
 *
 *  Description: disable pcm intr
 *
 ****************************************************************************/
-void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner)
+void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
@@ -885,8 +891,14 @@ void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner)
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
-	// changed to use ssp3 for bt integration test. will change back with bt side
-    chal_caph_intc_disable_ssp_intr(intc_handle, 1, owner);
+	
+	if (csl_sspid == CSL_CAPH_SSP_3)
+    	chal_caph_intc_disable_ssp_intr(intc_handle, 1, owner);
+	else if (csl_sspid == CSL_CAPH_SSP_4)
+		chal_caph_intc_disable_ssp_intr(intc_handle, 2, owner);
+	else
+		// should not get here.
+		xassert(0, csl_sspid);
 }
 
 /****************************************************************************
@@ -1098,4 +1110,41 @@ void csl_caph_dma_clr_ddrfifo_status(CSL_CAPH_DMA_CHNL_e chnl)
 {
     dmaCH_ctrl[chnl].eFifoStatus = CAPH_READY_NONE;
     return;
+}
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_dma_read_reqcount(CSL_CAPH_DMA_CHNL_e chnl)
+*
+*  Description: read dma req count
+*
+****************************************************************************/
+
+UInt8 csl_caph_dma_read_reqcount(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	return chal_caph_dma_read_reqcount(handle, csl_caph_dma_get_chal_chnl(chnl));
+}
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_dma_read_currmempointer(CSL_CAPH_DMA_CHNL_e chnl)
+*
+*  Description: read curr mem pointer
+*
+****************************************************************************/
+UInt16 csl_caph_dma_read_currmempointer(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	return chal_caph_dma_read_currmempointer(handle, csl_caph_dma_get_chal_chnl(chnl));
+}
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_dma_read_timestamp(CSL_CAPH_DMA_CHNL_e chnl)
+*
+*  Description: read dma time stamp
+*
+****************************************************************************/
+UInt32 csl_caph_dma_read_timestamp(CSL_CAPH_DMA_CHNL_e chnl)
+{
+	return chal_caph_dma_read_timestamp(handle, csl_caph_dma_get_chal_chnl(chnl));
 }

@@ -68,12 +68,17 @@ Broadcom's express prior written consent.
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
+static Boolean hwClkEnabled = FALSE;
+
 #ifdef CONFIG_AUDIO_BUILD
 static Interrupt_t AUDDRV_HISR_HANDLE;
 static CLIENT_ID id[MAX_AUDIO_CLOCK_NUM] = {0, 0, 0, 0, 0, 0};
-static void AUDDRV_LISR(void);
-static void AUDDRV_HISR(void);
+//****************************************************************************
+// local function declarations
+//****************************************************************************
+static void AUDDRV_ControlHWClock(Boolean enable);
 #else
+#include "clock.h"
 #include "clk.h"
 static struct clk *clkID[MAX_AUDIO_CLOCK_NUM] = {NULL,NULL,NULL,NULL,NULL,NULL};
 #endif
@@ -81,11 +86,81 @@ static struct clk *clkID[MAX_AUDIO_CLOCK_NUM] = {NULL,NULL,NULL,NULL,NULL,NULL};
 // local function declarations
 //****************************************************************************
 static CSL_CAPH_STREAM_e AUDDRV_GetCSLStreamID(AUDDRV_STREAM_e streamID);
-
+static CSL_CAPH_HW_GAIN_e AUDDRV_GetCSLHWGainSelect(AUDDRV_HW_GAIN_e hw);
 
 //******************************************************************************
 // local function definitions
 //******************************************************************************
+
+// ==========================================================================
+//
+// Function Name: void AUDDRV_ControlHWClock(Boolean enable)
+//
+// Description: This is to enable/disable the audio HW clocks
+//                  KHUB_CAPH_SRCMIXER_CLK
+//                  KHUB_AUDIOH_2P4M_CLK
+//                  KHUB_AUDIOH_26M_CLK
+//                  KHUB_AUDIOH_156M_CLK
+//
+// =========================================================================
+
+static void AUDDRV_ControlHWClock(Boolean enable)
+{
+#ifdef CONFIG_AUDIO_BUILD
+#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)                                 
+#if !defined(FPGA_VERSION)
+    if (enable == TRUE)
+    {
+        //Enable CAPH clock.
+        id[0] = PRM_client_register("AUDIO_CAPH_DRV");
+        PRM_set_clock_state(id[0], RESOURCE_CAPH, CLOCK_ON);
+        PRM_set_clock_speed(id[0], RESOURCE_CAPH, 156000000);
+
+    	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP3, KHUB_SSP3_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
+        //id[1] = PRM_client_register("AUDIO_CAPH_SSP3_DRV");
+        //PRM_set_clock_state(id[1], RESOURCE_SSP3_AUDIO, CLOCK_ON);
+        //PRM_set_clock_speed(id[1], RESOURCE_SSP3_AUDIO, 26000000);
+    
+	    // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_2P4M_CLK, CLOCK_CLK_EN, clock_op_enable);
+        id[2] = PRM_client_register("AUDIO_AUDIOH1_DRV");
+        PRM_set_clock_state(id[2], RESOURCE_AUDIOH_2P4M, CLOCK_ON);
+        // no need to set speed, it is fixed
+        //PRM_set_clock_speed(id[2], RESOURCE_AUDIOH_2P4M, 26000000);
+
+	    // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_26M_CLK, CLOCK_CLK_EN, clock_op_enable);
+        id[3] = PRM_client_register("AUDIO_AUDIOH2_DRV");
+        PRM_set_clock_state(id[3], RESOURCE_AUDIOH, CLOCK_ON);
+	    // no need to set the speed. it is fixed
+        //PRM_set_clock_speed(id[3], RESOURCE_AUDIOH, 26000000);
+
+	    // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_156M_CLK, CLOCK_CLK_EN, clock_op_enable);
+        id[4] = PRM_client_register("AUDIO_AUDIOH3_DRV");
+        PRM_set_clock_state(id[4], RESOURCE_AUDIOH_156M, CLOCK_ON);
+	    // no need to set speed, it is fixed.
+        //PRM_set_clock_speed(id[4], RESOURCE_AUDIOH_156M, 26000000);
+    
+    	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
+        //id[5] = PRM_client_register("AUDIO_CAPH_SSP4_DRV");
+        //PRM_set_clock_state(id[5], RESOURCE_SSP4_AUDIO, CLOCK_ON);
+        //PRM_set_clock_speed(id[5], RESOURCE_SSP4_AUDIO, 26000000);
+    }
+    else
+    {
+        PRM_set_clock_state(id[0], RESOURCE_CAPH, CLOCK_OFF);
+        PRM_client_deregister(id[0]);
+        PRM_set_clock_state(id[2], RESOURCE_AUDIOH_2P4M, CLOCK_OFF);
+        PRM_client_deregister(id[2]);
+        PRM_set_clock_state(id[3], RESOURCE_AUDIOH, CLOCK_OFF);
+        PRM_client_deregister(id[3]);
+        PRM_set_clock_state(id[4], RESOURCE_AUDIOH_156M, CLOCK_OFF);
+        PRM_client_deregister(id[4]);
+    }
+#endif    
+#endif
+    return;
+#endif
+}
+
 /****************************************************************************
 *
 *  Function Name: Result_t AUDDRV_HWControl_Init(void)
@@ -98,9 +173,16 @@ Result_t AUDDRV_HWControl_Init(void)
     CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
    	printk(KERN_INFO "AUDDRV_HWControl_Init:: \n");
 
-#ifdef CONFIG_DEPENDENCY_READY_CLOCK
+#if !(defined(_SAMOA_))
 //Enable CAPH clock.
     clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
+#ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
+                                This is a workaround before a solution from clock */
+    if ( clkID[0]->use_cnt )
+    {
+        clk_disable(clkID[0]);
+    }
+#endif
 	clk_set_rate(clkID[0], 156000000);
     clk_enable(clkID[0]);
     
@@ -108,10 +190,11 @@ Result_t AUDDRV_HWControl_Init(void)
 	//clkID[1] = clk_get(NULL, "audioh_apb_clk");
     //clk_enable(clkID[1]);
     //clk_set_rate(clkID[1], 156000000);
-
+#ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
 	clkID[1] = clk_get(NULL, "ssp3_audio_clk");
     clk_enable(clkID[1]);
     //clk_set_rate(clkID[1], 156000000);
+#endif
     
 	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_2P4M_CLK, CLOCK_CLK_EN, clock_op_enable);
     clkID[2] = clk_get(NULL, "audioh_2p4m_clk");
@@ -131,119 +214,12 @@ Result_t AUDDRV_HWControl_Init(void)
     //clk_set_rate(clkID[4], 26000000);
 
 	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
+#ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
     clkID[5] = clk_get(NULL, "ssp4_audio_clk");
     clk_enable(clkID[5]);
     //clk_set_rate(clkID[5], 156000000);
-#else
-    // hard code it.
-	UInt32 regVal;
-	regVal = (0x00A5A5 << KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
-    regVal |= KHUB_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_MASK;
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET),regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET)) = (UInt32)regVal);
-	while ( ((*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET))) & 0x01) == 1) {} 
- 
-	printk("AUDDRV_HWControl_Init:: OK 1\n");
-
-    /* Set the frequency policy */
-    regVal = (0x06 << KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_SHIFT);
-    regVal |= (0x06 << KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT);
-    regVal |= (0x06 << KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_SHIFT);
-    regVal |= (0x06 << KHUB_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_SHIFT);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY_FREQ_OFFSET)) = (UInt32)regVal);
- 
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET)) = (UInt32)0x0000FFFF);
-
-    /* Set the frequency policy */
-    regVal = 0x7FFFFFFF;
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET)) = (UInt32)regVal);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY1_MASK1_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY1_MASK1_OFFSET)) = (UInt32)regVal);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY2_MASK1_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY2_MASK1_OFFSET)) = (UInt32)regVal);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK1_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY3_MASK1_OFFSET)) = (UInt32)regVal);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY0_MASK2_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY0_MASK2_OFFSET)) = (UInt32)regVal);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY1_MASK2_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY1_MASK2_OFFSET)) = (UInt32)regVal);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY2_MASK2_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY2_MASK2_OFFSET)) = (UInt32)regVal);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY3_MASK2_OFFSET)) = (UInt32)regVal);
- 
-    /* start the frequency policy */
-    regVal = 0x00000003; //(KHUB_CLK_MGR_REG_POLICY_CTL_GO_MASK | KHUB_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK);
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET)) = (UInt32)regVal);
-	while ( ((*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_POLICY_CTL_OFFSET))) & 0x01) == 1) {} 
-	
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET)) = (UInt32)0x0000FFFF);
-
-
-	//OSTASK_Sleep(1000);
-
-	printk("AUDDRV_HWControl_Init:: OK 2\n");
-
-	// srcMixer clock
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET)) = (UInt32)0x00000011);
-	//while ( ((*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET))) & 0x00100000) == 0x00100000) {}
-	
-	printk("AUDDRV_HWControl_Init:: OK 3\n");
-	
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET)) = (UInt32)0x00100000);
-	//while ( ((*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET))) & 0x00100000) == 0x00100000) {}
-	
-	printk("AUDDRV_HWControl_Init:: OK 4\n");
-
-	/* Enable all the CAPH clocks */
-#if 0    
-	//regVal = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_CLK_EN_MASK;
-    //regVal |= KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HW_SW_GATING_SEL_MASK;
-	//regVal |= KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_EN_MASK;
-    //regVal |= KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_VAL_MASK;
-    //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET) ,regVal);
 #endif
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET)) = (UInt32)0x1030);
-
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_DAP_SWITCH_CLKGATE_OFFSET)) = (UInt32)0x1);
-
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_APB10_CLKGATE_OFFSET)) = (UInt32)0x1);
-
-	printk("AUDDRV_HWControl_Init:: OK 5\n");
-
-#if 0
-    /* Enable all the AUDIOH clocks, 26M, 156M, 2p4M, 6p5M  */
-    regVal = KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_2P4M_CLK_EN_MASK;
-    regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_2P4M_HW_SW_GATING_SEL_MASK;
-    regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_26M_CLK_EN_MASK;
-    regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_26M_HW_SW_GATING_SEL_MASK;
-    regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_156M_CLK_EN_MASK;
-    regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_156M_HW_SW_GATING_SEL_MASK;
-    regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_APB_CLK_EN_MASK;
-     regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_APB_HW_SW_GATING_SEL_MASK;
-    regVal |= KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_APB_HYST_VAL_MASK;
-	//WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET) ,regVal);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET)) = (UInt32)regVal);
-#endif
-	//( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET)) = (UInt32)0x00100000);
-	//( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_APB10_CLKGATE_OFFSET)) = (UInt32)0x00000001);
-
-	// lock
-	/*
-	regVal = (0x00A5A5 << KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
-	( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET)) = (UInt32)regVal);
-	while ( ((*((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET))) & 0x00100000) == 0x00100000) {}
-	*/
-
-
-	//( *((volatile UInt32 *)(KONA_HUB_CLK_BASE_VA+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET)) = (UInt32)0x0000ffaa);
-	
-	printk("AUDDRV_HWControl_Init:: OK 6\n");
-
-#endif
+#endif // !defined(_SAMOA_)
 
     CAPHIRQ_Init();
 
@@ -255,9 +231,10 @@ Result_t AUDDRV_HWControl_Init(void)
     addr.srcmixer_baseAddr = SRCMIXER_BASE_ADDR1;
     addr.audioh_baseAddr = AUDIOH_BASE_ADDR1;
     addr.sdt_baseAddr = SDT_BASE_ADDR1;
-	// swapped sspi3 and sspi4 for bt integration test. will change back with bt side
-    addr.ssp3_baseAddr = SSP4_BASE_ADDR1;
-    addr.ssp4_baseAddr = SSP3_BASE_ADDR1;
+
+    addr.ssp3_baseAddr = SSP3_BASE_ADDR1;
+    addr.ssp4_baseAddr = SSP4_BASE_ADDR1;
+	
     csl_caph_hwctrl_init(addr);
 	return RESULT_OK;
 }
@@ -285,12 +262,14 @@ Result_t AUDDRV_HWControl_DeInit(void)
     csl_caph_hwctrl_deinit(); 
 
 #ifndef CONFIG_AUDIO_BUILD
+#if !defined(_SAMOA_)
 	clk_disable(clkID[0]);
 	clk_disable(clkID[1]);
 	clk_disable(clkID[2]);
 	clk_disable(clkID[3]);
 	clk_disable(clkID[4]);
 	clk_disable(clkID[5]);
+#endif
 #else
     //Disable CAPH clock.
     PRM_set_clock_state(id[0], RESOURCE_CAPH, CLOCK_OFF);
@@ -327,6 +306,11 @@ AUDDRV_PathID AUDDRV_HWControl_EnablePath(AUDDRV_HWCTRL_CONFIG_t config)
     CSL_CAPH_PathID cslPathID = 0;
     Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_EnablePath::  Source: %d, Sink: %d\r\n",
             config.source, config.sink);
+	if(hwClkEnabled == FALSE)
+    {
+        AUDDRV_ControlHWClock(TRUE);
+        hwClkEnabled = TRUE;
+    }
 
     memset(&cslConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
@@ -338,6 +322,7 @@ AUDDRV_PathID AUDDRV_HWControl_EnablePath(AUDDRV_HWCTRL_CONFIG_t config)
     cslConfig.snk_sampleRate = config.snk_sampleRate;	
     cslConfig.chnlNum = config.chnlNum;
     cslConfig.bitPerSample = config.bitPerSample;
+    memcpy(&(cslConfig.mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
 
     cslPathID = csl_caph_hwctrl_EnablePath(cslConfig); 
 	return (AUDDRV_PathID)cslPathID;
@@ -360,7 +345,13 @@ Result_t AUDDRV_HWControl_DisablePath(AUDDRV_HWCTRL_CONFIG_t config)
     cslConfig.streamID = AUDDRV_GetCSLStreamID(config.streamID);
     cslConfig.pathID = (CSL_CAPH_PathID)(config.pathID);
 
-    return csl_caph_hwctrl_DisablePath(cslConfig);
+    (void)csl_caph_hwctrl_DisablePath(cslConfig);
+    if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
+    {
+        AUDDRV_ControlHWClock(FALSE);
+        hwClkEnabled = FALSE;
+    }
+    return RESULT_OK;
 }
 
 
@@ -408,82 +399,75 @@ Result_t AUDDRV_HWControl_ResumePath(AUDDRV_HWCTRL_CONFIG_t config)
 /****************************************************************************
 *
 *  Function Name: Result_t AUDDRV_HWControl_SetSinkGain(AUDDRV_PathID pathID, 
-*                                                       UInt32 gainL_mB,
-*                                                       UInt32 gainR_mB)
+*                                                       UInt16 gainL,
+*                                                       UInt16 gainR)
 *
-*  Description: Set the gain for sink. In AudioHub, the gain can noly be 
-*  done by using mixing output gain inside SRCMixer. No plan to use the 
-*  mixing input gain. 
-*  For the audio paths which do not go through SRCMixer, the gain is not doable.
+*  Description: Set the sink gain on the path.
 *
-*  Note1: If the path is a stereo path, gainL_mB is for Left channel and 
-*  gainR_mB is for right channel. If the path is mono path, gainL_mB is for the
-*  channel. gainR_mB is ignored.
+*  Note1: If the path is a stereo path, gainL is for Left channel and 
+*  gainR is for right channel. If the path is mono path, gainL is for the
+*  channel. gainR is ignored.
 *
-*  Note2: gain_mB is the gain in millibel. 1dB = 100mB. UInt32 gain_mB is in 
-*  Q31.0 format. It is:
+*  Note2: gain is in Q13.2 format. It is:
 *
-*   2147483647mB, i.e. 21474836dB ->
-*          7FFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF
+*   8191.75dB ->   7FFF
+*   8191.5dB  ->   7FFE       
 *   ......
-*   2mB -> 0000 0000 0000 0000 0000 0000 0000 0002
-*   1mB -> 0000 0000 0000 0000 0000 0000 0000 0001
-*   0mB -> 0000 0000 0000 0000 0000 0000 0000 0000
-*  -1mB -> FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF
-*  -2mB -> FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFE
+*   0.5dB    ->    0002
+*   0.25dB   ->    0001
+*   0dB ->         0000
+*   -0.25dB  ->    FFFF
+*   -1dB     ->    FFFE
 *  ......
-*  -2147483648mB, i.e. -21474836.48dB->
-*          8000 0000 0000 0000 0000 0000 0000 0000
+*  -8191.75dB->    8001
+*
 *
 ****************************************************************************/
 Result_t AUDDRV_HWControl_SetSinkGain(AUDDRV_PathID pathID, 
-                                      UInt32 gainL_mB,
-                                      UInt32 gainR_mB)
+                                      UInt16 gainL,
+                                      UInt16 gainR)
 {
     csl_caph_hwctrl_SetSinkGain((CSL_CAPH_PathID)pathID, 
-                                gainL_mB,
-                                gainR_mB);
+                                gainL,
+                                gainR);
 
     return RESULT_OK;
 }
 
 /****************************************************************************
 *
-*  Function Name: Result_t AUDDRV_HWControl_SetSource(AUDDRV_PathID pathID, 
-*                                                     UInt32 gainL_mB,
-*                                                     UInt32 gainR_mB)
+*  Function Name: Result_t AUDDRV_HWControl_SetSourceGain(AUDDRV_PathID pathID, 
+*                                                     UInt16 gainL,
+*                                                     UInt16 gainR)
 *
-*  Description: Set the gain for source. In AudioHub, the gain can noly be 
-*  done by using audioh CIC scale setting.
+*  Description: Set the source gain on the path.
 *
-*  Note1: If the path is a stereo path, gainL_mB is for Left channel and 
-*  gainR_mB is for right channel. If the path is mono path, gainL_mB is for the
-*  channel. gainR_mB is ignored.
+*  Note1: If the path is a stereo path, gainL is for Left channel and 
+*  gainR is for right channel. If the path is mono path, gainL is for the
+*  channel. gainR is ignored.
 *
-*  Note2: gain_mB is the gain in millibel. 1dB = 100mB. UInt32 gain_mB is in 
-*  Q31.0 format. It is:
+*  Note2: gain is in Q13.2 format. It is:
 *
-*   2147483647mB, i.e. 21474836dB ->
-*          7FFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF
+*   8191.75dB ->   7FFF
+*   8191.5dB  ->   7FFE       
 *   ......
-*   2mB -> 0000 0000 0000 0000 0000 0000 0000 0002
-*   1mB -> 0000 0000 0000 0000 0000 0000 0000 0001
-*   0mB -> 0000 0000 0000 0000 0000 0000 0000 0000
-*  -1mB -> FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFF
-*  -2mB -> FFFF FFFF FFFF FFFF FFFF FFFF FFFF FFFE
+*   0.5dB    ->    0002
+*   0.25dB   ->    0001
+*   0dB ->         0000
+*   -0.25dB  ->    FFFF
+*   -1dB     ->    FFFE
 *  ......
-*  -2147483648mB, i.e. -21474836.48dB->
-*          8000 0000 0000 0000 0000 0000 0000 0000
+*  -8191.75dB->    8001
 
 ****************************************************************************/
 Result_t AUDDRV_HWControl_SetSourceGain(AUDDRV_PathID pathID,
-                                        UInt32 gainL_mB,
-                                        UInt32 gainR_mB)
+                                        UInt16 gainL,
+                                        UInt16 gainR)
 
 {
     csl_caph_hwctrl_SetSourceGain((CSL_CAPH_PathID)pathID,
-                                  gainL_mB,
-                                  gainR_mB);
+                                  gainL,
+                                  gainR);
     return RESULT_OK;
 }
 
@@ -622,42 +606,104 @@ Result_t AUDDRV_HWControl_RemoveSource(AUDDRV_DEVICE_e source)
 ****************************************************************************/
 Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff)
 {
+    switch(filter)
+    {
+        case AUDDRV_SIDETONE_FILTER:
+           csl_caph_hwctrl_ConfigSidetoneFilter(coeff);		
+	   break;
+    	default:
+	   ;
+    }
     return RESULT_OK;
 }
 
 /****************************************************************************
 *
-*  Function Name: Result_t AUDDRV_HWControl_EnableSideTone(void)    
+*  Function Name: Result_t AUDDRV_HWControl_EnableSideTone(
+*  				AudioMode_t audioMode)    
 *  
 *  Description: Enable Sidetone path
 *
 ****************************************************************************/
-Result_t AUDDRV_HWControl_EnableSideTone(void)
+Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audioMode)
 {
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
+    switch(audioMode)
+    {
+        case AUDIO_MODE_HANDSET:
+        case AUDIO_MODE_HANDSET_WB:
+        case AUDIO_MODE_HAC:
+        case AUDIO_MODE_HAC_WB:
+	    config.sink = CSL_CAPH_DEV_EP; 
+            break;
+        case AUDIO_MODE_HEADSET:
+        case AUDIO_MODE_HEADSET_WB:
+        case AUDIO_MODE_TTY:
+        case AUDIO_MODE_TTY_WB:
+	    config.sink = CSL_CAPH_DEV_HS; 
+            break;
+        case AUDIO_MODE_SPEAKERPHONE:
+        case AUDIO_MODE_SPEAKERPHONE_WB:
+	    config.sink = CSL_CAPH_DEV_IHF; 
+            break;
+
+	default:
+	    // For other audio modes. nothing to be done.
+	return RESULT_OK;
+    }
+    csl_caph_hwctrl_EnableSidetone(config, TRUE);
     return RESULT_OK;
 }
 
 /****************************************************************************
 *
-*  Function Name: Result_t AUDDRV_HWControl_DisableSideTone(void)    
+*  Function Name: Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audioMode)    
 *  
 *  Description: Disable Sidetone path
 *
 ****************************************************************************/
-Result_t AUDDRV_HWControl_DisableSideTone(void)    
+Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audioMode)    
 {
+   CSL_CAPH_HWCTRL_CONFIG_t config;
+    memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
+    switch(audioMode)
+    {
+        case AUDIO_MODE_HANDSET:
+        case AUDIO_MODE_HANDSET_WB:
+        case AUDIO_MODE_HAC:
+        case AUDIO_MODE_HAC_WB:
+	    config.sink = CSL_CAPH_DEV_EP; 
+            break;
+        case AUDIO_MODE_HEADSET:
+        case AUDIO_MODE_HEADSET_WB:
+        case AUDIO_MODE_TTY:
+        case AUDIO_MODE_TTY_WB:
+	    config.sink = CSL_CAPH_DEV_HS; 
+            break;
+        case AUDIO_MODE_SPEAKERPHONE:
+        case AUDIO_MODE_SPEAKERPHONE_WB:
+	    config.sink = CSL_CAPH_DEV_IHF; 
+            break;
+
+	default:
+	    // For other audio modes. nothing to be done.
+	return RESULT_OK;
+    }	
+    csl_caph_hwctrl_EnableSidetone(config, FALSE);
     return RESULT_OK;
 }
 
 /****************************************************************************
 *
-*  Function Name:Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain_mB)    
+*  Function Name:Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain)    
 *  
 *  Description: Set the sidetone gain
 *
 ****************************************************************************/
-Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain_mB)
+Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain)
 {
+	csl_caph_hwctrl_SetSidetoneGain(gain);	
 	return RESULT_OK;
 }
 
@@ -711,8 +757,8 @@ Result_t AUDDRV_HWControl_SetDSPSharedMeMForIHF(UInt32 addr)
 Result_t AUDDRV_HWControl_ConfigSSP(UInt8 fm_port, UInt8 pcm_port)
 {
 	CSL_CAPH_SSP_Config_t sspConfig;
-
 	memset(&sspConfig, 0, sizeof(CSL_CAPH_SSP_Config_t));
+	
 	sspConfig.fm_port = (CSL_CAPH_SSP_e)fm_port;
 	sspConfig.pcm_port = (CSL_CAPH_SSP_e)pcm_port;
 
@@ -728,6 +774,18 @@ Result_t AUDDRV_HWControl_ConfigSSP(UInt8 fm_port, UInt8 pcm_port)
 
 	csl_caph_hwctrl_ConfigSSP(sspConfig);
 	return RESULT_OK;
+}
+
+/****************************************************************************
+*
+*  Function Name: AUDDRV_HWControl_SetSspTdmMode
+*
+*  Description: set ssp tdm
+*
+*****************************************************************************/
+void AUDDRV_HWControl_SetSspTdmMode(Boolean status)
+{
+	csl_caph_hwctrl_SetSspTdmMode(status);
 }
 
 /****************************************************************************
@@ -822,6 +880,66 @@ Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_VibratorStrength strength = 0
 }
 
 
+
+/****************************************************************************
+*
+*Result_t AUDDRV_HWControl_SetMixOutputGain(AUDDRV_PathID pathID, 
+*                                      fineGainL,
+*                                      coarseGainL,
+*                                      fineGainR,
+*                                      coarseGainR)		
+*
+*  Description: Set Mixer output gain in HW Mixer. Gain in register value format.
+*
+****************************************************************************/
+Result_t AUDDRV_HWControl_SetMixOutputGain(AUDDRV_PathID pathID, 
+                                      UInt32 fineGainL,
+                                      UInt32 coarseGainL,
+				      UInt32 fineGainR,
+                                      UInt32 coarseGainR)		
+{
+    csl_caph_hwctrl_SetMixOutGain((CSL_CAPH_PathID)pathID, 
+                                      (UInt16)fineGainL,
+                                      (UInt16)coarseGainL,
+				      (UInt16)fineGainR,
+                                      (UInt16)coarseGainR);
+    return RESULT_OK;
+}
+/****************************************************************************
+*
+*  AUDDRV_HWControl_SetMixingGain(AUDDRV_PathID pathID, UInt32 gainL, 
+ 						UInt32 gainR)
+*
+*  Description: Set Mixing gain in HW Mixer. Gain in Q13.2 Format.
+*
+****************************************************************************/
+Result_t AUDDRV_HWControl_SetMixingGain(AUDDRV_PathID pathID, 
+						UInt32 gainL, 
+ 						UInt32 gainR)
+{
+    csl_caph_hwctrl_SetMixingGain((CSL_CAPH_PathID)pathID, 
+  						gainL, 
+ 						gainR);
+    return RESULT_OK;
+}
+
+/****************************************************************************
+*
+*  Function Name:void AUDDRV_HWControl_SetHWGain(AUDDRV_HW_GAIN_e hw,
+*  						UInt32 gain,
+*  						AUDDRV_DEVICE_e dev)
+*
+*  Description: Set Hw gain. For audio tuning purpose only.
+*
+****************************************************************************/
+void  AUDDRV_HWControl_SetHWGain(AUDDRV_HW_GAIN_e hw, UInt32 gain, AUDDRV_DEVICE_e dev)
+{
+	csl_caph_hwctrl_SetHWGain(AUDDRV_GetCSLHWGainSelect(hw), 
+			gain, 
+			AUDDRV_GetCSLDevice(dev));
+	return;
+}
+
 /****************************************************************************
 *
 *  Function Name: CSL_CAPH_STREAM_e AUDDRV_GetCSLStreamID(AUDDRV_STREAM_e streamID)
@@ -893,3 +1011,75 @@ static CSL_CAPH_STREAM_e AUDDRV_GetCSLStreamID(AUDDRV_STREAM_e streamID)
     return cslStreamID;
 }
 
+
+
+/****************************************************************************
+*
+*  Function Name: CSL_CAPH_HW_GAIN_e AUDDRV_GetCSLHWGainSelect(AUDDRV_HW_GAIN_e hw)
+*
+*  Description: Get the CSL HW Gain Select from DRV layer
+*
+****************************************************************************/
+static CSL_CAPH_HW_GAIN_e AUDDRV_GetCSLHWGainSelect(AUDDRV_HW_GAIN_e hw)
+{
+    CSL_CAPH_HW_GAIN_e cslHW = CSL_CAPH_AMIC_DGA_COARSE_GAIN;
+    switch (hw)
+    {
+        case AUDDRV_AMIC_PGA_GAIN:
+            cslHW = CSL_CAPH_AMIC_PGA_GAIN;
+            break;
+        case AUDDRV_AMIC_DGA_COARSE_GAIN:
+            cslHW = CSL_CAPH_AMIC_DGA_COARSE_GAIN;
+            break;
+        case AUDDRV_AMIC_DGA_FINE_GAIN:
+            cslHW = CSL_CAPH_AMIC_DGA_FINE_GAIN;
+            break;
+        case AUDDRV_DMIC1_DGA_COARSE_GAIN:
+            cslHW = CSL_CAPH_DMIC1_DGA_COARSE_GAIN;
+            break;
+        case AUDDRV_DMIC1_DGA_FINE_GAIN:
+            cslHW = CSL_CAPH_DMIC1_DGA_FINE_GAIN;
+            break;
+        case AUDDRV_DMIC2_DGA_COARSE_GAIN:
+            cslHW = CSL_CAPH_DMIC2_DGA_COARSE_GAIN;
+            break;
+        case AUDDRV_DMIC2_DGA_FINE_GAIN:
+            cslHW = CSL_CAPH_DMIC2_DGA_FINE_GAIN;
+            break;
+        case AUDDRV_DMIC3_DGA_COARSE_GAIN:
+            cslHW = CSL_CAPH_DMIC3_DGA_COARSE_GAIN;
+            break;
+        case AUDDRV_DMIC3_DGA_FINE_GAIN:
+            cslHW = CSL_CAPH_DMIC3_DGA_FINE_GAIN;
+            break;
+        case AUDDRV_DMIC4_DGA_COARSE_GAIN:
+            cslHW = CSL_CAPH_DMIC4_DGA_COARSE_GAIN;
+            break;
+        case AUDDRV_DMIC4_DGA_FINE_GAIN:
+            cslHW = CSL_CAPH_DMIC4_DGA_FINE_GAIN;
+            break;
+        case AUDDRV_SRCM_INPUT_GAIN_L:
+            cslHW = CSL_CAPH_SRCM_INPUT_GAIN_L;
+            break;
+        case AUDDRV_SRCM_OUTPUT_COARSE_GAIN_L:
+            cslHW = CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L;
+            break;
+        case AUDDRV_SRCM_OUTPUT_FINE_GAIN_L:
+            cslHW = CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_L;
+            break;
+        case AUDDRV_SRCM_INPUT_GAIN_R:
+            cslHW = CSL_CAPH_SRCM_INPUT_GAIN_R;
+            break;
+        case AUDDRV_SRCM_OUTPUT_COARSE_GAIN_R:
+            cslHW = CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R;
+            break;
+        case AUDDRV_SRCM_OUTPUT_FINE_GAIN_R:
+            cslHW = CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R;
+            break;
+            
+        default:
+            xassert(0, hw);
+            break;
+    }
+    return cslHW;
+}

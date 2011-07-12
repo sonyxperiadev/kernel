@@ -22,6 +22,8 @@ Broadcom's express prior written consent.
 #ifndef _CSL_CAPH_GAIN_H_
 #define _CSL_CAPH_GAIN_H_
 
+#define GAIN_SYSPARM 0x8000
+#define GAIN_NA 0x8001
 
 typedef enum
 {
@@ -29,48 +31,55 @@ typedef enum
 	MIC_DIGITAL,
 }csl_caph_MIC_Path_e;
 
-typedef struct csl_caph_MicDSP_Gain_t
+typedef struct csl_caph_Mic_Gain_t
 {
-	Int16 micGain;
+	Int16 micGain; // dB in Q13.2
 	UInt16 micPGA;
 	UInt16 micCICFineScale;
 	UInt16 micCICBitSelect;
-	UInt16 micDSPULGain;
-}csl_caph_MicDSP_Gain_t;
+	Int16 micDSPULGain;  // mdB in Q15
+}csl_caph_Mic_Gain_t;
 
-typedef struct csl_caph_MicMEM_Gain_t
+
+typedef struct csl_caph_Mic_GainMapping_t
 {
-	Int16 micGain;
+	Int16 micGain; // dB in Q13.2
 	UInt16 micPGA;
 	UInt16 micCICFineScale;
 	UInt16 micCICBitSelect;
-}csl_caph_MicMEM_Gain_t;
+}csl_caph_Mic_GainMapping_t;
+
 
 
 typedef enum
 {
-	SPKR_EP,
-	SPKR_IHF,
-	SPKR_HS,
+	SPKR_EP_DSP,  //Voice Call EP
+	SPKR_IHF_HS_DSP,  //Voice Call IHF and HS
+	SPKR_EP, //Multimedia EP
+	SPKR_IHF_HS,  // Multimedia IHF an HS
 	SPKR_PATH_MAX
 }csl_caph_SPKR_Path_e;
 
-typedef struct csl_caph_SpkrDSP_Gain_t
+typedef struct csl_caph_Spkr_Gain_t
 {
-	Int16 spkrGain;
+	Int16 spkrGain;  // dB in Q13.2
+	Int16 spkrHWGain;
 	UInt16 spkrPMUGain;
-	UInt16 spkrDSPDLGain;
-}csl_caph_SpkrDSP_Gain_t;
+	Int16 spkrGain_Q1_14;  // dB  in 1.14
+	Int16 spkrDSPDLGain;  // mdB  in Q15
+}csl_caph_Spkr_Gain_t;
 
-typedef struct csl_caph_SpkrMEM_Gain_t
+typedef struct csl_caph_Mixer_Gain_t
 {
-	Int16 spkrGain;
-	UInt16 spkrPMUGain;
-}csl_caph_SpkrMEM_Gain_t;
+	Int16 hwGain; // dB in Q13.2
+	UInt16 mixerInputGain;  // Register value.
+	UInt16 mixerOutputGain;  // Register value. Bit15:13, Bit Select
+				// Bit12:0, Output Fine Gain
+}csl_caph_Mixer_Gain_t;
 
 /**
 *
-*  @brief  read the mic pah gains when DSP is involved.
+*  @brief  read the mic pah gains.
 *  
 *  @param  mic    mic path
 *  @param  gain   Requested gain in Q13.2.
@@ -78,21 +87,19 @@ typedef struct csl_caph_SpkrMEM_Gain_t
 *  @return outGain    the Gain structure which contains all the gains on mic
 *                     path.
 *****************************************************************************/
-csl_caph_MicDSP_Gain_t csl_caph_gain_GetMicDSPGain(csl_caph_MIC_Path_e mic, 
+csl_caph_Mic_Gain_t csl_caph_gain_GetMicGain(csl_caph_MIC_Path_e mic, 
 		Int16 gain);
 
 /**
 *
-*  @brief  read the mic pah gains when DSP is not involved.
+*  @brief  map the mic PGA and Digital gains from Q13.2 dB gain.
 *  
-*  @param  mic    mic path
 *  @param  gain   Requested gain in Q13.2.
 *
-*  @return outGain    the Gain structure which contains all the gains on mic
-*                     path.
+*  @return outGain    the Gain structure which contains PGA gain and 
+*                       digital gains
 *****************************************************************************/
-csl_caph_MicMEM_Gain_t csl_caph_gain_GetMicMEMGain(csl_caph_MIC_Path_e mic, 
-		Int16 gain);
+csl_caph_Mic_GainMapping_t csl_caph_gain_GetMicMappingGain(Int16 gain);
 
 /**
 *
@@ -104,20 +111,32 @@ csl_caph_MicMEM_Gain_t csl_caph_gain_GetMicMEMGain(csl_caph_MIC_Path_e mic,
 *  @return outGain    the Gain structure which contains all the gains on spkr
 *                     path.
 *****************************************************************************/
-csl_caph_SpkrDSP_Gain_t csl_caph_gain_GetSpkrDSPGain(csl_caph_SPKR_Path_e mic, 
+csl_caph_Spkr_Gain_t csl_caph_gain_GetSpkrGain(csl_caph_SPKR_Path_e mic, 
 		Int16 gain);
 
 /**
 *
-*  @brief  read the speaker pah gains when DSP is not involved.
+*  @brief  read the speaker pah gains when DSP is involved.
 *  
-*  @param  spker    spkr path
-*  @param  gain   Requested gain in Q13.2.
+*  @param  spkr    spkr path
+*  @param  gain   Requested gain in Q1.14.
 *
 *  @return outGain    the Gain structure which contains all the gains on spkr
 *                     path.
 *****************************************************************************/
-csl_caph_SpkrMEM_Gain_t csl_caph_gain_GetSpkrMEMGain(csl_caph_SPKR_Path_e mic, 
-		Int16 gain);
+csl_caph_Spkr_Gain_t csl_caph_gain_GetSpkrGain_Q1_14(csl_caph_SPKR_Path_e mic, Int16 gain);
+
+
+/**
+*
+*  @brief read the mixer input gain/output fine/coarse gain
+*  
+*  @param  gain   Requested gain in Q13.2.
+*
+*  @return outGain    the Gain structure which contains mixer input gain, mixer
+*  		output fine gain and output coarse gain.
+*****************************************************************************/
+
+csl_caph_Mixer_Gain_t csl_caph_gain_GetMixerGain(Int16 gain);
 #endif // _CSL_CAPH_GAIN_H_
 

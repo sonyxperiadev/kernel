@@ -74,7 +74,7 @@ static void samsung_pwm_haptic_power_off(struct samsung_pwm_haptic *haptic)
 static int samsung_pwm_haptic_set_pwm_cycle(struct samsung_pwm_haptic *haptic)
 {
 	int duty = haptic_levels[haptic->level];
-	return pwm_set(haptic->pwm, PWM_HAPTIC_PERIOD, duty, 0);
+	return pwm_set(haptic->pwm, PWM_HAPTIC_PERIOD, duty, 1);
 }
 
 static void samsung_pwm_haptic_work(struct work_struct *work)

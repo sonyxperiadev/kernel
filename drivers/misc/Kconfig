@@ -473,6 +473,15 @@ config APANIC_PLABEL
 	 If your platform uses a different flash partition label for storing
  	 crashdumps, enter it here.
 
+config APANIC_ON_MMC
+	bool "Dump panic info on eMMC"
+	depends on APANIC && MMCPOLL
+	default n
+	---help---
+	By default apanic works on MTD interface.
+	If your platform has only MMC (ex:- eMMC Flash) based storage and 
+	if you want to enable panic to dump kernel panic info to MMC say yes here.
+
 config INTER_PROCESSOR_COMM
 	bool "Inter-Processor Communication driver"
 	default n
@@ -497,6 +506,19 @@ config BCM59055_FUELGAUGE
 	---help---
 	 BCM59055 PMU Fuel Gauge driver
 
+config BCM59055_ADC_CHIPSET_API
+	tristate "BCM59055 ADC chipset API driver"
+	depends on BCM59055_SARADC && BCM59055_FUELGAUGE
+	default n
+	---help---
+	 BCM59055 ADC chispet API driver 
+
+config BCMPMU_AUDIO
+        tristate "BCM PMU Audio Driver"
+        depends on MFD_BCMPMU
+        help
+          If you say Y to support Audio drive on BCM PMUs.
+	  
 config MONITOR_ADC121C021_I2C
 	tristate "ADC121C021 Battery Monitor"
 	depends on I2C

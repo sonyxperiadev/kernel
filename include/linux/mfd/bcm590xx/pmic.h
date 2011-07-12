@@ -89,6 +89,7 @@ enum {
 	BCM590XX_ENABLE_ADC				=	(1 << 7),
 	BCM590XX_ENABLE_FUELGAUGE		=	(1 << 8),
 	BCM590XX_ENABLE_POWER			=	(1 << 9),
+	BCM590XX_ENABLE_USB_OTG			=	(1 << 10),
 };
 
 int bcm590xx_register_regulator(struct bcm590xx *bcm590xx, int reg,

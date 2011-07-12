@@ -45,16 +45,15 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 #include <sound/tlv.h>
-
-
 #include "mobcom_types.h"
 #include "auddrv_def.h"
 #include "audio_consts.h"
 #include "audio_ddriver.h"
+#include "drv_caph.h"
+
 #include "audio_controller.h"
 #include "bcm_audio_devices.h"
 #include "caph_common.h"
-
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
@@ -173,7 +172,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[0] = %ld, pVolume[0] =%ld, pVolume[1]=%ld\n", pCurSel[0],pVolume[0],pVolume[1]);
 
 			//call audio driver to set gain/volume				
-			AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,pCurSel[0],pVolume[0]); //UL
+					AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_MAIN,pVolume[1],AUDIO_GAIN_FORMAT_Q13_2); //record gain
 			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,	pCurSel[1], pVolume[1], AUDIO_GAIN_FORMAT_Q13_2);//DL
 		}
 		break;
@@ -313,25 +312,10 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 			else if(pCurSel[0] == pSel[0] && pCurSel[1] == pSel[1]) //And even call is enabled, but source and sink are not changed, we  do nothing
 				break;
 			else //Swith source/sink
-			{				
-				//enable voice call with sink
-				switch(pSel[0])
-				{
-					case AUDCTRL_MIC_MAIN:
-					{
-						//route voice call to earpiece or IHF
-						if(pSel[1] == AUDCTRL_SPK_HANDSET)
-							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],AUDCTRL_SPK_HANDSET);
-						else if(pSel[1] == AUDCTRL_SPK_LOUDSPK)
-							AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],AUDCTRL_SPK_LOUDSPK);
-					}
-					break;
-					case AUDCTRL_MIC_AUX:
-					{
-						AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
-					}
-					break;
-				}
+			{	
+				// save the mode first. We should have a spk to mode conversion to handle WB modes.
+				AUDCTRL_SaveAudioModeFlag(pSel[1]);
+				AUDCTRL_SetTelephonyMicSpkr(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
 			 }
 			break;
 		default:
@@ -517,6 +501,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int function = FUNC_OF_CTL(priv);
+	int	stream = STREAM_OF_CTL(priv);
 
 	switch(function)
 	{
@@ -530,9 +515,10 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
 			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[0]; 
-			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[1]; 
+			ucontrol->value.integer.value[1] = pChip->iMutePhoneCall[1]; 
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			ucontrol->value.integer.value[0] = pChip->pi32SpeechMixOption[stream-1]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
@@ -558,6 +544,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	int priv = kcontrol->private_value;
 	int function = priv&0xFF;
 	Int32	*pSel;
+	int	stream = STREAM_OF_CTL(priv);
 
 
 	switch(function)
@@ -582,6 +569,9 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);   
 			else
 			{				
+				// save the mode first. We should have a spk to mode conversion to handle WB modes.
+				AUDCTRL_SaveAudioModeFlag(pSel[1]);
+			
 				//enable voice call with sink and source
 				AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
 			}
@@ -611,6 +601,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			pChip->pi32SpeechMixOption[stream-1] = ucontrol->value.integer.value[0]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
@@ -758,7 +749,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
 			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
-			.strStreamName = "VO",
+			.strStreamName = "VD",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
@@ -771,7 +762,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 			.ctlLine = BCM_CTL_SRC_LINES,
 		},
 
-		//VOIP In
+		//Speech In
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
 			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
@@ -779,6 +770,15 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 			.strStreamName = "C2",
 			.ctlLine = BCM_CTL_SRC_LINES,
 		},
+		//VOIP In
+		{
+			.iFlags = MIXER_STREAM_FLAGS_CAPTURE,
+			.iTotalCtlLines = MIC_TOTAL_COUNT_FOR_USER,
+			.iLineSelect = {AUDCTRL_MIC_MAIN, AUDCTRL_MIC_MAIN},
+			.strStreamName = "VU",
+			.ctlLine = BCM_CTL_SRC_LINES,
+		},
+		
 		//Voice call
 		{
 			.iFlags = MIXER_STREAM_FLAGS_CALL,

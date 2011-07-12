@@ -93,6 +93,12 @@ config BCM_RAM_START_RESERVED_SIZE
 	help
 	 Reserve memory at the start of RAM. This memory
 	 may be used for LCD frame buffer, DSP, modem, etc.
+	 
+config KONA_CPU_PM_HANDLER
+	bool "Enable Kona platform PM (idle/suspend) hanlder."
+	depends on CPU_IDLE || SUSPEND
+	help
+	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.	 
 
 endmenu
 

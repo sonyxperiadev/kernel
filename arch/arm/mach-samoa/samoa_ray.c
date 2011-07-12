@@ -53,6 +53,12 @@
 #include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_ana_audio_reg.h> 
+#include <mach/rdb/brcm_rdb_auxmic.h> 
+#include <mach/rdb/brcm_rdb_aci.h> 
+#include <mach/rdb/brcm_rdb_audioh.h>   
+#include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h> 
+
 #include <mach/kona.h>
 #include <mach/samoa.h>
 #include <asm/mach/map.h>
@@ -330,9 +336,15 @@ static void __init samoa_ray_add_devices(void)
 	platform_add_devices(samoa_ray_plat_devices, ARRAY_SIZE(samoa_ray_plat_devices));
 
 	samoa_ray_add_i2c_devices();
+
+#ifdef CONFIG_MFD_BCMSAMOA	
+	board_pmu_init();
+#endif
 }
 
 /* Stub clock API to allow drivers to build */
+
+#if 0	/* ssg, bringup clock */
 void clk_disable(struct clk *clk) {;}
 int clk_enable(struct clk *clk) {return 0;}
 unsigned long clk_get_rate(struct clk *clk) {return 1000000;}
@@ -341,6 +353,8 @@ EXPORT_SYMBOL(clk_disable);
 EXPORT_SYMBOL(clk_enable);
 EXPORT_SYMBOL(clk_get_rate);
 EXPORT_SYMBOL(clk_set_rate);
+#endif
+
 
 void __init board_proc_clk_print(void)
 {
@@ -379,6 +393,9 @@ void __init board_proc_clk_print(void)
 #define CLK_MGR_REG_LVM_EN_OFFSET     0x34
 void __init board_configure(void)
 {
+    void __iomem *base;
+    int val;
+
 	/* print hubaon_timer */
 	printk(KERN_ERR "HAON_CCU: HUB_TIMER_DIV=0x%x\n", readl(KONA_AON_CLK_VA+KHUBAON_CLK_MGR_REG_HUB_TIMER_DIV_OFFSET));
 	/* print peri_timer */
@@ -426,8 +443,84 @@ void __init board_configure(void)
 	while ((readl(KONA_KPM_CLK_VA+CLK_MGR_REG_LVM_EN_OFFSET)&0x1) == 0x1 );
 	writel(0x5, (KONA_KPM_CLK_VA+CLK_MGR_REG_POLICY_CTL_OFFSET));
 #endif
+	writel(readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_KPS_POLICY3_MASK_OFFSET) |
+                                KPS_CLK_MGR_REG_KPS_POLICY3_MASK_BSC1_POLICY3_MASK_MASK |
+                                KPS_CLK_MGR_REG_KPS_POLICY3_MASK_BSC2_POLICY3_MASK_MASK |
+                                KPS_CLK_MGR_REG_KPS_POLICY3_MASK_UARTB2_POLICY3_MASK_MASK,
+                                (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_KPS_POLICY3_MASK_OFFSET));
 	writel(0x30f, (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC1_CLKGATE_OFFSET));
 	writel(0x30f, (KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC2_CLKGATE_OFFSET));
+	writel(0x00f, (KONA_KPS_CLK_VA+ KPS_CLK_MGR_REG_UARTB2_CLKGATE_OFFSET));
+	writel(0xB101, (KONA_KPS_CLK_VA+ KPS_CLK_MGR_REG_UARTB2_DIV_OFFSET));  
+	writel(0xf, (KONA_KPS_CLK_VA+ KPS_CLK_MGR_REG_UARTB2_CLKGATE_OFFSET));
+
+    /* caph clock enable.  The following code is temporary until clk_xxx APIs are ready */ 
+    /* Set the frequency policy */ 
+    writel(0xA5A501, (KONA_KPM_CLK_VA+KPM_CLK_MGR_REG_WR_ACCESS_OFFSET)); 
+
+    writel(0x00000011, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET)); 
+    writel(0x00100000, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET)); 
+    writel(0x3030, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET)); 
+
+    writel(0x7FFFFFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY0_MASK1_OFFSET)); 
+    writel(0x7FFFFFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY1_MASK1_OFFSET)); 
+    writel(0x7FFFFFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY2_MASK1_OFFSET)); 
+    writel(0x7FFFFFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY3_MASK1_OFFSET)); 
+
+    writel(0x7FFFFFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY0_MASK2_OFFSET)); 
+    writel(0x7FFFFFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY1_MASK2_OFFSET)); 
+    writel(0x7FFFFFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY2_MASK2_OFFSET)); 
+    writel(0x7FFFFFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY3_MASK2_OFFSET)); 
+
+    /* Samoa chip is diffeent. Use kpm to control kps clocks */ 
+    writel(0x1, (KONA_KPM_CLK_VA+CLK_MGR_REG_LVM_EN_OFFSET)); 
+    while ((readl(KONA_KPM_CLK_VA+CLK_MGR_REG_LVM_EN_OFFSET)&0x1) == 0x1 ); 
+    writel(0x3, (KONA_KPM_CLK_VA+CLK_MGR_REG_POLICY_CTL_OFFSET)); 
+
+    writel(0x0000FFFF, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET)); 
+
+    writel(0xA5A501, (KONA_KPM_CLK_VA+KPM_CLK_MGR_REG_WR_ACCESS_OFFSET)); 
+    writel(0x1, (KONA_KPM_CLK_VA+CLK_MGR_REG_LVM_EN_OFFSET)); 
+    while ((readl(KONA_KPM_CLK_VA+CLK_MGR_REG_LVM_EN_OFFSET)&0x1) == 0x1 ); 
+    writel(0x3, (KONA_KPM_CLK_VA+CLK_MGR_REG_POLICY_CTL_OFFSET)); 
+
+    writel(0x3, (KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_AUDREG_CTRL_CLKGATE_OFFSET)); 
+
+    /* enable PMU audio related registers.  Once PMU related audio driver is done, can  
+    move this elsewhere */ 
+    writel(0x1, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_SYS_CTRL_OFFSET)); 
+    writel(0x3, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_HVBG_CTRL_OFFSET)); 
+    writel(0x1, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_ANALDO_CTRL_OFFSET)); 
+    writel(0x0, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_ANALDO_TEST_OFFSET)); 
+    writel(0x1, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_EPHSLDO_CTRL_OFFSET)); 
+    writel(0x1, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_REFBG_CTRL_OFFSET)); 
+    writel(0x0, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_HS_CTRL_OFFSET)); 
+    writel(0x7, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_EP_CTRL_OFFSET)); 
+    writel(0x0, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_IHF_CTRL_OFFSET)); 
+    writel(0x0, (KONA_ANA_AUDIO_REG_BASE_VA+ANA_AUDIO_REG_AUD_IHF_TEST0_OFFSET)); 
+    writel(0X8000007, (KONA_AUDIOH_BASE_VA+AUDIOH_AUDIORX_VRX1_OFFSET)); 
+    writel(0x0, (KONA_AUDIOH_BASE_VA+AUDIOH_AUDIORX_BIAS_OFFSET)); 
+    writel(0x5, (KONA_AUDIOH_BASE_VA+AUDIOH_AUDIORX_VMIC_OFFSET)); 
+    writel(0x0, (KONA_AUXMIC_VA+AUXMIC_AUXEN_OFFSET)); 
+    writel(0x1, (KONA_AUXMIC_VA+AUXMIC_F_PWRDWN_OFFSET)); 
+
+    writel(0x1, (KONA_ACI_VA+ACI_MIC_BIAS_OFFSET)); 
+    writel(0x1, (KONA_ACI_VA+ACI_ACI_CTRL_OFFSET)); 
+    writel(0x1, (KONA_ACI_VA+ACI_ADC_PWD_OFFSET)); 
+    writel(0x1, (KONA_ACI_VA+ACI_COMP_PWD_OFFSET)); 
+
+    printk(KERN_ERR "Caph: KHUB_POLICY0=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY0_MASK1_OFFSET)); 
+    printk(KERN_ERR "Caph: KHUB_POLICY1=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY1_MASK1_OFFSET)); 
+    printk(KERN_ERR "Caph: KHUB_POLICY2=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY2_MASK1_OFFSET)); 
+    printk(KERN_ERR "Caph: KHUB_POLICY3=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY3_MASK1_OFFSET)); 
+    printk(KERN_ERR "Caph: KHUB_POLICY0=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY0_MASK2_OFFSET)); 
+    printk(KERN_ERR "Caph: KHUB_POLICY1=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY1_MASK2_OFFSET)); 
+    printk(KERN_ERR "Caph: KHUB_POLICY2=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY2_MASK2_OFFSET)); 
+    printk(KERN_ERR "Caph: KHUB_POLICY3=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_KHUB_POLICY3_MASK2_OFFSET)); 
+    printk(KERN_ERR "Caph: AUDIOH_CLKGATE=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET)); 
+    printk(KERN_ERR "Caph: CAPH_DIV=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET)); 
+    printk(KERN_ERR "Caph: PERIPH_SEG_TRG=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET)); 
+    printk(KERN_ERR "Caph: CAPH_CLKGATE=0x%x\n", readl(KONA_HUB_CLK_VA+KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET)); 
 
 	printk(KERN_ERR "I2C: BSC1_CLKGATE=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC1_CLKGATE_OFFSET));
 	printk(KERN_ERR "I2C: BSC2_CLKGATE=0x%x\n", readl(KONA_KPS_CLK_VA+KPS_CLK_MGR_REG_BSC2_CLKGATE_OFFSET));
@@ -438,6 +531,45 @@ void __init board_configure(void)
 #ifdef CONFIG_MACH_SAMOA_RAY_TEST_ON_RHEA_RAY
 	writel(0, (KONA_KPS_CLK_VA+CLK_MGR_REG_WR_ACCESS_OFFSET));
 #endif
+	/* turn on USB clock */
+ 	base = (void __iomem *)KONA_MST_CLK_BASE_VA;
+
+	writel(0x00A5A501, base);
+
+	writel(KPM_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK, base+KPM_CLK_MGR_REG_LVM_EN_OFFSET);
+	while (readl(base+KPM_CLK_MGR_REG_LVM_EN_OFFSET)&KPM_CLK_MGR_REG_LVM_EN_POLICY_CONFIG_EN_MASK);
+
+	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
+	val |=KPM_CLK_MGR_REG_KPM_POLICY0_MASK_USBH_POLICY0_MASK_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
+
+	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY1_MASK_OFFSET);
+	val |=KPM_CLK_MGR_REG_KPM_POLICY1_MASK_USBH_POLICY1_MASK_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY1_MASK_OFFSET);
+
+	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY0_MASK_OFFSET);
+	val |=KPM_CLK_MGR_REG_KPM_POLICY2_MASK_USBH_POLICY2_MASK_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY2_MASK_OFFSET);
+
+	val = readl(base+KPM_CLK_MGR_REG_KPM_POLICY3_MASK_OFFSET);
+	val |=KPM_CLK_MGR_REG_KPM_POLICY3_MASK_USBH_POLICY3_MASK_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_KPM_POLICY3_MASK_OFFSET);
+
+	val = readl(base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET);
+	val |=KPM_CLK_MGR_REG_POLICY_CTL_GO_MASK|KPM_CLK_MGR_REG_POLICY_CTL_GO_AC_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET);
+
+	while (readl(base+KPM_CLK_MGR_REG_POLICY_CTL_OFFSET)&KPM_CLK_MGR_REG_POLICY_CTL_GO_MASK);
+
+	val = readl(base+KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_OFFSET);
+	val |=KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_USBH_AHB_CLK_EN_MASK;
+	writel(val, base+KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_OFFSET);
+
+	writel(0x00A5A500, base);
+
+	printk("%s: USB Clock Enable Done\n", __func__);
+    
+
 }
 
 #ifndef CONFIG_MACH_SAMOA_FPGA

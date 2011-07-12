@@ -85,7 +85,7 @@ typedef struct AUDIO_DDRIVER_t
 //=============================================================================
 // Private Type and Constant declarations
 //=============================================================================
-static AUDIO_DDRIVER_t* audio_render_driver = NULL;
+static AUDIO_DDRIVER_t* audio_render_driver[CSL_CAPH_STREAM_TOTAL];
 static AUDIO_DDRIVER_t* audio_capture_driver = NULL;
 
 //=============================================================================
@@ -113,6 +113,47 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id);
 //=============================================================================
 // Functions
 //=============================================================================
+
+UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h)
+{
+	AUDIO_DDRIVER_t *ph=(AUDIO_DDRIVER_t *)h;
+	return ph->stream_id;
+}
+
+
+
+static int	SetPlaybackStreamHandle(AUDIO_DDRIVER_t* h)
+{
+	if(h->stream_id>CSL_CAPH_STREAM_TOTAL)
+	{
+		Log_DebugPrintf(LOGID_AUDIO,"Error: SetPlaybackStreamHandle invalid stream id=%ld\n" ,h->stream_id);
+		return -1;
+	}
+	if(audio_render_driver[h->stream_id]!=NULL)
+		Log_DebugPrintf(LOGID_AUDIO,"Warnning: SetPlaybackStreamHandle handle of stream id=%ld is overwritten pre=%p, after=%p\n" ,h->stream_id, audio_render_driver[h->stream_id], h);
+
+	audio_render_driver[h->stream_id]=h;
+	
+	return -1;
+}
+
+static AUDIO_DDRIVER_t* GetPlaybackStreamHandle(UInt32 streamID)
+{
+	if(	audio_render_driver[streamID]==NULL)
+	    Log_DebugPrintf(LOGID_AUDIO,"Error: GetPlaybackStreamHandle invalid handle for id %ld\n", streamID  );
+	return audio_render_driver[streamID];
+}
+
+static int ResetPlaybackStreamHandle(UInt32 streamID)
+{
+
+	if(	audio_render_driver[streamID]==NULL)
+	    Log_DebugPrintf(LOGID_AUDIO,"Warning: ResetPlaybackStreamHandle invalid handle for id %ld\n", streamID  );
+	audio_render_driver[streamID] = NULL;
+
+	return 0;
+}
+
 
 static CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
 {
@@ -256,9 +297,6 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
         case AUDIO_DRIVER_PLAY_VOICE:
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
-            {
-	            audio_render_driver =  aud_drv;
-            }
             break;
         case AUDIO_DRIVER_CAPT_HQ:
             {
@@ -310,7 +348,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
             {
                 // un initialize audvoc render
                 csl_audio_render_deinit (aud_drv->stream_id);
-                audio_render_driver = NULL;
+				ResetPlaybackStreamHandle(aud_drv->stream_id);
             }
             break;
         case AUDIO_DRIVER_CAPT_HQ:
@@ -322,7 +360,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
         case AUDIO_DRIVER_CAPT_VOICE:
             {
 		#ifdef CONFIG_AUDIO_BUILD
-		dspif_VPU_record_deinit (); // no function available
+		dspif_VPU_record_deinit (); // no function available
                 #endif
 		audio_capture_driver = NULL;
             }
@@ -483,6 +521,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                     return result_code;
                 }
 		aud_drv->stream_id = csl_audio_render_init (CSL_CAPH_DEV_MEMORY,AUDDRV_GetCSLDevice(*aud_dev));
+		SetPlaybackStreamHandle(aud_drv);//save the driver handle after ID is assigned
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
                  * Number of blocks = buffer size/block size
                  *
@@ -691,7 +730,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 		    speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_16K;
                    #else  
 		   speech_mode = 0;
-		   #endif
+
+		   #endif
 
                 // update num_frames and frame_size
                 aud_drv->num_frames = num_frames;
@@ -849,17 +889,20 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
 
 static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
 {
+	AUDIO_DDRIVER_t* pAudDrv;
+	
+	pAudDrv = GetPlaybackStreamHandle(stream_id);
 
     //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_RenderDmaCallback::\n");
 
-    if((audio_render_driver == NULL))
+    if(( pAudDrv== NULL))
     {
         Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_RenderDmaCallback:: Spurious call back\n");
 		return;
     }
-    if(audio_render_driver->pCallback != NULL)
+    if(pAudDrv->pCallback != NULL)
     {
-        audio_render_driver->pCallback(audio_render_driver->pCBPrivate);
+        pAudDrv->pCallback(pAudDrv->pCBPrivate);
     }
     else
         Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_RenderDmaCallback:: No callback registerd\n");

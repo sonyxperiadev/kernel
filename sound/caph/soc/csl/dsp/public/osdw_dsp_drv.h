@@ -53,7 +53,7 @@
 *
 *   @file   csl_dsp_drv.h
 *
-*   @brief  This file accesses the shared memory for the VPU
+*   @brief  This file DSP CSL OSDW definitions
 *
 ****************************************************************************/
 #ifndef _OSDW_DSP_DRV_H_
@@ -62,18 +62,7 @@
 
 #include "mobcom_types.h"
 
-
-typedef void (*Audio_ISR_Handler_t)(StatQ_t status_msg);
-//typedef void (*VPU_ProcessStatus_t)(VPStatQ_t vp_status_msg);
-typedef void (*VPU_ProcessStatus_t)( void );
-
 void DSPDRV_Init(void);
-
-void RIPISR_Register_AudioISR_Handler( Audio_ISR_Handler_t isr_cb );
-
-void RIPISR_Register_VPU_ProcessStatus( VPU_ProcessStatus_t hisr_cb );
-
-void Audio_ISR_Handler(StatQ_t msg);
 
 void VPSHAREDMEM_TriggerRIPInt(void);
 

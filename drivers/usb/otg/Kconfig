@@ -69,6 +69,12 @@ config NOP_USB_XCEIV
 	 built-in with usb ip or which are autonomous and doesn't require any
 	 phy programming such as ISP1x04 etc.
 
+config USB_BCM_OTG
+       tristate "Broadcom USB Transceiver Driver"
+       depends on MFD_BCM_PMU590XX
+       select USB_OTG_UTILS
+       help
+         Enable this to support Broadcom USB OTG transceiver
 config KONA_OTG_CP
 	tristate "Kona OTG Control"
 	depends on ARCH_KONA

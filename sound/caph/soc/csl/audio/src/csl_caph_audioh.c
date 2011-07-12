@@ -22,10 +22,12 @@ Broadcom's express prior written consent.
 #include "ostask.h"
 #include "xassert.h"
 #include "chal_types.h"
+#include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "auddrv_def.h"
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
+#include "csl_caph_gain.h"
 #include "log.h"
 
 //****************************************************************************
@@ -177,7 +179,7 @@ void csl_caph_audioh_config(int path_id, void *p)
 			chal_audio_vibra_int_enable(handle, TRUE, FALSE);			            // enable vin path interrupt
 
 			/* : add threshold at here  */
-
+			chal_audio_vibra_set_fifo_thres(handle, 0x4, 0x2); //the fifo size is 8.
 
 			/*  : add Sigma-Delta configuation at here*/
 
@@ -475,6 +477,7 @@ void csl_caph_audioh_start(int path_id)
 
 		case AUDDRV_PATH_HEADSET_OUTPUT:
 
+//			chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
 			if(path[path_id].sample_mode == AUDIO_CHANNEL_STEREO)
 			{
 				chnl_enable = CHAL_AUDIO_CHANNEL_LEFT | CHAL_AUDIO_CHANNEL_RIGHT;
@@ -492,8 +495,9 @@ void csl_caph_audioh_start(int path_id)
 				chnl_enable = CHAL_AUDIO_CHANNEL_LEFT; 
 			}
 
-			chal_audio_hspath_enable(handle, chnl_enable);	
 			chal_audio_hspath_set_dac_pwr(handle,chnl_enable);
+			chal_audio_hspath_set_gain(handle, 0);
+			chal_audio_hspath_enable(handle, chnl_enable);	
 
 #ifdef PMU_BCM59055
 
@@ -522,8 +526,9 @@ void csl_caph_audioh_start(int path_id)
 				chnl_enable = CHAL_AUDIO_CHANNEL_LEFT;
 			}
 			
-			chal_audio_ihfpath_enable(handle, chnl_enable);	
 			chal_audio_ihfpath_set_dac_pwr(handle,chnl_enable);			
+			chal_audio_ihfpath_set_gain(handle, 0);
+			chal_audio_ihfpath_enable(handle, chnl_enable);	
 #ifdef PMU_BCM59055
 //			PMU_DRV_AUDIO_IHF_PowerUp (NULL);
 
@@ -532,13 +537,6 @@ void csl_caph_audioh_start(int path_id)
 
 		case AUDDRV_PATH_EARPICEC_OUTPUT:
 
-			chal_audio_earpath_enable(handle, CHAL_AUDIO_ENABLE);	// Enable the Earpiece path
-            /* Power up the earpiece DAC */
-//			chal_audio_earpath_set_dac_pwr(handle, CHAL_AUDIO_ENABLE);
-
-            /* External Pop-Click sequence */
-            chal_audio_earpath_set_slowramp_ctrl(handle, CHAL_AUDIO_AUDIOTX_SR_EXT_POPCLICK);
-
             /* Isolate Input = 0 */
             chal_audio_earpath_clear_isolation_ctrl(handle, CHAL_AUDIO_AUDIOTX_ISO_IN);
             /* Power up the earpiece DAC */
@@ -546,6 +544,16 @@ void csl_caph_audioh_start(int path_id)
 
             /* Wait for 40msec */
             OSTASK_Sleep(40);	//	SysTimeDelayMilliSec(AUDIOH_HW_DACPWRUP_SETTLE_TIME);
+
+			chal_audio_earpath_set_gain(handle, 0);
+            /* Powerup the Ear Piece Driver */
+            chal_audio_earpath_set_drv_pwr(handle, CHAL_AUDIO_ENABLE);
+
+            /* Wait for 40msec */
+            OSTASK_Sleep(40);	// SysTimeDelayMilliSec(AUDIOH_HW_SLOWRAMP_RAMP1UP_TIME);
+
+            /* External Pop-Click sequence */
+            chal_audio_earpath_set_slowramp_ctrl(handle, CHAL_AUDIO_AUDIOTX_SR_EXT_POPCLICK);
 
             /* Cause a raising edge on SR_PUP_ED_DRV_TRIG and END_PWRDOWN to 1*/
             chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);
@@ -559,11 +567,6 @@ void csl_caph_audioh_start(int path_id)
             chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_EN_RAMP1_45M);
             chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PU_ENABLE);
 
-            /* Powerup the Ear Piece Driver */
-            chal_audio_earpath_set_drv_pwr(handle, CHAL_AUDIO_ENABLE);
-
-            /* Wait for 40msec */
-            OSTASK_Sleep(40);	// SysTimeDelayMilliSec(AUDIOH_HW_SLOWRAMP_RAMP1UP_TIME);
 
             /* End RAMP1_45M and Start RAMP2_5M */
             chal_audio_earpath_clear_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_EN_RAMP1_45M);
@@ -577,6 +580,8 @@ void csl_caph_audioh_start(int path_id)
             chal_audio_earpath_clear_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PU_ENABLE);
             chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_END_PWRUP);
 
+			chal_audio_earpath_enable(handle, CHAL_AUDIO_ENABLE);	// Enable the Earpiece path
+
 			break;
 
 		case AUDDRV_PATH_VIN_INPUT:
@@ -585,7 +590,7 @@ void csl_caph_audioh_start(int path_id)
 			// Enable the digital microphone			
 			chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 			//DMIC0CLK/DMIC0CQ can control both DMIC1 and DMIC2.
-			chal_audio_dmic1_pwrctrl(handle,1);
+			chal_audio_dmic1_pwrctrl(handle,TRUE);
 			micStatus |= 0x3;
 			break;
 
@@ -594,7 +599,7 @@ void csl_caph_audioh_start(int path_id)
 			// Enable the digital microphone			
 			chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 			//DMIC0CLK/DMIC0CQ can control both DMIC1 and DMIC2.
-			chal_audio_dmic1_pwrctrl(handle,1);
+			chal_audio_dmic1_pwrctrl(handle,TRUE);
 			micStatus |= 0x1;
 			break;
 
@@ -603,7 +608,7 @@ void csl_caph_audioh_start(int path_id)
 			// Enable the digital microphone			
 			chal_audio_vinpath_digi_mic_enable(handle, chnl_enable);
 			//DMIC0CLK/DMIC0CQ can control both DMIC1 and DMIC2.
-			chal_audio_dmic1_pwrctrl(handle,1);
+			chal_audio_dmic1_pwrctrl(handle,TRUE);
 			micStatus |= 0x2;
 			break;
 
@@ -613,7 +618,7 @@ void csl_caph_audioh_start(int path_id)
 			// Enable the digital microphone			
 			chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 			//DMIC1CLK/DMIC1CQ can control both DMIC3 and DMIC4.
-			chal_audio_dmic2_pwrctrl(handle,1);
+			chal_audio_dmic2_pwrctrl(handle,TRUE);
 			micStatus |= 0xC;
 			break;
 
@@ -622,7 +627,7 @@ void csl_caph_audioh_start(int path_id)
 			// Enable the digital microphone			
 			chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 			//DMIC1CLK/DMIC1CQ can control both DMIC3 and DMIC4.
-			chal_audio_dmic2_pwrctrl(handle,1);
+			chal_audio_dmic2_pwrctrl(handle,TRUE);
 			micStatus |= 0x4;
 			break;
 
@@ -631,7 +636,7 @@ void csl_caph_audioh_start(int path_id)
 			// Enable the digital microphone			
 			chal_audio_nvinpath_digi_mic_enable(handle, chnl_enable);
 			//DMIC1CLK/DMIC1CQ can control both DMIC3 and DMIC4.
-			chal_audio_dmic2_pwrctrl(handle,1);
+			chal_audio_dmic2_pwrctrl(handle,TRUE);
 			micStatus |= 0x8;
 			break;
 
@@ -731,7 +736,7 @@ void csl_caph_audioh_stop_keep_config(int path_id)
 			//DMIC0CLK/DMIC0CQ can control both DMIC1 and DMIC2.
 			//need to check whether both DIGI mic are turned off.
 			//Then to disable the clock.
-			chal_audio_dmic1_pwrctrl(handle,0);
+			chal_audio_dmic1_pwrctrl(handle,FALSE);
 			micStatus &= 0xFC;
 			break;
 		case AUDDRV_PATH_VIN_INPUT_L:
@@ -741,8 +746,9 @@ void csl_caph_audioh_stop_keep_config(int path_id)
 			//need to check whether both DIGI mic are turned off.
 			//Then to disable the clock.
 			if (!(micStatus & 0x2))
-			    chal_audio_dmic1_pwrctrl(handle,0);
+			    chal_audio_dmic1_pwrctrl(handle,FALSE);
 			micStatus &= 0xFE;
+			break;
 		case AUDDRV_PATH_VIN_INPUT_R:
 	                chnl_disable |= CHAL_AUDIO_CHANNEL_RIGHT;
 			chal_audio_vinpath_digi_mic_disable(handle, chnl_disable);
@@ -750,7 +756,7 @@ void csl_caph_audioh_stop_keep_config(int path_id)
 			//need to check whether both DIGI mic are turned off.
 			//Then to disable the clock.
 			if (!(micStatus & 0x1))
-			    chal_audio_dmic1_pwrctrl(handle,0);
+			    chal_audio_dmic1_pwrctrl(handle,FALSE);
 			micStatus &= 0xFD;
 			break;
 
@@ -761,7 +767,7 @@ void csl_caph_audioh_stop_keep_config(int path_id)
 			//DMIC1CLK/DMIC1CQ can control both DMIC3 and DMIC4.
 			//need to check whether both DIGI mic are turned off.
 			//Then to disable the clock.
-                        chal_audio_dmic2_pwrctrl(handle,0);
+                        chal_audio_dmic2_pwrctrl(handle,FALSE);
 			micStatus &= 0xF3;			
 			break;
 		case AUDDRV_PATH_NVIN_INPUT_L:
@@ -771,8 +777,9 @@ void csl_caph_audioh_stop_keep_config(int path_id)
 			//need to check whether both DIGI mic are turned off.
 			//Then to disable the clock.
 			if (!(micStatus & 0x8))
-			    chal_audio_dmic2_pwrctrl(handle,0);
+			    chal_audio_dmic2_pwrctrl(handle,FALSE);
 			micStatus &= 0xFB;
+			break;
 		case AUDDRV_PATH_NVIN_INPUT_R:
          	        chnl_disable |= CHAL_AUDIO_CHANNEL_RIGHT;				
 			chal_audio_nvinpath_digi_mic_disable(handle, chnl_disable);
@@ -780,7 +787,7 @@ void csl_caph_audioh_stop_keep_config(int path_id)
 			//need to check whether both DIGI mic are turned off.
 			//Then to disable the clock.
 			if (!(micStatus & 0x4))
-			    chal_audio_dmic2_pwrctrl(handle,0);
+			    chal_audio_dmic2_pwrctrl(handle,FALSE);
 			micStatus &= 0xF7;
 			break;
 
@@ -868,17 +875,20 @@ void csl_caph_audioh_mute(int path_id, Boolean mute_ctrl)
 		case AUDDRV_PATH_VIN_INPUT:
 		case AUDDRV_PATH_VIN_INPUT_L:
 		case AUDDRV_PATH_VIN_INPUT_R:
-
-			chal_audio_dmic1_pwrctrl(handle,  !mute_ctrl);
-
+			if(mute_ctrl == TRUE)
+			    chal_audio_dmic1_pwrctrl(handle, FALSE);
+                        else
+			    chal_audio_dmic1_pwrctrl(handle, TRUE);
 			break;
 
 		case AUDDRV_PATH_NVIN_INPUT:
 		case AUDDRV_PATH_NVIN_INPUT_L:
 		case AUDDRV_PATH_NVIN_INPUT_R:
-
-			chal_audio_dmic2_pwrctrl(handle, !mute_ctrl);
-			
+			if(mute_ctrl == TRUE)
+			    chal_audio_dmic2_pwrctrl(handle, FALSE);
+                        else
+			    chal_audio_dmic2_pwrctrl(handle, TRUE);
+	
 			break;
 
 		default:
@@ -903,7 +913,6 @@ void csl_caph_audioh_mute(int path_id, Boolean mute_ctrl)
 void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
 {
 
-	int pmu_gain;
 	switch(path_id)
 	{
 
@@ -913,29 +922,9 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
 			break;
 
 		case AUDDRV_PATH_HEADSET_OUTPUT:
-#ifdef PMU_BCM59055
-#if 0			
-			if(	gain < HS_MIN_APP_GAIN_SCALE) gain = HS_MIN_APP_GAIN_SCALE;
-			if(	gain > HS_MAX_APP_GAIN_SCALE) gain = HS_MAX_APP_GAIN_SCALE;
-
-			pmu_gain = (gain * HS_MAX_PUM_GAIN_SCALE) / HS_MAX_APP_GAIN_SCALE;
-
-			PMU_DRV_AUDIO_HS_SetGain(PMU_AUDIO_HS_BOTH,pmu_gain, NULL);
-#endif
-#endif			
 			break;
 
 		case AUDDRV_PATH_IHF_OUTPUT:
-#ifdef PMU_BCM59055
-#if 0			
-			if(	gain < IHF_MIN_APP_GAIN_SCALE) gain = IHF_MIN_APP_GAIN_SCALE;
-			if(	gain > IHF_MAX_APP_GAIN_SCALE) gain = IHF_MAX_APP_GAIN_SCALE;
-
-			pmu_gain = (gain * IHF_MAX_PUM_GAIN_SCALE) / IHF_MAX_APP_GAIN_SCALE;
-
-			PMU_DRV_AUDIO_IHF_SetGain(pmu_gain, NULL);
-#endif
-#endif			
 			break;
 
 
@@ -956,19 +945,22 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
         case AUDDRV_PATH_ANALOGMIC_INPUT:
         case AUDDRV_PATH_HEADSET_INPUT:
 
-			if(	((Int32)gain) < AMIC_MIN_APP_GAIN_SCALE) gain = AMIC_MIN_APP_GAIN_SCALE;
-			if(	((Int32)gain) > AMIC_MAX_APP_GAIN_SCALE) gain = AMIC_MAX_APP_GAIN_SCALE;
-
-			pmu_gain = (gain * AMIC_MAX_PUM_GAIN_SCALE) / AMIC_MAX_APP_GAIN_SCALE;
-
-			chal_audio_mic_pga(handle, pmu_gain);
+			chal_audio_mic_pga(handle, gain);
 
 			break;
         case AUDDRV_PATH_VIN_INPUT:
         case AUDDRV_PATH_VIN_INPUT_L:
         case AUDDRV_PATH_VIN_INPUT_R:
-			chal_audio_vinpath_set_cic_scale(handle, gain, gain1);
+			chal_audio_vinpath_set_cic_scale(handle, gain, gain1,
+				       	gain, gain1);			
 			break;		
+        case AUDDRV_PATH_NVIN_INPUT:
+        case AUDDRV_PATH_NVIN_INPUT_L:
+        case AUDDRV_PATH_NVIN_INPUT_R:
+			chal_audio_nvinpath_set_cic_scale(handle, gain, gain1,
+				       	gain, gain1);			
+			break;		
+			
 		default:
 			audio_xassert(0, path_id);	
 	}
@@ -1190,4 +1182,231 @@ void csl_audio_audiotx_get_dac_ctrl(CSL_CAPH_AUDIOH_DACCTRL_t *readdata)
     return;
 }
 
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_sidetone_config(UInt32 *coeff) 
+//
+// Description:  configure sidetone filter
+//
+// Parameters:   coeff   - the coefficient buffer			
+// Return:  
+//
+//============================================================================
 
+void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
+{
+	chal_audio_stpath_load_filter(handle, coeff );
+	return;
+}	
+
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_sidetone_config(UInt32 gain)
+//
+// Description:  Set sidetone gain
+//
+// Parameters:  gain   - gain valaue.			
+// Return:  
+//
+//============================================================================
+
+void csl_caph_audioh_sidetone_set_gain(UInt32 gain)
+{
+	chal_audio_stpath_set_gain(handle, gain);
+	return;
+}	
+
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_set_hwgain(CSL_CAPH_HW_GAIN_e hw, 
+// 						UInt32 gain)
+//
+// Description:  Set HW gain
+//
+// Parameters:  hw     - which HW gain
+// 		gain   - gain value.			
+// Return:  
+//
+//============================================================================
+
+void csl_caph_audioh_set_hwgain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
+{
+	CAPH_AUDIOH_MIC_GAIN_e micGainSelect = CAPH_AUDIOH_NONE_MIC_GAIN;
+    csl_caph_Mic_GainMapping_t outGain;
+    memset(&outGain, 0, sizeof(csl_caph_Mic_GainMapping_t));
+
+    outGain = csl_caph_gain_GetMicMappingGain((Int16)gain);
+	switch(hw)
+	{
+		case CSL_CAPH_AMIC_PGA_GAIN:
+			chal_audio_mic_pga(handle, (int)(outGain.micPGA));
+			break;
+		case CSL_CAPH_AMIC_DGA_COARSE_GAIN:
+		case CSL_CAPH_DMIC1_DGA_COARSE_GAIN:
+			micGainSelect = CAPH_AUDIOH_MIC1_COARSE_GAIN;
+			chal_audio_vinpath_set_each_cic_scale(handle,
+					micGainSelect,
+					(UInt32)(outGain.micCICBitSelect));
+			break;
+		case CSL_CAPH_AMIC_DGA_FINE_GAIN:
+		case CSL_CAPH_DMIC1_DGA_FINE_GAIN:
+			micGainSelect = CAPH_AUDIOH_MIC1_FINE_GAIN;
+			chal_audio_vinpath_set_each_cic_scale(handle,
+					micGainSelect,
+					(UInt32)(outGain.micCICFineScale));
+			break;
+		case CSL_CAPH_DMIC2_DGA_COARSE_GAIN:
+			micGainSelect = CAPH_AUDIOH_MIC2_COARSE_GAIN;
+			chal_audio_vinpath_set_each_cic_scale(handle,
+					micGainSelect,
+					(UInt32)(outGain.micCICBitSelect));
+			break;
+		case CSL_CAPH_DMIC2_DGA_FINE_GAIN:
+			micGainSelect = CAPH_AUDIOH_MIC2_FINE_GAIN;
+			chal_audio_vinpath_set_each_cic_scale(handle,
+					micGainSelect,
+					(UInt32)(outGain.micCICFineScale));
+			break;
+
+		case CSL_CAPH_DMIC3_DGA_COARSE_GAIN:
+			micGainSelect = CAPH_AUDIOH_MIC3_COARSE_GAIN;
+			chal_audio_nvinpath_set_each_cic_scale(handle,
+					micGainSelect,
+					(UInt32)(outGain.micCICBitSelect));
+			break;
+			
+		case CSL_CAPH_DMIC3_DGA_FINE_GAIN:
+			micGainSelect = CAPH_AUDIOH_MIC3_FINE_GAIN;
+			chal_audio_nvinpath_set_each_cic_scale(handle,
+					micGainSelect,
+					(UInt32)(outGain.micCICFineScale));
+			break;
+			
+		case CSL_CAPH_DMIC4_DGA_COARSE_GAIN:
+			micGainSelect = CAPH_AUDIOH_MIC4_COARSE_GAIN;
+			chal_audio_nvinpath_set_each_cic_scale(handle,
+					micGainSelect,
+					(UInt32)(outGain.micCICBitSelect));
+			break;
+			
+		case CSL_CAPH_DMIC4_DGA_FINE_GAIN:
+			micGainSelect = CAPH_AUDIOH_MIC4_FINE_GAIN;
+			chal_audio_nvinpath_set_each_cic_scale(handle,
+					micGainSelect,
+					(UInt32)(outGain.micCICFineScale));
+			break;
+
+		default:
+			audio_xassert(0, hw);
+			
+	}
+	return;
+}	
+
+
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_ihfpath_set_dac_pwr(UInt16 enable_chnl)
+//
+// Description:  Set DAC power on IHF path. For testing purpose
+//
+// Parameters:  enable_chnl - DAC channle to enable.			
+// Return:  
+//
+//============================================================================
+
+void csl_caph_audioh_ihfpath_set_dac_pwr(UInt16 enable_chnl)
+{
+	chal_audio_ihfpath_set_dac_pwr(handle, enable_chnl);	
+	return;
+}	
+
+
+
+//============================================================================
+//
+// Function Name: CSL_CAPH_AUDIOH_IHF_DAC_PWR_e csl_caph_audioh_ihfpath_get_dac_pwr(void)
+//
+// Description:  Get DAC power on IHF path. For testing purpose
+//
+// Parameters:  void			
+// Return:  CSL_CAPH_AUDIOH_IHF_DAC_PWR_e dac power status.
+//
+//============================================================================
+
+CSL_CAPH_AUDIOH_IHF_DAC_PWR_e csl_caph_audioh_ihfpath_get_dac_pwr(void)
+{
+	return (CSL_CAPH_AUDIOH_IHF_DAC_PWR_e)chal_audio_ihfpath_get_dac_pwr(handle);	
+}	
+
+
+
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_vinpath_digi_mic_enable(UInt16 ctrl)
+//
+// Description:  Enable the mic. For testing purpose
+//
+// Parameters:  ctrl. Left and/or right channel to enable			
+// Return: 
+//
+//============================================================================
+
+void csl_caph_audioh_vinpath_digi_mic_enable(UInt16 ctrl)
+{
+	chal_audio_vinpath_digi_mic_enable(handle, ctrl);
+	return;
+}	
+
+
+//============================================================================
+//
+// Function Name: CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e csl_caph_audioh_vinpath_digi_mic_enable_read()
+//
+// Description:  Get the enabling status of the mic1 and mic2. For testing purpose
+//
+// Return:  CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e mic status.
+//
+//============================================================================
+
+CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e csl_caph_audioh_vinpath_digi_mic_enable_read(void)
+{
+	return (CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e)chal_audio_vinpath_digi_mic_enable_read(handle);
+}	
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
+//
+// Description:  Enable the Eanc mic. For testing purpose
+//
+// Parameters:  ctrl. Left and/or right channel to enable			
+// Return: 
+//
+//============================================================================
+
+void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl)
+{
+	chal_audio_nvinpath_digi_mic_enable(handle, ctrl);
+	return;
+}	
+
+
+//============================================================================
+//
+// Function Name: CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e csl_caph_audioh_nvinpath_digi_mic_enable_read()
+//
+// Description:  Get the enabling status of the mic3 and mic4. For testing purpose
+//
+// Return:  CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e mic status.
+//
+//============================================================================
+
+CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e csl_caph_audioh_nvinpath_digi_mic_enable_read(void)
+{
+	return (CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e)chal_audio_nvinpath_digi_mic_enable_read(handle);
+}	

@@ -630,6 +630,594 @@ typedef enum
 #define CLEAR_RFIC_DATA_USF_DET_FLAG(data)	( ( (data).flag ) &= 0xfffb )
 #define CLEAR_RFIC_DATA_TA_FLAG(data)		( ( (data).flag ) &= 0xfff7 )
 
+typedef struct
+{
+    UInt16 cmd;     
+    UInt16 arg0;
+    UInt16 arg1;
+    UInt16 arg2;
+} CmdQ_t;
+
+
+typedef struct
+{
+    UInt16 status;
+    UInt16 arg0;
+    UInt16 arg1;
+    UInt16 arg2;
+} StatQ_t;
+
+#define EVENTMODE_MASK    0x0F
+#define EVENTMODE_SIZE    4
+#define EVENT_SEQ_SIZE    3
+typedef enum
+{
+    EVENTMODE_NOP         = 0x00,            ///<
+    EVENTMODE_TXAB        = 0x01,            ///<
+    EVENTMODE_TXNORM      = 0x02,            ///<
+    EVENTMODE_TXMS        = 0x03,            ///<
+    EVENTMODE_RXSRCH      = 0x04,            ///<
+    EVENTMODE_RXNORM      = 0x05,            ///<
+    EVENTMODE_RXMS        = 0x06,            ///<
+    EVENTMODE_MON         = 0x07,            ///<
+    EVENTMODE_TXNOP       = 0x08,            ///<
+    EVENTMODE_RXNOP       = 0x09,            ///<
+    EVENTMODE_SLEEP       = 0x0a             ///<
+} EventMode_t;            //NOTE: maximum bit length is 4 because EVENTMODE_SIZE is 4.
+
+typedef struct
+{
+    UInt16 EventBand;
+    UInt16 EventMode;
+} EventInfo_t;
+
+typedef enum
+{
+    CTMMODE_IDLE,                            ///< 0x00 - 
+    CTMMODE_RESET,                           ///< 0x01 - 
+    CTMMODE_NORMAL,                          ///< 0x02 - 
+    CTMMODE_BYPASS_SPK,                      ///< 0x03 - 
+    CTMMODE_BYPASS_MIC,                      ///< 0x04 - 
+    CTMMODE_TEST1,                           ///< 0x05 - 
+    CTMMODE_TEST2,                           ///< 0x06 - 
+    CTMMODE_TEST3,                           ///< 0x07 - 
+    CTMMODE_TEST4,                           ///< 0x08 - 
+    CTMMODE_TEST5,                           ///< 0x09 - 
+    CTMMODE_MODE1,                           ///< 0x0a - 
+    CTMMODE_MODE2,                           ///< 0x0b - 
+    CTMMODE_MODE3,                           ///< 0x0c - 
+    CTMMODE_MODE4                            ///< 0x0d - 
+} CTMMODE_t;
+
+typedef enum
+{
+    TXCODE_RACH_HO            = 0x00,        ///< 
+    TXCODE_CCCH               = 0x01,        ///< SDCCH or SACCH 
+    TXCODE_EPC_SACCH          = 0x02,        ///< EPC SACCH
+    TXCODE_FACCH              = 0x03,        ///< 
+    TXCODE_D9_6               = 0x04,        ///< 
+    TXCODE_D4_8               = 0x05,        ///< 
+    TXCODE_D2_4               = 0x06,        ///< 
+    TXCODE_D14_4              = 0x07,        ///< 
+    TXCODE_PRACH              = 0x08,        ///< 
+    TXCODE_CS1                = 0x09,        ///< 
+    TXCODE_CS2                = 0x0a,        ///< 
+    TXCODE_CS3                = 0x0b,        ///< 
+    TXCODE_CS4                = 0x0c,        ///< 
+    TXCODE_HR                 = 0x0d,        ///<
+    TXCODE_FR_EFR             = 0x0e,        ///<
+    TXCODE_AFS                = 0x0f,        ///<
+    TXCODE_AHS                = 0x10,        ///<
+    TXCODE_RATSCCH            = 0x11,        ///<
+    TXCODE_GROUP1             = 0x12,        ///< EDGE MCS1-4   Modified by Li Fung on May 14
+    TXCODE_GROUP2             = 0x13,        ///< EDGE MCS5-6
+    TXCODE_GROUP3             = 0x14,        ///< EDGE MCS7-9
+    TXCODE_WFS	              = 0x15,        ///< 
+    TXCODE_NONE               = 0xFFFF       ///<
+} TxCode_t;
+
+typedef enum
+{
+    TXOPT_FIXED_ALWAYS        = 0x00,        ///< Always send message
+    TXOPT_FIXED_DELAY         = 0x01,        ///< Send only on delayed USF match
+    TXOPT_FIXED_NO_DELAY      = 0x02,        ///< Send on USF match, otherwise TX_FAIL
+    TXOPT_ANY                 = 0x03         ///< Send on any USF match, otherwise TX_FAIL
+} TxOpt_t;
+
+typedef enum
+{
+    RXCODE_NONE           = 0x00,            ///< Frame entry only
+    RXCODE_EFR            = 0x01,            ///< Frame entry only
+    RXCODE_D9_6           = 0x02,            ///< Both entry and buffer
+    RXCODE_D4_8           = 0x03,            ///< Both entry and buffer and it is not supportted
+    RXCODE_FR             = 0x04,            ///< Frame entry only
+    RXCODE_D14_4          = 0x05,            ///< Both entry and buffer
+    RXCODE_CS2            = 0x06,            ///< Rx msg buffer only
+    RXCODE_CS3            = 0x07,            ///< Rx msg buffer only
+    RXCODE_CS4            = 0x08,            ///< Rx msg buffer only
+    RXCODE_CCCH           = 0x09,            ///< Both entry and buffer
+    RXCODE_CS1            = 0x0a,            ///< Rx msg buffer only
+    RXCODE_FACCH          = 0x0b,            ///< Rx msg buffer only
+    RXCODE_SCH            = 0x0c,            ///< Both entry and buffer
+    RXCODE_HR             = 0x0D,            ///< Half Rate speech
+    RXCODE_AFS            = 0x0E,            ///< AMR Full Rate speech
+    RXCODE_AHS            = 0x0F,            ///< AMR Half Rate speech
+    RXCODE_RATSCCH        = 0x10,            ///< AMR RATSCCH
+    RXCODE_D2_4           = 0x11,            ///< Both entry and buffer and it is not supportted
+    RXCODE_GROUP1         = 0x12,            ///< EDGE MCS 1-4 by Li Fung on May 14, 2002
+    RXCODE_GROUP2         = 0x13,            ///< EDGE MCS 5-6
+    RXCODE_GROUP3         = 0x14,            ///< EDGE MCS 7-9
+    RXCODE_EPC_SACCH	= 0x15,				///< EPC SACCH
+	RXCODE_AMR_WB		= 0x16,				///< AMR WB
+	RXCODE_WFS			= 0x17				///< WFS
+} RxCode_t;
+
+typedef enum
+{
+    RXCODE_USF0            = 0x00,           ///< 
+    RXCODE_USF1            = 0x01,           ///< 
+    RXCODE_USF2            = 0x02,           ///< 
+    RXCODE_USF3            = 0x03,           ///< 
+    RXCODE_USF4            = 0x04,           ///< 
+    RXCODE_USF5            = 0x05,           ///< 
+    RXCODE_USF6            = 0x06,           ///< 
+    RXCODE_USF7            = 0x07,           ///< 
+    RXCODE_USF_IDLE        = 0x08,           ///< 
+    RXCODE_USF_NONE        = 0x09,           ///< 
+    RXCODE_USF_ANY         = 0x0f            ///< 
+} USFCode_t;
+
+typedef enum
+{
+    CRYPTOMODE_NONE,                         ///< 0x00 - 
+    CRYPTOMODE_A5_1,                         ///< 0x01 - 
+    CRYPTOMODE_A5_2,                         ///< 0x02 - 
+    CRYPTOMODE_A5_3                          ///< 0x03 - 
+} CryptoMode_t;
+
+
+typedef enum
+{
+    S_NO_COMB        = 0,                    ///< disable SACCH combining
+    S_PART_COMB1     = 1,                    ///< if SACCH(curr) decoding fail, partial combining with SACCH(curr-1) then decoding
+    S_PART_COMB2     = 2,                    ///< if SACCH(curr) decoding fail, partial combining with SACCH(curr-2) then decoding
+    S_PART_COMB3     = 3,                    ///< if SACCH(curr) decoding fail, partial combining with SACCH(curr-3) then decoding
+    S_TOTA_COMB1     = 4,                    ///< if SACCH(curr) decoding fail, total combining with SACCH(curr-1) then decoding 
+    S_TOTA_COMB2     = 5,                    ///< if SACCH(curr) decoding fail, total combining with SACCH(curr-2) then decoding 
+    S_TOTA_COMB3     = 6                     ///< if SACCH(curr) decoding fail, total combining with SACCH(curr-3) then decoding 
+} SACCHCombine_t;
+
+typedef enum
+{
+    F_NO_COMB         = 0,                   ///< disable FACCH combining
+    F_TOTA_COMB1     = 1                     ///< if FACCH(curr) decoding fail, total combining with previous bad FACCH then decoding 
+} FACCHCombine_t;
+
+typedef enum
+{
+    TCHLOOP_NONE,                            ///< No TCH loop
+    TCHLOOP_A,                               ///< Loopback good speech/data, zero bad blocks
+    TCHLOOP_B,                               ///< Loopback all speech/data blocks
+    TCHLOOP_C,                               ///< Loopback all bursts
+    TCHLOOP_D,                               ///< Loopback good speech/data, zero bad/unreliable (Half rate only )
+    TCHLOOP_E,                               ///< Loopback good SID, zero erased SID blocks      (Half rate only )
+    TCHLOOP_F,                               ///< Loopback good SID, zero erased valid SID       (Half rate only )
+    TCHLOOP_G,                               ///< Multislot burst-by-burst loopback              
+    TCHLOOP_H,                               ///< Multislot loopback, zero bad blocks            
+    TCHLOOP_I,                               ///< Loopback AMR inband channel                    (AFS or AHS only)
+    EGPRS_SRBLOOP_ON,                        ///< EGPRS switched radio block loopback mode
+    EGPRS_SRBLOOP_OFF,
+    EGPRS_ASRBLOOP_ON						 ///< Enable EGPRS switched radio block asymmetric loopback mode
+} TCHLoop_t;
+
+typedef enum
+{
+    FULLBAND_NLP = 0,                        ///< EC NLP mode. FULLBAND is default legacy mode. SUBBAND is new mode
+    SUBBAND_NLP = 1
+} SubbandNlp_t;
+
+typedef enum
+{
+    AUDIO_STREAM_UL_VPU_OUT                = 0x1, 
+    AUDIO_STREAM_UL_ADC_OUT                = 0x2,
+	AUDIO_STREAM_UL_MIC1_EQ_OUT			   = 0x21,
+    AUDIO_STREAM_UL_DUAL_MIC_ADC_OUT	   = 0x3,
+    AUDIO_STREAM_UL_MIC2_EQ_OUT			   = 0x31, 
+    AUDIO_STREAM_UL_HPF_OUT                = 0x4, 
+    AUDIO_STREAM_UL_EC_IN          		   = 0x8, 
+    AUDIO_STREAM_DL_EC_REF_OUT             = 0x10,
+    AUDIO_STREAM_UL_EC_OUT                 = 0x20,
+	AUDIO_STREAM_UL_NOISE_REF_MIC_EC_OUT   = 0x22,
+    AUDIO_STREAM_UL_NS_OUT                 = 0x40,
+    AUDIO_STREAM_UL_COMPANDER_OUT          = 0x80,
+    AUDIO_STREAM_UL_LIMITER_OUT            = 0x100,
+    AUDIO_STREAM_UL_SP_ENC_OUT             = 0x101,
+    AUDIO_STREAM_DL_DEC_OUT                = 0x200,
+    AUDIO_STREAM_DL_CH_DEC_OUT             = 0x201,
+    AUDIO_STREAM_DL_HPF_OUT                = 0x400,
+    AUDIO_STREAM_DL_COMP_PREFILT_OUT       = 0x800,
+    AUDIO_STREAM_DL_VOL_OUT                = 0x1000,
+    AUDIO_STREAM_DL_COMPANDER_OUT          = 0x2000,
+    AUDIO_STREAM_DL_LIMITER_OUT            = 0x4000,
+	AUDIO_STREAM_DL_SPEAKER_EQ_OUT         = 0x4001,
+	AUDIO_STREAM_DL_SPEAKER_xProt_OUT      = 0x4002,
+    AUDIO_STREAM_DL_VPU_OUT                = 0x8000
+} AUDIO_CapturePoint_t;
+
+typedef enum
+{
+    COMPRESS_ONLY = 0x0001,
+    EXPAND_ONLY = 0x0002
+} CompanderMode_t;
+
+typedef enum
+{
+    TO_LA                     = 0x0000,
+    TO_TESTPOINT_HW_REGS      = 0x0001,
+    TO_ARM                    = 0x0002
+} TestpointOutputDir_t;
+
+typedef enum
+{
+    LOG_MODEM_DATA_RAW_I_Q = 1,
+	LOG_MODEM_DATA_DEROT_IQ,
+	LOG_MODEM_DATA_EQ_OUT,
+	LOG_MODEM_DATA_TSC_RAW_DATA,
+	LOG_MODEM_DATA_TSC_DEROT_DATA,
+	LOG_MODEM_DATA_SEARCH_TIME
+} Modem_CapturePoint_t;
+
+//******************************************************************************
+// Shared memory typedefs
+//******************************************************************************
+
+/**
+ * \note
+ * 7/17/02 Ken - CAUTION !!!  There are now TWO DIFFERENT definitions of the frame
+ * entry type.  The original definition is still used by the Arm to generate the
+ * entries.  The old format, is defined by the type def FrameEntry_t in fiqisr.h
+ *  ome of the data that was originally passed to the Arm via the frame entries
+ * is now processed in the FIQ interrupt and passed to the DSP there.
+ * Note the queue called rf_frame_data defined in fiqisr.h and the code in
+ * SHAREDMEM_WriteEntry() (file = sharedmem.c) 
+ * The original frame entry definition was retained on the Arm side for the moment
+ * to prevent the need for fairly massive code changes in layer 1.  Data from the 
+ * old format frame entry is simply copied the the correct final location in either
+ * rf_frame_data[] or shared_frame_entry[] by SHAREDMEM_WriteEntry().
+ * 
+ * \par
+ * 7/17/02 Ken - This is the REAL frame entry type def.  The DSP uses this and it
+ * defines the format of the frames in shared memory.  See CAUTION note above.
+ */
+
+typedef struct
+    {
+    UInt16    header[2];
+    UInt16    entry0;
+    UInt16    entry1;
+    UInt16    entry2;
+    UInt16    entry3;
+    UInt16  entry4;
+} Shared_FrameEntry_t;
+
+typedef struct
+    {
+    UInt16    header[2];
+    UInt16    entry0;
+    UInt16    entry1;
+    UInt16    entry2;
+    UInt16    entry3;
+    UInt16  entry4;
+    UInt16    freq0[2];
+    UInt16    freq1[2];
+    UInt16    freq2[2];
+} TCM_Shared_FrameEntry_t;
+
+#define    FRAME_ENTRY_SIZE        sizeof(    Shared_FrameEntry_t)// Size of a frame entry
+
+
+typedef struct                        //Structure for one command           
+{  
+	UInt32 spisr;              		// RFSPI_SPISR    
+	UInt32 spiar[64][4];			// RFSPI_SPIAR[0.0-16.3]
+	UInt32 num_rx_wr[3];			// Sotres the # of SPIRSR for each Rx action
+	UInt32 spirsr[ N_BANDS ][ N_RXPATTS ][ 3 ]; // 4 bands, 6 patterns, size 2 [2][16];			// RFSPI_SPIRSR[0-31]
+	UInt32 spiar_rx[ N_BANDS ][ N_RXPATTS ][ 4*3 ]; //4 bands, 6 patterns, 2  sets of commands, each cmd is 4 words ;  [64][4];		 
+	UInt32 num_tx_wr;   			// Stores the # of SPITSR for each Tx action
+	UInt32 spitsr[32];				// RFSPI_SPITSR[0-31]
+	UInt32 spird_hw;				// RFSPI_SPIRD_HW       
+	UInt32 spird_sw;				// RFSPI_SPIRD_SW  
+	UInt16 spisr_flag;  			// SPISR flag
+	UInt16 spird_flag;  			// SPIRD flag 
+} SPI_Records_t;  
+
+
+// These are flags which can be set by the Arm to control the DSP's Noise suppressor output 
+typedef struct
+{
+    UInt16 x1    : 1;
+    UInt16 x2    : 1;
+    UInt16 x3    : 1;
+    UInt16 x4    : 1;
+    UInt16 x5    : 1;
+    UInt16 enable_subband_nlp_dB          : 1;    // TRUE == Subband NLP will output ch_enrg_dB to shared memory
+    UInt16 enable_subband_nlp_enrg_lin    : 1;    // TRUE == Subband NLP will output linear energies to shared memory
+} Shared_ns_flags_t;                            
+
+typedef struct
+{
+    UInt16 bfi;
+    UInt16 index;
+    UInt16 otd;
+    UInt16 code;
+    UInt16 cn_db16;
+    UInt16 bl_var;
+    union
+    {
+        UInt16 msg[ CONTENTS_SIZE ];    // Two octets per word
+        // Following is needed to support release'99 enhanced measurement only for GSM circuit switched TCH.
+        // Note: The maximum size of message of GSM circuit switched TCH is 14.4kbps -> 290bits/16 -> 19 words.
+        struct
+        {    //Report SNR and rxlev of the rx block at the end of msg.
+            UInt16 dummy[ CONTENTS_SIZE - 8 ];    // Not used just for alignment        
+            UInt16 rxlev[ 4 ];            
+            Int16 SNR[ 4 ];        
+        } measurement;
+    } report;
+} RxBuf_t;
+
+    typedef struct
+    {
+        UInt16 code;
+        UInt16 seq_id;                    // DSP only takes the 12 lsb
+        UInt16 msg[ CONTENTS_SIZE ];    // Two octets per word
+    } TxBuf_t;
+
+
+    typedef struct
+    {
+        UInt16 bfi;
+        UInt16 index;
+        Int16 otd;
+        UInt16 code;
+        UInt16 cn_db16;
+        UInt16 bl_var;
+        Int16 SNR;
+        UInt16 usf;
+        UInt16 BEP[ 4 ];
+        UInt16 msg[EDGE_RX_CONTENTS_SIZE];
+    } EDGE_RxBuf_t;
+
+    typedef struct
+    {
+        UInt16 code;
+        UInt16 seq_id;                    // DSP only takes the 12 lsb
+        UInt16 msg[EDGE_TX_CONTENTS_SIZE];
+    } EDGE_TxBuf_t;
+    
+    typedef enum
+    {
+        GPRS_RXBUF, EGPRS_RXBUF
+    }
+    T_NEW_RXBUFPresent;
+
+    typedef struct T_NEW_RXBUF_s
+    {
+        UInt16 Present;
+        union
+        {
+           RxBuf_t gprs_rx_buf[3*MAX_RX_SLOTS];            // PING PONG BUFFER of multi-slot data plus HCSD SACCH
+           EDGE_RxBuf_t egprs_rx_buf[2*MAX_RX_SLOTS];    // PING PONG BUFFER
+        }
+        U;
+    }
+    T_NEW_RXBUF;
+    
+    typedef enum
+    {
+        GPRS_TXBUF, EGPRS_TXBUF
+    }
+    T_NEW_TXBUFPresent;
+
+    typedef struct T_NEW_TXBUF_s
+    {
+        UInt16 Present;
+        union
+        {
+           TxBuf_t gprs_tx_buf[10];
+           EDGE_TxBuf_t egprs_tx_buf[MAX_TX_SLOTS];
+        }
+        U;
+    }
+    T_NEW_TXBUF;
+
+
+typedef struct
+{
+    Int16    numSym;
+    Int16    bitsDemodBuff[10];
+} ctmRx_t;
+
+typedef struct
+{
+    Int16    mode;
+    Int16    numSym;
+    Int16    sym[5][2];
+} ctmTx_t;
+
+typedef Int16 baudotTx_t;
+
+typedef struct
+{
+    Int16    diff[20];
+} baudotRx_t;
+
+typedef struct
+{
+	Int16	snr;				 // SAIC switch SNR thershold for both BP & FP
+	Int16	colorNoisePeriod;	 // SAIC switch color noise detector avg period for BP
+	UInt16	colorNoiseRatio;	 // SAIC switch color noise detector threshold for BP
+	Int16	chProfileBP;		 // SAIC switch channel profile threshold for BP
+	Int16	chProfileFP;		 // SAIC switch channel profile threshold for FP
+} saic_thres_t;
+
+
+typedef struct
+{
+	UInt16	digital_power;		// Raw digital power
+	UInt16	channel_index;		// We need to track and report the digital power for all cells we're sync'd to
+	UInt16	status;				// Measurement status; MSB: saturation, bit14: HW saturation, bit9: dlink_dtx_flag, bit8: must TX frame, low byte is buf_index
+} AGC_dat_t;
+
+#define NumSamplePerBurstUsed 156
+#define    A5_BURST_LEN            8
+typedef    struct
+{
+    Int16    TSC_index;
+    Int16    derotOut[NumSamplePerBurstUsed*2];
+    Int16    snr_est;
+} saic_fp_burst_data_t;
+
+
+typedef    struct
+{
+UInt16    shared_expander_alpha;
+UInt16    shared_expander_beta;
+UInt16    shared_expander_b;
+UInt16    shared_expander_c;
+UInt16    shared_expander_c_div_b;
+UInt16    shared_expander_inv_b;
+UInt16    shared_expander_envelope;
+} expander_parm;
+
+typedef    struct
+{
+UInt16    shared_compressor_envelope;
+UInt16    shared_compressor_output_gain;
+UInt16    shared_compressor_scale;
+UInt16    shared_compressor_thresh;
+UInt16    shared_compressor_alpha;
+UInt16    shared_compressor_beta;
+} compressor_parm;
+
+typedef struct
+{
+Int16 burst_ms_freq[4][MAX_RX_SLOTS];
+UInt16 burst_ms_timing[4][MAX_RX_SLOTS];
+Int16 burst_ms_qbc_offset[4][MAX_RX_SLOTS];
+UInt16 burst_ms_snr_rxlev[4][MAX_RX_SLOTS];
+} Shared_TrackData_t;
+
+typedef struct
+{
+Int16 burst_ms_freq[4];
+UInt16 burst_ms_timing[4];
+Int16 burst_ms_qbc_offset[4];
+UInt16 burst_ms_snr_rxlev[4];
+} Shared_SacchTrackData_t;
+
+typedef struct
+{
+UInt16 burst_ms_SAIC_bp_flag[4][MAX_RX_SLOTS];
+UInt16 burst_ms_timing_diff[4][MAX_RX_SLOTS];
+Int16 burst_ms_EQU32_flag[4][MAX_RX_SLOTS];
+} Shared_BP_TrackData_t;
+					
+typedef    struct
+{
+UInt16    t2lin;
+UInt16    g2t2;
+UInt16    g3t3;
+UInt16    g4t4;
+UInt16    alpha;
+UInt16    beta;
+UInt16    env;
+Int16    g1lin;
+Int16    step2;
+Int16    step3;
+Int16    step4;
+} Shared_Compressor_t;
+
+
+typedef	struct
+{
+
+	UInt16			g2t2;
+	UInt16          env;
+	Int16			g1lin;
+} Shared_Smart_Compressor_t;
+
+
+// Pre-store OV parameters to save run-time calculations
+typedef struct {
+Int16 in2;
+Int16 out2;
+Int16 in3;
+Int16 out3;
+Int16 in4;
+Int16 out4;
+Int16 out5;
+Int16 step2;
+Int16 step3;
+Int16 step4;
+UInt16 out_max;
+Int16 inv_step2;
+Int16 inv_step3;
+Int16 inv_step4;
+} comp_parms_t;
+
+typedef struct
+{
+	UInt16 			omega_voice_enable;
+	Int16			omega_voice_thres_dB[NUM_OMEGA_VOICE_BANDS];
+	Int16			omega_voice_max_gain_dB[NUM_OMEGA_VOICE_BANDS];
+	Int16			omega_voice_gain_step_up_dB256;
+	Int16			omega_voice_gain_step_dn_dB256;
+	Int16			omega_voice_max_gain_dB_scale_factor;
+} OmegaVoice_t;
+
+typedef struct
+{
+	UInt16	alpha_voice_enable;
+	UInt16	alpha_voice_avc_target_dB;
+	UInt16	alpha_voice_avc_max_gain_dB;
+	UInt16	alpha_voice_avc_step_up_dB256;
+	UInt16	alpha_voice_avc_step_down_dB256;
+} AlphaVoice_t;
+
+typedef struct
+{
+	UInt16	kappa_voice_enable;
+	UInt16	kappa_voice_high_pitched_tone_target_dB;
+	Int16	kappa_voice_fast_detector_loudness_target_dB;
+	UInt16	kappa_voice_fast_detector_max_supp_dB;
+	Int16	kappa_voice_slow_detector_loudness_target_dB;
+	UInt16	kappa_voice_slow_detector_max_supp_dB;
+} KappaVoice_t;
+
+typedef struct                            //struct storing the raw IQ data for RF cal
+{
+    UInt16 frame_index;
+    UInt16 slot_mask;
+    UInt16 mode_ind;
+    UInt16 RSSI[MAX_RX_SLOTS];
+    UInt16 digi_pwr[MAX_RX_SLOTS];
+    UInt16 AGC_gain[MAX_RX_SLOTS];
+    UInt16 rawIQ[MAX_RX_SLOTS][ 156*2 ];    //data storing raw IQ, after DC cancelling, but no derotation
+} Shared_RF_rx_test_data_t;
+
+typedef struct                            //struct storing the raw IQ data for RF cal
+{
+    UInt16 rawIQ[30];    //data storing raw data for modulating, after DC cancelling, but no derotation
+} Shared_RF_tx_test_data_t;
+
+
+
+
+
+
+
+
 
 typedef struct
     {
@@ -855,20 +1443,21 @@ typedef enum
 	COMMAND_PRAM_WRITE,			// 0x25		( addr, value )
    /** \HR */
    /** \par Module
-    *                    Audio 
+    *                    Modem 
     *  \par Command Code         
     *                    0x26
     *  \par Description 
-    *       Enables VPU
+    *       Abort search
     *              
-    *              @param  None
+    *              @param  UInt16 arg0:  Search abort at slot number count 
+    *              @param  UInt16 arg1:  Search abort at frame count 
     */
-	NOT_USE_COMMAND_26,			// 0x26		( )
+	COMMAND_SRCH_ABORT,			// 0x26		( stop baseband search and its state machine at arg0 & arg1 specified slot & frame count)
 	COMMAND_GEN_TIMING_PULSE,	// 0x27		( frame_index, qbc_delay, qmcr_value )
 	COMMAND_TX_ABORT,			// 0x28		( buffer_index )
 	COMMAND_CLOSE_MS_LOOP,		// 0x29		( mode, rxindex0/txindex0, rxindex1/txindex1 )
 	COMMAND_OPEN_MS_LOOP,		// 0x2A		( )
-	NOT_USE_COMMAND_2B,			// 0x2B
+	COMMAND_SWITCH_AUDIO_PROFILE,// 0x2B	arg0 = Is_spkr_mode, arg1 = 0, arg2 = 0;
 	COMMAND_SYNC_OFFSET,		// 0x2C		( max_sync_offset )
 	COMMAND_RELOAD_TX_PARMS,	// 0x2D		( )
 	COMMAND_PWRCTRL_IDLE,		// 0x2E		( reset_cn_flag, idle_average, pb(dB) )
@@ -1009,7 +1598,42 @@ typedef enum
     */    
     COMMAND_MAIN_AMR_RUN,		// 0x5a		( run main AMR vocoder during GSM idle to support WCDMA voice call, arg0=UL AMR codec mode request )
     COMMAND_AUDIO_ALIGNMENT,	// 0x5b		( align audio input and/or output buffer, arg0: input buf, arg1: output buf )
-	COMMAND_VOICE_FILTER_COEFS,	// 0x5c		( )
+    /** \HR */
+    /** \par Module
+     *                    Audio
+     *  \par Command Code
+     *                    0x5c
+     *  \par Description
+     *  This command enables/disables Transducer Equalizer filters in the DSP.
+     *  This command must be sent prior enabling the speech audio for 16/8K sampling rate to turn ON the
+     *  following Filters:
+     *  -	Main MIC UL filter
+     *  -	Aux Mic (second MIC) UL filter
+     *  -	DL SPKR filter
+     *  The internal memory of the DSP is initialized to proceed with filtering.
+     *
+     *  The command reads the filter settings for the filters from the shared memory.
+     *
+     *  \note The parameters must be present in the shared memory before this command is sent.
+     *
+     *  Optional initialization of the filter states can be controlled by this command.
+     *  This command can be sent at least ONCE per audio mode.
+     *  If the audio mode changes and therefore setting of the filters, the command must be resent to
+     *  inform DSP that an updating of the filter settings needed.
+     *
+     *              @param  UInt16 Init: \BR
+     *                             {bit2 - ulaux_comp_filter_Init_flag \BR
+     *                              bit1 - ul_comp_filter_Init_flag \BR
+     *                              bit0 - dl_comp_filter_Init_flag} \BR
+     *              @param  UInt16 Enable: \BR
+     *                             {bit2 - ulaux_comp_filter_Enable_flag \BR
+     *                              bit1 - ul_comp_filter_Enable_flag \BR
+     *                              bit0 - dl_comp_filter_Enable_flag} \BR
+     *              @param  UInt16 Test_flag = 0xbeab - Initializes the filters with some default values.
+     *
+     *   \sa Transducer_EQ
+     */
+    COMMAND_VOICE_FILTER_COEFS,	// 0x5c		( )
 	COMMAND_POLYRINGER_STARTPLAY,	// 0x5d	( Polyringer Play )
 	COMMAND_POLYRINGER_CANCELPLAY,	// 0x5e	( Polyringer Cancel )
     COMMAND_MST_FLAG_EFR,		// 0x5f		( value(0,1,2,3,4,7,9) )
@@ -1021,24 +1645,7 @@ typedef enum
     COMMAND_FLAG_SAIC,			// 0x65		
     COMMAND_PATCH_ENABLE,		// 0x66	
 	COMMAND_WAKEUP_SMC,			// 0x67
-   /** \HR */
-   /** \par Module
-    *                    Audio 
-    *  \par Command Code         
-    *                    0x68
-    *  \par Description 
-    *      This command loads the coefficients of the various Biquad Filters
-    *
-    *              @param  UInt16 Load_Biquad_Coefficients_Of:
-    *                             - = 1: Load 10 coefficients for Bluetooth UL Double-Biquad filter from shared_bluetooth_ul_filter_coef \BR
-    *                             - = 2: Load 10 coefficients for Bluetooth DL Double-Biquad filter from shared_bluetooth_dl_filter_coef \BR
-    *                             - = 3: Load 10 coefficients for Echo Far-In filter from shared_echo_farIn_filt_coefs \BR
-    *                             - = 4: Load 10 coefficients for Compressor Pre-filter from shared_comp_filter_coef \BR
-    *
-    *              \see shared_bluetooth_ul_filter_coef, shared_bluetooth_dl_filter_coef, shared_echo_farIn_filt_coefs, 
-    *                   shared_comp_filter_coef
-    */
-	COMMAND_BIQUAD_FILT_COEFS,	// 0x68		( Biquad filter coef 0-9, arg0 = 1(Bluetooth UL), =2(Bluetooth DL), =3 (ECHO FARIN FILT), =4 (DL filter))
+	NOT_USE_COMMAND_68,			// 0x68
 	COMMAND_SET_PDMA,			// 0x69		( setup PDAM, arg0=ADDR_H, arg1=ADDR_L, arg2=LEN )	
 	COMMAND_START_PDMA,			// 0x6a		( lunch PDMA, arg0=PRAM_OFFSET )
 	COMMAND_SET_DDMA,			// 0x6b		( setup DDAM, arg0=ADDR_H, arg1=ADDR_L, arg2=LEN )
@@ -1257,7 +1864,7 @@ typedef enum
     *      \see sidetone_expander, shared_sidetone_expander_flag, Software_Sidetone
     */
 	COMMAND_INIT_SIDETONE_EXPANDER,		// 0x8f
-	COMMAND_INIT_BIQUAD_FILTER_MEMORY,	// 0x90
+	NOT_USE_COMMAND_90,					// 0x90
 	COMMAND_MUSIC_SUBBAND_SPEAKER_PROTECTION_VECTOR,	// 0x91 ( arg0 = music subband_speaker_protection_vector )
 	COMMAND_RESET_STACK_DEPTH_CHECK_RES,	// 0x92	( arg0 = 0: Disable stack depth checking, 1: Enable stack depth checking, 2: Upload Current minimum stack depth to shared memory )
 	COMMAND_GET_SHARED_MEM_SIZE,			// 0x93
@@ -1274,13 +1881,25 @@ typedef enum
 	NOT_USE_COMMAND_9E,						// 0x9E
 	NOT_USE_COMMAND_9F,						// 0x9F    
 #ifndef tempIntefrace_DSP_FEATURE_SP
-	  COMMAND_SP,		// 0xA0	  (enable) arg0 = 0 Disable, 1 enable; arg1 = oper_mode; arg2 = init flag
+	  COMMAND_SP,							// 0xA0	  (enable) arg0 = 0 Disable, 1 enable; arg1 = oper_mode; arg2 = init flag
 #else
 	  NOT_USE_COMMAND_A0,
 #endif
-	  COMMAND_ENABLE_DUAL_MIC,  //0xA1 (enable) arg0=0 Disable, 1 enable;
-	  COMMAND_QBC_STAR_STOPCNT,	//0xA2 (start/stop event timer QBC count) arg0=1 start; arg0=2 stop count; otherwise no effect on QBC count;
-	  COMMAND_DUAL_SIM_TRACK	//0xA3 (arg0=Kd, arg1=delta_limit, arg2= high byte is 2nd_sim_id & lower byte is delta_flag with zero means disabled)
+	COMMAND_ENABLE_DUAL_MIC,  				// 0xA1 (enable) arg0=0 Disable, 1 enable;
+	COMMAND_QBC_STAR_STOPCNT,				// 0xA2 (start/stop event timer QBC count) arg0=1 start; arg0=2 stop count; otherwise no effect on QBC count;
+	COMMAND_DUAL_SIM_TRACK,					// 0xA3 (arg0=Kd, arg1=delta_limit, arg2= high byte is 2nd_sim_id & lower byte is delta_flag with zero means disabled)
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0xA4
+    *  \par Description 
+    *       This command controls Downlink Noise Suppressor.
+    *              
+    *              @param  0 - disable, 1 - enable
+    *
+    */
+	COMMAND_DOWNLINK_NOISE_SUPPRESSION		// 0xA4 (arg0: 0 - disable, 1 - enable)
 } Command_t;
 /**
  * @}
@@ -1325,6 +1944,316 @@ typedef enum
 /**
  * @}
  */
+
+/**
+ * @addtogroup Queues
+ * @{
+ */
+
+/**
+ * @addtogroup Main_Queues
+ * @{
+ */
+
+/**
+ * @addtogroup Main_Status_Queue
+ * @{
+ */
+
+typedef enum
+{// Status						   Code		Arguments (** = unused status)
+ // ========================	   ====		====================================
+	STATUS_FRAME_INT,			// 0x00		( entry_index, fn_hi, fn_lo )
+	STATUS_RX_FULL,				// 0x01		( buffer_index, EDGE/GPRS mode ind, ping-pong buffer ind )
+	STATUS_TX_SENT,				// 0x02		( buffer_index, frame_index, burst_index<<12 | seq_id )
+	STATUS_READ_STATUS,			// 0x03		( address, any_val, read_value )
+	STATUS_SYNC,				// 0x04		( any_val )
+	STATUS_MEAS_REPORT,			// 0x05		( dtx_status )
+	STATUS_VERSION_ID,			// 0x06		( v1, v2, v3 )
+	STATUS_NCELL_ADJUST,		// 0x07		( adjust3210, adjust7654 )
+	STATUS_TIMING_PULSE,		// 0x08		( frame_index, delta_qbc )
+	STATUS_TX_RESULT,			// 0x09		( any_sent_cnt, fixed_sent_cnt, seq_id )
+	STATUS_SMC_ERROR,			// 0x0a		( SMIR, TQBC, QBC )
+	STATUS_EOTD,				// 0x0b		( )	Note: only do something if EOTD is defined!!!
+    STATUS_AMR_CMI,	            // 0x0c     ( current code mode indication in AMR, DL mode indication, DL DTX flag, UL mode indication )
+    STATUS_FACCH_SENT,			// 0x0d		( report FACCH sent, buf index, frame index, seq_id )
+    STATUS_RATSCCH_SENT,		// 0x0e		( report RATSCCH sent, buf index, frame index, seq_id )
+    STATUS_RATSCCH_MRK_SENT,	// 0x0f		( report AHS RATSCCH marker sent, buf index, frame index, burst_index )
+	STATUS_RX_RATSCCH_MRK,		// 0x10		( report AHS RATSCCH marker received, buf index, bec, frame index )
+    STATUS_AMR_PARM_SET,		// 0x11		( report AMR codec set parameters configured, 0xd000|id1/0xe000|id1 for downlink/uplink id1, max mode, mode set[0 to 3] )
+	STATUS_CTM_READY,			// 0x12
+    STATUS_DSP_WAKEUP_RSP,		// 0x13
+    STATUS_ONSET_SENT,			// 0x14		( report AMR onset sent, buf index, frame index, burst index )
+    STATUS_SID_FIRST_SENT,		// 0x15		( report AMR SID FIRST sent, buf index, frame index, burst index )
+    STATUS_SID_FIRST_INH_SENT,	// 0x16		( report AMR SID FIRST INH sent, buf index, frame index, burst index )
+    STATUS_SID_UPDATE_SENT,		// 0x17		( report AMR SID UPDATE sent, buf index, frame index, burst index )
+    STATUS_SID_UPDATE_INH_SENT,	// 0x18		( report AMR SID UPDATE INH sent, buf index, frame index, burst index )
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x19
+    *  \par Description 
+    *       This reply is sent by the DSP during GSM idle to support WCDMA/VOIP voice call. This reply is sent by the DSP
+    *       every-time it completes processing the COMMAND_MAIN_AMR_RUN command - i.e. it has encoded the speech data and 
+    *       stored it in UL_MainAMR_buf buffer for ARM to pick up and when it has completed speech decoding the data 
+    *       sent by the ARM in DL_MainAMR_buf
+    *                     
+    *              @param  UInt16 For Non-VOIP: amr_tx_type
+    *              @param  UInt16 {bit4: =1/0 - WBAMR/NBAMR, bit3-bit0: active_ulink_mode_set}
+    *              @param  Boolean dtx_enable
+    *              
+    *   \par Associated Command
+    *        For every COMMAND_MAIN_AMR_RUN command, an associated STATUS_MAIN_AMR_DONE reply would be sent in the status 
+    *        queue.
+    *   \sa  DL_MainAMR_buf, UL_MainAMR_buf, COMMAND_MAIN_AMR_RUN
+    */    
+    STATUS_MAIN_AMR_DONE,		// 0x19		( report main AMR encoder done, TX frame type, AMR mode, dtx_enable )
+	STATUS_ECHO_CANCEL_DONE,	// 0x1A		( Indicate that the Echo Canceller has just run
+    STATUS_SAIC_SW,				// 0x1B		SAIC switch status
+	STATUS_POLYRINGER_PLAY_EVENT_DONE,	// 0x1C  ()
+	STATUS_POLYRINGER_SW_FIFO_EMPTY,	// 0x1D  ()
+	STATUS_POLYRINGER_DONEPLAY,			// 0x1E  ()
+	STATUS_POLYRINGER_CANCELPLAY,		// 0x1F  ()
+	STATUS_DSP_ENTERING_DEEP_SLEEP,		// 0x20  ()  
+   	STATUS_OPEN_LOOP,			// 0x21		( ACK open loop CMD, loop mode, multi-slot loop CMD? )
+    STATUS_CLOSE_LOOP,			// 0x22		( ACK close loop )
+    STATUS_FER_TEST,			// 0x23		( FER TEST )
+    STATUS_SACCH_SNR,			// 0x24		( report SACCH burst snr, before SAIC snr, after SAIC snr, burst_index<<4 | saic_bp_flag  )
+	STATUS_TEST_PDMA,			// 0x25
+	STATUS_TEST_DDMA,			// 0x26
+	STATUS_AAC_PLAIN_ERROR,		// 0x27
+	STATUS_CTM_ABORT_BY_PR,		// 0x28
+	STATUS_PR_ABORT_BY_CTM,		// 0x29
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x2a
+    *  \par Description 
+    *       This reply is part of the NEWAUDFIFO interface. This reply is sent by the DSP
+    *       to the ARM when unused data in 
+    *       shared_pram_codec_out0 or shared_newpr_codec_out0 < soft FIFO threshold (sent in
+    *       COMMAND_NEWAUDFIFO_START command). \BR
+    *       
+    *       ARM responds to this reply by sending more data to be played in the 
+    *       shared_pram_codec_out0 or shared_newpr_codec_out0 buffers.
+    *
+    *       \note Athena does not support the NEWAUDFIFO Interface
+    *
+    *              @param  UInt16 audio_ch_index
+    *              @param  UInt16 Read Index
+    *              @param  UInt16 Write Index
+    *
+    *  \see NEWAUDFIFO_Interface, 
+    *                   STATUS_NEWAUDFIFO_SW_FIFO_EMPTY, COMMAND_NEWAUDFIFO_START, 
+    *                   COMMAND_NEWAUDFIFO_CANCEL, COMMAND_NEWAUDFIFO_PAUSE,
+    *                   COMMAND_NEWAUDFIFO_RESUME, STATUS_NEWAUDFIFO_DONEPLAY, 
+    *                   
+    */    
+	STATUS_NEWAUDFIFO_SW_FIFO_LOW,		// 0x2a
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x2b
+    *  \par Description 
+    *       This reply is part of the NEWAUDFIFO interface. This reply is sent by the DSP
+    *       to the ARM when there is no more unused data in 
+    *       shared_pram_codec_out0 or shared_newpr_codec_out0 \BR
+    *       
+    *       ARM responds to this reply by sending more data to be played in the 
+    *       shared_pram_codec_out0 or shared_newpr_codec_out0 buffers.
+    *
+    *       \note Athena does not support the NEWAUDFIFO Interface
+    *
+    *              @param  UInt16 AudioChIndex =[0,1]=[shared_pram_codec_out0, shared_newpr_codec_out0] 
+    *              @param  UInt16 AudioChannelMode[AudioChIndex]
+    *              @param  UInt16 Audio_SW_FIFO_th[AudioChIndex]
+    *
+    *  \see NEWAUDFIFO_Interface, 
+    *                   STATUS_NEWAUDFIFO_SW_FIFO_LOW, COMMAND_NEWAUDFIFO_START, 
+    *                   COMMAND_NEWAUDFIFO_CANCEL, COMMAND_NEWAUDFIFO_PAUSE,
+    *                   COMMAND_NEWAUDFIFO_RESUME, STATUS_NEWAUDFIFO_DONEPLAY
+    *                   
+    */    
+	STATUS_NEWAUDFIFO_SW_FIFO_EMPTY,	// 0x2b
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x2b
+    *  \par Description 
+    *       This reply is part of the NEWAUDFIFO interface. This reply is sent by the DSP
+    *       to the ARM when there is no more unused data in 
+    *       shared_pram_codec_out0 or shared_newpr_codec_out0, and this was indicated as
+    *       the last frame to be played by the ARM\BR
+    *       
+    *       \note Athena does not support the NEWAUDFIFO Interface
+    *
+    *              @param  UInt16 AudioChIndex =[0,1]=[shared_pram_codec_out0, shared_newpr_codec_out0] 
+    *              @param  UInt16 AudioChannelMode[AudioChIndex]
+    *              @param  UInt16 Audio_SW_FIFO_th[AudioChIndex]
+    *
+    *  \see NEWAUDFIFO_Interface, 
+    *                   STATUS_NEWAUDFIFO_SW_FIFO_LOW, COMMAND_NEWAUDFIFO_START, 
+    *                   COMMAND_NEWAUDFIFO_CANCEL, COMMAND_NEWAUDFIFO_PAUSE,
+    *                   COMMAND_NEWAUDFIFO_RESUME, STATUS_NEWAUDFIFO_SW_FIFO_EMPTY
+    *                   
+    */    
+	STATUS_NEWAUDFIFO_DONEPLAY,			// 0x2c
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x2d
+    *  \par Description 
+    *       This reply is part of the NEWAUDFIFO interface. This reply is sent by the DSP
+    *       to the ARM when it receives the COMMAND_NEWAUDFIFO_CANCEL command, informing
+    *       the ARM that it has completed cancelling the playback in the NEWAUDFIFO
+    *       interface\BR
+    *       
+    *       \note Athena does not support the NEWAUDFIFO Interface
+    *
+    *              @param  UInt16 AudioChIndex =[0,1]=[shared_pram_codec_out0, shared_newpr_codec_out0] 
+    *              @param  UInt16 AudioChannelMode[AudioChIndex]
+    *              @param  UInt16 Audio_SW_FIFO_th[AudioChIndex]
+    *
+    *  \see NEWAUDFIFO_Interface, 
+    *                   STATUS_NEWAUDFIFO_SW_FIFO_LOW, COMMAND_NEWAUDFIFO_START, 
+    *                   COMMAND_NEWAUDFIFO_CANCEL, COMMAND_NEWAUDFIFO_PAUSE,
+    *                   COMMAND_NEWAUDFIFO_RESUME, STATUS_NEWAUDFIFO_SW_FIFO_EMPTY
+    *                   
+    */    
+	STATUS_NEWAUDFIFO_CANCELPLAY,		// 0x2d
+	NOT_USE_STATUS_2E,					// 0x2e
+	NOT_USE_STATUS_2F,					// 0x2f
+	NOT_USE_STATUS_30,					// 0x30
+	NOT_USE_STATUS_31,					// 0x31
+	NOT_USE_STATUS_32,					// 0x32
+	NOT_USE_STATUS_33,					// 0x33
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x34
+    *  \par Description 
+    *       THIS STATUS REPLY IS NOT USED ANYMORE
+    *                     
+    *              @param  None
+    *   
+    */    
+	STATUS_ASK_START_DDMA,				// 0x34	(arg0=DDMA_DRAM_ADDR, arg1=DDMA_RW)
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x35  
+    *  \par Description
+    *       This reply is part of the Bluetooth Mixer interface to routes the output of the hardware mixer which 
+    *       combines the voice, polyringer and the audio streams to the ARM. 
+    *       This reply is sent by the DSP whenever finishing one BTM buffer in one sharedmem page (buffer starting 
+    *       at the beginning of 4kw sharedmem page). The finished BTM buffer is in page BTM_page, which indicates 
+    *       page index offset relative to the first sharedmem page of  shared_BTMIXER_OutputBuffer0/1[4096]. 
+    *       ARM reads BTM buffer from BTM_page and sends for SBC coding for BlueTooth.  
+    *
+    *              @param  UInt16 BTM_page
+    *              @param  UInt16 page_en 
+    *              @param  UInt16 BTM_buffer_index
+    *
+    *
+    *  \see shared_BTMIXER_OutputBuffer0, shared_BTMIXER_OutputBuffer1, COMMAND_SET_BTM_BUFFER_SIZE
+    *
+    *  \note This function would not be necessary in Rhea as ARM can directly route the output of the hardware
+    *        mixer to where-ever it wants
+    */    
+	STATUS_BTM_FRAME_DONE,				// 0x35	(arg0=BTM_page, arg1=page_en, arg2=BTM_buffer_index)
+	NOT_USE_STATUS_36,					// 0x36
+    NOT_USE_STATUS_37,					// 0x37	
+	STATUS_AUDIO_DEBUG_DATA_UPLOADED,	// 0x38
+	NOT_USE_STATUS_39,					// 0x39 
+	STATUS_EPC,							// 0x3A ( arg0 = vit_burst_index, arg1 = epc_cmd, arg2 = epc_rxqual  )
+    NOT_USE_STATUS_3B,					// 0x3B
+	STATUS_HQ_ADC_PAGE_DONE,			// 0x3C ( arg0 = HQ_ADC_page(data read page), arg1 = page_en(current page used by isr), arg2 = HQ_ADC_page_index )
+	NOT_USE_STATUS_3D,					// 0x3D
+	NOT_USE_STATUS_3E,					// 0x3E	( arg0=isr ptr, arg1=bk ptr(used by arm or dsp bk) )
+	STATUS_VIBRA_BUFFER_EMPTY,			// 0x3F	( arg0=VIBRA_page(empty page 0/1), page_en(current page used by isr), VIBRA_page_index)
+	STATUS_CURR_MIN_STACK_PTR,			// 0x40 Report the current minimum stack pointer
+	STATUS_SHARED_MEM_SIZE,				// 0x41
+	STATUS_CORE_TL3210_DUMP,			// 0x42
+ 	STATUS_20MS_TRIGGER,				// 0x43 (arg0=[1/0]=[enable/disable] 20ms status trigger to arm)
+	STATUS_IQ_DEBUG_DATA_READY,			// 0x44
+	NOT_USE_STATUS_45,					// 0x45
+	STATUS_MODEM_DATA_READY,			// 0x46
+	STATUS_GPIO_MISMATCH,				// 0x47
+	NOT_USE_STATUS_48,					// 0x48
+	NOT_USE_STATUS_49,					// 0x49
+	STATUS_ASRB_LOOP,					// 0x4a ASRB loop sync status
+	STATUS_DSP_SYNC,					// 0x4b DSP sync status
+	STATUS_DSP_MIPI_WRITE,				// 0x4c DSP MIPI write finished
+	STATUS_SHORT_FRAME,					// 0x4d	( Report the frame qbc is too short: arg0=qbc_next_frame, arg1=qbc_prev_adjust, arg2=next_next_rxmode|(next_next_cell<<8)|(next_next_slot<<13) )
+	STATUS_NCELL_OTD_ADJUST				// 0x4e ( Report the Ncell OTD adjustment by a frame, arg0=cell_id, arg1=adjustment(+1 or -1), otd)
+
+    // Following are DSP hard coded error status.
+    // The purpose is to report error to L1 so that L1 can assert during develpment & debugging time.
+    /*
+    STATUS_ERROR_E0,			0xec00		// Channel encoding mode is in error (txtch_mode, loop_flag, txbuf_index).
+    STATUS_ERROR_E1,			0xec01		// AHS codec rate error in TX (ul_active_id1, ul_active_id0, tx_cmi_cmr).
+    STATUS_ERROR_E2,			0xec02		// AHS codec rate error in re-encode (dl_active_id1, dl_active_id0, new_dlink_icm).
+    STATUS_ERROR_E3,			0xec03		// Block diagonal interleaving txtch_mode mode is in error (txtch_mode, rxtch_mode, txset_type).
+    STATUS_ERROR_E4,			0xec04		// 2nd AMR encoder error (vp_amr_mode, vp_mode, vp_record_mode)
+    STATUS_ERROR_E5,			0xec05		// 2nd AMR encoder error (vp_amr_mode, vp_speech_mode, dtx_enable)
+    STATUS_ERROR_E6,			0xec06		// encrytion mode at tx error (cry_mode, cry_even_flag[index], index)
+    STATUS_ERROR_E7, 			0xec07		// txsaved_ptr NULL error (txtch_mode, rxtch_mode, txbuf_index)
+    STATUS_ERROR_E8,			0xec08		// Index out of bound (index, sfr_index_start, smc_index)
+    STATUS_ERROR_E9,			0xec09		// TX is not done at start of new frame but it should be done (trcr, next_tcon, tx_patt)	
+    STATUS_ERROR_Ea,			0xec0a		// RX is not done at time to load RCON in TRCR register but it should be done (trcr, next_rcon, next_tcon)	
+    STATUS_ERROR_Eb,			0xec0b		// Unknown Event mode from shared mem written by rficisr.c (seq_index, band_index, span)
+    STATUS_ERROR_Ec,			0xec0c		// Band is wrong when trying to load RX GPIO (seq_index, low word curr_rx_vals.i, high word curr_rx_vals.i)
+    STATUS_ERROR_Ed,			0xec0d		// Too late to DTX uplink speech (j, index, prev_smc_page)
+    STATUS_ERROR_Ee,			0xec0e		// TX buffer is empty (txmode, txpatt, (txbuf << 4) | (cur_usf_flag << 3) | txburst)
+    STATUS_ERROR_Ef,			0xec0f		// TX buffer is not filled (buf_num, set.txset_type[ 0 ].seqid_steal, set.txset_type[0].txtch_mode)
+    STATUS_ERROR_E10,			0xec10		// RX shutdown qbc is too small in class 12 dynamic RX/TX split (rx_sfr1, shared_rfic_rx_bc_ind_and_shutdn_span, next_rxspan)
+    STATUS_ERROR_E11,			0xec11		// Report a warning having wrong TX band info (txmode, cfg_curr_tx_band, (txbuf << 4)| tx_full_burst_index)
+    STATUS_ERROR_E12,			0xec12		// Report NO_RX0 error (init_rx_state, rx_burst_type, ((rx_frame_index<<6) | (rx_buf_index<<2) | rx_burst_index))
+    STATUS_ERROR_E13,			0xec13		// Report an error on EDGE buf_index (rxbuf_index, rxtch_mode, MSGBUF_data_mode_ind).
+    STATUS_ERROR_E14,			0xec14		// Report an error on EQ pipeline (eq_status, rx_EQ_ready_flag, rx_VIT_ready_flag).
+    STATUS_ERROR_E15,			0xec15		// Report an error on srch_frame_cnt (bit_offset, burst_start, burst_size).
+    STATUS_ERROR_E16,			0xec16		// Report an error on srch_frame_cnt (tmp_adj, tmp_qbc, (srch_frame_cnt+tmp_adj)).
+    STATUS_ERROR_E17,			0xec17		// Report an error on TX_FULL command buffer index out of bound	(buf_num, opt, (delay<<4) | INT1_ENC_flag)
+    STATUS_ERROR_E19,			0xec19		// Report an warning that rx_speech_flag is enabled already at Vit burst 3
+    STATUS_ERROR_E1a,			0xec1a		// Report an warning that there is left over tx data (arg0|(arg1<<4)|(arg2<<12), (MSGBUF_tx_full[ arg0 ] & 0x0fff), tx_code)
+    STATUS_ERROR_E20,			0xec20		// Report an error on RX delay into next frame (rx_state, rx_last_slot_flag|(vit_slot_index<<8)|(rx_rxspan<<12), rx_EQ_ready_flag|(rx_VIT_ready_flag<<1)|(vit_last_slot_flag<<2)|(rx_gap_slot_flag<<3)).
+    STATUS_ERROR_E21,			0xec21		// Report an error on SW RX pending (rx_state, rx_last_slot_flag|(vit_slot_index<<8)|(rx_rxspan<<12), rx_EQ_ready_flag|(rx_VIT_ready_flag<<1)|(vit_last_slot_flag<<2)|(rx_gap_slot_flag<<3)).
+    STATUS_ERROR_E22,			0xec22		// Report BCR error( READ_BCR(), READ_SFCR(), READ_FCWR() ).
+    STATUS_ERROR_E23,			0xec23		// Report 2nd SIM cell ID not matching warning (scell_index, cell_index, dual_sim_2ndSimID_and_delta_flag).
+	STATUS_ERROR_E24,			0xec24		// Report an error on frame size over maximum allowed by HW (qbc_next_frame, qbc_prev_adjust, (next_next_rxmode<<12) | (next_next_slot<<8) | next_next_cell).
+    STATUS_ERROR_E25,			0xec25		// Report an error on phase 2 RFIC INT pending (rx_state, rx_last_slot_flag|(vit_slot_index<<8)|(rx_rxspan<<12), rx_EQ_ready_flag|(rx_VIT_ready_flag<<1)|(vit_last_slot_flag<<2)|(rx_gap_slot_flag<<3)).
+    STATUS_ERROR_D0,			0xdec0		// Channel decoding mode is in error (coder_mode, rxbuf_index, rxset_type).
+	STATUS_ERROR_D1,			0xdec1		// AHS codec rate error in RX RATSCCH_MARKER_temp (dl_active_id1, dl_active_id0, rx_cmi_cmc).
+	STATUS_ERROR_D2,			0xdec2		// AHS codec rate error in RX speech (dl_active_id1, dl_active_id0, rx_cmi_cmc).
+	STATUS_ERROR_D3,			0xdec3		// AHS codec rate error in RX re-try other rate(dl_active_id1, dl_active_id0, retry_ind).
+	STATUS_ERROR_D4,			0xdec4		// 2nd AMR decoder error (frame_type, vp_amr_mode, vp_speech_mode)
+    STATUS_ERROR_D5,			0xdec5		// 2nd AMR decoder error (frame_type, vp_amr_mode, vp_playback_mode)
+    STATUS_ERROR_D6,			0xdec6		// encrytion mode at rx error (cry_mode, mod_ind[index], index)
+    STATUS_ERROR_D7,			0xdec7		// rx_filled_cnt[ buf_num ] or tx_filled_cnt[ buf_num ] is invalid which may caused by memory corruption
+    STATUS_ERROR_D8,			0xdec8		// Multislot burst buffer wait mask is not cleared which may due to lack of MIPs (ms_wait_mask, rx_filled_cnt[12 to 8], wait_mask)
+    STATUS_ERROR_D9,			0xdec9		// Report an error VoIP AMR DL codec error
+    STATUS_ERROR_P1,			0xEE0C		// Poly ringer FIFO test error
+    STATUS_ERROR_CORE1			0XEF00		// Bad memory access
+	STATUS_ERROR_STACK_OVERFLOW 0XEF02		// Stack overflow
+    */
+} Status_t;
+/**
+ * @}
+ */
+/**
+ * @}
+ */
+/**
+ * @}
+ */
+
 
 
 //******************************************************************************
@@ -2088,43 +3017,43 @@ EXTERN UInt16 shared_echo_NLP_timeout_val					SHARED_SEC_GEN_AUDIO;								// Ti
 /**
  * This gain is applied at the input of the Echo Canceller (to the microphone samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_input_gain		   			SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the output of the Echo Canceller (to the microphone samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_output_gain	   			SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the input of the Echo Canceller on the feed forward (DL) path (to the speaker samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_feed_forward_gain 			SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the input of the Echo Canceller (to the second microphone samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_mic2_input_gain		   	SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the output of the Echo Canceller (to the second microphone samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_mic2_output_gain	   	   	SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the input of the Echo Canceller on the feed forward (DL) path (to the speaker samples).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 EXTERN UInt16 shared_echo_cancel_mic2_feed_forward_gain    	SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the output of the pre-compressor filter on the DL path.
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
 
 
@@ -2167,34 +3096,43 @@ EXTERN Int16 shared_ec_bulk_delay_buf[MAX_EC_BULK_DELAY_BUF_SIZE*2]		 SHARED_SEC
  * @addtogroup Audio_Gains_in_CP 
  * @{
  */
-EXTERN UInt16 shared_gain_slope							 	SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_ul_gain_slope						 	SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the input of the Uplink Noise suppressor.
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
-EXTERN UInt16 shared_noise_supp_input_gain					SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_ul_noise_supp_input_gain				SHARED_SEC_GEN_AUDIO;
 /**
  * This gain is applied at the output of the Uplink Noise suppressor.
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  */
-EXTERN UInt16 shared_noise_supp_output_gain					SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_ul_noise_supp_output_gain				SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_dl_gain_slope						 	SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
-EXTERN Int16  shared_noise_max_supp_dB[24]					SHARED_SEC_GEN_AUDIO;								//Maximum amount of suppression by band in dBQ5
+EXTERN Int16  shared_ul_noise_max_supp_dB[24]				SHARED_SEC_GEN_AUDIO;								// Maximum amount of suppression by band in dBQ5
 EXTERN UInt16 shared_noise_supp_ul_min_pwr					SHARED_SEC_GEN_AUDIO;								/* Number of samples in a frame */
 EXTERN UInt16 shared_noise_spec_var[2]						SHARED_SEC_GEN_AUDIO;
-EXTERN Int16 shared_idev_thld								SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
-EXTERN Int16 shared_iupdate_thld 							SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
-EXTERN Int16 shared_ihyster_cnt_thld 						SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
-EXTERN UInt16 shared_update_cnt_thld						SHARED_SEC_GEN_AUDIO;
+EXTERN Int16 shared_ul_idev_thld							SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN Int16 shared_ul_iupdate_thld 						SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN Int16 shared_ul_ihyster_cnt_thld 					SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN UInt16 shared_ul_update_cnt_thld						SHARED_SEC_GEN_AUDIO;
 EXTERN Int16 shared_update_noise_flag						SHARED_SEC_GEN_AUDIO;								// TRUE==NS background noise estimate is being updated
 EXTERN Int16 shared_noise_output_power[5]					SHARED_SEC_GEN_AUDIO;								// Used for comfort noise generator noise floor estimation
 EXTERN Int16 shared_noise_output_data[320]	 				SHARED_SEC_GEN_AUDIO;								// Holds latest 20ms worth of Noise Suppressed data 
 
-
+/**************************************************
+//Shared memory used by Downlink Noise Suppressor
+***************************************************/ 
+EXTERN UInt16 shared_dl_noise_supp_enable					SHARED_SEC_GEN_AUDIO;								// 0-disable, 1-enable
+EXTERN Int16 shared_dl_noise_max_supp_dB[24]				SHARED_SEC_GEN_AUDIO;								// Maximum amount of suppression by band in dBQ5
+EXTERN Int16 shared_dl_idev_thld							SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN Int16 shared_dl_iupdate_thld 						SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN Int16 shared_dl_ihyster_cnt_thld 					SHARED_SEC_GEN_AUDIO;								// NS background noise estimate adaptation performance fine tuning
+EXTERN UInt16 shared_dl_update_cnt_thld						SHARED_SEC_GEN_AUDIO;
 
 /******************************************
 //Shared memory used by SB-NLP
@@ -2248,6 +3186,12 @@ EXTERN UInt16 shared_echoNlpParams_subband_nlp_UL_margin[24] SHARED_SEC_GEN_AUDI
 EXTERN UInt16 shared_echoNlpParams_subband_nlp_distortion_thresh[24] SHARED_SEC_GEN_AUDIO;						//
 EXTERN UInt16 shared_subband_nlp_dt_fine_control			 SHARED_SEC_GEN_AUDIO;
 
+//Shared memory used by Beta voice 2
+EXTERN UInt16 shared_nlp_distortion_coupling				 SHARED_SEC_GEN_AUDIO;								//NLP distortion coupling
+EXTERN UInt16 shared_reverb_time_constant					 SHARED_SEC_GEN_AUDIO;								//NLP reverb control time constant
+EXTERN UInt16 shared_reverb_level							 SHARED_SEC_GEN_AUDIO;								//NLP reverb control level
+
+EXTERN UInt16 shared_detection_threshold					 SHARED_SEC_GEN_AUDIO;								//Detection threshold used in path change 	
 EXTERN UInt16 shared_echo_nlp_min_dl_pwr					 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_echo_nlp_min_ul_pwr					 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_curr_dl_min_pwr						 SHARED_SEC_GEN_AUDIO;
@@ -2256,7 +3200,7 @@ EXTERN Int16  shared_curr_min_ul_sb_energy[24]			 	 SHARED_SEC_GEN_AUDIO;
 EXTERN Int16  shared_uplink_inst_block_pwr				     SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_echoNlp_expander_upper_limit_ul		 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_echoNlp_expander_upper_limit			 SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16 shared_audio_mode								 SHARED_SEC_GEN_AUDIO;
+
 
 /******************************************
 //Shared memory used by Compressor/Expander/
@@ -2265,7 +3209,6 @@ EXTERN UInt16 shared_audio_mode								 SHARED_SEC_GEN_AUDIO;
 
 EXTERN UInt16 shared_DL_compander_flag 	   		 			 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_DL_subband_compander_flag				 SHARED_SEC_GEN_AUDIO;								// Enable/Disable Subband compressor
-EXTERN UInt16 shared_DL_compander_biquad_flag 				 SHARED_SEC_GEN_AUDIO;								// Enable/disable the compander biquad
 EXTERN UInt16 shared_UL_compander_flag 			 			 SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_compressor_alg							 SHARED_SEC_GEN_AUDIO;								// Flag to switch to run the interpolation based version instead of dB based version
 
@@ -2340,6 +3283,7 @@ EXTERN OmegaVoice_t	shared_omega_voice_mem						SHARED_SEC_GEN_AUDIO;
 EXTERN AlphaVoice_t	shared_alpha_voice_mem						SHARED_SEC_GEN_AUDIO;
 EXTERN KappaVoice_t	shared_kappa_voice_mem						SHARED_SEC_GEN_AUDIO;
 EXTERN Shared_Compressor_t	compress_ul_g2t2					SHARED_SEC_GEN_AUDIO;
+EXTERN Shared_Smart_Compressor_t shared_smart_compressor		SHARED_SEC_GEN_AUDIO;
 // following "informational" values written by the noise
 // suppressor when enabled in shared_ns_control
 
@@ -2377,81 +3321,9 @@ EXTERN expander_parm	sidetone_expander			   		 SHARED_SEC_GEN_AUDIO;
 /** @} */
 /** @} */
 /**
- * @addtogroup Audio_Gains_in_CP
- * @{
- */
-/**
- * This is the gain of the Bluetooth Double-Biquad Filter in the downlink 
- * (right before the Limiter)
- *
- * \see shared_bluetooth_filter_enable, shared_bluetooth_dl_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_dl_biquad_gain		   		 SHARED_SEC_GEN_AUDIO;
-/**
- * This is the output gain after the Bluetooth Double-Biquad Filter in the downlink 
- * (right before the Limiter)
- *
- * \see shared_bluetooth_filter_enable, shared_bluetooth_dl_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_dl_biquad_output_gain		   		 SHARED_SEC_GEN_AUDIO;
-
-/**
- * This is the gain of the Bluetooth Double-Biquad Filter in the uplink 
- * (right after the High Pass Filter)
- *
- * \see shared_bluetooth_filter_enable, shared_bluetooth_ul_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_ul_biquad_gain		   		 		SHARED_SEC_GEN_AUDIO;
-/**
- * This is the output gain after the Bluetooth Double-Biquad Filter in the uplink 
- * 
- *
- * \see shared_bluetooth_filter_enable, shared_bluetooth_ul_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_ul_biquad_output_gain		   		 SHARED_SEC_GEN_AUDIO;
-
-/** @} */
-/**
  * @addtogroup Audio_Blocks_in_CP
  * @{
  */
-/**
- * @addtogroup Bluetooth_Double_BiQuad_Filters_in_UL_AND_DL
- * @{
- */
-/**
- * This variable enables 
- * - (== 1) the Bluetooth Double-Biquad Filter in the uplink (right after the High Pass Filter), and 
- * - (!= 0) the Bluetooth Double-Biquad Filter in the downlink (right before the Limiter). 
- *
- * \see shared_bluetooth_ul_biquad_gain, shared_bluetooth_ul_filter_coef, COMMAND_BIQUAD_FILT_COEFS
- * \see shared_bluetooth_dl_biquad_gain, shared_bluetooth_dl_filter_coef
- */
-EXTERN UInt16	shared_bluetooth_filter_enable		   		 SHARED_SEC_GEN_AUDIO;
-/**
- * This array contains the coefficients of the Bluetooth Double-Biquad Filter in the downlink 
- * (right before the Limiter)
- *
- * \see shared_bluetooth_dl_biquad_gain, shared_bluetooth_filter_enable, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_dl_filter_coef[10]	   		 SHARED_SEC_GEN_AUDIO;
-/**
- * This array contains the coefficients of the Bluetooth Double-Biquad Filter in the uplink 
- * (right after the High Pass Filter)
- *
- * \see shared_bluetooth_ul_biquad_gain, shared_bluetooth_filter_enable, COMMAND_BIQUAD_FILT_COEFS
- */
-EXTERN UInt16	shared_bluetooth_ul_filter_coef[10]	   		 SHARED_SEC_GEN_AUDIO;
-/** @} */
-/** @} */
-
-/** 
- * \ingroup Audio_Gains_in_CP 
- * 
- * This gain is applied at the input of the compressor pre-filter in the DL.
- */
-EXTERN UInt16	shared_comp_biquad_gain						 SHARED_SEC_GEN_AUDIO;
-EXTERN UInt16	shared_comp_filter_coef[10]					 SHARED_SEC_GEN_AUDIO;
 /** 
  * @addtogroup Audio_Gains_in_CP 
  * @{
@@ -2490,21 +3362,6 @@ EXTERN Int16	shared_second_amr_out_gain_dl[5]			 SHARED_SEC_GEN_AUDIO;
  */
 EXTERN Int16	shared_second_amr_out_gain_ul[5]			 SHARED_SEC_GEN_AUDIO;
 /** 
- * This gain, is applied on the VPU playback path on the downlink path before going into record.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14, 
- * -   Int16 Target_Gain_in_Q14, 
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14) 
- * -   Int16 Reserved, 
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_speech_rec_gain_dl[5]				 SHARED_SEC_GEN_AUDIO;
-/** 
  * This gain, is applied on the VPU playback path on the uplink path before going into record.\BR
  * 
  * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
@@ -2523,54 +3380,6 @@ EXTERN Int16	shared_speech_rec_gain_ul[5]				 SHARED_SEC_GEN_AUDIO;
 /** 
  * The gain factor, shared_arm2speech_call_gain, is not used any more. */
 EXTERN UInt16	shared_arm2speech_call_gain					 SHARED_SEC_GEN_AUDIO;
-/** 
- * The gain factor, shared_arm2speech_call_gain_dl is applied on the shared_Arm2SP_InBuf[1280] PCM data 
- * on the downlink path (does not matter whether the ARM2SP data is added before or after audio processing.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14, 
- * -   Int16 Target_Gain_in_Q14, 
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14) 
- * -   Int16 Reserved, 
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech_call_gain_dl[5]			 SHARED_SEC_GEN_AUDIO;
-/** 
- * The gain factor, shared_arm2speech_call_gain_ul is applied on the shared_Arm2SP_InBuf[1280] PCM data 
- * on the uplink path (does not matter whether the ARM2SP data is added before or after audio processing.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech_call_gain_ul[5]			 SHARED_SEC_GEN_AUDIO;
-/** 
- * The gain factor, shared_arm2speech_call_gain_rec is applied on the ARM2SP PCM data 
- * getting recorded.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech_call_gain_rec[5]			 SHARED_SEC_GEN_AUDIO;
 /** 
  * The gain factor, shared_btnb_gain_dl is applied on the Bluetooth NB PCM data 
  * in the downlink path.\BR
@@ -2612,7 +3421,7 @@ EXTERN UInt16	shared_UL_audio_clip_level					 SHARED_SEC_GEN_AUDIO;
  * \ingroup Audio_Gains_in_CP 
  * This gain is applied at the input of the DL limiter (currently used only in the VoIP path).
  *
- * \note This gain is in Q14.6 format 
+ * \note This gain is in Q9.6 format 
  * 
  */
 EXTERN UInt16 shared_dl_clip_gain							 SHARED_SEC_GEN_AUDIO;								// Gain stage prior to the DL clipper
@@ -2751,7 +3560,27 @@ EXTERN UInt16 audio_input_16k_buf[1280]						  SHARED_SEC_GEN_AUDIO;
 /**
  * \note THIS BUFFER IS NOT BEING USED AND CAN BE REMOVED !!!!!
  */
-EXTERN UInt16 shared_encoder_InputBuffer[AUDIO_SIZE_PER_PAGE-1280] SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 shared_encoder_InputBuffer[AUDIO_SIZE_PER_PAGE-1294] SHARED_SEC_GEN_AUDIO;
+
+/** 
+ * @}
+ */
+/** 
+ * @addtogroup Audio_Gains_in_CP 
+ * @{
+ */
+/** 
+ * 
+ * 
+ * 
+ * pass usf info from dsp to arm. to ne used for logging \BR
+ *
+ */
+/** 
+ * @}
+ */
+
+EXTERN Int16  shared_usf_debug_info[14]							     SHARED_SEC_GEN_AUDIO;
 
 /** 
  * @}
@@ -3059,15 +3888,18 @@ EXTERN Int16 shared_dmic_init[200]											SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_wb_mm_output_gain[5]									SHARED_SEC_GEN_AUDIO;
 
 /**
+ * \defgroup Transducer_EQ
  * This memory section describes the setting of the voice compensation filter for 16/8K Voice only.
  * The filter is the form DF2 and programmable stages for UL and DL and Aux Ul for the second MIC path.
  * The memory is as follows:
+ *							Coef Fwd B[][] -> B0, B1, B2
+ *							Coef Bwd A[][] -> A1, A2
  * 							input gain[]
- *							Coef Fwd B[][]
- *							Coef Bwd A[][]
  *							OutputSelect
  *							Maximum IIR Stage supported = 12 in each direction
- * WARNING DO NOT CHANGE THE ORDER. it will break the order of the copy for swapping ext<->int memory.
+ * \note WARNING DO NOT CHANGE THE ORDER. it will break the order of the copy for swapping ext<->int memory.
+ * @{
+ *
  */
 
 EXTERN Int32  shared_dl_coef_fw_8k[12][3]									SHARED_SEC_GEN_AUDIO;
@@ -3110,7 +3942,9 @@ EXTERN UInt16 shared_dl_nstage_filter										SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_ul_nstage_filter										SHARED_SEC_GEN_AUDIO;
 EXTERN UInt16 shared_ul_Auxnstage_filter									SHARED_SEC_GEN_AUDIO;
 
-
+/**
+ * @}
+ */
 
 EXTERN UInt16 shared_DTMF_SV_tone_scale_mode	   							SHARED_SEC_GEN_AUDIO;			 // 1: new mode (sacle factor coming from arm); 0: old mode (DSP set scale factor)
 EXTERN UInt16 shared_RF_test_buf_ind                    					SHARED_SEC_DIAGNOS;
@@ -3177,7 +4011,7 @@ EXTERN UInt16 shared_stack_depth_check_res_buf[5]                          	SHAR
 EXTERN UInt32 shared_modem_logging_align_flag								SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_modem_logging_buf[1280]								SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_testpoint_data_buf[2048]                              	SHARED_SEC_DSP_DEBUG;                        // 32bit address Aligned Testpoint data buffer for implementing DSP testpoints via the ARM
-
+EXTERN UInt16 shared_modem_log_temp_buff[614]								SHARED_SEC_DSP_DEBUG;                        // 32bit address Aligned Testpoint data buffer for implementing DSP testpoints via the ARM
 EXTERN UInt16 shared_modem_logging_dsp_write_idx							SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_modem_logging_mcu_read_idx								SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_modem_logging_resvd_idx								SHARED_SEC_DSP_DEBUG;
@@ -3185,61 +4019,6 @@ EXTERN UInt16 shared_modem_logging_enable									SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_memory_size                                     		SHARED_SEC_DSP_DEBUG;            
 EXTERN UInt16 shared_access_kludge                                    		SHARED_SEC_DSP_DEBUG;
 
-/**
- * @addtogroup Audio_Gains_in_CP
- * @{
- */
-/** 
- * The gain factor, shared_arm2speech2_call_gain_dl is applied on the shared_Arm2SP2_InBuf[1280] PCM data 
- * on the downlink path (does not matter whether the ARM2SP2 data is added before or after audio processing.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech2_call_gain_dl[5]			 				SHARED_SEC_DSP_DEBUG;
-/** 
- * The gain factor, shared_arm2speech2_call_gain_ul is applied on the shared_Arm2SP2_InBuf[1280] PCM data 
- * on the uplink path (does not matter whether the ARM2SP2 data is added before or after audio processing.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech2_call_gain_ul[5]			 				SHARED_SEC_DSP_DEBUG;
-/** 
- * The gain factor, shared_arm2speech2_call_gain_rec is applied on the ARM2SP2 PCM data 
- * getting recorded.\BR
- * 
- * This gain is a ramped gain in Q14 format as shown below (Q14 means 2.14 format).\BR
- *
- * {
- * -   Int16 Start_Gain_in_Q14,
- * -   Int16 Target_Gain_in_Q14,
- * -   Int16 Step_size_to_increment_or_decrement_the_Gain_in_Q14,  (<= 0 make Start_Gain_in_Q14 = Target_Gain_in_Q14)
- * -   Int16 Reserved,
- * -   Int16 Reserved \BR
- * }
- *
- */
-EXTERN Int16	shared_arm2speech2_call_gain_rec[5]			 				SHARED_SEC_DSP_DEBUG;
-/**
- * @}
- */
 EXTERN UInt16 shared_g_sys_flag												SHARED_SEC_DSP_DEBUG;
 
 

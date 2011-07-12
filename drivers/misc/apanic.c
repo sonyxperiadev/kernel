@@ -38,7 +38,26 @@
 #include <linux/workqueue.h>
 #include <linux/preempt.h>
 
+#ifdef CONFIG_APANIC_ON_MMC
+#include <linux/mmc-poll/mmc_poll_stack.h>
+
+/* Enable this to debug some apanic code for MMC */
+/* #define APANIC_DEBUG */
+#ifdef APANIC_DEBUG
+#define apanic_print(a,b...) printk(a,##b)
+#else
+#define apanic_print(a,b...)
+#endif
+
+#endif
+
+
 extern void ram_console_enable_console(int);
+
+#ifdef CONFIG_APANIC_ON_MMC
+extern unsigned long get_apanic_start_address(void);
+extern int mmc_poll_stack_init (struct mmc **mmc, int *dev_num); 
+#endif
 
 struct panic_header {
 	u32 magic;
@@ -56,6 +75,10 @@ struct panic_header {
 
 struct apanic_data {
 	struct mtd_info		*mtd;
+#ifdef CONFIG_APANIC_ON_MMC
+	unsigned long dev_num;	
+	struct mmc *mmc;
+#endif
 	struct panic_header	curr;
 	void			*bounce;
 	struct proc_dir_entry	*apanic_console;
@@ -180,7 +203,6 @@ static int apanic_proc_read(char *buffer, char **start, off_t offset,
 
 	page_no = (file_offset + offset) / ctx->mtd->writesize;
 	page_offset = (file_offset + offset) % ctx->mtd->writesize;
-
 
 	if (phy_offset(ctx->mtd, (page_no * ctx->mtd->writesize))
 		== APANIC_INVALID_OFFSET) {
@@ -484,6 +506,76 @@ static int apanic_write_console(struct mtd_info *mtd, unsigned int off)
 	return idx;
 }
 
+#ifdef CONFIG_APANIC_ON_MMC
+
+static int apanic_write_console_mmc (unsigned long off)
+{
+	struct apanic_data *ctx = &drv_ctx;
+	int saved_oip;
+	int idx = 0;
+	int rc, rc2;
+	unsigned int last_chunk = 0;
+	unsigned long num = 0;
+
+#ifdef APANIC_DEBUG
+	unsigned long start; 
+	start = off; 
+#endif
+	while (!last_chunk) {
+		saved_oip = oops_in_progress;
+		oops_in_progress = 1;
+
+		/*
+		 * bounce buffer is reserved during init time.
+		 * Now copy 'writable' amount of data from __log_buf
+		 * to the bounce buffer
+		 */
+		rc = log_buf_copy(ctx->bounce, idx, ctx->mmc->write_bl_len);
+		if (rc < 0)
+			break;
+
+		if (rc != ctx->mmc->write_bl_len)
+			last_chunk = rc;
+
+		oops_in_progress = saved_oip;
+		if (rc <= 0)
+			break;
+		if (rc != ctx->mmc->write_bl_len)
+			memset(ctx->bounce + rc, 0, ctx->mmc->write_bl_len - rc);
+
+		/* Write the bounce buffer to eMMC */
+		rc2 = ctx->mmc->block_dev.block_write(ctx->dev_num,off,1,ctx->bounce);
+		if (rc2 <= 0) {
+			printk(KERN_EMERG
+			       "apanic: MMC write failed (%d)\n", rc2);
+			return idx;
+		}
+
+		++num;
+		/* idx is a byte offset used to copy from log buf */
+		if (!last_chunk)
+			idx += (rc2 * ctx->mmc->write_bl_len);
+		else
+			idx += last_chunk;
+
+		/* 
+		 * off is in terms of block count to tell the mmc driver where
+		 * to start the next write from, while idx is in terms of
+		 * bytes to tell the lob_buf_copy where to start the read
+		 * from. Note that the block_write function of mmc also
+		 * returns the number of blocks written.
+		 */
+		off += rc2;
+	}
+
+#ifdef APANIC_DEBUG
+	printk ("apanic_console_write_mmc: wrote %d pages from %d returned %d\r\n", num, start, off);
+#endif
+	return num;
+}
+
+#endif
+
 static int apanic(struct notifier_block *this, unsigned long event,
 			void *ptr)
 {
@@ -494,6 +586,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	int threads_offset = 0;
 	int threads_len = 0;
 	int rc;
+	unsigned long blk;
 
 	if (in_panic)
 		return NOTIFY_DONE;
@@ -504,6 +597,88 @@ static int apanic(struct notifier_block *this, unsigned long event,
 #endif
 	touch_softlockup_watchdog();
 
+#ifdef CONFIG_APANIC_ON_MMC
+	blk = get_apanic_start_address();
+	if (blk == 0) {
+		printk("apanic: Invalid block number \r\n");
+		goto out;
+	}
+
+	if (mmc_poll_stack_init(&ctx->mmc, &ctx->dev_num) < 0) {
+		printk("apanic: Unable to init polling mode mmc stack \r\n");
+		goto out;
+	}
+
+	apanic_print("apanic: MMC device write block size is %d \r\n",ctx->mmc->write_bl_len);
+
+	/* 
+	 * The first block is reserved for apanic header so copy the log_buf
+	 * from start_block + 1
+	 */
+	console_offset = blk + 1;
+
+	apanic_print("Log Buff is stored from block number %d \r\n", console_offset);
+	console_len = apanic_write_console_mmc(console_offset);
+	if (console_len <= 0) {
+		printk(KERN_EMERG "Error writing log but to panic log! (%d) \r\n", console_len);
+		console_len = 0;
+	}
+	/*
+	 * Write out all threads
+	 */
+	threads_offset = console_offset + console_len;
+
+	apanic_print("Thread data is stored from block number %d \r\n", threads_offset);
+
+	ram_console_enable_console(0);
+	log_buf_clear();
+	show_state_filter(0);
+
+	threads_len = apanic_write_console_mmc(threads_offset);
+	if (threads_len <= 0) {
+		printk(KERN_EMERG "Error writing threads to panic log! (%d)\n",
+		       threads_len);
+		threads_len = 0;
+	}
+
+	/*
+	 * Finally write the panic header at the first block of the partition
+	 */
+	memset(ctx->bounce, 0, PAGE_SIZE);
+	hdr->magic = PANIC_MAGIC;
+	hdr->version = PHDR_VERSION;
+
+	/*
+	 * blk - Holds the starting block number of the apanic partition
+	 * console_offset - Holds the block number from where console data is
+	 * 	            placed
+	 * console_len    - Holds the size of console data stored in terms of
+	 *                   number of blocks
+	 *
+	 * threads_offset, threads_length same as above but for threads info.
+	 * This info is converted into bytes before storing the header, so
+	 * when the application reads this header to go to console or to
+	 * thread info it has to simply 'lseek' as many bytes.
+	 */
+	hdr->console_offset = (console_offset-blk)*ctx->mmc->write_bl_len;
+	hdr->console_length = (console_len)*ctx->mmc->write_bl_len;
+
+	hdr->threads_offset = (threads_offset-blk)*ctx->mmc->write_bl_len;
+	hdr->threads_length = (threads_len)*ctx->mmc->write_bl_len;
+
+	apanic_print("apanic: writing the header at block %d \r\n", blk);
+
+	rc = ctx->mmc->block_dev.block_write(ctx->dev_num,blk,1,ctx->bounce);
+	if (rc == 0) {
+		printk(KERN_EMERG "apanic: Header write failed (%d)\n", rc);
+		goto out;
+	}
+
+	apanic_print("kona_mmc_poll_write: bock_read returned %d \r\n", rc);
+
+	printk(KERN_EMERG "apanic: Panic dump sucessfully written to flash\n");
+
+#else
 	if (!ctx->mtd)
 		goto out;
 
@@ -563,6 +738,7 @@ static int apanic(struct notifier_block *this, unsigned long event,
 	}
 
 	printk(KERN_EMERG "apanic: Panic dump sucessfully written to flash\n");
+#endif
 
  out:
 #ifdef CONFIG_PREEMPT
@@ -592,7 +768,9 @@ DEFINE_SIMPLE_ATTRIBUTE(panic_dbg_fops, panic_dbg_get, panic_dbg_set, "%llu\n");
 
 int __init apanic_init(void)
 {
+#ifndef CONFIG_APANIC_ON_MMC
 	register_mtd_user(&mtd_panic_notifier);
+#endif
 	atomic_notifier_chain_register(&panic_notifier_list, &panic_blk);
 	debugfs_create_file("apanic", 0644, NULL, NULL, &panic_dbg_fops);
 	memset(&drv_ctx, 0, sizeof(drv_ctx));
@@ -600,6 +778,7 @@ int __init apanic_init(void)
 	INIT_WORK(&proc_removal_work, apanic_remove_proc_work);
 	printk(KERN_INFO "Android kernel panic handler initialized (bind=%s)\n",
 	       CONFIG_APANIC_PLABEL);
+
 	return 0;
 }
 

@@ -13,6 +13,11 @@ config V3D
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
 	default n
 
+config VCE
+	tristate "VCE Driver"
+	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
+	default n
+
 config BRCM_FUSE_LOG
 	tristate "Broadcom FUSE LOG drivers"
 	depends on BRCM_CHAR_DRIVERS

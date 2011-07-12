@@ -1,3 +1,18 @@
+/*****************************************************************************
+*  Copyright 2001 - 2008 Broadcom Corporation.  All rights reserved.
+*
+*  Unless you and Broadcom execute a separate written software license
+*  agreement governing use of this software, this software is licensed to you
+*  under the terms of the GNU General Public License version 2, available at
+*  http://www.gnu.org/licenses/old-license/gpl-2.0.html (the "GPL").
+*
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a
+*  license other than the GPL, without Broadcom's express prior written
+*  consent.
+*
+*****************************************************************************/
+
 /*
 	VENDOR_ADC_PRODUCT_CONFIGURATION
 	Description: Used to determine if this configuration is here and it is to be used
@@ -98,7 +113,7 @@
  	Default value: 	180000 for B1.2 and onwards, 220000 for previous
 					In dalton, no external components are used for VBAT channel
 */
-#define VENDOR_ADC_VBAT_SCALE_UVPERBITS 4883
+#define VENDOR_ADC_VBAT_SCALE_UVPERBITS 4687
 
 /*
 	VENDOR_ADC_BSI_CHANNEL
@@ -305,13 +320,14 @@
 #define VENDOR_ADC_VBUS_UVPERBITS 7813
 
 #define VENDOR_ADC_ID_CHANNEL ADC_ID_CHANNEL + 4
+/*
 #define VENDOR_ADC_BSI_CAL_L_CHANNEL VENDOR_ADC_BASE_CHANNEL + 11
 #define VENDOR_ADC_NTC_CAL_L_CHANNEL VENDOR_ADC_BASE_CHANNEL + 12
 #define VENDOR_ADC_NTC_CAL_H_CHANNEL VENDOR_ADC_BASE_CHANNEL + 13
 #define VENDOR_ADC_BSI_CAL_H_CHANNEL VENDOR_ADC_BASE_CHANNEL + 15
 
 #define VENDOR_ADC_IBAT_CHANNEL VENDOR_ADC_BASE_CHANNEL + 16
-
+*/
 
 #define VENDOR_ADC_KELVIN_DOWN_TABLE_BEGIN (273-35)
 

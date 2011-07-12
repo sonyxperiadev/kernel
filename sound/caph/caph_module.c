@@ -37,6 +37,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/moduleparam.h>
 #include <linux/sched.h>
 
+#include <linux/broadcom/bcm_major.h>
 #include <sound/core.h>
 #include <sound/control.h>
 #include <sound/pcm.h>
@@ -47,14 +48,22 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "auddrv_def.h"
+#include "drv_caph.h"
+
 
 #include "audio_controller.h"
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"
 
+#include "shared.h"
+#include "auddrv_audlog.h"
+
 #include "caph_common.h"
+#include "bcm_audio.h"
 
 extern int LaunchAudioCtrlThread(void);
+
+extern int TerminateAudioHalThread(void);
 
 
 //  Module declarations.
@@ -65,10 +74,18 @@ MODULE_LICENSE("GPL");
 
 //global
 int gAudioDebugLevel = 2; 
-
-
-
 static brcm_alsa_chip_t *sgpCaph_chip=NULL;
+
+// AUDIO LOGGING
+
+#define DATA_TO_READ 4
+int logging_link[LOG_STREAM_NUMBER] = {0,0,0,0};
+
+// wait queues
+extern wait_queue_head_t bcmlogreadq;
+int audio_data_arrived = 0;
+
+extern UInt16 *bcmlog_stream_area;
 
 
 extern int BrcmCreateAuddrv_testSysFs(struct snd_card *card); //brcm_auddrv_test.c
@@ -184,7 +201,147 @@ static int DriverResume(struct platform_device *pdev)
 }
 
 //---------------------------------------------------------------------------
-// File opeations for audio logging
+// File operations for audio logging
+
+static int
+BCMAudLOG_open(struct inode *inode, struct file *file)
+{
+
+	BCM_AUDIO_DEBUG("\n BCMLOG_open \n");
+
+    return 0;
+} 
+
+
+/****************************************************************************
+*
+*  BCMLOG_read
+*
+***************************************************************************/
+
+static int
+BCMAudLOG_read(struct file *file, char __user *buf, size_t count, loff_t *ppos)
+{
+	int ret;
+	BCM_AUDIO_DEBUG("\n BCMLOG_read \n");
+
+    if ( wait_event_interruptible(bcmlogreadq, (audio_data_arrived != 0)))
+    {   
+        //(" Wait for read  ...\n");
+        return -ERESTARTSYS;
+    }   
+    audio_data_arrived = 0;  
+
+	ret = copy_to_user(buf, "read", 4); 
+    return DATA_TO_READ;
+          
+}
+
+/****************************************************************************
+*
+*  BCMLOG_release
+*
+***************************************************************************/
+
+static int
+BCMAudLOG_release(struct inode *inode, struct file *file)
+{
+	BCM_AUDIO_DEBUG("\n BCMLOG_release \n");
+
+    return 0;
+
+} /* BCMLOG_release */
+
+/****************************************************************************
+*
+*  BCMLOG_mmap
+*
+***************************************************************************/
+
+static int BCMAudLOG_mmap(struct file *filp, struct vm_area_struct *vma)
+{
+    int ret;
+    long length = vma->vm_end - vma->vm_start;
+
+    BCM_AUDIO_DEBUG("\n BCMLOG_mmap \n");
+
+   // check length - do not allow larger mappings than the number of pages allocated 
+    if (length > (PAGE_SIZE + (sizeof(LOG_FRAME_t)*4)) )
+    {
+        DEBUG("\n Failed at page boundary \n\r");
+        return -EIO;
+    }
+
+
+   // map the whole physically contiguous area in one piece
+    ret = remap_pfn_range(vma, vma->vm_start,
+                    virt_to_phys((void *)bcmlog_stream_area) >> PAGE_SHIFT,
+                    length, vma->vm_page_prot);
+
+    if(ret != 0) {
+            DEBUG("\n BCMLOG_mmap_kmem -EAGAIN \r\n");
+            return -EAGAIN;
+   	   }
+
+	 return 0;
+}
+
+
+/****************************************************************************
+*
+*  BCMLOG_ioctl - IOCTL to set switch to kernel mode for
+                1. Audio logging setup
+                2. Dump Audio data to MTT &  Copy audio data to user space
+                3. Stop and reset audio logging
+*
+***************************************************************************/
+
+static int BCMAudLOG_ioctl(struct inode *inode, struct file *file,
+             unsigned int cmd, unsigned long arg)
+{
+
+    int rtn = 0;
+	BCM_AUDIO_DEBUG("\n BCMLOG_ioctl cmd=0x%x\n",cmd);
+
+    switch (cmd)
+    {
+        case BCM_LOG_IOCTL_CONFIG_CHANNEL:
+	        break;
+ 		
+		case BCM_LOG_IOCTL_START_CHANNEL:
+        {
+                                                               
+            AUDDRV_CFG_LOG_INFO *p_log_info2 = (AUDDRV_CFG_LOG_INFO *) (arg) ;       
+			logging_link[p_log_info2->log_link-1] = 1;
+            rtn= AUDDRV_AudLog_Start(p_log_info2->log_link,p_log_info2->log_capture_point,p_log_info2->log_consumer,(char *) NULL);
+            if (rtn < 0 )
+            {
+                BCM_AUDIO_DEBUG("\n Couldnt setup channel \n");
+                rtn = -1;
+            }
+         }		       
+    	 break;
+		
+		case BCM_LOG_IOCTL_STOP:
+        {
+            AUDDRV_CFG_LOG_INFO *p_log_info3 = (AUDDRV_CFG_LOG_INFO *) (arg) ;
+            logging_link[p_log_info3->log_link-1] = 0;
+            rtn = AUDDRV_AudLog_Stop(p_log_info3->log_link);
+            if (rtn < 0 )
+            {
+                rtn = -1;
+            }
+        }
+        break;
+		default:
+		{
+			BCM_AUDIO_DEBUG("\n Wrong IOCTL cmd \n");
+			rtn = -1;
+		}
+		break;
+    }	
+	return rtn;
+}
 
 //Platform device structure
 static struct platform_device sgPlatformDevice =
@@ -209,6 +366,18 @@ static struct platform_driver sgPlatformDriver =
 };
 
 
+static struct class *audlog_class;
+//--------------------------------------------------------------------
+// File operations for audio logging
+static struct file_operations bcmlog_fops =
+{
+    .owner =    THIS_MODULE,
+    .open =    BCMAudLOG_open,
+    .read =    BCMAudLOG_read,
+    .ioctl =   BCMAudLOG_ioctl,
+    .mmap =    BCMAudLOG_mmap,
+    .release = BCMAudLOG_release,
+};
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++
 //
 //  Function Name: ModuleInit
@@ -225,23 +394,31 @@ static int __devinit ALSAModuleInit(void)
 
 
 	err =  platform_device_register(&sgPlatformDevice);
-       BCM_AUDIO_DEBUG("\n %lx:device register done %d\n",jiffies,err);
+    BCM_AUDIO_DEBUG("\n %lx:device register done %d\n",jiffies,err);
 	if (err)
-        {
-	       return err;
-	}
-	printk(KERN_INFO "platform device register done:\n");
-	
+	   return err;
+			
 	err = platform_driver_register(&sgPlatformDriver);
 	BCM_AUDIO_DEBUG("\n %lx:driver register done %d\n",jiffies,err);
 	if(err) 
-	 {
 		return err;
-	}
-        printk(KERN_INFO "platform_driver_register done:\n");
+		
+	LaunchAudioCtrlThread();
         
-    LaunchAudioCtrlThread();
+    // Device for audio logging
 
+    if ((err = register_chrdev(BCM_ALSA_LOG_MAJOR, "bcm_audio_log", &bcmlog_fops)) < 0)
+    {
+        return err;
+    }  
+    audlog_class = class_create(THIS_MODULE, "bcm_audio_log");
+    if (IS_ERR(audlog_class))
+    {
+        return PTR_ERR(audlog_class);
+    }
+
+    device_create(audlog_class, NULL, MKDEV(BCM_ALSA_LOG_MAJOR, 0),NULL, "bcm_audio_log");
+    init_waitqueue_head(&bcmlogreadq);
 	return err;
 }
 
@@ -263,7 +440,7 @@ static void __devexit ALSAModuleExit(void)
 	platform_driver_unregister(&sgPlatformDriver);
 
 	platform_device_unregister(&sgPlatformDevice);
-    //TerminateAudioHalThread();
+    TerminateAudioHalThread();
 	
 	BCM_AUDIO_DEBUG("\n %lx:exit done \n",jiffies);
 }

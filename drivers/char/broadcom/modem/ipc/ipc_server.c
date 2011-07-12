@@ -75,6 +75,7 @@ typedef struct
   struct work_struct cp_crash_dump_wq;
   struct work_struct intr_work;
   struct workqueue_struct *intr_workqueue;
+  struct workqueue_struct *crash_dump_workqueue;
   void __iomem *apcp_shmem;
 }ipcs_info_t;
 
@@ -260,17 +261,24 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 
    if(IpcCPCrashCheck())
    {
+		switch(BCMLOG_GetCpCrashLogDevice()) {
 #if 0 // MTD (flash/panic partition) not supported
-		if( BCMLOG_CPCRASH_MTD == BCMLOG_GetCpCrashDumpDevice() )
-		{
+		case BCMLOG_CPCRASH_MTD:
 			/* we kill AP when CP crashes */
-			printk( KERN_ALERT  "Crashing AP now...\n\n");
+			printk( KERN_ALERT	"Crashing AP now...\n\n");
 			abort();  
-		}
-
-		else 
+			break;
 #endif // 0
-		{
+		case BCMLOG_OUTDEV_RNDIS:
+			//Using RNDIS causes work queue event/0 lock up so it needs its own thread
+			g_ipc_info.crash_dump_workqueue = create_singlethread_workqueue("dump-wq");
+			if (!g_ipc_info.crash_dump_workqueue)
+			{
+			  IPC_DEBUG(DBG_ERROR,"[ipc]: cannot create cp crash dump workqueue\n");
+			}
+			queue_work(g_ipc_info.crash_dump_workqueue, &g_ipc_info.cp_crash_dump_wq);
+			break;
+		default:
 			schedule_work(&g_ipc_info.cp_crash_dump_wq);
 		}
 
@@ -348,12 +356,35 @@ int __init ipc_ipc_init(void *smbase, unsigned int size)
    return(0);
 }
 
+extern int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu);
+
+void WaitForCpIpc (void* pSmBase)
+{
+	int k = 0, ret = 0;
+
+    printk( KERN_ALERT  "ipcs_init Waiting for CP IPC to init ....\n");
+	while ( (ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU )) == 0)
+	{
+//		for (i=0; i<2048; i++);	// do not fight for accessing shared memory
+		set_current_state(TASK_INTERRUPTIBLE);
+		schedule_timeout (100);
+		k++;
+	}
+    printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+}
+
+
+
 /**
    static int ipcs_init(void *smbase, unsigned int size)
  */
 static int __init ipcs_init(void *smbase, unsigned int size)
 {
-   int rc = 0;
+  int rc = 0;
+  IPC_Boolean ret = 0;
+
+  //Wait for CP to initialize
+  WaitForCpIpc(smbase);
 
    //Initialize OS specific callbacks with the IPC lib
   rc = ipc_ipc_init(smbase, size);

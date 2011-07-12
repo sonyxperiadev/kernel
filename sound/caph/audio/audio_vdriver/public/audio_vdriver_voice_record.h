@@ -200,7 +200,7 @@ Result_t AUDDRV_VoiceCapture_Stop(
                       VOCAPTURE_TYPE_t      type,
                       Boolean                 immediately );
 
-void AMRWB_Capture_Request(VPStatQ_t reqMsg);
+void AMRWB_Capture_Request(UInt16 size, UInt16 index);
 
 #ifdef __cplusplus
 }

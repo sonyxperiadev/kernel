@@ -102,7 +102,7 @@ static  chal_caph_srcm_cb_t   chal_caph_srcm_cb = { 0,
                                                     };
 
 
-static const cUInt8    chal_caph_srcm_gain_ctrl_index[] = {1, 0, 2, 3};
+static const cUInt8    chal_caph_srcm_gain_ctrl_index[] = {1, 0, 3, 2};
 
 //****************************************************************************
 // local function declarations

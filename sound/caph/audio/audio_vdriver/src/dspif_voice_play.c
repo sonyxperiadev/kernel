@@ -22,8 +22,12 @@ Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "msconsts.h"
 #include "shared.h"
+#ifdef CONFIG_AUDIO_BUILD
+#include "sysparm.h"
+#endif
 #include "audio_consts.h"
 #include "auddrv_def.h"
+#include "drv_caph.h"
 #include "dspif_voice_play.h"
 #include "log.h"
 #include "sharedmem.h"
@@ -31,7 +35,8 @@ Broadcom's express prior written consent.
 #include "csl_apcmd.h"
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
-
+#define	ARM2SP_48K				0x0004				//bit2=[0,1]=[not_48K, 48K]
+#define	ARM2SP_MONO_ST			0x0080				//bit7=[0,1]=[MONO,STEREO] (not used if not 48k)
 /**
 *
 * @addtogroup AudioDriverGroup
@@ -41,7 +46,7 @@ Broadcom's express prior written consent.
 //
 // local defines
 //
-static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t samplingRate, VORENDER_PLAYBACK_MODE_t	playbackMode, VORENDER_VOICE_MIX_MODE_t   mixMode, UInt32 numFramesPerInterrupt);
+static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t samplingRate, VORENDER_PLAYBACK_MODE_t	playbackMode, VORENDER_VOICE_MIX_MODE_t   mixMode, UInt32 numFramesPerInterrupt, UInt8 audMode);
 
 //
 // APIs of VPU
@@ -120,7 +125,8 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 								VORENDER_PLAYBACK_MODE_t	playbackMode,
 								VORENDER_VOICE_MIX_MODE_t   mixMode,
 								AUDIO_SAMPLING_RATE_t		samplingRate,
-								UInt32						numFramesPerInterrupt)
+								UInt32						numFramesPerInterrupt,
+								UInt8						audMode)
 {
 	UInt16 arg0;
 	SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
@@ -132,7 +138,7 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 	if (samplingRate == AUDIO_SAMPLING_RATE_16000 && numFramesPerInterrupt > 2)
 		numFramesPerInterrupt = 2;
 
-	arg0 = ARM2SP_BuildCommandArg0 (samplingRate, playbackMode, mixMode, numFramesPerInterrupt);
+	arg0 = ARM2SP_BuildCommandArg0 (samplingRate, playbackMode, mixMode, numFramesPerInterrupt, audMode);
     
 						
 	Log_DebugPrintf(LOGID_AUDIO, " dspif_ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%lx\n", 
@@ -207,7 +213,8 @@ Result_t dspif_ARM2SP_play_resume( UInt32 instanceID,
 									VORENDER_PLAYBACK_MODE_t	playbackMode,
 									VORENDER_VOICE_MIX_MODE_t   mixMode,
 									AUDIO_SAMPLING_RATE_t		samplingRate,
-									UInt32						numFramesPerInterrupt)
+									UInt32						numFramesPerInterrupt,
+									UInt8						audMode)
 {	
 	UInt16 arg0;
 
@@ -218,7 +225,7 @@ Result_t dspif_ARM2SP_play_resume( UInt32 instanceID,
 	if (samplingRate == AUDIO_SAMPLING_RATE_16000 && numFramesPerInterrupt > 2)
 		numFramesPerInterrupt = 2;
 
-	arg0 = ARM2SP_BuildCommandArg0 (samplingRate, playbackMode, mixMode, numFramesPerInterrupt);
+	arg0 = ARM2SP_BuildCommandArg0 (samplingRate, playbackMode, mixMode, numFramesPerInterrupt, audMode);
 		
 	Log_DebugPrintf(LOGID_AUDIO, "dspif_ARM2SP_play_resume: Resume ARM2SP voice play instanceID=0x%lx \n", instanceID);
 
@@ -339,11 +346,12 @@ Result_t dspif_AMRWB_play_stop ( void)
 static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t		samplingRate,
 									   VORENDER_PLAYBACK_MODE_t		playbackMode,
 									   VORENDER_VOICE_MIX_MODE_t	mixMode,
-									   UInt32						numFramesPerInterrupt
+									   UInt32						numFramesPerInterrupt,
+									   UInt8						audMode
 									   )
 {
 	UInt16 arg0 = 0;
-
+	
 	/**
 	from shared.h
 		Arg0
@@ -361,11 +369,19 @@ static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t		samplingRate,
 	
 	#define	ARM2SP_FRAME_NUM		0x7000				//8K:1/2/3/4, 16K:1/2; if 0 (or other): 8K:4, 16K:2
 	#define	ARM2SP_FRAME_NUM_BIT_SHIFT	12				//Number of bits to shift to get the frame number
+	#define	ARM2SP_48K				0x0004				//bit2=[0,1]=[not_48K, 48K]
+	#define	ARM2SP_MONO_ST			0x0080				//bit7=[0,1]=[MONO,STEREO] (not used if not 48k)
 	**/
 
 	// samplingRate
 	if (samplingRate == AUDIO_SAMPLING_RATE_16000)
 		arg0 |= ARM2SP_16KHZ_SAMP_RATE;
+
+	if (samplingRate == AUDIO_SAMPLING_RATE_48000)
+		arg0 |= ARM2SP_48K;
+
+	if (audMode)
+		arg0 |= ARM2SP_MONO_ST;
 
 	// set number of frames per interrupt
 	arg0 |= (numFramesPerInterrupt << ARM2SP_FRAME_NUM_BIT_SHIFT);

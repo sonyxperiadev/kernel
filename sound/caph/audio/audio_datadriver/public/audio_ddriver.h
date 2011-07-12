@@ -184,4 +184,6 @@ void AUDIO_DRIVER_UpdateBuffer (AUDIO_DRIVER_HANDLE_t drv_handle,
                                 UInt32 nSize);
 
 
+UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h);
+
 #endif //#define __AUDIO_DDRIVER_H__

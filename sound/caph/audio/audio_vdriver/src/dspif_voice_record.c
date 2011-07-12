@@ -22,8 +22,12 @@ Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "msconsts.h"
 #include "shared.h"
+#ifdef CONFIG_AUDIO_BUILD
+#include "sysparm.h"
+#endif
 #include "audio_consts.h"
 #include "auddrv_def.h"
+#include "drv_caph.h"
 #include "dspif_voice_record.h"
 #include "sharedmem.h"
 #include "dspcmd.h"
@@ -31,6 +35,8 @@ Broadcom's express prior written consent.
 #include "csl_apcmd.h"
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
+
+
 
 /**
 *

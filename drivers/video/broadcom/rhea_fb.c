@@ -23,6 +23,10 @@
 
 #include <mach/io.h>
 
+#ifdef CONFIG_FRAMEBUFFER_FPS
+#include <linux/fb_fps.h>
+#endif
+
 #ifdef CONFIG_ANDROID_POWER
 #include <linux/android_power.h>
 #endif
@@ -48,6 +52,9 @@ struct rhea_fb {
 	atomic_t is_graphics_started;
 	int base_update_count;
 	int rotation;
+#ifdef CONFIG_FRAMEBUFFER_FPS
+	struct fb_fps_info *fps_info;
+#endif	
 	struct fb_info fb;
 	u32	cmap[16];
 	DISPDRV_T *display_ops;
@@ -153,6 +160,7 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 	int ret = 0;
 	struct rhea_fb *fb = container_of(info, struct rhea_fb, fb);
 	uint32_t buff_idx;
+	void *dst;
 
 	/* We are here only if yoffset is '0' or 'yres',
 	 * so if yoffset = 0, update first buffer or update second
@@ -166,6 +174,12 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 
 	atomic_set(&fb->buff_idx, buff_idx);
 
+#ifdef CONFIG_FRAMEBUFFER_FPS
+	dst = (fb->fb.screen_base) + 
+		(buff_idx * fb->fb.var.xres * fb->fb.var.yres * (fb->fb.var.bits_per_pixel/8));
+	fb_fps_display(fb->fps_info, dst, 5, 2, 0);
+#endif
+	
 	if (!atomic_read(&fb->is_fb_registered)) {
 		ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
 	} else {
@@ -426,6 +440,13 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		rheafb_error("Framebuffer registration failed\n");
 		goto err_fb_register_failed;
 	}
+
+#ifdef CONFIG_FRAMEBUFFER_FPS
+	fb->fps_info = fb_fps_register(&fb->fb);	
+	if (NULL == fb->fps_info )
+		printk(KERN_ERR "No fps display");
+#endif
+
 	up(&fb->thread_sem);
 
 	atomic_set(&fb->is_fb_registered, 1);
@@ -471,6 +492,10 @@ static int __devexit rhea_fb_remove(struct platform_device *pdev)
 
 #ifdef CONFIG_ANDROID_POWER
         android_unregister_early_suspend(&fb->early_suspend);
+#endif
+	
+#ifdef CONFIG_FRAMEBUFFER_FPS
+	fb_fps_unregister(fb->fps_info);
 #endif
 	unregister_framebuffer(&fb->fb);
 	disable_display(fb);

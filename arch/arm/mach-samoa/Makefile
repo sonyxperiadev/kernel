@@ -13,6 +13,7 @@
 #*****************************************************************************
 
 obj-y := io_map.o samoa.o common.o samoa_pinmux.o
-#obj-$(CONFIG_ARCH_SAMOA) += clock_samoa.o
+obj-$(CONFIG_ARCH_SAMOA) += clock_samoa.o
 obj-$(CONFIG_MACH_SAMOA_RAY) += samoa_ray.o samoa_ray_pinmux.o
+obj-$(CONFIG_MFD_BCMSAMOA) += board-samoapmu.o 
 obj-$(CONFIG_MACH_SAMOA_FPGA) += samoa_ray.o samoa_ray_pinmux.o

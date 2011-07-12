@@ -1301,6 +1301,11 @@ void BCMLOG_HandleCpCrashMemDumpData( const char* inPhysAddr, int size )
 			snprintf(tmpStr, 255, "CP memory dump done %d of %d bytes. Do not stop logging", (int)(p - (UInt32)MemDumpVAddr),size );
 			BCMLOG_LogCPCrashDumpString(tmpStr);
 		}
+		//A small sleep to let slower drivers like RNDIS time to dump
+		if ( BCMLOG_GetCpCrashLogDevice() == BCMLOG_OUTDEV_RNDIS ) {
+			set_current_state( TASK_INTERRUPTIBLE );
+			schedule_timeout(1);
+		}
 	}
 }
 

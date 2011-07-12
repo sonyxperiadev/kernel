@@ -121,7 +121,8 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 								VORENDER_PLAYBACK_MODE_t	playbackMode,
 								VORENDER_VOICE_MIX_MODE_t   mixMode,
 								AUDIO_SAMPLING_RATE_t		samplingRate,
-								UInt32						numFramesPerInterrupt);
+								UInt32						numFramesPerInterrupt,
+								UInt8						audMode);
 
 // ==========================================================================
 //
@@ -154,7 +155,8 @@ Result_t dspif_ARM2SP_play_resume( UInt32 instanceID,
 									VORENDER_PLAYBACK_MODE_t	playbackMode,
 									VORENDER_VOICE_MIX_MODE_t   mixMode,
 									AUDIO_SAMPLING_RATE_t		samplingRate,
-									UInt32						numFramesPerInterrupt);
+									UInt32						numFramesPerInterrupt,
+									UInt8						audMode);
 
 
 // ==========================================================================

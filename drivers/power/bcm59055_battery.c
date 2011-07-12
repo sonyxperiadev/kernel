@@ -235,11 +235,14 @@ static int get_batt_voltage(struct bcm59055_power *battery_data)
 static void bcm59055_batt_lvl_wq(struct work_struct *work)
 {
 	struct bcm59055_power *battery_data = container_of(work, struct bcm59055_power, batt_lvl_wq.work);
+/* For time being this has kept commented */
+#if 0
 	if (get_batt_percentage(battery_data))
 		power_supply_changed(&battery_data->battery);
 	if (battery_data->power_src != POWER_SUPPLY_TYPE_BATTERY)
 		get_batt_voltage(battery_data);
 	pr_debug("%s: Battery percentage %d\n", __func__, battery_data->batt_percentage);
+#endif
 	/* If charging is not happening bettery level can be measured
 	 * with a period of 1 min else with 10 sec period
 	*/

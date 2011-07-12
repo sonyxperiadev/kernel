@@ -125,7 +125,8 @@ bool_t xdr_RPC_InternalMsg_t(XDR *xdrs, RPC_InternalMsg_t* val)
 		xdr_u_char(xdrs, &val->reqXdrClientId);
 		return TRUE;
 	}
-	xassert(0,val->rootMsg.msgId);
+	_DBG_(RPC_TRACE("RPC: FAIL !!!! Message (%x)  fail to %s\n", val->msgType, (xdrs->x_op == XDR_DECODE)?"DECODE":"ENCODE"));
+//	xassert(0,val->rootMsg.msgId);
 	return FALSE;
 }
 

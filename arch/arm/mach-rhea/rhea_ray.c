@@ -44,6 +44,9 @@
 #ifdef CONFIG_TOUCHSCREEN_QT602240
 #include <linux/i2c/qt602240_ts.h>
 #endif
+#ifdef CONFIG_REGULATOR_TPS728XX
+#include <linux/regulator/tps728xx.h>
+#endif
 #include <mach/kona_headset_pd.h>
 #include <mach/kona.h>
 #include <mach/rhea.h>
@@ -134,6 +137,7 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 /* Regulator registration */
 struct regulator_consumer_supply sim_supply[] = {
 	{ .supply = "sim_vcc" },
+	{ .supply = "simldo_uc" },
 };
 
 static struct regulator_init_data bcm59055_simldo_data = {
@@ -143,7 +147,7 @@ static struct regulator_init_data bcm59055_simldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS |
 			REGULATOR_CHANGE_VOLTAGE,
-		.always_on = 0,
+		.always_on = 1,
 		.boot_on = 0,
 	},
 	.num_consumer_supplies = ARRAY_SIZE(sim_supply),
@@ -174,19 +178,84 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 		[BCM59055_SDSR]		= 0x00,
 	},
 };
+
+static const char *pmu_clients[] = {
+#ifdef CONFIG_INPUT_BCM59055_ONKEY
+	"bcm590xx-onkey",
+#endif
+#ifdef CONFIG_BCM59055_FUELGAUGE
+	"bcm590xx-fg",
+#endif
+#ifdef CONFIG_BCM59055_SARADC
+	"bcm590xx-saradc",
+#endif
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
+	"bcm590xx-regulator",
+#endif
+#ifdef CONFIG_BCM59055_AUDIO
+	"bcm590xx-audio",
+#endif
+#ifdef CONFIG_RTC_DRV_BCM59055
+	"bcm59055-rtc",
+#endif
+#ifdef CONFIG_BATTERY_BCM59055
+	"bcm590xx-power",
+#endif
+#ifdef CONFIG_BCM59055_ADC_CHIPSET_API
+	"bcm59055-adc_chipset_api",
+#endif
+#ifdef CONFIG_USB_BCM_OTG
+	"bcm_otg",
+#endif
+};
+
+/* Register userspace and virtual consumer for SIMLDO */
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+static struct regulator_bulk_data bcm59055_bd_sim = {
+	.supply = "simldo_uc",
+};
+
+static struct regulator_userspace_consumer_data bcm59055_uc_data_sim = {
+	.name = "simldo",
+	.num_supplies = 1,
+	.supplies = &bcm59055_bd_sim,
+	.init_on = 0
+};
+
+static struct platform_device bcm59055_uc_device_sim = {
+	.name = "reg-userspace-consumer",
+	.id = BCM59055_SIMLDO,
+	.dev = {
+		.platform_data = &bcm59055_uc_data_sim,
+	},
+};
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+static struct platform_device bcm59055_vc_device_sim = {
+	.name = "reg-virt-consumer",
+	.id = BCM59055_SIMLDO,
+	.dev = {
+		.platform_data = "simldo_uc"
+	},
+};
+#endif
 #endif
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
+	/*
+	 * PMU in Fast mode. Once the Rhea clock changes are in place,
+	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
+	 */
+	/*.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_HS, },*/
 	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
 	.init = bcm590xx_init_platform_hw,
-	.flag = BCM590XX_USE_REGULATORS | BCM590XX_ENABLE_AUDIO |
-	BCM590XX_USE_PONKEY | BCM590XX_USE_RTC | BCM590XX_ENABLE_ADC |
-	BCM590XX_ENABLE_FUELGAUGE,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
 #ifdef CONFIG_REGULATOR_BCM_PMU59055
 	.regl_pdata = &bcm59055_regl_pdata,
 #endif
+	.clients = pmu_clients,
+	.clients_num = ARRAY_SIZE(pmu_clients),
 };
 
 
@@ -210,9 +279,9 @@ struct platform_device bcm_kp_device = {
 
 /*	Keymap for Ray board plug-in 64-key keypad.
 	Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
-	GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
-	using pin GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
-	GPIO15 */
+	GPIO08, GPIO09, GPIO10 and GPIO11, SSP3 and camera used GPIO06,
+	GPIO07, GPIO12, GPIO13, for now keypad can only be set as a 2x2 matrix
+	by using pin GPIO04, GPIO05, GPIO14 and GPIO15 */
 static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
@@ -250,26 +319,26 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "Back Key", KEY_BACK},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "Forward key", KEY_FORWARD},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "Home Key", KEY_HOME},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "Search Key", KEY_SEARCH},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "Back Key", KEY_BACK},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "VolumnUp-Key", KEY_VOLUMEUP},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "VolumnDown-Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "key mute", KEY_MUTE},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "Menu-Key", KEY_MENU},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "Home-Key", KEY_HOME},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "key space", KEY_SPACE},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "key power", KEY_POWER},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "key sleep", KEY_SLEEP},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "key wakeup", KEY_WAKEUP},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
@@ -290,7 +359,13 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #endif
 
 #ifdef CONFIG_GPIO_PCA953X
+
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#define GPIO_PCA953X_GPIO_PIN      121 /* Configure pad MMC1DAT4 to GPIO74 */
+#else
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
+#endif
+
 static int pca953x_platform_init_hw(struct i2c_client *client,
 		unsigned gpio, unsigned ngpio, void *context)
 {
@@ -520,6 +595,81 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
+#if defined (CONFIG_REGULATOR_TPS728XX)
+#if defined (CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
+#define GPIO_SIM2LDO_EN		99
+#endif
+#ifdef CONFIG_GPIO_PCA953X
+#define GPIO_SIM2LDOVSET	(KONA_MAX_GPIO + 7)
+#endif
+#define TPS728XX_REGL_ID        (BCM59055_MAX_LDO + 0)
+struct regulator_consumer_supply sim2_supply[] = {
+	{ .supply = "sim2_vcc" },
+	{ .supply = "sim2ldo_uc" },
+};
+
+static struct regulator_init_data tps728xx_regl_initdata = {
+	.constraints = {
+		.name = "sim2ldo",
+		.min_uV = 1300000,
+		.max_uV = 3300000,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS |
+			REGULATOR_CHANGE_VOLTAGE,
+		.always_on = 0,
+		.boot_on = 0,
+	},
+	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
+	.consumer_supplies = sim2_supply,
+};
+
+struct tps728xx_plat_data tps728xx_data = {
+	.gpio_vset	= GPIO_SIM2LDOVSET,
+	.gpio_en	= GPIO_SIM2LDO_EN,
+	.vout0		= 1800000,
+	.vout1		= 3100000,
+	.initdata	= &tps728xx_regl_initdata,
+};
+
+struct platform_device tps728xx_device = {
+	.name = "tps728xx-regulator",
+	.id = -1,
+	.dev	=	{
+		.platform_data = &tps728xx_data,
+	},
+};
+
+/* Register userspace and virtual consumer for SIM2LDO */
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+static struct regulator_bulk_data tps728xx_bd_sim2 = {
+	.supply = "sim2ldo_uc",
+};
+
+static struct regulator_userspace_consumer_data tps728xx_uc_data_sim2 = {
+	.name = "sim2ldo",
+	.num_supplies = 1,
+	.supplies = &tps728xx_bd_sim2,
+	.init_on = 0
+};
+
+static struct platform_device tps728xx_uc_device_sim2 = {
+	.name = "reg-userspace-consumer",
+	.id = TPS728XX_REGL_ID,
+	.dev = {
+		.platform_data = &tps728xx_uc_data_sim2,
+	},
+};
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+static struct platform_device tps728xx_vc_device_sim2 = {
+	.name = "reg-virt-consumer",
+	.id = TPS728XX_REGL_ID,
+	.dev = {
+		.platform_data = "sim2ldo_uc"
+	},
+};
+#endif
+#endif /* CONFIG_REGULATOR_TPS728XX*/
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -537,7 +687,36 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
+/* TPS728XX device registration */
+#ifdef CONFIG_REGULATOR_TPS728XX
+	&tps728xx_device,
+#endif
 };
+
+/* Add all userspace regulator consumer devices here */
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+struct platform_device *rhea_ray_userspace_consumer_devices[] __initdata = {
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
+	&bcm59055_uc_device_sim,
+#endif
+#ifdef CONFIG_REGULATOR_TPS728XX
+	&tps728xx_uc_device_sim2,
+#endif
+};
+#endif
+
+/* Add all virtual regulator consumer devices here */
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
+	&bcm59055_vc_device_sim,
+#endif
+#ifdef CONFIG_REGULATOR_TPS728XX
+	&tps728xx_vc_device_sim2,
+#endif
+};
+#endif
+
 
 /* Rhea Ray specific i2c devices */
 static void __init rhea_ray_add_i2c_devices (void)
@@ -594,6 +773,12 @@ static void __init rhea_ray_add_devices(void)
 	platform_add_devices(rhea_ray_plat_devices, ARRAY_SIZE(rhea_ray_plat_devices));
 
 	rhea_ray_add_i2c_devices();
+#ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
+	platform_add_devices(rhea_ray_userspace_consumer_devices, ARRAY_SIZE(rhea_ray_userspace_consumer_devices));
+#endif
+#ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
+	platform_add_devices(rhea_ray_virtual_consumer_devices, ARRAY_SIZE(rhea_ray_virtual_consumer_devices));
+#endif
 
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));

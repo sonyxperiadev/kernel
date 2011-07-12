@@ -100,30 +100,50 @@ Jian: to update for Samoa
 #define KONA_SYSTEM_SWITCH_VA       HW_IO_PHYS_TO_VIRT( SYSSWITCH_BASE_ADDR )       /* System switch  */
 #define KONA_SYSTMR_VA              HW_IO_PHYS_TO_VIRT( TIMER_BASE_ADDR )           /* SYSTEM TIMER */
 #define KONA_TMR_HUB_VA             HW_IO_PHYS_TO_VIRT( HUB_TIMER_BASE_ADDR )       /* Hub timer */
+#define KONA_HUB_CLK_VA             HW_IO_PHYS_TO_VIRT( HUB_CLK_BASE_ADDR )			/* Hub Clock */
 #define KONA_TZCFG_VA               HW_IO_PHYS_TO_VIRT( TZCFG_BASE_ADDR )
 #define KONA_UART0_VA               HW_IO_PHYS_TO_VIRT( UARTB_BASE_ADDR )           /* UART 0 */
 #define KONA_UART1_VA               HW_IO_PHYS_TO_VIRT( UARTB2_BASE_ADDR )          /* UART 1 */
 #define KONA_UART2_VA               HW_IO_PHYS_TO_VIRT( UARTB3_BASE_ADDR )          /* UART 2 */
+#define KONA_MST_CLK_BASE_VA      HW_IO_PHYS_TO_VIRT( KONA_MST_CLK_BASE_ADDR )      /* Master Clock Base */
 #define KONA_USB_HSOTG_VA           HW_IO_PHYS_TO_VIRT( HSOTG_BASE_ADDR )           /* USB OTG */
 #define KONA_USB_HSOTG_CTRL_VA      HW_IO_PHYS_TO_VIRT( HSOTG_CTRL_BASE_ADDR )      /* USB OTG Control */
 
 #define KONA_BINTC_BASE_ADDR        HW_IO_PHYS_TO_VIRT( BINTC_BASE_ADDR )           /* BModem Int Ctrlr Base Address */
 
-#define KONA_SMI_VA		    HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */	
+#define KONA_SMI_VA		    		HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */	
 
-#define KONA_MM_CLK_VA		    HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */	
+#define KONA_MM_CLK_VA		    	HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */	
+#define KONA_PROC_CLK_VA			HW_IO_PHYS_TO_VIRT( PROC_CLK_BASE_ADDR )		/* Processor Clock Manager */
+#define KONA_MM_TECTL_VA	    	HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
+#define KONA_MM_CFG_VA              HW_IO_PHYS_TO_VIRT( MM_CFG_BASE_ADDR )
+#define KONA_MM_DMA_VA		   	 	HW_IO_PHYS_TO_VIRT( MM_DMA_BASE_ADDR )
 
-#define KONA_MM_TECTL_VA	    HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
-
-#define KONA_MM_DMA_VA		    HW_IO_PHYS_TO_VIRT( MM_DMA_BASE_ADDR )
-
-#define KONA_PWRMGR_VA		    HW_IO_PHYS_TO_VIRT( PWRMGR_BASE_ADDR )
+#define KONA_PWRMGR_VA		    	HW_IO_PHYS_TO_VIRT( PWRMGR_BASE_ADDR )
 
 #define KONA_PMU_PMU_VA		    HW_IO_PHYS_TO_VIRT( PMU_PMU_BASE_ADDR )
+
+#define KONA_PMU_PMU_VA		    HW_IO_PHYS_TO_VIRT( PMU_PMU_BASE_ADDR )
+
+#define KONA_AUXMIC_VA      HW_IO_PHYS_TO_VIRT(AUXMIC_BASE_ADDR) 
+#define KONA_ACI_VA		    HW_IO_PHYS_TO_VIRT(ACI_BASE_ADDR) 
 
 #define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */ 
 
 #define KONA_UART_LLDEBUG_VA		KONA_UART0_VA
 #define KONA_UART_LLDEBUG_PA		UARTB_BASE_ADDR
+
+/* add for CAPH*/  
+#define KONA_HUB_CLK_BASE_VA		 HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR) /* brcm_rdb_khub_clk_mgr_reg.h */  
+#define KONA_AUDIOH_BASE_VA          HW_IO_PHYS_TO_VIRT(AUDIOH_BASE_ADDR) /* brcm_rdb_audioh.h */  
+#define KONA_SDT_BASE_VA             HW_IO_PHYS_TO_VIRT(SDT_BASE_ADDR) /* brcm_rdb_sdt.h */  
+#define KONA_ANA_AUDIO_REG_BASE_VA   HW_IO_PHYS_TO_VIRT(ANA_AUDIO_REG_BASE_ADDR) /* brcm_rdb_audioh.h */  
+#define KONA_SSP4_BASE_VA            HW_IO_PHYS_TO_VIRT(SSP4_BASE_ADDR) /* brcm_rdb_sspil.h */  
+#define KONA_SSP3_BASE_VA            HW_IO_PHYS_TO_VIRT(SSP3_BASE_ADDR) /* brcm_rdb_sspil.h */  
+#define KONA_SRCMIXER_BASE_VA        HW_IO_PHYS_TO_VIRT(SRCMIXER_BASE_ADDR) /* brcm_rdb_srcmixer.h */  
+#define KONA_CFIFO_BASE_VA           HW_IO_PHYS_TO_VIRT(CFIFO_BASE_ADDR) /* brcm_rdb_cph_cfifo.h */  
+#define KONA_AADMAC_BASE_VA          HW_IO_PHYS_TO_VIRT(AADMAC_BASE_ADDR) /* brcm_rdb_cph_aadmac.h */  
+#define KONA_SSASW_BASE_VA           HW_IO_PHYS_TO_VIRT(SSASW_BASE_ADDR) /* brcm_rdb_cph_ssasw.h */  
+#define KONA_AHINTC_BASE_VA          HW_IO_PHYS_TO_VIRT(AHINTC_BASE_ADDR) /* brcm_rdb_ahintc.h */  
 
 #endif /* __SAMOA_IO_MAP_H */

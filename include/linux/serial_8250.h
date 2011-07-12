@@ -32,6 +32,7 @@ struct plat_serial8250_port {
 	unsigned int	type;		/* If UPF_FIXED_TYPE */
 	unsigned int	(*serial_in)(struct uart_port *, int);
 	void		(*serial_out)(struct uart_port *, int, int);
+	const unsigned char * clk_name;
 };
 
 /*
@@ -61,7 +62,7 @@ enum {
  */
 struct uart_port;
 
-int serial8250_register_port(struct uart_port *);
+int serial8250_register_port(struct uart_port *, const unsigned char * clk_name);
 void serial8250_unregister_port(int line);
 void serial8250_suspend_port(int line);
 void serial8250_resume_port(int line);

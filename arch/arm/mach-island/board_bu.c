@@ -47,6 +47,8 @@
 
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
+#include <linux/usb/android_composite.h>
+#include <linux/android_pmem.h>
 
 #include <linux/smb380.h>
 #include "island.h"
@@ -289,21 +291,39 @@ static struct resource board_sdio2_resource[] = {
 
 static struct sdio_platform_cfg board_sdio_param[] = {
    { /* SDIO0 */
-      .id = 0,
-      .data_pullup = 0,
-      .devtype = SDIO_DEV_TYPE_WIFI,
-   },
-   { /* SDIO1 */
-      .id = 1,
-      .data_pullup = 0,
-      .devtype = SDIO_DEV_TYPE_EMMC,
-   },
-   { /* SDIO2 */
-      .id = 2,
-      .data_pullup = 0,
-      .cd_gpio = 106,
-      .devtype = SDIO_DEV_TYPE_SDMMC,
-   },
+		.id = 0,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 179,
+			.reg		= 177,
+			.host_wake	= 178,
+		},
+		.peri_clk_name = "sdio1_clk",
+		.ahb_clk_name = "sdio1_ahb_clk",
+		.sleep_clk_name = "sdio1_sleep_clk",
+		.peri_clk_rate = 20000000,
+	},
+	{ /* SDIO1 */
+		.id = 1,
+		.data_pullup = 0,
+		.is_8bit = 1,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.peri_clk_name = "sdio2_clk",
+		.ahb_clk_name = "sdio2_ahb_clk",
+		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
+	},
+	{ /* SDIO2 */
+		.id = 2,
+		.data_pullup = 0,
+		.cd_gpio = 106,
+		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
 };
 
 static struct platform_device island_sdio1_device = {
@@ -491,6 +511,144 @@ static struct i2c_board_info __initdata bma150_info[] =
 };
 #endif
 
+
+static char *android_function_rndis[] = {
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis"
+#endif
+};
+
+static char *android_function_acm[] = {
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm"
+#endif
+};
+
+static char *android_function_adb_msc[] = {
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_ADB
+	"adb",
+#endif
+};
+
+static char *android_functions_all[] = {
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_ADB
+	"adb",
+#endif
+#ifdef CONFIG_USB_ANDROID_RNDIS
+	"rndis",
+#endif
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
+#endif
+};
+
+#define	BRCM_VENDOR_ID		0x0a5c
+#define	BIG_ISLAND_PRODUCT_ID	0x2816
+
+/* FIXME borrow Google Nexus One ID to use windows driver */
+#define	GOOGLE_VENDOR_ID	0x18d1
+#define	NEXUS_ONE_PROD_ID	0x0d02
+
+#define	VENDOR_ID		GOOGLE_VENDOR_ID
+#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
+
+/* use a seprate PID for RNDIS */
+#define RNDIS_PRODUCT_ID	0x4e13
+#define ACM_PRODUCT_ID		0x8888
+
+
+static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
+	.nluns		=	1,
+	.vendor		=	"Broadcom",
+	.product	=	"Big Island",
+	.release	=	0x0100
+};
+
+static struct platform_device android_mass_storage_device = {
+	.name	=	"usb_mass_storage",
+	.id	=	-1,
+	.dev	=	{
+		.platform_data	=	&android_mass_storage_pdata,
+	}
+};
+
+static struct usb_ether_platform_data android_rndis_pdata = {
+	/* ethaddr FIXME */
+	.vendorID = __constant_cpu_to_le16(VENDOR_ID),
+	.vendorDescr = "Broadcom RNDIS",
+};
+
+static struct platform_device android_rndis_device = {
+	.name	= "rndis",
+	.id	= -1,
+	.dev	= {
+		.platform_data = &android_rndis_pdata,
+	},
+};
+
+static struct android_usb_product android_products[] = {
+	{
+		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_adb_msc),
+		.functions	=	android_function_adb_msc,
+	},
+	{
+		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_rndis),
+		.functions	=	android_function_rndis,
+	},
+	{
+		.product_id	= 	__constant_cpu_to_le16(ACM_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_acm),
+		.functions	=	android_function_acm,
+	},
+};
+
+static struct android_usb_platform_data android_usb_data = {
+	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
+	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
+	.version		=	0,
+	.product_name		=	"Big Island",
+	.manufacturer_name	= 	"Broadcom",
+	.serial_number		=	"0123456789ABCDEF",
+
+	.num_products		=	ARRAY_SIZE(android_products),
+	.products		=	android_products,
+
+	.num_functions		=	ARRAY_SIZE(android_functions_all),
+	.functions		=	android_functions_all,
+};
+
+static struct platform_device android_usb = {
+	.name 	= "android_usb",
+	.id	= 1,
+	.dev	= {
+		.platform_data = &android_usb_data,
+	},
+};
+
+static struct android_pmem_platform_data android_pmem_data = {
+	.name = "pmem",
+	.start = 0x9C000000,
+	.size = SZ_64M,
+	.no_allocator = 0,
+	.cached = 0,
+	.buffered = 0,
+};
+
+static struct platform_device android_pmem = {
+	.name 	= "android_pmem",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &android_pmem_data,
+	},
+};
 void __init board_map_io(void)
 {
    /* Map machine specific iodesc here */
@@ -502,9 +660,14 @@ static struct platform_device *board_devices[] __initdata = {
    &board_i2c_adap_devices[0],
    &board_i2c_adap_devices[1],
    &board_i2c_adap_devices[2],
-   &island_sdio2_device,
-   &island_sdio1_device,
+	&island_sdio1_device,
+	&island_sdio2_device,
+
    &island_ipc_device,
+	&android_rndis_device,
+	&android_mass_storage_device,
+	&android_usb,
+	&android_pmem,
 };
 
 static void __init board_add_devices(void)

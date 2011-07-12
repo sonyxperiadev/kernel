@@ -456,6 +456,14 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel
 		return RPC_RESULT_ERROR;
 	}
 
+	
+	if(msgId == MSG_RPC_SIMPLE_REQ_RSP)
+	{
+		RPC_TRACE(("k:RPC_ServerRxCbk: MSG_RPC_SIMPLE_REQ_RSP Skipped \n"));
+		return RPC_RESULT_ERROR;
+	}
+
+
 	ret = RPC_IsRegisteredClient(channel, dataBufHandle);
 	if(ret)
 	{
@@ -469,7 +477,7 @@ RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel
 
 	RPC_TRACE(("k:RPC_ServerRxCbk interfaceType=%d bf=0x%x channel=%d msgId=%x numClients=%d\n", (int)interfaceType, (int)dataBufHandle, channel, (int)msgId, gNumActiveClients));
 
-	if(clientId != 0)
+	if(clientId != 0 && cInfo)
 	{
 		return RPC_ServerDispatchMsg(interfaceType, clientId, channel, dataBufHandle, msgId);
 	}
@@ -684,7 +692,7 @@ static long handle_pkt_get_buffer_info_ioc(struct file *filp, unsigned int cmd, 
 static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd, UInt32 param )
 {
     rpc_pkt_user_buf_t ioc_param = { 0 };
-	RpcClientInfo_t *cInfo;
+//	RpcClientInfo_t *cInfo;
     
     if (copy_from_user(&ioc_param, (rpc_pkt_user_buf_t *)param, sizeof(rpc_pkt_user_buf_t)) != 0)
     {
@@ -692,13 +700,13 @@ static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd, UInt
         return -1;
     }
 
-	cInfo = gRpcClientList[ioc_param.clientId];
+//	cInfo = gRpcClientList[ioc_param.clientId];
 
-	if(!cInfo)
-	{
-		RPC_TRACE(("k:handle_pkt_send_buffer_ioc invalid clientID %d\n", ioc_param.clientId));
-		return -1;
-	}
+//	if(!cInfo)
+//	{
+//		RPC_TRACE(("k:handle_pkt_send_buffer_ioc invalid clientID %d\n", ioc_param.clientId));
+//		return -1;
+//	}
 
 	RPC_TRACE(("k:handle_pkt_send_buffer_ioc client=%d pkt=%x len=%d\n", (int)ioc_param.clientId, (int)ioc_param.dataBufHandle, (int)ioc_param.userBufLen));
 
@@ -920,6 +928,7 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 para
 	else if(ioc_param.cmd1 == 4)
 	{
 		gEnableKprint = ioc_param.cmd2;
+		printk("RPC kernel log = %d\n",gEnableKprint);
 	}
 	
     if (copy_to_user((rpc_pkt_test_cmd_t*)param, &ioc_param, sizeof(rpc_pkt_test_cmd_t)) != 0)

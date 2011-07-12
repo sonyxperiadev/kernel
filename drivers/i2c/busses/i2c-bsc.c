@@ -543,42 +543,66 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    unsigned short i, nak_ok;
    enum bsc_bus_speed set_speed;
 
+   /* Get slave speed configuration */
    d = bsc_i2c_get_client(adapter,  msgs[0].addr);
-   if (d) {
+   if (d)
+   {
       client = i2c_verify_client(d);
       pd = (struct i2c_slave_platform_data *)client->dev.platform_data;
-      if (pd)	{
+      if (pd)
+      {
          dev_dbg(dev->dev, "i2c addr=0x%x, speed=0x%x\n",
                              client->addr, pd->i2c_speed);
-      /* Need to enable turbo mode for High speed */
-      if (pd->i2c_speed < BSC_BUS_SPEED_HS)
-          set_speed = pd->i2c_speed;
-      else
-          set_speed = dev->speed;	/* default speed */
-      } else {
-          dev_dbg(dev->dev,"i2c addr=0x%x No platform data!\n",client->addr);
-          set_speed = dev->speed;	/* default speed */
+
+         if (pd->i2c_speed < BSC_BUS_SPEED_MAX)
+            set_speed = pd->i2c_speed;
+         else
+            set_speed = dev->speed;	/* default speed */
       }
-   } else	{
-          dev_err(dev->dev, "ERROR! No i2c client with i2c addr=0x%x\n",
-                                                           msgs[0].addr);
+      else
+      {
+         dev_dbg(dev->dev,"i2c addr=0x%x No platform data!\n",client->addr);
          set_speed = dev->speed;	/* default speed */
+      }
+   }
+   else
+   {
+      dev_dbg(dev->dev, "!!!No i2c client with i2c addr=0x%x\n",
+                                                   msgs[0].addr);
+      set_speed = dev->speed;	/* default speed */
    }
 
    down(&dev->xfer_lock);
 
-    /* high speed */
-    if (set_speed == BSC_BUS_SPEED_HS || set_speed == BSC_BUS_SPEED_HS_FPGA)
-        dev->high_speed_mode = 1;
-    else
-        dev->high_speed_mode = 0;
+   /* check for high speed */
+   if (set_speed == BSC_BUS_SPEED_HS || set_speed == BSC_BUS_SPEED_HS_FPGA)
+      dev->high_speed_mode = 1;
+   else
+      dev->high_speed_mode = 0;
 
-   /* If High speed mode, start with default speed */
-   if ((!dev->high_speed_mode) && (set_speed != dev->current_speed))	{
+   /* configure the adapter bus speed */
+   if (set_speed != dev->current_speed)	{
       bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[set_speed]);
       dev->current_speed = set_speed;
-	}
+   }
 
+   /* high-speed mode */
+   if (dev->high_speed_mode)
+   {
+      /* Disable Timeout interrupts for HS mode */
+      bsc_disable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+      /*
+       * Auto-sense allows the slave device to stretch the clock for a long
+       * time. Need to turn off auto-sense for high-speed mode
+       */
+      bsc_set_autosense((uint32_t)dev->virt_base, 0);
+   }
+   else
+   {
+      /* Enable Timeout interrupts for F/S mode */
+      bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+      bsc_set_autosense((uint32_t)dev->virt_base, 1);
+   }
 
    /* send start command */
    rc = bsc_xfer_start(adapter);
@@ -592,7 +616,12 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    /* high-speed mode */
    if (dev->high_speed_mode)
    {
-      /* send the master code in fast speed mode first */
+      /*
+       * mastercode (0000 1000 + #id)
+       */
+      dev->mastercode = (MASTERCODE | (MASTERCODE_MASK & adapter->nr)) + 1;
+
+      /* send the master code in F/S mode first */
       rc = bsc_xfer_write_byte(adapter, 1, &dev->mastercode);
       if (rc < 0)
       {
@@ -610,6 +639,16 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          return -EREMOTEIO;
       }
 
+      /* Backup timing register before switching to HS mode */
+      dev->tim_val = bsc_get_tim((uint32_t)dev->virt_base);
+
+      /* configure the bsc clock to 104MHz for HS mode */
+      if (dev->bsc_clk)	{
+         clk_disable(dev->bsc_clk);
+         clk_set_rate(dev->bsc_clk, 104000000);
+         clk_enable(dev->bsc_clk);
+      }
+
       /* now configure the bus into high-speed mode */
       bsc_start_highspeed((uint32_t)dev->virt_base);
 
@@ -618,8 +657,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       if (rc < 0)
       {
          dev_err(dev->dev, "restart command failed\n");
-         up(&dev->xfer_lock);
-         return rc;
+         goto hs_ret;
       }
    }
 
@@ -639,8 +677,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
             if (rc < 0)
             {
                dev_err(dev->dev, "restart command failed\n");
-               up(&dev->xfer_lock);
-               return rc;
+               goto hs_ret;
             }
          }
 
@@ -649,8 +686,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          {
             dev_err(dev->dev, "NAK from device addr %2.2x msg#%d\n",
                   pmsg->addr, i);
-            up(&dev->xfer_lock);
-            return rc;
+            goto hs_ret;
          }
       }
 
@@ -663,8 +699,8 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          {
             dev_err(dev->dev, "read %d bytes but asked for %d bytes\n",
                   rc, pmsg->len);
-            up(&dev->xfer_lock);
-            return (rc < 0)? rc : -EREMOTEIO;
+            rc = (rc < 0)? rc : -EREMOTEIO;
+            goto hs_ret;
          }
       }
       else /* write to the slave */
@@ -676,33 +712,51 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          {
             dev_err(dev->dev, "wrote %d bytes but asked for %d bytes\n",
                   rc, pmsg->len);
-            up(&dev->xfer_lock);
-            return (rc < 0)? rc : -EREMOTEIO;
+            rc = (rc < 0)? rc : -EREMOTEIO;
+            goto hs_ret;
          }
       }
    }
 
-   /* high-speed mode */
-   if (dev->high_speed_mode)
-   {
-      /* restore the old BSC_TIM register value before the stop command */
-      bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
-   }
-   
    /* send stop command */
-	rc = bsc_xfer_stop(adapter);
+   rc = bsc_xfer_stop(adapter);
    if (rc < 0)
       dev_err(dev->dev, "stop command failed\n");
 
    /* high-speed mode */
    if (dev->high_speed_mode)
    {
+      bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
+
       /* stop high-speed and switch back to fast-speed */
+      if (dev->bsc_clk)	{
+         clk_disable(dev->bsc_clk);
+         clk_set_rate(dev->bsc_clk, 13000000);
+         clk_enable(dev->bsc_clk);
+      }
       bsc_stop_highspeed((uint32_t)dev->virt_base);
    }
    
    up(&dev->xfer_lock);
-	return (rc < 0) ? rc : num;
+   return (rc < 0) ? rc : num;
+
+ hs_ret:
+
+   if (dev->high_speed_mode)
+   {
+      bsc_set_tim((uint32_t)dev->virt_base, dev->tim_val);
+
+      /* stop high-speed and switch back to fast-speed */
+      if (dev->bsc_clk)	{
+         clk_disable(dev->bsc_clk);
+         clk_set_rate(dev->bsc_clk, 13000000);
+         clk_enable(dev->bsc_clk);
+      }
+      bsc_stop_highspeed((uint32_t)dev->virt_base);
+   }
+
+   up(&dev->xfer_lock);
+   return rc;
 }
 
 static u32 bsc_functionality(struct i2c_adapter *adap)
@@ -817,12 +871,16 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 
 	if (cfg->bsc_apb_clk) {
 		dev->bsc_apb_clk = clk_get (dev->dev, cfg->bsc_apb_clk);
+        /* AON domain clocks may be enabled by default, need to disable */
+        clk_disable(dev->bsc_apb_clk);
 		if (!dev->bsc_apb_clk)
 			return -EINVAL;
 	}
 
 	if (cfg->bsc_clk) {
 		dev->bsc_clk = clk_get (dev->dev, cfg->bsc_clk);
+        /* AON domain clocks may be enabled by default, need to disable */
+        clk_disable(dev->bsc_clk);
 		if (!dev->bsc_clk)
 			return -EINVAL;
 	}
@@ -908,6 +966,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		rc = bsc_get_clk (dev, hw_cfg);
 		if (rc)
 			goto err_free_dev_mem;
+
 		rc = bsc_enable_clk (dev);
 		if (rc)
 			goto err_free_clk;

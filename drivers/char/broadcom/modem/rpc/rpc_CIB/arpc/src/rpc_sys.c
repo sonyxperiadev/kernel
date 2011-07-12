@@ -90,6 +90,10 @@ void RPC_HandleEvent(void* eventHandle)
 		{
 			RPC_DispatchMsg(dataBuf);
 		}
+		else
+		{
+			capi2_free(dataBuf);
+		}
 	}
 
 	RPC_PACKET_FreeBuffer(bufHandle);

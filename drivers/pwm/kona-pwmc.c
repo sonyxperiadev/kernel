@@ -270,6 +270,9 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
     int chan = kona_get_chan(ap, p);
     int ret;
 
+    if (test_bit(PWM_CONFIG_POLARITY, &c->config_mask))
+        kona_pwmc_config_polarity(ap, chan, c);
+
     if (test_bit(PWM_CONFIG_PERIOD_TICKS, &c->config_mask)) {
         ret = kona_pwmc_config_period_ticks(ap, chan, c);
         if (ret)
@@ -286,9 +289,6 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
 
     if (test_bit(PWM_CONFIG_DUTY_TICKS, &c->config_mask))
         kona_pwmc_config_duty_ticks(ap, chan, c);
-
-    if (test_bit(PWM_CONFIG_POLARITY, &c->config_mask))
-        kona_pwmc_config_polarity(ap, chan, c);
 
     if (test_bit(PWM_CONFIG_START, &c->config_mask)
         || (!test_bit(PWM_CONFIG_STOP, &c->config_mask))) {

@@ -20,12 +20,15 @@
 EXTRA_CFLAGS += -DUNDER_LINUX
 EXTRA_CFLAGS += -DUNDER_LINUX_MODEM
 EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
-EXTRA_CFLAGS += -D _RHEA_  -D MSP -D FUSE_DUAL_PROCESSOR_ARCHITECTURE -D FUSE_APPS_PROCESSOR -D PMU_BCM59055 -D CHAL_NDEBUG_BUILD -D VPU_INCLUDED -D DEVELOPMENT_ONLY -D NDEBUG
+EXTRA_CFLAGS += -D _RHEA_  -D MSP -D FUSE_DUAL_PROCESSOR_ARCHITECTURE -D FUSE_APPS_PROCESSOR -D CHAL_NDEBUG_BUILD -D VPU_INCLUDED -D DEVELOPMENT_ONLY -D NDEBUG
 #Linux header files
 EXTRA_CFLAGS += -I ./include/linux/
+# For pmu bcm59055
 EXTRA_CFLAGS += -I ./include/linux/broadcom
+# For pmu audio driver
+EXTRA_CFLAGS += -I ./drivers/misc/
 #Audio Controller header files
-EXTRA_CFLAGS += -I $(src)/common -I $(src)/audio/audio_controller -I $(src)/audio/audio_controller/public
+EXTRA_CFLAGS += -I $(src) -I $(src)/common -I $(src)/audio/audio_controller -I $(src)/audio/audio_controller/public
 EXTRA_CFLAGS += -I $(src)/audio/audio_vdriver/public/
 EXTRA_CFLAGS += -I $(src)/audio/public/
 EXTRA_CFLAGS += -I $(src)/audio/audio_datadriver/public/
@@ -46,6 +49,9 @@ EXTRA_CFLAGS += -I $(src)/dsp/rhea/include/
 #EXTRA_CFLAGS += -I $(src)/sysinterface/sysparms/
 #RPC Header files
 EXTRA_CFLAGS += -I ./drivers/char/broadcom/modem/rpc/rpc_CIB/public/
+EXTRA_CFLAGS += -I ./drivers/char/broadcom/modem/CAPI2_CIB/soc/debug/public/
+EXTRA_CFLAGS += -I ./drivers/char/broadcom/modem/CAPI2_CIB/public/
+EXTRA_CFLAGS += -I ./drivers/char/broadcom/fuse_log
 #LOG Header files
 EXTRA_CFLAGS += -I $(src)/soc/debug/public
 #PMU Header files
@@ -97,16 +103,6 @@ snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_eanc.o
 snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_audio.o
 snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogtest.o
 snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogmic.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audiospeaker.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audioaipath.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audioaopath.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audiopopath.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audiovipath.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audiovopath.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audiopcmif.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audiomixertap.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audiomixer.o
-#snd-brcm-omx-objs += soc/chal/modules/audio/audvoc/src/chal_audiomic.o
 
 #CSL Source Files
 snd-brcm-omx-objs += soc/csl/audio/src/osdw_caph_drv.o
@@ -125,9 +121,6 @@ snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_capture.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_audioh.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_gain.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_aud_queue.o
-#snd-brcm-omx-objs += soc/csl/audio/src/csl_aud_drv_hw.o
-#snd-brcm-omx-objs += soc/csl/audio/src/csl_audvoc_render.o
-#snd-brcm-omx-objs += soc/csl/audio/src/csl_audvoc_capture.o
 
 #audio vdriver Source Files
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_caph.o
@@ -138,17 +131,19 @@ snd-brcm-omx-objs += audio/audio_vdriver/src/dspif_voice_play.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_voice_play.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_voice_record.o
 #snd-brcm-omx-objs += audio/audio_vdriver/src/audio_ipc_ap.o
-#snd-brcm-omx-objs += audio/audio_vdriver/src/ripisr_audio.o
-#snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_audlog.o
+snd-brcm-omx-objs += audio/audio_vdriver/src/ripisr_audio.o
+snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_audlog.o
 
 #dsp source files
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_apcmd.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp.o
+snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_common_util.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_arm2sp.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_bttap.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_vpu.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_log.o
-snd-brcm-omx-objs += soc/csl/dsp/src/sharedmem_ap.o
+#snd-brcm-omx-objs += soc/csl/dsp/src/sharedmem_ap.o
+snd-brcm-omx-objs += soc/csl/dsp/src/csl_voip.o
 snd-brcm-omx-objs += soc/csl/dsp/src/osdw_dsp_drv.o
 
 

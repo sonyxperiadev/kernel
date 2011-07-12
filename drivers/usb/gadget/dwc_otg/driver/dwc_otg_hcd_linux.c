@@ -387,6 +387,17 @@ int hcd_init(
 #else
 	hcd = usb_create_hcd(&dwc_otg_hc_driver, &_dev->dev, dev_name(&_dev->dev));
 #endif
+
+	/* Linux USB core usb_create_hcd function sets DWC OTG driver private
+	 * data pointer to point to USB core HCD. Restore data pointer to point
+	 * to DWC OTG controller structure.
+	 */
+#ifdef LM_INTERFACE
+	lm_set_drvdata(_dev, otg_dev);
+#elif defined (PCI_INTERFACE)
+	pci_set_drvdata(_dev, otg_dev);
+#endif
+
 	if (!hcd) {
 		retval = -ENOMEM;
 		goto error1;

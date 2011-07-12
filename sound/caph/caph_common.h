@@ -52,6 +52,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/initval.h>
 #include <linux/wakelock.h>
 
+#include "bcm_audio_devices.h"
 #define BCM_AUDIO_DEBUG_ON
 #if defined(BCM_AUDIO_DEBUG_ON)
 #define BCM_AUDIO_DEBUG(args...)  if (gAudioDebugLevel) printk(args)
@@ -61,16 +62,16 @@ the GPL, without Broadcom's express prior written consent.
 #define DEBUG(args...)
 #endif
 
-
 #define	MIXER_STREAM_FLAGS_CAPTURE	0x00000001
 #define	MIXER_STREAM_FLAGS_CALL		0x00000002
 #define	MIXER_STREAM_FLAGS_FM		0x00000004
 
-
 #define	CAPH_MIXER_NAME_LENGTH		20	//Max length of a mixer name
 #define	MIC_TOTAL_COUNT_FOR_USER	AUDCTRL_MIC_DIGI3
 #define	CAPH_MAX_CTRL_LINES			((MIC_TOTAL_COUNT_FOR_USER>AUDCTRL_SPK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDCTRL_SPK_TOTAL_COUNT)
-#define	CAPH_MAX_PCM_STREAMS		7
+#define	CAPH_MAX_PCM_STREAMS		8
+
+
 
 //Try to keep consistent with Android AudioSystem::audio_devices
 typedef	enum audio_devices {
@@ -146,6 +147,7 @@ typedef struct brcm_alsa_chip
 	Int32	pi32LoopBackTestParam[3];	//loopback test
 	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
+	Int32	pi32SpeechMixOption[2];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
 } brcm_alsa_chip_t;
 
 
@@ -160,6 +162,7 @@ enum	CTL_STREAM_PANEL_t
 	CTL_STREAM_PANEL_PCMOUT2,	
 	CTL_STREAM_PANEL_VOIPOUT,
 	CTL_STREAM_PANEL_PCMIN,
+	CTL_STREAM_PANEL_SPEECHIN,
 	CTL_STREAM_PANEL_VOIPIN,
 	CTL_STREAM_PANEL_VOICECALL,
 	CTL_STREAM_PANEL_FM,

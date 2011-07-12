@@ -66,7 +66,7 @@ static char g_netconsole_on = 0 ;				//	flow control state for RNDIS, set/reset 
 #endif
 static char g_acm_on = 0 ;					//	flow control state for ACM, set/reset by flow control callbacks
 
-#define BCMLOG_OUTPUT_FIFO_MAX_BYTES  65536		
+#define BCMLOG_OUTPUT_FIFO_MAX_BYTES  65536
 static BCMLOG_Fifo_t g_fifo ;					//	output fifo
 	
 
@@ -302,7 +302,7 @@ static void verifyRefCount(unsigned char *pBytes, unsigned long nBytes)
 				expect_counter = old_frame_counter+1;
 				if (frame_counter != expect_counter)
 				{
-					pr_info("BCMLOG: RefCount Skip!!!Time %d: %d, expect %d", 
+					pr_info("BCMLOG: RefCount Skip!!!Time %d: %d, expect %d\n", 
 						(pBytes[i+4]<<24)|(pBytes[i+5]<<16)|(pBytes[i+6]<<8)|(pBytes[i+7]),
 						frame_counter, expect_counter);
 				}
@@ -593,9 +593,9 @@ void BCMLOG_Output( unsigned char *pBytes, unsigned long nBytes , unsigned int m
 	if (n100 == 100)
 	{
 		n100 = 0;
-		pr_info("nospc %d nohdr %d splt %d wrtfl %d nosigbuf %d", 
+		pr_info("nospc %d nohdr %d splt %d wrtfl %d nosigbuf %d\n", 
 			nospace, noheader, splitbuffer, writefail, g_malloc_sig_buf);
-		pr_info("IN %d OUT %d dif %d inFIFO %d", 
+		pr_info("IN %d OUT %d dif %d inFIFO %d\n", 
 			totalbyte, nTotalout, totalbyte-nTotalout, BCMLOG_FifoGetDataSize(&g_fifo));
 	}
 #endif	

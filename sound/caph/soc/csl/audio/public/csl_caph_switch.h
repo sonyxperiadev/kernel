@@ -67,9 +67,9 @@ void csl_caph_switch_release_channel(CSL_CAPH_SWITCH_CHNL_e chnl);
 *
 *  @param   chnl_config  (in) caph switch channel configuration parameter
 *
-*  @return void
+*  @return status (out) Channel already used by other path or not.
 *****************************************************************************/
-void csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t chnl_config);
+CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t chnl_config);
 
 /**
 *

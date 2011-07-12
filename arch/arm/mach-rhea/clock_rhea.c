@@ -1216,19 +1216,7 @@ static int clock_module_temp_fixes(void)
     clk_enable(temp_clk);
     clk_put(temp_clk);
 
-    temp_clk = clk_get(NULL, "uartb_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "uartb2_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
     temp_clk = clk_get(NULL, "uartb2_apb_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "uartb3_clk");
     clk_enable(temp_clk);
     clk_put(temp_clk);
 
@@ -1241,22 +1229,6 @@ static int clock_module_temp_fixes(void)
     clk_put(temp_clk);
 
     temp_clk = clk_get(NULL, "dmac_mux_apb_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "bsc1_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "bsc1_apb_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "bsc2_clk");
-    clk_enable(temp_clk);
-    clk_put(temp_clk);
-
-    temp_clk = clk_get(NULL, "bsc2_apb_clk");
     clk_enable(temp_clk);
     clk_put(temp_clk);
 

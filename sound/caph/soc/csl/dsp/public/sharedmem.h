@@ -31,10 +31,14 @@
 #ifndef	_INC_SHAREDMEM_H_
 #define	_INC_SHAREDMEM_H_
 
+
+
 #include "shared.h"
 #include "sharedmem_comms.h"    
 #include "chip_version.h"
 //#include "dsp_feature_def.h"
+
+#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR))
 
 #ifndef _NODEBUG
    
@@ -124,7 +128,7 @@ void SHAREDMEM_WriteTestPoint(			// Write to a test point
 	UInt16	value						// Test Point Value
 	);
 
-SharedMem_t *SHAREDMEM_GetSharedMemPtr( void );
+//SharedMem_t *SHAREDMEM_GetSharedMemPtr( void );
 
 #if defined(DEVELOPMENT_ONLY)
 
@@ -149,6 +153,7 @@ void SHAREDMEM_ReadUL_WB_AMR_Speech(UInt32 **speech_data, Boolean amr_if2_enable
 //Remove it if VPU also uses the SHAREDMEM_ReadUL_UMTS_AMR_Mode version in which case the below function has to be deleted or updated
 UInt16 SHAREDMEM_ReadUL_UMTS_AMR_Mode( T_AMR_CODEC_TYPE codec_type ); //MobC00093269 - AMR-WB version of BO query
 
+#endif
 										// Return pointer to shared memory
 #endif	// _INC_SHAREDMEM_H_
 

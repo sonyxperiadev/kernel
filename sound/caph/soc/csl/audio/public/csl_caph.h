@@ -43,10 +43,10 @@ Broadcom's express prior written consent.
 #define	HS_MAX_APP_GAIN_SCALE	40
 #define	HS_MIN_PUM_GAIN_SCALE	0x00
 #define	HS_MAX_PUM_GAIN_SCALE	0x3F
-#define	AMIC_MIN_APP_GAIN_SCALE	00
-#define	AMIC_MAX_APP_GAIN_SCALE	40
-#define	AMIC_MIN_PUM_GAIN_SCALE	0x00
-#define	AMIC_MAX_PUM_GAIN_SCALE	0x3F
+//#define	AMIC_MIN_APP_GAIN_SCALE	00
+//#define	AMIC_MAX_APP_GAIN_SCALE	40
+//#define	AMIC_MIN_PUM_GAIN_SCALE	0x00
+//#define	AMIC_MAX_PUM_GAIN_SCALE	0x3F
 
 
 #define	IHF_MIN_APP_GAIN_SCALE	00
@@ -244,7 +244,7 @@ typedef enum
 ******************************************************************************/
 typedef enum
 {
-	CSL_CAPH_SWITCH_NONE,
+	CSL_CAPH_SWITCH_NONE = 0,
 	CSL_CAPH_SWITCH_CH1,
 	CSL_CAPH_SWITCH_CH2,
 	CSL_CAPH_SWITCH_CH3,
@@ -311,6 +311,7 @@ typedef enum
 	CSL_CAPH_CFIFO_FIFO_14,
 	CSL_CAPH_CFIFO_FIFO_15,
 	CSL_CAPH_CFIFO_FIFO_16,
+	CSL_CAPH_FIFO_MAX_NUM
 }CSL_CAPH_FIFO_e;
 
 
@@ -364,6 +365,18 @@ typedef enum
     CSL_CAPH_TRIG_MIX2_OUT2_THR  =  0x5E
 }CSL_CAPH_SWITCH_TRIGGER_e;
 
+
+
+/**
+* CAPH SWITCH channel configuration parameter
+******************************************************************************/
+typedef enum 
+{
+    CSL_CAPH_SWITCH_OWNER,
+    CSL_CAPH_SWITCH_BORROWER
+}CSL_CAPH_SWITCH_STATUS_e;
+
+
 /**
 * CAPH SWITCH channel configuration parameter
 ******************************************************************************/
@@ -377,7 +390,22 @@ typedef struct
     UInt32 FIFO_dst4Addr;
     CSL_CAPH_DATAFORMAT_e dataFmt;
     CSL_CAPH_SWITCH_TRIGGER_e trigger;
+    CSL_CAPH_SWITCH_STATUS_e status;
 }CSL_CAPH_SWITCH_CONFIG_t;
+
+
+/**
+* CAPH SRCMixer Mixer gains
+******************************************************************************/
+typedef struct CSL_CAPH_SRCM_MIX_GAIN_t
+{
+	UInt16 mixInGainL;
+	UInt16 mixInGainR;
+	UInt16 mixOutGainL;
+	UInt16 mixOutGainR;
+	UInt16 mixOutCoarseGainL;
+	UInt16 mixOutCoarseGainR;
+}CSL_CAPH_SRCM_MIX_GAIN_t;
 
 /**
 * CAPH SRCMixer input channel sample rate
@@ -425,6 +453,7 @@ typedef enum
 ******************************************************************************/
 typedef enum
 {
+	CSL_CAPH_SRCM_TAP_CH_NONE,
 	CSL_CAPH_SRCM_TAP_MONO_CH1,
 	CSL_CAPH_SRCM_TAP_MONO_CH2,
 	CSL_CAPH_SRCM_TAP_MONO_CH3,
@@ -456,31 +485,19 @@ typedef enum
 }CSL_CAPH_SRCM_OUTSAMPLERATE_e;
 
 /**
-* CAPH SRCMixer Mixer gains
-******************************************************************************/
-typedef struct CSL_CAPH_SRCM_MIX_GAIN_t
-{
-	UInt16 mixInGainL;
-	UInt16 mixInGainR;
-	UInt16 mixOutGainL;
-	UInt16 mixOutGainR;
-	UInt16 mixOutCoarseGainL;
-	UInt16 mixOutCoarseGainR;
-}CSL_CAPH_SRCM_MIX_GAIN_t;
-
-/**
 * CAPH SRCMixer SRC/Mixing Route Configuration Parameters
 ******************************************************************************/
 typedef struct 
 {
 	CSL_CAPH_SRCM_INCHNL_e inChnl;
-    UInt8 inThres;
-    CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate;
-    CSL_CAPH_DATAFORMAT_e inDataFmt;
+	UInt8 inThres;
+	CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate;
+	CSL_CAPH_DATAFORMAT_e inDataFmt;
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl;
-    UInt8 outThres;
-    CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
-    CSL_CAPH_DATAFORMAT_e outDataFmt;
+	CSL_CAPH_SRCM_SRC_OUTCHNL_e tapOutChnl;
+	UInt8 outThres;
+	CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
+	CSL_CAPH_DATAFORMAT_e outDataFmt;
 	CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
 }CSL_CAPH_SRCM_ROUTE_t;
 
@@ -705,6 +722,7 @@ typedef struct
     AUDIO_SAMPLING_RATE_t snk_sampleRate;	
     AUDIO_CHANNEL_NUM_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+    CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
 }CSL_CAPH_HWCTRL_CONFIG_t;
 
 
@@ -769,5 +787,33 @@ typedef struct
 	UInt32 AUDIOTX_BB_STI;
 	UInt32 AUDIOTX_EP_DRV_STO;
 }CSL_CAPH_AUDIOH_DACCTRL_t;
+
+
+
+
+
+/**
+* CAPH HW gain. For tuning purpose only
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_AMIC_PGA_GAIN,
+	CSL_CAPH_AMIC_DGA_COARSE_GAIN,
+	CSL_CAPH_AMIC_DGA_FINE_GAIN,
+	CSL_CAPH_DMIC1_DGA_COARSE_GAIN,
+	CSL_CAPH_DMIC1_DGA_FINE_GAIN,
+	CSL_CAPH_DMIC2_DGA_COARSE_GAIN,
+	CSL_CAPH_DMIC2_DGA_FINE_GAIN,
+	CSL_CAPH_DMIC3_DGA_COARSE_GAIN,
+	CSL_CAPH_DMIC3_DGA_FINE_GAIN,
+	CSL_CAPH_DMIC4_DGA_COARSE_GAIN,
+	CSL_CAPH_DMIC4_DGA_FINE_GAIN,
+	CSL_CAPH_SRCM_INPUT_GAIN_L,
+	CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L,
+	CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_L,
+	CSL_CAPH_SRCM_INPUT_GAIN_R,
+	CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R,
+	CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R,
+} CSL_CAPH_HW_GAIN_e;
 
 #endif // _CSL_CAPH_

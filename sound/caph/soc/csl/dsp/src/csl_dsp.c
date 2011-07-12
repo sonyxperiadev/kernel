@@ -53,42 +53,72 @@
 *
 *   @file   csl_dsp.c
 *
-*   @brief  This file accesses the shared memory for the VPU
+*   @brief  This file contains AP interface functions to DSP
 *
 ****************************************************************************/
 
 #include <string.h>
 #include "assert.h"
 #include "mobcom_types.h"
-#include "consts.h"
-#include "ostypes.h"
 #include "log.h"
 #include "shared.h"
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
-#include "memmap.h"
+#include "csl_arm2sp.h"
 
+#pragma arm section zidata = "shared_rip_mem_sect"
+static AP_SharedMem_t	AP_shared_mememory;      
+#pragma arm section
 
-VPSharedMem_t		   *vp_shared_mem;
+static AP_SharedMem_t	*shared_mem	= &AP_shared_mememory; 
 
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
+AP_SharedMem_t	*vp_shared_mem;
 
+static VPUCaptureStatusCB_t VPUCaptureStatusHandler = NULL;
+static VPURenderStatusCB_t VPURenderStatusHandler = NULL;
+static USBStatusCB_t USBStatusHandler = NULL;
+static VOIFStatusCB_t VOIFStatusHandler = NULL;
+static ARM2SPRenderStatusCB_t ARM2SPRenderStatusHandler = NULL;
+static ARM2SP2RenderStatusCB_t ARM2SP2RenderStatusHandler = NULL;
+static MainAMRStatusCB_t MainAMRStatusHandler = NULL;
+static VoIPStatusCB_t VoIPStatusHandler = NULL;
+#if defined(ENABLE_SPKPROT)
+static UserStatusCB_t UserStatusHandler = NULL;
+#endif
+static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 
+// Temporary till audio code contains references to this function
 //******************************************************************************
 //
-// Function Name:	VPSHAREDMEM_Init
+// Function Name:	SHAREDMEM_GetSharedMemPtr
 //
-// Description: Initialize Shared Memory for UPU
+// Description:		Return pointer to shared memory
 //
 // Notes:
 //
 //******************************************************************************
-
-void VPSHAREDMEM_Init(UInt32	dsp_shared_mem)
+AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memory
 {
-	AP_SHAREDMEM_Init();
+
+	return shared_mem;
+
+
+}	
+
+//*********************************************************************
+/**
+*
+*   VPSHAREDMEM_Init initializes AP interface to DSP.
+*
+*   @param    dsp_shared_mem (in)	AP shared memory address 
+* 
+**********************************************************************/
+void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
+{
+	// Clear out shared memory
+	memset(&AP_shared_mememory, 0, sizeof(AP_SharedMem_t));
 	
-	vp_shared_mem = (VPSharedMem_t*) dsp_shared_mem;
+	vp_shared_mem = (AP_SharedMem_t*) dsp_shared_mem;
 	
 	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", dsp_shared_mem);
 
@@ -97,21 +127,28 @@ void VPSHAREDMEM_Init(UInt32	dsp_shared_mem)
 	vp_shared_mem->vp_shared_statusq_in = 0;
 	vp_shared_mem->vp_shared_statusq_out = 0;
 
+	/* Setting various mixer gains to unity gain */
+	CSL_SetARM2SpeechDLGain(0);
+	CSL_SetARM2Speech2DLGain(0);
+	CSL_SetInpSpeechToARM2SpeechMixerDLGain(0);
+
+	CSL_SetARM2SpeechULGain(0);
+	CSL_SetARM2Speech2ULGain(0);
+	CSL_SetInpSpeechToARM2SpeechMixerULGain(0);
+
+	CSL_SetARM2SpeechCallRecordGain(0);
+	CSL_SetARM2Speech2CallRecordGain(0);
 }
 
-//******************************************************************************
-//
-// Function Name:	VPSHAREDMEM_PostCmdQ
-//
-// Description:   This function posts an entry to the VPU command queue
-//
-// Notes:
-//
-//******************************************************************************
-
-void VPSHAREDMEM_PostCmdQ(			// Post an entry to the VPU command queue
-	VPCmdQ_t *cmd_msg					// Entry to post
-	)
+//*********************************************************************
+/**
+*
+*   VPSHAREDMEM_PostCmdQ writes an entry to the VPU command queue.
+*
+*   @param    status_msg	(in)	input status message pointer 
+* 
+**********************************************************************/
+void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg)
 {
 	VPCmdQ_t 	*p;
 	UInt8 	next_cmd_in;
@@ -135,25 +172,21 @@ void VPSHAREDMEM_PostCmdQ(			// Post an entry to the VPU command queue
 }
 
 
-//******************************************************************************
-//
-// Function Name:	VPSHAREDMEM_ReadStatusQ
-//
-// Description: This function read an entry from the VPU status  queue
-//
-// Notes:
-//
-//******************************************************************************
-
-Boolean VPSHAREDMEM_ReadStatusQ(			// Read an entry from the VPU status  queue
-	VPStatQ_t *status_msg					// Entry from queue
-	)
+//*********************************************************************
+/**
+*
+*   VPSHAREDMEM_ReadStatusQ reads an entry from the VPU status  queue.
+*
+*   @param    status_msg	(in)	status message destination pointer 
+* 
+**********************************************************************/
+Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 {
 	VPStatQ_t *p;
 	UInt8	status_out = vp_shared_mem->vp_shared_statusq_out;
 	UInt8	status_in = vp_shared_mem->vp_shared_statusq_in;
 
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
+	//Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
 	if ( status_out == status_in )
 	{
 		return FALSE;
@@ -166,7 +199,7 @@ Boolean VPSHAREDMEM_ReadStatusQ(			// Read an entry from the VPU status  queue
 		status_msg->arg1 = (UInt16)p->arg1;
 		status_msg->arg2 = (UInt16)p->arg2;
 		status_msg->arg3 = (UInt16)p->arg3;
-		Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
+		//Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
 
 		vp_shared_mem->vp_shared_statusq_out = ( status_out + 1 ) % VP_STATUSQ_SIZE;
 
@@ -176,5 +209,330 @@ Boolean VPSHAREDMEM_ReadStatusQ(			// Read an entry from the VPU status  queue
 }
 
 
-#endif // #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
+//*********************************************************************
+/**
+*
+*   CSL_RegisterVPUCaptureStatusHandler registers VPU capture status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterVPUCaptureStatusHandler(VPUCaptureStatusCB_t callbackFunction)
+{
+	VPUCaptureStatusHandler = callbackFunction;
+
+}
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterVPURenderStatusHandler registers VPU render status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterVPURenderStatusHandler(VPURenderStatusCB_t callbackFunction)
+{
+	VPURenderStatusHandler = callbackFunction;
+
+}
+
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterUSBStatusHandler registers USB status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterUSBStatusHandler(USBStatusCB_t callbackFunction)
+{
+	USBStatusHandler = callbackFunction;
+
+}
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterVOIFStatusHandler registers VOIF status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterVOIFStatusHandler(VOIFStatusCB_t callbackFunction)
+{
+	VOIFStatusHandler = callbackFunction;
+
+}
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterARM2SPRenderStatusHandler registers main ARM2SP render 
+*	status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterARM2SPRenderStatusHandler(ARM2SPRenderStatusCB_t callbackFunction)
+{
+	ARM2SPRenderStatusHandler = callbackFunction;
+
+}
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterARM2SP2RenderStatusHandler registers main ARM2SP2 render 
+*	status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterARM2SP2RenderStatusHandler(ARM2SP2RenderStatusCB_t callbackFunction)
+{
+	ARM2SP2RenderStatusHandler = callbackFunction;
+
+}
+
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterMainAMRStatusHandler registers main AMR status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterMainAMRStatusHandler(MainAMRStatusCB_t callbackFunction)
+{
+	MainAMRStatusHandler = callbackFunction;
+
+}
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterAudioLogHandler registers VoIP status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterVoIPStatusHandler(VoIPStatusCB_t callbackFunction)
+{
+	VoIPStatusHandler = callbackFunction;
+
+}
+
+#if defined(ENABLE_SPKPROT)
+//*********************************************************************
+/**
+*
+*   CSL_RegisterAudioLogHandler registers user status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterUserStatusHandler(UserStatusCB_t callbackFunction)
+{
+	UserStatusHandler = callbackFunction;
+
+}
+#endif
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterAudioLogHandler registers audio logging status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterAudioLogHandler(AudioLogStatusCB_t callbackFunction)
+{
+	AudioLogStatusHandler = callbackFunction;
+
+}
+
+
+//*********************************************************************
+/**
+*
+*   AP_ProcessStatus processes VPU status message from DSP on AP.
+*
+* 
+**********************************************************************/
+void AP_ProcessStatus(void)
+{	
+ VPStatQ_t status_msg;
+
+	while(VPSHAREDMEM_ReadStatusQ(&status_msg))
+	{    
+		switch(status_msg.status)
+		{
+			case VP_STATUS_RECORDING_DATA_READY:
+			{
+				if(VPUCaptureStatusHandler != NULL)
+				{
+					VPUCaptureStatusHandler(status_msg.arg0);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: VPUCaptureStatusHandler is not registered");
+				}
+				break;
+
+			}
+
+			case VP_STATUS_PLAYBACK_DATA_EMPTY:
+			{
+				if(VPURenderStatusHandler != NULL)
+				{
+					VPURenderStatusHandler(status_msg.arg0);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: VPURenderStatusHandler is not registered");
+				}
+				break;
+			
+			}
+
+			case VP_STATUS_USB_HEADSET_BUFFER:
+			{
+				if(USBStatusHandler != NULL)
+				{
+					USBStatusHandler(status_msg.arg0, status_msg.arg1, status_msg.arg2);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: USBStatusHandler is not registered");
+				}
+				break;
+			}
+
+			case VP_STATUS_VOIF_BUFFER_READY:
+			{
+				if(VOIFStatusHandler != NULL)
+				{
+					VOIFStatusHandler(status_msg.arg0, status_msg.arg1);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: VOIFStatusHandler is not registered");
+				}
+				break;
+			}
+
+			case VP_STATUS_ARM2SP_EMPTY:
+			{
+				if(ARM2SPRenderStatusHandler != NULL)
+				{
+					ARM2SPRenderStatusHandler(status_msg.arg1);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: ARM2SPRenderStatusHandler is not registered");
+				}
+				break;
+			}
+
+			case VP_STATUS_ARM2SP2_EMPTY:
+			{
+				if(ARM2SP2RenderStatusHandler != NULL)
+				{
+					ARM2SP2RenderStatusHandler(status_msg.arg1);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: ARM2SP2RenderStatusHandler is not registered");
+				}
+				break;
+			}
+			
+			case VP_STATUS_MAIN_AMR_DONE:
+			{
+				if(MainAMRStatusHandler != NULL)
+				{
+					MainAMRStatusHandler(status_msg.arg0);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: MainAMRStatusHandler is not registered");
+				}
+ 				break;
+			}
+
+			case VP_STATUS_VOIP_DL_DONE:
+			{
+				if(VoIPStatusHandler != NULL)
+				{
+					VoIPStatusHandler();
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: VoIPStatusHandler is not registered");
+				}
+				break;
+			}
+
+#if defined(ENABLE_SPKPROT)
+			case VP_STATUS_SP:
+			{
+				if(UserStatusHandler != NULL)
+				{
+					UserStatusHandler((UInt32)status_msg.arg0, (UInt32)status_msg.arg1, (UInt32)status_msg.arg2);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: UserStatusHandler is not registered");
+				}
+				break;
+			}
+#endif
+
+			case VP_STATUS_AUDIO_STREAM_DATA_READY:
+			{
+				if(AudioLogStatusHandler != NULL)
+				{
+					AudioLogStatusHandler(status_msg.arg2);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: AudioLogStatusHandler is not registered");
+				}
+				break;		
+			}
+
+			default:
+				Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: Unknown Status received");
+
+				break;
+
+		}
+
+	}
+
+}
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: AUDIO_Return_IHF_48kHz_buffer_base_address
+*
+*   @note     This function returns the base address to the shared memory buffer where
+*             the ping-pong 48kHz data would be stored for AADMAC to pick them up
+*             for IHF case. This base address needs to be programmed to the 
+*             AADMAC_CTRL1 register.
+*                                                                                         
+*   @return   ptr (UInt32 *) Pointer to the base address of shared memory ping-pong buffer 
+*                            for transferring 48kHz speech data from DSP to AADMAC for IHF.
+*
+**/
+/*******************************************************************************************/
+UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void)
+{
+   	return(&(vp_shared_mem->shared_aud_out_buf_48k[0][0]));
+}
 

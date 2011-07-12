@@ -361,6 +361,9 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
 
 static int sdhci_pltfm_clk_enable(struct platform_device *pdev, int enable)
 {
+#ifdef  CONFIG_ARCH_SAMOA
+	return 0;
+#else
 	struct sdio_dev *dev;
 	struct sdio_platform_cfg *hw_cfg;
 	int ret = 0;
@@ -423,6 +426,7 @@ static int sdhci_pltfm_clk_enable(struct platform_device *pdev, int enable)
 		}
 	}
 	return ret;
+#endif
 }
 
 static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)

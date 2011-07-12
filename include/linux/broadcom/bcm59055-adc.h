@@ -31,21 +31,22 @@
 #define __BCM59055_ADC_H__
 
 enum {
-	ADC_VMBAT_CHANNEL = 0,
-	ADC_VBBAT_CHANNEL,
-	ADC_VWALL_CHANNEL,
-	ADC_VBUS_CHANNEL,
-	ADC_ID_CHANNEL,
-	ADC_NTC_CHANNEL,
-	ADC_BSI_CHANNEL,
-	ADC_BOM_CHANNEL,
-	ADC_32KTEMP_CHANNEL,
-	ADC_PATEMP_CHANNEL,
-	ADC_ALS_CHANNEL,
-	ADC_BSI_CAL_L_CHANNEL,
-	ADC_NTC_CAL_L_CHANNEL,
-	ADC_NTC_CAL_H_CHANNEL,
-	ADC_BSI_CAL_H_CHANNEL,
+	ADC_VMBAT_CHANNEL = 0,          /* 0000 */
+	ADC_VBBAT_CHANNEL,              /* 0001 */
+	ADC_VWALL_CHANNEL,              /* 0010 */
+	ADC_VBUS_CHANNEL,               /* 0011 */
+	ADC_ID_CHANNEL,                 /* 0100 */
+	ADC_NTC_CHANNEL,                /* 0101 */
+	ADC_BSI_CHANNEL,                /* 0110 */
+	ADC_BOM_CHANNEL,                /* 0111 */
+	ADC_32KTEMP_CHANNEL,            /* 1000 */
+	ADC_PATEMP_CHANNEL,             /* 1001 */
+	ADC_ALS_CHANNEL,                /* 1010 */
+	ADC_BSI_CAL_L_CHANNEL,          /* 1011 */
+	ADC_NTC_CAL_L_CHANNEL,          /* 1100 */
+	ADC_NTC_CAL_H_CHANNEL,          /* 1101 */
+	ADC_RESERVED,                   /* 1110 */
+	ADC_BSI_CAL_H_CHANNEL,          /* 1111 */
 	ADC_NULL_CHANNEL
 };
 
@@ -115,15 +116,12 @@ enum {
 
 #define BCM59055_CMPCTRL12_NTCON			0x1
 
-typedef void (*saradc_rtm_callback_handler) (void *param, u32 selection,
-					     u16 data);
-
 extern int bcm59055_saradc_start_burst_mode(void);
 extern int bcm59055_saradc_stop_burst_mode(void);
 extern int bcm59055_saradc_enable_ntc_block(void);
 extern int bcm59055_saradc_disable_ntc_block(void);
 extern int bcm59055_saradc_read_data(int sel);
-extern int bcm59055_saradc_request_rtm(saradc_rtm_callback_handler handler, int ch_sel, void *arg);
+extern u16 bcm59055_saradc_request_rtm(int ch_sel);
 extern int bcm59055_saradc_set_rtm_delay(int delay);
 #endif
 

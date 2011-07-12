@@ -39,8 +39,12 @@
 #include "osheap.h"
 #include "msconsts.h"
 #include "shared.h"
+#ifdef CONFIG_AUDIO_BUILD
+#include "sysparm.h"
+#endif
 #include "audio_consts.h"
 #include "auddrv_def.h"
+#include "drv_caph.h"
 #include "csl_aud_queue.h"
 #include "dspif_voice_record.h"
 #include "csl_vpu.h"
@@ -151,9 +155,51 @@ static Result_t ConfigAudDrv (VOCAPTURE_Drv_t *audDrv, VOCAPTURE_Configure_t    
 static UInt32	CopyBufferFromQueue (VOCAPTURE_Drv_t *audDrv, UInt8 *buf, UInt32 size);
 static void ProcessSharedMemRequest (VOCAPTURE_Drv_t *audDrv, UInt16 bufIndex, UInt32 bufSize);
 
-static void CheckBufDoneUponStop (VOCAPTURE_Drv_t	*audDrv);
+void VPU_Capture_Request(UInt16 bufferIndex);
 
-void VPU_Capture_Request(VPStatQ_t reqMsg);
+static void CheckBufDoneUponStop (VOCAPTURE_Drv_t	*audDrv);
+#if 0
+//temporary. will delete this after this function is in CIB soc/csl/dsp.
+static UInt32 CSL_MMVPU_ReadAMRWB(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex_no_use)
+{
+	UInt16 size_copied, size_wraparound, totalCopied; 
+	UInt32 frameSize = outSize;
+	UInt16 bufIndex;
+	UInt8 *buffer;
+
+	bufIndex = vp_shared_mem->shared_encodedSamples_buffer_out[0];
+
+	buffer = (UInt8* )&vp_shared_mem->shared_encoder_OutputBuffer[bufIndex&0x0fff];
+	
+	totalCopied = frameSize;
+	
+	if(bufIndex + totalCopied/2 >= AUDIO_SIZE_PER_PAGE)//wrap around
+	{
+		// copy first part
+		size_copied = (AUDIO_SIZE_PER_PAGE - bufIndex)<<1;
+		memcpy(outBuf, buffer, size_copied);
+		outBuf += size_copied;
+		// copy second part
+		size_wraparound = (totalCopied/2 + bufIndex - AUDIO_SIZE_PER_PAGE)<<1;
+		memcpy(outBuf, buffer, size_wraparound);
+
+		vp_shared_mem->shared_encodedSamples_buffer_out[0] = totalCopied/2 + bufIndex - AUDIO_SIZE_PER_PAGE;
+	}
+	else // no wrap around
+	{
+		// just copy it from shared memeory
+		size_copied = totalCopied;
+		memcpy(outBuf, buffer, size_copied);
+
+		vp_shared_mem->shared_encodedSamples_buffer_out[0] += totalCopied/2;
+	}
+
+	// the bytes has been really copied.
+    return totalCopied;
+
+} // CSL_MMVPU_ReadAMRWB
+
+#endif
 //
 // APIs
 //
@@ -531,7 +577,7 @@ Result_t AUDDRV_VoiceCapture_Stop(
 // data from DSP shared memory.
 //
 // ====================================================================
-void VPU_Capture_Request(VPStatQ_t reqMsg)
+void VPU_Capture_Request(UInt16 bufferIndex)
 {
 	VOCAPTURE_MSG_t	msg;
 
@@ -539,31 +585,9 @@ void VPU_Capture_Request(VPStatQ_t reqMsg)
 
 	memset (&msg, 0, sizeof(VOCAPTURE_MSG_t));
 	msg.msgID = VOCAPTURE_MSG_SHM_REQUEST;
-	msg.parm1 = reqMsg.arg0; // buffer index
+	msg.parm1 = bufferIndex; // arg0
 
 	OSQUEUE_Post(sVPU_Drv.msgQueue, (QMsg_t*)&msg, TICKS_FOREVER);	
-	
-}
-
-// ===================================================================
-//
-// Function Name: AUDDRVVPU_Capture_Request_VoiceCapture_Stop
-//
-// Description: Send a AMRWB capture request for voice capture driver to copy
-// data from DSP shared memory.
-//
-// ====================================================================
-void AMRWB_Capture_Request(VPStatQ_t reqMsg)
-{
-	VOCAPTURE_MSG_t	msg;
-
-	memset (&msg, 0, sizeof(VOCAPTURE_MSG_t));
-	msg.msgID = VOCAPTURE_MSG_SHM_REQUEST;
-	msg.parm1 = reqMsg.arg2; //index
-	msg.parm2 = reqMsg.arg0; //size
-
-	OSQUEUE_Post(sAMRWB_Drv.msgQueue, (QMsg_t*)&msg, TICKS_FOREVER);	
-
 	
 }
 

@@ -18,10 +18,12 @@ the GPL, without Broadcom's express prior written consent.
 #define BCM_ISP_MAGIC	'I'
 
 enum {
-	ISP_CMD_WAIT_IRQ = 0x80,
-	ISP_CMD_LAST
+    ISP_CMD_WAIT_IRQ = 0x80,
+    ISP_CMD_CLK_RESET,	
+    ISP_CMD_LAST
 };
 
 #define ISP_IOCTL_WAIT_IRQ	_IOR(BCM_ISP_MAGIC, ISP_CMD_WAIT_IRQ, unsigned int)
+#define ISP_IOCTL_CLK_RESET	_IOR(BCM_ISP_MAGIC, ISP_CMD_CLK_RESET, unsigned int)
 
 #endif

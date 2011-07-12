@@ -37,7 +37,6 @@
 #include <mach/irqs.h>
 #include <linux/clk.h>
 #include <mach/io_map.h>
-
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <mach/rdb/brcm_rdb_hsotg.h>
 
@@ -52,7 +51,6 @@
 #define	PHY_MODE_OTG		2
 #define	PHY_MODE_DEVICE		1
 #define	PHY_MODE_HOST		0
-
 #define	BC11_OVR_KEY		0x2AAB
 
 /* ---- Private Function Prototypes -------------------------------------- */
@@ -123,6 +121,94 @@ static void __exit dwc_otg_device_exit(void)
 	}
 }
 
+static void kona_otg_phy_set_vbus_stat(void *hsotg_ctrl_base, bool on)
+{
+	unsigned long val;
+
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+
+	if (on) {
+		val |= (HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK);
+	} else {
+		val &= ~(HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
+			 HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK);
+	}
+
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+}
+
+static void kona_otg_phy_set_non_driving(void *hsotg_ctrl_base, bool on)
+{
+	unsigned long val;
+
+	/* set Phy to driving mode */
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	if (on)
+		val |= HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
+	else
+		val &= ~HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
+
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+}
+
+/**
+ * Do OTG init. Currently only for testing dataline pulsing when Vbus is off
+ */
+static ssize_t do_konaotginit(struct device *dev,
+			 struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+	void __iomem *hsotg_ctrl_base;
+
+	/* map base address */
+	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+	if (!hsotg_ctrl_base) {
+		return -ENOMEM;
+	}
+
+	kona_otg_phy_set_vbus_stat(hsotg_ctrl_base, false);
+	kona_otg_phy_set_non_driving(hsotg_ctrl_base, true);
+	kona_otg_phy_set_non_driving(hsotg_ctrl_base, false);
+
+	/* unmap base address */
+	iounmap(hsotg_ctrl_base);
+	return count;
+	
+}
+
+DEVICE_ATTR(konaotginit, S_IWUSR, NULL, do_konaotginit);
+
+static ssize_t dump_konahsotgctrl(struct device *dev, 
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	void __iomem *hsotg_ctrl_base;
+
+	/* map base address */
+	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+	if (!hsotg_ctrl_base) {
+		return -ENOMEM;
+	}
+	printk("\nusbotgcontrol: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
+	printk("\nphy_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET));
+	printk("\nphy_p1ctl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET));
+	printk("\nbc11_status: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_STATUS_OFFSET));
+	printk("\nbc11_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET));
+	printk("\ntp_in: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_IN_OFFSET));
+	printk("\ntp_out: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_OUT_OFFSET));
+	printk("\nphy_ctrl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CTRL_OFFSET));
+	printk("\nusbreg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBREG_OFFSET));
+	printk("\nusbproben: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBPROBEN_OFFSET));
+
+	/* unmap base address */
+	iounmap(hsotg_ctrl_base);
+
+	return sprintf(buf, "\nkonahsotgctrl register dump");
+}
+DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
+
 /****************************************************************************
  *
  ***************************************************************************/
@@ -133,9 +219,9 @@ static int __init dwc_otg_device_init(void)
 	if ( lmdev != NULL ) {
 		rc = -EBUSY;
 	}
-	else if ( fshost ) {
-		rc = dwc_otg_device_register (BCM_INT_ID_USB_FSHOST, FSHOST_BASE_ADDR);
-	}
+//	else if ( fshost ) {
+//		rc = dwc_otg_device_register (BCM_INT_ID_USB_FSHOST, FSHOST_BASE_ADDR);
+//	}
 	else {
 		void __iomem *hsotg_ctrl_base;
 		int val;
@@ -143,6 +229,7 @@ static int __init dwc_otg_device_init(void)
 
 		printk("\n%s: Setting up USB OTG PHY and Clock\n", __func__);
 
+#ifndef CONFIG_ARCH_SAMOA
 		otg_clk = clk_get(NULL, "usb_otg_clk");
 		if (!otg_clk) {
 			printk("%s: error get clock\n", __func__);
@@ -156,6 +243,7 @@ static int __init dwc_otg_device_init(void)
 		}
 		rate = clk_get_rate(otg_clk);
 		printk("usb_otg_clk rate %lu\n", rate);
+#endif
 
 		/* map base address */
 		hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
@@ -272,6 +360,12 @@ static int __init dwc_otg_device_init(void)
 		}
 #endif
 		rc = dwc_otg_device_register(BCM_INT_ID_USB_HSOTG, HSOTG_BASE_ADDR);
+
+		if (NULL != lmdev)
+			rc = device_create_file(&lmdev->dev, &dev_attr_konaotginit);
+
+		if (!rc)
+			rc = device_create_file(&lmdev->dev, &dev_attr_konahsotgctrldump);
 
 		/* unmap base address */
 		iounmap(hsotg_ctrl_base);

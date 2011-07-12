@@ -131,6 +131,15 @@ config STI_CONSOLE
           machines.  Say Y here to build support for it into your kernel.
           The alternative is to use your primary serial port as a console.
 
+config FRAMEBUFFER_FPS
+		tristate "Enable framebuffer fps display"
+		depends on FONTS
+		default n
+		---help---
+		  Say Y here if you would like to calculate and display frames per second.
+		  If unsure, select n.
+
+
 config FONTS
 	bool "Select compiled-in fonts"
 	depends on FRAMEBUFFER_CONSOLE || STI_CONSOLE

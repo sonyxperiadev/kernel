@@ -15,11 +15,29 @@ config MFD_CORE
 	tristate
 	default y
 
+config MFD_BCMPMU
+	bool "MFD BCM PMU"
+	depends on MFD_CORE && I2C_BSC
+	help
+	  Support for the Broadcom PMUs
+
+config MFD_BCMPMU_DBG
+	bool "MFD BCM PMU DEBUG"
+	depends on MFD_BCMPMU
+	help
+	  Support debug functions for Broadcom PMUs.
+
 config MFD_BCM_PMU590XX
 	bool "MFD BCM PMU590XX PMIC"
 	depends on MFD_CORE && I2C_BSC 
 	help
 	  Support for the Broadcom PMIC.
+
+config MFD_BCMSAMOA
+	bool "PMU BCMSAMOA Support"
+	depends on MFD_BCMPMU
+	help
+	  This enables PMU driver to support 3GULC
 
 config MFD_BCMPMU
 	bool "MFD BCM PMU"

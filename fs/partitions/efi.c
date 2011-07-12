@@ -96,6 +96,7 @@
 #include <linux/crc32.h>
 #include <linux/math64.h>
 #include <linux/slab.h>
+#include <linux/nls.h>
 #include "check.h"
 #include "efi.h"
 
@@ -579,6 +580,10 @@ static int find_valid_gpt(struct parsed_partitions *state, gpt_header **gpt,
         return 0;
 }
 
+#ifdef CONFIG_APANIC_ON_MMC
+static unsigned long apanic_partition_start;
+#endif
+
 /**
  * efi_partition(struct parsed_partitions *state)
  * @state
@@ -600,12 +605,19 @@ static int find_valid_gpt(struct parsed_partitions *state, gpt_header **gpt,
  */
 int efi_partition(struct parsed_partitions *state)
 {
+	char* partition_name = NULL;
 	gpt_header *gpt = NULL;
 	gpt_entry *ptes = NULL;
 	u32 i;
 	unsigned ssz = bdev_logical_block_size(state->bdev) / 512;
 
+	partition_name = kzalloc(sizeof(ptes->partition_name), GFP_KERNEL);
+
+	if (!partition_name)
+		return 0;
+
 	if (!find_valid_gpt(state, &gpt, &ptes) || !gpt || !ptes) {
+		kfree(partition_name);
 		kfree(gpt);
 		kfree(ptes);
 		return 0;
@@ -614,6 +626,7 @@ int efi_partition(struct parsed_partitions *state)
 	pr_debug("GUID Partition Table is valid!  Yea!\n");
 
 	for (i = 0; i < le32_to_cpu(gpt->num_partition_entries) && i < state->limit-1; i++) {
+		int partition_name_len;
 		u64 start = le64_to_cpu(ptes[i].starting_lba);
 		u64 size = le64_to_cpu(ptes[i].ending_lba) -
 			   le64_to_cpu(ptes[i].starting_lba) + 1ULL;
@@ -621,19 +634,39 @@ int efi_partition(struct parsed_partitions *state)
 		if (!is_pte_valid(&ptes[i], last_lba(state->bdev)))
 			continue;
 
+		partition_name_len = utf16s_to_utf8s(ptes[i].partition_name,
+						     sizeof(ptes[i].partition_name),
+						     UTF16_LITTLE_ENDIAN,
+						     partition_name,
+                                                     sizeof(ptes[i].partition_name));
+
+#ifdef CONFIG_APANIC_ON_MMC
+		if(strncmp(partition_name,CONFIG_APANIC_PLABEL,partition_name_len) == 0) {
+			apanic_partition_start = start * ssz;
+			pr_debug("apanic partition found starts at %d \r\n", apanic_partition_start);
+		}
+#endif
+
 		put_named_partition(state, i+1, start * ssz, size * ssz,
-				   (const char *) ptes[i].partition_name,
-				    strnlen((const char *)
-					    ptes[i].partition_name,
-					    sizeof(ptes[i].partition_name)));
+				   (const char *) partition_name,
+				   partition_name_len);
 
 		/* If this is a RAID volume, tell md */
 		if (!efi_guidcmp(ptes[i].partition_type_guid,
 				 PARTITION_LINUX_RAID_GUID))
 			state->parts[i + 1].flags = ADDPART_FLAG_RAID;
 	}
+	kfree(partition_name);
 	kfree(ptes);
 	kfree(gpt);
 	printk("\n");
 	return 1;
 }
+
+#ifdef CONFIG_APANIC_ON_MMC
+unsigned long get_apanic_start_address(void)
+{
+	return apanic_partition_start;
+}
+EXPORT_SYMBOL(get_apanic_start_address);
+#endif

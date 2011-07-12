@@ -164,9 +164,13 @@ struct dwc_otg_driver_module_params {
 
 static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.opt = -1,
-	.otg_cap = -1,
-	.dma_enable = -1,
-	.dma_desc_enable = -1,
+#ifdef CONFIG_USB_OTG_UTILS
+	.otg_cap = 0,
+#else
+	.otg_cap = 2,
+#endif
+	.dma_enable = 1,
+	.dma_desc_enable = 0,
 	.dma_burst_size = -1,
 	.speed = -1,
 	.host_support_fs_ls_low_power = -1,

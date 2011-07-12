@@ -42,14 +42,19 @@
 #include "osheap.h"
 #include "msconsts.h"
 #include "shared.h"
+#ifdef CONFIG_AUDIO_BUILD
+#include "sysparm.h"
+#endif
 #include "audio_consts.h"
 #include "auddrv_def.h"
+#include "drv_caph.h"
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "dspcmd.h"
 #include "csl_aud_queue.h"
 #include "audio_vdriver_voip.h"
 #include "audio_vdriver.h"
+#include "csl_voip.h"
 #include "vpu.h"
 #include "log.h"
 
@@ -65,6 +70,8 @@
 //
 // local defines
 //
+typedef Boolean (*VOIPFillFramesCB_t)(UInt32 nSize);
+typedef Boolean (*VOIPDumpFramesCB_t)(UInt8 *pBuf, UInt32 nSize);
 
 #define VOIP_MAX_FRAME_LEN	(642 + AUDQUE_MARGIN) // 320 words + 1 word for codecType
 
@@ -152,21 +159,145 @@ static Result_t ConfigAudDrv (VOIP_Drv_t *audDrv, VOIP_Configure_t *config);
 static UInt32	CopyBufferToQueue (VOIP_Drv_t *audDrv, UInt8 *buf, UInt32 size);
 
 static Boolean Telephony_DumpUL_CB(UInt8* pSrc, UInt32 amrMode);
-static Boolean Telephony_FillDL_CB(UInt8 *pDst, UInt32 nFrames);
+static Boolean Telephony_FillDL_CB(UInt32 nFrames);
 static Boolean ProcessUlRequest(VOIP_Drv_t *audDrv, UInt8* pSrc, UInt32 amrMode);
-static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt8 *pDst, UInt32 nFrames);
+static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt32 nFrames);
 
 static Boolean AP_VoIP_StartTelephony(
-	VPUDumpFramesCB_t telephony_dump_cb,
-	VPUDumpFramesCB_t telephony_fill_cb,
-	UInt16	 voip_codec_type,  	// codec mode for encoding the next speech frame
-	Boolean	       dtx_mode,	// Turn DTX on (TRUE) or off (FALSE): this is obsolete. contained in voip_codec_type
-	Boolean	     amr_if2_enable	// Select AMR IF1 (FALSE) or IF2 (TRUE) format: obsolete
+	VOIPDumpFramesCB_t telephony_dump_cb,
+	VOIPFillFramesCB_t telephony_fill_cb
 	);
 
 static Boolean AP_VoIP_StopTelephony(void);
+void AP_ProcessStatusMainAMRDone(UInt16 codecType);
+void VOIP_ProcessVOIPDLDone(void);
+
+static Boolean				telephony_amr_if2;
+static VOIPFillFramesCB_t	FillVOIPFramesCB;
+static VOIPDumpFramesCB_t	DumpVOIPFramesCB;
 
 // DSP interrupt handlers
+//******************************************************************************
+//
+// Function Name:  VoIP_StartTelephony()
+//
+// Description:	This function starts full duplex telephony session
+//
+// Notes:	The full duplex DSP interface is in sharedmem, not vsharedmem.
+//		But since its function is closely related to voice processing,
+//		we put it here.
+//
+//******************************************************************************
+static Boolean VoIP_StartTelephony(
+	VOIPDumpFramesCB_t telephony_dump_cb,
+	VOIPFillFramesCB_t telephony_fill_cb
+	)
+{
+	DumpVOIPFramesCB = telephony_dump_cb;
+	FillVOIPFramesCB = telephony_fill_cb;
+	TRACE_Printf_Sio( "=====VoIP_StartTelephony \r\n");
+
+	VOIP_ProcessVOIPDLDone();
+	return TRUE;
+}
+
+
+//******************************************************************************
+//
+// Function Name:  VoIP_StartMainAMRDecodeEncode()
+//
+// Description:		This function passes the AMR frame to be decoded
+//					from application to DSP and starts its decoding
+//					as well as encoding of the next frame.
+//
+// Notes:			The full duplex DSP interface is in sharedmem, not vsharedmem.
+//					But since its function is closely related to voice processing,
+//					we put it here.
+//
+//******************************************************************************
+static void VoIP_StartMainAMRDecodeEncode(
+	VP_Mode_AMR_t		decode_amr_mode,	// AMR mode for decoding the next speech frame
+	UInt8				*pBuf,		// buffer carrying the AMR speech data to be decoded
+	UInt16				length,		// number of bytes of the AMR speech data to be decoded
+	VP_Mode_AMR_t		encode_amr_mode,	// AMR mode for encoding the next speech frame
+	Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
+	)
+{
+	static VP_Mode_AMR_t prev_amr_mode = (VP_Mode_AMR_t)0xffff;
+
+	// decode the next downlink AMR speech data from application
+	CSL_WriteDLVoIPData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
+
+	// signal DSP to start AMR decoding and encoding
+	TRACE_Printf_Sio( "=====VoIP_StartMainAMRDecodeEncode UL codecType=0x%x, send VP_COMMAND_MAIN_AMR_RUN to DSP", encode_amr_mode);
+
+	if (prev_amr_mode == 0xffff || prev_amr_mode != encode_amr_mode)
+	{
+		prev_amr_mode = encode_amr_mode;
+		VPRIPCMDQ_DSP_AMR_RUN((UInt16)encode_amr_mode, telephony_amr_if2, FALSE);
+	}
+
+}
+
+
+//******************************************************************************
+//
+// Function Name:  AP_ProcessStatusMainAMRDone()
+//
+// Description:		This function handles VP_STATUS_MAIN_AMR_DONE from DSP.
+//
+// Notes:			
+//
+//******************************************************************************
+void AP_ProcessStatusMainAMRDone(UInt16 codecType)
+{
+ static UInt16 Buf[321]; // buffer to hold UL data and codec type
+	
+	// encoded uplink AMR speech data now ready in DSP shared memory, copy it to application
+	// pBuf is to point the start of the encoded speech data buffer
+	if (DumpVOIPFramesCB) 
+	{
+		CSL_ReadULVoIPData(codecType, Buf);
+		DumpVOIPFramesCB((UInt8*)Buf, 0);
+	}
+
+}
+
+//******************************************************************************
+//
+// Function Name:  VoIP_ProcessDLFrame()
+//
+// Description:	This function handle the VoIP DL data
+//
+// Notes:			
+//******************************************************************************
+void VOIP_ProcessVOIPDLDone()
+{
+	//TRACE_Printf_Sio( "=====VOIP_ProcessVOIPDLDone. \r\n");
+	if (FillVOIPFramesCB)
+		FillVOIPFramesCB(1);
+}
+
+//******************************************************************************
+//
+// Function Name:  VoIP_StopTelephony()
+//
+// Description:	This function stops full duplex telephony session
+//
+// Notes:	The full duplex DSP interface is in sharedmem, not vsharedmem.
+//		But since its function is closely related to voice processing,
+//		we put it here.
+//
+//******************************************************************************
+static Boolean VoIP_StopTelephony(void)
+{    
+	TRACE_Printf_Sio( "=====VoIP_StopTelephony \r\n");
+
+	DumpVOIPFramesCB=NULL; 
+	FillVOIPFramesCB=NULL;
+	return TRUE;
+}
+
 
 ////////////////////////////////////////////////
 //
@@ -439,10 +570,7 @@ static void VOIP_TaskEntry ( void )
 					break;
 
 				case VOIP_MSG_START:
-					{
-						AP_VoIP_StartTelephony(Telephony_DumpUL_CB, Telephony_FillDL_CB, (VP_Mode_AMR_t)(audDrv->config.codecType), FALSE, TRUE);
-					}
-				
+						AP_VoIP_StartTelephony(Telephony_DumpUL_CB, Telephony_FillDL_CB);				
 					break;
 
 				case VOIP_MSG_STOP:
@@ -463,7 +591,7 @@ static void VOIP_TaskEntry ( void )
 					break;
 
 				case VOIP_MSG_DL_REQUEST:
-					ProcessDlRequest (audDrv, (UInt8 *)msg.parm1, msg.parm2);
+					ProcessDlRequest (audDrv, msg.parm1);
 					break;
 
 				default:
@@ -546,7 +674,7 @@ static Boolean ProcessUlRequest(
 	voipBufPtr = (VOIP_Buffer_t *)pSrc;
 	codecType = voipBufPtr->voip_vocoder;
 	index = (codecType & 0xf000) >> 12;
-	if (index > 6)
+	if (index >= 6)
 		Log_DebugPrintf(LOGID_AUDIO, "AUDDRV: ProcessUlRequest :: Invalid codecType = 0x%x\n", codecType);
 	else
 	{
@@ -564,7 +692,7 @@ static Boolean ProcessUlRequest(
 //	Description: Reponse to the VPU callback and copy data to VPU 
 //
 // ===============================================================================
-static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt8 *pDst, UInt32 nFrames)
+static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt32 nFrames)
 {
 	UInt32 copied = 0;
 	UInt32 dlSize = 0;
@@ -600,7 +728,6 @@ static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt8 *pDst, UInt32 nFrames)
 			tmpBuf.voip_frame.frame_g711[1].frame_type = 1;			
 		}
 		VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)tmpBuf.voip_vocoder, (UInt8 *)&tmpBuf, dlSize, (VP_Mode_AMR_t)(audDrv->config.codecType), FALSE);
-		VPU_VT_Clear();
 	}
 	else
 	{
@@ -618,7 +745,6 @@ static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt8 *pDst, UInt32 nFrames)
 			Log_DebugPrintf(LOGID_AUDIO, "AUDDRV: ProcessDlRequest :: dlSize = 0x%x...\n", dlSize);
 
 			VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)readPtr->voip_vocoder, (UInt8 *)readPtr, dlSize, (VP_Mode_AMR_t)(audDrv->config.codecType), FALSE);				   
-			VPU_VT_Clear();
 
 			// update the readPtr
 			AUDQUE_UpdateReadPtrWithSize (aq, VOIP_MAX_FRAME_LEN);
@@ -647,7 +773,6 @@ static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt8 *pDst, UInt32 nFrames)
 				tmpBuf.voip_frame.frame_g711[1].frame_type = 1;			
 			}
 			VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)tmpBuf.voip_vocoder, (UInt8 *)&tmpBuf, dlSize, (VP_Mode_AMR_t)(audDrv->config.codecType), FALSE);
-			VPU_VT_Clear();
 		}
 
 	}
@@ -739,14 +864,13 @@ static Boolean Telephony_DumpUL_CB(
 	return TRUE;
 }
 
-static Boolean Telephony_FillDL_CB(UInt8 *pDst, UInt32 nFrames)
+static Boolean Telephony_FillDL_CB(UInt32 nFrames)
 {
 	VOIP_MSG_t	msg;
 
 	memset (&msg, 0, sizeof(VOIP_MSG_t));
 	msg.msgID = VOIP_MSG_DL_REQUEST;
-	msg.parm1 = (UInt32)pDst;
-	msg.parm2 = (UInt32)nFrames;
+	msg.parm1 = (UInt32)nFrames;
 
 	OSQUEUE_Post(sVOIP_Drv.msgQueue, (QMsg_t*)&msg, TICKS_FOREVER);	
 
@@ -754,29 +878,13 @@ static Boolean Telephony_FillDL_CB(UInt8 *pDst, UInt32 nFrames)
 }
 
 static Boolean AP_VoIP_StartTelephony(
-	VPUDumpFramesCB_t telephony_dump_cb,
-	VPUDumpFramesCB_t telephony_fill_cb,
-	UInt16	 voip_codec_type,  	// codec mode for encoding the next speech frame
-	Boolean	       dtx_mode,	// Turn DTX on (TRUE) or off (FALSE): this is obsolete. contained in voip_codec_type
-	Boolean	     amr_if2_enable	// Select AMR IF1 (FALSE) or IF2 (TRUE) format: obsolete
+	VOIPDumpFramesCB_t telephony_dump_cb,
+	VOIPFillFramesCB_t telephony_fill_cb
 	)
 {
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
-
-	//AP sends a message to CP. Upon receiving the message, 
-	// CP will set the fuse_ap_vt_active flag. 
-
-	audio_control_dsp( DSPCMD_TYPE_COMMAND_VT_AMR_START_STOP, 1, 0, 0, 0, 0 );  //1 means start
-
-	audio_control_dsp( DSPCMD_TYPE_COMMAND_DSP_AUDIO_ALIGN, 1, 0, 0, 0, 0 );
-#endif
-
 	return VoIP_StartTelephony(
 		telephony_dump_cb,
-		telephony_fill_cb,
-		voip_codec_type,  	// codec mode for encoding the next speech frame
-		dtx_mode,	// Turn DTX on (TRUE) or off (FALSE): this is obsolete. contained in voip_codec_type
-		amr_if2_enable	// Select AMR IF1 (FALSE) or IF2 (TRUE) format: obsolete
+		telephony_fill_cb
 	);
 }
 
