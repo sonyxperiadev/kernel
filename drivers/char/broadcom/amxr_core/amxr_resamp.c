@@ -47,7 +47,8 @@
 *****************************************************************************/
 
 /* ---- Include Files ---------------------------------------------------- */
-//#include <gos_basic_types.h>         /* Needed for -EINVAL */
+#include <linux/types.h>
+#include <linux/errno.h>         /* Needed for -EINVAL */
 #include "amxr_resamp.h"       /* Resampler definitions */
 
 /* ---- Private Constants and Types -------------------------------------- */

@@ -49,12 +49,13 @@
 /* ---- Include Files ---------------------------------------------------- */
 #include <linux/module.h>
 #include <linux/init.h>
-//#include <linux/semaphore.h>                 /* For down_interruptible, up, etc. */
-#include <mutex.h>
+#include <linux/mutex.h>
+#include <linux/slab.h>
+#include <linux/mm.h>
 
-#include <knllog.h>                          /* For debugging */
-#include <amxr.h>                            /* Audio mixer API */
-//#include <gos.h>
+#include <linux/broadcom/knllog.h>           /* For debugging */
+#include <linux/broadcom/amxr.h>             /* Audio mixer API */
+#include <linux/errno.h>         	     /* Needed for -EINVAL */
 
 #include "amxr_resamp.h"                     /* Resampler definitions */
 #include "amxr_vectadd.h"                    /* Vector add operations */
@@ -96,6 +97,8 @@
  * serviced directly by selected ports.
  */
 #define AMXR_SYNC_FREQ( freq )            (((freq) % 8 ) == 0)
+
+#define AMXR_MEM_TYPE GFP_KERNEL
 
 /**
 *  Mixer port node structure
@@ -350,7 +353,6 @@ int amxrGetPortInfo(
 {
    struct amxr_port_node     *portp;
    struct amxr_cnxlist_node  *cnxlp;
-   int                        err;
 
    portp = getPort( port );
    if ( portp == NULL )
@@ -637,7 +639,7 @@ int amxrDisconnect(
 {
    struct amxr_port_node      *srcportp, *dstportp;
    struct amxr_cnxlist_node   *cnxlp, *tmpcnxlp;
-   int                         delcnx, err;
+   int                         delcnx;
 
    srcportp = getPort( src_port );
    dstportp = getPort( dst_port );
@@ -717,7 +719,7 @@ int amxrGetCnxListBySrc(
       return -EINVAL;
    }
 
-   mutex_lock( gCnxs.mutex );
+   mutex_lock( &gCnxs.mutex );
 
    mem_required = sizeof(*cnxlistp) + 
       sizeof(cnxlistp->list[0]) * ( srcportp->src_cnxs - 1 );
@@ -836,7 +838,7 @@ int amxrGetCnxListByDst(
    }
 
 backout:
-   mutex_unlock( gCnxs.mutex );
+   mutex_unlock( &gCnxs.mutex );
    return err;
 }
 
@@ -863,7 +865,6 @@ int amxrCreatePort(
 {
    struct amxr_port_node  *portp;
    unsigned long           state;
-   int                     err;
 
    /* Sanity checks */
    if ( cb == NULL )
@@ -877,7 +878,7 @@ int amxrCreatePort(
       return -EINVAL;
    }
 
-   portp = kmalloc( sizeof(*portp) );
+   portp = kmalloc( sizeof(*portp), AMXR_MEM_TYPE );
    if ( portp == NULL )
    {
       return -ENOMEM;
@@ -909,15 +910,11 @@ int amxrCreatePort(
    gPorts.total++;
    local_irq_restore( state );
 
-   mutex_unlock( gPorts.mutex );
+   mutex_unlock( &gPorts.mutex );
 
    *portidp = getId( portp );
 
    return 0;
-
-cleanup_and_exit:
-   kfree( portp );
-   return err;
 }
 
 /***************************************************************************/
@@ -1151,7 +1148,6 @@ fallthrough:
       mutex_unlock( &gCnxs.mutex );
    }
 
-backout:
    mutex_unlock( &gPorts.mutex );
    return err;
 }
@@ -1268,7 +1264,6 @@ fallthrough:
       mutex_unlock( &gCnxs.mutex );
    }
 
-backout:
    mutex_unlock( &gPorts.mutex );
    return err;
 }
@@ -1434,7 +1429,6 @@ int amxrSetPortDstChannels(
       mutex_unlock( &gCnxs.mutex );
    }
 
-backout:
    mutex_unlock( &gPorts.mutex );
    return err;
 }
@@ -1577,7 +1571,6 @@ int amxrSetPortSrcChannels(
       mutex_unlock( &gCnxs.mutex );
    }
 
-backout:
    mutex_unlock( &gPorts.mutex );
    return err;
 }
@@ -2560,7 +2553,7 @@ static int amxr_add_cnx_unsafe(
 
          /* Need to resize list */
          max_cnxs = cnxlp->max_cnxs + AMXR_CNXLIST_SIZE_INCREMENT;
-         newlistp = kmalloc( max_cnxs * sizeof(newlistp[0]) );
+         newlistp = kmalloc( max_cnxs * sizeof(newlistp[0]), AMXR_MEM_TYPE );
          if ( newlistp == NULL )
          {
             return -ENOMEM;
@@ -2584,7 +2577,7 @@ static int amxr_add_cnx_unsafe(
    else
    {
       /* Create new connection list */
-      cnxlp = kmalloc( sizeof(*cnxlp) );
+      cnxlp = kmalloc( sizeof(*cnxlp), AMXR_MEM_TYPE );
       if ( cnxlp == NULL )
       {
          return -ENOMEM;
@@ -2592,7 +2585,7 @@ static int amxr_add_cnx_unsafe(
 
       memset( cnxlp, 0, sizeof(*cnxlp) );
 
-      dstlp = kmalloc( AMXR_CNXLIST_SIZE_INCREMENT * sizeof(dstlp[0]) );
+      dstlp = kmalloc( AMXR_CNXLIST_SIZE_INCREMENT * sizeof(dstlp[0]), AMXR_MEM_TYPE );
       if ( dstlp == NULL )
       {
          kfree( cnxlp );
@@ -2703,7 +2696,7 @@ static int amxr_save_disabled_cnx_unsafe(
     */
 
    /* Create new connection list */
-   cnxlp = kmalloc( sizeof(*cnxlp) );
+   cnxlp = kmalloc( sizeof(*cnxlp), AMXR_MEM_TYPE );
    if ( cnxlp == NULL )
    {
       return -ENOMEM;
@@ -2711,7 +2704,7 @@ static int amxr_save_disabled_cnx_unsafe(
 
    memset( cnxlp, 0, sizeof(*cnxlp) );
 
-   dstlp = kmalloc( AMXR_CNXLIST_SIZE_INCREMENT * sizeof(dstlp[0]) );
+   dstlp = kmalloc( AMXR_CNXLIST_SIZE_INCREMENT * sizeof(dstlp[0]), AMXR_MEM_TYPE );
    if ( dstlp == NULL )
    {
       kfree( cnxlp );
@@ -2773,7 +2766,7 @@ static int amxr_alloc_resampler(
    /* Allocate static resampler memory for the first time */
    if ( cnxlp->resampbufp == NULL )
    {
-      cnxlp->resampbufp = kmalloc( AMXR_RESAMP_BUFFER_BYTES );
+      cnxlp->resampbufp = kmalloc( AMXR_RESAMP_BUFFER_BYTES, AMXR_MEM_TYPE );
       if ( cnxlp->resampbufp == NULL )
       {
          return -ENOMEM;
@@ -3032,7 +3025,7 @@ static int __init amxr_init( void )
    gMpyCAddFnc    = amxrCVectorMacQ16;
 
    /* Allocate scratch buffer */
-   gScratchBufp   = kmalloc( AMXR_SCRATCHBUF_BYTES );
+   gScratchBufp   = kmalloc( AMXR_SCRATCHBUF_BYTES, AMXR_MEM_TYPE );
    if ( gScratchBufp == NULL )
    {
       err = -ENOMEM;

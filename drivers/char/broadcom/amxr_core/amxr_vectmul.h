@@ -47,7 +47,7 @@
 #define AMXR_VECTMUL_H
 
 /* ---- Include Files ---------------------------------------------------- */
-#include <gos_basic_types.h>               /* Needed for int16_t */
+#include <linux/types.h>               /* Needed for int16_t */
 
 /* ---- Constants and Types ---------------------------------------------- */
 /* ---- Variable Externs ------------------------------------------------- */

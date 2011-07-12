@@ -51,7 +51,6 @@ config GPIO_USER_MODE_SUPPORT
 	  
 config BCM_AMXR
    bool "Audio Mixer Driver support"
-   select BCM_GOS
    default y
    ---help---
    Say Y to enable the Audio Mixer Driver to support interconnecting

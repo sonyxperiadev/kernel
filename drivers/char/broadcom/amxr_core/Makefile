@@ -1,6 +1,6 @@
 EXTRA_CFLAGS := -fno-inline -Wno-multichar -O0
 
-obj-y += amxr_core.c 
-obj-y += amxr_resamp.c 
-obj-y += amxr_vectadd.c 
-obj-y += amxr_vectmul.c
+obj-m += amxr_core.o
+obj-m += amxr_resamp.o
+obj-m += amxr_vectadd.o
+obj-m += amxr_vectmul.o

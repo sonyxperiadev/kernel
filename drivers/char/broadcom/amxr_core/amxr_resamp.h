@@ -47,8 +47,8 @@
 #define AMXR_RESAMP_H
 
 /* ---- Include Files ---------------------------------------------------- */
-#include <gos_basic_types.h>               /* Needed for int16_t */
-#include <amxr.h>                          /* AMXR API */
+#include <linux/types.h>                   /* Needed for int16_t */
+#include <linux/broadcom/amxr.h>                          /* AMXR API */
 
 /* ---- Constants and Types ---------------------------------------------- */
 
