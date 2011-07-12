@@ -29,6 +29,11 @@
 #include <trace/events/irq.h>
 
 #include <asm/irq.h>
+
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+#include <linux/broadcom/knllog.h>
+#endif
+
 /*
    - No shared variables, all the data are CPU local.
    - If a softirq needs serialization, let it serialize itself
@@ -415,7 +420,15 @@ static void tasklet_action(struct softirq_action *a)
 			if (!atomic_read(&t->count)) {
 				if (!test_and_clear_bit(TASKLET_STATE_SCHED, &t->state))
 					BUG();
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+				if (gKnllogIrqSchedEnable & KNLLOG_TASKLET)
+					KNLLOG("in  0x%x 0x%x 0x%x 0x%x\n", (int)t->func, (int)t->data, t->count, t->state);
+#endif
 				t->func(t->data);
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+				if (gKnllogIrqSchedEnable & KNLLOG_TASKLET)
+					KNLLOG("out 0x%x 0x%x 0x%x 0x%x\n", (int)t->func, (int)t->data, t->count, t->state);
+#endif
 				tasklet_unlock(t);
 				continue;
 			}
@@ -450,7 +463,15 @@ static void tasklet_hi_action(struct softirq_action *a)
 			if (!atomic_read(&t->count)) {
 				if (!test_and_clear_bit(TASKLET_STATE_SCHED, &t->state))
 					BUG();
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+				if (gKnllogIrqSchedEnable & KNLLOG_TASKLET)
+					KNLLOG("in  0x%x 0x%x 0x%x 0x%x\n", (int)t->func, (int)t->data, t->count, t->state);
+#endif
 				t->func(t->data);
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+				if (gKnllogIrqSchedEnable & KNLLOG_TASKLET)
+					KNLLOG("out 0x%x 0x%x 0x%x 0x%x\n", (int)t->func, (int)t->data, t->count, t->state);
+#endif
 				tasklet_unlock(t);
 				continue;
 			}

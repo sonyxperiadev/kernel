@@ -46,6 +46,7 @@
 #define BCM_VDEC_MAJOR        210
 #define BCM_VENC_MAJOR        211
 #define BCM_GPS_MAJOR		   212
+#define BCM_AMXR_MAJOR        213
 #define BCM_AACENC_MAJOR	226
 #define BCM_AUDIO_MAJOR	227
 #define BCM_WLAN_DRV_MAJOR    228

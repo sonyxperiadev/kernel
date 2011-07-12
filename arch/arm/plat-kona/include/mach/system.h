@@ -35,14 +35,24 @@
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #endif
 
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+#include <linux/broadcom/knllog.h>
+#endif
 
 static void arch_idle(void)
 {
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+	if (gKnllogIrqSchedEnable & KNLLOG_THREAD) KNLLOGCALL("schedule", "0 -> 99999");
+#endif
 	/*
 	 * This should do all the clock switching
 	 * and wait for interrupt tricks
 	 */
 	cpu_do_idle();
+
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+	if (gKnllogIrqSchedEnable & KNLLOG_THREAD) KNLLOGCALL("schedule", "99999 -> 0");
+#endif
 }
 
 static void arch_reset(char mode, const char *cmd)

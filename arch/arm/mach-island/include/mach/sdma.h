@@ -37,7 +37,7 @@
 #include <linux/mm.h>
 #include <linux/vmalloc.h>
 #include <linux/pagemap.h>
-//#include <mach/dma.h>
+#include <mach/profile_timer.h>
 #include <mach/dma_mmap.h>
 
 typedef enum
@@ -228,7 +228,7 @@ typedef struct
 
     void                   *userData;          /* Passed to the devHandler */
     DMA_DeviceHandler_t    devHandler;         /* Called when DMA operations finish. */
-    //timer_tick_count_t     transferStartTime;  /* Time the current transfer was started */
+    timer_tick_count_t     transferStartTime;  /* Time the current transfer was started */
 
     /*
      * The following statistical information will be collected and presented in a proc entry. 

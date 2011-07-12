@@ -62,3 +62,31 @@ config GPIO_USER_MODE_SUPPORT
 	default n
 	help
 	  Say y to turn on support for GPIO in user mode
+	  
+config BCM_AMXR
+   bool "Audio Mixer Driver support"
+   depends on BRCM_CHAR_DRIVERS
+   default n
+   ---help---
+   Say Y to enable the Audio Mixer Driver to support interconnecting
+   audio samples between kernel objects.
+   
+config BCM_HALAUDIO
+    bool "HAL Audio Driver support"
+    depends on BRCM_CHAR_DRIVERS
+    default n
+    help
+      Say Y to enable HAL Audio Driver support which is used to control
+      audio hardware.
+
+config BCM_HALAUDIO_AUDIOH_ISLAND
+    tristate "HAL Audio Audio Hub driver for the Island Chip family"
+    depends on ARCH_ISLAND
+    depends on BRCM_CHAR_DRIVERS
+    depends on BCM_HALAUDIO && BCM_AMXR
+    depends on MAP_SDMA && MAP_AADMA && MAP_ISLAND_AUDIOH_CHAL
+    default n
+    help
+      Select m to build the HAL Audio Audio Hub driver.This driver must
+      be built as a loadable module otherwise initialization will fail.
+              

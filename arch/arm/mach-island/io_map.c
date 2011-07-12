@@ -53,7 +53,7 @@
 #define MEM_DESC(va, sz) { .virtual = va, \
                           .pfn = __phys_to_pfn(HW_IO_VIRT_TO_PHYS(va)), \
                           .length = sz, \
-                          .type = MT_MEMORY }
+                          .type = MT_MEMORY_NONCACHED }
 
 
 static struct map_desc island_io_desc[] __initdata =
@@ -109,15 +109,13 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_SPUM_APB_NS_VA, SZ_4K ),
 	IO_DESC( KONA_SPUM_APB_S_VA, SZ_4K ),
 
-
-    /*
-     * See include/mach/aram_layout.h for SRAM layout. 
-     * PM requires its portion to be MEM_DESC, and VC requires 
-     * its portion to be IO_DESC. 
-     */
-
-    MEM_DESC( BCMHANA_ARAM_PM_START, BCMHANA_ARAM_PM_MM_SIZE ), /*  32K */
-    IO_DESC(  BCMHANA_ARAM_VC_START, BCMHANA_ARAM_VC_MM_SIZE ),  /* 128K */
+	/*
+	 * See include/mach/aram_layout.h for SRAM layout.
+	 * PM requires its portion to be MEM_DESC, and VC requires
+	 * its portion to be IO_DESC.
+	 */
+	MEM_DESC( BCMHANA_ARAM_PM_START, BCMHANA_ARAM_PM_MM_SIZE ), /*  32K */
+	IO_DESC(  BCMHANA_ARAM_VC_START, BCMHANA_ARAM_VC_MM_SIZE ),  /* 128K */
 
 	IO_DESC( KONA_SRAM_VA, SZ_256K ),
 	IO_DESC( KONA_KPS_CLK_VA, SZ_4K ),
@@ -139,8 +137,26 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_USB_HOST_OHCI_VA, SZ_256 ),	/* Could really use SZ_128 if was def'd */
 	IO_DESC( KONA_USB_HSOTG_CTRL_VA, SZ_4K ),
 
-   IO_DESC( KONA_VC_EMI, SZ_128M ),
-	
+#if defined(CONFIG_MAP_LITTLE_ISLAND_MODE)
+	/*
+	 * For LI we are temporarily using a custom I/O mapping for videocore memory.
+	 * The videocore in LI lives in a chunk of reserved DDR3 instead of LPDDR2,
+	 * but for simplicity we map the DDR3 memory to the same location as where
+	 * the LPDDR2 would be, i.e. MM_IO_BASE_VC_EMI. As such, we cannot use the
+	 * IO_DESC macro and must map it manuallly.
+	 *
+	 * Note: For the current mapping scheme (IO_DESC), we can at most map about
+	 * 160 MB of videocore memory, so if we were to want 256 MB, then the mapping
+	 * scheme will need to be changed.
+	 */
+	{  .virtual = KONA_VC_EMI,
+	   .pfn = __phys_to_pfn(VC_EMI),
+	   .length = SZ_128M,
+	   .type = MT_DEVICE },
+#else
+	IO_DESC( KONA_VC_EMI, SZ_128M ),
+#endif
+
 	/* add for CAPH*/
 	IO_DESC( KONA_HUB_CLK_BASE_VA, SZ_4K ),
 	IO_DESC( KONA_AUDIOH_BASE_VA, SZ_32K ),

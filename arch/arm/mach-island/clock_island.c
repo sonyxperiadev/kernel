@@ -170,6 +170,10 @@ DECLARE_BUS_CLK(dmac_mux_apb, DMAC_MUX, DMAC_MUX_APB, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
 
+DECLARE_BUS_CLK(uartb4_apb, UARTB4, UARTB4_APB, kps_ccu, KONA_SLV, IKPS,
+         26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+         52*CLOCK_1M,  78*CLOCK_1M);
+
 DECLARE_BUS_CLK(uartb3_apb, UARTB3, UARTB3_APB, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
 	 52*CLOCK_1M,  78*CLOCK_1M);
@@ -190,6 +194,10 @@ DECLARE_BUS_CLK(pwm_apb, PWM, PWM_APB, kps_ccu, KONA_SLV, IKPS,
 DECLARE_BUS_CLK(pwm, PWM, PWM, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,
 	 26*CLOCK_1M,  26*CLOCK_1M);
+
+DECLARE_BUS_CLK(bbl_apb, BBL, BBL_REG_APB, kps_ccu, KONA_SLV, IKPS,
+	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
+	 52*CLOCK_1M,  78*CLOCK_1M);
 
 DECLARE_BUS_CLK(bsc1_apb, BSC1, BSC1_APB, kps_ccu, KONA_SLV, IKPS,
 	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
@@ -331,6 +339,11 @@ static struct clk *uart_clk_src_tbl[] =
 	name_to_clk(ref_156m),
 };
 
+static struct clk_src uartb4_clk_src = {
+        .total          =       ARRAY_SIZE(uart_clk_src_tbl),
+        .sel            =       1,
+        .parents        =       uart_clk_src_tbl,
+};
 static struct clk_src uartb3_clk_src = {
 	.total		=	ARRAY_SIZE(uart_clk_src_tbl),
 	.sel		=	1,
@@ -346,6 +359,7 @@ static struct clk_src uartb_clk_src = {
 	.sel		=	1,
 	.parents	=	uart_clk_src_tbl,
 };
+DECLARE_PERI_CLK(uartb4, UARTB4, UARTB4, var_156m, 13*CLOCK_1M, 12, DIV_TRIG, KONA_SLV, IKPS, 8);
 DECLARE_PERI_CLK(uartb3, UARTB3, UARTB3, var_156m, 13*CLOCK_1M, 12, DIV_TRIG, KONA_SLV, IKPS, 8);
 DECLARE_PERI_CLK(uartb2, UARTB2, UARTB2, var_156m, 13*CLOCK_1M, 12, DIV_TRIG, KONA_SLV, IKPS, 8);
 DECLARE_PERI_CLK(uartb, UARTB, UARTB, var_156m, 13*CLOCK_1M, 12, DIV_TRIG, KONA_SLV, IKPS, 8);
@@ -522,10 +536,12 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(sdio4_sleep),
 	CLK_LK(bsc1_apb),
 	CLK_LK(bsc2_apb),
+	CLK_LK(bbl_apb),
 	CLK_LK(timers_apb),
 	CLK_LK(uartb_apb),
 	CLK_LK(uartb2_apb),
 	CLK_LK(uartb3_apb),
+	CLK_LK(uartb4_apb),
 	CLK_LK(pmu_bsc_apb),
 	CLK_LK(hsm_ahb),
 	CLK_LK(hsm_apb),
@@ -553,6 +569,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(uartb),
 	CLK_LK(uartb2),
 	CLK_LK(uartb3),
+	CLK_LK(uartb4),
 	CLK_LK(pmu_bsc),
 	CLK_LK(pwm),
 	CLK_LK(ssp0),

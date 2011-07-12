@@ -543,7 +543,7 @@ static int peri_clk_enable(struct clk *c, int enable)
 	/* enable access */
 	writel(CLK_WR_ACCESS_PASSWORD, base + peri_clk->wr_access_offset);
 
-	if(enable) {
+	if (enable) {
 		clk_dbg("%s %s rate %lu div %lu ind %d parent_rate %lu\n", __func__, c->name,
 			c->rate, c->div, c->src->sel, c->parent->rate);
 
@@ -559,6 +559,18 @@ static int peri_clk_enable(struct clk *c, int enable)
 			BUG_ON (c->div != 1);
 
 		reg = ((c->div-1) << (peri_clk->div_shift + peri_clk->div_dithering));
+
+		if (peri_clk->div_dithering > 0) {
+			reg = ((c->div-1) << (peri_clk->div_shift +
+			peri_clk->div_dithering)) | (c->fraction << peri_clk->div_shift);
+		} else {
+			reg = ((c->div-1) << (peri_clk->div_shift + peri_clk->div_dithering));
+		}
+		
+		if (peri_clk->pre_div_mask) {
+			reg |= (c->pre_div-1) << peri_clk->pre_div_shift;
+		}
+
 		reg |= (c->src->sel << peri_clk->pll_select_shift);
 
 		writel(reg, base + peri_clk->div_offset);
@@ -725,13 +737,14 @@ static int peri_clk_set_rate(struct clk *c, unsigned long rate)
 	c->src->parents[c->src->sel]->rate, temp_div, temp_prediv, temp_fraction);
 
 	if (peri_clk->div_mask) {
-	   if(peri_clk->div_dithering > 0)
-	       div_ctrl_val = (temp_div << (peri_clk->div_shift +
-	       	peri_clk->div_dithering)) | (temp_prediv << peri_clk->div_dithering);
-	   else
+	    if (peri_clk->div_dithering > 0) {
+	        div_ctrl_val = (temp_div << (peri_clk->div_shift +
+	       	peri_clk->div_dithering)) | (temp_fraction << peri_clk->div_shift);
+	    } else {
 	       div_ctrl_val = temp_div << peri_clk->div_shift;
+	    }
 	}
-	if (peri_clk->pre_div_max) {
+	if (peri_clk->pre_div_mask) {
 	    div_ctrl_val = div_ctrl_val |
 	    	(temp_prediv << peri_clk->pre_div_shift);
 	}
@@ -757,6 +770,8 @@ static int peri_clk_set_rate(struct clk *c, unsigned long rate)
 
 	c->rate = temp_rate;
 	c->div = temp_div + 1;
+	c->pre_div = temp_prediv + 1;
+	c->fraction = temp_fraction;
 
 	clk_dbg("At %s exit %s set rate %lu div %lu sel %d parent %lu\n", __func__, c->name,
 		c->rate, c->div, c->src->sel, c->parent->rate);

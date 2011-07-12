@@ -35,12 +35,37 @@ config MACH_ISLAND_TABLET
         help
           Support for the Broadcom Island Tablet board.
 
+config MACH_ISLAND_TABLET_28160
+        bool "Support Broadcom Island 28160 Tablet board"
+        help
+          Support for the Broadcom Island 28160 Tablet board.
+
 endchoice
+
+config MAP_LITTLE_ISLAND_MODE
+        bool "LITTLE ISLAND Mode"
+        help
+          Support the Little Island mode.
 
 config MAP_SDMA
 	bool "MAP SDMA and Memory Map"
 	help
 	  Support for the SDMA driver and its memory map utilities.
+
+config MAP_AADMA
+   bool "MAP CAPH AADMA"
+   help
+      Support for the CAPH Audio Asynchronous DMA driver
+
+config MAP_SSASW
+   bool "MAP CAPH SSASW"
+   help
+      Support for the CAPH Synchronous Audio Switch driver
+
+config MAP_ISLAND_AUDIOH_CHAL
+   bool "MAP AUDIOH CHAL"
+   help
+      Support for CHAL libraries for Audio Hub on Island
 
 config IPC
 	bool "Inter-Processor Communication (IPC)"
