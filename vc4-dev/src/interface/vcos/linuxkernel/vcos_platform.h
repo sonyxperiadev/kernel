@@ -451,6 +451,15 @@ void _vcos_log_platform_init(void);
 void _vcos_log_platform_register(struct VCOS_LOG_CAT_T *category);
 void _vcos_log_platform_unregister(struct VCOS_LOG_CAT_T *category);
 
+/***********************************************************
+ *
+ * Memory barriers
+ *
+ ***********************************************************/
+
+#define vcos_wmb(x) wmb()
+#define vcos_rmb() rmb()
+
 #include "interface/vcos/generic/vcos_common.h"
 //#include "interface/vcos/generic/vcos_generic_quickslow_mutex.h"
 

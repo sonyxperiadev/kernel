@@ -12,29 +12,22 @@
 * consent.
 *****************************************************************************/
 
-#ifndef MPU3050_I2C_SETTINGS_H
-#define MPU3050_I2C_SETTINGS_H
+#if !defined( VC_MEM_H )
+#define VC_MEM_H
 
-#define MPU3050_I2C_BUS_ID    2
-#define MPU3050_GPIO_IRQ_PIN 11
+#include <linux/ioctl.h>
 
-// Application programmable full-scale range of +- 250, +-500,
-// +- 1000 or +- 2000 degrees/second. Calibration for BCMHANA_TABLET 
-// identified following pre-configured value
-#define MPU3050_SCALE        250	
+#define VC_MEM_IOC_MAGIC  'v'
 
-/* 
- * Correction for the mount position of MPU3050 sensor on daughter card PCB.
- *  For x x
- *  For y y
- *  For z reverse z
- */
+#define VC_MEM_IOC_MEM_PHYS_ADDR    _IOR( VC_MEM_IOC_MAGIC, 0, unsigned long )
+#define VC_MEM_IOC_MEM_VIRT_ADDR    _IOR( VC_MEM_IOC_MAGIC, 1, unsigned long )
+#define VC_MEM_IOC_MEM_SIZE         _IOR( VC_MEM_IOC_MAGIC, 2, unsigned int )
 
-#define MPU3050_DRIVER_AXIS_SETTINGS \
-{ \
-   .x_change = gyro_x_dir_rev, \
-   .y_change = gyro_y_dir, \
-   .z_change = gyro_z_dir_rev, \
-}
+#if defined( __KERNEL__ )
+extern unsigned long mm_vc_mem_phys_addr;
+extern unsigned long mm_vc_mem_virt_addr;
+extern unsigned int  mm_vc_mem_size;
+#endif
 
-#endif /* MPU3050_I2C_SETTINGS_H */
+#endif  /* VC_MEM_H */
+

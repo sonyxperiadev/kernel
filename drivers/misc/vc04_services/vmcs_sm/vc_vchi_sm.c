@@ -85,7 +85,7 @@ VC_VCHI_SM_HANDLE_T vc_vchi_sm_init( VCHI_INSTANCE_T vchi_instance,
                __func__, num_connections, VCHI_MAX_NUM_CONNECTIONS );
 
       vcos_assert( num_connections <= VCHI_MAX_NUM_CONNECTIONS );
-      return NULL;
+      goto err_null;
    }
 
    // Allocate memory for this instance
@@ -99,7 +99,6 @@ VC_VCHI_SM_HANDLE_T vc_vchi_sm_init( VCHI_INSTANCE_T vchi_instance,
    if ( status != VCOS_SUCCESS )
    {
       LOG_ERR( "%s: failed to create event (status=%d)", __func__, status );
-
       goto err_free_mem;
    }
 
@@ -108,7 +107,6 @@ VC_VCHI_SM_HANDLE_T vc_vchi_sm_init( VCHI_INSTANCE_T vchi_instance,
    if ( status != VCOS_SUCCESS )
    {
       LOG_ERR( "%s: failed to create event (status=%d)", __func__, status );
-
       goto err_delete_event;
    }
 
@@ -157,6 +155,7 @@ err_delete_event:
 err_free_mem:
    vcos_free( instance );
 
+err_null:
    LOG_DBG( "%s: FAILED", __func__ );
    return NULL;
 }
@@ -171,7 +170,7 @@ int32_t vc_vchi_sm_stop( VC_VCHI_SM_HANDLE_T *handle )
       LOG_ERR( "%s: invalid pointer to handle %p", __func__, handle );
 
       vcos_assert( handle != NULL );
-      return -1;
+      goto err_lock;
    }
 
    if ( *handle == NULL )
@@ -179,10 +178,13 @@ int32_t vc_vchi_sm_stop( VC_VCHI_SM_HANDLE_T *handle )
       LOG_ERR( "%s: invalid handle %p", __func__, *handle );
 
       vcos_assert( *handle != NULL );
-      return -1;
+      goto err_lock;
    }
 
-   vcos_mutex_lock( &instance->vchi_mutex );
+   if ( vcos_mutex_lock( &instance->vchi_mutex ) != VCOS_SUCCESS )
+   {
+      goto err_lock;
+   }
 
    // Close all VCHI service connections
    for ( i = 0; i < instance->num_connections; i++ )
@@ -194,9 +196,7 @@ int32_t vc_vchi_sm_stop( VC_VCHI_SM_HANDLE_T *handle )
    }
 
    vcos_mutex_unlock( &instance->vchi_mutex );
-
    vcos_mutex_delete( &instance->vchi_mutex );
-
    vcos_event_delete( &instance->msg_avail_event );
 
    vcos_free( instance );
@@ -208,6 +208,9 @@ int32_t vc_vchi_sm_stop( VC_VCHI_SM_HANDLE_T *handle )
 	vcos_log_unregister( &sm_log_category );
 
    return 0;
+
+err_lock:
+   return -1;
 }
 
 int32_t vc_vchi_sm_alloc( VC_VCHI_SM_HANDLE_T handle,
@@ -225,7 +228,7 @@ int32_t vc_vchi_sm_alloc( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid handle 0x%p", __func__, handle );
 
       vcos_assert( handle != NULL );
-      return -1;
+      goto err_lock;
    }
 
    if ( alloc == NULL )
@@ -233,7 +236,7 @@ int32_t vc_vchi_sm_alloc( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid alloc pointer 0x%p", __func__, alloc );
 
       vcos_assert( alloc != NULL );
-      return -1;
+      goto err_lock;
    }
 
    if ( alloc_result == NULL )
@@ -241,10 +244,13 @@ int32_t vc_vchi_sm_alloc( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid alloc_result pointer 0x%p", __func__, alloc_result );
 
       vcos_assert( alloc_result != NULL );
-      return -1;
+      goto err_lock;
    }
 
-   vcos_mutex_lock( &instance->vchi_mutex );
+   if ( vcos_mutex_lock( &instance->vchi_mutex ) != VCOS_SUCCESS )
+   {
+      goto err_lock;
+   }
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *alloc );
    memset( instance->msg_buf, 0, msg_len );
@@ -296,12 +302,12 @@ int32_t vc_vchi_sm_alloc( VC_VCHI_SM_HANDLE_T handle,
    }
 
    vcos_mutex_unlock( &instance->vchi_mutex );
-
    return 0;
 
 err_unlock:
    vcos_mutex_unlock( &instance->vchi_mutex );
 
+err_lock:
    return -1;
 }
 
@@ -321,7 +327,8 @@ int32_t vc_vchi_sm_free( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid handle 0x%p", __func__, handle );
 
       vcos_assert( handle != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
    if ( free == NULL )
@@ -329,10 +336,15 @@ int32_t vc_vchi_sm_free( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid free pointer 0x%p", __func__, free );
 
       vcos_assert( free != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
-   vcos_mutex_lock( &instance->vchi_mutex );
+   if ( vcos_mutex_lock( &instance->vchi_mutex ) != VCOS_SUCCESS )
+   {
+      ret = -1;
+      goto err_lock;
+   }
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *free );
    memset( instance->msg_buf, 0, msg_len );
@@ -392,6 +404,7 @@ int32_t vc_vchi_sm_free( VC_VCHI_SM_HANDLE_T handle,
 unlock:
    vcos_mutex_unlock( &instance->vchi_mutex );
 
+err_lock:
    return ret;
 }
 
@@ -411,7 +424,8 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid handle 0x%p", __func__, handle );
 
       vcos_assert( handle != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
    if ( lock_unlock == NULL )
@@ -419,7 +433,8 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid lock_unlock pointer 0x%p", __func__, lock_unlock );
 
       vcos_assert( lock_unlock != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
    if ( lock_result == NULL )
@@ -427,10 +442,14 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid lock_result pointer 0x%p", __func__, lock_result );
 
       vcos_assert( lock_result != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
-   vcos_mutex_lock( &instance->vchi_mutex );
+   if ( vcos_mutex_lock( &instance->vchi_mutex ) != VCOS_SUCCESS )
+   {
+      goto err_lock;
+   }
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *lock_unlock );
    memset( instance->msg_buf, 0, msg_len );
@@ -492,6 +511,7 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
 err_unlock:
    vcos_mutex_unlock( &instance->vchi_mutex );
 
+err_lock:
    return -1;
 }
 
@@ -511,7 +531,8 @@ int32_t vc_vchi_sm_unlock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid handle 0x%p", __func__, handle );
 
       vcos_assert( handle != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
    if ( lock_unlock == NULL )
@@ -519,10 +540,15 @@ int32_t vc_vchi_sm_unlock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid lock_unlock pointer 0x%p", __func__, lock_unlock );
 
       vcos_assert( lock_unlock != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
-   vcos_mutex_lock( &instance->vchi_mutex );
+   if ( vcos_mutex_lock( &instance->vchi_mutex ) != VCOS_SUCCESS )
+   {
+      ret = -1;
+      goto err_lock;
+   }
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *lock_unlock );
    memset( instance->msg_buf, 0, msg_len );
@@ -582,6 +608,7 @@ int32_t vc_vchi_sm_unlock( VC_VCHI_SM_HANDLE_T handle,
 unlock:
    vcos_mutex_unlock( &instance->vchi_mutex );
 
+err_lock:
    return ret;
 }
 
@@ -601,7 +628,8 @@ int32_t vc_vchi_sm_resize( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid handle 0x%p", __func__, handle );
 
       vcos_assert( handle != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
    if ( resize == NULL )
@@ -609,10 +637,15 @@ int32_t vc_vchi_sm_resize( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid resize pointer 0x%p", __func__, resize );
 
       vcos_assert( resize != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
-   vcos_mutex_lock( &instance->vchi_mutex );
+   if ( vcos_mutex_lock( &instance->vchi_mutex ) != VCOS_SUCCESS )
+   {
+      ret = -1;
+      goto err_lock;
+   }
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *resize );
    memset( instance->msg_buf, 0, msg_len );
@@ -672,6 +705,7 @@ int32_t vc_vchi_sm_resize( VC_VCHI_SM_HANDLE_T handle,
 unlock:
    vcos_mutex_unlock( &instance->vchi_mutex );
 
+err_lock:
    return ret;
 }
 
@@ -690,10 +724,15 @@ int32_t vc_vchi_sm_walk_alloc( VC_VCHI_SM_HANDLE_T handle )
       LOG_ERR( "%s: invalid handle 0x%p", __func__, handle );
 
       vcos_assert( handle != NULL );
-      return -1;
+      ret = -1;
+      goto err_lock;
    }
 
-   vcos_mutex_lock( &instance->vchi_mutex );
+   if ( vcos_mutex_lock( &instance->vchi_mutex ) != VCOS_SUCCESS )
+   {
+      ret = -1;
+      goto err_lock;
+   }
 
    msg_len = sizeof( *msg_hdr );
    memset( instance->msg_buf, 0, msg_len );
@@ -750,6 +789,7 @@ int32_t vc_vchi_sm_walk_alloc( VC_VCHI_SM_HANDLE_T handle )
 unlock:
    vcos_mutex_unlock( &instance->vchi_mutex );
 
+err_lock:
    return ret;
 }
 

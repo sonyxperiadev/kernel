@@ -566,7 +566,7 @@ EXPORT_SYMBOL( dma_mmap_in_use );
 static int dma_mmap_add_user_region
 (
    DMA_MMAP_CFG_T      *memMap,
-   struct task_struct  *userTask,
+   struct mm_struct    *userMM,
    DMA_MMAP_REGION_T   *region
 )
 {
@@ -578,8 +578,8 @@ static int dma_mmap_add_user_region
    size_t                  bytesRemaining;
    struct vm_area_struct  *vma;
 
-   down_read(&userTask->mm->mmap_sem);
-   if ((vma = find_vma(userTask->mm, virtAddr)) == NULL)
+   down_read(&userMM->mmap_sem);
+   if ((vma = find_vma(userMM, virtAddr)) == NULL)
    {
       printk(KERN_ERR "%s: find_vma failed for virtAddr 0x%08lx\n",
              __func__, virtAddr);
@@ -653,7 +653,7 @@ static int dma_mmap_add_user_region
    }
 
 out_up:
-   up_read(&userTask->mm->mmap_sem);
+   up_read(&userMM->mmap_sem);
    return rc;
 }
 
@@ -718,8 +718,7 @@ int dma_mmap_add_region
    region->virtAddr = mem;
    region->numBytes = numBytes;
    region->numSegmentsUsed = 0;
-   region->numLockedPages = 0;
-   region->lockedPages = NULL;
+   region->pagelist = NULL;
 
    switch (region->memType)
    {
@@ -811,107 +810,57 @@ int dma_mmap_add_region
 
       case DMA_MMAP_TYPE_USER:
       {
-         size_t firstPageOffset;
-         size_t firstPageSize;
-         struct page **pages;
-         struct task_struct *userTask;
+         DMA_MMAP_PAGELIST_T *pagelist;
 
          atomic_inc(&gDmaStatMemTypeUser);
 
-#if 1
          /*
-          * If the pages are user pages, then the dma_mem_map_set_user_task
+          * If the pages are user pages, then the dma_mmap_set_pagelist
           * function must have been previously called.
           */
-         if (memMap->userTask == NULL)
+         pagelist = memMap->pagelist;
+
+         if (pagelist == NULL)
          {
-            printk(KERN_ERR "%s: must call dma_mmap_set_user_task when using "
-                  "user-mode memory\n", __func__);
+            printk(KERN_ERR "%s: must call dma_mmap_set_pagelist when"
+               " using user-mode memory\n", __func__);
             return -EINVAL;
          }
 
-         /* User pages need to be locked */
-         firstPageOffset = (unsigned long)region->virtAddr & (PAGE_SIZE - 1);
-         firstPageSize   = PAGE_SIZE - firstPageOffset;
-         if (firstPageSize > region->numBytes)
+         if (pagelist->numLockedPages == 0)
          {
-            firstPageSize = region->numBytes;
-         }
-
-         region->numLockedPages = (firstPageOffset + region->numBytes +
-                                   PAGE_SIZE - 1) / PAGE_SIZE;
-         pages = kmalloc(region->numLockedPages * sizeof(struct page *),
-               GFP_KERNEL);
-
-         if (pages == NULL)
-         {
-            region->numLockedPages = 0;
-            return -ENOMEM;
-         }
-
-         userTask = memMap->userTask;
-
-         down_read(&userTask->mm->mmap_sem);
-         rc = get_user_pages(userTask,                        /* task */
-                             userTask->mm,                    /* mm */
-                             (unsigned long)region->virtAddr, /* start */
-                             region->numLockedPages,          /* len */
-                             memMap->dir == DMA_FROM_DEVICE,  /* write */
-                             0,                               /* force */
-                             pages,                           /* pages (array of pointers to page) */
-                             NULL);                           /* vmas */
-         up_read(&userTask->mm->mmap_sem);
-
-         if (rc < 0)
-         {
-            int rc2;
-
             /*
              * get_user_pages will fail on pages which have no page struct.
              * Pages created by remap_pfn_range are like this, so we figure
              * out the PFN for each page
              */
-            if ((rc2 = dma_mmap_add_user_region(memMap, userTask, region)) == 0)
+            if ((rc = dma_mmap_add_user_region(memMap, pagelist->mm, region)) == 0)
             {
-               kfree( pages );
-               region->numLockedPages = 0;
-               rc = 0;
                break;
             }
 
-            printk(KERN_ERR "%s: get_user_pages/get_pfn for address %p len "
-                  "%d pages failed: %d %d\n", __func__, region->virtAddr,
-                  region->numLockedPages, rc, rc2);
-         }
-
-#if 0
-         DMA_MMAP_PRINT( "%s: dma_mmap_add_user_region vAddr: %p "
-                  "numLockedPages: %d rc: %d numBytes: %d\n", __func__, region->virtAddr,
-                  region->numLockedPages, rc, region->numBytes);
-#endif
-
-         if (rc != region->numLockedPages)
-         {
-            kfree(pages);
-            region->numLockedPages = 0;
-
-            if (rc >= 0)
-            {
-	            printk(KERN_ERR "%s: rc != region->numLockedPages vAddr: %p "
-                  "numLockedPages: %d rc: %d numBytes: %d\n", __func__, region->virtAddr,
-                  region->numLockedPages, rc, region->numBytes);
-               rc = -EINVAL;
-            }
+            printk(KERN_ERR "%s: get_pfn for address %p len "
+               "%d failed: %d\n", __func__, region->virtAddr,
+               region->numBytes, rc);
          }
          else
          {
+            size_t firstPageOffset;
+            size_t firstPageSize;
+            struct page **pages = pagelist->pages;
             uint8_t *virtAddr = region->virtAddr;
             size_t bytesRemaining;
             int pageIdx;
 
-            rc = 0; /* Since get_user_pages returns +ve number */
+            /* User pages need to be locked */
+            firstPageOffset = (unsigned long)region->virtAddr & (PAGE_SIZE - 1);
+            firstPageSize   = PAGE_SIZE - firstPageOffset;
+            if (firstPageSize > region->numBytes)
+            {
+               firstPageSize = region->numBytes;
+            }
 
-            region->lockedPages = pages;
+            rc = 0; /* Since get_user_pages returns +ve number */
 
             /*
              * We've locked the user pages. Now we need to walk them and figure
@@ -952,7 +901,7 @@ int dma_mmap_add_region
             virtAddr += firstPageSize;
             bytesRemaining = region->numBytes - firstPageSize;
 
-            for (pageIdx = 1; pageIdx < region->numLockedPages; pageIdx++)
+            for (pageIdx = 1; pageIdx < pagelist->numLockedPages; pageIdx++)
             {
                size_t bytesThisPage = (bytesRemaining > PAGE_SIZE ?
                                        PAGE_SIZE : bytesRemaining);
@@ -983,13 +932,6 @@ int dma_mmap_add_region
                bytesRemaining -= bytesThisPage;
             }
          }
-#else
-         printk(KERN_ERR "%s: User mode pages are not yet supported\n",
-               __func__);
-
-         /* user pages are not physically contiguous */
-         rc = -EINVAL;
-#endif
          break;
       }
 
@@ -1033,7 +975,7 @@ int dma_mmap_map
    {
       if (( rc = dma_mmap_add_region(memMap, addr, numBytes)) < 0)
       {
-         /*	
+         /*
           * Since the add fails, this function will fail, and the caller won't
           * call unmap, so we need to do it here
           */
@@ -1088,35 +1030,19 @@ int dma_mmap_unmap
 
          case DMA_MMAP_TYPE_USER:
          {
-            int segmentIdx;
+            /*
+             * For user mappings, we'v4 already calculated the physAddr
+             * in dma_mmap_add_region.
+             */
 
-            if ( region->numLockedPages == 0 )
+            for ( segmentIdx = 0; segmentIdx < region->numSegmentsUsed; segmentIdx++ )
             {
-               /*
-                * For user mappings with no page structure, we need 
-                * to figure out what to do. 
-                */
+               segment = &region->segment[segmentIdx];
 
-               printk( KERN_ERR "%s: no locked pages - need to check is cache flushing is required\n", __func__ );
-            }
-            else
-            {
-                /*
-                 * For user mappings with a page structure, we've 
-                 * already calculated the physAddr in dma_mmap_add_region.
-                 */
-
-                for ( segmentIdx = 0; segmentIdx < region->numSegmentsUsed; segmentIdx++ )
-                {
-                    DMA_MMAP_SEGMENT_T *segment;
-
-                    segment = &region->segment[segmentIdx];
-
-                    dma_sync_single_for_cpu( NULL,
-                                             segment->physAddr,
-                                             segment->numBytes,
-                                             memMap->dir );
-                }
+               dma_sync_single_for_cpu( NULL,
+                                        segment->physAddr,
+                                        segment->numBytes,
+                                        memMap->dir );
             }
             break;
          }
@@ -1124,7 +1050,7 @@ int dma_mmap_unmap
          case DMA_MMAP_TYPE_DMA:
          case DMA_MMAP_TYPE_KMALLOC:
          {
-            BUG_ON( region->numSegmentsUsed != 1 );
+             BUG_ON( region->numSegmentsUsed == 1 );
 
             /*
              * On the ARM, dma_unmap_single does nothing, which is fine for
@@ -1151,32 +1077,12 @@ int dma_mmap_unmap
          }
       }
 
-      if (region->numLockedPages > 0)
-      {
-         int pageIdx;
-
-         /* Some user pages were locked. We need to go and unlock them now. */
-         for (pageIdx = 0; pageIdx < region->numLockedPages; pageIdx++)
-         {
-            struct page *page = region->lockedPages[pageIdx];
-
-            if (memMap->dir == DMA_FROM_DEVICE)
-            {
-               SetPageDirty(page);
-            }
-            page_cache_release(page);
-         }
-         kfree(region->lockedPages);
-         region->numLockedPages = 0;
-         region->lockedPages = NULL;
-      }
-
       region->memType  = DMA_MMAP_TYPE_NONE;
       region->virtAddr = NULL;
       region->numBytes = 0;
       region->numSegmentsUsed = 0;
    }
-   memMap->userTask = NULL;
+   memMap->pagelist = NULL;
    memMap->numRegionsUsed = 0;
    memMap->inUse = 0;
 
@@ -1453,6 +1359,112 @@ int dma_mmap_add_desc
    return 0;
 }
 EXPORT_SYMBOL(dma_mmap_add_desc);
+
+/*
+ * Crate a pagelist describing the supplied user-space buffer, and return it
+ * through the pagelist_out pointer. After calling, the buffer pages should
+ * be locked, ready for DMA in the indicated direction.
+ *
+ * Returns zero on success, or a negative error code.
+ */
+int dma_mmap_create_pagelist
+(
+   char __user             *addr,
+   size_t                   numBytes,
+   enum dma_data_direction  dir,
+   struct task_struct      *userTask,
+   DMA_MMAP_PAGELIST_T    **pagelist_out
+)
+{
+   int                  firstPageOffset;
+   int                  numLockedPages;
+   DMA_MMAP_PAGELIST_T *pagelist;
+   int                  rc;
+
+   /* User pages need to be locked */
+   firstPageOffset = (unsigned long)addr & (PAGE_SIZE - 1);
+
+   numLockedPages = (firstPageOffset + numBytes + PAGE_SIZE - 1) /
+      PAGE_SIZE;
+   pagelist = kmalloc(sizeof(DMA_MMAP_PAGELIST_T) +
+      numLockedPages * sizeof(struct page *), GFP_KERNEL);
+
+   if (pagelist)
+   {
+      pagelist->dir = dir;
+      pagelist->mm = NULL;
+
+      down_read(&userTask->mm->mmap_sem);
+      rc = get_user_pages(userTask,               /* task */
+                          userTask->mm,           /* mm */
+                          (unsigned long)addr,    /* start */
+                          numLockedPages,         /* len */
+                          dir == DMA_FROM_DEVICE, /* write */
+                          0,                      /* force */
+                          pagelist->pages,        /* pages (array of pointers to page) */
+                          NULL);                  /* vmas */
+      up_read(&userTask->mm->mmap_sem);
+
+      if (rc == numLockedPages)
+      {
+         pagelist->mm = NULL;
+         pagelist->numLockedPages = numLockedPages;
+      }
+      else if (rc < 0)
+      {
+         /* Some pages in user space may not be lockable using get_user_pages.
+          * Remember the user memory map, and try later using get_pfn */
+         pagelist->mm = userTask->mm;
+         pagelist->numLockedPages = 0;
+         rc = 0;
+      }
+      else
+      {
+         kfree(pagelist);
+         pagelist = NULL;
+      }
+   }
+   else
+      rc = -ENOMEM;
+
+   *pagelist_out = pagelist;
+
+   return rc;
+}
+EXPORT_SYMBOL(dma_mmap_create_pagelist);
+
+/*
+ * Free a pagelist previously allocated using dma_mmap_create_pagelist.
+ * This will unlock any locked pages.
+ */
+void dma_mmap_free_pagelist
+(
+   DMA_MMAP_PAGELIST_T *pagelist
+)
+{
+   int i;
+   for (i = 0; i < pagelist->numLockedPages; i++) {
+      if (pagelist->dir != DMA_FROM_DEVICE)
+         set_page_dirty(pagelist->pages[i]);
+      page_cache_release(pagelist->pages[i]);
+   }
+
+   kfree(pagelist);
+}
+EXPORT_SYMBOL(dma_mmap_free_pagelist);
+
+/*
+ * Specifies a pagelist up front, to get it into dma_mmap_add_region.
+ */
+void dma_mmap_set_pagelist
+(
+   DMA_MMAP_CFG_T      *memMap,
+   DMA_MMAP_PAGELIST_T *pagelist
+)
+{
+   memMap->pagelist = pagelist;
+}
+EXPORT_SYMBOL(dma_mmap_set_pagelist);
 
 static int
 proc_debug_write(struct file *file, const char __user *buffer,

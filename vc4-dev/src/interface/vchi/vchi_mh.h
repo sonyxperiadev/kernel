@@ -3,8 +3,6 @@ Copyright (c) 2010 Broadcom Europe Limited. All rights reserved.
 
 Project  :  vchi
 Module   :  vchi
-File     :  $RCSfile:  $
-Revision :  $Revision: #6 $
 
 FILE DESCRIPTION:
 Definitions for memory handle types.

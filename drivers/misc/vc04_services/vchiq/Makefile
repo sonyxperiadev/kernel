@@ -2,7 +2,7 @@
 EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2 -Wno-declaration-after-statement -Wno-parentheses
 
 EXTRA_CFLAGS  += -I"vc4-dev/src/"
-EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vchiq_arm_bi"
+EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vchiq_arm"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vcos"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vcos/generic"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vcos/linuxkernel"
@@ -35,11 +35,12 @@ EXTRA_CFLAGS  += -DUSE_VCHIQ_ARM
 obj-$(CONFIG_VC_VCHIQ) += vc-vchiq.o
 
 vc-vchiq-objs := \
-    ../../../../vc4-dev/src/interface/vchiq_arm_bi/big_island/vchiq_arm.o \
-    ../../../../vc4-dev/src/interface/vchiq_arm_bi/vchiq_core.o \
-    ../../../../vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv.o \
-    ../../../../vc4-dev/src/interface/vchiq_arm_bi/vchiq_shim.o \
-    ../../../../vc4-dev/src/interface/vchiq_arm_bi/vchiq_util.o
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_arm.o \
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_core.o \
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_kern_lib.o \
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_shim.o \
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_util.o \
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_bi_arm.o
 
 obj-$(CONFIG_VC_VCHIQ_MEMDRV_HANA) += vchiq-memdrv-hana.o
 

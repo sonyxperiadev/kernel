@@ -6,9 +6,11 @@
 #obj-y   += $(CONFIG_BRCM_VIDEOCORE_ROOT)/services/vc_ctl/kernel/
 
 obj-y   += vcos/
+obj-y 	+= vc_mem/
 obj-y 	+= vchiq/
 obj-y   += vmcs_fb/
 obj-y 	+= vmcs_sm/
+obj-y 	+= vc_dnfo/
 
 obj-y	+= ../../../vc4-dev/src/interface/vceb/host/linux/
 
