@@ -338,6 +338,7 @@ void AUDIO_Ctrl_Process(
                                      param_start->rate);
             AUDCTRL_SetRecordGain(param_start->pdev_prop->u.c.hw_id,
                                   param_start->pdev_prop->u.c.mic,
+                                  AUDIO_GAIN_FORMAT_Q13_2,
                                   param_start->vol[0],
                                   param_start->vol[1]);
 

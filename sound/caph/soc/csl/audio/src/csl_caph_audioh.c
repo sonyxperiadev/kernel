@@ -1226,7 +1226,7 @@ void csl_caph_audioh_sidetone_set_gain(UInt32 gain)
 // Description:  Set HW gain
 //
 // Parameters:  hw     - which HW gain
-// 		gain   - gain value.			
+// 		gain   - gain value in Q13.2.			
 // Return:  
 //
 //============================================================================

@@ -428,13 +428,14 @@ Result_t AUDDRV_HWControl_SetMixingGain(AUDDRV_PathID pathID,
 *
 *  @brief Set Hw gain. For audio tuning purpose only.
 *
+*  @param  pathID  (in) path handle of HW path
 *  @param  hw   hw gain selection
 *  @param  gain  hw gain
 *  @param  dev   Output path EP/IHF/HS if available.
 *
 *  @return Result_t status
 *****************************************************************************/
-void  AUDDRV_HWControl_SetHWGain(AUDDRV_HW_GAIN_e hw, UInt32 gain, AUDDRV_DEVICE_e dev);
+void  AUDDRV_HWControl_SetHWGain(AUDDRV_PathID pathID, AUDDRV_HW_GAIN_e hw, UInt32 gain, AUDDRV_DEVICE_e dev);
 /********************************************************************
 *  @brief  Register up callback for getting audio mode
 *

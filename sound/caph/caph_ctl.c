@@ -190,7 +190,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 				//call audio driver to set volume
 				BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetRecordGain pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
 				AUDCTRL_SetRecordGain (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
-					pChip->streamCtl[stream-1].dev_prop.u.c.mic, 
+					pChip->streamCtl[stream-1].dev_prop.u.c.mic, AUDIO_GAIN_FORMAT_Q13_2,
 					pVolume[0], pVolume[1]);
 			}			
 		}

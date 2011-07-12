@@ -275,6 +275,13 @@ void AUDCTRL_SetTelephonyMicSpkr(
 		
 	OSTASK_Sleep( 100 );  //depending on switch to headset or off of headset, PMU is first off or last on.
 	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
+
+    //Load the mic gains from sysparm.
+    AUDCTRL_LoadMicGain(myTelephonyPathID.ulPathID, mic, TRUE);
+    //Load the speaker gains form sysparm.
+    AUDCTRL_LoadSpkrGain(myTelephonyPathID.dlPathID, speaker, TRUE);
+
+
 }
 //============================================================================
 //

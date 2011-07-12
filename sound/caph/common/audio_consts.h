@@ -656,3 +656,7 @@ typedef enum
 
 #endif
 
+//#define ENABLE_AUDMIX_V2	//define to avoid SW mixer for headset/EP
+#if defined(ENABLE_AUDMIX_V2)
+#define ENABLE_MONO2DUAL	//required on Rhea A0, as it does not support 48k mono pass-thru
+#endif

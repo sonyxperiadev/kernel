@@ -88,6 +88,42 @@ Int16 AUDDRV_GetDSPDLGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain);
 Int16 AUDDRV_GetDSPDLGain(AUDDRV_DEVICE_e spkr, Int16 gain);
 
 
+
+/**
+*
+*  @brief  Get the Mixer input gain
+*
+*  @param  gain (in) Gain in Q13.2 
+*
+*  @return HW gain (out)  mixer input gain -- register value.
+*****************************************************************************/
+UInt16 AUDDRV_GetMixerInputGain(Int16 gain);
+
+
+
+
+/**
+*
+*  @brief  Get the Mixer output fine gain
+*
+*  @param  gain (in) Gain in Q13.2 
+*
+*  @return HW gain (out)  mixer output fine gain -- register value.
+*****************************************************************************/
+UInt16 AUDDRV_GetMixerOutputFineGain(Int16 gain);
+
+
+/**
+*
+*  @brief  Get the Mixer output coarse gain
+*
+*  @param  gain (in) Gain in Q13.2 
+*
+*  @return HW gain (out)  mixer output coarse gain -- register value.
+*****************************************************************************/
+UInt16 AUDDRV_GetMixerOutputCoarseGain(Int16 gain);
+
+
 /**
 *
 *  @brief  Get the HW DL gain
