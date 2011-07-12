@@ -26,4 +26,7 @@ obj-$(CONFIG_MACH_SAMOA_RAY) += chal/
 #obj-$(CONFIG_MACH_SAMOA_RAY) += csl/
 obj-$(CONFIG_DMAC_PL330) += dmux.o dma.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += kona_pm.o
-obj-y += pwr_mgr.o pi_mgr.o
+ifneq ($(CONFIG_ARCH_SAMOA),y) 
+	obj-y += pwr_mgr.o pi_mgr.o
+endif
+
