@@ -11,25 +11,25 @@ in any way with any other Broadcom software provided under a license other than
 the GPL, without Broadcom's express prior written consent.
 *******************************************************************************/
 
-//TODO - remove most of these!
 #include <linux/kernel.h>
+
+#include <linux/bootmem.h>
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/device.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/mm.h>
+#include <linux/errno.h>
 #include <linux/fs.h>
+#include <linux/init.h>
 #include <linux/interrupt.h>
-#include <linux/semaphore.h>
+#include <linux/module.h>
+#include <linux/mm.h>
 #include <linux/mutex.h>
+#include <linux/proc_fs.h>
+#include <linux/semaphore.h>
+#include <linux/vmalloc.h>
 #include <mach/irqs.h>
 #include <asm/io.h>
-#include <linux/clk.h>
 #include <asm/uaccess.h>
-#include <linux/proc_fs.h>
-#include <linux/vmalloc.h>
-#include <linux/mm.h>
-#include <linux/bootmem.h>
 
 #include <linux/broadcom/v3d.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
