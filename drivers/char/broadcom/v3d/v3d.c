@@ -13,6 +13,7 @@ the GPL, without Broadcom's express prior written consent.
 
 //TODO - remove most of these!
 #include <linux/kernel.h>
+#include <linux/delay.h>
 #include <linux/device.h>
 #include <linux/module.h>
 #include <linux/init.h>
@@ -170,7 +171,7 @@ static int setup_v3d_clock(void)
 	return (rc);
 }
 
-static bool assert_idle_nolock(void)
+static bool v3d_is_not_idle(void)
 {
 	uint32_t pcs;
 	uint32_t srqcs;
@@ -199,6 +200,11 @@ static bool assert_idle_nolock(void)
 	}
 	
 	return not_idle;
+}
+
+static void assert_idle_nolock(void)
+{
+        BUG_ON(v3d_is_not_idle());
 }
 
 static void assert_v3d_is_idle(void)
@@ -369,7 +375,8 @@ static int v3d_release(struct inode *inode, struct file *filp)
 		//V3D hardware to go idle before letting any other process touch it.
 		//Otherwise it can cause a AXI lockup or other bad things :-(
 		down(&v3d_state.work_lock);
-		while(assert_idle_nolock());
+		while(v3d_is_not_idle())
+                   udelay(100);
 		up(&v3d_state.work_lock);
 		err_print("V3D HW idle\n");
 		reset_v3d();
