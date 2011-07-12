@@ -35,20 +35,6 @@ config UNICAM
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
 	default n 	
 
-config BCM_GPS
-    tristate "GPS support"
-	default n
-    ---help---
-        Select this to include GPS support for BCMHANA
-
-        If unsure, say N.
-		
-config BCM_GPS_UART
-	int "GPS UART"	
-	depends on BCM_GPS
-	--help---
-		GPS UART port no e.g. 0,1,2,3 to be used 
-
 config BCM_MODEM
         tristate "Broadcom Modem Driver"
         depends on BRCM_CHAR_DRIVERS && NET
@@ -65,28 +51,17 @@ config GPIO_USER_MODE_SUPPORT
 	  
 config BCM_AMXR
    bool "Audio Mixer Driver support"
-   depends on BRCM_CHAR_DRIVERS
-   default n
+   default y
    ---help---
    Say Y to enable the Audio Mixer Driver to support interconnecting
    audio samples between kernel objects.
    
 config BCM_HALAUDIO
     bool "HAL Audio Driver support"
-    depends on BRCM_CHAR_DRIVERS
+    select BCM_AMXR
+    select BCM_GOS
     default n
-    help
-      Say Y to enable HAL Audio Driver support which is used to control
-      audio hardware.
-
-config BCM_HALAUDIO_AUDIOH_ISLAND
-    tristate "HAL Audio Audio Hub driver for the Island Chip family"
-    depends on ARCH_ISLAND
-    depends on BRCM_CHAR_DRIVERS
-    depends on BCM_HALAUDIO && BCM_AMXR
-    depends on MAP_SDMA && MAP_AADMA && MAP_ISLAND_AUDIOH_CHAL
-    default n
-    help
-      Select m to build the HAL Audio Audio Hub driver.This driver must
-      be built as a loadable module otherwise initialization will fail.
-              
+    ---help---
+    Say Y to enable HAL Audio Driver support which is used to control
+    audio hardware.
+     
