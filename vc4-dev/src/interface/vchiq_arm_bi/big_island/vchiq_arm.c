@@ -359,6 +359,18 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
         return VCHIQ_ERROR;
     }
 
+    /* Direct connect the vchiq to get vmcs-fb and vmcs-sm device module built in */
+    if ( vchiq_memdrv_initialise() != VCHIQ_SUCCESS )
+    {
+        printk( KERN_ERR "%s: failed to initialize vchiq for '%s'\n",
+                    __func__, kernState->instance_name );
+    }
+    else
+    {
+        printk( KERN_INFO "%s: initialized vchiq for '%s'\n", __func__,
+                    kernState->instance_name );
+    }	
+	
     printk( KERN_INFO "%s: successfully initialized '%s' videocore\n",
             __func__, kernState->instance_name );
 

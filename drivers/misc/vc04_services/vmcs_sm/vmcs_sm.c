@@ -2341,8 +2341,9 @@ static void __exit vc_sm_exit( void )
              __func__ );
 }
 
-module_init( vc_sm_init );
+late_initcall( vc_sm_init );
 module_exit( vc_sm_exit );
+
 
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "VideoCore SharedMemory Driver" );
