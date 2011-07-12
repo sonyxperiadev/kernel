@@ -1064,9 +1064,7 @@ static int ccu_init(struct clk *c)
 	ret = root_ccu_init(c);
 	break;
     case BCM2165x_HUB_CCU:
-	#ifndef CONFIG_ARCH_HANA
 	ret = hub_ccu_init(c);
-	#endif
 	break;
     case BCM2165x_AON_CCU:
 	ret = aon_ccu_init(c);

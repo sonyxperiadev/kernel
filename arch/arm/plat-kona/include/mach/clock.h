@@ -581,6 +581,34 @@ unsigned long clock_get_xtal(void);
 		.freq_tbl	=	{__VA_ARGS__},						\
 	}
 
+/* declare c CCU clock */
+#define	DECLARE_CCU_CLK2(clk_name, id, ccu, pfx, mask, mask1, ... )						\
+	static struct ccu_clock clk_name##_clk = {						\
+		.clk	=	{								\
+			.name	=	__stringify(clk_name##_clk),				\
+			.ops	=	&ccu_clk_ops,						\
+			.ccu_id =       BCM2165x_##ccu##_CCU,					\
+			.flags	=	BCM2165x_##ccu##_CCU_FLAGS,				\
+		},										\
+		.ccu_clk_mgr_base	=	ccu##_CLK_BASE_ADDR,				\
+		.wr_access_offset	=	pfx##_CLK_MGR_REG_WR_ACCESS_OFFSET,		\
+		.policy_freq_offset	=	pfx##_CLK_MGR_REG_POLICY_FREQ_OFFSET,		\
+		.freq_bit_shift 	=	pfx##_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT,	\
+		.policy_ctl_offset	=	pfx##_CLK_MGR_REG_POLICY_CTL_OFFSET,		\
+		.policy0_mask_offset	=	pfx##_CLK_MGR_REG_POLICY0_##mask##_OFFSET,		\
+		.policy1_mask_offset	=	pfx##_CLK_MGR_REG_POLICY1_##mask##_OFFSET,		\
+		.policy2_mask_offset	=	pfx##_CLK_MGR_REG_POLICY2_##mask##_OFFSET,		\
+		.policy3_mask_offset	=	pfx##_CLK_MGR_REG_POLICY3_##mask##_OFFSET,		\
+		.policy0_mask1_offset	=	pfx##_CLK_MGR_REG_POLICY0_##mask1##_OFFSET,		\
+		.policy1_mask1_offset	=	pfx##_CLK_MGR_REG_POLICY1_##mask1##_OFFSET,		\
+		.policy2_mask1_offset	=	pfx##_CLK_MGR_REG_POLICY2_##mask1##_OFFSET,		\
+		.policy3_mask1_offset	=	pfx##_CLK_MGR_REG_POLICY3_##mask1##_OFFSET,		\
+		.lvm_en_offset		=	pfx##_CLK_MGR_REG_LVM_EN_OFFSET,		\
+		.freq_id	=	id,							\
+		.freq_tbl	=	{__VA_ARGS__},						\
+	}
+
+
 /* declare a bus clock*/
 #define	DECLARE_BUS_CLK(clk_name, NAME1, NAME2, clk_parent, ccu, pfx, ... )			\
 	static struct bus_clock clk_name##_clk = {						\
@@ -828,6 +856,7 @@ enum {
     BCM2165x_CLK_REF_52M,
     BCM2165x_CLK_REF_13M,
     BCM2165x_CLK_REF_26M,
+    BCM2165x_CLK_REF_2P4M,
     BCM2165x_CLK_VAR_312M,
     BCM2165x_CLK_VAR_208M,
     BCM2165x_CLK_VAR_156M,
