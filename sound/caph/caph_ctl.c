@@ -46,8 +46,10 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/initval.h>
 #include <sound/tlv.h>
 #include "mobcom_types.h"
+#include "resultcode.h"
 #include "auddrv_def.h"
 #include "audio_consts.h"
+#include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 #include "drv_caph.h"
 

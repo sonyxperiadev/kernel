@@ -71,9 +71,23 @@
 **********************************************************************/
 UInt32 CSL_ConvertMillibel2Scale(Int16 mBGain)
 {
+#ifdef CONFIG_AUDIO_BUILD
+	 float scale=0;
+	 /* get millibel value in floating point format */
+	 scale = (float)mBGain;
+	 /* convert millibel to linear scale factor */
+	 scale = (float)pow(10., scale/2000.);
  
-	return mBGain;
-
+	 /* scale to fixed point range */
+	 scale = floor(scale * (float)FIXED_POINT_UNITY_GAIN);
+#else
+	// temp fix for Linux until DSP team provides solution for avoiding float operations
+	 UInt32 scale=1; //(pow(10,0) (init values)
+	 scale = scale * FIXED_POINT_UNITY_GAIN;	 
+#endif
+	 /* return in fixed point format */
+	 return (UInt32)scale; 
+ 
 } // ConvertMillibel2Scale
 
 

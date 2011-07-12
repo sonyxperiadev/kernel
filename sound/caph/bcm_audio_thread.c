@@ -42,7 +42,10 @@ the GPL, without Broadcom's express prior written consent.
 #include "auddrv_def.h"
 #include "ossemaphore.h"
 #include "drv_caph.h"
+#include "csl_aud_drv.h"
+#include "audio_vdriver.h"
 #include "audio_controller.h"
+#include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"
 #include "bcm_audio_thread.h"
@@ -262,7 +265,10 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
-            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->u.p.speaker );
+			if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			{
+
+	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->u.p.speaker );
 
             // Enable the playback the path
             AUDCTRL_EnablePlay(AUDIO_HW_MEM, 
@@ -270,42 +276,52 @@ void AUDIO_Ctrl_Process(
                                    AUDIO_HW_NONE,
                                    param_start->pdev_prop->u.p.speaker,
 				                   param_start->channels,
-                                   param_start->rate, NULL
-				    );
+                                   param_start->rate, 
+                                   NULL);
 
 			AUDCTRL_SetPlayVolume (param_start->pdev_prop->u.p.hw_id,
 					param_start->pdev_prop->u.p.speaker, 
 					AUDIO_GAIN_FORMAT_Q13_2, 
 					param_start->vol[0], param_start->vol[1]); //0DB 
 
-     		AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.p.aud_dev);
-
+     			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.p.aud_dev);
+			
+			}
+			else if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_VOICE)
+			{
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode);
+			}
         }
         break;
         case ACTION_AUD_StopPlay:
         {
             BRCM_AUDIO_Param_Stop_t* param_stop = (BRCM_AUDIO_Param_Stop_t*) arg_param;
+	 
+			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-			 
-			 AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
-
-           //disable the playback path
-             AUDCTRL_DisablePlay(AUDIO_HW_MEM, 
+		    if(param_stop->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			{
+			     //disable the playback path
+    	    	   AUDCTRL_DisablePlay(AUDIO_HW_MEM, 
                         param_stop->pdev_prop->u.p.hw_id,
                         param_stop->pdev_prop->u.p.speaker,0
                     );
-
-			 BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process Stop Playback completed \n");
+		    }
+			BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process Stop Playback completed \n");
         }
         break;
         case ACTION_AUD_PausePlay:
         {
             BRCM_AUDIO_Param_Pause_t* param_pause = (BRCM_AUDIO_Param_Pause_t*) arg_param;
-            //disable the playback path
-             AUDCTRL_DisablePlay(AUDIO_HW_MEM,	
+			
+			if(param_pause->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			{
+            	//disable the playback path
+             	AUDCTRL_DisablePlay(AUDIO_HW_MEM,	
                         param_pause->pdev_prop->u.p.hw_id,
                         param_pause->pdev_prop->u.p.speaker,0
                     ); 
+			}
             AUDIO_DRIVER_Ctrl(param_pause->drv_handle,AUDIO_DRIVER_PAUSE,NULL);
         }
         break;
@@ -315,6 +331,9 @@ void AUDIO_Ctrl_Process(
             BRCM_AUDIO_Param_Resume_t* param_resume = (BRCM_AUDIO_Param_Resume_t*) arg_param;
 
             AUDIO_DRIVER_Ctrl(param_resume->drv_handle,AUDIO_DRIVER_RESUME,NULL);
+		
+			if(param_resume->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			{
 
            // Enable the playback the path
             AUDCTRL_EnablePlay(AUDIO_HW_MEM,	
@@ -323,7 +342,8 @@ void AUDIO_Ctrl_Process(
                                    param_resume->pdev_prop->u.p.speaker,
 				                   param_resume->channels,
                                    param_resume->rate, NULL
-				    );
+								    );
+			}
         }
         break;
         case ACTION_AUD_StartRecord:

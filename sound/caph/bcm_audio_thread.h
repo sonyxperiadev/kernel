@@ -45,6 +45,7 @@ typedef struct
     UInt32 channels;
     UInt32 rate;
 	Int32  vol[2];
+	Int32  mixMode;
 }BRCM_AUDIO_Param_Start_t;
 
 typedef struct
