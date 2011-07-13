@@ -9,18 +9,21 @@
 
 #include <plat/kona_pm.h>
 #include <mach/pm.h>
+#include <plat/pwr_mgr.h>
 
-//#ifdef CONFIG_CPU_IDLE
-//#ifndef KONA_MACH_MAX_IDLE_STATE 
-//#define KONA_MACH_MAX_IDLE_STATE 1
-//#endif /*KONA_MACH_MAX_IDLE_STATE*/
-//#endif
+#ifdef CONFIG_CPU_IDLE
+#ifndef KONA_MACH_MAX_IDLE_STATE 
+#define KONA_MACH_MAX_IDLE_STATE 1
+#endif /*KONA_MACH_MAX_IDLE_STATE*/
+#endif
+
 
 enum
 {
 	KONA_PM_LOG_LVL_NONE = 0,
 	KONAL_PM_LOG_LVL_ERROR	= 1,
-	KONAL_PM_LOG_LVL_FLOW = (1 << 1)
+	KONAL_PM_LOG_LVL_FLOW = (1 << 1),
+	KONAL_PM_LOG_LVL_TEST = (1 << 2)
 };
 
 
@@ -47,11 +50,29 @@ __weak int kona_mach_enter_idle_state(struct cpuidle_device *dev,
 	t1 = ktime_get();
 	local_irq_disable();
 	local_fiq_disable();
-	
+
 	if(LOG_LEVEL_ENABLED(KONAL_PM_LOG_LVL_FLOW))
 		pr_info("--%s--\n",__func__);
-	cpu_do_idle();	
-	
+
+	if(kona_pm_log_lvl == KONAL_PM_LOG_LVL_TEST)
+	{
+		pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
+		pwr_mgr_event_clear_events(USBOTG_EVENT,SOFTWARE_0_EVENT);
+		pwr_mgr_event_set(SOFTWARE_0_EVENT,0);
+	}
+
+	cpu_do_idle();
+
+	if(kona_pm_log_lvl == KONAL_PM_LOG_LVL_TEST)
+	{
+		pwr_mgr_process_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT,true);
+		pwr_mgr_process_events(USBOTG_EVENT,SOFTWARE_0_EVENT-1,true);
+		pwr_mgr_event_clear_events(USBOTG_EVENT,SOFTWARE_0_EVENT);
+		pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
+		pwr_mgr_event_set(SOFTWARE_0_EVENT,1);
+
+	}
+
 	local_irq_enable();
 	local_fiq_enable();
 
@@ -103,8 +124,8 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 
 	if(LOG_LEVEL_ENABLED(KONAL_PM_LOG_LVL_FLOW))
 		pr_info("--%s: state = %d --\n",__func__,state);
-	
-	switch (state) 
+
+	switch (state)
 	{
 	case PM_SUSPEND_STANDBY:
 	case PM_SUSPEND_MEM:
@@ -130,7 +151,7 @@ __weak int kona_mach_pm_valid(suspend_state_t state)
 		pr_info("--%s--\n",__func__);
 
 	return suspend_valid_only_mem(state);
-} 
+}
 static struct platform_suspend_ops kona_pm_ops = {
 	.begin		= kona_mach_pm_begin,
 	.end		= kona_mach_pm_end,
@@ -154,14 +175,14 @@ int __init kona_pm_init(void)
 	int i, count;
 	struct cpuidle_device *dev;
 	struct cpuidle_state *state;
-	
+
 	pr_info("--%s : registering cpu_ilde hanlders\n",__func__);
 	kona_mach_init_idle_states(idle_states);
 	cpuidle_register_driver(&kona_idle_driver);
 
 	dev = &per_cpu(kona_idle_dev, smp_processor_id());
 
-	for (i = 0,count = 0; i < KONA_MACH_MAX_IDLE_STATE; i++) 
+	for (i = 0,count = 0; i < KONA_MACH_MAX_IDLE_STATE; i++)
 	{
 		state = &dev->states[i];
 
@@ -182,11 +203,11 @@ int __init kona_pm_init(void)
 		return -EINVAL;
 	dev->state_count = count;
 
-	if (cpuidle_register_device(dev)) 
+	if (cpuidle_register_device(dev))
 	{
 		printk(KERN_ERR "%s: CPUidle register device failed\n",
 		       __func__);
-		cpuidle_unregister_driver(&kona_idle_driver);	   
+		cpuidle_unregister_driver(&kona_idle_driver);
 		return -EIO;
 	}
 #endif /*CONFIG_CPU_IDLE*/
@@ -195,7 +216,7 @@ int __init kona_pm_init(void)
 	pr_info("--%s : registering suspend hanlders\n",__func__);
 	suspend_set_ops(&kona_pm_ops);
 #endif /*CONFIG_SUSPEND*/
-	
+
 	return 0;
 }
 
