@@ -53,8 +53,6 @@
 #include <linux/broadcom/amxr.h>
 
 #include <chal/chal_audio.h>
-//#include <chal/chal_ccu_audioh_inline.h>
-//#include <chal/chal_intid.h>
 
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/aadma.h>
@@ -430,6 +428,15 @@ struct caph_dma_device_attr
    SSASW_Handle_t                ssasw_handle;     /* SSASW driver handle */
 };
 
+/* Clocks struct */
+struct audioh_clks
+{
+   struct clk           *audioh_156m;
+   struct clk           *audioh_26m;
+   struct clk           *audioh_2p4m;
+   struct clk           *audioh_apb;
+};
+
 /* CSX Data stucture */
 struct audioh_csx_data
 {
@@ -589,7 +596,7 @@ static int                 gNumIngressChannels = 0;
 /* Platform information */
 static HALAUDIO_AUDIOH_PLATFORM_INFO gAudiohPlatformInfo;
 
-static struct clk          *gAudiohClk;
+static struct audioh_clks  gAudiohClk;
 
 /* CAPH DMA Device attribute array */
 static struct caph_dma_device_attr gCaphDmaDevAttr[CAPH_DMA_NUM_DEVICE_ENTRIES];
@@ -2620,7 +2627,7 @@ static int audiohChPowerTransducer( int powerup )
    if ( powerup && !atomic_read(&gPwrTransducerLevel) )
    {
       /* Power up analog microphones */
-      chal_audio_enable_aci_auxmic(gChalAudioHandle, 1 );
+      //chal_audio_enable_aci_auxmic(gChalAudioHandle, 1 );
       chal_audio_mic_pwrctrl(gChalAudioHandle, 1);
 
 #if AUDIOH_EARPIECE_ENABLE
@@ -2641,7 +2648,7 @@ static int audiohChPowerTransducer( int powerup )
    {
       /* Power down analog microphones */
       chal_audio_mic_pwrctrl(gChalAudioHandle, 0);
-      chal_audio_enable_aci_auxmic(gChalAudioHandle, 0 );
+      //chal_audio_enable_aci_auxmic(gChalAudioHandle, 0 );
 
 #if AUDIOH_EARPIECE_ENABLE
       audiohEarpathPowerRamp( 0 );
@@ -2875,7 +2882,14 @@ static int audiohExit( void )
 
    aadma_exit();
 
-   clk_disable( gAudiohClk );
+   clk_disable( gAudiohClk.audioh_156m );
+   clk_disable( gAudiohClk.audioh_26m );
+   clk_disable( gAudiohClk.audioh_2p4m );
+   clk_disable( gAudiohClk.audioh_apb );
+   clk_put( gAudiohClk.audioh_156m );
+   clk_put( gAudiohClk.audioh_26m );
+   clk_put( gAudiohClk.audioh_2p4m );
+   clk_put( gAudiohClk.audioh_apb );
 
    free_irq( BCM_INT_ID_AUDIO, gAudioh.ch );
 
@@ -4489,12 +4503,33 @@ static int audioh_probe( struct platform_device *pdev )
    int err;
    HALAUDIO_AUDIOH_PLATFORM_INFO *info;
 
-   gAudiohClk = clk_get( &pdev->dev, "audioh_26m" );
+   gAudiohClk.audioh_156m = clk_get( &pdev->dev, "audioh_156m_clk" );
+   gAudiohClk.audioh_26m = clk_get( &pdev->dev, "audioh_26m_clk" );
+   gAudiohClk.audioh_2p4m = clk_get( &pdev->dev, "audioh_2p4m_clk" );
+   gAudiohClk.audioh_apb = clk_get( &pdev->dev, "audioh_apb_clk" );
 
-   err = clk_enable( gAudiohClk );
+   err = clk_enable( gAudiohClk.audioh_156m );
    if( err )
    {
-      printk( KERN_ERR "%s: failed to initialize audioh clock %d!\n", __FUNCTION__, err );
+      printk( KERN_ERR "%s: failed to enable 156 MHz audioh clock %d!\n", __FUNCTION__, err );
+      return err;
+   }
+   err = clk_enable( gAudiohClk.audioh_26m );
+   if( err )
+   {
+      printk( KERN_ERR "%s: failed to enable 26 MHz audioh clock %d!\n", __FUNCTION__, err );
+      return err;
+   }
+   err = clk_enable( gAudiohClk.audioh_2p4m );
+   if( err )
+   {
+      printk( KERN_ERR "%s: failed to enable 2.4 MHz audioh clock %d!\n", __FUNCTION__, err );
+      return err;
+   }
+   err = clk_enable( gAudiohClk.audioh_apb );
+   if( err )
+   {
+      printk( KERN_ERR "%s: failed to enable audioh apb clock %d!\n", __FUNCTION__, err );
       return err;
    }
 
@@ -4539,6 +4574,8 @@ static int __exit audioh_remove( struct platform_device *pdev )
    (void)pdev;
    halAudioDelInterface( gInterfHandle );
    audioh_platform_exit( info );
+   clk_disable( gAudiohClk.audioh_26m );
+   clk_put( gAudiohClk.audioh_26m );
 
    return 0;
 }

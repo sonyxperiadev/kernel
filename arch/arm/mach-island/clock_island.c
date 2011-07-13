@@ -60,8 +60,9 @@ DECLARE_REF_CLK		(ref_208m, REF_208M,			208*CLOCK_1M,	0,	name_to_clk(ref_312m));
 DECLARE_REF_CLK		(ref_156m, REF_156M,			156*CLOCK_1M,	2,	name_to_clk(ref_312m));
 DECLARE_REF_CLK		(ref_104m, REF_104M,			104*CLOCK_1M,	3,	name_to_clk(ref_312m));
 DECLARE_REF_CLK		(ref_52m, REF_52M,			52*CLOCK_1M,	2,	name_to_clk(ref_104m));
+DECLARE_REF_CLK		(ref_26m, REF_26M,			26*CLOCK_1M,	6,	name_to_clk(ref_156m));
 DECLARE_REF_CLK		(ref_13m, REF_13M,			13*CLOCK_1M,	4,	name_to_clk(ref_52m));
-DECLARE_REF_CLK (ref_26m,	REF_26M,			26*CLOCK_1M,	6,	name_to_clk(ref_156m));
+DECLARE_REF_CLK		(ref_2p4m, REF_2P4M,			2400*CLOCK_1K,	40,	name_to_clk(ref_96m));
 
 DECLARE_REF_CLK		(var_312m, VAR_312M,			312*CLOCK_1M,	0,	0);
 DECLARE_REF_CLK		(var_208m, VAR_208M,			208*CLOCK_1M,	0,	name_to_clk(var_312m));
@@ -88,9 +89,9 @@ DECLARE_CCU_CLK(khubaon_ccu, 4, AON, KHUBAON, MASK1,
          26*CLOCK_1M,  52*CLOCK_1M, 78*CLOCK_1M, 104*CLOCK_1M,
         156*CLOCK_1M, CLOCK_UNUSED);
 
-DECLARE_CCU_CLK(khub_ccu, 4, AON, KHUBAON, MASK1,
-	26*CLOCK_1M,  52*CLOCK_1M, 78*CLOCK_1M, 104*CLOCK_1M,
-	156*CLOCK_1M, CLOCK_UNUSED);
+DECLARE_CCU_CLK2(khub_ccu, 6, HUB, KHUB, MASK1, MASK2,
+	26*CLOCK_1M,  52*CLOCK_1M, 104*CLOCK_1M, 156*CLOCK_1M,
+	104*CLOCK_1M, 208*CLOCK_1M, 312*CLOCK_1M, CLOCK_UNUSED);
 
 /*****************************************************************************
 	Bus clocks
@@ -217,14 +218,19 @@ DECLARE_BUS_CLK(pmu_bsc_apb, PMU_BSC, PMU_BSC_APB, khubaon_ccu, AON, KHUBAON,
          26*CLOCK_1M,  52*CLOCK_1M, 78*CLOCK_1M, 104*CLOCK_1M,
         156*CLOCK_1M, CLOCK_UNUSED);
 
+DECLARE_BUS_CLK(audioh_apb, AUDIOH, AUDIOH_APB, khub_ccu, HUB, KHUB,
+	26*CLOCK_1M,  26*CLOCK_1M, 26*CLOCK_1M, 26*CLOCK_1M,
+	26*CLOCK_1M, 26*CLOCK_1M, 26*CLOCK_1M, CLOCK_UNUSED);
+
 /* audioh_156m and audioh_2p4m clocks resemple BUS clock, hence declaring as
  *  * bus clokc. */
 DECLARE_BUS_CLK(audioh_156m, AUDIOH, AUDIOH_156M, khub_ccu, HUB, KHUB,
 	156*CLOCK_1M,  156*CLOCK_1M, 156*CLOCK_1M, 156*CLOCK_1M,
 	156*CLOCK_1M, 156*CLOCK_1M, 156*CLOCK_1M, CLOCK_UNUSED);
+
 DECLARE_BUS_CLK(audioh_2p4m, AUDIOH, AUDIOH_2P4M, khub_ccu, HUB, KHUB,
-	2400*CLOCK_1K,  2400*CLOCK_1K, 2400*CLOCK_1K, 24*CLOCK_1K,
-	2400*CLOCK_1K, 24*CLOCK_1K, 2400*CLOCK_1K, CLOCK_UNUSED);
+	2400*CLOCK_1K,  2400*CLOCK_1K, 2400*CLOCK_1K, 2400*CLOCK_1K,
+	2400*CLOCK_1K, 2400*CLOCK_1K, 2400*CLOCK_1K, CLOCK_UNUSED);
 
 DECLARE_BUS_CLK(gpiokp_apb,  GPIOKP , GPIOKP_APB,  khubaon_ccu, AON, KHUBAON,
                 26*CLOCK_1M, 52*CLOCK_1M, CLOCK_UNUSED, 52*CLOCK_1M,
@@ -522,6 +528,7 @@ struct clk_lookup island_clk_tbl[] =
 	/* CCUs */
 	CLK_LK(kpm_ccu),
 	CLK_LK(kps_ccu),
+	CLK_LK(khub_ccu),
 
 	/* Bus clocks */
 	CLK_LK(usb_otg),
@@ -579,6 +586,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(caph_srcmixer),
 	CLK_LK(ssp3_audio),
 	CLK_LK(ssp4_audio),
+	CLK_LK(audioh_apb),
 	CLK_LK(audioh_156m),
 	CLK_LK(audioh_2p4m),
 	CLK_LK(audioh_26m),
