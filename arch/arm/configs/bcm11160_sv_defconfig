@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Wed Jul  6 15:14:19 2011
+# Wed Jul 13 13:33:02 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -252,6 +252,7 @@ CONFIG_KONA_DCACHE_INVALIDATION=y
 CONFIG_BCM_PARAMS_PHYS=0x80200000
 CONFIG_BCM_RAM_BASE=0x80000000
 CONFIG_BCM_RAM_START_RESERVED_SIZE=0x200000
+# CONFIG_KONA_CPU_PM_HANDLER is not set
 
 #
 # Island SoC based Machine types
@@ -1299,6 +1300,7 @@ CONFIG_MMC_SDHCI_PLTFM_KONA=y
 # CONFIG_MMC_BCM2708 is not set
 CONFIG_MMC_BCM_SD=y
 # CONFIG_BCM_SDIOWL is not set
+# CONFIG_MMCPOLL is not set
 # CONFIG_MEMSTICK is not set
 # CONFIG_NEW_LEDS is not set
 # CONFIG_SWITCH is not set
