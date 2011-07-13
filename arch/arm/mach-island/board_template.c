@@ -547,6 +547,13 @@ static struct platform_device board_keypad_device =
 };
 #endif
 
+#if defined(CONFIG_BCM_AAA) || defined(CONFIG_BCM_AAA_MODULE)
+static struct platform_device board_bcm_aaa_device = {
+   .name = "bcm-aaa",
+   .id = -1,
+};
+#endif
+
 #if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
 #define board_hana_gps_info concatenate(ISLAND_BOARD_ID, _board_hana_gps_info)
 static struct gps_platform_data board_hana_gps_info = GPS_PLATFORM_DATA_SETTINGS;
@@ -1293,6 +1300,10 @@ static void __init add_devices(void)
 #ifdef CONFIG_NET_ISLAND
 	platform_device_register(&net_device);
 #endif
+
+#if defined(CONFIG_BCM_AAA) || defined(CONFIG_BCM_AAA_MODULE)
+   platform_device_register(&board_bcm_aaa_device);
+#endif   
 
 #if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
    platform_device_register(&platform_device_gps);

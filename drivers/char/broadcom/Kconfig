@@ -35,6 +35,13 @@ config UNICAM
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
 	default n 	
 
+config BCM_AAA
+    tristate "Android Amxr Audio ('AAA grade-beef') driver"
+    default n
+    ---help---
+    Select m to build the generic AAA driver. This driver must be
+    built as a loadable module.
+
 config BCM_GPS
     tristate "GPS support"
 	default n
