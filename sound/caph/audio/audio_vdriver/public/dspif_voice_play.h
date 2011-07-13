@@ -50,6 +50,8 @@
 * @{
 */
 
+#include "shared.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -74,11 +76,11 @@ typedef enum VORENDER_VOICE_MIX_MODE_t
 
 typedef enum
 {
-	VORENDER_ARM2SP_INSTANCE_NONE,
 	VORENDER_ARM2SP_INSTANCE1,
 	VORENDER_ARM2SP_INSTANCE2,
 	VORENDER_ARM2SP_INSTANCE_TOTAL
 } VORENDER_ARM2SP_INSTANCE_e;
+typedef void (*playback_data_cb_t)(UInt16 buf_index);
 
 // ==========================================================================
 //
@@ -203,6 +205,36 @@ Result_t dspif_AMRWB_play_init_stop ( void);
 //
 // =========================================================================
 Result_t dspif_AMRWB_play_stop ( void);
+
+
+// ==========================================================================
+//
+// Function Name: dspif_ARM2SP_play_set_cb
+//
+// Description: set the callback for ARM2SP playback
+//
+// =========================================================================
+void dspif_ARM2SP_play_set_cb (UInt32 instanceId, playback_data_cb_t playback_data_cb);
+
+// ==========================================================================
+//
+// Function Name: dspif_ARM2SP_Render_Request
+//
+// Description: Start the data transfer of ARM2SP playback
+//
+// =========================================================================
+
+void ARM2SP_Render_Request(UInt16 bufferPosition);
+
+// ==========================================================================
+//
+// Function Name: dspif_ARM2SP2_Render_Request
+//
+// Description: Start the data transfer of ARM2SP2 playback
+//
+// =========================================================================
+
+void ARM2SP2_Render_Request(UInt16 bufferPosition);
 
 #ifdef __cplusplus
 }

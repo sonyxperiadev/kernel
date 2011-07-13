@@ -46,6 +46,7 @@ Broadcom's express prior written consent.
 #define DMIC_GAIN_LEVEL_NUM 97
 #define SPKR_GAIN_LEVEL_NUM 249
 #define MIXER_GAIN_LEVEL_NUM 201
+#define MIXER_GAIN_LEVEL_NUM2 179
 //****************************************************************************
 // local macro declarations
 //****************************************************************************
@@ -1557,7 +1558,7 @@ static csl_caph_Spkr_Gain_t Spkr_GainTable[SPKR_PATH_MAX][SPKR_GAIN_LEVEL_NUM]=
 
 //Gain Conversion from dB Q13.2 to register value.
 //Not a gain distribution table.
-static csl_caph_Mixer_Gain_t Mixer_GainTable[MIXER_GAIN_LEVEL_NUM] =
+static csl_caph_Mixer_GainMapping_t Mixer_GainTable[MIXER_GAIN_LEVEL_NUM] =
 {
 	/* 0dB */	{0x0000, 16384, 0x0},
 	/* -0.25dB */	{0xffff, 15919, 0xa},
@@ -1763,6 +1764,192 @@ static csl_caph_Mixer_Gain_t Mixer_GainTable[MIXER_GAIN_LEVEL_NUM] =
 
 };
 
+//Gain Conversion from dB Q13.2 to register value.
+//Not a gain distribution table.
+static csl_caph_Mixer_GainMapping2_t Mixer_GainTable2[MIXER_GAIN_LEVEL_NUM2] =
+{
+	/* 44.5dB */    {0x00B2, 0x7},
+	/* 44.25dB */	{0x00B1, 0x7},
+    /* 44dB */      {0x00B0, 0x7},
+	/* 43.75dB */   {0x00AF, 0x7},
+	/* 43.5dB */    {0x00AE, 0x7},
+	/* 43.25dB */	{0x00AD, 0x7},
+    /* 43dB */      {0x00AC, 0x7},
+	/* 42.75dB */   {0x00AB, 0x7},
+	/* 42.5dB */    {0x00AA, 0x7},
+	/* 42.25dB */	{0x00A9, 0x7},
+    /* 42dB */      {0x00A8, 0x7},
+	/* 41.75dB */   {0x00A7, 0x6},
+	/* 41.5dB */    {0x00A6, 0x6},
+	/* 41.25dB */	{0x00A5, 0x6},
+	/* 41dB */      {0x00A4, 0x6},
+	/* 40.75dB */   {0x00A3, 0x6},
+	/* 40.5dB */    {0x00A2, 0x6},
+	/* 40.25dB */	{0x00A1, 0x6},
+    /* 40dB */      {0x00A0, 0x6},
+	/* 39.75dB */   {0x009F, 0x6},
+	/* 39.5dB */    {0x009E, 0x6},
+	/* 39.25dB */	{0x009D, 0x6},
+    /* 39dB */      {0x009C, 0x6},
+	/* 38.75dB */   {0x009B, 0x6},
+	/* 38.5dB */    {0x009A, 0x6},
+	/* 38.25dB */	{0x0099, 0x6},
+    /* 38dB */      {0x0098, 0x6},
+	/* 37.75dB */   {0x0097, 0x6},
+	/* 37.5dB */    {0x0096, 0x6},
+	/* 37.25dB */	{0x0095, 0x6},
+	/* 37dB */      {0x0094, 0x6},
+	/* 36.75dB */   {0x0093, 0x6},
+	/* 36.5dB */    {0x0092, 0x6},
+	/* 36.25dB */	{0x0091, 0x6},
+    /* 36dB */      {0x0090, 0x6},
+	/* 35.75dB */   {0x008F, 0x5},
+	/* 35.5dB */    {0x008E, 0x5},
+	/* 35.25dB */	{0x008D, 0x5},
+    /* 35dB */      {0x008C, 0x5},
+	/* 34.75dB */   {0x008B, 0x5},
+	/* 34.5dB */    {0x008A, 0x5},
+	/* 34.25dB */	{0x0089, 0x5},
+    /* 34dB */      {0x0088, 0x5},
+	/* 33.75dB */   {0x0087, 0x5},
+	/* 33.5dB */    {0x0086, 0x5},
+	/* 33.25dB */	{0x0085, 0x5},
+	/* 33dB */      {0x0084, 0x5},
+	/* 32.75dB */   {0x0083, 0x5},
+	/* 32.5dB */    {0x0082, 0x5},
+	/* 32.25dB */	{0x0081, 0x5},
+    /* 32dB */      {0x0080, 0x5},
+	/* 31.75dB */   {0x007F, 0x5},
+	/* 31.5dB */    {0x007E, 0x5},
+	/* 31.25dB */	{0x007D, 0x5},
+    /* 31dB */      {0x007C, 0x5},
+	/* 30.75dB */   {0x007B, 0x5},
+	/* 30.5dB */    {0x007A, 0x5},
+	/* 30.25dB */	{0x0079, 0x5},
+    /* 30dB */      {0x0078, 0x5},
+	/* 29.75dB */   {0x0077, 0x4},
+	/* 29.5dB */    {0x0076, 0x4},
+	/* 29.25dB */	{0x0075, 0x4},
+	/* 29dB */      {0x0074, 0x4},
+	/* 28.75dB */   {0x0073, 0x4},
+	/* 28.5dB */    {0x0072, 0x4},
+	/* 28.25dB */	{0x0071, 0x4},
+    /* 28dB */      {0x0070, 0x4},
+	/* 27.75dB */   {0x006F, 0x4},
+	/* 27.5dB */    {0x006E, 0x4},
+	/* 27.25dB */	{0x006D, 0x4},
+    /* 27dB */      {0x006C, 0x4},
+	/* 26.75dB */   {0x006B, 0x4},
+	/* 26.5dB */    {0x006A, 0x4},
+	/* 26.25dB */	{0x0069, 0x4},
+    /* 26dB */      {0x0068, 0x4},
+	/* 25.75dB */   {0x0067, 0x4},
+	/* 25.5dB */    {0x0066, 0x4},
+	/* 25.25dB */	{0x0065, 0x4},
+	/* 25dB */      {0x0064, 0x4},
+	/* 24.75dB */   {0x0063, 0x4},
+	/* 24.5dB */    {0x0062, 0x4},
+	/* 24.25dB */	{0x0061, 0x4},
+    /* 24dB */      {0x0060, 0x4},
+	/* 23.75dB */   {0x005F, 0x3},
+	/* 23.5dB */    {0x005E, 0x3},
+	/* 23.25dB */	{0x005D, 0x3},
+    /* 23dB */      {0x005C, 0x3},
+	/* 22.75dB */   {0x005B, 0x3},
+	/* 22.5dB */    {0x005A, 0x3},
+	/* 22.25dB */	{0x0059, 0x3},
+    /* 22dB */      {0x0058, 0x3},
+	/* 21.75dB */   {0x0057, 0x3},
+	/* 21.5dB */    {0x0056, 0x3},
+	/* 21.25dB */	{0x0055, 0x3},
+	/* 21dB */      {0x0054, 0x3},
+	/* 20.75dB */   {0x0053, 0x3},
+	/* 20.5dB */    {0x0052, 0x3},
+	/* 20.25dB */	{0x0051, 0x3},
+    /* 20dB */      {0x0050, 0x3},
+	/* 19.75dB */   {0x004F, 0x3},
+	/* 19.5dB */    {0x004E, 0x3},
+	/* 19.25dB */	{0x004D, 0x3},
+    /* 19dB */      {0x004C, 0x3},
+	/* 18.75dB */   {0x004B, 0x3},
+	/* 18.5dB */    {0x004A, 0x3},
+	/* 18.25dB */	{0x0049, 0x3},
+    /* 18dB */      {0x0048, 0x3},
+	/* 17.75dB */   {0x0047, 0x2},
+	/* 17.5dB */    {0x0046, 0x2},
+	/* 17.25dB */	{0x0045, 0x2},
+	/* 17dB */      {0x0044, 0x2},
+	/* 16.75dB */   {0x0043, 0x2},
+	/* 16.5dB */    {0x0042, 0x2},
+	/* 16.25dB */	{0x0041, 0x2},
+    /* 16dB */      {0x0040, 0x2},
+	/* 15.75dB */   {0x003F, 0x2},
+	/* 15.5dB */    {0x003E, 0x2},
+	/* 15.25dB */	{0x003D, 0x2},
+    /* 15dB */      {0x003C, 0x2},
+	/* 14.75dB */   {0x003B, 0x2},
+	/* 14.5dB */    {0x003A, 0x2},
+	/* 14.25dB */	{0x0039, 0x2},
+    /* 14dB */      {0x0038, 0x2},
+	/* 13.75dB */   {0x0037, 0x2},
+	/* 13.5dB */    {0x0036, 0x2},
+	/* 13.25dB */	{0x0035, 0x2},
+	/* 13dB */      {0x0034, 0x2},
+	/* 12.75dB */   {0x0033, 0x2},
+	/* 12.5dB */    {0x0032, 0x2},
+	/* 12.25dB */	{0x0031, 0x2},
+    /* 12dB */      {0x0030, 0x2},
+	/* 11.75dB */   {0x002F, 0x1},
+	/* 11.5dB */    {0x002E, 0x1},
+	/* 11.25dB */	{0x002D, 0x1},
+    /* 11dB */      {0x002C, 0x1},
+	/* 10.75dB */   {0x002B, 0x1},
+	/* 10.5dB */    {0x002A, 0x1},
+	/* 10.25dB */	{0x0029, 0x1},
+    /* 10dB */      {0x0028, 0x1},
+	/* 9.75dB */    {0x0027, 0x1},
+	/* 9.5dB */     {0x0026, 0x1},
+	/* 9.25dB */	{0x0025, 0x1},
+	/* 9dB */       {0x0024, 0x1},
+	/* 8.75dB */    {0x0023, 0x1},
+	/* 8.5dB */     {0x0022, 0x1},
+	/* 8.25dB */	{0x0021, 0x1},
+    /* 8dB */       {0x0020, 0x1},
+	/* 7.75dB */    {0x001F, 0x1},
+	/* 7.5dB */     {0x001E, 0x1},
+	/* 7.25dB */	{0x001D, 0x1},
+    /* 7dB */       {0x001C, 0x1},
+	/* 6.75dB */    {0x001B, 0x1},
+	/* 6.5dB */     {0x001A, 0x1},
+	/* 6.25dB */	{0x0019, 0x1},
+    /* 6dB */       {0x0018, 0x1},
+	/* 5.75dB */    {0x0017, 0x0},
+	/* 5.5dB */     {0x0016, 0x0},
+	/* 5.25dB */	{0x0015, 0x0},
+	/* 5dB */       {0x0014, 0x0},
+	/* 4.75dB */    {0x0013, 0x0},
+	/* 4.5dB */     {0x0012, 0x0},
+	/* 4.25dB */	{0x0011, 0x0},
+    /* 4dB */       {0x0010, 0x0},
+	/* 3.75dB */    {0x000F, 0x0},
+	/* 3.5dB */     {0x000E, 0x0},
+	/* 3.25dB */	{0x000D, 0x0},
+    /* 3dB */       {0x000C, 0x0},
+	/* 2.75dB */    {0x000B, 0x0},
+	/* 2.5dB */     {0x000A, 0x0},
+	/* 2.25dB */	{0x0009, 0x0},
+    /* 2dB */       {0x0008, 0x0},
+	/* 1.75dB */    {0x0007, 0x0},
+	/* 1.5dB */     {0x0006, 0x0},
+	/* 1.25dB */	{0x0005, 0x0},
+	/* 1dB */       {0x0004, 0x0},
+	/* 0.75dB */    {0x0003, 0x0},
+	/* 0.5dB */     {0x0002, 0x0},
+	/* 0.25dB */	{0x0001, 0x0},
+	/* 0dB */   	{0x0000, 0x0}
+};
+	
+
 //****************************************************************************
 // local function declarations
 //****************************************************************************
@@ -1845,14 +2032,14 @@ csl_caph_Mic_GainMapping_t csl_caph_gain_GetMicMappingGain(Int16 gain)
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_gain_GetMicMappingGain::gain=0x%x\n", gain));
     if (gain >= Mic_GainMappingTable[AMIC_GAIN_LEVEL_NUM-1].micGain)
     {
-        memcpy(&outGain, &Mic_GainMappingTable[AMIC_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Mic_Gain_t));
+        memcpy(&outGain, &Mic_GainMappingTable[AMIC_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Mic_GainMapping_t));
         _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "micPGA=0x%x, micCICFineScale=0x%x, micCICBitSelect=0x%x\n", outGain.micPGA, outGain.micCICFineScale, outGain.micCICBitSelect));
         return outGain;	    
     }
     else
     if (gain <= Mic_GainMappingTable[0].micGain)
     {
-        memcpy(&outGain, &Mic_GainMappingTable[0], sizeof(csl_caph_Mic_Gain_t));
+        memcpy(&outGain, &Mic_GainMappingTable[0], sizeof(csl_caph_Mic_GainMapping_t));
         _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "micPGA=0x%x, micCICFineScale=0x%x, micCICBitSelect=0x%x\n", outGain.micPGA, outGain.micCICFineScale, outGain.micCICBitSelect));
         return outGain;	    
     }
@@ -1861,7 +2048,7 @@ csl_caph_Mic_GainMapping_t csl_caph_gain_GetMicMappingGain(Int16 gain)
     {
         if(gain == Mic_GainMappingTable[i].micGain)
         {
-            memcpy(&outGain, &Mic_GainMappingTable[i], sizeof(csl_caph_Mic_Gain_t));
+            memcpy(&outGain, &Mic_GainMappingTable[i], sizeof(csl_caph_Mic_GainMapping_t));
             _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "micPGA=0x%x, micCICFineScale=0x%x, micCICBitSelect=0x%x\n", outGain.micPGA, outGain.micCICFineScale, outGain.micCICBitSelect));
             return outGain;	    
     	}	
@@ -1971,29 +2158,29 @@ csl_caph_Spkr_Gain_t csl_caph_gain_GetSpkrGain_Q1_14(csl_caph_SPKR_Path_e spkr, 
 
 /****************************************************************************
 *
-*  Function Name: csl_caph_Mixer_Gain_t csl_caph_gain_GetMixerGain(Int16 gain)
+*  Function Name: csl_caph_Mixer_GainMapping_t csl_caph_gain_GetMixerGain(Int16 gain)
 *
 *  Description: read the mixer input gain/output fine/coarse gain.
 *
 ****************************************************************************/
-csl_caph_Mixer_Gain_t csl_caph_gain_GetMixerGain(Int16 gain)
+csl_caph_Mixer_GainMapping_t csl_caph_gain_GetMixerGain(Int16 gain)
 {
-    csl_caph_Mixer_Gain_t outGain;
+    csl_caph_Mixer_GainMapping_t outGain;
     UInt8 i = 0;
-    memset(&outGain, 0, sizeof(csl_caph_Mixer_Gain_t));
+    memset(&outGain, 0, sizeof(csl_caph_Mixer_GainMapping_t));
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_gain_GetMixerGain::gain=0x%x\n", gain));
 
     if (gain >= Mixer_GainTable[0].hwGain)
     {
-        memcpy(&outGain, &Mixer_GainTable[0], sizeof(csl_caph_Mixer_Gain_t));
-        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputGain));
+        memcpy(&outGain, &Mixer_GainTable[0], sizeof(csl_caph_Mixer_GainMapping_t));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputFineGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputFineGain));
         return outGain;	    
     }
     else
     if (gain <= Mixer_GainTable[MIXER_GAIN_LEVEL_NUM-1].hwGain)
     {
-        memcpy(&outGain, &Mixer_GainTable[MIXER_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Mixer_Gain_t));
-        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputGain));
+        memcpy(&outGain, &Mixer_GainTable[MIXER_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Mixer_GainMapping_t));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputFineGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputFineGain));
         return outGain;	    
     }
     
@@ -2001,8 +2188,51 @@ csl_caph_Mixer_Gain_t csl_caph_gain_GetMixerGain(Int16 gain)
     {
         if(gain == Mixer_GainTable[i].hwGain)
         {
-            memcpy(&outGain, &Mixer_GainTable[i], sizeof(csl_caph_Mixer_Gain_t));
-            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputGain));
+            memcpy(&outGain, &Mixer_GainTable[i], sizeof(csl_caph_Mixer_GainMapping_t));
+            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputFineGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputFineGain));
+            return outGain;	    
+	    }	
+    }
+    //Should not run to here.
+    audio_xassert(0,0);
+    return outGain;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_Mixer_GainMapping2_t csl_caph_gain_GetMixerGain2(Int16 gain)
+*
+*  Description: read the mixer output coarse gain.
+*
+****************************************************************************/
+csl_caph_Mixer_GainMapping2_t csl_caph_gain_GetMixerOutputCoarseGain(Int16 gain)
+{
+    csl_caph_Mixer_GainMapping2_t outGain;
+    UInt8 i = 0;
+    memset(&outGain, 0, sizeof(csl_caph_Mixer_GainMapping2_t));
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_gain_GetMixerGain::gain=0x%x\n", gain));
+
+    if (gain >= Mixer_GainTable2[0].hwGain)
+    {
+        memcpy(&outGain, &Mixer_GainTable2[0], sizeof(csl_caph_Mixer_GainMapping2_t));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerOutputCoarseGain=0x%x\n", outGain.hwGain, outGain.mixerOutputCoarseGain));
+        return outGain;	    
+    }
+    else
+    if (gain <= Mixer_GainTable2[MIXER_GAIN_LEVEL_NUM2-1].hwGain)
+    {
+        memcpy(&outGain, &Mixer_GainTable2[MIXER_GAIN_LEVEL_NUM2-1], sizeof(csl_caph_Mixer_GainMapping2_t));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerOutputCoarseGain=0x%x\n", outGain.hwGain, outGain.mixerOutputCoarseGain));
+        return outGain;	    
+    }
+    
+    for (i = 1; i<MIXER_GAIN_LEVEL_NUM2-1; i++)
+    {
+        if(gain == Mixer_GainTable2[i].hwGain)
+        {
+            memcpy(&outGain, &Mixer_GainTable2[i], sizeof(csl_caph_Mixer_GainMapping2_t));
+            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerOutputCoarseGain=0x%x\n", outGain.hwGain, outGain.mixerOutputCoarseGain));
             return outGain;	    
 	    }	
     }

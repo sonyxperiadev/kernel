@@ -331,8 +331,8 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
     CHAL_SSPI_PROT_t mode;
 //	CHAL_SSPI_CLK_SRC_t clk_source;
 	CHAL_SSPI_FIFO_DATA_PACK_t fifo_pack;
-	cUInt32 clk_div;
-	cUInt32 temp;
+	cUInt32 clk_div = 0;
+	cUInt32 temp = 0;
 //    CSL_SSPI_HANDLE_T *pDevice = (CSL_SSPI_HANDLE_T *)handle;
 
     if(config->prot == SSPI_HW_I2S_MODE1)

@@ -151,10 +151,12 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 {
     AUDDRV_HWCTRL_CONFIG_t config;
 	UInt32 dev = 0;
+    Int16 tempGain = 0;
     AudioMode_t mode = AUDIO_MODE_HANDSET;
 
     pData = pData;
     mode = mode; 
+    tempGain = tempGain;
     Log_DebugPrintf(LOGID_AUDIO, 
                     "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%ld*\n\r", 
                     mic, speaker, sample_rate);
@@ -222,14 +224,22 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 	    config.source = AUDDRV_DEV_DSP;
 	}
 	// Linux only change - End
+
 #ifdef CONFIG_AUDIO_BUILD
-    config.mixGain.mixInGainL = AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l;	
-    config.mixGain.mixOutGainL = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l;	
-    config.mixGain.mixOutCoarseGainL = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l;	
-    config.mixGain.mixInGainR = AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r;	
-    config.mixGain.mixOutGainR = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r;	
-    config.mixGain.mixOutCoarseGainR = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r;
-#endif		
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
+    config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
+    config.mixGain.mixOutGainL = AUDDRV_GetMixerOutputFineGain(tempGain);	
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l);
+    config.mixGain.mixOutCoarseGainL = AUDDRV_GetMixerOutputCoarseGain(tempGain);
+
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r);	
+    config.mixGain.mixInGainR = AUDDRV_GetMixerInputGain(tempGain);	
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r);
+    config.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);	
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r);
+    config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
+#endif
 
     ((AUDDRV_PathID_t *)pData)->dlPathID = AUDDRV_HWControl_EnablePath(config);
 
@@ -434,6 +444,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     AUDDRV_HWCTRL_CONFIG_t config;	
     AudioMode_t mode = AUDIO_MODE_HANDSET;
 	UInt32 dev = 0;
+    Int16 tempGain = 0;
 #if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 #if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))    
     UInt32 *memAddr = 0;
@@ -441,6 +452,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 #endif
 #endif      
     mode = mode; 
+    tempGain = tempGain;
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_SelectMicSpkr mic %d, spkr %d *\n\r", mic, speaker);
 
     memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
@@ -531,12 +543,19 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 #endif		
 	}	
 #ifdef CONFIG_AUDIO_BUILD	
-	config.mixGain.mixInGainL = AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l;	
-	config.mixGain.mixOutGainL = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l;	
-	config.mixGain.mixOutCoarseGainL = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l;	
-	config.mixGain.mixInGainR = AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r;	
-	config.mixGain.mixOutGainR = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r;	
-	config.mixGain.mixOutCoarseGainR = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r;
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
+    config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
+    config.mixGain.mixOutGainL = AUDDRV_GetMixerOutputFineGain(tempGain);	
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l);
+    config.mixGain.mixOutCoarseGainL = AUDDRV_GetMixerOutputCoarseGain(tempGain);
+
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r);	
+    config.mixGain.mixInGainR = AUDDRV_GetMixerInputGain(tempGain);	
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r);
+    config.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);	
+    tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r);
+    config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
 #endif		
 	
 	((AUDDRV_PathID_t *)pData)->dlPathID = AUDDRV_HWControl_EnablePath(config);
@@ -1068,7 +1087,7 @@ void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode,
 //
 // Function Name: AUDDRV_SetHWGain
 //
-// Description:   Set HW Gain
+// Description:   Set HW Gain. In Q13.2
 //
 //=============================================================================
 
@@ -1101,7 +1120,7 @@ void AUDDRV_SetHWGain(AUDDRV_HW_GAIN_e hw, UInt32 gain)
 	}
 
 
-	AUDDRV_HWControl_SetHWGain(hw, gain, dev);
+	AUDDRV_HWControl_SetHWGain(NULL, hw, gain, dev);
 	return;
 }
 //=============================================================================

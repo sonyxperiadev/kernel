@@ -545,6 +545,7 @@ void AUDCTRL_DisableRecord(
 *
 *  @param  src	(in)  record source
 *  @param  mic	(in)  microphone selection
+*  @param  gainFormat	(in)  the gain format
 *  @param  gainL	(in)  the left channel gain to set
 *  @param  gainR	(in)  the right channel gain to set
 *
@@ -554,6 +555,7 @@ void AUDCTRL_DisableRecord(
 void AUDCTRL_SetRecordGain(
 				AUDIO_HW_ID_t			src,
 				AUDCTRL_MICROPHONE_t	mic,
+                AUDIO_GAIN_FORMAT_t     gainFormat,
 				UInt32					gainL,
 				UInt32					gainR
 				);
@@ -638,6 +640,34 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 *
 ****************************************************************************/
 void AUDCTRL_SetGainOnExternalAmp(UInt32 gain);
+
+
+/**
+*  @brief  Load the UL gains from Sysparm
+*
+*  @param  ulPathID	(in)  UL path ID  
+*  @param  mic	(in)  microphone selection
+*  @param  isDSPNeeded	(in)  Does UL path go through DSP?  
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded);
+
+
+/**
+*  @brief  Load the DL gains from Sysparm
+*
+*  @param  dlPathID	(in)  DL path ID  
+*  @param  mic	(in)  microphone selection
+*  @param  isDSPNeeded	(in)  Does DL path go through DSP?  
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_LoadSpkrGain(AUDDRV_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded);
+
+
 
 /********************************************************************
 *  @brief  mute/unmute a record path

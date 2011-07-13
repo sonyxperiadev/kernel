@@ -33,6 +33,7 @@ Broadcom's express prior written consent.
 #include "csl_caph.h"
 #include "csl_caph_dma.h"
 #include "csl_caph_hwctrl.h"
+#include "csl_caph_gain.h"
 #include "drv_caph.h"
 #include "drv_audio_common.h"
 #include "drv_caph_hwctrl.h"
@@ -53,6 +54,8 @@ Broadcom's express prior written consent.
 //****************************************************************************
 //                         L O C A L   S E C T I O N
 //****************************************************************************
+//#define _DBG_(a)
+#define _DBG_(a) (a)
 
 //****************************************************************************
 // local macro declarations
@@ -248,7 +251,7 @@ Result_t AUDDRV_HWControl_Init(void)
 ****************************************************************************/
 Result_t AUDDRV_HWControl_DeInit(void)
 {
-    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_DeInit:: \n");
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_DeInit:: \n"));
 
 #ifdef CONFIG_AUDIO_BUILD
 	// this is just for fpga test. in real code may not need this.
@@ -304,8 +307,7 @@ AUDDRV_PathID AUDDRV_HWControl_EnablePath(AUDDRV_HWCTRL_CONFIG_t config)
 {
     CSL_CAPH_HWCTRL_CONFIG_t cslConfig;
     CSL_CAPH_PathID cslPathID = 0;
-    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_EnablePath::  Source: %d, Sink: %d\r\n",
-            config.source, config.sink);
+
 	if(hwClkEnabled == FALSE)
     {
         AUDDRV_ControlHWClock(TRUE);
@@ -325,6 +327,9 @@ AUDDRV_PathID AUDDRV_HWControl_EnablePath(AUDDRV_HWCTRL_CONFIG_t config)
     memcpy(&(cslConfig.mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
 
     cslPathID = csl_caph_hwctrl_EnablePath(cslConfig); 
+
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_EnablePath::  Source: %d, Sink: %d, pathID %d.\r\n",
+            config.source, config.sink, cslPathID));
 	return (AUDDRV_PathID)cslPathID;
 }
 
@@ -338,9 +343,9 @@ AUDDRV_PathID AUDDRV_HWControl_EnablePath(AUDDRV_HWCTRL_CONFIG_t config)
 Result_t AUDDRV_HWControl_DisablePath(AUDDRV_HWCTRL_CONFIG_t config)
 {
     CSL_CAPH_HWCTRL_CONFIG_t cslConfig;
-    Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "AUDDRV_HWControl_DisablePath:: streamID: %d\r\n",
-                    config.streamID);
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO,
+                    "AUDDRV_HWControl_DisablePath:: streamID: %d, pathID %d.\r\n",
+                    config.streamID, config.pathID));
     memset(&cslConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
     cslConfig.streamID = AUDDRV_GetCSLStreamID(config.streamID);
     cslConfig.pathID = (CSL_CAPH_PathID)(config.pathID);
@@ -366,9 +371,9 @@ Result_t AUDDRV_HWControl_DisablePath(AUDDRV_HWCTRL_CONFIG_t config)
 Result_t AUDDRV_HWControl_PausePath(AUDDRV_HWCTRL_CONFIG_t config)
 {
     CSL_CAPH_HWCTRL_CONFIG_t cslConfig;
-    Log_DebugPrintf(LOGID_SOC_AUDIO, 
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "AUDDRV_HWControl_PausePath:: streamID: %d\r\n",
-                    config.streamID);
+                    config.streamID));
     memset(&cslConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
     cslConfig.streamID = AUDDRV_GetCSLStreamID(config.streamID);
     cslConfig.pathID = (CSL_CAPH_PathID)(config.pathID);
@@ -387,8 +392,9 @@ Result_t AUDDRV_HWControl_PausePath(AUDDRV_HWCTRL_CONFIG_t config)
 Result_t AUDDRV_HWControl_ResumePath(AUDDRV_HWCTRL_CONFIG_t config)
 {
     CSL_CAPH_HWCTRL_CONFIG_t cslConfig;
-    Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "AUDDRV_HWControl_ResumePath:: streamID: %d\r\n",config.streamID);
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
+                    "AUDDRV_HWControl_ResumePath:: streamID: %d\r\n",
+                    config.streamID));
     memset(&cslConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
     cslConfig.streamID = AUDDRV_GetCSLStreamID(config.streamID);
     cslConfig.pathID = (CSL_CAPH_PathID)(config.pathID);
@@ -741,8 +747,8 @@ Result_t AUDDRV_HWControl_DisableEANC(void)
 ****************************************************************************/
 Result_t AUDDRV_HWControl_SetDSPSharedMeMForIHF(UInt32 addr)
 {
-	Log_DebugPrintf(LOGID_SOC_AUDIO, 
-		    "AUDDRV_HWControl_SetDSPSharedMeMForIHF:: \n");
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
+		    "AUDDRV_HWControl_SetDSPSharedMeMForIHF:: \n"));
     csl_caph_hwctrl_setDSPSharedMemForIHF(addr);
     return RESULT_OK;
 }
@@ -852,7 +858,7 @@ void AUDDRV_SetAudioLoopback(
 void AUDDRV_HWControl_EnableVibrator(Boolean enable_vibrator, AUDDRV_VIBRATOR_MODE_Enum_t mode)
 {
 
-Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_EnableVibrator \n");
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_EnableVibrator \n"));
 
 	csl_caph_hwctrl_vibrator(mode, enable_vibrator);
 
@@ -873,7 +879,7 @@ Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_EnableVibrator \n");
 void AUDDRV_HWControl_VibratorStrength(UInt32 strength)
 {
 
-Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_VibratorStrength strength = 0x%lx \n",strength);
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_VibratorStrength strength = 0x%lx \n",strength));
 
 	csl_caph_hwctrl_vibrator_strength(strength); 
 
@@ -889,20 +895,28 @@ Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_HWControl_VibratorStrength strength = 0
 *                                      fineGainR,
 *                                      coarseGainR)		
 *
-*  Description: Set Mixer output gain in HW Mixer. Gain in register value format.
+*  Description: Set Mixer output gain in HW Mixer. Gain in Q13.2.
 *
 ****************************************************************************/
 Result_t AUDDRV_HWControl_SetMixOutputGain(AUDDRV_PathID pathID, 
                                       UInt32 fineGainL,
                                       UInt32 coarseGainL,
-				      UInt32 fineGainR,
+                				      UInt32 fineGainR,
                                       UInt32 coarseGainR)		
 {
+    csl_caph_Mixer_GainMapping_t outGainL, outGainR;
+    csl_caph_Mixer_GainMapping2_t outGain2L, outGain2R;
+
+    outGainL = csl_caph_gain_GetMixerGain((Int16)fineGainL);
+    outGainR = csl_caph_gain_GetMixerGain((Int16)fineGainR);
+    outGain2L = csl_caph_gain_GetMixerOutputCoarseGain((Int16)coarseGainL);
+    outGain2R = csl_caph_gain_GetMixerOutputCoarseGain((Int16)coarseGainR);
+
     csl_caph_hwctrl_SetMixOutGain((CSL_CAPH_PathID)pathID, 
-                                      (UInt16)fineGainL,
-                                      (UInt16)coarseGainL,
-				      (UInt16)fineGainR,
-                                      (UInt16)coarseGainR);
+                                      outGainL.mixerOutputFineGain,
+                                      outGain2L.mixerOutputCoarseGain,
+                                      outGainR.mixerOutputFineGain,
+                                      outGain2R.mixerOutputCoarseGain);
     return RESULT_OK;
 }
 /****************************************************************************
@@ -925,16 +939,18 @@ Result_t AUDDRV_HWControl_SetMixingGain(AUDDRV_PathID pathID,
 
 /****************************************************************************
 *
-*  Function Name:void AUDDRV_HWControl_SetHWGain(AUDDRV_HW_GAIN_e hw,
+*  Function Name:void AUDDRV_HWControl_SetHWGain(AUDDRV_PathID pathID, 
+*                       AUDDRV_HW_GAIN_e hw,
 *  						UInt32 gain,
 *  						AUDDRV_DEVICE_e dev)
 *
-*  Description: Set Hw gain. For audio tuning purpose only.
+*  Description: Set Hw gain. Gain in Q13.2
 *
 ****************************************************************************/
-void  AUDDRV_HWControl_SetHWGain(AUDDRV_HW_GAIN_e hw, UInt32 gain, AUDDRV_DEVICE_e dev)
+void  AUDDRV_HWControl_SetHWGain(AUDDRV_PathID pathID, AUDDRV_HW_GAIN_e hw, UInt32 gain, AUDDRV_DEVICE_e dev)
 {
-	csl_caph_hwctrl_SetHWGain(AUDDRV_GetCSLHWGainSelect(hw), 
+	csl_caph_hwctrl_SetHWGain((CSL_CAPH_PathID)pathID, 
+            AUDDRV_GetCSLHWGainSelect(hw), 
 			gain, 
 			AUDDRV_GetCSLDevice(dev));
 	return;

@@ -87,6 +87,162 @@ extern AUDDRV_SPKR_Enum_t voiceCallSpkr;
 // Private Type and Constant declarations
 //=============================================================================
 
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+
+#ifdef CONFIG_AUDIO_BUILD
+typedef struct
+{
+    Int16 gain;
+    PMU_HS_Gain_t hsPMUGain;
+}HS_PMU_GainMapping_t;
+
+typedef struct
+{
+    Int16 gain;
+    PMU_IHF_Gain_t ihfPMUGain;
+}IHF_PMU_GainMapping_t;
+
+
+static HS_PMU_GainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM]=
+{
+    /* Gain in Q13.2,   HS PMU Gain */
+    {0x8000,             PMU_HSGAIN_MUTE},
+    {0xFEF8,             PMU_HSGAIN_66DB_N},
+    {0xFF04,             PMU_HSGAIN_63DB_N},
+    {0xFF10,             PMU_HSGAIN_60DB_N},
+    {0xFF1C,             PMU_HSGAIN_57DB_N},
+    {0xFF28,             PMU_HSGAIN_54DB_N},
+    {0xFF34,             PMU_HSGAIN_51DB_N},
+    {0xFF40,             PMU_HSGAIN_48DB_N},
+    {0xFF4C,             PMU_HSGAIN_45DB_N},
+    {0xFF58,             PMU_HSGAIN_42DB_N},
+    {0xFF5E,             PMU_HSGAIN_40P5DB_N},
+    {0xFF64,             PMU_HSGAIN_39DB_N},
+    {0xFF6A,             PMU_HSGAIN_37P5DB_N},
+    {0xFF70,             PMU_HSGAIN_36DB_N},
+    {0xFF76,             PMU_HSGAIN_34P5DB_N},
+    {0xFF7C,             PMU_HSGAIN_33DB_N},
+    {0xFF82,             PMU_HSGAIN_31P5DB_N},
+    {0xFF88,             PMU_HSGAIN_30DB_N},
+    {0xFF8E,             PMU_HSGAIN_28P5DB_N},
+    {0xFF94,             PMU_HSGAIN_27DB_N},
+    {0xFF9A,             PMU_HSGAIN_25P5DB_N},
+    {0xFFA0,             PMU_HSGAIN_24DB_N},
+    {0xFFA6,             PMU_HSGAIN_22P5DB_N},
+    {0xFFA8,             PMU_HSGAIN_22DB_N},
+    {0xFFAA,             PMU_HSGAIN_21P5DB_N},
+    {0xFFAC,             PMU_HSGAIN_21DB_N},
+    {0xFFAE,             PMU_HSGAIN_20P5DB_N},
+    {0xFFB0,             PMU_HSGAIN_20DB_N},
+    {0xFFB2,             PMU_HSGAIN_19P5DB_N},
+    {0xFFB4,             PMU_HSGAIN_19DB_N},
+    {0xFFB6,             PMU_HSGAIN_18P5DB_N},
+    {0xFFB8,             PMU_HSGAIN_18DB_N},
+    {0xFFBA,             PMU_HSGAIN_17P5DB_N},
+    {0xFFBC,             PMU_HSGAIN_17DB_N},
+    {0xFFBE,             PMU_HSGAIN_16P5DB_N},
+    {0xFFC0,             PMU_HSGAIN_16DB_N},
+    {0xFFC2,             PMU_HSGAIN_15P5DB_N},
+    {0xFFC4,             PMU_HSGAIN_15DB_N},
+    {0xFFC6,             PMU_HSGAIN_14P5DB_N},
+    {0xFFC8,             PMU_HSGAIN_14DB_N},
+    {0xFFCA,             PMU_HSGAIN_13P5DB_N},
+    {0xFFCC,             PMU_HSGAIN_13DB_N},
+    {0xFFCE,             PMU_HSGAIN_12P5DB_N},
+    {0xFFD0,             PMU_HSGAIN_12DB_N},
+    {0xFFD2,             PMU_HSGAIN_11P5DB_N},
+    {0xFFD4,             PMU_HSGAIN_11DB_N},
+    {0xFFD6,             PMU_HSGAIN_10P5DB_N},
+    {0xFFD8,             PMU_HSGAIN_10DB_N},
+    {0xFFDA,             PMU_HSGAIN_9P5DB_N},
+    {0xFFDC,             PMU_HSGAIN_9DB_N},
+    {0xFFDE,             PMU_HSGAIN_8P5DB_N},
+    {0xFFE0,             PMU_HSGAIN_8DB_N},
+    {0xFFE2,             PMU_HSGAIN_7P5DB_N},
+    {0xFFE4,             PMU_HSGAIN_7DB_N},
+    {0xFFE6,             PMU_HSGAIN_6P5DB_N},
+    {0xFFE8,             PMU_HSGAIN_6DB_N},
+    {0xFFEA,             PMU_HSGAIN_5P5DB_N},
+    {0xFFEC,             PMU_HSGAIN_5DB_N},
+    {0xFFEE,             PMU_HSGAIN_4P5DB_N},
+    {0xFFF0,             PMU_HSGAIN_4DB_N},
+    {0xFFF2,             PMU_HSGAIN_3P5DB_N},
+    {0xFFF4,             PMU_HSGAIN_3DB_N},
+    {0xFFF6,             PMU_HSGAIN_2P5DB_N},
+    {0xFFF8,             PMU_HSGAIN_2DB_N}
+};
+
+static IHF_PMU_GainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM]=
+{
+    /* Gain in Q13.2,   IHF PMU Gain */
+    {0x8000,             PMU_IHFGAIN_MUTE},
+    {0xFF10,             PMU_IHFGAIN_60DB_N},
+    {0xFF1C,             PMU_IHFGAIN_57DB_N},
+    {0xFF28,             PMU_IHFGAIN_54DB_N},
+    {0xFF34,             PMU_IHFGAIN_51DB_N},
+    {0xFF40,             PMU_IHFGAIN_48DB_N},
+    {0xFF4C,             PMU_IHFGAIN_45DB_N},
+    {0xFF58,             PMU_IHFGAIN_42DB_N},
+    {0xFF64,             PMU_IHFGAIN_39DB_N},
+    {0xFF70,             PMU_IHFGAIN_36DB_N},
+    {0xFF76,             PMU_IHFGAIN_34P5DB_N},
+    {0xFF7C,             PMU_IHFGAIN_33DB_N},
+    {0xFF82,             PMU_IHFGAIN_31P5DB_N},
+    {0xFF88,             PMU_IHFGAIN_30DB_N},
+    {0xFF8E,             PMU_IHFGAIN_28P5DB_N},
+    {0xFF94,             PMU_IHFGAIN_27DB_N},
+    {0xFF9A,             PMU_IHFGAIN_25P5DB_N},
+    {0xFFA0,             PMU_IHFGAIN_24DB_N},
+    {0xFFA6,             PMU_IHFGAIN_22P5DB_N},
+    {0xFFAC,             PMU_IHFGAIN_21DB_N},
+    {0xFFB2,             PMU_IHFGAIN_19P5DB_N},
+    {0xFFB8,             PMU_IHFGAIN_18DB_N},
+    {0xFFBE,             PMU_IHFGAIN_16P5DB_N},
+    {0xFFC0,             PMU_IHFGAIN_16DB_N},
+    {0xFFC2,             PMU_IHFGAIN_15P5DB_N},
+    {0xFFC4,             PMU_IHFGAIN_15DB_N},
+    {0xFFC6,             PMU_IHFGAIN_14P5DB_N},
+    {0xFFC8,             PMU_IHFGAIN_14DB_N},
+    {0xFFCA,             PMU_IHFGAIN_13P5DB_N},
+    {0xFFCC,             PMU_IHFGAIN_13DB_N},
+    {0xFFCE,             PMU_IHFGAIN_12P5DB_N},
+    {0xFFD0,             PMU_IHFGAIN_12DB_N},
+    {0xFFD2,             PMU_IHFGAIN_11P5DB_N},
+    {0xFFD4,             PMU_IHFGAIN_11DB_N},
+    {0xFFD6,             PMU_IHFGAIN_10P5DB_N},
+    {0xFFD8,             PMU_IHFGAIN_10DB_N},
+    {0xFFDA,             PMU_IHFGAIN_9P5DB_N},
+    {0xFFDC,             PMU_IHFGAIN_9DB_N},
+    {0xFFDE,             PMU_IHFGAIN_8P5DB_N},
+    {0xFFE0,             PMU_IHFGAIN_8DB_N},
+    {0xFFE2,             PMU_IHFGAIN_7P5DB_N},
+    {0xFFE4,             PMU_IHFGAIN_7DB_N},
+    {0xFFE6,             PMU_IHFGAIN_6P5DB_N},
+    {0xFFE8,             PMU_IHFGAIN_6DB_N},
+    {0xFFEA,             PMU_IHFGAIN_5P5DB_N},
+    {0xFFEC,             PMU_IHFGAIN_5DB_N},
+    {0xFFEE,             PMU_IHFGAIN_4P5DB_N},
+    {0xFFF0,             PMU_IHFGAIN_4DB_N},
+    {0xFFF2,             PMU_IHFGAIN_3P5DB_N},
+    {0xFFF4,             PMU_IHFGAIN_3DB_N},
+    {0xFFF6,             PMU_IHFGAIN_2P5DB_N},
+    {0xFFF8,             PMU_IHFGAIN_2DB_N},
+    {0xFFFA,             PMU_IHFGAIN_1P5DB_N},
+    {0xFFFC,             PMU_IHFGAIN_1DB_N},
+    {0xFFFE,             PMU_IHFGAIN_P5DB_N},
+    {0x0000,             PMU_IHFGAIN_0DB},
+    {0x0002,             PMU_IHFGAIN_P5DB_P},
+    {0x0004,             PMU_IHFGAIN_1DB_P},
+    {0x0006,             PMU_IHFGAIN_1P5DB_P},
+    {0x0008,             PMU_IHFGAIN_2DB_P},
+    {0x000A,             PMU_IHFGAIN_2P5DB_P},
+    {0x000C,             PMU_IHFGAIN_3DB_P},
+    {0x000E,             PMU_IHFGAIN_3P5DB_P},
+    {0x0010,             PMU_IHFGAIN_4DB_P},
+};
+#endif // CONFIG_AUDIO_BUILD
+#endif
+
 typedef struct node
 {
     AUDCTRL_Config_t data;
@@ -260,7 +416,7 @@ static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
 #endif
 #endif
 static void AUDCTRL_CreateTable(void);
-//static void AUDCTRL_DeleteTable(void);
+static void AUDCTRL_DeleteTable(void);
 static AUDDRV_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID);
 static AUDDRV_DEVICE_e GetDeviceFromMic(AUDCTRL_MICROPHONE_t mic);
 static AUDDRV_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr);
@@ -273,6 +429,12 @@ static AUDDRV_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
 static Int16 AUDCTRL_ConvertScale2Millibel(Int16 ScaleValue);
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+#ifdef CONFIG_AUDIO_BUILD
+static HS_PMU_GainMapping_t getHSPMUGain(Int16 gain);
+static IHF_PMU_GainMapping_t getIHFPMUGain(Int16 gain);
+#endif // CONFIG_AUDIO_BUILD
+#endif
 #endif
 //=============================================================================
 // Functions
@@ -306,7 +468,11 @@ void AUDCTRL_Init (void)
 //============================================================================
 void AUDCTRL_Shutdown(void)
 {
+	(void)AUDDRV_HWControl_DeInit();
+#if  ( defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
     AUDDRV_Shutdown();
+    AUDCTRL_DeleteTable();
+#endif    
 }
 
 #if  ( defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
@@ -371,6 +537,10 @@ void AUDCTRL_EnableTelephony(
 	
 	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
 
+    //Load the mic gains from sysparm.
+    AUDCTRL_LoadMicGain(telephonyPathID.ulPathID, mic, TRUE);
+    //Load the speaker gains form sysparm.
+    AUDCTRL_LoadSpkrGain(telephonyPathID.dlPathID, speaker, TRUE);
 
 	//Save UL path to the path table.
 	data.pathID = telephonyPathID.ulPathID;
@@ -464,6 +634,7 @@ void AUDCTRL_DisableTelephony(
 #endif
 	return;
 }
+
 //============================================================================
 //
 // Function Name: AUDCTRL_SetTelephonySpkrVolume
@@ -480,7 +651,6 @@ void AUDCTRL_SetTelephonySpkrVolume(
 {
 #if defined(FUSE_APPS_PROCESSOR) && defined(CAPI2_INCLUDED)
 #ifdef CONFIG_AUDIO_BUILD
-	UInt32 gainHW, gainHW2, gainHW3, gainHW4;
 	Int16 dspDLGain = 0;
 	Int16 pmuGain = 0;
 	Int16	digital_gain_dB = 0;
@@ -488,7 +658,6 @@ void AUDCTRL_SetTelephonySpkrVolume(
 	AUDDRV_PathID pathID = 0;
 	OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
 
-	gainHW = gainHW2 = gainHW3 = gainHW4 = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x\n", volume);
 	if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
@@ -599,17 +768,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 		audio_xassert(0,pathID);
 		return;
 	}
-	
-	//Set Mixer input/output gain from sysparm.
-        gainHW = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l;
-        gainHW2 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r;
-        (void)AUDDRV_HWControl_SetMixingGain(pathID, gainHW, gainHW2);
-	   
-        gainHW = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_l;
-        gainHW2 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l;
-        gainHW3 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_r;
-        gainHW4 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r;
-       (void) AUDDRV_HWControl_SetMixOutputGain(pathID, gainHW, gainHW2, gainHW3, gainHW4); 
+   
 #else
 	Int16 dspDLGain = 0;
 	UInt8	digital_gain_dB = 0;
@@ -730,10 +889,14 @@ void AUDCTRL_SetTelephonyMicGain(
 	Int16 dspULGain = 0;
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonyMicGain: gain = 0x%x\n", gain);
-	if ((gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
-	    ||(gain_format == AUDIO_GAIN_FORMAT_Q14_1))
+	if (gain_format == AUDIO_GAIN_FORMAT_Q14_1)
 	{
         gainTemp = gain<<1;
+    }
+    else
+	if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
+    {
+        gainTemp = gain<<2;
     }
     else	// If AUDIO_GAIN_FORMAT_Q1_14, does not support.
 	if (gain_format == AUDIO_GAIN_FORMAT_Q1_14)
@@ -768,8 +931,8 @@ void AUDCTRL_SetTelephonyMicGain(
 	
 	
 	AUDDRV_HWControl_SetSourceGain(pathID,
-                                        (UInt16) gain,
-                                        (UInt16) gain);
+                                        (UInt16) gainTemp,
+                                        (UInt16) gainTemp);
 	
 #else
 
@@ -831,6 +994,217 @@ void AUDCTRL_SetTelephonyMicMute(
 					(void*)&telephonyPathID);
 #endif
 }
+
+
+//============================================================================
+//
+// Function Name: AUDCTRL_LoadMicGain
+//
+// Description:   Load ul gain from sysparm.
+//
+//============================================================================
+void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded)
+{
+#ifdef CONFIG_AUDIO_BUILD
+    UInt16 gainTemp = 0;
+	Int16 dspULGain = 0;
+	AudioMode_t mode = AUDIO_MODE_HANDSET;
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_LoadMicGain\n");
+
+	// Set DSP UL gain from sysparm.
+	mode = AUDDRV_GetAudioMode();
+    if(isDSPNeeded == TRUE)
+    {
+	    dspULGain = AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
+	    audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, 
+				dspULGain, 0, 0, 0, 0);		
+    }
+
+    if((mic == AUDCTRL_MIC_MAIN) 
+       ||(mic == AUDCTRL_MIC_AUX)) 
+    {
+        // Set Mic PGA gain from sysparm.	
+      	gainTemp = AUDIO_GetParmAccessPtr()[mode].mic_pga;
+      	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_AMIC_PGA_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+
+        // Set AMic DGA coarse gain from sysparm.	
+       	gainTemp = AUDIO_GetParmAccessPtr()[mode].amic_dga_coarse_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_AMIC_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+	
+        // Set AMic DGA fine gain from sysparm.	
+       	gainTemp = AUDIO_GetParmAccessPtr()[mode].amic_dga_fine_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_AMIC_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+    }
+
+    if((mic == AUDCTRL_MIC_DIGI1) 
+       ||(mic == AUDCTRL_MIC_SPEECH_DIGI)) 
+    {
+        // Set DMic1 DGA coarse gain from sysparm.	
+      	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic1_dga_coarse_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_DMIC1_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+	
+        // Set DMic1 DGA fine gain from sysparm.	
+       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic1_dga_fine_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_DMIC1_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+    }
+
+    if((mic == AUDCTRL_MIC_DIGI2) 
+       ||(mic == AUDCTRL_MIC_SPEECH_DIGI)) 
+    {
+        // Set DMic2 DGA coarse gain from sysparm.	
+      	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic2_dga_coarse_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_DMIC2_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+	
+        // Set DMic2 DGA fine gain from sysparm.	
+       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic2_dga_fine_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_DMIC2_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+    }
+
+    if((AUDDRV_IsDualMicEnabled()==TRUE)
+       ||(mic == AUDCTRL_MIC_EANC_DIGI)) 
+    {
+        // Set DMic3 DGA coarse gain from sysparm.	
+       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic3_dga_coarse_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_DMIC3_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+	
+        // Set DMic3 DGA fine gain from sysparm.	
+       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic3_dga_fine_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_DMIC3_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+	
+        // Set DMic4 DGA coarse gain from sysparm.	
+       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic4_dga_coarse_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_DMIC4_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+	
+        // Set DMic4 DGA fine gain from sysparm.	
+       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic4_dga_fine_gain;
+       	AUDDRV_HWControl_SetHWGain(ulPathID,
+                                AUDDRV_DMIC4_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                AUDDRV_DEV_NONE);
+    }
+    return;
+#endif
+}
+
+
+
+//============================================================================
+//
+// Function Name: AUDCTRL_LoadSpkrGain
+//
+// Description:   Load dl gain from sysparm.
+//
+//============================================================================
+void AUDCTRL_LoadSpkrGain(AUDDRV_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded)
+{
+#ifdef CONFIG_AUDIO_BUILD
+	Int16 dspDLGain = 0;
+	Int16 pmuGain = 0;
+    UInt16 gainTemp = 0;
+	AudioMode_t mode = AUDIO_MODE_HANDSET;
+	AUDDRV_DEVICE_e dev = AUDDRV_DEV_NONE;
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_LoadSpkrGain\n");
+
+	mode = AUDDRV_GetAudioMode();
+
+	// Set DSP DL gain from sysparm.
+    if(isDSPNeeded == TRUE)
+    {
+	    dspDLGain = AUDIO_GetParmAccessPtr()[mode].echo_nlp_downlink_volume_ctrl;
+	    audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
+						dspDLGain, 0, 0, 0, 0);
+    }
+			
+
+    //Load HW Mixer gains from sysparm
+	if ((mode == AUDIO_MODE_HANDSET)
+		||(mode == AUDIO_MODE_HANDSET_WB)
+		||(mode == AUDIO_MODE_HAC)
+		||(mode == AUDIO_MODE_HAC_WB))		
+	{
+		dev = AUDDRV_DEV_EP;
+	}
+	else
+	if ((mode == AUDIO_MODE_HEADSET)
+		||(mode == AUDIO_MODE_HEADSET_WB)
+		||(mode == AUDIO_MODE_TTY)
+		||(mode == AUDIO_MODE_TTY_WB))
+		
+	{
+		dev = AUDDRV_DEV_HS;
+	}
+	else
+	if ((mode == AUDIO_MODE_SPEAKERPHONE)
+		||(mode == AUDIO_MODE_SPEAKERPHONE_WB))
+	{
+		dev = AUDDRV_DEV_IHF;
+	}
+
+	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l;
+	AUDDRV_HWControl_SetHWGain(dlPathID, 
+                               AUDDRV_SRCM_INPUT_GAIN_L, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r;
+	AUDDRV_HWControl_SetHWGain(dlPathID, 
+                               AUDDRV_SRCM_INPUT_GAIN_R, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l;
+	AUDDRV_HWControl_SetHWGain(dlPathID, 
+                               AUDDRV_SRCM_OUTPUT_COARSE_GAIN_L, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r;
+	AUDDRV_HWControl_SetHWGain(dlPathID, 
+                               AUDDRV_SRCM_OUTPUT_COARSE_GAIN_R, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l;
+	AUDDRV_HWControl_SetHWGain(dlPathID, 
+                               AUDDRV_SRCM_OUTPUT_FINE_GAIN_L, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r;
+	AUDDRV_HWControl_SetHWGain(dlPathID, 
+                               AUDDRV_SRCM_OUTPUT_FINE_GAIN_R, 
+                               (UInt32)gainTemp, dev);
+	
+	//Load PMU gain from sysparm.
+	pmuGain = AUDIO_GetParmAccessPtr()[mode].ext_speaker_pga_l;
+	SetGainOnExternalAmp(speaker, (void *)&pmuGain);
+	
+    return;
+#endif
+}
+
+
+
 
 //============================================================================
 //
@@ -898,6 +1272,11 @@ void AUDCTRL_EnablePlay(
     {
 		powerOnExternalAmp( spk, AudioUseExtSpkr, TRUE );
     }
+
+    //Load the speaker gains form sysparm.
+    //Can not call this following API here.
+    //Because Render driver really enable the path.
+    //AUDCTRL_LoadSpkrGain(pathID, spk, FALSE);
 
 #if 0
 	// in case it was muted from last play,
@@ -980,20 +1359,20 @@ void AUDCTRL_DisablePlay(
 void AUDCTRL_SetPlayVolume(
 				AUDIO_HW_ID_t			sink,
 				AUDCTRL_SPEAKER_t		spk,
-				AUDIO_GAIN_FORMAT_t     gainF,
+				AUDIO_GAIN_FORMAT_t     gain_format,
 				UInt32					vol_left,
 				UInt32					vol_right
 				)
 {
 #ifdef CONFIG_AUDIO_BUILD
-    UInt32 gainHW, gainHW2, gainHW3, gainHW4;
+    UInt32 gainHW, gainHW2, gainHW3, gainHW4, gainHW5, gainHW6;
     Int16 pmuGain = 0x0;
     AUDDRV_DEVICE_e speaker = AUDDRV_DEV_NONE;
     AUDDRV_PathID pathID = 0;
     UInt16 volume_max = 0;
     UInt8 digital_gain_dB = 0;
 
-    gainHW = gainHW2 = gainHW3 = gainHW4 = 0;
+    gainHW = gainHW2 = gainHW3 = gainHW4 = gainHW5 = gainHW6 = 0;
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: Set Play Volume. sink = 0x%x,  spk = 0x%x, vol = 0x%x\n", sink, spk, vol_left);
     
     speaker = GetDeviceFromSpkr(spk);
@@ -1018,65 +1397,73 @@ void AUDCTRL_SetPlayVolume(
         //Convert to Q13.2 and check from lookup table.
         gainHW = AUDDRV_GetHWDLGain(speaker, ((Int16)vol_left)<<1);
         gainHW2 = AUDDRV_GetHWDLGain(speaker, ((Int16)vol_right)<<1);
-	pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, ((Int16)vol_left)<<1);
+    	pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, ((Int16)vol_left)<<1);
     }
     else // If AUDIO_GAIN_FORMAT_Q13_2.
     if (gain_format == AUDIO_GAIN_FORMAT_Q13_2)
     {
         gainHW = AUDDRV_GetHWDLGain(speaker, (Int16)vol_left);
         gainHW2 = AUDDRV_GetHWDLGain(speaker, (Int16)vol_right);	    
-	pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, (Int16)vol_left);
+        pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, (Int16)vol_left);
     }
     else // If AUDIO_GAIN_FORMAT_Q1_14.
     if (gain_format == AUDIO_GAIN_FORMAT_Q1_14)
     {
         gainHW = AUDDRV_GetHWDLGain_Q1_14(speaker, (Int16)vol_left);
         gainHW2 = AUDDRV_GetHWDLGain_Q1_14(speaker, (Int16)vol_right);	    
-	pmuGain = (Int16)AUDDRV_GetPMUGain_Q1_14(speaker, (Int16)vol_left);
+        pmuGain = (Int16)AUDDRV_GetPMUGain_Q1_14(speaker, (Int16)vol_left);
     }
     else // If AUDIO_GAIN_FORMAT_VOL_LEVEL.
     if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
     {
-	volume_max = (UInt16)AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
-	// convert the value in 1st param from range of 2nd_param to range of 3rd_param:
-	digital_gain_dB = (Int16)AUDIO_Util_Convert( vol_left, AUDIO_VOLUME_MAX, volume_max );	    
-	vol_left = (UInt32)(digital_gain_dB - volume_max);
-	digital_gain_dB = (Int16)AUDIO_Util_Convert( vol_right, AUDIO_VOLUME_MAX, volume_max );	    
-	vol_right = (UInt32)(digital_gain_dB - volume_max);
+        volume_max = (UInt16)AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
+	    // convert the value in 1st param from range of 2nd_param to range of 3rd_param:
+        digital_gain_dB = (Int16)AUDIO_Util_Convert( vol_left, AUDIO_VOLUME_MAX, volume_max );	    
+	    vol_left = (UInt32)(digital_gain_dB - volume_max);
+	    digital_gain_dB = (Int16)AUDIO_Util_Convert( vol_right, AUDIO_VOLUME_MAX, volume_max );	    
+	    vol_right = (UInt32)(digital_gain_dB - volume_max);
 
         //Convert to Q13.2 and check lookup table.	
         gainHW = AUDDRV_GetHWDLGain(speaker, ((Int16)vol_left)<<2);
         gainHW2 = AUDDRV_GetHWDLGain(speaker, ((Int16)vol_right)<<2);
-	pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, ((Int16)vol_left)<<2);
+	    pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, ((Int16)vol_left)<<2);
     }
     
     // Set the gain to the audio HW.
     if ((gainHW != (UInt32)GAIN_NA)&&(gainHW2 != (UInt32)GAIN_NA))
     {
 	//for mixing gain. Get it from sysparm.
-	//Customer can overwrite the mixing gain later.
-        gainHW3 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l;
-        gainHW4 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r;
-        (void)AUDDRV_HWControl_SetHWGain(AUDDRV_SRCM_INPUT_GAIN_L,
+        gainHW3 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l);
+        gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r);
+        (void)AUDDRV_HWControl_SetHWGain(pathID, AUDDRV_SRCM_INPUT_GAIN_L,
 					 gainHW3, speaker);
-	(void)AUDDRV_HWControl_SetHWGain(AUDDRV_SRCM_INPUT_GAIN_R,
+	    (void)AUDDRV_HWControl_SetHWGain(pathID, AUDDRV_SRCM_INPUT_GAIN_R,
 					 gainHW4, speaker);
-	   
        // Mixer output gain is used for volume control.
-       // Configuration table decides wheter to read them from sysparm or directly take from
-       // customer.
+       // Configuration table decides wheter to read them from sysparm or directly take from the customer.
         if ((gainHW == (UInt32)GAIN_SYSPARM)||(gainHW2 == (UInt32)GAIN_SYSPARM))
         {
-            gainHW = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_l;
-            gainHW2 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l;
-            gainHW3 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_r;
-            gainHW4 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r;
-            (void) AUDDRV_HWControl_SetMixOutputGain(pathID, gainHW, gainHW2, gainHW3, gainHW4); 
+            gainHW5 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_l);
+            gainHW6 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l);
+            gainHW3 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_r);
+            gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r);
+            (void) AUDDRV_HWControl_SetMixOutputGain(pathID, 
+                    gainHW5, gainHW6, gainHW3, gainHW4); 
         }
-	else
-	{
+    	else
+	    {
+            gainHW6 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l);
+            gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r);
+
+        	AUDDRV_HWControl_SetHWGain(pathID, 
+                               AUDDRV_SRCM_OUTPUT_COARSE_GAIN_L, 
+                               gainHW6, AUDDRV_DEV_NONE);
+	
+        	AUDDRV_HWControl_SetHWGain(pathID, 
+                               AUDDRV_SRCM_OUTPUT_COARSE_GAIN_R, 
+                               gainHW4, AUDDRV_DEV_NONE);
             (void) AUDDRV_HWControl_SetSinkGain(pathID, (UInt16)gainHW, (UInt16)gainHW2);
-	}
+	    }
     }
     // Set teh gain to the external amplifier
     if (pmuGain == (Int16)GAIN_SYSPARM)
@@ -1268,6 +1655,11 @@ static void AUDCTRL_EnableRecordMono(
 		config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 	pathID = AUDDRV_HWControl_EnablePath(config);
 	
+    //Load the mic gains from sysparm.
+    //Can not call the following API here.
+    //Because Capture driver really enables the path.
+    //AUDCTRL_LoadMicGain(pathID, mic, FALSE);
+ 
 	Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnableRecordMono: path configuration, source = %d, sink = %d, pathID %d.\r\n", config.source, config.sink, pathID);
 
     //Save this path to the path table.
@@ -1496,14 +1888,17 @@ void AUDCTRL_DisableTap( AUDIO_HW_ID_t	tap)
 static void AUDCTRL_SetRecordGainMono(
 				AUDIO_HW_ID_t			src,
 				AUDCTRL_MICROPHONE_t	mic,
-				UInt32					gainL,
-				UInt32					gainR
+                AUDIO_GAIN_FORMAT_t     gainFormat,
+				Int16					gainL,
+				Int16					gainR
 				)
 {
     AUDDRV_PathID pathID = 0;
+    Int16 gainLTemp = 0;
+    Int16 gainRTemp = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_SetRecordGainMono: src = 0x%x,  mic = 0x%x, gainL = 0x%lx, gainR = 0x%lx\n", src, mic, gainL, gainR);
+                    "AUDCTRL_SetRecordGainMono: src = 0x%x,  mic = 0x%x, gainL = 0x%x, gainR = 0x%x\n", src, mic, gainL, gainR);
 
 	if( src == AUDIO_HW_USB_IN)
 		return;
@@ -1511,11 +1906,30 @@ static void AUDCTRL_SetRecordGainMono(
     pathID = AUDCTRL_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
     if(pathID == 0)
     {
-	audio_xassert(0,pathID);
-	return;
+	    audio_xassert(0,pathID);
+	    return;
     }
+    // For Q14.1, just convert it to Q13.2
+	if(gainFormat == AUDIO_GAIN_FORMAT_Q14_1)
+	{
+        gainLTemp = gainL<<1;
+        gainRTemp = gainR<<1;
+    }
+    // For volume level just convert it to Q13.2 
+    else
+    if (gainFormat == AUDIO_GAIN_FORMAT_VOL_LEVEL)
+    {
+         gainLTemp = gainL<<2;
+         gainRTemp = gainR<<2;
+    }
+	else	// If AUDIO_GAIN_FORMAT_Q1_14, does not support.
+	if (gainFormat == AUDIO_GAIN_FORMAT_Q1_14)
+	{
+        return;
+    }
+    
 
-    (void) AUDDRV_HWControl_SetSourceGain(pathID, gainL, gainR);
+    (void) AUDDRV_HWControl_SetSourceGain(pathID, gainLTemp, gainRTemp);
 
     return;
 }
@@ -1530,6 +1944,7 @@ static void AUDCTRL_SetRecordGainMono(
 void AUDCTRL_SetRecordGain(
 				AUDIO_HW_ID_t			src,
 				AUDCTRL_MICROPHONE_t	mic,
+                AUDIO_GAIN_FORMAT_t     gainFormat,
 				UInt32					gainL,
 				UInt32					gainR
 				)
@@ -1539,10 +1954,10 @@ void AUDCTRL_SetRecordGain(
 
 	if(mic==AUDCTRL_DUAL_MIC_DIGI12 || mic==AUDCTRL_DUAL_MIC_DIGI21 || mic==AUDCTRL_MIC_SPEECH_DIGI)
 	{
-		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI1, gainL, gainR);
-		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI2, gainL, gainR);
+		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI1, gainFormat, (Int16)gainL, (Int16)gainR);
+		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI2, gainFormat, (Int16)gainL, (Int16)gainR);
 	} else {
-		AUDCTRL_SetRecordGainMono(src, mic, gainL, gainR);
+		AUDCTRL_SetRecordGainMono(src, mic, gainFormat, (Int16)gainL, (Int16)gainR);
 	}
 
     return;
@@ -1766,7 +2181,7 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 //
 // Function Name: AUDCTRL_SetGainOnExternalAmp
 //
-// Description:   Set gain on external amplifier driver
+// Description:   Set gain on external amplifier driver. Gain in Q13.2
 //
 //============================================================================
 void AUDCTRL_SetGainOnExternalAmp(UInt32 gain)
@@ -1833,6 +2248,9 @@ void AUDCTRL_SetAudioLoopback(
     AUDIO_HW_ID_t audPlayHw, audRecHw;
 
     AUDDRV_HWCTRL_CONFIG_t hwCtrlConfig;
+#ifdef CONFIG_AUDIO_BUILD
+    Int16 tempGain = 0;
+#endif
 	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
 
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
@@ -1947,7 +2365,7 @@ void AUDCTRL_SetAudioLoopback(
             AUDCTRL_EnableRecord (audRecHw, AUDIO_HW_EARPIECE_OUT, mic, AUDIO_CHANNEL_MONO, 48000);
             return;
         }
-
+#if 0 //removed this to make fm radio work using xpft script
 	    if (source == AUDDRV_DEV_FM_RADIO)
 	    {
             AUDCTRL_EnableRecord (audRecHw, audPlayHw, mic, AUDIO_CHANNEL_STEREO, 48000);
@@ -1955,21 +2373,21 @@ void AUDCTRL_SetAudioLoopback(
 	            powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
 	        return;
 	    }
-
+#endif
         //  Microphone pat
-	if((mic == AUDCTRL_MIC_DIGI1) 
-	   || (mic == AUDCTRL_MIC_DIGI2) 
-	   || (mic == AUDCTRL_MIC_DIGI3) 
-	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
-	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
-	{
+    	if((mic == AUDCTRL_MIC_DIGI1) 
+    	   || (mic == AUDCTRL_MIC_DIGI2) 
+    	   || (mic == AUDCTRL_MIC_DIGI3) 
+    	   || (mic == AUDCTRL_MIC_DIGI4) 
+    	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
+    	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
+    	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
+	    {
 #ifdef CONFIG_AUDIO_BUILD
-		// Enable power to digital microphone
-		powerOnDigitalMic(TRUE);
+		    // Enable power to digital microphone
+    		powerOnDigitalMic(TRUE);
 #endif		
-	}
+        }
 	// enable HW path
         hwCtrlConfig.streamID = AUDDRV_STREAM_NONE;
         hwCtrlConfig.source = source;
@@ -1979,12 +2397,20 @@ void AUDCTRL_SetAudioLoopback(
         hwCtrlConfig.chnlNum = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
         hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
 #ifdef CONFIG_AUDIO_BUILD
-        hwCtrlConfig.mixGain.mixInGainL = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_l;	
-        hwCtrlConfig.mixGain.mixOutGainL = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_l;	
-        hwCtrlConfig.mixGain.mixOutCoarseGainL = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_l;	
-        hwCtrlConfig.mixGain.mixInGainR = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_r;	
-        hwCtrlConfig.mixGain.mixOutGainR = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_r;	
-        hwCtrlConfig.mixGain.mixOutCoarseGainR = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_r;	
+
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_l);	
+        hwCtrlConfig.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_l);
+        hwCtrlConfig.mixGain.mixOutGainL = AUDDRV_GetMixerOutputFineGain(tempGain);	
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_l);
+        hwCtrlConfig.mixGain.mixOutCoarseGainL = AUDDRV_GetMixerOutputCoarseGain(tempGain);
+
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_r);	
+        hwCtrlConfig.mixGain.mixInGainR = AUDDRV_GetMixerInputGain(tempGain);	
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_r);
+        hwCtrlConfig.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);	
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_r);
+        hwCtrlConfig.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
 
 #endif
         pathID = AUDDRV_HWControl_EnablePath(hwCtrlConfig);
@@ -2009,12 +2435,12 @@ void AUDCTRL_SetAudioLoopback(
         data.sr = AUDIO_SAMPLING_RATE_48000;
         AUDCTRL_AddToTable(&data);
 	//Enable PMU for headset/IHF
-	if ((speaker == AUDCTRL_SPK_LOUDSPK)
-	    ||(speaker == AUDCTRL_SPK_HEADSET))	
-	{
-		powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	   
-	} 
-    } else {
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+    	    ||(speaker == AUDCTRL_SPK_HEADSET))	
+	        powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
+    }
+    else
+    {
         // Disable Analog Mic path
         Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Disable loopback\n");
 
@@ -2027,7 +2453,7 @@ void AUDCTRL_SetAudioLoopback(
             AUDCTRL_DisableRecord (audRecHw, AUDIO_HW_EARPIECE_OUT, mic);
             return;
         }
-
+#if 0 //removed this to make fm radio work using xpft script
 	    if (source == AUDDRV_DEV_FM_RADIO)
 	    {
             AUDCTRL_DisableRecord (audRecHw, audPlayHw, mic);
@@ -2035,45 +2461,47 @@ void AUDCTRL_SetAudioLoopback(
 	            powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
 	        return;
 	    }
-
-		if((mic == AUDCTRL_MIC_DIGI1) 
-		   || (mic == AUDCTRL_MIC_DIGI2) 
-		   || (mic == AUDCTRL_MIC_DIGI3) 
-		   || (mic == AUDCTRL_MIC_DIGI4) 
-		   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-		   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
+#endif
+    	if((mic == AUDCTRL_MIC_DIGI1) 
+    	   || (mic == AUDCTRL_MIC_DIGI2) 
+	       || (mic == AUDCTRL_MIC_DIGI3) 
+    	   || (mic == AUDCTRL_MIC_DIGI4) 
+	       || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
+    	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	       || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
-		{
+	    {
 			// Enable power to digital microphone
 #ifdef CONFIG_AUDIO_BUILD			
 			powerOnDigitalMic(FALSE);
 #endif			
 		}	
-		//Enable PMU for headset/IHF
-		if ((speaker == AUDCTRL_SPK_LOUDSPK)
-			||(speaker == AUDCTRL_SPK_HEADSET))	
+	    //Enable PMU for headset/IHF
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+	        ||(speaker == AUDCTRL_SPK_HEADSET))	
 		{
 			powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
 		}
 
-		memset(&hwCtrlConfig, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
-		pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
-	if(pathID == 0)
-	{
-		audio_xassert(0,pathID);
-		return;
-	}
+        memset(&hwCtrlConfig, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+        pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
+    	if(pathID == 0)
+	    {
+		    audio_xassert(0,pathID);
+		    return;
+	    }
+	
 		hwCtrlConfig.pathID = pathID;
 		(void) AUDDRV_HWControl_DisablePath(hwCtrlConfig);
 		// up merged : remove the comment later on
 		// after mergining latest changes
-if (((source == AUDDRV_DEV_ANALOG_MIC) 
+        // Disable Loopback ctrl
+	    if (((source == AUDDRV_DEV_ANALOG_MIC) 
 	            || (source == AUDDRV_DEV_HS_MIC)) 
             && ((sink == AUDDRV_DEV_EP) 
                 || (sink == AUDDRV_DEV_IHF)
                 || (sink == AUDDRV_DEV_HS)))
 		{
-		    AUDDRV_SetAudioLoopback(enable_lpbk, audMic, audSpkr, 0);
+            AUDDRV_SetAudioLoopback(enable_lpbk, audMic, audSpkr, 0);
 		}
 
 		 //Remove this path to the path table.
@@ -2270,23 +2698,21 @@ void AUDCTRL_RemoveFromTable(AUDDRV_PathID pathID)
 // Description:   Delete the whole table.
 //
 //============================================================================
-#if 0
 static void AUDCTRL_DeleteTable(void)
 {
-    AUDCTRL_Table_t* current = tableHead;
+    AUDCTRL_Table_t* currentNode = tableHead;
     AUDCTRL_Table_t* next = NULL;
 
-    while(current != NULL)
+    while(currentNode != NULL)
     {
-        next = current->next;
-        memset(current, 0, sizeof(AUDCTRL_Table_t));
-   	    OSHEAP_Delete(current); 
-        current = next;
+        next = currentNode->next;
+        memset(currentNode, 0, sizeof(AUDCTRL_Table_t));
+   	    OSHEAP_Delete(currentNode); 
+        currentNode = next;
     }
     tableHead = NULL;
     return;
 }
-#endif
 
 //============================================================================
 //
@@ -2295,10 +2721,8 @@ static void AUDCTRL_DeleteTable(void)
 // Description:   Get a path information from the table.
 //
 //============================================================================
-
 AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID)
 {
-
     AUDCTRL_Config_t data; 
     AUDCTRL_Table_t* currentNode = tableHead; 
     memset(&data, 0, sizeof(AUDCTRL_Config_t));
@@ -2318,7 +2742,6 @@ AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID)
     return data;
 
 }
-
 
 
 //============================================================================
@@ -2419,13 +2842,233 @@ static AUDDRV_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
     return SPKR_Mapping_Table[spkr].dev;
 }
 
-#endif //defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
 
+#ifdef CONFIG_AUDIO_BUILD
+//============================================================================
+//
+// Function Name: getHSPMUGain
+//
+// Description:   Get Headset PMU gain. Input gain is Q13.2
+//
+//============================================================================
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+static HS_PMU_GainMapping_t getHSPMUGain(Int16 gain)
+{
+    HS_PMU_GainMapping_t outGain;
+    UInt8 i = 0;
+    memset(&outGain, 0, sizeof(HS_PMU_GainMapping_t));
+
+    if (gain < hsPMUGainTable[1].gain)
+    {
+        memcpy(&outGain, &hsPMUGainTable[0], sizeof(HS_PMU_GainMapping_t));
+        return outGain;	    
+    }
+    else
+    if (gain >= hsPMUGainTable[PMU_HSGAIN_NUM-1].gain)
+    {
+        memcpy(&outGain, &hsPMUGainTable[PMU_HSGAIN_NUM-1], sizeof(HS_PMU_GainMapping_t));
+        return outGain;	    
+    }
+    
+    for (i = 1; i<PMU_HSGAIN_NUM; i++)
+    {
+        if(gain == hsPMUGainTable[i].gain)
+        {
+            memcpy(&outGain, &hsPMUGainTable[i], sizeof(HS_PMU_GainMapping_t));
+            return outGain;	    
+        }	
+    }
+
+    for (i = 1; i<PMU_HSGAIN_NUM -1; i++)
+    {
+        if((gain - hsPMUGainTable[i].gain)<=(hsPMUGainTable[i+1].gain - gain))
+        {
+            memcpy(&outGain, &hsPMUGainTable[i], sizeof(HS_PMU_GainMapping_t));
+            return outGain;	    
+        }	
+    }
+    //Should not run to here.
+    audio_xassert(0,0);
+    return outGain;
+}
+
+#endif
+
+
+//============================================================================
+//
+// Function Name: getIHFPMUGain
+//
+// Description:   Get Loudspeaker PMU gain. Input gain is Q13.2
+//
+//============================================================================
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+static IHF_PMU_GainMapping_t getIHFPMUGain(Int16 gain)
+{
+    IHF_PMU_GainMapping_t outGain;
+    UInt8 i = 0;
+    memset(&outGain, 0, sizeof(IHF_PMU_GainMapping_t));
+
+    if (gain < ihfPMUGainTable[1].gain)
+    {
+        memcpy(&outGain, &ihfPMUGainTable[0], sizeof(IHF_PMU_GainMapping_t));
+        return outGain;	    
+    }
+    else
+    if (gain >= ihfPMUGainTable[PMU_IHFGAIN_NUM-1].gain)
+    {
+        memcpy(&outGain, &ihfPMUGainTable[PMU_IHFGAIN_NUM-1], sizeof(IHF_PMU_GainMapping_t));
+        return outGain;	    
+    }
+    
+    for (i = 1; i<PMU_IHFGAIN_NUM; i++)
+    {
+        if(gain == ihfPMUGainTable[i].gain)
+        {
+            memcpy(&outGain, &ihfPMUGainTable[i], sizeof(IHF_PMU_GainMapping_t));
+            return outGain;	    
+        }	
+    }
+
+    for (i = 1; i<PMU_IHFGAIN_NUM -1; i++)
+    {
+        if((gain - ihfPMUGainTable[i].gain)<=(ihfPMUGainTable[i+1].gain - gain))
+        {
+            memcpy(&outGain, &ihfPMUGainTable[i], sizeof(IHF_PMU_GainMapping_t));
+            return outGain;	    
+        }	
+    }
+    //Should not run to here.
+    audio_xassert(0,0);
+    return outGain;
+}
+
+#endif
+#endif  // CONFIG_AUDIO_BUILD
+
+
+//============================================================================
+//
+// Function Name: map2pmu_hs_gain
+//
+// Description:   convert Headset gain dB value to PMU-format gain value
+// 
+// Note: If it is BCM59038 or BCM59055, input gain is in Q13.2.
+// Note: If it is MAX8986, input gain is in Q15.0.
+//
+//============================================================================
+#if !defined(NO_PMU) && ( defined( PMU_BCM59038) || defined( PMU_BCM59055 ) || defined( PMU_MAX8986) )
+
+#ifdef CONFIG_AUDIO_BUILD
+PMU_HS_Gain_t map2pmu_hs_gain( Int16 db_gain )
+{
+#if defined(PMU_MAX8986)
+
+	Log_DebugPrintf(LOGID_AUDIO,"map2pmu_hs_gain: gain = 0x%x\n", db_gain);
+
+	if ( db_gain== (Int16)(-19) ) 	return PMU_HSGAIN_19DB_N;
+	else if ( db_gain== (Int16)(-18) || db_gain== (Int16)(-17) || db_gain== (Int16)(-16))		return PMU_HSGAIN_16DB_N;
+	else if ( db_gain== (Int16)(-15) || db_gain== (Int16)(-14))		return PMU_HSGAIN_14DB_N;
+	else if ( db_gain== (Int16)(-13) || db_gain== (Int16)(-12))		return PMU_HSGAIN_12DB_N;
+	else if ( db_gain== (Int16)(-11) || db_gain== (Int16)(-10))		return PMU_HSGAIN_10DB_N;
+	else if ( db_gain== (Int16)(-9) ||  db_gain== (Int16)(-8))		return PMU_HSGAIN_8DB_N;
+	else if ( db_gain== (Int16)(-7) ||  db_gain== (Int16)(-6))		return PMU_HSGAIN_6DB_N;
+	else if ( db_gain== (Int16)(-5) ||  db_gain== (Int16)(-4))		return PMU_HSGAIN_4DB_N;
+	else if ( db_gain== (Int16)(-3) ||  db_gain== (Int16)(-2))		return PMU_HSGAIN_2DB_N;
+	else if ( db_gain== (Int16)(-1) )		return PMU_HSGAIN_1DB_N;
+	else if ( db_gain== (Int16)(0) )		return PMU_HSGAIN_0DB;
+	else if ( db_gain== (Int16)(1) )		return PMU_HSGAIN_1DB_P;
+	else if ( db_gain== (Int16)(2) )		return PMU_HSGAIN_2DB_P;
+	else if ( db_gain== (Int16)(3) )		return PMU_HSGAIN_3DB_P;
+	else if ( db_gain== (Int16)(4) )		return PMU_HSGAIN_4DB_P;
+	// PMU_HSGAIN_4P5DB_P
+	else if ( db_gain== (Int16)(5) )		return PMU_HSGAIN_5DB_P;
+	// PMU_HSGAIN_5P5DB_P
+	else if ( db_gain== (Int16)(6) )		return PMU_HSGAIN_6DB_P;
+
+#else
+    {
+        HS_PMU_GainMapping_t outGain;
+        outGain = getHSPMUGain(db_gain);
+        return outGain.hsPMUGain;
+    }
+#endif
+}
+
+//============================================================================
+//
+// Function Name: map2pmu_ihf_gain
+//
+// Description:   convert IHF gain dB value to PMU-format gain value
+//
+// Note: If it is BCM59038 or BCM59055, input gain is in Q13.2.
+// Note: If it is MAX8986, input gain is in Q15.0.
+//
+//============================================================================
+PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain )
+{
+#if defined(PMU_MAX8986)	
+
+    Log_DebugPrintf(LOGID_AUDIO,"map2pmu_ihf_gain: gain = 0x%x\n", db_gain);
+
+    if ( db_gain== (Int16)(-33) || db_gain== (Int16)(-32) || db_gain== (Int16)(-31) || db_gain== (Int16)(-30) ) return PMU_IHFGAIN_30DB_N;
+    else if ( db_gain== (Int16)(-29) || db_gain== (Int16)(-28) || db_gain== (Int16)(-27) || db_gain== (Int16)(-26) ) return PMU_IHFGAIN_26DB_N;
+    else if ( db_gain== (Int16)(-25) || db_gain== (Int16)(-24) || db_gain== (Int16)(-23) || db_gain== (Int16)(-22) ) return PMU_IHFGAIN_22DB_N;
+	else if ( db_gain== (Int16)(-21) || db_gain== (Int16)(-20) || db_gain== (Int16)(-19) || db_gain== (Int16)(-18) ) return PMU_IHFGAIN_18DB_N;
+	else if ( db_gain== (Int16)(-17) || db_gain== (Int16)(-16) || db_gain== (Int16)(-15) || db_gain== (Int16)(-14) )	return PMU_IHFGAIN_14DB_N;
+	else if ( db_gain== (Int16)(-13) || db_gain== (Int16)(-12) )	return PMU_IHFGAIN_12DB_N;
+	else if ( db_gain== (Int16)(-11) || db_gain== (Int16)(-10) )	return PMU_IHFGAIN_10DB_N;
+	else if ( db_gain== (Int16)(-9)  || db_gain== (Int16)(-8) )		return PMU_IHFGAIN_8DB_N;
+	else if ( db_gain== (Int16)(-7)  || db_gain== (Int16)(-6) )		return PMU_IHFGAIN_6DB_N;
+	else if ( db_gain== (Int16)(-5)  || db_gain== (Int16)(-4) )		return PMU_IHFGAIN_4DB_N;
+	else if ( db_gain== (Int16)(-3)  || db_gain== (Int16)(-2) )		return PMU_IHFGAIN_2DB_N;
+	else if ( db_gain== (Int16)(-1)  || db_gain== (Int16)(0) )		return PMU_IHFGAIN_0DB;
+	else if ( db_gain== (Int16)(1) )		return PMU_IHFGAIN_1DB_P;
+	else if ( db_gain== (Int16)(2) )		return PMU_IHFGAIN_2DB_P;
+	else if ( db_gain== (Int16)(3) )		return PMU_IHFGAIN_3DB_P;
+	else if ( db_gain== (Int16)(4) )		return PMU_IHFGAIN_4DB_P;
+	else if ( db_gain== (Int16)(5) )		return PMU_IHFGAIN_5DB_P;
+	else if ( db_gain== (Int16)(6) )		return PMU_IHFGAIN_6DB_P;
+	else if ( db_gain== (Int16)(7) )		return PMU_IHFGAIN_7DB_P;
+	else if ( db_gain== (Int16)(8) )		return PMU_IHFGAIN_8DB_P;
+	else if ( db_gain== (Int16)(9) )		return PMU_IHFGAIN_9DB_P;
+	else if ( db_gain== (Int16)(10) )		return PMU_IHFGAIN_10DB_P;
+	else if ( db_gain== (Int16)(11) )		return PMU_IHFGAIN_11DB_P;
+	else if ( db_gain== (Int16)(12) )		return PMU_IHFGAIN_12DB_P;
+	// PMU_IHFGAIN_12P5DB_P,
+    else if ( db_gain== (Int16)(13) )		return PMU_IHFGAIN_13DB_P;
+	// PMU_IHFGAIN_13P5DB_P,
+    else if ( db_gain== (Int16)(14) )		return PMU_IHFGAIN_14DB_P;
+	// PMU_IHFGAIN_14P5DB_P,
+    else if ( db_gain== (Int16)(15) )		return PMU_IHFGAIN_15DB_P;
+	// PMU_IHFGAIN_15P5DB_P,
+    else if ( db_gain== (Int16)(16) )		return PMU_IHFGAIN_16DB_P;
+	// PMU_IHFGAIN_16P5DB_P,
+    else if ( db_gain== (Int16)(17) )		return PMU_IHFGAIN_17DB_P;
+	// PMU_IHFGAIN_17P5DB_P,
+    else if ( db_gain== (Int16)(18) )		return PMU_IHFGAIN_18DB_P;
+	// PMU_IHFGAIN_18P5DB_P,
+    else if ( db_gain== (Int16)(19) )		return PMU_IHFGAIN_19DB_P;
+	// PMU_IHFGAIN_19P5DB_P,
+    else if ( db_gain== (Int16)(20) )		return PMU_IHFGAIN_20DB_P;
+
+#else
+    {
+        IHF_PMU_GainMapping_t outGain;
+        outGain = getIHFPMUGain(db_gain);
+        return outGain.ihfPMUGain;
+    }
+#endif
+}
+#endif // #ifndef CONFIG_AUDIO_BUILD
+#endif
+
+#endif //defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
 //============================================================================
 //
 // Function Name: SetGainOnExternalAmp
 //
-// Description:   Set gain on external amplifier driver
+// Description:   Set gain on external amplifier driver. Gain in Q13.2
 //
 //============================================================================
 static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)

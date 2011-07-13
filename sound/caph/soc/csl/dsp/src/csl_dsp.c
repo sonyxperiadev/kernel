@@ -66,11 +66,10 @@
 #include "osdw_dsp_drv.h"
 #include "csl_arm2sp.h"
 
-#pragma arm section zidata = "shared_rip_mem_sect"
-static AP_SharedMem_t	AP_shared_mememory;      
-#pragma arm section
+#include "io.h"
+#include "platform_mconfig_rhea.h"
 
-static AP_SharedMem_t	*shared_mem	= &AP_shared_mememory; 
+static AP_SharedMem_t 			*global_shared_mem = NULL;
 
 AP_SharedMem_t	*vp_shared_mem;
 
@@ -99,10 +98,15 @@ static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 //******************************************************************************
 AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memory
 {
-
-	return shared_mem;
-
-
+	if(global_shared_mem == NULL)
+	{
+		global_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		if (!global_shared_mem) {
+			Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping dsp shared memory failed\n\r");
+			return NULL;
+		}
+	}
+	return global_shared_mem;
 }	
 
 //*********************************************************************
@@ -115,9 +119,6 @@ AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memor
 **********************************************************************/
 void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
 {
-	// Clear out shared memory
-	memset(&AP_shared_mememory, 0, sizeof(AP_SharedMem_t));
-	
 	vp_shared_mem = (AP_SharedMem_t*) dsp_shared_mem;
 	
 	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", dsp_shared_mem);
