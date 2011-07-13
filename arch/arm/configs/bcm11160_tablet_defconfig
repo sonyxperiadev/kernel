@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Mon Jul 11 20:25:58 2011
+# Tue Jul 12 17:45:00 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -307,7 +307,6 @@ CONFIG_COMMON_CLKDEV=y
 # CONFIG_FIQ_DEBUGGER is not set
 CONFIG_BCM_KNLLOG_SUPPORT=y
 CONFIG_BCM_KNLLOG_IRQ=y
-# CONFIG_BCM_AMXR is not set
 
 #
 # Bus support

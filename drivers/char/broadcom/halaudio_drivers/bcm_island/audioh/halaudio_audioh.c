@@ -2627,7 +2627,7 @@ static int audiohChPowerTransducer( int powerup )
    if ( powerup && !atomic_read(&gPwrTransducerLevel) )
    {
       /* Power up analog microphones */
-      chal_audio_enable_aci_auxmic(gChalAudioHandle, 1 );
+      //chal_audio_enable_aci_auxmic(gChalAudioHandle, 1 );
       chal_audio_mic_pwrctrl(gChalAudioHandle, 1);
 
 #if AUDIOH_EARPIECE_ENABLE
@@ -2648,7 +2648,7 @@ static int audiohChPowerTransducer( int powerup )
    {
       /* Power down analog microphones */
       chal_audio_mic_pwrctrl(gChalAudioHandle, 0);
-      chal_audio_enable_aci_auxmic(gChalAudioHandle, 0 );
+      //chal_audio_enable_aci_auxmic(gChalAudioHandle, 0 );
 
 #if AUDIOH_EARPIECE_ENABLE
       audiohEarpathPowerRamp( 0 );
