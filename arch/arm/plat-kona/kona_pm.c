@@ -12,7 +12,7 @@
 #include <plat/pwr_mgr.h>
 
 #ifdef CONFIG_CPU_IDLE
-#ifndef KONA_MACH_MAX_IDLE_STATE 
+#ifndef KONA_MACH_MAX_IDLE_STATE
 #define KONA_MACH_MAX_IDLE_STATE 1
 #endif /*KONA_MACH_MAX_IDLE_STATE*/
 #endif

@@ -8,10 +8,15 @@
 #include <mach/pi_mgr.h>
 
 #define PI_MGR_QOS_DEFAULT_VALUE 	0xFFFFFFFF
-#define PI_MGR_STATE_UNSUPPORTED	0xFFFFFFFF
-#define PI_OPP_UNSUPPORTED			0xFFFF
+#define PI_MGR_STATE_UNSUPPORTED 	0xFFFFFFFF
+#define PI_OPP_UNSUPPORTED		0xFFFF
 
 #define PI_MGR_ACTIVE_STATE_INX		0
+
+#ifndef PI_MGR_MAX_STATE_ALLOWED
+#define PI_MGR_MAX_STATE_ALLOWED 10
+#endif
+
 
 struct pi_ops;
 struct pi_mgr_qos_node;
@@ -20,7 +25,10 @@ struct pi_mgr_dfs_node;
 
 enum
 {
-	PI_DISABLE_ON_INIT  = (1 << 0),
+	PI_DISABLE_ON_INIT  	= (1 << 0),
+	PI_ARM_CORE		= (1 << 2),
+	PI_NO_QOS		= (1 << 3),
+	PI_NO_DFS		= (1 << 4),
 };
 
 struct pm_pi_info
@@ -40,6 +48,7 @@ struct pm_pi_info
 
 struct pi_state
 {
+	u32 id;
 	u32 state_policy;
 	u32 hw_wakeup_latency;
 };
@@ -51,11 +60,12 @@ struct pi
 	char** ccu_id;
 	u32 id;
 	u32 state_allowed;
+	bool init;
 	u16 usg_cnt;
 	u16 opp_active;
 	u16 sw_event_id;
 	u16	opp[PI_OPP_MAX];
-	struct pi_state pi_state[PI_STATE_MAX];
+	struct pi_state* pi_state;
 	struct pm_pi_info pi_info;
 	struct pi_ops* ops;
 };
@@ -64,7 +74,7 @@ struct pi_ops
 {
 	int	(*init)(struct pi *pi);
 	int	(*enable)(struct pi *pi, int enable);
-	int (*change_notify)(struct pi *pi, int state);
+	int (*change_notify)(struct pi *pi, int policy);
 };
 
 
@@ -84,7 +94,12 @@ int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier);
 int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier);
 
 int pi_mgr_register(struct pi* pi);
-const struct pi* pi_mgr_get(int pi_id);
+struct pi* pi_mgr_get(int pi_id);
 int pi_mgr_init(void);
+
+
+#define pi_init(pi) if((pi)->ops && (pi)->ops->init) (pi)->ops->init(pi)
+#define pi_enable(pi,en) if((pi)->ops && (pi)->ops->enable) (pi)->ops->enable(pi,en)
+#define pi_change_notify(pi,p) if((pi)->ops && (pi)->ops->change_notify) (pi)->ops->change_notify(pi,p)
 
 #endif /*__POWER_ISLAND_MGR_H__*/

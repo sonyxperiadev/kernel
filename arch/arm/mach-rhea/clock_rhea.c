@@ -30,7 +30,7 @@
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <linux/clk.h>
 #include <asm/io.h>
-
+#include <mach/pi_mgr.h>
 
 unsigned long clock_get_xtal(void)
 {
@@ -45,7 +45,7 @@ static struct ccu_clk CLK_NAME(root) = {
 	    .name = ROOT_CCU_CLK_NAME_STR,
 	    .id = CLK_ROOT_CCU_CLK_ID,
 	},
-	
+	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
 };
@@ -527,6 +527,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET,
@@ -1572,6 +1573,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.pi_id = PI_MGR_PI_ID_HUB_AON,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(AON_CLK_BASE_ADDR),
 	.wr_access_offset = KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KHUBAON_CLK_MGR_REG_POLICY0_MASK1_OFFSET,
@@ -2277,6 +2279,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_CLK_BASE_ADDR),
 	.wr_access_offset = KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KPM_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -2855,6 +2858,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_CLK_BASE_ADDR),
 	.wr_access_offset = KPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KPS_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -3753,6 +3757,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.pi_id = PI_MGR_PI_ID_ARM_CORE,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(MM_CLK_BASE_ADDR),
 	.wr_access_offset = MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = MM_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -4635,33 +4640,18 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(DSI_PLL_O_DSI_PLL_PERI_CLK_NAME_STR,NULL,dsi_pll_o_dsi_pll),
 };
 
-static void pwr_on_mm_subsystem(void)
-{
-	writel(0x1500, KONA_PWRMGR_VA + PWRMGR_SOFTWARE_1_VI_MM_POLICY_OFFSET);
-	writel(0x1, KONA_PWRMGR_VA + PWRMGR_SOFTWARE_1_EVENT_OFFSET);
-	mdelay(2);
-}
 
-int __init clock_init(void)
+int __init rhea_clock_init(void)
 {
-    int i;
 
-    pwr_on_mm_subsystem();
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 
-    for (i=0; i<ARRAY_SIZE(rhea_clk_tbl); i++)
-		clk_register(&rhea_clk_tbl[i]);
-
-     /*********************  TEMPORARY *************************************
-     * Work arounds for clock module . this could be because of ASIC
-     * errata or other limitations or special requirements.
-     * -- To be revised based on future fixes.
-     *********************************************************************/
-    /*clock_module_temp_fixes(); */
+	if(clk_register(rhea_clk_tbl,ARRAY_SIZE(rhea_clk_tbl)))
+		printk(KERN_INFO "%s clk_register failed !!!!\n", __func__);
 
     return 0;
 }
-early_initcall(clock_init);
+
 #if 1
 int __init clock_late_init(void)
 {

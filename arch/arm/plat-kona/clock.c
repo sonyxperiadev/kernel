@@ -28,7 +28,7 @@
 #include <asm/clkdev.h>
 #include <plat/clock.h>
 #include <asm/io.h>
-#include<plat/pwr_island_mgr.h>
+#include<plat/pi_mgr.h>
 
 #ifdef CONFIG_SMP
 #include <asm/cpu.h>
@@ -44,7 +44,7 @@ static DEFINE_SPINLOCK(clk_lock);
 
 int clk_debug = 1;
 
-static int clk_init(struct clk *clk)
+int clk_init(struct clk *clk)
 {
 	int ret = 0;
 	unsigned long flags;
@@ -64,13 +64,18 @@ static int clk_init(struct clk *clk)
 	return ret;
 }
 
-int clk_register(struct clk_lookup *clk_lkup)
+int clk_register(struct clk_lookup *clk_lkup,int num_clks)
 {
     int ret = 0;
+	int i;
 
-	ret = clk_init(clk_lkup->clk);
-	clkdev_add(clk_lkup);
-	clk_dbg("clock registerd - %s\n", clk_lkup->clk->name);
+	for(i = 0; i < num_clks; i++)
+	{
+		clkdev_add(&clk_lkup[i]);
+		clk_dbg("clock registered - %s\n",clk_lkup[i].clk->name);
+	}
+	for(i = 0; i < num_clks; i++)
+		ret |= clk_init(clk_lkup[i].clk);
 	return ret;
 }
 
@@ -510,9 +515,12 @@ static int ccu_clk_enable(struct clk *clk, int enable)
 		clk->use_cnt--;
 	}
 
-	//BUG_ON(!ccu_clk->pi || !ccu_clk->pi->ops->enable);
-	if(ccu_clk->pi && ccu_clk->pi->ops->enable)
-		ccu_clk->pi->ops->enable(ccu_clk->pi,enable);
+	if(ccu_clk->pi_id != -1)
+	{
+		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
+		BUG_ON(!pi);
+		pi_enable(pi,enable);
+	}
 	return ret;
 }
 
@@ -529,6 +537,7 @@ static int ccu_clk_init(struct clk* clk)
 		return 0;
 
 	ccu_clk = to_ccu_clk(clk);
+
 	BUG_ON (ccu_clk->freq_count > MAX_CCU_FREQ_COUNT);
 	clk_dbg("%s - %s\n",__func__, clk->name);
 
@@ -582,6 +591,14 @@ static int ccu_clk_init(struct clk* clk)
 	ccu_write_access_enable(ccu_clk, false);
 
 	clk->init = 1;
+
+	if(ccu_clk->pi_id != -1)
+	{
+		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
+		BUG_ON(!pi);
+		pi_init(pi);
+	}
+
 	return 0;
 }
 
@@ -818,7 +835,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 
 	if((enable) && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU))
 	    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
-	
+
 	/*Make sure that all dependent & src clks are enabled/disabled*/
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++)
 	{
@@ -1088,6 +1105,9 @@ static int peri_clk_set_rate(struct clk* clk, u32 rate)
 
 	peri_clk = to_peri_clk(clk);
 
+	clk_dbg("%s : %s\n",
+			__func__, clk->name);
+
 	if(CLK_FLG_ENABLED(clk,RATE_FIXED))
 	{
 		clk_dbg("%s : %s - fixed rate clk...rate cannot be changed\n",
@@ -1244,7 +1264,7 @@ static int peri_clk_init(struct clk* clk)
 		}
 	}else
 	    need_status_update = 1;
-	
+
 	if(peri_clk_get_gating_status(peri_clk) == 1) {
 	    clk->use_cnt = 1;
 	    if (need_status_update && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU))
@@ -1587,7 +1607,7 @@ static int bus_clk_init(struct clk *clk)
 		bus_clk_set_gating_ctrl(bus_clk, CLK_GATING_SW);
 
 	BUG_ON(CLK_FLG_ENABLED(clk,ENABLE_ON_INIT) && CLK_FLG_ENABLED(clk,DISABLE_ON_INIT));
-	
+
 	if(CLK_FLG_ENABLED(clk,ENABLE_ON_INIT))
 	{
 		if(clk->ops->enable)
@@ -1601,7 +1621,7 @@ static int bus_clk_init(struct clk *clk)
 			clk->ops->enable(clk, 0);
 	} else
 		need_status_update = 1;
-	
+
 	if(bus_clk_get_gating_status(bus_clk) == 1) {
 	    clk->use_cnt = 1;
 	    if (need_status_update && !(clk->flags & AUTO_GATE) &&(clk->flags & NOTIFY_STATUS_TO_CCU))
@@ -1822,7 +1842,7 @@ static int clk_source_show(struct seq_file *seq, void *p)
 	default:
 		return -EINVAL;
 	}
-		    
+
 	return 0;
 }
 

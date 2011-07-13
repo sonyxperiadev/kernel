@@ -74,6 +74,26 @@
 
 #define PM_POLICY_MASK	0x7
 
+#define CCU_POLICY(policy) ((policy) & 0x3)
+
+/*I2C commands - 4 bits*/
+
+enum
+{
+	REG_ADDR 		= 0, /*sets the next address for read/write data*/
+	REG_DATA 		= 1, /*executes a write to I2C controller via APB*/
+	I2C_DATA		= 2, /*data to be written to PMU via I2C*/
+	I2C_VAR 		= 3, /*data returned for voltage lookup (payload is the index to table)*/
+	WAIT_I2C_RETX	= 4, /*wait for retry from I2C control register*/
+	WAIT_I2C_STAT	= 5, /* wait for good status (loop until good)*/
+	WAIT_TIMER		= 6, /*wait for the number of clocks in the payload*/
+	END				= 7, /*stop and wait for new voltage request change*/
+	SET_PC_PINS		= 8, /*pc pins are set based on value and mask*/
+	SET_UPPER_DATA	= 9, 	/*sets the data in the upper byte of apb data bus*/
+	JUMP_VOLTAGE	= 0xE, /*jump to address based on current voltage request*/
+	JUMP			= 0xF  /*jump to address defined in payload*/
+};
+
 enum pm_policy
 {
     PM_POLICY_0,
@@ -111,7 +131,7 @@ enum pc_pin
 
 enum
 {
-	PM_PMU_I2C,
+	PM_PMU_I2C = (1 << 0),
 
 };
 
@@ -124,9 +144,8 @@ struct pm_policy_cfg
 
 struct i2c_cmd
 {
-	u8 cmd[PM_I2C_CMD_MAX];
-	u8 cmd_data[PM_I2C_CMD_MAX];
-	u32 num_cmds;
+	u8 cmd; /*4 bit command*/
+	u8 cmd_data; /*8bit command data */
 };
 
 struct v0x_spec_i2c_cmd_ptr
@@ -136,7 +155,7 @@ struct v0x_spec_i2c_cmd_ptr
 	u8 set1_val;
 	u8 set1_ptr;
 	u8 zerov_ptr;
-	u8 cmd_ptr;
+	u8 other_ptr;
 };
 
 struct pwr_mgr_info
@@ -169,7 +188,7 @@ int pwr_mgr_request_pm_i2c_ownership(int value);
 int pwr_mgr_verify_pm_i2c_ownership(void);
 int pwr_mgr_pm_i2c_enable(bool enable);
 int pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x, const struct v0x_spec_i2c_cmd_ptr* cmd_ptr);
-int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd);
+int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd , u32 num_cmds);
 int pwr_mgr_pm_i2c_var_data_write(const u8* var_data,int count);
 
 int	pwr_mgr_arm_core_dormant_enable(bool enable);
@@ -179,5 +198,6 @@ int pwr_mgr_register_event_handler(u32 event_id, void (*pwr_mgr_event_cb)(u32 ev
 											void* param);
 int pwr_mgr_unregister_event_handler(u32 event_id);
 int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event);
+int pwr_mgr_init(struct pwr_mgr_info* info);
 
 #endif /*__KONA_POWER_MANAGER_H__*/
