@@ -24,6 +24,7 @@ typedef struct {
 	void *ptr;		// virtual address
 	unsigned int addr;	// physical address
 	unsigned int size;
+	unsigned int ioptr;	//relocatable heap kernel address
 } mem_t;
 
 enum {
