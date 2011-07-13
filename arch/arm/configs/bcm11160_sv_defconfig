@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Wed Jul 13 13:33:02 2011
+# Wed Jul 13 14:34:13 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -874,6 +874,7 @@ CONFIG_BRCM_CHAR_DRIVERS=y
 # CONFIG_BRCM_FUSE_LOG is not set
 # CONFIG_STM_DEFAULT is not set
 # CONFIG_BCM_AAA is not set
+CONFIG_BCM_BSC=y
 # CONFIG_BCM_GPS is not set
 # CONFIG_BCM_MODEM is not set
 CONFIG_GPIO_USER_MODE_SUPPORT=y
