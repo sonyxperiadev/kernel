@@ -1372,10 +1372,6 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 	DWC_DEBUGPL(DBG_ANY, "registered gadget driver '%s'\n",
 		    driver->driver.name);
 
-	/* only enable interrupt when gadget function is registered */
-	DWC_DEBUGPL(DBG_PCD, "Enable USB global interrupt\n");
-	dwc_otg_enable_global_interrupts( GET_CORE_IF(gadget_wrapper->pcd));
-
 	return 0;
 }
 
