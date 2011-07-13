@@ -10,10 +10,11 @@
 #include <plat/kona_pm.h>
 #include <mach/pm.h>
 
-#ifdef CONFIG_CPU_IDLE
-#ifndef KONA_MACH_MAX_IDLE_STATE 
-#define KONA_MACH_MAX_IDLE_STATE 1
-#endif /*KONA_MACH_MAX_IDLE_STATE*/
+//#ifdef CONFIG_CPU_IDLE
+//#ifndef KONA_MACH_MAX_IDLE_STATE 
+//#define KONA_MACH_MAX_IDLE_STATE 1
+//#endif /*KONA_MACH_MAX_IDLE_STATE*/
+//#endif
 
 enum
 {
@@ -22,11 +23,12 @@ enum
 	KONAL_PM_LOG_LVL_FLOW = (1 << 1)
 };
 
+
 static int kona_pm_log_lvl = KONAL_PM_LOG_LVL_ERROR;
 module_param_named(kona_pm_log_lvl, kona_pm_log_lvl, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
 #define LOG_LEVEL_ENABLED(lvl) ((lvl) & kona_pm_log_lvl)
-
+#ifdef CONFIG_CPU_IDLE
 struct kona_idle_state_info idle_states[KONA_MACH_MAX_IDLE_STATE];
 
 __weak void kona_mach_init_idle_states(struct kona_idle_state_info* state_info)
