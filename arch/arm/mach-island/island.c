@@ -33,7 +33,7 @@
 #include <asm/hardware/cache-l2x0.h>
 
 #include <mach/io_map.h>
-#include <mach/clock.h>
+#include <plat/clock.h>
 #include <mach/gpio.h>
 #include <mach/timer.h>
 #include <mach/kona.h>

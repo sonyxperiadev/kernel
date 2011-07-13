@@ -15,7 +15,7 @@
 obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
 obj-$(CONFIG_NET_ISLAND) += ethHw.o ethHw_asm.o
-
+obj-$(CONFIG_KONA_POWER) += pm_island.o
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o
 obj-$(CONFIG_MACH_ISLAND_BU) += board_bu.o pinmux_island_bu.o
 obj-$(CONFIG_MACH_ISLAND_FF) += board_ff.o pinmux_island_ff.o board-bcm59055.o

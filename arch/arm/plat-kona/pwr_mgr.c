@@ -18,6 +18,32 @@
 #ifndef PWRMGR_I2C_VAR_DATA_REG
 #define PWRMGR_I2C_VAR_DATA_REG 6
 #endif /*PWRMGR_I2C_VAR_DATA_REG*/
+
+#define I2C_CMD0_DATA_SHIFT \
+		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_0_SHIFT
+#define I2C_CMD0_DATA_MASK \
+		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_0_MASK
+#define I2C_CMD1_DATA_SHIFT \
+		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_1_SHIFT
+#define I2C_CMD1_DATA_MASK \
+		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_1_MASK
+
+#define I2C_CMD0_SHIFT \
+		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_0_SHIFT
+#define I2C_CMD0_MASK \
+		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_0_MASK
+#define I2C_CMD1_SHIFT \
+		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_1_SHIFT
+#define I2C_CMD1_MASK \
+		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_1_MASK
+
+#define I2C_COMMAND_WORD(cmd1,cmd1_data,cmd0,cmd0_data) \
+			( ((((u32)(cmd0)) << I2C_CMD0_SHIFT) & I2C_CMD0_MASK ) |\
+				((((u32)(cmd0_data)) << I2C_CMD0_DATA_SHIFT) & I2C_CMD0_DATA_MASK) |\
+				((((u32)(cmd1)) << I2C_CMD1_SHIFT) & I2C_CMD1_MASK) |\
+				((((u32)(cmd1_data))  << I2C_CMD1_DATA_SHIFT)& I2C_CMD1_DATA_MASK) )
+
+
 static int pwr_debug = 1;
 /* global spinlock for pwr mgr API */
 static DEFINE_SPINLOCK(pwr_mgr_lock);
@@ -66,7 +92,6 @@ int	pwr_mgr_event_trg_enable(int event_id,int event_trg_type)
 	reg_offset = event_id * 4;
 
     reg_val = readl(PWR_MGR_REG_ADDR(reg_offset));
-	pwr_dbg("%s:reg_addr:%x value = %x\n",__func__,PWR_MGR_REG_ADDR(reg_offset),reg_val);
 
 	/*clear both pos & neg edge bits */
     reg_val &= ~PWRMGR_EVENT_NEGEDGE_CONDITION_ENABLE_MASK;
@@ -78,6 +103,7 @@ int	pwr_mgr_event_trg_enable(int event_id,int event_trg_type)
 	reg_val |= PWRMGR_EVENT_NEGEDGE_CONDITION_ENABLE_MASK;
 
     writel(reg_val, PWR_MGR_REG_ADDR(reg_offset));
+	pwr_dbg("%s:reg_addr:%x value = %x\n",__func__,PWR_MGR_REG_ADDR(reg_offset),reg_val);
 	spin_unlock(&pwr_mgr_lock);
 
 	return 0;
@@ -648,19 +674,23 @@ int	pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x, const struct v0x_spec_i2c_cmd_
     				& PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_SET1_MASK;
     reg_val |= (cmd_ptr->zerov_ptr << PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_ZEROV_SHIFT)
     				& PWRMGR_VO_SPECIFIC_I2C_COMMAND_PTR_ZEROV_MASK;
-    reg_val |= (cmd_ptr->cmd_ptr << PWRMGR_VO_SPECIFIC_I2C_COMMAND_POINTER_SHIFT)
+    reg_val |= (cmd_ptr->other_ptr << PWRMGR_VO_SPECIFIC_I2C_COMMAND_POINTER_SHIFT)
     				& PWRMGR_VO_SPECIFIC_I2C_COMMAND_POINTER_MASK;
     writel(reg_val, PWR_MGR_REG_ADDR(offset));
+
+	pwr_dbg("%s: %x set to %x register\n",__func__,reg_val,PWR_MGR_REG_ADDR(offset));
 	spin_unlock(&pwr_mgr_lock);
 	return 0;
 
 }
-int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd)
+int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd , u32 num_cmds)
 {
 	u32 inx;
 	u32 reg_val;
+	u8 cmd0,cmd1;
+	u8 cmd0_data,cmd1_data;
 
-	pwr_dbg("%s:\n",__func__);
+	pwr_dbg("%s:num_cmds = %d\n",__func__,num_cmds);
 
 	if(unlikely(!pwr_mgr.info))
 	{
@@ -673,26 +703,33 @@ int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd)
 		pwr_dbg("%s:ERROR - invalid param\n",__func__);
 		return -EINVAL;
 	}
+	if(unlikely(num_cmds > PM_I2C_CMD_MAX))
+	{
+		pwr_dbg("%s:ERROR - invalid param\n",__func__);
+		return -EINVAL;
+	}
 
 	spin_lock(&pwr_mgr_lock);
-	for(inx=0; inx < (i2c_cmd->num_cmds+1)/2; inx++)
+	for(inx=0; inx < (num_cmds+1)/2; inx++)
 	{
+		cmd0 = i2c_cmd[inx*2].cmd;
+		cmd0_data = i2c_cmd[inx*2].cmd_data;
 
-		reg_val = (i2c_cmd->cmd[2*inx] << PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_0_SHIFT) &
-					PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_0_MASK;
-		reg_val |= (i2c_cmd->cmd_data[2*inx]  << PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_0_SHIFT) &
-					PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_0_MASK;
-
-		if((2*inx+1) < i2c_cmd->num_cmds)
+		if((2*inx+1) < num_cmds)
 		{
-			reg_val |= (i2c_cmd->cmd[2*inx+1]  << PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_1_SHIFT) &
-						PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND__01_1_MASK;
-			reg_val |= (i2c_cmd->cmd_data[2*inx+1]  << PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_1_SHIFT) &
-						PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_1_MASK;
+			cmd1 = i2c_cmd[inx*2+1].cmd;
+			cmd1_data = i2c_cmd[inx*2+1].cmd_data;
 		}
-
+		else
+		{
+			reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET + inx*4));
+			cmd1 = (reg_val & I2C_CMD1_MASK) >> I2C_CMD1_SHIFT;
+			cmd1_data = (reg_val & I2C_CMD1_DATA_MASK) >> I2C_CMD1_DATA_SHIFT;
+		}
+		pwr_dbg("%s:cmd0 = %x cmd0_data = %x cmd1 = %x cmd1_data = %x",__func__, cmd0,cmd0_data,cmd1,cmd1_data);
+		reg_val = I2C_COMMAND_WORD(cmd1,cmd1_data,cmd0,cmd0_data);
 		writel(reg_val,PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET + inx*4));
-
+		pwr_dbg("%s: %x set to %x register\n",__func__,reg_val,PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_OFFSET + inx*4));
 	}
 	spin_unlock(&pwr_mgr_lock);
 	return 0;
@@ -731,6 +768,8 @@ int pwr_mgr_pm_i2c_var_data_write(const u8* var_data,int count)
 			PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_I2C_VARIABLE_DATA_03_MASK;
 
 		writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET + inx*4));
+		pwr_dbg("%s: %x set to %x register\n",__func__,
+		reg_val,PWR_MGR_REG_ADDR(PWRMGR_POWER_MANAGER_I2C_VARIABLE_DATA_LOCATION_01_OFFSET + inx*4));
 	}
 
 	spin_unlock(&pwr_mgr_lock);
@@ -878,6 +917,7 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 		reg_val = readl(PWR_MGR_REG_ADDR(inx*4));
 		if(reg_val & PWRMGR_EVENT_CONDITION_ACTIVE_MASK)
 		{
+			pr_info("%s:event id : %x\n",__func__,inx);
 			if(pwr_mgr.event_cb[inx].pwr_mgr_event_cb)
 				pwr_mgr.event_cb[inx].pwr_mgr_event_cb(inx,pwr_mgr.event_cb[inx].param);
 			if(clear_event)
