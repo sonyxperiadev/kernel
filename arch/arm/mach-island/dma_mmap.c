@@ -881,12 +881,16 @@ int dma_mmap_add_region
              * the direction of the transfer, the DMA buffers are either
              * invalidated (read) or flushed (write). When the DMA transfer is
              * done, we need to transfer the ownership back to the CPU.
+             *
+             * Note: When CONFIG_HIGHMEM is enabled, we can't use
+             * dma_sync_single_for_device. So we use SyncCpuToDev for the L2
+             * portion .
              */
             flush_dcache_page(pages[0]);
 
             physAddr = PFN_PHYS(page_to_pfn(pages[0])) + firstPageOffset;
-            dma_sync_single_for_device( NULL, physAddr, firstPageSize,
-                                        memMap->dir );
+
+            SyncCpuToDev( NULL, physAddr, firstPageSize, memMap->dir );
 
             rc = dma_mmap_add_segment(memMap,
                                       region,
@@ -915,8 +919,8 @@ int dma_mmap_add_region
                flush_dcache_page(pages[pageIdx]);
 
                physAddr = PFN_PHYS(page_to_pfn( pages[pageIdx]));
-               dma_sync_single_for_device( NULL, physAddr, bytesThisPage,
-                                           memMap->dir );
+               SyncCpuToDev( NULL, physAddr, bytesThisPage,
+                             memMap->dir );
 
                rc = dma_mmap_add_segment(memMap,
                                          region,
@@ -1033,16 +1037,19 @@ int dma_mmap_unmap
             /*
              * For user mappings, we'v4 already calculated the physAddr
              * in dma_mmap_add_region.
+             *
+             * We use SyncDevToCpu since dma_sync_device_to_cpu doesn't
+             * work on high memory pages when CONFIG_HIGHMEM is set.
              */
 
             for ( segmentIdx = 0; segmentIdx < region->numSegmentsUsed; segmentIdx++ )
             {
                segment = &region->segment[segmentIdx];
 
-               dma_sync_single_for_cpu( NULL,
-                                        segment->physAddr,
-                                        segment->numBytes,
-                                        memMap->dir );
+               SyncDevToCpu( NULL,
+                             segment->physAddr,
+                             segment->numBytes,
+                             memMap->dir );
             }
             break;
          }
@@ -1061,9 +1068,9 @@ int dma_mmap_unmap
 
             segment = &region->segment[0];
 
-            dma_sync_single_for_cpu( NULL, 
+            dma_sync_single_for_cpu( NULL,
                                      segment->physAddr,
-                                     segment->numBytes, 
+                                     segment->numBytes,
                                      memMap->dir);
             break;
          }
