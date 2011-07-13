@@ -2882,8 +2882,14 @@ static int audiohExit( void )
 
    aadma_exit();
 
+   clk_disable( gAudiohClk.audioh_156m );
    clk_disable( gAudiohClk.audioh_26m );
+   clk_disable( gAudiohClk.audioh_2p4m );
+   clk_disable( gAudiohClk.audioh_apb );
+   clk_put( gAudiohClk.audioh_156m );
    clk_put( gAudiohClk.audioh_26m );
+   clk_put( gAudiohClk.audioh_2p4m );
+   clk_put( gAudiohClk.audioh_apb );
 
    free_irq( BCM_INT_ID_AUDIO, gAudioh.ch );
 

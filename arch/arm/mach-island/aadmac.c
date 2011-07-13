@@ -33,8 +33,8 @@
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/pfn.h>
+#include <linux/clk.h>
 
-//#include <linux/broadcom/timer.h>
 #ifdef CONFIG_BCM_KNLLOG_IRQ
 #include <linux/broadcom/knllog.h>
 #endif
@@ -48,8 +48,6 @@
 #include <chal/chal_caph_cfifo.h>
 #include <chal/chal_caph_dma.h>
 #include <chal/chal_caph_intc.h>
-//#include <chal/chal_ccu_audioh_inline.h>
-//#include <chal/chal_ccu_caph_inline.h>
 #include <chal/chal_audio.h>
 
 /* ---- Public Variables ------------------------------------------------- */
@@ -104,6 +102,7 @@ typedef struct
 static AADMA_Global_t            gAADMA;
 static struct proc_dir_entry    *gDmaDir;
 static AADMA_ChalHandle_t        gChalHandle;
+static struct clk                *gCaph_srcmixer_clk;
 
 static spinlock_t                gHwAADmaLock;  /* acquired when starting DMA channel */
 static spinlock_t                gAADmaDevLock; /* acquired when setting device handler */
@@ -585,21 +584,24 @@ static int aadma_reset_intc( AADMA_ChalHandle_t *chal_handle )
 
 static int aadma_set_clock( AADMA_ChalHandle_t *chal_handle, int enable )
 {
+   int err = 0;
+
    (void)chal_handle;
+
    if( enable )
    {
-      /* Setup clock ( Use direct calls to chal until clock framework created ) */
-#if 0
-      chal_handle->chalHubClkHandle = chal_hub_clk_init( HUB_CLK_BASE_ADDR );
-      chal_hub_caph_clk_enable( chal_handle->chalHubClkHandle );
-#endif
+      gCaph_srcmixer_clk = clk_get( NULL, "caph_srcmixer_clk" );
+      err = clk_enable( gCaph_srcmixer_clk );
+      if ( err )
+      {
+         printk( KERN_ERR "%s: failed to enable CAPH SRC Mixer clock %d!\n", __FUNCTION__, err );
+         return err;
+      }
    }
    else
    {
-#if 0
-      chal_hub_caph_clk_disable( chal_handle->chalHubClkHandle );
-      chal_handle->chalHubClkHandle = 0;
-#endif
+      clk_disable( gCaph_srcmixer_clk );
+      clk_put( gCaph_srcmixer_clk );
    }
    return 0;
 }
@@ -706,7 +708,7 @@ int aadma_init( void )
       return rc;
    }
 
-   /* Enable CAPH clock.  Should be managed by CCU framework in future */
+   /* Enable CAPH clock */
    aadma_set_clock( &gChalHandle, 1 );
    aadma_reset_intc( &gChalHandle );
 
