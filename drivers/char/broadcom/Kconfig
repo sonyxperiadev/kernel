@@ -47,6 +47,12 @@ config BCM_AAA
     Select m to build the generic AAA driver. This driver must be
     built as a loadable module.
 
+config BCM_BSC
+    bool "Board Specific Configuration (BSC) driver support"
+    default y
+    ---help---
+    Say Y to enable the BSC support.
+
 config BCM_GPS
     tristate "GPS support"
 	default n

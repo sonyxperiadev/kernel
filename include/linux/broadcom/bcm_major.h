@@ -34,6 +34,7 @@
 #define BCM_GE_MAJOR       150
 #define BCM_GEMEMALLOC_MAJOR     151
 
+#define BCM_BSC_MAJOR         199
 #define BCM_CNTIN_MAJOR		  200
 #define BCM_KRIL_MAJOR        201
 #define BCM_LOG_MAJOR	      202
