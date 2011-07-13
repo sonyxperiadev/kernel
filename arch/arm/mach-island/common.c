@@ -234,7 +234,6 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 void __init board_add_common_devices(void)
 {
-	unsigned int i;
 	struct clk *temp_clk;
 
 	/*

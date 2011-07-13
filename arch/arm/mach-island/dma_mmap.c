@@ -1164,9 +1164,7 @@ static void dma_mmap_memcpy_page( struct page *page,
 void dma_mmap_memcpy( DMA_MMAP_CFG_T *memMap, void *mem )
 {
    DMA_MMAP_REGION_T      *region;
-   DMA_MMAP_SEGMENT_T     *segment;
    int                     regionIdx;
-   int                     segmentIdx;
    uint8_t                *memPtr = mem;
 
    /*
