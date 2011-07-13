@@ -311,6 +311,7 @@ extern int dwc_otg_pcd_get_iso_packet_count(dwc_otg_pcd_t * pcd,
 					    void *ep_handle,
 					    void *iso_req_handle);
 
+
 /** This function starts the SRP Protocol if no session is in progress. If
  * a session is already in progress, but the device is suspended,
  * remote wakeup signaling is started.
@@ -328,6 +329,9 @@ extern void dwc_otg_pcd_initiate_srp(dwc_otg_pcd_t * pcd);
 
 /** Starts remote wakeup signaling. */
 extern void dwc_otg_pcd_remote_wakeup(dwc_otg_pcd_t * pcd, int set);
+
+/** Soft disconnect enable/disable */
+extern void dwc_otg_pcd_disconnect(dwc_otg_pcd_t * pcd, int enable);
 
 /** Starts micorsecond soft disconnect. */
 extern void dwc_otg_pcd_disconnect_us(dwc_otg_pcd_t * pcd, int no_of_usecs);
