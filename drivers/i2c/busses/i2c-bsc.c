@@ -559,7 +559,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       pd = (struct i2c_slave_platform_data *)client->dev.platform_data;
       if (pd)
       {
-         dev_dbg(dev->dev, "i2c addr=0x%x, speed=0x%x\n",
+         dev_dbg(dev->device, "i2c addr=0x%x, speed=0x%x\n",
                              client->addr, pd->i2c_speed);
 
          if (pd->i2c_speed < BSC_BUS_SPEED_MAX)
@@ -569,13 +569,13 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       }
       else
       {
-         dev_dbg(dev->dev,"i2c addr=0x%x No platform data!\n",client->addr);
+         dev_dbg(dev->device,"i2c addr=0x%x No platform data!\n",client->addr);
          set_speed = dev->speed;	/* default speed */
       }
    }
    else
    {
-      dev_dbg(dev->dev, "!!!No i2c client with i2c addr=0x%x\n",
+      dev_dbg(dev->device, "!!!No i2c client with i2c addr=0x%x\n",
                                                    msgs[0].addr);
       set_speed = dev->speed;	/* default speed */
    }
@@ -664,7 +664,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       rc = bsc_xfer_repstart(adapter);
       if (rc < 0)
       {
-         dev_err(dev->dev, "restart command failed\n");
+         dev_err(dev->device, "restart command failed\n");
          goto hs_ret;
       }
    }
@@ -684,7 +684,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
             rc = bsc_xfer_repstart(adapter);
             if (rc < 0)
             {
-               dev_err(dev->dev, "restart command failed\n");
+               dev_err(dev->device, "restart command failed\n");
                goto hs_ret;
             }
          }
@@ -729,7 +729,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    /* send stop command */
    rc = bsc_xfer_stop(adapter);
    if (rc < 0)
-      dev_err(dev->dev, "stop command failed\n");
+      dev_err(dev->device, "stop command failed\n");
 
    /* high-speed mode */
    if (dev->high_speed_mode)
@@ -917,7 +917,7 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 	BUG_ON (dev->bsc_clk || dev->bsc_apb_clk);
 
 	if (cfg->bsc_apb_clk) {
-		dev->bsc_apb_clk = clk_get(dev->dev, cfg->bsc_apb_clk);
+		dev->bsc_apb_clk = clk_get(dev->device, cfg->bsc_apb_clk);
 		/* AON domain clocks may be enabled by default, need to disable */
 		clk_disable(dev->bsc_apb_clk);
 		if (!dev->bsc_apb_clk)
@@ -925,7 +925,7 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 	}
 
 	if (cfg->bsc_clk) {
-		dev->bsc_clk = clk_get(dev->dev, cfg->bsc_clk);
+		dev->bsc_clk = clk_get(dev->device, cfg->bsc_clk);
 		/* AON domain clocks may be enabled by default, need to disable */
 		clk_disable(dev->bsc_clk);
 		if (!dev->bsc_clk)
@@ -978,7 +978,7 @@ static void i2c_master_reset(struct work_struct *work)
 	
 	rc = bsc_xfer_stop(adap);
 	if (rc < 0) {
-		dev_err(dev, "failed to send stop command\n");
+		dev_err(dev->device, "failed to send stop command\n");
 		/* still go ahead to reset the master */
 	}
 
