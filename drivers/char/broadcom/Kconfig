@@ -77,6 +77,13 @@ config BCM_AMXR
    ---help---
    Say Y to enable the Audio Mixer Driver to support interconnecting
    audio samples between kernel objects.
+
+config BCM_AMXR_CORE
+   tristate "Audio Mixer Driver support"
+   depends on BCM_AMXR
+   default n
+   ---help---
+   Say Y to enable the Audio Mixer Core module.
    
 config BCM_HALAUDIO
     bool "HAL Audio Driver support"
