@@ -180,6 +180,12 @@ static struct __init pin_config board_pin_config[] = {
    PIN_CFG( SSP1_RXD, UARTB3_URTSN, 0, OFF, OFF, 0, 0, 8MA ),
    PIN_CFG( SSP1_TXD, UARTB3_UCTSN, 0, OFF, OFF, 0, 0, 8MA ),
 
+	/* UARTB4 */
+	PIN_CFG(SSP2_FS_0,  UARTB4_URXD,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SSP2_CLK,   UARTB4_UTXD,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SSP2_RXD_0, UARTB4_URTSN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SSP2_TXD_0, UARTB4_UCTSN, 0, OFF, OFF, 0, 0, 8MA),
+
    /* AUDIOH */
    PIN_CFG( UARTB4_UTXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
    PIN_CFG( UARTB4_URXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
