@@ -33,6 +33,7 @@
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/pfn.h>
+#include <linux/clk.h>
 
 #include <linux/broadcom/halaudio.h>
 
@@ -193,6 +194,8 @@ static SSASW_ChalHandle_t        gChalHandle;
 
 static spinlock_t                gHwSsaswLock;
 
+static struct clk                *gSRCMixer_clk;
+
 
 SSASW_DeviceAttribute_t SSASW_gDeviceAttribute[ SSASW_NUM_DEVICE_ENTRIES ] =
 {
@@ -317,8 +320,18 @@ static int ssasw_ioremap_exit( SSASW_ChalHandle_t *chal_handle )
 
 static int ssasw_set_clock( SSASW_ChalHandle_t *chal_handle, int enable )
 {
+   int err = 0;
+
    if( enable )
    {
+      gSRCMixer_clk = clk_get( NULL, "caph_srcmixer_clk" );
+      err = clk_enable( gSRCMixer_clk );
+      if ( err )
+      {
+         printk( KERN_ERR "%s: failed to enable CAPH SRC Mixer clock %d!\n", __FUNCTION__, err );
+         return err;
+      }
+
       chal_caph_switch_enable_clock_bypass( chal_handle->chalSsaswHandle );
       chal_caph_switch_enable_clock( chal_handle->chalSsaswHandle );
    }
@@ -326,6 +339,9 @@ static int ssasw_set_clock( SSASW_ChalHandle_t *chal_handle, int enable )
    {
       chal_caph_switch_disable_clock_bypass( chal_handle->chalSsaswHandle );
       chal_caph_switch_disable_clock( chal_handle->chalSsaswHandle );
+
+      clk_disable( gSRCMixer_clk );
+      clk_put( gSRCMixer_clk );
    }
    return 0;
 }

@@ -62,7 +62,6 @@ DECLARE_REF_CLK		(ref_104m, REF_104M,			104*CLOCK_1M,	3,	name_to_clk(ref_312m));
 DECLARE_REF_CLK		(ref_52m, REF_52M,			52*CLOCK_1M,	2,	name_to_clk(ref_104m));
 DECLARE_REF_CLK		(ref_26m, REF_26M,			26*CLOCK_1M,	6,	name_to_clk(ref_156m));
 DECLARE_REF_CLK		(ref_13m, REF_13M,			13*CLOCK_1M,	4,	name_to_clk(ref_52m));
-DECLARE_REF_CLK		(ref_2p4m, REF_2P4M,			2400*CLOCK_1K,	40,	name_to_clk(ref_96m));
 
 DECLARE_REF_CLK		(var_312m, VAR_312M,			312*CLOCK_1M,	0,	0);
 DECLARE_REF_CLK		(var_208m, VAR_208M,			208*CLOCK_1M,	0,	name_to_clk(var_312m));
@@ -529,6 +528,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(kpm_ccu),
 	CLK_LK(kps_ccu),
 	CLK_LK(khub_ccu),
+	CLK_LK(khubaon_ccu),
 
 	/* Bus clocks */
 	CLK_LK(usb_otg),

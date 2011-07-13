@@ -539,7 +539,7 @@ int amxrConnect(
    AMXR_CONNECT_TYPE       conn_type;
    AMXR_RESAMP_TYPE        rtype;
    int                     src_chans, src_idx, dst_chans, dst_idx;
-   int                     err;
+   int                     err = 0;
 
    srcportp = getPort( src_port );
    dstportp = getPort( dst_port );
@@ -1037,7 +1037,7 @@ int amxrSetPortDstFreq(
 {
    struct amxr_port_node  *portp;
    unsigned long           state;
-   int                     err;
+   int                     err = 0;
    int                     chg_dsthz;
    
    portp = getPort( portid );
@@ -1169,7 +1169,7 @@ int amxrSetPortSrcFreq(
 {
    struct amxr_port_node  *portp;
    unsigned long           state;
-   int                     err;
+   int                     err = 0;
    int                     chg_srchz;
    
    portp = getPort( portid );
@@ -1287,7 +1287,7 @@ int amxrSetPortDstChannels(
 {
    struct amxr_port_node  *portp;
    unsigned long           state;
-   int                     err;
+   int                     err = 0;
    int                     changed;
 
    portp = getPort( portid );
@@ -1453,7 +1453,7 @@ int amxrSetPortSrcChannels(
    struct amxr_port_node  *portp;
    unsigned long           state;
    int                     changed;
-   int                     err;
+   int                     err = 0;
    
    portp = getPort( portid );
    if ( portp == NULL )
@@ -2680,7 +2680,7 @@ static int amxr_save_disabled_cnx_unsafe(
 )
 {
    struct amxr_cnxlist_node  *cnxlp;
-   int                        err;
+   int                        err = 0;
    struct amxr_cnxdstl_t     *dstlp;
    AMXR_CONNECT_TYPE          cnx_type;
    int                        src_chans, src_idx;
@@ -2761,7 +2761,7 @@ static int amxr_alloc_resampler(
 {
    unsigned long              state;
    AMXR_RESAMPLE_TABENTRY    *tablep;
-   int                        err;
+   int                        err = 0;
 
    /* Allocate static resampler memory for the first time */
    if ( cnxlp->resampbufp == NULL )
@@ -3008,7 +3008,7 @@ static int amxr_get_cnxloss(
 static int __init amxr_init( void )
 {
    AMXR_API_FUNCS apifuncs;
-   int            err;
+   int            err = 0;
 
    memset( &gCnxs, 0, sizeof(gCnxs) );
    memset( &gPorts, 0, sizeof(gPorts) );
@@ -3064,7 +3064,7 @@ cleanup_and_exit:
 static void __exit amxr_exit( void )
 {
    struct amxr_port_node  *portp, *tmpportp;
-   int                     err;
+   int                     err = 0;
 
    amxrSetApiFuncs( NULL );
 
@@ -3100,5 +3100,4 @@ module_init( amxr_init );
 module_exit( amxr_exit );
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "Audio Mixer Driver" );
-MODULE_LICENSE( "Proprietary" );
-
+MODULE_LICENSE( "GPL" );
