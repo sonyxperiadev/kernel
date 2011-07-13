@@ -1035,7 +1035,7 @@ int dma_mmap_unmap
          case DMA_MMAP_TYPE_USER:
          {
             /*
-             * For user mappings, we'v4 already calculated the physAddr
+             * For user mappings, we've already calculated the physAddr
              * in dma_mmap_add_region.
              *
              * We use SyncDevToCpu since dma_sync_device_to_cpu doesn't
@@ -1102,6 +1102,53 @@ out:
 EXPORT_SYMBOL(dma_mmap_unmap);
 
 /*
+ * Copy a piece of memory, taking care to invalidate/flush as needed.
+*/
+static void dma_mmap_memcpy_page( struct page *page,
+                                  void                     *mem_ptr,
+                                  size_t                    offset,
+                                  size_t                    num_bytes,
+                                  enum dma_data_direction   dir )
+{
+   uint8_t    *kernel_addr;
+   dma_addr_t  phys_addr;
+
+   kernel_addr = kmap( page );
+   kernel_addr += offset;
+
+   phys_addr = PFN_PHYS( page_to_pfn( page )) + offset;
+
+   if ( dir == DMA_TO_DEVICE )
+   {
+      /*
+       * The userspace data has already been flushed out to the physical
+       * memory by dma_mmap. We're now going to access the data using
+       * the kernel virtual address, so we want to invalidate any cached
+       * data which might be present.
+       */
+
+      SyncCpuToDev( kernel_addr, phys_addr, num_bytes, DMA_FROM_DEVICE );
+      SyncDevToCpu( kernel_addr, phys_addr, num_bytes, DMA_FROM_DEVICE );
+
+      memcpy( mem_ptr, kernel_addr, num_bytes );
+   }
+   else
+   {
+      memcpy( kernel_addr, mem_ptr, num_bytes );
+
+      /*
+       * We've copied a bunch of data into the kernel memory. We need to
+       * flush it out to physical memory.
+       */
+
+      SyncCpuToDev( kernel_addr, phys_addr, num_bytes, DMA_TO_DEVICE );
+      SyncDevToCpu( kernel_addr, phys_addr, num_bytes, DMA_TO_DEVICE );
+   }
+
+   kunmap( page );
+}
+
+/*
  * Walk through the regions and segments, and use the CPU to copy the data
  *
  * This is useful for working around silicon bugs in the DMA hardware when
@@ -1135,42 +1182,65 @@ void dma_mmap_memcpy( DMA_MMAP_CFG_T *memMap, void *mem )
 
       if ( region->memType == DMA_MMAP_TYPE_USER )
       {
-         for (segmentIdx = 0; segmentIdx < region->numSegmentsUsed; segmentIdx++)
+         DMA_MMAP_PAGELIST_T *pagelist;
+         size_t               firstPageOffset;
+         size_t               firstPageSize;
+         struct page        **pages;
+         uint8_t             *virtAddr;
+         size_t               bytesRemaining;
+         int                  pageIdx;
+
+         /*
+          * Since user pages might not have corresponding kernel pages
+          * (especially when CONFIG_HIGHMEM is enabled), we need to walk
+          * the page list and use kmap/kunmap.
+          *
+          * For kernel direct memory, kmap returns the kernel direct mapping.
+          * For high-memory, a new mapping is created.
+          */
+
+         if (( pagelist = memMap->pagelist ) == NULL )
          {
-            void *kernelAddr;
+            printk( KERN_ERR "%s: must call dma_mmap_set_pagelist when"
+                             " using user-mode memory\n", __func__ );
+            return;
+         }
+         if ( pagelist->numLockedPages == 0 )
+         {
+            printk( KERN_ERR "%s: no locked pages???", __func__ );
+            return;
+         }
 
-            segment = &region->segment[segmentIdx];
+         /*
+          * The first page may be partial (at either end)
+          */
 
-            kernelAddr = phys_to_virt( segment->physAddr );
+         pages = pagelist->pages;
+         virtAddr = region->virtAddr;
 
-            if ( memMap->dir == DMA_TO_DEVICE )
-            {
-               /*
-                * The userspace data has already been flushed out to the physical
-                * memory by dma_mmap. We're now going to access the data using
-                * the kernel virtual address, so we want to invalidate any cached
-                * data which might be present
-                */
+         firstPageOffset = (unsigned long)virtAddr & (PAGE_SIZE - 1);
+         firstPageSize   = PAGE_SIZE - firstPageOffset;
+         if (firstPageSize > region->numBytes)
+         {
+            firstPageSize = region->numBytes;
+         }
 
-               dma_sync_single_for_device( NULL, segment->physAddr, segment->numBytes, DMA_FROM_DEVICE );
-               dma_sync_single_for_cpu( NULL, segment->physAddr, segment->numBytes, DMA_FROM_DEVICE );
+         dma_mmap_memcpy_page( pages[0], memPtr, firstPageOffset, firstPageSize, memMap->dir );
 
-               memcpy( memPtr, kernelAddr, segment->numBytes );
-            }
-            else
-            {
-               memcpy( kernelAddr, memPtr, segment->numBytes );
+         memPtr += firstPageSize;
+         virtAddr += firstPageSize;
+         bytesRemaining = region->numBytes - firstPageSize;
 
-               /*
-                * We've copied a bunch of data into the kernel memory. We need to
-                * flush it out.
-                */
+         for (pageIdx = 1; pageIdx < pagelist->numLockedPages; pageIdx++)
+         {
+            size_t bytesThisPage = (bytesRemaining > PAGE_SIZE ?
+                                    PAGE_SIZE : bytesRemaining);
 
-               dma_sync_single_for_device( NULL, segment->physAddr, segment->numBytes, DMA_TO_DEVICE );
-               dma_sync_single_for_cpu( NULL, segment->physAddr, segment->numBytes, DMA_TO_DEVICE );
+            dma_mmap_memcpy_page( pages[pageIdx], memPtr, 0, bytesThisPage, memMap->dir );
 
-            }
-            memPtr += segment->numBytes;
+            memPtr += bytesThisPage;
+            virtAddr += bytesThisPage;
+            bytesRemaining -= bytesThisPage;
          }
       }
       else
