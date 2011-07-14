@@ -921,6 +921,12 @@ config USB_ANDROID_RNDIS_WCEIS
          If you enable this option, the device is no longer CDC ethernet
          compatible.
 
+config USB_ANDROID_OBEX
+	boolean "Android gadget OBEX function"
+	depends on USB_ANDROID
+	help
+	  Provides OBEX function for android gadget driver.
+
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
 	depends on NET
