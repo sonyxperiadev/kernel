@@ -26,7 +26,9 @@
 
 #include "plat/chal/chal_common.h"
 #include "plat/chal/chal_trace.h"
+#include "plat/mobcom_types.h"
 #include "mach/rdb/brcm_rdb_util.h"
+#include <mach/io_map.h>
 #if defined(_HERA_)
 #include "mach/rdb/brcm_rdb_apbtoatb.h"
 #include "mach/rdb/brcm_rdb_atb2pti.h"
@@ -85,12 +87,18 @@ cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr)
     chal_dprintf(CDBG_INFO, "chal_trace_init\n");
 
     /* Hack to ungate PTI & TPIU clocks */
-
+	
+#if defined(CONFIG_ARCH_RHEA)
     BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
                          CHIPREG_PERIPH_SPARE_CONTROL1, PTI_CLK_IS_IDLE, 0);
     BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
                          CHIPREG_PERIPH_SPARE_CONTROL1, TPIU_CLK_IS_IDLE, 0);
-
+#elif defined(CONFIG_ARCH_ISLAND)
+    BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
+                         CHIPREG_ARM_PERI_CONTROL, PTI_CLK_IS_IDLE, 0);		
+    BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
+                         CHIPREG_ARM_PERI_CONTROL, TPIU_CLK_IS_IDLE, 0);
+#endif
     /* Do nothing */
     return TRUE;
 }

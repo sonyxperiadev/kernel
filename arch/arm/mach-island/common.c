@@ -31,6 +31,8 @@
 #include <mach/kona.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <mach/irqs.h>
+#include <plat/chal/chal_trace.h>
+#include <trace/stm.h>
 
 #define KONA_UART0_PA   UARTB_BASE_ADDR
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
@@ -66,6 +68,23 @@ static struct platform_device board_serial_device = {
 		.platform_data = uart_data,
 	},
 };
+
+#ifdef CONFIG_STM_TRACE
+static struct stm_platform_data stm_pdata = {
+	.regs_phys_base       = STM_BASE_ADDR,
+	.channels_phys_base   = SWSTM_BASE_ADDR,
+	.id_mask              = 0x0,   /* Skip ID check/match */
+	.final_funnel	      = CHAL_TRACE_FIN_FUNNEL,
+};
+
+struct platform_device kona_stm_device = {
+	.name = "stm",
+	.id = -1,
+	.dev = {
+	        .platform_data = &stm_pdata,
+	},
+};
+#endif
 
 #if defined(CONFIG_HW_RANDOM_KONA)
 static struct resource rng_device_resource[] = {
@@ -202,6 +221,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_KONA_PWMC)
         &pwm_device,
+#endif
+#ifdef CONFIG_STM_TRACE
+	&kona_stm_device,
 #endif
 };
 

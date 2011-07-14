@@ -1354,7 +1354,9 @@ static void __init board_add_devices(void)
 void __init pinmux_setup(void)
 {
 	void __iomem *chipRegBase = IOMEM(KONA_CHIPREG_VA);
-	uint32_t val;
+	uint32_t val, traceVal;
+	
+	traceVal = 0x107;
 
 	/* Setup pin muxing for PMU interrupt pin.
 	*/
@@ -1374,6 +1376,14 @@ void __init pinmux_setup(void)
 	val = ( 3 << CHIPREG_NORFLSH_AD_05_PINSEL_2_0_SHIFT ) |
 	( 3 << CHIPREG_NORFLSH_AD_05_SEL_2_0_SHIFT )	 ;
 	writel( val, chipRegBase + CHIPREG_NORFLSH_AD_05_OFFSET ) ;
+	
+	/* trace clock setting */
+	writel( traceVal, chipRegBase + CHIPREG_TRACECLK_OFFSET ) ;
+	writel( traceVal, chipRegBase + CHIPREG_TRACEDT07_OFFSET ) ;
+	writel( traceVal, chipRegBase + CHIPREG_TRACEDT03_OFFSET ) ;
+	writel( traceVal, chipRegBase + CHIPREG_TRACEDT02_OFFSET ) ;
+	writel( traceVal, chipRegBase + CHIPREG_TRACEDT01_OFFSET ) ;
+	writel( traceVal, chipRegBase + CHIPREG_TRACEDT00_OFFSET ) ;
 }
 
 void __init board_init(void)

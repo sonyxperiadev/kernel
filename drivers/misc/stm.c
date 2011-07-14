@@ -15,16 +15,19 @@
 #include <linux/debugfs.h>
 #include <trace/stm.h>
 #ifdef CONFIG_BCM_STM
+#include "plat/mobcom_types.h"
 #include "mach/rdb/brcm_rdb_util.h"
 #include "mach/rdb/brcm_rdb_swstm.h"
 #include "mach/rdb/brcm_rdb_atb_stm.h"
 #include "mach/rdb/brcm_rdb_cstf.h"
 #include "mach/rdb/brcm_rdb_atbfilter.h"
+#ifdef CONFIG_ARCH_RHEA
 #include "mach/rdb/brcm_rdb_padctrlreg.h"
+#endif
 #include "mach/rdb/brcm_rdb_chipreg.h"
 #include <mach/hardware.h>
 #include <plat/chal/chal_trace.h>
-#include <mach/hardware.h>
+#include <mach/io_map.h>
 #endif
 
 /* Max number of channels (multiple of 256) */
@@ -77,11 +80,15 @@ static CHAL_TRACE_DEV_t trace_base_addr = {
 	.AXITRACE_base[CHAL_TRACE_AXITRACE11] = KONA_AXITRACE11_VA,
 	.AXITRACE_base[CHAL_TRACE_AXITRACE12] = KONA_AXITRACE12_VA,
 	.AXITRACE_base[CHAL_TRACE_AXITRACE16] = KONA_AXITRACE16_VA,
+#ifdef CONFIG_ARCH_RHEA
 	.AXITRACE_base[CHAL_TRACE_AXITRACE17] = KONA_AXITRACE17_VA,
+#endif
 	.AXITRACE_base[CHAL_TRACE_AXITRACE18] = KONA_AXITP18_VA,
 	.AXITRACE_base[CHAL_TRACE_AXITRACE19] = KONA_AXITRACE19_VA,
 	.CTI_base[CHAL_TRACE_HUB_CTI] = KONA_HUB_CTI_VA,
+#ifdef CONFIG_ARCH_RHEA
 	.CTI_base[CHAL_TRACE_MM_CTI] = KONA_MM_CTI_VA,
+#endif
 	.CTI_base[CHAL_TRACE_FAB_CTI] = KONA_FAB_CTI_VA,
 	.CTI_base[CHAL_TRACE_A9CTI0] = KONA_A9CTI0_VA,
 	.CTI_base[CHAL_TRACE_R4_CTI] = KONA_BMODEM_CTI_VA,
@@ -91,7 +98,7 @@ static CHAL_TRACE_DEV_t trace_base_addr = {
 	.ATB_STM_base = KONA_STM_VA,
 	.SW_STM_base[CHAL_TRACE_SWSTM] = KONA_SWSTM_VA,
 	.SW_STM_base[CHAL_TRACE_SWSTM_ST] = KONA_SWSTM_ST_VA,
-	.GICTR_base = KONA_GICTR_VA,
+	.GICTR_base = KONA_GICTR_VA,	
 };
 static CHAL_HANDLE kona_trace_handle = NULL;
 
@@ -100,8 +107,9 @@ static void kona_tracepad_init(void)
     // All register config values taken from T32 script
     
     // clear pti_clk_is_idle
+#ifdef CONFIG_ARCH_RHEA
     BRCM_WRITE_REG(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1, 0x2);
-
+#endif
     // Config ATB Filter rm id's for STM
     BRCM_WRITE_REG(KONA_ATBFILTER_VA, ATBFILTER_ATB_FILTER, 0x203);
     // Config Funnels
@@ -112,13 +120,18 @@ static void kona_tracepad_init(void)
     BRCM_WRITE_REG(KONA_SWSTM_VA, SWSTM_R_CONFIG, 0x82);
     BRCM_WRITE_REG(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG, 0x82);
 
+#if defined(CONFIG_ARCH_RHEA)
     // Not tracepad setup, but RXD clock setup
-	*(volatile UInt32*)(KONA_SLV_CLK_VA +0x000) = 0xA5A501; // WR_ACCESS
-	*(volatile UInt32*)(KONA_SLV_CLK_VA +0x01C) |= 0x50000; // UARTB3_POLICY3_MASK
-	*(volatile UInt32*)(KONA_SLV_CLK_VA +0x034) = 0x01;		// LVM_EN
-	*(volatile UInt32*)(KONA_SLV_CLK_VA +0x00C) = 0x05;		// POLICY_CTL
-	*(volatile UInt32*)(KONA_SLV_CLK_VA +0x408) = 0x0F;		// UARTB3
-
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x000) = 0xA5A501; // WR_ACCESS
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x01C) |= 0x50000; // UARTB3_POLICY3_MASK
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x034) = 0x01;		// LVM_EN
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x00C) = 0x05;		// POLICY_CTL
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x408) = 0x0F;		// UARTB3
+#elif defined(CONFIG_ARCH_ISLAND)	
+    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0x000) = 0xA5A501; // WR_ACCESS 35001000
+    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0xa24) = 0x1; 
+    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0x000) = 0xA5A500;
+#endif
 }
 
 static int kona_trace_funnel_set_enable(CHAL_TRACE_FUNNEL_t funnel_type,

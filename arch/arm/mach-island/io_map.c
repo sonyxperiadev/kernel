@@ -63,6 +63,7 @@ static struct map_desc island_io_desc[] __initdata =
 	***************************************************/
 
 	IO_DESC( KONA_ACI_VA, SZ_4K  ),
+	IO_DESC( KONA_ATBFILTER_VA, SZ_4K  ),
 	IO_DESC( KONA_BINTC_BASE_ADDR, SZ_4K  ),
 	IO_DESC( KONA_BSC1_VA, SZ_4K  ),
 	IO_DESC( KONA_BSC2_VA, SZ_4K  ),
@@ -73,6 +74,8 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_DMUX_VA, SZ_4K  ),
 	IO_DESC( KONA_EDMA_VA, SZ_4K ),
 	IO_DESC( KONA_ESW_VA, SZ_1M ),
+	IO_DESC( KONA_FIN_FUNNEL_VA, SZ_4K ),
+	IO_DESC( KONA_FUNNEL_VA, SZ_4K ),
 	IO_DESC( KONA_GICDIST_VA, SZ_4K ),
 	IO_DESC( KONA_GPIO2_VA, SZ_4K ),
 	IO_DESC( KONA_HSI_VA, SZ_4K ),
@@ -89,6 +92,7 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_PKA_VA, SZ_4K ),
 	IO_DESC( KONA_PWM_VA, SZ_4K ),
 	IO_DESC( KONA_PMU_BSC_VA, SZ_4K ),
+	IO_DESC( KONA_ROOT_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_ROOT_RST_VA, SZ_4K ),
 	IO_DESC( KONA_RNG_VA, SZ_4K ),
 
@@ -125,6 +129,9 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_SSP2_VA, SZ_4K ),
 	IO_DESC( KONA_SSP3_VA, SZ_4K ),
 	IO_DESC( KONA_SSP4_VA, SZ_4K ),
+	IO_DESC( KONA_STM_VA, SZ_4K ),  
+	IO_DESC( KONA_SWSTM_VA, SZ_4K ),  
+	IO_DESC( KONA_SWSTM_ST_VA, SZ_4K ),  
 	
 	IO_DESC( KONA_SYSTMR_VA, SZ_4K ),  /* 32-bit kona gp timer */
 	IO_DESC( KONA_TMR_HUB_VA, SZ_4K ), /* 64-bit hub timer */
@@ -138,6 +145,7 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_USB_HOST_EHCI_VA, SZ_256 ),	/* Includes DWC specific registers, otherwise could use SZ_128 if was def'd */
 	IO_DESC( KONA_USB_HOST_OHCI_VA, SZ_256 ),	/* Could really use SZ_128 if was def'd */
 	IO_DESC( KONA_USB_HSOTG_CTRL_VA, SZ_4K ),
+	IO_DESC( KONA_PWRMGR_VA, SZ_32K),
 
    IO_DESC( KONA_VC_EMI, SZ_128M ),
 	

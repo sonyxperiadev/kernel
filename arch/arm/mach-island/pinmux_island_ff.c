@@ -27,6 +27,13 @@
 #include <mach/pinmux.h>
 
 static struct __init pin_config board_pin_config[] = {
+        /* STM trace - PTI */
+	PIN_CFG(TRACECLK, PTI_CLK, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(TRACEDT07, UARTB2_URXD, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(TRACEDT00, PTI_DAT0, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(TRACEDT01, PTI_DAT1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(TRACEDT02, PTI_DAT2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
 };
 
 /* board level init */

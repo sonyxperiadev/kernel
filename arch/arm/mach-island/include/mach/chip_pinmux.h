@@ -108,6 +108,14 @@ enum PIN_NAME {
         /* GPIO 87 */ PN_SDIO3_DATA_0,
         /* GPIO 86 */ PN_SDIO3_CMD,
         /* GPIO 85 */ PN_SDIO3_CLK,
+	
+	/* STM pinmuxing */
+	              PN_TRACECLK,
+	              PN_TRACEDT00,
+	              PN_TRACEDT01,
+	              PN_TRACEDT02,
+	              PN_TRACEDT03,
+	              PN_TRACEDT07,
 
 	/* GPIO 61 */ PN_PMU_SCL,
         /* GPIO 60 */ PN_PMU_SDA,
@@ -283,6 +291,27 @@ enum PIN_FUNC {
         PF_SDIO3_DATA_0,
         PF_SDIO3_CMD,
         PF_SDIO3_CLK,
+	
+	PF_TRACECLK,
+	PF_TRACEDT00,
+	PF_TRACEDT01,
+	PF_TRACEDT02,
+	PF_TRACEDT03,
+	PF_TRACEDT07,
+
+	PF_MDN_DSP_TRACE_CLK,
+	PF_MDN_DSP_TRACE_DAT0,
+	PF_MDN_DSP_TRACE_DAT1,
+	PF_MDN_DSP_TRACE_DAT2,
+	PF_MDN_DSP_TRACE_DAT3,
+	PF_MDN_DSP_TRACE_DAT7,
+	
+	PF_PTI_CLK,
+	PF_PTI_DAT0,
+	PF_PTI_DAT1,
+	PF_PTI_DAT2,
+	PF_PTI_DAT3,
+	PF_UARTB2_URXD,
 
 	PF_PMU_SCL,
         PF_PMU_SDA,
