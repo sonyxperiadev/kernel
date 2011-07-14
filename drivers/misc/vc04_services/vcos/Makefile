@@ -1,4 +1,4 @@
-EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2 -Wno-declaration-after-statement -Wno-parentheses
+EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -O2 -Wno-declaration-after-statement -Wno-parentheses
 
 EXTRA_CFLAGS  += -I"vc4-dev/src/"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vcos"
