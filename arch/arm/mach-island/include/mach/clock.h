@@ -518,4 +518,6 @@ enum
 #define DSI1_ESC_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
 #define DSI_PLL_O_DSI_PLL_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
 
+extern int island_clock_init(void);
+
 #endif /* __ARM_ARCH_BCM2165X_CLOCK_MGR_H  */

@@ -162,4 +162,6 @@ enum {
     PWR_MGR_NUM_EVENTS,
 };
 
+
+int island_pwr_mgr_init(void);
 #endif /*__RHEA_PWR_MNGR_H__*/

@@ -33,7 +33,7 @@
 #include <asm/hardware/cache-l2x0.h>
 
 #include <mach/io_map.h>
-#include <plat/clock.h>
+#include <mach/clock.h>
 #include <mach/gpio.h>
 #include <mach/timer.h>
 #include <mach/kona.h>
@@ -78,7 +78,7 @@ static int __init island_init(void)
 #endif
 
 #ifdef CONFIG_HAVE_CLK
-	clock_init();
+	//island_clock_init();
 #endif
 
 	pinmux_init();
