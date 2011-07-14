@@ -1416,6 +1416,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	int scan_assoc_time = 40;
 	int scan_unassoc_time = 80;
 	int32 wme = 1;
+	int32 scan_passive_time = 230;
 	const char 				*str;
 	wl_pkt_filter_t		pkt_filter;
 	wl_pkt_filter_t		*pkt_filterp;
@@ -1485,6 +1486,15 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 
 	/* Enable WME */
 	bcm_mkiovar("wme", (char *)&wme, 4, iovbuf, sizeof(iovbuf));
+	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
+
+	/* Set scan_passive_time to 230. The default setting (e.g. 250)
+	 * might cause the 5GHz AP to send a link down event during scanning.
+	 * Reducing it to 230 would mitigate this problem.  Note that the
+	 * choice of 230 is arbitrary (e.g. trial-and-error).  A shorter time
+	 * might be needed. 
+	*/
+	bcm_mkiovar("scan_passive_time", (char *)&scan_passive_time, 4, iovbuf, sizeof(iovbuf));
 	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 
 	/* Force STA UP */
