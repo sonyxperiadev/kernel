@@ -34,7 +34,6 @@ struct bcm_otg_data {
 	struct bcm590xx *bcm590xx;
 	struct otg_transceiver xceiver;
 	bool host;
-	bool otg_init_done;
 	struct clk *otg_clk;
 	void *hsotg_ctrl_base;
 };
@@ -43,6 +42,8 @@ struct bcm_otg_data {
 
 #define OTGCTRL1_VBUS_ON 0xDC
 #define OTGCTRL1_VBUS_OFF 0xD8
+
+static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled) ;
 
 static void bcm_otg_phy_set_vbus_stat(struct bcm_otg_data *otg_data,
 				      bool on)
@@ -149,6 +150,18 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcm_otg_host_show,
 		   bcm_otg_host_store);
 
+static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled)
+{
+	struct bcm_otg_data *otg_data = dev_get_drvdata(otg->dev);
+
+	if (NULL == otg_data)
+		return -EINVAL;
+
+	bcm_otg_set_vbus(otg_data, enabled);
+	bcm_otg_phy_set_vbus_stat(otg_data, enabled);
+	return 0;
+}
+
 static int __devinit bcm_otg_probe(struct platform_device *pdev)
 {
 	int error = 0;
@@ -184,6 +197,7 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	otg_data->xceiver.set_vbus = bcm_otg_control_vbus;
 	otg_set_transceiver(&otg_data->xceiver);
 
 	platform_set_drvdata(pdev, otg_data);
