@@ -1415,6 +1415,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	int arp_ol = dhd_arp_mode;
 	int scan_assoc_time = 40;
 	int scan_unassoc_time = 80;
+	int32 wme = 1;
 	const char 				*str;
 	wl_pkt_filter_t		pkt_filter;
 	wl_pkt_filter_t		*pkt_filterp;
@@ -1481,6 +1482,10 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	bcm_mkiovar("apsta", (char *)&apsta, 4, iovbuf, sizeof(iovbuf));
 	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 #endif
+
+	/* Enable WME */
+	bcm_mkiovar("wme", (char *)&wme, 4, iovbuf, sizeof(iovbuf));
+	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 
 	/* Force STA UP */
 	ret = dhd_wl_ioctl_cmd(dhd, WLC_UP, (char *)&up, sizeof(up), TRUE, 0);
