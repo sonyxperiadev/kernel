@@ -2,7 +2,7 @@
 CONFIG_VC_GENCMD	?= n
 
 #Build flags
-EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2 
+EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -O2 
 
 EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -D__linux__
