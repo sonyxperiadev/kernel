@@ -23,6 +23,7 @@ obj-$(CONFIG_SGI_XP)		+= sgi-xp/
 obj-$(CONFIG_SGI_GRU)		+= sgi-gru/
 obj-$(CONFIG_CS5535_MFGPT)	+= cs5535-mfgpt.o
 obj-$(CONFIG_HP_ILO)		+= hpilo.o
+obj-$(CONFIG_BRCM_VIRTUAL_SENSOR)	+= brvsens_driver.o
 obj-$(CONFIG_ISL29003)		+= isl29003.o
 obj-$(CONFIG_SENSORS_TSL2550)	+= tsl2550.o
 obj-$(CONFIG_SENSORS_BH1715)	+= bh1715.o

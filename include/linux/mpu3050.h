@@ -49,17 +49,4 @@ struct mpu3050_platform_data
 #define MPU3050_DRV_NAME		"mpu3050"
 #define MPU3050_I2C_ADDR		0x68
 
-/* user commands */
-#define MPU3050_IOC_MAGIC        'B'
-
-/* Default delay between poll events in non-interrupt mode */
-#define MPU3050_POLL_RATE_MSEC    200   // 0.2 seconds
-
-/* Uniform IOCTL Interface for User control from Sensor Library */
-#define MPU3050_SET_POLL_RATE           _IOW(MPU3050_IOC_MAGIC, 100, unsigned int)
-#define MPU3050_SET_ENABLE			    _IOW(MPU3050_IOC_MAGIC, 101, unsigned char)
-
-// gyro scale; SET can be added once driver implements functionality
-#define MPU3050_GET_SCALE				_IOW(MPU3050_IOC_MAGIC, 102, unsigned int)
-
 #endif /* _MPU3050_H_ */

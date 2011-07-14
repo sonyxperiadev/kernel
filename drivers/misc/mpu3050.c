@@ -46,7 +46,9 @@
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
 
-//#define PROC_DEBUG   // comment in/out to enable cmd line interface via /proc/mpu3050
+#include <linux/brvsens_driver.h>
+
+// #define PROC_DEBUG   // comment in/out to enable cmd line interface via /proc/mpu3050
 
 #ifdef PROC_DEBUG
    #include <linux/proc_fs.h>
@@ -68,9 +70,6 @@
 
 #define SENSOR_NAME 			MPU3050_DRV_NAME
 
-/* Global Client Pointer */
-static struct i2c_client* mpu3050_client = NULL;
-
 struct axis_data 
 {
 	s16 x;
@@ -84,19 +83,8 @@ struct mpu3050_data
 	struct device*     dev;
 	struct input_dev*  idev;
 	struct mutex       lock;
-	atomic_t           pollrate;               // poll rate [msec] -- see mpu3050_poll
 };
 
-
-/* Helper to manage poll rate setting */
-static inline void SetPollRate
-(
-   struct mpu3050_data* mpudata,  // client data structure pointer
-   u32                  msec      // poll rate in milliseconds
-)
-{
-   atomic_set(&(mpudata->pollrate), msec);
-}
 
 /* Helper to switch values depending how sensor is mounted on the board */
 static int mpu_switch_values
@@ -283,16 +271,18 @@ static void mpu3050_input_close(struct input_dev* input)
  */
 static irqreturn_t mpu3050_interrupt_thread(int irq, void* data)
 {
-    struct mpu3050_data* sensor = data;
+    struct i2c_client*   client = (struct i2c_client*)data;
+    struct mpu3050_data* sensor = i2c_get_clientdata(client);
 	struct axis_data axis;
     
 	mutex_lock(&sensor->lock);
-	mpu3050_read_xyz(mpu3050_client, &axis);
+	mpu3050_read_xyz(client, &axis);
 	mutex_unlock(&sensor->lock);
 
 	input_report_abs(sensor->idev, ABS_X, axis.x);
 	input_report_abs(sensor->idev, ABS_Y, axis.y);
 	input_report_abs(sensor->idev, ABS_Z, axis.z);
+	
 	input_sync(sensor->idev);
 
 	return IRQ_HANDLED;
@@ -301,17 +291,17 @@ static irqreturn_t mpu3050_interrupt_thread(int irq, void* data)
 
 
 /**
- *	mpu3050_register_input_device	-	remove input dev
+ *	mpu3050_register_input_device	-	register input dev
  *	@sensor: sensor to remove from input
  *
  *	Add an input device to the sensor. This will be used to report
  *	events from the sensor itself.
  */
-static int mpu3050_register_input_device(struct mpu3050_data *sensor)
+static int mpu3050_register_input_device(struct i2c_client* client)
 {
-	struct i2c_client* client = mpu3050_client;
 	struct input_dev* idev;
 	int ret;
+	struct mpu3050_data* sensor = i2c_get_clientdata(client);
 	
 	sensor->idev = input_allocate_device();
 	idev = sensor->idev;
@@ -323,12 +313,13 @@ static int mpu3050_register_input_device(struct mpu3050_data *sensor)
 		goto failed_alloc;
 	}
 	
-	idev->name = "MPU3050";
-	idev->open = mpu3050_input_open;
-	idev->close = mpu3050_input_close;
+	idev->name = MPU3050_DRV_NAME;
+	
+	idev->open       = mpu3050_input_open;
+	idev->close      = mpu3050_input_close;
 	idev->id.bustype = BUS_I2C;
 	idev->dev.parent = &client->dev;
-	idev->evbit[0] = BIT_MASK(EV_ABS);
+	idev->evbit[0]   = BIT_MASK(EV_ABS);
 	
 	input_set_abs_params(idev, ABS_X, MPU3050_MIN_VALUE,
 			MPU3050_MAX_VALUE, 0, 0);
@@ -349,7 +340,8 @@ static int mpu3050_register_input_device(struct mpu3050_data *sensor)
 	}
 	
 	ret = request_irq(client->irq, mpu3050_interrupt_thread, IRQF_TRIGGER_RISING,
-				"mpu_int", sensor);
+    				MPU3050_DRV_NAME, client);
+						
 	if (ret)
 	{
 		dev_err(&client->dev, "can't get IRQ %d, ret %d\n",
@@ -358,6 +350,7 @@ static int mpu3050_register_input_device(struct mpu3050_data *sensor)
 		goto failed_irq;
 	}
 	
+	printk("++++ mpu3050 Interrupt Registered!. IRQ line: %d++++\n", client->irq);
 	return 0;
 	
 failed_irq:
@@ -373,7 +366,7 @@ failed_alloc:
 }
 
 
-/* cmd line interface for purpose of power management. Sensor Library uses /dev/mpu3050 */
+/* cmd line interface for purpose of power management */
 #ifdef PROC_DEBUG
    #define MAX_PROC_BUF_SIZE  32
    #define PROC_ENTRY_MPU3050  MPU3050_DRV_NAME
@@ -385,7 +378,8 @@ static int proc_debug_mpu(struct file* file, const char __user* buffer, unsigned
 	int rc, num_args, cmd;
 	unsigned char kbuf[MAX_PROC_BUF_SIZE];
 	struct axis_data coords;
-	struct mpu3050_data* sensor = 0;
+	struct i2c_client* client = (struct i2c_client*)data;
+	struct mpu3050_data* sensor = i2c_get_clientdata(client);
 
 	if (count > MAX_PROC_BUF_SIZE) 
 	{
@@ -405,33 +399,25 @@ static int proc_debug_mpu(struct file* file, const char __user* buffer, unsigned
 		printk(KERN_ERR "echo <cmd> > %s\n", PROC_ENTRY_MPU3050);
 		return count;
 	}
-
-    /* check global client pointer */
-	if (mpu3050_client == NULL)
-	{
-		printk(KERN_ERR "sensor is not initialized\n");
-		return count;
-	}
 	
-	sensor = i2c_get_clientdata(mpu3050_client);
 	switch (cmd)
 	{
 	case 0: 
 		printk(KERN_ERR "CMD MODE_SLEEP\n");
-		mpu3050_set_power_mode(mpu3050_client, 0); 
+		mpu3050_set_power_mode(client, 0); 
 		 
 		break;
 		
 	case 1:
 		printk(KERN_ERR "CMD MODE_NORMAL\n");
-		mpu3050_set_power_mode(mpu3050_client, 1);
+		mpu3050_set_power_mode(client, 1);
 		msleep_interruptible(100);  /* wait for gyro chip resume */
 		
 		break;
 		
 	case 2:
 		coords.x = coords.y = coords.z = 0;
-		mpu3050_read_xyz(mpu3050_client, &coords);
+		mpu3050_read_xyz(client, &coords);
 		printk(KERN_INFO "CMD MODE READ x: %d, y: %d, z: %d\n", coords.x, coords.y, coords.z);
 		
 		break;
@@ -444,179 +430,6 @@ static int proc_debug_mpu(struct file* file, const char __user* buffer, unsigned
 }
 #endif
 
-/* Multiplexer for MPU3050 (*** Note: This is temp, as MPU3050 supports interrupts.
-   will be removed for Phase 2 **** */
-static unsigned int mpu3050_poll(struct file* file, struct poll_table_struct* polltable)
-{
-	struct mpu3050_data* data = 0;
-    
-	if (mpu3050_client == NULL)
-	{ 
-		msleep_interruptible(MPU3050_POLL_RATE_MSEC);
-		return POLLERR;
-	}
-	
-	data = i2c_get_clientdata(mpu3050_client);
-	msleep_interruptible(atomic_read(&(data->pollrate)  ) );
-	
-	return POLLIN;
-}
-
-/*	read command for MPU3050 device file	*/
-static ssize_t mpu3050_read(struct file* file, char __user* buf, size_t count, loff_t* offset)
-{	
-   struct axis_data axd;
-   struct mpu3050_data* data = 0;
-   int ret = 0;
-   
-   // check global client pointer
-   if (mpu3050_client == NULL)
-   {
-		printk(KERN_ERR "%s: I2C driver not installed\n", __FUNCTION__); 
-		return -1;
-   }
-   
-   // check user buffer
-   if (count != sizeof(axd) )
-       return -1;
-   
-   // read values
-   axd.x = axd.y = axd.z = 0;
-   mpu3050_read_xyz(mpu3050_client, &axd);
-
-
-   
-   // convert to degrees / second, based on current scale
-   
-   // copy data to user
-   ret = copy_to_user(buf, &axd, sizeof(axd));
-   if (ret != 0 )
-   {
-       printk(KERN_ERR "%s: MPU3050 copy_to_user ERROR: %d\n", __FUNCTION__, ret);
-       return -1;
-   }
-   
-   // all ok
-   return sizeof(axd);
-}
-
-
-/* IOCTL Interface for MPU3050: Uniform access from Sensor Library */
-static long mpu3050_ioctl
-(
-   struct file*  file,
-   unsigned int  cmd,
-   unsigned long arg
-)
-{
-	int err = 0;
-	unsigned char data[6];
-	unsigned int temp;
-	
-   	/* check cmd */
-	if (_IOC_TYPE(cmd) != MPU3050_IOC_MAGIC)	
-	{	
-		printk(KERN_ERR "[%s]::cmd magic type error\n", __FUNCTION__);
-		return -ENOTTY;
-	}
-	
-	if (_IOC_DIR(cmd) & _IOC_READ)
-		err = !access_ok(VERIFY_WRITE,(void __user*)arg, _IOC_SIZE(cmd));
-	
-	else if(_IOC_DIR(cmd) & _IOC_WRITE)
-		err = !access_ok(VERIFY_READ, (void __user*)arg, _IOC_SIZE(cmd));
-	
-	if (err)
-	{
-		printk(KERN_ERR "[%s]::cmd access_ok error\n", __FUNCTION__);
-		return -EFAULT;
-	}
-	
-    // check global client pointer
-    if (mpu3050_client == NULL)
-    {
-		printk(KERN_ERR "%s: I2C driver not installed\n", __FUNCTION__); 
-		return -1;
-    }
-
-	
-	/* cmd mapping */
-	switch (cmd)
-	{
-	   case MPU3050_SET_ENABLE:
-	   {
-		   if (copy_from_user(data, (unsigned char*)arg, sizeof(unsigned char) ) != 0)
-		   {
-			  printk(KERN_ERR "[%s]::copy_from_user error\n", __FUNCTION__);
-			  return -EFAULT;
-		   }
-	
-		   // enabled 1, disable 0
-		   if (*data)
-		   {
-		       mpu3050_set_power_mode(mpu3050_client, 1);
-		       msleep_interruptible(100);  /* wait for gyro chip resume: TODO: Is this necessary??? */
-		   }
-		   else
-		       mpu3050_set_power_mode(mpu3050_client, 0);
-		
-		   //printk("++++++ MPU3050_SET_ENABLE: set to [%d], err: [%d] +++++\n", *data, err);
-		   return 0;
-	   }
-
-	   case MPU3050_SET_POLL_RATE:
-	   {	
-		   if (copy_from_user((unsigned int*)data, (unsigned int*)arg, sizeof(unsigned int) ) != 0)
-		   {
-			   printk(KERN_ERR "[%s]::MPU3050_SET_POLL_RATE -- copy_from_user error\n", __FUNCTION__);
-			   return -EFAULT;
-		   }
-		
-		   // store passed value in client data
-		   memcpy(&temp, data, 4);
-		   SetPollRate(i2c_get_clientdata(mpu3050_client), temp);
-
-		   return 0;
-	   }
-	   
-	   case MPU3050_GET_SCALE:
-	   {
-	       struct mpu3050_platform_data* mpd = (struct mpu3050_platform_data*) mpu3050_client->dev.platform_data;
-	       if (copy_to_user((unsigned int*)arg, &(mpd->scale), 4) != 0)
-		   {
-			  printk(KERN_ERR "[%s]::MPU3050_GET_SCALE -- copy_to_user error\n", __FUNCTION__);
-			  return -EFAULT;
-		   }
-		   
-	       return 0;
-	   }
-
-	   default:
-	       printk(KERN_ERR "[%s]::Cmd number error", __FUNCTION__); 
-		   return -ENOTTY;
-	}
-	
-	// never reached
-}
-
-/* fops dev interface */
-static const struct file_operations mpu3050_fops = 
-{
-	.owner          = THIS_MODULE,
-	.poll           = mpu3050_poll,
-	.read           = mpu3050_read,
-    .unlocked_ioctl = mpu3050_ioctl,
-};
-
-/*
- * add miscdevices for mpu3050
- */
-static struct miscdevice mpu3050_device = 
-{
-    .minor = MISC_DYNAMIC_MINOR,
-	.name  = SENSOR_NAME,
-	.fops  = &mpu3050_fops,
-};
 
 /**
  *	mpu3050_probe	-	device detection callback
@@ -645,19 +458,8 @@ static int __devinit mpu3050_probe
 	}
 	
 	sensor->dev = &client->dev;
-	mpu3050_client = client;                 // set global client pointer
 	i2c_set_clientdata(client, sensor);
 
-    // register /dev/mpu3050
-	ret = misc_register(&mpu3050_device);
-	if (ret)
-	{
-	    printk(KERN_ERR "+++ [%s]::misc_register error: {%d} +++\n", __FUNCTION__, ret);
-		goto failed_free;
-    }
-
-    // Device registerd OK. Set default poll rate
-    SetPollRate(sensor, MPU3050_POLL_RATE_MSEC);
     
 	/* maps GPIO to IRQ */
 	if (client->dev.platform_data != NULL)
@@ -679,20 +481,20 @@ static int __devinit mpu3050_probe
 	if (ret < 0) 
 	{
 		dev_err(&client->dev, "failed to detect device\n");
-		goto failed_deregister;
+		goto failed_free;
 	}
 	
 	if (ret != MPU3050_CHIP_ID)
 	{
 		dev_err(&client->dev, "unsupported chip id\n");
-		goto failed_deregister;
+		goto failed_free;
 	}
 	
 	mutex_init(&sensor->lock);
 
 	pm_runtime_set_active(&client->dev);
 
-	ret = mpu3050_register_input_device(sensor);
+	ret = mpu3050_register_input_device(client);
 	if (ret)
 		dev_err(&client->dev, "only provide sysfs\n");
 
@@ -709,20 +511,22 @@ static int __devinit mpu3050_probe
 	{
 		printk(KERN_ERR "mpu3050/debug driver procfs failed\n");
 		ret = -ENOMEM;
-		goto failed_deregister;
+		
+		goto failed_free;
 	}
 	
 	proc_mpu->write_proc = proc_debug_mpu;
+	proc_mpu->data       = client;
+	
 	printk(KERN_INFO "mpu3050/debug driver procfs OK\n");
 #endif
-     
+    
+    // register with BRVSENS driver 
+    brvsens_register(SENSOR_HANDLE_GYROSCOPE, MPU3050_DRV_NAME, client, mpu3050_set_power_mode, mpu3050_read_xyz);
 	return 0;
 
-failed_deregister:
-	misc_deregister(&mpu3050_device);
 failed_free:
 	kfree(sensor);
-	mpu3050_client = NULL;
 	return ret;
 }
 
@@ -745,8 +549,6 @@ static int __devexit mpu3050_remove(struct i2c_client* client)
 	   input_unregister_device(data->idev);
 	   data->idev = NULL;	
     }
-		
-	misc_deregister(&mpu3050_device);
 		
 	kfree(data);
 	return 0;
@@ -787,16 +589,14 @@ static int mpu3050_resume(struct i2c_client* client)
 #ifdef CONFIG_PM_RUNTIME
 static int mpu3050_runtime_suspend(struct device* dev)
 {
-	struct mpu3050_data* sensor = dev_get_drvdata(dev);
-	mpu3050_set_power_mode(mpu3050_client, 0);
+	mpu3050_set_power_mode(dev_get_drvdata(dev), 0);
 	
 	return 0;
 }
 
 static int mpu3050_runtime_resume(struct device* dev)
 {
-	struct mpu3050_data* sensor = dev_get_drvdata(dev);
-	mpu3050_set_power_mode(mpu3050_client, 1);
+	mpu3050_set_power_mode(dev_get_drvdata(dev), 1);
 	msleep_interruptible(100);  /* wait for gyro chip resume */
 	
 	return 0;
@@ -842,6 +642,7 @@ static void __exit mpu3050_exit(void)
 {
 	i2c_del_driver(&mpu3050_i2c_driver);
 }
+
 
 module_init(mpu3050_init);
 module_exit(mpu3050_exit);

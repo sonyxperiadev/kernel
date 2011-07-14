@@ -44,15 +44,5 @@ struct t_bma150_axis_change
 #define BMA150_DRIVER_SLAVE_NUMBER_0x38    0x38
 #define BMA150_DRIVER_NAME                 "bma150"
 
-/* user commands */
-#define BMA150_IOC_MAGIC 'B'
-
-/* Default delay between poll events in non-interrupt mode */
-#define BMA150_POLL_RATE_MSEC 100   // 0.1 seconds
-
-/* Uniform IOCTL Interface for User control from Sensor Library */
-#define BMA150_SET_POLL_RATE            _IOW(BMA150_IOC_MAGIC, 100, unsigned int)
-#define BMA150_SET_ENABLE			    _IOW(BMA150_IOC_MAGIC, 101, unsigned char)
-
 #endif    /* _BMA150_H_ */
 
