@@ -2864,16 +2864,13 @@ static int audiohInit(
 */
 static int audiohExit( void )
 {
-   int error, rc;
-
-   error = 0;
+   int rc;
 
    rc = audiohMixerPortsDeregister();
 
    if( rc )
    {
       printk( KERN_ERR "%s: failed to cleanup mixer ports\n", __FUNCTION__ );
-      error = rc;
    }
 
    audiohProcTerm();
