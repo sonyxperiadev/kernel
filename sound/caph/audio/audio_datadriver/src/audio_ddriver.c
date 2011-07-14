@@ -49,6 +49,7 @@
 #include "auddrv_def.h"
 #include "log.h"
 #include "csl_caph.h"
+#include "csl_apcmd.h"
 #include "csl_audio_render.h"
 #include "csl_audio_capture.h"
 #include "dspif_voice_record.h"
@@ -811,7 +812,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-
+	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureVoiceCmd::%d \n",ctrl_cmd );
 
     switch (ctrl_cmd)
@@ -822,6 +823,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 frame_size;
                 UInt32 num_frames;
                 UInt32 left_over;
+				UInt16 encodingMode, numFramesPerInterrupt, recordMode;
                #ifdef CONFIG_AUDIO_BUILD
 		UInt32 speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_8K;
                #else
@@ -876,26 +878,38 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 		   #endif
 
                 // update num_frames and frame_size
-                aud_drv->num_frames = num_frames;
-                aud_drv->frame_size = frame_size;
-                aud_drv->speech_mode = speech_mode;
+                aud_drv->num_frames 				= num_frames;
+                aud_drv->frame_size 				= frame_size;
+                aud_drv->speech_mode 				= speech_mode;
+			
+				//aud_drv->config.recordMode			= VOCAPTURE_RECORD_BOTH
 
-                
-
-                result_code = dspif_VPU_record_start ( VOCAPTURE_RECORD_BOTH,
+/*                result_code = dspif_VPU_record_start ( VOCAPTURE_RECORD_BOTH,
 								aud_drv->sample_rate,
 								speech_mode, 
 								0, // used by AMRNB and AMRWB
 								0,
 								0,
-								num_frames);
+								num_frames);*/
+				encodingMode = (speech_mode << 4);
+
+				numFramesPerInterrupt = num_frames;
+
+			
+	
+					// restrict numFramesPerInterrupt due to the shared memory size 
+				if (numFramesPerInterrupt > 4)
+							numFramesPerInterrupt = 4;
+
+					VPRIPCMDQ_StartCallRecording((UInt8)VOCAPTURE_RECORD_BOTH, (UInt8)numFramesPerInterrupt, (UInt16)encodingMode);	
 
             }
             break;
         case AUDIO_DRIVER_STOP:
             {
                 //stop capture
-                result_code = dspif_VPU_record_stop ();
+                //result_code = dspif_VPU_record_stop ();
+				VPRIPCMDQ_CancelRecording();
             }
             break;
         case AUDIO_DRIVER_PAUSE:
@@ -921,6 +935,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 
     return result_code;
 }
+
 
 //============================================================================
 //

@@ -45,6 +45,7 @@
 #ifdef CONFIG_AUDIO_BUILD
 #include "ripcmdq.h"
 #endif
+#include "csl_apcmd.h"
 #include "ripisr.h"
 #include "audio_consts.h"
 #ifdef CONFIG_AUDIO_BUILD
@@ -62,6 +63,8 @@
 #include "drv_caph_hwctrl.h"
 #include "audio_vdriver.h"
 #include "platform_mconfig_rhea.h"
+#include "io.h"
+
 
 /**
 *
@@ -207,10 +210,13 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
         // special path for IHF voice call 
         // need to use the physical address  
 		// Linux only change
-        AP_SharedMem_t *ap_shared_mem_ptr = SHAREDMEM_GetDsp_SharedMemPtr();
-        UInt32 *memAddr = (UInt32 *)(AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0])
-				- (UInt32)ap_shared_mem_ptr));
+		AP_SharedMem_t *ap_shared_mem_ptr = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		// Linux only : to get the physical address use the virtual address to compute offset and 
+		// add to the base address 
+   		UInt32 *memAddr = AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0]) 
+                                       - (UInt32)ap_shared_mem_ptr); 
 
+       
         config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		config.source = AUDDRV_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
         
@@ -323,6 +329,10 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 
         (void)AUDDRV_HWControl_DisablePath(config);
     }
+	VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE, 
+   							FALSE, 
+   							FALSE); 
+
 
     currMic = AUDDRV_MIC_NONE;
     config.streamID = AUDDRV_STREAM_NONE;

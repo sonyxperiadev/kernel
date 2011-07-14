@@ -47,6 +47,7 @@
 #include "drv_caph.h"
 #include "csl_aud_queue.h"
 #include "dspif_voice_record.h"
+#include "csl_apcmd.h"
 #include "csl_vpu.h"
 #include "audio_vdriver_voice_record.h"
 #include "log.h"
@@ -60,7 +61,6 @@
 */
 
 
-#if defined (_ATHENA_) || defined (_RHEA_)
 
 //
 // local defines
@@ -139,7 +139,6 @@ typedef	struct VOCAPTURE_Drv_t
 // local variables
 //
 static VOCAPTURE_Drv_t	sVPU_Drv = { 0 };
-static VOCAPTURE_Drv_t	sAMRWB_Drv = { 0 };
 
 
 
@@ -147,7 +146,6 @@ static VOCAPTURE_Drv_t	sAMRWB_Drv = { 0 };
 //	local functions
 //
 static void VPUCapture_TaskEntry (void);
-static void AMRWBCapture_TaskEntry (void);
 
 static VOCAPTURE_Drv_t* GetDriverByType (VOCAPTURE_TYPE_t type);
 
@@ -158,48 +156,9 @@ static void ProcessSharedMemRequest (VOCAPTURE_Drv_t *audDrv, UInt16 bufIndex, U
 void VPU_Capture_Request(UInt16 bufferIndex);
 
 static void CheckBufDoneUponStop (VOCAPTURE_Drv_t	*audDrv);
-#if 0
-//temporary. will delete this after this function is in CIB soc/csl/dsp.
-static UInt32 CSL_MMVPU_ReadAMRWB(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex_no_use)
-{
-	UInt16 size_copied, size_wraparound, totalCopied; 
-	UInt32 frameSize = outSize;
-	UInt16 bufIndex;
-	UInt8 *buffer;
 
-	bufIndex = vp_shared_mem->shared_encodedSamples_buffer_out[0];
 
-	buffer = (UInt8* )&vp_shared_mem->shared_encoder_OutputBuffer[bufIndex&0x0fff];
-	
-	totalCopied = frameSize;
-	
-	if(bufIndex + totalCopied/2 >= AUDIO_SIZE_PER_PAGE)//wrap around
-	{
-		// copy first part
-		size_copied = (AUDIO_SIZE_PER_PAGE - bufIndex)<<1;
-		memcpy(outBuf, buffer, size_copied);
-		outBuf += size_copied;
-		// copy second part
-		size_wraparound = (totalCopied/2 + bufIndex - AUDIO_SIZE_PER_PAGE)<<1;
-		memcpy(outBuf, buffer, size_wraparound);
 
-		vp_shared_mem->shared_encodedSamples_buffer_out[0] = totalCopied/2 + bufIndex - AUDIO_SIZE_PER_PAGE;
-	}
-	else // no wrap around
-	{
-		// just copy it from shared memeory
-		size_copied = totalCopied;
-		memcpy(outBuf, buffer, size_copied);
-
-		vp_shared_mem->shared_encodedSamples_buffer_out[0] += totalCopied/2;
-	}
-
-	// the bytes has been really copied.
-    return totalCopied;
-
-} // CSL_MMVPU_ReadAMRWB
-
-#endif
 //
 // APIs
 //
@@ -241,18 +200,6 @@ Result_t AUDDRV_VoiceCapture_Init( VOCAPTURE_TYPE_t type )
 										TASKNAME_AUDDRV_VPUCAPTURE,
 										TASKPRI_AUDDRV_VPUCAPTURE,
 										STACKSIZE_AUDDRV_VPUCAPTURE
-										);
-			break;
-
-		case VOCAPTURE_TYPE_AMRWB:
-			audDrv->msgQueue = OSQUEUE_Create( QUEUESIZE_AUDDRV_AMRWBCAPTURE,
-											sizeof(VOCAPTURE_MSG_t), OSSUSPEND_PRIORITY );
-			OSQUEUE_ChangeName(audDrv->msgQueue, (const char *) "AUDDRV_AMRWBCAPTURE_Q" );
-
-			audDrv->task = OSTASK_Create( (TEntry_t) AMRWBCapture_TaskEntry,
-										TASKNAME_AUDDRV_AMRWBCAPTURE,
-										TASKPRI_AUDDRV_AMRWBCAPTURE,
-										STACKSIZE_AUDDRV_AMRWBCAPTURE
 										);
 			break;
 
@@ -610,6 +557,7 @@ static void VPUCapture_TaskEntry (void)
 	OSStatus_t		status;
 
 	VOCAPTURE_Drv_t	*audDrv = &sVPU_Drv;
+	UInt16 encodingMode, numFramesPerInterrupt, recordMode;
 	
 
 	Log_DebugPrintf(LOGID_AUDIO, "VPUCapture_TaskEntry: VPUCapture_TaskEntry is running \r\n");
@@ -638,19 +586,27 @@ static void VPUCapture_TaskEntry (void)
 
 				case VOCAPTURE_MSG_START:
 					Log_DebugPrintf(LOGID_AUDIO, " : VPUCapture_TaskEntry::Start capture.\n");
-					dspif_VPU_record_start ( audDrv->config.recordMode,
-								audDrv->config.samplingRate,
-								audDrv->config.speechMode, // used by AMRNB and AMRWB
-								audDrv->config.dataRate, // used by AMRNB and AMRWB
-								audDrv->config.procEnable,
-								audDrv->config.dtxEnable,
-								audDrv->numFramesPerInterrupt);
+
+					encodingMode = (audDrv->config.procEnable << 8) | (audDrv->config.dtxEnable << 7) | (audDrv->config.speechMode << 4) | (audDrv->config.dataRate);
+
+					numFramesPerInterrupt = audDrv->numFramesPerInterrupt;
+
+					recordMode = audDrv->config.recordMode;
+	
+					// restrict numFramesPerInterrupt due to the shared memory size 
+					if (numFramesPerInterrupt > 4)
+							numFramesPerInterrupt = 4;
+
+					VPRIPCMDQ_StartCallRecording((UInt8)recordMode, (UInt8)numFramesPerInterrupt, (UInt16)encodingMode);
+					
 					break;
 
 				case VOCAPTURE_MSG_STOP:
 					// stop or cancel, to be considered.
 					Log_DebugPrintf(LOGID_AUDIO, " : VPUCapture_TaskEntry::Stop capture.\n");
-					dspif_VPU_record_stop();
+					
+					VPRIPCMDQ_CancelRecording();
+
 					CheckBufDoneUponStop(audDrv);
 					OSSEMAPHORE_Release (audDrv->stopSema);
 					break;
@@ -680,87 +636,6 @@ static void VPUCapture_TaskEntry (void)
 }
 
 
-// ===================================================================
-//
-// Function Name: AMRWBCapture_TaskEntry
-//
-// Description: The main task entry of the voice capture driver when using DSP ARMWB.
-//
-// ====================================================================
-static void AMRWBCapture_TaskEntry (void)
-{
-	VOCAPTURE_MSG_t	msg;
-
-	OSStatus_t		status;
-
-	VOCAPTURE_Drv_t	*audDrv = &sAMRWB_Drv;
-	
-
-	Log_DebugPrintf(LOGID_AUDIO, "AMRWBCapture_TaskEntry: AMRWBCapture_TaskEntry is running \r\n");
-
-	while(TRUE)
-	{
-		status = OSQUEUE_Pend( audDrv->msgQueue, (QMsg_t *)&msg, TICKS_FOREVER );
-		if (status == OSSTATUS_SUCCESS)
-		{
-			Log_DebugPrintf(LOGID_AUDIO, " : AMRWBCapture_TaskEntry::msgID = 0x%x.\n", msg.msgID);
-
-			switch (msg.msgID)
-			{
-				case VOCAPTURE_MSG_SET_TRANSFER:
-					 audDrv->callbackThreshold = (UInt32)msg.parm1;
-					 audDrv->interruptInterval = (UInt32)msg.parm2;
-					 break;
-
-				case VOCAPTURE_MSG_CONFIG:
-					ConfigAudDrv (audDrv, (VOCAPTURE_Configure_t *)msg.parm1);
-					break;
-
-				case VOCAPTURE_MSG_REGISTER_BUFDONE_CB:
-					audDrv->bufDoneCb = (AUDDRV_VoiceCapture_BufDoneCB_t)msg.parm1;
-					break;
-
-				case VOCAPTURE_MSG_START:	
-					Log_DebugPrintf(LOGID_AUDIO, " : AMRWBCapture_TaskEntry::Start capture.\n");
-					dspif_AMRWB_record_start ( audDrv->config.recordMode,
-								audDrv->config.samplingRate,
-								audDrv->config.speechMode, // used by AMRNB and AMRWB
-								audDrv->config.dataRate, // used by AMRNB and AMRWB
-								audDrv->config.procEnable,
-								audDrv->config.dtxEnable,
-								audDrv->numFramesPerInterrupt);
-					break;
-
-				case VOCAPTURE_MSG_STOP:
-					//which cmd to stop the recording, besides the disable audio cmd (done when disable path)?
-					Log_DebugPrintf(LOGID_AUDIO, " : AMRWBCapture_TaskEntry::Stop capture.\n");
-					dspif_AMRWB_record_stop();
-					CheckBufDoneUponStop(audDrv);
-					OSSEMAPHORE_Release (audDrv->stopSema);
-					break;
-
-				case VOCAPTURE_MSG_PAUSE:
-					break;
-
-				case VOCAPTURE_MSG_RESUME:
-					break;
-
-				case VOCAPTURE_MSG_ADD_BUFFER:
-					CopyBufferFromQueue (audDrv, (UInt8 *)msg.parm1, msg.parm2);
-					OSSEMAPHORE_Release (audDrv->addBufSema);
-					break;
-
-				case VOCAPTURE_MSG_SHM_REQUEST:
-					ProcessSharedMemRequest (audDrv, (UInt16)msg.parm1, (msg.parm2)<<1);
-					break;
-
-				default:
-					Log_DebugPrintf(LOGID_AUDIO, "AMRWBCapture_TaskEntry: Unsupported msg, msgID = 0x%x \r\n", msg.msgID);
-					break;
-			}
-		}
-	}
-}
 
 // ===================================================================
 //
@@ -778,10 +653,6 @@ static VOCAPTURE_Drv_t* GetDriverByType (VOCAPTURE_TYPE_t type)
 		case VOCAPTURE_TYPE_AMRNB:
 		case VOCAPTURE_TYPE_PCM:
 			audDrv = &sVPU_Drv;
-			break;
-
-		case VOCAPTURE_TYPE_AMRWB:
-			audDrv = &sAMRWB_Drv;
 			break;
 
 		default:
@@ -883,22 +754,6 @@ static void ProcessSharedMemRequest (VOCAPTURE_Drv_t *audDrv, UInt16 bufIndex, U
 			}
 			break;
 
-		case VOCAPTURE_TYPE_AMRWB:
-			bottomSize = AUDQUE_GetSizeWritePtrToBottom(aq);
-			if (bottomSize >= bufSize)
-			{
-				recvSize = CSL_MMVPU_ReadAMRWB ( AUDQUE_GetWritePtr(aq), bufSize, bufIndex );
-				if (recvSize >0) AUDQUE_UpdateWritePtrWithSize (aq, recvSize);
-			}
-			else
-			{
-				recvSize = CSL_MMVPU_ReadAMRWB ( AUDQUE_GetWritePtr(aq), bottomSize, bufIndex );
-				if (recvSize >0) AUDQUE_UpdateWritePtrWithSize (aq, recvSize);
-
-				recvSize = CSL_MMVPU_ReadAMRWB ( AUDQUE_GetWritePtr(aq), bufSize - bottomSize, bufIndex );
-				if (recvSize >0) AUDQUE_UpdateWritePtrWithSize (aq, recvSize);
-			}
-			break;
 			
 		default:
 			break;
@@ -987,10 +842,6 @@ static Result_t ConfigAudDrv (VOCAPTURE_Drv_t *audDrv,
 			audDrv->bufferNum = 50/audDrv->numFramesPerInterrupt; 
 			break;
 
-		case VOCAPTURE_TYPE_AMRWB:
-			audDrv->bufferSize = 0x48;//0x21c; //in  bytes
-			audDrv->bufferNum = AUDIO_SIZE_PER_PAGE/audDrv->bufferSize*8;	
-			break;
 
 		default:
 			Log_DebugPrintf(LOGID_AUDIO, "ConfigAudDrv:: Doesn't support audio driver type drvType = 0x%x\n", audDrv->drvType);
@@ -1027,4 +878,4 @@ static void CheckBufDoneUponStop (VOCAPTURE_Drv_t	*audDrv)
 
 
 
-#endif
+

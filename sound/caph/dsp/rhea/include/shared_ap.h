@@ -2527,6 +2527,7 @@ EXTERN Audio_Logging_Buf_t shared_audio_stream_1[2]                         AP_S
 EXTERN Audio_Logging_Buf_t shared_audio_stream_2[2]           				AP_SHARED_SEC_DIAGNOS;                        // 8KHz 20ms double buffer of Audio
 EXTERN Audio_Logging_Buf_t shared_audio_stream_3[2]           				AP_SHARED_SEC_DIAGNOS;                        // 8KHz 20ms double buffer of Audio                                                                          
 EXTERN UInt16 shared_usb_status_option				           				AP_SHARED_SEC_DIAGNOS;                        // STATUS_USB_HEADSET_BUFFER ptr option 0 or 1                                                                          
+
 #if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
 EXTERN UInt16 shared_rhea_audio_test_select			           				AP_SHARED_SEC_DIAGNOS;                        // STATUS_USB_HEADSET_BUFFER ptr option 0 or 1                                                                          
 #endif

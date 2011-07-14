@@ -57,7 +57,7 @@
 *
 ****************************************************************************/
 #include "mobcom_types.h"
-
+#include "platform_mconfig_rhea.h"
 #include <linux/sched.h>
 #include <linux/interrupt.h>
 #include "msconsts.h"
@@ -186,10 +186,21 @@ void DSPDRV_Init( )
 //******************************************************************************
 static UInt32 DSPDRV_GetSharedMemoryAddress( )
 {
-	UInt32 dsp_shared_mem;
+	static UInt32 dsp_shared_mem=NULL;
 
-    dsp_shared_mem = (UInt32)SHAREDMEM_GetDsp_SharedMemPtr();
+    //dsp_shared_mem = (UInt32)SHAREDMEM_GetDsp_SharedMemPtr();
 
+	
+	 if(dsp_shared_mem == NULL)
+	 {
+		 dsp_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		 if (!dsp_shared_mem) {
+			 Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping shared memory failed\n\r");
+			 return NULL;
+		 }
+	}
+
+		
 	return dsp_shared_mem;
 }
 
