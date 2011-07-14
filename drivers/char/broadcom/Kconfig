@@ -111,9 +111,22 @@ config BCM_HALAUDIO_AUDIOH_ISLAND
     depends on ARCH_ISLAND
     depends on BRCM_CHAR_DRIVERS
     depends on BCM_HALAUDIO && BCM_AMXR
-    depends on MAP_SDMA && MAP_AADMA && MAP_ISLAND_AUDIOH_CHAL
+    depends on MAP_SDMA && MAP_AADMA && MAP_SSASW
+    depends on MAP_ISLAND_AUDIOH_CHAL
     default n
     help
       Select m to build the HAL Audio Audio Hub driver.This driver must
+      be built as a loadable module otherwise initialization will fail.
+
+config BCM_HALAUDIO_PCM_ISLAND
+    tristate "HAL Audio PCM driver for the Island Chip family"
+    depends on ARCH_ISLAND
+    depends on BRCM_CHAR_DRIVERS
+    depends on BCM_HALAUDIO && BCM_AMXR
+    depends on MAP_SDMA && MAP_AADMA && MAP_SSASW
+    depends on MAP_ISLAND_PCM_CHAL
+    default n
+    help
+      Select m to build the HAL Audio PCM driver.This driver must
       be built as a loadable module otherwise initialization will fail.
               

@@ -22,7 +22,7 @@
 #define DMA_PRIV_H
 
 /* ---- Include Files ---------------------------------------------------- */
-#include <mach/dma.h>
+#include <mach/sdma.h>
 
 /**
  * @addtogroup HALAUDIO

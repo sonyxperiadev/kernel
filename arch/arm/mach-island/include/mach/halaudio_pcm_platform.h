@@ -29,6 +29,15 @@
 
 #if defined( __KERNEL__ )
 
+typedef enum
+{
+   SSPI_CORE_ID_0 = 0,
+   SSPI_CORE_ID_1,
+   SSPI_CORE_ID_2,
+   SSPI_CORE_ID_3,
+
+} HALAUDIO_PCM_SSPI_CORE_ID;
+
 typedef struct halaudio_pcm_bt_gpio
 {
    int rst_b;
