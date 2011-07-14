@@ -14,4 +14,4 @@ obj-$(CONFIG_BCM_HALAUDIO)             += halaudio/ halaudio_drivers/
 obj-$(CONFIG_BCM_AMXR)                 += amxr_drv.o
 obj-$(CONFIG_BCM_AMXR_CORE)                 += amxr_core/
 obj-$(CONFIG_BCM_AAA)                  += aaa.o
-
+obj-$(CONFIG_BCM_HEADSET_SW)           += headset.o
