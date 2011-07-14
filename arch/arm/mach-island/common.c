@@ -82,7 +82,7 @@ static struct plat_serial8250_port uart_data[] = {
 	KONA_8250PORT(UART0,"uartb_clk"),
 	KONA_8250PORT(UART1,"uartb2_clk"),
 	KONA_8250PORT(UART2,"uartb3_clk"),
-	KONA_8250PORT(UART3,NULL),
+	KONA_8250PORT(UART3,"uartb4_clk"),
 	{ .flags = 0, },
 };
 
