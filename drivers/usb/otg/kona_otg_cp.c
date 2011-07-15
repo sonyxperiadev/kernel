@@ -33,8 +33,9 @@
 
 #define DRIVER_NAME "kona-otg-cp"
 
-#define VBUS_MONITOR_USECS	1000
-#define VBUS_MONITOR_JIFFIES	(VBUS_MONITOR_USECS * (HZ / 1000000UL))
+/* set VBUS line monitoring workqueue work item to run every 10 ms */
+#define VBUS_MONITOR_JIFFIES	(HZ / 100)
+
 #define NUM_VBUS_IRQS           3
 
 struct otg_drv {
