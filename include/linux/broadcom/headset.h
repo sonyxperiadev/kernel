@@ -64,11 +64,17 @@ typedef enum
 
 #define HEADSET_CMD_FIRST               0x80
 #define HEADSET_CMD_GET_STATE           0x80
-#define HEADSET_CMD_LAST                0x80
+#define HEADSET_CMD_GET_DEBOUNCE        0x81
+#define HEADSET_CMD_SET_DEBOUNCE        0x82
+#define HEADSET_CMD_LAST                0x82
 
 #define HEADSET_IOCTL_GET_STATE _IOR( HEADSET_MAGIC, HEADSET_CMD_GET_STATE, headset_state )
+#define HEADSET_IOCTL_GET_DEBOUNCE _IOR( HEADSET_MAGIC, HEADSET_CMD_GET_DEBOUNCE, int )
+#define HEADSET_IOCTL_SET_DEBOUNCE _IOR( HEADSET_MAGIC, HEADSET_CMD_SET_DEBOUNCE, int )
 
 /* ---- Variable Externs ------------------------------------------------- */
 /* ---- Function Prototypes ---------------------------------------------- */
+
+#define HEADSET_DEBOUNCE_DEFAULT        50000
 
 #endif  /* LINUX_HEADSET_H */

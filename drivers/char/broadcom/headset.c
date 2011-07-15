@@ -18,9 +18,6 @@
 *  @brief   Implements simple GPIO-based headset detection interface 
 *
 ****************************************************************************/
-#ifndef CONFIG_BCM_HEADSET_SW
-#define CONFIG_BCM_HEADSET_SW y
-#endif
 /* ---- Include Files ---------------------------------------------------- */
 #include <linux/module.h>
 #include <linux/version.h>
@@ -38,7 +35,7 @@
 #include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <asm/gpio.h>
-#if defined(CONFIG_BCM_HEADSET_SW)
+#if defined(CONFIG_SWITCH)
    #include <linux/switch.h>
 #endif
 
@@ -54,6 +51,7 @@ struct headset_info
 {
    atomic_t          avail;         /* Only allow single user because of select() */
    int               changed;       /* Changed flag used by poll */
+   int               debounce;      /* Debounce time in microseconds */
    headset_state     state;         /* Current state */
    wait_queue_head_t waitq;         /* wait queue */
    struct headset_hw_cfg hw_cfg;    /* board hw configuration */
@@ -64,7 +62,7 @@ struct headset_info
 #if CONFIG_SYSFS
 static struct class *headset_class;
 static struct device *headset_dev;
-#if defined(CONFIG_BCM_HEADSET_SW)
+#if defined(CONFIG_SWITCH)
 static struct switch_dev headset_switch;
 #endif
 #endif
@@ -86,7 +84,7 @@ static long  headset_ioctl( struct file *file, unsigned int cmd, unsigned long a
 
 static unsigned int headset_poll( struct file *file, struct poll_table_struct *poll_table );
 
-#if defined(CONFIG_BCM_HEADSET_SW)
+#if defined(CONFIG_SWITCH)
 static void setsw( struct work_struct *work );
 DECLARE_WORK(setsw_work, setsw);
 #endif
@@ -107,7 +105,7 @@ struct file_operations headset_fops =
 /**
 *  Helper function to schedule switch state changes for Android  
 */
-#if defined(CONFIG_BCM_HEADSET_SW)
+#if defined(CONFIG_SWITCH)
 static void setsw(struct work_struct *work){
   struct headset_info *ch = gHeadset;
   switch_set_state(&headset_switch,ch->state);  
@@ -128,7 +126,7 @@ static void check_headset_det_gpio( struct headset_info *ch )
       gpio_val = gpio_get_value( ch->hw_cfg.gpio_headset_det );
       ch->state = gpio_val ? HEADSET_TOGGLE_A : HEADSET_UNPLUGGED;
       ch->changed = 1;
-#if defined(CONFIG_BCM_HEADSET_SW)
+#if defined(CONFIG_SWITCH)
       schedule_work(&setsw_work);
 #endif
       
@@ -142,6 +140,33 @@ static void check_headset_det_gpio( struct headset_info *ch )
    }
 }
 
+#if defined(CONFIG_SWITCH)
+static ssize_t debounce_show(struct device *dev, struct device_attribute *attr,
+			char *buf)
+{
+   struct headset_info *ch = gHeadset;
+   return sprintf(buf,"%d\n",ch->debounce);
+}
+static ssize_t debounce_store(struct device *dev, struct device_attribute *attr,
+			 const char *buf, size_t count)
+{
+   int ret,debounce;
+   char lbuf[16]={0};
+   struct headset_info *ch = gHeadset;
+   ret = sscanf(buf,"%d",&debounce);
+   if ( ret == 1 ) {
+      ch->debounce = debounce;
+      //TODO: add optional software debounce if hardware debounce fails.
+      gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
+      sprintf(lbuf,"%d",debounce);
+      return strlen(lbuf);
+   }
+   return 0;
+}
+static DEVICE_ATTR(debounce, S_IRUGO | S_IWUSR, debounce_show, debounce_store);
+
+
+#endif
 /***************************************************************************/
 /**
 *  Driver open method
@@ -207,6 +232,22 @@ static long headset_ioctl( struct file *file, unsigned int cmd, unsigned long ar
             return -EFAULT;
          }
          break;
+      case HEADSET_IOCTL_GET_DEBOUNCE:
+         if ( copy_to_user( (unsigned long *)arg, &ch->debounce, sizeof(ch->debounce) ) != 0 )
+         {
+            return -EFAULT;
+         }
+         break;
+                        
+      case HEADSET_IOCTL_SET_DEBOUNCE:
+         if ( copy_to_user( (unsigned long *)arg, &ch->debounce, sizeof(ch->debounce) ) != 0 )
+         {
+            return -EFAULT;
+         }
+         //TODO: add optional software debounce if hardware debounce fails.
+         gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
+         break;
+         
 
       default:
          return -ENOTTY;
@@ -368,16 +409,21 @@ static int __init headset_init( void )
       rc = -EFAULT;
       goto err_class_destroy;
    }
-#if defined(CONFIG_BCM_HEADSET_SW)
-      /* Create a headset switch */
-      headset_switch.name="h2w";
-      
-      rc = switch_dev_register(&headset_switch);
-      if (rc < 0) {
-         printk(KERN_ERR "HEADSET: Device switch create failed\n");
-         rc = -EFAULT;
-         goto err_dev_destroy;
-      }
+#if defined(CONFIG_SWITCH)
+   /* Create a headset switch */
+   headset_switch.name="h2w";
+   
+   rc = switch_dev_register(&headset_switch);
+   if (rc < 0) {
+      printk(KERN_ERR "HEADSET: Device switch create failed\n");
+      rc = -EFAULT;
+      goto err_dev_destroy;
+   }
+
+   /* Add the debounce sysfs entry for h2w */
+   rc = device_create_file(headset_switch.dev, &dev_attr_debounce);
+   if (rc < 0)
+	   goto err_swdev_destroy;
 #endif
    
 #endif
@@ -390,13 +436,25 @@ static int __init headset_init( void )
       goto err_no_gpio;
 
    }
+   /* set the default debounce */
+   ch->debounce = HEADSET_DEBOUNCE_DEFAULT;
+   //TODO: add optional software debounce if hardware debounce fails.
+   rc = gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
+   if ( rc < 0 ) {
+      rc = -EPERM;
+      printk(KERN_ERR "HEADSET: Hardware GPIO debounce not supported and software debounce not implemented\n");
+      goto err_no_gpio;
+   }
+   
    check_headset_det_gpio( ch );
 
    return 0;
 
 err_no_gpio:   
 #if CONFIG_SYSFS
-#if defined(CONFIG_BCM_HEADSET_SW)
+#if defined(CONFIG_SWITCH)
+   device_remove_file(headset_switch.dev, &dev_attr_debounce);
+err_swdev_destroy:
    switch_dev_unregister(&headset_switch);
 err_dev_destroy:
    device_destroy(headset_class, MKDEV( BCM_HEADSET_MAJOR, 0 ));
@@ -423,8 +481,9 @@ err_unregister_platform:
 static void __exit headset_exit( void )
 {
 #if CONFIG_SYSFS
-#if defined(CONFIG_BCM_HEADSET_SW)
-      switch_dev_unregister(&headset_switch);
+#if defined(CONFIG_SWITCH)
+   device_remove_file(headset_switch.dev, &dev_attr_debounce);
+   switch_dev_unregister(&headset_switch);
 #endif
 
    device_destroy( headset_class, MKDEV( BCM_HEADSET_MAJOR, 0 ));
