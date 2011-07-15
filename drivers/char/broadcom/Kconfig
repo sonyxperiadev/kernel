@@ -68,6 +68,13 @@ config BCM_MODEM
         help
           Broadcom Modem IPC drivers
 
+config BCM_IDLE_PROFILER
+	bool "Broadcom Idle Profiler Support"
+	depends on BRCM_CHAR_DRIVERS && ARCH_KONA
+	default n
+	help
+	  Say y to turn on Broadcom idle profiler support
+
 config GPIO_USER_MODE_SUPPORT
 	tristate "Broadcom GPIO User Mode Support"
 	depends on BRCM_CHAR_DRIVERS

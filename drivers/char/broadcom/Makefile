@@ -8,6 +8,7 @@ obj-y += modem/
 obj-y += isp/
 obj-y += unicam/
 obj-$(CONFIG_BCM_GPS)    	 += gps.o
+obj-$(CONFIG_BCM_IDLE_PROFILER)		+= idle_profiler/
 obj-$(CONFIG_GPIO_USER_MODE_SUPPORT)	+= user-gpio.o
 obj-$(CONFIG_BCM_HALAUDIO_CORE)        += halaudio/
 obj-$(CONFIG_BCM_HALAUDIO)             += halaudio/ halaudio_drivers/
