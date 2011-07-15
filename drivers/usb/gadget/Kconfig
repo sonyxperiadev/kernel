@@ -924,6 +924,7 @@ config USB_ANDROID_RNDIS_WCEIS
 config USB_ANDROID_OBEX
 	boolean "Android gadget OBEX function"
 	depends on USB_ANDROID
+	default n
 	help
 	  Provides OBEX function for android gadget driver.
 
