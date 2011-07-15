@@ -589,15 +589,15 @@ static int mpu3050_resume(struct i2c_client* client)
 #ifdef CONFIG_PM_RUNTIME
 static int mpu3050_runtime_suspend(struct device* dev)
 {
-	mpu3050_set_power_mode(dev_get_drvdata(dev), 0);
+	//mpu3050_set_power_mode(dev_get_drvdata(dev), 0);
 	
 	return 0;
 }
 
 static int mpu3050_runtime_resume(struct device* dev)
 {
-	mpu3050_set_power_mode(dev_get_drvdata(dev), 1);
-	msleep_interruptible(100);  /* wait for gyro chip resume */
+	//mpu3050_set_power_mode(dev_get_drvdata(dev), 1);
+	//msleep_interruptible(100);  /* wait for gyro chip resume */
 	
 	return 0;
 }
