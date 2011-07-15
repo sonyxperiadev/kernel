@@ -14,7 +14,6 @@
 config BRCM_SOUND_BIG_ISLAND_ALSA
 	#tristate "Broadcom ALSA Athena sound drivers"
 	boolean "Broadcom ALSA Island sound drivers"
-	depends on !MACH_RHEA_RAY_EDN1X
         help
           Say Y here to activate an ALSA driver frontend to the BRCM endpoint
           To compile this driver as a module, choose M here: the module
