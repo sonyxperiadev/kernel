@@ -151,6 +151,7 @@ int bcm59055_fg_offset_cal(bool longcal)
 	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
 	u8 reg, calbit;
 	int ret;
+	s16 offset;
 	pr_debug("Inside %s\n", __func__);
 	mutex_lock(&bcm59055_fg->lock);
 	if (longcal)
@@ -165,6 +166,7 @@ int bcm59055_fg_offset_cal(bool longcal)
 		reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGCTRL2);
 	}
 	mutex_unlock(&bcm59055_fg->lock);
+	bcm59055_fg_read_offset(&offset);
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_fg_offset_cal);
@@ -239,6 +241,7 @@ int bcm59055_fg_init_read(void)
 	mutex_lock(&bcm59055_fg->lock);
 	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGCTRL2);
 	reg |= FGFRZREAD;
+	pr_info("%s: writing %x to FGCTRL2 register\n", __func__, reg);
 	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_FGCTRL2, reg);
 	udelay(2);
 	mutex_unlock(&bcm59055_fg->lock);
@@ -251,11 +254,15 @@ int bcm59055_fg_read_soc(u32 *fg_accm, u16 *fg_cnt, u16 *fg_sleep_cnt)
 {
 	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
 	u8 reg[SOC_READ_BYTE_MAX];
-	int ret;
+	int ret=0;
+	/*int i; to be deleted when I2C is fully functional */
 	pr_debug("Inside %s\n", __func__);
 
 	ret = bcm590xx_mul_reg_read(bcm59055, BCM59055_REG_FGACCM1,
 			SOC_READ_BYTE_MAX, (u8 *)reg);
+/*	for (i = 0; i < SOC_READ_BYTE_MAX; i++) {
+		reg [i] = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGACCM1 + i);
+	}*/
 	if (!(reg[0] & FGRDVALID)) {
 		pr_info("%s: Accumulator value is invalid..try later\n", __func__);
 		return -EINVAL;
@@ -279,24 +286,41 @@ int bcm59055_fg_reset(void)
 	mutex_lock(&bcm59055_fg->lock);
 	reg = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGCTRL2);
 	reg |= FGRESET;
+	pr_info("%s: writing %x to FGCTRL2 register\n", __func__, reg);
 	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_FGCTRL2, reg);
 	mutex_unlock(&bcm59055_fg->lock);
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_fg_reset);
 
-int bcm59055_fg_read_sample(void)
+int bcm59055_fg_read_sample(enum fg_smpl_type type, s16 * val)
 {
 	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
-	u8 reg[2], ret;
-	int val;
+	u8 reg[2];
+	int add = 0;
+	int ret = 0;
 	pr_debug("Inside %s\n", __func__);
 
-	ret = bcm590xx_mul_reg_read(bcm59055, BCM59055_REG_FGSMPL1, 2, (u8 *)reg);
+	switch (type) {
+	case fg_smpl_acc:
+		add = BCM59055_REG_FGSMPL1;
+		break;
+	case fg_smpl_cal:
+		add = BCM59055_REG_FGSMPL3;
+		break;
+	case fg_smpl_raw:
+		add = BCM59055_REG_FGSMPL5;
+		break;
+	}
+
+	ret = bcm590xx_mul_reg_read(bcm59055, add, 2, reg);
+	/*reg[0] = bcm590xx_reg_read(bcm59055, add);
+	reg[1] = bcm590xx_reg_read(bcm59055, add+1);*/
+	pr_info ("%s: ret %d, MSB %x, LSB %x", __func__, ret, reg[0], reg[1]);
 	if (ret < 0)
 		return ret;
-	val = (reg[0] << 8) | reg[1];
-	return val;
+	*val = reg[1] | (reg[0] << 8);
+	return ret;
 }
 EXPORT_SYMBOL(bcm59055_fg_read_sample);
 
@@ -333,6 +357,24 @@ int bcm59055_fg_write_offset_trim(u8 offset)
 	return bcm590xx_reg_write(bcm59055, BCM59055_REG_FGOFFSET_TRIM, offset);
 }
 EXPORT_SYMBOL(bcm59055_fg_write_offset_trim);
+
+int bcm59055_fg_read_offset(s16 *offset)
+{
+	int ret = 0;
+	u8 pmu_offset [2];
+	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
+	pr_debug("Inside %s\n", __func__);
+
+	ret = bcm590xx_mul_reg_read(bcm59055, BCM59055_REG_FGOFFSET1, 2, pmu_offset);
+	/*pmu_offset[0] = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGOFFSET1);
+	pmu_offset[1] = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGOFFSET2);*/
+	pr_info ("%s: ret %d, MSB %x, LSB %x\n", __func__, ret, pmu_offset[0], pmu_offset[1]);
+	if (ret >= 0) {
+		*offset = pmu_offset [1] | (pmu_offset [0] << 8);
+	}
+	return ret;
+}
+EXPORT_SYMBOL(bcm59055_fg_read_offset);
 
 static int __devinit bcm59055_fg_probe(struct platform_device *pdev)
 {
