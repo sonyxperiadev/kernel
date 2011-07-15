@@ -70,10 +70,6 @@
 // local defines
 //
 
-#define _DBG_(a)	(a)
-
-//#define _DBG_(a)
-
 //#define	DBG_MSG_TO_FILE
 #undef	DBG_MSG_TO_FILE
 

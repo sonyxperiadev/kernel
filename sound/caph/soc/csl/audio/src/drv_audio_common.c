@@ -22,9 +22,6 @@ Broadcom's express prior written consent.
 #include "auddrv_def.h"
 #include "csl_caph_gain.h"
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
-
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -519,8 +516,11 @@ Int16 AUDDRV_GetHWDLGain(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
+			cslSpkr = SPKR_HS;
+		    break;
+			
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
 	    case AUDDRV_DEV_BT_SPKR:
@@ -574,8 +574,11 @@ Int16 AUDDRV_GetHWDLGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
+			 cslSpkr = SPKR_HS;
+		    break;
+				
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
 
@@ -676,8 +679,11 @@ UInt16 AUDDRV_GetPMUGain(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
+			cslSpkr = SPKR_HS;
+		    break;
+			
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
 	    case AUDDRV_DEV_BT_SPKR:
@@ -731,8 +737,11 @@ UInt16 AUDDRV_GetPMUGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
+			 cslSpkr = SPKR_HS;
+		    break;
+			
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
 

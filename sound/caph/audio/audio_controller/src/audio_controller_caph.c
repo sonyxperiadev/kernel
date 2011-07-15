@@ -89,17 +89,16 @@ extern AUDDRV_SPKR_Enum_t voiceCallSpkr;
 
 #if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
 
-#ifdef CONFIG_AUDIO_BUILD
 typedef struct
 {
     Int16 gain;
-    PMU_HS_Gain_t hsPMUGain;
+    UInt32 hsPMUGain;
 }HS_PMU_GainMapping_t;
 
 typedef struct
 {
     Int16 gain;
-    PMU_IHF_Gain_t ihfPMUGain;
+    UInt32 ihfPMUGain;
 }IHF_PMU_GainMapping_t;
 
 
@@ -240,7 +239,6 @@ static IHF_PMU_GainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM]=
     {0x000E,             PMU_IHFGAIN_3P5DB_P},
     {0x0010,             PMU_IHFGAIN_4DB_P},
 };
-#endif // CONFIG_AUDIO_BUILD
 #endif
 
 typedef struct node
@@ -430,12 +428,23 @@ static AUDDRV_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
                                                 AUDCTRL_MICROPHONE_t mic);
 static Int16 AUDCTRL_ConvertScale2Millibel(Int16 ScaleValue);
 #if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
-#ifdef CONFIG_AUDIO_BUILD
 static HS_PMU_GainMapping_t getHSPMUGain(Int16 gain);
 static IHF_PMU_GainMapping_t getIHFPMUGain(Int16 gain);
-#endif // CONFIG_AUDIO_BUILD
 #endif
 #endif
+
+
+// convert the number from range scale_in to range scale_out.
+static UInt16	AUDIO_Util_Convert1( UInt16 input, UInt16 scale_in, UInt16 scale_out)
+{
+	//UInt16 output=0;
+	UInt16 temp=0;
+
+	temp = ( input * scale_out ) / scale_in;
+	//output = (UInt16)( temp + 0.5);
+	return temp;
+}
+
 //=============================================================================
 // Functions
 //=============================================================================
@@ -1364,7 +1373,6 @@ void AUDCTRL_SetPlayVolume(
 				UInt32					vol_right
 				)
 {
-#ifdef CONFIG_AUDIO_BUILD
     UInt32 gainHW, gainHW2, gainHW3, gainHW4, gainHW5, gainHW6;
     Int16 pmuGain = 0x0;
     AUDDRV_DEVICE_e speaker = AUDDRV_DEV_NONE;
@@ -1416,11 +1424,11 @@ void AUDCTRL_SetPlayVolume(
     else // If AUDIO_GAIN_FORMAT_VOL_LEVEL.
     if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
     {
-        volume_max = (UInt16)AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
+        volume_max = 40; //(UInt16)AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  
 	    // convert the value in 1st param from range of 2nd_param to range of 3rd_param:
-        digital_gain_dB = (Int16)AUDIO_Util_Convert( vol_left, AUDIO_VOLUME_MAX, volume_max );	    
+        digital_gain_dB = (Int16)AUDIO_Util_Convert1( vol_left, AUDIO_VOLUME_MAX, volume_max );	    
 	    vol_left = (UInt32)(digital_gain_dB - volume_max);
-	    digital_gain_dB = (Int16)AUDIO_Util_Convert( vol_right, AUDIO_VOLUME_MAX, volume_max );	    
+	    digital_gain_dB = (Int16)AUDIO_Util_Convert1( vol_right, AUDIO_VOLUME_MAX, volume_max );	    
 	    vol_right = (UInt32)(digital_gain_dB - volume_max);
 
         //Convert to Q13.2 and check lookup table.	
@@ -1432,6 +1440,7 @@ void AUDCTRL_SetPlayVolume(
     // Set the gain to the audio HW.
     if ((gainHW != (UInt32)GAIN_NA)&&(gainHW2 != (UInt32)GAIN_NA))
     {
+ #ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 	//for mixing gain. Get it from sysparm.
         gainHW3 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l);
         gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r);
@@ -1450,25 +1459,36 @@ void AUDCTRL_SetPlayVolume(
             (void) AUDDRV_HWControl_SetMixOutputGain(pathID, 
                     gainHW5, gainHW6, gainHW3, gainHW4); 
         }
-    	else
-	    {
-            gainHW6 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l);
-            gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r);
+		else
+#else
+{
+			gainHW3 = 0;  //(UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l);
+			gainHW4 = 0; //(UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r);
+			(void)AUDDRV_HWControl_SetHWGain(pathID, AUDDRV_SRCM_INPUT_GAIN_L,
+											 gainHW3, speaker);
+			(void)AUDDRV_HWControl_SetHWGain(pathID, AUDDRV_SRCM_INPUT_GAIN_R,
+								 gainHW4, speaker);
 
+            gainHW6 = 96; //(UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l);
+            gainHW5 = 96; //(UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r);
         	AUDDRV_HWControl_SetHWGain(pathID, 
                                AUDDRV_SRCM_OUTPUT_COARSE_GAIN_L, 
                                gainHW6, AUDDRV_DEV_NONE);
 	
         	AUDDRV_HWControl_SetHWGain(pathID, 
                                AUDDRV_SRCM_OUTPUT_COARSE_GAIN_R, 
-                               gainHW4, AUDDRV_DEV_NONE);
+                               gainHW5, AUDDRV_DEV_NONE);
             (void) AUDDRV_HWControl_SetSinkGain(pathID, (UInt16)gainHW, (UInt16)gainHW2);
-	    }
+			
+	}
+#endif
+   
     }
-    // Set teh gain to the external amplifier
+
+    // Set the gain to the external amplifier
     if (pmuGain == (Int16)GAIN_SYSPARM)
     {
-        pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
+		pmuGain = (Int16)vol_left; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
         SetGainOnExternalAmp(spk, &(pmuGain));
     }
     else
@@ -1477,65 +1497,7 @@ void AUDCTRL_SetPlayVolume(
         SetGainOnExternalAmp(spk, &(pmuGain));
     }
     return;
-#else
 
-    UInt32 gainHW, gainHW2;
-    AUDTABL_GainMapping_t gainMapping;
-    AUDDRV_PathID pathID = 0;
-    AudioMode_t audioMode = AUDIO_MODE_INVALID;
-
-    gainHW = gainHW2 = 0;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: Set Play Volume. sink = 0x%x,  spk = 0x%x, vol = 0x%lx\n", sink, spk, vol_left);
-    
-    memset(&gainMapping, 0, sizeof(AUDTABL_GainMapping_t));
-    switch(sink)
-    {
-        case AUDIO_HW_IHF_OUT:
-            audioMode = AUDIO_MODE_SPEAKERPHONE;
-            break;
-        case AUDIO_HW_HEADSET_OUT:
-            audioMode = AUDIO_MODE_HEADSET;
-            break;
-        case AUDIO_HW_EARPIECE_OUT:
-            audioMode = AUDIO_MODE_HANDSET;
-            break;
-        case AUDIO_HW_MONO_BT_OUT:
-        case AUDIO_HW_STEREO_BT_OUT:
-            audioMode = AUDIO_MODE_BLUETOOTH;
-            break;
-        case AUDIO_HW_USB_OUT:
-            audioMode = AUDIO_MODE_USB;
-            break;
-        default:
-            audioMode = AUDIO_MODE_INVALID;
-    }
-
-    gainMapping = AUDTABL_getGainDistribution(audioMode, vol_left);
-    gainHW = gainMapping.gainHW;
-    if (gainHW == TOTAL_GAIN)
-    {
-        gainHW = vol_left;
-    }
-    gainMapping = AUDTABL_getGainDistribution(audioMode, vol_right);
-    gainHW2 = gainMapping.gainHW;
-    if (gainHW2 == TOTAL_GAIN)
-    {
-        gainHW2 = vol_right;
-    }
-
-	if(sink == AUDIO_HW_STEREO_BT_OUT || sink == AUDIO_HW_USB_OUT)
-		return;
-    
-    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
-
-    // Set the gain to the audio HW.
-    (void) AUDDRV_HWControl_SetSinkGain(pathID, gainHW, gainHW2);
-
-    // Set teh gain to the external amplifier
-    SetGainOnExternalAmp(spk, &(gainMapping.gainPMU));
-
-    return;
-#endif
 }
 
 //============================================================================
@@ -2843,7 +2805,6 @@ static AUDDRV_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
 }
 
 
-#ifdef CONFIG_AUDIO_BUILD
 //============================================================================
 //
 // Function Name: getHSPMUGain
@@ -2944,7 +2905,6 @@ static IHF_PMU_GainMapping_t getIHFPMUGain(Int16 gain)
 }
 
 #endif
-#endif  // CONFIG_AUDIO_BUILD
 
 
 //============================================================================
@@ -2959,13 +2919,11 @@ static IHF_PMU_GainMapping_t getIHFPMUGain(Int16 gain)
 //============================================================================
 #if !defined(NO_PMU) && ( defined( PMU_BCM59038) || defined( PMU_BCM59055 ) || defined( PMU_MAX8986) )
 
-#ifdef CONFIG_AUDIO_BUILD
-PMU_HS_Gain_t map2pmu_hs_gain( Int16 db_gain )
+UInt32 map2pmu_hs_gain( Int16 db_gain )
 {
-#if defined(PMU_MAX8986)
-
 	Log_DebugPrintf(LOGID_AUDIO,"map2pmu_hs_gain: gain = 0x%x\n", db_gain);
 
+#if defined(PMU_MAX8986)
 	if ( db_gain== (Int16)(-19) ) 	return PMU_HSGAIN_19DB_N;
 	else if ( db_gain== (Int16)(-18) || db_gain== (Int16)(-17) || db_gain== (Int16)(-16))		return PMU_HSGAIN_16DB_N;
 	else if ( db_gain== (Int16)(-15) || db_gain== (Int16)(-14))		return PMU_HSGAIN_14DB_N;
@@ -3005,12 +2963,11 @@ PMU_HS_Gain_t map2pmu_hs_gain( Int16 db_gain )
 // Note: If it is MAX8986, input gain is in Q15.0.
 //
 //============================================================================
-PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain )
+UInt32 map2pmu_ihf_gain( Int16 db_gain )
 {
-#if defined(PMU_MAX8986)	
-
     Log_DebugPrintf(LOGID_AUDIO,"map2pmu_ihf_gain: gain = 0x%x\n", db_gain);
 
+#if defined(PMU_MAX8986)	
     if ( db_gain== (Int16)(-33) || db_gain== (Int16)(-32) || db_gain== (Int16)(-31) || db_gain== (Int16)(-30) ) return PMU_IHFGAIN_30DB_N;
     else if ( db_gain== (Int16)(-29) || db_gain== (Int16)(-28) || db_gain== (Int16)(-27) || db_gain== (Int16)(-26) ) return PMU_IHFGAIN_26DB_N;
     else if ( db_gain== (Int16)(-25) || db_gain== (Int16)(-24) || db_gain== (Int16)(-23) || db_gain== (Int16)(-22) ) return PMU_IHFGAIN_22DB_N;
@@ -3060,7 +3017,6 @@ PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain )
     }
 #endif
 }
-#endif // #ifndef CONFIG_AUDIO_BUILD
 #endif
 
 #endif //defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
@@ -3090,21 +3046,23 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
 	{
 		case AUDCTRL_SPK_HEADSET:
 		case AUDCTRL_SPK_TTY:
-	    	hs_gain = *((int*)gain);
 #ifdef CONFIG_BCM59055_AUDIO
+	    	hs_gain = map2pmu_hs_gain(*((int*)gain));
 		    hs_path = PMU_AUDIO_HS_BOTH;
 		    bcm59055_hs_set_gain( hs_path, hs_gain);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+			hs_gain = *((int*)gain);
 		    hs_path = PMU_AUDIO_HS_BOTH;
 		    bcmpmu_hs_set_gain( hs_path, hs_gain);
 #endif
 			break;
 
 		case AUDCTRL_SPK_LOUDSPK:
-    		ihf_gain = *((int*)gain);
 #ifdef CONFIG_BCM59055_AUDIO
+    		ihf_gain = map2pmu_ihf_gain(*((int *)gain));
 	    	bcm59055_ihf_set_gain( ihf_gain);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+    		ihf_gain = *((int*)gain);
 	    	bcmpmu_ihf_set_gain( ihf_gain);
 #endif
 			break;
