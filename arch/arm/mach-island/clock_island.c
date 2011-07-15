@@ -526,7 +526,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
-	.pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE,
+	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET,
@@ -1572,7 +1572,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
-	.pi_id = PI_MGR_PI_ID_HUB_AON,
+	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(AON_CLK_BASE_ADDR),
 	.wr_access_offset = KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KHUBAON_CLK_MGR_REG_POLICY0_MASK1_OFFSET,
@@ -2278,7 +2278,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
-	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_CLK_BASE_ADDR),
 	.wr_access_offset = KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KPM_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -2857,7 +2857,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
-	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_CLK_BASE_ADDR),
 	.wr_access_offset = IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = IKPS_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -3738,7 +3738,7 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 
 
 /* table for registering clock */
-static struct __init clk_lookup rhea_clk_tbl[] =
+static struct __init clk_lookup island_clk_tbl[] =
 {
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
@@ -3880,7 +3880,7 @@ int __init island_clock_init(void)
 
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 
-	if(clk_register(rhea_clk_tbl,ARRAY_SIZE(rhea_clk_tbl)))
+	if(clk_register(island_clk_tbl,ARRAY_SIZE(island_clk_tbl)))
 		printk(KERN_INFO "%s clk_register failed !!!!\n", __func__);
 
      /*********************  TEMPORARY *************************************
@@ -3899,8 +3899,8 @@ int __init clock_late_init(void)
 #ifdef CONFIG_DEBUG_FS
 	int i;
 	clock_debug_init();
-	for (i=0; i<ARRAY_SIZE(rhea_clk_tbl); i++)
-		clock_debug_add_clock (rhea_clk_tbl[i].clk);
+	for (i=0; i<ARRAY_SIZE(island_clk_tbl); i++)
+		clock_debug_add_clock (island_clk_tbl[i].clk);
 #endif
 	return 0;
 }
