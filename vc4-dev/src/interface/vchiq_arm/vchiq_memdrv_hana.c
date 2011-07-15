@@ -18,7 +18,6 @@
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/vchiq_platform_data_memdrv_hana.h>
-#include <linux/videocore/vc_boot_mode.h>
 
 #include "vchiq_core.h"
 #include "vchiq_memdrv.h"
@@ -105,11 +104,6 @@ static struct platform_driver vchiq_memdrv_hana_interface_driver =
 
 static int __init vchiq_memdrv_hana_interface_init( void )
 {
-    if ( vc_boot_mode_skip() )
-    {
-        return -ENODEV;
-    }
-
     return platform_driver_register( &vchiq_memdrv_hana_interface_driver );
 }
 
@@ -123,11 +117,6 @@ static int __init vchiq_memdrv_hana_interface_init( void )
 
 static void __exit vchiq_memdrv_hana_interface_exit( void )
 {
-    if ( vc_boot_mode_skip() )
-    {
-        return;
-    }
-    
     platform_driver_unregister( &vchiq_memdrv_hana_interface_driver );
 }
 

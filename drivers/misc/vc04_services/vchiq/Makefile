@@ -45,5 +45,5 @@ vc-vchiq-objs := \
 obj-$(CONFIG_VC_VCHIQ_MEMDRV_HANA) += vchiq-memdrv-hana.o
 
 vchiq-memdrv-hana-objs := \
-    ../../../../vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv_hana.o
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_memdrv_hana.o
 
