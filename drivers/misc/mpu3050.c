@@ -492,13 +492,12 @@ static int __devinit mpu3050_probe
 	
 	mutex_init(&sensor->lock);
 
-	pm_runtime_set_active(&client->dev);
-
 	ret = mpu3050_register_input_device(client);
 	if (ret)
 		dev_err(&client->dev, "only provide sysfs\n");
 
 	pm_runtime_enable(&client->dev);
+	pm_runtime_set_active(&client->dev);
 	
 // TODO uncomment next line
 //	pm_runtime_set_autosuspend_delay(&client->dev, MPU3050_AUTO_DELAY);
@@ -589,18 +588,31 @@ static int mpu3050_resume(struct i2c_client* client)
 #ifdef CONFIG_PM_RUNTIME
 static int mpu3050_runtime_suspend(struct device* dev)
 {
-	//mpu3050_set_power_mode(dev_get_drvdata(dev), 0);
-	
+    struct i2c_client* client = to_i2c_client(dev);
+    if (client == 0)
+    {
+        printk(KERN_ERR "+++ %s: i2c client not registered +++\n", __FUNCTION__);
+        return -EINVAL;
+    }
+    
+	mpu3050_set_power_mode(client, 0);
 	return 0;
 }
 
 static int mpu3050_runtime_resume(struct device* dev)
 {
-	//mpu3050_set_power_mode(dev_get_drvdata(dev), 1);
-	//msleep_interruptible(100);  /* wait for gyro chip resume */
-	
+    struct i2c_client* client = to_i2c_client(dev);
+    if (client == 0)
+    {
+        printk(KERN_ERR "+++ %s: i2c client not registered +++\n", __FUNCTION__);
+        return -EINVAL;
+    }
+    
+	mpu3050_set_power_mode(client, 1);
+	msleep_interruptible(100);  /* wait for gyro chip resume */
 	return 0;
 }
+
 
 static const struct dev_pm_ops mpu3050_pm = 
 {
