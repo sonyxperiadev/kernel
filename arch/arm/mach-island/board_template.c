@@ -149,6 +149,11 @@
 #include <linux/broadcom/gps.h>
 #endif
 
+#if defined(CONFIG_BCM_HAPTICS) || defined(CONFIG_BCM_HAPTICS_MODULE)
+#include <linux/broadcom/bcm_haptics.h>
+#include <bcm_haptics_settings.h>
+#endif
+
 #include "island.h"
 #include "common.h"
 
@@ -565,6 +570,18 @@ static struct platform_device platform_device_gps =
    .id = -1,
    .dev = {
       .platform_data = &board_hana_gps_info,
+   },
+};
+#endif
+
+#if defined(CONFIG_BCM_HAPTICS) || defined(CONFIG_BCM_HAPTICS_MODULE)
+#define board_bcm_haptics_device concatenate(ISLAND_BOARD_ID, _bcm_haptics_device)
+static struct bcm_haptics_data board_bcm_haptics_data = BCM_HAPTICS_SETTINGS;
+static struct platform_device board_bcm_haptics_device = {
+   .name = BCM_HAPTICS_DRIVER_NAME,
+   .id = -1,
+   .dev = {
+      .platform_data = &board_bcm_haptics_data,
    },
 };
 #endif
@@ -1290,6 +1307,10 @@ static void __init add_devices(void)
 
 #if defined(CONFIG_BCM_CMP_BATTERY_BQ24616) || defined(CONFIG_BCM_CMP_BATTERY_BQ24616_MODULE)
         platform_device_register(&board_battery_bq24616);
+#endif
+
+#if defined(CONFIG_BCM_HAPTICS) || defined(CONFIG_BCM_HAPTICS_MODULE)
+   platform_device_register(&board_bcm_haptics_device);
 #endif
 
 	add_usbh_device();

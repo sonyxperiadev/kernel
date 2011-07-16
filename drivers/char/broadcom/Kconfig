@@ -116,3 +116,9 @@ config BCM_HALAUDIO_AUDIOH_ISLAND
       Select m to build the HAL Audio Audio Hub driver.This driver must
       be built as a loadable module otherwise initialization will fail.
               
+config BCM_HAPTICS
+    tristate "HAPTICS driver"
+    default n
+    ---help---
+    Select m to build the generic HAPTICS driver. This driver must be
+    built as a loadable module otherwise initialization will fail.
