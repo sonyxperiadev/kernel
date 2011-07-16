@@ -412,7 +412,6 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
                          VC_SM_LOCK_UNLOCK_T *lock_unlock,
                          VC_SM_LOCK_RESULT_T *lock_result )
 {
-   int ret;
    SM_INSTANCE_T *instance = handle;
    int32_t success;
    uint32_t msg_len;
@@ -424,7 +423,6 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid handle 0x%p", __func__, handle );
 
       vcos_assert( handle != NULL );
-      ret = -1;
       goto err_lock;
    }
 
@@ -433,7 +431,6 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid lock_unlock pointer 0x%p", __func__, lock_unlock );
 
       vcos_assert( lock_unlock != NULL );
-      ret = -1;
       goto err_lock;
    }
 
@@ -442,7 +439,6 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: invalid lock_result pointer 0x%p", __func__, lock_result );
 
       vcos_assert( lock_result != NULL );
-      ret = -1;
       goto err_lock;
    }
 
@@ -469,7 +465,6 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: failed to queue message (success=%d)",
                __func__, success );
 
-      ret = -1;
       goto err_unlock;
    }
 
@@ -480,7 +475,6 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: failed on waiting for event (status=%d)",
                __func__, status );
 
-      ret = -1;
       goto err_unlock;
    }
 
@@ -492,7 +486,6 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: failed to dequeue message (success=%d)",
                __func__, success );
 
-      ret = -1;
       goto err_unlock;
    }
    else if ( msg_len != sizeof( *lock_result ))
@@ -500,7 +493,6 @@ int32_t vc_vchi_sm_lock( VC_VCHI_SM_HANDLE_T handle,
       LOG_ERR( "%s: incorrect message length %u (expected=%u)",
                __func__, msg_len, sizeof( *lock_result ));
 
-      ret = -1;
       goto err_unlock;
    }
 
