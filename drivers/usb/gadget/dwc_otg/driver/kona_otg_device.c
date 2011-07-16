@@ -182,7 +182,7 @@ DEVICE_ATTR(konaotginit, S_IWUSR, NULL, do_konaotginit);
 
 static ssize_t dump_konahsotgctrl(struct device *dev, 
 	struct device_attribute *attr,
-	const char *buf, size_t count)
+	const char *buf)
 {
 	void __iomem *hsotg_ctrl_base;
 
@@ -205,9 +205,9 @@ static ssize_t dump_konahsotgctrl(struct device *dev,
 	/* unmap base address */
 	iounmap(hsotg_ctrl_base);
 
-	return sprintf(buf, "\nkonahsotgctrl register dump");
+	return sprintf((char*)buf, "\nkonahsotgctrl register dump");
 }
-DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
+static DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
 
 /****************************************************************************
  *
@@ -258,12 +258,6 @@ static int __init dwc_otg_device_init(void)
 		else {
 			printk ("bc11 not done\n");
 		}
-		/* force turn off VDP, enable sw_ovwr_set to take over the bc11 switches directly */
-		val = (BC11_OVR_KEY<<HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_SHIFT)
-			| HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK;
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
-
-		schedule_timeout_interruptible(HZ/1000*160);// Allow time for switches to disengage.
 
 		/* clear bit 15 RDB error */
 		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
