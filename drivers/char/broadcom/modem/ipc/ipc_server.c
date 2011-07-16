@@ -412,59 +412,10 @@ static int __init ipcs_init(void *smbase, unsigned int size)
   return(0);
 }
 
-
-static int CP_Boot(void)
-{
-    int started = 0;
-    void __iomem *cp_boot_itcm;
-    void __iomem *cp_bmodem_r4cfg;
-    unsigned int r4init;
-    unsigned int jump_instruction = 0xEA000000;
-
-    #define BMODEM_SYSCFG_R4_CFG0  0x3a004000
-    #define CP_SYSCFG_BASE_SIZE    0x8
-
-    cp_bmodem_r4cfg = ioremap(BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
-    if (!cp_bmodem_r4cfg) {
-        printk(KERN_ERR "%s: ioremap error %x\n", __func__, BMODEM_SYSCFG_R4_CFG0);
-        return started;
-    }
-
-    r4init = *(unsigned int *)(cp_bmodem_r4cfg);
-
-    /* check if the CP is already booted, and if not, then boot it */
-    if ((0x5 != (r4init & 0x5)))
-    {
-        printk(KERN_ALERT "%s: boot (R4 COMMS) ...\n", __func__);
-
-        /* Set the CP jump to address.  CP must jump to DTCM offset 0x400 */
-        cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
-        if (!cp_boot_itcm) {
-            printk(KERN_ERR "%s: ioremap error %x\n", __func__, MODEM_ITCM_ADDRESS);
-            return 0;
-        }
-        jump_instruction |= (0x00FFFFFFUL & (((0x10000 + CONFIG_BCM_MODEM_HEADER_SIZE) / 4) - 2));
-        *(unsigned int *)(cp_boot_itcm) = jump_instruction;
-
-        iounmap(cp_boot_itcm);
-
-        /* boot CP */
-        *(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
-
-        started = 1;
-    }
-    iounmap(cp_bmodem_r4cfg);
-
-    return started;
-}
-
-
 void Comms_Start(void)
 {
     void __iomem *apcp_shmem;
     void __iomem *cp_boot_base;
-
-    CP_Boot();
 
     apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
     if (!apcp_shmem) {
