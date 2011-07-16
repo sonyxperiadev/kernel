@@ -109,6 +109,7 @@ AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memor
 	return global_shared_mem;
 }	
 
+
 //*********************************************************************
 /**
 *

@@ -141,6 +141,7 @@ snd-brcm-omx-objs += soc/csl/dsp/src/csl_vpu.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_log.o
 #snd-brcm-omx-objs += soc/csl/dsp/src/sharedmem_ap.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_voip.o
+snd-brcm-omx-objs += soc/csl/dsp/src/csl_voif.o
 snd-brcm-omx-objs += soc/csl/dsp/src/osdw_dsp_drv.o
 
 

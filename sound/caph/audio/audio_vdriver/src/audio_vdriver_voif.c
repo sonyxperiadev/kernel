@@ -54,6 +54,7 @@
 #include "audio_vdriver_voif.h"
 #include "dspcmd.h"
 #include "log.h"
+#include "csl_voif.h"
 
 
 /**
@@ -202,7 +203,6 @@ static void VOIF_TaskEntry (void)
 	Int16	*ulBuf, *dlBuf;
 	UInt32 sampleCount = VOIF_8K_SAMPLE_COUNT;
 #endif	
-	SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
 	
 	VOIF_Msg_t	msg;
 
@@ -242,7 +242,7 @@ static void VOIF_TaskEntry (void)
 #if defined (FUSE_APPS_PROCESSOR)					
 					if (!voif_enabled)
 						return;
-					ulBuf = (Int16 *)&pSharedMem->shared_voif_UL_buffer[0];
+
 					dlIndex = msg.parm0 & 0x1;
 
                     if (msg.parm1) 
@@ -254,7 +254,11 @@ static void VOIF_TaskEntry (void)
                         sampleCount = VOIF_8K_SAMPLE_COUNT;
                     }
 					Log_DebugPrintf(LOGID_AUDIO,"VOIF_TaskEntry received VOIF_DATA_READY. dlIndex = %d \r\n", dlIndex);
-					dlBuf = (Int16 *)&pSharedMem->shared_voif_DL_buffer[dlIndex * sampleCount];
+
+					ulBuf = CSL_GetULVoIFBuffer();
+
+					dlBuf = CSL_GetDLVoIFBuffer(sampleCount, dlIndex);
+
 					if (voifDrv.cb)
 						voifDrv.cb (ulBuf, dlBuf, sampleCount);
 #endif					

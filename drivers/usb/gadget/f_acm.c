@@ -793,7 +793,7 @@ int acm_function_bind_config(struct usb_configuration *c)
 {
 	int ret = acm_bind_config(c, 0);
 	if (ret == 0)
-		gserial_setup(c->cdev->gadget, 1);
+		gserial_setup(c->cdev->gadget, 2);
 	return ret;
 }
 

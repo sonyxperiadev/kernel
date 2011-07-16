@@ -480,6 +480,7 @@ static int v3d_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, u
 				dev->mempool.ptr = v3d_mempool_base + ( v3d_relocatable_chunk_size * dev->mem_slot);
 				dev->mempool.addr = virt_to_phys(dev->mempool.ptr);
 				dev->mempool.size = v3d_relocatable_chunk_size;
+				dev->mempool.ioptr = (uint32_t) dev->mempool.ptr;
 				up(&v3d_state.work_lock);
 			}
 			//This is used to give userspace the pointer to the relocatable heap memory

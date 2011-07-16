@@ -63,7 +63,7 @@ struct bcm59055_saradc {
 
 static struct bcm59055_saradc *bcm59055_saradc;
 
-#define CLOCK_CYCLE_IN_USEC	31
+#define CLOCK_CYCLE_IN_USEC	32
 /* 23 RTC clock cycle is taken by a RTM req without delay
  * taken in consideration.
 */
@@ -285,7 +285,7 @@ EXPORT_SYMBOL(bcm59055_saradc_read_data);
 * Return:
 ******************************************************************************/
 
-u16 bcm59055_saradc_request_rtm(int ch_sel)
+int bcm59055_saradc_request_rtm(int ch_sel)
 {
 	u8 regVal;
 	u16 adcData;
@@ -303,11 +303,13 @@ u16 bcm59055_saradc_request_rtm(int ch_sel)
 	}
 
 	mutex_lock(&bcm59055_saradc->lock);
+	INIT_COMPLETION(bcm59055_saradc->rtm_req);
 	bcm59055 = bcm59055_saradc->bcm59055;
 	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ADCCTRL1);
 	regVal &= ~(BCM59055_ADCCTRL1_RTM_CH_MASK <<
 				BCM59055_ADCCTRL1_RTM_CH_MASK_SHIFT);	/* Clear Channel Select */
-	regVal |= BCM59055_ADCCTRL1_RTM_ENABLE | ch_sel;
+	regVal &= ~(BCM59055_ADCCTRL1_RTM_ENABLE | BCM59055_ADCCTRL1_RTM_START);
+	regVal |= (ch_sel << BCM59055_ADCCTRL1_RTM_CH_MASK_SHIFT);
 	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_ADCCTRL1, regVal); /* set channel and enable RTM req */
 	if (ret)
 		return ret;
@@ -318,7 +320,6 @@ u16 bcm59055_saradc_request_rtm(int ch_sel)
 	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_ADCCTRL1, regVal);	/* Start RTM Conversion */
 	if (ret)
 		return ret;
-	INIT_COMPLETION(bcm59055_saradc->rtm_req);
 	time_left = wait_for_completion_timeout(&bcm59055_saradc->rtm_req, RTM_EXECUTION_TIMEOUT);
 	bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DATA_RDY);       /* Disable RTM DATA RDY INT */
 	bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DURING_CON_MEAS);        /* Enable RTM WHILE CONT INT */
