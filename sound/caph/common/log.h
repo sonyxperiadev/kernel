@@ -39,8 +39,17 @@
 
 #define OSTASK_Sleep(x)  msleep(x)
 
+//#define CAPH_DRIVER_LOG
 
+#ifdef CAPH_DRIVER_LOG
+#define _DBG_(a) a
 #define Log_DebugPrintf(logID,args...) printk(args)
+#else
+#define _DBG_(a)
+#define Log_DebugPrintf(logID,args...)
+#endif
+
+//
 
 typedef enum
 {

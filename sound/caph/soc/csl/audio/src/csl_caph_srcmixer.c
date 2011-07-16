@@ -24,9 +24,6 @@ Broadcom's express prior written consent.
 #include "chal_caph_srcmixer.h"
 #include "csl_caph_srcmixer.h"
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
-
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************

@@ -37,9 +37,6 @@ Broadcom's express prior written consent.
 #include <mach/io_map.h>
 #endif
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
-
 //#define CONFIG_VOICE_LOOPBACK_TEST
 
 //****************************************************************************
