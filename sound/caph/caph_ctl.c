@@ -586,8 +586,14 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			else
 			{				
 				// save the mode first. We should have a spk to mode conversion to handle WB modes.
-				AUDCTRL_SaveAudioModeFlag(pSel[1]);
-			
+	                        AudioMode_t tempMode = (AudioMode_t)pSel[1];
+				if ((AUDIO_SAMPLING_RATE_t)AUDCTRL_RateGetTelephony() == AUDIO_SAMPLING_RATE_16000)
+            			{
+        	                      tempMode += AUDIO_MODE_NUMBER;
+                                }
+
+				AUDCTRL_SaveAudioModeFlag(tempMode);
+		
 				//enable voice call with sink and source
 				AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
 			}

@@ -65,6 +65,7 @@ static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	{ MSG_AUDIO_COMP_FILTER_REQ,_T("MSG_AUDIO_COMP_FILTER_REQ"), (xdrproc_t)xdr_AudioCompfilter_t, sizeof( AudioCompfilter_t ), 0 },
 	{ MSG_AUDIO_COMP_FILTER_RSP,_T("MSG_AUDIO_COMP_FILTER_RSP"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
 #endif	
+	{ MSG_AUDIO_CALL_STATUS_IND,_T("MSG_AUDIO_CALL_STATUS_IND"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
 	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
 };
 
@@ -82,47 +83,56 @@ static Result_t SendAudioRspForRequest(RPC_Msg_t* req, MsgType_t msgType, void* 
 	
 	return RPC_SerializeRsp(&rsp);
 }
+
+void HandleCallStatusIndCb(InterTaskMsg_t *taskMsg)
+{
+	CallStatusMsg_t* callStatusMsg = NULL;
+	UInt32 tid = 0;
+	RPC_Msg_t msg;
+	UInt32 codecID = (UInt32)0;
+
+	if(taskMsg->msgType == MSG_CALL_STATUS_IND)
+	{
+		MSG_LOG("HandleCallStatusIndCb()   Receive MSG_CALL_STATUS_IND");
+		callStatusMsg = (CallStatusMsg_t*)taskMsg->dataBuf;
+		MSG_LOGV("HandleCallStatusIndCb()   codecid =", callStatusMsg->codecId);
+		codecID = callStatusMsg->codecId;
+
+		msg.msgId = MSG_AUDIO_CALL_STATUS_IND;
+		msg.tid = tid;
+		msg.clientID = audioClientId;
+		msg.dataLen = 0;
+		msg.dataBuf = (void*)(&codecID);
+		msg.dataLen = sizeof(UInt32);
+		RPC_SerializeRsp(&msg);
+	}
+}
 #endif
-#ifdef CONFIG_AUDIO_BUILD
+//#ifdef CONFIG_AUDIO_BUILD
 #if defined(FUSE_APPS_PROCESSOR)
 void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
                             ResultDataBufHandle_t dataBufHandle,
                             UInt32 userContextData)
-{
-    if ( pMsg->tid == 0 )
-    {
-        if (MSG_CALL_STATUS_IND == pMsg->msgId )
-        {
-            UInt32 len;
-            void* dataBuf;
-            CallStatusMsg_t* p = NULL;
-            //CAPI2_ReqRep_t * const reqRep = (CAPI2_ReqRep_t*)pMsg->dataBuf;
+{   
+	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* TeST 3G WB *\n\r");
+	if (MSG_AUDIO_CALL_STATUS_IND == pMsg->msgId )
+	{
+		UInt32* codecID = NULL;
+		codecID = (UInt32*)pMsg->dataBuf;
+		
+		Log_DebugPrintf(LOGID_AUDIO, "HandleAudioEventrespCb : codecid=0x%x \r\n",(*codecID));
 
-            Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : ===pMsg->tid=0x%x, pMsg->clientID=0x%x, pMsg->msgId=0x%x \r\n",(unsigned int)pMsg->tid, pMsg->clientID, pMsg->msgId);
+		if ((*codecID) != 0) // Make sure codeid is not 0
+			AUDDRV_RequestRateChange((UInt8)(*codecID));
+	}
 
-            CAPI2_GetPayloadInfo(pMsg->dataBuf, pMsg->msgId, &dataBuf, &len);
-
-            p = (CallStatusMsg_t*)dataBuf;
-
-            Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : codecid=0x%x, callstatus=0x%x \r\n",p->codecId, p->callstatus);
-
-            if ((p->codecId) != 0 && p->callstatus == CC_CALL_SYNC_IND)
-            {
-                AUDDRV_RequestRateChange(p->codecId);
-            }
-
-        }
-    }
-
-    if ( dataBufHandle )
-    {
+	if ( dataBufHandle )
         RPC_SYSFreeResultDataBuffer(dataBufHandle);
-    }
     else
         Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : dataBufHandle is NULL \r\n");
 }
 #endif
-#endif
+//#endif
 
 void HandleAudioEventReqCb(RPC_Msg_t* pMsg, 
 						 ResultDataBufHandle_t dataBufHandle, 
@@ -204,13 +214,20 @@ void Audio_InitRpc(void)
 		params.iType = INTERFACE_RPC_DEFAULT;
 		params.table_size = (sizeof(AUDIO_Prim_dscrm)/sizeof(RPC_XdrInfo_t));
 		params.xdrtbl = AUDIO_Prim_dscrm;
-		params.respCb = NULL;
+#if defined(FUSE_APPS_PROCESSOR)
+        params.respCb = HandleAudioEventrespCb;
+#else
+        params.respCb = NULL;
+#endif
 		params.reqCb = HandleAudioEventReqCb;
 		syncParams.copyCb = AudioCopyPayload;
 		
 		handle = RPC_SyncRegisterClient(&params,&syncParams);
 		audioClientId=RPC_SYS_GetClientID(handle);
 
+#if defined(FUSE_COMMS_PROCESSOR) 
+		SYS_RegisterForMSEvent(HandleCallStatusIndCb, 0);
+#endif
 
 		first_time = 0;
 		Log_DebugPrintf(LOGID_MISC, "Audio_InitRpc %d", audioClientId);
