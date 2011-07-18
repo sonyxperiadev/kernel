@@ -20,3 +20,10 @@ config FB_BRCM_LCDC_ALEX_DSI_VGA
 	help
 	  Say Y here if you want to have support for the external
 	  Alexander DSI LCD controller.
+
+config FB_BRCM_LCDC_R61581_SMI_HVGA
+	bool "R61581 SMI HVGA LCD controller support"
+	depends on FB_BRCM_RHEA
+	help
+	  Say Y here, if you want to have support for boards with an
+	  external R61581 SMI HVGA LCD controller.
