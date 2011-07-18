@@ -259,9 +259,6 @@ int bcm59055_fg_read_soc(u32 *fg_accm, u16 *fg_cnt, u16 *fg_sleep_cnt)
 
 	ret = bcm590xx_mul_reg_read(bcm59055, BCM59055_REG_FGACCM1,
 			SOC_READ_BYTE_MAX, (u8 *)reg);
-/*	for (i = 0; i < SOC_READ_BYTE_MAX; i++) {
-		reg [i] = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGACCM1 + i);
-	}*/
 	if (!(reg[0] & FGRDVALID)) {
 		pr_debug("%s: Accumulator value is invalid..try later\n", __func__);
 		return -EINVAL;
@@ -313,8 +310,6 @@ int bcm59055_fg_read_sample(enum fg_smpl_type type, s16 * val)
 	}
 
 	ret = bcm590xx_mul_reg_read(bcm59055, add, 2, reg);
-	/*reg[0] = bcm590xx_reg_read(bcm59055, add);
-	reg[1] = bcm590xx_reg_read(bcm59055, add+1);*/
 	pr_debug ("%s: ret %d, MSB %x, LSB %x", __func__, ret, reg[0], reg[1]);
 	if (ret < 0)
 		return ret;
@@ -365,8 +360,6 @@ int bcm59055_fg_read_offset(s16 *offset)
 	pr_debug("Inside %s\n", __func__);
 
 	ret = bcm590xx_mul_reg_read(bcm59055, BCM59055_REG_FGOFFSET1, 2, pmu_offset);
-	/*pmu_offset[0] = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGOFFSET1);
-	pmu_offset[1] = bcm590xx_reg_read(bcm59055, BCM59055_REG_FGOFFSET2);*/
 	pr_debug ("%s: ret %d, MSB %x, LSB %x\n", __func__, ret, pmu_offset[0], pmu_offset[1]);
 	if (ret >= 0) {
 		*offset = pmu_offset [1] | (pmu_offset [0] << 8);
