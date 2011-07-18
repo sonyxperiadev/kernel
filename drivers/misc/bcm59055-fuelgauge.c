@@ -254,7 +254,6 @@ int bcm59055_fg_read_soc(u32 *fg_accm, u16 *fg_cnt, u16 *fg_sleep_cnt)
 	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
 	u8 reg[SOC_READ_BYTE_MAX];
 	int ret=0;
-	/*int i; to be deleted when I2C is fully functional */
 	pr_debug("Inside %s\n", __func__);
 
 	ret = bcm590xx_mul_reg_read(bcm59055, BCM59055_REG_FGACCM1,
