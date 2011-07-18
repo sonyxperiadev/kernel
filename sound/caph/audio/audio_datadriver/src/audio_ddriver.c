@@ -823,7 +823,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 frame_size;
                 UInt32 num_frames;
                 UInt32 left_over;
-				UInt16 encodingMode, numFramesPerInterrupt, recordMode;
+				UInt16 encodingMode, numFramesPerInterrupt;
+				//UInt16 recordMode;
                #ifdef CONFIG_AUDIO_BUILD
 		UInt32 speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_8K;
                #else

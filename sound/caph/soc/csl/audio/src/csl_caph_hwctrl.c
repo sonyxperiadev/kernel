@@ -2735,13 +2735,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
 			{
 				sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-				fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+				fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
 			}
 			else
 			if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
 			{
 				sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       			fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+       			fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
 			}
 			else
 			{
@@ -2842,13 +2842,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-            fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+            fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
         }
         else
         if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       	    fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+       	    fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
         }
         else
         {
@@ -3114,13 +3114,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-            fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+           fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
         }
         else
         if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       	    fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+       	    fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
         }
         else
         {
@@ -3209,13 +3209,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-            fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+             fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
         }   
         else
         if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       	    fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+			 fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
         }
         else
         {
@@ -3305,13 +3305,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-            fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate); 
+            fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
         }
         else
         if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       	    fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+       	   fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
         }
         else
         {
@@ -3390,13 +3390,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-            fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+            fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
         }
         else
         if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       	    fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+			fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
         }
         else
         {
@@ -4998,13 +4998,13 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-            fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+            fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
         }   
         else
         if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
         {
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       	    fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+			 fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
         }
         else
         {
@@ -7311,13 +7311,13 @@ static void csl_caph_hwctrl_configre_fm_fifo(CSL_CAPH_HWConfig_Table_t audioPath
 		if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
 		{
 			sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-			fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+			fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
 		}
 		else
 		if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
 		{
 			sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       		fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+       		fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
 		}
 		else
 		{

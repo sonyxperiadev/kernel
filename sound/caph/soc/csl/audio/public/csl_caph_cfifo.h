@@ -54,6 +54,18 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataForma
 
 /**
 *
+*  @brief  assign a free caph cfifo buffer based on data information
+*
+*  @param   dataFormat  (in) format of the data to be transffered through this buffer
+*  @param   sampleRate  (in) Sample Rate of the data to be transffered through this buffer
+*
+*  @return CSL_CAPH_CFIFO_FIFO_e   assigned CFIFO buffer
+*****************************************************************************/
+CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat,
+                                                 CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate);
+
+/**
+*
 *  @brief  get a fifo's threshold
 *  
 *  @param   fifo  (in) CFIFO fifo

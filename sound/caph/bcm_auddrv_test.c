@@ -97,7 +97,6 @@ UInt8 playback_audiotest_srcmixer[165856] = {
 };
 
 
-
 #define BRCM_AUDDRV_NAME_MAX (15)  //max 15 char for test name 
 #define BRCM_AUDDRV_TESTVAL  (5)   // max no of arg for each test
 
@@ -715,8 +714,10 @@ static int HandleControlCommand()
  		case 8:// peek a register
         {
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
+			UInt32 regVal = 0;
 			DEBUG(" peek a register, 0x%08lx\n", regAddr);
-            DEBUG("		value = 0x%08lx\n", *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr))));
+			regVal = *((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)));
+            DEBUG("		value = 0x%08lx\n",regVal );
 		}
 		break;
 
@@ -733,10 +734,11 @@ static int HandleControlCommand()
         case 10: // hard code caph clocks, sometimes clock driver is not working well
         {
             // hard code it.
+           
+            UInt32 regVal;
 
             DEBUG(" hard code caph clock register for debugging..\n");
 
-            UInt32 regVal;
             regVal = (0x00A5A5 << KHUB_CLK_MGR_REG_WR_ACCESS_PASSWORD_SHIFT);
             regVal |= KHUB_CLK_MGR_REG_WR_ACCESS_CLKMGR_ACC_MASK;
             //WRITE_REG32((HUB_CLK_BASE_ADDR+KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET),regVal);
