@@ -51,7 +51,6 @@
 #include <mach/rdb/brcm_rdb_sspil.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 
-//#include <csp/chal_ccu_sspi_inline.h>
 #include <chal/chal_sspi.h>
 
 #include "dma_priv.h"
@@ -236,7 +235,7 @@ static short halAdcFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 static HALAUDIO_PCM_PLATFORM_INFO gPcmPlatformInfo;
 
 /* CHAL layer Clock Handle */
-//static CHAL_HANDLE gChalSspiClkHandle;
+static struct clk *gSspiClk;
 
 static struct pcm_sspi_hw_core_t gPcmHwCore;
 
@@ -556,36 +555,7 @@ int pcmInit(
    if( err )
    {
       printk( KERN_ERR "%s: PCM: Failed to initialize PCM err=%i\n", __FUNCTION__, err );
-      goto exit_disable_clocks;
-   }
-
-   if( info->core_id_select == SSPI_CORE_ID_0 )
-   {
-      //gChalSspiClkHandle = chal_ccu_sspi_clk_init( MM_IO_BASE_SLV_CLK );
-      //chal_ccu_set_sspi0_clock( gChalSspiClkHandle, PCM_CHAL_MAX_BIT_CLOCK_FREQ );
-   }
-   else if( info->core_id_select == SSPI_CORE_ID_1 )
-   {
-      /* NOTE: Core ID 1 is equal to ID 4 on clock */
-      //gChalSspiClkHandle = chal_ccu_sspi_clk_init( MM_IO_BASE_HUB_CLK );
-      //chal_ccu_set_sspi4_clock( gChalSspiClkHandle, PCM_CHAL_MAX_BIT_CLOCK_FREQ );
-   }
-   else if( info->core_id_select == SSPI_CORE_ID_2 )
-   {
-      //gChalSspiClkHandle = chal_ccu_sspi_clk_init( MM_IO_BASE_SLV_CLK );
-      //chal_ccu_set_sspi2_clock( gChalSspiClkHandle, PCM_CHAL_MAX_BIT_CLOCK_FREQ );
-   }
-   else if( info->core_id_select == SSPI_CORE_ID_3 )
-   {
-      //gChalSspiClkHandle = chal_ccu_sspi_clk_init( MM_IO_BASE_HUB_CLK );
-      //chal_ccu_set_sspi3_clock( gChalSspiClkHandle, PCM_CHAL_MAX_BIT_CLOCK_FREQ );
-   }
-   else
-   {
-      printk( KERN_ERR "%s: [ch=%u] failed to set DMA device configuration for core %d\n",
-            __FUNCTION__, ch->ch, info->core_id_select );
-      err = -EINVAL;
-      goto exit_disable_clocks;
+      return err;
    }
 
    err = pcmDmaInit();
@@ -621,10 +591,6 @@ int pcmInit(
 
 cleanup_alloc_buffers:  /* Full cleanup */
    pcmExit();
-   return err;
-
-exit_disable_clocks:
-
    return err;
 }
 
@@ -2348,33 +2314,11 @@ static void reset_bt( HALAUDIO_PCM_BT_GPIO *gpio, int reset )
 */
 static int pcm_platform_init( HALAUDIO_PCM_PLATFORM_INFO *info )
 {
-   //gpiomux_rc_e   gpiorc;
-   //int            err = 0;
+   int            err = 0;
 
-#if 0
-   gpiorc = gpiomux_requestGroup(gpiomux_group_ssp, info->core_id_select, "BT_PCM" );
-   if( gpiorc != gpiomux_rc_SUCCESS )
-   {
-      printk( KERN_ERR "%s: failed to request SSPI %d gpio group rc=%u\n", __FUNCTION__, info->core_id_select, gpiorc );
-      err = -EBUSY;
-      goto cleanup_and_exit;
-   }
-
-   if( info->bt_req_uart_gpio_group >= 0 )
-   {
-      gpiomux_requestGroup(gpiomux_group_uart, info->bt_req_uart_gpio_group, "BT_UART" );
-      if( gpiorc != gpiomux_rc_SUCCESS )
-      {
-         printk( KERN_ERR "%s: failed to request UART %d gpio group rc=%u\n", __FUNCTION__, info->core_id_select, gpiorc );
-         err = -EBUSY;
-         goto cleanup_and_exit;
-      }
-   }
-#endif
    /* Must have at minimum BT reset pin or will not function */
    if ( info->bt_gpio.rst_b >= 0 )
    {
-#if 0
       /* Request pin to enable power to BT module */
       err = gpio_request( info->bt_gpio.rst_b, "BT_RST_B" );
       if ( err )
@@ -2383,36 +2327,31 @@ static int pcm_platform_init( HALAUDIO_PCM_PLATFORM_INFO *info )
          err = -EBUSY;
          goto cleanup_and_exit;
       }
-#endif
       gpio_direction_output( info->bt_gpio.rst_b, 0 );
 
       /* Request pin for BT VREG CTL if required */
       if( info->bt_gpio.vreg_ctl >= 0 )
       {
-#if 0
          err = gpio_request( info->bt_gpio.vreg_ctl, "BT_VREG_CTL" );
-         if ( gpiorc != gpiomux_rc_SUCCESS )
+         if ( err )
          {
-            printk( KERN_ERR "%s: failed to request BT_VREG_CTL gpio pin rc=%u\n", __FUNCTION__, gpiorc );
+            printk( KERN_ERR "%s: failed to request BT_VREG_CTL gpio pin rc=%u\n", __FUNCTION__, err );
             err = -EBUSY;
             goto cleanup_and_exit;
          }
-#endif
          gpio_direction_output( info->bt_gpio.vreg_ctl, 0 );
       }
 
       /* Request pin for BT WAKE if required */
       if( info->bt_gpio.wake >= 0 )
       {
-#if 0
          err = gpio_request( info->bt_gpio.wake, "BT_WAKE" );
-         if ( gpiorc != gpiomux_rc_SUCCESS )
+         if ( err )
          {
-            printk( KERN_ERR "%s: failed to request BT_WAKE gpio pin rc=%u\n", __FUNCTION__, gpiorc );
+            printk( KERN_ERR "%s: failed to request BT_WAKE gpio pin rc=%u\n", __FUNCTION__, err );
             err = -EBUSY;
             goto cleanup_and_exit;
          }
-#endif
          gpio_direction_output( info->bt_gpio.wake, 0 );
       }
 
@@ -2424,11 +2363,11 @@ static int pcm_platform_init( HALAUDIO_PCM_PLATFORM_INFO *info )
    }
 
    return 0;
-#if 0
+
 cleanup_and_exit:
    pcm_platform_exit( info );
    return err;
-#endif
+
 }
 
 /***************************************************************************/
@@ -2437,15 +2376,6 @@ cleanup_and_exit:
 */
 static void pcm_platform_exit( HALAUDIO_PCM_PLATFORM_INFO *info )
 {
-#if 0
-   gpiomux_rc_e   gpiorc;
-
-   gpiorc = gpiomux_freeGroup( gpiomux_group_ssp, info->core_id_select );
-   if ( gpiorc != gpiomux_rc_SUCCESS )
-   {
-      printk( KERN_ERR "%s: failed to free SSP 0 GPIO MUX group rc=%i\n", __FUNCTION__, gpiorc );
-   }
-#endif
    if ( info->bt_gpio.rst_b >= 0 )
    {
       reset_bt( &info->bt_gpio, 1 );
@@ -2519,6 +2449,8 @@ static int __init pcm_probe( struct platform_device *pdev )
    {
       gPcmIrqId = BCM_INT_ID_SSP0;
       gPcmPhysBaseAddr = PCM_SSP0_PHYS_BASE_ADDR_START;
+
+      gSspiClk = clk_get( &pdev->dev, "ssp0_audio_clk" );
    }
    else if( info->core_id_select == SSPI_CORE_ID_1 )
    {
@@ -2538,6 +2470,12 @@ static int __init pcm_probe( struct platform_device *pdev )
    else
    {
       printk( KERN_ERR "%s: failed to select appropriate SSPI core %d!\n", __FUNCTION__, info->core_id_select );
+      return -EINVAL;
+   }
+
+   if( clk_enable( gSspiClk ) )
+   {
+      printk( KERN_ERR "%s: failed to enable clock on core %d!\n", __FUNCTION__, info->core_id_select );
       return -EINVAL;
    }
 

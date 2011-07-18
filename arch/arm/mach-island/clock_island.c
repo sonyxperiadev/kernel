@@ -23,6 +23,8 @@
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_kpm_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_kps_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_ikps_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khubaon_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
@@ -337,6 +339,21 @@ static struct clk_src ssp0_clk_src = {
 };
 DECLARE_PERI_CLK(ssp0, SSP0, SSP0, var_104m, 52*CLOCK_1M, 2, DIV_TRIG, KONA_SLV, IKPS, 0);
 
+static struct clk *ssp0_audio_clk_src_tbl[] =
+{
+	name_to_clk(crystal),
+	name_to_clk(ref_312m),
+	name_to_clk(ref_cx40),
+};
+
+static struct clk_src ssp0_audio_clk_src = {
+	.total		=	ARRAY_SIZE(ssp0_audio_clk_src_tbl),
+	.sel		=	1,
+	.parents	=	ssp0_audio_clk_src_tbl,
+};
+
+DECLARE_PERI_CLK_PRE_DIV(ssp0_audio, SSP0_AUDIO, SSP0_AUDIO, ref_cx40, 153600*CLOCK_1K, 1, DIV_TRIG, KONA_SLV, IKPS, 0);
+
 static struct clk *uart_clk_src_tbl[] =
 {
 	name_to_clk(crystal),
@@ -580,6 +597,7 @@ struct clk_lookup island_clk_tbl[] =
 	CLK_LK(pmu_bsc),
 	CLK_LK(pwm),
 	CLK_LK(ssp0),
+	CLK_LK(ssp0_audio),
 	CLK_LK(timers),
 	CLK_LK(spum_open),
 	CLK_LK(spum_sec),
