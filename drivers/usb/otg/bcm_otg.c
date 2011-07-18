@@ -34,7 +34,6 @@ struct bcm_otg_data {
 	struct bcm590xx *bcm590xx;
 	struct otg_transceiver xceiver;
 	bool host;
-	bool otg_init_done;
 	struct clk *otg_clk;
 	void *hsotg_ctrl_base;
 };
@@ -43,6 +42,8 @@ struct bcm_otg_data {
 
 #define OTGCTRL1_VBUS_ON 0xDC
 #define OTGCTRL1_VBUS_OFF 0xD8
+
+static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled) ;
 
 static void bcm_otg_phy_set_vbus_stat(struct bcm_otg_data *otg_data,
 				      bool on)
@@ -78,6 +79,37 @@ static void bcm_otg_phy_set_id_stat(struct bcm_otg_data *otg_data,
 	}
 
 	writel(reg, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+}
+
+static void bcm_otg_set_phy_non_driving(struct bcm_otg_data *otg_data, bool on)
+{
+	unsigned long reg;
+	void *hsotg_ctrl_base = otg_data->hsotg_ctrl_base;
+
+	/* set Phy to driving mode */
+	reg = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	if (on)
+		reg |= HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
+	else
+		reg &= ~HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
+
+	writel(reg, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+}
+
+static void bcm_otg_set_phy_off(struct bcm_otg_data *otg_data, bool on)
+{
+	unsigned long reg;
+	void *hsotg_ctrl_base = otg_data->hsotg_ctrl_base;
+
+	/* set the phy to functional state */
+	reg = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+	if (on)
+		reg &= ~HSOTG_CTRL_PHY_CFG_PHY_IDDQ_I_MASK;
+	else
+		reg |= ~HSOTG_CTRL_PHY_CFG_PHY_IDDQ_I_MASK;
+
+	writel(reg, hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
 }
 
 static void bcm_otg_set_vbus(struct bcm_otg_data *otg_data,
@@ -149,6 +181,32 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcm_otg_host_show,
 		   bcm_otg_host_store);
 
+static ssize_t bcm_otg_shutdown_phy(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t count)
+{
+	struct bcm_otg_data *otg_data = dev_get_drvdata(dev);
+
+	bcm_otg_phy_set_vbus_stat(otg_data, false);
+	bcm_otg_set_phy_non_driving(otg_data, true);
+	bcm_otg_set_phy_off(otg_data, true);
+
+	return count;
+}
+static DEVICE_ATTR(phy_shutdown, S_IWUSR, NULL, bcm_otg_shutdown_phy);
+
+static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled)
+{
+	struct bcm_otg_data *otg_data = dev_get_drvdata(otg->dev);
+
+	if (NULL == otg_data)
+		return -EINVAL;
+
+	bcm_otg_set_vbus(otg_data, enabled);
+	bcm_otg_phy_set_vbus_stat(otg_data, enabled);
+	return 0;
+}
+
 static int __devinit bcm_otg_probe(struct platform_device *pdev)
 {
 	int error = 0;
@@ -184,6 +242,7 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	otg_data->xceiver.set_vbus = bcm_otg_control_vbus;
 	otg_set_transceiver(&otg_data->xceiver);
 
 	platform_set_drvdata(pdev, otg_data);
@@ -193,6 +252,14 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 	if (error)
 	{
 		dev_warn(&pdev->dev, "Failed to create HOST file\n");
+		goto Error_bcm_otg_probe;
+	}
+
+	error = device_create_file(&pdev->dev, &dev_attr_phy_shutdown);
+
+	if (error)
+	{
+		dev_warn(&pdev->dev, "Failed to create phy_shutdown file\n");
 		goto Error_bcm_otg_probe;
 	}
 

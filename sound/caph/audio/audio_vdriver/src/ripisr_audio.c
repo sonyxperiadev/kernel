@@ -58,9 +58,6 @@
 #include "msconsts.h"
 #include "log.h"
 
-#define _DBG_(a)		a
-//#define _DBG_(a)
-
 extern int IPC_AudioControlSend(char *buff, UInt32 len);
 
 #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR) && defined(IPC_AUDIO))

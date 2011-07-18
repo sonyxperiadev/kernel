@@ -55,6 +55,9 @@
 #include <mach/rdb/brcm_rdb_bintc.h>
 #include <mach/irqs.h>
 
+#ifndef CONFIG_BCM_MODEM_HEADER_SIZE
+#define CONFIG_BCM_MODEM_HEADER_SIZE 0
+#endif
 // definitions for Rhea/BI BModem IRQ's
 // extracted from chip_irq.h for Rhea
 #define NUM_KONAIRQs          224
@@ -62,7 +65,6 @@
 #define FIRST_BMIRQ           (LAST_KONAIRQ+1)
 #define NUM_BMIRQs            56
 #define IRQ_TO_BMIRQ(irq)         ((irq)-FIRST_BMIRQ)
-
 
 #define IPC_MAJOR (204)
 
@@ -381,7 +383,6 @@ void WaitForCpIpc (void* pSmBase)
 static int __init ipcs_init(void *smbase, unsigned int size)
 {
   int rc = 0;
-  IPC_Boolean ret = 0;
 
   //Wait for CP to initialize
   WaitForCpIpc(smbase);
@@ -425,7 +426,7 @@ void Comms_Start(void)
     memset(apcp_shmem, 0, IPC_SIZE);
     iounmap(apcp_shmem);
 
-    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
+    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS+CONFIG_BCM_MODEM_HEADER_SIZE, CP_BOOT_BASE_SIZE);
     if (!cp_boot_base) {
         printk(KERN_ERR "%s: ioremap error\n", __func__);
         return;

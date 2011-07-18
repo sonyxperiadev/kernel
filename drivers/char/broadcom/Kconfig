@@ -61,6 +61,13 @@ config BCM_MODEM
         help
           Broadcom Modem IPC drivers
 
+config BCM_MODEM_HEADER_SIZE
+        int "Broadcom Modem Header Size"
+        depends on BRCM_CHAR_DRIVERS && NET && BCM_MODEM
+        default 0
+        help
+          Sets the length of the modem binary header reserved area
+
 config GPIO_USER_MODE_SUPPORT
 	tristate "Broadcom GPIO User Mode Support"
 	depends on BRCM_CHAR_DRIVERS

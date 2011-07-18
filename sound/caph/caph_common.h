@@ -53,7 +53,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/wakelock.h>
 
 #include "bcm_audio_devices.h"
-#define BCM_AUDIO_DEBUG_ON
+//#define BCM_AUDIO_DEBUG_ON
 #if defined(BCM_AUDIO_DEBUG_ON)
 #define BCM_AUDIO_DEBUG(args...)  if (gAudioDebugLevel) printk(args)
 #define DEBUG(args...)  if (gAudioDebugLevel) printk(args)
