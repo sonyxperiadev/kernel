@@ -164,10 +164,10 @@ struct dwc_otg_driver_module_params {
 
 static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.opt = -1,
-#ifdef CONFIG_USB_OTG_UTILS
-	.otg_cap = 0,
+#ifdef CONFIG_USB_OTG
+	.otg_cap = 0, /* SRP, HNP capable */
 #else
-	.otg_cap = 2,
+	.otg_cap = 2, /* Not capable of SRP and HNP */
 #endif
 	.dma_enable = 1,
 	.dma_desc_enable = 0,
