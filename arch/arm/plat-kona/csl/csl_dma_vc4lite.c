@@ -593,7 +593,10 @@ DMA_VC4LITE_STATUS csl_dma_vc4lite_add_data(
 
     dmaCtrlBlkInfo.srcAddr = pData->srcAddr;
     dmaCtrlBlkInfo.dstAddr = pData->dstAddr;    
-    
+   
+    /* This shall fix the lock up issue. */
+    dmaCtrlBlkInfo.xferMode  = 0; 
+
     dmaCtrlBlkInfo.srcStride = 0;
     dmaCtrlBlkInfo.dstStride = 0;
     dmaCtrlBlkInfo.xferLength.len = pData->xferLength;

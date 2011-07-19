@@ -690,6 +690,27 @@ static int get_frame_number(struct usb_gadget *gadget)
 	return dwc_otg_pcd_get_frame_number(d->pcd);
 }
 
+/**
+ * Controls pullup which lets the host detect that a USB device is attached.
+ * On implies activate pullup, i.e. remove disconnect condition.
+ */
+static int pullup(struct usb_gadget *gadget, int is_on)
+{
+	struct gadget_wrapper *d;
+
+	DWC_DEBUGPL(DBG_PCDV, "%s(%p)\n", __func__, gadget);
+
+	if (gadget == 0) {
+		return -ENODEV;
+	} else {
+		d = container_of(gadget, struct gadget_wrapper, gadget);
+	}
+	dwc_otg_pcd_disconnect(d->pcd, is_on ? false : true);
+
+	return 0;
+}
+
+
 #ifdef CONFIG_USB_DWC_OTG_LPM
 static int test_lpm_enabled(struct usb_gadget *gadget)
 {
@@ -722,30 +743,10 @@ static int wakeup(struct usb_gadget *gadget)
 	return 0;
 }
 
-/**
- * Use soft disonnect bit to enable/disable D+ and D- pull up,
- * to notify host to start enumeration
- *
- */
-static int dwc_otg_pullup(struct usb_gadget *gadget, int is_on)
-{
-	dctl_data_t dctl = {
-		.b = {
-			.sftdiscon = 1
-		}
-	};
-
-	dwc_modify_reg32(&(GET_CORE_IF(gadget_wrapper->pcd)->dev_if->dev_global_regs->dctl),
-		dctl.d32,
-		is_on? 0 : dctl.d32);
-
-	return 0;
-}
-
 static const struct usb_gadget_ops dwc_otg_pcd_ops = {
 	.get_frame = get_frame_number,
+	.pullup = pullup,
 	.wakeup = wakeup,
-	.pullup = dwc_otg_pullup,
 #ifdef CONFIG_USB_DWC_OTG_LPM
 	.lpm_support = test_lpm_enabled,
 #endif
@@ -1261,6 +1262,8 @@ int pcd_init(
 		DWC_ERROR("dwc_otg_pcd_init failed\n");
 		return -ENOMEM;
 	}
+	/* Postpone any connections to USB host until a gadget is attached */
+	dwc_otg_pcd_disconnect(otg_dev->pcd, true);
 
 	gadget_wrapper = alloc_wrapper(_dev);
 
@@ -1351,26 +1354,23 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 	gadget_wrapper->driver = driver;
 	gadget_wrapper->gadget.dev.driver = &driver->driver;
 
+	/* Default is to connect to USB host. Gadget driver may override
+	 * this during its bind using the pullup() API.
+	 */
+	dwc_otg_pcd_disconnect(gadget_wrapper->pcd, false);
+
 	DWC_DEBUGPL(DBG_PCD, "bind to driver %s\n", driver->driver.name);
 	retval = driver->bind(&gadget_wrapper->gadget);
 	if (retval) {
 		DWC_ERROR("bind to driver %s --> error %d\n",
 			  driver->driver.name, retval);
+		dwc_otg_pcd_disconnect(gadget_wrapper->pcd, true);
 		gadget_wrapper->driver = 0;
 		gadget_wrapper->gadget.dev.driver = 0;
 		return retval;
 	}
 	DWC_DEBUGPL(DBG_ANY, "registered gadget driver '%s'\n",
 		    driver->driver.name);
-
-	/* Now we have all drivers ready, allow connect to USB host */
-	dwc_otg_pullup(&gadget_wrapper->gadget, 0);
-	dwc_mdelay(10);
-	dwc_otg_pullup(&gadget_wrapper->gadget, 1);
-
-	/* only enable interrupt when gadget function is registered */
-	DWC_DEBUGPL(DBG_PCD, "Enable USB global interrupt\n");
-	dwc_otg_enable_global_interrupts( GET_CORE_IF(gadget_wrapper->pcd));
 
 	return 0;
 }
@@ -1396,12 +1396,8 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 			    -EINVAL);
 		return -EINVAL;
 	}
-
-	/* disable pull - soft disonnect */
-	dwc_otg_pullup(&gadget_wrapper->gadget, 0);
-
-	/* Disable USB interrupt before class driver unbind */
-	dwc_otg_disable_global_interrupts( GET_CORE_IF(gadget_wrapper->pcd) );
+	/* Gadget about to unbound, disable connection to USB host */
+	dwc_otg_pcd_disconnect(gadget_wrapper->pcd, true);
 
 	driver->unbind(&gadget_wrapper->gadget);
 	gadget_wrapper->driver = 0;

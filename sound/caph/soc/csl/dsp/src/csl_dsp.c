@@ -60,14 +60,16 @@
 #include <string.h>
 #include "assert.h"
 #include "mobcom_types.h"
-#include "consts.h"
-#include "ostypes.h"
 #include "log.h"
 #include "shared.h"
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
-#include "memmap.h"
 #include "csl_arm2sp.h"
+
+#include "io.h"
+#include "platform_mconfig_rhea.h"
+
+static AP_SharedMem_t 			*global_shared_mem = NULL;
 
 AP_SharedMem_t	*vp_shared_mem;
 
@@ -84,6 +86,29 @@ static UserStatusCB_t UserStatusHandler = NULL;
 #endif
 static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 
+// Temporary till audio code contains references to this function
+//******************************************************************************
+//
+// Function Name:	SHAREDMEM_GetSharedMemPtr
+//
+// Description:		Return pointer to shared memory
+//
+// Notes:
+//
+//******************************************************************************
+AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memory
+{
+	if(global_shared_mem == NULL)
+	{
+		global_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		if (!global_shared_mem) {
+			Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping dsp shared memory failed\n\r");
+			return NULL;
+		}
+	}
+	return global_shared_mem;
+}	
+
 
 //*********************************************************************
 /**
@@ -95,8 +120,6 @@ static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 **********************************************************************/
 void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
 {
-	AP_SHAREDMEM_Init();
-	
 	vp_shared_mem = (AP_SharedMem_t*) dsp_shared_mem;
 	
 	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", dsp_shared_mem);
@@ -493,5 +516,25 @@ void AP_ProcessStatus(void)
 
 	}
 
+}
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: AUDIO_Return_IHF_48kHz_buffer_base_address
+*
+*   @note     This function returns the base address to the shared memory buffer where
+*             the ping-pong 48kHz data would be stored for AADMAC to pick them up
+*             for IHF case. This base address needs to be programmed to the 
+*             AADMAC_CTRL1 register.
+*                                                                                         
+*   @return   ptr (UInt32 *) Pointer to the base address of shared memory ping-pong buffer 
+*                            for transferring 48kHz speech data from DSP to AADMAC for IHF.
+*
+**/
+/*******************************************************************************************/
+UInt32 *AUDIO_Return_IHF_48kHz_buffer_base_address(void)
+{
+   	return(&(vp_shared_mem->shared_aud_out_buf_48k[0][0]));
 }
 

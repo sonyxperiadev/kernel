@@ -39,13 +39,12 @@ Broadcom's express prior written consent.
 //****************************************************************************
 //                         L O C A L   S E C T I O N
 //****************************************************************************
-//#define _DBG_(a)
-#define _DBG_(a) (a)
 
 #define AMIC_GAIN_LEVEL_NUM 179
 #define DMIC_GAIN_LEVEL_NUM 97
 #define SPKR_GAIN_LEVEL_NUM 249
 #define MIXER_GAIN_LEVEL_NUM 201
+#define MIXER_GAIN_LEVEL_NUM2 179
 //****************************************************************************
 // local macro declarations
 //****************************************************************************
@@ -1300,7 +1299,261 @@ static csl_caph_Spkr_Gain_t Spkr_GainTable[SPKR_PATH_MAX][SPKR_GAIN_LEVEL_NUM]=
 	/* -50.0dB */	{0xff38, 0xff38, GAIN_NA, 50, GAIN_NA}
 	},
 
-	/*SPKR_IHF_HS*/
+	/* SPKR_IHF */
+	
+	{
+	/* 12.0dB */	{0x0030, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 11.75dB */	{0x002f, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 11.5dB */	{0x002e, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 11.25dB */	{0x002d, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 11.0dB */	{0x002c, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 10.25dB */	{0x002b, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 10.5dB */	{0x002a, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 10.75dB */	{0x0029, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 10.0dB */	{0x0028, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 9.75dB */	{0x0027, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 9.5dB */	{0x0026, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 9.25dB */	{0x0025, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 9.0dB */	{0x0024, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 8.75dB */	{0x0023, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 8.5dB */	{0x0022, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 8.25dB */	{0x0021, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 8.0dB */	{0x0020, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 7.75dB */	{0x001f, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 7.5dB */	{0x001e, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 7.25dB */	{0x001d, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 7.0dB */	{0x001c, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 6.75dB */	{0x001b, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 6.5dB */	{0x001a, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 6.25dB */	{0x0019, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 6.0dB */	{0x0018, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 5.75dB */	{0x0017, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 5.5dB */	{0x0016, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 5.25dB */	{0x0015, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 5.0dB */	{0x0014, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 4.75dB */	{0x0013, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 4.5dB */	{0x0012, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 4.25dB */	{0x0011, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 4.0dB */	{0x0010, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 3.75dB */	{0x000f, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 3.5dB */	{0x000e, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 3.25dB */	{0x000d, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 3.0dB */	{0x000c, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 2.75dB */	{0x000b, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 2.5dB */	{0x000a, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 2.25dB */	{0x0009, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 2.0dB */	{0x0008, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 1.75dB */	{0x0007, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 1.5dB */	{0x0006, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 1.25dB */	{0x0005, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 1.0dB */	{0x0004, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 0.75dB */	{0x0003, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 0.5dB */	{0x0002, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 0.25dB */	{0x0001, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* 0dB */	{0x0000, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
+	/* -0.25dB */	{0xffff, 0xffff, GAIN_SYSPARM, 15919, GAIN_NA},
+	/* -0.5dB */	{0xfffe, 0xfffe, GAIN_SYSPARM, 15467, GAIN_NA},
+	/* -0.75dB */	{0xfffd, 0xfffd, GAIN_SYSPARM, 15029, GAIN_NA},
+	/* -1.0dB */	{0xfffc, 0xfffc, GAIN_SYSPARM, 14602, GAIN_NA},
+	/* -1.25dB */	{0xfffb, 0xfffb, GAIN_SYSPARM, 14188, GAIN_NA},
+	/* -1.5dB */	{0xfffa, 0xfffa, GAIN_SYSPARM, 13785, GAIN_NA},
+	/* -1.75dB */	{0xfff9, 0xfff9, GAIN_SYSPARM, 13394, GAIN_NA},
+	/* -2.0dB */	{0xfff8, 0xfff8, GAIN_SYSPARM, 13014, GAIN_NA},
+	/* -2.25dB */	{0xfff7, 0xfff7, GAIN_SYSPARM, 12645, GAIN_NA},
+	/* -2.5dB */	{0xfff6, 0xfff6, GAIN_SYSPARM, 12286, GAIN_NA},
+	/* -2.75dB */	{0xfff5, 0xfff5, GAIN_SYSPARM, 11938, GAIN_NA},
+	/* -3.0dB */	{0xfff4, 0xfff4, GAIN_SYSPARM, 11599, GAIN_NA},
+	/* -3.25dB */	{0xfff3, 0xfff3, GAIN_SYSPARM, 11270, GAIN_NA},
+	/* -3.5dB */	{0xfff2, 0xfff2, GAIN_SYSPARM, 10950, GAIN_NA},
+	/* -3.75dB */	{0xfff1, 0xfff1, GAIN_SYSPARM, 10639, GAIN_NA},
+	/* -4.0dB */	{0xfff0, 0xfff0, GAIN_SYSPARM, 10338, GAIN_NA},
+	/* -4.25dB */	{0xffef, 0xffef, GAIN_SYSPARM, 10044, GAIN_NA},
+	/* -4.5dB */	{0xffee, 0xffee, GAIN_SYSPARM, 9759, GAIN_NA},
+	/* -4.75dB */	{0xffed, 0xffed, GAIN_SYSPARM, 9482, GAIN_NA},
+	/* -5.0dB */	{0xffec, 0xffec, GAIN_SYSPARM, 9213, GAIN_NA},
+	/* -5.25dB */	{0xffeb, 0xffeb, GAIN_SYSPARM, 8952, GAIN_NA},
+	/* -5.5dB */	{0xffea, 0xffeb, GAIN_SYSPARM, 8698, GAIN_NA},
+	/* -5.75dB */	{0xffe9, 0xffe9, GAIN_SYSPARM, 8451, GAIN_NA},
+	/* -6.0dB */	{0xffe8, 0xffe8, GAIN_SYSPARM, 8211, GAIN_NA},
+	/* -6.25dB */	{0xffe7, 0xffe7, GAIN_SYSPARM, 7978, GAIN_NA},
+	/* -6.5dB */	{0xffe6, 0xffe6, GAIN_SYSPARM, 7752, GAIN_NA},
+	/* -6.75dB */	{0xffe5, 0xffe5, GAIN_SYSPARM, 7514, GAIN_NA},
+	/* -7.0dB */	{0xffe4, 0xffe4, GAIN_SYSPARM, 7301, GAIN_NA},
+	/* -7.25dB */	{0xffe4, 0xffe4, GAIN_SYSPARM, 7094, GAIN_NA},
+	/* -7.5dB */	{0xffe2, 0xffe2, GAIN_SYSPARM, 6892, GAIN_NA},
+	/* -7.75dB */	{0xffe1, 0xffe1, GAIN_SYSPARM, 6697, GAIN_NA},
+	/* -8.0dB */	{0xffe0, 0xffe0, GAIN_SYSPARM, 6507, GAIN_NA},
+	/* -8.25dB */	{0xffdf, 0xffdf, GAIN_SYSPARM, 6322, GAIN_NA},
+	/* -8.5dB */	{0xffde, 0xffde, GAIN_SYSPARM, 6143, GAIN_NA},
+	/* -8.75dB */	{0xffdd, 0xffdd, GAIN_SYSPARM, 5969, GAIN_NA},
+	/* -9.0dB */	{0xffdc, 0xffdc, GAIN_SYSPARM, 5799, GAIN_NA},
+	/* -9.25dB */	{0xffdb, 0xffdb, GAIN_SYSPARM, 5635, GAIN_NA},
+	/* -9.5dB */	{0xffda, 0xffda, GAIN_SYSPARM, 5475, GAIN_NA},
+	/* -9.75dB */	{0xffd9, 0xffd9, GAIN_SYSPARM, 5319, GAIN_NA},
+	/* -10.0dB */	{0xffd8, 0xffd8, GAIN_SYSPARM, 5169, GAIN_NA},
+	/* -10.25dB */	{0xffd7, 0xffd7, GAIN_SYSPARM, 5022, GAIN_NA},
+	/* -10.5dB */	{0xffd6, 0xffd6, GAIN_SYSPARM, 4879, GAIN_NA},
+	/* -10.75dB */	{0xffd5, 0xffd5, GAIN_SYSPARM, 4741, GAIN_NA},
+	/* -11.0dB */	{0xffd4, 0xffd4, GAIN_SYSPARM, 4606, GAIN_NA},
+	/* -11.25dB */	{0xffd3, 0xffd3, GAIN_SYSPARM, 4476, GAIN_NA},
+	/* -11.5dB */	{0xffd2, 0xffd2, GAIN_SYSPARM, 4349, GAIN_NA},
+	/* -11.75dB */	{0xffd1, 0xffd1, GAIN_SYSPARM, 4225, GAIN_NA},
+	/* -12.0dB */	{0xffd0, 0xffd0, GAIN_SYSPARM, 4105, GAIN_NA},
+	/* -12.25dB */	{0xffcf, 0xffcf, GAIN_SYSPARM, 3989, GAIN_NA},
+	/* -12.5dB */	{0xffce, 0xffce, GAIN_SYSPARM, 3876, GAIN_NA},
+	/* -12.75dB */	{0xffcd, 0xffcd, GAIN_SYSPARM, 3757, GAIN_NA},
+	/* -13.0dB */	{0xffcc, 0xffcc, GAIN_SYSPARM, 3650, GAIN_NA},
+	/* -13.25dB */	{0xffcb, 0xffcb, GAIN_SYSPARM, 3547, GAIN_NA},
+	/* -13.5dB */	{0xffca, 0xffca, GAIN_SYSPARM, 3446, GAIN_NA},
+	/* -13.75dB */	{0xffc9, 0xffc9, GAIN_SYSPARM, 3348, GAIN_NA},
+	/* -14.0dB */	{0xffc8, 0xffc8, GAIN_SYSPARM, 3253, GAIN_NA},
+	/* -14.25dB */	{0xffc7, 0xffc7, GAIN_SYSPARM, 3161, GAIN_NA},
+	/* -14.5dB */	{0xffc6, 0xffc6, GAIN_SYSPARM, 3071, GAIN_NA},
+	/* -14.75dB */	{0xffc5, 0xffc5, GAIN_SYSPARM, 2984, GAIN_NA},
+	/* -15.0dB */	{0xffc4, 0xffc4, GAIN_SYSPARM, 2899, GAIN_NA},
+	/* -15.25dB */	{0xffc3, 0xffc3, GAIN_SYSPARM, 2817, GAIN_NA},
+	/* -15.5dB */	{0xffc2, 0xffc2, GAIN_SYSPARM, 2737, GAIN_NA},
+	/* -15.75dB */	{0xffc1, 0xffc1, GAIN_SYSPARM, 2659, GAIN_NA},
+	/* -16.0dB */	{0xffc0, 0xffc0, GAIN_SYSPARM, 2584, GAIN_NA},
+	/* -16.25dB */	{0xffbf, 0xffbf, GAIN_SYSPARM, 2511, GAIN_NA},
+	/* -16.5dB */	{0xffbe, 0xffbe, GAIN_SYSPARM, 2439, GAIN_NA},
+	/* -16.75dB */	{0xffbd, 0xffbd, GAIN_SYSPARM, 2370, GAIN_NA},
+	/* -17.0dB */	{0xffbc, 0xffbc, GAIN_SYSPARM, 2303, GAIN_NA},
+	/* -17.25dB */	{0xffbb, 0xffbb, GAIN_SYSPARM, 2238, GAIN_NA},
+	/* -17.5dB */	{0xffba, 0xffba, GAIN_SYSPARM, 2174, GAIN_NA},
+	/* -17.75dB */	{0xffb9, 0xffb9, GAIN_SYSPARM, 2112, GAIN_NA},
+	/* -18.0dB */	{0xffb8, 0xffb8, GAIN_SYSPARM, 2052, GAIN_NA},
+	/* -18.25dB */	{0xffb7, 0xffb7, GAIN_SYSPARM, 1994, GAIN_NA},
+	/* -18.5dB */	{0xffb6, 0xffb6, GAIN_SYSPARM, 1938, GAIN_NA},
+	/* -18.75dB */	{0xffb5, 0xffb5, GAIN_SYSPARM, 1878, GAIN_NA},
+	/* -19.0dB */	{0xffb4, 0xffb4, GAIN_SYSPARM, 1825, GAIN_NA},
+	/* -19.25dB */	{0xffb3, 0xffb3, GAIN_SYSPARM, 1773, GAIN_NA},
+	/* -19.5dB */	{0xffb2, 0xffb2, GAIN_SYSPARM, 1723, GAIN_NA},
+	/* -19.75dB */	{0xffb1, 0xffb1, GAIN_SYSPARM, 1674, GAIN_NA},
+	/* -20.0dB */	{0xffb0, 0xffb0, GAIN_SYSPARM, 1626, GAIN_NA},
+	/* -20.25dB */	{0xffaf, 0xffaf, GAIN_SYSPARM, 1580, GAIN_NA},
+	/* -20.5dB */	{0xffae, 0xffae, GAIN_SYSPARM, 1535, GAIN_NA},
+	/* -20.75dB */	{0xffad, 0xffad, GAIN_SYSPARM, 1492, GAIN_NA},
+	/* -21.0dB */	{0xffac, 0xffac, GAIN_SYSPARM, 1449, GAIN_NA},
+	/* -21.25dB */	{0xffab, 0xffab, GAIN_SYSPARM, 1408, GAIN_NA},
+	/* -21.5dB */	{0xffaa, 0xffaa, GAIN_SYSPARM, 1368, GAIN_NA},
+	/* -21.75dB */	{0xffa9, 0xffa9, GAIN_SYSPARM, 1329, GAIN_NA},
+	/* -22.0dB */	{0xffa8, 0xffa8, GAIN_SYSPARM, 1292, GAIN_NA},
+	/* -22.25dB */	{0xffa7, 0xffa7, GAIN_SYSPARM, 1255, GAIN_NA},
+	/* -22.5dB */	{0xffa6, 0xffa6, GAIN_SYSPARM, 1219, GAIN_NA},
+	/* -22.75dB */	{0xffa5, 0xffa5, GAIN_SYSPARM, 1185, GAIN_NA},
+	/* -23.0dB */	{0xffa4, 0xffa4, GAIN_SYSPARM, 1151, GAIN_NA},
+	/* -23.25dB */	{0xffa3, 0xffa3, GAIN_SYSPARM, 1119, GAIN_NA},
+	/* -23.5dB */	{0xffa2, 0xffa2, GAIN_SYSPARM, 1087, GAIN_NA},
+	/* -23.75dB */	{0xffa1, 0xffa1, GAIN_SYSPARM, 1056, GAIN_NA},
+	/* -24.0dB */	{0xffa0, 0xffa0, GAIN_SYSPARM, 1026, GAIN_NA},
+	/* -24.25dB */	{0xff9f, 0xff9f, GAIN_SYSPARM, 997, GAIN_NA},
+	/* -24.5dB */	{0xff9e, 0xff9e, GAIN_SYSPARM, 969, GAIN_NA},
+	/* -24.75dB */	{0xff9d, 0xff9d, GAIN_SYSPARM, 939, GAIN_NA},
+	/* -25.0dB */	{0xff9c, 0xff9c, GAIN_SYSPARM, 912, GAIN_NA},
+	/* -25.25dB */	{0xff9b, 0xff9b, GAIN_SYSPARM, 886, GAIN_NA},
+	/* -25.5dB */	{0xff9a, 0xff9a, GAIN_SYSPARM, 861, GAIN_NA},
+	/* -25.75dB */	{0xff99, 0xff99, GAIN_SYSPARM, 837, GAIN_NA},
+	/* -26.0dB */	{0xff98, 0xff98, GAIN_SYSPARM, 813, GAIN_NA},
+	/* -26.25dB */	{0xff97, 0xff97, GAIN_SYSPARM, 790, GAIN_NA},
+	/* -26.5dB */	{0xff96, 0xff96, GAIN_SYSPARM, 767, GAIN_NA},
+	/* -26.75dB */	{0xff95, 0xff95, GAIN_SYSPARM, 746, GAIN_NA},
+	/* -27.0dB */	{0xff94, 0xff94, GAIN_SYSPARM, 724, GAIN_NA},
+	/* -27.25dB */	{0xff93, 0xff93, GAIN_SYSPARM, 704, GAIN_NA},
+	/* -27.5dB */	{0xff92, 0xff92, GAIN_SYSPARM, 684, GAIN_NA},
+	/* -27.75dB */	{0xff91, 0xff91, GAIN_SYSPARM, 664, GAIN_NA},
+	/* -28.0dB */	{0xff90, 0xff90, GAIN_SYSPARM, 646, GAIN_NA},
+	/* -28.25dB */	{0xff8f, 0xff8f, GAIN_SYSPARM, 627, GAIN_NA},
+	/* -28.5dB */	{0xff8e, 0xff8e, GAIN_SYSPARM, 609, GAIN_NA},
+	/* -28.75dB */	{0xff8d, 0xff8d, GAIN_SYSPARM, 592, GAIN_NA},
+	/* -29.0dB */	{0xff8c, 0xff8c, GAIN_SYSPARM, 575, GAIN_NA},
+	/* -29.25dB */	{0xff8b, 0xff8b, GAIN_SYSPARM, 559, GAIN_NA},
+	/* -29.5dB */	{0xff8a, 0xff8a, GAIN_SYSPARM, 543, GAIN_NA},
+	/* -29.75dB */	{0xff89, 0xff89, GAIN_SYSPARM, 528, GAIN_NA},
+	/* -30.0dB */	{0xff88, 0xff88, GAIN_SYSPARM, 513, GAIN_NA},
+	/* -30.25dB */	{0xff87, 0xff87, GAIN_SYSPARM, 498, GAIN_NA},
+	/* -30.5dB */	{0xff86, 0xff86, GAIN_SYSPARM, 484, GAIN_NA},
+	/* -30.75dB */	{0xff85, 0xff85, GAIN_SYSPARM, 469, GAIN_NA},
+	/* -31.0dB */	{0xff84, 0xff84, GAIN_SYSPARM, 456, GAIN_NA},
+	/* -31.25dB */	{0xff83, 0xff83, GAIN_SYSPARM, 443, GAIN_NA},
+	/* -31.5dB */	{0xff82, 0xff82, GAIN_SYSPARM, 430, GAIN_NA},
+	/* -31.75dB */	{0xff81, 0xff81, GAIN_SYSPARM, 418, GAIN_NA},
+	/* -32.0dB */	{0xff80, 0xff80, GAIN_SYSPARM, 406, GAIN_NA},
+	/* -32.25dB */	{0xff7f, 0xff7f, GAIN_SYSPARM, 395, GAIN_NA},
+	/* -32.5dB */	{0xff7e, 0xff7e, GAIN_SYSPARM, 383, GAIN_NA},
+	/* -32.75dB */	{0xff7d, 0xff7d, GAIN_SYSPARM, 373, GAIN_NA},  
+	/* -33.0dB */	{0xff7c, 0xff7c, GAIN_SYSPARM, 362, GAIN_NA},
+	/* -33.25dB */	{0xff7b, 0xff7b, GAIN_SYSPARM, 352, GAIN_NA},
+	/* -33.5dB */	{0xff7a, 0xff7a, GAIN_SYSPARM, 342, GAIN_NA},
+	/* -33.75dB */	{0xff79, 0xff79, GAIN_SYSPARM, 332, GAIN_NA},
+	/* -34.0dB */	{0xff78, 0xff78, GAIN_SYSPARM, 323, GAIN_NA},
+	/* -34.25dB */	{0xff77, 0xff77, GAIN_SYSPARM, 313, GAIN_NA},
+	/* -34.5dB */	{0xff76, 0xff76, GAIN_SYSPARM, 304, GAIN_NA},
+	/* -34.75dB */	{0xff75, 0xff75, GAIN_SYSPARM, 296, GAIN_NA},
+	/* -35.0dB */	{0xff74, 0xff74, GAIN_SYSPARM, 287, GAIN_NA},
+	/* -35.25dB */	{0xff73, 0xff73, GAIN_SYSPARM, 279, GAIN_NA},
+	/* -35.5dB */	{0xff72, 0xff72, GAIN_SYSPARM, 271, GAIN_NA},
+	/* -35.75dB */	{0xff71, 0xff71, GAIN_SYSPARM, 264, GAIN_NA},
+	/* -36.0dB */	{0xff70, 0xff70, GAIN_SYSPARM, 256, GAIN_NA},
+	/* -36.25dB */	{0xff6f, 0xff6f, GAIN_SYSPARM, 249, GAIN_NA},
+	/* -36.5dB */	{0xff6e, 0xff6e, GAIN_SYSPARM, 242, GAIN_NA},
+	/* -36.75dB */	{0xff6d, 0xff6d, GAIN_SYSPARM, 234, GAIN_NA},
+	/* -37.0dB */	{0xff6c, 0xff6c, GAIN_SYSPARM, 228, GAIN_NA},
+	/* -37.25dB */	{0xff6b, 0xff6b, GAIN_SYSPARM, 221, GAIN_NA},
+	/* -37.5dB */	{0xff6a, 0xff6a, GAIN_SYSPARM, 215, GAIN_NA},
+	/* -37.75dB */	{0xff69, 0xff69, GAIN_SYSPARM, 209, GAIN_NA},
+	/* -38.0dB */	{0xff68, 0xff68, GAIN_SYSPARM, 203, GAIN_NA},
+	/* -38..75dB */	{0xff67, 0xff67, GAIN_SYSPARM, 197, GAIN_NA},
+	/* -38.5dB */	{0xff66, 0xff66, GAIN_SYSPARM, 191, GAIN_NA},
+	/* -38.5dB */	{0xff65, 0xff65, GAIN_SYSPARM, 186, GAIN_NA},
+	/* -39.0dB */	{0xff64, 0xff64, GAIN_SYSPARM, 181, GAIN_NA},
+	/* -39.25dB */	{0xff63, 0xff63, GAIN_SYSPARM, 176, GAIN_NA},
+	/* -39.5dB */	{0xff62, 0xff62, GAIN_SYSPARM, 171, GAIN_NA},
+	/* -39.75dB */	{0xff61, 0xff61, GAIN_SYSPARM, 166, GAIN_NA},
+	/* -40.0dB */	{0xff60, 0xff60, GAIN_SYSPARM, 161, GAIN_NA},
+	/* -40.25dB */	{0xff5f, 0xff5f, GAIN_SYSPARM, 156, GAIN_NA},
+	/* -40.5dB */	{0xff5e, 0xff5e, GAIN_SYSPARM, 152, GAIN_NA},
+	/* -40.75dB */	{0xff5d, 0xff5d, GAIN_SYSPARM, 148, GAIN_NA},
+	/* -41.0dB */	{0xff5c, 0xff5c, GAIN_SYSPARM, 143, GAIN_NA},
+	/* -41.25dB */	{0xff5b, 0xff5b, GAIN_SYSPARM, 139, GAIN_NA},
+	/* -41.5dB */	{0xff5a, 0xff5a, GAIN_SYSPARM, 135, GAIN_NA},
+	/* -41.75dB */	{0xff59, 0xff59, GAIN_SYSPARM, 132, GAIN_NA},
+	/* -42.0dB */	{0xff58, 0xff58, GAIN_SYSPARM, 128, GAIN_NA},
+	/* -42.25dB */	{0xff57, 0xff57, GAIN_SYSPARM, 124, GAIN_NA},
+	/* -42.5dB */	{0xff56, 0xff56, GAIN_SYSPARM, 121, GAIN_NA},
+	/* -42.75dB */	{0xff55, 0xff55, GAIN_SYSPARM, 117, GAIN_NA},
+	/* -43.0dB */	{0xff54, 0xff54, GAIN_SYSPARM, 114, GAIN_NA},
+	/* -43.25dB */	{0xff53, 0xff53, GAIN_SYSPARM, 110, GAIN_NA},
+	/* -43.5dB */	{0xff52, 0xff52, GAIN_SYSPARM, 107, GAIN_NA},
+	/* -43.75dB */	{0xff51, 0xff51, GAIN_SYSPARM, 104, GAIN_NA},
+	/* -44.0dB */	{0xff50, 0xff50, GAIN_SYSPARM, 101, GAIN_NA},
+	/* -44.25dB */	{0xff4f, 0xff4f, GAIN_SYSPARM, 98, GAIN_NA},
+	/* -44.5dB */	{0xff4e, 0xff4e, GAIN_SYSPARM, 95, GAIN_NA},
+	/* -44.75dB */	{0xff4d, 0xff4d, GAIN_SYSPARM, 93, GAIN_NA},
+	/* -45.0dB */	{0xff4c, 0xff4c, GAIN_SYSPARM, 90, GAIN_NA},
+	/* -45.25dB */	{0xff4b, 0xff4b, GAIN_SYSPARM, 88, GAIN_NA},
+	/* -45.5dB */	{0xff4a, 0xff4a, GAIN_SYSPARM, 85, GAIN_NA},
+	/* -45.75dB */	{0xff49, 0xff49, GAIN_SYSPARM, 83, GAIN_NA},
+	/* -46.0dB */	{0xff48, 0xff48, GAIN_SYSPARM, 80, GAIN_NA},
+	/* -46.25dB */	{0xff47, 0xff47, GAIN_SYSPARM, 78, GAIN_NA},
+	/* -46.5dB */	{0xff46, 0xff46, GAIN_SYSPARM, 76, GAIN_NA},
+	/* -46.75dB */	{0xff45, 0xff45, GAIN_SYSPARM, 74, GAIN_NA},
+	/* -47.0dB */	{0xff44, 0xff44, GAIN_SYSPARM, 71, GAIN_NA},
+	/* -47.25dB */	{0xff43, 0xff43, GAIN_SYSPARM, 69, GAIN_NA},
+	/* -47.5dB */	{0xff42, 0xff42, GAIN_SYSPARM, 67, GAIN_NA},
+	/* -47.75dB */	{0xff41, 0xff41, GAIN_SYSPARM, 66, GAIN_NA},
+	/* -48.0dB */	{0xff40, 0xff40, GAIN_SYSPARM, 64, GAIN_NA},
+	/* -48.25dB */	{0xff3f, 0xff3f, GAIN_SYSPARM, 62, GAIN_NA},
+	/* -48.5dB */	{0xff3e, 0xff3e, GAIN_SYSPARM, 60, GAIN_NA},
+	/* -48.75dB */	{0xff3d, 0xff3d, GAIN_SYSPARM, 58, GAIN_NA},
+	/* -49.0dB */	{0xff3c, 0xff3c, GAIN_SYSPARM, 57, GAIN_NA},
+	/* -49.25dB */	{0xff3b, 0xff3b, GAIN_SYSPARM, 55, GAIN_NA},
+	/* -49.5dB */	{0xff3a, 0xff3a, GAIN_SYSPARM, 53, GAIN_NA},
+	/* -49.75dB */	{0xff39, 0xff39, GAIN_SYSPARM, 52, GAIN_NA},
+	/* -50.0dB */	{0xff38, 0xff38, GAIN_SYSPARM, 50, GAIN_NA}
+	},
+
+	/*SPKR_HS*/
 	{
 	/* 12.0dB */	{0x0030, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
 	/* 11.75dB */	{0x002f, 0x0000, GAIN_SYSPARM, 16384, GAIN_NA},
@@ -1557,7 +1810,7 @@ static csl_caph_Spkr_Gain_t Spkr_GainTable[SPKR_PATH_MAX][SPKR_GAIN_LEVEL_NUM]=
 
 //Gain Conversion from dB Q13.2 to register value.
 //Not a gain distribution table.
-static csl_caph_Mixer_Gain_t Mixer_GainTable[MIXER_GAIN_LEVEL_NUM] =
+static csl_caph_Mixer_GainMapping_t Mixer_GainTable[MIXER_GAIN_LEVEL_NUM] =
 {
 	/* 0dB */	{0x0000, 16384, 0x0},
 	/* -0.25dB */	{0xffff, 15919, 0xa},
@@ -1763,6 +2016,192 @@ static csl_caph_Mixer_Gain_t Mixer_GainTable[MIXER_GAIN_LEVEL_NUM] =
 
 };
 
+//Gain Conversion from dB Q13.2 to register value.
+//Not a gain distribution table.
+static csl_caph_Mixer_GainMapping2_t Mixer_GainTable2[MIXER_GAIN_LEVEL_NUM2] =
+{
+	/* 44.5dB */    {0x00B2, 0x7},
+	/* 44.25dB */	{0x00B1, 0x7},
+    /* 44dB */      {0x00B0, 0x7},
+	/* 43.75dB */   {0x00AF, 0x7},
+	/* 43.5dB */    {0x00AE, 0x7},
+	/* 43.25dB */	{0x00AD, 0x7},
+    /* 43dB */      {0x00AC, 0x7},
+	/* 42.75dB */   {0x00AB, 0x7},
+	/* 42.5dB */    {0x00AA, 0x7},
+	/* 42.25dB */	{0x00A9, 0x7},
+    /* 42dB */      {0x00A8, 0x7},
+	/* 41.75dB */   {0x00A7, 0x6},
+	/* 41.5dB */    {0x00A6, 0x6},
+	/* 41.25dB */	{0x00A5, 0x6},
+	/* 41dB */      {0x00A4, 0x6},
+	/* 40.75dB */   {0x00A3, 0x6},
+	/* 40.5dB */    {0x00A2, 0x6},
+	/* 40.25dB */	{0x00A1, 0x6},
+    /* 40dB */      {0x00A0, 0x6},
+	/* 39.75dB */   {0x009F, 0x6},
+	/* 39.5dB */    {0x009E, 0x6},
+	/* 39.25dB */	{0x009D, 0x6},
+    /* 39dB */      {0x009C, 0x6},
+	/* 38.75dB */   {0x009B, 0x6},
+	/* 38.5dB */    {0x009A, 0x6},
+	/* 38.25dB */	{0x0099, 0x6},
+    /* 38dB */      {0x0098, 0x6},
+	/* 37.75dB */   {0x0097, 0x6},
+	/* 37.5dB */    {0x0096, 0x6},
+	/* 37.25dB */	{0x0095, 0x6},
+	/* 37dB */      {0x0094, 0x6},
+	/* 36.75dB */   {0x0093, 0x6},
+	/* 36.5dB */    {0x0092, 0x6},
+	/* 36.25dB */	{0x0091, 0x6},
+    /* 36dB */      {0x0090, 0x6},
+	/* 35.75dB */   {0x008F, 0x5},
+	/* 35.5dB */    {0x008E, 0x5},
+	/* 35.25dB */	{0x008D, 0x5},
+    /* 35dB */      {0x008C, 0x5},
+	/* 34.75dB */   {0x008B, 0x5},
+	/* 34.5dB */    {0x008A, 0x5},
+	/* 34.25dB */	{0x0089, 0x5},
+    /* 34dB */      {0x0088, 0x5},
+	/* 33.75dB */   {0x0087, 0x5},
+	/* 33.5dB */    {0x0086, 0x5},
+	/* 33.25dB */	{0x0085, 0x5},
+	/* 33dB */      {0x0084, 0x5},
+	/* 32.75dB */   {0x0083, 0x5},
+	/* 32.5dB */    {0x0082, 0x5},
+	/* 32.25dB */	{0x0081, 0x5},
+    /* 32dB */      {0x0080, 0x5},
+	/* 31.75dB */   {0x007F, 0x5},
+	/* 31.5dB */    {0x007E, 0x5},
+	/* 31.25dB */	{0x007D, 0x5},
+    /* 31dB */      {0x007C, 0x5},
+	/* 30.75dB */   {0x007B, 0x5},
+	/* 30.5dB */    {0x007A, 0x5},
+	/* 30.25dB */	{0x0079, 0x5},
+    /* 30dB */      {0x0078, 0x5},
+	/* 29.75dB */   {0x0077, 0x4},
+	/* 29.5dB */    {0x0076, 0x4},
+	/* 29.25dB */	{0x0075, 0x4},
+	/* 29dB */      {0x0074, 0x4},
+	/* 28.75dB */   {0x0073, 0x4},
+	/* 28.5dB */    {0x0072, 0x4},
+	/* 28.25dB */	{0x0071, 0x4},
+    /* 28dB */      {0x0070, 0x4},
+	/* 27.75dB */   {0x006F, 0x4},
+	/* 27.5dB */    {0x006E, 0x4},
+	/* 27.25dB */	{0x006D, 0x4},
+    /* 27dB */      {0x006C, 0x4},
+	/* 26.75dB */   {0x006B, 0x4},
+	/* 26.5dB */    {0x006A, 0x4},
+	/* 26.25dB */	{0x0069, 0x4},
+    /* 26dB */      {0x0068, 0x4},
+	/* 25.75dB */   {0x0067, 0x4},
+	/* 25.5dB */    {0x0066, 0x4},
+	/* 25.25dB */	{0x0065, 0x4},
+	/* 25dB */      {0x0064, 0x4},
+	/* 24.75dB */   {0x0063, 0x4},
+	/* 24.5dB */    {0x0062, 0x4},
+	/* 24.25dB */	{0x0061, 0x4},
+    /* 24dB */      {0x0060, 0x4},
+	/* 23.75dB */   {0x005F, 0x3},
+	/* 23.5dB */    {0x005E, 0x3},
+	/* 23.25dB */	{0x005D, 0x3},
+    /* 23dB */      {0x005C, 0x3},
+	/* 22.75dB */   {0x005B, 0x3},
+	/* 22.5dB */    {0x005A, 0x3},
+	/* 22.25dB */	{0x0059, 0x3},
+    /* 22dB */      {0x0058, 0x3},
+	/* 21.75dB */   {0x0057, 0x3},
+	/* 21.5dB */    {0x0056, 0x3},
+	/* 21.25dB */	{0x0055, 0x3},
+	/* 21dB */      {0x0054, 0x3},
+	/* 20.75dB */   {0x0053, 0x3},
+	/* 20.5dB */    {0x0052, 0x3},
+	/* 20.25dB */	{0x0051, 0x3},
+    /* 20dB */      {0x0050, 0x3},
+	/* 19.75dB */   {0x004F, 0x3},
+	/* 19.5dB */    {0x004E, 0x3},
+	/* 19.25dB */	{0x004D, 0x3},
+    /* 19dB */      {0x004C, 0x3},
+	/* 18.75dB */   {0x004B, 0x3},
+	/* 18.5dB */    {0x004A, 0x3},
+	/* 18.25dB */	{0x0049, 0x3},
+    /* 18dB */      {0x0048, 0x3},
+	/* 17.75dB */   {0x0047, 0x2},
+	/* 17.5dB */    {0x0046, 0x2},
+	/* 17.25dB */	{0x0045, 0x2},
+	/* 17dB */      {0x0044, 0x2},
+	/* 16.75dB */   {0x0043, 0x2},
+	/* 16.5dB */    {0x0042, 0x2},
+	/* 16.25dB */	{0x0041, 0x2},
+    /* 16dB */      {0x0040, 0x2},
+	/* 15.75dB */   {0x003F, 0x2},
+	/* 15.5dB */    {0x003E, 0x2},
+	/* 15.25dB */	{0x003D, 0x2},
+    /* 15dB */      {0x003C, 0x2},
+	/* 14.75dB */   {0x003B, 0x2},
+	/* 14.5dB */    {0x003A, 0x2},
+	/* 14.25dB */	{0x0039, 0x2},
+    /* 14dB */      {0x0038, 0x2},
+	/* 13.75dB */   {0x0037, 0x2},
+	/* 13.5dB */    {0x0036, 0x2},
+	/* 13.25dB */	{0x0035, 0x2},
+	/* 13dB */      {0x0034, 0x2},
+	/* 12.75dB */   {0x0033, 0x2},
+	/* 12.5dB */    {0x0032, 0x2},
+	/* 12.25dB */	{0x0031, 0x2},
+    /* 12dB */      {0x0030, 0x2},
+	/* 11.75dB */   {0x002F, 0x1},
+	/* 11.5dB */    {0x002E, 0x1},
+	/* 11.25dB */	{0x002D, 0x1},
+    /* 11dB */      {0x002C, 0x1},
+	/* 10.75dB */   {0x002B, 0x1},
+	/* 10.5dB */    {0x002A, 0x1},
+	/* 10.25dB */	{0x0029, 0x1},
+    /* 10dB */      {0x0028, 0x1},
+	/* 9.75dB */    {0x0027, 0x1},
+	/* 9.5dB */     {0x0026, 0x1},
+	/* 9.25dB */	{0x0025, 0x1},
+	/* 9dB */       {0x0024, 0x1},
+	/* 8.75dB */    {0x0023, 0x1},
+	/* 8.5dB */     {0x0022, 0x1},
+	/* 8.25dB */	{0x0021, 0x1},
+    /* 8dB */       {0x0020, 0x1},
+	/* 7.75dB */    {0x001F, 0x1},
+	/* 7.5dB */     {0x001E, 0x1},
+	/* 7.25dB */	{0x001D, 0x1},
+    /* 7dB */       {0x001C, 0x1},
+	/* 6.75dB */    {0x001B, 0x1},
+	/* 6.5dB */     {0x001A, 0x1},
+	/* 6.25dB */	{0x0019, 0x1},
+    /* 6dB */       {0x0018, 0x1},
+	/* 5.75dB */    {0x0017, 0x0},
+	/* 5.5dB */     {0x0016, 0x0},
+	/* 5.25dB */	{0x0015, 0x0},
+	/* 5dB */       {0x0014, 0x0},
+	/* 4.75dB */    {0x0013, 0x0},
+	/* 4.5dB */     {0x0012, 0x0},
+	/* 4.25dB */	{0x0011, 0x0},
+    /* 4dB */       {0x0010, 0x0},
+	/* 3.75dB */    {0x000F, 0x0},
+	/* 3.5dB */     {0x000E, 0x0},
+	/* 3.25dB */	{0x000D, 0x0},
+    /* 3dB */       {0x000C, 0x0},
+	/* 2.75dB */    {0x000B, 0x0},
+	/* 2.5dB */     {0x000A, 0x0},
+	/* 2.25dB */	{0x0009, 0x0},
+    /* 2dB */       {0x0008, 0x0},
+	/* 1.75dB */    {0x0007, 0x0},
+	/* 1.5dB */     {0x0006, 0x0},
+	/* 1.25dB */	{0x0005, 0x0},
+	/* 1dB */       {0x0004, 0x0},
+	/* 0.75dB */    {0x0003, 0x0},
+	/* 0.5dB */     {0x0002, 0x0},
+	/* 0.25dB */	{0x0001, 0x0},
+	/* 0dB */   	{0x0000, 0x0}
+};
+	
+
 //****************************************************************************
 // local function declarations
 //****************************************************************************
@@ -1845,14 +2284,14 @@ csl_caph_Mic_GainMapping_t csl_caph_gain_GetMicMappingGain(Int16 gain)
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_gain_GetMicMappingGain::gain=0x%x\n", gain));
     if (gain >= Mic_GainMappingTable[AMIC_GAIN_LEVEL_NUM-1].micGain)
     {
-        memcpy(&outGain, &Mic_GainMappingTable[AMIC_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Mic_Gain_t));
+        memcpy(&outGain, &Mic_GainMappingTable[AMIC_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Mic_GainMapping_t));
         _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "micPGA=0x%x, micCICFineScale=0x%x, micCICBitSelect=0x%x\n", outGain.micPGA, outGain.micCICFineScale, outGain.micCICBitSelect));
         return outGain;	    
     }
     else
     if (gain <= Mic_GainMappingTable[0].micGain)
     {
-        memcpy(&outGain, &Mic_GainMappingTable[0], sizeof(csl_caph_Mic_Gain_t));
+        memcpy(&outGain, &Mic_GainMappingTable[0], sizeof(csl_caph_Mic_GainMapping_t));
         _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "micPGA=0x%x, micCICFineScale=0x%x, micCICBitSelect=0x%x\n", outGain.micPGA, outGain.micCICFineScale, outGain.micCICBitSelect));
         return outGain;	    
     }
@@ -1861,7 +2300,7 @@ csl_caph_Mic_GainMapping_t csl_caph_gain_GetMicMappingGain(Int16 gain)
     {
         if(gain == Mic_GainMappingTable[i].micGain)
         {
-            memcpy(&outGain, &Mic_GainMappingTable[i], sizeof(csl_caph_Mic_Gain_t));
+            memcpy(&outGain, &Mic_GainMappingTable[i], sizeof(csl_caph_Mic_GainMapping_t));
             _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "micPGA=0x%x, micCICFineScale=0x%x, micCICBitSelect=0x%x\n", outGain.micPGA, outGain.micCICFineScale, outGain.micCICBitSelect));
             return outGain;	    
     	}	
@@ -1971,29 +2410,29 @@ csl_caph_Spkr_Gain_t csl_caph_gain_GetSpkrGain_Q1_14(csl_caph_SPKR_Path_e spkr, 
 
 /****************************************************************************
 *
-*  Function Name: csl_caph_Mixer_Gain_t csl_caph_gain_GetMixerGain(Int16 gain)
+*  Function Name: csl_caph_Mixer_GainMapping_t csl_caph_gain_GetMixerGain(Int16 gain)
 *
 *  Description: read the mixer input gain/output fine/coarse gain.
 *
 ****************************************************************************/
-csl_caph_Mixer_Gain_t csl_caph_gain_GetMixerGain(Int16 gain)
+csl_caph_Mixer_GainMapping_t csl_caph_gain_GetMixerGain(Int16 gain)
 {
-    csl_caph_Mixer_Gain_t outGain;
+    csl_caph_Mixer_GainMapping_t outGain;
     UInt8 i = 0;
-    memset(&outGain, 0, sizeof(csl_caph_Mixer_Gain_t));
+    memset(&outGain, 0, sizeof(csl_caph_Mixer_GainMapping_t));
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_gain_GetMixerGain::gain=0x%x\n", gain));
 
     if (gain >= Mixer_GainTable[0].hwGain)
     {
-        memcpy(&outGain, &Mixer_GainTable[0], sizeof(csl_caph_Mixer_Gain_t));
-        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputGain));
+        memcpy(&outGain, &Mixer_GainTable[0], sizeof(csl_caph_Mixer_GainMapping_t));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputFineGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputFineGain));
         return outGain;	    
     }
     else
     if (gain <= Mixer_GainTable[MIXER_GAIN_LEVEL_NUM-1].hwGain)
     {
-        memcpy(&outGain, &Mixer_GainTable[MIXER_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Mixer_Gain_t));
-        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputGain));
+        memcpy(&outGain, &Mixer_GainTable[MIXER_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Mixer_GainMapping_t));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputFineGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputFineGain));
         return outGain;	    
     }
     
@@ -2001,8 +2440,51 @@ csl_caph_Mixer_Gain_t csl_caph_gain_GetMixerGain(Int16 gain)
     {
         if(gain == Mixer_GainTable[i].hwGain)
         {
-            memcpy(&outGain, &Mixer_GainTable[i], sizeof(csl_caph_Mixer_Gain_t));
-            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputGain));
+            memcpy(&outGain, &Mixer_GainTable[i], sizeof(csl_caph_Mixer_GainMapping_t));
+            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerInputGain=0x%x, mixerOutputFineGain=0x%x\n", outGain.hwGain, outGain.mixerInputGain, outGain.mixerOutputFineGain));
+            return outGain;	    
+	    }	
+    }
+    //Should not run to here.
+    audio_xassert(0,0);
+    return outGain;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_Mixer_GainMapping2_t csl_caph_gain_GetMixerGain2(Int16 gain)
+*
+*  Description: read the mixer output coarse gain.
+*
+****************************************************************************/
+csl_caph_Mixer_GainMapping2_t csl_caph_gain_GetMixerOutputCoarseGain(Int16 gain)
+{
+    csl_caph_Mixer_GainMapping2_t outGain;
+    UInt8 i = 0;
+    memset(&outGain, 0, sizeof(csl_caph_Mixer_GainMapping2_t));
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_gain_GetMixerGain::gain=0x%x\n", gain));
+
+    if (gain >= Mixer_GainTable2[0].hwGain)
+    {
+        memcpy(&outGain, &Mixer_GainTable2[0], sizeof(csl_caph_Mixer_GainMapping2_t));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerOutputCoarseGain=0x%x\n", outGain.hwGain, outGain.mixerOutputCoarseGain));
+        return outGain;	    
+    }
+    else
+    if (gain <= Mixer_GainTable2[MIXER_GAIN_LEVEL_NUM2-1].hwGain)
+    {
+        memcpy(&outGain, &Mixer_GainTable2[MIXER_GAIN_LEVEL_NUM2-1], sizeof(csl_caph_Mixer_GainMapping2_t));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerOutputCoarseGain=0x%x\n", outGain.hwGain, outGain.mixerOutputCoarseGain));
+        return outGain;	    
+    }
+    
+    for (i = 1; i<MIXER_GAIN_LEVEL_NUM2-1; i++)
+    {
+        if(gain == Mixer_GainTable2[i].hwGain)
+        {
+            memcpy(&outGain, &Mixer_GainTable2[i], sizeof(csl_caph_Mixer_GainMapping2_t));
+            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "hwGain=0x%x, mixerOutputCoarseGain=0x%x\n", outGain.hwGain, outGain.mixerOutputCoarseGain));
             return outGain;	    
 	    }	
     }

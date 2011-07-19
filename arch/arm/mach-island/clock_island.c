@@ -474,7 +474,6 @@ static struct ref_clk CLK_NAME(ref_cx40) = {
 
 };
 
-
 /*
 Ref clock name REF_1M
 */

@@ -57,11 +57,13 @@
  *
  */
 
+#include <linux/usb/otg.h>
 #include "dwc_os.h"
 #include "dwc_otg_regs.h"
 #include "dwc_otg_cil.h"
 
 static int dwc_otg_setup_params(dwc_otg_core_if_t * core_if);
+static void dwc_otg_xceiv_set_vbus(dwc_otg_core_if_t * core_if, uint32_t val);
 
 /**
  * This function is called to initialize the DWC_otg CSR data
@@ -2065,8 +2067,7 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t * core_if)
 		hprt0.d32 = dwc_otg_read_hprt0(core_if);
 		DWC_PRINTF("Init: Power Port (%d)\n", hprt0.b.prtpwr);
 		if (hprt0.b.prtpwr == 0) {
-			hprt0.b.prtpwr = 1;
-			dwc_write_reg32(host_if->hprt0, hprt0.d32);
+			dwc_otg_set_prtpower(core_if, 1);
 		}
 	}
 
@@ -5923,6 +5924,17 @@ int dwc_otg_set_param_otg_ver(dwc_otg_core_if_t * core_if,
 		return -DWC_E_INVALID;
 	}
 
+	/*
+ 	 * There are a couple of things wrong here. Firstly, the
+ 	 * "otg_ver_support" field is mis-named. The databook describes this as
+ 	 * "OTG_BC_SUPPORT", and indicates whether or not Battery Charger
+ 	 * support has been enabled in the core. If it is set, then it does
+ 	 * imply that the OTG version has to be 2.0. However if it is not set,
+ 	 * it does not imply OTG 1.3, which is what was incorrectly being
+ 	 * assumed below. A case has been filed with Synopsys for this and a
+ 	 * STAR created. For now, just disable this check.
+ 	 */
+#if 0
 	if (val && (core_if->hwcfg3.b.otg_ver_support == 0)) {
 		if (dwc_otg_param_initialized(core_if->core_params->otg_ver)) {
 			DWC_ERROR("%d invalid for parameter otg_ver. Check HW configuration.\n",
@@ -5931,6 +5943,7 @@ int dwc_otg_set_param_otg_ver(dwc_otg_core_if_t * core_if,
 		retval = -DWC_E_INVALID;
 		val = 0;
 	}
+#endif
 	core_if->core_params->otg_ver = val;
 	return retval;
 }
@@ -6045,12 +6058,27 @@ uint32_t dwc_otg_get_core_state(dwc_otg_core_if_t * core_if)
 	return core_if->hibernation_suspend;
 }
 
+static void dwc_otg_xceiv_set_vbus(dwc_otg_core_if_t * core_if, uint32_t val)
+{
+#ifdef CONFIG_USB_OTG_UTILS
+	struct otg_transceiver * otg_xceiver_handle = otg_get_transceiver(); //If we get OTG xceiver as part of dwc_otg_core_if then we could use container_of macro at some point
+	if (NULL != otg_xceiver_handle) {
+		if (otg_xceiver_handle->set_vbus) {
+			otg_xceiver_handle->set_vbus(otg_xceiver_handle, val ? true : false);
+		}
+
+		otg_put_transceiver(otg_xceiver_handle);
+	}
+#endif
+}
+
 void dwc_otg_set_prtpower(dwc_otg_core_if_t * core_if, uint32_t val)
 {
 	hprt0_data_t hprt0;
 	hprt0.d32 = dwc_read_reg32(core_if->host_if->hprt0);
 	hprt0.b.prtpwr = val;
 	dwc_write_reg32(core_if->host_if->hprt0, val);
+	dwc_otg_xceiv_set_vbus(core_if, val);
 }
 
 uint32_t dwc_otg_get_prtsuspend(dwc_otg_core_if_t * core_if)

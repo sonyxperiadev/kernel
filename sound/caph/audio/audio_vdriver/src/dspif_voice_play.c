@@ -37,6 +37,9 @@ Broadcom's express prior written consent.
 #include "audio_vdriver.h"
 #define	ARM2SP_48K				0x0004				//bit2=[0,1]=[not_48K, 48K]
 #define	ARM2SP_MONO_ST			0x0080				//bit7=[0,1]=[MONO,STEREO] (not used if not 48k)
+
+static playback_data_cb_t play_cb[VORENDER_ARM2SP_INSTANCE_TOTAL] = {NULL};
+
 /**
 *
 * @addtogroup AudioDriverGroup
@@ -141,8 +144,8 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 	arg0 = ARM2SP_BuildCommandArg0 (samplingRate, playbackMode, mixMode, numFramesPerInterrupt, audMode);
     
 						
-	Log_DebugPrintf(LOGID_AUDIO, " dspif_ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%lx\n", 
-						playbackMode, mixMode, arg0, instanceID);
+	Log_DebugPrintf(LOGID_AUDIO, " dspif_ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%lx samplingRate = %ld\n", 
+						playbackMode, mixMode, arg0, instanceID,samplingRate);
 
 	if (instanceID == VORENDER_ARM2SP_INSTANCE1)
 	{
@@ -256,6 +259,47 @@ Result_t dspif_ARM2SP_play_flush( UInt32 instanceID)
 	return RESULT_OK;
 }
 
+// ==========================================================================
+//
+// Function Name: dspif_ARM2SP_play_set_cb
+//
+// Description: set the callback for ARM2SP playback
+//
+// =========================================================================
+void dspif_ARM2SP_play_set_cb (UInt32 instanceId, playback_data_cb_t playback_data_cb)
+{
+   	play_cb[instanceId] = playback_data_cb;
+}
+
+// ==========================================================================
+//
+// Function Name: ARM2SP_Render_Request
+//
+// Description: Start the data transfer of ARM2SP playback
+//
+// =========================================================================
+
+void ARM2SP_Render_Request(UInt16 bufferPosition)
+{
+	//Log_DebugPrintf(LOGID_AUDIO, "ARM2SP_Render_Request\n");
+    if(play_cb[VORENDER_ARM2SP_INSTANCE1] != NULL)
+        play_cb[VORENDER_ARM2SP_INSTANCE1](bufferPosition);
+}
+
+// ==========================================================================
+//
+// Function Name: ARM2SP2_Render_Request
+//
+// Description: Start the data transfer of ARM2SP playback
+//
+// =========================================================================
+
+void ARM2SP2_Render_Request(UInt16 bufferPosition)
+{
+	//Log_DebugPrintf(LOGID_AUDIO, "ARM2SP2_Render_Request\n");
+    if(play_cb[VORENDER_ARM2SP_INSTANCE2] != NULL)
+        play_cb[VORENDER_ARM2SP_INSTANCE2](bufferPosition);
+}
 
 //
 // APIs of AMRWB

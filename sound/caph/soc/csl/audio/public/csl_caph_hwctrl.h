@@ -444,13 +444,15 @@ void csl_caph_hwctrl_SetMixOutGain(CSL_CAPH_PathID pathID,
 *
 *  @brief  Set Hw gain. For audio tuning purpose only.
 *
+*  @param   pathID  (in) path handle of HW path
 *  @param   hw (in) which hw gain to set
-*  @param   gain  (in) Mixing gain
+*  @param   gain  (in) Mixing gain in Q15.0 format.
 *  @param   dev  (in) device
 *
 *  @return
 ****************************************************************************/
-void csl_caph_hwctrl_SetHWGain(CSL_CAPH_HW_GAIN_e hw, 
+void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID,
+        CSL_CAPH_HW_GAIN_e hw, 
 		UInt32 gain, 
 		CSL_CAPH_DEVICE_e dev);
 

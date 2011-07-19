@@ -31,9 +31,13 @@
 #ifndef	_INC_SHAREDMEM_COMMS_H_
 #define	_INC_SHAREDMEM_COMMS_H_
 
+
 #include "shared.h"
 #include "chip_version.h"
 #include "dsp_feature_def.h"
+
+#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR))
+
 typedef enum
 {
 	BAND_SHARED_MEM_GSM	= 0,		// 900 for 900_DCS group
@@ -142,7 +146,7 @@ void SHAREDMEM_WriteTestPoint(			// Write to a test point
 	UInt16	value						// Test Point Value
 	);
 
-SharedMem_t *SHAREDMEM_GetSharedMemPtr( void );
+//SharedMem_t *SHAREDMEM_GetSharedMemPtr( void );
 										// Return pointer to shared memory
 Int16 *SHAREDMEM_ReadSNR( void);
 
@@ -183,8 +187,6 @@ void SHAREDMEM_ReadUL_AMR_Speech(
 	Boolean amr_if2_enable
 );
 
-void SHAREDMEM_WriteDL_VoIP_Data(UInt16 codec_type, UInt16 *pSrc);
-UInt8 SHAREDMEM_ReadUL_VoIP_Data(UInt16 codec_type, UInt16 *pDst);
 
 
 UInt16 SHAREDMEM_ReadUL_AMR_TxType(void);
@@ -222,7 +224,8 @@ Boolean  SHAREDMEM_get_event_logging_flag(void);
 
 #endif	//  DEVELOPMENT_ONLY
 
-#endif	// _INC_SHAREDMEM_COMMS_H_
+#endif
 
+#endif	// _INC_SHAREDMEM_COMMS_H_
 
 

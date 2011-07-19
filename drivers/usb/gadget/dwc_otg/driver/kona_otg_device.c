@@ -66,9 +66,10 @@ static unsigned int otghost = 0;
 #else
 static unsigned int otghost = 1;
 #endif
+static unsigned int otgdevice = 0;
+
 static struct lm_device *lmdev = NULL;
 static struct clk *otg_clk;
-
 
 /*-------------------------------------------------------------------------*/
 
@@ -82,6 +83,9 @@ MODULE_PARM_DESC(fshost, "Load FSHOST device instead of HSOTG device");
 
 module_param( otghost, uint, 0644 );
 MODULE_PARM_DESC(otghost, "Force OTG host mode - Needed for FPGA v6.n images and later");
+
+module_param( otgdevice, uint, 0644 );
+MODULE_PARM_DESC(otgdevice, "Force OTG device mode - Needed for FPGA v6.n images and later");
 
 MODULE_DESCRIPTION("DWC OTG Device");
 MODULE_LICENSE("GPL");
@@ -176,6 +180,35 @@ static ssize_t do_konaotginit(struct device *dev,
 
 DEVICE_ATTR(konaotginit, S_IWUSR, NULL, do_konaotginit);
 
+static ssize_t dump_konahsotgctrl(struct device *dev, 
+	struct device_attribute *attr,
+	const char *buf)
+{
+	void __iomem *hsotg_ctrl_base;
+
+	/* map base address */
+	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+	if (!hsotg_ctrl_base) {
+		return -ENOMEM;
+	}
+	printk("\nusbotgcontrol: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
+	printk("\nphy_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET));
+	printk("\nphy_p1ctl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET));
+	printk("\nbc11_status: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_STATUS_OFFSET));
+	printk("\nbc11_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET));
+	printk("\ntp_in: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_IN_OFFSET));
+	printk("\ntp_out: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_TP_OUT_OFFSET));
+	printk("\nphy_ctrl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CTRL_OFFSET));
+	printk("\nusbreg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBREG_OFFSET));
+	printk("\nusbproben: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBPROBEN_OFFSET));
+
+	/* unmap base address */
+	iounmap(hsotg_ctrl_base);
+
+	return sprintf((char*)buf, "\nkonahsotgctrl register dump");
+}
+static DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
+
 /****************************************************************************
  *
  ***************************************************************************/
@@ -225,12 +258,6 @@ static int __init dwc_otg_device_init(void)
 		else {
 			printk ("bc11 not done\n");
 		}
-		/* force turn off VDP, enable sw_ovwr_set to take over the bc11 switches directly */
-		val = (BC11_OVR_KEY<<HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_SHIFT)
-			| HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK;
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
-
-		schedule_timeout_interruptible(HZ/1000*160);// Allow time for switches to disengage.
 
 		/* clear bit 15 RDB error */
 		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
@@ -268,8 +295,8 @@ static int __init dwc_otg_device_init(void)
 		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
 
 		schedule_timeout_interruptible(HZ/10);
-
-		if ( otghost ){
+		
+		if (otghost) {
 			printk(KERN_WARNING "%s: Set HSOTG_CTRL register for host mode\n", __func__);
 
 			val = HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
@@ -286,8 +313,7 @@ static int __init dwc_otg_device_init(void)
 				HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK |
 				HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
 			writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-		}
-		else {
+		} else if (otgdevice) {
 			printk(KERN_WARNING "%s: Set HSOTG_CTRL register for device mode\n", __func__);
 
 			val= HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
@@ -306,7 +332,16 @@ static int __init dwc_otg_device_init(void)
 				HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
 			writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 
+		} else {
+			val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+                        val |= (HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
+                                 HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK);
+                         writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
 		}
+
+		printk(KERN_WARNING "%s: HSOTG_CTRL_USBOTGCONTROL register=0x%08x\n",
+			__func__, readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
+		
 		schedule_timeout_interruptible(HZ/10*3);
 
 #if 0
@@ -322,6 +357,9 @@ static int __init dwc_otg_device_init(void)
 
 		if (NULL != lmdev)
 			rc = device_create_file(&lmdev->dev, &dev_attr_konaotginit);
+
+		if (!rc)
+			rc = device_create_file(&lmdev->dev, &dev_attr_konahsotgctrldump);
 
 		/* unmap base address */
 		iounmap(hsotg_ctrl_base);

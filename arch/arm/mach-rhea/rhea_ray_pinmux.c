@@ -61,18 +61,24 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT1, SDDAT1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	/* GPIO121 for TCA9539 IO expander */
+	PIN_CFG(ICUSBDP, GPIO, 0, OFF, ON, 0, 0, 8MA),
+#else
 	/* GPIO74 for TCA9539 IO expander */
 	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
-
+#endif
 	/*	Pinmux for keypad
 		Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
-		GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
-		using GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
-		GPIO15 */
+		GPIO08, GPIO09, GPIO10, GPIO11 and SSP3 has used GPIO06,
+		GPIO07, GPIO14, GPIO15, Keypad now is set as 2x2 matric by
+		using GPIO04, GPIO05, GPIO12, GPIO13 */
 	PIN_CFG(GPIO04, KEY_R4, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 
@@ -84,26 +90,29 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SSP3 - PCM
 	   SSP3 pinmux is set since keypad also check the same pins currently */
-    PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
-    PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
-    PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
-    PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
-
+#ifdef CONFIG_MACH_RHEA_RAY
+	PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
+#endif
 
 	/* SSP4 - I2S */
+#ifdef CONFIG_MACH_RHEA_RAY
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, SSP1DI, 0, OFF,  ON, 0, 0, 8MA),
+#endif
 
 	/* LCD */
-    PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDRES, GPIO, 0, OFF, ON, 0, 0, 8MA),
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	/* conflicts with SSP4 */
-	/*
 	PIN_CFG(DCLK4, GPIO, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(DCLKREQ4, GPIO, 0, OFF, ON, 0, 0, 8MA),
-    */
+#endif
 
 	/* STM trace - PTI */
 	PIN_CFG(TRACECLK, PTI_CLK, 0, OFF, ON, 0, 0, 8MA),
@@ -115,7 +124,7 @@ static struct __init pin_config board_pin_config[] = {
 		
 	/* Camera */
 	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),	
+	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
@@ -140,11 +149,12 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO27, LCDD1, 0, OFF, ON, 0, 0, 8MA),
 
 	/* PWM config - PWM4, PWM5*/
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	/* conflicts with SSP4 */
-    /*
-    PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
-    PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
-    */
+	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
+#endif
+
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
 	PIN_CFG(GPS_CALREQ, GPIO, 0, OFF, ON, 0, 0, 8MA),
 

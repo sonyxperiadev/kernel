@@ -56,17 +56,14 @@
 *   @brief  This file accesses the shared memory for the VPU
 *
 ****************************************************************************/
-
 #include "mobcom_types.h"
-#include "chip_version.h"
-
+#include "platform_mconfig_rhea.h"
 #include <linux/sched.h>
 #include <linux/interrupt.h>
-#include "consts.h"
 #include "msconsts.h"
 #include "log.h"
-#include "sharedmem.h"
-
+#include "shared.h"
+#include "shared_cp.h"
 #include "csl_dsp.h"
 
 #include "nandsdram_memmap.h"
@@ -84,10 +81,11 @@
 #include "csl_apcmd.h"
 #include "chal_bmodem_intc_inc.h"
 #include "csl_arm2sp.h"
-
+#include "ripisr.h"
+#if 0
 static Audio_ISR_Handler_t	client_Audio_ISR_Handler = NULL;
 static VPU_ProcessStatus_t	client_VPU_ProcessStatus = NULL;
-
+#endif
 
 typedef struct
 {
@@ -188,10 +186,21 @@ void DSPDRV_Init( )
 //******************************************************************************
 static UInt32 DSPDRV_GetSharedMemoryAddress( )
 {
-	UInt32 dsp_shared_mem;
+	static UInt32 dsp_shared_mem=NULL;
 
-    dsp_shared_mem = (UInt32)SHAREDMEM_GetDsp_SharedMemPtr();
+    //dsp_shared_mem = (UInt32)SHAREDMEM_GetDsp_SharedMemPtr();
 
+	
+	 if(dsp_shared_mem == NULL)
+	 {
+		 dsp_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		 if (!dsp_shared_mem) {
+			 Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping shared memory failed\n\r");
+			 return NULL;
+		 }
+	}
+
+		
 	return dsp_shared_mem;
 }
 
@@ -245,6 +254,7 @@ static void dsp_thread_proc(unsigned long data)
 //******************************************************************************
 
 //will figure out how to avoid vpu.c call this function.
+#if 0
 /*static*/ void Audio_ISR_Handler(StatQ_t msg)
 {
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP Audio_ISR_Handler\n\r");
@@ -253,8 +263,9 @@ static void dsp_thread_proc(unsigned long data)
 	{
 		client_Audio_ISR_Handler( msg );
 	}
-}
 
+}
+#endif
 //******************************************************************************
 //
 // Function Name:	RIPISR_Register_AudioISR_Handler
@@ -264,13 +275,14 @@ static void dsp_thread_proc(unsigned long data)
 // Notes:
 //
 //******************************************************************************
-
+#if 0
 void RIPISR_Register_AudioISR_Handler( Audio_ISR_Handler_t isr_cb )
 {
+
 	client_Audio_ISR_Handler = isr_cb;
 
 }
-
+#endif
 //******************************************************************************
 //
 // Function Name:	RIPISR_Register_VPU_ProcessStatus
@@ -280,12 +292,15 @@ void RIPISR_Register_AudioISR_Handler( Audio_ISR_Handler_t isr_cb )
 // Notes:
 //
 //******************************************************************************
+#if 0
 void RIPISR_Register_VPU_ProcessStatus( VPU_ProcessStatus_t hisr_cb )
 {
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP RIPISR_Register_VPU_ProcessStatus, %p\n\r", hisr_cb);
+	
 	client_VPU_ProcessStatus = hisr_cb;
-}
 
+}
+#endif
 //******************************************************************************
 //
 // Function Name:	VPSHAREDMEM_TriggerRIPInt

@@ -210,8 +210,6 @@ static int bcm_kona_sd_init(struct sdio_dev *dev)
    /*
     * Enable DAT3 logic for card detection and enable the AHB clock to the
     * host
-    *
-    * TODO: Turn on KONA_SDHOST_CD_PINCTRL after it's fixed
     */
    val = sdhci_readl(host, KONA_SDHOST_CORECTRL);
    val |= /*KONA_SDHOST_CD_PINCTRL | */KONA_SDHOST_EN;
@@ -228,6 +226,10 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 {
 	struct sdhci_host *host = dev->host;
    uint32_t val;
+   unsigned long flags;
+
+   /* this function can be called from various contexts including ISR */
+   spin_lock_irqsave(&host->lock, flags);
 
    val = sdhci_readl(host, KONA_SDHOST_CORESTAT);
 
@@ -239,10 +241,9 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
       sdhci_writel(host, val, KONA_SDHOST_CORESTAT);
    }
 
-   mmc_detect_change(host->mmc, msecs_to_jiffies(10));
+   spin_unlock_irqrestore(&host->lock, flags);
 
-   //sdhci_dumpregs(host);
-   
+   //mmc_detect_change(host->mmc, msecs_to_jiffies(10));
 
    return 0;
 }
@@ -358,7 +359,7 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
    return IRQ_HANDLED;
 }
 
-static int sdhci_pltfm_clk_enable (struct platform_device *pdev, int enable)
+static int sdhci_pltfm_clk_enable(struct platform_device *pdev, int enable)
 {
 #ifdef  CONFIG_ARCH_SAMOA
 	return 0;
@@ -503,9 +504,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	gDevs[dev->devtype] = dev;
 	platform_set_drvdata(pdev, dev);
 
-	/* resevre required GPIOs */
 	snprintf(devname, sizeof(devname), "%s%d", DEV_NAME, pdev->id);
-	/* need to use static memory gpiomux name string */
 
 	/* enable clocks */
 #ifdef CONFIG_MACH_BCM2850_FPGA
@@ -521,7 +520,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core clock for %s\n", devname);
 		ret = -EFAULT;
-		goto err_free_gpio;
+		goto err_unset_pltfm;
 	}
 	dev->clk_hz = clk_get_rate(dev->peri_clk);
 #endif
@@ -605,9 +604,9 @@ err_reset:
 
 err_term_clk:
 #ifndef CONFIG_MACH_KONA_FPGA
-	sdhci_pltfm_clk_enable (pdev, 0);
+	sdhci_pltfm_clk_enable(pdev, 0);
 #endif
-err_free_gpio:
+err_unset_pltfm:
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 
@@ -627,16 +626,21 @@ err:
 
 static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 {
-   struct sdio_dev *dev = platform_get_drvdata(pdev);
+	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 	struct resource *iomem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	int dead;
 	u32 scratch;
 
-   atomic_set(&dev->initialized, 0);
-   gDevs[dev->devtype] = NULL;
+	atomic_set(&dev->initialized, 0);
+	gDevs[dev->devtype] = NULL;
 
-   proc_term(pdev);
+	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
+		free_irq(gpio_to_irq(dev->cd_gpio), dev);
+		gpio_free(dev->cd_gpio);
+	}
+
+	proc_term(pdev);
 
 	dead = 0;
 	scratch = readl(host->ioaddr + SDHCI_INT_STATUS);
@@ -644,13 +648,12 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
-   //bcm_kona_sd_reset(dev);
 #ifndef CONFIG_MACH_KONA_FPGA
-	sdhci_pltfm_clk_enable (pdev, 0);
+	sdhci_pltfm_clk_enable(pdev, 0);
 #endif
 
-   platform_set_drvdata(pdev, NULL);
-   kfree(dev);
+	platform_set_drvdata(pdev, NULL);
+	kfree(dev);
 	iounmap(host->ioaddr);
 	release_mem_region(iomem->start, resource_size(iomem));
 	sdhci_free_host(host);
@@ -658,13 +661,102 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
+{
+	int ret;
+	struct sdio_dev *dev = platform_get_drvdata(pdev);
+	struct sdhci_host *host = dev->host;
+	
+#if 0
+	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0)
+		free_irq(gpio_to_irq(dev->cd_gpio), dev);
+#endif
+	
+	ret = sdhci_suspend_host(host, state);
+	if (ret) {
+		dev_err(&pdev->dev, "Unable to suspend sdhci host err=%d\n",
+				ret);
+		return ret;
+	}
+
+#ifndef CONFIG_MACH_KONA_FPGA
+	/* disable clocks */
+	ret = sdhci_pltfm_clk_enable(pdev, 0);
+	if (ret) {
+		dev_err(&pdev->dev, "Unable to disable sdio clocks err=%d\n",
+				ret);
+		sdhci_resume_host(host);
+
+		return ret;
+	}
+#endif
+	
+	return 0;
+}
+
+static int sdhci_pltfm_resume(struct platform_device *pdev)
+{
+	int ret;
+	struct sdio_dev *dev = platform_get_drvdata(pdev);
+	struct sdhci_host *host = dev->host;
+
+#ifndef CONFIG_MACH_KONA_FPGA
+	/* enable clocks */
+	ret = sdhci_pltfm_clk_enable(pdev, 1);
+	if (ret) {
+		dev_err(&pdev->dev, "Unable to enable sdio clocks err=%d\n",
+				ret);
+		return ret;
+	}
+#endif
+
+	ret = sdhci_resume_host(host);
+	if (ret) {
+		dev_err(&pdev->dev, "Unable to resume sdhci host err=%d\n", ret);
+#ifndef CONFIG_MACH_KONA_FPGA
+		sdhci_pltfm_clk_enable(pdev, 0);
+#endif
+		return ret;
+	}
+
+#if 0
+	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
+		ret = request_irq(gpio_to_irq(dev->cd_gpio), sdhci_pltfm_cd_interrupt,
+				IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING, "sdio cd", dev);
+		if (ret) {
+			dev_err(&pdev->dev, "Unable to request card detection irq=%d for gpio=%d\n",
+					gpio_to_irq(dev->cd_gpio), dev->cd_gpio);
+			return ret;
+		}
+	}
+#endif
+
+
+	/* card state might have been changed during system suspend. Need to sync up */
+	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
+		if (gpio_get_value(dev->cd_gpio) == 0)
+			bcm_kona_sd_card_emulate(dev, 1);
+		else
+			bcm_kona_sd_card_emulate(dev, 0);
+	}
+	
+	return 0;
+}
+#else
+#define sdhci_pltfm_suspend NULL
+#define sdhci_pltfm_resume NULL
+#endif  /* CONFIG_PM */
+
 static struct platform_driver sdhci_pltfm_driver = {
 	.driver = {
 		.name	= "sdhci",
 		.owner	= THIS_MODULE,
 	},
-	.probe		= sdhci_pltfm_probe,
-	.remove		= __devexit_p(sdhci_pltfm_remove),
+	.probe = sdhci_pltfm_probe,
+	.remove = __devexit_p(sdhci_pltfm_remove),
+	.suspend = sdhci_pltfm_suspend,
+	.resume = sdhci_pltfm_resume,
 };
 
 static int __init sdhci_drv_init(void)
@@ -689,8 +781,8 @@ static int __init sdhci_drv_init(void)
 
 static void __exit sdhci_drv_exit(void)
 {
+	remove_proc_entry(PROC_GLOBAL_PARENT_DIR, NULL);
 	platform_driver_unregister(&sdhci_pltfm_driver);
-   remove_proc_entry(PROC_GLOBAL_PARENT_DIR, NULL);
 }
 
 module_init(sdhci_drv_init);

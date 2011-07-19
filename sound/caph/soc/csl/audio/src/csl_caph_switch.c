@@ -26,8 +26,6 @@ Broadcom's express prior written consent.
 #include "chal_caph_switch.h"
 #include "csl_caph_switch.h"
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N

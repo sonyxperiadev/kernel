@@ -1,0 +1,81 @@
+#
+# vmcs services module config
+#
+
+menuconfig BRCM_VIDEOCORE_SERVICES
+	tristate "Broadcom VideoCore Services"
+	depends on PROC_FS
+	help
+	  Broadcom's VideoCore related services modules
+
+config BRCM_VIDEOCORE_ROOT
+	string "Path to VideoCore Modules Directory"
+	default "../../../../hardware/broadcom/bcm2727"
+	depends on BRCM_VIDEOCORE_SERVICES
+	help
+	  This is required to tell the kernel where to pick up
+	  the VideoCore modules from (relative or fixed paths are supported).
+	  For all Android distributions, this will be fixed as above.
+
+config BRCM_VIDEOCORE_VCEB
+	string "Path to VCEB modules directory"
+	default "vmcs/src/interface/vceb"
+	depends on BRCM_VIDEOCORE_SERVICES
+	help
+	  This is required to tell the kernel where to pick up the
+	  VCEB module from. Note that this is relative to the BRCM_VIDEOCORE_ROOT definition
+
+config BRCM_VIDEOCORE_SANITIZED
+	bool "BRCM VideoCore Santized Release"
+	depends on BRCM_VIDEOCORE_SERVICES
+	default n
+	help
+	  Switches between the sanitized release and the full software tree for VMCS-X
+
+config VC_PLATFORM_DIR
+	string "PATH to get to the vcfw plaform directory"
+	default ""
+	depends on BRCM_VIDEOCORE_SERVICES
+	help
+	  This is the path, to get from the top of the videocore tree down to the
+	  platform director, so that we can read the config-shared.mk file.
+
+config VC_GENERATION
+	string "PATH to get to the videocore source tree"
+	default ""
+	depends on BRCM_VIDEOCORE_SERVICES
+	help
+	  This is the path, to get from the top of the linux source tree into
+	  the videocore source tree.
+
+config VC_VCHIQ
+	tristate "VCHIQ service module"
+	depends on BRCM_VIDEOCORE_SERVICES
+	default BRCM_VIDEOCORE_SERVICES
+	help
+	  VCHIQ kernel service module used by almost all other services.
+
+config BCM_VCHIQ_VC04
+	tristate "VCHIQ stack model"
+	default BRCM_VIDEOCORE_SERVICES
+	depends on BRCM_VIDEOCORE_SERVICES
+	help
+	  VCHIQ stack model used by the current platform
+
+config VC_VCHIQ_MEMDRV
+	tristate "VCHIQ BUS Driver (internal videocore)"
+	depends on BRCM_VIDEOCORE_SERVICES
+	default n
+	select VC_VCHIQ
+        help
+           Causes the vchiq stack used for communicating with
+           internal videocores (via shared memory) to be compiled in.
+
+config VC_VCHIQ_MEMDRV_HANA
+	tristate "VCHIQ Internal Videocore (HANA)"
+	depends on VC_VCHIQ_MEMDRV
+	default n
+        help
+           Enables the internal videocore driver used on the Hana chip.
+
+

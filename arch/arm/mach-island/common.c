@@ -30,6 +30,9 @@
 #include <mach/hardware.h>
 #include <mach/kona.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
+#include <mach/irqs.h>
+#include <plat/chal/chal_trace.h>
+#include <trace/stm.h>
 
 #define KONA_UART0_PA   UARTB_BASE_ADDR
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
@@ -66,9 +69,162 @@ static struct platform_device board_serial_device = {
 	},
 };
 
+#ifdef CONFIG_STM_TRACE
+static struct stm_platform_data stm_pdata = {
+	.regs_phys_base       = STM_BASE_ADDR,
+	.channels_phys_base   = SWSTM_BASE_ADDR,
+	.id_mask              = 0x0,   /* Skip ID check/match */
+	.final_funnel	      = CHAL_TRACE_FIN_FUNNEL,
+};
+
+struct platform_device kona_stm_device = {
+	.name = "stm",
+	.id = -1,
+	.dev = {
+	        .platform_data = &stm_pdata,
+	},
+};
+#endif
+
+#if defined(CONFIG_HW_RANDOM_KONA)
+static struct resource rng_device_resource[] = {
+    [0] = {
+        .start = SEC_RNG_BASE_ADDR,
+        .end   = SEC_RNG_BASE_ADDR + 0x14,
+        .flags = IORESOURCE_MEM,
+    },
+    [1] = {
+        .start = BCM_INT_ID_SECURE_TRAP1,
+        .end   = BCM_INT_ID_SECURE_TRAP1,
+        .flags = IORESOURCE_IRQ,
+    },
+};
+
+static struct platform_device rng_device =
+{
+   .name          = "kona_rng",
+   .id            = -1,
+   .resource	  = rng_device_resource,
+   .num_resources = ARRAY_SIZE(rng_device_resource),
+};
+#endif
+
+#if defined(CONFIG_KONA_PWMC)
+static struct resource pwm_device_resource[] = {
+    [0] = {
+        .start = PWM_BASE_ADDR,
+        .end   = PWM_BASE_ADDR + 0x10,
+        .flags = IORESOURCE_MEM,
+    },
+};
+
+static struct platform_device pwm_device =
+{
+   .name          = "kona_pwmc",
+   .id            = -1,
+   .resource	  = pwm_device_resource,
+   .num_resources = ARRAY_SIZE(pwm_device_resource),
+};
+#endif
+
+#if defined(CONFIG_W1_MASTER_DS1WM)
+static struct resource d1w_device_resource[] = {
+    [0] = {
+        .start = D1W_BASE_ADDR,
+        .end   = D1W_BASE_ADDR + 0x10,
+        .flags = IORESOURCE_MEM,
+    },
+    [1] = {
+        .start = BCM_INT_ID_DALLAS_1_WIRE,
+        .end   = BCM_INT_ID_DALLAS_1_WIRE,
+        .flags = IORESOURCE_IRQ,
+    },
+};
+
+static struct platform_device d1w_device =
+{
+   .name          = "ds1wm",
+   .id            = -1,
+   .resource	  = d1w_device_resource,
+   .num_resources = ARRAY_SIZE(d1w_device_resource),
+};
+#endif
+
+#if defined(CONFIG_MPCORE_WATCHDOG)
+static struct resource wdt_device_resource[] = {
+    [0] = {
+        .start = PTIM_BASE_ADDR,
+        .end   = PTIM_BASE_ADDR + 0x34,
+        .flags = IORESOURCE_MEM,
+    },
+    [1] = {
+        .start = BCM_INT_ID_PPI14,
+        .end   = BCM_INT_ID_PPI14,
+        .flags = IORESOURCE_IRQ,
+    },
+};
+
+static struct platform_device wdt_device =
+{
+   .name          = "mpcore_wdt",
+   .id            = -1,
+   .resource	  = wdt_device_resource,
+   .num_resources = ARRAY_SIZE(wdt_device_resource),
+   .dev = {
+        .platform_data = "arm_periph_clk",
+    },
+};
+#endif
+
+#if defined(CONFIG_RTC_DRV_ISLAND)
+static struct resource rtc_device_resource[] = {
+    [0] = {
+        .start = BBL_BASE_ADDR,
+        .end   = BBL_BASE_ADDR + 0x24,
+        .flags = IORESOURCE_MEM,
+    },
+    [1] = {
+        .start = BCM_INT_ID_BBL0,
+        .end   = BCM_INT_ID_BBL0,
+        .flags = IORESOURCE_IRQ,
+    },
+    [2] = {
+        .start = BCM_INT_ID_BBL1,
+        .end   = BCM_INT_ID_BBL1,
+        .flags = IORESOURCE_IRQ,
+    },
+};
+
+static struct platform_device rtc_device =
+{
+   .name          = "bcmhana-rtc",
+   .id            = -1,
+   .resource	  = rtc_device_resource,
+   .num_resources = ARRAY_SIZE(rtc_device_resource),
+};
+#endif
+
 /* Common devices among all Island boards */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
+#if defined(CONFIG_MPCORE_WATCHDOG)
+        &wdt_device,
+#endif
+#if defined(CONFIG_W1_MASTER_DS1WM)
+        &d1w_device,
+#endif
+#if defined(CONFIG_HW_RANDOM_KONA)
+        &rng_device,
+#endif
+#if defined(CONFIG_RTC_DRV_ISLAND)
+        &rtc_device,
+#endif
+#if defined(CONFIG_KONA_PWMC)
+        &pwm_device,
+#endif
+#ifdef CONFIG_STM_TRACE
+	&kona_stm_device,
+#endif
 };
 
 void __init board_add_common_devices(void)

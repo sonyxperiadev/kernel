@@ -57,7 +57,6 @@
 *
 ****************************************************************************/
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
 #include "csl_vpu.h"
@@ -67,7 +66,7 @@
 #define MAX_DL_SP_REC_GAIN	((2<<14)-1)	/* 6dB in DSP Q1.14 format */
 #define MIN_DL_SP_REC_GAIN	0
 
-extern VPSharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t	*vp_shared_mem;
 
 
 //*********************************************************************
@@ -93,7 +92,7 @@ void CSL_VPU_Enable(void)
 *   @param    numFramesPerInterrupt	(in)	number frames per interrupt
 * 
 **********************************************************************/
-void CSL_VPU_Init(VP_Speech_Mode_t speechMode, UInt16 numFramesPerInterrupt)
+void CSL_VPU_Init(UInt16 speechMode, UInt16 numFramesPerInterrupt)
 {
  VPlayBack_Buffer_t *pBuf;
  UInt8 i;
@@ -103,7 +102,7 @@ void CSL_VPU_Init(VP_Speech_Mode_t speechMode, UInt16 numFramesPerInterrupt)
 	{
 		pBuf = &vp_shared_mem->shared_voice_buf.vp_buf[i];
 		pBuf->nb_frame = numFramesPerInterrupt;
-		pBuf->vp_speech_mode = speechMode;
+		pBuf->vp_speech_mode = (VP_Speech_Mode_t)speechMode;
 		memset(&pBuf->vp_frame, 0, sizeof(pBuf->vp_frame));
 	
 	}
@@ -124,7 +123,7 @@ void CSL_VPU_Init(VP_Speech_Mode_t speechMode, UInt16 numFramesPerInterrupt)
 *   @return   UInt32				number of bytes read to the buffer
 *
 **********************************************************************/
-UInt32 CSL_VPU_ReadPCM(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex, VP_Speech_Mode_t speechMode)
+UInt32 CSL_VPU_ReadPCM(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex, UInt16 speechMode)
 {
 	UInt32 frameSize;
 	UInt8	*buffer = NULL;
@@ -171,7 +170,7 @@ UInt32 CSL_VPU_ReadPCM(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex, VP_Speech
 *   @return   UInt32				number of bytes written from the buffer
 *
 **********************************************************************/
-UInt32 CSL_VPU_WritePCM(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, VP_Speech_Mode_t speechMode, UInt16 numFramesPerInterrupt)
+UInt32 CSL_VPU_WritePCM(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, UInt16 speechMode, UInt16 numFramesPerInterrupt)
 {
 	UInt32 frameSize;
 	UInt8	*buffer = NULL;
@@ -181,7 +180,7 @@ UInt32 CSL_VPU_WritePCM(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, VP_Speec
 	frameSize = LIN_PCM_FRAME_SIZE*sizeof(UInt16);
 	frameCount = vp_shared_mem->shared_voice_buf.vp_buf[writeIndex].nb_frame;
 	// need to reset them every time?
-	vp_shared_mem->shared_voice_buf.vp_buf[writeIndex].vp_speech_mode = speechMode;
+	vp_shared_mem->shared_voice_buf.vp_buf[writeIndex].vp_speech_mode = (VP_Speech_Mode_t)speechMode;
 	vp_shared_mem->shared_voice_buf.vp_buf[writeIndex].nb_frame = numFramesPerInterrupt;
 
 	for(i = 0; i < frameCount; i++)
@@ -260,7 +259,7 @@ UInt32 CSL_VPU_ReadAMRNB(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex)
 *   @return   UInt32				number of bytes written from the buffer
 *
 **********************************************************************/
-UInt32 CSL_VPU_WriteAMRNB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, VP_Speech_Mode_t speechMode, UInt32 numFramesPerInterrupt)
+UInt32 CSL_VPU_WriteAMRNB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, UInt16 speechMode, UInt32 numFramesPerInterrupt)
 {
 	UInt32 frameSize;
 	UInt8	*buffer = NULL;
@@ -270,7 +269,7 @@ UInt32 CSL_VPU_WriteAMRNB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, VP_Spe
 	frameSize = sizeof(VR_Frame_AMR_t);
 	frameCount = vp_shared_mem->shared_voice_buf.vp_buf[writeIndex].nb_frame;
 	// need to reset them every time?
-	vp_shared_mem->shared_voice_buf.vp_buf[writeIndex].vp_speech_mode = speechMode;
+	vp_shared_mem->shared_voice_buf.vp_buf[writeIndex].vp_speech_mode = (VP_Speech_Mode_t)speechMode;
 	vp_shared_mem->shared_voice_buf.vp_buf[writeIndex].nb_frame = numFramesPerInterrupt;
 
 	for (i = 0; i < frameCount; i++)
@@ -354,178 +353,3 @@ void CSL_MuteDlSpeechRec(void)
 } // CSL_MuteDlSpeechRec
 
 
-//*********************************************************************
-/**
-*
-*   CSL_MMVPU_ReadAMRWB reads AMR-WB data from shared memory for MM VPU voice record.
-* 
-*   @param    outBuf		(out)	destination buffer
-*   @param    outSize		(in)	data size to read
-*   @param    bufIndex_no_use	(in)	read index of circular buffer (no use)
-*   @return   UInt32				number of bytes read to the buffer
-*
-**********************************************************************/
-UInt32 CSL_MMVPU_ReadAMRWB(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex_no_use)
-{
-	UInt16 size_copied, size_wraparound, totalCopied; 
-	UInt32 frameSize = outSize;
-	UInt16 bufIndex;
-	UInt8 *buffer;
-
-	bufIndex = vp_shared_mem->shared_encodedSamples_buffer_out[0];
-
-	buffer = (UInt8* )&vp_shared_mem->shared_encoder_OutputBuffer[bufIndex&0x0fff];
-	
-	totalCopied = frameSize;
-	
-	if(bufIndex + totalCopied/2 >= AUDIO_SIZE_PER_PAGE)//wrap around
-	{
-		// copy first part
-		size_copied = (AUDIO_SIZE_PER_PAGE - bufIndex)<<1;
-		memcpy(outBuf, buffer, size_copied);
-		outBuf += size_copied;
-		// copy second part
-		size_wraparound = (totalCopied/2 + bufIndex - AUDIO_SIZE_PER_PAGE)<<1;
-		memcpy(outBuf, buffer, size_wraparound);
-
-		vp_shared_mem->shared_encodedSamples_buffer_out[0] = totalCopied/2 + bufIndex - AUDIO_SIZE_PER_PAGE;
-	}
-	else // no wrap around
-	{
-		// just copy it from shared memeory
-		size_copied = totalCopied;
-		memcpy(outBuf, buffer, size_copied);
-
-		vp_shared_mem->shared_encodedSamples_buffer_out[0] += totalCopied/2;
-	}
-
-	// the bytes has been really copied.
-    return totalCopied;
-
-} // CSL_MMVPU_ReadAMRWB
-
-// ==========================================================================
-//
-// Function Name: CSL_MMVPU_Rec_GetReadPtr
-//
-// Description: Get the buffer read pointer (from shared memory)
-//
-// =========================================================================
-UInt16 CSL_MMVPU_Rec_GetReadPtr( void )
-{
-	return vp_shared_mem->shared_encodedSamples_buffer_out[0];
-}
-
-// ==========================================================================
-//
-// Function Name: CSL_MMVPU_Rec_ResetReadPtr
-//
-// Description: Reset the buffer read pointer to zero (in shared memory)
-//
-// =========================================================================
-void CSL_MMVPU_Rec_ResetReadPtr( void )
-{
-	vp_shared_mem->shared_encodedSamples_buffer_out[0] = 0;
-}
-
-//*********************************************************************
-/**
-*
-*   CSL_MMVPU_WriteAMRWB writes AMR-WB data to shared memory for MM VPU voice playback.
-* 
-*   @param    inBuf					(in)	source buffer
-*   @param    inSize				(in)	data size to read
-*   @param    writeIndex_no_use		(in)	write index of circular buffer (no use)
-*   @param    readIndex				(in)	read index of circular buffer
-*   @return   UInt32				number of bytes written from the buffer
-*
-**********************************************************************/
-UInt32 CSL_MMVPU_WriteAMRWB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex_no_use, UInt16 readIndex)
-{
-	UInt16 size_copied_bytes, size_wraparound; // bytes
-	UInt16 space, totalCopied_words;  // words
-	UInt32 q_load_words = inSize>>1; // words 
-	UInt16 writeIndex;
-	UInt8 *buffer;
-
-	writeIndex = vp_shared_mem->shared_NEWAUD_InBuf_in[0];
-
-	buffer = (UInt8* ) &vp_shared_mem->shared_decoder_InputBuffer[writeIndex&0x0fff];
-
-	if(writeIndex >= readIndex) //arm ahead of dsp
-	{
-		// shared memory available space
-		space = (AUDIO_SIZE_PER_PAGE - writeIndex + readIndex - 1);
-		
-		// words to copy this time.
-		totalCopied_words = (space <= q_load_words) ? space : q_load_words;
-		
-		if (totalCopied_words > 0)
-		{
-			if ( (writeIndex + totalCopied_words) > AUDIO_SIZE_PER_PAGE) //wrap around
-			{
-				// copy first part
-				size_copied_bytes = (AUDIO_SIZE_PER_PAGE - writeIndex)<<1;
-				memcpy(buffer, inBuf, size_copied_bytes);
-				inBuf += size_copied_bytes;
-				// copy second part
-				size_wraparound = (totalCopied_words<<1) - size_copied_bytes;
-				memcpy( (UInt8* )&vp_shared_mem->shared_decoder_InputBuffer[0], inBuf, size_wraparound );
-			}
-			else // no wrap around
-			{
-				size_copied_bytes = totalCopied_words<<1;
-				size_wraparound = 0;
-				memcpy(buffer, inBuf, size_copied_bytes);
-			}
-			
-			vp_shared_mem->shared_NEWAUD_InBuf_in[0] = (writeIndex + totalCopied_words ) % AUDIO_SIZE_PER_PAGE;
-		}
-		
-
-	}
-	else //dsp ahead of arm
-	{
-		// available shared memory space
-		space = (readIndex - writeIndex - 1);
-		// words to copy this time.
-		totalCopied_words = (space <= q_load_words) ? space : q_load_words;
-		
-		if (totalCopied_words > 0)
-		{
-			size_copied_bytes = totalCopied_words<<1;
-			memcpy(buffer, inBuf, size_copied_bytes);
-			vp_shared_mem->shared_NEWAUD_InBuf_in[0] = writeIndex + totalCopied_words;
-		}
-		
-	}
-
-	// the bytes has been really copied.
-	return (totalCopied_words<<1);
-
-} // CSL_MMVPU_WriteAMRWB
-
-
-// ==========================================================================
-//
-// Function Name: CSL_MMVPU_Play_GetWritePtr
-//
-// Description: Get the buffer write pointer (from shared memory)
-//
-// =========================================================================
-UInt16 CSL_MMVPU_Play_GetWritePtr( void )
-{
-	return vp_shared_mem->shared_NEWAUD_InBuf_in[0];
-}
-
-// ==========================================================================
-//
-// Function Name: CSL_MMVPU_Play_GetWritePtr
-//
-// Description: Reset the buffer write pointer to zero (in shared memory)
-//
-// =========================================================================
-void CSL_MMVPU_Play_ResetWritePtr( void )
-{
-	vp_shared_mem->shared_NEWAUD_InBuf_in[0] = 0;
-}

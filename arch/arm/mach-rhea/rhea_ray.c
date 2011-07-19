@@ -147,7 +147,7 @@ static struct regulator_init_data bcm59055_simldo_data = {
 		.max_uV = 3300000,
 		.valid_ops_mask = REGULATOR_CHANGE_STATUS |
 			REGULATOR_CHANGE_VOLTAGE,
-		.always_on = 0,
+		.always_on = 1,
 		.boot_on = 0,
 	},
 	.num_consumer_supplies = ARRAY_SIZE(sim_supply),
@@ -203,6 +203,9 @@ static const char *pmu_clients[] = {
 #endif
 #ifdef CONFIG_BCM59055_ADC_CHIPSET_API
 	"bcm59055-adc_chipset_api",
+#endif
+#ifdef CONFIG_USB_BCM_OTG
+	"bcm_otg",
 #endif
 };
 
@@ -276,9 +279,9 @@ struct platform_device bcm_kp_device = {
 
 /*	Keymap for Ray board plug-in 64-key keypad.
 	Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
-	GPIO08, GPIO09, GPIO10 and GPIO11, Keypad can be set as 4x4 matric by
-	using pin GPIO04, GPIO05, GPIO06, GPIO07, GPIO12, GPIO13, GPIO14 and
-	GPIO15 */
+	GPIO08, GPIO09, GPIO10 and GPIO11, SSP3 and camera used GPIO06,
+	GPIO07, GPIO12, GPIO13, for now keypad can only be set as a 2x2 matrix
+	by using pin GPIO04, GPIO05, GPIO14 and GPIO15 */
 static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
@@ -316,26 +319,26 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_4, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "Back Key", KEY_BACK},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "Forward key", KEY_FORWARD},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "Home Key", KEY_HOME},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "Search Key", KEY_SEARCH},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "Back Key", KEY_BACK},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "VolumnUp-Key", KEY_VOLUMEUP},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "VolumnDown-Key", KEY_VOLUMEDOWN},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "key mute", KEY_MUTE},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "Menu-Key", KEY_MENU},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "Home-Key", KEY_HOME},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "key space", KEY_SPACE},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "key power", KEY_POWER},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "key sleep", KEY_SLEEP},
-	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "key wakeup", KEY_WAKEUP},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
@@ -356,7 +359,13 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 #endif
 
 #ifdef CONFIG_GPIO_PCA953X
+
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#define GPIO_PCA953X_GPIO_PIN      121 /* Configure pad MMC1DAT4 to GPIO74 */
+#else
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
+#endif
+
 static int pca953x_platform_init_hw(struct i2c_client *client,
 		unsigned gpio, unsigned ngpio, void *context)
 {
@@ -587,7 +596,7 @@ struct platform_device haptic_pwm_device = {
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
-#ifdef CONFIG_MACH_RHEA_RAY
+#if defined (CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X

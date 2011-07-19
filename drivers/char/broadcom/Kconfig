@@ -40,9 +40,37 @@ config UNICAM
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)
 	default n 	
 
+config BCM_GPS
+    tristate "GPS support"
+	default n
+    ---help---
+        Select this to include GPS support for BCMHANA
+
+        If unsure, say N.
+		
+config BCM_GPS_UART
+	int "GPS UART"	
+	depends on BCM_GPS
+	--help---
+		GPS UART port no e.g. 0,1,2,3 to be used 
+
 config BCM_MODEM
         tristate "Broadcom Modem Driver"
         depends on BRCM_CHAR_DRIVERS && NET
         default n
         help
           Broadcom Modem IPC drivers
+
+config BCM_MODEM_HEADER_SIZE
+        int "Broadcom Modem Header Size"
+        depends on BRCM_CHAR_DRIVERS && NET && BCM_MODEM
+        default 0
+        help
+          Sets the length of the modem binary header reserved area
+
+config GPIO_USER_MODE_SUPPORT
+	tristate "Broadcom GPIO User Mode Support"
+	depends on BRCM_CHAR_DRIVERS
+	default n
+	help
+	  Say y to turn on support for GPIO in user mode

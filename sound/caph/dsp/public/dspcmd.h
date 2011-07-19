@@ -127,6 +127,8 @@ typedef enum
 	DSPCMD_TYPE_COMMAND_CLEAR_VOIPMODE
 } DspCmdType_t;
 
+#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR))
+
 #ifdef DSP_COMMS_INCLUDED
 typedef struct
 {
@@ -578,6 +580,8 @@ void DSPPROC_GPRSModeFilt(RxCode_t coding_scheme);
 void DSPPROC_ResetPacketModeFilt(void); 
 void DSPPROC_SetSoftSymbolScaling(void);
 void DSPPROC_Set_SAIC_adapt(Boolean flag);         
+
+#endif
 
 #endif //#ifndef __DSPCMD_H__
 

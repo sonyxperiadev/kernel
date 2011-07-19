@@ -46,9 +46,10 @@
 #include "auddrv_def.h"
 #include "drv_caph.h"
 #include "csl_aud_queue.h"
-#include "dspif_voice_play.h"
+#include "csl_apcmd.h"
 #include "csl_vpu.h"
 #include "csl_arm2sp.h"
+#include "dspif_voice_play.h"
 #include "audio_vdriver_voice_play.h"
 #include "log.h"
 #include "csl_aud_drv.h"
@@ -61,7 +62,6 @@
 * @{
 */
 
-#if defined (_ATHENA_) || defined (_RHEA_)
 
 //
 // local defines
@@ -71,6 +71,8 @@
 //
 // local structures
 //
+
+
 typedef enum VORENDER_MSG_ID_t
 {
 	VORENDER_MSG_CONFIG,
@@ -144,7 +146,6 @@ typedef	struct VORENDER_Drv_t
 //
 static VORENDER_Drv_t	sVPU_Drv = { 0 };
 static VORENDER_Drv_t	sARM2SP_Drv[VORENDER_ARM2SP_INSTANCE_TOTAL] = { {0} };
-static VORENDER_Drv_t	sAMRWB_Drv = { 0 };
 
 static UInt16 dsp_readIndex;
 
@@ -152,9 +153,14 @@ static UInt16 dsp_readIndex;
 //
 //	local functions
 //
+static UInt16 ARM2SP_BuildCommandArg0 (
+									   AUDIO_SAMPLING_RATE_t	samplingRate,
+									   VORENDER_PLAYBACK_MODE_t	playbackMode,
+									   VORENDER_VOICE_MIX_MODE_t   mixMode,
+									   UInt32 numFramesPerInterrupt);
+
 static void VPU_Render_TaskEntry (void);
 static void ARM2SP_Render_TaskEntry (void* arg);
-static void AMRWB_Render_TaskEntry (void);
 
 static VORENDER_Drv_t* GetDriverByType (VORENDER_TYPE_t type);
 
@@ -166,79 +172,6 @@ void VPU_Render_Request(UInt16 bufferIndex);
 
 static void CheckBufDoneUponStop (VORENDER_Drv_t	*audDrv);
 static VORENDER_ARM2SP_INSTANCE_e AUDDRV_ARM2SP_GetInstanceID(VORENDER_TYPE_t type);
-#if 0
-//temporary, will delete this function after CIB soc/csl/dsp has this function.
-static UInt32 CSL_MMVPU_WriteAMRWB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex_no_use, UInt16 readIndex)
-{
-	UInt16 size_copied_bytes, size_wraparound; // bytes
-	UInt16 space, totalCopied_words;  // words
-	UInt32 q_load_words = inSize>>1; // words 
-	UInt16 writeIndex;
-	UInt8 *buffer;
-
-	writeIndex = vp_shared_mem->shared_NEWAUD_InBuf_in[0];
-
-	buffer = (UInt8* ) &vp_shared_mem->shared_decoder_InputBuffer[writeIndex&0x0fff];
-
-	if(writeIndex >= readIndex) //arm ahead of dsp
-	{
-		// shared memory available space
-		space = (AUDIO_SIZE_PER_PAGE - writeIndex + readIndex - 1);
-		
-		// words to copy this time.
-		totalCopied_words = (space <= q_load_words) ? space : q_load_words;
-		
-		if (totalCopied_words > 0)
-		{
-			if ( (writeIndex + totalCopied_words) > AUDIO_SIZE_PER_PAGE) //wrap around
-			{
-				// copy first part
-				size_copied_bytes = (AUDIO_SIZE_PER_PAGE - writeIndex)<<1;
-				memcpy(buffer, inBuf, size_copied_bytes);
-				inBuf += size_copied_bytes;
-				// copy second part
-				size_wraparound = (totalCopied_words<<1) - size_copied_bytes;
-				memcpy( (UInt8* )&vp_shared_mem->shared_decoder_InputBuffer[0], inBuf, size_wraparound );
-			}
-			else // no wrap around
-			{
-				size_copied_bytes = totalCopied_words<<1;
-				size_wraparound = 0;
-				memcpy(buffer, inBuf, size_copied_bytes);
-			}
-			
-			vp_shared_mem->shared_NEWAUD_InBuf_in[0] = (writeIndex + totalCopied_words ) % AUDIO_SIZE_PER_PAGE;
-		}
-		
-
-	}
-	else //dsp ahead of arm
-	{
-		// available shared memory space
-		space = (readIndex - writeIndex - 1);
-		// words to copy this time.
-		totalCopied_words = (space <= q_load_words) ? space : q_load_words;
-		
-		if (totalCopied_words > 0)
-		{
-			size_copied_bytes = totalCopied_words<<1;
-			memcpy(buffer, inBuf, size_copied_bytes);
-			vp_shared_mem->shared_NEWAUD_InBuf_in[0] = writeIndex + totalCopied_words;
-		}
-		
-	}
-
-	// the bytes has been really copied.
-	return (totalCopied_words<<1);
-
-} // CSL_MMVPU_WriteAMRWB
-
-static void CSL_MMVPU_Play_ResetWritePtr( void )
-{
-	vp_shared_mem->shared_NEWAUD_InBuf_in[0] = 0;
-}
-
-#endif
 //
 // APIs
 //
@@ -299,17 +232,6 @@ Result_t AUDDRV_VoiceRender_Init( VORENDER_TYPE_t type )
 										);
 			break;
 
-		case VORENDER_TYPE_AMRWB:
-			audDrv->msgQueue = OSQUEUE_Create( QUEUESIZE_AUDDRV_AMRWBRENDER,
-											sizeof(VORENDER_MSG_t), OSSUSPEND_PRIORITY );
-			OSQUEUE_ChangeName(audDrv->msgQueue, (const char *) "AUDDRV_AMRWBRENDER_Q" );
-
-			audDrv->task = OSTASK_Create( (TEntry_t) AMRWB_Render_TaskEntry,
-										TASKNAME_AUDDRV_AMRWBRENDER,
-										TASKPRI_AUDDRV_AMRWBRENDER,
-										STACKSIZE_AUDDRV_AMRWBRENDER
-										);
-			break;
 
 		default:
 			Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_VoiceRender_Init:: Doesn't support audio driver type drvType = 0x%x\n", audDrv->drvType);
@@ -793,12 +715,10 @@ static void VPU_Render_TaskEntry (void)
 
 				case VORENDER_MSG_START:
 					{
-						dspif_VPU_play_start ( audDrv->config.playbackMode,
-												audDrv->config.mixMode,
-												audDrv->config.samplingRate,
-												audDrv->config.speechMode, // used by AMRNB and AMRWB
-												audDrv->config.dataRateSelection, // used by AMRNB and AMRWB
-												audDrv->numFramesPerInterrupt);
+						CSL_VPU_Init( audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
+						// Alert! Our driver playbackMode and mixMode are 1 to 1 mapping to the DSP playback and mix mode defined
+						// in shared.h
+						VPRIPCMDQ_StartRecordingPlayback( (UInt8)audDrv->config.playbackMode, audDrv->config.mixMode );
 
 						Log_DebugPrintf(LOGID_AUDIO, " VPU_Render_TaskEntry::Start render, playbackMode = 0x%x,  speechMode = 0x%lx, dataRate = 0x%lx, mixMode = 0x%x\n", 
 							audDrv->config.playbackMode, audDrv->config.speechMode, audDrv->config.dataRateSelection, audDrv->config.mixMode);
@@ -812,7 +732,7 @@ static void VPU_Render_TaskEntry (void)
 
 				case VORENDER_MSG_STOP:
 					// stop or cancel, to be consisdered.
-					dspif_VPU_play_stop();
+					VPRIPCMDQ_CancelPlayback();
 					CheckBufDoneUponStop(audDrv);
 					Log_DebugPrintf(LOGID_AUDIO, " VPU_Render_TaskEntry::Stop render.\n");
 					OSSEMAPHORE_Release (audDrv->stopSema);
@@ -854,7 +774,7 @@ static void VPU_Render_TaskEntry (void)
 static void ARM2SP_Render_TaskEntry (void* arg)
 {
 	VORENDER_MSG_t	msg;
-
+	UInt16			arg0, numFramesPerInterrupt, instanceID;
 	OSStatus_t		status;
 
 	VORENDER_Drv_t	*audDrv = (VORENDER_Drv_t*)arg;
@@ -876,6 +796,7 @@ static void ARM2SP_Render_TaskEntry (void* arg)
 		{
 			Log_DebugPrintf(LOGID_AUDIO, " ARM2SP_Render_TaskEntry::msgID = 0x%x. parm1 = 0x%lx, parm2 = 0x%lx\n", 
 											msg.msgID, msg.parm1, msg.parm2);
+			instanceID = AUDDRV_ARM2SP_GetInstanceID(audDrv->drvType);
 			switch (msg.msgID)
 			{
 				case VORENDER_MSG_SET_TRANSFER:
@@ -892,12 +813,36 @@ static void ARM2SP_Render_TaskEntry (void* arg)
 					break;
 
 				case VORENDER_MSG_START:
-					dspif_ARM2SP_play_start ( AUDDRV_ARM2SP_GetInstanceID(audDrv->drvType),
-												audDrv->config.playbackMode,
-												audDrv->config.mixMode,
-												audDrv->config.samplingRate,
-												audDrv->numFramesPerInterrupt,
-												audDrv->config.audMode);
+
+					numFramesPerInterrupt = audDrv->numFramesPerInterrupt;
+					
+					// restrict numFramesPerInterrupt due to the shared memory size 
+					if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_8000 && numFramesPerInterrupt > 4)
+						numFramesPerInterrupt = 4;
+
+					if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_16000 && numFramesPerInterrupt > 2)
+						numFramesPerInterrupt = 2;
+
+					arg0 = ARM2SP_BuildCommandArg0 (audDrv->config.samplingRate,
+									audDrv->config.playbackMode, audDrv->config.mixMode, numFramesPerInterrupt);
+    										
+					Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%x\n", 
+										audDrv->config.playbackMode, audDrv->config.mixMode, arg0, instanceID);
+
+					if (instanceID == VORENDER_ARM2SP_INSTANCE1)
+					{
+						CSL_ARM2SP_Init();  // clean buffer before starting to play
+
+						Log_DebugPrintf(LOGID_AUDIO, " start ARM2SP, arg0=0x%x\n", arg0);
+						VPRIPCMDQ_SetARM2SP( arg0, 0 );
+					}
+					else if (instanceID == VORENDER_ARM2SP_INSTANCE2)
+					{
+						CSL_ARM2SP2_Init(); // clean buffer before starting to play
+
+						Log_DebugPrintf(LOGID_AUDIO, " start ARM2SP2, arg0=0x%x\n", arg0);
+						VPRIPCMDQ_SetARM2SP2( arg0, 0 );
+					}
 					break;
 
 				case VORENDER_MSG_FINISH:
@@ -906,23 +851,54 @@ static void ARM2SP_Render_TaskEntry (void* arg)
 
 				case VORENDER_MSG_STOP:
 					Log_DebugPrintf(LOGID_AUDIO, " ARM2SP_Render_TaskEntry::Stop render.\n");
-					dspif_ARM2SP_play_stop(AUDDRV_ARM2SP_GetInstanceID(audDrv->drvType));
+					
+					if (instanceID == VORENDER_ARM2SP_INSTANCE1)
+					{				
+						VPRIPCMDQ_SetARM2SP( 0, 0 );
+					}
+					else 
+					if (instanceID == VORENDER_ARM2SP_INSTANCE2)
+					{					
+						VPRIPCMDQ_SetARM2SP2( 0, 0 );
+					}
+
 					CheckBufDoneUponStop(audDrv);
 					OSSEMAPHORE_Release (audDrv->stopSema);
 					break;
 
 				case VORENDER_MSG_PAUSE:
 					Log_DebugPrintf(LOGID_AUDIO, " ARM2SP_Render_TaskEntry::Pause render.\n");
-					dspif_ARM2SP_play_pause(AUDDRV_ARM2SP_GetInstanceID(audDrv->drvType));
+					if (instanceID == VORENDER_ARM2SP_INSTANCE1)
+						VPRIPCMDQ_SetARM2SP( 0, 1 );
+					else
+					if (instanceID == VORENDER_ARM2SP_INSTANCE2)
+						VPRIPCMDQ_SetARM2SP2( 0, 1 );
 					break;
 
 				case VORENDER_MSG_RESUME:
-					dspif_ARM2SP_play_resume( AUDDRV_ARM2SP_GetInstanceID(audDrv->drvType),
-												audDrv->config.playbackMode,
-												audDrv->config.mixMode,
-												audDrv->config.samplingRate,
-												audDrv->numFramesPerInterrupt,
-												audDrv->config.audMode);
+					{
+
+					numFramesPerInterrupt = audDrv->numFramesPerInterrupt;
+
+					// restrict numFramesPerInterrupt due to the shared memory size 
+					if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_8000 && numFramesPerInterrupt > 4)
+						numFramesPerInterrupt = 4;
+
+					if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_16000 && numFramesPerInterrupt > 2)
+						numFramesPerInterrupt = 2;
+
+					arg0 = ARM2SP_BuildCommandArg0 (audDrv->config.samplingRate,
+									audDrv->config.playbackMode, audDrv->config.mixMode, numFramesPerInterrupt);
+						
+					Log_DebugPrintf(LOGID_AUDIO, "Resume ARM2SP voice play instanceID=0x%x \n", AUDDRV_ARM2SP_GetInstanceID(audDrv->drvType));
+
+					if (instanceID == VORENDER_ARM2SP_INSTANCE1)
+						VPRIPCMDQ_SetARM2SP( arg0, 1 );
+					else
+					if (instanceID == VORENDER_ARM2SP_INSTANCE2)	
+						VPRIPCMDQ_SetARM2SP2( arg0, 1 );
+
+					}
 					break;
 
 				case VORENDER_MSG_ADD_BUFFER:
@@ -932,7 +908,13 @@ static void ARM2SP_Render_TaskEntry (void* arg)
 
 				case VORENDER_MSG_FLUSH_BUFFER:
 					AUDQUE_Flush(audDrv->audQueue);
-					dspif_ARM2SP_play_flush(AUDDRV_ARM2SP_GetInstanceID(audDrv->drvType));
+					
+					if (instanceID == VORENDER_ARM2SP_INSTANCE1)
+						VPRIPCMDQ_SetARM2SP( 0, 0 );
+					else
+					if (instanceID == VORENDER_ARM2SP_INSTANCE2)
+						VPRIPCMDQ_SetARM2SP2( 0, 0 );
+
 					Log_DebugPrintf(LOGID_AUDIO, "ARM2SP_Render_TaskEntry:: Flushed queue.\n");
 					break;
 				
@@ -950,116 +932,6 @@ static void ARM2SP_Render_TaskEntry (void* arg)
 	}
 }
 
-//==============================================================================================
-// Function Name: AMRWB_Render_TaskEntry
-//
-//	Description: The main task entry of voice render when using DSP AMRWB decoder
-//==============================================================
-static void AMRWB_Render_TaskEntry ()
-{
-	VORENDER_MSG_t	msg;
-
-	OSStatus_t		status;
-
-	VORENDER_Drv_t	*audDrv = &sAMRWB_Drv;
-	
-
-	Log_DebugPrintf(LOGID_AUDIO, "AMRWBRender_TaskEntry: AMRWBRender_TaskEntry is running \r\n");
-
-	while(TRUE)
-	{
-		status = OSQUEUE_Pend( audDrv->msgQueue, (QMsg_t *)&msg, TICKS_FOREVER );
-		if (status == OSSTATUS_SUCCESS)
-		{
-			Log_DebugPrintf(LOGID_AUDIO, " AMRWBRender_TaskEntry::msgID = 0x%x.\n", msg.msgID);
-
-			switch (msg.msgID)
-			{
-				case VORENDER_MSG_SET_TRANSFER:
-					 audDrv->callbackThreshold = (UInt32)msg.parm1;
-					 audDrv->interruptInterval = (UInt32)msg.parm2;
-					 break;
-				
-				case VORENDER_MSG_CONFIG:
-					ConfigAudDrv (audDrv, (VORENDER_Configure_t *)msg.parm1);
-					break;
-
-				case VORENDER_MSG_REGISTER_BUFDONE_CB:
-					audDrv->bufDoneCb = (AUDDRV_VoiceRender_BufDoneCB_t)msg.parm1;
-					break;
-
-				case VORENDER_MSG_START:
-					Log_DebugPrintf(LOGID_AUDIO, " AMRWBRender_TaskEntry::Start render\n");
-					// Need to reset them, otherwise will use the values from the last play.
-					CSL_MMVPU_Play_ResetWritePtr();
-					dsp_readIndex = 0;
-					dspif_AMRWB_play_start ( audDrv->config.playbackMode,
-												audDrv->config.mixMode,
-												audDrv->config.samplingRate,
-												audDrv->config.speechMode, // used by AMRNB and AMRWB
-												audDrv->config.dataRateSelection, // used by AMRNB and AMRWB
-												audDrv->numFramesPerInterrupt);
-					// need to reset sema after start dsp. dsp can send duplicate msgs to us.
-					OSSEMAPHORE_ResetCnt(audDrv->stopDspAmrWbSema);
-					break;
-
-				case VORENDER_MSG_FINISH:
-					audDrv->isFinishing = TRUE;
-					break;
-
-				case VORENDER_MSG_STOP:
-					Log_DebugPrintf(LOGID_AUDIO, " AMRWBRender_TaskEntry::Stop render.\n");
-					dspif_AMRWB_play_init_stop();
-					//make sure dsp is stopped
-					OSSEMAPHORE_Obtain (audDrv->stopDspAmrWbSema, TICKS_FOREVER);
-					dspif_AMRWB_play_stop();
-					CheckBufDoneUponStop(audDrv);
-					Log_DebugPrintf(LOGID_AUDIO, " AMRWBRender_TaskEntry::Stop render - done.\n");
-					OSSEMAPHORE_Release (audDrv->stopSema);
-					break;
-
-				case VORENDER_MSG_PAUSE:
-					break;
-
-				case VORENDER_MSG_RESUME:
-					break;
-
-				case VORENDER_MSG_ADD_BUFFER:
-					Log_DebugPrintf(LOGID_AUDIO, " AMRWBRender_TaskEntry::VORENDER_MSG_ADD_BUFFER.\n");
-					CopyBufferToQueue (audDrv, (UInt8 *)msg.parm1, msg.parm2);
-					OSSEMAPHORE_Release (audDrv->addBufSema);
-					break;
-
-				case VORENDER_MSG_FLUSH_BUFFER:
-					Log_DebugPrintf(LOGID_AUDIO, "AMRWBRender_TaskEntry:: Flushed queue.\n");
-					// flush the data in the Q
-					AUDQUE_Flush(audDrv->audQueue);
-					// Need to reset them, otherwise will use the values from the last play.
-					CSL_MMVPU_Play_ResetWritePtr();
-					dsp_readIndex = 0;
-					// this will make dsp to flush data inside dsp
-					dspif_AMRWB_play_start ( audDrv->config.playbackMode,
-												audDrv->config.mixMode,
-												audDrv->config.samplingRate,
-												audDrv->config.speechMode, // used by AMRNB and AMRWB
-												audDrv->config.dataRateSelection, // used by AMRNB and AMRWB
-												audDrv->numFramesPerInterrupt);
-					// need to reset sema after start dsp. dsp can send duplicate msgs to us.
-					OSSEMAPHORE_ResetCnt(audDrv->stopDspAmrWbSema);
-					break;
-
-				case VORENDER_MSG_SHM_REQUEST:
-					Log_DebugPrintf(LOGID_AUDIO, " AMRWBRender_TaskEntry::VORENDER_MSG_SHM_REQUEST.\n");
-					ProcessSharedMemRequest (audDrv, (UInt16)msg.parm1, (UInt16)msg.parm2);
-					break;
-
-				default:
-					Log_DebugPrintf(LOGID_AUDIO, "AMRWBRender_TaskEntry: Unsupported msg, msgID = 0x%x \r\n", msg.msgID);
-					break;
-			}
-		}
-	}
-}
 
 // ========================================================
 // Function Name: GetDriverByType
@@ -1080,10 +952,6 @@ static VORENDER_Drv_t* GetDriverByType (VORENDER_TYPE_t type)
 		case VORENDER_TYPE_PCM_ARM2SP:
 		case VORENDER_TYPE_PCM_ARM2SP2:
 			audDrv = &sARM2SP_Drv[AUDDRV_ARM2SP_GetInstanceID(type)];
-			break;
-
-		case VORENDER_TYPE_AMRWB:
-			audDrv = &sAMRWB_Drv;
 			break;
 
 		default:
@@ -1166,7 +1034,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 				if (bottomSize >= audDrv->bufferSize_inBytes )
 				{
 					sentSize = CSL_VPU_WriteAMRNB ( AUDQUE_GetReadPtr(aq), audDrv->bufferSize_inBytes, writeIndex, 
-						(VP_Speech_Mode_t) audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
+						 audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 				}
 				else
@@ -1174,11 +1042,11 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 					// We should not run into the case of writing twice, because we the bottomSize is always multiple times of audDrv->bufferSize_inBytes according to the driver configure.
  
 					sentSize = CSL_VPU_WriteAMRNB ( AUDQUE_GetReadPtr(aq), bottomSize, writeIndex, 
-						(VP_Speech_Mode_t) audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
+						 audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 
 					sentSize = CSL_VPU_WriteAMRNB ( AUDQUE_GetReadPtr(aq), (audDrv->bufferSize_inBytes - bottomSize), writeIndex, 
-						(VP_Speech_Mode_t) audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
+						 audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 				}
 			}
@@ -1198,7 +1066,7 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 				if (bottomSize >= audDrv->bufferSize_inBytes )
 				{
 					sentSize = CSL_VPU_WritePCM ( AUDQUE_GetReadPtr(aq), audDrv->bufferSize_inBytes, writeIndex, 
-						(VP_Speech_Mode_t) audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
+						 audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 				}
 				else
@@ -1206,11 +1074,11 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 					// We should not run into the case of writing twice, because we the bottomSize is always multiple times of audDrv->bufferSize_inBytes according to the driver configure.
 
 					sentSize = CSL_VPU_WritePCM ( AUDQUE_GetReadPtr(aq), bottomSize, writeIndex, 
-						(VP_Speech_Mode_t) audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
+						 audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 
 					sentSize = CSL_VPU_WritePCM ( AUDQUE_GetReadPtr(aq), (audDrv->bufferSize_inBytes - bottomSize), writeIndex, 
-						(VP_Speech_Mode_t) audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
+						 audDrv->config.speechMode, audDrv->numFramesPerInterrupt );
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 				}
 			}
@@ -1274,33 +1142,6 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 			}
 			break;
 
-		case VORENDER_TYPE_AMRWB:
-			bottomSize = AUDQUE_GetSizeReadPtrToBottom(aq);
-			if (bottomSize >= qLoad)
-			{
-				sentSize = CSL_MMVPU_WriteAMRWB( AUDQUE_GetReadPtr(aq), qLoad, 0, readIndex );
-				AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
-			}
-			else
-			{
-				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest:: bottomSize %ld, qLoad %ld WRAP AROUND AMRWB!!! \n", bottomSize, qLoad );
-
-				sentSize = CSL_MMVPU_WriteAMRWB( AUDQUE_GetReadPtr(aq), bottomSize, 0, readIndex );
-				AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
-
-                //Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest 1 ::   sentSize = %d, readPtr = %d \n", sentSize, aq->readPtr);
-
-				if (sentSize == bottomSize)
-				{
-					sentSize = CSL_MMVPU_WriteAMRWB( AUDQUE_GetReadPtr(aq), qLoad - bottomSize, 0, readIndex );
-					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
-				}
-
-                //Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest 2 ::   sentSize = %d, readPtr = %d \n", sentSize, aq->readPtr);
-			}
-
-			dsp_readIndex  = readIndex;
-			break;
 			
 		default:
 			break;
@@ -1411,18 +1252,13 @@ static Result_t ConfigAudDrv (VORENDER_Drv_t *audDrv,
 
 			if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_48000)
 			{
-				audDrv->bufferSize_inBytes = (ARM2SP_INPUT_SIZE*3/4)*audDrv->numFramesPerInterrupt;
-				if (audDrv->config.audMode == 1) // 48K stereo
-					audDrv->bufferSize_inBytes *= 2;
+				audDrv->bufferSize_inBytes = (ARM2SP_INPUT_SIZE_48K/4)*audDrv->numFramesPerInterrupt;
+				if (audDrv->config.audMode == 0) // 48K mono, ARM2SP_INPUT_SIZE_48K is 40ms for mono
+					audDrv->bufferSize_inBytes >>= 1;
 			}
 			audDrv->bufferNum = ringBufferFrames/audDrv->numFramesPerInterrupt + 1; // arm2sp is always 4 frames, not configurable.
 			break;
 			
-		case VORENDER_TYPE_AMRWB:
-			// size we dump data to shared mem when we got ripisr from dsp or data from omx
-			audDrv->bufferSize_inBytes = 0x400; // double the size of the dsp threshold
-			audDrv->bufferNum = AUDIO_SIZE_PER_PAGE/audDrv->bufferSize_inBytes*4;
-			break;
 
 		default:
 			Log_DebugPrintf(LOGID_AUDIO, "ConfigAudDrv:: Doesn't support audio driver type drvType = 0x%x\n", audDrv->drvType);
@@ -1486,4 +1322,121 @@ static void CheckBufDoneUponStop (VORENDER_Drv_t	*audDrv)
 	return instanceID;  
 }
 
-#endif
+
+// ==============================================================================
+// Function Name: ARM2SP_BuildCommandArg0
+//
+//	Description: Build the arg0 for ARM2SP DSP command.
+// ================================================================================
+static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t		samplingRate,
+									   VORENDER_PLAYBACK_MODE_t		playbackMode,
+									   VORENDER_VOICE_MIX_MODE_t	mixMode,
+									   UInt32						numFramesPerInterrupt
+									   )
+{
+	UInt16 arg0 = 0;
+
+	/**
+	from shared.h
+		Arg0
+	#define	ARM2SP_DL_ENABLE_MASK	0x0001
+	#define	ARM2SP_UL_ENABLE_MASK	0x0002
+	
+	#define	ARM2SP_TONE_RECODED		0x0008				//bit3=1, record the tone, otherwise record UL and/or DL
+	#define	ARM2SP_UL_MIX			0x0010				//should set MIX or OVERWRITE, otherwise but not both, MIX wins
+	#define	ARM2SP_UL_OVERWRITE		0x0020
+	#define	ARM2SP_UL_BEFORE_PROC	0x0040				//bit6=1, play PCM before UL audio processing; default bit6=0
+	#define	ARM2SP_DL_MIX			0x0100
+	#define	ARM2SP_DL_OVERWRITE		0x0200
+	#define	ARM2SP_DL_AFTER_PROC	0x0400				//bit10=1, play PCM after DL audio processing; default bit10=0
+	#define	ARM2SP_16KHZ_SAMP_RATE  0x8000				//bit15=0 -> 8kHz data, bit15 = 1 -> 16kHz data
+	
+	#define	ARM2SP_FRAME_NUM		0x7000				//8K:1/2/3/4, 16K:1/2; if 0 (or other): 8K:4, 16K:2
+	#define	ARM2SP_FRAME_NUM_BIT_SHIFT	12				//Number of bits to shift to get the frame number
+	**/
+
+	// samplingRate
+	if (samplingRate == AUDIO_SAMPLING_RATE_16000)
+		arg0 |= ARM2SP_16KHZ_SAMP_RATE;
+
+	// set number of frames per interrupt
+	arg0 |= (numFramesPerInterrupt << ARM2SP_FRAME_NUM_BIT_SHIFT);
+
+	// set ul
+	switch (playbackMode)
+	{
+		case VORENDER_PLAYBACK_UL:
+			// set UL_enable
+			arg0 |= ARM2SP_UL_ENABLE_MASK;
+
+			if (mixMode == VORENDER_VOICE_MIX_UL 
+				|| mixMode == VORENDER_VOICE_MIX_BOTH) 
+			{
+				// mixing UL
+				arg0 |= ARM2SP_UL_MIX;
+			}
+			else
+			{
+				//overwrite UL
+				arg0 |= ARM2SP_UL_OVERWRITE;
+			}
+			break;
+
+		case VORENDER_PLAYBACK_DL:
+			// set DL_enable
+			arg0 |= ARM2SP_DL_ENABLE_MASK;
+
+			if (mixMode == VORENDER_VOICE_MIX_DL 
+				|| mixMode == VORENDER_VOICE_MIX_BOTH)
+			{
+				// mixing DL
+				arg0 |= ARM2SP_DL_MIX;
+			}
+			else
+			{
+				//overwirte DL
+				arg0 |= ARM2SP_DL_OVERWRITE;
+			}
+			break;
+
+		case VORENDER_PLAYBACK_BOTH:
+			// set UL_enable
+			arg0 |= ARM2SP_UL_ENABLE_MASK;
+
+			// set DL_enable
+			arg0 |= ARM2SP_DL_ENABLE_MASK;
+
+			if (mixMode == VORENDER_VOICE_MIX_UL 
+				|| mixMode == VORENDER_VOICE_MIX_BOTH)
+			{
+				// mixing UL
+				arg0 |= ARM2SP_UL_MIX;
+			}
+			else
+			{
+				// overwirte UL
+				arg0 |= ARM2SP_UL_OVERWRITE;
+			}
+			
+			if (mixMode == VORENDER_VOICE_MIX_DL 
+				|| mixMode == VORENDER_VOICE_MIX_BOTH)
+			{
+				// mixing DL
+				arg0 |= ARM2SP_DL_MIX;
+			}
+			else
+			{
+				// overwirte DL
+				arg0 |= ARM2SP_DL_OVERWRITE;
+			}
+			break;
+
+		case VORENDER_PLAYBACK_NONE:
+			break;
+
+		default:
+			break;
+	}
+
+	return arg0;
+}

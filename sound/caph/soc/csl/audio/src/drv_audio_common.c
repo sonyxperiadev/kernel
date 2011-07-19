@@ -22,9 +22,6 @@ Broadcom's express prior written consent.
 #include "auddrv_def.h"
 #include "csl_caph_gain.h"
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
-
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -73,7 +70,7 @@ CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
 {
 	CSL_CAPH_DEVICE_e cslDev = CSL_CAPH_DEV_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetCSLDevice:: dev = 0x%x\n", dev);
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetCSLDevice:: dev = 0x%x\n", dev));
 
       switch (dev)
       {
@@ -192,7 +189,7 @@ AUDDRV_DEVICE_e AUDDRV_GetDRVDeviceFromMic (AUDDRV_MIC_Enum_t mic)
 {
 	AUDDRV_DEVICE_e dev = AUDDRV_DEV_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDRVDeviceFromMic:: mic = 0x%x\n", mic);
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDRVDeviceFromMic:: mic = 0x%x\n", mic));
 
       switch (mic)
       {
@@ -254,7 +251,7 @@ AUDDRV_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDDRV_SPKR_Enum_t spkr)
 {
 	AUDDRV_DEVICE_e dev = AUDDRV_DEV_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDRVDeviceFromSpkr:: spkr = 0x%x\n", spkr);
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDRVDeviceFromSpkr:: spkr = 0x%x\n", spkr));
 
       switch (spkr)
       {
@@ -309,7 +306,7 @@ CSL_AUDIO_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
 {
 	CSL_AUDIO_DEVICE_e cslDev = CSL_AUDVOC_DEV_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetCSLDevice:: dev = 0x%x\n", dev);
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetCSLDevice:: dev = 0x%x\n", dev));
 
       switch (dev)
       {
@@ -519,8 +516,11 @@ Int16 AUDDRV_GetHWDLGain(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
+			cslSpkr = SPKR_HS;
+		    break;
+			
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
 	    case AUDDRV_DEV_BT_SPKR:
@@ -545,7 +545,7 @@ Int16 AUDDRV_GetHWDLGain(AUDDRV_DEVICE_e spkr, Int16 gain)
 
     }
 
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPDLGain::spkr=0x%x, gain=0x%x\n", spkr, gain));
+    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetHWDLGain::spkr=0x%x, gain=0x%x\n", spkr, gain));
     outGain = csl_caph_gain_GetSpkrGain(cslSpkr, gain);
     return outGain.spkrHWGain;
 }
@@ -574,8 +574,11 @@ Int16 AUDDRV_GetHWDLGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
+			 cslSpkr = SPKR_HS;
+		    break;
+				
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
 
@@ -610,10 +613,56 @@ Int16 AUDDRV_GetHWDLGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain)
 
 /****************************************************************************
 *
+*  Function Name: UInt16 AUDDRV_GetMixerInputGain(Int16 gain)
+*
+*  Description: Get the Mixer input gain. Param "gain" is in Q13.2
+*               Mixer input gain is register value.
+*
+****************************************************************************/
+UInt16 AUDDRV_GetMixerInputGain(Int16 gain)
+{
+    csl_caph_Mixer_GainMapping_t outGain;
+    outGain = csl_caph_gain_GetMixerGain(gain);
+    return outGain.mixerInputGain;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetMixerOutputFineGain(Int16 gain)
+*
+*  Description: Get the Mixer output fine gain. Param "gain" is in Q13.2
+*               Mixer output fine gain is register value.
+*
+****************************************************************************/
+UInt16 AUDDRV_GetMixerOutputFineGain(Int16 gain)
+{
+    csl_caph_Mixer_GainMapping_t outGain;
+    outGain = csl_caph_gain_GetMixerGain(gain);
+    return outGain.mixerOutputFineGain;
+}
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetMixerOutputCoarseGain(Int16 gain)
+*
+*  Description: Get the Mixer output coarse gain. Param "gain" is in Q13.2
+*               Mixer output coarse gain is register value.
+*
+****************************************************************************/
+UInt16 AUDDRV_GetMixerOutputCoarseGain(Int16 gain)
+{
+    csl_caph_Mixer_GainMapping2_t outGain;
+    outGain = csl_caph_gain_GetMixerOutputCoarseGain(gain);
+    return outGain.mixerOutputCoarseGain;
+}
+
+/****************************************************************************
+*
 *  Function Name: UInt16 AUDDRV_GetPMUGain(
 *                                         AUDDRV_DEVICE_e mic, UInt16 gain)
 *
-*  Description: read the DSP DL gain in mdB in Q15
+*  Description: read the PMU gain in dB in Q13,2. Input gain in Q13.2
 *
 ****************************************************************************/
 UInt16 AUDDRV_GetPMUGain(AUDDRV_DEVICE_e spkr, Int16 gain)
@@ -630,8 +679,11 @@ UInt16 AUDDRV_GetPMUGain(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
+			cslSpkr = SPKR_HS;
+		    break;
+			
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
 	    case AUDDRV_DEV_BT_SPKR:
@@ -685,8 +737,11 @@ UInt16 AUDDRV_GetPMUGain_Q1_14(AUDDRV_DEVICE_e spkr, Int16 gain)
 		    break;
 	    
 	    case AUDDRV_DEV_HS:
+			 cslSpkr = SPKR_HS;
+		    break;
+			
 	    case AUDDRV_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
 

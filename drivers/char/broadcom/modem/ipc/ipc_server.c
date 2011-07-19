@@ -55,6 +55,9 @@
 #include <mach/rdb/brcm_rdb_bintc.h>
 #include <mach/irqs.h>
 
+#ifndef CONFIG_BCM_MODEM_HEADER_SIZE
+#define CONFIG_BCM_MODEM_HEADER_SIZE 0
+#endif
 // definitions for Rhea/BI BModem IRQ's
 // extracted from chip_irq.h for Rhea
 #define NUM_KONAIRQs          224
@@ -62,7 +65,6 @@
 #define FIRST_BMIRQ           (LAST_KONAIRQ+1)
 #define NUM_BMIRQs            56
 #define IRQ_TO_BMIRQ(irq)         ((irq)-FIRST_BMIRQ)
-
 
 #define IPC_MAJOR (204)
 
@@ -381,7 +383,6 @@ void WaitForCpIpc (void* pSmBase)
 static int __init ipcs_init(void *smbase, unsigned int size)
 {
   int rc = 0;
-  IPC_Boolean ret = 0;
 
   //Wait for CP to initialize
   WaitForCpIpc(smbase);
@@ -411,10 +412,61 @@ static int __init ipcs_init(void *smbase, unsigned int size)
   return(0);
 }
 
+
+#if (CONFIG_BCM_MODEM_HEADER_SIZE > 0)
+static int CP_Boot(void)
+{
+    int started = 0;
+    void __iomem *cp_boot_itcm;
+    void __iomem *cp_bmodem_r4cfg;
+    unsigned int r4init;
+    unsigned int jump_instruction = 0xEA000000;
+
+    #define BMODEM_SYSCFG_R4_CFG0  0x3a004000
+    #define CP_SYSCFG_BASE_SIZE    0x8
+
+    cp_bmodem_r4cfg = ioremap(BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
+    if (!cp_bmodem_r4cfg) {
+        printk(KERN_ERR "%s: ioremap error %x\n", __func__, BMODEM_SYSCFG_R4_CFG0);
+        return started;
+    }
+
+    r4init = *(unsigned int *)(cp_bmodem_r4cfg);
+
+    /* check if the CP is already booted, and if not, then boot it */
+    if ((0x5 != (r4init & 0x5)))
+    {
+        printk(KERN_ALERT "%s: boot (R4 COMMS) ...\n", __func__);
+
+        /* Set the CP jump to address.  CP must jump to DTCM offset 0x400 */
+        cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
+        if (!cp_boot_itcm) {
+            printk(KERN_ERR "%s: ioremap error %x\n", __func__, MODEM_ITCM_ADDRESS);
+            return 0;
+        }
+        jump_instruction |= (0x00FFFFFFUL & (((0x10000 + CONFIG_BCM_MODEM_HEADER_SIZE) / 4) - 2));
+        *(unsigned int *)(cp_boot_itcm) = jump_instruction;
+
+        iounmap(cp_boot_itcm);
+
+        /* boot CP */
+        *(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
+    }
+    iounmap(cp_bmodem_r4cfg);
+
+    return started;
+}
+#endif
+
+
 void Comms_Start(void)
 {
     void __iomem *apcp_shmem;
     void __iomem *cp_boot_base;
+
+#if (CONFIG_BCM_MODEM_HEADER_SIZE > 0)
+    CP_Boot();
+#endif
 
     apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
     if (!apcp_shmem) {
@@ -425,7 +477,7 @@ void Comms_Start(void)
     memset(apcp_shmem, 0, IPC_SIZE);
     iounmap(apcp_shmem);
 
-    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
+    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS+CONFIG_BCM_MODEM_HEADER_SIZE, CP_BOOT_BASE_SIZE);
     if (!cp_boot_base) {
         printk(KERN_ERR "%s: ioremap error\n", __func__);
         return;

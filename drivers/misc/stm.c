@@ -15,9 +15,19 @@
 #include <linux/debugfs.h>
 #include <trace/stm.h>
 #ifdef CONFIG_BCM_STM
-#define CNEON_COMMON
-#include <plat/chal/chal_trace.h>
+#include "plat/mobcom_types.h"
+#include "mach/rdb/brcm_rdb_util.h"
+#include "mach/rdb/brcm_rdb_swstm.h"
+#include "mach/rdb/brcm_rdb_atb_stm.h"
+#include "mach/rdb/brcm_rdb_cstf.h"
+#include "mach/rdb/brcm_rdb_atbfilter.h"
+#ifdef CONFIG_ARCH_RHEA
+#include "mach/rdb/brcm_rdb_padctrlreg.h"
+#endif
+#include "mach/rdb/brcm_rdb_chipreg.h"
 #include <mach/hardware.h>
+#include <plat/chal/chal_trace.h>
+#include <mach/io_map.h>
 #endif
 
 /* Max number of channels (multiple of 256) */
@@ -49,57 +59,6 @@ static arch_spinlock_t stm_buf_lock =
 	        (arch_spinlock_t)__ARCH_SPIN_LOCK_UNLOCKED;
 
 #ifdef CONFIG_BCM_STM
-/* ATB ID definitions */
-enum {
-	ATB_ID_SW_STM_A9 = 1,
-	ATB_ID_SW_STM_R4 = 2,
-	ATB_ID_RESERVED1 = 3,
-	ATB_ID_RESERVED2 = 4,
-	ATB_ID_STM = 5,
-	ATB_ID_AXI1_READ = 6,
-	ATB_ID_AXI1_WRITE = 7,
-	ATB_ID_AXI2_READ = 8,
-	ATB_ID_AXI2_WRITE = 9,
-	ATB_ID_AXI3_READ = 10,
-	ATB_ID_AXI3_WRITE = 11,
-	ATB_ID_AXI4_READ = 12,
-	ATB_ID_AXI4_WRITE = 13,
-	ATB_ID_AXI5_READ = 14,
-	ATB_ID_AXI5_WRITE = 15,
-	ATB_ID_AXI6_READ = 16,
-	ATB_ID_AXI6_WRITE = 17,
-	ATB_ID_AXI7_READ = 18,
-	ATB_ID_AXI7_WRITE = 19,
-	ATB_ID_AXI8_READ = 20,
-	ATB_ID_AXI8_WRITE = 21,
-	ATB_ID_AXI9_READ = 22,
-	ATB_ID_AXI9_WRITE = 23,
-	ATB_ID_AXI10_READ = 24,
-	ATB_ID_AXI10_WRITE = 25,
-	ATB_ID_AXI11_READ = 26,
-	ATB_ID_AXI11_WRITE = 27,
-	ATB_ID_AXI12_READ = 28,
-	ATB_ID_AXI12_WRITE = 29,
-	ATB_ID_AXI13_READ = 30,
-	ATB_ID_AXI13_WRITE = 31,
-	ATB_ID_AXI14_READ = 32,
-	ATB_ID_AXI14_WRITE = 33,
-	ATB_ID_AXI15_READ = 34,
-	ATB_ID_AXI15_WRITE = 35,
-	ATB_ID_AXI16_READ = 36,
-	ATB_ID_AXI16_WRITE = 37,
-	ATB_ID_AXI17_READ = 38,
-	ATB_ID_AXI17_WRITE = 39,
-	ATB_ID_AXI18_READ = 40,
-	ATB_ID_AXI18_WRITE = 41,
-	ATB_ID_AXI19_READ = 42,
-	ATB_ID_AXI19_WRITE = 43,
-	ATB_ID_GIC_A9 = 44,
-	ATB_ID_GIC_R4 = 45,
-	ATB_ID_POWER_MGR = 46,
-	ATB_ID_MAX = 0x3F,	/* max 6bit ATB_ID */
-};
-
 /* STM and SWSTM on A9 will be initialized at boot loader. */
 #define ATB_ID_ODD(x) ((x<<1)|0x1) // 6bit ATB ID + 1bit (1)
 #define ATB_ID_EVEN(x) (x<<1) // 6bit ATB ID + 1bit (0)
@@ -121,11 +80,15 @@ static CHAL_TRACE_DEV_t trace_base_addr = {
 	.AXITRACE_base[CHAL_TRACE_AXITRACE11] = KONA_AXITRACE11_VA,
 	.AXITRACE_base[CHAL_TRACE_AXITRACE12] = KONA_AXITRACE12_VA,
 	.AXITRACE_base[CHAL_TRACE_AXITRACE16] = KONA_AXITRACE16_VA,
+#ifdef CONFIG_ARCH_RHEA
 	.AXITRACE_base[CHAL_TRACE_AXITRACE17] = KONA_AXITRACE17_VA,
+#endif
 	.AXITRACE_base[CHAL_TRACE_AXITRACE18] = KONA_AXITP18_VA,
 	.AXITRACE_base[CHAL_TRACE_AXITRACE19] = KONA_AXITRACE19_VA,
 	.CTI_base[CHAL_TRACE_HUB_CTI] = KONA_HUB_CTI_VA,
+#ifdef CONFIG_ARCH_RHEA
 	.CTI_base[CHAL_TRACE_MM_CTI] = KONA_MM_CTI_VA,
+#endif
 	.CTI_base[CHAL_TRACE_FAB_CTI] = KONA_FAB_CTI_VA,
 	.CTI_base[CHAL_TRACE_A9CTI0] = KONA_A9CTI0_VA,
 	.CTI_base[CHAL_TRACE_R4_CTI] = KONA_BMODEM_CTI_VA,
@@ -135,9 +98,41 @@ static CHAL_TRACE_DEV_t trace_base_addr = {
 	.ATB_STM_base = KONA_STM_VA,
 	.SW_STM_base[CHAL_TRACE_SWSTM] = KONA_SWSTM_VA,
 	.SW_STM_base[CHAL_TRACE_SWSTM_ST] = KONA_SWSTM_ST_VA,
-	.GICTR_base = KONA_GICTR_VA,
+	.GICTR_base = KONA_GICTR_VA,	
 };
 static CHAL_HANDLE kona_trace_handle = NULL;
+
+static void kona_tracepad_init(void)
+{
+    // All register config values taken from T32 script
+    
+    // clear pti_clk_is_idle
+#ifdef CONFIG_ARCH_RHEA
+    BRCM_WRITE_REG(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1, 0x2);
+#endif
+    // Config ATB Filter rm id's for STM
+    BRCM_WRITE_REG(KONA_ATBFILTER_VA, ATBFILTER_ATB_FILTER, 0x203);
+    // Config Funnels
+    BRCM_WRITE_REG(KONA_FUNNEL_VA, CSTF_FUNNEL_CONTROL, 0xe40);
+    BRCM_WRITE_REG(KONA_FIN_FUNNEL_VA, CSTF_FUNNEL_CONTROL, 0xe02);
+    // Config STM
+    BRCM_WRITE_REG(KONA_STM_VA, ATB_STM_CONFIG, 0x102);
+    BRCM_WRITE_REG(KONA_SWSTM_VA, SWSTM_R_CONFIG, 0x82);
+    BRCM_WRITE_REG(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG, 0x82);
+
+#if defined(CONFIG_ARCH_RHEA)
+    // Not tracepad setup, but RXD clock setup
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x000) = 0xA5A501; // WR_ACCESS
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x01C) |= 0x50000; // UARTB3_POLICY3_MASK
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x034) = 0x01;		// LVM_EN
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x00C) = 0x05;		// POLICY_CTL
+    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x408) = 0x0F;		// UARTB3
+#elif defined(CONFIG_ARCH_ISLAND)	
+    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0x000) = 0xA5A501; // WR_ACCESS 35001000
+    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0xa24) = 0x1; 
+    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0x000) = 0xA5A500;
+#endif
+}
 
 static int kona_trace_funnel_set_enable(CHAL_TRACE_FUNNEL_t funnel_type,
 					    uint8_t port_n, int enable)
@@ -241,6 +236,8 @@ static int __init kona_trace_init(void)
 
 	if (kona_trace_handle)
 		return 0;
+		
+	kona_tracepad_init();
 
 	chal_trace_init(&trace_base_addr);
 	kona_trace_handle = &trace_base_addr;

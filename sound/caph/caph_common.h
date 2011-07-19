@@ -53,7 +53,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/wakelock.h>
 
 #include "bcm_audio_devices.h"
-#define BCM_AUDIO_DEBUG_ON
+//#define BCM_AUDIO_DEBUG_ON
 #if defined(BCM_AUDIO_DEBUG_ON)
 #define BCM_AUDIO_DEBUG(args...)  if (gAudioDebugLevel) printk(args)
 #define DEBUG(args...)  if (gAudioDebugLevel) printk(args)
@@ -147,6 +147,7 @@ typedef struct brcm_alsa_chip
 	Int32	pi32LoopBackTestParam[3];	//loopback test
 	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
+	Int32	pi32SpeechMixOption[2];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
 } brcm_alsa_chip_t;
 
 

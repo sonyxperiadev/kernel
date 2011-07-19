@@ -24,8 +24,6 @@ Broadcom's express prior written consent.
 #include "log.h"
 #include "xassert.h"
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -363,6 +361,37 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataForma
 
 	return csl_caph_cfifo_ch;
 }
+
+/****************************************************************************
+*
+*  Function Name: CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(
+*                       CSL_CAPH_DATAFOMAT_e dataFormat, 
+*                       CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
+*
+*  Description: Obtain a CAPH CFIFO buffer
+*
+****************************************************************************/
+CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat, 
+                                                CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
+{
+	UInt16 id = 0;
+	
+	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_ssp_obtain_fifo:: \n"));
+
+	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
+	{
+		if ((CSL_CFIFO_table[id].owner == CAPH_SSP) &&(CSL_CFIFO_table[id].status == 0))
+		{
+			csl_caph_cfifo_ch = (CSL_CAPH_CFIFO_FIFO_e)id;
+			CSL_CFIFO_table[id].status = 1;
+			break;
+		}
+	}
+	return csl_caph_cfifo_ch;
+}
+
 
 /****************************************************************************
 *

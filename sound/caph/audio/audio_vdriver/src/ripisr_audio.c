@@ -42,6 +42,7 @@
 #include "resultcode.h"
 
 #include "shared.h"
+#include "shared_cp.h"
 #include "vpu.h"
 #include "dspif_voice_play.h"
 #include "audio_vdriver_voice_play.h"
@@ -57,12 +58,7 @@
 #include "msconsts.h"
 #include "log.h"
 
-#define _DBG_(a)		a
-//#define _DBG_(a)
-
 extern int IPC_AudioControlSend(char *buff, UInt32 len);
-void VPU_Capture_Request(VPStatQ_t reqMsg);
-void VPU_Render_Request(VPStatQ_t reqMsg);
 
 #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR) && defined(IPC_AUDIO))
 // For CP msg queue to process VPU and Audio status
@@ -140,79 +136,6 @@ void CP_Audio_ISR_Handler(StatQ_t status_msg)
 		status.type = TYPE_SEND_IPC_AUDIO_CTRL;
 		status.payload = status_msg;
 		OSQUEUE_Post(qAudioMsg, (QMsg_t *)&status, TICKS_FOREVER);
-	}
-
-}
-
-#endif
-
-// for bsp build, IPC_AUDIO is not defined, the bspCP build will not pass
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) /*&& defined(IPC_AUDIO)*/)
-
-//****************************************************************************
-//                        G L O B A L   S E C T I O N
-//****************************************************************************
-
-//****************************************
-// global variable definitions
-//****************************************
-
-//****************************************************************************
-//                         L O C A L   S E C T I O N
-//****************************************************************************
-
-//****************************************
-// local macro declarations
-//****************************************
-
-
-
-//****************************************
-// local typedef declarations
-//****************************************
-
-
-//****************************************
-// local variable definitions
-//****************************************
-
-//****************************************
-// local function declarations
-//****************************************
-
-
-//****************************************************************************
-//                         FUNCTIONS
-//****************************************************************************
-
-
-void AP_Audio_ISR_Handler(StatQ_t status_msg)
-{
-	int isr_status = status_msg.status;
-
-	switch (isr_status)
-	{
-
-
-#ifdef AUDIO_DRIVER_HQ_ENABLED
-		case STATUS_HQ_ADC_PAGE_DONE:
-		{
-			block_info.buffer = NULL;
-			block_info.length = status_msg.arg0; // use length to tell which page is used. 0 = page35, 1 = page36.
-			msg.block_info = block_info;
-			msg.type = HQ_RECORDING_PAGE_DONE;
-			if ((p_Device_Channel_HQ_Input) && (p_Device_Channel_HQ_Input->queuAudioMsg))
-			{
-				OSQUEUE_Post(p_Device_Channel_HQ_Input->queuAudioMsg, (QMsg_t*)&msg, TICKS_FOREVER);
-			}
-			break;
-		}
-#endif // #ifdef AUDIO_DRIVER_HQ_ENABLED
-
-
-		default:
-			_DBG_(Log_DebugPrintf(LOGID_AUDIO, "Unknown Interrupt!\r\n"));
-			break;
 	}
 
 }

@@ -21,6 +21,10 @@
 #include <linux/max17040_battery.h>
 #include <linux/slab.h>
 
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+#include <linux/broadcom/cmp_battery_multi.h>
+#endif
+
 #define MAX17040_VCELL_MSB	0x02
 #define MAX17040_VCELL_LSB	0x03
 #define MAX17040_SOC_MSB	0x04
@@ -103,10 +107,18 @@ static int max17040_read_reg(struct i2c_client *client, int reg)
 	return ret;
 }
 
-static void max17040_reset(struct i2c_client *client)
+static int max17040_reset(struct i2c_client *client)
 {
-	max17040_write_reg(client, MAX17040_CMD_MSB, 0x54);
-	max17040_write_reg(client, MAX17040_CMD_LSB, 0x00);
+	int ret;
+   
+	ret = max17040_write_reg(client, MAX17040_CMD_MSB, 0x54);
+   
+	if (ret < 0)
+	{
+	       return ret;
+	}    
+	ret = max17040_write_reg(client, MAX17040_CMD_LSB, 0x00);
+	return ret;
 }
 
 static void max17040_get_vcell(struct i2c_client *client)
@@ -176,6 +188,51 @@ static void max17040_get_status(struct i2c_client *client)
 		chip->status = POWER_SUPPLY_STATUS_FULL;
 }
 
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+int max17040_get_battery_voltage(void *p_data)
+{
+	struct max17040_chip *chip;
+   struct i2c_client *client;
+   
+   if (p_data == NULL)
+   {
+      printk("%s() error, p_data == NULL\n", __FUNCTION__);
+      return -1;
+   }   
+   
+   client = (struct i2c_client *)p_data;      
+   max17040_get_vcell(client);
+   chip = i2c_get_clientdata(client);
+
+   if (chip == NULL)
+   {
+      printk("%s() error, chip == NULL\n", __FUNCTION__);
+      return -1;
+   }   
+       
+   //printk("%s() battery voltage %d name %s\n", __FUNCTION__, chip->vcell, chip->battery.name);          
+   return chip->vcell;
+}
+int max17040_get_battery_charge (void *p_data)
+{
+	struct max17040_chip *chip;
+   struct i2c_client    *client;
+   
+   if (p_data == NULL)
+   {
+      printk("%s() error, p_data == NULL\n", __FUNCTION__);
+      return -1;
+   }
+   
+   client = (struct i2c_client *)p_data;
+   
+   max17040_get_soc(client);
+   chip = i2c_get_clientdata(client);
+   return chip->soc;
+}
+
+#endif
+
 static void max17040_work(struct work_struct *work)
 {
 	struct max17040_chip *chip;
@@ -187,6 +244,10 @@ static void max17040_work(struct work_struct *work)
 	max17040_get_online(chip->client);
 	max17040_get_status(chip->client);
 
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+#else
+   power_supply_changed(&chip->battery); 
+#endif   
 	schedule_delayed_work(&chip->work, MAX17040_DELAY);
 }
 
@@ -203,6 +264,9 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	struct i2c_adapter *adapter = to_i2c_adapter(client->dev.parent);
 	struct max17040_chip *chip;
 	int ret;
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+   struct battery_monitor_calls *p_calls;   
+#endif   
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE))
 		return -EIO;
@@ -211,29 +275,47 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	if (!chip)
 		return -ENOMEM;
 
+	if (max17040_reset(client) < 0)
+	{
+		kfree(chip);
+		return -1;
+	}
+      
 	chip->client = client;
 	chip->pdata = client->dev.platform_data;
 
 	i2c_set_clientdata(client, chip);
+	max17040_get_version(client);
 
 	chip->battery.name		= "battery";
 	chip->battery.type		= POWER_SUPPLY_TYPE_BATTERY;
 	chip->battery.get_property	= max17040_get_property;
 	chip->battery.properties	= max17040_battery_props;
 	chip->battery.num_properties	= ARRAY_SIZE(max17040_battery_props);
+   
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+   p_calls = kzalloc(sizeof(struct battery_monitor_calls), GFP_KERNEL); 
+   
+	if (p_calls == NULL)
+   {
+		return -ENOMEM;
+   }
 
+   p_calls->type           = enum_max17040;
+   p_calls->get_voltage_fn = max17040_get_battery_voltage;  
+   p_calls->get_charge_fn  = max17040_get_battery_charge;
+   register_battery_monitor(p_calls, client);   
+#else   
 	ret = power_supply_register(&client->dev, &chip->battery);
 	if (ret) {
 		dev_err(&client->dev, "failed: power supply register\n");
 		kfree(chip);
 		return ret;
 	}
-
-	max17040_reset(client);
-	max17040_get_version(client);
-
+   
 	INIT_DELAYED_WORK_DEFERRABLE(&chip->work, max17040_work);
 	schedule_delayed_work(&chip->work, MAX17040_DELAY);
+#endif
 
 	return 0;
 }
@@ -242,8 +324,11 @@ static int __devexit max17040_remove(struct i2c_client *client)
 {
 	struct max17040_chip *chip = i2c_get_clientdata(client);
 
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+#else
 	power_supply_unregister(&chip->battery);
 	cancel_delayed_work(&chip->work);
+#endif   
 	kfree(chip);
 	return 0;
 }

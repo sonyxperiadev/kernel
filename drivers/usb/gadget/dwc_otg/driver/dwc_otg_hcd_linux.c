@@ -99,6 +99,8 @@ extern int hub_status_data(struct usb_hcd *hcd, char *buf);
 extern int hub_control(struct usb_hcd *hcd,
 		       u16 typeReq,
 		       u16 wValue, u16 wIndex, char *buf, u16 wLength);
+static int bus_suspend(struct usb_hcd *hcd);
+static int bus_resume(struct usb_hcd *hcd);
 
 struct wrapper_priv_data {
 	dwc_otg_hcd_t *dwc_otg_hcd;
@@ -130,8 +132,8 @@ static struct hc_driver dwc_otg_hc_driver = {
 
 	.hub_status_data = hub_status_data,
 	.hub_control = hub_control,
-	//.bus_suspend =                
-	//.bus_resume =         
+	.bus_suspend = bus_suspend,
+	.bus_resume = bus_resume,
 };
 
 /** Gets the dwc_otg_hcd from a struct usb_hcd */
@@ -793,4 +795,12 @@ int hub_control(struct usb_hcd *hcd,
 	return retval;
 }
 
+static int bus_suspend(struct usb_hcd *hcd)
+{
+	return 0;
+}
+static int bus_resume(struct usb_hcd *hcd)
+{
+	return 0;
+}
 #endif				/* DWC_DEVICE_ONLY */

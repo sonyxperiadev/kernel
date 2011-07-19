@@ -56,7 +56,8 @@ typedef enum
 	SPKR_EP_DSP,  //Voice Call EP
 	SPKR_IHF_HS_DSP,  //Voice Call IHF and HS
 	SPKR_EP, //Multimedia EP
-	SPKR_IHF_HS,  // Multimedia IHF an HS
+	SPKR_IHF,  // Multimedia IHF
+	SPKR_HS,  // Multimedia HS
 	SPKR_PATH_MAX
 }csl_caph_SPKR_Path_e;
 
@@ -69,13 +70,19 @@ typedef struct csl_caph_Spkr_Gain_t
 	Int16 spkrDSPDLGain;  // mdB  in Q15
 }csl_caph_Spkr_Gain_t;
 
-typedef struct csl_caph_Mixer_Gain_t
+typedef struct csl_caph_Mixer_GainMapping_t
 {
 	Int16 hwGain; // dB in Q13.2
 	UInt16 mixerInputGain;  // Register value.
-	UInt16 mixerOutputGain;  // Register value. Bit15:13, Bit Select
-				// Bit12:0, Output Fine Gain
-}csl_caph_Mixer_Gain_t;
+	UInt16 mixerOutputFineGain;  // Bit12:0, Output Fine Gain
+}csl_caph_Mixer_GainMapping_t;
+
+typedef struct csl_caph_Mixer_GainMapping2_t
+{
+	Int16 hwGain; // dB in Q13.2
+	UInt16 mixerOutputCoarseGain;  // Bit2:0, Output Coarse Gain
+}csl_caph_Mixer_GainMapping2_t;
+
 
 /**
 *
@@ -137,6 +144,20 @@ csl_caph_Spkr_Gain_t csl_caph_gain_GetSpkrGain_Q1_14(csl_caph_SPKR_Path_e mic, I
 *  		output fine gain and output coarse gain.
 *****************************************************************************/
 
-csl_caph_Mixer_Gain_t csl_caph_gain_GetMixerGain(Int16 gain);
+csl_caph_Mixer_GainMapping_t csl_caph_gain_GetMixerGain(Int16 gain);
+
+
+/**
+*
+*  @brief read the mixer output coarse gain
+*  
+*  @param  gain   Requested gain in Q13.2.
+*
+*  @return outGain    the Gain structure which contains mixer 
+*  		output coarse gain.
+*****************************************************************************/
+
+csl_caph_Mixer_GainMapping2_t csl_caph_gain_GetMixerOutputCoarseGain(Int16 gain);
+
 #endif // _CSL_CAPH_GAIN_H_
 

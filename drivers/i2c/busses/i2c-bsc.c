@@ -448,6 +448,8 @@ static int bsc_xfer_try_address(struct i2c_adapter *adapter,
    {
       dev_err(dev->dev, "tried %u times to contact slave device at 0x%02x "
             "but no luck success=%d rc=%d\n", i + 1, addr >> 1, success, rc);
+
+      rc = -EREMOTEIO;
    }
 
    return rc;
@@ -888,10 +890,14 @@ static int bsc_get_clk(struct bsc_i2c_dev *dev, struct bsc_adap_cfg *cfg)
 
 static void bsc_put_clk(struct bsc_i2c_dev *dev)
 {
-	if (dev->bsc_clk)
-		clk_put (dev->bsc_clk);
-	if (dev->bsc_apb_clk)
+	if (dev->bsc_clk) {
+		clk_put(dev->bsc_clk);
+		dev->bsc_clk = NULL;
+	}
+	if (dev->bsc_apb_clk) {
 		clk_put (dev->bsc_apb_clk);
+		dev->bsc_apb_clk = NULL;
+	}
 }
 
 static int bsc_enable_clk(struct bsc_i2c_dev *dev)
@@ -1149,21 +1155,17 @@ static int bsc_remove(struct platform_device *pdev)
 #ifdef CONFIG_PM
 static int bsc_suspend(struct platform_device *pdev, pm_message_t state)
 {
-   (void)pdev;
-   (void)state;
-   
-   /* TODO: add suspend support in the future */
-   
-   return 0;
+	struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
+	
+	bsc_disable_clk(dev);
+	return 0;
 }
 
 static int bsc_resume(struct platform_device *pdev)
 {
-   (void)pdev;
+   struct bsc_i2c_dev *dev = platform_get_drvdata(pdev);
 
-   /* TODO: add resume support in the future */
-   
-   return 0;
+   return bsc_enable_clk(dev);
 }
 #else
 #define bsc_suspend    NULL

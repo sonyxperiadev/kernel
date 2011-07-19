@@ -72,7 +72,6 @@
 #include "mti_trace.h"
 #include "dspcmd.h"
 #include "log.h"
-#include "csl_dsp.h"
 
 static Boolean is_audio_on = FALSE;
 static Boolean is_ul_on = FALSE;

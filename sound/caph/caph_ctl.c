@@ -46,8 +46,10 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/initval.h>
 #include <sound/tlv.h>
 #include "mobcom_types.h"
+#include "resultcode.h"
 #include "auddrv_def.h"
 #include "audio_consts.h"
+#include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 #include "drv_caph.h"
 
@@ -65,6 +67,7 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
+	int	dev = DEV_OF_CTL(priv);
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->value.integer.step = 1; 
@@ -74,11 +77,19 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 		case CTL_STREAM_PANEL_PCMOUT2:
 		case CTL_STREAM_PANEL_VOIPOUT:			
 			uinfo->count = 2;
-			uinfo->value.integer.min = -50<<2; //Q13.2
-			uinfo->value.integer.max = 12<<2;//FIXME
+			if(dev == AUDCTRL_SPK_LOUDSPK)
+			{
+				uinfo->value.integer.min = -50<<2; //Q13.2
+				uinfo->value.integer.max = 12<<2;
+			}
+			else
+			{
+				uinfo->value.integer.min = -50<<2; //Q13.2
+				uinfo->value.integer.max = 0;
+			}
 			break;
 		case CTL_STREAM_PANEL_VOICECALL:
-			uinfo->count = 2;
+			uinfo->count = 1;
 			uinfo->value.integer.min = -50<<2; //Q13.2
 			uinfo->value.integer.max = 0;//FIXME
 			break;
@@ -149,50 +160,55 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 		case CTL_STREAM_PANEL_PCMOUT2:
 		case CTL_STREAM_PANEL_VOIPOUT:		
 		{
-			if(pChip->streamCtl[stream-1].pSubStream != NULL)
-				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
-			else
-				break;
-
-			BCM_AUDIO_DEBUG("VolumeCtrlPut stream state = %d\n",pStream->runtime->status->state);
-
-			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
+			if(pCurSel[0] == dev) //if current sink is diffent, dont call the driver to change the volume
 			{
-				//call audio driver to set volume
-				BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
-				AUDCTRL_SetPlayVolume (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
-					pChip->streamCtl[stream-1].dev_prop.u.p.speaker, 
-					AUDIO_GAIN_FORMAT_Q13_2,
-					pVolume[0], pVolume[1]);
-			}			
+				if(pChip->streamCtl[stream-1].pSubStream != NULL)
+					pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+				else
+					break;
+
+				BCM_AUDIO_DEBUG("VolumeCtrlPut stream state = %d\n",pStream->runtime->status->state);
+
+				if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
+				{
+					//call audio driver to set volume
+					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+					AUDCTRL_SetPlayVolume (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
+											pChip->streamCtl[stream-1].dev_prop.u.p.speaker, 
+											AUDIO_GAIN_FORMAT_Q13_2,
+											pVolume[0], pVolume[1]);
+				}
+			}		
 		}
-			break;
+		break;
 		case CTL_STREAM_PANEL_VOICECALL:
 		{
 			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[0] = %ld, pVolume[0] =%ld, pVolume[1]=%ld\n", pCurSel[0],pVolume[0],pVolume[1]);
 
-			//call audio driver to set gain/volume				
-					AUDCTRL_SetTelephonyMicGain(AUDIO_HW_VOICE_IN,AUDCTRL_MIC_MAIN,pVolume[1],AUDIO_GAIN_FORMAT_Q13_2); //record gain
-			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,	pCurSel[1], pVolume[1], AUDIO_GAIN_FORMAT_Q13_2);//DL
+			//call audio driver to set gain/volume		
+			if(pCurSel[1] == dev)
+				AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,	pCurSel[1], pVolume[0], AUDIO_GAIN_FORMAT_Q13_2);//DL
 		}
 		break;
 		case CTL_STREAM_PANEL_PCMIN:
 		{
-			if(pChip->streamCtl[stream-1].pSubStream != NULL)
-				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
-			else
-				break;
-
-			BCM_AUDIO_DEBUG("VolumeCtrlPut stream state = %d\n",pStream->runtime->status->state);
-
-			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
+			if(pCurSel[0] == dev) //if current sink is diffent, dont call the driver to change the volume
 			{
-				//call audio driver to set volume
-				BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetRecordGain pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
-				AUDCTRL_SetRecordGain (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
-					pChip->streamCtl[stream-1].dev_prop.u.c.mic, 
-					pVolume[0], pVolume[1]);
-			}			
+				if(pChip->streamCtl[stream-1].pSubStream != NULL)
+					pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
+				else
+					break;
+
+				BCM_AUDIO_DEBUG("VolumeCtrlPut stream state = %d\n",pStream->runtime->status->state);
+				if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
+				{
+					//call audio driver to set volume
+					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetRecordGain pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+					AUDCTRL_SetRecordGain (pChip->streamCtl[stream-1].dev_prop.u.p.hw_id,
+											pChip->streamCtl[stream-1].dev_prop.u.c.mic, AUDIO_GAIN_FORMAT_Q13_2,
+											pVolume[0], pVolume[1]);
+				}
+			}
 		}
 		break;
 		case CTL_STREAM_PANEL_VOIPIN:
@@ -501,6 +517,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int function = FUNC_OF_CTL(priv);
+	int	stream = STREAM_OF_CTL(priv);
 
 	switch(function)
 	{
@@ -514,9 +531,10 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
 			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[0]; 
-			ucontrol->value.integer.value[0] = pChip->iMutePhoneCall[1]; 
+			ucontrol->value.integer.value[1] = pChip->iMutePhoneCall[1]; 
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			ucontrol->value.integer.value[0] = pChip->pi32SpeechMixOption[stream-1]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
@@ -542,6 +560,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	int priv = kcontrol->private_value;
 	int function = priv&0xFF;
 	Int32	*pSel;
+	int	stream = STREAM_OF_CTL(priv);
 
 
 	switch(function)
@@ -567,8 +586,14 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			else
 			{				
 				// save the mode first. We should have a spk to mode conversion to handle WB modes.
-				AUDCTRL_SaveAudioModeFlag(pSel[1]);
-			
+	                        AudioMode_t tempMode = (AudioMode_t)pSel[1];
+				if ((AUDIO_SAMPLING_RATE_t)AUDCTRL_RateGetTelephony() == AUDIO_SAMPLING_RATE_16000)
+            			{
+        	                      tempMode += AUDIO_MODE_NUMBER;
+                                }
+
+				AUDCTRL_SaveAudioModeFlag(tempMode);
+		
 				//enable voice call with sink and source
 				AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
 			}
@@ -598,6 +623,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
+			pChip->pi32SpeechMixOption[stream-1] = ucontrol->value.integer.value[0]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
@@ -657,17 +683,17 @@ static const DECLARE_TLV_DB_SCALE(caph_db_scale_volume, -5000, 25, 0);
 	                        MiscCtrlInfo, MiscCtrlGet, MiscCtrlPut, 0,private_val)
 
 /*++++++++++++++++++++++++++++++++ Sink device and source devices
-{.strName = "Handset",	.iVolume = {12,12},},		//AUDCTRL_SPK_HANDSET 
-{.strName = "Headset",		.iVolume = {12,12},},	//AUDCTRL_SPK_HEADSET
-x{.strName = "Handsfree",	.iVolume = {12,12},},	//AUDCTRL_SPK_HANDSFREE
-{.strName = "BT SCO",	.iVolume = {12,12},},		//AUDCTRL_SPK_BTM
-{.strName = "Loud Speaker", .iVolume = {12,12},},	//AUDCTRL_SPK_LOUDSPK
+{.strName = "Handset",	.iVolume = {-10,-10},},		//AUDCTRL_SPK_HANDSET 
+{.strName = "Headset",		.iVolume = {-10,-10},},	//AUDCTRL_SPK_HEADSET
+x{.strName = "Handsfree",	.iVolume = {-10,-10},},	//AUDCTRL_SPK_HANDSFREE
+{.strName = "BT SCO",	.iVolume = {-10,-10},},		//AUDCTRL_SPK_BTM
+{.strName = "Loud Speaker", .iVolume = {-10,-10},},	//AUDCTRL_SPK_LOUDSPK
 {.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_TTY
 {.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_HAC
 x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_USB
 x{.strName = "", .iVolume = {0,0},}, 				//AUDCTRL_SPK_BTS
-{.strName = "I2S", .iVolume = {13,13},},			//AUDCTRL_SPK_I2S
-{.strName = "Speaker Vibra", .iVolume = {14,14},},	//AUDCTRL_SPK_VIBRA
+{.strName = "I2S", .iVolume = {0,0},},			//AUDCTRL_SPK_I2S
+{.strName = "Speaker Vibra", .iVolume = {-10,-10},},	//AUDCTRL_SPK_VIBRA
 
 
 {.strName = "", .iVolume = {0,0},}, 					//AUDCTRL_MIC_UNDEFINED
@@ -690,17 +716,17 @@ x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_EANC_DIGI
 --------------------------------------------------*/
 
 #define	BCM_CTL_SINK_LINES	{\
-						{.strName = "HNT",	.iVolume = {12,12},},		\
-						{.strName = "HST",		.iVolume = {12,12},}, 	\
-						{.strName = "HNF",	.iVolume = {12,12},},	\
-						{.strName = "BTM",	.iVolume = {12,12},},		\
-						{.strName = "SPK",	.iVolume = {12,12},},	\
+						{.strName = "HNT",	.iVolume = {-10,-10},},		\
+						{.strName = "HST",	.iVolume = {-10,-10},}, 	\
+						{.strName = "HNF",	.iVolume = {-10,-10},},	\
+						{.strName = "BTM",	.iVolume = {-10,-10},},		\
+						{.strName = "SPK",	.iVolume = {-10,-10},},	\
 						{.strName = "TTY",	.iVolume = {0,0},}, 				\
 						{.strName = "HAC",	.iVolume = {0,0},}, 				\
 						{.strName = "",	.iVolume = {0,0},},					\
 						{.strName = "", .iVolume = {0,0},}, 				\
-						{.strName = "I2S", .iVolume = {13,13},}, 			\
-						{.strName = "VIB", .iVolume = {14,14},},	\
+						{.strName = "I2S", .iVolume = {-10,-10},}, 			\
+						{.strName = "VIB", .iVolume = {-10,-10},},	\
 					}
 
 

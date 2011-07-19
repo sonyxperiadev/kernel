@@ -38,6 +38,7 @@
 
 extern DISPDRV_T* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable ( void );
 extern DISPDRV_T* DISP_DRV_BCM91008_ALEX_GetFuncTable( void );
+extern DISPDRV_T* DISP_DRV_R61581_HVGA_SMI_GetFuncTable ( void );
 
 struct rhea_fb {
 	dma_addr_t phys_fbbase;
@@ -160,7 +161,9 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 	int ret = 0;
 	struct rhea_fb *fb = container_of(info, struct rhea_fb, fb);
 	uint32_t buff_idx;
+#ifdef CONFIG_FRAMEBUFFER_FPS
 	void *dst;
+#endif
 
 	/* We are here only if yoffset is '0' or 'yres',
 	 * so if yoffset = 0, update first buffer or update second
@@ -213,10 +216,14 @@ static int enable_display(struct rhea_fb *fb)
 {
 	int ret = 0;
 
-#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
+#if defined(CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA)
 	fb->display_ops = DISP_DRV_BCM91008_ALEX_GetFuncTable();
-#else
+#elif defined(CONFIG_FB_BRCM_LCDC_NT35582_SMI_WVGA)
 	fb->display_ops = DISP_DRV_NT35582_WVGA_SMI_GetFuncTable();
+#elif defined(CONFIG_FB_BRCM_LCDC_R61581_SMI_HVGA)
+	fb->display_ops = DISP_DRV_R61581_HVGA_SMI_GetFuncTable(); 
+#else 
+#error "Wrong LCD configuration!" 
 #endif
 	fb->display_ops->init();
 	{
@@ -250,7 +257,6 @@ static int disable_display(struct rhea_fb *fb)
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
-	int ret = 0;
 
 	down(&fb->thread_sem);
 
@@ -269,16 +275,13 @@ static int rhea_refresh_thread(void *arg)
 static int vt_notifier_call(struct notifier_block *blk,
 			    unsigned long code, void *_param)
 {	
-
-//	struct fb_info *info = registered_fb[con2fb_map[vc->vc_num]];
-	struct vt_notifier_param *param = _param;
-	struct vc_data *vc = param->vc;
 	switch (code) {
 	case VT_UPDATE:
 		up(&g_rhea_fb->refresh_wait_sem);
 		break;
 	}
-	
+
+	return 0;
 }
 
 static struct notifier_block vt_notifier_block = {
@@ -337,10 +340,14 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	 * So either the display driver allocates the memory and pass the pointer to us, or
 	 * we allocate memory and pass into the display. 
 	 */
-#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
+#if defined(CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA)
 	framesize = 640 * 360 * 4 * 2;
-#else
+#elif defined(CONFIG_FB_BRCM_LCDC_NT35582_SMI_WVGA)
 	framesize = 480 * 800 * 2 * 2;
+#elif defined(CONFIG_FB_BRCM_LCDC_R61581_SMI_HVGA)
+	framesize = 320 * 480 * 2 * 2;
+#else 
+#error "Wrong LCD configuration!" 
 #endif
 
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
@@ -362,11 +369,6 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width; 
 	height = fb->display_info->height;
-#ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
-	BUG_ON(width != 360 || height != 640);
-#else
-	BUG_ON(width != 480 || height != 800);
-#endif
 
 	fb->fb.fbops		= &rhea_fb_ops;
 	fb->fb.flags		= FBINFO_FLAG_DEFAULT;
@@ -420,8 +422,8 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.fix.smem_start = fb->phys_fbbase;
 	fb->fb.fix.smem_len = framesize;
 
-	rheafb_debug("Framebuffer starts at phys[0x%08x], and virt[0x%08x]\n",
-			fb->phys_fbbase, (uint32_t)fb->fb.screen_base);
+	rheafb_debug("Framebuffer starts at phys[0x%08x], and virt[0x%08x] with frame size[0x%08x]\n",
+			fb->phys_fbbase, (uint32_t)fb->fb.screen_base, framesize);
 
 	ret = fb_set_var(&fb->fb, &fb->fb.var);
 	if (ret) {
