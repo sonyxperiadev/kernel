@@ -42,7 +42,7 @@
 /* global spinlock for clock API */
 static DEFINE_SPINLOCK(clk_lock);
 
-int clk_debug = 1;
+int clk_debug = 0;
 
 int clk_init(struct clk *clk)
 {
@@ -517,12 +517,10 @@ static int ccu_clk_enable(struct clk *clk, int enable)
 
 	if(ccu_clk->pi_id != -1)
 	{
-#ifndef CONFIG_ARCH_SAMOA
 		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
 
 		BUG_ON(!pi);
 		pi_enable(pi,enable);
-#endif
 	}
 	return ret;
 }
@@ -597,12 +595,10 @@ static int ccu_clk_init(struct clk* clk)
 
 	if(ccu_clk->pi_id != -1)
 	{
-#ifndef CONFIG_ARCH_SAMOA
 
 		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
 		BUG_ON(!pi);
 		pi_init(pi);
-#endif
 	}
 
 	return 0;

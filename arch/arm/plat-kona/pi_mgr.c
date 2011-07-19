@@ -13,7 +13,7 @@
 #include <plat/pi_mgr.h>
 #include <plat/pwr_mgr.h>
 
-
+extern int pwr_debug;
 enum
 {
 	NODE_ADD,
@@ -76,17 +76,17 @@ static int pi_set_ccu_freq(struct pi *pi, u32 policy, u16 freq)
 
 	for(inx =0; pi->ccu_id[inx];inx++)
 	{
-		pr_info("%s:pi:%s clock str:%s\n",__func__,pi->name,
+		pwr_dbg("%s:pi:%s clock str:%s\n",__func__,pi->name,
 				pi->ccu_id[inx]);
 
 		clk = clk_get(NULL,pi->ccu_id[inx]);
 		BUG_ON(clk == 0 || IS_ERR(clk));
-		pr_info("%s:%s clock %x policy freq => %d\n",__func__,
+		pwr_dbg("%s:%s clock %x policy freq => %d\n",__func__,
 				clk->name,policy,freq);
 
 		if((res = ccu_set_freq_policy(to_ccu_clk(clk),CCU_POLICY(policy),freq)) != 0)
 		{
-			pr_info("%s:ccu_set_freq_policy failed\n",__func__);
+			pwr_dbg("%s:ccu_set_freq_policy failed\n",__func__);
 
 		}
 	}
@@ -103,7 +103,7 @@ static int pi_set_policy(struct pi *pi, u32 policy)
 	cfg.ac = 1;
 	cfg.atl  = 0;
 	cfg.policy = policy;
-	pr_info("%s:%s: %d event policy => %x \n",
+	pwr_dbg("%s:%s: %d event policy => %x \n",
 				__func__, pi->name, pi->sw_event_id,cfg.policy);
 	res =  pwr_mgr_event_set_pi_policy(pi->sw_event_id,pi->id,&cfg);
 
@@ -121,7 +121,7 @@ static int pi_def_init(struct pi *pi)
 	int inx;
 	struct clk* clk;
 
-	pr_info("%s:%s\n",__func__,pi->name);
+	pwr_dbg("%s:%s\n",__func__,pi->name);
 	if(pi->init)
 		return 0;
 	spin_lock(&pi_mgr_lock);
@@ -168,12 +168,12 @@ static int pi_def_init(struct pi *pi)
 	{
 		if(pi->flags & PI_DISABLE_ON_INIT)
 		{
-			pr_info("%s: calling pi_set_policy-- policy = %d\n",__func__,pi->pi_state[pi->state_allowed].state_policy);
+			pwr_dbg("%s: calling pi_set_policy-- policy = %d\n",__func__,pi->pi_state[pi->state_allowed].state_policy);
 			pi_set_policy(pi,pi->pi_state[pi->state_allowed].state_policy);
 		}
 		else
 		{
-			pr_info("%s: calling pi_set_policy-- policy = %d\n",__func__,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy);
+			pwr_dbg("%s: calling pi_set_policy-- policy = %d\n",__func__,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy);
 			pi_set_policy(pi,pi->pi_state[PI_MGR_ACTIVE_STATE_INX].state_policy);
 		}
 		pwr_mgr_pi_set_wakeup_override(pi->id,true/*clear*/);
@@ -186,7 +186,7 @@ static int pi_def_enable(struct pi *pi, int enable)
 {
 	u32 policy;
 
-	pr_info("%s: enable:%d usageCount:%d\n",__func__,enable,pi->usg_cnt);
+	pwr_dbg("%s: enable:%d usageCount:%d\n",__func__,enable,pi->usg_cnt);
 	spin_lock(&pi_mgr_lock);
 	if(enable)
 	{
@@ -200,7 +200,7 @@ static int pi_def_enable(struct pi *pi, int enable)
 			goto done;
 		policy = pi->pi_state[pi->state_allowed].state_policy;
 	}
-	pr_info("%s: calling pi_set_policy-- policy = %d pi->state_allowed = %d\n",__func__,policy,pi->state_allowed);
+	pwr_dbg("%s: calling pi_set_policy-- policy = %d pi->state_allowed = %d\n",__func__,policy,pi->state_allowed);
 	pi_set_policy(pi,policy);
 done:
 	spin_unlock(&pi_mgr_lock);
@@ -347,22 +347,22 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 		}
 		/*TODO - Notify pm_qos for ARM core CCU*/
 	}
-	pr_info("%s:%s state allowed = %d\n",__func__,pi->name,pi->state_allowed);
+	pwr_dbg("%s:%s state allowed = %d\n",__func__,pi->name,pi->state_allowed);
 
 	return new_val;
 }
 
 int pi_mgr_register(struct pi* pi)
 {
-	pr_info("%s:name:%s id:%d\n",__func__,pi->name,pi->id);
+	pwr_dbg("%s:name:%s id:%d\n",__func__,pi->name,pi->id);
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EPERM;
 	}
 	if(pi->id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi->id])
 	{
-		pr_info("%s:pi already registered or invalid id \n",__func__);
+		pwr_dbg("%s:pi already registered or invalid id \n",__func__);
 		return -EPERM;
 	}
 	spin_lock(&pi_mgr_lock);
@@ -380,25 +380,25 @@ struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id, u32
 	struct pi_mgr_qos_node* node;
 	if(unlikely(!pi_mgr.init))
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return NULL;
 	}
 	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
 	{
-		pr_info("%s:ERROR - invalid pid\n",__func__);
+		pwr_dbg("%s:ERROR - invalid pid\n",__func__);
 		return NULL;
 	}
 
 	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
 	{
-		pr_info("%s:ERROR - QOS not supported for this PI\n",__func__);
+		pwr_dbg("%s:ERROR - QOS not supported for this PI\n",__func__);
 		return NULL;
 	}
 
 	node = kzalloc(sizeof(struct pi_mgr_qos_node), GFP_KERNEL);
 	if(!node)
 	{
-		pr_info("%s:ERROR - kzalloc failed\n",__func__);
+		pwr_dbg("%s:ERROR - kzalloc failed\n",__func__);
 		return NULL;
 	}
 	if(lat_value == PI_MGR_QOS_DEFAULT_VALUE)
@@ -416,7 +416,7 @@ int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32 lat_value)
 {
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	if(lat_value == PI_MGR_QOS_DEFAULT_VALUE)
@@ -436,7 +436,7 @@ int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node)
 {
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	pi_mgr_qos_update(node,node->pi_id,NODE_DELETE);
@@ -449,17 +449,17 @@ int pi_mgr_qos_add_notifier(u32 pi_id, struct notifier_block *notifier)
 {
 	if(unlikely(!pi_mgr.init))
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
 	{
-		pr_info("%s:ERROR - invalid pid\n",__func__);
+		pwr_dbg("%s:ERROR - invalid pid\n",__func__);
 		return -EINVAL;
 	}
 	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
 	{
-		pr_info("%s:ERROR - QOS not supported for this PI\n",__func__);
+		pwr_dbg("%s:ERROR - QOS not supported for this PI\n",__func__);
 		return -EINVAL;;
 	}
 
@@ -473,17 +473,17 @@ int pi_mgr_qos_remove_notifier(u32 pi_id, struct notifier_block *notifier)
 {
 	if(unlikely(!pi_mgr.init))
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	if(unlikely(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL))
 	{
-		pr_info("%s:ERROR - invalid pid\n",__func__);
+		pwr_dbg("%s:ERROR - invalid pid\n",__func__);
 		return -EINVAL;
 	}
 	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_QOS))
 	{
-		pr_info("%s:ERROR - QOS not supported for this PI\n",__func__);
+		pwr_dbg("%s:ERROR - QOS not supported for this PI\n",__func__);
 		return -EINVAL;;
 	}
 
@@ -500,30 +500,30 @@ struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id, u32
 	struct pi* pi;
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return NULL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || (pi = pi_mgr.pi_list[pi_id]) == NULL)
 	{
-		pr_info("%s:ERROR - invalid pid\n",__func__);
+		pwr_dbg("%s:ERROR - invalid pid\n",__func__);
 		return NULL;
 	}
 	if(unlikely(pi->flags & PI_NO_DFS))
 	{
-		pr_info("%s:ERROR - DFS not supported for this PI\n",__func__);
+		pwr_dbg("%s:ERROR - DFS not supported for this PI\n",__func__);
 		return NULL;
 	}
 
 	if(opp >= PI_OPP_MAX || pi->opp[opp] == PI_OPP_UNSUPPORTED)
 	{
-		pr_info("%s:ERROR - %d:unsupported opp \n",__func__,opp);
+		pwr_dbg("%s:ERROR - %d:unsupported opp \n",__func__,opp);
 		return NULL;
 	}
 
 	node = kzalloc(sizeof(struct pi_mgr_dfs_node), GFP_KERNEL);
 	if(!node)
 	{
-		pr_info("%s:ERROR - kzalloc failed\n",__func__);
+		pwr_dbg("%s:ERROR - kzalloc failed\n",__func__);
 		return NULL;
 	}
 
@@ -539,12 +539,12 @@ int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
 {
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	if(opp >= PI_OPP_MAX || pi_mgr.pi_list[node->pi_id]->opp[opp] == PI_OPP_UNSUPPORTED)
 	{
-		pr_info("%s:ERROR - %d:unsupported opp \n",__func__,opp);
+		pwr_dbg("%s:ERROR - %d:unsupported opp \n",__func__,opp);
 		return -EINVAL;
 	}
 
@@ -562,7 +562,7 @@ int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node)
 {
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	pi_mgr_dfs_update(node,node->pi_id,NODE_DELETE);
@@ -575,18 +575,18 @@ int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier)
 {
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
 	{
-		pr_info("%s:ERROR - invalid pid\n",__func__);
+		pwr_dbg("%s:ERROR - invalid pid\n",__func__);
 		return -EINVAL;
 	}
 
 	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))
 	{
-		pr_info("%s:ERROR - DFS not supported for this PI\n",__func__);
+		pwr_dbg("%s:ERROR - DFS not supported for this PI\n",__func__);
 		return -EINVAL;;
 	}
 
@@ -600,17 +600,17 @@ int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier)
 {
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
 	{
-		pr_info("%s:ERROR - invalid pid\n",__func__);
+		pwr_dbg("%s:ERROR - invalid pid\n",__func__);
 		return -EINVAL;
 	}
 	if(unlikely(pi_mgr.pi_list[pi_id]->flags & PI_NO_DFS))
 	{
-		pr_info("%s:ERROR - DFS not supported for this PI\n",__func__);
+		pwr_dbg("%s:ERROR - DFS not supported for this PI\n",__func__);
 		return -EINVAL;;
 	}
 
@@ -625,15 +625,15 @@ EXPORT_SYMBOL_GPL(pi_mgr_dfs_remove_notifier);
 
 struct pi* pi_mgr_get(int pi_id)
 {
-	pr_info("%s: id:%d\n",__func__,pi_id);
+	pwr_dbg("%s: id:%d\n",__func__,pi_id);
 	if(!pi_mgr.init)
 	{
-		pr_info("%s:ERROR - pi mgr not initialized\n",__func__);
+		pwr_dbg("%s:ERROR - pi mgr not initialized\n",__func__);
 		return NULL;
 	}
 	if(pi_id >= PI_MGR_PI_ID_MAX || pi_mgr.pi_list[pi_id] == NULL)
 	{
-		pr_info("%s:invalid pi_id id \n",__func__);
+		pwr_dbg("%s:invalid pi_id id \n",__func__);
 		return NULL;
 	}
 	return pi_mgr.pi_list[pi_id];

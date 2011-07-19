@@ -44,7 +44,7 @@
 				((((u32)(cmd1_data))  << I2C_CMD1_DATA_SHIFT)& I2C_CMD1_DATA_MASK) )
 
 
-static int pwr_debug = 1;
+int pwr_debug = 0;
 /* global spinlock for pwr mgr API */
 static DEFINE_SPINLOCK(pwr_mgr_lock);
 
