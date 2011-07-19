@@ -56,7 +56,7 @@ Defines a read-only address of the fuse ROM of the AK8975.*/
 #define ECS_IOCTL_READ                  _IOWR(AKMIO, 0x03, char[5])
 #define ECS_IOCTL_SET_MODE              _IOW(AKMIO, 0x04, short)
 #define ECS_IOCTL_GETDATA               _IOR(AKMIO, 0x08, char[RBUFF_SIZE])
-#define ECS_IOCTL_SET_YPR               _IOW(AKMIO, 0x0C, short[3])
+#define ECS_IOCTL_SET_YPR               _IOW(AKMIO, 0x0C, int[3])
 #define ECS_IOCTL_GET_OPEN_STATUS       _IOR(AKMIO, 0x0D, int)
 #define ECS_IOCTL_GET_CLOSE_STATUS      _IOR(AKMIO, 0x0E, int)
 #define ECS_IOCTL_GET_DELAY             _IOR(AKMIO, 0x30, short)

@@ -161,26 +161,30 @@ static int akm8975_ecs_get_data(struct akm8975_data *akm, u8 length, char *buffe
 
 static int akm8975_ecs_set_mode(struct akm8975_data *akm, char mode)
 {
+	/* guarantee some delay between each mode switch
+	 */
+	msleep(1);
  	return akm8975_i2c_txdata(akm, AK8975_REG_CNTL, mode);
 }
 
 
-static void akm8975_ecs_report_value(struct akm8975_data *akm, short *rbuf)
+static void akm8975_ecs_report_value(struct akm8975_data *akm, int *rbuf)
 {
 	struct akm8975_data *data = i2c_get_clientdata(akm->this_client);
 
 	FUNCDBG("called");
 
 #if AK8975DRV_DATA_DBG
-	pr_info("Magnetic:	 x = %d LSB, y = %d LSB, z = %d LSB\n\n",
-				 rbuf[0], rbuf[2], rbuf[4]);
+	pr_info("Magnetic:	 x = %d , y = %d , z = %d \n\n",
+				 rbuf[0], rbuf[1], rbuf[2]);
 #endif
+
 	mutex_lock(&akm->flags_lock);
 
 	if (mv_flag) {
 		input_report_abs(data->input_dev, ABS_HAT0X, rbuf[0]);
-		input_report_abs(data->input_dev, ABS_HAT0Y, rbuf[2]);
-		input_report_abs(data->input_dev, ABS_BRAKE, rbuf[4]);
+		input_report_abs(data->input_dev, ABS_HAT0Y, rbuf[1]);
+		input_report_abs(data->input_dev, ABS_BRAKE, rbuf[2]);
 	}
 	mutex_unlock(&akm->flags_lock);
 
@@ -309,11 +313,10 @@ static int akmd_ioctl(struct inode *inode, struct file *file, unsigned int cmd,
 	char databuf[RBUFF_SIZE];
 	int ret = -1;
 	int status;
-	short value[12];
+	int value[3];
 	short delay;
 	short mode;
 	struct akm8975_data *akm = file->private_data;
-	int timeout_ms = AK8975_MAX_CONVERSION_TIMEOUT;
 	
 	FUNCDBG("called");
 
