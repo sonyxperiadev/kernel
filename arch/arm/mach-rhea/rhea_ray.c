@@ -99,6 +99,7 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
+#ifdef CONFIG_MFD_BCM_PMU590XX
 static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx, int flag)
 {
 	int ret;
@@ -119,7 +120,6 @@ static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx, int flag)
 }
 
 #ifdef CONFIG_BATTERY_BCM59055
-
 static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
         .batt_min_volt = 3200,
         .batt_max_volt = 4200,
@@ -179,35 +179,7 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 	},
 };
 
-static const char *pmu_clients[] = {
-#ifdef CONFIG_INPUT_BCM59055_ONKEY
-	"bcm590xx-onkey",
-#endif
-#ifdef CONFIG_BCM59055_FUELGAUGE
-	"bcm590xx-fg",
-#endif
-#ifdef CONFIG_BCM59055_SARADC
-	"bcm590xx-saradc",
-#endif
-#ifdef CONFIG_REGULATOR_BCM_PMU59055
-	"bcm590xx-regulator",
-#endif
-#ifdef CONFIG_BCM59055_AUDIO
-	"bcm590xx-audio",
-#endif
-#ifdef CONFIG_RTC_DRV_BCM59055
-	"bcm59055-rtc",
-#endif
-#ifdef CONFIG_BATTERY_BCM59055
-	"bcm590xx-power",
-#endif
-#ifdef CONFIG_BCM59055_ADC_CHIPSET_API
-	"bcm59055-adc_chipset_api",
-#endif
-#ifdef CONFIG_USB_BCM_OTG
-	"bcm_otg",
-#endif
-};
+
 
 /* Register userspace and virtual consumer for SIMLDO */
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
@@ -240,6 +212,37 @@ static struct platform_device bcm59055_vc_device_sim = {
 };
 #endif
 #endif
+
+static const char *pmu_clients[] = {
+#ifdef CONFIG_INPUT_BCM59055_ONKEY
+	"bcm590xx-onkey",
+#endif
+#ifdef CONFIG_BCM59055_FUELGAUGE
+	"bcm590xx-fg",
+#endif
+#ifdef CONFIG_BCM59055_SARADC
+	"bcm590xx-saradc",
+#endif
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
+	"bcm590xx-regulator",
+#endif
+#ifdef CONFIG_BCM59055_AUDIO
+	"bcm590xx-audio",
+#endif
+#ifdef CONFIG_RTC_DRV_BCM59055
+	"bcm59055-rtc",
+#endif
+#ifdef CONFIG_BATTERY_BCM59055
+	"bcm590xx-power",
+#endif
+#ifdef CONFIG_BCM59055_ADC_CHIPSET_API
+	"bcm59055-adc_chipset_api",
+#endif
+#ifdef CONFIG_USB_BCM_OTG
+	"bcm_otg",
+#endif
+};
+
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	/*
 	 * PMU in Fast mode. Once the Rhea clock changes are in place,
@@ -267,6 +270,7 @@ static struct i2c_board_info __initdata pmu_info[] =
 		.platform_data  = &bcm590xx_plat_data,
 	},
 };
+#endif
 
 #ifdef CONFIG_KEYBOARD_BCM
 /*!
@@ -696,7 +700,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 /* Add all userspace regulator consumer devices here */
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 struct platform_device *rhea_ray_userspace_consumer_devices[] __initdata = {
-#ifdef CONFIG_REGULATOR_BCM_PMU59055
+#if defined(CONFIG_REGULATOR_BCM_PMU59055) && defined(CONFIG_MFD_BCM_PMU590XX)
 	&bcm59055_uc_device_sim,
 #endif
 #ifdef CONFIG_REGULATOR_TPS728XX
@@ -708,7 +712,7 @@ struct platform_device *rhea_ray_userspace_consumer_devices[] __initdata = {
 /* Add all virtual regulator consumer devices here */
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
-#ifdef CONFIG_REGULATOR_BCM_PMU59055
+#if defined(CONFIG_REGULATOR_BCM_PMU59055) && defined(CONFIG_MFD_BCM_PMU590XX)
 	&bcm59055_vc_device_sim,
 #endif
 #ifdef CONFIG_REGULATOR_TPS728XX
@@ -722,9 +726,11 @@ struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
 static void __init rhea_ray_add_i2c_devices (void)
 {
 	/* 59055 on BSC - PMU */
+#ifdef CONFIG_MFD_BCM_PMU590XX
 	i2c_register_board_info(2,
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
+#endif
 	i2c_register_board_info(1,
 			pca953x_info,
 			ARRAY_SIZE(pca953x_info));
