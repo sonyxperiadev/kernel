@@ -42,28 +42,28 @@
 #include <linux/broadcom/halaudio.h>
 #include <linux/broadcom/halaudio_lib.h>
 #include <linux/broadcom/amxr.h>
-#include <linux/broadcom/gpio.h>                /* GPIO register accesses */
+#include <linux/gpio.h>
 #include <linux/clk.h>
 #include <linux/interrupt.h>
 
 #include <mach/sdma.h>
 #include <mach/halaudio_pcm_platform.h>
+#include <mach/rdb/brcm_rdb_sspil.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
 
-#include <csp/chal_ccu_sspi_inline.h>
-#include <csp/chal_sspi.h>
-#include <csp/gpiomux.h>
+#include <chal/chal_sspi.h>
 
 #include "dma_priv.h"
 
 /* ---- Public Variables ------------------------------------- */
 /* ---- Private Constants and Types -------------------------- */
 
-#define PCM_SSP0_HERA_PHYS_BASE_ADDR_START              ( MM_ADDR_IO_SSP0 )
-#define PCM_SSP1_HERA_PHYS_BASE_ADDR_START              ( MM_ADDR_IO_SSP1 )
-#define PCM_SSP2_HERA_PHYS_BASE_ADDR_START              ( MM_ADDR_IO_SSP2 )
-#define PCM_SSP3_HERA_PHYS_BASE_ADDR_START              ( MM_ADDR_IO_SSP3 )
+#define PCM_SSP0_PHYS_BASE_ADDR_START              ( SSP0_BASE_ADDR )
+#define PCM_SSP1_PHYS_BASE_ADDR_START              ( SSP4_BASE_ADDR )
+#define PCM_SSP2_PHYS_BASE_ADDR_START              ( SSP2_BASE_ADDR )
+#define PCM_SSP3_PHYS_BASE_ADDR_START              ( SSP3_BASE_ADDR )
 
-#define PCM_SSP_HERA_REGISTER_LENGTH                     0x800
+#define PCM_SSP_REGISTER_LENGTH                     0x800
 
 /* Two hardware PCM channels, known also as "PCM interfaces,"
  * are supported. These channels are mapped into HAL Audio channels.
@@ -235,7 +235,7 @@ static short halAdcFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 static HALAUDIO_PCM_PLATFORM_INFO gPcmPlatformInfo;
 
 /* CHAL layer Clock Handle */
-static CHAL_HANDLE gChalSspiClkHandle;
+static struct clk *gSspiClk;
 
 static struct pcm_sspi_hw_core_t gPcmHwCore;
 
@@ -520,7 +520,7 @@ static int pcmCsxSet(
    }
    local_irq_restore( flags );
 
-   return 0;
+   return err;
 }
 
 /***************************************************************************/
@@ -555,36 +555,7 @@ int pcmInit(
    if( err )
    {
       printk( KERN_ERR "%s: PCM: Failed to initialize PCM err=%i\n", __FUNCTION__, err );
-      goto exit_disable_clocks;
-   }
-
-   if( info->core_id_select == 0 )
-   {
-      gChalSspiClkHandle = chal_ccu_sspi_clk_init( MM_IO_BASE_SLV_CLK );
-      chal_ccu_set_sspi0_clock( gChalSspiClkHandle, PCM_CHAL_MAX_BIT_CLOCK_FREQ );
-   }
-   else if( info->core_id_select == 1 )
-   {
-      /* NOTE: Core ID 1 is equal to ID 4 on clock */
-      gChalSspiClkHandle = chal_ccu_sspi_clk_init( MM_IO_BASE_HUB_CLK );
-      chal_ccu_set_sspi4_clock( gChalSspiClkHandle, PCM_CHAL_MAX_BIT_CLOCK_FREQ );
-   }
-   else if( info->core_id_select == 2 )
-   {
-      gChalSspiClkHandle = chal_ccu_sspi_clk_init( MM_IO_BASE_SLV_CLK );
-      chal_ccu_set_sspi2_clock( gChalSspiClkHandle, PCM_CHAL_MAX_BIT_CLOCK_FREQ );
-   }
-   else if( info->core_id_select == 3 )
-   {
-      gChalSspiClkHandle = chal_ccu_sspi_clk_init( MM_IO_BASE_HUB_CLK );
-      chal_ccu_set_sspi3_clock( gChalSspiClkHandle, PCM_CHAL_MAX_BIT_CLOCK_FREQ );
-   }
-   else
-   {
-      printk( KERN_ERR "%s: [ch=%u] failed to set DMA device configuration for core %d\n",
-            __FUNCTION__, ch->ch, info->core_id_select );
-      err = -EINVAL;
-      goto exit_disable_clocks;
+      return err;
    }
 
    err = pcmDmaInit();
@@ -621,10 +592,6 @@ int pcmInit(
 cleanup_alloc_buffers:  /* Full cleanup */
    pcmExit();
    return err;
-
-exit_disable_clocks:
-
-   return err;
 }
 
 /***************************************************************************/
@@ -638,9 +605,6 @@ exit_disable_clocks:
 static int pcmExit( void )
 {
    int                         rc, error = 0;
-   HALAUDIO_PCM_PLATFORM_INFO *info;
-
-   info = &gPcmPlatformInfo;
 
    pcmProcTerm();
 
@@ -1229,14 +1193,14 @@ static int pcmIoRemap( void )
    struct resource *pcm_ioarea;
    int rc;
 
-   pcm_ioarea = request_mem_region( gPcmPhysBaseAddr, PCM_SSP_HERA_REGISTER_LENGTH, "SSP PCM" );
+   pcm_ioarea = request_mem_region( gPcmPhysBaseAddr, PCM_SSP_REGISTER_LENGTH, "SSP PCM" );
 
    if( !pcm_ioarea )
    {
       return -EBUSY;
    }
 
-   pcm_virt_addr = ioremap( gPcmPhysBaseAddr, PCM_SSP_HERA_REGISTER_LENGTH );
+   pcm_virt_addr = ioremap( gPcmPhysBaseAddr, PCM_SSP_REGISTER_LENGTH );
 
    if( !pcm_virt_addr )
    {
@@ -1461,7 +1425,14 @@ static void extract_data(
 
 static int pcm_sspi_hw_init( uint32_t base, struct pcm_sspi_hw_core_t *pCore )
 {
-    pCore->handle = chal_sspi_init( base );
+    int type_full = 0;
+
+    if( gPcmPlatformInfo.core_id_select == SSPI_CORE_ID_2 )
+    {
+       type_full = 1;
+    }
+
+    pCore->handle = chal_sspi_init( base, type_full );
     return 0;
 }
 
@@ -1917,13 +1888,6 @@ static int proc_doEg2IgLoopback( ctl_table *table, int write,
    /* Process integer operation */
    rc = proc_dointvec( table, write, buffer, lenp, ppos );
 
-   if ( write )
-   {
-      struct pcm_ch_cfg *ch;
-
-      ch = table->extra1;
-   }
-
    return rc;
 }
 
@@ -2340,27 +2304,7 @@ static void reset_bt( HALAUDIO_PCM_BT_GPIO *gpio, int reset )
 */
 static int pcm_platform_init( HALAUDIO_PCM_PLATFORM_INFO *info )
 {
-   gpiomux_rc_e   gpiorc;
-   int            err;
-
-   gpiorc = gpiomux_requestGroup(gpiomux_group_ssp, info->core_id_select, "BT_PCM" );
-   if( gpiorc != gpiomux_rc_SUCCESS )
-   {
-      printk( KERN_ERR "%s: failed to request SSPI %d gpio group rc=%u\n", __FUNCTION__, info->core_id_select, gpiorc );
-      err = -EBUSY;
-      goto cleanup_and_exit;
-   }
-
-   if( info->bt_req_uart_gpio_group >= 0 )
-   {
-      gpiomux_requestGroup(gpiomux_group_uart, info->bt_req_uart_gpio_group, "BT_UART" );
-      if( gpiorc != gpiomux_rc_SUCCESS )
-      {
-         printk( KERN_ERR "%s: failed to request UART %d gpio group rc=%u\n", __FUNCTION__, info->core_id_select, gpiorc );
-         err = -EBUSY;
-         goto cleanup_and_exit;
-      }
-   }
+   int            err = 0;
 
    /* Must have at minimum BT reset pin or will not function */
    if ( info->bt_gpio.rst_b >= 0 )
@@ -2379,9 +2323,9 @@ static int pcm_platform_init( HALAUDIO_PCM_PLATFORM_INFO *info )
       if( info->bt_gpio.vreg_ctl >= 0 )
       {
          err = gpio_request( info->bt_gpio.vreg_ctl, "BT_VREG_CTL" );
-         if ( gpiorc != gpiomux_rc_SUCCESS )
+         if ( err )
          {
-            printk( KERN_ERR "%s: failed to request BT_VREG_CTL gpio pin rc=%u\n", __FUNCTION__, gpiorc );
+            printk( KERN_ERR "%s: failed to request BT_VREG_CTL gpio pin rc=%u\n", __FUNCTION__, err );
             err = -EBUSY;
             goto cleanup_and_exit;
          }
@@ -2392,9 +2336,9 @@ static int pcm_platform_init( HALAUDIO_PCM_PLATFORM_INFO *info )
       if( info->bt_gpio.wake >= 0 )
       {
          err = gpio_request( info->bt_gpio.wake, "BT_WAKE" );
-         if ( gpiorc != gpiomux_rc_SUCCESS )
+         if ( err )
          {
-            printk( KERN_ERR "%s: failed to request BT_WAKE gpio pin rc=%u\n", __FUNCTION__, gpiorc );
+            printk( KERN_ERR "%s: failed to request BT_WAKE gpio pin rc=%u\n", __FUNCTION__, err );
             err = -EBUSY;
             goto cleanup_and_exit;
          }
@@ -2413,6 +2357,7 @@ static int pcm_platform_init( HALAUDIO_PCM_PLATFORM_INFO *info )
 cleanup_and_exit:
    pcm_platform_exit( info );
    return err;
+
 }
 
 /***************************************************************************/
@@ -2421,14 +2366,6 @@ cleanup_and_exit:
 */
 static void pcm_platform_exit( HALAUDIO_PCM_PLATFORM_INFO *info )
 {
-   gpiomux_rc_e   gpiorc;
-
-   gpiorc = gpiomux_freeGroup( gpiomux_group_ssp, info->core_id_select );
-   if ( gpiorc != gpiomux_rc_SUCCESS )
-   {
-      printk( KERN_ERR "%s: failed to free SSP 0 GPIO MUX group rc=%i\n", __FUNCTION__, gpiorc );
-   }
-
    if ( info->bt_gpio.rst_b >= 0 )
    {
       reset_bt( &info->bt_gpio, 1 );
@@ -2475,7 +2412,7 @@ static int __init pcm_probe( struct platform_device *pdev )
 
    /* Validate core selected */
    /* TODO: Currently no framework to reserve a core for use */
-   if( info->core_id_select < 0 || info->core_id_select > 3 )
+   if( info->core_id_select < SSPI_CORE_ID_0 || info->core_id_select > SSPI_CORE_ID_3 )
    {
       printk( KERN_ERR "%s: invalid parameters - core_id_select=%i\n",
             __FUNCTION__, info->core_id_select );
@@ -2498,24 +2435,37 @@ static int __init pcm_probe( struct platform_device *pdev )
    }
 
    /* Set physical base address based on selected core ID */
-   if( info->core_id_select == 0 )
+   if( info->core_id_select == SSPI_CORE_ID_0 )
    {
       gPcmIrqId = BCM_INT_ID_SSP0;
-      gPcmPhysBaseAddr = PCM_SSP0_HERA_PHYS_BASE_ADDR_START;
+      gPcmPhysBaseAddr = PCM_SSP0_PHYS_BASE_ADDR_START;
+
+      gSspiClk = clk_get( &pdev->dev, "ssp0_audio_clk" );
    }
-   else if( info->core_id_select == 1 )
+   else if( info->core_id_select == SSPI_CORE_ID_1 )
    {
-      gPcmIrqId = BCM_INT_ID_SSP1;
-      gPcmPhysBaseAddr = PCM_SSP1_HERA_PHYS_BASE_ADDR_START;
+      gPcmIrqId = BCM_INT_ID_SSP4;
+      gPcmPhysBaseAddr = PCM_SSP1_PHYS_BASE_ADDR_START;
    }
-   else if( info->core_id_select == 3 )
+   else if( info->core_id_select == SSPI_CORE_ID_2 )
+   {
+      gPcmIrqId = BCM_INT_ID_SSP2;
+      gPcmPhysBaseAddr = PCM_SSP2_PHYS_BASE_ADDR_START;
+   }
+   else if( info->core_id_select == SSPI_CORE_ID_3 )
    {
       gPcmIrqId = BCM_INT_ID_SSP3;
-      gPcmPhysBaseAddr = PCM_SSP3_HERA_PHYS_BASE_ADDR_START;
+      gPcmPhysBaseAddr = PCM_SSP3_PHYS_BASE_ADDR_START;
    }
    else
    {
       printk( KERN_ERR "%s: failed to select appropriate SSPI core %d!\n", __FUNCTION__, info->core_id_select );
+      return -EINVAL;
+   }
+
+   if( clk_enable( gSspiClk ) )
+   {
+      printk( KERN_ERR "%s: failed to enable clock on core %d!\n", __FUNCTION__, info->core_id_select );
       return -EINVAL;
    }
 
@@ -2525,22 +2475,22 @@ static int __init pcm_probe( struct platform_device *pdev )
    for ( i = info->channel_select; i < (info->channel_select + info->channels); i++, ch++ )
    {
       /* Setup DMA device configurations */
-      if( info->core_id_select == 0 )
+      if( info->core_id_select == SSPI_CORE_ID_0 )
       {
          ch->dma_igr.device = DMA_DEVICE_SSP0A_RX0;
          ch->dma_egr.device = DMA_DEVICE_SSP0B_TX0;
       }
-      else if( info->core_id_select == 1 )
+      else if( info->core_id_select == SSPI_CORE_ID_1 )
       {
          ch->dma_igr.device = DMA_DEVICE_SSP1A_RX0;
          ch->dma_egr.device = DMA_DEVICE_SSP1B_TX0;
       }
-      else if( info->core_id_select == 2 )
+      else if( info->core_id_select == SSPI_CORE_ID_2 )
       {
          ch->dma_igr.device = DMA_DEVICE_SSP2A_RX0;
          ch->dma_egr.device = DMA_DEVICE_SSP2B_TX0;
       }
-      else if( info->core_id_select == 3 )
+      else if( info->core_id_select == SSPI_CORE_ID_3 )
       {
          ch->dma_igr.device = DMA_DEVICE_SSP3A_RX0;
          ch->dma_egr.device = DMA_DEVICE_SSP3B_TX0;

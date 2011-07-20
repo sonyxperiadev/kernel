@@ -67,6 +67,11 @@ config MAP_ISLAND_AUDIOH_CHAL
    help
       Support for CHAL libraries for Audio Hub on Island
 
+config MAP_ISLAND_PCM_CHAL
+   bool "MAP PCM CHAL"
+   help
+      Support for CHAL libraries for PCM on Island
+
 config IPC
 	bool "Inter-Processor Communication (IPC)"
 	help

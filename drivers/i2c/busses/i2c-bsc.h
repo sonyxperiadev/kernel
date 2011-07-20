@@ -86,6 +86,7 @@ static inline unsigned char bsc_get_timeout(uint32_t baseAddr);
 static inline void bsc_enable_intr(uint32_t baseAddr, uint32_t mask);
 static inline void bsc_deinit(uint32_t baseAddr);
 static inline void bsc_stop(uint32_t baseAddr);
+static inline void bsc_reset(uint32_t baseAddr);
 static inline void bsc_set_sda(uint32_t baseAddr, unsigned char state);
 static inline void bsc_set_scl(uint32_t baseAddr, unsigned char state);
 static inline void bsc_set_timeout(uint32_t baseAddr, unsigned char on);
@@ -201,6 +202,16 @@ static inline void bsc_stop(uint32_t baseAddr)
 {
    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT, I2C_MM_HS_CS_EN_CMD_RST_BSC);
    BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CLKEN_OFFSET), I2C_MM_HS_CLKEN_CLKEN_MASK, I2C_MM_HS_CLKEN_CLKEN_SHIFT, 0);
+}
+
+static inline void bsc_reset(uint32_t baseAddr)
+{
+	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT, I2C_MM_HS_CS_EN_CMD_RST_BSC);
+	bsc_set_sda(baseAddr, 1);
+	bsc_set_scl(baseAddr, 1);
+	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_CMD_MASK, I2C_MM_HS_CS_CMD_SHIFT, I2C_MM_HS_CS_CMD_CMD_NO_ACTION);
+	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_ACK_MASK, I2C_MM_HS_CS_ACK_SHIFT, I2C_MM_HS_CS_ACK_CMD_GEN_START);
+	BSC_WRITE_REG_FIELD((baseAddr+I2C_MM_HS_CS_OFFSET), I2C_MM_HS_CS_EN_MASK, I2C_MM_HS_CS_EN_SHIFT, I2C_MM_HS_CS_EN_CMD_ENABLE_BSC);
 }
 
 /**

@@ -151,7 +151,9 @@
  * 
  *  Parameters:
  *                 audioh_base,    mapped address of Hera audio register files
- *                 sdt_base,         mapped address of Hera sidetone register files
+ *                 sdt_base,       mapped address of Hera sdt register files
+ *                 aci_base,       mapped address of Hera aci register files
+ *                 auxmic_base,    mapped address of Hera auxmic register files
  * 
  *  Return:
  *              CHAL handle for Hera audio
@@ -159,64 +161,67 @@
  * ============================================================================
  */
 
-void chal_audio_init(CHAL_HANDLE handle, uint32_t audioh_base, uint32_t sdt_base)
+void chal_audio_init(CHAL_HANDLE handle, uint32_t audioh_base, uint32_t sdt_base, uint32_t aci_base, uint32_t auxmic_base)
 {
     ChalAudioCtrlBlk_t  *pCHALCb = (ChalAudioCtrlBlk_t*)handle;
 
     pCHALCb->audioh_base = audioh_base;
     pCHALCb->sdt_base = sdt_base;
+    pCHALCb->aci_base = aci_base;
+    pCHALCb->auxmic_base = auxmic_base;
 }
 
 void chal_audio_enable_aci_auxmic( CHAL_HANDLE handle, int enable )
 {
     uint32_t regVal;
-    (void)handle;
+    uint32_t aci_base = ((ChalAudioCtrlBlk_t*)handle)->aci_base;
+    uint32_t auxmic_base = ((ChalAudioCtrlBlk_t*)handle)->auxmic_base;
 
     if( enable )
     {
        /* Set ACI */
-       regVal = CHAL_REG_READ32((ACI_BASE_ADDR+ACI_ADC_CTRL_OFFSET));
+       regVal = CHAL_REG_READ32((aci_base+ACI_ADC_CTRL_OFFSET));
        regVal |= ACI_ADC_CTRL_AUDIORX_VREF_PWRUP_MASK;
        regVal |= ACI_ADC_CTRL_AUDIORX_BIAS_PWRUP_MASK;
-       CHAL_REG_WRITE32((ACI_BASE_ADDR+ACI_ADC_CTRL_OFFSET), regVal);
+       CHAL_REG_WRITE32((aci_base+ACI_ADC_CTRL_OFFSET), regVal);
 
        /* enable AUXMIC */
-       regVal = CHAL_REG_READ32((AUXMIC_BASE_ADDR+AUXMIC_AUXEN_OFFSET));
+       regVal = CHAL_REG_READ32((auxmic_base+AUXMIC_AUXEN_OFFSET));
        regVal |= AUXMIC_AUXEN_MICAUX_EN_MASK;
-       CHAL_REG_WRITE32((AUXMIC_BASE_ADDR+AUXMIC_AUXEN_OFFSET), regVal);
+       CHAL_REG_WRITE32((auxmic_base+AUXMIC_AUXEN_OFFSET), regVal);
 
        /* Set probe cycle to continuous */
-       regVal = CHAL_REG_READ32((AUXMIC_BASE_ADDR+AUXMIC_CMC_OFFSET));
+       regVal = CHAL_REG_READ32((auxmic_base+AUXMIC_CMC_OFFSET));
        regVal |= AUXMIC_CMC_CONT_MSR_CTRL_MASK;
-       CHAL_REG_WRITE32((AUXMIC_BASE_ADDR+AUXMIC_CMC_OFFSET), regVal);
+       CHAL_REG_WRITE32((auxmic_base+AUXMIC_CMC_OFFSET), regVal);
 
        /* disable AUXMIC force power down CHAL_REG_WRITE32(0x3500E028, */
-       regVal = CHAL_REG_READ32((AUXMIC_BASE_ADDR+AUXMIC_F_PWRDWN_OFFSET));
+       regVal = CHAL_REG_READ32((auxmic_base+AUXMIC_F_PWRDWN_OFFSET));
        regVal &= ~AUXMIC_F_PWRDWN_FORCE_PWR_DWN_MASK;
-       CHAL_REG_WRITE32((AUXMIC_BASE_ADDR+AUXMIC_F_PWRDWN_OFFSET), regVal);
+       CHAL_REG_WRITE32((auxmic_base+AUXMIC_F_PWRDWN_OFFSET), regVal);
     }
     else
     {
        /* Enable AUXMIC force power down */
-       regVal = CHAL_REG_READ32((AUXMIC_BASE_ADDR+AUXMIC_F_PWRDWN_OFFSET));
+       regVal = CHAL_REG_READ32((auxmic_base+AUXMIC_F_PWRDWN_OFFSET));
        regVal |= AUXMIC_F_PWRDWN_FORCE_PWR_DWN_MASK;
-       CHAL_REG_WRITE32((AUXMIC_BASE_ADDR+AUXMIC_F_PWRDWN_OFFSET), regVal);
+       CHAL_REG_WRITE32((auxmic_base+AUXMIC_F_PWRDWN_OFFSET), regVal);
 
        /* Set probe cycle to discontinuous */
-       regVal = CHAL_REG_READ32((AUXMIC_BASE_ADDR+AUXMIC_CMC_OFFSET));
+       regVal = CHAL_REG_READ32((auxmic_base+AUXMIC_CMC_OFFSET));
        regVal &= ~AUXMIC_CMC_CONT_MSR_CTRL_MASK;
-       CHAL_REG_WRITE32((AUXMIC_BASE_ADDR+AUXMIC_CMC_OFFSET), regVal);
+       CHAL_REG_WRITE32((auxmic_base+AUXMIC_CMC_OFFSET), regVal);
 
        /* Disable AUXMIC */
-       regVal = CHAL_REG_READ32((AUXMIC_BASE_ADDR+AUXMIC_AUXEN_OFFSET));
+       regVal = CHAL_REG_READ32((auxmic_base+AUXMIC_AUXEN_OFFSET));
        regVal &= ~AUXMIC_AUXEN_MICAUX_EN_MASK;
-       CHAL_REG_WRITE32((AUXMIC_BASE_ADDR+AUXMIC_AUXEN_OFFSET), regVal);
+       CHAL_REG_WRITE32((auxmic_base+AUXMIC_AUXEN_OFFSET), regVal);
 
        /* Analog MIC */
-       regVal = CHAL_REG_READ32((ACI_BASE_ADDR+ACI_ADC_CTRL_OFFSET));
+       regVal = CHAL_REG_READ32((aci_base+ACI_ADC_CTRL_OFFSET));
        regVal &= ~ACI_ADC_CTRL_AUDIORX_VREF_PWRUP_MASK;
        regVal &= ~ACI_ADC_CTRL_AUDIORX_BIAS_PWRUP_MASK;
-       CHAL_REG_WRITE32((ACI_BASE_ADDR+ACI_ADC_CTRL_OFFSET), regVal);
+       CHAL_REG_WRITE32((aci_base+ACI_ADC_CTRL_OFFSET), regVal);
     }
 }
 
@@ -240,7 +245,8 @@ void chal_audio_deinit(CHAL_HANDLE handle)
     ChalAudioCtrlBlk_t  *pCHALCb = (ChalAudioCtrlBlk_t*)handle;
 
     pCHALCb->audioh_base  = 0;
-    pCHALCb->sdt_base  = 0;
+    pCHALCb->aci_base  = 0;
+    pCHALCb->auxmic_base  = 0;
 
     return;
 }

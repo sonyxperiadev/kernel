@@ -1516,6 +1516,7 @@ static int audiohIoRemap( void )
    void __iomem *audioh_virt_addr = 0;
    void __iomem *sdt_virt_addr = 0;
    void __iomem *aci_virt_addr = 0;
+   void __iomem *auxmic_virt_addr = 0;
 
    struct resource *audioh_ioarea;
    struct resource *sdt_ioarea;
@@ -1541,9 +1542,12 @@ static int audiohIoRemap( void )
       return -ENOMEM;
    }
 
+   /* ACI and AUXMIC share same address */
+   auxmic_virt_addr = aci_virt_addr;
+
    gChalAudioHandle = (CHAL_HANDLE)(&gAudioHubCtrlBlk);
 
-   chal_audio_init(gChalAudioHandle, (uint32_t)audioh_virt_addr, (uint32_t)sdt_virt_addr );
+   chal_audio_init(gChalAudioHandle, (uint32_t)audioh_virt_addr, (uint32_t)sdt_virt_addr, (uint32_t)aci_virt_addr, (uint32_t)auxmic_virt_addr );
 
    return 0;
 }
@@ -2627,7 +2631,7 @@ static int audiohChPowerTransducer( int powerup )
    if ( powerup && !atomic_read(&gPwrTransducerLevel) )
    {
       /* Power up analog microphones */
-      //chal_audio_enable_aci_auxmic(gChalAudioHandle, 1 );
+      chal_audio_enable_aci_auxmic(gChalAudioHandle, 1 );
       chal_audio_mic_pwrctrl(gChalAudioHandle, 1);
 
 #if AUDIOH_EARPIECE_ENABLE
@@ -2648,7 +2652,7 @@ static int audiohChPowerTransducer( int powerup )
    {
       /* Power down analog microphones */
       chal_audio_mic_pwrctrl(gChalAudioHandle, 0);
-      //chal_audio_enable_aci_auxmic(gChalAudioHandle, 0 );
+      chal_audio_enable_aci_auxmic(gChalAudioHandle, 0 );
 
 #if AUDIOH_EARPIECE_ENABLE
       audiohEarpathPowerRamp( 0 );
