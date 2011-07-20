@@ -327,10 +327,45 @@ static int __devinit headset_pltfm_probe(struct platform_device *pdev)
                gpio_to_irq( ch->hw_cfg.gpio_headset_det ), ch->hw_cfg.gpio_headset_det );
          goto err_free_cd_gpio;
       }
+#if defined(CONFIG_SWITCH)
+      /* Create a headset switch */
+      headset_switch.name="h2w";
+      
+      ret = switch_dev_register(&headset_switch);
+      if (ret < 0) {
+         printk(KERN_ERR "HEADSET: Device switch create failed\n");
+         ret = -EFAULT;
+         goto err_irq_free;
+      }
+
+      /* Add the debounce sysfs entry for h2w */
+      ret = device_create_file(headset_switch.dev, &dev_attr_debounce);
+      if (ret < 0)
+	      goto err_swdev_destroy;
+#endif
+
+      /* set the default debounce */
+      ch->debounce = HEADSET_DEBOUNCE_DEFAULT;
+      //TODO: add optional software debounce if hardware debounce fails.
+      ret = gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
+      if ( ret < 0 ) {
+         ret = -EPERM;
+         printk(KERN_ERR "HEADSET: Hardware GPIO debounce not supported and software debounce not implemented\n");
+         goto probe_no_gpio;
+      }
+      check_headset_det_gpio( ch );
    }
 
    return 0;
 
+probe_no_gpio:
+#if defined(CONFIG_SWITCH)
+   device_remove_file(headset_switch.dev, &dev_attr_debounce);
+err_swdev_destroy:
+   switch_dev_unregister(&headset_switch);
+err_irq_free:
+#endif
+   free_irq(gpio_to_irq( ch->hw_cfg.gpio_headset_det ), &pdev->dev); 
 err_free_cd_gpio:
    gpio_free( ch->hw_cfg.gpio_headset_det );
    return ret;
@@ -345,6 +380,11 @@ static int __devexit headset_pltfm_remove( struct platform_device *pdev )
    struct headset_info *ch;
    ch = gHeadset;
 
+#if defined(CONFIG_SWITCH)
+   device_remove_file(headset_switch.dev, &dev_attr_debounce);
+   switch_dev_unregister(&headset_switch);
+#endif
+   free_irq(gpio_to_irq( ch->hw_cfg.gpio_headset_det ), &pdev->dev); 
    if ( ch->hw_cfg.gpio_headset_det >= 0 )
    {
       gpio_free( ch->hw_cfg.gpio_headset_det );
@@ -358,7 +398,7 @@ static struct platform_driver gPlatform_driver =
 {
    .driver = 
    {
-      .name    = "bcmhana-headset",
+      .name    = "bcmisland-headset-det",
       .owner   = THIS_MODULE,
    },
    .probe      = headset_pltfm_probe,
@@ -393,7 +433,7 @@ static int __init headset_init( void )
    }
 
 #if CONFIG_SYSFS
-   headset_class = class_create( THIS_MODULE,"bcmhana-headset" );
+   headset_class = class_create( THIS_MODULE,"bcmisland-headset-det" );
    if ( IS_ERR( headset_class ))
    {
       printk( "%s: Class create failed\n", __FUNCTION__ );
@@ -409,22 +449,6 @@ static int __init headset_init( void )
       rc = -EFAULT;
       goto err_class_destroy;
    }
-#if defined(CONFIG_SWITCH)
-   /* Create a headset switch */
-   headset_switch.name="h2w";
-   
-   rc = switch_dev_register(&headset_switch);
-   if (rc < 0) {
-      printk(KERN_ERR "HEADSET: Device switch create failed\n");
-      rc = -EFAULT;
-      goto err_dev_destroy;
-   }
-
-   /* Add the debounce sysfs entry for h2w */
-   rc = device_create_file(headset_switch.dev, &dev_attr_debounce);
-   if (rc < 0)
-	   goto err_swdev_destroy;
-#endif
    
 #endif
    ch = gHeadset;
@@ -433,32 +457,16 @@ static int __init headset_init( void )
       /* Missing configuration */
       rc = -EPERM;
       printk(KERN_ERR "HEADSET: Detection GPIO not avilable\n");
-      goto err_no_gpio;
+      goto init_no_gpio;
 
-   }
-   /* set the default debounce */
-   ch->debounce = HEADSET_DEBOUNCE_DEFAULT;
-   //TODO: add optional software debounce if hardware debounce fails.
-   rc = gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
-   if ( rc < 0 ) {
-      rc = -EPERM;
-      printk(KERN_ERR "HEADSET: Hardware GPIO debounce not supported and software debounce not implemented\n");
-      goto err_no_gpio;
    }
    
-   check_headset_det_gpio( ch );
-
    return 0;
 
-err_no_gpio:   
+init_no_gpio:   
 #if CONFIG_SYSFS
-#if defined(CONFIG_SWITCH)
-   device_remove_file(headset_switch.dev, &dev_attr_debounce);
-err_swdev_destroy:
-   switch_dev_unregister(&headset_switch);
-err_dev_destroy:
    device_destroy(headset_class, MKDEV( BCM_HEADSET_MAJOR, 0 ));
-#endif
+
 err_class_destroy:
    class_destroy( headset_class );
 
@@ -481,11 +489,6 @@ err_unregister_platform:
 static void __exit headset_exit( void )
 {
 #if CONFIG_SYSFS
-#if defined(CONFIG_SWITCH)
-   device_remove_file(headset_switch.dev, &dev_attr_debounce);
-   switch_dev_unregister(&headset_switch);
-#endif
-
    device_destroy( headset_class, MKDEV( BCM_HEADSET_MAJOR, 0 ));
    class_destroy( headset_class );
 #endif

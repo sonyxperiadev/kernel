@@ -149,6 +149,11 @@
 #include <linux/broadcom/gps.h>
 #endif
 
+#if defined(CONFIG_BCM_HEADSET_SW)
+#include <linux/broadcom/headset_cfg.h>
+#include <headset_settings.h>
+#endif
+
 #include "island.h"
 #include "common.h"
 
@@ -365,6 +370,39 @@ static struct platform_device i2c_adap_devices[MAX_I2C_ADAPS] =
       .num_resources	= ARRAY_SIZE(i2c2_resource),
    },
 };
+
+#ifdef CONFIG_BCM_HEADSET_SW
+
+#define board_headsetdet_data concatenate(ISLAND_BOARD_ID, _headsetdet_data)
+static struct headset_hw_cfg board_headsetdet_data =
+#ifdef HW_CFG_HEADSET
+   HW_CFG_HEADSET;
+#else
+{
+   .gpio_headset_det = -1,
+   .gpio_mic_det = -1,
+};
+#endif
+
+#define board_headsetdet_device concatenate(ISLAND_BOARD_ID, _headsetdet_device)
+static struct platform_device board_headsetdet_device =
+{
+   .name = "bcmisland-headset-det",
+   .id = -1,
+   .dev =
+   {
+      .platform_data = &board_headsetdet_data,
+   },
+};
+
+#define board_add_headsetdet_device concatenate(ISLAND_BOARD_ID, _add_headsetdet_device)
+static void __init board_add_headsetdet_device(void)
+{
+   platform_device_register(&board_headsetdet_device);
+}
+
+#endif /* CONFIG_BCM_HEADSET_SW */
+
 
 static struct usbh_cfg usbh_param =
 #ifdef HW_USBH_PARAM
@@ -1271,6 +1309,10 @@ static void __init add_devices(void)
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
         board_add_led_device();
 #endif
+
+#if defined(CONFIG_BCM_HEADSET_SW)
+        board_add_headsetdet_device();
+#endif   
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
         board_add_keys_device();
