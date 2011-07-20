@@ -74,7 +74,7 @@ MODULE_DESCRIPTION("Broadcom CAPH sound interface");
 MODULE_LICENSE("GPL");
 
 //global
-int gAudioDebugLevel = 2; 
+int gAudioDebugLevel = 0; 
 static brcm_alsa_chip_t *sgpCaph_chip=NULL;
 
 // AUDIO LOGGING

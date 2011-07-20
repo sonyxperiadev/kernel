@@ -499,6 +499,13 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->value.integer.max = 48000;
 			uinfo->value.integer.step = 1; 
 			break;
+		case CTL_FUNCTION_AT_AUDIO:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 6;
+			uinfo->value.integer.min = 0x80000000;
+			uinfo->value.integer.max = 0x7FFFFFFF;//FIXME
+			uinfo->value.integer.step = 1; 
+			break;			
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
 				break;
@@ -539,6 +546,9 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
 		case CTL_FUNCTION_FM_FORMAT:
+			break;
+		case CTL_FUNCTION_AT_AUDIO:
+			AtAudCtlHandler_get(kcontrol->id.index, pChip, kcontrol->count, ucontrol->value.integer.value);
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -628,6 +638,9 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
 		case CTL_FUNCTION_FM_FORMAT:
+			break;
+		case CTL_FUNCTION_AT_AUDIO:
+			AtAudCtlHandler_put(kcontrol->id.index, pChip, kcontrol->count, ucontrol->value.integer.value);
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -907,9 +920,10 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 
    //MISC 
    {
-   
+   		int 	loop;
       //Loopback Test control
 	   struct snd_kcontrol_new ctlLoopTest = BRCM_MIXER_CTRL_MISC(0, 0, "LPT", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_LOOPBACK_TEST) );
+   	   struct snd_kcontrol_new ctlAtAud = BRCM_MIXER_CTRL_MISC(0, 0, "AT-AUD", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AT_AUDIO) );
 	   struct snd_kcontrol_new kctlCallEnable = BRCM_MIXER_CTRL_MISC(0, 0, "VC-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_ENABLE));
 	   struct snd_kcontrol_new kctlCallMute = BRCM_MIXER_CTRL_MISC(0, 0, "VC-MUT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_CALL_MIC_MUTE));
 	   
@@ -926,6 +940,15 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		   return err;
 	   }
 
+	   for(loop=1;loop<AT_AUD_CMD_TOTAL;loop++)
+	   {
+     	   ctlAtAud.index = loop;
+		   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlAtAud, pChip))) < 0)
+		   {
+			   BCM_AUDIO_DEBUG("error to add AT_AUD control err=%d index=%d\n", err,ctlAtAud.index); 		   
+			   return err;
+		   }
+	   }
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlCallEnable, pChip))) < 0)
 	   {
 		   BCM_AUDIO_DEBUG("error to add call enable control err=%d\n", err); 		   

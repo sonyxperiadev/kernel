@@ -77,6 +77,7 @@ obj-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)		+= snd-brcm-omx.o
 snd-brcm-omx-objs := caph_module.o 
 snd-brcm-omx-objs += bcm_auddrv_test.o
 snd-brcm-omx-objs += caph_ctl.o
+snd-brcm-omx-objs += at_aud_ctl.o
 snd-brcm-omx-objs += caph_pcm.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_caph.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_common.o
