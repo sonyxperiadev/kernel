@@ -221,8 +221,10 @@
 ******************************************************************************/
 typedef struct
 {
-    uint32_t   audioh_base;  /*< AUDIOH block base address */
-    uint32_t   sdt_base;        /*< SDT sub-block base address */
+    uint32_t   audioh_base;      /*< AUDIOH block base address */
+    uint32_t   sdt_base;         /*< SDT sub-block base address */
+    uint32_t   aci_base;         /*< ACI sub-block base address */
+    uint32_t   auxmic_base;      /*< AUXMIC sub-block base address */
 } ChalAudioCtrlBlk_t;
 
 /**
@@ -238,11 +240,13 @@ typedef struct
 *  @brief  Initialize CHAL AUDIO and sidetone
 *
 *  @param  audioh_base  (in) mapped address of the AUDIOH base
-*  @param  sdt_base       (in) mapped address of the Sidetone base
+*  @param  sdt_base     (in) mapped address of the SDT base
+*  @param  aci_base     (in) mapped address of the ACI base
+*  @param  auxmic_base  (in) mapped address of the AUXMIC base
 *
 *  @return CHAL handle for the Audio
 *****************************************************************************/
-extern void chal_audio_init(CHAL_HANDLE handle, uint32_t audioh_base, uint32_t sdt_base);
+extern void chal_audio_init(CHAL_HANDLE handle, uint32_t audioh_base, uint32_t sdt_base, uint32_t aci_base, uint32_t auxmic_base);
 
 /**
 *

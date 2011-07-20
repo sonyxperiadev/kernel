@@ -13,7 +13,7 @@ all:
 
 else
 
-obj-$(CONFIG_BCM_HALAUDIO_PCM_BCM_ISLAND) += \
+obj-$(CONFIG_BCM_HALAUDIO_PCM_ISLAND) += \
 	halaudio_pcm.o \
 
 endif

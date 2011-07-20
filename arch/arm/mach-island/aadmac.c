@@ -33,7 +33,6 @@
 #include <linux/sched.h>
 #include <linux/mm.h>
 #include <linux/pfn.h>
-#include <linux/clk.h>
 
 #ifdef CONFIG_BCM_KNLLOG_IRQ
 #include <linux/broadcom/knllog.h>
@@ -102,7 +101,6 @@ typedef struct
 static AADMA_Global_t            gAADMA;
 static struct proc_dir_entry    *gDmaDir;
 static AADMA_ChalHandle_t        gChalHandle;
-static struct clk                *gCaph_srcmixer_clk;
 
 static spinlock_t                gHwAADmaLock;  /* acquired when starting DMA channel */
 static spinlock_t                gAADmaDevLock; /* acquired when setting device handler */
@@ -582,30 +580,6 @@ static int aadma_reset_intc( AADMA_ChalHandle_t *chal_handle )
    return 0;
 }
 
-static int aadma_set_clock( AADMA_ChalHandle_t *chal_handle, int enable )
-{
-   int err = 0;
-
-   (void)chal_handle;
-
-   if( enable )
-   {
-      gCaph_srcmixer_clk = clk_get( NULL, "caph_srcmixer_clk" );
-      err = clk_enable( gCaph_srcmixer_clk );
-      if ( err )
-      {
-         printk( KERN_ERR "%s: failed to enable CAPH SRC Mixer clock %d!\n", __FUNCTION__, err );
-         return err;
-      }
-   }
-   else
-   {
-      clk_disable( gCaph_srcmixer_clk );
-      clk_put( gCaph_srcmixer_clk );
-   }
-   return 0;
-}
-
 static int aadma_ioremap_init( AADMA_ChalHandle_t *chal_handle )
 {
    void __iomem *cfifo_virt_addr = 0;
@@ -709,7 +683,6 @@ int aadma_init( void )
    }
 
    /* Enable CAPH clock */
-   aadma_set_clock( &gChalHandle, 1 );
    aadma_reset_intc( &gChalHandle );
 
    return rc;
@@ -798,7 +771,6 @@ void aadma_exit( void )
    remove_proc_entry( "devices", gDmaDir );
 
    free_irq( BCM_INT_ID_CAPH, &gChalHandle );
-   aadma_set_clock( &gChalHandle, 0 );
    aadma_ioremap_exit( &gChalHandle );
 }
 

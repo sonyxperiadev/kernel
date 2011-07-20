@@ -35,20 +35,43 @@
 #include <mach/rdb/brcm_rdb_root_rst_mgr_reg.h>
 #endif
 
+#ifdef CONFIG_BCM_IDLE_PROFILER
+#include <mach/profile_timer.h>
+#endif
+
 #ifdef CONFIG_BCM_KNLLOG_IRQ
 #include <linux/broadcom/knllog.h>
 #endif
 
+#ifdef CONFIG_BCM_IDLE_PROFILER
+DECLARE_PER_CPU(u32, idle_count);
+#endif
+
 static void arch_idle(void)
 {
+#ifdef CONFIG_BCM_IDLE_PROFILER
+	u32 idle_enter, idle_leave;
+#endif
+
 #ifdef CONFIG_BCM_KNLLOG_IRQ
 	if (gKnllogIrqSchedEnable & KNLLOG_THREAD) KNLLOGCALL("schedule", "0 -> 99999");
 #endif
+
+#ifdef CONFIG_BCM_IDLE_PROFILER
+	idle_enter = timer_get_tick_count();
+#endif
+
 	/*
 	 * This should do all the clock switching
 	 * and wait for interrupt tricks
 	 */
 	cpu_do_idle();
+
+#ifdef CONFIG_BCM_IDLE_PROFILER
+	idle_leave = timer_get_tick_count();
+	get_cpu_var(idle_count) += (idle_leave - idle_enter);
+	put_cpu_var(idle_count);
+#endif
 
 #ifdef CONFIG_BCM_KNLLOG_IRQ
 	if (gKnllogIrqSchedEnable & KNLLOG_THREAD) KNLLOGCALL("schedule", "99999 -> 0");

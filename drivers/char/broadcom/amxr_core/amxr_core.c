@@ -111,7 +111,7 @@ struct amxr_port_node
    void                      *privdata;      /* User supplied data for callbacks */
    int                        dst_cnxs;      /* Number of connections as destination */
    int                        src_cnxs;      /* Number of connections as source */
-   int                        src_cnx_count; /* Source connection counter used by amxrServiceUnsyncPort ISR for tracking */
+   int                        src_cnx_count; /* Source connection counter used by amxrCoreServiceUnsyncPort ISR for tracking */
    int16_t                   *srcp;          /* Cached source ptr used in ISR */
    int16_t                   *dstp;          /* Cached destination ptr used in ISR */
    uint32_t                   dst_first;     /* Flag to indicate the port is waiting for its first dst frame. For multi-chan ports, used as bit fields */
@@ -345,7 +345,7 @@ static inline int amxr_find_dstport(
 *     0     On success
 *     -ve   Failure code
 */
-int amxrGetPortInfo(
+int amxrCoreGetPortInfo(
    AMXR_HDL        hdl,           /*<< (i) Mixer client handle */
    AMXR_PORT_ID    port,          /*<< (i) Port id */
    AMXR_PORT_INFO *info           /*<< (o) Ptr to port info structure */
@@ -396,7 +396,7 @@ int amxrGetPortInfo(
 *     0     On success
 *     -ve   Failure code
 */
-int amxrGetInfo(
+int amxrCoreGetInfo(
    AMXR_HDL     hdl,              /*<< (i) Mixer client handle */
    AMXR_INFO   *info              /*<< (o) Ptr to info structure */
 )
@@ -417,7 +417,7 @@ int amxrGetInfo(
 *     -EINVAL     No such connection found
 *     -ve         Other errors
 */
-int amxrSetCnxLoss(
+int amxrCoreSetCnxLoss(
    AMXR_HDL           hdl,        /*<< (i) client handle */
    AMXR_PORT_ID       src_port,   /*<< (i) source port id */
    AMXR_PORT_ID       dst_port,   /*<< (i) destination port id */
@@ -474,7 +474,7 @@ backout:
 *     -EINVAL     No such connection found
 *     -ve         Other errors
 */
-int amxrGetCnxLoss(
+int amxrCoreGetCnxLoss(
    AMXR_HDL           hdl,        /*<< (i) client handle */
    AMXR_PORT_ID       src_port,   /*<< (i) source port id */
    AMXR_PORT_ID       dst_port,   /*<< (i) destination port id */
@@ -528,7 +528,7 @@ backout:
 *     0           On success or connection already exists
 *     -ve         On general failure
 */
-int amxrConnect(
+int amxrCoreConnect(
    AMXR_HDL           hdl,        /*<< (i) client handle */
    AMXR_PORT_ID       src_port,   /*<< (i) source port id */
    AMXR_PORT_ID       dst_port,   /*<< (i) destination port id */
@@ -539,7 +539,7 @@ int amxrConnect(
    AMXR_CONNECT_TYPE       conn_type;
    AMXR_RESAMP_TYPE        rtype;
    int                     src_chans, src_idx, dst_chans, dst_idx;
-   int                     err;
+   int                     err = 0;
 
    srcportp = getPort( src_port );
    dstportp = getPort( dst_port );
@@ -631,7 +631,7 @@ int amxrConnect(
 *     0           On success
 *     -ve         On general failure
 */
-int amxrDisconnect(
+int amxrCoreDisconnect(
    AMXR_HDL           hdl,        /*<< (i) Mixer client handle */
    AMXR_PORT_ID       src_port,   /*<< (i) source port id */
    AMXR_PORT_ID       dst_port    /*<< (i) destination port id */
@@ -700,7 +700,7 @@ int amxrDisconnect(
 *     0           On success
 *     -ve         On general failure
 */
-int amxrGetCnxListBySrc(
+int amxrCoreGetCnxListBySrc(
    AMXR_HDL             hdl,        /*<< (i) Mixer client handle */
    AMXR_PORT_ID         src_port,   /*<< (i) Source port */
    AMXR_CNXS           *cnxlistp,   /*<< (o) Ptr to store cnx list */
@@ -780,7 +780,7 @@ backout:
 *     0           On success
 *     -ve         On general failure
 */
-int amxrGetCnxListByDst(
+int amxrCoreGetCnxListByDst(
    AMXR_HDL             hdl,        /*<< (i) Mixer client handle */
    AMXR_PORT_ID         dst_port,   /*<< (i) Dst port */
    AMXR_CNXS           *cnxlistp,   /*<< (o) Ptr to store cnx list */
@@ -850,7 +850,7 @@ backout:
 *     0        On success
 *     -ve      Error code
 */
-int amxrCreatePort(
+int amxrCoreCreatePort(
    const char       *name,          /*<< (i) Name string */
    AMXR_PORT_CB     *cb,            /*<< (i) Callbacks */
    void             *privdata,      /*<< (i) Private data passed back to callbacks */
@@ -933,7 +933,7 @@ int amxrCreatePort(
 *     applications will have to constantly query what ports still exists 
 *     and keep track of valid port IDs. 
 */
-int amxrRemovePort(
+int amxrCoreRemovePort(
    AMXR_PORT_ID port              /*<< (i) Port to remove */
 )
 {
@@ -1029,7 +1029,7 @@ backout:
 *     0           On success
 *     -ve         On general failure
 */
-int amxrSetPortDstFreq(
+int amxrCoreSetPortDstFreq(
    AMXR_PORT_ID   portid,           /*<< (i) Destination port id */
    int            dst_hz,           /*<< (i) Destination sampling frequency in Hz */
    int            dst_bytes         /*<< (i) Destination period size in bytes */
@@ -1037,7 +1037,7 @@ int amxrSetPortDstFreq(
 {
    struct amxr_port_node  *portp;
    unsigned long           state;
-   int                     err;
+   int                     err = 0;
    int                     chg_dsthz;
    
    portp = getPort( portid );
@@ -1161,7 +1161,7 @@ fallthrough:
 *     0           On success
 *     -ve         On general failure
 */
-int amxrSetPortSrcFreq(
+int amxrCoreSetPortSrcFreq(
    AMXR_PORT_ID   portid,           /*<< (i) Source port id */
    int            src_hz,           /*<< (i) Source sampling frequency in Hz */
    int            src_bytes         /*<< (i) Source period size in bytes */
@@ -1169,7 +1169,7 @@ int amxrSetPortSrcFreq(
 {
    struct amxr_port_node  *portp;
    unsigned long           state;
-   int                     err;
+   int                     err = 0;
    int                     chg_srchz;
    
    portp = getPort( portid );
@@ -1279,7 +1279,7 @@ fallthrough:
 *  @remarks    Not all existing connections with this source port
 *              will be maintained after changing the number of channels.
 */
-int amxrSetPortDstChannels(
+int amxrCoreSetPortDstChannels(
    AMXR_PORT_ID   portid,           /*<< (i) Destination port id */
    int            dst_chans,        /*<< (i) Number of channels: 1 for mono, 2 for stereo, etc */
    int            dst_bytes         /*<< (i) Destination period size in bytes */
@@ -1287,7 +1287,7 @@ int amxrSetPortDstChannels(
 {
    struct amxr_port_node  *portp;
    unsigned long           state;
-   int                     err;
+   int                     err = 0;
    int                     changed;
 
    portp = getPort( portid );
@@ -1444,7 +1444,7 @@ int amxrSetPortDstChannels(
 *  @remarks    Not all existing connections with this source port
 *              will be maintained after changing the number of channels.
 */
-int amxrSetPortSrcChannels(
+int amxrCoreSetPortSrcChannels(
    AMXR_PORT_ID   portid,           /*<< (i) Source port id */
    int            src_chans,        /*<< (i) Number of src channels: 1 for mono, 2 for stereo, etc. */
    int            src_bytes         /*<< (i) Source period size in bytes */
@@ -1453,7 +1453,7 @@ int amxrSetPortSrcChannels(
    struct amxr_port_node  *portp;
    unsigned long           state;
    int                     changed;
-   int                     err;
+   int                     err = 0;
    
    portp = getPort( portid );
    if ( portp == NULL )
@@ -2189,7 +2189,7 @@ EXPORT_SYMBOL( amxrElapsedTime );
 *
 *     This routine runs in an ATOMIC context!
 */
-void amxrServiceUnsyncPort( 
+void amxrCoreServiceUnsyncPort( 
    AMXR_PORT_ID id                  /*<< (i) Port ID of port to service */
 )
 {
@@ -2680,7 +2680,7 @@ static int amxr_save_disabled_cnx_unsafe(
 )
 {
    struct amxr_cnxlist_node  *cnxlp;
-   int                        err;
+   int                        err = 0;
    struct amxr_cnxdstl_t     *dstlp;
    AMXR_CONNECT_TYPE          cnx_type;
    int                        src_chans, src_idx;
@@ -2761,7 +2761,7 @@ static int amxr_alloc_resampler(
 {
    unsigned long              state;
    AMXR_RESAMPLE_TABENTRY    *tablep;
-   int                        err;
+   int                        err = 0;
 
    /* Allocate static resampler memory for the first time */
    if ( cnxlp->resampbufp == NULL )
@@ -3008,7 +3008,7 @@ static int amxr_get_cnxloss(
 static int __init amxr_init( void )
 {
    AMXR_API_FUNCS apifuncs;
-   int            err;
+   int            err = 0;
 
    memset( &gCnxs, 0, sizeof(gCnxs) );
    memset( &gPorts, 0, sizeof(gPorts) );
@@ -3033,21 +3033,21 @@ static int __init amxr_init( void )
    }
 
    memset( &apifuncs, 0, sizeof(apifuncs) );
-   apifuncs.getPortInfo          = amxrGetPortInfo;
-   apifuncs.getInfo              = amxrGetInfo;
-   apifuncs.setCnxLoss           = amxrSetCnxLoss;
-   apifuncs.getCnxLoss           = amxrGetCnxLoss;
-   apifuncs.connect              = amxrConnect;
-   apifuncs.disconnect           = amxrDisconnect;
-   apifuncs.getCnxListBySrc      = amxrGetCnxListBySrc;
-   apifuncs.getCnxListByDst      = amxrGetCnxListByDst;
-   apifuncs.createPort           = amxrCreatePort;
-   apifuncs.removePort           = amxrRemovePort;
-   apifuncs.setPortDstFreq       = amxrSetPortDstFreq;
-   apifuncs.setPortSrcFreq       = amxrSetPortSrcFreq;
-   apifuncs.setPortDstChannels   = amxrSetPortDstChannels;
-   apifuncs.setPortSrcChannels   = amxrSetPortSrcChannels;
-   apifuncs.serviceUnsyncPort    = amxrServiceUnsyncPort;
+   apifuncs.getPortInfo          = amxrCoreGetPortInfo;
+   apifuncs.getInfo              = amxrCoreGetInfo;
+   apifuncs.setCnxLoss           = amxrCoreSetCnxLoss;
+   apifuncs.getCnxLoss           = amxrCoreGetCnxLoss;
+   apifuncs.connect              = amxrCoreConnect;
+   apifuncs.disconnect           = amxrCoreDisconnect;
+   apifuncs.getCnxListBySrc      = amxrCoreGetCnxListBySrc;
+   apifuncs.getCnxListByDst      = amxrCoreGetCnxListByDst;
+   apifuncs.createPort           = amxrCoreCreatePort;
+   apifuncs.removePort           = amxrCoreRemovePort;
+   apifuncs.setPortDstFreq       = amxrCoreSetPortDstFreq;
+   apifuncs.setPortSrcFreq       = amxrCoreSetPortSrcFreq;
+   apifuncs.setPortDstChannels   = amxrCoreSetPortDstChannels;
+   apifuncs.setPortSrcChannels   = amxrCoreSetPortSrcChannels;
+   apifuncs.serviceUnsyncPort    = amxrCoreServiceUnsyncPort;
    amxrSetApiFuncs( &apifuncs );
 
    return 0;
@@ -3064,14 +3064,14 @@ cleanup_and_exit:
 static void __exit amxr_exit( void )
 {
    struct amxr_port_node  *portp, *tmpportp;
-   int                     err;
+   int                     err = 0;
 
    amxrSetApiFuncs( NULL );
 
    /* Delete all ports */
    llist_foreach_item_safe( portp, tmpportp, &gPorts.list, lnode )
    {
-      err = amxrRemovePort( portp );
+      err = amxrCoreRemovePort( portp );
       if ( err )
       {
          AMXR_LOG( "failed to delete port %s rc=%i", 
@@ -3100,5 +3100,4 @@ module_init( amxr_init );
 module_exit( amxr_exit );
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "Audio Mixer Driver" );
-MODULE_LICENSE( "Proprietary" );
-
+MODULE_LICENSE( "GPL" );
