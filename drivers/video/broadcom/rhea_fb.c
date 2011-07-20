@@ -302,6 +302,12 @@ static int disable_display(struct rhea_fb *fb)
 	/* TODO:  HACK
 	 * Need to fill the blank.
 	 */
+	fb->display_ops->stop(fb->display_hdl);
+
+	fb->display_ops->close(fb->display_hdl);
+
+	fb->display_ops->exit();
+
 	rheafb_info("RHEA display is disabled successfully\n");
 	return ret;
 }
@@ -551,7 +557,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	ret = rhea_fb_pan_display(&fb->fb.var, &fb->fb);
 	if (ret) {
 		rheafb_error("Can not enable the LCD!\n");
-		goto err_enable_display_failed;
+		goto err_fb_register_failed;;
 	}
 
 	ret = register_framebuffer(&fb->fb);
