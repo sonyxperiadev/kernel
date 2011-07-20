@@ -111,7 +111,7 @@
 #define	SIM_PERI_CLK_NAME_STR "sim_clk"
 #define	SIM2_PERI_CLK_NAME_STR "sim2_clk"
 #define	HUB_TIMER_PERI_CLK_NAME_STR "hub_timer_clk"
-#define	PMU_BSC_PERI_CLK_NAME_STR "pmu_bsc"
+#define	PMU_BSC_PERI_CLK_NAME_STR "pmu_bsc_clk"
 #define	KPM_CCU_CLK_NAME_STR "kpm_ccu_clk"
 #define	USB_OTG_AHB_BUS_CLK_NAME_STR "usb_otg_clk"
 #define	SDIO2_AHB_BUS_CLK_NAME_STR "sdio2_ahb_clk"
