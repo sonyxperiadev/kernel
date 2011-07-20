@@ -100,21 +100,24 @@
 #define BCM_KEY_COL_7  7
 
 #ifdef CONFIG_MFD_BCM_PMU590XX
-static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx, int flag)
+static int __init bcm590xx_event_callback(int flag, int param)
 {
 	int ret;
 	printk("REG: pmu_init_platform_hw called \n") ;
 	switch (flag) {
-		case BCM590XX_INITIALIZATION:
-			ret = gpio_request(PMU_IRQ_PIN, "pmu_irq");
-			if (ret < 0) {
-				printk(KERN_ERR "%s unable to request GPIO pin %d\n", __FUNCTION__, PMU_IRQ_PIN);
-				return ret ;
-			}
-			gpio_direction_input(PMU_IRQ_PIN);
-			break;
-		default:
-			return -EPERM;
+	case BCM590XX_INITIALIZATION:
+		ret = gpio_request(PMU_IRQ_PIN, "pmu_irq");
+		if (ret < 0) {
+			printk(KERN_ERR "%s unable to request GPIO pin %d\n", __FUNCTION__, PMU_IRQ_PIN);
+			return ret ;
+		}
+		gpio_direction_input(PMU_IRQ_PIN);
+		break;
+	case BCM590XX_CHARGER_INSERT:
+		pr_info("%s: BCM590XX_CHARGER_INSERT\n", __func__);
+		break;
+	default:
+		return -EPERM;
 	}
 	return 0 ;
 }
@@ -250,7 +253,7 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	 */
 	/*.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_HS, },*/
 	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
-	.init = bcm590xx_init_platform_hw,
+	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
