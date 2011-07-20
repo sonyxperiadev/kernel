@@ -17,4 +17,5 @@ obj-$(CONFIG_BCM_AMXR_CORE)                 += amxr_core/
 obj-$(CONFIG_BCM_AAA)                  += aaa.o
 obj-$(CONFIG_BCM_BSC)                  += bsc.o
 obj-$(CONFIG_BCM_HAPTICS)              += haptics/
+obj-$(CONFIG_BCM_HEADSET_SW)           += headset.o
 

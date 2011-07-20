@@ -87,6 +87,13 @@ config GPIO_USER_MODE_SUPPORT
 	default n
 	help
 	  Say y to turn on support for GPIO in user mode
+
+config BCM_HEADSET_SW
+   bool "Headset Detection Support"
+   depends on BRCM_CHAR_DRIVERS
+   default y
+   ---help---
+   Say Y to enable headset detection.
 	  
 config BCM_AMXR
    bool "Audio Mixer Driver support"
