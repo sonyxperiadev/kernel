@@ -77,6 +77,8 @@
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/platform_mconfig.h>
 
+#include <video/kona_fb.h>
+
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
 
@@ -290,10 +292,10 @@ struct platform_device bcm_kp_device = {
 	GPIO07, GPIO12, GPIO13, for now keypad can only be set as a 2x2 matrix
 	by using pin GPIO04, GPIO05, GPIO14 and GPIO15 */
 static struct bcm_keymap newKeymap[] = {
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Search Key", KEY_SEARCH},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Back Key", KEY_BACK},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "Home-Key", KEY_HOME},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
@@ -328,16 +330,16 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "Back Key", KEY_BACK},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "Home-Key", KEY_HOME},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
@@ -677,6 +679,60 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
+static struct kona_fb_platform_data alex_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
+	.screen_width		= 360,
+	.screen_height		= 640,
+	.bytes_per_pixel	= 4,
+	.pixel_format		= XRGB8888,
+};
+
+static struct platform_device alex_dsi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 0,
+	.dev = {
+		.platform_data		= &alex_dsi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.pixel_format		= RGB565,
+};
+
+static struct platform_device nt35582_smi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 1,
+	.dev = {
+		.platform_data		= &nt35582_smi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,
+	.pixel_format		= RGB565,
+};
+
+static struct platform_device r61581_smi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 2,
+	.dev = {
+		.platform_data		= &r61581_smi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -698,6 +754,9 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_REGULATOR_TPS728XX
 	&tps728xx_device,
 #endif
+	&alex_dsi_display_device,
+	&nt35582_smi_display_device,
+	&r61581_smi_display_device, 
 };
 
 /* Add all userspace regulator consumer devices here */
