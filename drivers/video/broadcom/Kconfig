@@ -6,24 +6,3 @@ config FB_BRCM_RHEA
 	select FB_CFB_IMAGEBLIT
 	help
 	  This framebuffer device driver is for the Broadcom Rhea platform.
-
-config FB_BRCM_LCDC_NT35582_SMI_WVGA
-	bool "NT35582 SMI WVGA LCD controller support"
-	depends on FB_BRCM_RHEA
-	help
-	  Say Y here, if you want to have support for boards with an
-	  external NT35582 SMI WVGA LCD controller.
-
-config FB_BRCM_LCDC_ALEX_DSI_VGA
-	bool "Alexander DSI LCD controller support"
-	depends on FB_BRCM_RHEA
-	help
-	  Say Y here if you want to have support for the external
-	  Alexander DSI LCD controller.
-
-config FB_BRCM_LCDC_R61581_SMI_HVGA
-	bool "R61581 SMI HVGA LCD controller support"
-	depends on FB_BRCM_RHEA
-	help
-	  Say Y here, if you want to have support for boards with an
-	  external R61581 SMI HVGA LCD controller.

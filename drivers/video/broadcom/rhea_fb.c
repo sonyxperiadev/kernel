@@ -20,6 +20,7 @@
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
 #include <linux/vt_kern.h>
+#include <video/kona_fb.h>
 
 #include <mach/io.h>
 
@@ -36,9 +37,9 @@
 #include <plat/mobcom_types.h>
 #include "lcd/display_drv.h"
 
-extern DISPDRV_T* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable ( void );
-extern DISPDRV_T* DISP_DRV_BCM91008_ALEX_GetFuncTable( void );
-extern DISPDRV_T* DISP_DRV_R61581_HVGA_SMI_GetFuncTable ( void );
+//extern DISPDRV_T* DISP_DRV_NT35582_WVGA_SMI_GetFuncTable ( void );
+//extern DISPDRV_T* DISP_DRV_BCM91008_ALEX_GetFuncTable( void );
+//extern DISPDRV_T* DISP_DRV_R61581_HVGA_SMI_GetFuncTable ( void );
 
 struct rhea_fb {
 	dma_addr_t phys_fbbase;
@@ -55,6 +56,7 @@ struct rhea_fb {
 	atomic_t is_graphics_started;
 	int base_update_count;
 	int rotation;
+	int is_display_found;
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	struct fb_fps_info *fps_info;
 #endif	
@@ -217,6 +219,52 @@ static void rhea_fb_late_resume(android_early_suspend_t *h)
 static int enable_display(struct rhea_fb *fb)
 {
 	int ret = 0;
+	DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
+
+	ret = fb->display_ops->init();
+	if (ret != 0) {
+		rheafb_error("Failed to init this display device!\n");
+		goto fail_to_init;
+	}
+	
+	/* Hack
+	 * Since the display driver is not using this field, 
+	 * we use it to pass the dma addr.
+	 */
+	local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
+	local_DISPDRV_OPEN_PARM_T.busCh = 0;
+	ret = fb->display_ops->open((void *)&local_DISPDRV_OPEN_PARM_T, &fb->display_hdl);
+	if (ret != 0) {
+		rheafb_error("Failed to open this display device!\n");
+		goto fail_to_open;
+	}
+
+	ret = fb->display_ops->start(fb->display_hdl);
+	if (ret != 0) {
+		rheafb_error("Failed to start this display device!\n");
+		goto fail_to_start;
+	}
+
+	ret = fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_ON);
+	if (ret != 0) {
+		rheafb_error("Failed to power on this display device!\n");
+		goto fail_to_power_control;
+ 	}
+
+ 	rheafb_info("RHEA display is enabled successfully\n");
+	return 0;
+ 
+fail_to_power_control:
+	fb->display_ops->stop(fb->display_hdl);
+fail_to_start:
+	fb->display_ops->close(fb->display_hdl);
+fail_to_open:
+	fb->display_ops->exit();
+fail_to_init:
+ 	return ret;
+
+}
+#if 0
 
 #if defined(CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA)
 	fb->display_ops = DISP_DRV_BCM91008_ALEX_GetFuncTable();
@@ -244,6 +292,8 @@ static int enable_display(struct rhea_fb *fb)
 
 	return ret;
 }
+
+#endif
 
 static int disable_display(struct rhea_fb *fb)
 {
@@ -311,6 +361,13 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	size_t framesize;
 	uint32_t width, height;
 
+	struct kona_fb_platform_data *fb_data;
+
+	if (g_rhea_fb && (g_rhea_fb->is_display_found == 1)) {
+		rheafb_info("A right display device is already found!\n");
+		return -EINVAL;
+	}
+
 	fb = kzalloc(sizeof(struct rhea_fb), GFP_KERNEL);
 	if (fb == NULL) {
 		rheafb_error("Unable to allocate framebuffer structure\n");
@@ -318,6 +375,14 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		goto err_fb_alloc_failed;
 	}
 	g_rhea_fb = fb;
+
+	fb_data = pdev->dev.platform_data;
+	if (!fb_data) {
+		ret = -EINVAL;
+		goto fb_data_failed;
+	}
+	fb->display_ops = 
+		(DISPDRV_T *)fb_data->get_dispdrv_func_tbl();
 
 	spin_lock_init(&fb->lock);
 	platform_set_drvdata(pdev, fb);
@@ -347,6 +412,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	 * So either the display driver allocates the memory and pass the pointer to us, or
 	 * we allocate memory and pass into the display. 
 	 */
+#if 0
 #if defined(CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA)
 	framesize = 640 * 360 * 4 * 2;
 #elif defined(CONFIG_FB_BRCM_LCDC_NT35582_SMI_WVGA)
@@ -356,6 +422,9 @@ static int rhea_fb_probe(struct platform_device *pdev)
 #else 
 #error "Wrong LCD configuration!" 
 #endif
+#endif
+	framesize = fb_data->screen_width * fb_data->screen_height * 
+				fb_data->bytes_per_pixel * 2;
 
 	fb->fb.screen_base = dma_alloc_writecombine(&pdev->dev,
 			framesize, &fb->phys_fbbase, GFP_KERNEL);
@@ -367,26 +436,33 @@ static int rhea_fb_probe(struct platform_device *pdev)
 
 	ret = enable_display(fb);
 	if (ret) {
-		rheafb_error("Failed to enable Display device\n");
+		rheafb_error("Failed to enable this display device\n");
 		goto err_enable_display_failed;
-	}
+	} else {
+		fb->is_display_found = 1;
+ 	}
 
 	fb->display_info = fb->display_ops->get_info(fb->display_hdl);
 
 	/* Now we should get correct width and height for this display .. */
 	width = fb->display_info->width; 
 	height = fb->display_info->height;
+	BUG_ON(width != fb_data->screen_width || height != fb_data->screen_height);
 
 	fb->fb.fbops		= &rhea_fb_ops;
 	fb->fb.flags		= FBINFO_FLAG_DEFAULT;
 	fb->fb.pseudo_palette	= fb->cmap;
 	fb->fb.fix.type		= FB_TYPE_PACKED_PIXELS;
 	fb->fb.fix.visual	= FB_VISUAL_TRUECOLOR;
+#if 0
 #ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
 	fb->fb.fix.line_length	= width * 4;
 #else
 	fb->fb.fix.line_length	= width * 2;
 #endif
+#endif
+	fb->fb.fix.line_length	= width * fb_data->bytes_per_pixel;
+
 	fb->fb.fix.accel	= FB_ACCEL_NONE;
 	fb->fb.fix.ypanstep	= 1;
 	fb->fb.fix.xpanstep	= 4;
@@ -395,16 +471,19 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.var.yres		= height;
 	fb->fb.var.xres_virtual	= width;
 	fb->fb.var.yres_virtual	= height * 2;
-
+#if 0
 #ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
 	fb->fb.var.bits_per_pixel = 32;
 #else
 	fb->fb.var.bits_per_pixel = 16;
 #endif
+#endif
+	fb->fb.var.bits_per_pixel = fb_data->bytes_per_pixel * 8;
 	fb->fb.var.activate	= FB_ACTIVATE_NOW;
 	fb->fb.var.height	= height;
 	fb->fb.var.width	= width;
 
+#if 0
 #ifdef CONFIG_FB_BRCM_LCDC_ALEX_DSI_VGA
 	fb->fb.var.red.offset = 16;
 	fb->fb.var.red.length = 8;
@@ -426,6 +505,37 @@ static int rhea_fb_probe(struct platform_device *pdev)
 
 	framesize = width * height * 2 * 2;
 #endif
+#endif
+	switch (fb_data->pixel_format) {
+	case RGB565:
+	fb->fb.var.red.offset = 11;
+	fb->fb.var.red.length = 5;
+	fb->fb.var.green.offset = 5;
+	fb->fb.var.green.length = 6;
+	fb->fb.var.blue.offset = 0;
+	fb->fb.var.blue.length = 5;
+
+	framesize = width * height * 2 * 2;
+	break;
+
+	case XRGB8888:
+	fb->fb.var.red.offset = 16;
+	fb->fb.var.red.length = 8;
+	fb->fb.var.green.offset = 8;
+	fb->fb.var.green.length = 8;
+	fb->fb.var.blue.offset = 0;
+	fb->fb.var.blue.length = 8;
+	fb->fb.var.transp.offset = 24;
+	fb->fb.var.transp.length = 8;
+
+	framesize = width * height * 4 * 2;
+	break;
+
+	default:
+	rheafb_error("Wrong format!\n");
+	break;
+	}
+
 	fb->fb.fix.smem_start = fb->phys_fbbase;
 	fb->fb.fix.smem_len = framesize;
 
@@ -455,7 +565,6 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	if (NULL == fb->fps_info )
 		printk(KERN_ERR "No fps display");
 #endif
-
 	up(&fb->thread_sem);
 
 	atomic_set(&fb->is_fb_registered, 1);
@@ -492,7 +601,9 @@ err_fbmem_alloc_failed:
 #ifndef CONFIG_MACH_RHEA_RAY_EDN1X
 thread_create_failed:
 #endif
+fb_data_failed:
 	kfree(fb);
+	g_rhea_fb = NULL;
 err_fb_alloc_failed:
 	rheafb_alert("RHEA Framebuffer probe FAILED !!\n");
 	return ret;
@@ -527,6 +638,7 @@ static struct platform_driver rhea_fb_driver = {
 	}
 };
 
+#if 0
 static struct platform_device rhea_fb_device = {
 	.name    = "rhea_fb",
 	.id      = -1,
@@ -535,6 +647,7 @@ static struct platform_device rhea_fb_device = {
 		.coherent_dma_mask   = ~(u32)0,
 	},
 };
+#endif
 
 static int __init rhea_fb_init(void)
 {
@@ -546,12 +659,14 @@ static int __init rhea_fb_init(void)
 		goto fail_to_register;
 	}
 
+#if 0
 	ret = platform_device_register(&rhea_fb_device);
 	if (ret) {
 		printk(KERN_ERR"%s : Unable to register Rhea framebuffer device\n", __func__);
 		platform_driver_unregister(&rhea_fb_driver);
 		goto fail_to_register;
 	}
+#endif
 
 fail_to_register:
 	printk(KERN_INFO"BRCM Framebuffer Init %s !\n", ret ? "FAILED" : "OK");
@@ -562,7 +677,7 @@ fail_to_register:
 static void __exit rhea_fb_exit(void)
 {
 	/* Clean up .. */
-	platform_device_unregister(&rhea_fb_device);
+	//platform_device_unregister(&rhea_fb_device);
 	platform_driver_unregister(&rhea_fb_driver);
 
 	printk(KERN_INFO"BRCM Framebuffer exit OK\n");
