@@ -87,7 +87,7 @@
 
 #endif /*  __KERNEL__ */
 
-#define __HVGA_BUSW_16__
+#define __HVGA_BUSW_08__
 #define __HVGA_MODE_565__
 
 // output color mdoe must be defined before including EC .H
@@ -273,12 +273,7 @@ void r61581hvgaSmi_WrCmndP2( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 data1
 {
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
 
-#if !defined(__HVGA_BUSW_08__)
     CSL_SMI_WrDirect( lcdDrv->cslH, FALSE,  data1 );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, FALSE,  (data1 & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, FALSE,   data1 & 0x00FF);
-#endif    
 }
 
 //*****************************************************************************
@@ -296,17 +291,8 @@ void r61581hvgaSmi_WrCmndP1(
 {
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
    
-#if !defined(__HVGA_BUSW_08__)
     CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
     CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE, (cmnd & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd & 0x00FF);
-    
-    // Write MSB byte, since all regs are 8-bit write 0 for MSB
-    CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, data );
-#endif    
 }
 
 //*****************************************************************************
@@ -320,12 +306,7 @@ void r61581hvgaSmi_WrCmndP0( DISPDRV_HANDLE_T dispH, Boolean useOs, UInt32 cmnd 
 {
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
    
-#if !defined(__HVGA_BUSW_08__)
     CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  cmnd );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (cmnd & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   cmnd & 0x00FF);
-#endif    
 }
 
 
@@ -344,22 +325,12 @@ static void r61581hvgaSmi_IoCtlWr(
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
     UInt32 i;
     
-#if !defined(__HVGA_BUSW_08__)
     CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (acc->cmnd & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   acc->cmnd & 0x00FF);
-#endif    
     
     for(i=0; i < acc->parmCount; i++ )
     {
         // Write MSB byte, since all regs are 8-bit write 0 for MSB
-#if !defined(__HVGA_BUSW_08__)
         CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)[i] );
-#else
-        CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, 0 );
-        CSL_SMI_WrDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)[i] );
-#endif        
         if( acc->verbose )
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] r61581hvgaSmi_IoCtlWr: "
@@ -384,21 +355,10 @@ static void r61581hvgaSmi_IoCtlRd(
     R61581_HVGA_SMI_PANEL_T* lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
     UInt32 i;
     
-#if !defined(__HVGA_BUSW_08__)
     CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  acc->cmnd );
-#else
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,  (acc->cmnd & 0xFF00) >> 8 );
-    CSL_SMI_WrDirect( lcdDrv->cslH, TRUE,   acc->cmnd & 0x00FF);
-#endif
     for(i=0; i<acc->parmCount; i++)
     {
-#if !defined(__HVGA_BUSW_08__)
         CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-#else
-        // first read is MSB, REG values are only 8-bit so MSB is always 0
-        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-        CSL_SMI_RdDirect( lcdDrv->cslH, FALSE, ((UInt32*)acc->pBuff)+i );
-#endif        
         if( acc->verbose )
         {
             LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: "
