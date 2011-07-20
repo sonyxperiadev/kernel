@@ -155,9 +155,9 @@ static ssize_t debounce_store(struct device *dev, struct device_attribute *attr,
    struct headset_info *ch = gHeadset;
    ret = sscanf(buf,"%d",&debounce);
    if ( ret == 1 ) {
-      ch->debounce = debounce;
-      //TODO: add optional software debounce if hardware debounce fails.
-      gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
+      if( !gpio_set_debounce(ch->hw_cfg.gpio_headset_det, debounce) ){
+            ch->debounce = debounce;
+      }
       sprintf(lbuf,"%d",debounce);
       return strlen(lbuf);
    }
@@ -223,6 +223,8 @@ static int headset_release( struct inode *inode, struct file *file )
 static long headset_ioctl( struct file *file, unsigned int cmd, unsigned long arg )
 {
    struct headset_info *ch = file->private_data;
+   int rc;
+   unsigned debounce;
 
    switch ( cmd )
    {
@@ -240,12 +242,14 @@ static long headset_ioctl( struct file *file, unsigned int cmd, unsigned long ar
          break;
                         
       case HEADSET_IOCTL_SET_DEBOUNCE:
-         if ( copy_to_user( (unsigned long *)arg, &ch->debounce, sizeof(ch->debounce) ) != 0 )
+         if ( copy_to_user( (unsigned long *)arg, &debounce, sizeof(debounce) ) != 0 )
          {
             return -EFAULT;
          }
-         //TODO: add optional software debounce if hardware debounce fails.
-         gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
+         if ( (rc=gpio_set_debounce(ch->hw_cfg.gpio_headset_det, debounce)) ) {
+            return rc;
+         }
+         ch->debounce=debounce;
          break;
          
 
@@ -346,7 +350,6 @@ static int __devinit headset_pltfm_probe(struct platform_device *pdev)
 
       /* set the default debounce */
       ch->debounce = HEADSET_DEBOUNCE_DEFAULT;
-      //TODO: add optional software debounce if hardware debounce fails.
       ret = gpio_set_debounce(ch->hw_cfg.gpio_headset_det, ch->debounce);
       if ( ret < 0 ) {
          ret = -EPERM;
