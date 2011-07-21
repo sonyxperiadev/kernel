@@ -1,0 +1,7 @@
+name   = bcm11160_sv_li_128mb
+arch   = arm
+family = island
+chip   = 11160
+board  = sv
+option = li_128mb
+

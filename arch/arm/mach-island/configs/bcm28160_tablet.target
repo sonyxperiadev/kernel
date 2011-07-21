@@ -1,0 +1,6 @@
+name   = bcm28160_tablet
+arch   = arm
+family = island
+chip   = 28160
+board  = tablet
+
