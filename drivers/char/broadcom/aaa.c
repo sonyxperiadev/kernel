@@ -792,18 +792,18 @@ static long aaa_ioctl(
             */
             if ( g_hal_wrt_device.name[0] != 0 )
             {
-               amxrDisconnectAllByName ( g_amxr_client,
-                                         AAA_PORT_NAME,
-                                         g_hal_wrt_device.info.mport_name );
+               amxrDisconnectByName ( g_amxr_client,
+                                      AAA_PORT_NAME,
+                                      g_hal_wrt_device.info.mport_name );
 
                /* If speaker is currently used, disconnect the right speaker which
                ** goes through "audioh4".
                */
                if ( strcmp( g_hal_wrt_device.name, "handsfree-spkr" ) == 0 )
                {
-                  amxrDisconnectAllByName ( g_amxr_client,
-                                            AAA_PORT_NAME,
-                                            "halaudio.audioh4" );
+                  amxrDisconnectByName ( g_amxr_client,
+                                         AAA_PORT_NAME,
+                                         "halaudio.audioh4" );
                }
             }
 #endif /* defined(AAA_RUNS_AT_44_1_KHz) */
@@ -909,9 +909,9 @@ static long aaa_ioctl(
             */
             if ( g_hal_rd_device.name[0] != 0 )
             {
-               amxrDisconnectAllByName ( g_amxr_client,
-                                         AAA_PORT_NAME,
-                                         g_hal_rd_device.info.mport_name );
+               amxrDisconnectByName ( g_amxr_client,
+                                      g_hal_rd_device.info.mport_name,
+                                      AAA_PORT_NAME );
             }
 
             memcpy( &g_hal_rd_device,
@@ -1095,27 +1095,27 @@ static int aaa_remove( struct platform_device *pdev )
    */
    if ( g_hal_wrt_device.name[0] != 0 )
    {
-      amxrDisconnectAllByName ( g_amxr_client,
-                                AAA_PORT_NAME,
-                                g_hal_wrt_device.info.mport_name );
+      amxrDisconnectByName ( g_amxr_client,
+                             AAA_PORT_NAME,
+                             g_hal_wrt_device.info.mport_name );
 
       /* If speaker is currently used, disconnect the right speaker which
       ** goes through "audioh4".
       */
       if ( strcmp( g_hal_wrt_device.name, "handsfree-spkr" ) == 0 )
       {
-         amxrDisconnectAllByName ( g_amxr_client,
-                                   AAA_PORT_NAME,
-                                   "halaudio.audioh4" );
+         amxrDisconnectByName ( g_amxr_client,
+                                AAA_PORT_NAME,
+                                "halaudio.audioh4" );
       }
 
       memset ( &g_hal_wrt_device, 0, sizeof(g_hal_wrt_device) );
    }
    if ( g_hal_rd_device.name[0] != 0 )
    {
-      amxrDisconnectAllByName ( g_amxr_client,
-                                AAA_PORT_NAME,
-                                g_hal_rd_device.info.mport_name );
+      amxrDisconnectByName ( g_amxr_client,
+                             g_hal_rd_device.info.mport_name,
+                             AAA_PORT_NAME );
       memset ( &g_hal_rd_device, 0, sizeof(g_hal_rd_device) );
    }
    amxrRemovePort( g_aaa_port );
