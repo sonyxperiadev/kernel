@@ -199,6 +199,7 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
 {
     unicam_t *dev;
     int ret = 0;
+	static int interrupt_irq = 0;
 
     if(_IOC_TYPE(cmd) != BCM_UNICAM_MAGIC)
         return -ENOTTY;
@@ -222,7 +223,7 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
     case UNICAM_IOCTL_WAIT_IRQ:
     {        
         dbg_print("Enabling unicam interrupt\n");
-
+		interrupt_irq = 0;
         enable_irq(IRQ_UNICAM);
         dbg_print("Waiting for interrupt\n");
         if (down_interruptible(&dev->irq_sem))
@@ -232,8 +233,20 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
         }
         dbg_print("Disabling unicam interrupt\n");
         disable_irq(IRQ_UNICAM);
+		if (interrupt_irq) {
+			printk(KERN_ERR"interrupted irq ioctl\n");
+			return -EIO;
+		}
     }
     break;
+	case UNICAM_IOCTL_RETURN_IRQ:
+	{
+		interrupt_irq = 1;
+		printk(KERN_ERR"Interrupting irq ioctl\n");
+		up(&dev->irq_sem);
+	}
+	break;
+
 
     case UNICAM_IOCTL_GET_MEMPOOL:
     {        
