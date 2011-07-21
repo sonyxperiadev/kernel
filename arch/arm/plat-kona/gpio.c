@@ -192,16 +192,26 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 	unsigned long flags;
 
 	(void) chip; /* unused input parameter */
+	
+	if (debounce < 1000){
+	   debounce = 1000;
+   }
 
-	if (!is_power_of_2(debounce)) {
-		printk(KERN_ERR "Invalid GPIO debounce value %d\n", debounce);
-		return -EINVAL;
-	}
+   debounce/=1000;
+   
+   if (debounce > 128){
+      debounce = 128;
+   }
+   /* find the MSB */
+   res=fls(debounce)-1;
+   /* Check if MSB-1 is set (round up or down) */
+   if (res>0 && (debounce & 1 << (res-1)) ){
+      res++;
+   }
 
-	res = fls(debounce) - 1;
-
+   /* should not be possible */
 	if (res < GPIO_GPCTR0_DBR_CMD_1MS || res > GPIO_GPCTR0_DBR_CMD_128MS) {
-		printk(KERN_ERR "Debounce value %d not in range\n", debounce);
+		printk(KERN_ERR "Debounce value %d000 not in range\n", debounce);
 		return -EINVAL;
 	}
 
