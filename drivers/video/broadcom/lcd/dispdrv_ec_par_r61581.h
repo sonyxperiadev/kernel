@@ -116,7 +116,7 @@ DISPCTRL_REC_T R61581_Init[] = {
     // Display Timing Setting for Normal Mode, 4P
     {DISPCTRL_WR_CMND         , 0xC1                            , 0       },   
     {DISPCTRL_WR_DATA         , 0x00                            , 0x08    },   
-    {DISPCTRL_WR_DATA         , 0x00                            , 0x12    },   // CLOCK
+    {DISPCTRL_WR_DATA         , 0x00                            , 0x1B    },   // CLOCK
     {DISPCTRL_WR_DATA         , 0x00                            , 0x08    },   
     {DISPCTRL_WR_DATA         , 0x00                            , 0x08    },   
 

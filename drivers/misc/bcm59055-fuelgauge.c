@@ -151,7 +151,6 @@ int bcm59055_fg_offset_cal(bool longcal)
 	struct bcm590xx *bcm59055 = bcm59055_fg->bcm59055;
 	u8 reg, calbit;
 	int ret;
-	s16 offset;
 	pr_debug("Inside %s\n", __func__);
 	mutex_lock(&bcm59055_fg->lock);
 	if (longcal)
