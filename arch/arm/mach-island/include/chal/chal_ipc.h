@@ -121,6 +121,10 @@ BCM_ERR_CODE chal_ipc_wakeup_vc (
     uint32_t address
     );
 
+BCM_ERR_CODE chal_ipc_sleep_vc (
+    CHAL_IPC_HANDLE handle
+    );
+
 BCM_ERR_CODE chal_ipc_int_vcset (
     CHAL_IPC_HANDLE handle,
     IPC_INTERRUPT_SOURCE irqNum
