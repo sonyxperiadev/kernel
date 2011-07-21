@@ -20,10 +20,13 @@ the GPL, without Broadcom's express prior written consent.
 enum {
     ISP_CMD_WAIT_IRQ = 0x80,
     ISP_CMD_CLK_RESET,	
+    ISP_CMD_RELEASE_IRQ,    
     ISP_CMD_LAST
 };
 
 #define ISP_IOCTL_WAIT_IRQ	_IOR(BCM_ISP_MAGIC, ISP_CMD_WAIT_IRQ, unsigned int)
 #define ISP_IOCTL_CLK_RESET	_IOR(BCM_ISP_MAGIC, ISP_CMD_CLK_RESET, unsigned int)
+#define ISP_IOCTL_RELEASE_IRQ _IOR(BCM_ISP_MAGIC, ISP_CMD_RELEASE_IRQ, unsigned int)
+
 
 #endif
