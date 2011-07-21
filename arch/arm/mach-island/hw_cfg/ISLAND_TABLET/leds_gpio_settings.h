@@ -19,26 +19,16 @@
 #ifndef LEDS_GPIO_SETTINGS_H
 #define LEDS_GPIO_SETTINGS_H
 
-#include <linux/leds.h>
-
-
-/* GPIO led definitions for Hana tablet */
-static struct gpio_led tabletLeds[] = 
-{
-    {
-        .name = "red",
-        .gpio = 0,    /* GPIO #0 */
-    },
-    {
-        .name = "green",
-        .gpio = 6,    /* GPIO #6 */
-    }
-};
-
-static struct gpio_led_platform_data leds_gpio_data =
-{
-    .num_leds = ARRAY_SIZE(tabletLeds),
-    .leds = tabletLeds,
+#define GPIO_LEDS_SETTINGS \
+{ \
+    { \
+        .name = "red", \
+        .gpio = 0, \
+    }, \
+    { \
+        .name = "green", \
+        .gpio = 6, \
+    } \
 };
 
 #endif /* LEDS_GPIO_SETTINGS_H */

@@ -95,9 +95,12 @@
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
 #include <leds_gpio_settings.h>
+#include <linux/leds.h>
 #endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/input.h>
+#include <linux/gpio_keys.h>
 #include <gpio_keys_settings.h>
 #endif
 
@@ -523,6 +526,16 @@ static struct i2c_board_info max3353_i2c_boardinfo[] = {
 #endif
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#define board_gpio_leds concatenate(ISLAND_BOARD_ID, _board_gpio_leds)
+static struct gpio_led board_gpio_leds[] = GPIO_LEDS_SETTINGS;
+
+#define leds_gpio_data concatenate(ISLAND_BOARD_ID, _leds_gpio_data)
+static struct gpio_led_platform_data leds_gpio_data =
+{
+    .num_leds = ARRAY_SIZE(board_gpio_leds),
+    .leds = board_gpio_leds,
+};
+
 #define board_leds_gpio_device concatenate(ISLAND_BOARD_ID, _leds_gpio_device)
 static struct platform_device board_leds_gpio_device = {
    .name = "leds-gpio",
@@ -534,6 +547,16 @@ static struct platform_device board_leds_gpio_device = {
 #endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#define board_gpio_keys concatenate(ISLAND_BOARD_ID, _board_gpio_keys)
+static struct gpio_keys_button board_gpio_keys[] = GPIO_KEYS_SETTINGS;
+
+#define gpio_keys_data concatenate(ISLAND_BOARD_ID, _gpio_keys_data)
+static struct gpio_keys_platform_data gpio_keys_data =
+{
+    .nbuttons = ARRAY_SIZE(board_gpio_keys),
+    .buttons = board_gpio_keys,
+};
+
 #define board_gpio_keys_device concatenate(ISLAND_BOARD_ID, _gpio_keys_device)
 static struct platform_device board_gpio_keys_device = {
    .name = "gpio-keys",
@@ -614,7 +637,10 @@ static struct platform_device platform_device_gps =
 
 #if defined(CONFIG_BCM_HAPTICS) || defined(CONFIG_BCM_HAPTICS_MODULE)
 #define board_bcm_haptics_device concatenate(ISLAND_BOARD_ID, _bcm_haptics_device)
+
+#define board_bcm_haptics_data concatenate(ISLAND_BOARD_ID, _board_bcm_haptics_data)
 static struct bcm_haptics_data board_bcm_haptics_data = BCM_HAPTICS_SETTINGS;
+
 static struct platform_device board_bcm_haptics_device = {
    .name = BCM_HAPTICS_DRIVER_NAME,
    .id = -1,
