@@ -70,8 +70,6 @@ static enum power_supply_property bcm59055_battery_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_VOLTAGE_MIN,
-	POWER_SUPPLY_PROP_HEALTH,
-	POWER_SUPPLY_PROP_TEMP
 };
 
 static enum power_supply_property bcm59055_wall_props[] = {
@@ -114,7 +112,6 @@ static int bcm59055_usb_get_property(struct power_supply *psy,
 	pr_debug("Inside %s\n", __func__);
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
-		printk("Hello sale POWER SRC %d\n", bcm59055_power->power_src);
 		val->intval =
 		 (bcm59055_power->power_src ==
 		 POWER_SUPPLY_TYPE_USB) ? 1 : 0;
@@ -158,6 +155,10 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 	pr_debug("Inside %s\n", __func__);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		val->intval =
+			(battery_data->power_src ==
+			 POWER_SUPPLY_TYPE_BATTERY) ? 1 : 0;
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = battery_data->batt_status;
 		break;
@@ -334,7 +335,7 @@ void pmu_set_usb_enum_current(int curr)
 }
 EXPORT_SYMBOL(pmu_set_usb_enum_current);
 
-int pmu_get_charger_type()
+int pmu_get_charger_type(void)
 {
 	int reg;
 	int type;
@@ -374,9 +375,13 @@ static void bcm59055_power_isr(int intr, void *data)
 			bcm59055->pdata->pmu_event_cb(BCM590XX_CHARGER_INSERT, POWER_SUPPLY_TYPE_USB);
 		break;
 	case BCM59055_IRQID_INT2_USBINS:
-		pr_info("%s: USB insert interrupt\n", __func__);
 		battery_data->power_src = POWER_SUPPLY_TYPE_USB;
 		battery_data->charger_type = pmu_get_charger_type();
+		pr_info("%s: USB insert interrupt, USB type %d\n", __func__, battery_data->charger_type);
+		pr_info("USB Type (0=UNKNOWN, 1=SDP, 2=CDP & 3=DCP)\n");
+		/* TODO: in case USB type is 0, BCLDO needs to be turned on
+		 * and the algo needs to be implemented
+		*/
 		val = bcm590xx_reg_read(bcm59055, BCM59055_REG_ENV3);
 		if (!(val & P_USBOV)) {		/* NO USB OV */
 			val = bcm590xx_reg_read(bcm59055, BCM59055_REG_MBCCTRL10);
@@ -597,6 +602,8 @@ static int bcm59055_battery_remove(struct platform_device *pdev)
 
 	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_CHGINS);
 	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_CHGRM);
+	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_USBINS);
+	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_USBRM);
 	kfree(data);
 
 	return 0;
