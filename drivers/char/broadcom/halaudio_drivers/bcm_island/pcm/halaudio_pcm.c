@@ -93,7 +93,7 @@
 #define PCM_CHAL_MAX_BIT_CLOCK_FREQ       CHAL_SSPI_BIT_RATE_512kHz  /* Do Not Change */
 #define PCM_MAX_BIT_CLOCK_FREQ            512000                     /* In Hz. Do not change */
 #define PCM_CHAL_CCU_CLK_INPUT_FREQ       15360000                   /* In Hz. Do not change */
-#define PCM_CHAL_REF_CLK_DIV              (( PCM_CHAL_CCU_CLK_INPUT_FREQ / (PCM_MAX_BIT_CLOCK_FREQ * 2) ) - 1)
+#define PCM_CHAL_REF_CLK_DIV              (( PCM_CHAL_CCU_CLK_INPUT_FREQ / (PCM_MAX_BIT_CLOCK_FREQ) ) - 1 + 1)
 #define PCM_MAX_NUM_SLOT_CHANNELS         1        /* Do not change */
 #define PCM_MAX_SAMPLING_RATE             16000    /* in Hz - do not change */
 

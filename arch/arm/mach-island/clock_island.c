@@ -348,11 +348,11 @@ static struct clk *ssp0_audio_clk_src_tbl[] =
 
 static struct clk_src ssp0_audio_clk_src = {
 	.total		=	ARRAY_SIZE(ssp0_audio_clk_src_tbl),
-	.sel		=	1,
+	.sel		=	2,
 	.parents	=	ssp0_audio_clk_src_tbl,
 };
 
-DECLARE_PERI_CLK_PRE_DIV(ssp0_audio, SSP0_AUDIO, SSP0_AUDIO, ref_cx40, 153600*CLOCK_1K, 1, DIV_TRIG, KONA_SLV, IKPS, 0);
+DECLARE_PERI_CLK_PRE_DIV3(ssp0_audio, SSP0, SSP0_AUDIO, SSP0_AUDIO, ref_cx40, 15360*CLOCK_1K, 10, DIV_TRIG, KONA_SLV, IKPS, 0);
 
 static struct clk *uart_clk_src_tbl[] =
 {
