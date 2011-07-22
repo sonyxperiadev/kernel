@@ -61,18 +61,21 @@ EXPORT_SYMBOL(bcm_sdiowl_reset_b);
 
 int bcm_sdiowl_rescan(void)
 {
-   int rc;
-   struct sdio_wifi_dev *dev = &gDev;
-   struct mmc_card *card;
+	int rc;
+	struct sdio_wifi_dev *dev = &gDev;
+	struct mmc_card *card;
 
-   if (!atomic_read(&dev->dev_is_ready))
-   {
-      PRINT_ERR("device not ready\n");
-      return -EFAULT;
-   }
+	if (!atomic_read(&dev->dev_is_ready)) {
+		PRINT_ERR("device not ready\n");
+		return -EFAULT;
+	}
 
-   card = sdio_get_mmc_card(SDIO_DEV_TYPE_WIFI);
-   rc = sdio_reset_comm(card);
+	card = sdio_get_mmc_card(SDIO_DEV_TYPE_WIFI);
+	if (!card) {
+		PRINT_ERR("unable to find WiFi SDIO device\n");
+		return -EIO;
+	}
+	rc = sdio_reset_comm(card);
 
 	return rc;
 }
