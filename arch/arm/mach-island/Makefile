@@ -34,6 +34,8 @@ obj-$(CONFIG_MAP_AADMA) += aadmac.o
 obj-$(CONFIG_MAP_SSASW) += chal/
 obj-$(CONFIG_MAP_SSASW) += ssasw.o
 
+obj-$(CONFIG_MAP_LITTLE_ISLAND_MEMC_QOS) += memc_qos.o
+
 obj-$(CONFIG_IPC) += chal/
 
 obj-$(CONFIG_MACH_ISLAND_AUDIOH_CHAL) += chal/
@@ -62,4 +64,5 @@ CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET_28160 \
 -Iarch/arm/mach-island/hw_cfg/BASE \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
+
 

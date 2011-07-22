@@ -39,6 +39,7 @@
 #include <mach/kona.h>
 #include <mach/dma_mmap.h>
 #include <mach/sdma.h>
+#include <mach/memc_qos.h>
 #include <mach/sdio_platform.h>
 #include <mach/usbh_cfg.h>
 #include <mach/halaudio_audioh_platform.h>
@@ -1408,6 +1409,10 @@ static void __init board_init(void)
 #ifdef CONFIG_MAP_SDMA
 	dma_mmap_init();
 	sdma_init();
+#endif
+
+#ifdef CONFIG_MAP_LITTLE_ISLAND_MEMC_QOS
+    memc_qos_init();
 #endif
 	/*
 	 * Add common platform devices that do not have board dependent HW
