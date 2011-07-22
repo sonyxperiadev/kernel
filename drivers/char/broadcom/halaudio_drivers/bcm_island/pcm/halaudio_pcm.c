@@ -93,7 +93,7 @@
 #define PCM_CHAL_MAX_BIT_CLOCK_FREQ       CHAL_SSPI_BIT_RATE_512kHz  /* Do Not Change */
 #define PCM_MAX_BIT_CLOCK_FREQ            512000                     /* In Hz. Do not change */
 #define PCM_CHAL_CCU_CLK_INPUT_FREQ       15360000                   /* In Hz. Do not change */
-#define PCM_CHAL_REF_CLK_DIV              (( PCM_CHAL_CCU_CLK_INPUT_FREQ / (PCM_MAX_BIT_CLOCK_FREQ) ) - 1 + 1)
+#define PCM_CHAL_REF_CLK_DIV              ((PCM_CHAL_CCU_CLK_INPUT_FREQ / (PCM_MAX_BIT_CLOCK_FREQ) ) - 1)
 #define PCM_MAX_NUM_SLOT_CHANNELS         1        /* Do not change */
 #define PCM_MAX_SAMPLING_RATE             16000    /* in Hz - do not change */
 
@@ -109,7 +109,7 @@
 #define PCM_DEFAULT_FRAME_SIZE            CALCFRAMESZ( PCM_DEFAULT_SAMP_FREQ, PCM_DEFAULT_FRAME_PERIOD, PCM_DEFAULT_SAMP_WIDTH ) /* do not change */
 #define PCM_MAX_FRAME_SIZE                CALCFRAMESZ( PCM_MAX_SAMPLING_RATE, PCM_DEFAULT_FRAME_PERIOD, PCM_DEFAULT_SAMP_WIDTH ) /* do not change */
 
-#define CALCCLOCKDIV(freq)                ((PCM_MAX_BIT_CLOCK_FREQ / (freq * 8 * PCM_DEFAULT_SAMP_WIDTH)) - 1)
+#define CALCCLOCKDIV(freq)                ((PCM_MAX_BIT_CLOCK_FREQ / (freq * 8 * PCM_DEFAULT_SAMP_WIDTH * 2)) - 1)
 
 /* PCM DMA defintions */
 #define PCM_DEFAULT_DMA_FRAME_SIZE        (PCM_MAX_NUM_SLOT_CHANNELS * PCM_DEFAULT_FRAME_SIZE)
@@ -2460,6 +2460,12 @@ static int __init pcm_probe( struct platform_device *pdev )
    else
    {
       printk( KERN_ERR "%s: failed to select appropriate SSPI core %d!\n", __FUNCTION__, info->core_id_select );
+      return -EINVAL;
+   }
+   err = clk_set_rate( gSspiClk, PCM_CHAL_CCU_CLK_INPUT_FREQ );
+   if( err )
+   {
+      printk( KERN_ERR "%s: failed to set clock rate on SSPI core %d!\n", __FUNCTION__, info->core_id_select );
       return -EINVAL;
    }
 

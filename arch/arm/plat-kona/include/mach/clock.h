@@ -762,7 +762,7 @@ unsigned long clock_get_xtal(void);
 			.parent =	name_to_clk(clk_parent),				\
 			.rate	=	clk_rate,						\
 			.div	=	clk_div,						\
-			.pre_div = 1,                    \
+			.pre_div = 0,                    \
 			.id	=	BCM2165x_CLK_##NAME2,							\
 			.ccu_id =       BCM2165x_##ccu##_CCU,					\
 			.flags	=	BCM2165x_CLK_##NAME2##_FLAGS,				\

@@ -39,6 +39,9 @@ static struct __init pin_config board_pin_config[] = {
        	PIN_BSC_CFG(PMU_SCL, PMU_SCL, 0x08),
        	PIN_BSC_CFG(PMU_SDA, PMU_SDA, 0x08),
 
+        /* PWM */
+        PIN_CFG(SIM_DATA,          PWM_O_2,     0, OFF, OFF, 0, 0, 8MA),
+
         /* Keypad */
         PIN_CFG(NORFLSH_AD_14,     KP_ROW_OP_0, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AD_13,     KP_ROW_OP_1, 0, OFF, OFF, 0, 0, 8MA),

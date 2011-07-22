@@ -272,7 +272,13 @@ int sdio_function_init(void)
 	/* Reset device and rescan so SDMMC does not get confused */
 	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 	dhd_customer_gpio_wlan_ctrl(WLAN_RESET_ON);
-	bcm_sdiowl_rescan(); 
+	error = bcm_sdiowl_rescan();
+	if (error) {
+		sd_err(("%s: bcm_sdiowl_rescan failed\n", __FUNCTION__));
+		bcm_sdiowl_term();
+		kfree(gInstance);
+		return error;
+	}
 
 	bzero(&sdmmc_dev, sizeof(sdmmc_dev));
 	error = sdio_register_driver(&bcmsdh_sdmmc_driver);

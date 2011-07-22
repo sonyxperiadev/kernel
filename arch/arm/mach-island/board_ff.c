@@ -54,7 +54,6 @@
 #include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/regulator/max8649.h>
-#include <linux/usb/android_composite.h>
 #include <linux/kernel_stat.h>
 #include <linux/android_pmem.h>
 
@@ -1116,128 +1115,6 @@ static struct i2c_board_info __initdata akm8975_info[] =
 	},
 };
 
-
-static char *android_function_rndis[] = {
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis"
-#endif
-};
-
-static char *android_function_acm[] = {
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm"
-#endif
-};
-
-static char *android_function_adb_msc[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ADB
-	"adb",
-#endif
-};
-
-static char *android_functions_all[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ADB
-	"adb",
-#endif
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis",
-#endif
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-#endif
-};
-
-#define	BRCM_VENDOR_ID		0x0a5c
-#define	BIG_ISLAND_PRODUCT_ID	0x2816
-
-/* FIXME borrow Google Nexus One ID to use windows driver */
-#define	GOOGLE_VENDOR_ID	0x18d1
-#define	NEXUS_ONE_PROD_ID	0x0d02
-
-#define	VENDOR_ID		GOOGLE_VENDOR_ID
-#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
-
-/* use a seprate PID for RNDIS */
-#define RNDIS_PRODUCT_ID	0x4e13
-#define ACM_PRODUCT_ID		0x8888
-
-
-static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
-	.nluns		=	1,
-	.vendor		=	"Broadcom",
-	.product	=	"Big Island",
-	.release	=	0x0100
-};
-
-static struct platform_device android_mass_storage_device = {
-	.name	=	"usb_mass_storage",
-	.id	=	-1,
-	.dev	=	{
-		.platform_data	=	&android_mass_storage_pdata,
-	}
-};
-
-static struct usb_ether_platform_data android_rndis_pdata = {
-	/* ethaddr FIXME */
-	.vendorID = __constant_cpu_to_le16(VENDOR_ID),
-	.vendorDescr = "Broadcom RNDIS",
-};
-
-static struct platform_device android_rndis_device = {
-	.name	= "rndis",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &android_rndis_pdata,
-	},
-};
-
-static struct android_usb_product android_products[] = {
-	{
-		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_adb_msc),
-		.functions	=	android_function_adb_msc,
-	},
-	{
-		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_rndis),
-		.functions	=	android_function_rndis,
-	},
-	{
-		.product_id	= 	__constant_cpu_to_le16(ACM_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_acm),
-		.functions	=	android_function_acm,
-	},
-};
-
-static struct android_usb_platform_data android_usb_data = {
-	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
-	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
-	.version		=	0,
-	.product_name		=	"Big Island",
-	.manufacturer_name	= 	"Broadcom",
-	.serial_number		=	"0123456789ABCDEF",
-
-	.num_products		=	ARRAY_SIZE(android_products),
-	.products		=	android_products,
-
-	.num_functions		=	ARRAY_SIZE(android_functions_all),
-	.functions		=	android_functions_all,
-};
-
-static struct platform_device android_usb = {
-	.name 	= "android_usb",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &android_usb_data,
-	},
-};
-
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.start = 0x9C000000,
@@ -1294,9 +1171,6 @@ static struct platform_device *board_devices[] __initdata = {
 	&island_ipc_device,
 	&board_gpio_keys_device,
 	&islands_leds_device,
-	&android_rndis_device,
-	&android_mass_storage_device,
-	&android_usb,
 	&android_pmem,
 	&island_leds_gpio_device,
 	&island_sdio0_device,

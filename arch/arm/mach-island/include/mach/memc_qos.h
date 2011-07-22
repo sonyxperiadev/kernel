@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2004 - 2011 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -12,22 +12,24 @@
 * consent.
 *****************************************************************************/
 
-/*
- * GPIO keys configurations
- */
 
-#ifndef GPIO_KEYS_SETTINGS_H
-#define GPIO_KEYS_SETTINGS_H
+/****************************************************************************/
+/**
+*   @file   memc_qos.h
+*
+*   @brief  API definitions for the memory controller QOS interface
+*/
+/****************************************************************************/
 
-#define GPIO_KEYS_SETTINGS \
-{ \
-    { \
-        .code = KEY_POWER, \
-        .desc = "Power", \
-        .gpio = 4, \
-        .active_low = 1, \
-    } \
-};
+#if !defined( ASM_ARM_ARCH_BCMHANA_MEMC_QOS_H )
+#define ASM_ARM_ARCH_BCMHANA_MEMC_QOS_H
 
+/* ---- Function Prototypes ---------------------------------------------- */
 
-#endif /* GPIO_KEYS_SETTINGS_H */
+#if defined( __KERNEL__ )
+
+extern int memc_qos_init( void );
+
+#endif  /* defined( __KERNEL__ ) */
+
+#endif  /* ASM_ARM_ARCH_BCMHANA_MEMC_QOS_H */

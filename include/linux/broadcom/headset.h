@@ -75,6 +75,6 @@ typedef enum
 /* ---- Variable Externs ------------------------------------------------- */
 /* ---- Function Prototypes ---------------------------------------------- */
 
-#define HEADSET_DEBOUNCE_DEFAULT        32
+#define HEADSET_DEBOUNCE_DEFAULT        32000
 
 #endif  /* LINUX_HEADSET_H */

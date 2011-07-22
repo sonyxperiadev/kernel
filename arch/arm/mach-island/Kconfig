@@ -47,6 +47,12 @@ config MAP_LITTLE_ISLAND_MODE
         help
           Support the Little Island mode.
 
+config MAP_LITTLE_ISLAND_MEMC_QOS
+        bool "Enable Memory Controller QOS in LITTLE ISLAND Mode"
+        depends on MAP_LITTLE_ISLAND_MODE
+        help
+          Enable Memory Controller QOS in Little Island mode.
+
 config MAP_SDMA
 	bool "MAP SDMA and Memory Map"
 	help
