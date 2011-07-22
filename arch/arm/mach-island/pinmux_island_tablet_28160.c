@@ -162,6 +162,12 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO_3, VC_GPCLK_0, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(GPIO_2, VC_GPCLK_1, 0, OFF, OFF, 0, 0, 8MA),
 
+        /* SSP0 */
+        PIN_CFG( SSP0_FS,  SSP0_FS,   0, OFF, OFF, 0, 0, 8MA ),
+        PIN_CFG( SSP0_CLK, SSP0_CLK,  0, OFF, OFF, 0, 0, 8MA ),
+        PIN_CFG( SSP0_RXD, SSP0_RXD,  0, OFF, OFF, 0, 0, 8MA ),
+        PIN_CFG( SSP0_TXD, SSP0_TXD,  0, OFF, OFF, 0, 0, 8MA ),
+
 	/* UARTB3 */
 	PIN_CFG( SSP1_FS,  UARTB3_URXD,  0, OFF, OFF, 0, 0, 8MA ),
 	PIN_CFG( SSP1_CLK, UARTB3_UTXD,  0, OFF, OFF, 0, 0, 8MA ),
