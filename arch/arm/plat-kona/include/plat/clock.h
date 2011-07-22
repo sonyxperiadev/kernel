@@ -514,6 +514,8 @@ int clock_debug_add_clock(struct clk *c);
 int clk_init(struct clk* clk);
 int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
+int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
+int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay);
 
 #if defined(DEBUG)
 #define	clk_dbg printk

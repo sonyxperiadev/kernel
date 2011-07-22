@@ -170,7 +170,7 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	if(IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->set_rate)
 		return -EINVAL;
 
-	if(clk->use_cnt)
+	if(clk->id != CLK_ARM_PERI_CLK_ID && clk->use_cnt)
 	{
 		printk("%s is in enabled state. Disable before calling set_rate\n", clk->name);
 		return -EBUSY;
@@ -567,12 +567,15 @@ static int ccu_clk_init(struct clk* clk)
 	{
 		ccu_set_voltage(ccu_clk,inx,ccu_clk->freq_volt[inx]);
 	}
-	/*Init peri voltage table  */
-	for (inx = 0; inx < MAX_CCU_PERI_VLT_COUNT; inx++)
+	/*PROC ccu doea not have the PERI voltage registers*/
+	if (ccu_clk->vlt_peri_offset != 0)
 	{
+	    /*Init peri voltage table  */
+	    for (inx = 0; inx < MAX_CCU_PERI_VLT_COUNT; inx++)
+	    {
 		ccu_set_peri_voltage(ccu_clk,inx,ccu_clk->volt_peri[inx]);
+	    }
 	}
-
 	/*Init freq policy */
 	for (inx = 0; inx < MAX_CCU_POLICY_COUNT; inx++)
 	{
@@ -751,7 +754,7 @@ static int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source)
 }
 EXPORT_SYMBOL(peri_clk_set_pll_select);
 
-static int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay)
+int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay)
 {
 	u32 reg_val;
 
@@ -1720,6 +1723,11 @@ static int _get_clk_status(struct clk *c)
 	{
 		ref_clk = to_ref_clk(c);
 		enabled = ref_clk_get_gating_status(ref_clk);
+	}
+	else if(c->clk_type == CLK_TYPE_CCU)
+	{
+	    if (c->use_cnt > 0)
+		enabled = 1;
 	}
 	if(enabled < 0)
 	    clk_dbg("Status register not available for clock %s\n", c->name);
