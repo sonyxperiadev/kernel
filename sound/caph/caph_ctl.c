@@ -90,8 +90,16 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 			break;
 		case CTL_STREAM_PANEL_VOICECALL:
 			uinfo->count = 1;
-			uinfo->value.integer.min = -50<<2; //Q13.2
-			uinfo->value.integer.max = 0;//FIXME
+			if(dev == AUDCTRL_SPK_LOUDSPK || dev == AUDCTRL_SPK_HEADSET)
+			{
+				uinfo->value.integer.min = -50<<2; //Q13.2
+				uinfo->value.integer.max = 12<<2;
+			}
+			else
+			{
+				uinfo->value.integer.min = -50<<2; //Q13.2
+				uinfo->value.integer.max = 0;
+			}
 			break;
 		case CTL_STREAM_PANEL_PCMIN:
 		case CTL_STREAM_PANEL_VOIPIN:
@@ -183,7 +191,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 		break;
 		case CTL_STREAM_PANEL_VOICECALL:
 		{
-			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[0] = %ld, pVolume[0] =%ld, pVolume[1]=%ld\n", pCurSel[0],pVolume[0],pVolume[1]);
+			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[1] = %ld, pVolume[0] =%ld, dev =%ld\n", pCurSel[1],pVolume[0],dev);
 
 			//call audio driver to set gain/volume		
 			if(pCurSel[1] == dev)

@@ -4396,7 +4396,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)
             csl_caph_audioh_config(AUDDRV_PATH_NVIN_INPUT_R, (void *)&audioh_config);	
 
-       	csl_caph_switch_start_transfer(audioPath.switchCH.chnl);
+       	csl_caph_switch_start_transfer(sw_config.chnl);
         csl_caph_audioh_start(audioh_path);
         if (audioPath.source == CSL_CAPH_DEV_DIGI_MIC_L)
             csl_caph_audioh_start(AUDDRV_PATH_VIN_INPUT_L);
