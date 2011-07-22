@@ -193,33 +193,29 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 
 	(void) chip; /* unused input parameter */
 	
-	if (debounce < 1000){
-	   debounce = 1000;
+	if (debounce !=0) {
+      debounce/=1000;
+      
+      /* find the MSB */
+      res=fls(debounce)-1;
+      /* Check if MSB-1 is set (round up or down) */
+      if (res>0 && (debounce & 1 << (res-1)) ){
+         res++;
+      }
+
+	   if (res < GPIO_GPCTR0_DBR_CMD_1MS || res > GPIO_GPCTR0_DBR_CMD_128MS) {
+		   printk(KERN_ERR "Debounce value %d000 not in range\n", debounce);
+		   return -EINVAL;
+	   }
+
+	   spin_lock_irqsave(&kona_gpio.lock, flags);
+
+	   val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+	   val &= ~GPIO_GPCTR0_DBR_MASK;
+     	val |= GPIO_DB_ENABLE | (res << GPIO_GPCTR0_DBR_SHIFT);
+   } else {
+      val &= ~GPIO_DB_ENABLE;
    }
-
-   debounce/=1000;
-   
-   if (debounce > 128){
-      debounce = 128;
-   }
-   /* find the MSB */
-   res=fls(debounce)-1;
-   /* Check if MSB-1 is set (round up or down) */
-   if (res>0 && (debounce & 1 << (res-1)) ){
-      res++;
-   }
-
-   /* should not be possible */
-	if (res < GPIO_GPCTR0_DBR_CMD_1MS || res > GPIO_GPCTR0_DBR_CMD_128MS) {
-		printk(KERN_ERR "Debounce value %d000 not in range\n", debounce);
-		return -EINVAL;
-	}
-
-	spin_lock_irqsave(&kona_gpio.lock, flags);
-
-	val = __raw_readl(reg_base + GPIO_CTRL(gpio));
-	val &= ~GPIO_GPCTR0_DBR_MASK;
-	val |= GPIO_DB_ENABLE | (res << GPIO_GPCTR0_DBR_SHIFT);
 
 	__raw_writel(val, reg_base + GPIO_CTRL(gpio));
 
