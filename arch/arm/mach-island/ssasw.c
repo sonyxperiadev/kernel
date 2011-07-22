@@ -325,6 +325,13 @@ static int ssasw_set_clock( SSASW_ChalHandle_t *chal_handle, int enable )
    if( enable )
    {
       gSRCMixer_clk = clk_get( NULL, "caph_srcmixer_clk" );
+      err = clk_set_rate( gSRCMixer_clk, 26000000 );
+      if ( err )
+      {
+         printk( KERN_ERR "%s: failed to set rate on CAPH SRC Mixer clock %d!\n", __FUNCTION__, err );
+         return err;
+      }
+
       err = clk_enable( gSRCMixer_clk );
       if ( err )
       {
