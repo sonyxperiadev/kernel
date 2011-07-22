@@ -122,6 +122,7 @@ static char *static_command_line;
 
 static char *execute_command;
 static char *ramdisk_execute_command;
+static int turn_ramdisk_execute_off = 0;
 
 #ifdef CONFIG_SMP
 /* Setup configured maximum number of CPUs to activate */
@@ -354,6 +355,15 @@ static int __init rdinit_setup(char *str)
 	return 1;
 }
 __setup("rdinit=", rdinit_setup);
+
+
+static int __init no_rdboot(char *str)
+{
+        turn_ramdisk_execute_off = 1;
+        return 1;
+}
+__setup("nordboot", no_rdboot);
+
 
 #ifndef CONFIG_SMP
 
@@ -837,7 +847,7 @@ static noinline int init_post(void)
 
 	current->signal->flags |= SIGNAL_UNKILLABLE;
 
-	if (ramdisk_execute_command) {
+	if (ramdisk_execute_command && !turn_ramdisk_execute_off) {
 		run_init_process(ramdisk_execute_command);
 		printk(KERN_WARNING "Failed to execute %s\n",
 				ramdisk_execute_command);
