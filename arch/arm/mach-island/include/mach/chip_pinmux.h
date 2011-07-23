@@ -186,6 +186,7 @@ enum PIN_NAME {
    /* GPIO 13 */  PN_DIGMIC2_CLK,
    /* GPIO 12 */  PN_DIGMIC2_DQ,
 
+	/* GPIO 6 */  PN_GPIO_6,
 	/* GPIO 3 */   PN_GPIO_3,
    /* GPIO 2 */   PN_GPIO_2,
 
@@ -201,6 +202,8 @@ enum PIN_FUNC {
 	
 	PF_PWM_O_0,
         PF_PWM_O_2,
+
+	PF_VC_PWM_1,
 
 	PF_VC_GPIO_0,
 	PF_VC_GPIO_1,
