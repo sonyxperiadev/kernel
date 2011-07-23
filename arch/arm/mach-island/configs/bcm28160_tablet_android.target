@@ -1,0 +1,7 @@
+name   = bcm11160_tablet_android
+arch   = arm
+family = island
+chip   = 11160
+board  = tablet_28160
+option = initrd
+
