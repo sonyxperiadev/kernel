@@ -158,6 +158,12 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(LCD_OE,    LCD_OE,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(LCD_PCLK,  LCD_PCLK,  0, OFF, OFF, 0, 0, 8MA),
 
+   /* Digital Mics*/
+   PIN_CFG( DIGMIC1_CLK, DIGMIC1_CLK, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC1_DQ,  DIGMIC1_DQ,  0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC2_CLK, DIGMIC2_CLK, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC2_DQ,  DIGMIC2_DQ,  0, OFF, OFF, 0, 0, 8MA ),
+
 	/* VC GP clock */
 	PIN_CFG(GPIO_3, VC_GPCLK_0, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(GPIO_2, VC_GPCLK_1, 0, OFF, OFF, 0, 0, 8MA),
@@ -179,6 +185,16 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SSP2_CLK,   UARTB4_UTXD,  0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SSP2_RXD_0, UARTB4_URTSN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SSP2_TXD_0, UARTB4_UCTSN, 0, OFF, OFF, 0, 0, 8MA),
+
+/* AUDIOH */
+   PIN_CFG( UARTB4_UTXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( UARTB4_URXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( NORFLSH_AD_08, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+
+   /* BT GPIO */
+   PIN_CFG( NORFLSH_CE0_N, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( NORFLSH_AD_05, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+
 };
 
 /* board level init */
