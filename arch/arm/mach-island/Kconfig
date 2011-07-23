@@ -40,6 +40,11 @@ config MACH_ISLAND_TABLET_28160
         help
           Support for the Broadcom Island 28160 Tablet board.
 
+config MACH_ISLAND_TABLET_CP
+        bool "Support Broadcom Island Compal Tablet board"
+        help
+          Support for the Broadcom Island Compal Tablet board.
+
 endchoice
 
 config MAP_LITTLE_ISLAND_MODE

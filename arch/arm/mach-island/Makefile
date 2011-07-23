@@ -65,4 +65,11 @@ CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET_28160 \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
 
+# For Compal tablet
+obj-$(CONFIG_MACH_ISLAND_TABLET_CP) += board_cp.o pinmux_island_tablet.o
+CFLAGS_board_cp.o += -Iarch/arm/mach-island/hw_cfg/CP_TABLET \
+-Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
+-Iarch/arm/mach-island/hw_cfg/BASE \
+-Ivc4-dev/src/interface/vceb/host \
+-Ivc4-dev/src/interface/vceb/host/linux
 
