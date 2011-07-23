@@ -194,7 +194,7 @@ static int kona_gpio_set_debounce(struct gpio_chip *chip, unsigned gpio, unsigne
 	(void) chip; /* unused input parameter */
 	
 	if ( ( debounce > 0 && debounce < 1000 ) || debounce > 128000 ){
-		   printk(KERN_ERR "Debounce value %d000 not in range\n", debounce);
+		   printk(KERN_ERR "Debounce value %d not in range\n", debounce);
 		   return -EINVAL;
    	}
 
