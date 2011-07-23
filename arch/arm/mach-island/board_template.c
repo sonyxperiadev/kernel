@@ -1427,10 +1427,8 @@ static void __init board_init(void)
 /*
  * Template used by board-xxx.c to create new board instance
  */
-#define QUOTEME_(x) #x
-#define QUOTEME(x) QUOTEME_(x)
 #define CREATE_BOARD_INSTANCE(name) \
-MACHINE_START(name, QUOTEME(name)) \
+MACHINE_START(name, #name) \
 	.phys_io = IO_START, \
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC, \
 	.map_io = island_map_io, \
