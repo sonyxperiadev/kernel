@@ -94,6 +94,8 @@ UInt8 SHARED_RAM_BASE[0x50000];
 
 #define BMODEM_BASE_ADDR 0x3A050000
 #define CAPH_BASE_ADDR   0x35020000
+#define DSPCCU_BASE_ADDR 0x3a056000
+#define CSR_BASE_ADDR	 0x35008000
 
 
 #pragma arm section zidata = "shared_rip_mem_sect"
@@ -222,7 +224,20 @@ void SHAREDMEM_Init()
 					/* rbuf_enable */ CHALTL3R_TL3RCONFIG_RBUF_DISABLE
 					);
 					
-	//*((UInt32 *)(SMICONF3)) = SHARED_RAM_BASE | 0x10 | 0x00; 					
+	
+
+	// *((UInt32 *)(SMICONF3)) = DSPCCU_BASE_ADDR  | 0xe;  // To access DSP CCU block
+	chal_tl3r_set_config_reg(chal_tl3r_handle, 
+					/* index */ CHAL_TL3R_CONFIG_REGISTER_3, 
+					/* sm_base_addr */ DSPCCU_BASE_ADDR,
+					/* addr_mode */ CHALTL3R_TL3RCONFIG_ADDR_MODE_LEGACY,
+					/* rbuf_adaptive_en */ CHALTL3R_TL3RCONFIG_RBUF_ADAPTIVE_DISABLE,
+					/* wbuf_en */ CHALTL3R_TL3RCONFIG_WBUF_DISABLE,
+					/* page_size3to0 */ CHALTL3R_TL3RCONFIG_PAGE_SIZE_4KW,
+					/* rbuf_enable */ CHALTL3R_TL3RCONFIG_RBUF_DISABLE
+					);
+
+	
 					
 	// *((UInt32 *)(SMICONF4)) = SHARED_RAM_BASE | 0x08 | 0x60; // Buffered read and write to shared memory
 	chal_tl3r_set_config_reg(chal_tl3r_handle, 
@@ -234,6 +249,25 @@ void SHAREDMEM_Init()
 					/* page_size3to0 */ CHALTL3R_TL3RCONFIG_PAGE_SIZE_256KW,
 					/* rbuf_enable */ CHALTL3R_TL3RCONFIG_RBUF_DISABLE
 					);
+
+
+
+	// *((UInt32 *)(SMICONF5)) = CSR_BASE_ADDR  | 0xe;  // To access CSR block
+	chal_tl3r_set_config_reg(chal_tl3r_handle, 
+					/* index */ CHAL_TL3R_CONFIG_REGISTER_5, 
+					/* sm_base_addr */ CSR_BASE_ADDR,
+					/* addr_mode */ CHALTL3R_TL3RCONFIG_ADDR_MODE_LEGACY,
+					/* rbuf_adaptive_en */ CHALTL3R_TL3RCONFIG_RBUF_ADAPTIVE_DISABLE,
+					/* wbuf_en */ CHALTL3R_TL3RCONFIG_WBUF_DISABLE,
+					/* page_size3to0 */ CHALTL3R_TL3RCONFIG_PAGE_SIZE_4KW,
+					/* rbuf_enable */ CHALTL3R_TL3RCONFIG_RBUF_DISABLE
+					);
+
+
+
+
+
+	
 	#endif
 					
 /* Route the audio interrupts over to the DSP */

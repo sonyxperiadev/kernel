@@ -157,7 +157,8 @@ static UInt16 ARM2SP_BuildCommandArg0 (
 									   AUDIO_SAMPLING_RATE_t	samplingRate,
 									   VORENDER_PLAYBACK_MODE_t	playbackMode,
 									   VORENDER_VOICE_MIX_MODE_t   mixMode,
-									   UInt32 numFramesPerInterrupt);
+									   UInt32 numFramesPerInterrupt,
+									   UInt8 audMode);
 
 static void VPU_Render_TaskEntry (void);
 static void ARM2SP_Render_TaskEntry (void* arg);
@@ -172,6 +173,41 @@ void VPU_Render_Request(UInt16 bufferIndex);
 
 static void CheckBufDoneUponStop (VORENDER_Drv_t	*audDrv);
 static VORENDER_ARM2SP_INSTANCE_e AUDDRV_ARM2SP_GetInstanceID(VORENDER_TYPE_t type);
+
+// Description: Insert silence into FIFO. 
+static Result_t AUDDRV_VoiceRender_InsertSilence(VORENDER_Drv_t *audDrv, UInt32 size)
+{
+	UInt32 nAvailSpace, nAvailBytes, nInsertBytes, margin = 0x10;
+	
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "%s audDrv %x, size %x.", __FUNCTION__, audDrv, size);
+
+	if (audDrv->audQueue == NULL)
+		return RESULT_ERROR;
+
+	nAvailBytes = AUDQUE_GetLoad(audDrv->audQueue);
+	nAvailSpace = AUDQUE_GetQueueSize(audDrv->audQueue) - nAvailBytes;
+	
+	nInsertBytes = size;
+	if(nAvailSpace <= margin) 
+		nInsertBytes = 0;
+	
+	if(nInsertBytes)
+	{
+		if(nAvailSpace <= nInsertBytes) 
+		{
+			nInsertBytes = nAvailSpace - margin; //fifo can not be 100% full.
+			Log_DebugPrintf(LOGID_AUDIO, "%s no enough space, %x left.", __FUNCTION__, nAvailSpace);
+		}
+
+		AUDQUE_UpdateWritePtrWithSize(audDrv->audQueue, nInsertBytes);
+	}
+
+	//Log_DebugPrintf(LOGID_SOC_AUDIO, "%s nInsertBytes %x.", __FUNCTION__, nInsertBytes);
+	return RESULT_OK; 
+}
+
+
+
 //
 // APIs
 //
@@ -823,8 +859,15 @@ static void ARM2SP_Render_TaskEntry (void* arg)
 					if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_16000 && numFramesPerInterrupt > 2)
 						numFramesPerInterrupt = 2;
 
+					if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_48000)
+					{
+						numFramesPerInterrupt = 1; //For 48K ARM2SP, dsp only supports 2*20ms ping-pong buffer, stereo or mono
+						audDrv->numFramesPerInterrupt = numFramesPerInterrupt;
+					}
+
 					arg0 = ARM2SP_BuildCommandArg0 (audDrv->config.samplingRate,
-									audDrv->config.playbackMode, audDrv->config.mixMode, numFramesPerInterrupt);
+									audDrv->config.playbackMode, audDrv->config.mixMode, numFramesPerInterrupt,
+									audDrv->config.audMode);
     										
 					Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%x\n", 
 										audDrv->config.playbackMode, audDrv->config.mixMode, arg0, instanceID);
@@ -887,8 +930,12 @@ static void ARM2SP_Render_TaskEntry (void* arg)
 					if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_16000 && numFramesPerInterrupt > 2)
 						numFramesPerInterrupt = 2;
 
+					if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_48000)
+						numFramesPerInterrupt = 1;
+
 					arg0 = ARM2SP_BuildCommandArg0 (audDrv->config.samplingRate,
-									audDrv->config.playbackMode, audDrv->config.mixMode, numFramesPerInterrupt);
+									audDrv->config.playbackMode, audDrv->config.mixMode, numFramesPerInterrupt,
+									audDrv->config.audMode);
 						
 					Log_DebugPrintf(LOGID_AUDIO, "Resume ARM2SP voice play instanceID=0x%x \n", AUDDRV_ARM2SP_GetInstanceID(audDrv->drvType));
 
@@ -1009,7 +1056,7 @@ static UInt32	CopyBufferToQueue (VORENDER_Drv_t *audDrv, UInt8 *buf, UInt32 size
 // ===============================================================================
 static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, UInt16 readIndex)
 {
-	UInt32 copied = 0, sentSize = 0, bottomSize = 0, qLoad = 0;
+	UInt32 copied = 0, sentSize = 0, bottomSize = 0, qLoad = 0, qLoad2 = 0;
 	AUDQUE_Queue_t	*aq = audDrv->audQueue;
 	Boolean in48K = FALSE;
 	qLoad =  AUDQUE_GetLoad(aq);
@@ -1091,23 +1138,26 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 				// ringbufer underflow. upper layer software should not let this happen, but let's still handle it.
 				// Insert silence. Need create dspif_insertSlience function to handle it.
 
-				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest::  Driver ring buffer under flow. qLoad = %ld, bufSize = %ld \n", qLoad, audDrv->bufferSize_inBytes);
+				AUDDRV_VoiceRender_InsertSilence(audDrv, audDrv->bufferSize_inBytes - qLoad);
+				bottomSize = AUDQUE_GetSizeReadPtrToBottom(aq);
+				qLoad2 =  AUDQUE_GetLoad(aq);
+				Log_DebugPrintf(LOGID_AUDIO, "ProcessSharedMemRequest:: error, Driver ring buffer under flow. qLoad = %d-->%d, bufSize = %d.\r\n", qLoad, qLoad2, audDrv->bufferSize_inBytes);
 			}
-			else
+			//else
 			{
 				if (bottomSize >= audDrv->bufferSize_inBytes)
 				{
-					sentSize = CSL_ARM2SP_Write( AUDQUE_GetReadPtr(aq), audDrv->bufferSize_inBytes, writeIndex, in48K );
+					sentSize = CSL_ARM2SP_Write( AUDQUE_GetReadPtr(aq), audDrv->bufferSize_inBytes, writeIndex, in48K, audDrv->config.audMode);
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 				}
 				else
 				{
 					// We should not run into the case of writing twice, because we the bottomSize is always multiple times of audDrv->bufferSize_inBytes according to the driver configure.
 
-					sentSize = CSL_ARM2SP_Write( AUDQUE_GetReadPtr(aq), bottomSize, writeIndex, in48K );
+					sentSize = CSL_ARM2SP_Write( AUDQUE_GetReadPtr(aq), bottomSize, writeIndex, in48K, audDrv->config.audMode);
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 
-					sentSize = CSL_ARM2SP_Write( AUDQUE_GetReadPtr(aq), (audDrv->bufferSize_inBytes - bottomSize), writeIndex, in48K );
+					sentSize = CSL_ARM2SP_Write( AUDQUE_GetReadPtr(aq), (audDrv->bufferSize_inBytes - bottomSize), writeIndex, in48K, audDrv->config.audMode);
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 				}
 			}
@@ -1126,17 +1176,17 @@ static void ProcessSharedMemRequest (VORENDER_Drv_t *audDrv, UInt16 writeIndex, 
 			{
 				if (bottomSize >= audDrv->bufferSize_inBytes)
 				{
-					sentSize = CSL_ARM2SP2_Write( AUDQUE_GetReadPtr(aq), audDrv->bufferSize_inBytes, writeIndex, in48K );
+					sentSize = CSL_ARM2SP2_Write( AUDQUE_GetReadPtr(aq), audDrv->bufferSize_inBytes, writeIndex, in48K, audDrv->config.audMode);
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 				}
 				else
 				{
 					// We should not run into the case of writing twice, because we the bottomSize is always multiple times of audDrv->bufferSize_inBytes according to the driver configure.
 
-					sentSize = CSL_ARM2SP2_Write( AUDQUE_GetReadPtr(aq), bottomSize, writeIndex, in48K );
+					sentSize = CSL_ARM2SP2_Write( AUDQUE_GetReadPtr(aq), bottomSize, writeIndex, in48K, audDrv->config.audMode);
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 
-					sentSize = CSL_ARM2SP2_Write( AUDQUE_GetReadPtr(aq), (audDrv->bufferSize_inBytes - bottomSize), writeIndex, in48K );
+					sentSize = CSL_ARM2SP2_Write( AUDQUE_GetReadPtr(aq), (audDrv->bufferSize_inBytes - bottomSize), writeIndex, in48K, audDrv->config.audMode);
 					AUDQUE_UpdateReadPtrWithSize (aq, sentSize);
 				}
 			}
@@ -1250,11 +1300,11 @@ static Result_t ConfigAudDrv (VORENDER_Drv_t *audDrv,
 			if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_16000)
 				audDrv->bufferSize_inBytes *= 2;
 
-			if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_48000)
+			if (audDrv->config.samplingRate == AUDIO_SAMPLING_RATE_48000) //For 48K ARM2SP, dsp only supports 2*20ms ping-pong buffer, stereo or mono
 			{
-				audDrv->bufferSize_inBytes = (ARM2SP_INPUT_SIZE_48K/4)*audDrv->numFramesPerInterrupt;
-				if (audDrv->config.audMode == 0) // 48K mono, ARM2SP_INPUT_SIZE_48K is 40ms for mono
-					audDrv->bufferSize_inBytes >>= 1;
+				audDrv->numFramesPerInterrupt = 1;
+				audDrv->bufferSize_inBytes = ARM2SP_INPUT_SIZE_48K;
+				if (audDrv->config.audMode == 0) audDrv->bufferSize_inBytes >>= 1;
 			}
 			audDrv->bufferNum = ringBufferFrames/audDrv->numFramesPerInterrupt + 1; // arm2sp is always 4 frames, not configurable.
 			break;
@@ -1331,7 +1381,8 @@ static void CheckBufDoneUponStop (VORENDER_Drv_t	*audDrv)
 static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t		samplingRate,
 									   VORENDER_PLAYBACK_MODE_t		playbackMode,
 									   VORENDER_VOICE_MIX_MODE_t	mixMode,
-									   UInt32						numFramesPerInterrupt
+									   UInt32						numFramesPerInterrupt,
+									   UInt8						audMode
 									   )
 {
 	UInt16 arg0 = 0;
@@ -1353,11 +1404,19 @@ static UInt16 ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t		samplingRate,
 	
 	#define	ARM2SP_FRAME_NUM		0x7000				//8K:1/2/3/4, 16K:1/2; if 0 (or other): 8K:4, 16K:2
 	#define	ARM2SP_FRAME_NUM_BIT_SHIFT	12				//Number of bits to shift to get the frame number
+	#define	ARM2SP_48K				0x0004				//bit2=[0,1]=[not_48K, 48K]
+	#define	ARM2SP_MONO_ST			0x0080				//bit7=[0,1]=[MONO,STEREO] (not used if not 48k)
 	**/
 
 	// samplingRate
 	if (samplingRate == AUDIO_SAMPLING_RATE_16000)
 		arg0 |= ARM2SP_16KHZ_SAMP_RATE;
+
+	if (samplingRate == AUDIO_SAMPLING_RATE_48000)
+		arg0 |= ARM2SP_48K;
+
+	if (audMode)
+		arg0 |= ARM2SP_MONO_ST;
 
 	// set number of frames per interrupt
 	arg0 |= (numFramesPerInterrupt << ARM2SP_FRAME_NUM_BIT_SHIFT);

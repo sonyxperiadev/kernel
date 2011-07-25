@@ -910,7 +910,7 @@ void csl_caph_audioh_mute(int path_id, Boolean mute_ctrl)
 //
 //============================================================================
 
-void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
+void csl_caph_audioh_setgain(int path_id ,UInt32 gain_or_bitselect, UInt32 fine_gain)
 {
 
 	switch(path_id)
@@ -918,7 +918,7 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
 
 		case AUDDRV_PATH_EARPICEC_OUTPUT:
 
-			chal_audio_earpath_set_gain(handle, gain);
+			chal_audio_earpath_set_gain(handle, gain_or_bitselect);
 			break;
 
 		case AUDDRV_PATH_HEADSET_OUTPUT:
@@ -930,7 +930,7 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
 
 		case AUDDRV_PATH_EANC_INPUT:
 
-			chal_audio_eancpath_set_cic_gain(handle, gain, gain1);
+			chal_audio_eancpath_set_cic_gain(handle, gain_or_bitselect, fine_gain);
 
 			break;
 		
@@ -945,20 +945,32 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
         case AUDDRV_PATH_ANALOGMIC_INPUT:
         case AUDDRV_PATH_HEADSET_INPUT:
 
-			chal_audio_mic_pga(handle, gain);
+			chal_audio_mic_pga(handle, gain_or_bitselect);
 
 			break;
         case AUDDRV_PATH_VIN_INPUT:
         case AUDDRV_PATH_VIN_INPUT_L:
         case AUDDRV_PATH_VIN_INPUT_R:
-			chal_audio_vinpath_set_cic_scale(handle, gain, gain1,
-				       	gain, gain1);			
+#if ( CHIP_REVISION == 10 )		//# A0
+			chal_audio_vinpath_set_cic_scale(handle, gain_or_bitselect, fine_gain,
+				       	gain_or_bitselect, fine_gain);
+#endif
+#if ( CHIP_REVISION == 20 )		//# B0
+			chal_audio_vinpath_set_cic_scale(handle, gain_or_bitselect | fine_gain,
+				       	gain_or_bitselect | fine_gain);
+#endif
 			break;		
         case AUDDRV_PATH_NVIN_INPUT:
         case AUDDRV_PATH_NVIN_INPUT_L:
         case AUDDRV_PATH_NVIN_INPUT_R:
-			chal_audio_nvinpath_set_cic_scale(handle, gain, gain1,
-				       	gain, gain1);			
+#if ( CHIP_REVISION == 10 )		//# A0
+			chal_audio_nvinpath_set_cic_scale(handle, gain_or_bitselect, fine_gain,
+				       	gain_or_bitselect, fine_gain);
+#endif
+#if ( CHIP_REVISION == 20 )		//# B0
+			chal_audio_nvinpath_set_cic_scale(handle, gain_or_bitselect | fine_gain,
+				       	gain_or_bitselect | fine_gain);
+#endif
 			break;		
 			
 		default:
@@ -1195,7 +1207,12 @@ void csl_audio_audiotx_get_dac_ctrl(CSL_CAPH_AUDIOH_DACCTRL_t *readdata)
 
 void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 {
+#if ( CHIP_REVISION == 10 )		//# A0
 	chal_audio_stpath_load_filter(handle, coeff );
+#endif
+#if ( CHIP_REVISION == 20 )		//# B0
+	chal_audio_stpath_load_filter(handle, coeff, 0 );
+#endif
 	return;
 }	
 

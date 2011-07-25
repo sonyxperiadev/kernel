@@ -1162,6 +1162,13 @@ void AUDCTRL_EnablePlay(
 		config.sink = AUDDRV_DEV_MEMORY;
 	}
 
+#if defined(ENABLE_DMA_ARM2SP)
+	if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk!=AUDCTRL_SPK_USB)
+	{
+		config.sink = AUDDRV_DEV_DSP_throughMEM; //convert from AUDDRV_DEV_EP
+	}
+#endif
+
 	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
 		;
 	else
@@ -1922,7 +1929,8 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 			AUDCTRL_MIX_SELECT_t mixSelect,
 			Boolean isDSPGain,
 			Boolean dspSpeechProcessingNeeded,
-			UInt32 gain)
+			UInt32 gain,
+			UInt32 inPathID)
 {
     AUDDRV_PathID pathID = 0;
     Int16 dspGain = 0;
@@ -2028,7 +2036,10 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
     }
     else
     {
-        pathID = AUDCTRL_GetPathIDFromTable(src, sink, spk, mic);
+		if(inPathID) 
+			pathID = inPathID;
+        else 
+			pathID = AUDCTRL_GetPathIDFromTable(src, sink, spk, mic);
         if(pathID == 0)
         {
             audio_xassert(0,pathID);
@@ -2371,6 +2382,140 @@ void AUDCTRL_SetAudioLoopback(
 		 AUDCTRL_RemoveFromTable(pathID);
     }
 }
+//============================================================================
+//
+// Function Name: AUDCTRL_SetSidetoneLoopback
+//
+// Description:   Set the sidetone loopback path
+// 
+//============================================================================
+void AUDCTRL_SetSidetoneLoopback( 
+                              Boolean enable_lpbk,
+                              AUDCTRL_MICROPHONE_t mic,
+                              AUDCTRL_SPEAKER_t	speaker
+                             )
+{
+	// This set of coeff doesn't allow signal to pass through, disable for now.
+	UInt32 sidetoneCoeff[128] = {
+								0x7FFFFF,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+							};
+	UInt32 *coeff = &sidetoneCoeff[0];
+    AUDDRV_DEVICE_e source, sink;
+    AUDDRV_PathID pathID;
+    AUDCTRL_Config_t data;
+
+    AUDDRV_HWCTRL_CONFIG_t hwCtrlConfig;
+    //Int16 tempGain = 0;
+	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
+
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: mic = %d\n", mic);
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: speaker = %d\n", speaker);
+
+    source = sink = AUDDRV_DEV_NONE;
+    pathID = 0;
+    memset(&data, 0, sizeof(AUDCTRL_Config_t));
+    switch (mic)
+    {
+        case AUDCTRL_MIC_MAIN:
+            source = AUDDRV_DEV_ANALOG_MIC;
+            break;
+        case AUDCTRL_MIC_AUX:
+            source = AUDDRV_DEV_HS_MIC;
+            break;
+        default:
+            source = AUDDRV_DEV_ANALOG_MIC;
+            Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: mic = %d\n", mic);
+            break;
+    }
+
+    switch (speaker)
+    {
+        case AUDCTRL_SPK_HANDSET:
+            sink = AUDDRV_DEV_EP;
+            audio_mode = AUDIO_MODE_HANDSET;
+            break;
+        case AUDCTRL_SPK_HEADSET:
+            sink = AUDDRV_DEV_HS;
+            audio_mode = AUDIO_MODE_HEADSET;
+            break;
+        case AUDCTRL_SPK_LOUDSPK:
+            sink = AUDDRV_DEV_IHF;
+            audio_mode = AUDIO_MODE_SPEAKERPHONE;
+            break;
+        default:
+            sink = AUDDRV_DEV_EP;
+            audio_mode = AUDIO_MODE_HANDSET;
+            Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: speaker = %d\n", speaker);
+            break;
+    }
+
+    if(enable_lpbk)
+    {
+        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: Enable loopback \n");
+
+		// enable HW path
+        hwCtrlConfig.streamID = AUDDRV_STREAM_NONE;
+        hwCtrlConfig.source = source;
+        hwCtrlConfig.sink = sink;
+        hwCtrlConfig.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
+        hwCtrlConfig.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
+        hwCtrlConfig.chnlNum = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
+        hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
+
+        pathID = AUDDRV_HWControl_EnablePath(hwCtrlConfig);
+		AUDDRV_HWControl_SetFilter(AUDDRV_SIDETONE_FILTER, (void *)coeff);
+		AUDDRV_HWControl_SetSideToneGain(0); // Set sidetone gain to 0dB.
+		AUDDRV_HWControl_EnableSideTone(audio_mode);
+
+        //Save this path to the path table.
+        data.pathID = pathID;
+        data.src = AUDIO_HW_VOICE_IN;
+        data.sink = AUDIO_HW_VOICE_OUT;
+        data.mic = mic;
+        data.spk = speaker;
+        data.numCh = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
+        data.sr = AUDIO_SAMPLING_RATE_48000;
+        AUDCTRL_AddToTable(&data);
+
+		//Enable PMU for headset/IHF
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+    	    ||(speaker == AUDCTRL_SPK_HEADSET))	
+	        powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
+    }
+    else
+    {
+        // Disable Analog Mic path
+        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: Disable loopback\n");
+
+	    //Enable PMU for headset/IHF
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+	        ||(speaker == AUDCTRL_SPK_HEADSET))	
+        	powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
+
+        memset(&hwCtrlConfig, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+        pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
+    	if(pathID == 0)
+	    {
+		    audio_xassert(0,pathID);
+		    return;
+	    }
+	
+        hwCtrlConfig.pathID = pathID;
+        (void) AUDDRV_HWControl_DisablePath(hwCtrlConfig);
+		AUDDRV_HWControl_DisableSideTone(audio_mode);
+
+        //Remove this path to the path table.
+        AUDCTRL_RemoveFromTable(pathID);
+    }
+}
+
 
 void AUDCTRL_SetEQ( 
 				AUDIO_HW_ID_t	audioPath,
