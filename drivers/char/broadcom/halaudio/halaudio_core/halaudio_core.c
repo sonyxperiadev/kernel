@@ -207,6 +207,23 @@ static struct halaudio_if_node     *gResyncDisable;
 static struct halaudio_csx_framesync gCsxFrameSync;
 
 /* ---- Private Function Prototypes -------------------------------------- */
+static HALAUDIO_HDL  halAudioCoreAllocateClient( void );
+static int           halAudioCoreFreeClient( HALAUDIO_HDL client_hdl );
+static int           halAudioCoreQueryInterfaceByName( HALAUDIO_HDL client_hdl, const char *name, HALAUDIO_IF *id );
+static int           halAudioCoreQueryCodecByName( HALAUDIO_HDL client_hdl, const char *name, HALAUDIO_CODEC *id );
+static int           halAudioCoreLockCodec( HALAUDIO_HDL client_hdl, HALAUDIO_CODEC cid );
+static int           halAudioCoreUnlockCodec( HALAUDIO_HDL client_hdl, HALAUDIO_CODEC cid );
+static int           halAudioCoreGetGainInfo( HALAUDIO_HDL client_hdl, HALAUDIO_BLOCK block, HALAUDIO_GAIN_INFO *info );
+static int           halAudioCoreSetGain( HALAUDIO_HDL client_hdl, HALAUDIO_BLOCK block, int db );
+static int           halAudioCoreSetPower( HALAUDIO_HDL client_hdl, HALAUDIO_POWER_LEVEL level );
+static int           halAudioCoreGetPower( HALAUDIO_HDL client_hdl, HALAUDIO_POWER_LEVEL *level );
+static int           halAudioCoreWrite( HALAUDIO_HDL client_hdl, HALAUDIO_CODEC cid, HALAUDIO_FMT format, const uint8_t *audio, int bytes );
+static int           halAudioCoreAddInterface( HALAUDIO_IF_OPS *ops, unsigned int codecs, const char *name, int frame_usec, int sync, HALAUDIO_IF_HDL *hdlp );
+static int           halAudioCoreDelInterface( HALAUDIO_IF_HDL handle );
+static int           halAudioCoreSetSyncFlag( HALAUDIO_IF_HDL handle, int sync );
+static int           halAudioCoreSetCsxIoPoints( HALAUDIO_CODEC cid, HALAUDIO_CSX_POINT_ID point, const CSX_IO_POINT_FNCS *fncp, void *data );
+static int           halAudioCoreSetCsxFrameSync( CSX_FRAME_SYNC_FP fncp, void *data );
+
 static int     halaudio_add_codec( HALAUDIO_IF_HDL ifhdl );
 static void    halaudio_frame_elapsed( void *data );
 static int     halaudio_del_interface_unsafe( HALAUDIO_IF_HDL handle );
@@ -378,7 +395,7 @@ static void halaudio_cleanup_clientp(
 *     valid pointer - success
 *     NULL          - error, out of memory
 */
-HALAUDIO_HDL halAudioAllocateClient( void )
+HALAUDIO_HDL halAudioCoreAllocateClient( void )
 {
    struct halaudio_client_node *clientp;
 
@@ -415,7 +432,7 @@ HALAUDIO_HDL halAudioAllocateClient( void )
 *     0        Success
 *     -ve      Failure code
 */
-int halAudioFreeClient(
+int halAudioCoreFreeClient(
    HALAUDIO_HDL client_hdl          /*<< (i) Client handle */
 )
 {
@@ -444,7 +461,7 @@ int halAudioFreeClient(
    /* Clear client's power request in case we were influencing
     * the power setting
     */
-   halAudioSetPower( client_hdl, HALAUDIO_POWER_DEEP_SLEEP );
+   halAudioCoreSetPower( client_hdl, HALAUDIO_POWER_DEEP_SLEEP );
 
    /* Free client */
    down( &gClients.mutex );
@@ -466,7 +483,7 @@ int halAudioFreeClient(
 *     0        Success
 *     -ve      Failure code
 */
-int halAudioQueryInterfaceByName(
+int halAudioCoreQueryInterfaceByName(
    HALAUDIO_HDL client_hdl,         /*<< (i) Client handle */
    const char  *name,               /*<< (i) Name of interface */
    HALAUDIO_IF *id                  /*<< (i) Ptr to store found interface ID */
@@ -502,7 +519,7 @@ int halAudioQueryInterfaceByName(
 *     0        Success
 *     -ve      Failure code
 */
-int halAudioQueryCodecByName(
+int halAudioCoreQueryCodecByName(
    HALAUDIO_HDL    client_hdl,      /*<< (i) Client handle */
    const char     *name,            /*<< (i) Name of codec channel */
    HALAUDIO_CODEC *id               /*<< (i) Ptr to store found codec ID */
@@ -547,7 +564,7 @@ int halAudioQueryCodecByName(
 *  @remarks
 *     Client can safely lock the same codec multiple times.
 */
-int halAudioLockCodec(
+int halAudioCoreLockCodec(
    HALAUDIO_HDL    client_hdl,      /*<< (i) Client handle */
    HALAUDIO_CODEC  cid              /*<< (i) Codec to lock */
 )
@@ -592,7 +609,7 @@ backout:
 *              is already unlocked.
 *     -ENODEV  Non-existing codec
 */
-int halAudioUnlockCodec(
+int halAudioCoreUnlockCodec(
    HALAUDIO_HDL    client_hdl,      /*<< (i) Client handle */
    HALAUDIO_CODEC  cid              /*<< (i) Codec ID to unlock */
 )
@@ -625,7 +642,7 @@ int halAudioUnlockCodec(
 *     -EPERM   Parent interface is disabled
 *     -ve      Failure code
 */
-int halAudioGetGainInfo(
+int halAudioCoreGetGainInfo(
    HALAUDIO_HDL        client_hdl,  /*<< (i) Client handle */
    HALAUDIO_BLOCK      block,       /*<< (i) Block id for digital or analog gain */
    HALAUDIO_GAIN_INFO *info         /*<< (o) Pointer to returned gain information */
@@ -696,7 +713,7 @@ backout:
 *     -EPERM   Parent interface is disabled
 *     -ve      Failure code
 */
-int halAudioSetGain(
+int halAudioCoreSetGain(
    HALAUDIO_HDL    client_hdl,      /*<< (i) Client handle */
    HALAUDIO_BLOCK  block,           /*<< (i) Block id for digital or analog gain */
    int             db               /*<< (i) Gain in dB to set */
@@ -773,7 +790,7 @@ backout:
 *     0        Success
 *     -EINVAL  Invalid power level
 */
-int halAudioSetPower(
+int halAudioCoreSetPower(
    HALAUDIO_HDL         client_hdl, /*<< (i) Client handle */
    HALAUDIO_POWER_LEVEL level       /*<< (i) Power level request */
 )
@@ -838,7 +855,7 @@ int halAudioSetPower(
 *     0        Success
 *     -ve      Error code
 */
-int halAudioGetPower(
+int halAudioCoreGetPower(
    HALAUDIO_HDL         client_hdl, /*<< (i) Client handle */
    HALAUDIO_POWER_LEVEL *level      /**< (o) Pointer to store power level */
 )
@@ -862,7 +879,7 @@ int halAudioGetPower(
 *     -EPERM   Parent interface is disabled
 *     -ve      Error code
 */
-int halAudioWrite(
+int halAudioCoreWrite(
    HALAUDIO_HDL   client_hdl,       /*<< (i) Client handle */
    HALAUDIO_CODEC cid,              /*<< (i) Codec channel to write to */
    HALAUDIO_FMT   format,           /*<< (i) Format of samples */
@@ -939,7 +956,7 @@ int halAudioWrite(
 *     -EPERM   Parent interface is disabled
 *     -ve      Error code
 */
-int halAudioRead(
+int halAudioCoreRead(
    HALAUDIO_HDL   client_hdl,       /*<< (i) Client handle */
    HALAUDIO_CODEC cid,              /*<< (i) Codec channel to write to */
    HALAUDIO_FMT   format,           /*<< (i) Format of samples */
@@ -1014,7 +1031,7 @@ int halAudioRead(
 *     0        Success
 *     -1       Super user privileges not permitted
 */
-int halAudioSetSuperUser(
+int halAudioCoreSetSuperUser(
    HALAUDIO_HDL   client_hdl,       /*<< (i) Client handle */
    int            enable            /*<< (i) 1 to enable super user, 0 to disable */
 )
@@ -1055,7 +1072,7 @@ int halAudioSetSuperUser(
 *     prior to switching the sampling frequency. Re-enabling the codec
 *     involves resynchronizing with the other codec channels.
 */
-int halAudioSetFreq(
+int halAudioCoreSetFreq(
    HALAUDIO_HDL   client_hdl,       /*<< (i) Client handle */
    HALAUDIO_CODEC cid,              /*<< (i) Codec channel to write to */
    int            newfreq           /*<< (i) Sampling frequency in Hz to set */
@@ -1153,7 +1170,7 @@ backout:
 *     -EINVAL  Invalid sampling frequency to set, or invalid codec
 *     -EPERM   Parent interface is disabled
 */
-int halAudioGetFreq(
+int halAudioCoreGetFreq(
    HALAUDIO_HDL   client_hdl,       /*<< (i) Client handle */
    HALAUDIO_CODEC cid,              /*<< (i) Codec channel to write to */
    int           *freqhz            /*<< (o) Ptr to store sampling freq */
@@ -1198,7 +1215,7 @@ backout:
 *     -EINVAL  Invalid parameters
 *     -EPERM   Parent interface is disabled
 */
-int halAudioSetEquParms(
+int halAudioCoreSetEquParms(
    HALAUDIO_HDL         client_hdl, /*<< (i) Client handle */
    HALAUDIO_CODEC       cid,        /*<< (i) Codec to write to */
    HALAUDIO_DIR         dir,        /*<< (i) Select equalizer direction */
@@ -1250,7 +1267,7 @@ backout:
 *     -EINVAL  Invalid parameters
 *     -EPERM   Parent interface is disabled
 */
-int halAudioGetEquParms(
+int halAudioCoreGetEquParms(
    HALAUDIO_HDL         client_hdl, /*<< (i) Client handle */
    HALAUDIO_CODEC       cid,        /*<< (i) Codec channel to write to */
    HALAUDIO_DIR         dir,        /*<< (i) Select equalizer direction */
@@ -1289,14 +1306,14 @@ backout:
 /***************************************************************************/
 /**
 *  Query high-level hardware information. To get detailed sub-component
-*  information call halAudioGetInterfaceInfo, halAudioGetCodecInfo and
-*  halAudioGetGainInfo.
+*  information call halAudioCoreGetInterfaceInfo, halAudioCoreGetCodecInfo and
+*  halAudioCoreGetGainInfo.
 *
 *  @return
 *     0        Success
 *     -EINVAL  Invalid parameters
 */
-int halAudioGetHardwareInfo(
+int halAudioCoreGetHardwareInfo(
    HALAUDIO_HDL       client_hdl,   /*<< (i) Client handle */
    HALAUDIO_HW_INFO  *info          /*<< (o) Ptr to store hardware info */
 )
@@ -1316,7 +1333,7 @@ int halAudioGetHardwareInfo(
 *     0        Success
 *     -EINVAL  Invalid parameters
 */
-int halAudioGetInterfaceInfo(
+int halAudioCoreGetInterfaceInfo(
    HALAUDIO_HDL         client_hdl, /*<< (i) Client handle */
    HALAUDIO_IF          id,         /*<< (i) Interface id */
    HALAUDIO_IF_INFO    *info        /*<< (o) Ptr to store interface info */
@@ -1349,7 +1366,7 @@ int halAudioGetInterfaceInfo(
 *     -EINVAL  Invalid parameters
 *     -EPERM   Parent interface is disabled
 */
-int halAudioGetCodecInfo(
+int halAudioCoreGetCodecInfo(
    HALAUDIO_HDL         client_hdl, /*<< (i) Client handle */
    HALAUDIO_CODEC       cid,        /*<< (i) Codec channel to write to */
    HALAUDIO_CODEC_INFO *info        /*<< (o) Ptr to store codec info */
@@ -1404,7 +1421,7 @@ int halAudioGetCodecInfo(
 *     0        Success
 *     -EINVAL  Invalid parameters
 */
-int halAudioEnableInterface(
+int halAudioCoreEnableInterface(
    HALAUDIO_HDL         client_hdl, /*<< (i) Client handle */
    HALAUDIO_IF          id,         /*<< (i) Interface number */
    int                  enable      /*<< (i) 1 to enable, 0 to disable */
@@ -1436,7 +1453,7 @@ int halAudioEnableInterface(
 *     limitations or other reasons. To opt out of synchronization, set
 *     the frame period to 0.
 */
-int halAudioAddInterface(
+int halAudioCoreAddInterface(
    HALAUDIO_IF_OPS  *ops,           /*<< (i) Interface operations */
    unsigned int      codecs,        /*<< (i) Total number of audio codec channels */
    const char       *name,          /*<< (i) Name string */
@@ -1560,7 +1577,7 @@ int halAudioAddInterface(
 
 exit_cleanup_memory:
 
-   halAudioDelInterface( interfp );
+   halAudioCoreDelInterface( interfp );
    return err;
 }
 
@@ -1577,7 +1594,7 @@ exit_cleanup_memory:
 *
 *  @remarks    This routine is very similar to the driver exit routine.
 */
-int halAudioDelInterface(
+int halAudioCoreDelInterface(
    HALAUDIO_IF_HDL handle           /*<< (i) interface to delete */
 )
 {
@@ -1610,7 +1627,7 @@ int halAudioDelInterface(
 *     -EAGAIN  Failed to acquire resource
 *     -ve      Other error codes
 */
-int halAudioSetCsxIoPoints(
+int halAudioCoreSetCsxIoPoints(
    HALAUDIO_CODEC           cid,    /*<< (i) Codec to install CSX callbacks */
    HALAUDIO_CSX_POINT_ID    point,  /*<< (i) Point ID for CSX callbacks */
    const CSX_IO_POINT_FNCS *fncp,   /*<< (i) List of callbacks */
@@ -1655,7 +1672,7 @@ backout:
 *     0        Success
 *     -ve      Other error codes
 */
-int halAudioSetCsxFrameSync(
+int halAudioCoreSetCsxFrameSync(
    CSX_FRAME_SYNC_FP fncp,    /**< (i) Frame sync callback */
    void              *data    /**< (i) User data */
 )
@@ -1689,7 +1706,7 @@ int halAudioSetCsxFrameSync(
 *
 *  @remarks
 */
-int halAudioSetSyncFlag(
+int halAudioCoreSetSyncFlag(
    HALAUDIO_IF_HDL   handle,        /*<< (i) interface to delete */
    int               sync           /*<< (i) 1 requests to sync with other interfaces */
 )
@@ -2177,7 +2194,7 @@ static int halaudio_disable_if_while_others_running(
 *     -EINVAL  Invalid parameters
 *
 *  @remarks
-*     See halAudioEnableInterface for a more elaborate description.
+*     See halAudioCoreEnableInterface for a more elaborate description.
 */
 static int halaudio_enable_interface_unsafe(
    struct halaudio_if_node *interfp,   /*<< (io) Ptr to interface structure */
@@ -2317,7 +2334,7 @@ static int halaudio_enable_interface_unsafe(
 *     -EINVAL  Invalid parameters
 *
 *  @remarks
-*     See halAudioEnableInterface for a more elaborate description.
+*     See halAudioCoreEnableInterface for a more elaborate description.
 *
 *     This routine grabs interface and power mutexes.
 */
@@ -2364,7 +2381,7 @@ static void halaudio_io_cb(
 /***************************************************************************/
 /**
 *  Helper function for setting power level.  This function is used in
-*  halAudioSetPower and in power management suspend/resume.  It is expected
+*  halAudioCoreSetPower and in power management suspend/resume.  It is expected
 *  that the user of this function handles the mutex for protecting
 *  this critical section.
 *
@@ -2642,32 +2659,32 @@ static int __init halaudio_init( void )
 
    /* Register API routines */
    memset( &apifuncs, 0, sizeof(apifuncs) );
-   apifuncs.allocateClient    = halAudioAllocateClient;
-   apifuncs.freeClient        = halAudioFreeClient;
-   apifuncs.queryInterfaceByName = halAudioQueryInterfaceByName;
-   apifuncs.queryCodecByName  = halAudioQueryCodecByName;
-   apifuncs.lockCodec         = halAudioLockCodec;
-   apifuncs.unlockCodec       = halAudioUnlockCodec;
-   apifuncs.getGainInfo       = halAudioGetGainInfo;
-   apifuncs.setGain           = halAudioSetGain;
-   apifuncs.setPower          = halAudioSetPower;
-   apifuncs.getPower          = halAudioGetPower;
-   apifuncs.write             = halAudioWrite;
-   apifuncs.read              = halAudioRead;
-   apifuncs.setSuperUser      = halAudioSetSuperUser;
-   apifuncs.setFreq           = halAudioSetFreq;
-   apifuncs.getFreq           = halAudioGetFreq;
-   apifuncs.setEquParms       = halAudioSetEquParms;
-   apifuncs.getEquParms       = halAudioGetEquParms;
-   apifuncs.getHardwareInfo   = halAudioGetHardwareInfo;
-   apifuncs.getInterfaceInfo  = halAudioGetInterfaceInfo;
-   apifuncs.getCodecInfo      = halAudioGetCodecInfo;
-   apifuncs.enableInterface   = halAudioEnableInterface;
-   apifuncs.addInterface      = halAudioAddInterface;
-   apifuncs.delInterface      = halAudioDelInterface;
-   apifuncs.setSyncFlag       = halAudioSetSyncFlag;
-   apifuncs.setCsxIoPoints    = halAudioSetCsxIoPoints;
-   apifuncs.setCsxFrameSync   = halAudioSetCsxFrameSync;
+   apifuncs.allocateClient    = halAudioCoreAllocateClient;
+   apifuncs.freeClient        = halAudioCoreFreeClient;
+   apifuncs.queryInterfaceByName = halAudioCoreQueryInterfaceByName;
+   apifuncs.queryCodecByName  = halAudioCoreQueryCodecByName;
+   apifuncs.lockCodec         = halAudioCoreLockCodec;
+   apifuncs.unlockCodec       = halAudioCoreUnlockCodec;
+   apifuncs.getGainInfo       = halAudioCoreGetGainInfo;
+   apifuncs.setGain           = halAudioCoreSetGain;
+   apifuncs.setPower          = halAudioCoreSetPower;
+   apifuncs.getPower          = halAudioCoreGetPower;
+   apifuncs.write             = halAudioCoreWrite;
+   apifuncs.read              = halAudioCoreRead;
+   apifuncs.setSuperUser      = halAudioCoreSetSuperUser;
+   apifuncs.setFreq           = halAudioCoreSetFreq;
+   apifuncs.getFreq           = halAudioCoreGetFreq;
+   apifuncs.setEquParms       = halAudioCoreSetEquParms;
+   apifuncs.getEquParms       = halAudioCoreGetEquParms;
+   apifuncs.getHardwareInfo   = halAudioCoreGetHardwareInfo;
+   apifuncs.getInterfaceInfo  = halAudioCoreGetInterfaceInfo;
+   apifuncs.getCodecInfo      = halAudioCoreGetCodecInfo;
+   apifuncs.enableInterface   = halAudioCoreEnableInterface;
+   apifuncs.addInterface      = halAudioCoreAddInterface;
+   apifuncs.delInterface      = halAudioCoreDelInterface;
+   apifuncs.setSyncFlag       = halAudioCoreSetSyncFlag;
+   apifuncs.setCsxIoPoints    = halAudioCoreSetCsxIoPoints;
+   apifuncs.setCsxFrameSync   = halAudioCoreSetCsxFrameSync;
    halAudioSetApiFuncs( &apifuncs );
 
    /* Register power management routines */
@@ -2696,7 +2713,7 @@ static void __exit halaudio_exit( void )
    /* Free all clients */
    llist_foreach_item_safe( client, tmpclient, &gClients.list, lnode )
    {
-      error = halAudioFreeClient( halaudio_get_client_hdl( client ));
+      error = halAudioCoreFreeClient( halaudio_get_client_hdl( client ));
       if ( error != 0 )
       {
          HALAUDIO_PRINTK( "failed to free client rc=%i", error );
