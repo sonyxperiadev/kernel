@@ -170,12 +170,6 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	if(IS_ERR_OR_NULL(clk) || !clk->ops || !clk->ops->set_rate)
 		return -EINVAL;
 
-	if(clk->id != CLK_ARM_PERI_CLK_ID && clk->use_cnt)
-	{
-		printk("%s is in enabled state. Disable before calling set_rate\n", clk->name);
-		return -EBUSY;
-	}
-
 	spin_lock_irqsave(&clk_lock, flags);
 	ret = clk->ops->set_rate(clk, rate);
 	spin_unlock_irqrestore(&clk_lock, flags);
@@ -183,8 +177,6 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 	return 0;
 }
 EXPORT_SYMBOL(clk_set_rate);
-
-
 
 /*CCU access functions */
 int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable)
