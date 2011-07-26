@@ -17,6 +17,8 @@
 
 #include <linux/math64.h>
 #include <linux/delay.h>
+#include <linux/clk.h>
+#include <asm/io.h>
 
 #include <mach/clock.h>
 #include <mach/io_map.h>
@@ -28,8 +30,6 @@
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
-#include <linux/clk.h>
-#include <asm/io.h>
 
 /*****************************************************************************
 	Proc clocks

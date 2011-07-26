@@ -17,7 +17,7 @@
 #include <linux/errno.h>
 #include <linux/spinlock.h>
 #include <linux/init.h>
-#include <asm/clkdev.h>
+#include <linux/clkdev.h>
 
 /* CCU IDs */
 enum {
