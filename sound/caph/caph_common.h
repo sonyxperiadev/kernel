@@ -155,11 +155,8 @@ typedef struct brcm_alsa_chip
 	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
 	Int32	pi32SpeechMixOption[2];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
-	//PCG
-	Int32	i32PCGMode;
-	Int32	i32PCGVolume;	
-	Int32	i32PCGPAVol;	
-	Int32	i32PCGPreAmpVol;		
+	//AT-AUD
+	Int32	i32AtAudHandlerParms[7];	
  } brcm_alsa_chip_t;
 
 
@@ -182,26 +179,6 @@ enum	CTL_STREAM_PANEL_t
 };
 
 
-#if 0
-enum	CTL_DEV_LINE_t
-{
-	CTL_DEV_OUT_EARPIECE = 1,
-	CTL_DEV_OUT_FIRST=CTL_DEV_OUT_EARPIECE,
-	CTL_DEV_OUT_IHF,		
-	CTL_DEV_OUT_HEADSET,
-	CTL_DEV_OUT_I2STX,
-	CTL_DEV_OUT_BTHFP,
-	CTL_DEV_OUT_LAST=CTL_DEV_OUT_BTHFP,
-
-	CTL_DEV_IN_HANDSET,
-	CTL_DEV_IN_FIRST = 	CTL_DEV_IN_HANDSET,
-	CTL_DEV_IN_HEADSET,
-	CTL_DEV_IN_DIGITAL1,
-	CTL_DEV_IN_DIGITAL2,
-	CTL_DEV_IN_BTHFP,
-	CTL_DEV_IN_LAST = CTL_DEV_IN_BTHFP
-};
-#endif
 
 enum	CTL_FUNCTION_t
 {
@@ -216,20 +193,24 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_AT_AUDIO,
 };
 
-//Index of the control
-enum	AT_AUD_Cmd_t
-{	
-	AT_AUD_CMD_NONE,
-	AT_AUD_DEBUG_LEVEL,
-	AT_AUD_AUDIO_LOGGING,
-	AT_AUD_PCG_MODE,
-	AT_AUD_PCG_VOL,
-	AT_AUD_PCG_PA_VOL,
-	AT_AUD_PCG_PREAMP_VOL,
-	AT_AUD_PCG_VOIP_LOOPBACK,
-	AT_AUD_PCG_PROFILE_MODE,
-	AT_AUD_CMD_TOTAL
+enum	AT_AUD_Ctl_t
+{
+	AT_AUD_CTL_INDEX,
+	AT_AUD_CTL_DBG_LEVEL,
+	AT_AUD_CTL_HANDLER,
+	AT_AUD_CTL_TOTAL
 };
+
+
+enum	AT_AUD_Handler_t
+{
+	AT_AUD_HANDLER_MODE,
+	AT_AUD_HANDLER_VOL,
+	AT_AUD_HANDLER_TST,
+	AT_AUD_HANDLER_LOG,
+	AT_AUD_HANDLER_LBTST
+};
+
 
 #define	CAPH_CTL_PRIVATE(dev, line, function) ((dev)<<16|(line)<<8|(function))
 #define	STREAM_OF_CTL(private)		(((private)>>16)&0xFF)

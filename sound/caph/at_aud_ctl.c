@@ -58,7 +58,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "caph_common.h"
 
 
-
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
 void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...)
 {
@@ -75,65 +74,294 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 }
 #endif
 
-
-
-int	AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//Description:
+//	Get sink and source device by PCG mode
+//Parameters
+//	mode -- PCG mode
+//	pMic	 -- Source device coresponding to PCG mode
+//	pSpk -- Sink device coresponding to PCG mode
+//Return
+//   0
+//------------------------------------------------------------------------------------------
+UInt32 GetVoiceSrcSinkByMode(AudioMode_t mode, AUDCTRL_MICROPHONE_t *pMic, AUDCTRL_SPEAKER_t *pSpk)
 {
-	BCM_AUDIO_DEBUG("AT-AUD-put %d %d %d %d %d %d\n", Params[0],Params[1],Params[2], Params[3],Params[4],Params[5]);
-	switch(cmdIndex)
+
+	switch(mode)
 	{
-		case AT_AUD_DEBUG_LEVEL:
-			gAudioDebugLevel = Params[0];
-			return 0;
-		case AT_AUD_PCG_MODE:	//at*maudmode 1 mode
-			pChip->i32PCGMode = Params[0];
+		case	AUDIO_MODE_HANDSET:
+		case	AUDIO_MODE_HANDSET_WB:
+        case    AUDIO_MODE_HAC:
+        case    AUDIO_MODE_HAC_WB:                
+			*pMic = AUDCTRL_MIC_MAIN;
+			*pSpk = AUDCTRL_SPK_HANDSET;
 			break;
-		case AT_AUD_PCG_VOL:   //at*maudvol 7  vol
-			pChip->i32PCGVolume = Params[0];
+		case	AUDIO_MODE_HEADSET:
+		case	AUDIO_MODE_HEADSET_WB:
+        case    AUDIO_MODE_TTY:
+        case    AUDIO_MODE_TTY_WB:
+			*pMic = AUDCTRL_MIC_AUX;
+			*pSpk = AUDCTRL_SPK_HEADSET;
 			break;
-		case AT_AUD_PCG_PA_VOL: ////at*maudtst 121 0 vol
-			pChip->i32PCGPAVol = Params[0];
+		case	AUDIO_MODE_BLUETOOTH:
+		case	AUDIO_MODE_BLUETOOTH_WB:
+			*pMic = AUDCTRL_MIC_BTM;
+			*pSpk = AUDCTRL_SPK_BTM;
 			break;
-		case AT_AUD_PCG_PREAMP_VOL: ////at*maudtst 121 0 vol
-			pChip->i32PCGPreAmpVol = Params[0];
+		case	AUDIO_MODE_SPEAKERPHONE:
+		case	AUDIO_MODE_SPEAKERPHONE_WB:
+			*pMic = AUDCTRL_MIC_MAIN;
+			*pSpk = AUDCTRL_SPK_LOUDSPK;
 			break;
-		case AT_AUD_AUDIO_LOGGING:
-			break;
- 		default:
-			BCM_AUDIO_DEBUG("AtAudCtlHandler_put Unsupported AT-AUD command %d \n", cmdIndex);		
+		default:
+			BCM_AUDIO_DEBUG("GetVoiceSrcSinkByMode() mode is out of range %d\r\n", mode);		
 			break;
 	}
-	return -1;
+	return 0;
 }
 
 
-int	AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//Description: 
+//	AT command handler, handle command AT commands at*maudmode=P1,P2,P3
+//Parameters:
+//	pChip -- Pointer to chip data structure
+//   ParamCount -- Count of parameter array
+//	Params  --- P1,P2,...,P6
+//---------------------------------------------------------------------------
+int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
+	AUDCTRL_MICROPHONE_t mic = AUDCTRL_MIC_MAIN;
+	AUDCTRL_SPEAKER_t spk = AUDCTRL_SPK_HANDSET;
+
+
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+
+	switch(Params[0])//P1
+	{
+
+		case 0:	//at*maudmode 0
+		//Get mode from driver
+		//Params[0]  = AUDCTRL_GetAudioMode();
+		//Or
+			Params[0] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL].iLineSelect[0]; 
+			BCM_AUDIO_DEBUG("%s mode %d \n", __FUNCTION__, Params[0]);
+			return 0;
+
+		case 1:	//at*maudmode 1 mode
+			GetVoiceSrcSinkByMode(Params[1], &mic, &spk);
+	//			AUDCTRL_SaveAudioModeFlag( Params[0],0 );
+	//			AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,mic,spk);
+	//			Update 'VC-SEL' -- 
+			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL].iLineSelect[0] = spk;
+			BCM_AUDIO_DEBUG("%s spk %d mode %d \n", __FUNCTION__, spk,Params[1]);
+			return 0;
+		default:
+			BCM_AUDIO_DEBUG("%s Unsupported cmd %d \n", __FUNCTION__, Params[0]);		
+			break;
+	}
+	
+	return -1;		
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//Description: 
+//	AT command handler, handle command AT commands at+maudlooptest=P1,P2,P3
+//Parameters:
+//	pChip -- Pointer to chip data structure
+//   ParamCount -- Count of parameter array
+//	Params  --- P1,P2,...,P6
+//---------------------------------------------------------------------------
+int	AtMaudLoopback(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
+{
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+	return 0;		
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//Description: 
+//	AT command handler, handle command AT commands at*maudlog=P1,P2,P3
+//Parameters:
+//	pChip -- Pointer to chip data structure
+//   ParamCount -- Count of parameter array
+//	Params  --- P1,P2,...,P6
+//---------------------------------------------------------------------------
+int	AtMaudLog(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
+{
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+	return 0;		
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//Description: 
+//	AT command handler, handle command AT commands at*maudtst=P1,P2,P3,P4,P5,P6
+//Parameters:
+//	pChip -- Pointer to chip data structure
+//   ParamCount -- Count of parameter array
+//	Params  --- P1,P2,...,P6
+//---------------------------------------------------------------------------
+int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
+{
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+	return 0;		
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//Description: 
+//	AT command handler, handle command AT commands at*maudvol=P1,P2,P3
+//Parameters:
+//	pChip -- Pointer to chip data structure
+//   ParamCount -- Count of parameter array
+//	Params  --- P1,P2,...,P6
+//---------------------------------------------------------------------------
+int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
+{
+	Int32 *pVolume;
+	int mode;
+
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+
+	switch(Params[0])//P1
+	{
+		case 6:	//at*maudvol=6
+			//Get volume from driver
+			//Params[0] = AUDCTRL_GetTelephonySpkrVolume();
+			//or
+			mode = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL].iLineSelect[0]; //temp, FIXME
+			pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL].ctlLine[mode].iVolume;
+			Params[0] = pVolume[0];
+			BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d\n", __FUNCTION__, Params[0],mode); 
+
+			return 0;;
+		case 7: //at*maudvol=7,x
+			//mode	= AUDCTRL_GetAudioMode();
+			//GetVoiceSrcSinkByMode(mode, &mic, &spk);
+			//or 
+			mode = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL].iLineSelect[0]; //temp, FIXME
+			pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL].ctlLine[mode].iVolume;
+			pVolume[0] = Params[1];
+		//			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT, mode, pVolume[0], AUDIO_GAIN_FORMAT_Q13_2);//DL
+		
+			BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d \n", __FUNCTION__, pVolume[0],mode); 
+			return 0;
+		default:
+			BCM_AUDIO_DEBUG("%s Unsupported cmd %d \n", __FUNCTION__, Params[0]);		
+			break;
+	}	
+	return -1;		
+}
+
+
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//Description:
+//	Kernel AT command handler and gernal purpose controls
+//Parameters
+//	cmdIndex -- command index coresponding to AT comand
+//	ParamCount	 -- count of array Params
+//	Params -- Parameter array
+//Return
+//   0 on success, -1 otherwise
+//------------------------------------------------------------------------------------------
+int	AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
+{
+	BCM_AUDIO_DEBUG("AT-AUD-put ctl=%d ParamCount= %d [%d %d %d %d %d %d %d]\n", cmdIndex, ParamCount, Params[0],Params[1],Params[2], Params[3],Params[4],Params[5],Params[6]);
+
+
 	switch(cmdIndex)
 	{
-		case AT_AUD_DEBUG_LEVEL:
-			Params[0] = gAudioDebugLevel;
-			break;
-		case AT_AUD_PCG_MODE:	//at*maudmode 0
-			Params[0] = pChip->i32PCGMode;
-			break;
-		case AT_AUD_PCG_VOL:   //at*maudvol 6
-			Params[0] = pChip->i32PCGVolume;
-			break;
-		case AT_AUD_PCG_PA_VOL:   //no corresponding at command   xxat*maudtst 121 0
-			Params[0] = pChip->i32PCGPAVol;
-			break;
-		case AT_AUD_PCG_PREAMP_VOL:   //no corresponding at command   xxat*maudtst 121 0
-			Params[0] = pChip->i32PCGPreAmpVol;
-			break;
-		case AT_AUD_AUDIO_LOGGING:
-			break;
+		case AT_AUD_CTL_INDEX:
+			{
+				int count = sizeof(pChip->i32AtAudHandlerParms)/sizeof(pChip->i32AtAudHandlerParms[0]);
+				if(count>ParamCount)
+					count = ParamCount;
+				memcpy(pChip->i32AtAudHandlerParms, Params, sizeof(pChip->i32AtAudHandlerParms[0])*count);
+				return 0;
+			}
+		case AT_AUD_CTL_DBG_LEVEL:
+			gAudioDebugLevel = Params[0];
+			return 0;
+		case AT_AUD_CTL_HANDLER:
+			break;//go next ..
 		default:
-			BCM_AUDIO_DEBUG("Unsupported AT-AUD command %d \n", Params[0]);		
+			return -1;//unlikely
+				
+	}
+
+	switch(Params[0])
+	{
+
+		case AT_AUD_HANDLER_MODE:
+			return AtMaudMode(pChip,ParamCount-1, &Params[1]);
+		case AT_AUD_HANDLER_VOL:
+			return AtMaudVol(pChip,ParamCount-1, &Params[1]);
+		case AT_AUD_HANDLER_TST:
+			return AtMaudTst(pChip,ParamCount-1, &Params[1]);
+		case AT_AUD_HANDLER_LOG:
+			return AtMaudLog(pChip,ParamCount-1, &Params[1]);
+		case AT_AUD_HANDLER_LBTST:
+			return AtMaudLoopback(pChip,ParamCount-1, &Params[1]);
+		default:
+			BCM_AUDIO_DEBUG("%s Unsupported handler %d \n", __FUNCTION__, Params[0]);		
 			break;
 	}
 
-	BCM_AUDIO_DEBUG("AtAudCtlHandler_get cmd=%d AT-AUD-get %d %d %d %d %d %d\n", cmdIndex, Params[0],Params[1],Params[2], Params[3],Params[4],Params[5]);
-	return 0;
+	return -1;
+}
+
+//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//Description:
+//	Kernel AT command handler and gernal purpose controls
+//Parameters
+//	cmdIndex -- command index coresponding to AT comand
+//	ParamCount	 -- count of array Params
+//	Params -- Parameter array
+//Return
+//   0 on success, -1 otherwise
+//------------------------------------------------------------------------------------------
+int	AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
+{
+	int count = sizeof(pChip->i32AtAudHandlerParms)/sizeof(pChip->i32AtAudHandlerParms[0]);
+
+	switch(cmdIndex)
+	{
+	
+		case AT_AUD_CTL_HANDLER:
+		case AT_AUD_CTL_INDEX:
+			{
+				if(count>ParamCount)
+					count = ParamCount;
+				memcpy(Params, pChip->i32AtAudHandlerParms, sizeof(pChip->i32AtAudHandlerParms[0])*count);
+				if(cmdIndex==AT_AUD_CTL_INDEX)
+					return 0;
+				else
+					break; //continue
+			}
+		case AT_AUD_CTL_DBG_LEVEL:
+			Params[0] = gAudioDebugLevel;
+			return 0;
+		default:
+			return -1;//unlikely
+				
+	}
+
+	switch(Params[0])
+	{
+		case AT_AUD_HANDLER_MODE:
+			return AtMaudMode(pChip,ParamCount-1, &Params[1]);
+		case AT_AUD_HANDLER_VOL:
+			return AtMaudVol(pChip,ParamCount-1, &Params[1]);
+		case AT_AUD_HANDLER_TST:
+			return AtMaudTst(pChip,ParamCount-1, &Params[1]);
+		case AT_AUD_HANDLER_LOG:
+			return AtMaudLog(pChip,ParamCount-1, &Params[1]);
+		case AT_AUD_HANDLER_LBTST:
+			return AtMaudLoopback(pChip,ParamCount-1, &Params[1]);			
+		default:
+			BCM_AUDIO_DEBUG("%s Unsupported handler %d \n", __FUNCTION__, Params[0]);		
+			break;
+	}
+
+	return -1;
 }
 

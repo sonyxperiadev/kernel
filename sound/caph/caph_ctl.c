@@ -509,10 +509,12 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			break;
 		case CTL_FUNCTION_AT_AUDIO:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
-			uinfo->count = 6;
+			uinfo->count = 7;
 			uinfo->value.integer.min = 0x80000000;
 			uinfo->value.integer.max = 0x7FFFFFFF;//FIXME
 			uinfo->value.integer.step = 1; 
+			if(kcontrol->id.index==1) //val[0] is at command handler, val[1] is 1st parameter of the AT command parameters
+				uinfo->count = 1;
 			break;			
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
@@ -556,7 +558,14 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_FM_FORMAT:
 			break;
 		case CTL_FUNCTION_AT_AUDIO:
-			AtAudCtlHandler_get(kcontrol->id.index, pChip, kcontrol->count, ucontrol->value.integer.value);
+		{
+			struct snd_ctl_elem_info info;
+			kcontrol->info(kcontrol, &info);
+			AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
+			BCM_AUDIO_DEBUG("%s values [%d %d %d %d %d %d %d]", __FUNCTION__, ucontrol->value.integer.value[0],
+				ucontrol->value.integer.value[1],ucontrol->value.integer.value[2], ucontrol->value.integer.value[3], ucontrol->value.integer.value[4],
+				ucontrol->value.integer.value[5],ucontrol->value.integer.value[6]);
+		}
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -648,8 +657,12 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_FM_FORMAT:
 			break;
 		case CTL_FUNCTION_AT_AUDIO:
-			AtAudCtlHandler_put(kcontrol->id.index, pChip, kcontrol->count, ucontrol->value.integer.value);
+		{
+			struct snd_ctl_elem_info info;
+			kcontrol->info(kcontrol, &info);
+			AtAudCtlHandler_put(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
 			break;
+		}
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
 			break;
@@ -948,7 +961,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		   return err;
 	   }
 
-	   for(loop=1;loop<AT_AUD_CMD_TOTAL;loop++)
+	   for(loop=0;loop<AT_AUD_CTL_TOTAL;loop++)//index, debug level, AT handler
 	   {
      	   ctlAtAud.index = loop;
 		   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlAtAud, pChip))) < 0)
