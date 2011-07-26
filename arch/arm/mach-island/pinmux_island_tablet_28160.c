@@ -195,7 +195,9 @@ static struct __init pin_config board_pin_config[] = {
    PIN_CFG( NORFLSH_AD_05, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
 
 	/* VC4 PWM */
+/* Leave PWM as GPIO until VC PWM is functional
 	PIN_CFG(GPIO_6, VC_PWM_1, 0, OFF, OFF, 0, 0, 8MA ),
+*/
 };
 
 /* board level init */
