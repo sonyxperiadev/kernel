@@ -769,6 +769,7 @@ void aadma_exit( void )
 {
    remove_proc_entry( "channels", gDmaDir );
    remove_proc_entry( "devices", gDmaDir );
+   remove_proc_entry( "aadma", NULL );
 
    free_irq( BCM_INT_ID_CAPH, &gChalHandle );
    aadma_ioremap_exit( &gChalHandle );

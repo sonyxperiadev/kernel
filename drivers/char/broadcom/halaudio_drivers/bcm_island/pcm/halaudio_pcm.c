@@ -606,6 +606,10 @@ static int pcmExit( void )
 {
    int                         rc, error = 0;
 
+   free_irq( gPcmIrqId, gPcm.ch );
+
+   gPcmIrqId = 0;
+
    pcmProcTerm();
 
    rc = pcmMixerPortsDeregister();
@@ -640,7 +644,9 @@ static int pcmExit( void )
 
    gPcm.initialized = 0;
 
-   /* Disable sspi clock here */
+   release_mem_region( gPcmPhysBaseAddr, PCM_SSP_REGISTER_LENGTH );
+
+   gPcmPhysBaseAddr = 0;
 
    return error;
 }
@@ -2538,6 +2544,9 @@ static int __exit pcm_remove( struct platform_device *pdev )
 
    halAudioDelInterface( gInterfHandle );
    pcm_platform_exit( info );
+
+   clk_disable( gSspiClk );
+   clk_put( gSspiClk );
 
    return 0;
 }
