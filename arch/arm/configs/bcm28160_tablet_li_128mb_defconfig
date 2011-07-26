@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Fri Jul 22 17:50:47 2011
+# Mon Jul 25 17:37:38 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1203,11 +1203,7 @@ CONFIG_USB_EHCI_BCM=y
 # CONFIG_USB_ISP116X_HCD is not set
 # CONFIG_USB_ISP1760_HCD is not set
 # CONFIG_USB_ISP1362_HCD is not set
-CONFIG_USB_OHCI_HCD=m
-CONFIG_USB_OHCI_BCM=y
-# CONFIG_USB_OHCI_BIG_ENDIAN_DESC is not set
-# CONFIG_USB_OHCI_BIG_ENDIAN_MMIO is not set
-CONFIG_USB_OHCI_LITTLE_ENDIAN=y
+# CONFIG_USB_OHCI_HCD is not set
 # CONFIG_USB_SL811_HCD is not set
 CONFIG_USB_R8A66597_HCD=y
 # CONFIG_USB_HWA_HCD is not set
