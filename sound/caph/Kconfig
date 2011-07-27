@@ -11,10 +11,9 @@
 #the GPL, without Broadcom's express prior written consent.
 #*******************************************************************************************/
 
-config BRCM_SOUND_BIG_ISLAND_ALSA
-	#tristate "Broadcom ALSA Athena sound drivers"
-	boolean "Broadcom ALSA Island sound drivers"
+config BCM_ALSA_SOUND
+	boolean "Broadcom ALSA sound drivers"
+	depends on (ARCH_RHEA || ARCH_ISLAND || ARCH_SAMOA) && BCM_MODEM
+          default y
         help
           Say Y here to activate an ALSA driver frontend to the BRCM endpoint
-          To compile this driver as a module, choose M here: the module
-          will be called snd-brcm-omx.
