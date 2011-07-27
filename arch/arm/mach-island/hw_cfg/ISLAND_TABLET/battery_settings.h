@@ -33,16 +33,6 @@
    .battery_min_voltage     = HW_BATTERY_MIN_VOLTAGE, \
    .battery_technology      = 2, \
    .gpio_power_control      = 85, \
-   .gpio_ac_power           = 181, \
-   .gpio_charging           = 180, \
-   .adc121_info.type              = enum_adc121,  \
-   .adc121_info.gpio_ac_power     = 181,    \
-   .adc121_info.ac_power_on_level = 1,    \
-   .adc121_info.gpio_charger      = 180,    \
-   .max17040_info.type              = enum_max17040, \
-   .max17040_info.gpio_ac_power     = 181, \
-   .max17040_info.ac_power_on_level = 0, \
-   .max17040_info.gpio_charger      = -1, \
    .p_cbm_data              = NULL \
 }    
 
