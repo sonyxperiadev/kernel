@@ -170,6 +170,8 @@ include/linux/videocore/vc_dnfo.h
 drivers/misc/vc04_services/vc_dnfo/vc_dnfo.c
 include/linux/videocore/vc_omx.h
 drivers/misc/vc04_services/vc_omx/vc_omx.c
+include/linux/videocore/vc_hnfo.h
+drivers/misc/vc04_services/vc_hnfo/vc_hnfo.c
 include/linux/videocore/vmcs_sm_ioctl.h
 drivers/misc/vc04_services/vmcs_fb/vc_fb_defs.h
 drivers/misc/vc04_services/vmcs_fb/vc_vchi_fb.h
