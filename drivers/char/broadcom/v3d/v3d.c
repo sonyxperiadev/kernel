@@ -428,7 +428,7 @@ static int v3d_mmap(struct file *filp, struct vm_area_struct *vma)
 	return 0;
 }
 
-static int v3d_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	v3d_t *dev;
 	int ret = 0;
@@ -561,7 +561,7 @@ static struct file_operations v3d_fops =
 	.open		= v3d_open,
 	.release	= v3d_release,
 	.mmap		= v3d_mmap,
-	.ioctl		= v3d_ioctl,
+	.unlocked_ioctl		= v3d_ioctl,
 };
 
 static void trace_dump_now(void)
@@ -799,7 +799,7 @@ int __init v3d_init(void)
 	else {
 		v3d_state.tracebuf = NULL;
 	}
-	v3d_state.trace_lock = SPIN_LOCK_UNLOCKED;
+	v3d_state.trace_lock = __SPIN_LOCK_UNLOCKED();
 
 	/* create a proc entry */
 	v3d_state.proc_info = create_proc_entry("v3d",

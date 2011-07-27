@@ -28,6 +28,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
 #include <linux/bootmem.h>
+#include <linux/spinlock_types.h>
 
 #include <linux/broadcom/isp.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
@@ -107,7 +108,7 @@ static int isp_open(struct inode *inode, struct file *filp)
         return -ENOMEM;
 
     filp->private_data = dev;
-    dev->lock = SPIN_LOCK_UNLOCKED;
+	dev->lock = __SPIN_LOCK_UNLOCKED();
     dev->isp_status.status = 0;
     
     sema_init(&dev->irq_sem, 0);
@@ -173,7 +174,7 @@ static int isp_mmap(struct file *filp, struct vm_area_struct *vma)
     return 0;
 }
 
-static int isp_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     isp_t *dev;
     int ret = 0;
@@ -272,7 +273,7 @@ static struct file_operations isp_fops =
     .open      = isp_open,
     .release   = isp_release,
     .mmap      = isp_mmap,
-    .ioctl     = isp_ioctl,
+    .unlocked_ioctl = isp_ioctl,
 };
 
 static int enable_isp_clock(void)

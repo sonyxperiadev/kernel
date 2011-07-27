@@ -334,12 +334,10 @@ static int vce_mmap(struct file *filp, struct vm_area_struct *vma)
 	return 0;
 }
 
-static int vce_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	vce_t *dev;
 	int ret = 0;
-
-	/* ? */ (void) inode;
 
 	if(_IOC_TYPE(cmd) != BCM_VCE_MAGIC)
 		return -ENOTTY;
@@ -428,7 +426,7 @@ static struct file_operations vce_fops =
 	.open           = vce_open,
 	.release        = vce_release,
 	.mmap           = vce_mmap,
-	.ioctl          = vce_ioctl,
+	.unlocked_ioctl          = vce_ioctl,
 };
 
 static int proc_version_read(char *buffer, char **start, off_t offset, int bytes, int *eof, void *context)

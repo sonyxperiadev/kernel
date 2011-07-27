@@ -195,7 +195,7 @@ ssize_t ipcs_write(struct file *filep, const char __user *buf, size_t size, loff
   return -EPERM;
 }
 
-static int ipcs_ioctl(struct inode *inode, struct file *filep, unsigned int cmd, unsigned long arg)
+static long ipcs_ioctl(struct file *filep, unsigned int cmd, unsigned long arg)
 {
   int rc = 0;
 
@@ -211,7 +211,7 @@ static struct file_operations ipc_ops =
   .open  = ipcs_open,
   .read  = ipcs_read,
   .write = ipcs_write,
-  .ioctl = ipcs_ioctl,
+  .unlocked_ioctl = ipcs_ioctl,
   .mmap  = NULL,
   .release = ipcs_release,
 };
@@ -498,7 +498,7 @@ static int __init ipcs_module_init(void)
   
   Comms_Start();
 
-  init_MUTEX_LOCKED(&g_ipc_info.ipc_sem);
+  sema_init(&g_ipc_info.ipc_sem, 0);
 
   g_ipc_info.ipc_state = 0;
 

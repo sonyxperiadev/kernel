@@ -519,7 +519,7 @@ static ssize_t bcm590xx_write(struct file *file, const char __user *buffer,
 
 static const struct file_operations bcm590xx_pmu_ops = {
 	.open = bcm590xx_open,
-	.ioctl = bcm590xx_ioctl,
+	.unlocked_ioctl = bcm590xx_ioctl,
 	.write = bcm590xx_write,
 	.release = bcm590xx_release,
 	.owner = THIS_MODULE,

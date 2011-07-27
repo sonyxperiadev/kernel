@@ -991,7 +991,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	}
 
 	dev->dev = &pdev->dev;
-	init_MUTEX(&dev->xfer_lock);
+	sema_init(&dev->xfer_lock, 1);
 	init_completion(&dev->ses_done);
 	dev->irq = irq;
 	dev->virt_base = ioremap(iomem->start, resource_size(iomem));
