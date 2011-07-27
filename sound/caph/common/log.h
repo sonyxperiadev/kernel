@@ -39,15 +39,20 @@
 
 #define OSTASK_Sleep(x)  msleep(x)
 
-//#define CAPH_DRIVER_LOG
 
-#ifdef CAPH_DRIVER_LOG
+#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
 #define _DBG_(a) a
-#define Log_DebugPrintf(logID,args...) printk(args)
+void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
+#define Log_DebugPrintf(logID, format, args...) \
+	_bcm_snd_printk(1, __FILE__, __LINE__, format, ##args)
+
 #else
 #define _DBG_(a)
 #define Log_DebugPrintf(logID,args...)
 #endif
+
+
+
 
 //
 

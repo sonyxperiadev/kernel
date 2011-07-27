@@ -920,7 +920,7 @@ typedef enum
 	* 			 
 	* 			 @param  UInt16  	{
 	*								Bit 0: Enable_48kHz_Speaker_Output: 0 = Disable, 1 = Enable
-	*                                                    Bit 1: Interrupt is enabled for this 
+	*                                                    Bit 1: Interrupt is enabled for this  // Not supported currently
 	*                                                    Bit 2: = 0 Mono, = 1 Stereo // Currently only supports mono 
 	*							}
 	*

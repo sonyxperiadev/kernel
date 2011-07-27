@@ -90,8 +90,16 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 			break;
 		case CTL_STREAM_PANEL_VOICECALL:
 			uinfo->count = 1;
-			uinfo->value.integer.min = -50<<2; //Q13.2
-			uinfo->value.integer.max = 0;//FIXME
+			if(dev == AUDCTRL_SPK_LOUDSPK || dev == AUDCTRL_SPK_HEADSET)
+			{
+				uinfo->value.integer.min = -50<<2; //Q13.2
+				uinfo->value.integer.max = 12<<2;
+			}
+			else
+			{
+				uinfo->value.integer.min = -50<<2; //Q13.2
+				uinfo->value.integer.max = 0;
+			}
 			break;
 		case CTL_STREAM_PANEL_PCMIN:
 		case CTL_STREAM_PANEL_VOIPIN:
@@ -183,7 +191,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 		break;
 		case CTL_STREAM_PANEL_VOICECALL:
 		{
-			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[0] = %ld, pVolume[0] =%ld, pVolume[1]=%ld\n", pCurSel[0],pVolume[0],pVolume[1]);
+			BCM_AUDIO_DEBUG("VolumeCtrlPut pCurSel[1] = %ld, pVolume[0] =%ld, dev =%ld\n", pCurSel[1],pVolume[0],dev);
 
 			//call audio driver to set gain/volume		
 			if(pCurSel[1] == dev)
@@ -499,6 +507,15 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->value.integer.max = 48000;
 			uinfo->value.integer.step = 1; 
 			break;
+		case CTL_FUNCTION_AT_AUDIO:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 7;
+			uinfo->value.integer.min = 0x80000000;
+			uinfo->value.integer.max = 0x7FFFFFFF;//FIXME
+			uinfo->value.integer.step = 1; 
+			if(kcontrol->id.index==1) //val[0] is at command handler, val[1] is 1st parameter of the AT command parameters
+				uinfo->count = 1;
+			break;			
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
 				break;
@@ -539,6 +556,16 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
 		case CTL_FUNCTION_FM_FORMAT:
+			break;
+		case CTL_FUNCTION_AT_AUDIO:
+		{
+			struct snd_ctl_elem_info info;
+			kcontrol->info(kcontrol, &info);
+			AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
+			BCM_AUDIO_DEBUG("%s values [%d %d %d %d %d %d %d]", __FUNCTION__, ucontrol->value.integer.value[0],
+				ucontrol->value.integer.value[1],ucontrol->value.integer.value[2], ucontrol->value.integer.value[3], ucontrol->value.integer.value[4],
+				ucontrol->value.integer.value[5],ucontrol->value.integer.value[6]);
+		}
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -629,6 +656,13 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 		case CTL_FUNCTION_FM_FORMAT:
 			break;
+		case CTL_FUNCTION_AT_AUDIO:
+		{
+			struct snd_ctl_elem_info info;
+			kcontrol->info(kcontrol, &info);
+			AtAudCtlHandler_put(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
+			break;
+		}
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
 			break;
@@ -907,9 +941,10 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 
    //MISC 
    {
-   
+   		int 	loop;
       //Loopback Test control
 	   struct snd_kcontrol_new ctlLoopTest = BRCM_MIXER_CTRL_MISC(0, 0, "LPT", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_LOOPBACK_TEST) );
+   	   struct snd_kcontrol_new ctlAtAud = BRCM_MIXER_CTRL_MISC(0, 0, "AT-AUD", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_AT_AUDIO) );
 	   struct snd_kcontrol_new kctlCallEnable = BRCM_MIXER_CTRL_MISC(0, 0, "VC-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_ENABLE));
 	   struct snd_kcontrol_new kctlCallMute = BRCM_MIXER_CTRL_MISC(0, 0, "VC-MUT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_VOICECALL, 0, CTL_FUNCTION_PHONE_CALL_MIC_MUTE));
 	   
@@ -926,6 +961,15 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		   return err;
 	   }
 
+	   for(loop=0;loop<AT_AUD_CTL_TOTAL;loop++)//index, debug level, AT handler
+	   {
+     	   ctlAtAud.index = loop;
+		   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlAtAud, pChip))) < 0)
+		   {
+			   BCM_AUDIO_DEBUG("error to add AT_AUD control err=%d index=%d\n", err,ctlAtAud.index); 		   
+			   return err;
+		   }
+	   }
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlCallEnable, pChip))) < 0)
 	   {
 		   BCM_AUDIO_DEBUG("error to add call enable control err=%d\n", err); 		   

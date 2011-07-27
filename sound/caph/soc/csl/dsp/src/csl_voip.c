@@ -64,7 +64,7 @@
 
 extern AP_SharedMem_t	*vp_shared_mem;
 
-static const UInt16 sVoIPDataLen[6] = {0, 322, 160, 38, 166, 642};
+static const UInt16 sVoIPDataLen[7] = {0, 322, 160, 38, 166, 642, 70};
 
 
 //*********************************************************************
@@ -83,7 +83,7 @@ void CSL_WriteDLVoIPData(UInt16 codec_type, UInt16 *pSrc)
 	UInt16 data_len = 0;
 
 	index = (codec_type & 0xf000) >> 12;
-	if (index >= 6)
+	if (index >= 7)
   		Log_DebugPrintf(LOGID_AUDIO, "===== CSL_WriteDLVoIPData, invalid codec type!!!\n");
 	else
 		data_len = sVoIPDataLen[index];
@@ -108,7 +108,7 @@ UInt8 CSL_ReadULVoIPData(UInt16 codec_type, UInt16 *pDst)
 	UInt16 data_len = 0;
 
 	index = (codec_type & 0xf000) >> 12;
-	if (index >= 6)
+	if (index >= 7)
   		Log_DebugPrintf(LOGID_AUDIO, "===== CSL_ReadULVoIPData, invalid codec type!!!\n");
 	else
 		data_len = sVoIPDataLen[index];

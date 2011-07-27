@@ -110,10 +110,11 @@ void CSL_ARM2SP_Init(void);
 *   @param    inSize		(in)	data size to write
 *   @param    writeIndex	(in)	index of ping-pong buffer
 *   @param    in48K			(in)	48K signal?
+*   @param    audMode		(in)    stereo?
 *   @return   UInt32				number of bytes written to the buffer
 *
 **********************************************************************/
-UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K);
+UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K, UInt8 audMode);
 
 //*********************************************************************
 /**
@@ -133,10 +134,11 @@ void CSL_ARM2SP2_Init(void);
 *   @param    inSize		(in)	data size to write
 *   @param    writeIndex	(in)	index of ping-pong buffer
 *   @param    in48K			(in)	48K signal?
+*   @param    audMode		(in)    stereo?
 *   @return   UInt32				number of bytes written to the buffer
 *
 **********************************************************************/
-UInt32 CSL_ARM2SP2_Write(UInt8 *inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K);
+UInt32 CSL_ARM2SP2_Write(UInt8 *inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K, UInt8 audMode);
 
 //*********************************************************************
 /**

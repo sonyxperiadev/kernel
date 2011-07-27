@@ -617,6 +617,7 @@ void AUDCTRL_SetTapGain(
 *  @param  isDSPGain	(in)  DSP provides the mixing.
 *  @param  dspSpeechProcessingNeeded	(in)  needs DSP Speech processing.
 *  @param  gain	(in)  
+*  @param  pathID (in)  HW pathID
 *
 *  @return none
 *
@@ -628,7 +629,8 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 			AUDCTRL_MIX_SELECT_t mixSelect,
 			Boolean isDSPGain,
 			Boolean dspSpeechProcessingNeeded,			
-			UInt32 gain);
+			UInt32 gain,
+			UInt32 pathID);
 
 
 /**
@@ -729,6 +731,23 @@ void AUDCTRL_SetAudioLoopback(
 							AUDCTRL_MICROPHONE_t	mic,
 							AUDCTRL_SPEAKER_t		speaker
 							);
+
+/********************************************************************
+*  @brief  enable or disable sidetone HW loopback
+*
+*  @param  enable_lpbk (in)  the audio mode
+*  @param  mic         (in)  the input to loopback
+*  @param  speaker     (in)  the output from loopback
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SetSidetoneLoopback( 
+							Boolean					enable_lpbk,
+							AUDCTRL_MICROPHONE_t	mic,
+							AUDCTRL_SPEAKER_t		speaker
+							);
+
 /********************************************************************
 *  @brief  Get a path configratio from the Table
 *
