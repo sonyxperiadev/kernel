@@ -13,40 +13,33 @@
 *****************************************************************************/
 
 /*
- * A driver to monitor the MAX17085 or LTC4006, the AC power and charge state of
- * the battery. 
- * On A1
- * MAX17085 Charger              GPIO  Direction
- * BAT_CH_B                      180   SOC to MAX17085 ?
- * ACOK(Active Low) connected to 181   MAX17085 to SOC confirmed (lo-AC, hi-battery)
- * PGOOD                         18    MAX17085 to SOC ?
+ * A driver to monitor the MAX17040 or ADC121C021, the AC power and charge state
+ * of the battery. 
  *
- * POWER_HOLD                    85    Out of Host
- * PWR_BUTTON                    4     In to Host  
+ * Driver works in conjunction with frameworks defined in linux/power_supply.h
+ * and linux/pm.h.
+ *
+ * 2 power_supply devices - power and battery are registered/unregistered with
+ * power supply(PSY) framework and report properties to PSY. The list of
+ * properties supported by this driver is defined in battery_data_props and
+ * power_data_props arrays.
+ * 
+ * Driver works in cooperation with battery monitor that registers with the
+ * driver via exported register_battery_monitor function. Driver relies on
+ * battery monitor for methods to determine volatage and charge and for supply
+ * of some essential data such as GPIO values. Only one battery monitor may be
+ * registered at a time.
  *
  * Platform information is passed into the driver via the platform_data pointer.
- * It follows that all data to be accessible via the platfrom_data as well.
- * This is what is looks like:
- * dev->dev.platform_data = cbm_platform_data 
- * cbm_platform_data ->p_cbm_data <== is void * but is really type struct
- * multi_data *. 
  *
  */
  
- /* 
-  * NOTE:
-  * It is important that the charge level of the battery returned by 
-  * POWER_SUPPLY_PROP_CAPACITY never be accidentally set to zero. This might
-  * cause a reboot by the parent OS. It is also bad if the value is greater 
-  * than 100.
-  */
-
-#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/power_supply.h>
+#include <linux/pm.h>
 #include <linux/spinlock.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -65,6 +58,8 @@ static int    mod_debug = 0x0;
 module_param(mod_debug, int, 0644);
 
 /* ---- Public Functions ------------------------------------------------- */
+/* after power_supply devices are registered, these functions are used to get
+ * power and battery properies */
 static int battery_get_property(struct power_supply *psy,
                                 enum power_supply_property psp,
                                 union power_supply_propval *val);
@@ -76,23 +71,17 @@ static void battery_external_power_changed(struct power_supply *psy);
 
 /* ---- Private Constants and Types -------------------------------------- */
 
-static struct battery_data 
+struct battery_data 
 {
    int status;
    struct power_supply t_power_supply;
    int full_chrg;
 
-   bool(*is_present) (struct battery_data *p_battery);
-   int gpio_charging_b;
-
    /* Power supply properties */
    int battery_technology;  /* POWER_SUPPLY_PROP_TECHNOLOGY */
    int battery_max;         /* POWER_SUPPLY_PROP_VOLTAGE_MAX */
    int battery_min;         /* POWER_SUPPLY_PROP_VOLTAGE_MIN */
-   
-   int adc_bat;
-   int adc_temp;
-         
+
    struct multi_data *pt_multi_data;
 }; /* battery_data */
 
@@ -113,35 +102,29 @@ struct multi_data
    struct battery_data *pt_battery_data;
    struct power_data   *pt_power_data;
    
-   struct work_struct  t_ac_power_work; /* Called when AC is plugged in or removed. */
+   /* Called when AC is plugged in or removed. */
+   struct work_struct  t_ac_power_work;
    
    struct delayed_work t_battery_dwork;
    struct delayed_work t_power_dwork;
-   
+
+   /* battery monitor instance and data that is registered with the driver */
+   struct battery_monitor *pt_battery_monitor;
+   void *pt_battery_monitor_data;
+
    struct mutex work_lock;                 /* Protects data. */    
-   struct wake_lock wakelock;             /* keeps device awake */
+   struct wake_lock wakelock;              /* keeps device awake */
    
-   /* Monitor values set at runtime. */
-   int (*get_battery_voltage_fn)(void *p_data); /* read the monitor voltage */
-   int (*get_battery_charge_fn) (void *p_data); /* read the monitor charge */
-   void **p_battery_monitor_data;               /* monitor specific data */
-   int battery_milliVolts;                      /* save the monitor voltage */
-   int battery_charge;                          /* save the monitor charge */
+   int battery_milliVolts;                 /* save the monitor voltage */
+   int battery_charge;                     /* save the monitor charge */
    int battery_status;
-   
-   struct battery_monitor_info *pt_monitor_info;
-   
-   /* For battery monitor registration. */
-   //struct battery_monitor_calls monitor_calls;     
    
    /* Reference to platform_data passed in by probe. *
     * Needed for suspend() and resume().             */
    struct cbm_platform_data    *pt_platform_data;
 };	
 
-#define NUM_DEBOUNCE_TRIES         5
-#define DEBOUNCE_WAIT_MSECS        50 
-#define INITIAL_POLL_INTERVAL      5000
+#define DEBOUNCE_TIME_USECS        128000
 #define MULTI_WAIT_PERIOD          3000
 #define MULTI_NO_WAIT              0
 
@@ -165,7 +148,6 @@ typedef enum
    enum_caller_external_power_changed
 } work_caller_enum;  
 
-static bool battery_is_present(struct battery_data *p_battery);
 
 /* ---- Private Variables ------------------------------------------------ */
 static const __devinitconst char gBanner[] =
@@ -183,6 +165,7 @@ static work_caller_enum battery_work_caller = 0;
 static work_caller_enum power_work_caller   = 0; 
 static int              test_isr_count      = 0;
 
+/* todo: may be used in the future to improve diagnostic */
 static char *status_text[] = 
 {
    [POWER_SUPPLY_STATUS_UNKNOWN]     = "Unknown",
@@ -197,25 +180,28 @@ static char *power_supplied_to[] =
    "battery",
 };
 
+/* array of battery properties supported by this driver */
 static enum power_supply_property battery_data_props[] = 
 {
-   POWER_SUPPLY_PROP_STATUS,             /* 0 charging, discharging ... */
-   POWER_SUPPLY_PROP_HEALTH,             /* 2 good, overheat, dead ...  */
-   POWER_SUPPLY_PROP_PRESENT,            /* 3                           */
-   POWER_SUPPLY_PROP_TECHNOLOGY,         /* 5 NiMH|LION|...             */ 
-   POWER_SUPPLY_PROP_VOLTAGE_MAX,        /* 7 battery_max               */
-   POWER_SUPPLY_PROP_VOLTAGE_MIN,        /* 8 battery_min               */
-   POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN, /* 9                           */
-   POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN, /* 10                          */
-   POWER_SUPPLY_PROP_VOLTAGE_NOW,        /* 11 battery voltage(mV)      */
-   POWER_SUPPLY_PROP_CAPACITY,           /* 30 Capacity in percent      */
-   POWER_SUPPLY_PROP_TEMP,               /* 32 Degrees celsius          */
+   POWER_SUPPLY_PROP_STATUS,             /* charging, discharging ... */
+   POWER_SUPPLY_PROP_HEALTH,             /* good, overheat, dead ...  */
+   POWER_SUPPLY_PROP_PRESENT,            /*                           */
+   POWER_SUPPLY_PROP_TECHNOLOGY,         /* NiMH|LION|...             */ 
+   POWER_SUPPLY_PROP_VOLTAGE_MAX,        /* battery_max               */
+   POWER_SUPPLY_PROP_VOLTAGE_MIN,        /* battery_min               */
+   POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN, /*                           */
+   POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN, /*                          */
+   POWER_SUPPLY_PROP_VOLTAGE_NOW,        /* battery voltage(mV)      */
+   POWER_SUPPLY_PROP_CAPACITY,           /* Capacity in percent      */
+   POWER_SUPPLY_PROP_TEMP,               /* Degrees celsius          */
 };
 
+/* array of "power"  properties supported by this driver */
 static enum power_supply_property power_data_props[] = {
-   POWER_SUPPLY_PROP_ONLINE,             /* 4 AC plugged in or not      */ 
+   POWER_SUPPLY_PROP_ONLINE,             /* AC plugged in or not      */ 
 };
 
+/* initialize PSY defined battery data */
 static struct battery_data gt_battery_info = 
 {
    .status = POWER_SUPPLY_STATUS_DISCHARGING,
@@ -230,15 +216,10 @@ static struct battery_data gt_battery_info =
       .external_power_changed = battery_external_power_changed,
       .use_for_apm            = 1,
    },
-   .is_present = battery_is_present,
-   .gpio_charging_b = -1,
-
-   .adc_bat = -1,
    .battery_technology = POWER_SUPPLY_TECHNOLOGY_LION,
-
-   .adc_temp = -1,
 };
 
+/* initialize PSY defined power data */
 static struct power_data gt_power_info = 
 {
    .online = -1,
@@ -258,23 +239,25 @@ static struct power_data gt_power_info =
 
 static int g_gpio_power_control = -1;
 
-/* Needed so battery monitor drivers can register with this driver. */
 static struct multi_data *gpt_multi_data = NULL;
+
+/* flag inidicating if the driver is ready for battery monitor drivers 
+   to register */ 
 static bool               g_is_driver_ok = false;
             
-//static struct cbm_platform_data *gpt_cbm_platform_data = NULL;
-
 /* ---- Private Function Prototypes -------------------------------------- */
 static void cmp_battery_multi_power_off(void);
-static bool is_ac_connected            (struct multi_data *pt_multi_data, int ac_gpio_level);
+static bool is_ac_connected            (struct multi_data *pt_multi_data, 
+                                        int ac_gpio_level);
 static void multi_power_work           (struct work_struct *p_work);
 static void multi_battery_work         (struct work_struct *p_work);
-static int  setup_gpios                (struct cbm_platform_data *pt_platform_data);
+static int  setup_gpios                (struct battery_monitor *pt_battery_monitor);
+static void close_gpios                (struct battery_monitor *pt_battery_monitor);
 static void ac_power_isr_handler_work  (struct work_struct *p_work);
 
 /* ---- Public Functions ------------------------------------------------- */
 
-int register_battery_monitor(struct battery_monitor_calls *p_calls,
+int register_battery_monitor(struct battery_monitor *p_monitor,
                              void   *p_data)
 {
    struct power_data  *pt_power_data;
@@ -285,50 +268,39 @@ int register_battery_monitor(struct battery_monitor_calls *p_calls,
    
    if (g_is_driver_ok == false)
    {  
-      printk("%s() cannot register, problem encountered in battery_probe()\n",
-             __FUNCTION__);
-      return -1;       
+      printk("%s() battery monitor %s cannot register. "
+             "Battery driver is not ready.\n", __FUNCTION__, p_monitor->name);
+      return -ENODATA;       
    }
    
    if (gpt_multi_data == NULL)
    {
-      printk("%s() called too early, pointer not created\n", __FUNCTION__);
-      return -1;
+      printk("%s() battery monitor %s cannot register. "
+             "Called too early, multi data is not created\n",
+             __FUNCTION__, p_monitor->name);
+      return -ENODATA;
    }
 
-   gpt_multi_data->get_battery_voltage_fn = p_calls->get_voltage_fn;
-   gpt_multi_data->get_battery_charge_fn  = p_calls->get_charge_fn;
-   
-   /* Need to set this pointer pt_multi_data->p_battery_monitor_data. */
-   gpt_multi_data->p_battery_monitor_data = p_data;
-   
-   if (p_calls->type == enum_adc121)
-   {
-      gpt_multi_data->pt_monitor_info = &gpt_multi_data->pt_platform_data->adc121_info;
-      if (mod_debug)
-         printk("%s() adc121 battery monitor registered with cmp_battery_multi\n",
-                __FUNCTION__); 
-   }   
-   else 
-   if (p_calls->type == enum_max17040)
-   {
-      gpt_multi_data->pt_monitor_info = &gpt_multi_data->pt_platform_data->max17040_info;
-      if (mod_debug)
-         printk("%s() max17040 battery monitor registered with cmp_battery_multi\n",
-                __FUNCTION__); 
-   }   
-
-   if ((rc = setup_gpios(gpt_multi_data->pt_platform_data)) != 0)
+   if ((rc = setup_gpios(p_monitor)) != 0)
    {
       printk("%s() setup_gpios() returned %d\n", __FUNCTION__, rc);
-      return -1;
+      return rc;
    }
    
+   /* store monitor and monitor data in multi struct */
+   gpt_multi_data->pt_battery_monitor = p_monitor;
+   gpt_multi_data->pt_battery_monitor_data = p_data;
+
+   if (mod_debug)
+         printk("%s() battery monitor %s successfully registered "
+                "with multi battery driver\n", __FUNCTION__, p_monitor->name); 
+
    pt_power_data = gpt_multi_data->pt_power_data;	
    
    /* Is the tablet plugged or not? Need to know for wakelock. */
-   ac_power_gpio_level        = gpio_get_value(gpt_multi_data->pt_monitor_info->gpio_ac_power);
-   pt_power_data->online      = is_ac_connected(gpt_multi_data, ac_power_gpio_level);
+   ac_power_gpio_level = 
+      gpio_get_value(gpt_multi_data->pt_battery_monitor->gpio_ac_power);
+   pt_power_data->online = is_ac_connected(gpt_multi_data, ac_power_gpio_level);
    pt_power_data->prev_online = pt_power_data->online;
    
    if (pt_power_data->online)
@@ -348,28 +320,19 @@ int register_battery_monitor(struct battery_monitor_calls *p_calls,
 
 /* ---- Functions -------------------------------------------------------- */
 
-bool is_monitor_registered(void)
+static bool is_monitor_registered(void)
 {
-   if (gpt_multi_data->pt_monitor_info == NULL)
+   if (gpt_multi_data->pt_battery_monitor == NULL)
       return false;
    else
       return true;
 }      
-                             
+
+/* todo: properly implement in the future, if needed */
 static unsigned long read_temp(struct battery_data *p_battery)
 {
    unsigned long value = 0;
-
-   //if (bat->adc_temp < 0)
-   //   return 20;
-
    return value;
-}
-
-static bool battery_is_present(struct battery_data *p_battery)
-{
-   (void)p_battery;
-   return 1;
 }
 
 /* AC power pin level differs between boards. */
@@ -378,7 +341,7 @@ static bool is_ac_connected(struct multi_data *pt_multi_data,
 {
    bool ret;
    
-   if (pt_multi_data->pt_monitor_info->ac_power_on_level > 0)
+   if (pt_multi_data->pt_battery_monitor->ac_power_on_level > 0)
    {  /* GPIO high indicates AC power is connected. */
       if (ac_gpio_level > 0)
       {
@@ -405,25 +368,19 @@ static bool is_ac_connected(struct multi_data *pt_multi_data,
 }
 
 /* Battery charge pin differs between tablets. */
+/* todo: review the logic of status assigning */
 static int get_battery_status(struct multi_data *pt_multi_data)
 {
-   int status;
-   struct battery_data *pt_battery = pt_multi_data->pt_battery_data;
+   int status = POWER_SUPPLY_STATUS_UNKNOWN;
 
-   if (pt_battery->is_present && !pt_battery->is_present(pt_battery)) 
+   if(pt_multi_data->pt_battery_monitor != NULL)
    {
-      printk(KERN_NOTICE "%s not present\n", pt_battery->t_power_supply.name);
-      return POWER_SUPPLY_STATUS_UNKNOWN;
-   } 
-   
-   switch(pt_multi_data->pt_monitor_info->type)
-   {
-      case enum_adc121:      
-         /* if (power_supply_am_i_supplied(pt_battery_psy)) *
-          * checks for POWER_SUPPLY_PROP_ONLINE             */
-         if (pt_multi_data->pt_power_data->online)
+      if (pt_multi_data->pt_power_data->online)
+      {
+         /* if battery monitor has charging pin */
+         if (pt_multi_data->pt_battery_monitor->gpio_charger != -1)
          {
-            if (gpio_get_value(pt_battery->gpio_charging_b)) 
+            if (gpio_get_value(pt_multi_data->pt_battery_monitor->gpio_charger))
             {
                status = POWER_SUPPLY_STATUS_NOT_CHARGING;
             } 
@@ -431,29 +388,21 @@ static int get_battery_status(struct multi_data *pt_multi_data)
             {
                status = POWER_SUPPLY_STATUS_CHARGING;
             }
-         } 
-         else 
-         {
-            status = POWER_SUPPLY_STATUS_DISCHARGING;
          }
-         break;
+      }
 
-      case enum_max17040:
-         if (pt_multi_data->pt_power_data->online)
-         {
-            status = POWER_SUPPLY_STATUS_CHARGING;
-         } 
-         else 
-         {
-            status = POWER_SUPPLY_STATUS_DISCHARGING;
-         }
-         break;
-         
-         
-      default:
-         status = POWER_SUPPLY_STATUS_UNKNOWN;
-   }   
-   
+      if (pt_multi_data->pt_battery_monitor->gpio_charger == -1 && 
+          pt_multi_data->pt_power_data->online)
+      {
+         status = POWER_SUPPLY_STATUS_CHARGING;
+      }
+
+      if (pt_multi_data->pt_battery_monitor->gpio_charger == -1 && 
+          !pt_multi_data->pt_power_data->online)
+      {
+         status = POWER_SUPPLY_STATUS_DISCHARGING;
+      }
+   }
    return status;
 }
 
@@ -464,20 +413,31 @@ static int cbm_get_battery_charge(struct multi_data *pt_multi_data)
    int battery_max     = pt_multi_data->pt_platform_data->battery_max_voltage;
    int battery_min     = pt_multi_data->pt_platform_data->battery_min_voltage;
       
-   if (pt_multi_data->get_battery_charge_fn == NULL)
-   {  /* No charge API provided, have to calculate it. */
-      charge_percent = (current_voltage - battery_min)*100/(battery_max-battery_min);  
+   /* if battery monitor is not registered */
+   if (pt_multi_data->pt_battery_monitor == NULL)
+   {
+      /* calculate charge */
+      charge_percent = 
+         (current_voltage - battery_min)*100/(battery_max-battery_min);
    }
    else
-   {  /* 
-       * Temporary, should be able to retrieve it now rather than use an out of
-       *  date value. 
+   {  
+      /* 
+       * todo: change this to retrieve it rather than use an out of
+       * date value. 
        */
       charge_percent = pt_multi_data->battery_charge;  
    }
 
+   /* 
+    * It is important that the charge level of the battery returned by 
+    * POWER_SUPPLY_PROP_CAPACITY never be accidentally set to zero. This might
+    * cause a reboot by the parent OS. It is also bad if the value is greater 
+    * than 100.
+    */
    if (charge_percent <= 0 || charge_percent > 100)
-   {  /* Need to keep this value in range. */
+   {  
+      /* Need to keep this value in range. */
       if (mod_debug)
          printk("%s() charge out of range %d, setting to 100\n",
                 __FUNCTION__, charge_percent);
@@ -486,18 +446,6 @@ static int cbm_get_battery_charge(struct multi_data *pt_multi_data)
       
    return charge_percent;
 }
-
-/* POWER_SUPPLY_PROP_STATUS,              0 charging, discharging ... */
-/* POWER_SUPPLY_PROP_HEALTH,              2 good, overheat, dead ...  */
-/* POWER_SUPPLY_PROP_PRESENT,             3                           */
-/* POWER_SUPPLY_PROP_TECHNOLOGY,          5 NiMH|LION|...             */ 
-/* POWER_SUPPLY_PROP_VOLTAGE_MAX,         7 battery_max               */
-/* POWER_SUPPLY_PROP_VOLTAGE_MIN,         8 battery_min               */
-/* POWER_SUPPLY_PROP_VOLTAGE_MAX_DESIGN,  9                           */
-/* POWER_SUPPLY_PROP_VOLTAGE_MIN_DESIGN,  10                          */
-/* POWER_SUPPLY_PROP_VOLTAGE_NOW,         11 battery voltage(mV)      */
-/* POWER_SUPPLY_PROP_CAPACITY,            30 Capacity in percent      */
-/* POWER_SUPPLY_PROP_TEMP,                32 Degrees celsius          */
 
 static int battery_get_property(struct power_supply *t_power_supply,
                                 enum power_supply_property psp,
@@ -508,11 +456,9 @@ static int battery_get_property(struct power_supply *t_power_supply,
                                                    struct battery_data, 
                                                    t_power_supply);
 
-   if (pt_battery->is_present && !pt_battery->is_present(pt_battery)
-       && psp != POWER_SUPPLY_PROP_PRESENT) 
-   {
-      return -ENODEV;
-   }
+   if (mod_debug)                       
+      printk("%s() requested property: %d\n", 
+             __FUNCTION__, psp);
    
    switch (psp) 
    {
@@ -523,7 +469,9 @@ static int battery_get_property(struct power_supply *t_power_supply,
          val->intval = POWER_SUPPLY_HEALTH_GOOD;
          break;
       case POWER_SUPPLY_PROP_PRESENT:
-         val->intval = pt_battery->is_present ? pt_battery->is_present(pt_battery) : 1;
+          /* for now we are assuming that battery is always present */
+          /* todo: came up with the way to determine its presence */
+          val->intval = 1;
          break;
       case POWER_SUPPLY_PROP_TECHNOLOGY:
          val->intval = pt_battery->battery_technology;
@@ -541,12 +489,14 @@ static int battery_get_property(struct power_supply *t_power_supply,
          val->intval = pt_battery->battery_min*1000;
          break;
       case POWER_SUPPLY_PROP_VOLTAGE_NOW:
-         if (pt_battery->pt_multi_data->get_battery_voltage_fn != NULL)
+         /* if battery monitor is registered */
+         if (pt_battery->pt_multi_data->pt_battery_monitor != NULL)
          {
+            /* todo: retrieve this data from the monitor directly */ 
             val->intval = pt_battery->pt_multi_data->battery_milliVolts*1000; 
          }
          else
-	         val->intval = pt_battery->battery_max*1000;            
+            val->intval = pt_battery->battery_max*1000;            
          break;
       case POWER_SUPPLY_PROP_CAPACITY:   
          val->intval = cbm_get_battery_charge(pt_battery->pt_multi_data);
@@ -560,10 +510,8 @@ static int battery_get_property(struct power_supply *t_power_supply,
    }
 
    if (mod_debug)                       
-   {
       printk("%s() property: %d val: %d\n", 
              __FUNCTION__, psp, val->intval);
-   }
    
    return ret;
 }  /* battery_get_property(..) */
@@ -573,8 +521,8 @@ static int power_get_property(struct power_supply *pt_power_supply,
                               union power_supply_propval *val)
 {
    struct power_data *p_pow = container_of(pt_power_supply, 
-                                            struct power_data, 
-                                            t_power_supply);
+                                           struct power_data, 
+                                           t_power_supply);
    
    switch (psp) 
    {
@@ -610,14 +558,6 @@ static irqreturn_t ac_power_gpio_isr(int irq, void *data)
 
    power_work_caller = enum_caller_isr;
    
-   /* Flush the delayed work. */
-   cancel_delayed_work_sync(&pt_multi_data->t_battery_dwork);
-   cancel_delayed_work_sync(&pt_multi_data->t_power_dwork);
-         
-   /* Handle the bounce in the the AC power GPIO value. ac_power_isr_handler_work()
-    * will call battery_update() and power_update() once the signal has been
-    * debounced.
-    */
    queue_work(isr_wq, &pt_multi_data->t_ac_power_work);
    
    return IRQ_HANDLED;
@@ -628,7 +568,9 @@ static void battery_update(struct multi_data *pt_multi_data)
    int old_battery_status;
    struct battery_data *pt_battery     = pt_multi_data->pt_battery_data;
    struct power_supply  *pt_battery_psy = &pt_battery->t_power_supply;
-   
+   struct battery_monitor *pt_battery_monitor = 
+      pt_multi_data->pt_battery_monitor;
+
    int battery_value;
    
    if (is_monitor_registered() == false)
@@ -648,58 +590,41 @@ static void battery_update(struct multi_data *pt_multi_data)
 
    if (old_battery_status != pt_battery->status) 
    {
-      //printk(KERN_INFO "%s %s -> %s\n", pt_battery_psy->name,
-      //    status_text[old_battery_status], status_text[pt_battery->status]);
-      printk("%s() battery status changed: %d\n", __FUNCTION__, pt_battery->status);
+      printk("%s() battery status changed: %d\n",
+             __FUNCTION__, pt_battery->status);
    }
 
    /* Retrieve the battery voltage from the monitor. */   
-   if (pt_multi_data->get_battery_voltage_fn != NULL)
+   if (pt_battery_monitor->get_voltage_fn != NULL)
    {   
-      battery_value = pt_multi_data->get_battery_voltage_fn(pt_multi_data->p_battery_monitor_data);      
-      
-      if (pt_multi_data->pt_monitor_info->type == enum_max17040)
-      {         
-         if (battery_value > 0)
-         {
-            battery_value = 2*battery_value + 1700;
-         }
-         else
-         {  /* At startup takes a bit of time to get the battery monitor voltage.*/
-            battery_value = pt_multi_data->pt_platform_data->battery_max_voltage;
-            if (mod_debug)
-               printk("%s() monitor not ready, setting voltage to %d\n",
-                     __FUNCTION__, battery_value);
-         }         
-      }   
+      battery_value = 
+         pt_battery_monitor->get_voltage_fn(pt_multi_data->pt_battery_monitor_data);
       
       if (battery_value == 0)
-      {  /* Sometimes occurs and may cause tablet to restart. */
+      {  
+         /* Sometimes occurs and may cause tablet to restart. */
          battery_value = pt_multi_data->pt_platform_data->battery_min_voltage;
       }
       
       pt_multi_data->battery_milliVolts = battery_value;      
       if (mod_debug)
          printk("%s() battery_voltage: %d battery_milliVolts: %d\n", 
-                __FUNCTION__, battery_value, pt_multi_data->battery_milliVolts);      
-   }            
+                __FUNCTION__, battery_value, pt_multi_data->battery_milliVolts);
+   }
    else
    {
       if (mod_debug)
-         printk("%s() battery monitor get_battery_voltage_fn() not configured\n",
-                __FUNCTION__);
+         printk("%s() battery monitor get_battery_voltage_fn() "
+                "not configured\n", __FUNCTION__);
    }
-   
-   
 
    /* Retrieve the battery charge from the monitor. */      
-   if (pt_multi_data->get_battery_charge_fn != NULL)
+   if (pt_battery_monitor->get_charge_fn != NULL)
    {      
-      if (pt_multi_data->pt_monitor_info->type == enum_max17040)
-      {
-         battery_value = pt_multi_data->get_battery_charge_fn(pt_multi_data->p_battery_monitor_data);
-         pt_multi_data->battery_charge = battery_value;      
-      }   
+      battery_value = 
+         pt_battery_monitor->get_charge_fn(pt_multi_data->pt_battery_monitor_data);
+      pt_multi_data->battery_charge = battery_value;      
+
       if (mod_debug)
          printk("%s() battery_charge: %d battery_charge: %d\n", 
                 __FUNCTION__, battery_value, pt_multi_data->battery_charge);      
@@ -707,7 +632,7 @@ static void battery_update(struct multi_data *pt_multi_data)
    else
    {
       if (mod_debug)
-         printk("%s() battery monitor get_battery_charge_fn() not configured\n",
+         printk("%s() battery monitor get_charge_fn() not configured\n",
                 __FUNCTION__);
    }
 
@@ -733,10 +658,12 @@ static void power_update(struct multi_data *pt_multi_data)
 
    if (mod_debug)                       
    {
-      printk("%s() running, gpio_ac_power: %d\n", __FUNCTION__, pt_multi_data->pt_monitor_info->gpio_ac_power);
+      printk("%s() running, gpio_ac_power: %d\n",
+             __FUNCTION__, pt_multi_data->pt_battery_monitor->gpio_ac_power);
    }
    
-   gpio_power_level = gpio_get_value(pt_multi_data->pt_monitor_info->gpio_ac_power);
+   gpio_power_level = 
+      gpio_get_value(pt_multi_data->pt_battery_monitor->gpio_ac_power);
    
    if (is_ac_connected(pt_multi_data, gpio_power_level))
    {
@@ -750,7 +677,7 @@ static void power_update(struct multi_data *pt_multi_data)
    if (mod_debug > 1)                       
    {
       printk("cmp_battery_multi.c %s() gpio %d prev_online: %d online: %d\n", 
-             __FUNCTION__, pt_multi_data->pt_monitor_info->gpio_ac_power, 
+             __FUNCTION__, pt_multi_data->pt_battery_monitor->gpio_ac_power, 
              pt_power_data->prev_online, 
              pt_power_data->online);
    }          
@@ -786,7 +713,9 @@ static void multi_battery_work(struct work_struct *p_work)
 {
    struct multi_data    *pt_multi_data;
    struct battery_data *pt_battery_data;
-   pt_multi_data = container_of(p_work, struct multi_data, t_battery_dwork.work);
+   pt_multi_data = container_of(p_work, 
+                                struct multi_data, 
+                                t_battery_dwork.work);
    pt_battery_data = pt_multi_data->pt_battery_data;
    
    if (pt_battery_data == NULL)
@@ -796,7 +725,7 @@ static void multi_battery_work(struct work_struct *p_work)
    }	   
 
    /* Let battery_update() call power_supply_changed(..) that informs the    *
-    * the system that a value changed.                                       */      
+    * the system that a value changed.                                       */
    battery_update(pt_multi_data); 
    schedule_delayed_work(&pt_multi_data->t_battery_dwork, MULTI_WAIT_PERIOD);
 }
@@ -819,7 +748,7 @@ static void multi_power_work(struct work_struct *p_work)
    {
       printk("%s() running gpio_ac_power: %d gpio_power_button: %d\n", 
              __FUNCTION__, 
-             pt_multi_data->pt_monitor_info->gpio_ac_power, 
+             pt_multi_data->pt_battery_monitor->gpio_ac_power, 
              pt_multi_data->pt_platform_data->gpio_power_control);
    } 
    
@@ -831,43 +760,19 @@ static void multi_power_work(struct work_struct *p_work)
 static void ac_power_isr_handler_work(struct work_struct *p_work)
 {
    struct multi_data *pt_multi_data;
-   int i;
-   int real_gpio_val; 
    int gpio_val;
       
-   pt_multi_data = container_of(p_work, 
-                                struct multi_data, 
-                                t_ac_power_work);   
-                                
-   real_gpio_val = gpio_get_value(pt_multi_data->pt_monitor_info->gpio_ac_power);                                
-
-   if (mod_debug)                       
+   if (mod_debug)
    {
       printk("running %s() name: %s\n", __FUNCTION__, 
              pt_multi_data->pt_power_data->t_power_supply.name);
    }          
    
-   /* While the ISR is triggered on the rising edge the signal has to be
-    * debounced before it be known for sure what really happened.
-    */  
+   pt_multi_data = container_of(p_work, struct multi_data, t_ac_power_work);   
+                                
+   gpio_val = gpio_get_value(pt_multi_data->pt_battery_monitor->gpio_ac_power);
       
-   for (i = 0; i < NUM_DEBOUNCE_TRIES; i++)
-   {
-      msleep(DEBOUNCE_WAIT_MSECS);
-      gpio_val = gpio_get_value(pt_multi_data->pt_monitor_info->gpio_ac_power);
-      
-      if (gpio_val != real_gpio_val)
-      {
-         if (mod_debug)                       
-         {
-            printk("AC power changed, orig %d new: %d \n", 
-                real_gpio_val, gpio_val); 
-         }       
-         real_gpio_val = gpio_val;      
-      }
-   }
-   
-   if (is_ac_connected(pt_multi_data, real_gpio_val))
+   if (is_ac_connected(pt_multi_data, gpio_val))
    {  /* The tablet is plugged into an external power supply. */
       wake_lock(&pt_multi_data->wakelock);
       if (mod_debug)                       
@@ -883,7 +788,7 @@ static void ac_power_isr_handler_work(struct work_struct *p_work)
    if (mod_debug > 2)                       
    {
       printk("running %s() run by: %s isr count: %d\n", 
-             __FUNCTION__, work_callers[power_work_caller], test_isr_count);          
+             __FUNCTION__, work_callers[power_work_caller], test_isr_count);
    }          
    
    /* These two methods call power_supply_changed(). */
@@ -902,7 +807,6 @@ static void battery_external_power_changed(struct power_supply *t_power_supply)
    
    if (mod_debug)
       printk("%s() called\n", __FUNCTION__);
-   //schedule_work(&bat_work);
 }
 
 static void cmp_battery_multi_power_off(void)
@@ -910,79 +814,105 @@ static void cmp_battery_multi_power_off(void)
    gpio_set_value(g_gpio_power_control, 0);
 }
 
-
-static int setup_gpios(struct cbm_platform_data *pt_platform_data)
+static int setup_gpios(struct battery_monitor *pt_battery_monitor)
 {
-   int rc_req, rc_dir;
-   struct multi_data *pt_multi_data  = (struct multi_data *)pt_platform_data->p_cbm_data;
+   int rc;
    
    if (mod_debug)
    {
-      printk("%s() power down gpio: %d\n", __FUNCTION__, pt_platform_data->gpio_power_control);
-      printk("%s() ac power gpio  : %d\n", __FUNCTION__, pt_multi_data->pt_monitor_info->gpio_ac_power); 
-      printk("%s() charger gpio   : %d\n", __FUNCTION__, pt_multi_data->pt_monitor_info->gpio_charger); 
+      printk("%s() power down gpio: %d\n", __FUNCTION__, g_gpio_power_control);
+      printk("%s() ac power gpio  : %d\n",
+             __FUNCTION__, pt_battery_monitor->gpio_ac_power); 
+      printk("%s() charger gpio   : %d\n",
+             __FUNCTION__, pt_battery_monitor->gpio_charger); 
    }
 
-   if (pt_platform_data->gpio_power_control >= 0)
+   if (g_gpio_power_control >= 0)
    {   
-      rc_req = gpio_request(pt_platform_data->gpio_power_control, "switch off");
-      rc_dir = gpio_direction_output(pt_platform_data->gpio_power_control, 1);
-      
-      if (rc_req || rc_dir)
+      rc = gpio_request_one(g_gpio_power_control,
+                            GPIOF_OUT_INIT_HIGH, "switch off");
+      if (rc)
       {
-         gpio_free(pt_platform_data->gpio_power_control);
-         return -1;
+         close_gpios(pt_battery_monitor);
+         return rc;
       }
-   }      
+   }
 
-   if (pt_multi_data->pt_monitor_info->gpio_ac_power >= 0)
+   if (pt_battery_monitor->gpio_charger >= 0)
    {
-      rc_req = gpio_request(pt_multi_data->pt_monitor_info->gpio_ac_power, "ac power");
-      rc_dir = gpio_direction_input(pt_multi_data->pt_monitor_info->gpio_ac_power);
-      
-      if (rc_req || rc_dir)
+      rc = gpio_request_one(pt_battery_monitor->gpio_charger, 
+                            GPIOF_IN, "charger");
+      if (rc)
       {
-         gpio_free(pt_multi_data->pt_monitor_info->gpio_ac_power);
-         return -1;
+         close_gpios(pt_battery_monitor);
+         return rc;
+      }   
+   }
+
+   if (pt_battery_monitor->gpio_ac_power >= 0)
+   {
+      rc = gpio_request_one(pt_battery_monitor->gpio_ac_power,
+                            GPIOF_IN, "ac power");
+      if (rc)
+      {
+         close_gpios(pt_battery_monitor);
+         return rc;
       }   
    }   
-   
-   if (pt_multi_data->pt_monitor_info->gpio_charger >= 0)
-   {
-      rc_req = gpio_request(pt_multi_data->pt_monitor_info->gpio_charger , "charger");
-      rc_dir = gpio_direction_input(pt_multi_data->pt_monitor_info->gpio_charger);
-      
-      if (rc_req || rc_dir)
-      {
-         gpio_free(pt_multi_data->pt_monitor_info->gpio_charger);
-         return -1;
-      }
+
+   /*
+    * power on/off gpio signal bounces up and down before settling in either
+    * case, so we need to debounce it.
+    */
+   rc = gpio_set_debounce(pt_battery_monitor->gpio_ac_power, 
+                          DEBOUNCE_TIME_USECS);
+   if (rc < 0) {
+      pr_err("%s: gpio_ac_power set debounce failed. gpio: %d, return: %d\n",
+             __FUNCTION__, pt_battery_monitor->gpio_ac_power, rc);
+      close_gpios(pt_battery_monitor);
+      return rc;
    }
-   
-   /* Needed to turn off the device. */   
-   g_gpio_power_control = pt_platform_data->gpio_power_control;
-   
+
+   /*
+    * Setup the interrupt to detect if external power is plugged in or not.
+    * IRQF_TRIGGER_FALLING  - external power is connected
+    * IRQF_TRIGGER_RISING   - external power is disconnected
+    */
+   rc = request_irq(gpio_to_irq(pt_battery_monitor->gpio_ac_power),
+                     ac_power_gpio_isr,
+                     IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
+                     "ac detect", gpt_multi_data);
+   if (rc)
+   {
+      printk("%s():  request_irq(gpio_to_irq(%d)) returned %d\n",
+             __FUNCTION__, pt_battery_monitor->gpio_ac_power, rc);
+      close_gpios(pt_battery_monitor);
+      return rc;
+   }
+
    return 0;
 }
 
-static void close_gpios(struct cbm_platform_data *pt_platform_data)
+static void close_gpios(struct battery_monitor *pt_battery_monitor)
 {
-   struct multi_data *pt_multi_data  = (struct multi_data *)pt_platform_data->p_cbm_data;
-   
-   if (pt_platform_data->gpio_power_control >= 0)
-      gpio_free(pt_platform_data->gpio_power_control);
+   /* release AC power switch IRQ */
+   free_irq(gpio_to_irq(pt_battery_monitor->gpio_ac_power), &gt_power_info);
+
+   if (g_gpio_power_control >= 0)
+      gpio_free(g_gpio_power_control);
       
-   if (pt_multi_data->pt_monitor_info->gpio_ac_power >= 0)  
-      gpio_free(pt_multi_data->pt_monitor_info->gpio_ac_power);
+   if (pt_battery_monitor->gpio_ac_power >= 0)  
+      gpio_free(pt_battery_monitor->gpio_ac_power);
       
-   if (pt_multi_data->pt_monitor_info->gpio_charger >= 0)   
-      gpio_free(pt_multi_data->pt_monitor_info->gpio_charger);
+   if (pt_battery_monitor->gpio_charger >= 0)   
+      gpio_free(pt_battery_monitor->gpio_charger);
 }
 
 #ifdef CONFIG_PM
 static int battery_suspend(struct platform_device *p_dev, pm_message_t state)
 {
-   struct cbm_platform_data *pt_data = (struct cbm_platform_data *)p_dev->dev.platform_data;
+   struct cbm_platform_data *pt_data = 
+      (struct cbm_platform_data *)p_dev->dev.platform_data;
    struct multi_data *pt_multi_data  = (struct multi_data *)pt_data->p_cbm_data;
    /* flush all pending status updates */
    flush_scheduled_work();  
@@ -995,14 +925,15 @@ static int battery_suspend(struct platform_device *p_dev, pm_message_t state)
 
 static int battery_resume(struct platform_device *p_dev)
 {
-   struct cbm_platform_data *pt_data = (struct cbm_platform_data *)p_dev->dev.platform_data;
+   struct cbm_platform_data *pt_data = 
+      (struct cbm_platform_data *)p_dev->dev.platform_data;
    struct multi_data *pt_multi_data  = (struct multi_data *)pt_data->p_cbm_data;
    /* Things may have changed while we were away */
    power_work_caller = enum_caller_resume;
 
    /* How to do in a SMP centric safe manner? */
-   schedule_delayed_work(&pt_multi_data->t_power_dwork, MULTI_WAIT_PERIOD);         
-   schedule_delayed_work(&pt_multi_data->t_battery_dwork, MULTI_WAIT_PERIOD);         
+   schedule_delayed_work(&pt_multi_data->t_power_dwork, MULTI_WAIT_PERIOD);
+   schedule_delayed_work(&pt_multi_data->t_battery_dwork, MULTI_WAIT_PERIOD);
    battery_work_caller = enum_caller_resume;
    return 0;
 }
@@ -1011,41 +942,39 @@ static int battery_resume(struct platform_device *p_dev)
 static int __devinit battery_probe(struct platform_device *p_dev)
 {
    int ret;
-   int i;
-   int ac_power_gpio_level = 0;
    struct multi_data    *pt_multi_data;
    struct battery_data  *pt_battery_data;
    struct power_data    *pt_power_data;
    /* CBM (C)mp (B)attery (M)ulti. */
    struct cbm_platform_data *pt_cbm_platform_data;
-   long data_location = 0;
 
    printk(gBanner);
 
    if (p_dev->dev.platform_data == NULL)
    {  /* Need this information. */
       printk("%s() error p_dev->dev.platform_data == NULL\n", __FUNCTION__);
-      return -1;
+      return -ENODATA;
    }
    
    pt_cbm_platform_data = (struct cbm_platform_data *)p_dev->dev.platform_data;
    
    if (mod_debug)
    {
-      printk("battery max voltage: %d\n", pt_cbm_platform_data->battery_max_voltage);    
-      printk("battery min voltage: %d\n", pt_cbm_platform_data->battery_min_voltage);    
-      printk("pt_cbm_platform_data->type 0: %d\n", pt_cbm_platform_data->adc121_info.type);    
-      printk("pt_cbm_platform_data->type 1: %d\n", pt_cbm_platform_data->max17040_info.type);    
-      printk("pt_cbm_platform_data->gpio_ac_power: %d\n", pt_cbm_platform_data->gpio_ac_power);    
+      printk("battery max voltage: %d\n", 
+             pt_cbm_platform_data->battery_max_voltage);
+      printk("battery min voltage: %d\n", 
+             pt_cbm_platform_data->battery_min_voltage);
    }  
 
-   /* Retrieve and assign the platform data. */
+   /* store platform data in battery info structure */
    gt_battery_info.battery_max = pt_cbm_platform_data->battery_max_voltage;   
    gt_battery_info.full_chrg = pt_cbm_platform_data->battery_max_voltage;   
    gt_battery_info.battery_min = pt_cbm_platform_data->battery_min_voltage;   
    gt_battery_info.battery_technology = pt_cbm_platform_data->battery_technology;
-   gt_battery_info.gpio_charging_b = pt_cbm_platform_data->gpio_charging;
 
+   /* Needed to turn off the device. */   
+   g_gpio_power_control = pt_cbm_platform_data->gpio_power_control;
+   
    pt_multi_data = kzalloc(sizeof(struct multi_data), GFP_KERNEL);
    if (pt_multi_data == NULL)
       return -ENOMEM;
@@ -1055,7 +984,7 @@ static int __devinit battery_probe(struct platform_device *p_dev)
    pt_battery_data = kzalloc(sizeof(struct battery_data), GFP_KERNEL);
    if (pt_battery_data == NULL)
    {
-	   kfree(pt_multi_data);   
+      kfree(pt_multi_data);
       return -ENOMEM;
    }
    
@@ -1075,6 +1004,7 @@ static int __devinit battery_probe(struct platform_device *p_dev)
    /* Set the battery monitor specific values. */
    pt_multi_data->pt_battery_data = pt_battery_data;
    pt_multi_data->pt_power_data   = pt_power_data;
+
    /* Need a reference to the parent structure. */
    pt_battery_data->pt_multi_data = pt_multi_data;
    pt_power_data->pt_multi_data   = pt_multi_data;
@@ -1089,30 +1019,19 @@ static int __devinit battery_probe(struct platform_device *p_dev)
    {
       printk("%s() name: %s\n", __FUNCTION__, pt_power_data->t_power_supply.name);
    } 
-
+   
    /* Tell the system how to turn off the power. */
+   /* pm_power_off is a global function pointer. It is declared as external in
+      linux/pm.h. I am not sure where it is declared and how user space uses it */
    pm_power_off = cmp_battery_multi_power_off;
 
    isr_wq = create_workqueue("multi_isr_wq");
-      
-   /* Setup the interrupt to detect if external power is plugged in or not. 
-    * IRQF_TRIGGER_RISING  - external power is connected or disconnected
-    * IRQF_TRIGGER_FALLING - external power is disconnected or connected
-    * Unfortunately the signal bounces up and down before settling in either
-    * case.
-    */
-   msleep(INT_SETUP_SLEEP_MSECS);
-
-   /* Detect when AC is plugged in or removed. */
-   ret = request_irq(gpio_to_irq(pt_cbm_platform_data->gpio_ac_power),
-                     ac_power_gpio_isr,
-                     IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
-                     "ac detect", pt_multi_data);
-   if (ret)
+   if (isr_wq == NULL)
    {
-      printk("%s():  request_irq(gpio_to_irq(%d)) returned %d\n",
-             __FUNCTION__, pt_multi_data->pt_monitor_info->gpio_ac_power, ret);  
-   }          
+      printk("%s() Can not create ISR workqueue\n", __FUNCTION__);
+      ret = -1;
+      goto err_isr_wq;
+   }
 
    /* Use a wake lock to keep the tablet awake. */
    wake_lock_init(&pt_multi_data->wakelock, WAKE_LOCK_SUSPEND, wake_lock_name);
@@ -1129,43 +1048,38 @@ static int __devinit battery_probe(struct platform_device *p_dev)
    if (ret)
       goto err_psy_reg_power;
 
-   if (ret == 0) 
-   {   
-      g_is_driver_ok = true;
-      return 0;
-   }
+   /* return success */
+   g_is_driver_ok = true;
+   return 0;
 
-   wake_lock_destroy(&pt_multi_data->wakelock);
-      
+  err_psy_reg_power:
    power_supply_unregister(&pt_multi_data->pt_battery_data->t_power_supply);
-      err_psy_reg_power:
-   power_supply_unregister(&pt_multi_data->pt_power_data->t_power_supply);
-      err_psy_reg_battery:
+
+  err_psy_reg_battery:
+   wake_lock_destroy(&pt_multi_data->wakelock);
 
    /* see comment in battery_remove */
    flush_scheduled_work();
    flush_workqueue(isr_wq);
    destroy_workqueue(isr_wq);
-   
-   i--;
-      err_gpio:
+  err_isr_wq:
+   kfree(pt_multi_data);
+   kfree(pt_battery_data);
+   kfree(pt_power_data);
    pm_power_off = NULL;
-
-   close_gpios(pt_cbm_platform_data);   
-
    printk("%s(): return %d\n", __FUNCTION__, ret);
    return ret;
 }  /* battery_probe() */
 
 static int __devexit battery_remove(struct platform_device *p_dev)
 {
-   struct cbm_platform_data *pt_data = (struct cbm_platform_data *)p_dev->dev.platform_data;
+   struct cbm_platform_data *pt_data = 
+      (struct cbm_platform_data *)p_dev->dev.platform_data;
    struct multi_data *pt_multi_data  = (struct multi_data *)pt_data->p_cbm_data;
 
-   printk("%s() entering ...\n", __FUNCTION__);   
-   
-   //free_irq(gpio_to_irq(pt_multi_data->pt_monitor_info->gpio_ac_power), &gt_power_info); 
+   printk("%s() entering ...\n", __FUNCTION__);
 
+   /* unregister power supplies from PSY framework */
    power_supply_unregister(&pt_multi_data->pt_battery_data->t_power_supply);
    power_supply_unregister(&pt_multi_data->pt_power_data->t_power_supply);
 
@@ -1178,26 +1092,32 @@ static int __devexit battery_remove(struct platform_device *p_dev)
    flush_scheduled_work();
    flush_workqueue(isr_wq);
    destroy_workqueue(isr_wq);
-   /* Flush the delayed work. */
+
+   /* flush the delayed work. */
    cancel_delayed_work_sync(&pt_multi_data->t_battery_dwork);
    cancel_delayed_work_sync(&pt_multi_data->t_power_dwork);
    
    pm_power_off = NULL;
+   g_is_driver_ok = false;
 
-   close_gpios(pt_data);
+   if (pt_multi_data->pt_battery_monitor != NULL)
+      close_gpios(pt_multi_data->pt_battery_monitor);
 
    wake_lock_destroy(&pt_multi_data->wakelock);
    mutex_destroy(&pt_multi_data->work_lock);
 
+   /* free all the data structures allocated in probe */
+   kfree(pt_multi_data->pt_battery_data);
+   kfree(pt_multi_data->pt_power_data);
+   kfree(pt_multi_data);
+
    printk("%s() exiting ...\n", __FUNCTION__);   
-   msleep(INT_SETUP_SLEEP_MSECS);
-   
    return 0;
 }
 
 static struct platform_driver battery_driver = 
 {
-   .driver.name = "cmp-battery",
+   .driver.name = HW_CMP_MULTI_DRIVER_NAME,
    .driver.owner = THIS_MODULE,
    .probe = battery_probe,
    .remove = __devexit_p(battery_remove),
@@ -1206,8 +1126,6 @@ static struct platform_driver battery_driver =
    .resume = battery_resume,
 #endif
 };
-
-static struct platform_device *battery_platform_device = NULL;
 
 static int __init battery_init(void)
 {
@@ -1226,11 +1144,6 @@ static int __init battery_init(void)
 
 static void __exit battery_exit(void)
 {
-   if (battery_platform_device) 
-   {
-      platform_device_del(battery_platform_device);
-      platform_device_put(battery_platform_device);
-   }
    platform_driver_unregister(&battery_driver);
 }
 

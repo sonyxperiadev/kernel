@@ -12,27 +12,14 @@
 * consent.
 *****************************************************************************/
 
-#ifndef ADC121C021_I2C_SETTINGS_H
-#define ADC121C021_I2C_SETTINGS_H
-
-/*
- * Refer to include/linux/broadcom/adc121c021_driver.h for details
- */
+#ifndef MAX17040_I2C_SETTINGS_H
+#define MAX17040_I2C_SETTINGS_H
 
 /* connected to BSC0 */
-#define HW_ADC121C021_I2C_BUS_ID    1
+#define HW_MAX17040_I2C_BUS_ID    1
 
-/* use GPIO0 to signal the host processor for battery alerts */
-#define HW_ADC121C021_GPIO_EVENT    18 /* GPIO #18 */
+#define HW_MAX17040_GPIO_AC_POWER      126 /* AC_OK_B */
+#define HW_MAX17040_AC_POWER_ON_LEVEL    0
+#define HW_MAX17040_GPIO_CHARGER        -1 /* BAT_CHG_B */
 
-#define HW_ADC121C021_BYTES_TO_READ 2
-
-#define HW_ADC121C021_RESISTOR_1    158
-#define HW_ADC121C021_RESISTOR_2    100
-
-#define HW_ADC121C021_GPIO_AC_POWER      181 /* AC_OK_B */
-#define HW_ADC121C021_AC_POWER_ON_LEVEL    1
-
-#define HW_ADC121C021_GPIO_CHARGER       180 /* BAT_CHG_B */
-
-#endif /* ADC121C021_I2C_SETTINGS_H */
+#endif /* MAX17040_I2C_SETTINGS_H */

@@ -122,7 +122,6 @@
 #if defined(CONFIG_MONITOR_ADC121C021_I2C)  || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
 #include <linux/broadcom/adc121c021_driver.h>
 #include <adc121c021_settings.h>
-#include <battery_settings.h>
 #endif
 
 #if defined(CONFIG_MONITOR_BQ27541_I2C) || defined(CONFIG_MONITOR_BQ27541_I2C_MODULE)
@@ -935,12 +934,19 @@ static struct i2c_board_info board_bq27541_i2c_boardinfo[] =
 #endif
 
 #if defined(CONFIG_BATTERY_MAX17040) || defined(CONFIG_BATTERY_MAX17040_MODULE)
-#define board_hana_max17040_info concatenate(ISLAND_BOARD_ID, _hana_max17040_info)
-static struct max17040_platform_data board_hana_max17040_info = 
+#define board_max17040_info concatenate(ISLAND_BOARD_ID, _max17040_info)
+static struct max17040_platform_data board_max17040_info = 
 {     /* Function pointers used to discover battery or AC power status using GPIOs */
       .battery_online = NULL,
       .charger_online = NULL,
       .charger_enable = NULL,
+
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+      .gpio_ac_power = HW_MAX17040_GPIO_AC_POWER,
+      .ac_power_on_level = HW_MAX17040_AC_POWER_ON_LEVEL,
+      .gpio_charger = HW_MAX17040_GPIO_CHARGER,
+      .battery_max_voltage = HW_BATTERY_MAX_VOLTAGE,
+#endif
 };
 
 #define board_max17040_i2c_boardinfo concatenate(ISLAND_BOARD_ID, _max17040_i2c_boardinfo)
@@ -949,22 +955,22 @@ static struct i2c_board_info board_max17040_i2c_boardinfo[] =
    {
       .type = HW_MAX17040_DRIVER_NAME,             /* "max17040" */
       .addr = HW_MAX17040_SLAVE_ADDR,              /* 0x36       */  
-      .platform_data = &board_hana_max17040_info,
+      .platform_data = &board_max17040_info,
    },
 };
 #endif
 
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-#define board_hana_cmp_battery_multi_info concatenate(ISLAND_BOARD_ID, _board_hana_cmp_battery_multi_info)
-static struct cbm_platform_data board_hana_cmp_battery_multi_info = CMP_BATTERY_MULTI_SETTINGS;
+#define board_cmp_battery_multi_info concatenate(ISLAND_BOARD_ID, _board_cmp_battery_multi_info)
+static struct cbm_platform_data board_cmp_battery_multi_info = CMP_BATTERY_MULTI_SETTINGS;
 
 #define board_battery_multi concatenate(ISLAND_BOARD_ID, _board_battery_multi)
 static struct platform_device board_battery_multi = 
 {
-   .name = "cmp-battery",
+   .name = HW_CMP_MULTI_DRIVER_NAME,
    .id = -1,
    .dev = {
-      .platform_data = &board_hana_cmp_battery_multi_info,
+      .platform_data = &board_cmp_battery_multi_info,
    },
 };
 #endif
@@ -1147,6 +1153,10 @@ static void __init add_i2c_device(void)
    board_adc121c021_i2c_param.battery_min_voltage = HW_BATTERY_MIN_VOLTAGE;
    board_adc121c021_i2c_param.resistor_1          = HW_ADC121C021_RESISTOR_1;
    board_adc121c021_i2c_param.resistor_2          = HW_ADC121C021_RESISTOR_2;
+
+   board_adc121c021_i2c_param.gpio_ac_power       = HW_ADC121C021_GPIO_AC_POWER;
+   board_adc121c021_i2c_param.ac_power_on_level   = HW_ADC121C021_AC_POWER_ON_LEVEL;
+   board_adc121c021_i2c_param.gpio_charger        = HW_ADC121C021_GPIO_CHARGER;
 
    printk("board_template.c %s() IRQ pin %d\n", __FUNCTION__, board_adc121c021_i2c_param.gpio_irq_pin);
    board_adc121c021_i2c_boardinfo[0].irq = 
