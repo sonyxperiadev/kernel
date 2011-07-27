@@ -54,6 +54,12 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "bcm_audio_devices.h"
 
+#ifdef	CONFIG_SND_BCM_PREALLOC_MEM_FOR_PCM
+#define	IS_PCM_MEM_PREALLOCATED		1
+#else
+#define	IS_PCM_MEM_PREALLOCATED		0
+#endif
+
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
 void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
 #define BCM_AUDIO_DEBUG(format, args...) \

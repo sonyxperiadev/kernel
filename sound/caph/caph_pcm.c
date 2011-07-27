@@ -978,7 +978,7 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 	for (; substream; substream = substream->next)
 	{
 	
-		err=snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV, 0, PCM_MAX_PLAYBACK_BUF_BYTES, PCM_MAX_PLAYBACK_BUF_BYTES);
+		err=snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV, 0, (IS_PCM_MEM_PREALLOCATED)?PCM_MAX_PLAYBACK_BUF_BYTES:0, PCM_MAX_PLAYBACK_BUF_BYTES);
 		if(err)
 			BCM_AUDIO_DEBUG("\n Error : Error when allocate memory for playback device err=%d\n",err);
 	}
@@ -987,7 +987,7 @@ int __devinit PcmDeviceNew(struct snd_card *card)
 	substream = pcm->streams[1].substream;
 	for (; substream; substream = substream->next)
 	{
-		err=snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV, 0, PCM_MAX_CAPTURE_BUF_BYTES, PCM_MAX_CAPTURE_BUF_BYTES);
+		err=snd_pcm_lib_preallocate_pages(substream, SNDRV_DMA_TYPE_DEV, 0, (IS_PCM_MEM_PREALLOCATED)?PCM_MAX_CAPTURE_BUF_BYTES:0, PCM_MAX_CAPTURE_BUF_BYTES);
 		if(err)
 			BCM_AUDIO_DEBUG("\n Error : Error when allocate memory for capture device err=%d\n",err);
 	}
