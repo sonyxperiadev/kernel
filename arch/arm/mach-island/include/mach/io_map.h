@@ -126,6 +126,7 @@
 #define KONA_SECWD_VA               HW_IO_PHYS_TO_VIRT( SECWD_BASE_ADDR )           /* Secure WD Timer
                                                                                      * (not to be confused with KONA_SEC_WATCHDOG)
                                                                                      */
+#define KONA_PAD_CTRL               HW_IO_PHYS_TO_VIRT( CHIPREGS_BASE_ADDR)         /* Pad control */
 #define KONA_SIMI_VA                HW_IO_PHYS_TO_VIRT( SIM_BASE_ADDR )             /* SIM interface */
 #define KONA_SIMI2_VA               HW_IO_PHYS_TO_VIRT( SIM2_BASE_ADDR )            /* SIM interface */
 #define KONA_SLV_CLK_VA             HW_IO_PHYS_TO_VIRT( KONA_SLV_CLK_BASE_ADDR )    /* Kona Peripheral Slave Clock Manager */
@@ -161,7 +162,7 @@
 #define KONA_USB_HSOTG_CTRL_VA      HW_IO_PHYS_TO_VIRT( HSOTG_CTRL_BASE_ADDR )      /* USB OTG Control */
 
 #define	KONA_BINTC_BASE_ADDR			  HW_IO_PHYS_TO_VIRT(BINTC_BASE_ADDR)
-
+#define KONA_PWRMGR_VA		    HW_IO_PHYS_TO_VIRT( PWRMGR_BASE_ADDR )
 #define KONA_UART_LLDEBUG_VA		KONA_UART0_VA
 #define KONA_UART_LLDEBUG_PA		UARTB_BASE_ADDR
 

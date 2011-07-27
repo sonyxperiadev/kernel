@@ -1384,25 +1384,8 @@ static void __init board_add_devices(void)
 
 }
 
-void __init pinmux_setup(void)
-{
-	void __iomem *chipRegBase = IOMEM(KONA_CHIPREG_VA);
-	uint32_t traceVal;
-	
-	traceVal = 0x107;
-	
-	/* trace clock setting */
-	writel( traceVal, chipRegBase + CHIPREG_TRACECLK_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT07_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT03_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT02_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT01_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT00_OFFSET ) ;
-}
-
 void __init board_init(void)
 {
-	pinmux_setup();
 	dma_mmap_init();
 	sdma_init();	
 	/*

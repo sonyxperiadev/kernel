@@ -57,6 +57,7 @@ VCHIQ_STATUS_T vchiq_initialise( VCHIQ_INSTANCE_T *instanceOut )
     if ( g_state.remote == NULL )
     {
         printk( "%s: g_state.remote = 0x%p\n", __func__, g_state.remote );
+        return VCHIQ_ERROR;
     }
 
     if ( !g_state.remote->initialised )

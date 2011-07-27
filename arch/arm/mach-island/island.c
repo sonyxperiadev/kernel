@@ -79,7 +79,7 @@ static int __init island_init(void)
 #endif
 
 #ifdef CONFIG_HAVE_CLK
-	clock_init();
+	//island_clock_init();
 #endif
 
 	pinmux_init();
