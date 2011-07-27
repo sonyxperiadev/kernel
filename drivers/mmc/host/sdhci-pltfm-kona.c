@@ -351,7 +351,7 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
    struct sdio_dev *dev = (struct sdio_dev *)dev_id;
 
    /* card insert */
-   if (gpio_get_value(dev->cd_gpio) == 0)
+   if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
       bcm_kona_sd_card_emulate(dev, 1);
    else /* card removal */
       bcm_kona_sd_card_emulate(dev, 0);
@@ -576,7 +576,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		* Since the card detection GPIO interrupt is configured to be edge
 		* sensitive, check the initial GPIO value here
 		*/
-		if (gpio_get_value(dev->cd_gpio) == 0)
+		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 			bcm_kona_sd_card_emulate(dev, 1);
 		else
 			bcm_kona_sd_card_emulate(dev, 0);
@@ -735,7 +735,7 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 
 	/* card state might have been changed during system suspend. Need to sync up */
 	if (dev->devtype == SDIO_DEV_TYPE_SDMMC && dev->cd_gpio >= 0) {
-		if (gpio_get_value(dev->cd_gpio) == 0)
+		if (gpio_get_value_cansleep(dev->cd_gpio) == 0)
 			bcm_kona_sd_card_emulate(dev, 1);
 		else
 			bcm_kona_sd_card_emulate(dev, 0);

@@ -74,7 +74,7 @@ int mmc_send_cmd(struct mmc *mmc, struct mmc_cmd *cmd, struct mmc_data *data)
 	return mmc->send_cmd(mmc, cmd, data);
 }
 
-int mmc_set_blocklen(struct mmc *mmc, int len)
+int mmc_poll_set_blocklen(struct mmc *mmc, int len)
 {
 	struct mmc_cmd cmd;
 
@@ -213,7 +213,7 @@ mmc_bwrite(int dev_num, ulong start, lbaint_t blkcnt, const void*src)
 	if (!mmc)
 		return 0;
 
-	if (mmc_set_blocklen(mmc, mmc->write_bl_len))
+	if (mmc_poll_set_blocklen(mmc, mmc->write_bl_len))
 		return 0;
 
 	do {
@@ -327,7 +327,7 @@ static ulong mmc_bread(int dev_num, ulong start, lbaint_t blkcnt, void *dst)
 		return 0;
 	}
 
-	if (mmc_set_blocklen(mmc, mmc->read_bl_len))
+	if (mmc_poll_set_blocklen(mmc, mmc->read_bl_len))
 		return 0;
 
 	do {
