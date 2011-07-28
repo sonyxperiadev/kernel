@@ -373,20 +373,21 @@ extern int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu);
 
 void WaitForCpIpc (void* pSmBase)
 {
-	int k = 0, ret = 0;
+    int k = 0, ret = 0;
 
     printk( KERN_ALERT  "ipcs_init Waiting for CP IPC to init ....\n");
-	while ( (ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU )) == 0)
-	{
-//		for (i=0; i<2048; i++);	// do not fight for accessing shared memory
-//		set_current_state(TASK_INTERRUPTIBLE);
-//		schedule_timeout (100);
-//		k++;
-                if (k++ > 2)
-                    break;
-                else
-                    msleep(1000);
-	}
+
+    ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    while (ret == 0)
+    {
+        // Wait up to 2s for CP to init
+        if (k++ > 200)
+            break;
+        else
+            msleep(10);
+        ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    }
+
     if (ret == 0)
     {
         printk( KERN_ALERT  "********************************************************************\n");
