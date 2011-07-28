@@ -71,6 +71,9 @@ typedef enum VOCAPTURE_VOICE_MIX_MODE_t
 	VOCAPTURE_VOICE_MIX_BOTH
 } VOCAPTURE_VOICE_MIX_MODE_t;
 
+typedef void (*capture_data_cb_t)(UInt16 buf_index);
+
+
 
 // ==========================================================================
 //
@@ -125,6 +128,45 @@ Result_t dspif_AMRWB_record_start ( VOCAPTURE_RECORD_MODE_t	recordMode,
 //
 // =========================================================================
 Result_t dspif_AMRWB_record_stop ( void);
+
+
+// ==========================================================================
+//
+// Function Name: dspif_VPU_record_pause
+//
+// Description: Pause the data transfer of VPU voice record
+//
+// =========================================================================
+Result_t dspif_VPU_record_pause (void);
+
+// ==========================================================================
+//
+// Function Name: dspif_VPU_record_resume
+//
+// Description: Resume the data transfer of VPU voice record
+//
+// =========================================================================
+Result_t dspif_VPU_record_resume( void);
+
+// ==========================================================================
+//
+// Function Name: dspif_VPU_record_set_cb
+//
+// Description: set the callback for voice recording
+//
+// =========================================================================
+void dspif_VPU_record_set_cb (capture_data_cb_t capture_data_cb);
+
+
+// ===================================================================
+//
+// Function Name: VPU_Capture_Request
+//
+// Description: Send a VPU capture request for voice capture driver to copy
+// data from DSP shared memory.
+//
+// ====================================================================
+void VPU_Capture_Request(UInt16 bufferIndex);
 
 
 #ifdef __cplusplus

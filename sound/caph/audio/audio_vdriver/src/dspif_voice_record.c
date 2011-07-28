@@ -48,7 +48,7 @@ Broadcom's express prior written consent.
 //
 // local defines
 //
-
+static capture_data_cb_t capture_cb = NULL;
 
 //
 // APIs of VPU
@@ -81,10 +81,11 @@ Result_t dspif_VPU_record_start ( VOCAPTURE_RECORD_MODE_t	recordMode,
 	if (numFramesPerInterrupt > 4)
 			numFramesPerInterrupt = 4;
 
-	VPRIPCMDQ_StartCallRecording((UInt8)recordMode, (UInt8)numFramesPerInterrupt, (UInt16)encodingMode);
-	Log_DebugPrintf(LOGID_AUDIO, " : dspif_VPU_record_start::Start capture, encodingMode = 0x%x, recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x, speechMode = 0x%lx, dataRate = 0x%lx\n", 
+	Log_DebugPrintf(LOGID_AUDIO, " dspif_VPU_record_start::Start capture, encodingMode = 0x%x, recordMode = 0x%x, procEnable = 0x%x, dtxEnable = 0x%x, speechMode = 0x%lx, dataRate = 0x%lx\n", 
 							encodingMode, recordMode, procEnable, dtxEnable, speechMode, dataRate);
 	
+	VPRIPCMDQ_StartCallRecording((UInt8)recordMode, (UInt8)numFramesPerInterrupt, (UInt16)encodingMode);
+
 	return RESULT_OK;
 }
 
@@ -105,6 +106,64 @@ Result_t dspif_VPU_record_stop ( void)
 
 }
 
+// ==========================================================================
+//
+// Function Name: dspif_VPU_record_pause
+//
+// Description: Pause the data transfer of VPU voice record
+//
+// =========================================================================
+Result_t dspif_VPU_record_pause (void)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "dspif_VPU_record_pause: Pause VPU voice record\n");
+
+	return RESULT_OK;
+}
+
+
+// ==========================================================================
+//
+// Function Name: dspif_VPU_record_resume
+//
+// Description: Resume the data transfer of VPU voice record
+//
+// =========================================================================
+Result_t dspif_VPU_record_resume( void)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "dspif_VPU_record_resume: Resume VPU voice record \n");
+
+	return RESULT_OK;
+}
+
+// ==========================================================================
+//
+// Function Name: dspif_VPU_record_set_cb
+//
+// Description: set the callback for voice recording
+//
+// =========================================================================
+
+void dspif_VPU_record_set_cb (capture_data_cb_t capture_data_cb)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "dspif_VPU_record_set_cb\n");
+
+	capture_cb = capture_data_cb;
+}
+
+// ===================================================================
+//
+// Function Name: VPU_Capture_Request
+//
+// Description: Send a VPU capture request for voice capture driver to copy
+// data from DSP shared memory.
+//
+// ====================================================================
+void VPU_Capture_Request(UInt16 bufferIndex)
+{
+	//Log_DebugPrintf(LOGID_AUDIO, " VPU_Capture_Request:: capture interrupt callback.bufferIndex %d\n",bufferIndex);
+	if(capture_cb != NULL)
+		capture_cb(bufferIndex);
+}
 
 //
 // APIs of AMRWB

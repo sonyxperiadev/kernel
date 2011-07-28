@@ -82,8 +82,13 @@ int audio_init_complete = 0;
 
 
 #define	PCM_MAX_CAPTURE_BUF_BYTES       (32 * 1024) 
-#define	PCM_MIN_CAPTURE_PERIOD_BYTES    (16 * 1024)  
-#define	PCM_MAX_CAPTURE_PERIOD_BYTES    PCM_MIN_CAPTURE_PERIOD_BYTES
+#define	PCM_MIN_CAPTURE_PERIOD_BYTES    (4 * 1024) //(16 * 1024)  
+#define	PCM_MAX_CAPTURE_PERIOD_BYTES    (PCM_MAX_CAPTURE_BUF_BYTES/2)
+
+
+#define	PCM_MAX_VOICE_CAPTURE_BUF_BYTES       (15360) 
+#define	PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES    (320 * 4) 
+#define	PCM_MAX_VOICE_CAPTURE_PERIOD_BYTES    (PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES * 2)
 
 #define	PCM_TOTAL_BUF_BYTES	(PCM_MAX_CAPTURE_BUF_BYTES+PCM_MAX_VOICE_PLAYBACK_BUF_BYTES)
 
@@ -91,6 +96,13 @@ void AUDIO_DRIVER_InterruptPeriodCB(void *pPrivate);
 void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate);
 
 
+static unsigned int pcm_voice_capture_period_bytes[]={PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES,PCM_MAX_VOICE_CAPTURE_PERIOD_BYTES};  
+static struct snd_pcm_hw_constraint_list pcm_voice_capture_period_bytes_constraints_list = 
+{
+	.count = ARRAY_SIZE(pcm_voice_capture_period_bytes),
+	.list  = pcm_voice_capture_period_bytes,
+	.mask  = 0,
+};
 
 
 /* hardware definition */
@@ -139,12 +151,30 @@ static struct snd_pcm_hardware brcm_capture_hw =
 	.rate_max = 48000,
 	.channels_min = 1,
 	.channels_max = 2, 
-	.buffer_bytes_max = PCM_MAX_CAPTURE_BUF_BYTES,	// one second data
-	.period_bytes_min = PCM_MIN_CAPTURE_PERIOD_BYTES, 		// one AMR brocks (each is 4 AMR frames) for pingpong, each blocks is 80 ms, 8000*0.020*2=320
-	.period_bytes_max =  PCM_MAX_CAPTURE_PERIOD_BYTES, //half buffer
+	.buffer_bytes_max = PCM_MAX_CAPTURE_BUF_BYTES,	
+	.period_bytes_min = PCM_MIN_CAPTURE_PERIOD_BYTES, 		
+	.period_bytes_max =  PCM_MAX_CAPTURE_PERIOD_BYTES, 
 	.periods_min = 2,
 	.periods_max = 2,
 };
+
+static struct snd_pcm_hardware brcm_voice_capture_hw =
+{
+	.info = (SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_INTERLEAVED |
+		SNDRV_PCM_INFO_BLOCK_TRANSFER |	SNDRV_PCM_INFO_MMAP_VALID),
+	.formats = SNDRV_PCM_FMTBIT_S16_LE,
+	.rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000),
+	.rate_min = 8000,
+	.rate_max = 16000,
+	.channels_min = 1,
+	.channels_max = 1, 
+	.buffer_bytes_max = PCM_MAX_VOICE_CAPTURE_BUF_BYTES,	// one second data
+	.period_bytes_min = PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES, 		// one AMR brocks (each is 4 AMR frames) for pingpong, each blocks is 80 ms, 8000*0.020*2=320
+	.period_bytes_max =  PCM_MAX_VOICE_CAPTURE_PERIOD_BYTES, //half buffer
+	.periods_min = 2,
+	.periods_max = PCM_MAX_VOICE_CAPTURE_BUF_BYTES/PCM_MIN_VOICE_CAPTURE_PERIOD_BYTES, 
+};
+
 
 static Int32 callMode = 0;
 
@@ -577,30 +607,50 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
     brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	int err=0;
+	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1; // for indexing
 
-	BCM_AUDIO_DEBUG("\n ALSA : PcmCaptureOpen substream->number = %d\n",CTL_STREAM_PANEL_PCMIN - 1  + substream->number);
+	BCM_AUDIO_DEBUG("\n ALSA : PcmCaptureOpen substream->number = %d\n",substream->number);
+
+	callMode = chip->iEnablePhoneCall; 
 
     if(audio_init_complete == 0)
     {
         AUDCTRL_Init ();
         audio_init_complete = 1;
     }
+	if((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
+	{
+		chip->streamCtl[substream_number].dev_prop.u.c.drv_type = AUDIO_DRIVER_CAPT_HQ;		
+		runtime->hw = brcm_capture_hw;	
+	}
+	else if((substream_number + 1) == CTL_STREAM_PANEL_SPEECHIN)
+	{
+		chip->streamCtl[substream_number].dev_prop.u.c.drv_type = AUDIO_DRIVER_CAPT_VOICE;
+		runtime->hw = brcm_voice_capture_hw;
 	
-	runtime->hw = brcm_capture_hw;	
+		err = snd_pcm_hw_constraint_step(runtime,0,SNDRV_PCM_HW_PARAM_BUFFER_BYTES,
+										2560); // should be multiple of SM size (16K support)
+										
+		err = snd_pcm_hw_constraint_list(runtime,0,SNDRV_PCM_HW_PARAM_PERIOD_BYTES,
+												&pcm_voice_capture_period_bytes_constraints_list);
+		if(err < 0)
+			return err;	
+	}
+	
 
     //open the capture device
 	param_open.drv_handle = NULL;
-	param_open.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop;
-	chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.drv_type = AUDIO_DRIVER_CAPT_HQ;
-	chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].pSubStream = substream; //for capture
+	param_open.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
 	
+	chip->streamCtl[substream_number].pSubStream = substream; //for capture
+
 	AUDIO_Ctrl_Trigger(ACTION_AUD_OpenRecord,&param_open,NULL,1); 
 	
 	drv_handle = param_open.drv_handle;
 
     if(drv_handle == NULL)
     {
-        BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d failed\n",jiffies, CTL_STREAM_PANEL_PCMIN - 1  + substream->number);
+        BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d failed\n",jiffies, substream_number);
         return -1;
     }
 
@@ -609,9 +659,9 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 	if (err<0)
 		return err;
 
-	BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d\n",jiffies, CTL_STREAM_PANEL_PCMIN - 1  + substream->number);
+	BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d\n",jiffies, substream_number);
 
-	chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1 + substream->number].stream_hw_ptr = 0;
+	chip->streamCtl[substream_number].stream_hw_ptr = 0;
 	
 	return 0;
 
@@ -628,15 +678,16 @@ static int PcmCaptureClose(struct snd_pcm_substream * substream)
 {
 	BRCM_AUDIO_Param_Close_t param_close;
     brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 	
     param_close.drv_handle = substream->runtime->private_data;
     //close the driver
 	AUDIO_Ctrl_Trigger(ACTION_AUD_CloseRecord,&param_close,NULL,1);
 
     substream->runtime->private_data = NULL;
-    chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].pSubStream = NULL;
+    chip->streamCtl[substream_number].pSubStream = NULL;
 
-	DEBUG("\n %lx:capture_close subdevice=%d\n",jiffies, CTL_STREAM_PANEL_PCMIN - 1  + substream->number);
+	DEBUG("\n %lx:capture_close subdevice=%d\n",jiffies, substream_number);
 
 	return 0;
 }
@@ -659,7 +710,7 @@ static int PcmCapturePrepare(struct snd_pcm_substream * substream)
 	AUDIO_DRIVER_CallBackParams_t	cbParams;
 
 	BCM_AUDIO_DEBUG("\n %lx:capture_prepare: subdevice=%d rate =%d format =%d channel=%d dma_area=0x%x dma_bytes=%d period_bytes=%d avail_min=%d periods=%d buffer_size=%d\n",
-		         jiffies,	CTL_STREAM_PANEL_PCMIN - 1  + substream->number, runtime->rate, runtime->format, runtime->channels, (unsigned int)runtime->dma_area, runtime->dma_bytes,
+		         jiffies,	substream->number, runtime->rate, runtime->format, runtime->channels, (unsigned int)runtime->dma_area, runtime->dma_bytes,
 		         frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->control->avail_min), runtime->periods, (int)runtime->buffer_size);
 	
     drv_handle = substream->runtime->private_data;
@@ -710,47 +761,51 @@ static int PcmCaptureTrigger(
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     Int32	*pSel;
+	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+
+
+	BCM_AUDIO_DEBUG("\n %lx:capture_trigger subdevice=%d cmd=%d\n",jiffies,substream_number, cmd);
 
     drv_handle = substream->runtime->private_data;
-	BCM_AUDIO_DEBUG("\n %lx:capture_trigger subdevice=%d cmd=%d\n",jiffies,CTL_STREAM_PANEL_PCMIN - 1  + substream->number, cmd);
 
-	pSel = chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].iLineSelect;
+
+	pSel = chip->streamCtl[substream_number].iLineSelect;
 
 	//Update Sink, volume , mute info from mixer controls
 	if(pSel[0]==AUDCTRL_MIC_MAIN)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
+		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
+		chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
 		BCM_AUDIO_DEBUG("updated with main mic info \n");
 	}
 	else if(pSel[0]==AUDCTRL_MIC_AUX)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_HS_MIC;		
+		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
+		chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_HS_MIC;		
 	}
 	else if(pSel[0]==AUDCTRL_MIC_DIGI1) 
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;		
+		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
+		chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;		
 	}
 	else if(pSel[0]==AUDCTRL_MIC_DIGI2)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;
+		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
+		chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;
 	}
 	else if(pSel[0]==AUDCTRL_MIC_I2S)
 	{
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_I2S_IN;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_FM_RADIO; 	
+		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_I2S_IN;
+		chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_FM_RADIO; 	
 	}
 	else
 	{
 		BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
-		chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
+		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
+		chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_ANALOG_MIC;
 	}
 
-	chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop.u.c.mic = pSel[0];
+	chip->streamCtl[substream_number].dev_prop.u.c.mic = pSel[0];
 	switch (cmd) 
 	{
 		case SNDRV_PCM_TRIGGER_START:
@@ -760,12 +815,30 @@ static int PcmCaptureTrigger(
 				struct snd_pcm_runtime *runtime = substream->runtime;
 
                 param_start.drv_handle = drv_handle;
-				param_start.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop;
+				param_start.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
                 param_start.channels = runtime->channels;
+				
+				if(callMode == 1)
+					param_start.mixMode = chip->pi32SpeechMixOption[substream_number]; //record Mode
+				else // In Idle mode
+					param_start.mixMode = 0;
+				
+				BCM_AUDIO_DEBUG("param_start.mixMode %ld \n", param_start.mixMode);
+				
                 param_start.rate = runtime->rate;
+				param_start.callMode = callMode;
 
-				param_start.vol[0] = chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].ctlLine[substream->number].iVolume[0];
-				param_start.vol[1] = chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].ctlLine[substream->number].iVolume[1];
+				if((substream_number + 1) == CTL_STREAM_PANEL_PCMIN)
+				{
+					chip->streamCtl[substream_number].dev_prop.u.c.hw_sink = AUDIO_HW_MEM;
+				}
+				else if((substream_number + 1) == CTL_STREAM_PANEL_SPEECHIN)
+				{
+					chip->streamCtl[substream_number].dev_prop.u.c.hw_sink = AUDIO_HW_DSP_VOICE;
+				}
+				
+				param_start.vol[0] = chip->streamCtl[substream_number].ctlLine[substream->number].iVolume[0];
+				param_start.vol[1] = chip->streamCtl[substream_number].ctlLine[substream->number].iVolume[1];
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StartRecord,&param_start,NULL,0);
                 
@@ -777,8 +850,9 @@ static int PcmCaptureTrigger(
                 BRCM_AUDIO_Param_Stop_t param_stop;
 
                 param_stop.drv_handle = drv_handle;
-				param_stop.pdev_prop = &chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1  + substream->number].dev_prop;
+				param_stop.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
 
+				param_stop.callMode = callMode;
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StopRecord,&param_stop,NULL,0); 
 
 		
@@ -804,9 +878,10 @@ static snd_pcm_uframes_t PcmCapturePointer(struct snd_pcm_substream * substream)
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	snd_pcm_uframes_t pos;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 	
-	pos = chip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1 + substream->number].stream_hw_ptr% runtime->buffer_size;
-	//BCM_AUDIO_DEBUG("%lx:PcmCapturePointer pos=%d pcm_read_ptr=%d, buffer size = %d,\n",jiffies,pos,g_brcm_alsa_chip->pcm_read_ptr[1],runtime->buffer_size);
+	pos = chip->streamCtl[substream_number].stream_hw_ptr % runtime->buffer_size;
+	//BCM_AUDIO_DEBUG("%lx:PcmCapturePointer pos=%d pcm_read_ptr=%d, buffer size = %d,\n",jiffies,(int)pos,(int)chip->streamCtl[substream_number].stream_hw_ptr,(int)runtime->buffer_size);
 	return pos;
 }
 
@@ -849,6 +924,7 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 	AUDIO_DRIVER_TYPE_t    drv_type;
 	struct snd_pcm_runtime *runtime;
 	brcm_alsa_chip_t *pChip = NULL;
+	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 
 	if(!substream)
 	{
@@ -856,7 +932,6 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
 		return;
 	}
 	pChip = snd_pcm_substream_chip(substream);
-
 	runtime = substream->runtime;
     	if(!runtime)
     	{
@@ -874,9 +949,9 @@ void AUDIO_DRIVER_CaptInterruptPeriodCB(void *pPrivate)
         case AUDIO_DRIVER_CAPT_VOICE:
             {
                 //update the PCM read pointer by period size
-                pChip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1 + substream->number].stream_hw_ptr += runtime->period_size;
-                if(pChip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1 + substream->number].stream_hw_ptr > runtime->boundary)
-                    pChip->streamCtl[CTL_STREAM_PANEL_PCMIN - 1 + substream->number].stream_hw_ptr -= runtime->boundary;
+                pChip->streamCtl[substream_number].stream_hw_ptr += runtime->period_size;
+                if(pChip->streamCtl[substream_number].stream_hw_ptr > runtime->boundary)
+                    pChip->streamCtl[substream_number].stream_hw_ptr -= runtime->boundary;
                 // send the period elapsed
 	            snd_pcm_period_elapsed(substream);
             }

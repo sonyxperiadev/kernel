@@ -46,12 +46,14 @@ typedef struct
     UInt32 rate;
 	Int32  vol[2];
 	Int32  mixMode;
+	Int32  callMode;
 }BRCM_AUDIO_Param_Start_t;
 
 typedef struct
 {
     void*   drv_handle;
     TIDChanOfDev	*pdev_prop;
+	Int32 callMode;
 
 }BRCM_AUDIO_Param_Stop_t;
 
