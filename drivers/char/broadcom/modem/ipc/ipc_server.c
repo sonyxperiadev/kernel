@@ -68,6 +68,7 @@
 
 #define IPC_MAJOR (204)
 
+
 typedef struct 
 {
   dev_t devnum;
@@ -80,6 +81,8 @@ typedef struct
   struct workqueue_struct *crash_dump_workqueue;
   void __iomem *apcp_shmem;
 }ipcs_info_t;
+
+static Boolean cp_running = 0;//FALSE;
 
 // flag used to track occurence of early CP interrupt; 
 // CP interrupt before IPC configured indicates early CP
@@ -215,6 +218,14 @@ static struct file_operations ipc_ops =
   .mmap  = NULL,
   .release = ipcs_release,
 };
+
+/** 
+   @fn Boolean is_CP_running(void);
+*/
+Boolean is_CP_running(void)
+{
+   return cp_running;
+}
 
 /** 
    @fn void ipcs_ipc_initialised(void);
@@ -368,11 +379,27 @@ void WaitForCpIpc (void* pSmBase)
 	while ( (ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU )) == 0)
 	{
 //		for (i=0; i<2048; i++);	// do not fight for accessing shared memory
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout (100);
-		k++;
+//		set_current_state(TASK_INTERRUPTIBLE);
+//		schedule_timeout (100);
+//		k++;
+                if (k++ > 2)
+                    break;
+                else
+                    msleep(1000);
 	}
-    printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+    if (ret == 0)
+    {
+        printk( KERN_ALERT  "********************************************************************\n");
+        printk( KERN_ALERT  "*                                                                  *\n");
+        printk( KERN_ALERT  "*       CP IPC NOT INITIALIZED - SYSTEM BOOTS WITH AP ONLY!!!      *\n");
+        printk( KERN_ALERT  "*                                                                  *\n");
+        printk( KERN_ALERT  "********************************************************************\n");
+    }
+    else
+    {
+        printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+        cp_running = 1;//TRUE;
+    }
 }
 
 
