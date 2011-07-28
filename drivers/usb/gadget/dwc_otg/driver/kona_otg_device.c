@@ -106,12 +106,6 @@ MODULE_VERSION("2.91a");
 module_init(dwc_otg_device_init);
 module_exit(dwc_otg_device_exit);
 
-void kona_otg_initiate_srp(void *platform_priv)
-{
-	dwc_otg_device_t *otg_dev = platform_get_drvdata((struct platform_device *)platform_priv);
-	dwc_otg_initiate_srp(otg_dev->core_if);
-}
-
 /* ==== Private Functions ================================================= */
 static int __init otghost_setup(char *str)
 {
