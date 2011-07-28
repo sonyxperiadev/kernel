@@ -45,6 +45,8 @@ struct dwc_otg_hcd;
 
 #ifdef  PCI_INTERFACE
 #include <linux/pci.h>
+#else
+#include <linux/device.h>
 #endif
 
 /**
@@ -60,6 +62,8 @@ typedef struct dwc_otg_device {
 #elif defined (PCI_INTERFACE)
 	int rsrc_start;
 	int rsrc_len;
+#else
+	struct platform_device *platdev;
 #endif
 
 	/** Pointer to the core interface structure. */
@@ -76,7 +80,6 @@ typedef struct dwc_otg_device {
 
 	/** Flag to indicate whether the common IRQ handler is installed. */
 	uint8_t common_irq_installed;
-
 } dwc_otg_device_t;
 
 /*We must clear S3C24XX_EINTPEND external interrupt register 
