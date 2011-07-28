@@ -23,6 +23,11 @@
  * power supply(PSY) framework and report properties to PSY. The list of
  * properties supported by this driver is defined in battery_data_props and
  * power_data_props arrays.
+ *
+ * Another PSY - USB is added to comply with Android's expectations. For now
+ * this is a mock PSY, that provides one propery - "online" that is always set
+ * to false. In the future boards (when the USB supply/charger is available)
+ * this will be changed.
  * 
  * Driver works in cooperation with battery monitor that registers with the
  * driver via exported register_battery_monitor function. Driver relies on
@@ -66,6 +71,10 @@ static int battery_get_property(struct power_supply *psy,
 static int power_get_property(struct power_supply *psy,
                               enum power_supply_property psp,
                               union power_supply_propval *val);
+
+static int usbpower_get_property(struct power_supply *psy,
+                              enum power_supply_property psp,
+                              union power_supply_propval *val);
                               
 static void battery_external_power_changed(struct power_supply *psy);
 
@@ -83,7 +92,7 @@ struct battery_data
    int battery_min;         /* POWER_SUPPLY_PROP_VOLTAGE_MIN */
 
    struct multi_data *pt_multi_data;
-}; /* battery_data */
+};
 
 struct power_data 
 {
@@ -93,8 +102,7 @@ struct power_data
    int prev_online;
 
    struct multi_data *pt_multi_data;
-}; /* power_data */
-
+};
 
 /* Main structure used in this driver. */
 struct multi_data
@@ -201,6 +209,12 @@ static enum power_supply_property power_data_props[] = {
    POWER_SUPPLY_PROP_ONLINE,             /* AC plugged in or not      */ 
 };
 
+/* array of "usb power"  properties supported by this driver */
+static enum power_supply_property usbpower_data_props[] = {
+   POWER_SUPPLY_PROP_ONLINE,             /* USB power plugged in or not      */ 
+};
+
+
 /* initialize PSY defined battery data */
 static struct battery_data gt_battery_info = 
 {
@@ -235,6 +249,18 @@ static struct power_data gt_power_info =
       .get_property    = power_get_property,
    },
 
+};
+
+/* initialize PSY defined usb power data */
+static struct power_supply usb_power_supply = 
+{
+   .name            = "usbpower",
+   .type            = POWER_SUPPLY_TYPE_USB,
+   .supplied_to     = power_supplied_to,
+   .num_supplicants = ARRAY_SIZE(power_supplied_to),
+   .properties      = usbpower_data_props,
+   .num_properties  = ARRAY_SIZE(power_data_props),
+   .get_property    = usbpower_get_property,
 };
 
 static int g_gpio_power_control = -1;
@@ -447,14 +473,14 @@ static int cbm_get_battery_charge(struct multi_data *pt_multi_data)
    return charge_percent;
 }
 
-static int battery_get_property(struct power_supply *t_power_supply,
+static int battery_get_property(struct power_supply *pt_power_supply,
                                 enum power_supply_property psp,
                                 union power_supply_propval *val)
 {
    int ret = 0;
-   struct battery_data *pt_battery = container_of(t_power_supply, 
-                                                   struct battery_data, 
-                                                   t_power_supply);
+   struct battery_data *pt_battery = container_of(pt_power_supply, 
+                                                  struct battery_data, 
+                                                  t_power_supply);
 
    if (mod_debug)                       
       printk("%s() requested property: %d\n", 
@@ -514,7 +540,7 @@ static int battery_get_property(struct power_supply *t_power_supply,
              __FUNCTION__, psp, val->intval);
    
    return ret;
-}  /* battery_get_property(..) */
+}
 
 static int power_get_property(struct power_supply *pt_power_supply,
                               enum power_supply_property psp,
@@ -528,6 +554,29 @@ static int power_get_property(struct power_supply *pt_power_supply,
    {
       case POWER_SUPPLY_PROP_ONLINE:         
          val->intval = p_pow->online;
+         break;
+      
+      default:
+         return -EINVAL;
+   }
+   
+   if (mod_debug)                       
+   {
+      printk("%s() property: %d val: %d\n", 
+             __FUNCTION__, psp, val->intval);
+   }
+
+   return 0;
+}
+
+static int usbpower_get_property(struct power_supply *pt_power_supply,
+                                 enum power_supply_property psp,
+                                 union power_supply_propval *val)
+{
+   switch (psp)
+   {
+      case POWER_SUPPLY_PROP_ONLINE:         
+         val->intval = 0;
          break;
       
       default:
@@ -639,7 +688,7 @@ static void battery_update(struct multi_data *pt_multi_data)
    power_supply_changed(pt_battery_psy); 
    mutex_unlock(&pt_multi_data->work_lock);
    
-}  /* battery_update() */
+}
 
 static void power_update(struct multi_data *pt_multi_data)
 {  	
@@ -1048,9 +1097,16 @@ static int __devinit battery_probe(struct platform_device *p_dev)
    if (ret)
       goto err_psy_reg_power;
 
+   ret = power_supply_register(&p_dev->dev, &usb_power_supply);
+   if (ret)
+      goto err_psy_reg_usbpower;
+
    /* return success */
    g_is_driver_ok = true;
    return 0;
+
+  err_psy_reg_usbpower:
+   power_supply_unregister(&pt_multi_data->pt_power_data->t_power_supply);
 
   err_psy_reg_power:
    power_supply_unregister(&pt_multi_data->pt_battery_data->t_power_supply);
@@ -1069,7 +1125,7 @@ static int __devinit battery_probe(struct platform_device *p_dev)
    pm_power_off = NULL;
    printk("%s(): return %d\n", __FUNCTION__, ret);
    return ret;
-}  /* battery_probe() */
+}
 
 static int __devexit battery_remove(struct platform_device *p_dev)
 {
