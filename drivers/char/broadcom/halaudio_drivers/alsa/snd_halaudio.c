@@ -44,7 +44,6 @@
 #endif
 
 #include <linux/broadcom/knllog.h>           /* For debugging */
-#include <linux/broadcom/bcm_major.h>        /* For BCM_HALAUDIO_MAJOR */
 #ifdef CONFIG_BCM_BSC
 #include <linux/broadcom/bsc.h>              /* Board Specific Configurations */
 #endif
