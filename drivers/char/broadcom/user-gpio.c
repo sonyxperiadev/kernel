@@ -33,7 +33,6 @@
 
 #include <asm/uaccess.h>
 #include <asm/ioctls.h>
-#include <linux/broadcom/bcm_major.h>
 
 #include <linux/gpio.h>
 #include <linux/broadcom/user-gpio.h>
@@ -48,7 +47,7 @@ static char     gBanner[] __initdata = KERN_INFO "Broadcom GPIO Driver: 1.00\n";
 
 #define GPIO_DRV_DEV_NAME   "user-gpio"
 
-static  dev_t           gGpioDrvDevNum = MKDEV( BCM_GPIO_MAJOR, 0 );
+static  dev_t           gGpioDrvDevNum;
 static  struct class   *gGpioDrvClass = NULL;
 static  struct  cdev    gGpioDrvCDev;
 
@@ -213,25 +212,11 @@ static int __init gpio_drv_init( void )
 
     printk( gBanner );
 
-    if ( MAJOR( gGpioDrvDevNum ) == 0 )
+    /* Allocate a major number dynaically */
+    if (( rc = alloc_chrdev_region( &gGpioDrvDevNum, 0, 1, GPIO_DRV_DEV_NAME )) < 0 )
     {
-        /* Allocate a major number dynaically */
-
-        if (( rc = alloc_chrdev_region( &gGpioDrvDevNum, 0, 1, GPIO_DRV_DEV_NAME )) < 0 )
-        {
-            printk( KERN_WARNING "gpio: alloc_chrdev_region failed; err: %d\n", rc );
-            return rc;
-        }
-    }
-    else
-    {
-        /* Use the statically assigned major number */
-
-        if (( rc = register_chrdev_region( gGpioDrvDevNum, 1, GPIO_DRV_DEV_NAME )) < 0 )
-        {
-           printk( KERN_WARNING "gpio: register_chrdev failed for major %d; err: %d\n", BCM_GPIO_MAJOR, rc );
-           return rc;
-        }
+        printk( KERN_WARNING "gpio: alloc_chrdev_region failed; err: %d\n", rc );
+        return rc;
     }
 
     cdev_init( &gGpioDrvCDev, &gpio_fops );
