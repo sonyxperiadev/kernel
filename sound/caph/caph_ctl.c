@@ -550,7 +550,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			ucontrol->value.integer.value[1] = pChip->iMutePhoneCall[1]; 
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
-			ucontrol->value.integer.value[0] = pChip->pi32SpeechMixOption[stream-1]; 
+				ucontrol->value.integer.value[0] = pChip->pi32SpeechMixOption[stream-1]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
 			break;
@@ -950,6 +950,10 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   struct snd_kcontrol_new kctlSpeechMixingOption1 = BRCM_MIXER_CTRL_MISC(0, 0, "P1-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
 	   struct snd_kcontrol_new kctlSpeechMixingOption2 = BRCM_MIXER_CTRL_MISC(0, 0, "P2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
 
+	   //kctlSpeechInMixingOption is for CTL_STREAM_PANEL_SPEECHIN
+	   struct snd_kcontrol_new kctlSpeechInMixingOption = BRCM_MIXER_CTRL_MISC(0, 0, "C2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2+1, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
+	   
+
 	   struct snd_kcontrol_new kctlFMEnable = BRCM_MIXER_CTRL_MISC(0, 0, "FM-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_FM_ENABLE));
 	   struct snd_kcontrol_new kctlFMFormat = BRCM_MIXER_CTRL_MISC(0, 0, "FM-FMT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_FM_FORMAT));
 
@@ -991,6 +995,12 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlSpeechMixingOption2, pChip))) < 0)
 	   {
 		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlSpeechMixingOption2.name, err);
+		   return err;
+	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlSpeechInMixingOption, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlSpeechInMixingOption.name, err);
 		   return err;
 	   }
 
