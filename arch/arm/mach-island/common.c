@@ -219,6 +219,33 @@ static struct platform_device pmu_device = {
        .num_resources = 1,
 };
 
+#ifdef CONFIG_USB_DWC_OTG
+static struct resource kona_otg_platform_resource[] = {
+	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
+		.start = HSOTG_BASE_ADDR,
+		.end = HSOTG_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start = BCM_INT_ID_USB_HSOTG,
+		.end = BCM_INT_ID_USB_HSOTG,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device board_kona_otg_platform_device =
+{
+	.name = "dwc_otg",
+	.id = -1,
+	.resource = kona_otg_platform_resource,
+	.num_resources = ARRAY_SIZE(kona_otg_platform_resource),
+};
+#endif
 
 /* Common devices among all Island boards */
 static struct platform_device *board_common_plat_devices[] __initdata = {
@@ -241,8 +268,10 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
 #endif
-
     &pmu_device,
+#ifdef CONFIG_USB_DWC_OTG
+	&board_kona_otg_platform_device,
+#endif
 };
 
 void __init board_add_common_devices(void)

@@ -54,7 +54,10 @@
 #ifdef LM_INTERFACE
 #include <mach/lm.h>
 #include <mach/irqs.h>
+#else
+#include <linux/platform_device.h>
 #endif
+
 
 #include <linux/usb.h>
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,35)
@@ -343,6 +346,8 @@ int hcd_init(
 	struct lm_device *_dev
 #elif defined (PCI_INTERFACE)
 	struct pci_dev *_dev
+#else
+	struct platform_device *_dev
 #endif
 	)
 {
@@ -352,6 +357,8 @@ int hcd_init(
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
 #elif defined (PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = pci_get_drvdata(_dev);
+#else
+	dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
 #endif
 
 	int retval = 0;
@@ -360,21 +367,21 @@ int hcd_init(
 
 	/* Set device flags indicating whether the HCD supports DMA. */
 	if (dwc_otg_is_dma_enable(otg_dev->core_if)) {
-#ifdef LM_INTERFACE
-		_dev->dev.dma_mask = &_dev->dev.coherent_dma_mask; 
-		_dev->dev.coherent_dma_mask = ~0;
-#elif defined (PCI_INTERFACE)
-		pci_set_dma_mask(_dev,DMA_32BIT_MASK);		
+#if defined (PCI_INTERFACE)
+		pci_set_dma_mask(_dev,DMA_32BIT_MASK);
 		pci_set_consistent_dma_mask(_dev,DMA_32BIT_MASK);
+#else
+		_dev->dev.dma_mask = &_dev->dev.coherent_dma_mask;
+		_dev->dev.coherent_dma_mask = ~0;
 #endif
 
 	} else {
-#ifdef LM_INTERFACE
+#if defined (PCI_INTERFACE)
+		pci_set_dma_mask(_dev,0);
+		pci_set_consistent_dma_mask(_dev,0);
+#else
 		_dev->dev.dma_mask = &_dev->dev.coherent_dma_mask;
 		_dev->dev.coherent_dma_mask = 0;
-#elif defined (PCI_INTERFACE)
-		pci_set_dma_mask(_dev,0);		
-		pci_set_consistent_dma_mask(_dev,0);
 #endif
 	}
 
@@ -396,6 +403,8 @@ int hcd_init(
 	lm_set_drvdata(_dev, otg_dev);
 #elif defined (PCI_INTERFACE)
 	pci_set_drvdata(_dev, otg_dev);
+#else
+	platform_set_drvdata(_dev, otg_dev);
 #endif
 
 	if (!hcd) {
@@ -425,7 +434,12 @@ int hcd_init(
 	 * allocates the DMA buffer pool, registers the USB bus, requests the
 	 * IRQ line, and calls hcd_start method.
 	 */
+#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
 	retval = usb_add_hcd(hcd, _dev->irq, IRQF_SHARED);
+#else
+	retval = usb_add_hcd(hcd, platform_get_irq(_dev, 0), IRQF_SHARED);
+#endif
+
 	if (retval < 0) {
 		goto error2;
 	}
@@ -448,6 +462,8 @@ void hcd_remove(
 	struct lm_device *_dev
 #elif defined (PCI_INTERFACE)
 	struct pci_dev *_dev
+#else
+	struct platform_device *_dev
 #endif
 	)
 {
@@ -455,6 +471,8 @@ void hcd_remove(
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
 #elif defined (PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = pci_get_drvdata(_dev);
+#else
+	dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
 #endif
 
 	dwc_otg_hcd_t *dwc_otg_hcd;

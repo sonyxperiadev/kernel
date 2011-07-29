@@ -6061,7 +6061,7 @@ uint32_t dwc_otg_get_core_state(dwc_otg_core_if_t * core_if)
 static void dwc_otg_xceiv_set_vbus(dwc_otg_core_if_t * core_if, uint32_t val)
 {
 #ifdef CONFIG_USB_OTG_UTILS
-	struct otg_transceiver * otg_xceiver_handle = otg_get_transceiver(); //If we get OTG xceiver as part of dwc_otg_core_if then we could use container_of macro at some point
+	struct otg_transceiver * otg_xceiver_handle = otg_get_transceiver();
 	if (NULL != otg_xceiver_handle) {
 		if (otg_xceiver_handle->set_vbus) {
 			otg_xceiver_handle->set_vbus(otg_xceiver_handle, val ? true : false);

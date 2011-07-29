@@ -32,8 +32,17 @@
 #include <linux/delay.h>
 #include <linux/sched.h>
 #include <asm/io.h>
-
+#ifdef LM_INTERFACE
 #include <mach/lm.h>
+#else
+#include <linux/platform_device.h>
+#include <linux/device.h>
+#include "dwc_otg_driver.h"
+#include "dwc_otg_cil.h"
+#endif
+#ifdef CONFIG_USB_OTG_UTILS
+#include <linux/usb/otg.h>
+#endif
 #include <mach/irqs.h>
 #include <linux/clk.h>
 #include <mach/io_map.h>
@@ -68,7 +77,10 @@ static unsigned int otghost = 1;
 #endif
 static unsigned int otgdevice = 0;
 
+#ifdef LM_INTERFACE
 static struct lm_device *lmdev = NULL;
+#endif
+
 static struct clk *otg_clk;
 
 /*-------------------------------------------------------------------------*/
@@ -94,6 +106,11 @@ MODULE_VERSION("2.91a");
 module_init(dwc_otg_device_init);
 module_exit(dwc_otg_device_exit);
 
+void kona_otg_initiate_srp(void *platform_priv)
+{
+	dwc_otg_device_t *otg_dev = platform_get_drvdata((struct platform_device *)platform_priv);
+	dwc_otg_initiate_srp(otg_dev->core_if);
+}
 
 /* ==== Private Functions ================================================= */
 static int __init otghost_setup(char *str)
@@ -103,11 +120,9 @@ static int __init otghost_setup(char *str)
 }
 __setup("otghost=", otghost_setup);
 
-/****************************************************************************
- *
- ***************************************************************************/
 static void __exit dwc_otg_device_exit(void)
 {
+#ifdef LM_INTERFACE
 	if ( lmdev != NULL ) {
 		/* The lmdev memory will get freed as side effect of the
 		* lm_device_unregister(), so don't do it here.
@@ -119,8 +134,12 @@ static void __exit dwc_otg_device_exit(void)
 		clk_disable(otg_clk);
 		clk_put (otg_clk);
 	}
+#endif
 }
 
+/****************************************************************************
+ *
+ ***************************************************************************/
 static void kona_otg_phy_set_vbus_stat(void *hsotg_ctrl_base, bool on)
 {
 	unsigned long val;
@@ -160,13 +179,23 @@ static ssize_t do_konaotginit(struct device *dev,
 			 struct device_attribute *attr,
 			 const char *buf, size_t count)
 {
+#ifndef LM_INTERFACE
+	struct platform_device *pdev = container_of(dev, struct platform_device, dev);
+	struct resource *resource = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	void __iomem *hsotg_ctrl_base;
 
+	if (NULL == resource)
+		return -ENOMEM;
+
 	/* map base address */
-	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+	hsotg_ctrl_base = ioremap (resource->start, SZ_4K);
 	if (!hsotg_ctrl_base) {
 		return -ENOMEM;
 	}
+#else
+	void __iomem *hsotg_ctrl_base;
+	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+#endif
 
 	kona_otg_phy_set_vbus_stat(hsotg_ctrl_base, false);
 	kona_otg_phy_set_non_driving(hsotg_ctrl_base, true);
@@ -177,20 +206,30 @@ static ssize_t do_konaotginit(struct device *dev,
 	return count;
 	
 }
-
-DEVICE_ATTR(konaotginit, S_IWUSR, NULL, do_konaotginit);
+static DEVICE_ATTR(konaotginit, S_IWUSR, NULL, do_konaotginit);
 
 static ssize_t dump_konahsotgctrl(struct device *dev, 
 	struct device_attribute *attr,
-	const char *buf)
+	char *buf)
 {
+#ifndef LM_INTERFACE
+	struct platform_device *pdev = container_of(dev, struct platform_device, dev);
+	struct resource *resource = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	void __iomem *hsotg_ctrl_base;
 
+	if (NULL == resource)
+		return -ENOMEM;
+
 	/* map base address */
-	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+	hsotg_ctrl_base = ioremap (resource->start, SZ_4K);
 	if (!hsotg_ctrl_base) {
 		return -ENOMEM;
 	}
+#else
+	void __iomem *hsotg_ctrl_base;
+	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+#endif
+
 	printk("\nusbotgcontrol: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
 	printk("\nphy_cfg: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET));
 	printk("\nphy_p1ctl: 0x%x", readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET));
@@ -205,7 +244,7 @@ static ssize_t dump_konahsotgctrl(struct device *dev,
 	/* unmap base address */
 	iounmap(hsotg_ctrl_base);
 
-	return sprintf((char*)buf, "\nkonahsotgctrl register dump");
+	return sprintf(buf, "konahsotgctrl register dump\n");
 }
 static DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
 
@@ -215,157 +254,148 @@ static DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
 static int __init dwc_otg_device_init(void)
 {
 	int rc;
+	void __iomem *hsotg_ctrl_base;
+	int val;
+	unsigned long rate;
 
+#ifdef LM_INTERFACE
 	if ( lmdev != NULL ) {
 		rc = -EBUSY;
 	}
-//	else if ( fshost ) {
-//		rc = dwc_otg_device_register (BCM_INT_ID_USB_FSHOST, FSHOST_BASE_ADDR);
-//	}
-	else {
-		void __iomem *hsotg_ctrl_base;
-		int val;
-		unsigned long rate;
+//     else if ( fshost ) {
+//             rc = dwc_otg_device_register (BCM_INT_ID_USB_FSHOST, FSHOST_BASE
+//     }
+#endif
 
-		printk("\n%s: Setting up USB OTG PHY and Clock\n", __func__);
+	printk("\n%s: Setting up USB OTG PHY and Clock\n", __func__);
 
 #ifndef CONFIG_ARCH_SAMOA
-		otg_clk = clk_get(NULL, "usb_otg_clk");
-		if (!otg_clk) {
-			printk("%s: error get clock\n", __func__);
-			return -EIO;
-		}
-
-		rc = clk_enable(otg_clk);
-		if (rc) {
-			printk("%s: error enable clock\n", __func__);
-			return -EIO;
-		}
-		rate = clk_get_rate(otg_clk);
-		printk("usb_otg_clk rate %lu\n", rate);
-#endif
-
-		/* map base address */
-		hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
-		if (!hsotg_ctrl_base) {
-			return -ENOMEM;
-		}
-
-		val = readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_STATUS_OFFSET);
-		if (val & HSOTG_CTRL_BC11_STATUS_BC_DONE_MASK){
-			printk ("bc11 done\n");
-		}
-		else {
-			printk ("bc11 not done\n");
-		}
-
-		/* clear bit 15 RDB error */
-		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-		val &= ~HSOTG_CTRL_PHY_P1CTL_PLL_SUSPEND_ENABLE_MASK;
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-		schedule_timeout_interruptible(HZ/10);
-
-		/* set Phy to driving mode */
-		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-		val &= ~HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-
-		schedule_timeout_interruptible(HZ/10);
-
-		/* S/W reset Phy, actively low */
-		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-		val &= ~HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
-		val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_MODE_MASK;
-		//val |= (otghost?PHY_MODE_HOST:PHY_MODE_DEVICE) << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT;	// use host or device mode
-		val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT;			// use OTG mode
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-
-		schedule_timeout_interruptible(HZ/10);
-
-		/* bring Phy out of reset */
-		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-		val |= HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
-
-		schedule_timeout_interruptible(HZ/10);
-
-		/* set the phy to functional state */
-		val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
-		val &= ~HSOTG_CTRL_PHY_CFG_PHY_IDDQ_I_MASK;
-		writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
-
-		schedule_timeout_interruptible(HZ/10);
-		
-		if (otghost) {
-			printk(KERN_WARNING "%s: Set HSOTG_CTRL register for host mode\n", __func__);
-
-			val = HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_OTGSTAT1_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_USB_ON_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_PRST_N_SW_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_SOFT_PHY_RESETB_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
-			writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-		} else if (otgdevice) {
-			printk(KERN_WARNING "%s: Set HSOTG_CTRL register for device mode\n", __func__);
-
-			val= HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_OTGSTAT1_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_USB_ON_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_PRST_N_SW_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_SOFT_PHY_RESETB_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK |
-				HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
-			writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-
-		} else {
-			val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-                        val |= (HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
-                                 HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK);
-                         writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-		}
-
-		printk(KERN_WARNING "%s: HSOTG_CTRL_USBOTGCONTROL register=0x%08x\n",
-			__func__, readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
-		
-		schedule_timeout_interruptible(HZ/10*3);
-
-#if 0
-		{
-			int i;
-			printk ("HSOTG_CTRL register\n");
-			for (i=0; i<0x28; i+=4) {
-				printk ("%x:	%08x\n", i, readl(hsotg_ctrl_base + i));
-			}
-		}
-#endif
-		rc = dwc_otg_device_register(BCM_INT_ID_USB_HSOTG, HSOTG_BASE_ADDR);
-
-		if (NULL != lmdev)
-			rc = device_create_file(&lmdev->dev, &dev_attr_konaotginit);
-
-		if (!rc)
-			rc = device_create_file(&lmdev->dev, &dev_attr_konahsotgctrldump);
-
-		/* unmap base address */
-		iounmap(hsotg_ctrl_base);
-
-		printk("\n%s: Setup USB OTG PHY and Clock Completed\n", __func__);
+	otg_clk = clk_get(NULL, "usb_otg_clk");
+	if (!otg_clk) {
+		printk("%s: error get clock\n", __func__);
+		return -EIO;
 	}
+
+	rc = clk_enable(otg_clk);
+	if (rc) {
+		printk("%s: error enable clock\n", __func__);
+		return -EIO;
+	}
+	rate = clk_get_rate(otg_clk);
+	printk("usb_otg_clk rate %lu\n", rate);
+#endif
+
+	/* map base address */
+	hsotg_ctrl_base = ioremap (HSOTG_CTRL_BASE_ADDR, SZ_4K);
+	if (!hsotg_ctrl_base) {
+		return -ENOMEM;
+	}
+
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_BC11_STATUS_OFFSET);
+	if (val & HSOTG_CTRL_BC11_STATUS_BC_DONE_MASK){
+		printk ("bc11 done\n");
+	}
+	else {
+		printk ("bc11 not done\n");
+	}
+
+	/* clear bit 15 RDB error */
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_P1CTL_PLL_SUSPEND_ENABLE_MASK;
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	schedule_timeout_interruptible(HZ/10);
+
+	/* set Phy to driving mode */
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10);
+
+	/* S/W reset Phy, actively low */
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
+	val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_MODE_MASK;
+	//val |= (otghost?PHY_MODE_HOST:PHY_MODE_DEVICE) << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT;	// use host or device mode
+	val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT;			// use OTG mode
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10);
+
+	/* bring Phy out of reset */
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val |= HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10);
+
+	/* set the phy to functional state */
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_CFG_PHY_IDDQ_I_MASK;
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10);
+		
+	if (otghost) {
+		printk(KERN_WARNING "%s: Set HSOTG_CTRL register for host mode\n", __func__);
+
+		val = HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT1_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_ON_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_PRST_N_SW_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_PHY_RESETB_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
+		writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+	} else if (otgdevice) {
+		printk(KERN_WARNING "%s: Set HSOTG_CTRL register for device mode\n", __func__);
+
+		val= HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT1_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_ON_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_PRST_N_SW_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_PHY_RESETB_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
+		writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+	} else {
+		val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+                       val |= (HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
+                                HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK);
+                        writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+	}
+
+	printk(KERN_WARNING "%s: HSOTG_CTRL_USBOTGCONTROL register=0x%08x\n",
+		__func__, readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET));
+
+	schedule_timeout_interruptible(HZ/10*3);
+
+#ifdef LM_INTERFACE
+	rc = dwc_otg_device_register(BCM_INT_ID_USB_HSOTG, HSOTG_BASE_ADDR);
+#endif
+
+	if (rc < 0) {
+		printk(KERN_ERR "%s rc=%d\n", __func__, rc);
+		return rc;
+	}
+
+	/* unmap base address */
+	iounmap(hsotg_ctrl_base);
+
+	printk("\n%s: Setup USB OTG PHY and Clock Completed\n", __func__);
 
 	return (rc);
 }
@@ -373,6 +403,7 @@ static int __init dwc_otg_device_init(void)
 /****************************************************************************
  *
  ***************************************************************************/
+#ifdef LM_INTERFACE
 static int __init  dwc_otg_device_register( unsigned irq, unsigned base_addr )
 {
 	int rc = 0;
@@ -396,7 +427,12 @@ static int __init  dwc_otg_device_register( unsigned irq, unsigned base_addr )
 	if ( (rc = lm_device_register(lmdev)) < 0 ) {
 		kfree(lmdev);
 		lmdev = NULL;
+		if (otg_clk) {
+			clk_disable(otg_clk);
+			clk_put (otg_clk);
+		}
 	}
 
 	return (rc);
 }
+#endif
