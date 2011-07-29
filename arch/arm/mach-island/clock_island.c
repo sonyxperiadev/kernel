@@ -4308,7 +4308,7 @@ static struct __init clk_lookup island_clk_tbl[] =
 
 int __init island_clock_init(void)
 {
-    int i;
+    int i, base;
 
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 
@@ -4321,7 +4321,9 @@ int __init island_clock_init(void)
      * -- To be revised based on future fixes.
      *********************************************************************/
     /*clock_module_temp_fixes(); */
-
+	base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR);
+    writel (0x1, base  + IROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+    writel (0x1, base  + IROOT_CLK_MGR_REG_VAR8PH_DIVMODE_OFFSET);
     return 0;
 }
 //early_initcall(island_clock_init);
