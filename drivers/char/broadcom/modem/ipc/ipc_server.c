@@ -68,7 +68,6 @@
 
 #define IPC_MAJOR (204)
 
-
 typedef struct 
 {
   dev_t devnum;
@@ -562,17 +561,6 @@ static int __init ipcs_module_init(void)
     goto out_unregister;
   } 
 
-
-  printk( KERN_ALERT  "[ipc]: request_irq\n");
-  rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND, "ipc-intr", &g_ipc_info);
-  if (rc) 
-  {
-    IPC_DEBUG(DBG_ERROR,"[ipc]: request_irq error\n");
-    goto out_del;
-  }
-  
-  printk( KERN_ALERT  "[ipc]: IRQ Clear and Enable\n");
-  
   /**
      Make sure this is not cache'd because CP has to know about any changes
      we write to this memory immediately.
@@ -585,9 +573,6 @@ static int __init ipcs_module_init(void)
     IPC_DEBUG(DBG_ERROR,"[ipc]: Could not map shmem\n");
     goto out_del;
   }
-#ifdef CONFIG_HAS_WAKELOCK
-  wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
-#endif
 
   printk( KERN_ALERT  "[ipc]: ipcs_init\n");
   if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE))
@@ -597,8 +582,23 @@ static int __init ipcs_module_init(void)
     goto out_del;
   }
   
-  printk( KERN_ALERT "[ipc]: ipcs_module_init ok\n");
+  printk(KERN_ALERT "[ipc]: ipcs_module_init ok\n");
   
+  printk(KERN_ALERT  "[ipc]: request_irq\n");
+  rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND, "ipc-intr",
+			&g_ipc_info);
+
+	if (rc) {
+		IPC_DEBUG(DBG_ERROR, "[ipc]: request_irq error\n");
+		goto out_del;
+	}
+
+  printk(KERN_ALERT  "[ipc]: IRQ Clear and Enable\n");
+
+#ifdef CONFIG_HAS_WAKELOCK
+  wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
+#endif
+
   if ( sEarlyCPInterrupt )
   {
     printk( KERN_ALERT "[ipc]: early CP interrupt - doing crash dump...\n");
