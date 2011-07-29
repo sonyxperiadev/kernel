@@ -568,7 +568,7 @@ static void dwc_otg_driver_remove(
 static void dwc_otg_driver_remove(
 	struct pci_dev *_dev
 #else
-static void dwc_otg_driver_remove(
+static int dwc_otg_driver_remove(
 	struct platform_device *_dev
 #endif
 )
@@ -585,14 +585,22 @@ static void dwc_otg_driver_remove(
 
 	if (!otg_dev) {
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev NULL!\n", __func__);
+#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
 		return;
+#else
+		return -ENODEV;
+#endif
 	}
 #ifndef DWC_DEVICE_ONLY
 	if (otg_dev->hcd) {
 		hcd_remove(_dev);
 	} else {
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev->hcd NULL!\n", __func__);
+#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
 		return;
+#else
+                return -ENODEV;
+#endif
 	}
 #endif
 
@@ -640,6 +648,7 @@ static void dwc_otg_driver_remove(
 	pci_set_drvdata(_dev, 0);
 #else
 	platform_set_drvdata(_dev, 0);
+	return 0;
 #endif
 }
 

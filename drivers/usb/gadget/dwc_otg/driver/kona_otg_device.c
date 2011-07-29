@@ -65,7 +65,9 @@
 /* ---- Private Function Prototypes -------------------------------------- */
 static void __exit dwc_otg_device_exit(void);
 static int __init  dwc_otg_device_init(void);
+#ifdef LM_INTERFACE
 static int __init  dwc_otg_device_register( unsigned irq, unsigned base_addr );
+#endif
 
 /* ---- Private Variables ------------------------------------------------ */
 
@@ -130,7 +132,7 @@ static void __exit dwc_otg_device_exit(void)
 	}
 #endif
 }
-
+#if 0
 /****************************************************************************
  *
  ***************************************************************************/
@@ -241,6 +243,7 @@ static ssize_t dump_konahsotgctrl(struct device *dev,
 	return sprintf(buf, "konahsotgctrl register dump\n");
 }
 static DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
+#endif
 
 /****************************************************************************
  *
