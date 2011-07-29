@@ -33,6 +33,7 @@
 #include <mach/irqs.h>
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
+#include <asm/pmu.h>
 
 #define KONA_UART0_PA   UARTB_BASE_ADDR
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
@@ -204,6 +205,21 @@ static struct platform_device rtc_device =
 };
 #endif
 
+/* ARM performance monitor unit */
+static struct resource pmu_resource = {
+       .start = BCM_INT_ID_PMU_IRQ0,
+       .end = BCM_INT_ID_PMU_IRQ0,
+       .flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device pmu_device = {
+       .name = "arm-pmu",
+       .id   = ARM_PMU_DEVICE_CPU,
+       .resource = &pmu_resource,
+       .num_resources = 1,
+};
+
+
 /* Common devices among all Island boards */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -225,6 +241,8 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
 #endif
+
+    &pmu_device,
 };
 
 void __init board_add_common_devices(void)
