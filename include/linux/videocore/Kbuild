@@ -1,0 +1,5 @@
+header-y += vc_dnfo.h
+header-y += vc_hnfo.h
+header-y += vc_omx.h
+header-y += vc_mem.h
+header-y += vmcs_sm_ioctl.h

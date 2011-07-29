@@ -392,3 +392,4 @@ header-y += wimax.h
 header-y += wimax/
 
 header-y += broadcom/
+header-y += videocore/
