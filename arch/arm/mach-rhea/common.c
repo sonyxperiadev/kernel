@@ -65,6 +65,33 @@
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
 #endif
 
+#define PID_PLATFORM				0xE600
+#define FD_MASS_PRODUCT_ID			0x0001
+#define FD_SICD_PRODUCT_ID			0x0002
+#define FD_VIDEO_PRODUCT_ID			0x0004
+#define FD_DFU_PRODUCT_ID			0x0008
+#define FD_MTP_ID					0x000C
+#define FD_CDC_ACM_PRODUCT_ID		0x0020
+#define FD_CDC_RNDIS_PRODUCT_ID		0x0040
+#define FD_CDC_OBEX_PRODUCT_ID		0x0080
+
+
+#define	BRCM_VENDOR_ID				0x0a5c
+#define	BIG_ISLAND_PRODUCT_ID		0x2816
+
+/* FIXME borrow Google Nexus One ID to use windows driver */
+#define	GOOGLE_VENDOR_ID			0x18d1
+#define	NEXUS_ONE_PROD_ID			0x0d02
+
+#define	VENDOR_ID					GOOGLE_VENDOR_ID
+#define	PRODUCT_ID					NEXUS_ONE_PROD_ID
+
+/* use a seprate PID for RNDIS */
+#define RNDIS_PRODUCT_ID			0x4e13
+#define ACM_PRODUCT_ID				0x8888
+#define OBEX_PRODUCT_ID				0x685E
+
+
 #define KONA_8250PORT(name,clk)				\
 {								\
 	.membase    = (void __iomem *)(KONA_##name##_VA), 	\
@@ -105,6 +132,17 @@ static char *android_function_rndis[] = {
 static char *android_function_acm[] = {
 #ifdef CONFIG_USB_ANDROID_ACM
 	"acm",
+	"acm1",
+#endif
+};
+
+static char *android_function_msc_acm[] = {
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
+	"acm1",
 #endif
 };
 
@@ -140,21 +178,6 @@ static char *android_functions_all[] = {
 	"obex",
 #endif
 };
-
-#define	BRCM_VENDOR_ID		0x0a5c
-#define	BIG_ISLAND_PRODUCT_ID	0x2816
-
-/* FIXME borrow Google Nexus One ID to use windows driver */
-#define	GOOGLE_VENDOR_ID	0x18d1
-#define	NEXUS_ONE_PROD_ID	0x0d02
-
-#define	VENDOR_ID		GOOGLE_VENDOR_ID
-#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
-
-/* use a seprate PID for RNDIS */
-#define RNDIS_PRODUCT_ID	0x4e13
-#define ACM_PRODUCT_ID		0x8888
-#define OBEX_PRODUCT_ID		0x685E
 
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
@@ -193,17 +216,22 @@ static struct android_usb_product android_products[] = {
 		.functions	=	android_function_adb_msc,
 	},
 	{
-		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
+		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_RNDIS_PRODUCT_ID),
 		.num_functions	=	ARRAY_SIZE(android_function_rndis),
 		.functions	=	android_function_rndis,
 	},
 	{
-		.product_id	= 	__constant_cpu_to_le16(ACM_PRODUCT_ID),
+		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID),
 		.num_functions	=	ARRAY_SIZE(android_function_acm),
 		.functions	=	android_function_acm,
 	},
 	{
-		.product_id =	__constant_cpu_to_le16(OBEX_PRODUCT_ID),
+		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID | FD_MASS_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_msc_acm),
+		.functions	=	android_function_msc_acm,
+	},
+	{
+		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_OBEX_PRODUCT_ID),
 		.num_functions	=	ARRAY_SIZE(android_function_obex),
 		.functions	=	android_function_obex,
 	},
