@@ -3733,7 +3733,7 @@ static struct peri_clk CLK_NAME(bsc1) = {
 				},
 	.src_clk = {
 					.count = 5,
-					.src_inx = 0,
+					.src_inx = 3,
 					.clk = bsc1_peri_clk_src_list,
 				},
 };
@@ -3772,7 +3772,7 @@ static struct peri_clk CLK_NAME(bsc2) = {
 				},
 	.src_clk = {
 					.count = 5,
-					.src_inx = 0,
+					.src_inx = 3,
 					.clk = bsc2_peri_clk_src_list,
 				},
 };
