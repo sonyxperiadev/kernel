@@ -12,6 +12,8 @@
 *  consent.
 *
 *****************************************************************************/
-int bcm_hsotgctrl_phy_set_vbus_stat(bool false);
+int bcm_hsotgctrl_phy_set_vbus_stat(bool on);
 int bcm_hsotgctrl_phy_set_non_driving(bool on);
+int bcm_hsotgctrl_set_phy_off(bool on);
+int bcm_hsotgctrl_phy_set_id_stat(bool floating);
 

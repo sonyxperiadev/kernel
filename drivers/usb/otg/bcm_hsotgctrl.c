@@ -72,6 +72,18 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 }
 static DEVICE_ATTR(hsotgctrldump, S_IRUSR, dump_hsotgctrl, NULL);
 
+static ssize_t do_phy_shutdown(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t count)
+{
+	bcm_hsotgctrl_phy_set_vbus_stat(false);
+	bcm_hsotgctrl_phy_set_non_driving(true);
+	bcm_hsotgctrl_set_phy_off(true);
+
+	return count;
+}
+static DEVICE_ATTR(phy_shutdown, S_IWUSR, NULL, do_phy_shutdown);
+
 static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 {
 	int error = 0;
@@ -118,6 +130,14 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	}
 
 	error = device_create_file(&pdev->dev, &dev_attr_hsotgctrlinit);
+
+	if (error)
+	{
+		dev_warn(&pdev->dev, "Failed to create phy_shutdown file\n");
+		goto Error_bcm_hsotgctrl_probe;
+	}
+
+	error = device_create_file(&pdev->dev, &dev_attr_phy_shutdown);
 
 	if (error)
 	{
@@ -219,6 +239,53 @@ int bcm_hsotgctrl_phy_set_non_driving(bool on)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_set_non_driving);
+
+int bcm_hsotgctrl_set_phy_off(bool on)
+{
+	unsigned long val;
+	void *hsotg_ctrl_base;
+
+	if (NULL != local_hsotgctrl_handle)
+		hsotg_ctrl_base = local_hsotgctrl_handle->hsotg_ctrl_base;
+	else
+		return -ENODEV;
+
+	/* set the phy to functional state */
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+	if (on)
+		val |= HSOTG_CTRL_PHY_CFG_PHY_IDDQ_I_MASK;
+	else
+		val &= ~HSOTG_CTRL_PHY_CFG_PHY_IDDQ_I_MASK;
+
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_set_phy_off);
+
+int bcm_hsotgctrl_phy_set_id_stat(bool floating)
+{
+	unsigned long val;
+	void *hsotg_ctrl_base;
+
+	if (NULL != local_hsotgctrl_handle)
+		hsotg_ctrl_base = local_hsotgctrl_handle->hsotg_ctrl_base;
+	else
+		return -ENODEV;
+
+	val = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+
+	if (floating) {
+		val |= HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK;
+	} else {
+		val &= ~HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK;
+	}
+
+	writel(val, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_set_id_stat);
 
 MODULE_AUTHOR("Broadcom");
 MODULE_DESCRIPTION("USB HSOTGCTRL driver");
