@@ -31,8 +31,8 @@
 
 #include <linux/bh1715.h>
 
-//#define BH1715_DEBUG
-//#define PROC_DEBUG
+#define BH1715_DEBUG
+#define PROC_DEBUG
 
 #ifdef PROC_DEBUG
 #include <linux/proc_fs.h>

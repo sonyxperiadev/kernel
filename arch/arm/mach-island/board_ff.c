@@ -33,6 +33,7 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <linux/bh1715.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_s32.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
@@ -1147,6 +1148,12 @@ static struct i2c_board_info __initdata akm8975_info[] =
 };
 
 
+static struct i2c_board_info __initdata bh1715_info[] = {
+	[0] = {
+		I2C_BOARD_INFO(BH1715_DRV_NAME, 0x5C ),
+	},
+};
+
 static char *android_function_rndis[] = {
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis"
@@ -1413,6 +1420,10 @@ static void __init board_add_devices(void)
 		akm8975_info,
 		ARRAY_SIZE(akm8975_info));
 	
+	i2c_register_board_info(3,
+		bh1715_info,
+		ARRAY_SIZE(bh1715_info));
+
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 	platform_add_devices(bcm59055_userspace_consumer_devices, ARRAY_SIZE(bcm59055_userspace_consumer_devices));
 #endif
