@@ -68,7 +68,6 @@ struct spi_kona_data {
 	CHAL_HANDLE chandle;	/* SSPI CHAL Handle */
 	void __iomem *base;	/* SPI virtual base address */
 	struct clk *ssp_clk;	/* SSPI bus clock */
-	struct clk *ssp_apb_clk;	/* SSPI APB access clock */
 	unsigned long spi_clk;	/* SPI controller clock speed */
 
 	struct workqueue_struct *workqueue;	/* Driver message queue */
@@ -745,6 +744,7 @@ static void spi_kona_work(struct work_struct *work)
 		cs_change = 1;
 		status = 0;
 
+		clk_enable(spi_kona->ssp_clk);
 		list_for_each_entry(t, &m->transfers, transfer_list) {
 
 			/* override speed or wordsize? */
@@ -810,6 +810,8 @@ static void spi_kona_work(struct work_struct *work)
 		 */
 		if (!(status == 0 && cs_change))
 			spi_kona_chipselect(spi, CS_INACTIVE);
+
+		clk_disable(spi_kona->ssp_clk);
 
 		spin_lock_irqsave(&spi_kona->lock, flags);
 	}
@@ -992,12 +994,6 @@ static int spi_kona_probe(struct platform_device *pdev)
 		goto out_release_mem;
 	}
 
-	status = spi_kona_config_spi_hw(spi_kona);
-	if (status) {
-		pr_err("Error configuring SPI hardware\n");
-		goto out_iounmap;
-	}
-
 	spi_kona->irq = platform_get_irq(pdev, 0);
 	if (!spi_kona->irq) {
 		pr_err("%s: No resource for IRQ\n", __func__);
@@ -1020,16 +1016,13 @@ static int spi_kona_probe(struct platform_device *pdev)
 		status = PTR_ERR(spi_kona->ssp_clk);
 		goto out_free_irq;
 	}
-	sprintf(clk_name, "ssp%d_apb_clk", master->bus_num);
-	spi_kona->ssp_apb_clk = clk_get(NULL, clk_name);
-	if (IS_ERR_OR_NULL(spi_kona->ssp_apb_clk)) {
-		dev_err(&pdev->dev, "unable to get %s clock\n", clk_name);
-		status = PTR_ERR(spi_kona->ssp_apb_clk);
-		clk_put(spi_kona->ssp_clk);
-		goto out_free_irq;
-	}
-	clk_enable(spi_kona->ssp_apb_clk);
 	clk_enable(spi_kona->ssp_clk);
+
+	status = spi_kona_config_spi_hw(spi_kona);
+	if (status) {
+		pr_err("Error configuring SPI hardware\n");
+		goto out_clk_put;
+	}
 
 	INIT_WORK(&spi_kona->work, spi_kona_work);
 	spin_lock_init(&spi_kona->lock);
@@ -1057,14 +1050,13 @@ static int spi_kona_probe(struct platform_device *pdev)
 		spi_kona->enable_dma = 0;
 	}
 
+	clk_disable(spi_kona->ssp_clk);
 	pr_info("%s: SSP %d setup done\n", __func__, master->bus_num);
 	return status;
 
       out_clk_put:
 	clk_disable(spi_kona->ssp_clk);
-	clk_disable(spi_kona->ssp_apb_clk);
 	clk_put(spi_kona->ssp_clk);
-	clk_put(spi_kona->ssp_apb_clk);
       out_free_irq:
 	free_irq(spi_kona->irq, spi_kona);
       out_iounmap:
@@ -1097,9 +1089,7 @@ static int spi_kona_remove(struct platform_device *pdev)
 		status = -EBUSY;
 
 	clk_disable(spi_kona->ssp_clk);
-	clk_disable(spi_kona->ssp_apb_clk);
 	clk_put(spi_kona->ssp_clk);
-	clk_put(spi_kona->ssp_apb_clk);
 	free_irq(spi_kona->irq, spi_kona);
 
 	spi_master_put(master);
