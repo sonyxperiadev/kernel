@@ -102,9 +102,6 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 		bcm_hsotgctrl_phy_set_vbus_stat(false);
 		msleep(100);
 		bcm_hsotgctrl_phy_set_id_stat(false);
-		msleep(500);
-		bcm_otg_set_vbus(otg_data, true);
-		bcm_hsotgctrl_phy_set_vbus_stat(true);
 	}
 
 	return result < 0 ? result : count;
@@ -120,8 +117,11 @@ static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled)
 	if (NULL == otg_data)
 		return -EINVAL;
 
-	bcm_otg_set_vbus(otg_data, enabled);
+	/* The order of these function calls has temporarily been
+	 * swapped due to overcurrent issue caused by slow I2C
+	 * operations. I2C operations take >200ms to complete */
 	bcm_hsotgctrl_phy_set_vbus_stat(enabled);
+	bcm_otg_set_vbus(otg_data, enabled);	
 	return 0;
 }
 

@@ -6077,7 +6077,7 @@ void dwc_otg_set_prtpower(dwc_otg_core_if_t * core_if, uint32_t val)
 	hprt0_data_t hprt0;
 	hprt0.d32 = dwc_read_reg32(core_if->host_if->hprt0);
 	hprt0.b.prtpwr = val;
-	dwc_write_reg32(core_if->host_if->hprt0, val);
+	dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
 	dwc_otg_xceiv_set_vbus(core_if, val);
 }
 

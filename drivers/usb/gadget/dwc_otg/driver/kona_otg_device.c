@@ -77,7 +77,14 @@ static unsigned int otghost = 0;
 #else
 static unsigned int otghost = 1;
 #endif
+#ifdef CONFIG_ARCH_RHEA
+/* Rhea needs to default to device mode until
+ * dynamic switching through ID pin is supported
+ */
+static unsigned int otgdevice = 1;
+#else
 static unsigned int otgdevice = 0;
+#endif
 
 #ifdef LM_INTERFACE
 static struct lm_device *lmdev = NULL;
