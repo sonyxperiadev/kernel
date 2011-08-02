@@ -292,7 +292,7 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
 
 VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platform_data )
 {
-   VCEB_INSTANCE_T       vceb_instance;
+   //VCEB_INSTANCE_T       vceb_instance;
    VCHIQ_KERNEL_STATE_T   *kernState;
 
    vcos_log_warn( "%s: vchiq_num_instances = %d, VCHIQ_NUM_VIDEOCORES = %d",
@@ -306,12 +306,14 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
       return VCHIQ_ERROR;
    }
 
+#if 0
    if ( vceb_get_instance( platform_data->instance_name, &vceb_instance ) != 0 )
    {
       /* No instance registered with vceb, which means the videocore is not
          present */
       return VCHIQ_ERROR;
    }
+#endif
 
    /* Allocate some memory */
    kernState = kmalloc( sizeof( *kernState ), GFP_KERNEL );
@@ -360,6 +362,18 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
       vcos_log_error( "%s: failed to create proc entry", __func__ );
 
       return VCHIQ_ERROR;
+   }
+
+   /* Direct connect the vchiq to get vmcs-fb and vmcs-sm device module built in */
+   if ( vchiq_memdrv_initialise() != VCHIQ_SUCCESS )
+   {
+       printk( KERN_ERR "%s: failed to initialize vchiq for '%s'\n",
+                   __func__, kernState->instance_name );
+   }
+   else
+   {
+       printk( KERN_INFO "%s: initialized vchiq for '%s'\n", __func__,
+                   kernState->instance_name );
    }
 
    vcos_log_warn( "%s: successfully initialized '%s' videocore",
@@ -720,7 +734,7 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
 
    /* Initialize the local state. Note that vc04 has already started by now
       so the slot memory is expected to be initialised. */
-	status = vchiq_init_state(state, vchiq_slot_zero, 1/*master*/);
+   status = vchiq_init_state(state, vchiq_slot_zero, 1/*master*/);
 
    if (status != VCHIQ_SUCCESS)
       goto failed_init_state;
