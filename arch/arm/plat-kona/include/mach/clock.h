@@ -95,7 +95,8 @@ struct clk {
 
 	unsigned long	rate;		/* in HZ */
 	unsigned long	div;		/* programmable divider. 0 means fixed ratio to parent clock */
-	unsigned long	pre_div;		/* programmable divider. 0 means fixed ratio to parent clock */
+	unsigned long	pre_div;	/* programmable divider. 0 means fixed ratio to parent clock */
+	unsigned long	fraction;
 
 	struct clk_src	*src;
 	struct clk_ops	*ops;
@@ -282,6 +283,7 @@ unsigned long clock_get_xtal(void);
 #define		BCM2165x_CLK_TIMERS_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_SSP0_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_DMAC_MUX_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
+#define         BCM2165x_CLK_UARTB4_APB_FLAGS                   (TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB3_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB2_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
@@ -289,6 +291,7 @@ unsigned long clock_get_xtal(void);
 #define		BCM2165x_CLK_PWM_FLAGS				(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_BSC1_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_BSC2_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
+#define		BCM2165x_CLK_BBL_REG_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 #define		BCM2165x_CLK_APB2_REG_FLAGS			(TYPE_BUS_CLK | SW_GATE)
 /* Under MM CCU */
 #define		BCM2165x_CLK_SPI_APB_FLAGS			(TYPE_BUS_CLK | SW_GATE)
@@ -372,6 +375,7 @@ unsigned long clock_get_xtal(void);
 #define		BCM2165x_CLK_UARTB_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB2_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_UARTB3_FLAGS			(TYPE_PERI_CLK | SW_GATE)
+#define         BCM2165x_CLK_UARTB4_FLAGS                       (TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_SPUM_OPEN_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_SPUM_SEC_FLAGS			(TYPE_PERI_CLK | SW_GATE)
 #define		BCM2165x_CLK_SMI_FLAGS				(TYPE_PERI_CLK | SW_GATE)
@@ -456,6 +460,10 @@ unsigned long clock_get_xtal(void);
 #define		CLK_UARTB3_DIV_MAX				0xF
 #define		CLK_UARTB3_PREDIV_MAX				1
 #define		CLK_UARTB3_FRACTION_MAX				0xFF
+
+#define         CLK_UARTB4_DIV_MAX                              0xF
+#define         CLK_UARTB4_PREDIV_MAX                           1
+#define         CLK_UARTB4_FRACTION_MAX                         0xFF
 
 #define		CLK_TIMERS_DIV_MAX				1
 #define		CLK_TIMERS_PREDIV_MAX				1
@@ -572,6 +580,34 @@ unsigned long clock_get_xtal(void);
 		.freq_id	=	id,							\
 		.freq_tbl	=	{__VA_ARGS__},						\
 	}
+
+/* declare c CCU clock */
+#define	DECLARE_CCU_CLK2(clk_name, id, ccu, pfx, mask, mask1, ... )						\
+	static struct ccu_clock clk_name##_clk = {						\
+		.clk	=	{								\
+			.name	=	__stringify(clk_name##_clk),				\
+			.ops	=	&ccu_clk_ops,						\
+			.ccu_id =       BCM2165x_##ccu##_CCU,					\
+			.flags	=	BCM2165x_##ccu##_CCU_FLAGS,				\
+		},										\
+		.ccu_clk_mgr_base	=	ccu##_CLK_BASE_ADDR,				\
+		.wr_access_offset	=	pfx##_CLK_MGR_REG_WR_ACCESS_OFFSET,		\
+		.policy_freq_offset	=	pfx##_CLK_MGR_REG_POLICY_FREQ_OFFSET,		\
+		.freq_bit_shift 	=	pfx##_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT,	\
+		.policy_ctl_offset	=	pfx##_CLK_MGR_REG_POLICY_CTL_OFFSET,		\
+		.policy0_mask_offset	=	pfx##_CLK_MGR_REG_POLICY0_##mask##_OFFSET,		\
+		.policy1_mask_offset	=	pfx##_CLK_MGR_REG_POLICY1_##mask##_OFFSET,		\
+		.policy2_mask_offset	=	pfx##_CLK_MGR_REG_POLICY2_##mask##_OFFSET,		\
+		.policy3_mask_offset	=	pfx##_CLK_MGR_REG_POLICY3_##mask##_OFFSET,		\
+		.policy0_mask1_offset	=	pfx##_CLK_MGR_REG_POLICY0_##mask1##_OFFSET,		\
+		.policy1_mask1_offset	=	pfx##_CLK_MGR_REG_POLICY1_##mask1##_OFFSET,		\
+		.policy2_mask1_offset	=	pfx##_CLK_MGR_REG_POLICY2_##mask1##_OFFSET,		\
+		.policy3_mask1_offset	=	pfx##_CLK_MGR_REG_POLICY3_##mask1##_OFFSET,		\
+		.lvm_en_offset		=	pfx##_CLK_MGR_REG_LVM_EN_OFFSET,		\
+		.freq_id	=	id,							\
+		.freq_tbl	=	{__VA_ARGS__},						\
+	}
+
 
 /* declare a bus clock*/
 #define	DECLARE_BUS_CLK(clk_name, NAME1, NAME2, clk_parent, ccu, pfx, ... )			\
@@ -716,6 +752,45 @@ unsigned long clock_get_xtal(void);
 		.pre_trigger_mask	=	pfx##_CLK_MGR_REG_##trigger##_##NAME2##_PRE_TRIGGER_MASK,	\
 	}
 
+/* for clock gate and div register with different prefix
+ * see ssp0_audio in Island IKPS
+ * */
+#define	DECLARE_PERI_CLK_PRE_DIV3(clk_name, NAME1, NAME2, NAME3, clk_parent, clk_rate, clk_div, trigger, ccu, pfx, dthr)	\
+	static struct peri_clock clk_name##_clk = {						\
+		.clk	=	{								\
+			.name	=	__stringify(clk_name##_clk),				\
+			.parent =	name_to_clk(clk_parent),				\
+			.rate	=	clk_rate,						\
+			.div	=	clk_div,						\
+			.pre_div = 0,                    \
+			.id	=	BCM2165x_CLK_##NAME2,							\
+			.ccu_id =       BCM2165x_##ccu##_CCU,					\
+			.flags	=	BCM2165x_CLK_##NAME2##_FLAGS,				\
+			.src	=	&clk_name##_clk_src,					\
+			.ops	=	&peri_clk_ops,						\
+		},										\
+		.ccu_clk_mgr_base	=	ccu##_CLK_BASE_ADDR,				\
+		.wr_access_offset	=	pfx##_CLK_MGR_REG_WR_ACCESS_OFFSET,		\
+		.clkgate_offset 	=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_OFFSET,	\
+		.div_offset		=	pfx##_CLK_MGR_REG_##NAME2##_DIV_OFFSET,	\
+		.div_trig_offset	=	pfx##_CLK_MGR_REG_##trigger##_OFFSET,		\
+		.stprsts_mask		=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_STPRSTS_MASK,		\
+		.hw_sw_gating_mask	=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_HW_SW_GATING_SEL_MASK,	\
+		.clk_en_mask		=	pfx##_CLK_MGR_REG_##NAME1##_CLKGATE_##NAME2##_CLK_EN_MASK,		\
+		.div_mask		=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_DIV_MASK,		\
+		.div_shift		=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_DIV_SHIFT,		\
+		.div_max		=	CLK_##NAME2##_DIV_MAX,						\
+		.pre_div_mask		=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_PRE_DIV_MASK,		\
+		.pre_div_shift		=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_PRE_DIV_SHIFT,		\
+		.pre_div_max		=	CLK_##NAME2##_PREDIV_MAX,						\
+		.div_dithering		=	dthr,									\
+		.pll_select_mask	=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_PRE_PLL_SELECT_MASK,	\
+		.pll_select_shift	=	pfx##_CLK_MGR_REG_##NAME3##_DIV_##NAME2##_PRE_PLL_SELECT_SHIFT,	\
+		.trigger_mask		=	pfx##_CLK_MGR_REG_##trigger##_##NAME2##_TRIGGER_MASK,	\
+		.pre_trigger_mask	=	pfx##_CLK_MGR_REG_##trigger##_##NAME2##_PRE_TRIGGER_MASK,	\
+	}
+
+
 /* declare a peripheral clock without divider count value. It will have source
  * selection*/
 #define	DECLARE_PERI_CLK_NO_DIV_COUNT(clk_name, CLK_NAME, clk_parent, clk_rate, trigger, ccu, pfx)	\
@@ -820,6 +895,7 @@ enum {
     BCM2165x_CLK_REF_52M,
     BCM2165x_CLK_REF_13M,
     BCM2165x_CLK_REF_26M,
+    BCM2165x_CLK_REF_2P4M,
     BCM2165x_CLK_VAR_312M,
     BCM2165x_CLK_VAR_208M,
     BCM2165x_CLK_VAR_156M,
@@ -859,6 +935,7 @@ enum {
     BCM2165x_CLK_UARTB,
     BCM2165x_CLK_UARTB2,
     BCM2165x_CLK_UARTB3,
+    BCM2165x_CLK_UARTB4,
     BCM2165x_CLK_TIMERS,
     BCM2165x_CLK_SPUM_OPEN,
     BCM2165x_CLK_SPUM_SEC,
@@ -886,11 +963,13 @@ enum {
 
     BCM2165x_CLK_END, /*End of functional clocks*/
     /*Bus clock IDs -- For internal use only */
+    BCM2165x_CLK_UARTB4_APB,
     BCM2165x_CLK_UARTB3_APB,
     BCM2165x_CLK_UARTB2_APB,
     BCM2165x_CLK_UARTB_APB,
     BCM2165x_CLK_BSC2_APB,
     BCM2165x_CLK_BSC1_APB,
+    BCM2165x_CLK_BBL_REG_APB,
     BCM2165x_CLK_SSP0_APB,
     BCM2165x_CLK_SPI_APB,
     BCM2165x_CLK_I2S_APB,

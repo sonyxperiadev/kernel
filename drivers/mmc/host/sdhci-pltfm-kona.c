@@ -785,7 +785,7 @@ static void __exit sdhci_drv_exit(void)
 	platform_driver_unregister(&sdhci_pltfm_driver);
 }
 
-module_init(sdhci_drv_init);
+fs_initcall(sdhci_drv_init);
 module_exit(sdhci_drv_exit);
 
 MODULE_DESCRIPTION("Secure Digital Host Controller Interface platform driver");

@@ -54,18 +54,20 @@
 #include <asm/uaccess.h>
 #include <linux/poll.h>
 
-#define BMP18X_CHIP_ID			0x55
+#include <linux/brvsens_driver.h>
 
-#define BMP18X_CALIBRATION_DATA_START	0xAA
-#define BMP18X_CALIBRATION_DATA_LENGTH	11	/* 16 bit values */
-#define BMP18X_CHIP_ID_REG		0xD0
-#define BMP18X_CTRL_REG			0xF4
-#define BMP18X_TEMP_MEASUREMENT		0x2E
-#define BMP18X_PRESSURE_MEASUREMENT	0x34
-#define BMP18X_CONVERSION_REGISTER_MSB	0xF6
-#define BMP18X_CONVERSION_REGISTER_LSB	0xF7
-#define BMP18X_CONVERSION_REGISTER_XLSB	0xF8
-#define BMP18X_TEMP_CONVERSION_TIME	5
+#define BMP18X_CHIP_ID			          0x55
+
+#define BMP18X_CALIBRATION_DATA_START	  0xAA
+#define BMP18X_CALIBRATION_DATA_LENGTH	  11	/* 16 bit values */
+#define BMP18X_CHIP_ID_REG		          0xD0
+#define BMP18X_CTRL_REG			          0xF4
+#define BMP18X_TEMP_MEASUREMENT		      0x2E
+#define BMP18X_PRESSURE_MEASUREMENT	      0x34
+#define BMP18X_CONVERSION_REGISTER_MSB	  0xF6
+#define BMP18X_CONVERSION_REGISTER_LSB	  0xF7
+#define BMP18X_CONVERSION_REGISTER_XLSB	  0xF8
+#define BMP18X_TEMP_CONVERSION_TIME	      5
 
 struct bmp18x_calibration_data 
 {
@@ -79,41 +81,28 @@ struct bmp18x_calibration_data
 /* Each client has this additional data */
 struct bmp18x_data 
 {
-	struct	bmp18x_data_bus data_bus;
-	struct	device* dev;
-	struct	mutex lock;
+	struct	bmp18x_data_bus         data_bus;
+	struct	device*                 dev;
+	struct	mutex                   lock;
 	struct	bmp18x_calibration_data calibration;
-	atomic_t pollrate;                             /* poll rate [msec] -- sensor library multiplexing */
-	u8	oversampling_setting;
-	u32	raw_temperature;
-	u32	raw_pressure;
-	u32	temp_measurement_period;
-	u32	last_temp_measurement;
-	s32	b6; /* calculated temperature correction coefficient */
+	u8	                            oversampling_setting;
+	u32	                            raw_temperature;
+	u32	                            raw_pressure;
+	u32	                            temp_measurement_period;
+	u32	                            last_temp_measurement;
+	s32	                            b6; /* calculated temperature correction coefficient */
 };
 
-/* Global Device Pointer */
-static struct device* bmp18x_device = NULL;
-
-/* Helper to manage poll rate setting */
-static inline void SetPollRate
-(
-   struct bmp18x_data* bmpdata,  // client data structure pointer
-   u32                 msec      // poll rate in milliseconds
-)
-{
-   atomic_set(&(bmpdata->pollrate), msec);
-}
 
 static s32 bmp18x_read_calibration_data(struct bmp18x_data* data)
 {
 	u16 tmp[BMP18X_CALIBRATION_DATA_LENGTH];
-	struct bmp18x_calibration_data *cali = &(data->calibration);
+	struct bmp18x_calibration_data* cali = &(data->calibration);
 	
 	s32 status = data->data_bus.bops->read_block(data->data_bus.client,
 				BMP18X_CALIBRATION_DATA_START,
-				BMP18X_CALIBRATION_DATA_LENGTH*sizeof(u16),
-				(u8 *)tmp);
+				BMP18X_CALIBRATION_DATA_LENGTH * sizeof(u16),
+				(u8*)tmp);
 				
 	if (status < 0)
 		return status;
@@ -202,7 +191,7 @@ static s32 bmp18x_update_raw_pressure(struct bmp18x_data* data)
 
 	/* copy data into a u32 (4 bytes), but skip the first byte. */
 	status = data->data_bus.bops->read_block(data->data_bus.client,
-			BMP18X_CONVERSION_REGISTER_MSB, 3, ((u8 *)&tmp)+1);
+			BMP18X_CONVERSION_REGISTER_MSB, 3, ((u8*)&tmp)+1);
 			
 	if (status < 0)
 		goto exit;
@@ -263,7 +252,7 @@ exit:
  */
 static s32 bmp18x_get_pressure(struct bmp18x_data* data, int* pressure)
 {
-	struct bmp18x_calibration_data *cali = &data->calibration;
+	struct bmp18x_calibration_data* cali = &data->calibration;
 	s32 x1, x2, x3, b3;
 	u32 b4, b7;
 	s32 p;
@@ -323,8 +312,11 @@ exit:
  * increase both. The datasheet gives on overview on how measurement time,
  * accuracy and noise correlate.
  */
-static void bmp18x_set_oversampling(struct bmp18x_data *data,
-						unsigned char oversampling)
+static void bmp18x_set_oversampling
+(
+   struct bmp18x_data* data,
+   unsigned char       oversampling
+)
 {
 	if (oversampling > 3)
 		oversampling = 3;
@@ -341,9 +333,13 @@ static unsigned char bmp18x_get_oversampling(struct bmp18x_data* data)
 }
 
 /* sysfs callbacks */
-static ssize_t set_oversampling(struct device *dev,
-				struct device_attribute *attr,
-				const char *buf, size_t count)
+static ssize_t set_oversampling
+(
+   struct device*            dev,
+   struct device_attribute*  attr,
+   const  char*              buf,
+   size_t                    count
+)
 {
 	struct bmp18x_data* data = dev_get_drvdata(dev);
 	unsigned long oversampling;
@@ -360,8 +356,12 @@ static ssize_t set_oversampling(struct device *dev,
 	return success;
 }
 
-static ssize_t show_oversampling(struct device *dev,
-				 struct device_attribute *attr, char *buf)
+static ssize_t show_oversampling
+(
+   struct device*           dev,
+   struct device_attribute* attr,
+   char*                    buf
+)
 {
 	struct bmp18x_data* data = dev_get_drvdata(dev);
 	return sprintf(buf, "%u\n", bmp18x_get_oversampling(data));
@@ -382,6 +382,7 @@ static ssize_t show_temperature
 	struct bmp18x_data* data = dev_get_drvdata(dev);
 
 	status = bmp18x_get_temperature(data, &temperature);
+	
 	if (status != 0)
 		return status;
 	else
@@ -404,6 +405,7 @@ static ssize_t show_pressure
 	struct bmp18x_data* data = dev_get_drvdata(dev);
 
 	status = bmp18x_get_pressure(data, &pressure);
+	
 	if (status != 0)
 		return status;
 	else
@@ -443,12 +445,23 @@ static ssize_t bmp18x_get_data
 static DEVICE_ATTR(data, S_IRUGO, bmp18x_get_data, NULL);
 
 
-static ssize_t show_pm(struct device *dev, struct device_attribute *attr, char *buf)
+static ssize_t show_pm
+(
+   struct device*           dev,
+   struct device_attribute* attr,
+   char*                    buf
+)
 {
 	return sprintf(buf, "pm: 0=off 1=on\n");
 }
 
-static ssize_t store_pm(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+static ssize_t store_pm
+(
+   struct device*            dev,
+   struct device_attribute*  attr,
+   const  char*              buf,
+   size_t                    count
+)
 {
 	unsigned long pm = 0;
 	int ret = strict_strtoul(buf, 10, &pm);
@@ -466,6 +479,7 @@ static ssize_t store_pm(struct device *dev, struct device_attribute *attr, const
 			printk(KERN_ERR "%s: cannot change power mode. CONFIG_PM is not set\n", __FUNCTION__);
 #endif
 			break;
+			
 		case 1:
 #ifdef CONFIG_PM
 			if ((ret = bmp18x_enable(dev)))
@@ -474,32 +488,13 @@ static ssize_t store_pm(struct device *dev, struct device_attribute *attr, const
 			printk(KERN_ERR "%s: cannot change power mode. CONFIG_PM is not set\n", __FUNCTION__);
 #endif
 			break;
+			
 		default:
 			printk(KERN_ERR "%s: illegal input %lu\n", __FUNCTION__, pm);
 	}
 	return count;
 }
 static DEVICE_ATTR(pm, S_IWUSR | S_IRUGO, show_pm, store_pm);
-
-static ssize_t show_pollrate(struct device* dev, struct device_attribute* attr, char* buf)
-{
-    struct bmp18x_data* data = dev_get_drvdata(dev);
-	return sprintf(buf, "%d [msec]\n", atomic_read(&(data->pollrate) ));
-}
-
-static ssize_t store_pollrate(struct device* dev, struct device_attribute* attr, const char* buf, size_t count)
-{
-	unsigned long val = 0;
-	int ret = strict_strtoul(buf, 10, &val);
-	
-	if (ret != 0)
-		return ret;
-
-	SetPollRate(dev_get_drvdata(dev), val);
-	return count;
-}
-
-static DEVICE_ATTR(pollrate, S_IWUSR | S_IRUGO, show_pollrate, store_pollrate);
 
 
 static struct attribute* bmp18x_attributes[] =
@@ -508,7 +503,6 @@ static struct attribute* bmp18x_attributes[] =
 	&dev_attr_pressure0_input.attr,
 	&dev_attr_data.attr,
 	&dev_attr_oversampling.attr,
-	&dev_attr_pollrate.attr,
 	NULL
 };
 
@@ -517,8 +511,11 @@ static const struct attribute_group bmp18x_attr_group =
 	.attrs = bmp18x_attributes,
 };
 
-static int bmp18x_init_client(struct bmp18x_data *data,
-			      struct bmp18x_platform_data *pdata)
+static int bmp18x_init_client
+(
+   struct bmp18x_data*          data,
+   struct bmp18x_platform_data* pdata
+)
 {
 	int status = bmp18x_read_calibration_data(data);
 	if (status != 0)
@@ -526,7 +523,7 @@ static int bmp18x_init_client(struct bmp18x_data *data,
 		
 	data->last_temp_measurement = 0;
 	data->temp_measurement_period =
-		pdata ? (pdata->temp_measurement_period/1000)*HZ : 1*HZ;
+		pdata ? (pdata->temp_measurement_period/1000) * HZ : 1 * HZ;
 		
 	data->oversampling_setting = pdata ? pdata->default_oversampling : 3;
 	mutex_init(&data->lock);
@@ -535,120 +532,7 @@ exit:
 	return status;
 }
 
-static unsigned int bmp18x_poll(struct file* file, struct poll_table_struct* tab)
-{
-     struct bmp18x_data* data = 0;
-     
-     /* Check global device pointer */
-     if (bmp18x_device == NULL)
-     {
-     	msleep_interruptible(BMP_POLL_RATE_MSEC);
-		return POLLERR;
-     }
-     
-     /* Get Data pointer */
-     data = dev_get_drvdata(bmp18x_device);
-     
-     /* Relax */
-	 msleep_interruptible(atomic_read(&(data->pollrate)  ) );
 
-	 return POLLIN;
-}
-
-/* IOCTL Interface for BMP18x: Uniform access from User Space Sensor Library */
-static long bmp18x_ioctl
-(
-   struct file*  file,
-   unsigned int  cmd,
-   unsigned long arg
-)
-{
-   	int err = 0;
-	unsigned char data[6];
-	unsigned int temp;
-	
-   	/* check cmd */
-	if (_IOC_TYPE(cmd) != BMP_IOC_MAGIC)	
-	{	
-		printk(KERN_ERR "[%s]::cmd magic type error\n", __FUNCTION__);
-		return -ENOTTY;
-	}
-	
-
-	if (_IOC_DIR(cmd) & _IOC_READ)
-		err = !access_ok(VERIFY_WRITE,(void __user*)arg, _IOC_SIZE(cmd));
-	
-	else if(_IOC_DIR(cmd) & _IOC_WRITE)
-		err = !access_ok(VERIFY_READ, (void __user*)arg, _IOC_SIZE(cmd));
-	
-	if (err)
-	{
-		printk(KERN_ERR "[%s]::cmd access_ok error\n", __FUNCTION__);
-		return -EFAULT;
-	}
-	
-	/* check global device pointer */
-	if (bmp18x_device == NULL)
-	{
-		printk(KERN_ERR "[%s]::I2C driver not installed\n", __FUNCTION__); 
-		return -EFAULT;
-	}
-	
-	/* cmd mapping */
-
-	switch (cmd)
-	{
-	   case BMP_SET_ENABLE:
-	   {
-		   if (copy_from_user(data, (unsigned char*)arg, sizeof(unsigned char) ) != 0)
-		   {
-			  printk(KERN_ERR "[%s]::copy_from_user error\n", __FUNCTION__);
-			  return -EFAULT;
-		   }
-	
-		   // enabled 1, disable 0
-		   err = (*data) ? bmp18x_enable(bmp18x_device) : bmp18x_disable(bmp18x_device);
-		   
-		   //printk("++++++ BMP18X_SET_ENABLE: set to [%d], err: [%d] +++++\n", *data, err);
-		   return err;
-		}
-
-	case BMP_SET_POLL_RATE:
-	{	
-		if (copy_from_user((unsigned int*)data, (unsigned int*)arg, sizeof(unsigned int) ) != 0)
-		{
-			printk(KERN_ERR "bmp18x_ioctl::BMP_SET_POLL_RATE -- copy_from_user error\n");
-			return -EFAULT;
-		}
-		
-		// store passed value in client data
-		memcpy(&temp, data, 4);
-		SetPollRate(dev_get_drvdata(bmp18x_device), temp);
-
-		return 0;
-	}
-
-	default:
-	    printk(KERN_ERR "[%s]::Cmd number error", __FUNCTION__); 
-		return -ENOTTY;
-	}
-	
-	// never reached
-}
-
-static const struct file_operations bmp18x_fops = 
-{
-	.owner          = THIS_MODULE,
-	.poll           = bmp18x_poll,
-	.unlocked_ioctl = bmp18x_ioctl,
-};
-
-static struct miscdevice bmp_device = 
-{
-	.minor = MISC_DYNAMIC_MINOR,
-	.name  = BMP18X_NAME,
-	.fops  = &bmp18x_fops,
-};
 
 __devinit int bmp18x_probe(struct device* dev, struct bmp18x_data_bus* data_bus)
 {
@@ -699,17 +583,11 @@ __devinit int bmp18x_probe(struct device* dev, struct bmp18x_data_bus* data_bus)
 	if (err)
 		goto exit_free;
 
-	/* Register file operations api */
-	err = misc_register(&bmp_device);
-	if (err)
-		goto exit_free;
 
-    /* Set Global Device Pointer */
-    bmp18x_device = dev;
-    
-    /* Initial default poll rate */
-    SetPollRate(data, BMP_POLL_RATE_MSEC);
-
+    /* Register with BRVSENS Driver */
+    brvsens_register(SENSOR_HANDLE_PRESSURE,    BMP18X_NAME,  data, 0, (PFNREAD)bmp18x_get_pressure);
+    brvsens_register(SENSOR_HANDLE_TEMPERATURE, BMP18X_NAME,  data, 0, (PFNREAD)bmp18x_get_temperature);
+     
 	dev_info(dev, "Succesfully initialized bmp18x!\n");
 	return 0;
 
@@ -730,7 +608,6 @@ int bmp18x_remove(struct device *dev)
 	struct bmp18x_data *data = dev_get_drvdata(dev);
 	sysfs_remove_group(&dev->kobj, &bmp18x_attr_group);
 	kfree(data);
-	misc_deregister(&bmp_device);
 	return 0;
 }
 EXPORT_SYMBOL(bmp18x_remove);
@@ -758,6 +635,7 @@ int bmp18x_enable(struct device *dev)
 }
 EXPORT_SYMBOL(bmp18x_enable);
 #endif
+
 
 MODULE_AUTHOR("Eric Andersson <eric.andersson@unixphere.com>");
 MODULE_DESCRIPTION("BMP18X driver");

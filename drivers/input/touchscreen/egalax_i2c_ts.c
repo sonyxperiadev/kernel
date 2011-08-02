@@ -47,7 +47,6 @@
 #define REPORTID_MTOUCH      0x04
 
 #ifdef CONFIG_TOUCHSCREEN_SCALE
-#undef CONFIG_CP_TS_SOFTKEY
 
 #define X_ORIG 1366
 #define Y_ORIG 768
@@ -194,7 +193,7 @@ static void ProcessReport(unsigned char *buf, int buflen)
    }
 
 #ifdef CONFIG_TOUCHSCREEN_SCALE
-   if ( !((g_x_new == 0) && (g_y_new == 0)) )
+   if ( !((g_x_new == X_ORIG) && (g_y_new = Y_ORIG)) && !((g_x_new == 0) && (g_y_new == 0)) )
    {
       if (X < X_MIN(g_x_new) || X > X_MAX(g_x_new) || Y < Y_MIN(g_y_new) || Y > Y_MAX(g_y_new))
          return;

@@ -39,13 +39,20 @@
 #include <mach/kona.h>
 #include <mach/dma_mmap.h>
 #include <mach/sdma.h>
+#include <mach/memc_qos.h>
 #include <mach/sdio_platform.h>
 #include <mach/usbh_cfg.h>
+#include <mach/halaudio_audioh_platform.h>
+#include <mach/halaudio_pcm_platform.h>
 
 #include <sdio_settings.h>
 
 #include <i2c_settings.h>
 #include <usbh_settings.h>
+
+#include <halaudio_settings.h>
+#include <halaudio_audioh_settings.h>
+#include <halaudio_pcm_settings.h>
 
 #if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
 #include <linux/broadcom/bcmblt-rfkill.h>
@@ -89,9 +96,12 @@
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
 #include <leds_gpio_settings.h>
+#include <linux/leds.h>
 #endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#include <linux/input.h>
+#include <linux/gpio_keys.h>
 #include <gpio_keys_settings.h>
 #endif
 
@@ -141,6 +151,21 @@
 #if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
 #include <gps_settings.h>
 #include <linux/broadcom/gps.h>
+#endif
+
+#if defined(CONFIG_BCM_HAPTICS) || defined(CONFIG_BCM_HAPTICS_MODULE)
+#include <linux/broadcom/bcm_haptics.h>
+#include <bcm_haptics_settings.h>
+#endif
+
+#if defined(CONFIG_BCM_HEADSET_SW)
+#include <linux/broadcom/headset_cfg.h>
+#include <headset_settings.h>
+#endif
+
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE ) \
+ || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
+#include <vceb_settings.h>
 #endif
 
 #include "island.h"
@@ -360,6 +385,39 @@ static struct platform_device i2c_adap_devices[MAX_I2C_ADAPS] =
    },
 };
 
+#ifdef CONFIG_BCM_HEADSET_SW
+
+#define board_headsetdet_data concatenate(ISLAND_BOARD_ID, _headsetdet_data)
+static struct headset_hw_cfg board_headsetdet_data =
+#ifdef HW_CFG_HEADSET
+   HW_CFG_HEADSET;
+#else
+{
+   .gpio_headset_det = -1,
+   .gpio_mic_det = -1,
+};
+#endif
+
+#define board_headsetdet_device concatenate(ISLAND_BOARD_ID, _headsetdet_device)
+static struct platform_device board_headsetdet_device =
+{
+   .name = "bcmisland-headset-det",
+   .id = -1,
+   .dev =
+   {
+      .platform_data = &board_headsetdet_data,
+   },
+};
+
+#define board_add_headsetdet_device concatenate(ISLAND_BOARD_ID, _add_headsetdet_device)
+static void __init board_add_headsetdet_device(void)
+{
+   platform_device_register(&board_headsetdet_device);
+}
+
+#endif /* CONFIG_BCM_HEADSET_SW */
+
+
 static struct usbh_cfg usbh_param =
 #ifdef HW_USBH_PARAM
 	HW_USBH_PARAM;
@@ -474,6 +532,16 @@ static struct i2c_board_info max3353_i2c_boardinfo[] = {
 #endif
 
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
+#define board_gpio_leds concatenate(ISLAND_BOARD_ID, _board_gpio_leds)
+static struct gpio_led board_gpio_leds[] = GPIO_LEDS_SETTINGS;
+
+#define leds_gpio_data concatenate(ISLAND_BOARD_ID, _leds_gpio_data)
+static struct gpio_led_platform_data leds_gpio_data =
+{
+    .num_leds = ARRAY_SIZE(board_gpio_leds),
+    .leds = board_gpio_leds,
+};
+
 #define board_leds_gpio_device concatenate(ISLAND_BOARD_ID, _leds_gpio_device)
 static struct platform_device board_leds_gpio_device = {
    .name = "leds-gpio",
@@ -485,6 +553,16 @@ static struct platform_device board_leds_gpio_device = {
 #endif
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
+#define board_gpio_keys concatenate(ISLAND_BOARD_ID, _board_gpio_keys)
+static struct gpio_keys_button board_gpio_keys[] = GPIO_KEYS_SETTINGS;
+
+#define gpio_keys_data concatenate(ISLAND_BOARD_ID, _gpio_keys_data)
+static struct gpio_keys_platform_data gpio_keys_data =
+{
+    .nbuttons = ARRAY_SIZE(board_gpio_keys),
+    .buttons = board_gpio_keys,
+};
+
 #define board_gpio_keys_device concatenate(ISLAND_BOARD_ID, _gpio_keys_device)
 static struct platform_device board_gpio_keys_device = {
    .name = "gpio-keys",
@@ -541,6 +619,13 @@ static struct platform_device board_keypad_device =
 };
 #endif
 
+#if defined(CONFIG_BCM_AAA) || defined(CONFIG_BCM_AAA_MODULE)
+static struct platform_device board_bcm_aaa_device = {
+   .name = "bcm-aaa",
+   .id = -1,
+};
+#endif
+
 #if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
 #define board_hana_gps_info concatenate(ISLAND_BOARD_ID, _board_hana_gps_info)
 static struct gps_platform_data board_hana_gps_info = GPS_PLATFORM_DATA_SETTINGS;
@@ -552,6 +637,21 @@ static struct platform_device platform_device_gps =
    .id = -1,
    .dev = {
       .platform_data = &board_hana_gps_info,
+   },
+};
+#endif
+
+#if defined(CONFIG_BCM_HAPTICS) || defined(CONFIG_BCM_HAPTICS_MODULE)
+#define board_bcm_haptics_device concatenate(ISLAND_BOARD_ID, _bcm_haptics_device)
+
+#define board_bcm_haptics_data concatenate(ISLAND_BOARD_ID, _board_bcm_haptics_data)
+static struct bcm_haptics_data board_bcm_haptics_data = BCM_HAPTICS_SETTINGS;
+
+static struct platform_device board_bcm_haptics_device = {
+   .name = BCM_HAPTICS_DRIVER_NAME,
+   .id = -1,
+   .dev = {
+      .platform_data = &board_bcm_haptics_data,
    },
 };
 #endif
@@ -617,6 +717,12 @@ static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
     .gpiomux_jtag_id     = 0,
     .gpiomux_jtag_label  = "vc-jtag",
 #endif
+
+    .disp_gpio.lcd_bl_pwr_en = HW_CFG_LCD_BL_PWR_EN,
+    .disp_gpio.lcd_bl_en     = HW_CFG_LCD_BL_EN,
+    .disp_gpio.lcd_bl_pwm    = HW_CFG_LCD_BL_PWM,
+    .disp_gpio.lcd_rst       = HW_CFG_LCD_RST,
+    .disp_gpio.lcd_pwr_en    = HW_CFG_LCD_PWR_EN,
 };
 
 static struct platform_device vceb_display_device = {
@@ -1122,6 +1228,129 @@ static void __init add_usb_otg_device(void)
 #endif
 }
 
+#define board_halaudio_dev_list concatenate(ISLAND_BOARD_ID, _halaudio_dev_list)
+static HALAUDIO_DEV_CFG board_halaudio_dev_list[] =
+#ifdef HALAUDIO_DEV_LIST
+   HALAUDIO_DEV_LIST;
+#else
+   NULL;
+#endif
+
+#define board_halaudio_cfg concatenate(ISLAND_BOARD_ID, _halaudio_cfg)
+static HALAUDIO_CFG board_halaudio_cfg;
+
+#define board_halaudio_device concatenate(ISLAND_BOARD_ID, _halaudio_device)
+static struct platform_device board_halaudio_device =
+{
+   .name = "bcm-halaudio",
+   .id = -1, /* to indicate there's only one such device */
+   .dev =
+   {
+      .platform_data = &board_halaudio_cfg,
+   },
+};
+
+#define board_halaudio_audio_info concatenate(ISLAND_BOARD_ID, _halaudio_audioh_info)
+static HALAUDIO_AUDIOH_PLATFORM_INFO board_halaudio_audioh_info =
+{
+   .spk_en_gpio =
+   {
+#ifdef HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_LEFT_EN
+      .handsfree_left_en = HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_LEFT_EN,
+#else
+      .handsfree_left_en = -1,
+#endif
+#ifdef HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_RIGHT_EN
+      .handsfree_right_en = HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_RIGHT_EN,
+#else
+      .handsfree_right_en = -1,
+#endif
+
+#ifdef HALAUDIO_AUDIOH_SETTINGS_GPIO_HEADSET_EN
+      .headset_en = HALAUDIO_AUDIOH_SETTINGS_GPIO_HEADSET_EN,
+#else
+      .headset_en = -1,
+#endif
+   },
+};
+
+#define board_halaudio_audioh_device concatenate(ISLAND_BOARD_ID, _halaudio_audioh_device)
+static struct platform_device board_halaudio_audioh_device =
+{
+   .name = "bcm-halaudio-audioh",
+   .id = -1, /* to indicate there's only one such device */
+   .dev =
+   {
+      .platform_data = &board_halaudio_audioh_info,
+   },
+};
+
+#define board_halaudio_pcm_info concatenate(ISLAND_BOARD_ID, _halaudio_pcm_info)
+static HALAUDIO_PCM_PLATFORM_INFO board_halaudio_pcm_info =
+{
+#ifdef HALAUDIO_PCM_SETTINGS_CORE_ID_SELECT
+   .core_id_select = HALAUDIO_PCM_SETTINGS_CORE_ID_SELECT,
+#else
+   .core_id_select = -1,
+#endif
+#ifdef HALAUDIO_PCM_SETTINGS_CHANS_SUPPORTED
+   .channels = HALAUDIO_PCM_SETTINGS_CHANS_SUPPORTED,
+#endif
+#ifdef HALAUDIO_PCM_SETTINGS_CHAN_SELECT
+   .channel_select = HALAUDIO_PCM_SETTINGS_CHAN_SELECT,
+#endif
+   .bt_gpio =
+   {
+#ifdef HALAUDIO_PCM_SETTINGS_GPIO_BT_RST_B
+      .rst_b = HALAUDIO_PCM_SETTINGS_GPIO_BT_RST_B,
+#else
+      .rst_b = -1,
+#endif
+#ifdef HALAUDIO_PCM_SETTINGS_GPIO_BT_VREG_CTL
+      .vreg_ctl = HALAUDIO_PCM_SETTINGS_GPIO_BT_VREG_CTL,
+#else
+      .vreg_ctl = -1,
+#endif
+#ifdef HALAUDIO_PCM_SETTINGS_GPIO_BT_WAKE
+      .wake = HALAUDIO_PCM_SETTINGS_GPIO_BT_WAKE,
+#else
+      .wake = -1,
+#endif
+   },
+#ifdef HALAUDIO_PCM_SETTINGS_BT_REQ_UART_GPIO_GROUP
+   .bt_req_uart_gpio_group = HALAUDIO_PCM_SETTINGS_BT_REQ_UART_GPIO_GROUP,
+#else
+   .bt_req_uart_gpio_group = -1,
+#endif
+};
+
+#ifndef HALAUDIO_PCM_SETTINGS_GPIO_BT_RST_B
+#define BT_SUPPORT    0
+#else
+#define BT_SUPPORT    1
+#endif
+
+#define board_halaudio_pcm_device concatenate(ISLAND_BOARD_ID, _halaudio_pcm_device)
+static struct platform_device board_halaudio_pcm_device =
+{
+   .name = "bcm-halaudio-pcm",
+   .id = -1, /* to indicate there's only one such device */
+   .dev =
+   {
+      .platform_data = &board_halaudio_pcm_info,
+   },
+};
+
+#define board_add_halaudio_device concatenate(ISLAND_BOARD_ID, _add_halaudio_device)
+static void __init board_add_halaudio_device(void)
+{
+   board_halaudio_cfg.numdev = ARRAY_SIZE(board_halaudio_dev_list);
+   board_halaudio_cfg.devlist = board_halaudio_dev_list;
+   platform_device_register(&board_halaudio_device);
+   platform_device_register(&board_halaudio_audioh_device);
+   platform_device_register(&board_halaudio_pcm_device);
+}
+
 static void __init add_devices(void)
 {
 #ifdef HW_SDIO_PARAM
@@ -1135,6 +1364,10 @@ static void __init add_devices(void)
 #if defined(CONFIG_LEDS_GPIO) || defined(CONFIG_LEDS_GPIO_MODULE)
         board_add_led_device();
 #endif
+
+#if defined(CONFIG_BCM_HEADSET_SW)
+        board_add_headsetdet_device();
+#endif   
 
 #if defined(CONFIG_KEYBOARD_GPIO) || defined(CONFIG_KEYBOARD_GPIO_MODULE)
         board_add_keys_device();
@@ -1156,12 +1389,22 @@ static void __init add_devices(void)
         platform_device_register(&board_battery_bq24616);
 #endif
 
+#if defined(CONFIG_BCM_HAPTICS) || defined(CONFIG_BCM_HAPTICS_MODULE)
+   platform_device_register(&board_bcm_haptics_device);
+#endif
+
 	add_usbh_device();
 	add_usb_otg_device();
+
+   board_add_halaudio_device();
 
 #ifdef CONFIG_NET_ISLAND
 	platform_device_register(&net_device);
 #endif
+
+#if defined(CONFIG_BCM_AAA) || defined(CONFIG_BCM_AAA_MODULE)
+   platform_device_register(&board_bcm_aaa_device);
+#endif   
 
 #if defined(CONFIG_BCM_GPS) || defined(CONFIG_BCM_GPS_MODULE)
    platform_device_register(&platform_device_gps);
@@ -1177,6 +1420,10 @@ static void __init board_init(void)
 #ifdef CONFIG_MAP_SDMA
 	dma_mmap_init();
 	sdma_init();
+#endif
+
+#ifdef CONFIG_MAP_LITTLE_ISLAND_MEMC_QOS
+    memc_qos_init();
 #endif
 	/*
 	 * Add common platform devices that do not have board dependent HW

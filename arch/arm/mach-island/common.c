@@ -26,6 +26,8 @@
 #include <linux/device.h>
 #include <linux/platform_device.h>
 #include <linux/serial_8250.h>
+#include <linux/clk.h>
+#include <linux/pwm_backlight.h>
 #include <asm/mach-types.h>
 #include <mach/hardware.h>
 #include <mach/kona.h>
@@ -34,17 +36,23 @@
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
 
+#if defined(CONFIG_USB_ANDROID)
+#include <linux/usb/android_composite.h>
+#endif
+
 #define KONA_UART0_PA   UARTB_BASE_ADDR
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
 #define KONA_UART3_PA   UARTB4_BASE_ADDR
+
+#define UART_CLOCK_RATE 13000000
 
 #define KONA_8250PORT(name,clk)                                                   \
 {                                                                             \
    .membase    = (void __iomem *)(KONA_##name##_VA),                          \
    .mapbase    = (resource_size_t)(KONA_##name##_PA),                         \
    .irq        = BCM_INT_ID_##name,                                           \
-   .uartclk    = 13000000,                                                    \
+   .uartclk    = UART_CLOCK_RATE,                                             \
    .regshift   = 2,                                                           \
    .iotype     = UPIO_DWAPB,                                                  \
    .type       = PORT_16550A,                                                 \
@@ -53,11 +61,35 @@
    .clk_name	= clk,	\
 }
 
+struct uart_clk_cfg {
+	char *bus_clk;
+	char *peri_clk;
+};
+
+static struct uart_clk_cfg uart_clk[] = {
+	[0] = {
+		.bus_clk = "uartb_apb_clk",
+		.peri_clk = "uartb_clk",
+	},
+	[1] = {
+                .bus_clk = "uartb2_apb_clk",
+                .peri_clk = "uartb2_clk",
+        },
+	[2] = {
+                .bus_clk = "uartb3_apb_clk",
+                .peri_clk = "uartb3_clk",
+        },
+	[3] = {
+                .bus_clk = "uartb4_apb_clk",
+                .peri_clk = "uartb4_clk",
+        },
+};
+
 static struct plat_serial8250_port uart_data[] = {
 	KONA_8250PORT(UART0,"uartb_clk"),
 	KONA_8250PORT(UART1,"uartb2_clk"),
 	KONA_8250PORT(UART2,"uartb3_clk"),
-	KONA_8250PORT(UART3,NULL),
+	KONA_8250PORT(UART3,"uartb4_clk"),
 	{ .flags = 0, },
 };
 
@@ -127,6 +159,26 @@ static struct platform_device pwm_device =
 };
 #endif
 
+#if defined(CONFIG_BACKLIGHT_PWM)
+static struct platform_pwm_backlight_data pwm_backlight_data =
+{
+	.pwm_name	= "kona_pwmc:2",
+	.max_brightness	= 255,
+	.dft_brightness	= 255,
+	.pwm_period_ns	= 5000000,
+};
+
+static struct platform_device pwm_backlight_device =
+{
+	.name     = "pwm-backlight",
+	.id       = -1,
+	.dev      =
+		{
+		.platform_data = &pwm_backlight_data,
+	},
+};
+#endif
+
 #if defined(CONFIG_W1_MASTER_DS1WM)
 static struct resource d1w_device_resource[] = {
     [0] = {
@@ -184,13 +236,13 @@ static struct resource rtc_device_resource[] = {
         .flags = IORESOURCE_MEM,
     },
     [1] = {
-        .start = BCM_INT_ID_BBL0,
-        .end   = BCM_INT_ID_BBL0,
+        .start = BCM_INT_ID_BBL1,
+        .end   = BCM_INT_ID_BBL1,
         .flags = IORESOURCE_IRQ,
     },
     [2] = {
-        .start = BCM_INT_ID_BBL1,
-        .end   = BCM_INT_ID_BBL1,
+        .start = BCM_INT_ID_BBL2,
+        .end   = BCM_INT_ID_BBL2,
         .flags = IORESOURCE_IRQ,
     },
 };
@@ -232,6 +284,141 @@ static struct platform_device board_kona_otg_platform_device =
 };
 #endif
 
+#if defined(CONFIG_USB_ANDROID)
+/* FIXME borrow GOOGLE vendor ID to use windows driver */
+#define GOOGLE_VENDOR_ID        0x18d1
+#define VENDOR_ID               GOOGLE_VENDOR_ID
+#define PRODUCT_ID              0x0001
+
+/* FIXME need revise these IDs*/
+#define UMS_PRODUCT_ID          PRODUCT_ID
+#define UMS_ADB_PRODUCT_ID      0x0002
+#define RNDIS_PRODUCT_ID        0x0ffe
+#define RNDIS_ADB_PRODUCT_ID    0x0ffc
+
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
+static struct usb_mass_storage_platform_data mass_storage_pdata = {
+   .nluns = 1,
+   .vendor = "Broadcom",
+   .product = "Media Broadcom Reference Design",
+   .release = 0x0100,
+};
+
+static struct platform_device usb_mass_storage_device = {
+   .name = "usb_mass_storage",
+   .id = -1,
+   .dev = {
+             .platform_data = &mass_storage_pdata,
+          },
+};
+#endif /* CONFIG_USB_ANDROID_MASS_STORAGE */
+
+#if defined(CONFIG_USB_ANDROID_RNDIS)
+static struct usb_ether_platform_data rndis_pdata = {
+   /* ethaddr is filled by board_serialno_setup */
+   .vendorID       = __constant_cpu_tole16(VENDOR_ID),
+   .vendorDescr    = "Broadcom",
+};
+
+static struct platform_device rndis_device = {
+   .name   = "rndis",
+   .id     = -1,
+   .dev    = {
+                .platform_data = &rndis_pdata,
+             },
+};
+#endif /* CONFIG_USB_ANDROID_RNDIS */
+
+static char *usb_functions_ums[] = {
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
+   "usb_mass_storage",
+#endif
+};
+
+static char *usb_functions_ums_adb[] = {
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
+   "usb_mass_storage",
+#endif
+#if defined(CONFIG_USB_ANDROID_ADB)
+   "adb",
+#endif
+};
+
+static char *usb_functions_rndis[] = {
+#if defined(CONFIG_USB_ANDROID_RNDIS)
+   "rndis",
+#endif
+};
+
+static char *usb_functions_rndis_adb[] = {
+#if defined(CONFIG_USB_ANDROID_RNDIS)
+   "rndis",
+#endif
+#if defined(CONFIG_USB_ANDROID_ADB)
+   "adb",
+#endif
+};
+
+static char *usb_functions_all[] = {
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
+   "usb_mass_storage",
+#endif
+#if defined(CONFIG_USB_ANDROID_ADB)
+   "adb",
+#endif
+#if defined(CONFIG_USB_ANDROID_RNDIS)
+   "rndis",
+#endif
+#if defined(CONFIG_USB_ANDROID_ACM)
+   "acm",
+#endif
+};
+
+static struct android_usb_product usb_products[] = {
+   {
+      .product_id     = __constant_cpu_to_le16(UMS_PRODUCT_ID),
+      .num_functions  = ARRAY_SIZE(usb_functions_ums),
+      .functions      = usb_functions_ums,
+   },
+   {
+      .product_id     = __constant_cpu_to_le16(UMS_ADB_PRODUCT_ID),
+      .num_functions  = ARRAY_SIZE(usb_functions_ums_adb),
+      .functions      = usb_functions_ums_adb,
+   },
+   {
+      .product_id     = __constant_cpu_to_le16(RNDIS_PRODUCT_ID),
+      .num_functions  = ARRAY_SIZE(usb_functions_rndis),
+      .functions      = usb_functions_rndis,
+   },
+   {
+      .product_id     = __constant_cpu_to_le16(RNDIS_ADB_PRODUCT_ID),
+      .num_functions  = ARRAY_SIZE(usb_functions_rndis_adb),
+      .functions      = usb_functions_rndis_adb,
+   },
+};
+
+static struct android_usb_platform_data android_usb_pdata = {
+   .vendor_id         = __constant_cpu_to_le16(VENDOR_ID),
+   .product_id        = __constant_cpu_to_le16(PRODUCT_ID),
+   .version           = 0x0100,
+   .product_name      = "Media Broadcom Reference Design",
+   .manufacturer_name = "Broadcom",
+   .serial_number     = "0123456789ABCDEF",
+   .num_products      = ARRAY_SIZE(usb_products),
+   .products          = usb_products,
+   .num_functions     = ARRAY_SIZE(usb_functions_all),
+   .functions         = usb_functions_all,
+};
+
+static struct platform_device android_usb_device = {
+   .name   = "android_usb",
+   .id     = -1,
+   .dev    = {
+                .platform_data = &android_usb_pdata,
+             },
+};
+#endif /* CONFIG_USB_ANDROID */
+
 /* Common devices among all Island boards */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -250,16 +437,46 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #if defined(CONFIG_KONA_PWMC)
         &pwm_device,
 #endif
+
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
 #endif
 #ifdef CONFIG_USB_DWC_OTG
 	&board_kona_otg_platform_device,
 #endif
+
+#if defined(CONFIG_BACKLIGHT_PWM)
+	&pwm_backlight_device,
+#endif
+#if defined(CONFIG_USB_ANDROID)
+        &android_usb_device,
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
+        &usb_mass_storage_device,
+#endif /* CONFIG_USB_ANDROID_MASS_STORAGE */
+#if defined(CONFIG_USB_ANDROID_RNDIS)
+        &rndis_device,
+#endif /* CONFIG_USB_ANDROID_RNDIS */
+#endif /* CONFIG_USB_ANDROID */
 };
 
 void __init board_add_common_devices(void)
 {
+	struct clk *temp_clk;
+
+	/*
+	 * Pre-configure UARTB3 core clock to 29.5 MHz. Bluetooth needs to run
+	 * at 921K which can be derived from 29.5 MHz but not 13 MHz
+	 */
+	temp_clk = clk_get(NULL, uart_clk[2].bus_clk);
+	clk_enable(temp_clk);
+	clk_put(temp_clk);
+
+	temp_clk = clk_get(NULL, uart_clk[2].peri_clk);
+	clk_set_rate(temp_clk, 29500000);
+	uart_data[2].uartclk = 29500000;
+	clk_enable(temp_clk);
+	clk_put(temp_clk);
+
 	platform_add_devices(board_common_plat_devices,
 			ARRAY_SIZE(board_common_plat_devices));
 }

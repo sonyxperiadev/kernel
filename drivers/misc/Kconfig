@@ -297,6 +297,14 @@ config SGI_GRU_DEBUG
 	This option enables addition debugging code for the SGI GRU driver. If
 	you are unsure, say N.
 
+config BRCM_VIRTUAL_SENSOR
+	tristate "Broadcom Virtual Sensor driver"
+	default n
+	---help---
+	If you say yes here you get support of multiplexing of sensor drivers
+	on the kernel level. Sensor drivers must implement registration with the
+	virtual sensor driver.
+
 config ISL29003
 	tristate "Intersil ISL29003 ambient light sensor"
 	depends on I2C && SYSFS

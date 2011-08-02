@@ -862,7 +862,7 @@ static int __devinit keypad_probe(struct platform_device *pdev)
     }
 
     clk_enable(blkp->clock);
-    printk(KERN_INFO "Keypad: driver initialized properly");
+    printk(KERN_INFO "Keypad: driver initialized properly\n");
 
     /* now enable interrupts on keys that are defined in the keymap */
     chal_keypad_interrupt_enable(blkp->regBaseAddr, &blkp->keypad_enable_mask);
