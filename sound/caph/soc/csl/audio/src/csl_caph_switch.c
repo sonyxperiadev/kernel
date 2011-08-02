@@ -638,10 +638,26 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
             sw_config.chnl = csl_caph_switch_obtain_channel();
             sw_config.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(configTable.fifo);
 
-            chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(configTable.routeConfig.inChnl);
-            sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
-            sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(configTable.routeConfig.inChnl);
-            sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+			// temp fix until we have a solution for mono - stereo conversion or SRC mixer pass thru for 48 K Mono
+			if((configTable.src_sampleRate != configTable.snk_sampleRate) || 
+				((configTable.src_sampleRate == AUDIO_SAMPLING_RATE_48000) && (configTable.chnlNum == AUDIO_CHANNEL_STEREO)))
+			{
+					//go through SRC Mixer
+	            	chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(configTable.routeConfig.inChnl);
+	    	        sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+    		        sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(configTable.routeConfig.inChnl);
+					sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+			}
+			else
+			{					
+					//bypass SRC Mixer
+	    	        audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
+           			audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+					sw_config.FIFO_dstAddr = audiohBufAddr.bufAddr;
+					sw_config.trigger = csl_caph_common_GetSwitchTrigger(configTable.sink);
+					sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+			
+			}
         }
 
         // config switch ch2 if needed
