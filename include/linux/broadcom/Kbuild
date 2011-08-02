@@ -3,3 +3,4 @@ header-y += halaudio_ioctl.h
 header-y += halaudio.h
 header-y += halaudio_cfg.h
 header-y += aaa_ioctl.h
+header-y += hdmi.h
