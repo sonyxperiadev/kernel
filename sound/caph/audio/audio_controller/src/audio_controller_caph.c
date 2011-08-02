@@ -48,13 +48,11 @@
 #include "ostask.h"
 #endif
 #include "audio_gain_table.h"
-#include "audioapi_asic.h"
 #include "csl_caph.h"
 #include "csl_caph_gain.h"
 #include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
-#include "audioapi_asic.h"
 //#include "i2s.h"
 #include "log.h"
 #include "osheap.h"

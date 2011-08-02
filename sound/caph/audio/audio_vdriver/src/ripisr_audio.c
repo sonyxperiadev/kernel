@@ -42,14 +42,8 @@
 #include "resultcode.h"
 
 #include "shared.h"
-#include "shared_cp.h"
-#include "vpu.h"
 #include "dspif_voice_play.h"
-#include "audio_vdriver_voice_play.h"
 #include "dspif_voice_record.h"
-#include "audio_vdriver_voice_record.h"
-#include "audio_vdriver_voif.h"
-#include "audio_vdriver_usb.h"
 
 
 #include "csl_aud_drv.h"

@@ -45,7 +45,6 @@
 #endif
 #include "audio_gain_table.h"
 #include "audio_vdriver.h"
-#include "dspcmd.h"
 #include "audio_controller.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "i2s.h"
@@ -53,7 +52,6 @@
 #endif
 #include "log.h"
 #include "xassert.h"
-#include "audioapi_asic.h"
 
 #if !defined(NO_PMU)
 #if defined(EXTERNAL_AMP_CONTROL)

@@ -12,7 +12,6 @@
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
-//#include "string.h"
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"
@@ -34,7 +33,6 @@
 #include "sharedmem.h"
 #include "dspcmd.h"
 #include "csl_apcmd.h"
-#include "audioapi_asic.h"
 #include "log.h"
 
 static UInt8 audioClientId = 0;

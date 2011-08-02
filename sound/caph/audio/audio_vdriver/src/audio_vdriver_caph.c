@@ -38,8 +38,6 @@
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "csl_aud_drv.h"
-//#include "brcm_rdb_sysmap.h"
-//#include "brcm_rdb_syscfg.h"
 #include "shared.h"
 #include "dspcmd.h"
 #ifdef CONFIG_AUDIO_BUILD
@@ -52,8 +50,6 @@
 #include "sysparm.h"
 #endif
 #include "ostask.h"
-#include "audioapi_asic.h"
-#include "audio_ipc.h"
 #include "log.h"
 #include "csl_caph.h"
 #include "csl_apcmd.h"

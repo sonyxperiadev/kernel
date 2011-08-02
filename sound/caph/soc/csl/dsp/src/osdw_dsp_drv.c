@@ -63,7 +63,6 @@
 #include "msconsts.h"
 #include "log.h"
 #include "shared.h"
-#include "shared_cp.h"
 #include "csl_dsp.h"
 
 #include "nandsdram_memmap.h"

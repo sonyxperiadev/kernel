@@ -38,8 +38,6 @@
 #include "resultcode.h"
 #include "audio_consts.h"
 
-//#include "brcm_rdb_sysmap.h"
-//#include "brcm_rdb_syscfg.h"
 #define SYSCFG_BASE_ADDR      0x08880000      /* SYSCFG core */
 #include "shared.h"
 #include "dspcmd.h"
@@ -55,7 +53,6 @@
 #include "audio_vdriver.h"
 //#include "sysparm.h"
 #include "ostask.h"
-#include "audioapi_asic.h"
 #include "log.h"
 #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
 #include "csl_dsp.h"
