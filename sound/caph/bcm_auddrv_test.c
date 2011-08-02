@@ -49,12 +49,11 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "chal_types.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #include "log.h"
-#include "csl_caph.h"
-#include "drv_caph.h"
-#include "drv_audio_common.h"
-#include "drv_caph_hwctrl.h"
+
+
+
 #include "audio_controller.h"
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"

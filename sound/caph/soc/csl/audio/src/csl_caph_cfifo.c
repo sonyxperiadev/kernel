@@ -18,12 +18,17 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 #include "mobcom_types.h"
-#include "auddrv_def.h"
 #include "chal_caph_cfifo.h"
+#include "csl_aud_drv.h"
+#include "csl_caph.h"
+#include "csl_caph_common.h"
 #include "csl_caph_cfifo.h"
+#include "csl_caph_dma.h"
 #include "log.h"
 #include "xassert.h"
 
+//#define _DBG_(a)
+#define _DBG_(a) (a)
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -34,7 +39,7 @@ Broadcom's express prior written consent.
 extern UInt32 cfifo_arb_key;
 extern CAPH_CFIFO_QUEUE_e cfifo_queue;
 extern CSL_CFIFO_TABLE_t CSL_CFIFO_table[];
-
+extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
 //****************************************************************************
 //                         L O C A L   S E C T I O N
 //****************************************************************************
@@ -364,37 +369,6 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataForma
 
 /****************************************************************************
 *
-*  Function Name: CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(
-*                       CSL_CAPH_DATAFOMAT_e dataFormat, 
-*                       CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
-*
-*  Description: Obtain a CAPH CFIFO buffer
-*
-****************************************************************************/
-CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat, 
-                                                CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
-{
-	UInt16 id = 0;
-	
-	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
-
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_ssp_obtain_fifo:: \n"));
-
-	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
-	{
-		if ((CSL_CFIFO_table[id].owner == CAPH_SSP) &&(CSL_CFIFO_table[id].status == 0))
-		{
-			csl_caph_cfifo_ch = (CSL_CAPH_CFIFO_FIFO_e)id;
-			CSL_CFIFO_table[id].status = 1;
-			break;
-		}
-	}
-	return csl_caph_cfifo_ch;
-}
-
-
-/****************************************************************************
-*
 *  Function Name: UInt16 csl_caph_cfifo_get_fifo_thres(CSL_CAPH_CFIFO_FIFO_e fifo)
 *
 *  Description: Obtain a CAPH CFIFO buffer's threshold
@@ -428,6 +402,65 @@ void csl_caph_cfifo_release_fifo(CSL_CAPH_CFIFO_FIFO_e fifo)
 		CSL_CFIFO_table[fifo].status = 0;
 	}
 	return;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_cfifo_config(CSL_CAPH_PathID pathID)
+*
+*  Description: configure CAPH CFIFO buffer
+*
+****************************************************************************/
+void csl_caph_cfifo_config(CSL_CAPH_PathID pathID)    
+{
+    CSL_CAPH_HWConfig_Table_t configTable;    
+    CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate = CSL_CAPH_SRCM_UNDEFINED;
+    CSL_CAPH_DATAFORMAT_e csl_caph_dataformat = CSL_CAPH_16BIT_MONO;
+    CSL_CAPH_CFIFO_FIFO_e fifo = CSL_CAPH_CFIFO_NONE;
+    CSL_CAPH_CFIFO_DIRECTION_e direction = CSL_CAPH_CFIFO_OUT;
+    UInt16 threshold = 0;
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+    // config cfifo	based on data format and sampling rate
+    sampleRate = csl_caph_common_GetCSLSampleRate(configTable.src_sampleRate);
+
+    csl_caph_dataformat = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+
+    if ((configTable.source == CSL_CAPH_DEV_DSP_throughMEM)
+         &&(configTable.sink == CSL_CAPH_DEV_IHF))	
+        fifo = csl_caph_dma_get_csl_cfifo(configTable.dmaCH);
+    else
+        fifo = csl_caph_cfifo_obtain_fifo(csl_caph_dataformat, sampleRate); 
+    // Save the fifo information
+    csl_caph_common_SetPathFifo(configTable.pathID, fifo);
+
+    if (((configTable.source == CSL_CAPH_DEV_MEMORY)
+        ||(configTable.source == CSL_CAPH_DEV_DSP_throughMEM))
+         &&((configTable.sink == CSL_CAPH_DEV_EP)
+	        ||(configTable.sink == CSL_CAPH_DEV_HS)
+	        ||(configTable.sink == CSL_CAPH_DEV_IHF)
+	        ||(configTable.sink == CSL_CAPH_DEV_VIBRA)))
+    { 
+        direction = CSL_CAPH_CFIFO_IN;
+    }
+    else
+    if (((configTable.source == CSL_CAPH_DEV_ANALOG_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_HS_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_R)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
+	    && (configTable.sink == CSL_CAPH_DEV_MEMORY))
+    { 
+        direction = CSL_CAPH_CFIFO_OUT;
+    }
+
+
+    threshold = csl_caph_cfifo_get_fifo_thres(fifo);
+
+    csl_caph_cfifo_config_fifo(fifo, direction, threshold);
+    return;
 }
 
 /****************************************************************************
@@ -489,6 +522,24 @@ UInt32 csl_caph_cfifo_get_fifo_addr(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 	
 	return cfifo_addr;
 }
+
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_cfifo_start(CSL_CAPH_PathID pathID)
+*
+*  Description: start the fifo
+*
+****************************************************************************/
+void csl_caph_cfifo_start(CSL_CAPH_PathID pathID)
+{
+    CSL_CAPH_HWConfig_Table_t configTable;    
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+    csl_caph_cfifo_start_fifo(configTable.fifo);
+    return;
+} 
+
 
 /****************************************************************************
 *

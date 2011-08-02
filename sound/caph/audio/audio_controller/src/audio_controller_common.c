@@ -38,15 +38,12 @@
 #include "resultcode.h"
 
 #include "audio_consts.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
-#include "csl_aud_drv.h"
+
 #endif
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
 #include "audio_gain_table.h"
-#include "auddrv_def.h"
 #include "audio_vdriver.h"
 #include "dspcmd.h"
 #include "audio_controller.h"

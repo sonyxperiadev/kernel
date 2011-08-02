@@ -24,12 +24,14 @@ Broadcom's express prior written consent.
 #include "chal_types.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
+#include "csl_caph_common.h"
 #include "csl_caph_audioh.h"
 #include "csl_caph_gain.h"
 #include "log.h"
-
+//#define _DBG_(a)
+#define _DBG_(a) (a)
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -81,6 +83,11 @@ static UInt8 micStatus = 0x0;
 //******************************************************************************
 // local function definitions
 //******************************************************************************
+
+//******************************************************************************
+// Global function definitions
+//******************************************************************************
+
 
 
 //============================================================================
@@ -145,6 +152,68 @@ void csl_caph_audioh_unconfig(int path_id)
 	path[path_id].eanc_output = 0;
 	return;
 }	
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_config_path(CSL_CAPH_PathID pathID)
+//
+// Description:  Configure the audio path on CSL layer
+//
+// Parameters:   pathID : audio path ID
+//				 
+// Return:      
+//
+//============================================================================
+
+void csl_caph_audioh_config_path(CSL_CAPH_PathID pathID)    
+{
+    CSL_CAPH_HWConfig_Table_t configTable;    
+    audio_config_t audioh_config;
+    AUDDRV_PATH_Enum_t	audioh_path = AUDDRV_PATH_EARPICEC_OUTPUT;	
+    AUDDRV_PATH_Enum_t	audioh_path2 = AUDDRV_PATH_EARPICEC_OUTPUT;	
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+    memset(&audioh_config, 0, sizeof(audio_config_t));
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+    if (((configTable.source == CSL_CAPH_DEV_DSP)
+        ||(configTable.source == CSL_CAPH_DEV_MEMORY)
+        ||(configTable.source == CSL_CAPH_DEV_DSP_throughMEM))
+         &&((configTable.sink == CSL_CAPH_DEV_EP)
+	        ||(configTable.sink == CSL_CAPH_DEV_HS)
+	        ||(configTable.sink == CSL_CAPH_DEV_IHF)
+	        ||(configTable.sink == CSL_CAPH_DEV_VIBRA)))
+    { 
+        audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
+        // if second sink exists.
+        if (configTable.sink2 != CSL_CAPH_DEV_NONE)
+            audioh_path2 = csl_caph_common_GetAudiohPath(configTable.sink2);
+    }
+    else
+    if (((configTable.source == CSL_CAPH_DEV_ANALOG_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_HS_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_R)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
+	    && ((configTable.sink == CSL_CAPH_DEV_MEMORY)
+            || (configTable.sink == CSL_CAPH_DEV_DSP)))
+    { 
+        audioh_path = csl_caph_common_GetAudiohPath(configTable.source);
+    }
+ 
+    // config audioh
+    audioh_config.sample_size = configTable.bitPerSample;
+    audioh_config.sample_pack = DATA_UNPACKED;
+    audioh_config.sample_mode = ((configTable.sink == CSL_CAPH_DEV_HS) ? AUDIO_CHANNEL_STEREO : configTable.chnlNum);
+    csl_caph_audioh_config(audioh_path, (void *)&audioh_config);
+
+    // config second sink 
+    if (configTable.sink2 != CSL_CAPH_DEV_NONE)
+    {
+        audioh_config.sample_mode = ((configTable.sink2 == CSL_CAPH_DEV_HS) ? AUDIO_CHANNEL_STEREO : configTable.chnlNum);
+        csl_caph_audioh_config(audioh_path2, (void *)&audioh_config);
+    } 
+    return; 
+}
 //============================================================================
 //
 // Function Name: void csl_caph_audioh_config(int path_id)
@@ -160,6 +229,9 @@ void csl_caph_audioh_unconfig(int path_id)
 void csl_caph_audioh_config(int path_id, void *p)
 {
 	audio_config_t *pcfg = (void *)p;
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_config:: sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n", 
+		pcfg->sample_rate, pcfg->sample_size, pcfg->sample_mode, pcfg->sample_pack, pcfg->eanc_input, pcfg->eanc_output));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_config:: st out %d tr mode %d.\r\n", pcfg->sidetone_output, pcfg->data_handle_mode));
 
 	path[path_id].sample_rate = pcfg->sample_rate;
 	path[path_id].sample_size = pcfg->sample_size;
@@ -448,6 +520,55 @@ CSL_CAPH_AUDIOH_BUFADDR_t csl_caph_audioh_get_fifo_addr(int path_id)
             audio_xassert(0, path_id);
 	}
     return dualBuf;
+}
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_start_path(CSL_CAPH_PathID pathID)
+//
+// Description:  Start playback or recording on pathID
+//
+// Parameters:   pathID : audio path ID
+//
+// Return:
+//
+//============================================================================
+void csl_caph_audioh_start_path(CSL_CAPH_PathID pathID)
+{
+    CSL_CAPH_HWConfig_Table_t configTable;    
+    AUDDRV_PATH_Enum_t	audioh_path = AUDDRV_PATH_EARPICEC_OUTPUT;	
+    AUDDRV_PATH_Enum_t	audioh_path2 = AUDDRV_PATH_EARPICEC_OUTPUT;	
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+    if (((configTable.source == CSL_CAPH_DEV_MEMORY)
+        ||(configTable.source == CSL_CAPH_DEV_DSP_throughMEM)
+        ||(configTable.source == CSL_CAPH_DEV_DSP))
+         &&((configTable.sink == CSL_CAPH_DEV_EP)
+	        ||(configTable.sink == CSL_CAPH_DEV_HS)
+	        ||(configTable.sink == CSL_CAPH_DEV_IHF)
+	        ||(configTable.sink == CSL_CAPH_DEV_VIBRA)))
+    { 
+        audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
+        if (configTable.sink2 != CSL_CAPH_DEV_NONE)
+            audioh_path2 = csl_caph_common_GetAudiohPath(configTable.sink2);
+    }
+    else
+    if (((configTable.source == CSL_CAPH_DEV_ANALOG_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_HS_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_R)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
+	    && ((configTable.sink == CSL_CAPH_DEV_MEMORY)
+            || (configTable.sink == CSL_CAPH_DEV_DSP)))
+    { 
+        audioh_path = csl_caph_common_GetAudiohPath(configTable.source);
+    }
+ 
+    csl_caph_audioh_start(audioh_path);
+    if (configTable.sink2 != CSL_CAPH_DEV_NONE)
+        csl_caph_audioh_start(audioh_path2);
+    return;
 }
 
 //============================================================================
@@ -910,7 +1031,7 @@ void csl_caph_audioh_mute(int path_id, Boolean mute_ctrl)
 //
 //============================================================================
 
-void csl_caph_audioh_setgain(int path_id ,UInt32 gain_or_bitselect, UInt32 fine_gain)
+void csl_caph_audioh_setgain(int path_id ,UInt32 gain, UInt32 gain1)
 {
 
 	switch(path_id)
@@ -918,7 +1039,7 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain_or_bitselect, UInt32 fine_
 
 		case AUDDRV_PATH_EARPICEC_OUTPUT:
 
-			chal_audio_earpath_set_gain(handle, gain_or_bitselect);
+			chal_audio_earpath_set_gain(handle, gain);
 			break;
 
 		case AUDDRV_PATH_HEADSET_OUTPUT:
@@ -930,7 +1051,7 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain_or_bitselect, UInt32 fine_
 
 		case AUDDRV_PATH_EANC_INPUT:
 
-			chal_audio_eancpath_set_cic_gain(handle, gain_or_bitselect, fine_gain);
+			chal_audio_eancpath_set_cic_gain(handle, gain, gain1);
 
 			break;
 		
@@ -945,32 +1066,20 @@ void csl_caph_audioh_setgain(int path_id ,UInt32 gain_or_bitselect, UInt32 fine_
         case AUDDRV_PATH_ANALOGMIC_INPUT:
         case AUDDRV_PATH_HEADSET_INPUT:
 
-			chal_audio_mic_pga(handle, gain_or_bitselect);
+			chal_audio_mic_pga(handle, gain);
 
 			break;
         case AUDDRV_PATH_VIN_INPUT:
         case AUDDRV_PATH_VIN_INPUT_L:
         case AUDDRV_PATH_VIN_INPUT_R:
-#if ( CHIP_REVISION == 10 )		//# A0
-			chal_audio_vinpath_set_cic_scale(handle, gain_or_bitselect, fine_gain,
-				       	gain_or_bitselect, fine_gain);
-#endif
-#if ( CHIP_REVISION == 20 )		//# B0
-			chal_audio_vinpath_set_cic_scale(handle, gain_or_bitselect | fine_gain,
-				       	gain_or_bitselect | fine_gain);
-#endif
+			chal_audio_vinpath_set_cic_scale(handle, gain, gain1,
+				       	gain, gain1);			
 			break;		
         case AUDDRV_PATH_NVIN_INPUT:
         case AUDDRV_PATH_NVIN_INPUT_L:
         case AUDDRV_PATH_NVIN_INPUT_R:
-#if ( CHIP_REVISION == 10 )		//# A0
-			chal_audio_nvinpath_set_cic_scale(handle, gain_or_bitselect, fine_gain,
-				       	gain_or_bitselect, fine_gain);
-#endif
-#if ( CHIP_REVISION == 20 )		//# B0
-			chal_audio_nvinpath_set_cic_scale(handle, gain_or_bitselect | fine_gain,
-				       	gain_or_bitselect | fine_gain);
-#endif
+			chal_audio_nvinpath_set_cic_scale(handle, gain, gain1,
+				       	gain, gain1);			
 			break;		
 			
 		default:
@@ -1207,12 +1316,7 @@ void csl_audio_audiotx_get_dac_ctrl(CSL_CAPH_AUDIOH_DACCTRL_t *readdata)
 
 void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 {
-#if ( CHIP_REVISION == 10 )		//# A0
 	chal_audio_stpath_load_filter(handle, coeff );
-#endif
-#if ( CHIP_REVISION == 20 )		//# B0
-	chal_audio_stpath_load_filter(handle, coeff, 0 );
-#endif
 	return;
 }	
 

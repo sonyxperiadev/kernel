@@ -141,7 +141,7 @@ typedef enum AUDCTRL_MIX_SELECT_t
 
 typedef struct
 {
-    AUDDRV_PathID           pathID;
+    CSL_CAPH_PathID           pathID;
 	AUDIO_HW_ID_t			src;
 	AUDIO_HW_ID_t			sink;
 	AUDCTRL_MICROPHONE_t	mic;
@@ -654,7 +654,7 @@ void AUDCTRL_SetGainOnExternalAmp(UInt32 gain);
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded);
+void AUDCTRL_LoadMicGain(CSL_CAPH_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded);
 
 
 /**
@@ -667,7 +667,7 @@ void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boole
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_LoadSpkrGain(AUDDRV_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded);
+void AUDCTRL_LoadSpkrGain(CSL_CAPH_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded);
 
 
 
@@ -756,7 +756,7 @@ void AUDCTRL_SetSidetoneLoopback(
 *  @return data configraton. 
 *
 ****************************************************************************/
-AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID);
+AUDCTRL_Config_t AUDCTRL_GetFromTable(CSL_CAPH_PathID pathID);
 
 
 /********************************************************************
@@ -767,7 +767,7 @@ AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID);
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_RemoveFromTable(AUDDRV_PathID pathID);
+void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID);
 
 /********************************************************************
 *  @brief  Add a path to the Table

@@ -27,9 +27,9 @@
 
 #include "xassert.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
+#include "csl_aud_drv.h"
+
+
 #include "audio_vdriver.h"
 #include "sharedmem.h"
 #include "dspcmd.h"
@@ -114,7 +114,6 @@ void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
                             ResultDataBufHandle_t dataBufHandle,
                             UInt32 userContextData)
 {   
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* TeST 3G WB *\n\r");
 	if (MSG_AUDIO_CALL_STATUS_IND == pMsg->msgId )
 	{
 		UInt32* codecID = NULL;

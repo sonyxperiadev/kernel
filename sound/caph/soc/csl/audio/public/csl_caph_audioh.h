@@ -57,9 +57,11 @@ typedef enum
 
 void csl_caph_audioh_init (UInt32 baseAddr, UInt32 sdtBaseAddr);
 void csl_caph_audioh_deinit(void);
+void csl_caph_audioh_config_path(CSL_CAPH_PathID pathID); 
 void csl_caph_audioh_config(int path_id, void *pcfg);
 void csl_caph_audioh_unconfig(int path_id);
 CSL_CAPH_AUDIOH_BUFADDR_t csl_caph_audioh_get_fifo_addr(int path_id);
+void csl_caph_audioh_start_path(CSL_CAPH_PathID pathID);
 void csl_caph_audioh_start(int path_id);
 void csl_caph_audioh_stop_keep_config(int path_id);
 void csl_caph_audioh_stop(int path_id);

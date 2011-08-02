@@ -96,6 +96,17 @@ void csl_caph_cfifo_release_fifo(CSL_CAPH_CFIFO_FIFO_e fifo);
 void csl_caph_cfifo_config_fifo(CSL_CAPH_CFIFO_FIFO_e fifo, 
                                 CSL_CAPH_CFIFO_DIRECTION_e  direction, 
                                 UInt16 threshold);
+
+/**
+*
+*  @brief  configure the caph cfifo 
+*
+*  @param   pathID  (in) path ID
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_cfifo_config(CSL_CAPH_PathID pathID); 
+
 /**
 *
 *  @brief  Get the caph cfifo buffer address 
@@ -105,6 +116,16 @@ void csl_caph_cfifo_config_fifo(CSL_CAPH_CFIFO_FIFO_e fifo,
 *  @return UInt32   buffer address
 *****************************************************************************/
 UInt32 csl_caph_cfifo_get_fifo_addr(CSL_CAPH_CFIFO_FIFO_e fifo);
+
+/**
+*
+*  @brief  start the transferring on the caph cfifo buffer 
+*
+*  @param   pathID  (in) pathID 
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_cfifo_start(CSL_CAPH_PathID pathID);
 
 /**
 *

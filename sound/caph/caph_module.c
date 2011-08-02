@@ -47,8 +47,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
+#include "csl_aud_drv.h"
 
 
 #include "audio_controller.h"

@@ -43,8 +43,6 @@
 #include "sysparm.h"
 #endif
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
 #include "csl_aud_queue.h"
 #include "dspif_voice_record.h"
 #include "csl_apcmd.h"

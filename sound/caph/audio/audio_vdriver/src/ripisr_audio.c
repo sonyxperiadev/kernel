@@ -38,7 +38,7 @@
 #include "ostask.h"
 #include "osqueue.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
+
 #include "resultcode.h"
 
 #include "shared.h"
@@ -51,12 +51,15 @@
 #include "audio_vdriver_voif.h"
 #include "audio_vdriver_usb.h"
 
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
+
+#include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "auddrv_audlog.h"
 #include "msconsts.h"
 #include "log.h"
+
+#define _DBG_(a)		a
+//#define _DBG_(a)
 
 extern int IPC_AudioControlSend(char *buff, UInt32 len);
 

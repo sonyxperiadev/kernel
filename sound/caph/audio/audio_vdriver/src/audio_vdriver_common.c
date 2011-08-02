@@ -37,7 +37,7 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
+
 //#include "brcm_rdb_sysmap.h"
 //#include "brcm_rdb_syscfg.h"
 #define SYSCFG_BASE_ADDR      0x08880000      /* SYSCFG core */
@@ -50,8 +50,8 @@
 
 #include "audio_consts.h"
 //#include "ripcmdq.h"
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
+
+#include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 //#include "sysparm.h"
 #include "ostask.h"

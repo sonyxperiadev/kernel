@@ -46,8 +46,6 @@
 #include "sysparm.h"
 #endif
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "dspcmd.h"

@@ -19,10 +19,12 @@ Broadcom's express prior written consent.
 ****************************************************************************/
 #include "xassert.h"
 #include "log.h"
-#include "auddrv_def.h"
+#include "mobcom_types.h"
 #include "chal_caph_dma.h"
 #include "chal_caph_intc.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
+#include "csl_caph_common.h"
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_dma.h"
 
@@ -561,6 +563,56 @@ void csl_caph_dma_release_channel(CSL_CAPH_DMA_CHNL_e chnl)
 	return;
 }
 
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_dma_config(CSL_CAPH_PathID pathID)
+*
+*  Description: assign and configure CAPH DMA channel
+*
+****************************************************************************/
+void csl_caph_dma_config(CSL_CAPH_PathID pathID)    
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_config:: \n");
+
+    CSL_CAPH_DMA_CONFIG_t dmaConfig;
+    CSL_CAPH_HWConfig_Table_t configTable;    
+	memset(&dmaConfig, 0, sizeof(CSL_CAPH_DMA_CONFIG_t));
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+
+    if ((configTable.source == CSL_CAPH_DEV_MEMORY)
+         &&((configTable.sink == CSL_CAPH_DEV_EP)
+	        ||(configTable.sink == CSL_CAPH_DEV_HS)
+	        ||(configTable.sink == CSL_CAPH_DEV_IHF)
+	        ||(configTable.sink == CSL_CAPH_DEV_VIBRA)))
+    { 
+        dmaConfig.direction = CSL_CAPH_DMA_IN;
+    }
+    else
+    if (((configTable.source == CSL_CAPH_DEV_ANALOG_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_HS_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_R)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
+	    && (configTable.sink == CSL_CAPH_DEV_MEMORY))
+    { 
+        dmaConfig.direction = CSL_CAPH_DMA_OUT;
+    }
+ 
+    dmaConfig.dma_ch = configTable.dmaCH;
+    dmaConfig.fifo = configTable.fifo;
+    dmaConfig.mem_addr = configTable.pBuf;
+    dmaConfig.mem_size = configTable.size;
+    dmaConfig.Tsize = CSL_AADMAC_TSIZE;
+    dmaConfig.dmaCB = configTable.dmaCB;
+    csl_caph_dma_config_channel(dmaConfig);
+    csl_caph_dma_enable_intr(configTable.dmaCH, CSL_CAPH_ARM);
+ 
+    return;
+}
+
 /****************************************************************************
 *
 *  Function Name:void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
@@ -668,6 +720,21 @@ void csl_caph_dma_switch_buffer(CSL_CAPH_DMA_CONFIG_t chnl_config)
 }
 
 
+/****************************************************************************
+*
+*  Function Name: void csl_caph_dma_start(CSL_CAPH_PathID pathID)
+*
+*  Description: start the channel
+*
+****************************************************************************/
+void csl_caph_dma_start(CSL_CAPH_PathID pathID)
+{
+    CSL_CAPH_HWConfig_Table_t configTable;    
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+    csl_caph_dma_start_transfer(configTable.dmaCH);
+    return;
+}
 /****************************************************************************
 *
 *  Function Name: void csl_caph_dma_start_transfer(CSL_CAPH_DMA_CHNL_e chnl)

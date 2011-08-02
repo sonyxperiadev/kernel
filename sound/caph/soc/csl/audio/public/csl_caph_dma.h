@@ -80,6 +80,15 @@ void csl_caph_dma_release_channel(CSL_CAPH_DMA_CHNL_e chnl);
 *
 *  @brief  configure the caph dma channel 
 *
+*  @param   pathID (in) path ID
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_dma_config(CSL_CAPH_PathID pathID); 
+/**
+*
+*  @brief  configure the caph dma channel 
+*
 *  @param   chnl_config  (in) caph dma channel configuration parameter
 *
 *  @return void
@@ -103,6 +112,16 @@ void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config);
 *  @return void
 *****************************************************************************/
 void csl_caph_dma_switch_buffer(CSL_CAPH_DMA_CONFIG_t chnl_config);
+/**
+*
+*  @brief  start the transferring on the caph dma channel 
+*
+*  @param   pathID  (in) path ID
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_dma_start(CSL_CAPH_PathID pathID);
+
 /**
 *
 *  @brief  start the transferring on the caph dma channel 

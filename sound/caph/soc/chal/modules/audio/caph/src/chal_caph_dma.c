@@ -828,8 +828,7 @@ cVoid chal_caph_dma_clr_channel_fifo(CHAL_HANDLE handle,
 
     }
 
-#else
-	error----;  //to catch build error
+
 #endif
 
     return;

@@ -21,9 +21,14 @@ Broadcom's express prior written consent.
 #include "xassert.h"
 #include "log.h"
 #include "resultcode.h"
-#include "auddrv_def.h"
-#include "csl_caph.h"
+#include "mobcom_types.h"
+#include "csl_aud_drv.h"
 #include "chal_caph_switch.h"
+#include "csl_caph.h"
+#include "csl_caph_common.h"
+#include "csl_caph_audioh.h"
+#include "csl_caph_cfifo.h"
+#include "csl_caph_srcmixer.h"
 #include "csl_caph_switch.h"
 
 
@@ -585,17 +590,248 @@ CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_channel(void)
 void csl_caph_switch_release_channel(CSL_CAPH_SWITCH_CHNL_e chnl)    
 {
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
-
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_release_channel:: \n"));
-
-    chal_chnl = csl_caph_switch_get_chalchnl(chnl);
-    chal_caph_switch_free_channel(handle, chal_chnl);
-
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_switch_release_channel:: chnl = 0x%x\n", 
                     chnl));
 
+    chal_chnl = csl_caph_switch_get_chalchnl(chnl);
+    chal_caph_switch_free_channel(handle, chal_chnl);
 	return;
+}
+
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_switch_config(CSL_CAPH_PathID pathID)
+*
+*  Description: configure CAPH switch channel
+*
+****************************************************************************/
+void csl_caph_switch_config(CSL_CAPH_PathID pathID)    
+{
+    CSL_CAPH_SWITCH_CONFIG_t sw_config, sw_config2, sw_config3;
+    CSL_CAPH_HWConfig_Table_t configTable;    
+    CSL_CAPH_AUDIOH_BUFADDR_t audiohBufAddr;  
+    CAPH_SRCMixer_FIFO_e chal_src_fifo = CAPH_CH_INFIFO_NONE;
+    AUDDRV_PATH_Enum_t	audioh_path = AUDDRV_PATH_EARPICEC_OUTPUT;	
+    memset(&sw_config, 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+    memset(&sw_config2, 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+    memset(&sw_config3, 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+	memset(&audiohBufAddr, 0, sizeof(CSL_CAPH_AUDIOH_BUFADDR_t));
+
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+
+    if ((configTable.source == CSL_CAPH_DEV_MEMORY)
+         &&((configTable.sink == CSL_CAPH_DEV_EP)
+	        ||(configTable.sink == CSL_CAPH_DEV_HS)
+	        ||(configTable.sink == CSL_CAPH_DEV_IHF)
+	        ||(configTable.sink == CSL_CAPH_DEV_VIBRA)
+            ||(configTable.sink2 == CSL_CAPH_DEV_EP)
+	        ||(configTable.sink2 == CSL_CAPH_DEV_HS)
+	        ||(configTable.sink2 == CSL_CAPH_DEV_IHF)
+	        ||(configTable.sink2 == CSL_CAPH_DEV_VIBRA)))
+    { 
+        //Config the 1st switch channel
+        if (configTable.switchCH.chnl == CSL_CAPH_SWITCH_NONE)
+        {
+            sw_config.chnl = csl_caph_switch_obtain_channel();
+            sw_config.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(configTable.fifo);
+
+            chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(configTable.routeConfig.inChnl);
+            sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+            sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(configTable.routeConfig.inChnl);
+            sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+        }
+
+        // config switch ch2 if needed
+        if (configTable.switchCH2.chnl == CSL_CAPH_SWITCH_NONE)
+        {
+            sw_config2.chnl = csl_caph_switch_obtain_channel();
+            
+            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.routeConfig.outChnl);
+            sw_config2.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+            audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
+            audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+            sw_config2.FIFO_dstAddr = audiohBufAddr.bufAddr;
+            sw_config2.trigger = csl_caph_common_GetSwitchTrigger(configTable.sink);
+            sw_config2.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+        }
+
+        // If the second sink exists, configure switch CH3.
+        if (configTable.sink2 != CSL_CAPH_DEV_NONE)
+        {
+            if (configTable.switchCH3.chnl == CSL_CAPH_SWITCH_NONE)
+            {
+                sw_config3.chnl = csl_caph_switch_obtain_channel();
+                chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.routeConfig2.outChnl);
+                sw_config3.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+                audioh_path = csl_caph_common_GetAudiohPath(configTable.sink2);
+                audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+                sw_config3.FIFO_dstAddr = audiohBufAddr.bufAddr;
+                sw_config3.trigger = csl_caph_common_GetSwitchTrigger(configTable.sink2);
+                sw_config3.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+            }
+        }
+    }
+    else
+    if (((configTable.source == CSL_CAPH_DEV_ANALOG_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_HS_MIC)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_DIGI_MIC_R)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
+	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
+	    && (configTable.sink == CSL_CAPH_DEV_MEMORY))
+    { 
+        if (configTable.switchCH.chnl == CSL_CAPH_SWITCH_NONE)
+        {
+            sw_config.chnl = csl_caph_switch_obtain_channel();
+
+            audioh_path = csl_caph_common_GetAudiohPath(configTable.source);
+            audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+            sw_config.FIFO_srcAddr = audiohBufAddr.bufAddr;
+ 
+            sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(configTable.fifo);
+            sw_config.trigger = csl_caph_common_GetSwitchTrigger(configTable.source);
+            sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+        }
+    }
+    else
+    if (((configTable.source == CSL_CAPH_DEV_ANALOG_MIC)
+         ||(configTable.source == CSL_CAPH_DEV_HS_MIC)       
+         ||(configTable.source == CSL_CAPH_DEV_DIGI_MIC_L)       
+         ||(configTable.source == CSL_CAPH_DEV_DIGI_MIC_R)       
+         ||(configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)       
+         ||(configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))       
+        &&(configTable.sink == CSL_CAPH_DEV_DSP))
+    {
+        if (configTable.switchCH.chnl == CSL_CAPH_SWITCH_NONE)
+        {
+        	sw_config.chnl = csl_caph_switch_obtain_channel();
+            audioh_path = csl_caph_common_GetAudiohPath(configTable.source);
+            audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+            sw_config.FIFO_srcAddr = audiohBufAddr.bufAddr;
+            chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(configTable.routeConfig.inChnl);
+            sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo );
+            sw_config.trigger = csl_caph_common_GetSwitchTrigger(configTable.source);
+            sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+        }
+    }
+    else
+    if ((configTable.source == CSL_CAPH_DEV_DSP)
+        &&((configTable.sink == CSL_CAPH_DEV_EP)
+        ||(configTable.sink == CSL_CAPH_DEV_HS)
+        ||(configTable.sink2 == CSL_CAPH_DEV_HS)
+        ||(configTable.sink2 == CSL_CAPH_DEV_HS)))
+    {
+        if (configTable.switchCH.chnl == CSL_CAPH_SWITCH_NONE)
+        {
+ 
+            // config switch
+            sw_config.chnl = csl_caph_switch_obtain_channel();
+       
+            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.routeConfig.outChnl);
+            sw_config.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+
+            audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
+            audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+            sw_config.FIFO_dstAddr = audiohBufAddr.bufAddr;
+       
+            // set the trigger based on the sink
+            sw_config.trigger = csl_caph_common_GetSwitchTrigger(configTable.sink);
+            sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+        }
+        else
+        if (configTable.switchCH2.chnl == CSL_CAPH_SWITCH_NONE)
+        {
+            // config switch
+            sw_config2.chnl = csl_caph_switch_obtain_channel();
+       
+            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.routeConfig2.outChnl);
+            sw_config2.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+
+            audioh_path = csl_caph_common_GetAudiohPath(configTable.sink2);
+            audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+            sw_config2.FIFO_dstAddr = audiohBufAddr.bufAddr;
+       
+            // set the trigger based on the sink
+            sw_config2.trigger = csl_caph_common_GetSwitchTrigger(configTable.sink2);
+            sw_config2.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+        }
+ 
+    }
+    else
+    if ((configTable.source == CSL_CAPH_DEV_DSP_throughMEM)
+            &&(configTable.sink == CSL_CAPH_DEV_IHF))	
+    {
+   	    sw_config.chnl = csl_caph_switch_obtain_channel();
+
+        sw_config.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(configTable.fifo);
+
+        audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
+        audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+        sw_config.FIFO_dstAddr = audiohBufAddr.bufAddr;
+
+        sw_config.trigger = csl_caph_common_GetSwitchTrigger(configTable.sink);
+        sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
+    }
+
+    if (sw_config.chnl != CSL_CAPH_SWITCH_NONE)
+    {
+        // finally config SW   
+        sw_config.status = csl_caph_switch_config_channel(sw_config);
+        // Save the switch channel information
+        csl_caph_common_SetPathSwitchCH(pathID, sw_config);
+    }
+
+    if (sw_config2.chnl != CSL_CAPH_SWITCH_NONE)
+    {
+        sw_config2.status = csl_caph_switch_config_channel(sw_config2);
+        csl_caph_common_SetPathSwitchCH2(pathID, sw_config2);
+    }
+
+    if (sw_config3.chnl != CSL_CAPH_SWITCH_NONE)
+    {
+        sw_config3.status = csl_caph_switch_config_channel(sw_config3);
+        csl_caph_common_SetPathSwitchCH3(pathID, sw_config3);
+    }
+    return;
+}
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_switch_config(CSL_CAPH_PathID pathID)
+*
+*  Description: configure CAPH switch channel
+*
+****************************************************************************/
+void csl_caph_switch_config_forSwitchPath(CSL_CAPH_PathID pathID)    
+{
+    CSL_CAPH_HWConfig_Table_t configTable;    
+    CSL_CAPH_AUDIOH_BUFADDR_t audiohBufAddr;  
+    AUDDRV_PATH_Enum_t	audioh_path = AUDDRV_PATH_EARPICEC_OUTPUT;	
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+	memset(&audiohBufAddr, 0, sizeof(CSL_CAPH_AUDIOH_BUFADDR_t));
+
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+
+    if ((configTable.source == CSL_CAPH_DEV_MEMORY)
+         &&((configTable.sink == CSL_CAPH_DEV_EP)
+	        ||(configTable.sink == CSL_CAPH_DEV_HS)
+	        ||(configTable.sink == CSL_CAPH_DEV_IHF)
+	        ||(configTable.sink == CSL_CAPH_DEV_VIBRA)))
+    { 
+        // config switch ch2
+        audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
+        audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
+        configTable.switchCH2.FIFO_dstAddr = audiohBufAddr.bufAddr;
+        configTable.switchCH2.trigger = csl_caph_common_GetSwitchTrigger(configTable.sink);
+        // finally config SW   
+        configTable.switchCH2.status = csl_caph_switch_config_channel(configTable.switchCH2);
+       // Save the switch channel information
+       csl_caph_common_SetPathSwitchCH2(pathID, configTable.switchCH2);
+    }
+    return;
 }
 
 /****************************************************************************
@@ -718,6 +954,30 @@ void csl_caph_switch_remove_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr
 
 /****************************************************************************
 *
+*  Function Name: void csl_caph_switch_start(CSL_CAPH_PathID pathID)
+*
+*  Description: start the channel
+*
+****************************************************************************/
+void csl_caph_switch_start(CSL_CAPH_PathID pathID)
+{
+    CSL_CAPH_HWConfig_Table_t configTable;    
+    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
+    configTable = csl_caph_common_GetPath_FromPathID(pathID);
+
+    if (configTable.switchCH.chnl != CSL_CAPH_SWITCH_NONE)
+        csl_caph_switch_start_transfer(configTable.switchCH.chnl);
+        
+    if (configTable.switchCH2.chnl != CSL_CAPH_SWITCH_NONE)
+        csl_caph_switch_start_transfer(configTable.switchCH2.chnl);
+
+    if (configTable.switchCH3.chnl != CSL_CAPH_SWITCH_NONE)
+        csl_caph_switch_start_transfer(configTable.switchCH3.chnl);
+
+    return; 
+}
+/****************************************************************************
+*
 *  Function Name: void csl_caph_switch_start_transfer(CSL_CAPH_SWITCH_CHNL_e chnl)
 *
 *  Description: start the channel
@@ -762,12 +1022,6 @@ void csl_caph_switch_stop_transfer(CSL_CAPH_SWITCH_CHNL_e chnl)
     chal_chnl = csl_caph_switch_get_chalchnl(chnl);
     /* Stop this channel */
     chal_caph_switch_disable(handle, chal_chnl);
-#if 0 //The following work is done in _release_channel(). So may be removed.
-    // reset src to default	
-    chal_caph_switch_select_src(handle, chal_chnl, 0x0);
-    // reset trigger to default	
-    chal_caph_switch_select_trigger(handle, chal_chnl, CAPH_VOID);	
-#endif    
 	return;
 }
 

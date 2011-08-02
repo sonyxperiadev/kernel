@@ -116,6 +116,28 @@ void csl_caph_srcmixer_release_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e chnl);
 *****************************************************************************/
 void csl_caph_srcmixer_release_tapoutchnl(CSL_CAPH_SRCM_SRC_OUTCHNL_e chnl);
 
+
+/**
+*
+*  @brief  configure the caph srcmixer 
+*
+*  @param   pathID  (in) path ID
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_srcmixer_config(CSL_CAPH_PathID pathID); 
+
+
+/**
+*
+*  @brief  configure the caph srcmixer when adding new mixer output Path. 
+*
+*  @param   pathID  (in) path ID
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_srcmixer_config_forAddingOutputPath(CSL_CAPH_PathID pathID); 
+
 /**
 *
 *  @brief  configure the caph srcmixer mixer route 
@@ -276,14 +298,18 @@ UInt16 csl_caph_srcmixer_get_chal_inchnl(UInt16 inChnl);
 *****************************************************************************/
 void csl_caph_srcmixer_set_inchnl_status(CSL_CAPH_SRCM_INCHNL_e chnl);
 
+
 /**
 *
-*  @brief  Get the tap output based on its SRC input
+*  @brief  Clear the SRCMixer outchnl usage table to remove input channel
 *
-*  @param   inChnl  (in) csl SRC inchnl
+*  @param   outChnl  (in) csl outchnl
+*  @param   inChnl  (in) csl inchnl
 *
-*  @return CSL_CAPH_SRCM_SRC_OUTCHNL_e SRC TAP output channel
-****************************************************************************/
-CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
+*  @return void
+*****************************************************************************/
+void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+                                          CSL_CAPH_SRCM_INCHNL_e inChnl);
+
 #endif // _CSL_CAPH_SRCMIXER_
 

@@ -61,6 +61,30 @@ CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_channel(void);
 *****************************************************************************/
 void csl_caph_switch_release_channel(CSL_CAPH_SWITCH_CHNL_e chnl);
 
+
+/**
+*
+*  @brief  configure the caph switch channel 
+*
+*  @param   pathID  (in) path ID
+*
+*  @return none 
+*****************************************************************************/
+void csl_caph_switch_config(CSL_CAPH_PathID pathID); 
+
+
+/**
+*
+*  @brief  configure the caph switch channel for path switching. 
+*
+*  @param   pathID  (in) path ID
+*
+*  @return none 
+*****************************************************************************/
+void csl_caph_switch_config_forSwitchPath(CSL_CAPH_PathID pathID); 
+
+
+
 /**
 *
 *  @brief  configure the caph switch channel 
@@ -92,6 +116,17 @@ Result_t csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAdd
 *  @return void
 *****************************************************************************/
 void csl_caph_switch_remove_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr);
+
+/**
+*
+*  @brief  start the transferring on the caph switch channel 
+*
+*  @param   pathID  (in) path ID
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_switch_start(CSL_CAPH_PathID pathID);
+
 
 /**
 *

@@ -42,7 +42,6 @@
 #include "resultcode.h"
 
 #include "audio_consts.h"
-#include "auddrv_def.h"
 #include "tones_def.h"
 #include "audioapi_asic.h"
 #include "sharedmem.h"

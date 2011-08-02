@@ -46,8 +46,9 @@
 #include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 #include "osdal_os.h"
-#include "auddrv_def.h"
+
 #include "log.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "csl_apcmd.h"
 #include "csl_audio_render.h"

@@ -43,8 +43,6 @@
 #include "msconsts.h"
 #include "shared.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
 #endif

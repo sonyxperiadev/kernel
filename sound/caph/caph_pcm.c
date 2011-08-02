@@ -48,8 +48,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "audio_consts.h"
 
-#include "auddrv_def.h"
-#include "drv_caph.h"
+#include "csl_aud_drv.h"
 // Include BRCM AAUD driver API header files
 #include "audio_controller.h"
 #include "dspif_voice_play.h"

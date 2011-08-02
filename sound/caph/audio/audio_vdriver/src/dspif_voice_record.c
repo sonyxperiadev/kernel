@@ -26,8 +26,6 @@ Broadcom's express prior written consent.
 #include "sysparm.h"
 #endif
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
 #include "dspif_voice_record.h"
 #include "sharedmem.h"
 #include "dspcmd.h"
