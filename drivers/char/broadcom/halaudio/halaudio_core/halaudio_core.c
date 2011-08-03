@@ -2410,8 +2410,7 @@ static int halaudio_set_power_unsafe( HALAUDIO_POWER_LEVEL final_level, HALAUDIO
       /* Delay 800 ms before cutting power to allow time for audio
        * buffers to flush
        */
-      set_current_state( TASK_INTERRUPTIBLE );
-      schedule_timeout( gHalAudioSleepDelayMsec );
+      schedule_timeout_interruptible( (HZ * gHalAudioSleepDelayMsec) / 1000 );
 
       /* Disable interfaces */
       local_irq_save( flags );
