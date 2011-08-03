@@ -245,6 +245,11 @@ static struct resource kona_otg_platform_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
 		.start = BCM_INT_ID_USB_HSOTG,
 		.end = BCM_INT_ID_USB_HSOTG,
 		.flags = IORESOURCE_IRQ,
@@ -281,7 +286,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
 #endif
-    &pmu_device,
+	&pmu_device,
 #ifdef CONFIG_USB
 	&board_kona_hsotgctrl_platform_device,
 #endif

@@ -157,7 +157,7 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		UInt32 val = audio_control_dsp(p->param1,p->param2,p->param3,p->param4,p->param5,p->param6);
 		
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_CTRL_DSP_RSP, &val);
-#ifdef CONFIG_AUDIO_BUILD	
+//#ifdef CONFIG_AUDIO_BUILD	
 	}
 	else if(pMsg->msgId == MSG_AUDIO_COMP_FILTER_REQ)
 	{
@@ -165,7 +165,7 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		UInt32 val = audio_cmf_filter(p);
 		
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_COMP_FILTER_RSP, &val);
-#endif
+//#endif
 	}
 	else
 		xassert(0, pMsg->msgId);

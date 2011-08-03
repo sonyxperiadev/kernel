@@ -1089,7 +1089,7 @@ static void AUDIO_DRIVER_RenderVoiceCallback1(UInt16 buf_index)
 
 	//copy the data from ring buffer to shared memory
 	
-	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K );
+	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K, pAudDrv->speech_mode );
 
 	srcIndex += copied_bytes;
 
@@ -1146,7 +1146,7 @@ static void AUDIO_DRIVER_RenderVoiceCallback2(UInt16 buf_index)
 		
 	//copy the data from ring buffer to shared memory
 		
-	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K );
+	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K, pAudDrv->speech_mode );
 	
 	srcIndex += copied_bytes;
 	

@@ -24,6 +24,7 @@ Broadcom's express prior written consent.
 #include "brcm_rdb_audioh.h"
 #include "brcm_rdb_sdt.h"
 #include "brcm_rdb_util.h"
+#include "log.h"
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N

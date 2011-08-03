@@ -494,6 +494,21 @@ static CAPH_SWITCH_TRIGGER_e csl_caph_switch_get_trigger(CSL_CAPH_SWITCH_TRIGGER
 		case CSL_CAPH_TRIG_MIX2_OUT2_THR:
 			chal_trig = CAPH_TRIG_MIX2_OUT2_THR;
 			break;
+		case CSL_CAPH_48KHZ:
+			chal_trig = CAPH_48KHZ;
+			break;
+		case CSL_CAPH_24KHZ:
+			chal_trig = CAPH_24KHZ;
+			break;
+		case CSL_CAPH_16KHZ:
+			chal_trig = CAPH_16KHZ;
+			break;
+		case CSL_CAPH_8KHZ:
+			chal_trig = CAPH_8KHZ;
+			break;
+		case CSL_CAPH_4KHZ:
+			chal_trig = CAPH_4KHZ;
+			break;
         default:
             audio_xassert(0, trigger);
     };

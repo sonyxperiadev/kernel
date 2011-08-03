@@ -303,6 +303,20 @@ typedef enum
 }Mode_WFS_t;
 
 
+typedef enum
+{
+	DSP_VIS = 0XF00,
+	DSP_SMICONF = 0XF01,
+	DSP_BOOST_DDR = 0XF02,
+	DSP_GO_TURBO = 0XF03,
+	DSP_GO_NORMAL = 0XF04,
+	DSP_GO_ECONOMY = 0XF05,
+	DSP_GO_RETENTION = 0XF06
+} StatusPwrMgrDsp;
+
+
+
+
 //******************************************************************************
 // Handy Shared memory macros for Frame entry access
 //******************************************************************************
@@ -1824,7 +1838,7 @@ typedef enum
     COMMAND_ENABLE_RFIC_DEBUG_DATA,            // 0x81
     COMMAND_EPC,                               // 0x82     ( setup EPC mode, arg0 = EPC mode enable/disable, arg1 = FPC enable/disable )
     NOT_USE_COMMAND_83,				// 0x83		
-    COMMAND_MIC2SPK,				// 0x84		(  )
+    NOT_USE_COMMAND_84,				// 0x84	
 	COMMAND_ENABLE_DSP_TESTPOINTS,	// 0x85	( arg0 = testpoint mode, if arg0 == 2 then arg1 = shared_testpoint_data_buf_wrap_idx )
 	COMMAND_RESET_HQ_ADC,			// 0x86	( arg0 = HQ_ADC_mode = [b1|b0]=[enable(1) STATUS_HQ_ADC_PAGE_DONE|1/0=stereo/mono(L)] )
 	NOT_USE_COMMAND_87,				// 0x87	
@@ -1873,7 +1887,7 @@ typedef enum
 	CORE_TL3210_DUMP,						// 0x96 Core dump to MTT at any time of processing
 	COMMAND_CLEAR_VOIPMODE,					// 0x97 (arg0 = 0 to clear VOIPmode)
  	COMMAND_SMC_FCWR_CNFG_ENABLE,			// 0x98 (arg0 = 1 to enable)
- 	COMMAND_SET_20MS_TRIGGER,				// 0x99 (arg0=[1/0]=[enable/disable] 20ms status trigger to arm)
+ 	NOT_USE_COMMAND_99,						// 0x99 
 	COMMAND_MODEM_LOGGING_ENABLE,			// 0x9A
 	NOT_USE_COMMAND_9B,						// 0x9B	
 	COMMAND_DSP_VIS_ENABLE,					// 0x9C (arg0 = TRACE/ATB SELECTION, arg1 = ATB ID/TRACE CONTROL, arg2= ATB CONTROL)		
@@ -2181,7 +2195,7 @@ typedef enum
 	STATUS_CURR_MIN_STACK_PTR,			// 0x40 Report the current minimum stack pointer
 	STATUS_SHARED_MEM_SIZE,				// 0x41
 	STATUS_CORE_TL3210_DUMP,			// 0x42
- 	STATUS_20MS_TRIGGER,				// 0x43 (arg0=[1/0]=[enable/disable] 20ms status trigger to arm)
+ 	NOT_USE_STATUS_43,					// 0x43 
 	STATUS_IQ_DEBUG_DATA_READY,			// 0x44
 	NOT_USE_STATUS_45,					// 0x45
 	STATUS_MODEM_DATA_READY,			// 0x46
@@ -2192,7 +2206,9 @@ typedef enum
 	STATUS_DSP_SYNC,					// 0x4b DSP sync status
 	STATUS_DSP_MIPI_WRITE,				// 0x4c DSP MIPI write finished
 	STATUS_SHORT_FRAME,					// 0x4d	( Report the frame qbc is too short: arg0=qbc_next_frame, arg1=qbc_prev_adjust, arg2=next_next_rxmode|(next_next_cell<<8)|(next_next_slot<<13) )
-	STATUS_NCELL_OTD_ADJUST				// 0x4e ( Report the Ncell OTD adjustment by a frame, arg0=cell_id, arg1=adjustment(+1 or -1), otd)
+	STATUS_NCELL_OTD_ADJUST,			// 0x4e ( Report the Ncell OTD adjustment by a frame, arg0=cell_id, arg1=adjustment(+1 or -1), otd)
+	STATUS_DSP_VIS, 					// 0x4f ack to change the padctrl to dsp trace
+	STATUS_DSP_REQPERFORM				// 0x50 used for DVFS in DSP subsystem by PWR MANAGER. Enumration StatusPwrMgrDsp
 
     // Following are DSP hard coded error status.
     // The purpose is to report error to L1 so that L1 can assert during develpment & debugging time.
@@ -2240,8 +2256,12 @@ typedef enum
     STATUS_ERROR_D8,			0xdec8		// Multislot burst buffer wait mask is not cleared which may due to lack of MIPs (ms_wait_mask, rx_filled_cnt[12 to 8], wait_mask)
     STATUS_ERROR_D9,			0xdec9		// Report an error VoIP AMR DL codec error
     STATUS_ERROR_P1,			0xEE0C		// Poly ringer FIFO test error
-    STATUS_ERROR_CORE1			0XEF00		// Bad memory access
-	STATUS_ERROR_STACK_OVERFLOW 0XEF02		// Stack overflow
+    STATUS_ERROR_CORE1,			0XEF00		// Bad memory access
+	STATUS_ERROR_STACK_OVERFLOW, 0XEF02		// Stack overflow
+	STATUS_ERROR_QBC_OVERFLOW,	0xEF04		// arg0 = plotted qbc, arg1 = previous qbc, 
+	STATUS_ERROR_TFN_CORRUPTION, 0xEF06		// arg0 = sfr0, arg1 = afr1, arg2 = index
+	STATUS_ERROR_FCBR_OVERFLOW,	 0xEF08		//	arg0 = entry.header0, arg1 = entry.header1, arg2 = wakeup count		
+	STATUS_ERROR_DEEP_SLEEP_COUNT, 0xEF0A	//	arg0 = shared_deep_sleep_cnt, arg1 = 0, arg2  =0	
     */
 } Status_t;
 /**
@@ -2839,7 +2859,6 @@ EXTERN Int16 shared_next_agc2							 			SHARED_SEC_AGC_AFC_RFIC;
 EXTERN Int16 shared_next_agc3							 			SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_cell_agc									 	SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tch_agc									 	SHARED_SEC_AGC_AFC_RFIC;
-EXTERN Int16 shared_g_sys[ N_BANDS ][ AGC_GAIN_SIZE ]			 	SHARED_SEC_AGC_AFC_RFIC;			// System gain table (changes on temperature)
 EXTERN Int16 shared_raw_digital_RX_power							SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_dyn_pwr_levels[MAX_TX_SLOTS]			 	SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16	shared_default_th							  	 	SHARED_SEC_AGC_AFC_RFIC;			// 
@@ -2854,7 +2873,10 @@ EXTERN UInt16 shared_rx_gpio_size										  SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_gpio_setup_size									  SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_gpio_txon_size									  SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_gpio_txoff_size									  SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_tx_gpio_txab_size 									  SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_tx_gpio_size																			SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_gpio_shutdown_size																	SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_tx_gpio_txmixed_size																	SHARED_SEC_AGC_AFC_RFIC;		
 EXTERN UInt16 shared_tx_gpio_setup_state   [ N_TX_BANDS ][ N_MODUS ][ N_PER_TXGPIO_GROUP ]					SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_gpio_txon_state    [ N_TX_BANDS ][ N_MODUS ][ N_PER_TXGPIO_GROUP ]					SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_gpio_txoff_state   [ N_TX_BANDS ][ N_MODUS ][ N_PER_TXGPIO_GROUP ]					SHARED_SEC_AGC_AFC_RFIC;
@@ -2863,7 +2885,10 @@ EXTERN UInt16 shared_tx_gpio_setup_delay   [ N_TX_BANDS ][ N_MODUS ]            
 EXTERN UInt16 shared_tx_gpio_txon_delay    [ N_TX_BANDS ][ N_MODUS ][ N_PL_GROUPS ][ N_PER_TXGPIO_GROUP ] 	SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_gpio_txoff_delay   [ N_TX_BANDS ][ N_MODUS ][ N_PL_GROUPS ][ N_PER_TXGPIO_GROUP ] 	SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_gpio_shutdown_delay[ N_TX_BANDS ][ N_MODUS ][ N_PL_GROUPS ][ N_PER_TXGPIO_GROUP ] 	SHARED_SEC_AGC_AFC_RFIC;
-EXTERN UInt16 shared_tx_gpio_size																			SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_tx_gpio_txab_state    [ N_TX_BANDS ][ N_MODUS ][ N_MODUS ][ N_PER_TXMIXEDGPIO_GROUP ]	SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_tx_gpio_txab_delay    [ N_TX_BANDS ][ N_MODUS ][ N_MODUS ][ N_PL_GROUPS ][ N_PER_TXMIXEDGPIO_GROUP ] SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_tx_gpio_txmixed_state [ N_TX_BANDS ][ N_MODUS ][ N_PER_TXMIXEDGPIO_GROUP ]					SHARED_SEC_AGC_AFC_RFIC;		
+EXTERN UInt16 shared_tx_gpio_txmixed_delay [ N_TX_BANDS ][ N_MODUS ][ N_PL_GROUPS ][ N_PER_TXMIXEDGPIO_GROUP ] 	SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_arm_TGPR_state[16]																		SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_arm_TGPR_delay[16]																		SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_arm_TGPR_flag																			SHARED_SEC_AGC_AFC_RFIC;
@@ -2879,6 +2904,7 @@ EXTERN UInt16 shared_tx_gpio    [ N_TX_BANDS ][ N_MODUS ][ N_TX_LEVELS ]								
 EXTERN UInt16 shared_tx_db_scale																			SHARED_SEC_AGC_AFC_RFIC;
 EXTERN Int16  shared_tx_trdr0[ N_MODUS ]																	SHARED_SEC_AGC_AFC_RFIC;
 EXTERN Int16  shared_tx_trdr_adjust[ N_MS_DN_RAMPS ]														SHARED_SEC_AGC_AFC_RFIC;
+EXTERN Int16  shared_mixed_trdr_adjust[N_MODUS]															SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_profile_up0[ N_MODUS ][ TX_PROFILE_SIZE - 3 ]										SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_profile_up1[ N_MODUS ][ TX_PROFILE_SIZE - 4 ]										SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_profile_up2[ N_MODUS ][ TX_PROFILE_SIZE - 5 ]										SHARED_SEC_AGC_AFC_RFIC;
@@ -2891,20 +2917,16 @@ EXTERN UInt16 shared_tx_profile_dn2[ N_MODUS ][ TX_PROFILE_SIZE - 5 ]										S
 EXTERN UInt16 shared_tx_profile_dn3[ N_MODUS ][ TX_PROFILE_SIZE - 6 ]										SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_profile_dn4[ N_MODUS ][ TX_PROFILE_SIZE - 7 ]										SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_tx_profile_dn5[ N_MODUS ][ TX_PROFILE_SIZE - 8 ]										SHARED_SEC_AGC_AFC_RFIC;
-EXTERN UInt16 shared_mixed_tx_profile_up_hi[ N_MODUS ][ N_TX_LEVELS ][ TX_PROFILE_SIZE - 8 ]				SHARED_SEC_AGC_AFC_RFIC;
-EXTERN UInt16 shared_mixed_tx_profile_up_lo[ N_MODUS ][ N_TX_LEVELS ][ TX_PROFILE_SIZE - 8 ]				SHARED_SEC_AGC_AFC_RFIC;
-EXTERN UInt16 shared_mixed_tx_profile_dn_hi[ N_MODUS ][ N_TX_LEVELS ][ TX_PROFILE_SIZE - 8 ]				SHARED_SEC_AGC_AFC_RFIC;
-EXTERN UInt16 shared_mixed_tx_profile_dn_lo[ N_MODUS ][ N_TX_LEVELS ][ TX_PROFILE_SIZE - 8 ]				SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_mixed_tx_profile_up_hi[ N_MODUS ][ TX_PROFILE_SIZE - 8 ]				SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_mixed_tx_profile_up_lo[ N_MODUS ][ TX_PROFILE_SIZE - 8 ]				SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_mixed_tx_profile_dn_hi[ N_MODUS ][ TX_PROFILE_SIZE - 8 ]				SHARED_SEC_AGC_AFC_RFIC;
+EXTERN UInt16 shared_mixed_tx_profile_dn_lo[ N_MODUS ][ TX_PROFILE_SIZE - 8 ]				SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16	shared_APCSWG [2][4]																		SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16	shared_APCSWP [2][4]																		SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16	shared_MSWTR  [2][4]		  																SHARED_SEC_AGC_AFC_RFIC;	// just in case that 8psk and gmsk times are different
 EXTERN UInt16	shared_APCPDFR[2]																			SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16	shared_APCGDFR[2]																			SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16	shared_flag_MIXED_TX																		SHARED_SEC_AGC_AFC_RFIC;
-EXTERN Int16	shared_apcswx_adjust[N_MODUS]		 														SHARED_SEC_AGC_AFC_RFIC;
-EXTERN Int16	shared_gpen_adjust[8]																		SHARED_SEC_AGC_AFC_RFIC;
-EXTERN UInt16	shared_gpen_mask[3]	  																		SHARED_SEC_AGC_AFC_RFIC;
-EXTERN Int16	shared_mixed_trdr_adjust[N_MODUS]															SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_SCKR_HI 																				SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_SCKR_LO 																				SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_SFCR 																					SHARED_SEC_AGC_AFC_RFIC;
@@ -2916,9 +2938,6 @@ EXTERN UInt16 shared_rf_postamble_hi[2]																		SHARED_SEC_AGC_AFC_RFIC
 EXTERN UInt16 shared_rf_postamble_lo[2]																		SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_timing_advance_min																		SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt16 shared_timing_advance_max																		SHARED_SEC_AGC_AFC_RFIC;
-EXTERN UInt16 shared_tx_gpio_txmixed_size																	SHARED_SEC_AGC_AFC_RFIC;		
-EXTERN UInt16 shared_tx_gpio_txmixed_state    [ N_TX_BANDS ][ N_MODUS ][ N_PER_TXMIXEDGPIO_GROUP ]					SHARED_SEC_AGC_AFC_RFIC;		
-EXTERN UInt16 shared_tx_gpio_txmixed_delay    [ N_TX_BANDS ][ N_MODUS ][ N_PL_GROUPS ][ N_PER_TXMIXEDGPIO_GROUP ] 	SHARED_SEC_AGC_AFC_RFIC;
 EXTERN SPI_Records_t		shared_spi_cmd																	SHARED_SEC_AGC_AFC_RFIC;	//   set by aARM for controling MIPI interface to RF
 EXTERN UInt32	shared_spi_dump[4][50]						 	SHARED_SEC_AGC_AFC_RFIC;
 EXTERN UInt32	shared_cn_db16								 	SHARED_SEC_AGC_AFC_RFIC;
@@ -4019,7 +4038,6 @@ EXTERN UInt16 shared_modem_logging_enable									SHARED_SEC_DSP_DEBUG;
 EXTERN UInt16 shared_memory_size                                     		SHARED_SEC_DSP_DEBUG;            
 EXTERN UInt16 shared_access_kludge                                    		SHARED_SEC_DSP_DEBUG;
 
-EXTERN UInt16 shared_g_sys_flag												SHARED_SEC_DSP_DEBUG;
 
 
 // PART TO BE REMOVED LATER AFTER VALIDATION

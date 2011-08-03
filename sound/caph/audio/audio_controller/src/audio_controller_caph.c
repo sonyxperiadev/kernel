@@ -658,14 +658,13 @@ void AUDCTRL_SetTelephonySpkrVolume(
 				AUDIO_GAIN_FORMAT_t		gain_format
 				)
 {
-#if defined(FUSE_APPS_PROCESSOR) && defined(CAPI2_INCLUDED)
-#ifdef CONFIG_AUDIO_BUILD
+#if defined(FUSE_APPS_PROCESSOR) &&	defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
+
 	Int16 dspDLGain = 0;
 	Int16 pmuGain = 0;
 	Int16	digital_gain_dB = 0;
 	Int16	volume_max = 0;
 	AUDDRV_PathID pathID = 0;
-	OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
 
 
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x\n", volume);
@@ -677,15 +676,16 @@ void AUDCTRL_SetTelephonySpkrVolume(
 		}
 		else
 		{
-		
-			volume_max = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
+			volume_max = 40; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
 			// convert the value in 1st param from range of 2nd_param to range of 3rd_param:
-			digital_gain_dB = AUDIO_Util_Convert( volume, AUDIO_VOLUME_MAX, volume_max );
+			digital_gain_dB = AUDIO_Util_Convert1( volume, AUDIO_VOLUME_MAX, volume_max );
 
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
+			OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
 
 			omega_voice_parms = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].omega_voice_parms;  //dB
 			audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam, (UInt32)(&(omega_voice_parms[digital_gain_dB])), 0, 0, 0, 0);
-
+#endif
 			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
 						(((Int16)digital_gain_dB - (Int16)volume_max)*100), 0, 0, 0, 0);
 			
@@ -696,7 +696,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 				if (pmuGain == (Int16)(GAIN_SYSPARM))
 				{
 					//Read from sysparm.
-					pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
+					pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 				}
 				SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 			}
@@ -718,7 +718,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			if (pmuGain == (Int16)(GAIN_SYSPARM))
 			{
 				//Read from sysparm.
-				pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
+				pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
@@ -740,7 +740,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			if (pmuGain == (Int16)(GAIN_SYSPARM))
 			{
 				//Read from sysparm.
-				pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
+				pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
@@ -762,7 +762,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			if (pmuGain == (Int16)(GAIN_SYSPARM))
 			{
 				//Read from sysparm.
-				pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
+				pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
@@ -776,104 +776,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 	{
 		audio_xassert(0,pathID);
 		return;
-	}
-   
-#else
-	Int16 dspDLGain = 0;
-	UInt8	digital_gain_dB = 0;
-	UInt16	volume_max = 0;
-	UInt8	OV_volume_step = 0;  //OmegaVoice volume step	
-//#define  CUSTOMER_SW_SPECIFY_OV_VOLUME_STEP
-#undef  CUSTOMER_SW_SPECIFY_OV_VOLUME_STEP
-
-#if defined(CUSTOMER_SW_SPECIFY_OV_VOLUME_STEP)
-
-	//map the digital gain to mmi level for OV. Need to adjust based on mmi level.
-	static UInt8 uVol2OV[37]={
-		/**
-					0, 
-				   0, 0, 1, 
-				   0, 0, 2, 
-				   0, 0, 3, 
-				   0, 0, 4, 
-				   0, 0, 5, 
-				   0, 0, 6, 
-				   0, 0, 7, 
-				   0, 0, 8, 
-				   0, 0, 0, 
-				   0, 0, 0, 
-				   0, 0, 0, 
-				   0, 0, 0
-				*/
-					0, 0, 0, 0, 1, 
-					0, 0, 0, 0, 2,
-					0, 0, 0, 0, 3,
-					0, 0, 0, 0, 4,
-					0, 0, 0, 0, 5, 
-					0, 0, 0, 0, 6, 
-					0, 0, 0, 0, 7, 
-					0, 0, 0, 0, 8
-				};
-
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x, OV volume step %d \n", volume, uVol2OV[volume] );
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandVolume, volume, gain_format, uVol2OV[volume], 0, 0);
-
-#else
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x\n", volume);
-	if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
-	{
-		if( AUDIO_VOLUME_MUTE == volume )
-		{  //mute
-			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
-		}
-		else
-		{
-		
-			volume_max = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
-			// convert the value in 1st param from range of 2nd_param to range of 3rd_param:
-			digital_gain_dB = AUDIO_Util_Convert( volume, AUDIO_VOLUME_MAX, volume_max );
-
-			Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x, OV volume step %d (FORMAT_VOL_LEVEL) \n", volume, OV_volume_step );
-
-			//if parm4 (OV_volume_step) is zero, volumectrl.c will calculate OV volume step based on digital_gain_dB, VOICE_VOLUME_MAX and NUM_SUPPORTED_VOLUME_LEVELS.
-			audio_control_generic( AUDDRV_CPCMD_SetBasebandVolume, digital_gain_dB, 0, OV_volume_step, 0, 0);
-		}
-		return;
-	}
-	else
-	if (gain_format == AUDIO_GAIN_FORMAT_Q14_1)		
-	{
-        dspDLGain = (Int16)AUDDRV_GetDSPDLGain(
-			GetDeviceFromSpkr(speaker),
-		       	(volume<<1));
-	
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-			(dspDLGain+100), 0, 0, 0, 0);
-		return;
-	}
-	else	// If AUDIO_GAIN_FORMAT_Q13_2.
-	if (gain_format == AUDIO_GAIN_FORMAT_Q13_2)		
-	{
-        dspDLGain = (Int16)AUDDRV_GetDSPDLGain(
-			GetDeviceFromSpkr(speaker),
-		       	volume);
-	
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-			(dspDLGain+100), 0, 0, 0, 0);
-		return;
-	}
-	else	// If AUDIO_GAIN_FORMAT_Q1_14, directly pass to DSP.
-	if (gain_format == AUDIO_GAIN_FORMAT_Q1_14)
-	{
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-			((Int16)volume+100), 0, 0, 0, 0);
 	}	
-	else	// If AUDIO_GAIN_FORMAT_HW_REG, do nothing.
-	{
-		return;
-	}	
-#endif
-#endif
 #endif
 }
 
@@ -892,7 +795,6 @@ void AUDCTRL_SetTelephonyMicGain(
 				AUDIO_GAIN_FORMAT_t		gain_format
 				)
 {
-#ifdef CONFIG_AUDIO_BUILD
 	AUDDRV_PathID pathID = 0;
     Int16 gainTemp = 0;
 	Int16 dspULGain = 0;
@@ -917,7 +819,7 @@ void AUDCTRL_SetTelephonyMicGain(
 	{
 		// Read from sysparm.
 		mode = AUDDRV_GetAudioMode();
-		dspULGain = AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;		
+		dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;		
 		
 		audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, 
 				dspULGain, 0, 0, 0, 0);		
@@ -943,15 +845,7 @@ void AUDCTRL_SetTelephonyMicGain(
                                         (UInt16) gainTemp,
                                         (UInt16) gainTemp);
 	
-#else
 
-	Int16 dspULGain = 0;
-        dspULGain = (Int16)AUDDRV_GetDSPULGain(
-			GetDeviceFromMic(mic),
-		       	gain);
-	//this API only take UInt32 param. pass (gain+100) in that it is Positive integer.
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, (dspULGain+100), 0, 0, 0, 0);
-#endif
 }
 
 
@@ -1014,7 +908,6 @@ void AUDCTRL_SetTelephonyMicMute(
 //============================================================================
 void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded)
 {
-#ifdef CONFIG_AUDIO_BUILD
     UInt16 gainTemp = 0;
 	Int16 dspULGain = 0;
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
@@ -1024,7 +917,7 @@ void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boole
 	mode = AUDDRV_GetAudioMode();
     if(isDSPNeeded == TRUE)
     {
-	    dspULGain = AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
+	    dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
 	    audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, 
 				dspULGain, 0, 0, 0, 0);		
     }
@@ -1033,21 +926,21 @@ void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boole
        ||(mic == AUDCTRL_MIC_AUX)) 
     {
         // Set Mic PGA gain from sysparm.	
-      	gainTemp = AUDIO_GetParmAccessPtr()[mode].mic_pga;
+      	gainTemp = 74; //AUDIO_GetParmAccessPtr()[mode].mic_pga;
       	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_AMIC_PGA_GAIN,
                                 (UInt32) gainTemp,
                                 AUDDRV_DEV_NONE);
 
         // Set AMic DGA coarse gain from sysparm.	
-       	gainTemp = AUDIO_GetParmAccessPtr()[mode].amic_dga_coarse_gain;
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].amic_dga_coarse_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_AMIC_DGA_COARSE_GAIN,
                                 (UInt32) gainTemp,
                                 AUDDRV_DEV_NONE);
 	
         // Set AMic DGA fine gain from sysparm.	
-       	gainTemp = AUDIO_GetParmAccessPtr()[mode].amic_dga_fine_gain;
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].amic_dga_fine_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_AMIC_DGA_FINE_GAIN,
                                 (UInt32) gainTemp,
@@ -1058,14 +951,14 @@ void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boole
        ||(mic == AUDCTRL_MIC_SPEECH_DIGI)) 
     {
         // Set DMic1 DGA coarse gain from sysparm.	
-      	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic1_dga_coarse_gain;
+      	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic1_dga_coarse_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_DMIC1_DGA_COARSE_GAIN,
                                 (UInt32) gainTemp,
                                 AUDDRV_DEV_NONE);
 	
         // Set DMic1 DGA fine gain from sysparm.	
-       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic1_dga_fine_gain;
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic1_dga_fine_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_DMIC1_DGA_FINE_GAIN,
                                 (UInt32) gainTemp,
@@ -1076,14 +969,14 @@ void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boole
        ||(mic == AUDCTRL_MIC_SPEECH_DIGI)) 
     {
         // Set DMic2 DGA coarse gain from sysparm.	
-      	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic2_dga_coarse_gain;
+      	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic2_dga_coarse_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_DMIC2_DGA_COARSE_GAIN,
                                 (UInt32) gainTemp,
                                 AUDDRV_DEV_NONE);
 	
         // Set DMic2 DGA fine gain from sysparm.	
-       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic2_dga_fine_gain;
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic2_dga_fine_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_DMIC2_DGA_FINE_GAIN,
                                 (UInt32) gainTemp,
@@ -1094,35 +987,34 @@ void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boole
        ||(mic == AUDCTRL_MIC_EANC_DIGI)) 
     {
         // Set DMic3 DGA coarse gain from sysparm.	
-       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic3_dga_coarse_gain;
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic3_dga_coarse_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_DMIC3_DGA_COARSE_GAIN,
                                 (UInt32) gainTemp,
                                 AUDDRV_DEV_NONE);
 	
         // Set DMic3 DGA fine gain from sysparm.	
-       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic3_dga_fine_gain;
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic3_dga_fine_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_DMIC3_DGA_FINE_GAIN,
                                 (UInt32) gainTemp,
                                 AUDDRV_DEV_NONE);
 	
         // Set DMic4 DGA coarse gain from sysparm.	
-       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic4_dga_coarse_gain;
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic4_dga_coarse_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_DMIC4_DGA_COARSE_GAIN,
                                 (UInt32) gainTemp,
                                 AUDDRV_DEV_NONE);
 	
         // Set DMic4 DGA fine gain from sysparm.	
-       	gainTemp = AUDIO_GetParmAccessPtr()[mode].dmic4_dga_fine_gain;
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic4_dga_fine_gain;
        	AUDDRV_HWControl_SetHWGain(ulPathID,
                                 AUDDRV_DMIC4_DGA_FINE_GAIN,
                                 (UInt32) gainTemp,
                                 AUDDRV_DEV_NONE);
     }
     return;
-#endif
 }
 
 
@@ -1136,7 +1028,6 @@ void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boole
 //============================================================================
 void AUDCTRL_LoadSpkrGain(AUDDRV_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded)
 {
-#ifdef CONFIG_AUDIO_BUILD
 	Int16 dspDLGain = 0;
 	Int16 pmuGain = 0;
     UInt16 gainTemp = 0;
@@ -1149,7 +1040,7 @@ void AUDCTRL_LoadSpkrGain(AUDDRV_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boo
 	// Set DSP DL gain from sysparm.
     if(isDSPNeeded == TRUE)
     {
-	    dspDLGain = AUDIO_GetParmAccessPtr()[mode].echo_nlp_downlink_volume_ctrl;
+	    dspDLGain = 64; //AUDIO_GetParmAccessPtr()[mode].echo_nlp_downlink_volume_ctrl;
 	    audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
 						dspDLGain, 0, 0, 0, 0);
     }
@@ -1179,37 +1070,47 @@ void AUDCTRL_LoadSpkrGain(AUDDRV_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boo
 		dev = AUDDRV_DEV_IHF;
 	}
 
-	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l;
+	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l;
 	AUDDRV_HWControl_SetHWGain(dlPathID, 
                                AUDDRV_SRCM_INPUT_GAIN_L, 
                                (UInt32)gainTemp, dev);
-	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r;
+	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r;
 	AUDDRV_HWControl_SetHWGain(dlPathID, 
                                AUDDRV_SRCM_INPUT_GAIN_R, 
                                (UInt32)gainTemp, dev);
-	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l;
+	gainTemp = 96; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l;
 	AUDDRV_HWControl_SetHWGain(dlPathID, 
                                AUDDRV_SRCM_OUTPUT_COARSE_GAIN_L, 
                                (UInt32)gainTemp, dev);
-	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r;
+	gainTemp = 96; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r;
 	AUDDRV_HWControl_SetHWGain(dlPathID, 
                                AUDDRV_SRCM_OUTPUT_COARSE_GAIN_R, 
                                (UInt32)gainTemp, dev);
-	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l;
+	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l;
 	AUDDRV_HWControl_SetHWGain(dlPathID, 
                                AUDDRV_SRCM_OUTPUT_FINE_GAIN_L, 
                                (UInt32)gainTemp, dev);
-	gainTemp = AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r;
+	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r;
 	AUDDRV_HWControl_SetHWGain(dlPathID, 
                                AUDDRV_SRCM_OUTPUT_FINE_GAIN_R, 
                                (UInt32)gainTemp, dev);
 	
 	//Load PMU gain from sysparm.
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 	pmuGain = AUDIO_GetParmAccessPtr()[mode].ext_speaker_pga_l;
+#else
+	//defaults until dependency of SYSPARM is resolved.
+	if(dev == AUDDRV_DEV_HS)
+		pmuGain = 65520;
+	else if(dev == AUDDRV_DEV_IHF)
+		pmuGain = 16;
+	else
+		pmuGain = 0;
+		
+#endif
 	SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 	
     return;
-#endif
 }
 
 
@@ -1260,6 +1161,13 @@ void AUDCTRL_EnablePlay(
 		config.source = AUDDRV_DEV_DSP;
 		config.sink = AUDDRV_DEV_MEMORY;
 	}
+
+#if defined(ENABLE_DMA_ARM2SP)
+	if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk!=AUDCTRL_SPK_USB)
+	{
+		config.sink = AUDDRV_DEV_DSP_throughMEM; //convert from AUDDRV_DEV_EP
+	}
+#endif
 
 	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
 		;
@@ -2021,7 +1929,8 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 			AUDCTRL_MIX_SELECT_t mixSelect,
 			Boolean isDSPGain,
 			Boolean dspSpeechProcessingNeeded,
-			UInt32 gain)
+			UInt32 gain,
+			UInt32 inPathID)
 {
     AUDDRV_PathID pathID = 0;
     Int16 dspGain = 0;
@@ -2127,7 +2036,10 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
     }
     else
     {
-        pathID = AUDCTRL_GetPathIDFromTable(src, sink, spk, mic);
+		if(inPathID) 
+			pathID = inPathID;
+        else 
+			pathID = AUDCTRL_GetPathIDFromTable(src, sink, spk, mic);
         if(pathID == 0)
         {
             audio_xassert(0,pathID);
@@ -2470,6 +2382,140 @@ void AUDCTRL_SetAudioLoopback(
 		 AUDCTRL_RemoveFromTable(pathID);
     }
 }
+//============================================================================
+//
+// Function Name: AUDCTRL_SetSidetoneLoopback
+//
+// Description:   Set the sidetone loopback path
+// 
+//============================================================================
+void AUDCTRL_SetSidetoneLoopback( 
+                              Boolean enable_lpbk,
+                              AUDCTRL_MICROPHONE_t mic,
+                              AUDCTRL_SPEAKER_t	speaker
+                             )
+{
+	// This set of coeff doesn't allow signal to pass through, disable for now.
+	UInt32 sidetoneCoeff[128] = {
+								0x7FFFFF,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+								0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+							};
+	UInt32 *coeff = &sidetoneCoeff[0];
+    AUDDRV_DEVICE_e source, sink;
+    AUDDRV_PathID pathID;
+    AUDCTRL_Config_t data;
+
+    AUDDRV_HWCTRL_CONFIG_t hwCtrlConfig;
+    //Int16 tempGain = 0;
+	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
+
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: mic = %d\n", mic);
+    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: speaker = %d\n", speaker);
+
+    source = sink = AUDDRV_DEV_NONE;
+    pathID = 0;
+    memset(&data, 0, sizeof(AUDCTRL_Config_t));
+    switch (mic)
+    {
+        case AUDCTRL_MIC_MAIN:
+            source = AUDDRV_DEV_ANALOG_MIC;
+            break;
+        case AUDCTRL_MIC_AUX:
+            source = AUDDRV_DEV_HS_MIC;
+            break;
+        default:
+            source = AUDDRV_DEV_ANALOG_MIC;
+            Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: mic = %d\n", mic);
+            break;
+    }
+
+    switch (speaker)
+    {
+        case AUDCTRL_SPK_HANDSET:
+            sink = AUDDRV_DEV_EP;
+            audio_mode = AUDIO_MODE_HANDSET;
+            break;
+        case AUDCTRL_SPK_HEADSET:
+            sink = AUDDRV_DEV_HS;
+            audio_mode = AUDIO_MODE_HEADSET;
+            break;
+        case AUDCTRL_SPK_LOUDSPK:
+            sink = AUDDRV_DEV_IHF;
+            audio_mode = AUDIO_MODE_SPEAKERPHONE;
+            break;
+        default:
+            sink = AUDDRV_DEV_EP;
+            audio_mode = AUDIO_MODE_HANDSET;
+            Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: speaker = %d\n", speaker);
+            break;
+    }
+
+    if(enable_lpbk)
+    {
+        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: Enable loopback \n");
+
+		// enable HW path
+        hwCtrlConfig.streamID = AUDDRV_STREAM_NONE;
+        hwCtrlConfig.source = source;
+        hwCtrlConfig.sink = sink;
+        hwCtrlConfig.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
+        hwCtrlConfig.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
+        hwCtrlConfig.chnlNum = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
+        hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
+
+        pathID = AUDDRV_HWControl_EnablePath(hwCtrlConfig);
+		AUDDRV_HWControl_SetFilter(AUDDRV_SIDETONE_FILTER, (void *)coeff);
+		AUDDRV_HWControl_SetSideToneGain(0); // Set sidetone gain to 0dB.
+		AUDDRV_HWControl_EnableSideTone(audio_mode);
+
+        //Save this path to the path table.
+        data.pathID = pathID;
+        data.src = AUDIO_HW_VOICE_IN;
+        data.sink = AUDIO_HW_VOICE_OUT;
+        data.mic = mic;
+        data.spk = speaker;
+        data.numCh = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
+        data.sr = AUDIO_SAMPLING_RATE_48000;
+        AUDCTRL_AddToTable(&data);
+
+		//Enable PMU for headset/IHF
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+    	    ||(speaker == AUDCTRL_SPK_HEADSET))	
+	        powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
+    }
+    else
+    {
+        // Disable Analog Mic path
+        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetSidetoneLoopback: Disable loopback\n");
+
+	    //Enable PMU for headset/IHF
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+	        ||(speaker == AUDCTRL_SPK_HEADSET))	
+        	powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
+
+        memset(&hwCtrlConfig, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+        pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
+    	if(pathID == 0)
+	    {
+		    audio_xassert(0,pathID);
+		    return;
+	    }
+	
+        hwCtrlConfig.pathID = pathID;
+        (void) AUDDRV_HWControl_DisablePath(hwCtrlConfig);
+		AUDDRV_HWControl_DisableSideTone(audio_mode);
+
+        //Remove this path to the path table.
+        AUDCTRL_RemoveFromTable(pathID);
+    }
+}
+
 
 void AUDCTRL_SetEQ( 
 				AUDIO_HW_ID_t	audioPath,

@@ -393,18 +393,18 @@ static void bcm59055_saradc_isr(int intr, void *data)
 
 	switch (intr) {
 	case BCM59055_IRQID_INT9_RTM_DATA_RDY:
-		pr_info("%s: RTM_DATA_RDY INT\n", __func__);
+		pr_debug("%s: RTM_DATA_RDY INT\n", __func__);
 		complete(&saradc->rtm_req);
 		break;
 	case BCM59055_IRQID_INT9_RTM_DURING_CON_MEAS:
-		pr_info("%s: BCM59055_IRQID_INT9_RTM_DURING_CON_MEAS\n", __func__);
+		pr_debug("%s: BCM59055_IRQID_INT9_RTM_DURING_CON_MEAS\n", __func__);
 		break;
 	case BCM59055_IRQID_INT9_RTM_UPPER_BOUND:
-		pr_info("%s: BCM59055_IRQID_INT9_RTM_UPPER_BOUND\n",
+		pr_debug("%s: BCM59055_IRQID_INT9_RTM_UPPER_BOUND\n",
 			__func__);
 		break;
 	case BCM59055_IRQID_INT9_RTM_IGNORE:
-		pr_info("%s: BCM59055_IRQID_INT9_RTM_IGNORE\n", __func__);
+		pr_debug("%s: BCM59055_IRQID_INT9_RTM_IGNORE\n", __func__);
 		/* In case current RTM request is the given after BCM59055_IRQID_INT9_RTM_UPPER_BOUND
 		 * request would be ignored and we need to notify the user of the request
 		 * for the same.
@@ -413,7 +413,7 @@ static void bcm59055_saradc_isr(int intr, void *data)
 		complete(&saradc->rtm_req);
 		break;
 	case BCM59055_IRQID_INT9_RTM_OVERRIDDEN:
-		pr_info("%s: BCM59055_IRQID_INT9_RTM_OVERRIDDEN\n",
+		pr_debug("%s: BCM59055_IRQID_INT9_RTM_OVERRIDDEN\n",
 			__func__);
 		/* This INT shouldn't be coming, taken care in driver code */
 		break;

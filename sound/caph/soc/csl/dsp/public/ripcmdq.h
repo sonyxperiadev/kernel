@@ -414,6 +414,11 @@ void RIPCMDQ_SetVoiceDtx(Boolean enable);
 
 void RIPCMDQ_CompFilterCtrl(UInt16 ResetUlFilterState, UInt16 ResetUlAuxFilterState, UInt16 ResetDlFilterState,UInt16 MainMicCtrl, UInt16 AuxMicCtrl, UInt16 DlSpkCtrl);
 
+
+#ifdef DSP_FEATURE_DUAL_SIM
+void RIPCMDQ_DualSimTrack(Boolean delta_flag, Boolean sec_ord_loop_enable,UInt16 cell_id_2nd_sim, UInt16 Kd, UInt16 limit);
+#endif
+
 //*********************************************************************
 /**
 *
@@ -425,5 +430,7 @@ void RIPCMDQ_CompFilterCtrl(UInt16 ResetUlFilterState, UInt16 ResetUlAuxFilterSt
 void RIPCMDQ_ControlDownlinkNoiseSuppression(Boolean control);
 
 void RIPCMDQ_AbortSearch(UInt16 abort_slot,  UInt16 abort_frame);
+
+void RIPCMDQ_PostCmd_LISR(UInt16 cmd, UInt16 arg0, UInt16 arg1, UInt16 arg2);
 
 #endif	//_RIPCMDQ_H_
