@@ -569,6 +569,7 @@ CSL_CAPH_DMA_CALLBACK_p dmaCB;
 
 typedef enum 
 {
+    AUDDRV_PATH_NONE,
     AUDDRV_PATH_VIBRA_OUTPUT,
     AUDDRV_PATH_HEADSET_OUTPUT,
     AUDDRV_PATH_IHF_OUTPUT,
@@ -828,6 +829,19 @@ typedef enum
 	CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R,
 } CSL_CAPH_HW_GAIN_e;
 
+#define MAX_BLOCK_NUM	4	//max number of same block in a path
+#define MAX_PATH_LEN	20	//max block number in a path
+typedef enum
+{
+	CAPH_NONE,
+	CAPH_DMA,
+	CAPH_SW,
+	CAPH_CFIFO,
+	CAPH_SRC,
+	CAPH_MIXER,
+	CAPH_TOTAL
+} CAPH_BLOCK_t;
+
 /**
 * CAPH HW configuration
 ******************************************************************************/
@@ -857,6 +871,16 @@ typedef struct
     UInt32 size;
     CSL_CAPH_DMA_CALLBACK_p dmaCB;
     Boolean status;
+
+	//for new api
+	CSL_CAPH_CFIFO_FIFO_e cfifo[MAX_BLOCK_NUM];
+	CSL_CAPH_SWITCH_CONFIG_t sw[MAX_BLOCK_NUM];
+	CSL_CAPH_DMA_CHNL_e dma[MAX_BLOCK_NUM];
+	CSL_CAPH_SRCM_ROUTE_t srcmRoute[MAX_BLOCK_NUM];	
+	CAPH_BLOCK_t block[MAX_PATH_LEN];
+	int blockIdx[MAX_PATH_LEN];
+	AUDDRV_PATH_Enum_t audiohPath[2];
+	audio_config_t audiohCfg[2];
 }CSL_CAPH_HWConfig_Table_t;
 
 

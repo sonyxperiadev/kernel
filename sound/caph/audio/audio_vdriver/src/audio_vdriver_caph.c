@@ -223,10 +223,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 		config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
         
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-        VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-                            FALSE,
-                            FALSE);
-							
 	}
 	else
 	{
@@ -251,6 +247,12 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 #endif
 
     ((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
+	if(sink == CSL_CAPH_DEV_IHF)
+	{
+		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
+						FALSE,
+						FALSE); //according to DSP, this should be called after EnablePath
+	}
 
     //UL
     config.streamID = CSL_CAPH_STREAM_NONE;

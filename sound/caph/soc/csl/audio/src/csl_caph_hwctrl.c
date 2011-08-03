@@ -45,6 +45,7 @@ Broadcom's express prior written consent.
 #endif
 
 //#define CONFIG_VOICE_LOOPBACK_TEST
+#define ENABLE_CAPH_API2	//define to apply new CAPH CSL API
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -224,12 +225,55 @@ static void csl_caph_hwctrl_SwitchPathTable(CSL_CAPH_HWConfig_Table_t pathTo,
 // local function definitions
 //******************************************************************************
 
+#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
+#else
+#undef ENABLE_DMA_ARM2SP
+#endif
+
+typedef enum 
+{
+//DDR --DMA1--> CFIFO1 --SW1-->                                 CFIFO2 --DMA2--> SharedMem, no SRC.
+//DDR --DMA1--> CFIFO1 --SW1--> SRC Mixer --SW2-->              CFIFO2 --DMA2--> SharedMem, 44/48k stereo to 48k mono.
+//DDR --DMA1--> CFIFO1 --SW1--> SRC       --SW2-->              CFIFO2 --DMA2--> SharedMem, 48k mono to 8/16k mono.
+//DDR --DMA1--> CFIFO1 --SW1--> SRC Mixer --SW2--> SRC --SW3--> CFIFO2 --DMA2--> SharedMem, 48/44k stereo to 8/16k mono.
+	ARM2SP_CAPH_DIRECT,
+	ARM2SP_CAPH_44S_48M,
+	ARM2SP_CAPH_48M_8M,
+	ARM2SP_CAPH_44S_8M,
+} ARM2SP_CAPH_PATH_t;
+
+ARM2SP_CAPH_PATH_t arm2spPath = ARM2SP_CAPH_48M_8M;
+
+typedef struct
+{
+	UInt32 instanceID; //arm2sp instance
+	AUDIO_SAMPLING_RATE_t srOut;
+	UInt32 dmaBytes;
+	UInt32 numFramesPerInterrupt;
+	ARM2SP_CAPH_PATH_t path;
+	CSL_CAPH_SWITCH_TRIGGER_e trigger;
+	AUDIO_CHANNEL_NUM_t chNumOut;
+	UInt16 arg0;
+} ARM2SP_CONFIG_t;
+
+ARM2SP_CONFIG_t arm2spCfg;
+
+#define DMA_VOICE_SIZE	320*2	//2x10ms for 24bit mono
+//#define ENABLE_DMA_LOOPBACK		//define to enable HW loopback via DMA.
+
+#if defined(ENABLE_DMA_LOOPBACK)
+static UInt8 caphDmaTestBuf[320*8]; //for test purpose, somehow using arm2sp shared mem does not give smooth tone playback for voice call path
+#endif
+
+static CSL_I2S_CONFIG_t fmCfg;
+static csl_pcm_config_device_t pcmCfg;
+static csl_pcm_config_tx_t pcmTxCfg; 
+static csl_pcm_config_rx_t pcmRxCfg;
+
 #if defined(ENABLE_DMA_ARM2SP)
 #include "shared.h"
 #include "csl_arm2sp.h"
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
 #include "csl_dsp.h"
-#endif
 #include "csl_apcmd.h"
 
 typedef enum VORENDER_PLAYBACK_MODE_t
@@ -258,11 +302,6 @@ typedef enum
 } VORENDER_ARM2SP_INSTANCE_e;
 
 extern AP_SharedMem_t	*vp_shared_mem;
-static Boolean bArm2spLowRate = FALSE; //need to convert 48/44kHz to 8/16kHz mono?
-
-//******************************************************************************
-// local function definitions
-//******************************************************************************
 
 static void ARM2SP_DMA_Req(UInt16 bufferPosition)
 {
@@ -320,82 +359,158 @@ static UInt16 DMA_ARM2SP_BuildCommandArg0 (AUDIO_SAMPLING_RATE_t		samplingRate,
 	// set ul
 	switch (playbackMode)
 	{
-		case VORENDER_PLAYBACK_UL:
-			// set UL_enable
-			arg0 |= ARM2SP_UL_ENABLE_MASK;
+	case VORENDER_PLAYBACK_UL:
+		// set UL_enable
+		arg0 |= ARM2SP_UL_ENABLE_MASK;
 
-			if (mixMode == VORENDER_VOICE_MIX_UL 
-				|| mixMode == VORENDER_VOICE_MIX_BOTH)
-			{
-				// mixing UL
-				arg0 |= ARM2SP_UL_MIX;
-			}
-			else
-			{
-				//overwrite UL
-				arg0 |= ARM2SP_UL_OVERWRITE;
-			}
-			break;
+		if (mixMode == VORENDER_VOICE_MIX_UL 
+			|| mixMode == VORENDER_VOICE_MIX_BOTH)
+		{
+			// mixing UL
+			arg0 |= ARM2SP_UL_MIX;
+		}
+		else
+		{
+			//overwrite UL
+			arg0 |= ARM2SP_UL_OVERWRITE;
+		}
+		break;
 
-		case VORENDER_PLAYBACK_DL:
-			// set DL_enable
-			arg0 |= ARM2SP_DL_ENABLE_MASK;
+	case VORENDER_PLAYBACK_DL:
+		// set DL_enable
+		arg0 |= ARM2SP_DL_ENABLE_MASK;
 
-			if (mixMode == VORENDER_VOICE_MIX_DL 
-				|| mixMode == VORENDER_VOICE_MIX_BOTH)
-			{
-				// mixing DL
-				arg0 |= ARM2SP_DL_MIX;
-			}
-			else
-			{
-				//overwirte DL
-				arg0 |= ARM2SP_DL_OVERWRITE;
-			}
-			break;
+		if (mixMode == VORENDER_VOICE_MIX_DL 
+			|| mixMode == VORENDER_VOICE_MIX_BOTH)
+		{
+			// mixing DL
+			arg0 |= ARM2SP_DL_MIX;
+		}
+		else
+		{
+			//overwirte DL
+			arg0 |= ARM2SP_DL_OVERWRITE;
+		}
+		break;
 
-		case VORENDER_PLAYBACK_BOTH:
-			// set UL_enable
-			arg0 |= ARM2SP_UL_ENABLE_MASK;
+	case VORENDER_PLAYBACK_BOTH:
+		// set UL_enable
+		arg0 |= ARM2SP_UL_ENABLE_MASK;
 
-			// set DL_enable
-			arg0 |= ARM2SP_DL_ENABLE_MASK;
+		// set DL_enable
+		arg0 |= ARM2SP_DL_ENABLE_MASK;
 
-			if (mixMode == VORENDER_VOICE_MIX_UL 
-				|| mixMode == VORENDER_VOICE_MIX_BOTH)
-			{
-				// mixing UL
-				arg0 |= ARM2SP_UL_MIX;
-			}
-			else
-			{
-				// overwirte UL
-				arg0 |= ARM2SP_UL_OVERWRITE;
-			}
-			
-			if (mixMode == VORENDER_VOICE_MIX_DL 
-				|| mixMode == VORENDER_VOICE_MIX_BOTH)
-			{
-				// mixing DL
-				arg0 |= ARM2SP_DL_MIX;
-			}
-			else
-			{
-				// overwirte DL
-				arg0 |= ARM2SP_DL_OVERWRITE;
-			}
-			break;
+		if (mixMode == VORENDER_VOICE_MIX_UL 
+			|| mixMode == VORENDER_VOICE_MIX_BOTH)
+		{
+			// mixing UL
+			arg0 |= ARM2SP_UL_MIX;
+		}
+		else
+		{
+			// overwirte UL
+			arg0 |= ARM2SP_UL_OVERWRITE;
+		}
+		
+		if (mixMode == VORENDER_VOICE_MIX_DL 
+			|| mixMode == VORENDER_VOICE_MIX_BOTH)
+		{
+			// mixing DL
+			arg0 |= ARM2SP_DL_MIX;
+		}
+		else
+		{
+			// overwirte DL
+			arg0 |= ARM2SP_DL_OVERWRITE;
+		}
+		break;
 
-		case VORENDER_PLAYBACK_NONE:
-			break;
+	case VORENDER_PLAYBACK_NONE:
+		break;
 
-		default:
-			break;
+	default:
+		break;
 	}
 
 	return arg0;
 }
 
+// ==========================================================================
+//
+// Function Name: csl_caph_config_arm2sp
+//
+// Description: config ARM2SP
+//
+// =========================================================================
+static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
+{
+	CSL_CAPH_HWConfig_Table_t *path;
+
+	if(!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+
+	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
+	arm2spCfg.instanceID = 1;
+	arm2spCfg.dmaBytes = ARM2SP_INPUT_SIZE*2;
+
+	arm2spCfg.path=arm2spPath; //?
+
+	//Validate the selected path.
+	if(path->src_sampleRate==AUDIO_SAMPLING_RATE_8000 || path->src_sampleRate==AUDIO_SAMPLING_RATE_16000) arm2spCfg.path = ARM2SP_CAPH_DIRECT;
+	else if(path->src_sampleRate==AUDIO_SAMPLING_RATE_44100 && (arm2spCfg.path != ARM2SP_CAPH_44S_48M && arm2spCfg.path != ARM2SP_CAPH_44S_8M)) arm2spCfg.path = ARM2SP_CAPH_44S_8M;
+	else if(path->chnlNum == AUDIO_CHANNEL_STEREO && arm2spCfg.path == ARM2SP_CAPH_48M_8M) arm2spCfg.path = ARM2SP_CAPH_44S_8M;
+	else if(path->chnlNum == AUDIO_CHANNEL_MONO && (arm2spCfg.path == ARM2SP_CAPH_44S_48M || arm2spCfg.path == ARM2SP_CAPH_44S_8M)) arm2spCfg.path = ARM2SP_CAPH_48M_8M;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "Revised arm2spCfg.path %d.\r\n", arm2spCfg.path);
+
+	arm2spCfg.srOut = path->src_sampleRate;
+	arm2spCfg.chNumOut = path->chnlNum;
+	if(arm2spCfg.path==ARM2SP_CAPH_DIRECT) 
+	{
+		if(path->src_sampleRate==AUDIO_SAMPLING_RATE_48000) 
+		{
+			arm2spCfg.numFramesPerInterrupt = 1;
+			arm2spCfg.trigger = CSL_CAPH_48KHZ;
+			arm2spCfg.dmaBytes = ARM2SP_INPUT_SIZE_48K*2;
+			if(path->chnlNum == AUDIO_CHANNEL_MONO && path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE) 
+			{
+				arm2spCfg.trigger = CSL_CAPH_24KHZ; //switch does not differentiate 16bit mono from 16bit stereo, hence reduce the clock.
+				arm2spCfg.dmaBytes >>= 1; //For 48K, dsp only supports 2*20ms ping-pong buffer, stereo or mono
+			}
+		} else if(path->src_sampleRate==AUDIO_SAMPLING_RATE_16000) {
+			arm2spCfg.numFramesPerInterrupt = 2;
+			arm2spCfg.trigger = CSL_CAPH_16KHZ;
+			if(path->chnlNum == AUDIO_CHANNEL_MONO && path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE) arm2spCfg.trigger = CSL_CAPH_8KHZ;
+		} else if(path->src_sampleRate==AUDIO_SAMPLING_RATE_8000) {
+			arm2spCfg.numFramesPerInterrupt = 4;
+			arm2spCfg.trigger = CSL_CAPH_8KHZ;
+			if(path->chnlNum == AUDIO_CHANNEL_MONO && path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE) arm2spCfg.trigger = CSL_CAPH_4KHZ;
+		}
+	} else if(arm2spCfg.path==ARM2SP_CAPH_44S_48M) {
+		arm2spCfg.numFramesPerInterrupt = 1;
+		arm2spCfg.srOut = AUDIO_SAMPLING_RATE_48000;
+		arm2spCfg.dmaBytes = ARM2SP_INPUT_SIZE_48K;
+		arm2spCfg.chNumOut = AUDIO_CHANNEL_MONO;
+	} else if(arm2spCfg.path==ARM2SP_CAPH_48M_8M) {
+		arm2spCfg.numFramesPerInterrupt = 4;
+		arm2spCfg.srOut = AUDIO_SAMPLING_RATE_8000;
+		arm2spCfg.dmaBytes = ARM2SP_INPUT_SIZE*2;
+		arm2spCfg.chNumOut = AUDIO_CHANNEL_MONO;
+	} else if(arm2spCfg.path==ARM2SP_CAPH_44S_8M) {
+		arm2spCfg.numFramesPerInterrupt = 4;
+		arm2spCfg.srOut = AUDIO_SAMPLING_RATE_8000;
+		arm2spCfg.dmaBytes = ARM2SP_INPUT_SIZE*2;
+		arm2spCfg.chNumOut = AUDIO_CHANNEL_MONO;
+	}
+
+	arm2spCfg.arg0 = DMA_ARM2SP_BuildCommandArg0 (arm2spCfg.srOut,
+								VORENDER_PLAYBACK_DL, //playbackMode
+								VORENDER_VOICE_MIX_DL, //mixMode 
+								arm2spCfg.numFramesPerInterrupt,
+								arm2spCfg.chNumOut);
+}
+#endif
+
+#if defined(ENABLE_DMA_ARM2SP) || defined(ENABLE_DMA_VOICE) || defined(ENABLE_CAPH_API2)
 // ==========================================================================
 //
 // Function Name: AUDIO_DMA_CB2
@@ -417,9 +532,930 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 		csl_caph_dma_set_ddrfifo_status( chnl, CSL_CAPH_READY_HIGH);
 	}
 }
+
+// ==========================================================================
+//
+// Function Name: csl_caph_get_dataformat
+//
+// Description: data format based on bistPerSample and channel mode
+//
+// =========================================================================
+static CSL_CAPH_DATAFORMAT_e csl_caph_get_dataformat(AUDIO_BITS_PER_SAMPLE_t bitPerSample, AUDIO_CHANNEL_NUM_t chnlNum)
+{
+	CSL_CAPH_DATAFORMAT_e dataFormat = CSL_CAPH_16BIT_MONO;
+
+	if (bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
+	{
+		if (chnlNum == AUDIO_CHANNEL_MONO) dataFormat = CSL_CAPH_16BIT_MONO;
+		else dataFormat = CSL_CAPH_16BIT_STEREO;
+	} else if (bitPerSample == AUDIO_24_BIT_PER_SAMPLE) {
+		if (chnlNum == AUDIO_CHANNEL_MONO) dataFormat = CSL_CAPH_24BIT_MONO;
+		else dataFormat = CSL_CAPH_24BIT_STEREO;
+	}
+	return dataFormat;
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_get_sink_dataformat
+//
+// Description: get data format based on sink
+//
+// =========================================================================
+static CSL_CAPH_DATAFORMAT_e csl_caph_get_sink_dataformat(CSL_CAPH_DATAFORMAT_e dataFormat, CSL_CAPH_DEVICE_e sink)
+{
+	CSL_CAPH_DATAFORMAT_e outDataFmt = dataFormat;
+
+	if (sink == CSL_CAPH_DEV_HS)
+	{
+		if (dataFormat == CSL_CAPH_16BIT_MONO) outDataFmt = CSL_CAPH_16BIT_STEREO;
+		else if (dataFormat == CSL_CAPH_24BIT_MONO) outDataFmt = CSL_CAPH_24BIT_STEREO;
+	} else {
+		if (dataFormat == CSL_CAPH_16BIT_STEREO) outDataFmt = CSL_CAPH_16BIT_MONO;
+		else if (dataFormat == CSL_CAPH_24BIT_STEREO) outDataFmt = CSL_CAPH_24BIT_MONO;
+	}
+	return outDataFmt;
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_srcmixer_get_outchnl_trigger
+//
+// Description: get mixer output trigger, maybe should be moved to mixer file.
+//
+// =========================================================================
+static CSL_CAPH_SWITCH_TRIGGER_e csl_caph_srcmixer_get_outchnl_trigger(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl)
+{
+	CSL_CAPH_SWITCH_TRIGGER_e trigger = CSL_CAPH_TRIG_NONE;
+
+	switch (outChnl)
+	{
+	case CSL_CAPH_SRCM_STEREO_CH1:
+	case CSL_CAPH_SRCM_STEREO_CH1_L:
+	case CSL_CAPH_SRCM_STEREO_CH1_R:
+		trigger = CSL_CAPH_TRIG_MIX1_OUT_THR; //HS
+		break;
+	case CSL_CAPH_SRCM_STEREO_CH2_L:
+		trigger = CSL_CAPH_TRIG_MIX2_OUT2_THR; //EP
+		break;
+	case CSL_CAPH_SRCM_STEREO_CH2_R:
+		trigger = CSL_CAPH_TRIG_MIX2_OUT1_THR; //IHF
+		break;
+	default:
+		audio_xassert(0, outChnl);
+		break;
+	}
+	return trigger;
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_get_audio_path
+//
+// Description: get audioH path per sink
+//
+// =========================================================================
+static AUDDRV_PATH_Enum_t csl_caph_get_audio_path(CSL_CAPH_DEVICE_e dev)
+{
+	AUDDRV_PATH_Enum_t audioh_path = AUDDRV_PATH_NONE;
+
+	switch (dev)
+	{
+	case CSL_CAPH_DEV_HS:
+		audioh_path = AUDDRV_PATH_HEADSET_OUTPUT;
+		break;
+	case CSL_CAPH_DEV_IHF:
+		audioh_path = AUDDRV_PATH_IHF_OUTPUT;
+		break;
+	case CSL_CAPH_DEV_EP:
+		audioh_path = AUDDRV_PATH_EARPICEC_OUTPUT;
+		break;
+	case CSL_CAPH_DEV_VIBRA:
+		audioh_path = AUDDRV_PATH_VIBRA_OUTPUT;
+		break;
+	case CSL_CAPH_DEV_ANALOG_MIC:
+		audioh_path = AUDDRV_PATH_ANALOGMIC_INPUT;
+		break;
+	case CSL_CAPH_DEV_HS_MIC:
+		audioh_path = AUDDRV_PATH_HEADSET_INPUT;
+		break;
+	case CSL_CAPH_DEV_DIGI_MIC_L:
+		audioh_path = AUDDRV_PATH_VIN_INPUT_L;
+		break;
+	case CSL_CAPH_DEV_DIGI_MIC_R:
+		audioh_path = AUDDRV_PATH_VIN_INPUT_R;
+		break;
+	case CSL_CAPH_DEV_EANC_DIGI_MIC_L:
+		audioh_path = AUDDRV_PATH_NVIN_INPUT_L;
+		break;
+	case CSL_CAPH_DEV_EANC_DIGI_MIC_R:
+		audioh_path = AUDDRV_PATH_NVIN_INPUT_R;
+		break;
+	default:
+		//audio_xassert(0, dev );
+		break;
+	}
+	return audioh_path;
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_get_sinktrigger
+//
+// Description: get device trigger
+//
+// =========================================================================
+static CSL_CAPH_SWITCH_TRIGGER_e csl_caph_get_dev_trigger(CSL_CAPH_DEVICE_e dev)
+{
+	CSL_CAPH_SWITCH_TRIGGER_e trigger = CSL_CAPH_TRIG_NONE;
+
+	switch (dev)
+	{
+	case CSL_CAPH_DEV_HS:
+		trigger = CSL_CAPH_TRIG_HS_THR_MET;
+		break;
+	case CSL_CAPH_DEV_IHF:
+		trigger = CSL_CAPH_TRIG_IHF_THR_MET;
+		break;
+	case CSL_CAPH_DEV_EP:
+		trigger = CSL_CAPH_TRIG_EP_THR_MET;
+		break;
+	case CSL_CAPH_DEV_VIBRA:
+		trigger = CSL_CAPH_TRIG_VB_THR_MET;
+		break;
+	case CSL_CAPH_DEV_ANALOG_MIC:
+	case CSL_CAPH_DEV_HS_MIC:
+	case CSL_CAPH_DEV_DIGI_MIC_L:
+		trigger = CSL_CAPH_TRIG_ADC_VOICE_FIFOR_THR_MET;
+		break;
+	case CSL_CAPH_DEV_DIGI_MIC_R:
+		trigger = CSL_CAPH_TRIG_ADC_VOICE_FIFOL_THR_MET;
+		break;
+	case CSL_CAPH_DEV_EANC_DIGI_MIC_L:
+		trigger = CSL_CAPH_TRIG_ADC_NOISE_FIFOR_THR_MET;
+		break;
+	case CSL_CAPH_DEV_EANC_DIGI_MIC_R:
+		trigger = CSL_CAPH_TRIG_ADC_NOISE_FIFOL_THR_MET;
+		break;
+	case CSL_CAPH_DEV_BT_MIC:
+		trigger = pcmRxTrigger;
+		break;
+	case CSL_CAPH_DEV_FM_RADIO:
+		trigger = fmRxTrigger;
+		break;
+	case CSL_CAPH_DEV_BT_SPKR:
+		trigger = pcmTxTrigger;
+		break;
+	case CSL_CAPH_DEV_FM_TX:
+		trigger = fmTxTrigger;
+		break;
+	default:
+		audio_xassert(0, dev );
+		break;
+	}
+	return trigger;
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_get_fifo_addr
+//
+// Description: 
+//	get fifo address, in order to config switch src/dst address
+//	direction 0 - in, 1 - out
+//
+// =========================================================================
+static UInt32 csl_caph_get_fifo_addr(CSL_CAPH_PathID pathID, int blockPathIdx, int direction)
+{
+	int blockIdx;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+	UInt32 addr = 0;
+	CAPH_SRCMixer_FIFO_e srcmFifo;
+
+	if(!pathID) return addr;
+	path = &HWConfig_Table[pathID-1];
+	block = path->block[blockPathIdx];
+	blockIdx = path->blockIdx[blockPathIdx];
+
+	switch(block)
+	{
+	case CAPH_CFIFO:
+		addr = csl_caph_cfifo_get_fifo_addr(path->cfifo[blockIdx]);
+		break;
+	case CAPH_SRC:
+		if(direction) srcmFifo = csl_caph_srcmixer_get_tapoutchnl_fifo(path->srcmRoute[blockIdx].tapOutChnl);
+		else srcmFifo = csl_caph_srcmixer_get_inchnl_fifo(path->srcmRoute[blockIdx].inChnl);
+		addr = csl_caph_srcmixer_get_fifo_addr(srcmFifo);
+		break;
+	case CAPH_MIXER:
+		if(direction) srcmFifo = csl_caph_srcmixer_get_outchnl_fifo(path->srcmRoute[blockIdx].outChnl);
+		else srcmFifo = csl_caph_srcmixer_get_inchnl_fifo(path->srcmRoute[blockIdx].inChnl);
+		addr = csl_caph_srcmixer_get_fifo_addr(srcmFifo);
+		break;
+	default:
+		break;
+	}
+	return addr;
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_obtain_blocks
+//
+// Description: obtain caph blocks
+//
+// =========================================================================
+static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID)
+{
+	int i = 0;
+	int blockIdx;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+	CSL_CAPH_CFIFO_FIFO_e fifo;
+	CSL_CAPH_SWITCH_CHNL_e sw;
+	CSL_CAPH_SRCM_INCHNL_e srcmIn;
+	CSL_CAPH_SRCM_MIX_OUTCHNL_e srcmOut;
+	CSL_CAPH_SRCM_SRC_OUTCHNL_e srcmTap;
+	CSL_CAPH_DATAFORMAT_e dataFormat;
+	CSL_CAPH_DEVICE_e sink;
+	AUDIO_SAMPLING_RATE_t srOut;
+	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
+	CSL_CAPH_DMA_CHNL_e dmaCH;
+
+	if(!pathID) return;
+
+	memset(&pcmRxCfg, 0, sizeof(pcmRxCfg));
+	memset(&pcmTxCfg, 0, sizeof(pcmTxCfg));
+	memset(&pcmCfg, 0, sizeof(pcmCfg));
+	memset(&fmCfg, 0, sizeof(fmCfg));
+
+	path = &HWConfig_Table[pathID-1];
+	dataFormat = csl_caph_get_dataformat(path->bitPerSample, path->chnlNum); //dataFormat would change according to block combination.
+	srOut = path->src_sampleRate;
+	if(path->source==CSL_CAPH_DEV_DSP) dataFormat = CSL_CAPH_24BIT_MONO; //dsp data is 24bit mono
+
+	path->audiohCfg[0].sample_size = path->bitPerSample;
+	path->audiohCfg[0].sample_pack = DATA_UNPACKED;
+	path->audiohCfg[0].sample_mode = path->chnlNum;
+	path->audiohPath[0] = csl_caph_get_audio_path(path->source);
+
+	while(1)
+	{
+		block = path->block[i];
+		if(block==CAPH_NONE) break;
+		blockIdx = 0;
+
+		switch(block)
+		{
+		case CAPH_DMA:
+			if(!path->dmaCH) 
+			{
+				/*
+				DSP reserves dma 12-16
+				12 IHF speaker/primary speaker
+				13 Primary microphone
+				14 Secondary microphone
+				15 ARM2SP DSP channel? Since DSP does not take arm2sp interrupt, so it can be dynamic.
+				16 ARM2SP2 DSP channel?
+				*/
+				if(path->source==CSL_CAPH_DEV_DSP) dmaCH = CSL_CAPH_DMA_CH12;
+				else if(path->sink==CSL_CAPH_DEV_DSP) {
+					if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R) dmaCH = CSL_CAPH_DMA_CH14;
+					else dmaCH = CSL_CAPH_DMA_CH13;
+				} else {
+					path->dmaCH = csl_caph_dma_obtain_channel();
+				}
+				path->dmaCH = csl_caph_dma_obtain_given_channel(dmaCH);
+				path->size = DMA_VOICE_SIZE;
+				path->dmaCB = AUDIO_DMA_CB2;
+#if defined(ENABLE_DMA_LOOPBACK) && defined(ENABLE_DMA_VOICE)
+				path->pBuf = caphDmaTestBuf;
+				if(path->sink==CSL_CAPH_DEV_DSP) 
+					if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R) 
+						path->pBuf += path->size; //pick a mic, analog or eanc? the 1st half is used for loopback, the 2nd half is for 2nd mic.
+#endif
+			}
+
+			if(!path->dma[0]) 
+			{
+				blockIdx = 0;
+				path->dma[blockIdx] = path->dmaCH;
+			} else {
+				if(!path->dmaCH2) 
+				{
+					if(path->sink != CSL_CAPH_DEV_DSP_throughMEM) 
+						audio_xassert(0, pathID); //only arm2sp uses 2 dma?
+					//dmaCH = CSL_CAPH_DMA_CH15;
+					//if(arm2spCfg.instanceID==2) dmaCH = CSL_CAPH_DMA_CH16;
+					//path->dmaCH2 = csl_caph_dma_obtain_given_channel(dmaCH);
+					path->dmaCH2 = csl_caph_dma_obtain_channel();
+				}
+				blockIdx = 1;
+				path->dma[blockIdx] = path->dmaCH2;
+			}
+			break;
+		case CAPH_CFIFO:
+			if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink == CSL_CAPH_DEV_IHF) fifo = csl_caph_dma_get_csl_cfifo(path->dma[0]);
+			else fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
+			if(!path->cfifo[0]) 
+			{
+				blockIdx = 0;
+			} else {
+				blockIdx = 1;
+			}
+			path->cfifo[blockIdx] = fifo;
+			break;
+		case CAPH_SW:
+			sw = csl_caph_switch_obtain_channel();
+			blockIdx = (int)sw;
+			if(!path->sw[0].chnl)
+			{
+				blockIdx = 0;
+			} else if (!path->sw[1].chnl) {
+				blockIdx = 1;
+			} else {
+				blockIdx = 2;
+			}
+			path->sw[blockIdx].chnl = sw;
+			path->sw[blockIdx].dataFmt = dataFormat;
+			break;
+		case CAPH_SRC:
+			if(!path->srcmRoute[0].inChnl)
+			{
+				blockIdx = 0;
+			} else if(!path->srcmRoute[1].inChnl) {
+				blockIdx = 1;
+			} else {
+				blockIdx = 2;
+			}
+			pSrcmRoute = &path->srcmRoute[blockIdx];
+
+			pSrcmRoute->inThres = 3;
+			pSrcmRoute->outThres = 3;
+			pSrcmRoute->inDataFmt = dataFormat;
+			pSrcmRoute->inSampleRate = csl_caph_srcmixer_get_srcm_insamplerate(srOut);
+			if(path->srcmRoute[0].inChnl)
+			{	//if not the first srcmixer block, assume 16bit mono output?
+				dataFormat = CSL_CAPH_16BIT_MONO;
+			}
+#if !defined(ENABLE_DMA_VOICE)
+			if (path->sink == CSL_CAPH_DEV_DSP) 
+			{
+				// fix the SRC-Mixer in channel for DSP
+				if(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L || path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R) srcmIn = EANC_MIC_UL_TO_DSP_CHNL;
+				else srcmIn = MAIN_MIC_UL_TO_DSP_CHNL;
+				pSrcmRoute->inThres = 1;
+				pSrcmRoute->outThres = 0; //This should be set to 0 to give an interrupt after every sample.
+			} else 
+#endif
+			{
+				srcmIn = csl_caph_srcmixer_obtain_inchnl(dataFormat, pSrcmRoute->inSampleRate);
+			}
+			srcmTap = csl_caph_srcmixer_get_tapoutchnl_from_inchnl(srcmIn);
+
+			if(path->sink == CSL_CAPH_DEV_DSP_throughMEM) srOut = AUDIO_SAMPLING_RATE_8000; //arm2sp 8kHz
+			else srOut = path->snk_sampleRate;
+			pSrcmRoute->inChnl = srcmIn;
+			pSrcmRoute->tapOutChnl = srcmTap;
+			pSrcmRoute->outDataFmt = dataFormat;
+			pSrcmRoute->outSampleRate = csl_caph_srcmixer_get_srcm_outsamplerate(srOut);
+			break;
+		case CAPH_MIXER:
+			if(!path->srcmRoute[0].inChnl)
+			{
+				blockIdx = 0;
+			} else if(!path->srcmRoute[1].inChnl) {
+				blockIdx = 1;
+			} else {
+				blockIdx = 2;
+			}
+			pSrcmRoute = &path->srcmRoute[blockIdx];
+
+			pSrcmRoute->inThres = 3;
+			pSrcmRoute->outThres = 3;
+			pSrcmRoute->inDataFmt = dataFormat;
+			pSrcmRoute->inSampleRate = csl_caph_srcmixer_get_srcm_insamplerate(srOut);
+
+			srOut = AUDIO_SAMPLING_RATE_48000;
+			sink = path->sink;
+
+#if !defined(ENABLE_DMA_VOICE)
+			if (path->source == CSL_CAPH_DEV_DSP) 
+			{
+				srcmIn = SPEAKER_DL_FROM_DSP_CHNL; // fixed the SRC-Mixer in channel for DSP: DL is always using ch1
+				pSrcmRoute->inThres = 1;
+				pSrcmRoute->outThres = 1;
+				if(sink==CSL_CAPH_DEV_MEMORY) //usb voice
+				{
+					sink = CSL_CAPH_DEV_HS;
+					dataFormat = CSL_CAPH_16BIT_STEREO;
+				}
+			} else 
+#endif
+			{
+				srcmIn = csl_caph_srcmixer_obtain_inchnl(dataFormat, pSrcmRoute->inSampleRate);
+			}
+
+			if(sink==CSL_CAPH_DEV_DSP_throughMEM)
+			{
+				sink = CSL_CAPH_DEV_IHF; //should be done in csl_caph_srcmixer_obtain_outchnl
+				dataFormat = CSL_CAPH_16BIT_MONO;
+			}
+			dataFormat = csl_caph_get_sink_dataformat(dataFormat, sink);
+			srcmOut = csl_caph_srcmixer_obtain_outchnl(sink);
+			pSrcmRoute->inChnl = srcmIn;
+			pSrcmRoute->outChnl = srcmOut;
+			pSrcmRoute->outDataFmt = dataFormat;
+			pSrcmRoute->outSampleRate = csl_caph_srcmixer_get_srcm_outsamplerate(srOut);
+			break;
+		default:
+			break;
+		}
+		path->blockIdx[i++] = blockIdx;
+	}
+
+	if(path->sink==CSL_CAPH_DEV_EP || path->sink==CSL_CAPH_DEV_HS || path->sink==CSL_CAPH_DEV_IHF || path->sink==CSL_CAPH_DEV_VIBRA)
+	{
+		path->audiohCfg[1].sample_size = 16;
+		if(dataFormat==CSL_CAPH_24BIT_MONO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[1].sample_size = 24;
+		path->audiohCfg[1].sample_mode = 1;
+		if(dataFormat==CSL_CAPH_16BIT_STEREO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[1].sample_mode = 2;
+		path->audiohPath[1] = csl_caph_get_audio_path(path->sink);
+	}
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_config_dma
+//
+// Description: config dma block
+//
+// =========================================================================
+static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
+{
+	int blockIdx;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+	CSL_CAPH_DMA_CONFIG_t dmaCfg;
+	CSL_CAPH_ARM_DSP_e owner = CSL_CAPH_ARM;
+
+	if(!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+	block = path->block[blockPathIdx];
+	if(block!=CAPH_DMA) return;
+	blockIdx = path->blockIdx[blockPathIdx];
+
+	memset(&dmaCfg, 0, sizeof(dmaCfg));
+
+	if(path->source==CSL_CAPH_DEV_DSP_throughMEM && path->sink==CSL_CAPH_DEV_IHF && blockPathIdx==0)
+	{	//ihf call: shared mem to ihf, special case
+		//hard coded to in direction.
+		//DMA channel configuration is done by DSP.
+		//So ARM code does not configure the AADMAC.
+		dmaCfg.dma_ch = path->dma[blockIdx];
+		dmaCfg.mem_addr = (UInt8*)dspSharedMemAddr;
+		csl_caph_dma_set_buffer_address(dmaCfg);
+		return;
+	}
+
+	dmaCfg.direction = CSL_CAPH_DMA_IN;
+	dmaCfg.dma_ch = path->dma[blockIdx];
+	dmaCfg.Tsize = CSL_AADMAC_TSIZE;
+	dmaCfg.dmaCB = path->dmaCB;
+	dmaCfg.mem_addr = path->pBuf;
+	dmaCfg.mem_size = path->size;
+
+	if(blockPathIdx==0) //dma from ddr
+	{
+		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx+1]]; //fifo has to follow dma
+	} else if(path->sink==CSL_CAPH_DEV_DSP_throughMEM && blockPathIdx) { //dma to shared mem
+		dmaCfg.direction = CSL_CAPH_DMA_OUT;
+		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
+#if defined(ENABLE_DMA_ARM2SP)
+		dmaCfg.mem_addr = (void*)vp_shared_mem->shared_Arm2SP_InBuf;
+		dmaCfg.mem_size = arm2spCfg.dmaBytes;
+		dmaCfg.dmaCB = AUDIO_DMA_CB2;
+#endif
+	} else if(path->sink==CSL_CAPH_DEV_MEMORY && blockPathIdx) { //dma to mem
+		dmaCfg.direction = CSL_CAPH_DMA_OUT;
+		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
+	} else if(path->sink==CSL_CAPH_DEV_DSP && blockPathIdx) {
+		dmaCfg.direction = CSL_CAPH_DMA_OUT;
+		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]];
+	} else {
+		audio_xassert(0, pathID);
+	}
+
+	csl_caph_dma_config_channel(dmaCfg);
+#if !defined(ENABLE_DMA_LOOPBACK)
+	if(dmaCfg.dma_ch>=CSL_CAPH_DMA_CH12) owner = CSL_CAPH_DSP;
+#endif
+	csl_caph_dma_enable_intr(dmaCfg.dma_ch, owner);
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_config_cfifo
+//
+// Description: config cfifo block
+//
+// =========================================================================
+static void csl_caph_config_cfifo(CSL_CAPH_PathID pathID, int blockPathIdx)
+{
+	int blockIdx;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+	CSL_CAPH_CFIFO_FIFO_e fifo;
+	UInt16 threshold;
+	CSL_CAPH_CFIFO_DIRECTION_e direction = CSL_CAPH_CFIFO_IN;
+
+	if(!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+	block = path->block[blockPathIdx];
+	if(block!=CAPH_CFIFO) return;
+	blockIdx = path->blockIdx[blockPathIdx];
+
+	fifo = path->cfifo[blockIdx];
+	threshold = csl_caph_cfifo_get_fifo_thres(fifo);
+	if(path->block[blockPathIdx+1]==CAPH_DMA) direction = CSL_CAPH_CFIFO_OUT; //if followed by DMA, must be output.
+	csl_caph_cfifo_config_fifo(fifo, direction, threshold);
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_config_sw
+//
+// Description: config switch block
+//
+// =========================================================================
+static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
+{
+	int blockIdx, blockIdxTmp;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+	CSL_CAPH_SWITCH_CONFIG_t *swCfg;
+	CSL_CAPH_AUDIOH_BUFADDR_t audiohBufAddr;
+
+	if(!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+	block = path->block[blockPathIdx];
+	if(block!=CAPH_SW) return;
+	blockIdx = path->blockIdx[blockPathIdx];
+
+	swCfg = &path->sw[blockIdx];
+
+	if(blockPathIdx) swCfg->FIFO_srcAddr = csl_caph_get_fifo_addr(pathID, blockPathIdx-1, 1);
+	if(path->block[blockPathIdx+1]!=CAPH_NONE) swCfg->FIFO_dstAddr = csl_caph_get_fifo_addr(pathID, blockPathIdx+1, 0);
+
+	if(!swCfg->FIFO_srcAddr)
+	{
+		//blockPathIdx == 0, sw is the first
+		swCfg->trigger = csl_caph_get_dev_trigger(path->source);
+		if(path->audiohPath[0]) //and audioh is source
+		{
+			audiohBufAddr = csl_caph_audioh_get_fifo_addr(path->audiohPath[0]);
+			swCfg->FIFO_srcAddr = audiohBufAddr.bufAddr;
+		} else if (path->source == CSL_CAPH_DEV_BT_MIC) {
+			swCfg->FIFO_srcAddr = csl_pcm_get_rx0_fifo_data_port(pcmHandleSSP);
+		} else if (path->source == CSL_CAPH_DEV_FM_RADIO) {
+			swCfg->FIFO_srcAddr = csl_i2s_get_rx0_fifo_data_port(fmHandleSSP);
+		} else {
+			audio_xassert(0, pathID);
+		}
+	}
+	
+	if(!swCfg->FIFO_dstAddr)
+	{
+		//if sw is the last
+		if(path->audiohPath[1]) 
+		{ //and audioh is sink
+			//if(!swCfg->trigger) //audioH trigger has higher priority?
+			swCfg->trigger = csl_caph_get_dev_trigger(path->sink);
+			audiohBufAddr = csl_caph_audioh_get_fifo_addr(path->audiohPath[1]);
+			swCfg->FIFO_dstAddr = audiohBufAddr.bufAddr;
+		} else if (path->sink == CSL_CAPH_DEV_BT_SPKR) {
+			if(!swCfg->trigger) swCfg->trigger = pcmTxTrigger;
+			swCfg->FIFO_dstAddr = csl_pcm_get_tx0_fifo_data_port(pcmHandleSSP);
+		} else if (path->sink == CSL_CAPH_DEV_FM_TX) {
+			if(!swCfg->trigger) swCfg->trigger = fmTxTrigger;
+			swCfg->FIFO_dstAddr = csl_i2s_get_tx0_fifo_data_port(fmHandleSSP);
+		} else {
+			audio_xassert(0, pathID);
+		}
+	}
+
+	if(!swCfg->trigger) 
+	{
+		if(path->block[blockPathIdx-1]==CAPH_CFIFO && path->block[blockPathIdx+1]==CAPH_CFIFO) 
+		{ //is this arm2sp direct?
+			swCfg->trigger = arm2spCfg.trigger;
+		} else if(path->block[blockPathIdx-1]==CAPH_SRC) { //if src is ahead, use src tap as trigger
+			blockIdxTmp = path->blockIdx[blockPathIdx-1];
+			swCfg->trigger = (CSL_CAPH_SWITCH_TRIGGER_e)((UInt32)CSL_CAPH_TRIG_TAPSDOWN_CH1_NORM_INT+(UInt32)path->srcmRoute[blockIdxTmp].tapOutChnl-(UInt32)CSL_CAPH_SRCM_TAP_MONO_CH1);
+		} else if(path->block[blockPathIdx+1]==CAPH_SRC || path->block[blockPathIdx+1]==CAPH_MIXER) { //if src is behind, use src input as trigger
+			blockIdxTmp = path->blockIdx[blockPathIdx+1];
+			swCfg->trigger = csl_caph_srcmixer_get_inchnl_trigger(path->srcmRoute[blockIdxTmp].inChnl);
+		} else if(path->block[blockPathIdx-1]==CAPH_MIXER) { //if mixer is ahead, use mixer output as trigger?
+			blockIdxTmp = path->blockIdx[blockPathIdx-1];
+			swCfg->trigger = csl_caph_srcmixer_get_outchnl_trigger(path->srcmRoute[blockIdxTmp].outChnl);
+		} else {
+			audio_xassert(0, pathID);
+		}
+	}
+
+	//path->sw[blockIdx].FIFO_dst2Addr = path->sw[blockIdx].FIFO_dstAddr; //hw
+	swCfg->status = csl_caph_switch_config_channel(path->sw[blockIdx]);
+	//path->sw[blockIdx].FIFO_dst2Addr = path->sw[blockIdx].FIFO_dstAddr; //hw
+	//csl_caph_switch_add_dst(path->sw[blockIdx].chnl, path->sw[blockIdx].FIFO_dst2Addr);
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_config_mixer
+//
+// Description: config mixer block
+//
+// =========================================================================
+static void csl_caph_config_mixer(CSL_CAPH_PathID pathID, int blockPathIdx)
+{
+	int blockIdx;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+	AUDIO_SAMPLING_RATE_t srOut = AUDIO_SAMPLING_RATE_48000;
+	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
+
+	if(!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+	block = path->block[blockPathIdx];
+	if(block!=CAPH_MIXER) return;
+	blockIdx = path->blockIdx[blockPathIdx];
+
+	pSrcmRoute = &path->srcmRoute[blockIdx];
+
+	if ((pSrcmRoute->mixGain.mixInGainL == MIX_IN_MUTE)
+		&&(pSrcmRoute->mixGain.mixInGainR == MIX_IN_MUTE))
+	{
+		pSrcmRoute->mixGain.mixInGainL		= MIX_IN_PASS;
+		pSrcmRoute->mixGain.mixOutCoarseGainL	= BIT_SELECT;
+		pSrcmRoute->mixGain.mixInGainR		= MIX_IN_PASS;
+		pSrcmRoute->mixGain.mixOutCoarseGainR	= BIT_SELECT;
+	}
+	csl_caph_srcmixer_config_mix_route(path->srcmRoute[blockIdx]);
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_config_src
+//
+// Description: config src block
+//
+// =========================================================================
+static void csl_caph_config_src(CSL_CAPH_PathID pathID, int blockPathIdx)
+{
+	int blockIdx;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+	AUDIO_SAMPLING_RATE_t srOut = AUDIO_SAMPLING_RATE_8000; //?
+	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
+
+	if(!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+	block = path->block[blockPathIdx];
+	if(block!=CAPH_SRC) return;
+	blockIdx = path->blockIdx[blockPathIdx];
+
+	pSrcmRoute = &path->srcmRoute[blockIdx];
+
+	csl_caph_srcmixer_config_src_route(path->srcmRoute[blockIdx]);
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_config_blocks
+//
+// Description: obtain caph blocks and configure them
+//
+// =========================================================================
+static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
+{
+	int i = 0;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+
+	if(!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+	memcpy(path->block, blocks, sizeof(path->block));
+
+	//=========================
+	//copy parameters to newer structures, to keep the compatibility. can be removed later
+	memcpy(&path->srcmRoute[0], &path->routeConfig, sizeof(CSL_CAPH_SRCM_ROUTE_t));
+	memcpy(&path->srcmRoute[1], &path->routeConfig2, sizeof(CSL_CAPH_SRCM_ROUTE_t));
+	memcpy(&path->srcmRoute[2], &path->routeConfig3, sizeof(CSL_CAPH_SRCM_ROUTE_t));
+	//=========================
+
+	csl_caph_obtain_blocks(pathID);
+
+	while(1)
+	{
+		block = path->block[i];
+		if(block==CAPH_NONE) break;
+
+		switch(block)
+		{
+		case CAPH_DMA:
+			csl_caph_config_dma(pathID, i);
+			break;
+		case CAPH_CFIFO:
+			csl_caph_config_cfifo(pathID, i);
+			break;
+		case CAPH_SW:
+			csl_caph_config_sw(pathID, i);
+			break;
+		case CAPH_SRC:
+			csl_caph_config_src(pathID, i);
+			break;
+		case CAPH_MIXER:
+			csl_caph_config_mixer(pathID, i);
+			break;
+		default:
+			break;
+		}
+		i++;
+	}
+
+	if (path->audiohPath[1]) csl_caph_audioh_config(path->audiohPath[1], (void *)&path->audiohCfg[1]);
+	if (path->audiohPath[0]) csl_caph_audioh_config(path->audiohPath[0], (void *)&path->audiohCfg[0]);
+
+	if(!pcmRunning && (path->sink==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC))
+	{
+		pcmCfg.mode = CSL_PCM_MASTER_MODE;
+		pcmCfg.protocol = CSL_PCM_PROTOCOL_MONO; 
+		pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
+		pcmCfg.sample_rate = path->src_sampleRate;
+		pcmCfg.interleave = TRUE;
+		pcmCfg.ext_bits = 0;
+		pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
+		pcmTxCfg.enable = 1;
+		pcmTxCfg.loopback_enable = 0;
+		pcmRxCfg.enable = 1;
+		pcmRxCfg.loopback_enable = 0;
+		csl_pcm_config(pcmHandleSSP, &pcmCfg, &pcmTxCfg, &pcmRxCfg); 
+	}
+
+	if(!fmRunning && (path->sink==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
+	{
+		fmCfg.mode = CSL_I2S_MASTER_MODE;
+		fmCfg.tx_ena = 1;
+		fmCfg.rx_ena = 1;
+		fmCfg.tx_loopback_ena = 0;
+		fmCfg.rx_loopback_ena = 0;
+		// Transfer size > 4096 bytes: Continuous transfer.
+		// < 4096 bytes: just transfer one block and then stop.
+		fmCfg.trans_size = CSL_I2S_SSP_TSIZE;
+		fmCfg.prot = SSPI_HW_I2S_MODE2;
+		fmCfg.interleave = TRUE;
+		// For test, set SSP to support 8KHz, 16bit.
+		fmCfg.sampleRate = CSL_I2S_16BIT_48000HZ; //48kHz or 8kHz?
+		csl_i2s_config(fmHandleSSP, &fmCfg);
+	}
+
+	//=========================
+	//copy parameters to older structures, to keep the compatibility. can be removed later
+	path->fifo = path->cfifo[0];
+	path->fifo2 = path->cfifo[1];
+	memcpy(&path->switchCH, &path->sw[0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+	memcpy(&path->switchCH2, &path->sw[1], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+	memcpy(&path->switchCH3, &path->sw[2], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+	memcpy(&path->routeConfig, &path->srcmRoute[0], sizeof(CSL_CAPH_SRCM_ROUTE_t));
+	memcpy(&path->routeConfig2, &path->srcmRoute[1], sizeof(CSL_CAPH_SRCM_ROUTE_t));
+	memcpy(&path->routeConfig3, &path->srcmRoute[2], sizeof(CSL_CAPH_SRCM_ROUTE_t));
+	csl_caph_hwctrl_SetPathSwitchCH(pathID, path->switchCH);
+	csl_caph_hwctrl_SetPathSwitchCH2(pathID, path->switchCH2);
+	csl_caph_hwctrl_SetPathSwitchCH3(pathID, path->switchCH3);
+	//=========================
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_start_blocks
+//
+// Description: start caph blocks, has to be in sequence?
+//
+// =========================================================================
+static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
+{
+	int i = 0;
+	int blockIdx;
+	CAPH_BLOCK_t block;
+	CSL_CAPH_HWConfig_Table_t *path;
+
+	if(!pathID) return;
+	path = &HWConfig_Table[pathID-1];
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_start_blocks path %d.\r\n", pathID);
+
+#if defined(ENABLE_DMA_LOOPBACK) && defined(ENABLE_DMA_VOICE) //for debug purpose, play 1khz tone to speaker
+	{
+		int k;
+		UInt32 tone1k[] = {0x000000,0x2D5D00,0x402600,0x2D5C00,0xFFFFFF00,0xFFD2A300,0xFFBFD900,0xFFD2A400};  //1kHz tone if sr = 8000
+		//short tone1k[] = {0x0000,0x2D5D,0x4026,0x2D5C,0xFFFF,0xD2A3,0xBFD9,0xD2A4};  //1kHz tone if sr = 8000
+		for(k=0; k<path->size; k+=sizeof(tone1k))
+		{
+#if !defined(WIN32)
+			if(path->pBuf) memcpy(path->pBuf+k, tone1k, sizeof(tone1k));
+#endif
+		}
+	}
 #endif
 
+#if !defined(ENABLE_DMA_VOICE)
+	if(path->sink==CSL_CAPH_DEV_DSP && path->audiohPath[0]) //UL mic to dsp
+	{
+		csl_caph_intc_enable_tapout_intr(MAIN_MIC_UL_TO_DSP_CHNL, CSL_CAPH_DSP);
+	}
+#endif
 
+	while(1)
+	{
+		block = path->block[i];
+		if(block==CAPH_NONE) break;
+		blockIdx = path->blockIdx[i];
+
+		switch(block)
+		{
+		case CAPH_DMA:
+			//csl_caph_dma_start_transfer(path->dma[blockIdx]);
+			//Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_start_blocks dma %d.\r\n", path->dma[blockIdx]);
+			break;
+		case CAPH_CFIFO:
+			csl_caph_cfifo_start_fifo(path->cfifo[blockIdx]);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "cfifo %d.\r\n", path->cfifo[blockIdx]);
+			break;
+		case CAPH_SW:
+			csl_caph_switch_start_transfer(path->sw[blockIdx].chnl);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw %d.\r\n", path->sw[blockIdx]);
+			break;
+		default:
+			break;
+		}
+		i++;
+	}
+
+	if (path->audiohPath[1])
+	{
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "audioh %d.\r\n", path->audiohPath[1]);
+		csl_caph_audioh_start(path->audiohPath[1]);
+	}
+
+	if (path->audiohPath[0])
+	{
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "audioh %d.\r\n", path->audiohPath[0]);
+		csl_caph_audioh_start(path->audiohPath[0]);
+	}
+
+	//have to start dma in the end?
+	if(!(path->source==CSL_CAPH_DEV_DSP_throughMEM && path->sink==CSL_CAPH_DEV_IHF))//ihf call, dsp starts dma.
+	{
+		for(i=0; i<MAX_PATH_LEN; i++)
+		{
+			block = path->block[i];
+			if(block==CAPH_NONE) break;
+			if(block!=CAPH_DMA) continue;
+			blockIdx = path->blockIdx[i];
+			
+			csl_caph_dma_start_transfer(path->dma[blockIdx]);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "dma %d.\r\n", path->dma[blockIdx]);
+		}
+	}
+
+	if(!pcmRunning && (path->sink==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC))
+	{
+		csl_pcm_start(pcmHandleSSP, &pcmCfg);
+		pcmRunning = TRUE;
+	}
+
+	if(!fmRunning && (path->sink==CSL_CAPH_DEV_FM_TX || path->source==CSL_CAPH_DEV_FM_RADIO))
+	{
+		csl_i2s_start(fmHandleSSP, &fmCfg);
+		fmRunning = TRUE;
+	}
+
+#if defined(ENABLE_DMA_ARM2SP)
+	if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
+	{
+		if(arm2spCfg.instanceID==1)
+		{
+			CSL_RegisterARM2SPRenderStatusHandler((void*)&ARM2SP_DMA_Req);
+			CSL_ARM2SP_Init();
+			VPRIPCMDQ_SetARM2SP( arm2spCfg.arg0, 0 ); //when to start ARM2SP? Maybe after the 1st DMA?
+			Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start instance %d, arg0=0x%x.\r\n", arm2spCfg.instanceID, arm2spCfg.arg0);
+		}
+	}
+#endif
+	if (path->source == CSL_CAPH_DEV_HS_MIC) csl_caph_hwctrl_ACIControl();
+}
+#endif //#if defined(ENABLE_CAPH_API2)
 
 // ==========================================================================
 //
@@ -2230,6 +3266,11 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         audioPath = csl_caph_hwctrl_GetPath_FromPathID(pathID);
     }
 
+#if defined(ENABLE_CAPH_API2)
+	if(config.dmaCH) csl_caph_hwctrl_SetPathDMACH(audioPath.pathID, config.dmaCH);
+	if(config.dmaCH2) csl_caph_hwctrl_SetPathDMACH2(audioPath.pathID, config.dmaCH2);
+#endif
+
     if ((audioPath.source == CSL_CAPH_DEV_MEMORY)
          &&((audioPath.sink == CSL_CAPH_DEV_EP)
 	        ||(audioPath.sink == CSL_CAPH_DEV_HS)
@@ -2237,6 +3278,16 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	        ||(audioPath.sink == CSL_CAPH_DEV_VIBRA)))
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Music playback: DDR->DMA->CFIFO->SSASW->SRC->SSASW->AUDIOH(EP/IHF/HS/Vibra)\r\n"));
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE};
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
+		
         /* Path:
          * DDR->DMA->CFIFO->SSASW->SRCM->SSASW->AUDIOH(EP/IHF/HS/Vibra)
          */
@@ -2252,15 +3303,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
         // Configure SRCMIxer
         // SRC->Mixer
-
-		// temp fix until we have a solution for mono - stereo conversion or SRC mixer pass thru for 48 K Mono
-		if ((audioPath.src_sampleRate != audioPath.snk_sampleRate) || 
-					((audioPath.src_sampleRate == AUDIO_SAMPLING_RATE_48000) && 
-					(audioPath.chnlNum == AUDIO_CHANNEL_STEREO)))
-		{
-			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnablePath :: go through SRC mixer\r\n"));
-        	csl_caph_srcmixer_config(audioPath.pathID);
-		}
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnablePath :: go through SRC mixer\r\n"));
+        csl_caph_srcmixer_config(audioPath.pathID);
         
         // Configure AudioH (EP/IHF/HS/Vibra)
         csl_caph_audioh_config_path(audioPath.pathID);
@@ -2281,329 +3325,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         csl_caph_dma_start(audioPath.pathID);
     }
     else
-    if (((audioPath.source == CSL_CAPH_DEV_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY))
-        ||((audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY)))
-    {
-		if(audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)
-		{
-			/* Set up the path for primary digital mic
-			 */
-			//In case that the source sample Rate is 0, force it to be 48KHz.
-			if(audioPath.src_sampleRate == 0)
-			{
-				audioPath.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
-				csl_caph_hwctrl_SetPathSrcSampleRate(audioPath.pathID, audioPath.src_sampleRate);
-			}
-
-   			// config cfifo
-			if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
-			{
-				sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-						fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
-			}
-			else
-			if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
-			{
-				sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       			   fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
-			}
-			else
-			{
-				audio_xassert(0, audioPath.bitPerSample );
-			}
-			// Save the fifo information
-			csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
-
-    		direction = CSL_CAPH_CFIFO_OUT;
-			threshold = csl_caph_cfifo_get_fifo_thres(fifo);
-   			csl_caph_cfifo_config_fifo(fifo, direction, threshold);
-
-    		// config switch
-			csl_caph_switch_ch = csl_caph_switch_obtain_channel();
-
-   			sw_config.chnl = csl_caph_switch_ch;
-			if (audioPath.source == CSL_CAPH_DEV_DIGI_MIC)
-			{
-				audiohBufAddr = csl_caph_audioh_get_fifo_addr(AUDDRV_PATH_VIN_INPUT);
-			}
-			else
-			if (audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)
-			{
-				audiohBufAddr = csl_caph_audioh_get_fifo_addr(AUDDRV_PATH_NVIN_INPUT);
-			}
-			sw_config.FIFO_srcAddr = audiohBufAddr.bufAddr;
-    		sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo);
-   			sw_config.chnl = csl_caph_switch_ch;
-
-			if (audioPath.source == CSL_CAPH_DEV_DIGI_MIC)
-			{
-   				sw_config.trigger = CSL_CAPH_TRIG_ADC_VOICE_FIFOR_THR_MET;
-			}
-			else
-			if (audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)
-			{
-   				sw_config.trigger = CSL_CAPH_TRIG_ADC_NOISE_FIFOR_THR_MET;
-			}
-    
-			if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
-			{
-    			sw_config.dataFmt = CSL_CAPH_16BIT_MONO;
-			}
-			else
-			if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
-			{
-       			sw_config.dataFmt = CSL_CAPH_24BIT_MONO;
-			}
-			else
-			{
-				audio_xassert(0, audioPath.bitPerSample );
-			}
-            sw_config.status = csl_caph_switch_config_channel(sw_config);
-	        // Save the switch channel information
-            csl_caph_hwctrl_SetPathSwitchCH(audioPath.pathID, sw_config);
-
-		
-
-			// config DMA
-			csl_caph_hwctrl_SetPathDMACH(audioPath.pathID, config.dmaCH);
-			// Get all the information from Table again.
-			audioPath = csl_caph_hwctrl_GetPath_FromPathID(audioPath.pathID);
-
-		   //hard coded to in direction.
-    		dmaConfig.direction = CSL_CAPH_DMA_OUT;
-			dmaConfig.dma_ch = audioPath.dmaCH;
-    		dmaConfig.fifo = fifo;
-			dmaConfig.mem_addr = audioPath.pBuf;
-    		dmaConfig.mem_size = audioPath.size;
-			dmaConfig.Tsize = CSL_AADMAC_TSIZE;
-    		dmaConfig.dmaCB = audioPath.dmaCB;
-			csl_caph_dma_config_channel(dmaConfig);
-			csl_caph_dma_enable_intr(audioPath.dmaCH, CSL_CAPH_ARM);
-
-
-			/* Set up the path for secondary digital mic
-			 */
-
-   			// config cfifo
-			if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
-			{
-				sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-				fifo2 = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
-			}
-			else
-			if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
-			{
-				sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       			fifo2 = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
-			}
-			else
-			{
-				audio_xassert(0, audioPath.bitPerSample );
-			}
-			// Save the fifo information
-			csl_caph_hwctrl_SetPathFifo2(audioPath.pathID, fifo2);
-
-    		direction = CSL_CAPH_CFIFO_OUT;
-			threshold = csl_caph_cfifo_get_fifo_thres(fifo2);
-   			csl_caph_cfifo_config_fifo(fifo2, direction, threshold);
-
-    		// config switch
-			csl_caph_switch_ch2 = csl_caph_switch_obtain_channel();
-
-   			sw_config.chnl = csl_caph_switch_ch2;
-			sw_config.FIFO_srcAddr = audiohBufAddr.buf2Addr;
-    		sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo2);
-
-			if (audioPath.source == CSL_CAPH_DEV_DIGI_MIC)
-			{
-   				sw_config.trigger = CSL_CAPH_TRIG_ADC_VOICE_FIFOL_THR_MET;
-			}
-			else
-			if (audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)
-			{
-   				sw_config.trigger = CSL_CAPH_TRIG_ADC_NOISE_FIFOL_THR_MET;
-			}
-
-			if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
-			{
-    			sw_config.dataFmt = CSL_CAPH_16BIT_MONO;
-			}
-			else
-			if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
-			{
-       			sw_config.dataFmt = CSL_CAPH_24BIT_MONO;
-			}
-			else
-			{
-				audio_xassert(0, audioPath.bitPerSample );
-			}
-            sw_config.status = csl_caph_switch_config_channel(sw_config);
-            // Save the switch channel information
-            csl_caph_hwctrl_SetPathSwitchCH2(audioPath.pathID, sw_config);
-
-			// config DMA
-			csl_caph_hwctrl_SetPathDMACH2(audioPath.pathID, config.dmaCH2);
-			// Get all the information from Table again.
-			audioPath = csl_caph_hwctrl_GetPath_FromPathID(audioPath.pathID);
-
-			//hard coded to in direction.
-    		dmaConfig.direction = CSL_CAPH_DMA_OUT;
-			dmaConfig.dma_ch = audioPath.dmaCH2;
-    		dmaConfig.fifo = fifo2;
-			dmaConfig.mem_addr = audioPath.pBuf2;
-    		dmaConfig.mem_size = audioPath.size;
-			dmaConfig.Tsize = CSL_AADMAC_TSIZE;
-    		dmaConfig.dmaCB = audioPath.dmaCB;
-			csl_caph_dma_config_channel(dmaConfig);
-			csl_caph_dma_enable_intr(audioPath.dmaCH2, CSL_CAPH_ARM);
-
-			// config audioh
-   			audioh_config.sample_size = audioPath.bitPerSample;
-    		audioh_config.sample_pack = DATA_UNPACKED;
-			audioh_config.sample_mode = AUDIO_CHANNEL_STEREO;
-
-			if (audioPath.source == CSL_CAPH_DEV_DIGI_MIC)
-			{
-   				csl_caph_audioh_config(AUDDRV_PATH_VIN_INPUT, 
-						(void *)&audioh_config);
-			}
-			else
-			if (audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)
-			{
-   				csl_caph_audioh_config(AUDDRV_PATH_NVIN_INPUT, 
-						(void *)&audioh_config);
-			}
-
-			// caph blocks start
-			csl_caph_cfifo_start_fifo(audioPath.fifo);
-			csl_caph_cfifo_start_fifo(audioPath.fifo2);
-			csl_caph_dma_start_transfer(audioPath.dmaCH);
-			csl_caph_dma_start_transfer(audioPath.dmaCH2);
-			csl_caph_switch_start_transfer(audioPath.switchCH.chnl);
-			csl_caph_switch_start_transfer(audioPath.switchCH2.chnl);
-			if (audioPath.source == CSL_CAPH_DEV_DIGI_MIC)
-			{
-				csl_caph_audioh_start(AUDDRV_PATH_VIN_INPUT);        
-			}
-			else
-			if (audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)
-			{
-				csl_caph_audioh_start(AUDDRV_PATH_NVIN_INPUT);        
-			}
-		}
-    }   
-    else
-    if(((audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_EP))
-        ||((audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_HS))
-        ||((audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(audioPath.sink == CSL_CAPH_DEV_IHF)))
-    {
-
-        /* Set up the path for primary digital mic
-         */
-
-   		// config cfifo
-        if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
-        {
-            sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-            fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
-        }
-        else
-        if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
-        {
-            sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
-       	    fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
-        }
-        else
-        {
-            audio_xassert(0, audioPath.bitPerSample );
-        }
-        // Save the fifo information
-        csl_caph_hwctrl_SetPathFifo(audioPath.pathID, fifo);
-
-    	direction = CSL_CAPH_CFIFO_OUT;
-	    threshold = csl_caph_cfifo_get_fifo_thres(fifo);
-   		csl_caph_cfifo_config_fifo(fifo, direction, threshold);
-
-    	// config switch
-	    csl_caph_switch_ch = csl_caph_switch_obtain_channel();
-
-   		sw_config.chnl = csl_caph_switch_ch;
-	    audiohBufAddr = csl_caph_audioh_get_fifo_addr(AUDDRV_PATH_EANC_INPUT);
-	    sw_config.FIFO_srcAddr = audiohBufAddr.bufAddr;
-    	sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo);
-   		sw_config.chnl = csl_caph_switch_ch;
-   		sw_config.trigger = CSL_CAPH_TRIG_EANC_FIFO_THRESMET;
-    
-        if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
-        {
-    	    sw_config.dataFmt = CSL_CAPH_16BIT_MONO;
-        }
-        else
-        if (audioPath.bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
-        {
-       		sw_config.dataFmt = CSL_CAPH_24BIT_MONO;
-        }
-        else
-        {
-            audio_xassert(0, audioPath.bitPerSample );
-        }
-        sw_config.status = csl_caph_switch_config_channel(sw_config);
-	    // Save the switch channel information
-        csl_caph_hwctrl_SetPathSwitchCH(audioPath.pathID, sw_config);
-
-        // config DMA
-        csl_caph_hwctrl_SetPathDMACH(audioPath.pathID, config.dmaCH);
-        // Get all the information from Table again.
-        audioPath = csl_caph_hwctrl_GetPath_FromPathID(audioPath.pathID);
-
-	    //hard coded to in direction.
-    	dmaConfig.direction = CSL_CAPH_DMA_OUT;
-	    dmaConfig.dma_ch = audioPath.dmaCH;
-    	dmaConfig.fifo = fifo;
-	    dmaConfig.mem_addr = audioPath.pBuf;
-    	dmaConfig.mem_size = audioPath.size;
-	    dmaConfig.Tsize = CSL_AADMAC_TSIZE;
-    	dmaConfig.dmaCB = audioPath.dmaCB;
-	    csl_caph_dma_config_channel(dmaConfig);
-	    csl_caph_dma_enable_intr(audioPath.dmaCH, CSL_CAPH_ARM);
-
-
-        /* Set up the path for NVIN mics
-         */
-
-        // config audioh
-   		audioh_config.sample_size = audioPath.bitPerSample;
-    	audioh_config.sample_pack = DATA_UNPACKED;
-	    audioh_config.sample_mode = AUDIO_CHANNEL_STEREO;
-   	    csl_caph_audioh_config(AUDDRV_PATH_NVIN_INPUT, (void *)&audioh_config);
-
-        memset(&audioh_config, 0, sizeof(audio_config_t));
-   		audioh_config.sample_size = audioPath.bitPerSample;
-    	audioh_config.sample_pack = DATA_UNPACKED;
-        audioh_config.eanc_input =(AUDDRV_MIC_Enum_t)0x2; /*Digi Mic3 is for EANC antinoise */
-        if (audioPath.sink == CSL_CAPH_DEV_EP)
-        {
-            audioh_config.eanc_output = AUDDRV_PATH_EARPICEC_OUTPUT;
-        }
-        else
-        if (audioPath.sink == CSL_CAPH_DEV_IHF)
-        {
-            audioh_config.eanc_output = AUDDRV_PATH_IHF_OUTPUT;
-        }
-        else //audioPath.sink == CSL_CAPH_DEV_HS
-        {
-            audioh_config.eanc_output = AUDDRV_PATH_HEADSET_OUTPUT;
-        }
-   	    csl_caph_audioh_config(AUDDRV_PATH_EANC_INPUT, (void *)&audioh_config);
-        
-	    // caph blocks start
-   		csl_caph_cfifo_start_fifo(audioPath.fifo);
-	    csl_caph_dma_start_transfer(audioPath.dmaCH);
-    	csl_caph_switch_start_transfer(audioPath.switchCH.chnl);
-        csl_caph_audioh_start(AUDDRV_PATH_NVIN_INPUT); 
-        csl_caph_audioh_start(AUDDRV_PATH_EANC_INPUT); 
-    }       
-    else
     if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 	    || (audioPath.source == CSL_CAPH_DEV_HS_MIC)
 	    || (audioPath.source == CSL_CAPH_DEV_DIGI_MIC_L)
@@ -2613,6 +3334,16 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	    && (audioPath.sink == CSL_CAPH_DEV_MEMORY))
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Music Recording: AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->SSASW->CFIFO->DMA->DDR\r\n"));
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE};
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			
+			return audioPath.pathID;
+		}
+#endif
     
         /* Path:
          * AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->SSASW->CFIFO->DMA->DDR
@@ -2691,6 +3422,16 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to Tx recording *** \r\n"));
 			/* Set up the path for FM Radio recording: SSP->CFIFO->DDR
 			 */
+#if defined(ENABLE_CAPH_API2)
+			{
+				CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE};
+				//switch dataformat should be 16bitmono or 16bitstereo?
+
+				csl_caph_config_blocks(audioPath.pathID, blocks);
+				csl_caph_start_blocks(audioPath.pathID);
+				return audioPath.pathID;
+			}
+#endif
 
    			// config cfifo
 			if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
@@ -2796,10 +3537,20 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else
     if ((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_FM_TX))
     {
-
-
         /* Set up the path for Music/speech/tone playback to FM TX: DDR->CFIFO->SSP3 Tx
          */
+#if defined(ENABLE_CAPH_API2)
+		{
+			//CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE};
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE};
+			//switch dataformat should be 16bitmono or 16bitstereo?
+			//fm samplerate 8 or 48kHz?
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
 
    		// config cfifo
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
@@ -2903,6 +3654,16 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     {
         /* Set up the path for FM Radio TX: AudioH(AnalogMic)->SSP3
          */
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE};
+			//fm samplerate 8 or 48kHz?
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
    		// config cfifo
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
@@ -2981,9 +3742,18 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         ((audioPath.sink == CSL_CAPH_DEV_EP) ||
          (audioPath.sink == CSL_CAPH_DEV_HS)))
     {
-
         /* Set up the path for FM Radio playback: SSP3->AudioH(EP/HS)
          */
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE};
+			//fm samplerate 8 or 48kHz?
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
         // config cfifo
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
             sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
@@ -3071,9 +3841,18 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else
     if ((audioPath.source == CSL_CAPH_DEV_BT_MIC)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY))
     {
-
         /* Set up the path for BT recording: SSP4->CFIFO->DDR
          */
+#if defined(ENABLE_CAPH_API2)
+		{
+			//CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE}; //more complete path
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE}; //only for 8/16kHz mono
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
 
    		// config cfifo
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
@@ -3172,6 +3951,16 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     {
         /* Set up the path for BT playback: DDR->CFIFO->SSP4(BT_SPKR)
          */
+#if defined(ENABLE_CAPH_API2)
+		{
+			//CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_NONE}; //more complete path
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE}; //only for 8/16kHz mono
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
 
    		// config cfifo
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
@@ -3272,6 +4061,15 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     {
         /* Set up the path for BT Recording: AudioH(AnalogMic)->SSP4
          */
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE}; //why dma and cfifo are involved in the current implementation? why no src?
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
    		// config cfifo
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         {
@@ -3354,10 +4152,17 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else
     if ((audioPath.source == CSL_CAPH_DEV_BT_MIC)&&(audioPath.sink == CSL_CAPH_DEV_EP))
     {
-
         /* Set up the path for BT playback: SSP4->AudioH(EP)
          */
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE}; //why dma and cfifo are involved in the current implementation? why no src?
 
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
 
    		// config cfifo
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
@@ -3467,6 +4272,15 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     if ((audioPath.source == CSL_CAPH_DEV_DSP_throughMEM)&&(audioPath.sink == CSL_CAPH_DEV_IHF))	
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice DL: DDR->DMA->CFIFO->SSASW->AUDIOH(IHF)\r\n"));
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE};
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
         /* Path:
          * DDR->DMA->CFIFO->SSASW->AUDIOH(IHF)
          */
@@ -3502,10 +4316,24 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         ||(audioPath.sink == CSL_CAPH_DEV_HS)))
     {
         _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice DL: DSP->SRCMixer->SSASW->AUDIOH(EP/HS)\r\n"));
+#if defined(ENABLE_DMA_VOICE) || defined(ENABLE_CAPH_API2)
+		{
+#if defined(ENABLE_DMA_VOICE)
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE};
+#elif defined(ENABLE_CAPH_API2)
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_MIXER, CAPH_SW, CAPH_NONE};
+#endif
+			CSL_CAPH_HWConfig_Table_t *path = &HWConfig_Table[pathID-1];
+
+			memcpy(&(path->routeConfig.mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
         /* Path:
          * DSP->SRCM->SSASW->AUDIOH(EP/HS)
          */
-    
         // Configure SRCMIxer
         // SRC->Mixer
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnablePath :: go through SRC mixer\r\n"));
@@ -3536,6 +4364,18 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 
     {
 	    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice UL: AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->SSASW->SRCMixer->DSP\r\n"));
+#if defined(ENABLE_DMA_VOICE) || defined(ENABLE_CAPH_API2)
+		{
+#if defined(ENABLE_DMA_VOICE)
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE};
+#elif defined(ENABLE_CAPH_API2)
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_SRC, CAPH_NONE};
+#endif
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
     
         /* Path:
          * AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->SSASW->SRCMixer->DSP
@@ -3583,6 +4423,14 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
             ||(audioPath.sink == CSL_CAPH_DEV_IHF) 
             ||(audioPath.sink == CSL_CAPH_DEV_HS)))
     {
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_NONE};
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
 	    // config audioh ear output path
         if (audioPath.sink == CSL_CAPH_DEV_IHF)
 	    {
@@ -3631,6 +4479,19 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 	(audioPath.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
         && (audioPath.sink == CSL_CAPH_DEV_HS))
     {
+#if defined(ENABLE_CAPH_API2)
+		{
+			//CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE}; //it seems to work somehow, why?
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE};  //it seems to work even better, why?
+			CSL_CAPH_HWConfig_Table_t *path = &HWConfig_Table[pathID-1];
+
+			memcpy(&(path->routeConfig2.mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
+			memcpy(&(path->routeConfig3.mixGain), &(config.mixGain), sizeof(CSL_CAPH_SRCM_MIX_GAIN_t)); 
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
 
 /***************************************************
  * Handset MIC/HS MIC/DIGI MIC -> SRCMixer TAP_OUTFIFO3 (48KHz->8KHz)
@@ -3847,6 +4708,15 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
         && ((audioPath.sink == CSL_CAPH_DEV_EP) ||
             (audioPath.sink == CSL_CAPH_DEV_IHF)))
     {
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE};
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
         // config switch
         csl_caph_switch_ch = csl_caph_switch_obtain_channel();
 
@@ -4322,6 +5192,15 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
  	if ((audioPath.source == CSL_CAPH_DEV_DSP)&&(audioPath.sink == CSL_CAPH_DEV_MEMORY))
     {
 		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnablePath dsp_to_mem: bitPerSample %ld, chnlNum %d.\r\n", audioPath.bitPerSample, audioPath.chnlNum);
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_MIXER, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE};
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
 
 		//AUDDRV_Telephony_InitHW() tells DSP to send 24bit, so fix to 24bit for now. DSP requires 24bit in order to get an interrupt every microphone sample.
         /*if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
@@ -4449,6 +5328,15 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 	else  // DDR --> HW src --> HW src tapout --> DSP
  	if ((audioPath.source == CSL_CAPH_DEV_MEMORY)&&(audioPath.sink == CSL_CAPH_DEV_DSP))
     {
+#if defined(ENABLE_CAPH_API2)
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_SRC, CAPH_NONE};
+
+			csl_caph_config_blocks(audioPath.pathID, blocks);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+#endif
         if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
         {
             if (audioPath.chnlNum == AUDIO_CHANNEL_MONO)
@@ -4571,13 +5459,50 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 	} 
 #if defined(ENABLE_DMA_ARM2SP)
 	else if (audioPath.source == CSL_CAPH_DEV_MEMORY && audioPath.sink == CSL_CAPH_DEV_DSP_throughMEM)
-	{	//DDR --DMA--> CFIFO1 --SW--> CFIFO2 --DMA--> SharedMem
-		//no SRC for now
+	{	//path varies with arm2spPath
+		//0: DDR --DMA1--> CFIFO1 --SW1-->								   CFIFO2 --DMA2--> SharedMem, no SRC.
+		//1: DDR --DMA1--> CFIFO1 --SW1--> SRC Mixer --SW2-->			   CFIFO2 --DMA2--> SharedMem, 44/48k stereo to 48k mono.
+		//2: DDR --DMA1--> CFIFO1 --SW1--> SRC		 --SW2-->			   CFIFO2 --DMA2--> SharedMem, 48k mono to 8/16k mono.
+		//3: DDR --DMA1--> CFIFO1 --SW1--> SRC Mixer --SW2--> SRC --SW3--> CFIFO2 --DMA2--> SharedMem, 48/44k stereo to 8/16k mono.
+
 		UInt16 arg0 = 0;
 		UInt32 instanceID = 1; //arm2sp instance
 		UInt32 numFramesPerInterrupt = 0;
 		CSL_CAPH_SWITCH_TRIGGER_e trigger = CSL_CAPH_TRIG_NONE;
 		UInt32 arm2spDmaBytes = ARM2SP_INPUT_SIZE*2; //whole ping-pong buffer
+		AUDIO_CHANNEL_NUM_t chNumOut = AUDIO_CHANNEL_MONO;
+		AUDIO_SAMPLING_RATE_t srOut = audioPath.src_sampleRate;
+
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_enablePath dma arm2sp streamID: %d, src sr %d, arm2spPath %d.\r\n", config.streamID, audioPath.src_sampleRate, arm2spPath);
+
+		//Validate the selected path.
+		if(audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_8000 || audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_16000) arm2spPath = ARM2SP_CAPH_DIRECT;
+		else if(audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_44100 && (arm2spPath != ARM2SP_CAPH_44S_48M && arm2spPath != ARM2SP_CAPH_44S_8M)) arm2spPath = ARM2SP_CAPH_44S_8M;
+		else if(audioPath.chnlNum == AUDIO_CHANNEL_STEREO && arm2spPath == ARM2SP_CAPH_48M_8M) arm2spPath = ARM2SP_CAPH_44S_8M;
+		else if(audioPath.chnlNum == AUDIO_CHANNEL_MONO && (arm2spPath == ARM2SP_CAPH_44S_48M || arm2spPath == ARM2SP_CAPH_44S_8M)) arm2spPath = ARM2SP_CAPH_48M_8M;
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "Revised arm2spPath %d.\r\n", arm2spPath);
+
+		csl_caph_hwctrl_SetPathDMACH(audioPath.pathID, config.dmaCH);
+		csl_caph_hwctrl_SetPathDMACH2(audioPath.pathID, config.dmaCH2);
+		if(arm2spPath<ARM2SP_CAPH_44S_8M)
+		{
+			CAPH_BLOCK_t blocks[4][MAX_PATH_LEN] = {
+				{CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE}, //ARM2SP_CAPH_DIRECT
+				{CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE}, //ARM2SP_CAPH_44S_48M
+				{CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE}, //ARM2SP_CAPH_48M_8M
+			};
+			
+			csl_caph_config_arm2sp(audioPath.pathID);
+			csl_caph_config_blocks(audioPath.pathID, blocks[arm2spPath]);
+			csl_caph_start_blocks(audioPath.pathID);
+			return audioPath.pathID;
+		}
+
+		if(!config.dmaCH2) 
+		{
+			config.dmaCH2 = csl_caph_dma_obtain_channel();
+			csl_caph_hwctrl_SetPathDMACH2(audioPath.pathID, config.dmaCH2);
+		}
 
 		if (audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
 		{
@@ -4588,28 +5513,7 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 			else csl_caph_dataformat = CSL_CAPH_24BIT_STEREO;
 		}
 
-		if(audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_48000) 
-		{
-			numFramesPerInterrupt = 1;
-			trigger = CSL_CAPH_48KHZ;
-			arm2spDmaBytes = ARM2SP_INPUT_SIZE_48K*2;
-			if(audioPath.chnlNum == AUDIO_CHANNEL_MONO && audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE) 
-			{
-				trigger = CSL_CAPH_24KHZ; //switch does not differentiate 16bit mono from 16bit stereo, hence reduce the clock.
-				arm2spDmaBytes >>= 1; //For 48K, dsp only supports 2*20ms ping-pong buffer, stereo or mono
-			}
-		} else if(audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_16000) {
-			numFramesPerInterrupt = 2;
-			trigger = CSL_CAPH_16KHZ;
-			if(audioPath.chnlNum == AUDIO_CHANNEL_MONO && audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE) trigger = CSL_CAPH_8KHZ;
-		} else if(audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_8000) {
-			numFramesPerInterrupt = 4;
-			trigger = CSL_CAPH_8KHZ;
-			if(audioPath.chnlNum == AUDIO_CHANNEL_MONO && audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE) trigger = CSL_CAPH_4KHZ;
-		}
-
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_enablePath DDR --> SharedMem:: streamID: %d, src sr %d.\r\n", config.streamID, audioPath.src_sampleRate);
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "config.dmaCH %d, dmaCH2 %d, pathID %d, format %d, trigger %d.\r\n", config.dmaCH, config.dmaCH2, audioPath.pathID, csl_caph_dataformat, trigger);
+		audioPath.snk_sampleRate = audioPath.src_sampleRate;
 
 		// config cfifo
 		sampleRate = csl_caph_hwctrl_GetCSLSampleRate(audioPath.src_sampleRate);
@@ -4619,7 +5523,7 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 		threshold = csl_caph_cfifo_get_fifo_thres(fifo);
 		csl_caph_cfifo_config_fifo(fifo, direction, threshold);
 
-		// config 2nd cfifo	
+		// config 2nd cfifo 
 		fifo2 = csl_caph_cfifo_obtain_fifo(csl_caph_dataformat, sampleRate); 
 		csl_caph_hwctrl_SetPathFifo2(audioPath.pathID, fifo2);
 		direction = CSL_CAPH_CFIFO_OUT;
@@ -4630,26 +5534,207 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 		csl_caph_switch_ch = csl_caph_switch_obtain_channel();
 		sw_config.chnl = csl_caph_switch_ch;
 		sw_config.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(fifo);
-		sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo2);
-		sw_config.trigger = trigger;
-		sw_config.dataFmt = csl_caph_dataformat;
-		sw_config.status = csl_caph_switch_config_channel(sw_config);
-		csl_caph_hwctrl_SetPathSwitchCH(audioPath.pathID, sw_config);
-
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "sw.trigger %d, dataFmt %d.\r\n", sw_config.trigger, sw_config.dataFmt);
-
-		if(audioPath.snk_sampleRate == 0)
+		if(arm2spPath==ARM2SP_CAPH_DIRECT) 
 		{
-			audioPath.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
-			csl_caph_hwctrl_SetPathSinkSampleRate(audioPath.pathID, audioPath.snk_sampleRate);
-		}
+			chNumOut = audioPath.chnlNum;
 
-		audioPath.routeConfig.outThres = 0x3; // set to default
-		csl_caph_hwctrl_SetPathRouteConfig(audioPath.pathID, audioPath.routeConfig);
+			if(audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_48000) 
+			{
+				numFramesPerInterrupt = 1;
+				trigger = CSL_CAPH_48KHZ;
+				arm2spDmaBytes = ARM2SP_INPUT_SIZE_48K*2;
+				if(audioPath.chnlNum == AUDIO_CHANNEL_MONO && audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE) 
+				{
+					trigger = CSL_CAPH_24KHZ; //switch does not differentiate 16bit mono from 16bit stereo, hence reduce the clock.
+					arm2spDmaBytes >>= 1; //For 48K, dsp only supports 2*20ms ping-pong buffer, stereo or mono
+				}
+			} else if(audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_16000) {
+				numFramesPerInterrupt = 2;
+				trigger = CSL_CAPH_16KHZ;
+				if(audioPath.chnlNum == AUDIO_CHANNEL_MONO && audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE) trigger = CSL_CAPH_8KHZ;
+			} else if(audioPath.src_sampleRate==AUDIO_SAMPLING_RATE_8000) {
+				numFramesPerInterrupt = 4;
+				trigger = CSL_CAPH_8KHZ;
+				if(audioPath.chnlNum == AUDIO_CHANNEL_MONO && audioPath.bitPerSample == AUDIO_16_BIT_PER_SAMPLE) trigger = CSL_CAPH_4KHZ;
+			}
+
+			sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo2);
+			sw_config.trigger = trigger;
+			sw_config.dataFmt = csl_caph_dataformat;
+			sw_config.status = csl_caph_switch_config_channel(sw_config);
+			csl_caph_hwctrl_SetPathSwitchCH(audioPath.pathID, sw_config);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw trigger 0x%x, dataFmt %d.\r\n", sw_config.trigger, sw_config.dataFmt);
+		} else if(arm2spPath==ARM2SP_CAPH_44S_48M) {
+			numFramesPerInterrupt = 1;
+			srOut = AUDIO_SAMPLING_RATE_48000;
+			arm2spDmaBytes = ARM2SP_INPUT_SIZE_48K;
+			csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(audioPath.src_sampleRate);
+			csl_caph_srcm_outsamplerate = csl_caph_srcmixer_get_srcm_outsamplerate(srOut);
+
+			audioPath.routeConfig.inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
+			chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(audioPath.routeConfig.inChnl);
+			sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+			audioPath.routeConfig.inDataFmt = csl_caph_dataformat;
+			audioPath.routeConfig.inSampleRate = csl_caph_srcm_insamplerate;
+			audioPath.routeConfig.inThres = 0x3; // set to default
+			audioPath.routeConfig.outChnl = csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEV_IHF);
+			audioPath.routeConfig.outDataFmt = CSL_CAPH_16BIT_MONO;
+			audioPath.routeConfig.outSampleRate = csl_caph_srcm_outsamplerate;
+			audioPath.routeConfig.outThres = 0x3; // set to default
+
+			// save the route config to path table
+			csl_caph_hwctrl_SetPathRouteConfig(audioPath.pathID, audioPath.routeConfig);
+
+			if ((audioPath.routeConfig.mixGain.mixInGainL == MIX_IN_MUTE)
+				&&(audioPath.routeConfig.mixGain.mixInGainR == MIX_IN_MUTE))
+			{
+				audioPath.routeConfig.mixGain.mixInGainL		= MIX_IN_PASS;
+				audioPath.routeConfig.mixGain.mixOutCoarseGainL = BIT_SELECT;
+				audioPath.routeConfig.mixGain.mixInGainR		= MIX_IN_PASS;
+				audioPath.routeConfig.mixGain.mixOutCoarseGainR = BIT_SELECT;
+			}
+			csl_caph_srcmixer_config_mix_route(audioPath.routeConfig);
+
+			sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(audioPath.routeConfig.inChnl);
+			sw_config.dataFmt = csl_caph_dataformat;
+			sw_config.status = csl_caph_switch_config_channel(sw_config);
+			csl_caph_hwctrl_SetPathSwitchCH(audioPath.pathID, sw_config);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw trigger 0x%x, dataFmt %d.\r\n", sw_config.trigger, sw_config.dataFmt);
+
+			// config switch2
+			sw_config.chnl = csl_caph_switch_obtain_channel();
+			chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(audioPath.routeConfig.outChnl);
+			sw_config.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+			sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo2);
+			//sw_config.trigger = CSL_CAPH_24KHZ;
+			sw_config.trigger = CSL_CAPH_TRIG_MIX2_OUT1_THR; //ihf mixer
+			sw_config.dataFmt = audioPath.routeConfig.outDataFmt;
+			sw_config.status = csl_caph_switch_config_channel(sw_config);
+			csl_caph_hwctrl_SetPathSwitchCH2(audioPath.pathID, sw_config);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw trigger2 0x%x, dataFmt %d.\r\n", sw_config.trigger, sw_config.dataFmt);
+		} else if(arm2spPath==ARM2SP_CAPH_48M_8M) {
+			numFramesPerInterrupt = 4;
+			srOut = AUDIO_SAMPLING_RATE_8000;
+			arm2spDmaBytes = ARM2SP_INPUT_SIZE*2;
+			chNumOut = AUDIO_CHANNEL_MONO;
+
+			csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(audioPath.src_sampleRate);
+			csl_caph_srcm_outsamplerate = csl_caph_srcmixer_get_srcm_outsamplerate(srOut);
+
+			audioPath.routeConfig.inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
+			audioPath.routeConfig.tapOutChnl = csl_caph_srcmixer_get_tapoutchnl_from_inchnl(audioPath.routeConfig.inChnl);
+			chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(audioPath.routeConfig.inChnl);
+			sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+			audioPath.routeConfig.inDataFmt = csl_caph_dataformat;
+			audioPath.routeConfig.inSampleRate = csl_caph_srcm_insamplerate;
+			audioPath.routeConfig.inThres = 0x3; // set to default
+			audioPath.routeConfig.outDataFmt = CSL_CAPH_16BIT_MONO;
+			audioPath.routeConfig.outSampleRate = csl_caph_srcm_outsamplerate;
+			audioPath.routeConfig.outThres = 0x3; // set to default
+
+			csl_caph_hwctrl_SetPathRouteConfig(audioPath.pathID, audioPath.routeConfig);
+			csl_caph_srcmixer_config_src_route(audioPath.routeConfig);
+
+			sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(audioPath.routeConfig.inChnl);
+			sw_config.dataFmt = csl_caph_dataformat;
+			sw_config.status = csl_caph_switch_config_channel(sw_config);
+			csl_caph_hwctrl_SetPathSwitchCH(audioPath.pathID, sw_config);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw trigger 0x%x, dataFmt %d, src in 0x%x, tap %d, out %d.\r\n", sw_config.trigger, sw_config.dataFmt, audioPath.routeConfig.inChnl, audioPath.routeConfig.tapOutChnl, audioPath.routeConfig.outChnl);
+
+			// config switch2
+			sw_config.chnl = csl_caph_switch_obtain_channel();
+			chal_src_fifo = csl_caph_srcmixer_get_tapoutchnl_fifo(audioPath.routeConfig.tapOutChnl);
+			sw_config.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+			sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo2);
+			sw_config.trigger = (CSL_CAPH_SWITCH_TRIGGER_e)((UInt32)CSL_CAPH_TRIG_TAPSDOWN_CH1_NORM_INT+(UInt32)audioPath.routeConfig.tapOutChnl-(UInt32)CSL_CAPH_SRCM_TAP_MONO_CH1);
+			//if(srOut>audioPath.src_sampleRate) sw_config.trigger = CSL_CAPH_TRIG_TAPSUP_CH1_NORM_INT+audioPath.routeConfig.tapOutChnl-1; //possible if 8-->16k
+			sw_config.dataFmt = audioPath.routeConfig.outDataFmt;
+			sw_config.status = csl_caph_switch_config_channel(sw_config);
+			csl_caph_hwctrl_SetPathSwitchCH2(audioPath.pathID, sw_config);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw trigger2 0x%x, dataFmt %d.\r\n", sw_config.trigger, sw_config.dataFmt);
+		} else if(arm2spPath==ARM2SP_CAPH_44S_8M) {
+			numFramesPerInterrupt = 4;
+			srOut = AUDIO_SAMPLING_RATE_8000;
+			arm2spDmaBytes = ARM2SP_INPUT_SIZE*2;
+			chNumOut = AUDIO_CHANNEL_MONO;
+
+			csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(audioPath.src_sampleRate);
+			csl_caph_srcm_outsamplerate = csl_caph_srcmixer_get_srcm_outsamplerate(AUDIO_SAMPLING_RATE_48000);
+
+			audioPath.routeConfig.inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
+			audioPath.routeConfig.inDataFmt = csl_caph_dataformat;
+			audioPath.routeConfig.inSampleRate = csl_caph_srcm_insamplerate;
+			audioPath.routeConfig.inThres = 0x3; // set to default
+			audioPath.routeConfig.outChnl = csl_caph_srcmixer_obtain_outchnl(CSL_CAPH_DEV_IHF);
+			audioPath.routeConfig.outDataFmt = CSL_CAPH_16BIT_MONO;
+			audioPath.routeConfig.outSampleRate = csl_caph_srcm_outsamplerate;
+			audioPath.routeConfig.outThres = 0x3; // set to default
+
+			// save the route config to path table
+			csl_caph_hwctrl_SetPathRouteConfig(audioPath.pathID, audioPath.routeConfig);
+
+			if ((audioPath.routeConfig.mixGain.mixInGainL == MIX_IN_MUTE)
+				&&(audioPath.routeConfig.mixGain.mixInGainR == MIX_IN_MUTE))
+			{
+				audioPath.routeConfig.mixGain.mixInGainL		= MIX_IN_PASS;
+				audioPath.routeConfig.mixGain.mixOutCoarseGainL = BIT_SELECT;
+				audioPath.routeConfig.mixGain.mixInGainR		= MIX_IN_PASS;
+				audioPath.routeConfig.mixGain.mixOutCoarseGainR = BIT_SELECT;
+			}
+			csl_caph_srcmixer_config_mix_route(audioPath.routeConfig);
+
+			chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(audioPath.routeConfig.inChnl);
+			sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+			sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(audioPath.routeConfig.inChnl);
+			sw_config.dataFmt = csl_caph_dataformat;
+			sw_config.status = csl_caph_switch_config_channel(sw_config);
+			csl_caph_hwctrl_SetPathSwitchCH(audioPath.pathID, sw_config);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw trigger1 0x%x, dataFmt %d, src in 0x%x, tap %d, out %d.\r\n", sw_config.trigger, sw_config.dataFmt, audioPath.routeConfig.inChnl, audioPath.routeConfig.tapOutChnl, audioPath.routeConfig.outChnl);
+
+			csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(AUDIO_SAMPLING_RATE_48000);
+			csl_caph_srcm_outsamplerate = csl_caph_srcmixer_get_srcm_outsamplerate(srOut);
+			csl_caph_dataformat = CSL_CAPH_16BIT_MONO;
+
+			audioPath.routeConfig2.inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
+			audioPath.routeConfig2.tapOutChnl = csl_caph_srcmixer_get_tapoutchnl_from_inchnl(audioPath.routeConfig2.inChnl);
+			audioPath.routeConfig2.inDataFmt = csl_caph_dataformat;
+			audioPath.routeConfig2.inSampleRate = csl_caph_srcm_insamplerate;
+			audioPath.routeConfig2.inThres = 0x1;
+			audioPath.routeConfig2.outDataFmt = CSL_CAPH_16BIT_MONO;
+			audioPath.routeConfig2.outSampleRate = csl_caph_srcm_outsamplerate;
+			audioPath.routeConfig2.outThres = 0x1;
+
+			csl_caph_hwctrl_SetPathRouteConfig2(audioPath.pathID, audioPath.routeConfig2);
+			csl_caph_srcmixer_config_src_route(audioPath.routeConfig2);
+
+			// config switch2
+			sw_config.chnl = csl_caph_switch_obtain_channel();
+			chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(audioPath.routeConfig.outChnl);
+			sw_config.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+			chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(audioPath.routeConfig2.inChnl);
+			sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+			sw_config.trigger = CSL_CAPH_TRIG_MIX2_OUT1_THR; //ihf mixer
+			//sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(audioPath.routeConfig2.inChnl);
+			sw_config.dataFmt = audioPath.routeConfig2.outDataFmt;
+			sw_config.status = csl_caph_switch_config_channel(sw_config);
+			csl_caph_hwctrl_SetPathSwitchCH2(audioPath.pathID, sw_config);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw trigger2 0x%x, dataFmt %d, src in 0x%x, tap %d, out %d.\r\n", sw_config.trigger, sw_config.dataFmt, audioPath.routeConfig2.inChnl, audioPath.routeConfig2.tapOutChnl, audioPath.routeConfig2.outChnl);
+
+			// config switch3
+			sw_config.chnl = csl_caph_switch_obtain_channel();
+			chal_src_fifo = csl_caph_srcmixer_get_tapoutchnl_fifo(audioPath.routeConfig2.tapOutChnl);
+			sw_config.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
+			sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(fifo2);
+			sw_config.trigger = (CSL_CAPH_SWITCH_TRIGGER_e)((UInt32)CSL_CAPH_TRIG_TAPSDOWN_CH1_NORM_INT+(UInt32)audioPath.routeConfig2.tapOutChnl-(UInt32)CSL_CAPH_SRCM_TAP_MONO_CH1);
+			sw_config.dataFmt = audioPath.routeConfig2.outDataFmt;
+			sw_config.status = csl_caph_switch_config_channel(sw_config);
+			csl_caph_hwctrl_SetPathSwitchCH3(audioPath.pathID, sw_config);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw trigger3 0x%x, dataFmt %d.\r\n", sw_config.trigger, sw_config.dataFmt);
+		}
 
 		// config DMA
 		csl_caph_hwctrl_SetPathDMACH(audioPath.pathID, config.dmaCH);
-		audioPath = csl_caph_hwctrl_GetPath_FromPathID(audioPath.pathID); //???
+		audioPath = csl_caph_hwctrl_GetPath_FromPathID(audioPath.pathID);
 		dmaConfig.direction = CSL_CAPH_DMA_IN;
 		dmaConfig.dma_ch = audioPath.dmaCH;
 		dmaConfig.fifo = fifo;
@@ -4666,7 +5751,6 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 		dmaConfig.direction = CSL_CAPH_DMA_OUT;
 		dmaConfig.dma_ch = audioPath.dmaCH2;
 		dmaConfig.fifo = fifo2;
-
 		dmaConfig.mem_addr = (void*)vp_shared_mem->shared_Arm2SP_InBuf;
 		dmaConfig.mem_size = arm2spDmaBytes;
 		dmaConfig.Tsize = CSL_AADMAC_TSIZE;
@@ -4678,20 +5762,22 @@ if (((audioPath.source == CSL_CAPH_DEV_ANALOG_MIC)
 		csl_caph_cfifo_start_fifo(audioPath.fifo);
 		csl_caph_cfifo_start_fifo(audioPath.fifo2);
 		csl_caph_switch_start_transfer(audioPath.switchCH.chnl);
+		if (audioPath.switchCH2.chnl != CSL_CAPH_SWITCH_NONE) csl_caph_switch_start_transfer(audioPath.switchCH2.chnl);
+		if (audioPath.switchCH3.chnl != CSL_CAPH_SWITCH_NONE) csl_caph_switch_start_transfer(audioPath.switchCH3.chnl);
 		csl_caph_dma_start_transfer(audioPath.dmaCH);
 		csl_caph_dma_start_transfer(audioPath.dmaCH2);
 
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "audioPath.dmaCH %d, dmaCH2 %d, swch %d, fifo %p fifo2 %p.\r\n", audioPath.dmaCH, audioPath.dmaCH2, audioPath.switchCH.chnl, audioPath.fifo, audioPath.fifo2);
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "audioPath.pBuf %p pBuf2 %p, size %p:%p, dmaCB %p.\r\n", audioPath.pBuf, dmaConfig.mem_addr, audioPath.size, dmaConfig.mem_size, audioPath.dmaCB);
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "audioPath.dmaCH %d:%d, switch %d:%d:%d, fifo %d:%d.\r\n", audioPath.dmaCH, audioPath.dmaCH2, audioPath.switchCH.chnl, audioPath.switchCH2.chnl, audioPath.switchCH3.chnl, audioPath.fifo, audioPath.fifo2);
+		Log_DebugPrintf(LOGID_SOC_AUDIO, "audioPath.pBuf %p:%p, size %p:%p, dmaCB %p.\r\n", audioPath.pBuf, dmaConfig.mem_addr, audioPath.size, dmaConfig.mem_size, audioPath.dmaCB);
 
-		arg0 = DMA_ARM2SP_BuildCommandArg0 (audioPath.src_sampleRate,
+		arg0 = DMA_ARM2SP_BuildCommandArg0 (srOut,
 									VORENDER_PLAYBACK_DL, //playbackMode
 									VORENDER_VOICE_MIX_DL, //mixMode 
 									numFramesPerInterrupt,
-									audioPath.chnlNum);
+									chNumOut);
 		if(instanceID==1)
 		{
-			CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_DMA_Req);
+			CSL_RegisterARM2SPRenderStatusHandler((void*)&ARM2SP_DMA_Req);
 			CSL_ARM2SP_Init();
 			VPRIPCMDQ_SetARM2SP( arg0, 0 ); //when to start ARM2SP? Maybe after the 1st DMA?
 			Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start instance %d, arg0=0x%x.\r\n", instanceID, arg0);
@@ -5005,6 +6091,11 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         ||((path.source == CSL_CAPH_DEV_DSP_throughMEM)
             &&(path.sink == CSL_CAPH_DEV_IHF)))
     {
+#if defined(ENABLE_DMA_VOICE)
+		if(path.dmaCH) csl_caph_hwctrl_closeDMA(path.dmaCH, path.pathID);
+		if(path.fifo) csl_caph_hwctrl_closeCFifo(path.fifo, path.pathID);
+		if(path.switchCH2.chnl) csl_caph_hwctrl_closeSwitchCH(path.switchCH2, path.pathID);
+#endif
 		// stop switch transfer, release channel					
         csl_caph_hwctrl_closeSwitchCH(path.switchCH, path.pathID);
         if (path.switchCH2.chnl != CSL_CAPH_SWITCH_NONE)        
@@ -5020,11 +6111,13 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         if (path.routeConfig2.inChnl != CSL_CAPH_SRCM_INCHNL_NONE)        
             csl_caph_hwctrl_closeSRCMixer(path.routeConfig2, path.pathID);
   		// release the DMA chnl, since IHF uses it.
+#if !defined(ENABLE_DMA_VOICE)
       	if (path.sink == CSL_CAPH_DEV_IHF)		
 	    {
             csl_caph_hwctrl_closeDMA(path.dmaCH, path.pathID);
             // stop cfifo transfer, release fifo
             csl_caph_hwctrl_closeCFifo(path.fifo, path.pathID);
+#endif
 	    }
     }	
     else //AUDIOH-->SW-->SRC-->DSP
@@ -5036,6 +6129,11 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	    || (path.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
 	    && (path.sink == CSL_CAPH_DEV_DSP))
     {
+#if defined(ENABLE_DMA_VOICE) //the sequence seems important, o.w. next attempt gives no sound.
+		if(path.dmaCH) csl_caph_hwctrl_closeDMA(path.dmaCH, path.pathID);
+		if(path.fifo) csl_caph_hwctrl_closeCFifo(path.fifo, path.pathID);
+		if(path.switchCH2.chnl) csl_caph_hwctrl_closeSwitchCH(path.switchCH2, path.pathID);
+#else
     	// stop the src intc to dsp
 	    if ((path.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
 	        ||(path.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
@@ -5048,6 +6146,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
        	    csl_caph_intc_disable_tapout_intr(MAIN_MIC_UL_TO_DSP_CHNL, 
                                             CSL_CAPH_DSP);
         }
+#endif        
         
 		// stop audioh					
         csl_caph_hwctrl_closeAudioH(path.source, path.pathID);
@@ -5131,21 +6230,24 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         csl_caph_hwctrl_closeSRCMixer(path.routeConfig, path.pathID);
 	}
 #if defined(ENABLE_DMA_ARM2SP)
-    else if (path.source == CSL_CAPH_DEV_MEMORY && path.sink == CSL_CAPH_DEV_DSP_throughMEM)
-    {
-	    // Stop DMA transfer, release channe
-        if(path.dmaCH) csl_caph_hwctrl_closeDMA(path.dmaCH, path.pathID);
-        if(path.dmaCH2) csl_caph_hwctrl_closeDMA(path.dmaCH2, path.pathID);
+	else if (path.source == CSL_CAPH_DEV_MEMORY && path.sink == CSL_CAPH_DEV_DSP_throughMEM)
+	{
+		if(path.dmaCH) csl_caph_hwctrl_closeDMA(path.dmaCH, path.pathID);
+		if(path.dmaCH2) csl_caph_hwctrl_closeDMA(path.dmaCH2, path.pathID);
+		if(path.fifo) csl_caph_hwctrl_closeCFifo(path.fifo, path.pathID);
+		if(path.fifo2) csl_caph_hwctrl_closeCFifo(path.fifo2, path.pathID);
+		if(path.switchCH.chnl) csl_caph_hwctrl_closeSwitchCH(path.switchCH, path.pathID);
+		if(path.switchCH2.chnl) csl_caph_hwctrl_closeSwitchCH(path.switchCH2, path.pathID);
+		if(path.switchCH3.chnl) csl_caph_hwctrl_closeSwitchCH(path.switchCH3, path.pathID);
+		if(path.routeConfig.inChnl) csl_caph_hwctrl_closeSRCMixer(path.routeConfig, path.pathID);
+		if(path.routeConfig2.inChnl) csl_caph_hwctrl_closeSRCMixer(path.routeConfig2, path.pathID);
 
-		// stop cfifo transfer, release fifo, deinit				
-        if(path.fifo) csl_caph_hwctrl_closeCFifo(path.fifo, path.pathID);
-        if(path.fifo2) csl_caph_hwctrl_closeCFifo(path.fifo2, path.pathID);
-		// stop switch transfer, release channel, deinit				
-        if(path.switchCH.chnl) csl_caph_hwctrl_closeSwitchCH(path.switchCH, path.pathID);
-        if(path.switchCH2.chnl) csl_caph_hwctrl_closeSwitchCH(path.switchCH2, path.pathID);
+		Log_DebugPrintf(LOGID_AUDIO, "disablePath:: dmaCh %d:%d, fifo %d:%d, switch %d:%d:%d.\r\n", path.dmaCH, path.dmaCH2, path.fifo, path.fifo2, path.switchCH.chnl, path.switchCH2.chnl, path.switchCH3.chnl);
+		Log_DebugPrintf(LOGID_AUDIO, "disablePath:: srcmixer in 0x%x tap %d out %d.\r\n", path.routeConfig.inChnl, path.routeConfig.tapOutChnl, path.routeConfig.outChnl);
+		Log_DebugPrintf(LOGID_AUDIO, "disablePath:: srcmixer in 0x%x tap %d out %d.\r\n", path.routeConfig2.inChnl, path.routeConfig2.tapOutChnl, path.routeConfig2.outChnl);
 
 		VPRIPCMDQ_SetARM2SP( 0, 0 ); //assume instance 1
-    }
+	}
 #endif //ENABLE_DMA_ARM2SP
 
 	csl_caph_hwctrl_RemovePathInTable(path.pathID);

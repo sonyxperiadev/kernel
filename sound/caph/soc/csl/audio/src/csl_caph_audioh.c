@@ -229,8 +229,8 @@ void csl_caph_audioh_config_path(CSL_CAPH_PathID pathID)
 void csl_caph_audioh_config(int path_id, void *p)
 {
 	audio_config_t *pcfg = (void *)p;
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_config:: sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n", 
-		pcfg->sample_rate, pcfg->sample_size, pcfg->sample_mode, pcfg->sample_pack, pcfg->eanc_input, pcfg->eanc_output));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_config:: path %d sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n", 
+		path_id, pcfg->sample_rate, pcfg->sample_size, pcfg->sample_mode, pcfg->sample_pack, pcfg->eanc_input, pcfg->eanc_output));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_config:: st out %d tr mode %d.\r\n", pcfg->sidetone_output, pcfg->data_handle_mode));
 
 	path[path_id].sample_rate = pcfg->sample_rate;

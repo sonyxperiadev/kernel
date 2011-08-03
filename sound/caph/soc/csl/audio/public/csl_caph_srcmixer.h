@@ -311,5 +311,15 @@ void csl_caph_srcmixer_set_inchnl_status(CSL_CAPH_SRCM_INCHNL_e chnl);
 void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
                                           CSL_CAPH_SRCM_INCHNL_e inChnl);
 
+/**
+*
+*  @brief  Get the tap output based on its SRC input
+*
+*  @param   inChnl  (in) csl SRC inchnl
+*
+*  @return CSL_CAPH_SRCM_SRC_OUTCHNL_e SRC TAP output channel
+****************************************************************************/
+CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
+
 #endif // _CSL_CAPH_SRCMIXER_
 

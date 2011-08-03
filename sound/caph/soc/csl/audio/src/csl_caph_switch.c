@@ -865,7 +865,6 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
     CAPH_DST_STATUS_e dstStatus = CAPH_DST_OK;
     CSL_CAPH_SWITCH_STATUS_e status = CSL_CAPH_SWITCH_OWNER;
 
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_config_channel:: \n"));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_switch_config_channel:: chnl = 0x%x, srcAddr = 0x%lx, dstcAddr = 0x%lx, dataFmt = 0x%x, trigger = 0x%x\n", 
                     chnl_config.chnl, 

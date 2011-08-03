@@ -626,8 +626,8 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 	CAPH_CFIFO_e caph_cfifo_fifo = CAPH_CFIFO_VOID;
     CAPH_CFIFO_CHNL_DIRECTION_e direction = CAPH_CFIFO_IN;
 
-	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_config_channel:: \n");
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_config_channel:: dir %d fifo %d dma %d mem %p size %p Tsize %d dmaCB %p.\r\n", 
+		chnl_config.direction, chnl_config.fifo, chnl_config.dma_ch, chnl_config.mem_addr, chnl_config.mem_size, chnl_config.Tsize));
 
 	if ((chnl_config.fifo == CSL_CAPH_CFIFO_NONE) || (chnl_config.dma_ch == CSL_CAPH_DMA_NONE))
 		return;
