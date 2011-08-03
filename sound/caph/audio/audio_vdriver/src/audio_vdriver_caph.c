@@ -223,6 +223,9 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 		config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
         
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
+		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
+						FALSE,
+						FALSE);
 	}
 	else
 	{
@@ -247,12 +250,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 #endif
 
     ((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
-	if(sink == CSL_CAPH_DEV_IHF)
-	{
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-						FALSE,
-						FALSE); //according to DSP, this should be called after EnablePath
-	}
 
     //UL
     config.streamID = CSL_CAPH_STREAM_NONE;
@@ -551,11 +548,6 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 #endif		
 #endif
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-#ifdef RHEA_DSP_IHF_FEATURE		
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-							FALSE,
-							FALSE);
-#endif		
 	}	
 #ifdef CONFIG_AUDIO_BUILD	
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
@@ -572,7 +564,16 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r);
     config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
 #endif		
-	
+
+	if(sink == CSL_CAPH_DEV_IHF)
+	{
+#ifdef RHEA_DSP_IHF_FEATURE		
+		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
+							FALSE,
+							FALSE); //integrate SDB CL 366484 
+#endif		
+	}	
+
 	((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
 #ifdef CONFIG_AUDIO_BUILD
 	//Config sidetone
