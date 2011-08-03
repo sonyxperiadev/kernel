@@ -59,11 +59,15 @@ typedef enum
 
 #define HDMI_MAGIC   'h'
 
-#define HDMI_CMD_FIRST               0x80
-#define HDMI_CMD_GET_STATE           0x80
-#define HDMI_CMD_LAST                0x80
+typedef enum
+{
+   HDMI_CMD_GET_STATE = 0x80,    /* Arbitrary start. */
+   HDMI_CMD_SET_SWITCH,
 
-#define HDMI_IOCTL_GET_STATE _IOR( HDMI_MAGIC, HDMI_CMD_GET_STATE, hdmi_state )
+} hdmi_ioctl_t;
+
+#define HDMI_IOCTL_GET_STATE  _IOR( HDMI_MAGIC, HDMI_CMD_GET_STATE, hdmi_state )
+#define HDMI_IOCTL_SET_SWITCH _IOR( HDMI_MAGIC, HDMI_CMD_SET_SWITCH, hdmi_state )
 
 /* ---- Variable Externs ------------------------------------------------- */
 /* ---- Function Prototypes ---------------------------------------------- */
