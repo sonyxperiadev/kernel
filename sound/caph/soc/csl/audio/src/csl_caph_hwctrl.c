@@ -3282,6 +3282,12 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE};
 
+			if((audioPath.src_sampleRate == AUDIO_SAMPLING_RATE_48000) && 
+					(audioPath.chnlNum == AUDIO_CHANNEL_MONO)) //no 48kHz mono pass-thru on A0, bypass mixer.
+			{
+				blocks[3] = CAPH_NONE;
+				blocks[4] = CAPH_NONE;
+			}
 			csl_caph_config_blocks(audioPath.pathID, blocks);
 			csl_caph_start_blocks(audioPath.pathID);
 			return audioPath.pathID;
@@ -3304,7 +3310,14 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         // Configure SRCMIxer
         // SRC->Mixer
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnablePath :: go through SRC mixer\r\n"));
-        csl_caph_srcmixer_config(audioPath.pathID);
+		// temp fix until we have a solution for mono - stereo conversion or SRC mixer pass thru for 48 K Mono
+		if ((audioPath.src_sampleRate != audioPath.snk_sampleRate) || 
+					((audioPath.src_sampleRate == AUDIO_SAMPLING_RATE_48000) && 
+					(audioPath.chnlNum == AUDIO_CHANNEL_STEREO)))
+		{
+			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnablePath :: go through SRC mixer\r\n"));
+        	csl_caph_srcmixer_config(audioPath.pathID);
+		}		
         
         // Configure AudioH (EP/IHF/HS/Vibra)
         csl_caph_audioh_config_path(audioPath.pathID);
