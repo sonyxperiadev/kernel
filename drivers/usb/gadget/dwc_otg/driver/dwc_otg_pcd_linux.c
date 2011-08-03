@@ -66,10 +66,11 @@
 #include <linux/version.h>
 
 #ifdef LM_INTERFACE
-# include <mach/lm.h>
-# include <mach/irqs.h>
+#include <mach/lm.h>
+#include <mach/irqs.h>
+#else
+#include <linux/platform_device.h>
 #endif
-
 #include <asm/io.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,28)
@@ -269,13 +270,11 @@ static void dwc_otg_pcd_free_request(struct usb_ep *ep, struct usb_request *req)
 		return;
 	}
 
-#ifdef LM_INTERFACE
 	/* free dma buffer if it's allocated but not freed
 	 * for example, req queued but killed w/o completion
 	 */
 	if ( (req->dma != DWC_INVALID_DMA_ADDR) && !is_req_aligned(req) )
 		kfree (phys_to_virt(req->dma));
-#endif
 
 	kfree(req);
 }
@@ -412,7 +411,9 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 	dma_addr = usb_req->dma;
 #else
 
-#if defined (LM_INTERFACE)
+#if defined(PCI_INTERFACE)
+#error	"need to take care cache coherence"
+#else
 	BUG_ON (usb_req->dma != DWC_INVALID_DMA_ADDR);
 
 	/*
@@ -437,8 +438,6 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 			usb_req->length,
 			ep->dwc_ep.is_in?DMA_TO_DEVICE:DMA_FROM_DEVICE);
 
-#elif defined(PCI_INTERFACE)
-#error	"need to take care cache coherence"
 #endif
 #endif
 
@@ -901,7 +900,10 @@ static int _complete(dwc_otg_pcd_t * pcd, void *ep_handle,
 		}
 		req->actual = actual;
 		ep = ep_from_handle(pcd, ep_handle);
-#if defined(LM_INTERFACE)
+
+#if defined(PCI_INTERFACE)
+#error	"need to take care cache coherence"
+#else
 		/*
 		 * for control pipe, the complete callback may be delayed by 1 packet
 		 * so direction of current packet doesn't apply
@@ -929,8 +931,7 @@ static int _complete(dwc_otg_pcd_t * pcd, void *ep_handle,
 		/* reset dma to invalid value */
 		req->dma = DWC_INVALID_DMA_ADDR;
 
-#elif defined(PCI_INTERFACE)
-#error	"need to take care cache coherence"
+
 #endif
 		req->complete(ep_handle, req);
 	}
@@ -1175,14 +1176,19 @@ static struct gadget_wrapper *alloc_wrapper(
 	struct lm_device *_dev
 #elif defined (PCI_INTERFACE)
 	struct pci_dev *_dev
+#else
+	struct platform_device *_dev
 #endif
 	)
 {
 	static char pcd_name[] = "dwc_otg_pcd";
+
 #ifdef LM_INTERFACE
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
 #elif defined (PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = pci_get_drvdata(_dev);
+#else
+	dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
 #endif
 
 	struct gadget_wrapper *d;
@@ -1242,14 +1248,17 @@ int pcd_init(
 	struct lm_device *_dev
 #elif defined (PCI_INTERFACE)
 	struct pci_dev *_dev
+#else
+	struct platform_device *_dev
 #endif
 	)
-
 {
 #ifdef LM_INTERFACE
-        dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
+	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
 #elif defined (PCI_INTERFACE)
         dwc_otg_device_t *otg_dev = pci_get_drvdata(_dev);
+#else
+        dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
 #endif
 
 	int retval = 0;
@@ -1274,6 +1283,7 @@ int pcd_init(
 	/*
 	 * Setup interupt handler
 	 */
+#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
 	DWC_DEBUGPL(DBG_ANY, "registering handler for irq%d\n", _dev->irq);
 	retval = request_irq(_dev->irq, dwc_otg_pcd_irq,
 			     IRQF_SHARED, gadget_wrapper->gadget.name,
@@ -1283,7 +1293,17 @@ int pcd_init(
 		free_wrapper(gadget_wrapper);
 		return -EBUSY;
 	}
-
+#else
+	DWC_DEBUGPL(DBG_ANY, "registering handler for irq%d\n", platform_get_irq(_dev, 0));
+	retval = request_irq(platform_get_irq(_dev, 0), dwc_otg_pcd_irq,
+			     IRQF_SHARED, gadget_wrapper->gadget.name,
+			     otg_dev->pcd);
+	if (retval != 0) {
+		DWC_ERROR("request of irq%d failed\n", platform_get_irq(_dev, 0));
+		free_wrapper(gadget_wrapper);
+		return -EBUSY;
+	}
+#endif
 	dwc_otg_pcd_start(gadget_wrapper->pcd, &fops);
 
 	return retval;
@@ -1297,6 +1317,8 @@ void pcd_remove(
 	struct lm_device *_dev
 #elif defined (PCI_INTERFACE)
 	struct pci_dev *_dev
+#else
+	struct platform_device *_dev
 #endif
 	)
 {
@@ -1304,6 +1326,8 @@ void pcd_remove(
 	dwc_otg_device_t *otg_dev = lm_get_drvdata(_dev);
 #elif defined (PCI_INTERFACE)
 	dwc_otg_device_t *otg_dev = pci_get_drvdata(_dev);
+#else
+	dwc_otg_device_t *otg_dev = platform_get_drvdata(_dev);
 #endif
 	dwc_otg_pcd_t *pcd = otg_dev->pcd;
 
@@ -1312,7 +1336,11 @@ void pcd_remove(
 	/*
 	 * Free the IRQ
 	 */
+#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
 	free_irq(_dev->irq, pcd);
+#else
+	free_irq(platform_get_irq(_dev, 0), pcd);
+#endif
 	dwc_otg_pcd_remove(otg_dev->pcd);
 	free_wrapper(gadget_wrapper);
 	otg_dev->pcd = 0;

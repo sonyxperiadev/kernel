@@ -41,10 +41,10 @@ enum bsc_bus_speed
  */
 struct bsc_adap_cfg
 {
+	/* I2C bus speed in KHz. It should be the first member in this struct */
+	enum bsc_bus_speed speed;
 	/* to explicitly disable the I2C adapter */
 	int disable;
-	/* I2C bus speed in KHz */
-	enum bsc_bus_speed speed;
 	char *bsc_clk;
 	char *bsc_apb_clk;
 };
