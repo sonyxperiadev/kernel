@@ -236,6 +236,7 @@ static HALAUDIO_PCM_PLATFORM_INFO gPcmPlatformInfo;
 
 /* CHAL layer Clock Handle */
 static struct clk *gSspiClk;
+static struct clk *gAudiohClk;      /* Need to ensure clock is enabled when using cores 1 and 3 */
 
 static struct pcm_sspi_hw_core_t gPcmHwCore;
 
@@ -606,6 +607,10 @@ static int pcmExit( void )
 {
    int                         rc, error = 0;
 
+   free_irq( gPcmIrqId, gPcm.ch );
+
+   gPcmIrqId = 0;
+
    pcmProcTerm();
 
    rc = pcmMixerPortsDeregister();
@@ -640,7 +645,9 @@ static int pcmExit( void )
 
    gPcm.initialized = 0;
 
-   /* Disable sspi clock here */
+   release_mem_region( gPcmPhysBaseAddr, PCM_SSP_REGISTER_LENGTH );
+
+   gPcmPhysBaseAddr = 0;
 
    return error;
 }
@@ -2444,18 +2451,43 @@ static int __init pcm_probe( struct platform_device *pdev )
    }
    else if( info->core_id_select == SSPI_CORE_ID_1 )
    {
-      gPcmIrqId = BCM_INT_ID_SSP4;
+      gPcmIrqId = BCM_INT_ID_SSP1;
       gPcmPhysBaseAddr = PCM_SSP1_PHYS_BASE_ADDR_START;
+
+      gAudiohClk = clk_get( &pdev->dev, "audioh_26m_clk" );
+
+      err = clk_enable( gAudiohClk );
+      if( err )
+      {
+         printk( KERN_ERR "%s: failed to enable audioh clock for core %d!\n", __FUNCTION__, info->core_id_select );
+         return -EINVAL;
+      }
+
+      gSspiClk = clk_get( &pdev->dev, "ssp4_audio_clk" );
+
    }
    else if( info->core_id_select == SSPI_CORE_ID_2 )
    {
       gPcmIrqId = BCM_INT_ID_SSP2;
       gPcmPhysBaseAddr = PCM_SSP2_PHYS_BASE_ADDR_START;
+
+      gSspiClk = clk_get( &pdev->dev, "ssp2_audio_clk" );
    }
    else if( info->core_id_select == SSPI_CORE_ID_3 )
    {
       gPcmIrqId = BCM_INT_ID_SSP3;
       gPcmPhysBaseAddr = PCM_SSP3_PHYS_BASE_ADDR_START;
+
+      gAudiohClk = clk_get( &pdev->dev, "audioh_26m_clk" );
+
+      err = clk_enable( gAudiohClk );
+      if( err )
+      {
+         printk( KERN_ERR "%s: failed to enable audioh clock for core %d!\n", __FUNCTION__, info->core_id_select );
+         return -EINVAL;
+      }
+
+      gSspiClk = clk_get( &pdev->dev, "ssp3_audio_clk" );
    }
    else
    {
@@ -2538,6 +2570,9 @@ static int __exit pcm_remove( struct platform_device *pdev )
 
    halAudioDelInterface( gInterfHandle );
    pcm_platform_exit( info );
+
+   clk_disable( gSspiClk );
+   clk_put( gSspiClk );
 
    return 0;
 }

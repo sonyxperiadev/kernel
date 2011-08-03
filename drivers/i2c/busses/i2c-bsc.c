@@ -73,6 +73,9 @@ struct bsc_i2c_dev
 	/* Current I2C bus speed configured */
 	enum bsc_bus_speed current_speed;
 
+	/* flag to support dynamic bus speed configuration for multiple slaves */
+	int dynamic_speed;
+
 	/* the 8-bit master code (0000 1XXX, 0x08) used for high speed mode */
 	unsigned char mastercode;
 
@@ -537,6 +540,70 @@ static struct device *bsc_i2c_get_client(struct i2c_adapter *adapter,
 }
 
 /*
+ * Set bus speed to what the client wants
+ */
+static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
+{
+	struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
+	struct device *d;
+	enum bsc_bus_speed set_speed;
+
+	/* Get slave speed configuration */
+	d = bsc_i2c_get_client(adapter, addr);
+	if (d) {
+		struct i2c_client *client = NULL;
+		struct i2c_slave_platform_data *pd = NULL;
+
+		client = i2c_verify_client(d);
+		pd = (struct i2c_slave_platform_data *)client->dev.platform_data;
+		if (pd) {
+			BSC_DBG(dev, "client addr=0x%x, speed=0x%x\n",
+					client->addr, pd->i2c_speed);
+			
+			if (pd->i2c_speed < BSC_BUS_SPEED_MAX)
+				set_speed = pd->i2c_speed;
+			else
+				set_speed = dev->speed;
+		}
+		else {
+			BSC_DBG(dev, "client addr=0x%x no platform data found!\n", client->addr);
+			set_speed = dev->speed;
+		}
+	} else {
+		BSC_DBG(dev, "no client found with addr=0x%x\n", addr);
+		set_speed = dev->speed;
+	}
+	
+	/* check for high speed */
+	if (set_speed == BSC_BUS_SPEED_HS || set_speed == BSC_BUS_SPEED_HS_FPGA)
+		dev->high_speed_mode = 1;
+	else
+		dev->high_speed_mode = 0;
+
+	/* configure the adapter bus speed */
+	if (set_speed != dev->current_speed) {
+		bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[set_speed]);
+		dev->current_speed = set_speed;
+	}
+	
+	/* high-speed mode */
+	if (dev->high_speed_mode) {
+		/* Disable Timeout interrupts for HS mode */
+		bsc_disable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+		
+		/*
+		 * Auto-sense allows the slave device to stretch the clock for a long
+		 * time. Need to turn off auto-sense for high-speed mode
+		 */
+		bsc_set_autosense((uint32_t)dev->virt_base, 0);
+	} else {
+		/* Enable Timeout interrupts for F/S mode */
+		bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
+		bsc_set_autosense((uint32_t)dev->virt_base, 1);
+	}
+}
+
+/*
  * Master tranfer function
  */
 static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
@@ -544,73 +611,14 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 {
    struct bsc_i2c_dev *dev = i2c_get_adapdata(adapter);
    struct i2c_msg *pmsg;
-   struct i2c_slave_platform_data *pd = NULL;
-   struct device *d = NULL;
-   struct i2c_client * client = NULL;
    int rc;
    unsigned short i, nak_ok;
-   enum bsc_bus_speed set_speed;
-
-   /* Get slave speed configuration */
-   d = bsc_i2c_get_client(adapter,  msgs[0].addr);
-   if (d)
-   {
-      client = i2c_verify_client(d);
-      pd = (struct i2c_slave_platform_data *)client->dev.platform_data;
-      if (pd)
-      {
-         dev_dbg(dev->device, "i2c addr=0x%x, speed=0x%x\n",
-                             client->addr, pd->i2c_speed);
-
-         if (pd->i2c_speed < BSC_BUS_SPEED_MAX)
-            set_speed = pd->i2c_speed;
-         else
-            set_speed = dev->speed;	/* default speed */
-      }
-      else
-      {
-         dev_dbg(dev->device,"i2c addr=0x%x No platform data!\n",client->addr);
-         set_speed = dev->speed;	/* default speed */
-      }
-   }
-   else
-   {
-      dev_dbg(dev->device, "!!!No i2c client with i2c addr=0x%x\n",
-                                                   msgs[0].addr);
-      set_speed = dev->speed;	/* default speed */
-   }
 
    down(&dev->dev_lock);
 
-   /* check for high speed */
-   if (set_speed == BSC_BUS_SPEED_HS || set_speed == BSC_BUS_SPEED_HS_FPGA)
-      dev->high_speed_mode = 1;
-   else
-      dev->high_speed_mode = 0;
-
-   /* configure the adapter bus speed */
-   if (set_speed != dev->current_speed)	{
-      bsc_set_bus_speed((uint32_t)dev->virt_base, gBusSpeedTable[set_speed]);
-      dev->current_speed = set_speed;
-   }
-
-   /* high-speed mode */
-   if (dev->high_speed_mode)
-   {
-      /* Disable Timeout interrupts for HS mode */
-      bsc_disable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
-      /*
-       * Auto-sense allows the slave device to stretch the clock for a long
-       * time. Need to turn off auto-sense for high-speed mode
-       */
-      bsc_set_autosense((uint32_t)dev->virt_base, 0);
-   }
-   else
-   {
-      /* Enable Timeout interrupts for F/S mode */
-      bsc_enable_intr((uint32_t)dev->virt_base, I2C_MM_HS_IER_ERR_INT_EN_MASK);
-      bsc_set_autosense((uint32_t)dev->virt_base, 1);
-   }
+   /* set the bus speed dynamically if dynamic speed support is turned on */
+   if (dev->dynamic_speed)
+      client_speed_set(adapter, msgs[0].addr);   
 
    /* send start command */
    rc = bsc_xfer_start(adapter);
@@ -1039,6 +1047,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	if (pdev->dev.platform_data) {
 		hw_cfg = (struct bsc_adap_cfg *)pdev->dev.platform_data;
 		dev->speed = hw_cfg->speed;
+		dev->dynamic_speed = hw_cfg->dynamic_speed;
 
 		rc = bsc_get_clk (dev, hw_cfg);
 		if (rc)

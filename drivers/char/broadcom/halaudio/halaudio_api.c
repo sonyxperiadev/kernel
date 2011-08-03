@@ -42,7 +42,6 @@
 #ifdef CONFIG_BCM_BSC
 #include <linux/broadcom/bsc.h>        /* Board Specific Configurations */
 #endif
-#include <linux/broadcom/bcm_major.h>  /* For BCM_HALAUDIO_MAJOR */
 
 #include <asm/atomic.h>                /* Atomic operators */
 #include <asm/io.h>
@@ -148,6 +147,7 @@ static int     halaudio_probe( struct platform_device *pdev );
 static int     halaudio_remove( struct platform_device *pdev );
 
 /* ---- Private Variables ------------------------------------------------- */
+static int gDriverMajor;
 #ifdef CONFIG_SYSFS
 static struct class * halaudio_class;
 static struct device * halaudio_dev;
@@ -1953,10 +1953,11 @@ static int halaudio_probe( struct platform_device *pdev )
    }
 #endif
 
-   err = register_chrdev( BCM_HALAUDIO_MAJOR, HALAUDIO_NAME, &gfops );
-   if ( err )
+   gDriverMajor = register_chrdev( 0, HALAUDIO_NAME, &gfops );
+   if ( gDriverMajor < 0 )
    {
-      printk( KERN_ERR "%s: failed to register character device major=%d\n", __FUNCTION__, BCM_HALAUDIO_MAJOR );
+      printk( KERN_ERR "HALAUDIO: Failed to register character device major\n" );
+      err = -EFAULT;
       goto error_cleanup;
    }
 
@@ -1968,7 +1969,7 @@ static int halaudio_probe( struct platform_device *pdev )
 	   goto err_unregister_chrdev;
    }
 
-   halaudio_dev = device_create(halaudio_class, NULL, MKDEV(BCM_HALAUDIO_MAJOR,0),NULL,"halaudio");
+   halaudio_dev = device_create(halaudio_class, NULL, MKDEV(gDriverMajor,0),NULL,"halaudio");
    if(IS_ERR(halaudio_dev)){
 	   printk(KERN_ERR "HALAUDIO: Device create failed\n");
 	   err = -EFAULT;
@@ -1984,7 +1985,7 @@ return 0;
 err_class_destroy:
    class_destroy(halaudio_class);
 err_unregister_chrdev:
-   unregister_chrdev(BCM_HALAUDIO_MAJOR, HALAUDIO_NAME);
+   unregister_chrdev(gDriverMajor, HALAUDIO_NAME);
 #endif
 
 error_cleanup:
@@ -2006,11 +2007,11 @@ static int halaudio_remove( struct platform_device *pdev )
 #endif
 
 #ifdef CONFIG_SYSFS
-   device_destroy(halaudio_class,MKDEV(BCM_HALAUDIO_MAJOR,0));
+   device_destroy(halaudio_class,MKDEV(gDriverMajor,0));
    class_destroy(halaudio_class);
 #endif
 
-   unregister_chrdev( BCM_HALAUDIO_MAJOR, "halaudio" );
+   unregister_chrdev( gDriverMajor, "halaudio" );
 
    /* Free any leftover clients */
    list_for_each_entry_safe( clientp, tmp, &gInfo.client_list, lnode )

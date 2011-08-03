@@ -44,7 +44,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <asm/pgtable.h>
 #include <linux/io.h>
 
-#include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/ipc_sharedmemory.h>
 #include <linux/broadcom/ipcinterface.h>
 
@@ -985,6 +984,7 @@ static int __init rpcipc_ModuleInit(void)
     if( IS_ERR( drvdata ) ) 
     {
         RPC_TRACE(( "device_create_drvdata failed\n" ) );
+        class_destroy( sModule.mDriverClass );
         unregister_chrdev( major, BCM_KERNEL_RPC_NAME ) ;
         return -1 ;
     }
