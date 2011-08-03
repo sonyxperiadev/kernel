@@ -124,6 +124,9 @@ void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
 	
 	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", dsp_shared_mem);
 
+	// Clear out shared memory
+	memset(vp_shared_mem, 0, sizeof(AP_SharedMem_t));
+
 	vp_shared_mem->vp_shared_cmdq_in = 0;
 	vp_shared_mem->vp_shared_cmdq_out = 0;
 	vp_shared_mem->vp_shared_statusq_in = 0;
