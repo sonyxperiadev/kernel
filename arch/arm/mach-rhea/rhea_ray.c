@@ -102,7 +102,7 @@
 #define BCM_KEY_COL_7  7
 
 #ifdef CONFIG_MFD_BCM_PMU590XX
-static int __init bcm590xx_event_callback(int flag, int param)
+static int bcm590xx_event_callback(int flag, int param)
 {
 	int ret;
 	printk("REG: pmu_init_platform_hw called \n") ;
