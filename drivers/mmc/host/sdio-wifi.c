@@ -22,8 +22,8 @@
 #include <mach/sdio_platform.h>
 #include "sdhci-pltfm.h"
 
-#define PRINT_ERR(format, args...) printk(KERN_ERR "SDIO-Wifi: " format, ## args)
-#define PRINT_INFO(format, args...) printk(KERN_INFO "SDIO-Wifi: " format, ## args)
+#define PRINT_ERR(format, args...) printk(KERN_ERR "%s: " format, __FUNCTION__, ## args)
+#define PRINT_INFO(format, args...) printk(KERN_INFO "%s: " format, __FUNCTION__, ## args)
 
 struct sdio_wifi_dev
 {
@@ -32,6 +32,12 @@ struct sdio_wifi_dev
 };
 
 static struct sdio_wifi_dev gDev;
+
+static void __wifi_reset(int reset_pin, int onoff)
+{	
+	gpio_set_value(reset_pin, onoff);
+	msleep(250);
+}
 
 /*
  * It's stupid that this API cannot return error code, but what can you do?
@@ -53,9 +59,7 @@ void bcm_sdiowl_reset_b(int onoff)
       return;
    }
 
-   gpio_set_value(wifi_gpio->reset, onoff);
-
-	msleep(200);
+   __wifi_reset(wifi_gpio->reset, onoff);
 }
 EXPORT_SYMBOL(bcm_sdiowl_reset_b);
 
@@ -174,8 +178,9 @@ static void wifi_gpio_free(struct sdio_wifi_gpio_cfg *gpio)
 
 int bcm_sdiowl_init(void)
 {
-   int rc;
+   int rc, wait_cnt;
    struct sdio_wifi_dev *dev = &gDev;
+   struct mmc_card *card;
    
    /* check if the SDIO device is already up */
    rc = sdio_dev_is_initialized(SDIO_DEV_TYPE_WIFI);
@@ -200,11 +205,9 @@ int bcm_sdiowl_init(void)
       return rc;
    }
 
-   atomic_set(&dev->dev_is_ready, 1);
-
 	/* reset the wifi chip */
-   bcm_sdiowl_reset_b(0);
-   bcm_sdiowl_reset_b(1);
+	__wifi_reset(dev->wifi_gpio->reset, 0);
+	__wifi_reset(dev->wifi_gpio->reset, 1);
    
    /* now, emulate the card insertion */
    rc = sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 1);
@@ -214,12 +217,24 @@ int bcm_sdiowl_init(void)
       goto err_free_gpio;
    }
 
+#define WAIT_CNT 10
 	/* need to wait for the mmc device population to finish */
-	msleep(500);
-	return 0;
+	wait_cnt = 0;
+	while (wait_cnt++ < WAIT_CNT) {
+		card = sdio_get_mmc_card(SDIO_DEV_TYPE_WIFI);
+		if (card) {
+			atomic_set(&dev->dev_is_ready, 1);
+			return 0;
+		}
+		msleep(100);
+	}
+	PRINT_ERR("timeout while populating sdio wifi device\n");
+	rc = -EIO;
+
+err_disable_card:
+	sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
 
 err_free_gpio:
-   atomic_set(&dev->dev_is_ready, 0);
    wifi_gpio_free(dev->wifi_gpio);
 
    return rc;
@@ -230,8 +245,8 @@ void bcm_sdiowl_term(void)
 {
    struct sdio_wifi_dev *dev = &gDev;
 
-   sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
    atomic_set(&dev->dev_is_ready, 0);
+   sdio_card_emulate(SDIO_DEV_TYPE_WIFI, 0);
 
    /* free GPIOs */
    wifi_gpio_free(dev->wifi_gpio);
