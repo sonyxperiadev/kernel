@@ -44,6 +44,7 @@ extern UInt8 srcmixer_fifo_thres2;
 // local macro declarations
 //****************************************************************************
 
+
 //****************************************************************************
 // local typedef declarations
 //****************************************************************************
@@ -1762,3 +1763,37 @@ CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcmixer_get_srcm_outsamplerate(AUDIO_SAM
 	return srcm_sampleRate;
 }
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_srcmixer_get_tapoutchnl_from_inchnl
+*
+*  Description: Get the tap output based on its SRC input
+*
+****************************************************************************/
+CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl)
+{
+	CSL_CAPH_SRCM_SRC_OUTCHNL_e outChnl = CSL_CAPH_SRCM_TAP_CH_NONE;
+
+	switch (inChnl)
+	{
+	case CSL_CAPH_SRCM_MONO_CH1:
+		outChnl = CSL_CAPH_SRCM_TAP_MONO_CH1;
+		break;
+	case CSL_CAPH_SRCM_MONO_CH2:
+		outChnl = CSL_CAPH_SRCM_TAP_MONO_CH2;
+		break;
+	case CSL_CAPH_SRCM_MONO_CH3:
+		outChnl = CSL_CAPH_SRCM_TAP_MONO_CH3;
+		break;
+	case CSL_CAPH_SRCM_MONO_CH4:
+		outChnl = CSL_CAPH_SRCM_TAP_MONO_CH4;
+		break;
+	case CSL_CAPH_SRCM_STEREO_CH5:
+		outChnl = CSL_CAPH_SRCM_TAP_STEREO_CH5;
+		break;
+	default:
+		audio_xassert(0, inChnl);
+		break;
+	}
+	return outChnl;
+}

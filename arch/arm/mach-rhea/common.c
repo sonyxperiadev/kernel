@@ -545,6 +545,34 @@ static struct platform_device rng_device =
 };
 #endif
 
+#ifdef CONFIG_USB_DWC_OTG
+static struct resource kona_otg_platform_resource[] = {
+	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
+		.start = HSOTG_BASE_ADDR,
+		.end = HSOTG_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start = BCM_INT_ID_USB_HSOTG,
+		.end = BCM_INT_ID_USB_HSOTG,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device board_kona_otg_platform_device =
+{
+	.name = "dwc_otg",
+	.id = -1,
+	.resource = kona_otg_platform_resource,
+	.num_resources = ARRAY_SIZE(kona_otg_platform_resource),
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -565,6 +593,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_HW_RANDOM_KONA)
 	&rng_device,
+#endif
+#ifdef CONFIG_USB_DWC_OTG
+	&board_kona_otg_platform_device,
 #endif
 };
 

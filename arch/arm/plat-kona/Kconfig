@@ -27,6 +27,12 @@ config ARCH_HANA
 
 endchoice
 
+config KONA_POWER
+       bool "Enable support for kona power management"
+       depends on ARCH_RHEA || ARCH_ISLAND
+       help
+       	Say Y if you want to enable the support for kona power management
+
 config GP_TIMER_CLOCK_OFF_FIX
 	bool "Enable the fix for general purpose timer clock off issue."
 	depends on ARCH_RHEA || ARCH_SAMOA

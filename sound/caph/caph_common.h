@@ -53,14 +53,21 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/wakelock.h>
 
 #include "bcm_audio_devices.h"
-//#define BCM_AUDIO_DEBUG_ON
-#if defined(BCM_AUDIO_DEBUG_ON)
-#define BCM_AUDIO_DEBUG(args...)  if (gAudioDebugLevel) printk(args)
-#define DEBUG(args...)  if (gAudioDebugLevel) printk(args)
+
+#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
+void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
+#define BCM_AUDIO_DEBUG(format, args...) \
+	_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
+
+#define DEBUG(format, args...) \
+	_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
+
 #else
-#define BCM_AUDIO_DEBUG(args...)
-#define DEBUG(args...)
+#define BCM_AUDIO_DEBUG(format, args...)	do { } while (0)
+#define DEBUG(format, args...)	do { } while (0)
 #endif
+
+
 
 #define	MIXER_STREAM_FLAGS_CAPTURE	0x00000001
 #define	MIXER_STREAM_FLAGS_CALL		0x00000002
@@ -148,7 +155,9 @@ typedef struct brcm_alsa_chip
 	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
 	Int32	pi32SpeechMixOption[2];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
-} brcm_alsa_chip_t;
+	//AT-AUD
+	Int32	i32AtAudHandlerParms[7];	
+ } brcm_alsa_chip_t;
 
 
 void caphassert(const char *fcn, int line, const char *expr);
@@ -170,26 +179,6 @@ enum	CTL_STREAM_PANEL_t
 };
 
 
-#if 0
-enum	CTL_DEV_LINE_t
-{
-	CTL_DEV_OUT_EARPIECE = 1,
-	CTL_DEV_OUT_FIRST=CTL_DEV_OUT_EARPIECE,
-	CTL_DEV_OUT_IHF,		
-	CTL_DEV_OUT_HEADSET,
-	CTL_DEV_OUT_I2STX,
-	CTL_DEV_OUT_BTHFP,
-	CTL_DEV_OUT_LAST=CTL_DEV_OUT_BTHFP,
-
-	CTL_DEV_IN_HANDSET,
-	CTL_DEV_IN_FIRST = 	CTL_DEV_IN_HANDSET,
-	CTL_DEV_IN_HEADSET,
-	CTL_DEV_IN_DIGITAL1,
-	CTL_DEV_IN_DIGITAL2,
-	CTL_DEV_IN_BTHFP,
-	CTL_DEV_IN_LAST = CTL_DEV_IN_BTHFP
-};
-#endif
 
 enum	CTL_FUNCTION_t
 {
@@ -201,7 +190,27 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_SPEECH_MIXING_OPTION,
 	CTL_FUNCTION_FM_ENABLE,
 	CTL_FUNCTION_FM_FORMAT,
+	CTL_FUNCTION_AT_AUDIO,
 };
+
+enum	AT_AUD_Ctl_t
+{
+	AT_AUD_CTL_INDEX,
+	AT_AUD_CTL_DBG_LEVEL,
+	AT_AUD_CTL_HANDLER,
+	AT_AUD_CTL_TOTAL
+};
+
+
+enum	AT_AUD_Handler_t
+{
+	AT_AUD_HANDLER_MODE,
+	AT_AUD_HANDLER_VOL,
+	AT_AUD_HANDLER_TST,
+	AT_AUD_HANDLER_LOG,
+	AT_AUD_HANDLER_LBTST
+};
+
 
 #define	CAPH_CTL_PRIVATE(dev, line, function) ((dev)<<16|(line)<<8|(function))
 #define	STREAM_OF_CTL(private)		(((private)>>16)&0xFF)
@@ -216,6 +225,8 @@ extern int gAudioDebugLevel;
 //functions
 extern int __devinit PcmDeviceNew(struct snd_card *card);
 extern int __devinit ControlDeviceNew(struct snd_card *card);
+extern int 	AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params); //at_aud_ctl.c
+extern int	AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params); //at_aud_ctl.c
 
 
 #endif //__CAPH_COMMON_H__

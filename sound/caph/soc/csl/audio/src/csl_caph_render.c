@@ -59,6 +59,7 @@ typedef	struct
 	CSL_AUDIO_DEVICE_e 		sink;
 	CSL_AUDRENDER_CB        dmaCB;	
 	CSL_CAPH_DMA_CHNL_e	    dmaCH;
+	CSL_CAPH_DMA_CHNL_e	    dmaCH2;
 	AUDIO_CHANNEL_NUM_t     numChannels;
 	AUDIO_BITS_PER_SAMPLE_t bitsPerSample;
 	AUDIO_SAMPLING_RATE_t	sampleRate;
@@ -93,6 +94,7 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 	CSL_CAPH_DMA_CHNL_e dmaCH = CSL_CAPH_DMA_NONE;
 	UInt32 streamID = CSL_CAPH_STREAM_NONE;
 	CSL_CAPH_Drv_t	*audDrv = NULL;
+	CSL_CAPH_DMA_CHNL_e dmaCH2 = CSL_CAPH_DMA_NONE;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_render_init::source=0x%x sink=0x%x.\n", source, sink));
 	if (source == CSL_CAPH_DEV_DSP) // any sink case? fixed the dmach for dsp
@@ -104,6 +106,11 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 	{
    		dmaCH = csl_caph_dma_obtain_channel();
 	    audio_xassert(dmaCH<CSL_CAPH_DMA_CH12, dmaCH);
+	}
+
+	if(sink == CSL_CAPH_DEV_DSP_throughMEM)
+	{
+		dmaCH2 = csl_caph_dma_obtain_channel();
 	}
 
 	if (dmaCH == CSL_CAPH_DMA_NONE)
@@ -118,6 +125,7 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 	audDrv->source = source;
 	audDrv->sink = sink;	
 	audDrv->dmaCH = dmaCH;
+	audDrv->dmaCH2 = dmaCH2;
 	// moved to configure
 	//audDrv->dmaCB = (CSL_CAPH_DMA_CALLBACK_p)AUDIO_DMA_CB;
 	
@@ -245,6 +253,7 @@ Result_t csl_audio_render_start (UInt32 streamID)
 	memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 	config.streamID = (CSL_CAPH_STREAM_e)audDrv->streamID;
 	config.dmaCH = audDrv->dmaCH;
+	config.dmaCH2 = audDrv->dmaCH2;
 
 	config.source = audDrv->source;
 	config.sink = audDrv->sink;

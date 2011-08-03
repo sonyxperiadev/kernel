@@ -17,7 +17,7 @@
 
 #include <linux/math64.h>
 #include <linux/delay.h>
-#include <mach/clock.h>
+#include <plat/clock.h>
 #include <mach/io_map.h>
 #include <asm/io.h>
 

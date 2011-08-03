@@ -54,6 +54,7 @@
 #include "csl_aud_queue.h"
 #include "audio_vdriver_voip.h"
 #include "audio_vdriver.h"
+#include "csl_apcmd.h"
 #include "csl_voip.h"
 #include "vpu.h"
 #include "log.h"
@@ -75,9 +76,10 @@ typedef Boolean (*VOIPDumpFramesCB_t)(UInt8 *pBuf, UInt32 nSize);
 
 #define VOIP_MAX_FRAME_LEN	(642 + AUDQUE_MARGIN) // 320 words + 1 word for codecType
 
-static const UInt16 sVoIPDataLen[6] = {0, 322, 160, 38, 166, 642};
+static const UInt16 sVoIPDataLen[] = {0, 322, 160, 38, 166, 642, 70};
 
 static UInt8 sVoIPAMRSilenceFrame[1] = {0x000f}; // vt silence 0x0f, amr-nb silence 0x7c
+static VP_Mode_AMR_t prev_amr_mode = (VP_Mode_AMR_t)0xffff;
 
 #if 0
 typedef enum VOIP_CODEC_t
@@ -223,8 +225,6 @@ static void VoIP_StartMainAMRDecodeEncode(
 	Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
 	)
 {
-	static VP_Mode_AMR_t prev_amr_mode = (VP_Mode_AMR_t)0xffff;
-
 	// decode the next downlink AMR speech data from application
 	CSL_WriteDLVoIPData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
 
@@ -375,6 +375,7 @@ Result_t AUDDRV_VoIP_Shutdown( void )
 	OSSEMAPHORE_Destroy (audDrv->addBufSema);
 
 	audDrv->isRunning = FALSE;
+	prev_amr_mode = (VP_Mode_AMR_t)0xffff;
 
 	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_VoIP_Shutdown::Exit.\n");
 
@@ -674,7 +675,7 @@ static Boolean ProcessUlRequest(
 	voipBufPtr = (VOIP_Buffer_t *)pSrc;
 	codecType = voipBufPtr->voip_vocoder;
 	index = (codecType & 0xf000) >> 12;
-	if (index >= 6)
+	if (index >= 7)
 		Log_DebugPrintf(LOGID_AUDIO, "AUDDRV: ProcessUlRequest :: Invalid codecType = 0x%x\n", codecType);
 	else
 	{
@@ -715,6 +716,8 @@ static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt32 nFrames)
 		Log_DebugPrintf(LOGID_AUDIO, "AUDDRV: ProcessDlRequest :: insert silence..., DLCodeType = 0x%x, ULCodecType = 0x%x, size = 0x%x\n", tmpBuf.voip_vocoder, audDrv->config.codecType, dlSize);
 		if ((audDrv->config.codecType & 0xf000) == VOIP_AMR475)
 			tmpBuf.voip_frame.frame_amr[0] = sVoIPAMRSilenceFrame[0];
+		else if ((audDrv->config.codecType & 0xf000) == VOIP_AMR_WB_MODE_7k)
+			tmpBuf.voip_frame.frame_amr_wb.frame_type = sVoIPAMRSilenceFrame[0];
 		else if ((audDrv->config.codecType & 0xf000) == VOIP_FR)
 		{
 
@@ -738,6 +741,7 @@ static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt32 nFrames)
 		if (((readPtr->voip_vocoder & 0xf000) == VOIP_PCM) ||
 		    ((readPtr->voip_vocoder & 0xf000) == VOIP_FR) ||
 		    ((readPtr->voip_vocoder & 0xf000) == VOIP_AMR475) || 
+			((readPtr->voip_vocoder & 0xf000) == VOIP_AMR_WB_MODE_7k) || 
 		    ((readPtr->voip_vocoder & 0xf000) == VOIP_PCM_16K) || ((readPtr->voip_vocoder & 0xf000) == VOIP_G711_U))
 		{
 			dlSize = sVoIPDataLen[((readPtr->voip_vocoder) & 0xf000) >> 12];
@@ -760,6 +764,10 @@ static void ProcessDlRequest(VOIP_Drv_t *audDrv, UInt32 nFrames)
 			if (audDrv->config.codecType & 0xf000 == VOIP_AMR475)
 			{
 				tmpBuf.voip_frame.frame_amr[0] = sVoIPAMRSilenceFrame[0];
+			} 
+			else if ((audDrv->config.codecType & 0xf000) == VOIP_AMR_WB_MODE_7k)
+			{
+				tmpBuf.voip_frame.frame_amr_wb.frame_type = sVoIPAMRSilenceFrame[0];
 			}
 			else if (audDrv->config.codecType & 0xf000 == VOIP_FR)
 			{

@@ -27,7 +27,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/proc_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
-#include <linux/bootmem.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
 
@@ -88,12 +87,9 @@ static void __iomem *rootclk_base = NULL;
 static struct clk *unicam_clk;
 
 typedef struct {
-    mem_t mempool;
     struct semaphore irq_sem;
 } unicam_t;
 
-void *unicam_mempool_base;	// declared and allocated in mach
-static unsigned int unicam_mempool_size;
 
 static int enable_unicam_clock(void);
 static void disable_unicam_clock(void);
@@ -129,9 +125,6 @@ static int unicam_open(struct inode *inode, struct file *filp)
 
     filp->private_data = dev;
 	
-    dev->mempool.ptr = unicam_mempool_base;
-    dev->mempool.addr = virt_to_phys(dev->mempool.ptr);
-    dev->mempool.size = unicam_mempool_size;
 
     sema_init(&dev->irq_sem, 0);
     
@@ -166,7 +159,6 @@ static int unicam_release(struct inode *inode, struct file *filp)
 static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 {
     unsigned long vma_size = vma->vm_end - vma->vm_start;
-	unicam_t *dev = (unicam_t *)(filp->private_data);
 
     if (vma_size & (~PAGE_MASK)) {
         pr_err(KERN_ERR "unicam_mmap: mmaps must be aligned to a multiple of pages_size.\n");
@@ -175,10 +167,7 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 
     if (!vma->vm_pgoff) {
         vma->vm_pgoff = RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
-    } else if (vma->vm_pgoff != (dev->mempool.addr >> PAGE_SHIFT)) {
-        pr_err("%s(): unicam_mmap failed\n", __FUNCTION__);
-        return -EINVAL;
-    }	
+    }
 
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
@@ -199,6 +188,7 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
 {
     unicam_t *dev;
     int ret = 0;
+	static int interrupt_irq = 0;
 
     if(_IOC_TYPE(cmd) != BCM_UNICAM_MAGIC)
         return -ENOTTY;
@@ -222,7 +212,7 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
     case UNICAM_IOCTL_WAIT_IRQ:
     {        
         dbg_print("Enabling unicam interrupt\n");
-
+		interrupt_irq = 0;
         enable_irq(IRQ_UNICAM);
         dbg_print("Waiting for interrupt\n");
         if (down_interruptible(&dev->irq_sem))
@@ -232,16 +222,19 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
         }
         dbg_print("Disabling unicam interrupt\n");
         disable_irq(IRQ_UNICAM);
+		if (interrupt_irq) {
+			printk(KERN_ERR"interrupted irq ioctl\n");
+			return -EIO;
+		}
     }
     break;
-
-    case UNICAM_IOCTL_GET_MEMPOOL:
-    {        
-        dbg_print("Obtain the Memory Pool Address\n");
-        if (copy_to_user((mem_t*)arg, &(dev->mempool), sizeof(mem_t)))
-            ret = -EPERM;
-    }
-    break;
+	case UNICAM_IOCTL_RETURN_IRQ:
+	{
+		interrupt_irq = 1;
+		printk(KERN_ERR"Interrupting irq ioctl\n");
+		up(&dev->irq_sem);
+	}
+	break;
 
     case UNICAM_IOCTL_OPEN_CSI0:
     {        
@@ -519,23 +512,6 @@ static void disable_unicam_clock(void)
     clk_disable(unicam_clk);     
 }
 
-static int __init setup_unicam_mempool(char *str)
-{
-    if(str){
-        get_option(&str, &unicam_mempool_size);
-    }
-	
-    if (!unicam_mempool_size) 
-        unicam_mempool_size = UNICAM_MEM_POOL_SIZE;
-	
-    dbg_print("Allocating camera relocatable heap of size = %d\n", unicam_mempool_size);
-    unicam_mempool_base = alloc_bootmem_low_pages(unicam_mempool_size);
-    if( !unicam_mempool_base )
-        err_print("Failed to allocate relocatable heap memory\n");
-    return 0;
-}
-
-__setup("unicam_mem=", setup_unicam_mempool);
 
 int __init unicam_init(void)
 {

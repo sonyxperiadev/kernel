@@ -164,6 +164,8 @@ enum PIN_NAME {
 	/* GPIO 3 */  PN_GPIO_3,  
         /* GPIO 2 */  PN_GPIO_2,
 
+	/* NAND_CEN_0 */  PN_NAND_CEN_1,
+
 	PN_MAX
 };
 
@@ -367,6 +369,9 @@ enum PIN_FUNC {
 
 		PF_VC_GPCLK_0,
 		PF_VC_GPCLK_1,
+
+	PF_NAND_CEN_1,
+	PF_SDIO4_DATA_1,
 
 	PF_MAX
 };
