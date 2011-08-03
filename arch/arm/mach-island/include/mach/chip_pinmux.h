@@ -260,10 +260,8 @@ enum PIN_NAME {
 
    /* GPIO 7 */   PN_GPIO_7,
    /* GPIO 6 */   PN_GPIO_6,
-
    /* GPIO 5 */   PN_GPIO_5,
    /* GPIO 4 */   PN_GPIO_4,
-
    /* GPIO 3 */   PN_GPIO_3,
    /* GPIO 2 */   PN_GPIO_2,
    /* GPIO 1 */   PN_GPIO_1,
@@ -284,8 +282,6 @@ enum PIN_FUNC {
    PF_PWM_O_3,
    PF_PWM_O_4,
    PF_PWM_O_5,
-
-	PF_VC_PWM_1,
 
 	PF_VC_GPIO_0,
 	PF_VC_GPIO_1,
