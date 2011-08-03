@@ -13,23 +13,9 @@
 *     All information contained in this document is Broadcom Corporation
 *     company private, proprietary, and trade secret.
 *
-****************************************************************************
-*
-*        Block Level Test System   BLTS
-*
-*
-* FILENAME:  SSPI_hw.h
-*
-*
-*  Description:  Header file for "public" access information to code in
-*                  SSPI_hw.c for SSPI block tests low level hardware functions
-*
-*
-*  Notes:
-*
 ****************************************************************************/
-#ifndef _SSPI_HW_H_
-#define _SSPI_HW_H_
+#ifndef _SSPI_HELPERS_H_
+#define _SSPI_HELPERS_H_
 
 #include "chal_sspi.h"
 
@@ -171,50 +157,6 @@ typedef enum
 
 typedef enum
 {
-    // Tx sinewave data to audioh
-    SSPI_HW_CAPH_CONF_ID_TX_SINEWAVE_AUD,
-    // Rx sinewave data from audioh
-    SSPI_HW_CAPH_CONF_ID_RX_SINEWAVE_AUD,
-    // Tx mem data and loopback it to mem
-    // 1. Memory Tx data to CFIFO and switch SSPI Tx FIFO
-    // 2. SSPI Tx and loopback to SSPI RX FIFO
-    // 3. Switch from SSPI RX fifo to CFIFO and DMA to memory
-    SSPI_HW_CAPH_CONF_ID_TXRX_MEM,
-    // 1. Memory Tx 8KHz sinewave data to CFIFO and switch SSPI Tx FIFO
-    // 2. SSPI Tx and loopback to SSPI RX FIFO
-    // 3. Switch from SSPI RX fifo to SRC and upsampling to 48KHz
-    // 4. Switch from SRC to AUDIOH
-    SSPI_HW_CAPH_CONF_ID_TXRX_SINEWAVE_SRC_AUD,
-    // Rx 8KHz sinewave data from SRC, which down-sample the 48KHz data from audioh
-    SSPI_HW_CAPH_CONF_ID_RX_SINEWAVE_SRC_AUD,
-    // 1. Memory Tx 48KHz sinewave data to CFIFO and switch SSPI Tx FIFO
-    // 2. SSPI Tx and loopback to SSPI RX FIFO
-    // 3. Switch from SSPI RX fifo to SRC and downsampling to 8KHz
-    // 4. Switch from SRC to CFIFO and DMA to memory
-    SSPI_HW_CAPH_CONF_ID_TXRX_SINEWAVE_SRC,
-    // 1. Memory Tx 44.1KHz sinewave data to CFIFO and switch to SRC and up-sample
-    //    to 48KHz.
-    // 2. Switch from SRC to SSPI Tx FIFO
-    // 2. SSPI Tx and loopback to SSPI RX FIFO
-    // 3. Switch from SSPI RX fifo to CFIFO and DMA to memory
-    SSPI_HW_CAPH_CONF_ID_TXRX_SINEWAVE_MEM_SRC_MEM,
-    // With this confID, if use 1 or 2 channels, ch1 or ch2 get input from
-    // AUDIOH VIN and loopback to AUDIO VOUT.
-    // 1. Switch from ADDIOH VIN to SSPI Tx FIFO
-    // 2. SSPI Tx and loopback to SSPI RX FIFO
-    // 3. Switch from SSPI RX fifo to AUDIOH VOUT
-    // if use 3 or 4 channels, ch1 and ch2 behave same but ch3 or ch4 get input
-    // from memory and loopback to memory loopback to memory
-    SSPI_HW_CAPH_CONF_ID_TXRX_AUDIN_AUDOUT_MEMIN_MEMOUT,
-
-    SSPI_HW_CAPH_CONF_ID_ARM_SET_TXRX_PATH,
-    SSPI_HW_CAPH_CONF_ID_DSP_SET_TXRX_PATH,
-
-    SSPI_HW_CAPH_CONF_ID_INV,  // Invalid conf ID
-}SSPI_hw_caph_conf_ID_t;
-
-typedef enum
-{
     SSPI_HW_INTR_STATE_INVALID,
     SSPI_HW_INTR_STATE_INIT,
     SSPI_HW_INTR_STATE_RUNNING,
@@ -255,8 +197,9 @@ typedef struct
 }SSPI_hw_core_t;
 
 typedef enum {
-	I2C_READ_TRANSACTION = 0,
-	I2C_WRITE_TRANSACTION,
+	I2C_RDONLY_TRANSACTION = 0,
+	I2C_WRONLY_TRANSACTION,
+	I2C_WRRD_TRANSACTION,
 } SSPI_hw_i2c_transaction_t;
 
 extern SSPI_hw_status_t SSPI_hw_init(SSPI_hw_core_t *pCore);
@@ -274,17 +217,10 @@ extern SSPI_hw_status_t SSPI_hw_i2c_send_stop_sequence(SSPI_hw_core_t *pCore);
 extern SSPI_hw_status_t SSPI_hw_i2c_write_byte_and_read_ack(SSPI_hw_core_t *pCore, unsigned char *byte, int *ack);
 #endif
 
-extern SSPI_hw_status_t SSPI_hw_i2c_do_write_transaction(SSPI_hw_core_t *pCore, 
-						 unsigned char *rx_buf, 
-						 unsigned int rx_len, 
-						 unsigned char *tx_buf,
-						 unsigned int tx_len);
-
-extern SSPI_hw_status_t SSPI_hw_i2c_do_read_transaction(SSPI_hw_core_t *pCore, 
-						 unsigned char *rx_buf, 
-						 unsigned int rx_len, 
-						 unsigned char *tx_buf,
-						 unsigned int tx_len);
+extern SSPI_hw_status_t SSPI_hw_i2c_do_transaction(SSPI_hw_core_t *pCore,
+				 unsigned char *rx_buf, unsigned int rx_len,
+				 unsigned char *tx_buf, unsigned int tx_len,
+				 unsigned int buf_len, SSPI_hw_i2c_transaction_t tran_type);
 
 extern void SSPI_hw_i2c_prepare_for_xfr(SSPI_hw_core_t *pCore);
 
@@ -294,5 +230,5 @@ extern SSPI_hw_status_t SSPI_hw_i2c_read_byte_and_write_ack(SSPI_hw_core_t *pCor
 
 extern void SSPI_hw_i2c_read_and_ack_intr(SSPI_hw_core_t *pCore, uint32_t *status, uint32_t *det_status);
 
-#endif /* _SSPI_HW_H_ */
+#endif /* _SSPI_HELPERS_H_ */
 

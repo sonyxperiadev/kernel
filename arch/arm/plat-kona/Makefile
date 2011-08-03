@@ -16,8 +16,7 @@ obj-y := irq.o kona_timer.o timer.o profile_timer.o pinmux.o sysfs.o
 obj-$(CONFIG_SMP) += headsmp.o platsmp.o
 obj-$(CONFIG_LOCAL_TIMERS) += localtimer.o
 obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o
-obj-$(CONFIG_USB_GADGET_DWC_OTG) += lm.o 
-obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o 
+obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o
 obj-$(CONFIG_HAVE_CLK) += clock.o
 obj-$(CONFIG_MACH_RHEA_RAY) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += chal/
@@ -29,3 +28,7 @@ obj-$(CONFIG_MACH_ISLAND_FF) += chal/
 #obj-$(CONFIG_MACH_SAMOA_RAY) += csl/
 obj-$(CONFIG_DMAC_PL330) += dmux.o dma.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += kona_pm.o
+ifneq ($(CONFIG_ARCH_SAMOA),y) 
+	obj-y += pwr_mgr.o pi_mgr.o
+endif
+

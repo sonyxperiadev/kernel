@@ -178,6 +178,8 @@ static const struct pin_desc pin_desc_tbl[PN_MAX] = {
 
 	/* GPIO 3 */  PIN_DESC(GPIO_3, RESERVED, VC_GPCLK_0, RESERVED, GPIO, RESERVED, RESERVED),
 	/* GPIO 2 */  PIN_DESC(GPIO_2, RESERVED, VC_GPCLK_1, RESERVED, GPIO, RESERVED, RESERVED),
+
+	/* NAND_CEN_1 */ PIN_DESC(NAND_CEN_1, NAND_CEN_1, SDIO4_DATA_1, RESERVED, GPIO, RESERVED, RESERVED),
 };
 
 struct chip_pin_desc g_chip_pin_desc = {

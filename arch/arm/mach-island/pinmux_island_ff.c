@@ -37,6 +37,10 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* PMU INT */
 	PIN_CFG(PMU_INT, GPIO, 0, OFF, ON, 0, 0, 8MA),
+
+	/* FIXME: Touchscreen has problems if GPIO selected? */
+	PIN_CFG(NAND_CEN_1, NAND_CEN_1, 0, OFF, OFF, 0, 0, 16MA),
+
 };
 
 /* board level init */

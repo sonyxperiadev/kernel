@@ -30,7 +30,7 @@
 #include <asm/io.h>
 #include <asm/mach/map.h>
 #include <asm/hardware/cache-l2x0.h>
-#include <mach/clock.h>
+//#include <plat/clock.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <mach/gpio.h>
 #include <mach/pinmux.h>
