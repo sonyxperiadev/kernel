@@ -70,4 +70,3 @@ CFLAGS_board_tablet_cp.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET_CP \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
 
-

@@ -33,7 +33,6 @@
 #include <linux/broadcom/halaudio.h>
 #include <linux/broadcom/halaudio_cfg.h>
 #include <linux/broadcom/halaudio_lib.h>
-#include <linux/broadcom/bcm_major.h>
 
 #include <asm/uaccess.h>
 
@@ -154,6 +153,7 @@ static AMXR_PORT_CB  g_amxr_callback =
    .dstcnxsremoved = aaa_amxr_dstcnxsremoved,
 };
 
+static int gDriverMajor;
 
 #ifdef CONFIG_SYSFS
 static struct class  * aaa_class;
@@ -987,11 +987,11 @@ static int aaa_probe( struct platform_device *pdev )
    }
    // printk( KERN_ERR "%s: setting up.\n", __FUNCTION__ );
 
-   err = register_chrdev( BCM_AAA_MAJOR, AAA_DEVICE_NAME, &gfops );   
-   if ( err )
+   gDriverMajor = register_chrdev( 0, AAA_DEVICE_NAME, &gfops );
+   if ( gDriverMajor < 0 )
    {
-      printk( KERN_ERR "%s: failed to register character device major=%d\n",
-              __FUNCTION__, BCM_AAA_MAJOR );
+      printk( KERN_ERR "AAA: Failed to register character device major\n" );
+      err = -EFAULT;
       goto error_cleanup;
    }
 
@@ -1008,7 +1008,7 @@ static int aaa_probe( struct platform_device *pdev )
    // printk( KERN_ERR "%s: creating device: %s.\n", __FUNCTION__, AAA_DEVICE_NAME );
    aaa_dev = device_create( aaa_class,
                             NULL,
-                            MKDEV( BCM_AAA_MAJOR, 0 ),
+                            MKDEV( gDriverMajor, 0 ),
                             NULL,
                             AAA_DEVICE_NAME );
    if(IS_ERR(aaa_dev))
@@ -1063,11 +1063,11 @@ err_amxr_client:
    amxrFreeClient( g_amxr_client );
 err_dev_destroy:
 #ifdef CONFIG_SYSFS
-   device_destroy( aaa_class, MKDEV( BCM_AAA_MAJOR, 0 ) );
+   device_destroy( aaa_class, MKDEV( gDriverMajor, 0 ) );
 err_class_destroy:
    class_destroy( aaa_class );
 err_unregister_chrdev:
-   unregister_chrdev( BCM_AAA_MAJOR, AAA_DEVICE_NAME );
+   unregister_chrdev( gDriverMajor, AAA_DEVICE_NAME );
 #endif
 error_cleanup:
    aaa_remove( pdev );
@@ -1085,11 +1085,11 @@ static int aaa_remove( struct platform_device *pdev )
    g_aaa_wrap_buf = NULL;
 
 #ifdef CONFIG_SYSFS
-   device_destroy( aaa_class, MKDEV( BCM_AAA_MAJOR, 0 ) );
+   device_destroy( aaa_class, MKDEV( gDriverMajor, 0 ) );
    class_destroy( aaa_class );
 #endif
 
-   unregister_chrdev( BCM_AAA_MAJOR, "aaa" );
+   unregister_chrdev( gDriverMajor, "aaa" );
 
    /* Terminate 'aaa' port existence.
    */

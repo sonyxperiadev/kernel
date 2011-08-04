@@ -2,22 +2,12 @@
 #include <linux/init.h>
 #include <linux/types.h>
 #include <linux/module.h>
+#include <linux/clk.h>
 #include <asm/io.h>
 
 #include <mach/profile_timer.h>
 #include <mach/rdb/brcm_rdb_glbtmr.h>
 
-/* 
- * TODO: The below profile timer code is retained as it is.
- * The clock manager is not up yet, once its ready read the 
- * correct frequency from it.  
- *
- * Right now Global timer runs at 5000000 on FPGA (A9 PERIPHCLK)
- * Ideally, this should be derived by timer.prof_clk and
- * prescaler.
- */
-
-#define GLOBAL_TIMER_FREQ_HZ	(5000000) /* For FPGA only, (temp)*/
 static void __iomem*	proftmr_regbase = NULL;
 
 void __init profile_timer_init(void __iomem *base)
@@ -79,7 +69,7 @@ timer_tick_rate_t timer_get_tick_rate(void)
 	prescaler &= GLBTMR_GLOB_CTRL_PRESCALER_G_MASK;
 	prescaler >>= GLBTMR_GLOB_CTRL_PRESCALER_G_SHIFT;
 
-	return (GLOBAL_TIMER_FREQ_HZ / (1 + prescaler)); 
+	return ((clk_get_rate(clk_get( NULL, "arm_clk" ))) / ((1 + prescaler) * 2));
 }
 
 timer_tick_count_t timer_get_tick_count(void)
