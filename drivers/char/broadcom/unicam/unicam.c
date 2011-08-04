@@ -42,6 +42,10 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <mach/rdb/brcm_rdb_util.h>
 
+#if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))   
+    #include <mach/rdb/brcm_rdb_csr.h>
+#endif
+
 
 //TODO - define the major device ID
 #define UNICAM_DEV_MAJOR	0
@@ -51,6 +55,7 @@ the GPL, without Broadcom's express prior written consent.
 #define RHEA_MM_CLK_BASE_ADDRESS               MM_CLK_BASE_ADDR
 #define RHEA_PAD_CTRL_BASE_ADDRESS             PAD_CTRL_BASE_ADDR
 #define RHEA_ROOT_CLK_BASE_ADDRESS             ROOT_CLK_BASE_ADDR
+#define RHEA_CSR_BASE_ADDRESS                  MEMC0_OPEN_BASE_ADDR
 
 
 #define IRQ_UNICAM	     (156+32)
@@ -83,6 +88,7 @@ static void __iomem *mmcfg_base = NULL;
 static void __iomem *mmclk_base = NULL;
 static void __iomem *padctl_base = NULL;
 static void __iomem *rootclk_base = NULL;
+static void __iomem *csr_base = NULL;
 
 static struct clk *unicam_clk;
 
@@ -90,6 +96,13 @@ typedef struct {
     struct semaphore irq_sem;
 } unicam_t;
 
+static cam_isr_reg_status_st_t unicam_isr_reg_status;
+
+// Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
+#if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))   
+    #define CSR_DDR_PLL_REG_UNSET_FLAG  0x000000FFFF
+    static unsigned int  RegCsrDdrPllPwrdnBit = CSR_DDR_PLL_REG_UNSET_FLAG;
+#endif    
 
 static int enable_unicam_clock(void);
 static void disable_unicam_clock(void);
@@ -104,10 +117,11 @@ static inline void reg_write(void __iomem *, unsigned int reg, unsigned int valu
 static irqreturn_t unicam_isr(int irq, void *dev_id)
 {
     unicam_t *dev;
-    unsigned int value;
     
-    value = reg_read(unicam_base, CAM_STA_OFFSET);
-    reg_write(unicam_base, CAM_STA_OFFSET, value);	// enable access		
+    unicam_isr_reg_status.rx_status = reg_read(unicam_base, CAM_STA_OFFSET);
+    unicam_isr_reg_status.image_intr = reg_read(unicam_base, CAM_ISTA_OFFSET);
+    reg_write(unicam_base, CAM_ISTA_OFFSET, unicam_isr_reg_status.image_intr);	// enable access		
+    reg_write(unicam_base, CAM_STA_OFFSET, unicam_isr_reg_status.rx_status);	// enable access		
 		
     dev = (unicam_t *)dev_id;	
     up(&dev->irq_sem);
@@ -213,6 +227,8 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
     {        
         dbg_print("Enabling unicam interrupt\n");
 		interrupt_irq = 0;
+        unicam_isr_reg_status.rx_status = 0;
+        unicam_isr_reg_status.image_intr = 0;
         enable_irq(IRQ_UNICAM);
         dbg_print("Waiting for interrupt\n");
         if (down_interruptible(&dev->irq_sem))
@@ -226,6 +242,8 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
 			printk(KERN_ERR"interrupted irq ioctl\n");
 			return -EIO;
 		}
+        if (copy_to_user((cam_isr_reg_status_st_t*)arg, &unicam_isr_reg_status, sizeof(cam_isr_reg_status_st_t)))
+            ret = -EPERM;
     }
     break;
 	case UNICAM_IOCTL_RETURN_IRQ:
@@ -434,6 +452,19 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
             err_print("DIGITAL_CH1_STPRSTS: Clk not Started\n");
         }
     }
+    
+// Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
+    #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
+        dbg_print("Disable DDR PLL PWRDN\n");
+        if (RegCsrDdrPllPwrdnBit == CSR_DDR_PLL_REG_UNSET_FLAG)
+        {
+            value = reg_read(csr_base, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+            RegCsrDdrPllPwrdnBit = value & CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+            value = value & ~(CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK);
+            reg_write(csr_base, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET, value);
+        }
+    #endif    
+    
 }
 
 static void unicam_close_csi(unsigned int port, unsigned int clk_src)
@@ -472,6 +503,18 @@ static void unicam_close_csi(unsigned int port, unsigned int clk_src)
             err_print("DIGITAL_CH1_STPRSTS: Clk not Stopped\n");
         }
     }
+// Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
+    #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
+        dbg_print("Enable DDR PLL PWRDN\n");
+        if (RegCsrDdrPllPwrdnBit != CSR_DDR_PLL_REG_UNSET_FLAG)
+        {
+            value = reg_read(csr_base, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+            value &= ~(CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK);
+            value |= RegCsrDdrPllPwrdnBit;
+            reg_write(csr_base, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET, value);
+            RegCsrDdrPllPwrdnBit = CSR_DDR_PLL_REG_UNSET_FLAG;
+        }
+    #endif    
 }
 
 
@@ -557,6 +600,12 @@ int __init unicam_init(void)
     if (rootclk_base == NULL)
         goto err;		
 
+#ifdef CSR_DDR_PLL_REG_UNSET_FLAG
+    csr_base = (void __iomem *)ioremap_nocache(RHEA_CSR_BASE_ADDRESS, SZ_4K);
+    if (csr_base == NULL)
+        goto err;		
+#endif
+
     return 0;
 
 err:
@@ -582,6 +631,11 @@ void __exit unicam_exit(void)
 
     if (rootclk_base)
         iounmap(rootclk_base);	
+
+#ifdef CSR_DDR_PLL_REG_UNSET_FLAG
+    if (csr_base)
+        iounmap(csr_base);	
+#endif
 
     disable_unicam_clock();		
    
