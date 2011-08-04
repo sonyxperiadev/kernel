@@ -33,6 +33,7 @@
 #include <linux/semaphore.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/jiffies.h>
 #ifdef CONFIG_BRCM_FUSE_IPC_CIB
 #include <linux/broadcom/ipcinterface.h>
 #else
@@ -144,28 +145,17 @@ static IPC_ReturnCode_T EventClear (void * Event)
     return IPC_OK;   
 }
 
-static IPC_ReturnCode_T EventWait (void * Event, IPC_U32 MilliSeconds)
+static IPC_ReturnCode_T EventWait(void *Event, IPC_U32 MilliSeconds)
 {
-    IPC_Evt_t* ipcEvt = (IPC_Evt_t*)Event;
-	IPC_ReturnCode_T  rtnCode = IPC_OK;
+	IPC_Evt_t *ipcEvt = (IPC_Evt_t *)Event;
 
-	if(MilliSeconds == IPC_WAIT_FOREVER)
-	{
-		wait_event( (ipcEvt->evt_wait), (ipcEvt->evt == 1) );
-	}
-	else
-	{
-	    int timeout = 0;
-	    // timeout in "jiffies" (apparently 10ms/jiffie in android?)
-		timeout = wait_event_timeout( (ipcEvt->evt_wait), (ipcEvt->evt == 1), MilliSeconds/10 );
-		// returns 0 if we timed out, > 0 otherwise
-		if ( timeout == 0 )
-		{
-		    rtnCode = IPC_TIMEOUT;
-		}
-	}
-	
-	return rtnCode;
+	if (MilliSeconds == IPC_WAIT_FOREVER)
+		wait_event((ipcEvt->evt_wait), (ipcEvt->evt == 1));
+	else if (!wait_event_timeout((ipcEvt->evt_wait), (ipcEvt->evt == 1),
+				    msecs_to_jiffies(MilliSeconds)))
+		return IPC_TIMEOUT;
+
+	return IPC_OK;
 }
 
 static int ipcs_open(struct inode *inode, struct file *file)
