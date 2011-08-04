@@ -348,7 +348,7 @@ static void __exit vc_mem_exit( void )
     unregister_chrdev_region( vc_mem_devnum, 1 );
 }
 
-late_initcall ( vc_mem_init );
+module_init( vc_mem_init );
 module_exit( vc_mem_exit );
 MODULE_LICENSE( "GPL" );
 MODULE_AUTHOR( "Broadcom Corporation" );
