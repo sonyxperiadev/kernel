@@ -46,7 +46,6 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(NORFLSH_AD_11,     KP_ROW_OP_3, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AD_10,     KP_ROW_OP_4, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AD_09,     KP_ROW_OP_5, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(NORFLSH_AD_08,     KP_ROW_OP_6, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADLAT_EN,  KP_COL_IP_1, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AADLAT_EN, KP_COL_IP_2, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADDR_20,   KP_COL_IP_3, 0, OFF, OFF, 0, 0, 8MA),
@@ -103,20 +102,6 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(ULPI0_NXT,    ULPI0_NXT,    0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(ULPI0_STP,    ULPI0_STP,    0, OFF, OFF, 0, 1, 8MA),
 
-	/* USB Host (ULPI) */
-        PIN_CFG(ULPI1_CLOCK,  ULPI1_CLOCK,  0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DATA_0, ULPI1_DATA_0, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DATA_1, ULPI1_DATA_1, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DATA_2, ULPI1_DATA_2, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DATA_3, ULPI1_DATA_3, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DATA_4, ULPI1_DATA_4, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DATA_5, ULPI1_DATA_5, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DATA_6, ULPI1_DATA_6, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DATA_7, ULPI1_DATA_7, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_DIR,    ULPI1_DIR,    0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_NXT,    ULPI1_NXT,    0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(ULPI1_STP,    ULPI1_STP,    0, OFF, OFF, 0, 1, 8MA),
-
 	/* VC CAM1 I2C */
 	PIN_BSC_CFG(VC_CAM1_SCL, VC_CAM1_SCL, 0x08),
 	PIN_BSC_CFG(VC_CAM1_SDA, VC_CAM1_SDA, 0x08),
@@ -158,9 +143,21 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(LCD_OE,    LCD_OE,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(LCD_PCLK,  LCD_PCLK,  0, OFF, OFF, 0, 0, 8MA),
 
+   /* Digital Mics*/
+   PIN_CFG( DIGMIC1_CLK, DIGMIC1_CLK, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC1_DQ,  DIGMIC1_DQ,  0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC2_CLK, DIGMIC2_CLK, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC2_DQ,  DIGMIC2_DQ,  0, OFF, OFF, 0, 0, 8MA ),
+
 	/* VC GP clock */
 	PIN_CFG(GPIO_3, VC_GPCLK_0, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(GPIO_2, VC_GPCLK_1, 0, OFF, OFF, 0, 0, 8MA),
+
+        /* SSP0 */
+        PIN_CFG( SSP0_FS,  SSP0_FS,   0, OFF, OFF, 0, 0, 8MA ),
+        PIN_CFG( SSP0_CLK, SSP0_CLK,  0, OFF, OFF, 0, 0, 8MA ),
+        PIN_CFG( SSP0_RXD, SSP0_RXD,  0, OFF, OFF, 0, 0, 8MA ),
+        PIN_CFG( SSP0_TXD, SSP0_TXD,  0, OFF, OFF, 0, 0, 8MA ),
 
 	/* UARTB3 */
 	PIN_CFG( SSP1_FS,  UARTB3_URXD,  0, OFF, OFF, 0, 0, 8MA ),
@@ -173,6 +170,20 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SSP2_CLK,   UARTB4_UTXD,  0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SSP2_RXD_0, UARTB4_URTSN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(SSP2_TXD_0, UARTB4_UCTSN, 0, OFF, OFF, 0, 0, 8MA),
+
+/* AUDIOH */
+   PIN_CFG( UARTB4_UTXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( UARTB4_URXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( NORFLSH_AD_08, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+
+   /* BT GPIO */
+   PIN_CFG( NORFLSH_CE0_N, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( NORFLSH_AD_05, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+
+	/* VC4 PWM */
+/* Leave PWM as GPIO until VC PWM is functional
+	PIN_CFG(GPIO_6, VC_PWM_1, 0, OFF, OFF, 0, 0, 8MA ),
+*/
 };
 
 /* board level init */

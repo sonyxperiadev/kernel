@@ -1,7 +1,7 @@
-name   = bcm11160_tablet_android
+name   = bcm28160_tablet_android
 arch   = arm
 family = island
-chip   = 11160
+chip   = 28160
 board  = tablet_28160
 option = initrd
 

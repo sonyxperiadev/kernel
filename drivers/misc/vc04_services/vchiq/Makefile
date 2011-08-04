@@ -10,6 +10,8 @@ EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vceb/host/linux"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vceb/host/common"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vceb/common"
 
+EXTRA_CFLAGS  += -Werror
+
 #EXTRA_CFLAGS  += -I$(BRCM_VIDEOCORE_VCEB_DIR)
 #EXTRA_CFLAGS  += -I$(BRCM_VIDEOCORE_VCEB_DIR)/..
 #EXTRA_CFLAGS  += -I$(BRCM_VIDEOCORE_VCEB_DIR)/../common

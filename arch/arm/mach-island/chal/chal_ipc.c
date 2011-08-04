@@ -191,11 +191,36 @@ BCM_ERR_CODE chal_ipc_wakeup_vc (
    
    device = (CHAL_IPC_DEV_T*)handle;
 
-   CHAL_REG_WRITE32(device->ipc_secure_reg_base + IPCSEC_IPCAWAKE_OFFSET, address | 0x1 );
+   CHAL_REG_WRITE32(device->ipc_secure_reg_base + IPCSEC_IPCAWAKE_OFFSET,
+      address | IPCSEC_IPCAWAKE_WAKEUP_MASK );
 
    BCM_DBG_EXIT();
    return( BCM_SUCCESS );
 }        
+
+/*
+ * ******************************************************************************
+ *
+ *  Function Name:  chal_ipc_sleep_vc
+ *
+ *  Description: VideoCore sleep
+ *
+ * ******************************************************************************
+ */
+BCM_ERR_CODE chal_ipc_sleep_vc (
+    CHAL_IPC_HANDLE handle
+    )
+{
+   CHAL_IPC_DEV_T *device;
+
+   BCM_DBG_ENTER();
+
+   device = (CHAL_IPC_DEV_T*)handle;
+
+   CHAL_REG_WRITE32( device->ipc_secure_reg_base + IPCSEC_IPCAWAKE_OFFSET,
+      CHAL_REG_READ32( device->ipc_secure_reg_base + IPCSEC_IPCAWAKE_OFFSET ) &
+      ~IPCSEC_IPCAWAKE_WAKEUP_MASK );
+}
 
 /*
  * ******************************************************************************
@@ -405,6 +430,7 @@ BCM_ERR_CODE chal_ipc_get_error_status (
 
 EXPORT_SYMBOL( chal_ipc_config );
 EXPORT_SYMBOL( chal_ipc_wakeup_vc );
+EXPORT_SYMBOL( chal_ipc_sleep_vc );
 
 EXPORT_SYMBOL( chal_ipc_int_secmode );
 EXPORT_SYMBOL( chal_ipc_int_clr );

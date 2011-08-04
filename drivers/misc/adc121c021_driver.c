@@ -50,9 +50,6 @@
 static int mod_debug = 0;
 module_param(mod_debug, int, 0644);
 
-/* ---- Public Functions ------------------------------------------------- */
-EXPORT_SYMBOL(i2c_adc121_get_battery_voltage);
-
 /* ---- Private Constants and Types -------------------------------------- */
 struct i2c_priv_data 
 {
@@ -115,6 +112,7 @@ int  i2c_adc121_driver_read            (int *millivolts);
 int  i2c_adc121_driver_write           (int length);
 void i2c_adc121_driver_handle_i2c_error(int rc);
 void i2c_adc121_read_slave             (void);
+int  i2c_adc121_get_battery_voltage    (int *battery_millivolts);
 #if USE_ALERT_IRQ 
 int  i2c_adc121_driver_setup_gpio      (void);
 #endif
@@ -198,10 +196,11 @@ int i2c_adc121_driver_read(int *p_measured_millivoltage)
       gp_buffer[0] = i;
       rc = i2c_master_send(gp_i2c_driver_priv->p_i2c_client,
                            gp_buffer,
-                           length);   
+                           length);
       if (rc < length)
       {
-         printk("%s %s() i2c_master_send() failed %d\n", I2C_ADC121C021_DRIVER_NAME, __FUNCTION__, rc);
+         printk("%s %s() i2c_master_send() failed %d\n", 
+                I2C_ADC121C021_DRIVER_NAME, __FUNCTION__, rc);
          g_num_read_errors++;
          return rc;
       }      
@@ -220,8 +219,10 @@ int i2c_adc121_driver_read(int *p_measured_millivoltage)
 
       if (mod_debug > 1)
       {         
-         printk("%s() i2c_master_recv() length %d rc: %d,  reg: %11s i: %d rcvd: 0x%x 0x%x\n", 
-                __FUNCTION__, length, rc, reg_names[i], i, gp_buffer[0], gp_buffer[1]);                           
+         printk("%s() i2c_master_recv() length %d rc: %d,  "
+                "reg: %11s i: %d rcvd: 0x%x 0x%x\n", 
+                __FUNCTION__, length, rc, reg_names[i], 
+                i, gp_buffer[0], gp_buffer[1]);
       }          
                               
       if (rc < adc121c021_registers[i].num_bytes)                           
@@ -232,7 +233,7 @@ int i2c_adc121_driver_read(int *p_measured_millivoltage)
          return rc;
       }
       
-      g_adc121c021_registers[i] = ((0x0f & gp_buffer[0]) << 8)  + gp_buffer[1];            
+      g_adc121c021_registers[i] = ((0x0f & gp_buffer[0]) << 8)  + gp_buffer[1];
    }   
       
    *p_measured_millivoltage = g_adc121c021_registers[ADC121C021_ADC_REG]; 
@@ -419,48 +420,59 @@ static int i2c_adc121_driver_probe(struct i2c_client *p_i2c_client,
    struct device *dev = &p_i2c_client->dev;
    int battery_data;
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-   struct battery_monitor_calls *p_calls;   
+   struct battery_monitor *p_monitor;   
 #endif   
    
    if (p_i2c_client == NULL)
    {
-      printk(KERN_ERR "%s i2c_adc121_driver_probe() p_i2c_client == NULL\n", I2C_ADC121C021_DRIVER_NAME);      
+      printk(KERN_ERR "%s i2c_adc121_driver_probe() p_i2c_client == NULL\n", 
+             I2C_ADC121C021_DRIVER_NAME);      
       return -1;
    }
    
    if (p_i2c_client->dev.platform_data == NULL)
    {
-      printk(KERN_ERR "%s i2c_adc121_driver_probe() p_i2c_client->dev.platform_data == NULL\n",
+      printk(KERN_ERR "%s i2c_adc121_driver_probe() "
+             "p_i2c_client->dev.platform_data == NULL\n",
              I2C_ADC121C021_DRIVER_NAME);      
       return -1;
    }
 
    if (g_found_slave_addr > 0)
    {  /* Needed when more than one I2C slave had the same address.  */
-      printk(KERN_ERR "%s i2c_adc121_driver_probe() i2c slave already found at 0x%x\n",
+      printk(KERN_ERR "%s i2c_adc121_driver_probe() i2c slave already "
+             "found at 0x%x\n",
              I2C_ADC121C021_DRIVER_NAME, g_found_slave_addr);      
       return -1;
    }
    
-   /* Get the I2C information compiled in for this platform. */   
-   gp_i2c_adc121c021 = (struct I2C_ADC121C021_t *)p_i2c_client->dev.platform_data;   
+   /* get platform data */   
+   gp_i2c_adc121c021 = 
+       (struct I2C_ADC121C021_t *)p_i2c_client->dev.platform_data;   
    
    if (gp_i2c_adc121c021 == NULL)
    {  /* Cannot access platform data. */   
       printk("%s:%s Cannot access platform data for I2C slave address %d\n", 
              I2C_ADC121C021_DRIVER_NAME, __FUNCTION__, p_i2c_client->addr);
       return -1;
-   }    
-         
+   }
+
+   /* todo: clean up memory allocation failure handlings */
    p_state = kzalloc(sizeof(struct i2c_state), GFP_KERNEL);
-   
    if (p_state == NULL) 
    {
       dev_err(dev, "failed to create our state\n");
-     return -ENOMEM;
+      return -ENOMEM;
    }
-
    p_state->p_i2c_client = p_i2c_client;
+
+
+   gp_i2c_driver_priv = kzalloc(sizeof(struct i2c_priv_data), GFP_KERNEL);
+   if (gp_i2c_driver_priv == NULL)
+   {
+      dev_err(dev, "failed to create gp_i2c_driver_priv\n");
+      return -ENOMEM;
+   }       
    gp_i2c_driver_priv->p_i2c_client = p_i2c_client;
    
    i2c_set_clientdata(p_i2c_client, p_state);
@@ -469,11 +481,9 @@ static int i2c_adc121_driver_probe(struct i2c_client *p_i2c_client,
    
    /* Create some space to store the I2C bytes read from the slave. */
    gp_buffer = kzalloc(gp_i2c_adc121c021->num_bytes_to_read + 10, GFP_KERNEL);
-
-	if (!gp_buffer) 
+   if (!gp_buffer)
    {
       printk("i2c_adc121_driver_probe() kzalloc() returned NULL\n");
-      kfree(p_i2c_client);
       return -ENOMEM;
    }       
 
@@ -488,16 +498,24 @@ static int i2c_adc121_driver_probe(struct i2c_client *p_i2c_client,
    }   
       
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-   p_calls = kzalloc(sizeof(struct battery_monitor_calls), GFP_KERNEL); 
+   p_monitor = kzalloc(sizeof(struct battery_monitor), GFP_KERNEL); 
    
-	if (p_calls == NULL)
+	if (p_monitor == NULL)
    {
 		return -ENOMEM;
    }
 
-   p_calls->type           = enum_adc121;
-   p_calls->get_voltage_fn = adc121_get_battery_voltage;     
-   register_battery_monitor(p_calls, p_i2c_client);   
+   p_monitor->name           = I2C_ADC121C021_DRIVER_NAME;
+   p_monitor->get_voltage_fn = adc121_get_battery_voltage;     
+   p_monitor->gpio_ac_power = gp_i2c_adc121c021->gpio_ac_power;
+   p_monitor->ac_power_on_level = gp_i2c_adc121c021->ac_power_on_level;
+   p_monitor->gpio_charger = gp_i2c_adc121c021->gpio_charger;
+   rc = register_battery_monitor(p_monitor, p_i2c_client);
+   if (rc < 0) {
+       kfree(p_monitor);
+       kfree(gp_buffer);             
+       return rc;
+   }
 #endif   
       
    /* 
@@ -507,7 +525,10 @@ static int i2c_adc121_driver_probe(struct i2c_client *p_i2c_client,
 #if USE_ALERT_IRQ    
    if (i2c_adc121_driver_setup_gpio() != 0)
    {
-      kfree(p_i2c_client);
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+      kfree(p_monitor);
+#endif   
+
       kfree(gp_buffer);             
       return -1;       
    }
@@ -522,7 +543,9 @@ static int i2c_adc121_driver_probe(struct i2c_client *p_i2c_client,
    {
       printk("%s i2c_adc121_driver_probe() kernel thread not created\n", 
              I2C_ADC121C021_DRIVER_NAME);
-      kfree(p_i2c_client);
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+      kfree(p_monitor);
+#endif   
       kfree(gp_buffer);             
 #if USE_ALERT_IRQ    
       free_irq(gp_i2c_adc121c021->gpio_irq_pin, gp_i2c_driver_priv);
@@ -536,9 +559,12 @@ static int i2c_adc121_driver_probe(struct i2c_client *p_i2c_client,
    
    if (mod_debug)
    {
-      printk("%s() gp_i2c_adc121c021->i2c_slave_address : 0x%x\n", __FUNCTION__, gp_i2c_adc121c021->i2c_slave_address);
-      printk("%s() gp_i2c_adc121c021->gpio_irq_pin      : %d\n", __FUNCTION__, gp_i2c_adc121c021->gpio_irq_pin);
-      printk("%s() gp_i2c_adc121c021->num_bytes_to_read : %d\n", __FUNCTION__, gp_i2c_adc121c021->num_bytes_to_read);
+      printk("%s() gp_i2c_adc121c021->i2c_slave_address : 0x%x\n", 
+             __FUNCTION__, gp_i2c_adc121c021->i2c_slave_address);
+      printk("%s() gp_i2c_adc121c021->gpio_irq_pin      : %d\n", 
+             __FUNCTION__, gp_i2c_adc121c021->gpio_irq_pin);
+      printk("%s() gp_i2c_adc121c021->num_bytes_to_read : %d\n",
+             __FUNCTION__, gp_i2c_adc121c021->num_bytes_to_read);
    }   
    
    /*
@@ -609,24 +635,11 @@ int __init i2c_adc121_driver_init(void)
 {
    int rc;
    
-   gp_i2c_driver_priv = kmalloc(sizeof(struct i2c_priv_data), GFP_KERNEL);
-   
-   if (gp_i2c_driver_priv == NULL)
-   {
-      printk("i2c_adc121_driver_init(): memory allocation failed for gp_i2c_driver_priv!\n");
-      return -ENOMEM;
-   }       
-   
-   /* Try to reset the I2C slave so it will be to detected by the master (us). 
-    * Do not have any information about the slave device so use the default
-    * reset ping.
-    */
-   
    rc = i2c_add_driver(&adc121c021_i2c_driver);
-   
    if (rc != 0) 
    {
-      printk("%s i2c_adc121_driver_init(): i2c_add_driver() failed, errno is %d\n", I2C_ADC121C021_DRIVER_NAME, rc);
+      printk("%s i2c_adc121_driver_init(): i2c_add_driver() failed, errno is %d\n", 
+             I2C_ADC121C021_DRIVER_NAME, rc);
       return rc;
    }
 

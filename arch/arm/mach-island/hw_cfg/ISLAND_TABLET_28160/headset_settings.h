@@ -22,6 +22,6 @@
 #define HW_CFG_HEADSET \
 { \
    .gpio_headset_det = 63, \
-   .gpio_mic_det = 183, \
+   .gpio_mic_det = 123, \
 }
 #endif /* HEADSET_SETTINGS_H */

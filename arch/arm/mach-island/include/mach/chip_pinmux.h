@@ -260,10 +260,8 @@ enum PIN_NAME {
 
    /* GPIO 7 */   PN_GPIO_7,
    /* GPIO 6 */   PN_GPIO_6,
-
    /* GPIO 5 */   PN_GPIO_5,
    /* GPIO 4 */   PN_GPIO_4,
-
    /* GPIO 3 */   PN_GPIO_3,
    /* GPIO 2 */   PN_GPIO_2,
    /* GPIO 1 */   PN_GPIO_1,

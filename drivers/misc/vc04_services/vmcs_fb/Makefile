@@ -12,6 +12,8 @@ EXTRA_CFLAGS  += -D__VCCOREVER__=0
 EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -D__linux__
 
+EXTRA_CFLAGS  += -Werror
+
 obj-m := vc-vmcs_fb.o
 vc-vmcs_fb-objs := \
     vmcs_fb.o \

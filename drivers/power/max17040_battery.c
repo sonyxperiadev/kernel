@@ -192,43 +192,52 @@ static void max17040_get_status(struct i2c_client *client)
 int max17040_get_battery_voltage(void *p_data)
 {
 	struct max17040_chip *chip;
-   struct i2c_client *client;
-   
-   if (p_data == NULL)
-   {
-      printk("%s() error, p_data == NULL\n", __FUNCTION__);
-      return -1;
-   }   
-   
-   client = (struct i2c_client *)p_data;      
-   max17040_get_vcell(client);
-   chip = i2c_get_clientdata(client);
+        struct i2c_client *client;
+	int battery_value;
 
-   if (chip == NULL)
-   {
-      printk("%s() error, chip == NULL\n", __FUNCTION__);
-      return -1;
-   }   
+	if (p_data == NULL) {
+		printk("%s() error, p_data == NULL\n", __FUNCTION__);
+		return -1;
+	}   
+   
+	client = (struct i2c_client *)p_data;      
+	max17040_get_vcell(client);
+	chip = i2c_get_clientdata(client);
+
+	if (chip == NULL) {
+		printk("%s() error, chip == NULL\n", __FUNCTION__);
+		return -1;
+	}
        
-   //printk("%s() battery voltage %d name %s\n", __FUNCTION__, chip->vcell, chip->battery.name);          
-   return chip->vcell;
+	/* adjust the returned value */
+	battery_value = chip->vcell;
+	if (battery_value > 0) {
+		battery_value = 2*battery_value + 1700;
+	}
+	else {  
+		/* At startup takes a bit of time to get the battery monitor voltage.*/
+		battery_value = chip->pdata->battery_max_voltage;
+		printk("%s() monitor not ready, setting voltage to %d\n",
+		       __FUNCTION__, battery_value);
+	}         
+	return battery_value;
 }
+
 int max17040_get_battery_charge (void *p_data)
 {
 	struct max17040_chip *chip;
-   struct i2c_client    *client;
+	struct i2c_client    *client;
    
-   if (p_data == NULL)
-   {
-      printk("%s() error, p_data == NULL\n", __FUNCTION__);
-      return -1;
-   }
+	if (p_data == NULL) {
+		printk("%s() error, p_data == NULL\n", __FUNCTION__);
+		return -1;
+	}
    
-   client = (struct i2c_client *)p_data;
+	client = (struct i2c_client *)p_data;
    
-   max17040_get_soc(client);
-   chip = i2c_get_clientdata(client);
-   return chip->soc;
+	max17040_get_soc(client);
+	chip = i2c_get_clientdata(client);
+	return chip->soc;
 }
 
 #endif
@@ -246,7 +255,7 @@ static void max17040_work(struct work_struct *work)
 
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
 #else
-   power_supply_changed(&chip->battery); 
+	power_supply_changed(&chip->battery); 
 #endif   
 	schedule_delayed_work(&chip->work, MAX17040_DELAY);
 }
@@ -265,7 +274,7 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	struct max17040_chip *chip;
 	int ret;
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-   struct battery_monitor_calls *p_calls;   
+	struct battery_monitor *p_monitor;
 #endif   
 
 	if (!i2c_check_functionality(adapter, I2C_FUNC_SMBUS_BYTE))
@@ -294,17 +303,25 @@ static int __devinit max17040_probe(struct i2c_client *client,
 	chip->battery.num_properties	= ARRAY_SIZE(max17040_battery_props);
    
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-   p_calls = kzalloc(sizeof(struct battery_monitor_calls), GFP_KERNEL); 
+	p_monitor = kzalloc(sizeof(struct battery_monitor), GFP_KERNEL); 
    
-	if (p_calls == NULL)
-   {
+	if (p_monitor == NULL) {
 		return -ENOMEM;
-   }
+	}
 
-   p_calls->type           = enum_max17040;
-   p_calls->get_voltage_fn = max17040_get_battery_voltage;  
-   p_calls->get_charge_fn  = max17040_get_battery_charge;
-   register_battery_monitor(p_calls, client);   
+	p_monitor->name           = "max17040";
+	p_monitor->get_voltage_fn = max17040_get_battery_voltage;
+	p_monitor->get_charge_fn = max17040_get_battery_charge;
+	p_monitor->gpio_ac_power = chip->pdata->gpio_ac_power;
+	p_monitor->ac_power_on_level = chip->pdata->ac_power_on_level;
+	p_monitor->gpio_charger = chip->pdata->gpio_charger;
+	ret = register_battery_monitor(p_monitor, client);
+	if(ret < 0) {
+		dev_err(&client->dev, "failed: battery monitir register\n");
+		kfree(p_monitor);
+		kfree(chip);
+		return ret;
+	}
 #else   
 	ret = power_supply_register(&client->dev, &chip->battery);
 	if (ret) {
@@ -367,7 +384,7 @@ MODULE_DEVICE_TABLE(i2c, max17040_id);
 
 static struct i2c_driver max17040_i2c_driver = {
 	.driver	= {
-		.name	= "max17040",
+        .name	= HW_MAX17040_DRIVER_NAME,
 	},
 	.probe		= max17040_probe,
 	.remove		= __devexit_p(max17040_remove),
