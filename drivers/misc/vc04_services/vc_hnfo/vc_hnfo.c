@@ -21,10 +21,10 @@
 #include <asm/uaccess.h>
 #include <linux/proc_fs.h>
 
-#include <linux/videocore/vc_dnfo.h>
+#include <linux/videocore/vc_hnfo.h>
 
 
-#define DRIVER_NAME  "vc-dnfo"
+#define DRIVER_NAME  "vc-hnfo"
 #define PROC_WRITE_BUF_SIZE      128
 
 // Uncomment to enable debug logging
@@ -38,21 +38,22 @@
 #define LOG_ERR( fmt, ... )  printk( KERN_ERR fmt "\n", ##__VA_ARGS__ )
 
 // Device (/dev) related variables
-static dev_t         vc_dnfo_devnum = 0;
-static struct class *vc_dnfo_class = NULL;
-static struct cdev   vc_dnfo_cdev;
-static struct vc_dnfo_display_info vc_dnfo_info;
+static dev_t         vc_hnfo_devnum = 0;
+static struct class *vc_hnfo_class = NULL;
+static struct cdev   vc_hnfo_cdev;
+
+static struct vc_hnfo_usr_info vc_hnfo_status;
 // Proc entry
-static struct proc_dir_entry *vc_dnfo_proc_entry;
+static struct proc_dir_entry *vc_hnfo_proc_entry;
 
 
 /****************************************************************************
 *
-*   vc_dnfo_open
+*   vc_hnfo_open
 *
 ***************************************************************************/
 
-static int vc_dnfo_open( struct inode *inode, struct file *file )
+static int vc_hnfo_open( struct inode *inode, struct file *file )
 {
     (void)inode;
     (void)file;
@@ -64,11 +65,11 @@ static int vc_dnfo_open( struct inode *inode, struct file *file )
 
 /****************************************************************************
 *
-*   vc_dnfo_release
+*   vc_hnfo_release
 *
 ***************************************************************************/
 
-static int vc_dnfo_release( struct inode *inode, struct file *file )
+static int vc_hnfo_release( struct inode *inode, struct file *file )
 {
     (void)inode;
     (void)file;
@@ -81,26 +82,25 @@ static int vc_dnfo_release( struct inode *inode, struct file *file )
 
 /****************************************************************************
 *
-*   vc_dnfo_ioctl
+*   vc_hnfo_ioctl
 *
 ***************************************************************************/
 
-static long vc_dnfo_ioctl( struct file *file, unsigned int cmd, unsigned long arg )
+static long vc_hnfo_ioctl( struct file *file, unsigned int cmd, unsigned long arg )
 {
     int rc = 0;
 
     (void)cmd;
-    (void)arg;
 
     LOG_DBG( "[%s]: called file = 0x%p", __func__, file );
 
     switch ( cmd )
     {
-        case VC_DNFO_IOC_DISPLAY_INFO:
+        case VC_HNFO_IOC_INFO:
         {
             if ( copy_to_user( (void *)arg,
-                               &vc_dnfo_info,
-                               sizeof( vc_dnfo_info )) != 0 )
+                               &vc_hnfo_status,
+                               sizeof( vc_hnfo_status )) != 0 )
             {
                rc = -EFAULT;
             }
@@ -122,21 +122,21 @@ static long vc_dnfo_ioctl( struct file *file, unsigned int cmd, unsigned long ar
 *
 ***************************************************************************/
 
-static const struct file_operations vc_dnfo_fops =
+static const struct file_operations vc_hnfo_fops =
 {
     .owner          = THIS_MODULE,
-    .open           = vc_dnfo_open,
-    .release        = vc_dnfo_release,
-    .unlocked_ioctl = vc_dnfo_ioctl,
+    .open           = vc_hnfo_open,
+    .release        = vc_hnfo_release,
+    .unlocked_ioctl = vc_hnfo_ioctl,
 };
 
 /****************************************************************************
 *
-*   vc_dnfo_proc_read
+*   vc_hnfo_proc_read
 *
 ***************************************************************************/
 
-static int vc_dnfo_proc_read( char *buf, char **start, off_t offset, int count, int *eof, void *data )
+static int vc_hnfo_proc_read( char *buf, char **start, off_t offset, int count, int *eof, void *data )
 {
     char *p = buf;
 
@@ -150,28 +150,13 @@ static int vc_dnfo_proc_read( char *buf, char **start, off_t offset, int count, 
        return 0;
     }
 
-    p += sprintf( p, "Display Information for User Application:\n\n" );
-    p += sprintf( p, "     \'width\'       : %d (pix)\n",
-                  vc_dnfo_info.width );
-    p += sprintf( p, "     \'height\'      : %d (pix)\n",
-                  vc_dnfo_info.height );
-    p += sprintf( p, "     \'scale\'       : %s\n",
-                  vc_dnfo_info.scale ? "yes" : "no" );
-    if ( vc_dnfo_info.scale )
-    {
-       p += sprintf( p, "     \'swidth\'      : %d (pix)\n",
-                     vc_dnfo_info.swidth );
-       p += sprintf( p, "     \'sheight\'     : %d (pix)\n",
-                     vc_dnfo_info.sheight );
-    }
-    p += sprintf( p, "     \'bpp\'         : %d\n",
-                  vc_dnfo_info.bpp );
-    p += sprintf( p, "     \'layer\'       : %d (VC layer)\n",
-                  vc_dnfo_info.layer );
-    p += sprintf( p, "     \'xdpi\'        : %d\n",
-                  vc_dnfo_info.xdpi );
-    p += sprintf( p, "     \'ydpi\'        : %d\n",
-                  vc_dnfo_info.ydpi );
+    p += sprintf( p, "HDMI Default Setup:\n\n" );
+    p += sprintf( p, "     \'power_on\'    : %s\n",
+                  vc_hnfo_status.power_on ? "explicit" : "per-detection" );
+    p += sprintf( p, "     \'dis_detect\'  : %s\n",
+                  vc_hnfo_status.dis_detect ? "oui" : "non" );
+    p += sprintf( p, "     \'resolution\'  : %d\n",
+                  vc_hnfo_status.resolution );
 
     *eof = 1;
     return p - buf;
@@ -179,16 +164,16 @@ static int vc_dnfo_proc_read( char *buf, char **start, off_t offset, int count, 
 
 /****************************************************************************
 *
-*   vc_dnfo_proc_read
+*   vc_hnfo_proc_read
 *
 ***************************************************************************/
 
-static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, unsigned long count, void *data )
+static int vc_hnfo_proc_write( struct file *file, const char __user *buffer, unsigned long count, void *data )
 {
    int ret;
    unsigned char kbuf[PROC_WRITE_BUF_SIZE];
    char name[PROC_WRITE_BUF_SIZE];
-   int value;
+   unsigned int value;
 
    if ( count > PROC_WRITE_BUF_SIZE )
    {
@@ -210,7 +195,7 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
    */
    ret = count;
 
-   if( sscanf( kbuf, "%s %d", name, &value ) != 2 )
+   if( sscanf( kbuf, "%s %u", name, &value ) != 2 )
    {
       LOG_ERR( "[%s]: echo <name> <value> > /proc/%s",
                __func__,
@@ -221,109 +206,69 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
       goto out;
    }
 
-   if ( (value < 0) &&
-        (strcmp( name, "layer" ) != 0) )
-   {
-      LOG_ERR( "[%s]: attribute '%s' requires '<value> >= 0'",
-               __func__,
-               name );
-
-      /* Failed to assign the proper value.
-      */
-      goto out;
-   }
-
    /* Big case to assign the desired value.  Make this a lookup table
    ** eventually.
    */
-   if ( strcmp( name, "width" ) == 0 )
+   if ( strcmp( name, "power_on" ) == 0 )
    {
-      vc_dnfo_info.width = value;
+      vc_hnfo_status.power_on = value;
    }
-   else if ( strcmp( name, "height" ) == 0 )
+   else if ( strcmp( name, "dis_detect" ) == 0 )
    {
-      vc_dnfo_info.height = value;
+      vc_hnfo_status.dis_detect = value;
    }
-   else if ( strcmp( name, "scale" ) == 0 )
+   else if ( strcmp( name, "resolution" ) == 0 )
    {
-      vc_dnfo_info.scale = value;
-   }
-   else if ( strcmp( name, "swidth" ) == 0 )
-   {
-      vc_dnfo_info.swidth = value;
-   }
-   else if ( strcmp( name, "sheight" ) == 0 )
-   {
-      vc_dnfo_info.sheight = value;
-   }
-   else if ( strcmp( name, "bpp" ) == 0 )
-   {
-      vc_dnfo_info.bpp = value;
-   }
-   else if ( strcmp( name, "layer" ) == 0 )
-   {
-      vc_dnfo_info.layer = value;
-   }
-   else if ( strcmp( name, "xdpi" ) == 0 )
-   {
-      vc_dnfo_info.xdpi = value;
-   }
-   else if ( strcmp( name, "ydpi" ) == 0 )
-   {
-      vc_dnfo_info.ydpi = value;
+      vc_hnfo_status.resolution = value;
    }
    else
    {
-      LOG_ERR( "[%s]: attribute '%s' is **unknown** to driver '%s'",
+      LOG_ERR( "[%s]: paramerter '%s' is **unknown** to driver '%s'",
                __func__,
                name,
                DRIVER_NAME );
-      goto out;
    }
 
-   /* Done.
-   */
-   goto out;
-   
+
 out:
    return ret;
 }
 
 /****************************************************************************
 *
-*   vc_dnfo_init
+*   vc_hnfo_init
 *
 ***************************************************************************/
 
-static int __init vc_dnfo_init( void )
+static int __init vc_hnfo_init( void )
 {
     int rc;
     struct device *dev;
 
     LOG_DBG( "[%s]: called", __func__ );
 
-    if (( rc = alloc_chrdev_region( &vc_dnfo_devnum, 0, 1, DRIVER_NAME )) < 0 )
+    if (( rc = alloc_chrdev_region( &vc_hnfo_devnum, 0, 1, DRIVER_NAME )) < 0 )
     {
         LOG_ERR( "[%s]: alloc_chrdev_region failed (rc=%d)", __func__, rc );
         goto out_err;
     }
 
-    cdev_init( &vc_dnfo_cdev, &vc_dnfo_fops );
-    if (( rc = cdev_add( &vc_dnfo_cdev, vc_dnfo_devnum, 1 )) != 0 )
+    cdev_init( &vc_hnfo_cdev, &vc_hnfo_fops );
+    if (( rc = cdev_add( &vc_hnfo_cdev, vc_hnfo_devnum, 1 )) != 0 )
     {
         LOG_ERR( "[%s]: cdev_add failed (rc=%d)", __func__, rc );
         goto out_unregister;
     }
 
-    vc_dnfo_class = class_create( THIS_MODULE, DRIVER_NAME );
-    if ( IS_ERR( vc_dnfo_class ))
+    vc_hnfo_class = class_create( THIS_MODULE, DRIVER_NAME );
+    if ( IS_ERR( vc_hnfo_class ))
     {
-        rc = PTR_ERR( vc_dnfo_class );
+        rc = PTR_ERR( vc_hnfo_class );
         LOG_ERR( "[%s]: class_create failed (rc=%d)", __func__, rc );
         goto out_cdev_del;
     }
 
-    dev = device_create( vc_dnfo_class, NULL, vc_dnfo_devnum, NULL,
+    dev = device_create( vc_hnfo_class, NULL, vc_hnfo_devnum, NULL,
                          DRIVER_NAME );
     if ( IS_ERR( dev ))
     {
@@ -332,42 +277,37 @@ static int __init vc_dnfo_init( void )
         goto out_class_destroy;
     }
 
-    vc_dnfo_proc_entry = create_proc_entry( DRIVER_NAME, 0660, NULL );
-    if ( vc_dnfo_proc_entry == NULL )
+    vc_hnfo_proc_entry = create_proc_entry( DRIVER_NAME, 0660, NULL );
+    if ( vc_hnfo_proc_entry == NULL )
     {
         rc = -EFAULT;
         LOG_ERR( "[%s]: create_proc_entry failed", __func__ );
         goto out_device_destroy;
     }
-    vc_dnfo_proc_entry->read_proc = vc_dnfo_proc_read;
-    vc_dnfo_proc_entry->write_proc = vc_dnfo_proc_write;
+    vc_hnfo_proc_entry->read_proc = vc_hnfo_proc_read;
+    vc_hnfo_proc_entry->write_proc = vc_hnfo_proc_write;
 
-    /* Populate default values.
+    /* Default setting for configuration entries.
     */
-    vc_dnfo_info.width   = 1024;
-    vc_dnfo_info.height  = 600;
-    vc_dnfo_info.scale   = 1;
-    vc_dnfo_info.swidth  = 1366;
-    vc_dnfo_info.sheight = 768;
-    vc_dnfo_info.bpp     = 32;
-    vc_dnfo_info.layer   = 1;
-    vc_dnfo_info.xdpi    = 200;
-    vc_dnfo_info.ydpi    = 200;
+    vc_hnfo_status.power_on   = 0;   // No explicit power on, power on detection.
+    vc_hnfo_status.dis_detect = 0;   // Don't disable action on detection.
+    vc_hnfo_status.resolution = 19;  // 'HDMI_CEA_720p50' - Highest supported resolution preferred.
+                                     // Can't ask for more at this time (ie 'HDMI_CEA_1080p60'=16).
 
     return 0;
 
 out_device_destroy:
-    device_destroy( vc_dnfo_class, vc_dnfo_devnum );
+    device_destroy( vc_hnfo_class, vc_hnfo_devnum );
 
 out_class_destroy:
-    class_destroy( vc_dnfo_class );
-    vc_dnfo_class = NULL;
+    class_destroy( vc_hnfo_class );
+    vc_hnfo_class = NULL;
 
 out_cdev_del:
-    cdev_del( &vc_dnfo_cdev );
+    cdev_del( &vc_hnfo_cdev );
 
 out_unregister:
-    unregister_chrdev_region( vc_dnfo_devnum, 1 );
+    unregister_chrdev_region( vc_hnfo_devnum, 1 );
 
 out_err:
     return rc;
@@ -375,22 +315,22 @@ out_err:
 
 /****************************************************************************
 *
-*   vc_dnfo_exit
+*   vc_hnfo_exit
 *
 ***************************************************************************/
 
-static void __exit vc_dnfo_exit( void )
+static void __exit vc_hnfo_exit( void )
 {
     LOG_DBG( "[%s]: called", __func__ );
 
-    remove_proc_entry( vc_dnfo_proc_entry->name, NULL );
-    device_destroy( vc_dnfo_class, vc_dnfo_devnum );
-    class_destroy( vc_dnfo_class );
-    cdev_del( &vc_dnfo_cdev );
-    unregister_chrdev_region( vc_dnfo_devnum, 1 );
+    remove_proc_entry( vc_hnfo_proc_entry->name, NULL );
+    device_destroy( vc_hnfo_class, vc_hnfo_devnum );
+    class_destroy( vc_hnfo_class );
+    cdev_del( &vc_hnfo_cdev );
+    unregister_chrdev_region( vc_hnfo_devnum, 1 );
 }
 
-module_init( vc_dnfo_init );
-module_exit( vc_dnfo_exit );
+module_init( vc_hnfo_init );
+module_exit( vc_hnfo_exit );
 MODULE_LICENSE( "GPL" );
 MODULE_AUTHOR( "Broadcom Corporation" );

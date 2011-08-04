@@ -21,10 +21,7 @@
 #include <linux/errno.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
-#include <linux/pagemap.h>
-#include <linux/slab.h>
 #include <linux/module.h>
-#include <asm/pgtable.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>
 
@@ -34,6 +31,8 @@
 #include "vchiq_bi.h"
 
 #include "vchiq_memdrv.h"
+
+#include "interface/vceb/host/vceb.h"
 
 #include <linux/dma-mapping.h>
 #include <mach/sdma.h>
@@ -59,6 +58,24 @@
 #endif
 
 #include <linux/videocore/vc_mem.h>
+
+#if defined(CONFIG_HAS_EARLYSUSPEND)
+#include <linux/earlysuspend.h>
+
+static void
+vchiq_early_suspend(struct early_suspend *h);
+static void
+vchiq_late_resume(struct early_suspend *h);
+
+static struct early_suspend g_vchiq_early_suspend =
+{
+   .level   = EARLY_SUSPEND_LEVEL_DISABLE_FB + 1,
+   .suspend = vchiq_early_suspend,
+   .resume  = vchiq_late_resume
+};
+
+#endif
+
 
 #define VCOS_LOG_CATEGORY (&vchiq_arm_log_category)
 
@@ -88,6 +105,7 @@ typedef struct
 
     const char                  *instance_name;
     const VCHIQ_PLATFORM_DATA_T *platform_data;
+
     VCOS_CFG_ENTRY_T             instance_cfg_dir;
     VCOS_CFG_ENTRY_T             vchiq_control_cfg_entry;
 } VCHIQ_KERNEL_STATE_T;
@@ -107,8 +125,11 @@ static DMA_MMAP_CFG_T    gVchiqDmaMmap;
 static SDMA_Handle_t     dmaHndl;
 static struct completion gDmaDone;
 static VCOS_MUTEX_T      g_dma_mutex;
+static VCOS_EVENT_T      g_pause_event;
 
 static VCHIQ_STATE_T    *g_vchiq_state;
+static VCHIQ_SLOT_ZERO_T *g_vchiq_slot_zero;
+static unsigned int      g_wake_address;
 
 static int
 ipc_dma( void *vcaddr, void *armaddr, int len, DMA_MMAP_PAGELIST_T *pagelist,
@@ -127,8 +148,14 @@ int __init
 vchiq_platform_init(VCHIQ_STATE_T *state)
 {
    g_vchiq_state = state;
+   g_wake_address = 0;
 
    vcos_mutex_create(&g_dma_mutex, "dma_mutex");
+   vcos_event_create(&g_pause_event, "pause_event");
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+   register_early_suspend(&g_vchiq_early_suspend);
+#endif
 
    return 0;
 }
@@ -136,6 +163,9 @@ vchiq_platform_init(VCHIQ_STATE_T *state)
 void __exit
 vchiq_platform_exit(VCHIQ_STATE_T *state)
 {
+#ifdef CONFIG_HAS_EARLYSUSPEND
+   unregister_early_suspend(&g_vchiq_early_suspend);
+#endif
    vcos_assert(state == g_vchiq_state);
    g_vchiq_state = NULL;
    free_irq(BCM_INT_ID_IPC_OPEN, state);
@@ -145,17 +175,18 @@ vchiq_platform_exit(VCHIQ_STATE_T *state)
 void
 remote_event_signal(REMOTE_EVENT_T *event)
 {
-	event->fired = 1;
+   event->fired = 1;
 
-	/* The test on the next line also ensures the write on the previous line
-		has completed */
+   /* The test on the next line also ensures the write on the previous line
+      has completed */
 
-	if (event->armed) {
-		/* trigger vc interrupt */
-		dsb();         /* data barrier operation */
+   if (event->armed)
+   {
+      /* trigger vc interrupt */
+      dsb();         /* data barrier operation */
 
       chal_ipc_int_vcset( ipcHandle, IPC_INTERRUPT_SOURCE_0 );
-	}
+   }
 }
 
 int
@@ -174,74 +205,157 @@ vchiq_copy_from_user(void *dst, const void *src, int size)
 
 VCHIQ_STATUS_T
 vchiq_prepare_bulk_data(VCHIQ_BULK_T *bulk,
-	VCHI_MEM_HANDLE_T memhandle, void *offset, int size, int dir)
+   VCHI_MEM_HANDLE_T memhandle, void *offset, int size, int dir)
 {
-	vcos_assert(memhandle == VCHI_MEM_HANDLE_INVALID);
+   vcos_assert(memhandle == VCHI_MEM_HANDLE_INVALID);
 
-	/* Check the memory is supported by dma_mmap */
-	if (!dma_mmap_dma_is_supported(offset))
-	{
-		vcos_log_error( "%s: buffer at %lx not supported", __func__,
-			(unsigned long)offset );
-		return VCHIQ_ERROR;
-	}
+   /* Check the memory is supported by dma_mmap */
+   if (!dma_mmap_dma_is_supported(offset))
+   {
+      vcos_log_error( "%s: buffer at %lx not supported", __func__,
+         (unsigned long)offset );
+      return VCHIQ_ERROR;
+   }
 
         if (dma_mmap_mem_type(offset) == DMA_MMAP_TYPE_USER)
-	{
-		DMA_MMAP_PAGELIST_T *pagelist;
-		int ret;
-		ret = dma_mmap_create_pagelist(
-			(char __user *)offset,
-			size,
-			(dir == VCHIQ_BULK_RECEIVE)
-			? DMA_FROM_DEVICE
-			: DMA_TO_DEVICE,
-			current,
-			&pagelist);
-		if (ret <= 0)
-			return VCHIQ_ERROR;
-		bulk->data = offset;
-		bulk->handle = (VCHI_MEM_HANDLE_T)pagelist;
-	}
-	else
-	{
-		bulk->data = offset;
-		bulk->handle = 0;
-	}
-   
-	return VCHIQ_SUCCESS;
+   {
+      DMA_MMAP_PAGELIST_T *pagelist;
+      int ret;
+      ret = dma_mmap_create_pagelist(
+         (char __user *)offset,
+         size,
+         (dir == VCHIQ_BULK_RECEIVE)
+         ? DMA_FROM_DEVICE
+         : DMA_TO_DEVICE,
+         current,
+         &pagelist);
+      if (ret <= 0)
+         return VCHIQ_ERROR;
+      bulk->data = offset;
+      bulk->handle = (VCHI_MEM_HANDLE_T)pagelist;
+   }
+   else
+   {
+      bulk->data = offset;
+      bulk->handle = 0;
+   }
+
+   return VCHIQ_SUCCESS;
 }
 
 void
 vchiq_complete_bulk(VCHIQ_BULK_T *bulk)
 {
-	if (bulk->handle != 0)
-		dma_mmap_free_pagelist((DMA_MMAP_PAGELIST_T *)bulk->handle);
+   if (bulk->handle != 0)
+      dma_mmap_free_pagelist((DMA_MMAP_PAGELIST_T *)bulk->handle);
 }
 
 void
 vchiq_transfer_bulk(VCHIQ_BULK_T *bulk)
 {
-	if ((bulk->size == bulk->remote_size) &&
-		(ipc_dma( bulk->remote_data, bulk->data, bulk->size, (DMA_MMAP_PAGELIST_T *)bulk->handle,
-		(bulk->dir == VCHIQ_BULK_TRANSMIT) ? DMA_TO_DEVICE : DMA_FROM_DEVICE) == 0))
-	{
-		bulk->actual = bulk->size;
-	}
-	else
-	{
-		bulk->actual = VCHIQ_BULK_ACTUAL_ABORTED;
-	}
+   if ((bulk->size == bulk->remote_size) &&
+      (ipc_dma( bulk->remote_data, bulk->data, bulk->size, (DMA_MMAP_PAGELIST_T *)bulk->handle,
+      (bulk->dir == VCHIQ_BULK_TRANSMIT) ? DMA_TO_DEVICE : DMA_FROM_DEVICE) == 0))
+   {
+      bulk->actual = bulk->size;
+   }
+   else
+   {
+      bulk->actual = VCHIQ_BULK_ACTUAL_ABORTED;
+   }
 }
 
 void
 vchiq_dump_platform_state(void *dump_context)
 {
-        char buf[80];
-        int len;
-        len = vcos_snprintf(buf, sizeof(buf),
-                "  Platform: BI (ARM master)");
-        vchiq_dump(dump_context, buf, len + 1);
+   char buf[80];
+   int len;
+   len = vcos_snprintf(buf, sizeof(buf),
+      "  Platform: BI (ARM master)");
+   vchiq_dump(dump_context, buf, len + 1);
+}
+
+VCHIQ_STATUS_T
+vchiq_platform_suspend(VCHIQ_STATE_T *state)
+{
+   VCHIQ_STATUS_T status;
+
+   if (state->conn_state != VCHIQ_CONNSTATE_CONNECTED)
+      return VCHIQ_ERROR;
+
+   /* Invalidate the wake address */
+   ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0] = ~0;
+
+   status = vchiq_pause_internal(state);
+
+   if (status == VCHIQ_SUCCESS)
+   {
+      if (vcos_event_wait(&g_pause_event) != VCOS_SUCCESS)
+         return VCHIQ_RETRY;
+
+      do
+      {
+         msleep(1);
+         g_wake_address = ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0];
+      } while (g_wake_address == ~0);
+
+      chal_ipc_sleep_vc( ipcHandle );
+      msleep(10);
+      ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0] = ~0;
+      vcos_wmb(g_vchiq_slot_zero->platform_data);
+      msleep(10);
+
+      if (g_wake_address == 0)
+      {
+         vcos_log_error("VideoCore suspend failed!");
+         status = VCHIQ_ERROR;
+      }
+      else
+      {
+         vcos_log_info("VideoCore suspended - wake address %x", g_wake_address);
+      }
+   }
+
+   return status;
+}
+
+void
+vchiq_platform_paused(VCHIQ_STATE_T *state)
+{
+   vcos_event_signal(&g_pause_event);
+}
+
+VCHIQ_STATUS_T
+vchiq_platform_resume(VCHIQ_STATE_T *state)
+{
+   if (g_wake_address == 0)
+   {
+      vcos_log_error("VideoCore not suspended");
+      return VCHIQ_ERROR;
+   }
+
+   vcos_log_info("Resuming VideoCore at address %x", g_wake_address);
+
+   /* Write the wake address to wake up videocore */
+   chal_ipc_wakeup_vc( ipcHandle, g_wake_address );
+
+   vcos_log_info("Waiting for response from VideoCore...");
+
+   /* Wait for VideoCore boot */
+   if (vcos_event_wait(&g_pause_event) != VCOS_SUCCESS)
+      return VCHIQ_RETRY;
+
+   g_wake_address = 0;
+
+   vcos_log_info("VideoCore awake");
+
+   return VCHIQ_SUCCESS;
+}
+
+void
+vchiq_platform_resumed(VCHIQ_STATE_T *state)
+{
+   vcos_event_signal(&g_pause_event);
 }
 
 /****************************************************************************
@@ -270,12 +384,75 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
             kernState->instance_name );
       }
    }
-   //TODO support "disconnect", "resume", "suspend"
+   else if ( strncmp( "suspend", command, strlen( "suspend" )) == 0 )
+   {
+      if ( vchiq_platform_suspend(g_vchiq_state) == VCHIQ_SUCCESS )
+      {
+         vcos_log_warn( "%s: suspended vchiq for '%s'", __func__,
+            kernState->instance_name );
+      }
+      else
+      {
+         vcos_log_error( "%s: failed to suspend vchiq '%s'",
+            __func__, kernState->instance_name );
+      }
+   }
+   else if ( strncmp( "resume", command, strlen( "resume" )) == 0 )
+   {
+      if ( vchiq_platform_resume(g_vchiq_state) == VCHIQ_SUCCESS )
+      {
+         vcos_log_warn( "%s: resumed vchiq for '%s'", __func__,
+            kernState->instance_name );
+      }
+      else
+      {
+         vcos_log_error( "%s: failed to resume vchiq for '%s'",
+            __func__, kernState->instance_name );
+      }
+   }
+   //TODO support "disconnect"
    else
    {
       vcos_log_error( "%s: unknown command '%s'", __func__, command );
    }
 }
+
+#if defined(CONFIG_HAS_EARLYSUSPEND)
+
+static void
+vchiq_early_suspend(struct early_suspend *h)
+{
+   if ( 1 ) // FIXME - activate this when the rest of the logic is worked out
+   {
+      vcos_log_error( "%s: ignoring early suspend in vchiq", __func__ );
+   }
+   else if (vchiq_platform_suspend(g_vchiq_state) == VCHIQ_SUCCESS )
+   {
+      vcos_log_warn( "%s: early suspended vchiq", __func__ );
+   }
+   else
+   {
+      vcos_log_error( "%s: failed to early suspend vchiq", __func__ );
+   }
+}
+
+static void
+vchiq_late_resume(struct early_suspend *h)
+{
+   if ( 1 ) // FIXME - activate this when the rest of the logic is worked out
+   {
+      vcos_log_error( "%s: ignoring late resume in vchiq", __func__ );
+   }
+   else if ( vchiq_platform_resume(g_vchiq_state) == VCHIQ_SUCCESS )
+   {
+      vcos_log_warn( "%s: resumed vchiq", __func__ );
+   }
+   else
+   {
+      vcos_log_error( "%s: failed to resume vchiq", __func__ );
+   }
+}
+#endif
 
 /****************************************************************************
 *
@@ -370,6 +547,104 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
 }
 
 EXPORT_SYMBOL( vchiq_userdrv_create_instance );
+
+/****************************************************************************
+*
+* vchiq_userdrv_suspend
+*
+*   The lower level drivers (vchiq_memdrv or vchiq_busdrv) will call this
+*   function to suspend each videcore.
+*
+***************************************************************************/
+
+VCHIQ_STATUS_T vchiq_userdrv_suspend( const VCHIQ_PLATFORM_DATA_T *platform_data )
+{
+   VCHIQ_KERNEL_STATE_T *kernState = NULL;
+   VCHIQ_STATUS_T status;
+   int i;
+
+   for (i = 0; i < vchiq_num_instances; i++)
+   {
+      if (vchiq_kernel_state[i]->platform_data == platform_data)
+      {
+         kernState = vchiq_kernel_state[i];
+         break;
+      }
+   }
+
+   if (!kernState)
+   {
+      vcos_log_error( "%s: failed to find state for instance %s", __func__,
+         platform_data->instance_name );
+
+      return VCHIQ_ERROR;
+   }
+
+   status = vchiq_platform_suspend(g_vchiq_state);
+   if ( status == VCHIQ_SUCCESS )
+   {
+      vcos_log_warn( "%s: suspended vchiq for '%s'", __func__,
+         kernState->instance_name );
+   }
+   else
+   {
+      vcos_log_error( "%s: failed to suspend vchiq '%s'",
+         __func__, kernState->instance_name );
+   }
+
+   return status;
+}
+
+EXPORT_SYMBOL( vchiq_userdrv_suspend );
+
+/****************************************************************************
+*
+* vchiq_userdrv_resume
+*
+*   The lower level drivers (vchiq_memdrv or vchiq_busdrv) will call this
+*   function to resume each videcore.
+*
+***************************************************************************/
+
+VCHIQ_STATUS_T vchiq_userdrv_resume( const VCHIQ_PLATFORM_DATA_T *platform_data )
+{
+   VCHIQ_KERNEL_STATE_T *kernState = NULL;
+   VCHIQ_STATUS_T status;
+   int i;
+
+   for (i = 0; i < vchiq_num_instances; i++)
+   {
+      if (vchiq_kernel_state[i]->platform_data == platform_data)
+      {
+         kernState = vchiq_kernel_state[i];
+         break;
+      }
+   }
+
+   if (!kernState)
+   {
+      vcos_log_error( "%s: failed to find state for instance %s", __func__,
+         platform_data->instance_name );
+
+      return VCHIQ_ERROR;
+   }
+
+   status = vchiq_platform_resume(g_vchiq_state);
+   if ( status == VCHIQ_SUCCESS )
+   {
+      vcos_log_warn( "%s: resumed vchiq for '%s'", __func__,
+         kernState->instance_name );
+   }
+   else
+   {
+      vcos_log_error( "%s: failed to resume vchiq '%s'",
+         __func__, kernState->instance_name );
+   }
+
+   return status;
+}
+
+EXPORT_SYMBOL( vchiq_userdrv_resume );
 
 /****************************************************************************
 *
@@ -706,22 +981,21 @@ vchiq_doorbell_irq(int irq, void *dev_id)
 
 VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
 {
-	VCHIQ_SLOT_ZERO_T *vchiq_slot_zero;
-	VCHIQ_STATE_T *state;
-	VCHIQ_STATUS_T status;
-	int err = 0;
-	int i;
+   VCHIQ_STATE_T *state;
+   VCHIQ_STATUS_T status;
+   int err = 0;
+   int i;
 
    vcos_log_warn( "%s: IPC_SHARED_MEM_SLOTS_VIRT = 0x%lx", __func__, IPC_SHARED_MEM_SLOTS_VIRT );
    vcos_log_warn( "%s: IPC_SHARED_MEM_SLOTS_SIZE = 0x%x", __func__, IPC_SHARED_MEM_SLOTS_SIZE );
    vcos_log_warn( "%s: VCHIQ_MAX_SERVICES        = %d", __func__, VCHIQ_MAX_SERVICES );
 
-   vchiq_slot_zero = (VCHIQ_SLOT_ZERO_T *)IPC_SHARED_MEM_SLOTS_VIRT;
+   g_vchiq_slot_zero = (VCHIQ_SLOT_ZERO_T *)IPC_SHARED_MEM_SLOTS_VIRT;
    state = g_vchiq_state;
 
    /* Initialize the local state. Note that vc04 has already started by now
       so the slot memory is expected to be initialised. */
-   status = vchiq_init_state(state, vchiq_slot_zero, 1/*master*/);
+   status = vchiq_init_state(state, g_vchiq_slot_zero, 1/*master*/);
 
    if (status != VCHIQ_SUCCESS)
       goto failed_init_state;
@@ -739,7 +1013,6 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
       chal_ipc_int_clr(ipcHandle, i);
    }
 
-//setup_irq(IRQ_ARM_DOORBELL_0, &vchiq_doorbell_irqaction);
    if (( err = request_irq( BCM_INT_ID_IPC_OPEN, vchiq_doorbell_irq,
       IRQF_DISABLED, "IPC driver", state )) != 0 )
    {
@@ -756,9 +1029,9 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
    /* initialize dma_mmap for use */
    dma_mmap_init_map( &gVchiqDmaMmap );
 
-	return 0;
+   return 0;
 
 failed_request_irq:
 failed_init_state:
-	return VCHIQ_ERROR;
+   return VCHIQ_ERROR;
 }
