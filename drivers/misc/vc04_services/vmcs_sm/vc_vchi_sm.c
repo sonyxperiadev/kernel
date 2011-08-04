@@ -294,8 +294,9 @@ static SM_CMD_RSP_BLK_T * vc_vchi_rsp_from_tid( SM_INSTANCE_T *instance,
       blk = blk->next;
    }
 
-out:
    mutex_unlock ( &(instance->rsp_lock) );
+
+out:
    return NULL;
 }
 
@@ -315,7 +316,6 @@ static SM_CMD_RSP_BLK_T * vc_vchi_cmd_top( SM_INSTANCE_T *instance )
    return blk;
 
 out:
-   mutex_unlock ( &(instance->cmd_lock) );
    return NULL;
 }
 
