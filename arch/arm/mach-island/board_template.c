@@ -84,7 +84,7 @@
 #include <bmp18x_i2c_settings.h>
 #endif
 
-#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE)
 #include <linux/akm8975.h>
 #include <akm8975_i2c_settings.h>
 #endif
@@ -839,7 +839,7 @@ static struct i2c_board_info __initdata i2c_bma150_info[] =
 };
 #endif
 
-#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE)
 
 #define board_akm8975_axis_change concatenate(ISLAND_BOARD_ID, _akm150_axis_change)
 
@@ -856,7 +856,7 @@ static struct i2c_board_info __initdata i2c_akm8975_info[] =
 #endif
 	},
 };
-#endif     // CONFIG_SENSORS_AKM8975
+#endif     // CONFIG_SENSORS_AK8975
 
 
 #if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
@@ -1160,7 +1160,7 @@ static void __init add_i2c_device(void)
 #endif
 
 
-#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE)
    i2c_register_board_info(
 #ifdef AKM8975_I2C_BUS_ID
       AKM8975_I2C_BUS_ID,  
