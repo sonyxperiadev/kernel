@@ -49,14 +49,21 @@
 /*ARM core PI CCU Ids  -- TBD*/
 char* armc_core_ccu[] = {NULL};
 /*ARM core PI states  -- TBD*/
+struct pi_opp arm_opp = {
+							.opp =  {
+										[PI_OPP_ECONOMY] = 3,
+										[PI_OPP_NORMAL] = 6,
+										[PI_OPP_TURBO] = 7,
+									},
+						};
+
 
 static struct pi_state arm_core_states[] =
 		{
 			PI_STATE(ARM_CORE_STATE_ACTIVE,RUN_POLICY,0),
 			PI_STATE(ARM_CORE_STATE_SUSPEND,RUN_POLICY,0),
 			PI_STATE(ARM_CORE_STATE_RETENTION,RETN_POLICY,100),
-			PI_STATE(ARM_CORE_STATE_DORMANT,RETN_POLICY,10000),
-			PI_STATE(PI_MGR_STATE_UNSUPPORTED,0,0),
+			PI_STATE(ARM_CORE_STATE_DORMANT,RETN_POLICY,10000)
 
 		};
 
@@ -69,13 +76,9 @@ static struct pi arm_core_pi =
 		.state_allowed = ARM_CORE_STATE_DORMANT,
 		.pi_state = arm_core_states,
 		.opp_active = 0,
-		/*opp frequnecies ...need to revisit*/
-		.opp =  {
-					[PI_OPP_ECONOMY] = 3,
-					[PI_OPP_NORMAL] = 6,
-					[PI_OPP_TURBO] = 7,
-				},
-		.sw_event_id = SOFTWARE_0_EVENT,
+		.pi_opp =  &arm_opp,
+		.num_opp = 3,
+		.qos_sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET,
@@ -93,14 +96,20 @@ static struct pi arm_core_pi =
 	};
 
 /*MM PI CCU Id*/
-static char* mm_ccu[] = {MM_CCU_CLK_NAME_STR,NULL};
+static char* mm_ccu[] = {MM_CCU_CLK_NAME_STR};
+struct pi_opp mm_opp = {
+							.opp =  {
+										[PI_OPP_ECONOMY] = 1,
+										[PI_OPP_NORMAL] = 4,
+										[PI_OPP_TURBO] = 5,
+									},
+						};
 
 static struct pi_state mm_states[] =
 		{
 			PI_STATE(PI_STATE_ACTIVE,RUN_POLICY,0),
-			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100),
-			//PI_STATE(PI_STATE_SHUTDOWN,SHTDWN_POLICY,100),
-			PI_STATE(PI_MGR_STATE_UNSUPPORTED,0,0),
+			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100)
+			//PI_STATE(PI_STATE_SHUTDOWN,SHTDWN_POLICY,100)
 
 		};
 
@@ -111,16 +120,13 @@ static struct pi mm_pi =
 		.id = PI_MGR_PI_ID_MM,
 		//.flags = PI_DISABLE_ON_INIT,
 		.ccu_id = mm_ccu,
+		.num_ccu_id = ARRAY_SIZE(mm_ccu),
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = mm_states,
 		.opp_active = 0,
-		/*opp frequnecies ...need to revisit*/
-		.opp =  {
-					[PI_OPP_ECONOMY] = 1,
-					[PI_OPP_NORMAL] = 1,
-					[PI_OPP_TURBO] = 1,
-				},
-		.sw_event_id = SOFTWARE_0_EVENT,
+		.pi_opp =  &mm_opp,
+		.num_opp = 3,
+		.qos_sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_MM_POLICY_OFFSET,
@@ -138,13 +144,19 @@ static struct pi mm_pi =
 	};
 
 /*HUB PI CCU Id*/
-static char* hub_ccu[] = {KHUB_CCU_CLK_NAME_STR,NULL};
+static char* hub_ccu[] = {KHUB_CCU_CLK_NAME_STR};
+struct pi_opp hub_opp = {
+							.opp =  {
+										[PI_OPP_ECONOMY] = 2, /* 0 */
+										[PI_OPP_NORMAL] = 2,
+									},
+						};
+
 
 static struct pi_state hub_states[] =
 		{
 			PI_STATE(PI_STATE_ACTIVE,RUN_POLICY,0),
-			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100),
-			PI_STATE(PI_MGR_STATE_UNSUPPORTED,0,0),
+			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100)
 
 		};
 
@@ -154,16 +166,14 @@ static struct pi hub_pi =
 		.name = "hub",
 		.id = PI_MGR_PI_ID_HUB_SWITCHABLE,
 		.ccu_id = hub_ccu,
+		.num_ccu_id = ARRAY_SIZE(hub_ccu),
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = hub_states,
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
-		.opp =  {
-					[PI_OPP_ECONOMY] = 2,
-					[PI_OPP_NORMAL] = 2,
-					[PI_OPP_TURBO] = 2,
-				},
-		.sw_event_id = SOFTWARE_0_EVENT,
+		.pi_opp =  &hub_opp,
+		.num_opp = 2,
+		.qos_sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET,
@@ -182,13 +192,18 @@ static struct pi hub_pi =
 
 
 /*AON PI CCU Id*/
-static char* aon_ccu[] = {KHUBAON_CCU_CLK_NAME_STR,NULL};
+static char* aon_ccu[] = {KHUBAON_CCU_CLK_NAME_STR};
+struct pi_opp aon_opp = {
+							.opp =  {
+										[PI_OPP_ECONOMY] = 4, 
+										[PI_OPP_NORMAL] = 4,
+									},
+						};
 
 static struct pi_state aon_states[] =
 		{
 			PI_STATE(PI_STATE_ACTIVE,RUN_POLICY,0),
-			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100),
-			PI_STATE(PI_MGR_STATE_UNSUPPORTED,0,0),
+			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100)
 
 		};
 
@@ -198,16 +213,14 @@ static struct pi aon_pi =
 		.name = "aon",
 		.id = PI_MGR_PI_ID_HUB_AON,
 		.ccu_id = aon_ccu,
+		.num_ccu_id = ARRAY_SIZE(aon_ccu),
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = aon_states,
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
-		.opp =  {
-					[PI_OPP_ECONOMY] = 4,
-					[PI_OPP_NORMAL] = 4,
-					[PI_OPP_TURBO] = 4,
-				},
-		.sw_event_id = SOFTWARE_0_EVENT,
+		.pi_opp =  &aon_opp,
+		.num_opp = 2,
+		.qos_sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_HUB_POLICY_OFFSET,
@@ -225,13 +238,27 @@ static struct pi aon_pi =
 	};
 
 /*ARM subsystem PI Id*/
-static char* sub_sys_ccu[] = {KPM_CCU_CLK_NAME_STR,KPS_CCU_CLK_NAME_STR,NULL};
+static char* sub_sys_ccu[] = {KPM_CCU_CLK_NAME_STR,KPS_CCU_CLK_NAME_STR};
+struct pi_opp sub_sys_opp[2] = 	{
+									[0] = { /*KPM*/
+									.opp =	{
+												[PI_OPP_ECONOMY] = 2,
+												[PI_OPP_NORMAL] = 2,
+											},
+										  },
+									[1] = { /*KPS*/
+									.opp =	{
+												[PI_OPP_ECONOMY] = 2, /* 0 */
+												[PI_OPP_NORMAL] = 2,
+											},
+										  },
+
+								};
 
 static struct pi_state sub_sys_states[] =
 		{
 			PI_STATE(PI_STATE_ACTIVE,RUN_POLICY,0),
-			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100),
-			PI_STATE(PI_MGR_STATE_UNSUPPORTED,0,0),
+			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100)
 
 		};
 
@@ -241,16 +268,14 @@ static struct pi sub_sys_pi =
 		.name = "sub_sys",
 		.id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
 		.ccu_id = sub_sys_ccu,
+		.num_ccu_id = ARRAY_SIZE(sub_sys_ccu),
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = sub_sys_states,
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
-		.opp =  {
-					[PI_OPP_ECONOMY] = 2,
-					[PI_OPP_NORMAL] = 2,
-					[PI_OPP_TURBO] = 2,
-				},
-		.sw_event_id = SOFTWARE_0_EVENT,
+		.pi_opp =  sub_sys_opp,
+		.num_opp = 2,
+		.qos_sw_event_id = SOFTWARE_0_EVENT,
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_ARM_SUBSYSTEM_POLICY_OFFSET,
@@ -270,7 +295,7 @@ static struct pi sub_sys_pi =
 /*MODEM CCU -  ADDED for initializing EVENT table only*/
 static struct pi_state modem_states[] =
 		{
-			PI_STATE(PI_MGR_STATE_UNSUPPORTED,0,0),
+			PI_STATE(PI_STATE_ACTIVE,RUN_POLICY,0),
 
 		};
 
@@ -281,6 +306,7 @@ static struct pi modem_pi =
 		.id = PI_MGR_PI_ID_MODEM,
 		.flags = PI_NO_DFS | PI_NO_QOS,
 		.pi_state = modem_states,
+		.num_states = ARRAY_SIZE(modem_states),
 		.pi_info =
 				{
 					.policy_reg_offset = PWRMGR_LCDTE_VI_ARM_CORE_POLICY_OFFSET,
