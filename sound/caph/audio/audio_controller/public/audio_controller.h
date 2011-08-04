@@ -476,6 +476,23 @@ void AUDCTRL_SetPlayMute(
 				);
 
 /********************************************************************
+*  @brief  switch speaker of playback 
+*
+*  @param   curSink	current Sink device
+*  @param   curSpk  current speaker
+*  @param   newSink	new Sink device
+*  @param   newSpk  new speaker
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SwitchPlaySpk(
+				AUDIO_HW_ID_t			curSink,
+				AUDCTRL_SPEAKER_t		curSpk,
+				AUDIO_HW_ID_t			newSink,
+				AUDCTRL_SPEAKER_t		newSpk
+				);
+
+/********************************************************************
 *  @brief  Add a speaker to a playback path
 *
 *  @param  sink	(in)  playback sink

@@ -420,6 +420,11 @@ static AUDDRV_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
+static void AUDCTRL_UpdatePath (CSL_CAPH_PathID pathID,
+                                                AUDIO_HW_ID_t src,
+                                                AUDIO_HW_ID_t sink,
+                                                AUDCTRL_SPEAKER_t spk,
+                                                AUDCTRL_MICROPHONE_t mic);
 static Int16 AUDCTRL_ConvertScale2Millibel(Int16 ScaleValue);
 #if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
 static HS_PMU_GainMapping_t getHSPMUGain(Int16 gain);
@@ -1472,6 +1477,66 @@ void AUDCTRL_SetPlayMute(
 
 //============================================================================
 //
+// Function Name: AUDCTRL_SwitchPlaySpk
+//
+// Description:   switch a speaker to a playback path
+//
+//============================================================================
+void AUDCTRL_SwitchPlaySpk(
+				AUDIO_HW_ID_t			curSink,
+				AUDCTRL_SPEAKER_t		curSpk,
+				AUDIO_HW_ID_t			newSink,
+				AUDCTRL_SPEAKER_t		newSpk
+				)
+{
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID = 0;
+    CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+
+	Log_DebugPrintf(LOGID_AUDIO,
+                    "AUDCTRL_SwitchPlaySpk curSink = 0x%x,  curSpk = 0x%x, newSink = 0x%x,  newSpk = 0x%x\n", 
+                    curSink, curSpk, newSink, newSpk);
+
+
+    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
+    if(pathID == 0)
+    {
+	    audio_xassert(0,pathID);
+	    return;
+    }
+ 
+    // add new spk first... 
+    speaker = GetDeviceFromSpkr(newSpk);
+    if (speaker != CSL_CAPH_DEV_NONE)
+    {
+        config.source = CSL_CAPH_DEV_MEMORY;
+        config.sink = speaker;
+        (void) csl_caph_hwctrl_AddPath(pathID, config);
+    }
+    if ((curSpk == AUDCTRL_SPK_LOUDSPK)||(curSpk == AUDCTRL_SPK_HEADSET))	
+        powerOnExternalAmp( curSpk, AudioUseExtSpkr, FALSE );	    
+   
+    // remove current spk
+    speaker = GetDeviceFromSpkr(curSpk);
+    if (speaker != CSL_CAPH_DEV_NONE)
+    {
+        config.source = CSL_CAPH_DEV_MEMORY;
+        config.sink = speaker;
+        (void) csl_caph_hwctrl_RemovePath(pathID, config);
+    } 
+    if ((newSpk == AUDCTRL_SPK_LOUDSPK)||(newSpk == AUDCTRL_SPK_HEADSET))	
+        powerOnExternalAmp( newSpk, AudioUseExtSpkr, TRUE );	    
+    
+
+    // update path structure
+    AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
+
+    return;
+    
+}
+
+//============================================================================
+//
 // Function Name: AUDCTRL_AddPlaySpk
 //
 // Description:   add a speaker to a playback path
@@ -1482,6 +1547,35 @@ void AUDCTRL_AddPlaySpk(
 				AUDCTRL_SPEAKER_t		spk
 				)
 {
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID = 0;
+    CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+
+	Log_DebugPrintf(LOGID_AUDIO,
+                    "AUDCTRL_AddPlaySpk: sink = 0x%x,  spk = 0x%x\n", 
+                    sink, spk);
+
+
+    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
+    if(pathID == 0)
+    {
+	    audio_xassert(0,pathID);
+	    return;
+    }
+   
+
+    speaker = GetDeviceFromSpkr(spk);
+    if (speaker != CSL_CAPH_DEV_NONE)
+    {
+        config.source = CSL_CAPH_DEV_MEMORY;
+        config.sink = speaker;
+        (void) csl_caph_hwctrl_AddPath(pathID, config);
+    }
+    
+    AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, sink, spk, AUDCTRL_MIC_UNDEFINED); 
+    
+    return;
+    
 }
 
 //============================================================================
@@ -1496,6 +1590,35 @@ void AUDCTRL_RemovePlaySpk(
 				AUDCTRL_SPEAKER_t		spk
 				)
 {
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID = 0;
+    CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+
+	Log_DebugPrintf(LOGID_AUDIO,
+                    "AUDCTRL_RemovePlaySpk: sink = 0x%x,  spk = 0x%x\n", 
+                    sink, spk);
+
+
+    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
+    if(pathID == 0)
+    {
+	    audio_xassert(0,pathID);
+	    return;
+    }
+    
+
+    speaker = GetDeviceFromSpkr(spk);
+    if (speaker != CSL_CAPH_DEV_NONE)
+    {
+        config.source = CSL_CAPH_DEV_MEMORY;
+        config.sink = speaker;
+        (void) csl_caph_hwctrl_RemovePath(pathID, config);
+    }
+    
+    // don't know how to update the path now.
+    //AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, sink, spk, AUDCTRL_MIC_UNDEFINED); 
+    
+    return;
 }
 
 //============================================================================
@@ -2675,7 +2798,8 @@ static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
     {
 
         
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, sink = %d\n",(currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
+	    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+                    (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
 		
 	
         if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
@@ -2706,6 +2830,9 @@ static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
     AUDCTRL_Table_t* currentNode = tableHead;     
     while(currentNode != NULL)
     {
+	    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTableWithSrcSink: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+                    (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
+    
         if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
             &&(((currentNode->data).sink == sink)&&((currentNode->data).spk == spk)))
         {
@@ -2718,6 +2845,42 @@ static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
     }
     return 0;
 
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_UpdatePath
+//
+// Description:   update a path with new src/sink/spk/mic.
+//
+//============================================================================
+static void AUDCTRL_UpdatePath (CSL_CAPH_PathID pathID,
+                                                AUDIO_HW_ID_t src,
+                                                AUDIO_HW_ID_t sink,
+                                                AUDCTRL_SPEAKER_t spk,
+                                                AUDCTRL_MICROPHONE_t mic)
+{
+    AUDCTRL_Table_t* currentNode = tableHead; 
+
+    while(currentNode != NULL)
+    {
+        if ((currentNode->data).pathID == pathID)
+        {
+	        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_UpdatePath:  pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+                    pathID, src, sink, mic, spk);
+            (currentNode->data).src = src;
+            (currentNode->data).sink = sink;
+            (currentNode->data).spk = spk;
+            (currentNode->data).mic = mic;
+            return;
+        }
+        else
+        {
+            currentNode = currentNode->next;
+        }
+    }
+
+    return;
 }
 
 //============================================================================

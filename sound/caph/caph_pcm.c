@@ -476,8 +476,8 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 		}
 		else if(pSel[0]==AUDCTRL_SPK_I2S)
 		{
-			chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_I2S_OUT;
-			chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_FM_TX; 	
+			chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_I2S_OUT;
+			chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_FM_TX; 	
 		}
 		else
 		{
