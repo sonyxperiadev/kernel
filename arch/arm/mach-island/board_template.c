@@ -84,6 +84,11 @@
 #include <bmp18x_i2c_settings.h>
 #endif
 
+#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+#include <linux/akm8975.h>
+#include <akm8975_i2c_settings.h>
+#endif
+
 #if defined(CONFIG_NET_ISLAND)
 #include <mach/net_platform.h>
 #include <net_settings.h>
@@ -820,7 +825,7 @@ struct platform_device * vchiq_devices[] __initdata = { &vceb_display_device, &v
 #define board_bma150_axis_change concatenate(ISLAND_BOARD_ID, _bma150_axis_change)
 
 #ifdef BMA150_DRIVER_AXIS_SETTINGS
-   static struct t_bma150_axis_change board_bma150_axis_change = BMA150_DRIVER_AXIS_SETTINGS;
+static struct t_bma150_axis_change board_bma150_axis_change = BMA150_DRIVER_AXIS_SETTINGS;
 #endif
 
 static struct i2c_board_info __initdata i2c_bma150_info[] =
@@ -833,6 +838,26 @@ static struct i2c_board_info __initdata i2c_bma150_info[] =
    }, 
 };
 #endif
+
+#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+
+#define board_akm8975_axis_change concatenate(ISLAND_BOARD_ID, _akm150_axis_change)
+
+#ifdef AKM8975_DRIVER_AXIS_SETTINGS
+static struct t_akm8975_axis_change board_akm8975_axis_change = AKM8975_DRIVER_AXIS_SETTINGS;
+#endif
+
+static struct i2c_board_info __initdata i2c_akm8975_info[] = 
+{
+	{
+		I2C_BOARD_INFO(AKM8975_DRV_NAME, AKM8975_I2C_ADDR),
+#ifdef AKM8975_DRIVER_AXIS_SETTINGS
+      .platform_data  = &board_akm8975_axis_change,
+#endif
+	},
+};
+#endif     // CONFIG_SENSORS_AKM8975
+
 
 #if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 static struct i2c_board_info __initdata i2c_bh1715_info[] =
@@ -1133,6 +1158,18 @@ static void __init add_i2c_device(void)
 #endif
       i2c_mpu3050_info, ARRAY_SIZE(i2c_mpu3050_info));
 #endif
+
+
+#if defined(CONFIG_SENSORS_AKM8975) || defined(CONFIG_SENSORS_AKM8975_MODULE)
+   i2c_register_board_info(
+#ifdef AKM8975_I2C_BUS_ID
+      AKM8975_I2C_BUS_ID,  
+#else
+      -1,
+#endif
+      i2c_akm8975_info, ARRAY_SIZE(i2c_akm8975_info));
+#endif
+
 
 #if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 			i2c_register_board_info(

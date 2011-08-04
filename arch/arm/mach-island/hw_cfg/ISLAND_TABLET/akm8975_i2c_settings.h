@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2011 Broadcom Corporation.  All rights reserved.
+* Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -12,36 +12,29 @@
 * consent.
 *****************************************************************************/
 
+#if !defined __AKM8975_I2C_SETTINGS_H__
+#define      __AKM8975_I2C_SETTINGS_H__
 
-/*
- * Definitions for akm8975 compass chip.
+// compass i2c settings
+#define AKM8975_I2C_BUS_ID    2
+#define AKM8975_I2C_ADDR      0x0C
+
+
+/* 
+ * Correction for the mount position of AKM8975 sensor on daughter card PCB.
+ *  For x x
+ *  For y y
+ *  For z z
  */
-#ifndef __AKM8975_H__
-#define __AKM8975_H__
+
+#define AKM8975_DRIVER_AXIS_SETTINGS \
+{ \
+   .x_change = compass_x_dir_rev, \
+   .y_change = compass_y_dir_rev, \
+   .z_change = compass_z_dir, \
+}
 
 
-/* Axis switching stuff should be common header as same enum exists for accelerometer and gyro */
-typedef enum
-{
-   compass_x_dir,
-   compass_y_dir,
-   compass_z_dir,
-   compass_x_dir_rev,
-   compass_y_dir_rev,
-   compass_z_dir_rev
-} akm8975_axis_change_enum;
 
-struct t_akm8975_axis_change
-{
-   int x_change;
-   int y_change;
-   int z_change;
-}; 
-
-
-#define AKM8975_DEVICE_NAME   "compass"
-#define AKM8975_DRV_NAME      "akm8975"
-
-
-#endif
+#endif     // __AKM8975_I2C_SETTINGS_H__
 
