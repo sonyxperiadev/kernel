@@ -75,9 +75,9 @@
 #define CCU_POLICY_TGT_VLD_CLR			1
 
 #define CCU_FREQ_POLICY0_SHIFT	0
-#define CCU_FREQ_POLICY1_SHIFT	3
-#define CCU_FREQ_POLICY2_SHIFT	6
-#define CCU_FREQ_POLICY3_SHIFT	9
+#define CCU_FREQ_POLICY1_SHIFT	8
+#define CCU_FREQ_POLICY2_SHIFT	16
+#define CCU_FREQ_POLICY3_SHIFT	24
 #define CCU_FREQ_POLICY_MASK	7
 
 #define CCU_ACT_INT_SHIFT	1
@@ -514,8 +514,10 @@ int clock_debug_add_clock(struct clk *c);
 int clk_init(struct clk* clk);
 int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
-int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
+int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
 int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay);
+int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
+int set_gpio_mux_for_debug_bus(int val);
 
 #if defined(DEBUG)
 #define	clk_dbg printk

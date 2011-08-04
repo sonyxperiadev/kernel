@@ -15,6 +15,8 @@
 * consent.
 *****************************************************************************/
 
+#include <linux/module.h>
+#include <linux/kernel.h>
 #include <linux/math64.h>
 #include <linux/delay.h>
 
@@ -42,6 +44,13 @@ unsigned long clock_get_xtal(void)
 	return FREQ_MHZ(26);
 }
 
+/*root ccu ops */
+static int root_ccu_clk_init(struct clk* clk);
+
+static struct gen_clk_ops root_ccu_clk_ops =
+{
+	.init		= 	root_ccu_clk_init,
+};
 /*
 Root CCU clock
 */
@@ -49,6 +58,8 @@ static struct ccu_clk CLK_NAME(root) = {
     	.clk = {
 	    .name = ROOT_CCU_CLK_NAME_STR,
 	    .id = CLK_ROOT_CCU_CLK_ID,
+		.ops = &root_ccu_clk_ops,
+		.clk_type = CLK_TYPE_CCU,
 	},
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR),
@@ -545,15 +556,18 @@ static struct ccu_clk CLK_NAME(kproc) = {
 static inline void __proc_clk_set_pll_div(u32 base, int div)
 {
 	clk_dbg ("%s: div %d\n", __func__, div);
+	writel(div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
+	writel((div<<KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT) | KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
+		base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
+	writel(div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
+
+	div = div+1; /*For policy 6 divder should be for VCO/3 */
+
 	writel(div, base + KPROC_CLK_MGR_REG_PLLARMC_OFFSET);
 	writel((div << KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT) | KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
 		base + KPROC_CLK_MGR_REG_PLLARMC_OFFSET);
 	writel(div, base + KPROC_CLK_MGR_REG_PLLARMC_OFFSET);
 
-	writel(div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
-	writel((div<<KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT) | KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
-		base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
-	writel(div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
 }
 
 static inline void __proc_clk_dump_register (u32 base)
@@ -1643,49 +1657,6 @@ static struct peri_clk CLK_NAME(tmon_1m) = {
 					.count = 2,
 					.src_inx = 0,
 					.clk = tmon_1m_peri_clk_src_list,
-				},
-};
-
-/*
-Peri clock name CAPH_SRCMIXER
-*/
-/*peri clk src list*/
-static struct clk* caph_srcmixer_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(ref_312m));
-static struct peri_clk CLK_NAME(caph_srcmixer) = {
-
-	.clk =	{
-				.flags = CAPH_SRCMIXER_PERI_CLK_FLAGS,
-				.clk_type = CLK_TYPE_PERI,
-				.id	= CLK_CAPH_SRCMIXER_PERI_CLK_ID,
-				.name = CAPH_SRCMIXER_PERI_CLK_NAME_STR,
-				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
-				.ops = &gen_peri_clk_ops,
-		},
-	.ccu_clk = &CLK_NAME(khub),
-	.mask_set = 1,
-	.policy_bit_mask = KHUB_CLK_MGR_REG_POLICY0_MASK1_CAPH_POLICY0_MASK_MASK,
-	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
-	.clk_gate_offset = KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET,
-	.clk_en_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_CLK_EN_MASK,
-	.gating_sel_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HW_SW_GATING_SEL_MASK,
-	.hyst_val_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_VAL_MASK,
-	.hyst_en_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_EN_MASK,
-	.stprsts_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_STPRSTS_MASK,
-	.volt_lvl_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_VOLTAGE_LEVEL_MASK,
-	.clk_div = {
-					.div_offset = KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET,
-					.div_mask = KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_DIV_MASK,
-					.div_shift = KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_DIV_SHIFT,
-					.div_trig_offset= KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET,
-					.div_trig_mask= KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_CAPH_SRCMIXER_TRIGGER_MASK,
-					.pll_select_offset= KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET,
-					.pll_select_mask= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_MASK,
-					.pll_select_shift= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_SHIFT,
-				},
-	.src_clk = {
-					.count = 2,
-					.src_inx = 0,
-					.clk = caph_srcmixer_peri_clk_src_list,
 				},
 };
 
@@ -3111,6 +3082,50 @@ static struct ccu_clk CLK_NAME(kps) = {
 };
 
 /*
+Peri clock name CAPH_SRCMIXER
+*/
+/*peri clk src list*/
+static struct clk* caph_srcmixer_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(ref_312m));
+static struct peri_clk CLK_NAME(caph_srcmixer) = {
+
+	.clk =	{
+				.flags = CAPH_SRCMIXER_PERI_CLK_FLAGS,
+				.clk_type = CLK_TYPE_PERI,
+				.id	= CLK_CAPH_SRCMIXER_PERI_CLK_ID,
+				.name = CAPH_SRCMIXER_PERI_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(kps),CLK_PTR(kpm),NULL),/*Don't allow arm subsys to enter retention when CapH is active*/
+				.ops = &gen_peri_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(khub),
+	.mask_set = 1,
+	.policy_bit_mask = KHUB_CLK_MGR_REG_POLICY0_MASK1_CAPH_POLICY0_MASK_MASK,
+	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
+	.clk_gate_offset = KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET,
+	.clk_en_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_CLK_EN_MASK,
+	.gating_sel_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HW_SW_GATING_SEL_MASK,
+	.hyst_val_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_VAL_MASK,
+	.hyst_en_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_HYST_EN_MASK,
+	.stprsts_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_STPRSTS_MASK,
+	.volt_lvl_mask = KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_VOLTAGE_LEVEL_MASK,
+	.clk_div = {
+					.div_offset = KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET,
+					.div_mask = KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_DIV_MASK,
+					.div_shift = KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_DIV_SHIFT,
+					.div_trig_offset= KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_OFFSET,
+					.div_trig_mask= KHUB_CLK_MGR_REG_PERIPH_SEG_TRG_CAPH_SRCMIXER_TRIGGER_MASK,
+					.pll_select_offset= KHUB_CLK_MGR_REG_CAPH_DIV_OFFSET,
+					.pll_select_mask= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_MASK,
+					.pll_select_shift= KHUB_CLK_MGR_REG_CAPH_DIV_CAPH_SRCMIXER_PLL_SELECT_SHIFT,
+				},
+	.src_clk = {
+					.count = 2,
+					.src_inx = 0,
+					.clk = caph_srcmixer_peri_clk_src_list,
+				},
+};
+
+
+/*
 Bus clock name UARTB_APB
 */
 static struct bus_clk CLK_NAME(uartb_apb) = {
@@ -3988,7 +4003,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
-	.pi_id = PI_MGR_PI_ID_ARM_CORE,
+	.pi_id = PI_MGR_PI_ID_MM,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(MM_CLK_BASE_ADDR),
 	.wr_access_offset = MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = MM_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -4705,11 +4720,107 @@ static struct peri_clk CLK_NAME(dsi_pll_o_dsi_pll) = {
 };
 
 
+/*Rhea specifc handlers*/
+
+int clk_set_pll_pwr_on_idle(int pll_id, int enable)
+{
+    u32 reg_val = 0;
+	int ret = 0;
+	/* enable write access*/
+    switch(pll_id)
+	{
+    case ROOT_CCU_PLL0A:
+		ccu_write_access_enable(&CLK_NAME(root),true);
+    	reg_val = readl(CLK_NAME(root).ccu_clk_mgr_base + ROOT_CLK_MGR_REG_PLL0A_OFFSET);
+		if(enable)
+			reg_val |= ROOT_CLK_MGR_REG_PLL0A_PLL0_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+		else
+			reg_val &= ~ROOT_CLK_MGR_REG_PLL0A_PLL0_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+		writel(reg_val , CLK_NAME(root).ccu_clk_mgr_base + ROOT_CLK_MGR_REG_PLL0A_OFFSET);
+		ccu_write_access_enable(&CLK_NAME(root),false);
+		break;
+
+    case ROOT_CCU_PLL1A:
+		ccu_write_access_enable(&CLK_NAME(root),true);
+    	reg_val = readl(CLK_NAME(root).ccu_clk_mgr_base + ROOT_CLK_MGR_REG_PLL1A_OFFSET);
+		if(enable)
+			reg_val |= ROOT_CLK_MGR_REG_PLL1A_PLL1_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+		else
+			reg_val &= ~ROOT_CLK_MGR_REG_PLL1A_PLL1_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+		writel(reg_val , CLK_NAME(root).ccu_clk_mgr_base + ROOT_CLK_MGR_REG_PLL1A_OFFSET);
+		ccu_write_access_enable(&CLK_NAME(root),false);
+
+    	break;
+    default:
+    	ret =  -EINVAL;
+		break;
+    }
+
+    return ret;
+}
+EXPORT_SYMBOL(clk_set_pll_pwr_on_idle);
+
+int clk_set_crystal_pwr_on_idle(int enable)
+{
+    u32 reg_val = 0;
+	/* enable write access*/
+	ccu_write_access_enable(&CLK_NAME(root),true);
+
+    reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
+    if(enable)
+		reg_val |= ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+    else
+		reg_val &= ~ROOT_CLK_MGR_REG_CRYSTALCTL_CRYSTAL_IDLE_PWRDWN_SW_OVRRIDE_MASK;
+
+    writel(reg_val , KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTALCTL_OFFSET);
+	/* disable write access*/
+	ccu_write_access_enable(&CLK_NAME(root), false);
+
+    return 0;
+}
+EXPORT_SYMBOL(clk_set_crystal_pwr_on_idle);
+
+int root_ccu_clk_init(struct clk* clk)
+{
+	struct ccu_clk * ccu_clk;
+	u32 reg_val;
+	if(clk->clk_type != CLK_TYPE_CCU)
+		return -EPERM;
+
+	if(clk->init)
+		return 0;
+
+	ccu_clk = to_ccu_clk(clk);
+
+	clk_dbg("%s - %s\n",__func__, clk->name);
+
+	ccu_clk->write_access_en_count = 0;
+
+	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, 1);
+    clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, 1);
+	clk_set_crystal_pwr_on_idle(1);
+
+	/* enable write access*/
+	ccu_write_access_enable(ccu_clk,true);
+	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
+    reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
+    writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
+
+	/* disable write access*/
+	ccu_write_access_enable(ccu_clk, false);
+	clk->init = 1;
+	return 0;
+}
+
+
+
+
 /* table for registering clock */
 static struct __init clk_lookup rhea_clk_tbl[] =
 {
 	BRCM_REGISTER_CLK(ARM_PERI_CLK_NAME_STR,NULL,arm),
 	BRCM_REGISTER_CLK(KPROC_CCU_CLK_NAME_STR,NULL,kproc),
+	BRCM_REGISTER_CLK(ROOT_CCU_CLK_NAME_STR,NULL,root),
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),
