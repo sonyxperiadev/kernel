@@ -4583,7 +4583,7 @@ err_platform_exit:
    return err;
 }
 
-static int __exit audioh_remove( struct platform_device *pdev )
+static int audioh_remove( struct platform_device *pdev )
 {
    HALAUDIO_AUDIOH_PLATFORM_INFO *info = &gAudiohPlatformInfo;
 
@@ -4604,7 +4604,7 @@ static struct platform_driver audioh_driver =
       .owner = THIS_MODULE,
    },
    .probe = audioh_probe,
-   .remove = audioh_remove,
+   .remove = __devexit_p(audioh_remove),
 };
 
 

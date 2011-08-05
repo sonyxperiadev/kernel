@@ -2564,7 +2564,7 @@ err_platform_exit:
    return err;
 }
 
-static int __exit pcm_remove( struct platform_device *pdev )
+static int pcm_remove( struct platform_device *pdev )
 {
    HALAUDIO_PCM_PLATFORM_INFO *info = &gPcmPlatformInfo;
 
@@ -2585,7 +2585,7 @@ static struct platform_driver pcm_driver =
       .owner = THIS_MODULE,
    },
    .probe = pcm_probe,
-   .remove = pcm_remove,
+   .remove = __devexit_p(pcm_remove),
 };
 
 /***************************************************************************/

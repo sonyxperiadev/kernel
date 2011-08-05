@@ -1162,7 +1162,7 @@ static void amxr_debug_exit( void )
    }
 }
 
-module_init( amxr_init );
+arch_initcall( amxr_init );
 module_exit( amxr_exit );
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "Audio Mixer Driver" );

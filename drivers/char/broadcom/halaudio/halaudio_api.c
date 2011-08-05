@@ -2069,7 +2069,7 @@ static void __exit halaudio_exit( void )
    platform_driver_unregister( &halaudio_driver );
 }
 
-module_init( halaudio_init );
+arch_initcall( halaudio_init );
 module_exit( halaudio_exit );
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "HAL Audio driver" );
