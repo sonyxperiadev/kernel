@@ -561,7 +561,7 @@ static int ccu_clk_init(struct clk* clk)
 
 	if(clk->init)
 		return 0;
-
+	clk->init = 1;
 	ccu_clk = to_ccu_clk(clk);
 
 	BUG_ON (ccu_clk->freq_count > MAX_CCU_FREQ_COUNT);
@@ -627,8 +627,6 @@ static int ccu_clk_init(struct clk* clk)
 		ccu_policy_engine_resume(ccu_clk, CCU_LOAD_ACTIVE);
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
-
-	clk->init = 1;
 
 	if(ccu_clk->pi_id != -1)
 	{

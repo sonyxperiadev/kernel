@@ -242,7 +242,7 @@ static int pi_def_init(struct pi *pi)
 		BLOCKING_INIT_NOTIFIER_HEAD(&dfs->notifiers);
 		plist_head_init(&dfs->requests,&pi_mgr_list_lock);
 
-		dfs->default_opp = pi->opp_active;
+		dfs->default_opp = 0;
 		BUG_ON(pi->num_opp && pi->pi_opp == NULL);
 
 #ifdef CONFIG_CHANGE_POLICY_FOR_DFS
