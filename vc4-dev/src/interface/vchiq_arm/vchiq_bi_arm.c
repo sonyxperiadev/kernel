@@ -35,8 +35,6 @@
 
 #include "vchiq_memdrv.h"
 
-#include "interface/vceb/host/vceb.h"
-
 #include <linux/dma-mapping.h>
 #include <mach/sdma.h>
 #include <mach/dma_mmap.h>
@@ -90,7 +88,6 @@ typedef struct
 
     const char                  *instance_name;
     const VCHIQ_PLATFORM_DATA_T *platform_data;
-
     VCOS_CFG_ENTRY_T             instance_cfg_dir;
     VCOS_CFG_ENTRY_T             vchiq_control_cfg_entry;
 } VCHIQ_KERNEL_STATE_T;
@@ -292,7 +289,6 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
 
 VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platform_data )
 {
-   //VCEB_INSTANCE_T       vceb_instance;
    VCHIQ_KERNEL_STATE_T   *kernState;
 
    vcos_log_warn( "%s: vchiq_num_instances = %d, VCHIQ_NUM_VIDEOCORES = %d",
@@ -305,15 +301,6 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
 
       return VCHIQ_ERROR;
    }
-
-#if 0
-   if ( vceb_get_instance( platform_data->instance_name, &vceb_instance ) != 0 )
-   {
-      /* No instance registered with vceb, which means the videocore is not
-         present */
-      return VCHIQ_ERROR;
-   }
-#endif
 
    /* Allocate some memory */
    kernState = kmalloc( sizeof( *kernState ), GFP_KERNEL );
@@ -363,7 +350,7 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
 
       return VCHIQ_ERROR;
    }
-
+   
    /* Direct connect the vchiq to get vmcs-fb and vmcs-sm device module built in */
    if ( vchiq_memdrv_initialise() != VCHIQ_SUCCESS )
    {
