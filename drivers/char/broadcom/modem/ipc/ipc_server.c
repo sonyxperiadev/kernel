@@ -574,6 +574,10 @@ static int __init ipcs_module_init(void)
   
   printk(KERN_ALERT "[ipc]: ipcs_module_init ok\n");
   
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
+#endif
+
   printk(KERN_ALERT  "[ipc]: request_irq\n");
   rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND, "ipc-intr",
 			&g_ipc_info);
@@ -584,10 +588,6 @@ static int __init ipcs_module_init(void)
 	}
 
   printk(KERN_ALERT  "[ipc]: IRQ Clear and Enable\n");
-
-#ifdef CONFIG_HAS_WAKELOCK
-  wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
-#endif
 
   if ( sEarlyCPInterrupt )
   {
