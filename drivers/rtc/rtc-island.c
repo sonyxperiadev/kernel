@@ -1171,37 +1171,8 @@ err_out:
     return ret;
 }
 
-
-#ifdef CONFIG_PM
-
-/* RTC Power management control */
-
-static int period_cnt;
-
-static int
-bcmhana_rtc_suspend( struct platform_device *pdev, pm_message_t state )
-{
-     struct bcmhana_rtc *rtc = platform_get_drvdata( pdev );
-     period_cnt = chal_rtc_readReg( rtc->handle, RTC_PERIODIC_TIMER_ADDR );
-    return 0;
-}
-
-static int
-bcmhana_rtc_resume( struct platform_device *pdev )
-{
-     struct bcmhana_rtc *rtc = platform_get_drvdata( pdev );
-    chal_rtc_writeReg( rtc->handle, RTC_PERIODIC_TIMER_ADDR, period_cnt );
-    return 0;
-}
-#else
-#define bcmhana_rtc_suspend NULL
-#define bcmhana_rtc_resume  NULL
-#endif
-
 static struct platform_driver bcmhana_rtcdrv = {
     .remove = __exit_p( bcmhana_rtc_remove ),
-    .suspend = bcmhana_rtc_suspend,
-    .resume = bcmhana_rtc_resume,
     .driver = {
         .name = "bcmhana-rtc",
         .owner = THIS_MODULE,
