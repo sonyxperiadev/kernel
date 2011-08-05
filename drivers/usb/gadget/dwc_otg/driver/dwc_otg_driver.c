@@ -725,6 +725,12 @@ static int dwc_otg_driver_probe(
 		goto fail;
 	}
 	dev_dbg(&_dev->dev, "base=0x%08x\n", (unsigned)dwc_otg_device->base);
+
+	/*
+	 * Initialize driver data to point to the global DWC_otg
+	 * Device structure.
+	 */
+	lm_set_drvdata(_dev, dwc_otg_device);
 #elif defined (PCI_INTERFACE)
 
 	_dev->current_state = PCI_D0;
@@ -775,11 +781,7 @@ static int dwc_otg_driver_probe(
 	 * Initialize driver data to point to the global DWC_otg
 	 * Device structure.
 	 */
-#ifdef LM_INTERFACE
-	lm_set_drvdata(_dev, dwc_otg_device);
-#else
 	platform_set_drvdata(_dev, dwc_otg_device);
-#endif
 #endif
 
 	dev_dbg(&_dev->dev, "dwc_otg_device=0x%p\n", dwc_otg_device);

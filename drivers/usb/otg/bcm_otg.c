@@ -42,6 +42,9 @@ struct bcm_otg_data {
 #define OTGCTRL1_VBUS_ON 0xDC
 #define OTGCTRL1_VBUS_OFF 0xD8
 
+#define HOST_TO_PERIPHERAL_DELAY_MS 1000
+#define PERIPHERAL_TO_HOST_DELAY_MS 100
+
 static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled) ;
 
 static void bcm_otg_set_vbus(struct bcm_otg_data *otg_data,
@@ -91,16 +94,13 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 		dev_info(otg_data->dev, "Switching to Peripheral\n");
 		otg_data->host = false;
 		bcm_hsotgctrl_phy_set_id_stat(true);
-		msleep(100);
-		bcm_otg_set_vbus(otg_data, false);
-		bcm_hsotgctrl_phy_set_vbus_stat(false);
-		msleep(500);
+		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
 		bcm_hsotgctrl_phy_set_vbus_stat(true);
 	} else {
 		dev_info(otg_data->dev, "Switching to Host\n");
 		otg_data->host = true;
 		bcm_hsotgctrl_phy_set_vbus_stat(false);
-		msleep(100);
+		msleep(PERIPHERAL_TO_HOST_DELAY_MS);
 		bcm_hsotgctrl_phy_set_id_stat(false);
 	}
 
