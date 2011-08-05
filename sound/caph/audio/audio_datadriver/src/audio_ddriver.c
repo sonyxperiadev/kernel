@@ -46,7 +46,7 @@
 #include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 #include "osdal_os.h"
-
+#include "osheap.h"
 #include "log.h"
 #include "csl_aud_drv.h"
 #include "csl_caph.h"
@@ -56,6 +56,7 @@
 #include "dspif_voice_record.h"
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
+#include "dspif_voip.h"
 
 #define VOICE_CAPT_FRAME_SIZE 320
 
@@ -85,6 +86,9 @@ typedef struct AUDIO_DDRIVER_t
 	UInt32									bufferSize_inBytes;
 	UInt32 									num_periods;
 	UInt8 									audMode;
+	AUDIO_DRIVER_VoipCB_t					pVoipULCallback;
+	AUDIO_DRIVER_VoipCB_t					pVoipDLCallback;
+	UInt16									codec_type;
 }AUDIO_DDRIVER_t;
 
 
@@ -95,10 +99,14 @@ typedef struct AUDIO_DDRIVER_t
 static AUDIO_DDRIVER_t* audio_render_driver[CSL_CAPH_STREAM_TOTAL];
 
 static AUDIO_DDRIVER_t* audio_voice_driver[VORENDER_ARM2SP_INSTANCE_TOTAL]; // 2 ARM2SP instances
+
+static AUDIO_DDRIVER_t* audio_voip_driver = NULL;
+
 static AUDIO_DDRIVER_t* audio_capture_driver = NULL;
 
 static int index = 1;
 static Boolean endOfBuffer = FALSE;
+static const UInt16 sVoIPDataLen[] = {0, 322, 160, 38, 166, 642, 70};
 
 
 //=============================================================================
@@ -120,6 +128,11 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           AUDIO_DRIVER_CTRL_t ctrl_cmd,
                                           void* pCtrlStruct);
 
+static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
+                                          AUDIO_DRIVER_CTRL_t ctrl_cmd,
+                                          void* pCtrlStruct);
+
+
 static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                                           AUDIO_DRIVER_CTRL_t ctrl_cmd,
                                           void* pCtrlStruct);
@@ -129,6 +142,13 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id);
 static void AUDIO_DRIVER_RenderVoiceCallback1(UInt16 buf_index);
 static void AUDIO_DRIVER_RenderVoiceCallback2(UInt16 buf_index);
 static void AUDIO_DRIVER_CaptureVoiceCallback(UInt16 buf_index);
+
+static Boolean VOIP_DumpUL_CB(
+		UInt8		*pSrc,		// pointer to start of speech data
+		UInt32		amrMode		// AMR codec mode of speech data
+		);
+
+static Boolean VOIP_FillDL_CB(UInt32 nFrames);
 
 
 //=============================================================================
@@ -319,15 +339,14 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
             break;
+			
         case AUDIO_DRIVER_CAPT_HQ:
-            {
-	           audio_capture_driver = aud_drv;
-			}
-            break;
         case AUDIO_DRIVER_CAPT_VOICE:
-            {
-                audio_capture_driver = aud_drv;
-            }
+            audio_capture_driver = aud_drv;
+            break;
+			
+		case AUDIO_DRIVER_VOIP:
+            audio_voip_driver = aud_drv;
             break;
 
         default:
@@ -380,6 +399,13 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
             {
 				audio_capture_driver = NULL;
             }
+            break;
+		case AUDIO_DRIVER_VOIP:
+			{
+            audio_voip_driver = NULL;
+			OSHEAP_Delete(aud_drv->tmp_buffer);
+			aud_drv->tmp_buffer = NULL;
+			}
             break;
         default:
             Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Close::Unsupported driver  \n"  );
@@ -434,7 +460,6 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 {
     AUDIO_DDRIVER_t*  aud_drv = (AUDIO_DDRIVER_t*)drv_handle;
     Result_t result_code = RESULT_ERROR;
-    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::  \n"  );
 
     if(aud_drv == NULL)
     {
@@ -472,6 +497,12 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
                 result_code =  AUDIO_DRIVER_ProcessCaptureVoiceCmd(aud_drv,ctrl_cmd,pCtrlStruct);
             }
             break;
+
+		 case AUDIO_DRIVER_VOIP:
+            { 
+				result_code =  AUDIO_DRIVER_ProcessVoIPCmd(aud_drv,ctrl_cmd,pCtrlStruct);
+		 	}
+		 	break;
         default:
             Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::Unsupported driver  \n"  );
             break;
@@ -479,7 +510,7 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 
     if(result_code == RESULT_ERROR)
     {
-        Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::command processing failed  \n"  );
+        Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::command processing failed aud_drv->drv_type %d ctrl_cmd %d \n",aud_drv->drv_type,ctrl_cmd);
     }
     return;
 }
@@ -907,6 +938,109 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 
 //============================================================================
 //
+// Function Name: AUDIO_DRIVER_ProcessVoIPCmd
+//
+// Description:   This function is used to process VoIP commands
+//
+//============================================================================
+
+static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
+                                          AUDIO_DRIVER_CTRL_t ctrl_cmd,
+                                          void* pCtrlStruct)
+{
+    Result_t result_code = RESULT_ERROR;
+	UInt16 *codec_type = 0;
+	UInt32 size=0;
+	
+    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::%d \n",ctrl_cmd );
+
+    switch (ctrl_cmd)
+    {
+        case AUDIO_DRIVER_START:
+            {     
+				if( (aud_drv->pVoipULCallback == NULL) ||
+					(aud_drv->pVoipDLCallback == NULL)
+					)
+				{
+					Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::All Configuration is not set yet	\n"  );
+					return result_code;
+				}
+
+				if(pCtrlStruct != NULL)
+			    	codec_type = (UInt16 *)pCtrlStruct;
+					
+					if(*codec_type == 0)
+						aud_drv->codec_type = VOIP_PCM;
+					else if(*codec_type == 1) 
+						aud_drv->codec_type = VOIP_PCM_16K;
+					else if(*codec_type == 2) 
+						aud_drv->codec_type = VOIP_AMR475;
+					else if(*codec_type == 3) 
+						aud_drv->codec_type = VOIP_AMR_WB_MODE_7k;
+					else if(*codec_type == 4) 
+						aud_drv->codec_type = VOIP_FR;
+					else if(*codec_type == 5) 
+						aud_drv->codec_type = VOIP_G711_U;
+					else
+					{
+						Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n" );
+						break;
+					}
+
+				size = sVoIPDataLen[(aud_drv->codec_type & 0xf000) >> 12];
+			
+				Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd:: aud_drv->codec_type %d size = %ld\n", aud_drv->codec_type,size );
+
+				aud_drv->tmp_buffer = OSHEAP_Alloc(size); 
+
+				if(aud_drv->tmp_buffer == NULL)
+					break;
+				else
+					memset(aud_drv->tmp_buffer,0,size);
+			
+				result_code = AP_VoIP_StartTelephony(VOIP_DumpUL_CB, VOIP_FillDL_CB);
+            }
+            break;
+        case AUDIO_DRIVER_STOP:
+            {
+				result_code = AP_VoIP_StopTelephony();
+            }
+            break;
+        case AUDIO_DRIVER_SET_VOIP_UL_CB:
+            {
+				if(pCtrlStruct == NULL)
+                {
+                    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr  \n"  );
+                    return result_code;
+                }
+                //assign the call back
+                aud_drv->pVoipULCallback = (AUDIO_DRIVER_VoipCB_t)pCtrlStruct;
+                result_code = RESULT_OK;
+		    }
+            break;
+        case AUDIO_DRIVER_SET_VOIP_DL_CB:
+            {
+	            if(pCtrlStruct == NULL)
+                {
+                    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr  \n"  );
+                    return result_code;
+                }
+                //assign the call back
+                aud_drv->pVoipDLCallback = (AUDIO_DRIVER_VoipCB_t)pCtrlStruct;
+                result_code = RESULT_OK;
+		    }
+            break;
+        default:
+            Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::Unsupported command  \n"  );
+            break;
+    }
+
+    return result_code;
+}
+
+
+//============================================================================
+//
 // Function Name: AUDIO_DRIVER_ProcessCommonCmd
 //
 // Description:   This function is used to process common control commands
@@ -997,7 +1131,6 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
             break;
             
         default:
-            Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCommonCmd::Unsupported command  \n"  );
             break;
     }
 
@@ -1242,3 +1375,54 @@ static void AUDIO_DRIVER_CaptureVoiceCallback(UInt16 buf_index)
 	}
     return;
 }
+
+static Boolean VOIP_DumpUL_CB(
+		UInt8		*pSrc,		// pointer to start of speech data
+		UInt32		amrMode		// AMR codec mode of speech data
+		)
+{
+
+    AUDIO_DDRIVER_t* aud_drv;
+	UInt8 index = 0;
+	VOIP_Buffer_t *voipBufPtr = NULL;
+	UInt16 codecType;
+	
+    aud_drv = audio_voip_driver;
+    if((aud_drv == NULL))
+    {
+        Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB:: Spurious call back\n");
+        return TRUE;
+    }
+	voipBufPtr = (VOIP_Buffer_t *)pSrc;
+	codecType = voipBufPtr->voip_vocoder;
+	index = (codecType & 0xf000) >> 12;
+	if (index >= 7)
+		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: Invalid codecType = 0x%x\n", codecType);
+	else
+	{
+		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: codecType = 0x%x, index = %d\n", codecType, index);		
+	    if(aud_drv->pVoipULCallback != NULL)
+			aud_drv->pVoipULCallback(aud_drv, (pSrc + 2), codecType); // 2 bytes for codec type
+	}    
+    return TRUE;
+};
+
+static Boolean VOIP_FillDL_CB( UInt32 nFrames)
+{
+    AUDIO_DDRIVER_t* aud_drv;
+	UInt32 dlSize = 0;
+
+    aud_drv = audio_voip_driver;
+    if(aud_drv == NULL)
+    {
+        Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB:: Spurious call back\n");
+        return TRUE;
+    }
+	aud_drv->tmp_buffer[0] = aud_drv->codec_type;
+	dlSize = sVoIPDataLen[(aud_drv->codec_type & 0xf000) >> 12];
+	Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->codec_type, dlSize);
+	aud_drv->pVoipDLCallback(aud_drv, aud_drv->tmp_buffer, dlSize);
+	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->codec_type, aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->codec_type, FALSE);
+	return TRUE;
+};
+

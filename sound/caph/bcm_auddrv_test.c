@@ -95,6 +95,7 @@ UInt8 playback_audiotest_srcmixer[165856] = {
 #endif
 };
 
+#define CONFIG_VOIP_DRIVER_TEST
 
 #define BRCM_AUDDRV_NAME_MAX (15)  //max 15 char for test name 
 #define BRCM_AUDDRV_TESTVAL  (5)   // max no of arg for each test
@@ -125,7 +126,6 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate);
 void dump_audio_registers(void);
 
 #ifdef CONFIG_ARM2SP_PLAYBACK_TEST
-static Semaphore_t		AUDDRV_BufDoneSema;
 
 static void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6);
 
@@ -135,6 +135,46 @@ static Boolean AUDDRV_BUFFER_DONE_CB (UInt8 *buf, UInt32 size, UInt32 streamID)
 	return TRUE;  
 }
 #endif
+
+#ifdef CONFIG_VOIP_DRIVER_TEST
+static void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6);
+#endif
+
+static Semaphore_t		AUDDRV_BufDoneSema;
+
+static AUDQUE_Queue_t	*sVtQueue = NULL;
+
+static Semaphore_t		sVtQueue_Sema;
+static const UInt16 sVoIPDataLen[] = { 0, 322, 160, 38, 166, 642, 70};
+
+static Boolean AudDrv_VOIP_DumpUL_CB(AUDIO_DRIVER_HANDLE_t drv_handle, UInt8	*pSrc, UInt32 amrMode);
+static Boolean AudDrv_VOIP_FillDL_CB(AUDIO_DRIVER_HANDLE_t drv_handle, UInt8 *pDst, UInt32 nFrames);
+
+//static UInt8 sVoIPAMRSilenceFrame[1] = {0x000f};
+
+// callback for buffer ready of pull mode
+Boolean AudDrv_VOIP_DumpUL_CB (AUDIO_DRIVER_HANDLE_t drv_handle, UInt8	*pSrc, UInt32 amrMode)
+{
+	UInt32 copied = 0,size; 
+
+	size = sVoIPDataLen[(amrMode & 0xf000) >> 12];	
+	copied = AUDQUE_Write (sVtQueue, pSrc, (size - 2)); // 2 bytes for codec type
+	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL ready, size = 0x%lx, copied = 0x%lx\n",  size, copied);
+	OSSEMAPHORE_Release (sVtQueue_Sema);
+	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL done \n");
+	return TRUE;
+}
+
+static Boolean AudDrv_VOIP_FillDL_CB(AUDIO_DRIVER_HANDLE_t drv_handle, UInt8 *pDst, UInt32 nFrames)
+{
+	UInt32 copied = 0; 
+	copied = AUDQUE_Read (sVtQueue, pDst, nFrames);
+	printk(KERN_INFO "\n VOIP_FillDL_CB DL ready, size =0x%lx, copied = 0x%lx\n", nFrames, copied);
+    OSSEMAPHORE_Release (AUDDRV_BufDoneSema);
+	return TRUE;  
+}
+
+
 
 //+++++++++++++++++++++++++++++++++++++++
 //Brcm_auddrv_TestSysfs_show (struct device *dev, struct device_attribute *attr, char *buf)
@@ -710,6 +750,18 @@ static int HandleControlCommand()
             DEBUG(" Telephony disabled \n");
         }
 		break;
+#ifdef CONFIG_VOIP_DRIVER_TEST
+		case 6: // VoIP loopback test
+		{
+			//Val2 - Mic
+			//Val3 - speaker
+			//Val4 - Delay 
+			//Val5 - Codectype
+			//AUDTST_VoIP( sgBrcm_auddrv_TestValues[2],sgBrcm_auddrv_TestValues[3], 2000, sgBrcm_auddrv_TestValues[4],0 );
+			AUDTST_VoIP( sgBrcm_auddrv_TestValues[2],sgBrcm_auddrv_TestValues[3], 2000, sgBrcm_auddrv_TestValues[4],0);
+		}
+		break;
+#endif
  		case 8:// peek a register
         {
 			UInt32 regAddr = sgBrcm_auddrv_TestValues[2];
@@ -1574,4 +1626,132 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 	}
 }
 
+#endif
+
+#ifdef CONFIG_VOIP_DRIVER_TEST
+
+void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6)
+{
+	// Val2 : mic
+	// Val3: speaker
+	// Val4: delay in miliseconds
+	// Val5: codec value, i.e. 4096 (0x1000, PCM), 8192 (0x2000, FR), 12288 (0x3000, AMR475), 20480 (0x5000, PCM_16K), 24576 (0x6000 AMR_16K), etc
+	// val6: n/a
+	UInt8	*dataDest = NULL;
+	UInt32	vol = 30;
+	UInt16 codecType = 0;
+	AudioMode_t mode = AUDIO_MODE_HANDSET;
+	UInt16 codecVal = 0;
+	static AUDIO_DRIVER_HANDLE_t drv_handle = NULL;
+
+	AUDCTRL_MICROPHONE_t mic = (AUDCTRL_MICROPHONE_t)Val2; // mic
+	AUDCTRL_SPEAKER_t spk = (AUDCTRL_SPEAKER_t)Val3; //speaker
+	UInt32		delayMs = Val4; // delay in milliseconds
+	UInt32 count = 0; //20ms each count
+	UInt32 count1 = 0; //20ms each count
+
+    if (record_test_buf == NULL) 
+    {
+        record_test_buf = OSHEAP_Alloc(1024*1024);
+    }
+
+	codecVal = Val5; //0; 
+
+	if(codecVal == 0)
+		codecType = VOIP_PCM;
+	else if(codecVal == 1)
+		codecType = VOIP_PCM_16K;
+	else if(codecVal == 2)
+			codecType = VOIP_AMR475;
+	else if(codecVal == 3)
+			codecType = VOIP_AMR_WB_MODE_7k;
+	else if(codecVal == 4)
+			codecType = VOIP_FR;
+	else if(codecVal == 5)
+			codecType = VOIP_G711_U;
+
+	Log_DebugPrintf(LOGID_AUDIO, "\n AUDTST_VoIP codecType %d\n",codecType);
+	
+
+	if((codecType & 0xf000) == VOIP_PCM_16K || (codecType & 0xf000) == VOIP_AMR_WB_MODE_7k)
+	{
+		mode = AUDCTRL_GetAudioMode();
+		//set the audio mode to WB
+		AUDCTRL_SetAudioMode((AudioMode_t)(mode + AUDIO_MODE_NUMBER));
+	}
+
+	AUDCTRL_EnableTelephony (AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, mic, spk);
+	AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT, spk, vol, AUDIO_GAIN_FORMAT_VOL_LEVEL);
+
+	// init driver
+
+	drv_handle = AUDIO_DRIVER_Open(AUDIO_DRIVER_VOIP);
+
+	//set UL callback
+	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_VOIP_UL_CB,(void*)AudDrv_VOIP_DumpUL_CB);
+	
+	//set the callback
+	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_VOIP_DL_CB,(void*)AudDrv_VOIP_FillDL_CB);	
+
+	dataDest = (UInt8 *)&record_test_buf[0];
+
+	sVtQueue = AUDQUE_Create (dataDest, 2000, 322);
+	
+	AUDDRV_BufDoneSema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
+	sVtQueue_Sema = OSSEMAPHORE_Create(1, OSSUSPEND_PRIORITY);
+
+
+	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_START,&codecVal);
+
+	//Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 1 \n");
+
+	count = delayMs/20;
+	
+	//Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 2 \n");
+
+	//Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: Test loopback \n");
+
+	// test with loopback UL to DL
+	while (1)
+	{
+		if (count1++ == 1000)
+		{
+			count1 = 0;
+			break;
+		}
+
+		//Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 3, count1 %d\n", count1);
+
+		OSSEMAPHORE_Obtain(sVtQueue_Sema, TICKS_FOREVER);
+		if(count)
+		{
+			count--;
+			//Log_DebugPrintf(LOGID_AUDIO, "\n VoIP: debug 4 count %d\n", count);
+			continue;
+		}
+		OSSEMAPHORE_Obtain(AUDDRV_BufDoneSema, 2*1000); 
+
+	}
+
+	printk(KERN_INFO "\n VoIP: Finished\n");
+
+	// finish all the data
+	// stop the driver
+	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_STOP,NULL);
+
+	printk(KERN_INFO "\n VoIP: Stop\n");
+
+	// disable the hw
+	AUDCTRL_DisableTelephony (AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, mic, spk);
+
+	if((codecType & 0xf000) == VOIP_PCM_16K || (codecType & 0xf000) == VOIP_AMR_WB_MODE_7k)
+		AUDCTRL_SetAudioMode(mode); //setting it back the original mode
+
+	OSSEMAPHORE_Destroy(AUDDRV_BufDoneSema);
+	OSSEMAPHORE_Destroy(sVtQueue_Sema);
+	AUDQUE_Destroy(sVtQueue);
+
+	AUDIO_DRIVER_Close(drv_handle);
+
+}
 #endif
