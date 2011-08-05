@@ -778,8 +778,7 @@ typedef struct
 typedef struct
 {
     UInt8 dmaNum; // 0 <= dmaNum <= 2.
-    CSL_CAPH_DMA_CHNL_e dmaCH;
-    CSL_CAPH_DMA_CHNL_e dmaCH2;
+    CSL_CAPH_DMA_CHNL_e dma[2];
 }CSL_CAPH_HWConfig_DMA_t;
 
 /**
@@ -856,16 +855,6 @@ typedef struct
     AUDIO_SAMPLING_RATE_t snk_sampleRate;	
     AUDIO_CHANNEL_NUM_t chnlNum;
     AUDIO_BITS_PER_SAMPLE_t bitPerSample;
-    CSL_CAPH_CFIFO_FIFO_e fifo;
-    CSL_CAPH_CFIFO_FIFO_e fifo2;
-    CSL_CAPH_SWITCH_CONFIG_t switchCH;
-    CSL_CAPH_SWITCH_CONFIG_t switchCH2;
-    CSL_CAPH_SWITCH_CONFIG_t switchCH3;
-    CSL_CAPH_DMA_CHNL_e dmaCH;
-    CSL_CAPH_DMA_CHNL_e dmaCH2;
-    CSL_CAPH_SRCM_ROUTE_t routeConfig;	
-    CSL_CAPH_SRCM_ROUTE_t routeConfig2;	
-    CSL_CAPH_SRCM_ROUTE_t routeConfig3;	
     UInt8* pBuf;
     UInt8* pBuf2;
     UInt32 size;

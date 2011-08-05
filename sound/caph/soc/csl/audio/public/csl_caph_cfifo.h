@@ -99,16 +99,6 @@ void csl_caph_cfifo_config_fifo(CSL_CAPH_CFIFO_FIFO_e fifo,
 
 /**
 *
-*  @brief  configure the caph cfifo 
-*
-*  @param   pathID  (in) path ID
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_cfifo_config(CSL_CAPH_PathID pathID); 
-
-/**
-*
 *  @brief  Get the caph cfifo buffer address 
 *
 *  @param   fifo  (in) caph cfifo id
@@ -116,16 +106,6 @@ void csl_caph_cfifo_config(CSL_CAPH_PathID pathID);
 *  @return UInt32   buffer address
 *****************************************************************************/
 UInt32 csl_caph_cfifo_get_fifo_addr(CSL_CAPH_CFIFO_FIFO_e fifo);
-
-/**
-*
-*  @brief  start the transferring on the caph cfifo buffer 
-*
-*  @param   pathID  (in) pathID 
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_cfifo_start(CSL_CAPH_PathID pathID);
 
 /**
 *
@@ -170,5 +150,17 @@ UInt32 csl_caph_cfifo_read_fifo_status(CSL_CAPH_CFIFO_FIFO_e csl_fifo);
 UInt16 csl_caph_cfifo_read_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo, 
                                 UInt32* data, 
                                 UInt16 size);
+/****************************************************************************
+*
+* Function Name: CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(
+* CSL_CAPH_DATAFOMAT_e dataFormat,
+* CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
+*
+* Description: Obtain a CAPH CFIFO buffer
+*
+****************************************************************************/
+CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat,
+ CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate);
+
 #endif // _CSL_CAPH_CFIFO_
 

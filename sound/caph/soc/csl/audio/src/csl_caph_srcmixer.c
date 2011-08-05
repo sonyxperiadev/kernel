@@ -1233,39 +1233,39 @@ void csl_caph_srcmixer_config(CSL_CAPH_PathID pathID)
         // 1. get SRC-Mixer in channel
         // fixed the SRC-Mixer in channel for DSP: DL is always using ch1
         if (configTable.source == CSL_CAPH_DEV_DSP)
-            configTable.routeConfig.inChnl = SPEAKER_DL_FROM_DSP_CHNL;
+            configTable.srcmRoute[0].inChnl = SPEAKER_DL_FROM_DSP_CHNL;
         else
-		    configTable.routeConfig.inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
+		    configTable.srcmRoute[0].inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
         // 2. set the data format, sr and threshold of input channel
-        configTable.routeConfig.inDataFmt = csl_caph_dataformat;
-        configTable.routeConfig.inSampleRate = csl_caph_srcm_insamplerate;
+        configTable.srcmRoute[0].inDataFmt = csl_caph_dataformat;
+        configTable.srcmRoute[0].inSampleRate = csl_caph_srcm_insamplerate;
         if (configTable.source == CSL_CAPH_DEV_DSP)
-            configTable.routeConfig.inThres = 0x1;
+            configTable.srcmRoute[0].inThres = 0x1;
         else
-            configTable.routeConfig.inThres = 0x3; // set to default
-	    csl_caph_srcmixer_set_inchnl_status(configTable.routeConfig.inChnl);  
+            configTable.srcmRoute[0].inThres = 0x3; // set to default
+	    csl_caph_srcmixer_set_inchnl_status(configTable.srcmRoute[0].inChnl);  
         // 3. set the data format, sr and threshold of output channel
-        configTable.routeConfig.outChnl = csl_caph_srcmixer_obtain_outchnl(configTable.sink);	
-        configTable.routeConfig.outDataFmt = csl_caph_common_GetOutPutDataFormat(configTable.bitPerSample, configTable.sink);
-        configTable.routeConfig.outSampleRate = csl_caph_srcm_outsamplerate;
+        configTable.srcmRoute[0].outChnl = csl_caph_srcmixer_obtain_outchnl(configTable.sink);	
+        configTable.srcmRoute[0].outDataFmt = csl_caph_common_GetOutPutDataFormat(configTable.bitPerSample, configTable.sink);
+        configTable.srcmRoute[0].outSampleRate = csl_caph_srcm_outsamplerate;
         if (configTable.source == CSL_CAPH_DEV_DSP)
-            configTable.routeConfig.outThres = 0x1;
+            configTable.srcmRoute[0].outThres = 0x1;
         else
-            configTable.routeConfig.outThres = 0x3; // set to default
+            configTable.srcmRoute[0].outThres = 0x3; // set to default
            
         // 4. Check whether the mixer gains are already set by 
         // _SetSinkGain().
         //If not, then set with the pre-defined value here.
-        if ((configTable.routeConfig.mixGain.mixInGainL == MIX_IN_MUTE)
-            &&(configTable.routeConfig.mixGain.mixInGainR == MIX_IN_MUTE))
+        if ((configTable.srcmRoute[0].mixGain.mixInGainL == MIX_IN_MUTE)
+            &&(configTable.srcmRoute[0].mixGain.mixInGainR == MIX_IN_MUTE))
         {
-            configTable.routeConfig.mixGain.mixInGainL		= MIX_IN_PASS;
-	        configTable.routeConfig.mixGain.mixOutCoarseGainL	= BIT_SELECT;
-	   	    configTable.routeConfig.mixGain.mixInGainR		= MIX_IN_PASS;
-    	    configTable.routeConfig.mixGain.mixOutCoarseGainR	= BIT_SELECT;
+            configTable.srcmRoute[0].mixGain.mixInGainL		= MIX_IN_PASS;
+	        configTable.srcmRoute[0].mixGain.mixOutCoarseGainL	= BIT_SELECT;
+	   	    configTable.srcmRoute[0].mixGain.mixInGainR		= MIX_IN_PASS;
+    	    configTable.srcmRoute[0].mixGain.mixOutCoarseGainR	= BIT_SELECT;
         }
         // 5. save the route config to path table
-        csl_caph_common_SetPathRouteConfig(configTable.pathID, configTable.routeConfig);
+        csl_caph_common_SetPathRouteConfig(configTable.pathID, configTable.srcmRoute[0]);
     }
     else
     if (((configTable.source == CSL_CAPH_DEV_ANALOG_MIC)
@@ -1283,37 +1283,37 @@ void csl_caph_srcmixer_config(CSL_CAPH_PathID pathID)
 	    if ((configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
 	        ||(configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
         {
-            configTable.routeConfig.inChnl = EANC_MIC_UL_TO_DSP_CHNL;
+            configTable.srcmRoute[0].inChnl = EANC_MIC_UL_TO_DSP_CHNL;
         }
         else
         {
-            configTable.routeConfig.inChnl = MAIN_MIC_UL_TO_DSP_CHNL;
+            configTable.srcmRoute[0].inChnl = MAIN_MIC_UL_TO_DSP_CHNL;
         }
  
         // 2. set the data format, sr and threshold of input channel
-        configTable.routeConfig.inDataFmt = csl_caph_dataformat;
-        configTable.routeConfig.inSampleRate = csl_caph_srcm_insamplerate;
+        configTable.srcmRoute[0].inDataFmt = csl_caph_dataformat;
+        configTable.srcmRoute[0].inSampleRate = csl_caph_srcm_insamplerate;
         // For dsp, set the thr to 1
-        configTable.routeConfig.inThres = 0x1; // set to default
-        csl_caph_srcmixer_set_inchnl_status(configTable.routeConfig.inChnl);
+        configTable.srcmRoute[0].inThres = 0x1; // set to default
+        csl_caph_srcmixer_set_inchnl_status(configTable.srcmRoute[0].inChnl);
         // 3. set the data format, sr and threshold of output channel
-        configTable.routeConfig.tapOutChnl = csl_caph_srcmixer_getTapOutChnl(configTable.routeConfig.inChnl);
-        configTable.routeConfig.outDataFmt = csl_caph_common_GetOutPutDataFormat(configTable.bitPerSample, configTable.sink);
-        configTable.routeConfig.outSampleRate = csl_caph_srcm_outsamplerate; 
+        configTable.srcmRoute[0].tapOutChnl = csl_caph_srcmixer_getTapOutChnl(configTable.srcmRoute[0].inChnl);
+        configTable.srcmRoute[0].outDataFmt = csl_caph_common_GetOutPutDataFormat(configTable.bitPerSample, configTable.sink);
+        configTable.srcmRoute[0].outSampleRate = csl_caph_srcm_outsamplerate; 
         // This should be set to 0x0 to give an interrupt after every sample.
-        configTable.routeConfig.outThres = 0x0;
+        configTable.srcmRoute[0].outThres = 0x0;
 
         // 4. save the route config to path table
-        csl_caph_common_SetPathRouteConfig(configTable.pathID, configTable.routeConfig);
+        csl_caph_common_SetPathRouteConfig(configTable.pathID, configTable.srcmRoute[0]);
            
         // 5. The mixer gains are already set by _SetSinkGain().
     }
  
     // 6. Check whether it is SRC only
-    if (configTable.routeConfig.tapOutChnl == CSL_CAPH_SRCM_TAP_CH_NONE) 
-        csl_caph_srcmixer_config_mix_route(configTable.routeConfig);
+    if (configTable.srcmRoute[0].tapOutChnl == CSL_CAPH_SRCM_TAP_CH_NONE) 
+        csl_caph_srcmixer_config_mix_route(configTable.srcmRoute[0]);
     else
-        csl_caph_srcmixer_config_src_route(configTable.routeConfig);
+        csl_caph_srcmixer_config_src_route(configTable.srcmRoute[0]);
     return;
 }
 
@@ -1348,10 +1348,10 @@ void csl_caph_srcmixer_config_forAddingOutputPath(CSL_CAPH_PathID pathID)
 	        ||(configTable.sink2 == CSL_CAPH_DEV_IHF)
 	        ||(configTable.sink2 == CSL_CAPH_DEV_VIBRA)))
     { 
-        if (configTable.routeConfig.inChnl == CSL_CAPH_SRCM_INCHNL_NONE)
+        if (configTable.srcmRoute[0].inChnl == CSL_CAPH_SRCM_INCHNL_NONE)
         {
             // 1st routeConfig is empty. Copy 2nd routeConfig to it.
-            routeConfig = configTable.routeConfig2;
+            routeConfig = configTable.srcmRoute[1];
 
             // 1. set the data format, sr and threshold of output channel
             csl_caph_srcmixer_buildRouteConfig(
@@ -1362,17 +1362,17 @@ void csl_caph_srcmixer_config_forAddingOutputPath(CSL_CAPH_PathID pathID)
 
             // 2. copy mixing gain from 2nd routeConfig.
             memcpy(&(routeConfig.mixGain), 
-                   &(configTable.routeConfig2.mixGain),
+                   &(configTable.srcmRoute[1].mixGain),
                    sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
 
             // 3. save the 1st routeConfig to path table
             csl_caph_common_SetPathRouteConfig(configTable.pathID, routeConfig);
         }
         else
-        if (configTable.routeConfig2.inChnl == CSL_CAPH_SRCM_INCHNL_NONE)
+        if (configTable.srcmRoute[1].inChnl == CSL_CAPH_SRCM_INCHNL_NONE)
         {
             // 2nd routeConfig is empty. Copy 1st routeConfig to it.
-            routeConfig = configTable.routeConfig;
+            routeConfig = configTable.srcmRoute[0];
 
             // 1. set the data format, sr and threshold of output channel
             csl_caph_srcmixer_buildRouteConfig(
@@ -1383,7 +1383,7 @@ void csl_caph_srcmixer_config_forAddingOutputPath(CSL_CAPH_PathID pathID)
 
             // 2. copy mixing gain from 1st routeConfig.
             memcpy(&(routeConfig.mixGain), 
-                   &(configTable.routeConfig.mixGain),
+                   &(configTable.srcmRoute[0].mixGain),
                    sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
 
             // 3. save the 2nd routeConfig to path table

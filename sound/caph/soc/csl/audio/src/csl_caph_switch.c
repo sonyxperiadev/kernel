@@ -633,19 +633,19 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
 	        ||(configTable.sink2 == CSL_CAPH_DEV_VIBRA)))
     { 
         //Config the 1st switch channel
-        if (configTable.switchCH.chnl == CSL_CAPH_SWITCH_NONE)
+        if (configTable.sw[0].chnl == CSL_CAPH_SWITCH_NONE)
         {
             sw_config.chnl = csl_caph_switch_obtain_channel();
-            sw_config.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(configTable.fifo);
+            sw_config.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(configTable.cfifo[0]);
 
 			// temp fix until we have a solution for mono - stereo conversion or SRC mixer pass thru for 48 K Mono
 			if((configTable.src_sampleRate != configTable.snk_sampleRate) || 
 				((configTable.src_sampleRate == AUDIO_SAMPLING_RATE_48000) && (configTable.chnlNum == AUDIO_CHANNEL_STEREO)))
 			{
 					//go through SRC Mixer
-	            	chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(configTable.routeConfig.inChnl);
+	            	chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(configTable.srcmRoute[0].inChnl);
 	    	        sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
-    		        sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(configTable.routeConfig.inChnl);
+    		        sw_config.trigger = csl_caph_srcmixer_get_inchnl_trigger(configTable.srcmRoute[0].inChnl);
 					sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
 			}
 			else
@@ -661,11 +661,11 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
         }
 
         // config switch ch2 if needed
-        if (configTable.switchCH2.chnl == CSL_CAPH_SWITCH_NONE)
+        if (configTable.sw[1].chnl == CSL_CAPH_SWITCH_NONE)
         {
             sw_config2.chnl = csl_caph_switch_obtain_channel();
             
-            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.routeConfig.outChnl);
+            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.srcmRoute[0].outChnl);
             sw_config2.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
             audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
             audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
@@ -677,10 +677,10 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
         // If the second sink exists, configure switch CH3.
         if (configTable.sink2 != CSL_CAPH_DEV_NONE)
         {
-            if (configTable.switchCH3.chnl == CSL_CAPH_SWITCH_NONE)
+            if (configTable.sw[2].chnl == CSL_CAPH_SWITCH_NONE)
             {
                 sw_config3.chnl = csl_caph_switch_obtain_channel();
-                chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.routeConfig2.outChnl);
+                chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.srcmRoute[1].outChnl);
                 sw_config3.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
                 audioh_path = csl_caph_common_GetAudiohPath(configTable.sink2);
                 audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
@@ -699,7 +699,7 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
 	    || (configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
 	    && (configTable.sink == CSL_CAPH_DEV_MEMORY))
     { 
-        if (configTable.switchCH.chnl == CSL_CAPH_SWITCH_NONE)
+        if (configTable.sw[0].chnl == CSL_CAPH_SWITCH_NONE)
         {
             sw_config.chnl = csl_caph_switch_obtain_channel();
 
@@ -707,7 +707,7 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
             audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
             sw_config.FIFO_srcAddr = audiohBufAddr.bufAddr;
  
-            sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(configTable.fifo);
+            sw_config.FIFO_dstAddr = csl_caph_cfifo_get_fifo_addr(configTable.cfifo[0]);
             sw_config.trigger = csl_caph_common_GetSwitchTrigger(configTable.source);
             sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
         }
@@ -721,13 +721,13 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
          ||(configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))       
         &&(configTable.sink == CSL_CAPH_DEV_DSP))
     {
-        if (configTable.switchCH.chnl == CSL_CAPH_SWITCH_NONE)
+        if (configTable.sw[0].chnl == CSL_CAPH_SWITCH_NONE)
         {
         	sw_config.chnl = csl_caph_switch_obtain_channel();
             audioh_path = csl_caph_common_GetAudiohPath(configTable.source);
             audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
             sw_config.FIFO_srcAddr = audiohBufAddr.bufAddr;
-            chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(configTable.routeConfig.inChnl);
+            chal_src_fifo = csl_caph_srcmixer_get_inchnl_fifo(configTable.srcmRoute[0].inChnl);
             sw_config.FIFO_dstAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo );
             sw_config.trigger = csl_caph_common_GetSwitchTrigger(configTable.source);
             sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
@@ -740,13 +740,13 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
         ||(configTable.sink2 == CSL_CAPH_DEV_HS)
         ||(configTable.sink2 == CSL_CAPH_DEV_HS)))
     {
-        if (configTable.switchCH.chnl == CSL_CAPH_SWITCH_NONE)
+        if (configTable.sw[0].chnl == CSL_CAPH_SWITCH_NONE)
         {
  
             // config switch
             sw_config.chnl = csl_caph_switch_obtain_channel();
        
-            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.routeConfig.outChnl);
+            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.srcmRoute[0].outChnl);
             sw_config.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
 
             audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
@@ -758,12 +758,12 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
             sw_config.dataFmt = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
         }
         else
-        if (configTable.switchCH2.chnl == CSL_CAPH_SWITCH_NONE)
+        if (configTable.sw[1].chnl == CSL_CAPH_SWITCH_NONE)
         {
             // config switch
             sw_config2.chnl = csl_caph_switch_obtain_channel();
        
-            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.routeConfig2.outChnl);
+            chal_src_fifo = csl_caph_srcmixer_get_outchnl_fifo(configTable.srcmRoute[1].outChnl);
             sw_config2.FIFO_srcAddr = csl_caph_srcmixer_get_fifo_addr(chal_src_fifo);
 
             audioh_path = csl_caph_common_GetAudiohPath(configTable.sink2);
@@ -782,7 +782,7 @@ void csl_caph_switch_config(CSL_CAPH_PathID pathID)
     {
    	    sw_config.chnl = csl_caph_switch_obtain_channel();
 
-        sw_config.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(configTable.fifo);
+        sw_config.FIFO_srcAddr = csl_caph_cfifo_get_fifo_addr(configTable.cfifo[0]);
 
         audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
         audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
@@ -840,12 +840,12 @@ void csl_caph_switch_config_forSwitchPath(CSL_CAPH_PathID pathID)
         // config switch ch2
         audioh_path = csl_caph_common_GetAudiohPath(configTable.sink);
         audiohBufAddr = csl_caph_audioh_get_fifo_addr(audioh_path);
-        configTable.switchCH2.FIFO_dstAddr = audiohBufAddr.bufAddr;
-        configTable.switchCH2.trigger = csl_caph_common_GetSwitchTrigger(configTable.sink);
+        configTable.sw[1].FIFO_dstAddr = audiohBufAddr.bufAddr;
+        configTable.sw[1].trigger = csl_caph_common_GetSwitchTrigger(configTable.sink);
         // finally config SW   
-        configTable.switchCH2.status = csl_caph_switch_config_channel(configTable.switchCH2);
+        configTable.sw[1].status = csl_caph_switch_config_channel(configTable.sw[1]);
        // Save the switch channel information
-       csl_caph_common_SetPathSwitchCH2(pathID, configTable.switchCH2);
+       csl_caph_common_SetPathSwitchCH2(pathID, configTable.sw[1]);
     }
     return;
 }
@@ -980,14 +980,14 @@ void csl_caph_switch_start(CSL_CAPH_PathID pathID)
     memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
     configTable = csl_caph_common_GetPath_FromPathID(pathID);
 
-    if (configTable.switchCH.chnl != CSL_CAPH_SWITCH_NONE)
-        csl_caph_switch_start_transfer(configTable.switchCH.chnl);
+    if (configTable.sw[0].chnl != CSL_CAPH_SWITCH_NONE)
+        csl_caph_switch_start_transfer(configTable.sw[0].chnl);
         
-    if (configTable.switchCH2.chnl != CSL_CAPH_SWITCH_NONE)
-        csl_caph_switch_start_transfer(configTable.switchCH2.chnl);
+    if (configTable.sw[1].chnl != CSL_CAPH_SWITCH_NONE)
+        csl_caph_switch_start_transfer(configTable.sw[1].chnl);
 
-    if (configTable.switchCH3.chnl != CSL_CAPH_SWITCH_NONE)
-        csl_caph_switch_start_transfer(configTable.switchCH3.chnl);
+    if (configTable.sw[2].chnl != CSL_CAPH_SWITCH_NONE)
+        csl_caph_switch_start_transfer(configTable.sw[2].chnl);
 
     return; 
 }

@@ -152,16 +152,16 @@ CSL_CAPH_HWConfig_Table_t csl_caph_common_GetPath_FromPathID(CSL_CAPH_PathID pat
             path.snk_sampleRate = HWConfig_Table[i].snk_sampleRate;			
             path.chnlNum = HWConfig_Table[i].chnlNum;
             path.bitPerSample = HWConfig_Table[i].bitPerSample;
-            path.fifo = HWConfig_Table[i].fifo;
-            path.fifo2 = HWConfig_Table[i].fifo2;
-	        memcpy(&(path.switchCH), &(HWConfig_Table[i].switchCH), sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
-	        memcpy(&(path.switchCH2), &(HWConfig_Table[i].switchCH2), sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
-	        memcpy(&(path.switchCH3), &(HWConfig_Table[i].switchCH3), sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
-            path.dmaCH = HWConfig_Table[i].dmaCH;
-            path.dmaCH2 = HWConfig_Table[i].dmaCH2;
-            path.routeConfig = HWConfig_Table[i].routeConfig;		
-            path.routeConfig2 = HWConfig_Table[i].routeConfig2;		
-            path.routeConfig3 = HWConfig_Table[i].routeConfig3;		
+            path.cfifo[0] = HWConfig_Table[i].cfifo[0];
+            path.cfifo[1] = HWConfig_Table[i].cfifo[1];
+	        memcpy(&(path.sw[0]), &(HWConfig_Table[i].sw[0]), sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+	        memcpy(&(path.sw[1]), &(HWConfig_Table[i].sw[1]), sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+	        memcpy(&(path.sw[2]), &(HWConfig_Table[i].sw[2]), sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+            path.dma[0] = HWConfig_Table[i].dma[0];
+            path.dma[1] = HWConfig_Table[i].dma[1];
+            path.srcmRoute[0] = HWConfig_Table[i].srcmRoute[0];		
+            path.srcmRoute[1] = HWConfig_Table[i].srcmRoute[1];		
+            path.srcmRoute[2] = HWConfig_Table[i].srcmRoute[2];		
             path.pBuf = HWConfig_Table[i].pBuf;
             path.pBuf2 = HWConfig_Table[i].pBuf2;
             path.size = HWConfig_Table[i].size;
@@ -359,7 +359,7 @@ void csl_caph_common_SetPathFifo(CSL_CAPH_PathID pathID,
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-            HWConfig_Table[i].fifo = fifo;
+            HWConfig_Table[i].cfifo[0] = fifo;
             return;
         }
     }
@@ -383,7 +383,7 @@ void csl_caph_common_ClearPathSwitchCH(CSL_CAPH_PathID pathID)
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-	        memset(&(HWConfig_Table[i].switchCH), 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+	        memset(&(HWConfig_Table[i].sw[0]), 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
             return;
         }
     }
@@ -409,7 +409,7 @@ void csl_caph_common_SetPathSwitchCH(CSL_CAPH_PathID pathID,
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-	        memcpy(&(HWConfig_Table[i].switchCH), &switchCH, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+	        memcpy(&(HWConfig_Table[i].sw[0]), &switchCH, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
             csl_caph_common_addHWResource(switchCH.FIFO_srcAddr, pathID);
             csl_caph_common_addHWResource(switchCH.FIFO_dstAddr, pathID);
             csl_caph_common_addHWResource(switchCH.FIFO_dst2Addr, pathID);
@@ -438,7 +438,7 @@ void csl_caph_common_ClearPathSwitchCH2(CSL_CAPH_PathID pathID)
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-	        memset(&(HWConfig_Table[i].switchCH2), 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+	        memset(&(HWConfig_Table[i].sw[1]), 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
             return;
         }
     }
@@ -464,7 +464,7 @@ void csl_caph_common_SetPathSwitchCH2(CSL_CAPH_PathID pathID,
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-	        memcpy(&(HWConfig_Table[i].switchCH2), &switchCH, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+	        memcpy(&(HWConfig_Table[i].sw[1]), &switchCH, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
             csl_caph_common_addHWResource(switchCH.FIFO_srcAddr, pathID);
             csl_caph_common_addHWResource(switchCH.FIFO_dstAddr, pathID);
             csl_caph_common_addHWResource(switchCH.FIFO_dst2Addr, pathID);
@@ -494,7 +494,7 @@ void csl_caph_common_ClearPathSwitchCH3(CSL_CAPH_PathID pathID)
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-	        memset(&(HWConfig_Table[i].switchCH3), 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+	        memset(&(HWConfig_Table[i].sw[2]), 0, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
             return;
         }
     }
@@ -519,7 +519,7 @@ void csl_caph_common_SetPathSwitchCH3(CSL_CAPH_PathID pathID,
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-	        memcpy(&(HWConfig_Table[i].switchCH3), &switchCH, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
+	        memcpy(&(HWConfig_Table[i].sw[2]), &switchCH, sizeof(CSL_CAPH_SWITCH_CONFIG_t)); 
             csl_caph_common_addHWResource(switchCH.FIFO_srcAddr, pathID);
             csl_caph_common_addHWResource(switchCH.FIFO_dstAddr, pathID);
             csl_caph_common_addHWResource(switchCH.FIFO_dst2Addr, pathID);
@@ -549,7 +549,7 @@ void csl_caph_common_SetPathDMACH(CSL_CAPH_PathID pathID,
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-            HWConfig_Table[i].dmaCH = dmaCH;
+            HWConfig_Table[i].dma[0] = dmaCH;
             return;
         }
     }
@@ -574,7 +574,7 @@ void csl_caph_common_SetPathRouteConfig(CSL_CAPH_PathID pathID,
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-            HWConfig_Table[i].routeConfig = routeConfig;
+            HWConfig_Table[i].srcmRoute[0] = routeConfig;
             return;
         }
     }
@@ -597,7 +597,7 @@ void csl_caph_common_ClearPathRouteConfig(CSL_CAPH_PathID pathID)
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-            memset(&(HWConfig_Table[i].routeConfig), 0, sizeof(CSL_CAPH_SRCM_ROUTE_t));
+            memset(&(HWConfig_Table[i].srcmRoute[0]), 0, sizeof(CSL_CAPH_SRCM_ROUTE_t));
             return;
         }
     }
@@ -622,7 +622,7 @@ void csl_caph_common_SetPathRouteConfig2(CSL_CAPH_PathID pathID,
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-            HWConfig_Table[i].routeConfig2 = routeConfig;
+            HWConfig_Table[i].srcmRoute[1] = routeConfig;
             return;
         }
     }
@@ -645,7 +645,7 @@ void csl_caph_common_ClearPathRouteConfig2(CSL_CAPH_PathID pathID)
     {
         if (HWConfig_Table[i].pathID == pathID)
         {
-            memset(&(HWConfig_Table[i].routeConfig2), 0, sizeof(CSL_CAPH_SRCM_ROUTE_t));
+            memset(&(HWConfig_Table[i].srcmRoute[1]), 0, sizeof(CSL_CAPH_SRCM_ROUTE_t));
             return;
         }
     }
