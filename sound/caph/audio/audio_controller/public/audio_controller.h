@@ -400,6 +400,28 @@ void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode );
 ****************************************************************************/
 void AUDCTRL_SetAudioMode( AudioMode_t mode );
 #endif
+
+/**
+*   Get Audio Mode From Sink (speaker)
+* 
+*   @param      sink        speaker
+*	@param		mode		(voice call) audio mode 
+*
+*	@return		none
+****************************************************************************/
+void AUDCTRL_GetAudioModeBySink(AUDCTRL_SPEAKER_t sink, AudioMode_t *mode);
+
+/**
+*   Get src and sink from audio mode
+*
+*	@param		mode		(voice call) audio mode 
+*   @param      pMic        microphone
+*   @param      pSpk        speaker
+* 
+*	@return		none
+****************************************************************************/
+void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDCTRL_MICROPHONE_t *pMic, AUDCTRL_SPEAKER_t *pSpk);
+
 /**
 *  @brief  Enable a playback path
 *

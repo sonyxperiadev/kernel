@@ -585,6 +585,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	int priv = kcontrol->private_value;
 	int function = FUNC_OF_CTL(priv);
 	int	stream = STREAM_OF_CTL(priv);
+    int rtn = 0;
 
 	switch(function)
 	{
@@ -611,7 +612,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		{
 			struct snd_ctl_elem_info info;
 			kcontrol->info(kcontrol, &info);
-			AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
+			rtn = AtAudCtlHandler_get(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
 			BCM_AUDIO_DEBUG("%s values [%d %d %d %d %d %d %d]", __FUNCTION__, ucontrol->value.integer.value[0],
 				ucontrol->value.integer.value[1],ucontrol->value.integer.value[2], ucontrol->value.integer.value[3], ucontrol->value.integer.value[4],
 				ucontrol->value.integer.value[5],ucontrol->value.integer.value[6]);
@@ -623,7 +624,7 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			
 	}
 
-	return 0;
+	return rtn;
 }
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -638,7 +639,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	int function = priv&0xFF;
 	Int32	*pSel;
 	int	stream = STREAM_OF_CTL(priv);
-
+    int rtn = 0;
 
 	switch(function)
 	{
@@ -710,7 +711,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		{
 			struct snd_ctl_elem_info info;
 			kcontrol->info(kcontrol, &info);
-			AtAudCtlHandler_put(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
+			rtn = AtAudCtlHandler_put(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
 			break;
 		}
 		default:
@@ -719,7 +720,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	}
 
 
-	return 0;
+	return rtn;
 }
 
 
