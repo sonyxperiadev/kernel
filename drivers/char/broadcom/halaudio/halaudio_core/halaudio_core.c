@@ -2752,7 +2752,7 @@ static void __exit halaudio_exit( void )
    }
 }
 
-module_init( halaudio_init );
+arch_initcall( halaudio_init );
 module_exit( halaudio_exit );
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "HALAUDIO Driver" );
