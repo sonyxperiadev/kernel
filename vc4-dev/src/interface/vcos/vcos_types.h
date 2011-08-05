@@ -53,6 +53,7 @@ typedef enum
    VCOS_ENOSYS,
    VCOS_EEXIST,
    VCOS_ENXIO,
+   VCOS_EINTR
 } VCOS_STATUS_T;
 
 /* Some compilers (MetaWare) won't inline with -g turned on, which then results

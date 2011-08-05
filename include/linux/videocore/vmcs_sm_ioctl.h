@@ -102,7 +102,6 @@ struct vmcs_sm_ioctl_lock_unlock
    unsigned int handle;
 
    /* kernel -> user */
-   unsigned int map_me;
    unsigned int addr;
 };
 
@@ -175,7 +174,6 @@ struct vmcs_sm_ioctl_cache
 #define VMCS_SM_IOCTL_MEM_LOCK_CACHE      _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_LOCK_CACHE, struct vmcs_sm_ioctl_lock_cache )
 #define VMCS_SM_IOCTL_MEM_UNLOCK          _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_UNLOCK, struct vmcs_sm_ioctl_lock_unlock )
 #define VMCS_SM_IOCTL_MEM_RESIZE          _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_RESIZE, struct vmcs_sm_ioctl_resize )
-#define VMCS_SM_IOCTL_MEM_UNMAP           _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_UNMAP, struct vmcs_sm_ioctl_map )
 #define VMCS_SM_IOCTL_MEM_FREE            _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_FREE, struct vmcs_sm_ioctl_free )
 #define VMCS_SM_IOCTL_MEM_FLUSH           _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_FLUSH, struct vmcs_sm_ioctl_cache )
 #define VMCS_SM_IOCTL_MEM_INVALID         _IOR( VMCS_SM_MAGIC_TYPE, VMCS_SM_CMD_INVALID, struct vmcs_sm_ioctl_cache )
