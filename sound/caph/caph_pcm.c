@@ -259,6 +259,9 @@ static int PcmPlaybackOpen(
 		//route the playback to DSP
 		runtime->hw = brcm_voice_playback_hw;
 		chip->streamCtl[substream_number].dev_prop.u.p.drv_type = AUDIO_DRIVER_PLAY_VOICE;
+
+		err = snd_pcm_hw_constraint_step(runtime,0,SNDRV_PCM_HW_PARAM_BUFFER_BYTES,
+										1280); 
 	}
 	else
 	{

@@ -265,6 +265,7 @@
 
 #define		DSP_FEATURE_COMMAND_QBC_STAR_STOPCNT
 #define		DSP_FEATURE_AUDIO_ENHANCEMENT		//	OMEGA, ALPHA, KAPPA, BETA
+#define		DSP_FEATURE_NEW_SMC_RECORDS
 
 
 //******************************************************************

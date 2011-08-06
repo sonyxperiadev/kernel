@@ -278,10 +278,6 @@ typedef struct
 	UInt16  mst_flag;
 } DspCmdDSPAMRMode_t;
 
-typedef struct{
-	UInt16 compressor_output_gain;      
-	UInt16 compressor_gain;    
-}DspCmdCompressGain_t;
 
 typedef struct{
 	UInt16 expander_b;
@@ -292,13 +288,8 @@ typedef struct{
 
 typedef struct{
    UInt16 echo_dual_ec_eclen;
-   UInt16 echo_dual_ec_rinlpcbuffersize;
-   UInt16 echo_dual_e_rincirbuffsizemodij;
    UInt16 echo_dual_ec_dt_th_erl_db;
    UInt16 echo_dual_echno_step_size_gain;
-   UInt16 echo_dual_ec_hangover_cnt;
-   UInt16 echo_dual_ec_vad_th_db;
-   UInt16 echo_dual_dt_hangover_time; 
    } DspCmdEchoDual_t;
 
 //audio end
@@ -315,7 +306,7 @@ typedef struct
 		DspCmdAudioConnect_t	DspCmdAudioConnect;
 		UInt8					DspCmdEchoDlfCngNlpOnOff;
 		Boolean					DspCmdOnOff;
-		Boolean					DspCmdAudioEnable;
+		UInt16					DspCmdAudioEnable;
 		UInt16					DspCmdNlpTimeout;
 		UInt16					DspCmdStableCoefThresh[2];
 		UInt16					DspCmdFarInFilterCoefs[10];
@@ -334,7 +325,6 @@ typedef struct
 		DspCmdSetScellslot_t		DspCmdSetScellSlot;
 #endif
 		DspCmdDSPAMRMode_t		DspCmdDSPAMRMode;
-		DspCmdCompressGain_t	DspCmdCompressGain;
 		UInt16					DspCmdExpAlpha;
 		UInt16					DspCmdExpBeta;
 		DspCmdExpander_t		DspCmdExpander;
@@ -428,17 +418,13 @@ void DSPCMD_AudioConnectDl(
 	UInt8	level,
 	UInt8 channel		//AudioChnl_t	channel
 	);
-void DSPCMD_AudioEnable( Boolean enable	);
+void DSPCMD_AudioEnable( UInt16 enable	);
 void DSPCMD_AudioToneCtrl(
 	Boolean enable,
     UInt8 tone,
 	UInt8 tone_dur
 	);
 
-void DSPCMD_ConfigCompressGain(
-	UInt16 compressor_output_gain,      
-	UInt16 compressor_gain     
-	);
 void DSPCMD_ConfigExpAlpha(
 	UInt16 expander_alpha      
 	);
