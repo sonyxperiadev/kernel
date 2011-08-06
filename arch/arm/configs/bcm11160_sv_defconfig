@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Fri Aug  5 13:43:23 2011
+# Fri Aug  5 17:49:24 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -629,8 +629,6 @@ CONFIG_ANDROID_PMEM=y
 CONFIG_BTHID=m
 # CONFIG_APANIC is not set
 # CONFIG_INTER_PROCESSOR_COMM is not set
-# CONFIG_MONITOR_ADC121C021_I2C is not set
-# CONFIG_MONITOR_BQ27541_I2C is not set
 # CONFIG_STM_TRACE is not set
 # CONFIG_C2PORT is not set
 
@@ -1017,6 +1015,8 @@ CONFIG_POWER_SUPPLY=y
 # CONFIG_BATTERY_MAX17040 is not set
 # CONFIG_BCM_CMP_BATTERY_MULTI is not set
 # CONFIG_BCM_CMP_BATTERY_BQ24616 is not set
+# CONFIG_MONITOR_ADC121C021_I2C is not set
+# CONFIG_MONITOR_BQ27541_I2C is not set
 # CONFIG_HWMON is not set
 # CONFIG_HAPTIC is not set
 # CONFIG_THERMAL is not set

@@ -54,5 +54,3 @@ obj-$(CONFIG_BCM59055_ADC_CHIPSET_API)+= bcm59055-adc_chipset_api.o
 obj-$(CONFIG_BCMPMU_AUDIO)	+= bcmpmu_audio.o
 obj-$(CONFIG_BCMBLT_RFKILL)	+= bcmblt-rfkill.o
 obj-$(CONFIG_BTHID)		+= bthid.o
-obj-$(CONFIG_MONITOR_ADC121C021_I2C)	+= adc121c021_driver.o
-obj-$(CONFIG_MONITOR_BQ27541_I2C)	+= bq27541.o
