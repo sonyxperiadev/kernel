@@ -153,9 +153,7 @@ LEAK_SNR_IDLE		96			// Minimum SNR (dB16) in order to run the 2nd order part of 
 LEAK_SNR_DCH		96			// Minimum SNR (dB16) in order to run the 2nd order part of the time tracking loop during Dedicated mode in dB16
 EQU_SNR_CNTRL		40			// Minimum SNR (dB16) in order to accumulate an individual burst measured time offset in QB during RX control channel
 CONTINUOUS_SPEECH_BFI_THRESH	25	// Stop track if continuous speech BFI over this threshold
-#ifdef	tempInterface_DSP_PARAM_NCELL_FREQ_ERROR_LIMIT
 NCELL_FREQ_ERROR_LIMIT			400 // freq limit for ncell
-#endif
 //
 //
 //	<mode>		Different loop parameters for different operating modes: IDLE, SDCCH, TCH, NULLPAGE
@@ -173,7 +171,7 @@ TRACK_TIME      IDLE  		SCH   0        0     32767		// QBC
 TRACK_TIME      SDCCH 		SCELL 78      -1    1			// QBC
 TRACK_TIME      SDCCH 		NCELL 4        -2    12			// QBC
 TRACK_TIME      SDCCH 		SCH   0        0     32767		// QBC
-TRACK_TIME      TCH   		SCELL 78      -1    1			// 32nd-BC
+TRACK_TIME      TCH   		SCELL 65      -1    1			// 32nd-BC
 TRACK_TIME      TCH   		NCELL 4        -2    12			// QBC
 TRACK_TIME      TCH   		SCH   0        0     32767		// QBC
 TRACK_TIME      TCH_H  		SCELL 78      -1    1			// 32nd-BC
@@ -194,7 +192,7 @@ TRACK_TIME      TBF   		SCH   0        0     32767		// QBC
 //              ===== 		======= ====== ===========
 TRACK_TIME2     IDLE  		32767   0      0                  // QBC
 TRACK_TIME2     SDCCH 		32767   0      0                  // QBC
-TRACK_TIME2     TCH   		32767   -2     311                // 32nd-BC
+TRACK_TIME2     TCH   		32767   -2     280                // 32nd-BC
 TRACK_TIME2     TCH_H  		32767   -2     311                // 32nd-BC
 TRACK_TIME2     NULLPAGE	32767   0      0                  // QBC
 TRACK_TIME2     TBF   		32767   0      0                  // QBC
@@ -228,7 +226,7 @@ FREQ_MAX_ADJ_LOOP_CNT	6		// For 13 bits DAC, the freq DAC/LSB is 3~4Hz, limit to
 //*****************************************************************************
 FACCH_THRESH            	64 		// Stealing flag sum FACCH detect threshold
 HALF_FACCH_THRESH           32 		// Stealing flag sum 1st part of half rate FACCH detect threshold
-HALF_FACCH_METRIC_SCALE		29		// Scale factor for metric bound of half rate 1st part FACCH <= 32
+HALF_FACCH_METRIC_SCALE		36		// Scale factor for metric bound of half rate 1st part FACCH <= 32
 
 MUTE_FACCH_NOISE_FR		 5			// number of FR blocks with audio ramping after FACCH
 MUTE_FACCH_NOISE_HR		 8			// number of HR blocks with audio ramping after FACCH
@@ -366,7 +364,7 @@ DISTANCE_AHS					795		1590	795		795 	795		1710	795		1590
 //	 				afs12.2, afs10.2, afs7.95, afs7.4, afs6.7, afs5.9, afs5.15, afs4.75, ahs7.95, ahs7.4, ahs6.7, ahs5.9, ahs5.15, ahs4.75	wfs12.65 wfs8.85 wfs6.60
 //
 // Viterbi decoder lower bound final metric threshold for BFI. Below this threshold if bfi flag based on CRC is set, UFI will be set
-  METRIC_BOUND_L_WHOLE_SET  		920 	880 	770 	800 	700 	700 	700 	500 	960  	930  	920  	870  	860  	820		920	830	800	 
+  METRIC_BOUND_L_WHOLE_SET  		810    800 	    750    720      720     670     650     500     950     930     910     870     840     820		920	830	800
 // Viterbi decoder upper bound final metric threshold for BFI. Above this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
   METRIC_BOUND_H_WHOLE_SET  		980 	940 	870 	800 	830 	820 	800 	800 	980 	980 	980 	960  	930  	900 	970	950	820
 // Re-encoded BEC lower boundary. Below this threshold if bfi flag based on CRC is NOT set, UFI will NOT be set
@@ -563,7 +561,7 @@ SAIC_DL_SNR_th					0xA0	//SNR threshold determing which DL factor used, 10dB
 SAIC_lo_SNR_DL					100		//DL shift for low SNR channel
 SAIC_hi_SNR_DL					100		//DL shift for hi SNR channel
 SAIC_BP_timing					10		//BP timing offset
-SAIC_soft_th					0x1004		//retrain softbit thrshold
+SAIC_soft_th					0x674		//retrain softbit thrshold
 SAIC_softBitScale				16		//softbit quantization
 
 SAIC_rx_DL_snr					0xc0  	//SNR threshold for DL factor, 12dB
@@ -792,35 +790,3 @@ AUDIO_AGC_UL_MIN_IDX  		9 	9 	9 	9 	9 	9 	9 	9 	9   	// -6dB swing
 // *************************************************************** //
 // *************************************************************** //
 
-//*****************************************************************************
-// 
-//	set up biquad filter coefficients, 
-//	biquad  after gain stage: shared_echo_NLP_fast_downlink_volume_ctrl 
-//	and before compander
-// 
-//*****************************************************************************
-
-// Coefficient order:	bx1  	bx2    	bx0    	ax1    	ax2    	bx1    	bx2    	bx0    	ax1    	ax2
-COMP_BIQUAD_FILTER    0 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000  
-COMP_BIQUAD_FILTER    1 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
-COMP_BIQUAD_FILTER    2 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
-COMP_BIQUAD_FILTER    3 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
-COMP_BIQUAD_FILTER    4 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
-COMP_BIQUAD_FILTER    5 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
-COMP_BIQUAD_FILTER    6 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
-COMP_BIQUAD_FILTER    7 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
-COMP_BIQUAD_FILTER    8 0x0000 	0x0000 	0x4000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000
-
-COMP_BIQUAD_GAIN		16384 	16384	16384	16384	16384	16384	16384	16384	16384	// gain is a function of the filter coefficients. Default is 16384
-
-
-
-//bx1  	bx2    	bx0    	ax1    	ax2    	bx1    	bx2    	bx0    	ax1    	ax2   Boost 3 KHz
-
-//0x0000 	0x0000 	0x2000 	0x0000 	0x0000 	0x0000 	0x0000 	0x4000 	0x0000 	0x0000   		0dB
-//0x17b8 	0x08b9 	0x1fac 	0xc7e0 	0xe923 	0x212c 	0x20d2 	0x4000 	0xdc9b 	0xe0e6   		3dB
-//0x0e67 	0x068d 	0x1fdb 	0xcd5c 	0xe921 	0x19f8 	0x218d 	0x4000 	0xe503 	0xe3d8   		6dB
-//0x07a7 	0x0532 	0x2036 	0xcea2 	0xe8c1 	0x1649 	0x2302 	0x4000 	0xe88a 	0xe6bb   		9dB
-//0x01cc 	0x03a0 	0x1a02 	0xe99f 	0xe8b9 	0x12e8 	0x251a 	0x4000 	0xced6 	0xe854   		12dB
-//0xfe59 	0x02dd 	0x151b 	0xe98e 	0xea01 	0x0f5c 	0x2773 	0x4000 	0xcec3 	0xe7f8   		15dB
-//0xfc3b 	0x028b 	0x1133 	0xe8fe 	0xeac8 	0x0bbb 	0x2a0f 	0x4000 	0xcea4 	0xe7b2   		18dB

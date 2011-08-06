@@ -166,7 +166,7 @@ extern "C" {
 
 #define GPIO_INVALID 0xFF
 
-#if defined (_HERA_)|| defined (_RHEA_)
+#if defined (_HERA_) || defined(_RHEA_) || defined(_SAMOA_)
 #define NR_GPIO	(GPIO124 + 1)
 #else
 #define NR_GPIO	(GPIO63 + 1)
@@ -214,7 +214,11 @@ extern "C" {
 #define GPIO_IRQ_ENABLE          0x01
 #define GPIO_IRQ_DISABLE         0x00
 
+#if defined(CNEON_COMMON) || defined(CNEON_MODEM)
+typedef void (*GPIO_CB)(UInt32);
+#else /* CNEON_COMMON */
 typedef void (*GPIO_CB)(void);
+#endif /* CNEON_COMMON */
 
 /** @addtogroup CSLGPIODrvGroup
 	@{
@@ -381,6 +385,10 @@ void GPIODRV_Disable_Int(UInt32 pin_id);
 *  @return none 
 ******************************************************************************/
 void GPIODRV_Register(GPIO_CB callback, UInt32 pin_id);
+
+#if defined(CNEON_COMMON)
+GPIO_CB GPIODRV_Get_CallBack(UInt32 input_pin);
+#endif /* CNEON_COMMON */
 
 /**
 *

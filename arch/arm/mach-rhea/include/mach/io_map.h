@@ -29,6 +29,7 @@
 #include <asm/memory.h>
 #include <mach/rdb/brcm_rdb_sysmap.h>
 
+#define KONA_PROC_CLK_VA             HW_IO_PHYS_TO_VIRT( PROC_CLK_BASE_ADDR )
 #define KONA_AON_CLK_VA             HW_IO_PHYS_TO_VIRT( AON_CLK_BASE_ADDR )
 #define KONA_AON_RST_VA             HW_IO_PHYS_TO_VIRT( AON_RST_BASE_ADDR )
 #define KONA_ATBFILTER_VA           HW_IO_PHYS_TO_VIRT( ATBFILTER_BASE_ADDR )
@@ -67,7 +68,7 @@
 #define KONA_PKA_VA                 HW_IO_PHYS_TO_VIRT( SEC_PKA_BASE_ADDR )
 #define KONA_PROFTMR_VA             HW_IO_PHYS_TO_VIRT( GTIM_BASE_ADDR )            /* PROFILE TIMER */
 #define KONA_PTIM_VA                HW_IO_PHYS_TO_VIRT( PTIM_BASE_ADDR )            /* Private timer and watchdog */
-#define KONA_PMU_BSC_VA             HW_IO_PHYS_TO_VIRT( PMU_BSC_BASE_ADDR )			/* PMU BSC Controller */ 
+#define KONA_PMU_BSC_VA             HW_IO_PHYS_TO_VIRT( PMU_BSC_BASE_ADDR )			/* PMU BSC Controller */
 
 #define KONA_ROOT_CLK_VA            HW_IO_PHYS_TO_VIRT( ROOT_CLK_BASE_ADDR )
 #define KONA_ROOT_RST_VA            HW_IO_PHYS_TO_VIRT( ROOT_RST_BASE_ADDR )
@@ -125,12 +126,12 @@
 
 #define KONA_BINTC_BASE_ADDR        HW_IO_PHYS_TO_VIRT( BINTC_BASE_ADDR )           /* BModem Int Ctrlr Base Address */
 
-#define KONA_DSI0_VA		    HW_IO_PHYS_TO_VIRT( DSI0_BASE_ADDR )            /* DSI0 Interface */	
-#define KONA_DSI1_VA		    HW_IO_PHYS_TO_VIRT( DSI1_BASE_ADDR )            /* DSI1 Interface */	
+#define KONA_DSI0_VA		    HW_IO_PHYS_TO_VIRT( DSI0_BASE_ADDR )            /* DSI0 Interface */
+#define KONA_DSI1_VA		    HW_IO_PHYS_TO_VIRT( DSI1_BASE_ADDR )            /* DSI1 Interface */
 
-#define KONA_SMI_VA		    HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */	
+#define KONA_SMI_VA		    HW_IO_PHYS_TO_VIRT( SMI_BASE_ADDR )            /* SMI Interface */
 
-#define KONA_MM_CLK_VA		    HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */	
+#define KONA_MM_CLK_VA		    HW_IO_PHYS_TO_VIRT( MM_CLK_BASE_ADDR )            /* MultiMedia CCU */
 
 #define KONA_MM_TECTL_VA	    HW_IO_PHYS_TO_VIRT( MM_TECTL_BASE_ADDR )        /* TECTL interface in MM subsystem */
 
@@ -143,7 +144,7 @@
 #define KONA_AUXMIC_VA      HW_IO_PHYS_TO_VIRT(AUXMIC_BASE_ADDR)
 #define KONA_AUDIOH_VA		HW_IO_PHYS_TO_VIRT(AUDIOH_BASE_ADDR)
 
-#define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */ 
+#define INTERNAL_SRAM_BASE_ADDR		0x34040000                                      /* Internal SRAM (160KB) */
 
 #define KONA_UART_LLDEBUG_VA		KONA_UART0_VA
 #define KONA_UART_LLDEBUG_PA		UARTB_BASE_ADDR

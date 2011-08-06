@@ -1481,6 +1481,20 @@ void RIPCMDQ_EnableRFTxTest( UInt16 mode )
 }
 #endif
 
+#ifdef DSP_FEATURE_DUAL_SIM
+void RIPCMDQ_DualSimTrack(Boolean delta_flag, Boolean sec_ord_loop_enable,UInt16 cell_id_2nd_sim, UInt16 Kd, UInt16 limit)
+{
+	CmdQ_t msg;
+
+	msg.cmd = COMMAND_DUAL_SIM_TRACK; 			// 0xa3 (arg0=Kd, arg1=delta_limit, arg2=delta_flag with zero means disabled)
+	
+	msg.arg0 = Kd;
+	msg.arg1 = limit;
+	msg.arg2 = (UInt16)(delta_flag|(sec_ord_loop_enable<<4)|(cell_id_2nd_sim<<8));
+						
+	SHAREDMEM_PostCmdQ( &msg );
+}
+#endif
 
 void RIPCMDQ_AbortSearch(UInt16 abort_slot,  UInt16 abort_frame)
 {
@@ -1493,5 +1507,18 @@ void RIPCMDQ_AbortSearch(UInt16 abort_slot,  UInt16 abort_frame)
 	msg.arg2 = 0;
 						
 	SHAREDMEM_PostCmdQ( &msg );
+}
+
+void RIPCMDQ_PostCmd_LISR(UInt16 cmd, UInt16 arg0, UInt16 arg1, UInt16 arg2)
+{
+	CmdQ_t msg;
+
+	msg.cmd = cmd; 			
+	
+	msg.arg0 = arg0;
+	msg.arg1 = arg1;
+	msg.arg2 = arg2;
+						
+	SHAREDMEM_PostCmdQ_LISR( &msg );
 }
 
