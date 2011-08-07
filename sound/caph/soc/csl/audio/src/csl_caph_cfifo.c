@@ -21,7 +21,6 @@ Broadcom's express prior written consent.
 #include "chal_caph_cfifo.h"
 #include "csl_aud_drv.h"
 #include "csl_caph.h"
-#include "csl_caph_common.h"
 #include "csl_caph_cfifo.h"
 #include "csl_caph_dma.h"
 #include "log.h"
@@ -39,7 +38,6 @@ Broadcom's express prior written consent.
 extern UInt32 cfifo_arb_key;
 extern CAPH_CFIFO_QUEUE_e cfifo_queue;
 extern CSL_CFIFO_TABLE_t CSL_CFIFO_table[];
-extern CSL_CAPH_HWConfig_Table_t HWConfig_Table[MAX_AUDIO_PATH];
 //****************************************************************************
 //                         L O C A L   S E C T I O N
 //****************************************************************************
@@ -64,7 +62,6 @@ static CHAL_HANDLE handle = 0;
 //****************************************************************************
 // local function declarations
 //****************************************************************************
-//static CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_csl_fifo(CAPH_CFIFO_e chal_fifo);
 static CAPH_CFIFO_e csl_caph_cfifo_get_chal_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo);
 static void csl_caph_cfifo_fifo_init(void);
 static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_cfifo_get_chal_direction(CSL_CAPH_CFIFO_DIRECTION_e direct);
@@ -102,97 +99,6 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataF
 	}
 	return csl_caph_cfifo_ch;
 }
-
-#if 0
-/****************************************************************************
-*  Function Name: CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_csl_fifo(
-*                                         CAPH_CFIFO_e chal_fifo)
-*
-*  Description: get the CSL CFIFO fifo id from CHAL fifo id
-*
-****************************************************************************/
-static CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_csl_fifo(CAPH_CFIFO_e chal_fifo)
-{
-    CSL_CAPH_CFIFO_FIFO_e csl_fifo = CSL_CAPH_CFIFO_NONE;
-
-    switch (chal_fifo)
-    {
-        case CAPH_CFIFO_VOID:
-            csl_fifo = CSL_CAPH_CFIFO_NONE;
-            break;
-			
-         case CAPH_CFIFO1:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO1;
-            break;
-			
-        case CAPH_CFIFO2:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO2;
-            break;	
-			
-        case CAPH_CFIFO3:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO3;
-            break;
-			
-        case CAPH_CFIFO4:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO4;
-            break;
-			
-        case CAPH_CFIFO5:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO5;
-            break;
-			
-        case CAPH_CFIFO6:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO6;
-            break;
-			
-         case CAPH_CFIFO7:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO7;
-            break;
-			
-        case CAPH_CFIFO8:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO8;
-            break;
-			
-        case CAPH_CFIFO9:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO9;
-            break;
-			
-        case CAPH_CFIFO10:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO10;
-            break;
-			
-        case CAPH_CFIFO11:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO11;
-            break;
-			
-        case CAPH_CFIFO12:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO12;
-            break;
-			
-         case CAPH_CFIFO13:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO13;
-            break;
-			
-        case CAPH_CFIFO14:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO14;
-            break;	
-			
-        case CAPH_CFIFO15:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO15;
-            break;
-			
-        case CAPH_CFIFO16:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO16;
-            break;
-			
-        default:
-            xassert(0, chal_fifo);
-		break;	
-    };
-
-    return csl_fifo;
-}
-#endif
 
 /****************************************************************************
 *  Function Name: CAPH_CFIFO_e csl_caph_cfifo_get_chal_fifo(

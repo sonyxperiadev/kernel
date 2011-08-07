@@ -24,7 +24,6 @@ Broadcom's express prior written consent.
 #include "chal_caph_intc.h"
 #include "csl_aud_drv.h"
 #include "csl_caph.h"
-#include "csl_caph_common.h"
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_dma.h"
 

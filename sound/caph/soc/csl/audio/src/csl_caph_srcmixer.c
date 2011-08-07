@@ -23,7 +23,6 @@ Broadcom's express prior written consent.
 #include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "chal_caph_srcmixer.h"
-#include "csl_caph_common.h"
 #include "csl_caph_srcmixer.h"
 
 //#define _DBG_(a)
@@ -110,76 +109,11 @@ static UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e ou
 static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 //static CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_chal_fifo(
 //                                                   CSL_CAPH_SRCM_FIFO_e fifo);
-static void csl_caph_srcmixer_buildRouteConfig(
-                    CSL_CAPH_SRCM_ROUTE_t *pRouteConfig, 
-                    CSL_CAPH_DEVICE_e dev, 
-                    AUDIO_SAMPLING_RATE_t sampleRate, 
-                    AUDIO_BITS_PER_SAMPLE_t bitPerSample);
-
 static CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_getTapOutChnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
 //******************************************************************************
 // local function definitions
 //******************************************************************************
 
-
-/****************************************************************************
-*
-*  Function Name: CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_getTapOutChnl(CSL_CAPH_SRCM_INCHNL_e inChnl)
-*
-*  Description: Get SRCMixer's SRC  TAP Output Channel
-*
-****************************************************************************/
-static CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_getTapOutChnl(CSL_CAPH_SRCM_INCHNL_e inChnl)
-{
-    CSL_CAPH_SRCM_SRC_OUTCHNL_e tapOutChnl = CSL_CAPH_SRCM_TAP_CH_NONE;
-    switch (inChnl)
-    {
-        case CSL_CAPH_SRCM_MONO_CH1: 
-            tapOutChnl = CSL_CAPH_SRCM_TAP_MONO_CH1;
-            break;
-        case CSL_CAPH_SRCM_MONO_CH2:
-            tapOutChnl = CSL_CAPH_SRCM_TAP_MONO_CH2;
-            break;
-        case CSL_CAPH_SRCM_MONO_CH3:  
-            tapOutChnl = CSL_CAPH_SRCM_TAP_MONO_CH3;
-            break;
-        case CSL_CAPH_SRCM_MONO_CH4: 
-            tapOutChnl = CSL_CAPH_SRCM_TAP_MONO_CH4;
-            break;
-        case CSL_CAPH_SRCM_STEREO_CH5: 
-        case CSL_CAPH_SRCM_STEREO_CH5_L: 
-        case CSL_CAPH_SRCM_STEREO_CH5_R: 
-            tapOutChnl = CSL_CAPH_SRCM_TAP_STEREO_CH5;
-            break;
-        default:
-            ;
-    }
-    return tapOutChnl;
-} 
-
-/****************************************************************************
-*
-*  Function Name: void csl_caph_srcmixer_buildRouteConfig(
-*                      CSL_CAPH_SRCM_ROUTE_t *pRouteConfig,
-*                      CSL_CAPH_DEVICE_e dev,
-*                      AUDIO_SAMPLING_RATE_t sampleRate,
-*                      AUDIO_BITS_PER_SAMPLE_t bitPerSample)
-*
-*  Description: Build the route configuration
-*
-****************************************************************************/
-static void csl_caph_srcmixer_buildRouteConfig(
-                    CSL_CAPH_SRCM_ROUTE_t *pRouteConfig, 
-                    CSL_CAPH_DEVICE_e dev, 
-                    AUDIO_SAMPLING_RATE_t sampleRate, 
-                    AUDIO_BITS_PER_SAMPLE_t bitPerSample)
-{
-    pRouteConfig->outChnl = csl_caph_srcmixer_obtain_outchnl(dev);	
-    pRouteConfig->outDataFmt = csl_caph_common_GetSRCMixerOutputDataFormat(dev, bitPerSample);
-    pRouteConfig->outSampleRate = csl_caph_srcmixer_get_srcm_outsamplerate(sampleRate);
-    pRouteConfig->outThres = 0x3; // set to default
-    return;
-}
 /****************************************************************************
 *
 *  Function Name: void csl_caph_srcmixer_set_all_mixingainramp(CHAL_HANDLE handle, UInt16 gain)    
@@ -1202,203 +1136,6 @@ void csl_caph_srcmixer_set_inchnl_status(CSL_CAPH_SRCM_INCHNL_e chnl)
 	return;
 }
 
-
-/****************************************************************************
-*
-*  Function Name: void csl_caph_srcmixer_config(CSL_CAPH_PathID pathID)
-*
-*  Description: configure CAPH srcmixer
-*
-****************************************************************************/
-void csl_caph_srcmixer_config(CSL_CAPH_PathID pathID)    
-{
-    CSL_CAPH_HWConfig_Table_t configTable;    
-    CSL_CAPH_SRCM_INSAMPLERATE_e csl_caph_srcm_insamplerate =CSL_CAPH_SRCMIN_48KHZ;
-    CSL_CAPH_SRCM_OUTSAMPLERATE_e csl_caph_srcm_outsamplerate =CSL_CAPH_SRCMOUT_48KHZ;	
-    CSL_CAPH_DATAFORMAT_e csl_caph_dataformat = CSL_CAPH_16BIT_MONO;
-    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
-
-    configTable = csl_caph_common_GetPath_FromPathID(pathID);
-
-    if (((configTable.source == CSL_CAPH_DEV_MEMORY)
-        ||(configTable.source == CSL_CAPH_DEV_DSP))
-         &&((configTable.sink == CSL_CAPH_DEV_EP)
-	        ||(configTable.sink == CSL_CAPH_DEV_HS)
-	        ||(configTable.sink == CSL_CAPH_DEV_IHF)
-	        ||(configTable.sink == CSL_CAPH_DEV_VIBRA)))
-    { 
-        csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(configTable.src_sampleRate);
-        csl_caph_srcm_outsamplerate = csl_caph_srcmixer_get_srcm_outsamplerate(configTable.snk_sampleRate);
-        csl_caph_dataformat = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
-        // 1. get SRC-Mixer in channel
-        // fixed the SRC-Mixer in channel for DSP: DL is always using ch1
-        if (configTable.source == CSL_CAPH_DEV_DSP)
-            configTable.srcmRoute[0].inChnl = SPEAKER_DL_FROM_DSP_CHNL;
-        else
-		    configTable.srcmRoute[0].inChnl = csl_caph_srcmixer_obtain_inchnl(csl_caph_dataformat, csl_caph_srcm_insamplerate);
-        // 2. set the data format, sr and threshold of input channel
-        configTable.srcmRoute[0].inDataFmt = csl_caph_dataformat;
-        configTable.srcmRoute[0].inSampleRate = csl_caph_srcm_insamplerate;
-        if (configTable.source == CSL_CAPH_DEV_DSP)
-            configTable.srcmRoute[0].inThres = 0x1;
-        else
-            configTable.srcmRoute[0].inThres = 0x3; // set to default
-	    csl_caph_srcmixer_set_inchnl_status(configTable.srcmRoute[0].inChnl);  
-        // 3. set the data format, sr and threshold of output channel
-        configTable.srcmRoute[0].outChnl = csl_caph_srcmixer_obtain_outchnl(configTable.sink);	
-        configTable.srcmRoute[0].outDataFmt = csl_caph_common_GetOutPutDataFormat(configTable.bitPerSample, configTable.sink);
-        configTable.srcmRoute[0].outSampleRate = csl_caph_srcm_outsamplerate;
-        if (configTable.source == CSL_CAPH_DEV_DSP)
-            configTable.srcmRoute[0].outThres = 0x1;
-        else
-            configTable.srcmRoute[0].outThres = 0x3; // set to default
-           
-        // 4. Check whether the mixer gains are already set by 
-        // _SetSinkGain().
-        //If not, then set with the pre-defined value here.
-        if ((configTable.srcmRoute[0].mixGain.mixInGainL == MIX_IN_MUTE)
-            &&(configTable.srcmRoute[0].mixGain.mixInGainR == MIX_IN_MUTE))
-        {
-            configTable.srcmRoute[0].mixGain.mixInGainL		= MIX_IN_PASS;
-	        configTable.srcmRoute[0].mixGain.mixOutCoarseGainL	= BIT_SELECT;
-	   	    configTable.srcmRoute[0].mixGain.mixInGainR		= MIX_IN_PASS;
-    	    configTable.srcmRoute[0].mixGain.mixOutCoarseGainR	= BIT_SELECT;
-        }
-        // 5. save the route config to path table
-        csl_caph_common_SetPathRouteConfig(configTable.pathID, configTable.srcmRoute[0]);
-    }
-    else
-    if (((configTable.source == CSL_CAPH_DEV_ANALOG_MIC)
-         ||(configTable.source == CSL_CAPH_DEV_HS_MIC)       
-         ||(configTable.source == CSL_CAPH_DEV_DIGI_MIC_L)       
-         ||(configTable.source == CSL_CAPH_DEV_DIGI_MIC_R)       
-         ||(configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)       
-         ||(configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))       
-        &&(configTable.sink == CSL_CAPH_DEV_DSP))
-    {
-      	csl_caph_srcm_insamplerate = csl_caph_srcmixer_get_srcm_insamplerate(configTable.src_sampleRate);
-        csl_caph_srcm_outsamplerate = csl_caph_srcmixer_get_srcm_outsamplerate(configTable.snk_sampleRate);    
-        csl_caph_dataformat = csl_caph_common_GetDataFormat(configTable.bitPerSample, configTable.chnlNum);
-        // 1, fixed the SRC-Mixer in channel for DSP: UL_TO_DSP_CHNL is defined in csl_caph.h
-	    if ((configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
-	        ||(configTable.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-        {
-            configTable.srcmRoute[0].inChnl = EANC_MIC_UL_TO_DSP_CHNL;
-        }
-        else
-        {
-            configTable.srcmRoute[0].inChnl = MAIN_MIC_UL_TO_DSP_CHNL;
-        }
- 
-        // 2. set the data format, sr and threshold of input channel
-        configTable.srcmRoute[0].inDataFmt = csl_caph_dataformat;
-        configTable.srcmRoute[0].inSampleRate = csl_caph_srcm_insamplerate;
-        // For dsp, set the thr to 1
-        configTable.srcmRoute[0].inThres = 0x1; // set to default
-        csl_caph_srcmixer_set_inchnl_status(configTable.srcmRoute[0].inChnl);
-        // 3. set the data format, sr and threshold of output channel
-        configTable.srcmRoute[0].tapOutChnl = csl_caph_srcmixer_getTapOutChnl(configTable.srcmRoute[0].inChnl);
-        configTable.srcmRoute[0].outDataFmt = csl_caph_common_GetOutPutDataFormat(configTable.bitPerSample, configTable.sink);
-        configTable.srcmRoute[0].outSampleRate = csl_caph_srcm_outsamplerate; 
-        // This should be set to 0x0 to give an interrupt after every sample.
-        configTable.srcmRoute[0].outThres = 0x0;
-
-        // 4. save the route config to path table
-        csl_caph_common_SetPathRouteConfig(configTable.pathID, configTable.srcmRoute[0]);
-           
-        // 5. The mixer gains are already set by _SetSinkGain().
-    }
- 
-    // 6. Check whether it is SRC only
-    if (configTable.srcmRoute[0].tapOutChnl == CSL_CAPH_SRCM_TAP_CH_NONE) 
-        csl_caph_srcmixer_config_mix_route(configTable.srcmRoute[0]);
-    else
-        csl_caph_srcmixer_config_src_route(configTable.srcmRoute[0]);
-    return;
-}
-
-
-
-
-
-/****************************************************************************
-*
-*  Function Name: void csl_caph_srcmixer_config_forAddingOutputPath(CSL_CAPH_PathID pathID)
-*
-*  Description: configure CAPH srcmixer when adding new mixer output path.
-*
-****************************************************************************/
-void csl_caph_srcmixer_config_forAddingOutputPath(CSL_CAPH_PathID pathID)    
-{
-    CSL_CAPH_HWConfig_Table_t configTable;    
-    CSL_CAPH_SRCM_ROUTE_t routeConfig;
-    memset(&configTable, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
-    memset(&routeConfig, 0, sizeof(CSL_CAPH_SRCM_ROUTE_t));
-
-    configTable = csl_caph_common_GetPath_FromPathID(pathID);
-
-    if (((configTable.source == CSL_CAPH_DEV_MEMORY)
-        ||(configTable.source == CSL_CAPH_DEV_DSP))
-         &&((configTable.sink == CSL_CAPH_DEV_EP)
-	        ||(configTable.sink == CSL_CAPH_DEV_HS)
-	        ||(configTable.sink == CSL_CAPH_DEV_IHF)
-	        ||(configTable.sink == CSL_CAPH_DEV_VIBRA)
-            ||(configTable.sink2 == CSL_CAPH_DEV_EP)
-	        ||(configTable.sink2 == CSL_CAPH_DEV_HS)
-	        ||(configTable.sink2 == CSL_CAPH_DEV_IHF)
-	        ||(configTable.sink2 == CSL_CAPH_DEV_VIBRA)))
-    { 
-        if (configTable.srcmRoute[0].inChnl == CSL_CAPH_SRCM_INCHNL_NONE)
-        {
-            // 1st routeConfig is empty. Copy 2nd routeConfig to it.
-            routeConfig = configTable.srcmRoute[1];
-
-            // 1. set the data format, sr and threshold of output channel
-            csl_caph_srcmixer_buildRouteConfig(
-                    &routeConfig, 
-                    configTable.sink,
-                    configTable.snk_sampleRate,
-                    configTable.bitPerSample);
-
-            // 2. copy mixing gain from 2nd routeConfig.
-            memcpy(&(routeConfig.mixGain), 
-                   &(configTable.srcmRoute[1].mixGain),
-                   sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
-
-            // 3. save the 1st routeConfig to path table
-            csl_caph_common_SetPathRouteConfig(configTable.pathID, routeConfig);
-        }
-        else
-        if (configTable.srcmRoute[1].inChnl == CSL_CAPH_SRCM_INCHNL_NONE)
-        {
-            // 2nd routeConfig is empty. Copy 1st routeConfig to it.
-            routeConfig = configTable.srcmRoute[0];
-
-            // 1. set the data format, sr and threshold of output channel
-            csl_caph_srcmixer_buildRouteConfig(
-                    &routeConfig, 
-                    configTable.sink2,
-                    configTable.snk_sampleRate,
-                    configTable.bitPerSample);
-
-            // 2. copy mixing gain from 1st routeConfig.
-            memcpy(&(routeConfig.mixGain), 
-                   &(configTable.srcmRoute[0].mixGain),
-                   sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
-
-            // 3. save the 2nd routeConfig to path table
-            csl_caph_common_SetPathRouteConfig2(configTable.pathID, routeConfig);
-        }
-    }
-    // 4. Check whether it is SRC only
-    if (routeConfig.tapOutChnl != CSL_CAPH_SRCM_TAP_CH_NONE) 
-        csl_caph_srcmixer_config_src_route(routeConfig);
-    else
-        csl_caph_srcmixer_config_mix_route(routeConfig);
-    return;
-}
-
-
 /****************************************************************************
 *
 *  Function Name: void csl_caph_srcmixer_config_mix_route(CSL_SRCMixer_ROUTE_t routeConfig)
@@ -2060,6 +1797,8 @@ CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAP
 		outChnl = CSL_CAPH_SRCM_TAP_MONO_CH4;
 		break;
 	case CSL_CAPH_SRCM_STEREO_CH5:
+    case CSL_CAPH_SRCM_STEREO_CH5_L: 
+    case CSL_CAPH_SRCM_STEREO_CH5_R: 
 		outChnl = CSL_CAPH_SRCM_TAP_STEREO_CH5;
 		break;
 	default:

@@ -828,51 +828,6 @@ typedef enum
 	CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R,
 } CSL_CAPH_HW_GAIN_e;
 
-#define MAX_BLOCK_NUM	4	//max number of same block in a path
-#define MAX_PATH_LEN	20	//max block number in a path
-typedef enum
-{
-	CAPH_NONE,
-	CAPH_DMA,
-	CAPH_SW,
-	CAPH_CFIFO,
-	CAPH_SRC,
-	CAPH_MIXER,
-	CAPH_TOTAL
-} CAPH_BLOCK_t;
-
-/**
-* CAPH HW configuration
-******************************************************************************/
-typedef struct
-{
-    CSL_CAPH_PathID pathID;
-    CSL_CAPH_STREAM_e streamID;
-    CSL_CAPH_DEVICE_e source;
-    CSL_CAPH_DEVICE_e sink;
-    CSL_CAPH_DEVICE_e sink2;
-    AUDIO_SAMPLING_RATE_t src_sampleRate;
-    AUDIO_SAMPLING_RATE_t snk_sampleRate;	
-    AUDIO_CHANNEL_NUM_t chnlNum;
-    AUDIO_BITS_PER_SAMPLE_t bitPerSample;
-    UInt8* pBuf;
-    UInt8* pBuf2;
-    UInt32 size;
-    CSL_CAPH_DMA_CALLBACK_p dmaCB;
-    Boolean status;
-
-	//for new api
-	CSL_CAPH_CFIFO_FIFO_e cfifo[MAX_BLOCK_NUM];
-	CSL_CAPH_SWITCH_CONFIG_t sw[MAX_BLOCK_NUM];
-	CSL_CAPH_DMA_CHNL_e dma[MAX_BLOCK_NUM];
-	CSL_CAPH_SRCM_ROUTE_t srcmRoute[MAX_BLOCK_NUM];	
-	CAPH_BLOCK_t block[MAX_PATH_LEN];
-	int blockIdx[MAX_PATH_LEN];
-	AUDDRV_PATH_Enum_t audiohPath[2];
-	audio_config_t audiohCfg[2];
-}CSL_CAPH_HWConfig_Table_t;
-
-
 /**
 * CAPH Maximum number of HW Path
 ******************************************************************************/
