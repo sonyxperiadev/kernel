@@ -289,7 +289,7 @@ int enter_idle_state(struct kona_idle_state* state)
 		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	}
 
-	peri_clk_set_hw_gating_ctrl(clk, 1);
+	peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_AUTO);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 	clk_set_crystal_pwr_on_idle(true);
@@ -351,7 +351,7 @@ int enter_idle_state(struct kona_idle_state* state)
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, false);
 	clk_set_crystal_pwr_on_idle(false);
 
-	peri_clk_set_hw_gating_ctrl(clk, 0);
+	peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_SW);
 	return -1;
 }
 
