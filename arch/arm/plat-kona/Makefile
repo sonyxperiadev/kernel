@@ -31,3 +31,5 @@ obj-$(CONFIG_KONA_CPU_PM_HANDLER) += kona_pm.o
 obj-$(CONFIG_KONA_POWER_MGR) += pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += pi_mgr.o
 obj-$(CONFIG_KONA_CPU_FREQ_DRV) += kona_cpufreq.o
+obj-$(CONFIG_KONA_AVS) += kona_avs.o
+

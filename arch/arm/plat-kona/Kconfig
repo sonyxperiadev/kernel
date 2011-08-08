@@ -123,5 +123,9 @@ config KONA_PI_MGR
        help
 	Say Y if you want to enable Kona PI manager driver
 
+config KONA_AVS
+       bool "Enable Kona AVS driver"
+       help
+	Say Y if you want to enable Kona AVS  driver
 endmenu
 

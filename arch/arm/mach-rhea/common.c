@@ -51,6 +51,10 @@
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
 
+#ifdef CONFIG_KONA_AVS
+#include <plat/kona_avs.h>
+#endif
+
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
@@ -457,7 +461,7 @@ static struct platform_device board_i2c_adap_devices[] =
 	},
 };
 
-/* ARM performance monitor unit */ 
+/* ARM performance monitor unit */
 static struct resource pmu_resource = {
        .start = BCM_INT_ID_PMU_IRQ0,
        .end = BCM_INT_ID_PMU_IRQ0,
@@ -623,6 +627,67 @@ static struct platform_device board_kona_otg_platform_device =
 };
 #endif
 
+#ifdef CONFIG_KONA_AVS
+
+static u32 svt_pmos_bin[3+1] = {125,146,171,201};
+static u32 svt_nmos_bin[3+1] = {75,96,126,151};
+
+static u32 lvt_pmos_bin[3+1] = {150,181,216,251};
+static u32 lvt_nmos_bin[3+1] = {90,111,146,181};
+
+u32 svt_silicon_type_lut[3][3] =
+	{
+		{SILICON_TYPE_SLOW,SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL},
+		{SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL},
+		{SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST}
+	};
+
+u32 lvt_silicon_type_lut[3][3] =
+	{
+		{SILICON_TYPE_SLOW,SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL},
+		{SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL},
+		{SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST}
+	};
+
+u32 ss_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xe, 0xe, 0xe,
+						0xe, 0xe, 0xe, 0xe, 0x13, 0x13, 0x13, 0x13};
+
+u32 tt_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xb, 0xb, 0xb,
+							0xb, 0xb, 0xb, 0xb,  0xd,  0xd,  0xd, 0xd};
+
+u32 ff_vlt_tbl[] = { 0x3, 0x3, 0x4, 0x4,0x4, 0x4, 0xb, 0xb,
+							0xb, 0xb, 0xb, 0xb, 0xb, 0xd, 0xd, 0xd };
+static u32* volt_table[] = {ss_vlt_tbl, tt_vlt_tbl, ff_vlt_tbl};
+
+static struct kona_avs_pdata avs_pdata =
+{
+	.avs_type = AVS_TYPE_OPEN,
+	.nmos_bin_size = 3,
+	.pmos_bin_size = 3,
+
+	.svt_pmos_bin = svt_pmos_bin,
+	.svt_nmos_bin = svt_nmos_bin,
+
+	.lvt_pmos_bin = lvt_pmos_bin,
+	.lvt_nmos_bin = lvt_nmos_bin,
+
+	.svt_silicon_type_lut =(u32**) svt_silicon_type_lut,
+	.lvt_silicon_type_lut = (u32**)lvt_silicon_type_lut,
+
+	.volt_table = volt_table,
+	.otp_row = 8,
+};
+
+struct platform_device kona_avs_device = {
+	.name = "kona-avs",
+	.id = -1,
+	.dev = {
+	        .platform_data = &avs_pdata,
+	},
+};
+
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -632,7 +697,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&android_rndis_device,
 	&android_mass_storage_device,
 	&android_usb,
-	&pmu_device,	
+	&pmu_device,
 	&kona_pwm_device,
 	&kona_sspi_spi0_device,
 #ifdef CONFIG_SENSORS_KONA
@@ -649,6 +714,10 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #ifdef CONFIG_USB_DWC_OTG
 	&board_kona_otg_platform_device,
+#endif
+
+#ifdef CONFIG_KONA_AVS
+	&kona_avs_device,
 #endif
 };
 
