@@ -132,8 +132,10 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	err = ControlDeviceNew(card);
 	if (err)
     	goto err;
-	
-
+	//HWDEP interface
+	err = HwdepDeviceNew(card);
+	if (err)
+    	goto err;
 
 	//TODO: other interface
 	
