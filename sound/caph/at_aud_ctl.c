@@ -100,6 +100,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
     int rtn = 0;
     static UInt8 loopback_status = 0, loopback_input = 0, loopback_output = 0;
 	AudioMode_t mode;
+    Int32 pCurSel[2];
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
 
@@ -113,12 +114,23 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 		case 1:	//at*maudmode 1 mode
 			AUDCTRL_GetVoiceSrcSinkByMode(Params[1], &mic, &spk);
-			AUDCTRL_SetAudioMode( Params[1] );
-	//			AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,mic,spk);
+            pCurSel[0] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0]; //save current setting
+            pCurSel[1] = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];
 
             // Update 'VC-SEL' -- 
+			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0] = mic; 
 			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1] = spk;
-			pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[0] = mic; // set mic also
+            AUDCTRL_SetAudioMode( Params[1] );
+
+            if(!pChip->iEnablePhoneCall)//if call is not enabled, we only update the sink and source in pSel, do nothing
+                break;
+			else if(pCurSel[0] == mic && pCurSel[1] == spk) // if call is enabled, but source and sink are not changed, do nothing
+                break;
+			else // switch source/sink
+            {
+                AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, pCurSel[0], pCurSel[1]);
+                AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, mic, spk);
+            }
 			BCM_AUDIO_DEBUG("%s mic %d spk %d mode %d \n", __FUNCTION__, mic,spk,Params[1]);
 			break;
 
