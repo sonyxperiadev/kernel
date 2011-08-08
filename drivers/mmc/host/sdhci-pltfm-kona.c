@@ -472,6 +472,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	host->ops = &sdhci_pltfm_ops;
 	host->irq = platform_get_irq(pdev, 0);
 
+	if (hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE)
+		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
+
 	if (!request_mem_region(iomem->start, resource_size(iomem),
 		mmc_hostname(host->mmc))) {
 		dev_err(&pdev->dev, "cannot request region\n");
@@ -502,6 +505,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
 
 	gDevs[dev->devtype] = dev;
+
 	platform_set_drvdata(pdev, dev);
 
 	snprintf(devname, sizeof(devname), "%s%d", DEV_NAME, pdev->id);
