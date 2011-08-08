@@ -299,6 +299,15 @@ static CSL_I2S_CONFIG_t fmCfg;
 static csl_pcm_config_device_t pcmCfg;
 static csl_pcm_config_tx_t pcmTxCfg; 
 static csl_pcm_config_rx_t pcmRxCfg;
+static char *blockName[CAPH_TOTAL] = { //should match the order of CAPH_BLOCK_t
+		"NONE",
+		"DMA",
+		"SW",
+		"CFIFO",
+		"SRC",
+		"MIXER",
+		"SAME"
+	};
 
 #if defined(ENABLE_DMA_ARM2SP)
 #include "shared.h"
@@ -560,6 +569,22 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDIO_DMA_CB2:: high ch=0x%x \r\n", chnl));
 		csl_caph_dma_set_ddrfifo_status( chnl, CSL_CAPH_READY_HIGH);
 	}
+}
+
+// ==========================================================================
+//
+// Function Name: csl_caph_hwctrl_PrintPath
+//
+// Description: print path info
+//
+// =========================================================================
+static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
+{
+	if(!path) return;
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[0-2]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[0]], path->blockIdx[0], blockName[path->block[1]], path->blockIdx[1], blockName[path->block[2]], path->blockIdx[2]));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[3-5]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[3]], path->blockIdx[3], blockName[path->block[4]], path->blockIdx[4], blockName[path->block[5]], path->blockIdx[5]));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[6-8]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[6]], path->blockIdx[6], blockName[path->block[7]], path->blockIdx[7], blockName[path->block[8]], path->blockIdx[8]));
 }
 
 // ==========================================================================
@@ -1043,6 +1068,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 		if(dataFormat==CSL_CAPH_16BIT_STEREO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_mode = 2;
 		path->audiohPath[audiohSinkPathIdx] = csl_caph_get_audio_path(sink);
 	}
+	csl_caph_hwctrl_PrintPath(path);
 }
 
 // ==========================================================================
@@ -4182,6 +4208,7 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_
 
 	if(!pathID) return RESULT_OK;
 	path = &HWConfig_Table[pathID-1];
+	csl_caph_hwctrl_PrintPath(path);
 
 	if((config.sink == CSL_CAPH_DEV_EP)
 		||(config.sink == CSL_CAPH_DEV_HS)
@@ -4248,6 +4275,7 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_
 		csl_caph_audioh_start(path->audiohPath[0]);
 		if (path->source == CSL_CAPH_DEV_HS_MIC) csl_caph_hwctrl_ACIControl();
     }
+	csl_caph_hwctrl_PrintPath(path);
     return RESULT_OK;
 }
 
@@ -4269,6 +4297,7 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 
 	if(!pathID) return RESULT_OK;
 	path = &HWConfig_Table[pathID-1];
+	csl_caph_hwctrl_PrintPath(path);
 
 	if ((config.sink == CSL_CAPH_DEV_EP)
 		||(config.sink == CSL_CAPH_DEV_HS)
@@ -4309,7 +4338,7 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 			memcpy(&path->block[blockPathIdx], &path->block[blockPathIdx+3], 4*sizeof(CAPH_BLOCK_t));
 			memset(&path->block[blockPathIdx+3], 0, 4*sizeof(int));
 
-			memcpy(&path->blockIdx[blockPathIdx], &path->blockIdx[blockPathIdx+3], 4*sizeof(int));
+			//memcpy(&path->blockIdx[blockPathIdx], &path->blockIdx[blockPathIdx+3], 4*sizeof(int));
 			memset(&path->blockIdx[blockPathIdx+3], 0, 4*sizeof(int));
 			
 			memcpy(&path->sw[swBlockIdx], &path->sw[swBlockIdx+1], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
@@ -4348,6 +4377,7 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 
 		path->audiohPath[0]=AUDDRV_PATH_NONE;
 	}
+	csl_caph_hwctrl_PrintPath(path);
     return RESULT_OK;
 }
 
