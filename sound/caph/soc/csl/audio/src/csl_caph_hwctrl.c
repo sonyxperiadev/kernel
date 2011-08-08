@@ -41,6 +41,7 @@ Broadcom's express prior written consent.
 #include <mach/io_map.h>
 #include "clock.h"
 #include "clk.h"
+#include "audio_plat_defconfig.h"
 #endif
 
 //#define CONFIG_VOICE_LOOPBACK_TEST
@@ -1569,6 +1570,8 @@ static void csl_caph_ControlHWClock(Boolean enable)
     //clk_enable(clkID[1]);
     //clk_set_rate(clkID[1], 156000000);
 #ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
+	clkID[1] = clk_get(NULL, "ssp3_clk");
+	clk_enable(clkID[1]);
 	clkID[1] = clk_get(NULL, "ssp3_audio_clk");
     clk_enable(clkID[1]);
     //clk_set_rate(clkID[1], 156000000);
@@ -1593,6 +1596,8 @@ static void csl_caph_ControlHWClock(Boolean enable)
 
 	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
 #ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
+    clkID[5] = clk_get(NULL, "ssp4_clk");
+    clk_enable(clkID[5]);
     clkID[5] = clk_get(NULL, "ssp4_audio_clk");
     clk_enable(clkID[5]);
     //clk_set_rate(clkID[5], 156000000);
