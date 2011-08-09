@@ -386,14 +386,15 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 }
 #endif
 
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+//*********************************************************************
 //Description:
 //	Get audio mode from sink
 //Parameters
 //	mode -- audio mode
 //	sink -- Sink device coresponding to audio mode
 //Return    none
-//------------------------------------------------------------------------------------------
+//**********************************************************************/
 void AUDCTRL_GetAudioModeBySink(AUDCTRL_SPEAKER_t sink, AudioMode_t *mode)
 {
 	switch(sink)
@@ -434,7 +435,7 @@ void AUDCTRL_GetAudioModeBySink(AUDCTRL_SPEAKER_t sink, AudioMode_t *mode)
 	}
 }
 
-//++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+//*********************************************************************
 //Description:
 //	Get sink and source device by audio mode
 //Parameters
@@ -442,7 +443,7 @@ void AUDCTRL_GetAudioModeBySink(AUDCTRL_SPEAKER_t sink, AudioMode_t *mode)
 //	pMic -- Source device coresponding to audio mode
 //	pSpk -- Sink device coresponding to audio mode
 //Return   none
-//------------------------------------------------------------------------------------------
+//**********************************************************************/
 void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDCTRL_MICROPHONE_t *pMic, AUDCTRL_SPEAKER_t *pSpk)
 {
 
