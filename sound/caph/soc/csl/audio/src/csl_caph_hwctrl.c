@@ -41,7 +41,6 @@ Broadcom's express prior written consent.
 #include <mach/io_map.h>
 #include "clock.h"
 #include "clk.h"
-#include "audio_plat_defconfig.h"
 #endif
 
 //#define CONFIG_VOICE_LOOPBACK_TEST
@@ -584,8 +583,14 @@ static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
 	if(!path) return;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[0-2]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[0]], path->blockIdx[0], blockName[path->block[1]], path->blockIdx[1], blockName[path->block[2]], path->blockIdx[2]));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[3-5]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[3]], path->blockIdx[3], blockName[path->block[4]], path->blockIdx[4], blockName[path->block[5]], path->blockIdx[5]));
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[6-8]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[6]], path->blockIdx[6], blockName[path->block[7]], path->blockIdx[7], blockName[path->block[8]], path->blockIdx[8]));
+	if(path->block[3]!=CAPH_NONE)
+	{
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[3-5]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[3]], path->blockIdx[3], blockName[path->block[4]], path->blockIdx[4], blockName[path->block[5]], path->blockIdx[5]));
+	}
+	if(path->block[6]!=CAPH_NONE)
+	{
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[6-8]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[6]], path->blockIdx[6], blockName[path->block[7]], path->blockIdx[7], blockName[path->block[8]], path->blockIdx[8]));
+	}
 }
 
 // ==========================================================================
@@ -1570,8 +1575,6 @@ static void csl_caph_ControlHWClock(Boolean enable)
     //clk_enable(clkID[1]);
     //clk_set_rate(clkID[1], 156000000);
 #ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
-	clkID[1] = clk_get(NULL, "ssp3_clk");
-	clk_enable(clkID[1]);
 	clkID[1] = clk_get(NULL, "ssp3_audio_clk");
     clk_enable(clkID[1]);
     //clk_set_rate(clkID[1], 156000000);
@@ -1596,8 +1599,6 @@ static void csl_caph_ControlHWClock(Boolean enable)
 
 	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
 #ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
-    clkID[5] = clk_get(NULL, "ssp4_clk");
-    clk_enable(clkID[5]);
     clkID[5] = clk_get(NULL, "ssp4_audio_clk");
     clk_enable(clkID[5]);
     //clk_set_rate(clkID[5], 156000000);
@@ -2956,7 +2957,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	CSL_CAPH_DMA_CHNL_t dmaCHs;    
     CSL_CAPH_HWConfig_DMA_t dmaCHSetting;
     UInt16 threshold = 0;
-	
+	CSL_CAPH_HWConfig_Table_t *path = NULL;
+
     pathID = 0;
     csl_caph_switch_ch = CSL_CAPH_SWITCH_NONE;
     csl_caph_switch_ch2 = CSL_CAPH_SWITCH_NONE;
@@ -3128,6 +3130,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         audioPath = csl_caph_hwctrl_GetPath_FromPathID(pathID);
     }
 
+	path = &HWConfig_Table[pathID-1];
 	if(config.dmaCH) csl_caph_hwctrl_SetPathDMACH(audioPath.pathID, config.dmaCH);
 	if(config.dmaCH2) csl_caph_hwctrl_SetPathDMACH2(audioPath.pathID, config.dmaCH2);
 
@@ -3241,6 +3244,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 			csl_caph_config_blocks(audioPath.pathID, blocks);
 			csl_caph_start_blocks(audioPath.pathID);
+			fmPlayTx = TRUE;
 			return audioPath.pathID;
 		}
     }   
@@ -3268,8 +3272,10 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE};
 			//fm samplerate 8 or 48kHz?
+			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP *****\r\n"));
 
 			csl_caph_config_blocks(audioPath.pathID, blocks);
+			memcpy(&fm_sw_config, & path->sw[0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
 			csl_caph_start_blocks(audioPath.pathID);
 			return audioPath.pathID;
 		}
