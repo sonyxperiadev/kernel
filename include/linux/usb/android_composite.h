@@ -20,11 +20,6 @@
 #include <linux/usb/composite.h>
 #include <linux/if_ether.h>
 
-struct android_usb_function {
-	struct list_head	list;
-	char			*name;
-	int 			(*bind_config)(struct usb_configuration *c);
-};
 
 struct android_usb_product {
 	/* Default product ID. */
@@ -89,14 +84,5 @@ struct usb_ether_platform_data {
 };
 
 extern void android_register_function(struct android_usb_function *f);
-
-extern void android_enable_function(struct usb_function *f, int enable);
-
-/* get the actual interface index under current configuration
- * interface index from set up command doesn't include disabled function
- * for example, if interface 0 and 1  are disabled and interface 2 is enabled.
- * set up command from host specifies interface
- */
-extern u8 composite_actual_intf (struct usb_composite_dev *cdev, u8 intf);
 
 #endif	/* __LINUX_USB_ANDROID_H */

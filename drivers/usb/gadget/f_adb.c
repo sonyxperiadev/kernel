@@ -584,15 +584,6 @@ static int adb_setup(void)
 
 	INIT_LIST_HEAD(&dev->tx_idle);
 
-	dev->cdev = c->cdev;
-	dev->function.name = "adb";
-	dev->function.descriptors = fs_adb_descs;
-	dev->function.hs_descriptors = hs_adb_descs;
-	dev->function.bind = adb_function_bind;
-	dev->function.unbind = adb_function_unbind;
-	dev->function.set_alt = adb_function_set_alt;
-	dev->function.disable = adb_function_disable;
-
 	/* start enabled */
 	/* host can get correct interface information before adb daemon starts*/
 	/* it shows offline before adbd starts */

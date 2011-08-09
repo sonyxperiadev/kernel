@@ -108,6 +108,8 @@ struct usb_function {
 	struct usb_descriptor_header	**hs_descriptors;
 
 	struct usb_configuration	*config;
+	/* disabled is zero if the function is enabled */
+	int				disabled;
 
 	/* REVISIT:  bind() functions can be marked __init, which
 	 * makes trouble for section mismatch analysis.  See if
@@ -136,6 +138,7 @@ struct usb_function {
 	/* internals */
 	struct list_head		list;
 	DECLARE_BITMAP(endpoints, 32);
+	struct device			*dev;
 };
 
 int usb_add_function(struct usb_configuration *, struct usb_function *);
@@ -359,8 +362,8 @@ struct usb_composite_dev {
 	 */
 	int				delayed_status;
 
-	/* protects deactivations and delayed_status counts*/
-	spinlock_t			lock;
+    /* protects deactivations and delayed_status counts*/
+    spinlock_t                      lock;
 };
 
 extern int usb_string_id(struct usb_composite_dev *c);
