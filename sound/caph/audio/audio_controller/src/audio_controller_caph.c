@@ -382,6 +382,8 @@ static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 //static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
 #endif
 
+static telephony_digital_gain_dB = 12;  //dB
+
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -466,6 +468,8 @@ void AUDCTRL_Init (void)
 #endif 
 	
 	csl_caph_hwctrl_init();
+
+	//telephony_digital_gain_dB = 12;  //SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  //dB
 }
 
 //============================================================================
@@ -661,7 +665,6 @@ void AUDCTRL_SetTelephonySpkrVolume(
 
 	Int16 dspDLGain = 0;
 	Int16 pmuGain = 0;
-	Int16	digital_gain_dB = 0;
 	Int16	volume_max = 0;
 	CSL_CAPH_PathID pathID = 0;
 
@@ -669,24 +672,30 @@ void AUDCTRL_SetTelephonySpkrVolume(
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x\n", volume);
 	if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
 	{
+		//actually uses gain unit of dB:
+		telephony_digital_gain_dB = volume;
+		if ( telephony_digital_gain_dB > 36 ) //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max )  //dB
+			telephony_digital_gain_dB = 36; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max; //dB
+
 		if( AUDIO_VOLUME_MUTE == volume )
 		{  //mute
 			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
 		}
 		else
 		{
-			volume_max = 40; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
-			// convert the value in 1st param from range of 2nd_param to range of 3rd_param:
-			digital_gain_dB = AUDIO_Util_Convert1( volume, AUDIO_VOLUME_MAX, volume_max );
-
 #ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 			OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
 
 			omega_voice_parms = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].omega_voice_parms;  //dB
-			audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam, (UInt32)(&(omega_voice_parms[digital_gain_dB])), 0, 0, 0, 0);
+			audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
+								(UInt32)(&(omega_voice_parms[telephony_digital_gain_dB])),  //?
+								0, 0, 0, 0);
 #endif
-			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-						(((Int16)digital_gain_dB - (Int16)volume_max)*100), 0, 0, 0, 0);
+
+			//if parm4 (OV_volume_step) is zero, volumectrl.c will calculate OV volume step based on digital_gain_dB, VOICE_VOLUME_MAX and NUM_SUPPORTED_VOLUME_LEVELS.
+			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain,
+								((telephony_digital_gain_dB - 36) * 100),  //DSP accepts [-3600, 0] mB
+								0, 0, 0, 0);
 			
 			pmuGain = (Int16)AUDDRV_GetPMUGain(GetDeviceFromSpkr(speaker),
 			       	((Int16)volume)<<1);
@@ -704,6 +713,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 	else
 	if (gain_format == AUDIO_GAIN_FORMAT_Q14_1)		
 	{
+/******
 	        dspDLGain = AUDDRV_GetDSPDLGain(
 			GetDeviceFromSpkr(speaker),
 		       	((Int16)volume)<<1);
@@ -721,10 +731,12 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
+******/
 	}
 	else	// If AUDIO_GAIN_FORMAT_Q13_2.
 	if (gain_format == AUDIO_GAIN_FORMAT_Q13_2)		
 	{
+/******
         	dspDLGain = AUDDRV_GetDSPDLGain(
 			GetDeviceFromSpkr(speaker),
 		       	(Int16)volume);
@@ -743,10 +755,12 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
+******/
 	}
 	else	// If AUDIO_GAIN_FORMAT_Q1_14, directly pass to DSP.
 	if (gain_format == AUDIO_GAIN_FORMAT_Q1_14)
 	{
+/******
 	        dspDLGain = AUDDRV_GetDSPDLGain_Q1_14(
 			GetDeviceFromSpkr(speaker),
 		       	(Int16)volume);
@@ -765,8 +779,10 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
-	}	
+******/
+	}
 	// If AUDIO_GAIN_FORMAT_HW_REG, do nothing.
+	/***
 	pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE,
                                         dlSink,
                                         speaker,
@@ -776,9 +792,21 @@ void AUDCTRL_SetTelephonySpkrVolume(
 		audio_xassert(0,pathID);
 		return;
 	}	
+	***/
 #endif
 }
 
+//============================================================================
+//
+// Function Name: AUDCTRL_GetTelephonySpkrVolume
+//
+// Description:   Set dl volume of telephony path
+//
+//============================================================================
+UInt32 AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format )
+{
+	return telephony_digital_gain_dB;
+}
 
 //============================================================================
 //
@@ -1866,31 +1894,6 @@ void AUDCTRL_RemoveRecordMic(
 	// Nothing to do.
 }
 
-//============================================================================
-//
-// Function Name: AUDCTRL_EnableTap
-//
-// Description:   enable a tap path
-//
-//============================================================================
-void AUDCTRL_EnableTap(
-				AUDIO_HW_ID_t			tap,
-				AUDCTRL_SPEAKER_t		spk,
-				AUDIO_SAMPLING_RATE_t	sr
-				)
-{
-}
-
-//============================================================================
-//
-// Function Name: AUDCTRL_DisableTap
-//
-// Description:   disable a tap path
-//
-//============================================================================
-void AUDCTRL_DisableTap( AUDIO_HW_ID_t	tap)
-{
-}
 
 //============================================================================
 //

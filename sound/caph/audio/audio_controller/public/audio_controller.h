@@ -285,6 +285,16 @@ void AUDCTRL_SetTelephonySpkrVolume(
 				);
 
 /**
+*  @brief  Get telephony speaker (downlink) volume
+*
+*  @param  gain_format	(in)  gain format
+*
+*  @return UInt32    dB
+*
+****************************************************************************/
+UInt32 AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format );
+
+/**
 *  @brief  Set telephony speaker (downlink) mute / un-mute
 *
 *  @param  dlSink	(in)  downlink sink
@@ -598,36 +608,6 @@ void AUDCTRL_SetRecordGain(
 				UInt32					gainL,
 				UInt32					gainR
 				);
-
-/**
-*  @brief  Ensable Tap (wideband or voice)
-*
-*  @param  src	(in)  
-*  @param  sink	(in)  
-*  @param  spk	(in)  speaker selection
-*  @param  numCh	(in)  stereo, momo
-*  @param  sr	(in)  sample rate
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_EnableTap(
-				AUDIO_HW_ID_t			tap,
-				AUDCTRL_SPEAKER_t		spk,
-				AUDIO_SAMPLING_RATE_t	sr
-				);
-
-/**
-*  @brief  Disable Tap (wideband or voice)
-*
-*  @param  src	(in)  
-*  @param  sink	(in)  
-*  @param  spr	(in)  speaker selection
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_DisableTap( AUDIO_HW_ID_t tap);
 
 /**
 *  @brief  Set Tap gain (only wideband)

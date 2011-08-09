@@ -313,8 +313,8 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	
 	switch(stream)
 	{
-		case CTL_STREAM_PANEL_PCMOUT1: //pcmout 1
-		case CTL_STREAM_PANEL_PCMOUT2: //pcmout 2
+	case CTL_STREAM_PANEL_PCMOUT1: //pcmout 1
+	case CTL_STREAM_PANEL_PCMOUT2: //pcmout 2
 		{
             AUDIO_HW_ID_t newSink = AUDIO_HW_NONE;
             AUDIO_HW_ID_t curSink = pChip->streamCtl[stream-1].dev_prop.u.p.hw_id;
@@ -374,28 +374,33 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 		}
 		break;
 
-		case CTL_STREAM_PANEL_VOICECALL://voice call
-			if(!pChip->iEnablePhoneCall)//if call is not enabled, we only update the sink and source inpSel, do nothing
-				break;
-			else if(pCurSel[0] == pSel[0] && pCurSel[1] == pSel[1]) //And even call is enabled, but source and sink are not changed, we  do nothing
-				break;
-			else //Swith source/sink
-			{
-                AUDCTRL_SPEAKER_t newMic = pSel[0];
-                AUDCTRL_SPEAKER_t curMic = pCurSel[0];
-                AUDCTRL_SPEAKER_t newSpk = pSel[1];
-                AUDCTRL_SPEAKER_t curSpk = pCurSel[1];
-                	
-				// save the mode first. We should have a spk to mode conversion to handle WB modes.
-				AUDCTRL_SaveAudioModeFlag(pSel[1]);
-                AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, curMic, curSpk);
-                AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, newMic, newSpk);
-			 }
+	case CTL_STREAM_PANEL_VOICECALL://voice call
+
+		// save the mode first. We should have a spk to mode conversion to handle WB modes.
+		AUDCTRL_SaveAudioModeFlag(pSel[1]);
+
+        if(!pChip->iEnablePhoneCall)//if call is not enabled, we only update the sink and source inpSel, do nothing
+	        break;
+        else if(pCurSel[0] == pSel[0] && pCurSel[1] == pSel[1]) //And even call is enabled, but source and sink are not changed, we  do nothing
+	        break;
+        else //Swith source/sink
+        {
+            AUDCTRL_SPEAKER_t newMic = pSel[0];
+            AUDCTRL_SPEAKER_t curMic = pCurSel[0];
+            AUDCTRL_SPEAKER_t newSpk = pSel[1];
+            AUDCTRL_SPEAKER_t curSpk = pCurSel[1];
+                
+	        // save the mode first. We should have a spk to mode conversion to handle WB modes.
+	        AUDCTRL_SaveAudioModeFlag(pSel[1]);
+			//AUDCTRL_SetTelephonyMicSpkr(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
+            AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, curMic, curSpk);
+            AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, newMic, newSpk);
+         }
+		break;
+
+	default:
 			break;
-		default:
-			break;
-		}
-	
+	}
 
 	return 0;
 }
@@ -678,25 +683,24 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			
 			break;
 		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
-			if( pChip->iEnablePhoneCall && (pChip->iMutePhoneCall[0] != ucontrol->value.integer.value[0]||pChip->iMutePhoneCall[1] != ucontrol->value.integer.value[1]) )
+			//if( pChip->iEnablePhoneCall && (pChip->iMutePhoneCall[0] != ucontrol->value.integer.value[0]||pChip->iMutePhoneCall[1] != ucontrol->value.integer.value[1]) )
 			{
 				pChip->iMutePhoneCall[0] = ucontrol->value.integer.value[0]; 
-				pChip->iMutePhoneCall[1] = ucontrol->value.integer.value[1]; 
+				//pChip->iMutePhoneCall[1] = ucontrol->value.integer.value[1]; 
 
 				pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect;
 				
 				BCM_AUDIO_DEBUG("MiscCtrlPut pSel[0] = %ld pMute[0] =%ld pMute[1] =%ld\n", pSel[0], pChip->iMutePhoneCall[0], pChip->iMutePhoneCall[1]);
 			
 				//call audio driver to mute UL/DL
-				
-				AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT, pSel[1], pChip->iMutePhoneCall[1]);
+				//AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT, pSel[1], pChip->iMutePhoneCall[1]);
 				AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,pSel[0],pChip->iMutePhoneCall[0]); //record mute
 			}
-			else
-			{
-				pChip->iMutePhoneCall[0] = ucontrol->value.integer.value[0]; 
-				pChip->iMutePhoneCall[1] = ucontrol->value.integer.value[1]; 
-			}
+			//else
+			//{
+				//pChip->iMutePhoneCall[0] = ucontrol->value.integer.value[0]; 
+				//pChip->iMutePhoneCall[1] = ucontrol->value.integer.value[1]; 
+			//}
 			
 			
 			break;
