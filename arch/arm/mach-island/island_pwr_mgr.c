@@ -53,7 +53,7 @@ struct island_event_table
 	u32 policy_arm_sub;
     u32 policy_hub_aon;
     u32 policy_hub_switchable;
-    u32 policy_mm;
+   /* u32 policy_mm;*/
 };
 
 static const struct island_event_table event_table[] = {
@@ -180,7 +180,7 @@ static const u8 voltage_lookup[] = {
 
 int __init island_pwr_mgr_init()
 {
-	#if 0
+	#if 1
 	struct v0x_spec_i2c_cmd_ptr v_ptr;
 	int i;
 	struct pi* pi;
@@ -199,7 +199,7 @@ int __init island_pwr_mgr_init()
 	island_pi_mgr_init();
 
 	/*MM override is not set by default*/
-	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,false/*clear*/);
+	//pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,false/*clear*/);
 
 		/*Done in two steps to skip DUMMY_EVENT*/
 	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
@@ -238,14 +238,14 @@ int __init island_pwr_mgr_init()
 		cfg.policy = event_table[i].policy_hub_switchable;
 		pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_HUB_SWITCHABLE,&cfg);
 
-		cfg.policy = event_table[i].policy_mm;
-		pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_MM,&cfg);
+		//cfg.policy = event_table[i].policy_mm;
+		//pwr_mgr_event_set_pi_policy(event_table[i].event_id,PI_MGR_PI_ID_MM,&cfg);
 	}
 	/*Init all PIs*/
 #endif
 	island_clock_init();
 
-#if 0
+#if 1
 	for(i = 0; i < PI_MGR_PI_ID_MODEM;i++)
 	{
 		pi = pi_mgr_get(i);

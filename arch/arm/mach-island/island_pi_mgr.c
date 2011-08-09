@@ -94,7 +94,7 @@ static struct pi arm_core_pi =
 				},
 		.ops = &gen_pi_ops,
 	};
-
+#if 0
 /*MM PI CCU Id*/
 static char* mm_ccu[] = {MM_CCU_CLK_NAME_STR};
 struct pi_opp mm_opp = {
@@ -142,7 +142,7 @@ static struct pi mm_pi =
 				},
 		.ops = &gen_pi_ops,
 	};
-
+#endif
 /*HUB PI CCU Id*/
 static char* hub_ccu[] = {KHUB_CCU_CLK_NAME_STR};
 struct pi_opp hub_opp = {
@@ -331,7 +331,7 @@ void __init island_pi_mgr_init()
 	struct pi* pi_list[] =
 	{
 		&arm_core_pi,
-		&mm_pi,
+		/*&mm_pi,*/
 		&hub_pi,
 		&aon_pi,
 		&sub_sys_pi,
