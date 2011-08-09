@@ -234,11 +234,13 @@ void netpoll_poll_dev(struct net_device *dev)
 
 	zap_completion_queue();
 }
+EXPORT_SYMBOL(netpoll_poll_dev);
 
 void netpoll_poll(struct netpoll *np)
 {
 	netpoll_poll_dev(np->dev);
 }
+EXPORT_SYMBOL(netpoll_poll);
 
 /**
  * static void __refill_skbs(struct sk_buff *skb) - put the skb buf back to queue to reuse
@@ -273,6 +275,7 @@ int netpoll_free_memory(void)
 	spin_unlock_irqrestore(&skb_pool.lock, flags);
 	return free_skbs<<10;
 }
+EXPORT_SYMBOL(netpoll_free_memory);
 
 /**
  * void netpoll_recycle_skbs(struct sk_buff *skb) - recycle the skb buf for the logging to avoid to run out of memory
@@ -516,6 +519,7 @@ void netpoll_send_udp(struct netpoll *np, const char *msg, int len)
 
 	netpoll_send_skb(np, skb);
 }
+EXPORT_SYMBOL(netpoll_send_udp);
 
 static void arp_reply(struct sk_buff *skb)
 {
@@ -742,6 +746,7 @@ void netpoll_print_options(struct netpoll *np)
 	printk(KERN_INFO "%s: remote ethernet address %pM\n",
 	                 np->name, np->remote_mac);
 }
+EXPORT_SYMBOL(netpoll_print_options);
 
 int netpoll_parse_options(struct netpoll *np, char *opt)
 {
@@ -810,6 +815,7 @@ int netpoll_parse_options(struct netpoll *np, char *opt)
 	       np->name, cur);
 	return -1;
 }
+EXPORT_SYMBOL(netpoll_parse_options);
 
 int __netpoll_setup(struct netpoll *np)
 {
@@ -975,6 +981,7 @@ put:
 	dev_put(ndev);
 	return err;
 }
+EXPORT_SYMBOL(netpoll_setup);
 
 static int __init netpoll_init(void)
 {
@@ -1035,11 +1042,13 @@ void netpoll_cleanup(struct netpoll *np)
 	dev_put(np->dev);
 	np->dev = NULL;
 }
+EXPORT_SYMBOL(netpoll_cleanup);
 
 int netpoll_trap(void)
 {
 	return atomic_read(&trapped);
 }
+EXPORT_SYMBOL(netpoll_trap);
 
 void netpoll_set_trap(int trap)
 {
@@ -1049,12 +1058,4 @@ void netpoll_set_trap(int trap)
 		atomic_dec(&trapped);
 }
 EXPORT_SYMBOL(netpoll_set_trap);
-EXPORT_SYMBOL(netpoll_trap);
-EXPORT_SYMBOL(netpoll_print_options);
-EXPORT_SYMBOL(netpoll_parse_options);
-EXPORT_SYMBOL(netpoll_setup);
-EXPORT_SYMBOL(netpoll_cleanup);
-EXPORT_SYMBOL(netpoll_send_udp);
-EXPORT_SYMBOL(netpoll_free_memory);
-EXPORT_SYMBOL(netpoll_poll_dev);
-EXPORT_SYMBOL(netpoll_poll);
+
