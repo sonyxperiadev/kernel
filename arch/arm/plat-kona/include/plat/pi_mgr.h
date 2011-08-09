@@ -8,6 +8,7 @@
 #include <mach/pi_mgr.h>
 
 #define PI_MGR_QOS_DEFAULT_VALUE 	0xFFFFFFFF
+#define PI_MGR_DFS_MIN_VALUE 	0
 #define PI_OPP_UNSUPPORTED		0xFFFF
 
 #define PI_MGR_ACTIVE_STATE_INX		0
