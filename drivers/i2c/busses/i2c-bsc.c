@@ -125,6 +125,10 @@ static const unsigned int gBusSpeedTable[BSC_SPD_MAXIMUM] =
 
 static struct proc_dir_entry *gProcParent;
 
+static void bsc_put_clk(struct bsc_i2c_dev *dev);
+static int bsc_enable_clk(struct bsc_i2c_dev *dev);
+static void bsc_disable_clk(struct bsc_i2c_dev *dev);
+
 /*
  * BSC ISR routine
  */
@@ -574,6 +578,8 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 
    down(&dev->xfer_lock);
 
+   bsc_enable_clk(dev);
+
    /* check for high speed */
    if (set_speed == BSC_BUS_SPEED_HS || set_speed == BSC_BUS_SPEED_HS_FPGA)
       dev->high_speed_mode = 1;
@@ -609,6 +615,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    if (rc < 0)
    {
       dev_err(dev->dev, "start command failed\n");
+      bsc_disable_clk(dev);
       up(&dev->xfer_lock);
       return rc;
    }
@@ -626,6 +633,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       if (rc < 0)
       {
          dev_err(dev->dev, "high-speed master code failed\n");
+         bsc_disable_clk(dev);
          up(&dev->xfer_lock);
          return rc;
       }
@@ -635,6 +643,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       {
          dev_err(dev->dev, "one of the slaves replied to the high-speed "
                "master code unexpectedly\n");
+         bsc_disable_clk(dev);
          up(&dev->xfer_lock);
          return -EREMOTEIO;
       }
@@ -737,6 +746,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       bsc_stop_highspeed((uint32_t)dev->virt_base);
    }
    
+   bsc_disable_clk(dev);
    up(&dev->xfer_lock);
    return (rc < 0) ? rc : num;
 
@@ -755,6 +765,7 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       bsc_stop_highspeed((uint32_t)dev->virt_base);
    }
 
+   bsc_disable_clk(dev);
    up(&dev->xfer_lock);
    return rc;
 }
@@ -1093,6 +1104,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		goto err_proc_term;
 	}
 
+	bsc_disable_clk(dev);
 	return 0;
 
 err_proc_term:
