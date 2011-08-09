@@ -305,7 +305,8 @@ typedef enum
 typedef enum
 {
     MOD_GMSK = 0,
-    MOD_8PSK = 1
+    MOD_8PSK = 1,
+    MOD_DUMMY= 2
 } Modulation_t;
 
 

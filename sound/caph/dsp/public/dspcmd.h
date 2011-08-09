@@ -171,7 +171,7 @@ typedef struct
 	UInt16	value;
 } DspCmdRIPWritePRAM_t;
 
-typedef void (*SetCalibrationCb_t)(void);
+typedef void (*SetCalibrationCb_t)();
 
 typedef struct
 {
