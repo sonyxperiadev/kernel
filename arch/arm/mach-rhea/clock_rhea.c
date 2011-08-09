@@ -54,6 +54,7 @@ static struct gen_clk_ops root_ccu_clk_ops =
 /*
 Root CCU clock
 */
+static struct ccu_clk_ops root_ccu_ops;
 static struct ccu_clk CLK_NAME(root) = {
     	.clk = {
 	    .name = ROOT_CCU_CLK_NAME_STR,
@@ -64,6 +65,7 @@ static struct ccu_clk CLK_NAME(root) = {
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.ccu_ops = &root_ccu_ops,
 };
 
 /*
@@ -534,6 +536,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_ARM_CORE,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_CLK_BASE_ADDR),
 	.wr_access_offset = KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -772,6 +775,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -1775,6 +1779,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_HUB_AON,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(AON_CLK_BASE_ADDR),
 	.wr_access_offset = KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -2481,6 +2486,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_CLK_BASE_ADDR),
 	.wr_access_offset = KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -3060,6 +3066,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_CLK_BASE_ADDR),
 	.wr_access_offset = KPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -3986,6 +3993,8 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 /*
 CCU clock name MM
 */
+
+static struct ccu_clk_ops mm_ccu_ops;
 /* CCU freq list */
 static u32 mm_clk_freq_list0[] = DEFINE_ARRAY_ARGS(26000000,26000000);
 static u32 mm_clk_freq_list1[] = DEFINE_ARRAY_ARGS(49920000,49920000);
@@ -4003,6 +4012,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &mm_ccu_ops,
 	.pi_id = PI_MGR_PI_ID_MM,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(MM_CLK_BASE_ADDR),
 	.wr_access_offset = MM_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -4806,10 +4816,101 @@ int root_ccu_clk_init(struct clk* clk)
     reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
+    /* Var_312M and Var_96M clocks default PLL is wrong. correcting here.*/
+    writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+    writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
+
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
 	clk->init = 1;
 	return 0;
+}
+
+/*Override ccu_clk_set_freq_policy for MM as the offset is different*/
+static int mm_ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
+{
+	u32 reg_val = 0;
+	struct pi* pi =  NULL;
+	u32 shift;
+
+	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n",__func__,
+				ccu_clk->clk.name,freq_id,policy_id);
+
+	if(freq_id >= ccu_clk->freq_count)
+		return -EINVAL;
+
+	switch(policy_id)
+	{
+	case CCU_POLICY0:
+		shift = MM_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_SHIFT;
+		break;
+	case CCU_POLICY1:
+		shift = MM_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT;
+		break;
+	case CCU_POLICY2:
+		shift = MM_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_SHIFT;
+		break;
+	case CCU_POLICY3:
+		shift = MM_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_SHIFT;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	/*Make sure that PI is enabled ...*/
+	if(ccu_clk->pi_id != -1)
+	{
+		pi = pi_mgr_get(ccu_clk->pi_id);
+
+		BUG_ON(!pi);
+		pi_enable(pi,1);
+	}
+
+	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+	clk_dbg("%s: reg_val:%08x shift:%d\n",__func__, reg_val, shift);
+	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
+
+	reg_val |= freq_id << shift;
+
+	ccu_write_access_enable(ccu_clk,true);
+	ccu_policy_engine_stop(ccu_clk);
+
+	writel(reg_val, CCU_POLICY_FREQ_REG(ccu_clk));
+	ccu_policy_engine_resume(ccu_clk,
+		ccu_clk->clk.flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
+	ccu_write_access_enable(ccu_clk,false);
+	if(pi)
+		pi_enable(pi,0);
+	return 0;
+}
+
+/*Override ccu_clk_get_freq_policy for MM as the offset is different*/
+static int mm_ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
+{
+	u32 shift, reg_val;
+
+	switch(policy_id)
+	{
+	case CCU_POLICY0:
+		shift = MM_CLK_MGR_REG_POLICY_FREQ_POLICY0_FREQ_SHIFT;
+		break;
+	case CCU_POLICY1:
+		shift = MM_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT;
+		break;
+	case CCU_POLICY2:
+		shift = MM_CLK_MGR_REG_POLICY_FREQ_POLICY2_FREQ_SHIFT;
+		break;
+	case CCU_POLICY3:
+		shift = MM_CLK_MGR_REG_POLICY_FREQ_POLICY3_FREQ_SHIFT;
+		break;
+	default:
+		return CCU_FREQ_INVALID;
+
+	}
+	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
+	clk_dbg("%s: reg_val:%08x shift:%d\n",__func__, reg_val, shift);
+
+	return ((reg_val >> shift) & CCU_FREQ_POLICY_MASK);
 }
 
 
@@ -4986,6 +5087,15 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 
 int __init rhea_clock_init(void)
 {
+
+	/*overrride callback functions b4 registering the clks*/
+
+	/*only write_access function is needed for root ccu*/
+	root_ccu_ops.write_access =  gen_ccu_ops.write_access;
+
+	mm_ccu_ops = gen_ccu_ops;
+	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
+	mm_ccu_ops.get_freq_policy = mm_ccu_get_freq_policy;
 
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 

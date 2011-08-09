@@ -309,8 +309,21 @@ struct bus_clk_ops
 {
 };
 
+struct ccu_clk;
 struct ccu_clk_ops
 {
+	int (*write_access)(struct ccu_clk* ccu_clk, int enable);
+	int (*policy_engine_resume)(struct ccu_clk* ccu_clk, int load_type);
+	int (*policy_engine_stop)(struct ccu_clk* ccu_clk);
+	int (*set_policy_ctrl)(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action);
+	int (*int_enable)(struct ccu_clk* ccu_clk, int int_type, int enable);
+	int (*int_status_clear)(struct ccu_clk* ccu_clk,int int_type);
+	int (*set_freq_policy)(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
+	int (*get_freq_policy)(struct ccu_clk * ccu_clk, int policy_id);
+	int (*set_peri_voltage)(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage);
+	int (*set_voltage)(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
+	int (*set_active_policy)(struct ccu_clk * ccu_clk, u32 policy);
+	int (*get_active_policy)(struct ccu_clk * ccu_clk);
 };
 
 struct clk_div
@@ -498,6 +511,8 @@ extern struct gen_clk_ops gen_bus_clk_ops;
 extern struct gen_clk_ops gen_ccu_clk_ops;
 extern struct gen_clk_ops gen_peri_clk_ops;
 
+extern struct ccu_clk_ops gen_ccu_ops;
+
 extern int clk_debug;
 int __init clock_init(void);
 int __init clock_late_init(void);
@@ -517,7 +532,17 @@ int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
 int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
 int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay);
 int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
-int set_gpio_mux_for_debug_bus(int val);
+int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type);
+int ccu_policy_engine_stop(struct ccu_clk* ccu_clk);
+int ccu_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action);
+int ccu_int_enable(struct ccu_clk* ccu_clk, int int_type, int enable);
+int ccu_int_status_clear(struct ccu_clk* ccu_clk,int int_type);
+int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
+int ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id);
+int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage);
+int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
+int ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy);
+int ccu_get_active_policy(struct ccu_clk * ccu_clk);
 
 #if defined(DEBUG)
 #define	clk_dbg printk

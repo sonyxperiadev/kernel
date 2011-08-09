@@ -183,8 +183,105 @@ int clk_set_rate(struct clk *clk, unsigned long rate)
 }
 EXPORT_SYMBOL(clk_set_rate);
 
-/*CCU access functions */
+
 int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->write_access)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->write_access(ccu_clk, enable);
+}
+EXPORT_SYMBOL(ccu_write_access_enable);
+
+int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->policy_engine_resume)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->policy_engine_resume(ccu_clk, load_type);
+}
+EXPORT_SYMBOL(ccu_policy_engine_resume);
+
+int ccu_policy_engine_stop(struct ccu_clk* ccu_clk)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->policy_engine_stop)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->policy_engine_stop(ccu_clk);
+}
+EXPORT_SYMBOL(ccu_policy_engine_stop);
+
+int ccu_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_policy_ctrl)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->set_policy_ctrl(ccu_clk, pol_ctrl_id, action);
+}
+EXPORT_SYMBOL(ccu_set_policy_ctrl);
+
+int ccu_int_enable(struct ccu_clk* ccu_clk, int int_type, int enable)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->int_enable)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->int_enable(ccu_clk, int_type, enable);
+}
+EXPORT_SYMBOL(ccu_int_enable);
+
+int ccu_int_status_clear(struct ccu_clk* ccu_clk,int int_type)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->int_status_clear)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->int_status_clear(ccu_clk, int_type);
+}
+EXPORT_SYMBOL(ccu_int_status_clear);
+
+int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_freq_policy)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->set_freq_policy(ccu_clk, policy_id, freq_id);
+}
+EXPORT_SYMBOL(ccu_set_freq_policy);
+
+int ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->get_freq_policy)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->get_freq_policy(ccu_clk, policy_id);
+}
+EXPORT_SYMBOL(ccu_get_freq_policy);
+
+int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_peri_voltage)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->set_peri_voltage(ccu_clk, peri_volt_id, voltage);
+}
+EXPORT_SYMBOL(ccu_set_peri_voltage);
+
+int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_voltage)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->set_voltage(ccu_clk, volt_id, voltage);
+}
+EXPORT_SYMBOL(ccu_set_voltage);
+
+int ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->set_active_policy)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->set_active_policy(ccu_clk, policy);
+}
+EXPORT_SYMBOL(ccu_set_active_policy);
+
+int ccu_get_active_policy(struct ccu_clk * ccu_clk)
+{
+	if(IS_ERR_OR_NULL(ccu_clk) || !ccu_clk->ccu_ops || !ccu_clk->ccu_ops->get_active_policy)
+		return -EINVAL;
+	return ccu_clk->ccu_ops->get_active_policy(ccu_clk);
+}
+EXPORT_SYMBOL(ccu_get_active_policy);
+
+/*CCU access functions */
+static int ccu_clk_write_access_enable(struct ccu_clk* ccu_clk, int enable)
 {
 	u32 reg_val = 0;
 
@@ -203,9 +300,8 @@ int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable)
 
 	return 0;
 }
-EXPORT_SYMBOL(ccu_write_access_enable);
 
-int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type)
+static int ccu_clk_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type)
 {
 	u32 reg_val = 0;
 
@@ -235,9 +331,8 @@ int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type)
 
 	return 0;
 }
-EXPORT_SYMBOL(ccu_policy_engine_resume);
 
-int ccu_policy_engine_stop(struct ccu_clk* ccu_clk)
+static int ccu_clk_policy_engine_stop(struct ccu_clk* ccu_clk)
 {
 	u32 reg_val = 0;
 
@@ -250,9 +345,8 @@ int ccu_policy_engine_stop(struct ccu_clk* ccu_clk)
 
 	return 0;
 }
-EXPORT_SYMBOL(ccu_policy_engine_stop);
 
-int ccu_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action)
+static int ccu_clk_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action)
 {
 	u32 reg_val = 0;
 	u32 shift;
@@ -280,9 +374,8 @@ int ccu_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action)
 	writel(reg_val,CCU_POLICY_CTRL_REG(ccu_clk));
 	return 0;
 }
-EXPORT_SYMBOL(ccu_set_policy_ctrl);
 
-int ccu_int_enable(struct ccu_clk* ccu_clk, int int_type, int enable)
+static int ccu_clk_int_enable(struct ccu_clk* ccu_clk, int int_type, int enable)
 {
 	u32 reg_val = 0;
 	u32 shift;
@@ -304,9 +397,8 @@ int ccu_int_enable(struct ccu_clk* ccu_clk, int int_type, int enable)
 	writel(reg_val,CCU_INT_EN_REG(ccu_clk));
 	return 0;
 }
-EXPORT_SYMBOL(ccu_int_enable);
 
-int ccu_int_status_clear(struct ccu_clk* ccu_clk,int int_type)
+static int ccu_clk_int_status_clear(struct ccu_clk* ccu_clk,int int_type)
 {
 	u32 reg_val = 0;
 	u32 shift;
@@ -324,9 +416,8 @@ int ccu_int_status_clear(struct ccu_clk* ccu_clk,int int_type)
 
 	return 0;
 }
-EXPORT_SYMBOL(ccu_int_status_clear);
 
-int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
+static int ccu_clk_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
 {
 	u32 reg_val = 0;
 	struct pi* pi =  NULL;
@@ -382,9 +473,8 @@ int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
 		pi_enable(pi,0);
 	return 0;
 }
-EXPORT_SYMBOL(ccu_set_freq_policy);
 
-int ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
+static int ccu_clk_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
 {
 	u32 shift, reg_val;
 
@@ -411,9 +501,8 @@ int ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
 
 	return ((reg_val >> shift) & CCU_FREQ_POLICY_MASK);
 }
-EXPORT_SYMBOL(ccu_get_freq_policy);
 
-int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage)
+static int ccu_clk_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage)
 {
 
 	u32 shift, reg_val;
@@ -439,9 +528,8 @@ int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage)
 
 	return 0;
 }
-EXPORT_SYMBOL(ccu_set_peri_voltage);
 
-int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage)
+static int ccu_clk_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage)
 {
 	u32 shift, reg_val;
 	u32 reg_addr;
@@ -495,19 +583,34 @@ int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage)
 
 	return 0;
 }
-EXPORT_SYMBOL(ccu_set_voltage);
 
-void ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy)
+static int ccu_clk_set_active_policy(struct ccu_clk * ccu_clk, u32 policy)
 {
 	ccu_clk->active_policy = policy;
+	return 0;
 }
-EXPORT_SYMBOL(ccu_set_active_policy);
 
-int ccu_get_active_policy(struct ccu_clk * ccu_clk)
+static int ccu_clk_get_active_policy(struct ccu_clk * ccu_clk)
 {
 	return ccu_clk->active_policy;
 }
-EXPORT_SYMBOL(ccu_get_active_policy);
+
+struct ccu_clk_ops gen_ccu_ops =
+{
+    .write_access = ccu_clk_write_access_enable,
+    .policy_engine_resume = ccu_clk_policy_engine_resume,
+    .policy_engine_stop = ccu_clk_policy_engine_stop,
+    .set_policy_ctrl = ccu_clk_set_policy_ctrl,
+    .int_enable = ccu_clk_int_enable,
+    .int_status_clear = ccu_clk_int_status_clear,
+    .set_freq_policy = ccu_clk_set_freq_policy,
+    .get_freq_policy = ccu_clk_get_freq_policy,
+    .set_peri_voltage = ccu_clk_set_peri_voltage,
+    .set_voltage = ccu_clk_set_voltage,
+    .set_active_policy = ccu_clk_set_active_policy,
+    .get_active_policy = ccu_clk_get_active_policy,
+};
+
 
 /*Generic ccu ops functions*/
 
@@ -870,6 +973,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	struct peri_clk * peri_clk;
 	int inx;
 	struct clk* src_clk;
+	int insurance;
 
 	if(clk->clk_type != CLK_TYPE_PERI)
 	{
@@ -952,12 +1056,20 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	writel(reg_val, CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
 
 	clk_dbg("%s:%s clk before stprsts start\n",__func__,clk->name);
-	if(enable)
-		while(!(readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset))
-				& peri_clk->stprsts_mask));
-	else
-		while((readl(CCU_REG_ADDR(peri_clk->ccu_clk,
-								  peri_clk->clk_gate_offset))) & peri_clk->stprsts_mask);
+	insurance = 0;
+	if(enable) {
+	    do {
+		reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
+		insurance++;
+	    } while(!(GET_BIT_USING_MASK(reg_val, peri_clk->stprsts_mask)) && insurance < 1000);
+	    WARN_ON(insurance >= 1000);
+	} else {
+	    do {
+		reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, peri_clk->clk_gate_offset));
+		insurance++;
+	    } while((GET_BIT_USING_MASK(reg_val, peri_clk->stprsts_mask)) && insurance < 1000);
+	    WARN_ON(insurance >= 1000);
+	}
 	clk_dbg("%s:%s clk after stprsts start\n",__func__,clk->name);
 	clk_dbg("%s, %s is %s..! \n",__func__, clk->name, enable?"enabled":"disabled");
 
@@ -1161,7 +1273,7 @@ static int peri_clk_set_rate(struct clk* clk, u32 rate)
 	u32 new_rate, reg_val;
 	u32 div, pre_div, src;
 	struct clk_div* clk_div;
-	struct pi* pi = NULL;
+	int insurance;
 
 	if(clk->clk_type != CLK_TYPE_PERI)
 		return -EPERM;
@@ -1178,31 +1290,22 @@ static int peri_clk_set_rate(struct clk* clk, u32 rate)
 		return -EINVAL;
 
 	}
-
-	if(peri_clk->ccu_clk->pi_id != -1)
-	{
-		pi = pi_mgr_get(peri_clk->ccu_clk->pi_id);
-		BUG_ON(pi==NULL);
-		pi_enable(pi,1);
-	}
-
+	/*Clock should be in enabled state to set the rate */
+	clk->ops->enable(clk, 1);
 	clk_div = &peri_clk->clk_div;
-
 	new_rate = peri_clk_calculate_div(peri_clk,rate,&div,&pre_div,&src);
 
 	if(abs(rate - new_rate) > CLK_RATE_MAX_DIFF)
 	{
 		clk_dbg("%s : %s - rate(%d) not supported\n",
 			__func__, clk->name,rate);
-
-		if(pi)
-		{
-			pi_enable(pi,0);
-		}
+		/* Disable clock to compensate enable call before set rate */
+		clk->ops->enable(clk, 0);
 		return -EINVAL;
 	}
 	clk_dbg("%s clock name %s, src_rate %u sel %d div %u pre_div %u new_rate %u\n",
 			__func__, clk->name, peri_clk->src_clk.clk[src]->rate, src, div, pre_div, new_rate);
+
 
 	/* enable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk, true);
@@ -1231,12 +1334,15 @@ static int peri_clk_set_rate(struct clk* clk, u32 rate)
 				clk_div->div_trig_offset, reg_val, clk_div->div_trig_mask);
 		reg_val = SET_BIT_USING_MASK(reg_val, clk_div->div_trig_mask);
 		writel(reg_val, CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->div_trig_offset));
+		insurance = 0;
 		do
 		{
 			reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->div_trig_offset));
 			clk_dbg("reg_val: %08x, trigger bit: %08x\n", reg_val, GET_BIT_USING_MASK(reg_val, clk_div->div_trig_mask));
+			insurance++;
 		}
-		while(!(GET_BIT_USING_MASK(reg_val, clk_div->div_trig_mask)));
+		while((GET_BIT_USING_MASK(reg_val, clk_div->div_trig_mask)) && insurance < 1000);
+		WARN_ON(insurance >= 1000);
 	}
 	if(clk_div->prediv_trig_offset && clk_div->prediv_trig_mask)
 	{
@@ -1245,20 +1351,20 @@ static int peri_clk_set_rate(struct clk* clk, u32 rate)
 				clk_div->div_trig_offset, reg_val, clk_div->div_trig_mask);
 		reg_val = SET_BIT_USING_MASK(reg_val, clk_div->prediv_trig_mask);
 		writel(reg_val, CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->prediv_trig_offset));
+		insurance = 0;
 		do
 		{
 			reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk,	clk_div->prediv_trig_offset));
 			clk_dbg("reg_val: %08x, trigger bit: %08x\n", reg_val, GET_BIT_USING_MASK(reg_val, clk_div->prediv_trig_mask));
+			insurance++;
 		}
-		while(!(GET_BIT_USING_MASK(reg_val, clk_div->prediv_trig_mask)));
+		while((GET_BIT_USING_MASK(reg_val, clk_div->prediv_trig_mask)) && insurance < 1000);
+		WARN_ON(insurance >= 1000);
 	}
 	/* disable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk,false);
-	if(pi)
-	{
-		pi_enable(pi,0);
-	}
-
+	/* Disable clock to compensate enable call before set rate */
+	clk->ops->enable(clk, 0);
 
 	clk_dbg("clock set rate done \n");
 	return 0;
@@ -1544,6 +1650,7 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	struct bus_clk *bus_clk;
 	u32 reg_val;
 	int inx;
+	int insurance;
 
 	if(clk->clk_type != CLK_TYPE_BUS)
 	{
@@ -1605,12 +1712,20 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	writel(reg_val, CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
 
 	clk_dbg("%s:%s clk before stprsts start\n",__func__,clk->name);
-	if(enable)
-		while(!(readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset))
-					& bus_clk->stprsts_mask));
-	else
-		while((readl(CCU_REG_ADDR(bus_clk->ccu_clk,
-							bus_clk->clk_gate_offset))) & bus_clk->stprsts_mask);
+	insurance = 0;
+	if(enable) {
+	    do {
+		reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
+		insurance++;
+	    } while(!(GET_BIT_USING_MASK(reg_val, bus_clk->stprsts_mask)) && insurance < 1000);
+	    WARN_ON(insurance >= 1000);
+	} else {
+	    do {
+		reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
+		insurance++;
+	    } while((GET_BIT_USING_MASK(reg_val, bus_clk->stprsts_mask)) && insurance < 1000);
+	    WARN_ON(insurance >= 1000);
+	}
 
 	clk_dbg("%s:%s clk after stprsts start\n",__func__,clk->name);
 	clk_dbg("%s -- %s is %s\n", __func__, clk->name, enable?"enabled":"disabled");
