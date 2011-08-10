@@ -319,6 +319,16 @@ static struct platform_device board_kona_otg_platform_device =
 
 #if defined(CONFIG_USB_ANDROID)
 /* FIXME borrow GOOGLE vendor ID to use windows driver */
+#define PID_PLATFORM				0xE600
+#define FD_MASS_PRODUCT_ID			0x0001
+#define FD_SICD_PRODUCT_ID			0x0002
+#define FD_VIDEO_PRODUCT_ID			0x0004
+#define FD_DFU_PRODUCT_ID			0x0008
+#define FD_MTP_ID					0x000C
+#define FD_CDC_ACM_PRODUCT_ID		0x0020
+#define FD_CDC_RNDIS_PRODUCT_ID		0x0040
+#define FD_CDC_OBEX_PRODUCT_ID		0x0080
+
 #define GOOGLE_VENDOR_ID        0x18d1
 #define VENDOR_ID               GOOGLE_VENDOR_ID
 #define PRODUCT_ID              0x0001
@@ -392,6 +402,30 @@ static char *usb_functions_rndis_adb[] = {
 #endif
 };
 
+static char *android_function_acm[] = {
+#if defined(CONFIG_USB_ANDROID_ACM)
+	"acm",
+	"acm1",
+#endif
+};
+
+static char *android_function_msc_acm[] = {
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
+	"usb_mass_storage",
+#endif
+#if defined(CONFIG_USB_ANDROID_ACM)
+	"acm",
+	"acm1",
+#endif
+};
+
+static char *android_function_obex[] = {
+#if defined(CONFIG_USB_ANDROID_OBEX)
+	"obex",
+#endif
+};
+
+
 static char *usb_functions_all[] = {
 #if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
    "usb_mass_storage",
@@ -404,6 +438,9 @@ static char *usb_functions_all[] = {
 #endif
 #if defined(CONFIG_USB_ANDROID_ACM)
    "acm",
+#endif
+#if defined (CONFIG_USB_ANDROID_OBEX)
+	"obex",
 #endif
 };
 
@@ -428,6 +465,21 @@ static struct android_usb_product usb_products[] = {
       .num_functions  = ARRAY_SIZE(usb_functions_rndis_adb),
       .functions      = usb_functions_rndis_adb,
    },
+	{
+		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_acm),
+		.functions	=	android_function_acm,
+	},
+	{
+		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID | FD_MASS_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_msc_acm),
+		.functions	=	android_function_msc_acm,
+	},
+	{
+		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_OBEX_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_obex),
+		.functions	=	android_function_obex,
+	},
 };
 
 static struct android_usb_platform_data android_usb_pdata = {
@@ -517,3 +569,4 @@ void __init board_add_common_devices(void)
 	platform_add_devices(board_common_plat_devices,
 			ARRAY_SIZE(board_common_plat_devices));
 }
+
