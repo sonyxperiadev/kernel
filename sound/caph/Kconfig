@@ -13,7 +13,10 @@
 
 config BCM_ALSA_SOUND
 	boolean "Broadcom ALSA sound drivers"
+	select SND_PCM
+	select SND_HWDEP
+	depends on SND
 	depends on (ARCH_RHEA || ARCH_ISLAND || ARCH_SAMOA) && BCM_MODEM
-          default y
+        default y
         help
           Say Y here to activate an ALSA driver frontend to the BRCM endpoint
