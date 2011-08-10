@@ -89,6 +89,8 @@ struct opaque_vceb_host_interface_state_t
 
 #define VCBOOT_VC4_BOOT_ADDR        0xC0000200  // Address to start running videocore from (I think this should be 0x200)
 
+static int vceb_is_videocore_running = 0;
+
 /****************************************************************************
 *
 * vceb_hana_interface_initialize
@@ -104,6 +106,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     //gpiomux_rc_e                gpiomux_rc;
     VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
     VCEB_HOST_INTERFACE_STATE_T state = instance->state;
+    uint32_t                    wakeup_register;
 #if 0
     DBG_LOG( BootTrace, "called, vc_boot_mode = '%s'", vc_boot_mode );
 
@@ -116,7 +119,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
              * it requested that the videocore not be initialized. In this case we fail
              * so that the bootup will proceed.
              */
-    
+
             printk( KERN_ERR "%s: CFG_GLOBAL_VIDEO_BOOT_FROM_KERNEL == 0, vc_boot_mode = '%s'\n", __func__, vc_boot_mode );
             printk( KERN_ERR "%s: Not initializing videocore\n", __func__ );
             return -1;
@@ -142,6 +145,21 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     /* we will have to request the non muxed gpio pins here and set it to the appropriate values */
 
     /*
+     * Check the IPC Awake register to see ig the videocore is already running.
+     * If it's running, then we assume that u-boot initialized it.
+     */
+
+    chal_ipc_query_wakeup_vc( state->ipcHandle, &wakeup_register );
+    if (( wakeup_register & ~1 ) == 0 )
+    {
+        vceb_is_videocore_running = 0;
+    }
+    else
+    {
+        vceb_is_videocore_running = 1;
+    }
+
+    /*
      * FIXME All the hardcoded GPIO pin numbers should be moved to the
      * platform_data! Otherwise this code may not work when we move to another
      * platform that has a different GPIO muxing.
@@ -151,13 +169,13 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
  #define HDMI_HOT_PLUG    62
     if (( rc = gpio_request( HDMI_HOT_PLUG, "hdmi_hot_plug" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'hdmi_hot_plug' ) failed: %d\n", 
+        printk( KERN_ERR "%s: gpio_request( %d, 'hdmi_hot_plug' ) failed: %d\n",
                 __func__, HDMI_HOT_PLUG, rc );
         return -ENODEV;
     }
     //explicitly set the direction for GPIO pins that are muxed to the host
     gpio_direction_input( 62 );   //HDMI_HOT_DETECT
-    
+
 #define CAM1_PWR_EN  50
 #define CAM1_RST_B   51
 #define CAM2_GPIO2   168
@@ -181,7 +199,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
        printk( KERN_ERR "%s: gpio_request( %d, 'cam2_rst_b' ) failed: %d\n",
                __func__, CAM2_RST_B, rc );
        return -ENODEV;
-    }    
+    }
     if (( rc = gpio_request( CAM2_GPIO2, "cam2_gpio2" )) != 0 )
     {
        printk( KERN_ERR "%s: gpio_request( %d, 'cam2_gpio2' ) failed: %d\n",
@@ -199,8 +217,8 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
        printk( KERN_ERR "%s: gpio_request( %d, 'cam2_gpio0' ) failed: %d\n",
                __func__, CAM2_GPIO0, rc );
        return -ENODEV;
-    }     
-    
+    }
+
     //explicitly set the direction for GPIO pins that are muxed to the host
     gpio_direction_output( 50, 1 );    //CAM1_PWR_EN/CAM1_WP
     gpio_direction_output( 51, 0 );    //CAM1_RST_B
@@ -209,14 +227,14 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
 
     {
         /*
-         * Set the entire SRAM to be unsecure. The API only allows is to do 4K at a time 
-         * instead of 3 x 32 register writes. 
+         * Set the entire SRAM to be unsecure. The API only allows is to do 4K at a time
+         * instead of 3 x 32 register writes.
          */
-    
+
         printk( KERN_INFO "calling mpu Memory Region ACCESS_OPEN\n" );
 
         mpuHw_MEMORY_REGION_e       region;
-    
+
         for ( region = mpuHw_MEMORY_REGION_0K_4K; region <= mpuHw_MEMORY_REGION_160K_164K; region ++ )
         {
            mpuHw_setSRAM_AccessMode( region, mpuHw_MEMORY_ACCESS_OPEN );
@@ -229,46 +247,63 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
 
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwr_en, "bl-pwr-en" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwr-en' ) failed: %d\n", 
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwr-en' ) failed: %d\n",
                 __func__, platform_data->disp_gpio.lcd_bl_pwr_en, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_en, "bl-en" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n", 
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n",
                 __func__, platform_data->disp_gpio.lcd_bl_en, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwm, "bl-pwm" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwm' ) failed: %d\n", 
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwm' ) failed: %d\n",
                 __func__, platform_data->disp_gpio.lcd_bl_pwm, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_rst, "lcd-reset" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-reset' ) failed: %d\n", 
+        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-reset' ) failed: %d\n",
                 __func__, platform_data->disp_gpio.lcd_rst, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_pwr_en, "lcd-pwr-en" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-pwr-en' ) failed: %d\n", 
+        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-pwr-en' ) failed: %d\n",
                 __func__, platform_data->disp_gpio.lcd_pwr_en, rc );
         return -ENODEV;
     }
 
-    gpio_direction_output( platform_data->disp_gpio.lcd_rst,       0 );
-    gpio_direction_output( platform_data->disp_gpio.lcd_pwr_en,    0 );
-    gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwm,    0 );
-    gpio_direction_output( platform_data->disp_gpio.lcd_bl_en,     0 );
-    gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwr_en, 0 );
+    if ( vceb_is_videocore_running )
+    {
+        /*
+         * We call gpio_direction_output so that the gpiolib will think that
+         * the pins are configured as output. Otherwise it will falsely
+         * assume that they're inputs.
+         */
 
-    gpio_set_value( platform_data->disp_gpio.lcd_pwr_en,    1 );
-    gpio_set_value( platform_data->disp_gpio.lcd_rst,       1 );
-    gpio_set_value( platform_data->disp_gpio.lcd_bl_pwr_en, 1 );
-    gpio_set_value( platform_data->disp_gpio.lcd_bl_en,     1 );
-    gpio_set_value( platform_data->disp_gpio.lcd_bl_pwm,    1 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_rst,       1 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_pwr_en,    1 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwm,    1 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_bl_en,     1 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwr_en, 1 );
+    }
+    else
+    {
+        gpio_direction_output( platform_data->disp_gpio.lcd_rst,       0 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_pwr_en,    0 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwm,    0 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_bl_en,     0 );
+        gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwr_en, 0 );
+
+        gpio_set_value( platform_data->disp_gpio.lcd_pwr_en,    1 );
+        gpio_set_value( platform_data->disp_gpio.lcd_rst,       1 );
+        gpio_set_value( platform_data->disp_gpio.lcd_bl_pwr_en, 1 );
+        gpio_set_value( platform_data->disp_gpio.lcd_bl_en,     1 );
+        gpio_set_value( platform_data->disp_gpio.lcd_bl_pwm,    1 );
+    }
 
     return 0;
 }
@@ -276,7 +311,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
 /****************************************************************************
 *
 * vceb_hana_interface_shutdown
-* 
+*
 *   Shuts down the videocore interface. This is called prior to suspending
 *   a videocore, and before unloading the module.
 *
@@ -294,7 +329,7 @@ int32_t vceb_hana_interface_shutdown( VCEB_HOST_INTERFACE_INSTANCE_T instance )
 /****************************************************************************
 *
 * vceb_hana_interface_control_run_pin
-* 
+*
 *   Manipulates the RUN pin connected to the videocore.
 *
 ***************************************************************************/
@@ -322,19 +357,26 @@ int32_t vceb_hana_interface_download( VCEB_HOST_INTERFACE_INSTANCE_T instance,
                                  const void * const data,
                                  const uint32_t data_size )
 {
-    VCEB_HOST_INTERFACE_STATE_T state = instance->state;
-    VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
+    if ( vceb_is_videocore_running )
+    {
+        printk( KERN_INFO "VCEB: Internal Videocore already running. Ignoring download request...\n" );
+    }
+    else
+    {
+        VCEB_HOST_INTERFACE_STATE_T state = instance->state;
+        VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
 
-    printk( KERN_INFO "VCEB download address 0x%x data_size = %d\n", 
-          (unsigned int)platform_data->vcMemAddr,
-          data_size );
-    memcpy( (void *)platform_data->vcMemAddr, data, data_size );
-    chal_ipc_wakeup_vc( state->ipcHandle, VCBOOT_VC4_BOOT_ADDR );
+        printk( KERN_INFO "VCEB download address 0x%x data_size = %d\n",
+              (unsigned int)platform_data->vcMemAddr,
+              data_size );
+        memcpy( (void *)platform_data->vcMemAddr, data, data_size );
+        chal_ipc_wakeup_vc( state->ipcHandle, VCBOOT_VC4_BOOT_ADDR );
 
-    /* Wait for Videocore boot. */
-    msleep( 2000 );
+        /* Wait for Videocore boot. */
+        msleep( 2000 );
 
-    printk( KERN_INFO "VCEB: Internal Videocore running...\n" );
+        printk( KERN_INFO "VCEB: Internal Videocore running...\n" );
+    }
 
     return 0;
 }
@@ -347,15 +389,15 @@ int32_t vceb_hana_interface_download( VCEB_HOST_INTERFACE_INSTANCE_T instance,
 *
 ***************************************************************************/
 
-static int vceb_hana_interface_download_status( VCEB_HOST_INTERFACE_INSTANCE_T instance, 
+static int vceb_hana_interface_download_status( VCEB_HOST_INTERFACE_INSTANCE_T instance,
                                                 char *buf,
                                                 int count )
 {
     VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
     char *p = buf;
 
-    uint32_t   clockDebug = *(volatile uint32_t *)( platform_data->vcSramAddr 
-                                                  - IPC_SHARED_MEM_CHANNEL_VC_OFFSET 
+    uint32_t   clockDebug = *(volatile uint32_t *)( platform_data->vcSramAddr
+                                                  - IPC_SHARED_MEM_CHANNEL_VC_OFFSET
                                                   + IPC_SHARED_MEM_CLOCK_DEBUG_OFFSET );
 
     p += sprintf( p, "Stability Test:\n" );
@@ -453,8 +495,8 @@ static int __devinit vceb_hana_interface_probe( struct platform_device *pdev )
     printk( KERN_INFO "vceb_hana: Probing %s ...\n", name );
 
     /*
-     * Since this is for the internal videocore, we assume that it's always 
-     * present. 
+     * Since this is for the internal videocore, we assume that it's always
+     * present.
      */
 
     if ( vceb_linux_host_interface_alloc( &platform_data->create_params,
@@ -483,7 +525,7 @@ static int __devinit vceb_hana_interface_probe( struct platform_device *pdev )
         goto err;
     }
 
-    if ( vceb_linux_create_instance( &platform_data->create_params, 
+    if ( vceb_linux_create_instance( &platform_data->create_params,
                                      instance,
                                      &instance->state->vceb_inst,
                                      &instance->state->linux_inst ))
@@ -501,11 +543,11 @@ static int __devinit vceb_hana_interface_probe( struct platform_device *pdev )
     printk( KERN_INFO "vceb_hana: %s detected\n", name );
     printk( KERN_INFO "vceb_hana: bootFromKernel: %d\n", platform_data->bootFromKernel );
 #if 0
-    printk( KERN_INFO "vceb_hana:    LCD gpiomux: group: %d id: %d label: '%s'\n", 
+    printk( KERN_INFO "vceb_hana:    LCD gpiomux: group: %d id: %d label: '%s'\n",
             platform_data->gpiomux_lcd_group,
             platform_data->gpiomux_lcd_id,
             platform_data->gpiomux_lcd_label );
-    printk( KERN_INFO "vceb_hana:   JTAG gpiomux: group: %d id: %d label: '%s'\n", 
+    printk( KERN_INFO "vceb_hana:   JTAG gpiomux: group: %d id: %d label: '%s'\n",
             platform_data->gpiomux_jtag_group,
             platform_data->gpiomux_jtag_id,
             platform_data->gpiomux_jtag_label );
@@ -543,7 +585,7 @@ err:
 static int vceb_hana_interface_remove( struct platform_device *pdev )
 {
     VCEB_HOST_INTERFACE_INSTANCE_T instance;
-    
+
     instance = platform_get_drvdata( pdev );
     if ( instance != NULL )
     {
@@ -612,7 +654,7 @@ static int __init vceb_hana_interface_init( void )
 /****************************************************************************
 *
 * vceb_hana_interface_exit
-* 
+*
 *   Called when the module is unloaded.
 *
 ***************************************************************************/

@@ -40,7 +40,9 @@ static struct __init pin_config board_pin_config[] = {
        	PIN_BSC_CFG(PMU_SDA, PMU_SDA, 0x08),
 
         /* PWM */
-        PIN_CFG(SIM_DATA,          PWM_O_2,     0, OFF, OFF, 0, 0, 8MA),
+        PIN_CFG(SIM2_DATA,         GPIO,        0, OFF, OFF, 0, 0, 8MA),    /* GPIO 141 - BL_PWR_EN */
+        PIN_CFG(SSP2_FS_2,         GPIO,        0, OFF, OFF, 0, 0, 8MA),    /* GPIO  69 - BL_EN */
+        PIN_CFG(SIM_DATA,          PWM_O_2,     0, OFF, OFF, 0, 0, 8MA),    /*            BL_PWM */
 
         /* Keypad */
         PIN_CFG(NORFLSH_AD_14,     KP_ROW_OP_0, 0, OFF, OFF, 0, 0, 8MA),
@@ -128,37 +130,39 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_BSC_CFG(HDMI_SDA, HDMI_SDA, 0x08),
 
 	/* LCD */
-	PIN_CFG(LCD_R_7, LCD_R_7, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_R_6, LCD_R_6, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_R_5, LCD_R_5, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_R_4, LCD_R_4, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_R_3, LCD_R_3, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_R_2, LCD_R_2, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_R_1, LCD_R_1, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_R_0, LCD_R_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SIM2_CLK, GPIO,    0, OFF, OFF, 0, 0, 8MA), /* GPIO 142 - LCD_PWR_EN */
+    PIN_CFG(SIM_CLK,  GPIO,    0, OFF, OFF, 0, 0, 8MA), /* GPIO 146 - LCD_RESET */
+	PIN_CFG(LCD_R_7,  LCD_R_7, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_R_6,  LCD_R_6, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_R_5,  LCD_R_5, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_R_4,  LCD_R_4, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_R_3,  LCD_R_3, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_R_2,  LCD_R_2, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_R_1,  LCD_R_1, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_R_0,  LCD_R_0, 0, OFF, OFF, 0, 0, 8MA),
 
-        PIN_CFG(LCD_G_7, LCD_G_7, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_G_6, LCD_G_6, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_G_5, LCD_G_5, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_G_4, LCD_G_4, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_G_3, LCD_G_3, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_G_2, LCD_G_2, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_G_1, LCD_G_1, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_G_0, LCD_G_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_G_7, LCD_G_7, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_G_6, LCD_G_6, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_G_5, LCD_G_5, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_G_4, LCD_G_4, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_G_3, LCD_G_3, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_G_2, LCD_G_2, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_G_1, LCD_G_1, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_G_0, LCD_G_0, 0, OFF, OFF, 0, 0, 8MA),
 
-        PIN_CFG(LCD_B_7, LCD_B_7, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_B_6, LCD_B_6, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_B_5, LCD_B_5, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_B_4, LCD_B_4, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_B_3, LCD_B_3, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_B_2, LCD_B_2, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_B_1, LCD_B_1, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_B_0, LCD_B_0, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_B_7, LCD_B_7, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_B_6, LCD_B_6, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_B_5, LCD_B_5, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_B_4, LCD_B_4, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_B_3, LCD_B_3, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_B_2, LCD_B_2, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_B_1, LCD_B_1, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_B_0, LCD_B_0, 0, OFF, OFF, 0, 0, 8MA),
 
-        PIN_CFG(LCD_HSYNC, LCD_HSYNC, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_VSYNC, LCD_VSYNC, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_OE,    LCD_OE,    0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(LCD_PCLK,  LCD_PCLK,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_HSYNC, LCD_HSYNC, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_VSYNC, LCD_VSYNC, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_OE,    LCD_OE,    0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(LCD_PCLK,  LCD_PCLK,  0, OFF, OFF, 0, 0, 8MA),
 
    /* Digital Mics*/
    PIN_CFG( DIGMIC1_CLK, DIGMIC1_CLK, 0, OFF, OFF, 0, 0, 8MA ),

@@ -32,25 +32,25 @@
 /*
  * ===========================================================================
  *  global variable declarations
- * 
+ *
  */
 
 /*
  * ===========================================================================
  *  extern variable declarations
- * 
+ *
  */
 
 /*
  * ===========================================================================
  *  static function prototype declarations
- * 
+ *
  */
 
 /*
  * ===========================================================================
  *  local macro declarations
- * 
+ *
  */
 #if 1
 #define IPC_DBG_OUT(a) {BCM_DBG_OUT(a);}
@@ -71,18 +71,18 @@ typedef struct CHAL_IPC_DEV_T
 /*
  * ===========================================================================
  *  static variables declarations
- * 
+ *
  */
 
 static CHAL_IPC_DEV_T ipcDevice;
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_config
- * 
+ *
  *  Description:
- *       
+ *
  * ******************************************************************************
  */
 CHAL_IPC_HANDLE chal_ipc_config (
@@ -90,7 +90,7 @@ CHAL_IPC_HANDLE chal_ipc_config (
     )
 {
    CHAL_UNUSED( pConfig );
-  
+
    BCM_DBG_ENTER();
 
    ipcDevice.ipc_open_reg_base = KONA_IPC_NS_VA;
@@ -98,15 +98,15 @@ CHAL_IPC_HANDLE chal_ipc_config (
 
    BCM_DBG_EXIT();
    return( (CHAL_IPC_HANDLE)&ipcDevice );
-}    
+}
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_write_mailbox
- * 
+ *
  *  Description:
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_write_mailbox (
@@ -116,7 +116,7 @@ BCM_ERR_CODE chal_ipc_write_mailbox (
     )
 {
    CHAL_IPC_DEV_T *device;
-    
+
    BCM_DBG_ENTER();
 
    /* Check boundry conditions
@@ -126,22 +126,22 @@ BCM_ERR_CODE chal_ipc_write_mailbox (
       BCM_DBG_EXIT();
       return( BCM_ERROR );
    }
-   
+
    device = (CHAL_IPC_DEV_T*)handle;
 
    CHAL_REG_WRITE32( device->ipc_secure_reg_base + IPCSEC_IPCMAIL0_OFFSET + mailboxId*sizeof(uint32_t), value );
 
    BCM_DBG_EXIT();
    return( BCM_SUCCESS );
-}    
+}
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_read_mailbox
- * 
+ *
  *  Description:
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_read_mailbox (
@@ -161,23 +161,50 @@ BCM_ERR_CODE chal_ipc_read_mailbox (
       BCM_DBG_EXIT();
       return( BCM_ERROR );
    }
-   
+
    device = (CHAL_IPC_DEV_T*)handle;
 
    *value = CHAL_REG_READ32( device->ipc_secure_reg_base + IPCSEC_IPCMAIL0_OFFSET + mailboxId*sizeof(uint32_t) );
 
    BCM_DBG_EXIT();
    return( BCM_SUCCESS );
-}    
+}
 
 
 /*
  * ******************************************************************************
- * 
+ *
+ *  Function Name:  chal_ipc_query_wakeup_vc
+ *
+ *  Description: Queries and returns the value of the wakeup register.
+ *
+ * ******************************************************************************
+ */
+
+BCM_ERR_CODE chal_ipc_query_wakeup_vc (
+    CHAL_IPC_HANDLE handle,
+    uint32_t *result
+    )
+{
+   CHAL_IPC_DEV_T *device;
+
+   BCM_DBG_ENTER();
+
+   device = (CHAL_IPC_DEV_T*)handle;
+
+   *result = CHAL_REG_READ32( device->ipc_secure_reg_base + IPCSEC_IPCAWAKE_OFFSET );
+
+   BCM_DBG_EXIT();
+   return( BCM_SUCCESS );
+}
+
+/*
+ * ******************************************************************************
+ *
  *  Function Name:  chal_ipc_wakeup_vc
- * 
+ *
  *  Description: Videocore wakeup
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_wakeup_vc (
@@ -188,7 +215,7 @@ BCM_ERR_CODE chal_ipc_wakeup_vc (
    CHAL_IPC_DEV_T *device;
 
    BCM_DBG_ENTER();
-   
+
    device = (CHAL_IPC_DEV_T*)handle;
 
    CHAL_REG_WRITE32(device->ipc_secure_reg_base + IPCSEC_IPCAWAKE_OFFSET,
@@ -196,7 +223,7 @@ BCM_ERR_CODE chal_ipc_wakeup_vc (
 
    BCM_DBG_EXIT();
    return( BCM_SUCCESS );
-}        
+}
 
 /*
  * ******************************************************************************
@@ -224,11 +251,11 @@ BCM_ERR_CODE chal_ipc_sleep_vc (
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_int_vcset
- * 
+ *
  *  Description: Videocore interrupt set
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_int_vcset (
@@ -239,7 +266,7 @@ BCM_ERR_CODE chal_ipc_int_vcset (
    CHAL_IPC_DEV_T *device;
 
    BCM_DBG_ENTER();
-   
+
    device = (CHAL_IPC_DEV_T*)handle;
 
    if ( irqNum >= IPC_INTERRUPT_SOURCE_MAX )
@@ -247,23 +274,23 @@ BCM_ERR_CODE chal_ipc_int_vcset (
       BCM_DBG_EXIT();
       return( BCM_ERROR );
    }
-   
-   /* Note: since IPCOPEN_IPCASET_OFFSET is a write-only register it is not 
+
+   /* Note: since IPCOPEN_IPCASET_OFFSET is a write-only register it is not
     * valid to read the register then OR the appropriate bit and then write the
     * new value.  Simply write the appropriate bit to set the interrupt */
    CHAL_REG_WRITE32(device->ipc_open_reg_base + IPCOPEN_IPCASET_OFFSET, 1 << irqNum );
 
    BCM_DBG_EXIT();
    return( BCM_SUCCESS );
-}    
+}
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_int_clr
- * 
+ *
  *  Description: Clear ARM interrupt
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_int_clr (
@@ -274,7 +301,7 @@ BCM_ERR_CODE chal_ipc_int_clr (
    CHAL_IPC_DEV_T *device;
 
    BCM_DBG_ENTER();
-   
+
    device = (CHAL_IPC_DEV_T*)handle;
 
    if ( irqNum >= IPC_INTERRUPT_SOURCE_MAX )
@@ -283,22 +310,22 @@ BCM_ERR_CODE chal_ipc_int_clr (
       return( BCM_ERROR );
    }
 
-   /* Note: since IPCOPEN_IPCACLR_OFFSET is a write-only register it is not 
+   /* Note: since IPCOPEN_IPCACLR_OFFSET is a write-only register it is not
     * valid to read the register then OR the appropriate bit and then write the
     * new value.  Simply write the appropriate bit to clear the interrupt */
    CHAL_REG_WRITE32(device->ipc_open_reg_base + IPCOPEN_IPCACLR_OFFSET, 1 << irqNum );
 
    BCM_DBG_EXIT();
    return( BCM_SUCCESS );
-}    
+}
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_int_mode
- * 
+ *
  *  Description: Set ARM interrupt to be secure or open
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_int_secmode (
@@ -310,7 +337,7 @@ BCM_ERR_CODE chal_ipc_int_secmode (
    CHAL_IPC_DEV_T *device;
 
    BCM_DBG_ENTER();
-   
+
    device = (CHAL_IPC_DEV_T*)handle;
 
    if ( irqNum >= IPC_INTERRUPT_SOURCE_MAX )
@@ -318,14 +345,14 @@ BCM_ERR_CODE chal_ipc_int_secmode (
       BCM_DBG_EXIT();
       return( BCM_ERROR );
    }
-   
+
    if ( intMode == IPC_INTERRUPT_MODE_OPEN )
    {
       CHAL_REG_CLRBIT32(device->ipc_secure_reg_base + IPCSEC_IPCASECURE_OFFSET, 1 << irqNum );
-   } 
+   }
    else if ( intMode == IPC_INTERRUPT_MODE_SECURE )
    {
-      CHAL_REG_SETBIT32(device->ipc_secure_reg_base + IPCSEC_IPCASECURE_OFFSET, 1 << irqNum ); 
+      CHAL_REG_SETBIT32(device->ipc_secure_reg_base + IPCSEC_IPCASECURE_OFFSET, 1 << irqNum );
    }
    else
    {
@@ -339,11 +366,11 @@ BCM_ERR_CODE chal_ipc_int_secmode (
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_get_int_status
- * 
+ *
  *  Description: Get ARM interrupt status
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_get_int_status (
@@ -354,7 +381,7 @@ BCM_ERR_CODE chal_ipc_get_int_status (
    CHAL_IPC_DEV_T *device;
 
    BCM_DBG_ENTER();
-   
+
    device = (CHAL_IPC_DEV_T*)handle;
 
    *status = CHAL_REG_READ32( device->ipc_open_reg_base + IPCOPEN_IPCASTATUS_OFFSET );
@@ -365,11 +392,11 @@ BCM_ERR_CODE chal_ipc_get_int_status (
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_get_int_source
- * 
+ *
  *  Description: Get ARM interrupt source
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_get_int_source (
@@ -381,28 +408,28 @@ BCM_ERR_CODE chal_ipc_get_int_source (
    IPC_INTERRUPT_SOURCE i = IPC_INTERRUPT_SOURCE_0;
 
    chal_ipc_get_int_status( handle, &status );
-   
-   for ( i = IPC_INTERRUPT_SOURCE_0; i < IPC_INTERRUPT_SOURCE_MAX; i++ ) 
+
+   for ( i = IPC_INTERRUPT_SOURCE_0; i < IPC_INTERRUPT_SOURCE_MAX; i++ )
    {
-      if ( status & ( IPC_INTERRUPT_STATUS_ENABLED << i ) ) 
+      if ( status & ( IPC_INTERRUPT_STATUS_ENABLED << i ) )
       {
          *source = i;
          return BCM_SUCCESS;
       }
    }
-   
+
    *source = IPC_INTERRUPT_SOURCE_NULL;
    return BCM_ERROR;
-}    
+}
 
 
 /*
  * ******************************************************************************
- * 
+ *
  *  Function Name:  chal_ipc_get_error_status
- * 
+ *
  *  Description: Get ARM error status
- *       
+ *
  * ******************************************************************************
  */
 BCM_ERR_CODE chal_ipc_get_error_status (
@@ -413,7 +440,7 @@ BCM_ERR_CODE chal_ipc_get_error_status (
    CHAL_IPC_DEV_T *device;
 
    BCM_DBG_ENTER();
-   
+
    device = (CHAL_IPC_DEV_T*)handle;
 
    *status = CHAL_REG_READ32(device->ipc_open_reg_base + IPCOPEN_IPCERR_OFFSET );
@@ -429,6 +456,7 @@ BCM_ERR_CODE chal_ipc_get_error_status (
 /* Export the following symbols so that the videocore driver can use them.*/
 
 EXPORT_SYMBOL( chal_ipc_config );
+EXPORT_SYMBOL( chal_ipc_query_wakeup_vc );
 EXPORT_SYMBOL( chal_ipc_wakeup_vc );
 EXPORT_SYMBOL( chal_ipc_sleep_vc );
 
