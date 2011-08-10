@@ -30,7 +30,7 @@ Broadcom's express prior written consent.
 *
 *  @return
 *****************************************************************************/
-void csl_caph_hwctrl_init(CSL_CAPH_HWCTRL_BASE_ADDR_t addr);
+void csl_caph_hwctrl_init(void);
 
 /**
 *
@@ -62,6 +62,40 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 *****************************************************************************/
 Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 
+/**
+*
+*  @brief  switch the source/sink of a caph HW path 
+*
+*  @param   pathID  (in) Caph HW path id
+*  @param   config  (in) Caph HW path configuration parameters
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t csl_caph_hwctrl_SwitchPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config);
+
+
+/**
+*
+*  @brief  Add a source/sink to a caph HW path 
+*
+*  @param   pathID  (in) Caph HW path id
+*  @param   config  (in) Caph HW path configuration parameters
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config);
+
+
+/**
+*
+*  @brief  Remove a source/sink from a caph HW path 
+*
+*  @param   pathID  (in) Caph HW path id
+*  @param   config  (in) Caph HW path configuration parameters
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config);
 
 /**
 *

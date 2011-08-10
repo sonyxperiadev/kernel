@@ -39,9 +39,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
 #include "ossemaphore.h"
-#include "drv_caph.h"
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
@@ -335,8 +333,8 @@ void AUDIO_Ctrl_Process(
 			if(param_resume->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 
-           // Enable the playback the path
-            AUDCTRL_EnablePlay(AUDIO_HW_MEM,	
+           		// Enable the playback the path
+            	AUDCTRL_EnablePlay(AUDIO_HW_MEM,	
                                    param_resume->pdev_prop->u.p.hw_id,
                                    AUDIO_HW_NONE,
                                    param_resume->pdev_prop->u.p.speaker,
@@ -351,8 +349,8 @@ void AUDIO_Ctrl_Process(
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
 
-            AUDCTRL_EnableRecord(param_start->pdev_prop->u.c.hw_id,
-				                     AUDIO_HW_MEM,	
+	        AUDCTRL_EnableRecord(param_start->pdev_prop->u.c.hw_id,
+				                     param_start->pdev_prop->u.c.hw_sink,	
                                      param_start->pdev_prop->u.c.mic,
 				                     param_start->channels,
                                      param_start->rate);
@@ -362,7 +360,10 @@ void AUDIO_Ctrl_Process(
                                   param_start->vol[0],
                                   param_start->vol[1]);
 
-            AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.c.aud_dev); 
+			if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_CAPT_HQ)
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.c.aud_dev); 
+			else
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode); 
 			
         }
         break;
@@ -372,9 +373,12 @@ void AUDIO_Ctrl_Process(
                
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-            AUDCTRL_DisableRecord(param_stop->pdev_prop->u.c.hw_id,
+			if(param_stop->callMode != 1) 
+			{		
+            	AUDCTRL_DisableRecord(param_stop->pdev_prop->u.c.hw_id,
                                       AUDIO_HW_MEM,
-                                      param_stop->pdev_prop->u.c.mic); 
+                                      param_stop->pdev_prop->u.c.mic);
+			}
 
         }
         break;

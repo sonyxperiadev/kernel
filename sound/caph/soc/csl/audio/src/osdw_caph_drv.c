@@ -44,12 +44,11 @@
 #include "nandsdram_memmap.h"
 #include "osdw_caph_drv.h"
 #endif
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #include "assert.h"
 #include "chal_caph_intc.h"
 #include "chip_irq.h"
 #include "csl_caph_dma.h"
-#include "drv_caph.h"
 #include "irqs.h"
 
 //****************************************************************************
@@ -104,6 +103,8 @@ void CAPHIRQ_Init( void )
 //******************************************************************************
 static irqreturn_t caph_audio_isr(int irq, void *dev_id)
 {
+/*	Log_DebugPrintf(LOGID_AUDIO,"CAPHIRQ_ISR: %s ISR called\n",
+		       __FUNCTION__);*/
 	disable_irq_nosync(BCM_INT_ID_CAPH);
 	schedule_work(&audio_play);
 	return IRQ_HANDLED;

@@ -54,7 +54,14 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "bcm_audio_devices.h"
 
+#ifdef	CONFIG_SND_BCM_PREALLOC_MEM_FOR_PCM
+#define	IS_PCM_MEM_PREALLOCATED		1
+#else
+#define	IS_PCM_MEM_PREALLOCATED		0
+#endif
+
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
+//#if 1
 void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
 #define BCM_AUDIO_DEBUG(format, args...) \
 	_bcm_snd_printk(2, __FILE__, __LINE__, format, ##args)
@@ -79,44 +86,6 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 #define	CAPH_MAX_PCM_STREAMS		8
 
 
-
-//Try to keep consistent with Android AudioSystem::audio_devices
-typedef	enum audio_devices {
-	// output devices
-	DEVICE_OUT_EARPIECE = 0x1,
-	DEVICE_OUT_SPEAKER = 0x2,
-	DEVICE_OUT_WIRED_HEADSET = 0x4,
-	DEVICE_OUT_WIRED_HEADPHONE = 0x8,
-	DEVICE_OUT_BLUETOOTH_SCO = 0x10,
-	DEVICE_OUT_BLUETOOTH_SCO_HEADSET = 0x20,
-	DEVICE_OUT_BLUETOOTH_SCO_CARKIT = 0x40,
-	DEVICE_OUT_BLUETOOTH_A2DP = 0x80,
-	DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES = 0x100,
-	DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER = 0x200,
-	DEVICE_OUT_AUX_DIGITAL = 0x400,
-	DEVICE_OUT_DEFAULT = 0x8000,
-	DEVICE_OUT_ALL = (DEVICE_OUT_EARPIECE | DEVICE_OUT_SPEAKER | DEVICE_OUT_WIRED_HEADSET |
-			DEVICE_OUT_WIRED_HEADPHONE | DEVICE_OUT_BLUETOOTH_SCO | DEVICE_OUT_BLUETOOTH_SCO_HEADSET |
-			DEVICE_OUT_BLUETOOTH_SCO_CARKIT | DEVICE_OUT_BLUETOOTH_A2DP | DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES |
-			DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER | DEVICE_OUT_AUX_DIGITAL | DEVICE_OUT_DEFAULT),
-	DEVICE_OUT_ALL_A2DP = (DEVICE_OUT_BLUETOOTH_A2DP | DEVICE_OUT_BLUETOOTH_A2DP_HEADPHONES |
-			DEVICE_OUT_BLUETOOTH_A2DP_SPEAKER),
-
-	// input devices
-	DEVICE_IN_COMMUNICATION = 0x10000,
-	DEVICE_IN_AMBIENT = 0x20000,
-	DEVICE_IN_BUILTIN_MIC = 0x40000,
-	DEVICE_IN_BLUETOOTH_SCO_HEADSET = 0x80000,
-	DEVICE_IN_WIRED_HEADSET = 0x100000,
-	DEVICE_IN_AUX_DIGITAL = 0x200000,
-	DEVICE_IN_VOICE_CALL = 0x400000,
-	DEVICE_IN_BACK_MIC = 0x800000,
-	DEVICE_IN_DEFAULT = 0x80000000,
-
-	DEVICE_IN_ALL = (DEVICE_IN_COMMUNICATION | DEVICE_IN_AMBIENT | DEVICE_IN_BUILTIN_MIC |
-			DEVICE_IN_BLUETOOTH_SCO_HEADSET | DEVICE_IN_WIRED_HEADSET | DEVICE_IN_AUX_DIGITAL |
-			DEVICE_IN_VOICE_CALL | DEVICE_IN_BACK_MIC | DEVICE_IN_DEFAULT)
-}AUDIO_DEVICES_t;
 
 typedef	struct _TCtrl_Line
 {
@@ -154,7 +123,7 @@ typedef struct brcm_alsa_chip
 	Int32	pi32LoopBackTestParam[3];	//loopback test
 	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
-	Int32	pi32SpeechMixOption[2];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
+	Int32	pi32SpeechMixOption[3];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
 	//AT-AUD
 	Int32	i32AtAudHandlerParms[7];	
  } brcm_alsa_chip_t;
@@ -225,6 +194,8 @@ extern int gAudioDebugLevel;
 //functions
 extern int __devinit PcmDeviceNew(struct snd_card *card);
 extern int __devinit ControlDeviceNew(struct snd_card *card);
+int __devinit HwdepDeviceNew(struct snd_card *card);
+
 extern int 	AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params); //at_aud_ctl.c
 extern int	AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params); //at_aud_ctl.c
 

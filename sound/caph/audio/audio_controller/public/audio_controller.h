@@ -141,7 +141,7 @@ typedef enum AUDCTRL_MIX_SELECT_t
 
 typedef struct
 {
-    AUDDRV_PathID           pathID;
+    CSL_CAPH_PathID           pathID;
 	AUDIO_HW_ID_t			src;
 	AUDIO_HW_ID_t			sink;
 	AUDCTRL_MICROPHONE_t	mic;
@@ -400,6 +400,28 @@ void AUDCTRL_SaveAudioModeFlag( AudioMode_t mode );
 ****************************************************************************/
 void AUDCTRL_SetAudioMode( AudioMode_t mode );
 #endif
+
+/**
+*   Get Audio Mode From Sink (speaker)
+* 
+*   @param      sink        speaker
+*	@param		mode		(voice call) audio mode 
+*
+*	@return		none
+****************************************************************************/
+void AUDCTRL_GetAudioModeBySink(AUDCTRL_SPEAKER_t sink, AudioMode_t *mode);
+
+/**
+*   Get src and sink from audio mode
+*
+*	@param		mode		(voice call) audio mode 
+*   @param      pMic        microphone
+*   @param      pSpk        speaker
+* 
+*	@return		none
+****************************************************************************/
+void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDCTRL_MICROPHONE_t *pMic, AUDCTRL_SPEAKER_t *pSpk);
+
 /**
 *  @brief  Enable a playback path
 *
@@ -473,6 +495,23 @@ void AUDCTRL_SetPlayMute(
 				AUDIO_HW_ID_t			sink,
 				AUDCTRL_SPEAKER_t		spk,
 				Boolean					mute
+				);
+
+/********************************************************************
+*  @brief  switch speaker of playback 
+*
+*  @param   curSink	current Sink device
+*  @param   curSpk  current speaker
+*  @param   newSink	new Sink device
+*  @param   newSpk  new speaker
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SwitchPlaySpk(
+				AUDIO_HW_ID_t			curSink,
+				AUDCTRL_SPEAKER_t		curSpk,
+				AUDIO_HW_ID_t			newSink,
+				AUDCTRL_SPEAKER_t		newSpk
 				);
 
 /********************************************************************
@@ -654,7 +693,7 @@ void AUDCTRL_SetGainOnExternalAmp(UInt32 gain);
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded);
+void AUDCTRL_LoadMicGain(CSL_CAPH_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded);
 
 
 /**
@@ -667,7 +706,7 @@ void AUDCTRL_LoadMicGain(AUDDRV_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boole
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_LoadSpkrGain(AUDDRV_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded);
+void AUDCTRL_LoadSpkrGain(CSL_CAPH_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded);
 
 
 
@@ -756,7 +795,7 @@ void AUDCTRL_SetSidetoneLoopback(
 *  @return data configraton. 
 *
 ****************************************************************************/
-AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID);
+AUDCTRL_Config_t AUDCTRL_GetFromTable(CSL_CAPH_PathID pathID);
 
 
 /********************************************************************
@@ -767,7 +806,7 @@ AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID);
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_RemoveFromTable(AUDDRV_PathID pathID);
+void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID);
 
 /********************************************************************
 *  @brief  Add a path to the Table

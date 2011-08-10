@@ -47,8 +47,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
+#include "csl_aud_drv.h"
 
 
 #include "audio_controller.h"
@@ -133,8 +132,10 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	err = ControlDeviceNew(card);
 	if (err)
     	goto err;
-	
-
+	//HWDEP interface
+	err = HwdepDeviceNew(card);
+	if (err)
+    	goto err;
 
 	//TODO: other interface
 	

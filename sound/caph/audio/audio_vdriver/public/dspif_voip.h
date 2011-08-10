@@ -25,91 +25,70 @@
 
 /**
 *
-*  @file  audio_vdriver_voif.h
+*   @file  dspif_voip.h
 *
-*  @brief Audio Virtual Driver API for voice call interface. Used for DyVE for example.
+*   
 *
-*  @note
-*****************************************************************************/
-/**
-*
-* @defgroup Audio    Audio Component
-*
-* @brief    This group defines the common APIs for audio virtual driver
-*
-* @ingroup  Audio Component
-*****************************************************************************/
-
-
-#ifndef	__AUDIO_VDRIVER_VOIF_H__
-#define	__AUDIO_VDRIVER_VOIF_H__
-
-/**
-*
-* @addtogroup Audio
-* @{
-*/
-
+****************************************************************************/
+#ifndef	__DSPIF_VOIP_H__
+#define	__DSPIF_VOIP_H__
+	
+	/**
+	*
+	* @addtogroup Audio
+	* @{
+	*/
+	
 #ifdef __cplusplus
-extern "C" {
+	extern "C" {
 #endif
 
+typedef Boolean (*AUDDRV_VoIP_BufDoneCB_t)( UInt8  *pBuf,  UInt32 nSize, UInt32 streamID);
 
-#define AUDIO_DRIVER_VOIF_ENABLED // flag to turn on/off this object
-
-#ifdef AUDIO_DRIVER_VOIF_ENABLED // real definitions
-
-//*********************************************************************
-/**
-* Prototype of voif callback function.
-*
-*	@param	ulData: The data pointer of the UL data. Input of VOIF processing
-*	@param	dlData: The data pointer of the DL data. Input of VOIF processing and output VOIF processing.
-*	@param	sampleCout: the number of samples, 16 bit per sample
-*	@return	void
-*	@note	The user code use the callback function to get UL/DL data and write back processed DL.	
-**************************************************************************/
-typedef void (*VOIF_CB) (Int16 * ulData, Int16 *dlData, UInt32 sampleCount); 
+typedef Boolean (*VOIPFillFramesCB_t)(UInt32 nSize);
+typedef Boolean (*VOIPDumpFramesCB_t)(UInt8 *pBuf, UInt32 nSize);
 
 
 //*********************************************************************
 /**
-* Start the VOIF processing.
+* Start the data transfer in voip driver.
 *
-*	@param	voifCB: the callback function from application to process the UL/DL data
-*	@return	void
-*	@note		
+*	@return	Result_t
+*	@note	
 **************************************************************************/
-void AUDDRV_VOIF_Start (VOIF_CB voifCB);
+
+Result_t AP_VoIP_StartTelephony(VOIPDumpFramesCB_t telephony_dump_cb,VOIPFillFramesCB_t telephony_fill_cb);
+
 
 //*********************************************************************
 /**
-* Stop the VOIF processing.
+* Stop the data transfer in voip driver.
 *
-*	@param	none
-*	@return	void
-*	@note		
+*	@return	Result_t
+*	@note	
 **************************************************************************/
-void AUDDRV_VOIF_Stop (void);
 
-//*********************************************************************
-/**
-* VOIF processing interrupt handler.
-*
-*	@param	bufferIndex: The index of the ping-pong buffers to hold the DL/DL data
-*	@return	void
-*	@note	Not for application programming.	
-**************************************************************************/
-// voif interrupt handler, called by hw interrupt. 
-void VOIF_ISR_Handler (UInt32 bufferIndex, UInt32 samplingRate);
+Result_t AP_VoIP_StopTelephony( void );
 
-
-#endif // AUDIO_DRIVER_VOIF_ENABLED
-
+//******************************************************************************
+//
+// Function Name:  VoIP_StartMainAMRDecodeEncode()
+//
+// Description:		This function passes the AMR frame to be decoded
+//					from application to DSP and starts its decoding
+//					as well as encoding of the next frame.
+//
+//
+//******************************************************************************
+void VoIP_StartMainAMRDecodeEncode(VP_Mode_AMR_t		decode_amr_mode,	// AMR mode for decoding the next speech frame
+											UInt8				*pBuf,		// buffer carrying the AMR speech data to be decoded
+											UInt16				length,		// number of bytes of the AMR speech data to be decoded
+											VP_Mode_AMR_t		encode_amr_mode,	// AMR mode for encoding the next speech frame
+											Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
+											);
 #ifdef __cplusplus
 }
 #endif
 
+#endif // __DSPIF_VOIP_H__
 
-
-#endif // __AUDIO_VDRIVER_VOIF_H__

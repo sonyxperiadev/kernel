@@ -37,9 +37,7 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-//#include "brcm_rdb_sysmap.h"
-//#include "brcm_rdb_syscfg.h"
+#include "csl_aud_drv.h"
 #include "shared.h"
 #include "dspcmd.h"
 #ifdef CONFIG_AUDIO_BUILD
@@ -52,16 +50,13 @@
 #include "sysparm.h"
 #endif
 #include "ostask.h"
-#include "audioapi_asic.h"
-#include "audio_ipc.h"
 #include "log.h"
 #include "csl_caph.h"
 #include "csl_apcmd.h"
-#include "drv_caph.h"
 #include "csl_caph_audioh.h"
-#include "drv_audio_common.h"
-#include "drv_caph_hwctrl.h"
+#include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
+#include "csl_caph_gain.h"
 #include "platform_mconfig_rhea.h"
 #include "io.h"
 
@@ -105,7 +100,7 @@ static Boolean voicePlayOutpathEnabled = FALSE;  //this is needed because DSPCMD
 static void *sUserCB = NULL;
 #if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 #if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
-static AUDDRV_DEVICE_e sink = AUDDRV_DEV_NONE;
+static CSL_CAPH_DEVICE_e sink = CSL_CAPH_DEV_NONE;
 static AUDDRV_SPKR_Enum_t currSpkr = AUDDRV_SPKR_NONE;
 static AUDDRV_MIC_Enum_t currMic = AUDDRV_MIC_NONE;
 static AUDIO_SAMPLING_RATE_t currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED; 
@@ -121,12 +116,12 @@ static UInt32 audDev = 0;
 //static CB_SetAudioMode_t  client_SetAudioMode = NULL;
 //static CB_SetMusicMode_t  client_SetMusicMode = NULL;
 
-#if	defined(FUSE_COMMS_PROCESSOR)
+//#if	defined(FUSE_COMMS_PROCESSOR)
 static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
 static Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
 static Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);    
 static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain);
-#endif
+//#endif
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -152,11 +147,17 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 				  AUDIO_SAMPLING_RATE_t	sample_rate,
 				  void * pData)
 {
-    AUDDRV_HWCTRL_CONFIG_t config;
+    CSL_CAPH_HWCTRL_CONFIG_t config;
 	UInt32 dev = 0;
     Int16 tempGain = 0;
     AudioMode_t mode = AUDIO_MODE_HANDSET;
 
+#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
+#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))    
+    UInt32 *memAddr = 0;
+
+#endif
+#endif    
     pData = pData;
     mode = mode; 
     tempGain = tempGain;
@@ -164,7 +165,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
                     "\n\r\t* AUDDRV_Telephony_InitHW mic=%d, spkr=%d sample_rate=%ld*\n\r", 
                     mic, speaker, sample_rate);
 	
-    memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+    memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
 #if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 #if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
@@ -174,16 +175,16 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     currSampleRate = sample_rate;
     mode = AUDDRV_GetAudioMode();
     //DL
-    config.streamID = AUDDRV_STREAM_NONE;
+    config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = 0;
-    config.source = AUDDRV_DEV_DSP;
+    config.source = CSL_CAPH_DEV_DSP;
     config.sink = AUDDRV_GetDRVDeviceFromSpkr(speaker);
     dev |= AUDDRV_SPEAKER;
     config.dmaCH = CSL_CAPH_DMA_NONE;    
     //If DSP DL goes to IHF, Sample rate should be 48KHz.
     if (speaker == AUDDRV_SPKR_IHF)
     {
-        config.source = AUDDRV_DEV_DSP_throughMEM;
+        config.source = CSL_CAPH_DEV_DSP_throughMEM;
     	config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
     }
     else
@@ -192,7 +193,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     }
     config.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;	
 
-	if(config.sink == AUDDRV_DEV_HS)
+	if(config.sink == CSL_CAPH_DEV_HS)
 	{
 	    config.chnlNum = AUDIO_CHANNEL_STEREO;
 	}
@@ -203,10 +204,11 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 
     config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
-	// Linux only change - Start
+// Linux only change - End
     sink = config.sink;
-	if(sink == AUDDRV_DEV_IHF)
+	if(sink == CSL_CAPH_DEV_IHF)
 	{
+		// Linux only change - Start
         // special path for IHF voice call 
         // need to use the physical address  
 		// Linux only change
@@ -218,16 +220,16 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 
        
         config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
-		config.source = AUDDRV_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
+		config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
         
-        AUDDRV_HWControl_SetDSPSharedMeMForIHF((UInt32)memAddr);
-        VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-                            FALSE,
-                            FALSE);
+		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
+		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
+						FALSE,
+						FALSE);
 	}
 	else
 	{
-	    config.source = AUDDRV_DEV_DSP;
+	    config.source = CSL_CAPH_DEV_DSP;
 	}
 	// Linux only change - End
 
@@ -247,37 +249,37 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
 #endif
 
-    ((AUDDRV_PathID_t *)pData)->dlPathID = AUDDRV_HWControl_EnablePath(config);
+    ((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
 
     //UL
-    config.streamID = AUDDRV_STREAM_NONE;
+    config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = 0;
     config.source = AUDDRV_GetDRVDeviceFromMic(mic);
     dev |= AUDDRV_MIC1;
-    config.sink = AUDDRV_DEV_DSP;
+    config.sink = CSL_CAPH_DEV_DSP;
     config.dmaCH = CSL_CAPH_DMA_NONE;    
     config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
     config.snk_sampleRate = sample_rate;	
     config.chnlNum = AUDIO_CHANNEL_MONO;
     config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
-    ((AUDDRV_PathID_t *)pData)->ulPathID = AUDDRV_HWControl_EnablePath(config);
+    ((AUDDRV_PathID_t *)pData)->ulPathID = csl_caph_hwctrl_EnablePath(config);
     //If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
     //Here Let us assume it is DMIC3. It can be changed.
     if(AUDDRV_IsDualMicEnabled()==TRUE)
     {
     	dev |= AUDDRV_MIC2;
-        config.streamID = AUDDRV_STREAM_NONE;
+        config.streamID = CSL_CAPH_STREAM_NONE;
         config.pathID = 0;
         config.source = MIC_NOISE_CANCEL;
-        config.sink = AUDDRV_DEV_DSP;
+        config.sink = CSL_CAPH_DEV_DSP;
         config.dmaCH = CSL_CAPH_DMA_NONE;    
         config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
         config.snk_sampleRate = sample_rate;	
         config.chnlNum = AUDIO_CHANNEL_MONO;
         config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
-        ((AUDDRV_PathID_t *)pData)->ul2PathID = AUDDRV_HWControl_EnablePath(config);
+        ((AUDDRV_PathID_t *)pData)->ul2PathID = csl_caph_hwctrl_EnablePath(config);
     }
 #ifdef CONFIG_AUDIO_BUILD
     //Config sidetone
@@ -306,28 +308,28 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 //=============================================================================
 void AUDDRV_Telephony_DeinitHW (void *pData)
 {
-    AUDDRV_HWCTRL_CONFIG_t config;
+    CSL_CAPH_HWCTRL_CONFIG_t config;
 	Log_DebugPrintf(LOGID_AUDIO, 
                     "\n\r\t* AUDDRV_Telephony_DeinitHW *\n\r");
 
-    memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+    memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 #if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 #if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
 
     currSpkr = AUDDRV_SPKR_NONE;
     currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
 
-    config.streamID = AUDDRV_STREAM_NONE;
+    config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
 
-    (void)AUDDRV_HWControl_DisablePath(config);
+    (void)csl_caph_hwctrl_DisablePath(config);
 
     if(AUDDRV_IsDualMicEnabled()==TRUE)
     {
-        config.streamID = AUDDRV_STREAM_NONE;
+        config.streamID = CSL_CAPH_STREAM_NONE;
         config.pathID = ((AUDDRV_PathID_t *)pData)->ul2PathID;
 
-        (void)AUDDRV_HWControl_DisablePath(config);
+        (void)csl_caph_hwctrl_DisablePath(config);
     }
 	VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE, 
    							FALSE, 
@@ -335,14 +337,14 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 
 
     currMic = AUDDRV_MIC_NONE;
-    config.streamID = AUDDRV_STREAM_NONE;
+    config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
 
-    (void)AUDDRV_HWControl_DisablePath(config);
+    (void)csl_caph_hwctrl_DisablePath(config);
 
     // Disable sidetone.
     (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
-	if(sink == AUDDRV_DEV_IHF)
+	if(sink == CSL_CAPH_DEV_IHF)
 	{
 #ifdef RHEA_DSP_IHF_FEATURE		
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
@@ -350,7 +352,7 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 							FALSE);
 #endif		
 	}	
-	sink = AUDDRV_DEV_NONE;
+	sink = CSL_CAPH_DEV_NONE;
 	audDev = 0;
 
 #endif
@@ -371,10 +373,10 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 void AUDDRV_Telephony_MuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 					void *pData)
 {
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_PathID pathID = 0;
 	pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
     speaker = speaker; //speaker is not currently used.
-    (void)AUDDRV_HWControl_MuteSink(pathID);
+    (void)csl_caph_hwctrl_MuteSink(pathID);
     return;
 }
 
@@ -390,10 +392,10 @@ void AUDDRV_Telephony_MuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 void AUDDRV_Telephony_UnmuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 					void *pData)
 {
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_PathID pathID = 0;
 	pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
     speaker = speaker; //speaker is not currently used.
-    (void)AUDDRV_HWControl_UnmuteSink(pathID);
+    (void)csl_caph_hwctrl_UnmuteSink(pathID);
     return;
 }
 
@@ -411,10 +413,10 @@ void AUDDRV_Telephony_UnmuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 void AUDDRV_Telephony_MuteMic (AUDDRV_MIC_Enum_t mic,
 					void *pData)
 {
-    AUDDRV_PathID pathID = 0;
+	CSL_CAPH_PathID pathID = 0;
 	pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
     mic = mic; //mic is not currently used.
-    (void)AUDDRV_HWControl_MuteSource(pathID);
+    (void)csl_caph_hwctrl_MuteSource(pathID);
     return;
 }
 
@@ -430,10 +432,10 @@ void AUDDRV_Telephony_MuteMic (AUDDRV_MIC_Enum_t mic,
 void AUDDRV_Telephony_UnmuteMic (AUDDRV_MIC_Enum_t mic,
 					void *pData)
 {
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_PathID pathID = 0;
 	pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
     mic = mic; //mic is not currently used.
-    (void)AUDDRV_HWControl_UnmuteSource(pathID);
+    (void)csl_caph_hwctrl_UnmuteSource(pathID);
     return;
 }
 
@@ -451,7 +453,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 					AUDDRV_SPKR_Enum_t speaker,
 					void *pData)
 {
-    AUDDRV_HWCTRL_CONFIG_t config;	
+    CSL_CAPH_HWCTRL_CONFIG_t config;	
     AudioMode_t mode = AUDIO_MODE_HANDSET;
 	UInt32 dev = 0;
     Int16 tempGain = 0;
@@ -465,7 +467,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     tempGain = tempGain;
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_SelectMicSpkr mic %d, spkr %d *\n\r", mic, speaker);
 
-    memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+    memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 #if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 #if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))    
 
@@ -486,19 +488,19 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     if (speaker != currSpkr)
     {	    
 	//Disable the existing speaker path.	    
-	config.streamID = AUDDRV_STREAM_NONE;
+	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
-	(void)AUDDRV_HWControl_DisablePath(config);
+	(void)csl_caph_hwctrl_DisablePath(config);
 	((AUDDRV_PathID_t *)pData)->dlPathID = 0;
 
-	if(AUDDRV_GetDRVDeviceFromSpkr(currSpkr) == AUDDRV_DEV_IHF)
+	if(AUDDRV_GetDRVDeviceFromSpkr(currSpkr) == CSL_CAPH_DEV_IHF)
 	{
 #ifdef CONFIG_AUDIO_BUILD	
 #ifdef RHEA_DSP_IHF_FEATURE		
 		memAddr = AUDIO_Return_IHF_48kHz_buffer_base_address();
 #endif		
 #endif
-		AUDDRV_HWControl_SetDSPSharedMeMForIHF((UInt32)memAddr);
+		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
 #ifdef RHEA_DSP_IHF_FEATURE		
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
 							FALSE,
@@ -508,16 +510,16 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 	
 	//Enable the new speaker path
    	currSpkr = speaker;
-	config.streamID = AUDDRV_STREAM_NONE;
+	config.streamID = CSL_CAPH_STREAM_NONE;
 	config.pathID = 0;
-	config.source = AUDDRV_DEV_DSP;
+	config.source = CSL_CAPH_DEV_DSP;
 	config.sink = AUDDRV_GetDRVDeviceFromSpkr(speaker);
 	dev |= AUDDRV_SPEAKER;	
 	config.dmaCH = CSL_CAPH_DMA_NONE;    
 	//If DSP DL goes to IHF, Sample rate should be 48KHz.
 	if (speaker == AUDDRV_SPKR_IHF)
 	{
-		config.source = AUDDRV_DEV_DSP_throughMEM;
+		config.source = CSL_CAPH_DEV_DSP_throughMEM;
     	config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 	}
 	else
@@ -526,7 +528,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 	}
 	config.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;	
 
-	if(config.sink == AUDDRV_DEV_HS)
+	if(config.sink == CSL_CAPH_DEV_HS)
 	{
 	    config.chnlNum = AUDIO_CHANNEL_STEREO;
 	}
@@ -538,19 +540,14 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 	config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
 	sink = config.sink;
-	if(sink == AUDDRV_DEV_IHF)
+	if(sink == CSL_CAPH_DEV_IHF)
 	{
 #ifdef CONFIG_AUDIO_BUILD	
 #ifdef RHEA_DSP_IHF_FEATURE		
 		memAddr = AUDIO_Return_IHF_48kHz_buffer_base_address();
 #endif		
 #endif
-		AUDDRV_HWControl_SetDSPSharedMeMForIHF((UInt32)memAddr);
-#ifdef RHEA_DSP_IHF_FEATURE		
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-							FALSE,
-							FALSE);
-#endif		
+		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
 	}	
 #ifdef CONFIG_AUDIO_BUILD	
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
@@ -567,8 +564,17 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r);
     config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
 #endif		
-	
-	((AUDDRV_PathID_t *)pData)->dlPathID = AUDDRV_HWControl_EnablePath(config);
+
+	if(sink == CSL_CAPH_DEV_IHF)
+	{
+#ifdef RHEA_DSP_IHF_FEATURE		
+		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
+							FALSE,
+							FALSE); //integrate SDB CL 366484 
+#endif		
+	}	
+
+	((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
 #ifdef CONFIG_AUDIO_BUILD
 	//Config sidetone
 	AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
@@ -579,34 +585,34 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     if (mic != currMic)
     {
 	    //Disable the existing mic path.	    
-	    config.streamID = AUDDRV_STREAM_NONE;
+	    config.streamID = CSL_CAPH_STREAM_NONE;
 	    config.pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
-	    (void)AUDDRV_HWControl_DisablePath(config);
+	    (void)csl_caph_hwctrl_DisablePath(config);
 	    ((AUDDRV_PathID_t *)pData)->ulPathID = 0;
 
         if((AUDDRV_IsDualMicEnabled()==FALSE)
             &&(((AUDDRV_PathID_t *)pData)->ul2PathID != 0))
         {
-            config.streamID = AUDDRV_STREAM_NONE;
+            config.streamID = CSL_CAPH_STREAM_NONE;
             config.pathID = ((AUDDRV_PathID_t *)pData)->ul2PathID;
-            (void)AUDDRV_HWControl_DisablePath(config);
+            (void)csl_caph_hwctrl_DisablePath(config);
             ((AUDDRV_PathID_t *)pData)->ul2PathID = 0;
         }
 
 
    	    currMic = mic;
         //UL
-        config.streamID = AUDDRV_STREAM_NONE;
+        config.streamID = CSL_CAPH_STREAM_NONE;
         config.pathID = 0;
         config.source = AUDDRV_GetDRVDeviceFromMic(mic);
 		dev |= AUDDRV_MIC1;
-        config.sink = AUDDRV_DEV_DSP;
+        config.sink = CSL_CAPH_DEV_DSP;
         config.dmaCH = CSL_CAPH_DMA_NONE;    
         config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
         config.snk_sampleRate = currSampleRate;	
         config.chnlNum = AUDIO_CHANNEL_MONO;
         config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-        ((AUDDRV_PathID_t *)pData)->ulPathID = AUDDRV_HWControl_EnablePath(config);
+        ((AUDDRV_PathID_t *)pData)->ulPathID = csl_caph_hwctrl_EnablePath(config);
 
         //If Dual Mic is enabled. Theoretically DMIC3 or DMIC4 are used
         //Here Let us assume it is DMIC3. It can be changed.
@@ -614,16 +620,16 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
             &&(((AUDDRV_PathID_t *)pData)->ul2PathID == 0))
         {
     	    dev |= AUDDRV_MIC2;
-            config.streamID = AUDDRV_STREAM_NONE;
+            config.streamID = CSL_CAPH_STREAM_NONE;
             config.pathID = 0;
             config.source = MIC_NOISE_CANCEL;
-            config.sink = AUDDRV_DEV_DSP;
+            config.sink = CSL_CAPH_DEV_DSP;
             config.dmaCH = CSL_CAPH_DMA_NONE;    
             config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
             config.snk_sampleRate = currSampleRate;	
             config.chnlNum = AUDIO_CHANNEL_MONO;
             config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-            ((AUDDRV_PathID_t *)pData)->ul2PathID = AUDDRV_HWControl_EnablePath(config);
+            ((AUDDRV_PathID_t *)pData)->ul2PathID = csl_caph_hwctrl_EnablePath(config);
         }
     }
 #endif
@@ -1101,17 +1107,17 @@ void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode,
 //
 //=============================================================================
 
-void AUDDRV_SetHWGain(AUDDRV_HW_GAIN_e hw, UInt32 gain)
+void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
 {
 	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
-	AUDDRV_DEVICE_e dev = AUDDRV_DEV_NONE;
+	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
 	audio_mode = AUDDRV_GetAudioMode();
 	if ((audio_mode == AUDIO_MODE_HANDSET)
 		||(audio_mode == AUDIO_MODE_HANDSET_WB)
 		||(audio_mode == AUDIO_MODE_HAC)
 		||(audio_mode == AUDIO_MODE_HAC_WB))		
 	{
-		dev = AUDDRV_DEV_EP;
+		dev = CSL_CAPH_DEV_EP;
 	}
 	else
 	if ((audio_mode == AUDIO_MODE_HEADSET)
@@ -1120,17 +1126,17 @@ void AUDDRV_SetHWGain(AUDDRV_HW_GAIN_e hw, UInt32 gain)
 		||(audio_mode == AUDIO_MODE_TTY_WB))
 		
 	{
-		dev = AUDDRV_DEV_HS;
+		dev = CSL_CAPH_DEV_HS;
 	}
 	else
 	if ((audio_mode == AUDIO_MODE_SPEAKERPHONE)
 		||(audio_mode == AUDIO_MODE_SPEAKERPHONE_WB))
 	{
-		dev = AUDDRV_DEV_IHF;
+		dev = CSL_CAPH_DEV_IHF;
 	}
 
 
-	AUDDRV_HWControl_SetHWGain(NULL, hw, gain, dev);
+	csl_caph_hwctrl_SetHWGain(NULL, hw, gain, dev);
 	return;
 }
 //=============================================================================
@@ -1312,7 +1318,7 @@ static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
 #endif
 
 
-#if	defined(FUSE_COMMS_PROCESSOR)
+//#if	defined(FUSE_COMMS_PROCESSOR)
 /****************************************************************************
 *
 *  Function Name: Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, 
@@ -1414,5 +1420,541 @@ static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain)
 	csl_caph_audioh_sidetone_set_gain(gain);
 	return RESULT_OK;
 }
-#endif
+
+
+// move from drv_audio_commom.c
+
+
+
+// ==========================================================================
+//
+// Function Name: AUDDRV_GetDRVDeviceFromMic
+//
+// Description: Get the audio driver Device from the Microphone selection.
+//
+// =========================================================================
+CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromMic (AUDDRV_MIC_Enum_t mic)
+{
+	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDRVDeviceFromMic:: mic = 0x%x\n", mic);
+
+      switch (mic)
+      {
+        case AUDDRV_MIC_NONE:
+            dev = CSL_CAPH_DEV_NONE;
+            break;
+			
+         case AUDDRV_MIC_SPEECH_DIGI:
+         case AUDDRV_DUAL_MIC_DIGI12:
+         case AUDDRV_DUAL_MIC_DIGI21:
+            dev = CSL_CAPH_DEV_DIGI_MIC;
+            break;
+			
+         case AUDDRV_MIC_DIGI1:
+            dev = CSL_CAPH_DEV_DIGI_MIC_L;
+            break;	
+			
+         case AUDDRV_MIC_DIGI2:
+            dev = CSL_CAPH_DEV_DIGI_MIC_R;
+            break;
+			
+         case AUDDRV_MIC_EANC_DIGI:
+            dev = CSL_CAPH_DEV_EANC_DIGI_MIC;
+            break;
+			
+         case AUDDRV_MIC_ANALOG_MAIN:
+            dev = CSL_CAPH_DEV_ANALOG_MIC;
+            break;
+
+         case AUDDRV_MIC_ANALOG_AUX:
+            dev = CSL_CAPH_DEV_HS_MIC;
+            break;
+
+         case AUDDRV_MIC_PCM_IF:
+            dev = CSL_CAPH_DEV_BT_MIC;
+            break;
+
+         case AUDDRV_MIC_USB_IF:
+            dev = CSL_CAPH_DEV_MEMORY;
+            break;
+
+
+        default:
+			break;	
+    };
+
+	return dev;
+}
+
+// ==========================================================================
+//
+// Function Name: AUDDRV_GetDRVDeviceFromSpkr
+//
+// Description: Get the audio driver Device from the Speaker selection.
+//
+// =========================================================================
+CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDDRV_SPKR_Enum_t spkr)
+{
+	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDRVDeviceFromSpkr:: spkr = 0x%x\n", spkr);
+
+      switch (spkr)
+      {
+        case AUDDRV_SPKR_NONE:
+            dev = CSL_CAPH_DEV_NONE;
+            break;
+			
+         case AUDDRV_SPKR_EP:
+            dev = CSL_CAPH_DEV_EP;
+            break;
+			
+         case AUDDRV_SPKR_IHF:
+            dev = CSL_CAPH_DEV_IHF;
+            break;	
+			
+         case AUDDRV_SPKR_HS:
+            dev = CSL_CAPH_DEV_HS;
+            break;
+			
+         case AUDDRV_SPKR_VIBRA:
+            dev = CSL_CAPH_DEV_VIBRA;
+            break;
+			
+         case AUDDRV_SPKR_PCM_IF:
+            dev = CSL_CAPH_DEV_BT_SPKR;
+            break;
+		
+         case AUDDRV_SPKR_USB_IF:
+            dev = CSL_CAPH_DEV_MEMORY;
+            break;
+
+        default:
+			break;	
+    };
+
+	return dev;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: csl_caUInt16ph_MicDSP_Gain_t AUDDRV_GetDSPULGain(
+*                                         CSL_CAPH_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the DSP UL gain
+*
+****************************************************************************/
+Int16 AUDDRV_GetDSPULGain(CSL_CAPH_DEVICE_e mic, Int16 gain)
+{
+    csl_caph_Mic_Gain_t outGain;
+    csl_caph_MIC_Path_e cslMic = MIC_ANALOG_HEADSET;
+
+    memset(&outGain, 0, sizeof(csl_caph_Mic_Gain_t));
+    switch (mic)
+    {
+	    case CSL_CAPH_DEV_ANALOG_MIC:
+	    case CSL_CAPH_DEV_HS_MIC:
+		    cslMic = MIC_ANALOG_HEADSET;
+		    break;
+	    
+	    case CSL_CAPH_DEV_DIGI_MIC_L:
+	    case CSL_CAPH_DEV_DIGI_MIC_R:
+	    case CSL_CAPH_DEV_EANC_DIGI_MIC_L:
+	    case CSL_CAPH_DEV_EANC_DIGI_MIC_R:
+		    cslMic = MIC_DIGITAL;
+		    break;
+
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as analog mic.
+		    cslMic = MIC_ANALOG_HEADSET;
+		    break;
+    }
+
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPULGain::mic=0x%x, gain=0x%x\n", mic, gain);
+    outGain = csl_caph_gain_GetMicGain(cslMic, gain);
+    return outGain.micDSPULGain;
+}
+
+/****************************************************************************
+*
+*  Function Name: Int16 AUDDRV_GetDSPDLGain_Q1_14(
+*                                         CSL_CAPH_DEVICE_e mic, Int16 gain)
+*
+*  Description: read the DSP DL gain in dB in Q1.14
+*
+****************************************************************************/
+Int16 AUDDRV_GetDSPDLGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case CSL_CAPH_DEV_EP:
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+	    
+	    case CSL_CAPH_DEV_HS:
+	    case CSL_CAPH_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS_DSP;
+		    break;
+
+
+	    case CSL_CAPH_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+
+	    case CSL_CAPH_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+
+    }
+
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPDLGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain);
+    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
+    return outGain.spkrDSPDLGain;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: Int16 AUDDRV_GetDSPDLGain(
+*                                         CSL_CAPH_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the DSP DL gain in mdB in Q15
+*
+****************************************************************************/
+Int16 AUDDRV_GetDSPDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case CSL_CAPH_DEV_EP:
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+	    
+	    case CSL_CAPH_DEV_HS:
+	    case CSL_CAPH_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS_DSP;
+		    break;
+
+	    case CSL_CAPH_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+
+	    case CSL_CAPH_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP_DSP;
+		    break;
+
+    }
+
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPDLGain::spkr=0x%x, gain=0x%x\n", spkr, gain);
+    outGain = csl_caph_gain_GetSpkrGain(cslSpkr, gain);
+    return outGain.spkrDSPDLGain;
+}
+
+
+
+/****************************************************************************
+*
+*  Function Name: Int16 AUDDRV_GetHWDLGain(
+*                                         CSL_CAPH_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the HW DL gain in Q13.2
+*
+****************************************************************************/
+Int16 AUDDRV_GetHWDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case CSL_CAPH_DEV_EP:
+		    cslSpkr = SPKR_EP;
+		    break;
+	    
+	    case CSL_CAPH_DEV_HS:
+	    case CSL_CAPH_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS;
+		    break;
+
+	    case CSL_CAPH_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+	    case CSL_CAPH_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+    }
+
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetHWDLGain::spkr=0x%x, gain=0x%x\n", spkr, gain);
+    outGain = csl_caph_gain_GetSpkrGain(cslSpkr, gain);
+    return outGain.spkrHWGain;
+}
+
+
+
+/****************************************************************************
+*
+*  Function Name: Int16 AUDDRV_GetHWDLGain_Q1_14(
+*                                         CSL_CAPH_DEVICE_e mic, Int16 gain)
+*
+*  Description: read the HW DL gain in dB in Q1.14
+*
+****************************************************************************/
+Int16 AUDDRV_GetHWDLGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case CSL_CAPH_DEV_EP:
+		    cslSpkr = SPKR_EP;
+		    break;
+	    
+	    case CSL_CAPH_DEV_HS:
+	    case CSL_CAPH_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS;
+		    break;
+
+
+	    case CSL_CAPH_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+	    case CSL_CAPH_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+    }
+
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetHWDLGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain);
+    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
+    return outGain.spkrHWGain;
+}
+
+
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetMixerInputGain(Int16 gain)
+*
+*  Description: Get the Mixer input gain. Param "gain" is in Q13.2
+*               Mixer input gain is register value.
+*
+****************************************************************************/
+UInt16 AUDDRV_GetMixerInputGain(Int16 gain)
+{
+    csl_caph_Mixer_GainMapping_t outGain;
+    outGain = csl_caph_gain_GetMixerGain(gain);
+    return outGain.mixerInputGain;
+}
+
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetMixerOutputFineGain(Int16 gain)
+*
+*  Description: Get the Mixer output fine gain. Param "gain" is in Q13.2
+*               Mixer output fine gain is register value.
+*
+****************************************************************************/
+UInt16 AUDDRV_GetMixerOutputFineGain(Int16 gain)
+{
+    csl_caph_Mixer_GainMapping_t outGain;
+    outGain = csl_caph_gain_GetMixerGain(gain);
+    return outGain.mixerOutputFineGain;
+}
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetMixerOutputCoarseGain(Int16 gain)
+*
+*  Description: Get the Mixer output coarse gain. Param "gain" is in Q13.2
+*               Mixer output coarse gain is register value.
+*
+****************************************************************************/
+UInt16 AUDDRV_GetMixerOutputCoarseGain(Int16 gain)
+{
+    csl_caph_Mixer_GainMapping2_t outGain;
+    outGain = csl_caph_gain_GetMixerOutputCoarseGain(gain);
+    return outGain.mixerOutputCoarseGain;
+}
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetPMUGain(
+*                                         CSL_CAPH_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the PMU gain in dB in Q13,2. Input gain in Q13.2
+*
+****************************************************************************/
+UInt16 AUDDRV_GetPMUGain(CSL_CAPH_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case CSL_CAPH_DEV_EP:
+		    cslSpkr = SPKR_EP;
+		    break;
+	    
+	    case CSL_CAPH_DEV_HS:
+	    case CSL_CAPH_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS;
+		    break;
+
+	    case CSL_CAPH_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+	    case CSL_CAPH_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+    }
+
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetPMUGain::spkr=0x%x, gain=0x%x\n", spkr, gain);
+    outGain = csl_caph_gain_GetSpkrGain(cslSpkr, gain);
+    return outGain.spkrPMUGain;
+}
+
+
+
+/****************************************************************************
+*
+*  Function Name: UInt16 AUDDRV_GetPMUGain_Q1_14(
+*                                         CSL_CAPH_DEVICE_e mic, UInt16 gain)
+*
+*  Description: read the DSP DL gain in dB in Q1.14
+*
+****************************************************************************/
+UInt16 AUDDRV_GetPMUGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
+{
+    csl_caph_Spkr_Gain_t outGain;
+    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
+
+    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
+
+    switch (spkr)
+    {
+	    case CSL_CAPH_DEV_EP:
+		    cslSpkr = SPKR_EP;
+		    break;
+	    
+	    case CSL_CAPH_DEV_HS:
+	    case CSL_CAPH_DEV_IHF:
+		    cslSpkr = SPKR_IHF_HS;
+		    break;
+
+
+	    case CSL_CAPH_DEV_BT_SPKR:
+		    // For Bluetooth, it is yet
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+	    case CSL_CAPH_DEV_MEMORY:
+		    // This is for USB headset. It is
+		    // to decide whether DSP DL gain is 
+		    // needed or not.
+		    cslSpkr = SPKR_EP;
+		    break;
+		    
+	    default:
+		    // For all others, just use
+		    // DSP DL gain as Earpiece.
+		    cslSpkr = SPKR_EP;
+		    break;
+
+    }
+
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetPMUGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain);
+    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
+    return outGain.spkrPMUGain;
+}
+
+
+
+//#endif
 

@@ -16,7 +16,10 @@
 
 # -D USE_HAL_AUDIO_THREAD
 
-
+EXTRA_CFLAGS += -DCONFIG_DEPENDENCY_READY_CAPI
+EXTRA_CFLAGS += -DCONFIG_DEPENDENCY_ENABLE_SSP34
+EXTRA_CFLAGS += -DCONFIG_DEPENDENCY_READY_PMU
+#EXTRA_CFLAGS += -DCONFIG_DEPENDENCY_READY_SYSPARM
 EXTRA_CFLAGS += -DUNDER_LINUX
 EXTRA_CFLAGS += -DUNDER_LINUX_MODEM
 EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
@@ -70,7 +73,7 @@ EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/chal/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/csl/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/osabstract/
 
-obj-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)		+= snd-brcm-omx.o
+obj-$(CONFIG_BCM_ALSA_SOUND)		+= snd-brcm-omx.o
 snd-brcm-omx-objs := caph_module.o 
 snd-brcm-omx-objs += bcm_auddrv_test.o
 snd-brcm-omx-objs += caph_ctl.o
@@ -104,8 +107,6 @@ snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogmic.
 
 #CSL Source Files
 snd-brcm-omx-objs += soc/csl/audio/src/osdw_caph_drv.o
-snd-brcm-omx-objs += soc/csl/audio/src/drv_caph_hwctrl.o
-snd-brcm-omx-objs += soc/csl/audio/src/drv_audio_common.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_switch.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_srcmixer.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_render.o
@@ -126,9 +127,7 @@ snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_common.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_rpc.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/dspif_voice_record.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/dspif_voice_play.o
-#snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_voice_play.o
-snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_voice_record.o
-#snd-brcm-omx-objs += audio/audio_vdriver/src/audio_ipc_ap.o
+snd-brcm-omx-objs += audio/audio_vdriver/src/dspif_voip.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/ripisr_audio.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_audlog.o
 
@@ -146,8 +145,3 @@ snd-brcm-omx-objs += soc/csl/dsp/src/csl_voif.o
 snd-brcm-omx-objs += soc/csl/dsp/src/osdw_dsp_drv.o
 
 
-#ccflags-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)	+= -DDEBUG
-
-#obj-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)		+= snd-brcm-omx.o
-#snd-brcm-omx-objs := brcm_alsa_dev.o 
-#snd-brcm-omx-objs += brcm_auddrv_test.o
