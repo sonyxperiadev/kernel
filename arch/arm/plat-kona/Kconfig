@@ -1,9 +1,9 @@
 menu	"Broadcom KONA architecture based implementations"
 	depends on ARCH_KONA
-	
+
 choice
 	prompt "Broadcom KONA SoC Type"
-	default ARCH_ISLAND	
+	default ARCH_ISLAND
 
 config ARCH_ISLAND
 	bool "BROADCOM Island SoC"
@@ -43,12 +43,12 @@ config GP_TIMER_CLOCK_OFF_FIX
 config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
         depends on ARCH_RHEA || ARCH_ISLAND || ARCH_SAMOA || ARCH_HANA
-        default y  
-	  
+        default y
+
 config KONA_DCACHE_INVALIDATION
 	bool "Have Linux invalidate D-Cache"
-        default y  
-	help 
+        default y
+	help
 	  Say Y if you want Linux to invalidate primary core D-Cache during Linux
 	  decompression and boot.
 
@@ -80,8 +80,8 @@ config DMAC_KONA_PL330_SECURE_MODE
 	bool "PL330 DMAC Secure Mode Support"
 	depends on DMAC_PL330
 	help
-	 	PL330 DMA driver operates in open mode by default. 
-		 Enable this option to operate PL330 in secure mode. 
+	 	PL330 DMA driver operates in open mode by default.
+		 Enable this option to operate PL330 in secure mode.
 
 config BCM_ZRELADDR
 	hex "Compressed ZREL address"
@@ -100,12 +100,33 @@ config BCM_RAM_START_RESERVED_SIZE
 	help
 	 Reserve memory at the start of RAM. This memory
 	 may be used for LCD frame buffer, DSP, modem, etc.
-	 
+
 config KONA_CPU_PM_HANDLER
 	bool "Enable Kona platform PM (idle/suspend) hanlder."
 	depends on CPU_IDLE || SUSPEND
 	help
-	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.	 
+	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.
 
+config KONA_CPU_FREQ_DRV
+       bool "Enable CPU frequency scaling for kona chips"
+       depends on CPU_FREQ
+       help
+	Say Y if you want to enable generic Kona cpu-freq driver for Kona platforms
+
+config KONA_POWER_MGR
+       bool "Enable Kona power manager driver"
+       help
+	Say Y if you want to enable Kona power manager driver
+
+config KONA_PI_MGR
+       bool "Enable Kona PI manager driver"
+       depends on KONA_POWER_MGR
+       help
+	Say Y if you want to enable Kona PI manager driver
+
+config KONA_AVS
+       bool "Enable Kona AVS driver"
+       help
+	Say Y if you want to enable Kona AVS  driver
 endmenu
 

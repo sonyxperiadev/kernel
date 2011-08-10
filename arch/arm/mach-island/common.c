@@ -35,6 +35,7 @@
 #include <mach/irqs.h>
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
+#include <asm/pmu.h>
 
 #if defined(CONFIG_USB_ANDROID)
 #include <linux/usb/android_composite.h>
@@ -256,6 +257,38 @@ static struct platform_device rtc_device =
 };
 #endif
 
+/* ARM performance monitor unit */
+static struct resource pmu_resource = {
+       .start = BCM_INT_ID_PMU_IRQ0,
+       .end = BCM_INT_ID_PMU_IRQ0,
+       .flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device pmu_device = {
+       .name = "arm-pmu",
+       .id   = ARM_PMU_DEVICE_CPU,
+       .resource = &pmu_resource,
+       .num_resources = 1,
+};
+
+#ifdef CONFIG_USB
+static struct resource kona_hsotgctrl_platform_resource[] = {
+	[0] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device board_kona_hsotgctrl_platform_device =
+{
+	.name = "bcm_hsotgctrl",
+	.id = -1,
+	.resource = kona_hsotgctrl_platform_resource,
+	.num_resources = ARRAY_SIZE(kona_hsotgctrl_platform_resource),
+};
+#endif
+
 #ifdef CONFIG_USB_DWC_OTG
 static struct resource kona_otg_platform_resource[] = {
 	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
@@ -440,6 +473,10 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_STM_TRACE
 	&kona_stm_device,
+#endif
+	&pmu_device,
+#ifdef CONFIG_USB
+	&board_kona_hsotgctrl_platform_device,
 #endif
 #ifdef CONFIG_USB_DWC_OTG
 	&board_kona_otg_platform_device,

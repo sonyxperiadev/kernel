@@ -568,7 +568,7 @@ static void dwc_otg_driver_remove(
 static void dwc_otg_driver_remove(
 	struct pci_dev *_dev
 #else
-static void dwc_otg_driver_remove(
+static int dwc_otg_driver_remove(
 	struct platform_device *_dev
 #endif
 )
@@ -585,14 +585,22 @@ static void dwc_otg_driver_remove(
 
 	if (!otg_dev) {
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev NULL!\n", __func__);
+#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
 		return;
+#else
+		return -ENODEV;
+#endif
 	}
 #ifndef DWC_DEVICE_ONLY
 	if (otg_dev->hcd) {
 		hcd_remove(_dev);
 	} else {
 		DWC_DEBUGPL(DBG_ANY, "%s: otg_dev->hcd NULL!\n", __func__);
+#if defined (LM_INTERFACE) || defined (PCI_INTERFACE)
 		return;
+#else
+                return -ENODEV;
+#endif
 	}
 #endif
 
@@ -640,6 +648,7 @@ static void dwc_otg_driver_remove(
 	pci_set_drvdata(_dev, 0);
 #else
 	platform_set_drvdata(_dev, 0);
+	return 0;
 #endif
 }
 
@@ -716,6 +725,12 @@ static int dwc_otg_driver_probe(
 		goto fail;
 	}
 	dev_dbg(&_dev->dev, "base=0x%08x\n", (unsigned)dwc_otg_device->base);
+
+	/*
+	 * Initialize driver data to point to the global DWC_otg
+	 * Device structure.
+	 */
+	lm_set_drvdata(_dev, dwc_otg_device);
 #elif defined (PCI_INTERFACE)
 
 	_dev->current_state = PCI_D0;
@@ -766,11 +781,7 @@ static int dwc_otg_driver_probe(
 	 * Initialize driver data to point to the global DWC_otg
 	 * Device structure.
 	 */
-#ifdef LM_INTERFACE
-	lm_set_drvdata(_dev, dwc_otg_device);
-#else
 	platform_set_drvdata(_dev, dwc_otg_device);
-#endif
 #endif
 
 	dev_dbg(&_dev->dev, "dwc_otg_device=0x%p\n", dwc_otg_device);

@@ -73,6 +73,12 @@
 #include <linux/haptic.h>
 #endif
 
+#if defined (CONFIG_KONA_CPU_FREQ_DRV)
+#include <plat/kona_cpufreq_drv.h>
+#include <linux/cpufreq.h>
+#include <mach/pi_mgr.h>
+#endif
+
 #define _RHEA_
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/platform_mconfig.h>
@@ -733,6 +739,38 @@ static struct platform_device r61581_smi_display_device = {
 	},
 };
 
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+struct kona_freq_tbl kona_freq_tbl[] =
+{
+//    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+    FTBL_INIT(467000, PI_OPP_NORMAL),
+    FTBL_INIT(700000, PI_OPP_TURBO),
+};
+
+struct kona_cpu_info kona_cpu_info[] = {
+    [0] = {
+	.freq_tbl = kona_freq_tbl,
+	.num_freqs = ARRAY_SIZE(kona_freq_tbl),
+	/*FIX ME: To be changed according to the cpu latency*/
+	.kona_latency = 10*1000,
+	.pi_id = PI_MGR_PI_ID_ARM_CORE,
+    }
+};
+
+struct kona_cpufreq_drv_plat kona_cpufreq_drv_plat = {
+    .info = kona_cpu_info,
+    .nr_cpus = ARRAY_SIZE(kona_cpu_info),
+};
+
+static struct platform_device kona_cpufreq_device = {
+	.name    = "kona-cpufreq-drv",
+	.id      = -1,
+	.dev = {
+		.platform_data		= &kona_cpufreq_drv_plat,
+	},
+};
+#endif /*CONFIG_KONA_CPU_FREQ_DRV*/
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -756,7 +794,12 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #endif
 	&alex_dsi_display_device,
 	&nt35582_smi_display_device,
-	&r61581_smi_display_device, 
+	&r61581_smi_display_device,
+
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+	&kona_cpufreq_device,
+#endif
+
 };
 
 /* Add all userspace regulator consumer devices here */

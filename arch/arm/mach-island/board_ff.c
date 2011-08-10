@@ -33,6 +33,7 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <linux/bh1715.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_s32.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
@@ -424,6 +425,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.id = 0,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_WIFI,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.wifi_gpio = {
 			.reset		= 179,
 			.reg		= 177,
@@ -439,6 +441,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.data_pullup = 0,
 		.is_8bit = 1,
 		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
 		.peri_clk_name = "sdio2_clk",
 		.ahb_clk_name = "sdio2_ahb_clk",
 		.sleep_clk_name = "sdio2_sleep_clk",
@@ -449,6 +452,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.data_pullup = 0,
 		.cd_gpio = 106,
 		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE ,
 		.peri_clk_name = "sdio3_clk",
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
@@ -1145,6 +1149,13 @@ static struct i2c_board_info __initdata akm8975_info[] =
 	},
 };
 
+
+static struct i2c_board_info __initdata bh1715_info[] = {
+	[0] = {
+		I2C_BOARD_INFO(BH1715_DRV_NAME, 0x5C ),
+	},
+};
+
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
 	.start = 0x9C000000,
@@ -1247,6 +1258,10 @@ static void __init board_add_devices(void)
 		akm8975_info,
 		ARRAY_SIZE(akm8975_info));
 	
+	i2c_register_board_info(3,
+		bh1715_info,
+		ARRAY_SIZE(bh1715_info));
+
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 	platform_add_devices(bcm59055_userspace_consumer_devices, ARRAY_SIZE(bcm59055_userspace_consumer_devices));
 #endif

@@ -771,7 +771,12 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 	acm->port.disconnect = acm_disconnect;
 	acm->port.send_break = acm_send_break;
 
-	acm->port.func.name = "acm";
+#ifdef CONFIG_USB_ANDROID_ACM
+	if(port_num != 0)
+		acm->port.func.name = "acm1";
+	else
+#endif	
+		acm->port.func.name = "acm";
 	acm->port.func.strings = acm_strings;
 	/* descriptors are per-instance copies */
 	acm->port.func.bind = acm_bind;
@@ -788,12 +793,21 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 }
 
 #ifdef CONFIG_USB_ANDROID_ACM
+#define ACM_INSTANCE_0 0
+#define ACM_INSTANCE_1 1
 
 int acm_function_bind_config(struct usb_configuration *c)
 {
-	int ret = acm_bind_config(c, 0);
+	int ret = acm_bind_config(c, ACM_INSTANCE_0);
+
+	if(ret)
+		printk("ERROR binding acm_function_bind_config ACM_INSTANCE_0\n");
+	ret = acm_bind_config(c, ACM_INSTANCE_1);
 	if (ret == 0)
-		gserial_setup(c->cdev->gadget, 2);
+		gserial_setup(c->cdev->gadget, 4);
+	else
+		printk("ERROR binding acm_function_bind_config ACM_INSTANCE_1\n");
+
 	return ret;
 }
 

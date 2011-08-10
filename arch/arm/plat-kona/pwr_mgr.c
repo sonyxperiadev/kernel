@@ -9,6 +9,10 @@
 #include <plat/pi_mgr.h>
 #include <mach/pwr_mgr.h>
 #include <plat/pwr_mgr.h>
+#include <mach/io_map.h>
+#include <mach/clock.h>
+#include <plat/clock.h>
+#include <linux/clk.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
@@ -18,6 +22,20 @@
 #ifndef PWRMGR_I2C_VAR_DATA_REG
 #define PWRMGR_I2C_VAR_DATA_REG 6
 #endif /*PWRMGR_I2C_VAR_DATA_REG*/
+
+
+#ifdef CONFIG_DEBUG_FS
+#ifndef PWRMGR_EVENT_ID_TO_STR
+static char* pwr_mgr_event2str(int event)
+{
+	static char str[10] ;
+	sprintf(str,"event_%d",event);
+	return str;
+}
+#define PWRMGR_EVENT_ID_TO_STR(e) pwr_mgr_event2str(e)
+#endif /*PWRMGR_EVENT_ID_TO_STR*/
+#endif /*CONFIG_DEBUG_FS*/
+
 
 #define I2C_CMD0_DATA_SHIFT \
 		PWRMGR_POWER_MANAGER_I2C_COMMAND_DATA_LOCATION_01_I2C_COMMAND_DATA__01_0_SHIFT
@@ -44,7 +62,7 @@
 				((((u32)(cmd1_data))  << I2C_CMD1_DATA_SHIFT)& I2C_CMD1_DATA_MASK) )
 
 
-int pwr_debug = 0;
+static int pwr_debug = 0;
 /* global spinlock for pwr mgr API */
 static DEFINE_SPINLOCK(pwr_mgr_lock);
 
@@ -109,6 +127,39 @@ int	pwr_mgr_event_trg_enable(int event_id,int event_trg_type)
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_event_trg_enable);
+
+int	pwr_mgr_get_event_trg_type(int event_id)
+{
+	u32 reg_val = 0;
+	int trig_type = PM_TRIG_NONE;
+	u32 reg_offset;
+	pwr_dbg("%s:event_id: %d\n",
+		__func__,event_id);
+	if(unlikely(!pwr_mgr.info))
+	{
+		pwr_dbg("%s:ERROR - pwr mgr not initialized\n",__func__);
+		return -EPERM;
+	}
+
+	if(unlikely(event_id >= PWR_MGR_NUM_EVENTS))
+	{
+		pwr_dbg("%s:invalid event id\n",__func__);
+		return -EPERM;
+	}
+	reg_offset = event_id * 4;
+
+    reg_val = readl(PWR_MGR_REG_ADDR(reg_offset));
+
+	if(reg_val & PWRMGR_EVENT_NEGEDGE_CONDITION_ENABLE_MASK)
+		trig_type |= PM_TRIG_NEG_EDGE;
+
+	if(reg_val & PWRMGR_EVENT_POSEDGE_CONDITION_ENABLE_MASK)
+		trig_type |= PM_TRIG_POS_EDGE;
+
+	return trig_type;
+
+}
+EXPORT_SYMBOL(pwr_mgr_get_event_trg_type);
 
 int	pwr_mgr_event_clear_events(u32 event_start, u32 event_end)
 {
@@ -205,8 +256,7 @@ int pwr_mgr_event_set_pi_policy(int event_id,int pi_id,const struct pm_policy_cf
 	u32 reg_val = 0;
 	const struct pi* pi;
 	pwr_dbg("%s : event_id = %d : pi_id = %d, ac : %d, ATL : %d, policy: %d\n",
-				__func__,event_id,pi_id,pm_policy_cfg->ac, pm_policy_cfg->atl,
-				pm_policy_cfg->policy);
+		__func__,event_id,pi_id,pm_policy_cfg->ac, pm_policy_cfg->atl, pm_policy_cfg->policy);
 
 	if(unlikely(!pwr_mgr.info))
 	{
@@ -235,14 +285,19 @@ int pwr_mgr_event_set_pi_policy(int event_id,int pi_id,const struct pm_policy_cf
 	else
 		reg_val &= ~(1 << pi->pi_info.atl_shift);
 
-	reg_val &= ~PM_POLICY_MASK;
+	reg_val &= ~(PM_POLICY_MASK << pi->pi_info.pm_policy_shift);
 	reg_val |= (pm_policy_cfg->policy & PM_POLICY_MASK) <<
 								pi->pi_info.pm_policy_shift;
 
+	pwr_dbg("%s:reg val %08x shift val: %08x\n",__func__,reg_val, pi->pi_info.pm_policy_shift);
+
 	writel(reg_val,PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset,event_id*4));
 	pwr_dbg("%s : event_id = %d : pi_id = %d, ac : %d, ATL : %d, policy: %d\n",
-				__func__,event_id,pi_id,pm_policy_cfg->ac, pm_policy_cfg->atl,
-				pm_policy_cfg->policy);
+		__func__,event_id,pi_id,pm_policy_cfg->ac, pm_policy_cfg->atl, pm_policy_cfg->policy);
+
+
+	pwr_dbg("%s:reg val %08x written to register: %08x\n",
+		__func__,reg_val, PWR_MGR_PI_EVENT_POLICY_ADDR(policy_reg_offset,event_id*4));
 
 	spin_unlock(&pwr_mgr_lock);
 
@@ -705,7 +760,7 @@ int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd , u32 num_cmds)
 	}
 	if(unlikely(num_cmds > PM_I2C_CMD_MAX))
 	{
-		pwr_dbg("%s:ERROR - invalid param\n",__func__);
+		pwr_dbg("%s:ERROR - invalid param(num_cmds > PM_I2C_CMD_MAX)\n",__func__);
 		return -EINVAL;
 	}
 
@@ -834,6 +889,29 @@ int	pwr_mgr_pi_retn_clamp_enable(int pi_id,bool enable)
 }
 EXPORT_SYMBOL(pwr_mgr_pi_retn_clamp_enable);
 
+int pwr_mgr_ignore_power_ok_signal(bool ignore)
+{
+	u32 reg_val = 0;
+	pwr_dbg("%s :ignore = %d\n",
+				__func__, ignore);
+
+	if(unlikely(!pwr_mgr.info))
+	{
+		pwr_dbg("%s:ERROR - pwr mgr not initialized\n",__func__);
+		return -EPERM;
+	}
+	reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
+
+	if(ignore)
+		reg_val |= PWRMGR_PI_DEFAULT_POWER_STATE_POWER_OK_MASK_MASK;
+	else
+		reg_val &= ~PWRMGR_PI_DEFAULT_POWER_STATE_POWER_OK_MASK_MASK;
+
+	writel(reg_val,PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
+	return 0;
+}
+EXPORT_SYMBOL(pwr_mgr_ignore_power_ok_signal);
+
 int pwr_mgr_register_event_handler(u32 event_id, void (*pwr_mgr_event_cb)(u32 event_id,void* param),
 											void* param)
 {
@@ -917,7 +995,7 @@ int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event)
 		reg_val = readl(PWR_MGR_REG_ADDR(inx*4));
 		if(reg_val & PWRMGR_EVENT_CONDITION_ACTIVE_MASK)
 		{
-			pr_info("%s:event id : %x\n",__func__,inx);
+			pwr_dbg("%s:event id : %x\n",__func__,inx);
 			if(pwr_mgr.event_cb[inx].pwr_mgr_event_cb)
 				pwr_mgr.event_cb[inx].pwr_mgr_event_cb(inx,pwr_mgr.event_cb[inx].param);
 			if(clear_event)
@@ -939,3 +1017,285 @@ int pwr_mgr_init(struct pwr_mgr_info* info)
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_init);
+
+
+
+
+
+#ifdef CONFIG_DEBUG_FS
+
+static u32 bmdm_pwr_mgr_base;
+
+__weak void pwr_mgr_mach_debug_fs_init(int type)
+{
+}
+
+static int set_pm_mgr_dbg_bus(void *data, u64 val)
+{
+    u32 reg_val = 0;
+
+    pwr_dbg("%s: val: %lld\n", __func__, val);
+    pwr_mgr_mach_debug_fs_init(0);
+    if(val > 0xA)
+	return -EINVAL;
+    reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
+    reg_val &= ~(0xF << 20);
+    reg_val |= (val & 0x0F) << 20;
+    pwr_dbg("reg_val to be written %08x\n", reg_val);
+    writel(reg_val, PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
+
+    reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_PC_PIN_OVERRIDE_CONTROL_OFFSET));
+    pwr_dbg("PC_PIN_OVERRIDE_CONTROL Register: %08x\n", reg_val);
+
+    return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(set_pm_dbg_bus_fops, NULL, set_pm_mgr_dbg_bus, "%llu\n");
+
+static int set_bmdm_mgr_dbg_bus(void *data, u64 val)
+{
+    u32 reg_val = 0;
+	u32 reg_addr = bmdm_pwr_mgr_base+BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_OFFSET;
+    pwr_dbg("%s: val: %lld\n", __func__, val);
+    pwr_mgr_mach_debug_fs_init(1);
+    if(val > 0xA)
+	return -EINVAL;
+    reg_val = readl(reg_addr);
+    reg_val &= ~(BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_MASK);
+    reg_val |= (val << BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_SHIFT) &
+					BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL_DEBUG_BUS_SELECT_MASK;
+    pwr_dbg("reg_val to be written %08x\n", reg_val);
+    writel(reg_val, reg_addr);
+
+    reg_val = readl(reg_addr);
+    pwr_dbg("BMDM_PWRMGR_DEBUG_AND_COUNTER_CONTROL Register: %08x\n", reg_val);
+
+    return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(set_bmdm_dbg_bus_fops, NULL, set_bmdm_mgr_dbg_bus, "%llu\n");
+
+
+static int pwr_mgr_dbg_event_get_active(void *data, u64* val)
+{
+	u32 event_id = (u32)data;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS);
+
+	*val = pwr_mgr_is_event_active(event_id);
+	return 0;
+}
+
+static int pwr_mgr_dbg_event_set_active(void *data, u64 val)
+{
+	u32 event_id = (u32)data;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS);
+
+	return pwr_mgr_event_set(event_id,(int)val);
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pwr_mgr_dbg_active_fops, pwr_mgr_dbg_event_get_active,
+		pwr_mgr_dbg_event_set_active, "%llu\n");
+
+
+static int pwr_mgr_dbg_event_get_trig(void *data, u64* val)
+{
+	u32 event_id = (u32)data;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS);
+
+	*val = (u64)pwr_mgr_get_event_trg_type(event_id);
+	return 0;
+}
+
+static int pwr_mgr_dbg_event_set_trig(void *data, u64 val)
+{
+	u32 event_id = (u32)data;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS);
+
+	return pwr_mgr_event_trg_enable(event_id,(int)val);
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pwr_mgr_dbg_trig_fops, pwr_mgr_dbg_event_get_trig,
+		pwr_mgr_dbg_event_set_trig, "%llu\n");
+
+static int pwr_mgr_dbg_event_get_atl(void *data, u64* val)
+{
+	u32 event_id = ((u32)data & 0xFFFF0000) >> 16;
+	u32 pid = (u32)data & 0xFFFF;
+	int ret;
+	struct pm_policy_cfg pm_policy_cfg;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS ||  pid >= pwr_mgr.info->num_pi);
+
+	ret = pwr_mgr_event_get_pi_policy(event_id,pid,&pm_policy_cfg);
+
+	if(!ret)
+		*val = pm_policy_cfg.atl;
+	return ret;
+}
+static int pwr_mgr_dbg_event_set_atl(void *data, u64 val)
+{
+	u32 event_id = ((u32)data & 0xFFFF0000) >> 16;
+	u32 pid = (u32)data & 0xFFFF;
+	int ret;
+	struct pm_policy_cfg pm_policy_cfg;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS ||  pid >= pwr_mgr.info->num_pi);
+
+	ret = pwr_mgr_event_get_pi_policy(event_id,pid,&pm_policy_cfg);
+	if(!ret)
+	{
+		pm_policy_cfg.atl = (u32)val;
+		ret = pwr_mgr_event_set_pi_policy(event_id,pid,&pm_policy_cfg);
+	}
+
+	return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pwr_mgr_dbg_atl_ops, pwr_mgr_dbg_event_get_atl,
+		pwr_mgr_dbg_event_set_atl, "%llu\n");
+
+
+static int pwr_mgr_dbg_event_get_ac(void *data, u64* val)
+{
+	u32 event_id = ((u32)data & 0xFFFF0000) >> 16;
+	u32 pid = (u32)data & 0xFFFF;
+	int ret;
+	struct pm_policy_cfg pm_policy_cfg;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS ||  pid >= pwr_mgr.info->num_pi);
+
+	ret = pwr_mgr_event_get_pi_policy(event_id,pid,&pm_policy_cfg);
+
+	if(!ret)
+		*val = pm_policy_cfg.ac;
+	return ret;
+}
+static int pwr_mgr_dbg_event_set_ac(void *data, u64 val)
+{
+	u32 event_id = ((u32)data & 0xFFFF0000) >> 16;
+	u32 pid = (u32)data & 0xFFFF;
+	int ret;
+	struct pm_policy_cfg pm_policy_cfg;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS ||  pid >= pwr_mgr.info->num_pi);
+
+	ret = pwr_mgr_event_get_pi_policy(event_id,pid,&pm_policy_cfg);
+	if(!ret)
+	{
+		pm_policy_cfg.ac = (u32)val;
+		ret = pwr_mgr_event_set_pi_policy(event_id,pid,&pm_policy_cfg);
+	}
+
+	return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pwr_mgr_dbg_ac_ops, pwr_mgr_dbg_event_get_ac,
+		pwr_mgr_dbg_event_set_ac, "%llu\n");
+
+
+static int pwr_mgr_dbg_event_get_policy(void *data, u64* val)
+{
+	u32 event_id = ((u32)data & 0xFFFF0000) >> 16;
+	u32 pid = (u32)data & 0xFFFF;
+	int ret;
+	struct pm_policy_cfg pm_policy_cfg;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS ||  pid >= pwr_mgr.info->num_pi);
+
+	ret = pwr_mgr_event_get_pi_policy(event_id,pid,&pm_policy_cfg);
+
+	if(!ret)
+		*val = pm_policy_cfg.policy;
+	return ret;
+}
+static int pwr_mgr_dbg_event_set_policy(void *data, u64 val)
+{
+	u32 event_id = ((u32)data & 0xFFFF0000) >> 16;
+	u32 pid = (u32)data & 0xFFFF;
+	int ret;
+	struct pm_policy_cfg pm_policy_cfg;
+	BUG_ON(event_id >= PWR_MGR_NUM_EVENTS ||  pid >= pwr_mgr.info->num_pi);
+
+	ret = pwr_mgr_event_get_pi_policy(event_id,pid,&pm_policy_cfg);
+	if(!ret)
+	{
+		pm_policy_cfg.policy = (u32)val;
+		ret = pwr_mgr_event_set_pi_policy(event_id,pid,&pm_policy_cfg);
+	}
+
+	return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(pwr_mgr_dbg_policy_ops, pwr_mgr_dbg_event_get_policy,
+		pwr_mgr_dbg_event_set_policy, "%llu\n");
+
+struct dentry *dent_pwr_root_dir = NULL;
+int __init pwr_mgr_debug_init(u32 bmdm_pwr_base)
+{
+	struct dentry *dent_event_tbl;
+	struct dentry *dent_pi;
+	struct dentry *dent_event;
+	struct pi* pi;
+	int event;
+	int i;
+
+	if(unlikely(!pwr_mgr.info))
+	{
+		pwr_dbg("%s:ERROR - pwr mgr not initialized\n",__func__);
+		return -EPERM;
+	}
+
+	dent_pwr_root_dir = debugfs_create_dir("power_mgr", 0);
+	if (!dent_pwr_root_dir)
+		return -ENOMEM;
+
+	bmdm_pwr_mgr_base = bmdm_pwr_base;
+
+    if(!debugfs_create_u32("debug", S_IWUSR|S_IRUSR, dent_pwr_root_dir, (int*)&pwr_debug))
+		return -ENOMEM;
+    /* Debug Bus control via Debugfs */
+    if(!debugfs_create_file("pm_debug_bus", S_IWUSR|S_IRUSR, dent_pwr_root_dir, NULL, &set_pm_dbg_bus_fops))
+		return -ENOMEM;
+	if(!debugfs_create_file("bmdm_debug_bus", S_IWUSR|S_IRUSR, dent_pwr_root_dir, NULL, &set_bmdm_dbg_bus_fops))
+		return -ENOMEM;
+
+	dent_event_tbl = debugfs_create_dir("event_table", dent_pwr_root_dir);
+    if(!dent_event_tbl)
+		return -ENOMEM;
+	for(event = 0; event < PWR_MGR_NUM_EVENTS;event++)
+	{
+		dent_event = debugfs_create_dir(PWRMGR_EVENT_ID_TO_STR(event), dent_event_tbl);
+		if(!dent_event)
+			return -ENOMEM;
+		if(!debugfs_create_file("active", S_IWUSR|S_IRUSR, dent_event,(void*)event,&pwr_mgr_dbg_active_fops))
+			return -ENOMEM;
+
+		if(!debugfs_create_file("trig_type", S_IWUSR|S_IRUSR, dent_event,(void*)event,&pwr_mgr_dbg_trig_fops))
+			return -ENOMEM;
+
+		for(i =0; i < pwr_mgr.info->num_pi; i++)
+		{
+			pi = pi_mgr_get(i);
+			BUG_ON(pi == NULL);
+			dent_pi = debugfs_create_dir(pi_get_name(pi), dent_event);
+			if(!dent_pi)
+				return -ENOMEM;
+
+			if(!debugfs_create_file("policy", S_IWUSR|S_IRUSR, dent_pi,(void*)(((u32)event << 16) | (u16)i),
+							&pwr_mgr_dbg_policy_ops))
+			return -ENOMEM;
+
+			if(!debugfs_create_file("ac", S_IWUSR|S_IRUSR, dent_pi,(void*)(((u32)event << 16) | (u16)i),
+				&pwr_mgr_dbg_ac_ops))
+			return -ENOMEM;
+
+			if(!debugfs_create_file("atl", S_IWUSR|S_IRUSR, dent_pi,(void*)(((u32)event << 16) | (u16)i),
+				&pwr_mgr_dbg_atl_ops))
+				return -ENOMEM;
+		}
+
+	}
+
+
+
+    return 0;
+}
+
+#endif /*  CONFIG_DEBUG_FS  */
+
+

@@ -75,6 +75,7 @@
 #define PM_POLICY_MASK	0x7
 
 #define CCU_POLICY(policy) ((policy) & 0x3)
+#define IS_ACTIVE_POLICY(policy)	((policy) & 0x4)
 
 /*I2C commands - 4 bits*/
 
@@ -166,6 +167,7 @@ struct pwr_mgr_info
 };
 
 int pwr_mgr_event_trg_enable(int event_id,int event_trg_type);
+int	pwr_mgr_get_event_trg_type(int event_id);
 int	pwr_mgr_event_clear_events(u32 event_start, u32 event_end);
 bool pwr_mgr_is_event_active(int event_id);
 int pwr_mgr_event_set(int event_id, int event_state);
@@ -193,11 +195,17 @@ int pwr_mgr_pm_i2c_var_data_write(const u8* var_data,int count);
 
 int	pwr_mgr_arm_core_dormant_enable(bool enable);
 int	pwr_mgr_pi_retn_clamp_enable(int pi_id,bool enable);
-
+int pwr_mgr_ignore_power_ok_signal(bool ignore);
 int pwr_mgr_register_event_handler(u32 event_id, void (*pwr_mgr_event_cb)(u32 event_id,void* param),
 											void* param);
 int pwr_mgr_unregister_event_handler(u32 event_id);
 int pwr_mgr_process_events(u32 event_start, u32 event_end, int clear_event);
 int pwr_mgr_init(struct pwr_mgr_info* info);
 
+int pm_set_pll_pwr_on_idle(int pll_num, int enable);
+int pm_set_crystal_pwr_on_idle(int enable);
+
+#ifdef CONFIG_DEBUG_FS
+int __init pwr_mgr_debug_init(u32 bmdm_pwr_base);
+#endif
 #endif /*__KONA_POWER_MANAGER_H__*/

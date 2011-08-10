@@ -31,12 +31,144 @@
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <mach/io_map.h>
+#include <linux/io.h>
 
 #include<mach/clock.h>
 #include<plat/pi_mgr.h>
 #include<mach/pi_mgr.h>
 #include<mach/pwr_mgr.h>
 #include<plat/pwr_mgr.h>
+#ifdef CONFIG_DEBUG_FS
+#include <mach/rdb/brcm_rdb_chipreg.h>
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
+#endif
+
+#ifdef CONFIG_DEBUG_FS
+const char* _rhea__event2str[] =
+{
+	__stringify(LCDTE_EVENT),
+	__stringify(SSP2SYN_EVENT),
+	__stringify(SSP2DI_EVENT),
+	__stringify(SSP2CK_EVENT),
+	__stringify(SSP1SYN_EVENT),
+	__stringify(SSP1DI_EVENT),
+	__stringify(SSP1CK_EVENT),
+	__stringify(SSP0SYN_EVENT),
+	__stringify(SSP0DI_EVENT),
+	__stringify(SSP0CK_EVENT),
+	__stringify(DIGCLKREQ_EVENT),
+	__stringify(ANA_SYS_REQ_EVENT),
+	__stringify(SYSCLKREQ_EVENT),
+	__stringify(UBRX_EVENT),
+	__stringify(UBCTSN_EVENT),
+	__stringify(UB2RX_EVENT),
+	__stringify(UB2CTSN_EVENT),
+	__stringify(SIMDET_EVENT),
+	__stringify(SIM2DET_EVENT),
+	__stringify(MMC0D3_EVENT),
+	__stringify(MMC0D1_EVENT),
+	__stringify(MMC1D3_EVENT),
+	__stringify(MMC1D1_EVENT),
+	__stringify(SDDAT3_EVENT),
+	__stringify(SDDAT1_EVENT),
+	__stringify(SLB1CLK_EVENT),
+	__stringify(SLB1DAT_EVENT),
+	__stringify(SWCLKTCK_EVENT),
+	__stringify(SWDIOTMS_EVENT),
+	__stringify(KEY_R0_EVENT),
+	__stringify(KEY_R1_EVENT),
+	__stringify(KEY_R2_EVENT),
+	__stringify(KEY_R3_EVENT),
+	__stringify(KEY_R4_EVENT),
+	__stringify(KEY_R5_EVENT),
+	__stringify(KEY_R6_EVENT),
+	__stringify(KEY_R7_EVENT),
+	__stringify(CAWAKE_EVENT),
+	__stringify(CAREADY_EVENT),
+	__stringify(CAFLAG_EVENT),
+	__stringify(BATRM_EVENT),
+	__stringify(USBDP_EVENT),
+	__stringify(USBDN_EVENT),
+	__stringify(RXD_EVENT),
+	__stringify(GPIO29_A_EVENT),
+	__stringify(GPIO32_A_EVENT),
+	__stringify(GPIO33_A_EVENT),
+	__stringify(GPIO43_A_EVENT),
+	__stringify(GPIO44_A_EVENT),
+	__stringify(GPIO45_A_EVENT),
+	__stringify(GPIO46_A_EVENT),
+	__stringify(GPIO47_A_EVENT),
+	__stringify(GPIO48_A_EVENT),
+	__stringify(GPIO71_A_EVENT),
+	__stringify(GPIO72_A_EVENT),
+	__stringify(GPIO73_A_EVENT),
+	__stringify(GPIO74_A_EVENT),
+	__stringify(GPIO95_A_EVENT),
+	__stringify(GPIO96_A_EVENT),
+	__stringify(GPIO99_A_EVENT),
+	__stringify(GPIO100_A_EVENT),
+	__stringify(GPIO111_A_EVENT),
+	__stringify(GPIO18_A_EVENT),
+	__stringify(GPIO19_A_EVENT),
+	__stringify(GPIO20_A_EVENT),
+	__stringify(GPIO89_A_EVENT),
+	__stringify(GPIO90_A_EVENT),
+	__stringify(GPIO91_A_EVENT),
+	__stringify(GPIO92_A_EVENT),
+	__stringify(GPIO93_A_EVENT),
+	__stringify(GPIO18_B_EVENT),
+	__stringify(GPIO19_B_EVENT),
+	__stringify(GPIO20_B_EVENT),
+	__stringify(GPIO89_B_EVENT),
+	__stringify(GPIO90_B_EVENT),
+	__stringify(GPIO91_B_EVENT),
+	__stringify(GPIO92_B_EVENT),
+	__stringify(GPIO93_B_EVENT),
+	__stringify(GPIO29_B_EVENT),
+	__stringify(GPIO32_B_EVENT),
+	__stringify(GPIO33_B_EVENT),
+	__stringify(GPIO43_B_EVENT),
+	__stringify(GPIO44_B_EVENT),
+	__stringify(GPIO45_B_EVENT),
+	__stringify(GPIO46_B_EVENT),
+	__stringify(GPIO47_B_EVENT),
+	__stringify(GPIO48_B_EVENT),
+	__stringify(GPIO71_B_EVENT),
+	__stringify(GPIO72_B_EVENT),
+	__stringify(GPIO73_B_EVENT),
+	__stringify(GPIO74_B_EVENT),
+	__stringify(GPIO95_B_EVENT),
+	__stringify(GPIO96_B_EVENT),
+	__stringify(GPIO99_B_EVENT),
+	__stringify(GPIO100_B_EVENT),
+	__stringify(GPIO111_B_EVENT),
+	__stringify(COMMON_TIMER_0_EVENT),
+	__stringify(COMMON_TIMER_1_EVENT),
+	__stringify(COMMON_TIMER_2_EVENT),
+	__stringify(COMMON_TIMER_3_EVENT),
+	__stringify(COMMON_TIMER_4_EVENT),
+	__stringify(COMMON_INT_TO_AC_EVENT),
+	__stringify(TZCFG_INT_TO_AC_EVENT),
+	__stringify(DMA_REQUEST_EVENT),
+	__stringify(MODEM1_EVENT),
+	__stringify(MODEM2_EVENT),
+	__stringify(MODEM_UART_EVENT),
+	__stringify(BRIDGE_TO_AC_EVENT),
+	__stringify(BRIDGE_TO_MODEM_EVENT),
+	__stringify(VREQ_NONZERO_PI_MODEM_EVENT),
+	__stringify(DUMMY_EVENT),
+	__stringify(USBOTG_EVENT),
+	__stringify(GPIO_EXP_IRQ_EVENT),
+	__stringify(DBR_IRQ_EVENT),
+	__stringify(ACI_EVENT),
+	__stringify(PHY_RESUME_EVENT),
+	__stringify(MODEMBUS_ACTIVE_EVENT),
+	__stringify(SOFTWARE_0_EVENT),
+	__stringify(SOFTWARE_1_EVENT),
+	__stringify(SOFTWARE_2_EVENT),
+};
+
+#endif
 
 struct pwr_mgr_info rhea_pwr_mgr_info = {
 	.num_pi = PI_MGR_PI_ID_MAX,
@@ -57,14 +189,14 @@ struct rhea_event_table
 };
 
 static const struct rhea_event_table event_table[] = {
-			/*event_id				trig_type			modem	arm_core arm_sub	aon		hub		mm*/
-	{	SOFTWARE_0_EVENT,			PM_TRIG_BOTH_EDGE,		1,		1, 		5,		5,		5,		5, },
+			/*event_id				trig_type			modem		arm_core 	arm_sub		aon		hub		mm*/
+	{	SOFTWARE_0_EVENT,			PM_TRIG_BOTH_EDGE,		1,		1, 		5,		5,		5,		1, },
 	{	SOFTWARE_1_EVENT,			PM_TRIG_NONE,			1,		1,		1,		1,		1,		1,	},
-	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		1,		4,		4,		4,		4,		1,	},
+	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		1,		5,		4,		4,		4,		1,	},
 	{	MODEMBUS_ACTIVE_EVENT, 		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	VREQ_NONZERO_PI_MODEM_EVENT,PM_TRIG_POS_EDGE,		5,		1,		1,		5,		5,		1,	},
 	{	COMMON_INT_TO_AC_EVENT,		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	COMMON_TIMER_1_EVENT,		PM_TRIG_POS_EDGE,		1,		4,		4,		4,		4,		1,	},
+	{	COMMON_TIMER_1_EVENT,		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	UBRX_EVENT,					PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	UB2RX_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	SIMDET_EVENT,				PM_TRIG_BOTH_EDGE,		1,		5,		5,		5,		5,		1,	},
@@ -255,5 +387,60 @@ int __init rhea_pwr_mgr_init()
 
 return 0;
 }
-//EXPORT_SYMBOL(rhea_pwr_mgr_init);
 early_initcall(rhea_pwr_mgr_init);
+
+#ifdef CONFIG_DEBUG_FS
+
+void pwr_mgr_mach_debug_fs_init(int type)
+{
+	static bool mux_init = false;
+	u32 reg_val;
+
+	if(!mux_init)
+	{
+		mux_init = true;
+		 /*Get pad control write access by rwiting password */
+		writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
+		/* unlock first 32 pad control registers */
+		writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK0_OFFSET);
+
+		/* Configure GPIO_XX to TESTPORT_XX  */
+		/* writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET); */
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO09_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO10_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO11_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO12_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO13_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO14_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO15_OFFSET);
+		writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO16_OFFSET);
+	}
+	reg_val = readl(KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+	reg_val &= ~CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_MASK;
+	if(type == 0)
+		reg_val |= 0x2 << CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT;
+	else if(type == 1)
+		reg_val |= 0xD << CHIPREG_PERIPH_SPARE_CONTROL0_KEYPAD_DEBUG_MUX_CONTROL_SHIFT;
+	else
+		BUG();
+	writel(reg_val,KONA_CHIPREG_VA+CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+}
+
+int __init rhea_pwr_mgr_late_init(void)
+{
+	u32 bmdm_pwr_mgr_base = (u32)ioremap_nocache(BMDM_PWRMGR_BASE_ADDR,SZ_1K);
+	return pwr_mgr_debug_init(bmdm_pwr_mgr_base);
+}
+
+late_initcall(rhea_pwr_mgr_late_init);
+
+#endif
