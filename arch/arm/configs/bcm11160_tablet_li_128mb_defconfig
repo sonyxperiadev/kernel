@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Sun Aug  7 23:50:08 2011
+# Wed Aug 10 12:47:52 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -917,7 +917,10 @@ CONFIG_INPUT_FF_MEMLESS=y
 #
 # Userland interfaces
 #
-# CONFIG_INPUT_MOUSEDEV is not set
+CONFIG_INPUT_MOUSEDEV=y
+# CONFIG_INPUT_MOUSEDEV_PSAUX is not set
+CONFIG_INPUT_MOUSEDEV_SCREEN_X=1024
+CONFIG_INPUT_MOUSEDEV_SCREEN_Y=768
 # CONFIG_INPUT_JOYDEV is not set
 CONFIG_INPUT_EVDEV=y
 # CONFIG_INPUT_EVBUG is not set
@@ -998,7 +1001,11 @@ CONFIG_INPUT_UINPUT=y
 #
 # Character devices
 #
-# CONFIG_VT is not set
+CONFIG_VT=y
+CONFIG_CONSOLE_TRANSLATIONS=y
+CONFIG_VT_CONSOLE=y
+CONFIG_HW_CONSOLE=y
+# CONFIG_VT_HW_CONSOLE_BINDING is not set
 CONFIG_DEVMEM=y
 CONFIG_DEVKMEM=y
 # CONFIG_SERIAL_NONSTANDARD is not set
@@ -1234,6 +1241,13 @@ CONFIG_BACKLIGHT_PWM=y
 # Display device support
 #
 # CONFIG_DISPLAY_SUPPORT is not set
+
+#
+# Console display driver support
+#
+# CONFIG_VGA_CONSOLE is not set
+CONFIG_DUMMY_CONSOLE=y
+# CONFIG_FRAMEBUFFER_CONSOLE is not set
 # CONFIG_LOGO is not set
 # CONFIG_SOUND is not set
 CONFIG_HID_SUPPORT=y

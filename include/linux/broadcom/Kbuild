@@ -9,3 +9,5 @@ header-y += vcp_device.h
 header-y += vcp_ioctl.h
 header-y += vcp_msg.h
 header-y += vcp_conference.h
+header-y += amxr.h
+header-y += amxr_ioctl.h

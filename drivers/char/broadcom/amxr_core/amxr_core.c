@@ -709,7 +709,8 @@ int amxrCoreGetCnxListBySrc(
 {
    struct amxr_port_node     *srcportp;
    struct amxr_cnxlist_node  *cnxlp;
-   int                        err, mem_required;
+   int                        err = 0;
+   int                        mem_required;
    AMXR_PORT_CNXINFO         *portinfop;
    int                        cnxs;
 
@@ -789,7 +790,8 @@ int amxrCoreGetCnxListByDst(
 {
    struct amxr_port_node     *dstportp;
    struct amxr_cnxlist_node  *cnxlp;
-   int                        err, mem_required, cnxs;
+   int                        err = 0;
+   int                        mem_required, cnxs;
    AMXR_PORT_CNXINFO         *portinfop;
 
    dstportp = getPort( dst_port );
@@ -2461,7 +2463,7 @@ static int amxr_add_cnx(
    AMXR_RESAMP_TYPE         rtype      /*<< (i) Resampler type */
 )
 {
-   int err;
+   int err = 0;
 
    mutex_lock( &gCnxs.mutex );
    err = amxr_add_cnx_unsafe( srcportp, dstportp, desc, rtype, 0 /* default no loss */ );
@@ -2490,7 +2492,8 @@ static int amxr_add_cnx_unsafe(
 )
 {
    struct amxr_cnxlist_node  *cnxlp;
-   int                        foundcnx, err;
+   int                        foundcnx;
+   int                        err = 0;
    unsigned long              state;
    struct amxr_cnxdstl_t     *dstlp;
    AMXR_CONNECT_TYPE          cnx_type;
