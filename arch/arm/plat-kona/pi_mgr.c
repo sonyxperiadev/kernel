@@ -260,7 +260,6 @@ static int pi_def_init(struct pi *pi)
 		pi_dbg("%s: %s %s on init\n",__func__,pi->name,pi->flags & PI_ENABLE_ON_INIT ? "enable" : "disable" );
 
 		pi_enable(pi,pi->flags & PI_ENABLE_ON_INIT);
-		pwr_mgr_pi_set_wakeup_override(pi->id,true/*clear*/);
 	}
 	spin_unlock(&pi_mgr_lock);
 	printk(KERN_INFO " %s: count = %d\n",__func__,pi->usg_cnt);
