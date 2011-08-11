@@ -519,7 +519,7 @@ static ssize_t bcm590xx_write(struct file *file, const char __user *buffer,
 
 static const struct file_operations bcm590xx_pmu_ops = {
 	.open = bcm590xx_open,
-	.ioctl = bcm590xx_ioctl,
+	.unlocked_ioctl = bcm590xx_ioctl,
 	.write = bcm590xx_write,
 	.release = bcm590xx_release,
 	.owner = THIS_MODULE,
@@ -542,7 +542,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 					with addr 0x%x\n", __func__,
 					bcm590xx->i2c_client[i].addr);
 		}
-		else	{
+		else {
 			printk("%s: i2c client(0x%x) registered with slave id 0x%x\n", __func__,
 					(unsigned int)bcm590xx->i2c_client[i].client,
 					bcm590xx->i2c_client[i].addr );
@@ -578,8 +578,8 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 		printk("BCM590XX: Chip Version [0x%x]\n", ret);
 	}
 
-	if (pdata && pdata->init) {
-		ret = pdata->init(bcm590xx, BCM590XX_INITIALIZATION);
+	if (pdata && pdata->pmu_event_cb) {
+		ret = pdata->pmu_event_cb(BCM590XX_INITIALIZATION, 0);
 		if (ret != 0) {
 			dev_err(bcm590xx->dev, "Platform init() failed: %d\n",
 					ret);
@@ -606,7 +606,6 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 
 	enable_irq(irq);
 
-	/* register all subdevices */
 	for (i = 0; i < pdata->clients_num; i++) {
 		ret = bcm590xx_client_dev_register(info, pdata->clients[i]);
 		if (ret < 0)

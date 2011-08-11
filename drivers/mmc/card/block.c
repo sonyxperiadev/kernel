@@ -66,6 +66,7 @@ static DEFINE_MUTEX(block_mutex);
  * or bootarg options.
  */
 static int perdev_minors = CONFIG_MMC_BLOCK_MINORS;
+static int max_devices;
 
 #ifdef CONFIG_MMC_BCM_SD
 /*

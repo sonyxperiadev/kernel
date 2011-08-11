@@ -18,11 +18,9 @@
  */
 #include <mach/io_map.h>
 
-	.macro addruart, rx, tmp
-	mrc	p15, 0, \rx, c1, c0
-	tst	\rx, #1					@ MMU enabled?
-	ldreq	\rx, =KONA_UART_LLDEBUG_PA 		@ MMU off, Physical
-	ldrne	\rx, =KONA_UART_LLDEBUG_VA 	@ MMU on, Virtual
+	.macro addruart, px, vx
+	ldr	\px, =KONA_UART_LLDEBUG_PA 		@ MMU off, Physical
+	ldr	\vx, =KONA_UART_LLDEBUG_VA 	@ MMU on, Virtual
 	.endm
 
 #define UART_SHIFT	2

@@ -162,8 +162,8 @@ EXPORT_SYMBOL_GPL(memory_add_physaddr_to_nid);
 #endif
 #endif /* CONFIG_MEMORY_HOTPLUG */
 
-static void __init find_node_limits(int node, struct meminfo *mi,
-	unsigned long *min, unsigned long *max_low, unsigned long *max_high)
+static void __init find_limits(unsigned long *min, unsigned long *max_low,
+	unsigned long *max_high)
 {
 	struct meminfo *mi = &meminfo;
 	int i;

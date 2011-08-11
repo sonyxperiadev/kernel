@@ -2215,6 +2215,24 @@ struct usb_hcd *usb_create_shared_hcd(const struct hc_driver *driver,
 
 	dev_set_drvdata(dev, hcd);
 
+	if (primary_hcd == NULL) {
+		hcd->bandwidth_mutex = kmalloc(sizeof(*hcd->bandwidth_mutex),
+				GFP_KERNEL);
+		if (!hcd->bandwidth_mutex) {
+			kfree(hcd);
+			dev_dbg(dev, "hcd bandwidth mutex alloc failed\n");
+			return NULL;
+		}
+		mutex_init(hcd->bandwidth_mutex);
+		dev_set_drvdata(dev, hcd);
+	} else {
+		hcd->bandwidth_mutex = primary_hcd->bandwidth_mutex;
+		hcd->primary_hcd = primary_hcd;
+		primary_hcd->primary_hcd = primary_hcd;
+		hcd->shared_hcd = primary_hcd;
+		primary_hcd->shared_hcd = hcd;
+	}
+
 	kref_init(&hcd->kref);
 
 	usb_bus_init(&hcd->self);

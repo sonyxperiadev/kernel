@@ -297,8 +297,7 @@ static int BCMAudLOG_mmap(struct file *filp, struct vm_area_struct *vma)
 *
 ***************************************************************************/
 
-static int BCMAudLOG_ioctl(struct inode *inode, struct file *file,
-             unsigned int cmd, unsigned long arg)
+static long BCMAudLOG_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 
     int rtn = 0;
@@ -375,7 +374,7 @@ static struct file_operations bcmlog_fops =
     .owner =    THIS_MODULE,
     .open =    BCMAudLOG_open,
     .read =    BCMAudLOG_read,
-    .ioctl =   BCMAudLOG_ioctl,
+    .unlocked_ioctl =   BCMAudLOG_ioctl,
     .mmap =    BCMAudLOG_mmap,
     .release = BCMAudLOG_release,
 };

@@ -17,6 +17,7 @@
 #ifndef _OSTYPES_H_
 #define _OSTYPES_H_
 
+#include <linux/sched.h>
 #include <linux/jiffies.h>
 /**
  * @addtogroup RTOSTypesGroup

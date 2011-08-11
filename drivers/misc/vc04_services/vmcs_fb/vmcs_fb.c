@@ -1092,8 +1092,9 @@ static void __exit vc_fb_exit( void )
    LOG_INFO( "%s: end", __func__ );
 }
 
-module_init( vc_fb_init );
+late_initcall( vc_fb_init );
 module_exit( vc_fb_exit );
+
 
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "VC Framebuffer Driver" );

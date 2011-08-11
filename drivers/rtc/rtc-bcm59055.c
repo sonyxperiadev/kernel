@@ -241,7 +241,6 @@ static const struct rtc_class_ops bcm59055_rtc_ops = {
 	.read_alarm = bcm59055_rtc_read_alarm,
 	.set_alarm = bcm59055_rtc_set_alarm,
 	.alarm_irq_enable = bcm59055_rtc_alarm_irq_enable,
-	.update_irq_enable = bcm59055_rtc_alarm_irq_enable,
 };
 
 #ifdef CONFIG_PM

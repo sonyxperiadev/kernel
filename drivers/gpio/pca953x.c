@@ -393,9 +393,17 @@ static uint16_t pca953x_irq_pending(struct pca953x_chip *chip)
 	uint16_t pending;
 	uint16_t trigger;
 	uint16_t missed;
-	int ret;
+	int ret, offset = 0;
 
-	ret = pca953x_read_reg(chip, PCA953X_INPUT, &cur_stat);
+	switch (chip->chip_type) {
+	case PCA953X_TYPE:
+		offset = PCA953X_INPUT;
+		break;
+	case PCA957X_TYPE:
+		offset = PCA957X_IN;
+		break;
+	}
+	ret = pca953x_read_reg(chip, offset, &cur_stat);
 	if (ret)
 		return 0;
 
@@ -456,7 +464,7 @@ static int pca953x_irq_setup(struct pca953x_chip *chip,
 	int ret, offset = 0;
 
 	if (pdata->irq_base != -1
-			&& (id->driver_data & PCA953X_INT)) {
+			&& (id->driver_data & PCA_INT)) {
 		int lvl;
 
 		switch (chip->chip_type) {
@@ -483,9 +491,9 @@ static int pca953x_irq_setup(struct pca953x_chip *chip,
 		for (lvl = 0; lvl < chip->gpio_chip.ngpio; lvl++) {
 			int irq = lvl + chip->irq_base;
 
-			set_irq_chip_data(irq, chip);
-			set_irq_chip_and_handler(irq, &pca953x_irq_chip,
-						 handle_edge_irq);
+			irq_set_chip_data(irq, chip);
+			irq_set_chip_and_handler(irq, &pca953x_irq_chip,
+						 handle_simple_irq);
 #ifdef CONFIG_ARM
 			set_irq_flags(irq, IRQF_VALID);
 #else
@@ -527,7 +535,7 @@ static int pca953x_irq_setup(struct pca953x_chip *chip,
 	struct i2c_client *client = chip->client;
 	struct pca953x_platform_data *pdata = client->dev.platform_data;
 
-	if (pdata->irq_base != -1 && (id->driver_data & PCA953X_INT))
+	if (pdata->irq_base != -1 && (id->driver_data & PCA_INT))
 		dev_warn(&client->dev, "interrupt support not compiled in\n");
 
 	return 0;

@@ -143,6 +143,16 @@ comment "I2C RTC drivers"
 
 if I2C
 
+config RTC_DRV_88PM860X
+	tristate "Marvell 88PM860x"
+	depends on RTC_CLASS && I2C && MFD_88PM860X
+	help
+	  If you say yes here you get support for RTC function in Marvell
+	  88PM860x chips.
+
+	  This driver can also be built as a module. If so, the module
+	  will be called rtc-88pm860x.
+
 config RTC_DRV_BCM59055
         tristate "Broadcom BCM59055 PMU RTC"
         depends on MFD_BCM_PMU590XX
@@ -1038,6 +1048,52 @@ config RTC_DRV_MPC5121
 
 	  This driver can also be built as a module. If so, the module
 	  will be called rtc-mpc5121.
+
+config RTC_DRV_JZ4740
+	tristate "Ingenic JZ4740 SoC"
+	depends on RTC_CLASS
+	depends on MACH_JZ4740
+	help
+	  If you say yes here you get support for the Ingenic JZ4740 SoC RTC
+	  controller.
+
+	  This driver can also be buillt as a module. If so, the module
+	  will be called rtc-jz4740.
+
+config RTC_DRV_LPC32XX
+	depends on ARCH_LPC32XX
+	tristate "NXP LPC32XX RTC"
+	help
+	  This enables support for the NXP RTC in the LPC32XX
+
+	  This driver can also be buillt as a module. If so, the module
+	  will be called rtc-lpc32xx.
+
+config RTC_DRV_TEGRA
+	tristate "NVIDIA Tegra Internal RTC driver"
+	depends on RTC_CLASS && ARCH_TEGRA
+	help
+	  If you say yes here you get support for the
+	  Tegra 200 series internal RTC module.
+
+	  This drive can also be built as a module. If so, the module
+	  will be called rtc-tegra.
+
+config RTC_DRV_TILE
+	tristate "Tilera hypervisor RTC support"
+	depends on TILE
+	help
+	  Enable support for the Linux driver side of the Tilera
+	  hypervisor's real-time clock interface.
+
+config RTC_DRV_PUV3
+	tristate "PKUnity v3 RTC support"
+	depends on ARCH_PUV3
+	help
+	  This enables support for the RTC in the PKUnity-v3 SoCs.
+
+	  This drive can also be built as a module. If so, the module
+	  will be called rtc-puv3.
 
 config RTC_DRV_BCMPMU
 	tristate "BCM PMU RTC"

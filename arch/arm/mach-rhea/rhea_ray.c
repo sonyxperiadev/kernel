@@ -77,6 +77,8 @@
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/platform_mconfig.h>
 
+#include <video/kona_fb.h>
+
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
 
@@ -99,27 +101,30 @@
 #define BCM_KEY_COL_6  6
 #define BCM_KEY_COL_7  7
 
-static int __init bcm590xx_init_platform_hw(struct bcm590xx *bcm590xx, int flag)
+#ifdef CONFIG_MFD_BCM_PMU590XX
+static int __init bcm590xx_event_callback(int flag, int param)
 {
 	int ret;
 	printk("REG: pmu_init_platform_hw called \n") ;
 	switch (flag) {
-		case BCM590XX_INITIALIZATION:
-			ret = gpio_request(PMU_IRQ_PIN, "pmu_irq");
-			if (ret < 0) {
-				printk(KERN_ERR "%s unable to request GPIO pin %d\n", __FUNCTION__, PMU_IRQ_PIN);
-				return ret ;
-			}
-			gpio_direction_input(PMU_IRQ_PIN);
-			break;
-		default:
-			return -EPERM;
+	case BCM590XX_INITIALIZATION:
+		ret = gpio_request(PMU_IRQ_PIN, "pmu_irq");
+		if (ret < 0) {
+			printk(KERN_ERR "%s unable to request GPIO pin %d\n", __FUNCTION__, PMU_IRQ_PIN);
+			return ret ;
+		}
+		gpio_direction_input(PMU_IRQ_PIN);
+		break;
+	case BCM590XX_CHARGER_INSERT:
+		pr_info("%s: BCM590XX_CHARGER_INSERT\n", __func__);
+		break;
+	default:
+		return -EPERM;
 	}
 	return 0 ;
 }
 
 #ifdef CONFIG_BATTERY_BCM59055
-
 static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
         .batt_min_volt = 3200,
         .batt_max_volt = 4200,
@@ -179,35 +184,7 @@ static struct bcm590xx_regulator_pdata bcm59055_regl_pdata = {
 	},
 };
 
-static const char *pmu_clients[] = {
-#ifdef CONFIG_INPUT_BCM59055_ONKEY
-	"bcm590xx-onkey",
-#endif
-#ifdef CONFIG_BCM59055_FUELGAUGE
-	"bcm590xx-fg",
-#endif
-#ifdef CONFIG_BCM59055_SARADC
-	"bcm590xx-saradc",
-#endif
-#ifdef CONFIG_REGULATOR_BCM_PMU59055
-	"bcm590xx-regulator",
-#endif
-#ifdef CONFIG_BCM59055_AUDIO
-	"bcm590xx-audio",
-#endif
-#ifdef CONFIG_RTC_DRV_BCM59055
-	"bcm59055-rtc",
-#endif
-#ifdef CONFIG_BATTERY_BCM59055
-	"bcm590xx-power",
-#endif
-#ifdef CONFIG_BCM59055_ADC_CHIPSET_API
-	"bcm59055-adc_chipset_api",
-#endif
-#ifdef CONFIG_USB_BCM_OTG
-	"bcm_otg",
-#endif
-};
+
 
 /* Register userspace and virtual consumer for SIMLDO */
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
@@ -240,6 +217,37 @@ static struct platform_device bcm59055_vc_device_sim = {
 };
 #endif
 #endif
+
+static const char *pmu_clients[] = {
+#ifdef CONFIG_INPUT_BCM59055_ONKEY
+	"bcm590xx-onkey",
+#endif
+#ifdef CONFIG_BCM59055_FUELGAUGE
+	"bcm590xx-fg",
+#endif
+#ifdef CONFIG_BCM59055_SARADC
+	"bcm590xx-saradc",
+#endif
+#ifdef CONFIG_REGULATOR_BCM_PMU59055
+	"bcm590xx-regulator",
+#endif
+#ifdef CONFIG_BCM59055_AUDIO
+	"bcm590xx-audio",
+#endif
+#ifdef CONFIG_RTC_DRV_BCM59055
+	"bcm59055-rtc",
+#endif
+#ifdef CONFIG_BATTERY_BCM59055
+	"bcm590xx-power",
+#endif
+#ifdef CONFIG_BCM59055_ADC_CHIPSET_API
+	"bcm59055-adc_chipset_api",
+#endif
+#ifdef CONFIG_USB_BCM_OTG
+	"bcm_otg",
+#endif
+};
+
 static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	/*
 	 * PMU in Fast mode. Once the Rhea clock changes are in place,
@@ -247,7 +255,7 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	 */
 	/*.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_HS, },*/
 	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
-	.init = bcm590xx_init_platform_hw,
+	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
 #endif
@@ -267,6 +275,7 @@ static struct i2c_board_info __initdata pmu_info[] =
 		.platform_data  = &bcm590xx_plat_data,
 	},
 };
+#endif
 
 #ifdef CONFIG_KEYBOARD_BCM
 /*!
@@ -283,10 +292,10 @@ struct platform_device bcm_kp_device = {
 	GPIO07, GPIO12, GPIO13, for now keypad can only be set as a 2x2 matrix
 	by using pin GPIO04, GPIO05, GPIO14 and GPIO15 */
 static struct bcm_keymap newKeymap[] = {
-	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
-	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Search Key", KEY_SEARCH},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Back Key", KEY_BACK},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "Home-Key", KEY_HOME},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
@@ -321,16 +330,16 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_4, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_4, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "Search Key", KEY_SEARCH},
-	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "Back Key", KEY_BACK},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_4, BCM_KEY_COL_7, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_5, BCM_KEY_COL_5, "unused", 0},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "Menu-Key", KEY_MENU},
-	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "Home-Key", KEY_HOME},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_6, "unused", 0},
+	{BCM_KEY_ROW_5, BCM_KEY_COL_7, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_2, "unused", 0},
@@ -602,6 +611,7 @@ struct platform_device haptic_pwm_device = {
 #ifdef CONFIG_GPIO_PCA953X
 #define GPIO_SIM2LDOVSET	(KONA_MAX_GPIO + 7)
 #endif
+
 #define TPS728XX_REGL_ID        (BCM59055_MAX_LDO + 0)
 struct regulator_consumer_supply sim2_supply[] = {
 	{ .supply = "sim2_vcc" },
@@ -670,6 +680,60 @@ static struct platform_device tps728xx_vc_device_sim2 = {
 #endif
 #endif /* CONFIG_REGULATOR_TPS728XX*/
 
+static struct kona_fb_platform_data alex_dsi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_BCM91008_ALEX_GetFuncTable,
+	.screen_width		= 360,
+	.screen_height		= 640,
+	.bytes_per_pixel	= 4,
+	.pixel_format		= XRGB8888,
+};
+
+static struct platform_device alex_dsi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 0,
+	.dev = {
+		.platform_data		= &alex_dsi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_NT35582_WVGA_SMI_GetFuncTable,
+	.screen_width		= 480,
+	.screen_height		= 800,
+	.bytes_per_pixel	= 2,
+	.pixel_format		= RGB565,
+};
+
+static struct platform_device nt35582_smi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 1,
+	.dev = {
+		.platform_data		= &nt35582_smi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
+static struct kona_fb_platform_data r61581_smi_display_fb_data = {
+	.get_dispdrv_func_tbl	= &DISP_DRV_R61581_HVGA_SMI_GetFuncTable,
+	.screen_width		= 320,
+	.screen_height		= 480,
+	.bytes_per_pixel	= 2,
+	.pixel_format		= RGB565,
+};
+
+static struct platform_device r61581_smi_display_device = {
+	.name    = "rhea_fb",
+	.id      = 2,
+	.dev = {
+		.platform_data		= &r61581_smi_display_fb_data,
+		.dma_mask		= (u64 *) ~(u32)0,
+		.coherent_dma_mask	= ~(u32)0,
+	},
+};
+
 /* Rhea Ray specific platform devices */
 static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
@@ -691,12 +755,15 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_REGULATOR_TPS728XX
 	&tps728xx_device,
 #endif
+	&alex_dsi_display_device,
+	&nt35582_smi_display_device,
+	&r61581_smi_display_device, 
 };
 
 /* Add all userspace regulator consumer devices here */
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 struct platform_device *rhea_ray_userspace_consumer_devices[] __initdata = {
-#ifdef CONFIG_REGULATOR_BCM_PMU59055
+#if defined(CONFIG_REGULATOR_BCM_PMU59055) && defined(CONFIG_MFD_BCM_PMU590XX)
 	&bcm59055_uc_device_sim,
 #endif
 #ifdef CONFIG_REGULATOR_TPS728XX
@@ -708,7 +775,7 @@ struct platform_device *rhea_ray_userspace_consumer_devices[] __initdata = {
 /* Add all virtual regulator consumer devices here */
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
-#ifdef CONFIG_REGULATOR_BCM_PMU59055
+#if defined(CONFIG_REGULATOR_BCM_PMU59055) && defined(CONFIG_MFD_BCM_PMU590XX)
 	&bcm59055_vc_device_sim,
 #endif
 #ifdef CONFIG_REGULATOR_TPS728XX
@@ -721,16 +788,24 @@ struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
 /* Rhea Ray specific i2c devices */
 static void __init rhea_ray_add_i2c_devices (void)
 {
+#ifdef CONFIG_MFD_BCM_PMU590XX
 	/* 59055 on BSC - PMU */
+#endif
+#ifdef CONFIG_MFD_BCM_PMU590XX
 	i2c_register_board_info(2,
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
+#endif
+#ifdef CONFIG_GPIO_PCA953X
 	i2c_register_board_info(1,
 			pca953x_info,
 			ARRAY_SIZE(pca953x_info));
+#endif
+#ifdef CONFIG_TOUCHSCREEN_QT602240
 	i2c_register_board_info(1,
 			qt602240_info,
 			ARRAY_SIZE(qt602240_info));
+#endif
 }
 
 static int __init rhea_ray_add_lateInit_devices (void)
@@ -801,8 +876,6 @@ void __init board_map_io(void)
 late_initcall(rhea_ray_add_lateInit_devices);
 
 MACHINE_START(RHEA, "RheaRay")
-	.phys_io = IO_START,
-	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,

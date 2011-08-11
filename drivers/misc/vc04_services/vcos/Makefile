@@ -13,7 +13,7 @@ EXTRA_CFLAGS  += -D__linux__
 EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -DHAVE_VCOS_VERSION
 
-obj-m += vcos-mod.o
+obj-y += vcos-mod.o
 
 vcos-mod-objs := \
     ../../../../vc4-dev/src/interface/vcos/generic/vcos_generic_event_flags.o \

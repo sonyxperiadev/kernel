@@ -3458,7 +3458,7 @@ config BRCM_NETCONSOLE
 config BRCM_NETCONSOLE_DYNAMIC
         bool "Broadcom Dynamic reconfiguration of logging targets (EXPERIMENTAL)"
         depends on BRCM_NETCONSOLE && SYSFS && EXPERIMENTAL
-        select CONFIGFS_FS
+        #select CONFIGFS_FS
         help
           This option enables the ability to dynamically reconfigure target
           parameters (interface, IP addresses, port numbers, MAC addresses)

@@ -160,7 +160,7 @@ enum PIN_NAME {
         /* GPIO 22 */ PN_LCD_VSYNC,
         /* GPIO 21 */ PN_LCD_OE,  
         /* GPIO 20 */ PN_LCD_PCLK,
-
+		/* GPIO 10 */ PN_PMU_INT,
 	/* GPIO 3 */  PN_GPIO_3,  
         /* GPIO 2 */  PN_GPIO_2,
 
@@ -360,11 +360,13 @@ enum PIN_FUNC {
         PF_LCD_OE,
         PF_LCD_PCLK,
 
-	PF_GPIO_3,
+		PF_PMU_INT, 
+		
+		PF_GPIO_3,
         PF_GPIO_2,
 
-	PF_VC_GPCLK_0,
-	PF_VC_GPCLK_1,
+		PF_VC_GPCLK_0,
+		PF_VC_GPCLK_1,
 
 	PF_MAX
 };

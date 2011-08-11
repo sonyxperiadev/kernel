@@ -38,6 +38,9 @@
 #include <linux/ratelimit.h>
 #include <linux/kmsg_dump.h>
 #include <linux/syslog.h>
+#include <linux/cpu.h>
+#include <linux/notifier.h>
+#include <linux/rculist.h>
 #include <trace/stm.h>
 
 #include <asm/uaccess.h>
@@ -929,8 +932,8 @@ int brcm_retrive_early_printk(void)
 	 * will release 'logbuf_lock' regardless of whether it
 	 * actually gets the semaphore or not.
 	 */
-	if (acquire_console_semaphore_for_printk(this_cpu))
-		release_console_sem();
+	if (console_trylock_for_printk(this_cpu))
+		console_unlock();
 
 	lockdep_on();
 
@@ -999,23 +1002,21 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 	/* Send printk buffer to MIPI STM trace hardware too if enable */
 	stm_dup_printk(printk_buf, printed_len);
 
-	/* Do we have a loglevel in the string? */
-	if (p[0] == '<') {
-		unsigned char c = p[1];
-		if (c && p[2] == '>') {
-			switch (c) {
-			case '0' ... '7': /* loglevel */
-				current_log_level = c - '0';
-			/* Fallthrough - make sure we're on a new line */
-			case 'd': /* KERN_DEFAULT */
-				if (!new_text_line) {
-					emit_log_char('\n');
-					new_text_line = 1;
-				}
-			/* Fallthrough - skip the loglevel */
-			case 'c': /* KERN_CONT */
-				p += 3;
-				break;
+	/* Read log level and handle special printk prefix */
+	plen = log_prefix(p, &current_log_level, &special);
+	if (plen) {
+		p += plen;
+
+		switch (special) {
+		case 'c': /* Strip <c> KERN_CONT, continue line */
+			plen = 0;
+			break;
+		case 'd': /* Strip <d> KERN_DEFAULT, start new line */
+			plen = 0;
+		default:
+			if (!new_text_line) {
+				emit_log_char('\n');
+				new_text_line = 1;
 			}
 		}
 	}
@@ -1302,7 +1303,7 @@ void console_lock(void)
 	console_locked = 1;
 	console_may_schedule = 1;
 }
-EXPORT_SYMBOL(acquire_console_sem);
+EXPORT_SYMBOL(console_lock);
 EXPORT_SYMBOL(BrcmLogString);
 
 /**

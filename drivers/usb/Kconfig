@@ -40,6 +40,8 @@ config USB_ARCH_HAS_OHCI
 	default y if MFD_TC6393XB
 	default y if ARCH_W90X900
 	default y if ARCH_DAVINCI_DA8XX
+	default y if ARCH_CNS3XXX
+	default y if PLAT_SPEAR
 	default y if ARCH_ISLAND
 	# PPC:
 	default y if STB03xxx
@@ -61,6 +63,13 @@ config USB_ARCH_HAS_EHCI
 	default y if ARCH_AT91SAM9G45
 	default y if ARCH_MXC
 	default y if ARCH_OMAP3
+	default y if ARCH_CNS3XXX
+	default y if ARCH_VT8500
+	default y if PLAT_SPEAR
+	default y if PLAT_S5P
+	default y if ARCH_MSM
+	default y if MICROBLAZE
+	default y if SPARC_LEON
 	default y if ARCH_ISLAND
 	default PCI
 

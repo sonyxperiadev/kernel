@@ -136,7 +136,7 @@ static int tps728xx_regulator_get_voltage(struct regulator_dev *rdev)
 	int status;
 	pr_info("Inside %s\n", __func__);
 
-	status = gpio_get_value(tps728xx->vset_gpio);
+	status = gpio_get_value_cansleep(tps728xx->vset_gpio);
 	if (status == 1)
 		return tps728xx->vout1;
 	return tps728xx->vout0;

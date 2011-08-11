@@ -188,8 +188,26 @@
 #define PORT_ALTERA_JTAGUART	91
 #define PORT_ALTERA_UART	92
 
+/* SH-SCI */
+#define PORT_SCIFB	93
+
+/* MAX3107 */
+#define PORT_MAX3107	94
+
+/* High Speed UART for Medfield */
+#define PORT_MFD	95
+
+/* TI OMAP-UART */
+#define PORT_OMAP	96
+
+/* VIA VT8500 SoC */
+#define PORT_VT8500	97
+
+/* Xilinx PSS UART */
+#define PORT_XUARTPS	98
+
 /* Broadcom Virtual UART */
-#define PORT_BCMVUART   93
+#define PORT_BCMVUART	93
 
 #ifdef __KERNEL__
 

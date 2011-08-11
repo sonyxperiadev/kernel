@@ -86,3 +86,7 @@ obj-$(CONFIG_I2C_BSC)		+= i2c-bsc.o
 obj-$(CONFIG_I2C_BRCM_SSPI)	+= brcm_sspi/
 
 ccflags-$(CONFIG_I2C_DEBUG_BUS) := -DDEBUG
+
+ifeq ($(CONFIG_I2C_DEBUG_BUS),y)
+EXTRA_CFLAGS += -DDEBUG
+endif

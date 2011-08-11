@@ -869,13 +869,39 @@ config PLAT_SPEAR
 	help
 	  Support for ST's SPEAr platform (SPEAr3xx, SPEAr6xx and SPEAr13xx).
 
+config ARCH_VT8500
+	bool "VIA/WonderMedia 85xx"
+	select CPU_ARM926T
+	select GENERIC_GPIO
+	select ARCH_HAS_CPUFREQ
+	select GENERIC_CLOCKEVENTS
+	select ARCH_REQUIRE_GPIOLIB
+	select HAVE_PWM
+	help
+	  Support for VIA/WonderMedia VT8500/WM85xx System-on-Chip.
+
+config ARCH_KONA
+	bool "Broadcom KONA Architecture"
+	depends on MMU
+	select CPU_V7
+	select HAVE_CLK
+	select COMMON_CLKDEV
+	select CLKDEV_LOOKUP
+	select ARM_GIC
+	select GENERIC_GPIO
+	select ARCH_REQUIRE_GPIOLIB
+	select GENERIC_TIME
+	select GENERIC_CLOCKEVENTS
+	help
+	  This enables support for system based on Broadcom KONA architecture
+ 
 config ARCH_BCM2708
 	bool "Broadcom BCM2708 family"
 	select CPU_V6
 	select ARM_AMBA
-        select HAVE_CLK
-        select COMMON_CLKDEV
-        select GENERIC_CLOCKEVENTS
+	select HAVE_CLK
+	select COMMON_CLKDEV
+	select GENERIC_CLOCKEVENTS
 	select ARM_ERRATA_411920
 	select MACH_BCM2708
 	select VC4
@@ -886,20 +912,6 @@ config ARCH_BCM2708
 #	select SPARSEMEM_VMEMMAP_ENABLE
 	help
 	  This enables support for Broadcom BCM2708 boards.
-
-config ARCH_KONA
-	bool "Broadcom KONA Architecture"
-	depends on MMU
-	select CPU_V7
-	select HAVE_CLK
-	select COMMON_CLKDEV
-	select ARM_GIC
-	select GENERIC_GPIO
-	select ARCH_REQUIRE_GPIOLIB
-	select GENERIC_TIME
-	select GENERIC_CLOCKEVENTS
-	help
-	  This enables support for system based on Broadcom KONA architecture
 
 endchoice
 
@@ -1032,8 +1044,6 @@ source "arch/arm/plat-versatile/Kconfig"
 source "arch/arm/mach-vt8500/Kconfig"
 
 source "arch/arm/mach-w90x900/Kconfig"
-
-source "arch/arm/mach-bcm2708/Kconfig"
 
 # Definitions to make life easier
 config ARCH_ACORN
@@ -1334,17 +1344,15 @@ menu "Kernel Features"
 source "kernel/time/Kconfig"
 
 config SMP
-	bool "Symmetric Multi-Processing (EXPERIMENTAL)"
-	depends on EXPERIMENTAL && (REALVIEW_EB_ARM11MP || REALVIEW_EB_A9MP ||\
-		 MACH_REALVIEW_PB11MP || MACH_REALVIEW_PBX || ARCH_OMAP4 ||\
-		 ARCH_U8500 || ARCH_VEXPRESS_CA9X4 || ARCH_KONA)
+	bool "Symmetric Multi-Processing"
+	depends on CPU_V6K || CPU_V7
 	depends on GENERIC_CLOCKEVENTS
 	depends on REALVIEW_EB_ARM11MP || REALVIEW_EB_A9MP || \
 		 MACH_REALVIEW_PB11MP || MACH_REALVIEW_PBX || ARCH_OMAP4 || \
 		 ARCH_EXYNOS4 || ARCH_TEGRA || ARCH_U8500 || ARCH_VEXPRESS_CA9X4 || \
 		 ARCH_MSM_SCORPIONMP || ARCH_SHMOBILE
 	select USE_GENERIC_SMP_HELPERS
-	select HAVE_ARM_SCU if (ARCH_REALVIEW || ARCH_OMAP4 || ARCH_U8500 || ARCH_VEXPRESS_CA9X4 || ARCH_KONA)
+	select HAVE_ARM_SCU if !ARCH_MSM_SCORPIONMP
 	help
 	  This enables support for systems with more than one CPU. If you have
 	  a system with only one CPU, like most personal computers, say N. If
@@ -1426,10 +1434,9 @@ config HOTPLUG_CPU
 
 config LOCAL_TIMERS
 	bool "Use local timer interrupts"
-	depends on SMP && (REALVIEW_EB_ARM11MP || MACH_REALVIEW_PB11MP || \
-		REALVIEW_EB_A9MP || MACH_REALVIEW_PBX || ARCH_OMAP4 || ARCH_U8500 || ARCH_KONA)
+	depends on SMP
 	default y
-	select HAVE_ARM_TWD if (ARCH_REALVIEW || ARCH_OMAP4 || ARCH_U8500 || ARCH_KONA)
+	select HAVE_ARM_TWD if (!ARCH_MSM_SCORPIONMP && !EXYNOS4_MCT)
 	help
 	  Enable support for local timers on SMP platforms, rather then the
 	  legacy IPI broadcast method.  Local timers allows the system

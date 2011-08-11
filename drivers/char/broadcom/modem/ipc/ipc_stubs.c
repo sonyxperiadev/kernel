@@ -45,16 +45,6 @@ UInt32 TIMER_GetValue(void)
 return 0;
 }
 
-int RpcLog_DetailLogEnabled()
-{
-	return 0;
-}
-
-//JW, to do, hack
-Boolean IsBasicCapi2LoggingEnable(void)
-{
-	return false;
-}
 
 
 void CAPI2_Assert(char *expr, char *file, int line, int value)
@@ -63,28 +53,5 @@ void CAPI2_Assert(char *expr, char *file, int line, int value)
 #ifdef FUSE_IPC_CRASH_SUPPORT 
     IPCCP_SetCPCrashedStatus(IPC_AP_ASSERT);
 #endif
-}
-
-#define MAX_BUF_SIZE 1024
-static char buf[MAX_BUF_SIZE];
-int RpcLog_DebugPrintf(char* fmt, ...)
-{
-#ifdef CONFIG_BRCM_UNIFIED_LOGGING
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, MAX_BUF_SIZE, fmt, ap);
-    va_end(ap);
-    KRIL_DEBUG(DBG_INFO, "TS[%ld]%s\n", TIMER_GetValue(), buf);
-#else
-    if(IsBasicCapi2LoggingEnable())
-    {
-        va_list ap;
-        va_start(ap, fmt);
-        vsnprintf(buf, MAX_BUF_SIZE, fmt, ap);
-        va_end(ap);
-        pr_info("TS[%ld]%s",TIMER_GetValue(),buf);
-    }
-#endif
-    return 1;
 }
 

@@ -68,31 +68,35 @@ enum interrupt_source_type {
 
 static DEFINE_SPINLOCK(intc_lock);
 
-static void intc_ack_irq(unsigned int irq)
+static void intc_ack_irq(struct irq_data *d)
 {
-	void __iomem *base = get_irq_chip_data(irq);
+	unsigned int irq = d->irq;
+	void __iomem *base = irq_get_chip_data(irq);
 	writel(1 << (irq & 31), base + INTC_ICR);
 	/* moreover, clear the soft-triggered, in case it was the reason */
 	writel(1 << (irq & 31), base + INTC_SICR(irq));
 }
 
-static void intc_mask_irq(unsigned int irq)
+static void intc_mask_irq(struct irq_data *d)
 {
-	void __iomem *base = get_irq_chip_data(irq);
+	unsigned int irq = d->irq;
+	void __iomem *base = irq_get_chip_data(irq);
 	irq &= 31;
 	writel(readl(base + INTC_IMR) & ~(1 << irq), base + INTC_IMR);
 }
 
-static void intc_unmask_irq(unsigned int irq)
+static void intc_unmask_irq(struct irq_data *d)
 {
-	void __iomem *base = get_irq_chip_data(irq);
+	unsigned int irq = d->irq;
+	void __iomem *base = irq_get_chip_data(irq);
 	irq &= 31;
 	writel(readl(base + INTC_IMR) | (1 << irq), base + INTC_IMR);
 }
 
-static int intc_set_type(unsigned int irq, unsigned int flow_type)
+static int intc_set_type(struct irq_data *d, unsigned int flow_type)
 {
-	void __iomem *base = get_irq_chip_data(irq);
+	unsigned int irq = d->irq;
+	void __iomem *base = irq_get_chip_data(irq);
 	unsigned int type = 0, val;
 
 	irq &= 31;
@@ -321,11 +325,11 @@ static inline void intc_pm_register(void __iomem *base, unsigned int irq,
 
 static struct irq_chip intc_chip = {
 	.name = "INTC",
-	.ack = intc_ack_irq,
-	.mask = intc_mask_irq,
-	.unmask = intc_unmask_irq,
-	.set_type = intc_set_type,
-	.set_wake = intc_set_wake,
+	.irq_ack = intc_ack_irq,
+	.irq_mask = intc_mask_irq,
+	.irq_unmask = intc_unmask_irq,
+	.irq_set_type = intc_set_type,
+	.irq_set_wake = intc_set_wake,
 };
 
 /** @addtogroup InterruptAPIGroup
@@ -362,13 +366,13 @@ void __init bcm_intc_init(void __iomem * base, unsigned int irq_start,
 		if (intc_sources & (1 << i)) {
 			unsigned int irq = irq_start + i;
 
-			set_irq_chip(irq, &intc_chip);
-			set_irq_chip_data(irq, base);
+			irq_set_chip(irq, &intc_chip);
+			irq_set_chip_data(irq, base);
 			if (irq != IRQ_GPIO)
-				set_irq_handler(irq, handle_level_irq);
+				irq_set_handler(irq, handle_level_irq);
 			else
-				set_irq_handler(irq, handle_simple_irq);
-			set_irq_flags(irq, IRQF_VALID | IRQF_PROBE);
+				irq_set_handler(irq, handle_simple_irq);
+			irq_set_status_flags(irq, IRQF_VALID | IRQF_PROBE);
 		}
 	}
 

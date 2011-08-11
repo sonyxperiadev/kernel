@@ -1485,8 +1485,7 @@ int bcm59055_adc_chipset_release(struct inode *inode, struct file *file)
 	return 0;
 }
 
-static int bcm59055_adc_chipset_ioctl(struct inode *inode, struct file *file,
-	unsigned int cmd, unsigned long arg)
+static long bcm59055_adc_chipset_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
 	/* TODO: */
 	return 0;
@@ -1667,7 +1666,7 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 
 static const struct file_operations bcm59055_adc_chipset_ops = {
 	.open = bcm59055_adc_chipset_open,
-	.ioctl = bcm59055_adc_chipset_ioctl,
+	.unlocked_ioctl = bcm59055_adc_chipset_ioctl,
 	.write = bcm59055_adc_chipset_write,
 	.release = bcm59055_adc_chipset_release,
 	.owner = THIS_MODULE,

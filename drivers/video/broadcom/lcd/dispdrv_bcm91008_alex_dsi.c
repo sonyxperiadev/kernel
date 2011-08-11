@@ -77,7 +77,7 @@
 #define BCM91008_ALEX_VC            (0)
 #define BCM91008_ALEX_CMND_IS_LP    TRUE  // display init comm LP or HS mode
 
-#define GPIODRV_Set_Bit(pin, val) gpio_set_value(pin, val)
+#define GPIODRV_Set_Bit(pin, val) gpio_set_value_cansleep(pin, val)
 
 #undef HAL_LCD_RESET
 #define HAL_LCD_RESET_B  (KONA_MAX_GPIO + 3)

@@ -58,13 +58,14 @@ include/asm
 include/asm-*/asm-offsets.h
 include/asm-*/mach-types.h
 include/config
-include/linux/autoconf.h
-include/linux/compile.h
 include/linux/version.h
-include/linux/utsrelease.h
-include/linux/bounds.h
 include/generated
 arch/*/include/generated
+include/asm-*/mach-types.h
+include/linux/autoconf.h
+include/linux/compile.h
+include/linux/utsrelease.h
+include/linux/bounds.h
 
 # stgit generated dirs
 patches-*

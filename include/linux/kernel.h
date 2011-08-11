@@ -362,6 +362,7 @@ extern void brcm_current_netcon_status(unsigned char status);
 
 extern int printk_delay_msec;
 
+#if 0
 /*
  * Print a one-time message (analogous to WARN_ONCE() et al):
  */
@@ -373,6 +374,7 @@ extern int printk_delay_msec;
 		printk(x);			\
 	}					\
 })
+#endif
 
 void log_buf_kexec_setup(void);
 #else

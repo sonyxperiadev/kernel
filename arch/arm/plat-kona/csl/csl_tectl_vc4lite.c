@@ -185,13 +185,15 @@ static Int32 csl_tectl_vc4l_CfgInput ( UInt32 teIn, pTECTL_CFG teCfg )
             "ERROR Invalid TE Input \r\n" ); 
         return ( -1 );
     }
-    
+
+#if 0
     if ( teCslCfg[teIn].inUse ) 
     {
         LCD_DBG ( LCD_DBG_ID, "[CSL TECTL] csl_tectl_vc4l_CfgInput: "
             "ERROR TE Input Already In Use \r\n" ); 
         return ( -1 );
-    }    
+    }
+#endif
     
     if ( teIn == TE_VC4L_IN_0_LCD  )
     { 

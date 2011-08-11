@@ -69,13 +69,6 @@ config DMAC_PL330
 	help
 	 Support for PL330 DMA Controller driver for Rhea SOC/KONA architecture
 
-config DMAC_KONA_PL330_SECURE_MODE
-	bool "PL330 DMAC Secure Mode Support"
-	depends on DMAC_PL330
-	help
-	 	PL330 DMA driver operates in open mode by default. 
-		 Enable this option to operate PL330 in secure mode. 
-
 config BCM_ZRELADDR
 	hex "Compressed ZREL address"
 
@@ -100,5 +93,11 @@ config KONA_CPU_PM_HANDLER
 	help
 	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.	 
 
+config DMAC_KONA_PL330_SECURE_MODE
+	bool "PL330 DMAC Secure Mode Support"
+	depends on DMAC_PL330
+	help
+	 	PL330 DMA driver operates in open mode by default. 
+		 Enable this option to operate PL330 in secure mode. 
 endmenu
 

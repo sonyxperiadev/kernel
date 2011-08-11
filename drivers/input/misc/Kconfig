@@ -420,13 +420,86 @@ config INPUT_PCAP
 	  To compile this driver as a module, choose M here: the
 	  module will be called pcap_keys.
 
+config INPUT_ADXL34X
+	tristate "Analog Devices ADXL34x Three-Axis Digital Accelerometer"
+	default n
+	help
+	  Say Y here if you have a Accelerometer interface using the
+	  ADXL345/6 controller, and your board-specific initialization
+	  code includes that in its table of devices.
+
+	  This driver can use either I2C or SPI communication to the
+	  ADXL345/6 controller.  Select the appropriate method for
+	  your system.
+
+	  If unsure, say N (but it's safe to say "Y").
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called adxl34x.
+
+config INPUT_ADXL34X_I2C
+	tristate "support I2C bus connection"
+	depends on INPUT_ADXL34X && I2C
+	default y
+	help
+	  Say Y here if you have ADXL345/6 hooked to an I2C bus.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called adxl34x-i2c.
+
+config INPUT_ADXL34X_SPI
+	tristate "support SPI bus connection"
+	depends on INPUT_ADXL34X && SPI
+	default y
+	help
+	  Say Y here if you have ADXL345/6 hooked to a SPI bus.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called adxl34x-spi.
+
+config INPUT_CMA3000
+	tristate "VTI CMA3000 Tri-axis accelerometer"
+	help
+	  Say Y here if you want to use VTI CMA3000_D0x Accelerometer
+	  driver
+
+	  This driver currently only supports I2C interface to the
+	  controller. Also select the I2C method.
+
+	  If unsure, say N
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cma3000_d0x.
+
+config INPUT_CMA3000_I2C
+	tristate "Support I2C bus connection"
+	depends on INPUT_CMA3000 && I2C
+	help
+	  Say Y here if you want to use VTI CMA3000_D0x Accelerometer
+	  through I2C interface.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called cma3000_d0x_i2c.
+
+config INPUT_XEN_KBDDEV_FRONTEND
+	tristate "Xen virtual keyboard and mouse support"
+	depends on XEN_FBDEV_FRONTEND
+	default y
+	select XEN_XENBUS_FRONTEND
+	help
+	  This driver implements the front-end of the Xen virtual
+	  keyboard and mouse device driver.  It communicates with a back-end
+	  in another domain.
+
+	  To compile this driver as a module, choose M here: the
+	  module will be called xen-kbdfront.
+
 config INPUT_SMB380
 	tristate "SMB380/BMA023 Triaxial acceleration sensor"
 	depends on I2C
 	help
 	Say Y here if you want to support Bosch SMB380/BMA023 connected via an I2C bus.
 	To compile this driver as a module, choose M here: the module will be called smb380.
-
 
 config INPUT_BCM2835_IR
         tristate "BCM2835 IR input events"

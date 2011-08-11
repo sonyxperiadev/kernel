@@ -41,7 +41,7 @@
 #include <mach/kona.h>
 #include <mach/rhea.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
-#include <linux/usb/android_composite.h>
+/*#include <linux/usb/android_composite.h>*/
 #include <asm/mach/map.h>
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <linux/broadcom/ipcinterface.h>
@@ -96,6 +96,8 @@ static struct platform_device board_serial_device = {
 	},
 };
 
+/* FIXME: BRCM specific USB is not fully migrated, disabling them for now */
+#ifdef CONFIG_USB
 static char *android_function_rndis[] = {
 #ifdef CONFIG_USB_ANDROID_RNDIS
 	"rndis",
@@ -155,7 +157,6 @@ static char *android_functions_all[] = {
 #define RNDIS_PRODUCT_ID	0x4e13
 #define ACM_PRODUCT_ID		0x8888
 #define OBEX_PRODUCT_ID		0x685E
-
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
 	.nluns		=	1,
@@ -231,6 +232,7 @@ static struct platform_device android_usb = {
 		.platform_data = &android_usb_data,
 	},
 };
+#endif
 
 static struct resource board_sdio0_resource[] = {
 	[0] = {
@@ -331,6 +333,7 @@ static struct platform_device board_sdio2_device = {
 		.platform_data = &board_sdio_param[2],
 	},
 };
+
 static struct resource board_i2c0_resource[] = {
 	[0] =
 	{
@@ -545,15 +548,45 @@ static struct platform_device rng_device =
 };
 #endif
 
+#ifdef CONFIG_USB_DWC_OTG
+static struct resource kona_otg_platform_resource[] = {
+	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
+		.start = HSOTG_BASE_ADDR,
+		.end = HSOTG_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start = BCM_INT_ID_USB_HSOTG,
+		.end = BCM_INT_ID_USB_HSOTG,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device board_kona_otg_platform_device =
+{
+	.name = "dwc_otg",
+	.id = -1,
+	.resource = kona_otg_platform_resource,
+	.num_resources = ARRAY_SIZE(kona_otg_platform_resource),
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
 	&board_i2c_adap_devices[2],
+#ifdef CONFIG_USB
 	&android_rndis_device,
 	&android_mass_storage_device,
 	&android_usb,
+#endif
 	&pmu_device,	
 	&kona_pwm_device,
 	&kona_sspi_spi0_device,
@@ -565,6 +598,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_HW_RANDOM_KONA)
 	&rng_device,
+#endif
+#ifdef CONFIG_USB_DWC_OTG
+	&board_kona_otg_platform_device,
 #endif
 };
 

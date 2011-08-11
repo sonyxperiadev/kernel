@@ -26,7 +26,14 @@
 #define HUB_RESET_TT		9
 #define HUB_GET_TT_STATE	10
 #define HUB_STOP_TT		11
-#define HUB_SET_AND_TEST	12
+
+/*
+ * Hub class additional requests defined by USB 3.0 spec
+ * See USB 3.0 spec Table 10-6
+ */
+#define HUB_SET_DEPTH		12
+#define HUB_GET_PORT_ERR_COUNT	13
+#define HUB_SET_AND_TEST	14
 
 /*
  * Hub Class feature numbers

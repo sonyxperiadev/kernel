@@ -29,6 +29,7 @@
 
 #include <linux/io.h>
 #include <asm/gpio.h>
+#include <asm/mach/irq.h>
 #include <mach/gpio.h>
 #include <mach/rdb/brcm_rdb_gpio.h>
 #include <mach/io_map.h>
@@ -229,8 +230,9 @@ static struct gpio_chip kona_gpio_chip = {
 	.ngpio              = 0,
 };
 
-static void kona_gpio_irq_ack(unsigned int irq)
+static void kona_gpio_irq_ack(struct irq_data *d)
 {
+	unsigned int irq = d->irq;
 	int gpio = irq_to_gpio(irq);
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
@@ -247,8 +249,9 @@ static void kona_gpio_irq_ack(unsigned int irq)
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 }
 
-static void kona_gpio_irq_mask(unsigned int irq)
+static void kona_gpio_irq_mask(struct irq_data *d)
 {
+	unsigned int irq = d->irq;
 	int gpio = irq_to_gpio(irq);
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
@@ -265,8 +268,9 @@ static void kona_gpio_irq_mask(unsigned int irq)
 	spin_unlock_irqrestore(&kona_gpio.lock, flags);
 }
 
-static void kona_gpio_irq_unmask(unsigned int irq)
+static void kona_gpio_irq_unmask(struct irq_data *d)
 {
+	unsigned int irq = d->irq;
 	int gpio = irq_to_gpio(irq);
 	int bankId = GPIO_BANK(gpio);
 	int bit = GPIO_BIT(gpio);
@@ -284,10 +288,11 @@ static void kona_gpio_irq_unmask(unsigned int irq)
 }
 
 
-static int kona_gpio_irq_set_type(unsigned int irq, unsigned int type)
+static int kona_gpio_irq_set_type(struct irq_data *d, unsigned int type)
 {
+	unsigned int irq = d->irq;
 	int gpio = irq_to_gpio(irq);
-	struct kona_gpio *p_kona_gpio = get_irq_chip_data(irq);
+	struct kona_gpio *p_kona_gpio = irq_get_chip_data(irq);
 	u32 lvl_type;
 	u32 val;
 	unsigned long flags;
@@ -329,14 +334,14 @@ static int kona_gpio_irq_set_type(unsigned int irq, unsigned int type)
 
 static void kona_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 {
-	struct kona_gpio_bank *bank;
 	int bit, bankId;
 	void __iomem * reg_base = kona_gpio.reg_base;
 	unsigned long sta;
+	struct kona_gpio_bank *bank = irq_get_handler_data(irq);
+	struct irq_chip *chip = irq_desc_get_chip(desc);
 
-	desc->chip->ack(irq);
+	chained_irq_enter(chip, desc);
 
-	bank = get_irq_data(irq);
 	bankId = bank->id;
 	sta = __raw_readl(reg_base + GPIO_INT_STA(bankId)) &
 		      (~(__raw_readl(reg_base + GPIO_INT_MSK(bankId))));
@@ -349,24 +354,21 @@ static void kona_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 		__raw_writel(__raw_readl(reg_base + GPIO_INT_STA(bankId)) | (1 << bit), 
 			         reg_base + GPIO_INT_STA(bankId));
 
-		/* KONA GPIOs are all edge triggered. Clear condition
-		 * before executing the handler so that we don't miss edges.
-		 */ 
-		desc->chip->unmask(irq); 
-		
 		/* Invoke interrupt handler.
 		 */ 
 		generic_handle_irq(gpio_to_irq(GPIO_PER_BANK * bankId + bit));
 	}
+	
+	chained_irq_exit(chip, desc);
 }
 
 
 static struct irq_chip kona_gpio_irq_chip = {
 	.name		= "KONA-GPIO",
-	.ack		= kona_gpio_irq_ack,
-	.mask		= kona_gpio_irq_mask,
-	.unmask		= kona_gpio_irq_unmask,
-	.set_type	= kona_gpio_irq_set_type,
+	.irq_ack		= kona_gpio_irq_ack,
+	.irq_mask		= kona_gpio_irq_mask,
+	.irq_unmask		= kona_gpio_irq_unmask,
+	.irq_set_type	= kona_gpio_irq_set_type,
 };
 
 
@@ -412,14 +414,13 @@ int __init kona_gpio_init(int num_bank)
 	kona_gpio.num_bank = num_bank;
 	spin_lock_init(&kona_gpio.lock);
 	kona_gpio_chip.ngpio = num_bank * GPIO_PER_BANK;
-	gpiochip_add(&kona_gpio_chip);
+	BUG_ON(gpiochip_add(&kona_gpio_chip) < 0);
 
 	for (i = IRQ_GPIO_0; i < (IRQ_GPIO_0 + kona_gpio_chip.ngpio ); i++) 
 	{
-		lockdep_set_class(&irq_desc[i].lock, &gpio_lock_class);
-		set_irq_chip_data(i, &kona_gpio);
-		set_irq_chip(i, &kona_gpio_irq_chip);
-		set_irq_handler(i, handle_simple_irq);
+		irq_set_lockdep_class(i, &gpio_lock_class);
+		irq_set_chip_and_handler(i, &kona_gpio_irq_chip, handle_simple_irq);
+		irq_set_chip_data(i, &kona_gpio);
 		set_irq_flags(i, IRQF_VALID);
 	}
 
@@ -427,8 +428,8 @@ int __init kona_gpio_init(int num_bank)
 	{
 		bank = &kona_gpio.banks[i];
 
-		set_irq_chained_handler(bank->irq, kona_gpio_irq_handler);
-		set_irq_data(bank->irq, bank);
+		irq_set_chained_handler(bank->irq, kona_gpio_irq_handler);
+		irq_set_handler_data(bank->irq, bank);
 	}
 
 	printk(KERN_INFO "kona gpio initialised.\n");

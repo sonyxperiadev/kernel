@@ -543,6 +543,57 @@ config USB_LANGWELL
 	default USB_GADGET
 	select USB_GADGET_SELECTED
 
+config USB_GADGET_EG20T
+	boolean "Intel EG20T PCH/OKI SEMICONDUCTOR ML7213 IOH UDC"
+	depends on PCI
+	select USB_GADGET_DUALSPEED
+	help
+	  This is a USB device driver for EG20T PCH.
+	  EG20T PCH is the platform controller hub that is used in Intel's
+	  general embedded platform. EG20T PCH has USB device interface.
+	  Using this interface, it is able to access system devices connected
+	  to USB device.
+	  This driver enables USB device function.
+	  USB device is a USB peripheral controller which
+	  supports both full and high speed USB 2.0 data transfers.
+	  This driver supports both control transfer and bulk transfer modes.
+	  This driver dose not support interrupt transfer or isochronous
+	  transfer modes.
+
+	  This driver also can be used for OKI SEMICONDUCTOR's ML7213 which is
+	  for IVI(In-Vehicle Infotainment) use.
+	  ML7213 is companion chip for Intel Atom E6xx series.
+	  ML7213 is completely compatible for Intel EG20T PCH.
+
+config USB_EG20T
+	tristate
+	depends on USB_GADGET_EG20T
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+
+config USB_GADGET_CI13XXX_MSM
+	boolean "MIPS USB CI13xxx for MSM"
+	depends on ARCH_MSM
+	select USB_GADGET_DUALSPEED
+	select USB_MSM_OTG
+	help
+	  MSM SoC has chipidea USB controller.  This driver uses
+	  ci13xxx_udc core.
+	  This driver depends on OTG driver for PHY initialization,
+	  clock management, powering up VBUS, and power management.
+	  This driver is not supported on boards like trout which
+	  has an external PHY.
+
+	  Say "y" to link the driver statically, or "m" to build a
+	  dynamically linked module called "ci13xxx_msm" and force all
+	  gadget drivers to also be dynamically linked.
+
+config USB_CI13XXX_MSM
+	tristate
+	depends on USB_GADGET_CI13XXX_MSM
+	default USB_GADGET
+	select USB_GADGET_SELECTED
+
 config USB_GADGET_DWC_OTG
 	boolean "Synopsys DWC_OTG 2.91a"
 	depends on ARCH_KONA
@@ -930,39 +981,39 @@ config USB_G_ANDROID
 	  The functions can be configured via a board file and may be
 	  enabled and disabled dynamically.
 
-config USB_ANDROID_ACM
+config USB_G_ANDROID_ACM
 	boolean "Android gadget ACM serial function"
-	depends on USB_ANDROID
+	depends on USB_G_ANDROID
 	help
 	  Provides ACM serial function for android gadget driver.
 
-config USB_ANDROID_ADB
+config USB_G_ANDROID_ADB
 	boolean "Android gadget adb function"
-	depends on USB_ANDROID
+	depends on USB_G_ANDROID
 	help
 	  Provides adb function for android gadget driver.
 
-config USB_ANDROID_MASS_STORAGE
+config USB_G_ANDROID_MASS_STORAGE
 	boolean "Android gadget mass storage function"
-	depends on USB_ANDROID && SWITCH
+	depends on USB_G_ANDROID && SWITCH
 	help
 	  Provides USB mass storage function for android gadget driver.
 
-config USB_ANDROID_MTP
+config USB_G_ANDROID_MTP
 	boolean "Android MTP function"
-	depends on USB_ANDROID
+	depends on USB_G_ANDROID
 	help
 	  Provides Media Transfer Protocol (MTP) support for android gadget driver.
 
-config USB_ANDROID_RNDIS
+config USB_G_ANDROID_RNDIS
 	boolean "Android gadget RNDIS ethernet function"
-	depends on USB_ANDROID
+	depends on USB_G_ANDROID
 	help
 	  Provides RNDIS ethernet function for android gadget driver.
 
-config USB_ANDROID_RNDIS_WCEIS
+config USB_G_ANDROID_RNDIS_WCEIS
         boolean "Use Windows Internet Sharing Class/SubClass/Protocol"
-        depends on USB_ANDROID_RNDIS
+        depends on USB_G_ANDROID_RNDIS
         help
          Causes the driver to look like a Windows-compatible Internet
          Sharing device, so Windows auto-detects it.
@@ -970,10 +1021,9 @@ config USB_ANDROID_RNDIS_WCEIS
          If you enable this option, the device is no longer CDC ethernet
          compatible.
 
-config USB_ANDROID_OBEX
+config USB_G_ANDROID_OBEX
 	boolean "Android gadget OBEX function"
-	depends on USB_ANDROID
-	default n
+	depends on USB_G_ANDROID
 	help
 	  Provides OBEX function for android gadget driver.
 
@@ -1097,5 +1147,6 @@ config USB_G_WEBCAM
 	  dynamically linked module called "g_webcam".
 
 endchoice
+
 
 endif # USB_GADGET

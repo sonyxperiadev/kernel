@@ -131,7 +131,7 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 int LaunchAudioCtrlThread(void)
 {
 	int ret;
-	sgThreadData.m_lock =  SPIN_LOCK_UNLOCKED;
+	sgThreadData.m_lock =  __SPIN_LOCK_UNLOCKED();
 	
 	ret = kfifo_alloc(&sgThreadData.m_pkfifo,KFIFO_SIZE, GFP_KERNEL);
 	BCM_AUDIO_DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo.size);

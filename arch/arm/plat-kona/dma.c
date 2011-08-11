@@ -859,8 +859,6 @@ static int pl330_probe(struct platform_device *pdev)
 	struct pl330_info *pl330_info;
 	int ret, i, irq_start, irq;
 
-	printk("\nkona-dmac-pl330: Probe ()\n");
-
 	pl330_pdata = pdev->dev.platform_data;
 
 	/* Only One Pl330 device is supported, 

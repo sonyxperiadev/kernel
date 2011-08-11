@@ -195,7 +195,7 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
     return 0;
 }
 
-static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
+static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
     unicam_t *dev;
     int ret = 0;
@@ -295,7 +295,7 @@ static struct file_operations unicam_fops =
     .open      = unicam_open,
     .release   = unicam_release,
     .mmap      = unicam_mmap,
-    .ioctl     = unicam_ioctl,
+    .unlocked_ioctl     = unicam_ioctl,
 };
 
 
