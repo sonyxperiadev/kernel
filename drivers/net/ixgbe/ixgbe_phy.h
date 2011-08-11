@@ -1,7 +1,7 @@
 /*******************************************************************************
 
   Intel 10 Gigabit PCI Express Linux driver
-  Copyright(c) 1999 - 2010 Intel Corporation.
+  Copyright(c) 1999 - 2011 Intel Corporation.
 
   This program is free software; you can redistribute it and/or modify it
   under the terms and conditions of the GNU General Public License,
@@ -48,6 +48,7 @@
 #define IXGBE_SFF_DA_SPEC_ACTIVE_LIMITING    0x4
 #define IXGBE_SFF_1GBASESX_CAPABLE           0x1
 #define IXGBE_SFF_1GBASELX_CAPABLE           0x2
+#define IXGBE_SFF_1GBASET_CAPABLE            0x8
 #define IXGBE_SFF_10GBASESR_CAPABLE          0x10
 #define IXGBE_SFF_10GBASELR_CAPABLE          0x20
 #define IXGBE_I2C_EEPROM_READ_MASK           0x100
@@ -56,6 +57,10 @@
 #define IXGBE_I2C_EEPROM_STATUS_PASS         0x1
 #define IXGBE_I2C_EEPROM_STATUS_FAIL         0x2
 #define IXGBE_I2C_EEPROM_STATUS_IN_PROGRESS  0x3
+
+/* Flow control defines */
+#define IXGBE_TAF_SYM_PAUSE                  0x400
+#define IXGBE_TAF_ASM_PAUSE                  0x800
 
 /* Bit-shift macros */
 #define IXGBE_SFF_VENDOR_OUI_BYTE0_SHIFT    24
@@ -95,13 +100,19 @@ s32 ixgbe_setup_phy_link_speed_generic(struct ixgbe_hw *hw,
                                        ixgbe_link_speed speed,
                                        bool autoneg,
                                        bool autoneg_wait_to_complete);
+s32 ixgbe_get_copper_link_capabilities_generic(struct ixgbe_hw *hw,
+                                               ixgbe_link_speed *speed,
+                                               bool *autoneg);
 
 /* PHY specific */
 s32 ixgbe_check_phy_link_tnx(struct ixgbe_hw *hw,
                              ixgbe_link_speed *speed,
                              bool *link_up);
+s32 ixgbe_setup_phy_link_tnx(struct ixgbe_hw *hw);
 s32 ixgbe_get_phy_firmware_version_tnx(struct ixgbe_hw *hw,
                                        u16 *firmware_version);
+s32 ixgbe_get_phy_firmware_version_generic(struct ixgbe_hw *hw,
+                                           u16 *firmware_version);
 
 s32 ixgbe_reset_phy_nl(struct ixgbe_hw *hw);
 s32 ixgbe_identify_sfp_module_generic(struct ixgbe_hw *hw);

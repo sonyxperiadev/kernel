@@ -33,6 +33,7 @@
 #include <linux/vmalloc.h>
 #include <linux/swap.h>
 #include <linux/kmsg_dump.h>
+#include <linux/syscore_ops.h>
 
 #include <asm/page.h>
 #include <asm/uaccess.h>
@@ -144,15 +145,17 @@ static int do_kimage_alloc(struct kimage **rimage, unsigned long entry,
 	/* Initialize the list of destination pages */
 	INIT_LIST_HEAD(&image->dest_pages);
 
-	/* Initialize the list of unuseable pages */
+	/* Initialize the list of unusable pages */
 	INIT_LIST_HEAD(&image->unuseable_pages);
 
 	/* Read in the segments */
 	image->nr_segments = nr_segments;
 	segment_bytes = nr_segments * sizeof(*segments);
 	result = copy_from_user(image->segment, segments, segment_bytes);
-	if (result)
+	if (result) {
+		result = -EFAULT;
 		goto out;
+	}
 
 	/*
 	 * Verify we have good destination addresses.  The caller is
@@ -161,7 +164,7 @@ static int do_kimage_alloc(struct kimage **rimage, unsigned long entry,
 	 * just verifies it is an address we can use.
 	 *
 	 * Since the kernel does everything in page size chunks ensure
-	 * the destination addreses are page aligned.  Too many
+	 * the destination addresses are page aligned.  Too many
 	 * special cases crop of when we don't do this.  The most
 	 * insidious is getting overlapping destination addresses
 	 * simply because addresses are changed to page size
@@ -452,7 +455,7 @@ static struct page *kimage_alloc_normal_control_pages(struct kimage *image,
 	/* Deal with the destination pages I have inadvertently allocated.
 	 *
 	 * Ideally I would convert multi-page allocations into single
-	 * page allocations, and add everyting to image->dest_pages.
+	 * page allocations, and add everything to image->dest_pages.
 	 *
 	 * For now it is simpler to just free the pages.
 	 */
@@ -600,7 +603,7 @@ static void kimage_free_extra_pages(struct kimage *image)
 	/* Walk through and free any extra destination pages I may have */
 	kimage_free_page_list(&image->dest_pages);
 
-	/* Walk through and free any unuseable pages I have cached */
+	/* Walk through and free any unusable pages I have cached */
 	kimage_free_page_list(&image->unuseable_pages);
 
 }
@@ -814,7 +817,7 @@ static int kimage_load_normal_segment(struct kimage *image,
 
 		ptr = kmap(page);
 		/* Start with a clear page */
-		memset(ptr, 0, PAGE_SIZE);
+		clear_page(ptr);
 		ptr += maddr & ~PAGE_MASK;
 		mchunk = PAGE_SIZE - (maddr & ~PAGE_MASK);
 		if (mchunk > mbytes)
@@ -827,7 +830,7 @@ static int kimage_load_normal_segment(struct kimage *image,
 		result = copy_from_user(ptr, buf, uchunk);
 		kunmap(page);
 		if (result) {
-			result = (result < 0) ? result : -EIO;
+			result = -EFAULT;
 			goto out;
 		}
 		ubytes -= uchunk;
@@ -882,7 +885,7 @@ static int kimage_load_crash_segment(struct kimage *image,
 		kexec_flush_icache_page(page);
 		kunmap(page);
 		if (result) {
-			result = (result < 0) ? result : -EIO;
+			result = -EFAULT;
 			goto out;
 		}
 		ubytes -= uchunk;
@@ -1097,7 +1100,8 @@ size_t crash_get_memory_size(void)
 	return size;
 }
 
-static void free_reserved_phys_range(unsigned long begin, unsigned long end)
+void __weak crash_free_reserved_phys_range(unsigned long begin,
+					   unsigned long end)
 {
 	unsigned long addr;
 
@@ -1133,7 +1137,7 @@ int crash_shrink_memory(unsigned long new_size)
 	start = roundup(start, PAGE_SIZE);
 	end = roundup(start + new_size, PAGE_SIZE);
 
-	free_reserved_phys_range(end, crashk_res.end);
+	crash_free_reserved_phys_range(end, crashk_res.end);
 
 	if ((start == end) && (crashk_res.parent != NULL))
 		release_resource(&crashk_res);
@@ -1527,8 +1531,7 @@ int kernel_kexec(void)
 		if (error)
 			goto Enable_cpus;
 		local_irq_disable();
-		/* Suspend system devices */
-		error = sysdev_suspend(PMSG_FREEZE);
+		error = syscore_suspend();
 		if (error)
 			goto Enable_irqs;
 	} else
@@ -1543,7 +1546,7 @@ int kernel_kexec(void)
 
 #ifdef CONFIG_KEXEC_JUMP
 	if (kexec_image->preserve_context) {
-		sysdev_resume();
+		syscore_resume();
  Enable_irqs:
 		local_irq_enable();
  Enable_cpus:

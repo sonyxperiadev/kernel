@@ -45,7 +45,7 @@ static int setkey(struct crypto_tfm *parent, const u8 *key,
 		return -EINVAL;
 	}
 
-	/* we need two cipher instances: one to compute the inital 'tweak'
+	/* we need two cipher instances: one to compute the initial 'tweak'
 	 * by encrypting the IV (usually the 'plain' iv) and the other
 	 * one to encrypt and decrypt the data */
 
@@ -224,7 +224,7 @@ static struct crypto_instance *alloc(struct rtattr **tb)
 	alg = crypto_get_attr_alg(tb, CRYPTO_ALG_TYPE_CIPHER,
 				  CRYPTO_ALG_TYPE_MASK);
 	if (IS_ERR(alg))
-		return ERR_PTR(PTR_ERR(alg));
+		return ERR_CAST(alg);
 
 	inst = crypto_alloc_instance("xts", alg);
 	if (IS_ERR(inst))

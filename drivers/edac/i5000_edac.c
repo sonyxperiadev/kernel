@@ -27,7 +27,7 @@
 /*
  * Alter this version for the I5000 module when modifications are made
  */
-#define I5000_REVISION    " Ver: 2.0.12 " __DATE__
+#define I5000_REVISION    " Ver: 2.0.12"
 #define EDAC_MOD_STR      "i5000_edac"
 
 #define i5000_printk(level, fmt, arg...) \
@@ -1372,7 +1372,7 @@ static int i5000_probe1(struct pci_dev *pdev, int dev_idx)
 	 * actual number of slots/dimms per channel, we thus utilize the
 	 * resource as specified by the chipset. Thus, we might have
 	 * have more DIMMs per channel than actually on the mobo, but this
-	 * allows the driver to support upto the chipset max, without
+	 * allows the driver to support up to the chipset max, without
 	 * some fancy mobo determination.
 	 */
 	i5000_get_dimm_and_channel_counts(pdev, &num_dimms_per_channel,
@@ -1482,7 +1482,7 @@ static int __devinit i5000_init_one(struct pci_dev *pdev,
 
 	/* wake up device */
 	rc = pci_enable_device(pdev);
-	if (rc == -EIO)
+	if (rc)
 		return rc;
 
 	/* now probe and enable the device */

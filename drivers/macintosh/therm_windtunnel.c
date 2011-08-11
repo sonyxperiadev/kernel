@@ -45,14 +45,14 @@
 #include <asm/sections.h>
 #include <asm/macio.h>
 
-#define LOG_TEMP		0			/* continously log temperature */
+#define LOG_TEMP		0			/* continuously log temperature */
 
 static struct {
 	volatile int		running;
 	struct task_struct	*poll_task;
 	
 	struct mutex	 	lock;
-	struct of_device	*of_dev;
+	struct platform_device	*of_dev;
 	
 	struct i2c_client	*thermostat;
 	struct i2c_client	*fan;
@@ -322,10 +322,10 @@ do_attach( struct i2c_adapter *adapter )
 
 		memset(&info, 0, sizeof(struct i2c_board_info));
 		strlcpy(info.type, "therm_ds1775", I2C_NAME_SIZE);
-		i2c_new_probed_device(adapter, &info, scan_ds1775);
+		i2c_new_probed_device(adapter, &info, scan_ds1775, NULL);
 
 		strlcpy(info.type, "therm_adm1030", I2C_NAME_SIZE);
-		i2c_new_probed_device(adapter, &info, scan_adm1030);
+		i2c_new_probed_device(adapter, &info, scan_adm1030, NULL);
 
 		if( x.thermostat && x.fan ) {
 			x.running = 1;
@@ -443,14 +443,13 @@ static struct i2c_driver g4fan_driver = {
 /*	initialization / cleanup					*/
 /************************************************************************/
 
-static int
-therm_of_probe( struct of_device *dev, const struct of_device_id *match )
+static int therm_of_probe(struct platform_device *dev)
 {
 	return i2c_add_driver( &g4fan_driver );
 }
 
 static int
-therm_of_remove( struct of_device *dev )
+therm_of_remove( struct platform_device *dev )
 {
 	i2c_del_driver( &g4fan_driver );
 	return 0;
@@ -462,7 +461,7 @@ static const struct of_device_id therm_of_match[] = {{
     }, {}
 };
 
-static struct of_platform_driver therm_of_driver = {
+static struct platform_driver therm_of_driver = {
 	.driver = {
 		.name = "temperature",
 		.owner = THIS_MODULE,
@@ -509,14 +508,14 @@ g4fan_init( void )
 		return -ENODEV;
 	}
 
-	of_register_platform_driver( &therm_of_driver );
+	platform_driver_register( &therm_of_driver );
 	return 0;
 }
 
 static void __exit
 g4fan_exit( void )
 {
-	of_unregister_platform_driver( &therm_of_driver );
+	platform_driver_unregister( &therm_of_driver );
 
 	if( x.of_dev )
 		of_device_unregister( x.of_dev );

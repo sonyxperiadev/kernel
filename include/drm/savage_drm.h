@@ -29,7 +29,7 @@
 #ifndef __SAVAGE_SAREA_DEFINES__
 #define __SAVAGE_SAREA_DEFINES__
 
-/* 2 heaps (1 for card, 1 for agp), each divided into upto 128
+/* 2 heaps (1 for card, 1 for agp), each divided into up to 128
  * regions, subject to a minimum region size of (1<<16) == 64k.
  *
  * Clients may subdivide regions internally, but when sharing between
@@ -63,10 +63,10 @@ typedef struct _drm_savage_sarea {
 #define DRM_SAVAGE_BCI_EVENT_EMIT	0x02
 #define DRM_SAVAGE_BCI_EVENT_WAIT	0x03
 
-#define DRM_IOCTL_SAVAGE_INIT		DRM_IOW( DRM_COMMAND_BASE + DRM_SAVAGE_BCI_INIT, drm_savage_init_t)
-#define DRM_IOCTL_SAVAGE_CMDBUF		DRM_IOW( DRM_COMMAND_BASE + DRM_SAVAGE_BCI_CMDBUF, drm_savage_cmdbuf_t)
-#define DRM_IOCTL_SAVAGE_EVENT_EMIT	DRM_IOWR(DRM_COMMAND_BASE + DRM_SAVAGE_BCI_EVENT_EMIT, drm_savage_event_emit_t)
-#define DRM_IOCTL_SAVAGE_EVENT_WAIT	DRM_IOW( DRM_COMMAND_BASE + DRM_SAVAGE_BCI_EVENT_WAIT, drm_savage_event_wait_t)
+#define DRM_IOCTL_SAVAGE_BCI_INIT		DRM_IOW( DRM_COMMAND_BASE + DRM_SAVAGE_BCI_INIT, drm_savage_init_t)
+#define DRM_IOCTL_SAVAGE_BCI_CMDBUF		DRM_IOW( DRM_COMMAND_BASE + DRM_SAVAGE_BCI_CMDBUF, drm_savage_cmdbuf_t)
+#define DRM_IOCTL_SAVAGE_BCI_EVENT_EMIT	DRM_IOWR(DRM_COMMAND_BASE + DRM_SAVAGE_BCI_EVENT_EMIT, drm_savage_event_emit_t)
+#define DRM_IOCTL_SAVAGE_BCI_EVENT_WAIT	DRM_IOW( DRM_COMMAND_BASE + DRM_SAVAGE_BCI_EVENT_WAIT, drm_savage_event_wait_t)
 
 #define SAVAGE_DMA_PCI	1
 #define SAVAGE_DMA_AGP	3

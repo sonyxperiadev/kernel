@@ -94,7 +94,7 @@ extern void jbd2_free(void *ptr, size_t size);
  *
  * This is an opaque datatype.
  **/
-typedef struct handle_s		handle_t;	/* Atomic operation type */
+typedef struct jbd2_journal_handle handle_t;	/* Atomic operation type */
 
 
 /**
@@ -395,7 +395,7 @@ struct jbd2_inode {
 	struct inode *i_vfs_inode;
 
 	/* Flags of inode [j_list_lock] */
-	unsigned int i_flags;
+	unsigned long i_flags;
 };
 
 struct jbd2_revoke_table_s;
@@ -416,7 +416,7 @@ struct jbd2_revoke_table_s;
  * in so it can be fixed later.
  */
 
-struct handle_s
+struct jbd2_journal_handle
 {
 	/* Which compound transaction is this update a part of? */
 	transaction_t		*h_transaction;
@@ -432,12 +432,34 @@ struct handle_s
 	int			h_err;
 
 	/* Flags [no locking] */
-	unsigned int	h_sync:		1;	/* sync-on-close */
-	unsigned int	h_jdata:	1;	/* force data journaling */
-	unsigned int	h_aborted:	1;	/* fatal error on handle */
+	unsigned int	h_sync:1;	/* sync-on-close */
+	unsigned int	h_jdata:1;	/* force data journaling */
+	unsigned int	h_aborted:1;	/* fatal error on handle */
+	unsigned int	h_cowing:1;	/* COWing block to snapshot */
+
+	/* Number of buffers requested by user:
+	 * (before adding the COW credits factor) */
+	unsigned int	h_base_credits:14;
+
+	/* Number of buffers the user is allowed to dirty:
+	 * (counts only buffers dirtied when !h_cowing) */
+	unsigned int	h_user_credits:14;
+
 
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 	struct lockdep_map	h_lockdep_map;
+#endif
+
+#ifdef CONFIG_JBD2_DEBUG
+	/* COW debugging counters: */
+	unsigned int h_cow_moved; /* blocks moved to snapshot */
+	unsigned int h_cow_copied; /* blocks copied to snapshot */
+	unsigned int h_cow_ok_jh; /* blocks already COWed during current
+				     transaction */
+	unsigned int h_cow_ok_bitmap; /* blocks not set in COW bitmap */
+	unsigned int h_cow_ok_mapped;/* blocks already mapped in snapshot */
+	unsigned int h_cow_bitmaps; /* COW bitmaps created */
+	unsigned int h_cow_excluded; /* blocks set in exclude bitmap */
 #endif
 };
 
@@ -507,9 +529,10 @@ struct transaction_s
 	enum {
 		T_RUNNING,
 		T_LOCKED,
-		T_RUNDOWN,
 		T_FLUSH,
 		T_COMMIT,
+		T_COMMIT_DFLUSH,
+		T_COMMIT_JFLUSH,
 		T_FINISHED
 	}			t_state;
 
@@ -601,13 +624,13 @@ struct transaction_s
 	 * Number of outstanding updates running on this transaction
 	 * [t_handle_lock]
 	 */
-	int			t_updates;
+	atomic_t		t_updates;
 
 	/*
 	 * Number of buffers reserved for use by all handles in this transaction
 	 * handle but not yet modified. [t_handle_lock]
 	 */
-	int			t_outstanding_credits;
+	atomic_t		t_outstanding_credits;
 
 	/*
 	 * Forward and backward links for the circular list of all transactions
@@ -629,14 +652,16 @@ struct transaction_s
 	/*
 	 * How many handles used this transaction? [t_handle_lock]
 	 */
-	int t_handle_count;
+	atomic_t		t_handle_count;
 
 	/*
 	 * This transaction is being forced and some process is
 	 * waiting for it to finish.
 	 */
 	unsigned int t_synchronous_commit:1;
-	unsigned int t_flushed_data_blocks:1;
+
+	/* Disk flush needs to be sent to fs partition [no locking] */
+	int			t_need_data_flush;
 
 	/*
 	 * For use by the filesystem to store fs-specific data
@@ -764,7 +789,7 @@ struct journal_s
 	/*
 	 * Protect the various scalars in the journal
 	 */
-	spinlock_t		j_state_lock;
+	rwlock_t		j_state_lock;
 
 	/*
 	 * Number of processes waiting to create a barrier lock [j_state_lock]
@@ -999,7 +1024,6 @@ struct journal_s
 
 /* Filing buffers */
 extern void jbd2_journal_unfile_buffer(journal_t *, struct journal_head *);
-extern void __jbd2_journal_unfile_buffer(struct journal_head *);
 extern void __jbd2_journal_refile_buffer(struct journal_head *);
 extern void jbd2_journal_refile_buffer(journal_t *, struct journal_head *);
 extern void __jbd2_journal_file_buffer(struct journal_head *, transaction_t *, int);
@@ -1082,7 +1106,9 @@ static inline handle_t *journal_current_handle(void)
  */
 
 extern handle_t *jbd2_journal_start(journal_t *, int nblocks);
-extern int	 jbd2_journal_restart (handle_t *, int nblocks);
+extern handle_t *jbd2__journal_start(journal_t *, int nblocks, int gfp_mask);
+extern int	 jbd2_journal_restart(handle_t *, int nblocks);
+extern int	 jbd2__journal_restart(handle_t *, int nblocks, int gfp_mask);
 extern int	 jbd2_journal_extend (handle_t *, int nblocks);
 extern int	 jbd2_journal_get_write_access(handle_t *, struct buffer_head *);
 extern int	 jbd2_journal_get_create_access (handle_t *, struct buffer_head *);
@@ -1138,7 +1164,6 @@ extern void	   jbd2_journal_release_jbd_inode(journal_t *journal, struct jbd2_in
  */
 struct journal_head *jbd2_journal_add_journal_head(struct buffer_head *bh);
 struct journal_head *jbd2_journal_grab_journal_head(struct buffer_head *bh);
-void jbd2_journal_remove_journal_head(struct buffer_head *bh);
 void jbd2_journal_put_journal_head(struct journal_head *jh);
 
 /*
@@ -1154,6 +1179,22 @@ static inline handle_t *jbd2_alloc_handle(gfp_t gfp_flags)
 static inline void jbd2_free_handle(handle_t *handle)
 {
 	kmem_cache_free(jbd2_handle_cache, handle);
+}
+
+/*
+ * jbd2_inode management (optional, for those file systems that want to use
+ * dynamically allocated jbd2_inode structures)
+ */
+extern struct kmem_cache *jbd2_inode_cache;
+
+static inline struct jbd2_inode *jbd2_alloc_inode(gfp_t gfp_flags)
+{
+	return kmem_cache_alloc(jbd2_inode_cache, gfp_flags);
+}
+
+static inline void jbd2_free_inode(struct jbd2_inode *jinode)
+{
+	kmem_cache_free(jbd2_inode_cache, jinode);
 }
 
 /* Primary revoke support */
@@ -1188,6 +1229,7 @@ int jbd2_journal_start_commit(journal_t *journal, tid_t *tid);
 int jbd2_journal_force_commit_nested(journal_t *journal);
 int jbd2_log_wait_commit(journal_t *journal, tid_t tid);
 int jbd2_log_do_checkpoint(journal_t *journal);
+int jbd2_trans_will_send_data_barrier(journal_t *journal, tid_t tid);
 
 void __jbd2_log_wait_for_space(journal_t *journal);
 extern void __jbd2_journal_drop_transaction(journal_t *, transaction_t *);
@@ -1257,8 +1299,8 @@ static inline int jbd_space_needed(journal_t *journal)
 {
 	int nblocks = journal->j_max_transaction_buffers;
 	if (journal->j_committing_transaction)
-		nblocks += journal->j_committing_transaction->
-					t_outstanding_credits;
+		nblocks += atomic_read(&journal->j_committing_transaction->
+				       t_outstanding_credits);
 	return nblocks;
 }
 

@@ -18,10 +18,6 @@
 
 #include "yaffs_guts.h"
 
-#if (MTD_VERSION_CODE < MTD_VERSION(2, 6, 18))
-extern struct nand_oobinfo yaffs_oobinfo;
-extern struct nand_oobinfo yaffs_noeccinfo;
-#endif
-int nandmtd_EraseBlockInNAND(yaffs_Device *dev, int blockNumber);
-int nandmtd_InitialiseNAND(yaffs_Device *dev);
+int nandmtd_erase_block(struct yaffs_dev *dev, int block_no);
+int nandmtd_initialise(struct yaffs_dev *dev);
 #endif

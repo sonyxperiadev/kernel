@@ -18,21 +18,18 @@
   *
   * Not currently implemented.
   *
-  * - Monitor interrrupt generation.
   * - Control of internal reference.
   */
 
 #include <linux/interrupt.h>
-#include <linux/gpio.h>
-#include <linux/workqueue.h>
 #include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/sysfs.h>
 #include <linux/list.h>
 #include <linux/i2c.h>
-#include <linux/rtc.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
+#include <linux/err.h>
 
 #include "../iio.h"
 #include "../sysfs.h"
@@ -41,39 +38,50 @@
 #include "adc.h"
 #include "max1363.h"
 
-/* Here we claim all are 16 bits. This currently does no harm and saves
- * us a lot of scan element listings */
+#define MAX1363_MODE_SINGLE(_num, _mask) {				\
+		.conf = MAX1363_CHANNEL_SEL(_num)			\
+			| MAX1363_CONFIG_SCAN_SINGLE_1			\
+			| MAX1363_CONFIG_SE,				\
+			.modemask = _mask,				\
+			}
 
-#define MAX1363_SCAN_EL(number)						\
-	IIO_SCAN_EL_C(in##number, number, IIO_UNSIGNED(16), 0, NULL);
-#define MAX1363_SCAN_EL_D(p, n, number)					\
-	IIO_SCAN_NAMED_EL_C(in##p##m##in##n, in##p-in##n,		\
-			number, IIO_SIGNED(16), 0 , NULL);
+#define MAX1363_MODE_SCAN_TO_CHANNEL(_num, _mask) {			\
+		.conf = MAX1363_CHANNEL_SEL(_num)			\
+			| MAX1363_CONFIG_SCAN_TO_CS			\
+			| MAX1363_CONFIG_SE,				\
+			.modemask = _mask,				\
+			}
 
-static MAX1363_SCAN_EL(0);
-static MAX1363_SCAN_EL(1);
-static MAX1363_SCAN_EL(2);
-static MAX1363_SCAN_EL(3);
-static MAX1363_SCAN_EL(4);
-static MAX1363_SCAN_EL(5);
-static MAX1363_SCAN_EL(6);
-static MAX1363_SCAN_EL(7);
-static MAX1363_SCAN_EL(8);
-static MAX1363_SCAN_EL(9);
-static MAX1363_SCAN_EL(10);
-static MAX1363_SCAN_EL(11);
-static MAX1363_SCAN_EL_D(0, 1, 12);
-static MAX1363_SCAN_EL_D(2, 3, 13);
-static MAX1363_SCAN_EL_D(4, 5, 14);
-static MAX1363_SCAN_EL_D(6, 7, 15);
-static MAX1363_SCAN_EL_D(8, 9, 16);
-static MAX1363_SCAN_EL_D(10, 11, 17);
-static MAX1363_SCAN_EL_D(1, 0, 18);
-static MAX1363_SCAN_EL_D(3, 2, 19);
-static MAX1363_SCAN_EL_D(5, 4, 20);
-static MAX1363_SCAN_EL_D(7, 6, 21);
-static MAX1363_SCAN_EL_D(9, 8, 22);
-static MAX1363_SCAN_EL_D(11, 10, 23);
+/* note not available for max1363 hence naming */
+#define MAX1236_MODE_SCAN_MID_TO_CHANNEL(_mid, _num, _mask) {		\
+		.conf = MAX1363_CHANNEL_SEL(_num)			\
+			| MAX1236_SCAN_MID_TO_CHANNEL			\
+			| MAX1363_CONFIG_SE,				\
+			.modemask = _mask				\
+}
+
+#define MAX1363_MODE_DIFF_SINGLE(_nump, _numm, _mask) {			\
+		.conf = MAX1363_CHANNEL_SEL(_nump)			\
+			| MAX1363_CONFIG_SCAN_SINGLE_1			\
+			| MAX1363_CONFIG_DE,				\
+			.modemask = _mask				\
+			}
+
+/* Can't think how to automate naming so specify for now */
+#define MAX1363_MODE_DIFF_SCAN_TO_CHANNEL(_num, _numvals, _mask) {	\
+		.conf = MAX1363_CHANNEL_SEL(_num)			\
+			| MAX1363_CONFIG_SCAN_TO_CS			\
+			| MAX1363_CONFIG_DE,				\
+			.modemask = _mask				\
+			}
+
+/* note only available for max1363 hence naming */
+#define MAX1236_MODE_DIFF_SCAN_MID_TO_CHANNEL(_num, _numvals, _mask) {	\
+		.conf = MAX1363_CHANNEL_SEL(_num)			\
+			| MAX1236_SCAN_MID_TO_CHANNEL			\
+			| MAX1363_CONFIG_SE,				\
+			.modemask = _mask				\
+}
 
 static const struct max1363_mode max1363_mode_table[] = {
 	/* All of the single channel options first */
@@ -148,36 +156,15 @@ const struct max1363_mode
 			      mask))
 				return &max1363_mode_table[ci->mode_list[i]];
 	return NULL;
-};
-
-static ssize_t max1363_show_precision(struct device *dev,
-				struct device_attribute *attr,
-				char *buf)
-{
-	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct max1363_state *st = iio_dev_get_devdata(dev_info);
-	return sprintf(buf, "%d\n", st->chip_info->bits);
 }
-
-static IIO_DEVICE_ATTR(in_precision, S_IRUGO, max1363_show_precision,
-		       NULL, 0);
 
 static int max1363_write_basic_config(struct i2c_client *client,
 				      unsigned char d1,
 				      unsigned char d2)
 {
-	int ret;
-	u8 *tx_buf = kmalloc(2 , GFP_KERNEL);
+	u8 tx_buf[2] = {d1, d2};
 
-	if (!tx_buf)
-		return -ENOMEM;
-	tx_buf[0] = d1;
-	tx_buf[1] = d2;
-
-	ret = i2c_master_send(client, tx_buf, 2);
-	kfree(tx_buf);
-
-	return (ret > 0) ? 0 : ret;
+	return i2c_master_send(client, tx_buf, 2);
 }
 
 int max1363_set_scan_mode(struct max1363_state *st)
@@ -192,23 +179,32 @@ int max1363_set_scan_mode(struct max1363_state *st)
 					  st->configbyte);
 }
 
-static ssize_t max1363_read_single_channel(struct device *dev,
-				   struct device_attribute *attr,
-				   char *buf)
+static int max1363_read_single_chan(struct iio_dev *indio_dev,
+				    struct iio_chan_spec const *chan,
+				    int *val,
+				    long m)
 {
-	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct max1363_state *st = iio_dev_get_devdata(dev_info);
-	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
-	struct i2c_client *client = st->client;
-	int ret = 0, len = 0;
-	s32 data ;
+	int ret = 0;
+	s32 data;
 	char rxbuf[2];
 	long mask;
+	struct max1363_state *st = iio_priv(indio_dev);
+	struct i2c_client *client = st->client;
 
-	mutex_lock(&dev_info->mlock);
-	/* If ring buffer capture is occuring, query the buffer */
-	if (iio_ring_enabled(dev_info)) {
-		mask = max1363_mode_table[this_attr->address].modemask;
+	mutex_lock(&indio_dev->mlock);
+	/*
+	 * If monitor mode is enabled, the method for reading a single
+	 * channel will have to be rather different and has not yet
+	 * been implemented.
+	 */
+	if (st->monitor_on) {
+		ret = -EBUSY;
+		goto error_ret;
+	}
+
+	/* If ring buffer capture is occurring, query the buffer */
+	if (iio_ring_enabled(indio_dev)) {
+		mask = max1363_mode_table[chan->address].modemask;
 		data = max1363_single_channel_from_ring(mask, st);
 		if (data < 0) {
 			ret = data;
@@ -216,13 +212,11 @@ static ssize_t max1363_read_single_channel(struct device *dev,
 		}
 	} else {
 		/* Check to see if current scan mode is correct */
-		if (st->current_mode !=
-		    &max1363_mode_table[this_attr->address]) {
+		if (st->current_mode != &max1363_mode_table[chan->address]) {
 			/* Update scan mode if needed */
-			st->current_mode
-				= &max1363_mode_table[this_attr->address];
+			st->current_mode = &max1363_mode_table[chan->address];
 			ret = max1363_set_scan_mode(st);
-			if (ret)
+			if (ret < 0)
 				goto error_ret;
 		}
 		if (st->chip_info->bits != 8) {
@@ -232,7 +226,6 @@ static ssize_t max1363_read_single_channel(struct device *dev,
 				ret = data;
 				goto error_ret;
 			}
-
 			data = (s32)(rxbuf[1]) | ((s32)(rxbuf[0] & 0x0F)) << 8;
 		} else {
 			/* Get reading */
@@ -244,71 +237,43 @@ static ssize_t max1363_read_single_channel(struct device *dev,
 			data = rxbuf[0];
 		}
 	}
-	/* Pretty print the result */
-	len = sprintf(buf, "%u\n", data);
-
+	*val = data;
 error_ret:
-	mutex_unlock(&dev_info->mlock);
-	return ret ? ret : len;
+	mutex_unlock(&indio_dev->mlock);
+	return ret;
+
 }
 
-/* Direct read attribtues */
-static IIO_DEV_ATTR_IN_RAW(0, max1363_read_single_channel, _s0);
-static IIO_DEV_ATTR_IN_RAW(1, max1363_read_single_channel, _s1);
-static IIO_DEV_ATTR_IN_RAW(2, max1363_read_single_channel, _s2);
-static IIO_DEV_ATTR_IN_RAW(3, max1363_read_single_channel, _s3);
-static IIO_DEV_ATTR_IN_RAW(4, max1363_read_single_channel, _s4);
-static IIO_DEV_ATTR_IN_RAW(5, max1363_read_single_channel, _s5);
-static IIO_DEV_ATTR_IN_RAW(6, max1363_read_single_channel, _s6);
-static IIO_DEV_ATTR_IN_RAW(7, max1363_read_single_channel, _s7);
-static IIO_DEV_ATTR_IN_RAW(8, max1363_read_single_channel, _s8);
-static IIO_DEV_ATTR_IN_RAW(9, max1363_read_single_channel, _s9);
-static IIO_DEV_ATTR_IN_RAW(10, max1363_read_single_channel, _s10);
-static IIO_DEV_ATTR_IN_RAW(11, max1363_read_single_channel, _s11);
-
-static IIO_DEV_ATTR_IN_DIFF_RAW(0, 1, max1363_read_single_channel, d0m1);
-static IIO_DEV_ATTR_IN_DIFF_RAW(2, 3, max1363_read_single_channel, d2m3);
-static IIO_DEV_ATTR_IN_DIFF_RAW(4, 5, max1363_read_single_channel, d4m5);
-static IIO_DEV_ATTR_IN_DIFF_RAW(6, 7, max1363_read_single_channel, d6m7);
-static IIO_DEV_ATTR_IN_DIFF_RAW(8, 9, max1363_read_single_channel, d8m9);
-static IIO_DEV_ATTR_IN_DIFF_RAW(10, 11, max1363_read_single_channel, d10m11);
-static IIO_DEV_ATTR_IN_DIFF_RAW(1, 0, max1363_read_single_channel, d1m0);
-static IIO_DEV_ATTR_IN_DIFF_RAW(3, 2, max1363_read_single_channel, d3m2);
-static IIO_DEV_ATTR_IN_DIFF_RAW(5, 4, max1363_read_single_channel, d5m4);
-static IIO_DEV_ATTR_IN_DIFF_RAW(7, 6, max1363_read_single_channel, d7m6);
-static IIO_DEV_ATTR_IN_DIFF_RAW(9, 8, max1363_read_single_channel, d9m8);
-static IIO_DEV_ATTR_IN_DIFF_RAW(11, 10, max1363_read_single_channel, d11m10);
-
-
-static ssize_t max1363_show_scale(struct device *dev,
-				struct device_attribute *attr,
-				char *buf)
+static int max1363_read_raw(struct iio_dev *indio_dev,
+			    struct iio_chan_spec const *chan,
+			    int *val,
+			    int *val2,
+			    long m)
 {
-	/* Driver currently only support internal vref */
-	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct max1363_state *st = iio_dev_get_devdata(dev_info);
-	/* Corresponds to Vref / 2^(bits) */
-
-	if ((1 << (st->chip_info->bits + 1))
-	    > st->chip_info->int_vref_mv)
-		return sprintf(buf, "0.5\n");
-	else
-		return sprintf(buf, "%d\n",
-			st->chip_info->int_vref_mv >> st->chip_info->bits);
+	struct max1363_state *st = iio_priv(indio_dev);
+	int ret;
+	switch (m) {
+	case 0:
+		ret = max1363_read_single_chan(indio_dev, chan, val, m);
+		if (ret)
+			return ret;
+		return IIO_VAL_INT;
+	case (1 << IIO_CHAN_INFO_SCALE_SHARED):
+		if ((1 << (st->chip_info->bits + 1)) >
+		    st->chip_info->int_vref_mv) {
+			*val = 0;
+			*val2 = 500000;
+			return IIO_VAL_INT_PLUS_MICRO;
+		} else {
+			*val = (st->chip_info->int_vref_mv)
+				>> st->chip_info->bits;
+			return IIO_VAL_INT;
+		}
+	default:
+		return -EINVAL;
+	}
+	return 0;
 }
-
-static IIO_DEVICE_ATTR(in_scale, S_IRUGO, max1363_show_scale, NULL, 0);
-
-static ssize_t max1363_show_name(struct device *dev,
-				 struct device_attribute *attr,
-				 char *buf)
-{
-	struct iio_dev *dev_info = dev_get_drvdata(dev);
-	struct max1363_state *st = iio_dev_get_devdata(dev_info);
-	return sprintf(buf, "%s\n", st->chip_info->name);
-}
-
-static IIO_DEVICE_ATTR(name, S_IRUGO, max1363_show_name, NULL, 0);
 
 /* Applies to max1363 */
 static const enum max1363_modes max1363_mode_list[] = {
@@ -318,41 +283,76 @@ static const enum max1363_modes max1363_mode_list[] = {
 	d0m1to2m3, d1m0to3m2,
 };
 
-static struct attribute *max1363_device_attrs[] = {
-	&iio_dev_attr_in0_raw.dev_attr.attr,
-	&iio_dev_attr_in1_raw.dev_attr.attr,
-	&iio_dev_attr_in2_raw.dev_attr.attr,
-	&iio_dev_attr_in3_raw.dev_attr.attr,
-	&iio_dev_attr_in0min1_raw.dev_attr.attr,
-	&iio_dev_attr_in2min3_raw.dev_attr.attr,
-	&iio_dev_attr_in1min0_raw.dev_attr.attr,
-	&iio_dev_attr_in3min2_raw.dev_attr.attr,
-	&iio_dev_attr_name.dev_attr.attr,
-	&iio_dev_attr_in_scale.dev_attr.attr,
-	NULL
+#define MAX1363_EV_M						\
+	(IIO_EV_BIT(IIO_EV_TYPE_THRESH, IIO_EV_DIR_RISING)	\
+	 | IIO_EV_BIT(IIO_EV_TYPE_THRESH, IIO_EV_DIR_FALLING))
+#define MAX1363_INFO_MASK (1 << IIO_CHAN_INFO_SCALE_SHARED)
+
+static struct iio_chan_spec max1363_channels[] = {
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, 0, 0, MAX1363_INFO_MASK,
+		 _s0, 0, IIO_ST('u', 12, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, 1, 0, MAX1363_INFO_MASK,
+		 _s1, 1, IIO_ST('u', 12, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, 2, 0, MAX1363_INFO_MASK,
+		 _s2, 2, IIO_ST('u', 12, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, 3, 0, MAX1363_INFO_MASK,
+		 _s3, 3, IIO_ST('u', 12, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, 0, 1, MAX1363_INFO_MASK,
+		 d0m1, 4, IIO_ST('s', 12, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, 2, 3, MAX1363_INFO_MASK,
+		 d2m3, 5, IIO_ST('s', 12, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, 1, 0, MAX1363_INFO_MASK,
+		 d1m0, 6, IIO_ST('s', 12, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, 3, 2, MAX1363_INFO_MASK,
+		 d3m2, 7, IIO_ST('s', 12, 16, 0), MAX1363_EV_M),
+	IIO_CHAN_SOFT_TIMESTAMP(8)
 };
 
-static struct attribute_group max1363_dev_attr_group = {
-	.attrs = max1363_device_attrs,
+static struct iio_chan_spec max1361_channels[] = {
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, 0, 0, MAX1363_INFO_MASK,
+		 _s0, 0, IIO_ST('u', 10, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, 1, 0, MAX1363_INFO_MASK,
+		 _s1, 1, IIO_ST('u', 10, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, 2, 0, MAX1363_INFO_MASK,
+		 _s2, 2, IIO_ST('u', 10, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, 3, 0, MAX1363_INFO_MASK,
+		 _s3, 3, IIO_ST('u', 10, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, 0, 1, MAX1363_INFO_MASK,
+		 d0m1, 4, IIO_ST('s', 10, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, 2, 3, MAX1363_INFO_MASK,
+		 d2m3, 5, IIO_ST('s', 10, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, 1, 0, MAX1363_INFO_MASK,
+		 d1m0, 6, IIO_ST('s', 10, 16, 0), MAX1363_EV_M),
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, 3, 2, MAX1363_INFO_MASK,
+		 d3m2, 7, IIO_ST('s', 10, 16, 0), MAX1363_EV_M),
+	IIO_CHAN_SOFT_TIMESTAMP(8)
 };
 
-static struct attribute *max1363_scan_el_attrs[] = {
-	&iio_scan_el_in0.dev_attr.attr,
-	&iio_scan_el_in1.dev_attr.attr,
-	&iio_scan_el_in2.dev_attr.attr,
-	&iio_scan_el_in3.dev_attr.attr,
-	&iio_scan_el_in0min1.dev_attr.attr,
-	&iio_scan_el_in2min3.dev_attr.attr,
-	&iio_scan_el_in1min0.dev_attr.attr,
-	&iio_scan_el_in3min2.dev_attr.attr,
-	&iio_dev_attr_in_precision.dev_attr.attr,
-	NULL,
-};
+#define MAX1363_CHAN_U(num, address, scan_index, bits)		\
+	IIO_CHAN(IIO_IN, 0, 1, 0, NULL, num, 0, MAX1363_INFO_MASK,	\
+		 address, scan_index, IIO_ST('u', bits,		\
+					     (bits == 8) ? 8 : 16, 0), 0)
+/* bipolar channel */
+#define MAX1363_CHAN_B(num, num2, address, scan_index, bits)		\
+	IIO_CHAN(IIO_IN_DIFF, 0, 1, 0, NULL, num, num2, MAX1363_INFO_MASK,\
+		 address, scan_index, IIO_ST('s', bits,		\
+					     (bits == 8) ? 8 : 16, 0), 0)
 
-static struct attribute_group max1363_scan_el_group = {
-	.name = "scan_elements",
-	.attrs = max1363_scan_el_attrs,
-};
+#define MAX1363_4X_CHANS(bits) {		\
+	MAX1363_CHAN_U(0, _s0, 0, bits),	\
+	MAX1363_CHAN_U(1, _s1, 1, bits),	\
+	MAX1363_CHAN_U(2, _s2, 2, bits),	\
+	MAX1363_CHAN_U(3, _s3, 3, bits),	\
+	MAX1363_CHAN_B(0, 1, d0m1, 4, bits),	\
+	MAX1363_CHAN_B(2, 3, d2m3, 5, bits),	\
+	MAX1363_CHAN_B(1, 0, d1m0, 6, bits),	\
+	MAX1363_CHAN_B(3, 2, d3m2, 7, bits),	\
+	IIO_CHAN_SOFT_TIMESTAMP(8)		\
+	}
+
+static struct iio_chan_spec max1036_channels[] = MAX1363_4X_CHANS(8);
+static struct iio_chan_spec max1136_channels[] = MAX1363_4X_CHANS(10);
+static struct iio_chan_spec max1236_channels[] = MAX1363_4X_CHANS(12);
 
 /* Appies to max1236, max1237 */
 static const enum max1363_modes max1236_mode_list[] = {
@@ -376,74 +376,36 @@ static const enum max1363_modes max1238_mode_list[] = {
 	d6m7to8m9, d6m7to10m11, d7m6to9m8, d7m6to11m10,
 };
 
-static struct attribute *max1238_device_attrs[] = {
-	&iio_dev_attr_in0_raw.dev_attr.attr,
-	&iio_dev_attr_in1_raw.dev_attr.attr,
-	&iio_dev_attr_in2_raw.dev_attr.attr,
-	&iio_dev_attr_in3_raw.dev_attr.attr,
-	&iio_dev_attr_in4_raw.dev_attr.attr,
-	&iio_dev_attr_in5_raw.dev_attr.attr,
-	&iio_dev_attr_in6_raw.dev_attr.attr,
-	&iio_dev_attr_in7_raw.dev_attr.attr,
-	&iio_dev_attr_in8_raw.dev_attr.attr,
-	&iio_dev_attr_in9_raw.dev_attr.attr,
-	&iio_dev_attr_in10_raw.dev_attr.attr,
-	&iio_dev_attr_in11_raw.dev_attr.attr,
-	&iio_dev_attr_in0min1_raw.dev_attr.attr,
-	&iio_dev_attr_in2min3_raw.dev_attr.attr,
-	&iio_dev_attr_in4min5_raw.dev_attr.attr,
-	&iio_dev_attr_in6min7_raw.dev_attr.attr,
-	&iio_dev_attr_in8min9_raw.dev_attr.attr,
-	&iio_dev_attr_in10min11_raw.dev_attr.attr,
-	&iio_dev_attr_in1min0_raw.dev_attr.attr,
-	&iio_dev_attr_in3min2_raw.dev_attr.attr,
-	&iio_dev_attr_in5min4_raw.dev_attr.attr,
-	&iio_dev_attr_in7min6_raw.dev_attr.attr,
-	&iio_dev_attr_in9min8_raw.dev_attr.attr,
-	&iio_dev_attr_in11min10_raw.dev_attr.attr,
-	&iio_dev_attr_name.dev_attr.attr,
-	&iio_dev_attr_in_scale.dev_attr.attr,
-	NULL
-};
-
-static struct attribute_group max1238_dev_attr_group = {
-	.attrs = max1238_device_attrs,
-};
-
-static struct attribute *max1238_scan_el_attrs[] = {
-	&iio_scan_el_in0.dev_attr.attr,
-	&iio_scan_el_in1.dev_attr.attr,
-	&iio_scan_el_in2.dev_attr.attr,
-	&iio_scan_el_in3.dev_attr.attr,
-	&iio_scan_el_in4.dev_attr.attr,
-	&iio_scan_el_in5.dev_attr.attr,
-	&iio_scan_el_in6.dev_attr.attr,
-	&iio_scan_el_in7.dev_attr.attr,
-	&iio_scan_el_in8.dev_attr.attr,
-	&iio_scan_el_in9.dev_attr.attr,
-	&iio_scan_el_in10.dev_attr.attr,
-	&iio_scan_el_in11.dev_attr.attr,
-	&iio_scan_el_in0min1.dev_attr.attr,
-	&iio_scan_el_in2min3.dev_attr.attr,
-	&iio_scan_el_in4min5.dev_attr.attr,
-	&iio_scan_el_in6min7.dev_attr.attr,
-	&iio_scan_el_in8min9.dev_attr.attr,
-	&iio_scan_el_in10min11.dev_attr.attr,
-	&iio_scan_el_in1min0.dev_attr.attr,
-	&iio_scan_el_in3min2.dev_attr.attr,
-	&iio_scan_el_in5min4.dev_attr.attr,
-	&iio_scan_el_in7min6.dev_attr.attr,
-	&iio_scan_el_in9min8.dev_attr.attr,
-	&iio_scan_el_in11min10.dev_attr.attr,
-	&iio_dev_attr_in_precision.dev_attr.attr,
-	NULL,
-};
-
-static struct attribute_group max1238_scan_el_group = {
-	.name = "scan_elements",
-	.attrs = max1238_scan_el_attrs,
-};
-
+#define MAX1363_12X_CHANS(bits) {			\
+	MAX1363_CHAN_U(0, _s0, 0, bits),		\
+	MAX1363_CHAN_U(1, _s1, 1, bits),		\
+	MAX1363_CHAN_U(2, _s2, 2, bits),		\
+	MAX1363_CHAN_U(3, _s3, 3, bits),		\
+	MAX1363_CHAN_U(4, _s4, 4, bits),		\
+	MAX1363_CHAN_U(5, _s5, 5, bits),		\
+	MAX1363_CHAN_U(6, _s6, 6, bits),		\
+	MAX1363_CHAN_U(7, _s7, 7, bits),		\
+	MAX1363_CHAN_U(8, _s8, 8, bits),		\
+	MAX1363_CHAN_U(9, _s9, 9, bits),		\
+	MAX1363_CHAN_U(10, _s10, 10, bits),		\
+	MAX1363_CHAN_U(11, _s11, 11, bits),		\
+	MAX1363_CHAN_B(0, 1, d0m1, 12, bits),		\
+	MAX1363_CHAN_B(2, 3, d2m3, 13, bits),		\
+	MAX1363_CHAN_B(4, 5, d4m5, 14, bits),		\
+	MAX1363_CHAN_B(6, 7, d6m7, 15, bits),		\
+	MAX1363_CHAN_B(8, 9, d8m9, 16, bits),		\
+	MAX1363_CHAN_B(10, 11, d10m11, 17, bits),	\
+	MAX1363_CHAN_B(1, 0, d1m0, 18, bits),		\
+	MAX1363_CHAN_B(3, 2, d3m2, 19, bits),		\
+	MAX1363_CHAN_B(5, 4, d5m4, 20, bits),		\
+	MAX1363_CHAN_B(7, 6, d7m6, 21, bits),		\
+	MAX1363_CHAN_B(9, 8, d9m8, 22, bits),		\
+	MAX1363_CHAN_B(11, 10, d11m10, 23, bits),	\
+	IIO_CHAN_SOFT_TIMESTAMP(24)			\
+	}
+static struct iio_chan_spec max1038_channels[] = MAX1363_12X_CHANS(8);
+static struct iio_chan_spec max1138_channels[] = MAX1363_12X_CHANS(10);
+static struct iio_chan_spec max1238_channels[] = MAX1363_12X_CHANS(12);
 
 static const enum max1363_modes max11607_mode_list[] = {
 	_s0, _s1, _s2, _s3,
@@ -463,56 +425,43 @@ static const enum max1363_modes max11608_mode_list[] = {
 	d1m0to3m2, d1m0to5m4, d1m0to7m6,
 };
 
-static struct attribute *max11608_device_attrs[] = {
-	&iio_dev_attr_in0_raw.dev_attr.attr,
-	&iio_dev_attr_in1_raw.dev_attr.attr,
-	&iio_dev_attr_in2_raw.dev_attr.attr,
-	&iio_dev_attr_in3_raw.dev_attr.attr,
-	&iio_dev_attr_in4_raw.dev_attr.attr,
-	&iio_dev_attr_in5_raw.dev_attr.attr,
-	&iio_dev_attr_in6_raw.dev_attr.attr,
-	&iio_dev_attr_in7_raw.dev_attr.attr,
-	&iio_dev_attr_in0min1_raw.dev_attr.attr,
-	&iio_dev_attr_in2min3_raw.dev_attr.attr,
-	&iio_dev_attr_in4min5_raw.dev_attr.attr,
-	&iio_dev_attr_in6min7_raw.dev_attr.attr,
-	&iio_dev_attr_in1min0_raw.dev_attr.attr,
-	&iio_dev_attr_in3min2_raw.dev_attr.attr,
-	&iio_dev_attr_in5min4_raw.dev_attr.attr,
-	&iio_dev_attr_in7min6_raw.dev_attr.attr,
-	&iio_dev_attr_name.dev_attr.attr,
-	&iio_dev_attr_in_scale.dev_attr.attr,
-	NULL
+#define MAX1363_8X_CHANS(bits) {				\
+		MAX1363_CHAN_U(0, _s0, 0, bits),		\
+			MAX1363_CHAN_U(1, _s1, 1, bits),	\
+			MAX1363_CHAN_U(2, _s2, 2, bits),	\
+			MAX1363_CHAN_U(3, _s3, 3, bits),	\
+			MAX1363_CHAN_U(4, _s4, 4, bits),	\
+			MAX1363_CHAN_U(5, _s5, 5, bits),	\
+			MAX1363_CHAN_U(6, _s6, 6, bits),	\
+			MAX1363_CHAN_U(7, _s7, 7, bits),	\
+			MAX1363_CHAN_B(0, 1, d0m1, 8, bits),	\
+			MAX1363_CHAN_B(2, 3, d2m3, 9, bits),	\
+			MAX1363_CHAN_B(4, 5, d4m5, 10, bits),	\
+			MAX1363_CHAN_B(6, 7, d6m7, 11, bits),	\
+			MAX1363_CHAN_B(1, 0, d1m0, 12, bits),	\
+			MAX1363_CHAN_B(3, 2, d3m2, 13, bits),	\
+			MAX1363_CHAN_B(5, 4, d5m4, 14, bits),	\
+			MAX1363_CHAN_B(7, 6, d7m6, 15, bits),	\
+			IIO_CHAN_SOFT_TIMESTAMP(16)		\
+		}
+static struct iio_chan_spec max11602_channels[] = MAX1363_8X_CHANS(8);
+static struct iio_chan_spec max11608_channels[] = MAX1363_8X_CHANS(10);
+static struct iio_chan_spec max11614_channels[] = MAX1363_8X_CHANS(12);
+
+static const enum max1363_modes max11644_mode_list[] = {
+	_s0, _s1, s0to1, d0m1, d1m0,
 };
 
-static struct attribute_group max11608_dev_attr_group = {
-	.attrs = max11608_device_attrs,
-};
+#define MAX1363_2X_CHANS(bits) {			\
+	MAX1363_CHAN_U(0, _s0, 0, bits),		\
+	MAX1363_CHAN_U(1, _s1, 1, bits),		\
+	MAX1363_CHAN_B(0, 1, d0m1, 2, bits),		\
+	MAX1363_CHAN_B(1, 0, d1m0, 3, bits),		\
+	IIO_CHAN_SOFT_TIMESTAMP(4)			\
+	}
 
-static struct attribute *max11608_scan_el_attrs[] = {
-	&iio_scan_el_in0.dev_attr.attr,
-	&iio_scan_el_in1.dev_attr.attr,
-	&iio_scan_el_in2.dev_attr.attr,
-	&iio_scan_el_in3.dev_attr.attr,
-	&iio_scan_el_in4.dev_attr.attr,
-	&iio_scan_el_in5.dev_attr.attr,
-	&iio_scan_el_in6.dev_attr.attr,
-	&iio_scan_el_in7.dev_attr.attr,
-	&iio_scan_el_in0min1.dev_attr.attr,
-	&iio_scan_el_in2min3.dev_attr.attr,
-	&iio_scan_el_in4min5.dev_attr.attr,
-	&iio_scan_el_in6min7.dev_attr.attr,
-	&iio_scan_el_in1min0.dev_attr.attr,
-	&iio_scan_el_in3min2.dev_attr.attr,
-	&iio_scan_el_in5min4.dev_attr.attr,
-	&iio_scan_el_in7min6.dev_attr.attr,
-	&iio_dev_attr_in_precision.dev_attr.attr,
-};
-
-static struct attribute_group max11608_scan_el_group = {
-	.name = "scan_elements",
-	.attrs = max11608_scan_el_attrs,
-};
+static struct iio_chan_spec max11646_channels[] = MAX1363_2X_CHANS(10);
+static struct iio_chan_spec max11644_channels[] = MAX1363_2X_CHANS(12);
 
 enum { max1361,
        max1362,
@@ -548,356 +497,738 @@ enum { max1361,
        max11615,
        max11616,
        max11617,
+       max11644,
+       max11645,
+       max11646,
+       max11647
+};
+
+static const int max1363_monitor_speeds[] = { 133000, 665000, 33300, 16600,
+					      8300, 4200, 2000, 1000 };
+
+static ssize_t max1363_monitor_show_freq(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct max1363_state *st = iio_priv(dev_get_drvdata(dev));
+	return sprintf(buf, "%d\n", max1363_monitor_speeds[st->monitor_speed]);
+}
+
+static ssize_t max1363_monitor_store_freq(struct device *dev,
+					struct device_attribute *attr,
+					const char *buf,
+					size_t len)
+{
+	struct iio_dev *indio_dev = dev_get_drvdata(dev);
+	struct max1363_state *st = iio_priv(indio_dev);
+	int i, ret;
+	unsigned long val;
+	bool found = false;
+
+	ret = strict_strtoul(buf, 10, &val);
+	if (ret)
+		return -EINVAL;
+	for (i = 0; i < ARRAY_SIZE(max1363_monitor_speeds); i++)
+		if (val == max1363_monitor_speeds[i]) {
+			found = true;
+			break;
+		}
+	if (!found)
+		return -EINVAL;
+
+	mutex_lock(&indio_dev->mlock);
+	st->monitor_speed = i;
+	mutex_unlock(&indio_dev->mlock);
+
+	return 0;
+}
+
+static IIO_DEV_ATTR_SAMP_FREQ(S_IRUGO | S_IWUSR,
+			max1363_monitor_show_freq,
+			max1363_monitor_store_freq);
+
+static IIO_CONST_ATTR(sampling_frequency_available,
+		"133000 665000 33300 16600 8300 4200 2000 1000");
+
+static int max1363_read_thresh(struct iio_dev *indio_dev,
+			       int event_code,
+			       int *val)
+{
+	struct max1363_state *st = iio_priv(indio_dev);
+	if (IIO_EVENT_CODE_EXTRACT_DIR(event_code) == IIO_EV_DIR_FALLING)
+		*val = st->thresh_low[IIO_EVENT_CODE_EXTRACT_NUM(event_code)];
+	else
+		*val = st->thresh_high[IIO_EVENT_CODE_EXTRACT_NUM(event_code)];
+	return 0;
+}
+
+static int max1363_write_thresh(struct iio_dev *indio_dev,
+				int event_code,
+				int val)
+{
+	struct max1363_state *st = iio_priv(indio_dev);
+	/* make it handle signed correctly as well */
+	switch (st->chip_info->bits) {
+	case 10:
+		if (val > 0x3FF)
+			return -EINVAL;
+		break;
+	case 12:
+		if (val > 0xFFF)
+			return -EINVAL;
+		break;
+	}
+
+	switch (IIO_EVENT_CODE_EXTRACT_DIR(event_code)) {
+	case IIO_EV_DIR_FALLING:
+		st->thresh_low[IIO_EVENT_CODE_EXTRACT_NUM(event_code)] = val;
+		break;
+	case IIO_EV_DIR_RISING:
+		st->thresh_high[IIO_EVENT_CODE_EXTRACT_NUM(event_code)] = val;
+		break;
+	}
+
+	return 0;
+}
+
+static const int max1363_event_codes[] = {
+	IIO_EVENT_CODE_IN_LOW_THRESH(3), IIO_EVENT_CODE_IN_HIGH_THRESH(3),
+	IIO_EVENT_CODE_IN_LOW_THRESH(2), IIO_EVENT_CODE_IN_HIGH_THRESH(2),
+	IIO_EVENT_CODE_IN_LOW_THRESH(1), IIO_EVENT_CODE_IN_HIGH_THRESH(1),
+	IIO_EVENT_CODE_IN_LOW_THRESH(0), IIO_EVENT_CODE_IN_HIGH_THRESH(0)
+};
+
+static irqreturn_t max1363_event_handler(int irq, void *private)
+{
+	struct iio_dev *indio_dev = private;
+	struct max1363_state *st = iio_priv(indio_dev);
+	s64 timestamp = iio_get_time_ns();
+	unsigned long mask, loc;
+	u8 rx;
+	u8 tx[2] = { st->setupbyte,
+		     MAX1363_MON_INT_ENABLE | (st->monitor_speed << 1) | 0xF0 };
+
+	i2c_master_recv(st->client, &rx, 1);
+	mask = rx;
+	for_each_set_bit(loc, &mask, 8)
+		iio_push_event(indio_dev, 0, max1363_event_codes[loc],
+			       timestamp);
+	i2c_master_send(st->client, tx, 2);
+
+	return IRQ_HANDLED;
+}
+
+static int max1363_read_event_config(struct iio_dev *indio_dev,
+				     int event_code)
+{
+	struct max1363_state *st = iio_priv(indio_dev);
+
+	int val;
+	int number = IIO_EVENT_CODE_EXTRACT_NUM(event_code);
+	mutex_lock(&indio_dev->mlock);
+	if (IIO_EVENT_CODE_EXTRACT_DIR(event_code) == IIO_EV_DIR_FALLING)
+		val = (1 << number) & st->mask_low;
+	else
+		val = (1 << number) & st->mask_high;
+	mutex_unlock(&indio_dev->mlock);
+
+	return val;
+}
+
+static int max1363_monitor_mode_update(struct max1363_state *st, int enabled)
+{
+	u8 *tx_buf;
+	int ret, i = 3, j;
+	unsigned long numelements;
+	int len;
+	long modemask;
+
+	if (!enabled) {
+		/* transition to ring capture is not currently supported */
+		st->setupbyte &= ~MAX1363_SETUP_MONITOR_SETUP;
+		st->configbyte &= ~MAX1363_SCAN_MASK;
+		st->monitor_on = false;
+		return max1363_write_basic_config(st->client,
+						st->setupbyte,
+						st->configbyte);
+	}
+
+	/* Ensure we are in the relevant mode */
+	st->setupbyte |= MAX1363_SETUP_MONITOR_SETUP;
+	st->configbyte &= ~(MAX1363_CHANNEL_SEL_MASK
+			    | MAX1363_SCAN_MASK
+			| MAX1363_SE_DE_MASK);
+	st->configbyte |= MAX1363_CONFIG_SCAN_MONITOR_MODE;
+	if ((st->mask_low | st->mask_high) & 0x0F) {
+		st->configbyte |= max1363_mode_table[s0to3].conf;
+		modemask = max1363_mode_table[s0to3].modemask;
+	} else if ((st->mask_low | st->mask_high) & 0x30) {
+		st->configbyte |= max1363_mode_table[d0m1to2m3].conf;
+		modemask = max1363_mode_table[d0m1to2m3].modemask;
+	} else {
+		st->configbyte |= max1363_mode_table[d1m0to3m2].conf;
+		modemask = max1363_mode_table[d1m0to3m2].modemask;
+	}
+	numelements = hweight_long(modemask);
+	len = 3 * numelements + 3;
+	tx_buf = kmalloc(len, GFP_KERNEL);
+	if (!tx_buf) {
+		ret = -ENOMEM;
+		goto error_ret;
+	}
+	tx_buf[0] = st->configbyte;
+	tx_buf[1] = st->setupbyte;
+	tx_buf[2] = (st->monitor_speed << 1);
+
+	/*
+	 * So we need to do yet another bit of nefarious scan mode
+	 * setup to match what we need.
+	 */
+	for (j = 0; j < 8; j++)
+		if (modemask & (1 << j)) {
+			/* Establish the mode is in the scan */
+			if (st->mask_low & (1 << j)) {
+				tx_buf[i] = (st->thresh_low[j] >> 4) & 0xFF;
+				tx_buf[i + 1] = (st->thresh_low[j] << 4) & 0xF0;
+			} else if (j < 4) {
+				tx_buf[i] = 0;
+				tx_buf[i + 1] = 0;
+			} else {
+				tx_buf[i] = 0x80;
+				tx_buf[i + 1] = 0;
+			}
+			if (st->mask_high & (1 << j)) {
+				tx_buf[i + 1] |=
+					(st->thresh_high[j] >> 8) & 0x0F;
+				tx_buf[i + 2] = st->thresh_high[j] & 0xFF;
+			} else if (j < 4) {
+				tx_buf[i + 1] |= 0x0F;
+				tx_buf[i + 2] = 0xFF;
+			} else {
+				tx_buf[i + 1] |= 0x07;
+				tx_buf[i + 2] = 0xFF;
+			}
+			i += 3;
+		}
+
+
+	ret = i2c_master_send(st->client, tx_buf, len);
+	if (ret < 0)
+		goto error_ret;
+	if (ret != len) {
+		ret = -EIO;
+		goto error_ret;
+	}
+
+	/*
+	 * Now that we hopefully have sensible thresholds in place it is
+	 * time to turn the interrupts on.
+	 * It is unclear from the data sheet if this should be necessary
+	 * (i.e. whether monitor mode setup is atomic) but it appears to
+	 * be in practice.
+	 */
+	tx_buf[0] = st->setupbyte;
+	tx_buf[1] = MAX1363_MON_INT_ENABLE | (st->monitor_speed << 1) | 0xF0;
+	ret = i2c_master_send(st->client, tx_buf, 2);
+	if (ret < 0)
+		goto error_ret;
+	if (ret != 2) {
+		ret = -EIO;
+		goto error_ret;
+	}
+	ret = 0;
+	st->monitor_on = true;
+error_ret:
+
+	kfree(tx_buf);
+
+	return ret;
+}
+
+/*
+ * To keep this manageable we always use one of 3 scan modes.
+ * Scan 0...3, 0-1,2-3 and 1-0,3-2
+ */
+
+static inline int __max1363_check_event_mask(int thismask, int checkmask)
+{
+	int ret = 0;
+	/* Is it unipolar */
+	if (thismask < 4) {
+		if (checkmask & ~0x0F) {
+			ret = -EBUSY;
+			goto error_ret;
+		}
+	} else if (thismask < 6) {
+		if (checkmask & ~0x30) {
+			ret = -EBUSY;
+			goto error_ret;
+		}
+	} else if (checkmask & ~0xC0)
+		ret = -EBUSY;
+error_ret:
+	return ret;
+}
+
+static int max1363_write_event_config(struct iio_dev *indio_dev,
+				      int event_code,
+				      int state)
+{
+	int ret = 0;
+	struct max1363_state *st = iio_priv(indio_dev);
+	u16 unifiedmask;
+	int number = IIO_EVENT_CODE_EXTRACT_NUM(event_code);
+
+	mutex_lock(&indio_dev->mlock);
+	unifiedmask = st->mask_low | st->mask_high;
+	if (IIO_EVENT_CODE_EXTRACT_DIR(event_code) == IIO_EV_DIR_FALLING) {
+
+		if (state == 0)
+			st->mask_low &= ~(1 << number);
+		else {
+			ret = __max1363_check_event_mask((1 << number),
+							 unifiedmask);
+			if (ret)
+				goto error_ret;
+			st->mask_low |= (1 << number);
+		}
+	} else {
+		if (state == 0)
+			st->mask_high &= ~(1 << number);
+		else {
+			ret = __max1363_check_event_mask((1 << number),
+							 unifiedmask);
+			if (ret)
+				goto error_ret;
+			st->mask_high |= (1 << number);
+		}
+	}
+
+	max1363_monitor_mode_update(st, !!(st->mask_high | st->mask_low));
+error_ret:
+	mutex_unlock(&indio_dev->mlock);
+
+	return ret;
+}
+
+/*
+ * As with scan_elements, only certain sets of these can
+ * be combined.
+ */
+static struct attribute *max1363_event_attributes[] = {
+	&iio_dev_attr_sampling_frequency.dev_attr.attr,
+	&iio_const_attr_sampling_frequency_available.dev_attr.attr,
+	NULL,
+};
+
+static struct attribute_group max1363_event_attribute_group = {
+	.attrs = max1363_event_attributes,
+};
+
+#define MAX1363_EVENT_FUNCS						\
+
+
+static const struct iio_info max1238_info = {
+	.read_raw = &max1363_read_raw,
+	.driver_module = THIS_MODULE,
+};
+
+static const struct iio_info max1363_info = {
+	.read_event_value = &max1363_read_thresh,
+	.write_event_value = &max1363_write_thresh,
+	.read_event_config = &max1363_read_event_config,
+	.write_event_config = &max1363_write_event_config,
+	.read_raw = &max1363_read_raw,
+	.driver_module = THIS_MODULE,
+	.num_interrupt_lines = 1,
+	.event_attrs = &max1363_event_attribute_group,
 };
 
 /* max1363 and max1368 tested - rest from data sheet */
 static const struct max1363_chip_info max1363_chip_info_tbl[] = {
-	{
-		.name = "max1361",
-		.num_inputs = 4,
+	[max1361] = {
 		.bits = 10,
 		.int_vref_mv = 2048,
-		.monitor_mode = 1,
 		.mode_list = max1363_mode_list,
 		.num_modes = ARRAY_SIZE(max1363_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1362",
-		.num_inputs = 4,
+		.channels = max1361_channels,
+		.num_channels = ARRAY_SIZE(max1361_channels),
+		.info = &max1363_info,
+	},
+	[max1362] = {
 		.bits = 10,
 		.int_vref_mv = 4096,
-		.monitor_mode = 1,
 		.mode_list = max1363_mode_list,
 		.num_modes = ARRAY_SIZE(max1363_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1363",
-		.num_inputs = 4,
+		.channels = max1361_channels,
+		.num_channels = ARRAY_SIZE(max1361_channels),
+		.info = &max1363_info,
+	},
+	[max1363] = {
 		.bits = 12,
 		.int_vref_mv = 2048,
-		.monitor_mode = 1,
 		.mode_list = max1363_mode_list,
 		.num_modes = ARRAY_SIZE(max1363_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1364",
-		.num_inputs = 4,
+		.channels = max1363_channels,
+		.num_channels = ARRAY_SIZE(max1363_channels),
+		.info = &max1363_info,
+	},
+	[max1364] = {
 		.bits = 12,
 		.int_vref_mv = 4096,
-		.monitor_mode = 1,
 		.mode_list = max1363_mode_list,
 		.num_modes = ARRAY_SIZE(max1363_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1036",
-		.num_inputs = 4,
+		.channels = max1363_channels,
+		.num_channels = ARRAY_SIZE(max1363_channels),
+		.info = &max1363_info,
+	},
+	[max1036] = {
 		.bits = 8,
 		.int_vref_mv = 4096,
 		.mode_list = max1236_mode_list,
 		.num_modes = ARRAY_SIZE(max1236_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1037",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1036_channels,
+		.num_channels = ARRAY_SIZE(max1036_channels),
+	},
+	[max1037] = {
 		.bits = 8,
 		.int_vref_mv = 2048,
 		.mode_list = max1236_mode_list,
 		.num_modes = ARRAY_SIZE(max1236_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1038",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1036_channels,
+		.num_channels = ARRAY_SIZE(max1036_channels),
+	},
+	[max1038] = {
 		.bits = 8,
 		.int_vref_mv = 4096,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max1039",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1038_channels,
+		.num_channels = ARRAY_SIZE(max1038_channels),
+	},
+	[max1039] = {
 		.bits = 8,
 		.int_vref_mv = 2048,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max1136",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1038_channels,
+		.num_channels = ARRAY_SIZE(max1038_channels),
+	},
+	[max1136] = {
 		.bits = 10,
 		.int_vref_mv = 4096,
 		.mode_list = max1236_mode_list,
 		.num_modes = ARRAY_SIZE(max1236_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1137",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1136_channels,
+		.num_channels = ARRAY_SIZE(max1136_channels),
+	},
+	[max1137] = {
 		.bits = 10,
 		.int_vref_mv = 2048,
 		.mode_list = max1236_mode_list,
 		.num_modes = ARRAY_SIZE(max1236_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1138",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1136_channels,
+		.num_channels = ARRAY_SIZE(max1136_channels),
+	},
+	[max1138] = {
 		.bits = 10,
 		.int_vref_mv = 4096,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max1139",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1138_channels,
+		.num_channels = ARRAY_SIZE(max1138_channels),
+	},
+	[max1139] = {
 		.bits = 10,
 		.int_vref_mv = 2048,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max1236",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1138_channels,
+		.num_channels = ARRAY_SIZE(max1138_channels),
+	},
+	[max1236] = {
 		.bits = 12,
 		.int_vref_mv = 4096,
 		.mode_list = max1236_mode_list,
 		.num_modes = ARRAY_SIZE(max1236_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1237",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1236_channels,
+		.num_channels = ARRAY_SIZE(max1236_channels),
+	},
+	[max1237] = {
 		.bits = 12,
 		.int_vref_mv = 2048,
 		.mode_list = max1236_mode_list,
 		.num_modes = ARRAY_SIZE(max1236_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max1238",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1236_channels,
+		.num_channels = ARRAY_SIZE(max1236_channels),
+	},
+	[max1238] = {
 		.bits = 12,
 		.int_vref_mv = 4096,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max1239",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1238_channels,
+		.num_channels = ARRAY_SIZE(max1238_channels),
+	},
+	[max1239] = {
 		.bits = 12,
 		.int_vref_mv = 2048,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max11600",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1238_channels,
+		.num_channels = ARRAY_SIZE(max1238_channels),
+	},
+	[max11600] = {
 		.bits = 8,
 		.int_vref_mv = 4096,
 		.mode_list = max11607_mode_list,
 		.num_modes = ARRAY_SIZE(max11607_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max11601",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1036_channels,
+		.num_channels = ARRAY_SIZE(max1036_channels),
+	},
+	[max11601] = {
 		.bits = 8,
 		.int_vref_mv = 2048,
 		.mode_list = max11607_mode_list,
 		.num_modes = ARRAY_SIZE(max11607_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max11602",
-		.num_inputs = 8,
+		.info = &max1238_info,
+		.channels = max1036_channels,
+		.num_channels = ARRAY_SIZE(max1036_channels),
+	},
+	[max11602] = {
 		.bits = 8,
 		.int_vref_mv = 4096,
 		.mode_list = max11608_mode_list,
 		.num_modes = ARRAY_SIZE(max11608_mode_list),
 		.default_mode = s0to7,
-		.dev_attrs = &max11608_dev_attr_group,
-		.scan_attrs = &max11608_scan_el_group,
-	}, {
-		.name = "max11603",
-		.num_inputs = 8,
+		.info = &max1238_info,
+		.channels = max11602_channels,
+		.num_channels = ARRAY_SIZE(max11602_channels),
+	},
+	[max11603] = {
 		.bits = 8,
 		.int_vref_mv = 2048,
 		.mode_list = max11608_mode_list,
 		.num_modes = ARRAY_SIZE(max11608_mode_list),
 		.default_mode = s0to7,
-		.dev_attrs = &max11608_dev_attr_group,
-		.scan_attrs = &max11608_scan_el_group,
-	}, {
-		.name = "max11604",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max11602_channels,
+		.num_channels = ARRAY_SIZE(max11602_channels),
+	},
+	[max11604] = {
 		.bits = 8,
 		.int_vref_mv = 4098,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max11605",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1238_channels,
+		.num_channels = ARRAY_SIZE(max1238_channels),
+	},
+	[max11605] = {
 		.bits = 8,
 		.int_vref_mv = 2048,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max11606",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1238_channels,
+		.num_channels = ARRAY_SIZE(max1238_channels),
+	},
+	[max11606] = {
 		.bits = 10,
 		.int_vref_mv = 4096,
 		.mode_list = max11607_mode_list,
 		.num_modes = ARRAY_SIZE(max11607_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max11607",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1136_channels,
+		.num_channels = ARRAY_SIZE(max1136_channels),
+	},
+	[max11607] = {
 		.bits = 10,
 		.int_vref_mv = 2048,
 		.mode_list = max11607_mode_list,
 		.num_modes = ARRAY_SIZE(max11607_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max11608",
-		.num_inputs = 8,
+		.info = &max1238_info,
+		.channels = max1136_channels,
+		.num_channels = ARRAY_SIZE(max1136_channels),
+	},
+	[max11608] = {
 		.bits = 10,
 		.int_vref_mv = 4096,
 		.mode_list = max11608_mode_list,
 		.num_modes = ARRAY_SIZE(max11608_mode_list),
 		.default_mode = s0to7,
-		.dev_attrs = &max11608_dev_attr_group,
-		.scan_attrs = &max11608_scan_el_group,
-	}, {
-		.name = "max11609",
-		.num_inputs = 8,
+		.info = &max1238_info,
+		.channels = max11608_channels,
+		.num_channels = ARRAY_SIZE(max11608_channels),
+	},
+	[max11609] = {
 		.bits = 10,
 		.int_vref_mv = 2048,
 		.mode_list = max11608_mode_list,
 		.num_modes = ARRAY_SIZE(max11608_mode_list),
 		.default_mode = s0to7,
-		.dev_attrs = &max11608_dev_attr_group,
-		.scan_attrs = &max11608_scan_el_group,
-	}, {
-		.name = "max11610",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max11608_channels,
+		.num_channels = ARRAY_SIZE(max11608_channels),
+	},
+	[max11610] = {
 		.bits = 10,
 		.int_vref_mv = 4098,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max11611",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1238_channels,
+		.num_channels = ARRAY_SIZE(max1238_channels),
+	},
+	[max11611] = {
 		.bits = 10,
 		.int_vref_mv = 2048,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max11612",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1238_channels,
+		.num_channels = ARRAY_SIZE(max1238_channels),
+	},
+	[max11612] = {
 		.bits = 12,
 		.int_vref_mv = 4096,
 		.mode_list = max11607_mode_list,
 		.num_modes = ARRAY_SIZE(max11607_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max11613",
-		.num_inputs = 4,
+		.info = &max1238_info,
+		.channels = max1363_channels,
+		.num_channels = ARRAY_SIZE(max1363_channels),
+	},
+	[max11613] = {
 		.bits = 12,
 		.int_vref_mv = 2048,
 		.mode_list = max11607_mode_list,
 		.num_modes = ARRAY_SIZE(max11607_mode_list),
 		.default_mode = s0to3,
-		.dev_attrs = &max1363_dev_attr_group,
-		.scan_attrs = &max1363_scan_el_group,
-	}, {
-		.name = "max11614",
-		.num_inputs = 8,
+		.info = &max1238_info,
+		.channels = max1363_channels,
+		.num_channels = ARRAY_SIZE(max1363_channels),
+	},
+	[max11614] = {
 		.bits = 12,
 		.int_vref_mv = 4096,
 		.mode_list = max11608_mode_list,
 		.num_modes = ARRAY_SIZE(max11608_mode_list),
 		.default_mode = s0to7,
-		.dev_attrs = &max11608_dev_attr_group,
-		.scan_attrs = &max11608_scan_el_group,
-	}, {
-		.name = "max11615",
-		.num_inputs = 8,
+		.info = &max1238_info,
+		.channels = max11614_channels,
+		.num_channels = ARRAY_SIZE(max11614_channels),
+	},
+	[max11615] = {
 		.bits = 12,
 		.int_vref_mv = 2048,
 		.mode_list = max11608_mode_list,
 		.num_modes = ARRAY_SIZE(max11608_mode_list),
 		.default_mode = s0to7,
-		.dev_attrs = &max11608_dev_attr_group,
-		.scan_attrs = &max11608_scan_el_group,
-	}, {
-		.name = "max11616",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max11614_channels,
+		.num_channels = ARRAY_SIZE(max11614_channels),
+	},
+	[max11616] = {
 		.bits = 12,
 		.int_vref_mv = 4098,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}, {
-		.name = "max11617",
-		.num_inputs = 12,
+		.info = &max1238_info,
+		.channels = max1238_channels,
+		.num_channels = ARRAY_SIZE(max1238_channels),
+	},
+	[max11617] = {
 		.bits = 12,
 		.int_vref_mv = 2048,
 		.mode_list = max1238_mode_list,
 		.num_modes = ARRAY_SIZE(max1238_mode_list),
 		.default_mode = s0to11,
-		.dev_attrs = &max1238_dev_attr_group,
-		.scan_attrs = &max1238_scan_el_group,
-	}
+		.info = &max1238_info,
+		.channels = max1238_channels,
+		.num_channels = ARRAY_SIZE(max1238_channels),
+	},
+	[max11644] = {
+		.bits = 12,
+		.int_vref_mv = 2048,
+		.mode_list = max11644_mode_list,
+		.num_modes = ARRAY_SIZE(max11644_mode_list),
+		.default_mode = s0to1,
+		.info = &max1238_info,
+		.channels = max11644_channels,
+		.num_channels = ARRAY_SIZE(max11644_channels),
+	},
+	[max11645] = {
+		.bits = 12,
+		.int_vref_mv = 4096,
+		.mode_list = max11644_mode_list,
+		.num_modes = ARRAY_SIZE(max11644_mode_list),
+		.default_mode = s0to1,
+		.info = &max1238_info,
+		.channels = max11644_channels,
+		.num_channels = ARRAY_SIZE(max11644_channels),
+	},
+	[max11646] = {
+		.bits = 10,
+		.int_vref_mv = 2048,
+		.mode_list = max11644_mode_list,
+		.num_modes = ARRAY_SIZE(max11644_mode_list),
+		.default_mode = s0to1,
+		.info = &max1238_info,
+		.channels = max11646_channels,
+		.num_channels = ARRAY_SIZE(max11646_channels),
+	},
+	[max11647] = {
+		.bits = 10,
+		.int_vref_mv = 4096,
+		.mode_list = max11644_mode_list,
+		.num_modes = ARRAY_SIZE(max11644_mode_list),
+		.default_mode = s0to1,
+		.info = &max1238_info,
+		.channels = max11646_channels,
+		.num_channels = ARRAY_SIZE(max11646_channels),
+	},
 };
+
+
 
 static int max1363_initial_setup(struct max1363_state *st)
 {
@@ -919,117 +1250,116 @@ static int __devinit max1363_probe(struct i2c_client *client,
 				   const struct i2c_device_id *id)
 {
 	int ret, i, regdone = 0;
-	struct max1363_state *st = kzalloc(sizeof(*st), GFP_KERNEL);
-	if (st == NULL) {
-		ret = -ENOMEM;
-		goto error_ret;
-	}
+	struct max1363_state *st;
+	struct iio_dev *indio_dev;
+	struct regulator *reg;
 
-	/* this is only used for device removal purposes */
-	i2c_set_clientdata(client, st);
-
-	atomic_set(&st->protect_ring, 0);
-
-	/* Find the chip model specific data */
-	for (i = 0; i < ARRAY_SIZE(max1363_chip_info_tbl); i++)
-		if (!strcmp(max1363_chip_info_tbl[i].name, id->name)) {
-			st->chip_info = &max1363_chip_info_tbl[i];
-			break;
-		};
-	/* Unsupported chip */
-	if (!st->chip_info) {
-		dev_err(&client->dev, "%s is not supported\n", id->name);
-		ret = -ENODEV;
-		goto error_free_st;
-	}
-
-	st->reg = regulator_get(&client->dev, "vcc");
-	if (!IS_ERR(st->reg)) {
-		ret = regulator_enable(st->reg);
+	reg = regulator_get(&client->dev, "vcc");
+	if (!IS_ERR(reg)) {
+		ret = regulator_enable(reg);
 		if (ret)
 			goto error_put_reg;
 	}
-	st->client = client;
 
-	st->indio_dev = iio_allocate_device();
-	if (st->indio_dev == NULL) {
+	indio_dev = iio_allocate_device(sizeof(struct max1363_state));
+	if (indio_dev == NULL) {
 		ret = -ENOMEM;
 		goto error_disable_reg;
 	}
+	st = iio_priv(indio_dev);
+	st->reg = reg;
+	/* this is only used for device removal purposes */
+	i2c_set_clientdata(client, indio_dev);
 
-	st->indio_dev->available_scan_masks
-		= kzalloc(sizeof(*st->indio_dev->available_scan_masks)*
+	st->chip_info = &max1363_chip_info_tbl[id->driver_data];
+	st->client = client;
+
+	indio_dev->available_scan_masks
+		= kzalloc(sizeof(*indio_dev->available_scan_masks)*
 			  (st->chip_info->num_modes + 1), GFP_KERNEL);
-	if (!st->indio_dev->available_scan_masks) {
+	if (!indio_dev->available_scan_masks) {
 		ret = -ENOMEM;
 		goto error_free_device;
 	}
 
 	for (i = 0; i < st->chip_info->num_modes; i++)
-		st->indio_dev->available_scan_masks[i] =
+		indio_dev->available_scan_masks[i] =
 			max1363_mode_table[st->chip_info->mode_list[i]]
 			.modemask;
 	/* Estabilish that the iio_dev is a child of the i2c device */
-	st->indio_dev->dev.parent = &client->dev;
-	st->indio_dev->attrs = st->chip_info->dev_attrs;
+	indio_dev->dev.parent = &client->dev;
+	indio_dev->name = id->name;
 
-	/* Todo: this shouldn't be here. */
-	st->indio_dev->scan_el_attrs = st->chip_info->scan_attrs;
-	st->indio_dev->dev_data = (void *)(st);
-	st->indio_dev->driver_module = THIS_MODULE;
-	st->indio_dev->modes = INDIO_DIRECT_MODE;
-
+	indio_dev->info = st->chip_info->info;
+	indio_dev->modes = INDIO_DIRECT_MODE;
 	ret = max1363_initial_setup(st);
+	if (ret < 0)
+		goto error_free_available_scan_masks;
+
+	ret = max1363_register_ring_funcs_and_init(indio_dev);
 	if (ret)
 		goto error_free_available_scan_masks;
 
-	ret = max1363_register_ring_funcs_and_init(st->indio_dev);
-	if (ret)
-		goto error_free_available_scan_masks;
-
-	ret = iio_device_register(st->indio_dev);
+	ret = iio_device_register(indio_dev);
 	if (ret)
 		goto error_cleanup_ring;
 	regdone = 1;
-	ret = max1363_initialize_ring(st->indio_dev->ring);
+	ret = iio_ring_buffer_register_ex(indio_dev->ring, 0,
+					  st->chip_info->channels,
+					  st->chip_info->num_channels);
 	if (ret)
 		goto error_cleanup_ring;
+
+	if (client->irq) {
+		ret = request_threaded_irq(st->client->irq,
+					   NULL,
+					   &max1363_event_handler,
+					   IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+					   "max1363_event",
+					   indio_dev);
+
+		if (ret)
+			goto error_uninit_ring;
+	}
+
 	return 0;
+error_uninit_ring:
+	iio_ring_buffer_unregister(indio_dev->ring);
 error_cleanup_ring:
-	max1363_ring_cleanup(st->indio_dev);
+	max1363_ring_cleanup(indio_dev);
 error_free_available_scan_masks:
-	kfree(st->indio_dev->available_scan_masks);
+	kfree(indio_dev->available_scan_masks);
 error_free_device:
 	if (!regdone)
-		iio_free_device(st->indio_dev);
+		iio_free_device(indio_dev);
 	else
-		iio_device_unregister(st->indio_dev);
+		iio_device_unregister(indio_dev);
 error_disable_reg:
 	if (!IS_ERR(st->reg))
 		regulator_disable(st->reg);
 error_put_reg:
 	if (!IS_ERR(st->reg))
 		regulator_put(st->reg);
-error_free_st:
-	kfree(st);
 
-error_ret:
 	return ret;
 }
 
 static int max1363_remove(struct i2c_client *client)
 {
-	struct max1363_state *st = i2c_get_clientdata(client);
-	struct iio_dev *indio_dev = st->indio_dev;
-	max1363_uninitialize_ring(indio_dev->ring);
+	struct iio_dev *indio_dev = i2c_get_clientdata(client);
+	struct max1363_state *st = iio_priv(indio_dev);
+	struct regulator *reg = st->reg;
+
+	if (client->irq)
+		free_irq(st->client->irq, indio_dev);
+	iio_ring_buffer_unregister(indio_dev->ring);
 	max1363_ring_cleanup(indio_dev);
-	kfree(st->indio_dev->available_scan_masks);
-	iio_device_unregister(indio_dev);
-	if (!IS_ERR(st->reg)) {
-		regulator_disable(st->reg);
-		regulator_put(st->reg);
+	kfree(indio_dev->available_scan_masks);
+	if (!IS_ERR(reg)) {
+		regulator_disable(reg);
+		regulator_put(reg);
 	}
-	kfree(st);
+	iio_device_unregister(indio_dev);
 
 	return 0;
 }

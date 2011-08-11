@@ -589,22 +589,23 @@ marvel_print_pox_spl_cmplt(u64 spl_cmplt)
 static void
 marvel_print_pox_trans_sum(u64 trans_sum)
 {
-	char *pcix_cmd[] = { "Interrupt Acknowledge",
-			     "Special Cycle",
-			     "I/O Read",
-			     "I/O Write",
-			     "Reserved",
-			     "Reserved / Device ID Message",
-			     "Memory Read",
-			     "Memory Write",
-			     "Reserved / Alias to Memory Read Block",
-			     "Reserved / Alias to Memory Write Block",
-			     "Configuration Read",
-			     "Configuration Write",
-			     "Memory Read Multiple / Split Completion",
-			     "Dual Address Cycle",
-			     "Memory Read Line / Memory Read Block",
-			     "Memory Write and Invalidate / Memory Write Block"
+	static const char * const pcix_cmd[] = {
+		"Interrupt Acknowledge",
+		"Special Cycle",
+		"I/O Read",
+		"I/O Write",
+		"Reserved",
+		"Reserved / Device ID Message",
+		"Memory Read",
+		"Memory Write",
+		"Reserved / Alias to Memory Read Block",
+		"Reserved / Alias to Memory Write Block",
+		"Configuration Read",
+		"Configuration Write",
+		"Memory Read Multiple / Split Completion",
+		"Dual Address Cycle",
+		"Memory Read Line / Memory Read Block",
+		"Memory Write and Invalidate / Memory Write Block"
 	};
 
 #define IO7__POX_TRANSUM__PCI_ADDR__S		(0)
@@ -1026,7 +1027,7 @@ marvel_process_logout_frame(struct ev7_lf_subpackets *lf_subpackets, int print)
 	 * normal operation, dismiss them.
 	 *
 	 * Dismiss if:
-	 *	C_STAT		= 0x14 		(Error Reponse)
+	 *	C_STAT		= 0x14 		(Error Response)
 	 *	C_STS<3>	= 0    		(C_ADDR valid)
 	 *	C_ADDR<42>	= 1    		(I/O)
 	 *	C_ADDR<31:22>	= 111110xxb	(PCI Config space)

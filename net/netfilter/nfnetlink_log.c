@@ -66,9 +66,10 @@ struct nfulnl_instance {
 	u_int16_t group_num;		/* number of this queue */
 	u_int16_t flags;
 	u_int8_t copy_mode;
+	struct rcu_head rcu;
 };
 
-static DEFINE_RWLOCK(instances_lock);
+static DEFINE_SPINLOCK(instances_lock);
 static atomic_t global_seq;
 
 #define INSTANCE_BUCKETS	16
@@ -88,7 +89,7 @@ __instance_lookup(u_int16_t group_num)
 	struct nfulnl_instance *inst;
 
 	head = &instance_table[instance_hashfn(group_num)];
-	hlist_for_each_entry(inst, pos, head, hlist) {
+	hlist_for_each_entry_rcu(inst, pos, head, hlist) {
 		if (inst->group_num == group_num)
 			return inst;
 	}
@@ -106,22 +107,26 @@ instance_lookup_get(u_int16_t group_num)
 {
 	struct nfulnl_instance *inst;
 
-	read_lock_bh(&instances_lock);
+	rcu_read_lock_bh();
 	inst = __instance_lookup(group_num);
-	if (inst)
-		instance_get(inst);
-	read_unlock_bh(&instances_lock);
+	if (inst && !atomic_inc_not_zero(&inst->use))
+		inst = NULL;
+	rcu_read_unlock_bh();
 
 	return inst;
+}
+
+static void nfulnl_instance_free_rcu(struct rcu_head *head)
+{
+	kfree(container_of(head, struct nfulnl_instance, rcu));
+	module_put(THIS_MODULE);
 }
 
 static void
 instance_put(struct nfulnl_instance *inst)
 {
-	if (inst && atomic_dec_and_test(&inst->use)) {
-		kfree(inst);
-		module_put(THIS_MODULE);
-	}
+	if (inst && atomic_dec_and_test(&inst->use))
+		call_rcu_bh(&inst->rcu, nfulnl_instance_free_rcu);
 }
 
 static void nfulnl_timer(unsigned long data);
@@ -132,7 +137,7 @@ instance_create(u_int16_t group_num, int pid)
 	struct nfulnl_instance *inst;
 	int err;
 
-	write_lock_bh(&instances_lock);
+	spin_lock_bh(&instances_lock);
 	if (__instance_lookup(group_num)) {
 		err = -EEXIST;
 		goto out_unlock;
@@ -166,32 +171,37 @@ instance_create(u_int16_t group_num, int pid)
 	inst->copy_mode 	= NFULNL_COPY_PACKET;
 	inst->copy_range 	= NFULNL_COPY_RANGE_MAX;
 
-	hlist_add_head(&inst->hlist,
+	hlist_add_head_rcu(&inst->hlist,
 		       &instance_table[instance_hashfn(group_num)]);
 
-	write_unlock_bh(&instances_lock);
+	spin_unlock_bh(&instances_lock);
 
 	return inst;
 
 out_unlock:
-	write_unlock_bh(&instances_lock);
+	spin_unlock_bh(&instances_lock);
 	return ERR_PTR(err);
 }
 
 static void __nfulnl_flush(struct nfulnl_instance *inst);
 
+/* called with BH disabled */
 static void
 __instance_destroy(struct nfulnl_instance *inst)
 {
 	/* first pull it out of the global list */
-	hlist_del(&inst->hlist);
+	hlist_del_rcu(&inst->hlist);
 
 	/* then flush all pending packets from skb */
 
-	spin_lock_bh(&inst->lock);
+	spin_lock(&inst->lock);
+
+	/* lockless readers wont be able to use us */
+	inst->copy_mode = NFULNL_COPY_DISABLED;
+
 	if (inst->skb)
 		__nfulnl_flush(inst);
-	spin_unlock_bh(&inst->lock);
+	spin_unlock(&inst->lock);
 
 	/* and finally put the refcount */
 	instance_put(inst);
@@ -200,9 +210,9 @@ __instance_destroy(struct nfulnl_instance *inst)
 static inline void
 instance_destroy(struct nfulnl_instance *inst)
 {
-	write_lock_bh(&instances_lock);
+	spin_lock_bh(&instances_lock);
 	__instance_destroy(inst);
-	write_unlock_bh(&instances_lock);
+	spin_unlock_bh(&instances_lock);
 }
 
 static int
@@ -366,13 +376,11 @@ __build_packet_message(struct nfulnl_instance *inst,
 			unsigned int hooknum,
 			const struct net_device *indev,
 			const struct net_device *outdev,
-			const struct nf_loginfo *li,
 			const char *prefix, unsigned int plen)
 {
 	struct nfulnl_msg_packet_hdr pmsg;
 	struct nlmsghdr *nlh;
 	struct nfgenmsg *nfmsg;
-	__be32 tmp_uint;
 	sk_buff_data_t old_tail = inst->skb->tail;
 
 	nlh = NLMSG_PUT(inst->skb, 0, 0,
@@ -403,8 +411,9 @@ __build_packet_message(struct nfulnl_instance *inst,
 			NLA_PUT_BE32(inst->skb, NFULA_IFINDEX_PHYSINDEV,
 				     htonl(indev->ifindex));
 			/* this is the bridge group "brX" */
+			/* rcu_read_lock()ed by nf_hook_slow or nf_log_packet */
 			NLA_PUT_BE32(inst->skb, NFULA_IFINDEX_INDEV,
-				     htonl(indev->br_port->br->dev->ifindex));
+				     htonl(br_port_get_rcu(indev)->br->dev->ifindex));
 		} else {
 			/* Case 2: indev is bridge group, we need to look for
 			 * physical device (when called from ipv4) */
@@ -418,7 +427,6 @@ __build_packet_message(struct nfulnl_instance *inst,
 	}
 
 	if (outdev) {
-		tmp_uint = htonl(outdev->ifindex);
 #ifndef CONFIG_BRIDGE_NETFILTER
 		NLA_PUT_BE32(inst->skb, NFULA_IFINDEX_OUTDEV,
 			     htonl(outdev->ifindex));
@@ -430,8 +438,9 @@ __build_packet_message(struct nfulnl_instance *inst,
 			NLA_PUT_BE32(inst->skb, NFULA_IFINDEX_PHYSOUTDEV,
 				     htonl(outdev->ifindex));
 			/* this is the bridge group "brX" */
+			/* rcu_read_lock()ed by nf_hook_slow or nf_log_packet */
 			NLA_PUT_BE32(inst->skb, NFULA_IFINDEX_OUTDEV,
-				     htonl(outdev->br_port->br->dev->ifindex));
+				     htonl(br_port_get_rcu(outdev)->br->dev->ifindex));
 		} else {
 			/* Case 2: indev is a bridge group, we need to look
 			 * for physical device (when called from ipv4) */
@@ -447,7 +456,8 @@ __build_packet_message(struct nfulnl_instance *inst,
 	if (skb->mark)
 		NLA_PUT_BE32(inst->skb, NFULA_MARK, htonl(skb->mark));
 
-	if (indev && skb->dev) {
+	if (indev && skb->dev &&
+	    skb->mac_header != skb->network_header) {
 		struct nfulnl_msg_packet_hw phw;
 		int len = dev_parse_header(skb, phw.hw_addr);
 		if (len > 0) {
@@ -619,6 +629,7 @@ nfulnl_log_packet(u_int8_t pf,
 		size += nla_total_size(data_len);
 		break;
 
+	case NFULNL_COPY_DISABLED:
 	default:
 		goto unlock_and_release;
 	}
@@ -639,7 +650,7 @@ nfulnl_log_packet(u_int8_t pf,
 	inst->qlen++;
 
 	__build_packet_message(inst, skb, data_len, pf,
-				hooknum, in, out, li, prefix, plen);
+				hooknum, in, out, prefix, plen);
 
 	if (inst->qlen >= qthreshold)
 		__nfulnl_flush(inst);
@@ -672,7 +683,7 @@ nfulnl_rcv_nl_event(struct notifier_block *this,
 		int i;
 
 		/* destroy all instances for this pid */
-		write_lock_bh(&instances_lock);
+		spin_lock_bh(&instances_lock);
 		for  (i = 0; i < INSTANCE_BUCKETS; i++) {
 			struct hlist_node *tmp, *t2;
 			struct nfulnl_instance *inst;
@@ -684,7 +695,7 @@ nfulnl_rcv_nl_event(struct notifier_block *this,
 					__instance_destroy(inst);
 			}
 		}
-		write_unlock_bh(&instances_lock);
+		spin_unlock_bh(&instances_lock);
 	}
 	return NOTIFY_DONE;
 }
@@ -861,19 +872,19 @@ static struct hlist_node *get_first(struct iter_state *st)
 
 	for (st->bucket = 0; st->bucket < INSTANCE_BUCKETS; st->bucket++) {
 		if (!hlist_empty(&instance_table[st->bucket]))
-			return instance_table[st->bucket].first;
+			return rcu_dereference_bh(hlist_first_rcu(&instance_table[st->bucket]));
 	}
 	return NULL;
 }
 
 static struct hlist_node *get_next(struct iter_state *st, struct hlist_node *h)
 {
-	h = h->next;
+	h = rcu_dereference_bh(hlist_next_rcu(h));
 	while (!h) {
 		if (++st->bucket >= INSTANCE_BUCKETS)
 			return NULL;
 
-		h = instance_table[st->bucket].first;
+		h = rcu_dereference_bh(hlist_first_rcu(&instance_table[st->bucket]));
 	}
 	return h;
 }
@@ -890,9 +901,9 @@ static struct hlist_node *get_idx(struct iter_state *st, loff_t pos)
 }
 
 static void *seq_start(struct seq_file *seq, loff_t *pos)
-	__acquires(instances_lock)
+	__acquires(rcu_bh)
 {
-	read_lock_bh(&instances_lock);
+	rcu_read_lock_bh();
 	return get_idx(seq->private, *pos);
 }
 
@@ -903,9 +914,9 @@ static void *seq_next(struct seq_file *s, void *v, loff_t *pos)
 }
 
 static void seq_stop(struct seq_file *s, void *v)
-	__releases(instances_lock)
+	__releases(rcu_bh)
 {
-	read_unlock_bh(&instances_lock);
+	rcu_read_unlock_bh();
 }
 
 static int seq_show(struct seq_file *s, void *v)

@@ -528,7 +528,7 @@ this driver assignment of hotplug added vty-servers may be in a different
 order than how they would be exposed on module load.  Rebooting or
 reloading the module after dynamic addition may result in the /dev/hvcs*
 and vty-server coupling changing if a vty-server adapter was added in a
-slot inbetween two other vty-server adapters.  Refer to the section above
+slot between two other vty-server adapters.  Refer to the section above
 on how to determine which vty-server goes with which /dev/hvcs* node.
 Hint; look at the sysfs "index" attribute for the vty-server.
 
@@ -560,7 +560,7 @@ The proper channel for reporting bugs is either through the Linux OS
 distribution company that provided your OS or by posting issues to the
 PowerPC development mailing list at:
 
-linuxppc-dev@ozlabs.org
+linuxppc-dev@lists.ozlabs.org
 
 This request is to provide a documented and searchable public exchange
 of the problems and solutions surrounding this driver for the benefit of

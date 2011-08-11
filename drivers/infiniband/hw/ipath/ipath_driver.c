@@ -199,12 +199,11 @@ static struct ipath_devdata *ipath_alloc_devdata(struct pci_dev *pdev)
 		goto bail;
 	}
 
-	dd = vmalloc(sizeof(*dd));
+	dd = vzalloc(sizeof(*dd));
 	if (!dd) {
 		dd = ERR_PTR(-ENOMEM);
 		goto bail;
 	}
-	memset(dd, 0, sizeof(*dd));
 	dd->ipath_unit = -1;
 
 	spin_lock_irqsave(&ipath_devs_lock, flags);
@@ -390,6 +389,8 @@ done:
 	ipath_enable_armlaunch(dd);
 }
 
+static void cleanup_device(struct ipath_devdata *dd);
+
 static int __devinit ipath_init_one(struct pci_dev *pdev,
 				    const struct pci_device_id *ent)
 {
@@ -397,7 +398,6 @@ static int __devinit ipath_init_one(struct pci_dev *pdev,
 	struct ipath_devdata *dd;
 	unsigned long long addr;
 	u32 bar0 = 0, bar1 = 0;
-	u8 rev;
 
 	dd = ipath_alloc_devdata(pdev);
 	if (IS_ERR(dd)) {
@@ -528,9 +528,8 @@ static int __devinit ipath_init_one(struct pci_dev *pdev,
 	for (j = 0; j < 6; j++) {
 		if (!pdev->resource[j].start)
 			continue;
-		ipath_cdbg(VERBOSE, "BAR %d start %llx, end %llx, len %llx\n",
-			   j, (unsigned long long)pdev->resource[j].start,
-			   (unsigned long long)pdev->resource[j].end,
+		ipath_cdbg(VERBOSE, "BAR %d %pR, len %llx\n",
+			   j, &pdev->resource[j],
 			   (unsigned long long)pci_resource_len(pdev, j));
 	}
 
@@ -540,13 +539,7 @@ static int __devinit ipath_init_one(struct pci_dev *pdev,
 		goto bail_regions;
 	}
 
-	ret = pci_read_config_byte(pdev, PCI_REVISION_ID, &rev);
-	if (ret) {
-		ipath_dev_err(dd, "Failed to read PCI revision ID unit "
-			      "%u: err %d\n", dd->ipath_unit, -ret);
-		goto bail_regions;	/* shouldn't ever happen */
-	}
-	dd->ipath_pcirev = rev;
+	dd->ipath_pcirev = pdev->revision;
 
 #if defined(__powerpc__)
 	/* There isn't a generic way to specify writethrough mappings */
@@ -616,8 +609,13 @@ static int __devinit ipath_init_one(struct pci_dev *pdev,
 	goto bail;
 
 bail_irqsetup:
-	if (pdev->irq)
-		free_irq(pdev->irq, dd);
+	cleanup_device(dd);
+
+	if (dd->ipath_irq)
+		dd->ipath_f_free_irq(dd);
+
+	if (dd->ipath_f_cleanup)
+		dd->ipath_f_cleanup(dd);
 
 bail_iounmap:
 	iounmap((volatile void __iomem *) dd->ipath_kregbase);
@@ -635,7 +633,7 @@ bail:
 	return ret;
 }
 
-static void __devexit cleanup_device(struct ipath_devdata *dd)
+static void cleanup_device(struct ipath_devdata *dd)
 {
 	int port;
 	struct ipath_portdata **tmp;
@@ -750,7 +748,7 @@ static void __devexit ipath_remove_one(struct pci_dev *pdev)
 	 */
 	ipath_shutdown_device(dd);
 
-	flush_scheduled_work();
+	flush_workqueue(ib_wq);
 
 	if (dd->verbs_dev)
 		ipath_unregister_ib_device(dd->verbs_dev);
@@ -2387,7 +2385,7 @@ void ipath_shutdown_device(struct ipath_devdata *dd)
 	/*
 	 * clear SerdesEnable and turn the leds off; do this here because
 	 * we are unloading, so don't count on interrupts to move along
-	 * Turn the LEDs off explictly for the same reason.
+	 * Turn the LEDs off explicitly for the same reason.
 	 */
 	dd->ipath_f_quiet_serdes(dd);
 

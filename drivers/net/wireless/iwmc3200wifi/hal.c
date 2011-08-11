@@ -54,10 +54,10 @@
  *   LMAC. If you look at LMAC commands you'll se that they
  *   are actually regular iwlwifi target commands encapsulated
  *   into a special UMAC command called UMAC passthrough.
- *   This is due to the fact the the host talks exclusively
+ *   This is due to the fact the host talks exclusively
  *   to the UMAC and so there needs to be a special UMAC
  *   command for talking to the LMAC.
- *   This is how a wifi command is layed out:
+ *   This is how a wifi command is laid out:
  *    ------------------------
  *   | iwm_udma_out_wifi_hdr  |
  *    ------------------------
@@ -72,7 +72,7 @@
  *   Those commands are handled by the device's bootrom,
  *   and are typically sent when the UMAC and the LMAC
  *   are not yet available.
- *    *   This is how a non-wifi command is layed out:
+ *    *   This is how a non-wifi command is laid out:
  *    ---------------------------
  *   | iwm_udma_out_nonwifi_hdr  |
  *    ---------------------------

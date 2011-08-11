@@ -197,7 +197,7 @@ struct cpc_can_err_counter {
 };
 
 /* Main message type used between library and application */
-struct __attribute__ ((packed)) ems_cpc_msg {
+struct __packed ems_cpc_msg {
 	u8 type;	/* type of message */
 	u8 length;	/* length of data within union 'msg' */
 	u8 msgid;	/* confirmation handle */
@@ -386,7 +386,7 @@ static void ems_usb_rx_err(struct ems_usb *dev, struct ems_cpc_msg *msg)
 			break;
 		}
 
-		/* Error occured during transmission? */
+		/* Error occurred during transmission? */
 		if ((ecc & SJA1000_ECC_DIR) == 0)
 			cf->data[2] |= CAN_ERR_PROT_TX;
 

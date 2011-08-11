@@ -31,7 +31,7 @@
  * $Log: pmcc4.h,v $
  * Revision 1.4  2005/11/01 19:24:48  rickd
  * Remove de-implement function prototypes.  Several <int> to
- * <status_t> changes for consistant usage of same.
+ * <status_t> changes for consistent usage of same.
  *
  * Revision 1.3  2005/09/28 00:10:08  rickd
  * Add GNU license info. Use config params from libsbew.h
@@ -117,11 +117,7 @@ extern      "C"
 
 #include "pmcc4_private.h"
 
-#if !(LINUX_VERSION_CODE < KERNEL_VERSION(2,5,0))
 char       *get_hdlc_name (hdlc_device *);
-
-#endif
-
 
 /*
  * external interface

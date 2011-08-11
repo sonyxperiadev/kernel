@@ -87,6 +87,7 @@ struct fiq_debugger_state {
 #endif
 
 	unsigned int last_irqs[NR_IRQS];
+	unsigned int last_local_timer_irqs[NR_CPUS];
 };
 
 #ifdef CONFIG_FIQ_DEBUGGER_NO_SLEEP
@@ -94,8 +95,14 @@ static bool initial_no_sleep = true;
 #else
 static bool initial_no_sleep;
 #endif
+
+#ifdef CONFIG_FIQ_DEBUGGER_CONSOLE_DEFAULT_ENABLE
+static bool initial_debug_enable = true;
+static bool initial_console_enable = true;
+#else
 static bool initial_debug_enable;
 static bool initial_console_enable;
+#endif
 
 module_param_named(no_sleep, initial_no_sleep, bool, 0644);
 module_param_named(debug_enable, initial_debug_enable, bool, 0644);
@@ -129,9 +136,9 @@ static void debug_force_irq(struct fiq_debugger_state *state)
 	if (state->pdata->force_irq)
 		state->pdata->force_irq(state->pdev, irq);
 	else {
-		struct irq_chip *chip = get_irq_chip(irq);
-		if (chip && chip->retrigger)
-			chip->retrigger(irq);
+		struct irq_chip *chip = irq_get_chip(irq);
+		if (chip && chip->irq_retrigger)
+			chip->irq_retrigger(irq_get_irq_data(irq));
 	}
 }
 
@@ -323,6 +330,8 @@ static void dump_allregs(struct fiq_debugger_state *state, unsigned *regs)
 static void dump_irqs(struct fiq_debugger_state *state)
 {
 	int n;
+	unsigned int cpu;
+
 	debug_printf(state, "irqnr       total  since-last   status  name\n");
 	for (n = 0; n < NR_IRQS; n++) {
 		struct irqaction *act = irq_desc[n].action;
@@ -331,9 +340,19 @@ static void dump_irqs(struct fiq_debugger_state *state)
 		debug_printf(state, "%5d: %10u %11u %8x  %s\n", n,
 			kstat_irqs(n),
 			kstat_irqs(n) - state->last_irqs[n],
-			irq_desc[n].status,
+			irq_desc[n].status_use_accessors,
 			(act && act->name) ? act->name : "???");
 		state->last_irqs[n] = kstat_irqs(n);
+	}
+
+	for (cpu = 0; cpu < NR_CPUS; cpu++) {
+
+		debug_printf(state, "LOC %d: %10u %11u\n", cpu,
+			     __IRQ_STAT(cpu, local_timer_irqs),
+			     __IRQ_STAT(cpu, local_timer_irqs) -
+			     state->last_local_timer_irqs[cpu]);
+		state->last_local_timer_irqs[cpu] =
+			__IRQ_STAT(cpu, local_timer_irqs);
 	}
 }
 
@@ -428,10 +447,35 @@ void dump_stacktrace(struct fiq_debugger_state *state,
 		tail = user_backtrace(state, tail);
 }
 
+static void debug_help(struct fiq_debugger_state *state)
+{
+	debug_printf(state,	"FIQ Debugger commands:\n"
+				" pc            PC status\n"
+				" regs          Register dump\n"
+				" allregs       Extended Register dump\n"
+				" bt            Stack trace\n"
+				" reboot        Reboot\n"
+				" irqs          Interupt status\n"
+				" kmsg          Kernel log\n"
+				" version       Kernel version\n");
+	debug_printf(state,	" sleep         Allow sleep while in FIQ\n"
+				" nosleep       Disable sleep while in FIQ\n"
+				" console       Switch terminal to console\n"
+				" cpu           Current CPU\n"
+				" cpu <number>  Switch to CPU<number>\n");
+	if (!state->debug_busy) {
+		strcpy(state->debug_cmd, "help");
+		state->debug_busy = 1;
+		debug_force_irq(state);
+	}
+}
+
 static void debug_exec(struct fiq_debugger_state *state,
 			const char *cmd, unsigned *regs, void *svc_sp)
 {
-	if (!strcmp(cmd, "pc")) {
+	if (!strcmp(cmd, "help") || !strcmp(cmd, "?")) {
+		debug_help(state);
+	} else if (!strcmp(cmd, "pc")) {
 		debug_printf(state, " pc %08x cpsr %08x mode %s\n",
 			regs[15], regs[16], mode_name(regs[16]));
 	} else if (!strcmp(cmd, "regs")) {

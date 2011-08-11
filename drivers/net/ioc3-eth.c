@@ -82,7 +82,6 @@ struct ioc3_private {
 	struct ioc3_etxd *txr;
 	struct sk_buff *rx_skbs[512];
 	struct sk_buff *tx_skbs[128];
-	struct net_device_stats stats;
 	int rx_ci;			/* RX consumer index */
 	int rx_pi;			/* RX producer index */
 	int tx_ci;			/* TX consumer index */
@@ -91,8 +90,6 @@ struct ioc3_private {
 	u32 emcr, ehar_h, ehar_l;
 	spinlock_t ioc3_lock;
 	struct mii_if_info mii;
-	unsigned long flags;
-#define IOC3_FLAG_RX_CHECKSUMS	1
 
 	struct pci_dev *pdev;
 
@@ -504,8 +501,8 @@ static struct net_device_stats *ioc3_get_stats(struct net_device *dev)
 	struct ioc3_private *ip = netdev_priv(dev);
 	struct ioc3 *ioc3 = ip->regs;
 
-	ip->stats.collisions += (ioc3_r_etcdc() & ETCDC_COLLCNT_MASK);
-	return &ip->stats;
+	dev->stats.collisions += (ioc3_r_etcdc() & ETCDC_COLLCNT_MASK);
+	return &dev->stats;
 }
 
 static void ioc3_tcpudp_checksum(struct sk_buff *skb, uint32_t hwsum, int len)
@@ -576,8 +573,9 @@ static void ioc3_tcpudp_checksum(struct sk_buff *skb, uint32_t hwsum, int len)
 		skb->ip_summed = CHECKSUM_UNNECESSARY;
 }
 
-static inline void ioc3_rx(struct ioc3_private *ip)
+static inline void ioc3_rx(struct net_device *dev)
 {
+	struct ioc3_private *ip = netdev_priv(dev);
 	struct sk_buff *skb, *new_skb;
 	struct ioc3 *ioc3 = ip->regs;
 	int rx_entry, n_entry, len;
@@ -598,18 +596,18 @@ static inline void ioc3_rx(struct ioc3_private *ip)
 		if (err & ERXBUF_GOODPKT) {
 			len = ((w0 >> ERXBUF_BYTECNT_SHIFT) & 0x7ff) - 4;
 			skb_trim(skb, len);
-			skb->protocol = eth_type_trans(skb, priv_netdev(ip));
+			skb->protocol = eth_type_trans(skb, dev);
 
 			new_skb = ioc3_alloc_skb(RX_BUF_ALLOC_SIZE, GFP_ATOMIC);
 			if (!new_skb) {
 				/* Ouch, drop packet and just recycle packet
 				   to keep the ring filled.  */
-				ip->stats.rx_dropped++;
+				dev->stats.rx_dropped++;
 				new_skb = skb;
 				goto next;
 			}
 
-			if (likely(ip->flags & IOC3_FLAG_RX_CHECKSUMS))
+			if (likely(dev->features & NETIF_F_RXCSUM))
 				ioc3_tcpudp_checksum(skb,
 					w0 & ERXBUF_IPCKSUM_MASK, len);
 
@@ -622,19 +620,19 @@ static inline void ioc3_rx(struct ioc3_private *ip)
 			rxb = (struct ioc3_erxbuf *) new_skb->data;
 			skb_reserve(new_skb, RX_OFFSET);
 
-			ip->stats.rx_packets++;		/* Statistics */
-			ip->stats.rx_bytes += len;
+			dev->stats.rx_packets++;		/* Statistics */
+			dev->stats.rx_bytes += len;
 		} else {
- 			/* The frame is invalid and the skb never
-                           reached the network layer so we can just
-                           recycle it.  */
- 			new_skb = skb;
- 			ip->stats.rx_errors++;
+			/* The frame is invalid and the skb never
+			   reached the network layer so we can just
+			   recycle it.  */
+			new_skb = skb;
+			dev->stats.rx_errors++;
 		}
 		if (err & ERXBUF_CRCERR)	/* Statistics */
-			ip->stats.rx_crc_errors++;
+			dev->stats.rx_crc_errors++;
 		if (err & ERXBUF_FRAMERR)
-			ip->stats.rx_frame_errors++;
+			dev->stats.rx_frame_errors++;
 next:
 		ip->rx_skbs[n_entry] = new_skb;
 		rxr[n_entry] = cpu_to_be64(ioc3_map(rxb, 1));
@@ -652,8 +650,9 @@ next:
 	ip->rx_ci = rx_entry;
 }
 
-static inline void ioc3_tx(struct ioc3_private *ip)
+static inline void ioc3_tx(struct net_device *dev)
 {
+	struct ioc3_private *ip = netdev_priv(dev);
 	unsigned long packets, bytes;
 	struct ioc3 *ioc3 = ip->regs;
 	int tx_entry, o_entry;
@@ -681,12 +680,12 @@ static inline void ioc3_tx(struct ioc3_private *ip)
 		tx_entry = (etcir >> 7) & 127;
 	}
 
-	ip->stats.tx_packets += packets;
-	ip->stats.tx_bytes += bytes;
+	dev->stats.tx_packets += packets;
+	dev->stats.tx_bytes += bytes;
 	ip->txqlen -= packets;
 
 	if (ip->txqlen < 128)
-		netif_wake_queue(priv_netdev(ip));
+		netif_wake_queue(dev);
 
 	ip->tx_ci = o_entry;
 	spin_unlock(&ip->ioc3_lock);
@@ -699,9 +698,9 @@ static inline void ioc3_tx(struct ioc3_private *ip)
  * with such error interrupts if something really goes wrong, so we might
  * also consider to take the interface down.
  */
-static void ioc3_error(struct ioc3_private *ip, u32 eisr)
+static void ioc3_error(struct net_device *dev, u32 eisr)
 {
-	struct net_device *dev = priv_netdev(ip);
+	struct ioc3_private *ip = netdev_priv(dev);
 	unsigned char *iface = dev->name;
 
 	spin_lock(&ip->ioc3_lock);
@@ -747,11 +746,11 @@ static irqreturn_t ioc3_interrupt(int irq, void *_dev)
 
 	if (eisr & (EISR_RXOFLO | EISR_RXBUFOFLO | EISR_RXMEMERR |
 	            EISR_RXPARERR | EISR_TXBUFUFLO | EISR_TXMEMERR))
-		ioc3_error(ip, eisr);
+		ioc3_error(dev, eisr);
 	if (eisr & EISR_RXTIMERINT)
-		ioc3_rx(ip);
+		ioc3_rx(dev);
 	if (eisr & EISR_TXEXPLICIT)
-		ioc3_tx(ip);
+		ioc3_tx(dev);
 
 	return IRQ_HANDLED;
 }
@@ -826,7 +825,7 @@ static void ioc3_mii_start(struct ioc3_private *ip)
 {
 	ip->ioc3_timer.expires = jiffies + (12 * HZ)/10;  /* 1.2 sec. */
 	ip->ioc3_timer.data = (unsigned long) ip;
-	ip->ioc3_timer.function = &ioc3_timer;
+	ip->ioc3_timer.function = ioc3_timer;
 	add_timer(&ip->ioc3_timer);
 }
 
@@ -916,7 +915,7 @@ static void ioc3_alloc_rings(struct net_device *dev)
 
 			skb = ioc3_alloc_skb(RX_BUF_ALLOC_SIZE, GFP_ATOMIC);
 			if (!skb) {
-				show_free_areas();
+				show_free_areas(0);
 				continue;
 			}
 
@@ -1327,6 +1326,7 @@ static int __devinit ioc3_probe(struct pci_dev *pdev,
 	dev->watchdog_timeo	= 5 * HZ;
 	dev->netdev_ops		= &ioc3_netdev_ops;
 	dev->ethtool_ops	= &ioc3_ethtool_ops;
+	dev->hw_features	= NETIF_F_IP_CSUM | NETIF_F_RXCSUM;
 	dev->features		= NETIF_F_IP_CSUM;
 
 	sw_physid1 = ioc3_mdio_read(dev, ip->mii.phy_id, MII_PHYSID1);
@@ -1617,37 +1617,12 @@ static u32 ioc3_get_link(struct net_device *dev)
 	return rc;
 }
 
-static u32 ioc3_get_rx_csum(struct net_device *dev)
-{
-	struct ioc3_private *ip = netdev_priv(dev);
-
-	return ip->flags & IOC3_FLAG_RX_CHECKSUMS;
-}
-
-static int ioc3_set_rx_csum(struct net_device *dev, u32 data)
-{
-	struct ioc3_private *ip = netdev_priv(dev);
-
-	spin_lock_bh(&ip->ioc3_lock);
-	if (data)
-		ip->flags |= IOC3_FLAG_RX_CHECKSUMS;
-	else
-		ip->flags &= ~IOC3_FLAG_RX_CHECKSUMS;
-	spin_unlock_bh(&ip->ioc3_lock);
-
-	return 0;
-}
-
 static const struct ethtool_ops ioc3_ethtool_ops = {
 	.get_drvinfo		= ioc3_get_drvinfo,
 	.get_settings		= ioc3_get_settings,
 	.set_settings		= ioc3_set_settings,
 	.nway_reset		= ioc3_nway_reset,
 	.get_link		= ioc3_get_link,
-	.get_rx_csum		= ioc3_get_rx_csum,
-	.set_rx_csum		= ioc3_set_rx_csum,
-	.get_tx_csum		= ethtool_op_get_tx_csum,
-	.set_tx_csum		= ethtool_op_set_tx_csum
 };
 
 static int ioc3_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)

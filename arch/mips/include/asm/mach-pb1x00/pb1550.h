@@ -1,5 +1,5 @@
 /*
- * AMD Alchemy Semi PB1550 Referrence Board
+ * AMD Alchemy Semi PB1550 Reference Board
  * Board Registers defines.
  *
  * Copyright 2004 Embedded Edge LLC.
@@ -39,14 +39,6 @@
 #define AC97_PSC_BASE		PSC1_BASE_ADDR
 #define SMBUS_PSC_BASE		PSC2_BASE_ADDR
 #define I2S_PSC_BASE		PSC3_BASE_ADDR
-
-#if defined(CONFIG_MTD_PB1550_BOOT) && defined(CONFIG_MTD_PB1550_USER)
-#define PB1550_BOTH_BANKS
-#elif defined(CONFIG_MTD_PB1550_BOOT) && !defined(CONFIG_MTD_PB1550_USER)
-#define PB1550_BOOT_ONLY
-#elif !defined(CONFIG_MTD_PB1550_BOOT) && defined(CONFIG_MTD_PB1550_USER)
-#define PB1550_USER_ONLY
-#endif
 
 /*
  * Timing values as described in databook, * ns value stripped of

@@ -284,7 +284,7 @@ static int ohci_bus_suspend (struct usb_hcd *hcd)
 
 	spin_lock_irq (&ohci->lock);
 
-	if (unlikely(!test_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags)))
+	if (unlikely(!HCD_HW_ACCESSIBLE(hcd)))
 		rc = -ESHUTDOWN;
 	else
 		rc = ohci_rh_suspend (ohci, 0);
@@ -302,7 +302,7 @@ static int ohci_bus_resume (struct usb_hcd *hcd)
 
 	spin_lock_irq (&ohci->lock);
 
-	if (unlikely(!test_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags)))
+	if (unlikely(!HCD_HW_ACCESSIBLE(hcd)))
 		rc = -ESHUTDOWN;
 	else
 		rc = ohci_rh_resume (ohci);
@@ -355,6 +355,11 @@ static void ohci_finish_controller_resume(struct usb_hcd *hcd)
 		ohci_readl(ohci, &ohci->regs->intrenable);
 		msleep(20);
 	}
+
+	/* Does the root hub have a port wakeup pending? */
+	if (ohci_readl(ohci, &ohci->regs->intrstatus) &
+			(OHCI_INTR_RD | OHCI_INTR_RHSC))
+		usb_hcd_resume_root_hub(hcd);
 }
 
 /* Carry out polling-, autostop-, and autoresume-related state changes */
@@ -364,7 +369,7 @@ static int ohci_root_hub_state_changes(struct ohci_hcd *ohci, int changed,
 	int	poll_rh = 1;
 	int	rhsc_enable;
 
-	/* Some broken controllers never turn off RHCS in the interrupt
+	/* Some broken controllers never turn off RHSC in the interrupt
 	 * status register.  For their sake we won't re-enable RHSC
 	 * interrupts if the interrupt bit is already active.
 	 */
@@ -489,7 +494,7 @@ ohci_hub_status_data (struct usb_hcd *hcd, char *buf)
 	unsigned long	flags;
 
 	spin_lock_irqsave (&ohci->lock, flags);
-	if (!test_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags))
+	if (!HCD_HW_ACCESSIBLE(hcd))
 		goto done;
 
 	/* undocumented erratum seen on at least rev D */
@@ -533,8 +538,12 @@ ohci_hub_status_data (struct usb_hcd *hcd, char *buf)
 		}
 	}
 
-	hcd->poll_rh = ohci_root_hub_state_changes(ohci, changed,
-			any_connected, rhsc_status);
+	if (ohci_root_hub_state_changes(ohci, changed,
+			any_connected, rhsc_status))
+		set_bit(HCD_FLAG_POLL_RH, &hcd->flags);
+	else
+		clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
+
 
 done:
 	spin_unlock_irqrestore (&ohci->lock, flags);
@@ -571,15 +580,16 @@ ohci_hub_descriptor (
 	    temp |= 0x0008;
 	desc->wHubCharacteristics = (__force __u16)cpu_to_hc16(ohci, temp);
 
-	/* two bitmaps:  ports removable, and usb 1.0 legacy PortPwrCtrlMask */
+	/* ports removable, and usb 1.0 legacy PortPwrCtrlMask */
 	rh = roothub_b (ohci);
-	memset(desc->bitmap, 0xff, sizeof(desc->bitmap));
-	desc->bitmap [0] = rh & RH_B_DR;
+	memset(desc->u.hs.DeviceRemovable, 0xff,
+			sizeof(desc->u.hs.DeviceRemovable));
+	desc->u.hs.DeviceRemovable[0] = rh & RH_B_DR;
 	if (ohci->num_ports > 7) {
-		desc->bitmap [1] = (rh & RH_B_DR) >> 8;
-		desc->bitmap [2] = 0xff;
+		desc->u.hs.DeviceRemovable[1] = (rh & RH_B_DR) >> 8;
+		desc->u.hs.DeviceRemovable[2] = 0xff;
 	} else
-		desc->bitmap [1] = 0xff;
+		desc->u.hs.DeviceRemovable[1] = 0xff;
 }
 
 /*-------------------------------------------------------------------------*/
@@ -701,7 +711,7 @@ static int ohci_hub_control (
 	u32		temp;
 	int		retval = 0;
 
-	if (unlikely(!test_bit(HCD_FLAG_HW_ACCESSIBLE, &hcd->flags)))
+	if (unlikely(!HCD_HW_ACCESSIBLE(hcd)))
 		return -ESHUTDOWN;
 
 	switch (typeReq) {

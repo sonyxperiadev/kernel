@@ -70,9 +70,7 @@
 #include <sys/poll.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
-#ifndef NO_SYS_SELECT_H
 #include <sys/select.h>
-#endif
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
@@ -83,12 +81,9 @@
 #include "types.h"
 #include <sys/ttydefaults.h>
 
-#ifndef NO_ICONV
-#include <iconv.h>
-#endif
-
 extern const char *graph_line;
 extern const char *graph_dotted_line;
+extern char buildid_dir[];
 
 /* On most systems <limits.h> would have given us this, but
  * not on some systems (e.g. GNU/Hurd).
@@ -152,6 +147,8 @@ extern void warning(const char *err, ...) __attribute__((format (printf, 1, 2)))
 extern void set_die_routine(void (*routine)(const char *err, va_list params) NORETURN);
 
 extern int prefixcmp(const char *str, const char *prefix);
+extern void set_buildid_dir(void);
+extern void disable_buildid_cache(void);
 
 static inline const char *skip_prefix(const char *str, const char *prefix)
 {
@@ -233,26 +230,6 @@ static inline int sane_case(int x, int high)
 	return x;
 }
 
-#ifndef DIR_HAS_BSD_GROUP_SEMANTICS
-# define FORCE_DIR_SET_GID S_ISGID
-#else
-# define FORCE_DIR_SET_GID 0
-#endif
-
-#ifdef NO_NSEC
-#undef USE_NSEC
-#define ST_CTIME_NSEC(st) 0
-#define ST_MTIME_NSEC(st) 0
-#else
-#ifdef USE_ST_TIMESPEC
-#define ST_CTIME_NSEC(st) ((unsigned int)((st).st_ctimespec.tv_nsec))
-#define ST_MTIME_NSEC(st) ((unsigned int)((st).st_mtimespec.tv_nsec))
-#else
-#define ST_CTIME_NSEC(st) ((unsigned int)((st).st_ctim.tv_nsec))
-#define ST_MTIME_NSEC(st) ((unsigned int)((st).st_mtim.tv_nsec))
-#endif
-#endif
-
 int mkdir_p(char *path, mode_t mode);
 int copyfile(const char *from, const char *to);
 
@@ -262,19 +239,7 @@ void argv_free(char **argv);
 bool strglobmatch(const char *str, const char *pat);
 bool strlazymatch(const char *str, const char *pat);
 unsigned long convert_unit(unsigned long value, char *unit);
-
-#ifndef ESC
-#define ESC 27
-#endif
-
-static inline bool is_exit_key(int key)
-{
-	char up;
-	if (key == CTRL('c') || key == ESC)
-		return true;
-	up = toupper(key);
-	return up == 'Q';
-}
+int readn(int fd, void *buf, size_t size);
 
 #define _STR(x) #x
 #define STR(x) _STR(x)

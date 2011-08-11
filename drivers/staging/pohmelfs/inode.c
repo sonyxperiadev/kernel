@@ -29,6 +29,7 @@
 #include <linux/slab.h>
 #include <linux/statfs.h>
 #include <linux/writeback.h>
+#include <linux/prefetch.h>
 
 #include "netfs.h"
 
@@ -815,7 +816,7 @@ static int pohmelfs_readpages(struct file *file, struct address_space *mapping,
 }
 
 /*
- * Small addres space operations for POHMELFS.
+ * Small address space operations for POHMELFS.
  */
 const struct address_space_operations pohmelfs_aops = {
 	.readpage		= pohmelfs_readpage,
@@ -826,8 +827,15 @@ const struct address_space_operations pohmelfs_aops = {
 	.set_page_dirty 	= __set_page_dirty_nobuffers,
 };
 
+static void pohmelfs_i_callback(struct rcu_head *head)
+{
+	struct inode *inode = container_of(head, struct inode, i_rcu);
+	INIT_LIST_HEAD(&inode->i_dentry);
+	kmem_cache_free(pohmelfs_inode_cache, POHMELFS_I(inode));
+}
+
 /*
- * ->detroy_inode() callback. Deletes inode from the caches
+ * ->destroy_inode() callback. Deletes inode from the caches
  *  and frees private data.
  */
 static void pohmelfs_destroy_inode(struct inode *inode)
@@ -842,12 +850,12 @@ static void pohmelfs_destroy_inode(struct inode *inode)
 
 	dprintk("%s: pi: %p, inode: %p, ino: %llu.\n",
 		__func__, pi, &pi->vfs_inode, pi->ino);
-	kmem_cache_free(pohmelfs_inode_cache, pi);
 	atomic_long_dec(&psb->total_inodes);
+	call_rcu(&inode->i_rcu, pohmelfs_i_callback);
 }
 
 /*
- * ->alloc_inode() callback. Allocates inode and initilizes private data.
+ * ->alloc_inode() callback. Allocates inode and initializes private data.
  */
 static struct inode *pohmelfs_alloc_inode(struct super_block *sb)
 {
@@ -882,12 +890,8 @@ static struct inode *pohmelfs_alloc_inode(struct super_block *sb)
 static int pohmelfs_fsync(struct file *file, int datasync)
 {
 	struct inode *inode = file->f_mapping->host;
-	struct writeback_control wbc = {
-		.sync_mode = WB_SYNC_ALL,
-		.nr_to_write = 0,	/* sys_fsync did this */
-	};
 
-	return sync_inode(inode, &wbc);
+	return sync_inode_metadata(inode, 1);
 }
 
 ssize_t pohmelfs_write(struct file *file, const char __user *buf,
@@ -968,11 +972,17 @@ int pohmelfs_setattr_raw(struct inode *inode, struct iattr *attr)
 		goto err_out_exit;
 	}
 
-	err = inode_setattr(inode, attr);
-	if (err) {
-		dprintk("%s: ino: %llu, failed to set the attributes.\n", __func__, POHMELFS_I(inode)->ino);
-		goto err_out_exit;
+	if ((attr->ia_valid & ATTR_SIZE) &&
+	    attr->ia_size != i_size_read(inode)) {
+		err = vmtruncate(inode, attr->ia_size);
+		if (err) {
+			dprintk("%s: ino: %llu, failed to set the attributes.\n", __func__, POHMELFS_I(inode)->ino);
+			goto err_out_exit;
+		}
 	}
+
+	setattr_copy(inode, attr);
+	mark_inode_dirty(inode);
 
 	dprintk("%s: ino: %llu, mode: %o -> %o, uid: %u -> %u, gid: %u -> %u, size: %llu -> %llu.\n",
 			__func__, POHMELFS_I(inode)->ino, inode->i_mode, attr->ia_mode,
@@ -1118,18 +1128,18 @@ static ssize_t pohmelfs_getxattr(struct dentry *dentry, const char *name,
 
 		/*
 		 * This loop is a bit ugly, since it waits until reference counter
-		 * hits 1 and then put object here. Main goal is to prevent race with
-		 * network thread, when it can start processing given request, i.e.
+		 * hits 1 and then puts the object here. Main goal is to prevent race with
+		 * the network thread, when it can start processing the given request, i.e.
 		 * increase its reference counter but yet not complete it, while
 		 * we will exit from ->getxattr() with timeout, and although request
 		 * will not be freed (its reference counter was increased by network
 		 * thread), data pointer provided by user may be released, so we will
-		 * overwrite already freed area in network thread.
+		 * overwrite an already freed area in the network thread.
 		 *
 		 * Now after timeout we remove request from the cache, so it can not be
 		 * found by network thread, and wait for its reference counter to hit 1,
 		 * i.e. if network thread already started to process this request, we wait
-		 * it to finish, and then free object locally. If reference counter is
+		 * for it to finish, and then free object locally. If reference counter is
 		 * already 1, i.e. request is not used by anyone else, we can free it without
 		 * problem.
 		 */
@@ -1217,7 +1227,7 @@ void pohmelfs_fill_inode(struct inode *inode, struct netfs_inode_info *info)
 	}
 }
 
-static void pohmelfs_drop_inode(struct inode *inode)
+static int pohmelfs_drop_inode(struct inode *inode)
 {
 	struct pohmelfs_sb *psb = POHMELFS_SB(inode->i_sb);
 	struct pohmelfs_inode *pi = POHMELFS_I(inode);
@@ -1226,7 +1236,7 @@ static void pohmelfs_drop_inode(struct inode *inode)
 	list_del_init(&pi->inode_entry);
 	spin_unlock(&psb->ino_lock);
 
-	generic_drop_inode(inode);
+	return generic_drop_inode(inode);
 }
 
 static struct pohmelfs_inode *pohmelfs_get_inode_from_list(struct pohmelfs_sb *psb,
@@ -1266,7 +1276,7 @@ static void pohmelfs_put_super(struct super_block *sb)
 {
 	struct pohmelfs_sb *psb = POHMELFS_SB(sb);
 	struct pohmelfs_inode *pi;
-	unsigned int count;
+	unsigned int count = 0;
 	unsigned int in_drop_list = 0;
 	struct inode *inode, *tmp;
 
@@ -1316,8 +1326,8 @@ static void pohmelfs_put_super(struct super_block *sb)
 	}
 
 	psb->trans_scan_timeout = psb->drop_scan_timeout = 0;
-	cancel_rearming_delayed_work(&psb->dwork);
-	cancel_rearming_delayed_work(&psb->drop_dwork);
+	cancel_delayed_work_sync(&psb->dwork);
+	cancel_delayed_work_sync(&psb->drop_dwork);
 	flush_scheduled_work();
 
 	dprintk("%s: stopped workqueues.\n", __func__);
@@ -1935,11 +1945,10 @@ err_out_exit:
 /*
  * Some VFS magic here...
  */
-static int pohmelfs_get_sb(struct file_system_type *fs_type,
-	int flags, const char *dev_name, void *data, struct vfsmount *mnt)
+static struct dentry *pohmelfs_mount(struct file_system_type *fs_type,
+	int flags, const char *dev_name, void *data)
 {
-	return get_sb_nodev(fs_type, flags, data, pohmelfs_fill_super,
-				mnt);
+	return mount_nodev(fs_type, flags, data, pohmelfs_fill_super);
 }
 
 /*
@@ -1956,7 +1965,7 @@ static void pohmelfs_kill_super(struct super_block *sb)
 static struct file_system_type pohmel_fs_type = {
 	.owner		= THIS_MODULE,
 	.name		= "pohmel",
-	.get_sb		= pohmelfs_get_sb,
+	.mount		= pohmelfs_mount,
 	.kill_sb 	= pohmelfs_kill_super,
 };
 

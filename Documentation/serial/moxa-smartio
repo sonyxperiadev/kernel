@@ -76,7 +76,7 @@ Content
    GNU General Public License in this version. Please refer to GNU General
    Public License announcement in each source code file for more detail.
 
-   In Moxa's Web sites, you may always find latest driver at http://web.moxa.com.
+   In Moxa's Web sites, you may always find latest driver at http://www.moxa.com/.
 
    This version of driver can be installed as Loadable Module (Module driver)
    or built-in into kernel (Static driver). You may refer to following
@@ -473,7 +473,7 @@ Content
    spd_normal	  Use  38.4kb  when  the application requests 38.4kb.
    spd_cust	  Use  the custom divisor to set the speed when  the
 		  application requests 38.4kb.
-   divisor	  This option set the custom divison.
+   divisor	  This option set the custom division.
    baud_base	  This option set the base baud rate.
 
 -----------------------------------------------------------------------------

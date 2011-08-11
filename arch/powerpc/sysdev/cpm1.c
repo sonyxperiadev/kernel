@@ -56,32 +56,32 @@ static cpic8xx_t __iomem *cpic_reg;
 
 static struct irq_host *cpm_pic_host;
 
-static void cpm_mask_irq(unsigned int irq)
+static void cpm_mask_irq(struct irq_data *d)
 {
-	unsigned int cpm_vec = (unsigned int)irq_map[irq].hwirq;
+	unsigned int cpm_vec = (unsigned int)irqd_to_hwirq(d);
 
 	clrbits32(&cpic_reg->cpic_cimr, (1 << cpm_vec));
 }
 
-static void cpm_unmask_irq(unsigned int irq)
+static void cpm_unmask_irq(struct irq_data *d)
 {
-	unsigned int cpm_vec = (unsigned int)irq_map[irq].hwirq;
+	unsigned int cpm_vec = (unsigned int)irqd_to_hwirq(d);
 
 	setbits32(&cpic_reg->cpic_cimr, (1 << cpm_vec));
 }
 
-static void cpm_end_irq(unsigned int irq)
+static void cpm_end_irq(struct irq_data *d)
 {
-	unsigned int cpm_vec = (unsigned int)irq_map[irq].hwirq;
+	unsigned int cpm_vec = (unsigned int)irqd_to_hwirq(d);
 
 	out_be32(&cpic_reg->cpic_cisr, (1 << cpm_vec));
 }
 
 static struct irq_chip cpm_pic = {
 	.name = "CPM PIC",
-	.mask = cpm_mask_irq,
-	.unmask = cpm_unmask_irq,
-	.eoi = cpm_end_irq,
+	.irq_mask = cpm_mask_irq,
+	.irq_unmask = cpm_unmask_irq,
+	.irq_eoi = cpm_end_irq,
 };
 
 int cpm_get_irq(void)
@@ -103,8 +103,8 @@ static int cpm_pic_host_map(struct irq_host *h, unsigned int virq,
 {
 	pr_debug("cpm_pic_host_map(%d, 0x%lx)\n", virq, hw);
 
-	irq_to_desc(virq)->status |= IRQ_LEVEL;
-	set_irq_chip_and_handler(virq, &cpm_pic, handle_fasteoi_irq);
+	irq_set_status_flags(virq, IRQ_LEVEL);
+	irq_set_chip_and_handler(virq, &cpm_pic, handle_fasteoi_irq);
 	return 0;
 }
 
@@ -157,7 +157,7 @@ unsigned int cpm_pic_init(void)
 		goto end;
 
 	/* Initialize the CPM interrupt controller. */
-	hwirq = (unsigned int)irq_map[sirq].hwirq;
+	hwirq = (unsigned int)virq_to_hw(sirq);
 	out_be32(&cpic_reg->cpic_cicr,
 	    (CICR_SCD_SCC4 | CICR_SCC_SCC3 | CICR_SCB_SCC2 | CICR_SCA_SCC1) |
 		((hwirq/2) << 13) | CICR_HP_MASK);
@@ -223,7 +223,7 @@ void __init cpm_reset(void)
 
 	/* Set SDMA Bus Request priority 5.
 	 * On 860T, this also enables FEC priority 6.  I am not sure
-	 * this is what we realy want for some applications, but the
+	 * this is what we really want for some applications, but the
 	 * manual recommends it.
 	 * Bit 25, FAM can also be set to use FEC aggressive mode (860T).
 	 */
@@ -621,7 +621,6 @@ int cpm1_gpiochip_add16(struct device_node *np)
 {
 	struct cpm1_gpio16_chip *cpm1_gc;
 	struct of_mm_gpio_chip *mm_gc;
-	struct of_gpio_chip *of_gc;
 	struct gpio_chip *gc;
 
 	cpm1_gc = kzalloc(sizeof(*cpm1_gc), GFP_KERNEL);
@@ -631,11 +630,9 @@ int cpm1_gpiochip_add16(struct device_node *np)
 	spin_lock_init(&cpm1_gc->lock);
 
 	mm_gc = &cpm1_gc->mm_gc;
-	of_gc = &mm_gc->of_gc;
-	gc = &of_gc->gc;
+	gc = &mm_gc->gc;
 
 	mm_gc->save_regs = cpm1_gpio16_save_regs;
-	of_gc->gpio_cells = 2;
 	gc->ngpio = 16;
 	gc->direction_input = cpm1_gpio16_dir_in;
 	gc->direction_output = cpm1_gpio16_dir_out;
@@ -745,7 +742,6 @@ int cpm1_gpiochip_add32(struct device_node *np)
 {
 	struct cpm1_gpio32_chip *cpm1_gc;
 	struct of_mm_gpio_chip *mm_gc;
-	struct of_gpio_chip *of_gc;
 	struct gpio_chip *gc;
 
 	cpm1_gc = kzalloc(sizeof(*cpm1_gc), GFP_KERNEL);
@@ -755,11 +751,9 @@ int cpm1_gpiochip_add32(struct device_node *np)
 	spin_lock_init(&cpm1_gc->lock);
 
 	mm_gc = &cpm1_gc->mm_gc;
-	of_gc = &mm_gc->of_gc;
-	gc = &of_gc->gc;
+	gc = &mm_gc->gc;
 
 	mm_gc->save_regs = cpm1_gpio32_save_regs;
-	of_gc->gpio_cells = 2;
 	gc->ngpio = 32;
 	gc->direction_input = cpm1_gpio32_dir_in;
 	gc->direction_output = cpm1_gpio32_dir_out;

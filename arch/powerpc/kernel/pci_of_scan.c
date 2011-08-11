@@ -135,7 +135,7 @@ struct pci_dev *of_create_pci_dev(struct device_node *node,
 	pr_debug("    create device, devfn: %x, type: %s\n", devfn, type);
 
 	dev->bus = bus;
-	dev->sysdata = node;
+	dev->dev.of_node = of_node_get(node);
 	dev->dev.parent = bus->bridge;
 	dev->dev.bus = &pci_bus_type;
 	dev->devfn = devfn;
@@ -238,7 +238,7 @@ void __devinit of_scan_pci_bridge(struct device_node *node,
 	bus->primary = dev->bus->number;
 	bus->subordinate = busrange[1];
 	bus->bridge_ctl = 0;
-	bus->sysdata = node;
+	bus->dev.of_node = of_node_get(node);
 
 	/* parse ranges property */
 	/* PCI #address-cells == 3 and #size-cells == 2 always */
@@ -336,7 +336,7 @@ static void __devinit __of_scan_bus(struct device_node *node,
 		if (dev->hdr_type == PCI_HEADER_TYPE_BRIDGE ||
 		    dev->hdr_type == PCI_HEADER_TYPE_CARDBUS) {
 			struct device_node *child = pci_device_to_OF_node(dev);
-			if (dev)
+			if (child)
 				of_scan_pci_bridge(child, dev);
 		}
 	}

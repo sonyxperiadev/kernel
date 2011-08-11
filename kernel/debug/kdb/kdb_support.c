@@ -82,8 +82,8 @@ static char *kdb_name_table[100];	/* arbitrary size */
 int kdbnearsym(unsigned long addr, kdb_symtab_t *symtab)
 {
 	int ret = 0;
-	unsigned long symbolsize;
-	unsigned long offset;
+	unsigned long symbolsize = 0;
+	unsigned long offset = 0;
 #define knt1_size 128		/* must be >= kallsyms table size */
 	char *knt1 = NULL;
 
@@ -545,7 +545,7 @@ int kdb_putword(unsigned long addr, unsigned long word, size_t size)
  *	Mask for process state.
  * Notes:
  *	The mask folds data from several sources into a single long value, so
- *	be carefull not to overlap the bits.  TASK_* bits are in the LSB,
+ *	be careful not to overlap the bits.  TASK_* bits are in the LSB,
  *	special cases like UNRUNNABLE are in the MSB.  As of 2.6.10-rc1 there
  *	is no overlap between TASK_* and EXIT_* but that may not always be
  *	true, so EXIT_* bits are shifted left 16 bits before being stored in

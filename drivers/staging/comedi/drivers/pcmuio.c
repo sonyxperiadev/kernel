@@ -605,7 +605,7 @@ static int pcmuio_dio_insn_config(struct comedi_device *dev,
 		break;
 
 	case INSN_CONFIG_DIO_QUERY:
-		/* retreive from shadow register */
+		/* retrieve from shadow register */
 		data[1] =
 		    (s->io_bits & (1 << chan)) ? COMEDI_OUTPUT : COMEDI_INPUT;
 		return insn->n;
@@ -1018,4 +1018,19 @@ pcmuio_cmdtest(struct comedi_device *dev, struct comedi_subdevice *s,
  * A convenient macro that defines init_module() and cleanup_module(),
  * as necessary.
  */
-COMEDI_INITCLEANUP(driver);
+static int __init driver_init_module(void)
+{
+	return comedi_driver_register(&driver);
+}
+
+static void __exit driver_cleanup_module(void)
+{
+	comedi_driver_unregister(&driver);
+}
+
+module_init(driver_init_module);
+module_exit(driver_cleanup_module);
+
+MODULE_AUTHOR("Comedi http://www.comedi.org");
+MODULE_DESCRIPTION("Comedi low-level driver");
+MODULE_LICENSE("GPL");

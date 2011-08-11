@@ -2,11 +2,11 @@
  * Backlight control code for Sharp Zaurus SL-5500
  *
  * Copyright 2005 John Lenz <lenz@cs.wisc.edu>
- * Maintainer: Pavel Machek <pavel@suse.cz> (unless John wants to :-)
+ * Maintainer: Pavel Machek <pavel@ucw.cz> (unless John wants to :-)
  * GPL v2
  *
  * This driver assumes single CPU. That's okay, because collie is
- * slightly old hardware, and noone is going to retrofit second CPU to
+ * slightly old hardware, and no one is going to retrofit second CPU to
  * old PDA.
  */
 
@@ -184,6 +184,7 @@ static int locomolcd_probe(struct locomo_dev *ldev)
 	local_irq_restore(flags);
 
 	memset(&props, 0, sizeof(struct backlight_properties));
+	props.type = BACKLIGHT_RAW;
 	props.max_brightness = 4;
 	locomolcd_bl_device = backlight_device_register("locomo-bl",
 							&ldev->dev, NULL,
@@ -246,6 +247,6 @@ static void __exit locomolcd_exit(void)
 module_init(locomolcd_init);
 module_exit(locomolcd_exit);
 
-MODULE_AUTHOR("John Lenz <lenz@cs.wisc.edu>, Pavel Machek <pavel@suse.cz>");
+MODULE_AUTHOR("John Lenz <lenz@cs.wisc.edu>, Pavel Machek <pavel@ucw.cz>");
 MODULE_DESCRIPTION("Collie LCD driver");
 MODULE_LICENSE("GPL");

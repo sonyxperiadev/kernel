@@ -129,7 +129,7 @@ static void linkwatch_schedule_work(int urgent)
 	if (!cancel_delayed_work(&linkwatch_work))
 		return;
 
-	/* Otherwise we reschedule it again for immediate exection. */
+	/* Otherwise we reschedule it again for immediate execution. */
 	schedule_delayed_work(&linkwatch_work, 0);
 }
 
@@ -243,5 +243,4 @@ void linkwatch_fire_event(struct net_device *dev)
 
 	linkwatch_schedule_work(urgent);
 }
-
 EXPORT_SYMBOL(linkwatch_fire_event);

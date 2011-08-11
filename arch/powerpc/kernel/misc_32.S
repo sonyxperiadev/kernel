@@ -30,6 +30,7 @@
 #include <asm/processor.h>
 #include <asm/kexec.h>
 #include <asm/bug.h>
+#include <asm/ptrace.h>
 
 	.text
 
@@ -693,6 +694,17 @@ _GLOBAL(kernel_thread)
 	addi	r1,r1,16
 	blr
 
+#ifdef CONFIG_SMP
+_GLOBAL(start_secondary_resume)
+	/* Reset stack */
+	rlwinm	r1,r1,0,0,(31-THREAD_SHIFT)	/* current_thread_info() */
+	addi	r1,r1,THREAD_SIZE-STACK_FRAME_OVERHEAD
+	li	r3,0
+	stw	r3,0(r1)		/* Zero the stack frame pointer	*/
+	bl	start_secondary
+	b	.
+#endif /* CONFIG_SMP */
+	
 /*
  * This routine is just here to keep GCC happy - sigh...
  */
@@ -809,6 +821,9 @@ relocate_new_kernel:
 	 */
 	isync
 	sync
+
+	mfspr	r3, SPRN_PIR /* current core we are running on */
+	mr	r4, r5 /* load physical address of chunk called */
 
 	/* jump to the entry point, usually the setup routine */
 	mtlr	r5

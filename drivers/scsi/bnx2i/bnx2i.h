@@ -1,6 +1,6 @@
 /* bnx2i.h: Broadcom NetXtreme II iSCSI driver.
  *
- * Copyright (c) 2006 - 2009 Broadcom Corporation
+ * Copyright (c) 2006 - 2010 Broadcom Corporation
  * Copyright (c) 2007, 2008 Red Hat, Inc.  All rights reserved.
  * Copyright (c) 2007, 2008 Mike Christie
  *
@@ -9,6 +9,7 @@
  * the Free Software Foundation.
  *
  * Written by: Anil Veerabhadrappa (anilgv@broadcom.com)
+ * Maintained by: Eddie Wai (eddie.wai@broadcom.com)
  */
 
 #ifndef _BNX2I_H_
@@ -58,16 +59,18 @@
 #define MAX_PAGES_PER_CTRL_STRUCT_POOL	8
 #define BNX2I_RESERVED_SLOW_PATH_CMD_SLOTS	4
 
+#define BNX2I_5771X_DBELL_PAGE_SIZE	128
+
 /* 5706/08 hardware has limit on maximum buffer size per BD it can handle */
 #define MAX_BD_LENGTH			65535
 #define BD_SPLIT_SIZE			32768
 
 /* min, max & default values for SQ/RQ/CQ size, configurable via' modparam */
-#define BNX2I_SQ_WQES_MIN 		16
-#define BNX2I_570X_SQ_WQES_MAX 		128
-#define BNX2I_5770X_SQ_WQES_MAX 	512
-#define BNX2I_570X_SQ_WQES_DEFAULT 	128
-#define BNX2I_5770X_SQ_WQES_DEFAULT 	256
+#define BNX2I_SQ_WQES_MIN		16
+#define BNX2I_570X_SQ_WQES_MAX		128
+#define BNX2I_5770X_SQ_WQES_MAX		512
+#define BNX2I_570X_SQ_WQES_DEFAULT	128
+#define BNX2I_5770X_SQ_WQES_DEFAULT	128
 
 #define BNX2I_570X_CQ_WQES_MAX 		128
 #define BNX2I_5770X_CQ_WQES_MAX 	512
@@ -112,6 +115,7 @@
 #define BNX2X_MAX_CQS			8
 
 #define CNIC_ARM_CQE			1
+#define CNIC_ARM_CQE_FP			2
 #define CNIC_DISARM_CQE			0
 
 #define REG_RD(__hba, offset)				\
@@ -295,16 +299,21 @@ struct iscsi_cid_queue {
  * @max_cqes:              CQ size
  * @num_ccell:             number of command cells per connection
  * @ofld_conns_active:     active connection list
+ * @eh_wait:               wait queue for the endpoint to shutdown
  * @max_active_conns:      max offload connections supported by this device
  * @cid_que:               iscsi cid queue
  * @ep_rdwr_lock:          read / write lock to synchronize various ep lists
  * @ep_ofld_list:          connection list for pending offload completion
+ * @ep_active_list:        connection list for active offload endpoints
  * @ep_destroy_list:       connection list for pending offload completion
  * @mp_bd_tbl:             BD table to be used with middle path requests
  * @mp_bd_dma:             DMA address of 'mp_bd_tbl' memory buffer
  * @dummy_buffer:          Dummy buffer to be used with zero length scsicmd reqs
  * @dummy_buf_dma:         DMA address of 'dummy_buffer' memory buffer
  * @lock:              	   lock to synchonize access to hba structure
+ * @hba_shutdown_tmo:      Timeout value to shutdown each connection
+ * @conn_teardown_tmo:     Timeout value to tear down each connection
+ * @conn_ctx_destroy_tmo:  Timeout value to destroy context of each connection
  * @pci_did:               PCI device ID
  * @pci_vid:               PCI vendor ID
  * @pci_sdid:              PCI subsystem device ID
@@ -352,7 +361,7 @@ struct bnx2i_hba {
 		#define ADAPTER_STATE_LINK_DOWN		2
 		#define ADAPTER_STATE_INIT_FAILED	31
 	unsigned int mtu_supported;
-		#define BNX2I_MAX_MTU_SUPPORTED		1500
+		#define BNX2I_MAX_MTU_SUPPORTED		9000
 
 	struct Scsi_Host *shost;
 
@@ -369,6 +378,7 @@ struct bnx2i_hba {
 
 	rwlock_t ep_rdwr_lock;
 	struct list_head ep_ofld_list;
+	struct list_head ep_active_list;
 	struct list_head ep_destroy_list;
 
 	/*
@@ -383,6 +393,8 @@ struct bnx2i_hba {
 	struct mutex net_dev_lock;/* sync net device access */
 
 	int hba_shutdown_tmo;
+	int conn_teardown_tmo;
+	int conn_ctx_destroy_tmo;
 	/*
 	 * PCI related info.
 	 */
@@ -631,12 +643,15 @@ enum {
 	EP_STATE_CLEANUP_CMPL           = 0x800,
 	EP_STATE_TCP_FIN_RCVD           = 0x1000,
 	EP_STATE_TCP_RST_RCVD           = 0x2000,
+	EP_STATE_LOGOUT_SENT            = 0x4000,
+	EP_STATE_LOGOUT_RESP_RCVD       = 0x8000,
 	EP_STATE_PG_OFLD_FAILED         = 0x1000000,
 	EP_STATE_ULP_UPDATE_FAILED      = 0x2000000,
 	EP_STATE_CLEANUP_FAILED         = 0x4000000,
 	EP_STATE_OFLD_FAILED            = 0x8000000,
 	EP_STATE_CONNECT_FAILED         = 0x10000000,
 	EP_STATE_DISCONN_TIMEDOUT       = 0x20000000,
+	EP_STATE_OFLD_FAILED_CID_BUSY   = 0x80000000,
 };
 
 /**
@@ -645,13 +660,16 @@ enum {
  * @link:               list head to link elements
  * @hba:                adapter to which this connection belongs
  * @conn:               iscsi connection this EP is linked to
+ * @cls_ep:             associated iSCSI endpoint pointer
  * @sess:               iscsi session this EP is linked to
  * @cm_sk:              cnic sock struct
  * @hba_age:            age to detect if 'iscsid' issues ep_disconnect()
  *                      after HBA reset is completed by bnx2i/cnic/bnx2
  *                      modules
  * @state:              tracks offload connection state machine
- * @teardown_mode:      indicates if conn teardown is abortive or orderly
+ * @timestamp:          tracks the start time when the ep begins to connect
+ * @num_active_cmds:    tracks the number of outstanding commands for this ep
+ * @ec_shift:           the amount of shift as part of the event coal calc
  * @qp:                 QP information
  * @ids:                contains chip allocated *context id* & driver assigned
  *                      *iscsi cid*
@@ -664,11 +682,13 @@ struct bnx2i_endpoint {
 	struct list_head link;
 	struct bnx2i_hba *hba;
 	struct bnx2i_conn *conn;
+	struct iscsi_endpoint *cls_ep;
 	struct cnic_sock *cm_sk;
 	u32 hba_age;
 	u32 state;
 	unsigned long timestamp;
 	int num_active_cmds;
+	u32 ec_shift;
 
 	struct qp_info qp;
 	struct ep_handles ids;
@@ -703,14 +723,11 @@ extern struct device_attribute *bnx2i_dev_attributes[];
  * Function Prototypes
  */
 extern void bnx2i_identify_device(struct bnx2i_hba *hba);
-extern void bnx2i_register_device(struct bnx2i_hba *hba);
 
 extern void bnx2i_ulp_init(struct cnic_dev *dev);
 extern void bnx2i_ulp_exit(struct cnic_dev *dev);
 extern void bnx2i_start(void *handle);
 extern void bnx2i_stop(void *handle);
-extern void bnx2i_reg_dev_all(void);
-extern void bnx2i_unreg_dev_all(void);
 extern struct bnx2i_hba *get_adapter_list_head(void);
 
 struct bnx2i_conn *bnx2i_get_conn_from_id(struct bnx2i_hba *hba,
@@ -738,20 +755,22 @@ extern int bnx2i_send_iscsi_login(struct bnx2i_conn *conn,
 				  struct iscsi_task *mtask);
 extern int bnx2i_send_iscsi_tmf(struct bnx2i_conn *conn,
 				  struct iscsi_task *mtask);
+extern int bnx2i_send_iscsi_text(struct bnx2i_conn *conn,
+				 struct iscsi_task *mtask);
 extern int bnx2i_send_iscsi_scsicmd(struct bnx2i_conn *conn,
 				    struct bnx2i_cmd *cmnd);
 extern int bnx2i_send_iscsi_nopout(struct bnx2i_conn *conn,
-				   struct iscsi_task *mtask, u32 ttt,
+				   struct iscsi_task *mtask,
 				   char *datap, int data_len, int unsol);
 extern int bnx2i_send_iscsi_logout(struct bnx2i_conn *conn,
 				   struct iscsi_task *mtask);
 extern void bnx2i_send_cmd_cleanup_req(struct bnx2i_hba *hba,
 				       struct bnx2i_cmd *cmd);
-extern void bnx2i_send_conn_ofld_req(struct bnx2i_hba *hba,
-				     struct bnx2i_endpoint *ep);
-extern void bnx2i_update_iscsi_conn(struct iscsi_conn *conn);
-extern void bnx2i_send_conn_destroy(struct bnx2i_hba *hba,
+extern int bnx2i_send_conn_ofld_req(struct bnx2i_hba *hba,
 				    struct bnx2i_endpoint *ep);
+extern void bnx2i_update_iscsi_conn(struct iscsi_conn *conn);
+extern int bnx2i_send_conn_destroy(struct bnx2i_hba *hba,
+				   struct bnx2i_endpoint *ep);
 
 extern int bnx2i_alloc_qp_resc(struct bnx2i_hba *hba,
 			       struct bnx2i_endpoint *ep);
@@ -765,6 +784,8 @@ extern struct bnx2i_endpoint *bnx2i_find_ep_in_destroy_list(
 
 extern int bnx2i_map_ep_dbell_regs(struct bnx2i_endpoint *ep);
 extern void bnx2i_arm_cq_event_coalescing(struct bnx2i_endpoint *ep, u8 action);
+
+extern int bnx2i_hw_ep_disconnect(struct bnx2i_endpoint *bnx2i_ep);
 
 /* Debug related function prototypes */
 extern void bnx2i_print_pend_cmd_queue(struct bnx2i_conn *conn);

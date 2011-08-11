@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2010 Atheros Communications Inc.
+ * Copyright (c) 2008-2011 Atheros Communications Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -113,6 +113,10 @@
 #define AR_PHY_FIND_SIG_FIRSTEP_S 12
 #define AR_PHY_FIND_SIG_FIRPWR    0x03FC0000
 #define AR_PHY_FIND_SIG_FIRPWR_S  18
+
+#define AR_PHY_FIND_SIG_LOW           0x9840
+#define AR_PHY_FIND_SIG_FIRSTEP_LOW   0x00000FC0L
+#define AR_PHY_FIND_SIG_FIRSTEP_LOW_S 6
 
 #define AR_PHY_AGC_CTL1                  0x985C
 #define AR_PHY_AGC_CTL1_COARSE_LOW       0x00007F80
@@ -298,6 +302,8 @@
 #define AR_PHY_NEW_ADC_DC_OFFSET_CORR_ENABLE 0x80000000
 
 #define AR_PHY_MULTICHAIN_GAIN_CTL          0x99ac
+#define AR_PHY_9285_FAST_DIV_BIAS	    0x00007E00
+#define AR_PHY_9285_FAST_DIV_BIAS_S	    9
 #define AR_PHY_9285_ANT_DIV_CTL_ALL         0x7f000000
 #define AR_PHY_9285_ANT_DIV_CTL             0x01000000
 #define AR_PHY_9285_ANT_DIV_CTL_S           24
@@ -325,6 +331,9 @@
 #define AR_PHY_EXT_CCA_CYCPWR_THR1_S    9
 #define AR_PHY_EXT_CCA_THRESH62         0x007F0000
 #define AR_PHY_EXT_CCA_THRESH62_S       16
+#define AR_PHY_EXT_TIMING5_CYCPWR_THR1   0x0000FE00L
+#define AR_PHY_EXT_TIMING5_CYCPWR_THR1_S 9
+
 #define AR_PHY_EXT_MINCCA_PWR           0xFF800000
 #define AR_PHY_EXT_MINCCA_PWR_S         23
 #define AR9280_PHY_EXT_MINCCA_PWR       0x01FF0000
@@ -474,7 +483,11 @@
 #define AR_PHY_TX_PWRCTRL_INIT_TX_GAIN     0x01F80000
 #define AR_PHY_TX_PWRCTRL_INIT_TX_GAIN_S   19
 
+#define AR_PHY_TX_PWRCTRL8       0xa278
+
 #define AR_PHY_TX_PWRCTRL9       0xa27C
+
+#define AR_PHY_TX_PWRCTRL10       0xa394
 #define AR_PHY_TX_DESIRED_SCALE_CCK        0x00007C00
 #define AR_PHY_TX_DESIRED_SCALE_CCK_S      10
 #define AR_PHY_TX_PWRCTRL9_RES_DC_REMOVAL  0x80000000
@@ -486,6 +499,8 @@
 
 #define AR_PHY_CH0_TX_PWRCTRL11  0xa398
 #define AR_PHY_CH1_TX_PWRCTRL11  0xb398
+#define AR_PHY_CH0_TX_PWRCTRL12  0xa3dc
+#define AR_PHY_CH0_TX_PWRCTRL13  0xa3e0
 #define AR_PHY_TX_PWRCTRL_OLPC_TEMP_COMP   0x0000FC00
 #define AR_PHY_TX_PWRCTRL_OLPC_TEMP_COMP_S 10
 
@@ -568,5 +583,31 @@
 #define AR_PHY_CH2_EXT_CCA          0xb9bc
 #define AR_PHY_CH2_EXT_MINCCA_PWR   0xFF800000
 #define AR_PHY_CH2_EXT_MINCCA_PWR_S 23
+
+#define AR_PHY_CCA_NOM_VAL_5416_2GHZ            -90
+#define AR_PHY_CCA_NOM_VAL_5416_5GHZ            -100
+#define AR_PHY_CCA_MIN_GOOD_VAL_5416_2GHZ     -100
+#define AR_PHY_CCA_MIN_GOOD_VAL_5416_5GHZ     -110
+#define AR_PHY_CCA_MAX_GOOD_VAL_5416_2GHZ     -80
+#define AR_PHY_CCA_MAX_GOOD_VAL_5416_5GHZ     -90
+
+#define AR_PHY_CCA_NOM_VAL_9280_2GHZ         -112
+#define AR_PHY_CCA_NOM_VAL_9280_5GHZ         -112
+#define AR_PHY_CCA_MIN_GOOD_VAL_9280_2GHZ  -127
+#define AR_PHY_CCA_MIN_GOOD_VAL_9280_5GHZ  -122
+#define AR_PHY_CCA_MAX_GOOD_VAL_9280_2GHZ  -97
+#define AR_PHY_CCA_MAX_GOOD_VAL_9280_5GHZ  -102
+
+#define AR_PHY_CCA_NOM_VAL_9285_2GHZ           -118
+#define AR_PHY_CCA_MIN_GOOD_VAL_9285_2GHZ    -127
+#define AR_PHY_CCA_MAX_GOOD_VAL_9285_2GHZ    -108
+
+#define AR_PHY_CCA_NOM_VAL_9271_2GHZ             -118
+#define AR_PHY_CCA_MIN_GOOD_VAL_9271_2GHZ      -127
+#define AR_PHY_CCA_MAX_GOOD_VAL_9271_2GHZ      -116
+
+#define AR_PHY_CCA_NOM_VAL_9287_2GHZ           -120
+#define AR_PHY_CCA_MIN_GOOD_VAL_9287_2GHZ    -127
+#define AR_PHY_CCA_MAX_GOOD_VAL_9287_2GHZ    -110
 
 #endif

@@ -37,6 +37,7 @@
 #include <asm/thread_info.h>
 #include <asm/ppc_asm.h>
 #include <asm/asm-offsets.h>
+#include <asm/ptrace.h>
 #include <asm/synch.h>
 #include "head_booke.h"
 
@@ -113,6 +114,10 @@ _ENTRY(_start);
 	stw	r5, 0(r4)	/* Save abatron_pteptrs at a fixed location */
 	stw	r6, 0(r5)
 
+	/* Clear the Machine Check Syndrome Register */
+	li	r0,0
+	mtspr	SPRN_MCSR,r0
+
 	/* Let's move on */
 	lis	r4,start_kernel@h
 	ori	r4,r4,start_kernel@l
@@ -173,7 +178,7 @@ interrupt_base:
 	NORMAL_EXCEPTION_PROLOG
 	EXC_XFER_EE_LITE(0x0c00, DoSyscall)
 
-	/* Auxillary Processor Unavailable Interrupt */
+	/* Auxiliary Processor Unavailable Interrupt */
 	EXCEPTION(0x2020, AuxillaryProcessorUnavailable, unknown_exception, EXC_XFER_EE)
 
 	/* Decrementer Interrupt */

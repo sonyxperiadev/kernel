@@ -171,9 +171,6 @@ int mpc52xx_pm_enter(suspend_state_t state)
 	/* restore SRAM */
 	memcpy(sram, saved_sram, sram_size);
 
-	/* restart jiffies */
-	wakeup_decrementer();
-
 	/* reenable interrupts in PIC */
 	out_be32(&intr->main_mask, intr_main_mask);
 
@@ -189,7 +186,7 @@ void mpc52xx_pm_finish(void)
 	iounmap(mbar);
 }
 
-static struct platform_suspend_ops mpc52xx_pm_ops = {
+static const struct platform_suspend_ops mpc52xx_pm_ops = {
 	.valid		= mpc52xx_pm_valid,
 	.prepare	= mpc52xx_pm_prepare,
 	.enter		= mpc52xx_pm_enter,

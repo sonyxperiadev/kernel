@@ -201,7 +201,7 @@ static u8 wait_drive_not_busy(ide_drive_t *drive)
 	u8 stat;
 
 	/*
-	 * Last sector was transfered, wait until device is ready.  This can
+	 * Last sector was transferred, wait until device is ready.  This can
 	 * take up to 6 ms on some ATAPI devices, so we will wait max 10 ms.
 	 */
 	for (retries = 0; retries < 1000; retries++) {
@@ -480,13 +480,9 @@ int ide_taskfile_ioctl(ide_drive_t *drive, unsigned long arg)
 	u16 nsect		= 0;
 	char __user *buf = (char __user *)arg;
 
-	req_task = kzalloc(tasksize, GFP_KERNEL);
-	if (req_task == NULL)
-		return -ENOMEM;
-	if (copy_from_user(req_task, buf, tasksize)) {
-		kfree(req_task);
-		return -EFAULT;
-	}
+	req_task = memdup_user(buf, tasksize);
+	if (IS_ERR(req_task))
+		return PTR_ERR(req_task);
 
 	taskout = req_task->out_size;
 	taskin  = req_task->in_size;

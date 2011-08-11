@@ -203,7 +203,7 @@ skbuff at an offset of "+2", 16-byte aligning the IP header.
 IIId. Synchronization
 
 Most operations are synchronized on the np->lock irq spinlock, except the
-recieve and transmit paths which are synchronised using a combination of
+receive and transmit paths which are synchronised using a combination of
 hardware descriptor ownership, disabling interrupts and NAPI poll scheduling.
 
 IVb. References
@@ -548,7 +548,6 @@ struct netdev_private {
 	dma_addr_t tx_dma[TX_RING_SIZE];
 	struct net_device *dev;
 	struct napi_struct napi;
-	struct net_device_stats stats;
 	/* Media monitoring timer */
 	struct timer_list timer;
 	/* Frequently used values: keep some adjacent for cache effect */
@@ -727,7 +726,7 @@ static void move_int_phy(struct net_device *dev, int addr)
 	 * There are two addresses we must avoid:
 	 * - the address on the external phy that is used for transmission.
 	 * - the address that we want to access. User space can access phys
-	 *   on the mii bus with SIOCGMIIREG/SIOCSMIIREG, independant from the
+	 *   on the mii bus with SIOCGMIIREG/SIOCSMIIREG, independent from the
 	 *   phy that is used for transmission.
 	 */
 
@@ -860,6 +859,9 @@ static int __devinit natsemi_probe1 (struct pci_dev *pdev,
 		dev->dev_addr[i*2+1] = eedata >> 7;
 		prev_eedata = eedata;
 	}
+
+	/* Store MAC Address in perm_addr */
+	memcpy(dev->perm_addr, dev->dev_addr, ETH_ALEN);
 
 	dev->base_addr = (unsigned long __force) ioaddr;
 	dev->irq = irq;
@@ -1571,7 +1573,7 @@ static int netdev_open(struct net_device *dev)
 	init_timer(&np->timer);
 	np->timer.expires = round_jiffies(jiffies + NATSEMI_TIMER_FREQ);
 	np->timer.data = (unsigned long)dev;
-	np->timer.function = &netdev_timer; /* timer handler */
+	np->timer.function = netdev_timer; /* timer handler */
 	add_timer(&np->timer);
 
 	return 0;
@@ -1906,7 +1908,7 @@ static void ns_tx_timeout(struct net_device *dev)
 	enable_irq(dev->irq);
 
 	dev->trans_start = jiffies; /* prevent tx timeout */
-	np->stats.tx_errors++;
+	dev->stats.tx_errors++;
 	netif_wake_queue(dev);
 }
 
@@ -1983,7 +1985,7 @@ static void init_ring(struct net_device *dev)
 
 	np->rx_head_desc = &np->rx_ring[0];
 
-	/* Please be carefull before changing this loop - at least gcc-2.95.1
+	/* Please be careful before changing this loop - at least gcc-2.95.1
 	 * miscompiles it otherwise.
 	 */
 	/* Initialize all Rx descriptors. */
@@ -2009,7 +2011,7 @@ static void drain_tx(struct net_device *dev)
 				np->tx_dma[i], np->tx_skbuff[i]->len,
 				PCI_DMA_TODEVICE);
 			dev_kfree_skb(np->tx_skbuff[i]);
-			np->stats.tx_dropped++;
+			dev->stats.tx_dropped++;
 		}
 		np->tx_skbuff[i] = NULL;
 	}
@@ -2115,7 +2117,7 @@ static netdev_tx_t start_tx(struct sk_buff *skb, struct net_device *dev)
 		writel(TxOn, ioaddr + ChipCmd);
 	} else {
 		dev_kfree_skb_irq(skb);
-		np->stats.tx_dropped++;
+		dev->stats.tx_dropped++;
 	}
 	spin_unlock_irqrestore(&np->lock, flags);
 
@@ -2140,20 +2142,20 @@ static void netdev_tx_done(struct net_device *dev)
 					dev->name, np->dirty_tx,
 					le32_to_cpu(np->tx_ring[entry].cmd_status));
 		if (np->tx_ring[entry].cmd_status & cpu_to_le32(DescPktOK)) {
-			np->stats.tx_packets++;
-			np->stats.tx_bytes += np->tx_skbuff[entry]->len;
+			dev->stats.tx_packets++;
+			dev->stats.tx_bytes += np->tx_skbuff[entry]->len;
 		} else { /* Various Tx errors */
 			int tx_status =
 				le32_to_cpu(np->tx_ring[entry].cmd_status);
 			if (tx_status & (DescTxAbort|DescTxExcColl))
-				np->stats.tx_aborted_errors++;
+				dev->stats.tx_aborted_errors++;
 			if (tx_status & DescTxFIFO)
-				np->stats.tx_fifo_errors++;
+				dev->stats.tx_fifo_errors++;
 			if (tx_status & DescTxCarrier)
-				np->stats.tx_carrier_errors++;
+				dev->stats.tx_carrier_errors++;
 			if (tx_status & DescTxOOWCol)
-				np->stats.tx_window_errors++;
-			np->stats.tx_errors++;
+				dev->stats.tx_window_errors++;
+			dev->stats.tx_errors++;
 		}
 		pci_unmap_single(np->pci_dev,np->tx_dma[entry],
 					np->tx_skbuff[entry]->len,
@@ -2301,7 +2303,7 @@ static void netdev_rx(struct net_device *dev, int *work_done, int work_to_do)
 						"buffers, entry %#08x "
 						"status %#08x.\n", dev->name,
 						np->cur_rx, desc_status);
-				np->stats.rx_length_errors++;
+				dev->stats.rx_length_errors++;
 
 				/* The RX state machine has probably
 				 * locked up beneath us.  Follow the
@@ -2321,15 +2323,15 @@ static void netdev_rx(struct net_device *dev, int *work_done, int work_to_do)
 
 			} else {
 				/* There was an error. */
-				np->stats.rx_errors++;
+				dev->stats.rx_errors++;
 				if (desc_status & (DescRxAbort|DescRxOver))
-					np->stats.rx_over_errors++;
+					dev->stats.rx_over_errors++;
 				if (desc_status & (DescRxLong|DescRxRunt))
-					np->stats.rx_length_errors++;
+					dev->stats.rx_length_errors++;
 				if (desc_status & (DescRxInvalid|DescRxAlign))
-					np->stats.rx_frame_errors++;
+					dev->stats.rx_frame_errors++;
 				if (desc_status & DescRxCRC)
-					np->stats.rx_crc_errors++;
+					dev->stats.rx_crc_errors++;
 			}
 		} else if (pkt_len > np->rx_buf_sz) {
 			/* if this is the tail of a double buffer
@@ -2358,14 +2360,15 @@ static void netdev_rx(struct net_device *dev, int *work_done, int work_to_do)
 					PCI_DMA_FROMDEVICE);
 			} else {
 				pci_unmap_single(np->pci_dev, np->rx_dma[entry],
-					buflen, PCI_DMA_FROMDEVICE);
+						 buflen + NATSEMI_PADDING,
+						 PCI_DMA_FROMDEVICE);
 				skb_put(skb = np->rx_skbuff[entry], pkt_len);
 				np->rx_skbuff[entry] = NULL;
 			}
 			skb->protocol = eth_type_trans(skb, dev);
 			netif_receive_skb(skb);
-			np->stats.rx_packets++;
-			np->stats.rx_bytes += pkt_len;
+			dev->stats.rx_packets++;
+			dev->stats.rx_bytes += pkt_len;
 		}
 		entry = (++np->cur_rx) % RX_RING_SIZE;
 		np->rx_head_desc = &np->rx_ring[entry];
@@ -2428,17 +2431,17 @@ static void netdev_error(struct net_device *dev, int intr_status)
 			printk(KERN_NOTICE "%s: Rx status FIFO overrun\n",
 				dev->name);
 		}
-		np->stats.rx_fifo_errors++;
-		np->stats.rx_errors++;
+		dev->stats.rx_fifo_errors++;
+		dev->stats.rx_errors++;
 	}
 	/* Hmmmmm, it's not clear how to recover from PCI faults. */
 	if (intr_status & IntrPCIErr) {
 		printk(KERN_NOTICE "%s: PCI error %#08x\n", dev->name,
 			intr_status & IntrPCIErr);
-		np->stats.tx_fifo_errors++;
-		np->stats.tx_errors++;
-		np->stats.rx_fifo_errors++;
-		np->stats.rx_errors++;
+		dev->stats.tx_fifo_errors++;
+		dev->stats.tx_errors++;
+		dev->stats.rx_fifo_errors++;
+		dev->stats.rx_errors++;
 	}
 	spin_unlock(&np->lock);
 }
@@ -2446,11 +2449,10 @@ static void netdev_error(struct net_device *dev, int intr_status)
 static void __get_stats(struct net_device *dev)
 {
 	void __iomem * ioaddr = ns_ioaddr(dev);
-	struct netdev_private *np = netdev_priv(dev);
 
 	/* The chip only need report frame silently dropped. */
-	np->stats.rx_crc_errors	+= readl(ioaddr + RxCRCErrs);
-	np->stats.rx_missed_errors += readl(ioaddr + RxMissed);
+	dev->stats.rx_crc_errors += readl(ioaddr + RxCRCErrs);
+	dev->stats.rx_missed_errors += readl(ioaddr + RxMissed);
 }
 
 static struct net_device_stats *get_stats(struct net_device *dev)
@@ -2463,7 +2465,7 @@ static struct net_device_stats *get_stats(struct net_device *dev)
 		__get_stats(dev);
 	spin_unlock_irq(&np->lock);
 
-	return &np->stats;
+	return &dev->stats;
 }
 
 #ifdef CONFIG_NET_POLL_CONTROLLER
@@ -2819,7 +2821,7 @@ static int netdev_get_ecmd(struct net_device *dev, struct ethtool_cmd *ecmd)
 	u32 tmp;
 
 	ecmd->port        = dev->if_port;
-	ecmd->speed       = np->speed;
+	ethtool_cmd_speed_set(ecmd, np->speed);
 	ecmd->duplex      = np->duplex;
 	ecmd->autoneg     = np->autoneg;
 	ecmd->advertising = 0;
@@ -2877,9 +2879,9 @@ static int netdev_get_ecmd(struct net_device *dev, struct ethtool_cmd *ecmd)
 		tmp = mii_nway_result(
 			np->advertising & mdio_read(dev, MII_LPA));
 		if (tmp == LPA_100FULL || tmp == LPA_100HALF)
-			ecmd->speed  = SPEED_100;
+			ethtool_cmd_speed_set(ecmd, SPEED_100);
 		else
-			ecmd->speed  = SPEED_10;
+			ethtool_cmd_speed_set(ecmd, SPEED_10);
 		if (tmp == LPA_100FULL || tmp == LPA_10FULL)
 			ecmd->duplex = DUPLEX_FULL;
 		else
@@ -2907,7 +2909,8 @@ static int netdev_set_ecmd(struct net_device *dev, struct ethtool_cmd *ecmd)
 			return -EINVAL;
 		}
 	} else if (ecmd->autoneg == AUTONEG_DISABLE) {
-		if (ecmd->speed != SPEED_10 && ecmd->speed != SPEED_100)
+		u32 speed = ethtool_cmd_speed(ecmd);
+		if (speed != SPEED_10 && speed != SPEED_100)
 			return -EINVAL;
 		if (ecmd->duplex != DUPLEX_HALF && ecmd->duplex != DUPLEX_FULL)
 			return -EINVAL;
@@ -2955,7 +2958,7 @@ static int netdev_set_ecmd(struct net_device *dev, struct ethtool_cmd *ecmd)
 		if (ecmd->advertising & ADVERTISED_100baseT_Full)
 			np->advertising |= ADVERTISE_100FULL;
 	} else {
-		np->speed  = ecmd->speed;
+		np->speed  = ethtool_cmd_speed(ecmd);
 		np->duplex = ecmd->duplex;
 		/* user overriding the initial full duplex parm? */
 		if (np->duplex == DUPLEX_HALF)

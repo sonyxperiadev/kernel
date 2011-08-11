@@ -153,6 +153,19 @@
 #define B43_BFH_FEM_BT			0x0040	/* has FEM and switch to share antenna
 						 * with bluetooth */
 
+/* SPROM boardflags2_lo values */
+#define B43_BFL2_RXBB_INT_REG_DIS	0x0001	/* external RX BB regulator present */
+#define B43_BFL2_APLL_WAR		0x0002	/* alternative A-band PLL settings implemented */
+#define B43_BFL2_TXPWRCTRL_EN 		0x0004	/* permits enabling TX Power Control */
+#define B43_BFL2_2X4_DIV		0x0008	/* 2x4 diversity switch */
+#define B43_BFL2_5G_PWRGAIN		0x0010	/* supports 5G band power gain */
+#define B43_BFL2_PCIEWAR_OVR		0x0020	/* overrides ASPM and Clkreq settings */
+#define B43_BFL2_CAESERS_BRD		0x0040	/* is Caesers board (unused) */
+#define B43_BFL2_BTC3WIRE		0x0080	/* used 3-wire bluetooth coexist */
+#define B43_BFL2_SKWRKFEM_BRD		0x0100	/* 4321mcm93 uses Skyworks FEM */
+#define B43_BFL2_SPUR_WAR		0x0200	/* has a workaround for clock-harmonic spurs */
+#define B43_BFL2_GPLL_WAR		0x0400	/* altenative G-band PLL settings implemented */
+
 /* GPIO register offset, in both ChipCommon and PCI core. */
 #define B43_GPIO_CONTROL		0x6c
 
@@ -186,7 +199,8 @@ enum {
 #define B43_SHM_SH_PHYTXNOI		0x006E	/* PHY noise directly after TX (lower 8bit only) */
 #define B43_SHM_SH_RFRXSP1		0x0072	/* RF RX SP Register 1 */
 #define B43_SHM_SH_CHAN			0x00A0	/* Current channel (low 8bit only) */
-#define  B43_SHM_SH_CHAN_5GHZ		0x0100	/* Bit set, if 5Ghz channel */
+#define  B43_SHM_SH_CHAN_5GHZ		0x0100	/* Bit set, if 5 Ghz channel */
+#define  B43_SHM_SH_CHAN_40MHZ		0x0200	/* Bit set, if 40 Mhz channel width */
 #define B43_SHM_SH_BCMCFIFOID		0x0108	/* Last posted cookie to the bcast/mcast FIFO */
 /* TSSI information */
 #define B43_SHM_SH_TSSI_CCK		0x0058	/* TSSI for last 4 CCK frames (32bit) */
@@ -402,10 +416,10 @@ enum {
 
 /* 802.11 core specific TM State Low (SSB_TMSLOW) flags */
 #define B43_TMSLOW_GMODE		0x20000000	/* G Mode Enable */
-#define B43_TMSLOW_PHYCLKSPEED		0x00C00000	/* PHY clock speed mask (N-PHY only) */
-#define  B43_TMSLOW_PHYCLKSPEED_40MHZ	0x00000000	/* 40 MHz PHY */
-#define  B43_TMSLOW_PHYCLKSPEED_80MHZ	0x00400000	/* 80 MHz PHY */
-#define  B43_TMSLOW_PHYCLKSPEED_160MHZ	0x00800000	/* 160 MHz PHY */
+#define B43_TMSLOW_PHY_BANDWIDTH	0x00C00000	/* PHY band width and clock speed mask (N-PHY only) */
+#define  B43_TMSLOW_PHY_BANDWIDTH_10MHZ	0x00000000	/* 10 MHz bandwidth, 40 MHz PHY */
+#define  B43_TMSLOW_PHY_BANDWIDTH_20MHZ	0x00400000	/* 20 MHz bandwidth, 80 MHz PHY */
+#define  B43_TMSLOW_PHY_BANDWIDTH_40MHZ	0x00800000	/* 40 MHz bandwidth, 160 MHz PHY */
 #define B43_TMSLOW_PLLREFSEL		0x00200000	/* PLL Frequency Reference Select (rev >= 5) */
 #define B43_TMSLOW_MACPHYCLKEN		0x00100000	/* MAC PHY Clock Control Enable (rev >= 5) */
 #define B43_TMSLOW_PHYRESET		0x00080000	/* PHY Reset */
@@ -530,7 +544,7 @@ struct b43_fw_header {
 	/* Size of the data. For ucode and PCM this is in bytes.
 	 * For IV this is number-of-ivs. */
 	__be32 size;
-} __attribute__((__packed__));
+} __packed;
 
 /* Initial Value file format */
 #define B43_IV_OFFSET_MASK	0x7FFF
@@ -540,8 +554,8 @@ struct b43_iv {
 	union {
 		__be16 d16;
 		__be32 d32;
-	} data __attribute__((__packed__));
-} __attribute__((__packed__));
+	} data __packed;
+} __packed;
 
 
 /* Data structures for DMA transmission, per 80211 core. */
@@ -553,6 +567,8 @@ struct b43_dma {
 	struct b43_dmaring *tx_ring_mcast; /* Multicast */
 
 	struct b43_dmaring *rx_ring;
+
+	u32 translation; /* Routing bits */
 };
 
 struct b43_pio_txqueue;
@@ -634,8 +650,8 @@ struct b43_request_fw_context {
 	char errors[B43_NR_FWTYPES][128];
 	/* Temporary buffer for storing the firmware name. */
 	char fwname[64];
-	/* A fatal error occured while requesting. Firmware reqest
-	 * can not continue, as any other reqest will also fail. */
+	/* A fatal error occurred while requesting. Firmware request
+	 * can not continue, as any other request will also fail. */
 	int fatal_failure;
 };
 
@@ -691,7 +707,7 @@ enum {
 
 /* Data structure for one wireless device (802.11 core) */
 struct b43_wldev {
-	struct ssb_device *dev;
+	struct ssb_device *sdev;
 	struct b43_wl *wl;
 
 	/* The device initialization status.
@@ -865,22 +881,34 @@ static inline enum ieee80211_band b43_current_band(struct b43_wl *wl)
 
 static inline u16 b43_read16(struct b43_wldev *dev, u16 offset)
 {
-	return ssb_read16(dev->dev, offset);
+	return ssb_read16(dev->sdev, offset);
 }
 
 static inline void b43_write16(struct b43_wldev *dev, u16 offset, u16 value)
 {
-	ssb_write16(dev->dev, offset, value);
+	ssb_write16(dev->sdev, offset, value);
 }
 
 static inline u32 b43_read32(struct b43_wldev *dev, u16 offset)
 {
-	return ssb_read32(dev->dev, offset);
+	return ssb_read32(dev->sdev, offset);
 }
 
 static inline void b43_write32(struct b43_wldev *dev, u16 offset, u32 value)
 {
-	ssb_write32(dev->dev, offset, value);
+	ssb_write32(dev->sdev, offset, value);
+}
+
+static inline void b43_block_read(struct b43_wldev *dev, void *buffer,
+				 size_t count, u16 offset, u8 reg_width)
+{
+	ssb_block_read(dev->sdev, buffer, count, offset, reg_width);
+}
+
+static inline void b43_block_write(struct b43_wldev *dev, const void *buffer,
+				   size_t count, u16 offset, u8 reg_width)
+{
+	ssb_block_write(dev->sdev, buffer, count, offset, reg_width);
 }
 
 static inline bool b43_using_pio_transfers(struct b43_wldev *dev)

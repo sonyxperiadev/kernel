@@ -97,7 +97,7 @@ static int monwrite_new_hdr(struct mon_private *monpriv)
 {
 	struct monwrite_hdr *monhdr = &monpriv->hdr;
 	struct mon_buf *monbuf;
-	int rc;
+	int rc = 0;
 
 	if (monhdr->datalen > MONWRITE_MAX_DATALEN ||
 	    monhdr->mon_function > MONWRITE_START_CONFIG ||
@@ -135,7 +135,7 @@ static int monwrite_new_hdr(struct mon_private *monpriv)
 			mon_buf_count++;
 	}
 	monpriv->current_buf = monbuf;
-	return 0;
+	return rc;
 }
 
 static int monwrite_new_data(struct mon_private *monpriv)
@@ -274,6 +274,7 @@ static const struct file_operations monwrite_fops = {
 	.open	 = &monwrite_open,
 	.release = &monwrite_close,
 	.write	 = &monwrite_write,
+	.llseek  = noop_llseek,
 };
 
 static struct miscdevice mon_dev = {
@@ -380,7 +381,7 @@ out_driver:
 
 static void __exit mon_exit(void)
 {
-	WARN_ON(misc_deregister(&mon_dev) != 0);
+	misc_deregister(&mon_dev);
 	platform_device_unregister(monwriter_pdev);
 	platform_driver_unregister(&monwriter_pdrv);
 }

@@ -83,7 +83,7 @@ Quilt:
 http://savannah.nongnu.org/projects/quilt
 
 Andrew Morton 的补丁脚本:
-http://www.zip.com.au/~akpm/linux/patches/
+http://userweb.kernel.org/~akpm/stuff/patch-scripts.tar.gz
 作为这些脚本的替代，quilt 是值得推荐的补丁管理工具(看上面的链接)。
 
 2)描述你的改动。
@@ -100,7 +100,7 @@ http://www.zip.com.au/~akpm/linux/patches/
 
 将改动拆分，逻辑类似的放到同一个补丁文件里。
 
-例如，如果你的改动里同时有bug修正和性能优化，那么把这些改动才分到两个或
+例如，如果你的改动里同时有bug修正和性能优化，那么把这些改动拆分到两个或
 者更多的补丁文件中。如果你的改动包含对API的修改，并且修改了驱动程序来适
 应这些新的API，那么把这些修改分成两个补丁。
 
@@ -166,7 +166,7 @@ MAITAINERS 文件里的）发送一个手册页（man-pages）补丁，或者至
   人拷贝，只要它是琐碎的）
   任何文件的作者/维护者对该文件的改动（例如 patch monkey 在重传模式下）
 
-URL: <http://www.kernel.org/pub/linux/kernel/people/bunk/trivial/>
+EMAIL: trivial@kernel.org
 
 (译注，关于“琐碎补丁”的一些说明：因为原文的这一部分写得比较简单，所以不得不
 违例写一下译注。"trivial"这个英文单词的本意是“琐碎的，不重要的。”但是在这里
@@ -230,7 +230,7 @@ pref("mailnews.display.disable_format_flowed_support", true);
 些原因，修正错误，重新提交更新后的改动，是你自己的工作。
 
 Linus不给出任何评论就“丢弃”你的补丁是常见的事情。在系统中这样的事情很
-平常。如果他没有接受你的补丁，也许是由于以下原本：
+平常。如果他没有接受你的补丁，也许是由于以下原因：
 * 你的补丁不能在最新版本的内核上干净的打上。
 * 你的补丁在 linux-kernel 邮件列表中没有得到充分的讨论。
 * 风格问题（参照第2小节）
@@ -394,7 +394,7 @@ Static inline 函数相比宏来说，是好得多的选择。Static inline 函�
 ----------------
 
 Andrew Morton, "The perfect patch" (tpp).
-  <http://www.zip.com.au/~akpm/linux/patches/stuff/tpp.txt>
+  <http://userweb.kernel.org/~akpm/stuff/tpp.txt>
 
 Jeff Garzik, "Linux kernel patch submission format".
   <http://linux.yyz.us/patch-format.html>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2009 Atheros Communications Inc.
+ * Copyright (c) 2008-2011 Atheros Communications Inc.
  * Copyright (c) 2009 Gabor Juhos <juhosg@openwrt.org>
  * Copyright (c) 2009 Imre Kaloz <kaloz@openwrt.org>
  *
@@ -21,6 +21,18 @@
 #include <linux/ath9k_platform.h>
 #include "ath9k.h"
 
+static const struct platform_device_id ath9k_platform_id_table[] = {
+	{
+		.name = "ath9k",
+		.driver_data = AR5416_AR9100_DEVID,
+	},
+	{
+		.name = "ar934x_wmac",
+		.driver_data = AR9300_DEVID_AR9340,
+	},
+	{},
+};
+
 /* return bus cachesize in 4B word units */
 static void ath_ahb_read_cachesize(struct ath_common *common, int *csz)
 {
@@ -35,10 +47,9 @@ static bool ath_ahb_eeprom_read(struct ath_common *common, u32 off, u16 *data)
 
 	pdata = (struct ath9k_platform_data *) pdev->dev.platform_data;
 	if (off >= (ARRAY_SIZE(pdata->eeprom_data))) {
-		ath_print(common, ATH_DBG_FATAL,
-			  "%s: flash read failed, offset %08x "
-			  "is out of range\n",
-			  __func__, off);
+		ath_err(common,
+			"%s: flash read failed, offset %08x is out of range\n",
+			__func__, off);
 		return false;
 	}
 
@@ -55,10 +66,10 @@ static struct ath_bus_ops ath_ahb_bus_ops  = {
 static int ath_ahb_probe(struct platform_device *pdev)
 {
 	void __iomem *mem;
-	struct ath_wiphy *aphy;
 	struct ath_softc *sc;
 	struct ieee80211_hw *hw;
 	struct resource *res;
+	const struct platform_device_id *id = platform_get_device_id(pdev);
 	int irq;
 	int ret = 0;
 	struct ath_hw *ah;
@@ -77,7 +88,7 @@ static int ath_ahb_probe(struct platform_device *pdev)
 		goto err_out;
 	}
 
-	mem = ioremap_nocache(res->start, res->end - res->start + 1);
+	mem = ioremap_nocache(res->start, resource_size(res));
 	if (mem == NULL) {
 		dev_err(&pdev->dev, "ioremap failed\n");
 		ret = -ENOMEM;
@@ -93,8 +104,7 @@ static int ath_ahb_probe(struct platform_device *pdev)
 
 	irq = res->start;
 
-	hw = ieee80211_alloc_hw(sizeof(struct ath_wiphy) +
-				sizeof(struct ath_softc), &ath9k_ops);
+	hw = ieee80211_alloc_hw(sizeof(struct ath_softc), &ath9k_ops);
 	if (hw == NULL) {
 		dev_err(&pdev->dev, "no memory for ieee80211_hw\n");
 		ret = -ENOMEM;
@@ -104,11 +114,7 @@ static int ath_ahb_probe(struct platform_device *pdev)
 	SET_IEEE80211_DEV(hw, &pdev->dev);
 	platform_set_drvdata(pdev, hw);
 
-	aphy = hw->priv;
-	sc = (struct ath_softc *) (aphy + 1);
-	aphy->sc = sc;
-	aphy->hw = hw;
-	sc->pri_wiphy = aphy;
+	sc = hw->priv;
 	sc->hw = hw;
 	sc->dev = &pdev->dev;
 	sc->mem = mem;
@@ -123,7 +129,7 @@ static int ath_ahb_probe(struct platform_device *pdev)
 		goto err_free_hw;
 	}
 
-	ret = ath9k_init_device(AR5416_AR9100_DEVID, sc, 0x0, &ath_ahb_bus_ops);
+	ret = ath9k_init_device(id->driver_data, sc, 0x0, &ath_ahb_bus_ops);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize device\n");
 		goto err_irq;
@@ -131,11 +137,8 @@ static int ath_ahb_probe(struct platform_device *pdev)
 
 	ah = sc->sc_ah;
 	ath9k_hw_name(ah, hw_name, sizeof(hw_name));
-	printk(KERN_INFO
-	       "%s: %s mem=0x%lx, irq=%d\n",
-	       wiphy_name(hw->wiphy),
-	       hw_name,
-	       (unsigned long)mem, irq);
+	wiphy_info(hw->wiphy, "%s mem=0x%lx, irq=%d\n",
+		   hw_name, (unsigned long)mem, irq);
 
 	return 0;
 
@@ -155,8 +158,7 @@ static int ath_ahb_remove(struct platform_device *pdev)
 	struct ieee80211_hw *hw = platform_get_drvdata(pdev);
 
 	if (hw) {
-		struct ath_wiphy *aphy = hw->priv;
-		struct ath_softc *sc = aphy->sc;
+		struct ath_softc *sc = hw->priv;
 		void __iomem *mem = sc->mem;
 
 		ath9k_deinit_device(sc);
@@ -176,7 +178,10 @@ static struct platform_driver ath_ahb_driver = {
 		.name	= "ath9k",
 		.owner	= THIS_MODULE,
 	},
+	.id_table    = ath9k_platform_id_table,
 };
+
+MODULE_DEVICE_TABLE(platform, ath9k_platform_id_table);
 
 int ath_ahb_init(void)
 {

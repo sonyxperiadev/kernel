@@ -24,7 +24,6 @@
 #include <linux/rslib.h>
 #include <linux/bitrev.h>
 #include <linux/module.h>
-#include <linux/mtd/compatmac.h>
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/partitions.h>
@@ -581,7 +580,8 @@ static int __init rtc_from4_init(void)
 #endif
 
 	/* Register the partitions */
-	ret = add_mtd_partitions(rtc_from4_mtd, partition_info, NUM_PARTITIONS);
+	ret = mtd_device_register(rtc_from4_mtd, partition_info,
+				  NUM_PARTITIONS);
 	if (ret)
 		goto err_3;
 

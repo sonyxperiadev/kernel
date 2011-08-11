@@ -18,17 +18,16 @@
 
 #include "yaffs_guts.h"
 
-int yaffs2_CheckpointOpen(yaffs_Device *dev, int forWriting);
+int yaffs2_checkpt_open(struct yaffs_dev *dev, int writing);
 
-int yaffs2_CheckpointWrite(yaffs_Device *dev, const void *data, int nBytes);
+int yaffs2_checkpt_wr(struct yaffs_dev *dev, const void *data, int n_bytes);
 
-int yaffs2_CheckpointRead(yaffs_Device *dev, void *data, int nBytes);
+int yaffs2_checkpt_rd(struct yaffs_dev *dev, void *data, int n_bytes);
 
-int yaffs2_GetCheckpointSum(yaffs_Device *dev, __u32 *sum);
+int yaffs2_get_checkpt_sum(struct yaffs_dev *dev, u32 * sum);
 
-int yaffs2_CheckpointClose(yaffs_Device *dev);
+int yaffs_checkpt_close(struct yaffs_dev *dev);
 
-int yaffs2_CheckpointInvalidateStream(yaffs_Device *dev);
-
+int yaffs2_checkpt_invalidate_stream(struct yaffs_dev *dev);
 
 #endif

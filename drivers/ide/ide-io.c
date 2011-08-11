@@ -135,7 +135,7 @@ EXPORT_SYMBOL(ide_complete_rq);
 
 void ide_kill_rq(ide_drive_t *drive, struct request *rq)
 {
-	u8 drv_req = blk_special_request(rq) && rq->rq_disk;
+	u8 drv_req = (rq->cmd_type == REQ_TYPE_SPECIAL) && rq->rq_disk;
 	u8 media = drive->media;
 
 	drive->failed_pc = NULL;
@@ -145,7 +145,7 @@ void ide_kill_rq(ide_drive_t *drive, struct request *rq)
 	} else {
 		if (media == ide_tape)
 			rq->errors = IDE_DRV_ERROR_GENERAL;
-		else if (blk_fs_request(rq) == 0 && rq->errors == 0)
+		else if (rq->cmd_type != REQ_TYPE_FS && rq->errors == 0)
 			rq->errors = -EIO;
 	}
 
@@ -307,7 +307,7 @@ static ide_startstop_t start_request (ide_drive_t *drive, struct request *rq)
 {
 	ide_startstop_t startstop;
 
-	BUG_ON(!blk_rq_started(rq));
+	BUG_ON(!(rq->cmd_flags & REQ_STARTED));
 
 #ifdef DEBUG
 	printk("%s: start_request: current=0x%08lx\n",
@@ -353,7 +353,7 @@ static ide_startstop_t start_request (ide_drive_t *drive, struct request *rq)
 			    pm->pm_step == IDE_PM_COMPLETED)
 				ide_complete_pm_rq(drive, rq);
 			return startstop;
-		} else if (!rq->rq_disk && blk_special_request(rq))
+		} else if (!rq->rq_disk && rq->cmd_type == REQ_TYPE_SPECIAL)
 			/*
 			 * TODO: Once all ULDs have been modified to
 			 * check for specific op codes rather than
@@ -430,6 +430,26 @@ static inline void ide_unlock_host(struct ide_host *host)
 	}
 }
 
+static void __ide_requeue_and_plug(struct request_queue *q, struct request *rq)
+{
+	if (rq)
+		blk_requeue_request(q, rq);
+	if (rq || blk_peek_request(q)) {
+		/* Use 3ms as that was the old plug delay */
+		blk_delay_queue(q, 3);
+	}
+}
+
+void ide_requeue_and_plug(ide_drive_t *drive, struct request *rq)
+{
+	struct request_queue *q = drive->queue;
+	unsigned long flags;
+
+	spin_lock_irqsave(q->queue_lock, flags);
+	__ide_requeue_and_plug(q, rq);
+	spin_unlock_irqrestore(q->queue_lock, flags);
+}
+
 /*
  * Issue a new request to a device.
  */
@@ -440,19 +460,7 @@ void do_ide_request(struct request_queue *q)
 	struct ide_host *host = hwif->host;
 	struct request	*rq = NULL;
 	ide_startstop_t	startstop;
-
-	/*
-	 * drive is doing pre-flush, ordered write, post-flush sequence. even
-	 * though that is 3 requests, it must be seen as a single transaction.
-	 * we must not preempt this drive until that is complete
-	 */
-	if (blk_queue_flushing(q))
-		/*
-		 * small race where queue could get replugged during
-		 * the 3-request flush cycle, just yank the plug since
-		 * we want it to finish asap
-		 */
-		blk_remove_plug(q);
+	unsigned long queue_run_ms = 3; /* old plug delay */
 
 	spin_unlock_irq(q->queue_lock);
 
@@ -472,6 +480,9 @@ repeat:
 		prev_port = hwif->host->cur_port;
 		if (drive->dev_flags & IDE_DFLAG_SLEEPING &&
 		    time_after(drive->sleep, jiffies)) {
+			unsigned long left = jiffies - drive->sleep;
+
+			queue_run_ms = jiffies_to_msecs(left + 1);
 			ide_unlock_port(hwif);
 			goto plug_device;
 		}
@@ -559,26 +570,7 @@ plug_device:
 	ide_unlock_host(host);
 plug_device_2:
 	spin_lock_irq(q->queue_lock);
-
-	if (rq)
-		blk_requeue_request(q, rq);
-	if (!elv_queue_empty(q))
-		blk_plug_device(q);
-}
-
-void ide_requeue_and_plug(ide_drive_t *drive, struct request *rq)
-{
-	struct request_queue *q = drive->queue;
-	unsigned long flags;
-
-	spin_lock_irqsave(q->queue_lock, flags);
-
-	if (rq)
-		blk_requeue_request(q, rq);
-	if (!elv_queue_empty(q))
-		blk_plug_device(q);
-
-	spin_unlock_irqrestore(q->queue_lock, flags);
+	__ide_requeue_and_plug(q, rq);
 }
 
 static int drive_is_ready(ide_drive_t *drive)

@@ -13,8 +13,6 @@
 #include <linux/io.h>
 #include <linux/etherdevice.h>
 
-#include <pcmcia/cs_types.h>
-#include <pcmcia/cs.h>
 #include <pcmcia/cistpl.h>
 #include <pcmcia/ciscode.h>
 #include <pcmcia/ds.h>
@@ -72,14 +70,9 @@
 /* Write to a PCMCIA configuration register. */
 static int ssb_pcmcia_cfg_write(struct ssb_bus *bus, u8 offset, u8 value)
 {
-	conf_reg_t reg;
 	int res;
 
-	memset(&reg, 0, sizeof(reg));
-	reg.Offset = offset;
-	reg.Action = CS_WRITE;
-	reg.Value = value;
-	res = pcmcia_access_configuration_register(bus->host_pcmcia, &reg);
+	res = pcmcia_write_config_byte(bus->host_pcmcia, offset, value);
 	if (unlikely(res != 0))
 		return -EBUSY;
 
@@ -89,16 +82,11 @@ static int ssb_pcmcia_cfg_write(struct ssb_bus *bus, u8 offset, u8 value)
 /* Read from a PCMCIA configuration register. */
 static int ssb_pcmcia_cfg_read(struct ssb_bus *bus, u8 offset, u8 *value)
 {
-	conf_reg_t reg;
 	int res;
 
-	memset(&reg, 0, sizeof(reg));
-	reg.Offset = offset;
-	reg.Action = CS_READ;
-	res = pcmcia_access_configuration_register(bus->host_pcmcia, &reg);
+	res = pcmcia_read_config_byte(bus->host_pcmcia, offset, value);
 	if (unlikely(res != 0))
 		return -EBUSY;
-	*value = reg.Value;
 
 	return 0;
 }
@@ -745,7 +733,7 @@ int ssb_pcmcia_get_invariants(struct ssb_bus *bus,
 
 	/* Fetch the vendor specific tuples. */
 	res = pcmcia_loop_tuple(bus->host_pcmcia, SSB_PCMCIA_CIS,
-				ssb_pcmcia_do_get_invariants, sprom);
+				ssb_pcmcia_do_get_invariants, iv);
 	if ((res == 0) || (res == -ENOSPC))
 		return 0;
 

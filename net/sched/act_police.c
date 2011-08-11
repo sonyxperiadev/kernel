@@ -22,8 +22,8 @@
 #include <net/act_api.h>
 #include <net/netlink.h>
 
-#define L2T(p,L)   qdisc_l2t((p)->tcfp_R_tab, L)
-#define L2T_P(p,L) qdisc_l2t((p)->tcfp_P_tab, L)
+#define L2T(p, L)   qdisc_l2t((p)->tcfp_R_tab, L)
+#define L2T_P(p, L) qdisc_l2t((p)->tcfp_P_tab, L)
 
 #define POL_TAB_MASK     15
 static struct tcf_common *tcf_police_ht[POL_TAB_MASK + 1];
@@ -37,8 +37,7 @@ static struct tcf_hashinfo police_hash_info = {
 };
 
 /* old policer structure from before tc actions */
-struct tc_police_compat
-{
+struct tc_police_compat {
 	u32			index;
 	int			action;
 	u32			limit;
@@ -113,7 +112,11 @@ static void tcf_police_destroy(struct tcf_police *p)
 				qdisc_put_rtab(p->tcfp_R_tab);
 			if (p->tcfp_P_tab)
 				qdisc_put_rtab(p->tcfp_P_tab);
-			kfree(p);
+			/*
+			 * gen_estimator est_timer() might access p->tcf_lock
+			 * or bstats, wait a RCU grace period before freeing p
+			 */
+			kfree_rcu(p, tcf_rcu);
 			return;
 		}
 	}
@@ -130,7 +133,7 @@ static const struct nla_policy police_policy[TCA_POLICE_MAX + 1] = {
 static int tcf_act_police_locate(struct nlattr *nla, struct nlattr *est,
 				 struct tc_action *a, int ovr, int bind)
 {
-	unsigned h;
+	unsigned int h;
 	int ret = 0, err;
 	struct nlattr *tb[TCA_POLICE_MAX + 1];
 	struct tc_police *parm;
@@ -289,8 +292,7 @@ static int tcf_act_police(struct sk_buff *skb, struct tc_action *a,
 
 	spin_lock(&police->tcf_lock);
 
-	police->tcf_bstats.bytes += qdisc_pkt_len(skb);
-	police->tcf_bstats.packets++;
+	bstats_update(&police->tcf_bstats, skb);
 
 	if (police->tcfp_ewma_rate &&
 	    police->tcf_rate_est.bps >= police->tcfp_ewma_rate) {
@@ -341,22 +343,19 @@ tcf_act_police_dump(struct sk_buff *skb, struct tc_action *a, int bind, int ref)
 {
 	unsigned char *b = skb_tail_pointer(skb);
 	struct tcf_police *police = a->priv;
-	struct tc_police opt;
+	struct tc_police opt = {
+		.index = police->tcf_index,
+		.action = police->tcf_action,
+		.mtu = police->tcfp_mtu,
+		.burst = police->tcfp_burst,
+		.refcnt = police->tcf_refcnt - ref,
+		.bindcnt = police->tcf_bindcnt - bind,
+	};
 
-	opt.index = police->tcf_index;
-	opt.action = police->tcf_action;
-	opt.mtu = police->tcfp_mtu;
-	opt.burst = police->tcfp_burst;
-	opt.refcnt = police->tcf_refcnt - ref;
-	opt.bindcnt = police->tcf_bindcnt - bind;
 	if (police->tcfp_R_tab)
 		opt.rate = police->tcfp_R_tab->rate;
-	else
-		memset(&opt.rate, 0, sizeof(opt.rate));
 	if (police->tcfp_P_tab)
 		opt.peakrate = police->tcfp_P_tab->rate;
-	else
-		memset(&opt.peakrate, 0, sizeof(opt.peakrate));
 	NLA_PUT(skb, TCA_POLICE_TBF, sizeof(opt), &opt);
 	if (police->tcfp_result)
 		NLA_PUT_U32(skb, TCA_POLICE_RESULT, police->tcfp_result);

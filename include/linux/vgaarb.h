@@ -31,7 +31,6 @@
 #ifndef LINUX_VGA_H
 #define LINUX_VGA_H
 
-#include <asm/vga.h>
 
 /* Legacy VGA regions */
 #define VGA_RSRC_NONE	       0x00
@@ -79,7 +78,7 @@ extern void vga_set_legacy_decoding(struct pci_dev *pdev,
  *     wether the card is doing legacy decoding for that type of resource. If
  *     yes, the lock is "converted" into a legacy resource lock.
  *     The arbiter will first look for all VGA cards that might conflict
- *     and disable their IOs and/or Memory access, inlcuding VGA forwarding
+ *     and disable their IOs and/or Memory access, including VGA forwarding
  *     on P2P bridges if necessary, so that the requested resources can
  *     be used. Then, the card is marked as locking these resources and
  *     the IO and/or Memory accesse are enabled on the card (including
@@ -94,8 +93,11 @@ extern void vga_set_legacy_decoding(struct pci_dev *pdev,
  *     Nested calls are supported (a per-resource counter is maintained)
  */
 
-extern int vga_get(struct pci_dev *pdev, unsigned int rsrc,
-											int interruptible);
+#if defined(CONFIG_VGA_ARB)
+extern int vga_get(struct pci_dev *pdev, unsigned int rsrc, int interruptible);
+#else
+static inline int vga_get(struct pci_dev *pdev, unsigned int rsrc, int interruptible) { return 0; }
+#endif
 
 /**
  *     vga_get_interruptible
@@ -132,7 +134,11 @@ static inline int vga_get_uninterruptible(struct pci_dev *pdev,
  *     are already locked by another card. It can be called in any context
  */
 
+#if defined(CONFIG_VGA_ARB)
 extern int vga_tryget(struct pci_dev *pdev, unsigned int rsrc);
+#else
+static inline int vga_tryget(struct pci_dev *pdev, unsigned int rsrc) { return 0; }
+#endif
 
 /**
  *     vga_put         - release lock on legacy VGA resources
@@ -147,7 +153,11 @@ extern int vga_tryget(struct pci_dev *pdev, unsigned int rsrc);
  *     released if the counter reaches 0.
  */
 
+#if defined(CONFIG_VGA_ARB)
 extern void vga_put(struct pci_dev *pdev, unsigned int rsrc);
+#else
+#define vga_put(pdev, rsrc)
+#endif
 
 
 /**
@@ -177,7 +187,7 @@ extern struct pci_dev *vga_default_device(void);
  *     vga_conflicts
  *
  *     Architectures should define this if they have several
- *     independant PCI domains that can afford concurrent VGA
+ *     independent PCI domains that can afford concurrent VGA
  *     decoding
  */
 

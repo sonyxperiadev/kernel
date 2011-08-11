@@ -14,385 +14,270 @@
 #include <linux/errno.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/dma-mapping.h>
+#include <linux/slab.h>
+#include <linux/of_address.h>
 #include <linux/of_device.h>
+#include <linux/of_irq.h>
 #include <linux/of_platform.h>
+#include <linux/platform_device.h>
 
-extern struct device_attribute of_platform_device_attrs[];
-
-static int of_platform_bus_match(struct device *dev, struct device_driver *drv)
+static int of_dev_node_match(struct device *dev, void *data)
 {
-	const struct of_device_id *matches = drv->of_match_table;
-
-	if (!matches)
-		return 0;
-
-	return of_match_device(matches, dev) != NULL;
+	return dev->of_node == data;
 }
 
-static int of_platform_device_probe(struct device *dev)
+/**
+ * of_find_device_by_node - Find the platform_device associated with a node
+ * @np: Pointer to device tree node
+ *
+ * Returns platform_device pointer, or NULL if not found
+ */
+struct platform_device *of_find_device_by_node(struct device_node *np)
 {
-	int error = -ENODEV;
-	struct of_platform_driver *drv;
-	struct of_device *of_dev;
-	const struct of_device_id *match;
+	struct device *dev;
 
-	drv = to_of_platform_driver(dev->driver);
-	of_dev = to_of_device(dev);
-
-	if (!drv->probe)
-		return error;
-
-	of_dev_get(of_dev);
-
-	match = of_match_device(drv->driver.of_match_table, dev);
-	if (match)
-		error = drv->probe(of_dev, match);
-	if (error)
-		of_dev_put(of_dev);
-
-	return error;
+	dev = bus_find_device(&platform_bus_type, NULL, np, of_dev_node_match);
+	return dev ? to_platform_device(dev) : NULL;
 }
+EXPORT_SYMBOL(of_find_device_by_node);
 
-static int of_platform_device_remove(struct device *dev)
+#if defined(CONFIG_PPC_DCR)
+#include <asm/dcr.h>
+#endif
+
+#if !defined(CONFIG_SPARC)
+/*
+ * The following routines scan a subtree and registers a device for
+ * each applicable node.
+ *
+ * Note: sparc doesn't use these routines because it has a different
+ * mechanism for creating devices from device tree nodes.
+ */
+
+/**
+ * of_device_make_bus_id - Use the device node data to assign a unique name
+ * @dev: pointer to device structure that is linked to a device tree node
+ *
+ * This routine will first try using either the dcr-reg or the reg property
+ * value to derive a unique name.  As a last resort it will use the node
+ * name followed by a unique number.
+ */
+void of_device_make_bus_id(struct device *dev)
 {
-	struct of_device *of_dev = to_of_device(dev);
-	struct of_platform_driver *drv = to_of_platform_driver(dev->driver);
+	static atomic_t bus_no_reg_magic;
+	struct device_node *node = dev->of_node;
+	const u32 *reg;
+	u64 addr;
+	int magic;
 
-	if (dev->driver && drv->remove)
-		drv->remove(of_dev);
-	return 0;
-}
+#ifdef CONFIG_PPC_DCR
+	/*
+	 * If it's a DCR based device, use 'd' for native DCRs
+	 * and 'D' for MMIO DCRs.
+	 */
+	reg = of_get_property(node, "dcr-reg", NULL);
+	if (reg) {
+#ifdef CONFIG_PPC_DCR_NATIVE
+		dev_set_name(dev, "d%x.%s", *reg, node->name);
+#else /* CONFIG_PPC_DCR_NATIVE */
+		u64 addr = of_translate_dcr_address(node, *reg, NULL);
+		if (addr != OF_BAD_ADDR) {
+			dev_set_name(dev, "D%llx.%s",
+				     (unsigned long long)addr, node->name);
+			return;
+		}
+#endif /* !CONFIG_PPC_DCR_NATIVE */
+	}
+#endif /* CONFIG_PPC_DCR */
 
-static void of_platform_device_shutdown(struct device *dev)
-{
-	struct of_device *of_dev = to_of_device(dev);
-	struct of_platform_driver *drv = to_of_platform_driver(dev->driver);
-
-	if (dev->driver && drv->shutdown)
-		drv->shutdown(of_dev);
-}
-
-#ifdef CONFIG_PM_SLEEP
-
-static int of_platform_legacy_suspend(struct device *dev, pm_message_t mesg)
-{
-	struct of_device *of_dev = to_of_device(dev);
-	struct of_platform_driver *drv = to_of_platform_driver(dev->driver);
-	int ret = 0;
-
-	if (dev->driver && drv->suspend)
-		ret = drv->suspend(of_dev, mesg);
-	return ret;
-}
-
-static int of_platform_legacy_resume(struct device *dev)
-{
-	struct of_device *of_dev = to_of_device(dev);
-	struct of_platform_driver *drv = to_of_platform_driver(dev->driver);
-	int ret = 0;
-
-	if (dev->driver && drv->resume)
-		ret = drv->resume(of_dev);
-	return ret;
-}
-
-static int of_platform_pm_prepare(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (drv && drv->pm && drv->pm->prepare)
-		ret = drv->pm->prepare(dev);
-
-	return ret;
-}
-
-static void of_platform_pm_complete(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-
-	if (drv && drv->pm && drv->pm->complete)
-		drv->pm->complete(dev);
-}
-
-#ifdef CONFIG_SUSPEND
-
-static int of_platform_pm_suspend(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->suspend)
-			ret = drv->pm->suspend(dev);
-	} else {
-		ret = of_platform_legacy_suspend(dev, PMSG_SUSPEND);
+	/*
+	 * For MMIO, get the physical address
+	 */
+	reg = of_get_property(node, "reg", NULL);
+	if (reg) {
+		addr = of_translate_address(node, reg);
+		if (addr != OF_BAD_ADDR) {
+			dev_set_name(dev, "%llx.%s",
+				     (unsigned long long)addr, node->name);
+			return;
+		}
 	}
 
-	return ret;
+	/*
+	 * No BusID, use the node name and add a globally incremented
+	 * counter (and pray...)
+	 */
+	magic = atomic_add_return(1, &bus_no_reg_magic);
+	dev_set_name(dev, "%s.%d", node->name, magic - 1);
 }
 
-static int of_platform_pm_suspend_noirq(struct device *dev)
+/**
+ * of_device_alloc - Allocate and initialize an of_device
+ * @np: device node to assign to device
+ * @bus_id: Name to assign to the device.  May be null to use default name.
+ * @parent: Parent device.
+ */
+struct platform_device *of_device_alloc(struct device_node *np,
+				  const char *bus_id,
+				  struct device *parent)
 {
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
+	struct platform_device *dev;
+	int rc, i, num_reg = 0, num_irq;
+	struct resource *res, temp_res;
 
-	if (!drv)
-		return 0;
+	dev = platform_device_alloc("", -1);
+	if (!dev)
+		return NULL;
 
-	if (drv->pm) {
-		if (drv->pm->suspend_noirq)
-			ret = drv->pm->suspend_noirq(dev);
+	/* count the io and irq resources */
+	while (of_address_to_resource(np, num_reg, &temp_res) == 0)
+		num_reg++;
+	num_irq = of_irq_count(np);
+
+	/* Populate the resource table */
+	if (num_irq || num_reg) {
+		res = kzalloc(sizeof(*res) * (num_irq + num_reg), GFP_KERNEL);
+		if (!res) {
+			platform_device_put(dev);
+			return NULL;
+		}
+
+		dev->num_resources = num_reg + num_irq;
+		dev->resource = res;
+		for (i = 0; i < num_reg; i++, res++) {
+			rc = of_address_to_resource(np, i, res);
+			WARN_ON(rc);
+		}
+		WARN_ON(of_irq_to_resource_table(np, res, num_irq) != num_irq);
 	}
 
-	return ret;
+	dev->dev.of_node = of_node_get(np);
+#if defined(CONFIG_PPC) || defined(CONFIG_MICROBLAZE)
+	dev->dev.dma_mask = &dev->archdata.dma_mask;
+#endif
+	dev->dev.parent = parent;
+
+	if (bus_id)
+		dev_set_name(&dev->dev, "%s", bus_id);
+	else
+		of_device_make_bus_id(&dev->dev);
+
+	return dev;
 }
+EXPORT_SYMBOL(of_device_alloc);
 
-static int of_platform_pm_resume(struct device *dev)
+/**
+ * of_platform_device_create - Alloc, initialize and register an of_device
+ * @np: pointer to node to create device for
+ * @bus_id: name to assign device
+ * @parent: Linux device model parent device.
+ *
+ * Returns pointer to created platform device, or NULL if a device was not
+ * registered.  Unavailable devices will not get registered.
+ */
+struct platform_device *of_platform_device_create(struct device_node *np,
+					    const char *bus_id,
+					    struct device *parent)
 {
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
+	struct platform_device *dev;
 
-	if (!drv)
-		return 0;
+	if (!of_device_is_available(np))
+		return NULL;
 
-	if (drv->pm) {
-		if (drv->pm->resume)
-			ret = drv->pm->resume(dev);
-	} else {
-		ret = of_platform_legacy_resume(dev);
+	dev = of_device_alloc(np, bus_id, parent);
+	if (!dev)
+		return NULL;
+
+#if defined(CONFIG_PPC) || defined(CONFIG_MICROBLAZE)
+	dev->archdata.dma_mask = 0xffffffffUL;
+#endif
+	dev->dev.coherent_dma_mask = DMA_BIT_MASK(32);
+	dev->dev.bus = &platform_bus_type;
+
+	/* We do not fill the DMA ops for platform devices by default.
+	 * This is currently the responsibility of the platform code
+	 * to do such, possibly using a device notifier
+	 */
+
+	if (of_device_add(dev) != 0) {
+		platform_device_put(dev);
+		return NULL;
 	}
 
-	return ret;
+	return dev;
 }
+EXPORT_SYMBOL(of_platform_device_create);
 
-static int of_platform_pm_resume_noirq(struct device *dev)
+/**
+ * of_platform_bus_create() - Create a device for a node and its children.
+ * @bus: device node of the bus to instantiate
+ * @matches: match table for bus nodes
+ * disallow recursive creation of child buses
+ * @parent: parent for new device, or NULL for top level.
+ *
+ * Creates a platform_device for the provided device_node, and optionally
+ * recursively create devices for all the child nodes.
+ */
+static int of_platform_bus_create(struct device_node *bus,
+				  const struct of_device_id *matches,
+				  struct device *parent)
 {
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
+	struct device_node *child;
+	struct platform_device *dev;
+	int rc = 0;
 
-	if (!drv)
+	dev = of_platform_device_create(bus, NULL, parent);
+	if (!dev || !of_match_node(matches, bus))
 		return 0;
 
-	if (drv->pm) {
-		if (drv->pm->resume_noirq)
-			ret = drv->pm->resume_noirq(dev);
+	for_each_child_of_node(bus, child) {
+		pr_debug("   create child: %s\n", child->full_name);
+		rc = of_platform_bus_create(child, matches, &dev->dev);
+		if (rc) {
+			of_node_put(child);
+			break;
+		}
+	}
+	return rc;
+}
+
+/**
+ * of_platform_bus_probe() - Probe the device-tree for platform buses
+ * @root: parent of the first level to probe or NULL for the root of the tree
+ * @matches: match table for bus nodes
+ * @parent: parent to hook devices from, NULL for toplevel
+ *
+ * Note that children of the provided root are not instantiated as devices
+ * unless the specified root itself matches the bus list and is not NULL.
+ */
+int of_platform_bus_probe(struct device_node *root,
+			  const struct of_device_id *matches,
+			  struct device *parent)
+{
+	struct device_node *child;
+	int rc = 0;
+
+	root = root ? of_node_get(root) : of_find_node_by_path("/");
+	if (!root)
+		return -EINVAL;
+
+	pr_debug("of_platform_bus_probe()\n");
+	pr_debug(" starting at: %s\n", root->full_name);
+
+	/* Do a self check of bus type, if there's a match, create children */
+	if (of_match_node(matches, root)) {
+		rc = of_platform_bus_create(root, matches, parent);
+	} else for_each_child_of_node(root, child) {
+		if (!of_match_node(matches, child))
+			continue;
+		rc = of_platform_bus_create(child, matches, parent);
+		if (rc)
+			break;
 	}
 
-	return ret;
+	of_node_put(root);
+	return rc;
 }
-
-#else /* !CONFIG_SUSPEND */
-
-#define of_platform_pm_suspend		NULL
-#define of_platform_pm_resume		NULL
-#define of_platform_pm_suspend_noirq	NULL
-#define of_platform_pm_resume_noirq	NULL
-
-#endif /* !CONFIG_SUSPEND */
-
-#ifdef CONFIG_HIBERNATION
-
-static int of_platform_pm_freeze(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->freeze)
-			ret = drv->pm->freeze(dev);
-	} else {
-		ret = of_platform_legacy_suspend(dev, PMSG_FREEZE);
-	}
-
-	return ret;
-}
-
-static int of_platform_pm_freeze_noirq(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->freeze_noirq)
-			ret = drv->pm->freeze_noirq(dev);
-	}
-
-	return ret;
-}
-
-static int of_platform_pm_thaw(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->thaw)
-			ret = drv->pm->thaw(dev);
-	} else {
-		ret = of_platform_legacy_resume(dev);
-	}
-
-	return ret;
-}
-
-static int of_platform_pm_thaw_noirq(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->thaw_noirq)
-			ret = drv->pm->thaw_noirq(dev);
-	}
-
-	return ret;
-}
-
-static int of_platform_pm_poweroff(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->poweroff)
-			ret = drv->pm->poweroff(dev);
-	} else {
-		ret = of_platform_legacy_suspend(dev, PMSG_HIBERNATE);
-	}
-
-	return ret;
-}
-
-static int of_platform_pm_poweroff_noirq(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->poweroff_noirq)
-			ret = drv->pm->poweroff_noirq(dev);
-	}
-
-	return ret;
-}
-
-static int of_platform_pm_restore(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->restore)
-			ret = drv->pm->restore(dev);
-	} else {
-		ret = of_platform_legacy_resume(dev);
-	}
-
-	return ret;
-}
-
-static int of_platform_pm_restore_noirq(struct device *dev)
-{
-	struct device_driver *drv = dev->driver;
-	int ret = 0;
-
-	if (!drv)
-		return 0;
-
-	if (drv->pm) {
-		if (drv->pm->restore_noirq)
-			ret = drv->pm->restore_noirq(dev);
-	}
-
-	return ret;
-}
-
-#else /* !CONFIG_HIBERNATION */
-
-#define of_platform_pm_freeze		NULL
-#define of_platform_pm_thaw		NULL
-#define of_platform_pm_poweroff		NULL
-#define of_platform_pm_restore		NULL
-#define of_platform_pm_freeze_noirq	NULL
-#define of_platform_pm_thaw_noirq		NULL
-#define of_platform_pm_poweroff_noirq	NULL
-#define of_platform_pm_restore_noirq	NULL
-
-#endif /* !CONFIG_HIBERNATION */
-
-static struct dev_pm_ops of_platform_dev_pm_ops = {
-	.prepare = of_platform_pm_prepare,
-	.complete = of_platform_pm_complete,
-	.suspend = of_platform_pm_suspend,
-	.resume = of_platform_pm_resume,
-	.freeze = of_platform_pm_freeze,
-	.thaw = of_platform_pm_thaw,
-	.poweroff = of_platform_pm_poweroff,
-	.restore = of_platform_pm_restore,
-	.suspend_noirq = of_platform_pm_suspend_noirq,
-	.resume_noirq = of_platform_pm_resume_noirq,
-	.freeze_noirq = of_platform_pm_freeze_noirq,
-	.thaw_noirq = of_platform_pm_thaw_noirq,
-	.poweroff_noirq = of_platform_pm_poweroff_noirq,
-	.restore_noirq = of_platform_pm_restore_noirq,
-};
-
-#define OF_PLATFORM_PM_OPS_PTR	(&of_platform_dev_pm_ops)
-
-#else /* !CONFIG_PM_SLEEP */
-
-#define OF_PLATFORM_PM_OPS_PTR	NULL
-
-#endif /* !CONFIG_PM_SLEEP */
-
-int of_bus_type_init(struct bus_type *bus, const char *name)
-{
-	bus->name = name;
-	bus->match = of_platform_bus_match;
-	bus->probe = of_platform_device_probe;
-	bus->remove = of_platform_device_remove;
-	bus->shutdown = of_platform_device_shutdown;
-	bus->dev_attrs = of_platform_device_attrs;
-	bus->pm = OF_PLATFORM_PM_OPS_PTR;
-	return bus_register(bus);
-}
-
-int of_register_driver(struct of_platform_driver *drv, struct bus_type *bus)
-{
-	drv->driver.bus = bus;
-
-	/* register with core */
-	return driver_register(&drv->driver);
-}
-EXPORT_SYMBOL(of_register_driver);
-
-void of_unregister_driver(struct of_platform_driver *drv)
-{
-	driver_unregister(&drv->driver);
-}
-EXPORT_SYMBOL(of_unregister_driver);
+EXPORT_SYMBOL(of_platform_bus_probe);
+#endif /* !CONFIG_SPARC */

@@ -63,6 +63,14 @@ struct rtas_t {
 	struct device_node *dev;	/* virtual address pointer */
 };
 
+struct rtas_suspend_me_data {
+	atomic_t working; /* number of cpus accessing this struct */
+	atomic_t done;
+	int token; /* ibm,suspend-me */
+	atomic_t error;
+	struct completion *complete; /* wait on this until working == 0 */
+};
+
 /* RTAS event classes */
 #define RTAS_INTERNAL_ERROR		0x80000000 /* set bit 0 */
 #define RTAS_EPOW_WARNING		0x40000000 /* set bit 1 */
@@ -137,6 +145,9 @@ struct rtas_t {
 #define RTAS_TYPE_PMGM_CONFIG_CHANGE	0x70
 #define RTAS_TYPE_PMGM_SERVICE_PROC	0x71
 
+/* RTAS check-exception vector offset */
+#define RTAS_VECTOR_EXTERNAL_INTERRUPT	0x500
+
 struct rtas_error_log {
 	unsigned long version:8;		/* Architectural version */
 	unsigned long severity:3;		/* Severity level of error */
@@ -147,7 +158,50 @@ struct rtas_error_log {
 	unsigned long target:4;			/* Target of failed operation */
 	unsigned long type:8;			/* General event or error*/
 	unsigned long extended_log_length:32;	/* length in bytes */
-	unsigned char buffer[1];
+	unsigned char buffer[1];		/* Start of extended log */
+						/* Variable length.      */
+};
+
+#define RTAS_V6EXT_LOG_FORMAT_EVENT_LOG	14
+
+#define RTAS_V6EXT_COMPANY_ID_IBM	(('I' << 24) | ('B' << 16) | ('M' << 8))
+
+/* RTAS general extended event log, Version 6. The extended log starts
+ * from "buffer" field of struct rtas_error_log defined above.
+ */
+struct rtas_ext_event_log_v6 {
+	/* Byte 0 */
+	uint32_t log_valid:1;		/* 1:Log valid */
+	uint32_t unrecoverable_error:1;	/* 1:Unrecoverable error */
+	uint32_t recoverable_error:1;	/* 1:recoverable (correctable	*/
+					/*   or successfully retried)	*/
+	uint32_t degraded_operation:1;	/* 1:Unrecoverable err, bypassed*/
+					/*   - degraded operation (e.g.	*/
+					/*   CPU or mem taken off-line)	*/
+	uint32_t predictive_error:1;
+	uint32_t new_log:1;		/* 1:"New" log (Always 1 for	*/
+					/*   data returned from RTAS	*/
+	uint32_t big_endian:1;		/* 1: Big endian */
+	uint32_t :1;			/* reserved */
+	/* Byte 1 */
+	uint32_t :8;			/* reserved */
+	/* Byte 2 */
+	uint32_t powerpc_format:1;	/* Set to 1 (indicating log is	*/
+					/* in PowerPC format		*/
+	uint32_t :3;			/* reserved */
+	uint32_t log_format:4;		/* Log format indicator. Define	*/
+					/* format used for byte 12-2047	*/
+	/* Byte 3 */
+	uint32_t :8;			/* reserved */
+	/* Byte 4-11 */
+	uint8_t reserved[8];		/* reserved */
+	/* Byte 12-15 */
+	uint32_t company_id;		/* Company ID of the company	*/
+					/* that defines the format for	*/
+					/* the vendor specific log type	*/
+	/* Byte 16-end of log */
+	uint8_t vendor_log[1];		/* Start of vendor specific log	*/
+					/* Variable length.		*/
 };
 
 /*
@@ -174,6 +228,9 @@ extern int rtas_set_indicator(int indicator, int index, int new_value);
 extern int rtas_set_indicator_fast(int indicator, int index, int new_value);
 extern void rtas_progress(char *s, unsigned short hex);
 extern void rtas_initialize(void);
+extern int rtas_suspend_cpu(struct rtas_suspend_me_data *data);
+extern int rtas_suspend_last_cpu(struct rtas_suspend_me_data *data);
+extern int rtas_ibm_suspend_me(struct rtas_args *);
 
 struct rtc_time;
 extern unsigned long rtas_get_boot_time(void);

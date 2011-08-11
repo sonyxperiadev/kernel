@@ -34,7 +34,7 @@
 static const char * cdb_byte0_names[] = {
 /* 00-03 */ "Test Unit Ready", "Rezero Unit/Rewind", NULL, "Request Sense",
 /* 04-07 */ "Format Unit/Medium", "Read Block Limits", NULL,
-	    "Reasssign Blocks",
+	    "Reassign Blocks",
 /* 08-0d */ "Read(6)", NULL, "Write(6)", "Seek(6)", NULL, NULL,
 /* 0e-12 */ NULL, "Read Reverse", "Write Filemarks", "Space", "Inquiry",  
 /* 13-16 */ "Verify(6)", "Recover Buffered Data", "Mode Select(6)",
@@ -772,6 +772,7 @@ static const struct error_info additional[] =
 	{0x3802, "Esn - power management class event"},
 	{0x3804, "Esn - media class event"},
 	{0x3806, "Esn - device busy class event"},
+	{0x3807, "Thin Provisioning soft threshold reached"},
 
 	{0x3900, "Saving parameters not supported"},
 
@@ -1404,13 +1405,13 @@ void scsi_print_sense(char *name, struct scsi_cmnd *cmd)
 {
 	struct scsi_sense_hdr sshdr;
 
-	scmd_printk(KERN_INFO, cmd, "");
+	scmd_printk(KERN_INFO, cmd, " ");
 	scsi_decode_sense_buffer(cmd->sense_buffer, SCSI_SENSE_BUFFERSIZE,
 				 &sshdr);
 	scsi_show_sense_hdr(&sshdr);
 	scsi_decode_sense_extras(cmd->sense_buffer, SCSI_SENSE_BUFFERSIZE,
 				 &sshdr);
-	scmd_printk(KERN_INFO, cmd, "");
+	scmd_printk(KERN_INFO, cmd, " ");
 	scsi_show_extd_sense(sshdr.asc, sshdr.ascq);
 }
 EXPORT_SYMBOL(scsi_print_sense);
@@ -1453,7 +1454,7 @@ EXPORT_SYMBOL(scsi_show_result);
 
 void scsi_print_result(struct scsi_cmnd *cmd)
 {
-	scmd_printk(KERN_INFO, cmd, "");
+	scmd_printk(KERN_INFO, cmd, " ");
 	scsi_show_result(cmd->result);
 }
 EXPORT_SYMBOL(scsi_print_result);

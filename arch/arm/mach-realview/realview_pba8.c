@@ -25,6 +25,7 @@
 #include <linux/amba/bus.h>
 #include <linux/amba/pl061.h>
 #include <linux/amba/mmci.h>
+#include <linux/amba/pl022.h>
 #include <linux/io.h>
 
 #include <asm/irq.h>
@@ -114,52 +115,37 @@ static struct pl061_platform_data gpio2_plat_data = {
 	.irq_base	= -1,
 };
 
+static struct pl022_ssp_controller ssp0_plat_data = {
+	.bus_id = 0,
+	.enable_dma = 0,
+	.num_chipselect = 1,
+};
+
 /*
  * RealView PBA8Core AMBA devices
  */
 
 #define GPIO2_IRQ		{ IRQ_PBA8_GPIO2, NO_IRQ }
-#define GPIO2_DMA		{ 0, 0 }
 #define GPIO3_IRQ		{ IRQ_PBA8_GPIO3, NO_IRQ }
-#define GPIO3_DMA		{ 0, 0 }
 #define AACI_IRQ		{ IRQ_PBA8_AACI, NO_IRQ }
-#define AACI_DMA		{ 0x80, 0x81 }
 #define MMCI0_IRQ		{ IRQ_PBA8_MMCI0A, IRQ_PBA8_MMCI0B }
-#define MMCI0_DMA		{ 0x84, 0 }
 #define KMI0_IRQ		{ IRQ_PBA8_KMI0, NO_IRQ }
-#define KMI0_DMA		{ 0, 0 }
 #define KMI1_IRQ		{ IRQ_PBA8_KMI1, NO_IRQ }
-#define KMI1_DMA		{ 0, 0 }
 #define PBA8_SMC_IRQ		{ NO_IRQ, NO_IRQ }
-#define PBA8_SMC_DMA		{ 0, 0 }
 #define MPMC_IRQ		{ NO_IRQ, NO_IRQ }
-#define MPMC_DMA		{ 0, 0 }
 #define PBA8_CLCD_IRQ		{ IRQ_PBA8_CLCD, NO_IRQ }
-#define PBA8_CLCD_DMA		{ 0, 0 }
 #define DMAC_IRQ		{ IRQ_PBA8_DMAC, NO_IRQ }
-#define DMAC_DMA		{ 0, 0 }
 #define SCTL_IRQ		{ NO_IRQ, NO_IRQ }
-#define SCTL_DMA		{ 0, 0 }
 #define PBA8_WATCHDOG_IRQ	{ IRQ_PBA8_WATCHDOG, NO_IRQ }
-#define PBA8_WATCHDOG_DMA	{ 0, 0 }
 #define PBA8_GPIO0_IRQ		{ IRQ_PBA8_GPIO0, NO_IRQ }
-#define PBA8_GPIO0_DMA		{ 0, 0 }
 #define GPIO1_IRQ		{ IRQ_PBA8_GPIO1, NO_IRQ }
-#define GPIO1_DMA		{ 0, 0 }
 #define PBA8_RTC_IRQ		{ IRQ_PBA8_RTC, NO_IRQ }
-#define PBA8_RTC_DMA		{ 0, 0 }
 #define SCI_IRQ			{ IRQ_PBA8_SCI, NO_IRQ }
-#define SCI_DMA			{ 7, 6 }
 #define PBA8_UART0_IRQ		{ IRQ_PBA8_UART0, NO_IRQ }
-#define PBA8_UART0_DMA		{ 15, 14 }
 #define PBA8_UART1_IRQ		{ IRQ_PBA8_UART1, NO_IRQ }
-#define PBA8_UART1_DMA		{ 13, 12 }
 #define PBA8_UART2_IRQ		{ IRQ_PBA8_UART2, NO_IRQ }
-#define PBA8_UART2_DMA		{ 11, 10 }
 #define PBA8_UART3_IRQ		{ IRQ_PBA8_UART3, NO_IRQ }
-#define PBA8_UART3_DMA		{ 0x86, 0x87 }
 #define PBA8_SSP_IRQ		{ IRQ_PBA8_SSP, NO_IRQ }
-#define PBA8_SSP_DMA		{ 9, 8 }
 
 /* FPGA Primecells */
 AMBA_DEVICE(aaci,	"fpga:aaci",	AACI,		NULL);
@@ -180,7 +166,7 @@ AMBA_DEVICE(sci0,	"dev:sci0",	SCI,		NULL);
 AMBA_DEVICE(uart0,	"dev:uart0",	PBA8_UART0,	NULL);
 AMBA_DEVICE(uart1,	"dev:uart1",	PBA8_UART1,	NULL);
 AMBA_DEVICE(uart2,	"dev:uart2",	PBA8_UART2,	NULL);
-AMBA_DEVICE(ssp0,	"dev:ssp0",	PBA8_SSP,	NULL);
+AMBA_DEVICE(ssp0,	"dev:ssp0",	PBA8_SSP,	&ssp0_plat_data);
 
 /* Primecells on the NEC ISSP chip */
 AMBA_DEVICE(clcd,	"issp:clcd",	PBA8_CLCD,	&clcd_plat_data);
@@ -266,9 +252,9 @@ static struct platform_device pmu_device = {
 static void __init gic_init_irq(void)
 {
 	/* ARM PB-A8 on-board GIC */
-	gic_cpu_base_addr = __io_address(REALVIEW_PBA8_GIC_CPU_BASE);
-	gic_dist_init(0, __io_address(REALVIEW_PBA8_GIC_DIST_BASE), IRQ_PBA8_GIC_START);
-	gic_cpu_init(0, __io_address(REALVIEW_PBA8_GIC_CPU_BASE));
+	gic_init(0, IRQ_PBA8_GIC_START,
+		 __io_address(REALVIEW_PBA8_GIC_DIST_BASE),
+		 __io_address(REALVIEW_PBA8_GIC_CPU_BASE));
 }
 
 static void __init realview_pba8_timer_init(void)
@@ -324,11 +310,10 @@ static void __init realview_pba8_init(void)
 
 MACHINE_START(REALVIEW_PBA8, "ARM-RealView PB-A8")
 	/* Maintainer: ARM Ltd/Deep Blue Solutions Ltd */
-	.phys_io	= REALVIEW_PBA8_UART0_BASE & SECTION_MASK,
-	.io_pg_offst	= (IO_ADDRESS(REALVIEW_PBA8_UART0_BASE) >> 18) & 0xfffc,
-	.boot_params	= PHYS_OFFSET + 0x00000100,
+	.boot_params	= PLAT_PHYS_OFFSET + 0x00000100,
 	.fixup		= realview_fixup,
 	.map_io		= realview_pba8_map_io,
+	.init_early	= realview_init_early,
 	.init_irq	= gic_init_irq,
 	.timer		= &realview_pba8_timer,
 	.init_machine	= realview_pba8_init,

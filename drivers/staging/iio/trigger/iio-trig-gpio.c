@@ -42,20 +42,10 @@ struct iio_gpio_trigger_info {
 
 static irqreturn_t iio_gpio_trigger_poll(int irq, void *private)
 {
-	iio_trigger_poll(private);
+	/* Timestamp not currently provided */
+	iio_trigger_poll(private, 0);
 	return IRQ_HANDLED;
 }
-
-static DEVICE_ATTR(name, S_IRUGO, iio_trigger_read_name, NULL);
-
-static struct attribute *iio_gpio_trigger_attrs[] = {
-	&dev_attr_name.attr,
-	NULL,
-};
-
-static const struct attribute_group iio_gpio_trigger_attr_group = {
-	.attrs = iio_gpio_trigger_attrs,
-};
 
 static int iio_gpio_trigger_probe(struct platform_device *pdev)
 {
@@ -78,7 +68,7 @@ static int iio_gpio_trigger_probe(struct platform_device *pdev)
 
 		for (irq = irq_res->start; irq <= irq_res->end; irq++) {
 
-			trig = iio_allocate_trigger();
+			trig = iio_allocate_trigger("irqtrig%d", irq);
 			if (!trig) {
 				ret = -ENOMEM;
 				goto error_free_completed_registrations;
@@ -89,26 +79,15 @@ static int iio_gpio_trigger_probe(struct platform_device *pdev)
 				ret = -ENOMEM;
 				goto error_put_trigger;
 			}
-			trig->control_attrs = &iio_gpio_trigger_attr_group;
 			trig->private_data = trig_info;
 			trig_info->irq = irq;
 			trig->owner = THIS_MODULE;
-			trig->name = kmalloc(IIO_TRIGGER_NAME_LENGTH,
-					GFP_KERNEL);
-			if (!trig->name) {
-				ret = -ENOMEM;
-				goto error_free_trig_info;
-			}
-			snprintf((char *)trig->name,
-				 IIO_TRIGGER_NAME_LENGTH,
-				 "irqtrig%d", irq);
-
 			ret = request_irq(irq, iio_gpio_trigger_poll,
 					  irqflags, trig->name, trig);
 			if (ret) {
 				dev_err(&pdev->dev,
 					"request IRQ-%d failed", irq);
-				goto error_free_name;
+				goto error_free_trig_info;
 			}
 
 			ret = iio_trigger_register(trig);
@@ -128,8 +107,6 @@ static int iio_gpio_trigger_probe(struct platform_device *pdev)
 /* First clean up the partly allocated trigger */
 error_release_irq:
 	free_irq(irq, trig);
-error_free_name:
-	kfree(trig->name);
 error_free_trig_info:
 	kfree(trig_info);
 error_put_trigger:
@@ -142,7 +119,6 @@ error_free_completed_registrations:
 				 alloc_list) {
 		trig_info = trig->private_data;
 		free_irq(gpio_to_irq(trig_info->irq), trig);
-		kfree(trig->name);
 		kfree(trig_info);
 		iio_trigger_unregister(trig);
 	}
@@ -163,7 +139,6 @@ static int iio_gpio_trigger_remove(struct platform_device *pdev)
 		trig_info = trig->private_data;
 		iio_trigger_unregister(trig);
 		free_irq(trig_info->irq, trig);
-		kfree(trig->name);
 		kfree(trig_info);
 		iio_put_trigger(trig);
 	}

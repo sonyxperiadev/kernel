@@ -43,7 +43,7 @@ struct pmi_data {
 	struct mutex		msg_mutex;
 	pmi_message_t		msg;
 	struct completion	*completion;
-	struct of_device	*dev;
+	struct platform_device	*dev;
 	int			irq;
 	u8 __iomem		*pmi_reg;
 	struct work_struct	work;
@@ -114,15 +114,14 @@ static void pmi_notify_handlers(struct work_struct *work)
 
 	spin_lock(&data->handler_spinlock);
 	list_for_each_entry(handler, &data->handler, node) {
-		pr_debug(KERN_INFO "pmi: notifying handler %p\n", handler);
+		pr_debug("pmi: notifying handler %p\n", handler);
 		if (handler->type == data->msg.type)
 			handler->handle_pmi_message(data->msg);
 	}
 	spin_unlock(&data->handler_spinlock);
 }
 
-static int pmi_of_probe(struct of_device *dev,
-			const struct of_device_id *match)
+static int pmi_of_probe(struct platform_device *dev)
 {
 	struct device_node *np = dev->dev.of_node;
 	int rc;
@@ -185,7 +184,7 @@ out:
 	return rc;
 }
 
-static int pmi_of_remove(struct of_device *dev)
+static int pmi_of_remove(struct platform_device *dev)
 {
 	struct pmi_handler *handler, *tmp;
 
@@ -205,7 +204,7 @@ static int pmi_of_remove(struct of_device *dev)
 	return 0;
 }
 
-static struct of_platform_driver pmi_of_platform_driver = {
+static struct platform_driver pmi_of_platform_driver = {
 	.probe		= pmi_of_probe,
 	.remove		= pmi_of_remove,
 	.driver = {
@@ -217,13 +216,13 @@ static struct of_platform_driver pmi_of_platform_driver = {
 
 static int __init pmi_module_init(void)
 {
-	return of_register_platform_driver(&pmi_of_platform_driver);
+	return platform_driver_register(&pmi_of_platform_driver);
 }
 module_init(pmi_module_init);
 
 static void __exit pmi_module_exit(void)
 {
-	of_unregister_platform_driver(&pmi_of_platform_driver);
+	platform_driver_unregister(&pmi_of_platform_driver);
 }
 module_exit(pmi_module_exit);
 

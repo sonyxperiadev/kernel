@@ -97,7 +97,18 @@ static struct comedi_driver driver_pcm3724 = {
 	.offset = sizeof(struct pcm3724_board),
 };
 
-COMEDI_INITCLEANUP(driver_pcm3724);
+static int __init driver_pcm3724_init_module(void)
+{
+	return comedi_driver_register(&driver_pcm3724);
+}
+
+static void __exit driver_pcm3724_cleanup_module(void)
+{
+	comedi_driver_unregister(&driver_pcm3724);
+}
+
+module_init(driver_pcm3724_init_module);
+module_exit(driver_pcm3724_cleanup_module);
 
 /* (setq c-basic-offset 8) */
 
@@ -184,7 +195,7 @@ static void enable_chan(struct comedi_device *dev, struct comedi_subdevice *s,
 	struct priv_pcm3724 *priv;
 
 	gatecfg = 0;
-	priv = (struct priv_pcm3724 *)(dev->private);
+	priv = dev->private;
 
 	mask = 1 << CR_CHAN(chanspec);
 	if (s == dev->subdevices)	/*  subdev 0 */
@@ -290,7 +301,7 @@ static int pcm3724_attach(struct comedi_device *dev,
 		subdev_8255_init(dev, dev->subdevices + i, subdev_8255_cb,
 				 (unsigned long)(dev->iobase + SIZE_8255 * i));
 		((dev->subdevices) + i)->insn_config = subdev_3724_insn_config;
-	};
+	}
 	return 0;
 }
 
@@ -307,3 +318,7 @@ static int pcm3724_detach(struct comedi_device *dev)
 
 	return 0;
 }
+
+MODULE_AUTHOR("Comedi http://www.comedi.org");
+MODULE_DESCRIPTION("Comedi low-level driver");
+MODULE_LICENSE("GPL");

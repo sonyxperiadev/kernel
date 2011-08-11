@@ -29,6 +29,7 @@
 
 #include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/of_address.h>
 
 /**
  * ehci_xilinx_of_setup - Initialize the device for ehci_reset()
@@ -117,6 +118,7 @@ static const struct hc_driver ehci_xilinx_of_hc_driver = {
 	.urb_enqueue		= ehci_urb_enqueue,
 	.urb_dequeue		= ehci_urb_dequeue,
 	.endpoint_disable	= ehci_endpoint_disable,
+	.endpoint_reset		= ehci_endpoint_reset,
 
 	/*
 	 * scheduling support
@@ -140,16 +142,14 @@ static const struct hc_driver ehci_xilinx_of_hc_driver = {
 
 /**
  * ehci_hcd_xilinx_of_probe - Probe method for the USB host controller
- * @op:		pointer to the of_device to which the host controller bound
- * @match:	pointer to of_device_id structure, not used
+ * @op:		pointer to the platform_device bound to the host controller
  *
  * This function requests resources and sets up appropriate properties for the
  * host controller. Because the Xilinx USB host controller can be configured
  * as HS only or HS/FS only, it checks the configuration in the device tree
  * entry, and sets an appropriate value for hcd->has_tt.
  */
-static int __devinit
-ehci_hcd_xilinx_of_probe(struct of_device *op, const struct of_device_id *match)
+static int __devinit ehci_hcd_xilinx_of_probe(struct platform_device *op)
 {
 	struct device_node *dn = op->dev.of_node;
 	struct usb_hcd *hcd;
@@ -220,7 +220,7 @@ ehci_hcd_xilinx_of_probe(struct of_device *op, const struct of_device_id *match)
 	 */
 	ehci->caps = hcd->regs + 0x100;
 	ehci->regs = hcd->regs + 0x100 +
-			HC_LENGTH(ehci_readl(ehci, &ehci->caps->hc_capbase));
+		HC_LENGTH(ehci, ehci_readl(ehci, &ehci->caps->hc_capbase));
 
 	/* cache this readonly data; minimize chip reads */
 	ehci->hcs_params = ehci_readl(ehci, &ehci->caps->hcs_params);
@@ -242,12 +242,12 @@ err_rmr:
 
 /**
  * ehci_hcd_xilinx_of_remove - shutdown hcd and release resources
- * @op:		pointer to of_device structure that is to be removed
+ * @op:		pointer to platform_device structure that is to be removed
  *
  * Remove the hcd structure, and release resources that has been requested
  * during probe.
  */
-static int ehci_hcd_xilinx_of_remove(struct of_device *op)
+static int ehci_hcd_xilinx_of_remove(struct platform_device *op)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(&op->dev);
 	dev_set_drvdata(&op->dev, NULL);
@@ -266,11 +266,11 @@ static int ehci_hcd_xilinx_of_remove(struct of_device *op)
 
 /**
  * ehci_hcd_xilinx_of_shutdown - shutdown the hcd
- * @op:		pointer to of_device structure that is to be removed
+ * @op:		pointer to platform_device structure that is to be removed
  *
  * Properly shutdown the hcd, call driver's shutdown routine.
  */
-static int ehci_hcd_xilinx_of_shutdown(struct of_device *op)
+static int ehci_hcd_xilinx_of_shutdown(struct platform_device *op)
 {
 	struct usb_hcd *hcd = dev_get_drvdata(&op->dev);
 
@@ -287,7 +287,7 @@ static const struct of_device_id ehci_hcd_xilinx_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, ehci_hcd_xilinx_of_match);
 
-static struct of_platform_driver ehci_hcd_xilinx_of_driver = {
+static struct platform_driver ehci_hcd_xilinx_of_driver = {
 	.probe		= ehci_hcd_xilinx_of_probe,
 	.remove		= ehci_hcd_xilinx_of_remove,
 	.shutdown	= ehci_hcd_xilinx_of_shutdown,

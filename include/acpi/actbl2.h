@@ -1,11 +1,11 @@
 /******************************************************************************
  *
- * Name: actbl2.h - ACPI Specification Revision 2.0 Tables
+ * Name: actbl2.h - ACPI Table Definitions (tables not in ACPI spec)
  *
  *****************************************************************************/
 
 /*
- * Copyright (C) 2000 - 2010, Intel Corp.
+ * Copyright (C) 2000 - 2011, Intel Corp.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -77,7 +77,17 @@
 #define ACPI_SIG_UEFI           "UEFI"	/* Uefi Boot Optimization Table */
 #define ACPI_SIG_WAET           "WAET"	/* Windows ACPI Emulated devices Table */
 #define ACPI_SIG_WDAT           "WDAT"	/* Watchdog Action Table */
+#define ACPI_SIG_WDDT           "WDDT"	/* Watchdog Timer Description Table */
 #define ACPI_SIG_WDRT           "WDRT"	/* Watchdog Resource Table */
+
+#ifdef ACPI_UNDEFINED_TABLES
+/*
+ * These tables have been seen in the field, but no definition has been found
+ */
+#define ACPI_SIG_ATKG           "ATKG"
+#define ACPI_SIG_GSCI           "GSCI"	/* GMCH SCI table */
+#define ACPI_SIG_IEIT           "IEIT"
+#endif
 
 /*
  * All tables must be byte-packed to match the ACPI specification, since
@@ -706,6 +716,68 @@ struct acpi_table_mchi {
 
 /*******************************************************************************
  *
+ * SLIC - Software Licensing Description Table
+ *        Version 1
+ *
+ * Conforms to "OEM Activation 2.0 for Windows Vista Operating Systems",
+ * Copyright 2006
+ *
+ ******************************************************************************/
+
+/* Basic SLIC table is only the common ACPI header */
+
+struct acpi_table_slic {
+	struct acpi_table_header header;	/* Common ACPI table header */
+};
+
+/* Common SLIC subtable header */
+
+struct acpi_slic_header {
+	u32 type;
+	u32 length;
+};
+
+/* Values for Type field above */
+
+enum acpi_slic_type {
+	ACPI_SLIC_TYPE_PUBLIC_KEY = 0,
+	ACPI_SLIC_TYPE_WINDOWS_MARKER = 1,
+	ACPI_SLIC_TYPE_RESERVED = 2	/* 2 and greater are reserved */
+};
+
+/*
+ * SLIC Sub-tables, correspond to Type in struct acpi_slic_header
+ */
+
+/* 0: Public Key Structure */
+
+struct acpi_slic_key {
+	struct acpi_slic_header header;
+	u8 key_type;
+	u8 version;
+	u16 reserved;
+	u32 algorithm;
+	char magic[4];
+	u32 bit_length;
+	u32 exponent;
+	u8 modulus[128];
+};
+
+/* 1: Windows Marker Structure */
+
+struct acpi_slic_marker {
+	struct acpi_slic_header header;
+	u32 version;
+	char oem_id[ACPI_OEM_ID_SIZE];	/* ASCII OEM identification */
+	char oem_table_id[ACPI_OEM_TABLE_ID_SIZE];	/* ASCII OEM table identification */
+	char windows_flag[8];
+	u32 slic_version;
+	u8 reserved[16];
+	u8 signature[128];
+};
+
+/*******************************************************************************
+ *
  * SPCR - Serial Port Console Redirection table
  *        Version 1
  *
@@ -906,6 +978,44 @@ enum acpi_wdat_instructions {
 	ACPI_WDAT_INSTRUCTION_RESERVED = 4,	/* 4 and greater are reserved */
 	ACPI_WDAT_PRESERVE_REGISTER = 0x80	/* Except for this value */
 };
+
+/*******************************************************************************
+ *
+ * WDDT - Watchdog Descriptor Table
+ *        Version 1
+ *
+ * Conforms to "Using the Intel ICH Family Watchdog Timer (WDT)",
+ * Version 001, September 2002
+ *
+ ******************************************************************************/
+
+struct acpi_table_wddt {
+	struct acpi_table_header header;	/* Common ACPI table header */
+	u16 spec_version;
+	u16 table_version;
+	u16 pci_vendor_id;
+	struct acpi_generic_address address;
+	u16 max_count;		/* Maximum counter value supported */
+	u16 min_count;		/* Minimum counter value supported */
+	u16 period;
+	u16 status;
+	u16 capability;
+};
+
+/* Flags for Status field above */
+
+#define ACPI_WDDT_AVAILABLE     (1)
+#define ACPI_WDDT_ACTIVE        (1<<1)
+#define ACPI_WDDT_TCO_OS_OWNED  (1<<2)
+#define ACPI_WDDT_USER_RESET    (1<<11)
+#define ACPI_WDDT_WDT_RESET     (1<<12)
+#define ACPI_WDDT_POWER_FAIL    (1<<13)
+#define ACPI_WDDT_UNKNOWN_RESET (1<<14)
+
+/* Flags for Capability field above */
+
+#define ACPI_WDDT_AUTO_RESET    (1)
+#define ACPI_WDDT_ALERT_SUPPORT (1<<1)
 
 /*******************************************************************************
  *

@@ -151,42 +151,6 @@ struct edmacc_param {
 #define DA830_DMACH2EVENT_MAP1		0x00000000u
 #define DA830_EDMA_ARM_OWN		0x30FFCCFFu
 
-/* DA830 specific EDMA3 Events Information */
-enum DA830_edma_ch {
-	DA830_DMACH_MCASP0_RX,
-	DA830_DMACH_MCASP0_TX,
-	DA830_DMACH_MCASP1_RX,
-	DA830_DMACH_MCASP1_TX,
-	DA830_DMACH_MCASP2_RX,
-	DA830_DMACH_MCASP2_TX,
-	DA830_DMACH_GPIO_BNK0INT,
-	DA830_DMACH_GPIO_BNK1INT,
-	DA830_DMACH_UART0_RX,
-	DA830_DMACH_UART0_TX,
-	DA830_DMACH_TMR64P0_EVTOUT12,
-	DA830_DMACH_TMR64P0_EVTOUT34,
-	DA830_DMACH_UART1_RX,
-	DA830_DMACH_UART1_TX,
-	DA830_DMACH_SPI0_RX,
-	DA830_DMACH_SPI0_TX,
-	DA830_DMACH_MMCSD_RX,
-	DA830_DMACH_MMCSD_TX,
-	DA830_DMACH_SPI1_RX,
-	DA830_DMACH_SPI1_TX,
-	DA830_DMACH_DMAX_EVTOUT6,
-	DA830_DMACH_DMAX_EVTOUT7,
-	DA830_DMACH_GPIO_BNK2INT,
-	DA830_DMACH_GPIO_BNK3INT,
-	DA830_DMACH_I2C0_RX,
-	DA830_DMACH_I2C0_TX,
-	DA830_DMACH_I2C1_RX,
-	DA830_DMACH_I2C1_TX,
-	DA830_DMACH_GPIO_BNK4INT,
-	DA830_DMACH_GPIO_BNK5INT,
-	DA830_DMACH_UART2_RX,
-	DA830_DMACH_UART2_TX
-};
-
 /*ch_status paramater of callback function possible values*/
 #define DMA_COMPLETE 1
 #define DMA_CC_ERROR 2
@@ -230,6 +194,8 @@ enum sync_dimension {
 #define EDMA_CONT_PARAMS_FIXED_EXACT	 1002
 #define EDMA_CONT_PARAMS_FIXED_NOT_EXACT 1003
 
+#define EDMA_MAX_CC               2
+
 /* alloc/free DMA channels and their dedicated parameter RAM slots */
 int edma_alloc_channel(int channel,
 	void (*callback)(unsigned channel, u16 ch_status, void *data),
@@ -269,6 +235,12 @@ void edma_clear_event(unsigned channel);
 void edma_pause(unsigned channel);
 void edma_resume(unsigned channel);
 
+struct edma_rsv_info {
+
+	const s16	(*rsv_chans)[2];
+	const s16	(*rsv_slots)[2];
+};
+
 /* platform_data for EDMA driver */
 struct edma_soc_info {
 
@@ -279,6 +251,9 @@ struct edma_soc_info {
 	unsigned	n_tc;
 	unsigned	n_cc;
 	enum dma_event_q	default_queue;
+
+	/* Resource reservation for other cores */
+	struct edma_rsv_info	*rsv;
 
 	const s8	(*queue_tc_mapping)[2];
 	const s8	(*queue_priority_mapping)[2];

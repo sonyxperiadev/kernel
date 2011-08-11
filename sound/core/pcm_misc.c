@@ -35,7 +35,10 @@ struct pcm_format_data {
 	unsigned char silence[8];	/* silence data to fill */
 };
 
-static struct pcm_format_data pcm_formats[SNDRV_PCM_FORMAT_LAST+1] = {
+/* we do lots of calculations on snd_pcm_format_t; shut up sparse */
+#define INT	__force int
+
+static struct pcm_format_data pcm_formats[(INT)SNDRV_PCM_FORMAT_LAST+1] = {
 	[SNDRV_PCM_FORMAT_S8] = {
 		.width = 8, .phys = 8, .le = -1, .signd = 1,
 		.silence = {},
@@ -128,6 +131,14 @@ static struct pcm_format_data pcm_formats[SNDRV_PCM_FORMAT_LAST+1] = {
 		.width = 4, .phys = 4, .le = -1, .signd = -1,
 		.silence = {},
 	},
+	[SNDRV_PCM_FORMAT_G723_24] = {
+		.width = 3, .phys = 3, .le = -1, .signd = -1,
+		.silence = {},
+	},
+	[SNDRV_PCM_FORMAT_G723_40] = {
+		.width = 5, .phys = 5, .le = -1, .signd = -1,
+		.silence = {},
+	},
 	/* FIXME: the following three formats are not defined properly yet */
 	[SNDRV_PCM_FORMAT_MPEG] = {
 		.le = -1, .signd = -1,
@@ -186,6 +197,14 @@ static struct pcm_format_data pcm_formats[SNDRV_PCM_FORMAT_LAST+1] = {
 		.width = 18, .phys = 24, .le = 0, .signd = 0,
 		.silence = { 0x02, 0x00, 0x00 },
 	},
+	[SNDRV_PCM_FORMAT_G723_24_1B] = {
+		.width = 3, .phys = 8, .le = -1, .signd = -1,
+		.silence = {},
+	},
+	[SNDRV_PCM_FORMAT_G723_40_1B] = {
+		.width = 5, .phys = 8, .le = -1, .signd = -1,
+		.silence = {},
+	},
 };
 
 
@@ -199,9 +218,9 @@ static struct pcm_format_data pcm_formats[SNDRV_PCM_FORMAT_LAST+1] = {
 int snd_pcm_format_signed(snd_pcm_format_t format)
 {
 	int val;
-	if (format < 0 || format > SNDRV_PCM_FORMAT_LAST)
+	if ((INT)format < 0 || (INT)format > (INT)SNDRV_PCM_FORMAT_LAST)
 		return -EINVAL;
-	if ((val = pcm_formats[format].signd) < 0)
+	if ((val = pcm_formats[(INT)format].signd) < 0)
 		return -EINVAL;
 	return val;
 }
@@ -250,9 +269,9 @@ EXPORT_SYMBOL(snd_pcm_format_linear);
 int snd_pcm_format_little_endian(snd_pcm_format_t format)
 {
 	int val;
-	if (format < 0 || format > SNDRV_PCM_FORMAT_LAST)
+	if ((INT)format < 0 || (INT)format > (INT)SNDRV_PCM_FORMAT_LAST)
 		return -EINVAL;
-	if ((val = pcm_formats[format].le) < 0)
+	if ((val = pcm_formats[(INT)format].le) < 0)
 		return -EINVAL;
 	return val;
 }
@@ -288,9 +307,9 @@ EXPORT_SYMBOL(snd_pcm_format_big_endian);
 int snd_pcm_format_width(snd_pcm_format_t format)
 {
 	int val;
-	if (format < 0 || format > SNDRV_PCM_FORMAT_LAST)
+	if ((INT)format < 0 || (INT)format > (INT)SNDRV_PCM_FORMAT_LAST)
 		return -EINVAL;
-	if ((val = pcm_formats[format].width) == 0)
+	if ((val = pcm_formats[(INT)format].width) == 0)
 		return -EINVAL;
 	return val;
 }
@@ -307,9 +326,9 @@ EXPORT_SYMBOL(snd_pcm_format_width);
 int snd_pcm_format_physical_width(snd_pcm_format_t format)
 {
 	int val;
-	if (format < 0 || format > SNDRV_PCM_FORMAT_LAST)
+	if ((INT)format < 0 || (INT)format > (INT)SNDRV_PCM_FORMAT_LAST)
 		return -EINVAL;
-	if ((val = pcm_formats[format].phys) == 0)
+	if ((val = pcm_formats[(INT)format].phys) == 0)
 		return -EINVAL;
 	return val;
 }
@@ -342,11 +361,11 @@ EXPORT_SYMBOL(snd_pcm_format_size);
  */
 const unsigned char *snd_pcm_format_silence_64(snd_pcm_format_t format)
 {
-	if (format < 0 || format > SNDRV_PCM_FORMAT_LAST)
+	if ((INT)format < 0 || (INT)format > (INT)SNDRV_PCM_FORMAT_LAST)
 		return NULL;
-	if (! pcm_formats[format].phys)
+	if (! pcm_formats[(INT)format].phys)
 		return NULL;
-	return pcm_formats[format].silence;
+	return pcm_formats[(INT)format].silence;
 }
 
 EXPORT_SYMBOL(snd_pcm_format_silence_64);
@@ -366,16 +385,16 @@ int snd_pcm_format_set_silence(snd_pcm_format_t format, void *data, unsigned int
 	int width;
 	unsigned char *dst, *pat;
 
-	if (format < 0 || format > SNDRV_PCM_FORMAT_LAST)
+	if ((INT)format < 0 || (INT)format > (INT)SNDRV_PCM_FORMAT_LAST)
 		return -EINVAL;
 	if (samples == 0)
 		return 0;
-	width = pcm_formats[format].phys; /* physical width */
-	pat = pcm_formats[format].silence;
+	width = pcm_formats[(INT)format].phys; /* physical width */
+	pat = pcm_formats[(INT)format].silence;
 	if (! width)
 		return -EINVAL;
 	/* signed or 1 byte data */
-	if (pcm_formats[format].signd == 1 || width <= 8) {
+	if (pcm_formats[(INT)format].signd == 1 || width <= 8) {
 		unsigned int bytes = samples * width / 8;
 		memset(data, *pat, bytes);
 		return 0;

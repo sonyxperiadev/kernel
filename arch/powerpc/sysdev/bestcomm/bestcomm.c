@@ -365,8 +365,7 @@ bcom_engine_cleanup(void)
 /* OF platform driver                                                       */
 /* ======================================================================== */
 
-static int __devinit
-mpc52xx_bcom_probe(struct of_device *op, const struct of_device_id *match)
+static int __devinit mpc52xx_bcom_probe(struct platform_device *op)
 {
 	struct device_node *ofn_sram;
 	struct resource res_bcom;
@@ -461,8 +460,7 @@ error_ofput:
 }
 
 
-static int
-mpc52xx_bcom_remove(struct of_device *op)
+static int mpc52xx_bcom_remove(struct platform_device *op)
 {
 	/* Clean up the engine */
 	bcom_engine_cleanup();
@@ -493,7 +491,7 @@ static struct of_device_id mpc52xx_bcom_of_match[] = {
 MODULE_DEVICE_TABLE(of, mpc52xx_bcom_of_match);
 
 
-static struct of_platform_driver mpc52xx_bcom_of_platform_driver = {
+static struct platform_driver mpc52xx_bcom_of_platform_driver = {
 	.probe		= mpc52xx_bcom_probe,
 	.remove		= mpc52xx_bcom_remove,
 	.driver = {
@@ -511,13 +509,13 @@ static struct of_platform_driver mpc52xx_bcom_of_platform_driver = {
 static int __init
 mpc52xx_bcom_init(void)
 {
-	return of_register_platform_driver(&mpc52xx_bcom_of_platform_driver);
+	return platform_driver_register(&mpc52xx_bcom_of_platform_driver);
 }
 
 static void __exit
 mpc52xx_bcom_exit(void)
 {
-	of_unregister_platform_driver(&mpc52xx_bcom_of_platform_driver);
+	platform_driver_unregister(&mpc52xx_bcom_of_platform_driver);
 }
 
 /* If we're not a module, we must make sure everything is setup before  */

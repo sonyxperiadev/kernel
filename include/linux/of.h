@@ -23,8 +23,6 @@
 
 #include <asm/byteorder.h>
 
-#ifdef CONFIG_OF
-
 typedef u32 phandle;
 typedef u32 ihandle;
 
@@ -65,10 +63,22 @@ struct device_node {
 #endif
 };
 
+#ifdef CONFIG_OF
+
 /* Pointer for first entry in chain of all nodes. */
 extern struct device_node *allnodes;
 extern struct device_node *of_chosen;
 extern rwlock_t devtree_lock;
+
+static inline bool of_have_populated_dt(void)
+{
+	return allnodes != NULL;
+}
+
+static inline bool of_node_is_root(const struct device_node *node)
+{
+	return node && (node->parent == NULL);
+}
 
 static inline int of_node_check_flag(struct device_node *n, unsigned long flag)
 {
@@ -98,7 +108,7 @@ extern void of_node_put(struct device_node *node);
 #endif
 
 /*
- * OF address retreival & translation
+ * OF address retrieval & translation
  */
 
 /* Helper to read a big number; size is in cells (not bytes) */
@@ -140,6 +150,11 @@ static inline unsigned long of_read_ulong(const __be32 *cell, int size)
 #define OF_MARK_DYNAMIC(x) set_bit(OF_DYNAMIC, &x->_flags)
 
 #define OF_BAD_ADDR	((u64)-1)
+
+#ifndef of_node_to_nid
+static inline int of_node_to_nid(struct device_node *np) { return -1; }
+#define of_node_to_nid of_node_to_nid
+#endif
 
 extern struct device_node *of_find_node_by_name(struct device_node *from,
 	const char *name);
@@ -211,6 +226,13 @@ extern int prom_update_property(struct device_node *np,
 extern void of_attach_node(struct device_node *);
 extern void of_detach_node(struct device_node *);
 #endif
+
+#else
+
+static inline bool of_have_populated_dt(void)
+{
+	return false;
+}
 
 #endif /* CONFIG_OF */
 #endif /* _LINUX_OF_H */

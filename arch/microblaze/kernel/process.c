@@ -76,8 +76,11 @@ __setup("hlt", hlt_setup);
 void default_idle(void)
 {
 	if (likely(hlt_counter)) {
-		while (!need_resched())
-			cpu_relax();
+		local_irq_disable();
+		stop_critical_timings();
+		cpu_relax();
+		start_critical_timings();
+		local_irq_enable();
 	} else {
 		clear_thread_flag(TIF_POLLING_NRFLAG);
 		smp_mb__after_clear_bit();
@@ -156,7 +159,7 @@ int copy_thread(unsigned long clone_flags, unsigned long usp,
 	}
 
 	/* FIXME STATE_SAVE_PT_OFFSET; */
-	ti->cpu_context.r1  = (unsigned long)childregs - STATE_SAVE_ARG_SPACE;
+	ti->cpu_context.r1  = (unsigned long)childregs;
 	/* we should consider the fact that childregs is a copy of the parent
 	 * regs which were saved immediately after entering the kernel state
 	 * before enabling VM. This MSR will be restored in switch_to and

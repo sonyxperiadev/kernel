@@ -86,8 +86,8 @@
 
 #ifdef CONFIG_QUOTA
 /* Amount of blocks needed for quota update - we know that the structure was
- * allocated so we need to update only inode+data */
-#define EXT4_QUOTA_TRANS_BLOCKS(sb) (test_opt(sb, QUOTA) ? 2 : 0)
+ * allocated so we need to update only data block */
+#define EXT4_QUOTA_TRANS_BLOCKS(sb) (test_opt(sb, QUOTA) ? 1 : 0)
 /* Amount of blocks needed for quota insert/delete - we do some block writes
  * but inode, sb and group updates are done only once */
 #define EXT4_QUOTA_INIT_BLOCKS(sb) (test_opt(sb, QUOTA) ? (DQUOT_INIT_ALLOC*\
@@ -122,39 +122,42 @@ int ext4_mark_inode_dirty(handle_t *handle, struct inode *inode);
 /*
  * Wrapper functions with which ext4 calls into JBD.
  */
-void ext4_journal_abort_handle(const char *caller, const char *err_fn,
+void ext4_journal_abort_handle(const char *caller, unsigned int line,
+			       const char *err_fn,
 		struct buffer_head *bh, handle_t *handle, int err);
 
-int __ext4_journal_get_undo_access(const char *where, handle_t *handle,
-				struct buffer_head *bh);
+int __ext4_journal_get_write_access(const char *where, unsigned int line,
+				    handle_t *handle, struct buffer_head *bh);
 
-int __ext4_journal_get_write_access(const char *where, handle_t *handle,
-				struct buffer_head *bh);
+int __ext4_forget(const char *where, unsigned int line, handle_t *handle,
+		  int is_metadata, struct inode *inode,
+		  struct buffer_head *bh, ext4_fsblk_t blocknr);
 
-int __ext4_forget(const char *where, handle_t *handle, int is_metadata,
-		  struct inode *inode, struct buffer_head *bh,
-		  ext4_fsblk_t blocknr);
-
-int __ext4_journal_get_create_access(const char *where,
+int __ext4_journal_get_create_access(const char *where, unsigned int line,
 				handle_t *handle, struct buffer_head *bh);
 
-int __ext4_handle_dirty_metadata(const char *where, handle_t *handle,
-				 struct inode *inode, struct buffer_head *bh);
+int __ext4_handle_dirty_metadata(const char *where, unsigned int line,
+				 handle_t *handle, struct inode *inode,
+				 struct buffer_head *bh);
 
-#define ext4_journal_get_undo_access(handle, bh) \
-	__ext4_journal_get_undo_access(__func__, (handle), (bh))
+int __ext4_handle_dirty_super(const char *where, unsigned int line,
+			      handle_t *handle, struct super_block *sb);
+
 #define ext4_journal_get_write_access(handle, bh) \
-	__ext4_journal_get_write_access(__func__, (handle), (bh))
+	__ext4_journal_get_write_access(__func__, __LINE__, (handle), (bh))
 #define ext4_forget(handle, is_metadata, inode, bh, block_nr) \
-	__ext4_forget(__func__, (handle), (is_metadata), (inode), (bh),\
-		      (block_nr))
+	__ext4_forget(__func__, __LINE__, (handle), (is_metadata), (inode), \
+		      (bh), (block_nr))
 #define ext4_journal_get_create_access(handle, bh) \
-	__ext4_journal_get_create_access(__func__, (handle), (bh))
+	__ext4_journal_get_create_access(__func__, __LINE__, (handle), (bh))
 #define ext4_handle_dirty_metadata(handle, inode, bh) \
-	__ext4_handle_dirty_metadata(__func__, (handle), (inode), (bh))
+	__ext4_handle_dirty_metadata(__func__, __LINE__, (handle), (inode), \
+				     (bh))
+#define ext4_handle_dirty_super(handle, sb) \
+	__ext4_handle_dirty_super(__func__, __LINE__, (handle), (sb))
 
 handle_t *ext4_journal_start_sb(struct super_block *sb, int nblocks);
-int __ext4_journal_stop(const char *where, handle_t *handle);
+int __ext4_journal_stop(const char *where, unsigned int line, handle_t *handle);
 
 #define EXT4_NOJOURNAL_MAX_REF_COUNT ((unsigned long) 4096)
 
@@ -194,20 +197,13 @@ static inline int ext4_handle_has_enough_credits(handle_t *handle, int needed)
 	return 1;
 }
 
-static inline void ext4_journal_release_buffer(handle_t *handle,
-						struct buffer_head *bh)
-{
-	if (ext4_handle_valid(handle))
-		jbd2_journal_release_buffer(handle, bh);
-}
-
 static inline handle_t *ext4_journal_start(struct inode *inode, int nblocks)
 {
 	return ext4_journal_start_sb(inode->i_sb, nblocks);
 }
 
 #define ext4_journal_stop(handle) \
-	__ext4_journal_stop(__func__, (handle))
+	__ext4_journal_stop(__func__, __LINE__, (handle))
 
 static inline handle_t *ext4_journal_current_handle(void)
 {
@@ -245,7 +241,7 @@ static inline int ext4_journal_force_commit(journal_t *journal)
 static inline int ext4_jbd2_file_inode(handle_t *handle, struct inode *inode)
 {
 	if (ext4_handle_valid(handle))
-		return jbd2_journal_file_inode(handle, &EXT4_I(inode)->jinode);
+		return jbd2_journal_file_inode(handle, EXT4_I(inode)->jinode);
 	return 0;
 }
 
@@ -308,16 +304,14 @@ static inline int ext4_should_writeback_data(struct inode *inode)
  * This function controls whether or not we should try to go down the
  * dioread_nolock code paths, which makes it safe to avoid taking
  * i_mutex for direct I/O reads.  This only works for extent-based
- * files, and it doesn't work for nobh or if data journaling is
- * enabled, since the dioread_nolock code uses b_private to pass
- * information back to the I/O completion handler, and this conflicts
- * with the jbd's use of b_private.
+ * files, and it doesn't work if data journaling is enabled, since the
+ * dioread_nolock code uses b_private to pass information back to the
+ * I/O completion handler, and this conflicts with the jbd's use of
+ * b_private.
  */
 static inline int ext4_should_dioread_nolock(struct inode *inode)
 {
 	if (!test_opt(inode->i_sb, DIOREAD_NOLOCK))
-		return 0;
-	if (test_opt(inode->i_sb, NOBH))
 		return 0;
 	if (!S_ISREG(inode->i_mode))
 		return 0;

@@ -475,7 +475,7 @@ static int qset_add_urb_sg(struct whc *whc, struct whc_qset *qset, struct urb *u
 			    || (prev_end & (WHCI_PAGE_SIZE-1))
 			    || (dma_addr & (WHCI_PAGE_SIZE-1))
 			    || std->len + WHCI_PAGE_SIZE > QTD_MAX_XFER_SIZE) {
-				if (std->len % qset->max_packet != 0)
+				if (std && std->len % qset->max_packet != 0)
 					return -EINVAL;
 				std = qset_new_std(whc, qset, urb, mem_flags);
 				if (std == NULL) {
@@ -739,7 +739,7 @@ static int get_urb_status_from_qtd(struct urb *urb, u32 status)
  * process_inactive_qtd - process an inactive (but not halted) qTD.
  *
  * Update the urb with the transfer bytes from the qTD, if the urb is
- * completely transfered or (in the case of an IN only) the LPF is
+ * completely transferred or (in the case of an IN only) the LPF is
  * set, then the transfer is complete and the urb should be returned
  * to the system.
  */

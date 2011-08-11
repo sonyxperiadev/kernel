@@ -26,10 +26,10 @@
 /* clock sources for the mmc bus clock, order as for the ctrl2[5..4] */
 
 char *s5pc100_hsmmc_clksrcs[4] = {
-	[0] = "hsmmc",
-	[1] = "hsmmc",
-	/* [2] = "mmc_bus", not yet successfully used yet */
-	/* [3] = "48m", - note not successfully used yet */
+	[0] = "hsmmc",		/* HCLK */
+	/* [1] = "hsmmc",	- duplicate HCLK entry */
+	[2] = "sclk_mmc",	/* mmc_bus */
+	/* [3] = "48m",		- note not successfully used yet */
 };
 
 
@@ -40,7 +40,7 @@ void s5pc100_setup_sdhci0_cfg_card(struct platform_device *dev,
 {
 	u32 ctrl2, ctrl3;
 
-	/* don't need to alter anything acording to card-type */
+	/* don't need to alter anything according to card-type */
 
 	writel(S3C64XX_SDHCI_CONTROL4_DRIVE_9mA, r + S3C64XX_SDHCI_CONTROL4);
 

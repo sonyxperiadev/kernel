@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2009 Atheros Communications Inc.
+ * Copyright (c) 2008-2011 Atheros Communications Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -37,29 +37,15 @@
 #define AR_PHY_CLC_Q0        0x0000ffd0
 #define AR_PHY_CLC_Q0_S      5
 
-#define REG_WRITE_RF_ARRAY(iniarray, regData, regWr) do {               \
-		int r;							\
-		for (r = 0; r < ((iniarray)->ia_rows); r++) {		\
-			REG_WRITE(ah, INI_RA((iniarray), r, 0), (regData)[r]); \
-			DO_DELAY(regWr);				\
-		}							\
-	} while (0)
-
-#define ATH9K_IS_MIC_ENABLED(ah)					\
-	((ah)->sta_id1_defaults & AR_STA_ID1_CRPT_MIC_ENABLE)
-
 #define ANTSWAP_AB 0x0001
 #define REDUCE_CHAIN_0 0x00000050
 #define REDUCE_CHAIN_1 0x00000051
 #define AR_PHY_CHIP_ID 0x9818
 
-#define RF_BANK_SETUP(_bank, _iniarray, _col) do {			\
-		int i;							\
-		for (i = 0; i < (_iniarray)->ia_rows; i++)		\
-			(_bank)[i] = INI_RA((_iniarray), i, _col);;	\
-	} while (0)
-
 #define	AR_PHY_TIMING11_SPUR_FREQ_SD		0x3FF00000
 #define	AR_PHY_TIMING11_SPUR_FREQ_SD_S		20
+
+#define AR_PHY_PLL_CONTROL 0x16180
+#define AR_PHY_PLL_MODE 0x16184
 
 #endif

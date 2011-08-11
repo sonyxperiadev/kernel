@@ -1,263 +1,52 @@
-#include "osdef.h"
 #include "vb_def.h"
 #include "vgatypes.h"
 #include "vb_struct.h"
 
-#ifdef LINUX_KERNEL
 #include "XGIfb.h"
-#include <asm/io.h>
+#include <linux/io.h>
 #include <linux/types.h>
-#endif
 
-#ifdef TC
-#include <stdio.h>
-#include <string.h>
-#include <conio.h>
-#include <dos.h>
-#endif
+#include "vb_util.h"
 
-#ifdef WIN2000
-#include <dderror.h>
-#include <devioctl.h>
-#include <miniport.h>
-#include <ntddvdeo.h>
-#include <video.h>
-
-#include "xgiv.h"
-#include "dd_i2c.h"
-#include "tools.h"
-#endif
-
-#ifdef LINUX_XF86
-#include "xf86.h"
-#include "xf86PciInfo.h"
-#include "xgi.h"
-#include "xgi_regs.h"
-#endif
-
-
-
-
-void XGINew_SetReg1( ULONG , USHORT , USHORT ) ;
-void XGINew_SetReg2( ULONG , USHORT , USHORT ) ;
-void XGINew_SetReg3( ULONG , USHORT ) ;
-void XGINew_SetReg4( ULONG , ULONG ) ;
-UCHAR XGINew_GetReg1( ULONG , USHORT) ;
-UCHAR XGINew_GetReg2( ULONG ) ;
-ULONG XGINew_GetReg3( ULONG ) ;
-void XGINew_ClearDAC( PUCHAR ) ;
-void     XGINew_SetRegANDOR(ULONG Port,USHORT Index,USHORT DataAND,USHORT DataOR);
-void     XGINew_SetRegOR(ULONG Port,USHORT Index,USHORT DataOR);
-void     XGINew_SetRegAND(ULONG Port,USHORT Index,USHORT DataAND);
-
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_SetReg1 */
-/* Input : */
-/* Output : */
-/* Description : SR CRTC GR */
-/* --------------------------------------------------------------------- */
-void XGINew_SetReg1( ULONG port , USHORT index , USHORT data )
+void xgifb_reg_set(unsigned long port, u8 index, u8 data)
 {
-#ifdef LINUX_XF86
-    OutPortByte( ( PUCHAR )(ULONG)port , index ) ;
-    OutPortByte( ( PUCHAR )(ULONG)port + 1 , data ) ;
-#else
-    OutPortByte( port , index ) ;
-    OutPortByte( port + 1 , data ) ;
-#endif
+	outb(index, port);
+	outb(data, port + 1);
 }
 
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_SetReg2 */
-/* Input : */
-/* Output : */
-/* Description : AR( 3C0 ) */
-/* --------------------------------------------------------------------- */
-/*void XGINew_SetReg2( ULONG port , USHORT index , USHORT data )
+u8 xgifb_reg_get(unsigned long port, u8 index)
 {
-    InPortByte( ( PUCHAR )port + 0x3da - 0x3c0 ) ;
-    OutPortByte( XGINew_P3c0 , index ) ;
-    OutPortByte( XGINew_P3c0 , data ) ;
-    OutPortByte( XGINew_P3c0 , 0x20 ) ;
-}*/
+	u8 data;
 
-
-/* --------------------------------------------------------------------- */
-/* Function : */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-void XGINew_SetReg3( ULONG port , USHORT data )
-{
-    OutPortByte( port , data ) ;
+	outb(index, port);
+	data = inb(port + 1);
+	return data;
 }
 
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_SetReg4 */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-void XGINew_SetReg4( ULONG port , ULONG data )
+void xgifb_reg_and_or(unsigned long port, u8 index,
+		unsigned data_and, unsigned data_or)
 {
-    OutPortLong( port , data ) ;
+	u8 temp;
+
+	temp = xgifb_reg_get(port, index); /* XGINew_Part1Port index 02 */
+	temp = (temp & data_and) | data_or;
+	xgifb_reg_set(port, index, temp);
 }
 
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_GetReg1 */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-UCHAR XGINew_GetReg1( ULONG port , USHORT index )
+void xgifb_reg_and(unsigned long port, u8 index, unsigned data_and)
 {
-    UCHAR data ;
+	u8 temp;
 
-#ifdef LINUX_XF86
-    OutPortByte( ( PUCHAR )(ULONG)port , index ) ;
-    data = InPortByte( ( PUCHAR )(ULONG)port + 1 ) ;
-#else
-    OutPortByte( port , index ) ;
-    data = InPortByte( port + 1 ) ;
-#endif
-
-    return( data ) ;
+	temp = xgifb_reg_get(port, index); /* XGINew_Part1Port index 02 */
+	temp &= data_and;
+	xgifb_reg_set(port, index, temp);
 }
 
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_GetReg2 */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-UCHAR XGINew_GetReg2( ULONG port )
+void xgifb_reg_or(unsigned long port, u8 index, unsigned data_or)
 {
-    UCHAR data ;
+	u8 temp;
 
-    data = InPortByte( port ) ;
-
-    return( data ) ;
+	temp = xgifb_reg_get(port, index); /* XGINew_Part1Port index 02 */
+	temp |= data_or;
+	xgifb_reg_set(port, index, temp);
 }
-
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_GetReg3 */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-ULONG XGINew_GetReg3( ULONG port )
-{
-    ULONG data ;
-
-    data = InPortLong( port ) ;
-
-    return( data ) ;
-}
-
-
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_SetRegANDOR */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-void XGINew_SetRegANDOR( ULONG Port , USHORT Index , USHORT DataAND , USHORT DataOR )
-{
-    USHORT temp ;
-
-    temp = XGINew_GetReg1( Port , Index ) ;		/* XGINew_Part1Port index 02 */
-    temp = ( temp & ( DataAND ) ) | DataOR ;
-    XGINew_SetReg1( Port , Index , temp ) ;
-}
-
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_SetRegAND */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-void XGINew_SetRegAND(ULONG Port,USHORT Index,USHORT DataAND)
-{
-    USHORT temp ;
-
-    temp = XGINew_GetReg1( Port , Index ) ;	/* XGINew_Part1Port index 02 */
-    temp &= DataAND ;
-    XGINew_SetReg1( Port , Index , temp ) ;
-}
-
-
-/* --------------------------------------------------------------------- */
-/* Function : XGINew_SetRegOR */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-void XGINew_SetRegOR( ULONG Port , USHORT Index , USHORT DataOR )
-{
-    USHORT temp ;
-
-    temp = XGINew_GetReg1( Port , Index ) ;	/* XGINew_Part1Port index 02 */
-    temp |= DataOR ;
-    XGINew_SetReg1( Port , Index , temp ) ;
-}
-
-
-/* --------------------------------------------------------------------- */
-/* Function : NewDelaySecond */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-void NewDelaySeconds( int seconds )
-{
-#ifdef WIN2000
-    int j ;
-#endif
-    int i ;
-
-
-    for( i = 0 ; i < seconds ; i++ )
-    {
-#ifdef TC
-        delay( 1000 ) ;
-#endif
-
-#ifdef WIN2000
-
-        for ( j = 0 ; j < 20000 ; j++ )
-            VideoPortStallExecution( 50 ) ;
-#endif
-
-#ifdef WINCE_HEADER
-#endif
-
-#ifdef LINUX_KERNEL
-#endif
-    }
-}
-
-
-/* --------------------------------------------------------------------- */
-/* Function : Newdebugcode */
-/* Input : */
-/* Output : */
-/* Description : */
-/* --------------------------------------------------------------------- */
-void Newdebugcode( UCHAR code )
-{
-//    OutPortByte ( 0x80 , code ) ;
-    /* OutPortByte ( 0x300 , code ) ; */
-    /* NewDelaySeconds( 0x3 ) ; */
-}
-
-
-

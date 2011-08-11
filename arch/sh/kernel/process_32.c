@@ -21,6 +21,7 @@
 #include <linux/fs.h>
 #include <linux/ftrace.h>
 #include <linux/hw_breakpoint.h>
+#include <linux/prefetch.h>
 #include <asm/uaccess.h>
 #include <asm/mmu_context.h>
 #include <asm/system.h>
@@ -101,8 +102,6 @@ EXPORT_SYMBOL(kernel_thread);
 void start_thread(struct pt_regs *regs, unsigned long new_pc,
 		  unsigned long new_sp)
 {
-	set_fs(USER_DS);
-
 	regs->pr = 0;
 	regs->sr = SR_FD;
 	regs->pc = new_pc;
@@ -296,9 +295,10 @@ asmlinkage int sys_vfork(unsigned long r4, unsigned long r5,
 /*
  * sys_execve() executes a new program.
  */
-asmlinkage int sys_execve(char __user *ufilename, char __user * __user *uargv,
-			  char __user * __user *uenvp, unsigned long r7,
-			  struct pt_regs __regs)
+asmlinkage int sys_execve(const char __user *ufilename,
+			  const char __user *const __user *uargv,
+			  const char __user *const __user *uenvp,
+			  unsigned long r7, struct pt_regs __regs)
 {
 	struct pt_regs *regs = RELOC_HIDE(&__regs, 0);
 	int error;

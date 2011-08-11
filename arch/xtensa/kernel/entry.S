@@ -16,6 +16,7 @@
 #include <linux/linkage.h>
 #include <asm/asm-offsets.h>
 #include <asm/processor.h>
+#include <asm/coprocessor.h>
 #include <asm/thread_info.h>
 #include <asm/uaccess.h>
 #include <asm/unistd.h>
@@ -1025,7 +1026,7 @@ ENTRY(fast_syscall_unrecoverable)
  * TRY	 adds an entry to the __ex_table fixup table for the immediately
  *	 following instruction.
  *
- * CATCH catches any exception that occurred at one of the preceeding TRY
+ * CATCH catches any exception that occurred at one of the preceding TRY
  *       statements and continues from there
  *
  * Usage TRY	l32i	a0, a1, 0

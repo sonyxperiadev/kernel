@@ -8,9 +8,12 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/gpio.h>
+#include <linux/of_gpio.h>
 #include <linux/idr.h>
 #include <linux/slab.h>
 
+#define CREATE_TRACE_POINTS
+#include <trace/events/gpio.h>
 
 /* Optional implementation infrastructure for GPIO interfaces.
  *
@@ -56,9 +59,9 @@ struct gpio_desc {
 #define FLAG_TRIG_RISE	6	/* trigger on rising edge */
 #define FLAG_ACTIVE_LOW	7	/* sysfs value has active low */
 
-#define PDESC_ID_SHIFT	16	/* add new flags before this one */
+#define ID_SHIFT	16	/* add new flags before this one */
 
-#define GPIO_FLAGS_MASK		((1 << PDESC_ID_SHIFT) - 1)
+#define GPIO_FLAGS_MASK		((1 << ID_SHIFT) - 1)
 #define GPIO_TRIGGER_MASK	(BIT(FLAG_TRIG_FALL) | BIT(FLAG_TRIG_RISE))
 
 #ifdef CONFIG_DEBUG_FS
@@ -68,12 +71,7 @@ struct gpio_desc {
 static struct gpio_desc gpio_desc[ARCH_NR_GPIOS];
 
 #ifdef CONFIG_GPIO_SYSFS
-struct poll_desc {
-	struct work_struct	work;
-	struct sysfs_dirent	*value_sd;
-};
-
-static struct idr pdesc_idr;
+static DEFINE_IDR(dirent_idr);
 #endif
 
 static inline void desc_set_label(struct gpio_desc *d, const char *label)
@@ -324,24 +322,16 @@ static const DEVICE_ATTR(value, 0644,
 
 static irqreturn_t gpio_sysfs_irq(int irq, void *priv)
 {
-	struct work_struct	*work = priv;
+	struct sysfs_dirent	*value_sd = priv;
 
-	schedule_work(work);
+	sysfs_notify_dirent(value_sd);
 	return IRQ_HANDLED;
-}
-
-static void gpio_notify_sysfs(struct work_struct *work)
-{
-	struct poll_desc	*pdesc;
-
-	pdesc = container_of(work, struct poll_desc, work);
-	sysfs_notify_dirent(pdesc->value_sd);
 }
 
 static int gpio_setup_irq(struct gpio_desc *desc, struct device *dev,
 		unsigned long gpio_flags)
 {
-	struct poll_desc	*pdesc;
+	struct sysfs_dirent	*value_sd;
 	unsigned long		irq_flags;
 	int			ret, irq, id;
 
@@ -352,18 +342,16 @@ static int gpio_setup_irq(struct gpio_desc *desc, struct device *dev,
 	if (irq < 0)
 		return -EIO;
 
-	id = desc->flags >> PDESC_ID_SHIFT;
-	pdesc = idr_find(&pdesc_idr, id);
-	if (pdesc) {
-		free_irq(irq, &pdesc->work);
-		cancel_work_sync(&pdesc->work);
-	}
+	id = desc->flags >> ID_SHIFT;
+	value_sd = idr_find(&dirent_idr, id);
+	if (value_sd)
+		free_irq(irq, value_sd);
 
 	desc->flags &= ~GPIO_TRIGGER_MASK;
 
 	if (!gpio_flags) {
 		ret = 0;
-		goto free_sd;
+		goto free_id;
 	}
 
 	irq_flags = IRQF_SHARED;
@@ -374,55 +362,46 @@ static int gpio_setup_irq(struct gpio_desc *desc, struct device *dev,
 		irq_flags |= test_bit(FLAG_ACTIVE_LOW, &desc->flags) ?
 			IRQF_TRIGGER_FALLING : IRQF_TRIGGER_RISING;
 
-	if (!pdesc) {
-		pdesc = kmalloc(sizeof(*pdesc), GFP_KERNEL);
-		if (!pdesc) {
-			ret = -ENOMEM;
+	if (!value_sd) {
+		value_sd = sysfs_get_dirent(dev->kobj.sd, NULL, "value");
+		if (!value_sd) {
+			ret = -ENODEV;
 			goto err_out;
 		}
 
 		do {
 			ret = -ENOMEM;
-			if (idr_pre_get(&pdesc_idr, GFP_KERNEL))
-				ret = idr_get_new_above(&pdesc_idr,
-						pdesc, 1, &id);
+			if (idr_pre_get(&dirent_idr, GFP_KERNEL))
+				ret = idr_get_new_above(&dirent_idr, value_sd,
+							1, &id);
 		} while (ret == -EAGAIN);
 
 		if (ret)
-			goto free_mem;
+			goto free_sd;
 
 		desc->flags &= GPIO_FLAGS_MASK;
-		desc->flags |= (unsigned long)id << PDESC_ID_SHIFT;
+		desc->flags |= (unsigned long)id << ID_SHIFT;
 
-		if (desc->flags >> PDESC_ID_SHIFT != id) {
+		if (desc->flags >> ID_SHIFT != id) {
 			ret = -ERANGE;
 			goto free_id;
 		}
-
-		pdesc->value_sd = sysfs_get_dirent(dev->kobj.sd, NULL, "value");
-		if (!pdesc->value_sd) {
-			ret = -ENODEV;
-			goto free_id;
-		}
-		INIT_WORK(&pdesc->work, gpio_notify_sysfs);
 	}
 
-	ret = request_irq(irq, gpio_sysfs_irq, irq_flags,
-			"gpiolib", &pdesc->work);
-	if (ret)
-		goto free_sd;
+	ret = request_any_context_irq(irq, gpio_sysfs_irq, irq_flags,
+				"gpiolib", value_sd);
+	if (ret < 0)
+		goto free_id;
 
 	desc->flags |= gpio_flags;
 	return 0;
 
-free_sd:
-	if (pdesc)
-		sysfs_put(pdesc->value_sd);
 free_id:
-	idr_remove(&pdesc_idr, id);
+	idr_remove(&dirent_idr, id);
 	desc->flags &= GPIO_FLAGS_MASK;
-free_mem:
-	kfree(pdesc);
+free_sd:
+	if (value_sd)
+		sysfs_put(value_sd);
 err_out:
 	return ret;
 }
@@ -993,8 +972,6 @@ static int __init gpiolib_sysfs_init(void)
 	unsigned long	flags;
 	unsigned	gpio;
 
-	idr_init(&pdesc_idr);
-
 	status = class_register(&gpio_class);
 	if (status < 0)
 		return status;
@@ -1100,16 +1077,24 @@ int gpiochip_add(struct gpio_chip *chip)
 		}
 	}
 
+	of_gpiochip_add(chip);
+
 unlock:
 	spin_unlock_irqrestore(&gpio_lock, flags);
-	if (status == 0)
-		status = gpiochip_export(chip);
+
+	if (status)
+		goto fail;
+
+	status = gpiochip_export(chip);
+	if (status)
+		goto fail;
+
+	return 0;
 fail:
 	/* failures here can mean systems won't boot... */
-	if (status)
-		pr_err("gpiochip_add: gpios %d..%d (%s) failed to register\n",
-			chip->base, chip->base + chip->ngpio - 1,
-			chip->label ? : "generic");
+	pr_err("gpiochip_add: gpios %d..%d (%s) failed to register\n",
+		chip->base, chip->base + chip->ngpio - 1,
+		chip->label ? : "generic");
 	return status;
 }
 EXPORT_SYMBOL_GPL(gpiochip_add);
@@ -1127,6 +1112,8 @@ int gpiochip_remove(struct gpio_chip *chip)
 	unsigned	id;
 
 	spin_lock_irqsave(&gpio_lock, flags);
+
+	of_gpiochip_remove(chip);
 
 	for (id = chip->base; id < chip->base + chip->ngpio; id++) {
 		if (test_bit(FLAG_REQUESTED, &gpio_desc[id].flags)) {
@@ -1148,6 +1135,39 @@ int gpiochip_remove(struct gpio_chip *chip)
 }
 EXPORT_SYMBOL_GPL(gpiochip_remove);
 
+/**
+ * gpiochip_find() - iterator for locating a specific gpio_chip
+ * @data: data to pass to match function
+ * @callback: Callback function to check gpio_chip
+ *
+ * Similar to bus_find_device.  It returns a reference to a gpio_chip as
+ * determined by a user supplied @match callback.  The callback should return
+ * 0 if the device doesn't match and non-zero if it does.  If the callback is
+ * non-zero, this function will return to the caller and not iterate over any
+ * more gpio_chips.
+ */
+struct gpio_chip *gpiochip_find(void *data,
+				int (*match)(struct gpio_chip *chip, void *data))
+{
+	struct gpio_chip *chip = NULL;
+	unsigned long flags;
+	int i;
+
+	spin_lock_irqsave(&gpio_lock, flags);
+	for (i = 0; i < ARCH_NR_GPIOS; i++) {
+		if (!gpio_desc[i].chip)
+			continue;
+
+		if (match(gpio_desc[i].chip, data)) {
+			chip = gpio_desc[i].chip;
+			break;
+		}
+	}
+	spin_unlock_irqrestore(&gpio_lock, flags);
+
+	return chip;
+}
+EXPORT_SYMBOL_GPL(gpiochip_find);
 
 /* These "optional" allocation calls help prevent drivers from stomping
  * on each other, and help provide better diagnostics in debugfs.
@@ -1229,7 +1249,7 @@ void gpio_free(unsigned gpio)
 	if (chip && test_bit(FLAG_REQUESTED, &desc->flags)) {
 		if (chip->free) {
 			spin_unlock_irqrestore(&gpio_lock, flags);
-			might_sleep_if(extra_checks && chip->can_sleep);
+			might_sleep_if(chip->can_sleep);
 			chip->free(chip, gpio - chip->base);
 			spin_lock_irqsave(&gpio_lock, flags);
 		}
@@ -1264,6 +1284,9 @@ int gpio_request_one(unsigned gpio, unsigned long flags, const char *label)
 		err = gpio_direction_output(gpio,
 				(flags & GPIOF_INIT_HIGH) ? 1 : 0);
 
+	if (err)
+		gpio_free(gpio);
+
 	return err;
 }
 EXPORT_SYMBOL_GPL(gpio_request_one);
@@ -1273,7 +1296,7 @@ EXPORT_SYMBOL_GPL(gpio_request_one);
  * @array:	array of the 'struct gpio'
  * @num:	how many GPIOs in the array
  */
-int gpio_request_array(struct gpio *array, size_t num)
+int gpio_request_array(const struct gpio *array, size_t num)
 {
 	int i, err;
 
@@ -1296,7 +1319,7 @@ EXPORT_SYMBOL_GPL(gpio_request_array);
  * @array:	array of the 'struct gpio'
  * @num:	how many GPIOs in the array
  */
-void gpio_free_array(struct gpio *array, size_t num)
+void gpio_free_array(const struct gpio *array, size_t num)
 {
 	while (num--)
 		gpio_free((array++)->gpio);
@@ -1367,7 +1390,7 @@ int gpio_direction_input(unsigned gpio)
 
 	spin_unlock_irqrestore(&gpio_lock, flags);
 
-	might_sleep_if(extra_checks && chip->can_sleep);
+	might_sleep_if(chip->can_sleep);
 
 	if (status) {
 		status = chip->request(chip, gpio);
@@ -1384,6 +1407,8 @@ int gpio_direction_input(unsigned gpio)
 	status = chip->direction_input(chip, gpio);
 	if (status == 0)
 		clear_bit(FLAG_IS_OUT, &desc->flags);
+
+	trace_gpio_direction(chip->base + gpio, 1, status);
 lose:
 	return status;
 fail:
@@ -1420,7 +1445,7 @@ int gpio_direction_output(unsigned gpio, int value)
 
 	spin_unlock_irqrestore(&gpio_lock, flags);
 
-	might_sleep_if(extra_checks && chip->can_sleep);
+	might_sleep_if(chip->can_sleep);
 
 	if (status) {
 		status = chip->request(chip, gpio);
@@ -1437,6 +1462,8 @@ int gpio_direction_output(unsigned gpio, int value)
 	status = chip->direction_output(chip, gpio, value);
 	if (status == 0)
 		set_bit(FLAG_IS_OUT, &desc->flags);
+	trace_gpio_value(chip->base + gpio, 0, value);
+	trace_gpio_direction(chip->base + gpio, 0, status);
 lose:
 	return status;
 fail:
@@ -1478,7 +1505,7 @@ int gpio_set_debounce(unsigned gpio, unsigned debounce)
 
 	spin_unlock_irqrestore(&gpio_lock, flags);
 
-	might_sleep_if(extra_checks && chip->can_sleep);
+	might_sleep_if(chip->can_sleep);
 
 	return chip->set_debounce(chip, gpio, debounce);
 
@@ -1526,10 +1553,13 @@ EXPORT_SYMBOL_GPL(gpio_set_debounce);
 int __gpio_get_value(unsigned gpio)
 {
 	struct gpio_chip	*chip;
+	int value;
 
 	chip = gpio_to_chip(gpio);
-	WARN_ON(extra_checks && chip->can_sleep);
-	return chip->get ? chip->get(chip, gpio - chip->base) : 0;
+	WARN_ON(chip->can_sleep);
+	value = chip->get ? chip->get(chip, gpio - chip->base) : 0;
+	trace_gpio_value(gpio, 1, value);
+	return value;
 }
 EXPORT_SYMBOL_GPL(__gpio_get_value);
 
@@ -1547,7 +1577,8 @@ void __gpio_set_value(unsigned gpio, int value)
 	struct gpio_chip	*chip;
 
 	chip = gpio_to_chip(gpio);
-	WARN_ON(extra_checks && chip->can_sleep);
+	WARN_ON(chip->can_sleep);
+	trace_gpio_value(gpio, 0, value);
 	chip->set(chip, gpio - chip->base, value);
 }
 EXPORT_SYMBOL_GPL(__gpio_set_value);
@@ -1598,10 +1629,13 @@ EXPORT_SYMBOL_GPL(__gpio_to_irq);
 int gpio_get_value_cansleep(unsigned gpio)
 {
 	struct gpio_chip	*chip;
+	int value;
 
 	might_sleep_if(extra_checks);
 	chip = gpio_to_chip(gpio);
-	return chip->get ? chip->get(chip, gpio - chip->base) : 0;
+	value = chip->get ? chip->get(chip, gpio - chip->base) : 0;
+	trace_gpio_value(gpio, 1, value);
+	return value;
 }
 EXPORT_SYMBOL_GPL(gpio_get_value_cansleep);
 
@@ -1611,6 +1645,7 @@ void gpio_set_value_cansleep(unsigned gpio, int value)
 
 	might_sleep_if(extra_checks);
 	chip = gpio_to_chip(gpio);
+	trace_gpio_value(gpio, 0, value);
 	chip->set(chip, gpio - chip->base, value);
 }
 EXPORT_SYMBOL_GPL(gpio_set_value_cansleep);
@@ -1636,51 +1671,6 @@ static void gpiolib_dbg_show(struct seq_file *s, struct gpio_chip *chip)
 			chip->get
 				? (chip->get(chip, i) ? "hi" : "lo")
 				: "?  ");
-
-		if (!is_out) {
-			int		irq = gpio_to_irq(gpio);
-			struct irq_desc	*desc = irq_to_desc(irq);
-
-			/* This races with request_irq(), set_irq_type(),
-			 * and set_irq_wake() ... but those are "rare".
-			 *
-			 * More significantly, trigger type flags aren't
-			 * currently maintained by genirq.
-			 */
-			if (irq >= 0 && desc->action) {
-				char *trigger;
-
-				switch (desc->status & IRQ_TYPE_SENSE_MASK) {
-				case IRQ_TYPE_NONE:
-					trigger = "(default)";
-					break;
-				case IRQ_TYPE_EDGE_FALLING:
-					trigger = "edge-falling";
-					break;
-				case IRQ_TYPE_EDGE_RISING:
-					trigger = "edge-rising";
-					break;
-				case IRQ_TYPE_EDGE_BOTH:
-					trigger = "edge-both";
-					break;
-				case IRQ_TYPE_LEVEL_HIGH:
-					trigger = "level-high";
-					break;
-				case IRQ_TYPE_LEVEL_LOW:
-					trigger = "level-low";
-					break;
-				default:
-					trigger = "?trigger?";
-					break;
-				}
-
-				seq_printf(s, " irq-%d %s%s",
-					irq, trigger,
-					(desc->status & IRQ_WAKEUP)
-						? " wakeup" : "");
-			}
-		}
-
 		seq_printf(s, "\n");
 	}
 }

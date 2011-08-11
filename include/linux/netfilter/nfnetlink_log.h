@@ -28,8 +28,8 @@ struct nfulnl_msg_packet_hw {
 };
 
 struct nfulnl_msg_packet_timestamp {
-	aligned_be64	sec;
-	aligned_be64	usec;
+	__aligned_be64	sec;
+	__aligned_be64	usec;
 };
 
 enum nfulnl_attr_type {
@@ -89,6 +89,7 @@ enum nfulnl_attr_config {
 #define NFULNL_COPY_NONE	0x00
 #define NFULNL_COPY_META	0x01
 #define NFULNL_COPY_PACKET	0x02
+/* 0xff is reserved, don't use it for new copy modes. */
 
 #define NFULNL_CFG_F_SEQ	0x0001
 #define NFULNL_CFG_F_SEQ_GLOBAL	0x0002

@@ -222,21 +222,21 @@
 typedef struct wlan_ie {
 	u8 eid;
 	u8 len;
-} __attribute__ ((packed)) wlan_ie_t;
+} __packed wlan_ie_t;
 
 /*-- Service Set Identity (SSID)  -----------------*/
 typedef struct wlan_ie_ssid {
 	u8 eid;
 	u8 len;
 	u8 ssid[1];		/* may be zero, ptrs may overlap */
-} __attribute__ ((packed)) wlan_ie_ssid_t;
+} __packed wlan_ie_ssid_t;
 
 /*-- Supported Rates  -----------------------------*/
 typedef struct wlan_ie_supp_rates {
 	u8 eid;
 	u8 len;
 	u8 rates[1];		/* had better be at LEAST one! */
-} __attribute__ ((packed)) wlan_ie_supp_rates_t;
+} __packed wlan_ie_supp_rates_t;
 
 /*-- FH Parameter Set  ----------------------------*/
 typedef struct wlan_ie_fh_parms {
@@ -246,14 +246,14 @@ typedef struct wlan_ie_fh_parms {
 	u8 hopset;
 	u8 hoppattern;
 	u8 hopindex;
-} __attribute__ ((packed)) wlan_ie_fh_parms_t;
+} __packed wlan_ie_fh_parms_t;
 
 /*-- DS Parameter Set  ----------------------------*/
 typedef struct wlan_ie_ds_parms {
 	u8 eid;
 	u8 len;
 	u8 curr_ch;
-} __attribute__ ((packed)) wlan_ie_ds_parms_t;
+} __packed wlan_ie_ds_parms_t;
 
 /*-- CF Parameter Set  ----------------------------*/
 
@@ -264,7 +264,7 @@ typedef struct wlan_ie_cf_parms {
 	u8 cfp_period;
 	u16 cfp_maxdur;
 	u16 cfp_durremaining;
-} __attribute__ ((packed)) wlan_ie_cf_parms_t;
+} __packed wlan_ie_cf_parms_t;
 
 /*-- TIM ------------------------------------------*/
 typedef struct wlan_ie_tim {
@@ -274,21 +274,21 @@ typedef struct wlan_ie_tim {
 	u8 dtim_period;
 	u8 bitmap_ctl;
 	u8 virt_bm[1];
-} __attribute__ ((packed)) wlan_ie_tim_t;
+} __packed wlan_ie_tim_t;
 
 /*-- IBSS Parameter Set ---------------------------*/
 typedef struct wlan_ie_ibss_parms {
 	u8 eid;
 	u8 len;
 	u16 atim_win;
-} __attribute__ ((packed)) wlan_ie_ibss_parms_t;
+} __packed wlan_ie_ibss_parms_t;
 
 /*-- Challenge Text  ------------------------------*/
 typedef struct wlan_ie_challenge {
 	u8 eid;
 	u8 len;
 	u8 challenge[1];
-} __attribute__ ((packed)) wlan_ie_challenge_t;
+} __packed wlan_ie_challenge_t;
 
 /*-------------------------------------------------*/
 /*  Frame Types  */
@@ -298,7 +298,7 @@ typedef struct wlan_fr_mgmt {
 	u16 type;
 	u16 len;		/* DOES NOT include CRC !!!! */
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -310,7 +310,7 @@ typedef struct wlan_fr_beacon {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -333,7 +333,7 @@ typedef struct wlan_fr_ibssatim {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 
@@ -349,7 +349,7 @@ typedef struct wlan_fr_disassoc {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -364,7 +364,7 @@ typedef struct wlan_fr_assocreq {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -381,7 +381,7 @@ typedef struct wlan_fr_assocresp {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -398,7 +398,7 @@ typedef struct wlan_fr_reassocreq {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -416,7 +416,7 @@ typedef struct wlan_fr_reassocresp {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -433,7 +433,7 @@ typedef struct wlan_fr_probereq {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -448,7 +448,7 @@ typedef struct wlan_fr_proberesp {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -469,7 +469,7 @@ typedef struct wlan_fr_authen {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/
@@ -486,7 +486,7 @@ typedef struct wlan_fr_deauthen {
 	u16 type;
 	u16 len;
 	u8 *buf;
-	p80211_hdr_t *hdr;
+	union p80211_hdr *hdr;
 	/* used for target specific data, skb in Linux */
 	void *priv;
 	/*-- fixed fields -----------*/

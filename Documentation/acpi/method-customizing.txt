@@ -19,6 +19,8 @@ Note: Only ACPI METHOD can be overridden, any other object types like
       "Device", "OperationRegion", are not recognized.
 Note: The same ACPI control method can be overridden for many times,
       and it's always the latest one that used by Linux/kernel.
+Note: To get the ACPI debug object output (Store (AAAA, Debug)),
+      please run "echo 1 > /sys/module/acpi/parameters/aml_debug_output".
 
 1. override an existing method
    a) get the ACPI table via ACPI sysfs I/F. e.g. to get the DSDT,
@@ -64,3 +66,8 @@ Note: We can use a kernel with multiple custom ACPI method running,
       But each individual write to debugfs can implement a SINGLE
       method override. i.e. if we want to insert/override multiple
       ACPI methods, we need to redo step c) ~ g) for multiple times.
+
+Note: Be aware that root can mis-use this driver to modify arbitrary
+      memory and gain additional rights, if root's privileges got
+      restricted (for example if root is not allowed to load additional
+      modules after boot).

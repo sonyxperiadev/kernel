@@ -15,17 +15,17 @@
 
 #ifdef CONFIG_MACH_U300_DUAL_RAM
 
-#define PHYS_OFFSET		UL(0x48000000)
+#define PLAT_PHYS_OFFSET		UL(0x48000000)
 #define BOOT_PARAMS_OFFSET	(PHYS_OFFSET + 0x100)
 
 #else
 
 #ifdef CONFIG_MACH_U300_2MB_ALIGNMENT_FIX
-#define PHYS_OFFSET (0x28000000 + \
+#define PLAT_PHYS_OFFSET (0x28000000 + \
 	     (CONFIG_MACH_U300_ACCESS_MEM_SIZE - \
 	     (CONFIG_MACH_U300_ACCESS_MEM_SIZE & 1))*1024*1024)
 #else
-#define PHYS_OFFSET (0x28000000 + \
+#define PLAT_PHYS_OFFSET (0x28000000 + \
 	     (CONFIG_MACH_U300_ACCESS_MEM_SIZE +	\
 	     (CONFIG_MACH_U300_ACCESS_MEM_SIZE & 1))*1024*1024)
 #endif
@@ -33,14 +33,6 @@
 	    (CONFIG_MACH_U300_ACCESS_MEM_SIZE +		\
 	    (CONFIG_MACH_U300_ACCESS_MEM_SIZE & 1))*1024*1024 + 0x100)
 #endif
-
-/*
- * TCM memory whereabouts
- */
-#define ITCM_OFFSET	0xffff2000
-#define ITCM_END	0xffff3fff
-#define DTCM_OFFSET	0xffff4000
-#define DTCM_END	0xffff5fff
 
 /*
  * We enable a real big DMA buffer if need be.

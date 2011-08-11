@@ -102,22 +102,6 @@ config YAFFS_DISABLE_TAGS_ECC
 
 	  If unsure, say N.
 
-
-config YAFFS_DISABLE_WIDE_TNODES
-	bool "Turn off wide tnodes"
-	depends on YAFFS_FS
-	default n
-	help
-	  Wide tnodes are only used for NAND arrays >=32MB for 512-byte
-	  page devices and >=128MB for 2k page devices. They use slightly
-	  more RAM but are faster since they eliminate chunk group
-	  searching.
-
-	  Setting this to 'y' will force tnode width to 16 bits and save
-	  memory but make large arrays slower.
-
-	  If unsure, say N.
-
 config YAFFS_ALWAYS_CHECK_CHUNK_ERASED
 	bool "Force chunk erase check"
 	depends on YAFFS_FS
@@ -133,17 +117,6 @@ config YAFFS_ALWAYS_CHECK_CHUNK_ERASED
 
 	  Suggest setting Y during development and ironing out driver
 	  issues etc. Suggest setting to N if you want faster writing.
-
-	  If unsure, say Y.
-
-config YAFFS_SHORT_NAMES_IN_RAM
-	bool "Cache short names in RAM"
-	depends on YAFFS_FS
-	default y
-	help
-	  If this config is set, then short names are stored with the
-	  yaffs_Object.  This costs an extra 16 bytes of RAM per object,
-	  but makes look-ups faster.
 
 	  If unsure, say Y.
 
@@ -177,7 +150,7 @@ config YAFFS_DISABLE_BACKGROUND
 	 If this is set, then background processing is disabled.
 	 Background processing makes many foreground activities faster.
 
-	  If unsure, say N.
+	 If unsure, say N.
 
 config YAFFS_XATTR
 	bool "Enable yaffs2 xattr support"
@@ -186,5 +159,3 @@ config YAFFS_XATTR
 	help
 	 If this is set then yaffs2 will provide xattr support.
 	 If unsure, say Y.
-
-

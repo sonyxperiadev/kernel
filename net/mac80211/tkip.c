@@ -202,9 +202,9 @@ EXPORT_SYMBOL(ieee80211_get_tkip_key);
  * @payload_len is the length of payload (_not_ including IV/ICV length).
  * @ta is the transmitter addresses.
  */
-void ieee80211_tkip_encrypt_data(struct crypto_blkcipher *tfm,
-				 struct ieee80211_key *key,
-				 u8 *pos, size_t payload_len, u8 *ta)
+int ieee80211_tkip_encrypt_data(struct crypto_cipher *tfm,
+				struct ieee80211_key *key,
+				u8 *pos, size_t payload_len, u8 *ta)
 {
 	u8 rc4key[16];
 	struct tkip_ctx *ctx = &key->u.tkip.tx;
@@ -216,14 +216,14 @@ void ieee80211_tkip_encrypt_data(struct crypto_blkcipher *tfm,
 
 	tkip_mixing_phase2(tk, ctx, ctx->iv16, rc4key);
 
-	ieee80211_wep_encrypt_data(tfm, rc4key, 16, pos, payload_len);
+	return ieee80211_wep_encrypt_data(tfm, rc4key, 16, pos, payload_len);
 }
 
 /* Decrypt packet payload with TKIP using @key. @pos is a pointer to the
  * beginning of the buffer containing IEEE 802.11 header payload, i.e.,
  * including IV, Ext. IV, real data, Michael MIC, ICV. @payload_len is the
  * length of payload, including IV, Ext. IV, MIC, ICV.  */
-int ieee80211_tkip_decrypt_data(struct crypto_blkcipher *tfm,
+int ieee80211_tkip_decrypt_data(struct crypto_cipher *tfm,
 				struct ieee80211_key *key,
 				u8 *payload, size_t payload_len, u8 *ta,
 				u8 *ra, int only_iv, int queue,

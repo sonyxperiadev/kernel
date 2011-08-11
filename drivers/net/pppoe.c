@@ -89,11 +89,10 @@
 #define PPPOE_HASH_SIZE (1 << PPPOE_HASH_BITS)
 #define PPPOE_HASH_MASK	(PPPOE_HASH_SIZE - 1)
 
-static int pppoe_xmit(struct ppp_channel *chan, struct sk_buff *skb);
 static int __pppoe_xmit(struct sock *sk, struct sk_buff *skb);
 
 static const struct proto_ops pppoe_ops;
-static struct ppp_channel_ops pppoe_chan_ops;
+static const struct ppp_channel_ops pppoe_chan_ops;
 
 /* per-net private data for this module */
 static int pppoe_net_id __read_mostly;
@@ -116,7 +115,7 @@ struct pppoe_net {
  * 2) Session stage (MAC and SID are known)
  *
  * Ethernet frames have a special tag for this but
- * we use simplier approach based on session id
+ * we use simpler approach based on session id
  */
 static inline bool stage_session(__be16 sid)
 {
@@ -318,7 +317,7 @@ static void pppoe_flush_dev(struct net_device *dev)
 			lock_sock(sk);
 
 			if (po->pppoe_dev == dev &&
-			    sk->sk_state & (PPPOX_CONNECTED | PPPOX_BOUND)) {
+			    sk->sk_state & (PPPOX_CONNECTED | PPPOX_BOUND | PPPOX_ZOMBIE)) {
 				pppox_unbind_sock(sk);
 				sk->sk_state = PPPOX_ZOMBIE;
 				sk->sk_state_change(sk);
@@ -964,7 +963,7 @@ static int pppoe_xmit(struct ppp_channel *chan, struct sk_buff *skb)
 	return __pppoe_xmit(sk, skb);
 }
 
-static struct ppp_channel_ops pppoe_chan_ops = {
+static const struct ppp_channel_ops pppoe_chan_ops = {
 	.start_xmit = pppoe_xmit,
 };
 
@@ -1125,7 +1124,7 @@ static const struct proto_ops pppoe_ops = {
 	.ioctl		= pppox_ioctl,
 };
 
-static struct pppox_proto pppoe_proto = {
+static const struct pppox_proto pppoe_proto = {
 	.create	= pppoe_create,
 	.ioctl	= pppoe_ioctl,
 	.owner	= THIS_MODULE,

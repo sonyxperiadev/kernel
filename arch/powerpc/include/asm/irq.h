@@ -88,9 +88,6 @@ struct irq_host_ops {
 	/* Dispose of such a mapping */
 	void (*unmap)(struct irq_host *h, unsigned int virq);
 
-	/* Update of such a mapping  */
-	void (*remap)(struct irq_host *h, unsigned int virq, irq_hw_number_t hw);
-
 	/* Translate device-tree interrupt specifier from raw format coming
 	 * from the firmware to a irq_hw_number_t (interrupt line number) and
 	 * type (sense) that can be passed to set_irq_type(). In the absence
@@ -128,19 +125,10 @@ struct irq_host {
 	struct device_node	*of_node;
 };
 
-/* The main irq map itself is an array of NR_IRQ entries containing the
- * associate host and irq number. An entry with a host of NULL is free.
- * An entry can be allocated if it's free, the allocator always then sets
- * hwirq first to the host's invalid irq number and then fills ops.
- */
-struct irq_map_entry {
-	irq_hw_number_t	hwirq;
-	struct irq_host	*host;
-};
-
-extern struct irq_map_entry irq_map[NR_IRQS];
-
+struct irq_data;
+extern irq_hw_number_t irqd_to_hwirq(struct irq_data *d);
 extern irq_hw_number_t virq_to_hw(unsigned int virq);
+extern bool virq_is_host(unsigned int virq, struct irq_host *host);
 
 /**
  * irq_alloc_host - Allocate a new irq_host data structure
@@ -299,34 +287,6 @@ extern unsigned int irq_alloc_virt(struct irq_host *host,
  * prior to calling this.
  */
 extern void irq_free_virt(unsigned int virq, unsigned int count);
-
-
-/* -- OF helpers -- */
-
-/**
- * irq_create_of_mapping - Map a hardware interrupt into linux virq space
- * @controller: Device node of the interrupt controller
- * @inspec: Interrupt specifier from the device-tree
- * @intsize: Size of the interrupt specifier from the device-tree
- *
- * This function is identical to irq_create_mapping except that it takes
- * as input informations straight from the device-tree (typically the results
- * of the of_irq_map_*() functions.
- */
-extern unsigned int irq_create_of_mapping(struct device_node *controller,
-					  const u32 *intspec, unsigned int intsize);
-
-/**
- * irq_of_parse_and_map - Parse and Map an interrupt into linux virq space
- * @device: Device node of the device whose interrupt is to be mapped
- * @index: Index of the interrupt to map
- *
- * This function is a wrapper that chains of_irq_map_one() and
- * irq_create_of_mapping() to make things easier to callers
- */
-extern unsigned int irq_of_parse_and_map(struct device_node *dev, int index);
-
-/* -- End OF helpers -- */
 
 /**
  * irq_early_init - Init irq remapping subsystem

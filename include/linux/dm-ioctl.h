@@ -11,6 +11,7 @@
 #include <linux/types.h>
 
 #define DM_DIR "mapper"		/* Slashes not supported */
+#define DM_CONTROL_NODE "control"
 #define DM_MAX_TYPE_NAME 16
 #define DM_NAME_LEN 128
 #define DM_UUID_LEN 129
@@ -43,7 +44,7 @@
  * Remove a device, destroy any tables.
  *
  * DM_DEV_RENAME:
- * Rename a device.
+ * Rename a device or set its uuid if none was previously supplied.
  *
  * DM_SUSPEND:
  * This performs both suspend and resume, depending which flag is
@@ -266,9 +267,9 @@ enum {
 #define DM_DEV_SET_GEOMETRY	_IOWR(DM_IOCTL, DM_DEV_SET_GEOMETRY_CMD, struct dm_ioctl)
 
 #define DM_VERSION_MAJOR	4
-#define DM_VERSION_MINOR	17
+#define DM_VERSION_MINOR	20
 #define DM_VERSION_PATCHLEVEL	0
-#define DM_VERSION_EXTRA	"-ioctl (2010-03-05)"
+#define DM_VERSION_EXTRA	"-ioctl (2011-02-02)"
 
 /* Status bits */
 #define DM_READONLY_FLAG	(1 << 0) /* In/Out */
@@ -320,5 +321,17 @@ enum {
  * If set, a uevent was generated for which the caller may need to wait.
  */
 #define DM_UEVENT_GENERATED_FLAG	(1 << 13) /* Out */
+
+/*
+ * If set, rename changes the uuid not the name.  Only permitted
+ * if no uuid was previously supplied: an existing uuid cannot be changed.
+ */
+#define DM_UUID_FLAG			(1 << 14) /* In */
+
+/*
+ * If set, all buffers are wiped after use. Use when sending
+ * or requesting sensitive data such as an encryption key.
+ */
+#define DM_SECURE_DATA_FLAG		(1 << 15) /* In */
 
 #endif				/* _LINUX_DM_IOCTL_H */

@@ -7,6 +7,7 @@
 #include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/module.h>
+#include <linux/namei.h>
 #include <linux/sched.h>
 #include <linux/writeback.h>
 #include <linux/syscalls.h>
@@ -33,7 +34,7 @@ static int __sync_filesystem(struct super_block *sb, int wait)
 	 * This should be safe, as we require bdi backing to actually
 	 * write out data in the first place
 	 */
-	if (!sb->s_bdi || sb->s_bdi == &noop_backing_dev_info)
+	if (sb->s_bdi == &noop_backing_dev_info)
 		return 0;
 
 	if (sb->s_qcop && sb->s_qcop->quota_sync)
@@ -79,7 +80,7 @@ EXPORT_SYMBOL_GPL(sync_filesystem);
 
 static void sync_one_sb(struct super_block *sb, void *arg)
 {
-	if (!(sb->s_flags & MS_RDONLY) && sb->s_bdi)
+	if (!(sb->s_flags & MS_RDONLY))
 		__sync_filesystem(sb, *(int *)arg);
 }
 /*
@@ -129,29 +130,27 @@ void emergency_sync(void)
 }
 
 /*
- * Generic function to fsync a file.
+ * sync a single super
  */
-int file_fsync(struct file *filp, int datasync)
+SYSCALL_DEFINE1(syncfs, int, fd)
 {
-	struct inode *inode = filp->f_mapping->host;
-	struct super_block * sb;
-	int ret, err;
+	struct file *file;
+	struct super_block *sb;
+	int ret;
+	int fput_needed;
 
-	/* sync the inode to buffers */
-	ret = write_inode_now(inode, 0);
+	file = fget_light(fd, &fput_needed);
+	if (!file)
+		return -EBADF;
+	sb = file->f_dentry->d_sb;
 
-	/* sync the superblock to buffers */
-	sb = inode->i_sb;
-	if (sb->s_dirt && sb->s_op->write_super)
-		sb->s_op->write_super(sb);
+	down_read(&sb->s_umount);
+	ret = sync_filesystem(sb);
+	up_read(&sb->s_umount);
 
-	/* .. finally sync the buffers to disk */
-	err = sync_blockdev(sb->s_bdev);
-	if (!ret)
-		ret = err;
+	fput_light(file, fput_needed);
 	return ret;
 }
-EXPORT_SYMBOL(file_fsync);
 
 /**
  * vfs_fsync_range - helper to sync a range of data & metadata to disk

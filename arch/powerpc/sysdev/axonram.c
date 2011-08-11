@@ -60,7 +60,7 @@
 static int azfs_major, azfs_minor;
 
 struct axon_ram_bank {
-	struct of_device	*device;
+	struct platform_device	*device;
 	struct gendisk		*disk;
 	unsigned int		irq_id;
 	unsigned long		ph_addr;
@@ -72,7 +72,7 @@ struct axon_ram_bank {
 static ssize_t
 axon_ram_sysfs_ecc(struct device *dev, struct device_attribute *attr, char *buf)
 {
-	struct of_device *device = to_of_device(dev);
+	struct platform_device *device = to_platform_device(dev);
 	struct axon_ram_bank *bank = device->dev.platform_data;
 
 	BUG_ON(!bank);
@@ -90,12 +90,12 @@ static DEVICE_ATTR(ecc, S_IRUGO, axon_ram_sysfs_ecc, NULL);
 static irqreturn_t
 axon_ram_irq_handler(int irq, void *dev)
 {
-	struct of_device *device = dev;
+	struct platform_device *device = dev;
 	struct axon_ram_bank *bank = device->dev.platform_data;
 
 	BUG_ON(!bank);
 
-	dev_err(&device->dev, "Correctable memory error occured\n");
+	dev_err(&device->dev, "Correctable memory error occurred\n");
 	bank->ecc_counter++;
 	return IRQ_HANDLED;
 }
@@ -172,10 +172,9 @@ static const struct block_device_operations axon_ram_devops = {
 
 /**
  * axon_ram_probe - probe() method for platform driver
- * @device, @device_id: see of_platform_driver method
+ * @device: see platform_driver method
  */
-static int
-axon_ram_probe(struct of_device *device, const struct of_device_id *device_id)
+static int axon_ram_probe(struct platform_device *device)
 {
 	static int axon_ram_bank_id = -1;
 	struct axon_ram_bank *bank;
@@ -217,7 +216,7 @@ axon_ram_probe(struct of_device *device, const struct of_device_id *device_id)
 			AXON_RAM_DEVICE_NAME, axon_ram_bank_id, bank->size >> 20);
 
 	bank->ph_addr = resource.start;
-	bank->io_addr = (unsigned long) ioremap_flags(
+	bank->io_addr = (unsigned long) ioremap_prot(
 			bank->ph_addr, bank->size, _PAGE_NO_CACHE);
 	if (bank->io_addr == 0) {
 		dev_err(&device->dev, "ioremap() failed\n");
@@ -304,7 +303,7 @@ failed:
  * @device: see of_platform_driver method
  */
 static int
-axon_ram_remove(struct of_device *device)
+axon_ram_remove(struct platform_device *device)
 {
 	struct axon_ram_bank *bank = device->dev.platform_data;
 
@@ -326,7 +325,7 @@ static struct of_device_id axon_ram_device_id[] = {
 	{}
 };
 
-static struct of_platform_driver axon_ram_driver = {
+static struct platform_driver axon_ram_driver = {
 	.probe		= axon_ram_probe,
 	.remove		= axon_ram_remove,
 	.driver = {
@@ -350,7 +349,7 @@ axon_ram_init(void)
 	}
 	azfs_minor = 0;
 
-	return of_register_platform_driver(&axon_ram_driver);
+	return platform_driver_register(&axon_ram_driver);
 }
 
 /**
@@ -359,7 +358,7 @@ axon_ram_init(void)
 static void __exit
 axon_ram_exit(void)
 {
-	of_unregister_platform_driver(&axon_ram_driver);
+	platform_driver_unregister(&axon_ram_driver);
 	unregister_blkdev(azfs_major, AXON_RAM_DEVICE_NAME);
 }
 

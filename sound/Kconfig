@@ -99,6 +99,8 @@ source "sound/caph/Kconfig"
 # here assuming USB is defined before ALSA
 source "sound/usb/Kconfig"
 
+source "sound/firewire/Kconfig"
+
 # the following will depend on the order of config.
 # here assuming PCMCIA is defined before ALSA
 source "sound/pcmcia/Kconfig"

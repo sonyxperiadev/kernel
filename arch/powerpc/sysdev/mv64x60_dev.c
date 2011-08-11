@@ -16,16 +16,12 @@
 #include <linux/mv643xx.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
+#include <linux/of_net.h>
 #include <linux/dma-mapping.h>
 
 #include <asm/prom.h>
 
-/*
- * These functions provide the necessary setup for the mv64x60 drivers.
- * These drivers are unusual in that they work on both the MIPS and PowerPC
- * architectures.  Because of that, the drivers do not support the normal
- * PowerPC of_platform_bus_type.  They support platform_bus_type instead.
- */
+/* These functions provide the necessary setup for the mv64x60 drivers. */
 
 static struct of_device_id __initdata of_mv64x60_devices[] = {
 	{ .compatible = "marvell,mv64306-devctrl", },
@@ -350,7 +346,7 @@ static int __init mv64x60_i2c_device_setup(struct device_node *np, int id)
 	if (prop)
 		pdata.freq_m = *prop;
 
-	pdata.freq_m = 3;	/* default */
+	pdata.freq_n = 3;	/* default */
 	prop = of_get_property(np, "freq_n", NULL);
 	if (prop)
 		pdata.freq_n = *prop;

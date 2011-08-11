@@ -42,7 +42,7 @@ bool atl1c_read_eeprom(struct atl1c_hw *hw, u32 offset, u32 *p_value);
 int atl1c_phy_init(struct atl1c_hw *hw);
 int atl1c_check_eeprom_exist(struct atl1c_hw *hw);
 int atl1c_restart_autoneg(struct atl1c_hw *hw);
-
+int atl1c_phy_power_saving(struct atl1c_hw *hw);
 /* register definition */
 #define REG_DEVICE_CAP              	0x5C
 #define DEVICE_CAP_MAX_PAYLOAD_MASK     0x7
@@ -120,6 +120,12 @@ int atl1c_restart_autoneg(struct atl1c_hw *hw);
 #define REG_PCIE_PHYMISC	    	0x1000
 #define PCIE_PHYMISC_FORCE_RCV_DET	0x4
 
+#define REG_PCIE_PHYMISC2		0x1004
+#define PCIE_PHYMISC2_SERDES_CDR_MASK	0x3
+#define PCIE_PHYMISC2_SERDES_CDR_SHIFT	16
+#define PCIE_PHYMISC2_SERDES_TH_MASK	0x3
+#define PCIE_PHYMISC2_SERDES_TH_SHIFT	18
+
 #define REG_TWSI_DEBUG			0x1108
 #define TWSI_DEBUG_DEV_EXIST		0x20000000
 
@@ -150,24 +156,28 @@ int atl1c_restart_autoneg(struct atl1c_hw *hw);
 #define PM_CTRL_ASPM_L0S_EN		0x00001000
 #define PM_CTRL_CLK_SWH_L1		0x00002000
 #define PM_CTRL_CLK_PWM_VER1_1		0x00004000
-#define PM_CTRL_PCIE_RECV		0x00008000
+#define PM_CTRL_RCVR_WT_TIMER		0x00008000
 #define PM_CTRL_L1_ENTRY_TIMER_MASK	0xF
 #define PM_CTRL_L1_ENTRY_TIMER_SHIFT	16
 #define PM_CTRL_PM_REQ_TIMER_MASK	0xF
 #define PM_CTRL_PM_REQ_TIMER_SHIFT	20
-#define PM_CTRL_LCKDET_TIMER_MASK	0x3F
+#define PM_CTRL_LCKDET_TIMER_MASK	0xF
 #define PM_CTRL_LCKDET_TIMER_SHIFT	24
 #define PM_CTRL_EN_BUFS_RX_L0S		0x10000000
 #define PM_CTRL_SA_DLY_EN		0x20000000
 #define PM_CTRL_MAC_ASPM_CHK		0x40000000
 #define PM_CTRL_HOTRST			0x80000000
 
+#define REG_LTSSM_ID_CTRL		0x12FC
+#define LTSSM_ID_EN_WRO			0x1000
 /* Selene Master Control Register */
 #define REG_MASTER_CTRL			0x1400
 #define MASTER_CTRL_SOFT_RST            0x1
 #define MASTER_CTRL_TEST_MODE_MASK	0x3
 #define MASTER_CTRL_TEST_MODE_SHIFT	2
 #define MASTER_CTRL_BERT_START		0x10
+#define MASTER_CTRL_OOB_DIS_OFF		0x40
+#define MASTER_CTRL_SA_TIMER_EN		0x80
 #define MASTER_CTRL_MTIMER_EN           0x100
 #define MASTER_CTRL_MANUAL_INT          0x200
 #define MASTER_CTRL_TX_ITIMER_EN	0x400
@@ -220,6 +230,12 @@ int atl1c_restart_autoneg(struct atl1c_hw *hw);
 		GPHY_CTRL_PWDOWN_HW	|\
 		GPHY_CTRL_PHY_IDDQ)
 
+#define GPHY_CTRL_POWER_SAVING (	\
+		GPHY_CTRL_SEL_ANA_RST	|\
+		GPHY_CTRL_HIB_EN	|\
+		GPHY_CTRL_HIB_PULSE	|\
+		GPHY_CTRL_PWDOWN_HW	|\
+		GPHY_CTRL_PHY_IDDQ)
 /* Block IDLE Status Register */
 #define REG_IDLE_STATUS  		0x1410
 #define IDLE_STATUS_MASK		0x00FF
@@ -287,6 +303,14 @@ int atl1c_restart_autoneg(struct atl1c_hw *hw);
 #define SERDES_LOCK_DETECT          	0x1  /* SerDes lock detected. This signal
 					      * comes from Analog SerDes */
 #define SERDES_LOCK_DETECT_EN       	0x2  /* 1: Enable SerDes Lock detect function */
+#define SERDES_LOCK_STS_SELFB_PLL_SHIFT 0xE
+#define SERDES_LOCK_STS_SELFB_PLL_MASK  0x3
+#define SERDES_OVCLK_18_25		0x0
+#define SERDES_OVCLK_12_18		0x1
+#define SERDES_OVCLK_0_4		0x2
+#define SERDES_OVCLK_4_12		0x3
+#define SERDES_MAC_CLK_SLOWDOWN		0x20000
+#define SERDES_PYH_CLK_SLOWDOWN		0x40000
 
 /* MAC Control Register  */
 #define REG_MAC_CTRL         		0x1480
@@ -693,55 +717,35 @@ int atl1c_restart_autoneg(struct atl1c_hw *hw);
 #define REG_MAC_TX_STATUS_BIN 		0x1760
 #define REG_MAC_TX_STATUS_END 		0x17c0
 
+#define REG_CLK_GATING_CTRL		0x1814
+#define CLK_GATING_DMAW_EN		0x0001
+#define CLK_GATING_DMAR_EN		0x0002
+#define CLK_GATING_TXQ_EN		0x0004
+#define CLK_GATING_RXQ_EN		0x0008
+#define CLK_GATING_TXMAC_EN		0x0010
+#define CLK_GATING_RXMAC_EN		0x0020
+
+#define CLK_GATING_EN_ALL	(CLK_GATING_DMAW_EN |\
+				 CLK_GATING_DMAR_EN |\
+				 CLK_GATING_TXQ_EN  |\
+				 CLK_GATING_RXQ_EN  |\
+				 CLK_GATING_TXMAC_EN|\
+				 CLK_GATING_RXMAC_EN)
+
 /* DEBUG ADDR */
 #define REG_DEBUG_DATA0 		0x1900
 #define REG_DEBUG_DATA1 		0x1904
 
-/* PHY Control Register */
-#define MII_BMCR			0x00
-#define BMCR_SPEED_SELECT_MSB		0x0040  /* bits 6,13: 10=1000, 01=100, 00=10 */
-#define BMCR_COLL_TEST_ENABLE		0x0080  /* Collision test enable */
-#define BMCR_FULL_DUPLEX		0x0100  /* FDX =1, half duplex =0 */
-#define BMCR_RESTART_AUTO_NEG		0x0200  /* Restart auto negotiation */
-#define BMCR_ISOLATE			0x0400  /* Isolate PHY from MII */
-#define BMCR_POWER_DOWN			0x0800  /* Power down */
-#define BMCR_AUTO_NEG_EN		0x1000  /* Auto Neg Enable */
-#define BMCR_SPEED_SELECT_LSB		0x2000  /* bits 6,13: 10=1000, 01=100, 00=10 */
-#define BMCR_LOOPBACK			0x4000  /* 0 = normal, 1 = loopback */
-#define BMCR_RESET			0x8000  /* 0 = normal, 1 = PHY reset */
-#define BMCR_SPEED_MASK			0x2040
-#define BMCR_SPEED_1000			0x0040
-#define BMCR_SPEED_100			0x2000
-#define BMCR_SPEED_10			0x0000
+#define L1D_MPW_PHYID1			0xD01C  /* V7 */
+#define L1D_MPW_PHYID2			0xD01D  /* V1-V6 */
+#define L1D_MPW_PHYID3			0xD01E  /* V8 */
 
-/* PHY Status Register */
-#define MII_BMSR			0x01
-#define BMMSR_EXTENDED_CAPS		0x0001  /* Extended register capabilities */
-#define BMSR_JABBER_DETECT		0x0002  /* Jabber Detected */
-#define BMSR_LINK_STATUS		0x0004  /* Link Status 1 = link */
-#define BMSR_AUTONEG_CAPS		0x0008  /* Auto Neg Capable */
-#define BMSR_REMOTE_FAULT		0x0010  /* Remote Fault Detect */
-#define BMSR_AUTONEG_COMPLETE		0x0020  /* Auto Neg Complete */
-#define BMSR_PREAMBLE_SUPPRESS		0x0040  /* Preamble may be suppressed */
-#define BMSR_EXTENDED_STATUS		0x0100  /* Ext. status info in Reg 0x0F */
-#define BMSR_100T2_HD_CAPS		0x0200  /* 100T2 Half Duplex Capable */
-#define BMSR_100T2_FD_CAPS		0x0400  /* 100T2 Full Duplex Capable */
-#define BMSR_10T_HD_CAPS		0x0800  /* 10T   Half Duplex Capable */
-#define BMSR_10T_FD_CAPS		0x1000  /* 10T   Full Duplex Capable */
-#define BMSR_100X_HD_CAPS		0x2000  /* 100X  Half Duplex Capable */
-#define BMMII_SR_100X_FD_CAPS		0x4000  /* 100X  Full Duplex Capable */
-#define BMMII_SR_100T4_CAPS		0x8000  /* 100T4 Capable */
-
-#define MII_PHYSID1			0x02
-#define MII_PHYSID2			0x03
 
 /* Autoneg Advertisement Register */
-#define MII_ADVERTISE			0x04
-#define ADVERTISE_SPEED_MASK		0x01E0
-#define ADVERTISE_DEFAULT_CAP		0x0DE0
+#define ADVERTISE_DEFAULT_CAP \
+	(ADVERTISE_ALL | ADVERTISE_PAUSE_CAP | ADVERTISE_PAUSE_ASYM)
 
 /* 1000BASE-T Control Register */
-#define MII_GIGA_CR			0x09
 #define GIGA_CR_1000T_REPEATER_DTE	0x0400  /* 1=Repeater/switch device port 0=DTE device */
 
 #define GIGA_CR_1000T_MS_VALUE		0x0800  /* 1=Configure PHY as Master 0=Configure PHY as Slave */

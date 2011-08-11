@@ -1,5 +1,5 @@
 /*
- * Copyright 2008 Cisco Systems, Inc.  All rights reserved.
+ * Copyright 2008-2010 Cisco Systems, Inc.  All rights reserved.
  * Copyright 2007 Nuova Systems, Inc.  All rights reserved.
  *
  * This program is free software; you may redistribute it and/or modify
@@ -80,8 +80,34 @@
 enum vnic_devcmd_cmd {
 	CMD_NONE                = _CMDC(_CMD_DIR_NONE, _CMD_VTYPE_NONE, 0),
 
-	/* mcpu fw info in mem: (u64)a0=paddr to struct vnic_devcmd_fw_info */
-	CMD_MCPU_FW_INFO        = _CMDC(_CMD_DIR_WRITE, _CMD_VTYPE_ALL, 1),
+	/*
+	 * mcpu fw info in mem:
+	 * in:
+	 *   (u64)a0=paddr to struct vnic_devcmd_fw_info
+	 * action:
+	 *   Fills in struct vnic_devcmd_fw_info (128 bytes)
+	 * note:
+	 *   An old definition of CMD_MCPU_FW_INFO
+	 */
+	CMD_MCPU_FW_INFO_OLD    = _CMDC(_CMD_DIR_WRITE, _CMD_VTYPE_ALL, 1),
+
+	/*
+	 * mcpu fw info in mem:
+	 * in:
+	 *   (u64)a0=paddr to struct vnic_devcmd_fw_info
+	 *   (u16)a1=size of the structure
+	 * out:
+	 *	 (u16)a1=0                          for in:a1 = 0,
+	 *	         data size actually written for other values.
+	 * action:
+	 *   Fills in first 128 bytes of vnic_devcmd_fw_info for in:a1 = 0,
+	 *            first in:a1 bytes               for 0 < in:a1 <= 132,
+	 *            132 bytes                       for other values of in:a1.
+	 * note:
+	 *   CMD_MCPU_FW_INFO and CMD_MCPU_FW_INFO_OLD have the same enum 1
+	 *   for source compatibility.
+	 */
+	CMD_MCPU_FW_INFO        = _CMDC(_CMD_DIR_RW, _CMD_VTYPE_ALL, 1),
 
 	/* dev-specific block member:
 	 *    in: (u16)a0=offset,(u8)a1=size
@@ -97,6 +123,9 @@ enum vnic_devcmd_cmd {
 
 	/* set Rx packet filter: (u32)a0=filters (see CMD_PFILTER_*) */
 	CMD_PACKET_FILTER	= _CMDCNW(_CMD_DIR_WRITE, _CMD_VTYPE_ENET, 7),
+
+	/* set Rx packet filter for all: (u32)a0=filters (see CMD_PFILTER_*) */
+	CMD_PACKET_FILTER_ALL   = _CMDCNW(_CMD_DIR_WRITE, _CMD_VTYPE_ALL, 7),
 
 	/* hang detection notification */
 	CMD_HANG_NOTIFY         = _CMDC(_CMD_DIR_NONE, _CMD_VTYPE_ALL, 8),
@@ -171,6 +200,9 @@ enum vnic_devcmd_cmd {
 	/* enable virtual link */
 	CMD_ENABLE		= _CMDCNW(_CMD_DIR_WRITE, _CMD_VTYPE_ALL, 28),
 
+	/* enable virtual link, waiting variant. */
+	CMD_ENABLE_WAIT		= _CMDC(_CMD_DIR_WRITE, _CMD_VTYPE_ALL, 28),
+
 	/* disable virtual link */
 	CMD_DISABLE		= _CMDC(_CMD_DIR_NONE, _CMD_VTYPE_ALL, 29),
 
@@ -211,7 +243,85 @@ enum vnic_devcmd_cmd {
 	 * in: (u16)a0=interrupt number to assert
 	 */
 	CMD_IAR			= _CMDCNW(_CMD_DIR_WRITE, _CMD_VTYPE_ALL, 38),
+
+	/* initiate hangreset, like softreset after hang detected */
+	CMD_HANG_RESET		= _CMDC(_CMD_DIR_NONE, _CMD_VTYPE_ALL, 39),
+
+	/* hangreset status:
+	 *    out: a0=0 reset complete, a0=1 reset in progress */
+	CMD_HANG_RESET_STATUS   = _CMDC(_CMD_DIR_READ, _CMD_VTYPE_ALL, 40),
+
+	/*
+	 * Set hw ingress packet vlan rewrite mode:
+	 * in:  (u32)a0=new vlan rewrite mode
+	 * out: (u32)a0=old vlan rewrite mode */
+	CMD_IG_VLAN_REWRITE_MODE = _CMDC(_CMD_DIR_RW, _CMD_VTYPE_ENET, 41),
+
+	/*
+	 * in:  (u16)a0=bdf of target vnic
+	 *      (u32)a1=cmd to proxy
+	 *      a2-a15=args to cmd in a1
+	 * out: (u32)a0=status of proxied cmd
+	 *      a1-a15=out args of proxied cmd */
+	CMD_PROXY_BY_BDF =	_CMDC(_CMD_DIR_RW, _CMD_VTYPE_ALL, 42),
+
+	/*
+	 * As for BY_BDF except a0 is index of hvnlink subordinate vnic
+	 * or SR-IOV virtual vnic
+	 */
+	CMD_PROXY_BY_INDEX =    _CMDC(_CMD_DIR_RW, _CMD_VTYPE_ALL, 43),
+
+	/*
+	 * For HPP toggle:
+	 * adapter-info-get
+	 * in:  (u64)a0=phsical address of buffer passed in from caller.
+	 *      (u16)a1=size of buffer specified in a0.
+	 * out: (u64)a0=phsical address of buffer passed in from caller.
+	 *      (u16)a1=actual bytes from VIF-CONFIG-INFO TLV, or
+	 *              0 if no VIF-CONFIG-INFO TLV was ever received. */
+	CMD_CONFIG_INFO_GET     = _CMDC(_CMD_DIR_RW, _CMD_VTYPE_ALL, 44),
+
+	/* init_prov_info2:
+	 * Variant of CMD_INIT_PROV_INFO, where it will not try to enable
+	 * the vnic until CMD_ENABLE2 is issued.
+	 *     (u64)a0=paddr of vnic_devcmd_provinfo
+	 *     (u32)a1=sizeof provision info */
+	CMD_INIT_PROV_INFO2  = _CMDC(_CMD_DIR_WRITE, _CMD_VTYPE_ENET, 47),
+
+	/* enable2:
+	 *      (u32)a0=0                  ==> standby
+	 *             =CMD_ENABLE2_ACTIVE ==> active
+	 */
+	CMD_ENABLE2 = _CMDC(_CMD_DIR_WRITE, _CMD_VTYPE_ENET, 48),
+
+	/*
+	 * cmd_status:
+	 *     Returns the status of the specified command
+	 * Input:
+	 *     a0 = command for which status is being queried.
+	 *          Possible values are:
+	 *              CMD_SOFT_RESET
+	 *              CMD_HANG_RESET
+	 *              CMD_OPEN
+	 *              CMD_INIT
+	 *              CMD_INIT_PROV_INFO
+	 *              CMD_DEINIT
+	 *              CMD_INIT_PROV_INFO2
+	 *              CMD_ENABLE2
+	 * Output:
+	 *     if status == STAT_ERROR
+	 *        a0 = ERR_ENOTSUPPORTED - status for command in a0 is
+	 *                                 not supported
+	 *     if status == STAT_NONE
+	 *        a0 = status of the devcmd specified in a0 as follows.
+	 *             ERR_SUCCESS   - command in a0 completed successfully
+	 *             ERR_EINPROGRESS - command in a0 is still in progress
+	 */
+	CMD_STATUS = _CMDC(_CMD_DIR_RW, _CMD_VTYPE_ALL, 49),
 };
+
+/* CMD_ENABLE2 flags */
+#define CMD_ENABLE2_ACTIVE  0x1
 
 /* flags for CMD_OPEN */
 #define CMD_OPENF_OPROM		0x1	/* open coming from option rom */
@@ -225,6 +335,12 @@ enum vnic_devcmd_cmd {
 #define CMD_PFILTER_BROADCAST		0x04
 #define CMD_PFILTER_PROMISCUOUS		0x08
 #define CMD_PFILTER_ALL_MULTICAST	0x10
+
+/* rewrite modes for CMD_IG_VLAN_REWRITE_MODE */
+#define IG_VLAN_REWRITE_MODE_DEFAULT_TRUNK              0
+#define IG_VLAN_REWRITE_MODE_UNTAG_DEFAULT_VLAN         1
+#define IG_VLAN_REWRITE_MODE_PRIORITY_TAG_DEFAULT_VLAN  2
+#define IG_VLAN_REWRITE_MODE_PASS_THRU                  3
 
 enum vnic_devcmd_status {
 	STAT_NONE = 0,
@@ -244,13 +360,23 @@ enum vnic_devcmd_error {
 	ERR_ETIMEDOUT = 8,
 	ERR_ELINKDOWN = 9,
 	ERR_EMAXRES = 10,
+	ERR_ENOTSUPPORTED = 11,
+	ERR_EINPROGRESS = 12,
 };
 
+/*
+ * note: hw_version and asic_rev refer to the same thing,
+ *       but have different formats. hw_version is
+ *       a 32-byte string (e.g. "A2") and asic_rev is
+ *       a 16-bit integer (e.g. 0xA2).
+ */
 struct vnic_devcmd_fw_info {
 	char fw_version[32];
 	char fw_build[32];
 	char hw_version[32];
 	char hw_serial_number[32];
+	u16 asic_type;
+	u16 asic_rev;
 };
 
 struct vnic_devcmd_notify {

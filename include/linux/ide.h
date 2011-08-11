@@ -18,13 +18,13 @@
 #include <linux/pci.h>
 #include <linux/completion.h>
 #include <linux/pm.h>
+#include <linux/mutex.h>
 #ifdef CONFIG_BLK_DEV_IDEACPI
 #include <acpi/acpi.h>
 #endif
 #include <asm/byteorder.h>
 #include <asm/system.h>
 #include <asm/io.h>
-#include <asm/mutex.h>
 
 /* for request_sense */
 #include <linux/cdrom.h>
@@ -458,7 +458,7 @@ enum {
 	IDE_DFLAG_DOORLOCKING		= (1 << 15),
 	/* disallow DMA */
 	IDE_DFLAG_NODMA			= (1 << 16),
-	/* powermanagment told us not to do anything, so sleep nicely */
+	/* powermanagement told us not to do anything, so sleep nicely */
 	IDE_DFLAG_BLOCKED		= (1 << 17),
 	/* sleeping & sleep field valid */
 	IDE_DFLAG_SLEEPING		= (1 << 18),

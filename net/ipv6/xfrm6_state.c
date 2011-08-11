@@ -20,23 +20,29 @@
 #include <net/addrconf.h>
 
 static void
-__xfrm6_init_tempsel(struct xfrm_state *x, struct flowi *fl,
-		     struct xfrm_tmpl *tmpl,
-		     xfrm_address_t *daddr, xfrm_address_t *saddr)
+__xfrm6_init_tempsel(struct xfrm_selector *sel, const struct flowi *fl)
 {
+	const struct flowi6 *fl6 = &fl->u.ip6;
+
 	/* Initialize temporary selector matching only
 	 * to current session. */
-	ipv6_addr_copy((struct in6_addr *)&x->sel.daddr, &fl->fl6_dst);
-	ipv6_addr_copy((struct in6_addr *)&x->sel.saddr, &fl->fl6_src);
-	x->sel.dport = xfrm_flowi_dport(fl);
-	x->sel.dport_mask = htons(0xffff);
-	x->sel.sport = xfrm_flowi_sport(fl);
-	x->sel.sport_mask = htons(0xffff);
-	x->sel.family = AF_INET6;
-	x->sel.prefixlen_d = 128;
-	x->sel.prefixlen_s = 128;
-	x->sel.proto = fl->proto;
-	x->sel.ifindex = fl->oif;
+	ipv6_addr_copy((struct in6_addr *)&sel->daddr, &fl6->daddr);
+	ipv6_addr_copy((struct in6_addr *)&sel->saddr, &fl6->saddr);
+	sel->dport = xfrm_flowi_dport(fl, &fl6->uli);
+	sel->dport_mask = htons(0xffff);
+	sel->sport = xfrm_flowi_sport(fl, &fl6->uli);
+	sel->sport_mask = htons(0xffff);
+	sel->family = AF_INET6;
+	sel->prefixlen_d = 128;
+	sel->prefixlen_s = 128;
+	sel->proto = fl6->flowi6_proto;
+	sel->ifindex = fl6->flowi6_oif;
+}
+
+static void
+xfrm6_init_temprop(struct xfrm_state *x, const struct xfrm_tmpl *tmpl,
+		   const xfrm_address_t *daddr, const xfrm_address_t *saddr)
+{
 	x->id = tmpl->id;
 	if (ipv6_addr_any((struct in6_addr*)&x->id.daddr))
 		memcpy(&x->id.daddr, daddr, sizeof(x->sel.daddr));
@@ -168,9 +174,11 @@ static struct xfrm_state_afinfo xfrm6_state_afinfo = {
 	.eth_proto		= htons(ETH_P_IPV6),
 	.owner			= THIS_MODULE,
 	.init_tempsel		= __xfrm6_init_tempsel,
+	.init_temprop		= xfrm6_init_temprop,
 	.tmpl_sort		= __xfrm6_tmpl_sort,
 	.state_sort		= __xfrm6_state_sort,
 	.output			= xfrm6_output,
+	.output_finish		= xfrm6_output_finish,
 	.extract_input		= xfrm6_extract_input,
 	.extract_output		= xfrm6_extract_output,
 	.transport_finish	= xfrm6_transport_finish,

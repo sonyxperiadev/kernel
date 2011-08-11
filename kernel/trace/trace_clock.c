@@ -32,22 +32,21 @@
 u64 notrace trace_clock_local(void)
 {
 	u64 clock;
-	int resched;
 
 	/*
 	 * sched_clock() is an architecture implemented, fast, scalable,
 	 * lockless clock. It is not guaranteed to be coherent across
 	 * CPUs, nor across CPU idle events.
 	 */
-	resched = ftrace_preempt_disable();
+	preempt_disable_notrace();
 	clock = sched_clock();
-	ftrace_preempt_enable(resched);
+	preempt_enable_notrace();
 
 	return clock;
 }
 
 /*
- * trace_clock(): 'inbetween' trace clock. Not completely serialized,
+ * trace_clock(): 'between' trace clock. Not completely serialized,
  * but not completely incorrect when crossing CPUs either.
  *
  * This is based on cpu_clock(), which will allow at most ~1 jiffy of
@@ -56,7 +55,7 @@ u64 notrace trace_clock_local(void)
  */
 u64 notrace trace_clock(void)
 {
-	return cpu_clock(raw_smp_processor_id());
+	return local_clock();
 }
 
 

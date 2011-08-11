@@ -51,11 +51,21 @@ struct socket_smack {
  */
 struct inode_smack {
 	char		*smk_inode;	/* label of the fso */
+	char		*smk_task;	/* label of the task */
+	char		*smk_mmap;	/* label of the mmap domain */
 	struct mutex	smk_lock;	/* initialization lock */
 	int		smk_flags;	/* smack inode flags */
 };
 
+struct task_smack {
+	char			*smk_task;	/* label for access control */
+	char			*smk_forked;	/* label when forked */
+	struct list_head	smk_rules;	/* per task access rules */
+	struct mutex		smk_rules_lock;	/* lock for the rules */
+};
+
 #define	SMK_INODE_INSTANT	0x01	/* inode is instantiated */
+#define	SMK_INODE_TRANSMUTE	0x02	/* directory is transmuting */
 
 /*
  * A label access rule.
@@ -123,16 +133,6 @@ struct smack_known {
 #define SMK_FSHAT	"smackfshat="
 #define SMK_FSROOT	"smackfsroot="
 
-/*
- * xattr names
- */
-#define XATTR_SMACK_SUFFIX	"SMACK64"
-#define XATTR_SMACK_IPIN	"SMACK64IPIN"
-#define XATTR_SMACK_IPOUT	"SMACK64IPOUT"
-#define XATTR_NAME_SMACK	XATTR_SECURITY_PREFIX XATTR_SMACK_SUFFIX
-#define XATTR_NAME_SMACKIPIN	XATTR_SECURITY_PREFIX XATTR_SMACK_IPIN
-#define XATTR_NAME_SMACKIPOUT	XATTR_SECURITY_PREFIX XATTR_SMACK_IPOUT
-
 #define SMACK_CIPSO_OPTION 	"-CIPSO"
 
 /*
@@ -155,12 +155,6 @@ struct smack_known {
 #define SMACK_MAGIC	0x43415d53 /* "SMAC" */
 
 /*
- * A limit on the number of entries in the lists
- * makes some of the list administration easier.
- */
-#define SMACK_LIST_MAX	10000
-
-/*
  * CIPSO defaults.
  */
 #define SMACK_CIPSO_DOI_DEFAULT		3	/* Historical */
@@ -171,11 +165,13 @@ struct smack_known {
 #define SMACK_CIPSO_MAXCATNUM           239     /* CIPSO 2.2 standard */
 
 /*
+ * Flag for transmute access
+ */
+#define MAY_TRANSMUTE	64
+/*
  * Just to make the common cases easier to deal with
  */
-#define MAY_ANY		(MAY_READ | MAY_WRITE | MAY_APPEND | MAY_EXEC)
 #define MAY_ANYREAD	(MAY_READ | MAY_EXEC)
-#define MAY_ANYWRITE	(MAY_WRITE | MAY_APPEND)
 #define MAY_READWRITE	(MAY_READ | MAY_WRITE)
 #define MAY_NOT		0
 
@@ -201,6 +197,7 @@ struct inode_smack *new_inode_smack(char *);
 /*
  * These functions are in smack_access.c
  */
+int smk_access_entry(char *, char *, struct list_head *);
 int smk_access(char *, char *, int, struct smk_audit_info *);
 int smk_curacc(char *, u32, struct smk_audit_info *);
 int smack_to_cipso(const char *, struct smack_cipso *);
@@ -244,12 +241,45 @@ static inline void smack_catset_bit(int cat, char *catsetp)
 }
 
 /*
+ * Is the directory transmuting?
+ */
+static inline int smk_inode_transmutable(const struct inode *isp)
+{
+	struct inode_smack *sip = isp->i_security;
+	return (sip->smk_flags & SMK_INODE_TRANSMUTE) != 0;
+}
+
+/*
  * Present a pointer to the smack label in an inode blob.
  */
 static inline char *smk_of_inode(const struct inode *isp)
 {
 	struct inode_smack *sip = isp->i_security;
 	return sip->smk_inode;
+}
+
+/*
+ * Present a pointer to the smack label in an task blob.
+ */
+static inline char *smk_of_task(const struct task_smack *tsp)
+{
+	return tsp->smk_task;
+}
+
+/*
+ * Present a pointer to the forked smack label in an task blob.
+ */
+static inline char *smk_of_forked(const struct task_smack *tsp)
+{
+	return tsp->smk_forked;
+}
+
+/*
+ * Present a pointer to the smack label in the current task blob.
+ */
+static inline char *smk_of_current(void)
+{
+	return smk_of_task(current_security());
 }
 
 /*
@@ -286,22 +316,17 @@ static inline void smk_ad_setfield_u_tsk(struct smk_audit_info *a,
 static inline void smk_ad_setfield_u_fs_path_dentry(struct smk_audit_info *a,
 						    struct dentry *d)
 {
-	a->a.u.fs.path.dentry = d;
-}
-static inline void smk_ad_setfield_u_fs_path_mnt(struct smk_audit_info *a,
-						 struct vfsmount *m)
-{
-	a->a.u.fs.path.mnt = m;
+	a->a.u.dentry = d;
 }
 static inline void smk_ad_setfield_u_fs_inode(struct smk_audit_info *a,
 					      struct inode *i)
 {
-	a->a.u.fs.inode = i;
+	a->a.u.inode = i;
 }
 static inline void smk_ad_setfield_u_fs_path(struct smk_audit_info *a,
 					     struct path p)
 {
-	a->a.u.fs.path = p;
+	a->a.u.path = p;
 }
 static inline void smk_ad_setfield_u_net_sk(struct smk_audit_info *a,
 					    struct sock *sk)

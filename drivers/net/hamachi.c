@@ -132,13 +132,8 @@ static int tx_params[MAX_UNITS] = {-1, -1, -1, -1, -1, -1, -1, -1};
 /*
  * RX_CHECKSUM turns on card-generated receive checksum generation for
  *   TCP and UDP packets.  Otherwise the upper layers do the calculation.
- * TX_CHECKSUM won't do anything too useful, even if it works.  There's no
- *   easy mechanism by which to tell the TCP/UDP stack that it need not
- *   generate checksums for this device.  But if somebody can find a way
- *   to get that to work, most of the card work is in here already.
  * 3/10/1999 Pete Wyckoff <wyckoff@ca.sandia.gov>
  */
-#undef  TX_CHECKSUM
 #define RX_CHECKSUM
 
 /* Operational parameters that usually are not changed. */
@@ -492,7 +487,6 @@ struct hamachi_private {
 	struct sk_buff* tx_skbuff[TX_RING_SIZE];
 	dma_addr_t tx_ring_dma;
 	dma_addr_t rx_ring_dma;
-	struct net_device_stats stats;
 	struct timer_list timer;		/* Media selection timer. */
 	/* Frequently used and paired value: keep adjacent for cache effect. */
 	spinlock_t lock;
@@ -630,11 +624,6 @@ static int __devinit hamachi_init_one (struct pci_dev *pdev,
 		goto err_out_iounmap;
 
 	SET_NETDEV_DEV(dev, &pdev->dev);
-
-#ifdef TX_CHECKSUM
-	printk("check that skbcopy in ip_queue_xmit isn't happening\n");
-	dev->hard_header_len += 8;  /* for cksum tag */
-#endif
 
 	for (i = 0; i < 6; i++)
 		dev->dev_addr[i] = 1 ? read_eeprom(ioaddr, 4 + i)
@@ -938,11 +927,7 @@ static int hamachi_open(struct net_device *dev)
 
 	/* always 1, takes no more time to do it */
 	writew(0x0001, ioaddr + RxChecksum);
-#ifdef TX_CHECKSUM
-	writew(0x0001, ioaddr + TxChecksum);
-#else
 	writew(0x0000, ioaddr + TxChecksum);
-#endif
 	writew(0x8000, ioaddr + MACCnfg); /* Soft reset the MAC */
 	writew(0x215F, ioaddr + MACCnfg);
 	writew(0x000C, ioaddr + FrameGap0);
@@ -1005,7 +990,7 @@ static int hamachi_open(struct net_device *dev)
 	init_timer(&hmp->timer);
 	hmp->timer.expires = RUN_AT((24*HZ)/10);			/* 2.4 sec. */
 	hmp->timer.data = (unsigned long)dev;
-	hmp->timer.function = &hamachi_timer;				/* timer handler */
+	hmp->timer.function = hamachi_timer;				/* timer handler */
 	add_timer(&hmp->timer);
 
 	return 0;
@@ -1036,7 +1021,7 @@ static inline int hamachi_tx(struct net_device *dev)
 		if (entry >= TX_RING_SIZE-1)
 			hmp->tx_ring[TX_RING_SIZE-1].status_n_length |=
 				cpu_to_le32(DescEndRing);
-		hmp->stats.tx_packets++;
+		dev->stats.tx_packets++;
 	}
 
 	return 0;
@@ -1167,7 +1152,7 @@ static void hamachi_tx_timeout(struct net_device *dev)
 
 	/* Trigger an immediate transmit demand. */
 	dev->trans_start = jiffies; /* prevent tx timeout */
-	hmp->stats.tx_errors++;
+	dev->stats.tx_errors++;
 
 	/* Restart the chip's Tx/Rx processes . */
 	writew(0x0002, ioaddr + TxCmd); /* STOP Tx */
@@ -1203,7 +1188,7 @@ static void hamachi_init_ring(struct net_device *dev)
 	}
 	/* Fill in the Rx buffers.  Handle allocation failure gracefully. */
 	for (i = 0; i < RX_RING_SIZE; i++) {
-		struct sk_buff *skb = dev_alloc_skb(hmp->rx_buf_sz);
+		struct sk_buff *skb = dev_alloc_skb(hmp->rx_buf_sz + 2);
 		hmp->rx_skbuff[i] = skb;
 		if (skb == NULL)
 			break;
@@ -1226,40 +1211,6 @@ static void hamachi_init_ring(struct net_device *dev)
 	hmp->tx_ring[TX_RING_SIZE-1].status_n_length |= cpu_to_le32(DescEndRing);
 }
 
-
-#ifdef TX_CHECKSUM
-#define csum_add(it, val) \
-do { \
-    it += (u16) (val); \
-    if (it & 0xffff0000) { \
-	it &= 0xffff; \
-	++it; \
-    } \
-} while (0)
-    /* printk("add %04x --> %04x\n", val, it); \ */
-
-/* uh->len already network format, do not swap */
-#define pseudo_csum_udp(sum,ih,uh) do { \
-    sum = 0; \
-    csum_add(sum, (ih)->saddr >> 16); \
-    csum_add(sum, (ih)->saddr & 0xffff); \
-    csum_add(sum, (ih)->daddr >> 16); \
-    csum_add(sum, (ih)->daddr & 0xffff); \
-    csum_add(sum, cpu_to_be16(IPPROTO_UDP)); \
-    csum_add(sum, (uh)->len); \
-} while (0)
-
-/* swap len */
-#define pseudo_csum_tcp(sum,ih,len) do { \
-    sum = 0; \
-    csum_add(sum, (ih)->saddr >> 16); \
-    csum_add(sum, (ih)->saddr & 0xffff); \
-    csum_add(sum, (ih)->daddr >> 16); \
-    csum_add(sum, (ih)->daddr & 0xffff); \
-    csum_add(sum, cpu_to_be16(IPPROTO_TCP)); \
-    csum_add(sum, htons(len)); \
-} while (0)
-#endif
 
 static netdev_tx_t hamachi_start_xmit(struct sk_buff *skb,
 				      struct net_device *dev)
@@ -1292,36 +1243,6 @@ static netdev_tx_t hamachi_start_xmit(struct sk_buff *skb,
 	entry = hmp->cur_tx % TX_RING_SIZE;
 
 	hmp->tx_skbuff[entry] = skb;
-
-#ifdef TX_CHECKSUM
-	{
-	    /* tack on checksum tag */
-	    u32 tagval = 0;
-	    struct ethhdr *eh = (struct ethhdr *)skb->data;
-	    if (eh->h_proto == cpu_to_be16(ETH_P_IP)) {
-		struct iphdr *ih = (struct iphdr *)((char *)eh + ETH_HLEN);
-		if (ih->protocol == IPPROTO_UDP) {
-		    struct udphdr *uh
-		      = (struct udphdr *)((char *)ih + ih->ihl*4);
-		    u32 offset = ((unsigned char *)uh + 6) - skb->data;
-		    u32 pseudo;
-		    pseudo_csum_udp(pseudo, ih, uh);
-		    pseudo = htons(pseudo);
-		    printk("udp cksum was %04x, sending pseudo %04x\n",
-		      uh->check, pseudo);
-		    uh->check = 0;  /* zero out uh->check before card calc */
-		    /*
-		     * start at 14 (skip ethhdr), store at offset (uh->check),
-		     * use pseudo value given.
-		     */
-		    tagval = (14 << 24) | (offset << 16) | pseudo;
-		} else if (ih->protocol == IPPROTO_TCP) {
-		    printk("tcp, no auto cksum\n");
-		}
-	    }
-	    *(u32 *)skb_push(skb, 8) = tagval;
-	}
-#endif
 
         hmp->tx_ring[entry].addr = cpu_to_leXX(pci_map_single(hmp->pci_dev,
 		skb->data, skb->len, PCI_DMA_TODEVICE));
@@ -1434,7 +1355,7 @@ static irqreturn_t hamachi_interrupt(int irq, void *dev_instance)
 					if (entry >= TX_RING_SIZE-1)
 						hmp->tx_ring[TX_RING_SIZE-1].status_n_length |=
 							cpu_to_le32(DescEndRing);
-					hmp->stats.tx_packets++;
+					dev->stats.tx_packets++;
 				}
 				if (hmp->cur_tx - hmp->dirty_tx < TX_RING_SIZE - 4){
 					/* The ring is no longer full */
@@ -1525,18 +1446,22 @@ static int hamachi_rx(struct net_device *dev)
 				   le32_to_cpu(hmp->rx_ring[(hmp->cur_rx+1) % RX_RING_SIZE].status_n_length) & 0xffff0000,
 				   le32_to_cpu(hmp->rx_ring[(hmp->cur_rx+1) % RX_RING_SIZE].status_n_length) & 0x0000ffff,
 				   le32_to_cpu(hmp->rx_ring[(hmp->cur_rx-1) % RX_RING_SIZE].status_n_length));
-			hmp->stats.rx_length_errors++;
+			dev->stats.rx_length_errors++;
 		} /* else  Omit for prototype errata??? */
 		if (frame_status & 0x00380000) {
 			/* There was an error. */
 			if (hamachi_debug > 2)
 				printk(KERN_DEBUG "  hamachi_rx() Rx error was %8.8x.\n",
 					   frame_status);
-			hmp->stats.rx_errors++;
-			if (frame_status & 0x00600000) hmp->stats.rx_length_errors++;
-			if (frame_status & 0x00080000) hmp->stats.rx_frame_errors++;
-			if (frame_status & 0x00100000) hmp->stats.rx_crc_errors++;
-			if (frame_status < 0) hmp->stats.rx_dropped++;
+			dev->stats.rx_errors++;
+			if (frame_status & 0x00600000)
+				dev->stats.rx_length_errors++;
+			if (frame_status & 0x00080000)
+				dev->stats.rx_frame_errors++;
+			if (frame_status & 0x00100000)
+				dev->stats.rx_crc_errors++;
+			if (frame_status < 0)
+				dev->stats.rx_dropped++;
 		} else {
 			struct sk_buff *skb;
 			/* Omit CRC */
@@ -1654,7 +1579,7 @@ static int hamachi_rx(struct net_device *dev)
 #endif  /* RX_CHECKSUM */
 
 			netif_rx(skb);
-			hmp->stats.rx_packets++;
+			dev->stats.rx_packets++;
 		}
 		entry = (++hmp->cur_rx) % RX_RING_SIZE;
 	}
@@ -1666,7 +1591,7 @@ static int hamachi_rx(struct net_device *dev)
 		entry = hmp->dirty_rx % RX_RING_SIZE;
 		desc = &(hmp->rx_ring[entry]);
 		if (hmp->rx_skbuff[entry] == NULL) {
-			struct sk_buff *skb = dev_alloc_skb(hmp->rx_buf_sz);
+			struct sk_buff *skb = dev_alloc_skb(hmp->rx_buf_sz + 2);
 
 			hmp->rx_skbuff[entry] = skb;
 			if (skb == NULL)
@@ -1724,9 +1649,9 @@ static void hamachi_error(struct net_device *dev, int intr_status)
 		       dev->name, intr_status);
 	/* Hmmmmm, it's not clear how to recover from PCI faults. */
 	if (intr_status & (IntrTxPCIErr | IntrTxPCIFault))
-		hmp->stats.tx_fifo_errors++;
+		dev->stats.tx_fifo_errors++;
 	if (intr_status & (IntrRxPCIErr | IntrRxPCIFault))
-		hmp->stats.rx_fifo_errors++;
+		dev->stats.rx_fifo_errors++;
 }
 
 static int hamachi_close(struct net_device *dev)
@@ -1828,19 +1753,27 @@ static struct net_device_stats *hamachi_get_stats(struct net_device *dev)
            so I think I'll comment it out here and see if better things
            happen.
         */
-	/* hmp->stats.tx_packets	= readl(ioaddr + 0x000); */
+	/* dev->stats.tx_packets	= readl(ioaddr + 0x000); */
 
-	hmp->stats.rx_bytes = readl(ioaddr + 0x330); /* Total Uni+Brd+Multi */
-	hmp->stats.tx_bytes = readl(ioaddr + 0x3B0); /* Total Uni+Brd+Multi */
-	hmp->stats.multicast		= readl(ioaddr + 0x320); /* Multicast Rx */
+	/* Total Uni+Brd+Multi */
+	dev->stats.rx_bytes = readl(ioaddr + 0x330);
+	/* Total Uni+Brd+Multi */
+	dev->stats.tx_bytes = readl(ioaddr + 0x3B0);
+	/* Multicast Rx */
+	dev->stats.multicast = readl(ioaddr + 0x320);
 
-	hmp->stats.rx_length_errors	= readl(ioaddr + 0x368); /* Over+Undersized */
-	hmp->stats.rx_over_errors	= readl(ioaddr + 0x35C); /* Jabber */
-	hmp->stats.rx_crc_errors	= readl(ioaddr + 0x360); /* Jabber */
-	hmp->stats.rx_frame_errors	= readl(ioaddr + 0x364); /* Symbol Errs */
-	hmp->stats.rx_missed_errors	= readl(ioaddr + 0x36C); /* Dropped */
+	/* Over+Undersized */
+	dev->stats.rx_length_errors = readl(ioaddr + 0x368);
+	/* Jabber */
+	dev->stats.rx_over_errors = readl(ioaddr + 0x35C);
+	/* Jabber */
+	dev->stats.rx_crc_errors = readl(ioaddr + 0x360);
+	/* Symbol Errs */
+	dev->stats.rx_frame_errors = readl(ioaddr + 0x364);
+	/* Dropped */
+	dev->stats.rx_missed_errors = readl(ioaddr + 0x36C);
 
-	return &hmp->stats;
+	return &dev->stats;
 }
 
 static void set_rx_mode(struct net_device *dev)

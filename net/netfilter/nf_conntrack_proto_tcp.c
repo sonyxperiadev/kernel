@@ -227,11 +227,11 @@ static const u8 tcp_conntracks[2][6][TCP_CONNTRACK_MAX] = {
  *	sCL -> sIV
  */
 /* 	     sNO, sSS, sSR, sES, sFW, sCW, sLA, sTW, sCL, sS2	*/
-/*synack*/ { sIV, sSR, sSR, sIG, sIG, sIG, sIG, sIG, sIG, sSR },
+/*synack*/ { sIV, sSR, sIG, sIG, sIG, sIG, sIG, sIG, sIG, sSR },
 /*
  *	sSS -> sSR	Standard open.
  *	sS2 -> sSR	Simultaneous open
- *	sSR -> sSR	Retransmitted SYN/ACK.
+ *	sSR -> sIG	Retransmitted SYN/ACK, ignore it.
  *	sES -> sIG	Late retransmitted SYN/ACK?
  *	sFW -> sIG	Might be SYN/ACK answering ignored SYN
  *	sCW -> sIG
@@ -329,8 +329,8 @@ static unsigned int get_conntrack_index(const struct tcphdr *tcph)
 /* TCP connection tracking based on 'Real Stateful TCP Packet Filtering
    in IP Filter' by Guido van Rooij.
 
-   http://www.nluug.nl/events/sane2000/papers.html
-   http://www.iae.nl/users/guido/papers/tcp_filtering.ps.gz
+   http://www.sane.nl/events/sane2000/papers.html
+   http://www.darkart.com/mirrors/www.obfuscation.org/ipf/
 
    The boundaries and the conditions are changed according to RFC793:
    the packet must intersect the window (i.e. segments may be
@@ -585,8 +585,16 @@ static bool tcp_in_window(const struct nf_conn *ct,
 			 * Let's try to use the data from the packet.
 			 */
 			sender->td_end = end;
+			win <<= sender->td_scale;
 			sender->td_maxwin = (win == 0 ? 1 : win);
 			sender->td_maxend = end + sender->td_maxwin;
+			/*
+			 * We haven't seen traffic in the other direction yet
+			 * but we have to tweak window tracking to pass III
+			 * and IV until that happens.
+			 */
+			if (receiver->td_maxwin == 0)
+				receiver->td_end = receiver->td_maxend = sack;
 		}
 	} else if (((state->state == TCP_CONNTRACK_SYN_SENT
 		     && dir == IP_CT_DIR_ORIGINAL)
@@ -680,7 +688,7 @@ static bool tcp_in_window(const struct nf_conn *ct,
 		/*
 		 * Update receiver data.
 		 */
-		if (after(end, sender->td_maxend))
+		if (receiver->td_maxwin != 0 && after(end, sender->td_maxend))
 			receiver->td_maxwin += end - sender->td_maxend;
 		if (after(sack + win, receiver->td_maxend - 1)) {
 			receiver->td_maxend = sack + win;
@@ -736,27 +744,19 @@ static bool tcp_in_window(const struct nf_conn *ct,
 	return res;
 }
 
-#define	TH_FIN	0x01
-#define	TH_SYN	0x02
-#define	TH_RST	0x04
-#define	TH_PUSH	0x08
-#define	TH_ACK	0x10
-#define	TH_URG	0x20
-#define	TH_ECE	0x40
-#define	TH_CWR	0x80
-
 /* table of valid flag combinations - PUSH, ECE and CWR are always valid */
-static const u8 tcp_valid_flags[(TH_FIN|TH_SYN|TH_RST|TH_ACK|TH_URG) + 1] =
+static const u8 tcp_valid_flags[(TCPHDR_FIN|TCPHDR_SYN|TCPHDR_RST|TCPHDR_ACK|
+				 TCPHDR_URG) + 1] =
 {
-	[TH_SYN]			= 1,
-	[TH_SYN|TH_URG]			= 1,
-	[TH_SYN|TH_ACK]			= 1,
-	[TH_RST]			= 1,
-	[TH_RST|TH_ACK]			= 1,
-	[TH_FIN|TH_ACK]			= 1,
-	[TH_FIN|TH_ACK|TH_URG]		= 1,
-	[TH_ACK]			= 1,
-	[TH_ACK|TH_URG]			= 1,
+	[TCPHDR_SYN]				= 1,
+	[TCPHDR_SYN|TCPHDR_URG]			= 1,
+	[TCPHDR_SYN|TCPHDR_ACK]			= 1,
+	[TCPHDR_RST]				= 1,
+	[TCPHDR_RST|TCPHDR_ACK]			= 1,
+	[TCPHDR_FIN|TCPHDR_ACK]			= 1,
+	[TCPHDR_FIN|TCPHDR_ACK|TCPHDR_URG]	= 1,
+	[TCPHDR_ACK]				= 1,
+	[TCPHDR_ACK|TCPHDR_URG]			= 1,
 };
 
 /* Protect conntrack agaist broken packets. Code taken from ipt_unclean.c.  */
@@ -803,7 +803,7 @@ static int tcp_error(struct net *net, struct nf_conn *tmpl,
 	}
 
 	/* Check TCP flags. */
-	tcpflags = (((u_int8_t *)th)[13] & ~(TH_ECE|TH_CWR|TH_PUSH));
+	tcpflags = (tcp_flag_byte(th) & ~(TCPHDR_ECE|TCPHDR_CWR|TCPHDR_PSH));
 	if (!tcp_valid_flags[tcpflags]) {
 		if (LOG_INVALID(net, IPPROTO_TCP))
 			nf_log_packet(pf, 0, skb, NULL, NULL, NULL,
@@ -1066,9 +1066,7 @@ static bool tcp_new(struct nf_conn *ct, const struct sk_buff *skb,
 	BUG_ON(th == NULL);
 
 	/* Don't need lock here: this conntrack not in circulation yet */
-	new_state
-		= tcp_conntracks[0][get_conntrack_index(th)]
-		[TCP_CONNTRACK_NONE];
+	new_state = tcp_conntracks[0][get_conntrack_index(th)][TCP_CONNTRACK_NONE];
 
 	/* Invalid: delete conntrack */
 	if (new_state >= TCP_CONNTRACK_MAX) {
@@ -1077,6 +1075,7 @@ static bool tcp_new(struct nf_conn *ct, const struct sk_buff *skb,
 	}
 
 	if (new_state == TCP_CONNTRACK_SYN_SENT) {
+		memset(&ct->proto.tcp, 0, sizeof(ct->proto.tcp));
 		/* SYN packet */
 		ct->proto.tcp.seen[0].td_end =
 			segment_seq_plus_len(ntohl(th->seq), skb->len,
@@ -1088,11 +1087,11 @@ static bool tcp_new(struct nf_conn *ct, const struct sk_buff *skb,
 			ct->proto.tcp.seen[0].td_end;
 
 		tcp_options(skb, dataoff, th, &ct->proto.tcp.seen[0]);
-		ct->proto.tcp.seen[1].flags = 0;
 	} else if (nf_ct_tcp_loose == 0) {
 		/* Don't try to pick up connections. */
 		return false;
 	} else {
+		memset(&ct->proto.tcp, 0, sizeof(ct->proto.tcp));
 		/*
 		 * We are in the middle of a connection,
 		 * its history is lost for us.
@@ -1107,7 +1106,6 @@ static bool tcp_new(struct nf_conn *ct, const struct sk_buff *skb,
 		ct->proto.tcp.seen[0].td_maxend =
 			ct->proto.tcp.seen[0].td_end +
 			ct->proto.tcp.seen[0].td_maxwin;
-		ct->proto.tcp.seen[0].td_scale = 0;
 
 		/* We assume SACK and liberal window checking to handle
 		 * window scaling */
@@ -1116,13 +1114,7 @@ static bool tcp_new(struct nf_conn *ct, const struct sk_buff *skb,
 					      IP_CT_TCP_FLAG_BE_LIBERAL;
 	}
 
-	ct->proto.tcp.seen[1].td_end = 0;
-	ct->proto.tcp.seen[1].td_maxend = 0;
-	ct->proto.tcp.seen[1].td_maxwin = 0;
-	ct->proto.tcp.seen[1].td_scale = 0;
-
 	/* tcp_packet will set them */
-	ct->proto.tcp.state = TCP_CONNTRACK_NONE;
 	ct->proto.tcp.last_index = TCP_NONE_SET;
 
 	pr_debug("tcp_new: sender end=%u maxend=%u maxwin=%u scale=%i "

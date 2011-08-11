@@ -2313,7 +2313,7 @@ static struct dma_async_tx_descriptor *ppc440spe_adma_prep_dma_memcpy(
 	if (unlikely(!len))
 		return NULL;
 
-	BUG_ON(unlikely(len > PPC440SPE_ADMA_DMA_MAX_BYTE_COUNT));
+	BUG_ON(len > PPC440SPE_ADMA_DMA_MAX_BYTE_COUNT);
 
 	spin_lock_bh(&ppc440spe_chan->lock);
 
@@ -2354,7 +2354,7 @@ static struct dma_async_tx_descriptor *ppc440spe_adma_prep_dma_memset(
 	if (unlikely(!len))
 		return NULL;
 
-	BUG_ON(unlikely(len > PPC440SPE_ADMA_DMA_MAX_BYTE_COUNT));
+	BUG_ON(len > PPC440SPE_ADMA_DMA_MAX_BYTE_COUNT);
 
 	spin_lock_bh(&ppc440spe_chan->lock);
 
@@ -2397,7 +2397,7 @@ static struct dma_async_tx_descriptor *ppc440spe_adma_prep_dma_xor(
 				     dma_dest, dma_src, src_cnt));
 	if (unlikely(!len))
 		return NULL;
-	BUG_ON(unlikely(len > PPC440SPE_ADMA_XOR_MAX_BYTE_COUNT));
+	BUG_ON(len > PPC440SPE_ADMA_XOR_MAX_BYTE_COUNT);
 
 	dev_dbg(ppc440spe_chan->device->common.dev,
 		"ppc440spe adma%d: %s src_cnt: %d len: %u int_en: %d\n",
@@ -2887,7 +2887,7 @@ static struct dma_async_tx_descriptor *ppc440spe_adma_prep_dma_pq(
 	ADMA_LL_DBG(prep_dma_pq_dbg(ppc440spe_chan->device->id,
 				    dst, src, src_cnt));
 	BUG_ON(!len);
-	BUG_ON(unlikely(len > PPC440SPE_ADMA_XOR_MAX_BYTE_COUNT));
+	BUG_ON(len > PPC440SPE_ADMA_XOR_MAX_BYTE_COUNT);
 	BUG_ON(!src_cnt);
 
 	if (src_cnt == 1 && dst[1] == src[0]) {
@@ -4257,11 +4257,11 @@ static int ppc440spe_adma_setup_irqs(struct ppc440spe_adma_device *adev,
 				     struct ppc440spe_adma_chan *chan,
 				     int *initcode)
 {
-	struct of_device *ofdev;
+	struct platform_device *ofdev;
 	struct device_node *np;
 	int ret;
 
-	ofdev = container_of(adev->dev, struct of_device, dev);
+	ofdev = container_of(adev->dev, struct platform_device, dev);
 	np = ofdev->dev.of_node;
 	if (adev->id != PPC440SPE_XOR_ID) {
 		adev->err_irq = irq_of_parse_and_map(np, 1);
@@ -4393,8 +4393,7 @@ static void ppc440spe_adma_release_irqs(struct ppc440spe_adma_device *adev,
 /**
  * ppc440spe_adma_probe - probe the asynch device
  */
-static int __devinit ppc440spe_adma_probe(struct of_device *ofdev,
-					  const struct of_device_id *match)
+static int __devinit ppc440spe_adma_probe(struct platform_device *ofdev)
 {
 	struct device_node *np = ofdev->dev.of_node;
 	struct resource res;
@@ -4449,9 +4448,8 @@ static int __devinit ppc440spe_adma_probe(struct of_device *ofdev,
 
 	if (!request_mem_region(res.start, resource_size(&res),
 				dev_driver_string(&ofdev->dev))) {
-		dev_err(&ofdev->dev, "failed to request memory region "
-			"(0x%016llx-0x%016llx)\n",
-			(u64)res.start, (u64)res.end);
+		dev_err(&ofdev->dev, "failed to request memory region %pR\n",
+			&res);
 		initcode = PPC_ADMA_INIT_MEMREG;
 		ret = -EBUSY;
 		goto out;
@@ -4625,7 +4623,7 @@ out:
 /**
  * ppc440spe_adma_remove - remove the asynch device
  */
-static int __devexit ppc440spe_adma_remove(struct of_device *ofdev)
+static int __devexit ppc440spe_adma_remove(struct platform_device *ofdev)
 {
 	struct ppc440spe_adma_device *adev = dev_get_drvdata(&ofdev->dev);
 	struct device_node *np = ofdev->dev.of_node;
@@ -4945,7 +4943,7 @@ static const struct of_device_id ppc440spe_adma_of_match[] __devinitconst = {
 };
 MODULE_DEVICE_TABLE(of, ppc440spe_adma_of_match);
 
-static struct of_platform_driver ppc440spe_adma_driver = {
+static struct platform_driver ppc440spe_adma_driver = {
 	.probe = ppc440spe_adma_probe,
 	.remove = __devexit_p(ppc440spe_adma_remove),
 	.driver = {
@@ -4963,7 +4961,7 @@ static __init int ppc440spe_adma_init(void)
 	if (ret)
 		return ret;
 
-	ret = of_register_platform_driver(&ppc440spe_adma_driver);
+	ret = platform_driver_register(&ppc440spe_adma_driver);
 	if (ret) {
 		pr_err("%s: failed to register platform driver\n",
 			__func__);
@@ -4997,7 +4995,7 @@ out_dev:
 	/* User will not be able to enable h/w RAID-6 */
 	pr_err("%s: failed to create RAID-6 driver interface\n",
 		__func__);
-	of_unregister_platform_driver(&ppc440spe_adma_driver);
+	platform_driver_unregister(&ppc440spe_adma_driver);
 out_reg:
 	dcr_unmap(ppc440spe_mq_dcr_host, ppc440spe_mq_dcr_len);
 	kfree(ppc440spe_dma_fifo_buf);
@@ -5012,7 +5010,7 @@ static void __exit ppc440spe_adma_exit(void)
 			   &driver_attr_enable);
 	driver_remove_file(&ppc440spe_adma_driver.driver,
 			   &driver_attr_devices);
-	of_unregister_platform_driver(&ppc440spe_adma_driver);
+	platform_driver_unregister(&ppc440spe_adma_driver);
 	dcr_unmap(ppc440spe_mq_dcr_host, ppc440spe_mq_dcr_len);
 	kfree(ppc440spe_dma_fifo_buf);
 }

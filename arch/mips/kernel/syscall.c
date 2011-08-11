@@ -10,12 +10,9 @@
 #include <linux/capability.h>
 #include <linux/errno.h>
 #include <linux/linkage.h>
-#include <linux/mm.h>
 #include <linux/fs.h>
 #include <linux/smp.h>
-#include <linux/mman.h>
 #include <linux/ptrace.h>
-#include <linux/sched.h>
 #include <linux/string.h>
 #include <linux/syscalls.h>
 #include <linux/file.h>
@@ -25,10 +22,10 @@
 #include <linux/msg.h>
 #include <linux/shm.h>
 #include <linux/compiler.h>
-#include <linux/module.h>
 #include <linux/ipc.h>
 #include <linux/uaccess.h>
 #include <linux/slab.h>
+#include <linux/elf.h>
 
 #include <asm/asm.h>
 #include <asm/branch.h>
@@ -62,76 +59,6 @@ asmlinkage int sysm_pipe(nabi_no_regargs volatile struct pt_regs regs)
 	res = fd[0];
 out:
 	return res;
-}
-
-unsigned long shm_align_mask = PAGE_SIZE - 1;	/* Sane caches */
-
-EXPORT_SYMBOL(shm_align_mask);
-
-#define COLOUR_ALIGN(addr,pgoff)				\
-	((((addr) + shm_align_mask) & ~shm_align_mask) +	\
-	 (((pgoff) << PAGE_SHIFT) & shm_align_mask))
-
-unsigned long arch_get_unmapped_area(struct file *filp, unsigned long addr,
-	unsigned long len, unsigned long pgoff, unsigned long flags)
-{
-	struct vm_area_struct * vmm;
-	int do_color_align;
-	unsigned long task_size;
-
-#ifdef CONFIG_32BIT
-	task_size = TASK_SIZE;
-#else /* Must be CONFIG_64BIT*/
-	task_size = test_thread_flag(TIF_32BIT_ADDR) ? TASK_SIZE32 : TASK_SIZE;
-#endif
-
-	if (len > task_size)
-		return -ENOMEM;
-
-	if (flags & MAP_FIXED) {
-		/* Even MAP_FIXED mappings must reside within task_size.  */
-		if (task_size - len < addr)
-			return -EINVAL;
-
-		/*
-		 * We do not accept a shared mapping if it would violate
-		 * cache aliasing constraints.
-		 */
-		if ((flags & MAP_SHARED) &&
-		    ((addr - (pgoff << PAGE_SHIFT)) & shm_align_mask))
-			return -EINVAL;
-		return addr;
-	}
-
-	do_color_align = 0;
-	if (filp || (flags & MAP_SHARED))
-		do_color_align = 1;
-	if (addr) {
-		if (do_color_align)
-			addr = COLOUR_ALIGN(addr, pgoff);
-		else
-			addr = PAGE_ALIGN(addr);
-		vmm = find_vma(current->mm, addr);
-		if (task_size - len >= addr &&
-		    (!vmm || addr + len <= vmm->vm_start))
-			return addr;
-	}
-	addr = TASK_UNMAPPED_BASE;
-	if (do_color_align)
-		addr = COLOUR_ALIGN(addr, pgoff);
-	else
-		addr = PAGE_ALIGN(addr);
-
-	for (vmm = find_vma(current->mm, addr); ; vmm = vmm->vm_next) {
-		/* At this point:  (!vmm || addr < vmm->vm_end). */
-		if (task_size - len < addr)
-			return -ENOMEM;
-		if (!vmm || addr + len <= vmm->vm_start)
-			return addr;
-		addr = vmm->vm_end;
-		if (do_color_align)
-			addr = COLOUR_ALIGN(addr, pgoff);
-	}
 }
 
 SYSCALL_DEFINE6(mips_mmap, unsigned long, addr, unsigned long, len,
@@ -207,12 +134,14 @@ asmlinkage int sys_execve(nabi_no_regargs struct pt_regs regs)
 	int error;
 	char * filename;
 
-	filename = getname((char __user *) (long)regs.regs[4]);
+	filename = getname((const char __user *) (long)regs.regs[4]);
 	error = PTR_ERR(filename);
 	if (IS_ERR(filename))
 		goto out;
-	error = do_execve(filename, (char __user *__user *) (long)regs.regs[5],
-	                  (char __user *__user *) (long)regs.regs[6], &regs);
+	error = do_execve(filename,
+			  (const char __user *const __user *) (long)regs.regs[5],
+	                  (const char __user *const __user *) (long)regs.regs[6],
+			  &regs);
 	putname(filename);
 
 out:
@@ -334,12 +263,11 @@ save_static_function(sys_sysmips);
 static int __used noinline
 _sys_sysmips(nabi_no_regargs struct pt_regs regs)
 {
-	long cmd, arg1, arg2, arg3;
+	long cmd, arg1, arg2;
 
 	cmd = regs.regs[4];
 	arg1 = regs.regs[5];
 	arg2 = regs.regs[6];
-	arg3 = regs.regs[7];
 
 	switch (cmd) {
 	case MIPS_ATOMIC_SET:
@@ -356,7 +284,7 @@ _sys_sysmips(nabi_no_regargs struct pt_regs regs)
 		if (arg1 & 2)
 			set_thread_flag(TIF_LOGADE);
 		else
-			clear_thread_flag(TIF_FIXADE);
+			clear_thread_flag(TIF_LOGADE);
 
 		return 0;
 
@@ -389,7 +317,9 @@ asmlinkage void bad_stack(void)
  * Do a system call from kernel instead of calling sys_execve so we
  * end up with proper pt_regs.
  */
-int kernel_execve(const char *filename, char *const argv[], char *const envp[])
+int kernel_execve(const char *filename,
+		  const char *const argv[],
+		  const char *const envp[])
 {
 	register unsigned long __a0 asm("$4") = (unsigned long) filename;
 	register unsigned long __a1 asm("$5") = (unsigned long) argv;

@@ -54,7 +54,7 @@ static void do_sysrq(struct kdbg_ctxt *ctxt, char rq)
 	int ret;
 	int idx = 0;
 	do_syslog(5 /* clear */, NULL, 0);
-	handle_sysrq(rq, NULL);
+	handle_sysrq(rq);
 	while (1) {
 		ret = log_buf_copy(buf, idx, sizeof(buf) - 1);
 		if (ret <= 0)
@@ -65,6 +65,14 @@ static void do_sysrq(struct kdbg_ctxt *ctxt, char rq)
 	}
 }
 
+static void do_help(struct kdbg_ctxt *ctxt)
+{
+	dprintf("Kernel Debugger commands:\n");
+	dprintf(" ps            Process list\n");
+	dprintf(" sysrq         sysrq options\n");
+	dprintf(" sysrq <param> Execute sysrq with <param>\n");
+}
+
 int kernel_debugger(struct kdbg_ctxt *ctxt, char *cmd)
 {
 	if (!strcmp(cmd, "ps"))
@@ -73,6 +81,8 @@ int kernel_debugger(struct kdbg_ctxt *ctxt, char *cmd)
 		do_sysrq(ctxt, 'h');
 	if (!strncmp(cmd, "sysrq ", 6))
 		do_sysrq(ctxt, cmd[6]);
+	if (!strcmp(cmd, "help"))
+		do_help(ctxt);
 
 	return 0;
 }

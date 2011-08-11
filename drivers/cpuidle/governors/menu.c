@@ -80,7 +80,7 @@
  * Limiting Performance Impact
  * ---------------------------
  * C states, especially those with large exit latencies, can have a real
- * noticable impact on workloads, which is not acceptable for most sysadmins,
+ * noticeable impact on workloads, which is not acceptable for most sysadmins,
  * and in addition, less performance has a power price of its own.
  *
  * As a general rule of thumb, menu assumes that the following heuristic
@@ -234,8 +234,10 @@ static int menu_select(struct cpuidle_device *dev)
 {
 	struct menu_device *data = &__get_cpu_var(menu_devices);
 	int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);
+	unsigned int power_usage = -1;
 	int i;
 	int multiplier;
+	struct timespec t;
 
 	if (data->needs_update) {
 		menu_update(dev);
@@ -250,8 +252,9 @@ static int menu_select(struct cpuidle_device *dev)
 		return 0;
 
 	/* determine the expected residency time, round up */
+	t = ktime_to_timespec(tick_nohz_get_sleep_length());
 	data->expected_us =
-	    DIV_ROUND_UP((u32)ktime_to_ns(tick_nohz_get_sleep_length()), 1000);
+		t.tv_sec * USEC_PER_SEC + t.tv_nsec / NSEC_PER_USEC;
 
 
 	data->bucket = which_bucket(data->expected_us);
@@ -278,19 +281,27 @@ static int menu_select(struct cpuidle_device *dev)
 	if (data->expected_us > 5)
 		data->last_state_idx = CPUIDLE_DRIVER_STATE_START;
 
-
-	/* find the deepest idle state that satisfies our constraints */
+	/*
+	 * Find the idle state with the lowest power while satisfying
+	 * our constraints.
+	 */
 	for (i = CPUIDLE_DRIVER_STATE_START; i < dev->state_count; i++) {
 		struct cpuidle_state *s = &dev->states[i];
 
+		if (s->flags & CPUIDLE_FLAG_IGNORE)
+			continue;
 		if (s->target_residency > data->predicted_us)
-			break;
+			continue;
 		if (s->exit_latency > latency_req)
-			break;
+			continue;
 		if (s->exit_latency * multiplier > data->predicted_us)
-			break;
-		data->exit_us = s->exit_latency;
-		data->last_state_idx = i;
+			continue;
+
+		if (s->power_usage < power_usage) {
+			power_usage = s->power_usage;
+			data->last_state_idx = i;
+			data->exit_us = s->exit_latency;
+		}
 	}
 
 	return data->last_state_idx;

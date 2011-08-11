@@ -313,6 +313,7 @@ static void handle_internal_command(int argc, const char **argv)
 		{ "buildid-cache", cmd_buildid_cache, 0 },
 		{ "buildid-list", cmd_buildid_list, 0 },
 		{ "diff",	cmd_diff,	0 },
+		{ "evlist",	cmd_evlist,	0 },
 		{ "help",	cmd_help,	0 },
 		{ "list",	cmd_list,	0 },
 		{ "record",	cmd_record,	0 },
@@ -323,7 +324,7 @@ static void handle_internal_command(int argc, const char **argv)
 		{ "top",	cmd_top,	0 },
 		{ "annotate",	cmd_annotate,	0 },
 		{ "version",	cmd_version,	0 },
-		{ "trace",	cmd_trace,	0 },
+		{ "script",	cmd_script,	0 },
 		{ "sched",	cmd_sched,	0 },
 		{ "probe",	cmd_probe,	0 },
 		{ "kmem",	cmd_kmem,	0 },
@@ -458,6 +459,8 @@ int main(int argc, const char **argv)
 	handle_options(&argv, &argc, NULL);
 	commit_pager_choice();
 	set_debugfs_path();
+	set_buildid_dir();
+
 	if (argc > 0) {
 		if (!prefixcmp(argv[0], "--"))
 			argv[0] += 2;

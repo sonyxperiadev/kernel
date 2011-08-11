@@ -213,6 +213,7 @@ Channel manager Data Structure entry = 20 DWORD
 #define DEV_CNTRL2	0x00040000
 
 #define PCI_MSK_IR        (1 << 28)
+#define PCI_MSK_AV_CORE   (1 << 27)
 #define PCI_MSK_GPIO1     (1 << 24)
 #define PCI_MSK_GPIO0     (1 << 23)
 #define PCI_MSK_APB_DMA   (1 << 12)
@@ -291,6 +292,7 @@ Channel manager Data Structure entry = 20 DWORD
 #define RDR_CFG0	0x00050000
 #define RDR_CFG1	0x00050004
 #define RDR_CFG2	0x00050008
+#define RDR_RDRCTL1	0x0005030c
 #define RDR_TLCTL0	0x00050318
 
 /* APB DMAC Current Buffer Pointer */

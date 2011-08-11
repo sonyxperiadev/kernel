@@ -8,7 +8,7 @@
  *  Copyright:	MontaVista Software, Inc.
  *
  * Spliting done by: Marek Vasut <marek.vasut@gmail.com>
- * If something doesnt work and it worked before spliting, e-mail me,
+ * If something doesn't work and it worked before spliting, e-mail me,
  * dont bother Nicolas please ;-)
  *
  * This program is free software; you can redistribute it and/or modify
@@ -114,7 +114,7 @@ static int ucb1400_core_probe(struct device *dev)
 err3:
 	platform_device_put(ucb->ucb1400_ts);
 err2:
-	platform_device_unregister(ucb->ucb1400_gpio);
+	platform_device_del(ucb->ucb1400_gpio);
 err1:
 	platform_device_put(ucb->ucb1400_gpio);
 err0:

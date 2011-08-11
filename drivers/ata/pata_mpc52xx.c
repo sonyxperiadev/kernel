@@ -610,7 +610,7 @@ static struct scsi_host_template mpc52xx_ata_sht = {
 };
 
 static struct ata_port_operations mpc52xx_ata_port_ops = {
-	.inherits		= &ata_sff_port_ops,
+	.inherits		= &ata_bmdma_port_ops,
 	.sff_dev_select		= mpc52xx_ata_dev_select,
 	.set_piomode		= mpc52xx_ata_set_piomode,
 	.set_dmamode		= mpc52xx_ata_set_dmamode,
@@ -680,7 +680,7 @@ mpc52xx_ata_remove_one(struct device *dev)
 /* ======================================================================== */
 
 static int __devinit
-mpc52xx_ata_probe(struct of_device *op, const struct of_device_id *match)
+mpc52xx_ata_probe(struct platform_device *op)
 {
 	unsigned int ipb_freq;
 	struct resource res_mem;
@@ -821,7 +821,7 @@ mpc52xx_ata_probe(struct of_device *op, const struct of_device_id *match)
 }
 
 static int
-mpc52xx_ata_remove(struct of_device *op)
+mpc52xx_ata_remove(struct platform_device *op)
 {
 	struct mpc52xx_ata_priv *priv;
 	int task_irq;
@@ -848,7 +848,7 @@ mpc52xx_ata_remove(struct of_device *op)
 #ifdef CONFIG_PM
 
 static int
-mpc52xx_ata_suspend(struct of_device *op, pm_message_t state)
+mpc52xx_ata_suspend(struct platform_device *op, pm_message_t state)
 {
 	struct ata_host *host = dev_get_drvdata(&op->dev);
 
@@ -856,7 +856,7 @@ mpc52xx_ata_suspend(struct of_device *op, pm_message_t state)
 }
 
 static int
-mpc52xx_ata_resume(struct of_device *op)
+mpc52xx_ata_resume(struct platform_device *op)
 {
 	struct ata_host *host = dev_get_drvdata(&op->dev);
 	struct mpc52xx_ata_priv *priv = host->private_data;
@@ -883,7 +883,7 @@ static struct of_device_id mpc52xx_ata_of_match[] = {
 };
 
 
-static struct of_platform_driver mpc52xx_ata_of_platform_driver = {
+static struct platform_driver mpc52xx_ata_of_platform_driver = {
 	.probe		= mpc52xx_ata_probe,
 	.remove		= mpc52xx_ata_remove,
 #ifdef CONFIG_PM
@@ -906,13 +906,13 @@ static int __init
 mpc52xx_ata_init(void)
 {
 	printk(KERN_INFO "ata: MPC52xx IDE/ATA libata driver\n");
-	return of_register_platform_driver(&mpc52xx_ata_of_platform_driver);
+	return platform_driver_register(&mpc52xx_ata_of_platform_driver);
 }
 
 static void __exit
 mpc52xx_ata_exit(void)
 {
-	of_unregister_platform_driver(&mpc52xx_ata_of_platform_driver);
+	platform_driver_unregister(&mpc52xx_ata_of_platform_driver);
 }
 
 module_init(mpc52xx_ata_init);

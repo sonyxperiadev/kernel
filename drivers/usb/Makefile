@@ -22,8 +22,7 @@ obj-$(CONFIG_USB_R8A66597_HCD)	+= host/
 obj-$(CONFIG_USB_HWA_HCD)	+= host/
 obj-$(CONFIG_USB_ISP1760_HCD)	+= host/
 obj-$(CONFIG_USB_IMX21_HCD)	+= host/
-obj-$(CONFIG_USB_DWCOTG)        += host/
-obj-$(CONFIG_USB_BCM_ISLAND)	+= host/
+obj-$(CONFIG_USB_FSL_MPH_DR_OF)	+= host/
 
 obj-$(CONFIG_USB_C67X00_HCD)	+= c67x00/
 
@@ -43,7 +42,12 @@ obj-$(CONFIG_USB_MICROTEK)	+= image/
 obj-$(CONFIG_USB_SERIAL)	+= serial/
 
 obj-$(CONFIG_USB)		+= misc/
-obj-y				+= early/
+obj-$(CONFIG_EARLY_PRINTK_DBGP)	+= early/
 
 obj-$(CONFIG_USB_ATM)		+= atm/
 obj-$(CONFIG_USB_SPEEDTOUCH)	+= atm/
+
+obj-$(CONFIG_USB_MUSB_HDRC)	+= musb/
+obj-$(CONFIG_USB_RENESAS_USBHS)	+= renesas_usbhs/
+obj-$(CONFIG_USB_OTG_UTILS)	+= otg/
+obj-$(CONFIG_USB_GADGET)	+= gadget/

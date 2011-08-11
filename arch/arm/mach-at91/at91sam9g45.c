@@ -20,6 +20,7 @@
 #include <mach/at91_pmc.h>
 #include <mach/at91_rstc.h>
 #include <mach/at91_shdwc.h>
+#include <mach/cpu.h>
 
 #include "generic.h"
 #include "clock.h"
@@ -120,8 +121,8 @@ static struct clk ssc1_clk = {
 	.pmc_mask	= 1 << AT91SAM9G45_ID_SSC1,
 	.type		= CLK_TYPE_PERIPHERAL,
 };
-static struct clk tcb_clk = {
-	.name		= "tcb_clk",
+static struct clk tcb0_clk = {
+	.name		= "tcb0_clk",
 	.pmc_mask	= 1 << AT91SAM9G45_ID_TCB,
 	.type		= CLK_TYPE_PERIPHERAL,
 };
@@ -176,12 +177,11 @@ static struct clk mmc1_clk = {
 	.type		= CLK_TYPE_PERIPHERAL,
 };
 
-/* One additional fake clock for ohci */
-static struct clk ohci_clk = {
-	.name		= "ohci_clk",
-	.pmc_mask	= 0,
+/* Video decoder clock - Only for sam9m10/sam9m11 */
+static struct clk vdec_clk = {
+	.name		= "vdec_clk",
+	.pmc_mask	= 1 << AT91SAM9G45_ID_VDEC,
 	.type		= CLK_TYPE_PERIPHERAL,
-	.parent		= &uhphs_clk,
 };
 
 static struct clk *periph_clocks[] __initdata = {
@@ -200,7 +200,7 @@ static struct clk *periph_clocks[] __initdata = {
 	&spi1_clk,
 	&ssc0_clk,
 	&ssc1_clk,
-	&tcb_clk,
+	&tcb0_clk,
 	&pwm_clk,
 	&tsc_clk,
 	&dma_clk,
@@ -212,7 +212,30 @@ static struct clk *periph_clocks[] __initdata = {
 	&udphs_clk,
 	&mmc1_clk,
 	// irq0
-	&ohci_clk,
+};
+
+static struct clk_lookup periph_clocks_lookups[] = {
+	/* One additional fake clock for ohci */
+	CLKDEV_CON_ID("ohci_clk", &uhphs_clk),
+	CLKDEV_CON_DEV_ID("ehci_clk", "atmel-ehci", &uhphs_clk),
+	CLKDEV_CON_DEV_ID("hclk", "atmel_usba_udc", &utmi_clk),
+	CLKDEV_CON_DEV_ID("pclk", "atmel_usba_udc", &udphs_clk),
+	CLKDEV_CON_DEV_ID("mci_clk", "atmel_mci.0", &mmc0_clk),
+	CLKDEV_CON_DEV_ID("mci_clk", "atmel_mci.1", &mmc1_clk),
+	CLKDEV_CON_DEV_ID("spi_clk", "atmel_spi.0", &spi0_clk),
+	CLKDEV_CON_DEV_ID("spi_clk", "atmel_spi.1", &spi1_clk),
+	CLKDEV_CON_DEV_ID("t0_clk", "atmel_tcb.0", &tcb0_clk),
+	CLKDEV_CON_DEV_ID("t0_clk", "atmel_tcb.1", &tcb0_clk),
+	CLKDEV_CON_DEV_ID("pclk", "ssc.0", &ssc0_clk),
+	CLKDEV_CON_DEV_ID("pclk", "ssc.1", &ssc1_clk),
+};
+
+static struct clk_lookup usart_clocks_lookups[] = {
+	CLKDEV_CON_DEV_ID("usart", "atmel_usart.0", &mck),
+	CLKDEV_CON_DEV_ID("usart", "atmel_usart.1", &usart0_clk),
+	CLKDEV_CON_DEV_ID("usart", "atmel_usart.2", &usart1_clk),
+	CLKDEV_CON_DEV_ID("usart", "atmel_usart.3", &usart2_clk),
+	CLKDEV_CON_DEV_ID("usart", "atmel_usart.4", &usart3_clk),
 };
 
 /*
@@ -239,8 +262,28 @@ static void __init at91sam9g45_register_clocks(void)
 	for (i = 0; i < ARRAY_SIZE(periph_clocks); i++)
 		clk_register(periph_clocks[i]);
 
+	clkdev_add_table(periph_clocks_lookups,
+			 ARRAY_SIZE(periph_clocks_lookups));
+	clkdev_add_table(usart_clocks_lookups,
+			 ARRAY_SIZE(usart_clocks_lookups));
+
+	if (cpu_is_at91sam9m10() || cpu_is_at91sam9m11())
+		clk_register(&vdec_clk);
+
 	clk_register(&pck0);
 	clk_register(&pck1);
+}
+
+static struct clk_lookup console_clock_lookup;
+
+void __init at91sam9g45_set_console_clock(int id)
+{
+	if (id >= ARRAY_SIZE(usart_clocks_lookups))
+		return;
+
+	console_clock_lookup.con_id = "usart";
+	console_clock_lookup.clk = usart_clocks_lookups[id].clk;
+	clkdev_add(&console_clock_lookup);
 }
 
 /* --------------------------------------------------------------------
@@ -286,11 +329,14 @@ static void at91sam9g45_poweroff(void)
  *  AT91SAM9G45 processor initialization
  * -------------------------------------------------------------------- */
 
-void __init at91sam9g45_initialize(unsigned long main_clock)
+void __init at91sam9g45_map_io(void)
 {
 	/* Map peripherals */
 	iotable_init(at91sam9g45_io_desc, ARRAY_SIZE(at91sam9g45_io_desc));
+}
 
+void __init at91sam9g45_initialize(unsigned long main_clock)
+{
 	at91_arch_reset = at91sam9g45_reset;
 	pm_power_off = at91sam9g45_poweroff;
 	at91_extern_irq = (1 << AT91SAM9G45_ID_IRQ0);

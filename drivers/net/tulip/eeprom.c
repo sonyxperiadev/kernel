@@ -115,13 +115,13 @@ static void __devinit tulip_build_fake_mediatable(struct tulip_private *tp)
 			  0x02,       /* phy reset sequence length */
 			  0x01, 0x00, /* phy reset sequence */
 			  0x00, 0x78, /* media capabilities */
-			  0x00, 0xe0, /* nway advertisment */
+			  0x00, 0xe0, /* nway advertisement */
 			  0x00, 0x05, /* fdx bit map */
 			  0x00, 0x06  /* ttm bit map */
 			};
 
-		tp->mtable = (struct mediatable *)
-			kmalloc(sizeof(struct mediatable) + sizeof(struct medialeaf), GFP_KERNEL);
+		tp->mtable = kmalloc(sizeof(struct mediatable) +
+				     sizeof(struct medialeaf), GFP_KERNEL);
 
 		if (tp->mtable == NULL)
 			return; /* Horrible, impossible failure. */
@@ -222,14 +222,14 @@ subsequent_board:
 	        /* there is no phy information, don't even try to build mtable */
 	        if (count == 0) {
 			if (tulip_debug > 0)
-				pr_warning("%s: no phy info, aborting mtable build\n",
-					   dev->name);
+				pr_warn("%s: no phy info, aborting mtable build\n",
+					dev->name);
 		        return;
 		}
 
-		mtable = (struct mediatable *)
-			kmalloc(sizeof(struct mediatable) + count*sizeof(struct medialeaf),
-					GFP_KERNEL);
+		mtable = kmalloc(sizeof(struct mediatable) +
+				 count * sizeof(struct medialeaf),
+				 GFP_KERNEL);
 		if (mtable == NULL)
 			return;				/* Horrible, impossible failure. */
 		last_mediatable = tp->mtable = mtable;

@@ -49,7 +49,7 @@
 #define BT_DBG(D...)
 #endif
 
-#define VERSION "2.15"
+#define VERSION "2.16"
 
 /* Bluetooth sockets */
 #define BT_MAX_PROTO	8
@@ -237,14 +237,15 @@ struct sock *bt_accept_dequeue(struct sock *parent, struct socket *newsock)
 
 	BT_DBG("parent %p", parent);
 
+	local_bh_disable();
 	list_for_each_safe(p, n, &bt_sk(parent)->accept_q) {
 		sk = (struct sock *) list_entry(p, struct bt_sock, accept_q);
 
-		lock_sock(sk);
+		bh_lock_sock(sk);
 
 		/* FIXME: Is this check still needed */
 		if (sk->sk_state == BT_CLOSED) {
-			release_sock(sk);
+			bh_unlock_sock(sk);
 			bt_accept_unlink(sk);
 			continue;
 		}
@@ -254,12 +255,16 @@ struct sock *bt_accept_dequeue(struct sock *parent, struct socket *newsock)
 			bt_accept_unlink(sk);
 			if (newsock)
 				sock_graft(sk, newsock);
-			release_sock(sk);
+
+			bh_unlock_sock(sk);
+			local_bh_enable();
 			return sk;
 		}
 
-		release_sock(sk);
+		bh_unlock_sock(sk);
 	}
+	local_bh_enable();
+
 	return NULL;
 }
 EXPORT_SYMBOL(bt_accept_dequeue);
@@ -278,7 +283,8 @@ int bt_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 	if (flags & (MSG_OOB))
 		return -EOPNOTSUPP;
 
-	if (!(skb = skb_recv_datagram(sk, flags, noblock, &err))) {
+	skb = skb_recv_datagram(sk, flags, noblock, &err);
+	if (!skb) {
 		if (sk->sk_shutdown & RCV_SHUTDOWN)
 			return 0;
 		return err;
@@ -303,6 +309,116 @@ int bt_sock_recvmsg(struct kiocb *iocb, struct socket *sock,
 }
 EXPORT_SYMBOL(bt_sock_recvmsg);
 
+static long bt_sock_data_wait(struct sock *sk, long timeo)
+{
+	DECLARE_WAITQUEUE(wait, current);
+
+	add_wait_queue(sk_sleep(sk), &wait);
+	for (;;) {
+		set_current_state(TASK_INTERRUPTIBLE);
+
+		if (!skb_queue_empty(&sk->sk_receive_queue))
+			break;
+
+		if (sk->sk_err || (sk->sk_shutdown & RCV_SHUTDOWN))
+			break;
+
+		if (signal_pending(current) || !timeo)
+			break;
+
+		set_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+		release_sock(sk);
+		timeo = schedule_timeout(timeo);
+		lock_sock(sk);
+		clear_bit(SOCK_ASYNC_WAITDATA, &sk->sk_socket->flags);
+	}
+
+	__set_current_state(TASK_RUNNING);
+	remove_wait_queue(sk_sleep(sk), &wait);
+	return timeo;
+}
+
+int bt_sock_stream_recvmsg(struct kiocb *iocb, struct socket *sock,
+			       struct msghdr *msg, size_t size, int flags)
+{
+	struct sock *sk = sock->sk;
+	int err = 0;
+	size_t target, copied = 0;
+	long timeo;
+
+	if (flags & MSG_OOB)
+		return -EOPNOTSUPP;
+
+	msg->msg_namelen = 0;
+
+	BT_DBG("sk %p size %zu", sk, size);
+
+	lock_sock(sk);
+
+	target = sock_rcvlowat(sk, flags & MSG_WAITALL, size);
+	timeo  = sock_rcvtimeo(sk, flags & MSG_DONTWAIT);
+
+	do {
+		struct sk_buff *skb;
+		int chunk;
+
+		skb = skb_dequeue(&sk->sk_receive_queue);
+		if (!skb) {
+			if (copied >= target)
+				break;
+
+			err = sock_error(sk);
+			if (err)
+				break;
+			if (sk->sk_shutdown & RCV_SHUTDOWN)
+				break;
+
+			err = -EAGAIN;
+			if (!timeo)
+				break;
+
+			timeo = bt_sock_data_wait(sk, timeo);
+
+			if (signal_pending(current)) {
+				err = sock_intr_errno(timeo);
+				goto out;
+			}
+			continue;
+		}
+
+		chunk = min_t(unsigned int, skb->len, size);
+		if (memcpy_toiovec(msg->msg_iov, skb->data, chunk)) {
+			skb_queue_head(&sk->sk_receive_queue, skb);
+			if (!copied)
+				copied = -EFAULT;
+			break;
+		}
+		copied += chunk;
+		size   -= chunk;
+
+		sock_recv_ts_and_drops(msg, sk, skb);
+
+		if (!(flags & MSG_PEEK)) {
+			skb_pull(skb, chunk);
+			if (skb->len) {
+				skb_queue_head(&sk->sk_receive_queue, skb);
+				break;
+			}
+			kfree_skb(skb);
+
+		} else {
+			/* put message back and return */
+			skb_queue_head(&sk->sk_receive_queue, skb);
+			break;
+		}
+	} while (size);
+
+out:
+	release_sock(sk);
+	return copied ? : err;
+}
+EXPORT_SYMBOL(bt_sock_stream_recvmsg);
+
 static inline unsigned int bt_accept_poll(struct sock *parent)
 {
 	struct list_head *p, *n;
@@ -319,7 +435,7 @@ static inline unsigned int bt_accept_poll(struct sock *parent)
 	return 0;
 }
 
-unsigned int bt_sock_poll(struct file * file, struct socket *sock, poll_table *wait)
+unsigned int bt_sock_poll(struct file *file, struct socket *sock, poll_table *wait)
 {
 	struct sock *sk = sock->sk;
 	unsigned int mask = 0;
@@ -335,13 +451,12 @@ unsigned int bt_sock_poll(struct file * file, struct socket *sock, poll_table *w
 		mask |= POLLERR;
 
 	if (sk->sk_shutdown & RCV_SHUTDOWN)
-		mask |= POLLRDHUP;
+		mask |= POLLRDHUP | POLLIN | POLLRDNORM;
 
 	if (sk->sk_shutdown == SHUTDOWN_MASK)
 		mask |= POLLHUP;
 
-	if (!skb_queue_empty(&sk->sk_receive_queue) ||
-			(sk->sk_shutdown & RCV_SHUTDOWN))
+	if (!skb_queue_empty(&sk->sk_receive_queue))
 		mask |= POLLIN | POLLRDNORM;
 
 	if (sk->sk_state == BT_CLOSED)
@@ -468,13 +583,39 @@ static int __init bt_init(void)
 
 	BT_INFO("HCI device and connection manager initialized");
 
-	hci_sock_init();
+	err = hci_sock_init();
+	if (err < 0)
+		goto error;
+
+	err = l2cap_init();
+	if (err < 0)
+		goto sock_err;
+
+	err = sco_init();
+	if (err < 0) {
+		l2cap_exit();
+		goto sock_err;
+	}
 
 	return 0;
+
+sock_err:
+	hci_sock_cleanup();
+
+error:
+	sock_unregister(PF_BLUETOOTH);
+	bt_sysfs_cleanup();
+
+	return err;
 }
 
 static void __exit bt_exit(void)
 {
+
+	sco_exit();
+
+	l2cap_exit();
+
 	hci_sock_cleanup();
 
 	sock_unregister(PF_BLUETOOTH);

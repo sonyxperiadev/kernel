@@ -43,6 +43,8 @@ extern void smp_imb(void);
 /* ??? Ought to use this in arch/alpha/kernel/signal.c too.  */
 
 #ifndef CONFIG_SMP
+#include <linux/sched.h>
+
 extern void __load_new_mm_context(struct mm_struct *);
 static inline void
 flush_icache_user_range(struct vm_area_struct *vma, struct page *page,
@@ -61,7 +63,7 @@ extern void flush_icache_user_range(struct vm_area_struct *vma,
 		struct page *page, unsigned long addr, int len);
 #endif
 
-/* This is used only in do_no_page and do_swap_page.  */
+/* This is used only in __do_fault and do_swap_page.  */
 #define flush_icache_page(vma, page) \
   flush_icache_user_range((vma), (page), 0, 0)
 
