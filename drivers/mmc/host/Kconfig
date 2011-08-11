@@ -500,6 +500,17 @@ config MMC_SDHI
 	  This provides support for the SDHI SD/SDIO controller found in
 	  SuperH and ARM SH-Mobile SoCs
 
+config MMC_BCM_SD
+	tristate "Broadcom MMC/SD/SDIO Card Interface support"
+	depends on MMC
+	help
+	  This selects a driver for the MMC/SD/SDIO interface found in
+	  BCM2820, BCM2152, BCM2850 and BCMRING... CPUs.
+	  If you have a board based on one of those and a MMC/SD
+	  slot, say Y or M here.
+
+	  If unsure, say N.
+
 config MMC_CB710
 	tristate "ENE CB710 MMC/SD Interface support"
 	depends on PCI
@@ -621,3 +632,13 @@ config MMC_USHC
 
 	  Note: These controllers only support SDIO cards and do not
 	  support MMC or SD memory cards.
+
+config BCM_SDIOWL
+	tristate "Fixes/Workarounds for Broadcom SDIO WL Card Interface support"
+	depends on MMC
+	default n
+	help
+	  This is an option to apply the software workaround for some of the
+	  hardware workarounds with Broadcom SDIOWL card.
+
+	  If unsure, say N.

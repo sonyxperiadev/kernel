@@ -303,5 +303,45 @@ config REGULATOR_TPS65910
 	help
 	  This driver supports TPS65910 voltage regulator chips.
 
+config REGULATOR_BCM_PMU59055
+	bool "BCM PMU59055 Regulator"
+	depends on MFD_BCM_PMU590XX 
+	help
+	  This driver supports the voltage regulators provided by
+	  PMU 59055.
+
+config REGULATOR_BCMPMU
+	bool "BCM PMU Regulator"
+	depends on MFD_BCMPMU
+	help
+	  This driver supports the voltage regulators provided by
+	  this family of companion chips.
+
+config REGULATOR_BCMSAMOA
+	bool "BCMSAMOA Regulator"
+	depends on MFD_BCMPMU && REGULATOR_BCMPMU
+	help
+	  This driver supports the voltage regulators provided by SAMOA PMU
+
+config REGULATOR_BCM59055
+	bool "BCM59055 Regulator"
+	depends on MFD_BCMPMU && REGULATOR_BCMPMU
+	help
+	  This driver supports the voltage regulators provided by
+	  PMU 59055.
+
+config REGULATOR_TPS728XX
+	bool "TPS28XX Regulator"
+	depends on ARCH_REQUIRE_GPIOLIB
+	help
+	  This driver supports the voltage regulators provided by
+	  TPS728XX.
+
+config MAX8649_SUPPORT_CHANGE_VID_MODE
+	bool "Enable Maxim 8649 regulator to change voltage "
+	depends on REGULATOR_MAX8649
+	help
+	  This support is to add a virtual consumer for changing voltages, and modes.
+
 endif
 
