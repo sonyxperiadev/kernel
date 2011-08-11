@@ -42,7 +42,6 @@
 #include "shared.h"
 #include "dspcmd.h"
 
-#include "ripisr.h"
 #include "osqueue.h"
 #include "msconsts.h"
 
