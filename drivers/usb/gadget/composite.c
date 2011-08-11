@@ -271,6 +271,8 @@ static int config_buf(struct usb_configuration *config,
 	/* add each function's descriptors */
 	list_for_each_entry(f, &config->functions, list) {
 		struct usb_descriptor_header **descriptors;
+		struct usb_descriptor_header *descriptor;
+		struct usb_interface_assoc_descriptor *iad = NULL;
 
 		if (speed == USB_SPEED_HIGH)
 			descriptors = f->hs_descriptors;
@@ -282,6 +284,43 @@ static int config_buf(struct usb_configuration *config,
 			(const struct usb_descriptor_header **) descriptors);
 		if (status < 0)
 			return status;
+
+		/* set interface numbers dynamically */
+		dest = next;
+		while ((descriptor = *descriptors++) != NULL) {
+			intf = (struct usb_interface_descriptor *)dest;
+			if (intf->bDescriptorType == USB_DT_INTERFACE) {
+				/* don't increment bInterfaceNumber for alternate settings */
+				if (intf->bAlternateSetting == 0)
+					intf->bInterfaceNumber = interfaceCount++;
+				else
+					intf->bInterfaceNumber = interfaceCount - 1;
+				if (iad) {
+					iad->bFirstInterface =
+						intf->bInterfaceNumber;
+					iad = NULL;
+				}
+			} else if (intf->bDescriptorType ==
+				USB_DT_INTERFACE_ASSOCIATION) {
+				iad = (struct usb_interface_assoc_descriptor *)
+					dest;
+			} else if (intf->bDescriptorType ==
+				USB_DT_CS_INTERFACE) {
+				struct usb_cdc_union_desc *cdc_union;
+				cdc_union = (struct usb_cdc_union_desc *)
+					dest;
+				if (cdc_union->bDescriptorSubType ==
+					USB_CDC_UNION_TYPE) {
+					cdc_union->bMasterInterface0 =
+						interfaceCount-1;
+					cdc_union->bSlaveInterface0 =
+						interfaceCount;
+				}
+			}
+
+			dest += intf->bLength;
+		}
+
 		len -= status;
 		next += status;
 	}
@@ -1394,4 +1433,3 @@ void usb_composite_setup_continue(struct usb_composite_dev *cdev)
 
 	spin_unlock_irqrestore(&cdev->lock, flags);
 }
-

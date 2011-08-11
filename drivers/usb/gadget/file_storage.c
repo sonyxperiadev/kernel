@@ -2152,7 +2152,7 @@ static int finish_reply(struct fsg_dev *fsg)
 					&bh->inreq_busy, &bh->state);
 			fsg->next_buffhd_to_fill = bh->next;
 			if (mod_data.can_stall)
-				rc = halt_bulk_in_endpoint(fsg);
+//				rc = halt_bulk_in_endpoint(fsg);
 		}
 		break;
 

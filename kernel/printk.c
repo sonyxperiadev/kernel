@@ -41,6 +41,7 @@
 #include <linux/cpu.h>
 #include <linux/notifier.h>
 #include <linux/rculist.h>
+#include <trace/stm.h>
 
 #include <asm/uaccess.h>
 
@@ -931,8 +932,8 @@ int brcm_retrive_early_printk(void)
 	 * will release 'logbuf_lock' regardless of whether it
 	 * actually gets the semaphore or not.
 	 */
-	if (acquire_console_semaphore_for_printk(this_cpu))
-		release_console_sem();
+	if (console_trylock_for_printk(this_cpu))
+		console_unlock();
 
 	lockdep_on();
 
@@ -997,6 +998,9 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 #endif
 
 	p = printk_buf;
+
+	/* Send printk buffer to MIPI STM trace hardware too if enable */
+	stm_dup_printk(printk_buf, printed_len);
 
 	/* Read log level and handle special printk prefix */
 	plen = log_prefix(p, &current_log_level, &special);
@@ -1300,6 +1304,7 @@ void console_lock(void)
 	console_may_schedule = 1;
 }
 EXPORT_SYMBOL(console_lock);
+EXPORT_SYMBOL(BrcmLogString);
 
 /**
  * console_trylock - try to lock the console system for exclusive use.

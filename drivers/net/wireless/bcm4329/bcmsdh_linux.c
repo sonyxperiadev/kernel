@@ -635,7 +635,7 @@ int bcmsdh_register_oob_intr(void * dhdp)
 		if (error)
 			return -ENODEV;
 
-		enable_irq_wake(sdhcinfo->oob_irq);
+		//enable_irq_wake(sdhcinfo->oob_irq);
 		sdhcinfo->oob_irq_registered = TRUE;
 	}
 
@@ -661,7 +661,7 @@ void bcmsdh_unregister_oob_intr(void)
 	SDLX_MSG(("%s: Enter\n", __FUNCTION__));
 
 	if (sdhcinfo->oob_irq_registered) {
-		disable_irq_wake(sdhcinfo->oob_irq);
+		//disable_irq_wake(sdhcinfo->oob_irq);
 		disable_irq(sdhcinfo->oob_irq);	/* just in case.. */
 		free_irq(sdhcinfo->oob_irq, NULL);
 		sdhcinfo->oob_irq_registered = FALSE;

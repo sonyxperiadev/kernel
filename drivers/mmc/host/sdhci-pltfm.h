@@ -1,28 +1,29 @@
-/*
- * Copyright 2010 MontaVista Software, LLC.
- *
- * Author: Anton Vorontsov <avorontsov@ru.mvista.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License version 2 as
- * published by the Free Software Foundation.
- */
+/*****************************************************************************
+* Copyright 2010 - 2011 Broadcom Corporation.  All rights reserved.
+*
+* Unless you and Broadcom execute a separate written software license
+* agreement governing use of this software, this software is licensed to you
+* under the terms of the GNU General Public License version 2, available at
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
+*
+* Notwithstanding the above, under no circumstances may you combine this
+* software in any way with any other Broadcom software provided under a
+* license other than the GPL, without Broadcom's express prior written
+* consent.
+*****************************************************************************/
 
-#ifndef _DRIVERS_MMC_SDHCI_PLTFM_H
-#define _DRIVERS_MMC_SDHCI_PLTFM_H
+#ifndef _SDHCI_PLTFM_H_
+#define _SDHCI_PLTFM_H_
 
-#include <linux/clk.h>
-#include <linux/types.h>
-#include <linux/mmc/sdhci-pltfm.h>
+#include <linux/kernel.h>
+#include <linux/module.h>
 
-struct sdhci_pltfm_host {
-	struct clk *clk;
-	void *priv; /* to handle quirks across io-accessor calls */
-};
+#include <mach/sdio_platform.h>
 
-extern struct sdhci_pltfm_data sdhci_cns3xxx_pdata;
-extern struct sdhci_pltfm_data sdhci_esdhc_imx_pdata;
-extern struct sdhci_pltfm_data sdhci_dove_pdata;
-extern struct sdhci_pltfm_data sdhci_tegra_pdata;
+extern int sdio_dev_is_initialized(enum sdio_devtype devtype);
+extern struct mmc_card *sdio_get_mmc_card(enum sdio_devtype devtype);
+extern struct sdio_wifi_gpio_cfg *sdio_get_wifi_gpio(enum sdio_devtype devtype);
+extern int sdio_card_emulate(enum sdio_devtype devtype, int insert);
+extern int sdio_reset_comm(struct mmc_card *card);
 
-#endif /* _DRIVERS_MMC_SDHCI_PLTFM_H */
+#endif /* _SDHCI_PLTFM_H_ */

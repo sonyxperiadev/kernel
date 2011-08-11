@@ -20,6 +20,9 @@
 
 #include <linux/mmc/sdhci.h>
 
+#ifdef CONFIG_MMC_BCM_SD
+#define SDHCI_HOST_MAX_CLK_LS_MODE	25000000
+#endif
 /*
  * Controller registers
  */
@@ -239,7 +242,6 @@
 /*
  * End of controller registers.
  */
-
 #define SDHCI_MAX_DIV_SPEC_200	256
 #define SDHCI_MAX_DIV_SPEC_300	2046
 

@@ -51,7 +51,9 @@ Broadcom's express prior written consent.
 #define MAX_UDP_CHUNK 1400
 #else
 #define MAX_UDP_CHUNK 1460
-#define MAX_SKBS 32
+#endif
+#define MAX_SKBS 128
+#define MAX_QUEUE_DEPTH (MAX_SKBS / 2)
 
 static struct sk_buff_head skb_pool;
 
@@ -1055,3 +1057,12 @@ void netpoll_set_trap(int trap)
 		atomic_dec(&trapped);
 }
 EXPORT_SYMBOL(netpoll_set_trap);
+EXPORT_SYMBOL(netpoll_trap);
+EXPORT_SYMBOL(netpoll_print_options);
+EXPORT_SYMBOL(netpoll_parse_options);
+EXPORT_SYMBOL(netpoll_setup);
+EXPORT_SYMBOL(netpoll_cleanup);
+EXPORT_SYMBOL(netpoll_send_udp);
+EXPORT_SYMBOL(netpoll_free_memory);
+EXPORT_SYMBOL(netpoll_poll_dev);
+EXPORT_SYMBOL(netpoll_poll);

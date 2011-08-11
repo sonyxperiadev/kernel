@@ -2475,6 +2475,12 @@ int sdhci_add_host(struct sdhci_host *host)
 		mmc_dev(host->mmc)->dma_mask = &host->dma_mask;
 	}
 
+#ifdef CONFIG_MMC_BCM_SD
+	if (host->ops->get_max_clk)
+		host->max_clk = host->ops->get_max_clk(host);
+	else
+		host->max_clk = 0;
+#else
 	if (host->version >= SDHCI_SPEC_300)
 		host->max_clk = (caps[0] & SDHCI_CLOCK_V3_BASE_MASK)
 			>> SDHCI_CLOCK_BASE_SHIFT;
@@ -2531,6 +2537,10 @@ int sdhci_add_host(struct sdhci_host *host)
 	 */
 	mmc->ops = &sdhci_ops;
 	mmc->f_max = host->max_clk;
+#ifdef CONFIG_MACH_BCM2850_FPGA
+   /* frequency divisor does not work on FPGA image */
+   mmc->f_min = mmc->f_min = host->max_clk;
+#endif
 	if (host->ops->get_min_clock)
 		mmc->f_min = host->ops->get_min_clock(host);
 	else if (host->version >= SDHCI_SPEC_300) {
@@ -2567,8 +2577,14 @@ int sdhci_add_host(struct sdhci_host *host)
 	if (!(host->quirks & SDHCI_QUIRK_FORCE_1_BIT_DATA))
 		mmc->caps |= MMC_CAP_4_BIT_DATA;
 
+#ifndef CONFIG_MACH_BCM2850_FPGA /* FPGA not fast enough for high speed */
 	if (caps[0] & SDHCI_CAN_DO_HISPD)
+#ifdef CONFIG_MMC_BCM_SD
 		mmc->caps |= MMC_CAP_SD_HIGHSPEED | MMC_CAP_MMC_HIGHSPEED;
+#else
+		mmc->caps |= MMC_CAP_SD_HIGHSPEED;
+#endif
+#endif
 
 	if ((host->quirks & SDHCI_QUIRK_BROKEN_CARD_DETECTION) &&
 	    mmc_card_is_removable(mmc))
@@ -2687,7 +2703,7 @@ int sdhci_add_host(struct sdhci_host *host)
 	if (host->ocr_avail_mmc)
 		mmc->ocr_avail_mmc &= host->ocr_avail_mmc;
 
-	if (host->quirks & SDHCI_QUIRK_CAP_VOLTAGE_BROKEN)
+	if (host->quirks & SDHCI_QUIRK_MISSING_CAPS)
 		mmc->ocr_avail |= MMC_VDD_29_30|MMC_VDD_30_31;
 
 	if (mmc->ocr_avail == 0) {

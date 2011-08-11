@@ -790,3 +790,28 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 		kfree(acm);
 	return status;
 }
+
+#ifdef CONFIG_USB_ANDROID_ACM
+
+int acm_function_bind_config(struct usb_configuration *c)
+{
+	int ret = acm_bind_config(c, 0);
+	if (ret == 0)
+		gserial_setup(c->cdev->gadget, 2);
+	return ret;
+}
+
+static struct android_usb_function acm_function = {
+	.name = "acm",
+	.bind_config = acm_function_bind_config,
+};
+
+static int __init init(void)
+{
+	printk(KERN_INFO "f_acm init\n");
+	android_register_function(&acm_function);
+	return 0;
+}
+module_init(init);
+
+#endif /* CONFIG_USB_ANDROID_ACM */

@@ -392,6 +392,7 @@ static uint16_t pca953x_irq_pending(struct pca953x_chip *chip)
 	uint16_t old_stat;
 	uint16_t pending;
 	uint16_t trigger;
+	uint16_t missed;
 	int ret, offset = 0;
 
 	switch (chip->chip_type) {

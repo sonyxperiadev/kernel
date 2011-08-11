@@ -66,6 +66,7 @@ static DEFINE_MUTEX(block_mutex);
  * or bootarg options.
  */
 static int perdev_minors = CONFIG_MMC_BLOCK_MINORS;
+static int max_devices;
 
 #ifdef CONFIG_MMC_BCM_SD
 /*
@@ -78,7 +79,10 @@ static int perdev_minors = CONFIG_MMC_BLOCK_MINORS;
  * We've only got one major, so number of mmcblk devices is
  * limited to 256 / number of minors per device.
  */
-static int max_devices;
+#define MMC_SHIFT	3
+#endif
+
+#define MMC_NUM_MINORS	(256 >> MMC_SHIFT)
 
 /* 256 minors, so at most 256 separate devices */
 static DECLARE_BITMAP(dev_use, 256);
