@@ -101,6 +101,19 @@ ENTRY(stext)
 #ifdef CONFIG_ARM_PATCH_PHYS_VIRT
 	bl	__fixup_pv_table
 #endif
+
+#if 0
+   /* check vc memory */
+   
+   ldr r0,=0x0a000000
+   ldr r1,=0x0a400000
+1:
+    cmp r0, r1
+    ldr r2,=0x0badf00d
+    strcc r2, [r0], #4
+    bcc 1b
+#endif
+
 	bl	__create_page_tables
 
 	/*
