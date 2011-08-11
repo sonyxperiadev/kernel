@@ -793,12 +793,16 @@ static void __init rhea_ray_add_i2c_devices (void)
 			pmu_info,
 			ARRAY_SIZE(pmu_info));
 #endif
+#ifdef CONFIG_GPIO_PCA953X
 	i2c_register_board_info(1,
 			pca953x_info,
 			ARRAY_SIZE(pca953x_info));
+#endif
+#ifdef CONFIG_TOUCHSCREEN_QT602240
 	i2c_register_board_info(1,
 			qt602240_info,
 			ARRAY_SIZE(qt602240_info));
+#endif
 }
 
 static int __init rhea_ray_add_lateInit_devices (void)
@@ -869,8 +873,6 @@ void __init board_map_io(void)
 late_initcall(rhea_ray_add_lateInit_devices);
 
 MACHINE_START(RHEA, "RheaRay")
-	.phys_io = IO_START,
-	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
