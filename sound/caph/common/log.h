@@ -40,7 +40,8 @@
 #define OSTASK_Sleep(x)  msleep(x)
 
 
-#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
+//#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
+#if 1
 #define _DBG_(a) a
 void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
 #define Log_DebugPrintf(logID, format, args...) \

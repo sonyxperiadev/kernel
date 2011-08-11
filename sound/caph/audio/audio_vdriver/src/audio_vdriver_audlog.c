@@ -41,10 +41,10 @@
 #include "msconsts.h"
 #include "shared.h"
 
-#include "auddrv_def.h"
+
 #include "audio_consts.h"
 #include "audio_ddriver.h"
-#include "drv_caph.h"
+
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "csl_aud_queue.h"

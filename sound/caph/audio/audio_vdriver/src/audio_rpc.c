@@ -12,7 +12,6 @@
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
-//#include "string.h"
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"
@@ -27,14 +26,13 @@
 
 #include "xassert.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
+#include "csl_aud_drv.h"
+
+
 #include "audio_vdriver.h"
 #include "sharedmem.h"
 #include "dspcmd.h"
 #include "csl_apcmd.h"
-#include "audioapi_asic.h"
 #include "log.h"
 
 static UInt8 audioClientId = 0;
@@ -114,7 +112,6 @@ void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
                             ResultDataBufHandle_t dataBufHandle,
                             UInt32 userContextData)
 {   
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* TeST 3G WB *\n\r");
 	if (MSG_AUDIO_CALL_STATUS_IND == pMsg->msgId )
 	{
 		UInt32* codecID = NULL;

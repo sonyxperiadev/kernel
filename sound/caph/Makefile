@@ -27,3 +27,6 @@ endif
 ifdef CONFIG_ARCH_SAMOA
 include $(src)/Samoa_Makefile
 endif
+
+# common files for all chips
+snd-brcm-omx-objs += caph_hwdep.o

@@ -33,6 +33,7 @@
 #include <linux/semaphore.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/jiffies.h>
 #ifdef CONFIG_BRCM_FUSE_IPC_CIB
 #include <linux/broadcom/ipcinterface.h>
 #else
@@ -80,6 +81,8 @@ typedef struct
   struct workqueue_struct *crash_dump_workqueue;
   void __iomem *apcp_shmem;
 }ipcs_info_t;
+
+static Boolean cp_running = 0;//FALSE;
 
 // flag used to track occurence of early CP interrupt; 
 // CP interrupt before IPC configured indicates early CP
@@ -142,28 +145,17 @@ static IPC_ReturnCode_T EventClear (void * Event)
     return IPC_OK;   
 }
 
-static IPC_ReturnCode_T EventWait (void * Event, IPC_U32 MilliSeconds)
+static IPC_ReturnCode_T EventWait(void *Event, IPC_U32 MilliSeconds)
 {
-    IPC_Evt_t* ipcEvt = (IPC_Evt_t*)Event;
-	IPC_ReturnCode_T  rtnCode = IPC_OK;
+	IPC_Evt_t *ipcEvt = (IPC_Evt_t *)Event;
 
-	if(MilliSeconds == IPC_WAIT_FOREVER)
-	{
-		wait_event( (ipcEvt->evt_wait), (ipcEvt->evt == 1) );
-	}
-	else
-	{
-	    int timeout = 0;
-	    // timeout in "jiffies" (apparently 10ms/jiffie in android?)
-		timeout = wait_event_timeout( (ipcEvt->evt_wait), (ipcEvt->evt == 1), MilliSeconds/10 );
-		// returns 0 if we timed out, > 0 otherwise
-		if ( timeout == 0 )
-		{
-		    rtnCode = IPC_TIMEOUT;
-		}
-	}
-	
-	return rtnCode;
+	if (MilliSeconds == IPC_WAIT_FOREVER)
+		wait_event((ipcEvt->evt_wait), (ipcEvt->evt == 1));
+	else if (!wait_event_timeout((ipcEvt->evt_wait), (ipcEvt->evt == 1),
+				    msecs_to_jiffies(MilliSeconds)))
+		return IPC_TIMEOUT;
+
+	return IPC_OK;
 }
 
 static int ipcs_open(struct inode *inode, struct file *file)
@@ -215,6 +207,14 @@ static struct file_operations ipc_ops =
   .mmap  = NULL,
   .release = ipcs_release,
 };
+
+/** 
+   @fn Boolean is_CP_running(void);
+*/
+Boolean is_CP_running(void)
+{
+   return cp_running;
+}
 
 /** 
    @fn void ipcs_ipc_initialised(void);
@@ -362,17 +362,34 @@ extern int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu);
 
 void WaitForCpIpc (void* pSmBase)
 {
-	int k = 0, ret = 0;
+    int k = 0, ret = 0;
 
     printk( KERN_ALERT  "ipcs_init Waiting for CP IPC to init ....\n");
-	while ( (ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU )) == 0)
-	{
-//		for (i=0; i<2048; i++);	// do not fight for accessing shared memory
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout (100);
-		k++;
-	}
-    printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+
+    ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    while (ret == 0)
+    {
+        // Wait up to 2s for CP to init
+        if (k++ > 200)
+            break;
+        else
+            msleep(10);
+        ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    }
+
+    if (ret == 0)
+    {
+        printk( KERN_ALERT  "********************************************************************\n");
+        printk( KERN_ALERT  "*                                                                  *\n");
+        printk( KERN_ALERT  "*       CP IPC NOT INITIALIZED - SYSTEM BOOTS WITH AP ONLY!!!      *\n");
+        printk( KERN_ALERT  "*                                                                  *\n");
+        printk( KERN_ALERT  "********************************************************************\n");
+    }
+    else
+    {
+        printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+        cp_running = 1;//TRUE;
+    }
 }
 
 

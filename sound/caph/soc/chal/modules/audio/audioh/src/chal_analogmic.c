@@ -25,6 +25,7 @@ Broadcom's express prior written consent.
 #include "brcm_rdb_aci.h"
 #include "brcm_rdb_auxmic.h"
 #include "brcm_rdb_padctrlreg.h"
+#include "brcm_rdb_sysmap.h"
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -72,10 +73,9 @@ Broadcom's express prior written consent.
 
 //============================================================================
 //
-// Function Name: CHAL_HANDLE chal_audio_init(cUInt32 baseAddr)
+// Function Name: cVoid chal_audio_mic_input_select(CHAL_HANDLE handle, UInt16 mic_input)
 //
-// Description:   Standard Init entry point for cHal
-//                first function to call.
+// Description:   select primary Mic as input
 //
 // Parameters:
 //                handle     ---  the Hera audio handle
@@ -129,6 +129,89 @@ cVoid chal_audio_mic_input_select(CHAL_HANDLE handle, UInt16 mic_input)
 
     return;
 }
+
+
+
+//============================================================================
+//
+// Function Name: cVoid chal_audio_auxmic_input_select(CHAL_HANDLE handle, UInt16 mic_input)
+//
+// Description:   select auxilary Mic as input
+//
+// Parameters:
+//                handle     ---  the Hera audio handle
+//                mic_input  ---  the annlog microphone select
+// Return:        none
+//
+//============================================================================
+
+cVoid chal_audio_auxmic_input_select(CHAL_HANDLE handle, UInt16 mic_input)
+{
+
+    cUInt32 regVal = 0;
+
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+
+    cUInt32 reg_val;
+
+    reg_val = BRCM_READ_REG(base, AUDIOH_ADC_CTL);
+    reg_val &= ~(AUDIOH_ADC_CTL_AMIC_EN_MASK);
+
+    // if(mic_input == CHAL_AUDIO_ENABLE)
+    {
+       reg_val |= AUDIOH_ADC_CTL_AMIC_EN_MASK;
+    }
+
+    /* Set the required setting */
+    BRCM_WRITE_REG(base,  AUDIOH_ADC_CTL, reg_val);
+
+
+	// ACI control for analog microphone
+
+	// WRITE_REG32(0x3500E0D0, 0x20);
+	regVal = READ_REG32((ACI_BASE_ADDR+ACI_ACI_CTRL_OFFSET));
+    regVal |= ACI_ACI_CTRL_SW_MIC_DATAB_MASK;
+    WRITE_REG32((ACI_BASE_ADDR+ACI_ACI_CTRL_OFFSET), regVal);
+
+
+	// WRITE_REG32(0x3500E0D4, 0xC0);
+	regVal = READ_REG32((ACI_BASE_ADDR+ACI_ADC_CTRL_OFFSET));
+    regVal |= ACI_ADC_CTRL_AUDIORX_VREF_PWRUP_MASK;
+    regVal |= ACI_ADC_CTRL_AUDIORX_BIAS_PWRUP_MASK;
+    WRITE_REG32((ACI_BASE_ADDR+ACI_ADC_CTRL_OFFSET), regVal);
+
+	/* enable AUXMIC */
+	
+
+	// WRITE_REG32(0x3500E028, 0x00);
+	WRITE_REG32((AUXMIC_BASE_ADDR+AUXMIC_F_PWRDWN_OFFSET), 0x00);
+
+
+	// WRITE_REG32(0x3500E00C, 0x01);
+	regVal = READ_REG32((AUXMIC_BASE_ADDR+AUXMIC_F_PWRDWN_OFFSET));
+	regVal |= AUXMIC_F_PWRDWN_FORCE_PWR_DWN_MASK;
+	WRITE_REG32((AUXMIC_BASE_ADDR+AUXMIC_CMC_OFFSET), regVal);
+
+
+	// WRITE_REG32(0x3500E0C4, 0x00);
+	WRITE_REG32((ACI_BASE_ADDR+ACI_MIC_BIAS_OFFSET), 0x00);
+
+	// WRITE_REG32(0x3500E014, 0x01);
+	regVal = READ_REG32((AUXMIC_BASE_ADDR+AUXMIC_AUXEN_OFFSET));
+	regVal |= AUXMIC_AUXEN_MICAUX_EN_MASK;
+	WRITE_REG32((AUXMIC_BASE_ADDR+AUXMIC_AUXEN_OFFSET), regVal);
+
+	/* disable AUXMIC force power down */
+	
+	regVal = READ_REG32((AUXMIC_BASE_ADDR+AUXMIC_F_PWRDWN_OFFSET));
+	regVal &= ~AUXMIC_F_PWRDWN_FORCE_PWR_DWN_MASK;
+	WRITE_REG32((AUXMIC_BASE_ADDR+AUXMIC_F_PWRDWN_OFFSET), regVal);
+
+
+    return;
+}
+
+
 
 //============================================================================
 //
@@ -315,6 +398,149 @@ cVoid chal_audio_mic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
 
 	return;
 }
+
+
+
+
+
+
+
+//============================================================================
+//
+// Function Name: cVoid chal_audio_auxmic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
+//
+// Description:   power on/off headset analog microphone path
+//
+// Parameters:
+//                handle   ---  the Hera audio handle
+//				  pwronoff ---  on or off selection
+// Return:        none
+//
+//============================================================================
+
+
+cVoid chal_audio_auxmic_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff)
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+
+    cUInt32 reg_val;
+
+    if(pwronoff == TRUE)
+    {
+        //0. powerup ACI VREF, BIAS (should be done by caller before)
+
+																					
+			// (0x35020210)  = 0x01;
+
+        //1. power up BiasCore
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_BIAS);
+        reg_val |= (AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_BIAS, reg_val);
+
+
+			// (0x35020208)  = 0x06;
+
+        //2. power up AUDIORX_REF, and fast settle, others "0"
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
+        reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_PWRUP_MASK);
+        reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VREF, reg_val);
+
+        //3.  enable AUXMIC
+        //4. disable AUXMIC force power down
+
+
+			// (0x35020200)  = 0x40;
+
+
+        //5.  turn on everything and all default to "zero"
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+        reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
+        reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_CMBUF_PWRDN_MASK);
+        reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_APMCLK_PWRDN_MASK);
+        reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
+		reg_val |= AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_SEL_MIC1B_MIC2_MASK; 
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VRX1, reg_val);
+
+
+			// (0x3502020c)  = 0x302;
+
+        //6. power up MAIN MIC
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
+        reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
+        reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
+        reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
+        reg_val |= (3 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VMIC, reg_val);
+
+
+
+			// (0x35020208)  = 0x00;
+
+        // power up AUDIORX_REF, others "0"
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
+        reg_val &= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VREF, reg_val);
+
+
+			// (0x35020204)  = 0x00;
+
+        // AUDIORX_VRX2/AUDIORX_VMIC
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VRX2, 0x00);
+
+    }
+    else
+    {
+
+        // power down AUDIORX_REF, others "0"
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
+        reg_val |= (AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VREF, reg_val);
+
+        //6. power down MAIN MIC
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VMIC);
+        reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_PWRDN_MASK);
+        reg_val &= ~(AUDIOH_AUDIORX_VMIC_AUDIORX_MIC_EN_MASK);
+        reg_val |= (AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_MASK);
+        reg_val |= (0 << AUDIOH_AUDIORX_VMIC_AUDIORX_VMIC_CTRL_SHIFT);
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VMIC, reg_val);
+
+        //5.  turn off everything
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VRX1);
+        reg_val |= (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_PWRDN_MASK);
+        reg_val |= (AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_CMBUF_PWRDN_MASK);
+        reg_val |= (AUDIOH_AUDIORX_VRX1_AUDIORX_APMCLK_PWRDN_MASK);
+        reg_val |= (AUDIOH_AUDIORX_VRX1_AUDIORX_LDO_DIG_PWRDN_MASK);
+		reg_val &= ~(AUDIOH_AUDIORX_VRX1_AUDIORX_VRX_SEL_MIC1B_MIC2_MASK); 
+
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VRX1, reg_val);
+
+        //2. power down AUDIORX_REF, and fast settle
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_VREF);
+        reg_val &= ~(AUDIOH_AUDIORX_VREF_AUDIORX_VREF_PWRUP_MASK);
+        reg_val &= ~(AUDIOH_AUDIORX_VREF_AUDIORX_VREF_FASTSETTLE_MASK);
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_VREF, reg_val);
+
+        //1. power down BiasCore
+        reg_val = BRCM_READ_REG(base, AUDIOH_AUDIORX_BIAS);
+        reg_val &= ~(AUDIOH_AUDIORX_BIAS_AUDIORX_BIAS_PWRUP_MASK);
+        BRCM_WRITE_REG(base,  AUDIOH_AUDIORX_BIAS, reg_val);
+
+    }
+
+	return;
+}
+
+
+
+
+
+
+
+
+
+
+
 
 
 //============================================================================
