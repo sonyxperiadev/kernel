@@ -75,7 +75,7 @@ void set_au1x00_uart_baud_base(unsigned long new_baud_base)
  * counter, if it exists.  If we don't have an accurate processor
  * speed, all of the peripherals that derive their clocks based on
  * this advertised speed will introduce error and sometimes not work
- * properly.  This function is futher convoluted to still allow configurations
+ * properly.  This function is further convoluted to still allow configurations
  * to do that in case they have really, really old silicon with a
  * write-only PLL register.			-- Dan
  */
@@ -89,11 +89,7 @@ unsigned long au1xxx_calc_clock(void)
 	 * over backwards trying to determine the frequency.
 	 */
 	if (au1xxx_cpu_has_pll_wo())
-#ifdef CONFIG_SOC_AU1000_FREQUENCY
-		cpu_speed = CONFIG_SOC_AU1000_FREQUENCY;
-#else
 		cpu_speed = 396000000;
-#endif
 	else
 		cpu_speed = (au_readl(SYS_CPUPLL) & 0x0000003f) * AU1000_SRC_CLK;
 

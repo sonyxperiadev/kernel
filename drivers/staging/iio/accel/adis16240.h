@@ -126,21 +126,14 @@
 /**
  * struct adis16240_state - device instance specific data
  * @us:			actual spi_device
- * @work_trigger_to_ring: bh for triggered event handling
- * @work_cont_thresh: CLEAN
- * @inter:		used to check if new interrupt has been triggered
- * @last_timestamp:	passing timestamp from th to bh of interrupt handler
  * @indio_dev:		industrial I/O device structure
  * @trig:		data ready trigger registered with iio
  * @tx:			transmit buffer
- * @rx:			recieve buffer
+ * @rx:			receive buffer
  * @buf_lock:		mutex to protect tx and rx
  **/
 struct adis16240_state {
 	struct spi_device		*us;
-	struct work_struct		work_trigger_to_ring;
-	struct iio_work_cont		work_cont_thresh;
-	s64				last_timestamp;
 	struct iio_dev			*indio_dev;
 	struct iio_trigger		*trig;
 	u8				*tx;
@@ -148,21 +141,19 @@ struct adis16240_state {
 	struct mutex			buf_lock;
 };
 
-int adis16240_set_irq(struct device *dev, bool enable);
+int adis16240_set_irq(struct iio_dev *indio_dev, bool enable);
 
 #ifdef CONFIG_IIO_RING_BUFFER
 /* At the moment triggers are only used for ring buffer
  * filling. This may change!
  */
 
-enum adis16240_scan {
-	ADIS16240_SCAN_SUPPLY,
-	ADIS16240_SCAN_ACC_X,
-	ADIS16240_SCAN_ACC_Y,
-	ADIS16240_SCAN_ACC_Z,
-	ADIS16240_SCAN_AUX_ADC,
-	ADIS16240_SCAN_TEMP,
-};
+#define ADIS16240_SCAN_SUPPLY	0
+#define ADIS16240_SCAN_ACC_X	1
+#define ADIS16240_SCAN_ACC_Y	2
+#define ADIS16240_SCAN_ACC_Z	3
+#define ADIS16240_SCAN_AUX_ADC	4
+#define ADIS16240_SCAN_TEMP	5
 
 void adis16240_remove_trigger(struct iio_dev *indio_dev);
 int adis16240_probe_trigger(struct iio_dev *indio_dev);
@@ -175,8 +166,6 @@ ssize_t adis16240_read_data_from_ring(struct device *dev,
 int adis16240_configure_ring(struct iio_dev *indio_dev);
 void adis16240_unconfigure_ring(struct iio_dev *indio_dev);
 
-int adis16240_initialize_ring(struct iio_ring_buffer *ring);
-void adis16240_uninitialize_ring(struct iio_ring_buffer *ring);
 #else /* CONFIG_IIO_RING_BUFFER */
 
 static inline void adis16240_remove_trigger(struct iio_dev *indio_dev)
@@ -202,15 +191,6 @@ static int adis16240_configure_ring(struct iio_dev *indio_dev)
 }
 
 static inline void adis16240_unconfigure_ring(struct iio_dev *indio_dev)
-{
-}
-
-static inline int adis16240_initialize_ring(struct iio_ring_buffer *ring)
-{
-	return 0;
-}
-
-static inline void adis16240_uninitialize_ring(struct iio_ring_buffer *ring)
 {
 }
 

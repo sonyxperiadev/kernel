@@ -54,15 +54,17 @@ int mtx1_pci_idsel(unsigned int devsel, int assert);
 
 static void mtx1_reset(char *c)
 {
-	/* Hit BCSR.SYSTEM_CONTROL[SW_RST] */
-	au_writel(0x00000000, 0xAE00001C);
+	/* Jump to the reset vector */
+	__asm__ __volatile__("jr\t%0"::"r"(0xbfc00000));
 }
 
 static void mtx1_power_off(void)
 {
-	printk(KERN_ALERT "It's now safe to remove power\n");
 	while (1)
-		asm volatile (".set mips3 ; wait ; .set mips1");
+		asm volatile (
+		"	.set	mips32					\n"
+		"	wait						\n"
+		"	.set	mips0					\n");
 }
 
 void __init board_setup(void)
@@ -85,7 +87,7 @@ void __init board_setup(void)
 	au_writel(SYS_PF_NI2, SYS_PINFUNC);
 
 	/* Initialize GPIO */
-	au_writel(0xFFFFFFFF, SYS_TRIOUTCLR);
+	au_writel(~0, KSEG1ADDR(AU1000_SYS_PHYS_ADDR) + SYS_TRIOUTCLR);
 	alchemy_gpio_direction_output(0, 0);	/* Disable M66EN (PCI 66MHz) */
 	alchemy_gpio_direction_output(3, 1);	/* Disable PCI CLKRUN# */
 	alchemy_gpio_direction_output(1, 1);	/* Enable EXT_IO3 */
@@ -105,14 +107,10 @@ void __init board_setup(void)
 int
 mtx1_pci_idsel(unsigned int devsel, int assert)
 {
-#define MTX_IDSEL_ONLY_0_AND_3 0
-#if MTX_IDSEL_ONLY_0_AND_3
-	if (devsel != 0 && devsel != 3) {
-		printk(KERN_ERR "*** not 0 or 3\n");
-		return 0;
-	}
-#endif
-
+	/* This function is only necessary to support a proprietary Cardbus
+	 * adapter on the mtx-1 "singleboard" variant. It triggers a custom
+	 * logic chip connected to EXT_IO3 (GPIO1) to suppress IDSEL signals.
+	 */
 	if (assert && devsel != 0)
 		/* Suppress signal to Cardbus */
 		alchemy_gpio_set_value(1, 0);	/* set EXT_IO3 OFF */
@@ -125,11 +123,11 @@ mtx1_pci_idsel(unsigned int devsel, int assert)
 
 static int __init mtx1_init_irq(void)
 {
-	set_irq_type(AU1500_GPIO204_INT, IRQF_TRIGGER_HIGH);
-	set_irq_type(AU1500_GPIO201_INT, IRQF_TRIGGER_LOW);
-	set_irq_type(AU1500_GPIO202_INT, IRQF_TRIGGER_LOW);
-	set_irq_type(AU1500_GPIO203_INT, IRQF_TRIGGER_LOW);
-	set_irq_type(AU1500_GPIO205_INT, IRQF_TRIGGER_LOW);
+	irq_set_irq_type(AU1500_GPIO204_INT, IRQF_TRIGGER_HIGH);
+	irq_set_irq_type(AU1500_GPIO201_INT, IRQF_TRIGGER_LOW);
+	irq_set_irq_type(AU1500_GPIO202_INT, IRQF_TRIGGER_LOW);
+	irq_set_irq_type(AU1500_GPIO203_INT, IRQF_TRIGGER_LOW);
+	irq_set_irq_type(AU1500_GPIO205_INT, IRQF_TRIGGER_LOW);
 
 	return 0;
 }

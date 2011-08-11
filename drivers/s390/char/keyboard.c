@@ -305,7 +305,7 @@ kbd_keycode(struct kbd_data *kbd, unsigned int keycode)
 		if (kbd->sysrq) {
 			if (kbd->sysrq == K(KT_LATIN, '-')) {
 				kbd->sysrq = 0;
-				handle_sysrq(value, kbd->tty);
+				handle_sysrq(value);
 				return;
 			}
 			if (value == '-') {
@@ -455,12 +455,11 @@ do_kdgkb_ioctl(struct kbd_data *kbd, struct kbsentry __user *u_kbs,
 	return 0;
 }
 
-int
-kbd_ioctl(struct kbd_data *kbd, struct file *file,
-	  unsigned int cmd, unsigned long arg)
+int kbd_ioctl(struct kbd_data *kbd, unsigned int cmd, unsigned long arg)
 {
 	void __user *argp;
-	int ct, perm;
+	unsigned int ct;
+	int perm;
 
 	argp = (void __user *)arg;
 

@@ -88,6 +88,7 @@ typedef struct siginfo {
 #ifdef __ARCH_SI_TRAPNO
 			int _trapno;	/* TRAP # which caused the signal */
 #endif
+			short _addr_lsb;
 		} _sigfault;
 
 		/* SIGPOLL, SIGXFSZ (To do ...)  */
@@ -100,7 +101,7 @@ typedef struct siginfo {
 
 /*
  * si_code values
- * Again these have been choosen to be IRIX compatible.
+ * Again these have been chosen to be IRIX compatible.
  */
 #undef SI_ASYNCIO
 #undef SI_TIMER

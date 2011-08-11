@@ -11,8 +11,6 @@
 #include <asm/cache.h>
 #include <asm/page.h>
 
-.text
-
 /* 05000443 - IFLUSH cannot be last instruction in hardware loop */
 #if ANOMALY_05000443
 # define BROK_FLUSH_INST "IFLUSH"
@@ -54,6 +52,8 @@
 1:
 .ifeqs "\flushins", BROK_FLUSH_INST
 	\flushins [P0++];
+	nop;
+	nop;
 2:	nop;
 .else
 2:	\flushins [P0++];
@@ -62,21 +62,42 @@
 	RTS;
 .endm
 
+#ifdef CONFIG_ICACHE_FLUSH_L1
+.section .l1.text
+#else
+.text
+#endif
+
 /* Invalidate all instruction cache lines assocoiated with this memory area */
+#ifdef CONFIG_SMP
+# define _blackfin_icache_flush_range _blackfin_icache_flush_range_l1
+#endif
 ENTRY(_blackfin_icache_flush_range)
-/*
- * Walkaround to avoid loading wrong instruction after invalidating icache
- * and following sequence is met.
- *
- * 1) One instruction address is cached in the instruction cache.
- * 2) This instruction in SDRAM is changed.
- * 3) IFLASH[P0] is executed only once in blackfin_icache_flush_range().
- * 4) This instruction is executed again, but the old one is loaded.
- */
-	P0 = R0;
-	IFLUSH[P0];
 	do_flush IFLUSH
 ENDPROC(_blackfin_icache_flush_range)
+
+#ifdef CONFIG_SMP
+.text
+# undef _blackfin_icache_flush_range
+ENTRY(_blackfin_icache_flush_range)
+	p0.L = LO(DSPID);
+	p0.H = HI(DSPID);
+	r3 = [p0];
+	r3 = r3.b (z);
+	p2 = r3;
+	p0.L = _blackfin_iflush_l1_entry;
+	p0.H = _blackfin_iflush_l1_entry;
+	p0 = p0 + (p2 << 2);
+	p1 = [p0];
+	jump (p1);
+ENDPROC(_blackfin_icache_flush_range)
+#endif
+
+#ifdef CONFIG_DCACHE_FLUSH_L1
+.section .l1.text
+#else
+.text
+#endif
 
 /* Throw away all D-cached data in specified region without any obligation to
  * write them back.  Since the Blackfin ISA does not have an "invalidate"

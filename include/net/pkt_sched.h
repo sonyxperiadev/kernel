@@ -32,7 +32,7 @@ static inline void *qdisc_priv(struct Qdisc *q)
    
    The result: [34]86 is not good choice for QoS router :-(
 
-   The things are not so bad, because we may use artifical
+   The things are not so bad, because we may use artificial
    clock evaluated by integration of network data flow
    in the most critical places.
  */
@@ -95,7 +95,7 @@ extern void __qdisc_run(struct Qdisc *q);
 
 static inline void qdisc_run(struct Qdisc *q)
 {
-	if (!test_and_set_bit(__QDISC_STATE_RUNNING, &q->state))
+	if (qdisc_run_begin(q))
 		__qdisc_run(q);
 }
 

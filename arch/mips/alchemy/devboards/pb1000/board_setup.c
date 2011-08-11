@@ -47,9 +47,11 @@ static void board_reset(char *c)
 
 static void board_power_off(void)
 {
-	printk(KERN_ALERT "It's now safe to remove power\n");
 	while (1)
-		asm volatile (".set mips3 ; wait ; .set mips1");
+		asm volatile (
+		"	.set	mips32					\n"
+		"	wait						\n"
+		"	.set	mips0					\n");
 }
 
 void __init board_setup(void)
@@ -63,7 +65,7 @@ void __init board_setup(void)
 
 	/* Set AUX clock to 12 MHz * 8 = 96 MHz */
 	au_writel(8, SYS_AUXPLL);
-	au_writel(0, SYS_PINSTATERD);
+	alchemy_gpio1_input_enable();
 	udelay(100);
 
 #if defined(CONFIG_USB_OHCI_HCD) || defined(CONFIG_USB_OHCI_HCD_MODULE)
@@ -195,7 +197,7 @@ void __init board_setup(void)
 
 static int __init pb1000_init_irq(void)
 {
-	set_irq_type(AU1000_GPIO15_INT, IRQF_TRIGGER_LOW);
+	irq_set_irq_type(AU1000_GPIO15_INT, IRQF_TRIGGER_LOW);
 	return 0;
 }
 arch_initcall(pb1000_init_irq);

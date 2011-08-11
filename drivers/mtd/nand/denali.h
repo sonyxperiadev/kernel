@@ -17,7 +17,7 @@
  *
  */
 
-#include <linux/mtd/nand.h> 
+#include <linux/mtd/nand.h>
 
 #define DEVICE_RESET				0x0
 #define     DEVICE_RESET__BANK0				0x0001
@@ -29,7 +29,7 @@
 #define     TRANSFER_SPARE_REG__FLAG			0x0001
 
 #define LOAD_WAIT_CNT				0x20
-#define     LOAD_WAIT_CNT__VALUE				0xffff
+#define     LOAD_WAIT_CNT__VALUE			0xffff
 
 #define PROGRAM_WAIT_CNT			0x30
 #define     PROGRAM_WAIT_CNT__VALUE			0xffff
@@ -83,7 +83,7 @@
 #define RE_2_WE					0x120
 #define     RE_2_WE__VALUE				0x003f
 
-#define ACC_CLKS    				0x130
+#define ACC_CLKS				0x130
 #define     ACC_CLKS__VALUE				0x000f
 
 #define NUMBER_OF_PLANES			0x140
@@ -140,7 +140,7 @@
 #define DEVICES_CONNECTED			0x250
 #define     DEVICES_CONNECTED__VALUE			0x0007
 
-#define DIE_MASK					0x260
+#define DIE_MASK				0x260
 #define     DIE_MASK__VALUE				0x00ff
 
 #define FIRST_BLOCK_OF_NEXT_PLANE		0x270
@@ -152,7 +152,7 @@
 #define RE_2_RE					0x290
 #define     RE_2_RE__VALUE				0x003f
 
-#define MANUFACTURER_ID			0x300
+#define MANUFACTURER_ID				0x300
 #define     MANUFACTURER_ID__VALUE			0x00ff
 
 #define DEVICE_ID				0x310
@@ -173,13 +173,13 @@
 #define LOGICAL_PAGE_SPARE_SIZE			0x360
 #define     LOGICAL_PAGE_SPARE_SIZE__VALUE		0xffff
 
-#define REVISION					0x370
+#define REVISION				0x370
 #define     REVISION__VALUE				0xffff
 
 #define ONFI_DEVICE_FEATURES			0x380
 #define     ONFI_DEVICE_FEATURES__VALUE			0x003f
 
-#define ONFI_OPTIONAL_COMMANDS		0x390
+#define ONFI_OPTIONAL_COMMANDS			0x390
 #define     ONFI_OPTIONAL_COMMANDS__VALUE		0x003f
 
 #define ONFI_TIMING_MODE			0x3a0
@@ -201,195 +201,56 @@
 #define FEATURES					0x3f0
 #define     FEATURES__N_BANKS				0x0003
 #define     FEATURES__ECC_MAX_ERR			0x003c
-#define     FEATURES__DMA					0x0040
+#define     FEATURES__DMA				0x0040
 #define     FEATURES__CMD_DMA				0x0080
 #define     FEATURES__PARTITION				0x0100
 #define     FEATURES__XDMA_SIDEBAND			0x0200
 #define     FEATURES__GPREG				0x0400
-#define     FEATURES__INDEX_ADDR				0x0800
+#define     FEATURES__INDEX_ADDR			0x0800
 
 #define TRANSFER_MODE				0x400
 #define     TRANSFER_MODE__VALUE			0x0003
 
-#define INTR_STATUS0				0x410
-#define     INTR_STATUS0__ECC_TRANSACTION_DONE		0x0001
-#define     INTR_STATUS0__ECC_ERR			0x0002
-#define     INTR_STATUS0__DMA_CMD_COMP			0x0004
-#define     INTR_STATUS0__TIME_OUT			0x0008
-#define     INTR_STATUS0__PROGRAM_FAIL			0x0010
-#define     INTR_STATUS0__ERASE_FAIL			0x0020
-#define     INTR_STATUS0__LOAD_COMP			0x0040
-#define     INTR_STATUS0__PROGRAM_COMP			0x0080
-#define     INTR_STATUS0__ERASE_COMP			0x0100
-#define     INTR_STATUS0__PIPE_CPYBCK_CMD_COMP		0x0200
-#define     INTR_STATUS0__LOCKED_BLK			0x0400
-#define     INTR_STATUS0__UNSUP_CMD			0x0800
-#define     INTR_STATUS0__INT_ACT			0x1000
-#define     INTR_STATUS0__RST_COMP			0x2000
-#define     INTR_STATUS0__PIPE_CMD_ERR			0x4000
-#define     INTR_STATUS0__PAGE_XFER_INC			0x8000
+#define INTR_STATUS(__bank)	(0x410 + ((__bank) * 0x50))
+#define INTR_EN(__bank)		(0x420 + ((__bank) * 0x50))
 
-#define INTR_EN0					0x420
-#define     INTR_EN0__ECC_TRANSACTION_DONE		0x0001
-#define     INTR_EN0__ECC_ERR				0x0002
-#define     INTR_EN0__DMA_CMD_COMP			0x0004
-#define     INTR_EN0__TIME_OUT				0x0008
-#define     INTR_EN0__PROGRAM_FAIL			0x0010
-#define     INTR_EN0__ERASE_FAIL				0x0020
-#define     INTR_EN0__LOAD_COMP				0x0040
-#define     INTR_EN0__PROGRAM_COMP			0x0080
-#define     INTR_EN0__ERASE_COMP				0x0100
-#define     INTR_EN0__PIPE_CPYBCK_CMD_COMP		0x0200
-#define     INTR_EN0__LOCKED_BLK				0x0400
-#define     INTR_EN0__UNSUP_CMD				0x0800
-#define     INTR_EN0__INT_ACT				0x1000
-#define     INTR_EN0__RST_COMP				0x2000
-#define     INTR_EN0__PIPE_CMD_ERR			0x4000
-#define     INTR_EN0__PAGE_XFER_INC			0x8000
+#define     INTR_STATUS__ECC_TRANSACTION_DONE		0x0001
+#define     INTR_STATUS__ECC_ERR			0x0002
+#define     INTR_STATUS__DMA_CMD_COMP			0x0004
+#define     INTR_STATUS__TIME_OUT			0x0008
+#define     INTR_STATUS__PROGRAM_FAIL			0x0010
+#define     INTR_STATUS__ERASE_FAIL			0x0020
+#define     INTR_STATUS__LOAD_COMP			0x0040
+#define     INTR_STATUS__PROGRAM_COMP			0x0080
+#define     INTR_STATUS__ERASE_COMP			0x0100
+#define     INTR_STATUS__PIPE_CPYBCK_CMD_COMP		0x0200
+#define     INTR_STATUS__LOCKED_BLK			0x0400
+#define     INTR_STATUS__UNSUP_CMD			0x0800
+#define     INTR_STATUS__INT_ACT			0x1000
+#define     INTR_STATUS__RST_COMP			0x2000
+#define     INTR_STATUS__PIPE_CMD_ERR			0x4000
+#define     INTR_STATUS__PAGE_XFER_INC			0x8000
 
-#define PAGE_CNT0				0x430
-#define     PAGE_CNT0__VALUE				0x00ff
+#define     INTR_EN__ECC_TRANSACTION_DONE		0x0001
+#define     INTR_EN__ECC_ERR				0x0002
+#define     INTR_EN__DMA_CMD_COMP			0x0004
+#define     INTR_EN__TIME_OUT				0x0008
+#define     INTR_EN__PROGRAM_FAIL			0x0010
+#define     INTR_EN__ERASE_FAIL				0x0020
+#define     INTR_EN__LOAD_COMP				0x0040
+#define     INTR_EN__PROGRAM_COMP			0x0080
+#define     INTR_EN__ERASE_COMP				0x0100
+#define     INTR_EN__PIPE_CPYBCK_CMD_COMP		0x0200
+#define     INTR_EN__LOCKED_BLK				0x0400
+#define     INTR_EN__UNSUP_CMD				0x0800
+#define     INTR_EN__INT_ACT				0x1000
+#define     INTR_EN__RST_COMP				0x2000
+#define     INTR_EN__PIPE_CMD_ERR			0x4000
+#define     INTR_EN__PAGE_XFER_INC			0x8000
 
-#define ERR_PAGE_ADDR0				0x440
-#define     ERR_PAGE_ADDR0__VALUE			0xffff
-
-#define ERR_BLOCK_ADDR0			0x450
-#define     ERR_BLOCK_ADDR0__VALUE			0xffff
-
-#define INTR_STATUS1				0x460
-#define     INTR_STATUS1__ECC_TRANSACTION_DONE		0x0001
-#define     INTR_STATUS1__ECC_ERR			0x0002
-#define     INTR_STATUS1__DMA_CMD_COMP			0x0004
-#define     INTR_STATUS1__TIME_OUT			0x0008
-#define     INTR_STATUS1__PROGRAM_FAIL			0x0010
-#define     INTR_STATUS1__ERASE_FAIL			0x0020
-#define     INTR_STATUS1__LOAD_COMP			0x0040
-#define     INTR_STATUS1__PROGRAM_COMP			0x0080
-#define     INTR_STATUS1__ERASE_COMP			0x0100
-#define     INTR_STATUS1__PIPE_CPYBCK_CMD_COMP		0x0200
-#define     INTR_STATUS1__LOCKED_BLK			0x0400
-#define     INTR_STATUS1__UNSUP_CMD			0x0800
-#define     INTR_STATUS1__INT_ACT			0x1000
-#define     INTR_STATUS1__RST_COMP			0x2000
-#define     INTR_STATUS1__PIPE_CMD_ERR			0x4000
-#define     INTR_STATUS1__PAGE_XFER_INC			0x8000
-
-#define INTR_EN1					0x470
-#define     INTR_EN1__ECC_TRANSACTION_DONE		0x0001
-#define     INTR_EN1__ECC_ERR				0x0002
-#define     INTR_EN1__DMA_CMD_COMP			0x0004
-#define     INTR_EN1__TIME_OUT				0x0008
-#define     INTR_EN1__PROGRAM_FAIL			0x0010
-#define     INTR_EN1__ERASE_FAIL				0x0020
-#define     INTR_EN1__LOAD_COMP				0x0040
-#define     INTR_EN1__PROGRAM_COMP			0x0080
-#define     INTR_EN1__ERASE_COMP				0x0100
-#define     INTR_EN1__PIPE_CPYBCK_CMD_COMP		0x0200
-#define     INTR_EN1__LOCKED_BLK				0x0400
-#define     INTR_EN1__UNSUP_CMD				0x0800
-#define     INTR_EN1__INT_ACT				0x1000
-#define     INTR_EN1__RST_COMP				0x2000
-#define     INTR_EN1__PIPE_CMD_ERR			0x4000
-#define     INTR_EN1__PAGE_XFER_INC			0x8000
-
-#define PAGE_CNT1				0x480
-#define     PAGE_CNT1__VALUE				0x00ff
-
-#define ERR_PAGE_ADDR1				0x490
-#define     ERR_PAGE_ADDR1__VALUE			0xffff
-
-#define ERR_BLOCK_ADDR1			0x4a0
-#define     ERR_BLOCK_ADDR1__VALUE			0xffff
-
-#define INTR_STATUS2				0x4b0
-#define     INTR_STATUS2__ECC_TRANSACTION_DONE		0x0001
-#define     INTR_STATUS2__ECC_ERR			0x0002
-#define     INTR_STATUS2__DMA_CMD_COMP			0x0004
-#define     INTR_STATUS2__TIME_OUT			0x0008
-#define     INTR_STATUS2__PROGRAM_FAIL			0x0010
-#define     INTR_STATUS2__ERASE_FAIL			0x0020
-#define     INTR_STATUS2__LOAD_COMP			0x0040
-#define     INTR_STATUS2__PROGRAM_COMP			0x0080
-#define     INTR_STATUS2__ERASE_COMP			0x0100
-#define     INTR_STATUS2__PIPE_CPYBCK_CMD_COMP		0x0200
-#define     INTR_STATUS2__LOCKED_BLK			0x0400
-#define     INTR_STATUS2__UNSUP_CMD			0x0800
-#define     INTR_STATUS2__INT_ACT			0x1000
-#define     INTR_STATUS2__RST_COMP			0x2000
-#define     INTR_STATUS2__PIPE_CMD_ERR			0x4000
-#define     INTR_STATUS2__PAGE_XFER_INC			0x8000
-
-#define INTR_EN2					0x4c0
-#define     INTR_EN2__ECC_TRANSACTION_DONE		0x0001
-#define     INTR_EN2__ECC_ERR				0x0002
-#define     INTR_EN2__DMA_CMD_COMP			0x0004
-#define     INTR_EN2__TIME_OUT				0x0008
-#define     INTR_EN2__PROGRAM_FAIL			0x0010
-#define     INTR_EN2__ERASE_FAIL				0x0020
-#define     INTR_EN2__LOAD_COMP				0x0040
-#define     INTR_EN2__PROGRAM_COMP			0x0080
-#define     INTR_EN2__ERASE_COMP				0x0100
-#define     INTR_EN2__PIPE_CPYBCK_CMD_COMP		0x0200
-#define     INTR_EN2__LOCKED_BLK				0x0400
-#define     INTR_EN2__UNSUP_CMD				0x0800
-#define     INTR_EN2__INT_ACT				0x1000
-#define     INTR_EN2__RST_COMP				0x2000
-#define     INTR_EN2__PIPE_CMD_ERR			0x4000
-#define     INTR_EN2__PAGE_XFER_INC			0x8000
-
-#define PAGE_CNT2				0x4d0
-#define     PAGE_CNT2__VALUE				0x00ff
-
-#define ERR_PAGE_ADDR2				0x4e0
-#define     ERR_PAGE_ADDR2__VALUE			0xffff
-
-#define ERR_BLOCK_ADDR2			0x4f0
-#define     ERR_BLOCK_ADDR2__VALUE			0xffff
-
-#define INTR_STATUS3				0x500
-#define     INTR_STATUS3__ECC_TRANSACTION_DONE		0x0001
-#define     INTR_STATUS3__ECC_ERR			0x0002
-#define     INTR_STATUS3__DMA_CMD_COMP			0x0004
-#define     INTR_STATUS3__TIME_OUT			0x0008
-#define     INTR_STATUS3__PROGRAM_FAIL			0x0010
-#define     INTR_STATUS3__ERASE_FAIL			0x0020
-#define     INTR_STATUS3__LOAD_COMP			0x0040
-#define     INTR_STATUS3__PROGRAM_COMP			0x0080
-#define     INTR_STATUS3__ERASE_COMP			0x0100
-#define     INTR_STATUS3__PIPE_CPYBCK_CMD_COMP		0x0200
-#define     INTR_STATUS3__LOCKED_BLK			0x0400
-#define     INTR_STATUS3__UNSUP_CMD			0x0800
-#define     INTR_STATUS3__INT_ACT			0x1000
-#define     INTR_STATUS3__RST_COMP			0x2000
-#define     INTR_STATUS3__PIPE_CMD_ERR			0x4000
-#define     INTR_STATUS3__PAGE_XFER_INC			0x8000
-
-#define INTR_EN3					0x510
-#define     INTR_EN3__ECC_TRANSACTION_DONE		0x0001
-#define     INTR_EN3__ECC_ERR				0x0002
-#define     INTR_EN3__DMA_CMD_COMP			0x0004
-#define     INTR_EN3__TIME_OUT				0x0008
-#define     INTR_EN3__PROGRAM_FAIL			0x0010
-#define     INTR_EN3__ERASE_FAIL				0x0020
-#define     INTR_EN3__LOAD_COMP				0x0040
-#define     INTR_EN3__PROGRAM_COMP			0x0080
-#define     INTR_EN3__ERASE_COMP				0x0100
-#define     INTR_EN3__PIPE_CPYBCK_CMD_COMP		0x0200
-#define     INTR_EN3__LOCKED_BLK				0x0400
-#define     INTR_EN3__UNSUP_CMD				0x0800
-#define     INTR_EN3__INT_ACT				0x1000
-#define     INTR_EN3__RST_COMP				0x2000
-#define     INTR_EN3__PIPE_CMD_ERR			0x4000
-#define     INTR_EN3__PAGE_XFER_INC			0x8000
-
-#define PAGE_CNT3				0x520
-#define     PAGE_CNT3__VALUE				0x00ff
-
-#define ERR_PAGE_ADDR3				0x530
-#define     ERR_PAGE_ADDR3__VALUE			0xffff
-
-#define ERR_BLOCK_ADDR3			0x540
-#define     ERR_BLOCK_ADDR3__VALUE			0xffff
+#define PAGE_CNT(__bank)	(0x430 + ((__bank) * 0x50))
+#define ERR_PAGE_ADDR(__bank)	(0x440 + ((__bank) * 0x50))
+#define ERR_BLOCK_ADDR(__bank)	(0x450 + ((__bank) * 0x50))
 
 #define DATA_INTR				0x550
 #define     DATA_INTR__WRITE_SPACE_AV			0x0001
@@ -412,9 +273,9 @@
 #define     GPREG_3__VALUE				0xffff
 
 #define ECC_THRESHOLD				0x600
-#define     ECC_THRESHOLD__VALUE				0x03ff
+#define     ECC_THRESHOLD__VALUE			0x03ff
 
-#define ECC_ERROR_BLOCK_ADDRESS		0x610
+#define ECC_ERROR_BLOCK_ADDRESS			0x610
 #define     ECC_ERROR_BLOCK_ADDRESS__VALUE		0xffff
 
 #define ECC_ERROR_PAGE_ADDRESS			0x620
@@ -466,7 +327,7 @@
 #define     CHNL_ACTIVE__CHANNEL3			0x0008
 
 #define ACTIVE_SRC_ID				0x800
-#define     ACTIVE_SRC_ID__VALUE				0x00ff
+#define     ACTIVE_SRC_ID__VALUE			0x00ff
 
 #define PTN_INTR					0x810
 #define     PTN_INTR__CONFIG_ERROR			0x0001
@@ -484,182 +345,23 @@
 #define     PTN_INTR_EN__ACCESS_ERROR_BANK3		0x0010
 #define     PTN_INTR_EN__REG_ACCESS_ERROR		0x0020
 
-#define PERM_SRC_ID_0				0x830
-#define     PERM_SRC_ID_0__SRCID				0x00ff
-#define     PERM_SRC_ID_0__DIRECT_ACCESS_ACTIVE		0x0800
-#define     PERM_SRC_ID_0__WRITE_ACTIVE			0x2000
-#define     PERM_SRC_ID_0__READ_ACTIVE			0x4000
-#define     PERM_SRC_ID_0__PARTITION_VALID		0x8000
+#define PERM_SRC_ID(__bank)	(0x830 + ((__bank) * 0x40))
+#define     PERM_SRC_ID__SRCID				0x00ff
+#define     PERM_SRC_ID__DIRECT_ACCESS_ACTIVE		0x0800
+#define     PERM_SRC_ID__WRITE_ACTIVE			0x2000
+#define     PERM_SRC_ID__READ_ACTIVE			0x4000
+#define     PERM_SRC_ID__PARTITION_VALID		0x8000
 
-#define MIN_BLK_ADDR_0				0x840
-#define     MIN_BLK_ADDR_0__VALUE			0xffff
+#define MIN_BLK_ADDR(__bank)	(0x840 + ((__bank) * 0x40))
+#define     MIN_BLK_ADDR__VALUE				0xffff
 
-#define MAX_BLK_ADDR_0				0x850
-#define     MAX_BLK_ADDR_0__VALUE			0xffff
+#define MAX_BLK_ADDR(__bank)	(0x850 + ((__bank) * 0x40))
+#define     MAX_BLK_ADDR__VALUE				0xffff
 
-#define MIN_MAX_BANK_0				0x860
-#define     MIN_MAX_BANK_0__MIN_VALUE			0x0003
-#define     MIN_MAX_BANK_0__MAX_VALUE			0x000c
+#define MIN_MAX_BANK(__bank)	(0x860 + ((__bank) * 0x40))
+#define     MIN_MAX_BANK__MIN_VALUE			0x0003
+#define     MIN_MAX_BANK__MAX_VALUE			0x000c
 
-#define PERM_SRC_ID_1				0x870
-#define     PERM_SRC_ID_1__SRCID				0x00ff
-#define     PERM_SRC_ID_1__DIRECT_ACCESS_ACTIVE		0x0800
-#define     PERM_SRC_ID_1__WRITE_ACTIVE			0x2000
-#define     PERM_SRC_ID_1__READ_ACTIVE			0x4000
-#define     PERM_SRC_ID_1__PARTITION_VALID		0x8000
-
-#define MIN_BLK_ADDR_1				0x880
-#define     MIN_BLK_ADDR_1__VALUE			0xffff
-
-#define MAX_BLK_ADDR_1				0x890
-#define     MAX_BLK_ADDR_1__VALUE			0xffff
-
-#define MIN_MAX_BANK_1				0x8a0
-#define     MIN_MAX_BANK_1__MIN_VALUE			0x0003
-#define     MIN_MAX_BANK_1__MAX_VALUE			0x000c
-
-#define PERM_SRC_ID_2				0x8b0
-#define     PERM_SRC_ID_2__SRCID				0x00ff
-#define     PERM_SRC_ID_2__DIRECT_ACCESS_ACTIVE		0x0800
-#define     PERM_SRC_ID_2__WRITE_ACTIVE			0x2000
-#define     PERM_SRC_ID_2__READ_ACTIVE			0x4000
-#define     PERM_SRC_ID_2__PARTITION_VALID		0x8000
-
-#define MIN_BLK_ADDR_2				0x8c0
-#define     MIN_BLK_ADDR_2__VALUE			0xffff
-
-#define MAX_BLK_ADDR_2				0x8d0
-#define     MAX_BLK_ADDR_2__VALUE			0xffff
-
-#define MIN_MAX_BANK_2				0x8e0
-#define     MIN_MAX_BANK_2__MIN_VALUE			0x0003
-#define     MIN_MAX_BANK_2__MAX_VALUE			0x000c
-
-#define PERM_SRC_ID_3				0x8f0
-#define     PERM_SRC_ID_3__SRCID				0x00ff
-#define     PERM_SRC_ID_3__DIRECT_ACCESS_ACTIVE		0x0800
-#define     PERM_SRC_ID_3__WRITE_ACTIVE			0x2000
-#define     PERM_SRC_ID_3__READ_ACTIVE			0x4000
-#define     PERM_SRC_ID_3__PARTITION_VALID		0x8000
-
-#define MIN_BLK_ADDR_3				0x900
-#define     MIN_BLK_ADDR_3__VALUE			0xffff
-
-#define MAX_BLK_ADDR_3				0x910
-#define     MAX_BLK_ADDR_3__VALUE			0xffff
-
-#define MIN_MAX_BANK_3				0x920
-#define     MIN_MAX_BANK_3__MIN_VALUE			0x0003
-#define     MIN_MAX_BANK_3__MAX_VALUE			0x000c
-
-#define PERM_SRC_ID_4				0x930
-#define     PERM_SRC_ID_4__SRCID				0x00ff
-#define     PERM_SRC_ID_4__DIRECT_ACCESS_ACTIVE		0x0800
-#define     PERM_SRC_ID_4__WRITE_ACTIVE			0x2000
-#define     PERM_SRC_ID_4__READ_ACTIVE			0x4000
-#define     PERM_SRC_ID_4__PARTITION_VALID		0x8000
-
-#define MIN_BLK_ADDR_4				0x940
-#define     MIN_BLK_ADDR_4__VALUE			0xffff
-
-#define MAX_BLK_ADDR_4				0x950
-#define     MAX_BLK_ADDR_4__VALUE			0xffff
-
-#define MIN_MAX_BANK_4				0x960
-#define     MIN_MAX_BANK_4__MIN_VALUE			0x0003
-#define     MIN_MAX_BANK_4__MAX_VALUE			0x000c
-
-#define PERM_SRC_ID_5				0x970
-#define     PERM_SRC_ID_5__SRCID				0x00ff
-#define     PERM_SRC_ID_5__DIRECT_ACCESS_ACTIVE		0x0800
-#define     PERM_SRC_ID_5__WRITE_ACTIVE			0x2000
-#define     PERM_SRC_ID_5__READ_ACTIVE			0x4000
-#define     PERM_SRC_ID_5__PARTITION_VALID		0x8000
-
-#define MIN_BLK_ADDR_5				0x980
-#define     MIN_BLK_ADDR_5__VALUE			0xffff
-
-#define MAX_BLK_ADDR_5				0x990
-#define     MAX_BLK_ADDR_5__VALUE			0xffff
-
-#define MIN_MAX_BANK_5				0x9a0
-#define     MIN_MAX_BANK_5__MIN_VALUE			0x0003
-#define     MIN_MAX_BANK_5__MAX_VALUE			0x000c
-
-#define PERM_SRC_ID_6				0x9b0
-#define     PERM_SRC_ID_6__SRCID				0x00ff
-#define     PERM_SRC_ID_6__DIRECT_ACCESS_ACTIVE		0x0800
-#define     PERM_SRC_ID_6__WRITE_ACTIVE			0x2000
-#define     PERM_SRC_ID_6__READ_ACTIVE			0x4000
-#define     PERM_SRC_ID_6__PARTITION_VALID		0x8000
-
-#define MIN_BLK_ADDR_6				0x9c0
-#define     MIN_BLK_ADDR_6__VALUE			0xffff
-
-#define MAX_BLK_ADDR_6				0x9d0
-#define     MAX_BLK_ADDR_6__VALUE			0xffff
-
-#define MIN_MAX_BANK_6				0x9e0
-#define     MIN_MAX_BANK_6__MIN_VALUE			0x0003
-#define     MIN_MAX_BANK_6__MAX_VALUE			0x000c
-
-#define PERM_SRC_ID_7				0x9f0
-#define     PERM_SRC_ID_7__SRCID				0x00ff
-#define     PERM_SRC_ID_7__DIRECT_ACCESS_ACTIVE		0x0800
-#define     PERM_SRC_ID_7__WRITE_ACTIVE			0x2000
-#define     PERM_SRC_ID_7__READ_ACTIVE			0x4000
-#define     PERM_SRC_ID_7__PARTITION_VALID		0x8000
-
-#define MIN_BLK_ADDR_7				0xa00
-#define     MIN_BLK_ADDR_7__VALUE			0xffff
-
-#define MAX_BLK_ADDR_7				0xa10
-#define     MAX_BLK_ADDR_7__VALUE			0xffff
-
-#define MIN_MAX_BANK_7				0xa20
-#define     MIN_MAX_BANK_7__MIN_VALUE			0x0003
-#define     MIN_MAX_BANK_7__MAX_VALUE			0x000c
-
-/* flash.h */
-struct device_info_tag {
-        uint16_t wDeviceMaker;
-        uint16_t wDeviceID;
-	uint8_t  bDeviceParam0;
-	uint8_t  bDeviceParam1;
-	uint8_t  bDeviceParam2;
-        uint32_t wDeviceType;
-        uint32_t wSpectraStartBlock;
-        uint32_t wSpectraEndBlock;
-        uint32_t wTotalBlocks;
-        uint16_t wPagesPerBlock;
-        uint16_t wPageSize;
-        uint16_t wPageDataSize;
-        uint16_t wPageSpareSize;
-        uint16_t wNumPageSpareFlag;
-        uint16_t wECCBytesPerSector;
-        uint32_t wBlockSize;
-        uint32_t wBlockDataSize;
-        uint32_t wDataBlockNum;
-        uint8_t bPlaneNum;
-        uint16_t wDeviceMainAreaSize;
-        uint16_t wDeviceSpareAreaSize;
-        uint16_t wDevicesConnected;
-        uint16_t wDeviceWidth;
-        uint16_t wHWRevision;
-        uint16_t wHWFeatures;
-
-        uint16_t wONFIDevFeatures;
-        uint16_t wONFIOptCommands;
-        uint16_t wONFITimingMode;
-        uint16_t wONFIPgmCacheTimingMode;
-
-        uint16_t MLCDevice;
-        uint16_t wSpareSkipBytes;
-
-        uint8_t nBitsInPageNumber;
-        uint8_t nBitsInPageDataSize;
-        uint8_t nBitsInBlockDataSize;
-};
 
 /* ffsdefs.h */
 #define CLEAR 0                 /*use this to clear a field instead of "fail"*/
@@ -675,24 +377,6 @@ struct device_info_tag {
 
 #define CLK_X  5
 #define CLK_MULTI 4
-
-/* ffsport.h */
-#define VERBOSE    1
-
-#define NAND_DBG_WARN  1
-#define NAND_DBG_DEBUG 2
-#define NAND_DBG_TRACE 3
-
-#ifdef VERBOSE
-#define nand_dbg_print(level, args...)                  \
-        do {                                            \
-                if (level <= nand_debug_level)          \
-                        printk(KERN_ALERT args);        \
-        } while (0)
-#else
-#define nand_dbg_print(level, args...)
-#endif
-
 
 /* spectraswconfig.h */
 #define CMD_DMA 0
@@ -770,12 +454,10 @@ struct device_info_tag {
 #define READ_WRITE_ENABLE_HIGH_COUNT    22
 
 #define ECC_SECTOR_SIZE     512
-#define LLD_MAX_FLASH_BANKS     4
 
-#define DENALI_BUF_SIZE		NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE
+#define DENALI_BUF_SIZE		(NAND_MAX_PAGESIZE + NAND_MAX_OOBSIZE)
 
-struct nand_buf
-{
+struct nand_buf {
 	int head;
 	int tail;
 	uint8_t buf[DENALI_BUF_SIZE];
@@ -788,12 +470,11 @@ struct nand_buf
 struct denali_nand_info {
 	struct mtd_info mtd;
 	struct nand_chip nand;
-	struct device_info_tag dev_info;
 	int flash_bank; /* currently selected chip */
 	int status;
 	int platform;
 	struct nand_buf buf;
-	struct pci_dev *dev;
+	struct device *dev;
 	int total_used_banks;
 	uint32_t block;  /* stored for future use */
 	uint16_t page;
@@ -806,11 +487,13 @@ struct denali_nand_info {
 	uint32_t irq_status;
 	int irq_debug_array[32];
 	int idx;
+
+	uint32_t devnum;	/* represent how many nands connected */
+	uint32_t fwblks; /* represent how many blocks FW used */
+	uint32_t totalblks;
+	uint32_t blksperchip;
+	uint32_t bbtskipbytes;
+	uint32_t max_banks;
 };
 
-static uint16_t  NAND_Flash_Reset(struct denali_nand_info *denali);
-static uint16_t  NAND_Read_Device_ID(struct denali_nand_info *denali);
-static void NAND_LLD_Enable_Disable_Interrupts(struct denali_nand_info *denali, uint16_t INT_ENABLE);
-
 #endif /*_LLD_NAND_*/
-

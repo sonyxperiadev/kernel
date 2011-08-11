@@ -32,7 +32,7 @@ config WANT_COMPAT_NETLINK_MESSAGES
 config COMPAT_NETLINK_MESSAGES
 	def_bool y
 	depends on COMPAT
-	depends on WIRELESS_EXT || WANT_COMPAT_NETLINK_MESSAGES
+	depends on WEXT_CORE || WANT_COMPAT_NETLINK_MESSAGES
 	help
 	  This option makes it possible to send different netlink messages
 	  to tasks depending on whether the task is a compat task or not. To
@@ -98,6 +98,16 @@ config NETWORK_SECMARK
 	help
 	  This enables security marking of network packets, similar
 	  to nfmark, but designated for security purposes.
+	  If you are unsure how to answer this question, answer N.
+
+config NETWORK_PHY_TIMESTAMPING
+	bool "Timestamping in PHY devices"
+	depends on EXPERIMENTAL
+	help
+	  This allows timestamping of network packets by PHYs with
+	  hardware timestamping capabilities. This option adds some
+	  overhead in the transmit and receive paths.
+
 	  If you are unsure how to answer this question, answer N.
 
 menuconfig NETFILTER
@@ -217,11 +227,38 @@ source "net/phonet/Kconfig"
 source "net/ieee802154/Kconfig"
 source "net/sched/Kconfig"
 source "net/dcb/Kconfig"
+source "net/dns_resolver/Kconfig"
+source "net/batman-adv/Kconfig"
 
 config RPS
+	boolean "RPS"
+	depends on SMP && SYSFS && USE_GENERIC_SMP_HELPERS
+	default y
+
+config RFS_ACCEL
+	boolean
+	depends on RPS && GENERIC_HARDIRQS
+	select CPU_RMAP
+	default y
+
+config XPS
 	boolean
 	depends on SMP && SYSFS && USE_GENERIC_SMP_HELPERS
 	default y
+
+config HAVE_BPF_JIT
+	bool
+
+config BPF_JIT
+	bool "enable BPF Just In Time compiler"
+	depends on HAVE_BPF_JIT
+	depends on MODULES
+	---help---
+	  Berkeley Packet Filter filtering capabilities are normally handled
+	  by an interpreter. This option allows kernel to generate a native
+	  code when filter is loaded in memory. This should speedup
+	  packet sniffing (libpcap/tcpdump). Note : Admin should enable
+	  this feature changing /proc/sys/net/core/bpf_jit_enable
 
 menu "Network testing"
 
@@ -250,7 +287,9 @@ config NET_TCPPROBE
 	what was just said, you don't need it: say N.
 
 	Documentation on how to use TCP connection probing can be found
-	at http://linux-net.osdl.org/index.php/TcpProbe
+	at:
+	
+	  http://www.linuxfoundation.org/collaborate/workgroups/networking/tcpprobe
 
 	To compile this code as a module, choose M here: the
 	module will be called tcp_probe.
@@ -296,6 +335,7 @@ source "net/wimax/Kconfig"
 source "net/rfkill/Kconfig"
 source "net/9p/Kconfig"
 source "net/caif/Kconfig"
+source "net/ceph/Kconfig"
 
 
 endif   # if NET

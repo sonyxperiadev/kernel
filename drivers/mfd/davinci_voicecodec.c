@@ -94,7 +94,8 @@ static int __init davinci_vc_probe(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_DMA, 0);
 	if (!res) {
 		dev_err(&pdev->dev, "no DMA resource\n");
-		return -ENXIO;
+		ret = -ENXIO;
+		goto fail4;
 	}
 
 	davinci_vc->davinci_vcif.dma_tx_channel = res->start;
@@ -104,7 +105,8 @@ static int __init davinci_vc_probe(struct platform_device *pdev)
 	res = platform_get_resource(pdev, IORESOURCE_DMA, 1);
 	if (!res) {
 		dev_err(&pdev->dev, "no DMA resource\n");
-		return -ENXIO;
+		ret = -ENXIO;
+		goto fail4;
 	}
 
 	davinci_vc->davinci_vcif.dma_rx_channel = res->start;
@@ -116,13 +118,15 @@ static int __init davinci_vc_probe(struct platform_device *pdev)
 
 	/* Voice codec interface client */
 	cell = &davinci_vc->cells[DAVINCI_VC_VCIF_CELL];
-	cell->name = "davinci_vcif";
-	cell->driver_data = davinci_vc;
+	cell->name = "davinci-vcif";
+	cell->platform_data = davinci_vc;
+	cell->pdata_size = sizeof(*davinci_vc);
 
 	/* Voice codec CQ93VC client */
 	cell = &davinci_vc->cells[DAVINCI_VC_CQ93VC_CELL];
-	cell->name = "cq93vc";
-	cell->driver_data = davinci_vc;
+	cell->name = "cq93vc-codec";
+	cell->platform_data = davinci_vc;
+	cell->pdata_size = sizeof(*davinci_vc);
 
 	ret = mfd_add_devices(&pdev->dev, pdev->id, davinci_vc->cells,
 			      DAVINCI_VC_CELLS, NULL, 0);

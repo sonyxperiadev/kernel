@@ -29,11 +29,14 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <asm/div64.h>
+#include <linux/firmware.h>
 
 #include "cx23885.h"
 #include "cimax2.h"
+#include "altera-ci.h"
 #include "cx23888-ir.h"
 #include "cx23885-ir.h"
+#include "cx23885-av.h"
 #include "cx23885-input.h"
 
 MODULE_DESCRIPTION("Driver for cx23885 based TV cards");
@@ -299,6 +302,83 @@ static struct sram_channel cx23887_sram_channels[] = {
 	},
 };
 
+void cx23885_irq_add(struct cx23885_dev *dev, u32 mask)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&dev->pci_irqmask_lock, flags);
+
+	dev->pci_irqmask |= mask;
+
+	spin_unlock_irqrestore(&dev->pci_irqmask_lock, flags);
+}
+
+void cx23885_irq_add_enable(struct cx23885_dev *dev, u32 mask)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&dev->pci_irqmask_lock, flags);
+
+	dev->pci_irqmask |= mask;
+	cx_set(PCI_INT_MSK, mask);
+
+	spin_unlock_irqrestore(&dev->pci_irqmask_lock, flags);
+}
+
+void cx23885_irq_enable(struct cx23885_dev *dev, u32 mask)
+{
+	u32 v;
+	unsigned long flags;
+	spin_lock_irqsave(&dev->pci_irqmask_lock, flags);
+
+	v = mask & dev->pci_irqmask;
+	if (v)
+		cx_set(PCI_INT_MSK, v);
+
+	spin_unlock_irqrestore(&dev->pci_irqmask_lock, flags);
+}
+
+static inline void cx23885_irq_enable_all(struct cx23885_dev *dev)
+{
+	cx23885_irq_enable(dev, 0xffffffff);
+}
+
+void cx23885_irq_disable(struct cx23885_dev *dev, u32 mask)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&dev->pci_irqmask_lock, flags);
+
+	cx_clear(PCI_INT_MSK, mask);
+
+	spin_unlock_irqrestore(&dev->pci_irqmask_lock, flags);
+}
+
+static inline void cx23885_irq_disable_all(struct cx23885_dev *dev)
+{
+	cx23885_irq_disable(dev, 0xffffffff);
+}
+
+void cx23885_irq_remove(struct cx23885_dev *dev, u32 mask)
+{
+	unsigned long flags;
+	spin_lock_irqsave(&dev->pci_irqmask_lock, flags);
+
+	dev->pci_irqmask &= ~mask;
+	cx_clear(PCI_INT_MSK, mask);
+
+	spin_unlock_irqrestore(&dev->pci_irqmask_lock, flags);
+}
+
+static u32 cx23885_irq_get_mask(struct cx23885_dev *dev)
+{
+	u32 v;
+	unsigned long flags;
+	spin_lock_irqsave(&dev->pci_irqmask_lock, flags);
+
+	v = cx_read(PCI_INT_MSK);
+
+	spin_unlock_irqrestore(&dev->pci_irqmask_lock, flags);
+	return v;
+}
+
 static int cx23885_risc_decode(u32 risc)
 {
 	static char *instr[16] = {
@@ -548,7 +628,7 @@ static void cx23885_shutdown(struct cx23885_dev *dev)
 	cx_write(UART_CTL, 0);
 
 	/* Disable Interrupts */
-	cx_write(PCI_INT_MSK, 0);
+	cx23885_irq_disable_all(dev);
 	cx_write(VID_A_INT_MSK, 0);
 	cx_write(VID_B_INT_MSK, 0);
 	cx_write(VID_C_INT_MSK, 0);
@@ -737,6 +817,7 @@ static void cx23885_dev_checkrevision(struct cx23885_dev *dev)
 	case 0x0e:
 		/* CX23887-15Z */
 		dev->hwrevision = 0xc0;
+		break;
 	case 0x0f:
 		/* CX23887-14Z */
 		dev->hwrevision = 0xb1;
@@ -773,6 +854,8 @@ struct v4l2_subdev *cx23885_find_hw(struct cx23885_dev *dev, u32 hw)
 static int cx23885_dev_setup(struct cx23885_dev *dev)
 {
 	int i;
+
+	spin_lock_init(&dev->pci_irqmask_lock);
 
 	mutex_init(&dev->lock);
 	mutex_init(&dev->gpio_lock);
@@ -820,9 +903,7 @@ static int cx23885_dev_setup(struct cx23885_dev *dev)
 
 	dev->pci_bus  = dev->pci->bus->number;
 	dev->pci_slot = PCI_SLOT(dev->pci->devfn);
-	dev->pci_irqmask = 0x001f00;
-	if (cx23885_boards[dev->board].cimax > 0)
-		dev->pci_irqmask |= 0x01800000; /* for CiMaxes */
+	cx23885_irq_add(dev, 0x001f00);
 
 	/* External Master 1 Bus */
 	dev->i2c_bus[0].nr = 0;
@@ -889,11 +970,12 @@ static int cx23885_dev_setup(struct cx23885_dev *dev)
 	/* Assume some sensible defaults */
 	dev->tuner_type = cx23885_boards[dev->board].tuner_type;
 	dev->tuner_addr = cx23885_boards[dev->board].tuner_addr;
+	dev->tuner_bus = cx23885_boards[dev->board].tuner_bus;
 	dev->radio_type = cx23885_boards[dev->board].radio_type;
 	dev->radio_addr = cx23885_boards[dev->board].radio_addr;
 
-	dprintk(1, "%s() tuner_type = 0x%x tuner_addr = 0x%x\n",
-		__func__, dev->tuner_type, dev->tuner_addr);
+	dprintk(1, "%s() tuner_type = 0x%x tuner_addr = 0x%x tuner_bus = %d\n",
+		__func__, dev->tuner_type, dev->tuner_addr, dev->tuner_bus);
 	dprintk(1, "%s() radio_type = 0x%x radio_addr = 0x%x\n",
 		__func__, dev->radio_type, dev->radio_addr);
 
@@ -923,6 +1005,9 @@ static int cx23885_dev_setup(struct cx23885_dev *dev)
 	}
 
 	if (cx23885_boards[dev->board].portb == CX23885_MPEG_DVB) {
+		if (cx23885_boards[dev->board].num_fds_portb)
+			dev->ts1.num_frontends =
+				cx23885_boards[dev->board].num_fds_portb;
 		if (cx23885_dvb_register(&dev->ts1) < 0) {
 			printk(KERN_ERR "%s() Failed to register dvb adapters on VID_B\n",
 			       __func__);
@@ -937,6 +1022,9 @@ static int cx23885_dev_setup(struct cx23885_dev *dev)
 	}
 
 	if (cx23885_boards[dev->board].portc == CX23885_MPEG_DVB) {
+		if (cx23885_boards[dev->board].num_fds_portc)
+			dev->ts2.num_frontends =
+				cx23885_boards[dev->board].num_fds_portc;
 		if (cx23885_dvb_register(&dev->ts2) < 0) {
 			printk(KERN_ERR
 				"%s() Failed to register dvb on VID_C\n",
@@ -952,6 +1040,10 @@ static int cx23885_dev_setup(struct cx23885_dev *dev)
 	}
 
 	cx23885_dev_checkrevision(dev);
+
+	/* disable MSI for NetUP cards, otherwise CI is not working */
+	if (cx23885_boards[dev->board].ci_type > 0)
+		cx_clear(RDR_RDRCTL1, 1 << 8);
 
 	return 0;
 }
@@ -1141,8 +1233,8 @@ void cx23885_free_buffer(struct videobuf_queue *q, struct cx23885_buffer *buf)
 	struct videobuf_dmabuf *dma = videobuf_to_dma(&buf->vb);
 
 	BUG_ON(in_interrupt());
-	videobuf_waiton(&buf->vb, 0, 0);
-	videobuf_dma_unmap(q, dma);
+	videobuf_waiton(q, &buf->vb, 0, 0);
+	videobuf_dma_unmap(q->dev, dma);
 	videobuf_dma_free(dma);
 	btcx_riscmem_free(to_pci_dev(q->dev), &buf->risc);
 	buf->vb.state = VIDEOBUF_NEEDS_INIT;
@@ -1156,7 +1248,7 @@ static void cx23885_tsport_reg_dump(struct cx23885_tsport *port)
 	dprintk(1, "%s() DEV_CNTRL2               0x%08X\n", __func__,
 		cx_read(DEV_CNTRL2));
 	dprintk(1, "%s() PCI_INT_MSK              0x%08X\n", __func__,
-		cx_read(PCI_INT_MSK));
+		cx23885_irq_get_mask(dev));
 	dprintk(1, "%s() AUD_INT_INT_MSK          0x%08X\n", __func__,
 		cx_read(AUDIO_INT_INT_MSK));
 	dprintk(1, "%s() AUD_INT_DMA_CTL          0x%08X\n", __func__,
@@ -1292,7 +1384,8 @@ static int cx23885_start_dma(struct cx23885_tsport *port,
 		dprintk(1, "%s() enabling TS int's and DMA\n", __func__);
 		cx_set(port->reg_ts_int_msk,  port->ts_int_msk_val);
 		cx_set(port->reg_dma_ctl, port->dma_ctl_val);
-		cx_set(PCI_INT_MSK, dev->pci_irqmask | port->pci_irqmask);
+		cx23885_irq_add(dev, port->pci_irqmask);
+		cx23885_irq_enable_all(dev);
 		break;
 	default:
 		BUG();
@@ -1650,10 +1743,10 @@ static irqreturn_t cx23885_irq(int irq, void *dev_id)
 	u32 ts1_status, ts1_mask;
 	u32 ts2_status, ts2_mask;
 	int vida_count = 0, ts1_count = 0, ts2_count = 0, handled = 0;
-	bool ir_handled = false;
+	bool subdev_handled;
 
 	pci_status = cx_read(PCI_INT_STAT);
-	pci_mask = cx_read(PCI_INT_MSK);
+	pci_mask = cx23885_irq_get_mask(dev);
 	vida_status = cx_read(VID_A_INT_STAT);
 	vida_mask = cx_read(VID_A_INT_MSK);
 	ts1_status = cx_read(VID_B_INT_STAT);
@@ -1681,7 +1774,7 @@ static irqreturn_t cx23885_irq(int irq, void *dev_id)
 			  PCI_MSK_VID_C   | PCI_MSK_VID_B   | PCI_MSK_VID_A   |
 			  PCI_MSK_AUD_INT | PCI_MSK_AUD_EXT |
 			  PCI_MSK_GPIO0   | PCI_MSK_GPIO1   |
-			  PCI_MSK_IR)) {
+			  PCI_MSK_AV_CORE | PCI_MSK_IR)) {
 
 		if (pci_status & PCI_MSK_RISC_RD)
 			dprintk(7, " (PCI_MSK_RISC_RD   0x%08x)\n",
@@ -1731,19 +1824,22 @@ static irqreturn_t cx23885_irq(int irq, void *dev_id)
 			dprintk(7, " (PCI_MSK_GPIO1     0x%08x)\n",
 				PCI_MSK_GPIO1);
 
+		if (pci_status & PCI_MSK_AV_CORE)
+			dprintk(7, " (PCI_MSK_AV_CORE   0x%08x)\n",
+				PCI_MSK_AV_CORE);
+
 		if (pci_status & PCI_MSK_IR)
 			dprintk(7, " (PCI_MSK_IR        0x%08x)\n",
 				PCI_MSK_IR);
 	}
 
-	if (cx23885_boards[dev->board].cimax > 0 &&
-		((pci_status & PCI_MSK_GPIO0) ||
-			(pci_status & PCI_MSK_GPIO1))) {
+	if (cx23885_boards[dev->board].ci_type == 1 &&
+			(pci_status & (PCI_MSK_GPIO1 | PCI_MSK_GPIO0)))
+		handled += netup_ci_slot_status(dev, pci_status);
 
-		if (cx23885_boards[dev->board].cimax > 0)
-			handled += netup_ci_slot_status(dev, pci_status);
-
-	}
+	if (cx23885_boards[dev->board].ci_type == 2 &&
+			(pci_status & PCI_MSK_GPIO0))
+		handled += altera_ci_irq(dev);
 
 	if (ts1_status) {
 		if (cx23885_boards[dev->board].portb == CX23885_MPEG_DVB)
@@ -1765,10 +1861,20 @@ static irqreturn_t cx23885_irq(int irq, void *dev_id)
 		handled += cx23885_video_irq(dev, vida_status);
 
 	if (pci_status & PCI_MSK_IR) {
-		v4l2_subdev_call(dev->sd_ir, ir, interrupt_service_routine,
-				 pci_status, &ir_handled);
-		if (ir_handled)
+		subdev_handled = false;
+		v4l2_subdev_call(dev->sd_ir, core, interrupt_service_routine,
+				 pci_status, &subdev_handled);
+		if (subdev_handled)
 			handled++;
+	}
+
+	if ((pci_status & pci_mask) & PCI_MSK_AV_CORE) {
+		cx23885_irq_disable(dev, PCI_MSK_AV_CORE);
+		if (!schedule_work(&dev->cx25840_work))
+			printk(KERN_ERR "%s: failed to set up deferred work for"
+			       " AV Core/IR interrupt. Interrupt is disabled"
+			       " and won't be re-enabled\n", dev->name);
+		handled++;
 	}
 
 	if (handled)
@@ -1788,11 +1894,11 @@ static void cx23885_v4l2_dev_notify(struct v4l2_subdev *sd,
 	dev = to_cx23885(sd->v4l2_dev);
 
 	switch (notification) {
-	case V4L2_SUBDEV_IR_RX_NOTIFY: /* Called in an IRQ context */
+	case V4L2_SUBDEV_IR_RX_NOTIFY: /* Possibly called in an IRQ context */
 		if (sd == dev->sd_ir)
 			cx23885_ir_rx_v4l2_dev_notify(sd, *(u32 *)arg);
 		break;
-	case V4L2_SUBDEV_IR_TX_NOTIFY: /* Called in an IRQ context */
+	case V4L2_SUBDEV_IR_TX_NOTIFY: /* Possibly called in an IRQ context */
 		if (sd == dev->sd_ir)
 			cx23885_ir_tx_v4l2_dev_notify(sd, *(u32 *)arg);
 		break;
@@ -1801,6 +1907,7 @@ static void cx23885_v4l2_dev_notify(struct v4l2_subdev *sd,
 
 static void cx23885_v4l2_dev_notify_init(struct cx23885_dev *dev)
 {
+	INIT_WORK(&dev->cx25840_work, cx23885_av_work_handler);
 	INIT_WORK(&dev->ir_rx_work, cx23885_ir_rx_work_handler);
 	INIT_WORK(&dev->ir_tx_work, cx23885_ir_tx_work_handler);
 	dev->v4l2_dev.notify = cx23885_v4l2_dev_notify;
@@ -1938,7 +2045,7 @@ static int __devinit cx23885_initdev(struct pci_dev *pci_dev,
 	}
 
 	/* print pci info */
-	pci_read_config_byte(pci_dev, PCI_CLASS_REVISION, &dev->pci_rev);
+	dev->pci_rev = pci_dev->revision;
 	pci_read_config_byte(pci_dev, PCI_LATENCY_TIMER,  &dev->pci_lat);
 	printk(KERN_INFO "%s/0: found at %s, rev: %d, irq: %d, "
 	       "latency: %d, mmio: 0x%llx\n", dev->name,
@@ -1953,8 +2060,12 @@ static int __devinit cx23885_initdev(struct pci_dev *pci_dev,
 		goto fail_irq;
 	}
 
-	err = request_irq(pci_dev->irq, cx23885_irq,
-			  IRQF_SHARED | IRQF_DISABLED, dev->name, dev);
+	if (!pci_enable_msi(pci_dev))
+		err = request_irq(pci_dev->irq, cx23885_irq,
+				  IRQF_DISABLED, dev->name, dev);
+	else
+		err = request_irq(pci_dev->irq, cx23885_irq,
+				  IRQF_SHARED | IRQF_DISABLED, dev->name, dev);
 	if (err < 0) {
 		printk(KERN_ERR "%s: can't get IRQ %d\n",
 		       dev->name, pci_dev->irq);
@@ -1963,7 +2074,10 @@ static int __devinit cx23885_initdev(struct pci_dev *pci_dev,
 
 	switch (dev->board) {
 	case CX23885_BOARD_NETUP_DUAL_DVBS2_CI:
-		cx_set(PCI_INT_MSK, 0x01800000); /* for NetUP */
+		cx23885_irq_add_enable(dev, PCI_MSK_GPIO1 | PCI_MSK_GPIO0);
+		break;
+	case CX23885_BOARD_NETUP_DUAL_DVB_T_C_CI_RF:
+		cx23885_irq_add_enable(dev, PCI_MSK_GPIO0);
 		break;
 	}
 
@@ -2000,6 +2114,7 @@ static void __devexit cx23885_finidev(struct pci_dev *pci_dev)
 
 	/* unregister stuff */
 	free_irq(pci_dev->irq, dev);
+	pci_disable_msi(pci_dev);
 
 	cx23885_dev_unregister(dev);
 	v4l2_device_unregister(v4l2_dev);

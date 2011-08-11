@@ -41,13 +41,13 @@ static struct tcf_hashinfo mirred_hash_info = {
 	.lock	=	&mirred_lock,
 };
 
-static inline int tcf_mirred_release(struct tcf_mirred *m, int bind)
+static int tcf_mirred_release(struct tcf_mirred *m, int bind)
 {
 	if (m) {
 		if (bind)
 			m->tcf_bindcnt--;
 		m->tcf_refcnt--;
-		if(!m->tcf_bindcnt && m->tcf_refcnt <= 0) {
+		if (!m->tcf_bindcnt && m->tcf_refcnt <= 0) {
 			list_del(&m->tcfm_list);
 			if (m->tcfm_dev)
 				dev_put(m->tcfm_dev);
@@ -165,6 +165,7 @@ static int tcf_mirred(struct sk_buff *skb, struct tc_action *a,
 
 	spin_lock(&m->tcf_lock);
 	m->tcf_tm.lastuse = jiffies;
+	bstats_update(&m->tcf_bstats, skb);
 
 	dev = m->tcfm_dev;
 	if (!dev) {
@@ -179,13 +180,11 @@ static int tcf_mirred(struct sk_buff *skb, struct tc_action *a,
 		goto out;
 	}
 
-	skb2 = skb_act_clone(skb, GFP_ATOMIC);
+	at = G_TC_AT(skb->tc_verd);
+	skb2 = skb_act_clone(skb, GFP_ATOMIC, m->tcf_action);
 	if (skb2 == NULL)
 		goto out;
 
-	m->tcf_bstats.bytes += qdisc_pkt_len(skb2);
-	m->tcf_bstats.packets++;
-	at = G_TC_AT(skb->tc_verd);
 	if (!(at & AT_EGRESS)) {
 		if (m->tcfm_ok_push)
 			skb_push(skb2, skb2->dev->hard_header_len);
@@ -195,16 +194,14 @@ static int tcf_mirred(struct sk_buff *skb, struct tc_action *a,
 	if (m->tcfm_eaction != TCA_EGRESS_MIRROR)
 		skb2->tc_verd = SET_TC_FROM(skb2->tc_verd, at);
 
-	skb2->dev = dev;
 	skb2->skb_iif = skb->dev->ifindex;
+	skb2->dev = dev;
 	dev_queue_xmit(skb2);
 	err = 0;
 
 out:
 	if (err) {
 		m->tcf_qstats.overlimits++;
-		m->tcf_bstats.bytes += qdisc_pkt_len(skb);
-		m->tcf_bstats.packets++;
 		/* should we be asking for packet to be dropped?
 		 * may make sense for redirect case only
 		 */
@@ -221,15 +218,16 @@ static int tcf_mirred_dump(struct sk_buff *skb, struct tc_action *a, int bind, i
 {
 	unsigned char *b = skb_tail_pointer(skb);
 	struct tcf_mirred *m = a->priv;
-	struct tc_mirred opt;
+	struct tc_mirred opt = {
+		.index   = m->tcf_index,
+		.action  = m->tcf_action,
+		.refcnt  = m->tcf_refcnt - ref,
+		.bindcnt = m->tcf_bindcnt - bind,
+		.eaction = m->tcfm_eaction,
+		.ifindex = m->tcfm_ifindex,
+	};
 	struct tcf_t t;
 
-	opt.index = m->tcf_index;
-	opt.action = m->tcf_action;
-	opt.refcnt = m->tcf_refcnt - ref;
-	opt.bindcnt = m->tcf_bindcnt - bind;
-	opt.eaction = m->tcfm_eaction;
-	opt.ifindex = m->tcfm_ifindex;
 	NLA_PUT(skb, TCA_MIRRED_PARMS, sizeof(opt), &opt);
 	t.install = jiffies_to_clock_t(jiffies - m->tcf_tm.install);
 	t.lastuse = jiffies_to_clock_t(jiffies - m->tcf_tm.lastuse);

@@ -158,9 +158,9 @@ static int e1000_get_settings(struct net_device *netdev,
 
 		e1000_get_speed_and_duplex(hw, &adapter->link_speed,
 		                                   &adapter->link_duplex);
-		ecmd->speed = adapter->link_speed;
+		ethtool_cmd_speed_set(ecmd, adapter->link_speed);
 
-		/* unfortunatly FULL_DUPLEX != DUPLEX_FULL
+		/* unfortunately FULL_DUPLEX != DUPLEX_FULL
 		 *          and HALF_DUPLEX != DUPLEX_HALF */
 
 		if (adapter->link_duplex == FULL_DUPLEX)
@@ -168,7 +168,7 @@ static int e1000_get_settings(struct net_device *netdev,
 		else
 			ecmd->duplex = DUPLEX_HALF;
 	} else {
-		ecmd->speed = -1;
+		ethtool_cmd_speed_set(ecmd, -1);
 		ecmd->duplex = -1;
 	}
 
@@ -197,11 +197,13 @@ static int e1000_set_settings(struct net_device *netdev,
 			                         ADVERTISED_TP |
 			                         ADVERTISED_Autoneg;
 		ecmd->advertising = hw->autoneg_advertised;
-	} else
-		if (e1000_set_spd_dplx(adapter, ecmd->speed + ecmd->duplex)) {
+	} else {
+		u32 speed = ethtool_cmd_speed(ecmd);
+		if (e1000_set_spd_dplx(adapter, speed, ecmd->duplex)) {
 			clear_bit(__E1000_RESETTING, &adapter->flags);
 			return -EINVAL;
 		}
+	}
 
 	/* reset the link */
 
@@ -346,7 +348,7 @@ static int e1000_set_tso(struct net_device *netdev, u32 data)
 
 	netdev->features &= ~NETIF_F_TSO6;
 
-	e_info("TSO is %s\n", data ? "Enabled" : "Disabled");
+	e_info(probe, "TSO is %s\n", data ? "Enabled" : "Disabled");
 	adapter->tso_force = true;
 	return 0;
 }
@@ -714,9 +716,9 @@ static bool reg_pattern_test(struct e1000_adapter *adapter, u64 *data, int reg,
 		writel(write & test[i], address);
 		read = readl(address);
 		if (read != (write & test[i] & mask)) {
-			e_info("pattern test reg %04X failed: "
-			       "got 0x%08X expected 0x%08X\n",
-			       reg, read, (write & test[i] & mask));
+			e_err(drv, "pattern test reg %04X failed: "
+			      "got 0x%08X expected 0x%08X\n",
+			      reg, read, (write & test[i] & mask));
 			*data = reg;
 			return true;
 		}
@@ -734,7 +736,7 @@ static bool reg_set_and_check(struct e1000_adapter *adapter, u64 *data, int reg,
 	writel(write & mask, address);
 	read = readl(address);
 	if ((read & mask) != (write & mask)) {
-		e_err("set/check reg %04X test failed: "
+		e_err(drv, "set/check reg %04X test failed: "
 		      "got 0x%08X expected 0x%08X\n",
 		      reg, (read & mask), (write & mask));
 		*data = reg;
@@ -779,7 +781,7 @@ static int e1000_reg_test(struct e1000_adapter *adapter, u64 *data)
 	ew32(STATUS, toggle);
 	after = er32(STATUS) & toggle;
 	if (value != after) {
-		e_err("failed STATUS register test got: "
+		e_err(drv, "failed STATUS register test got: "
 		      "0x%08X expected: 0x%08X\n", after, value);
 		*data = 1;
 		return 1;
@@ -894,7 +896,8 @@ static int e1000_intr_test(struct e1000_adapter *adapter, u64 *data)
 		*data = 1;
 		return -1;
 	}
-	e_info("testing %s interrupt\n", (shared_int ? "shared" : "unshared"));
+	e_info(hw, "testing %s interrupt\n", (shared_int ?
+	       "shared" : "unshared"));
 
 	/* Disable all the interrupts */
 	ew32(IMC, 0xFFFFFFFF);
@@ -1561,7 +1564,7 @@ static void e1000_diag_test(struct net_device *netdev,
 		u8 forced_speed_duplex = hw->forced_speed_duplex;
 		u8 autoneg = hw->autoneg;
 
-		e_info("offline testing starting\n");
+		e_info(hw, "offline testing starting\n");
 
 		/* Link test performed before hardware reset so autoneg doesn't
 		 * interfere with test result */
@@ -1601,7 +1604,7 @@ static void e1000_diag_test(struct net_device *netdev,
 		if (if_running)
 			dev_open(netdev);
 	} else {
-		e_info("online testing starting\n");
+		e_info(hw, "online testing starting\n");
 		/* Online tests */
 		if (e1000_link_test(adapter, &data[4]))
 			eth_test->flags |= ETH_TEST_FL_FAILED;
@@ -1694,8 +1697,8 @@ static void e1000_get_wol(struct net_device *netdev,
 		wol->supported &= ~WAKE_UCAST;
 
 		if (adapter->wol & E1000_WUFC_EX)
-			e_err("Interface does not support "
-		        "directed (unicast) frame wake-up packets\n");
+			e_err(drv, "Interface does not support directed "
+			      "(unicast) frame wake-up packets\n");
 		break;
 	default:
 		break;
@@ -1726,8 +1729,8 @@ static int e1000_set_wol(struct net_device *netdev, struct ethtool_wolinfo *wol)
 	switch (hw->device_id) {
 	case E1000_DEV_ID_82546GB_QUAD_COPPER_KSP3:
 		if (wol->wolopts & WAKE_UCAST) {
-			e_err("Interface does not support "
-			      "directed (unicast) frame wake-up packets\n");
+			e_err(drv, "Interface does not support directed "
+			      "(unicast) frame wake-up packets\n");
 			return -EOPNOTSUPP;
 		}
 		break;
@@ -1752,46 +1755,28 @@ static int e1000_set_wol(struct net_device *netdev, struct ethtool_wolinfo *wol)
 	return 0;
 }
 
-/* toggle LED 4 times per second = 2 "blinks" per second */
-#define E1000_ID_INTERVAL	(HZ/4)
-
-/* bit defines for adapter->led_status */
-#define E1000_LED_ON		0
-
-static void e1000_led_blink_callback(unsigned long data)
-{
-	struct e1000_adapter *adapter = (struct e1000_adapter *) data;
-	struct e1000_hw *hw = &adapter->hw;
-
-	if (test_and_change_bit(E1000_LED_ON, &adapter->led_status))
-		e1000_led_off(hw);
-	else
-		e1000_led_on(hw);
-
-	mod_timer(&adapter->blink_timer, jiffies + E1000_ID_INTERVAL);
-}
-
-static int e1000_phys_id(struct net_device *netdev, u32 data)
+static int e1000_set_phys_id(struct net_device *netdev,
+			     enum ethtool_phys_id_state state)
 {
 	struct e1000_adapter *adapter = netdev_priv(netdev);
 	struct e1000_hw *hw = &adapter->hw;
 
-	if (!data)
-		data = INT_MAX;
+	switch (state) {
+	case ETHTOOL_ID_ACTIVE:
+		e1000_setup_led(hw);
+		return 2;
 
-	if (!adapter->blink_timer.function) {
-		init_timer(&adapter->blink_timer);
-		adapter->blink_timer.function = e1000_led_blink_callback;
-		adapter->blink_timer.data = (unsigned long)adapter;
+	case ETHTOOL_ID_ON:
+		e1000_led_on(hw);
+		break;
+
+	case ETHTOOL_ID_OFF:
+		e1000_led_off(hw);
+		break;
+
+	case ETHTOOL_ID_INACTIVE:
+		e1000_cleanup_led(hw);
 	}
-	e1000_setup_led(hw);
-	mod_timer(&adapter->blink_timer, jiffies);
-	msleep_interruptible(data * 1000);
-	del_timer_sync(&adapter->blink_timer);
-
-	e1000_led_off(hw);
-	clear_bit(E1000_LED_ON, &adapter->led_status);
-	e1000_cleanup_led(hw);
 
 	return 0;
 }
@@ -1928,7 +1913,7 @@ static const struct ethtool_ops e1000_ethtool_ops = {
 	.set_tso                = e1000_set_tso,
 	.self_test              = e1000_diag_test,
 	.get_strings            = e1000_get_strings,
-	.phys_id                = e1000_phys_id,
+	.set_phys_id            = e1000_set_phys_id,
 	.get_ethtool_stats      = e1000_get_ethtool_stats,
 	.get_sset_count         = e1000_get_sset_count,
 	.get_coalesce           = e1000_get_coalesce,

@@ -16,6 +16,7 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/input.h>
+#include <linux/input/mt.h>
 #include <linux/serio.h>
 #include <linux/libps2.h>
 #include "psmouse.h"
@@ -185,7 +186,6 @@ static void elantech_report_absolute_v1(struct psmouse *psmouse)
 	struct elantech_data *etd = psmouse->private;
 	unsigned char *packet = psmouse->packet;
 	int fingers;
-	static int old_fingers;
 
 	if (etd->fw_version < 0x020000) {
 		/*
@@ -203,10 +203,13 @@ static void elantech_report_absolute_v1(struct psmouse *psmouse)
 	}
 
 	if (etd->jumpy_cursor) {
-		/* Discard packets that are likely to have bogus coordinates */
-		if (fingers > old_fingers) {
+		if (fingers != 1) {
+			etd->single_finger_reports = 0;
+		} else if (etd->single_finger_reports < 2) {
+			/* Discard first 2 reports of one finger, bogus */
+			etd->single_finger_reports++;
 			elantech_debug("discarding packet\n");
-			goto discard_packet_v1;
+			return;
 		}
 	}
 
@@ -238,9 +241,27 @@ static void elantech_report_absolute_v1(struct psmouse *psmouse)
 	}
 
 	input_sync(dev);
+}
 
- discard_packet_v1:
-	old_fingers = fingers;
+static void elantech_set_slot(struct input_dev *dev, int slot, bool active,
+			      unsigned int x, unsigned int y)
+{
+	input_mt_slot(dev, slot);
+	input_mt_report_slot_state(dev, MT_TOOL_FINGER, active);
+	if (active) {
+		input_report_abs(dev, ABS_MT_POSITION_X, x);
+		input_report_abs(dev, ABS_MT_POSITION_Y, y);
+	}
+}
+
+/* x1 < x2 and y1 < y2 when two fingers, x = y = 0 when not pressed */
+static void elantech_report_semi_mt_data(struct input_dev *dev,
+					 unsigned int num_fingers,
+					 unsigned int x1, unsigned int y1,
+					 unsigned int x2, unsigned int y2)
+{
+	elantech_set_slot(dev, 0, num_fingers != 0, x1, y1);
+	elantech_set_slot(dev, 1, num_fingers == 2, x2, y2);
 }
 
 /*
@@ -249,28 +270,41 @@ static void elantech_report_absolute_v1(struct psmouse *psmouse)
  */
 static void elantech_report_absolute_v2(struct psmouse *psmouse)
 {
+	struct elantech_data *etd = psmouse->private;
 	struct input_dev *dev = psmouse->dev;
 	unsigned char *packet = psmouse->packet;
-	int fingers, x1, y1, x2, y2;
+	unsigned int fingers, x1 = 0, y1 = 0, x2 = 0, y2 = 0, width = 0, pres = 0;
 
 	/* byte 0: n1  n0   .   .   .   .   R   L */
 	fingers = (packet[0] & 0xc0) >> 6;
 	input_report_key(dev, BTN_TOUCH, fingers != 0);
 
 	switch (fingers) {
+	case 3:
+		/*
+		 * Same as one finger, except report of more than 3 fingers:
+		 * byte 3:  n4  .   w1  w0   .   .   .   .
+		 */
+		if (packet[3] & 0x80)
+			fingers = 4;
+		/* pass through... */
 	case 1:
 		/*
 		 * byte 1:  .   .   .   .   .  x10 x9  x8
 		 * byte 2: x7  x6  x5  x4  x4  x2  x1  x0
 		 */
-		input_report_abs(dev, ABS_X,
-			((packet[1] & 0x07) << 8) | packet[2]);
+		x1 = ((packet[1] & 0x07) << 8) | packet[2];
 		/*
 		 * byte 4:  .   .   .   .   .   .  y9  y8
 		 * byte 5: y7  y6  y5  y4  y3  y2  y1  y0
 		 */
-		input_report_abs(dev, ABS_Y,
-			ETP_YMAX_V2 - (((packet[4] & 0x03) << 8) | packet[5]));
+		y1 = ETP_YMAX_V2 - (((packet[4] & 0x03) << 8) | packet[5]);
+
+		input_report_abs(dev, ABS_X, x1);
+		input_report_abs(dev, ABS_Y, y1);
+
+		pres = (packet[1] & 0xf0) | ((packet[4] & 0xf0) >> 4);
+		width = ((packet[0] & 0x30) >> 2) | ((packet[3] & 0x30) >> 4);
 		break;
 
 	case 2:
@@ -296,22 +330,24 @@ static void elantech_report_absolute_v2(struct psmouse *psmouse)
 		 */
 		input_report_abs(dev, ABS_X, x1 << 2);
 		input_report_abs(dev, ABS_Y, y1 << 2);
-		/*
-		 * For compatibility with the proprietary X Elantech driver
-		 * report both coordinates as hat coordinates
-		 */
-		input_report_abs(dev, ABS_HAT0X, x1);
-		input_report_abs(dev, ABS_HAT0Y, y1);
-		input_report_abs(dev, ABS_HAT1X, x2);
-		input_report_abs(dev, ABS_HAT1Y, y2);
+
+		/* Unknown so just report sensible values */
+		pres = 127;
+		width = 7;
 		break;
 	}
 
+	elantech_report_semi_mt_data(dev, fingers, x1, y1, x2, y2);
 	input_report_key(dev, BTN_TOOL_FINGER, fingers == 1);
 	input_report_key(dev, BTN_TOOL_DOUBLETAP, fingers == 2);
 	input_report_key(dev, BTN_TOOL_TRIPLETAP, fingers == 3);
+	input_report_key(dev, BTN_TOOL_QUADTAP, fingers == 4);
 	input_report_key(dev, BTN_LEFT, packet[0] & 0x01);
 	input_report_key(dev, BTN_RIGHT, packet[0] & 0x02);
+	if (etd->reports_pressure) {
+		input_report_abs(dev, ABS_PRESSURE, pres);
+		input_report_abs(dev, ABS_TOOL_WIDTH, width);
+	}
 
 	input_sync(dev);
 }
@@ -467,12 +503,19 @@ static void elantech_set_input_params(struct psmouse *psmouse)
 		break;
 
 	case 2:
+		__set_bit(BTN_TOOL_QUADTAP, dev->keybit);
 		input_set_abs_params(dev, ABS_X, ETP_XMIN_V2, ETP_XMAX_V2, 0, 0);
 		input_set_abs_params(dev, ABS_Y, ETP_YMIN_V2, ETP_YMAX_V2, 0, 0);
-		input_set_abs_params(dev, ABS_HAT0X, ETP_2FT_XMIN, ETP_2FT_XMAX, 0, 0);
-		input_set_abs_params(dev, ABS_HAT0Y, ETP_2FT_YMIN, ETP_2FT_YMAX, 0, 0);
-		input_set_abs_params(dev, ABS_HAT1X, ETP_2FT_XMIN, ETP_2FT_XMAX, 0, 0);
-		input_set_abs_params(dev, ABS_HAT1Y, ETP_2FT_YMIN, ETP_2FT_YMAX, 0, 0);
+		if (etd->reports_pressure) {
+			input_set_abs_params(dev, ABS_PRESSURE, ETP_PMIN_V2,
+					     ETP_PMAX_V2, 0, 0);
+			input_set_abs_params(dev, ABS_TOOL_WIDTH, ETP_WMIN_V2,
+					     ETP_WMAX_V2, 0, 0);
+		}
+		__set_bit(INPUT_PROP_SEMI_MT, dev->propbit);
+		input_mt_init_slots(dev, 2);
+		input_set_abs_params(dev, ABS_MT_POSITION_X, ETP_XMIN_V2, ETP_XMAX_V2, 0, 0);
+		input_set_abs_params(dev, ABS_MT_POSITION_Y, ETP_YMIN_V2, ETP_YMAX_V2, 0, 0);
 		break;
 	}
 }
@@ -690,7 +733,7 @@ int elantech_init(struct psmouse *psmouse)
 
 	psmouse->private = etd = kzalloc(sizeof(struct elantech_data), GFP_KERNEL);
 	if (!etd)
-		return -1;
+		return -ENOMEM;
 
 	etd->parity[0] = 1;
 	for (i = 1; i < 256; i++)
@@ -716,6 +759,10 @@ int elantech_init(struct psmouse *psmouse)
 		etd->debug = 1;
 		/* Don't know how to do parity checking for version 2 */
 		etd->paritycheck = 0;
+
+		if (etd->fw_version >= 0x020800)
+			etd->reports_pressure = true;
+
 	} else {
 		etd->hw_version = 1;
 		etd->paritycheck = 1;
@@ -733,13 +780,13 @@ int elantech_init(struct psmouse *psmouse)
 	etd->capabilities = param[0];
 
 	/*
-	 * This firmware seems to suffer from misreporting coordinates when
+	 * This firmware suffers from misreporting coordinates when
 	 * a touch action starts causing the mouse cursor or scrolled page
 	 * to jump. Enable a workaround.
 	 */
-	if (etd->fw_version == 0x020022) {
-		pr_info("firmware version 2.0.34 detected, enabling jumpy cursor workaround\n");
-		etd->jumpy_cursor = 1;
+	if (etd->fw_version == 0x020022 || etd->fw_version == 0x020600) {
+		pr_info("firmware version 2.0.34/2.6.0 detected, enabling jumpy cursor workaround\n");
+		etd->jumpy_cursor = true;
 	}
 
 	if (elantech_set_absolute_mode(psmouse)) {

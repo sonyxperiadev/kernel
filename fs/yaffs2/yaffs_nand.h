@@ -17,28 +17,22 @@
 #define __YAFFS_NAND_H__
 #include "yaffs_guts.h"
 
+int yaffs_rd_chunk_tags_nand(struct yaffs_dev *dev, int nand_chunk,
+			     u8 * buffer, struct yaffs_ext_tags *tags);
 
+int yaffs_wr_chunk_tags_nand(struct yaffs_dev *dev,
+			     int nand_chunk,
+			     const u8 * buffer, struct yaffs_ext_tags *tags);
 
-int yaffs_ReadChunkWithTagsFromNAND(yaffs_Device *dev, int chunkInNAND,
-					__u8 *buffer,
-					yaffs_ExtendedTags *tags);
+int yaffs_mark_bad(struct yaffs_dev *dev, int block_no);
 
-int yaffs_WriteChunkWithTagsToNAND(yaffs_Device *dev,
-						int chunkInNAND,
-						const __u8 *buffer,
-						yaffs_ExtendedTags *tags);
+int yaffs_query_init_block_state(struct yaffs_dev *dev,
+				 int block_no,
+				 enum yaffs_block_state *state,
+				 unsigned *seq_number);
 
-int yaffs_MarkBlockBad(yaffs_Device *dev, int blockNo);
+int yaffs_erase_block(struct yaffs_dev *dev, int flash_block);
 
-int yaffs_QueryInitialBlockState(yaffs_Device *dev,
-						int blockNo,
-						yaffs_BlockState *state,
-						unsigned *sequenceNumber);
-
-int yaffs_EraseBlockInNAND(struct yaffs_DeviceStruct *dev,
-				  int blockInNAND);
-
-int yaffs_InitialiseNAND(struct yaffs_DeviceStruct *dev);
+int yaffs_init_nand(struct yaffs_dev *dev);
 
 #endif
-

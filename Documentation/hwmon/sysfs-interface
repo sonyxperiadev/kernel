@@ -91,12 +91,11 @@ name		The chip name.
 		I2C devices get this attribute created automatically.
 		RO
 
-update_rate	The rate at which the chip will update readings.
+update_interval	The interval at which the chip will update readings.
 		Unit: millisecond
 		RW
-		Some devices have a variable update rate. This attribute
-		can be used to change the update rate to the desired
-		frequency.
+		Some devices have a variable update rate or interval.
+		This attribute can be used to change it to the desired value.
 
 
 ************
@@ -107,10 +106,24 @@ in[0-*]_min	Voltage min value.
 		Unit: millivolt
 		RW
 		
+in[0-*]_lcrit	Voltage critical min value.
+		Unit: millivolt
+		RW
+		If voltage drops to or below this limit, the system may
+		take drastic action such as power down or reset. At the very
+		least, it should report a fault.
+
 in[0-*]_max	Voltage max value.
 		Unit: millivolt
 		RW
 		
+in[0-*]_crit	Voltage critical max value.
+		Unit: millivolt
+		RW
+		If voltage reaches or exceeds this limit, the system may
+		take drastic action such as power down or reset. At the very
+		least, it should report a fault.
+
 in[0-*]_input	Voltage input value.
 		Unit: millivolt
 		RO
@@ -173,6 +186,17 @@ fan[1-*]_div	Fan divisor.
 		Some chips only support values 1, 2, 4 and 8.
 		Note that this is actually an internal clock divisor, which
 		affects the measurable speed range, not the read value.
+
+fan[1-*]_pulses	Number of tachometer pulses per fan revolution.
+		Integer value, typically between 1 and 4.
+		RW
+		This value is a characteristic of the fan connected to the
+		device's input, so it has to be set in accordance with the fan
+		model.
+		Should only be created if the chip has a register to configure
+		the number of pulses. In the absence of such a register (and
+		thus attribute) the value assumed by all devices is 2 pulses
+		per fan revolution.
 
 fan[1-*]_target
 		Desired fan speed
@@ -284,7 +308,7 @@ temp[1-*]_input Temperature input value.
 		Unit: millidegree Celsius
 		RO
 
-temp[1-*]_crit	Temperature critical value, typically greater than
+temp[1-*]_crit	Temperature critical max value, typically greater than
 		corresponding temp_max values.
 		Unit: millidegree Celsius
 		RW
@@ -294,6 +318,25 @@ temp[1-*]_crit_hyst
 		Unit: millidegree Celsius
 		Must be reported as an absolute temperature, NOT a delta
 		from the critical value.
+		RW
+
+temp[1-*]_emergency
+		Temperature emergency max value, for chips supporting more than
+		two upper temperature limits. Must be equal or greater than
+		corresponding temp_crit values.
+		Unit: millidegree Celsius
+		RW
+
+temp[1-*]_emergency_hyst
+		Temperature hysteresis value for emergency limit.
+		Unit: millidegree Celsius
+		Must be reported as an absolute temperature, NOT a delta
+		from the emergency value.
+		RW
+
+temp[1-*]_lcrit	Temperature critical min value, typically lower than
+		corresponding temp_min values.
+		Unit: millidegree Celsius
 		RW
 
 temp[1-*]_offset
@@ -344,9 +387,6 @@ Also see the Alarms section for status flags associated with temperatures.
 * Currents *
 ************
 
-Note that no known chip provides current measurements as of writing,
-so this part is theoretical, so to say.
-
 curr[1-*]_max	Current max value
 		Unit: milliampere
 		RW
@@ -355,9 +395,19 @@ curr[1-*]_min	Current min value.
 		Unit: milliampere
 		RW
 
+curr[1-*]_lcrit	Current critical low value
+		Unit: milliampere
+		RW
+
+curr[1-*]_crit	Current critical high value.
+		Unit: milliampere
+		RW
+
 curr[1-*]_input	Current input value
 		Unit: milliampere
 		RO
+
+Also see the Alarms section for status flags associated with currents.
 
 *********
 * Power *
@@ -421,13 +471,6 @@ power[1-*]_accuracy		Accuracy of the power meter.
 				Unit: Percent
 				RO
 
-power[1-*]_alarm		1 if the system is drawing more power than the
-				cap allows; 0 otherwise.  A poll notification is
-				sent to this file when the power use exceeds the
-				cap.  This file only appears if the cap is known
-				to be enforced by hardware.
-				RO
-
 power[1-*]_cap			If power use rises above this limit, the
 				system should take action to reduce power use.
 				A poll notification is sent to this file if the
@@ -450,12 +493,35 @@ power[1-*]_cap_min		Minimum cap that can be set.
 				Unit: microWatt
 				RO
 
+power[1-*]_max			Maximum power.
+				Unit: microWatt
+				RW
+
+power[1-*]_crit			Critical maximum power.
+				If power rises to or above this limit, the
+				system is expected take drastic action to reduce
+				power consumption, such as a system shutdown or
+				a forced powerdown of some devices.
+				Unit: microWatt
+				RW
+
+Also see the Alarms section for status flags associated with power readings.
+
 **********
 * Energy *
 **********
 
 energy[1-*]_input		Cumulative energy use
 				Unit: microJoule
+				RO
+
+
+************
+* Humidity *
+************
+
+humidity[1-*]_input		Humidity
+				Unit: milli-percent (per cent mille, pcm)
 				RO
 
 
@@ -471,6 +537,8 @@ limit-related alarms, not both. The driver should just reflect the hardware
 implementation.
 
 in[0-*]_alarm
+curr[1-*]_alarm
+power[1-*]_alarm
 fan[1-*]_alarm
 temp[1-*]_alarm
 		Channel alarm
@@ -482,11 +550,22 @@ OR
 
 in[0-*]_min_alarm
 in[0-*]_max_alarm
+in[0-*]_lcrit_alarm
+in[0-*]_crit_alarm
+curr[1-*]_min_alarm
+curr[1-*]_max_alarm
+curr[1-*]_lcrit_alarm
+curr[1-*]_crit_alarm
+power[1-*]_cap_alarm
+power[1-*]_max_alarm
+power[1-*]_crit_alarm
 fan[1-*]_min_alarm
 fan[1-*]_max_alarm
 temp[1-*]_min_alarm
 temp[1-*]_max_alarm
+temp[1-*]_lcrit_alarm
 temp[1-*]_crit_alarm
+temp[1-*]_emergency_alarm
 		Limit alarm
 		0: no alarm
 		1: alarm
@@ -497,11 +576,10 @@ to notify open diodes, unconnected fans etc. where the hardware
 supports it. When this boolean has value 1, the measurement for that
 channel should not be trusted.
 
-in[0-*]_fault
 fan[1-*]_fault
 temp[1-*]_fault
 		Input fault condition
-		0: no fault occured
+		0: no fault occurred
 		1: fault condition
 		RO
 
@@ -513,6 +591,7 @@ beep_enable	Master beep enable
 		RW
 
 in[0-*]_beep
+curr[1-*]_beep
 fan[1-*]_beep
 temp[1-*]_beep
 		Channel beep

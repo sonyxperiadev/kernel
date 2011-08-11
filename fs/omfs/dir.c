@@ -25,11 +25,10 @@ static struct buffer_head *omfs_get_bucket(struct inode *dir,
 		const char *name, int namelen, int *ofs)
 {
 	int nbuckets = (dir->i_size - OMFS_DIR_START)/8;
-	int block = clus_to_blk(OMFS_SB(dir->i_sb), dir->i_ino);
 	int bucket = omfs_hash(name, namelen, nbuckets);
 
 	*ofs = OMFS_DIR_START + bucket * 8;
-	return sb_bread(dir->i_sb, block);
+	return omfs_bread(dir->i_sb, dir->i_ino);
 }
 
 static struct buffer_head *omfs_scan_list(struct inode *dir, u64 block,
@@ -42,8 +41,7 @@ static struct buffer_head *omfs_scan_list(struct inode *dir, u64 block,
 	*prev_block = ~0;
 
 	while (block != ~0) {
-		bh = sb_bread(dir->i_sb,
-			clus_to_blk(OMFS_SB(dir->i_sb), block));
+		bh = omfs_bread(dir->i_sb, block);
 		if (!bh) {
 			err = -EIO;
 			goto err;
@@ -86,11 +84,10 @@ static struct buffer_head *omfs_find_entry(struct inode *dir,
 int omfs_make_empty(struct inode *inode, struct super_block *sb)
 {
 	struct omfs_sb_info *sbi = OMFS_SB(sb);
-	int block = clus_to_blk(sbi, inode->i_ino);
 	struct buffer_head *bh;
 	struct omfs_inode *oi;
 
-	bh = sb_bread(sb, block);
+	bh = omfs_bread(sb, inode->i_ino);
 	if (!bh)
 		return -ENOMEM;
 
@@ -134,7 +131,7 @@ static int omfs_add_link(struct dentry *dentry, struct inode *inode)
 	brelse(bh);
 
 	/* now set the sibling and parent pointers on the new inode */
-	bh = sb_bread(dir->i_sb, clus_to_blk(OMFS_SB(dir->i_sb), inode->i_ino));
+	bh = omfs_bread(dir->i_sb, inode->i_ino);
 	if (!bh)
 		goto out;
 
@@ -190,8 +187,7 @@ static int omfs_delete_entry(struct dentry *dentry)
 	if (prev != ~0) {
 		/* found in middle of list, get list ptr */
 		brelse(bh);
-		bh = sb_bread(dir->i_sb,
-			clus_to_blk(OMFS_SB(dir->i_sb), prev));
+		bh = omfs_bread(dir->i_sb, prev);
 		if (!bh)
 			goto out;
 
@@ -224,8 +220,7 @@ static int omfs_dir_is_empty(struct inode *inode)
 	u64 *ptr;
 	int i;
 
-	bh = sb_bread(inode->i_sb, clus_to_blk(OMFS_SB(inode->i_sb),
-			inode->i_ino));
+	bh = omfs_bread(inode->i_sb, inode->i_ino);
 
 	if (!bh)
 		return 0;
@@ -240,33 +235,24 @@ static int omfs_dir_is_empty(struct inode *inode)
 	return *ptr != ~0;
 }
 
-static int omfs_unlink(struct inode *dir, struct dentry *dentry)
+static int omfs_remove(struct inode *dir, struct dentry *dentry)
 {
-	int ret;
 	struct inode *inode = dentry->d_inode;
+	int ret;
+
+
+	if (S_ISDIR(inode->i_mode) &&
+	    !omfs_dir_is_empty(inode))
+		return -ENOTEMPTY;
 
 	ret = omfs_delete_entry(dentry);
 	if (ret)
-		goto end_unlink;
-
-	inode_dec_link_count(inode);
+		return ret;
+	
+	clear_nlink(inode);
+	mark_inode_dirty(inode);
 	mark_inode_dirty(dir);
-
-end_unlink:
-	return ret;
-}
-
-static int omfs_rmdir(struct inode *dir, struct dentry *dentry)
-{
-	int err = -ENOTEMPTY;
-	struct inode *inode = dentry->d_inode;
-
-	if (omfs_dir_is_empty(inode)) {
-		err = omfs_unlink(dir, dentry);
-		if (!err)
-			inode_dec_link_count(inode);
-	}
-	return err;
+	return 0;
 }
 
 static int omfs_add_node(struct inode *dir, struct dentry *dentry, int mode)
@@ -353,8 +339,7 @@ static int omfs_fill_chain(struct file *filp, void *dirent, filldir_t filldir,
 
 	/* follow chain in this bucket */
 	while (fsblock != ~0) {
-		bh = sb_bread(dir->i_sb, clus_to_blk(OMFS_SB(dir->i_sb),
-				fsblock));
+		bh = omfs_bread(dir->i_sb, fsblock);
 		if (!bh)
 			goto out;
 
@@ -378,9 +363,10 @@ static int omfs_fill_chain(struct file *filp, void *dirent, filldir_t filldir,
 
 		res = filldir(dirent, oi->i_name, strnlen(oi->i_name,
 			OMFS_NAMELEN), filp->f_pos, self, d_type);
-		if (res == 0)
-			filp->f_pos++;
 		brelse(bh);
+		if (res < 0)
+			break;
+		filp->f_pos++;
 	}
 out:
 	return res;
@@ -391,44 +377,28 @@ static int omfs_rename(struct inode *old_dir, struct dentry *old_dentry,
 {
 	struct inode *new_inode = new_dentry->d_inode;
 	struct inode *old_inode = old_dentry->d_inode;
-	struct buffer_head *bh;
-	int is_dir;
 	int err;
-
-	is_dir = S_ISDIR(old_inode->i_mode);
 
 	if (new_inode) {
 		/* overwriting existing file/dir */
-		err = -ENOTEMPTY;
-		if (is_dir && !omfs_dir_is_empty(new_inode))
-			goto out;
-
-		err = -ENOENT;
-		bh = omfs_find_entry(new_dir, new_dentry->d_name.name,
-			new_dentry->d_name.len);
-		if (IS_ERR(bh))
-			goto out;
-		brelse(bh);
-
-		err = omfs_unlink(new_dir, new_dentry);
+		err = omfs_remove(new_dir, new_dentry);
 		if (err)
 			goto out;
 	}
 
 	/* since omfs locates files by name, we need to unlink _before_
 	 * adding the new link or we won't find the old one */
-	inode_inc_link_count(old_inode);
-	err = omfs_unlink(old_dir, old_dentry);
-	if (err) {
-		inode_dec_link_count(old_inode);
+	err = omfs_delete_entry(old_dentry);
+	if (err)
 		goto out;
-	}
 
+	mark_inode_dirty(old_dir);
 	err = omfs_add_link(new_dentry, old_inode);
 	if (err)
 		goto out;
 
 	old_inode->i_ctime = CURRENT_TIME_SEC;
+	mark_inode_dirty(old_inode);
 out:
 	return err;
 }
@@ -466,7 +436,7 @@ static int omfs_readdir(struct file *filp, void *dirent, filldir_t filldir)
 	hchain = (filp->f_pos >> 20) - 1;
 	hindex = filp->f_pos & 0xfffff;
 
-	bh = sb_bread(dir->i_sb, clus_to_blk(OMFS_SB(dir->i_sb), dir->i_ino));
+	bh = omfs_bread(dir->i_sb, dir->i_ino);
 	if (!bh)
 		goto out;
 
@@ -494,8 +464,8 @@ const struct inode_operations omfs_dir_inops = {
 	.mkdir = omfs_mkdir,
 	.rename = omfs_rename,
 	.create = omfs_create,
-	.unlink = omfs_unlink,
-	.rmdir = omfs_rmdir,
+	.unlink = omfs_remove,
+	.rmdir = omfs_remove,
 };
 
 const struct file_operations omfs_dir_operations = {

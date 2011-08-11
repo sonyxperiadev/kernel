@@ -49,7 +49,13 @@ static inline void cache_wait(void __iomem *reg, unsigned long mask)
 static inline void cache_sync(void)
 {
 	void __iomem *base = l2x0_base;
+
+#ifdef CONFIG_ARM_ERRATA_753970
+	/* write to an unmmapped register */
+	writel_relaxed(0, base + L2X0_DUMMY_REG);
+#else
 	writel_relaxed(0, base + L2X0_CACHE_SYNC);
+#endif
 	cache_wait(base + L2X0_CACHE_SYNC, 1);
 }
 
@@ -67,18 +73,24 @@ static inline void l2x0_inv_line(unsigned long addr)
 	writel_relaxed(addr, base + L2X0_INV_LINE_PA);
 }
 
-#ifdef CONFIG_PL310_ERRATA_588369
-static void debug_writel(unsigned long val)
-{
-	extern void omap_smc1(u32 fn, u32 arg);
+#if defined(CONFIG_PL310_ERRATA_588369) || defined(CONFIG_PL310_ERRATA_727915)
 
-	/*
-	 * Texas Instrument secure monitor api to modify the
-	 * PL310 Debug Control Register.
-	 */
-	omap_smc1(0x100, val);
+#define debug_writel(val)	outer_cache.set_debug(val)
+
+static void l2x0_set_debug(unsigned long val)
+{
+	writel_relaxed(val, l2x0_base + L2X0_DEBUG_CTRL);
+}
+#else
+/* Optimised out for non-errata case */
+static inline void debug_writel(unsigned long val)
+{
 }
 
+#define l2x0_set_debug	NULL
+#endif
+
+#ifdef CONFIG_PL310_ERRATA_588369
 static inline void l2x0_flush_line(unsigned long addr)
 {
 	void __iomem *base = l2x0_base;
@@ -90,11 +102,6 @@ static inline void l2x0_flush_line(unsigned long addr)
 	writel_relaxed(addr, base + L2X0_INV_LINE_PA);
 }
 #else
-
-/* Optimised out for non-errata case */
-static inline void debug_writel(unsigned long val)
-{
-}
 
 static inline void l2x0_flush_line(unsigned long addr)
 {

@@ -1,7 +1,7 @@
 /*******************************************************************************
 
   Intel PRO/1000 Linux driver
-  Copyright(c) 1999 - 2009 Intel Corporation.
+  Copyright(c) 1999 - 2011 Intel Corporation.
 
   This program is free software; you can redistribute it and/or modify it
   under the terms and conditions of the GNU General Public License,
@@ -57,6 +57,7 @@ enum e1e_registers {
 	E1000_SCTL     = 0x00024, /* SerDes Control - RW */
 	E1000_FCAL     = 0x00028, /* Flow Control Address Low - RW */
 	E1000_FCAH     = 0x0002C, /* Flow Control Address High -RW */
+	E1000_FEXTNVM4 = 0x00024, /* Future Extended NVM 4 - RW */
 	E1000_FEXTNVM  = 0x00028, /* Future Extended NVM - RW */
 	E1000_FCT      = 0x00030, /* Flow Control Type - RW */
 	E1000_VET      = 0x00038, /* VLAN Ether Type - RW */
@@ -82,6 +83,7 @@ enum e1e_registers {
 	E1000_EXTCNF_CTRL  = 0x00F00, /* Extended Configuration Control */
 	E1000_EXTCNF_SIZE  = 0x00F08, /* Extended Configuration Size */
 	E1000_PHY_CTRL     = 0x00F10, /* PHY Control Register in CSR */
+#define E1000_POEMB	E1000_PHY_CTRL	/* PHY OEM Bits */
 	E1000_PBA      = 0x01000, /* Packet Buffer Allocation - RW */
 	E1000_PBS      = 0x01008, /* Packet Buffer Size */
 	E1000_EEMNGCTL = 0x01010, /* MNG EEprom Control */
@@ -100,7 +102,7 @@ enum e1e_registers {
 	E1000_RDTR     = 0x02820, /* Rx Delay Timer - RW */
 	E1000_RXDCTL_BASE = 0x02828, /* Rx Descriptor Control - RW */
 #define E1000_RXDCTL(_n)   (E1000_RXDCTL_BASE + (_n << 8))
-	E1000_RADV     = 0x0282C, /* RX Interrupt Absolute Delay Timer - RW */
+	E1000_RADV     = 0x0282C, /* Rx Interrupt Absolute Delay Timer - RW */
 
 /* Convenience macros
  *
@@ -217,7 +219,10 @@ enum e1e_registers {
 	E1000_SWSM      = 0x05B50, /* SW Semaphore */
 	E1000_FWSM      = 0x05B54, /* FW Semaphore */
 	E1000_SWSM2     = 0x05B58, /* Driver-only SW semaphore */
-	E1000_CRC_OFFSET = 0x05F50, /* CRC Offset register */
+	E1000_FFLT_DBG  = 0x05F04, /* Debug Register */
+	E1000_PCH_RAICC_BASE = 0x05F50, /* Receive Address Initial CRC */
+#define E1000_PCH_RAICC(_n)	(E1000_PCH_RAICC_BASE + ((_n) * 4))
+#define E1000_CRC_OFFSET	E1000_PCH_RAICC_BASE
 	E1000_HICR      = 0x08F00, /* Host Interface Control */
 };
 
@@ -303,13 +308,14 @@ enum e1e_registers {
 #define E1000_KMRNCTRLSTA_OFFSET	0x001F0000
 #define E1000_KMRNCTRLSTA_OFFSET_SHIFT	16
 #define E1000_KMRNCTRLSTA_REN		0x00200000
+#define E1000_KMRNCTRLSTA_CTRL_OFFSET	0x1    /* Kumeran Control */
 #define E1000_KMRNCTRLSTA_DIAG_OFFSET	0x3    /* Kumeran Diagnostic */
 #define E1000_KMRNCTRLSTA_TIMEOUTS	0x4    /* Kumeran Timeouts */
 #define E1000_KMRNCTRLSTA_INBAND_PARAM	0x9    /* Kumeran InBand Parameters */
 #define E1000_KMRNCTRLSTA_DIAG_NELPBK	0x1000 /* Nearend Loopback mode */
 #define E1000_KMRNCTRLSTA_K1_CONFIG	0x7
 #define E1000_KMRNCTRLSTA_K1_ENABLE	0x0002
-#define E1000_KMRNCTRLSTA_K1_DISABLE	0x1400
+#define E1000_KMRNCTRLSTA_HD_CTRL	0x10   /* Kumeran HD Control */
 
 #define IFE_PHY_EXTENDED_STATUS_CONTROL	0x10
 #define IFE_PHY_SPECIAL_CONTROL		0x11 /* 100BaseTx PHY Special Control */
@@ -387,6 +393,8 @@ enum e1e_registers {
 #define E1000_DEV_ID_PCH_M_HV_LC		0x10EB
 #define E1000_DEV_ID_PCH_D_HV_DM		0x10EF
 #define E1000_DEV_ID_PCH_D_HV_DC		0x10F0
+#define E1000_DEV_ID_PCH2_LV_LM			0x1502
+#define E1000_DEV_ID_PCH2_LV_V			0x1503
 
 #define E1000_REVISION_4 4
 
@@ -406,6 +414,7 @@ enum e1000_mac_type {
 	e1000_ich9lan,
 	e1000_ich10lan,
 	e1000_pchlan,
+	e1000_pch2lan,
 };
 
 enum e1000_media_type {
@@ -442,6 +451,7 @@ enum e1000_phy_type {
 	e1000_phy_bm,
 	e1000_phy_82578,
 	e1000_phy_82577,
+	e1000_phy_82579,
 };
 
 enum e1000_bus_width {
@@ -746,6 +756,7 @@ struct e1000_host_mng_command_info {
 /* Function pointers and static data for the MAC. */
 struct e1000_mac_operations {
 	s32  (*id_led_init)(struct e1000_hw *);
+	s32  (*blink_led)(struct e1000_hw *);
 	bool (*check_mng_mode)(struct e1000_hw *);
 	s32  (*check_for_link)(struct e1000_hw *);
 	s32  (*cleanup_led)(struct e1000_hw *);
@@ -802,9 +813,8 @@ struct e1000_nvm_operations {
 
 struct e1000_mac_info {
 	struct e1000_mac_operations ops;
-
-	u8 addr[6];
-	u8 perm_addr[6];
+	u8 addr[ETH_ALEN];
+	u8 perm_addr[ETH_ALEN];
 
 	enum e1000_mac_type type;
 
@@ -929,6 +939,7 @@ struct e1000_dev_spec_ich8lan {
 	bool kmrn_lock_loss_workaround_enabled;
 	struct e1000_shadow_ram shadow_ram[E1000_ICH8_SHADOW_RAM_WORDS];
 	bool nvm_k1_enabled;
+	bool eee_disable;
 };
 
 struct e1000_hw {

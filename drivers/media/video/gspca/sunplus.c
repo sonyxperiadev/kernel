@@ -54,7 +54,7 @@ struct sd {
 #define MegapixV4 4
 #define MegaImageVI 5
 
-	u8 *jpeg_hdr;
+	u8 jpeg_hdr[JPEG_HDR_SZ];
 };
 
 /* V4L2 controls supported by the driver */
@@ -343,7 +343,7 @@ static void reg_r(struct gspca_dev *gspca_dev,
 			len ? gspca_dev->usb_buf : NULL, len,
 			500);
 	if (ret < 0) {
-		PDEBUG(D_ERR, "reg_r err %d", ret);
+		err("reg_r err %d", ret);
 		gspca_dev->usb_err = ret;
 	}
 }
@@ -368,7 +368,7 @@ static void reg_w_1(struct gspca_dev *gspca_dev,
 			gspca_dev->usb_buf, 1,
 			500);
 	if (ret < 0) {
-		PDEBUG(D_ERR, "reg_w_1 err %d", ret);
+		err("reg_w_1 err %d", ret);
 		gspca_dev->usb_err = ret;
 	}
 }
@@ -388,63 +388,12 @@ static void reg_w_riv(struct gspca_dev *gspca_dev,
 			USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
 			value, index, NULL, 0, 500);
 	if (ret < 0) {
-		PDEBUG(D_ERR, "reg_w_riv err %d", ret);
+		err("reg_w_riv err %d", ret);
 		gspca_dev->usb_err = ret;
 		return;
 	}
 	PDEBUG(D_USBO, "reg_w_riv: 0x%02x,0x%04x:0x%04x",
 		req, index, value);
-}
-
-/* read 1 byte */
-static u8 reg_r_1(struct gspca_dev *gspca_dev,
-			u16 value)	/* wValue */
-{
-	int ret;
-
-	if (gspca_dev->usb_err < 0)
-		return 0;
-	ret = usb_control_msg(gspca_dev->dev,
-			usb_rcvctrlpipe(gspca_dev->dev, 0),
-			0x20,			/* request */
-			USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-			value,
-			0,			/* index */
-			gspca_dev->usb_buf, 1,
-			500);			/* timeout */
-	if (ret < 0) {
-		PDEBUG(D_ERR, "reg_r_1 err %d", ret);
-		gspca_dev->usb_err = ret;
-		return 0;
-	}
-	return gspca_dev->usb_buf[0];
-}
-
-/* read 1 or 2 bytes */
-static u16 reg_r_12(struct gspca_dev *gspca_dev,
-			u8 req,		/* bRequest */
-			u16 index,	/* wIndex */
-			u16 length)	/* wLength (1 or 2 only) */
-{
-	int ret;
-
-	if (gspca_dev->usb_err < 0)
-		return 0;
-	gspca_dev->usb_buf[1] = 0;
-	ret = usb_control_msg(gspca_dev->dev,
-			usb_rcvctrlpipe(gspca_dev->dev, 0),
-			req,
-			USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_DEVICE,
-			0,		/* value */
-			index,
-			gspca_dev->usb_buf, length,
-			500);
-	if (ret < 0) {
-		PDEBUG(D_ERR, "reg_r_12 err %d", ret);
-		gspca_dev->usb_err = ret;
-		return 0;
-	}
-	return (gspca_dev->usb_buf[1] << 8) + gspca_dev->usb_buf[0];
 }
 
 static void write_vector(struct gspca_dev *gspca_dev,
@@ -463,7 +412,7 @@ static void setup_qtable(struct gspca_dev *gspca_dev,
 
 	/* loop over y components */
 	for (i = 0; i < 64; i++)
-		 reg_w_riv(gspca_dev, 0x00, 0x2800 + i, qtable[0][i]);
+		reg_w_riv(gspca_dev, 0x00, 0x2800 + i, qtable[0][i]);
 
 	/* loop over c components */
 	for (i = 0; i < 64; i++)
@@ -473,44 +422,46 @@ static void setup_qtable(struct gspca_dev *gspca_dev,
 static void spca504_acknowledged_command(struct gspca_dev *gspca_dev,
 			     u8 req, u16 idx, u16 val)
 {
-	u16 notdone;
-
 	reg_w_riv(gspca_dev, req, idx, val);
-	notdone = reg_r_12(gspca_dev, 0x01, 0x0001, 1);
+	reg_r(gspca_dev, 0x01, 0x0001, 1);
+	PDEBUG(D_FRAM, "before wait 0x%04x", gspca_dev->usb_buf[0]);
 	reg_w_riv(gspca_dev, req, idx, val);
-
-	PDEBUG(D_FRAM, "before wait 0x%04x", notdone);
 
 	msleep(200);
-	notdone = reg_r_12(gspca_dev, 0x01, 0x0001, 1);
-	PDEBUG(D_FRAM, "after wait 0x%04x", notdone);
+	reg_r(gspca_dev, 0x01, 0x0001, 1);
+	PDEBUG(D_FRAM, "after wait 0x%04x", gspca_dev->usb_buf[0]);
 }
 
+#ifdef GSPCA_DEBUG
 static void spca504_read_info(struct gspca_dev *gspca_dev)
 {
 	int i;
 	u8 info[6];
 
-	for (i = 0; i < 6; i++)
-		info[i] = reg_r_1(gspca_dev, i);
+	for (i = 0; i < 6; i++) {
+		reg_r(gspca_dev, 0, i, 1);
+		info[i] = gspca_dev->usb_buf[0];
+	}
 	PDEBUG(D_STREAM,
 		"Read info: %d %d %d %d %d %d."
 		" Should be 1,0,2,2,0,0",
 		info[0], info[1], info[2],
 		info[3], info[4], info[5]);
 }
+#endif
 
 static void spca504A_acknowledged_command(struct gspca_dev *gspca_dev,
 			u8 req,
-			u16 idx, u16 val, u16 endcode, u8 count)
+			u16 idx, u16 val, u8 endcode, u8 count)
 {
 	u16 status;
 
 	reg_w_riv(gspca_dev, req, idx, val);
-	status = reg_r_12(gspca_dev, 0x01, 0x0001, 1);
+	reg_r(gspca_dev, 0x01, 0x0001, 1);
 	if (gspca_dev->usb_err < 0)
 		return;
-	PDEBUG(D_FRAM, "Status 0x%04x Need 0x%04x", status, endcode);
+	PDEBUG(D_FRAM, "Status 0x%02x Need 0x%02x",
+			gspca_dev->usb_buf[0], endcode);
 	if (!count)
 		return;
 	count = 200;
@@ -518,7 +469,8 @@ static void spca504A_acknowledged_command(struct gspca_dev *gspca_dev,
 		msleep(10);
 		/* gsmart mini2 write a each wait setting 1 ms is enough */
 /*		reg_w_riv(gspca_dev, req, idx, val); */
-		status = reg_r_12(gspca_dev, 0x01, 0x0001, 1);
+		reg_r(gspca_dev, 0x01, 0x0001, 1);
+		status = gspca_dev->usb_buf[0];
 		if (status == endcode) {
 			PDEBUG(D_FRAM, "status 0x%04x after wait %d",
 				status, 200 - count);
@@ -555,17 +507,19 @@ static void spca504B_WaitCmdStatus(struct gspca_dev *gspca_dev)
 	}
 }
 
+#ifdef GSPCA_DEBUG
 static void spca50x_GetFirmware(struct gspca_dev *gspca_dev)
 {
 	u8 *data;
 
 	data = gspca_dev->usb_buf;
 	reg_r(gspca_dev, 0x20, 0, 5);
-	PDEBUG(D_STREAM, "FirmWare : %d %d %d %d %d ",
+	PDEBUG(D_STREAM, "FirmWare: %d %d %d %d %d",
 		data[0], data[1], data[2], data[3], data[4]);
 	reg_r(gspca_dev, 0x23, 0, 64);
 	reg_r(gspca_dev, 0x23, 1, 64);
 }
+#endif
 
 static void spca504B_SetSizeType(struct gspca_dev *gspca_dev)
 {
@@ -578,7 +532,9 @@ static void spca504B_SetSizeType(struct gspca_dev *gspca_dev)
 		reg_w_riv(gspca_dev, 0x31, 0, 0);
 		spca504B_WaitCmdStatus(gspca_dev);
 		spca504B_PollingDataReady(gspca_dev);
+#ifdef GSPCA_DEBUG
 		spca50x_GetFirmware(gspca_dev);
+#endif
 		reg_w_1(gspca_dev, 0x24, 0, 8, 2);		/* type */
 		reg_r(gspca_dev, 0x24, 8, 1);
 
@@ -628,7 +584,8 @@ static void spca504_wait_status(struct gspca_dev *gspca_dev)
 	cnt = 256;
 	while (--cnt > 0) {
 		/* With this we get the status, when return 0 it's all ok */
-		if (reg_r_12(gspca_dev, 0x06, 0x00, 1) == 0)
+		reg_r(gspca_dev, 0x06, 0x00, 1);
+		if (gspca_dev->usb_buf[0] == 0)
 			return;
 		msleep(10);
 	}
@@ -712,8 +669,9 @@ static int sd_config(struct gspca_dev *gspca_dev,
 	sd->subtype = id->driver_info;
 
 	if (sd->subtype == AiptekMiniPenCam13) {
-/* try to get the firmware as some cam answer 2.0.1.2.2
- * and should be a spca504b then overwrite that setting */
+
+		/* try to get the firmware as some cam answer 2.0.1.2.2
+		 * and should be a spca504b then overwrite that setting */
 		reg_r(gspca_dev, 0x20, 0, 1);
 		switch (gspca_dev->usb_buf[0]) {
 		case 1:
@@ -733,7 +691,7 @@ static int sd_config(struct gspca_dev *gspca_dev,
 /*	case BRIDGE_SPCA504: */
 /*	case BRIDGE_SPCA536: */
 		cam->cam_mode = vga_mode;
-		cam->nmodes =ARRAY_SIZE(vga_mode);
+		cam->nmodes = ARRAY_SIZE(vga_mode);
 		break;
 	case BRIDGE_SPCA533:
 		cam->cam_mode = custom_mode;
@@ -771,10 +729,14 @@ static int sd_init(struct gspca_dev *gspca_dev)
 		/* fall thru */
 	case BRIDGE_SPCA533:
 		spca504B_PollingDataReady(gspca_dev);
+#ifdef GSPCA_DEBUG
 		spca50x_GetFirmware(gspca_dev);
+#endif
 		break;
 	case BRIDGE_SPCA536:
+#ifdef GSPCA_DEBUG
 		spca50x_GetFirmware(gspca_dev);
+#endif
 		reg_r(gspca_dev, 0x00, 0x5002, 1);
 		reg_w_1(gspca_dev, 0x24, 0, 0, 0);
 		reg_r(gspca_dev, 0x24, 0, 1);
@@ -800,12 +762,14 @@ static int sd_init(struct gspca_dev *gspca_dev)
 /*	case BRIDGE_SPCA504: */
 		PDEBUG(D_STREAM, "Opening SPCA504");
 		if (sd->subtype == AiptekMiniPenCam13) {
+#ifdef GSPCA_DEBUG
 			spca504_read_info(gspca_dev);
+#endif
 
 			/* Set AE AWB Banding Type 3-> 50Hz 2-> 60Hz */
 			spca504A_acknowledged_command(gspca_dev, 0x24,
 							8, 3, 0x9e, 1);
-			/* Twice sequencial need status 0xff->0x9e->0x9d */
+			/* Twice sequential need status 0xff->0x9e->0x9d */
 			spca504A_acknowledged_command(gspca_dev, 0x24,
 							8, 3, 0x9e, 0);
 
@@ -842,9 +806,6 @@ static int sd_start(struct gspca_dev *gspca_dev)
 	int enable;
 
 	/* create the JPEG header */
-	sd->jpeg_hdr = kmalloc(JPEG_HDR_SZ, GFP_KERNEL);
-	if (!sd->jpeg_hdr)
-		return -ENOMEM;
 	jpeg_define(sd->jpeg_hdr, gspca_dev->height, gspca_dev->width,
 			0x22);		/* JPEG 411 */
 	jpeg_set_qual(sd->jpeg_hdr, sd->quality);
@@ -875,19 +836,23 @@ static int sd_start(struct gspca_dev *gspca_dev)
 		break;
 	case BRIDGE_SPCA504:
 		if (sd->subtype == AiptekMiniPenCam13) {
+#ifdef GSPCA_DEBUG
 			spca504_read_info(gspca_dev);
+#endif
 
 			/* Set AE AWB Banding Type 3-> 50Hz 2-> 60Hz */
 			spca504A_acknowledged_command(gspca_dev, 0x24,
 							8, 3, 0x9e, 1);
-			/* Twice sequencial need status 0xff->0x9e->0x9d */
+			/* Twice sequential need status 0xff->0x9e->0x9d */
 			spca504A_acknowledged_command(gspca_dev, 0x24,
 							8, 3, 0x9e, 0);
 			spca504A_acknowledged_command(gspca_dev, 0x24,
 							0, 0, 0x9d, 1);
 		} else {
 			spca504_acknowledged_command(gspca_dev, 0x24, 8, 3);
+#ifdef GSPCA_DEBUG
 			spca504_read_info(gspca_dev);
+#endif
 			spca504_acknowledged_command(gspca_dev, 0x24, 8, 3);
 			spca504_acknowledged_command(gspca_dev, 0x24, 0, 0);
 		}
@@ -952,13 +917,6 @@ static void sd_stopN(struct gspca_dev *gspca_dev)
 		}
 		break;
 	}
-}
-
-static void sd_stop0(struct gspca_dev *gspca_dev)
-{
-	struct sd *sd = (struct sd *) gspca_dev;
-
-	kfree(sd->jpeg_hdr);
 }
 
 static void sd_pkt_scan(struct gspca_dev *gspca_dev,
@@ -1162,7 +1120,6 @@ static const struct sd_desc sd_desc = {
 	.init = sd_init,
 	.start = sd_start,
 	.stopN = sd_stopN,
-	.stop0 = sd_stop0,
 	.pkt_scan = sd_pkt_scan,
 	.get_jcomp = sd_get_jcomp,
 	.set_jcomp = sd_set_jcomp,
@@ -1172,7 +1129,7 @@ static const struct sd_desc sd_desc = {
 #define BS(bridge, subtype) \
 	.driver_info = (BRIDGE_ ## bridge << 8) \
 			| (subtype)
-static const __devinitdata struct usb_device_id device_table[] = {
+static const struct usb_device_id device_table[] = {
 	{USB_DEVICE(0x041e, 0x400b), BS(SPCA504C, 0)},
 	{USB_DEVICE(0x041e, 0x4012), BS(SPCA504C, 0)},
 	{USB_DEVICE(0x041e, 0x4013), BS(SPCA504C, 0)},
@@ -1258,17 +1215,11 @@ static struct usb_driver sd_driver = {
 /* -- module insert / remove -- */
 static int __init sd_mod_init(void)
 {
-	int ret;
-	ret = usb_register(&sd_driver);
-	if (ret < 0)
-		return ret;
-	PDEBUG(D_PROBE, "registered");
-	return 0;
+	return usb_register(&sd_driver);
 }
 static void __exit sd_mod_exit(void)
 {
 	usb_deregister(&sd_driver);
-	PDEBUG(D_PROBE, "deregistered");
 }
 
 module_init(sd_mod_init);

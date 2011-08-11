@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010 Atheros Communications Inc.
+ * Copyright (c) 2010-2011 Atheros Communications Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -116,16 +116,21 @@ static inline void ath9k_hw_clr11n_aggr(struct ath_hw *ah, void *ds)
 	ath9k_hw_ops(ah)->clr11n_aggr(ah, ds);
 }
 
-static inline void ath9k_hw_set11n_burstduration(struct ath_hw *ah, void *ds,
-						 u32 burstDuration)
+static inline void ath9k_hw_set_clrdmask(struct ath_hw *ah, void *ds, bool val)
 {
-	ath9k_hw_ops(ah)->set11n_burstduration(ah, ds, burstDuration);
+	ath9k_hw_ops(ah)->set_clrdmask(ah, ds, val);
 }
 
-static inline void ath9k_hw_set11n_virtualmorefrag(struct ath_hw *ah, void *ds,
-						   u32 vmf)
+static inline void ath9k_hw_antdiv_comb_conf_get(struct ath_hw *ah,
+		struct ath_hw_antcomb_conf *antconf)
 {
-	ath9k_hw_ops(ah)->set11n_virtualmorefrag(ah, ds, vmf);
+	ath9k_hw_ops(ah)->antdiv_comb_conf_get(ah, antconf);
+}
+
+static inline void ath9k_hw_antdiv_comb_conf_set(struct ath_hw *ah,
+		struct ath_hw_antcomb_conf *antconf)
+{
+	ath9k_hw_ops(ah)->antdiv_comb_conf_set(ah, antconf);
 }
 
 /* Private hardware call ops */
@@ -223,11 +228,6 @@ static inline void ath9k_hw_rfbus_done(struct ath_hw *ah)
 	return ath9k_hw_private_ops(ah)->rfbus_done(ah);
 }
 
-static inline void ath9k_enable_rfkill(struct ath_hw *ah)
-{
-	return ath9k_hw_private_ops(ah)->enable_rfkill(ah);
-}
-
 static inline void ath9k_hw_restore_chainmask(struct ath_hw *ah)
 {
 	if (!ath9k_hw_private_ops(ah)->restore_chainmask)
@@ -253,12 +253,6 @@ static inline void ath9k_hw_do_getnf(struct ath_hw *ah,
 	ath9k_hw_private_ops(ah)->do_getnf(ah, nfarray);
 }
 
-static inline void ath9k_hw_loadnf(struct ath_hw *ah,
-				   struct ath9k_channel *chan)
-{
-	ath9k_hw_private_ops(ah)->loadnf(ah, chan);
-}
-
 static inline bool ath9k_hw_init_cal(struct ath_hw *ah,
 				     struct ath9k_channel *chan)
 {
@@ -269,12 +263,6 @@ static inline void ath9k_hw_setup_calibration(struct ath_hw *ah,
 					      struct ath9k_cal_list *currCal)
 {
 	ath9k_hw_private_ops(ah)->setup_calibration(ah, currCal);
-}
-
-static inline bool ath9k_hw_iscal_supported(struct ath_hw *ah,
-					    enum ath9k_cal_types calType)
-{
-	return ath9k_hw_private_ops(ah)->iscal_supported(ah, calType);
 }
 
 #endif /* ATH9K_HW_OPS_H */

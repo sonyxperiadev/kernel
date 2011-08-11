@@ -125,7 +125,6 @@ SYSCALL_DEFINE5(remap_file_pages, unsigned long, start, unsigned long, size,
 {
 	struct mm_struct *mm = current->mm;
 	struct address_space *mapping;
-	unsigned long end = start + size;
 	struct vm_area_struct *vma;
 	int err = -EINVAL;
 	int has_write_lock = 0;
@@ -140,6 +139,10 @@ SYSCALL_DEFINE5(remap_file_pages, unsigned long, start, unsigned long, size,
 
 	/* Does the address range wrap, or is the span zero-sized? */
 	if (start + size <= start)
+		return err;
+
+	/* Does pgoff wrap? */
+	if (pgoff + (size >> PAGE_SHIFT) < pgoff)
 		return err;
 
 	/* Can we represent this offset inside this architecture's pte's? */
@@ -168,7 +171,7 @@ SYSCALL_DEFINE5(remap_file_pages, unsigned long, start, unsigned long, size,
 	if (!(vma->vm_flags & VM_CAN_NONLINEAR))
 		goto out;
 
-	if (end <= start || start < vma->vm_start || end > vma->vm_end)
+	if (start < vma->vm_start || start + size > vma->vm_end)
 		goto out;
 
 	/* Must set VM_NONLINEAR before any pages are populated. */
@@ -208,20 +211,20 @@ SYSCALL_DEFINE5(remap_file_pages, unsigned long, start, unsigned long, size,
 			}
 			goto out;
 		}
-		spin_lock(&mapping->i_mmap_lock);
+		mutex_lock(&mapping->i_mmap_mutex);
 		flush_dcache_mmap_lock(mapping);
 		vma->vm_flags |= VM_NONLINEAR;
 		vma_prio_tree_remove(vma, &mapping->i_mmap);
 		vma_nonlinear_insert(vma, &mapping->i_mmap_nonlinear);
 		flush_dcache_mmap_unlock(mapping);
-		spin_unlock(&mapping->i_mmap_lock);
+		mutex_unlock(&mapping->i_mmap_mutex);
 	}
 
 	if (vma->vm_flags & VM_LOCKED) {
 		/*
 		 * drop PG_Mlocked flag for over-mapped range
 		 */
-		unsigned int saved_flags = vma->vm_flags;
+		vm_flags_t saved_flags = vma->vm_flags;
 		munlock_vma_pages_range(vma, start, start + size);
 		vma->vm_flags = saved_flags;
 	}

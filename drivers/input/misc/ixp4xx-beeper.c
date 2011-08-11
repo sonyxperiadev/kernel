@@ -69,11 +69,7 @@ static int ixp4xx_spkr_event(struct input_dev *dev, unsigned int type, unsigned 
 	}
 
 	if (value > 20 && value < 32767)
-#ifndef FREQ
-		count = (ixp4xx_get_board_tick_rate() / (value * 4)) - 1;
-#else
-		count = (FREQ / (value * 4)) - 1;
-#endif
+		count = (IXP4XX_TIMER_FREQ / (value * 4)) - 1;
 
 	ixp4xx_spkr_control(pin, count);
 
@@ -115,7 +111,8 @@ static int __devinit ixp4xx_spkr_probe(struct platform_device *dev)
 	input_dev->event = ixp4xx_spkr_event;
 
 	err = request_irq(IRQ_IXP4XX_TIMER2, &ixp4xx_spkr_interrupt,
-			  IRQF_DISABLED | IRQF_TIMER, "ixp4xx-beeper", (void *) dev->id);
+			  IRQF_DISABLED | IRQF_NO_SUSPEND, "ixp4xx-beeper",
+			  (void *) dev->id);
 	if (err)
 		goto err_free_device;
 

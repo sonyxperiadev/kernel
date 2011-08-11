@@ -17,6 +17,7 @@
  *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
  */
 
+#include <linux/mm.h>
 #include <linux/fs.h>
 #include <linux/quotaops.h>
 #include "jfs_incore.h"
@@ -65,9 +66,9 @@ static int jfs_open(struct inode *inode, struct file *file)
 		struct jfs_inode_info *ji = JFS_IP(inode);
 		spin_lock_irq(&ji->ag_lock);
 		if (ji->active_ag == -1) {
-			ji->active_ag = ji->agno;
-			atomic_inc(
-			    &JFS_SBI(inode->i_sb)->bmap->db_active[ji->agno]);
+			struct jfs_sb_info *jfs_sb = JFS_SBI(inode->i_sb);
+			ji->active_ag = BLKTOAG(addressPXD(&ji->ixpxd), jfs_sb);
+			atomic_inc( &jfs_sb->bmap->db_active[ji->active_ag]);
 		}
 		spin_unlock_irq(&ji->ag_lock);
 	}
@@ -107,11 +108,18 @@ int jfs_setattr(struct dentry *dentry, struct iattr *iattr)
 			return rc;
 	}
 
-	rc = inode_setattr(inode, iattr);
+	if ((iattr->ia_valid & ATTR_SIZE) &&
+	    iattr->ia_size != i_size_read(inode)) {
+		rc = vmtruncate(inode, iattr->ia_size);
+		if (rc)
+			return rc;
+	}
 
-	if (!rc && (iattr->ia_valid & ATTR_MODE))
+	setattr_copy(inode, iattr);
+	mark_inode_dirty(inode);
+
+	if (iattr->ia_valid & ATTR_MODE)
 		rc = jfs_acl_chmod(inode);
-
 	return rc;
 }
 

@@ -104,7 +104,6 @@ module_exit(cleanup_soundcore);
 
 #include <linux/init.h>
 #include <linux/slab.h>
-#include <linux/smp_lock.h>
 #include <linux/types.h>
 #include <linux/kernel.h>
 #include <linux/sound.h>
@@ -165,6 +164,7 @@ static const struct file_operations soundcore_fops =
 	/* We must have an owner or the module locking fails */
 	.owner	= THIS_MODULE,
 	.open	= soundcore_open,
+	.llseek = noop_llseek,
 };
 
 /*
@@ -384,6 +384,9 @@ int register_sound_special_device(const struct file_operations *fops, int unit,
 	    case 4:
 		name = "audio";
 		break;
+	    case 5:
+		name = "dspW";
+		break;
 	    case 8:
 		name = "sequencer2";
 		if (unit >= SOUND_STEP)
@@ -576,8 +579,6 @@ static int soundcore_open(struct inode *inode, struct file *file)
 	struct sound_unit *s;
 	const struct file_operations *new_fops = NULL;
 
-	lock_kernel ();
-
 	chain=unit&0x0F;
 	if(chain==4 || chain==5)	/* dsp/audio/dsp16 */
 	{
@@ -630,18 +631,19 @@ static int soundcore_open(struct inode *inode, struct file *file)
 		const struct file_operations *old_fops = file->f_op;
 		file->f_op = new_fops;
 		spin_unlock(&sound_loader_lock);
-		if(file->f_op->open)
+
+		if (file->f_op->open)
 			err = file->f_op->open(inode,file);
+
 		if (err) {
 			fops_put(file->f_op);
 			file->f_op = fops_get(old_fops);
 		}
+
 		fops_put(old_fops);
-		unlock_kernel();
 		return err;
 	}
 	spin_unlock(&sound_loader_lock);
-	unlock_kernel();
 	return -ENODEV;
 }
 

@@ -62,6 +62,10 @@ struct gether {
 
 	/* hooks for added framing, as needed for RNDIS and EEM. */
 	u32				header_len;
+	/* NCM requires fixed size bundles */
+	bool				is_fixed;
+	u32				fixed_out_len;
+	u32				fixed_in_len;
 	struct sk_buff			*(*wrap)(struct gether *port,
 						struct sk_buff *skb);
 	int				(*unwrap)(struct gether *port,
@@ -103,16 +107,19 @@ static inline bool can_support_ecm(struct usb_gadget *gadget)
 /* each configuration may bind one instance of an ethernet link */
 int geth_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN]);
 int ecm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN]);
+int ncm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN]);
 int eem_bind_config(struct usb_configuration *c);
 
-#if defined(USB_ETH_RNDIS) || defined(CONFIG_USB_ANDROID_RNDIS)
+#ifdef USB_ETH_RNDIS
 
-int rndis_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN]);
+int rndis_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
+				u32 vendorID, const char *manufacturer);
 
 #else
 
 static inline int
-rndis_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN])
+rndis_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN],
+				u32 vendorID, const char *manufacturer)
 {
 	return 0;
 }

@@ -118,7 +118,7 @@
  *	-> See hfc_multi.h for HFC_IO_MODE_* values
  *	By default, the IO mode is pci memory IO (MEMIO).
  *	Some cards require specific IO mode, so it cannot be changed.
- *	It may be usefull to set IO mode to register io (REGIO) to solve
+ *	It may be useful to set IO mode to register io (REGIO) to solve
  *	PCI bridge problems.
  *	If unsure, don't give this parameter.
  *
@@ -903,7 +903,7 @@ vpm_echocan_off(struct hfc_multi *hc, int ch)
 /*
  * Speech Design resync feature
  * NOTE: This is called sometimes outside interrupt handler.
- * We must lock irqsave, so no other interrupt (other card) will occurr!
+ * We must lock irqsave, so no other interrupt (other card) will occur!
  * Also multiple interrupts may nest, so must lock each access (lists, card)!
  */
 static inline void
@@ -4268,7 +4268,7 @@ init_card(struct hfc_multi *hc)
 		goto error;
 	/*
 	 * Finally enable IRQ output
-	 * this is only allowed, if an IRQ routine is allready
+	 * this is only allowed, if an IRQ routine is already
 	 * established for this HFC, so don't do that earlier
 	 */
 	spin_lock_irqsave(&hc->lock, flags);
@@ -5212,7 +5212,7 @@ static void __devexit hfc_remove_pci(struct pci_dev *pdev)
 		spin_unlock_irqrestore(&HFClock, flags);
 	}  else {
 		if (debug)
-			printk(KERN_DEBUG "%s: drvdata allready removed\n",
+			printk(KERN_DEBUG "%s: drvdata already removed\n",
 			    __func__);
 	}
 }
@@ -5354,12 +5354,9 @@ static struct pci_device_id hfmultipci_ids[] __devinitdata = {
 	{ PCI_VENDOR_ID_CCD, PCI_DEVICE_ID_CCD_HFCE1, PCI_VENDOR_ID_CCD,
 		PCI_SUBDEVICE_ID_CCD_JHSE1, 0, 0, H(25)}, /* Junghanns E1 */
 
-	{ PCI_VENDOR_ID_CCD, PCI_DEVICE_ID_CCD_HFC4S, PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, 0},
-	{ PCI_VENDOR_ID_CCD, PCI_DEVICE_ID_CCD_HFC8S, PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, 0},
-	{ PCI_VENDOR_ID_CCD, PCI_DEVICE_ID_CCD_HFCE1, PCI_ANY_ID, PCI_ANY_ID,
-		0, 0, 0},
+	{ PCI_VDEVICE(CCD, PCI_DEVICE_ID_CCD_HFC4S), 0 },
+	{ PCI_VDEVICE(CCD, PCI_DEVICE_ID_CCD_HFC8S), 0 },
+	{ PCI_VDEVICE(CCD, PCI_DEVICE_ID_CCD_HFCE1), 0 },
 	{0, }
 };
 #undef H

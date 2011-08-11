@@ -105,7 +105,7 @@ bool __fscache_maybe_release_page(struct fscache_cookie *cookie,
 
 page_busy:
 	/* we might want to wait here, but that could deadlock the allocator as
-	 * the slow-work threads writing to the cache may all end up sleeping
+	 * the work threads writing to the cache may all end up sleeping
 	 * on memory allocation */
 	fscache_stat(&fscache_n_store_vmscan_busy);
 	return false;
@@ -155,11 +155,9 @@ static void fscache_attr_changed_op(struct fscache_operation *op)
 	fscache_stat(&fscache_n_attr_changed_calls);
 
 	if (fscache_object_is_active(object)) {
-		fscache_set_op_state(op, "CallFS");
 		fscache_stat(&fscache_n_cop_attr_changed);
 		ret = object->cache->ops->attr_changed(object);
 		fscache_stat_d(&fscache_n_cop_attr_changed);
-		fscache_set_op_state(op, "Done");
 		if (ret < 0)
 			fscache_abort_object(object);
 	}
@@ -188,10 +186,8 @@ int __fscache_attr_changed(struct fscache_cookie *cookie)
 		return -ENOMEM;
 	}
 
-	fscache_operation_init(op, NULL);
-	fscache_operation_init_slow(op, fscache_attr_changed_op);
-	op->flags = FSCACHE_OP_SLOW | (1 << FSCACHE_OP_EXCLUSIVE);
-	fscache_set_op_name(op, "Attr");
+	fscache_operation_init(op, fscache_attr_changed_op, NULL);
+	op->flags = FSCACHE_OP_ASYNC | (1 << FSCACHE_OP_EXCLUSIVE);
 
 	spin_lock(&cookie->lock);
 
@@ -216,24 +212,6 @@ nobufs:
 	return -ENOBUFS;
 }
 EXPORT_SYMBOL(__fscache_attr_changed);
-
-/*
- * handle secondary execution given to a retrieval op on behalf of the
- * cache
- */
-static void fscache_retrieval_work(struct work_struct *work)
-{
-	struct fscache_retrieval *op =
-		container_of(work, struct fscache_retrieval, op.fast_work);
-	unsigned long start;
-
-	_enter("{OP%x}", op->op.debug_id);
-
-	start = jiffies;
-	op->op.processor(&op->op);
-	fscache_hist(fscache_ops_histogram, start);
-	fscache_put_operation(&op->op);
-}
 
 /*
  * release a retrieval op reference
@@ -269,15 +247,13 @@ static struct fscache_retrieval *fscache_alloc_retrieval(
 		return NULL;
 	}
 
-	fscache_operation_init(&op->op, fscache_release_retrieval_op);
+	fscache_operation_init(&op->op, NULL, fscache_release_retrieval_op);
 	op->op.flags	= FSCACHE_OP_MYTHREAD | (1 << FSCACHE_OP_WAITING);
 	op->mapping	= mapping;
 	op->end_io_func	= end_io_func;
 	op->context	= context;
 	op->start_time	= jiffies;
-	INIT_WORK(&op->op.fast_work, fscache_retrieval_work);
 	INIT_LIST_HEAD(&op->to_do);
-	fscache_set_op_name(&op->op, "Retr");
 	return op;
 }
 
@@ -388,7 +364,6 @@ int __fscache_read_or_alloc_page(struct fscache_cookie *cookie,
 		_leave(" = -ENOMEM");
 		return -ENOMEM;
 	}
-	fscache_set_op_name(&op->op, "RetrRA1");
 
 	spin_lock(&cookie->lock);
 
@@ -507,7 +482,6 @@ int __fscache_read_or_alloc_pages(struct fscache_cookie *cookie,
 	op = fscache_alloc_retrieval(mapping, end_io_func, context);
 	if (!op)
 		return -ENOMEM;
-	fscache_set_op_name(&op->op, "RetrRAN");
 
 	spin_lock(&cookie->lock);
 
@@ -609,7 +583,6 @@ int __fscache_alloc_page(struct fscache_cookie *cookie,
 	op = fscache_alloc_retrieval(page->mapping, NULL, NULL);
 	if (!op)
 		return -ENOMEM;
-	fscache_set_op_name(&op->op, "RetrAL1");
 
 	spin_lock(&cookie->lock);
 
@@ -682,8 +655,6 @@ static void fscache_write_op(struct fscache_operation *_op)
 
 	_enter("{OP%x,%d}", op->op.debug_id, atomic_read(&op->op.usage));
 
-	fscache_set_op_state(&op->op, "GetPage");
-
 	spin_lock(&object->lock);
 	cookie = object->cookie;
 
@@ -718,15 +689,12 @@ static void fscache_write_op(struct fscache_operation *_op)
 	spin_unlock(&cookie->stores_lock);
 	spin_unlock(&object->lock);
 
-	fscache_set_op_state(&op->op, "Store");
 	fscache_stat(&fscache_n_store_pages);
 	fscache_stat(&fscache_n_cop_write_page);
 	ret = object->cache->ops->write_page(op, page);
 	fscache_stat_d(&fscache_n_cop_write_page);
-	fscache_set_op_state(&op->op, "EndWrite");
 	fscache_end_page_write(object, page);
 	if (ret < 0) {
-		fscache_set_op_state(&op->op, "Abort");
 		fscache_abort_object(object);
 	} else {
 		fscache_enqueue_operation(&op->op);
@@ -795,10 +763,9 @@ int __fscache_write_page(struct fscache_cookie *cookie,
 	if (!op)
 		goto nomem;
 
-	fscache_operation_init(&op->op, fscache_release_write_op);
-	fscache_operation_init_slow(&op->op, fscache_write_op);
-	op->op.flags = FSCACHE_OP_SLOW | (1 << FSCACHE_OP_WAITING);
-	fscache_set_op_name(&op->op, "Write1");
+	fscache_operation_init(&op->op, fscache_write_op,
+			       fscache_release_write_op);
+	op->op.flags = FSCACHE_OP_ASYNC | (1 << FSCACHE_OP_WAITING);
 
 	ret = radix_tree_preload(gfp & ~__GFP_HIGHMEM);
 	if (ret < 0)
@@ -852,7 +819,7 @@ int __fscache_write_page(struct fscache_cookie *cookie,
 	fscache_stat(&fscache_n_store_ops);
 	fscache_stat(&fscache_n_stores_ok);
 
-	/* the slow work queue now carries its own ref on the object */
+	/* the work queue now carries its own ref on the object */
 	fscache_put_operation(&op->op);
 	_leave(" = 0");
 	return 0;
@@ -987,3 +954,47 @@ void fscache_mark_pages_cached(struct fscache_retrieval *op,
 	pagevec_reinit(pagevec);
 }
 EXPORT_SYMBOL(fscache_mark_pages_cached);
+
+/*
+ * Uncache all the pages in an inode that are marked PG_fscache, assuming them
+ * to be associated with the given cookie.
+ */
+void __fscache_uncache_all_inode_pages(struct fscache_cookie *cookie,
+				       struct inode *inode)
+{
+	struct address_space *mapping = inode->i_mapping;
+	struct pagevec pvec;
+	pgoff_t next;
+	int i;
+
+	_enter("%p,%p", cookie, inode);
+
+	if (!mapping || mapping->nrpages == 0) {
+		_leave(" [no pages]");
+		return;
+	}
+
+	pagevec_init(&pvec, 0);
+	next = 0;
+	while (next <= (loff_t)-1 &&
+	       pagevec_lookup(&pvec, mapping, next, PAGEVEC_SIZE)
+	       ) {
+		for (i = 0; i < pagevec_count(&pvec); i++) {
+			struct page *page = pvec.pages[i];
+			pgoff_t page_index = page->index;
+
+			ASSERTCMP(page_index, >=, next);
+			next = page_index + 1;
+
+			if (PageFsCache(page)) {
+				__fscache_wait_on_page_write(cookie, page);
+				__fscache_uncache_page(cookie, page);
+			}
+		}
+		pagevec_release(&pvec);
+		cond_resched();
+	}
+
+	_leave("");
+}
+EXPORT_SYMBOL(__fscache_uncache_all_inode_pages);

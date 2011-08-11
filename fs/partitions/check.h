@@ -1,7 +1,6 @@
 #include <linux/pagemap.h>
 #include <linux/blkdev.h>
-
-#define PART_NAME_SIZE 128
+#include <linux/genhd.h>
 
 /*
  * add_gd_partition adds a partitions details to the devices partition
@@ -14,11 +13,13 @@ struct parsed_partitions {
 		sector_t from;
 		sector_t size;
 		int flags;
-		char name[PART_NAME_SIZE];
+		bool has_info;
+		struct partition_meta_info info;
 	} parts[DISK_MAX_PARTS];
 	int next;
 	int limit;
 	bool access_beyond_eod;
+	char *pp_buf;
 };
 
 static inline void *read_part_sector(struct parsed_partitions *state,
@@ -32,27 +33,16 @@ static inline void *read_part_sector(struct parsed_partitions *state,
 }
 
 static inline void
-put_named_partition(struct parsed_partitions *p, int n, sector_t from,
-	sector_t size, const char *name, size_t name_size)
-{
-	if (n < p->limit) {
-		p->parts[n].from = from;
-		p->parts[n].size = size;
-		printk(" %s%d", p->name, n);
-		if (name) {
-			if (name_size > PART_NAME_SIZE - 1)
-				name_size = PART_NAME_SIZE - 1;
-			memcpy(p->parts[n].name, name, name_size);
-			p->parts[n].name[name_size] = 0;
-			printk(" (%s)", p->parts[n].name);
-		}
-	}
-}
-
-static inline void
 put_partition(struct parsed_partitions *p, int n, sector_t from, sector_t size)
 {
-	put_named_partition(p, n, from, size, NULL, 0);
+	if (n < p->limit) {
+		char tmp[1 + BDEVNAME_SIZE + 10 + 1];
+
+		p->parts[n].from = from;
+		p->parts[n].size = size;
+		snprintf(tmp, sizeof(tmp), " %s%d", p->name, n);
+		strlcat(p->pp_buf, tmp, PAGE_SIZE);
+	}
 }
 
 extern int warn_no_part;

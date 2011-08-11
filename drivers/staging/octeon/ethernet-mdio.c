@@ -91,8 +91,6 @@ const struct ethtool_ops cvm_oct_ethtool_ops = {
 	.set_settings = cvm_oct_set_settings,
 	.nway_reset = cvm_oct_nway_reset,
 	.get_link = ethtool_op_get_link,
-	.get_sg = ethtool_op_get_sg,
-	.get_tx_csum = ethtool_op_get_tx_csum,
 };
 
 /**
@@ -113,7 +111,7 @@ int cvm_oct_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
 	if (!priv->phydev)
 		return -EINVAL;
 
-	return phy_mii_ioctl(priv->phydev, if_mii(rq), cmd);
+	return phy_mii_ioctl(priv->phydev, rq, cmd);
 }
 
 static void cvm_oct_adjust_link(struct net_device *dev)

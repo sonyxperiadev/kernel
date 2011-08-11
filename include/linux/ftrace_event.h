@@ -11,10 +11,13 @@ struct trace_array;
 struct tracer;
 struct dentry;
 
-DECLARE_PER_CPU(struct trace_seq, ftrace_event_seq);
-
 struct trace_print_flags {
 	unsigned long		mask;
+	const char		*name;
+};
+
+struct trace_print_flags_u64 {
+	unsigned long long	mask;
 	const char		*name;
 };
 
@@ -24,6 +27,13 @@ const char *ftrace_print_flags_seq(struct trace_seq *p, const char *delim,
 
 const char *ftrace_print_symbols_seq(struct trace_seq *p, unsigned long val,
 				     const struct trace_print_flags *symbol_array);
+
+#if BITS_PER_LONG == 32
+const char *ftrace_print_symbols_seq_u64(struct trace_seq *p,
+					 unsigned long long val,
+					 const struct trace_print_flags_u64
+								 *symbol_array);
+#endif
 
 const char *ftrace_print_hex_seq(struct trace_seq *p,
 				 const unsigned char *buf, int len);
@@ -39,7 +49,7 @@ struct trace_entry {
 	unsigned char		flags;
 	unsigned char		preempt_count;
 	int			pid;
-	int			lock_depth;
+	int			padding;
 };
 
 #define FTRACE_MAX_EVENT						\
@@ -57,6 +67,9 @@ struct trace_iterator {
 	struct mutex		mutex;
 	struct ring_buffer_iter	*buffer_iter[NR_CPUS];
 	unsigned long		iter_flags;
+
+	/* trace_seq for __print_flags() and __print_symbolic() etc. */
+	struct trace_seq	tmp_seq;
 
 	/* The below is zeroed out in pipe_read */
 	struct trace_seq	seq;
@@ -146,14 +159,21 @@ struct ftrace_event_class {
 	int			(*raw_init)(struct ftrace_event_call *);
 };
 
+extern int ftrace_event_reg(struct ftrace_event_call *event,
+			    enum trace_reg type);
+
 enum {
 	TRACE_EVENT_FL_ENABLED_BIT,
 	TRACE_EVENT_FL_FILTERED_BIT,
+	TRACE_EVENT_FL_RECORDED_CMD_BIT,
+	TRACE_EVENT_FL_CAP_ANY_BIT,
 };
 
 enum {
-	TRACE_EVENT_FL_ENABLED	= (1 << TRACE_EVENT_FL_ENABLED_BIT),
-	TRACE_EVENT_FL_FILTERED	= (1 << TRACE_EVENT_FL_FILTERED_BIT),
+	TRACE_EVENT_FL_ENABLED		= (1 << TRACE_EVENT_FL_ENABLED_BIT),
+	TRACE_EVENT_FL_FILTERED		= (1 << TRACE_EVENT_FL_FILTERED_BIT),
+	TRACE_EVENT_FL_RECORDED_CMD	= (1 << TRACE_EVENT_FL_RECORDED_CMD_BIT),
+	TRACE_EVENT_FL_CAP_ANY		= (1 << TRACE_EVENT_FL_CAP_ANY_BIT),
 };
 
 struct ftrace_event_call {
@@ -171,6 +191,7 @@ struct ftrace_event_call {
 	 * 32 bit flags:
 	 *   bit 1:		enabled
 	 *   bit 2:		filter_active
+	 *   bit 3:		enabled cmd record
 	 *
 	 * Changes to flags must hold the event_mutex.
 	 *
@@ -184,14 +205,21 @@ struct ftrace_event_call {
 	unsigned int		flags;
 
 #ifdef CONFIG_PERF_EVENTS
-	int			perf_refcount;
-	struct hlist_head	*perf_events;
+	int				perf_refcount;
+	struct hlist_head __percpu	*perf_events;
 #endif
 };
 
+#define __TRACE_EVENT_FLAGS(name, value)				\
+	static int __init trace_init_flags_##name(void)			\
+	{								\
+		event_##name.flags = value;				\
+		return 0;						\
+	}								\
+	early_initcall(trace_init_flags_##name);
+
 #define PERF_MAX_TRACE_SIZE	2048
 
-#define MAX_FILTER_PRED		32
 #define MAX_FILTER_STR_VAL	256	/* Should handle KSYM_SYMBOL_LEN */
 
 extern void destroy_preds(struct ftrace_event_call *call);
@@ -207,6 +235,10 @@ enum {
 	FILTER_DYN_STRING,
 	FILTER_PTR_STRING,
 };
+
+#define EVENT_STORAGE_SIZE 128
+extern struct mutex event_storage_mutex;
+extern char event_storage[EVENT_STORAGE_SIZE];
 
 extern int trace_event_raw_init(struct ftrace_event_call *call);
 extern int trace_define_field(struct ftrace_event_call *call, const char *type,
@@ -245,8 +277,8 @@ DECLARE_PER_CPU(struct pt_regs, perf_trace_regs);
 
 extern int  perf_trace_init(struct perf_event *event);
 extern void perf_trace_destroy(struct perf_event *event);
-extern int  perf_trace_enable(struct perf_event *event);
-extern void perf_trace_disable(struct perf_event *event);
+extern int  perf_trace_add(struct perf_event *event, int flags);
+extern void perf_trace_del(struct perf_event *event, int flags);
 extern int  ftrace_profile_set_filter(struct perf_event *event, int event_id,
 				     char *filter_str);
 extern void ftrace_profile_free_filter(struct perf_event *event);
@@ -257,8 +289,7 @@ static inline void
 perf_trace_buf_submit(void *raw_data, int size, int rctx, u64 addr,
 		       u64 count, struct pt_regs *regs, void *head)
 {
-	perf_tp_event(addr, count, raw_data, size, regs, head);
-	perf_swevent_put_recursion_context(rctx);
+	perf_tp_event(addr, count, raw_data, size, regs, head, rctx);
 }
 #endif
 

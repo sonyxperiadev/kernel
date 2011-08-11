@@ -23,7 +23,6 @@
 #include <linux/io.h>
 #include <linux/bcd.h>
 #include <linux/delay.h>
-#include <linux/version.h>
 #include <linux/slab.h>
 
 /*
@@ -294,57 +293,6 @@ static int pl031_set_alarm(struct device *dev, struct rtc_wkalrm *alarm)
 	return ret;
 }
 
-/* Periodic interrupt is only available in ST variants. */
-static int pl031_irq_set_state(struct device *dev, int enabled)
-{
-	struct pl031_local *ldata = dev_get_drvdata(dev);
-
-	if (enabled == 1) {
-		/* Clear any pending timer interrupt. */
-		writel(RTC_BIT_PI, ldata->base + RTC_ICR);
-
-		writel(readl(ldata->base + RTC_IMSC) | RTC_BIT_PI,
-			ldata->base + RTC_IMSC);
-
-		/* Now start the timer */
-		writel(readl(ldata->base + RTC_TCR) | RTC_TCR_EN,
-			ldata->base + RTC_TCR);
-
-	} else {
-		writel(readl(ldata->base + RTC_IMSC) & (~RTC_BIT_PI),
-			ldata->base + RTC_IMSC);
-
-		/* Also stop the timer */
-		writel(readl(ldata->base + RTC_TCR) & (~RTC_TCR_EN),
-			ldata->base + RTC_TCR);
-	}
-	/* Wait at least 1 RTC32 clock cycle to ensure next access
-	 * to RTC_TCR will succeed.
-	 */
-	udelay(40);
-
-	return 0;
-}
-
-static int pl031_irq_set_freq(struct device *dev, int freq)
-{
-	struct pl031_local *ldata = dev_get_drvdata(dev);
-
-	/* Cant set timer if it is already enabled */
-	if (readl(ldata->base + RTC_TCR) & RTC_TCR_EN) {
-		dev_err(dev, "can't change frequency while timer enabled\n");
-		return -EINVAL;
-	}
-
-	/* If self start bit in RTC_TCR is set timer will start here,
-	 * but we never set that bit. Instead we start the timer when
-	 * set_state is called with enabled == 1.
-	 */
-	writel(RTC_TIMER_FREQ / freq, ldata->base + RTC_TLR);
-
-	return 0;
-}
-
 static int pl031_remove(struct amba_device *adev)
 {
 	struct pl031_local *ldata = dev_get_drvdata(&adev->dev);
@@ -359,7 +307,7 @@ static int pl031_remove(struct amba_device *adev)
 	return 0;
 }
 
-static int pl031_probe(struct amba_device *adev, struct amba_id *id)
+static int pl031_probe(struct amba_device *adev, const struct amba_id *id)
 {
 	int ret;
 	struct pl031_local *ldata;
@@ -404,7 +352,7 @@ static int pl031_probe(struct amba_device *adev, struct amba_id *id)
 	}
 
 	if (request_irq(adev->irq[0], pl031_interrupt,
-			IRQF_DISABLED | IRQF_SHARED, "rtc-pl031", ldata)) {
+			IRQF_DISABLED, "rtc-pl031", ldata)) {
 		ret = -EIO;
 		goto out_no_irq;
 	}
@@ -441,8 +389,6 @@ static struct rtc_class_ops stv1_pl031_ops = {
 	.read_alarm = pl031_read_alarm,
 	.set_alarm = pl031_set_alarm,
 	.alarm_irq_enable = pl031_alarm_irq_enable,
-	.irq_set_state = pl031_irq_set_state,
-	.irq_set_freq = pl031_irq_set_freq,
 };
 
 /* And the second ST derivative */
@@ -452,11 +398,9 @@ static struct rtc_class_ops stv2_pl031_ops = {
 	.read_alarm = pl031_stv2_read_alarm,
 	.set_alarm = pl031_stv2_set_alarm,
 	.alarm_irq_enable = pl031_alarm_irq_enable,
-	.irq_set_state = pl031_irq_set_state,
-	.irq_set_freq = pl031_irq_set_freq,
 };
 
-static struct amba_id pl031_ids[] __initdata = {
+static struct amba_id pl031_ids[] = {
 	{
 		.id = 0x00041031,
 		.mask = 0x000fffff,

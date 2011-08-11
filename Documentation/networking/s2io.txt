@@ -37,7 +37,7 @@ To associate an interface with a physical adapter use "ethtool -p <ethX>".
 The corresponding adapter's LED will blink multiple times.
 
 3.	Features supported:
-a. Jumbo frames. Xframe I/II supports MTU upto 9600 bytes,
+a. Jumbo frames. Xframe I/II supports MTU up to 9600 bytes,
 modifiable using ifconfig command.
 
 b. Offloads. Supports checksum offload(TCP/UDP/IP) on transmit
@@ -49,7 +49,7 @@ significant performance improvement on certain platforms(SGI Altix,
 IBM xSeries).
 
 d. MSI/MSI-X. Can be enabled on platforms which support this feature
-(IA64, Xeon) resulting in noticeable performance improvement(upto 7%
+(IA64, Xeon) resulting in noticeable performance improvement(up to 7%
 on certain platforms).
 
 e. Statistics. Comprehensive MAC-level and software statistics displayed
@@ -133,7 +133,8 @@ bring down CPU utilization.
 ** For AMD opteron platforms with 8131 chipset, MMRBC=1 and MOST=1 are 
 recommended as safe parameters.
 For more information, please review the AMD8131 errata at
-http://www.amd.com/us-en/assets/content_type/white_papers_and_tech_docs/26310.pdf
+http://vip.amd.com/us-en/assets/content_type/white_papers_and_tech_docs/
+26310_AMD-8131_HyperTransport_PCI-X_Tunnel_Revision_Guide_rev_3_18.pdf
 
 6.  Available Downloads
 Neterion "s2io" driver in Red Hat and Suse 2.6-based distributions is kept up 

@@ -5,8 +5,8 @@
 obj-y				:= dma-mapping.o extable.o fault.o init.o \
 				   iomap.o
 
-obj-$(CONFIG_MMU)		+= fault-armv.o flush.o ioremap.o mmap.o \
-				   pgd.o mmu.o vmregion.o
+obj-$(CONFIG_MMU)		+= fault-armv.o flush.o idmap.o ioremap.o \
+				   mmap.o pgd.o mmu.o vmregion.o
 
 ifneq ($(CONFIG_MMU),y)
 obj-y				+= nommu.o
@@ -15,7 +15,6 @@ endif
 obj-$(CONFIG_MODULES)		+= proc-syms.o
 
 obj-$(CONFIG_ALIGNMENT_TRAP)	+= alignment.o
-obj-$(CONFIG_DISCONTIGMEM)	+= discontig.o
 obj-$(CONFIG_HIGHMEM)		+= highmem.o
 
 obj-$(CONFIG_CPU_ABRT_NOMMU)	+= abort-nommu.o
@@ -91,6 +90,7 @@ obj-$(CONFIG_CPU_XSC3)		+= proc-xsc3.o
 obj-$(CONFIG_CPU_MOHAWK)	+= proc-mohawk.o
 obj-$(CONFIG_CPU_FEROCEON)	+= proc-feroceon.o
 obj-$(CONFIG_CPU_V6)		+= proc-v6.o
+obj-$(CONFIG_CPU_V6K)		+= proc-v6.o
 obj-$(CONFIG_CPU_V7)		+= proc-v7.o
 
 AFLAGS_proc-v6.o	:=-Wa,-march=armv6

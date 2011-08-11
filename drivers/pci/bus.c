@@ -56,7 +56,7 @@ void pci_bus_remove_resources(struct pci_bus *bus)
 	int i;
 
 	for (i = 0; i < PCI_BRIDGE_RESOURCE_NUM; i++)
-		bus->resource[i] = 0;
+		bus->resource[i] = NULL;
 
 	list_for_each_entry_safe(bus_res, tmp, &bus->resources, list) {
 		list_del(&bus_res->list);
@@ -163,12 +163,6 @@ int pci_bus_add_child(struct pci_bus *bus)
 
 	bus->is_added = 1;
 
-	retval = device_create_file(&bus->dev, &dev_attr_cpuaffinity);
-	if (retval)
-		return retval;
-
-	retval = device_create_file(&bus->dev, &dev_attr_cpulistaffinity);
-
 	/* Create legacy_io and legacy_mem files for this bus */
 	pci_create_legacy_files(bus);
 
@@ -240,6 +234,8 @@ void pci_enable_bridges(struct pci_bus *bus)
 		if (dev->subordinate) {
 			if (!pci_is_enabled(dev)) {
 				retval = pci_enable_device(dev);
+				if (retval)
+					dev_err(&dev->dev, "Error enabling bridge (%d), continuing\n", retval);
 				pci_set_master(dev);
 			}
 			pci_enable_bridges(dev->subordinate);
@@ -297,6 +293,7 @@ void pci_walk_bus(struct pci_bus *top, int (*cb)(struct pci_dev *, void *),
 	}
 	up_read(&pci_bus_sem);
 }
+EXPORT_SYMBOL_GPL(pci_walk_bus);
 
 EXPORT_SYMBOL(pci_bus_alloc_resource);
 EXPORT_SYMBOL_GPL(pci_bus_add_device);

@@ -264,11 +264,13 @@ static void sis_update_voice(struct voice *voice)
 		 * if using small periods.
 		 *
 		 * If we're less than 9 samples behind, we're on target.
+		 * Otherwise, shorten the next vperiod by the amount we've
+		 * been delayed.
 		 */
 		if (sync > -9)
 			voice->vperiod = voice->sync_period_size + 1;
 		else
-			voice->vperiod = voice->sync_period_size - 4;
+			voice->vperiod = voice->sync_period_size + sync + 10;
 
 		if (voice->vperiod < voice->buffer_size) {
 			sis_update_sso(voice, voice->vperiod);
@@ -306,7 +308,7 @@ static irqreturn_t sis_interrupt(int irq, void *dev)
 	u32 intr, status;
 
 	/* We only use the DMA interrupts, and we don't enable any other
-	 * source of interrupts. But, it is possible to see an interupt
+	 * source of interrupts. But, it is possible to see an interrupt
 	 * status that didn't actually interrupt us, so eliminate anything
 	 * we're not expecting to avoid falsely claiming an IRQ, and an
 	 * ensuing endless loop.
@@ -736,7 +738,7 @@ static void sis_prepare_timing_voice(struct voice *voice,
 	period_size = buffer_size;
 
 	/* Initially, we want to interrupt just a bit behind the end of
-	 * the period we're clocking out. 10 samples seems to give a good
+	 * the period we're clocking out. 12 samples seems to give a good
 	 * delay.
 	 *
 	 * We want to spread our interrupts throughout the virtual period,
@@ -747,7 +749,7 @@ static void sis_prepare_timing_voice(struct voice *voice,
 	 *
 	 * This is all moot if we don't need to use virtual periods.
 	 */
-	vperiod = runtime->period_size + 10;
+	vperiod = runtime->period_size + 12;
 	if (vperiod > period_size) {
 		u16 tail = vperiod % period_size;
 		u16 quarter_period = period_size / 4;
@@ -771,12 +773,12 @@ static void sis_prepare_timing_voice(struct voice *voice,
 		vperiod = 0;
 	}
 
-	/* The interrupt handler implements the timing syncronization, so
+	/* The interrupt handler implements the timing synchronization, so
 	 * setup its state.
 	 */
 	timing->flags |= VOICE_SYNC_TIMING;
 	timing->sync_base = voice->ctrl_base;
-	timing->sync_cso = runtime->period_size - 1;
+	timing->sync_cso = runtime->period_size;
 	timing->sync_period_size = runtime->period_size;
 	timing->sync_buffer_size = runtime->buffer_size;
 	timing->period_size = period_size;
@@ -1047,7 +1049,7 @@ static int sis_chip_free(struct sis7019 *sis)
 	/* Reset the chip, and disable all interrputs.
 	 */
 	outl(SIS_GCR_SOFTWARE_RESET, sis->ioport + SIS_GCR);
-	udelay(10);
+	udelay(25);
 	outl(0, sis->ioport + SIS_GCR);
 	outl(0, sis->ioport + SIS_GIER);
 
@@ -1083,7 +1085,7 @@ static int sis_chip_init(struct sis7019 *sis)
 	/* Reset the audio controller
 	 */
 	outl(SIS_GCR_SOFTWARE_RESET, io + SIS_GCR);
-	udelay(10);
+	udelay(25);
 	outl(0, io + SIS_GCR);
 
 	/* Get the AC-link semaphore, and reset the codecs
@@ -1096,7 +1098,7 @@ static int sis_chip_init(struct sis7019 *sis)
 		return -EIO;
 
 	outl(SIS_AC97_CMD_CODEC_COLD_RESET, io + SIS_AC97_CMD);
-	udelay(10);
+	udelay(250);
 
 	count = 0xffff;
 	while ((inw(io + SIS_AC97_STATUS) & SIS_AC97_STATUS_BUSY) && --count)
@@ -1137,7 +1139,7 @@ static int sis_chip_init(struct sis7019 *sis)
 	 */
 	outl(SIS_DMA_CSR_PCI_SETTINGS, io + SIS_DMA_CSR);
 
-	/* Reset the syncronization groups for all of the channels
+	/* Reset the synchronization groups for all of the channels
 	 * to be asyncronous. If we start doing SPDIF or 5.1 sound, etc.
 	 * we'll need to change how we handle these. Until then, we just
 	 * assign sub-mixer 0 to all playback channels, and avoid any

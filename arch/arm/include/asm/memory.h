@@ -15,6 +15,7 @@
 
 #include <linux/compiler.h>
 #include <linux/const.h>
+#include <linux/types.h>
 #include <mach/memory.h>
 #include <asm/sizes.h>
 
@@ -124,20 +125,19 @@
 #endif /* !CONFIG_MMU */
 
 /*
- * Physical vs virtual RAM address space conversion.  These are
- * private definitions which should NOT be used outside memory.h
- * files.  Use virt_to_phys/phys_to_virt/__pa/__va instead.
+ * We fix the TCM memories max 32 KiB ITCM resp DTCM at these
+ * locations
  */
-#ifndef __virt_to_phys
-#define __virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
-#define __phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
+#ifdef CONFIG_HAVE_TCM
+#define ITCM_OFFSET	UL(0xfffe0000)
+#define DTCM_OFFSET	UL(0xfffe8000)
 #endif
 
 /*
  * Convert a physical address to a Page Frame Number and back
  */
-#define	__phys_to_pfn(paddr)	((paddr) >> PAGE_SHIFT)
-#define	__pfn_to_phys(pfn)	((pfn) << PAGE_SHIFT)
+#define	__phys_to_pfn(paddr)	((unsigned long)((paddr) >> PAGE_SHIFT))
+#define	__pfn_to_phys(pfn)	((phys_addr_t)(pfn) << PAGE_SHIFT)
 
 /*
  * Convert a page to/from a physical address
@@ -148,12 +148,68 @@
 #ifndef __ASSEMBLY__
 
 /*
+ * Physical vs virtual RAM address space conversion.  These are
+ * private definitions which should NOT be used outside memory.h
+ * files.  Use virt_to_phys/phys_to_virt/__pa/__va instead.
+ */
+#ifndef __virt_to_phys
+#ifdef CONFIG_ARM_PATCH_PHYS_VIRT
+
+/*
+ * Constants used to force the right instruction encodings and shifts
+ * so that all we need to do is modify the 8-bit constant field.
+ */
+#define __PV_BITS_31_24	0x81000000
+#define __PV_BITS_23_16	0x00810000
+
+extern unsigned long __pv_phys_offset;
+#define PHYS_OFFSET __pv_phys_offset
+
+#define __pv_stub(from,to,instr,type)			\
+	__asm__("@ __pv_stub\n"				\
+	"1:	" instr "	%0, %1, %2\n"		\
+	"	.pushsection .pv_table,\"a\"\n"		\
+	"	.long	1b\n"				\
+	"	.popsection\n"				\
+	: "=r" (to)					\
+	: "r" (from), "I" (type))
+
+static inline unsigned long __virt_to_phys(unsigned long x)
+{
+	unsigned long t;
+	__pv_stub(x, t, "add", __PV_BITS_31_24);
+#ifdef CONFIG_ARM_PATCH_PHYS_VIRT_16BIT
+	__pv_stub(t, t, "add", __PV_BITS_23_16);
+#endif
+	return t;
+}
+
+static inline unsigned long __phys_to_virt(unsigned long x)
+{
+	unsigned long t;
+	__pv_stub(x, t, "sub", __PV_BITS_31_24);
+#ifdef CONFIG_ARM_PATCH_PHYS_VIRT_16BIT
+	__pv_stub(t, t, "sub", __PV_BITS_23_16);
+#endif
+	return t;
+}
+#else
+#define __virt_to_phys(x)	((x) - PAGE_OFFSET + PHYS_OFFSET)
+#define __phys_to_virt(x)	((x) - PHYS_OFFSET + PAGE_OFFSET)
+#endif
+#endif
+
+#ifndef PHYS_OFFSET
+#define PHYS_OFFSET	PLAT_PHYS_OFFSET
+#endif
+
+/*
  * The DMA mask corresponding to the maximum bus address allocatable
  * using GFP_DMA.  The default here places no restriction on DMA
  * allocations.  This must be the smallest DMA mask in the system,
  * so a successful GFP_DMA allocation will always satisfy this.
  */
-#ifndef ISA_DMA_THRESHOLD
+#ifndef ARM_DMA_ZONE_SIZE
 #define ISA_DMA_THRESHOLD	(0xffffffffULL)
 #endif
 
@@ -177,12 +233,12 @@
  * translation for translating DMA addresses.  Use the driver
  * DMA support - see dma-mapping.h.
  */
-static inline unsigned long virt_to_phys(void *x)
+static inline phys_addr_t virt_to_phys(const volatile void *x)
 {
 	return __virt_to_phys((unsigned long)(x));
 }
 
-static inline void *phys_to_virt(unsigned long x)
+static inline void *phys_to_virt(phys_addr_t x)
 {
 	return (void *)(__phys_to_virt((unsigned long)(x)));
 }
@@ -232,75 +288,10 @@ static inline __deprecated void *bus_to_virt(unsigned long x)
  *  virt_to_page(k)	convert a _valid_ virtual address to struct page *
  *  virt_addr_valid(k)	indicates whether a virtual address is valid
  */
-#ifndef CONFIG_DISCONTIGMEM
-
 #define ARCH_PFN_OFFSET		PHYS_PFN_OFFSET
 
 #define virt_to_page(kaddr)	pfn_to_page(__pa(kaddr) >> PAGE_SHIFT)
 #define virt_addr_valid(kaddr)	((unsigned long)(kaddr) >= PAGE_OFFSET && (unsigned long)(kaddr) < (unsigned long)high_memory)
-
-#define PHYS_TO_NID(addr)	(0)
-
-#else /* CONFIG_DISCONTIGMEM */
-
-/*
- * This is more complex.  We have a set of mem_map arrays spread
- * around in memory.
- */
-#include <linux/numa.h>
-
-#define arch_pfn_to_nid(pfn)	PFN_TO_NID(pfn)
-#define arch_local_page_offset(pfn, nid) LOCAL_MAP_NR((pfn) << PAGE_SHIFT)
-
-#define virt_to_page(kaddr)					\
-	(ADDR_TO_MAPBASE(kaddr) + LOCAL_MAP_NR(kaddr))
-
-#define virt_addr_valid(kaddr)	(KVADDR_TO_NID(kaddr) < MAX_NUMNODES)
-
-/*
- * Common discontigmem stuff.
- *  PHYS_TO_NID is used by the ARM kernel/setup.c
- */
-#define PHYS_TO_NID(addr)	PFN_TO_NID((addr) >> PAGE_SHIFT)
-
-/*
- * Given a kaddr, ADDR_TO_MAPBASE finds the owning node of the memory
- * and returns the mem_map of that node.
- */
-#define ADDR_TO_MAPBASE(kaddr)	NODE_MEM_MAP(KVADDR_TO_NID(kaddr))
-
-/*
- * Given a page frame number, find the owning node of the memory
- * and returns the mem_map of that node.
- */
-#define PFN_TO_MAPBASE(pfn)	NODE_MEM_MAP(PFN_TO_NID(pfn))
-
-#ifdef NODE_MEM_SIZE_BITS
-#define NODE_MEM_SIZE_MASK	((1 << NODE_MEM_SIZE_BITS) - 1)
-
-/*
- * Given a kernel address, find the home node of the underlying memory.
- */
-#define KVADDR_TO_NID(addr) \
-	(((unsigned long)(addr) - PAGE_OFFSET) >> NODE_MEM_SIZE_BITS)
-
-/*
- * Given a page frame number, convert it to a node id.
- */
-#define PFN_TO_NID(pfn) \
-	(((pfn) - PHYS_PFN_OFFSET) >> (NODE_MEM_SIZE_BITS - PAGE_SHIFT))
-
-/*
- * Given a kaddr, LOCAL_MEM_MAP finds the owning node of the memory
- * and returns the index corresponding to the appropriate page in the
- * node's mem_map.
- */
-#define LOCAL_MAP_NR(addr) \
-	(((unsigned long)(addr) & NODE_MEM_SIZE_MASK) >> PAGE_SHIFT)
-
-#endif /* NODE_MEM_SIZE_BITS */
-
-#endif /* !CONFIG_DISCONTIGMEM */
 
 /*
  * Optional coherency support.  Currently used only by selected

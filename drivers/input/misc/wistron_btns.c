@@ -274,7 +274,7 @@ static struct key_entry keymap_fs_amilo_pro_v3505[] __initdata = {
 	{ KE_BLUETOOTH, 0x30 },                      /* Fn+F10 */
 	{ KE_KEY,       0x31, {KEY_MAIL} },          /* mail button */
 	{ KE_KEY,       0x36, {KEY_WWW} },           /* www button */
-	{ KE_WIFI,      0x78 },                      /* satelite dish button */
+	{ KE_WIFI,      0x78 },                      /* satellite dish button */
 	{ KE_END,       0 }
 };
 
@@ -1347,7 +1347,7 @@ static int __init wb_module_init(void)
 
 	err = map_bios();
 	if (err)
-		return err;
+		goto err_free_keymap;
 
 	err = platform_driver_register(&wistron_driver);
 	if (err)
@@ -1371,6 +1371,8 @@ static int __init wb_module_init(void)
 	platform_driver_unregister(&wistron_driver);
  err_unmap_bios:
 	unmap_bios();
+ err_free_keymap:
+	kfree(keymap);
 
 	return err;
 }

@@ -499,7 +499,6 @@ static int isd200_action( struct us_data *us, int action,
 	memset(&ata, 0, sizeof(ata));
 	srb->cmnd = info->cmnd;
 	srb->device = &srb_dev;
-	++srb->serial_number;
 
 	ata.generic.SignatureByte0 = info->ConfigData.ATAMajorCommand;
 	ata.generic.SignatureByte1 = info->ConfigData.ATAMinorCommand;
@@ -1456,8 +1455,7 @@ static int isd200_init_info(struct us_data *us)
 	int retStatus = ISD200_GOOD;
 	struct isd200_info *info;
 
-	info = (struct isd200_info *)
-			kzalloc(sizeof(struct isd200_info), GFP_KERNEL);
+	info = kzalloc(sizeof(struct isd200_info), GFP_KERNEL);
 	if (!info)
 		retStatus = ISD200_ERROR;
 	else {
@@ -1511,7 +1509,7 @@ static int isd200_Initialization(struct us_data *us)
  * Protocol and Transport for the ISD200 ASIC
  *
  * This protocol and transport are for ATA devices connected to an ISD200
- * ASIC.  An ATAPI device that is conected as a slave device will be
+ * ASIC.  An ATAPI device that is connected as a slave device will be
  * detected in the driver initialization function and the protocol will
  * be changed to an ATAPI protocol (Transparent SCSI).
  *

@@ -62,23 +62,24 @@ tee_tg_route4(struct sk_buff *skb, const struct xt_tee_tginfo *info)
 	const struct iphdr *iph = ip_hdr(skb);
 	struct net *net = pick_net(skb);
 	struct rtable *rt;
-	struct flowi fl;
+	struct flowi4 fl4;
 
-	memset(&fl, 0, sizeof(fl));
+	memset(&fl4, 0, sizeof(fl4));
 	if (info->priv) {
 		if (info->priv->oif == -1)
 			return false;
-		fl.oif = info->priv->oif;
+		fl4.flowi4_oif = info->priv->oif;
 	}
-	fl.nl_u.ip4_u.daddr = info->gw.ip;
-	fl.nl_u.ip4_u.tos   = RT_TOS(iph->tos);
-	fl.nl_u.ip4_u.scope = RT_SCOPE_UNIVERSE;
-	if (ip_route_output_key(net, &rt, &fl) != 0)
+	fl4.daddr = info->gw.ip;
+	fl4.flowi4_tos = RT_TOS(iph->tos);
+	fl4.flowi4_scope = RT_SCOPE_UNIVERSE;
+	rt = ip_route_output_key(net, &fl4);
+	if (IS_ERR(rt))
 		return false;
 
 	skb_dst_drop(skb);
-	skb_dst_set(skb, &rt->u.dst);
-	skb->dev      = rt->u.dst.dev;
+	skb_dst_set(skb, &rt->dst);
+	skb->dev      = rt->dst.dev;
 	skb->protocol = htons(ETH_P_IP);
 	return true;
 }
@@ -104,7 +105,7 @@ tee_tg4(struct sk_buff *skb, const struct xt_action_param *par)
 #ifdef WITH_CONNTRACK
 	/* Avoid counting cloned packets towards the original connection. */
 	nf_conntrack_put(skb->nfct);
-	skb->nfct     = &nf_conntrack_untracked.ct_general;
+	skb->nfct     = &nf_ct_untracked_get()->ct_general;
 	skb->nfctinfo = IP_CT_NEW;
 	nf_conntrack_get(skb->nfct);
 #endif
@@ -142,18 +143,18 @@ tee_tg_route6(struct sk_buff *skb, const struct xt_tee_tginfo *info)
 	const struct ipv6hdr *iph = ipv6_hdr(skb);
 	struct net *net = pick_net(skb);
 	struct dst_entry *dst;
-	struct flowi fl;
+	struct flowi6 fl6;
 
-	memset(&fl, 0, sizeof(fl));
+	memset(&fl6, 0, sizeof(fl6));
 	if (info->priv) {
 		if (info->priv->oif == -1)
 			return false;
-		fl.oif = info->priv->oif;
+		fl6.flowi6_oif = info->priv->oif;
 	}
-	fl.nl_u.ip6_u.daddr = info->gw.in6;
-	fl.nl_u.ip6_u.flowlabel = ((iph->flow_lbl[0] & 0xF) << 16) |
-				  (iph->flow_lbl[1] << 8) | iph->flow_lbl[2];
-	dst = ip6_route_output(net, NULL, &fl);
+	fl6.daddr = info->gw.in6;
+	fl6.flowlabel = ((iph->flow_lbl[0] & 0xF) << 16) |
+			   (iph->flow_lbl[1] << 8) | iph->flow_lbl[2];
+	dst = ip6_route_output(net, NULL, &fl6);
 	if (dst == NULL)
 		return false;
 
@@ -177,7 +178,7 @@ tee_tg6(struct sk_buff *skb, const struct xt_action_param *par)
 
 #ifdef WITH_CONNTRACK
 	nf_conntrack_put(skb->nfct);
-	skb->nfct     = &nf_conntrack_untracked.ct_general;
+	skb->nfct     = &nf_ct_untracked_get()->ct_general;
 	skb->nfctinfo = IP_CT_NEW;
 	nf_conntrack_get(skb->nfct);
 #endif

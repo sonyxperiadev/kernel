@@ -113,12 +113,16 @@ char *driver_name
 int (*load_firmware)(struct capi_ctr *ctrlr, capiloaddata *ldata)
 	(optional) pointer to a callback function for sending firmware and
 	configuration data to the device
+	The function may return before the operation has completed.
+	Completion must be signalled by a call to capi_ctr_ready().
 	Return value: 0 on success, error code on error
 	Called in process context.
 
 void (*reset_ctr)(struct capi_ctr *ctrlr)
-	(optional) pointer to a callback function for performing a reset on
-	the device, releasing all registered applications
+	(optional) pointer to a callback function for stopping the device,
+	releasing all registered applications
+	The function may return before the operation has completed.
+	Completion must be signalled by a call to capi_ctr_down().
 	Called in process context.
 
 void (*register_appl)(struct capi_ctr *ctrlr, u16 applid,
@@ -236,7 +240,7 @@ Functions capi_cmsg2message() and capi_message2cmsg() are provided to convert
 messages between their transport encoding described in the CAPI 2.0 standard
 and their _cmsg structure representation. Note that capi_cmsg2message() does
 not know or check the size of its destination buffer. The caller must make
-sure it is big enough to accomodate the resulting CAPI message.
+sure it is big enough to accommodate the resulting CAPI message.
 
 
 5. Lower Layer Interface Functions

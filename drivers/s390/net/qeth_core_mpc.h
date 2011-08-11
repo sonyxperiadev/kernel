@@ -80,14 +80,6 @@ enum qeth_tr_broadcast_modes {
 	QETH_TR_BROADCAST_LOCAL    = 1,
 };
 
-/* these values match CHECKSUM_* in include/linux/skbuff.h */
-enum qeth_checksum_types {
-	SW_CHECKSUMMING = 0, /* TODO: set to bit flag used in IPA Command */
-	HW_CHECKSUMMING = 1,
-	NO_CHECKSUMMING = 2,
-};
-#define QETH_CHECKSUM_DEFAULT SW_CHECKSUMMING
-
 /*
  * Routing stuff
  */
@@ -333,7 +325,7 @@ struct qeth_arp_query_data {
 	__u16 request_bits;
 	__u16 reply_bits;
 	__u32 no_entries;
-	char data;
+	char data; /* only for replies */
 } __attribute__((packed));
 
 /* used as parameter for arp_query reply */
@@ -456,6 +448,12 @@ enum qeth_diags_trace_cmds {
 	QETH_DIAGS_CMD_TRACE_QUERY	= 0x0010,
 };
 
+enum qeth_diags_trap_action {
+	QETH_DIAGS_TRAP_ARM	= 0x01,
+	QETH_DIAGS_TRAP_DISARM	= 0x02,
+	QETH_DIAGS_TRAP_CAPTURE = 0x04,
+};
+
 struct qeth_ipacmd_diagass {
 	__u32  host_tod2;
 	__u32:32;
@@ -465,7 +463,8 @@ struct qeth_ipacmd_diagass {
 	__u8   type;
 	__u8   action;
 	__u16  options;
-	__u32:32;
+	__u32  ext;
+	__u8   cdata[64];
 } __attribute__ ((packed));
 
 /* Header for each IPA command */
@@ -616,8 +615,9 @@ extern unsigned char IDX_ACTIVATE_WRITE[];
 #define QETH_IS_IDX_ACT_POS_REPLY(buffer) (((buffer)[0x08] & 3) == 2)
 #define QETH_IDX_REPLY_LEVEL(buffer) (buffer + 0x12)
 #define QETH_IDX_ACT_CAUSE_CODE(buffer) (buffer)[0x09]
-#define QETH_IDX_ACT_ERR_EXCL	0x19
-#define QETH_IDX_ACT_ERR_AUTH	0x1E
+#define QETH_IDX_ACT_ERR_EXCL		0x19
+#define QETH_IDX_ACT_ERR_AUTH		0x1E
+#define QETH_IDX_ACT_ERR_AUTH_USER	0x20
 
 #define PDU_ENCAPSULATION(buffer) \
 	(buffer + *(buffer + (*(buffer + 0x0b)) + \

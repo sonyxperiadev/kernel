@@ -31,7 +31,7 @@
  *		Jeff Garzik	:	PCI cleanups
  *		Tigran Aivazian	:	Restructured wdtpci_init_one() to handle
  *					failures
- *		Joel Becker 	:	Added WDIOC_GET/SETTIMEOUT
+ *		Joel Becker	:	Added WDIOC_GET/SETTIMEOUT
  *		Zwane Mwaikambo	:	Magic char closing, locking changes,
  *					cleanups
  *		Matt Domsch	:	nowayout module option
@@ -59,19 +59,6 @@
 #include "wd501p.h"
 
 #define PFX "wdt_pci: "
-
-/*
- * Until Access I/O gets their application for a PCI vendor ID approved,
- * I don't think that it's appropriate to move these constants into the
- * regular pci_ids.h file. -- JPN 2000/01/18
- */
-
-#ifndef PCI_VENDOR_ID_ACCESSIO
-#define PCI_VENDOR_ID_ACCESSIO 0x494f
-#endif
-#ifndef PCI_DEVICE_ID_WDG_CSM
-#define PCI_DEVICE_ID_WDG_CSM 0x22c0
-#endif
 
 /* We can only use 1 card due to the /dev/watchdog restriction */
 static int dev_count;
@@ -740,10 +727,10 @@ static void __devexit wdtpci_remove_one(struct pci_dev *pdev)
 }
 
 
-static struct pci_device_id wdtpci_pci_tbl[] = {
+static DEFINE_PCI_DEVICE_TABLE(wdtpci_pci_tbl) = {
 	{
 		.vendor	   = PCI_VENDOR_ID_ACCESSIO,
-		.device	   = PCI_DEVICE_ID_WDG_CSM,
+		.device	   = PCI_DEVICE_ID_ACCESSIO_WDG_CSM,
 		.subvendor = PCI_ANY_ID,
 		.subdevice = PCI_ANY_ID,
 	},
@@ -777,7 +764,7 @@ static void __exit wdtpci_cleanup(void)
 
 
 /**
- * 	wdtpci_init:
+ *	wdtpci_init:
  *
  *	Set up the WDT watchdog board. All we have to do is grab the
  *	resources we require and bitch if anyone beat us to them.

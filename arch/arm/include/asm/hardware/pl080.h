@@ -16,7 +16,7 @@
  * make it not entierly compatible with the PL080 specification from
  * ARM. When in doubt, check the Samsung documentation first.
  *
- * The Samsung defines are PL080S, and add an extra controll register,
+ * The Samsung defines are PL080S, and add an extra control register,
  * the ability to move more than 2^11 counts of data and some extra
  * OneNAND features.
 */
@@ -43,7 +43,7 @@
 
 /* Per channel configuration registers */
 
-#define PL008_Cx_STRIDE				(0x20)
+#define PL080_Cx_STRIDE				(0x20)
 #define PL080_Cx_BASE(x)			((0x100 + (x * 0x20)))
 #define PL080_Cx_SRC_ADDR(x)			((0x100 + (x * 0x20)))
 #define PL080_Cx_DST_ADDR(x)			((0x104 + (x * 0x20)))
@@ -68,6 +68,8 @@
 #define PL080_CONTROL_TC_IRQ_EN			(1 << 31)
 #define PL080_CONTROL_PROT_MASK			(0x7 << 28)
 #define PL080_CONTROL_PROT_SHIFT		(28)
+#define PL080_CONTROL_PROT_CACHE		(1 << 30)
+#define PL080_CONTROL_PROT_BUFF			(1 << 29)
 #define PL080_CONTROL_PROT_SYS			(1 << 28)
 #define PL080_CONTROL_DST_INCR			(1 << 27)
 #define PL080_CONTROL_SRC_INCR			(1 << 26)

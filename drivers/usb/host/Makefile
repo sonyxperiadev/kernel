@@ -2,17 +2,17 @@
 # Makefile for USB Host Controller Drivers
 #
 
-ifeq ($(CONFIG_USB_DEBUG),y)
-	EXTRA_CFLAGS		+= -DDEBUG
-endif
+ccflags-$(CONFIG_USB_DEBUG) := -DDEBUG
 
-isp1760-objs := isp1760-hcd.o isp1760-if.o
-fhci-objs := fhci-hcd.o fhci-hub.o fhci-q.o fhci-mem.o \
-	     fhci-tds.o fhci-sched.o
-ifeq ($(CONFIG_FHCI_DEBUG),y)
-fhci-objs += fhci-dbg.o
-endif
-xhci-hcd-objs := xhci.o xhci-mem.o xhci-pci.o xhci-ring.o xhci-hub.o xhci-dbg.o
+isp1760-y := isp1760-hcd.o isp1760-if.o
+
+fhci-y := fhci-hcd.o fhci-hub.o fhci-q.o
+fhci-y += fhci-mem.o fhci-tds.o fhci-sched.o
+
+fhci-$(CONFIG_FHCI_DEBUG) += fhci-dbg.o
+
+xhci-hcd-y := xhci.o xhci-mem.o xhci-pci.o
+xhci-hcd-y += xhci-ring.o xhci-hub.o xhci-dbg.o
 
 obj-$(CONFIG_USB_WHCI_HCD)	+= whci/
 

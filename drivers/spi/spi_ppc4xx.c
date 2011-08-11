@@ -388,10 +388,9 @@ static void free_gpios(struct ppc4xx_spi *hw)
 }
 
 /*
- * of_device layer stuff...
+ * platform_device layer stuff...
  */
-static int __init spi_ppc4xx_of_probe(struct of_device *op,
-				      const struct of_device_id *match)
+static int __init spi_ppc4xx_of_probe(struct platform_device *op)
 {
 	struct ppc4xx_spi *hw;
 	struct spi_master *master;
@@ -407,6 +406,7 @@ static int __init spi_ppc4xx_of_probe(struct of_device *op,
 	master = spi_alloc_master(dev, sizeof *hw);
 	if (master == NULL)
 		return -ENOMEM;
+	master->dev.of_node = np;
 	dev_set_drvdata(dev, master);
 	hw = spi_master_get_devdata(master);
 	hw->master = spi_master_get(master);
@@ -545,7 +545,6 @@ static int __init spi_ppc4xx_of_probe(struct of_device *op,
 	}
 
 	dev_info(dev, "driver initialized\n");
-	of_register_spi_devices(master, np);
 
 	return 0;
 
@@ -565,7 +564,7 @@ free_master:
 	return ret;
 }
 
-static int __exit spi_ppc4xx_of_remove(struct of_device *op)
+static int __exit spi_ppc4xx_of_remove(struct platform_device *op)
 {
 	struct spi_master *master = dev_get_drvdata(&op->dev);
 	struct ppc4xx_spi *hw = spi_master_get_devdata(master);
@@ -586,7 +585,7 @@ static const struct of_device_id spi_ppc4xx_of_match[] = {
 
 MODULE_DEVICE_TABLE(of, spi_ppc4xx_of_match);
 
-static struct of_platform_driver spi_ppc4xx_of_driver = {
+static struct platform_driver spi_ppc4xx_of_driver = {
 	.probe = spi_ppc4xx_of_probe,
 	.remove = __exit_p(spi_ppc4xx_of_remove),
 	.driver = {
@@ -598,13 +597,13 @@ static struct of_platform_driver spi_ppc4xx_of_driver = {
 
 static int __init spi_ppc4xx_init(void)
 {
-	return of_register_platform_driver(&spi_ppc4xx_of_driver);
+	return platform_driver_register(&spi_ppc4xx_of_driver);
 }
 module_init(spi_ppc4xx_init);
 
 static void __exit spi_ppc4xx_exit(void)
 {
-	of_unregister_platform_driver(&spi_ppc4xx_of_driver);
+	platform_driver_unregister(&spi_ppc4xx_of_driver);
 }
 module_exit(spi_ppc4xx_exit);
 

@@ -43,10 +43,11 @@
 
 #include <asm/fixmap.h>
 #include <asm/apb_timer.h>
+#include <asm/mrst.h>
 
 #define APBT_MASK			CLOCKSOURCE_MASK(32)
 #define APBT_SHIFT			22
-#define APBT_CLOCKEVENT_RATING		150
+#define APBT_CLOCKEVENT_RATING		110
 #define APBT_CLOCKSOURCE_RATING		250
 #define APBT_MIN_DELTA_USEC		200
 
@@ -82,8 +83,6 @@ struct apbt_dev {
 	unsigned int flags;
 	char name[10];
 };
-
-int disable_apbt_percpu __cpuinitdata;
 
 static DEFINE_PER_CPU(struct apbt_dev, cpu_apbt_dev);
 
@@ -178,7 +177,6 @@ static struct clocksource clocksource_apbt = {
 	.rating		= APBT_CLOCKSOURCE_RATING,
 	.read		= apbt_read_clocksource,
 	.mask		= APBT_MASK,
-	.shift		= APBT_SHIFT,
 	.flags		= CLOCK_SOURCE_IS_CONTINUOUS,
 	.resume		= apbt_restart_clocksource,
 };
@@ -193,29 +191,6 @@ static struct clock_event_device apbt_clockevent = {
 	.irq		= 0,
 	.rating		= APBT_CLOCKEVENT_RATING,
 };
-
-/*
- * if user does not want to use per CPU apb timer, just give it a lower rating
- * than local apic timer and skip the late per cpu timer init.
- */
-static inline int __init setup_x86_mrst_timer(char *arg)
-{
-	if (!arg)
-		return -EINVAL;
-
-	if (strcmp("apbt_only", arg) == 0)
-		disable_apbt_percpu = 0;
-	else if (strcmp("lapic_and_apbt", arg) == 0)
-		disable_apbt_percpu = 1;
-	else {
-		pr_warning("X86 MRST timer option %s not recognised"
-			   " use x86_mrst_timer=apbt_only or lapic_and_apbt\n",
-			   arg);
-		return -EINVAL;
-	}
-	return 0;
-}
-__setup("x86_mrst_timer=", setup_x86_mrst_timer);
 
 /*
  * start count down from 0xffff_ffff. this is done by toggling the enable bit
@@ -254,34 +229,6 @@ static void apbt_restart_clocksource(struct clocksource *cs)
 {
 	apbt_start_counter(phy_cs_timer_id);
 }
-
-/* Setup IRQ routing via IOAPIC */
-#ifdef CONFIG_SMP
-static void apbt_setup_irq(struct apbt_dev *adev)
-{
-	struct irq_chip *chip;
-	struct irq_desc *desc;
-
-	/* timer0 irq has been setup early */
-	if (adev->irq == 0)
-		return;
-	desc = irq_to_desc(adev->irq);
-	chip = get_irq_chip(adev->irq);
-	disable_irq(adev->irq);
-	desc->status |= IRQ_MOVE_PCNTXT;
-	irq_set_affinity(adev->irq, cpumask_of(adev->cpu));
-	/* APB timer irqs are set up as mp_irqs, timer is edge triggerred */
-	set_irq_chip_and_handler_name(adev->irq, chip, handle_edge_irq, "edge");
-	enable_irq(adev->irq);
-	if (system_state == SYSTEM_BOOTING)
-		if (request_irq(adev->irq, apbt_interrupt_handler,
-				IRQF_TIMER | IRQF_DISABLED | IRQF_NOBALANCING,
-				adev->name, adev)) {
-			printk(KERN_ERR "Failed request IRQ for APBT%d\n",
-			       adev->num);
-		}
-}
-#endif
 
 static void apbt_enable_int(int n)
 {
@@ -335,8 +282,8 @@ static int __init apbt_clockevent_register(void)
 	adev->num = smp_processor_id();
 	memcpy(&adev->evt, &apbt_clockevent, sizeof(struct clock_event_device));
 
-	if (disable_apbt_percpu) {
-		apbt_clockevent.rating = APBT_CLOCKEVENT_RATING - 100;
+	if (mrst_timer_options == MRST_TIMER_LAPIC_APBT) {
+		adev->evt.rating = APBT_CLOCKEVENT_RATING - 100;
 		global_clock_event = &adev->evt;
 		printk(KERN_DEBUG "%s clockevent registered as global\n",
 		       global_clock_event->name);
@@ -358,6 +305,30 @@ static int __init apbt_clockevent_register(void)
 }
 
 #ifdef CONFIG_SMP
+
+static void apbt_setup_irq(struct apbt_dev *adev)
+{
+	/* timer0 irq has been setup early */
+	if (adev->irq == 0)
+		return;
+
+	irq_modify_status(adev->irq, 0, IRQ_MOVE_PCNTXT);
+	irq_set_affinity(adev->irq, cpumask_of(adev->cpu));
+	/* APB timer irqs are set up as mp_irqs, timer is edge type */
+	__irq_set_handler(adev->irq, handle_edge_irq, 0, "edge");
+
+	if (system_state == SYSTEM_BOOTING) {
+		if (request_irq(adev->irq, apbt_interrupt_handler,
+					IRQF_TIMER | IRQF_DISABLED |
+					IRQF_NOBALANCING,
+					adev->name, adev)) {
+			printk(KERN_ERR "Failed request IRQ for APBT%d\n",
+			       adev->num);
+		}
+	} else
+		enable_irq(adev->irq);
+}
+
 /* Should be called with per cpu */
 void apbt_setup_secondary_clock(void)
 {
@@ -367,7 +338,7 @@ void apbt_setup_secondary_clock(void)
 
 	/* Don't register boot CPU clockevent */
 	cpu = smp_processor_id();
-	if (cpu == boot_cpu_id)
+	if (!cpu)
 		return;
 	/*
 	 * We need to calculate the scaled math multiplication factor for
@@ -413,23 +384,25 @@ static int apbt_cpuhp_notify(struct notifier_block *n,
 
 	switch (action & 0xf) {
 	case CPU_DEAD:
+		disable_irq(adev->irq);
 		apbt_disable_int(cpu);
-		if (system_state == SYSTEM_RUNNING)
+		if (system_state == SYSTEM_RUNNING) {
 			pr_debug("skipping APBT CPU %lu offline\n", cpu);
-		else if (adev) {
+		} else if (adev) {
 			pr_debug("APBT clockevent for cpu %lu offline\n", cpu);
 			free_irq(adev->irq, adev);
 		}
 		break;
 	default:
-		pr_debug(KERN_INFO "APBT notified %lu, no action\n", action);
+		pr_debug("APBT notified %lu, no action\n", action);
 	}
 	return NOTIFY_OK;
 }
 
 static __init int apbt_late_init(void)
 {
-	if (disable_apbt_percpu || !apb_timer_block_enabled)
+	if (mrst_timer_options == MRST_TIMER_LAPIC_APBT ||
+		!apb_timer_block_enabled)
 		return 0;
 	/* This notifier should be called after workqueue is ready */
 	hotcpu_notifier(apbt_cpuhp_notify, -20);
@@ -449,6 +422,8 @@ static void apbt_set_mode(enum clock_event_mode mode,
 	uint64_t delta;
 	int timer_num;
 	struct apbt_dev *adev = EVT_TO_APBT_DEV(evt);
+
+	BUG_ON(!apbt_virt_address);
 
 	timer_num = adev->num;
 	pr_debug("%s CPU %d timer %d mode=%d\n",
@@ -532,64 +507,12 @@ static int apbt_next_event(unsigned long delta,
 	return 0;
 }
 
-/*
- * APB timer clock is not in sync with pclk on Langwell, which translates to
- * unreliable read value caused by sampling error. the error does not add up
- * overtime and only happens when sampling a 0 as a 1 by mistake. so the time
- * would go backwards. the following code is trying to prevent time traveling
- * backwards. little bit paranoid.
- */
 static cycle_t apbt_read_clocksource(struct clocksource *cs)
 {
-	unsigned long t0, t1, t2;
-	static unsigned long last_read;
+	unsigned long current_count;
 
-bad_count:
-	t1 = apbt_readl(phy_cs_timer_id,
-			APBTMR_N_CURRENT_VALUE);
-	t2 = apbt_readl(phy_cs_timer_id,
-			APBTMR_N_CURRENT_VALUE);
-	if (unlikely(t1 < t2)) {
-		pr_debug("APBT: read current count error %lx:%lx:%lx\n",
-			 t1, t2, t2 - t1);
-		goto bad_count;
-	}
-	/*
-	 * check against cached last read, makes sure time does not go back.
-	 * it could be a normal rollover but we will do tripple check anyway
-	 */
-	if (unlikely(t2 > last_read)) {
-		/* check if we have a normal rollover */
-		unsigned long raw_intr_status =
-			apbt_readl_reg(APBTMRS_RAW_INT_STATUS);
-		/*
-		 * cs timer interrupt is masked but raw intr bit is set if
-		 * rollover occurs. then we read EOI reg to clear it.
-		 */
-		if (raw_intr_status & (1 << phy_cs_timer_id)) {
-			apbt_readl(phy_cs_timer_id, APBTMR_N_EOI);
-			goto out;
-		}
-		pr_debug("APB CS going back %lx:%lx:%lx ",
-			 t2, last_read, t2 - last_read);
-bad_count_x3:
-		pr_debug(KERN_INFO "tripple check enforced\n");
-		t0 = apbt_readl(phy_cs_timer_id,
-				APBTMR_N_CURRENT_VALUE);
-		udelay(1);
-		t1 = apbt_readl(phy_cs_timer_id,
-				APBTMR_N_CURRENT_VALUE);
-		udelay(1);
-		t2 = apbt_readl(phy_cs_timer_id,
-				APBTMR_N_CURRENT_VALUE);
-		if ((t2 > t1) || (t1 > t0)) {
-			printk(KERN_ERR "Error: APB CS tripple check failed\n");
-			goto bad_count_x3;
-		}
-	}
-out:
-	last_read = t2;
-	return (cycle_t)~t2;
+	current_count = apbt_readl(phy_cs_timer_id, APBTMR_N_CURRENT_VALUE);
+	return (cycle_t)~current_count;
 }
 
 static int apbt_clocksource_register(void)
@@ -619,14 +542,7 @@ static int apbt_clocksource_register(void)
 	if (t1 == apbt_read_clocksource(&clocksource_apbt))
 		panic("APBT counter not counting. APBT disabled\n");
 
-	/*
-	 * initialize and register APBT clocksource
-	 * convert that to ns/clock cycle
-	 * mult = (ns/c) * 2^APBT_SHIFT
-	 */
-	clocksource_apbt.mult = div_sc(MSEC_PER_SEC,
-				       (unsigned long) apbt_freq, APBT_SHIFT);
-	clocksource_register(&clocksource_apbt);
+	clocksource_register_khz(&clocksource_apbt, (u32)apbt_freq*1000);
 
 	return 0;
 }
@@ -676,7 +592,7 @@ void __init apbt_time_init(void)
 	}
 #ifdef CONFIG_SMP
 	/* kernel cmdline disable apb timer, so we will use lapic timers */
-	if (disable_apbt_percpu) {
+	if (mrst_timer_options == MRST_TIMER_LAPIC_APBT) {
 		printk(KERN_INFO "apbt: disabled per cpu timer\n");
 		return;
 	}

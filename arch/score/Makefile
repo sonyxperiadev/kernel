@@ -20,7 +20,8 @@ cflags-y += -G0 -pipe -mel -mnhwloop -D__SCOREEL__ \
 #
 KBUILD_AFLAGS += $(cflags-y)
 KBUILD_CFLAGS += $(cflags-y)
-MODFLAGS += -mlong-calls
+KBUILD_AFLAGS_MODULE += -mlong-calls
+KBUILD_CFLAGS_MODULE += -mlong-calls
 LDFLAGS += --oformat elf32-littlescore
 LDFLAGS_vmlinux	+= -G0 -static -nostdlib
 
@@ -39,5 +40,5 @@ archclean:
 define archhelp
 	echo '  vmlinux.bin          - Raw binary boot image'
 	echo
-	echo '  These will be default as apropriate for a configured platform.'
+	echo '  These will be default as appropriate for a configured platform.'
 endef

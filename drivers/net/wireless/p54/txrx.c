@@ -38,8 +38,8 @@ static void p54_dump_tx_queue(struct p54_common *priv)
 	u32 largest_hole = 0, free;
 
 	spin_lock_irqsave(&priv->tx_queue.lock, flags);
-	printk(KERN_DEBUG "%s: / --- tx queue dump (%d entries) ---\n",
-	       wiphy_name(priv->hw->wiphy), skb_queue_len(&priv->tx_queue));
+	wiphy_debug(priv->hw->wiphy, "/ --- tx queue dump (%d entries) ---\n",
+		    skb_queue_len(&priv->tx_queue));
 
 	prev_addr = priv->rx_start;
 	skb_queue_walk(&priv->tx_queue, skb) {
@@ -48,21 +48,23 @@ static void p54_dump_tx_queue(struct p54_common *priv)
 		hdr = (void *) skb->data;
 
 		free = range->start_addr - prev_addr;
-		printk(KERN_DEBUG "%s: | [%02d] => [skb:%p skb_len:0x%04x "
-		       "hdr:{flags:%02x len:%04x req_id:%04x type:%02x} "
-		       "mem:{start:%04x end:%04x, free:%d}]\n",
-		       wiphy_name(priv->hw->wiphy), i++, skb, skb->len,
-		       le16_to_cpu(hdr->flags), le16_to_cpu(hdr->len),
-		       le32_to_cpu(hdr->req_id), le16_to_cpu(hdr->type),
-		       range->start_addr, range->end_addr, free);
+		wiphy_debug(priv->hw->wiphy,
+			    "| [%02d] => [skb:%p skb_len:0x%04x "
+			    "hdr:{flags:%02x len:%04x req_id:%04x type:%02x} "
+			    "mem:{start:%04x end:%04x, free:%d}]\n",
+			    i++, skb, skb->len,
+			    le16_to_cpu(hdr->flags), le16_to_cpu(hdr->len),
+			    le32_to_cpu(hdr->req_id), le16_to_cpu(hdr->type),
+			    range->start_addr, range->end_addr, free);
 
 		prev_addr = range->end_addr;
 		largest_hole = max(largest_hole, free);
 	}
 	free = priv->rx_end - prev_addr;
 	largest_hole = max(largest_hole, free);
-	printk(KERN_DEBUG "%s: \\ --- [free: %d], largest free block: %d ---\n",
-	       wiphy_name(priv->hw->wiphy), free, largest_hole);
+	wiphy_debug(priv->hw->wiphy,
+		    "\\ --- [free: %d], largest free block: %d ---\n",
+		    free, largest_hole);
 	spin_unlock_irqrestore(&priv->tx_queue.lock, flags);
 }
 #endif /* P54_MM_DEBUG */
@@ -271,17 +273,15 @@ void p54_tx(struct p54_common *priv, struct sk_buff *skb)
 
 static int p54_rssi_to_dbm(struct p54_common *priv, int rssi)
 {
-	int band = priv->hw->conf.channel->band;
-
-	if (priv->rxhw != 5)
-		return ((rssi * priv->rssical_db[band].mul) / 64 +
-			 priv->rssical_db[band].add) / 4;
-	else
+	if (priv->rxhw != 5) {
+		return ((rssi * priv->cur_rssi->mul) / 64 +
+			 priv->cur_rssi->add) / 4;
+	} else {
 		/*
 		 * TODO: find the correct formula
 		 */
-		return ((rssi * priv->rssical_db[band].mul) / 64 +
-			 priv->rssical_db[band].add) / 4;
+		return rssi / 2 - 110;
+	}
 }
 
 /*
@@ -367,7 +367,7 @@ static int p54_rx_data(struct p54_common *priv, struct sk_buff *skb)
 	rx_status->mactime = ((u64)priv->tsf_high32) << 32 | tsf32;
 	priv->tsf_low32 = tsf32;
 
-	rx_status->flag |= RX_FLAG_TSFT;
+	rx_status->flag |= RX_FLAG_MACTIME_MPDU;
 
 	if (hdr->flags & cpu_to_le16(P54_HDR_FLAG_DATA_ALIGN))
 		header_len += hdr->align[0];
@@ -538,8 +538,7 @@ static void p54_rx_trap(struct p54_common *priv, struct sk_buff *skb)
 	case P54_TRAP_BEACON_TX:
 		break;
 	case P54_TRAP_RADAR:
-		printk(KERN_INFO "%s: radar (freq:%d MHz)\n",
-			wiphy_name(priv->hw->wiphy), freq);
+		wiphy_info(priv->hw->wiphy, "radar (freq:%d MHz)\n", freq);
 		break;
 	case P54_TRAP_NO_BEACON:
 		if (priv->vif)
@@ -558,8 +557,8 @@ static void p54_rx_trap(struct p54_common *priv, struct sk_buff *skb)
 		wiphy_rfkill_set_hw_state(priv->hw->wiphy, false);
 		break;
 	default:
-		printk(KERN_INFO "%s: received event:%x freq:%d\n",
-		       wiphy_name(priv->hw->wiphy), event, freq);
+		wiphy_info(priv->hw->wiphy, "received event:%x freq:%d\n",
+			   event, freq);
 		break;
 	}
 }
@@ -584,8 +583,9 @@ static int p54_rx_control(struct p54_common *priv, struct sk_buff *skb)
 		p54_rx_eeprom_readback(priv, skb);
 		break;
 	default:
-		printk(KERN_DEBUG "%s: not handling 0x%02x type control frame\n",
-		       wiphy_name(priv->hw->wiphy), le16_to_cpu(hdr->type));
+		wiphy_debug(priv->hw->wiphy,
+			    "not handling 0x%02x type control frame\n",
+			    le16_to_cpu(hdr->type));
 		break;
 	}
 	return 0;
@@ -616,7 +616,7 @@ static void p54_tx_80211_header(struct p54_common *priv, struct sk_buff *skb,
 	else
 		*burst_possible = false;
 
-	if (info->flags & IEEE80211_TX_CTL_ASSIGN_SEQ)
+	if (!(info->flags & IEEE80211_TX_CTL_ASSIGN_SEQ))
 		*flags |= P54_HDR_FLAG_DATA_OUT_SEQNR;
 
 	if (info->flags & IEEE80211_TX_CTL_PSPOLL_RESPONSE)
@@ -681,28 +681,29 @@ static void p54_tx_80211_header(struct p54_common *priv, struct sk_buff *skb,
 	}
 }
 
-static u8 p54_convert_algo(enum ieee80211_key_alg alg)
+static u8 p54_convert_algo(u32 cipher)
 {
-	switch (alg) {
-	case ALG_WEP:
+	switch (cipher) {
+	case WLAN_CIPHER_SUITE_WEP40:
+	case WLAN_CIPHER_SUITE_WEP104:
 		return P54_CRYPTO_WEP;
-	case ALG_TKIP:
+	case WLAN_CIPHER_SUITE_TKIP:
 		return P54_CRYPTO_TKIPMICHAEL;
-	case ALG_CCMP:
+	case WLAN_CIPHER_SUITE_CCMP:
 		return P54_CRYPTO_AESCCMP;
 	default:
 		return 0;
 	}
 }
 
-int p54_tx_80211(struct ieee80211_hw *dev, struct sk_buff *skb)
+void p54_tx_80211(struct ieee80211_hw *dev, struct sk_buff *skb)
 {
 	struct p54_common *priv = dev->priv;
 	struct ieee80211_tx_info *info = IEEE80211_SKB_CB(skb);
 	struct p54_tx_info *p54info;
 	struct p54_hdr *hdr;
 	struct p54_tx_data *txhdr;
-	unsigned int padding, len, extra_len;
+	unsigned int padding, len, extra_len = 0;
 	int i, j, ridx;
 	u16 hdr_flags = 0, aid = 0;
 	u8 rate, queue = 0, crypt_offset = 0;
@@ -716,12 +717,8 @@ int p54_tx_80211(struct ieee80211_hw *dev, struct sk_buff *skb)
 			    &hdr_flags, &aid, &burst_allowed);
 
 	if (p54_tx_qos_accounting_alloc(priv, skb, queue)) {
-		if (!IS_QOS_QUEUE(queue)) {
-			dev_kfree_skb_any(skb);
-			return NETDEV_TX_OK;
-		} else {
-			return NETDEV_TX_BUSY;
-		}
+		dev_kfree_skb_any(skb);
+		return;
 	}
 
 	padding = (unsigned long)(skb->data - (sizeof(*hdr) + sizeof(*txhdr))) & 3;
@@ -729,7 +726,7 @@ int p54_tx_80211(struct ieee80211_hw *dev, struct sk_buff *skb)
 
 	if (info->control.hw_key) {
 		crypt_offset = ieee80211_get_hdrlen_from_skb(skb);
-		if (info->control.hw_key->alg == ALG_TKIP) {
+		if (info->control.hw_key->cipher == WLAN_CIPHER_SUITE_TKIP) {
 			u8 *iv = (u8 *)(skb->data + crypt_offset);
 			/*
 			 * The firmware excepts that the IV has to have
@@ -825,10 +822,10 @@ int p54_tx_80211(struct ieee80211_hw *dev, struct sk_buff *skb)
 	hdr->tries = ridx;
 	txhdr->rts_rate_idx = 0;
 	if (info->control.hw_key) {
-		txhdr->key_type = p54_convert_algo(info->control.hw_key->alg);
+		txhdr->key_type = p54_convert_algo(info->control.hw_key->cipher);
 		txhdr->key_len = min((u8)16, info->control.hw_key->keylen);
 		memcpy(txhdr->key, info->control.hw_key->key, txhdr->key_len);
-		if (info->control.hw_key->alg == ALG_TKIP) {
+		if (info->control.hw_key->cipher == WLAN_CIPHER_SUITE_TKIP) {
 			/* reserve space for the MIC key */
 			len += 8;
 			memcpy(skb_put(skb, 8), &(info->control.hw_key->key
@@ -864,5 +861,4 @@ int p54_tx_80211(struct ieee80211_hw *dev, struct sk_buff *skb)
 	p54info->extra_len = extra_len;
 
 	p54_tx(priv, skb);
-	return NETDEV_TX_OK;
 }

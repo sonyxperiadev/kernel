@@ -22,7 +22,7 @@ typedef enum { STATUSTYPE_INFO, STATUSTYPE_TABLE } status_type_t;
 union map_info {
 	void *ptr;
 	unsigned long long ll;
-	unsigned flush_request;
+	unsigned target_request_nr;
 };
 
 /*
@@ -174,17 +174,35 @@ struct dm_target {
 	 * A number of zero-length barrier requests that will be submitted
 	 * to the target for the purpose of flushing cache.
 	 *
-	 * The request number will be placed in union map_info->flush_request.
+	 * The request number will be placed in union map_info->target_request_nr.
 	 * It is a responsibility of the target driver to remap these requests
 	 * to the real underlying devices.
 	 */
 	unsigned num_flush_requests;
+
+	/*
+	 * The number of discard requests that will be submitted to the
+	 * target.  map_info->request_nr is used just like num_flush_requests.
+	 */
+	unsigned num_discard_requests;
 
 	/* target specific data */
 	void *private;
 
 	/* Used to provide an error string from the ctr */
 	char *error;
+
+	/*
+	 * Set if this target needs to receive discards regardless of
+	 * whether or not its underlying devices have support.
+	 */
+	unsigned discards_supported:1;
+};
+
+/* Each target can link one of these into the table */
+struct dm_target_callbacks {
+	struct list_head list;
+	int (*congested_fn) (struct dm_target_callbacks *, int);
 };
 
 int dm_register_target(struct target_type *t);
@@ -263,14 +281,14 @@ int dm_table_add_target(struct dm_table *t, const char *type,
 			sector_t start, sector_t len, char *params);
 
 /*
+ * Target_ctr should call this if it needs to add any callbacks.
+ */
+void dm_table_add_target_callbacks(struct dm_table *t, struct dm_target_callbacks *cb);
+
+/*
  * Finally call this to make the table ready for use.
  */
 int dm_table_complete(struct dm_table *t);
-
-/*
- * Unplug all devices in a table.
- */
-void dm_table_unplug_all(struct dm_table *t);
 
 /*
  * Table reference counting.
@@ -391,6 +409,12 @@ void *dm_vcalloc(unsigned long nmemb, unsigned long elem_size);
 
 #define dm_array_too_big(fixed, obj, num) \
 	((num) > (UINT_MAX - (fixed)) / (obj))
+
+/*
+ * Sector offset taken relative to the start of the target instead of
+ * relative to the start of the device.
+ */
+#define dm_target_offset(ti, sector) ((sector) - (ti)->begin)
 
 static inline sector_t to_sector(unsigned long n)
 {

@@ -77,9 +77,9 @@ void rs690_pm_info(struct radeon_device *rdev)
 		switch (crev) {
 		case 1:
 			tmp.full = dfixed_const(100);
-			rdev->pm.igp_sideport_mclk.full = dfixed_const(info->info.ulBootUpMemoryClock);
+			rdev->pm.igp_sideport_mclk.full = dfixed_const(le32_to_cpu(info->info.ulBootUpMemoryClock));
 			rdev->pm.igp_sideport_mclk.full = dfixed_div(rdev->pm.igp_sideport_mclk, tmp);
-			if (info->info.usK8MemoryClock)
+			if (le16_to_cpu(info->info.usK8MemoryClock))
 				rdev->pm.igp_system_mclk.full = dfixed_const(le16_to_cpu(info->info.usK8MemoryClock));
 			else if (rdev->clock.default_mclk) {
 				rdev->pm.igp_system_mclk.full = dfixed_const(rdev->clock.default_mclk);
@@ -91,16 +91,16 @@ void rs690_pm_info(struct radeon_device *rdev)
 			break;
 		case 2:
 			tmp.full = dfixed_const(100);
-			rdev->pm.igp_sideport_mclk.full = dfixed_const(info->info_v2.ulBootUpSidePortClock);
+			rdev->pm.igp_sideport_mclk.full = dfixed_const(le32_to_cpu(info->info_v2.ulBootUpSidePortClock));
 			rdev->pm.igp_sideport_mclk.full = dfixed_div(rdev->pm.igp_sideport_mclk, tmp);
-			if (info->info_v2.ulBootUpUMAClock)
-				rdev->pm.igp_system_mclk.full = dfixed_const(info->info_v2.ulBootUpUMAClock);
+			if (le32_to_cpu(info->info_v2.ulBootUpUMAClock))
+				rdev->pm.igp_system_mclk.full = dfixed_const(le32_to_cpu(info->info_v2.ulBootUpUMAClock));
 			else if (rdev->clock.default_mclk)
 				rdev->pm.igp_system_mclk.full = dfixed_const(rdev->clock.default_mclk);
 			else
 				rdev->pm.igp_system_mclk.full = dfixed_const(66700);
 			rdev->pm.igp_system_mclk.full = dfixed_div(rdev->pm.igp_system_mclk, tmp);
-			rdev->pm.igp_ht_link_clk.full = dfixed_const(info->info_v2.ulHTLinkFreq);
+			rdev->pm.igp_ht_link_clk.full = dfixed_const(le32_to_cpu(info->info_v2.ulHTLinkFreq));
 			rdev->pm.igp_ht_link_clk.full = dfixed_div(rdev->pm.igp_ht_link_clk, tmp);
 			rdev->pm.igp_ht_link_width.full = dfixed_const(le16_to_cpu(info->info_v2.usMinHTLinkWidth));
 			break;
@@ -154,13 +154,13 @@ void rs690_mc_init(struct radeon_device *rdev)
 	rdev->mc.vram_width = 128;
 	rdev->mc.real_vram_size = RREG32(RADEON_CONFIG_MEMSIZE);
 	rdev->mc.mc_vram_size = rdev->mc.real_vram_size;
-	rdev->mc.aper_base = drm_get_resource_start(rdev->ddev, 0);
-	rdev->mc.aper_size = drm_get_resource_len(rdev->ddev, 0);
+	rdev->mc.aper_base = pci_resource_start(rdev->pdev, 0);
+	rdev->mc.aper_size = pci_resource_len(rdev->pdev, 0);
 	rdev->mc.visible_vram_size = rdev->mc.aper_size;
 	base = RREG32_MC(R_000100_MCCFG_FB_LOCATION);
 	base = G_000100_MC_FB_START(base) << 16;
-	rs690_pm_info(rdev);
 	rdev->mc.igp_sideport_enabled = radeon_atombios_sideport_present(rdev);
+	rs690_pm_info(rdev);
 	radeon_vram_location(rdev, &rdev->mc, base);
 	rdev->mc.gtt_base_align = rdev->mc.gtt_size - 1;
 	radeon_gtt_location(rdev, &rdev->mc);
@@ -615,23 +615,33 @@ static int rs690_startup(struct radeon_device *rdev)
 	r = rs400_gart_enable(rdev);
 	if (r)
 		return r;
+
+	/* allocate wb buffer */
+	r = radeon_wb_init(rdev);
+	if (r)
+		return r;
+
 	/* Enable IRQ */
 	rs600_irq_set(rdev);
 	rdev->config.r300.hdp_cntl = RREG32(RADEON_HOST_PATH_CNTL);
 	/* 1M ring buffer */
 	r = r100_cp_init(rdev, 1024 * 1024);
 	if (r) {
-		dev_err(rdev->dev, "failled initializing CP (%d).\n", r);
+		dev_err(rdev->dev, "failed initializing CP (%d).\n", r);
 		return r;
 	}
-	r = r100_wb_init(rdev);
-	if (r)
-		dev_err(rdev->dev, "failled initializing WB (%d).\n", r);
 	r = r100_ib_init(rdev);
 	if (r) {
-		dev_err(rdev->dev, "failled initializing IB (%d).\n", r);
+		dev_err(rdev->dev, "failed initializing IB (%d).\n", r);
 		return r;
 	}
+
+	r = r600_audio_init(rdev);
+	if (r) {
+		dev_err(rdev->dev, "failed initializing audio\n");
+		return r;
+	}
+
 	return 0;
 }
 
@@ -658,8 +668,9 @@ int rs690_resume(struct radeon_device *rdev)
 
 int rs690_suspend(struct radeon_device *rdev)
 {
+	r600_audio_fini(rdev);
 	r100_cp_disable(rdev);
-	r100_wb_disable(rdev);
+	radeon_wb_disable(rdev);
 	rs600_irq_disable(rdev);
 	rs400_gart_disable(rdev);
 	return 0;
@@ -667,8 +678,9 @@ int rs690_suspend(struct radeon_device *rdev)
 
 void rs690_fini(struct radeon_device *rdev)
 {
+	r600_audio_fini(rdev);
 	r100_cp_fini(rdev);
-	r100_wb_fini(rdev);
+	radeon_wb_fini(rdev);
 	r100_ib_fini(rdev);
 	radeon_gem_fini(rdev);
 	rs400_gart_fini(rdev);
@@ -690,6 +702,8 @@ int rs690_init(struct radeon_device *rdev)
 	radeon_scratch_init(rdev);
 	/* Initialize surface registers */
 	radeon_surface_init(rdev);
+	/* restore some register to sane defaults */
+	r100_restore_sanity(rdev);
 	/* TODO: disable VGA need to use VGA request */
 	/* BIOS*/
 	if (!radeon_get_bios(rdev)) {
@@ -741,7 +755,7 @@ int rs690_init(struct radeon_device *rdev)
 		/* Somethings want wront with the accel init stop accel */
 		dev_err(rdev->dev, "Disabling GPU acceleration\n");
 		r100_cp_fini(rdev);
-		r100_wb_fini(rdev);
+		radeon_wb_fini(rdev);
 		r100_ib_fini(rdev);
 		rs400_gart_fini(rdev);
 		radeon_irq_kms_fini(rdev);

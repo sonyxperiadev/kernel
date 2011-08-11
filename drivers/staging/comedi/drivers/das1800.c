@@ -531,7 +531,18 @@ static struct comedi_driver driver_das1800 = {
  * A convenient macro that defines init_module() and cleanup_module(),
  * as necessary.
  */
-COMEDI_INITCLEANUP(driver_das1800);
+static int __init driver_das1800_init_module(void)
+{
+	return comedi_driver_register(&driver_das1800);
+}
+
+static void __exit driver_das1800_cleanup_module(void)
+{
+	comedi_driver_unregister(&driver_das1800);
+}
+
+module_init(driver_das1800_init_module);
+module_exit(driver_das1800_cleanup_module);
 
 static int das1800_init_dma(struct comedi_device *dev, unsigned int dma0,
 			    unsigned int dma1)
@@ -1076,7 +1087,7 @@ static void das1800_flush_dma_channel(struct comedi_device *dev,
 	return;
 }
 
-/* flushes remaining data from board when external trigger has stopped aquisition
+/* flushes remaining data from board when external trigger has stopped acquisition
  * and we are using dma transfers */
 static void das1800_flush_dma(struct comedi_device *dev,
 			      struct comedi_subdevice *s)
@@ -1800,3 +1811,7 @@ static unsigned int suggest_transfer_size(struct comedi_cmd *cmd)
 
 	return size;
 }
+
+MODULE_AUTHOR("Comedi http://www.comedi.org");
+MODULE_DESCRIPTION("Comedi low-level driver");
+MODULE_LICENSE("GPL");

@@ -146,6 +146,8 @@
 DHD_SPINWAIT_SLEEP_INIT(sdioh_spinwait_sleep);
 extern int dhdcdc_set_ioctl(dhd_pub_t *dhd, int ifidx, uint cmd, void *buf, uint len);
 
+extern void bcmsdh_set_irq(int flag);
+
 #ifdef DHD_DEBUG
 /* Device console log buffer state */
 typedef struct dhd_console {
@@ -426,7 +428,6 @@ static void dhdsdio_sdtest_set(dhd_bus_t *bus, bool start);
 
 #ifdef DHD_DEBUG_TRAP
 static int dhdsdio_checkdied(dhd_bus_t *bus, uint8 *data, uint size);
-static int dhdsdio_mem_dump(dhd_bus_t *bus);
 #endif /* DHD_DEBUG_TRAP */
 static int dhdsdio_download_state(dhd_bus_t *bus, bool enter);
 
@@ -1847,11 +1848,6 @@ dhdsdio_checkdied(dhd_bus_t *bus, uint8 *data, uint size)
 		DHD_ERROR(("%s: %s\n", __FUNCTION__, strbuf.origbuf));
 	}
 
-	if (sdpcm_shared.flags & SDPCM_SHARED_TRAP) {
-			/* Mem dump to a file on device */
-			dhdsdio_mem_dump(bus);
-	}
-
 done:
 	if (mbuffer)
 		MFREE(bus->dhd->osh, mbuffer, msize);
@@ -1859,60 +1855,6 @@ done:
 		MFREE(bus->dhd->osh, str, maxstrlen);
 
 	return bcmerror;
-}
-
-static int
-dhdsdio_mem_dump(dhd_bus_t *bus)
-{
-	int ret = 0;
-	int size; /* Full mem size */
-	int start = 0; /* Start address */
-	int read_size = 0; /* Read size of each iteration */
-	uint8 *buf = NULL, *databuf = NULL;
-
-	/* Get full mem size */
-	size = bus->ramsize;
-	buf = MALLOC(bus->dhd->osh, size);
-	if (!buf) {
-		printf("%s: Out of memory (%d bytes)\n", __FUNCTION__, size);
-		return -1;
-	}
-
-	/* Read mem content */
-	printf("Dump dongle memory");
-	databuf = buf;
-	while (size)
-	{
-		read_size = MIN(MEMBLOCK, size);
-		if ((ret = dhdsdio_membytes(bus, FALSE, start, databuf, read_size)))
-		{
-			printf("%s: Error membytes %d\n", __FUNCTION__, ret);
-			if (buf) {
-				MFREE(bus->dhd->osh, buf, size);
-			}
-			return -1;
-		}
-		printf(".");
-
-		/* Decrement size and increment start address */
-		size -= read_size;
-		start += read_size;
-		databuf += read_size;
-	}
-	printf("Done\n");
-
-#ifdef DHD_DEBUG
-	/* free buf before return !!! */
-	if (write_to_file(bus->dhd, buf, bus->ramsize))
-	{
-		printf("%s: Error writing to files\n", __FUNCTION__);
-		return -1;
-	}
-	/* buf free handled in write_to_file, not here */
-#else
-	MFREE(bus->dhd->osh, buf, size);
-#endif
-	return 0;
 }
 #endif /* DHD_DEBUG_TRAP */
 
@@ -5814,7 +5756,9 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 			/* Expect app to have torn down any connection before calling */
 			/* Stop the bus, disable F2 */
 			dhd_bus_stop(bus, FALSE);
-
+#if defined(OOB_INTR_ONLY)
+			bcmsdh_set_irq(FALSE);
+#endif /* defined(OOB_INTR_ONLY) */
 			/* Clean tx/rx buffer pointers, detach from the dongle */
 			dhdsdio_release_dongle(bus, bus->dhd->osh, TRUE);
 
@@ -5850,6 +5794,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 					bcmerror = dhd_bus_init((dhd_pub_t *) bus->dhd, FALSE);
 					if (bcmerror == BCME_OK) {
 #if defined(OOB_INTR_ONLY)
+						bcmsdh_set_irq(TRUE);
 						dhd_enable_oob_intr(bus, TRUE);
 #endif /* defined(OOB_INTR_ONLY) */
 						bus->dhd->dongle_reset = FALSE;

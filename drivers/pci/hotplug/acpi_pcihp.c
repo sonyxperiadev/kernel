@@ -338,9 +338,7 @@ int acpi_get_hp_hw_control_from_firmware(struct pci_dev *pdev, u32 flags)
 	acpi_handle chandle, handle;
 	struct acpi_buffer string = { ACPI_ALLOCATE_BUFFER, NULL };
 
-	flags &= (OSC_PCI_EXPRESS_NATIVE_HP_CONTROL |
-		  OSC_SHPC_NATIVE_HP_CONTROL |
-		  OSC_PCI_EXPRESS_CAP_STRUCTURE_CONTROL);
+	flags &= OSC_SHPC_NATIVE_HP_CONTROL;
 	if (!flags) {
 		err("Invalid flags %u specified!\n", flags);
 		return -EINVAL;
@@ -353,14 +351,14 @@ int acpi_get_hp_hw_control_from_firmware(struct pci_dev *pdev, u32 flags)
 	 * To handle different BIOS behavior, we look for _OSC on a root
 	 * bridge preferentially (according to PCI fw spec). Later for
 	 * OSHP within the scope of the hotplug controller and its parents,
-	 * upto the host bridge under which this controller exists.
+	 * up to the host bridge under which this controller exists.
 	 */
 	handle = acpi_find_root_bridge_handle(pdev);
 	if (handle) {
 		acpi_get_name(handle, ACPI_FULL_PATHNAME, &string);
 		dbg("Trying to get hotplug control for %s\n",
 				(char *)string.pointer);
-		status = acpi_pci_osc_control_set(handle, flags);
+		status = acpi_pci_osc_control_set(handle, &flags, flags);
 		if (ACPI_SUCCESS(status))
 			goto got_one;
 		if (status == AE_SUPPORT)

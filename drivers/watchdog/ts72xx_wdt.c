@@ -68,7 +68,7 @@ struct platform_device *ts72xx_wdt_pdev;
  * to control register):
  *	value	description
  *	-------------------------
- * 	0x00	watchdog disabled
+ *	0x00	watchdog disabled
  *	0x01	250ms
  *	0x02	500ms
  *	0x03	1s
@@ -448,6 +448,9 @@ static __devinit int ts72xx_wdt_probe(struct platform_device *pdev)
 	ts72xx_wdt_pdev = pdev;
 	wdt->pdev = pdev;
 	mutex_init(&wdt->lock);
+
+	/* make sure that the watchdog is disabled */
+	ts72xx_wdt_stop(wdt);
 
 	error = misc_register(&ts72xx_wdt_miscdev);
 	if (error) {

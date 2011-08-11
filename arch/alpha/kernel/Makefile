@@ -3,8 +3,8 @@
 #
 
 extra-y		:= head.o vmlinux.lds
-EXTRA_AFLAGS	:= $(KBUILD_CFLAGS)
-EXTRA_CFLAGS	:= -Werror -Wno-sign-compare
+asflags-y	:= $(KBUILD_CFLAGS)
+ccflags-y	:= -Wno-sign-compare
 
 obj-y    := entry.o traps.o process.o init_task.o osf_sys.o irq.o \
 	    irq_alpha.o signal.o setup.o ptrace.o time.o \
@@ -15,6 +15,7 @@ obj-$(CONFIG_SMP)	+= smp.o
 obj-$(CONFIG_PCI)	+= pci.o pci_iommu.o pci-sysfs.o
 obj-$(CONFIG_SRM_ENV)	+= srm_env.o
 obj-$(CONFIG_MODULES)	+= module.o
+obj-$(CONFIG_PERF_EVENTS) += perf_event.o
 
 ifdef CONFIG_ALPHA_GENERIC
 

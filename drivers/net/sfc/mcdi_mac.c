@@ -1,6 +1,6 @@
 /****************************************************************************
  * Driver for Solarflare Solarstorm network controllers and boards
- * Copyright 2009 Solarflare Communications Inc.
+ * Copyright 2009-2010 Solarflare Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published
@@ -69,8 +69,8 @@ static int efx_mcdi_get_mac_faults(struct efx_nic *efx, u32 *faults)
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n",
-		__func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n",
+		  __func__, rc);
 	return rc;
 }
 
@@ -110,8 +110,8 @@ int efx_mcdi_mac_stats(struct efx_nic *efx, dma_addr_t dma_addr,
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: %s failed rc=%d\n",
-		__func__, enable ? "enable" : "disable", rc);
+	netif_err(efx, hw, efx->net_dev, "%s: %s failed rc=%d\n",
+		  __func__, enable ? "enable" : "disable", rc);
 	return rc;
 }
 
@@ -138,7 +138,7 @@ static bool efx_mcdi_mac_check_fault(struct efx_nic *efx)
 }
 
 
-struct efx_mac_operations efx_mcdi_mac_operations = {
+const struct efx_mac_operations efx_mcdi_mac_operations = {
 	.reconfigure	= efx_mcdi_mac_reconfigure,
 	.update_stats	= efx_port_dummy_op_void,
 	.check_fault 	= efx_mcdi_mac_check_fault,

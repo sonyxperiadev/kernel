@@ -11,7 +11,7 @@
  * published by the Free Software Foundation.
  *
  * ChangeLog:
- *  2006 Pavel Machek <pavel@suse.cz>
+ *  2006 Pavel Machek <pavel@ucw.cz>
  *  03-06-2004 John Lenz <lenz@cs.wisc.edu>
  *  06-04-2002 Chris Larson <kergoth@digitalnemesis.net>
  *  04-16-2001 Lineo Japan,Inc. ...
@@ -241,6 +241,9 @@ static struct locomo_platform_data locomo_info = {
 struct platform_device collie_locomo_device = {
 	.name		= "locomo",
 	.id		= 0,
+	.dev		= {
+		.platform_data	= &locomo_info,
+	},
 	.num_resources	= ARRAY_SIZE(locomo_resources),
 	.resource	= locomo_resources,
 };
@@ -379,8 +382,6 @@ static void __init collie_map_io(void)
 }
 
 MACHINE_START(COLLIE, "Sharp-Collie")
-	.phys_io	= 0x80000000,
-	.io_pg_offst	= ((0xf8000000) >> 18) & 0xfffc,
 	.map_io		= collie_map_io,
 	.init_irq	= sa1100_init_irq,
 	.timer		= &sa1100_timer,

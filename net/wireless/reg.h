@@ -8,9 +8,10 @@ bool reg_is_valid_request(const char *alpha2);
 
 int regulatory_hint_user(const char *alpha2);
 
+int reg_device_uevent(struct device *dev, struct kobj_uevent_env *env);
 void reg_device_remove(struct wiphy *wiphy);
 
-int regulatory_init(void);
+int __init regulatory_init(void);
 void regulatory_exit(void);
 
 int set_regdom(const struct ieee80211_regdomain *rd);

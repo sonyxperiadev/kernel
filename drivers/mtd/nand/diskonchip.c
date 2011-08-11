@@ -29,7 +29,6 @@
 #include <linux/mtd/mtd.h>
 #include <linux/mtd/nand.h>
 #include <linux/mtd/doc2000.h>
-#include <linux/mtd/compatmac.h>
 #include <linux/mtd/partitions.h>
 #include <linux/mtd/inftl.h>
 
@@ -138,7 +137,7 @@ static struct rs_control *rs_decoder;
  *
  * Fabrice Bellard figured this out in the old docecc code. I added
  * some comments, improved a minor bit and converted it to make use
- * of the generic Reed-Solomon libary. tglx
+ * of the generic Reed-Solomon library. tglx
  */
 static int doc_ecc_decode(struct rs_control *rs, uint8_t *data, uint8_t *ecc)
 {
@@ -146,6 +145,7 @@ static int doc_ecc_decode(struct rs_control *rs, uint8_t *data, uint8_t *ecc)
 	uint8_t parity;
 	uint16_t ds[4], s[5], tmp, errval[8], syn[4];
 
+	memset(syn, 0, sizeof(syn));
 	/* Convert the ecc bytes into words */
 	ds[0] = ((ecc[4] & 0xff) >> 0) | ((ecc[5] & 0x03) << 8);
 	ds[1] = ((ecc[5] & 0xfc) >> 2) | ((ecc[2] & 0x0f) << 6);
@@ -169,9 +169,9 @@ static int doc_ecc_decode(struct rs_control *rs, uint8_t *data, uint8_t *ecc)
 			s[i] ^= rs->alpha_to[rs_modnn(rs, tmp + (FCR + i) * j)];
 	}
 
-	/* Calc s[i] = s[i] / alpha^(v + i) */
+	/* Calc syn[i] = s[i] / alpha^(v + i) */
 	for (i = 0; i < NROOTS; i++) {
-		if (syn[i])
+		if (s[i])
 			syn[i] = rs_modnn(rs, rs->index_of[s[i]] + (NN - FCR - i));
 	}
 	/* Call the decoder library */
@@ -400,7 +400,7 @@ static uint16_t __init doc200x_ident_chip(struct mtd_info *mtd, int nr)
 	doc200x_hwcontrol(mtd, 0, NAND_CTRL_ALE | NAND_CTRL_CHANGE);
 	doc200x_hwcontrol(mtd, NAND_CMD_NONE, NAND_NCE | NAND_CTRL_CHANGE);
 
-	/* We cant' use dev_ready here, but at least we wait for the
+	/* We can't use dev_ready here, but at least we wait for the
 	 * command to complete
 	 */
 	udelay(50);
@@ -986,7 +986,7 @@ static int doc200x_correct_data(struct mtd_info *mtd, u_char *dat,
 		dummy = ReadDOC(docptr, ECCConf);
 	}
 
-	/* Error occured ? */
+	/* Error occurred ? */
 	if (dummy & 0x80) {
 		for (i = 0; i < 6; i++) {
 			if (DoC_is_MillenniumPlus(doc))
@@ -1160,7 +1160,7 @@ static inline int __init nftl_partscan(struct mtd_info *mtd, struct mtd_partitio
 	/* NOTE: The lines below modify internal variables of the NAND and MTD
 	   layers; variables with have already been configured by nand_scan.
 	   Unfortunately, we didn't know before this point what these values
-	   should be.  Thus, this code is somewhat dependant on the exact
+	   should be.  Thus, this code is somewhat dependent on the exact
 	   implementation of the NAND layer.  */
 	if (mh->UnitSizeFactor != 0xff) {
 		this->bbt_erase_shift += (0xff - mh->UnitSizeFactor);
@@ -1360,11 +1360,9 @@ static int __init nftl_scan_bbt(struct mtd_info *mtd)
 	   At least as nand_bbt.c is currently written. */
 	if ((ret = nand_scan_bbt(mtd, NULL)))
 		return ret;
-	add_mtd_device(mtd);
-#ifdef CONFIG_MTD_PARTITIONS
+	mtd_device_register(mtd, NULL, 0);
 	if (!no_autopart)
-		add_mtd_partitions(mtd, parts, numparts);
-#endif
+		mtd_device_register(mtd, parts, numparts);
 	return 0;
 }
 
@@ -1419,11 +1417,9 @@ static int __init inftl_scan_bbt(struct mtd_info *mtd)
 	   autopartitioning, but I want to give it more thought. */
 	if (!numparts)
 		return -EIO;
-	add_mtd_device(mtd);
-#ifdef CONFIG_MTD_PARTITIONS
+	mtd_device_register(mtd, NULL, 0);
 	if (!no_autopart)
-		add_mtd_partitions(mtd, parts, numparts);
-#endif
+		mtd_device_register(mtd, parts, numparts);
 	return 0;
 }
 
@@ -1678,9 +1674,9 @@ static int __init doc_probe(unsigned long physadr)
 		/* DBB note: i believe nand_release is necessary here, as
 		   buffers may have been allocated in nand_base.  Check with
 		   Thomas. FIX ME! */
-		/* nand_release will call del_mtd_device, but we haven't yet
-		   added it.  This is handled without incident by
-		   del_mtd_device, as far as I can tell. */
+		/* nand_release will call mtd_device_unregister, but we
+		   haven't yet added it.  This is handled without incident by
+		   mtd_device_unregister, as far as I can tell. */
 		nand_release(mtd);
 		kfree(mtd);
 		goto fail;

@@ -19,6 +19,7 @@
 #define PIN_BASE		NR_AIC_IRQS
 
 #define MAX_GPIO_BANKS		5
+#define NR_BUILTIN_GPIO		(PIN_BASE + (MAX_GPIO_BANKS * 32))
 
 /* these pin numbers double as IRQ numbers, like AT91xxx_ID_* values */
 
@@ -207,7 +208,7 @@ extern void at91_gpio_resume(void);
 
 /*-------------------------------------------------------------------------*/
 
-/* wrappers for "new style" GPIO calls. the old AT91-specfic ones should
+/* wrappers for "new style" GPIO calls. the old AT91-specific ones should
  * eventually be removed (along with this errno.h inclusion), and the
  * gpio request/free calls should probably be implemented.
  */
@@ -219,15 +220,8 @@ extern void at91_gpio_resume(void);
 #define gpio_set_value	__gpio_set_value
 #define gpio_cansleep	__gpio_cansleep
 
-static inline int gpio_to_irq(unsigned gpio)
-{
-	return gpio;
-}
-
-static inline int irq_to_gpio(unsigned irq)
-{
-	return irq;
-}
+#define gpio_to_irq(gpio) (gpio)
+#define irq_to_gpio(irq)  (irq)
 
 #endif	/* __ASSEMBLY__ */
 

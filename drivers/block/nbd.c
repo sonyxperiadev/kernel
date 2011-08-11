@@ -4,7 +4,7 @@
  * Note that you can not swap over this thing, yet. Seems to work but
  * deadlocks sometimes - you can not swap over TCP in general.
  * 
- * Copyright 1997-2000, 2008 Pavel Machek <pavel@suse.cz>
+ * Copyright 1997-2000, 2008 Pavel Machek <pavel@ucw.cz>
  * Parts copyright 2001 Steven Whitehouse <steve@chygwyn.com>
  *
  * This file is released under GPLv2 or later.
@@ -24,6 +24,7 @@
 #include <linux/errno.h>
 #include <linux/file.h>
 #include <linux/ioctl.h>
+#include <linux/mutex.h>
 #include <linux/compiler.h>
 #include <linux/err.h>
 #include <linux/kernel.h>
@@ -191,7 +192,8 @@ static int sock_xmit(struct nbd_device *lo, int send, void *buf, int size,
 			if (lo->xmit_timeout)
 				del_timer_sync(&ti);
 		} else
-			result = kernel_recvmsg(sock, &msg, &iov, 1, size, 0);
+			result = kernel_recvmsg(sock, &msg, &iov, 1, size,
+						msg.msg_flags);
 
 		if (signal_pending(current)) {
 			siginfo_t info;
@@ -448,7 +450,7 @@ static void nbd_clear_que(struct nbd_device *lo)
 
 static void nbd_handle_req(struct nbd_device *lo, struct request *req)
 {
-	if (!blk_fs_request(req))
+	if (req->cmd_type != REQ_TYPE_FS)
 		goto error_out;
 
 	nbd_cmd(req) = NBD_CMD_READ;
@@ -726,7 +728,7 @@ static int nbd_ioctl(struct block_device *bdev, fmode_t mode,
 static const struct block_device_operations nbd_fops =
 {
 	.owner =	THIS_MODULE,
-	.locked_ioctl =	nbd_ioctl,
+	.ioctl =	nbd_ioctl,
 };
 
 /*
@@ -752,8 +754,25 @@ static int __init nbd_init(void)
 		return -ENOMEM;
 
 	part_shift = 0;
-	if (max_part > 0)
+	if (max_part > 0) {
 		part_shift = fls(max_part);
+
+		/*
+		 * Adjust max_part according to part_shift as it is exported
+		 * to user space so that user can know the max number of
+		 * partition kernel should be able to manage.
+		 *
+		 * Note that -1 is required because partition 0 is reserved
+		 * for the whole disk.
+		 */
+		max_part = (1UL << part_shift) - 1;
+	}
+
+	if ((1UL << part_shift) > DISK_MAX_PARTS)
+		return -EINVAL;
+
+	if (nbds_max > 1UL << (MINORBITS - part_shift))
+		return -EINVAL;
 
 	for (i = 0; i < nbds_max; i++) {
 		struct gendisk *disk = alloc_disk(1 << part_shift);

@@ -11,16 +11,19 @@
 
 #include <asm/pgalloc.h>
 #include <asm/uaccess.h>
+#include <asm/tlbflush.h>
 #include <asm-generic/mm_hooks.h>
 
 static inline int init_new_context(struct task_struct *tsk,
 				   struct mm_struct *mm)
 {
+	atomic_set(&mm->context.attach_count, 0);
+	mm->context.flush_mm = 0;
 	mm->context.asce_bits = _ASCE_TABLE_LENGTH | _ASCE_USER_BITS;
 #ifdef CONFIG_64BIT
 	mm->context.asce_bits |= _ASCE_TYPE_REGION3;
 #endif
-	if (current->mm->context.alloc_pgste) {
+	if (current->mm && current->mm->context.alloc_pgste) {
 		/*
 		 * alloc_pgste indicates, that any NEW context will be created
 		 * with extended page tables. The old context is unchanged. The
@@ -32,11 +35,9 @@ static inline int init_new_context(struct task_struct *tsk,
 		 * and if has_pgste is set, it will create extended page
 		 * tables.
 		 */
-		mm->context.noexec = 0;
 		mm->context.has_pgste = 1;
 		mm->context.alloc_pgste = 1;
 	} else {
-		mm->context.noexec = (user_mode == SECONDARY_SPACE_MODE);
 		mm->context.has_pgste = 0;
 		mm->context.alloc_pgste = 0;
 	}
@@ -60,10 +61,8 @@ static inline void update_mm(struct mm_struct *mm, struct task_struct *tsk)
 	S390_lowcore.user_asce = mm->context.asce_bits | __pa(pgd);
 	if (user_mode != HOME_SPACE_MODE) {
 		/* Load primary space page table origin. */
-		pgd = mm->context.noexec ? get_shadow_table(pgd) : pgd;
-		S390_lowcore.user_exec_asce = mm->context.asce_bits | __pa(pgd);
 		asm volatile(LCTL_OPCODE" 1,1,%0\n"
-			     : : "m" (S390_lowcore.user_exec_asce) );
+			     : : "m" (S390_lowcore.user_asce) );
 	} else
 		/* Load home space page table origin. */
 		asm volatile(LCTL_OPCODE" 13,13,%0"
@@ -76,6 +75,12 @@ static inline void switch_mm(struct mm_struct *prev, struct mm_struct *next,
 {
 	cpumask_set_cpu(smp_processor_id(), mm_cpumask(next));
 	update_mm(next, tsk);
+	atomic_dec(&prev->context.attach_count);
+	WARN_ON(atomic_read(&prev->context.attach_count) < 0);
+	atomic_inc(&next->context.attach_count);
+	/* Check for TLBs not flushed yet */
+	if (next->context.flush_mm)
+		__tlb_flush_mm(next);
 }
 
 #define enter_lazy_tlb(mm,tsk)	do { } while (0)

@@ -48,6 +48,7 @@ struct sockaddr_ll {
 #define PACKET_LOSS			14
 #define PACKET_VNET_HDR			15
 #define PACKET_TX_TIMESTAMP		16
+#define PACKET_TIMESTAMP		17
 
 struct tpacket_stats {
 	unsigned int	tp_packets;
@@ -61,6 +62,7 @@ struct tpacket_auxdata {
 	__u16		tp_mac;
 	__u16		tp_net;
 	__u16		tp_vlan_tci;
+	__u16		tp_padding;
 };
 
 /* Rx ring - header status */
@@ -69,6 +71,7 @@ struct tpacket_auxdata {
 #define TP_STATUS_COPY		0x2
 #define TP_STATUS_LOSING	0x4
 #define TP_STATUS_CSUMNOTREADY	0x8
+#define TP_STATUS_VLAN_VALID   0x10 /* auxdata has valid tp_vlan_tci */
 
 /* Tx ring - header status */
 #define TP_STATUS_AVAILABLE	0x0
@@ -99,6 +102,7 @@ struct tpacket2_hdr {
 	__u32		tp_sec;
 	__u32		tp_nsec;
 	__u16		tp_vlan_tci;
+	__u16		tp_padding;
 };
 
 #define TPACKET2_HDRLEN		(TPACKET_ALIGN(sizeof(struct tpacket2_hdr)) + sizeof(struct sockaddr_ll))

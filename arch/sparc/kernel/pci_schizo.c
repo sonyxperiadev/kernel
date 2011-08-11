@@ -264,7 +264,7 @@ static void schizo_check_iommu_error_pbm(struct pci_pbm_info *pbm,
 		default:
 			type_string = "ECC Error";
 			break;
-		};
+		}
 		printk("%s: IOMMU Error, type[%s]\n",
 		       pbm->name, type_string);
 
@@ -319,7 +319,7 @@ static void schizo_check_iommu_error_pbm(struct pci_pbm_info *pbm,
 			default:
 				type_string = "ECC Error";
 				break;
-			};
+			}
 			printk("%s: IOMMU TAG(%d)[error(%s) ctx(%x) wr(%d) str(%d) "
 			       "sz(%dK) vpg(%08lx)]\n",
 			       pbm->name, i, type_string,
@@ -844,7 +844,7 @@ static int pbm_routes_this_ino(struct pci_pbm_info *pbm, u32 ino)
  */
 static void tomatillo_register_error_handlers(struct pci_pbm_info *pbm)
 {
-	struct of_device *op = of_find_device_by_node(pbm->op->dev.of_node);
+	struct platform_device *op = of_find_device_by_node(pbm->op->dev.of_node);
 	u64 tmp, err_mask, err_no_mask;
 	int err;
 
@@ -857,14 +857,14 @@ static void tomatillo_register_error_handlers(struct pci_pbm_info *pbm)
 	 */
 
 	if (pbm_routes_this_ino(pbm, SCHIZO_UE_INO)) {
-		err = request_irq(op->irqs[1], schizo_ue_intr, 0,
+		err = request_irq(op->archdata.irqs[1], schizo_ue_intr, 0,
 				  "TOMATILLO_UE", pbm);
 		if (err)
 			printk(KERN_WARNING "%s: Could not register UE, "
 			       "err=%d\n", pbm->name, err);
 	}
 	if (pbm_routes_this_ino(pbm, SCHIZO_CE_INO)) {
-		err = request_irq(op->irqs[2], schizo_ce_intr, 0,
+		err = request_irq(op->archdata.irqs[2], schizo_ce_intr, 0,
 				  "TOMATILLO_CE", pbm);
 		if (err)
 			printk(KERN_WARNING "%s: Could not register CE, "
@@ -872,10 +872,10 @@ static void tomatillo_register_error_handlers(struct pci_pbm_info *pbm)
 	}
 	err = 0;
 	if (pbm_routes_this_ino(pbm, SCHIZO_PCIERR_A_INO)) {
-		err = request_irq(op->irqs[0], schizo_pcierr_intr, 0,
+		err = request_irq(op->archdata.irqs[0], schizo_pcierr_intr, 0,
 				  "TOMATILLO_PCIERR", pbm);
 	} else if (pbm_routes_this_ino(pbm, SCHIZO_PCIERR_B_INO)) {
-		err = request_irq(op->irqs[0], schizo_pcierr_intr, 0,
+		err = request_irq(op->archdata.irqs[0], schizo_pcierr_intr, 0,
 				  "TOMATILLO_PCIERR", pbm);
 	}
 	if (err)
@@ -883,7 +883,7 @@ static void tomatillo_register_error_handlers(struct pci_pbm_info *pbm)
 		       "err=%d\n", pbm->name, err);
 
 	if (pbm_routes_this_ino(pbm, SCHIZO_SERR_INO)) {
-		err = request_irq(op->irqs[3], schizo_safarierr_intr, 0,
+		err = request_irq(op->archdata.irqs[3], schizo_safarierr_intr, 0,
 				  "TOMATILLO_SERR", pbm);
 		if (err)
 			printk(KERN_WARNING "%s: Could not register SERR, "
@@ -939,7 +939,7 @@ static void tomatillo_register_error_handlers(struct pci_pbm_info *pbm)
 
 static void schizo_register_error_handlers(struct pci_pbm_info *pbm)
 {
-	struct of_device *op = of_find_device_by_node(pbm->op->dev.of_node);
+	struct platform_device *op = of_find_device_by_node(pbm->op->dev.of_node);
 	u64 tmp, err_mask, err_no_mask;
 	int err;
 
@@ -952,14 +952,14 @@ static void schizo_register_error_handlers(struct pci_pbm_info *pbm)
 	 */
 
 	if (pbm_routes_this_ino(pbm, SCHIZO_UE_INO)) {
-		err = request_irq(op->irqs[1], schizo_ue_intr, 0,
+		err = request_irq(op->archdata.irqs[1], schizo_ue_intr, 0,
 				  "SCHIZO_UE", pbm);
 		if (err)
 			printk(KERN_WARNING "%s: Could not register UE, "
 			       "err=%d\n", pbm->name, err);
 	}
 	if (pbm_routes_this_ino(pbm, SCHIZO_CE_INO)) {
-		err = request_irq(op->irqs[2], schizo_ce_intr, 0,
+		err = request_irq(op->archdata.irqs[2], schizo_ce_intr, 0,
 				  "SCHIZO_CE", pbm);
 		if (err)
 			printk(KERN_WARNING "%s: Could not register CE, "
@@ -967,10 +967,10 @@ static void schizo_register_error_handlers(struct pci_pbm_info *pbm)
 	}
 	err = 0;
 	if (pbm_routes_this_ino(pbm, SCHIZO_PCIERR_A_INO)) {
-		err = request_irq(op->irqs[0], schizo_pcierr_intr, 0,
+		err = request_irq(op->archdata.irqs[0], schizo_pcierr_intr, 0,
 				  "SCHIZO_PCIERR", pbm);
 	} else if (pbm_routes_this_ino(pbm, SCHIZO_PCIERR_B_INO)) {
-		err = request_irq(op->irqs[0], schizo_pcierr_intr, 0,
+		err = request_irq(op->archdata.irqs[0], schizo_pcierr_intr, 0,
 				  "SCHIZO_PCIERR", pbm);
 	}
 	if (err)
@@ -978,7 +978,7 @@ static void schizo_register_error_handlers(struct pci_pbm_info *pbm)
 		       "err=%d\n", pbm->name, err);
 
 	if (pbm_routes_this_ino(pbm, SCHIZO_SERR_INO)) {
-		err = request_irq(op->irqs[3], schizo_safarierr_intr, 0,
+		err = request_irq(op->archdata.irqs[3], schizo_safarierr_intr, 0,
 				  "SCHIZO_SERR", pbm);
 		if (err)
 			printk(KERN_WARNING "%s: Could not register SERR, "
@@ -1307,13 +1307,13 @@ static void schizo_pbm_hw_init(struct pci_pbm_info *pbm)
 }
 
 static int __devinit schizo_pbm_init(struct pci_pbm_info *pbm,
-				     struct of_device *op, u32 portid,
+				     struct platform_device *op, u32 portid,
 				     int chip_type)
 {
 	const struct linux_prom64_registers *regs;
 	struct device_node *dp = op->dev.of_node;
 	const char *chipset_name;
-	int is_pbm_a, err;
+	int err;
 
 	switch (chip_type) {
 	case PBM_CHIP_TYPE_TOMATILLO:
@@ -1328,7 +1328,7 @@ static int __devinit schizo_pbm_init(struct pci_pbm_info *pbm,
 	default:
 		chipset_name = "SCHIZO";
 		break;
-	};
+	}
 
 	/* For SCHIZO, three OBP regs:
 	 * 1) PBM controller regs
@@ -1342,8 +1342,6 @@ static int __devinit schizo_pbm_init(struct pci_pbm_info *pbm,
 	 * 4) Ichip regs
 	 */
 	regs = of_get_property(dp, "reg", NULL);
-
-	is_pbm_a = ((regs[0].phys_addr & 0x00700000) == 0x00600000);
 
 	pbm->next = pci_pbm_root;
 	pci_pbm_root = pbm;
@@ -1413,7 +1411,7 @@ static struct pci_pbm_info * __devinit schizo_find_sibling(u32 portid,
 	return NULL;
 }
 
-static int __devinit __schizo_init(struct of_device *op, unsigned long chip_type)
+static int __devinit __schizo_init(struct platform_device *op, unsigned long chip_type)
 {
 	struct device_node *dp = op->dev.of_node;
 	struct pci_pbm_info *pbm;
@@ -1460,10 +1458,15 @@ out_err:
 	return err;
 }
 
-static int __devinit schizo_probe(struct of_device *op,
-				  const struct of_device_id *match)
+static const struct of_device_id schizo_match[];
+static int __devinit schizo_probe(struct platform_device *op)
 {
-	return __schizo_init(op, (unsigned long) match->data);
+	const struct of_device_id *match;
+
+	match = of_match_device(schizo_match, &op->dev);
+	if (!match)
+		return -EINVAL;
+	return __schizo_init(op, (unsigned long)match->data);
 }
 
 /* The ordering of this table is very important.  Some Tomatillo
@@ -1471,7 +1474,7 @@ static int __devinit schizo_probe(struct of_device *op,
  * and pci108e,8001.  So list the chips in reverse chronological
  * order.
  */
-static struct of_device_id __initdata schizo_match[] = {
+static const struct of_device_id schizo_match[] = {
 	{
 		.name = "pci",
 		.compatible = "pci108e,a801",
@@ -1490,7 +1493,7 @@ static struct of_device_id __initdata schizo_match[] = {
 	{},
 };
 
-static struct of_platform_driver schizo_driver = {
+static struct platform_driver schizo_driver = {
 	.driver = {
 		.name = DRIVER_NAME,
 		.owner = THIS_MODULE,
@@ -1501,7 +1504,7 @@ static struct of_platform_driver schizo_driver = {
 
 static int __init schizo_init(void)
 {
-	return of_register_driver(&schizo_driver, &of_bus_type);
+	return platform_driver_register(&schizo_driver);
 }
 
 subsys_initcall(schizo_init);

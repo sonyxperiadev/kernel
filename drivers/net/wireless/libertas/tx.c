@@ -1,23 +1,23 @@
-/**
-  * This file contains the handling of TX in wlan driver.
-  */
+/*
+ * This file contains the handling of TX in wlan driver.
+ */
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
 #include <linux/sched.h>
+#include <net/cfg80211.h>
 
 #include "host.h"
 #include "radiotap.h"
 #include "decl.h"
 #include "defs.h"
 #include "dev.h"
-#include "wext.h"
 
 /**
- *  @brief This function converts Tx/Rx rates from IEEE80211_RADIOTAP_RATE
- *  units (500 Kb/s) into Marvell WLAN format (see Table 8 in Section 3.2.1)
+ * convert_radiotap_rate_to_mv - converts Tx/Rx rates from IEEE80211_RADIOTAP_RATE
+ * units (500 Kb/s) into Marvell WLAN format (see Table 8 in Section 3.2.1)
  *
- *  @param rate    Input rate
- *  @return      Output Rate (0 if invalid)
+ * @rate:	Input rate
+ * returns:	Output Rate (0 if invalid)
  */
 static u32 convert_radiotap_rate_to_mv(u8 rate)
 {
@@ -51,12 +51,12 @@ static u32 convert_radiotap_rate_to_mv(u8 rate)
 }
 
 /**
- *  @brief This function checks the conditions and sends packet to IF
- *  layer if everything is ok.
+ * lbs_hard_start_xmit - checks the conditions and sends packet to IF
+ * layer if everything is ok
  *
- *  @param priv    A pointer to struct lbs_private structure
- *  @param skb     A pointer to skb which includes TX packet
- *  @return 	   0 or -1
+ * @skb:	A pointer to skb which includes TX packet
+ * @dev:	A pointer to the &struct net_device
+ * returns:	0 or -1
  */
 netdev_tx_t lbs_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
@@ -111,7 +111,7 @@ netdev_tx_t lbs_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	p802x_hdr = skb->data;
 	pkt_len = skb->len;
 
-	if (dev == priv->rtap_net_dev) {
+	if (priv->wdev->iftype == NL80211_IFTYPE_MONITOR) {
 		struct tx_radiotap_hdr *rtap_hdr = (void *)skb->data;
 
 		/* set txpd fields from the radiotap header */
@@ -147,7 +147,7 @@ netdev_tx_t lbs_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	dev->stats.tx_packets++;
 	dev->stats.tx_bytes += skb->len;
 
-	if (priv->monitormode) {
+	if (priv->wdev->iftype == NL80211_IFTYPE_MONITOR) {
 		/* Keep the skb to echo it back once Tx feedback is
 		   received from FW */
 		skb_orphan(skb);
@@ -158,6 +158,7 @@ netdev_tx_t lbs_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
  free:
 		dev_kfree_skb_any(skb);
 	}
+
  unlock:
 	spin_unlock_irqrestore(&priv->driver_lock, flags);
 	wake_up(&priv->waitq);
@@ -167,19 +168,20 @@ netdev_tx_t lbs_hard_start_xmit(struct sk_buff *skb, struct net_device *dev)
 }
 
 /**
- *  @brief This function sends to the host the last transmitted packet,
- *  filling the radiotap headers with transmission information.
+ * lbs_send_tx_feedback - sends to the host the last transmitted packet,
+ * filling the radiotap headers with transmission information.
  *
- *  @param priv     A pointer to struct lbs_private structure
- *  @param status   A 32 bit value containing transmission status.
+ * @priv:	A pointer to &struct lbs_private structure
+ * @try_count:	A 32-bit value containing transmission retry status.
  *
- *  @returns void
+ * returns:	void
  */
 void lbs_send_tx_feedback(struct lbs_private *priv, u32 try_count)
 {
 	struct tx_radiotap_hdr *radiotap_hdr;
 
-	if (!priv->monitormode || priv->currenttxskb == NULL)
+	if (priv->wdev->iftype != NL80211_IFTYPE_MONITOR ||
+	    priv->currenttxskb == NULL)
 		return;
 
 	radiotap_hdr = (struct tx_radiotap_hdr *)priv->currenttxskb->data;
@@ -188,7 +190,7 @@ void lbs_send_tx_feedback(struct lbs_private *priv, u32 try_count)
 		(1 + priv->txretrycount - try_count) : 0;
 
 	priv->currenttxskb->protocol = eth_type_trans(priv->currenttxskb,
-						      priv->rtap_net_dev);
+						      priv->dev);
 	netif_rx(priv->currenttxskb);
 
 	priv->currenttxskb = NULL;

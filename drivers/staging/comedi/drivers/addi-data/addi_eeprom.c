@@ -8,7 +8,7 @@ Copyright (C) 2004,2005  ADDI-DATA GmbH for the source code of this module.
 	D-77833 Ottersweier
 	Tel: +19(0)7223/9493-0
 	Fax: +49(0)7223/9493-92
-	http://www.addi-data-com
+	http://www.addi-data.com
 	info@addi-data.com
 
 This program is free software; you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any later version.
@@ -101,10 +101,10 @@ struct str_TimerMainHeader {
 };
 
 
-typedef struct {
+struct str_AnalogOutputHeader {
 	unsigned short w_Nchannel;
 	unsigned char b_Resolution;
-} str_AnalogOutputHeader;
+};
 
 struct str_AnalogInputHeader {
 	unsigned short w_Nchannel;
@@ -136,7 +136,7 @@ int i_EepromReadTimerHeader(unsigned short w_PCIBoardEepromAddress,
 
 int i_EepromReadAnlogOutputHeader(unsigned short w_PCIBoardEepromAddress,
 	char *pc_PCIChipInformation, unsigned short w_Address,
-	str_AnalogOutputHeader *s_Header);
+	struct str_AnalogOutputHeader *s_Header);
 
 int i_EepromReadAnlogInputHeader(unsigned short w_PCIBoardEepromAddress,
 	char *pc_PCIChipInformation, unsigned short w_Address,
@@ -635,7 +635,7 @@ void v_EepromSendCommand76(unsigned int dw_Address, unsigned int dw_EepromComman
 
 | Input Parameters  : unsigned int dw_Address : PCI eeprom base address                  |
 
-|		      unsigned short    w_offset : Offset of the adress to read             |
+|		      unsigned short    w_offset : Offset of the address to read             |
 
 |		      unsigned short *   pw_Value : PCI eeprom 16 bit read value.            |
 
@@ -811,7 +811,7 @@ int i_EepromReadMainHeader(unsigned short w_PCIBoardEepromAddress,
 	struct str_DigitalInputHeader s_DigitalInputHeader;
 	struct str_DigitalOutputHeader s_DigitalOutputHeader;
 	/* struct str_TimerMainHeader     s_TimerMainHeader,s_WatchdogMainHeader; */
-	str_AnalogOutputHeader s_AnalogOutputHeader;
+	struct str_AnalogOutputHeader s_AnalogOutputHeader;
 	struct str_AnalogInputHeader s_AnalogInputHeader;
 
 	/* Read size */
@@ -847,7 +847,7 @@ int i_EepromReadMainHeader(unsigned short w_PCIBoardEepromAddress,
 				pc_PCIChipInformation,
 				s_MainHeader.s_Functions[i].w_Address,
 				&s_DigitalInputHeader);
-			this_board->i_NbrDiChannel =
+			devpriv->s_EeParameters.i_NbrDiChannel =
 				s_DigitalInputHeader.w_Nchannel;
 			break;
 
@@ -856,11 +856,12 @@ int i_EepromReadMainHeader(unsigned short w_PCIBoardEepromAddress,
 				pc_PCIChipInformation,
 				s_MainHeader.s_Functions[i].w_Address,
 				&s_DigitalOutputHeader);
-			this_board->i_NbrDoChannel =
+			devpriv->s_EeParameters.i_NbrDoChannel =
 				s_DigitalOutputHeader.w_Nchannel;
 			ui_Temp = 0xffffffff;
-			this_board->i_DoMaxdata =
-				ui_Temp >> (32 - this_board->i_NbrDoChannel);
+			devpriv->s_EeParameters.i_DoMaxdata =
+				ui_Temp >> (32 -
+					devpriv->s_EeParameters.i_NbrDoChannel);
 			break;
 
 		case EEPROM_ANALOGINPUT:
@@ -869,20 +870,21 @@ int i_EepromReadMainHeader(unsigned short w_PCIBoardEepromAddress,
 				s_MainHeader.s_Functions[i].w_Address,
 				&s_AnalogInputHeader);
 			if (!(strcmp(this_board->pc_DriverName, "apci3200")))
-				this_board->i_NbrAiChannel =
+				devpriv->s_EeParameters.i_NbrAiChannel =
 					s_AnalogInputHeader.w_Nchannel * 4;
 			else
-				this_board->i_NbrAiChannel =
+				devpriv->s_EeParameters.i_NbrAiChannel =
 					s_AnalogInputHeader.w_Nchannel;
-			this_board->i_Dma = s_AnalogInputHeader.b_HasDma;
-			this_board->ui_MinAcquisitiontimeNs =
+			devpriv->s_EeParameters.i_Dma =
+				s_AnalogInputHeader.b_HasDma;
+			devpriv->s_EeParameters.ui_MinAcquisitiontimeNs =
 				(unsigned int) s_AnalogInputHeader.w_MinConvertTiming *
 				1000;
-			this_board->ui_MinDelaytimeNs =
+			devpriv->s_EeParameters.ui_MinDelaytimeNs =
 				(unsigned int) s_AnalogInputHeader.w_MinDelayTiming *
 				1000;
 			ui_Temp = 0xffff;
-			this_board->i_AiMaxdata =
+			devpriv->s_EeParameters.i_AiMaxdata =
 				ui_Temp >> (16 -
 				s_AnalogInputHeader.b_Resolution);
 			break;
@@ -892,24 +894,28 @@ int i_EepromReadMainHeader(unsigned short w_PCIBoardEepromAddress,
 				pc_PCIChipInformation,
 				s_MainHeader.s_Functions[i].w_Address,
 				&s_AnalogOutputHeader);
-			this_board->i_NbrAoChannel =
+			devpriv->s_EeParameters.i_NbrAoChannel =
 				s_AnalogOutputHeader.w_Nchannel;
 			ui_Temp = 0xffff;
-			this_board->i_AoMaxdata =
+			devpriv->s_EeParameters.i_AoMaxdata =
 				ui_Temp >> (16 -
 				s_AnalogOutputHeader.b_Resolution);
 			break;
 
 		case EEPROM_TIMER:
-			this_board->i_Timer = 1;	/* Timer subdevice present */
+			/* Timer subdevice present */
+			devpriv->s_EeParameters.i_Timer = 1;
 			break;
 
 		case EEPROM_WATCHDOG:
-			this_board->i_Timer = 1;	/* Timer subdevice present */
+			/* Timer subdevice present */
+			devpriv->s_EeParameters.i_Timer = 1;
 			break;
 
 		case EEPROM_TIMER_WATCHDOG_COUNTER:
-			this_board->i_Timer = 1;	/* Timer subdevice present */
+			/* Timer subdevice present */
+			devpriv->s_EeParameters.i_Timer = 1;
+			break;
 		}
 	}
 
@@ -1081,7 +1087,7 @@ int i_EepromReadTimerHeader(unsigned short w_PCIBoardEepromAddress,
 
 int i_EepromReadAnlogOutputHeader(unsigned short w_PCIBoardEepromAddress,
 	char *pc_PCIChipInformation, unsigned short w_Address,
-	str_AnalogOutputHeader *s_Header)
+	struct str_AnalogOutputHeader *s_Header)
 {
 	unsigned short w_Temp;
 	/*  No of channels for 1st hard component */

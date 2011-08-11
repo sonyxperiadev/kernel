@@ -93,7 +93,7 @@ static inline u32 rgmii_mode_mask(int mode, int input)
 	}
 }
 
-int __devinit rgmii_attach(struct of_device *ofdev, int input, int mode)
+int __devinit rgmii_attach(struct platform_device *ofdev, int input, int mode)
 {
 	struct rgmii_instance *dev = dev_get_drvdata(&ofdev->dev);
 	struct rgmii_regs __iomem *p = dev->base;
@@ -122,7 +122,7 @@ int __devinit rgmii_attach(struct of_device *ofdev, int input, int mode)
 	return 0;
 }
 
-void rgmii_set_speed(struct of_device *ofdev, int input, int speed)
+void rgmii_set_speed(struct platform_device *ofdev, int input, int speed)
 {
 	struct rgmii_instance *dev = dev_get_drvdata(&ofdev->dev);
 	struct rgmii_regs __iomem *p = dev->base;
@@ -144,7 +144,7 @@ void rgmii_set_speed(struct of_device *ofdev, int input, int speed)
 	mutex_unlock(&dev->lock);
 }
 
-void rgmii_get_mdio(struct of_device *ofdev, int input)
+void rgmii_get_mdio(struct platform_device *ofdev, int input)
 {
 	struct rgmii_instance *dev = dev_get_drvdata(&ofdev->dev);
 	struct rgmii_regs __iomem *p = dev->base;
@@ -165,7 +165,7 @@ void rgmii_get_mdio(struct of_device *ofdev, int input)
 	DBG2(dev, " fer = 0x%08x\n", fer);
 }
 
-void rgmii_put_mdio(struct of_device *ofdev, int input)
+void rgmii_put_mdio(struct platform_device *ofdev, int input)
 {
 	struct rgmii_instance *dev = dev_get_drvdata(&ofdev->dev);
 	struct rgmii_regs __iomem *p = dev->base;
@@ -186,7 +186,7 @@ void rgmii_put_mdio(struct of_device *ofdev, int input)
 	mutex_unlock(&dev->lock);
 }
 
-void rgmii_detach(struct of_device *ofdev, int input)
+void rgmii_detach(struct platform_device *ofdev, int input)
 {
 	struct rgmii_instance *dev = dev_get_drvdata(&ofdev->dev);
 	struct rgmii_regs __iomem *p;
@@ -206,13 +206,13 @@ void rgmii_detach(struct of_device *ofdev, int input)
 	mutex_unlock(&dev->lock);
 }
 
-int rgmii_get_regs_len(struct of_device *ofdev)
+int rgmii_get_regs_len(struct platform_device *ofdev)
 {
 	return sizeof(struct emac_ethtool_regs_subhdr) +
 		sizeof(struct rgmii_regs);
 }
 
-void *rgmii_dump_regs(struct of_device *ofdev, void *buf)
+void *rgmii_dump_regs(struct platform_device *ofdev, void *buf)
 {
 	struct rgmii_instance *dev = dev_get_drvdata(&ofdev->dev);
 	struct emac_ethtool_regs_subhdr *hdr = buf;
@@ -228,8 +228,7 @@ void *rgmii_dump_regs(struct of_device *ofdev, void *buf)
 }
 
 
-static int __devinit rgmii_probe(struct of_device *ofdev,
-				 const struct of_device_id *match)
+static int __devinit rgmii_probe(struct platform_device *ofdev)
 {
 	struct device_node *np = ofdev->dev.of_node;
 	struct rgmii_instance *dev;
@@ -293,7 +292,7 @@ static int __devinit rgmii_probe(struct of_device *ofdev,
 	return rc;
 }
 
-static int __devexit rgmii_remove(struct of_device *ofdev)
+static int __devexit rgmii_remove(struct platform_device *ofdev)
 {
 	struct rgmii_instance *dev = dev_get_drvdata(&ofdev->dev);
 
@@ -318,7 +317,7 @@ static struct of_device_id rgmii_match[] =
 	{},
 };
 
-static struct of_platform_driver rgmii_driver = {
+static struct platform_driver rgmii_driver = {
 	.driver = {
 		.name = "emac-rgmii",
 		.owner = THIS_MODULE,
@@ -330,10 +329,10 @@ static struct of_platform_driver rgmii_driver = {
 
 int __init rgmii_init(void)
 {
-	return of_register_platform_driver(&rgmii_driver);
+	return platform_driver_register(&rgmii_driver);
 }
 
 void rgmii_exit(void)
 {
-	of_unregister_platform_driver(&rgmii_driver);
+	platform_driver_unregister(&rgmii_driver);
 }

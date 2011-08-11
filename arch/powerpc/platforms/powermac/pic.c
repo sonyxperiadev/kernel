@@ -21,7 +21,7 @@
 #include <linux/signal.h>
 #include <linux/pci.h>
 #include <linux/interrupt.h>
-#include <linux/sysdev.h>
+#include <linux/syscore_ops.h>
 #include <linux/adb.h>
 #include <linux/pmu.h>
 #include <linux/module.h>
@@ -45,6 +45,10 @@ struct pmac_irq_hw {
         unsigned int    ack;
         unsigned int    level;
 };
+
+/* Workaround flags for 32bit powermac machines */
+unsigned int of_irq_workarounds;
+struct device_node *of_irq_dflt_pic;
 
 /* Default addresses */
 static volatile struct pmac_irq_hw __iomem *pmac_irq_hw[4];
@@ -78,9 +82,9 @@ static void __pmac_retrigger(unsigned int irq_nr)
 	}
 }
 
-static void pmac_mask_and_ack_irq(unsigned int virq)
+static void pmac_mask_and_ack_irq(struct irq_data *d)
 {
-	unsigned int src = irq_map[virq].hwirq;
+	unsigned int src = irqd_to_hwirq(d);
         unsigned long bit = 1UL << (src & 0x1f);
         int i = src >> 5;
         unsigned long flags;
@@ -100,9 +104,9 @@ static void pmac_mask_and_ack_irq(unsigned int virq)
 	raw_spin_unlock_irqrestore(&pmac_pic_lock, flags);
 }
 
-static void pmac_ack_irq(unsigned int virq)
+static void pmac_ack_irq(struct irq_data *d)
 {
-	unsigned int src = irq_map[virq].hwirq;
+	unsigned int src = irqd_to_hwirq(d);
         unsigned long bit = 1UL << (src & 0x1f);
         int i = src >> 5;
         unsigned long flags;
@@ -145,15 +149,15 @@ static void __pmac_set_irq_mask(unsigned int irq_nr, int nokicklost)
 /* When an irq gets requested for the first client, if it's an
  * edge interrupt, we clear any previous one on the controller
  */
-static unsigned int pmac_startup_irq(unsigned int virq)
+static unsigned int pmac_startup_irq(struct irq_data *d)
 {
 	unsigned long flags;
-	unsigned int src = irq_map[virq].hwirq;
+	unsigned int src = irqd_to_hwirq(d);
         unsigned long bit = 1UL << (src & 0x1f);
         int i = src >> 5;
 
 	raw_spin_lock_irqsave(&pmac_pic_lock, flags);
-	if ((irq_to_desc(virq)->status & IRQ_LEVEL) == 0)
+	if (!irqd_is_level_type(d))
 		out_le32(&pmac_irq_hw[i]->ack, bit);
         __set_bit(src, ppc_cached_irq_mask);
         __pmac_set_irq_mask(src, 0);
@@ -162,10 +166,10 @@ static unsigned int pmac_startup_irq(unsigned int virq)
 	return 0;
 }
 
-static void pmac_mask_irq(unsigned int virq)
+static void pmac_mask_irq(struct irq_data *d)
 {
 	unsigned long flags;
-	unsigned int src = irq_map[virq].hwirq;
+	unsigned int src = irqd_to_hwirq(d);
 
 	raw_spin_lock_irqsave(&pmac_pic_lock, flags);
         __clear_bit(src, ppc_cached_irq_mask);
@@ -173,10 +177,10 @@ static void pmac_mask_irq(unsigned int virq)
 	raw_spin_unlock_irqrestore(&pmac_pic_lock, flags);
 }
 
-static void pmac_unmask_irq(unsigned int virq)
+static void pmac_unmask_irq(struct irq_data *d)
 {
 	unsigned long flags;
-	unsigned int src = irq_map[virq].hwirq;
+	unsigned int src = irqd_to_hwirq(d);
 
 	raw_spin_lock_irqsave(&pmac_pic_lock, flags);
 	__set_bit(src, ppc_cached_irq_mask);
@@ -184,24 +188,24 @@ static void pmac_unmask_irq(unsigned int virq)
 	raw_spin_unlock_irqrestore(&pmac_pic_lock, flags);
 }
 
-static int pmac_retrigger(unsigned int virq)
+static int pmac_retrigger(struct irq_data *d)
 {
 	unsigned long flags;
 
 	raw_spin_lock_irqsave(&pmac_pic_lock, flags);
-	__pmac_retrigger(irq_map[virq].hwirq);
+	__pmac_retrigger(irqd_to_hwirq(d));
 	raw_spin_unlock_irqrestore(&pmac_pic_lock, flags);
 	return 1;
 }
 
 static struct irq_chip pmac_pic = {
 	.name		= "PMAC-PIC",
-	.startup	= pmac_startup_irq,
-	.mask		= pmac_mask_irq,
-	.ack		= pmac_ack_irq,
-	.mask_ack	= pmac_mask_and_ack_irq,
-	.unmask		= pmac_unmask_irq,
-	.retrigger	= pmac_retrigger,
+	.irq_startup	= pmac_startup_irq,
+	.irq_mask	= pmac_mask_irq,
+	.irq_ack	= pmac_ack_irq,
+	.irq_mask_ack	= pmac_mask_and_ack_irq,
+	.irq_unmask	= pmac_unmask_irq,
+	.irq_retrigger	= pmac_retrigger,
 };
 
 static irqreturn_t gatwick_action(int cpl, void *dev_id)
@@ -235,15 +239,12 @@ static unsigned int pmac_pic_get_irq(void)
 	unsigned long bits = 0;
 	unsigned long flags;
 
-#ifdef CONFIG_SMP
-	void psurge_smp_message_recv(void);
-
-       	/* IPI's are a hack on the powersurge -- Cort */
-       	if ( smp_processor_id() != 0 ) {
-		psurge_smp_message_recv();
-		return NO_IRQ_IGNORE;	/* ignore, already handled */
+#ifdef CONFIG_PPC_PMAC32_PSURGE
+	/* IPI's are a hack on the powersurge -- Cort */
+	if (smp_processor_id() != 0) {
+		return  psurge_secondary_virq;
         }
-#endif /* CONFIG_SMP */
+#endif /* CONFIG_PPC_PMAC32_PSURGE */
 	raw_spin_lock_irqsave(&pmac_pic_lock, flags);
 	for (irq = max_real_irqs; (irq -= 32) >= 0; ) {
 		int i = irq >> 5;
@@ -285,7 +286,6 @@ static int pmac_pic_host_match(struct irq_host *h, struct device_node *node)
 static int pmac_pic_host_map(struct irq_host *h, unsigned int virq,
 			     irq_hw_number_t hw)
 {
-	struct irq_desc *desc = irq_to_desc(virq);
 	int level;
 
 	if (hw >= max_irqs)
@@ -296,9 +296,9 @@ static int pmac_pic_host_map(struct irq_host *h, unsigned int virq,
 	 */
 	level = !!(level_mask[hw >> 5] & (1UL << (hw & 0x1f)));
 	if (level)
-		desc->status |= IRQ_LEVEL;
-	set_irq_chip_and_handler(virq, &pmac_pic, level ?
-				 handle_level_irq : handle_edge_irq);
+		irq_set_status_flags(virq, IRQ_LEVEL);
+	irq_set_chip_and_handler(virq, &pmac_pic,
+				 level ? handle_level_irq : handle_edge_irq);
 	return 0;
 }
 
@@ -428,16 +428,54 @@ static void __init pmac_pic_probe_oldstyle(void)
 	setup_irq(irq_create_mapping(NULL, 20), &xmon_action);
 #endif
 }
+
+int of_irq_map_oldworld(struct device_node *device, int index,
+			struct of_irq *out_irq)
+{
+	const u32 *ints = NULL;
+	int intlen;
+
+	/*
+	 * Old machines just have a list of interrupt numbers
+	 * and no interrupt-controller nodes. We also have dodgy
+	 * cases where the APPL,interrupts property is completely
+	 * missing behind pci-pci bridges and we have to get it
+	 * from the parent (the bridge itself, as apple just wired
+	 * everything together on these)
+	 */
+	while (device) {
+		ints = of_get_property(device, "AAPL,interrupts", &intlen);
+		if (ints != NULL)
+			break;
+		device = device->parent;
+		if (device && strcmp(device->type, "pci") != 0)
+			break;
+	}
+	if (ints == NULL)
+		return -EINVAL;
+	intlen /= sizeof(u32);
+
+	if (index >= intlen)
+		return -EINVAL;
+
+	out_irq->controller = NULL;
+	out_irq->specifier[0] = ints[index];
+	out_irq->size = 1;
+
+	return 0;
+}
 #endif /* CONFIG_PPC32 */
 
 static void pmac_u3_cascade(unsigned int irq, struct irq_desc *desc)
 {
-	struct mpic *mpic = desc->handler_data;
-
+	struct irq_chip *chip = irq_desc_get_chip(desc);
+	struct mpic *mpic = irq_desc_get_handler_data(desc);
 	unsigned int cascade_irq = mpic_get_one_irq(mpic);
+
 	if (cascade_irq != NO_IRQ)
 		generic_handle_irq(cascade_irq);
-	desc->chip->eoi(irq);
+
+	chip->irq_eoi(&desc->irq_data);
 }
 
 static void __init pmac_pic_setup_mpic_nmi(struct mpic *mpic)
@@ -549,8 +587,8 @@ static int __init pmac_pic_probe_mpic(void)
 		of_node_put(slave);
 		return 0;
 	}
-	set_irq_data(cascade, mpic2);
-	set_irq_chained_handler(cascade, pmac_u3_cascade);
+	irq_set_handler_data(cascade, mpic2);
+	irq_set_chained_handler(cascade, pmac_u3_cascade);
 
 	of_node_put(slave);
 	return 0;
@@ -559,19 +597,39 @@ static int __init pmac_pic_probe_mpic(void)
 
 void __init pmac_pic_init(void)
 {
-	unsigned int flags = 0;
-
 	/* We configure the OF parsing based on our oldworld vs. newworld
 	 * platform type and wether we were booted by BootX.
 	 */
 #ifdef CONFIG_PPC32
 	if (!pmac_newworld)
-		flags |= OF_IMAP_OLDWORLD_MAC;
+		of_irq_workarounds |= OF_IMAP_OLDWORLD_MAC;
 	if (of_get_property(of_chosen, "linux,bootx", NULL) != NULL)
-		flags |= OF_IMAP_NO_PHANDLE;
-#endif /* CONFIG_PPC_32 */
+		of_irq_workarounds |= OF_IMAP_NO_PHANDLE;
 
-	of_irq_map_init(flags);
+	/* If we don't have phandles on a newworld, then try to locate a
+	 * default interrupt controller (happens when booting with BootX).
+	 * We do a first match here, hopefully, that only ever happens on
+	 * machines with one controller.
+	 */
+	if (pmac_newworld && (of_irq_workarounds & OF_IMAP_NO_PHANDLE)) {
+		struct device_node *np;
+
+		for_each_node_with_property(np, "interrupt-controller") {
+			/* Skip /chosen/interrupt-controller */
+			if (strcmp(np->name, "chosen") == 0)
+				continue;
+			/* It seems like at least one person wants
+			 * to use BootX on a machine with an AppleKiwi
+			 * controller which happens to pretend to be an
+			 * interrupt controller too. */
+			if (strcmp(np->name, "AppleKiwi") == 0)
+				continue;
+			/* I think we found one ! */
+			of_irq_dflt_pic = np;
+			break;
+		}
+	}
+#endif /* CONFIG_PPC32 */
 
 	/* We first try to detect Apple's new Core99 chipset, since mac-io
 	 * is quite different on those machines and contains an IBM MPIC2.
@@ -616,7 +674,7 @@ not_found:
 	return viaint;
 }
 
-static int pmacpic_suspend(struct sys_device *sysdev, pm_message_t state)
+static int pmacpic_suspend(void)
 {
 	int viaint = pmacpic_find_viaint();
 
@@ -637,7 +695,7 @@ static int pmacpic_suspend(struct sys_device *sysdev, pm_message_t state)
         return 0;
 }
 
-static int pmacpic_resume(struct sys_device *sysdev)
+static void pmacpic_resume(void)
 {
 	int i;
 
@@ -647,40 +705,21 @@ static int pmacpic_resume(struct sys_device *sysdev)
 	mb();
 	for (i = 0; i < max_real_irqs; ++i)
 		if (test_bit(i, sleep_save_mask))
-			pmac_unmask_irq(i);
-
-	return 0;
+			pmac_unmask_irq(irq_get_irq_data(i));
 }
 
-#endif /* CONFIG_PM && CONFIG_PPC32 */
-
-static struct sysdev_class pmacpic_sysclass = {
-	.name = "pmac_pic",
+static struct syscore_ops pmacpic_syscore_ops = {
+	.suspend	= pmacpic_suspend,
+	.resume		= pmacpic_resume,
 };
 
-static struct sys_device device_pmacpic = {
-	.id		= 0,
-	.cls		= &pmacpic_sysclass,
-};
-
-static struct sysdev_driver driver_pmacpic = {
-#if defined(CONFIG_PM) && defined(CONFIG_PPC32)
-	.suspend	= &pmacpic_suspend,
-	.resume		= &pmacpic_resume,
-#endif /* CONFIG_PM && CONFIG_PPC32 */
-};
-
-static int __init init_pmacpic_sysfs(void)
+static int __init init_pmacpic_syscore(void)
 {
-#ifdef CONFIG_PPC32
-	if (max_irqs == 0)
-		return -ENODEV;
-#endif
-	printk(KERN_DEBUG "Registering pmac pic with sysfs...\n");
-	sysdev_class_register(&pmacpic_sysclass);
-	sysdev_register(&device_pmacpic);
-	sysdev_driver_register(&pmacpic_sysclass, &driver_pmacpic);
+	if (pmac_irq_hw[0])
+		register_syscore_ops(&pmacpic_syscore_ops);
 	return 0;
 }
-machine_subsys_initcall(powermac, init_pmacpic_sysfs);
 
+machine_subsys_initcall(powermac, init_pmacpic_syscore);
+
+#endif /* CONFIG_PM && CONFIG_PPC32 */

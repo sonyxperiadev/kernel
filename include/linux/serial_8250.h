@@ -72,5 +72,13 @@ extern int early_serial_setup(struct uart_port *port);
 extern int serial8250_find_port(struct uart_port *p);
 extern int serial8250_find_port_for_earlycon(void);
 extern int setup_early_serial8250_console(char *cmdline);
+extern void serial8250_do_set_termios(struct uart_port *port,
+		struct ktermios *termios, struct ktermios *old);
+extern void serial8250_do_pm(struct uart_port *port, unsigned int state,
+			     unsigned int oldstate);
+
+extern void serial8250_set_isa_configurator(void (*v)
+					(int port, struct uart_port *up,
+						unsigned short *capabilities));
 
 #endif

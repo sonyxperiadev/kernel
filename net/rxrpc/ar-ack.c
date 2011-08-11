@@ -245,6 +245,9 @@ static void rxrpc_resend_timer(struct rxrpc_call *call)
 	_enter("%d,%d,%d",
 	       call->acks_tail, call->acks_unacked, call->acks_head);
 
+	if (call->state >= RXRPC_CALL_COMPLETE)
+		return;
+
 	resend = 0;
 	resend_at = 0;
 
@@ -372,7 +375,6 @@ protocol_error:
  */
 static void rxrpc_rotate_tx_window(struct rxrpc_call *call, u32 hard)
 {
-	struct rxrpc_skb_priv *sp;
 	unsigned long _skb;
 	int tail = call->acks_tail, old_tail;
 	int win = CIRC_CNT(call->acks_head, tail, call->acks_winsz);
@@ -384,7 +386,6 @@ static void rxrpc_rotate_tx_window(struct rxrpc_call *call, u32 hard)
 	while (call->acks_hard < hard) {
 		smp_read_barrier_depends();
 		_skb = call->acks_window[tail] & ~1;
-		sp = rxrpc_skb((struct sk_buff *) _skb);
 		rxrpc_free_skb((struct sk_buff *) _skb);
 		old_tail = tail;
 		tail = (tail + 1) & (call->acks_winsz - 1);

@@ -17,6 +17,6 @@
 #define __YAFFS_YAFFS1_H__
 
 #include "yaffs_guts.h"
-int yaffs1_Scan(yaffs_Device *dev);
+int yaffs1_scan(struct yaffs_dev *dev);
 
 #endif

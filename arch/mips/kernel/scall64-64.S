@@ -66,9 +66,9 @@ NESTED(handle_sys64, PT_SIZE, sp)
 	sd	t0, PT_R7(sp)		# set error flag
 	beqz	t0, 1f
 
+	ld	t1, PT_R2(sp)		# syscall number
 	dnegu	v0			# error
-	sd	v0, PT_R0(sp)		# set flag for syscall
-					# restarting
+	sd	t1, PT_R0(sp)		# save it for syscall restarting
 1:	sd	v0, PT_R2(sp)		# result
 
 n64_syscall_exit:
@@ -91,8 +91,7 @@ syscall_trace_entry:
 	SAVE_STATIC
 	move	s0, t2
 	move	a0, sp
-	li	a1, 0
-	jal	do_syscall_trace
+	jal	syscall_trace_enter
 
 	move	t0, s0
 	RESTORE_STATIC
@@ -109,8 +108,9 @@ syscall_trace_entry:
 	sd	t0, PT_R7(sp)		# set error flag
 	beqz	t0, 1f
 
+	ld	t1, PT_R2(sp)		# syscall number
 	dnegu	v0			# error
-	sd	v0, PT_R0(sp)		# set flag for syscall restarting
+	sd	t1, PT_R0(sp)		# save it for syscall restarting
 1:	sd	v0, PT_R2(sp)		# result
 
 	j	syscall_exit
@@ -403,7 +403,7 @@ sys_call_table:
 	PTR	sys_ioprio_get
 	PTR	sys_utimensat			/* 5275 */
 	PTR	sys_signalfd
-	PTR	sys_ni_syscall
+	PTR	sys_ni_syscall			/* was timerfd */
 	PTR	sys_eventfd
 	PTR	sys_fallocate
 	PTR	sys_timerfd_create		/* 5280 */
@@ -416,9 +416,17 @@ sys_call_table:
 	PTR	sys_pipe2
 	PTR	sys_inotify_init1
 	PTR	sys_preadv
-	PTR	sys_pwritev			/* 5390 */
+	PTR	sys_pwritev			/* 5290 */
 	PTR	sys_rt_tgsigqueueinfo
 	PTR	sys_perf_event_open
 	PTR	sys_accept4
-	PTR     sys_recvmmsg
+	PTR	sys_recvmmsg
+	PTR	sys_fanotify_init		/* 5295 */
+	PTR	sys_fanotify_mark
+	PTR	sys_prlimit64
+	PTR	sys_name_to_handle_at
+	PTR	sys_open_by_handle_at
+	PTR	sys_clock_adjtime		/* 5300 */
+	PTR	sys_syncfs
+	PTR	sys_setns
 	.size	sys_call_table,.-sys_call_table

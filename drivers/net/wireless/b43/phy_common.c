@@ -50,7 +50,7 @@ int b43_phy_allocate(struct b43_wldev *dev)
 		phy->ops = &b43_phyops_g;
 		break;
 	case B43_PHYTYPE_N:
-#ifdef CONFIG_B43_NPHY
+#ifdef CONFIG_B43_PHY_N
 		phy->ops = &b43_phyops_n;
 #endif
 		break;
@@ -168,7 +168,7 @@ void b43_phy_lock(struct b43_wldev *dev)
 	B43_WARN_ON(dev->phy.phy_locked);
 	dev->phy.phy_locked = 1;
 #endif
-	B43_WARN_ON(dev->dev->id.revision < 3);
+	B43_WARN_ON(dev->sdev->id.revision < 3);
 
 	if (!b43_is_mode(dev->wl, NL80211_IFTYPE_AP))
 		b43_power_saving_ctl_bits(dev, B43_PS_AWAKE);
@@ -180,7 +180,7 @@ void b43_phy_unlock(struct b43_wldev *dev)
 	B43_WARN_ON(!dev->phy.phy_locked);
 	dev->phy.phy_locked = 0;
 #endif
-	B43_WARN_ON(dev->dev->id.revision < 3);
+	B43_WARN_ON(dev->sdev->id.revision < 3);
 
 	if (!b43_is_mode(dev->wl, NL80211_IFTYPE_AP))
 		b43_power_saving_ctl_bits(dev, 0);
@@ -231,6 +231,7 @@ void b43_radio_maskset(struct b43_wldev *dev, u16 offset, u16 mask, u16 set)
 u16 b43_phy_read(struct b43_wldev *dev, u16 reg)
 {
 	assert_mac_suspended(dev);
+	dev->phy.writes_counter = 0;
 	return dev->phy.ops->phy_read(dev, reg);
 }
 
@@ -238,6 +239,10 @@ void b43_phy_write(struct b43_wldev *dev, u16 reg, u16 value)
 {
 	assert_mac_suspended(dev);
 	dev->phy.ops->phy_write(dev, reg, value);
+	if (++dev->phy.writes_counter == B43_MAX_WRITES_IN_ROW) {
+		b43_read16(dev, B43_MMIO_PHY_VER);
+		dev->phy.writes_counter = 0;
+	}
 }
 
 void b43_phy_copy(struct b43_wldev *dev, u16 destreg, u16 srcreg)
@@ -294,8 +299,10 @@ int b43_switch_channel(struct b43_wldev *dev, unsigned int new_channel)
 	 */
 	channelcookie = new_channel;
 	if (b43_current_band(dev->wl) == IEEE80211_BAND_5GHZ)
-		channelcookie |= 0x100;
-	//FIXME set 40Mhz flag if required
+		channelcookie |= B43_SHM_SH_CHAN_5GHZ;
+	/* FIXME: set 40Mhz flag if required */
+	if (0)
+		channelcookie |= B43_SHM_SH_CHAN_40MHZ;
 	savedcookie = b43_shm_read16(dev, B43_SHM_SHARED, B43_SHM_SH_CHAN);
 	b43_shm_write16(dev, B43_SHM_SHARED, B43_SHM_SH_CHAN, channelcookie);
 
@@ -361,8 +368,8 @@ void b43_phy_txpower_check(struct b43_wldev *dev, unsigned int flags)
 	/* The next check will be needed in two seconds, or later. */
 	phy->next_txpwr_check_time = round_jiffies(now + (HZ * 2));
 
-	if ((dev->dev->bus->boardinfo.vendor == SSB_BOARDVENDOR_BCM) &&
-	    (dev->dev->bus->boardinfo.type == SSB_BOARD_BU4306))
+	if ((dev->sdev->bus->boardinfo.vendor == SSB_BOARDVENDOR_BCM) &&
+	    (dev->sdev->bus->boardinfo.type == SSB_BOARD_BU4306))
 		return; /* No software txpower adjustment needed */
 
 	result = phy->ops->recalc_txpower(dev, !!(flags & B43_TXPWR_IGNORE_TSSI));
@@ -422,12 +429,21 @@ void b43_phyop_switch_analog_generic(struct b43_wldev *dev, bool on)
 	b43_write16(dev, B43_MMIO_PHY0, on ? 0 : 0xF4);
 }
 
+
+bool b43_channel_type_is_40mhz(enum nl80211_channel_type channel_type)
+{
+	return (channel_type == NL80211_CHAN_HT40MINUS ||
+		channel_type == NL80211_CHAN_HT40PLUS);
+}
+
 /* http://bcm-v4.sipsolutions.net/802.11/PHY/Cordic */
 struct b43_c32 b43_cordic(int theta)
 {
-	u32 arctg[] = { 2949120, 1740967, 919879, 466945, 234379, 117304,
-		      58666, 29335, 14668, 7334, 3667, 1833, 917, 458,
-		      229, 115, 57, 29, };
+	static const u32 arctg[] = {
+		2949120, 1740967, 919879, 466945, 234379, 117304,
+		  58666,   29335,  14668,   7334,   3667,   1833,
+		    917,     458,    229,    115,     57,     29,
+	};
 	u8 i;
 	s32 tmp;
 	s8 signx = 1;

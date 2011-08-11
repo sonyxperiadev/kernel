@@ -153,9 +153,11 @@ enum {D_PRT, D_PRO, D_UNI, D_MOD, D_GEO, D_SBY, D_DLY, D_SLV};
 #include <linux/blkdev.h>
 #include <linux/blkpg.h>
 #include <linux/kernel.h>
+#include <linux/mutex.h>
 #include <asm/uaccess.h>
 #include <linux/workqueue.h>
 
+static DEFINE_MUTEX(pd_mutex);
 static DEFINE_SPINLOCK(pd_lock);
 
 module_param(verbose, bool, 0);
@@ -439,7 +441,7 @@ static char *pd_buf;		/* buffer for request in progress */
 
 static enum action do_pd_io_start(void)
 {
-	if (blk_special_request(pd_req)) {
+	if (pd_req->cmd_type == REQ_TYPE_SPECIAL) {
 		phase = pd_special;
 		return pd_special();
 	}
@@ -735,12 +737,14 @@ static int pd_open(struct block_device *bdev, fmode_t mode)
 {
 	struct pd_unit *disk = bdev->bd_disk->private_data;
 
+	mutex_lock(&pd_mutex);
 	disk->access++;
 
 	if (disk->removable) {
 		pd_special_command(disk, pd_media_check);
 		pd_special_command(disk, pd_door_lock);
 	}
+	mutex_unlock(&pd_mutex);
 	return 0;
 }
 
@@ -768,8 +772,10 @@ static int pd_ioctl(struct block_device *bdev, fmode_t mode,
 
 	switch (cmd) {
 	case CDROMEJECT:
+		mutex_lock(&pd_mutex);
 		if (disk->access == 1)
 			pd_special_command(disk, pd_eject);
+		mutex_unlock(&pd_mutex);
 		return 0;
 	default:
 		return -EINVAL;
@@ -780,13 +786,15 @@ static int pd_release(struct gendisk *p, fmode_t mode)
 {
 	struct pd_unit *disk = p->private_data;
 
+	mutex_lock(&pd_mutex);
 	if (!--disk->access && disk->removable)
 		pd_special_command(disk, pd_door_unlock);
+	mutex_unlock(&pd_mutex);
 
 	return 0;
 }
 
-static int pd_check_media(struct gendisk *p)
+static unsigned int pd_check_events(struct gendisk *p, unsigned int clearing)
 {
 	struct pd_unit *disk = p->private_data;
 	int r;
@@ -795,7 +803,7 @@ static int pd_check_media(struct gendisk *p)
 	pd_special_command(disk, pd_media_check);
 	r = disk->changed;
 	disk->changed = 0;
-	return r;
+	return r ? DISK_EVENT_MEDIA_CHANGE : 0;
 }
 
 static int pd_revalidate(struct gendisk *p)
@@ -812,9 +820,9 @@ static const struct block_device_operations pd_fops = {
 	.owner		= THIS_MODULE,
 	.open		= pd_open,
 	.release	= pd_release,
-	.locked_ioctl	= pd_ioctl,
+	.ioctl		= pd_ioctl,
 	.getgeo		= pd_getgeo,
-	.media_changed	= pd_check_media,
+	.check_events	= pd_check_events,
 	.revalidate_disk= pd_revalidate
 };
 

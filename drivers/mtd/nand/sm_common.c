@@ -109,7 +109,7 @@ static struct nand_flash_dev nand_xd_flash_ids[] = {
 
 int sm_register_device(struct mtd_info *mtd, int smartmedia)
 {
-	struct nand_chip *chip = (struct nand_chip *)mtd->priv;
+	struct nand_chip *chip = mtd->priv;
 	int ret;
 
 	chip->options |= NAND_SKIP_BBTSCAN;
@@ -121,7 +121,7 @@ int sm_register_device(struct mtd_info *mtd, int smartmedia)
 	if (ret)
 		return ret;
 
-	/* Bad block marker postion */
+	/* Bad block marker position */
 	chip->badblockpos = 0x05;
 	chip->badblockbits = 7;
 	chip->block_markbad = sm_block_markbad;
@@ -139,7 +139,7 @@ int sm_register_device(struct mtd_info *mtd, int smartmedia)
 	if (ret)
 		return ret;
 
-	return add_mtd_device(mtd);
+	return mtd_device_register(mtd, NULL, 0);
 }
 EXPORT_SYMBOL_GPL(sm_register_device);
 

@@ -26,7 +26,7 @@
  * the one that requires (phase B, wusbhc_b_{create,destroy}).
  *
  * This is so because usb_add_hcd() will start the HC, and thus, all
- * the HC specific stuff has to be already initialiazed (like sysfs
+ * the HC specific stuff has to be already initialized (like sysfs
  * thingies).
  */
 #include <linux/device.h>
@@ -320,7 +320,7 @@ u8 wusb_cluster_id_get(void)
 	u8 id;
 	spin_lock(&wusb_cluster_ids_lock);
 	id = find_first_zero_bit(wusb_cluster_id_table, CLUSTER_IDS);
-	if (id > CLUSTER_IDS) {
+	if (id >= CLUSTER_IDS) {
 		id = 0;
 		goto out;
 	}

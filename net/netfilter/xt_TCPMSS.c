@@ -148,25 +148,30 @@ tcpmss_mangle_packet(struct sk_buff *skb,
 static u_int32_t tcpmss_reverse_mtu(const struct sk_buff *skb,
 				    unsigned int family)
 {
-	struct flowi fl = {};
+	struct flowi fl;
 	const struct nf_afinfo *ai;
 	struct rtable *rt = NULL;
 	u_int32_t mtu     = ~0U;
 
-	if (family == PF_INET)
-		fl.fl4_dst = ip_hdr(skb)->saddr;
-	else
-		fl.fl6_dst = ipv6_hdr(skb)->saddr;
+	if (family == PF_INET) {
+		struct flowi4 *fl4 = &fl.u.ip4;
+		memset(fl4, 0, sizeof(*fl4));
+		fl4->daddr = ip_hdr(skb)->saddr;
+	} else {
+		struct flowi6 *fl6 = &fl.u.ip6;
 
+		memset(fl6, 0, sizeof(*fl6));
+		ipv6_addr_copy(&fl6->daddr, &ipv6_hdr(skb)->saddr);
+	}
 	rcu_read_lock();
 	ai = nf_get_afinfo(family);
 	if (ai != NULL)
-		ai->route((struct dst_entry **)&rt, &fl);
+		ai->route(&init_net, (struct dst_entry **)&rt, &fl, false);
 	rcu_read_unlock();
 
 	if (rt != NULL) {
-		mtu = dst_mtu(&rt->u.dst);
-		dst_release(&rt->u.dst);
+		mtu = dst_mtu(&rt->dst);
+		dst_release(&rt->dst);
 	}
 	return mtu;
 }
@@ -220,15 +225,13 @@ tcpmss_tg6(struct sk_buff *skb, const struct xt_action_param *par)
 }
 #endif
 
-#define TH_SYN 0x02
-
 /* Must specify -p tcp --syn */
 static inline bool find_syn_match(const struct xt_entry_match *m)
 {
 	const struct xt_tcp *tcpinfo = (const struct xt_tcp *)m->data;
 
 	if (strcmp(m->u.kernel.match->name, "tcp") == 0 &&
-	    tcpinfo->flg_cmp & TH_SYN &&
+	    tcpinfo->flg_cmp & TCPHDR_SYN &&
 	    !(tcpinfo->invflags & XT_TCP_INV_FLAGS))
 		return true;
 

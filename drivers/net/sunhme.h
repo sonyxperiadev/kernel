@@ -223,7 +223,7 @@
 /* BigMac receive config register. */
 #define BIGMAC_RXCFG_ENABLE   0x00000001 /* Enable the receiver             */
 #define BIGMAC_RXCFG_PSTRIP   0x00000020 /* Pad byte strip enable           */
-#define BIGMAC_RXCFG_PMISC    0x00000040 /* Enable promiscous mode          */
+#define BIGMAC_RXCFG_PMISC    0x00000040 /* Enable promiscuous mode          */
 #define BIGMAC_RXCFG_DERR     0x00000080 /* Disable error checking          */
 #define BIGMAC_RXCFG_DCRCS    0x00000100 /* Disable CRC stripping           */
 #define BIGMAC_RXCFG_REJME    0x00000200 /* Reject packets addressed to me  */
@@ -407,7 +407,7 @@ struct happy_meal {
 	void (*write_rxd)(struct happy_meal_rxd *, u32, u32);
 #endif
 
-	/* This is either an of_device or a pci_dev. */
+	/* This is either an platform_device or a pci_dev. */
 	void			  *happy_dev;
 	struct device		  *dma_dev;
 

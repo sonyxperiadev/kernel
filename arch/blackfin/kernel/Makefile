@@ -16,6 +16,7 @@ else
     obj-y += time.o
 endif
 
+obj-$(CONFIG_DYNAMIC_FTRACE)         += ftrace.o
 obj-$(CONFIG_FUNCTION_TRACER)        += ftrace-entry.o
 obj-$(CONFIG_FUNCTION_GRAPH_TRACER)  += ftrace.o
 CFLAGS_REMOVE_ftrace.o = -pg
@@ -32,7 +33,10 @@ obj-$(CONFIG_EARLY_PRINTK)           += shadow_console.o
 obj-$(CONFIG_STACKTRACE)             += stacktrace.o
 obj-$(CONFIG_DEBUG_VERBOSE)          += trace.o
 obj-$(CONFIG_BFIN_PSEUDODBG_INSNS)   += pseudodbg.o
+obj-$(CONFIG_PERF_EVENTS)            += perf_event.o
 
 # the kgdb test puts code into L2 and without linker
 # relaxation, we need to force long calls to/from it
 CFLAGS_kgdb_test.o := -mlong-calls -O0
+
+obj-$(CONFIG_DEBUG_MMRS)             += debug-mmrs.o

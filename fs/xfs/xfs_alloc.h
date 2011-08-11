@@ -19,6 +19,7 @@
 #define	__XFS_ALLOC_H__
 
 struct xfs_buf;
+struct xfs_btree_cur;
 struct xfs_mount;
 struct xfs_perag;
 struct xfs_trans;
@@ -27,16 +28,16 @@ struct xfs_busy_extent;
 /*
  * Freespace allocation types.  Argument to xfs_alloc_[v]extent.
  */
-typedef enum xfs_alloctype
-{
-	XFS_ALLOCTYPE_ANY_AG,		/* allocate anywhere, use rotor */
-	XFS_ALLOCTYPE_FIRST_AG,		/* ... start at ag 0 */
-	XFS_ALLOCTYPE_START_AG,		/* anywhere, start in this a.g. */
-	XFS_ALLOCTYPE_THIS_AG,		/* anywhere in this a.g. */
-	XFS_ALLOCTYPE_START_BNO,	/* near this block else anywhere */
-	XFS_ALLOCTYPE_NEAR_BNO,		/* in this a.g. and near this block */
-	XFS_ALLOCTYPE_THIS_BNO		/* at exactly this block */
-} xfs_alloctype_t;
+#define XFS_ALLOCTYPE_ANY_AG	0x01	/* allocate anywhere, use rotor */
+#define XFS_ALLOCTYPE_FIRST_AG	0x02	/* ... start at ag 0 */
+#define XFS_ALLOCTYPE_START_AG	0x04	/* anywhere, start in this a.g. */
+#define XFS_ALLOCTYPE_THIS_AG	0x08	/* anywhere in this a.g. */
+#define XFS_ALLOCTYPE_START_BNO	0x10	/* near this block else anywhere */
+#define XFS_ALLOCTYPE_NEAR_BNO	0x20	/* in this a.g. and near this block */
+#define XFS_ALLOCTYPE_THIS_BNO	0x40	/* at exactly this block */
+
+/* this should become an enum again when the tracing code is fixed */
+typedef unsigned int xfs_alloctype_t;
 
 #define XFS_ALLOC_TYPES \
 	{ XFS_ALLOCTYPE_ANY_AG,		"ANY_AG" }, \
@@ -72,6 +73,22 @@ typedef enum xfs_alloctype
  * to 4 + 4*agcount.
  */
 #define XFS_ALLOC_SET_ASIDE(mp)  (4 + ((mp)->m_sb.sb_agcount * 4))
+
+/*
+ * When deciding how much space to allocate out of an AG, we limit the
+ * allocation maximum size to the size the AG. However, we cannot use all the
+ * blocks in the AG - some are permanently used by metadata. These
+ * blocks are generally:
+ *	- the AG superblock, AGF, AGI and AGFL
+ *	- the AGF (bno and cnt) and AGI btree root blocks
+ *	- 4 blocks on the AGFL according to XFS_ALLOC_SET_ASIDE() limits
+ *
+ * The AG headers are sector sized, so the amount of space they take up is
+ * dependent on filesystem geometry. The others are all single blocks.
+ */
+#define XFS_ALLOC_AG_MAX_USABLE(mp)	\
+	((mp)->m_sb.sb_agblocks - XFS_BB_TO_FSB(mp, XFS_FSS_TO_BB(mp, 4)) - 7)
+
 
 /*
  * Argument structure for xfs_alloc routines.
@@ -118,15 +135,29 @@ xfs_alloc_longest_free_extent(struct xfs_mount *mp,
 		struct xfs_perag *pag);
 
 #ifdef __KERNEL__
+void
+xfs_alloc_busy_insert(struct xfs_trans *tp, xfs_agnumber_t agno,
+	xfs_agblock_t bno, xfs_extlen_t len, unsigned int flags);
 
 void
-xfs_alloc_busy_insert(xfs_trans_t *tp,
-		xfs_agnumber_t agno,
-		xfs_agblock_t bno,
-		xfs_extlen_t len);
+xfs_alloc_busy_clear(struct xfs_mount *mp, struct list_head *list,
+	bool do_discard);
+
+int
+xfs_alloc_busy_search(struct xfs_mount *mp, xfs_agnumber_t agno,
+	xfs_agblock_t bno, xfs_extlen_t len);
 
 void
-xfs_alloc_busy_clear(struct xfs_mount *mp, struct xfs_busy_extent *busyp);
+xfs_alloc_busy_reuse(struct xfs_mount *mp, xfs_agnumber_t agno,
+	xfs_agblock_t fbno, xfs_extlen_t flen, bool userdata);
+
+int
+xfs_busy_extent_ag_cmp(void *priv, struct list_head *a, struct list_head *b);
+
+static inline void xfs_alloc_busy_sort(struct list_head *list)
+{
+	list_sort(NULL, list, xfs_busy_extent_ag_cmp);
+}
 
 #endif	/* __KERNEL__ */
 
@@ -204,5 +235,19 @@ xfs_free_extent(
 	struct xfs_trans *tp,	/* transaction pointer */
 	xfs_fsblock_t	bno,	/* starting block number of extent */
 	xfs_extlen_t	len);	/* length of extent */
+
+int					/* error */
+xfs_alloc_lookup_le(
+	struct xfs_btree_cur	*cur,	/* btree cursor */
+	xfs_agblock_t		bno,	/* starting block of extent */
+	xfs_extlen_t		len,	/* length of extent */
+	int			*stat);	/* success/failure */
+
+int					/* error */
+xfs_alloc_get_rec(
+	struct xfs_btree_cur	*cur,	/* btree cursor */
+	xfs_agblock_t		*bno,	/* output: starting block of extent */
+	xfs_extlen_t		*len,	/* output: length of extent */
+	int			*stat);	/* output: success/failure */
 
 #endif	/* __XFS_ALLOC_H__ */

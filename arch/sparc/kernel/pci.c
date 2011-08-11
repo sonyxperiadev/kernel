@@ -198,7 +198,7 @@ static unsigned long pci_parse_of_flags(u32 addr0)
  * into physical address resources, we only have to figure out the register
  * mapping.
  */
-static void pci_parse_of_addrs(struct of_device *op,
+static void pci_parse_of_addrs(struct platform_device *op,
 			       struct device_node *node,
 			       struct pci_dev *dev)
 {
@@ -248,7 +248,7 @@ static struct pci_dev *of_create_pci_dev(struct pci_pbm_info *pbm,
 {
 	struct dev_archdata *sd;
 	struct pci_slot *slot;
-	struct of_device *op;
+	struct platform_device *op;
 	struct pci_dev *dev;
 	const char *type;
 	u32 class;
@@ -340,7 +340,7 @@ static struct pci_dev *of_create_pci_dev(struct pci_pbm_info *pbm,
 		dev->hdr_type = PCI_HEADER_TYPE_NORMAL;
 		dev->rom_base_reg = PCI_ROM_ADDRESS;
 
-		dev->irq = sd->op->irqs[0];
+		dev->irq = sd->op->archdata.irqs[0];
 		if (dev->irq == 0xffffffff)
 			dev->irq = PCI_IRQ_NONE;
 	}
@@ -675,6 +675,7 @@ static void __devinit pci_bus_register_of_sysfs(struct pci_bus *bus)
 		 * humanoid.
 		 */
 		err = sysfs_create_file(&dev->dev.kobj, &dev_attr_obppath.attr);
+		(void) err;
 	}
 	list_for_each_entry(child_bus, &bus->children, node)
 		pci_bus_register_of_sysfs(child_bus);
@@ -1001,22 +1002,22 @@ EXPORT_SYMBOL(pci_domain_nr);
 int arch_setup_msi_irq(struct pci_dev *pdev, struct msi_desc *desc)
 {
 	struct pci_pbm_info *pbm = pdev->dev.archdata.host_controller;
-	unsigned int virt_irq;
+	unsigned int irq;
 
 	if (!pbm->setup_msi_irq)
 		return -EINVAL;
 
-	return pbm->setup_msi_irq(&virt_irq, pdev, desc);
+	return pbm->setup_msi_irq(&irq, pdev, desc);
 }
 
-void arch_teardown_msi_irq(unsigned int virt_irq)
+void arch_teardown_msi_irq(unsigned int irq)
 {
-	struct msi_desc *entry = get_irq_msi(virt_irq);
+	struct msi_desc *entry = irq_get_msi_desc(irq);
 	struct pci_dev *pdev = entry->dev;
 	struct pci_pbm_info *pbm = pdev->dev.archdata.host_controller;
 
 	if (pbm->teardown_msi_irq)
-		pbm->teardown_msi_irq(virt_irq, pdev);
+		pbm->teardown_msi_irq(irq, pdev);
 }
 #endif /* !(CONFIG_PCI_MSI) */
 

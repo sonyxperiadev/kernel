@@ -1261,14 +1261,13 @@ idt77252_rx_raw(struct idt77252_dev *card)
 				    PCI_DMA_FROMDEVICE);
 
 	while (head != tail) {
-		unsigned int vpi, vci, pti;
+		unsigned int vpi, vci;
 		u32 header;
 
 		header = le32_to_cpu(*(u32 *) &queue->data[0]);
 
 		vpi = (header & ATM_HDR_VPI_MASK) >> ATM_HDR_VPI_SHIFT;
 		vci = (header & ATM_HDR_VCI_MASK) >> ATM_HDR_VCI_SHIFT;
-		pti = (header & ATM_HDR_PTI_MASK) >> ATM_HDR_PTI_SHIFT;
 
 #ifdef CONFIG_ATM_IDT77252_DEBUG
 		if (debug & DBG_RAW_CELL) {
@@ -2709,53 +2708,10 @@ idt77252_proc_read(struct atm_dev *dev, loff_t * pos, char *page)
 static void
 idt77252_collect_stat(struct idt77252_dev *card)
 {
-	u32 cdc, vpec, icc;
+	(void) readl(SAR_REG_CDC);
+	(void) readl(SAR_REG_VPEC);
+	(void) readl(SAR_REG_ICC);
 
-	cdc = readl(SAR_REG_CDC);
-	vpec = readl(SAR_REG_VPEC);
-	icc = readl(SAR_REG_ICC);
-
-#ifdef	NOTDEF
-	printk("%s:", card->name);
-
-	if (cdc & 0x7f0000) {
-		char *s = "";
-
-		printk(" [");
-		if (cdc & (1 << 22)) {
-			printk("%sRM ID", s);
-			s = " | ";
-		}
-		if (cdc & (1 << 21)) {
-			printk("%sCON TAB", s);
-			s = " | ";
-		}
-		if (cdc & (1 << 20)) {
-			printk("%sNO FB", s);
-			s = " | ";
-		}
-		if (cdc & (1 << 19)) {
-			printk("%sOAM CRC", s);
-			s = " | ";
-		}
-		if (cdc & (1 << 18)) {
-			printk("%sRM CRC", s);
-			s = " | ";
-		}
-		if (cdc & (1 << 17)) {
-			printk("%sRM FIFO", s);
-			s = " | ";
-		}
-		if (cdc & (1 << 16)) {
-			printk("%sRX FIFO", s);
-			s = " | ";
-		}
-		printk("]");
-	}
-
-	printk(" CDC %04x, VPEC %04x, ICC: %04x\n",
-	       cdc & 0xffff, vpec & 0xffff, icc & 0xffff);
-#endif
 }
 
 static irqreturn_t
@@ -3152,7 +3108,7 @@ deinit_card(struct idt77252_dev *card)
 }
 
 
-static int __devinit
+static void __devinit
 init_sram(struct idt77252_dev *card)
 {
 	int i;
@@ -3298,7 +3254,6 @@ init_sram(struct idt77252_dev *card)
 	       SAR_REG_RXFD);
 
 	IPRINTK("%s: SRAM initialization complete.\n", card->name);
-	return 0;
 }
 
 static int __devinit
@@ -3364,7 +3319,7 @@ init_card(struct atm_dev *dev)
 		writel(SAR_STAT_TMROF, SAR_REG_STAT);
 	}
 	IPRINTK("%s: Request IRQ ... ", card->name);
-	if (request_irq(pcidev->irq, idt77252_interrupt, IRQF_DISABLED|IRQF_SHARED,
+	if (request_irq(pcidev->irq, idt77252_interrupt, IRQF_SHARED,
 			card->name, card) != 0) {
 		printk("%s: can't allocate IRQ.\n", card->name);
 		deinit_card(card);
@@ -3410,8 +3365,7 @@ init_card(struct atm_dev *dev)
 
 	writel(readl(SAR_REG_CFG) | conf, SAR_REG_CFG);
 
-	if (init_sram(card) < 0)
-		return -1;
+	init_sram(card);
 
 /********************************************************************/
 /*  A L L O C   R A M   A N D   S E T   V A R I O U S   T H I N G S */
@@ -3497,7 +3451,7 @@ init_card(struct atm_dev *dev)
 		return -1;
 	}
 	if (dev->phy->ioctl == NULL) {
-		printk("%s: LT had no IOCTL funtion defined.\n", card->name);
+		printk("%s: LT had no IOCTL function defined.\n", card->name);
 		deinit_card(card);
 		return -1;
 	}
@@ -3700,7 +3654,8 @@ idt77252_init_one(struct pci_dev *pcidev, const struct pci_device_id *id)
 		goto err_out_iounmap;
 	}
 
-	dev = atm_dev_register("idt77252", &idt77252_ops, -1, NULL);
+	dev = atm_dev_register("idt77252", &pcidev->dev, &idt77252_ops, -1,
+			       NULL);
 	if (!dev) {
 		printk("%s: can't register atm device\n", card->name);
 		err = -EIO;
@@ -3779,8 +3734,7 @@ err_out_disable_pdev:
 
 static struct pci_device_id idt77252_pci_tbl[] =
 {
-	{ PCI_VENDOR_ID_IDT, PCI_DEVICE_ID_IDT_IDT77252,
-	  PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 },
+	{ PCI_VDEVICE(IDT, PCI_DEVICE_ID_IDT_IDT77252), 0 },
 	{ 0, }
 };
 

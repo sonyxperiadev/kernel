@@ -115,7 +115,7 @@ ENTRY(_interrupt)
 	/* restore r31 */
 	lwi	r31, r0, PER_CPU(CURRENT_SAVE)
 	/* prepare the link register, the argument and jump */
-	la	r15, r0, ret_from_intr - 8
+	addik	r15, r0, ret_from_intr - 8
 	addk	r6, r0, r15
 	braid	do_IRQ
 	add	r5, r0, r1
@@ -283,7 +283,7 @@ ENTRY(_user_exception)
 	add	r12, r12, r12			/* convert num -> ptr */
 	add	r12, r12, r12
 	lwi	r12, r12, sys_call_table	/* Get function pointer */
-	la	r15, r0, ret_to_user-8		/* set return address */
+	addik	r15, r0, ret_to_user-8		/* set return address */
 	bra	r12				/* Make the system call. */
 	bri	0				/* won't reach here */
 1:
@@ -588,3 +588,31 @@ sys_rt_sigsuspend_wrapper:
 #include "syscall_table.S"
 
 syscall_table_size=(.-sys_call_table)
+
+type_SYSCALL:
+	.ascii "SYSCALL\0"
+type_IRQ:
+	.ascii "IRQ\0"
+type_IRQ_PREEMPT:
+	.ascii "IRQ (PREEMPTED)\0"
+type_SYSCALL_PREEMPT:
+	.ascii " SYSCALL (PREEMPTED)\0"
+
+	/*
+	 * Trap decoding for stack unwinder
+	 * Tuples are (start addr, end addr, string)
+	 * If return address lies on [start addr, end addr],
+	 * unwinder displays 'string'
+	 */
+
+	.align 4
+.global microblaze_trap_handlers
+microblaze_trap_handlers:
+	/* Exact matches come first */
+	.word ret_to_user  ; .word ret_to_user    ; .word type_SYSCALL
+	.word ret_from_intr; .word ret_from_intr  ; .word type_IRQ
+	/* Fuzzy matches go here */
+	.word ret_from_intr; .word no_intr_resched; .word type_IRQ_PREEMPT
+	.word work_pending ; .word no_work_pending; .word type_SYSCALL_PREEMPT
+	/* End of table */
+	.word 0             ; .word 0               ; .word 0

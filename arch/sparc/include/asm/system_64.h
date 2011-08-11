@@ -29,10 +29,6 @@ enum sparc_cpu {
 /* This cannot ever be a sun4c :) That's just history. */
 #define ARCH_SUN4C 0
 
-extern const char *sparc_cpu_type;
-extern const char *sparc_fpu_type;
-extern const char *sparc_pmu_type;
-
 extern char reboot_command[];
 
 /* These are here in an effort to more fully work around Spitfire Errata
@@ -106,6 +102,7 @@ do {	__asm__ __volatile__("ba,pt	%%xcc, 1f\n\t" \
  */
 #define write_pic(__p)  					\
 	__asm__ __volatile__("ba,pt	%%xcc, 99f\n\t"		\
+			     " nop\n\t"				\
 			     ".align	64\n"			\
 			  "99:wr	%0, 0x0, %%pic\n\t"	\
 			     "rd	%%pic, %%g0" : : "r" (__p))
@@ -237,7 +234,7 @@ static inline unsigned long __xchg(unsigned long x, __volatile__ void * ptr,
 		return xchg32(ptr, x);
 	case 8:
 		return xchg64(ptr, x);
-	};
+	}
 	__xchg_called_with_bad_pointer();
 	return x;
 }

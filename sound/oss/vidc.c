@@ -227,7 +227,7 @@ static int vidc_audio_set_speed(int dev, int rate)
 		} else {
 			/*printk("VIDC: internal %d %d %d\n", rate, rate_int, hwrate);*/
 			hwctrl=0x00000003;
-			/* Allow rougly 0.4% tolerance */
+			/* Allow roughly 0.4% tolerance */
 			if (diff_int > (rate/256))
 				rate=rate_int;
 		}
@@ -491,9 +491,6 @@ static void __init attach_vidc(struct address_info *hw_config)
 	vidc_adev = adev;
 	vidc_mixer_set(SOUND_MIXER_VOLUME, (85 | 85 << 8));
 
-#if defined(CONFIG_SOUND_SOFTOSS) || defined(CONFIG_SOUND_SOFTOSS_MODULE)
-	softoss_dev = adev;
-#endif
 	return;
 
 irq_failed:

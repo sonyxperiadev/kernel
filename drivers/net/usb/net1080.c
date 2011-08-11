@@ -64,13 +64,13 @@ struct nc_header {		// packed:
 	// all else is optional, and must start with:
 	// __le16	vendorId;	// from usb-if
 	// __le16	productId;
-} __attribute__((__packed__));
+} __packed;
 
 #define	PAD_BYTE	((unsigned char)0xAC)
 
 struct nc_trailer {
 	__le16	packet_id;
-} __attribute__((__packed__));
+} __packed;
 
 // packets may use FLAG_FRAMING_NC and optional pad
 #define FRAMED_SIZE(mtu) (sizeof (struct nc_header) \
@@ -560,7 +560,7 @@ static int net1080_bind(struct usbnet *dev, struct usb_interface *intf)
 
 static const struct driver_info	net1080_info = {
 	.description =	"NetChip TurboCONNECT",
-	.flags =	FLAG_FRAMING_NC,
+	.flags =	FLAG_POINTTOPOINT | FLAG_FRAMING_NC,
 	.bind =		net1080_bind,
 	.reset =	net1080_reset,
 	.check_connect = net1080_check_connect,

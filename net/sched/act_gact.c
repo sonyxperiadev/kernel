@@ -50,7 +50,7 @@ static int gact_determ(struct tcf_gact *gact)
 }
 
 typedef int (*g_rand)(struct tcf_gact *gact);
-static g_rand gact_rand[MAX_RAND]= { NULL, gact_net_rand, gact_determ };
+static g_rand gact_rand[MAX_RAND] = { NULL, gact_net_rand, gact_determ };
 #endif /* CONFIG_GACT_PROB */
 
 static const struct nla_policy gact_policy[TCA_GACT_MAX + 1] = {
@@ -89,7 +89,7 @@ static int tcf_gact_init(struct nlattr *nla, struct nlattr *est,
 		pc = tcf_hash_create(parm->index, est, a, sizeof(*gact),
 				     bind, &gact_idx_gen, &gact_hash_info);
 		if (IS_ERR(pc))
-		    return PTR_ERR(pc);
+			return PTR_ERR(pc);
 		ret = ACT_P_CREATED;
 	} else {
 		if (!ovr) {
@@ -152,21 +152,24 @@ static int tcf_gact(struct sk_buff *skb, struct tc_action *a, struct tcf_result 
 static int tcf_gact_dump(struct sk_buff *skb, struct tc_action *a, int bind, int ref)
 {
 	unsigned char *b = skb_tail_pointer(skb);
-	struct tc_gact opt;
 	struct tcf_gact *gact = a->priv;
+	struct tc_gact opt = {
+		.index   = gact->tcf_index,
+		.refcnt  = gact->tcf_refcnt - ref,
+		.bindcnt = gact->tcf_bindcnt - bind,
+		.action  = gact->tcf_action,
+	};
 	struct tcf_t t;
 
-	opt.index = gact->tcf_index;
-	opt.refcnt = gact->tcf_refcnt - ref;
-	opt.bindcnt = gact->tcf_bindcnt - bind;
-	opt.action = gact->tcf_action;
 	NLA_PUT(skb, TCA_GACT_PARMS, sizeof(opt), &opt);
 #ifdef CONFIG_GACT_PROB
 	if (gact->tcfg_ptype) {
-		struct tc_gact_p p_opt;
-		p_opt.paction = gact->tcfg_paction;
-		p_opt.pval = gact->tcfg_pval;
-		p_opt.ptype = gact->tcfg_ptype;
+		struct tc_gact_p p_opt = {
+			.paction = gact->tcfg_paction,
+			.pval    = gact->tcfg_pval,
+			.ptype   = gact->tcfg_ptype,
+		};
+
 		NLA_PUT(skb, TCA_GACT_PROB, sizeof(p_opt), &p_opt);
 	}
 #endif
@@ -202,9 +205,9 @@ MODULE_LICENSE("GPL");
 static int __init gact_init_module(void)
 {
 #ifdef CONFIG_GACT_PROB
-	printk(KERN_INFO "GACT probability on\n");
+	pr_info("GACT probability on\n");
 #else
-	printk(KERN_INFO "GACT probability NOT on\n");
+	pr_info("GACT probability NOT on\n");
 #endif
 	return tcf_register_action(&act_gact_ops);
 }

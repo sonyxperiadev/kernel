@@ -23,7 +23,6 @@
 
 #include <linux/dmi.h>
 #include <linux/module.h>
-#include <linux/jiffies.h>
 #include <asm/div64.h>
 #include <asm/x86_init.h>
 #include <asm/hypervisor.h>
@@ -87,7 +86,7 @@ static void __init vmware_platform_setup(void)
 }
 
 /*
- * While checking the dmi string infomation, just checking the product
+ * While checking the dmi string information, just checking the product
  * serial key should be enough, as this will always have a VMware
  * specific string when running under VMware hypervisor.
  */

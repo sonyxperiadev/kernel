@@ -1,6 +1,6 @@
 /****************************************************************************
  * Driver for Solarflare Solarstorm network controllers and boards
- * Copyright 2008-2009 Solarflare Communications Inc.
+ * Copyright 2008-2011 Solarflare Communications Inc.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published
@@ -50,6 +50,20 @@ static inline struct efx_mcdi_iface *efx_mcdi(struct efx_nic *efx)
 	return &nic_data->mcdi;
 }
 
+static inline void
+efx_mcdi_readd(struct efx_nic *efx, efx_dword_t *value, unsigned reg)
+{
+	struct siena_nic_data *nic_data = efx->nic_data;
+	value->u32[0] = (__force __le32)__raw_readl(nic_data->mcdi_smem + reg);
+}
+
+static inline void
+efx_mcdi_writed(struct efx_nic *efx, const efx_dword_t *value, unsigned reg)
+{
+	struct siena_nic_data *nic_data = efx->nic_data;
+	__raw_writel((__force u32)value->u32[0], nic_data->mcdi_smem + reg);
+}
+
 void efx_mcdi_init(struct efx_nic *efx)
 {
 	struct efx_mcdi_iface *mcdi;
@@ -70,8 +84,8 @@ static void efx_mcdi_copyin(struct efx_nic *efx, unsigned cmd,
 			    const u8 *inbuf, size_t inlen)
 {
 	struct efx_mcdi_iface *mcdi = efx_mcdi(efx);
-	unsigned pdu = FR_CZ_MC_TREG_SMEM + MCDI_PDU(efx);
-	unsigned doorbell = FR_CZ_MC_TREG_SMEM + MCDI_DOORBELL(efx);
+	unsigned pdu = MCDI_PDU(efx);
+	unsigned doorbell = MCDI_DOORBELL(efx);
 	unsigned int i;
 	efx_dword_t hdr;
 	u32 xflags, seqno;
@@ -92,29 +106,28 @@ static void efx_mcdi_copyin(struct efx_nic *efx, unsigned cmd,
 			     MCDI_HEADER_SEQ, seqno,
 			     MCDI_HEADER_XFLAGS, xflags);
 
-	efx_writed(efx, &hdr, pdu);
+	efx_mcdi_writed(efx, &hdr, pdu);
 
 	for (i = 0; i < inlen; i += 4)
-		_efx_writed(efx, *((__le32 *)(inbuf + i)), pdu + 4 + i);
-
-	/* Ensure the payload is written out before the header */
-	wmb();
+		efx_mcdi_writed(efx, (const efx_dword_t *)(inbuf + i),
+				pdu + 4 + i);
 
 	/* ring the doorbell with a distinctive value */
-	_efx_writed(efx, (__force __le32) 0x45789abc, doorbell);
+	EFX_POPULATE_DWORD_1(hdr, EFX_DWORD_0, 0x45789abc);
+	efx_mcdi_writed(efx, &hdr, doorbell);
 }
 
 static void efx_mcdi_copyout(struct efx_nic *efx, u8 *outbuf, size_t outlen)
 {
 	struct efx_mcdi_iface *mcdi = efx_mcdi(efx);
-	unsigned int pdu = FR_CZ_MC_TREG_SMEM + MCDI_PDU(efx);
+	unsigned int pdu = MCDI_PDU(efx);
 	int i;
 
 	BUG_ON(atomic_read(&mcdi->state) == MCDI_STATE_QUIESCENT);
 	BUG_ON(outlen & 3 || outlen >= 0x100);
 
 	for (i = 0; i < outlen; i += 4)
-		*((__le32 *)(outbuf + i)) = _efx_readd(efx, pdu + 4 + i);
+		efx_mcdi_readd(efx, (efx_dword_t *)(outbuf + i), pdu + 4 + i);
 }
 
 static int efx_mcdi_poll(struct efx_nic *efx)
@@ -122,7 +135,7 @@ static int efx_mcdi_poll(struct efx_nic *efx)
 	struct efx_mcdi_iface *mcdi = efx_mcdi(efx);
 	unsigned int time, finish;
 	unsigned int respseq, respcmd, error;
-	unsigned int pdu = FR_CZ_MC_TREG_SMEM + MCDI_PDU(efx);
+	unsigned int pdu = MCDI_PDU(efx);
 	unsigned int rc, spins;
 	efx_dword_t reg;
 
@@ -148,8 +161,7 @@ static int efx_mcdi_poll(struct efx_nic *efx)
 
 		time = get_seconds();
 
-		rmb();
-		efx_readd(efx, &reg, pdu);
+		efx_mcdi_readd(efx, &reg, pdu);
 
 		/* All 1's indicates that shared memory is in reset (and is
 		 * not a valid header). Wait for it to come out reset before
@@ -168,14 +180,15 @@ static int efx_mcdi_poll(struct efx_nic *efx)
 	error = EFX_DWORD_FIELD(reg, MCDI_HEADER_ERROR);
 
 	if (error && mcdi->resplen == 0) {
-		EFX_ERR(efx, "MC rebooted\n");
+		netif_err(efx, hw, efx->net_dev, "MC rebooted\n");
 		rc = EIO;
 	} else if ((respseq ^ mcdi->seqno) & SEQ_MASK) {
-		EFX_ERR(efx, "MC response mismatch tx seq 0x%x rx seq 0x%x\n",
-			respseq, mcdi->seqno);
+		netif_err(efx, hw, efx->net_dev,
+			  "MC response mismatch tx seq 0x%x rx seq 0x%x\n",
+			  respseq, mcdi->seqno);
 		rc = EIO;
 	} else if (error) {
-		efx_readd(efx, &reg, pdu + 4);
+		efx_mcdi_readd(efx, &reg, pdu + 4);
 		switch (EFX_DWORD_FIELD(reg, EFX_DWORD_0)) {
 #define TRANSLATE_ERROR(name)					\
 		case MC_CMD_ERR_ ## name:			\
@@ -209,21 +222,21 @@ out:
 /* Test and clear MC-rebooted flag for this port/function */
 int efx_mcdi_poll_reboot(struct efx_nic *efx)
 {
-	unsigned int addr = FR_CZ_MC_TREG_SMEM + MCDI_REBOOT_FLAG(efx);
+	unsigned int addr = MCDI_REBOOT_FLAG(efx);
 	efx_dword_t reg;
 	uint32_t value;
 
 	if (efx_nic_rev(efx) < EFX_REV_SIENA_A0)
 		return false;
 
-	efx_readd(efx, &reg, addr);
+	efx_mcdi_readd(efx, &reg, addr);
 	value = EFX_DWORD_FIELD(reg, EFX_DWORD_0);
 
 	if (value == 0)
 		return 0;
 
 	EFX_ZERO_DWORD(reg);
-	efx_writed(efx, &reg, addr);
+	efx_mcdi_writed(efx, &reg, addr);
 
 	if (value == MC_STATUS_DWORD_ASSERT)
 		return -EINTR;
@@ -303,8 +316,9 @@ static void efx_mcdi_ev_cpl(struct efx_nic *efx, unsigned int seqno,
 			/* The request has been cancelled */
 			--mcdi->credits;
 		else
-			EFX_ERR(efx, "MC response mismatch tx seq 0x%x rx "
-				"seq 0x%x\n", seqno, mcdi->seqno);
+			netif_err(efx, hw, efx->net_dev,
+				  "MC response mismatch tx seq 0x%x rx "
+				  "seq 0x%x\n", seqno, mcdi->seqno);
 	} else {
 		mcdi->resprc = errno;
 		mcdi->resplen = datalen;
@@ -352,8 +366,9 @@ int efx_mcdi_rpc(struct efx_nic *efx, unsigned cmd,
 		++mcdi->credits;
 		spin_unlock_bh(&mcdi->iface_lock);
 
-		EFX_ERR(efx, "MC command 0x%x inlen %d mode %d timed out\n",
-			cmd, (int)inlen, mcdi->mode);
+		netif_err(efx, hw, efx->net_dev,
+			  "MC command 0x%x inlen %d mode %d timed out\n",
+			  cmd, (int)inlen, mcdi->mode);
 	} else {
 		size_t resplen;
 
@@ -374,11 +389,13 @@ int efx_mcdi_rpc(struct efx_nic *efx, unsigned cmd,
 		} else if (cmd == MC_CMD_REBOOT && rc == -EIO)
 			; /* Don't reset if MC_CMD_REBOOT returns EIO */
 		else if (rc == -EIO || rc == -EINTR) {
-			EFX_ERR(efx, "MC fatal error %d\n", -rc);
+			netif_err(efx, hw, efx->net_dev, "MC fatal error %d\n",
+				  -rc);
 			efx_schedule_reset(efx, RESET_TYPE_MC_FAILURE);
 		} else
-			EFX_ERR(efx, "MC command 0x%x inlen %d failed rc=%d\n",
-				cmd, (int)inlen, -rc);
+			netif_dbg(efx, hw, efx->net_dev,
+				  "MC command 0x%x inlen %d failed rc=%d\n",
+				  cmd, (int)inlen, -rc);
 	}
 
 	efx_mcdi_release(mcdi);
@@ -447,7 +464,7 @@ static void efx_mcdi_ev_death(struct efx_nic *efx, int rc)
 	 *
 	 * There's a race here with efx_mcdi_rpc(), because we might receive
 	 * a REBOOT event *before* the request has been copied out. In polled
-	 * mode (during startup) this is irrelevent, because efx_mcdi_complete()
+	 * mode (during startup) this is irrelevant, because efx_mcdi_complete()
 	 * is ignored. In event mode, this condition is just an edge-case of
 	 * receiving a REBOOT event after posting the MCDI request. Did the mc
 	 * reboot before or after the copyout? The best we can do always is
@@ -458,6 +475,7 @@ static void efx_mcdi_ev_death(struct efx_nic *efx, int rc)
 		if (mcdi->mode == MCDI_MODE_EVENTS) {
 			mcdi->resprc = rc;
 			mcdi->resplen = 0;
+			++mcdi->credits;
 		}
 	} else
 		/* Nobody was waiting for an MCDI request, so trigger a reset */
@@ -534,8 +552,9 @@ static void efx_mcdi_sensor_event(struct efx_nic *efx, efx_qword_t *ev)
 	EFX_BUG_ON_PARANOID(state >= ARRAY_SIZE(sensor_status_names));
 	state_txt = sensor_status_names[state];
 
-	EFX_ERR(efx, "Sensor %d (%s) reports condition '%s' for raw value %d\n",
-		monitor, name, state_txt, value);
+	netif_err(efx, hw, efx->net_dev,
+		  "Sensor %d (%s) reports condition '%s' for raw value %d\n",
+		  monitor, name, state_txt, value);
 }
 
 /* Called from  falcon_process_eventq for MCDI events */
@@ -548,12 +567,13 @@ void efx_mcdi_process_event(struct efx_channel *channel,
 
 	switch (code) {
 	case MCDI_EVENT_CODE_BADSSERT:
-		EFX_ERR(efx, "MC watchdog or assertion failure at 0x%x\n", data);
+		netif_err(efx, hw, efx->net_dev,
+			  "MC watchdog or assertion failure at 0x%x\n", data);
 		efx_mcdi_ev_death(efx, EINTR);
 		break;
 
 	case MCDI_EVENT_CODE_PMNOTICE:
-		EFX_INFO(efx, "MCDI PM event.\n");
+		netif_info(efx, wol, efx->net_dev, "MCDI PM event.\n");
 		break;
 
 	case MCDI_EVENT_CODE_CMDDONE:
@@ -570,10 +590,11 @@ void efx_mcdi_process_event(struct efx_channel *channel,
 		efx_mcdi_sensor_event(efx, event);
 		break;
 	case MCDI_EVENT_CODE_SCHEDERR:
-		EFX_INFO(efx, "MC Scheduler error address=0x%x\n", data);
+		netif_info(efx, hw, efx->net_dev,
+			   "MC Scheduler error address=0x%x\n", data);
 		break;
 	case MCDI_EVENT_CODE_REBOOT:
-		EFX_INFO(efx, "MC Reboot\n");
+		netif_info(efx, hw, efx->net_dev, "MC Reboot\n");
 		efx_mcdi_ev_death(efx, EIO);
 		break;
 	case MCDI_EVENT_CODE_MAC_STATS_DMA:
@@ -581,7 +602,8 @@ void efx_mcdi_process_event(struct efx_channel *channel,
 		break;
 
 	default:
-		EFX_ERR(efx, "Unknown MCDI event 0x%x\n", code);
+		netif_err(efx, hw, efx->net_dev, "Unknown MCDI event 0x%x\n",
+			  code);
 	}
 }
 
@@ -592,7 +614,7 @@ void efx_mcdi_process_event(struct efx_channel *channel,
  **************************************************************************
  */
 
-int efx_mcdi_fwver(struct efx_nic *efx, u64 *version, u32 *build)
+void efx_mcdi_print_fwver(struct efx_nic *efx, char *buf, size_t len)
 {
 	u8 outbuf[ALIGN(MC_CMD_GET_VERSION_V1_OUT_LEN, 4)];
 	size_t outlength;
@@ -606,29 +628,20 @@ int efx_mcdi_fwver(struct efx_nic *efx, u64 *version, u32 *build)
 	if (rc)
 		goto fail;
 
-	if (outlength == MC_CMD_GET_VERSION_V0_OUT_LEN) {
-		*version = 0;
-		*build = MCDI_DWORD(outbuf, GET_VERSION_OUT_FIRMWARE);
-		return 0;
-	}
-
 	if (outlength < MC_CMD_GET_VERSION_V1_OUT_LEN) {
 		rc = -EIO;
 		goto fail;
 	}
 
 	ver_words = (__le16 *)MCDI_PTR(outbuf, GET_VERSION_OUT_VERSION);
-	*version = (((u64)le16_to_cpu(ver_words[0]) << 48) |
-		    ((u64)le16_to_cpu(ver_words[1]) << 32) |
-		    ((u64)le16_to_cpu(ver_words[2]) << 16) |
-		    le16_to_cpu(ver_words[3]));
-	*build = MCDI_DWORD(outbuf, GET_VERSION_OUT_FIRMWARE);
-
-	return 0;
+	snprintf(buf, len, "%u.%u.%u.%u",
+		 le16_to_cpu(ver_words[0]), le16_to_cpu(ver_words[1]),
+		 le16_to_cpu(ver_words[2]), le16_to_cpu(ver_words[3]));
+	return;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
-	return rc;
+	netif_err(efx, probe, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
+	buf[0] = 0;
 }
 
 int efx_mcdi_drv_attach(struct efx_nic *efx, bool driver_operating,
@@ -657,7 +670,7 @@ int efx_mcdi_drv_attach(struct efx_nic *efx, bool driver_operating,
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, probe, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -695,7 +708,8 @@ int efx_mcdi_get_board_cfg(struct efx_nic *efx, u8 *mac_address,
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d len=%d\n", __func__, rc, (int)outlen);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d len=%d\n",
+		  __func__, rc, (int)outlen);
 
 	return rc;
 }
@@ -724,7 +738,7 @@ int efx_mcdi_log_ctrl(struct efx_nic *efx, bool evq, bool uart, u32 dest_evq)
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -749,8 +763,8 @@ int efx_mcdi_nvram_types(struct efx_nic *efx, u32 *nvram_types_out)
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n",
-		__func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n",
+		  __func__, rc);
 	return rc;
 }
 
@@ -781,7 +795,7 @@ int efx_mcdi_nvram_info(struct efx_nic *efx, unsigned int type,
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -802,7 +816,7 @@ int efx_mcdi_nvram_update_start(struct efx_nic *efx, unsigned int type)
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -827,7 +841,7 @@ int efx_mcdi_nvram_read(struct efx_nic *efx, unsigned int type,
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -853,7 +867,7 @@ int efx_mcdi_nvram_write(struct efx_nic *efx, unsigned int type,
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -877,7 +891,7 @@ int efx_mcdi_nvram_erase(struct efx_nic *efx, unsigned int type,
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -898,7 +912,7 @@ int efx_mcdi_nvram_update_finish(struct efx_nic *efx, unsigned int type)
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -948,9 +962,10 @@ int efx_mcdi_nvram_test_all(struct efx_nic *efx)
 	return 0;
 
 fail2:
-	EFX_ERR(efx, "%s: failed type=%u\n", __func__, type);
+	netif_err(efx, hw, efx->net_dev, "%s: failed type=%u\n",
+		  __func__, type);
 fail1:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -994,14 +1009,15 @@ static int efx_mcdi_read_assertion(struct efx_nic *efx)
 		: (flags == MC_CMD_GET_ASSERTS_FLAGS_WDOG_FIRED)
 		? "watchdog reset"
 		: "unknown assertion";
-	EFX_ERR(efx, "MCPU %s at PC = 0x%.8x in thread 0x%.8x\n", reason,
-		MCDI_DWORD(outbuf, GET_ASSERTS_OUT_SAVED_PC_OFFS),
-		MCDI_DWORD(outbuf, GET_ASSERTS_OUT_THREAD_OFFS));
+	netif_err(efx, hw, efx->net_dev,
+		  "MCPU %s at PC = 0x%.8x in thread 0x%.8x\n", reason,
+		  MCDI_DWORD(outbuf, GET_ASSERTS_OUT_SAVED_PC_OFFS),
+		  MCDI_DWORD(outbuf, GET_ASSERTS_OUT_THREAD_OFFS));
 
 	/* Print out the registers */
 	ofst = MC_CMD_GET_ASSERTS_OUT_GP_REGS_OFFS_OFST;
 	for (index = 1; index < 32; index++) {
-		EFX_ERR(efx, "R%.2d (?): 0x%.8x\n", index,
+		netif_err(efx, hw, efx->net_dev, "R%.2d (?): 0x%.8x\n", index,
 			MCDI_DWORD2(outbuf, ofst));
 		ofst += sizeof(efx_dword_t);
 	}
@@ -1050,14 +1066,16 @@ void efx_mcdi_set_id_led(struct efx_nic *efx, enum efx_led_mode mode)
 	rc = efx_mcdi_rpc(efx, MC_CMD_SET_ID_LED, inbuf, sizeof(inbuf),
 			  NULL, 0, NULL);
 	if (rc)
-		EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+		netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n",
+			  __func__, rc);
 }
 
 int efx_mcdi_reset_port(struct efx_nic *efx)
 {
 	int rc = efx_mcdi_rpc(efx, MC_CMD_PORT_RESET, NULL, 0, NULL, 0, NULL);
 	if (rc)
-		EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+		netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n",
+			  __func__, rc);
 	return rc;
 }
 
@@ -1075,12 +1093,12 @@ int efx_mcdi_reset_mc(struct efx_nic *efx)
 		return 0;
 	if (rc == 0)
 		rc = -EIO;
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
-int efx_mcdi_wol_filter_set(struct efx_nic *efx, u32 type,
-			    const u8 *mac, int *id_out)
+static int efx_mcdi_wol_filter_set(struct efx_nic *efx, u32 type,
+				   const u8 *mac, int *id_out)
 {
 	u8 inbuf[MC_CMD_WOL_FILTER_SET_IN_LEN];
 	u8 outbuf[MC_CMD_WOL_FILTER_SET_OUT_LEN];
@@ -1108,7 +1126,7 @@ int efx_mcdi_wol_filter_set(struct efx_nic *efx, u32 type,
 
 fail:
 	*id_out = -1;
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 
 }
@@ -1143,7 +1161,7 @@ int efx_mcdi_wol_filter_get_magic(struct efx_nic *efx, int *id_out)
 
 fail:
 	*id_out = -1;
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -1163,7 +1181,7 @@ int efx_mcdi_wol_filter_remove(struct efx_nic *efx, int id)
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 
@@ -1179,7 +1197,7 @@ int efx_mcdi_wol_filter_reset(struct efx_nic *efx)
 	return 0;
 
 fail:
-	EFX_ERR(efx, "%s: failed rc=%d\n", __func__, rc);
+	netif_err(efx, hw, efx->net_dev, "%s: failed rc=%d\n", __func__, rc);
 	return rc;
 }
 

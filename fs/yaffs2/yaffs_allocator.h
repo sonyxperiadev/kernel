@@ -18,13 +18,13 @@
 
 #include "yaffs_guts.h"
 
-void yaffs_InitialiseRawTnodesAndObjects(yaffs_Device *dev);
-void yaffs_DeinitialiseRawTnodesAndObjects(yaffs_Device *dev);
+void yaffs_init_raw_tnodes_and_objs(struct yaffs_dev *dev);
+void yaffs_deinit_raw_tnodes_and_objs(struct yaffs_dev *dev);
 
-yaffs_Tnode *yaffs_AllocateRawTnode(yaffs_Device *dev);
-void yaffs_FreeRawTnode(yaffs_Device *dev, yaffs_Tnode *tn);
+struct yaffs_tnode *yaffs_alloc_raw_tnode(struct yaffs_dev *dev);
+void yaffs_free_raw_tnode(struct yaffs_dev *dev, struct yaffs_tnode *tn);
 
-yaffs_Object *yaffs_AllocateRawObject(yaffs_Device *dev);
-void yaffs_FreeRawObject(yaffs_Device *dev, yaffs_Object *obj);
+struct yaffs_obj *yaffs_alloc_raw_obj(struct yaffs_dev *dev);
+void yaffs_free_raw_obj(struct yaffs_dev *dev, struct yaffs_obj *obj);
 
 #endif

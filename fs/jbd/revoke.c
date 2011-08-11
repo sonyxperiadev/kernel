@@ -71,7 +71,7 @@
  * switching hash tables under them. For operations on the lists of entries in
  * the hash table j_revoke_lock is used.
  *
- * Finally, also replay code uses the hash tables but at this moment noone else
+ * Finally, also replay code uses the hash tables but at this moment no one else
  * can touch them (filesystem isn't mounted yet) and hence no locking is
  * needed.
  */
@@ -617,7 +617,7 @@ static void flush_descriptor(journal_t *journal,
 	set_buffer_jwrite(bh);
 	BUFFER_TRACE(bh, "write");
 	set_buffer_dirty(bh);
-	ll_rw_block((write_op == WRITE) ? SWRITE : SWRITE_SYNC_PLUG, 1, &bh);
+	write_dirty_buffer(bh, write_op);
 }
 #endif
 

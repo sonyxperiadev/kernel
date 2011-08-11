@@ -19,7 +19,7 @@
 #include <linux/leds.h>
 #include <linux/leds-bd2802.h>
 #include <linux/slab.h>
-
+#include <linux/pm.h>
 
 #define LED_CTL(rgb2en, rgb1en) ((rgb2en) << 4 | ((rgb1en) << 0))
 
@@ -319,20 +319,6 @@ static void bd2802_turn_off(struct bd2802_led *led, enum led_ids id,
 	bd2802_update_state(led, id, color, BD2802_OFF);
 }
 
-static void bd2802_restore_state(struct bd2802_led *led)
-{
-	int i;
-
-	for (i = 0; i < LED_NUM; i++) {
-		if (led->led[i].r)
-			bd2802_turn_on(led, i, RED, led->led[i].r);
-		if (led->led[i].g)
-			bd2802_turn_on(led, i, GREEN, led->led[i].g);
-		if (led->led[i].b)
-			bd2802_turn_on(led, i, BLUE, led->led[i].b);
-	}
-}
-
 #define BD2802_SET_REGISTER(reg_addr, reg_name)				\
 static ssize_t bd2802_store_reg##reg_addr(struct device *dev,		\
 	struct device_attribute *attr, const char *buf, size_t count)	\
@@ -351,7 +337,7 @@ static ssize_t bd2802_store_reg##reg_addr(struct device *dev,		\
 	return count;							\
 }									\
 static struct device_attribute bd2802_reg##reg_addr##_attr = {		\
-	.attr = {.name = reg_name, .mode = 0644, .owner = THIS_MODULE},	\
+	.attr = {.name = reg_name, .mode = 0644},			\
 	.store = bd2802_store_reg##reg_addr,				\
 };
 
@@ -482,7 +468,6 @@ static struct device_attribute bd2802_adv_conf_attr = {
 	.attr = {
 		.name = "advanced_configuration",
 		.mode = 0644,
-		.owner = THIS_MODULE
 	},
 	.show = bd2802_show_adv_conf,
 	.store = bd2802_store_adv_conf,
@@ -519,7 +504,6 @@ static struct device_attribute bd2802_##attr_name##_attr = {		\
 	.attr = {							\
 		.name = name_str,					\
 		.mode = 0644,						\
-		.owner = THIS_MODULE					\
 	},								\
 	.show = bd2802_show_##attr_name,				\
 	.store = bd2802_store_##attr_name,				\
@@ -763,8 +747,25 @@ static int __exit bd2802_remove(struct i2c_client *client)
 	return 0;
 }
 
-static int bd2802_suspend(struct i2c_client *client, pm_message_t mesg)
+#ifdef CONFIG_PM
+
+static void bd2802_restore_state(struct bd2802_led *led)
 {
+	int i;
+
+	for (i = 0; i < LED_NUM; i++) {
+		if (led->led[i].r)
+			bd2802_turn_on(led, i, RED, led->led[i].r);
+		if (led->led[i].g)
+			bd2802_turn_on(led, i, GREEN, led->led[i].g);
+		if (led->led[i].b)
+			bd2802_turn_on(led, i, BLUE, led->led[i].b);
+	}
+}
+
+static int bd2802_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
 	struct bd2802_led *led = i2c_get_clientdata(client);
 
 	gpio_set_value(led->pdata->reset_gpio, 0);
@@ -772,8 +773,9 @@ static int bd2802_suspend(struct i2c_client *client, pm_message_t mesg)
 	return 0;
 }
 
-static int bd2802_resume(struct i2c_client *client)
+static int bd2802_resume(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
 	struct bd2802_led *led = i2c_get_clientdata(client);
 
 	if (!bd2802_is_all_off(led) || led->adf_on) {
@@ -784,6 +786,12 @@ static int bd2802_resume(struct i2c_client *client)
 	return 0;
 }
 
+static SIMPLE_DEV_PM_OPS(bd2802_pm, bd2802_suspend, bd2802_resume);
+#define BD2802_PM (&bd2802_pm)
+#else		/* CONFIG_PM */
+#define BD2802_PM NULL
+#endif
+
 static const struct i2c_device_id bd2802_id[] = {
 	{ "BD2802", 0 },
 	{ }
@@ -793,11 +801,10 @@ MODULE_DEVICE_TABLE(i2c, bd2802_id);
 static struct i2c_driver bd2802_i2c_driver = {
 	.driver	= {
 		.name	= "BD2802",
+		.pm	= BD2802_PM,
 	},
 	.probe		= bd2802_probe,
 	.remove		= __exit_p(bd2802_remove),
-	.suspend	= bd2802_suspend,
-	.resume		= bd2802_resume,
 	.id_table	= bd2802_id,
 };
 

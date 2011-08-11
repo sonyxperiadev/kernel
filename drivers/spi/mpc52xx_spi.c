@@ -18,7 +18,6 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/spi/spi.h>
-#include <linux/of_spi.h>
 #include <linux/io.h>
 #include <linux/of_gpio.h>
 #include <linux/slab.h>
@@ -391,8 +390,7 @@ static int mpc52xx_spi_transfer(struct spi_device *spi, struct spi_message *m)
 /*
  * OF Platform Bus Binding
  */
-static int __devinit mpc52xx_spi_probe(struct of_device *op,
-				       const struct of_device_id *match)
+static int __devinit mpc52xx_spi_probe(struct platform_device *op)
 {
 	struct spi_master *master;
 	struct mpc52xx_spi *ms;
@@ -439,6 +437,7 @@ static int __devinit mpc52xx_spi_probe(struct of_device *op,
 	master->setup = mpc52xx_spi_setup;
 	master->transfer = mpc52xx_spi_transfer;
 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_LSB_FIRST;
+	master->dev.of_node = op->dev.of_node;
 
 	dev_set_drvdata(&op->dev, master);
 
@@ -512,7 +511,6 @@ static int __devinit mpc52xx_spi_probe(struct of_device *op,
 	if (rc)
 		goto err_register;
 
-	of_register_spi_devices(master, op->dev.of_node);
 	dev_info(&ms->master->dev, "registered MPC5200 SPI bus\n");
 
 	return rc;
@@ -531,7 +529,7 @@ static int __devinit mpc52xx_spi_probe(struct of_device *op,
 	return rc;
 }
 
-static int __devexit mpc52xx_spi_remove(struct of_device *op)
+static int __devexit mpc52xx_spi_remove(struct platform_device *op)
 {
 	struct spi_master *master = dev_get_drvdata(&op->dev);
 	struct mpc52xx_spi *ms = spi_master_get_devdata(master);
@@ -557,25 +555,25 @@ static const struct of_device_id mpc52xx_spi_match[] __devinitconst = {
 };
 MODULE_DEVICE_TABLE(of, mpc52xx_spi_match);
 
-static struct of_platform_driver mpc52xx_spi_of_driver = {
+static struct platform_driver mpc52xx_spi_of_driver = {
 	.driver = {
 		.name = "mpc52xx-spi",
 		.owner = THIS_MODULE,
 		.of_match_table = mpc52xx_spi_match,
 	},
 	.probe = mpc52xx_spi_probe,
-	.remove = __exit_p(mpc52xx_spi_remove),
+	.remove = __devexit_p(mpc52xx_spi_remove),
 };
 
 static int __init mpc52xx_spi_init(void)
 {
-	return of_register_platform_driver(&mpc52xx_spi_of_driver);
+	return platform_driver_register(&mpc52xx_spi_of_driver);
 }
 module_init(mpc52xx_spi_init);
 
 static void __exit mpc52xx_spi_exit(void)
 {
-	of_unregister_platform_driver(&mpc52xx_spi_of_driver);
+	platform_driver_unregister(&mpc52xx_spi_of_driver);
 }
 module_exit(mpc52xx_spi_exit);
 

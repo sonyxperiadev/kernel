@@ -307,7 +307,6 @@ extern long fat_generic_ioctl(struct file *filp, unsigned int cmd,
 extern const struct file_operations fat_file_operations;
 extern const struct inode_operations fat_file_inode_operations;
 extern int fat_setattr(struct dentry * dentry, struct iattr * attr);
-extern int fat_setsize(struct inode *inode, loff_t offset);
 extern void fat_truncate_blocks(struct inode *inode, loff_t offset);
 extern int fat_getattr(struct vfsmount *mnt, struct dentry *dentry,
 		       struct kstat *stat);
@@ -321,18 +320,20 @@ extern struct inode *fat_build_inode(struct super_block *sb,
 			struct msdos_dir_entry *de, loff_t i_pos);
 extern int fat_sync_inode(struct inode *inode);
 extern int fat_fill_super(struct super_block *sb, void *data, int silent,
-			const struct inode_operations *fs_dir_inode_ops, int isvfat);
+			  int isvfat, void (*setup)(struct super_block *));
 
 extern int fat_flush_inodes(struct super_block *sb, struct inode *i1,
 		            struct inode *i2);
 /* fat/misc.c */
 extern void
-__fat_fs_error(struct super_block *s, int report, const char *fmt, ...)
+__fat_fs_error(struct super_block *sb, int report, const char *fmt, ...)
 	__attribute__ ((format (printf, 3, 4))) __cold;
-#define fat_fs_error(s, fmt, args...)		\
-	__fat_fs_error(s, 1, fmt , ## args)
-#define fat_fs_error_ratelimit(s, fmt, args...) \
-	__fat_fs_error(s, __ratelimit(&MSDOS_SB(s)->ratelimit), fmt , ## args)
+#define fat_fs_error(sb, fmt, args...)		\
+	__fat_fs_error(sb, 1, fmt , ## args)
+#define fat_fs_error_ratelimit(sb, fmt, args...) \
+	__fat_fs_error(sb, __ratelimit(&MSDOS_SB(sb)->ratelimit), fmt , ## args)
+void fat_msg(struct super_block *sb, const char *level, const char *fmt, ...)
+	__attribute__ ((format (printf, 3, 4))) __cold;
 extern int fat_clusters_flush(struct super_block *sb);
 extern int fat_chain_add(struct inode *inode, int new_dclus, int nr_cluster);
 extern void fat_time_fat2unix(struct msdos_sb_info *sbi, struct timespec *ts,

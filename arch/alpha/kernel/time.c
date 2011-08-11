@@ -41,6 +41,7 @@
 #include <linux/init.h>
 #include <linux/bcd.h>
 #include <linux/profile.h>
+#include <linux/irq_work.h>
 
 #include <asm/uaccess.h>
 #include <asm/io.h>
@@ -81,6 +82,26 @@ static struct {
 } state;
 
 unsigned long est_cycle_freq;
+
+#ifdef CONFIG_IRQ_WORK
+
+DEFINE_PER_CPU(u8, irq_work_pending);
+
+#define set_irq_work_pending_flag()  __get_cpu_var(irq_work_pending) = 1
+#define test_irq_work_pending()      __get_cpu_var(irq_work_pending)
+#define clear_irq_work_pending()     __get_cpu_var(irq_work_pending) = 0
+
+void set_irq_work_pending(void)
+{
+	set_irq_work_pending_flag();
+}
+
+#else  /* CONFIG_IRQ_WORK */
+
+#define test_irq_work_pending()      0
+#define clear_irq_work_pending()
+
+#endif /* CONFIG_IRQ_WORK */
 
 
 static inline __u32 rpcc(void)
@@ -132,13 +153,14 @@ void read_persistent_clock(struct timespec *ts)
 		year += 100;
 
 	ts->tv_sec = mktime(year, mon, day, hour, min, sec);
+	ts->tv_nsec = 0;
 }
 
 
 
 /*
  * timer_interrupt() needs to keep up the real-time clock,
- * as well as call the "do_timer()" routine every clocktick
+ * as well as call the "xtime_update()" routine every clocktick
  */
 irqreturn_t timer_interrupt(int irq, void *dev)
 {
@@ -150,8 +172,6 @@ irqreturn_t timer_interrupt(int irq, void *dev)
 	/* Not SMP, do kernel PC profiling here.  */
 	profile_tick(CPU_PROFILING);
 #endif
-
-	write_seqlock(&xtime_lock);
 
 	/*
 	 * Calculate how many ticks have passed since the last update,
@@ -166,9 +186,12 @@ irqreturn_t timer_interrupt(int irq, void *dev)
 	nticks = delta >> FIX_SHIFT;
 
 	if (nticks)
-		do_timer(nticks);
+		xtime_update(nticks);
 
-	write_sequnlock(&xtime_lock);
+	if (test_irq_work_pending()) {
+		clear_irq_work_pending();
+		irq_work_run();
+	}
 
 #ifndef CONFIG_SMP
 	while (nticks--)
@@ -352,8 +375,7 @@ static struct clocksource clocksource_rpcc = {
 
 static inline void register_rpcc_clocksource(long cycle_freq)
 {
-	clocksource_calc_mult_shift(&clocksource_rpcc, cycle_freq, 4);
-	clocksource_register(&clocksource_rpcc);
+	clocksource_register_hz(&clocksource_rpcc, cycle_freq);
 }
 #else /* !CONFIG_SMP */
 static inline void register_rpcc_clocksource(long cycle_freq)
@@ -480,7 +502,7 @@ set_rtc_mmss(unsigned long nowtime)
 		CMOS_WRITE(real_seconds,RTC_SECONDS);
 		CMOS_WRITE(real_minutes,RTC_MINUTES);
 	} else {
-		printk(KERN_WARNING
+		printk_once(KERN_NOTICE
 		       "set_rtc_mmss: can't update from %d to %d\n",
 		       cmos_minutes, real_minutes);
  		retval = -1;

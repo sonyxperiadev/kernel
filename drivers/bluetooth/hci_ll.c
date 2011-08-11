@@ -74,7 +74,7 @@ enum hcill_states_e {
 
 struct hcill_cmd {
 	u8 cmd;
-} __attribute__((packed));
+} __packed;
 
 struct ll_struct {
 	unsigned long rx_state;
@@ -207,7 +207,7 @@ static void ll_device_want_to_wakeup(struct hci_uart *hu)
 		/*
 		 * This state means that both the host and the BRF chip
 		 * have simultaneously sent a wake-up-indication packet.
-		 * Traditionaly, in this case, receiving a wake-up-indication
+		 * Traditionally, in this case, receiving a wake-up-indication
 		 * was enough and an additional wake-up-ack wasn't needed.
 		 * This has changed with the BRF6350, which does require an
 		 * explicit wake-up-ack. Other BRF versions, which do not
@@ -517,7 +517,7 @@ static struct hci_uart_proto llp = {
 	.flush		= ll_flush,
 };
 
-int ll_init(void)
+int __init ll_init(void)
 {
 	int err = hci_uart_register_proto(&llp);
 
@@ -529,7 +529,7 @@ int ll_init(void)
 	return err;
 }
 
-int ll_deinit(void)
+int __exit ll_deinit(void)
 {
 	return hci_uart_unregister_proto(&llp);
 }

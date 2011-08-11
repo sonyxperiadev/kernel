@@ -244,7 +244,7 @@ void radeon_write_agp_base(drm_radeon_private_t *dev_priv, u64 agp_base)
 	u32 agp_base_lo = agp_base & 0xffffffff;
 	u32 r6xx_agp_base = (agp_base >> 22) & 0x3ffff;
 
-	/* R6xx/R7xx must be aligned to a 4MB boundry */
+	/* R6xx/R7xx must be aligned to a 4MB boundary */
 	if ((dev_priv->flags & RADEON_FAMILY_MASK) >= CHIP_RV770)
 		RADEON_WRITE(R700_MC_VM_AGP_BASE, r6xx_agp_base);
 	else if ((dev_priv->flags & RADEON_FAMILY_MASK) >= CHIP_R600)
@@ -2113,15 +2113,15 @@ int radeon_driver_load(struct drm_device *dev, unsigned long flags)
 		break;
 	}
 
-	if (drm_device_is_agp(dev))
+	if (drm_pci_device_is_agp(dev))
 		dev_priv->flags |= RADEON_IS_AGP;
-	else if (drm_device_is_pcie(dev))
+	else if (drm_pci_device_is_pcie(dev))
 		dev_priv->flags |= RADEON_IS_PCIE;
 	else
 		dev_priv->flags |= RADEON_IS_PCI;
 
-	ret = drm_addmap(dev, drm_get_resource_start(dev, 2),
-			 drm_get_resource_len(dev, 2), _DRM_REGISTERS,
+	ret = drm_addmap(dev, pci_resource_start(dev->pdev, 2),
+			 pci_resource_len(dev->pdev, 2), _DRM_REGISTERS,
 			 _DRM_READ_ONLY | _DRM_DRIVER, &dev_priv->mmio);
 	if (ret != 0)
 		return ret;
@@ -2194,9 +2194,9 @@ int radeon_driver_firstopen(struct drm_device *dev)
 
 	dev_priv->gart_info.table_size = RADEON_PCIGART_TABLE_SIZE;
 
-	dev_priv->fb_aper_offset = drm_get_resource_start(dev, 0);
+	dev_priv->fb_aper_offset = pci_resource_start(dev->pdev, 0);
 	ret = drm_addmap(dev, dev_priv->fb_aper_offset,
-			 drm_get_resource_len(dev, 0), _DRM_FRAME_BUFFER,
+			 pci_resource_len(dev->pdev, 0), _DRM_FRAME_BUFFER,
 			 _DRM_WRITE_COMBINING, &map);
 	if (ret != 0)
 		return ret;

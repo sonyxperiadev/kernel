@@ -168,7 +168,7 @@ Older Version	: 2.20.4.6 (scsi module), 2.20.2.6 (cmm module)
 
 1.	Sorted out PCI IDs to remove megaraid support overlaps.
 	Based on the patch from Daniel, sorted out PCI IDs along with
-	charactor node name change from 'megadev' to 'megadev_legacy' to avoid
+	character node name change from 'megadev' to 'megadev_legacy' to avoid
 	conflict.
 	---
 	Hopefully we'll be getting the build restriction zapped much sooner, 
@@ -215,7 +215,7 @@ Older Version	: 2.20.4.5 (scsi module), 2.20.2.5 (cmm module)
 
 3.	Convert pci_module_init to pci_register_driver
 	Convert from pci_module_init to pci_register_driver
-	(from:http://kerneljanitors.org/TODO)
+	(from:http://kernelnewbies.org/KernelJanitors/TODO)
 		- Signed-off-by: Domen Puncer <domen@coderock.org>
 
 4.	Use the pre defined DMA mask constants from dma-mapping.h

@@ -19,6 +19,8 @@
 #define DM_MSG_PREFIX "io"
 
 #define DM_IO_MAX_REGIONS	BITS_PER_LONG
+#define MIN_IOS		16
+#define MIN_BIOS	16
 
 struct dm_io_client {
 	mempool_t *pool;
@@ -31,7 +33,6 @@ struct dm_io_client {
  */
 struct io {
 	unsigned long error_bits;
-	unsigned long eopnotsupp_bits;
 	atomic_t count;
 	struct task_struct *sleeper;
 	struct dm_io_client *client;
@@ -42,33 +43,21 @@ struct io {
 static struct kmem_cache *_dm_io_cache;
 
 /*
- * io contexts are only dynamically allocated for asynchronous
- * io.  Since async io is likely to be the majority of io we'll
- * have the same number of io contexts as bios! (FIXME: must reduce this).
- */
-
-static unsigned int pages_to_ios(unsigned int pages)
-{
-	return 4 * pages;	/* too many ? */
-}
-
-/*
  * Create a client with mempool and bioset.
  */
-struct dm_io_client *dm_io_client_create(unsigned num_pages)
+struct dm_io_client *dm_io_client_create(void)
 {
-	unsigned ios = pages_to_ios(num_pages);
 	struct dm_io_client *client;
 
 	client = kmalloc(sizeof(*client), GFP_KERNEL);
 	if (!client)
 		return ERR_PTR(-ENOMEM);
 
-	client->pool = mempool_create_slab_pool(ios, _dm_io_cache);
+	client->pool = mempool_create_slab_pool(MIN_IOS, _dm_io_cache);
 	if (!client->pool)
 		goto bad;
 
-	client->bios = bioset_create(16, 0);
+	client->bios = bioset_create(MIN_BIOS, 0);
 	if (!client->bios)
 		goto bad;
 
@@ -81,13 +70,6 @@ struct dm_io_client *dm_io_client_create(unsigned num_pages)
 	return ERR_PTR(-ENOMEM);
 }
 EXPORT_SYMBOL(dm_io_client_create);
-
-int dm_io_client_resize(unsigned num_pages, struct dm_io_client *client)
-{
-	return mempool_resize(client->pool, pages_to_ios(num_pages),
-			      GFP_KERNEL);
-}
-EXPORT_SYMBOL(dm_io_client_resize);
 
 void dm_io_client_destroy(struct dm_io_client *client)
 {
@@ -130,11 +112,8 @@ static void retrieve_io_and_region_from_bio(struct bio *bio, struct io **io,
  *---------------------------------------------------------------*/
 static void dec_count(struct io *io, unsigned int region, int error)
 {
-	if (error) {
+	if (error)
 		set_bit(region, &io->error_bits);
-		if (error == -EOPNOTSUPP)
-			set_bit(region, &io->eopnotsupp_bits);
-	}
 
 	if (atomic_dec_and_test(&io->count)) {
 		if (io->sleeper)
@@ -310,8 +289,8 @@ static void do_region(int rw, unsigned region, struct dm_io_region *where,
 	sector_t remaining = where->count;
 
 	/*
-	 * where->count may be zero if rw holds a write barrier and we
-	 * need to send a zero-sized barrier.
+	 * where->count may be zero if rw holds a flush and we need to
+	 * send a zero-sized flush.
 	 */
 	do {
 		/*
@@ -356,7 +335,7 @@ static void dispatch_io(int rw, unsigned int num_regions,
 	BUG_ON(num_regions > DM_IO_MAX_REGIONS);
 
 	if (sync)
-		rw |= (1 << BIO_RW_SYNCIO) | (1 << BIO_RW_UNPLUG);
+		rw |= REQ_SYNC;
 
 	/*
 	 * For multiple regions we need to be careful to rewind
@@ -364,7 +343,7 @@ static void dispatch_io(int rw, unsigned int num_regions,
 	 */
 	for (i = 0; i < num_regions; i++) {
 		*dp = old_pages;
-		if (where[i].count || (rw & (1 << BIO_RW_BARRIER)))
+		if (where[i].count || (rw & REQ_FLUSH))
 			do_region(rw, i, where + i, dp, io);
 	}
 
@@ -393,9 +372,7 @@ static int sync_io(struct dm_io_client *client, unsigned int num_regions,
 		return -EIO;
 	}
 
-retry:
 	io->error_bits = 0;
-	io->eopnotsupp_bits = 0;
 	atomic_set(&io->count, 1); /* see dispatch_io() */
 	io->sleeper = current;
 	io->client = client;
@@ -411,11 +388,6 @@ retry:
 		io_schedule();
 	}
 	set_current_state(TASK_RUNNING);
-
-	if (io->eopnotsupp_bits && (rw & (1 << BIO_RW_BARRIER))) {
-		rw &= ~(1 << BIO_RW_BARRIER);
-		goto retry;
-	}
 
 	if (error_bits)
 		*error_bits = io->error_bits;
@@ -437,7 +409,6 @@ static int async_io(struct dm_io_client *client, unsigned int num_regions,
 
 	io = mempool_alloc(client->pool, GFP_NOIO);
 	io->error_bits = 0;
-	io->eopnotsupp_bits = 0;
 	atomic_set(&io->count, 1); /* see dispatch_io() */
 	io->sleeper = NULL;
 	io->client = client;
@@ -479,8 +450,8 @@ static int dp_init(struct dm_io_request *io_req, struct dpages *dp)
  * New collapsed (a)synchronous interface.
  *
  * If the IO is asynchronous (i.e. it has notify.fn), you must either unplug
- * the queue with blk_unplug() some time later or set the BIO_RW_SYNC bit in
- * io_req->bi_rw. If you fail to do one of these, the IO will be submitted to
+ * the queue with blk_unplug() some time later or set REQ_SYNC in
+io_req->bi_rw. If you fail to do one of these, the IO will be submitted to
  * the disk after q->unplug_delay, which defaults to 3ms in blk-settings.c.
  */
 int dm_io(struct dm_io_request *io_req, unsigned num_regions,

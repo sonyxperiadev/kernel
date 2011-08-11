@@ -96,16 +96,21 @@ static ssize_t show_ep_interval(struct device *dev,
 
 	switch (usb_endpoint_type(ep->desc)) {
 	case USB_ENDPOINT_XFER_CONTROL:
-		if (ep->udev->speed == USB_SPEED_HIGH) 	/* uframes per NAK */
+		if (ep->udev->speed == USB_SPEED_HIGH)
+			/* uframes per NAK */
 			interval = ep->desc->bInterval;
 		break;
+
 	case USB_ENDPOINT_XFER_ISOC:
 		interval = 1 << (ep->desc->bInterval - 1);
 		break;
+
 	case USB_ENDPOINT_XFER_BULK:
-		if (ep->udev->speed == USB_SPEED_HIGH && !in) /* uframes per NAK */
+		if (ep->udev->speed == USB_SPEED_HIGH && !in)
+			/* uframes per NAK */
 			interval = ep->desc->bInterval;
 		break;
+
 	case USB_ENDPOINT_XFER_INT:
 		if (ep->udev->speed == USB_SPEED_HIGH)
 			interval = 1 << (ep->desc->bInterval - 1);
@@ -187,17 +192,17 @@ int usb_create_ep_devs(struct device *parent,
 	ep_dev->dev.parent = parent;
 	ep_dev->dev.release = ep_device_release;
 	dev_set_name(&ep_dev->dev, "ep_%02x", endpoint->desc.bEndpointAddress);
-	device_enable_async_suspend(&ep_dev->dev);
 
 	retval = device_register(&ep_dev->dev);
 	if (retval)
 		goto error_register;
 
+	device_enable_async_suspend(&ep_dev->dev);
 	endpoint->ep_dev = ep_dev;
 	return retval;
 
 error_register:
-	kfree(ep_dev);
+	put_device(&ep_dev->dev);
 exit:
 	return retval;
 }

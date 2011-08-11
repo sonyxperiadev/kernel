@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008-2009 Atheros Communications Inc.
+ * Copyright (c) 2008-2011 Atheros Communications Inc.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -53,6 +53,10 @@ struct ath_buf;
  * @cabend: RX End of CAB traffic
  * @dtimsync: DTIM sync lossage
  * @dtim: RX Beacon with DTIM
+ * @bb_watchdog: Baseband watchdog
+ * @tsfoor: TSF out of range, indicates that the corrected TSF received
+ * from a beacon differs from the PCU's internal TSF by more than a
+ * (programmable) threshold
  */
 struct ath_interrupt_stats {
 	u32 total;
@@ -76,21 +80,21 @@ struct ath_interrupt_stats {
 	u32 cabend;
 	u32 dtimsync;
 	u32 dtim;
-};
-
-struct ath_rc_stats {
-	u32 success;
-	u32 retries;
-	u32 xretries;
-	u8 per;
+	u32 bb_watchdog;
+	u32 tsfoor;
 };
 
 /**
  * struct ath_tx_stats - Statistics about TX
+ * @tx_pkts_all:  No. of total frames transmitted, including ones that
+	may have had errors.
+ * @tx_bytes_all:  No. of total bytes transmitted, including ones that
+	may have had errors.
  * @queued: Total MPDUs (non-aggr) queued
  * @completed: Total MPDUs (non-aggr) completed
  * @a_aggr: Total no. of aggregates queued
- * @a_queued: Total AMPDUs queued
+ * @a_queued_hw: Total AMPDUs queued to hardware
+ * @a_queued_sw: Total AMPDUs queued to software queues
  * @a_completed: Total AMPDUs completed
  * @a_retries: No. of AMPDUs retried (SW)
  * @a_xretries: No. of AMPDUs dropped due to xretries
@@ -103,12 +107,18 @@ struct ath_rc_stats {
  * @desc_cfg_err: Descriptor configuration errors
  * @data_urn: TX data underrun errors
  * @delim_urn: TX delimiter underrun errors
+ * @puttxbuf: Number of times hardware was given txbuf to write.
+ * @txstart:  Number of times hardware was told to start tx.
+ * @txprocdesc:  Number of times tx descriptor was processed
  */
 struct ath_tx_stats {
+	u32 tx_pkts_all;
+	u32 tx_bytes_all;
 	u32 queued;
 	u32 completed;
 	u32 a_aggr;
-	u32 a_queued;
+	u32 a_queued_hw;
+	u32 a_queued_sw;
 	u32 a_completed;
 	u32 a_retries;
 	u32 a_xretries;
@@ -118,10 +128,17 @@ struct ath_tx_stats {
 	u32 desc_cfg_err;
 	u32 data_underrun;
 	u32 delim_underrun;
+	u32 puttxbuf;
+	u32 txstart;
+	u32 txprocdesc;
 };
 
 /**
  * struct ath_rx_stats - RX Statistics
+ * @rx_pkts_all:  No. of total frames received, including ones that
+	may have had errors.
+ * @rx_bytes_all:  No. of total bytes received, including ones that
+	may have had errors.
  * @crc_err: No. of frames with incorrect CRC value
  * @decrypt_crc_err: No. of frames whose CRC check failed after
 	decryption process completed
@@ -134,6 +151,8 @@ struct ath_tx_stats {
  * @phy_err_stats: Individual PHY error statistics
  */
 struct ath_rx_stats {
+	u32 rx_pkts_all;
+	u32 rx_bytes_all;
 	u32 crc_err;
 	u32 decrypt_crc_err;
 	u32 phy_err;
@@ -142,11 +161,17 @@ struct ath_rx_stats {
 	u32 post_delim_crc_err;
 	u32 decrypt_busy_err;
 	u32 phy_err_stats[ATH9K_PHYERR_MAX];
+	int8_t rs_rssi_ctl0;
+	int8_t rs_rssi_ctl1;
+	int8_t rs_rssi_ctl2;
+	int8_t rs_rssi_ext0;
+	int8_t rs_rssi_ext1;
+	int8_t rs_rssi_ext2;
+	u8 rs_antenna;
 };
 
 struct ath_stats {
 	struct ath_interrupt_stats istats;
-	struct ath_rc_stats rcstats[RATE_TABLE_SIZE];
 	struct ath_tx_stats txstats[ATH9K_NUM_TX_QUEUES];
 	struct ath_rx_stats rxstats;
 };
@@ -158,17 +183,11 @@ struct ath9k_debug {
 };
 
 int ath9k_init_debug(struct ath_hw *ah);
-void ath9k_exit_debug(struct ath_hw *ah);
 
-int ath9k_debug_create_root(void);
-void ath9k_debug_remove_root(void);
 void ath_debug_stat_interrupt(struct ath_softc *sc, enum ath9k_int status);
-void ath_debug_stat_rc(struct ath_softc *sc, int final_rate);
-void ath_debug_stat_tx(struct ath_softc *sc, struct ath_txq *txq,
-		       struct ath_buf *bf, struct ath_tx_status *ts);
+void ath_debug_stat_tx(struct ath_softc *sc, struct ath_buf *bf,
+		       struct ath_tx_status *ts, struct ath_txq *txq);
 void ath_debug_stat_rx(struct ath_softc *sc, struct ath_rx_status *rs);
-void ath_debug_stat_retries(struct ath_softc *sc, int rix,
-			    int xretries, int retries, u8 per);
 
 #else
 
@@ -177,43 +196,20 @@ static inline int ath9k_init_debug(struct ath_hw *ah)
 	return 0;
 }
 
-static inline void ath9k_exit_debug(struct ath_hw *ah)
-{
-}
-
-static inline int ath9k_debug_create_root(void)
-{
-	return 0;
-}
-
-static inline void ath9k_debug_remove_root(void)
-{
-}
-
 static inline void ath_debug_stat_interrupt(struct ath_softc *sc,
 					    enum ath9k_int status)
 {
 }
 
-static inline void ath_debug_stat_rc(struct ath_softc *sc,
-				     int final_rate)
-{
-}
-
 static inline void ath_debug_stat_tx(struct ath_softc *sc,
-				     struct ath_txq *txq,
 				     struct ath_buf *bf,
-				     struct ath_tx_status *ts)
+				     struct ath_tx_status *ts,
+				     struct ath_txq *txq)
 {
 }
 
 static inline void ath_debug_stat_rx(struct ath_softc *sc,
 				     struct ath_rx_status *rs)
-{
-}
-
-static inline void ath_debug_stat_retries(struct ath_softc *sc, int rix,
-					  int xretries, int retries, u8 per)
 {
 }
 

@@ -149,7 +149,7 @@ copy_thread(unsigned long clone_flags, unsigned long usp,
         childregs->r10 = 0;	/* Child returns 0 after a fork/clone. */
 
 	/* Set a new TLS ?
-	 * The TLS is in $mof beacuse it is the 5th argument to sys_clone.
+	 * The TLS is in $mof because it is the 5th argument to sys_clone.
 	 */
 	if (p->mm && (clone_flags & CLONE_SETTLS)) {
 		task_thread_info(p)->tls = regs->mof;
@@ -218,8 +218,10 @@ sys_vfork(long r10, long r11, long r12, long r13, long mof, long srp,
 
 /* sys_execve() executes a new program. */
 asmlinkage int
-sys_execve(const char *fname, char **argv, char **envp, long r13, long mof, long srp,
-	struct pt_regs *regs)
+sys_execve(const char *fname,
+	   const char *const *argv,
+	   const char *const *envp, long r13, long mof, long srp,
+	   struct pt_regs *regs)
 {
 	int error;
 	char *filename;

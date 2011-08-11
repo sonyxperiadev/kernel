@@ -49,17 +49,10 @@
 		__attribute__ ((unused, __section__(".vsyscall_" #nr))) notrace
 #define __syscall_clobber "r11","cx","memory"
 
-/*
- * vsyscall_gtod_data contains data that is :
- * - readonly from vsyscalls
- * - written by timer interrupt or systcl (/proc/sys/kernel/vsyscall64)
- * Try to keep this structure as small as possible to avoid cache line ping pongs
- */
-int __vgetcpu_mode __section_vgetcpu_mode;
-
-struct vsyscall_gtod_data __vsyscall_gtod_data __section_vsyscall_gtod_data =
+DEFINE_VVAR(int, vgetcpu_mode);
+DEFINE_VVAR(struct vsyscall_gtod_data, vsyscall_gtod_data) =
 {
-	.lock = SEQLOCK_UNLOCKED,
+	.lock = __SEQLOCK_UNLOCKED(__vsyscall_gtod_data.lock),
 	.sysctl_enabled = 1,
 };
 
@@ -73,8 +66,8 @@ void update_vsyscall_tz(void)
 	write_sequnlock_irqrestore(&vsyscall_gtod_data.lock, flags);
 }
 
-void update_vsyscall(struct timespec *wall_time, struct clocksource *clock,
-		     u32 mult)
+void update_vsyscall(struct timespec *wall_time, struct timespec *wtm,
+			struct clocksource *clock, u32 mult)
 {
 	unsigned long flags;
 
@@ -87,7 +80,7 @@ void update_vsyscall(struct timespec *wall_time, struct clocksource *clock,
 	vsyscall_gtod_data.clock.shift = clock->shift;
 	vsyscall_gtod_data.wall_time_sec = wall_time->tv_sec;
 	vsyscall_gtod_data.wall_time_nsec = wall_time->tv_nsec;
-	vsyscall_gtod_data.wall_to_monotonic = wall_to_monotonic;
+	vsyscall_gtod_data.wall_to_monotonic = *wtm;
 	vsyscall_gtod_data.wall_time_coarse = __current_kernel_time();
 	write_sequnlock_irqrestore(&vsyscall_gtod_data.lock, flags);
 }
@@ -97,7 +90,7 @@ void update_vsyscall(struct timespec *wall_time, struct clocksource *clock,
  */
 static __always_inline void do_get_tz(struct timezone * tz)
 {
-	*tz = __vsyscall_gtod_data.sys_tz;
+	*tz = VVAR(vsyscall_gtod_data).sys_tz;
 }
 
 static __always_inline int gettimeofday(struct timeval *tv, struct timezone *tz)
@@ -126,23 +119,24 @@ static __always_inline void do_vgettimeofday(struct timeval * tv)
 	unsigned long mult, shift, nsec;
 	cycle_t (*vread)(void);
 	do {
-		seq = read_seqbegin(&__vsyscall_gtod_data.lock);
+		seq = read_seqbegin(&VVAR(vsyscall_gtod_data).lock);
 
-		vread = __vsyscall_gtod_data.clock.vread;
-		if (unlikely(!__vsyscall_gtod_data.sysctl_enabled || !vread)) {
+		vread = VVAR(vsyscall_gtod_data).clock.vread;
+		if (unlikely(!VVAR(vsyscall_gtod_data).sysctl_enabled ||
+			     !vread)) {
 			gettimeofday(tv,NULL);
 			return;
 		}
 
 		now = vread();
-		base = __vsyscall_gtod_data.clock.cycle_last;
-		mask = __vsyscall_gtod_data.clock.mask;
-		mult = __vsyscall_gtod_data.clock.mult;
-		shift = __vsyscall_gtod_data.clock.shift;
+		base = VVAR(vsyscall_gtod_data).clock.cycle_last;
+		mask = VVAR(vsyscall_gtod_data).clock.mask;
+		mult = VVAR(vsyscall_gtod_data).clock.mult;
+		shift = VVAR(vsyscall_gtod_data).clock.shift;
 
-		tv->tv_sec = __vsyscall_gtod_data.wall_time_sec;
-		nsec = __vsyscall_gtod_data.wall_time_nsec;
-	} while (read_seqretry(&__vsyscall_gtod_data.lock, seq));
+		tv->tv_sec = VVAR(vsyscall_gtod_data).wall_time_sec;
+		nsec = VVAR(vsyscall_gtod_data).wall_time_nsec;
+	} while (read_seqretry(&VVAR(vsyscall_gtod_data).lock, seq));
 
 	/* calculate interval: */
 	cycle_delta = (now - base) & mask;
@@ -169,13 +163,18 @@ int __vsyscall(0) vgettimeofday(struct timeval * tv, struct timezone * tz)
  * unlikely */
 time_t __vsyscall(1) vtime(time_t *t)
 {
-	struct timeval tv;
+	unsigned seq;
 	time_t result;
-	if (unlikely(!__vsyscall_gtod_data.sysctl_enabled))
+	if (unlikely(!VVAR(vsyscall_gtod_data).sysctl_enabled))
 		return time_syscall(t);
 
-	vgettimeofday(&tv, NULL);
-	result = tv.tv_sec;
+	do {
+		seq = read_seqbegin(&VVAR(vsyscall_gtod_data).lock);
+
+		result = VVAR(vsyscall_gtod_data).wall_time_sec;
+
+	} while (read_seqretry(&VVAR(vsyscall_gtod_data).lock, seq));
+
 	if (t)
 		*t = result;
 	return result;
@@ -203,9 +202,9 @@ vgetcpu(unsigned *cpu, unsigned *node, struct getcpu_cache *tcache)
 	   We do this here because otherwise user space would do it on
 	   its own in a likely inferior way (no access to jiffies).
 	   If you don't like it pass NULL. */
-	if (tcache && tcache->blob[0] == (j = __jiffies)) {
+	if (tcache && tcache->blob[0] == (j = VVAR(jiffies))) {
 		p = tcache->blob[1];
-	} else if (__vgetcpu_mode == VGETCPU_RDTSCP) {
+	} else if (VVAR(vgetcpu_mode) == VGETCPU_RDTSCP) {
 		/* Load per CPU data from RDTSCP */
 		native_read_tscp(&p);
 	} else {

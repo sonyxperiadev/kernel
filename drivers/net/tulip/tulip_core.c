@@ -12,6 +12,7 @@
 	Please submit bugs to http://bugzilla.kernel.org/ .
 */
 
+#define pr_fmt(fmt) "tulip: " fmt
 
 #define DRV_NAME	"tulip"
 #ifdef CONFIG_TULIP_NAPI
@@ -30,7 +31,6 @@
 #include <linux/etherdevice.h>
 #include <linux/delay.h>
 #include <linux/mii.h>
-#include <linux/ethtool.h>
 #include <linux/crc32.h>
 #include <asm/unaligned.h>
 #include <asm/uaccess.h>
@@ -119,8 +119,6 @@ module_param(rx_copybreak, int, 0);
 module_param(csr0, int, 0);
 module_param_array(options, int, NULL, 0);
 module_param_array(full_duplex, int, NULL, 0);
-
-#define PFX DRV_NAME ": "
 
 #ifdef TULIP_DEBUG
 int tulip_debug = TULIP_DEBUG;
@@ -272,6 +270,7 @@ static void tulip_down(struct net_device *dev);
 static struct net_device_stats *tulip_get_stats(struct net_device *dev);
 static int private_ioctl(struct net_device *dev, struct ifreq *rq, int cmd);
 static void set_rx_mode(struct net_device *dev);
+static void tulip_set_wolopts(struct pci_dev *pdev, u32 wolopts);
 #ifdef CONFIG_NET_POLL_CONTROLLER
 static void poll_tulip(struct net_device *dev);
 #endif
@@ -309,6 +308,11 @@ static void tulip_up(struct net_device *dev)
 	/* Wake the chip from sleep/snooze mode. */
 	tulip_set_power_state (tp, 0, 0);
 
+	/* Disable all WOL events */
+	pci_enable_wake(tp->pdev, PCI_D3hot, 0);
+	pci_enable_wake(tp->pdev, PCI_D3cold, 0);
+	tulip_set_wolopts(tp->pdev, 0);
+
 	/* On some chip revs we must set the MII/SYM port before the reset!? */
 	if (tp->mii_cnt  ||  (tp->mtable  &&  tp->mtable->has_mii))
 		iowrite32(0x00040000, ioaddr + CSR6);
@@ -326,8 +330,7 @@ static void tulip_up(struct net_device *dev)
 	udelay(100);
 
 	if (tulip_debug > 1)
-		printk(KERN_DEBUG "%s: tulip_up(), irq==%d\n",
-		       dev->name, dev->irq);
+		netdev_dbg(dev, "tulip_up(), irq==%d\n", dev->irq);
 
 	iowrite32(tp->rx_ring_dma, ioaddr + CSR3);
 	iowrite32(tp->tx_ring_dma, ioaddr + CSR4);
@@ -345,8 +348,8 @@ static void tulip_up(struct net_device *dev)
 		} else if (tp->flags & COMET_MAC_ADDR) {
 			iowrite32(addr_low,  ioaddr + 0xA4);
 			iowrite32(addr_high, ioaddr + 0xA8);
-			iowrite32(0, ioaddr + 0xAC);
-			iowrite32(0, ioaddr + 0xB0);
+			iowrite32(0, ioaddr + CSR27);
+			iowrite32(0, ioaddr + CSR28);
 		}
 	} else {
 		/* This is set_rx_mode(), but without starting the transmitter. */
@@ -494,10 +497,10 @@ media_picked:
 	iowrite32(0, ioaddr + CSR2);		/* Rx poll demand */
 
 	if (tulip_debug > 2) {
-		printk(KERN_DEBUG "%s: Done tulip_up(), CSR0 %08x, CSR5 %08x CSR6 %08x\n",
-		       dev->name, ioread32(ioaddr + CSR0),
-		       ioread32(ioaddr + CSR5),
-		       ioread32(ioaddr + CSR6));
+		netdev_dbg(dev, "Done tulip_up(), CSR0 %08x, CSR5 %08x CSR6 %08x\n",
+			   ioread32(ioaddr + CSR0),
+			   ioread32(ioaddr + CSR5),
+			   ioread32(ioaddr + CSR6));
 	}
 
 	/* Set the timer to switch to check for link beat and perhaps switch
@@ -591,10 +594,10 @@ static void tulip_tx_timeout(struct net_device *dev)
 					pr_cont(" %02x", buf[j]);
 			pr_cont(" j=%d\n", j);
 		}
-		printk(KERN_DEBUG "  Rx ring %08x: ", (int)tp->rx_ring);
+		printk(KERN_DEBUG "  Rx ring %p: ", tp->rx_ring);
 		for (i = 0; i < RX_RING_SIZE; i++)
 			pr_cont(" %08x", (unsigned int)tp->rx_ring[i].status);
-		printk(KERN_DEBUG "  Tx ring %08x: ", (int)tp->tx_ring);
+		printk(KERN_DEBUG "  Tx ring %p: ", tp->tx_ring);
 		for (i = 0; i < TX_RING_SIZE; i++)
 			pr_cont(" %08x", (unsigned int)tp->tx_ring[i].status);
 		pr_cont("\n");
@@ -720,7 +723,7 @@ static void tulip_clean_tx_ring(struct tulip_private *tp)
 		int status = le32_to_cpu(tp->tx_ring[entry].status);
 
 		if (status < 0) {
-			tp->stats.tx_errors++;	/* It wasn't Txed */
+			tp->dev->stats.tx_errors++;	/* It wasn't Txed */
 			tp->tx_ring[entry].status = 0;
 		}
 
@@ -776,8 +779,8 @@ static void tulip_down (struct net_device *dev)
 	/* release any unconsumed transmit buffers */
 	tulip_clean_tx_ring(tp);
 
-	if (ioread32 (ioaddr + CSR6) != 0xffffffff)
-		tp->stats.rx_missed_errors += ioread32 (ioaddr + CSR8) & 0xffff;
+	if (ioread32(ioaddr + CSR6) != 0xffffffff)
+		dev->stats.rx_missed_errors += ioread32(ioaddr + CSR8) & 0xffff;
 
 	spin_unlock_irqrestore (&tp->lock, flags);
 
@@ -838,8 +841,7 @@ static int tulip_close (struct net_device *dev)
 	tulip_down (dev);
 
 	if (tulip_debug > 1)
-		dev_printk(KERN_DEBUG, &dev->dev,
-			   "Shutting down ethercard, status was %02x\n",
+		netdev_dbg(dev, "Shutting down ethercard, status was %02x\n",
 			   ioread32 (ioaddr + CSR5));
 
 	free_irq (dev->irq, dev);
@@ -859,12 +861,12 @@ static struct net_device_stats *tulip_get_stats(struct net_device *dev)
 
 		spin_lock_irqsave (&tp->lock, flags);
 
-		tp->stats.rx_missed_errors += ioread32(ioaddr + CSR8) & 0xffff;
+		dev->stats.rx_missed_errors += ioread32(ioaddr + CSR8) & 0xffff;
 
 		spin_unlock_irqrestore(&tp->lock, flags);
 	}
 
-	return &tp->stats;
+	return &dev->stats;
 }
 
 
@@ -876,8 +878,35 @@ static void tulip_get_drvinfo(struct net_device *dev, struct ethtool_drvinfo *in
 	strcpy(info->bus_info, pci_name(np->pdev));
 }
 
+
+static int tulip_ethtool_set_wol(struct net_device *dev,
+				 struct ethtool_wolinfo *wolinfo)
+{
+	struct tulip_private *tp = netdev_priv(dev);
+
+	if (wolinfo->wolopts & (~tp->wolinfo.supported))
+		   return -EOPNOTSUPP;
+
+	tp->wolinfo.wolopts = wolinfo->wolopts;
+	device_set_wakeup_enable(&tp->pdev->dev, tp->wolinfo.wolopts);
+	return 0;
+}
+
+static void tulip_ethtool_get_wol(struct net_device *dev,
+				  struct ethtool_wolinfo *wolinfo)
+{
+	struct tulip_private *tp = netdev_priv(dev);
+
+	wolinfo->supported = tp->wolinfo.supported;
+	wolinfo->wolopts = tp->wolinfo.wolopts;
+	return;
+}
+
+
 static const struct ethtool_ops ops = {
-	.get_drvinfo = tulip_get_drvinfo
+	.get_drvinfo = tulip_get_drvinfo,
+	.set_wol     = tulip_ethtool_set_wol,
+	.get_wol     = tulip_ethtool_get_wol,
 };
 
 /* Provide ioctl() calls to examine the MII xcvr state. */
@@ -1093,8 +1122,8 @@ static void set_rx_mode(struct net_device *dev)
 				iowrite32(3, ioaddr + CSR13);
 				iowrite32(mc_filter[1], ioaddr + CSR14);
 			} else if (tp->flags & COMET_MAC_ADDR) {
-				iowrite32(mc_filter[0], ioaddr + 0xAC);
-				iowrite32(mc_filter[1], ioaddr + 0xB0);
+				iowrite32(mc_filter[0], ioaddr + CSR27);
+				iowrite32(mc_filter[1], ioaddr + CSR28);
 			}
 			tp->mc_filter[0] = mc_filter[0];
 			tp->mc_filter[1] = mc_filter[1];
@@ -1175,7 +1204,7 @@ static void __devinit tulip_mwi_config (struct pci_dev *pdev,
 	u32 csr0;
 
 	if (tulip_debug > 3)
-		printk(KERN_DEBUG "%s: tulip_mwi_config()\n", pci_name(pdev));
+		netdev_dbg(dev, "tulip_mwi_config()\n");
 
 	tp->csr0 = csr0 = 0;
 
@@ -1237,8 +1266,8 @@ static void __devinit tulip_mwi_config (struct pci_dev *pdev,
 out:
 	tp->csr0 = csr0;
 	if (tulip_debug > 2)
-		printk(KERN_DEBUG "%s: MWI config cacheline=%d, csr0=%08x\n",
-		       pci_name(pdev), cache, csr0);
+		netdev_dbg(dev, "MWI config cacheline=%d, csr0=%08x\n",
+			   cache, csr0);
 }
 #endif
 
@@ -1270,17 +1299,18 @@ static const struct net_device_ops tulip_netdev_ops = {
 #endif
 };
 
+DEFINE_PCI_DEVICE_TABLE(early_486_chipsets) = {
+	{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82424) },
+	{ PCI_DEVICE(PCI_VENDOR_ID_SI, PCI_DEVICE_ID_SI_496) },
+	{ },
+};
+
 static int __devinit tulip_init_one (struct pci_dev *pdev,
 				     const struct pci_device_id *ent)
 {
 	struct tulip_private *tp;
 	/* See note below on the multiport cards. */
 	static unsigned char last_phys_addr[6] = {0x00, 'L', 'i', 'n', 'u', 'x'};
-	static struct pci_device_id early_486_chipsets[] = {
-		{ PCI_DEVICE(PCI_VENDOR_ID_INTEL, PCI_DEVICE_ID_INTEL_82424) },
-		{ PCI_DEVICE(PCI_VENDOR_ID_SI, PCI_DEVICE_ID_SI_496) },
-		{ },
-	};
 	static int last_irq;
 	static int multiport_cnt;	/* For four-port boards w/one EEPROM */
 	int i, irq;
@@ -1307,7 +1337,13 @@ static int __devinit tulip_init_one (struct pci_dev *pdev,
 	 */
 
         if (pdev->subsystem_vendor == PCI_VENDOR_ID_LMC) {
-		pr_err(PFX "skipping LMC card\n");
+		pr_err("skipping LMC card\n");
+		return -ENODEV;
+	} else if (pdev->subsystem_vendor == PCI_VENDOR_ID_SBE &&
+		   (pdev->subsystem_device == PCI_SUBDEVICE_ID_SBE_T3E3 ||
+		    pdev->subsystem_device == PCI_SUBDEVICE_ID_SBE_2T3E3_P0 ||
+		    pdev->subsystem_device == PCI_SUBDEVICE_ID_SBE_2T3E3_P1)) {
+		pr_err("skipping SBE T3E3 port\n");
 		return -ENODEV;
 	}
 
@@ -1323,13 +1359,13 @@ static int __devinit tulip_init_one (struct pci_dev *pdev,
 
 		if (pdev->vendor == 0x1282 && pdev->device == 0x9100 &&
 		    pdev->revision < 0x30) {
-			pr_info(PFX "skipping early DM9100 with Crc bug (use dmfe)\n");
+			pr_info("skipping early DM9100 with Crc bug (use dmfe)\n");
 			return -ENODEV;
 		}
 
 		dp = pci_device_to_OF_node(pdev);
 		if (!(dp && of_get_property(dp, "local-mac-address", NULL))) {
-			pr_info(PFX "skipping DM910x expansion card (use dmfe)\n");
+			pr_info("skipping DM910x expansion card (use dmfe)\n");
 			return -ENODEV;
 		}
 	}
@@ -1376,9 +1412,14 @@ static int __devinit tulip_init_one (struct pci_dev *pdev,
 
 	i = pci_enable_device(pdev);
 	if (i) {
-		pr_err(PFX "Cannot enable tulip board #%d, aborting\n",
-		       board_idx);
+		pr_err("Cannot enable tulip board #%d, aborting\n", board_idx);
 		return i;
+	}
+
+	/* The chip will fail to enter a low-power state later unless
+	 * first explicitly commanded into D0 */
+	if (pci_set_power_state(pdev, PCI_D0)) {
+		pr_notice("Failed to set power state to D0\n");
 	}
 
 	irq = pdev->irq;
@@ -1386,13 +1427,13 @@ static int __devinit tulip_init_one (struct pci_dev *pdev,
 	/* alloc_etherdev ensures aligned and zeroed private structures */
 	dev = alloc_etherdev (sizeof (*tp));
 	if (!dev) {
-		pr_err(PFX "ether device alloc failed, aborting\n");
+		pr_err("ether device alloc failed, aborting\n");
 		return -ENOMEM;
 	}
 
 	SET_NETDEV_DEV(dev, &pdev->dev);
 	if (pci_resource_len (pdev, 0) < tulip_tbl[chip_idx].io_size) {
-		pr_err(PFX "%s: I/O region (0x%llx@0x%llx) too small, aborting\n",
+		pr_err("%s: I/O region (0x%llx@0x%llx) too small, aborting\n",
 		       pci_name(pdev),
 		       (unsigned long long)pci_resource_len (pdev, 0),
 		       (unsigned long long)pci_resource_start (pdev, 0));
@@ -1427,6 +1468,20 @@ static int __devinit tulip_init_one (struct pci_dev *pdev,
 
 	tp->chip_id = chip_idx;
 	tp->flags = tulip_tbl[chip_idx].flags;
+
+	tp->wolinfo.supported = 0;
+	tp->wolinfo.wolopts = 0;
+	/* COMET: Enable power management only for AN983B */
+	if (chip_idx == COMET ) {
+		u32 sig;
+		pci_read_config_dword (pdev, 0x80, &sig);
+		if (sig == 0x09811317) {
+			tp->flags |= COMET_PM;
+			tp->wolinfo.supported = WAKE_PHY | WAKE_MAGIC;
+			pr_info("%s: Enabled WOL support for AN983B\n",
+				__func__);
+		}
+	}
 	tp->pdev = pdev;
 	tp->base_addr = ioaddr;
 	tp->revision = pdev->revision;
@@ -1624,7 +1679,9 @@ static int __devinit tulip_init_one (struct pci_dev *pdev,
 		tp->full_duplex_lock = 1;
 
 	if (tulip_media_cap[tp->default_port] & MediaIsMII) {
-		u16 media2advert[] = { 0x20, 0x40, 0x03e0, 0x60, 0x80, 0x100, 0x200 };
+		static const u16 media2advert[] = {
+			0x20, 0x40, 0x03e0, 0x60, 0x80, 0x100, 0x200
+		};
 		tp->mii_advertise = media2advert[tp->default_port - 9];
 		tp->mii_advertise |= (tp->flags & HAS_8023X); /* Matching bits! */
 	}
@@ -1759,11 +1816,43 @@ err_out_free_netdev:
 }
 
 
+/* set the registers according to the given wolopts */
+static void tulip_set_wolopts (struct pci_dev *pdev, u32 wolopts)
+{
+	struct net_device *dev = pci_get_drvdata(pdev);
+	struct tulip_private *tp = netdev_priv(dev);
+	void __iomem *ioaddr = tp->base_addr;
+
+	if (tp->flags & COMET_PM) {
+	  
+		unsigned int tmp;
+			
+		tmp = ioread32(ioaddr + CSR18);
+		tmp &= ~(comet_csr18_pmes_sticky | comet_csr18_apm_mode | comet_csr18_d3a);
+		tmp |= comet_csr18_pm_mode;
+		iowrite32(tmp, ioaddr + CSR18);
+			
+		/* Set the Wake-up Control/Status Register to the given WOL options*/
+		tmp = ioread32(ioaddr + CSR13);
+		tmp &= ~(comet_csr13_linkoffe | comet_csr13_linkone | comet_csr13_wfre | comet_csr13_lsce | comet_csr13_mpre);
+		if (wolopts & WAKE_MAGIC)
+			tmp |= comet_csr13_mpre;
+		if (wolopts & WAKE_PHY)
+			tmp |= comet_csr13_linkoffe | comet_csr13_linkone | comet_csr13_lsce;
+		/* Clear the event flags */
+		tmp |= comet_csr13_wfr | comet_csr13_mpr | comet_csr13_lsc;
+		iowrite32(tmp, ioaddr + CSR13);
+	}
+}
+
 #ifdef CONFIG_PM
+
 
 static int tulip_suspend (struct pci_dev *pdev, pm_message_t state)
 {
+	pci_power_t pstate;
 	struct net_device *dev = pci_get_drvdata(pdev);
+	struct tulip_private *tp = netdev_priv(dev);
 
 	if (!dev)
 		return -EINVAL;
@@ -1779,7 +1868,16 @@ static int tulip_suspend (struct pci_dev *pdev, pm_message_t state)
 save_state:
 	pci_save_state(pdev);
 	pci_disable_device(pdev);
-	pci_set_power_state(pdev, pci_choose_state(pdev, state));
+	pstate = pci_choose_state(pdev, state);
+	if (state.event == PM_EVENT_SUSPEND && pstate != PCI_D0) {
+		int rc;
+
+		tulip_set_wolopts(pdev, tp->wolinfo.wolopts);
+		rc = pci_enable_wake(pdev, pstate, tp->wolinfo.wolopts);
+		if (rc)
+			pr_err("pci_enable_wake failed (%d)\n", rc);
+	}
+	pci_set_power_state(pdev, pstate);
 
 	return 0;
 }
@@ -1788,7 +1886,10 @@ save_state:
 static int tulip_resume(struct pci_dev *pdev)
 {
 	struct net_device *dev = pci_get_drvdata(pdev);
+	struct tulip_private *tp = netdev_priv(dev);
+	void __iomem *ioaddr = tp->base_addr;
 	int retval;
+	unsigned int tmp;
 
 	if (!dev)
 		return -EINVAL;
@@ -1800,15 +1901,27 @@ static int tulip_resume(struct pci_dev *pdev)
 		return 0;
 
 	if ((retval = pci_enable_device(pdev))) {
-		pr_err(PFX "pci_enable_device failed in resume\n");
+		pr_err("pci_enable_device failed in resume\n");
 		return retval;
 	}
 
 	if ((retval = request_irq(dev->irq, tulip_interrupt, IRQF_SHARED, dev->name, dev))) {
-		pr_err(PFX "request_irq failed in resume\n");
+		pr_err("request_irq failed in resume\n");
 		return retval;
 	}
 
+	if (tp->flags & COMET_PM) {
+		pci_enable_wake(pdev, PCI_D3hot, 0);
+		pci_enable_wake(pdev, PCI_D3cold, 0);
+
+		/* Clear the PMES flag */
+		tmp = ioread32(ioaddr + CSR20);
+		tmp |= comet_csr20_pmes;
+		iowrite32(tmp, ioaddr + CSR20);
+
+		/* Disable all wake-up events */
+		tulip_set_wolopts(pdev, 0);
+	}
 	netif_device_attach(dev);
 
 	if (netif_running(dev))
