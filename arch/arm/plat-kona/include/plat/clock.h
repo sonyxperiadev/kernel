@@ -21,6 +21,9 @@
 #include <linux/list.h>
 #include <plat/pi_mgr.h>
 #include <mach/clock.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 
 #define GET_BIT_USING_MASK(reg_val, mask)	(!!((reg_val) & (mask)))
 #define SET_BIT_USING_MASK(reg_val, mask)	((reg_val) | (mask))
@@ -99,6 +102,9 @@
 #define CCU_VLT6_SHIFT	16
 #define CCU_VLT7_SHIFT	24
 #define CCU_VLT_MASK	0xF
+
+#define CCU_POLICY_DBG_FREQ_MASK	7
+#define CCU_POLICY_DBG_POLICY_MASK	3
 
 
 #define CLK_OFF_DELAY_EN	1
@@ -389,6 +395,7 @@ struct ccu_clk {
 	int pi_id;
 	struct list_head peri_list;
 	struct list_head bus_list;
+	struct list_head ref_list;
 
 	u32 pol_engine_dis_cnt;
 	u32 write_access_en_count;
@@ -417,6 +424,12 @@ struct ccu_clk {
 	struct ccu_clk_ops* ccu_ops;
 	u8 active_policy;
 	u32*	freq_tbl[MAX_CCU_FREQ_COUNT];
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *dent_ccu_dir;
+	u32 policy_dbg_offset;
+	u32 policy_dbg_act_freq_shift;
+	u32 policy_dbg_act_policy_shift;
+#endif
 
 };
 
@@ -527,9 +540,11 @@ unsigned long clock_get_xtal(void);
 #ifdef CONFIG_DEBUG_FS
 int clock_debug_init(void);
 int clock_debug_add_clock(struct clk *c);
+int __init clock_debug_add_ccu(struct clk *c);
 #else
 #define	clock_debug_init() do {} while(0)
 #define	clock_debug_add_clock(clk) do {} while(0)
+#define	clock_debug_add_ccu(clk) do {} while(0)
 #endif
 
 int clk_init(struct clk* clk);

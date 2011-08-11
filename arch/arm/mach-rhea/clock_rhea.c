@@ -550,6 +550,11 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.lvm_en_offset = KPROC_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KPROC_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPROC_CLK_MGR_REG_VLT0_3_OFFSET,
+#ifdef CONFIG_DEBUG_FS
+	.policy_dbg_offset = KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET,
+	.policy_dbg_act_freq_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+	.policy_dbg_act_policy_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,4,0xb,0xb,0xb,0xe),
 	.freq_count = 8,
 	.freq_policy = DEFINE_ARRAY_ARGS(7,7,7,7),
@@ -658,6 +663,9 @@ static int arm_clk_init(struct clk* clk)
     /* Disable write access*/
     ccu_write_access_enable(peri_clk->ccu_clk, false);
     clk->init = 1;
+
+    INIT_LIST_HEAD(&clk->list);
+    list_add(&clk->list, &peri_clk->ccu_clk->peri_list);
 
     return 0;
 }
@@ -789,6 +797,11 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.lvm_en_offset = KHUB_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KHUB_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KHUB_CLK_MGR_REG_VLT0_3_OFFSET,
+#ifdef CONFIG_DEBUG_FS
+	.policy_dbg_offset = KHUB_CLK_MGR_REG_POLICY_DBG_OFFSET,
+	.policy_dbg_act_freq_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+	.policy_dbg_act_policy_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,0xb,0xe,0xe,0xe,0xe),
 	.freq_count = 8,
 	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
@@ -1793,6 +1806,11 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.lvm_en_offset = KHUBAON_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KHUBAON_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KHUBAON_CLK_MGR_REG_VLT0_3_OFFSET,
+#ifdef CONFIG_DEBUG_FS
+	.policy_dbg_offset = KHUBAON_CLK_MGR_REG_POLICY_DBG_OFFSET,
+	.policy_dbg_act_freq_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+	.policy_dbg_act_policy_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#endif
 	.freq_volt = DEFINE_ARRAY_ARGS(0xe,0xe,0xe,0xe,0xe,0xe,0xe,0xe),
 	.freq_count = 8,
 	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
@@ -2500,6 +2518,11 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.lvm_en_offset = KPM_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KPM_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPM_CLK_MGR_REG_VLT0_3_OFFSET,
+#ifdef CONFIG_DEBUG_FS
+	.policy_dbg_offset = KPM_CLK_MGR_REG_POLICY_DBG_OFFSET,
+	.policy_dbg_act_freq_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+	.policy_dbg_act_policy_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,0xb,0xb,0xe,0xe,0xe),
 	.freq_count = 8,
 	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
@@ -3080,6 +3103,11 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.lvm_en_offset = KPS_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KPS_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPS_CLK_MGR_REG_VLT0_3_OFFSET,
+#ifdef CONFIG_DEBUG_FS
+	.policy_dbg_offset = KPS_CLK_MGR_REG_POLICY_DBG_OFFSET,
+	.policy_dbg_act_freq_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+	.policy_dbg_act_policy_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,0xb,0xb,0xe,0xe,0xe,0xe),
 	.freq_count = 8,
 	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
@@ -4026,6 +4054,11 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.lvm_en_offset = MM_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = MM_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = MM_CLK_MGR_REG_VLT0_3_OFFSET,
+#ifdef CONFIG_DEBUG_FS
+	.policy_dbg_offset = MM_CLK_MGR_REG_POLICY_DBG_OFFSET,
+	.policy_dbg_act_freq_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
+	.policy_dbg_act_policy_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+#endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,0xb,0xb,0xb,0xe,0xe,0xe),
 	.freq_count = 8,
 	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
@@ -4804,6 +4837,9 @@ int root_ccu_clk_init(struct clk* clk)
 		return 0;
 
 	ccu_clk = to_ccu_clk(clk);
+	INIT_LIST_HEAD(&ccu_clk->peri_list);
+	INIT_LIST_HEAD(&ccu_clk->bus_list);
+	INIT_LIST_HEAD(&ccu_clk->ref_list);
 
 	clk_dbg("%s - %s\n",__func__, clk->name);
 
@@ -4922,9 +4958,18 @@ static int mm_ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
 /* table for registering clock */
 static struct __init clk_lookup rhea_clk_tbl[] =
 {
-	BRCM_REGISTER_CLK(ARM_PERI_CLK_NAME_STR,NULL,arm),
+	/* All the CCUs are registered first */
 	BRCM_REGISTER_CLK(KPROC_CCU_CLK_NAME_STR,NULL,kproc),
 	BRCM_REGISTER_CLK(ROOT_CCU_CLK_NAME_STR,NULL,root),
+	BRCM_REGISTER_CLK(KHUB_CCU_CLK_NAME_STR,NULL,khub),
+	BRCM_REGISTER_CLK(KHUBAON_CCU_CLK_NAME_STR,NULL,khubaon),
+	BRCM_REGISTER_CLK(KPM_CCU_CLK_NAME_STR,NULL,kpm),
+	BRCM_REGISTER_CLK(KPS_CCU_CLK_NAME_STR,NULL,kps),
+	BRCM_REGISTER_CLK(MM_CCU_CLK_NAME_STR,NULL,mm),
+	/* CCU registration end */
+
+	/* Clocks registration */
+	BRCM_REGISTER_CLK(ARM_PERI_CLK_NAME_STR,NULL,arm),
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),
@@ -4959,7 +5004,6 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(DSI0_PIX_PHY_REF_CLK_NAME_STR,NULL,dsi0_pix_phy),
 	BRCM_REGISTER_CLK(DSI1_PIX_PHY_REF_CLK_NAME_STR,NULL,dsi1_pix_phy),
 	BRCM_REGISTER_CLK(TEST_DEBUG_REF_CLK_NAME_STR,NULL,test_debug),
-	BRCM_REGISTER_CLK(KHUB_CCU_CLK_NAME_STR,NULL,khub),
 	BRCM_REGISTER_CLK(NOR_APB_BUS_CLK_NAME_STR,NULL,nor_apb),
 	BRCM_REGISTER_CLK(TMON_APB_BUS_CLK_NAME_STR,NULL,tmon_apb),
 	BRCM_REGISTER_CLK(APB5_BUS_CLK_NAME_STR,NULL,apb5),
@@ -4993,7 +5037,6 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(DAP_SWITCH_PERI_CLK_NAME_STR,NULL,dap_switch),
 	BRCM_REGISTER_CLK(BROM_PERI_CLK_NAME_STR,NULL,brom),
 	BRCM_REGISTER_CLK(MDIOMASTER_PERI_CLK_NAME_STR,NULL,mdiomaster),
-	BRCM_REGISTER_CLK(KHUBAON_CCU_CLK_NAME_STR,NULL,khubaon),
 	BRCM_REGISTER_CLK(HUB_TIMER_APB_BUS_CLK_NAME_STR,NULL,hub_timer_apb),
 	BRCM_REGISTER_CLK(ACI_APB_BUS_CLK_NAME_STR,NULL,aci_apb),
 	BRCM_REGISTER_CLK(SIM_APB_BUS_CLK_NAME_STR,NULL,sim_apb),
@@ -5016,7 +5059,6 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(SIM2_PERI_CLK_NAME_STR,NULL,sim2),
 	BRCM_REGISTER_CLK(HUB_TIMER_PERI_CLK_NAME_STR,NULL,hub_timer),
 	BRCM_REGISTER_CLK(PMU_BSC_PERI_CLK_NAME_STR,NULL,pmu_bsc),
-	BRCM_REGISTER_CLK(KPM_CCU_CLK_NAME_STR,NULL,kpm),
 	BRCM_REGISTER_CLK(USB_OTG_AHB_BUS_CLK_NAME_STR,NULL,usb_otg_ahb),
 	BRCM_REGISTER_CLK(SDIO2_AHB_BUS_CLK_NAME_STR,NULL,sdio2_ahb),
 	BRCM_REGISTER_CLK(SDIO3_AHB_BUS_CLK_NAME_STR,NULL,sdio3_ahb),
@@ -5036,7 +5078,6 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(SDIO4_SLEEP_PERI_CLK_NAME_STR,NULL,sdio4_sleep),
 	BRCM_REGISTER_CLK(USBH_48M_PERI_CLK_NAME_STR,NULL,usbh_48m),
 	BRCM_REGISTER_CLK(USBH_12M_PERI_CLK_NAME_STR,NULL,usbh_12m),
-	BRCM_REGISTER_CLK(KPS_CCU_CLK_NAME_STR,NULL,kps),
 	BRCM_REGISTER_CLK(UARTB_APB_BUS_CLK_NAME_STR,NULL,uartb_apb),
 	BRCM_REGISTER_CLK(UARTB2_APB_BUS_CLK_NAME_STR,NULL,uartb2_apb),
 	BRCM_REGISTER_CLK(UARTB3_APB_BUS_CLK_NAME_STR,NULL,uartb3_apb),
@@ -5066,7 +5107,6 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(TIMERS_PERI_CLK_NAME_STR,NULL,timers),
 	BRCM_REGISTER_CLK(SPUM_OPEN_PERI_CLK_NAME_STR,NULL,spum_open),
 	BRCM_REGISTER_CLK(SPUM_SEC_PERI_CLK_NAME_STR,NULL,spum_sec),
-	BRCM_REGISTER_CLK(MM_CCU_CLK_NAME_STR,NULL,mm),
 	BRCM_REGISTER_CLK(mm_switch_axi_PERI_CLK_NAME_STR,NULL,mm_switch_axi),
 	BRCM_REGISTER_CLK(CSI0_AXI_BUS_CLK_NAME_STR,NULL,csi0_axi),
 	BRCM_REGISTER_CLK(CSI1_AXI_BUS_CLK_NAME_STR,NULL,csi1_axi),
@@ -5114,8 +5154,12 @@ int __init clock_late_init(void)
 #ifdef CONFIG_DEBUG_FS
 	int i;
 	clock_debug_init();
-	for (i=0; i<ARRAY_SIZE(rhea_clk_tbl); i++)
+	for (i=0; i<ARRAY_SIZE(rhea_clk_tbl); i++) {
+	    if(rhea_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU)
+		clock_debug_add_ccu(rhea_clk_tbl[i].clk);
+	    else
 		clock_debug_add_clock (rhea_clk_tbl[i].clk);
+	}
 #endif
 	return 0;
 }
