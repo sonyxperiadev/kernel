@@ -269,7 +269,7 @@ static struct platform_device usb_mass_storage_device = {
 #if defined(CONFIG_USB_ANDROID_RNDIS)
 static struct usb_ether_platform_data rndis_pdata = {
    /* ethaddr is filled by board_serialno_setup */
-   .vendorID       = __constant_cpu_tole16(VENDOR_ID),
+   .vendorID       = __constant_cpu_to_le16(VENDOR_ID),
    .vendorDescr    = "Broadcom",
 };
 
