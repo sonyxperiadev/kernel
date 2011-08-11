@@ -1007,7 +1007,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   struct snd_kcontrol_new kctlSpeechMixingOption2 = BRCM_MIXER_CTRL_MISC(0, 0, "P2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
 
 	   //kctlSpeechInMixingOption is for CTL_STREAM_PANEL_SPEECHIN
-	   struct snd_kcontrol_new kctlSpeechInMixingOption = BRCM_MIXER_CTRL_MISC(0, 0, "C2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2+1, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
+	   struct snd_kcontrol_new kctlSpeechInMixingOption = BRCM_MIXER_CTRL_MISC(0, 0, "C2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_SPEECHIN, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
 	   
 
 	   struct snd_kcontrol_new kctlFMEnable = BRCM_MIXER_CTRL_MISC(0, 0, "FM-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_FM_ENABLE));
