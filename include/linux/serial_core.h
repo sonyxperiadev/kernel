@@ -206,6 +206,9 @@
 /* Xilinx PSS UART */
 #define PORT_XUARTPS	98
 
+/* Broadcom Virtual UART */
+#define PORT_BCMVUART	93
+
 #ifdef __KERNEL__
 
 #include <linux/compiler.h>

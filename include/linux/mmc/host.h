@@ -74,6 +74,14 @@ struct mmc_ios {
 #define MMC_SET_DRIVER_TYPE_A	1
 #define MMC_SET_DRIVER_TYPE_C	2
 #define MMC_SET_DRIVER_TYPE_D	3
+
+#ifdef	 CONFIG_BCM_SDIOWL
+	unsigned char	host_reset;		/* reset host controller */
+
+#define MMC_HOST_RESET_CMD	1
+#define MMC_HOST_RESET_DAT	2
+#define MMC_HOST_RESET_ALL	3
+#endif
 };
 
 struct mmc_host_ops {
