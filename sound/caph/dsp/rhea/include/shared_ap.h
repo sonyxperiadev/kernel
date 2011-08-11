@@ -2568,16 +2568,6 @@ EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_S
 } AP_SharedMem_t;
 #endif
 
-#ifdef MSP
-
-typedef        AP_SharedMem_t SharedMem_t;
-typedef        AP_SharedMem_t VPSharedMem_t;
-
-AP_SharedMem_t  *SHAREDMEM_GetDsp_SharedMemPtr(void);                    // Return pointer to shared memory
-
-extern  AP_SharedMem_t    *vp_shared_mem;
-
-#endif // #ifdef MSP
 
 //******************************************************************************
 // Function Prototypes

@@ -347,19 +347,20 @@ void AUDIO_Ctrl_Process(
         case ACTION_AUD_StartRecord:
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
-
-
-	        AUDCTRL_EnableRecord(param_start->pdev_prop->u.c.hw_id,
+			
+			if(param_start->callMode != 1) 
+			{
+	        	AUDCTRL_EnableRecord(param_start->pdev_prop->u.c.hw_id,
 				                     param_start->pdev_prop->u.c.hw_sink,	
                                      param_start->pdev_prop->u.c.mic,
 				                     param_start->channels,
                                      param_start->rate);
-            AUDCTRL_SetRecordGain(param_start->pdev_prop->u.c.hw_id,
+	            AUDCTRL_SetRecordGain(param_start->pdev_prop->u.c.hw_id,
                                   param_start->pdev_prop->u.c.mic,
                                   AUDIO_GAIN_FORMAT_Q13_2,
                                   param_start->vol[0],
                                   param_start->vol[1]);
-
+			}
 			if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_CAPT_HQ)
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.c.aud_dev); 
 			else

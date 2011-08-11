@@ -48,6 +48,8 @@ Broadcom's express prior written consent.
 //
 static capture_data_cb_t capture_cb = NULL;
 
+extern AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr(void);
+
 //
 // APIs of VPU
 //
@@ -182,8 +184,8 @@ Result_t dspif_AMRWB_record_start ( VOCAPTURE_RECORD_MODE_t	recordMode,
 								Boolean						dtxEnable,
 								UInt32						numFramesPerInterrupt)
 {
-	SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
-
+	AP_SharedMem_t	*pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
+	
 	Log_DebugPrintf(LOGID_AUDIO, "dspif_AMRWB_record_start::start AMRWB voice record\n");;
 	
 	pSharedMem->shared_WB_AMR_Ctrl_state = dataRate | (dtxEnable<<4) | (speechMode<<5);

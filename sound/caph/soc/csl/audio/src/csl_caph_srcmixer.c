@@ -25,9 +25,6 @@ Broadcom's express prior written consent.
 #include "chal_caph_srcmixer.h"
 #include "csl_caph_srcmixer.h"
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
-
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -109,7 +106,6 @@ static UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e ou
 static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 //static CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_chal_fifo(
 //                                                   CSL_CAPH_SRCM_FIFO_e fifo);
-static CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_getTapOutChnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
 //******************************************************************************
 // local function definitions
 //******************************************************************************
