@@ -5143,7 +5143,6 @@ int root_ccu_clk_init(struct clk* clk)
 static int mm_ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
 {
 	u32 reg_val = 0;
-	struct pi* pi =  NULL;
 	u32 shift;
 
 	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n",__func__,
@@ -5171,14 +5170,7 @@ static int mm_ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int fr
 	}
 
 	/*Make sure that PI is enabled ...*/
-	if(ccu_clk->pi_id != -1)
-	{
-		pi = pi_mgr_get(ccu_clk->pi_id);
-
-		BUG_ON(!pi);
-		pi_enable(pi,1);
-	}
-
+	CCU_PI_ENABLE(ccu_clk,1);
 	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
 	clk_dbg("%s: reg_val:%08x shift:%d\n",__func__, reg_val, shift);
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
@@ -5192,8 +5184,7 @@ static int mm_ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int fr
 	ccu_policy_engine_resume(ccu_clk,
 		ccu_clk->clk.flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 	ccu_write_access_enable(ccu_clk,false);
-	if(pi)
-		pi_enable(pi,0);
+	CCU_PI_ENABLE(ccu_clk,0);
 	return 0;
 }
 
