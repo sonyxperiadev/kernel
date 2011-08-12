@@ -353,32 +353,71 @@ int32_t vceb_hana_interface_control_run_pin( VCEB_HOST_INTERFACE_INSTANCE_T inst
 *
 ***************************************************************************/
 
-int32_t vceb_hana_interface_download( VCEB_HOST_INTERFACE_INSTANCE_T instance,
-                                 const void * const data,
-                                 const uint32_t data_size )
+static int32_t vceb_hana_interface_download( VCEB_HOST_INTERFACE_INSTANCE_T instance,
+                                             const void * const data,
+                                             const uint32_t data_size )
 {
+    int32_t ret = -1;
+    VCEB_HOST_INTERFACE_STATE_T state = instance->state;
+    VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
+    struct resource *res;
+    void *vc_mem;
+
     if ( vceb_is_videocore_running )
     {
         printk( KERN_INFO "VCEB: Internal Videocore already running. Ignoring download request...\n" );
+
+        ret = 0;
+        goto out;
     }
-    else
+
+    printk( KERN_INFO "VCEB download address 0x%x data_size = %d\n",
+          (unsigned int)platform_data->vcMemAddr,
+          data_size );
+
+    // Request an I/O memory region big enough for the videocore image
+    res = request_mem_region( platform_data->vcMemAddr, data_size,
+                              "vceb download" );
+    if ( res == NULL )
     {
-        VCEB_HOST_INTERFACE_STATE_T state = instance->state;
-        VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
-
-        printk( KERN_INFO "VCEB download address 0x%x data_size = %d\n",
-              (unsigned int)platform_data->vcMemAddr,
-              data_size );
-        memcpy( (void *)platform_data->vcMemAddr, data, data_size );
-        chal_ipc_wakeup_vc( state->ipcHandle, VCBOOT_VC4_BOOT_ADDR );
-
-        /* Wait for Videocore boot. */
-        msleep( 2000 );
-
-        printk( KERN_INFO "VCEB: Internal Videocore running...\n" );
+        printk( KERN_ERR "VCEB: Failed to request I/O memory region\n" );
+        goto out;
     }
 
-    return 0;
+    // I/O remap the videocore memory
+    vc_mem = ioremap_nocache( res->start, resource_size( res ));
+    if ( vc_mem == NULL )
+    {
+        printk( KERN_ERR "VCEB: Failed to I/O remap\n" );
+        goto rel_mem_region;
+    }
+
+    printk( KERN_INFO "VCEB: Downloading Videocore image (%u bytes) to 0x%p\n",
+            data_size, vc_mem );
+
+
+    // Copy the videocore image to the videocore memory
+    memcpy_toio( vc_mem, data, data_size );
+
+    chal_ipc_wakeup_vc( state->ipcHandle, VCBOOT_VC4_BOOT_ADDR );
+
+    /* Wait for Videocore boot. */
+    msleep( 2000 );
+
+    printk( KERN_INFO "VCEB: Internal Videocore running...\n" );
+
+    // Success!
+    ret = 0;
+
+    // Unmap the videocore memory
+    iounmap( vc_mem );
+
+rel_mem_region:
+    // Release the I/O memory region
+    release_mem_region( res->start, resource_size( res ));
+
+out:
+    return ret;
 }
 
 /****************************************************************************

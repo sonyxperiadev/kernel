@@ -460,6 +460,9 @@ EXPORT_SYMBOL( chal_ipc_query_wakeup_vc );
 EXPORT_SYMBOL( chal_ipc_wakeup_vc );
 EXPORT_SYMBOL( chal_ipc_sleep_vc );
 
+EXPORT_SYMBOL( chal_ipc_write_mailbox );
+EXPORT_SYMBOL( chal_ipc_read_mailbox );
+
 EXPORT_SYMBOL( chal_ipc_int_secmode );
 EXPORT_SYMBOL( chal_ipc_int_clr );
 EXPORT_SYMBOL( chal_ipc_int_vcset );

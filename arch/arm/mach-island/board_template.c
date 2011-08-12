@@ -707,7 +707,7 @@ static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
         .host_param = &vceb_hana_display_data,
     },
 
-    .vcMemAddr          = KONA_VC_EMI,
+    .vcMemAddr          = VC_EMI,
     .vcSramAddr         = KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET,
 
     .bootFromKernel     = 1,
