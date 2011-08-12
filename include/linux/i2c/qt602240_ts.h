@@ -31,6 +31,11 @@ struct qt602240_platform_data {
 	unsigned int y_line;
 	unsigned int x_size;
 	unsigned int y_size;
+	unsigned int x_min;
+	unsigned int y_min;
+	unsigned int x_max;
+	unsigned int y_max;
+	unsigned int max_area;
 	unsigned int blen;
 	unsigned int threshold;
 	unsigned int voltage;
