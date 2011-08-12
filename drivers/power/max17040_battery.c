@@ -38,7 +38,7 @@
 #define MAX17040_CMD_MSB	0xFE
 #define MAX17040_CMD_LSB	0xFF
 
-#define MAX17040_DELAY		1000
+#define MAX17040_DELAY		(10*HZ)
 #define MAX17040_BATTERY_FULL	95
 
 struct max17040_chip {

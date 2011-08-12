@@ -15,6 +15,9 @@
 #ifndef BATTERY_SETTINGS_H
 #define BATTERY_SETTINGS_H
 
+/* this is needed for the POWER_SUPPLY_TECHNOLOGY_LION definition */
+#include <linux/power_supply.h>
+
 /* 
    the following 2 settings are of interest to cmp_battery_multi.c and
    adc121c021_driver.c drivers. They are used to initialize cbm_platform_data
@@ -31,9 +34,8 @@
 {  \
    .battery_max_voltage     = HW_BATTERY_MAX_VOLTAGE, \
    .battery_min_voltage     = HW_BATTERY_MIN_VOLTAGE, \
-   .battery_technology      = 2, \
+   .battery_technology      = POWER_SUPPLY_TECHNOLOGY_LION, \
    .gpio_power_control      = 85, \
-   .p_cbm_data              = NULL \
 }    
 
 #endif

@@ -38,12 +38,10 @@ struct cbm_platform_data
    int battery_technology;
    
    int gpio_power_control;
-   void *p_cbm_data;
 };
 
 int register_battery_monitor(struct battery_monitor *p_battery_monitor,
                              void *p_data);
-                                  
 
 #endif    /* _CMP_BATTERY_MULTI_H_ */
 
