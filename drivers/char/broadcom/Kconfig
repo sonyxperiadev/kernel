@@ -68,7 +68,7 @@ config BCM_GPS_UART
 		GPS UART port no e.g. 0,1,2,3 to be used 
 
 config BCM_MODEM
-        tristate "Broadcom Modem Driver"
+        bool "Broadcom Modem Driver"
         depends on BRCM_CHAR_DRIVERS && NET
         default n
         help
