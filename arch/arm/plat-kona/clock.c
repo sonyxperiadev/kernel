@@ -914,7 +914,7 @@ static int peri_clk_get_pll_select(struct peri_clk * peri_clk)
 }
 EXPORT_SYMBOL(peri_clk_get_pll_select);
 
-static int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source)
+int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source)
 {
 	u32 reg_val;
 	if(!peri_clk->clk_div.pll_select_offset ||
@@ -1017,7 +1017,8 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	if((enable) && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU) && !(clk->flags & AUTO_GATE))
 	{
 	    clk_dbg("%s: peri clock %s incrementing CCU count\n",__func__, clk->name);
-	    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
+	    if (peri_clk->ccu_clk->clk.ops && peri_clk->ccu_clk->clk.ops->enable)
+		peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
 	}
 
 	/*Make sure that all dependent & src clks are enabled/disabled*/
@@ -1120,7 +1121,8 @@ enable_done:
 	if(!enable && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU) && !(clk->flags& AUTO_GATE))
 	{
 	    clk_dbg("%s: peri clock %s decrementing CCU count\n",__func__, clk->name);
-	    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 0);
+	    if (peri_clk->ccu_clk->clk.ops && peri_clk->ccu_clk->clk.ops->enable)
+		peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 0);
 	}
 enable_done1:
 	/* disable write access*/
@@ -1590,7 +1592,7 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 	}
 	if(clk_div->pll_select_offset && clk_div->pll_select_mask)
 	{
-		reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->div_offset));
+		reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->pll_select_offset));
 		sel = GET_VAL_USING_MASK_SHIFT(reg_val, clk_div->pll_select_mask, clk_div->pll_select_shift);
 		clk_dbg("pll_sel : %u\n", sel);
 	}
