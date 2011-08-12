@@ -182,7 +182,10 @@
 #define	DSI0_ESC_PERI_CLK_NAME_STR "dsi0_esc_clk"
 #define	DSI1_ESC_PERI_CLK_NAME_STR "dsi1_esc_clk"
 #define	DSI_PLL_O_DSI_PLL_PERI_CLK_NAME_STR "dsi_pll_o_dsi_pll_clk"
-
+#define	DIG_CH0_PERI_CLK_NAME_STR	"dig_ch0_clk"
+#define	DIG_CH1_PERI_CLK_NAME_STR	"dig_ch1_clk"
+#define	DIG_CH2_PERI_CLK_NAME_STR	"dig_ch2_clk"
+#define	DIG_CH3_PERI_CLK_NAME_STR	"dig_ch3_clk"
 
 /*
 Clock ids
@@ -354,6 +357,10 @@ enum
 	CLK_DSI0_ESC_PERI_CLK_ID,
 	CLK_DSI1_ESC_PERI_CLK_ID,
 	CLK_DSI_PLL_O_DSI_PLL_PERI_CLK_ID,
+	CLK_DIG_CH0_PERI_CLK_ID,
+	CLK_DIG_CH1_PERI_CLK_ID,
+	CLK_DIG_CH2_PERI_CLK_ID,
+	CLK_DIG_CH3_PERI_CLK_ID,
 
 };
 
@@ -521,12 +528,17 @@ enum
 #define DSI0_ESC_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
 #define DSI1_ESC_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
 #define DSI_PLL_O_DSI_PLL_PERI_CLK_FLAGS 			HYST_ENABLE|HYST_HIGH
+#define	DIG_CH0_PERI_CLK_FLAGS			0
+#define	DIG_CH1_PERI_CLK_FLAGS			0
+#define	DIG_CH2_PERI_CLK_FLAGS			0
+#define	DIG_CH3_PERI_CLK_FLAGS			0
 
 
 enum {
     ROOT_CCU_PLL0A,
     ROOT_CCU_PLL1A,
 };
+#define DIG_CHANNEL_AUTO_GATE_REQ_MASK	7
 
 int clk_set_pll_pwr_on_idle(int pll_id, int enable);
 int clk_set_crystal_pwr_on_idle(int enable);

@@ -552,6 +552,7 @@ int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
 int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
 int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay);
+int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source);
 int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
 int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type);
 int ccu_policy_engine_stop(struct ccu_clk* ccu_clk);
