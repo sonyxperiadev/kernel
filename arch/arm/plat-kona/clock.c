@@ -64,6 +64,11 @@ int clk_init(struct clk *clk)
 	return ret;
 }
 
+int clk_is_enabled(struct clk* clk)
+{
+	return (!!clk->use_cnt);
+}
+
 int clk_register(struct clk_lookup *clk_lkup,int num_clks)
 {
     int ret = 0;
@@ -420,7 +425,6 @@ static int ccu_clk_int_status_clear(struct ccu_clk* ccu_clk,int int_type)
 static int ccu_clk_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
 {
 	u32 reg_val = 0;
-	struct pi* pi =  NULL;
 	u32 shift;
 
 	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n",__func__,
@@ -448,14 +452,7 @@ static int ccu_clk_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int f
 	}
 
 	/*Make sure that PI is enabled ...*/
-	if(ccu_clk->pi_id != -1)
-	{
-		pi = pi_mgr_get(ccu_clk->pi_id);
-
-		BUG_ON(!pi);
-		pi_enable(pi,1);
-	}
-
+	CCU_PI_ENABLE(ccu_clk,1);
 	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
 	clk_dbg("%s: reg_val:%08x shift:%d\n",__func__, reg_val, shift);
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
@@ -469,8 +466,9 @@ static int ccu_clk_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int f
 	ccu_policy_engine_resume(ccu_clk,
 		ccu_clk->clk.flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 	ccu_write_access_enable(ccu_clk,false);
-	if(pi)
-		pi_enable(pi,0);
+
+	CCU_PI_ENABLE(ccu_clk,0);
+
 	return 0;
 }
 
@@ -681,7 +679,6 @@ static int ccu_clk_init(struct clk* clk)
 {
 	struct ccu_clk * ccu_clk;
 	int inx;
-	struct pi* pi = NULL;
 	u32 reg_val;
 	if(clk->clk_type != CLK_TYPE_CCU)
 		return -EPERM;
@@ -699,14 +696,17 @@ static int ccu_clk_init(struct clk* clk)
 	INIT_LIST_HEAD(&ccu_clk->bus_list);
 	INIT_LIST_HEAD(&ccu_clk->ref_list);
 
+
+
 	if(ccu_clk->pi_id != -1)
 	{
-		pi = pi_mgr_get(ccu_clk->pi_id);
+		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
 		BUG_ON(!pi);
 		pi_init(pi);
-		pi_enable(pi,1);
 	}
 
+
+	CCU_PI_ENABLE(ccu_clk,1);
 
 	/* enable write access*/
 	ccu_write_access_enable(ccu_clk,true);
@@ -757,12 +757,7 @@ static int ccu_clk_init(struct clk* clk)
 		ccu_policy_engine_resume(ccu_clk, CCU_LOAD_ACTIVE);
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
-
-	if(ccu_clk->pi_id != -1)
-	{
-		pi_enable(pi,0);
-	}
-
+	CCU_PI_ENABLE(ccu_clk,0);
 
 	return 0;
 }
@@ -961,7 +956,7 @@ int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay)
 }
 EXPORT_SYMBOL(peri_clk_hyst_enable);
 
-static int peri_clk_get_gating_status(struct peri_clk * peri_clk)
+int peri_clk_get_gating_status(struct peri_clk * peri_clk)
 {
 	u32 reg_val;
 
@@ -971,7 +966,6 @@ static int peri_clk_get_gating_status(struct peri_clk * peri_clk)
 
 	return GET_BIT_USING_MASK(reg_val, peri_clk->stprsts_mask);
 }
-EXPORT_SYMBOL(peri_clk_get_gating_status);
 
 static int peri_clk_set_voltage_lvl(struct peri_clk * peri_clk, int voltage_lvl)
 {
@@ -992,7 +986,6 @@ static int peri_clk_set_voltage_lvl(struct peri_clk * peri_clk, int voltage_lvl)
 
 	return 0;
 }
-EXPORT_SYMBOL(peri_clk_set_voltage_lvl);
 
 static int peri_clk_enable(struct clk* clk, int enable)
 {
@@ -1045,7 +1038,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	{
 		/*Increment usage count... return if already enabled*/
 		if(peri_clk->clk.use_cnt++ != 0)
-			goto enable_done1;
+			goto enable_done;
 
 		/*Update DFS request to opp before enabling the clock */
 		if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
@@ -1054,6 +1047,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 			pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,peri_clk->opp);
 		}
 
+		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 		/*TBD - MAY NEED TO REVISIT*/
 		if(clk->flags & ENABLE_HVT)
 			peri_clk_set_voltage_lvl(peri_clk,VLT_HIGH);
@@ -1062,25 +1056,27 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	{
 		/*decrment usage count... return if already disabled or usage count is non-zero*/
 		if(peri_clk->clk.use_cnt == 0)
-		    goto enable_done1;
-		if(--peri_clk->clk.use_cnt != 0)
 		    goto enable_done;
+		if(--peri_clk->clk.use_cnt != 0)
+		    goto notify_ccu;
+
+		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 
 		/*MAY NEED TO REVISIT*/
 		if(clk->flags & ENABLE_HVT)
 			peri_clk_set_voltage_lvl(peri_clk,VLT_NORMAL);
 	}
 
-	/* enable write access*/
-	ccu_write_access_enable(peri_clk->ccu_clk, true);
-
 	clk_dbg("%s:%s use count = %d\n",__func__,clk->name,peri_clk->clk.use_cnt);
 
 	if(clk->flags & AUTO_GATE)
 	{
 		clk_dbg("%s:%s: is auto gated\n",__func__, clk->name);
-		goto enable_done1;
+		goto dis_pi;
 	}
+
+		/* enable write access*/
+	ccu_write_access_enable(peri_clk->ccu_clk, true);
 
 	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk,peri_clk->clk_gate_offset));
 	clk_dbg("%s, Before change clk_gate reg value: %08x  \n",__func__, reg_val);
@@ -1117,14 +1113,17 @@ static int peri_clk_enable(struct clk* clk, int enable)
 		pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,PI_MGR_DFS_MIN_VALUE);
 	}
 
-enable_done:
+dis_pi:
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+
+notify_ccu:
 	if(!enable && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU) && !(clk->flags& AUTO_GATE))
 	{
 	    clk_dbg("%s: peri clock %s decrementing CCU count\n",__func__, clk->name);
 	    if (peri_clk->ccu_clk->clk.ops && peri_clk->ccu_clk->clk.ops->enable)
 		peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 0);
 	}
-enable_done1:
+enable_done:
 	/* disable write access*/
 
 	clk_dbg("*************%s: peri clock %s count after %s : %d ***************\n",
@@ -1419,7 +1418,6 @@ static int peri_clk_init(struct clk* clk)
 	struct peri_clk * peri_clk;
 	struct src_clk * src_clks;
 	int inx;
-	struct pi* pi = NULL;
 
 	if(clk->clk_type != CLK_TYPE_PERI)
 		return -EPERM;
@@ -1427,17 +1425,13 @@ static int peri_clk_init(struct clk* clk)
 	if(clk->init)
 		return 0;
 
+	clk->init = 1;
 	peri_clk = to_peri_clk(clk);
 	BUG_ON(peri_clk->ccu_clk == NULL);
 
 	clk_dbg("%s, clock name: %s \n",__func__, clk->name);
 	clk->use_cnt = 0;
-	if(peri_clk->ccu_clk->pi_id != -1)
-	{
-		pi = pi_mgr_get(peri_clk->ccu_clk->pi_id);
-		BUG_ON(pi == NULL);
-		pi_enable(pi,1);
-	}
+	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++)
 	{
 		if(clk->dep_clks[inx]->ops && clk->dep_clks[inx]->ops->init)
@@ -1513,18 +1507,15 @@ static int peri_clk_init(struct clk* clk)
 	}
 	/* Disable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk, false);
-	clk->init = 1;
+
 	clk_dbg("*************%s: peri clock %s count after init %d **************\n",
 		__func__, clk->name, clk->use_cnt);
 
-	if(peri_clk->ccu_clk->pi_id != -1)
-	{
-		pi_enable(pi,0);
-	}
 
 	INIT_LIST_HEAD(&clk->list);
 	list_add(&clk->list, &peri_clk->ccu_clk->peri_list);
 
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
 	return 0;
 }
 
@@ -1570,6 +1561,8 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 
 	}
 
+	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+
 	clk_div = &peri_clk->clk_div;
 	if(clk_div->div_offset && clk_div->div_mask)
 	{
@@ -1609,6 +1602,7 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 	clk_dbg("%s clock name %s, src_rate %u sel %d div %u pre_div %u dither %u rate %u\n",
 		__func__, clk->name, peri_clk->src_clk.clk[sel]->rate, sel, div, pre_div, dither, clk->rate);
 
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
 	return clk->rate;
 }
 
@@ -1760,6 +1754,8 @@ static int bus_clk_enable(struct clk *clk, int enable)
 		goto enable_done;
 	}
 
+	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+
 	/* enable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, true);
 
@@ -1802,6 +1798,7 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	/* disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);
 
+	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
 enable_done:
 	if(!enable && !(clk->flags & AUTO_GATE) && (clk->flags & NOTIFY_STATUS_TO_CCU))
 	{
@@ -1834,6 +1831,7 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 		c->rate =  bus_clk->src_clk->ops->get_rate(bus_clk->src_clk);
 		goto ret;
 	}
+	CCU_PI_ENABLE(ccu_clk,1);
 	current_policy = ccu_get_active_policy(ccu_clk);
 
 	freq_id = ccu_get_freq_policy(ccu_clk, current_policy);
@@ -1842,6 +1840,7 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 	c->rate = ccu_clk->freq_tbl[freq_id][bus_clk->freq_tbl_index];
 ret:
 	clk_dbg("clock rate: %ld\n", (long int)c->rate);
+	CCU_PI_ENABLE(ccu_clk,0);
 	return c->rate;
 }
 
@@ -1849,24 +1848,20 @@ static int bus_clk_init(struct clk *clk)
 {
 	struct bus_clk * bus_clk;
 	int inx;
-	struct pi* pi = NULL;
 
 	if(clk->clk_type != CLK_TYPE_BUS)
 		return -EPERM;
 	if(clk->init)
 		return 0;
 
+	clk->init = 1;
 	bus_clk = to_bus_clk(clk);
 	BUG_ON(bus_clk->ccu_clk == NULL);
 
 	clk_dbg("%s - %s\n", __func__, clk->name);
 	clk->use_cnt = 0;
-	if(bus_clk->ccu_clk->pi_id != -1)
-	{
-		pi = pi_mgr_get(bus_clk->ccu_clk->pi_id);
-		BUG_ON(!pi);
-		pi_enable(pi,1);
-	}
+
+	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
 
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++)
 	{
@@ -1914,14 +1909,11 @@ static int bus_clk_init(struct clk *clk)
 
 	/* Disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);
-	clk->init = 1;
 	clk_dbg("%s init complete\n", clk->name);
 	clk_dbg("*************%s: bus clock %s count after init %d ***************\n",
 		__func__, clk->name, clk->use_cnt);
-	if(bus_clk->ccu_clk->pi_id != -1)
-	{
-		pi_enable(pi,0);
-	}
+
+	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
 
 	INIT_LIST_HEAD(&clk->list);
 	list_add(&clk->list, &bus_clk->ccu_clk->bus_list);
@@ -1988,11 +1980,14 @@ static int ref_clk_init(struct clk* clk)
 	if(clk->init)
 		return 0;
 
+	clk->init = 1;
 	ref_clk = to_ref_clk(clk);
 	BUG_ON(ref_clk->ccu_clk == NULL);
 
 	clk_dbg("%s, clock name: %s \n",__func__, clk->name);
 
+
+	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
 	/* enable write access*/
 	ccu_write_access_enable(ref_clk->ccu_clk, true);
 	if(ref_clk_get_gating_status(ref_clk) == 1)
@@ -2028,7 +2023,8 @@ static int ref_clk_init(struct clk* clk)
 
 	/* Disable write access*/
 	ccu_write_access_enable(ref_clk->ccu_clk, false);
-	clk->init = 1;
+	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+
 
 	INIT_LIST_HEAD(&clk->list);
 	list_add(&clk->list, &ref_clk->ccu_clk->ref_list);

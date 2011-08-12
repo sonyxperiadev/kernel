@@ -148,6 +148,13 @@
 #define FREQ_MHZ(x) ((x)*1000*1000)
 #define FREQ_KHZ(x) ((x)*1000)
 
+#define CCU_PI_ENABLE(ccu,en) if((ccu)->pi_id != -1) \
+				{\
+					struct pi* pi = pi_mgr_get((ccu)->pi_id);\
+					BUG_ON(pi == NULL);\
+					pi_enable(pi,en);\
+				}
+
 /* CCU Policy ids*/
 enum
 {
@@ -548,6 +555,7 @@ int __init clock_debug_add_ccu(struct clk *c);
 #endif
 
 int clk_init(struct clk* clk);
+int clk_is_enabled(struct clk* clk);
 int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
 int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
