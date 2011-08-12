@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Thu Aug 11 14:13:22 2011
+# Fri Aug 12 02:54:19 2011
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -1010,7 +1010,7 @@ CONFIG_INPUT_MISC=y
 # CONFIG_INPUT_SMB380 is not set
 CONFIG_INPUT_BCM59055_ONKEY=y
 # CONFIG_INPUT_BCM2850_MIC_DETECT is not set
-# CONFIG_KONA_HEADSET is not set
+CONFIG_KONA_HEADSET=y
 
 #
 # Hardware I/O ports
