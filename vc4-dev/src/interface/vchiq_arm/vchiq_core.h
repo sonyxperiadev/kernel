@@ -266,7 +266,8 @@ typedef struct vchiq_shared_state_struct {
 
 typedef struct vchiq_slot_zero_struct {
    int magic;
-   int version;
+   short version;
+   short version_min;
    int slot_zero_size;
    int slot_size;
    int max_slots;

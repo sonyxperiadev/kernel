@@ -339,6 +339,7 @@ static int vc_fb_open( struct fb_info *fb_info,
 {
    int ret = 0;
    SCRN_INFO_T *scrn_info = to_scrn_info( fb_info );
+   struct resource *res;
 
    LOG_DBG( "%s: start (fb_info=0x%p, user=%d)", __func__, fb_info, user );
 
@@ -403,10 +404,31 @@ static int vc_fb_open( struct fb_info *fb_info,
       // Mask out the top two bits of the videocore address to get the offset;
       vc_addr = (uint32_t)alloc_result.res_mem & 0x3FFFFFFF;
 
-      // Then use the offset to calculate the virtual and physical addresses
-      fb_info->screen_base = (void *)(vc_addr + mm_vc_mem_virt_addr);
-      fb_info->fix.smem_start = (unsigned long)(vc_addr + mm_vc_mem_phys_addr);
-      fb_info->fix.smem_len = alloc_result.frame_bytes * alloc.num_frames;
+      // Request an I/O memory region for remapping
+      res = request_mem_region( vc_addr + mm_vc_mem_phys_addr,
+                                alloc_result.frame_bytes * alloc.num_frames,
+                                "vc_fb" );
+      if ( res == NULL )
+      {
+         LOG_ERR( "%s: failed to request I/O memory region", __func__ );
+
+         ret = -ENOMEM;
+         goto err_free_fb;
+      }
+
+      // I/O remap the framebuffer
+      fb_info->screen_base = ioremap_nocache( res->start, resource_size( res ));
+      if ( fb_info->screen_base == NULL )
+      {
+         LOG_ERR( "%s: failed to I/O remap framebuffer", __func__ );
+
+         ret = -ENOMEM;
+         goto err_release_mem_region;
+      }
+
+      // Fill out the rest of the framebuffer info
+      fb_info->fix.smem_start = res->start;
+      fb_info->fix.smem_len = resource_size( res );
       fb_info->fix.line_length = alloc_result.line_bytes;
 
       LOG_DBG( "%s: screen_base=0x%p, smem_start=0x%08x, smem_len=%u, line_length=%u",
@@ -419,6 +441,15 @@ static int vc_fb_open( struct fb_info *fb_info,
 
    // Increase the user count by one
    scrn_info->user_cnt++;
+
+   goto out;
+
+err_release_mem_region:
+   release_mem_region( res->start, resource_size( res ));
+
+err_free_fb:
+   vc_vchi_fb_free( fb_state->fb_handle, scrn_info->res_handle );
+   scrn_info->res_handle = 0;
 
 out:
    vcos_mutex_unlock( &scrn_info->user_cnt_mutex );
@@ -448,7 +479,12 @@ static int vc_fb_release( struct fb_info *fb_info,
 
       LOG_DBG( "%s: freeing videocore framebuffer", __func__ );
 
+      // Unmap the videocore memory
+      iounmap( fb_info->screen_base );
       fb_info->screen_base = NULL;
+
+      // Release the I/O memory region
+      release_mem_region( fb_info->fix.smem_start, fb_info->fix.smem_len );
       fb_info->fix.smem_start = 0;
       fb_info->fix.smem_len = 0;
 

@@ -13,6 +13,7 @@
 *****************************************************************************/
 
 #ifndef __VC_SM_DEFS_H__INCLUDED__
+#define __VC_SM_DEFS_H__INCLUDED__
 
 // FourCC code used for VCHI connection
 #define VC_SM_SERVER_NAME MAKE_FOURCC("SMEM")
