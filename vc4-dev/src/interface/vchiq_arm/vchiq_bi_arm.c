@@ -217,7 +217,7 @@ vchiq_prepare_bulk_data(VCHIQ_BULK_T *bulk,
       return VCHIQ_ERROR;
    }
 
-        if (dma_mmap_mem_type(offset) == DMA_MMAP_TYPE_USER)
+   if (dma_mmap_mem_type(offset) == DMA_MMAP_TYPE_USER)
    {
       DMA_MMAP_PAGELIST_T *pagelist;
       int ret;
@@ -795,10 +795,34 @@ ipc_dma( void *vcaddr, void *armaddr, int len, DMA_MMAP_PAGELIST_T *pagelist, en
 
    if ( dmaDev == DMA_DEVICE_NONE )
    {
-      /* Calculate the kernel virtual address using the address offset */
-      void *vcVirtAddr = (void *)(mm_vc_mem_virt_addr + vcAddrOffset);
+      struct resource *res;
+      void *vcVirtAddr;
 
-      dma_mmap_memcpy( &gVchiqDmaMmap, vcVirtAddr);
+      /* Request an I/O memory region for remapping */
+      res = request_mem_region( vcPhysAddr, len, "vchiq" );
+      if ( res == NULL )
+      {
+         vcos_log_error( "%s: failed to request I/O memory region", __func__ );
+         goto failed_request_mem_region;
+      }
+
+      /* I/O remap the videocore memory */
+      vcVirtAddr = ioremap_nocache( res->start, resource_size( res ));
+      if ( vcVirtAddr == NULL )
+      {
+         vcos_log_error( "%s: failed to I/O remap videocore bulk buffer",
+                         __func__ );
+         release_mem_region( res->start, resource_size( res ));
+         goto failed_ioremap;
+      }
+
+      dma_mmap_memcpy( &gVchiqDmaMmap, vcVirtAddr );
+
+      /* Unmap the videocore memory */
+      iounmap( vcVirtAddr );
+
+      /* Release the I/O memory region */
+      release_mem_region( res->start, resource_size( res ));
    }
    else
    {
@@ -826,6 +850,8 @@ ipc_dma( void *vcaddr, void *armaddr, int len, DMA_MMAP_PAGELIST_T *pagelist, en
 
 failed_sdma_start_transfer:
 failed_sdma_map_create_descriptor_ring:
+failed_ioremap:
+failed_request_mem_region:
    dma_mmap_unmap( &gVchiqDmaMmap, (dir == DMA_FROM_DEVICE) ? DMA_MMAP_DIRTIED : DMA_MMAP_CLEAN );
 failed_dma_mmap_map:
 failed_dma_mmap_dma_is_supported:

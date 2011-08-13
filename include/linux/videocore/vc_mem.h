@@ -20,12 +20,10 @@
 #define VC_MEM_IOC_MAGIC  'v'
 
 #define VC_MEM_IOC_MEM_PHYS_ADDR    _IOR( VC_MEM_IOC_MAGIC, 0, unsigned long )
-#define VC_MEM_IOC_MEM_VIRT_ADDR    _IOR( VC_MEM_IOC_MAGIC, 1, unsigned long )
-#define VC_MEM_IOC_MEM_SIZE         _IOR( VC_MEM_IOC_MAGIC, 2, unsigned int )
+#define VC_MEM_IOC_MEM_SIZE         _IOR( VC_MEM_IOC_MAGIC, 1, unsigned int )
 
 #if defined( __KERNEL__ )
 extern unsigned long mm_vc_mem_phys_addr;
-extern unsigned long mm_vc_mem_virt_addr;
 extern unsigned int  mm_vc_mem_size;
 #endif
 
