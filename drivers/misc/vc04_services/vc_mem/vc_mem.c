@@ -22,6 +22,12 @@
 #include <linux/proc_fs.h>
 #include <asm/uaccess.h>
 
+#ifdef CONFIG_ARCH_KONA
+#include <chal/chal_ipc.h>
+#else
+#include <csp/chal_ipc.h>
+#endif
+
 #include <linux/videocore/vc_mem.h>
 
 #define DRIVER_NAME  "vc-mem"
@@ -62,20 +68,17 @@ static struct proc_dir_entry *vc_mem_proc_entry;
 
 #include <mach/io_map.h>
 unsigned long mm_vc_mem_phys_addr = VC_EMI;
-unsigned long mm_vc_mem_virt_addr = KONA_VC_EMI;
 
 #else
 
 #include <mach/csp/mm_io.h>
 unsigned long mm_vc_mem_phys_addr = MM_ADDR_IO_VC_EMI;
-unsigned long mm_vc_mem_virt_addr = MM_IO_BASE_VC_EMI;
 
 #endif
 
-unsigned int  mm_vc_mem_size      = SZ_128M;
+unsigned int  mm_vc_mem_size      = 0;
 
 EXPORT_SYMBOL( mm_vc_mem_phys_addr );
-EXPORT_SYMBOL( mm_vc_mem_virt_addr );
 EXPORT_SYMBOL( mm_vc_mem_size );
 
 /****************************************************************************
@@ -110,6 +113,32 @@ static int vc_mem_release( struct inode *inode, struct file *file )
     return 0;
 }
 
+/****************************************************************************
+*
+*   vc_mem_get_size
+*
+***************************************************************************/
+
+static void vc_mem_get_size( void )
+{
+   CHAL_IPC_HANDLE ipc_handle;
+
+   // Get the videocore memory size from the IPC mailbox
+   if ( mm_vc_mem_size == 0 )
+   {
+      ipc_handle = chal_ipc_config( NULL );
+      if ( ipc_handle == NULL )
+      {
+         LOG_ERR( "%s: failed to get IPC handlle", __func__ );
+      }
+      else if ( chal_ipc_read_mailbox( ipc_handle, IPC_MAILBOX_ID_0,
+                                       &mm_vc_mem_size ) != BCM_SUCCESS )
+      {
+         LOG_ERR( "%s: failed to read from IPC mailbox", __func__ );
+      }
+   }
+}
+
 
 /****************************************************************************
 *
@@ -140,20 +169,11 @@ static long vc_mem_ioctl( struct file *file, unsigned int cmd, unsigned long arg
             }
             break;
         }
-        case VC_MEM_IOC_MEM_VIRT_ADDR:
-        {
-            LOG_DBG( "%s: VC_MEM_IOC_MEM_VIRT_ADDR=0x%p",
-                    __func__, (void *)mm_vc_mem_virt_addr );
-
-            if ( copy_to_user( (void *)arg, &mm_vc_mem_virt_addr,
-                               sizeof( mm_vc_mem_virt_addr )) != 0 )
-            {
-               rc = -EFAULT;
-            }
-            break;
-        }
         case VC_MEM_IOC_MEM_SIZE:
         {
+            // Get the videocore memory size first
+            vc_mem_get_size();
+
             LOG_DBG( "%s: VC_MEM_IOC_MEM_SIZE=%u", __func__, mm_vc_mem_size );
 
             if ( copy_to_user( (void *)arg, &mm_vc_mem_size,
@@ -244,15 +264,51 @@ static int vc_mem_proc_read( char *buf, char **start, off_t offset, int count, i
        return 0;
     }
 
+    // Get the videocore memory size first
+    vc_mem_get_size();
+
     p += sprintf( p, "Videocore memory:\n" );
     p += sprintf( p, "   Physical address: 0x%p\n",
                   (void *)mm_vc_mem_phys_addr );
-    p += sprintf( p, "   Virtual address:  0x%p\n",
-                  (void *)mm_vc_mem_virt_addr );
     p += sprintf( p, "   Length (bytes):   %u\n", mm_vc_mem_size );
 
     *eof = 1;
     return p - buf;
+}
+
+/****************************************************************************
+*
+*   vc_mem_proc_write
+*
+***************************************************************************/
+
+static int vc_mem_proc_write( struct file *file, const char __user *buffer, unsigned long count, void *data )
+{
+   int rc = -EFAULT;
+   char input_str[10];
+
+   memset( input_str, 0, sizeof( input_str ));
+
+   if ( count > sizeof( input_str ))
+   {
+      LOG_ERR( "%s: input string length too long", __func__ );
+      goto out;
+   }
+
+   if ( copy_from_user( input_str, buffer, count - 1 ))
+   {
+      LOG_ERR( "%s: failed to get input string", __func__ );
+      goto out;
+   }
+
+   if ( strncmp( input_str, "connect", strlen( "connect" )) == 0 )
+   {
+      // Get the videocore memory size from the videocore
+      vc_mem_get_size();
+   }
+
+out:
+   return rc;
 }
 
 /****************************************************************************
@@ -263,13 +319,12 @@ static int vc_mem_proc_read( char *buf, char **start, off_t offset, int count, i
 
 static int __init vc_mem_init( void )
 {
-    int rc;
+    int rc = -EFAULT;
     struct device *dev;
 
     LOG_DBG( "%s: called", __func__ );
 
     printk( "vc-mem: mm_vc_mem_phys_addr = 0x%08lx\n", mm_vc_mem_phys_addr );
-    printk( "vc-mem: mm_vc_mem_virt_addr = 0x%08lx\n", mm_vc_mem_virt_addr );
     printk( "vc-mem: mm_vc_mem_size      = 0x%08x (%u MiB)\n",
             mm_vc_mem_size, mm_vc_mem_size / (1024 * 1024));
 
@@ -311,6 +366,7 @@ static int __init vc_mem_init( void )
         goto out_device_destroy;
     }
     vc_mem_proc_entry->read_proc = vc_mem_proc_read;
+    vc_mem_proc_entry->write_proc = vc_mem_proc_write;
 
     return 0;
 

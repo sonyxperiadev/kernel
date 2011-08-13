@@ -604,7 +604,7 @@ VCOS_STATUS_T vcos_cmd_register( VCOS_CMD_T *cmd_entry )
 
         // The + 1 is to ensure that we always have a NULL entry at the end.
 
-        new_cmd_entry = vcos_calloc( new_num_cmd_alloc + 1, sizeof( *cmd_entry ), "vcos_cmd_entries" );
+        new_cmd_entry = (VCOS_CMD_T *)vcos_calloc( new_num_cmd_alloc + 1, sizeof( *cmd_entry ), "vcos_cmd_entries" );
         if ( new_cmd_entry == NULL )
         {
             rc = VCOS_ENOMEM;
@@ -617,22 +617,31 @@ VCOS_STATUS_T vcos_cmd_register( VCOS_CMD_T *cmd_entry )
         vcos_free( old_cmd_entry );
     }
 
-    // Keep the list in alphabetical order. We start at the end and work backwards
-    // shuffling entries up one until we find an insertion point.
-
-    for ( scan_entry = &cmd_globals.cmd_entry[cmd_globals.num_cmd_entries - 1];
-          scan_entry >= cmd_globals.cmd_entry; scan_entry-- )
+    if ( cmd_globals.num_cmd_entries == 0 )
     {
-        if ( vcos_strcmp( cmd_entry->name, scan_entry->name ) > 0 )
-        {
-            // We found an insertion point.
+        // This is the first command being registered
 
-            break;
-        }
-
-        scan_entry[1] = scan_entry[0];
+        cmd_globals.cmd_entry[0] = *cmd_entry;
     }
-    scan_entry[1] = *cmd_entry;
+    else
+    {
+        // Keep the list in alphabetical order. We start at the end and work backwards
+        // shuffling entries up one until we find an insertion point.
+
+        for ( scan_entry = &cmd_globals.cmd_entry[cmd_globals.num_cmd_entries - 1];
+              scan_entry >= cmd_globals.cmd_entry; scan_entry-- )
+        {
+            if ( vcos_strcmp( cmd_entry->name, scan_entry->name ) > 0 )
+            {
+                // We found an insertion point.
+
+                break;
+            }
+
+            scan_entry[1] = scan_entry[0];
+        }
+        scan_entry[1] = *cmd_entry;
+    }
     cmd_globals.num_cmd_entries++;
 
     rc = VCOS_SUCCESS;
