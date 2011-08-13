@@ -24,6 +24,7 @@ Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "audio_consts.h"
 
+
 //Per ASIC people, To get the transfer size of 4 32bit words, need to set as 3.
 #define CSL_AADMAC_TSIZE    0x3
 // total ring buffer size for cfifo. make sure sync with cfifo config table 
@@ -568,6 +569,7 @@ CSL_CAPH_DMA_CALLBACK_p dmaCB;
 
 typedef enum 
 {
+    AUDDRV_PATH_NONE,
     AUDDRV_PATH_VIBRA_OUTPUT,
     AUDDRV_PATH_HEADSET_OUTPUT,
     AUDDRV_PATH_IHF_OUTPUT,
@@ -776,8 +778,7 @@ typedef struct
 typedef struct
 {
     UInt8 dmaNum; // 0 <= dmaNum <= 2.
-    CSL_CAPH_DMA_CHNL_e dmaCH;
-    CSL_CAPH_DMA_CHNL_e dmaCH2;
+    CSL_CAPH_DMA_CHNL_e dma[2];
 }CSL_CAPH_HWConfig_DMA_t;
 
 /**
@@ -826,5 +827,33 @@ typedef enum
 	CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R,
 	CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R,
 } CSL_CAPH_HW_GAIN_e;
+
+/**
+* CAPH Maximum number of HW Path
+******************************************************************************/
+
+#define MAX_AUDIO_PATH 32
+
+
+/**
+* CAPH HW Resource management information
+******************************************************************************/
+typedef struct
+{
+    UInt32 fifoAddr;
+    CSL_CAPH_PathID pathID[MAX_AUDIO_PATH];
+}CSL_CAPH_HWResource_Table_t;
+
+/**
+* CAPH Data format: Unpacked.
+******************************************************************************/
+#define DATA_UNPACKED	0
+
+/**
+* Voice Call UL/DL to/from DSP channel
+******************************************************************************/
+#define SPEAKER_DL_FROM_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH1
+#define MAIN_MIC_UL_TO_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH2
+#define EANC_MIC_UL_TO_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH3
 
 #endif // _CSL_CAPH_

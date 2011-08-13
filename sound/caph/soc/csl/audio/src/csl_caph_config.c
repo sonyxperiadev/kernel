@@ -17,8 +17,9 @@ Broadcom's express prior written consent.
 *  @brief  csl layer config data for caph driver
 *
 ****************************************************************************/
+#include "mobcom_types.h"
 #include "chal_caph.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
 
 

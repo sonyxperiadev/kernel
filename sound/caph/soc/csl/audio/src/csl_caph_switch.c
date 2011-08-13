@@ -21,9 +21,13 @@ Broadcom's express prior written consent.
 #include "xassert.h"
 #include "log.h"
 #include "resultcode.h"
-#include "auddrv_def.h"
-#include "csl_caph.h"
+#include "mobcom_types.h"
+#include "csl_aud_drv.h"
 #include "chal_caph_switch.h"
+#include "csl_caph.h"
+#include "csl_caph_audioh.h"
+#include "csl_caph_cfifo.h"
+#include "csl_caph_srcmixer.h"
 #include "csl_caph_switch.h"
 
 
@@ -585,16 +589,12 @@ CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_channel(void)
 void csl_caph_switch_release_channel(CSL_CAPH_SWITCH_CHNL_e chnl)    
 {
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
-
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_release_channel:: \n"));
-
-    chal_chnl = csl_caph_switch_get_chalchnl(chnl);
-    chal_caph_switch_free_channel(handle, chal_chnl);
-
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_switch_release_channel:: chnl = 0x%x\n", 
                     chnl));
 
+    chal_chnl = csl_caph_switch_get_chalchnl(chnl);
+    chal_caph_switch_free_channel(handle, chal_chnl);
 	return;
 }
 
@@ -613,7 +613,6 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
     CAPH_DST_STATUS_e dstStatus = CAPH_DST_OK;
     CSL_CAPH_SWITCH_STATUS_e status = CSL_CAPH_SWITCH_OWNER;
 
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_config_channel:: \n"));
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_switch_config_channel:: chnl = 0x%x, srcAddr = 0x%lx, dstcAddr = 0x%lx, dataFmt = 0x%x, trigger = 0x%x\n", 
                     chnl_config.chnl, 
@@ -762,12 +761,6 @@ void csl_caph_switch_stop_transfer(CSL_CAPH_SWITCH_CHNL_e chnl)
     chal_chnl = csl_caph_switch_get_chalchnl(chnl);
     /* Stop this channel */
     chal_caph_switch_disable(handle, chal_chnl);
-#if 0 //The following work is done in _release_channel(). So may be removed.
-    // reset src to default	
-    chal_caph_switch_select_src(handle, chal_chnl, 0x0);
-    // reset trigger to default	
-    chal_caph_switch_select_trigger(handle, chal_chnl, CAPH_VOID);	
-#endif    
 	return;
 }
 

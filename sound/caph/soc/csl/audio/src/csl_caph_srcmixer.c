@@ -19,10 +19,14 @@ Broadcom's express prior written consent.
 ****************************************************************************/
 #include "log.h"
 #include "xassert.h"
-#include "auddrv_def.h"
+#include "mobcom_types.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "chal_caph_srcmixer.h"
 #include "csl_caph_srcmixer.h"
+
+//#define _DBG_(a)
+#define _DBG_(a) (a)
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -101,13 +105,11 @@ static CAPH_DATA_FORMAT_e csl_caph_srcmixer_get_chal_dataformat(CHAL_HANDLE hand
                                                    CSL_CAPH_DATAFORMAT_e dataFmt);
 static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
                                           CSL_CAPH_SRCM_INCHNL_e inChnl);
-static void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
-                                          CSL_CAPH_SRCM_INCHNL_e inChnl);
 static UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 static UInt8 csl_caph_srcmixer_get_chaloutchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl);
 //static CAPH_SRCMixer_FIFO_e csl_caph_srcmixer_get_chal_fifo(
 //                                                   CSL_CAPH_SRCM_FIFO_e fifo);
-
+static CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_getTapOutChnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
 //******************************************************************************
 // local function definitions
 //******************************************************************************
@@ -688,7 +690,6 @@ static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
     return;
 }
 
-
 /****************************************************************************
 *
 *  Function Name:CAPH_DATA_FORMAT_e csl_caph_srcmixer_unuse_outchnl(
@@ -698,7 +699,7 @@ static void csl_caph_srcmixer_use_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *  Description: Check the output channel usage table to remove input channel
 *
 ****************************************************************************/
-static void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
+void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
                                           CSL_CAPH_SRCM_INCHNL_e inChnl)
 {
     UInt8 ch = 0;
@@ -707,14 +708,12 @@ static void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 
     for (ch=0; ch<OUTCHNL_MAX_NUM_CHNL; ch++)
     {
-        if (chnlTable[ch].outChnl == outChnl)
-        {
-		if (chnlTable[ch].inChnl&inChnl)
+        if ((chnlTable[ch].outChnl == outChnl)
+		    &&(chnlTable[ch].inChnl&inChnl))
 		{
-	            chnlTable[ch].inChnl &= ~inChnl;
-
-	    	    chalInChnl = csl_caph_srcmixer_get_single_chal_inchnl(inChnl);
-	    	    chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
+            chnlTable[ch].inChnl &= ~inChnl;
+    	    chalInChnl = csl_caph_srcmixer_get_single_chal_inchnl(inChnl);
+    	    chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
 
 		    //Set mix in gain to 0x0.	
 		    if (chalOutChnl&CAPH_M0_Left)
@@ -765,7 +764,6 @@ static void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 				    (CAPH_SRCMixer_OUTPUT_e)chalOutChnl, 
 				    MIX_IN_NO_GAINSTEP);
 		    }
-		}
         }
     }
     return;
@@ -1157,6 +1155,13 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
     UInt8 ch = 0x0;
     UInt8 chnl = 0x0;
 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_mix_route:: ch %x:%x dataFmt %d:%d sr %d:%d tapCh %d.\r\n", 
+		routeConfig.inChnl, routeConfig.outChnl, routeConfig.inDataFmt, routeConfig.outDataFmt, routeConfig.inSampleRate, routeConfig.outSampleRate, routeConfig.tapOutChnl));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_mix_route:: threshold %x:%x.\r\n", routeConfig.inThres, routeConfig.outThres));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_mix_route:: gain %x:%x:%x:%x:%x:%x.\r\n", 
+		routeConfig.mixGain.mixInGainL, routeConfig.mixGain.mixInGainR, routeConfig.mixGain.mixOutGainL, routeConfig.mixGain.mixOutGainR, routeConfig.mixGain.mixOutCoarseGainL, routeConfig.mixGain.mixOutCoarseGainR));
+
+
     if (routeConfig.inSampleRate == CSL_CAPH_SRCMIN_8KHZ )
     {
         /* 8KHz -> 48KHz */
@@ -1228,11 +1233,8 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
     chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(routeConfig.outChnl);
     /* read from the output usage table the input channels */
     inChnls = csl_caph_srcmixer_read_outchnltable(routeConfig.outChnl);
-#if 0
-    chalInChnl = csl_caph_srcmixer_get_chal_inchnl((CSL_CAPH_SRCM_INCHNL_e)inChnls);
-#else
+
     chalInChnlM = csl_caph_srcmixer_get_chal_inchnl(inChnls);
-#endif
     /* Mute those input channels which do not connect to this output channel */
     for (ch=MAX_SINGLE_INCHNLS; ch>0; ch--)
     {
@@ -1336,6 +1338,12 @@ void csl_caph_srcmixer_config_src_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
     CAPH_SRCMixer_SRC_e srcSampleRate = CAPH_8KHz_48KHz;
     CAPH_SRCMixer_FIFO_e fifo = CAPH_CH_INFIFO_NONE;
     CAPH_DATA_FORMAT_e dataFmt = CAPH_MONO_16BIT;
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_src_route:: ch %x:%x dataFmt %d:%d sr %d:%d tapCh %d.\r\n", 
+		routeConfig.inChnl, routeConfig.outChnl, routeConfig.inDataFmt, routeConfig.outDataFmt, routeConfig.inSampleRate, routeConfig.outSampleRate, routeConfig.tapOutChnl));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_src_route:: threshold %x:%x.\r\n", routeConfig.inThres, routeConfig.outThres));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_config_src_route:: gain %x:%x:%x:%x:%x:%x.\r\n", 
+		routeConfig.mixGain.mixInGainL, routeConfig.mixGain.mixInGainR, routeConfig.mixGain.mixOutGainL, routeConfig.mixGain.mixOutGainR, routeConfig.mixGain.mixOutCoarseGainL, routeConfig.mixGain.mixOutCoarseGainR));
+
 
     if ((routeConfig.inSampleRate == CSL_CAPH_SRCMIN_8KHZ)
         &(routeConfig.outSampleRate == CSL_CAPH_SRCMOUT_48KHZ))
@@ -1789,6 +1797,8 @@ CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAP
 		outChnl = CSL_CAPH_SRCM_TAP_MONO_CH4;
 		break;
 	case CSL_CAPH_SRCM_STEREO_CH5:
+    case CSL_CAPH_SRCM_STEREO_CH5_L: 
+    case CSL_CAPH_SRCM_STEREO_CH5_R: 
 		outChnl = CSL_CAPH_SRCM_TAP_STEREO_CH5;
 		break;
 	default:
@@ -1797,3 +1807,4 @@ CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAP
 	}
 	return outChnl;
 }
+

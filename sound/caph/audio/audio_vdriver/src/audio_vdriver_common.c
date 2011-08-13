@@ -37,9 +37,7 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-//#include "brcm_rdb_sysmap.h"
-//#include "brcm_rdb_syscfg.h"
+
 #define SYSCFG_BASE_ADDR      0x08880000      /* SYSCFG core */
 #include "shared.h"
 #include "dspcmd.h"
@@ -50,12 +48,11 @@
 
 #include "audio_consts.h"
 //#include "ripcmdq.h"
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
+
+#include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 //#include "sysparm.h"
 #include "ostask.h"
-#include "audioapi_asic.h"
 #include "log.h"
 #if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
 #include "csl_dsp.h"
@@ -143,9 +140,9 @@ void AUDDRV_Init( void )
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
 	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
 	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_ISR_Handler);
+#endif	
 	CSL_RegisterVoIPStatusHandler((VoIPStatusCB_t)&VOIP_ProcessVOIPDLDone);
 	CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);
-#endif	
 #ifndef _SAMOA_
 	CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);
 	CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);

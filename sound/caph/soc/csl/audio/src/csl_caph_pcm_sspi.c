@@ -35,7 +35,7 @@
 ****************************************************************************/
 #include <string.h>
 #include "mobcom_types.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #include "chal_types.h"
 #include "chal_sspi.h"
 #include "csl_caph_pcm_sspi.h"
@@ -383,6 +383,12 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 	CHAL_SSPI_PROT_t protocol;
     csl_pcm_config_device_t *devCfg = configDev;
 	uint32_t intrMask;
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: handle %p.\r\n", handle));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: cfgDev mode %d interleave %d protocol %d format %d size %d bits %d sr %d.\r\n", 
+		configDev->mode, configDev->interleave, configDev->protocol, configDev->format, configDev->xferSize, configDev->ext_bits, configDev->sample_rate));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: cfgTx ena %d ch %d sr %d lpbEna %d.\r\n", configTx->enable, configTx->channel, configTx->sampleRate, configTx->loopback_enable));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_config:: cfgRx ena %d ch %d sr %d lpbEna %d.\r\n", configRx->enable, configRx->channel, configRx->sampleRate, configRx->loopback_enable));
 
 	if(handle == NULL) {
     	Log_DebugPrintf(LOGID_SOC_AUDIO,"csl_pcm_config failed\r\n");

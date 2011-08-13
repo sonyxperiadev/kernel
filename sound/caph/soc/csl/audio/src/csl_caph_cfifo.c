@@ -18,12 +18,16 @@ Broadcom's express prior written consent.
 *
 ****************************************************************************/
 #include "mobcom_types.h"
-#include "auddrv_def.h"
 #include "chal_caph_cfifo.h"
+#include "csl_aud_drv.h"
+#include "csl_caph.h"
 #include "csl_caph_cfifo.h"
+#include "csl_caph_dma.h"
 #include "log.h"
 #include "xassert.h"
 
+//#define _DBG_(a)
+#define _DBG_(a) (a)
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -34,7 +38,6 @@ Broadcom's express prior written consent.
 extern UInt32 cfifo_arb_key;
 extern CAPH_CFIFO_QUEUE_e cfifo_queue;
 extern CSL_CFIFO_TABLE_t CSL_CFIFO_table[];
-
 //****************************************************************************
 //                         L O C A L   S E C T I O N
 //****************************************************************************
@@ -59,7 +62,6 @@ static CHAL_HANDLE handle = 0;
 //****************************************************************************
 // local function declarations
 //****************************************************************************
-//static CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_csl_fifo(CAPH_CFIFO_e chal_fifo);
 static CAPH_CFIFO_e csl_caph_cfifo_get_chal_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo);
 static void csl_caph_cfifo_fifo_init(void);
 static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_cfifo_get_chal_direction(CSL_CAPH_CFIFO_DIRECTION_e direct);
@@ -67,96 +69,36 @@ static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_cfifo_get_chal_direction(CSL_CAPH_CF
 //******************************************************************************
 // local function definitions
 //******************************************************************************
-#if 0
+
 /****************************************************************************
-*  Function Name: CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_csl_fifo(
-*                                         CAPH_CFIFO_e chal_fifo)
 *
-*  Description: get the CSL CFIFO fifo id from CHAL fifo id
+* Function Name: CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(
+* CSL_CAPH_DATAFOMAT_e dataFormat,
+* CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
+*
+* Description: Obtain a CAPH CFIFO buffer
 *
 ****************************************************************************/
-static CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_csl_fifo(CAPH_CFIFO_e chal_fifo)
+CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat,
+ CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
 {
-    CSL_CAPH_CFIFO_FIFO_e csl_fifo = CSL_CAPH_CFIFO_NONE;
+	UInt16 id = 0;
 
-    switch (chal_fifo)
-    {
-        case CAPH_CFIFO_VOID:
-            csl_fifo = CSL_CAPH_CFIFO_NONE;
-            break;
-			
-         case CAPH_CFIFO1:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO1;
-            break;
-			
-        case CAPH_CFIFO2:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO2;
-            break;	
-			
-        case CAPH_CFIFO3:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO3;
-            break;
-			
-        case CAPH_CFIFO4:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO4;
-            break;
-			
-        case CAPH_CFIFO5:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO5;
-            break;
-			
-        case CAPH_CFIFO6:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO6;
-            break;
-			
-         case CAPH_CFIFO7:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO7;
-            break;
-			
-        case CAPH_CFIFO8:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO8;
-            break;
-			
-        case CAPH_CFIFO9:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO9;
-            break;
-			
-        case CAPH_CFIFO10:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO10;
-            break;
-			
-        case CAPH_CFIFO11:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO11;
-            break;
-			
-        case CAPH_CFIFO12:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO12;
-            break;
-			
-         case CAPH_CFIFO13:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO13;
-            break;
-			
-        case CAPH_CFIFO14:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO14;
-            break;	
-			
-        case CAPH_CFIFO15:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO15;
-            break;
-			
-        case CAPH_CFIFO16:
-            csl_fifo = CSL_CAPH_CFIFO_FIFO16;
-            break;
-			
-        default:
-            xassert(0, chal_fifo);
-		break;	
-    };
+	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
 
-    return csl_fifo;
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_ssp_obtain_fifo:: \n"));
+
+	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
+	{
+		if ((CSL_CFIFO_table[id].owner == CAPH_SSP) &&(CSL_CFIFO_table[id].status == 0))
+		{
+			csl_caph_cfifo_ch = (CSL_CAPH_CFIFO_FIFO_e)id;
+			CSL_CFIFO_table[id].status = 1;
+			break;
+		}
+	}
+	return csl_caph_cfifo_ch;
 }
-#endif
 
 /****************************************************************************
 *  Function Name: CAPH_CFIFO_e csl_caph_cfifo_get_chal_fifo(
@@ -364,37 +306,6 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataForma
 
 /****************************************************************************
 *
-*  Function Name: CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(
-*                       CSL_CAPH_DATAFOMAT_e dataFormat, 
-*                       CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
-*
-*  Description: Obtain a CAPH CFIFO buffer
-*
-****************************************************************************/
-CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat, 
-                                                CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
-{
-	UInt16 id = 0;
-	
-	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
-
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_ssp_obtain_fifo:: \n"));
-
-	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
-	{
-		if ((CSL_CFIFO_table[id].owner == CAPH_SSP) &&(CSL_CFIFO_table[id].status == 0))
-		{
-			csl_caph_cfifo_ch = (CSL_CAPH_CFIFO_FIFO_e)id;
-			CSL_CFIFO_table[id].status = 1;
-			break;
-		}
-	}
-	return csl_caph_cfifo_ch;
-}
-
-
-/****************************************************************************
-*
 *  Function Name: UInt16 csl_caph_cfifo_get_fifo_thres(CSL_CAPH_CFIFO_FIFO_e fifo)
 *
 *  Description: Obtain a CAPH CFIFO buffer's threshold
@@ -446,7 +357,7 @@ void csl_caph_cfifo_config_fifo(CSL_CAPH_CFIFO_FIFO_e fifo,
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
 	CAPH_CFIFO_CHNL_DIRECTION_e chalDirect = CAPH_CFIFO_IN;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_config_fifo:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_config_fifo:: fifo %d dir %d threshold %p.\r\n", fifo, direction, threshold));
 	
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(fifo);
     chalDirect = csl_caph_cfifo_get_chal_direction(direction); 
