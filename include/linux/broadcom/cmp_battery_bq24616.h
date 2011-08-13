@@ -24,7 +24,7 @@ struct battery_bq24616_cfg {
     /* Input GPIO: AC power present/shutdown. HIGH = AC power removed. */
     int gpio_acp_shd;
 
-    /* Until proper solution for docking station is found, compal docking
+    /* Until proper solution for docking station is found, cp docking
        station power is handled here */
     int gpio_docking_station_power_3_3v;
 }; 
