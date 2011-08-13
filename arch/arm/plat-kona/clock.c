@@ -1018,6 +1018,14 @@ static int peri_clk_enable(struct clk* clk, int enable)
 		/*Increment usage count... return if already enabled*/
 		if(peri_clk->clk.use_cnt++ != 0)
 			goto enable_done1;
+
+		/*Update DFS request to opp before enabling the clock */
+		if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
+		{
+			BUG_ON(peri_clk->pi_mgr_dfs_node == NULL);
+			pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,peri_clk->opp);
+		}
+
 		/*TBD - MAY NEED TO REVISIT*/
 		if(clk->flags & ENABLE_HVT)
 			peri_clk_set_voltage_lvl(peri_clk,VLT_HIGH);
@@ -1074,6 +1082,13 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	clk_dbg("%s, %s is %s..! \n",__func__, clk->name, enable?"enabled":"disabled");
 
 	ccu_write_access_enable(peri_clk->ccu_clk,false);
+	/*Update DFS request to PI_MGR_DFS_MIN_VALUE after disabling the clock */
+	if(CLK_FLG_ENABLED(clk,REQUEST_OPP) && !enable)
+	{
+		BUG_ON(peri_clk->pi_mgr_dfs_node == NULL);
+		pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,PI_MGR_DFS_MIN_VALUE);
+	}
+
 enable_done:
 	if(!enable && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU) && !(clk->flags& AUTO_GATE))
 	{
@@ -1459,6 +1474,14 @@ static int peri_clk_init(struct clk* clk)
 			clk->ops->enable(clk, 0);
 		}
 	}
+
+	/*Add DSF request if the flag is enabled */
+	if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
+	{
+		BUG_ON(peri_clk->ccu_clk->pi_id == -1);
+		peri_clk->pi_mgr_dfs_node = pi_mgr_dfs_add_request((char*)clk->name,
+				peri_clk->ccu_clk->pi_id,PI_MGR_DFS_MIN_VALUE);
+	}
 	/* Disable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk, false);
 	clk->init = 1;
@@ -1681,6 +1704,14 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	/*Increment usage count... return if already enabled*/
 		if(clk->use_cnt++ != 0)
 			goto enable_done_ret;
+
+		/*Update DFS request to opp before enabling the clock */
+		if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
+		{
+			BUG_ON(bus_clk->pi_mgr_dfs_node == NULL);
+			pi_mgr_dfs_request_update(bus_clk->pi_mgr_dfs_node,bus_clk->opp);
+		}
+
 	}
 	else
 	{
@@ -1728,8 +1759,15 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	}
 
 	clk_dbg("%s:%s clk after stprsts start\n",__func__,clk->name);
+
+	/*Update DFS request to PI_MGR_DFS_MIN_VALUE after disabling the clock */
+	if(CLK_FLG_ENABLED(clk,REQUEST_OPP) && !enable)
+	{
+		BUG_ON(bus_clk->pi_mgr_dfs_node == NULL);
+		pi_mgr_dfs_request_update(bus_clk->pi_mgr_dfs_node,PI_MGR_DFS_MIN_VALUE);
+	}
 	clk_dbg("%s -- %s is %s\n", __func__, clk->name, enable?"enabled":"disabled");
-						/* disable write access*/
+	/* disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);
 
 enable_done:
@@ -1831,6 +1869,14 @@ static int bus_clk_init(struct clk *clk)
 		if(clk->ops->enable)
 			clk->ops->enable(clk, 0);
 	}
+	/*Add DSF request if the flag is enabled */
+	if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
+	{
+		BUG_ON(bus_clk->ccu_clk->pi_id == -1);
+		bus_clk->pi_mgr_dfs_node = pi_mgr_dfs_add_request((char*)clk->name,
+				bus_clk->ccu_clk->pi_id,PI_MGR_DFS_MIN_VALUE);
+	}
+
 
 	/* Disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);

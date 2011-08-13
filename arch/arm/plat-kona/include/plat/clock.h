@@ -19,6 +19,7 @@
 #include <linux/init.h>
 #include <asm/clkdev.h>
 #include <linux/list.h>
+#include <plat/pi_mgr.h>
 #include <mach/clock.h>
 
 #define GET_BIT_USING_MASK(reg_val, mask)	(!!((reg_val) & (mask)))
@@ -254,6 +255,7 @@ enum {
     RATE_FIXED			= (1 << 7), /*used for peri ...clk set/get rate functions uses .rate field*/
     NOTIFY_STATUS_TO_CCU	= (1 << 8),
     DONOT_NOTIFY_STATUS_TO_CCU	= (1 << 9),
+	REQUEST_OPP			= (1 << 10),
 
     /* CCU specific flags */
     CCU_TARGET_LOAD		= (1 << 16),
@@ -432,7 +434,8 @@ struct peri_clk {
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
 	u32 volt_lvl_mask;
-
+	u32 opp;
+	struct pi_mgr_dfs_node* pi_mgr_dfs_node;
 	struct peri_clk_ops* peri_ops;
 
 	struct clk_div  clk_div;
@@ -453,6 +456,9 @@ struct bus_clk {
 	int freq_tbl_index;
 	struct clk* src_clk;
 	struct bus_clk_ops* bus_ops;
+	u32 opp;
+	struct pi_mgr_dfs_node* pi_mgr_dfs_node;
+
 };
 
 struct ref_clk {
