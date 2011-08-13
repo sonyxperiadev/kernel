@@ -1289,6 +1289,7 @@ vchiq_init_slots(void *mem_base, int mem_size)
 
    slot_zero->magic = VCHIQ_MAGIC;
    slot_zero->version = VCHIQ_VERSION;
+   slot_zero->version_min = VCHIQ_VERSION_MIN;
    slot_zero->slot_zero_size = sizeof(VCHIQ_SLOT_ZERO_T);
    slot_zero->slot_size = VCHIQ_SLOT_SIZE;
    slot_zero->max_slots = VCHIQ_MAX_SLOTS;
@@ -1321,18 +1322,53 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
 
    /* Check the input configuration */
 
-   if ((slot_zero->magic != VCHIQ_MAGIC) ||
-      (slot_zero->version != VCHIQ_VERSION) ||
-      (slot_zero->slot_zero_size != sizeof(VCHIQ_SLOT_ZERO_T)) ||
-      (slot_zero->slot_size != VCHIQ_SLOT_SIZE) ||
-      (slot_zero->max_slots != VCHIQ_MAX_SLOTS) ||
-      (slot_zero->max_slots_per_side != VCHIQ_MAX_SLOTS_PER_SIDE))
+   if (slot_zero->magic != VCHIQ_MAGIC)
    {
-      vcos_log_error("slot_zero=%x: magic=%x, version=%x, slot_zero_size=%x,"
-         " slot_size=%d, max_slots=%d, max_slots_per_side=%d",
-         (unsigned int)slot_zero, slot_zero->magic, slot_zero->version,
-         slot_zero->slot_zero_size, slot_zero->slot_size, slot_zero->max_slots,
-         slot_zero->max_slots_per_side);
+      vcos_log_error("slot_zero=%x: magic=%x (expected %x)",
+         (unsigned int)slot_zero, slot_zero->magic, VCHIQ_MAGIC);
+      return VCHIQ_ERROR;
+   }
+
+   if (slot_zero->version < VCHIQ_VERSION_MIN)
+   {
+      vcos_log_error("slot_zero=%x: peer_version=%x (minimum %x)",
+         (unsigned int)slot_zero, slot_zero->version, VCHIQ_VERSION_MIN);
+      return VCHIQ_ERROR;
+   }
+
+   if (VCHIQ_VERSION < slot_zero->version_min)
+   {
+      vcos_log_error("slot_zero=%x: version=%x (peer minimum %x)",
+         (unsigned int)slot_zero, VCHIQ_VERSION, slot_zero->version_min);
+      return VCHIQ_ERROR;
+   }
+
+   if (slot_zero->slot_zero_size != sizeof(VCHIQ_SLOT_ZERO_T))
+   {
+      vcos_log_error("slot_zero=%x: slot_zero_size=%x (expected %x)",
+         (unsigned int)slot_zero, slot_zero->slot_zero_size, sizeof(VCHIQ_SLOT_ZERO_T));
+      return VCHIQ_ERROR;
+   }
+
+   if (slot_zero->slot_size != VCHIQ_SLOT_SIZE)
+   {
+      vcos_log_error("slot_zero=%x: slot_size=%d (expected %d",
+         (unsigned int)slot_zero, slot_zero->slot_size, VCHIQ_SLOT_SIZE);
+      return VCHIQ_ERROR;
+   }
+
+   if (slot_zero->max_slots != VCHIQ_MAX_SLOTS)
+   {
+      vcos_log_error("slot_zero=%x: max_slots=%d (expected %d)",
+         (unsigned int)slot_zero, slot_zero->max_slots, VCHIQ_MAX_SLOTS);
+      return VCHIQ_ERROR;
+   }
+
+   if (slot_zero->max_slots_per_side != VCHIQ_MAX_SLOTS_PER_SIDE)
+   {
+      vcos_log_error("slot_zero=%x: max_slots_per_side=%d (expected %d)",
+         (unsigned int)slot_zero, slot_zero->max_slots_per_side,
+         VCHIQ_MAX_SLOTS_PER_SIDE);
       return VCHIQ_ERROR;
    }
 
@@ -2175,10 +2211,12 @@ vchiq_get_config(VCHIQ_INSTANCE_T instance,
 
    vcos_unused(instance);
 
-   config.max_msg_size = VCHIQ_MAX_MSG_SIZE;
-   config.bulk_threshold = VCHIQ_MAX_MSG_SIZE;
-   config.max_outstanding_bulks = VCHIQ_NUM_SERVICE_BULKS;
-   config.max_services = VCHIQ_MAX_SERVICES;
+   config.max_msg_size           = VCHIQ_MAX_MSG_SIZE;
+   config.bulk_threshold         = VCHIQ_MAX_MSG_SIZE;
+   config.max_outstanding_bulks  = VCHIQ_NUM_SERVICE_BULKS;
+   config.max_services           = VCHIQ_MAX_SERVICES;
+   config.version                = VCHIQ_VERSION;
+   config.version_min            = VCHIQ_VERSION_MIN;
 
    if (config_size > sizeof(VCHIQ_CONFIG_T))
       return VCHIQ_ERROR;

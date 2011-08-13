@@ -99,6 +99,8 @@ typedef struct vchiq_config_struct {
                           a bulk transfer (<= max_msg_size) */
    int max_outstanding_bulks;
    int max_services;
+   short version;      /* The version of VCHIQ */
+   short version_min;  /* The minimum compatible version of VCHIQ */
 } VCHIQ_CONFIG_T;
 
 typedef struct vchiq_instance_struct *VCHIQ_INSTANCE_T;

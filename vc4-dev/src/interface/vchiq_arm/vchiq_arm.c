@@ -1200,8 +1200,9 @@ vchiq_init(void)
    if (err != 0)
       goto failed_platform_init;
 
-   vcos_log_error("vchiq: initialised, %d.%d", MAJOR(vchiq_devid),
-             MINOR(vchiq_devid));
+   vcos_log_error("vchiq: initialised - version %d (min %d), device %d.%d",
+      VCHIQ_VERSION, VCHIQ_VERSION_MIN,
+      MAJOR(vchiq_devid), MINOR(vchiq_devid));
 
    return 0;
 
