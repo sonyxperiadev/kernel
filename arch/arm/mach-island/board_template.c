@@ -1193,8 +1193,6 @@ static void __init board_init(void)
  */
 #define CREATE_BOARD_INSTANCE(name) \
 MACHINE_START(name, #name) \
-	.phys_io = IO_START, \
-	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC, \
 	.map_io = island_map_io, \
 	.init_irq = kona_init_irq, \
 	.timer  = &kona_timer, \
