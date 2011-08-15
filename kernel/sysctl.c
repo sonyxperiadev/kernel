@@ -771,6 +771,16 @@ static struct ctl_table kern_table[] = {
 		.proc_handler	= proc_dointvec,
 	},
 #endif
+#if defined(CONFIG_ARM) && defined(CONFIG_DEBUG_USER)
+	{
+		.procname	= "user_debug",
+		.data		= &user_debug,
+		.maxlen		= sizeof( int ),
+		.mode		= 0644,
+		.child		= NULL,
+		.proc_handler	= &proc_dointvec,
+	},
+#endif
 #if defined(CONFIG_MMU)
 	{
 		.procname	= "randomize_va_space",

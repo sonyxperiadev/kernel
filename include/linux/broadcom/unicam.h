@@ -28,6 +28,11 @@ typedef struct {
     unsigned int enable;
 } sensor_ctrl_t;	
 
+typedef struct {
+    unsigned int rx_status;
+    unsigned int image_intr;
+} cam_isr_reg_status_st_t;	
+
 enum {
     UNICAM_CMD_WAIT_IRQ = 0x80,
     UNICAM_CMD_OPEN_CSI0,	

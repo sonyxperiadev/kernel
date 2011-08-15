@@ -133,8 +133,6 @@ static void mpcore_wdt_keepalive_worker(struct work_struct *work)
         wdt_work_t *wdt_work = (wdt_work_t *)work;
         struct mpcore_wdt *wdt = wdt_work->wdt;
 
-        dev_printk(KERN_INFO, wdt->dev, "pinging watchdog on CPU %d.\n",smp_processor_id());
-
         /* Assume prescale is set to 256 */
         count = (clk_get_rate(wdt->clock) / 256) * mpcore_margin;
 

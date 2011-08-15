@@ -262,6 +262,10 @@ void w_conn_id_status_change(void *p)
 		}
 		DWC_ASSERT(++count < 10000,
 			   "Connection id status change timed out");
+#ifdef CONFIG_USB_OTG_UTILS
+		if (core_if->xceiver->set_vbus)
+			core_if->xceiver->set_vbus(core_if->xceiver, false);
+#endif
 		core_if->op_state = B_PERIPHERAL;
 		dwc_otg_core_init(core_if);
 		dwc_otg_enable_global_interrupts(core_if);

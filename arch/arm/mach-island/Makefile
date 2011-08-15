@@ -14,7 +14,8 @@
 
 obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
 
-obj-y += island_pi_mgr.o island_pwr_mgr.o
+obj-$(CONFIG_KONA_POWER_MGR) += island_pwr_mgr.o
+obj-$(CONFIG_KONA_PI_MGR) += island_pi_mgr.o
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
 obj-$(CONFIG_NET_ISLAND) += ethHw.o ethHw_asm.o
 obj-$(CONFIG_KONA_POWER) += pm_island.o

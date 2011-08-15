@@ -33,18 +33,18 @@
  */
 struct bmp18x_platform_data 
 {
-	u8	chip_id;
-	u8	default_oversampling;
-	u32	temp_measurement_period;
-	int	(*init_hw)(void);
-	void	(*deinit_hw)(void);
+	u8	 chip_id;
+	u8	 default_oversampling;
+	u32	 temp_measurement_period;
+	int	 (*init_hw)(void);
+	void (*deinit_hw)(void);
 };
 
 struct bmp18x_bus_ops
 {
-	int	(*read_block)(void *client, u8 reg, int len, char *buf);
-	int	(*read_byte)(void *client, u8 reg);
-	int	(*write_byte)(void *client, u8 reg, u8 value);
+	int	(*read_block)(void* client, u8 reg, int len, char* buf);
+	int	(*read_byte) (void*  client, u8 reg);
+	int	(*write_byte)(void* client, u8 reg, u8 value);
 };
 
 struct bmp18x_data_bus 
@@ -57,17 +57,8 @@ int bmp18x_probe(struct device* dev, struct bmp18x_data_bus* data_bus);
 int bmp18x_remove(struct device* dev);
 
 #ifdef CONFIG_PM
-int bmp18x_enable(struct device* dev);
-int bmp18x_disable(struct device* dev);
+   int bmp18x_enable(struct device*  dev);
+   int bmp18x_disable(struct device* dev);
 #endif
-
-/* user commands */
-#define BMP_IOC_MAGIC 'B'
-
-#define BMP_SET_POLL_RATE     _IOW(BMP_IOC_MAGIC, 100, unsigned int)
-#define BMP_SET_ENABLE  	  _IOW(BMP_IOC_MAGIC, 101, unsigned char)
-
-/* Default delay between poll events in non-interrupt mode */
-#define BMP_POLL_RATE_MSEC 5000      // 5 seconds
 
 #endif

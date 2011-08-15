@@ -64,6 +64,7 @@
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
 #include "csl_arm2sp.h"
+#include "csl_vpu.h"
 
 
 AP_SharedMem_t	*vp_shared_mem;
@@ -96,7 +97,7 @@ void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
 	
 	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", dsp_shared_mem);
 
-	// Clear out shared memory
+	/* Clear out shared memory */
 	memset(vp_shared_mem, 0, sizeof(AP_SharedMem_t));
 
 	vp_shared_mem->vp_shared_cmdq_in = 0;
@@ -115,6 +116,9 @@ void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
 
 	CSL_SetARM2SpeechCallRecordGain(0);
 	CSL_SetARM2Speech2CallRecordGain(0);
+
+	/* set DSP DL speech record gain */
+	CSL_SetDlSpeechRecGain(0);
 }
 
 //*********************************************************************

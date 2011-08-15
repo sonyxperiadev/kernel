@@ -29,8 +29,6 @@ Broadcom's express prior written consent.
 #include "csl_caph_audioh.h"
 #include "csl_caph_gain.h"
 #include "log.h"
-//#define _DBG_(a)
-#define _DBG_(a) (a)
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************

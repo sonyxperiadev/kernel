@@ -62,7 +62,7 @@ VCOS_STATIC_INLINE
 char *vcos_strncpy(char *dst, const char *src, size_t count) { return strncpy(dst, src, count); }
 
 VCOS_STATIC_INLINE
-void *vcos_memcpy(void *dst, const void *src, size_t n) { return memcpy(dst, src, n ); }
+void *vcos_memcpy(void *dst, const void *src, size_t n) {  memcpy(dst, src, n);  return dst;  }
 
 VCOS_STATIC_INLINE
 void *vcos_memset(void *p, int c, size_t n) { return memset(p, c, n); }

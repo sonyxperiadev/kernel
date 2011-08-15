@@ -31,250 +31,174 @@
 #include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/delay.h>
+#include <linux/errno.h>
 
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
+/* --- START: CHAL compatability shim --- */
+static void CHAL_REG_SETBIT32(uint32_t addr, unsigned int bits)
+{
+    iowrite32(ioread32((void *)addr) | bits,  (void *)addr);
+}
+
+#define CHAL_REG_WRITE32(x,y) iowrite32(y,x)
+#define CHAL_REG_READ32(x) ioread32(x)
+#define chal_dbg_printf(x,...) pr_debug(__VA_ARGS__)
+
 #include <mach/rdb/brcm_rdb_bbl_apb.h>
-#include <mach/rdb/brcm_rdb_bbl_config.h>
-#include <mach/rdb/brcm_rdb_bbl_pwseq.h>
 #include <mach/rdb/brcm_rdb_bbl_rtc.h>
-#include <mach/rdb/brcm_rdb_fmon.h>
-#include <mach/rdb/brcm_rdb_bbl_vmon.h>
+#include <mach/rdb/brcm_rdb_sysmap.h>
+#include <mach/rdb/brcm_rdb_map.h>
 
+#define RTC_PERIODIC_TIMER_ADDR     (rtc->handle->rtcBaseAddr+BBL_RTC_PER_OFFSET)
+#define RTC_MATCH_REGISTER_ADDR     (rtc->handle->rtcBaseAddr+BBL_RTC_MATCH_OFFSET)
+#define RTC_CLEAR_INTR_ADDR         (rtc->handle->rtcBaseAddr+BBL_RTC_CLR_INT_OFFSET)
+#define RTC_INTERRUPT_STATUS_ADDR   (rtc->handle->rtcBaseAddr+BBL_RTC_INT_STS_OFFSET)
+#define RTC_CONTROL_ADDR            (rtc->handle->rtcBaseAddr+BBL_RTC_CTRL_OFFSET)
+/* --- END:  CHAL compatability shim --- */
 
-static void iosetbit32(void *addr, unsigned int bits)
+/* ---- Public Constants and Types --------------------------------------- */
+
+/*
+ * Handle for RTC controller operations.
+ */
+struct chal_rtc_handle
 {
-    iowrite32(ioread32(addr) | bits,  addr);
-}
+   uint32_t rtcBaseAddr; /* Base address of the RTC */
+   uint32_t bar;         /* Base address to use for register accesses */
+   uint32_t wr_data;     /* Data to be written into BBL APB Slave */
+   uint32_t rd_data;     /* Data read from BBL APB Interface */
+   uint32_t ctrl_sts;    /* APB Control & Status Register */
+   uint32_t int_sts;     /* Status register indicating interrupt source from BBL */
+};
+typedef struct chal_rtc_handle CHAL_RTC_HANDLE_t;
 
-static void ioclrbit32(void *addr, unsigned int bits)
-{
-    iowrite32(ioread32(addr) & ~bits,  addr);
-}
+typedef uint64_t chal_rtc_TIME_t;   /* Time in seconds */
 
-/* ---- Private Constants and Types ---------------------------------------- */
-typedef uint64_t bbl_TIME_t;   /* Time in second */
-
-/* BBL_APB Block */
-typedef struct
-{
-   uint32_t addr;       /* Address of BBL APB Slave */
-   uint32_t wr_data;    /* Data to be written into BBL APB Slave */
-   uint32_t rd_data;    /* Data read from BBL APB Interface */
-   uint32_t ctrl_sts;   /* APB Control & Status Register */
-   uint32_t int_sts;    /* Status register indicating interrupt source from BBL */
-} bbl_APB_REG_t;
-
-/* BBL_APB Interrupts */
+/* RTC Block - CTRL */
 typedef enum
 {
-   BBL_INT_CMD_DONE      = 0,  /* APB command done interrupt */
-   BBL_INT_RTC_PER       = 1,  /* RTC periodic interrupt */
-   BBL_INT_RTC_MATCH     = 2,  /* RTC match interrupt */
-   BBL_INT_VFM_FMON_HIGH = 3,  /* high frequency monitor tamper interrupt */
-   BBL_INT_VFM_FMON_LOW  = 4,  /* low frequency monitor tamper interrupt */
-   BBL_INT_VFM_VMON_HIGH = 5,  /* high voltage monitor tamper itnerrupt */
-   BBL_INT_VFM_VMON_LOW  = 6,  /* low voltage monitor tamper interrupt */
-   BBL_INT_WDG_TIMER     = 7,  /* watchdog timer interrupt */
-   BBL_INT_WDG_UTC       = 8   /* uptime counter interrupt */
-} bbl_INT_e;
+   CHAL_RTC_CTRL_LOCK  = 0,  /* lock the real-time clock counters, SET_DIV and SEC_0 */
+   CHAL_RTC_CTRL_UNLOCK,     /* unlock the real-time clock counters, SET_DIV and SEC_0 */
+   CHAL_RTC_CTRL_STOP,       /* halt the real-time clock */
+   CHAL_RTC_CTRL_RUN         /* start the real-time clock */
+} chal_RTC_CTRL_e;
 
-/* BBL_CONFIG Block */
+/* RTC Block - Interrupt types */
 typedef enum
 {
-   BBL_CONFIG_RTC     = 0,  /* RTC */
-   BBL_CONFIG_PWSEQ   = 1,  /* PWSEQ */
-   BBL_CONFIG_VFM     = 2,  /* VFM */
-   BBL_CONFIG_WDG     = 3,  /* Watchdog */
-   BBL_CONFIG_BBRAM   = 4   /* BBRAM */
-} bbl_CFG_e;
+   CHAL_RTC_INT_PER    = 0,  /* Periodic interrupt */
+   CHAL_RTC_INT_MATCH  = 1,  /* Match interrupt */
+   CHAL_RTC_INT_NONE,
+} chal_RTC_INT_e;
 
-/* BBL_RTC Block - CTRL */
+/* RTC - Monotonic timer clock */
 typedef enum
 {
-   BBL_RTC_CTRL_LOCK  = 0,  /* lock thye real-time clock counters, SET_DIV and SEC_0 */
-   BBL_RTC_CTRL_UNLOCK,     /* unlock the real-time clock counters, SET_DIV and SEC_0 */
-   BBL_RTC_CTRL_STOP,       /* halt the real-time clock */
-   BBL_RTC_CTRL_RUN         /* start the real-time clock */
-} bbl_RTC_CTRL_e;
+   CHAL_RTC_MTC_LOCK    = 0, /* Locks writes to MTC.  Sticky bit */
+   CHAL_RTC_MTC_INCR         /* increment MTC by INCR_AMT, even when locked */
+} chal_RTC_MTC_CTRL_e;
 
-/* BBL_RTC Block - Interrupt */
+/* RTC - Periodic interrupt interval */
 typedef enum
 {
-   BBL_RTC_INT_PER    = 0,  /* Periodic interrupt */
-   BBL_RTC_INT_MATCH  = 1,  /* Match interrupt */
-   BBL_RTC_INT_NONE
-} bbl_RTC_INT_e;
+   CHAL_RTC_PER_INTERVAL_125ms     = 0x00000001,  /* Time interval 125ms */
+   CHAL_RTC_PER_INTERVAL_250ms     = 0x00000002,  /* Time interval 250ms */
+   CHAL_RTC_PER_INTERVAL_500ms     = 0x00000004,  /* Time interval 500ms */
+   CHAL_RTC_PER_INTERVAL_1000ms    = 0x00000008,  /* Time interval 1 sec */
+   CHAL_RTC_PER_INTERVAL_2000ms    = 0x00000010,  /* Time interval 2 sec */
+   CHAL_RTC_PER_INTERVAL_4000ms    = 0x00000020,  /* Time interval 4 sec */
+   CHAL_RTC_PER_INTERVAL_8000ms    = 0x00000040,  /* Time interval 8 sec */
+   CHAL_RTC_PER_INTERVAL_16000ms   = 0x00000080,  /* Time interval 16 sec */
+   CHAL_RTC_PER_INTERVAL_32000ms   = 0x00000100,  /* Time interval 32 sec */
+   CHAL_RTC_PER_INTERVAL_64000ms   = 0x00000200,  /* Time interval 64 sec */
+   CHAL_RTC_PER_INTERVAL_128000ms  = 0x00000400,  /* Time interval 128 sec */
+   CHAL_RTC_PER_INTERVAL_256000ms  = 0x00000800   /* Time interval 256 sec */
+} chal_RTC_PER_INTERVAL_e;
 
-/* BBL_RTC - Monotonic timer clock */
-typedef enum
-{
-   BBL_RTC_MTC_LOCK    = 0, /* Locks writes to MTC.  Sticky bit */
-   BBL_RTC_MTC_INCR         /* increment MTC by INCR_AMT, even when locked */
-} bbl_RTC_MTC_CTRL_e;
+#define CHAL_RTC_RESET_ACCESS_STATUS     0xACCE55ED
 
-/* BBL_RTC - Periodic interrupt interval */
-typedef enum
-{
-   BBL_RTC_PER_INTERVAL_125ms     = 0x00000001,  /* Time interval 125ms */
-   BBL_RTC_PER_INTERVAL_250ms     = 0x00000002,  /* Time interval 250ms */
-   BBL_RTC_PER_INTERVAL_500ms     = 0x00000004,  /* Time interval 500ms */
-   BBL_RTC_PER_INTERVAL_1000ms    = 0x00000008,  /* Time interval 1 sec */
-   BBL_RTC_PER_INTERVAL_2000ms    = 0x00000010,  /* Time interval 2 sec */
-   BBL_RTC_PER_INTERVAL_4000ms    = 0x00000020,  /* Time interval 4 sec */
-   BBL_RTC_PER_INTERVAL_8000ms    = 0x00000040,  /* Time interval 8 sec */
-   BBL_RTC_PER_INTERVAL_16000ms   = 0x00000080,  /* Time interval 16 sec */
-   BBL_RTC_PER_INTERVAL_32000ms   = 0x00000100,  /* Time interval 32 sec */
-   BBL_RTC_PER_INTERVAL_64000ms   = 0x00000200,  /* Time interval 64 sec */
-   BBL_RTC_PER_INTERVAL_128000ms  = 0x00000400,  /* Time interval 128 sec */
-   BBL_RTC_PER_INTERVAL_256000ms  = 0x00000800   /* Time internal 256 sec */
-} bbl_RTC_PER_INTERVAL_e;
+/* ---- Public Variable Externs ------------------------------------------ */
+/* ---- Public Function Prototypes --------------------------------------- */
 
-/* BBL_VFM - interrupt */
-typedef enum
-{
-   BBL_VFM_INT_VMON_HIGH = 0,
-   BBL_VFM_INT_VMON_LOW  = 1,
-   BBL_VFM_INT_FMON_HIGH = 2,
-   BBL_VFM_INT_FMON_LOW  = 3,
-   BBL_VFM_INT_NONE
-} bbl_VFM_INT_e;
-
-/* BBL_PWSEQ - delay */
-typedef enum
-{
-   BBL_PWSEQ_DELAY_1     = BBL_PWSEQ_DLY1_OFFSET,
-   BBL_PWSEQ_DELAY_2     = BBL_PWSEQ_DLY2_OFFSET,
-   BBL_PWSEQ_DELAY_NONE
-} bbl_PWSEQ_DELAY_e;
-
-/* BBL_PWSEQ - tigger */
-typedef enum
-{
-   BBL_PWSEQ_TRIG_0         = 0,
-   BBL_PWSEQ_TRIG_1         = 1,
-   BBL_PWSEQ_TRIG_2         = 2,
-   BBL_PWSEQ_TRIG_RTC_MATCH = 3,
-   BBL_PWSEQ_TRIG_RTC_PER   = 4,
-   BBL_PWSEQ_TRIG_NONE
-} bbl_PWSEQ_TRIG_e;
-
-/* BBL_PWSEQ - event */
-typedef enum
-{
-   BBL_PWSEQ_EVENT_0     = BBL_PWSEQ_EVENT0_OFFSET,
-   BBL_PWSEQ_EVENT_1     = BBL_PWSEQ_EVENT1_OFFSET,
-   BBL_PWSEQ_EVENT_2     = BBL_PWSEQ_EVENT2_OFFSET,
-   BBL_PWSEQ_EVENT_NONE
-} bbl_PWSEQ_EVENT_e;
-
-/* BBL_PWSEQ - reset */
-typedef enum
-{
-   BBL_PWSEQ_RESET_EVENT_0  = 0,
-   BBL_PWSEQ_RESET_EVENT_1  = 1,
-   BBL_PWSEQ_RESET_EVENT_2  = 2,
-   BBL_PWSEQ_RESET_ONESHOT  = 3,
-   BBL_PWSEQ_RESET_SEQ_0    = 4,
-   BBL_PWSEQ_RESET_SEQ_1    = 5,
-   BBL_PWSEQ_RESET_SEQ_2    = 6,
-   BBL_PWSEQ_RESET_TIMEOUT  = 8,
-   BBL_PWSEQ_RESET_NONE
-} bbl_PWSEQ_RESET_e;
-
-#define BBL_RTC_RESET_ACCESS_STATUS     0xACCE55ED
-
-static   bbl_APB_REG_t *pBblApbReg;
-
-/* Macros for pBblApbReg->addr register */
-#define  bbl_REG_SET_APB_SLAVE_ADDRESS(add)  ( iosetbit32 ( &pBblApbReg->addr, ( (add) & BBL_APB_ADDR_APB_ADDR_MASK ) ) )
-
-/* Macros for pBblApbReg->wr_data register */
-#define  bbl_REG_GET_WR_DATA()                ( ioread32 ( &pBblApbReg->wr_data ) )
-#define  bbl_REG_SET_WR_DATA(val)             ( iowrite32 ( (val), &pBblApbReg->wr_data ) )
-
-/* Macros for pBblApbReg->rd_data register */
-#define  bbl_REG_GET_RD_DATA()                ( ioread32 ( &pBblApbReg->rd_data ) )
-
-/* Macros for pBblApbReg->ctrl_sts register */
-static void bbl_REG_COMMAND_WRITE(void)
-{
-    ioclrbit32 ( &pBblApbReg->ctrl_sts, BBL_APB_CTRL_STS_BBL_CMD_START_MASK | BBL_APB_CTRL_STS_BBL_APB_CMD_MASK );
-    iosetbit32 ( &pBblApbReg->ctrl_sts, BBL_APB_CTRL_STS_BBL_CMD_START_MASK | BBL_APB_CTRL_STS_BBL_APB_CMD_MASK );
-}
-
-static void bbl_REG_COMMAND_READ(void)
-{
-    ioclrbit32 ( &pBblApbReg->ctrl_sts, BBL_APB_CTRL_STS_BBL_CMD_START_MASK | BBL_APB_CTRL_STS_BBL_APB_CMD_MASK );
-    iosetbit32 ( &pBblApbReg->ctrl_sts, BBL_APB_CTRL_STS_BBL_CMD_START_MASK );
-}
-
-static int bbl_REG_IS_COMMAND_DONE(void)
-{
-    return ioread32 ( &pBblApbReg->ctrl_sts ) & BBL_APB_CTRL_STS_BBL_CMD_DONE_MASK;
-}
-
-static void bbl_REG_COMMAND_DONE_CLEAR()
-{
-    iosetbit32( &pBblApbReg->ctrl_sts, BBL_APB_CTRL_STS_BBL_CMD_DONE_MASK );
-}
-
-#define RTC_PERIODIC_TIMER_ADDR     (BBL_RTC_BASE_ADDR+BBL_RTC_PER_OFFSET)
-#define RTC_MATCH_REGISTER_ADDR     (BBL_RTC_BASE_ADDR+BBL_RTC_MATCH_OFFSET)
-#define RTC_CLEAR_INTR_ADDR         (BBL_RTC_BASE_ADDR+BBL_RTC_CLR_INT_OFFSET)
-#define RTC_INTERRUPT_STATUS_ADDR   (BBL_RTC_BASE_ADDR+BBL_RTC_INT_STS_OFFSET)
-#define RTC_CONTROL_ADDR            (BBL_RTC_BASE_ADDR+BBL_RTC_CTRL_OFFSET)
-
-/* ---- Public Variable Externs -------------------------------------------- */
-
-/* ---- Private Function Prototypes ---------------------------------------- */
-static inline void bbl_rtc_ctrlSet ( bbl_RTC_CTRL_e cmd );
-static inline int bbl_rtc_intIsEnabled ( bbl_RTC_INT_e interrupt );
-
-/* ---- Public Function Prototypes ----------------------------------------- */
-
-/* ---- Indirect register access functions --------------------------------- */
-
-static inline void bbl_readyForCommand ( void )
-{
-    printk( "BBL: Waiting to issue command \n" );
-    while ( bbl_REG_IS_COMMAND_DONE() ) udelay ( 1 );
-    bbl_REG_COMMAND_DONE_CLEAR();
-    printk( "BBL: Issuing command \n" );
-}
-
-static inline uint32_t bbl_readReg ( uint32_t regAddr )
-{
-    /* Make sure BBL interface is ready to accept commands */
-    bbl_readyForCommand ();
-    bbl_REG_SET_APB_SLAVE_ADDRESS ( regAddr );
-    bbl_REG_COMMAND_READ();
-    /* Wait until command is processed */
-    bbl_readyForCommand ();
-    /* Read the data */
-    return ( bbl_REG_GET_RD_DATA () );
-}
-
-static inline void bbl_writeReg ( uint32_t regAddr, uint32_t val )
-{
-    /* Make sure BBL interface is ready to accept commands */
-    bbl_readyForCommand ();
-    bbl_REG_SET_APB_SLAVE_ADDRESS ( regAddr );
-    bbl_REG_SET_WR_DATA ( val );
-    bbl_REG_COMMAND_WRITE ();
-}
+/*===========================================================================
+* Functions for RTC operations.
+* ===========================================================================*/
 
 /****************************************************************************/
 /**
-*  @brief   Set the RTC clock divider value
+*  @brief   Initialize RTC config structure
+*
+*  @param   handle      (in) Pointer to the RTC initialization structure
+*  @param   bblBar      (in) Location of BBL base address register
+*  @param   config      (in) Location of RTC base address register
+*
+****************************************************************************/
+int chal_rtc_init(CHAL_RTC_HANDLE_t *handle, uint32_t bblBar, uint32_t rtcBar);
+
+static inline void      chal_rtc_divSet(CHAL_RTC_HANDLE_t *handle, uint32_t val);
+static inline uint32_t  chal_rtc_divGet(CHAL_RTC_HANDLE_t *handle);
+
+static inline void      chal_rtc_secSet(CHAL_RTC_HANDLE_t *handle, uint32_t val);
+static inline uint32_t  chal_rtc_secGet(CHAL_RTC_HANDLE_t *handle);
+
+static inline void      chal_rtc_ctrlSet(CHAL_RTC_HANDLE_t *handle, chal_RTC_CTRL_e cmd);
+
+static inline void      chal_rtc_periodInterruptValSet(CHAL_RTC_HANDLE_t *handle, chal_RTC_PER_INTERVAL_e interval);
+static inline uint32_t  chal_rtc_periodInterruptValGet(CHAL_RTC_HANDLE_t *handle);
+
+static inline void      chal_rtc_matchInterruptValSet(CHAL_RTC_HANDLE_t *handle, chal_rtc_TIME_t sec);
+static inline uint32_t  chal_rtc_matchInterruptValGet(CHAL_RTC_HANDLE_t *handle);
+static inline void      chal_rtc_intStatusClr(CHAL_RTC_HANDLE_t *handle, chal_RTC_INT_e interrupt);
+static inline void      chal_rtc_intStatusClrVal(CHAL_RTC_HANDLE_t *handle, uint32_t val);
+static inline int       chal_rtc_intStatusGet(CHAL_RTC_HANDLE_t *handle, chal_RTC_INT_e interrupt);
+static inline uint32_t  chal_rtc_intStatusGetVal(CHAL_RTC_HANDLE_t *handle);
+static inline void      chal_rtc_intEnable(CHAL_RTC_HANDLE_t *handle, chal_RTC_INT_e interrupt);
+static inline void      chal_rtc_intEnableVal(CHAL_RTC_HANDLE_t *handle, uint32_t bitsOn);
+static inline void      chal_rtc_intDisable(CHAL_RTC_HANDLE_t *handle, chal_RTC_INT_e interrupt);
+static inline void      chal_rtc_intDisableVal(CHAL_RTC_HANDLE_t *handle, uint32_t bitsOff );
+
+static inline int       chal_rtc_intIsEnabled(CHAL_RTC_HANDLE_t *handle, chal_RTC_INT_e interrupt);
+static inline           chal_RTC_INT_e chal_rtc_interruptStatusGet(CHAL_RTC_HANDLE_t *handle);
+
+static inline int       chal_rtc_rstIsAsserted(CHAL_RTC_HANDLE_t *handle);
+
+static inline void      chal_rtc_mtcCtrlSet(CHAL_RTC_HANDLE_t *handle, chal_RTC_MTC_CTRL_e cmd);
+static inline void      chal_rtc_mtcIncrSet(CHAL_RTC_HANDLE_t *handle, uint16_t amount);
+
+static inline void      chal_rtc_mtcTimeSet(CHAL_RTC_HANDLE_t *handle, chal_rtc_TIME_t time);
+static inline chal_rtc_TIME_t chal_rtc_mtcTimeGet(CHAL_RTC_HANDLE_t *handle);
+
+/* ---- Private Constants and Types ---------------------------------------- */
+/* ---- Public Variable Externs -------------------------------------------- */
+/* ---- Private Function Prototypes ----------------------------------------- */
+static inline uint32_t  chal_rtc_readReg(CHAL_RTC_HANDLE_t *handle, uint32_t regAddr);
+static inline void      chal_rtc_writeReg(CHAL_RTC_HANDLE_t *handle, uint32_t regAddr, uint32_t val);
+static inline void      chal_rtc_writeRegNoWait(CHAL_RTC_HANDLE_t *handle, uint32_t regAddr, uint32_t val);
+
+/* Macros for accessing RTC registers through the APB BBL interface*/
+#define  chal_rtc_REG_SET_APB_SLAVE_ADDRESS(handle, add) (CHAL_REG_WRITE32(handle->bar, add))
+#define  chal_rtc_REG_GET_WR_DATA(handle)         (CHAL_REG_READ32(handle->wr_data))
+#define  chal_rtc_REG_SET_WR_DATA(handle, val)    (CHAL_REG_WRITE32(handle->wr_data, val))
+#define  chal_rtc_REG_GET_RD_DATA(handle)         (CHAL_REG_READ32(handle->rd_data))
+#define  chal_rtc_REG_COMMAND_WRITE(handle)       (CHAL_REG_SETBIT32(handle->ctrl_sts, BBL_APB_CTRL_STS_BBL_CMD_START_MASK | BBL_APB_CTRL_STS_BBL_APB_CMD_MASK))
+#define  chal_rtc_REG_COMMAND_READ(handle)        (CHAL_REG_SETBIT32(handle->ctrl_sts, BBL_APB_CTRL_STS_BBL_CMD_START_MASK & ~BBL_APB_CTRL_STS_BBL_APB_CMD_MASK))
+#define  chal_rtc_REG_IS_COMMAND_DONE(handle)     (CHAL_REG_READ32(handle->ctrl_sts) & BBL_APB_CTRL_STS_BBL_CMD_DONE_MASK)
+#define  chal_rtc_REG_COMMAND_DONE_CLEAR(handle)  (CHAL_REG_SETBIT32(handle->ctrl_sts, BBL_APB_CTRL_STS_BBL_CMD_DONE_MASK))
+
+
+/* ---- Public Function Prototypes ----------------------------------------- */
+
+/****************************************************************************/
+/**
+*  @brief   Set the RTC clock divider value. The clock must be set to start
+*           running again after this is called.
 *
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_divSet ( uint32_t val )
+static inline void chal_rtc_divSet(CHAL_RTC_HANDLE_t *handle, uint32_t val)
 {
-   bbl_rtc_ctrlSet( BBL_RTC_CTRL_STOP );
-   bbl_writeReg ( BBL_RTC_BASE_ADDR | BBL_RTC_SET_DIV_OFFSET, val );
-   /*bbl_rtc_ctrlSet( BBL_RTC_CTRL_RUN );*/
+   chal_rtc_ctrlSet(handle, CHAL_RTC_CTRL_STOP);
+   chal_rtc_writeReg(handle, handle->rtcBaseAddr + RTC_SET_DIV_OFFSET, val);
 }
 
 /****************************************************************************/
@@ -284,9 +208,9 @@ static inline void bbl_rtc_divSet ( uint32_t val )
 *  @return  Clock divider value
 */
 /****************************************************************************/
-static inline uint32_t bbl_rtc_divGet ( void )
+static inline uint32_t chal_rtc_divGet(CHAL_RTC_HANDLE_t *handle)
 {
-   return ( bbl_readReg ( BBL_RTC_BASE_ADDR | BBL_RTC_SET_DIV_OFFSET ) );
+   return ( chal_rtc_readReg (handle, handle->rtcBaseAddr + RTC_SET_DIV_OFFSET));
 }
 
 /****************************************************************************/
@@ -296,11 +220,11 @@ static inline uint32_t bbl_rtc_divGet ( void )
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_secSet ( uint32_t val )
+static inline void chal_rtc_secSet(CHAL_RTC_HANDLE_t *handle, uint32_t val)
 {
-   bbl_rtc_ctrlSet( BBL_RTC_CTRL_STOP );
-   bbl_writeReg ( BBL_RTC_BASE_ADDR | BBL_RTC_SEC_0_OFFSET, val );
-   /*bbl_rtc_ctrlSet( BBL_RTC_CTRL_RUN );*/
+   chal_rtc_ctrlSet(handle, CHAL_RTC_CTRL_STOP);
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Write %d to SEC_0\n", val);
+   chal_rtc_writeReg (handle, handle->rtcBaseAddr + RTC_SEC_0_OFFSET, val);
 }
 
 /****************************************************************************/
@@ -310,9 +234,10 @@ static inline void bbl_rtc_secSet ( uint32_t val )
 *  @return  RTC seconds value
 */
 /****************************************************************************/
-static inline uint32_t bbl_rtc_secGet ( void )
+static inline uint32_t chal_rtc_secGet(CHAL_RTC_HANDLE_t *handle)
 {
-   return ( bbl_readReg ( BBL_RTC_BASE_ADDR | BBL_RTC_SEC_0_OFFSET ) );
+    uint32_t val = chal_rtc_readReg(handle, handle->rtcBaseAddr + RTC_SEC_0_OFFSET);
+    return val;
 }
 
 /****************************************************************************/
@@ -322,38 +247,41 @@ static inline uint32_t bbl_rtc_secGet ( void )
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_ctrlSet ( bbl_RTC_CTRL_e cmd )
+static inline void chal_rtc_ctrlSet(CHAL_RTC_HANDLE_t *handle, chal_RTC_CTRL_e cmd)
 {
    uint32_t val;
    uint32_t addr;
 
-   addr = BBL_RTC_BASE_ADDR | BBL_RTC_CTRL_OFFSET;
+   addr = handle->rtcBaseAddr + RTC_CTRL_OFFSET;
 
    /* Read the data */
-   val = bbl_readReg ( addr );
+   val = chal_rtc_readReg (handle, addr);
+   val &= 0x3;
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Read RTC CTRL: %d\n", val);
 
    switch ( cmd )
    {
-      case BBL_RTC_CTRL_LOCK:
+      case CHAL_RTC_CTRL_LOCK:
          /* Set the RTC lock bit */
- 	      val |= BBL_RTC_CTRL_BBL_RTC_LOCK_MASK;
+              val |= RTC_CTRL_RTC_LOCK_MASK;
          break;
-      case BBL_RTC_CTRL_UNLOCK:
+      case CHAL_RTC_CTRL_UNLOCK:
          /* Clear the RTC lock bit */
-         val &= ~BBL_RTC_CTRL_BBL_RTC_LOCK_MASK;
+         val &= ~RTC_CTRL_RTC_LOCK_MASK;
          break;
-      case BBL_RTC_CTRL_STOP:
+      case CHAL_RTC_CTRL_STOP:
          /* Set the RTC stop bit */
- 	      val |= BBL_RTC_CTRL_BBL_RTC_STOP_MASK;
+              val |= RTC_CTRL_RTC_STOP_MASK;
          break;
-      case BBL_RTC_CTRL_RUN:
+      case CHAL_RTC_CTRL_RUN:
          /* Clear the RTC stop bit */
-         val &= ~BBL_RTC_CTRL_BBL_RTC_STOP_MASK;
+         val &= ~RTC_CTRL_RTC_STOP_MASK;
          break;
    }
 
    /* Write the data */
-   bbl_writeReg ( addr, val );
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Write %d to RTC CTRL\n", val);
+   chal_rtc_writeReg (handle, addr, val);
 }
 
 /****************************************************************************/
@@ -367,9 +295,11 @@ static inline void bbl_rtc_ctrlSet ( bbl_RTC_CTRL_e cmd )
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_periodInterruptValSet ( bbl_RTC_PER_INTERVAL_e interval )
+static inline void chal_rtc_periodInterruptValSet(CHAL_RTC_HANDLE_t *handle,
+    chal_RTC_PER_INTERVAL_e interval)
 {
-   bbl_writeReg( (BBL_RTC_BASE_ADDR | BBL_RTC_PER_OFFSET), interval );
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Write 0x%x to PER\n", interval);
+   chal_rtc_writeReg(handle, handle->rtcBaseAddr + RTC_PER_OFFSET, interval);
 }
 
 /****************************************************************************/
@@ -379,9 +309,9 @@ static inline void bbl_rtc_periodInterruptValSet ( bbl_RTC_PER_INTERVAL_e interv
 *  @return  Perioidic interrupt value
 */
 /****************************************************************************/
-static inline uint32_t bbl_rtc_periodInterruptValGet ( void )
+static inline uint32_t chal_rtc_periodInterruptValGet(CHAL_RTC_HANDLE_t *handle)
 {
-   return( bbl_readReg( BBL_RTC_BASE_ADDR | BBL_RTC_PER_OFFSET ) );
+   return( chal_rtc_readReg(handle, handle->rtcBaseAddr + RTC_PER_OFFSET) );
 }
 
 /****************************************************************************/
@@ -394,9 +324,11 @@ static inline uint32_t bbl_rtc_periodInterruptValGet ( void )
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_matchInterruptValSet ( bbl_TIME_t sec )
+static inline void chal_rtc_matchInterruptValSet(CHAL_RTC_HANDLE_t *handle,
+    chal_rtc_TIME_t sec)
 {
-   bbl_writeReg( (BBL_RTC_BASE_ADDR | BBL_RTC_MATCH_OFFSET), (sec & BBL_RTC_MATCH_BBL_RTC_MATCH_MASK) );
+   chal_rtc_writeReg(handle, handle->rtcBaseAddr + RTC_MATCH_OFFSET,
+       (sec & RTC_MATCH_RTC_MATCH_MASK));
 }
 
 /****************************************************************************/
@@ -409,9 +341,9 @@ static inline void bbl_rtc_matchInterruptValSet ( bbl_TIME_t sec )
 *  @return  Match interrupt value
 */
 /****************************************************************************/
-static inline uint32_t bbl_rtc_matchInterruptValGet ( void )
+static inline uint32_t chal_rtc_matchInterruptValGet(CHAL_RTC_HANDLE_t *handle)
 {
-   return( bbl_readReg( BBL_RTC_BASE_ADDR | BBL_RTC_MATCH_OFFSET ) );
+   return( chal_rtc_readReg(handle, handle->rtcBaseAddr + RTC_MATCH_OFFSET) );
 }
 
 /****************************************************************************/
@@ -421,9 +353,23 @@ static inline uint32_t bbl_rtc_matchInterruptValGet ( void )
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_intStatusClr ( bbl_RTC_INT_e interrupt )
+static inline void chal_rtc_intStatusClr(CHAL_RTC_HANDLE_t *handle,
+    chal_RTC_INT_e interrupt)
 {
-   bbl_writeReg( (BBL_RTC_BASE_ADDR | BBL_RTC_CTRL_OFFSET), (1<<interrupt) );
+   chal_rtc_writeReg(handle, handle->rtcBaseAddr + RTC_CLR_INT_OFFSET,
+       1 << interrupt);
+}
+
+static inline void chal_rtc_intStatusClrVal(CHAL_RTC_HANDLE_t *handle,
+    uint32_t val)
+{
+   uint32_t verify = 0;
+
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Writing %d to CLR_INT\n", val);
+   chal_rtc_writeReg(handle, handle->rtcBaseAddr + RTC_CLR_INT_OFFSET, val);
+
+   verify = chal_rtc_readReg(handle, handle->rtcBaseAddr + RTC_CLR_INT_OFFSET);
+   //chal_dbg_printf(CHAL_DBG_DEBUG, "Verifying CLR_INT: %d\n", verify);
 }
 
 /****************************************************************************/
@@ -434,10 +380,19 @@ static inline void bbl_rtc_intStatusClr ( bbl_RTC_INT_e interrupt )
 *           0: no interrupt occurred
 */
 /****************************************************************************/
-static inline int bbl_rtc_intStatusGet ( bbl_RTC_INT_e interrupt )
+static inline int chal_rtc_intStatusGet(CHAL_RTC_HANDLE_t *handle,
+    chal_RTC_INT_e interrupt)
 {
-   return( ( bbl_readReg( BBL_RTC_BASE_ADDR | BBL_RTC_INT_STS_OFFSET ) & (1<<interrupt) ) ? 1 : 0 );
+    return( ( chal_rtc_readReg(handle, handle->rtcBaseAddr + RTC_INT_STS_OFFSET) &
+        (1<<interrupt) ) ? 1 : 0 );
 }
+
+static inline uint32_t chal_rtc_intStatusGetVal(CHAL_RTC_HANDLE_t *handle)
+{
+    uint32_t val = chal_rtc_readReg(handle, handle->rtcBaseAddr + RTC_INT_STS_OFFSET);
+    return val;
+}
+
 
 /****************************************************************************/
 /**
@@ -449,17 +404,19 @@ static inline int bbl_rtc_intStatusGet ( bbl_RTC_INT_e interrupt )
 *           rtcHw_INTERRUPT_STATUS_ONESHOT
 */
 /****************************************************************************/
-static inline bbl_RTC_INT_e bbl_rtc_interruptStatusGet ( void )
+static inline chal_RTC_INT_e chal_rtc_interruptStatusGet(CHAL_RTC_HANDLE_t *handle)
 {
-   if( bbl_rtc_intStatusGet( BBL_RTC_INT_PER ) & bbl_rtc_intIsEnabled( BBL_RTC_INT_PER ) )
+   if( chal_rtc_intStatusGet(handle, CHAL_RTC_INT_PER) &
+       chal_rtc_intIsEnabled(handle, CHAL_RTC_INT_PER) )
    {
-      return BBL_RTC_INT_PER;
+      return CHAL_RTC_INT_PER;
    }
-   else if( bbl_rtc_intStatusGet( BBL_RTC_INT_MATCH ) & bbl_rtc_intIsEnabled( BBL_RTC_INT_MATCH ) )
+   else if( chal_rtc_intStatusGet(handle, CHAL_RTC_INT_MATCH) &
+       chal_rtc_intIsEnabled(handle, CHAL_RTC_INT_MATCH) )
    {
-      return BBL_RTC_INT_MATCH;
+       return CHAL_RTC_INT_MATCH;
    }
-   return BBL_RTC_INT_NONE;
+   return CHAL_RTC_INT_NONE;
 }
 
 /****************************************************************************/
@@ -469,26 +426,57 @@ static inline bbl_RTC_INT_e bbl_rtc_interruptStatusGet ( void )
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_intEnable ( bbl_RTC_INT_e interrupt )
+static inline void chal_rtc_intEnable(CHAL_RTC_HANDLE_t *handle,
+    chal_RTC_INT_e interrupt)
 {
    uint32_t val, addr;
 
-   addr = BBL_RTC_BASE_ADDR | BBL_RTC_INT_ENABLE_OFFSET;
+   addr = handle->rtcBaseAddr + RTC_INT_ENABLE_OFFSET;
 
-   val = bbl_readReg ( addr );
+   val = chal_rtc_readReg(handle, addr);
    val |= (1 << interrupt);
-   bbl_writeReg ( addr, val );
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Write INT_ENABLE: %d\n", val);
+   chal_rtc_writeRegNoWait(handle, addr, val);
+
+//   val = chal_rtc_readReg(handle, addr);
+  // chal_dbg_printf(CHAL_DBG_DEBUG, "Read INT_ENABLE: %d\n", val);
 }
 
-static inline void bbl_rtc_intDisable ( bbl_RTC_INT_e interrupt )
+static inline void chal_rtc_intEnableVal(CHAL_RTC_HANDLE_t *handle, uint32_t bitsOn)
 {
    uint32_t val, addr;
 
-   addr = BBL_RTC_BASE_ADDR | BBL_RTC_INT_ENABLE_OFFSET;
+   addr = handle->rtcBaseAddr + RTC_INT_ENABLE_OFFSET;
 
-   val = bbl_readReg ( addr );
+   val = chal_rtc_readReg (handle, addr);
+   val |= bitsOn;
+   chal_dbg_printf(CHAL_DBG_DEBUG, "INT_ENABLE (enabling): %d\n", val);
+   chal_rtc_writeReg (handle, addr, val);
+}
+
+static inline void chal_rtc_intDisable(CHAL_RTC_HANDLE_t *handle,
+    chal_RTC_INT_e interrupt)
+{
+   uint32_t val, addr;
+
+   addr = handle->rtcBaseAddr + RTC_INT_ENABLE_OFFSET;
+
+   val = chal_rtc_readReg(handle, addr);
    val &= ~(1 << interrupt);
-   bbl_writeReg ( addr, val );
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Write %d to INT_ENABLE (disabling)\n", val);
+   chal_rtc_writeReg(handle, addr, val);
+}
+
+static inline void chal_rtc_intDisableVal(CHAL_RTC_HANDLE_t *handle, uint32_t bitsOff)
+{
+   uint32_t val, addr;
+
+   addr = handle->rtcBaseAddr + RTC_INT_ENABLE_OFFSET;
+
+   val = chal_rtc_readReg (handle, addr );
+   val &= ~(bitsOff);
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Write %d to INT_ENABLE (disabling)\n", val);
+   chal_rtc_writeReg (handle, addr, val);
 }
 
 /****************************************************************************/
@@ -499,9 +487,11 @@ static inline void bbl_rtc_intDisable ( bbl_RTC_INT_e interrupt )
 *           0: interrupt is disabled
 */
 /****************************************************************************/
-static inline int bbl_rtc_intIsEnabled ( bbl_RTC_INT_e interrupt )
+static inline int chal_rtc_intIsEnabled(CHAL_RTC_HANDLE_t *handle,
+    chal_RTC_INT_e interrupt)
 {
-   return( ( bbl_readReg ( BBL_RTC_BASE_ADDR | BBL_RTC_INT_ENABLE_OFFSET ) & (1<<interrupt) ) ? 1 : 0 );
+   return( ( chal_rtc_readReg (handle, handle->rtcBaseAddr + RTC_INT_ENABLE_OFFSET )
+       & (1<<interrupt) ) ? 1 : 0 );
 }
 
 /****************************************************************************/
@@ -512,9 +502,10 @@ static inline int bbl_rtc_intIsEnabled ( bbl_RTC_INT_e interrupt )
 *           0: reset is not asserted
 */
 /****************************************************************************/
-static inline int bbl_rtc_rstIsAsserted ( void )
+static inline int chal_rtc_rstIsAsserted(CHAL_RTC_HANDLE_t *handle)
 {
-   return( ( bbl_readReg ( BBL_RTC_BASE_ADDR | BBL_RTC_RESET_ACCESS_OFFSET ) == BBL_RTC_RESET_ACCESS_STATUS ) ? 1 : 0 );
+   return( ( chal_rtc_readReg (handle, handle->rtcBaseAddr + RTC_RESET_ACCESS_OFFSET ) ==
+       CHAL_RTC_RESET_ACCESS_STATUS ) ? 1 : 0 );
 }
 
 /****************************************************************************/
@@ -524,29 +515,30 @@ static inline int bbl_rtc_rstIsAsserted ( void )
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_mtcCtrlSet ( bbl_RTC_MTC_CTRL_e cmd )
+static inline void chal_rtc_mtcCtrlSet(CHAL_RTC_HANDLE_t *handle,
+    chal_RTC_MTC_CTRL_e cmd)
 {
    uint32_t val, addr;
 
-   addr = BBL_RTC_BASE_ADDR | BBL_RTC_MTC_CTRL_OFFSET;
+   addr = handle->rtcBaseAddr + RTC_MTC_CTRL_OFFSET;
 
    /* Read the data */
-   val = bbl_readReg ( addr );
+   val = chal_rtc_readReg (handle, addr );
 
    switch ( cmd )
    {
-      case BBL_RTC_MTC_LOCK:
+      case CHAL_RTC_MTC_LOCK:
          /* locks monotonic counter - sticky bit */
- 	      val |= BBL_RTC_MTC_CTRL_BBL_MT_CTR_LOCK_MASK;
+              val |= RTC_MTC_CTRL_RTC_MT_CTR_LOCK_MASK;
          break;
-      case BBL_RTC_MTC_INCR:
+      case CHAL_RTC_MTC_INCR:
          /* increment monotonic counter by incr_amt - self clear */
-         val |= BBL_RTC_MTC_CTRL_BBL_MT_CTR_INCR_MASK;
+         val |= RTC_MTC_CTRL_RTC_MT_CTR_INCR_MASK;
          break;
    }
 
    /* Write the data */
-   bbl_writeReg ( addr, val );
+   chal_rtc_writeReg (handle, addr, val);
 }
 
 /****************************************************************************/
@@ -556,20 +548,20 @@ static inline void bbl_rtc_mtcCtrlSet ( bbl_RTC_MTC_CTRL_e cmd )
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_rtc_mtcIncrSet ( uint16_t amount )
+static inline void chal_rtc_mtcIncrSet(CHAL_RTC_HANDLE_t *handle, uint16_t amount)
 {
    uint32_t val, addr;
 
-   addr = BBL_RTC_BASE_ADDR | BBL_RTC_MTC_CTRL_OFFSET;
+   addr = handle->rtcBaseAddr + RTC_MTC_CTRL_OFFSET;
 
    /* Read the data */
-   val = bbl_readReg ( addr );
+   val = chal_rtc_readReg (handle, addr );
 
-   val &= ~BBL_RTC_MTC_CTRL_BBL_MT_CTR_INCR_AMT_MASK;
-   val |= (uint32_t) amount << BBL_RTC_MTC_CTRL_BBL_MT_CTR_INCR_AMT_SHIFT;
+   val &= ~RTC_MTC_CTRL_RTC_MT_CTR_INCR_AMT_MASK;
+   val |= (uint32_t) amount << RTC_MTC_CTRL_RTC_MT_CTR_INCR_AMT_SHIFT;
 
    /* Write the data */
-   bbl_writeReg ( addr, val );
+   chal_rtc_writeReg (handle, addr, val);
 }
 
 /****************************************************************************/
@@ -581,10 +573,11 @@ static inline void bbl_rtc_mtcIncrSet ( uint16_t amount )
 *  @return  Current time count since it started
 */
 /****************************************************************************/
-static inline void bbl_rtc_mtcTimeSet ( bbl_TIME_t time )
+static inline void chal_rtc_mtcTimeSet(CHAL_RTC_HANDLE_t *handle,
+    chal_rtc_TIME_t time)
 {
-   bbl_writeReg ( BBL_RTC_BASE_ADDR | BBL_RTC_MTC_MSB_OFFSET, time >> 32 );
-   bbl_writeReg ( BBL_RTC_BASE_ADDR | BBL_RTC_MTC_LSB_OFFSET, time & 0xffffffff );
+   chal_rtc_writeReg (handle, handle->rtcBaseAddr + RTC_MTC_MSB_OFFSET, time >> 32 );
+   chal_rtc_writeReg (handle, handle->rtcBaseAddr + RTC_MTC_LSB_OFFSET, time & 0xffffffff );
 }
 
 /****************************************************************************/
@@ -596,115 +589,128 @@ static inline void bbl_rtc_mtcTimeSet ( bbl_TIME_t time )
 *  @return  Current time count since it started
 */
 /****************************************************************************/
-static inline bbl_TIME_t bbl_rtc_mtcTimeGet ( void )
+static inline chal_rtc_TIME_t chal_rtc_mtcTimeGet(CHAL_RTC_HANDLE_t *handle)
 {
    uint32_t mtcMsb, mtcLsb;
-   bbl_TIME_t time;
+   chal_rtc_TIME_t time;
 
-   mtcMsb = bbl_readReg ( BBL_RTC_BASE_ADDR | BBL_RTC_MTC_MSB_OFFSET );
-   mtcLsb = bbl_readReg ( BBL_RTC_BASE_ADDR | BBL_RTC_MTC_LSB_OFFSET );
+   mtcMsb = chal_rtc_readReg (handle, handle->rtcBaseAddr + RTC_MTC_MSB_OFFSET);
+   mtcLsb = chal_rtc_readReg (handle, handle->rtcBaseAddr + RTC_MTC_LSB_OFFSET);
 
-   time = ((bbl_TIME_t)mtcMsb) << 32 | (bbl_TIME_t) mtcLsb;
+   time = ((chal_rtc_TIME_t)mtcMsb) << 32 | (chal_rtc_TIME_t) mtcLsb;
 
    return time;
 }
 
+/* ==== Private Functions ================================================= */
+
+static inline void chal_rtc_readyForCommand(CHAL_RTC_HANDLE_t *handle)
+{
+    uint32_t count = 0;
+    while (!chal_rtc_REG_IS_COMMAND_DONE(handle))
+    {
+        udelay (1);
+        count++;
+    }
+
+    /* This delay is a hack to get around a problem where RTC registers can't be
+    read if they occur too soon after a previous read. */
+    mdelay(1);
+
+    chal_dbg_printf(CHAL_DBG_DEBUG, "Command completed in %d us\n", count);
+    chal_rtc_REG_COMMAND_DONE_CLEAR(handle);
+}
+
 /****************************************************************************/
 /**
-*  @brief   Enable/disable SEQ0 (RTC alarm out) to also trigger the
-*           BBL_PWREN[1:0] pins
+*  @brief   A command to read indirect RTC registers
+*
+*  @return  Value read
+*/
+/****************************************************************************/
+static inline uint32_t chal_rtc_readReg(CHAL_RTC_HANDLE_t *handle, uint32_t regAddr)
+{
+   uint32_t ctrlStsVal = 0;
+   uint32_t val;
+
+   ctrlStsVal = CHAL_REG_READ32(handle->ctrl_sts);
+
+   chal_rtc_REG_SET_APB_SLAVE_ADDRESS (handle, regAddr);
+
+   /* Execute read command */
+   ctrlStsVal &= ~BBL_APB_CTRL_STS_BBL_APB_CMD_MASK;
+   ctrlStsVal |= BBL_APB_CTRL_STS_BBL_CMD_START_MASK;
+   chal_dbg_printf(CHAL_DBG_DEBUG, "Write %d to ctrl_sts\n", ctrlStsVal);
+   CHAL_REG_WRITE32(handle->ctrl_sts, ctrlStsVal);
+
+   /* Wait until command is processed */
+   chal_rtc_readyForCommand(handle);
+
+   /* Read the data */
+   val = chal_rtc_REG_GET_RD_DATA(handle);
+
+   return val;
+}
+
+/****************************************************************************/
+/**
+*  @brief   A command to write to indirect BBL registers
 *
 *  @return  none
 */
 /****************************************************************************/
-static inline void bbl_pwseq_alarmOutEnable ( void )
+static inline void chal_rtc_writeReg(CHAL_RTC_HANDLE_t *handle,
+    uint32_t regAddr, uint32_t val)
 {
-   uint32_t addr, val;
-
-   addr = BBL_PWSEQ_BASE_ADDR | BBL_PWSEQ_TIMEOUT_OFFSET;
-   val = bbl_readReg( addr );
-   val |= BBL_PWSEQ_TIMEOUT_OFFSET;
-   bbl_writeReg( addr, val );
+   /* Make sure BBL interface is ready to accept commands */
+   chal_rtc_REG_SET_APB_SLAVE_ADDRESS(handle, regAddr);
+   CHAL_REG_WRITE32(handle->wr_data, val);
+   chal_rtc_REG_COMMAND_WRITE(handle);
+   chal_rtc_readyForCommand(handle);
 }
 
-static inline void bbl_pwseq_alarmOutDisable ( void )
+static inline void chal_rtc_writeRegNoWait(CHAL_RTC_HANDLE_t *handle,
+    uint32_t regAddr, uint32_t val )
 {
-   uint32_t addr, val;
-
-   addr = BBL_PWSEQ_BASE_ADDR | BBL_PWSEQ_TIMEOUT_OFFSET;
-   val = bbl_readReg( addr );
-   val &= ~BBL_PWSEQ_TIMEOUT_OFFSET;
-   bbl_writeReg( addr, val );
+   /* Make sure BBL interface is ready to accept commands */
+   chal_rtc_REG_SET_APB_SLAVE_ADDRESS(handle, regAddr);
+   CHAL_REG_WRITE32(handle->wr_data, val);
+   chal_rtc_REG_COMMAND_WRITE(handle);
 }
 
-/****************************************************************************/
-/**
-*  @brief   Check if RTC alarm out is enabled
-*
-*  @return  1: RTC alarm out is enabled
-*           0: RTC alarm out is disabled
-*/
-/****************************************************************************/
-static inline uint32_t bbl_pwseq_alarmOutIsEnable ( void )
+int chal_rtc_init(CHAL_RTC_HANDLE_t *handle, uint32_t bblBar, uint32_t rtcBar)
 {
-   return( ( bbl_readReg ( BBL_PWSEQ_BASE_ADDR | BBL_PWSEQ_TIMEOUT_OFFSET ) & BBL_PWSEQ_TIMEOUT_OFFSET ) ? 1 : 0 );
-}
+    if (!handle)
+    {
+        return -1;
+    }
 
+    handle->bar = bblBar;
+    handle->wr_data  = handle->bar + BBL_APB_WR_DATA_OFFSET;
+    handle->rd_data  = handle->bar + BBL_APB_RD_DATA_OFFSET;
+    handle->ctrl_sts = handle->bar + BBL_APB_CTRL_STS_OFFSET;
+    handle->int_sts  = handle->bar + BBL_APB_INT_STS_OFFSET;
 
-/****************************************************************************/
-/**
-*  @brief   A common function to update BBL clock disable register
-*
-*/
-/****************************************************************************/
-static inline void bbl_cfg_clkEnable ( bbl_CFG_e device, uint32_t enable )
-{
-   uint32_t val;
-   uint32_t addr;
+    handle->rtcBaseAddr = rtcBar;
 
-   addr = BBL_CONFIG_BASE_ADDR | BBL_CONFIG_CLK_DISABLE_OFFSET;
-
-   /* Read the data */
-   val = bbl_readReg ( addr );
-
-   /* enable/disable clock */
-   if( enable )
-   {
-      val &= ~(1 << device);
-   }
-   else
-   {
-      val |= (1 << device);
-   }
-
-   /* Write the data */
-   bbl_writeReg ( addr, val );
-}
-
-/****************************************************************************/
-/**
-*  @brief   A common function to soft reset APB peripherals
-*
-*/
-/****************************************************************************/
-static inline void bbl_cfg_softReset ( bbl_CFG_e device )
-{
-   /* Write the data */
-   bbl_writeReg ( BBL_CONFIG_BASE_ADDR | BBL_CONFIG_SOFT_RST_OFFSET, (1 << device) );
+    return 0;
 }
 
 struct bcmhana_rtc
 {
-    struct device *dev;
+    CHAL_RTC_HANDLE_t *handle;
+    struct rtc_device *dev;
     void __iomem  *base;
     unsigned int irq1;
     unsigned int irq2;
     unsigned int max_user_freq;
+   struct clk *clock;
 };
+    struct bcmhana_rtc *rtc;
+CHAL_RTC_HANDLE_t foo;
 
 static unsigned int epoch = 1970;
 static DEFINE_SPINLOCK( bcmhana_rtc_lock );
-static struct clk *bbl_clk;
 
 /* IRQ Handlers */
 
@@ -714,15 +720,15 @@ static struct clk *bbl_clk;
 static irqreturn_t
 rtc_alm_isr( int irq, void *data )
 {
-    struct rtc_device *rdev = data;
+    struct bcmhana_rtc *rdev = data;
 
     /* Disable alarm interrupts because they are oneshot */
-    bbl_rtc_intDisable( BBL_RTC_INT_MATCH);
-    bbl_rtc_intStatusClr( BBL_RTC_INT_MATCH);
-    if ( bbl_rtc_matchInterruptValGet() )
+    chal_rtc_intDisable( rtc->handle, CHAL_RTC_INT_MATCH);
+    chal_rtc_intStatusClr( rtc->handle, CHAL_RTC_INT_MATCH);
+    if ( chal_rtc_matchInterruptValGet(rtc->handle) )
     {
         pr_debug( "%s: oneshot interrupted\n", __func__ );
-        rtc_update_irq( rdev, 1, RTC_AF | RTC_IRQF );
+        rtc_update_irq( rdev->dev, 1, RTC_AF | RTC_IRQF );
     }
     return IRQ_HANDLED;
 }
@@ -733,11 +739,13 @@ rtc_alm_isr( int irq, void *data )
 static irqreturn_t
 rtc_per_isr( int irq, void *data )
 {
-    struct rtc_device *rdev = data;
-    if ( bbl_rtc_periodInterruptValGet()  )
+    struct bcmhana_rtc *rdev = data;
+    pr_debug( "%s: periodic interrupted\n", __func__ );
+    chal_rtc_intStatusClr( rtc->handle, CHAL_RTC_INT_PER);
+    if ( chal_rtc_periodInterruptValGet(rtc->handle)  )
     {
         pr_debug( "%s: periodic interrupted\n", __func__ );
-        rtc_update_irq( rdev, 1, RTC_PF | RTC_IRQF );
+        rtc_update_irq( rdev->dev, 1, RTC_PF | RTC_IRQF );
     }
     return IRQ_HANDLED;
 }
@@ -750,11 +758,11 @@ bcmhana_rtc_setaie( int to )
 
     if ( to )
     {
-        bbl_rtc_intEnable( BBL_RTC_INT_MATCH);
+        chal_rtc_intEnable(rtc->handle,  CHAL_RTC_INT_MATCH);
     }
     else
     {
-        bbl_rtc_intDisable( BBL_RTC_INT_MATCH); 
+        chal_rtc_intDisable(rtc->handle,  CHAL_RTC_INT_MATCH);
     }
 }
 
@@ -767,11 +775,11 @@ bcmhana_rtc_setpie( struct device *dev, int enabled )
 
     if ( enabled )
     {
-        bbl_rtc_intEnable( BBL_RTC_INT_PER ); /* enables the interrupt */
+        chal_rtc_intEnable( rtc->handle, CHAL_RTC_INT_PER ); /* enables the interrupt */
     }
     else
     {
-        bbl_rtc_intDisable( BBL_RTC_INT_PER );  /* disables the interrupt */
+        chal_rtc_intDisable( rtc->handle, CHAL_RTC_INT_PER );  /* disables the interrupt */
     }
     spin_unlock_irq( &bcmhana_rtc_lock );
 
@@ -781,35 +789,23 @@ bcmhana_rtc_setpie( struct device *dev, int enabled )
 static int
 bcmhana_rtc_setfreq( struct device *dev, int freq )
 {
-    bbl_RTC_PER_INTERVAL_e interval = 0xffffffff;   /* invalid */
+    chal_RTC_PER_INTERVAL_e interval = 0xffffffff;   /* invalid */
 
     pr_debug( "%s: freq=%d\n", __func__, freq );
     spin_lock_irq( &bcmhana_rtc_lock );
     switch ( freq )
     {
     case 1:
-        interval = BBL_RTC_PER_INTERVAL_1000ms;
+        interval = CHAL_RTC_PER_INTERVAL_1000ms;
         break;
     case 2:
-        interval = BBL_RTC_PER_INTERVAL_2000ms;
+        interval = CHAL_RTC_PER_INTERVAL_500ms;
         break;
     case 4:
-        interval = BBL_RTC_PER_INTERVAL_4000ms;
+        interval = CHAL_RTC_PER_INTERVAL_250ms;
         break;
     case 8:
-        interval = BBL_RTC_PER_INTERVAL_8000ms;
-        break;
-    case 16:
-        interval = BBL_RTC_PER_INTERVAL_16000ms;
-        break;
-    case 32:
-        interval = BBL_RTC_PER_INTERVAL_32000ms;
-        break;
-    case 64:
-        interval = BBL_RTC_PER_INTERVAL_64000ms;
-        break;
-    case 128:
-        interval = BBL_RTC_PER_INTERVAL_128000ms;
+        interval = CHAL_RTC_PER_INTERVAL_125ms;
         break;
     }
     spin_unlock_irq( &bcmhana_rtc_lock );
@@ -817,7 +813,7 @@ bcmhana_rtc_setfreq( struct device *dev, int freq )
     if ( interval != 0xffffffff )
     {
         pr_debug( "%s: OKAY freq=%d interval=%d\n", __func__, freq, interval );
-        bbl_rtc_periodInterruptValSet( interval );
+       chal_rtc_periodInterruptValSet( rtc->handle, interval );
     }
     else
     {
@@ -830,43 +826,33 @@ bcmhana_rtc_setfreq( struct device *dev, int freq )
 static int
 bcmhana_rtc_getfreq( struct device *dev, int *freq )
 {
-    bbl_RTC_PER_INTERVAL_e interval;
+    chal_RTC_PER_INTERVAL_e interval;
     *freq = 0xffffffff;          /* invalid */
 
     spin_lock_irq( &bcmhana_rtc_lock );
-    interval = bbl_readReg( RTC_PERIODIC_TIMER_ADDR );
+    interval = chal_rtc_readReg(rtc->handle,  RTC_PERIODIC_TIMER_ADDR );
     switch ( interval )
     {
-    case BBL_RTC_PER_INTERVAL_125ms:   /* avoid compiler warnings */
-    case BBL_RTC_PER_INTERVAL_250ms:
-    case BBL_RTC_PER_INTERVAL_500ms:
-        break;
-    case BBL_RTC_PER_INTERVAL_1000ms:
-        *freq = 1;
-        break;
-    case BBL_RTC_PER_INTERVAL_2000ms:
-        *freq = 2;
-        break;
-    case BBL_RTC_PER_INTERVAL_4000ms:
-        *freq = 4;
-        break;
-    case BBL_RTC_PER_INTERVAL_8000ms:
+    case CHAL_RTC_PER_INTERVAL_125ms:   /* avoid compiler warnings */
         *freq = 8;
         break;
-    case BBL_RTC_PER_INTERVAL_16000ms:
-        *freq = 16;
+    case CHAL_RTC_PER_INTERVAL_250ms:
+        *freq = 4;
         break;
-    case BBL_RTC_PER_INTERVAL_32000ms:
-        *freq = 32;
+    case CHAL_RTC_PER_INTERVAL_500ms:
+        *freq = 2;
         break;
-    case BBL_RTC_PER_INTERVAL_64000ms:
-        *freq = 64;
+    case CHAL_RTC_PER_INTERVAL_1000ms:
+        *freq = 1;
         break;
-    case BBL_RTC_PER_INTERVAL_128000ms:
-        *freq = 128;
-        break;
-    case BBL_RTC_PER_INTERVAL_256000ms:
-        *freq = 256;
+    case CHAL_RTC_PER_INTERVAL_2000ms:
+    case CHAL_RTC_PER_INTERVAL_4000ms:
+    case CHAL_RTC_PER_INTERVAL_8000ms:
+    case CHAL_RTC_PER_INTERVAL_16000ms:
+    case CHAL_RTC_PER_INTERVAL_32000ms:
+    case CHAL_RTC_PER_INTERVAL_64000ms:
+    case CHAL_RTC_PER_INTERVAL_128000ms:
+    case CHAL_RTC_PER_INTERVAL_256000ms:
         break;
     }
     spin_unlock_irq( &bcmhana_rtc_lock );
@@ -887,7 +873,7 @@ bcmhana_rtc_gettime( struct device *dev, struct rtc_time *rtc_tm )
     unsigned int epoch_sec, elapsed_sec;
 
     epoch_sec = mktime( epoch, 1, 1, 0, 0, 0 );
-    elapsed_sec = bbl_rtc_mtcTimeGet();
+    elapsed_sec = chal_rtc_secGet(rtc->handle);
 
     pr_debug( "%s: epoch_sec=%u, elapsed_sec=%u\n", __func__, epoch_sec, elapsed_sec );
     rtc_time_to_tm( epoch_sec + elapsed_sec, rtc_tm );
@@ -906,7 +892,8 @@ bcmhana_rtc_settime( struct device *dev, struct rtc_time *time )
     epoch_sec = mktime( epoch, 1, 1, 0, 0, 0 );
     current_sec = mktime( time->tm_year + 1900, time->tm_mon + 1, time->tm_mday, time->tm_hour, time->tm_min, time->tm_sec );
 
-    bbl_rtc_mtcCtrlSet( current_sec - epoch_sec );
+    chal_rtc_secSet(rtc->handle,  current_sec - epoch_sec );
+    chal_rtc_ctrlSet( rtc->handle, CHAL_RTC_CTRL_RUN );
 
     pr_debug( "%s: current_sec=%u, epoch_sec=%u\n", __func__, current_sec, epoch_sec );
 
@@ -919,15 +906,15 @@ static int
 bcmhana_rtc_getalarm( struct device *dev, struct rtc_wkalrm *alrm )
 {
     unsigned int epoch_sec, elapsed_sec, alarm_elapsed_sec;
-    bbl_TIME_t alm_reg_secs;
+    chal_rtc_TIME_t alm_reg_secs;
     struct rtc_time *alm_tm = &alrm->time;
-    alrm->enabled = bbl_rtc_intIsEnabled ( BBL_RTC_INT_MATCH );
+    alrm->enabled = chal_rtc_intIsEnabled ( rtc->handle, CHAL_RTC_INT_MATCH );
 //    alrm->pending = ( bbl_readReg( RTC_INTERRUPT_STATUS_ADDR ) & RTC_CMD_ONESHOT_INTERRUPT_STATUS ) ? 1 : 0;
 
     epoch_sec = mktime( epoch, 1, 1, 0, 0, 0 );
-    elapsed_sec = bbl_rtc_mtcTimeGet();
+    elapsed_sec = chal_rtc_secGet(rtc->handle);
 
-    alm_reg_secs =  bbl_rtc_matchInterruptValGet();
+    alm_reg_secs =  chal_rtc_matchInterruptValGet(rtc->handle);
 
     /* Handle carry over */
     if ((elapsed_sec & 0x0ffff) > alm_reg_secs)
@@ -936,8 +923,8 @@ bcmhana_rtc_getalarm( struct device *dev, struct rtc_wkalrm *alrm )
     }
     elapsed_sec &= ~0xffff; /* clear lower 16 bits for 16-bit alarm match register below */
     alarm_elapsed_sec = elapsed_sec + alm_reg_secs;
-    pr_debug( "%s: epoch_sec=%u, elapsed_sec=%u, alm_reg_secs=%u=0x%x, alarm_elapsed_sec=%u=0x%x\n",
-              __func__, epoch_sec, elapsed_sec, alm_reg_secs, alm_reg_secs, alarm_elapsed_sec, alarm_elapsed_sec );
+    pr_debug( "%s: epoch_sec=%u, elapsed_sec=%u, alm_reg_secs=%lu=0x%lx, alarm_elapsed_sec=%u=0x%x\n",
+              __func__, epoch_sec, elapsed_sec, (unsigned long) alm_reg_secs, (unsigned long) alm_reg_secs, alarm_elapsed_sec, alarm_elapsed_sec );
 
     rtc_time_to_tm( epoch_sec + alarm_elapsed_sec, alm_tm );
     pr_debug( "read alarm %02x %02x.%02x.%02x %02x/%02x/%02x\n",
@@ -951,25 +938,25 @@ bcmhana_rtc_setalarm( struct device *dev, struct rtc_wkalrm *alrm )
 {
     unsigned int epoch_sec, elapsed_sec;
     struct rtc_time *time = &alrm->time;
-    bbl_TIME_t alm_secs;
+    chal_rtc_TIME_t alm_secs;
 
     pr_debug( "%s: %d, %02x/%02x/%02x %02x.%02x.%02x\n",
               __func__, alrm->enabled, time->tm_mday & 0xff, time->tm_mon & 0xff, time->tm_year & 0xff, time->tm_hour & 0xff, time->tm_min & 0xff,
               time->tm_sec );
 
     epoch_sec = mktime( epoch, 1, 1, 0, 0, 0 );
-    elapsed_sec = bbl_rtc_mtcTimeGet();
+    elapsed_sec = chal_rtc_secGet(rtc->handle);
     alm_secs = mktime( time->tm_year + 1900, time->tm_mon + 1, time->tm_mday, time->tm_hour, time->tm_min, time->tm_sec );
 
-    pr_debug( "%s: epoch_sec=%u, elapsed_sec=%u, alm_secs=%u\n", __func__, epoch_sec, elapsed_sec, alm_secs );
+    pr_debug( "%s: epoch_sec=%u, elapsed_sec=%u, alm_secs=%lu\n", __func__, epoch_sec, elapsed_sec, (unsigned long)alm_secs );
 
-    bbl_rtc_intDisable( BBL_RTC_INT_MATCH );
-    bbl_rtc_intStatusClr ( BBL_RTC_INT_MATCH );
+    chal_rtc_intDisable( rtc->handle, CHAL_RTC_INT_MATCH );
+    chal_rtc_intStatusClr ( rtc->handle, CHAL_RTC_INT_MATCH );
 
-    bbl_rtc_matchInterruptValSet( alm_secs );
+    chal_rtc_matchInterruptValSet( rtc->handle, alm_secs );
 
     if (alrm->enabled) {
-        bbl_rtc_intEnable( BBL_RTC_INT_MATCH );
+        chal_rtc_intEnable( rtc->handle, CHAL_RTC_INT_MATCH );
     }
 
 
@@ -979,11 +966,11 @@ bcmhana_rtc_setalarm( struct device *dev, struct rtc_wkalrm *alrm )
 static int
 bcmhana_rtc_proc( struct device *dev, struct seq_file *seq )
 {
-    seq_printf( seq, "\nperiodic timer: 0x%x\n", bbl_readReg( RTC_PERIODIC_TIMER_ADDR ) );
-    seq_printf( seq, "match register: 0x%x\n", bbl_readReg( RTC_MATCH_REGISTER_ADDR ) );
-    seq_printf( seq, "clear intr register: 0x%x\n", bbl_readReg( RTC_CLEAR_INTR_ADDR ) );
-    seq_printf( seq, "intr status register: 0x%x\n", bbl_readReg( RTC_INTERRUPT_STATUS_ADDR ) );
-    seq_printf( seq, "control addr register: 0x%x\n", bbl_readReg( RTC_CONTROL_ADDR ) );
+    seq_printf( seq, "\nperiodic timer: 0x%x\n", chal_rtc_readReg( rtc->handle, RTC_PERIODIC_TIMER_ADDR ) );
+    seq_printf( seq, "match register: 0x%x\n", chal_rtc_readReg( rtc->handle, RTC_MATCH_REGISTER_ADDR ) );
+    seq_printf( seq, "clear intr register: 0x%x\n", chal_rtc_readReg( rtc->handle, RTC_CLEAR_INTR_ADDR ) );
+    seq_printf( seq, "intr status register: 0x%x\n", chal_rtc_readReg( rtc->handle, RTC_INTERRUPT_STATUS_ADDR ) );
+    seq_printf( seq, "control addr register: 0x%x\n",chal_rtc_readReg( rtc->handle, RTC_CONTROL_ADDR ) );
     return 0;
 }
 
@@ -1004,12 +991,12 @@ bcmhana_rtc_ioctl( struct device *dev, unsigned int cmd, unsigned long arg )
         return 0;
     case RTC_PIE_OFF:
         spin_lock_irq( &bcmhana_rtc_lock );
-        bbl_rtc_intDisable( BBL_RTC_INT_PER );
+        chal_rtc_intDisable( rtc->handle, CHAL_RTC_INT_PER );
         spin_unlock_irq( &bcmhana_rtc_lock );
         return 0;
     case RTC_PIE_ON:
         spin_lock_irq( &bcmhana_rtc_lock );
-        bbl_rtc_intEnable( BBL_RTC_INT_PER );
+        chal_rtc_intEnable( rtc->handle, CHAL_RTC_INT_PER );
         spin_unlock_irq( &bcmhana_rtc_lock );
         return 0;
     case RTC_IRQP_READ:
@@ -1051,19 +1038,18 @@ static void bcmhana_rtc_enable( struct platform_device *pdev, int en )
 {
     if ( !en )
     {
-        bbl_rtc_ctrlSet( BBL_RTC_CTRL_STOP );
+        chal_rtc_ctrlSet( rtc->handle, CHAL_RTC_CTRL_STOP );
     }
     else
     {
-        bbl_rtc_ctrlSet( BBL_RTC_CTRL_RUN );
+        chal_rtc_ctrlSet( rtc->handle, CHAL_RTC_CTRL_RUN );
     }
 }
 
 static int __exit
 bcmhana_rtc_remove( struct platform_device *dev )
 {
-    struct rtc_device *rtc = platform_get_drvdata( dev );
-
+    rtc_device_unregister( rtc->dev );
     device_init_wakeup( &dev->dev, 0 );
 
     platform_set_drvdata( dev, NULL );
@@ -1071,19 +1057,17 @@ bcmhana_rtc_remove( struct platform_device *dev )
     bcmhana_rtc_setpie( &dev->dev, 0 );
     bcmhana_rtc_setaie( 0 );
 
-    //  free_irq( rtc->irq2, rtc );
-    // free_irq( rtc->irq1, rtc );
-    rtc_device_unregister( rtc );
-   
-    clk_disable(bbl_clk);
-    clk_put(bbl_clk);
+    free_irq( rtc->irq2, rtc );
+    free_irq( rtc->irq1, rtc );
+
+    clk_disable(rtc->clock);
+    clk_put(rtc->clock);
 
     return 0;
 }
 
 static int __devinit bcmhana_rtc_probe(struct platform_device *dev)
 {
-    struct bcmhana_rtc *rtc;
     struct resource *res;
     int ret;
 
@@ -1103,55 +1087,47 @@ static int __devinit bcmhana_rtc_probe(struct platform_device *dev)
         goto err_out;
     }
 
-    rtc->dev = &dev->dev;
+    rtc->clock = clk_get(&dev->dev, "bbl_apb_clk");
+    if (rtc->clock < 0)
+    {
+        ret = -ENXIO;
+        goto err_free;
+    }
+
+
     rtc->irq1 = platform_get_irq(dev, 0);
     if (rtc->irq1 < 0) {
         ret = -ENXIO;
         goto err_free;
     }
-    rtc->irq2 = platform_get_irq(dev, 0);
+    rtc->irq2 = platform_get_irq(dev, 1);
     if (rtc->irq2 < 0) {
         ret = -ENXIO;
         goto err_free;
     }
     rtc->base = ioremap(res->start, resource_size(res));
 
-    pBblApbReg = rtc->base;
-
-    printk( "RTC got here 6 VA:0x%08p PA:0x%08p \n", pBblApbReg, res->start );
-
-    printk( "RTC addr    0x%08x\n", pBblApbReg->addr);      /* Address of BBL APB Slave */
-    printk( "RTC wr_data 0x%08x\n", pBblApbReg-> wr_data);  /* Data to be written into BBL APB Slave */
-    printk( "RTC rd_data 0x%08x\n", pBblApbReg->rd_data);   /* Data read from BBL APB Interface */
-    printk( "RTC ctrl    0x%08x\n", pBblApbReg->ctrl_sts);  /* APB Control & Status Register */
-    printk( "RTC int     0x%08x\n", pBblApbReg->int_sts);   /* Status register indicating interrupt source from BBL */
+    rtc->handle = &foo;
+    chal_rtc_init(rtc->handle, (uint32_t)rtc->base, 0x00002000);
 
     if (!rtc->base) {
         ret = -ENOMEM;
         goto err_free;
     }
 
-    printk( "RTC got here 7\n" );
     bcmhana_rtc_enable( dev, 1 );
 
-    printk( "RTC got here 8\n" );
-    bcmhana_rtc_setfreq( &dev->dev, 1 );
+    bcmhana_rtc_setfreq( &dev->dev, 1);
 
-    printk( "RTC got here 9\n" );
     device_init_wakeup( &dev->dev, 1 );
 
-    printk( "RTC got here 10\n" );
-    bbl_rtc_intDisable( BBL_RTC_INT_MATCH );
-    printk( "RTC got here 11\n" );
-    bbl_rtc_intDisable( BBL_RTC_INT_PER );
-    printk( "RTC got here 12\n" );
-    bbl_rtc_intStatusClr ( BBL_RTC_INT_MATCH );
-    printk( "RTC got here 13\n" );
-    bbl_rtc_intStatusClr( BBL_RTC_INT_PER );
-    printk( "RTC got here 14\n" );
-    rtc = rtc_device_register( "bcmhana", &dev->dev, &bcmhana_rtcops, THIS_MODULE );
+    chal_rtc_intDisable( rtc->handle, CHAL_RTC_INT_MATCH );
+    chal_rtc_intDisable( rtc->handle, CHAL_RTC_INT_PER );
+    chal_rtc_intStatusClr ( rtc->handle, CHAL_RTC_INT_MATCH );
+    chal_rtc_intStatusClr( rtc->handle, CHAL_RTC_INT_PER );
 
-    printk( "RTC got here 15\n" );
+    rtc->dev = rtc_device_register( "bcmhana", &dev->dev, &bcmhana_rtcops, THIS_MODULE );
+
     if ( IS_ERR( rtc ) )
     {
         ret = PTR_ERR( rtc );
@@ -1159,29 +1135,28 @@ static int __devinit bcmhana_rtc_probe(struct platform_device *dev)
         goto err_device_unregister;
     }
 
-    printk( "RTC got here 16\n" );
-    rtc->max_user_freq = 128;
+    rtc->max_user_freq = 8;
 
-    printk( "RTC got here 17\n" );
-    ret = request_irq(rtc->irq1, rtc_per_isr, IRQF_DISABLED,
+    ret = request_irq(rtc->irq1, rtc_alm_isr, 0,
                       "bcmhana_rtc", rtc);
-    printk( "RTC got here 18\n" );
     if (ret) {
-        dev_printk(KERN_ERR, rtc->dev,
-                   "cannot register IRQ%d for watchdog\n", rtc->irq1);
+        dev_printk(KERN_ERR, &rtc->dev->dev,
+                   "cannot register IRQ%d for periodic rtc\n", rtc->irq1);
         goto err_irq;
     }
 
-    printk( "RTC got here 19\n" );
-    ret = request_irq(rtc->irq2, rtc_alm_isr, IRQF_DISABLED,
+    ret = request_irq(rtc->irq2, rtc_per_isr, 0,
                       "bcmhana_rtc", rtc);
-    printk( "RTC got here 20\n" );
     if (ret) {
-        dev_printk(KERN_ERR, rtc->dev,
-                   "cannot register IRQ%d for watchdog\n", rtc->irq2);
+        dev_printk(KERN_ERR, &rtc->dev->dev,
+                   "cannot register IRQ%d for match rtc\n", rtc->irq2);
         goto err_irq;
     }
-    printk( "RTC got here 21\n" );
+
+    chal_rtc_ctrlSet( rtc->handle, CHAL_RTC_CTRL_RUN );
+    clk_enable(rtc->clock);
+
+    printk(KERN_INFO "RTC: driver initialized properly\n");
 
     return 0;
 
@@ -1206,14 +1181,16 @@ static int period_cnt;
 static int
 bcmhana_rtc_suspend( struct platform_device *pdev, pm_message_t state )
 {
-    period_cnt = bbl_readReg( RTC_PERIODIC_TIMER_ADDR );
+     struct bcmhana_rtc *rtc = platform_get_drvdata( pdev );
+     period_cnt = chal_rtc_readReg( rtc->handle, RTC_PERIODIC_TIMER_ADDR );
     return 0;
 }
 
 static int
 bcmhana_rtc_resume( struct platform_device *pdev )
 {
-    bbl_writeReg( RTC_PERIODIC_TIMER_ADDR, period_cnt );
+     struct bcmhana_rtc *rtc = platform_get_drvdata( pdev );
+    chal_rtc_writeReg( rtc->handle, RTC_PERIODIC_TIMER_ADDR, period_cnt );
     return 0;
 }
 #else
