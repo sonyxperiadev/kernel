@@ -1820,6 +1820,7 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 
 	BUG_ON(!bus_clk->ccu_clk);
 	ccu_clk= bus_clk->ccu_clk;
+	CCU_PI_ENABLE(ccu_clk,1);
 	if(bus_clk->freq_tbl_index == -1)
 	{
 		if(!bus_clk->src_clk || !bus_clk->src_clk->ops || !bus_clk->src_clk->ops->get_rate)
@@ -1831,7 +1832,6 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 		c->rate =  bus_clk->src_clk->ops->get_rate(bus_clk->src_clk);
 		goto ret;
 	}
-	CCU_PI_ENABLE(ccu_clk,1);
 	current_policy = ccu_get_active_policy(ccu_clk);
 
 	freq_id = ccu_get_freq_policy(ccu_clk, current_policy);
