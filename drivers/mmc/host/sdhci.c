@@ -652,8 +652,10 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 	}
 
 	if (count >= 0xF) {
+#ifndef CONFIG_MMC_BCM_SD
 		printk(KERN_WARNING "%s: Too large timeout requested for CMD%d!\n",
 		       mmc_hostname(host->mmc), cmd->opcode);
+#endif
 		count = 0xE;
 	}
 #ifdef CONFIG_MMC_BCM_SD
