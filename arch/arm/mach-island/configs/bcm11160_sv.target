@@ -1,0 +1,6 @@
+name   = bcm11160_sv
+arch   = arm
+family = island
+chip   = 11160
+board  = sv
+
