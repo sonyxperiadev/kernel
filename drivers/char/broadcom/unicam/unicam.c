@@ -54,7 +54,6 @@ the GPL, without Broadcom's express prior written consent.
 #define RHEA_MM_CFG_BASE_ADDRESS               MM_CFG_BASE_ADDR
 #define RHEA_MM_CLK_BASE_ADDRESS               MM_CLK_BASE_ADDR
 #define RHEA_PAD_CTRL_BASE_ADDRESS             PAD_CTRL_BASE_ADDR
-#define RHEA_ROOT_CLK_BASE_ADDRESS             ROOT_CLK_BASE_ADDR
 #define RHEA_CSR_BASE_ADDRESS                  MEMC0_OPEN_BASE_ADDR
 
 
@@ -87,10 +86,12 @@ static void __iomem *unicam_base = NULL;
 static void __iomem *mmcfg_base = NULL;
 static void __iomem *mmclk_base = NULL;
 static void __iomem *padctl_base = NULL;
-static void __iomem *rootclk_base = NULL;
 static void __iomem *csr_base = NULL;
 
 static struct clk *unicam_clk;
+static struct clk *dig_chan0_clk;
+static struct clk *dig_chan1_clk;
+
 
 typedef struct {
     struct semaphore irq_sem;
@@ -350,9 +351,9 @@ static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 
 static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 {
-    unsigned int value;
+    unsigned int value, ret;
    
-    if (port == 0) {
+    if (port == 0) {	
         // Set Camera CSI0 Phy & Clock Registers
         reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A00000F);
     
@@ -385,37 +386,28 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
         reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	// enable access	
     }
         
-    if (clk_src == 0)
-    {                   
+    if (clk_src == 0) {            
         // Enable DIG0 clock out to sensor 
         // Select DCLK1  ( bits 10:8 = 0x000 => DCLK1 , bits 2:0 = 3 => 8 mAmps strength
         value = reg_read(padctl_base, PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
         reg_write(padctl_base, PADCTRLREG_DCLK1_OFFSET, value);
-            
-        // Disable Dig Clk0
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
-        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK);
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-        if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) != 0) { 
-            err_print("DIGITAL_CH0_STPRSTS: Clk not Stopped\n");
+		
+        dig_chan0_clk = clk_get(NULL, "dig_ch0_clk");
+        if (!dig_chan0_clk) {
+            err_print("%s: error get clock\n", __func__);
         }
-				
-        // Set Dig Clk0 Divider = 1 (13Mhz)
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG0_DIV_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG0_DIV_DIGITAL_CH0_DIV_SHIFT));
-
-        // Trigger Dig Clk0 
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_TRG_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH0_TRIGGER_SHIFT));
-        msleep(1);
     
-        // Start Dig Clk0
-        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) | (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_SHIFT);		
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-        msleep(1);
-            
-        // Check Clock running
-        if ((reg_read(rootclk_base , ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) == 0 ) { 
-            err_print("DIGITAL_CH0_STPRSTS: Clk not Started\n");
+        ret = clk_enable(dig_chan0_clk);
+        if (ret) {
+            err_print("%s: error enable unicam clock\n", __func__);
         }
+
+        ret = clk_set_rate(dig_chan0_clk, 13000000);
+        if (ret) {
+            err_print("%s: error changing clock rate\n", __func__);
+        }
+		
+        dbg_print("dig_chan_clk rate %lu\n", clk_get_rate(dig_chan0_clk));	
     }
     else  //if (clk_src == 1)
     {                   
@@ -425,32 +417,23 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
         value |= (3 << PADCTRLREG_GPIO32_PINSEL_GPIO32_SHIFT);
         reg_write(padctl_base, PADCTRLREG_GPIO32_OFFSET, value);
             
-        // Disable Dig Clk1
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
-        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
-        value |= (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_HW_SW_GATING_SEL_SHIFT);
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-        
-        if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) != 0) { 
-            err_print("DIGITAL_CH1_STPRSTS: Clk not Stopped\n");
+
+        dig_chan1_clk = clk_get(NULL, "dig_ch1_clk");
+        if (!dig_chan1_clk) {
+            err_print("%s: error get clock\n", __func__);
         }
-				
-        // Set Dig Clk1 Divider = 1 (13Mhz)
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG1_DIV_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG1_DIV_DIGITAL_CH1_DIV_SHIFT));
- 
-        // Trigger Dig Clk1 
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_TRG_OFFSET, (1 << ROOT_CLK_MGR_REG_DIG_TRG_DIGITAL_CH1_TRIGGER_SHIFT));
-        msleep(1);
     
-        // Start Dig Clk1
-        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) | (1 << ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_SHIFT);		
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET, value);
-        msleep(1);
-        
-        // Check Clock running
-        if ((reg_read(rootclk_base , ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) == 0 ) { 
-            err_print("DIGITAL_CH1_STPRSTS: Clk not Started\n");
+        ret = clk_enable(dig_chan1_clk);
+        if (ret) {
+            err_print("%s: error enable unicam clock\n", __func__);
         }
+
+        ret = clk_set_rate(dig_chan1_clk, 13000000);
+        if (ret) {
+            err_print("%s: error changing clock rate\n", __func__);
+        }
+		
+        dbg_print("dig_chan_clk rate %lu\n", clk_get_rate(dig_chan1_clk));
     }
     
 // Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
@@ -484,24 +467,19 @@ static void unicam_close_csi(unsigned int port, unsigned int clk_src)
         reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000302);	// ...	
     } 
         
-    if (clk_src == 0)
-    {                   
+    if (clk_src == 0) {                   
         // Disable Dig Clk0
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
-        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK);
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-        if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_STPRSTS_MASK) != 0) { 
-            err_print("DIGITAL_CH0_STPRSTS: Clk not Stopped\n");
-        }
+        dig_chan0_clk = clk_get(NULL, "dig_ch0_clk");
+        if (!dig_chan0_clk) return;
+    
+        clk_disable(dig_chan0_clk);  
     }
     else {                   
         // Disable Dig Clk1
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,0xA5A501);
-        value = reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & (~ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
-        reg_write(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET,value);
-        if ((reg_read(rootclk_base, ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET) & ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_STPRSTS_MASK) != 0) { 
-            err_print("DIGITAL_CH1_STPRSTS: Clk not Stopped\n");
-        }
+        dig_chan1_clk = clk_get(NULL, "dig_ch1_clk");
+        if (!dig_chan1_clk) return;
+    
+        clk_disable(dig_chan1_clk);  
     }
 // Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
     #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
@@ -594,10 +572,6 @@ int __init unicam_init(void)
 
     padctl_base = (void __iomem *)ioremap_nocache(RHEA_PAD_CTRL_BASE_ADDRESS, SZ_4K);
     if (padctl_base == NULL)
-        goto err;
-
-    rootclk_base = (void __iomem *)ioremap_nocache(RHEA_ROOT_CLK_BASE_ADDRESS, SZ_4K);
-    if (rootclk_base == NULL)
         goto err;		
 
 #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
@@ -628,9 +602,7 @@ void __exit unicam_exit(void)
 
     if (padctl_base)
         iounmap(padctl_base);
-
-    if (rootclk_base)
-        iounmap(rootclk_base);	
+	
 
 #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
     if (csr_base)
