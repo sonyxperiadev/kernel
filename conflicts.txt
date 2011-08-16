@@ -1,14 +1,7 @@
 Remaining conflict files:
 
-	both modified:      arch/arm/mach-island/clock_island.c
-	both modified:      arch/arm/mach-island/include/mach/chip_pinmux.h
-	both modified:      arch/arm/mach-island/island_pinmux.c
-	deleted by them:    arch/arm/plat-kona/include/mach/clock.h
-	both modified:      drivers/char/broadcom/modem/rpc/rpc_ipc_kernel.c
-	both modified:      drivers/i2c/busses/i2c-bsc.c
 	both modified:      drivers/misc/akm8975.c
 	both modified:      include/linux/akm8975.h
-	both modified:      include/linux/i2c-kona.h
 	both modified:      vc4-dev/src/interface/vceb/host/linux/hana/vceb-host-interface-hana.c
 
 
