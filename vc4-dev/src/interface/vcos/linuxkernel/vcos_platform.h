@@ -56,10 +56,7 @@ VideoCore OS Abstraction Layer - Linux kernel (partial) implementation.
 #define VCOS_HAVE_CFG          1
 #define VCOS_HAVE_SPINLOCK     0
 #define VCOS_HAVE_CMD          1
-<<<<<<< HEAD
 #define VCOS_HAVE_EVENT_FLAGS  1
-=======
->>>>>>> mps-lmp
 
 /* Exclude many VCOS classes which don't have predicates */
 #define VCOS_TLS_H
@@ -151,17 +148,12 @@ void  vcos_platform_free( void *ptr );
 
 /***********************************************************
  *
-<<<<<<< HEAD
  * Counted Semaphores
-=======
- * Counted Smeaphores
->>>>>>> mps-lmp
  *
  ***********************************************************/
 
 VCOS_INLINE_IMPL
 VCOS_STATUS_T vcos_semaphore_wait(VCOS_SEMAPHORE_T *sem) {
-<<<<<<< HEAD
    int ret = down_interruptible(sem);
    if ( ret == 0 )
       /* Success */
@@ -172,11 +164,6 @@ VCOS_STATUS_T vcos_semaphore_wait(VCOS_SEMAPHORE_T *sem) {
    else
       /* Default (timeout) */
       return VCOS_EAGAIN;
-=======
-   if (down_interruptible(sem) != 0)
-      return VCOS_EAGAIN;
-   return VCOS_SUCCESS;
->>>>>>> mps-lmp
 }
 
 VCOS_INLINE_IMPL
@@ -266,7 +253,6 @@ void vcos_mutex_delete(VCOS_MUTEX_T *m) {
 
 VCOS_INLINE_IMPL
 VCOS_STATUS_T vcos_mutex_lock(VCOS_MUTEX_T *m) {
-<<<<<<< HEAD
    int ret = mutex_lock_interruptible(m);
    if ( ret == 0 )
       /* Success */
@@ -277,11 +263,6 @@ VCOS_STATUS_T vcos_mutex_lock(VCOS_MUTEX_T *m) {
    else
       /* Default */
       return VCOS_EAGAIN;
-=======
-   if (mutex_lock_interruptible(m) != 0)
-      return VCOS_EAGAIN;
-   return VCOS_SUCCESS;
->>>>>>> mps-lmp
 }
 
 VCOS_INLINE_IMPL
@@ -340,16 +321,12 @@ void vcos_event_signal(VCOS_EVENT_T *event)
 VCOS_INLINE_IMPL
 VCOS_STATUS_T vcos_event_wait(VCOS_EVENT_T *event)
 {
-<<<<<<< HEAD
    int ret = down_interruptible(event);
    if ( ret == -EINTR )
       /* Interrupted */
       return VCOS_EINTR;
    else if (ret != 0)
       /* Default (timeout) */
-=======
-   if (down_interruptible(event) != 0)
->>>>>>> mps-lmp
       return VCOS_EAGAIN;
    // Emulate a maximum count of 1 by removing any extra upness
    while (down_trylock(event) == 0) continue;

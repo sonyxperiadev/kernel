@@ -22,26 +22,10 @@
 
 #include "vchiq_util.h"
 
-<<<<<<< HEAD
 #include <stddef.h>
 
 #if defined(__KERNEL__)
 #include <linux/module.h>
-=======
-#if defined(__KERNEL__)
-#include <linux/module.h>
-#include <linux/kernel.h>
-#include <linux/string.h>
-#include <linux/vmalloc.h>
-#else
-#include <stdlib.h>
-#include <string.h>
-#include <stddef.h>
-
-#ifdef WIN32
-#include <process.h>
-#endif
->>>>>>> mps-lmp
 #endif
 
 #define vchiq_status_to_vchi(status) ((int32_t)status)
@@ -473,14 +457,11 @@ int32_t vchi_msg_dequeue( VCHI_SERVICE_HANDLE_T handle,
  * Returns: int32_t - success == 0
  *
  ***********************************************************/
-<<<<<<< HEAD
 
 vcos_static_assert(sizeof(VCHI_MSG_VECTOR_T) == sizeof(VCHIQ_ELEMENT_T));
 vcos_static_assert(offsetof(VCHI_MSG_VECTOR_T, vec_base) == offsetof(VCHIQ_ELEMENT_T, data));
 vcos_static_assert(offsetof(VCHI_MSG_VECTOR_T, vec_len) == offsetof(VCHIQ_ELEMENT_T, size));
 
-=======
->>>>>>> mps-lmp
 int32_t vchi_msg_queuev( VCHI_SERVICE_HANDLE_T handle,
                          VCHI_MSG_VECTOR_T * vector,
                          uint32_t count,
@@ -491,13 +472,6 @@ int32_t vchi_msg_queuev( VCHI_SERVICE_HANDLE_T handle,
 
    vcos_unused(msg_handle);
 
-<<<<<<< HEAD
-=======
-   vcos_assert(sizeof(VCHI_MSG_VECTOR_T) == sizeof(VCHIQ_ELEMENT_T));
-   vcos_assert(offsetof(VCHI_MSG_VECTOR_T, vec_base) == offsetof(VCHIQ_ELEMENT_T, data));
-   vcos_assert(offsetof(VCHI_MSG_VECTOR_T, vec_len) == offsetof(VCHIQ_ELEMENT_T, size));
-
->>>>>>> mps-lmp
    vcos_assert(flags == VCHI_FLAGS_BLOCK_UNTIL_QUEUED);
 
    return vchiq_status_to_vchi(vchiq_queue_message(service->handle, (const VCHIQ_ELEMENT_T *)vector, count));

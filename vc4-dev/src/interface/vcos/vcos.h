@@ -111,13 +111,6 @@ VideoCore OS Abstraction Layer - public header file
 #include "interface/vcos/vcos_mutex.h"
 #endif
 
-<<<<<<< HEAD
-=======
-#ifndef VCOS_EVENT_FLAGS_H
-#include "interface/vcos/vcos_event_flags.h"
-#endif
-
->>>>>>> mps-lmp
 #ifndef VCOS_MEM_H
 #include "interface/vcos/vcos_mem.h"
 #endif
@@ -156,13 +149,10 @@ VideoCore OS Abstraction Layer - public header file
 
 /* Headers with predicates */
 
-<<<<<<< HEAD
 #if VCOS_HAVE_EVENT_FLAGS
 #include "interface/vcos/vcos_event_flags.h"
 #endif
 
-=======
->>>>>>> mps-lmp
 #if VCOS_HAVE_QUEUE
 #include "interface/vcos/vcos_queue.h"
 #endif

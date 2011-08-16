@@ -32,10 +32,6 @@
 #include <linux/hugetlb.h>
 #include <linux/seq_file.h>
 #include <linux/list.h>
-<<<<<<< HEAD
-=======
-#include <linux/highmem.h>
->>>>>>> mps-lmp
 
 #include <asm/cacheflush.h>
 
@@ -136,16 +132,9 @@ typedef struct
 */
 typedef struct sm_global_map
 {
-<<<<<<< HEAD
    struct list_head              map_list;    // Linked list of maps.
 
    struct sm_resource            *resource;   // Pointer to the resource.
-=======
-   struct sm_global_map          *next;       // Linked list next pointer.
-
-   struct sm_resource            *resource;   // Link to the allocated resource.
-   struct sm_global_map          *res_next;   // Linked list next pointer.
->>>>>>> mps-lmp
 
    unsigned int                  res_pid;     // PID owning that resource.
    unsigned int                  res_vc_hdl;  // Resource handle (videocore handle).
@@ -153,10 +142,7 @@ typedef struct sm_global_map
 
    long unsigned int             res_addr;    // Mapped virtual address.
    struct vm_area_struct         *vma;        // VM area for this mapping.
-<<<<<<< HEAD
    unsigned int                  ref_count;   // Reference count to this vma.
-=======
->>>>>>> mps-lmp
 
    struct list_head              resource_map_list; // Used to link maps associated with a resource.
 } SM_GLOBAL_MAP_T;
@@ -171,14 +157,9 @@ typedef struct
    struct proc_dir_entry *dir_alloc;            // Proc entries allocations sub-tree.
    SM_PDE_T              dir_stats;             // Proc entries statistics sub-tree.
    SM_PDE_T              dir_state;             // Proc entries state sub-tree.
-<<<<<<< HEAD
 
    struct mutex          map_lock;              // Global map lock.
    struct list_head      map_list;              // List of maps.
-=======
-   SM_GLOBAL_MAP_T       *map;                  // Global map.
-   struct mutex          map_lock;              // Global map lock.
->>>>>>> mps-lmp
 
    SM_STATS_T            deceased[END_ALL];     // Natural termination stats collector.
    SM_STATS_T            terminated[END_ALL];   // Forcefull termination stats collector.
@@ -201,11 +182,7 @@ typedef struct
 */
 typedef struct sm_resource
 {
-<<<<<<< HEAD
    struct list_head           resource_list;       // List of resources.
-=======
-   struct sm_resource        *next;                // Linked list next pointer.
->>>>>>> mps-lmp
 
    uint32_t                   res_guid;            // Unique identifier for kernel/user cross reference.
    uint32_t                   ref_count;           // Reference / Lock count for this resource.
@@ -237,11 +214,7 @@ typedef enum
 
 typedef struct
 {
-<<<<<<< HEAD
    struct list_head                    resource_list;    // List of resources.
-=======
-   SM_RESOURCE_T                       *resource;        // Resource linked list.
->>>>>>> mps-lmp
 
    uint32_t                            guid;             // GUID (next) tracker.
    uint32_t                            pid;              // PID of creator.
@@ -273,147 +246,6 @@ static const char * sm_cache_map_vector[] =
 
 // ---- Private Functions ----------------------------------------------------
 
-<<<<<<< HEAD
-=======
-#if defined(NOT_USED)
-/* Checks whether a mapped virtual address does indeed map to the
-** expected physical address.
-**
-** Returns 0 on success, -errno on error.
-*/
-#define EXECUTE_FAST_PATH
-static int vmcs_sm_check_mapping( unsigned int v_addr,
-                                  unsigned int size,
-                                  dma_addr_t expected_phys_addr )
-{
-   int ret = 0;
-   unsigned long pfn = 0;
-   struct vm_area_struct *vma = NULL;
-
-   /* In practice the first method below always fails and we always end up
-   ** having to lookup the address the 'backup' way.
-   */
-#if !defined(EXECUTE_FAST_PATH)
-   dma_addr_t phys_addr = 0;
-   struct page **pages;
-   size_t first_page_offset = 0;
-   size_t num_pages = 0;
-
-   first_page_offset = (unsigned long)v_addr & (PAGE_SIZE - 1);
-   num_pages = (first_page_offset + size + PAGE_SIZE - 1) / PAGE_SIZE;
-
-   pages = kmalloc( sizeof(*pages) * num_pages, GFP_NOFS );
-   if ( pages )
-   {
-      down_read( &current->mm->mmap_sem );
-      ret = get_user_pages( current,
-                            current->mm,
-                            (unsigned long)v_addr,
-                            num_pages,
-                            0,
-                            0,
-                            pages,
-                            NULL );
-      up_read( &current->mm->mmap_sem );
-
-      if ( ret == num_pages )
-      {
-         phys_addr = PFN_PHYS( page_to_pfn( pages[0] ) ) + first_page_offset;
-         if ( phys_addr != expected_phys_addr )
-         {
-            LOG_DBG( "[%s]: virtual address %x (sz: %u) pfn %x != expected %x",
-                     __func__,
-                     v_addr,
-                     size,
-                     phys_addr,
-                     expected_phys_addr );
-            ret = -EINVAL;
-         }
-         else
-         {
-            ret = 0;
-         }
-
-         /* Done.
-         */
-         goto out_free;
-      }
-      else
-      {
-         kfree( pages );
-         pages = NULL;
-
-         ret = -EINVAL;
-      }
-   }
-#else
-   ret = -EINVAL;
-#endif /*!defined(EXECUTE_FAST_PATH)*/
-
-   /* Backup way...  try to lookup the address differently.
-   */
-   if ( ret == -EINVAL )
-   {
-      down_read( &current->mm->mmap_sem );
-      vma = find_vma( current->mm,
-                      (unsigned long)v_addr );
-      if ( vma != NULL )
-      {
-         ret = get_pfn( vma, (unsigned long)v_addr, &pfn );
-      }
-      else
-      {
-         ret = -EINVAL;
-      }
-      up_read( &current->mm->mmap_sem );
-
-      if ( ret < 0 )
-      {
-         LOG_DBG( "[%s]: failed lookup virtual address %x (sz: %u), expected %x",
-                  __func__,
-                  v_addr,
-                  size,
-                  expected_phys_addr );
-         ret = -EINVAL;
-         goto out;
-      }
-      else
-      {
-         if ( PFN_PHYS(pfn) != expected_phys_addr )
-         {
-            LOG_DBG( "[%s]: virtual address %x (sz: %u) pfn %x != expected %x",
-                     __func__,
-                     v_addr,
-                     size,
-                     PFN_PHYS(pfn),
-                     expected_phys_addr );
-
-            /* Valid error.
-            */
-            ret = -EINVAL;
-         }
-
-         /* Done.
-         */
-         goto out;
-      }
-   }
-
-
-#if !defined(EXECUTE_FAST_PATH)
-out_free:
-   if ( pages )
-   {
-      kfree( pages );
-      pages = NULL;
-   }
-#endif
-out:
-   return ret;
-}
-#endif
-
->>>>>>> mps-lmp
 /* Carries over to the state statistics the statistics once owned by a deceased
 ** resource.
 */
@@ -456,19 +288,9 @@ static unsigned int vmcs_sm_vc_handle_from_pid_and_address( unsigned int pid,
                                                             unsigned int addr )
 {
    SM_GLOBAL_MAP_T *map = NULL;
-<<<<<<< HEAD
    unsigned int handle = 0;
 
    if ( sm_state == NULL || addr == 0 )
-=======
-
-   if ( sm_state == NULL )
-   {
-      goto out;
-   }
-
-   if ( addr == 0 )
->>>>>>> mps-lmp
    {
       goto out;
    }
@@ -476,7 +298,6 @@ static unsigned int vmcs_sm_vc_handle_from_pid_and_address( unsigned int pid,
    mutex_lock ( &(sm_state->map_lock) );
 
    /* Lookup the resource.
-<<<<<<< HEAD
    */
    list_for_each_entry ( map, &sm_state->map_list, map_list )
    {
@@ -493,37 +314,6 @@ static unsigned int vmcs_sm_vc_handle_from_pid_and_address( unsigned int pid,
 
    mutex_unlock ( &(sm_state->map_lock) );
 
-=======
-   **
-   ** Linear search for now, could be improved.
-   */
-   map = sm_state->map;
-   while ( 1 )
-   {
-      if ( map == NULL )
-      {
-         break;
-      }
-
-      if ( (map->res_pid == pid) &&
-           (map->res_addr == addr) )
-      {
-         LOG_DBG( "[%s]: global map %p (pid %u, addr %lx) -> vc-hdl %x (usr-hdl %x)",
-                  __func__,
-                  map,
-                  map->res_pid,
-                  map->res_addr,
-                  map->res_vc_hdl,
-                  map->res_usr_hdl );
-
-         mutex_unlock ( &(sm_state->map_lock) );
-         return map->res_vc_hdl;
-      }
-
-      map = map->next;
-   }
-
->>>>>>> mps-lmp
 out:
    /* Use a debug log here as it may be a valid situation that we query
    ** for something that is not mapped, we do not want a kernel log each
@@ -533,7 +323,6 @@ out:
    ** subsequently tries to use something invalid after being told not to
    ** use it...
    */
-<<<<<<< HEAD
    if ( handle == 0 )
    {
       LOG_DBG( "[%s]: not a valid map (pid %u, addr %x)",
@@ -541,15 +330,6 @@ out:
    }
 
    return handle;
-=======
-   LOG_DBG( "[%s]: not a valid map (pid %u, addr %x)",
-            __func__,
-            pid,
-            addr );
-
-   mutex_unlock ( &(sm_state->map_lock) );
-   return 0;
->>>>>>> mps-lmp
 }
 
 /* Fetch a user handle corresponding to a mapping of the pid+address
@@ -559,19 +339,9 @@ static unsigned int vmcs_sm_usr_handle_from_pid_and_address( unsigned int pid,
                                                              unsigned int addr )
 {
    SM_GLOBAL_MAP_T *map = NULL;
-<<<<<<< HEAD
    unsigned int handle = 0;
 
    if ( sm_state == NULL || addr == 0 )
-=======
-
-   if ( sm_state == NULL )
-   {
-      goto out;
-   }
-
-   if ( addr == 0 )
->>>>>>> mps-lmp
    {
       goto out;
    }
@@ -579,7 +349,6 @@ static unsigned int vmcs_sm_usr_handle_from_pid_and_address( unsigned int pid,
    mutex_lock ( &(sm_state->map_lock) );
 
    /* Lookup the resource.
-<<<<<<< HEAD
    */
    list_for_each_entry ( map, &sm_state->map_list, map_list )
    {
@@ -596,37 +365,6 @@ static unsigned int vmcs_sm_usr_handle_from_pid_and_address( unsigned int pid,
 
    mutex_unlock ( &(sm_state->map_lock) );
 
-=======
-   **
-   ** Linear search for now, could be improved.
-   */
-   map = sm_state->map;
-   while ( 1 )
-   {
-      if ( map == NULL )
-      {
-         break;
-      }
-
-      if ( (map->res_pid == pid) &&
-           (map->res_addr == addr) )
-      {
-         LOG_DBG( "[%s]: global map %p (pid %u, addr %lx) -> usr-hdl %x (vc-hdl %x)",
-                  __func__,
-                  map,
-                  map->res_pid,
-                  map->res_addr,
-                  map->res_usr_hdl,
-                  map->res_vc_hdl );
-
-         mutex_unlock ( &(sm_state->map_lock) );
-         return map->res_usr_hdl;
-      }
-
-      map = map->next;
-   }
-
->>>>>>> mps-lmp
 out:
    /* Use a debug log here as it may be a valid situation that we query
    ** for something that is not mapped yet (typically during start condition),
@@ -636,7 +374,6 @@ out:
    ** subsequently tries to use something invalid after being told not to
    ** use it...
    */
-<<<<<<< HEAD
    if ( handle == 0 )
    {
       LOG_DBG( "[%s]: not a valid map (pid %u, addr %x)",
@@ -644,15 +381,6 @@ out:
    }
 
    return handle;
-=======
-   LOG_DBG( "[%s]: not a valid map (pid %u, addr %x)",
-            __func__,
-            pid,
-            addr );
-
-   mutex_unlock ( &(sm_state->map_lock) );
-   return 0;
->>>>>>> mps-lmp
 }
 
 #if defined(DO_NOT_USE)
@@ -663,19 +391,9 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_vc_handle( unsigned int pid
                                                                 unsigned int hdl )
 {
    SM_GLOBAL_MAP_T *map = NULL;
-<<<<<<< HEAD
    unsigned int addr = 0;
 
    if ( sm_state == NULL || hdl == 0 )
-=======
-
-   if ( sm_state == NULL )
-   {
-      goto out;
-   }
-
-   if ( hdl == 0 )
->>>>>>> mps-lmp
    {
       goto out;
    }
@@ -683,7 +401,6 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_vc_handle( unsigned int pid
    mutex_lock ( &(sm_state->map_lock) );
 
    /* Lookup the resource.
-<<<<<<< HEAD
    */
    list_for_each_entry ( map, &sm_state->map_list, map_list )
    {
@@ -700,37 +417,6 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_vc_handle( unsigned int pid
 
    mutex_unlock ( &(sm_state->map_lock) );
 
-=======
-   **
-   ** Linear search for now, could be improved.
-   */
-   map = sm_state->map;
-   while ( 1 )
-   {
-      if ( map == NULL )
-      {
-         break;
-      }
-
-      if ( (map->res_pid == pid) &&
-           (map->res_vc_hdl == hdl) )
-      {
-         LOG_DBG( "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
-                  __func__,
-                  map,
-                  map->res_pid,
-                  map->res_vc_hdl,
-                  map->res_usr_hdl,
-                  map->res_addr );
-
-         mutex_unlock ( &(sm_state->map_lock) );
-         return map->res_addr;
-      }
-
-      map = map->next;
-   }
-
->>>>>>> mps-lmp
 out:
    /* Use a debug log here as it may be a valid situation that we query
    ** for something that is not mapped, we do not want a kernel log each
@@ -740,7 +426,6 @@ out:
    ** subsequently tries to use something invalid after being told not to
    ** use it...
    */
-<<<<<<< HEAD
    if ( addr == 0 )
    {
       LOG_DBG( "[%s]: not a valid map (pid %u, hdl %x)",
@@ -748,14 +433,6 @@ out:
    }
 
    return addr;
-=======
-   LOG_DBG( "[%s]: not a valid map (pid %u, hdl %x)",
-            __func__,
-            pid,
-            hdl );
-   mutex_unlock ( &(sm_state->map_lock) );
-   return 0;
->>>>>>> mps-lmp
 }
 #endif
 
@@ -766,19 +443,9 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_usr_handle( unsigned int pi
                                                                  unsigned int hdl )
 {
    SM_GLOBAL_MAP_T *map = NULL;
-<<<<<<< HEAD
    unsigned int addr = 0;
 
    if ( sm_state == NULL || hdl == 0 )
-=======
-
-   if ( sm_state == NULL )
-   {
-      goto out;
-   }
-
-   if ( hdl == 0 )
->>>>>>> mps-lmp
    {
       goto out;
    }
@@ -786,7 +453,6 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_usr_handle( unsigned int pi
    mutex_lock ( &(sm_state->map_lock) );
 
    /* Lookup the resource.
-<<<<<<< HEAD
    */
    list_for_each_entry ( map, &sm_state->map_list, map_list )
    {
@@ -803,37 +469,6 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_usr_handle( unsigned int pi
 
    mutex_unlock ( &(sm_state->map_lock) );
 
-=======
-   **
-   ** Linear search for now, could be improved.
-   */
-   map = sm_state->map;
-   while ( 1 )
-   {
-      if ( map == NULL )
-      {
-         break;
-      }
-
-      if ( (map->res_pid == pid) &&
-           (map->res_usr_hdl == hdl) )
-      {
-         LOG_DBG( "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
-                  __func__,
-                  map,
-                  map->res_pid,
-                  map->res_vc_hdl,
-                  map->res_usr_hdl,
-                  map->res_addr );
-
-         mutex_unlock ( &(sm_state->map_lock) );
-         return map->res_addr;
-      }
-
-      map = map->next;
-   }
-
->>>>>>> mps-lmp
 out:
    /* Use a debug log here as it may be a valid situation that we query
    ** for something that is not mapped, we do not want a kernel log each
@@ -843,7 +478,6 @@ out:
    ** subsequently tries to use something invalid after being told not to
    ** use it...
    */
-<<<<<<< HEAD
    if ( addr == 0 )
    {
       LOG_DBG( "[%s]: not a valid map (pid %u, hdl %x)",
@@ -903,108 +537,6 @@ static void vmcs_sm_remove_map( SM_STATE_T *state,
             map->res_usr_hdl, map->res_addr );
 
    kfree( map );
-=======
-   LOG_DBG( "[%s]: not a valid map (pid %u, hdl %x)",
-            __func__,
-            pid,
-            hdl );
-   mutex_unlock ( &(sm_state->map_lock) );
-   return 0;
-}
-
-/* Adds a resource to the global data list which tracks all the allocated
-** data mapping.
-*/
-static void vmcs_sm_add_global_resource( SM_STATE_T *state,
-                                         SM_GLOBAL_MAP_T *map )
-{
-   mutex_lock ( &(state->map_lock) );
-
-   if ( state->map == NULL )
-   {
-      state->map = map;
-   }
-   else
-   {
-      SM_GLOBAL_MAP_T *ptr = state->map;
-
-      while ( ptr->next != NULL )
-      {
-         ptr = ptr->next;
-      }
-
-      ptr->next = map;
-   }
-
-   LOG_DBG( "[%s]: added map %p (pid %u, vc-hdl %x, usr-hdl %x, addr %lx)",
-            __func__,
-            map,
-            map->res_pid,
-            map->res_vc_hdl,
-            map->res_usr_hdl,
-            map->res_addr );
-
-   map->next = NULL;
-
-   mutex_unlock ( &(state->map_lock) );
-}
-
-/* Removes a resource from the global data list which tracks all the allocated
-** data mapping.
-*/
-static void vmcs_sm_remove_global_resource( SM_STATE_T *state,
-                                            SM_GLOBAL_MAP_T **map )
-{
-   SM_GLOBAL_MAP_T *prev_ptr = NULL;
-   SM_GLOBAL_MAP_T *curr_ptr = NULL;
-
-   mutex_lock ( &(state->map_lock) );
-
-   curr_ptr = state->map;
-   while ( curr_ptr != NULL )
-   {
-      if ( curr_ptr == *map )
-      {
-         if ( curr_ptr == state->map )
-         {
-            state->map = curr_ptr->next;
-         }
-         else
-         {
-            prev_ptr->next = curr_ptr->next;
-         }
-
-         LOG_DBG( "[%s]: removed map %p (pid %d, vc-hdl %x, usr-hdl %x, addr %lx)",
-                  __func__,
-                  curr_ptr,
-                  curr_ptr->res_pid,
-                  curr_ptr->res_vc_hdl,
-                  curr_ptr->res_usr_hdl,
-                  curr_ptr->res_addr );
-
-         kfree( *map );
-         *map = NULL;
-
-         mutex_unlock ( &(state->map_lock) );
-         return;
-      }
-      else
-      {
-         prev_ptr = curr_ptr;
-         curr_ptr = curr_ptr->next;
-      }
-   }
-
-   LOG_ERR( "[%s]: failed to find map (%p) in map list",
-            __func__,
-            *map );
-
-   /* We should free the memory anyway to avoid a memory leak.
-   */
-   kfree( *map );
-
-   mutex_unlock ( &(state->map_lock) );
->>>>>>> mps-lmp
 }
 
 /* Read callback for the configuration proc entry.
@@ -1037,7 +569,6 @@ static int vc_sm_global_state_proc_read( struct seq_file *s )
    SM_GLOBAL_MAP_T *map = NULL;
    int map_count = 0;
 
-<<<<<<< HEAD
    if ( sm_state == NULL )
    {
       return 0;
@@ -1064,35 +595,6 @@ static int vc_sm_global_state_proc_read( struct seq_file *s )
 
    mutex_unlock ( &(sm_state->map_lock) );
 
-=======
-   if ( sm_state != NULL )
-   {
-      seq_printf( s, "\nVC-ServiceHandle     0x%x\n",
-                  (unsigned int)sm_state->sm_handle );
-
-      /* Log all applicable mapping(s).
-      */
-      map = sm_state->map;
-      while ( 1 )
-      {
-         if ( map == NULL )
-         {
-            break;
-         }
-
-         map_count++;
-
-         seq_printf( s, "\nMapping                0x%x\n", (unsigned int)map );
-         seq_printf( s, "           TGID        %u\n", map->res_pid );
-         seq_printf( s, "           VC-HDL      0x%x\n", map->res_vc_hdl );
-         seq_printf( s, "           USR-HDL     0x%x\n", map->res_usr_hdl );
-         seq_printf( s, "           USR-ADDR    0x%lx\n", map->res_addr );
-
-         map = map->next;
-      }
-   }
-
->>>>>>> mps-lmp
    seq_printf( s, "\n\nTotal map count:   %d\n\n", map_count );
 
    return 0;
@@ -1169,7 +671,6 @@ static int vc_sm_statistics_proc_read( struct seq_file *s )
    p_pde = (SM_PDE_T *) (s->private);
    file_data = (SM_PRIV_DATA_T *) (p_pde->priv_data);
 
-<<<<<<< HEAD
    if ( file_data == NULL )
    {
       return 0;
@@ -1212,50 +713,6 @@ static int vc_sm_statistics_proc_read( struct seq_file *s )
 
    seq_printf( s, "\nResources Count %d\n", res_count );
 
-=======
-   /* Per process statistics.
-   */
-   if ( file_data != NULL )
-   {
-      seq_printf( s, "\nStatistics for TGID %d\n", file_data->pid );
-
-      resource = file_data->resource;
-      while ( 1 )
-      {
-         if ( resource == NULL )
-         {
-            break;
-         }
-
-         res_count++;
-
-         seq_printf( s, "\nGUID:         0x%x\n\n", resource->res_guid );
-         for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
-         {
-            if ( resource->res_stats[ ix ] > 0 )
-            {
-               seq_printf( s, "                %u\t%s\n",
-                           resource->res_stats[ ix ],
-                           sm_stats_human_read[ ix ] );
-            }
-         }
-         seq_printf( s, "\n" );
-         for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
-         {
-            if ( resource->res_stats[ ix + END_ATTEMPT ] > 0 )
-            {
-               seq_printf( s, "                %u\tFAILED %s\n",
-                           resource->res_stats[ ix + END_ATTEMPT ],
-                           sm_stats_human_read[ ix ] );
-            }
-         }
-
-         resource = resource->next;
-      }
-      seq_printf( s, "\nResources Count %d\n", res_count );
-   }
-
->>>>>>> mps-lmp
    return 0;
 }
 
@@ -1271,7 +728,6 @@ static int vc_sm_alloc_proc_read( struct seq_file *s )
    p_pde = (SM_PDE_T *) (s->private);
    file_data = (SM_PRIV_DATA_T *) (p_pde->priv_data);
 
-<<<<<<< HEAD
    if ( file_data == NULL )
    {
       return 0;
@@ -1286,22 +742,6 @@ static int vc_sm_alloc_proc_read( struct seq_file *s )
 
    list_for_each_entry ( resource, &file_data->resource_list, resource_list )
    {
-=======
-   /* Per process statistics.
-   */
-   if ( file_data != NULL )
-   {
-      seq_printf( s, "\nAllocation for TGID %d\n", file_data->pid );
-
-      resource = file_data->resource;
-      while ( 1 )
-      {
-         if ( resource == NULL )
-         {
-            break;
-         }
-
->>>>>>> mps-lmp
          alloc_count++;
 
          seq_printf( s, "\nGUID:              0x%x\n", resource->res_guid );
@@ -1311,20 +751,11 @@ static int vc_sm_alloc_proc_read( struct seq_file *s )
          seq_printf( s, "VC-address:        0x%p\n", resource->res_base_mem );
          seq_printf( s, "VC-size (bytes):   %u\n", resource->res_size );
          seq_printf( s, "Cache:             %s\n", sm_cache_map_vector[ resource->res_cached ] );
-<<<<<<< HEAD
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
 
    seq_printf( s, "\n\nTotal allocation count: %d\n\n", alloc_count );
-=======
-
-         resource = resource->next;
-      }
-
-      seq_printf( s, "\n\nTotal allocation count: %d\n\n", alloc_count );
-   }
->>>>>>> mps-lmp
 
    return 0;
 }
@@ -1423,7 +854,6 @@ static const struct file_operations vc_sm_proc_fops =
 static void vmcs_sm_add_resource( SM_PRIV_DATA_T *privdata,
                                   SM_RESOURCE_T *resource )
 {
-<<<<<<< HEAD
    mutex_lock ( &(sm_state->map_lock) );
    list_add( &resource->resource_list, &privdata->resource_list );
    mutex_unlock ( &(sm_state->map_lock) );
@@ -1431,40 +861,12 @@ static void vmcs_sm_add_resource( SM_PRIV_DATA_T *privdata,
    LOG_DBG( "[%s]: added resource %p (base addr %p, hdl %x, size %u, cache %u)",
             __func__, resource, resource->res_base_mem, resource->res_handle,
             resource->res_size, resource->res_cached );
-=======
-   if ( privdata->resource == NULL )
-   {
-      privdata->resource = resource;
-   }
-   else
-   {
-      SM_RESOURCE_T *ptr = privdata->resource;
-
-      while ( ptr->next != NULL )
-      {
-         ptr = ptr->next;
-      }
-
-      ptr->next = resource;
-   }
-
-   LOG_DBG( "[%s]: added resource %p (base addr %p, hdl %x, size %u, cache %u)",
-            __func__,
-            resource,
-            resource->res_base_mem,
-            resource->res_handle,
-            resource->res_size,
-            resource->res_cached );
-
-   resource->next = NULL;
->>>>>>> mps-lmp
 }
 
 /* Removes a resource from the private data list which tracks all the allocated
 ** data.
 */
 static void vmcs_sm_remove_resource( SM_PRIV_DATA_T *privdata,
-<<<<<<< HEAD
                                      SM_RESOURCE_T *resource )
 {
    mutex_lock ( &(sm_state->map_lock) );
@@ -1479,55 +881,6 @@ static void vmcs_sm_remove_resource( SM_PRIV_DATA_T *privdata,
    vc_sm_resource_deceased( resource, 0 );
    kfree( resource );
    return;
-=======
-                                     SM_RESOURCE_T **resource )
-{
-   SM_RESOURCE_T *prev_ptr = NULL;
-   SM_RESOURCE_T *curr_ptr = privdata->resource;
-
-   while ( curr_ptr != NULL )
-   {
-      if ( curr_ptr == *resource )
-      {
-         if ( curr_ptr == privdata->resource )
-         {
-            privdata->resource = curr_ptr->next;
-         }
-         else
-         {
-            prev_ptr->next = curr_ptr->next;
-         }
-
-         LOG_DBG( "[%s]: located resource %p (base addr %p, hdl %x, size %u, cache %u)",
-                  __func__,
-                  curr_ptr,
-                  curr_ptr->res_base_mem,
-                  curr_ptr->res_handle,
-                  curr_ptr->res_size,
-                  curr_ptr->res_cached );
-
-         vc_sm_resource_deceased( *resource, 0 );
-         kfree( *resource );
-         *resource = NULL;
-
-         return;
-      }
-      else
-      {
-         prev_ptr = curr_ptr;
-         curr_ptr = curr_ptr->next;
-      }
-   }
-
-   LOG_ERR( "[%s]: failed to find resource (%p) in resource list",
-            __func__,
-            *resource );
-
-   /* We should free the memory anyway to avoid a memory leak.
-   */
-   vc_sm_resource_deceased( *resource, 1 );
-   kfree( *resource );
->>>>>>> mps-lmp
 }
 
 /* Locates a resource from the private data list which tracks all the allocated
@@ -1539,7 +892,6 @@ static void vmcs_sm_remove_resource( SM_PRIV_DATA_T *privdata,
 static SM_RESOURCE_T *vmcs_sm_get_resource_with_guid( SM_PRIV_DATA_T *privdata,
                                                       unsigned int res_guid )
 {
-<<<<<<< HEAD
    SM_RESOURCE_T *resource;
 
    mutex_lock ( &(sm_state->map_lock) );
@@ -1586,36 +938,6 @@ static SM_GLOBAL_MAP_T *vmcs_sm_map_from_resource( SM_RESOURCE_T *resource, unsi
    return map;
 }
 #endif
-=======
-   SM_RESOURCE_T *resource = privdata->resource;
-
-   while ( 1 )
-   {
-      if ( resource == NULL )
-      {
-         break;
-      }
-
-      if ( resource->res_guid == res_guid )
-      {
-         LOG_DBG( "[%s]: located resource %p (guid: %u, base addr %p, hdl %x, size %u, cache %u)",
-                  __func__,
-                  resource,
-                  resource->res_guid,
-                  resource->res_base_mem,
-                  resource->res_handle,
-                  resource->res_size,
-                  resource->res_cached );
-
-         return resource;
-      }
-
-      resource = resource->next;
-   }
-
-   return NULL;
-}
->>>>>>> mps-lmp
 
 /* Dump the map table for the driver.  If process is -1, dumps the whole table,
 ** if process is a valid pid (non -1) dump only the entries associated with the
@@ -1629,7 +951,6 @@ static void vmcs_sm_host_walk_map_per_pid( int pid )
    */
    if ( sm_state == NULL )
    {
-<<<<<<< HEAD
       LOG_ERR( "[%s]: invalid device", __func__ );
       return;
    }
@@ -1650,39 +971,6 @@ static void vmcs_sm_host_walk_map_per_pid( int pid )
 
    mutex_unlock ( &(sm_state->map_lock) );
 
-=======
-      LOG_ERR( "[%s]: invalid device",
-               __func__ );
-      
-      goto out;
-   }
-
-   /* Log all applicable mapping(s).
-   */
-   map = sm_state->map;
-   while ( 1 )
-   {
-      if ( map == NULL )
-      {
-         break;
-      }
-      
-      if ( (pid == -1) ||
-           ((pid != -1) && (map->res_pid == pid)) )
-      {
-         LOG_INFO( "[%s]: tgid: %u - vc-hdl: %x, usr-hdl: %x, usr-addr: %lx",
-                  __func__,
-                  map->res_pid,
-                  map->res_vc_hdl,
-                  map->res_usr_hdl,
-                  map->res_addr );
-      }
-      map = map->next;      
-   }
-
-
-out:
->>>>>>> mps-lmp
    return;
 }
 
@@ -1697,7 +985,6 @@ static void vmcs_sm_host_walk_alloc( SM_PRIV_DATA_T *file_data )
    */
    if ( (sm_state == NULL) || (file_data == NULL) )
    {
-<<<<<<< HEAD
       LOG_ERR( "[%s]: invalid device", __func__ );
       return;
    }
@@ -1714,34 +1001,6 @@ static void vmcs_sm_host_walk_alloc( SM_PRIV_DATA_T *file_data )
 
    mutex_unlock ( &(sm_state->map_lock) );
 
-=======
-      LOG_ERR( "[%s]: invalid device",
-               __func__ );
-      
-      goto out;
-   }
-
-   resource = file_data->resource;
-   while ( 1 )
-   {
-      if ( resource == NULL )
-      {
-         break;
-      }
-
-      LOG_INFO( "[%s]: guid: %x - hdl: %x, vc-mem: %p, size: %u, cache: %u",
-                __func__,
-                resource->res_guid,
-                resource->res_handle,
-                resource->res_base_mem,
-                resource->res_size,
-                resource->res_cached );
-
-      resource = resource->next;
-   }
-
-out:
->>>>>>> mps-lmp
    return;
 }
 
@@ -1780,11 +1039,7 @@ static int vc_sm_open( struct inode *inode, struct file *file )
 
    sprintf( alloc_name, "%d", current->tgid );
 
-<<<<<<< HEAD
    INIT_LIST_HEAD(&file_data->resource_list);
-=======
-   file_data->resource = NULL;
->>>>>>> mps-lmp
    file_data->guid     = 1; /* Start at 1 - 0 means INVALID. */
    file_data->pid      = current->tgid; /* current->pid; */
    file_data->dir_pid  = proc_mkdir( alloc_name, sm_state->dir_alloc );
@@ -1845,12 +1100,7 @@ static int vc_sm_release( struct inode *inode, struct file *file )
 {
    int ret                         = 0;
    SM_PRIV_DATA_T *file_data       = NULL;
-<<<<<<< HEAD
    SM_RESOURCE_T *resource, *resource_tmp;
-=======
-   SM_RESOURCE_T *resource         = NULL;
-   SM_RESOURCE_T *free_up          = NULL;
->>>>>>> mps-lmp
    VC_SM_FREE_ALL_T free_all;
    int freed_up                    = 0;
    char alloc_name[32];
@@ -1914,7 +1164,6 @@ static int vc_sm_release( struct inode *inode, struct file *file )
       **
       ** NOTE: Do we need to care about multiple allocated/mapped?
       */
-<<<<<<< HEAD
       mutex_lock ( &(sm_state->map_lock) );
 
       list_for_each_entry_safe ( resource, resource_tmp, &file_data->resource_list, resource_list )
@@ -1928,23 +1177,6 @@ static int vc_sm_release( struct inode *inode, struct file *file )
 
       mutex_unlock ( &(sm_state->map_lock) );
 
-=======
-      resource = file_data->resource;
-      while ( resource != NULL )
-      {
-         /* Free up the local resource tracking this allocation.
-         */
-         free_up  = resource;
-         resource = resource->next;
-
-         vc_sm_resource_deceased( free_up, 1 );
-         kfree ( free_up );
-         free_up = NULL;
-
-         freed_up++;
-      }
-
->>>>>>> mps-lmp
       /* Free up the videocore allocated resource left for this allocator.
       */
       if ( freed_up )
@@ -1983,26 +1215,17 @@ out:
 
 static void vcsm_vma_open(struct vm_area_struct *vma)
 {
-<<<<<<< HEAD
    SM_GLOBAL_MAP_T *map = (SM_GLOBAL_MAP_T *)vma->vm_private_data;
 
    LOG_DBG( "[%s]: virt %lx-%lx, pid %i, pfn %i",
             __func__, vma->vm_start, vma->vm_end, (int)current->tgid, (int)vma->vm_pgoff);
 
    map->ref_count++;
-=======
-   LOG_DBG( "[%s]: virt %lx",
-            __func__,
-            vma->vm_start );
-
-   // TODO: some of vc_sm_mmap() needs to be moved here
->>>>>>> mps-lmp
 }
 
 static void vcsm_vma_close(struct vm_area_struct *vma)
 {
    SM_GLOBAL_MAP_T *map = (SM_GLOBAL_MAP_T *)vma->vm_private_data;
-<<<<<<< HEAD
 
    LOG_DBG( "[%s]: virt %lx-%lx, pid %i, pfn %i",
             __func__, vma->vm_start, vma->vm_end, (int)current->tgid, (int)vma->vm_pgoff);
@@ -2015,22 +1238,6 @@ static void vcsm_vma_close(struct vm_area_struct *vma)
    {
       vmcs_sm_remove_map( sm_state, map->resource, map );
    }
-=======
-   SM_RESOURCE_T *resource = map->resource;
-
-   LOG_DBG( "[%s]: virt %lx",
-            __func__,
-            vma->vm_start );
-
-   /* Remove map from list of maps associated with the resource
-   */
-   list_del(&map->resource_map_list);
-   resource->map_count--;
-
-   /* Remove from the map table.
-   */
-   vmcs_sm_remove_global_resource( sm_state, &map );
->>>>>>> mps-lmp
 }
 
 static int vcsm_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
@@ -2041,12 +1248,8 @@ static int vcsm_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
    unsigned long pfn;
    int ret = 0;
 
-<<<<<<< HEAD
    /* Lock the resource if necessary.
    */
-=======
-   // Lock the resource if necessary
->>>>>>> mps-lmp
    if ( !resource->ref_count )
    {
       VC_SM_LOCK_UNLOCK_T lock_unlock;
@@ -2076,7 +1279,6 @@ static int vcsm_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
          resource->res_stats[LOCK_FAIL]++;
          return VM_FAULT_SIGBUS;
       }
-<<<<<<< HEAD
 
       resource->res_stats[LOCK]++;
       resource->ref_count++;
@@ -2089,12 +1291,6 @@ static int vcsm_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
       {
          resource->res_base_mem = lock_result.res_mem;
       }
-=======
-      resource->res_stats[LOCK]++;
-      resource->ref_count++;
-
-      //file_data->restart_sys = VCOS_SUCCESS;
->>>>>>> mps-lmp
    }
 
    /* We don't use vmf->pgoff since that has the fake offset */
@@ -2126,7 +1322,6 @@ static struct vm_operations_struct vcsm_vm_ops = {
     .fault = vcsm_vma_fault,
 };
 
-<<<<<<< HEAD
 /* Walks a VMA and clean each valid page from the cache */
 static void vcsm_vma_cache_clean_page_range(unsigned long addr, unsigned long end)
 {
@@ -2182,8 +1377,6 @@ static void vcsm_vma_cache_clean_page_range(unsigned long addr, unsigned long en
    } while (pgd++, addr = pgd_next, addr != end);
 }
 
-=======
->>>>>>> mps-lmp
 /* Map an allocated data into something that the user space.
 */
 static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
@@ -2276,22 +1469,11 @@ static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
    global_resource->res_addr    = (long unsigned int)vma->vm_start;
    global_resource->resource    = resource;
    global_resource->vma         = vma;
-<<<<<<< HEAD
    vmcs_sm_add_map( sm_state, resource, global_resource );
-=======
-   vmcs_sm_add_global_resource( sm_state,
-                                global_resource );
-
-   /* Add to the list of mappings for this resource
-   */
-   list_add( &global_resource->resource_map_list, &resource->map_list );
-   resource->map_count++;
->>>>>>> mps-lmp
 
    /* We are not actually mapping the pages, we just provide a fault
    ** handler to allow pages to be mapped when accessed
    */
-<<<<<<< HEAD
    vma->vm_flags |= VM_IO | VM_RESERVED | VM_PFNMAP | VM_DONTCOPY | VM_DONTEXPAND;
    vma->vm_ops = &vcsm_vm_ops;
    vma->vm_private_data = global_resource;
@@ -2301,12 +1483,6 @@ static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
    vma->vm_pgoff += mm_vc_mem_phys_addr;
    vma->vm_pgoff >>= PAGE_SHIFT;
 
-=======
-   vma->vm_flags |= VM_IO | VM_RESERVED | VM_PFNMAP | VM_DONTEXPAND;
-   vma->vm_ops = &vcsm_vm_ops;
-   vma->vm_private_data = global_resource;
-   vma->vm_pgoff = 0; /* Reset GUID setting since real offset is 0. */
->>>>>>> mps-lmp
    if ( (resource->res_cached == VMCS_SM_CACHE_NONE) ||
         (resource->res_cached == VMCS_SM_CACHE_VC) )
    {
@@ -2334,10 +1510,7 @@ static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
             resource->map_count,
             (unsigned int)vma->vm_start );
 
-<<<<<<< HEAD
    vcsm_vma_open(vma);
-=======
->>>>>>> mps-lmp
    resource->res_stats[MAP]++;
    return 0;
 
@@ -2439,10 +1612,6 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
             ret = -ENOMEM;
             goto out;
          }
-<<<<<<< HEAD
-=======
-         memset ( resource, 0, sizeof( *resource ) );
->>>>>>> mps-lmp
          INIT_LIST_HEAD(&resource->map_list);
          resource->res_stats[ALLOC]++;
 
@@ -2843,10 +2012,6 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
             ret = -EINVAL;
             goto out;
          }
-<<<<<<< HEAD
-=======
-         resource->res_stats[UNLOCK]++;
->>>>>>> mps-lmp
 
          lock_unlock.res_handle = resource->res_handle;
          lock_unlock.res_mem    = resource->res_base_mem;
@@ -2901,10 +2066,7 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
                goto out;
             }
 
-<<<<<<< HEAD
             resource->res_stats[UNLOCK]++;
-=======
->>>>>>> mps-lmp
             file_data->restart_sys = VCOS_SUCCESS;
 
             /* Successfully unlocked, decrease the reference count for this resource.
@@ -3135,22 +2297,14 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
          LOG_DBG( "[%s]: %s to free data - hdl %x, base address %p",
                   __func__,
-<<<<<<< HEAD
                   ( status == VCOS_SUCCESS ) ? "SUCCEEDED" : "FAILED",
-=======
-                  ( success == 0 ) ? "SUCCEEDED" : "FAILED",
->>>>>>> mps-lmp
                   free.res_handle,
                   free.res_mem );
 
          /* Free up the local resource tracking this allocation.
          */
          vmcs_sm_remove_resource ( file_data,
-<<<<<<< HEAD
                                    resource );
-=======
-                                   &resource );
->>>>>>> mps-lmp
 
          /* Done.
          */
@@ -3602,46 +2756,10 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
             phys_addr += (dma_addr_t)mm_vc_mem_phys_addr;
 
             // L1 cache flush
-<<<<<<< HEAD
             down_read( &current->mm->mmap_sem );
             vcsm_vma_cache_clean_page_range((unsigned long)ioparam.addr,
                                             (unsigned long)ioparam.addr + ioparam.size );
             up_read( &current->mm->mmap_sem );
-=======
-            {            
-               unsigned long v_addr = (unsigned long)ioparam.addr;
-               int size = (int) ioparam.size;
-               int flush;
-               struct page *page;
-
-               /* Here we assume that size is always PAGE_SIZE aligned and that the
-               ** virtual address is always PAGE_SIZE aligned, both assumptions should
-               ** be correct given the driver implementation.
-               */
-               while ( size >= 0 )
-               {
-                  down_read( &current->mm->mmap_sem );
-                  flush = get_user_pages( current,
-                                          current->mm,
-                                          (unsigned long)v_addr,
-                                          1, /* Get one page only. */
-                                          0,
-                                          0,
-                                          &page,
-                                          NULL );
-                  up_read( &current->mm->mmap_sem );
-
-                  if ( flush == 1 /* Got the page? */ )
-                  {
-                     flush_dcache_page( page );
-                     page_cache_release( page );
-                  }
-
-                  size -= PAGE_SIZE;
-                  v_addr += PAGE_SIZE;
-               }
-            }
->>>>>>> mps-lmp
 
             // L2 cache flush
             outer_clean_range( phys_addr,
@@ -3698,7 +2816,6 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
             phys_addr = (dma_addr_t)((uint32_t)resource->res_base_mem & 0x3FFFFFFF);
             phys_addr += (dma_addr_t)mm_vc_mem_phys_addr;
 
-<<<<<<< HEAD
             // L2 cache invalidate
             outer_inv_range( phys_addr,
                              phys_addr + (size_t)ioparam.size );
@@ -3708,10 +2825,6 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
             vcsm_vma_cache_clean_page_range((unsigned long)ioparam.addr,
                                             (unsigned long)ioparam.addr + ioparam.size );
             up_read( &current->mm->mmap_sem );
-=======
-            outer_inv_range( phys_addr,
-                             phys_addr + (size_t)ioparam.size );
->>>>>>> mps-lmp
          }
          else if ( resource == NULL )
          {
@@ -4033,11 +3146,8 @@ static int __init vc_sm_init( void )
       goto err_remove_cfg_entry;
    }
 
-<<<<<<< HEAD
    INIT_LIST_HEAD(&sm_state->map_list);
 
-=======
->>>>>>> mps-lmp
    /* Done!
    */
    goto out;
