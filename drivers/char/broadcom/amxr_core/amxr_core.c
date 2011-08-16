@@ -55,6 +55,7 @@
 
 #include <linux/broadcom/knllog.h>           /* For debugging */
 #include <linux/broadcom/amxr.h>             /* Audio mixer API */
+#include <linux/broadcom/amxr_port.h>
 #include <linux/errno.h>         	     /* Needed for -EINVAL */
 
 #include "amxr_resamp.h"                     /* Resampler definitions */
