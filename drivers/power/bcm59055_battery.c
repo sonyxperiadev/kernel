@@ -40,6 +40,7 @@ struct bcm59055_power {
 	int usb_cc;
 	int wac_cc;
 	enum power_supply_type power_src;
+	int charger_type;
 	struct delayed_work charger_insert_wq;
 	struct delayed_work batt_lvl_wq;
 
@@ -69,8 +70,6 @@ static enum power_supply_property bcm59055_battery_props[] = {
 	POWER_SUPPLY_PROP_VOLTAGE_MAX,
 	POWER_SUPPLY_PROP_VOLTAGE_NOW,
 	POWER_SUPPLY_PROP_VOLTAGE_MIN,
-	POWER_SUPPLY_PROP_HEALTH,
-	POWER_SUPPLY_PROP_TEMP
 };
 
 static enum power_supply_property bcm59055_wall_props[] = {
@@ -113,7 +112,6 @@ static int bcm59055_usb_get_property(struct power_supply *psy,
 	pr_debug("Inside %s\n", __func__);
 	switch (psp) {
 	case POWER_SUPPLY_PROP_ONLINE:
-		printk("Hello sale POWER SRC %d\n", bcm59055_power->power_src);
 		val->intval =
 		 (bcm59055_power->power_src ==
 		 POWER_SUPPLY_TYPE_USB) ? 1 : 0;
@@ -157,6 +155,10 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 	pr_debug("Inside %s\n", __func__);
 
 	switch (psp) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		val->intval =
+			(battery_data->power_src ==
+			 POWER_SUPPLY_TYPE_BATTERY) ? 1 : 0;
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = battery_data->batt_status;
 		break;
@@ -333,6 +335,16 @@ void pmu_set_usb_enum_current(int curr)
 }
 EXPORT_SYMBOL(pmu_set_usb_enum_current);
 
+int pmu_get_charger_type(void)
+{
+	int reg;
+	int type;
+	reg = bcm590xx_reg_read(pvt_data->bcm590xx, BCM59055_REG_MBCCTRL5);
+	type = ((reg >> 4) & 0x3);
+	return type;
+}
+EXPORT_SYMBOL(pmu_get_charger_type);
+
 static void bcm59055_power_isr(int intr, void *data)
 {
 	int val = 0;
@@ -342,7 +354,9 @@ static void bcm59055_power_isr(int intr, void *data)
 
 	switch (intr) {
 	case BCM59055_IRQID_INT2_CHGINS:
+		pr_info("%s: WAC insert interrupt\n", __func__);
 		battery_data->power_src = POWER_SUPPLY_TYPE_MAINS;
+		battery_data->charger_type = pmu_get_charger_type();
 		val = bcm590xx_reg_read(bcm59055, BCM59055_REG_ENV3);
 		if (!(val & P_CHGOV)) {
 			val = bcm590xx_reg_read(bcm59055, BCM59055_REG_MBCCTRL11);
@@ -357,9 +371,17 @@ static void bcm59055_power_isr(int intr, void *data)
 			pr_info("%s: WAC Over Voltage\n", __func__);
 		/* Need to start NTC block on after detecting the charger */
 		bcm59055_saradc_enable_ntc_block();
+		if (bcm59055->pdata->pmu_event_cb)
+			bcm59055->pdata->pmu_event_cb(BCM590XX_CHARGER_INSERT, POWER_SUPPLY_TYPE_USB);
 		break;
 	case BCM59055_IRQID_INT2_USBINS:
 		battery_data->power_src = POWER_SUPPLY_TYPE_USB;
+		battery_data->charger_type = pmu_get_charger_type();
+		pr_info("%s: USB insert interrupt, USB type %d\n", __func__, battery_data->charger_type);
+		pr_info("USB Type (0=UNKNOWN, 1=SDP, 2=CDP & 3=DCP)\n");
+		/* TODO: in case USB type is 0, BCLDO needs to be turned on
+		 * and the algo needs to be implemented
+		*/
 		val = bcm590xx_reg_read(bcm59055, BCM59055_REG_ENV3);
 		if (!(val & P_USBOV)) {		/* NO USB OV */
 			val = bcm590xx_reg_read(bcm59055, BCM59055_REG_MBCCTRL10);
@@ -375,14 +397,18 @@ static void bcm59055_power_isr(int intr, void *data)
 
 		/* Need to start NTC block on after detecting the charger */
 		bcm59055_saradc_enable_ntc_block();
+		if (bcm59055->pdata->pmu_event_cb)
+			bcm59055->pdata->pmu_event_cb(BCM590XX_CHARGER_INSERT, POWER_SUPPLY_TYPE_USB);
 		break;
 	case BCM59055_IRQID_INT2_CHGRM:
+		pr_info("%s: WAC remove interrupt\n", __func__);
 		battery_data->power_src = POWER_SUPPLY_TYPE_BATTERY;
 		bcm59055_stop_charging(bcm59055, POWER_SUPPLY_TYPE_MAINS);
 		/* Need to stop NTC block on after detecting the charger */
 		bcm59055_saradc_disable_ntc_block();
 		break;
 	case BCM59055_IRQID_INT2_USBRM:
+		pr_info("%s: USB remove interrupt\n", __func__);
 		battery_data->power_src = POWER_SUPPLY_TYPE_BATTERY;
 		bcm59055_stop_charging(bcm59055, POWER_SUPPLY_TYPE_USB);
 		battery_data->usb_cc = PRE_ENUM_CURRENT;
@@ -576,6 +602,8 @@ static int bcm59055_battery_remove(struct platform_device *pdev)
 
 	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_CHGINS);
 	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_CHGRM);
+	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_USBINS);
+	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_USBRM);
 	kfree(data);
 
 	return 0;

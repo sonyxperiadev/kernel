@@ -27,16 +27,14 @@
 
 #include <asm/io.h>
 #include <mach/io_map.h>
-#include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
+#include "bcm_hsotgctrl.h"
 
 struct bcm_otg_data {
 	struct device *dev;
 	struct bcm590xx *bcm590xx;
 	struct otg_transceiver xceiver;
 	bool host;
-	bool otg_init_done;
 	struct clk *otg_clk;
-	void *hsotg_ctrl_base;
 };
 
 #define xceiver_to_data(x) container_of((x), struct bcm_otg_data, xceiver);
@@ -44,41 +42,10 @@ struct bcm_otg_data {
 #define OTGCTRL1_VBUS_ON 0xDC
 #define OTGCTRL1_VBUS_OFF 0xD8
 
-static void bcm_otg_phy_set_vbus_stat(struct bcm_otg_data *otg_data,
-				      bool on)
-{
-	unsigned long reg;
-	void *hsotg_ctrl_base = otg_data->hsotg_ctrl_base;
+#define HOST_TO_PERIPHERAL_DELAY_MS 1000
+#define PERIPHERAL_TO_HOST_DELAY_MS 100
 
-	reg = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-
-	if (on) {
-		reg |= (HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
-			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK);
-	} else {
-		reg &= ~(HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
-			 HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK);
-	}
-
-	writel(reg, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-}
-
-static void bcm_otg_phy_set_id_stat(struct bcm_otg_data *otg_data,
-				    bool floating)
-{
-	unsigned long reg;
-	void *hsotg_ctrl_base = otg_data->hsotg_ctrl_base;
-
-	reg = readl(hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-
-	if (floating) {
-		reg |= HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK;
-	} else {
-		reg &= ~HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK;
-	}
-
-	writel(reg, hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
-}
+static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled) ;
 
 static void bcm_otg_set_vbus(struct bcm_otg_data *otg_data,
 			     bool on)
@@ -126,21 +93,15 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 	} else if (val == 0) {
 		dev_info(otg_data->dev, "Switching to Peripheral\n");
 		otg_data->host = false;
-		bcm_otg_phy_set_id_stat(otg_data, true);
-		msleep(100);
-		bcm_otg_set_vbus(otg_data, false);
-		bcm_otg_phy_set_vbus_stat(otg_data, false);
-		msleep(500);
-		bcm_otg_phy_set_vbus_stat(otg_data, true);
+		bcm_hsotgctrl_phy_set_id_stat(true);
+		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
+		bcm_hsotgctrl_phy_set_vbus_stat(true);
 	} else {
 		dev_info(otg_data->dev, "Switching to Host\n");
 		otg_data->host = true;
-		bcm_otg_phy_set_vbus_stat(otg_data, false);
-		msleep(100);
-		bcm_otg_phy_set_id_stat(otg_data, false);
-		msleep(500);
-		bcm_otg_set_vbus(otg_data, true);
-		bcm_otg_phy_set_vbus_stat(otg_data, true);
+		bcm_hsotgctrl_phy_set_vbus_stat(false);
+		msleep(PERIPHERAL_TO_HOST_DELAY_MS);
+		bcm_hsotgctrl_phy_set_id_stat(false);
 	}
 
 	return result < 0 ? result : count;
@@ -148,6 +109,21 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 
 static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcm_otg_host_show,
 		   bcm_otg_host_store);
+
+static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled)
+{
+	struct bcm_otg_data *otg_data = dev_get_drvdata(otg->dev);
+
+	if (NULL == otg_data)
+		return -EINVAL;
+
+	/* The order of these function calls has temporarily been
+	 * swapped due to overcurrent issue caused by slow I2C
+	 * operations. I2C operations take >200ms to complete */
+	bcm_hsotgctrl_phy_set_vbus_stat(enabled);
+	bcm_otg_set_vbus(otg_data, enabled);	
+	return 0;
+}
 
 static int __devinit bcm_otg_probe(struct platform_device *pdev)
 {
@@ -176,14 +152,7 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
-	otg_data->hsotg_ctrl_base = ioremap(HSOTG_CTRL_BASE_ADDR, SZ_4K);
-	if (!otg_data->hsotg_ctrl_base) {
-		dev_warn(&pdev->dev, "IO remap failed\n");
-		clk_put(otg_data->otg_clk);
-		kfree(otg_data);
-		return -ENOMEM;
-	}
-
+	otg_data->xceiver.set_vbus = bcm_otg_control_vbus;
 	otg_set_transceiver(&otg_data->xceiver);
 
 	platform_set_drvdata(pdev, otg_data);
@@ -200,7 +169,6 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 	return 0;
 
 Error_bcm_otg_probe:
-	iounmap(otg_data->hsotg_ctrl_base);
 	clk_put(otg_data->otg_clk);
 	kfree(otg_data);
 	return error;
@@ -212,7 +180,6 @@ static int __exit bcm_otg_remove(struct platform_device *pdev)
 
 	device_remove_file(otg_data->dev, &dev_attr_host);
 
-	iounmap(otg_data->hsotg_ctrl_base);
 	clk_put(otg_data->otg_clk);
 	kfree(otg_data);
 

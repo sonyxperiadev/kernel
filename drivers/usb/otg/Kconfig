@@ -72,6 +72,7 @@ config NOP_USB_XCEIV
 config USB_BCM_OTG
        tristate "Broadcom USB Transceiver Driver"
        depends on MFD_BCM_PMU590XX
+       select USB_OTG
        select USB_OTG_UTILS
        help
          Enable this to support Broadcom USB OTG transceiver

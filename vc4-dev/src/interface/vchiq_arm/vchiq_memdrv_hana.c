@@ -48,7 +48,11 @@ static int __devinit vchiq_memdrv_hana_interface_probe( struct platform_device *
      * This needs to be moved up into vchiq_memdrv.c
     */
 
+<<<<<<< HEAD
     if ( vchiq_userdrv_create_instance( &platform_data->memdrv.common ) != VCHIQ_SUCCESS )
+=======
+    if ( vchiq_userdrv_create_instance( &platform_data->memdrv.common) != VCHIQ_SUCCESS )
+>>>>>>> mps-lmp
     {
         printk( KERN_ERR "vchiq_memdrv_hana: Failed to create vchiq instance for '%s'\n",
                 name );
@@ -77,6 +81,7 @@ static int vchiq_memdrv_hana_interface_remove( struct platform_device *pdev )
 
 /****************************************************************************
 *
+<<<<<<< HEAD
 * vchiq_memdrv_hana_interface_suspend
 *
 *   Pass the suspend call down to the implementation.
@@ -119,6 +124,8 @@ static int vchiq_memdrv_hana_interface_resume( struct platform_device *pdev )
 
 /****************************************************************************
 *
+=======
+>>>>>>> mps-lmp
 * vchiq_memdrv_hana_interface_driver
 *
 *   Register a "driver". We do this so that the probe routine will be called
@@ -130,8 +137,11 @@ static struct platform_driver vchiq_memdrv_hana_interface_driver =
 {
     .probe          = vchiq_memdrv_hana_interface_probe,
     .remove         = vchiq_memdrv_hana_interface_remove,
+<<<<<<< HEAD
     .suspend        = vchiq_memdrv_hana_interface_suspend,
     .resume         = vchiq_memdrv_hana_interface_resume,
+=======
+>>>>>>> mps-lmp
     .driver = {
         .name	    = "vchiq_memdrv_hana",
     }

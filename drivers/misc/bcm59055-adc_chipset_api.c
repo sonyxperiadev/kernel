@@ -40,16 +40,16 @@
 #include <linux/ioctl.h>
 #include <linux/uaccess.h>
 #include <linux/err.h>
+#include <linux/delay.h>
 #include <linux/semaphore.h>
 #include <linux/platform_device.h>
 #include <linux/mfd/bcm590xx/core.h>
 //#include <linux/workqueue.h>
 #include <linux/semaphore.h>
-//#include <mach/irqs.h>
 #include <linux/stringify.h>
 #include <linux/proc_fs.h>
+#include <linux/csapi_adc.h>
 #include <linux/broadcom/bcm59055-adc.h>
-#include <linux/broadcom/bcm59055-adc_chipset_api.h>
 #include <linux/broadcom/bcm59055-adc_chipset_hw.h>
 #include <linux/broadcom/bcm59055-fuelgauge.h>
 
@@ -63,6 +63,17 @@
 #ifdef VENDOR_ADC_KELVIN_DOWN_TABLE
     int VENDOR_ADC_kelvin_down_table[] = VENDOR_ADC_KELVIN_DOWN_TABLE;
 #endif
+
+s32 hal_adc_cal_calc_dalton (struct csapi_cal_req * Data);
+
+typedef s32 (*CSAPI_ADC_HW_CAL_CALC_FUNC) (struct csapi_cal_req * Data);
+#ifdef VENDOR_ADC_CAL_FUNCTION
+CSAPI_ADC_HW_CAL_CALC_FUNC hal_adc_hw_cal_calc_func = VENDOR_ADC_CAL_FUNCTION;
+#else
+CSAPI_ADC_HW_CAL_CALC_FUNC hal_adc_hw_cal_calc_func = NULL;
+#endif
+
+#define CSAPI_ADC_ERR_SUCCESS 0
 
 static int bsearch_descending_int_table(int* table, int sz, int value);
 
@@ -128,6 +139,8 @@ struct bcm59055_adc_chipset_api {
 };
 
 static struct bcm59055_adc_chipset_api *bcm59055_adc_chipset_api=NULL;
+
+static int columb_counter = 0, ibat_avg = 0;
 
 void hal_adc_init_channels (u8 use_cal_data)
 {
@@ -401,77 +414,76 @@ static struct adc_channels_t * hal_adc_map_channel (struct adc_channels_t * chan
 
 	switch (channel) {
 #ifdef VENDOR_ADC_VBAT_SCALE_CHANNEL
-	case 0:	// temporary hack
-	case HAL_ADC_CHIPSET_VBAT:
+	case CSAPI_ADC_VBAT:
 		pchan = &channel_array [VENDOR_ADC_VBAT_SCALE_CHANNEL];
 		break;
 #endif
 #ifdef VENDOR_ADC_BSI_CHANNEL
 	// Main ADC (Used during phone calibration)
-	case HAL_ADC_MAIN_CAL:
+	case CSAPI_ADC_MAIN_CAL:
 	// Fall through (this is also the BSI ADC)
 	// Battery Size Identification 
-	case HAL_ADC_CHIPSET_BSI:
+	case CSAPI_ADC_BSI:
 		pchan = &channel_array [VENDOR_ADC_BSI_CHANNEL];
 		break;
 #endif
 #ifdef VENDOR_ADC_BTEMP_CHANNEL
 	// Battery TEMPerature
-	case HAL_ADC_CHIPSET_BTEMP:
+	case CSAPI_ADC_BTEMP:
 		pchan = &channel_array [VENDOR_ADC_BTEMP_CHANNEL];	
 		break;
 #endif
 	// Power Amplifier TEMPerature
 #ifdef VENDOR_ADC_PATEMP_CHANNEL
-	case HAL_ADC_CHIPSET_PATEMP:
+	case CSAPI_ADC_PATEMP:
 		pchan = &channel_array [VENDOR_ADC_PATEMP_CHANNEL]; 
 		break;
 #endif
 #ifdef VENDOR_ADC_X32TEMP_CHANNEL
-	case HAL_ADC_CHIPSET_VCXOTEMP:
+	case CSAPI_ADC_CTEMP:
 		pchan = &channel_array [VENDOR_ADC_X32TEMP_CHANNEL]; 
 		break;
 #endif
 #ifdef VENDOR_ADC_VCHAR_CHANNEL
-	case HAL_ADC_CHIPSET_VCHAR:
+	case CSAPI_ADC_VCHAR:
 		pchan = &channel_array [VENDOR_ADC_VCHAR_CHANNEL]; 
 		break;
 #endif
 #ifdef VENDOR_ADC_VBUS_CHANNEL
-	case HAL_ADC_CHIPSET_VBUS:
+	case CSAPI_ADC_VBUS:
 		pchan = &channel_array [VENDOR_ADC_VBUS_CHANNEL]; 
 		break;
 #endif
 #ifdef VENDOR_ADC_IBAT_CHANNEL
-	case HAL_ADC_CHIPSET_IBAT_FAST:
+	case CSAPI_ADC_IBAT:
 		pchan = &channel_array [VENDOR_ADC_IBAT_CHANNEL]; 
 		break;
 #endif
 #ifdef VENDOR_ADC_VBBAT_CHANNEL
-	case HAL_ADC_CHIPSET_VBACK:
+	case CSAPI_ADC_VBACK:
 		pchan = &channel_array [VENDOR_ADC_VBBAT_CHANNEL]; 
 		break;
 #endif
 #ifdef VENDOR_ADC_ID_CHANNEL
-	case HAL_ADC_CHIPSET_IDDET:
+	case CSAPI_ADC_IDIN:
 		pchan = &channel_array [VENDOR_ADC_ID_CHANNEL]; 
 		break;
 #endif
 #ifdef VENDOR_ADC_BSI_COMP_CHANNELS
-	case HAL_ADC_CHIPSET_VENDOR_CH_0:
-		pchan = &channel_array [VENDOR_ADC_BSI_COMP_CHANNEL_1];	
+	case CSAPI_ADC_VENDOR_CH_0:
+		pchan = &channel_array [VENDOR_ADC_BSI_CAL_L_CHANNEL];	
 		pchan->unit.unit = adc_unit_bom;
 		break;
-	case HAL_ADC_CHIPSET_VENDOR_CH_1:
-		pchan = &channel_array [VENDOR_ADC_BSI_COMP_CHANNEL_2];	
+	case CSAPI_ADC_VENDOR_CH_1:
+		pchan = &channel_array [VENDOR_ADC_BSI_CAL_H_CHANNEL];	
 		pchan->unit.unit = adc_unit_bom;
 		break;
-	case HAL_ADC_CHIPSET_VENDOR_CH_2:
-		pchan = &channel_array [VENDOR_ADC_ADC_COMP_CHANNEL_1];	
+	case CSAPI_ADC_VENDOR_CH_2:
+		pchan = &channel_array [VENDOR_ADC_NTC_CAL_L_CHANNEL];	
 		pchan->unit.unit = adc_unit_bom;
 		break;
-	case HAL_ADC_CHIPSET_VENDOR_CH_3:
-		pchan = &channel_array [VENDOR_ADC_ADC_COMP_CHANNEL_2];	
+	case CSAPI_ADC_VENDOR_CH_3:
+		pchan = &channel_array [VENDOR_ADC_NTC_CAL_H_CHANNEL];	
 		pchan->unit.unit = adc_unit_bom;
 		break;
 #endif
@@ -480,6 +492,7 @@ static struct adc_channels_t * hal_adc_map_channel (struct adc_channels_t * chan
 		pchan->unit.unit = adc_unit_bom;
 		break;
 	}
+	printk (KERN_INFO "%s, Nokia channel %d, pChan 0x%x", __func__, channel, (u32)pchan );
 	return pchan;
 }
 
@@ -500,39 +513,96 @@ static u16 read_hk_adc (int physical_channel)
 		return 0;
 }
 
-#if 0
-static u16 read_rtm_adc (int physical_channel)
+
+static int read_rtm_adc (int physical_channel)
 {
 	int reading;
-	if (physical_channel <= ADC_ALS_CHANNEL) {
-		do {
-			reading = bcm59055_saradc_read_data (physical_channel);
-			if (reading < 0) {
-			
-			}
-		} while (reading < 0);
-		return reading;
-	}
-	else 
-		return 0;
+	do {
+		reading = bcm59055_saradc_request_rtm (physical_channel);
+		//printk (KERN_INFO "%s: reading %d", reading);
+		if (reading < 0) {
+			mdelay (20);
+		}
+	} while (reading < 0);
+	return reading;
 }
-#endif
 
+/* Update_columb */
+/* Returns average current consumption */
+/* updates the static variable columb with the values from the fuel gauge */
+static int update_columb (void)
+{
+	u32 fg_accm;
+	u16 fg_cnt, fg_sleep_cnt;
+	u8 signbit;
+	int smpl_time, samples;
+	int ret;
 
-int bcm59055_hal_adc_raw_read (u8 channel, u32* value, HAL_ADC_CALLBACK adc_handler, void* context)
+	/* Get the value from the fuel gauge */
+	bcm59055_fg_init_read ();
+	ret = bcm59055_fg_read_soc(&fg_accm, &fg_cnt, &fg_sleep_cnt);
+
+	printk (KERN_INFO "%s: raw data: %x, %d, %d\n", __func__, fg_accm, fg_cnt, fg_sleep_cnt);
+
+	if (ret < 0) { /* || !(fg_accm & BCM59055_REG_FGACCM_VALID)) { */
+		return ibat_avg;
+	}
+	/* Calculate for how long the FG has been averaging */
+	/* Time (ms) = FGCNT * 500 + FGSLEEPCNT * 32 */
+	smpl_time = fg_cnt * 500 + fg_sleep_cnt * 32; 
+	/* if time == 0, return the previous value */
+	if (smpl_time < 500) {
+		return ibat_avg;
+	}
+
+	samples = smpl_time / 500;
+
+	signbit = (fg_accm & BCM59055_REG_FGACCM_SIGNBIT) ? 1:0;
+	/* Calculate the amount of columbs (almost mC) - or multiply it with 976 to get uC */
+	/* Right now it is stored with a sign bit in bit 26 */
+	if (signbit) {
+		fg_accm = (fg_accm & BCM59055_REG_FGACCM_VALMASK) - 1;
+		fg_accm = (~fg_accm) & BCM59055_REG_FGACCM_VALMASK;
+	}
+	else {
+		fg_accm &= BCM59055_REG_FGACCM_VALMASK;
+	}
+
+	fg_accm *= 976; /* To make it uC */
+	/* Adjust fg_accm for sleep current */
+	fg_accm /= 1000; 
+	/* Update the final columb counter */
+	if (signbit) {
+		ibat_avg = -(fg_accm / samples); 
+		columb_counter += (ibat_avg * smpl_time)/1000;
+	}
+	else {
+		ibat_avg = fg_accm / samples; 
+		columb_counter += (ibat_avg * smpl_time)/1000; 
+	}
+	/* Calculate the average current consumption - right now it is uC/ms = mA*/
+	
+	printk (KERN_INFO "%s: fg_accm %d, ibat_avg %d, signbit %d, smpltime %d\n", __func__, fg_accm, ibat_avg, signbit, smpl_time);
+
+	/* Return new average current */
+	return ibat_avg;
+}
+
+int csapi_adc_raw_read(struct csapi_cli *cli,
+		       u8 cha, u32 *val, csapi_cb cb, void *ptr)
 {
 #if 0
- if ((channel >= 50) && (channel < 100) ) 
+ if ((cha >= 50) && (cha < 100) ) 
  {
 	*value = glue_selftest_debug_executer(channel);
-	return HAL_ADC_ERR_SUCCESS;
+	return CSAPI_ADC_ERR_SUCCESS;
  }
  else 
 #endif
  {
 	struct adc_channels_t * pchan;
 	u32 reading, overflow;
-	int status = HAL_ADC_ERR_SUCCESS;
+	int status = CSAPI_ADC_ERR_SUCCESS;
 #if 0
 	static u32 ibat_last_sample_time = 0;
 	u32 current_time;
@@ -541,16 +611,24 @@ int bcm59055_hal_adc_raw_read (u8 channel, u32* value, HAL_ADC_CALLBACK adc_hand
 	if (!bcm59055_adc_chipset_api)
 		return -ENOMEM;
 
-	pchan = hal_adc_map_channel (bcm59055_adc_chipset_api->adc_channels, channel);
-	GLUE_DBG (("hal_adc_raw_read: Reading Nokia channel %x, pchan %x", channel, pchan));
+	/* Special Nokia IBAT channels */
+	if (cha == CSAPI_ADC_IBAT_AVG) {
+		*val = update_columb ();
+		return CSAPI_ADC_ERR_SUCCESS;
+	}
+	if (cha == CSAPI_ADC_IBAT_CC) {
+		update_columb ();
+		*val = columb_counter;
+		return CSAPI_ADC_ERR_SUCCESS;
+	}
+
+	pchan = hal_adc_map_channel (bcm59055_adc_chipset_api->adc_channels, cha);
+	GLUE_DBG (("hal_adc_raw_read: Reading Nokia channel %x, pchan %x", cha, pchan));
 
 	if (!pchan) {
-		return HAL_ADC_ERR_NOTSUP;
+		return -ENODEV;
 	}
-	if (pchan->locked) {
-		*value = pchan->lockvalue;
-		return HAL_ADC_ERR_SUCCESS;
-	}
+
 #ifdef VENDOR_ADC_IBAT_CHANNEL	
 	if (pchan->unit.unit == adc_unit_ibat_k) {
 	    // Fuel gauge...
@@ -567,26 +645,24 @@ int bcm59055_hal_adc_raw_read (u8 channel, u32* value, HAL_ADC_CALLBACK adc_hand
 	        }
 	    }
 	    ibat_last_sample_time = current_time; 
+#endif	    
 	    // Read sampleB register...
 	    {
-	        i16 ibat;
-		PMU_FGSMPL_data_st_t data;
-		
-		data.type = PMU_FG_TYPE_SMPLB;
-		data.smpl = &ibat;
-	        fg_reading_in_progress = true;
+	        s16 ibat;
 
-		/*HAL_EM_PMU_Ctrl (EM_PMU_ACTION_READ_FGSMPL, &data, NULL);*/
-    	        down_interruptible (bcm59055_adc_chipset_api->fg_read_sem);
+
+			/*CSAPI_EM_PMU_Ctrl (EM_PMU_ACTION_READ_FGSMPL, &data, NULL);*/
+    	    /* down_interruptible (bcm59055_adc_chipset_api->fg_read_sem); */
 	    
+			bcm59055_fg_set_fgfrzsmpl ();
+			bcm59055_fg_read_sample (fg_smpl_raw, &ibat);
 	        ibat += 2;	/* For rounding... */
 	        ibat >>= 2;
-	        *value = ibat;
-	        fg_reading_in_progress = false;
-		GLUE_DBG (("hal_adc_raw_read: IBAT reading returns %d", ibat));
-                return HAL_ADC_ERR_SUCCESS;
+	        *val = ibat;
+	        //fg_reading_in_progress = false;
+			GLUE_DBG (("hal_adc_raw_read: IBAT reading returns %d", ibat));
+            return CSAPI_ADC_ERR_SUCCESS;
 	    }
-#endif	    
 	}
 #endif
 	
@@ -594,21 +670,36 @@ int bcm59055_hal_adc_raw_read (u8 channel, u32* value, HAL_ADC_CALLBACK adc_hand
 
 	reading = read_hk_adc (pchan->select);
 	if (reading == overflow) {
-		status = HAL_ADC_ERR_OVERFLOW;
+		status = -ERANGE;
 	}
 	else
-		status = HAL_ADC_ERR_SUCCESS;
-	*value = reading;
+		status = CSAPI_ADC_ERR_SUCCESS;
+	*val = reading;
 
-	if (adc_handler) {
-		adc_handler ((u32)status, *value, context);
+	if (cb) {
+		cb (cha, *val, status, ptr);
 		GLUE_DBG (("hal_adc_raw_read: returned from callback"));
 	}	
-	GLUE_DBG (("hal_adc_raw_read: Returning value %x, status %d, callback %x, context %x", *value, status, adc_handler, context));
+	GLUE_DBG (("hal_adc_raw_read: Returning value %x, status %d, callback %x, context %x", *val, status, adc_handler, ptr));
 	return status;
  }
 }
-EXPORT_SYMBOL(bcm59055_hal_adc_raw_read);
+EXPORT_SYMBOL(csapi_adc_raw_read);
+
+int csapi_adc_unit_read(struct csapi_cli *cli,
+			u8 cha, u32 *val, csapi_cb cb, void *ptr)
+{
+	int res;
+	u32 raw;
+	res = csapi_adc_raw_read (cli, cha, &raw, NULL, NULL);
+
+	if (res >= 0) {
+		*val = csapi_adc_unit_convert (cli, cha, raw);
+		return 0;
+	}
+	return res;
+}
+EXPORT_SYMBOL(csapi_adc_unit_read);
 
 static int bsearch_descending_int_table(int* table, int sz, int value)
 {
@@ -636,7 +727,8 @@ static int bsearch_descending_int_table(int* table, int sz, int value)
 	return res;
 }
 
-int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
+/*int bcm59055_hal_adc_unit_convert (u8 cha, u32 val)*/
+int csapi_adc_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
 {
 	struct adc_channels_t *chan;
 	int vread, temp_to_return=298, ibat_to_return, ibat, ibat_cal;
@@ -655,31 +747,24 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
 	if (!bcm59055_adc_chipset_api) {
 		return -ENOMEM;
 	}
-#if 0
-	if (adc_cal_channels) {
-		// use cal data
-		chan = hal_adc_map_channel (adc_cal_channels, channel);
-#ifdef VENDOR_ADC_TEMPERATURE_COMP_CHANNEL
-		stored_reference_reading = adc_cal_channels [8].unit.data.ohms.reference_reading;
-#endif
+
+	/* Special Nokia IBAT channels */
+	if (cha == CSAPI_ADC_IBAT_AVG || cha == CSAPI_ADC_IBAT_CC) {
+		return raw;
 	}
-	else
-#endif
-	{
-		// Use normal data
-		chan = hal_adc_map_channel (bcm59055_adc_chipset_api->adc_channels, channel);
+
+	chan = hal_adc_map_channel (bcm59055_adc_chipset_api->adc_channels, cha);
 #ifdef VENDOR_ADC_TEMPERATURE_COMP_CHANNEL
-		stored_reference_reading = bcm59055_adc_chipset_api->adc_channels [8].unit.data.ohms.reference_reading;
+	stored_reference_reading = bcm59055_adc_chipset_api->adc_channels [8].unit.data.ohms.reference_reading;
 #endif
-	}
 	if (!chan) {
-		return value;
+		return -ENODEV;
 	}
 	if (chan->locked) {
 		return chan->lockvalue;
 	}
 
-	vread = value * chan->unit.uvperlsb;
+	vread = raw * chan->unit.uvperlsb;
 	vread += chan->unit.offset;
 
 	GLUE_DBG (("hal_adc_unit_convert: value %d, unit %d, uv %d, vread = %d", value, chan->unit.unit, chan->unit.uvperlsb, vread));
@@ -695,9 +780,9 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
 				reference_reading += read_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
 				reference_reading += 2;			// Ensure correct rounding
 				reference_reading >>=2;			// Divide by four
-				value *= stored_reference_reading;
-				value /= reference_reading;
-				vread = value * chan->unit.uvperlsb + chan->unit.offset;	
+				raw *= stored_reference_reading;
+				raw /= reference_reading;
+				vread = raw * chan->unit.uvperlsb + chan->unit.offset;	
 				GLUE_DBG (("hal_adc_unit_convert: Temperature compensated value %d, reference_reading = %d, vread = %d", 
 						value, chan->unit.uvperlsb, reference_reading, vread));
 			}	
@@ -725,11 +810,11 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
 				reference_reading += read_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
 				reference_reading += 2;			// Ensure correct rounding
 				reference_reading >>=2;			// Divide by four
-				value *= chan->unit.data.ohms.reference_reading;
-				value /= reference_reading;
-				vread = value * chan->unit.uvperlsb + chan->unit.offset;	
+				raw *= chan->unit.data.ohms.reference_reading;
+				raw /= reference_reading;
+				vread = raw * chan->unit.uvperlsb + chan->unit.offset;	
 				GLUE_DBG (("hal_adc_unit_convert: Temperature compensated value %d, reference_reading = %d, vread = %d", 
-						value, chan->unit.uvperlsb, reference_reading, vread));
+						raw, chan->unit.uvperlsb, reference_reading, vread));
 			}	
 		}		
 #endif
@@ -745,45 +830,47 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
 			gain = chan->unit.uvperlsb;
 			offset = chan->unit.offset;
 			read1 = 0;
-			for (i=0; i<BSI_COMP_SAMPLES;) {
-				read0 = read_adc (VENDOR_ADC_BSI_COMP_CHANNEL_1);
+			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
+				read0 = read_rtm_adc (VENDOR_ADC_BSI_CAL_L_CHANNEL);
 				if (read0 != 0x3ff) {
 					read1 += read0;
 					i++;
 				}
 			}
-			read1 += BSI_COMP_SAMPLES/2;	// add samples/2 for rounding
-			read1 /= BSI_COMP_SAMPLES;	// Divide by the number of samples
+			read1 += VENDOR_ADC_COMP_SAMPLES/2;	// add samples/2 for rounding
+			read1 /= VENDOR_ADC_COMP_SAMPLES;	// Divide by the number of samples
 
 		    	read2 = 0;
-			for (i=0; i<BSI_COMP_SAMPLES;) {
-			    	read0 = read_adc (VENDOR_ADC_BSI_COMP_CHANNEL_2);
+			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
+			    	read0 = read_rtm_adc (VENDOR_ADC_BSI_CAL_H_CHANNEL);
 				if (read0 != 0x3ff) {
 					read2 += read0;
 					i++;
 				}
 			}
-			read2 +=BSI_COMP_SAMPLES/2;	// For rounding
-			read2 /=BSI_COMP_SAMPLES;	// Divide to get average
+			read2 +=VENDOR_ADC_COMP_SAMPLES/2;	// For rounding
+			read2 /=VENDOR_ADC_COMP_SAMPLES;	// Divide to get average
 		   
 		    	// Calculate uvperbit and offset
 		    	if (read1 != read2) {
 		            gain = ((VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE-VENDOR_ADC_BSI_COMP_LOW_VOLTAGE)*1000) / (read2 - read1);
 		            offset = VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE*1000 - (read2*gain);
 		    	}
-			vread = value * gain + offset;
+			vread = raw * gain + offset;
 			GLUE_DBG (("hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
-		    		value, read1, read2, gain, offset, vread,chan->unit.vmax));
+		    		val, read1, read2, gain, offset, vread,chan->unit.vmax));
+			printk (KERN_INFO "hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
+		    		raw, read1, read2, gain, offset, vread, chan->unit.vmax);
  
 		}
 #endif
 		//vread_f = vread;
-		if(channel == 0xfe) {
+		if(cha == CSAPI_ADC_MAIN_CAL) {
 			return vread;
 		}
 		// Read current consumption
-		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_IBAT_FAST, (u32*)&ibat, NULL, NULL);
-		ibat_cal = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_IBAT_FAST, ibat);
+		csapi_adc_raw_read (NULL, CSAPI_ADC_IBAT, (u32*)&ibat, NULL, NULL);
+		ibat_cal = csapi_adc_unit_convert (NULL, CSAPI_ADC_IBAT, ibat);
 		
 		vread += ((ibat_cal + 20)/40)*1000;	// compensate reading with the 25 mOhm in the FG and battery terminal
 		GLUE_DBG (("hal_adc_unit_convert: res - ibat %d, new vread %d", ibat_cal, vread));
@@ -820,8 +907,8 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
 				reference_reading += read_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
 				reference_reading += 2;			// Ensure correct rounding
 				reference_reading >>=2;			// Divide by four
-				value *= stored_reference_reading;
-				value /= reference_reading;
+				raw *= stored_reference_reading;
+				raw /= reference_reading;
 				vread = value * chan->unit.uvperlsb + chan->unit.offset;	
 				GLUE_DBG (("hal_adc_unit_convert: Temperature compensated value %d, reference_reading = %d, vread = %d", 
 						value, chan->unit.uvperlsb, reference_reading, vread));
@@ -878,15 +965,15 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
 		{
 			if (stored_reference_reading) {
 				u16 reference_reading = 0;
-				reference_reading += read_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
-				reference_reading += read_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
-				reference_reading += read_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
-				reference_reading += read_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
+				reference_reading += read_rtm_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
+				reference_reading += read_rtm_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
+				reference_reading += read_rtm_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
+				reference_reading += read_rtm_adc (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL);	
 				reference_reading += 2;			// Ensure correct rounding
 				reference_reading >>=2;			// Divide by four
-				value *= stored_reference_reading;
-				value /= reference_reading;
-				vread = value * chan->unit.uvperlsb + chan->unit.offset;	
+				raw *= stored_reference_reading;
+				raw /= reference_reading;
+				vread = raw * chan->unit.uvperlsb + chan->unit.offset;	
 				GLUE_DBG (("hal_adc_unit_convert: Temperature compensated value %d, reference_reading = %d, vread = %d", 
 						value, chan->unit.uvperlsb, reference_reading, vread));
 			}	
@@ -904,33 +991,33 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
 			gain = chan->unit.uvperlsb;
 			offset = chan->unit.offset;
 			read1 = 0;
-			for (i=0; i<BSI_COMP_SAMPLES;) {
-				read0 = read_adc (VENDOR_ADC_BSI_COMP_CHANNEL_1);
+			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
+				read0 = read_rtm_adc (VENDOR_ADC_BSI_CAL_L_CHANNEL);
 				if (read0 != 0x3ff) {
 					read1 += read0;
 					i++;
 				}
 			}
-			read1 += BSI_COMP_SAMPLES/2;	// add samples/2 for rounding
-			read1 /= BSI_COMP_SAMPLES;	// Divide by the number of samples
+			read1 += VENDOR_ADC_COMP_SAMPLES/2;	// add samples/2 for rounding
+			read1 /= VENDOR_ADC_COMP_SAMPLES;	// Divide by the number of samples
 
 		    	read2 = 0;
-			for (i=0; i<BSI_COMP_SAMPLES;) {
-			    	read0 = read_adc (VENDOR_ADC_BSI_COMP_CHANNEL_2);
+			for (i=0; i<VENDOR_ADC_COMP_SAMPLES;) {
+			    	read0 = read_rtm_adc (VENDOR_ADC_BSI_CAL_H_CHANNEL);
 				if (read0 != 0x3ff) {
 					read2 += read0;
 					i++;
 				}
 			}
-			read2 +=BSI_COMP_SAMPLES/2;	// For rounding
-			read2 /=BSI_COMP_SAMPLES;	// Divide to get average
+			read2 +=VENDOR_ADC_COMP_SAMPLES/2;	// For rounding
+			read2 /=VENDOR_ADC_COMP_SAMPLES;	// Divide to get average
 		   
 		    	// Calculate uvperbit and offset
 		    	if (read1 != read2) {
 		            gain = ((VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE-VENDOR_ADC_BSI_COMP_LOW_VOLTAGE)*1000) / (read2 - read1);
 		            offset = VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE*1000 - (read2*gain);
 		    	}
-			vread = value * gain + offset;
+			vread = raw * gain + offset;
 			GLUE_DBG (("hal_adc_unit_convert: Value %d, read1 %d, read2 %d, gain %d, offset %d, new vread %d, vmax %d",
 		    		value, read1, read2, gain, offset, vread,chan->unit.vmax));
  
@@ -999,14 +1086,14 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
         	return 0; /*hal_adc_get_bom_id ();*/
 	case adc_unit_ibat_k:
         {
-		int modifier = 0, reading = value;
+		int modifier = 0, reading = raw;
 		if (chan->unit.data.ibat_k.k) {
 			modifier = (chan->unit.data.ibat_k.k > 128) ? 768 + chan->unit.data.ibat_k.k : 1024 + chan->unit.data.ibat_k.k;
 			ibat_to_return = ((reading * modifier) / 1024) - chan->unit.offset;
 			GLUE_DBG (("hal_adc_unit_convert: ibat_to_return before negation and 976 modification %d", ibat_to_return));
 		}
 		else
-			ibat_to_return = value;
+			ibat_to_return = raw;
 		ibat_to_return = -((ibat_to_return*976)/1000);
 		GLUE_DBG (("hal_adc_unit_convert: value %d, modifier %d Offset %d, ibat %d", value, modifier, chan->unit.offset, ibat_to_return));
 	        return ibat_to_return;
@@ -1018,8 +1105,370 @@ int bcm59055_hal_adc_unit_convert (u8 channel, u32 value)
     return 0;
 
 }
-EXPORT_SYMBOL(bcm59055_hal_adc_unit_convert);
+EXPORT_SYMBOL(csapi_adc_unit_convert);
 
+int csapi_cal_unit_convert(struct csapi_cli *cli, u8 cha, u32 raw)
+{
+	return csapi_adc_unit_convert (cli, cha, raw);
+}
+EXPORT_SYMBOL(csapi_cal_unit_convert);
+
+int csapi_cal_unit_convert_lock(struct csapi_cli *cli, u8 cha, int val)
+{
+	struct adc_channels_t *chan;
+
+	chan = hal_adc_map_channel (bcm59055_adc_chipset_api->adc_channels, cha);
+
+	if (!chan) {
+		GLUE_DBG (("%s returns Not supported for channel %d", __func__, cha));
+		return -ENODEV;
+	}
+	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)chan);
+
+	chan->locked = true;
+	chan->lockvalue = val;
+	return 0;
+}
+EXPORT_SYMBOL(csapi_cal_unit_convert_lock);
+
+int csapi_cal_unit_convert_unlock(struct csapi_cli *cli, u8 cha)
+{
+	struct adc_channels_t *chan;
+
+	chan = hal_adc_map_channel (bcm59055_adc_chipset_api->adc_channels, cha);
+
+	if (!chan) {
+		GLUE_DBG (("%s returns Not supported for channel %d", __func__, cha));
+		return -ENODEV;
+	}
+	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)chan);
+
+	chan->locked = false;
+	chan->lockvalue = 0;
+	return 0;
+
+}
+EXPORT_SYMBOL(csapi_cal_unit_convert_unlock);
+
+int csapi_cal_data_get(struct csapi_cli *cli,
+		       u8 cha, u32 *id, u32 *p1, u32 *p2, u32 *p3)
+{
+	struct adc_channels_t * pchan;
+	
+    pchan = hal_adc_map_channel (bcm59055_adc_chipset_api->adc_channels, cha);
+
+	if (!pchan) {
+		GLUE_DBG (("hal_adc_cal_get returns Not supported for channel %d", cha));
+		return -ENODEV;
+	}
+	printk(KERN_INFO "%s: pchan 0x%x", __func__, (u32)pchan);
+	*p1 = 0;
+	*p2 = 0;
+	*p3 = 0;
+	*id = pchan->unit.cal_id;
+
+	switch (pchan->unit.unit) {
+	case adc_unit_volts:
+		*p1 = pchan->unit.uvperlsb;	// uV per step
+		*p2 = pchan->unit.offset; // Offset in uV
+		break;
+	case adc_unit_kelvin_down:
+	case adc_unit_kelvin_down_table:
+	case adc_unit_kelvin_up:
+		*p1 = pchan->unit.uvperlsb;	// uV per step
+		*p2 = pchan->unit.vmax;		// reference voltage, uV
+		break;
+	case adc_unit_ohms:
+		*p1 = pchan->unit.uvperlsb;				// uV per step
+		if (cha == CSAPI_ADC_MAIN_CAL) {
+			*p2=pchan->unit.offset;
+		}
+		else {
+			*p2 = pchan->unit.offset;	//
+			*p3 = pchan->unit.vmax;					// VNTC
+	#if !defined (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL)
+			*p3 = pchan->unit.vmax;
+	#else
+			*p3 = pchan->unit.data.ohms.reference_reading;
+	#endif
+		}
+		break;
+	case adc_unit_ibat_k:
+		{
+			s16 off;
+			*p1 = pchan->unit.data.ibat_k.k;
+			bcm59055_fg_read_offset (&off);
+			pchan->unit.offset = off;
+			*p2 = pchan->unit.offset;
+		}
+		break;
+	case adc_unit_amps:
+	case adc_unit_bom:
+	case adc_unit_unknown:
+		break;
+	}
+	GLUE_DBG (("hal_adc_cal_get for channel %d: Id %d, values %d, %d, %d", 
+			   cha, *identification, *p1, *p2, *p3));
+	return CSAPI_ADC_ERR_SUCCESS;
+}
+
+
+int csapi_cal_data_set(struct csapi_cli *cli,
+		       u8 cha, u32 id, u32 p1, u32 p2, u32 p3)
+{
+	struct adc_channels_t * pchan;
+	// Do we have a copy of the structure? If not, use primary structure as source.
+    pchan = hal_adc_map_channel (bcm59055_adc_chipset_api->adc_channels, cha);
+
+	if (!pchan) {
+		GLUE_DBG (("hal_adc_cal_get returns Not supported for channel %d", cha));
+		return -ENODEV;
+	}
+
+	pchan->unit.cal_id = id;
+
+	switch (pchan->unit.unit) {
+	case adc_unit_volts:
+		pchan->unit.uvperlsb = p1;	/* uV per step */
+		pchan->unit.offset = p2; 	/* Offset in uV */
+		break;
+	case adc_unit_kelvin_down:
+	case adc_unit_kelvin_down_table:
+	case adc_unit_kelvin_up:
+		pchan->unit.uvperlsb = p1;	// uV per step
+		pchan->unit.vmax = p2;		// reference voltage, uV
+		break;
+	case adc_unit_ohms:
+		pchan->unit.uvperlsb = p1;				// uV per step
+		if (cha == CSAPI_ADC_MAIN_CAL) {
+			pchan->unit.offset = p2;
+		}
+		else {
+			pchan->unit.offset = p2;	//
+	#if !defined (VENDOR_ADC_TEMPERATURE_COMP_CHANNEL)
+			pchan->unit.vmax = p3;					// VNTC
+	#else
+			pchan->unit.data.ohms.reference_reading = p3;
+	#endif
+		}
+		break;
+	case adc_unit_ibat_k:
+		pchan->unit.data.ibat_k.k = p1;
+		bcm59055_fg_write_gain_trim (pchan->unit.data.ibat_k.k);
+		pchan->unit.offset = p2;
+		/* shouldn't we get it from the PMU it self? */
+		break;
+	case adc_unit_amps:
+	case adc_unit_bom:
+	case adc_unit_unknown:
+		break;
+
+	}
+	GLUE_DBG (("hal_adc_cal_get for channel %d: Id %d, values %d, %d, %d", 
+			   cha, identification, p1, p2, p3));
+	return CSAPI_ADC_ERR_SUCCESS;
+}
+
+
+
+
+s32 hal_adc_cal_calc_dalton (struct csapi_cal_req * Data)
+{
+	struct adc_channels_t *pchan = NULL;
+	struct adc_channels_t *adc_channels = bcm59055_adc_chipset_api->adc_channels;
+	u32 vapplied_uv;
+	u8 element;
+
+#ifdef VENDOR_ADC_BSI_CHANNEL
+	//uint32 vbsi_val1, vbsi_val2;
+	u32 vbsi_pullup;
+#endif
+#ifdef VENDOR_ADC_VBAT_SCALE_CHANNEL
+	u32 vbat_val1 = 0, vbat_read1 = 0;
+	s32 vbat_val_diff, vbat_read_diff;
+#endif
+#ifdef VENDOR_ADC_VCHAR_CHANNEL
+	u32 vchar_val1 = 0, vchar_read1 = 0;
+	s32 vchar_val_diff, vchar_read_diff;
+#endif
+
+
+	GLUE_DBG (("hal_adc_cal_calc_dalton: NumberOfElements %d", Data->NumberOfElements));
+
+	if (!Data->size) {
+		return -EINVAL;
+
+	}
+	for (element=0; element < Data->size; element++) {
+#if 0
+		pchan = hal_adc_map_channel (adc_cal_channels, Data->data [element].Channel);
+#else
+		pchan = hal_adc_map_channel (adc_channels, Data->data [element].cha);
+#endif
+		if (!pchan) {
+			return -ENODEV;
+		}
+		pchan->unit.cal_id = Data->data [element].id;
+		switch (Data->data [element].cha) {
+		
+#ifdef VENDOR_ADC_BSI_CHANNEL
+		case CSAPI_ADC_BSI:
+			// Get the two reference values from the ADC 
+		    {
+#ifdef VENDOR_ADC_BSI_COMP_CHANNELS
+		    	u16 read1, read2, i;
+
+		    	// Read the two ADC channels
+			read1 = 0;
+			for (i=0; i<VENDOR_ADC_COMP_SAMPLES; i++) {
+				read1 += read_rtm_adc (VENDOR_ADC_BSI_CAL_L_CHANNEL);
+			}
+			read1 += VENDOR_ADC_COMP_SAMPLES/2;	// add samples/2 for rounding
+			read1 /= VENDOR_ADC_COMP_SAMPLES;	// Divide by the number of samples
+
+		    	read2 = 0;
+			for (i=0; i<VENDOR_ADC_COMP_SAMPLES; i++) {
+			    	read2 += read_rtm_adc (VENDOR_ADC_BSI_CAL_H_CHANNEL);
+			}
+			read2 +=VENDOR_ADC_COMP_SAMPLES/2;	// For rounding
+			read2 /=VENDOR_ADC_COMP_SAMPLES;	// Divide to get average
+		   
+		    	// Calculate uvperbit and offset
+		    	if (read1 != read2) {
+		            pchan->unit.uvperlsb = ((VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE-VENDOR_ADC_BSI_COMP_LOW_VOLTAGE)*1000) / (read2 - read1);
+		            pchan->unit.offset = VENDOR_ADC_BSI_COMP_HIGH_VOLTAGE*1000 - (read2*pchan->unit.uvperlsb);
+		            GLUE_DBG (("adc_cal_calc_dalton: read1 %d, read2 %d, gain %d, offset %d",
+		    	   	    read1, read2, pchan->unit.uvperlsb, pchan->unit.offset));
+		    	}
+		    	else {
+		            GLUE_DBG (("adc_cal_calc_dalton: Unable to get reference channel readings"));
+		        }
+
+#endif
+
+		    	// Calculate the BSI_VREF based on the three readings
+		    	vbsi_pullup = (Data->data[element].raw * pchan->unit.uvperlsb + pchan->unit.offset) * (pchan->unit.data.ohms.rpullup / 1000);
+		    	vbsi_pullup /= Data->data [element].ref;
+		    	vbsi_pullup *= 1000;	// Overflow 'danger' has passed, go back to uV
+		    	vbsi_pullup += Data->data[element].raw * pchan->unit.uvperlsb + pchan->unit.offset;
+			pchan->unit.vmax = vbsi_pullup;
+		    }
+		    break;
+#endif		
+
+#ifdef VENDOR_ADC_VBAT_SCALE_CHANNEL
+		case CSAPI_ADC_VBAT:
+			// Even though we're not supposed to implement it in Dalton, then the possibility doesn't harm 
+			if (!vbat_read1) {
+				// Store values for later reference...
+				vbat_read1 = Data->data [element].raw;
+				vbat_val1 = Data->data [element].ref;
+
+				vapplied_uv = Data->data [element].ref;		
+				vapplied_uv *= 1000;		// Make it microvolts
+				adc_channels [VENDOR_ADC_VBAT_SCALE_CHANNEL].unit.uvperlsb = vapplied_uv / Data->data [element].raw;
+				adc_channels [VENDOR_ADC_VBAT_SCALE_CHANNEL].unit.offset = 0;
+				GLUE_DBG (("hal_adc_cal_calc_dalton: VBAT one point: ref. %d, reading %d, Applied %d, uvperlsb %d",
+						   Data->data [element].ref, Data->data [element].raw, vapplied_uv, adc_cal_channels [6].unit.uvperlsb));
+			} else {
+				// Two point calibration
+				vapplied_uv = Data->data [element].ref * 1000;		// Make it microvolts
+				vbat_val1 *= 1000;	// also microvolts
+				vbat_val_diff = vapplied_uv - vbat_val1;
+				vbat_read_diff = Data->data [element].raw - vbat_read1;
+				adc_channels [VENDOR_ADC_VBAT_SCALE_CHANNEL].unit.uvperlsb = vbat_val_diff / vbat_read_diff;
+
+				adc_channels [VENDOR_ADC_VBAT_SCALE_CHANNEL].unit.offset = vbat_val1 - (adc_channels [VENDOR_ADC_VBAT_SCALE_CHANNEL].unit.uvperlsb * vbat_read1);
+				GLUE_DBG (("hal_adc_cal_calc_dalton: VBAT two point: voltages (%d, %d), references (%d, %d)",
+						   vapplied_uv, vbat_val1, Data->data [element].raw, vbat_read1));
+				GLUE_DBG (("hal_adc_cal_calc_dalton: VBAT two point: uvperlsb %d, offset %d",
+						   adc_channels [VENDOR_ADC_VBAT_SCALE_CHANNEL].unit.uvperlsb, adc_cal_channels [VENDOR_ADC_VBAT_SCALE_CHANNEL].unit.offset));
+			}
+			break;
+#endif
+		
+#ifdef VENDOR_ADC_BTEMP_CHANNEL
+		case CSAPI_ADC_BTEMP:
+			break;
+#endif
+#ifdef VENDOR_ADC_VCHAR_CHANNEL
+		case CSAPI_ADC_VCHAR:
+			if (!vbat_read1) {
+				// Store values for later reference...
+				vchar_read1 = Data->data [element].raw;
+				vchar_val1 = Data->data [element].ref;
+
+				vapplied_uv = Data->data [element].ref;		
+				vapplied_uv *= 1000;		// Make it microvolts
+				adc_channels [VENDOR_ADC_VCHAR_CHANNEL].unit.uvperlsb = vapplied_uv / Data->data [element].raw;
+				adc_channels [VENDOR_ADC_VCHAR_CHANNEL].unit.offset = 0;
+				GLUE_DBG (("hal_adc_cal_calc_dalton: VCHAR one point: ref. %d, reading %d, Applied %d, uvperlsb %d",
+						   Data->data [element].ref, Data->data [element].raw, vapplied_uv, adc_channels [VENDOR_ADC_VCHAR_CHANNEL].unit.uvperlsb));
+			} else {
+				// Two point calibration
+				vapplied_uv = Data->data [element].ref * 1000;		// Make it microvolts
+				vchar_val1 *= 1000;	// also microvolts
+				vchar_val_diff = vapplied_uv - vchar_val1;
+				vchar_read_diff = Data->data [element].raw - vchar_read1;
+				adc_channels [VENDOR_ADC_VCHAR_CHANNEL].unit.uvperlsb = vchar_val_diff / vchar_read_diff;
+
+				adc_channels [VENDOR_ADC_VCHAR_CHANNEL].unit.offset = vchar_val1 - (adc_channels [VENDOR_ADC_VCHAR_CHANNEL].unit.uvperlsb * vbat_read1);
+				GLUE_DBG (("hal_adc_cal_calc_dalton: VCHAR two point: voltages (%d, %d), references (%d, %d)",
+						   vapplied_uv, vbat_val1, Data->data [element].raw, vbat_read1));
+				GLUE_DBG (("hal_adc_cal_calc_dalton: VCHAR two point: uvperlsb %d, offset %d",
+						   adc_channels [VENDOR_ADC_VCHAR_CHANNEL].unit.uvperlsb, adc_channels [VENDOR_ADC_VCHAR_CHANNEL].unit.offset));
+			}
+			break;
+#endif
+#ifdef VENDOR_ADC_IBAT_CHANNEL
+		case CSAPI_ADC_IBAT:
+			if (pchan->unit.unit == adc_unit_amps) {
+				// classical RSHUNT calibration - not implemented
+				break;
+			}
+			if (pchan->unit.unit == adc_unit_ibat_k) {
+				s16 fgoffset;
+				bcm59055_fg_read_offset(&fgoffset);
+				GLUE_DBG (("hal_Adc_cal_calc_dalton: IBAT K calibration: FGOFFSET read from the PMU: 0x%x", fgoffset));
+				fgoffset >>= 2;
+				GLUE_DBG (("hal_Adc_cal_calc_dalton: IBAT K calibration: Converted FGOFFSET: 0x%x", fgoffset));
+				// k is defined as IBAT(measured)*1024/IBAT(reading-offset) % 256
+				adc_channels [VENDOR_ADC_IBAT_CHANNEL].unit.data.ibat_k.k = ((Data->data [element].ref * 1024) / ((Data->data [element].raw - fgoffset)*976/1000)) % 256; 
+				adc_channels [VENDOR_ADC_IBAT_CHANNEL].unit.offset = fgoffset;
+				GLUE_DBG (("hal_Adc_cal_calc_dalton: IBAT K calibration: Reading %d, reference value %d, k %d, offset %d",
+							Data->data [element].raw, Data->data [element].ref, adc_cal_channels[VENDOR_ADC_IBAT_CHANNEL].unit.data.ibat_k.k,
+							adc_channels [VENDOR_ADC_IBAT_CHANNEL].unit.offset )); 
+				bcm59055_fg_write_gain_trim (adc_channels [VENDOR_ADC_IBAT_CHANNEL].unit.data.ibat_k.k);
+
+			}
+			break;
+#endif
+        default:
+            return -EINVAL;
+		}
+	}
+    return CSAPI_ADC_ERR_SUCCESS;
+}
+
+/*s32 bcm59055_adc_cal_calc(struct CSAPI_ADC_CAL_DATA_TYPE * Data)*/
+int csapi_cal_calc(struct csapi_cal_req *req)
+{
+	// Allocate copy of structure
+#if 0
+	if (!adc_cal_channels) {
+		adc_cal_channels = malloc (VENDOR_ADC_NUM_CHANNELS * sizeof (adc_channels_t));
+		assert (adc_cal_channels);
+		memcpy (adc_cal_channels, adc_channels, VENDOR_ADC_NUM_CHANNELS * sizeof (adc_channels_t));
+	}
+#endif
+	if (hal_adc_hw_cal_calc_func) {
+		return hal_adc_hw_cal_calc_func (req);
+	}
+	else {
+		return -EINVAL;
+	}
+}
+EXPORT_SYMBOL(csapi_cal_calc);
 /* Debug interface */
 
 static int bcm59055_adc_chipset_open(struct inode *inode, struct file *file)
@@ -1043,14 +1492,20 @@ static int bcm59055_adc_chipset_ioctl(struct inode *inode, struct file *file,
 	return 0;
 }
 
-#define MAX_USER_INPUT_LEN      100
+#define MAX_USER_INPUT_LEN      256
+#define MAX_ARGS 25
 
 static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *buffer,
 	size_t len, loff_t *offset)
 {
 	/*struct bcm59055_adc_chipset_api *data = file->private_data;*/
 	/*struct adc_debug dbg;*/
-	char cmd[MAX_USER_INPUT_LEN];
+	char cmd[MAX_USER_INPUT_LEN], * pcmd = cmd;
+	char **ap, arg_cnt;
+	char *argv[MAX_ARGS];
+	u8 channel;
+	int i;
+
 	/*int ret, i;*/
 	int adc_raw, adc_unit;
 
@@ -1070,24 +1525,142 @@ static ssize_t bcm59055_adc_chipset_write(struct file *file, const char __user *
 	if (cmd[len - 1] == '\n')
 		cmd[len - 1] = '\0';
 
-	if (strcmp (cmd, "VBAT_UNIT") == 0) {
-		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_VBAT, &adc_raw, NULL, NULL);
-		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_VBAT, adc_raw);
-		printk(KERN_INFO "%s: VBAT: Raw %d, unit %d mV\n", __func__, adc_raw, adc_unit);
-	
-	}
-	else if (strcmp(cmd, "BSI_UNIT") == 0) {
-		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_BSI, &adc_raw, NULL, NULL);
-		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_BSI, adc_raw);
-		printk(KERN_INFO "%s: BSI: Raw %d, unit %d HOhm\n", __func__, adc_raw, adc_unit);
-	}
-	else if (strcmp(cmd, "BTEMP_UNIT") == 0) {
-		bcm59055_hal_adc_raw_read (HAL_ADC_CHIPSET_BTEMP, &adc_raw, NULL, NULL);
-		adc_unit = bcm59055_hal_adc_unit_convert (HAL_ADC_CHIPSET_BTEMP, adc_raw);
-		printk(KERN_INFO "%s: BTEMP: Raw %d, unit %d K\n", __func__, adc_raw, adc_unit);
+	arg_cnt = 0;
+	for (ap = argv; (*ap = strsep(&pcmd, " \t")) != NULL; arg_cnt++) {
+ 	   if (**ap != '\0') {
+		   if (++ap >= &argv[MAX_ARGS]) {
+			   break;
+		   }
+	   }
 	}
 
+	printk (KERN_INFO "%s: Command %s, total number of args (including first command) %d", __func__, argv[0], arg_cnt);
+	i = 0;
+	while (i < arg_cnt) {
+		if (strcmp (argv[i], "VBAT_UNIT") == 0) {
+			csapi_adc_raw_read (NULL, CSAPI_ADC_VBAT, &adc_raw, NULL, NULL);
+			adc_unit = csapi_adc_unit_convert (NULL, CSAPI_ADC_VBAT, adc_raw);
+			printk(KERN_INFO "%s: VBAT: Raw %d, unit %d mV\n", __func__, adc_raw, adc_unit);
+		
+		}
+		else if (strcmp(argv[i], "BSI_UNIT") == 0) {
+			csapi_adc_raw_read (NULL, CSAPI_ADC_BSI, &adc_raw, NULL, NULL);
+			adc_unit = csapi_adc_unit_convert (NULL, CSAPI_ADC_BSI, adc_raw);
+			printk(KERN_INFO "%s: BSI: Raw %d, unit %d HOhm\n", __func__, adc_raw, adc_unit);
+		}
+		else if (strcmp(argv[i], "BTEMP_UNIT") == 0) {
+			csapi_adc_raw_read (NULL, CSAPI_ADC_BTEMP, &adc_raw, NULL, NULL);
+			adc_unit = csapi_adc_unit_convert (NULL, CSAPI_ADC_BTEMP, adc_raw);
+			printk(KERN_INFO "%s: BTEMP: Raw %d, unit %d K\n", __func__, adc_raw, adc_unit);
+		}
 
+		else if (strcmp (argv[i], "csapi_adc_raw_read") == 0) {
+			// Only (Nokia) channel can be supplied here, rest is given
+			if (argv[i+1]) {
+				csapi_adc_raw_read (NULL, simple_strtol (argv[i+1], NULL, 0), &adc_raw, NULL, NULL);
+				printk(KERN_INFO "%s: Raw %d\n", __func__, adc_raw);
+				i++; /* since we are using two arguments here, add one extra to i */
+			}
+			else {
+				printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv [i]);
+			}
+
+		}
+		else if (strcmp (argv[i], "csapi_adc_unit_convert") == 0) {
+			// Nokia channel and raw reading can be supplied here, rest is given
+			if (argv[i+2]) {
+				channel = simple_strtol (argv [i+1], NULL, 0);
+				adc_raw = simple_strtol (argv [i+2], NULL, 0);
+				adc_unit = csapi_adc_unit_convert (NULL, channel, adc_raw);
+				printk(KERN_INFO "%s: Channel %d, Raw %d, unit %d\n", __func__, channel, adc_raw, adc_unit);
+				i += 2; /* since we are using two arguments here, add one extra to i */
+			}
+			else {
+				printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv [i]);
+			}
+		}
+		else if (strcmp (argv[i], "csapi_cal_unit_convert_lock") == 0) {
+			// Nokia channel and raw reading can be supplied here, rest is given
+			if (argv[i+2]) {
+				channel = simple_strtol (argv [i+1], NULL, 0);
+				adc_unit = simple_strtol (argv [i+2], NULL, 0);
+				csapi_cal_unit_convert_lock (NULL, channel, adc_unit);
+				printk(KERN_INFO "%s: Channel %d, locked to %d\n", __func__, channel, adc_unit);
+				i += 2; /* since we are using two arguments here, add one extra to i */
+			}
+			else {
+				printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv [i]);
+			}
+		}
+		else if (strcmp (argv[i], "csapi_cal_unit_convert_unlock") == 0) {
+			// Nokia channel and raw reading can be supplied here, rest is given
+			if (argv[i+1]) {
+				channel = simple_strtol (argv [i+1], NULL, 0);
+				csapi_cal_unit_convert_unlock (NULL, channel);
+				printk(KERN_INFO "%s: Channel %d, unlocked\n", __func__, channel);
+				i++; /* since we are using two arguments here, add one extra to i */
+			}
+			else {
+				printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv [i]);
+			}
+		}
+		else if (strcmp (argv[i], "csapi_cal_data_get") == 0) {
+			 if (argv[i+1]) {
+				 u32 id, p1, p2, p3;
+				 channel = simple_strtol (argv [i+1], NULL, 0);
+				 csapi_cal_data_get (NULL, channel, &id, &p1, &p2, &p3);
+				 printk(KERN_INFO "%s (%s): chl %d, id %d, p1 %d, p2 %d, p3 %d\n", __func__, argv [i], channel, id, p1, p2, p3);
+				 i++; /* since we are using two arguments here, add one extra to i */
+			 }
+			 else {
+				 printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv [i]);
+			 }
+		}
+		else if (strcmp (argv[i], "csapi_cal_data_set") == 0) {
+			 if (argv[i+5]) {
+				 u32 id, p1, p2, p3;
+				 channel = simple_strtol (argv [i+1], NULL, 0);
+				 id = simple_strtol (argv [i+2], NULL, 0);
+				 p1 = simple_strtol (argv [i+3], NULL, 0);
+				 p2 = simple_strtol (argv [i+4], NULL, 0);
+				 p3 = simple_strtol (argv [i+5], NULL, 0);
+				 csapi_cal_data_set (NULL, channel, id, p1, p2, p3);
+				 printk(KERN_INFO "%s (%s): chl %d, id %d, p1 %d, p2 %d, p3 %d\n", __func__, argv [i], channel, id, p1, p2, p3);
+				 i += 5; /* since we are using five arguments here, add one extra to i */
+			 }
+			 else {
+				 printk(KERN_INFO "%s: Not enough parameters for %s\n", __func__, argv [i]);
+			 }
+		}
+		else if (strcmp (argv[i], "csapi_cal_data_calc") == 0) {
+			/* only one command in this case */
+			if (i == 0) {
+				struct csapi_cal_req * cal;
+				arg_cnt--; /* skip command */
+				cal = kzalloc(sizeof(struct csapi_cal_req) + (sizeof (struct csapi_cal_data)* (arg_cnt/4)), GFP_KERNEL);
+				cal->size = arg_cnt / 4;
+				i = 0;
+				while (i < cal->size) {
+					cal->data [i].cha = simple_strtol (argv [i*4+1], NULL, 0);
+					cal->data [i].type = simple_strtol (argv [i*4+2], NULL, 0);
+					cal->data [i].raw = simple_strtol (argv [i*4+3], NULL, 0);
+					cal->data [i].ref = simple_strtol (argv [i*4+4], NULL, 0);
+					cal->data [i].id = 0xfedeabe;
+					i++;
+				}
+				if (cal->size) {
+					csapi_cal_calc (cal);
+				}
+				kfree (cal);
+			}
+			else {
+				printk(KERN_INFO "%s: Calc is only allowed alone", __func__);
+			}
+			i = arg_cnt;
+
+		}
+		i++;
+	}
 	*offset += len;
 	return len;
 }

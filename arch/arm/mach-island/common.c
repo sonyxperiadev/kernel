@@ -33,6 +33,9 @@
 #include <mach/kona.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <mach/irqs.h>
+#include <plat/chal/chal_trace.h>
+#include <trace/stm.h>
+#include <asm/pmu.h>
 
 #if defined(CONFIG_USB_ANDROID)
 #include <linux/usb/android_composite.h>
@@ -98,6 +101,23 @@ static struct platform_device board_serial_device = {
 		.platform_data = uart_data,
 	},
 };
+
+#ifdef CONFIG_STM_TRACE
+static struct stm_platform_data stm_pdata = {
+	.regs_phys_base       = STM_BASE_ADDR,
+	.channels_phys_base   = SWSTM_BASE_ADDR,
+	.id_mask              = 0x0,   /* Skip ID check/match */
+	.final_funnel	      = CHAL_TRACE_FIN_FUNNEL,
+};
+
+struct platform_device kona_stm_device = {
+	.name = "stm",
+	.id = -1,
+	.dev = {
+	        .platform_data = &stm_pdata,
+	},
+};
+#endif
 
 #if defined(CONFIG_HW_RANDOM_KONA)
 static struct resource rng_device_resource[] = {
@@ -237,8 +257,78 @@ static struct platform_device rtc_device =
 };
 #endif
 
+/* ARM performance monitor unit */
+static struct resource pmu_resource = {
+       .start = BCM_INT_ID_PMU_IRQ0,
+       .end = BCM_INT_ID_PMU_IRQ0,
+       .flags = IORESOURCE_IRQ,
+};
+
+static struct platform_device pmu_device = {
+       .name = "arm-pmu",
+       .id   = ARM_PMU_DEVICE_CPU,
+       .resource = &pmu_resource,
+       .num_resources = 1,
+};
+
+#ifdef CONFIG_USB
+static struct resource kona_hsotgctrl_platform_resource[] = {
+	[0] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device board_kona_hsotgctrl_platform_device =
+{
+	.name = "bcm_hsotgctrl",
+	.id = -1,
+	.resource = kona_hsotgctrl_platform_resource,
+	.num_resources = ARRAY_SIZE(kona_hsotgctrl_platform_resource),
+};
+#endif
+
+#ifdef CONFIG_USB_DWC_OTG
+static struct resource kona_otg_platform_resource[] = {
+	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
+		.start = HSOTG_BASE_ADDR,
+		.end = HSOTG_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start = BCM_INT_ID_USB_HSOTG,
+		.end = BCM_INT_ID_USB_HSOTG,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device board_kona_otg_platform_device =
+{
+	.name = "dwc_otg",
+	.id = -1,
+	.resource = kona_otg_platform_resource,
+	.num_resources = ARRAY_SIZE(kona_otg_platform_resource),
+};
+#endif
+
 #if defined(CONFIG_USB_ANDROID)
 /* FIXME borrow GOOGLE vendor ID to use windows driver */
+#define PID_PLATFORM				0xE600
+#define FD_MASS_PRODUCT_ID			0x0001
+#define FD_SICD_PRODUCT_ID			0x0002
+#define FD_VIDEO_PRODUCT_ID			0x0004
+#define FD_DFU_PRODUCT_ID			0x0008
+#define FD_MTP_ID					0x000C
+#define FD_CDC_ACM_PRODUCT_ID		0x0020
+#define FD_CDC_RNDIS_PRODUCT_ID		0x0040
+#define FD_CDC_OBEX_PRODUCT_ID		0x0080
+
 #define GOOGLE_VENDOR_ID        0x18d1
 #define VENDOR_ID               GOOGLE_VENDOR_ID
 #define PRODUCT_ID              0x0001
@@ -269,7 +359,7 @@ static struct platform_device usb_mass_storage_device = {
 #if defined(CONFIG_USB_ANDROID_RNDIS)
 static struct usb_ether_platform_data rndis_pdata = {
    /* ethaddr is filled by board_serialno_setup */
-   .vendorID       = __constant_cpu_tole16(VENDOR_ID),
+   .vendorID       = __constant_cpu_to_le16(VENDOR_ID),
    .vendorDescr    = "Broadcom",
 };
 
@@ -312,6 +402,30 @@ static char *usb_functions_rndis_adb[] = {
 #endif
 };
 
+static char *android_function_acm[] = {
+#if defined(CONFIG_USB_ANDROID_ACM)
+	"acm",
+	"acm1",
+#endif
+};
+
+static char *android_function_msc_acm[] = {
+#if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
+	"usb_mass_storage",
+#endif
+#if defined(CONFIG_USB_ANDROID_ACM)
+	"acm",
+	"acm1",
+#endif
+};
+
+static char *android_function_obex[] = {
+#if defined(CONFIG_USB_ANDROID_OBEX)
+	"obex",
+#endif
+};
+
+
 static char *usb_functions_all[] = {
 #if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
    "usb_mass_storage",
@@ -324,6 +438,9 @@ static char *usb_functions_all[] = {
 #endif
 #if defined(CONFIG_USB_ANDROID_ACM)
    "acm",
+#endif
+#if defined (CONFIG_USB_ANDROID_OBEX)
+	"obex",
 #endif
 };
 
@@ -348,6 +465,21 @@ static struct android_usb_product usb_products[] = {
       .num_functions  = ARRAY_SIZE(usb_functions_rndis_adb),
       .functions      = usb_functions_rndis_adb,
    },
+	{
+		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_acm),
+		.functions	=	android_function_acm,
+	},
+	{
+		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID | FD_MASS_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_msc_acm),
+		.functions	=	android_function_msc_acm,
+	},
+	{
+		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_OBEX_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_obex),
+		.functions	=	android_function_obex,
+	},
 };
 
 static struct android_usb_platform_data android_usb_pdata = {
@@ -390,6 +522,18 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #if defined(CONFIG_KONA_PWMC)
         &pwm_device,
 #endif
+
+#ifdef CONFIG_STM_TRACE
+	&kona_stm_device,
+#endif
+	&pmu_device,
+#ifdef CONFIG_USB
+	&board_kona_hsotgctrl_platform_device,
+#endif
+#ifdef CONFIG_USB_DWC_OTG
+	&board_kona_otg_platform_device,
+#endif
+
 #if defined(CONFIG_BACKLIGHT_PWM)
 	&pwm_backlight_device,
 #endif
@@ -425,3 +569,4 @@ void __init board_add_common_devices(void)
 	platform_add_devices(board_common_plat_devices,
 			ARRAY_SIZE(board_common_plat_devices));
 }
+

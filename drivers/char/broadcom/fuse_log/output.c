@@ -64,7 +64,7 @@ static unsigned int totalbyte = 0;
 static char g_netconsole_on = 0 ;				//	flow control state for RNDIS, set/reset by flow control callbacks
 
 #endif
-static char g_acm_on = 0 ;					//	flow control state for ACM, set/reset by flow control callbacks
+static char g_acm_on = 1 ;					//	flow control state for ACM, set/reset by flow control callbacks
 
 #define BCMLOG_OUTPUT_FIFO_MAX_BYTES  65536
 static BCMLOG_Fifo_t g_fifo ;					//	output fifo

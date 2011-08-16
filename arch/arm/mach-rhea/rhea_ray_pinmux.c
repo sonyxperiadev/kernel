@@ -68,19 +68,19 @@ static struct __init pin_config board_pin_config[] = {
 	/* GPIO74 for TCA9539 IO expander */
 	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
 #endif
-	/*	Pinmux for keypad
-		Since LCD block has used pin GPIO00, GPIO01, GPIO02, GPIO03,
-		GPIO08, GPIO09, GPIO10, GPIO11 and SSP3 has used GPIO06,
-		GPIO07, GPIO14, GPIO15, Keypad now is set as 2x2 matric by
-		using GPIO04, GPIO05, GPIO12, GPIO13 */
-	PIN_CFG(GPIO04, KEY_R4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO05, KEY_R5, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO06, KEY_R6, 0, OFF, ON, 0, 0, 8MA),
-//	PIN_CFG(GPIO07, KEY_R7, 0, OFF, ON, 0, 0, 8MA),
+	/*	Pinmux for keypad */
+	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO01, KEY_R1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO02, KEY_R2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO03, KEY_R3, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO08, KEY_C0, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO09, KEY_C1, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO10, KEY_C2, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPIO11, KEY_C3, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO12, KEY_C4, 0, OFF, ON, 0, 0, 8MA),
 //	PIN_CFG(GPIO13, KEY_C5, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO14, KEY_C6, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO15, KEY_C7, 0, OFF, ON, 0, 0, 8MA),
 
 	/* SSP0 */
 	PIN_CFG(SPI0FSS, SSP0SYN, 0, OFF, OFF, 0, 0, 8MA),
@@ -90,12 +90,10 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SSP3 - PCM
 	   SSP3 pinmux is set since keypad also check the same pins currently */
-#ifdef CONFIG_MACH_RHEA_RAY
 	PIN_CFG(GPIO15, SSP2SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO14, SSP2CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO07, SSP2DO, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
-#endif
 
 	/* SSP4 - I2S */
 #ifdef CONFIG_MACH_RHEA_RAY
@@ -129,14 +127,14 @@ static struct __init pin_config board_pin_config[] = {
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDSDA, LCDD0, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO00, LCDD15, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO01, LCDD14, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO02, LCDD13, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO03, LCDD12, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO08, LCDD11, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO09, LCDD10, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO10, LCDD9, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(GPIO11, LCDD8, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO00, LCDD15, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO01, LCDD14, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO02, LCDD13, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO03, LCDD12, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO08, LCDD11, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO09, LCDD10, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO10, LCDD9, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(GPIO11, LCDD8, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO18, LCDCS1, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO19, LCDWE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO20, LCDRE, 0, OFF, ON, 0, 0, 8MA),

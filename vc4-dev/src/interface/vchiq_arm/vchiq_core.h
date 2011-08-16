@@ -39,7 +39,11 @@ vcos_static_assert(IS_POW2(VCHIQ_MAX_SLOTS_PER_SIDE));
 
 #define VCHIQ_MSG_PADDING              0  // -
 #define VCHIQ_MSG_CONNECT              1  // -
+<<<<<<< HEAD
 #define VCHIQ_MSG_OPEN                 2  // + (srcport, -), fourcc, client_id
+=======
+#define VCHIQ_MSG_OPEN                 2  // + (srcport, -), fourcc
+>>>>>>> mps-lmp
 #define VCHIQ_MSG_OPENACK              3  // + (srcport, dstport)
 #define VCHIQ_MSG_CLOSE                4  // + (srcport, dstport)
 #define VCHIQ_MSG_DATA                 5  // + (srcport, dstport)
@@ -47,8 +51,11 @@ vcos_static_assert(IS_POW2(VCHIQ_MAX_SLOTS_PER_SIDE));
 #define VCHIQ_MSG_BULK_TX              7  // + (srcport, dstport), data, size
 #define VCHIQ_MSG_BULK_RX_DONE         8  // + (srcport, dstport), actual
 #define VCHIQ_MSG_BULK_TX_DONE         9  // + (srcport, dstport), actual
+<<<<<<< HEAD
 #define VCHIQ_MSG_PAUSE               10  // -
 #define VCHIQ_MSG_RESUME              11  // -
+=======
+>>>>>>> mps-lmp
 
 #define VCHIQ_PORT_MAX                 (VCHIQ_MAX_SERVICES - 1)
 #define VCHIQ_PORT_FREE                0x1000
@@ -125,6 +132,7 @@ enum
 
 #endif /* DEBUG_ENABLED */
 
+<<<<<<< HEAD
 typedef enum
 {
    VCHIQ_CONNSTATE_DISCONNECTED,
@@ -135,6 +143,8 @@ typedef enum
    VCHIQ_CONNSTATE_RESUMING
 } VCHIQ_CONNSTATE_T;
 
+=======
+>>>>>>> mps-lmp
 enum
 {
    VCHIQ_SRVSTATE_FREE,
@@ -280,7 +290,11 @@ typedef struct vchiq_slot_zero_struct {
 struct vchiq_state_struct {
    int id;
    int initialised;
+<<<<<<< HEAD
    VCHIQ_CONNSTATE_T conn_state;
+=======
+   int connected;
+>>>>>>> mps-lmp
    int is_master;
 
    VCHIQ_SHARED_STATE_T *local;
@@ -291,6 +305,10 @@ struct vchiq_state_struct {
 
    VCOS_EVENT_T connect;      // event indicating connect message received
    VCOS_MUTEX_T mutex;        // mutex protecting services
+<<<<<<< HEAD
+=======
+   VCHIQ_CALLBACK_T connect_callback;
+>>>>>>> mps-lmp
    VCHIQ_INSTANCE_T *instance;
 
    VCOS_THREAD_T slot_handler_thread;  // processes incoming messages
@@ -322,9 +340,12 @@ struct vchiq_state_struct {
    /* The slot_queue index of the slot to become available next. */
    int slot_queue_available;
 
+<<<<<<< HEAD
    /* A flag to indicate if any poll has been requested */
    int poll_needed;
 
+=======
+>>>>>>> mps-lmp
    /* An array of bit sets indicating which services must be polled. */
    VCOS_ATOMIC_FLAGS_T poll_services[BITSET_SIZE(VCHIQ_MAX_SERVICES)];
 
@@ -374,12 +395,15 @@ vchiq_free_service_internal(VCHIQ_SERVICE_T *service);
 extern VCHIQ_STATUS_T
 vchiq_shutdown_internal(VCHIQ_STATE_T *state, VCHIQ_INSTANCE_T instance);
 
+<<<<<<< HEAD
 extern VCHIQ_STATUS_T
 vchiq_pause_internal(VCHIQ_STATE_T *state);
 
 extern VCHIQ_STATUS_T
 vchiq_resume_internal(VCHIQ_STATE_T *state);
 
+=======
+>>>>>>> mps-lmp
 extern void
 remote_event_pollall(VCHIQ_STATE_T *state);
 
@@ -414,12 +438,15 @@ extern void
 remote_event_signal(REMOTE_EVENT_T *event);
 
 extern void
+<<<<<<< HEAD
 vchiq_platform_paused(VCHIQ_STATE_T *state);
 
 extern void
 vchiq_platform_resumed(VCHIQ_STATE_T *state);
 
 extern void
+=======
+>>>>>>> mps-lmp
 vchiq_dump(void *dump_context, const char *str, int len);
 
 extern void

@@ -56,7 +56,6 @@
 *   @brief  This file contains AP interface functions to DSP
 *
 ****************************************************************************/
-
 #include <string.h>
 #include "assert.h"
 #include "mobcom_types.h"
@@ -65,12 +64,8 @@
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
 #include "csl_arm2sp.h"
+#include "csl_vpu.h"
 
-#pragma arm section zidata = "shared_rip_mem_sect"
-static AP_SharedMem_t	AP_shared_mememory;      
-#pragma arm section
-
-static AP_SharedMem_t	*shared_mem	= &AP_shared_mememory; 
 
 AP_SharedMem_t	*vp_shared_mem;
 
@@ -87,23 +82,6 @@ static UserStatusCB_t UserStatusHandler = NULL;
 #endif
 static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 
-// Temporary till audio code contains references to this function
-//******************************************************************************
-//
-// Function Name:	SHAREDMEM_GetSharedMemPtr
-//
-// Description:		Return pointer to shared memory
-//
-// Notes:
-//
-//******************************************************************************
-AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memory
-{
-
-	return shared_mem;
-
-
-}	
 
 //*********************************************************************
 /**
@@ -115,12 +93,12 @@ AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memor
 **********************************************************************/
 void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
 {
-	// Clear out shared memory
-	memset(&AP_shared_mememory, 0, sizeof(AP_SharedMem_t));
-	
 	vp_shared_mem = (AP_SharedMem_t*) dsp_shared_mem;
 	
 	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", dsp_shared_mem);
+
+	/* Clear out shared memory */
+	memset(vp_shared_mem, 0, sizeof(AP_SharedMem_t));
 
 	vp_shared_mem->vp_shared_cmdq_in = 0;
 	vp_shared_mem->vp_shared_cmdq_out = 0;
@@ -138,6 +116,9 @@ void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
 
 	CSL_SetARM2SpeechCallRecordGain(0);
 	CSL_SetARM2Speech2CallRecordGain(0);
+
+	/* set DSP DL speech record gain */
+	CSL_SetDlSpeechRecGain(0);
 }
 
 //*********************************************************************
@@ -180,13 +161,13 @@ void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg)
 *   @param    status_msg	(in)	status message destination pointer 
 * 
 **********************************************************************/
-Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
+static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 {
 	VPStatQ_t *p;
 	UInt8	status_out = vp_shared_mem->vp_shared_statusq_out;
 	UInt8	status_in = vp_shared_mem->vp_shared_statusq_in;
 
-	//Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
+	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
 	if ( status_out == status_in )
 	{
 		return FALSE;
@@ -199,7 +180,7 @@ Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 		status_msg->arg1 = (UInt16)p->arg1;
 		status_msg->arg2 = (UInt16)p->arg2;
 		status_msg->arg3 = (UInt16)p->arg3;
-		//Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
+		Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status=%d, arg0=%d, arg1=%d, arg2=%d, arg3=%d \n", p->status, p->arg0, p->arg1, p->arg2, p->arg3);
 
 		vp_shared_mem->vp_shared_statusq_out = ( status_out + 1 ) % VP_STATUSQ_SIZE;
 

@@ -27,7 +27,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/proc_fs.h>
 #include <linux/vmalloc.h>
 #include <linux/mm.h>
-#include <linux/bootmem.h>
 #include <linux/gpio.h>
 #include <linux/delay.h>
 
@@ -43,6 +42,10 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #include <mach/rdb/brcm_rdb_util.h>
 
+#if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))   
+    #include <mach/rdb/brcm_rdb_csr.h>
+#endif
+
 
 //TODO - define the major device ID
 #define UNICAM_DEV_MAJOR	0
@@ -52,6 +55,7 @@ the GPL, without Broadcom's express prior written consent.
 #define RHEA_MM_CLK_BASE_ADDRESS               MM_CLK_BASE_ADDR
 #define RHEA_PAD_CTRL_BASE_ADDRESS             PAD_CTRL_BASE_ADDR
 #define RHEA_ROOT_CLK_BASE_ADDRESS             ROOT_CLK_BASE_ADDR
+#define RHEA_CSR_BASE_ADDRESS                  MEMC0_OPEN_BASE_ADDR
 
 
 #define IRQ_UNICAM	     (156+32)
@@ -84,16 +88,21 @@ static void __iomem *mmcfg_base = NULL;
 static void __iomem *mmclk_base = NULL;
 static void __iomem *padctl_base = NULL;
 static void __iomem *rootclk_base = NULL;
+static void __iomem *csr_base = NULL;
 
 static struct clk *unicam_clk;
 
 typedef struct {
-    mem_t mempool;
     struct semaphore irq_sem;
 } unicam_t;
 
-void *unicam_mempool_base;	// declared and allocated in mach
-static unsigned int unicam_mempool_size;
+static cam_isr_reg_status_st_t unicam_isr_reg_status;
+
+// Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
+#if (1) //(defined (_RHEA_) && (CHIP_REVISION == 10))   
+    #define CSR_DDR_PLL_REG_UNSET_FLAG  0x000000FFFF
+    static unsigned int  RegCsrDdrPllPwrdnBit = CSR_DDR_PLL_REG_UNSET_FLAG;
+#endif    
 
 static int enable_unicam_clock(void);
 static void disable_unicam_clock(void);
@@ -108,10 +117,11 @@ static inline void reg_write(void __iomem *, unsigned int reg, unsigned int valu
 static irqreturn_t unicam_isr(int irq, void *dev_id)
 {
     unicam_t *dev;
-    unsigned int value;
     
-    value = reg_read(unicam_base, CAM_STA_OFFSET);
-    reg_write(unicam_base, CAM_STA_OFFSET, value);	// enable access		
+    unicam_isr_reg_status.rx_status = reg_read(unicam_base, CAM_STA_OFFSET);
+    unicam_isr_reg_status.image_intr = reg_read(unicam_base, CAM_ISTA_OFFSET);
+    reg_write(unicam_base, CAM_ISTA_OFFSET, unicam_isr_reg_status.image_intr);	// enable access		
+    reg_write(unicam_base, CAM_STA_OFFSET, unicam_isr_reg_status.rx_status);	// enable access		
 		
     dev = (unicam_t *)dev_id;	
     up(&dev->irq_sem);
@@ -129,9 +139,6 @@ static int unicam_open(struct inode *inode, struct file *filp)
 
     filp->private_data = dev;
 	
-    dev->mempool.ptr = unicam_mempool_base;
-    dev->mempool.addr = virt_to_phys(dev->mempool.ptr);
-    dev->mempool.size = unicam_mempool_size;
 
     sema_init(&dev->irq_sem, 0);
     
@@ -166,7 +173,6 @@ static int unicam_release(struct inode *inode, struct file *filp)
 static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 {
     unsigned long vma_size = vma->vm_end - vma->vm_start;
-	unicam_t *dev = (unicam_t *)(filp->private_data);
 
     if (vma_size & (~PAGE_MASK)) {
         pr_err(KERN_ERR "unicam_mmap: mmaps must be aligned to a multiple of pages_size.\n");
@@ -175,10 +181,7 @@ static int unicam_mmap(struct file *filp, struct vm_area_struct *vma)
 
     if (!vma->vm_pgoff) {
         vma->vm_pgoff = RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS >> PAGE_SHIFT;
-    } else if (vma->vm_pgoff != (dev->mempool.addr >> PAGE_SHIFT)) {
-        pr_err("%s(): unicam_mmap failed\n", __FUNCTION__);
-        return -EINVAL;
-    }	
+    }
 
     vma->vm_page_prot = pgprot_noncached(vma->vm_page_prot);
 
@@ -199,6 +202,7 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
 {
     unicam_t *dev;
     int ret = 0;
+	static int interrupt_irq = 0;
 
     if(_IOC_TYPE(cmd) != BCM_UNICAM_MAGIC)
         return -ENOTTY;
@@ -222,7 +226,9 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
     case UNICAM_IOCTL_WAIT_IRQ:
     {        
         dbg_print("Enabling unicam interrupt\n");
-
+		interrupt_irq = 0;
+        unicam_isr_reg_status.rx_status = 0;
+        unicam_isr_reg_status.image_intr = 0;
         enable_irq(IRQ_UNICAM);
         dbg_print("Waiting for interrupt\n");
         if (down_interruptible(&dev->irq_sem))
@@ -232,16 +238,21 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
         }
         dbg_print("Disabling unicam interrupt\n");
         disable_irq(IRQ_UNICAM);
-    }
-    break;
-
-    case UNICAM_IOCTL_GET_MEMPOOL:
-    {        
-        dbg_print("Obtain the Memory Pool Address\n");
-        if (copy_to_user((mem_t*)arg, &(dev->mempool), sizeof(mem_t)))
+		if (interrupt_irq) {
+			printk(KERN_ERR"interrupted irq ioctl\n");
+			return -EIO;
+		}
+        if (copy_to_user((cam_isr_reg_status_st_t*)arg, &unicam_isr_reg_status, sizeof(cam_isr_reg_status_st_t)))
             ret = -EPERM;
     }
     break;
+	case UNICAM_IOCTL_RETURN_IRQ:
+	{
+		interrupt_irq = 1;
+		printk(KERN_ERR"Interrupting irq ioctl\n");
+		up(&dev->irq_sem);
+	}
+	break;
 
     case UNICAM_IOCTL_OPEN_CSI0:
     {        
@@ -441,6 +452,19 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
             err_print("DIGITAL_CH1_STPRSTS: Clk not Started\n");
         }
     }
+    
+// Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
+    #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
+        dbg_print("Disable DDR PLL PWRDN\n");
+        if (RegCsrDdrPllPwrdnBit == CSR_DDR_PLL_REG_UNSET_FLAG)
+        {
+            value = reg_read(csr_base, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+            RegCsrDdrPllPwrdnBit = value & CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
+            value = value & ~(CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK);
+            reg_write(csr_base, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET, value);
+        }
+    #endif    
+    
 }
 
 static void unicam_close_csi(unsigned int port, unsigned int clk_src)
@@ -479,6 +503,18 @@ static void unicam_close_csi(unsigned int port, unsigned int clk_src)
             err_print("DIGITAL_CH1_STPRSTS: Clk not Stopped\n");
         }
     }
+// Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
+    #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
+        dbg_print("Enable DDR PLL PWRDN\n");
+        if (RegCsrDdrPllPwrdnBit != CSR_DDR_PLL_REG_UNSET_FLAG)
+        {
+            value = reg_read(csr_base, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
+            value &= ~(CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK);
+            value |= RegCsrDdrPllPwrdnBit;
+            reg_write(csr_base, CSR_HW_FREQ_CHANGE_CNTRL_OFFSET, value);
+            RegCsrDdrPllPwrdnBit = CSR_DDR_PLL_REG_UNSET_FLAG;
+        }
+    #endif    
 }
 
 
@@ -519,23 +555,6 @@ static void disable_unicam_clock(void)
     clk_disable(unicam_clk);     
 }
 
-static int __init setup_unicam_mempool(char *str)
-{
-    if(str){
-        get_option(&str, &unicam_mempool_size);
-    }
-	
-    if (!unicam_mempool_size) 
-        unicam_mempool_size = UNICAM_MEM_POOL_SIZE;
-	
-    dbg_print("Allocating camera relocatable heap of size = %d\n", unicam_mempool_size);
-    unicam_mempool_base = alloc_bootmem_low_pages(unicam_mempool_size);
-    if( !unicam_mempool_base )
-        err_print("Failed to allocate relocatable heap memory\n");
-    return 0;
-}
-
-__setup("unicam_mem=", setup_unicam_mempool);
 
 int __init unicam_init(void)
 {
@@ -581,6 +600,12 @@ int __init unicam_init(void)
     if (rootclk_base == NULL)
         goto err;		
 
+#ifdef CSR_DDR_PLL_REG_UNSET_FLAG
+    csr_base = (void __iomem *)ioremap_nocache(RHEA_CSR_BASE_ADDRESS, SZ_4K);
+    if (csr_base == NULL)
+        goto err;		
+#endif
+
     return 0;
 
 err:
@@ -606,6 +631,11 @@ void __exit unicam_exit(void)
 
     if (rootclk_base)
         iounmap(rootclk_base);	
+
+#ifdef CSR_DDR_PLL_REG_UNSET_FLAG
+    if (csr_base)
+        iounmap(csr_base);	
+#endif
 
     disable_unicam_clock();		
    

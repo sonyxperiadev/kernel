@@ -71,16 +71,25 @@
 #define GAIN_FRACTION_BITS_NUMBER	16
 #define FIXED_POINT_UNITY_GAIN		(1<<GAIN_FRACTION_BITS_NUMBER)
 
+#define TWO_IN_MILLIBEL				602
+#define QUARTERDB_IN_MILLIBEL		25
+#define QUARTERDB_ROUNDER			12
+	
 
 // ---- Function Declarations -----------------------------------------
 
-/*********************************************************************
+//*********************************************************************
+/**
+*   CSL_ConvertMillibel2Scale converts gain in millibel to Q15.16 
+*								linear scale factor.
+*	Floating point implementation is replaced by fixed point with 
+*	25mB (0.25 dB) resolution in order to avoid floating point math
+*	in Linux kernel.
+*	Less than 2% error over assumed -5000mB:5000mB (-50dB:50dB) 
+*	dynamic range. 
 *
-*   CSL_ConvertMillibel2Scale converts gain in millibel to fixed point 
-*							scale factor. 
-*
-*   param    mBGain					(in)	gain in millibels
-*   return   UInt32					scale factor in fixed point format
+*   @param    mBGain					(in)	gain in millibels
+*   @return   UInt32					scale factor in Q15.16 format
 * 
 **********************************************************************/
 UInt32 CSL_ConvertMillibel2Scale(Int16 mBGain);

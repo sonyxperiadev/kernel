@@ -75,8 +75,13 @@ enum PIN_NAME {
 	/* GPIO 168 */ PN_NORFLSH_ADDR_16,
 	/* GPIO 167 */ PN_NORFLSH_AADLAT_EN,
 	/* GPIO 166 */ PN_NORFLSH_ADLAT_EN,
+<<<<<<< HEAD
 	/* GPIO 165 */ PN_NORFLSH_AD_15,
    /* GPIO 164 */ PN_NORFLSH_AD_14,
+=======
+	/* GPIO 165 */ PN_NORFLSH_AD_05,
+        /* GPIO 164 */ PN_NORFLSH_AD_14,
+>>>>>>> mps-lmp
 	/* GPIO 163 */ PN_NORFLSH_AD_13,
 	/* GPIO 162 */ PN_NORFLSH_AD_12,
 	/* GPIO 161 */ PN_NORFLSH_AD_11,
@@ -84,10 +89,15 @@ enum PIN_NAME {
 	/* GPIO 159 */ PN_NORFLSH_AD_09,
 	/* GPIO 158 */ PN_NORFLSH_AD_08,
 	/* GPIO 157 */ PN_NORFLSH_AD_07,
+<<<<<<< HEAD
 	/* GPIO 156 */ PN_NORFLSH_AD_06,
 	/* GPIO 155 */ PN_NORFLSH_AD_05,
    /* GPIO 154 */ PN_NORFLSH_AD_04,
    /* GPIO 153 */ PN_NORFLSH_AD_03,
+=======
+        /* GPIO 154 */ PN_NORFLSH_AD_04,
+        /* GPIO 153 */ PN_NORFLSH_AD_03,
+>>>>>>> mps-lmp
 	/* GPIO 152 */ PN_NORFLSH_AD_02,
 	/* GPIO 151 */ PN_NORFLSH_AD_01,
 	/* GPIO 150 */ PN_NORFLSH_AD_00,
@@ -104,6 +114,7 @@ enum PIN_NAME {
 	/* GPIO 141 */ PN_SIM2_DATA,
 	/* GPIO 140 */ PN_SIM2_DET,
 
+<<<<<<< HEAD
    /* GPIO 139 */ PN_ULPI0_CLOCK,
    /* GPIO 138 */ PN_ULPI0_DATA_0,
    /* GPIO 137 */ PN_ULPI0_DATA_1,
@@ -129,6 +140,33 @@ enum PIN_NAME {
    /* GPIO 118 */ PN_ULPI1_DIR,
    /* GPIO 117 */ PN_ULPI1_NXT,
    /* GPIO 116 */ PN_ULPI1_STP,
+=======
+        /* GPIO 139 */ PN_ULPI0_CLOCK,
+        /* GPIO 138 */ PN_ULPI0_DATA_0,
+        /* GPIO 137 */ PN_ULPI0_DATA_1,
+        /* GPIO 136 */ PN_ULPI0_DATA_2,
+        /* GPIO 135 */ PN_ULPI0_DATA_3,
+        /* GPIO 134 */ PN_ULPI0_DATA_4,
+        /* GPIO 133 */ PN_ULPI0_DATA_5,
+        /* GPIO 132 */ PN_ULPI0_DATA_6,
+        /* GPIO 131 */ PN_ULPI0_DATA_7,
+        /* GPIO 130 */ PN_ULPI0_DIR,
+        /* GPIO 129 */ PN_ULPI0_NXT,
+        /* GPIO 128 */ PN_ULPI0_STP,
+
+	/* GPIO 127 */ PN_ULPI1_CLOCK,  
+        /* GPIO 126 */ PN_ULPI1_DATA_0, 
+        /* GPIO 125 */ PN_ULPI1_DATA_1, 
+        /* GPIO 124 */ PN_ULPI1_DATA_2, 
+        /* GPIO 123 */ PN_ULPI1_DATA_3, 
+        /* GPIO 122 */ PN_ULPI1_DATA_4, 
+        /* GPIO 121 */ PN_ULPI1_DATA_5, 
+        /* GPIO 120 */ PN_ULPI1_DATA_6, 
+        /* GPIO 119 */ PN_ULPI1_DATA_7, 
+        /* GPIO 118 */ PN_ULPI1_DIR,    
+        /* GPIO 117 */ PN_ULPI1_NXT,    
+        /* GPIO 116 */ PN_ULPI1_STP,
+>>>>>>> mps-lmp
 
    /* GPIO 115 */ PN_NAND_WP,
 	/* GPIO 114 */ PN_NAND_CEN_0,
@@ -147,8 +185,10 @@ enum PIN_NAME {
 	/* GPIO 101 */ PN_NAND_AD_2,
 	/* GPIO 100 */ PN_NAND_AD_1,
 	/* GPIO 99 */  PN_NAND_AD_0,
+
 	/* GPIO 98 */  PN_UARTB4_UTXD,
 	/* GPIO 97 */  PN_UARTB4_URXD,
+<<<<<<< HEAD
 	/* GPIO 96 */  PN_SDIO2_DATA_3,
 	/* GPIO 95 */  PN_SDIO2_DATA_2,
 	/* GPIO 94 */  PN_SDIO2_DATA_1,
@@ -266,6 +306,111 @@ enum PIN_NAME {
    /* GPIO 2 */   PN_GPIO_2,
    /* GPIO 1 */   PN_GPIO_1,
    /* GPIO 0 */   PN_GPIO_0,
+=======
+
+	/* GPIO 96 */ PN_SDIO2_DATA_3,
+	/* GPIO 95 */ PN_SDIO2_DATA_2,
+	/* GPIO 94 */ PN_SDIO2_DATA_1,
+	/* GPIO 93 */ PN_SDIO2_DATA_0,
+	/* GPIO 92 */ PN_SDIO2_CMD,
+        /* GPIO 91 */ PN_SDIO2_CLK,
+
+        /* GPIO 90 */ PN_SDIO3_DATA_3,
+        /* GPIO 89 */ PN_SDIO3_DATA_2,
+        /* GPIO 88 */ PN_SDIO3_DATA_1,
+        /* GPIO 87 */ PN_SDIO3_DATA_0,
+        /* GPIO 86 */ PN_SDIO3_CMD,
+        /* GPIO 85 */ PN_SDIO3_CLK,
+	
+	/* STM pinmuxing */
+	              PN_TRACECLK,
+	              PN_TRACEDT00,
+	              PN_TRACEDT01,
+	              PN_TRACEDT02,
+	              PN_TRACEDT03,
+	              PN_TRACEDT07,
+
+        /* GPIO 84 */  PN_SSP0_FS,
+        /* GPIO 83 */  PN_SSP0_CLK,
+        /* GPIO 82 */  PN_SSP0_RXD,
+        /* GPIO 81 */  PN_SSP0_TXD,
+
+        /* GPIO 80 */  PN_SSP1_FS,
+        /* GPIO 79 */  PN_SSP1_CLK,
+        /* GPIO 78 */  PN_SSP1_RXD,
+        /* GPIO 77 */  PN_SSP1_TXD,
+
+        /* GPIO 76 */  PN_SSP2_FS_0,
+        /* GPIO 75 */  PN_SSP2_CLK,
+        /* GPIO 74 */  PN_SSP2_RXD_0,
+        /* GPIO 73 */  PN_SSP2_TXD_0,
+        /* GPIO 72 */  PN_SSP2_FS_1,
+        /* GPIO 71 */  PN_SSP2_RXD_1,
+        /* GPIO 70 */  PN_SSP2_TXD_1,
+        /* GPIO 69 */  PN_SSP2_FS_2,
+
+        /* GPIO 68 */  PN_SSP3_FS,
+        /* GPIO 67 */  PN_SSP3_CLK,
+        /* GPIO 66 */  PN_SSP3_RXD,
+        /* GPIO 65 */  PN_SSP3_TXD,
+        /* GPIO 64 */  PN_SSP3_EXTCLK,
+
+	/* GPIO 61 */ PN_PMU_SCL,
+        /* GPIO 60 */ PN_PMU_SDA,
+
+        /* GPIO 59 */ PN_BSC2_SCL,
+        /* GPIO 58 */ PN_BSC2_SDA,
+
+        /* GPIO 57 */ PN_VC_CAM1_SCL,
+        /* GPIO 56 */ PN_VC_CAM1_SDA,
+
+	/* GPIO 55 */ PN_HDMI_SCL,
+        /* GPIO 54 */ PN_HDMI_SDA,
+
+	/* GPIO 47 */ PN_LCD_R_7,
+        /* GPIO 46 */ PN_LCD_R_6,
+        /* GPIO 45 */ PN_LCD_R_5,
+        /* GPIO 44 */ PN_LCD_R_4,
+        /* GPIO 43 */ PN_LCD_R_3,
+        /* GPIO 42 */ PN_LCD_R_2,
+        /* GPIO 41 */ PN_LCD_R_1,
+        /* GPIO 40 */ PN_LCD_R_0,
+
+        /* GPIO 39 */ PN_LCD_G_7,
+        /* GPIO 38 */ PN_LCD_G_6,
+        /* GPIO 37 */ PN_LCD_G_5,
+        /* GPIO 36 */ PN_LCD_G_4,
+        /* GPIO 35 */ PN_LCD_G_3,
+        /* GPIO 34 */ PN_LCD_G_2,
+        /* GPIO 33 */ PN_LCD_G_1,
+        /* GPIO 32 */ PN_LCD_G_0,
+
+        /* GPIO 31 */ PN_LCD_B_7,
+        /* GPIO 30 */ PN_LCD_B_6,
+        /* GPIO 29 */ PN_LCD_B_5,
+        /* GPIO 28 */ PN_LCD_B_4,
+        /* GPIO 27 */ PN_LCD_B_3,
+        /* GPIO 26 */ PN_LCD_B_2,
+        /* GPIO 25 */ PN_LCD_B_1,
+        /* GPIO 24 */ PN_LCD_B_0,
+
+        /* GPIO 23 */ PN_LCD_HSYNC, 
+        /* GPIO 22 */ PN_LCD_VSYNC,
+        /* GPIO 21 */ PN_LCD_OE,  
+        /* GPIO 20 */ PN_LCD_PCLK,
+
+        /* GPIO 15 */  PN_DIGMIC1_CLK,
+        /* GPIO 14 */  PN_DIGMIC1_DQ,
+        /* GPIO 13 */  PN_DIGMIC2_CLK,
+        /* GPIO 12 */  PN_DIGMIC2_DQ,
+
+        /* GPIO 10 */ PN_PMU_INT,
+        /* GPIO 6 */  PN_GPIO_6,
+	/* GPIO 3 */  PN_GPIO_3,  
+        /* GPIO 2 */  PN_GPIO_2,
+
+	/* NAND_CEN_0 */  PN_NAND_CEN_1,
+>>>>>>> mps-lmp
 
 	PN_MAX
 };
@@ -277,11 +422,17 @@ enum PIN_FUNC {
    PF_DUMMY,
 	
 	PF_PWM_O_0,
+<<<<<<< HEAD
    PF_PWM_O_1,
    PF_PWM_O_2,
    PF_PWM_O_3,
    PF_PWM_O_4,
    PF_PWM_O_5,
+=======
+        PF_PWM_O_2,
+
+        PF_VC_PWM_1,
+>>>>>>> mps-lmp
 
 	PF_VC_GPIO_0,
 	PF_VC_GPIO_1,
@@ -296,8 +447,12 @@ enum PIN_FUNC {
 
 	PF_NORFLSH_WE_N,
 	PF_NORFLSH_CE1_N,
+<<<<<<< HEAD
 	PF_NORFLSH_CE0_N,
 	PF_NORFLSH_OE_N,
+=======
+        PF_NORFLSH_CE0_N,
+>>>>>>> mps-lmp
 	PF_NORFLSH_ADDR_23,
    PF_NORFLSH_ADDR_22,
    PF_NORFLSH_ADDR_21,
@@ -308,8 +463,13 @@ enum PIN_FUNC {
 	PF_NORFLSH_ADDR_16,
 	PF_NORFLSH_AADLAT_EN,
 	PF_NORFLSH_ADLAT_EN,
+<<<<<<< HEAD
    PF_NORFLSH_AD_15,
    PF_NORFLSH_AD_14,
+=======
+        PF_NORFLSH_AD_05,
+        PF_NORFLSH_AD_14,
+>>>>>>> mps-lmp
 	PF_NORFLSH_AD_13,
 	PF_NORFLSH_AD_12,
 	PF_NORFLSH_AD_11,
@@ -335,7 +495,7 @@ enum PIN_FUNC {
 	PF_KP_ROW_OP_4,
 	PF_KP_ROW_OP_5,
 	PF_KP_ROW_OP_6,
-	PF_KP_ROW_OP_7,
+        PF_KP_ROW_OP_7,
 
    PF_KP_COL_IP_0,
    PF_KP_COL_IP_1,
@@ -417,6 +577,7 @@ enum PIN_FUNC {
    PF_SDIO2_WP,
    PF_SDIO2_CD_N,
 	PF_SDIO2_DATA_7,
+<<<<<<< HEAD
    PF_SDIO2_DATA_6,
    PF_SDIO2_DATA_5,
    PF_SDIO2_DATA_4,
@@ -487,6 +648,79 @@ enum PIN_FUNC {
    PF_SSP3_RXD,
    PF_SSP3_TXD,
    PF_SSP3_EXTCLK,
+=======
+        PF_SDIO2_DATA_6,
+        PF_SDIO2_DATA_5,
+        PF_SDIO2_DATA_4,
+        PF_SDIO2_DATA_3,
+        PF_SDIO2_DATA_2,
+        PF_SDIO2_DATA_1,
+        PF_SDIO2_DATA_0,
+        PF_SDIO2_CMD,
+        PF_SDIO2_CLK,
+
+        PF_SDIO3_DATA_3,
+        PF_SDIO3_DATA_2,
+        PF_SDIO3_DATA_1,
+        PF_SDIO3_DATA_0,
+        PF_SDIO3_CMD,
+        PF_SDIO3_CLK,
+	
+	PF_TRACECLK,
+	PF_TRACEDT00,
+	PF_TRACEDT01,
+	PF_TRACEDT02,
+	PF_TRACEDT03,
+	PF_TRACEDT07,
+
+	PF_MDN_DSP_TRACE_CLK,
+	PF_MDN_DSP_TRACE_DAT0,
+	PF_MDN_DSP_TRACE_DAT1,
+	PF_MDN_DSP_TRACE_DAT2,
+	PF_MDN_DSP_TRACE_DAT3,
+	PF_MDN_DSP_TRACE_DAT7,
+	
+	PF_PTI_CLK,
+	PF_PTI_DAT0,
+	PF_PTI_DAT1,
+	PF_PTI_DAT2,
+	PF_PTI_DAT3,
+
+        PF_SSP0_FS,
+        PF_SSP0_CLK,
+        PF_SSP0_RXD,
+        PF_SSP0_TXD,
+
+        PF_UARTB2_URXD,
+        PF_UARTB2_UTXD,
+        PF_UARTB2_URTSN,
+        PF_UARTB2_UCTSN,
+
+        PF_SSP1_FS,
+        PF_SSP1_CLK,
+        PF_SSP1_RXD,
+        PF_SSP1_TXD,
+
+        PF_UARTB3_URXD,
+        PF_UARTB3_UTXD,
+        PF_UARTB3_URTSN,
+        PF_UARTB3_UCTSN,
+
+        PF_SSP2_FS_0,
+        PF_SSP2_CLK,
+        PF_SSP2_RXD_0,
+        PF_SSP2_TXD_0,
+        PF_SSP2_FS_1,
+        PF_SSP2_RXD_1,
+        PF_SSP2_TXD_1,
+        PF_SSP2_FS_2,
+
+        PF_SSP3_FS,
+        PF_SSP3_CLK,
+        PF_SSP3_RXD,
+        PF_SSP3_TXD,
+        PF_SSP3_EXTCLK,
+>>>>>>> mps-lmp
 
 	PF_PMU_SCL,
    PF_PMU_SDA,
@@ -548,11 +782,12 @@ enum PIN_FUNC {
    PF_CLKOUT_1,
    PF_CLKOUT_0,
 
-   PF_DIGMIC1_CLK,
-   PF_DIGMIC1_DQ,
-   PF_DIGMIC2_CLK,
-   PF_DIGMIC2_DQ,
+        PF_DIGMIC1_CLK,
+        PF_DIGMIC1_DQ,
+        PF_DIGMIC2_CLK,
+        PF_DIGMIC2_DQ,
 
+<<<<<<< HEAD
 	PF_BAT_RM,
    PF_PMU_INT,
 	PF_STAT_1,
@@ -775,6 +1010,18 @@ enum PIN_FUNC {
    PF_RXDATA3G2,
    PF_CLK_CX8,
    PF_SYSCLKEN,
+=======
+        PF_PMU_INT, 
+		
+        PF_GPIO_3,
+        PF_GPIO_2,
+
+        PF_VC_GPCLK_0,
+        PF_VC_GPCLK_1,
+
+	PF_NAND_CEN_1,
+	PF_SDIO4_DATA_1,
+>>>>>>> mps-lmp
 
 	PF_MAX
 };

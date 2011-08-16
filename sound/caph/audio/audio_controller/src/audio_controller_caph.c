@@ -42,28 +42,22 @@
 
 #include "csl_vpu.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
 #include "ostask.h"
 #endif
 #include "audio_gain_table.h"
-#include "audioapi_asic.h"
 #include "csl_caph.h"
-#include "drv_caph.h"
 #include "csl_caph_gain.h"
-//#include "audio_vdriver.h"
-//#include "dspcmd.h"
-//#include "csl_aud_drv.h"
-#include "drv_caph_hwctrl.h"
+#include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
-#include "audioapi_asic.h"
 //#include "i2s.h"
 #include "log.h"
 #include "osheap.h"
 #include "xassert.h"
-#include "drv_audio_common.h"
+
 #include "drv_audio_capture.h"
 #include "drv_audio_render.h"
 
@@ -87,6 +81,160 @@ extern AUDDRV_SPKR_Enum_t voiceCallSpkr;
 // Private Type and Constant declarations
 //=============================================================================
 
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+
+typedef struct
+{
+    Int16 gain;
+    UInt32 hsPMUGain;
+}HS_PMU_GainMapping_t;
+
+typedef struct
+{
+    Int16 gain;
+    UInt32 ihfPMUGain;
+}IHF_PMU_GainMapping_t;
+
+
+static HS_PMU_GainMapping_t hsPMUGainTable[PMU_HSGAIN_NUM]=
+{
+    /* Gain in Q13.2,   HS PMU Gain */
+    {0x8000,             PMU_HSGAIN_MUTE},
+    {0xFEF8,             PMU_HSGAIN_66DB_N},
+    {0xFF04,             PMU_HSGAIN_63DB_N},
+    {0xFF10,             PMU_HSGAIN_60DB_N},
+    {0xFF1C,             PMU_HSGAIN_57DB_N},
+    {0xFF28,             PMU_HSGAIN_54DB_N},
+    {0xFF34,             PMU_HSGAIN_51DB_N},
+    {0xFF40,             PMU_HSGAIN_48DB_N},
+    {0xFF4C,             PMU_HSGAIN_45DB_N},
+    {0xFF58,             PMU_HSGAIN_42DB_N},
+    {0xFF5E,             PMU_HSGAIN_40P5DB_N},
+    {0xFF64,             PMU_HSGAIN_39DB_N},
+    {0xFF6A,             PMU_HSGAIN_37P5DB_N},
+    {0xFF70,             PMU_HSGAIN_36DB_N},
+    {0xFF76,             PMU_HSGAIN_34P5DB_N},
+    {0xFF7C,             PMU_HSGAIN_33DB_N},
+    {0xFF82,             PMU_HSGAIN_31P5DB_N},
+    {0xFF88,             PMU_HSGAIN_30DB_N},
+    {0xFF8E,             PMU_HSGAIN_28P5DB_N},
+    {0xFF94,             PMU_HSGAIN_27DB_N},
+    {0xFF9A,             PMU_HSGAIN_25P5DB_N},
+    {0xFFA0,             PMU_HSGAIN_24DB_N},
+    {0xFFA6,             PMU_HSGAIN_22P5DB_N},
+    {0xFFA8,             PMU_HSGAIN_22DB_N},
+    {0xFFAA,             PMU_HSGAIN_21P5DB_N},
+    {0xFFAC,             PMU_HSGAIN_21DB_N},
+    {0xFFAE,             PMU_HSGAIN_20P5DB_N},
+    {0xFFB0,             PMU_HSGAIN_20DB_N},
+    {0xFFB2,             PMU_HSGAIN_19P5DB_N},
+    {0xFFB4,             PMU_HSGAIN_19DB_N},
+    {0xFFB6,             PMU_HSGAIN_18P5DB_N},
+    {0xFFB8,             PMU_HSGAIN_18DB_N},
+    {0xFFBA,             PMU_HSGAIN_17P5DB_N},
+    {0xFFBC,             PMU_HSGAIN_17DB_N},
+    {0xFFBE,             PMU_HSGAIN_16P5DB_N},
+    {0xFFC0,             PMU_HSGAIN_16DB_N},
+    {0xFFC2,             PMU_HSGAIN_15P5DB_N},
+    {0xFFC4,             PMU_HSGAIN_15DB_N},
+    {0xFFC6,             PMU_HSGAIN_14P5DB_N},
+    {0xFFC8,             PMU_HSGAIN_14DB_N},
+    {0xFFCA,             PMU_HSGAIN_13P5DB_N},
+    {0xFFCC,             PMU_HSGAIN_13DB_N},
+    {0xFFCE,             PMU_HSGAIN_12P5DB_N},
+    {0xFFD0,             PMU_HSGAIN_12DB_N},
+    {0xFFD2,             PMU_HSGAIN_11P5DB_N},
+    {0xFFD4,             PMU_HSGAIN_11DB_N},
+    {0xFFD6,             PMU_HSGAIN_10P5DB_N},
+    {0xFFD8,             PMU_HSGAIN_10DB_N},
+    {0xFFDA,             PMU_HSGAIN_9P5DB_N},
+    {0xFFDC,             PMU_HSGAIN_9DB_N},
+    {0xFFDE,             PMU_HSGAIN_8P5DB_N},
+    {0xFFE0,             PMU_HSGAIN_8DB_N},
+    {0xFFE2,             PMU_HSGAIN_7P5DB_N},
+    {0xFFE4,             PMU_HSGAIN_7DB_N},
+    {0xFFE6,             PMU_HSGAIN_6P5DB_N},
+    {0xFFE8,             PMU_HSGAIN_6DB_N},
+    {0xFFEA,             PMU_HSGAIN_5P5DB_N},
+    {0xFFEC,             PMU_HSGAIN_5DB_N},
+    {0xFFEE,             PMU_HSGAIN_4P5DB_N},
+    {0xFFF0,             PMU_HSGAIN_4DB_N},
+    {0xFFF2,             PMU_HSGAIN_3P5DB_N},
+    {0xFFF4,             PMU_HSGAIN_3DB_N},
+    {0xFFF6,             PMU_HSGAIN_2P5DB_N},
+    {0xFFF8,             PMU_HSGAIN_2DB_N}
+};
+
+static IHF_PMU_GainMapping_t ihfPMUGainTable[PMU_IHFGAIN_NUM]=
+{
+    /* Gain in Q13.2,   IHF PMU Gain */
+    {0x8000,             PMU_IHFGAIN_MUTE},
+    {0xFF10,             PMU_IHFGAIN_60DB_N},
+    {0xFF1C,             PMU_IHFGAIN_57DB_N},
+    {0xFF28,             PMU_IHFGAIN_54DB_N},
+    {0xFF34,             PMU_IHFGAIN_51DB_N},
+    {0xFF40,             PMU_IHFGAIN_48DB_N},
+    {0xFF4C,             PMU_IHFGAIN_45DB_N},
+    {0xFF58,             PMU_IHFGAIN_42DB_N},
+    {0xFF64,             PMU_IHFGAIN_39DB_N},
+    {0xFF70,             PMU_IHFGAIN_36DB_N},
+    {0xFF76,             PMU_IHFGAIN_34P5DB_N},
+    {0xFF7C,             PMU_IHFGAIN_33DB_N},
+    {0xFF82,             PMU_IHFGAIN_31P5DB_N},
+    {0xFF88,             PMU_IHFGAIN_30DB_N},
+    {0xFF8E,             PMU_IHFGAIN_28P5DB_N},
+    {0xFF94,             PMU_IHFGAIN_27DB_N},
+    {0xFF9A,             PMU_IHFGAIN_25P5DB_N},
+    {0xFFA0,             PMU_IHFGAIN_24DB_N},
+    {0xFFA6,             PMU_IHFGAIN_22P5DB_N},
+    {0xFFAC,             PMU_IHFGAIN_21DB_N},
+    {0xFFB2,             PMU_IHFGAIN_19P5DB_N},
+    {0xFFB8,             PMU_IHFGAIN_18DB_N},
+    {0xFFBE,             PMU_IHFGAIN_16P5DB_N},
+    {0xFFC0,             PMU_IHFGAIN_16DB_N},
+    {0xFFC2,             PMU_IHFGAIN_15P5DB_N},
+    {0xFFC4,             PMU_IHFGAIN_15DB_N},
+    {0xFFC6,             PMU_IHFGAIN_14P5DB_N},
+    {0xFFC8,             PMU_IHFGAIN_14DB_N},
+    {0xFFCA,             PMU_IHFGAIN_13P5DB_N},
+    {0xFFCC,             PMU_IHFGAIN_13DB_N},
+    {0xFFCE,             PMU_IHFGAIN_12P5DB_N},
+    {0xFFD0,             PMU_IHFGAIN_12DB_N},
+    {0xFFD2,             PMU_IHFGAIN_11P5DB_N},
+    {0xFFD4,             PMU_IHFGAIN_11DB_N},
+    {0xFFD6,             PMU_IHFGAIN_10P5DB_N},
+    {0xFFD8,             PMU_IHFGAIN_10DB_N},
+    {0xFFDA,             PMU_IHFGAIN_9P5DB_N},
+    {0xFFDC,             PMU_IHFGAIN_9DB_N},
+    {0xFFDE,             PMU_IHFGAIN_8P5DB_N},
+    {0xFFE0,             PMU_IHFGAIN_8DB_N},
+    {0xFFE2,             PMU_IHFGAIN_7P5DB_N},
+    {0xFFE4,             PMU_IHFGAIN_7DB_N},
+    {0xFFE6,             PMU_IHFGAIN_6P5DB_N},
+    {0xFFE8,             PMU_IHFGAIN_6DB_N},
+    {0xFFEA,             PMU_IHFGAIN_5P5DB_N},
+    {0xFFEC,             PMU_IHFGAIN_5DB_N},
+    {0xFFEE,             PMU_IHFGAIN_4P5DB_N},
+    {0xFFF0,             PMU_IHFGAIN_4DB_N},
+    {0xFFF2,             PMU_IHFGAIN_3P5DB_N},
+    {0xFFF4,             PMU_IHFGAIN_3DB_N},
+    {0xFFF6,             PMU_IHFGAIN_2P5DB_N},
+    {0xFFF8,             PMU_IHFGAIN_2DB_N},
+    {0xFFFA,             PMU_IHFGAIN_1P5DB_N},
+    {0xFFFC,             PMU_IHFGAIN_1DB_N},
+    {0xFFFE,             PMU_IHFGAIN_P5DB_N},
+    {0x0000,             PMU_IHFGAIN_0DB},
+    {0x0002,             PMU_IHFGAIN_P5DB_P},
+    {0x0004,             PMU_IHFGAIN_1DB_P},
+    {0x0006,             PMU_IHFGAIN_1P5DB_P},
+    {0x0008,             PMU_IHFGAIN_2DB_P},
+    {0x000A,             PMU_IHFGAIN_2P5DB_P},
+    {0x000C,             PMU_IHFGAIN_3DB_P},
+    {0x000E,             PMU_IHFGAIN_3P5DB_P},
+    {0x0010,             PMU_IHFGAIN_4DB_P},
+};
+#endif
+
 typedef struct node
 {
     AUDCTRL_Config_t data;
@@ -100,30 +248,30 @@ static AUDCTRL_Table_t* tableHead = NULL;
 typedef struct
 {
     AUDIO_HW_ID_t hwID;
-    AUDDRV_DEVICE_e dev;
+    CSL_CAPH_DEVICE_e dev;
 } AUDCTRL_HWID_Mapping_t;
 
 static AUDCTRL_HWID_Mapping_t HWID_Mapping_Table[AUDIO_HW_TOTAL_COUNT] =
 {
 	//HW ID				// Device ID
-	{AUDIO_HW_NONE,			AUDDRV_DEV_NONE},
-	{AUDIO_HW_MEM,			AUDDRV_DEV_MEMORY},
-	{AUDIO_HW_VOICE_OUT,	AUDDRV_DEV_NONE},
-	{AUDIO_HW_MONO_BT_OUT,	AUDDRV_DEV_BT_SPKR},
-	{AUDIO_HW_STEREO_BT_OUT,AUDDRV_DEV_BT_SPKR},
-	{AUDIO_HW_USB_OUT,		AUDDRV_DEV_MEMORY},
-	{AUDIO_HW_I2S_OUT,		AUDDRV_DEV_FM_TX},
-	{AUDIO_HW_VOICE_IN,		AUDDRV_DEV_NONE},
-	{AUDIO_HW_MONO_BT_IN,	AUDDRV_DEV_BT_MIC},
-	{AUDIO_HW_USB_IN,		AUDDRV_DEV_MEMORY},
-	{AUDIO_HW_I2S_IN,		AUDDRV_DEV_FM_RADIO},
-	{AUDIO_HW_DSP_VOICE,	AUDDRV_DEV_DSP},
-	{AUDIO_HW_EARPIECE_OUT,	AUDDRV_DEV_EP},
-	{AUDIO_HW_HEADSET_OUT,	AUDDRV_DEV_HS},
-	{AUDIO_HW_IHF_OUT,		AUDDRV_DEV_IHF},
-	{AUDIO_HW_SPEECH_IN,	AUDDRV_DEV_ANALOG_MIC},
-	{AUDIO_HW_NOISE_IN,		AUDDRV_DEV_EANC_DIGI_MIC},
-	{AUDIO_HW_VIBRA_OUT,	AUDDRV_DEV_VIBRA}
+	{AUDIO_HW_NONE,			CSL_CAPH_DEV_NONE},
+	{AUDIO_HW_MEM,			CSL_CAPH_DEV_MEMORY},
+	{AUDIO_HW_VOICE_OUT,	CSL_CAPH_DEV_NONE},
+	{AUDIO_HW_MONO_BT_OUT,	CSL_CAPH_DEV_BT_SPKR},
+	{AUDIO_HW_STEREO_BT_OUT,CSL_CAPH_DEV_BT_SPKR},
+	{AUDIO_HW_USB_OUT,		CSL_CAPH_DEV_MEMORY},
+	{AUDIO_HW_I2S_OUT,		CSL_CAPH_DEV_FM_TX},
+	{AUDIO_HW_VOICE_IN,		CSL_CAPH_DEV_NONE},
+	{AUDIO_HW_MONO_BT_IN,	CSL_CAPH_DEV_BT_MIC},
+	{AUDIO_HW_USB_IN,		CSL_CAPH_DEV_MEMORY},
+	{AUDIO_HW_I2S_IN,		CSL_CAPH_DEV_FM_RADIO},
+	{AUDIO_HW_DSP_VOICE,	CSL_CAPH_DEV_DSP},
+	{AUDIO_HW_EARPIECE_OUT,	CSL_CAPH_DEV_EP},
+	{AUDIO_HW_HEADSET_OUT,	CSL_CAPH_DEV_HS},
+	{AUDIO_HW_IHF_OUT,		CSL_CAPH_DEV_IHF},
+	{AUDIO_HW_SPEECH_IN,	CSL_CAPH_DEV_ANALOG_MIC},
+	{AUDIO_HW_NOISE_IN,		CSL_CAPH_DEV_EANC_DIGI_MIC},
+	{AUDIO_HW_VIBRA_OUT,	CSL_CAPH_DEV_VIBRA}
 };
 
 
@@ -132,24 +280,24 @@ static AUDCTRL_HWID_Mapping_t HWID_Mapping_Table[AUDIO_HW_TOTAL_COUNT] =
 typedef struct
 {
     AUDCTRL_SPEAKER_t spkr;
-    AUDDRV_DEVICE_e dev;
+    CSL_CAPH_DEVICE_e dev;
 } AUDCTRL_SPKR_Mapping_t;
 
 static AUDCTRL_SPKR_Mapping_t SPKR_Mapping_Table[AUDCTRL_SPK_TOTAL_COUNT] =
 {
 	//HW ID				// Device ID
-	{AUDCTRL_SPK_HANDSET,		AUDDRV_DEV_EP},
-	{AUDCTRL_SPK_HEADSET,		AUDDRV_DEV_HS},
-	{AUDCTRL_SPK_HANDSFREE,		AUDDRV_DEV_IHF},
-	{AUDCTRL_SPK_BTM,		    AUDDRV_DEV_BT_SPKR},
-	{AUDCTRL_SPK_LOUDSPK,		AUDDRV_DEV_IHF},
-	{AUDCTRL_SPK_TTY,		    AUDDRV_DEV_HS},
-	{AUDCTRL_SPK_HAC,		    AUDDRV_DEV_EP},
-	{AUDCTRL_SPK_USB,		    AUDDRV_DEV_MEMORY},
-	{AUDCTRL_SPK_BTS,		    AUDDRV_DEV_BT_SPKR},
-	{AUDCTRL_SPK_I2S,		    AUDDRV_DEV_FM_TX},
-	{AUDCTRL_SPK_VIBRA,		    AUDDRV_DEV_VIBRA},
-	{AUDCTRL_SPK_UNDEFINED,		AUDDRV_DEV_NONE}
+	{AUDCTRL_SPK_HANDSET,		CSL_CAPH_DEV_EP},
+	{AUDCTRL_SPK_HEADSET,		CSL_CAPH_DEV_HS},
+	{AUDCTRL_SPK_HANDSFREE,		CSL_CAPH_DEV_IHF},
+	{AUDCTRL_SPK_BTM,		    CSL_CAPH_DEV_BT_SPKR},
+	{AUDCTRL_SPK_LOUDSPK,		CSL_CAPH_DEV_IHF},
+	{AUDCTRL_SPK_TTY,		    CSL_CAPH_DEV_HS},
+	{AUDCTRL_SPK_HAC,		    CSL_CAPH_DEV_EP},
+	{AUDCTRL_SPK_USB,		    CSL_CAPH_DEV_MEMORY},
+	{AUDCTRL_SPK_BTS,		    CSL_CAPH_DEV_BT_SPKR},
+	{AUDCTRL_SPK_I2S,		    CSL_CAPH_DEV_FM_TX},
+	{AUDCTRL_SPK_VIBRA,		    CSL_CAPH_DEV_VIBRA},
+	{AUDCTRL_SPK_UNDEFINED,		CSL_CAPH_DEV_NONE}
 };
 
 typedef struct
@@ -206,33 +354,35 @@ static AUDCTRL_DRVMIC_Mapping_t DRVMIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 typedef struct
 {
     AUDCTRL_MICROPHONE_t mic;
-    AUDDRV_DEVICE_e dev;
+    CSL_CAPH_DEVICE_e dev;
 } AUDCTRL_MIC_Mapping_t;
 
 static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 {
 	//HW ID				// Device ID
-	{AUDCTRL_MIC_UNDEFINED,		    AUDDRV_DEV_NONE},
-	{AUDCTRL_MIC_MAIN,		        AUDDRV_DEV_ANALOG_MIC},
-	{AUDCTRL_MIC_AUX,		        AUDDRV_DEV_HS_MIC},
-	{AUDCTRL_MIC_DIGI1,     		AUDDRV_DEV_DIGI_MIC_L},
-	{AUDCTRL_MIC_DIGI2,		        AUDDRV_DEV_DIGI_MIC_R},
-	{AUDCTRL_DUAL_MIC_DIGI12,		AUDDRV_DEV_DIGI_MIC},
-	{AUDCTRL_DUAL_MIC_DIGI21,		AUDDRV_DEV_DIGI_MIC},
-	{AUDCTRL_DUAL_MIC_ANALOG_DIGI1,	AUDDRV_DEV_NONE},
-	{AUDCTRL_DUAL_MIC_DIGI1_ANALOG,	AUDDRV_DEV_NONE},
-	{AUDCTRL_MIC_BTM,		        AUDDRV_DEV_BT_MIC},
-	{AUDCTRL_MIC_USB,       		AUDDRV_DEV_MEMORY},
-	{AUDCTRL_MIC_I2S,		        AUDDRV_DEV_FM_RADIO},
-	{AUDCTRL_MIC_DIGI3,	        	AUDDRV_DEV_NONE},
-	{AUDCTRL_MIC_DIGI4,		        AUDDRV_DEV_NONE},
-	{AUDCTRL_MIC_SPEECH_DIGI,       AUDDRV_DEV_DIGI_MIC},
-	{AUDCTRL_MIC_EANC_DIGI,		    AUDDRV_DEV_EANC_DIGI_MIC}
+	{AUDCTRL_MIC_UNDEFINED,		    CSL_CAPH_DEV_NONE},
+	{AUDCTRL_MIC_MAIN,		        CSL_CAPH_DEV_ANALOG_MIC},
+	{AUDCTRL_MIC_AUX,		        CSL_CAPH_DEV_HS_MIC},
+	{AUDCTRL_MIC_DIGI1,     		CSL_CAPH_DEV_DIGI_MIC_L},
+	{AUDCTRL_MIC_DIGI2,		        CSL_CAPH_DEV_DIGI_MIC_R},
+	{AUDCTRL_DUAL_MIC_DIGI12,		CSL_CAPH_DEV_DIGI_MIC},
+	{AUDCTRL_DUAL_MIC_DIGI21,		CSL_CAPH_DEV_DIGI_MIC},
+	{AUDCTRL_DUAL_MIC_ANALOG_DIGI1,	CSL_CAPH_DEV_NONE},
+	{AUDCTRL_DUAL_MIC_DIGI1_ANALOG,	CSL_CAPH_DEV_NONE},
+	{AUDCTRL_MIC_BTM,		        CSL_CAPH_DEV_BT_MIC},
+	{AUDCTRL_MIC_USB,       		CSL_CAPH_DEV_MEMORY},
+	{AUDCTRL_MIC_I2S,		        CSL_CAPH_DEV_FM_RADIO},
+	{AUDCTRL_MIC_DIGI3,	        	CSL_CAPH_DEV_NONE},
+	{AUDCTRL_MIC_DIGI4,		        CSL_CAPH_DEV_NONE},
+	{AUDCTRL_MIC_SPEECH_DIGI,       CSL_CAPH_DEV_DIGI_MIC},
+	{AUDCTRL_MIC_EANC_DIGI,		    CSL_CAPH_DEV_EANC_DIGI_MIC}
 };
 
  AUDDRV_PathID_t telephonyPathID;
 //static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
 #endif
+
+static telephony_digital_gain_dB = 12;  //dB
 
 //=============================================================================
 // Private function prototypes
@@ -260,11 +410,11 @@ static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
 #endif
 #endif
 static void AUDCTRL_CreateTable(void);
-//static void AUDCTRL_DeleteTable(void);
-static AUDDRV_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID);
-static AUDDRV_DEVICE_e GetDeviceFromMic(AUDCTRL_MICROPHONE_t mic);
-static AUDDRV_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr);
-static AUDDRV_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
+static void AUDCTRL_DeleteTable(void);
+static CSL_CAPH_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID);
+static CSL_CAPH_DEVICE_e GetDeviceFromMic(AUDCTRL_MICROPHONE_t mic);
+static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr);
+static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
@@ -272,8 +422,30 @@ static AUDDRV_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
+static void AUDCTRL_UpdatePath (CSL_CAPH_PathID pathID,
+                                                AUDIO_HW_ID_t src,
+                                                AUDIO_HW_ID_t sink,
+                                                AUDCTRL_SPEAKER_t spk,
+                                                AUDCTRL_MICROPHONE_t mic);
 static Int16 AUDCTRL_ConvertScale2Millibel(Int16 ScaleValue);
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+static HS_PMU_GainMapping_t getHSPMUGain(Int16 gain);
+static IHF_PMU_GainMapping_t getIHFPMUGain(Int16 gain);
 #endif
+#endif
+
+
+// convert the number from range scale_in to range scale_out.
+static UInt16	AUDIO_Util_Convert1( UInt16 input, UInt16 scale_in, UInt16 scale_out)
+{
+	//UInt16 output=0;
+	UInt16 temp=0;
+
+	temp = ( input * scale_out ) / scale_in;
+	//output = (UInt16)( temp + 0.5);
+	return temp;
+}
+
 //=============================================================================
 // Functions
 //=============================================================================
@@ -293,8 +465,11 @@ void AUDCTRL_Init (void)
 	AUDDRV_Init ();
 
     AUDCTRL_CreateTable();
-#endif    
-	(void)AUDDRV_HWControl_Init();
+#endif 
+	
+	csl_caph_hwctrl_init();
+
+	//telephony_digital_gain_dB = 12;  //SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  //dB
 }
 
 //============================================================================
@@ -306,7 +481,10 @@ void AUDCTRL_Init (void)
 //============================================================================
 void AUDCTRL_Shutdown(void)
 {
+#if  ( defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
     AUDDRV_Shutdown();
+    AUDCTRL_DeleteTable();
+#endif    
 }
 
 #if  ( defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
@@ -371,6 +549,10 @@ void AUDCTRL_EnableTelephony(
 	
 	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
 
+    //Load the mic gains from sysparm.
+    AUDCTRL_LoadMicGain(telephonyPathID.ulPathID, mic, TRUE);
+    //Load the speaker gains form sysparm.
+    AUDCTRL_LoadSpkrGain(telephonyPathID.dlPathID, speaker, TRUE);
 
 	//Save UL path to the path table.
 	data.pathID = telephonyPathID.ulPathID;
@@ -464,6 +646,7 @@ void AUDCTRL_DisableTelephony(
 #endif
 	return;
 }
+
 //============================================================================
 //
 // Function Name: AUDCTRL_SetTelephonySpkrVolume
@@ -478,38 +661,41 @@ void AUDCTRL_SetTelephonySpkrVolume(
 				AUDIO_GAIN_FORMAT_t		gain_format
 				)
 {
-#if defined(FUSE_APPS_PROCESSOR) && defined(CAPI2_INCLUDED)
-#ifdef CONFIG_AUDIO_BUILD
-	UInt32 gainHW, gainHW2, gainHW3, gainHW4;
+#if defined(FUSE_APPS_PROCESSOR) &&	defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
+
 	Int16 dspDLGain = 0;
 	Int16 pmuGain = 0;
-	Int16	digital_gain_dB = 0;
 	Int16	volume_max = 0;
-	AUDDRV_PathID pathID = 0;
-	OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
+	CSL_CAPH_PathID pathID = 0;
 
-	gainHW = gainHW2 = gainHW3 = gainHW4 = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x\n", volume);
 	if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
 	{
+		//actually uses gain unit of dB:
+		telephony_digital_gain_dB = volume;
+		if ( telephony_digital_gain_dB > 36 ) //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max )  //dB
+			telephony_digital_gain_dB = 36; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max; //dB
+
 		if( AUDIO_VOLUME_MUTE == volume )
 		{  //mute
 			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
 		}
 		else
 		{
-		
-			volume_max = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
-			// convert the value in 1st param from range of 2nd_param to range of 3rd_param:
-			digital_gain_dB = AUDIO_Util_Convert( volume, AUDIO_VOLUME_MAX, volume_max );
-
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
+			OmegaVoice_Sysparm_t *omega_voice_parms = NULL;
 
 			omega_voice_parms = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].omega_voice_parms;  //dB
-			audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam, (UInt32)(&(omega_voice_parms[digital_gain_dB])), 0, 0, 0, 0);
+			audio_control_generic(AUDDRV_CPCMD_SetOmegaVoiceParam,
+								(UInt32)(&(omega_voice_parms[telephony_digital_gain_dB])),  //?
+								0, 0, 0, 0);
+#endif
 
-			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-						(((Int16)digital_gain_dB - (Int16)volume_max)*100), 0, 0, 0, 0);
+			//if parm4 (OV_volume_step) is zero, volumectrl.c will calculate OV volume step based on digital_gain_dB, VOICE_VOLUME_MAX and NUM_SUPPORTED_VOLUME_LEVELS.
+			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain,
+								((telephony_digital_gain_dB - 36) * 100),  //DSP accepts [-3600, 0] mB
+								0, 0, 0, 0);
 			
 			pmuGain = (Int16)AUDDRV_GetPMUGain(GetDeviceFromSpkr(speaker),
 			       	((Int16)volume)<<1);
@@ -518,7 +704,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 				if (pmuGain == (Int16)(GAIN_SYSPARM))
 				{
 					//Read from sysparm.
-					pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
+					pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 				}
 				SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 			}
@@ -527,6 +713,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 	else
 	if (gain_format == AUDIO_GAIN_FORMAT_Q14_1)		
 	{
+/******
 	        dspDLGain = AUDDRV_GetDSPDLGain(
 			GetDeviceFromSpkr(speaker),
 		       	((Int16)volume)<<1);
@@ -540,14 +727,16 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			if (pmuGain == (Int16)(GAIN_SYSPARM))
 			{
 				//Read from sysparm.
-				pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
+				pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
+******/
 	}
 	else	// If AUDIO_GAIN_FORMAT_Q13_2.
 	if (gain_format == AUDIO_GAIN_FORMAT_Q13_2)		
 	{
+/******
         	dspDLGain = AUDDRV_GetDSPDLGain(
 			GetDeviceFromSpkr(speaker),
 		       	(Int16)volume);
@@ -562,14 +751,16 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			if (pmuGain == (Int16)(GAIN_SYSPARM))
 			{
 				//Read from sysparm.
-				pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
+				pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
+******/
 	}
 	else	// If AUDIO_GAIN_FORMAT_Q1_14, directly pass to DSP.
 	if (gain_format == AUDIO_GAIN_FORMAT_Q1_14)
 	{
+/******
 	        dspDLGain = AUDDRV_GetDSPDLGain_Q1_14(
 			GetDeviceFromSpkr(speaker),
 		       	(Int16)volume);
@@ -584,12 +775,14 @@ void AUDCTRL_SetTelephonySpkrVolume(
 			if (pmuGain == (Int16)(GAIN_SYSPARM))
 			{
 				//Read from sysparm.
-				pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
+				pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 			}
 			SetGainOnExternalAmp(speaker, (void *)&pmuGain);
 		}
-	}	
+******/
+	}
 	// If AUDIO_GAIN_FORMAT_HW_REG, do nothing.
+	/***
 	pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE,
                                         dlSink,
                                         speaker,
@@ -598,117 +791,22 @@ void AUDCTRL_SetTelephonySpkrVolume(
 	{
 		audio_xassert(0,pathID);
 		return;
-	}
-	
-	//Set Mixer input/output gain from sysparm.
-        gainHW = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l;
-        gainHW2 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r;
-        (void)AUDDRV_HWControl_SetMixingGain(pathID, gainHW, gainHW2);
-	   
-        gainHW = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_l;
-        gainHW2 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l;
-        gainHW3 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_r;
-        gainHW4 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r;
-       (void) AUDDRV_HWControl_SetMixOutputGain(pathID, gainHW, gainHW2, gainHW3, gainHW4); 
-#else
-	Int16 dspDLGain = 0;
-	UInt8	digital_gain_dB = 0;
-	UInt16	volume_max = 0;
-	UInt8	OV_volume_step = 0;  //OmegaVoice volume step	
-//#define  CUSTOMER_SW_SPECIFY_OV_VOLUME_STEP
-#undef  CUSTOMER_SW_SPECIFY_OV_VOLUME_STEP
-
-#if defined(CUSTOMER_SW_SPECIFY_OV_VOLUME_STEP)
-
-	//map the digital gain to mmi level for OV. Need to adjust based on mmi level.
-	static UInt8 uVol2OV[37]={
-		/**
-					0, 
-				   0, 0, 1, 
-				   0, 0, 2, 
-				   0, 0, 3, 
-				   0, 0, 4, 
-				   0, 0, 5, 
-				   0, 0, 6, 
-				   0, 0, 7, 
-				   0, 0, 8, 
-				   0, 0, 0, 
-				   0, 0, 0, 
-				   0, 0, 0, 
-				   0, 0, 0
-				*/
-					0, 0, 0, 0, 1, 
-					0, 0, 0, 0, 2,
-					0, 0, 0, 0, 3,
-					0, 0, 0, 0, 4,
-					0, 0, 0, 0, 5, 
-					0, 0, 0, 0, 6, 
-					0, 0, 0, 0, 7, 
-					0, 0, 0, 0, 8
-				};
-
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x, OV volume step %d \n", volume, uVol2OV[volume] );
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandVolume, volume, gain_format, uVol2OV[volume], 0, 0);
-
-#else
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x\n", volume);
-	if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
-	{
-		if( AUDIO_VOLUME_MUTE == volume )
-		{  //mute
-			audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
-		}
-		else
-		{
-		
-			volume_max = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
-			// convert the value in 1st param from range of 2nd_param to range of 3rd_param:
-			digital_gain_dB = AUDIO_Util_Convert( volume, AUDIO_VOLUME_MAX, volume_max );
-
-			Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x, OV volume step %d (FORMAT_VOL_LEVEL) \n", volume, OV_volume_step );
-
-			//if parm4 (OV_volume_step) is zero, volumectrl.c will calculate OV volume step based on digital_gain_dB, VOICE_VOLUME_MAX and NUM_SUPPORTED_VOLUME_LEVELS.
-			audio_control_generic( AUDDRV_CPCMD_SetBasebandVolume, digital_gain_dB, 0, OV_volume_step, 0, 0);
-		}
-		return;
-	}
-	else
-	if (gain_format == AUDIO_GAIN_FORMAT_Q14_1)		
-	{
-        dspDLGain = (Int16)AUDDRV_GetDSPDLGain(
-			GetDeviceFromSpkr(speaker),
-		       	(volume<<1));
-	
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-			(dspDLGain+100), 0, 0, 0, 0);
-		return;
-	}
-	else	// If AUDIO_GAIN_FORMAT_Q13_2.
-	if (gain_format == AUDIO_GAIN_FORMAT_Q13_2)		
-	{
-        dspDLGain = (Int16)AUDDRV_GetDSPDLGain(
-			GetDeviceFromSpkr(speaker),
-		       	volume);
-	
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-			(dspDLGain+100), 0, 0, 0, 0);
-		return;
-	}
-	else	// If AUDIO_GAIN_FORMAT_Q1_14, directly pass to DSP.
-	if (gain_format == AUDIO_GAIN_FORMAT_Q1_14)
-	{
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-			((Int16)volume+100), 0, 0, 0, 0);
 	}	
-	else	// If AUDIO_GAIN_FORMAT_HW_REG, do nothing.
-	{
-		return;
-	}	
-#endif
-#endif
+	***/
 #endif
 }
 
+//============================================================================
+//
+// Function Name: AUDCTRL_GetTelephonySpkrVolume
+//
+// Description:   Set dl volume of telephony path
+//
+//============================================================================
+UInt32 AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_t gain_format )
+{
+	return telephony_digital_gain_dB;
+}
 
 //============================================================================
 //
@@ -724,16 +822,19 @@ void AUDCTRL_SetTelephonyMicGain(
 				AUDIO_GAIN_FORMAT_t		gain_format
 				)
 {
-#ifdef CONFIG_AUDIO_BUILD
-	AUDDRV_PathID pathID = 0;
+	CSL_CAPH_PathID pathID = 0;
     Int16 gainTemp = 0;
 	Int16 dspULGain = 0;
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonyMicGain: gain = 0x%x\n", gain);
-	if ((gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
-	    ||(gain_format == AUDIO_GAIN_FORMAT_Q14_1))
+	if (gain_format == AUDIO_GAIN_FORMAT_Q14_1)
 	{
         gainTemp = gain<<1;
+    }
+    else
+	if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
+    {
+        gainTemp = gain<<2;
     }
     else	// If AUDIO_GAIN_FORMAT_Q1_14, does not support.
 	if (gain_format == AUDIO_GAIN_FORMAT_Q1_14)
@@ -745,7 +846,7 @@ void AUDCTRL_SetTelephonyMicGain(
 	{
 		// Read from sysparm.
 		mode = AUDDRV_GetAudioMode();
-		dspULGain = AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;		
+		dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;		
 		
 		audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, 
 				dspULGain, 0, 0, 0, 0);		
@@ -767,19 +868,11 @@ void AUDCTRL_SetTelephonyMicGain(
 	}
 	
 	
-	AUDDRV_HWControl_SetSourceGain(pathID,
-                                        (UInt16) gain,
-                                        (UInt16) gain);
+	csl_caph_hwctrl_SetSourceGain(pathID,
+                                        (UInt16) gainTemp,
+                                        (UInt16) gainTemp);
 	
-#else
 
-	Int16 dspULGain = 0;
-        dspULGain = (Int16)AUDDRV_GetDSPULGain(
-			GetDeviceFromMic(mic),
-		       	gain);
-	//this API only take UInt32 param. pass (gain+100) in that it is Positive integer.
-	audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, (dspULGain+100), 0, 0, 0, 0);
-#endif
 }
 
 
@@ -832,6 +925,224 @@ void AUDCTRL_SetTelephonyMicMute(
 #endif
 }
 
+
+//============================================================================
+//
+// Function Name: AUDCTRL_LoadMicGain
+//
+// Description:   Load ul gain from sysparm.
+//
+//============================================================================
+void AUDCTRL_LoadMicGain(CSL_CAPH_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded)
+{
+    UInt16 gainTemp = 0;
+	Int16 dspULGain = 0;
+	AudioMode_t mode = AUDIO_MODE_HANDSET;
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_LoadMicGain\n");
+
+	// Set DSP UL gain from sysparm.
+	mode = AUDDRV_GetAudioMode();
+    if(isDSPNeeded == TRUE)
+    {
+	    dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
+	    audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, 
+				dspULGain, 0, 0, 0, 0);		
+    }
+
+    if((mic == AUDCTRL_MIC_MAIN) 
+       ||(mic == AUDCTRL_MIC_AUX)) 
+    {
+        // Set Mic PGA gain from sysparm.	
+      	gainTemp = 74; //AUDIO_GetParmAccessPtr()[mode].mic_pga;
+      	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_AMIC_PGA_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+
+        // Set AMic DGA coarse gain from sysparm.	
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].amic_dga_coarse_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_AMIC_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+	
+        // Set AMic DGA fine gain from sysparm.	
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].amic_dga_fine_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_AMIC_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+    }
+
+    if((mic == AUDCTRL_MIC_DIGI1) 
+       ||(mic == AUDCTRL_MIC_SPEECH_DIGI)) 
+    {
+        // Set DMic1 DGA coarse gain from sysparm.	
+      	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic1_dga_coarse_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_DMIC1_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+	
+        // Set DMic1 DGA fine gain from sysparm.	
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic1_dga_fine_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_DMIC1_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+    }
+
+    if((mic == AUDCTRL_MIC_DIGI2) 
+       ||(mic == AUDCTRL_MIC_SPEECH_DIGI)) 
+    {
+        // Set DMic2 DGA coarse gain from sysparm.	
+      	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic2_dga_coarse_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_DMIC2_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+	
+        // Set DMic2 DGA fine gain from sysparm.	
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic2_dga_fine_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_DMIC2_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+    }
+
+    if((AUDDRV_IsDualMicEnabled()==TRUE)
+       ||(mic == AUDCTRL_MIC_EANC_DIGI)) 
+    {
+        // Set DMic3 DGA coarse gain from sysparm.	
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic3_dga_coarse_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_DMIC3_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+	
+        // Set DMic3 DGA fine gain from sysparm.	
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic3_dga_fine_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_DMIC3_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+	
+        // Set DMic4 DGA coarse gain from sysparm.	
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic4_dga_coarse_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_DMIC4_DGA_COARSE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+	
+        // Set DMic4 DGA fine gain from sysparm.	
+       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic4_dga_fine_gain;
+       	csl_caph_hwctrl_SetHWGain(ulPathID,
+                                CSL_CAPH_DMIC4_DGA_FINE_GAIN,
+                                (UInt32) gainTemp,
+                                CSL_CAPH_DEV_NONE);
+    }
+    return;
+}
+
+
+
+//============================================================================
+//
+// Function Name: AUDCTRL_LoadSpkrGain
+//
+// Description:   Load dl gain from sysparm.
+//
+//============================================================================
+void AUDCTRL_LoadSpkrGain(CSL_CAPH_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded)
+{
+	Int16 dspDLGain = 0;
+	Int16 pmuGain = 0;
+    UInt16 gainTemp = 0;
+	AudioMode_t mode = AUDIO_MODE_HANDSET;
+	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_LoadSpkrGain\n");
+
+	mode = AUDDRV_GetAudioMode();
+
+	// Set DSP DL gain from sysparm.
+    if(isDSPNeeded == TRUE)
+    {
+	    dspDLGain = 64; //AUDIO_GetParmAccessPtr()[mode].echo_nlp_downlink_volume_ctrl;
+	    audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
+						dspDLGain, 0, 0, 0, 0);
+    }
+			
+
+    //Load HW Mixer gains from sysparm
+	if ((mode == AUDIO_MODE_HANDSET)
+		||(mode == AUDIO_MODE_HANDSET_WB)
+		||(mode == AUDIO_MODE_HAC)
+		||(mode == AUDIO_MODE_HAC_WB))		
+	{
+		dev = CSL_CAPH_DEV_EP;
+	}
+	else
+	if ((mode == AUDIO_MODE_HEADSET)
+		||(mode == AUDIO_MODE_HEADSET_WB)
+		||(mode == AUDIO_MODE_TTY)
+		||(mode == AUDIO_MODE_TTY_WB))
+		
+	{
+		dev = CSL_CAPH_DEV_HS;
+	}
+	else
+	if ((mode == AUDIO_MODE_SPEAKERPHONE)
+		||(mode == AUDIO_MODE_SPEAKERPHONE_WB))
+	{
+		dev = CSL_CAPH_DEV_IHF;
+	}
+
+	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l;
+	csl_caph_hwctrl_SetHWGain(dlPathID, 
+                               CSL_CAPH_SRCM_INPUT_GAIN_L, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r;
+	csl_caph_hwctrl_SetHWGain(dlPathID, 
+                               CSL_CAPH_SRCM_INPUT_GAIN_R, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = 96; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l;
+	csl_caph_hwctrl_SetHWGain(dlPathID, 
+                               CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = 96; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r;
+	csl_caph_hwctrl_SetHWGain(dlPathID, 
+                               CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l;
+	csl_caph_hwctrl_SetHWGain(dlPathID, 
+                               CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_L, 
+                               (UInt32)gainTemp, dev);
+	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r;
+	csl_caph_hwctrl_SetHWGain(dlPathID, 
+                               CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R, 
+                               (UInt32)gainTemp, dev);
+	
+	//Load PMU gain from sysparm.
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
+	pmuGain = AUDIO_GetParmAccessPtr()[mode].ext_speaker_pga_l;
+#else
+	//defaults until dependency of SYSPARM is resolved.
+	if(dev == AUDDRV_DEV_HS)
+		pmuGain = 65520;
+	else if(dev == AUDDRV_DEV_IHF)
+		pmuGain = 16;
+	else
+		pmuGain = 0;
+		
+#endif
+	SetGainOnExternalAmp(speaker, (void *)&pmuGain);
+	
+    return;
+}
+
+
+
+
 //============================================================================
 //
 // Function Name: AUDCTRL_EnablePlay
@@ -849,19 +1160,19 @@ void AUDCTRL_EnablePlay(
 				UInt32					*pPathID
 				)
 {
-    AUDDRV_HWCTRL_CONFIG_t config;
-    AUDDRV_PathID pathID;
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID;
     AUDCTRL_Config_t data;
 
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_EnablePlay: src = 0x%x, sink = 0x%x, tap = 0x%x, spkr %d \n", 
                     src, sink, tap, spk);
     pathID = 0;
-    memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+    memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
     memset(&data, 0, sizeof(AUDCTRL_Config_t));
 
     // Enable the path. And get path ID.
-    config.streamID = AUDDRV_STREAM_NONE; 
+    config.streamID = CSL_CAPH_STREAM_NONE; 
     config.pathID = 0;
     config.source = GetDeviceFromHWID(src);
     config.sink =  GetDeviceFromSpkr(spk);
@@ -874,14 +1185,21 @@ void AUDCTRL_EnablePlay(
 
 	if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk==AUDCTRL_SPK_USB)
 	{	//USB call
-		config.source = AUDDRV_DEV_DSP;
-		config.sink = AUDDRV_DEV_MEMORY;
+		config.source = CSL_CAPH_DEV_DSP;
+		config.sink = CSL_CAPH_DEV_MEMORY;
 	}
+
+#if defined(ENABLE_DMA_ARM2SP)
+	if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk!=AUDCTRL_SPK_USB)
+	{
+		config.sink = CSL_CAPH_DEV_DSP_throughMEM; //convert from AUDDRV_DEV_EP
+	}
+#endif
 
 	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
 		;
 	else
-		pathID = AUDDRV_HWControl_EnablePath(config);
+		pathID = csl_caph_hwctrl_EnablePath(config);
 
     //Save this path to the path table.
     data.pathID = pathID;
@@ -899,17 +1217,22 @@ void AUDCTRL_EnablePlay(
 		powerOnExternalAmp( spk, AudioUseExtSpkr, TRUE );
     }
 
+    //Load the speaker gains form sysparm.
+    //Can not call this following API here.
+    //Because Render driver really enable the path.
+    //AUDCTRL_LoadSpkrGain(pathID, spk, FALSE);
+
 #if 0
 	// in case it was muted from last play,
 	AUDCTRL_SetPlayMute (sink, spk, FALSE); 
 #endif    
 	// Enable DSP DL for Voice Call.
-	if(config.source == AUDDRV_DEV_DSP)
+	if(config.source == CSL_CAPH_DEV_DSP)
 	{
 		AUDDRV_EnableDSPOutput(DRVSPKR_Mapping_Table[spk].auddrv_spkr, sr);
 	}
 	if(pPathID) *pPathID = pathID;
-
+	Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %p, pathID %d.\r\n", pPathID, pathID);
 }
 //
 // Function Name: AUDCTRL_DisablePlay
@@ -924,10 +1247,10 @@ void AUDCTRL_DisablePlay(
 				UInt32					inPathID
 				)
 {
-    AUDDRV_HWCTRL_CONFIG_t config;
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID = 0;
 
-    memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+    memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 	if(inPathID==0) pathID = AUDCTRL_GetPathIDFromTableWithSrcSink(src, sink, spk, AUDCTRL_MIC_UNDEFINED);
 	else pathID = inPathID; //do not search for it if pathID is provided, this is to support multi streams to the same destination.
 	Log_DebugPrintf(LOGID_AUDIO,
@@ -943,8 +1266,8 @@ void AUDCTRL_DisablePlay(
 
 	if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk==AUDCTRL_SPK_USB)
 	{	//USB call
-		config.source = AUDDRV_DEV_DSP;
-		config.sink = AUDDRV_DEV_MEMORY;
+		config.source = CSL_CAPH_DEV_DSP;
+		config.sink = CSL_CAPH_DEV_MEMORY;
 	}
 
 	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
@@ -952,7 +1275,7 @@ void AUDCTRL_DisablePlay(
 	else
 	{
 		config.pathID = pathID;
-		(void) AUDDRV_HWControl_DisablePath(config);
+		(void) csl_caph_hwctrl_DisablePath(config);
 	}
 
         //Save this path to the path table.
@@ -980,20 +1303,19 @@ void AUDCTRL_DisablePlay(
 void AUDCTRL_SetPlayVolume(
 				AUDIO_HW_ID_t			sink,
 				AUDCTRL_SPEAKER_t		spk,
-				AUDIO_GAIN_FORMAT_t     gainF,
+				AUDIO_GAIN_FORMAT_t     gain_format,
 				UInt32					vol_left,
 				UInt32					vol_right
 				)
 {
-#ifdef CONFIG_AUDIO_BUILD
-    UInt32 gainHW, gainHW2, gainHW3, gainHW4;
+    UInt32 gainHW, gainHW2, gainHW3, gainHW4, gainHW5, gainHW6;
     Int16 pmuGain = 0x0;
-    AUDDRV_DEVICE_e speaker = AUDDRV_DEV_NONE;
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+    CSL_CAPH_PathID pathID = 0;
     UInt16 volume_max = 0;
     UInt8 digital_gain_dB = 0;
 
-    gainHW = gainHW2 = gainHW3 = gainHW4 = 0;
+    gainHW = gainHW2 = gainHW3 = gainHW4 = gainHW5 = gainHW6 = 0;
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: Set Play Volume. sink = 0x%x,  spk = 0x%x, vol = 0x%x\n", sink, spk, vol_left);
     
     speaker = GetDeviceFromSpkr(spk);
@@ -1018,70 +1340,117 @@ void AUDCTRL_SetPlayVolume(
         //Convert to Q13.2 and check from lookup table.
         gainHW = AUDDRV_GetHWDLGain(speaker, ((Int16)vol_left)<<1);
         gainHW2 = AUDDRV_GetHWDLGain(speaker, ((Int16)vol_right)<<1);
-	pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, ((Int16)vol_left)<<1);
+    	pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, ((Int16)vol_left)<<1);
     }
     else // If AUDIO_GAIN_FORMAT_Q13_2.
     if (gain_format == AUDIO_GAIN_FORMAT_Q13_2)
     {
         gainHW = AUDDRV_GetHWDLGain(speaker, (Int16)vol_left);
         gainHW2 = AUDDRV_GetHWDLGain(speaker, (Int16)vol_right);	    
-	pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, (Int16)vol_left);
+        pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, (Int16)vol_left);
     }
     else // If AUDIO_GAIN_FORMAT_Q1_14.
     if (gain_format == AUDIO_GAIN_FORMAT_Q1_14)
     {
         gainHW = AUDDRV_GetHWDLGain_Q1_14(speaker, (Int16)vol_left);
         gainHW2 = AUDDRV_GetHWDLGain_Q1_14(speaker, (Int16)vol_right);	    
-	pmuGain = (Int16)AUDDRV_GetPMUGain_Q1_14(speaker, (Int16)vol_left);
+        pmuGain = (Int16)AUDDRV_GetPMUGain_Q1_14(speaker, (Int16)vol_left);
     }
     else // If AUDIO_GAIN_FORMAT_VOL_LEVEL.
     if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)
     {
-	volume_max = (UInt16)AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  //dB
-	// convert the value in 1st param from range of 2nd_param to range of 3rd_param:
-	digital_gain_dB = (Int16)AUDIO_Util_Convert( vol_left, AUDIO_VOLUME_MAX, volume_max );	    
-	vol_left = (UInt32)(digital_gain_dB - volume_max);
-	digital_gain_dB = (Int16)AUDIO_Util_Convert( vol_right, AUDIO_VOLUME_MAX, volume_max );	    
-	vol_right = (UInt32)(digital_gain_dB - volume_max);
+        volume_max = 40; //(UInt16)AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].voice_volume_max;  
+	    // convert the value in 1st param from range of 2nd_param to range of 3rd_param:
+        digital_gain_dB = (Int16)AUDIO_Util_Convert1( vol_left, AUDIO_VOLUME_MAX, volume_max );	    
+	    vol_left = (UInt32)(digital_gain_dB - volume_max);
+	    digital_gain_dB = (Int16)AUDIO_Util_Convert1( vol_right, AUDIO_VOLUME_MAX, volume_max );	    
+	    vol_right = (UInt32)(digital_gain_dB - volume_max);
 
         //Convert to Q13.2 and check lookup table.	
         gainHW = AUDDRV_GetHWDLGain(speaker, ((Int16)vol_left)<<2);
         gainHW2 = AUDDRV_GetHWDLGain(speaker, ((Int16)vol_right)<<2);
-	pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, ((Int16)vol_left)<<2);
+	    pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, ((Int16)vol_left)<<2);
     }
-    
-    // Set the gain to the audio HW.
+ #ifdef CONFIG_DEPENDENCY_READY_SYSPARM
+     // Set the gain to the audio HW.
     if ((gainHW != (UInt32)GAIN_NA)&&(gainHW2 != (UInt32)GAIN_NA))
     {
 	//for mixing gain. Get it from sysparm.
-	//Customer can overwrite the mixing gain later.
-        gainHW3 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l;
-        gainHW4 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r;
-        (void)AUDDRV_HWControl_SetHWGain(AUDDRV_SRCM_INPUT_GAIN_L,
+        gainHW3 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l);
+        gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r);
+        (void)csl_caph_hwctrl_SetHWGain(pathID, CSL_CAPH_SRCM_INPUT_GAIN_L,
 					 gainHW3, speaker);
-	(void)AUDDRV_HWControl_SetHWGain(AUDDRV_SRCM_INPUT_GAIN_R,
+	    (void)csl_caph_hwctrl_SetHWGain(pathID, CSL_CAPH_SRCM_INPUT_GAIN_R,
 					 gainHW4, speaker);
-	   
        // Mixer output gain is used for volume control.
-       // Configuration table decides wheter to read them from sysparm or directly take from
-       // customer.
+       // Configuration table decides wheter to read them from sysparm or directly take from the customer.
         if ((gainHW == (UInt32)GAIN_SYSPARM)||(gainHW2 == (UInt32)GAIN_SYSPARM))
         {
-            gainHW = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_l;
-            gainHW2 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l;
-            gainHW3 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_r;
-            gainHW4 = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r;
-            (void) AUDDRV_HWControl_SetMixOutputGain(pathID, gainHW, gainHW2, gainHW3, gainHW4); 
+            gainHW5 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_l);
+            gainHW6 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l);
+            gainHW3 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_fine_gain_r);
+            gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r);
+            {
+				    csl_caph_Mixer_GainMapping_t outGainL, outGainR;
+					csl_caph_Mixer_GainMapping2_t outGain2L, outGain2R;
+
+					outGainL = csl_caph_gain_GetMixerGain((Int16)gainHW5);
+					outGainR = csl_caph_gain_GetMixerGain((Int16)gainHW3);
+					outGain2L = csl_caph_gain_GetMixerOutputCoarseGain((Int16)gainHW6);
+					outGain2R = csl_caph_gain_GetMixerOutputCoarseGain((Int16)gainHW4);
+
+					csl_caph_hwctrl_SetMixOutGain((CSL_CAPH_PathID)pathID, 
+													  outGainL.mixerOutputFineGain,
+													  outGain2L.mixerOutputCoarseGain,
+													  outGainR.mixerOutputFineGain,
+													  outGain2R.mixerOutputCoarseGain);
+			}
         }
-	else
-	{
-            (void) AUDDRV_HWControl_SetSinkGain(pathID, (UInt16)gainHW, (UInt16)gainHW2);
-	}
+    	else
+	    {
+            gainHW6 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l);
+            gainHW4 = (UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r);
+
+        	csl_caph_hwctrl_SetHWGain(pathID, 
+                               CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L, 
+                               gainHW6, CSL_CAPH_DEV_NONE);
+	
+        	csl_caph_hwctrl_SetHWGain(pathID, 
+                               CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R, 
+                               gainHW4, CSL_CAPH_DEV_NONE);
+            (void) csl_caph_hwctrl_SetSinkGain(pathID, (UInt16)gainHW, (UInt16)gainHW2);
+	    }
     }
-    // Set teh gain to the external amplifier
+
+ #else
+    if ((gainHW != (UInt32)GAIN_NA)&&(gainHW2 != (UInt32)GAIN_NA))
+    {
+			gainHW3 = 0;  //(UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_l);
+			gainHW4 = 0; //(UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_input_gain_r);
+			(void)csl_caph_hwctrl_SetHWGain(pathID, CSL_CAPH_SRCM_INPUT_GAIN_L,
+											 gainHW3, speaker);
+			(void)csl_caph_hwctrl_SetHWGain(pathID, CSL_CAPH_SRCM_INPUT_GAIN_R,
+								 gainHW4, speaker);
+
+            gainHW6 = 96; //(UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_l);
+            gainHW5 = 96; //(UInt32)(AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].srcmixer_output_coarse_gain_r);
+        	csl_caph_hwctrl_SetHWGain(pathID, 
+                               CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L,
+                               gainHW6, CSL_CAPH_DEV_NONE);
+	
+        	csl_caph_hwctrl_SetHWGain(pathID,
+                               CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R, 
+                               gainHW5,  CSL_CAPH_DEV_NONE);
+            (void) csl_caph_hwctrl_SetSinkGain(pathID, (UInt16)gainHW, (UInt16)gainHW2);
+	}
+ #endif
+    
+
+
+    // Set the gain to the external amplifier
     if (pmuGain == (Int16)GAIN_SYSPARM)
     {
-        pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
+		pmuGain = (Int16)vol_left; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
         SetGainOnExternalAmp(spk, &(pmuGain));
     }
     else
@@ -1090,65 +1459,7 @@ void AUDCTRL_SetPlayVolume(
         SetGainOnExternalAmp(spk, &(pmuGain));
     }
     return;
-#else
 
-    UInt32 gainHW, gainHW2;
-    AUDTABL_GainMapping_t gainMapping;
-    AUDDRV_PathID pathID = 0;
-    AudioMode_t audioMode = AUDIO_MODE_INVALID;
-
-    gainHW = gainHW2 = 0;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: Set Play Volume. sink = 0x%x,  spk = 0x%x, vol = 0x%lx\n", sink, spk, vol_left);
-    
-    memset(&gainMapping, 0, sizeof(AUDTABL_GainMapping_t));
-    switch(sink)
-    {
-        case AUDIO_HW_IHF_OUT:
-            audioMode = AUDIO_MODE_SPEAKERPHONE;
-            break;
-        case AUDIO_HW_HEADSET_OUT:
-            audioMode = AUDIO_MODE_HEADSET;
-            break;
-        case AUDIO_HW_EARPIECE_OUT:
-            audioMode = AUDIO_MODE_HANDSET;
-            break;
-        case AUDIO_HW_MONO_BT_OUT:
-        case AUDIO_HW_STEREO_BT_OUT:
-            audioMode = AUDIO_MODE_BLUETOOTH;
-            break;
-        case AUDIO_HW_USB_OUT:
-            audioMode = AUDIO_MODE_USB;
-            break;
-        default:
-            audioMode = AUDIO_MODE_INVALID;
-    }
-
-    gainMapping = AUDTABL_getGainDistribution(audioMode, vol_left);
-    gainHW = gainMapping.gainHW;
-    if (gainHW == TOTAL_GAIN)
-    {
-        gainHW = vol_left;
-    }
-    gainMapping = AUDTABL_getGainDistribution(audioMode, vol_right);
-    gainHW2 = gainMapping.gainHW;
-    if (gainHW2 == TOTAL_GAIN)
-    {
-        gainHW2 = vol_right;
-    }
-
-	if(sink == AUDIO_HW_STEREO_BT_OUT || sink == AUDIO_HW_USB_OUT)
-		return;
-    
-    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
-
-    // Set the gain to the audio HW.
-    (void) AUDDRV_HWControl_SetSinkGain(pathID, gainHW, gainHW2);
-
-    // Set teh gain to the external amplifier
-    SetGainOnExternalAmp(spk, &(gainMapping.gainPMU));
-
-    return;
-#endif
 }
 
 //============================================================================
@@ -1164,7 +1475,7 @@ void AUDCTRL_SetPlayMute(
 				Boolean					mute
 				)
 {
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_PathID pathID = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_SetPlayMute: sink = 0x%x,  spk = 0x%x, mute = 0x%x\n", 
@@ -1183,13 +1494,73 @@ void AUDCTRL_SetPlayMute(
 
     if (mute == TRUE)
     {
-        (void) AUDDRV_HWControl_MuteSink(pathID);
+        (void) csl_caph_hwctrl_MuteSink(pathID);
     }
     else
     {
-        (void) AUDDRV_HWControl_UnmuteSink(pathID);
+        (void) csl_caph_hwctrl_UnmuteSink(pathID);
     }
     return;
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_SwitchPlaySpk
+//
+// Description:   switch a speaker to a playback path
+//
+//============================================================================
+void AUDCTRL_SwitchPlaySpk(
+				AUDIO_HW_ID_t			curSink,
+				AUDCTRL_SPEAKER_t		curSpk,
+				AUDIO_HW_ID_t			newSink,
+				AUDCTRL_SPEAKER_t		newSpk
+				)
+{
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID = 0;
+    CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+
+	Log_DebugPrintf(LOGID_AUDIO,
+                    "AUDCTRL_SwitchPlaySpk curSink = 0x%x,  curSpk = 0x%x, newSink = 0x%x,  newSpk = 0x%x\n", 
+                    curSink, curSpk, newSink, newSpk);
+
+
+    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
+    if(pathID == 0)
+    {
+	    audio_xassert(0,pathID);
+	    return;
+    }
+ 
+    // add new spk first... 
+    speaker = GetDeviceFromSpkr(newSpk);
+    if (speaker != CSL_CAPH_DEV_NONE)
+    {
+        config.source = CSL_CAPH_DEV_MEMORY;
+        config.sink = speaker;
+        (void) csl_caph_hwctrl_AddPath(pathID, config);
+    }
+    if ((curSpk == AUDCTRL_SPK_LOUDSPK)||(curSpk == AUDCTRL_SPK_HEADSET))	
+        powerOnExternalAmp( curSpk, AudioUseExtSpkr, FALSE );	    
+   
+    // remove current spk
+    speaker = GetDeviceFromSpkr(curSpk);
+    if (speaker != CSL_CAPH_DEV_NONE)
+    {
+        config.source = CSL_CAPH_DEV_MEMORY;
+        config.sink = speaker;
+        (void) csl_caph_hwctrl_RemovePath(pathID, config);
+    } 
+    if ((newSpk == AUDCTRL_SPK_LOUDSPK)||(newSpk == AUDCTRL_SPK_HEADSET))	
+        powerOnExternalAmp( newSpk, AudioUseExtSpkr, TRUE );	    
+    
+
+    // update path structure
+    AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
+
+    return;
+    
 }
 
 //============================================================================
@@ -1204,6 +1575,35 @@ void AUDCTRL_AddPlaySpk(
 				AUDCTRL_SPEAKER_t		spk
 				)
 {
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID = 0;
+    CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+
+	Log_DebugPrintf(LOGID_AUDIO,
+                    "AUDCTRL_AddPlaySpk: sink = 0x%x,  spk = 0x%x\n", 
+                    sink, spk);
+
+
+    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
+    if(pathID == 0)
+    {
+	    audio_xassert(0,pathID);
+	    return;
+    }
+   
+
+    speaker = GetDeviceFromSpkr(spk);
+    if (speaker != CSL_CAPH_DEV_NONE)
+    {
+        config.source = CSL_CAPH_DEV_MEMORY;
+        config.sink = speaker;
+        (void) csl_caph_hwctrl_AddPath(pathID, config);
+    }
+    
+    AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, sink, spk, AUDCTRL_MIC_UNDEFINED); 
+    
+    return;
+    
 }
 
 //============================================================================
@@ -1218,6 +1618,35 @@ void AUDCTRL_RemovePlaySpk(
 				AUDCTRL_SPEAKER_t		spk
 				)
 {
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID = 0;
+    CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
+
+	Log_DebugPrintf(LOGID_AUDIO,
+                    "AUDCTRL_RemovePlaySpk: sink = 0x%x,  spk = 0x%x\n", 
+                    sink, spk);
+
+
+    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
+    if(pathID == 0)
+    {
+	    audio_xassert(0,pathID);
+	    return;
+    }
+    
+
+    speaker = GetDeviceFromSpkr(spk);
+    if (speaker != CSL_CAPH_DEV_NONE)
+    {
+        config.source = CSL_CAPH_DEV_MEMORY;
+        config.sink = speaker;
+        (void) csl_caph_hwctrl_RemovePath(pathID, config);
+    }
+    
+    // don't know how to update the path now.
+    //AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, sink, spk, AUDCTRL_MIC_UNDEFINED); 
+    
+    return;
 }
 
 //============================================================================
@@ -1234,16 +1663,16 @@ static void AUDCTRL_EnableRecordMono(
 				AUDIO_CHANNEL_NUM_t		numCh,
 				AUDIO_SAMPLING_RATE_t	sr)
 {
-    AUDDRV_HWCTRL_CONFIG_t config;
-    AUDDRV_PathID pathID;
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID;
     AUDCTRL_Config_t data;
 
     pathID = 0;
-    memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+    memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
     memset(&data, 0, sizeof(AUDCTRL_Config_t));
 
     // Enable the path. And get path ID.
-    config.streamID = AUDDRV_STREAM_NONE; 
+    config.streamID = CSL_CAPH_STREAM_NONE; 
     config.pathID = 0;
     config.source = GetDeviceFromMic(mic);
     config.sink =  GetDeviceFromHWID(sink);
@@ -1261,13 +1690,18 @@ static void AUDCTRL_EnableRecordMono(
 		// for HW control, need to setup the caph path DDR --> (via AADMAC, Caph switch)HW srcMixer input CH2 --> HW srcMixer tapout CH2 --> DSP.
 		// the caph path source is MEMORY, the capth path sink is DSP. Also need to set the input sampling rate as 48K, and output sampling rate as 8K or 16 (depending on 
 		// the passed in parameter sr), so we know we need to use the HW srcMixer.
-		config.source = AUDDRV_DEV_MEMORY;
-		config.sink = AUDDRV_DEV_DSP;
+		config.source = CSL_CAPH_DEV_MEMORY;
+		config.sink = CSL_CAPH_DEV_DSP;
 	}
-	if(config.sink==AUDDRV_DEV_DSP)
+	if(config.sink==CSL_CAPH_DEV_DSP)
 		config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-	pathID = AUDDRV_HWControl_EnablePath(config);
+	pathID = csl_caph_hwctrl_EnablePath(config);
 	
+    //Load the mic gains from sysparm.
+    //Can not call the following API here.
+    //Because Capture driver really enables the path.
+    //AUDCTRL_LoadMicGain(pathID, mic, FALSE);
+ 
 	Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnableRecordMono: path configuration, source = %d, sink = %d, pathID %d.\r\n", config.source, config.sink, pathID);
 
     //Save this path to the path table.
@@ -1285,7 +1719,7 @@ static void AUDCTRL_EnableRecordMono(
 	AUDCTRL_SetRecordMute (src, mic, FALSE); 
 #endif
 	// Enable DSP UL for Voice Call.
-	if(config.sink == AUDDRV_DEV_DSP)
+	if(config.sink == CSL_CAPH_DEV_DSP)
 	{
 		AUDDRV_EnableDSPInput(DRVMIC_Mapping_Table[mic].auddrv_mic, sr);
 	}
@@ -1349,8 +1783,8 @@ void AUDCTRL_DisableRecord(
 				)
 {
 
-    AUDDRV_HWCTRL_CONFIG_t config;
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_HWCTRL_CONFIG_t config;
+    CSL_CAPH_PathID pathID = 0;
 	
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_DisableRecord: src = 0x%x, sink = 0x%x,  mic = 0x%x\n", 
@@ -1361,7 +1795,7 @@ void AUDCTRL_DisableRecord(
 			|| mic==AUDCTRL_MIC_SPEECH_DIGI)
 		
 	{
-		memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+		memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 		pathID = AUDCTRL_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, AUDCTRL_MIC_DIGI1);
 		if(pathID == 0)
 		{
@@ -1371,7 +1805,7 @@ void AUDCTRL_DisableRecord(
 
 		config.pathID = pathID;
 		Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_DisableRecord: pathID %d.\r\n", pathID);
-		(void) AUDDRV_HWControl_DisablePath(config);
+		(void) csl_caph_hwctrl_DisablePath(config);
 		AUDCTRL_RemoveFromTable(pathID);
 
 		pathID = AUDCTRL_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, AUDCTRL_MIC_DIGI2);
@@ -1383,10 +1817,10 @@ void AUDCTRL_DisableRecord(
 
 		config.pathID = pathID;
 		Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_DisableRecord: pathID %d.\r\n", pathID);
-		(void) AUDDRV_HWControl_DisablePath(config);
+		(void) csl_caph_hwctrl_DisablePath(config);
 		AUDCTRL_RemoveFromTable(pathID);
 	} else {
-		memset(&config, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
+		memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 		pathID = AUDCTRL_GetPathIDFromTable(src, sink, AUDCTRL_SPK_UNDEFINED, mic);
 		if(pathID == 0)
 		{
@@ -1405,11 +1839,11 @@ void AUDCTRL_DisableRecord(
 			// for HW control, need to setup the caph path DDR --> (via AADMAC, Caph switch)HW srcMixer input CH2 --> HW srcMixer tapout CH2 --> DSP.
 			// the caph path source is MEMORY, the capth path sink is DSP. Also need to set the input sampling rate as 48K, and output sampling rate as 8K or 16 (depending on 
 			// the passed in parameter sr), so we know we need to use the HW srcMixer.
-			config.source = AUDDRV_DEV_MEMORY;
-			config.sink = AUDDRV_DEV_DSP;
+			config.source = CSL_CAPH_DEV_MEMORY;
+			config.sink = CSL_CAPH_DEV_DSP;
 		}
 
-		(void) AUDDRV_HWControl_DisablePath(config);
+		(void) csl_caph_hwctrl_DisablePath(config);
 		
 
 		//Remove this path from the path table.
@@ -1460,31 +1894,6 @@ void AUDCTRL_RemoveRecordMic(
 	// Nothing to do.
 }
 
-//============================================================================
-//
-// Function Name: AUDCTRL_EnableTap
-//
-// Description:   enable a tap path
-//
-//============================================================================
-void AUDCTRL_EnableTap(
-				AUDIO_HW_ID_t			tap,
-				AUDCTRL_SPEAKER_t		spk,
-				AUDIO_SAMPLING_RATE_t	sr
-				)
-{
-}
-
-//============================================================================
-//
-// Function Name: AUDCTRL_DisableTap
-//
-// Description:   disable a tap path
-//
-//============================================================================
-void AUDCTRL_DisableTap( AUDIO_HW_ID_t	tap)
-{
-}
 
 //============================================================================
 //
@@ -1496,14 +1905,17 @@ void AUDCTRL_DisableTap( AUDIO_HW_ID_t	tap)
 static void AUDCTRL_SetRecordGainMono(
 				AUDIO_HW_ID_t			src,
 				AUDCTRL_MICROPHONE_t	mic,
-				UInt32					gainL,
-				UInt32					gainR
+                AUDIO_GAIN_FORMAT_t     gainFormat,
+				Int16					gainL,
+				Int16					gainR
 				)
 {
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_PathID pathID = 0;
+    Int16 gainLTemp = 0;
+    Int16 gainRTemp = 0;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_SetRecordGainMono: src = 0x%x,  mic = 0x%x, gainL = 0x%lx, gainR = 0x%lx\n", src, mic, gainL, gainR);
+                    "AUDCTRL_SetRecordGainMono: src = 0x%x,  mic = 0x%x, gainL = 0x%x, gainR = 0x%x\n", src, mic, gainL, gainR);
 
 	if( src == AUDIO_HW_USB_IN)
 		return;
@@ -1511,11 +1923,30 @@ static void AUDCTRL_SetRecordGainMono(
     pathID = AUDCTRL_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
     if(pathID == 0)
     {
-	audio_xassert(0,pathID);
-	return;
+	    audio_xassert(0,pathID);
+	    return;
     }
+    // For Q14.1, just convert it to Q13.2
+	if(gainFormat == AUDIO_GAIN_FORMAT_Q14_1)
+	{
+        gainLTemp = gainL<<1;
+        gainRTemp = gainR<<1;
+    }
+    // For volume level just convert it to Q13.2 
+    else
+    if (gainFormat == AUDIO_GAIN_FORMAT_VOL_LEVEL)
+    {
+         gainLTemp = gainL<<2;
+         gainRTemp = gainR<<2;
+    }
+	else	// If AUDIO_GAIN_FORMAT_Q1_14, does not support.
+	if (gainFormat == AUDIO_GAIN_FORMAT_Q1_14)
+	{
+        return;
+    }
+    
 
-    (void) AUDDRV_HWControl_SetSourceGain(pathID, gainL, gainR);
+    (void) csl_caph_hwctrl_SetSourceGain(pathID, gainLTemp, gainRTemp);
 
     return;
 }
@@ -1530,6 +1961,7 @@ static void AUDCTRL_SetRecordGainMono(
 void AUDCTRL_SetRecordGain(
 				AUDIO_HW_ID_t			src,
 				AUDCTRL_MICROPHONE_t	mic,
+                AUDIO_GAIN_FORMAT_t     gainFormat,
 				UInt32					gainL,
 				UInt32					gainR
 				)
@@ -1539,10 +1971,10 @@ void AUDCTRL_SetRecordGain(
 
 	if(mic==AUDCTRL_DUAL_MIC_DIGI12 || mic==AUDCTRL_DUAL_MIC_DIGI21 || mic==AUDCTRL_MIC_SPEECH_DIGI)
 	{
-		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI1, gainL, gainR);
-		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI2, gainL, gainR);
+		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI1, gainFormat, (Int16)gainL, (Int16)gainR);
+		AUDCTRL_SetRecordGainMono(src, AUDCTRL_MIC_DIGI2, gainFormat, (Int16)gainL, (Int16)gainR);
 	} else {
-		AUDCTRL_SetRecordGainMono(src, mic, gainL, gainR);
+		AUDCTRL_SetRecordGainMono(src, mic, gainFormat, (Int16)gainL, (Int16)gainR);
 	}
 
     return;
@@ -1561,7 +1993,7 @@ static void AUDCTRL_SetRecordMuteMono(
 				Boolean					mute
 				)
 {
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_PathID pathID = 0;
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_SetRecordMuteMono: src = 0x%x,  mic = 0x%x, mute = 0x%x\n", 
                     src, mic, mute);
@@ -1570,6 +2002,7 @@ static void AUDCTRL_SetRecordMuteMono(
 		return;
 
     pathID = AUDCTRL_GetPathIDFromTable(src, AUDIO_HW_NONE, AUDCTRL_SPK_UNDEFINED, mic);
+
     if(pathID == 0)
     {
 	audio_xassert(0,pathID);
@@ -1578,12 +2011,13 @@ static void AUDCTRL_SetRecordMuteMono(
 
     if (mute == TRUE)
     {
-        (void) AUDDRV_HWControl_MuteSource(pathID);
+        (void) csl_caph_hwctrl_MuteSource(pathID);
     }
     else
     {
-        (void) AUDDRV_HWControl_UnmuteSource(pathID);
+        (void) csl_caph_hwctrl_UnmuteSource(pathID);
     }
+
     return;    
 }
 
@@ -1644,9 +2078,10 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 			AUDCTRL_MIX_SELECT_t mixSelect,
 			Boolean isDSPGain,
 			Boolean dspSpeechProcessingNeeded,
-			UInt32 gain)
+			UInt32 gain,
+			UInt32 inPathID)
 {
-    AUDDRV_PathID pathID = 0;
+    CSL_CAPH_PathID pathID = 0;
     Int16 dspGain = 0;
     if (isDSPGain)
     {
@@ -1667,7 +2102,7 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
                 audio_xassert(0,pathID);
                 return;
             }
-                (void) AUDDRV_HWControl_SetMixingGain(pathID, 
+                (void) csl_caph_hwctrl_SetMixingGain(pathID, 
                             gain, gain);
         }
 		else // for IHF
@@ -1750,13 +2185,16 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
     }
     else
     {
-        pathID = AUDCTRL_GetPathIDFromTable(src, sink, spk, mic);
+		if(inPathID) 
+			pathID = inPathID;
+        else 
+			pathID = AUDCTRL_GetPathIDFromTable(src, sink, spk, mic);
         if(pathID == 0)
         {
             audio_xassert(0,pathID);
             return;
         }
-        (void) AUDDRV_HWControl_SetMixingGain(pathID, gain, gain);
+        (void) csl_caph_hwctrl_SetMixingGain(pathID, gain, gain);
     }
     return;
 }
@@ -1766,7 +2204,7 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 //
 // Function Name: AUDCTRL_SetGainOnExternalAmp
 //
-// Description:   Set gain on external amplifier driver
+// Description:   Set gain on external amplifier driver. Gain in Q13.2
 //
 //============================================================================
 void AUDCTRL_SetGainOnExternalAmp(UInt32 gain)
@@ -1825,68 +2263,71 @@ void AUDCTRL_SetAudioLoopback(
                               AUDCTRL_SPEAKER_t	speaker
                              )
 {
-    AUDDRV_DEVICE_e source, sink;
-    static AUDDRV_SPKR_Enum_t audSpkr;
-    static AUDDRV_MIC_Enum_t audMic;
-    AUDDRV_PathID pathID;
+    CSL_AUDIO_DEVICE_e source, sink;
+    static CSL_CAPH_DEVICE_e audSpkr;
+    //static AUDDRV_MIC_Enum_t audMic;
+    CSL_CAPH_PathID pathID;
     AUDCTRL_Config_t data;
     AUDIO_HW_ID_t audPlayHw, audRecHw;
 
-    AUDDRV_HWCTRL_CONFIG_t hwCtrlConfig;
+    CSL_CAPH_HWCTRL_CONFIG_t hwCtrlConfig;
+#ifdef CONFIG_AUDIO_BUILD
+    Int16 tempGain = 0;
+#endif
 	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
 
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: speaker = %d\n", speaker);
 
     audPlayHw = audRecHw = AUDIO_HW_NONE;
-    source = sink = AUDDRV_DEV_NONE;
-    audSpkr = AUDDRV_SPKR_NONE;
-    audMic = AUDDRV_MIC_NONE;
+    source = sink = CSL_CAPH_DEV_NONE;
+    audSpkr = CSL_CAPH_DEV_NONE;
+    //audMic = AUDDRV_MIC_NONE;
     pathID = 0;
     memset(&data, 0, sizeof(AUDCTRL_Config_t));
     switch (mic)
     {
         case AUDCTRL_MIC_MAIN:
-            source = AUDDRV_DEV_ANALOG_MIC;
-            audMic = AUDDRV_MIC_ANALOG_MAIN;
+            source = CSL_CAPH_DEV_ANALOG_MIC;
+            //audMic = AUDDRV_MIC_ANALOG_MAIN;
             audRecHw = AUDIO_HW_VOICE_IN;
             break;
         case AUDCTRL_MIC_AUX:
-            source = AUDDRV_DEV_HS_MIC;
-            audMic = AUDDRV_MIC_ANALOG_AUX;
+            source = CSL_CAPH_DEV_HS_MIC;
+            //audMic = AUDDRV_MIC_ANALOG_AUX;
             audRecHw = AUDIO_HW_VOICE_IN;
             break;
         case AUDCTRL_MIC_SPEECH_DIGI:
-            source = AUDDRV_DEV_DIGI_MIC;
-            audMic = AUDDRV_MIC_SPEECH_DIGI;
+            source = CSL_CAPH_DEV_DIGI_MIC;
+            //audMic = AUDDRV_MIC_SPEECH_DIGI;
             break;	    
         case AUDCTRL_MIC_DIGI1:
-            source = AUDDRV_DEV_DIGI_MIC_L;
-            audMic = AUDDRV_MIC_DIGI1;
+            source = CSL_CAPH_DEV_DIGI_MIC_L;
+            //audMic = AUDDRV_MIC_DIGI1;
             break;
         case AUDCTRL_MIC_DIGI2:
-            source = AUDDRV_DEV_DIGI_MIC_R;
-            audMic = AUDDRV_MIC_DIGI2;
+            source = CSL_CAPH_DEV_DIGI_MIC_R;
+            //audMic = AUDDRV_MIC_DIGI2;
             break;
         case AUDCTRL_MIC_DIGI3:
-            source = AUDDRV_DEV_EANC_DIGI_MIC_L;
-            audMic = AUDDRV_MIC_DIGI3;
+            source = CSL_CAPH_DEV_EANC_DIGI_MIC_L;
+            //audMic = AUDDRV_MIC_DIGI3;
             break;
         case AUDCTRL_MIC_DIGI4:
-            source = AUDDRV_DEV_EANC_DIGI_MIC_R;
-            audMic = AUDDRV_MIC_DIGI4;
+            source = CSL_CAPH_DEV_EANC_DIGI_MIC_R;
+            //audMic = AUDDRV_MIC_DIGI4;
             break;
         case AUDCTRL_MIC_I2S:
-            source = AUDDRV_DEV_FM_RADIO;
+            source = CSL_CAPH_DEV_FM_RADIO;
             audRecHw = AUDIO_HW_I2S_IN;
             break;
         case AUDCTRL_MIC_BTM:
-            source = AUDDRV_DEV_BT_MIC;
+            source = CSL_CAPH_DEV_BT_MIC;
             audRecHw = AUDIO_HW_MONO_BT_IN;
             break;
         default:
-            audMic = AUDDRV_MIC_ANALOG_MAIN;
-            source = AUDDRV_DEV_ANALOG_MIC;
+            //audMic = AUDDRV_MIC_ANALOG_MAIN;
+            source = CSL_CAPH_DEV_ANALOG_MIC;
             audRecHw = AUDIO_HW_I2S_IN;
             Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
             break;
@@ -1895,37 +2336,37 @@ void AUDCTRL_SetAudioLoopback(
     switch (speaker)
     {
         case AUDCTRL_SPK_HANDSET:
-            sink = AUDDRV_DEV_EP;
-            audSpkr = AUDDRV_SPKR_EP;
+            sink = CSL_CAPH_DEV_EP;
+            audSpkr = CSL_CAPH_DEV_EP;
             audPlayHw = AUDIO_HW_EARPIECE_OUT;
             audio_mode = AUDIO_MODE_HANDSET;
             break;
         case AUDCTRL_SPK_HEADSET:
-            sink = AUDDRV_DEV_HS;
-            audSpkr = AUDDRV_SPKR_HS;
+            sink = CSL_CAPH_DEV_HS;
+            audSpkr = CSL_CAPH_DEV_HS;
             audPlayHw = AUDIO_HW_HEADSET_OUT;
             audio_mode = AUDIO_MODE_HEADSET;
             break;
         case AUDCTRL_SPK_LOUDSPK:
-            sink = AUDDRV_DEV_IHF;
-            audSpkr = AUDDRV_SPKR_IHF;
+            sink = CSL_CAPH_DEV_IHF;
+            audSpkr = CSL_CAPH_DEV_IHF;
             audio_mode = AUDIO_MODE_SPEAKERPHONE;
             break;
         case AUDCTRL_SPK_I2S:
-            sink = AUDDRV_DEV_FM_TX;
+            sink = CSL_CAPH_DEV_FM_TX;
             audPlayHw = AUDIO_HW_I2S_OUT;
             // No audio mode available for this case.
             // for now just use AUDIO_MODE_HANDSFREE
             audio_mode = AUDIO_MODE_HANDSFREE;
             break;
         case AUDCTRL_SPK_BTM:
-            sink = AUDDRV_DEV_BT_SPKR;
+            sink = CSL_CAPH_DEV_BT_SPKR;
             audPlayHw = AUDIO_HW_MONO_BT_OUT;
             audio_mode = AUDIO_MODE_BLUETOOTH;
             break;
         default:
-            audSpkr = AUDDRV_SPKR_EP;
-            sink = AUDDRV_DEV_EP;
+            audSpkr = CSL_CAPH_DEV_EP;
+            sink = CSL_CAPH_DEV_EP;
             audPlayHw = AUDIO_HW_EARPIECE_OUT;
             audio_mode = AUDIO_MODE_HANDSET;
             Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: speaker = %d\n", speaker);
@@ -1939,15 +2380,15 @@ void AUDCTRL_SetAudioLoopback(
         Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Enable loopback \n");
 
 	// For I2S/PCM loopback
-        if (((source == AUDDRV_DEV_FM_RADIO) && (sink == AUDDRV_DEV_FM_TX)) ||
-		((source == AUDDRV_DEV_BT_MIC) && (sink == AUDDRV_DEV_BT_SPKR)))
+        if (((source == CSL_CAPH_DEV_FM_RADIO) && (sink == CSL_CAPH_DEV_FM_TX)) ||
+		((source == CSL_CAPH_DEV_BT_MIC) && (sink == CSL_CAPH_DEV_BT_SPKR)))
         {
             // I2S hard coded to use ssp3, BT PCM to use ssp4. This could be changed later
             AUDCTRL_EnablePlay (AUDIO_HW_SPEECH_IN, audPlayHw, AUDIO_HW_NONE, speaker, AUDIO_CHANNEL_MONO, 48000, NULL);
             AUDCTRL_EnableRecord (audRecHw, AUDIO_HW_EARPIECE_OUT, mic, AUDIO_CHANNEL_MONO, 48000);
             return;
         }
-
+#if 0 //removed this to make fm radio work using xpft script
 	    if (source == AUDDRV_DEV_FM_RADIO)
 	    {
             AUDCTRL_EnableRecord (audRecHw, audPlayHw, mic, AUDIO_CHANNEL_STEREO, 48000);
@@ -1955,23 +2396,23 @@ void AUDCTRL_SetAudioLoopback(
 	            powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
 	        return;
 	    }
-
+#endif
         //  Microphone pat
-	if((mic == AUDCTRL_MIC_DIGI1) 
-	   || (mic == AUDCTRL_MIC_DIGI2) 
-	   || (mic == AUDCTRL_MIC_DIGI3) 
-	   || (mic == AUDCTRL_MIC_DIGI4) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
-	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
-	{
+    	if((mic == AUDCTRL_MIC_DIGI1) 
+    	   || (mic == AUDCTRL_MIC_DIGI2) 
+    	   || (mic == AUDCTRL_MIC_DIGI3) 
+    	   || (mic == AUDCTRL_MIC_DIGI4) 
+    	   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
+    	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
+    	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
+	    {
 #ifdef CONFIG_AUDIO_BUILD
-		// Enable power to digital microphone
-		powerOnDigitalMic(TRUE);
+		    // Enable power to digital microphone
+    		powerOnDigitalMic(TRUE);
 #endif		
-	}
+        }
 	// enable HW path
-        hwCtrlConfig.streamID = AUDDRV_STREAM_NONE;
+        hwCtrlConfig.streamID = CSL_CAPH_STREAM_NONE;
         hwCtrlConfig.source = source;
         hwCtrlConfig.sink = sink;
         hwCtrlConfig.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
@@ -1979,25 +2420,33 @@ void AUDCTRL_SetAudioLoopback(
         hwCtrlConfig.chnlNum = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
         hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
 #ifdef CONFIG_AUDIO_BUILD
-        hwCtrlConfig.mixGain.mixInGainL = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_l;	
-        hwCtrlConfig.mixGain.mixOutGainL = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_l;	
-        hwCtrlConfig.mixGain.mixOutCoarseGainL = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_l;	
-        hwCtrlConfig.mixGain.mixInGainR = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_r;	
-        hwCtrlConfig.mixGain.mixOutGainR = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_r;	
-        hwCtrlConfig.mixGain.mixOutCoarseGainR = AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_r;	
+
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_l);	
+        hwCtrlConfig.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_l);
+        hwCtrlConfig.mixGain.mixOutGainL = AUDDRV_GetMixerOutputFineGain(tempGain);	
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_l);
+        hwCtrlConfig.mixGain.mixOutCoarseGainL = AUDDRV_GetMixerOutputCoarseGain(tempGain);
+
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_r);	
+        hwCtrlConfig.mixGain.mixInGainR = AUDDRV_GetMixerInputGain(tempGain);	
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_fine_gain_r);
+        hwCtrlConfig.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);	
+        tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_output_coarse_gain_r);
+        hwCtrlConfig.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
 
 #endif
-        pathID = AUDDRV_HWControl_EnablePath(hwCtrlConfig);
+        pathID = csl_caph_hwctrl_EnablePath(hwCtrlConfig);
 
         // Enable Loopback ctrl
 		// up merged : remove the comment later on
 		// after mergining latest changes
-	    if (((source == AUDDRV_DEV_ANALOG_MIC) 
-	            || (source == AUDDRV_DEV_HS_MIC)) 
-            && ((sink == AUDDRV_DEV_EP) 
-                || (sink == AUDDRV_DEV_IHF)
-                || (sink == AUDDRV_DEV_HS)))
-            AUDDRV_SetAudioLoopback(enable_lpbk, audMic, audSpkr, 0);
+	    if (((source == CSL_CAPH_DEV_ANALOG_MIC) 
+	            || (source == CSL_CAPH_DEV_HS_MIC)) 
+            && ((sink == CSL_CAPH_DEV_EP) 
+                || (sink == CSL_CAPH_DEV_IHF)
+                || (sink == CSL_CAPH_DEV_HS)))
+            csl_caph_audio_loopback_control(audSpkr, 0, enable_lpbk);
 
         //Save this path to the path table.
         data.pathID = pathID;
@@ -2009,77 +2458,79 @@ void AUDCTRL_SetAudioLoopback(
         data.sr = AUDIO_SAMPLING_RATE_48000;
         AUDCTRL_AddToTable(&data);
 	//Enable PMU for headset/IHF
-	if ((speaker == AUDCTRL_SPK_LOUDSPK)
-	    ||(speaker == AUDCTRL_SPK_HEADSET))	
-	{
-		powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	   
-	} 
-    } else {
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+    	    ||(speaker == AUDCTRL_SPK_HEADSET))	
+	        powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
+    }
+    else
+    {
         // Disable Analog Mic path
         Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Disable loopback\n");
 
 	// Disable I2S/PCM loopback
-        if (((source == AUDDRV_DEV_FM_RADIO) && (sink == AUDDRV_DEV_FM_TX)) ||
-		((source == AUDDRV_DEV_BT_MIC) && (sink == AUDDRV_DEV_BT_SPKR)))
+        if (((source == CSL_CAPH_DEV_FM_RADIO) && (sink == CSL_CAPH_DEV_FM_TX)) ||
+		((source == CSL_CAPH_DEV_BT_MIC) && (sink == CSL_CAPH_DEV_BT_SPKR)))
         {
             // I2S configured to use ssp3, BT PCM to use ssp4.
             AUDCTRL_DisablePlay (AUDIO_HW_SPEECH_IN, audPlayHw, speaker, 0);
             AUDCTRL_DisableRecord (audRecHw, AUDIO_HW_EARPIECE_OUT, mic);
             return;
         }
-
-	    if (source == AUDDRV_DEV_FM_RADIO)
+#if 0 //removed this to make fm radio work using xpft script
+	    if (source == CSL_CAPH_DEV_FM_RADIO)
 	    {
             AUDCTRL_DisableRecord (audRecHw, audPlayHw, mic);
 	        if ((speaker == AUDCTRL_SPK_LOUDSPK)||(speaker == AUDCTRL_SPK_HEADSET))	
 	            powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
 	        return;
 	    }
-
-		if((mic == AUDCTRL_MIC_DIGI1) 
-		   || (mic == AUDCTRL_MIC_DIGI2) 
-		   || (mic == AUDCTRL_MIC_DIGI3) 
-		   || (mic == AUDCTRL_MIC_DIGI4) 
-		   || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
-		   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
+#endif
+    	if((mic == AUDCTRL_MIC_DIGI1) 
+    	   || (mic == AUDCTRL_MIC_DIGI2) 
+	       || (mic == AUDCTRL_MIC_DIGI3) 
+    	   || (mic == AUDCTRL_MIC_DIGI4) 
+	       || (mic == AUDCTRL_DUAL_MIC_DIGI12) 
+    	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	       || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
-		{
+	    {
 			// Enable power to digital microphone
 #ifdef CONFIG_AUDIO_BUILD			
 			powerOnDigitalMic(FALSE);
 #endif			
 		}	
-		//Enable PMU for headset/IHF
-		if ((speaker == AUDCTRL_SPK_LOUDSPK)
-			||(speaker == AUDCTRL_SPK_HEADSET))	
+	    //Enable PMU for headset/IHF
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+	        ||(speaker == AUDCTRL_SPK_HEADSET))	
 		{
 			powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
 		}
 
-		memset(&hwCtrlConfig, 0, sizeof(AUDDRV_HWCTRL_CONFIG_t));
-		pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
-	if(pathID == 0)
-	{
-		audio_xassert(0,pathID);
-		return;
-	}
-		hwCtrlConfig.pathID = pathID;
-		(void) AUDDRV_HWControl_DisablePath(hwCtrlConfig);
+        memset(&hwCtrlConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
+        pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
+    	if(pathID == 0)
+	    {
+		    audio_xassert(0,pathID);
+		    return;
+	    }
+	
+        hwCtrlConfig.pathID = pathID;
+		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig);
 		// up merged : remove the comment later on
 		// after mergining latest changes
-if (((source == AUDDRV_DEV_ANALOG_MIC) 
-	            || (source == AUDDRV_DEV_HS_MIC)) 
-            && ((sink == AUDDRV_DEV_EP) 
-                || (sink == AUDDRV_DEV_IHF)
-                || (sink == AUDDRV_DEV_HS)))
+if (((source == CSL_CAPH_DEV_ANALOG_MIC) 
+	            || (source == CSL_CAPH_DEV_HS_MIC)) 
+            && ((sink == CSL_CAPH_DEV_EP) 
+                || (sink == CSL_CAPH_DEV_IHF)
+                || (sink == CSL_CAPH_DEV_HS)))
 		{
-		    AUDDRV_SetAudioLoopback(enable_lpbk, audMic, audSpkr, 0);
+		    csl_caph_audio_loopback_control(audSpkr, 0, enable_lpbk);
 		}
 
-		 //Remove this path to the path table.
-		 AUDCTRL_RemoveFromTable(pathID);
+        //Remove this path to the path table.
+        AUDCTRL_RemoveFromTable(pathID);
     }
 }
+
 
 void AUDCTRL_SetEQ( 
 				AUDIO_HW_ID_t	audioPath,
@@ -2094,7 +2545,23 @@ void AUDCTRL_SetEQ(
 
 void AUDCTRL_ConfigSSP( UInt8 fm_port, UInt8 pcm_port)
 {
-	AUDDRV_HWControl_ConfigSSP (fm_port, pcm_port);
+	CSL_CAPH_SSP_Config_t sspConfig;
+	memset(&sspConfig, 0, sizeof(CSL_CAPH_SSP_Config_t));
+	
+	sspConfig.fm_port = (CSL_CAPH_SSP_e)fm_port;
+	sspConfig.pcm_port = (CSL_CAPH_SSP_e)pcm_port;
+
+	if (sspConfig.fm_port == CSL_CAPH_SSP_3)
+		sspConfig.fm_baseAddr = SSP3_BASE_ADDR1;
+	else if (sspConfig.fm_port == CSL_CAPH_SSP_4)
+		sspConfig.fm_baseAddr = SSP4_BASE_ADDR1;
+
+	if (sspConfig.pcm_port == CSL_CAPH_SSP_3)
+		sspConfig.pcm_baseAddr = SSP3_BASE_ADDR1;
+	else if (sspConfig.pcm_port == CSL_CAPH_SSP_4)
+		sspConfig.pcm_baseAddr = SSP4_BASE_ADDR1;
+
+	csl_caph_hwctrl_ConfigSSP(sspConfig);
 }
 
 //============================================================================
@@ -2107,7 +2574,7 @@ void AUDCTRL_ConfigSSP( UInt8 fm_port, UInt8 pcm_port)
 
 void AUDCTRL_SetSspTdmMode( Boolean status )
 {
-	AUDDRV_HWControl_SetSspTdmMode (status);
+	csl_caph_hwctrl_SetSspTdmMode(status);
 }
 
 //============================================================================
@@ -2119,7 +2586,7 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
 //============================================================================
  void  AUDCTRL_EnableBypassVibra(void)
  {
-	 AUDDRV_HWControl_EnableVibrator(TRUE, AUDDRV_VIBRATOR_BYPASS_MODE);
+	 csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, TRUE);
  }
 
 //============================================================================
@@ -2131,7 +2598,7 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
 //============================================================================
  void  AUDCTRL_DisableBypassVibra(void)
  {
-	 AUDDRV_HWControl_EnableVibrator(FALSE, AUDDRV_VIBRATOR_BYPASS_MODE);
+	 csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, FALSE);
  }
 
 //============================================================================
@@ -2150,7 +2617,7 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
 	 Strength = ((Strength > 100) ? 100 : Strength);
 	 vib_power = ((direction == 0) ?  vib_power : (0xffff - vib_power + 1 ));
 
-	 AUDDRV_HWControl_VibratorStrength(vib_power);
+	 csl_caph_hwctrl_vibrator_strength(vib_power);
  }
 
 
@@ -2214,6 +2681,7 @@ static void AUDCTRL_CreateTable(void)
 //============================================================================
 void AUDCTRL_AddToTable(AUDCTRL_Config_t* data)
 {
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, sink = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
     AUDCTRL_Table_t* newNode = NULL;
     newNode = (AUDCTRL_Table_t *)OSHEAP_Alloc(sizeof(AUDCTRL_Table_t));
 	memset(newNode, 0, sizeof(AUDCTRL_Table_t));
@@ -2232,7 +2700,7 @@ void AUDCTRL_AddToTable(AUDCTRL_Config_t* data)
 // Description:   Remove a path from the table.
 //
 //============================================================================
-void AUDCTRL_RemoveFromTable(AUDDRV_PathID pathID)
+void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID)
 {
     AUDCTRL_Table_t* currentNode = tableHead;
     while(currentNode != NULL)
@@ -2270,23 +2738,21 @@ void AUDCTRL_RemoveFromTable(AUDDRV_PathID pathID)
 // Description:   Delete the whole table.
 //
 //============================================================================
-#if 0
 static void AUDCTRL_DeleteTable(void)
 {
-    AUDCTRL_Table_t* current = tableHead;
+    AUDCTRL_Table_t* currentNode = tableHead;
     AUDCTRL_Table_t* next = NULL;
 
-    while(current != NULL)
+    while(currentNode != NULL)
     {
-        next = current->next;
-        memset(current, 0, sizeof(AUDCTRL_Table_t));
-   	    OSHEAP_Delete(current); 
-        current = next;
+        next = currentNode->next;
+        memset(currentNode, 0, sizeof(AUDCTRL_Table_t));
+   	    OSHEAP_Delete(currentNode); 
+        currentNode = next;
     }
     tableHead = NULL;
     return;
 }
-#endif
 
 //============================================================================
 //
@@ -2295,10 +2761,8 @@ static void AUDCTRL_DeleteTable(void)
 // Description:   Get a path information from the table.
 //
 //============================================================================
-
-AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID)
+AUDCTRL_Config_t AUDCTRL_GetFromTable(CSL_CAPH_PathID pathID)
 {
-
     AUDCTRL_Config_t data; 
     AUDCTRL_Table_t* currentNode = tableHead; 
     memset(&data, 0, sizeof(AUDCTRL_Config_t));
@@ -2320,7 +2784,6 @@ AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID)
 }
 
 
-
 //============================================================================
 //
 // Function Name: AUDCTRL_GetPathIDFromTable
@@ -2328,7 +2791,7 @@ AUDCTRL_Config_t AUDCTRL_GetFromTable(AUDDRV_PathID pathID)
 // Description:   Get a path ID from the table.
 //
 //============================================================================
-static AUDDRV_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
+static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
 				                                AUDCTRL_MICROPHONE_t mic)
@@ -2336,6 +2799,12 @@ static AUDDRV_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
     AUDCTRL_Table_t* currentNode = tableHead;     
     while(currentNode != NULL)
     {
+
+        
+	    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+                    (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
+		
+	
         if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
             ||(((currentNode->data).sink == sink)&&((currentNode->data).spk == spk)))
         {
@@ -2355,7 +2824,7 @@ static AUDDRV_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
 // Description:   Get a path ID from the table.
 //
 //============================================================================
-static AUDDRV_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
+static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
 				                                AUDCTRL_MICROPHONE_t mic)
@@ -2364,6 +2833,9 @@ static AUDDRV_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
     AUDCTRL_Table_t* currentNode = tableHead;     
     while(currentNode != NULL)
     {
+	    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTableWithSrcSink: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+                    (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
+    
         if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
             &&(((currentNode->data).sink == sink)&&((currentNode->data).spk == spk)))
         {
@@ -2380,12 +2852,48 @@ static AUDDRV_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
 
 //============================================================================
 //
+// Function Name: AUDCTRL_UpdatePath
+//
+// Description:   update a path with new src/sink/spk/mic.
+//
+//============================================================================
+static void AUDCTRL_UpdatePath (CSL_CAPH_PathID pathID,
+                                                AUDIO_HW_ID_t src,
+                                                AUDIO_HW_ID_t sink,
+                                                AUDCTRL_SPEAKER_t spk,
+                                                AUDCTRL_MICROPHONE_t mic)
+{
+    AUDCTRL_Table_t* currentNode = tableHead; 
+
+    while(currentNode != NULL)
+    {
+        if ((currentNode->data).pathID == pathID)
+        {
+	        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_UpdatePath:  pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+                    pathID, src, sink, mic, spk);
+            (currentNode->data).src = src;
+            (currentNode->data).sink = sink;
+            (currentNode->data).spk = spk;
+            (currentNode->data).mic = mic;
+            return;
+        }
+        else
+        {
+            currentNode = currentNode->next;
+        }
+    }
+
+    return;
+}
+
+//============================================================================
+//
 // Function Name: GetDeviceFromHWID
 //
 // Description:   convert audio controller HW ID enum to auddrv device enum
 //
 //============================================================================
-static AUDDRV_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID)
+static CSL_CAPH_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID)
 {
 	Log_DebugPrintf(LOGID_AUDIO,"GetDeviceFromHWID: hwID = 0x%x\n", hwID);
     return HWID_Mapping_Table[hwID].dev;
@@ -2399,7 +2907,7 @@ static AUDDRV_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID)
 // Description:   convert audio controller Mic enum to auddrv device enum
 //
 //============================================================================
-static AUDDRV_DEVICE_e GetDeviceFromMic(AUDCTRL_MICROPHONE_t mic)
+static CSL_CAPH_DEVICE_e GetDeviceFromMic(AUDCTRL_MICROPHONE_t mic)
 {
 	Log_DebugPrintf(LOGID_AUDIO,"GetDeviceFromMic: hwID = 0x%x\n", mic);
     return MIC_Mapping_Table[mic].dev;
@@ -2413,19 +2921,233 @@ static AUDDRV_DEVICE_e GetDeviceFromMic(AUDCTRL_MICROPHONE_t mic)
 // Description:   convert audio controller Spkr enum to auddrv device enum
 //
 //============================================================================
-static AUDDRV_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
+static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
 {
 	Log_DebugPrintf(LOGID_AUDIO,"GetDeviceFromSpkr: hwID = 0x%x\n", spkr);
     return SPKR_Mapping_Table[spkr].dev;
 }
 
-#endif //defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
 
+//============================================================================
+//
+// Function Name: getHSPMUGain
+//
+// Description:   Get Headset PMU gain. Input gain is Q13.2
+//
+//============================================================================
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+static HS_PMU_GainMapping_t getHSPMUGain(Int16 gain)
+{
+    HS_PMU_GainMapping_t outGain;
+    UInt8 i = 0;
+    memset(&outGain, 0, sizeof(HS_PMU_GainMapping_t));
+
+    if (gain < hsPMUGainTable[1].gain)
+    {
+        memcpy(&outGain, &hsPMUGainTable[0], sizeof(HS_PMU_GainMapping_t));
+        return outGain;	    
+    }
+    else
+    if (gain >= hsPMUGainTable[PMU_HSGAIN_NUM-1].gain)
+    {
+        memcpy(&outGain, &hsPMUGainTable[PMU_HSGAIN_NUM-1], sizeof(HS_PMU_GainMapping_t));
+        return outGain;	    
+    }
+    
+    for (i = 1; i<PMU_HSGAIN_NUM; i++)
+    {
+        if(gain == hsPMUGainTable[i].gain)
+        {
+            memcpy(&outGain, &hsPMUGainTable[i], sizeof(HS_PMU_GainMapping_t));
+            return outGain;	    
+        }	
+    }
+
+    for (i = 1; i<PMU_HSGAIN_NUM -1; i++)
+    {
+        if((gain - hsPMUGainTable[i].gain)<=(hsPMUGainTable[i+1].gain - gain))
+        {
+            memcpy(&outGain, &hsPMUGainTable[i], sizeof(HS_PMU_GainMapping_t));
+            return outGain;	    
+        }	
+    }
+    //Should not run to here.
+    audio_xassert(0,0);
+    return outGain;
+}
+
+#endif
+
+
+//============================================================================
+//
+// Function Name: getIHFPMUGain
+//
+// Description:   Get Loudspeaker PMU gain. Input gain is Q13.2
+//
+//============================================================================
+#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+static IHF_PMU_GainMapping_t getIHFPMUGain(Int16 gain)
+{
+    IHF_PMU_GainMapping_t outGain;
+    UInt8 i = 0;
+    memset(&outGain, 0, sizeof(IHF_PMU_GainMapping_t));
+
+    if (gain < ihfPMUGainTable[1].gain)
+    {
+        memcpy(&outGain, &ihfPMUGainTable[0], sizeof(IHF_PMU_GainMapping_t));
+        return outGain;	    
+    }
+    else
+    if (gain >= ihfPMUGainTable[PMU_IHFGAIN_NUM-1].gain)
+    {
+        memcpy(&outGain, &ihfPMUGainTable[PMU_IHFGAIN_NUM-1], sizeof(IHF_PMU_GainMapping_t));
+        return outGain;	    
+    }
+    
+    for (i = 1; i<PMU_IHFGAIN_NUM; i++)
+    {
+        if(gain == ihfPMUGainTable[i].gain)
+        {
+            memcpy(&outGain, &ihfPMUGainTable[i], sizeof(IHF_PMU_GainMapping_t));
+            return outGain;	    
+        }	
+    }
+
+    for (i = 1; i<PMU_IHFGAIN_NUM -1; i++)
+    {
+        if((gain - ihfPMUGainTable[i].gain)<=(ihfPMUGainTable[i+1].gain - gain))
+        {
+            memcpy(&outGain, &ihfPMUGainTable[i], sizeof(IHF_PMU_GainMapping_t));
+            return outGain;	    
+        }	
+    }
+    //Should not run to here.
+    audio_xassert(0,0);
+    return outGain;
+}
+
+#endif
+
+
+//============================================================================
+//
+// Function Name: map2pmu_hs_gain
+//
+// Description:   convert Headset gain dB value to PMU-format gain value
+// 
+// Note: If it is BCM59038 or BCM59055, input gain is in Q13.2.
+// Note: If it is MAX8986, input gain is in Q15.0.
+//
+//============================================================================
+#if !defined(NO_PMU) && ( defined( PMU_BCM59038) || defined( PMU_BCM59055 ) || defined( PMU_MAX8986) )
+
+UInt32 map2pmu_hs_gain( Int16 db_gain )
+{
+	Log_DebugPrintf(LOGID_AUDIO,"map2pmu_hs_gain: gain = 0x%x\n", db_gain);
+
+#if defined(PMU_MAX8986)
+	if ( db_gain== (Int16)(-19) ) 	return PMU_HSGAIN_19DB_N;
+	else if ( db_gain== (Int16)(-18) || db_gain== (Int16)(-17) || db_gain== (Int16)(-16))		return PMU_HSGAIN_16DB_N;
+	else if ( db_gain== (Int16)(-15) || db_gain== (Int16)(-14))		return PMU_HSGAIN_14DB_N;
+	else if ( db_gain== (Int16)(-13) || db_gain== (Int16)(-12))		return PMU_HSGAIN_12DB_N;
+	else if ( db_gain== (Int16)(-11) || db_gain== (Int16)(-10))		return PMU_HSGAIN_10DB_N;
+	else if ( db_gain== (Int16)(-9) ||  db_gain== (Int16)(-8))		return PMU_HSGAIN_8DB_N;
+	else if ( db_gain== (Int16)(-7) ||  db_gain== (Int16)(-6))		return PMU_HSGAIN_6DB_N;
+	else if ( db_gain== (Int16)(-5) ||  db_gain== (Int16)(-4))		return PMU_HSGAIN_4DB_N;
+	else if ( db_gain== (Int16)(-3) ||  db_gain== (Int16)(-2))		return PMU_HSGAIN_2DB_N;
+	else if ( db_gain== (Int16)(-1) )		return PMU_HSGAIN_1DB_N;
+	else if ( db_gain== (Int16)(0) )		return PMU_HSGAIN_0DB;
+	else if ( db_gain== (Int16)(1) )		return PMU_HSGAIN_1DB_P;
+	else if ( db_gain== (Int16)(2) )		return PMU_HSGAIN_2DB_P;
+	else if ( db_gain== (Int16)(3) )		return PMU_HSGAIN_3DB_P;
+	else if ( db_gain== (Int16)(4) )		return PMU_HSGAIN_4DB_P;
+	// PMU_HSGAIN_4P5DB_P
+	else if ( db_gain== (Int16)(5) )		return PMU_HSGAIN_5DB_P;
+	// PMU_HSGAIN_5P5DB_P
+	else if ( db_gain== (Int16)(6) )		return PMU_HSGAIN_6DB_P;
+
+#else
+    {
+        HS_PMU_GainMapping_t outGain;
+        outGain = getHSPMUGain(db_gain);
+        return outGain.hsPMUGain;
+    }
+#endif
+}
+
+//============================================================================
+//
+// Function Name: map2pmu_ihf_gain
+//
+// Description:   convert IHF gain dB value to PMU-format gain value
+//
+// Note: If it is BCM59038 or BCM59055, input gain is in Q13.2.
+// Note: If it is MAX8986, input gain is in Q15.0.
+//
+//============================================================================
+UInt32 map2pmu_ihf_gain( Int16 db_gain )
+{
+    Log_DebugPrintf(LOGID_AUDIO,"map2pmu_ihf_gain: gain = 0x%x\n", db_gain);
+
+#if defined(PMU_MAX8986)	
+    if ( db_gain== (Int16)(-33) || db_gain== (Int16)(-32) || db_gain== (Int16)(-31) || db_gain== (Int16)(-30) ) return PMU_IHFGAIN_30DB_N;
+    else if ( db_gain== (Int16)(-29) || db_gain== (Int16)(-28) || db_gain== (Int16)(-27) || db_gain== (Int16)(-26) ) return PMU_IHFGAIN_26DB_N;
+    else if ( db_gain== (Int16)(-25) || db_gain== (Int16)(-24) || db_gain== (Int16)(-23) || db_gain== (Int16)(-22) ) return PMU_IHFGAIN_22DB_N;
+	else if ( db_gain== (Int16)(-21) || db_gain== (Int16)(-20) || db_gain== (Int16)(-19) || db_gain== (Int16)(-18) ) return PMU_IHFGAIN_18DB_N;
+	else if ( db_gain== (Int16)(-17) || db_gain== (Int16)(-16) || db_gain== (Int16)(-15) || db_gain== (Int16)(-14) )	return PMU_IHFGAIN_14DB_N;
+	else if ( db_gain== (Int16)(-13) || db_gain== (Int16)(-12) )	return PMU_IHFGAIN_12DB_N;
+	else if ( db_gain== (Int16)(-11) || db_gain== (Int16)(-10) )	return PMU_IHFGAIN_10DB_N;
+	else if ( db_gain== (Int16)(-9)  || db_gain== (Int16)(-8) )		return PMU_IHFGAIN_8DB_N;
+	else if ( db_gain== (Int16)(-7)  || db_gain== (Int16)(-6) )		return PMU_IHFGAIN_6DB_N;
+	else if ( db_gain== (Int16)(-5)  || db_gain== (Int16)(-4) )		return PMU_IHFGAIN_4DB_N;
+	else if ( db_gain== (Int16)(-3)  || db_gain== (Int16)(-2) )		return PMU_IHFGAIN_2DB_N;
+	else if ( db_gain== (Int16)(-1)  || db_gain== (Int16)(0) )		return PMU_IHFGAIN_0DB;
+	else if ( db_gain== (Int16)(1) )		return PMU_IHFGAIN_1DB_P;
+	else if ( db_gain== (Int16)(2) )		return PMU_IHFGAIN_2DB_P;
+	else if ( db_gain== (Int16)(3) )		return PMU_IHFGAIN_3DB_P;
+	else if ( db_gain== (Int16)(4) )		return PMU_IHFGAIN_4DB_P;
+	else if ( db_gain== (Int16)(5) )		return PMU_IHFGAIN_5DB_P;
+	else if ( db_gain== (Int16)(6) )		return PMU_IHFGAIN_6DB_P;
+	else if ( db_gain== (Int16)(7) )		return PMU_IHFGAIN_7DB_P;
+	else if ( db_gain== (Int16)(8) )		return PMU_IHFGAIN_8DB_P;
+	else if ( db_gain== (Int16)(9) )		return PMU_IHFGAIN_9DB_P;
+	else if ( db_gain== (Int16)(10) )		return PMU_IHFGAIN_10DB_P;
+	else if ( db_gain== (Int16)(11) )		return PMU_IHFGAIN_11DB_P;
+	else if ( db_gain== (Int16)(12) )		return PMU_IHFGAIN_12DB_P;
+	// PMU_IHFGAIN_12P5DB_P,
+    else if ( db_gain== (Int16)(13) )		return PMU_IHFGAIN_13DB_P;
+	// PMU_IHFGAIN_13P5DB_P,
+    else if ( db_gain== (Int16)(14) )		return PMU_IHFGAIN_14DB_P;
+	// PMU_IHFGAIN_14P5DB_P,
+    else if ( db_gain== (Int16)(15) )		return PMU_IHFGAIN_15DB_P;
+	// PMU_IHFGAIN_15P5DB_P,
+    else if ( db_gain== (Int16)(16) )		return PMU_IHFGAIN_16DB_P;
+	// PMU_IHFGAIN_16P5DB_P,
+    else if ( db_gain== (Int16)(17) )		return PMU_IHFGAIN_17DB_P;
+	// PMU_IHFGAIN_17P5DB_P,
+    else if ( db_gain== (Int16)(18) )		return PMU_IHFGAIN_18DB_P;
+	// PMU_IHFGAIN_18P5DB_P,
+    else if ( db_gain== (Int16)(19) )		return PMU_IHFGAIN_19DB_P;
+	// PMU_IHFGAIN_19P5DB_P,
+    else if ( db_gain== (Int16)(20) )		return PMU_IHFGAIN_20DB_P;
+
+#else
+    {
+        IHF_PMU_GainMapping_t outGain;
+        outGain = getIHFPMUGain(db_gain);
+        return outGain.ihfPMUGain;
+    }
+#endif
+}
+#endif
+
+#endif //defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
 //============================================================================
 //
 // Function Name: SetGainOnExternalAmp
 //
-// Description:   Set gain on external amplifier driver
+// Description:   Set gain on external amplifier driver. Gain in Q13.2
 //
 //============================================================================
 static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
@@ -2447,21 +3169,23 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)
 	{
 		case AUDCTRL_SPK_HEADSET:
 		case AUDCTRL_SPK_TTY:
-	    	hs_gain = *((int*)gain);
 #ifdef CONFIG_BCM59055_AUDIO
+	    	hs_gain = map2pmu_hs_gain(*((int*)gain));
 		    hs_path = PMU_AUDIO_HS_BOTH;
 		    bcm59055_hs_set_gain( hs_path, hs_gain);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+			hs_gain = *((int*)gain);
 		    hs_path = PMU_AUDIO_HS_BOTH;
 		    bcmpmu_hs_set_gain( hs_path, hs_gain);
 #endif
 			break;
 
 		case AUDCTRL_SPK_LOUDSPK:
-    		ihf_gain = *((int*)gain);
 #ifdef CONFIG_BCM59055_AUDIO
+    		ihf_gain = map2pmu_ihf_gain(*((int *)gain));
 	    	bcm59055_ihf_set_gain( ihf_gain);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+    		ihf_gain = *((int*)gain);
 	    	bcmpmu_ihf_set_gain( ihf_gain);
 #endif
 			break;

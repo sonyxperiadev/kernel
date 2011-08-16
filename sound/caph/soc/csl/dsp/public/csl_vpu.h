@@ -88,7 +88,7 @@ void CSL_VPU_Enable(void);
 *   @param    numFramesPerInterrupt	(in)	number frames per interrupt
 * 
 **********************************************************************/
-void CSL_VPU_Init(VP_Speech_Mode_t speechMode, UInt16 numFramesPerInterrupt);
+void CSL_VPU_Init(UInt16 speechMode, UInt16 numFramesPerInterrupt);
 
 //*********************************************************************
 /**
@@ -102,7 +102,7 @@ void CSL_VPU_Init(VP_Speech_Mode_t speechMode, UInt16 numFramesPerInterrupt);
 *   @return   UInt32				number of bytes read to the buffer
 *
 **********************************************************************/
-UInt32 CSL_VPU_ReadPCM(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex, VP_Speech_Mode_t speechMode);
+UInt32 CSL_VPU_ReadPCM(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex, UInt16 speechMode);
 
 /**
 *
@@ -116,7 +116,7 @@ UInt32 CSL_VPU_ReadPCM(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex, VP_Speech
 *   @return   UInt32				number of bytes written from the buffer
 *
 **********************************************************************/
-UInt32 CSL_VPU_WritePCM(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, VP_Speech_Mode_t speechMode, UInt16 numFramesPerInterrupt);
+UInt32 CSL_VPU_WritePCM(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, UInt16 speechMode, UInt16 numFramesPerInterrupt);
 
 //*********************************************************************
 /**
@@ -144,7 +144,7 @@ UInt32 CSL_VPU_ReadAMRNB(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex);
 *   @return   UInt32				number of bytes written from the buffer
 *
 **********************************************************************/
-UInt32 CSL_VPU_WriteAMRNB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, VP_Speech_Mode_t speechMode, UInt32 numFramesPerInterrupt);
+UInt32 CSL_VPU_WriteAMRNB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, UInt16 speechMode, UInt32 numFramesPerInterrupt);
 
 //*********************************************************************
 /**
@@ -165,73 +165,6 @@ Boolean CSL_SetDlSpeechRecGain(Int16 mBGain);
 * 
 **********************************************************************/
 void CSL_MuteDlSpeechRec(void);
-
-//*********************************************************************
-/**
-*
-*   CSL_MMVPU_ReadAMRWB reads AMR-WB data from shared memory for MM VPU voice record.
-* 
-*   @param    outBuf		(out)	destination buffer
-*   @param    outSize		(in)	data size to read
-*   @param    bufIndex		(in)	index of circular buffer
-*   @return   UInt32				number of bytes read to the buffer
-*
-**********************************************************************/
-UInt32 CSL_MMVPU_ReadAMRWB(UInt8* outBuf, UInt32 outSize, UInt16 bufIndex);
-
-//*********************************************************************
-/**
-*   CSL_MMVPU_Rec_GetReadPtr get the buffer read pointer (from shared memory)
-* 
-*   @param    none
-*   @return   UInt16			the buffer write pointer
-*
-**********************************************************************/
-UInt16 CSL_MMVPU_Rec_GetReadPtr( void );
-
-//*********************************************************************
-/**
-*   CSL_MMVPU_Rec_ResetReadPtr reset the buffer read pointer to zero (in shared memory)
-* 
-*   @param    none
-*   @return   none
-*
-**********************************************************************/
-void CSL_MMVPU_Rec_ResetReadPtr( void );
-
-//*********************************************************************
-/**
-*
-*   CSL_MMVPU_WriteAMRWB writes AMR-WB data to shared memory for MM VPU voice playback.
-* 
-*   @param    inBuf					(in)	source buffer
-*   @param    inSize				(in)	data size to read
-*   @param    writeIndex			(in)	write index of circular buffer
-*   @param    readIndex				(in)	read index of circular buffer
-*   @return   UInt32				number of bytes written from the buffer
-*
-**********************************************************************/
-UInt32 CSL_MMVPU_WriteAMRWB(UInt8* inBuf, UInt32 inSize, UInt16 writeIndex, UInt16 readIndex);
-
-//*********************************************************************
-/**
-*   CSL_MMVPU_Play_GetWritePtr get the buffer write pointer (from shared memory)
-* 
-*   @param    none
-*   @return   UInt16			the buffer write pointer
-*
-**********************************************************************/
-UInt16 CSL_MMVPU_Play_GetWritePtr( void );
-
-//*********************************************************************
-/**
-*   CSL_MMVPU_Play_ResetWritePtr reset the buffer write pointer to zero (in shared memory)
-* 
-*   @param    none
-*   @return   none
-*
-**********************************************************************/
-void CSL_MMVPU_Play_ResetWritePtr( void );
 
 
 /** @} */

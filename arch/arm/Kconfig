@@ -823,6 +823,7 @@ config ARCH_KONA
 	select ARCH_REQUIRE_GPIOLIB
 	select GENERIC_TIME
 	select GENERIC_CLOCKEVENTS
+	select ARCH_HAS_CPUFREQ
 	help
 	  This enables support for system based on Broadcom KONA architecture
 

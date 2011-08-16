@@ -254,6 +254,22 @@ dwc_otg_core_if_t *dwc_otg_cil_init(const uint32_t * reg_base_addr)
 
 	core_if->hibernation_suspend = 0;
 
+#ifdef CONFIG_USB_OTG_UTILS
+	/*
+	 * Get OTG transceiver driver.
+	 */
+	core_if->xceiver = otg_get_transceiver();
+	if (!core_if->xceiver) {
+		DWC_WARN("otg_get_transceiver failed\n");
+		dwc_free(host_if);
+		dwc_free(dev_if);
+		DWC_WORKQ_FREE(core_if->wq_otg);
+		DWC_TIMER_FREE(core_if->wkp_timer);
+		dwc_free(core_if);
+		return 0;
+	}
+#endif
+
 	/** ADP initialization */
 	if (core_if->adp_enable)
 	{
@@ -275,6 +291,12 @@ void dwc_otg_cil_remove(dwc_otg_core_if_t * core_if)
 	/* Disable all interrupts */
 	dwc_modify_reg32(&core_if->core_global_regs->gahbcfg, 1, 0);
 	dwc_write_reg32(&core_if->core_global_regs->gintmsk, 0);
+
+#ifdef CONFIG_USB_OTG_UTILS
+	if (core_if->xceiver) {
+		otg_put_transceiver(core_if->xceiver);
+	}
+#endif
 
 	if (core_if->wq_otg) {
 		DWC_WORKQ_WAIT_WORK_DONE(core_if->wq_otg, 500);
@@ -2067,6 +2089,11 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t * core_if)
 		if (hprt0.b.prtpwr == 0) {
 			hprt0.b.prtpwr = 1;
 			dwc_write_reg32(host_if->hprt0, hprt0.d32);
+#ifdef CONFIG_USB_OTG_UTILS
+			if (core_if->xceiver->set_vbus)
+				core_if->xceiver->set_vbus(core_if->xceiver,
+							   true);
+#endif
 		}
 	}
 
@@ -6062,7 +6089,12 @@ void dwc_otg_set_prtpower(dwc_otg_core_if_t * core_if, uint32_t val)
 	hprt0_data_t hprt0;
 	hprt0.d32 = dwc_read_reg32(core_if->host_if->hprt0);
 	hprt0.b.prtpwr = val;
-	dwc_write_reg32(core_if->host_if->hprt0, val);
+	dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+#ifdef CONFIG_USB_OTG_UTILS
+	if (core_if->xceiver->set_vbus)
+		core_if->xceiver->set_vbus(core_if->xceiver,
+					   val ? true : false);
+#endif
 }
 
 uint32_t dwc_otg_get_prtsuspend(dwc_otg_core_if_t * core_if)

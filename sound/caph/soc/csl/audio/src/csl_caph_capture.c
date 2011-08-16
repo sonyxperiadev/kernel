@@ -23,7 +23,7 @@ Broadcom's express prior written consent.
 #include "log.h"
 #include "msconsts.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "csl_caph_dma.h"
 #include "csl_caph_hwctrl.h"
@@ -32,8 +32,6 @@ Broadcom's express prior written consent.
 #include "dbg.h"
 #endif
 
-#define _DBG_(a)
-//#define _DBG_(a) (a)
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -226,11 +224,6 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 	audDrv->blockSize = blockSize;
 	audDrv->numBlocks = numBlocks;
 	
-#ifdef DSP_FPGA_TEST	
-    if (audDrv->sink == CSL_CAPH_DEV_DSP)
-		audDrv->ringBuffer = (UInt8*)(&(pSharedMem->shared_eanc_buf1_low[0]));
-#endif		
-
 	// : make sure ringbuffer, numblocks and block size are legal for Rhea 
 	memset(&stream, 0, sizeof(CSL_CAPH_HWCTRL_STREAM_REGISTER_t));
     stream.streamID = (CSL_CAPH_STREAM_e)audDrv->streamID;

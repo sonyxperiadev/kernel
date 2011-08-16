@@ -30,6 +30,7 @@ struct bcm590xx_client {
 };
 enum {
 	BCM590XX_INITIALIZATION = 1,
+	BCM590XX_CHARGER_INSERT,
 };
 /**
  * Data to be supplied by the platform to initialise the BCM590XX.
@@ -39,7 +40,7 @@ enum {
  */
 struct bcm590xx_platform_data {
 	struct i2c_slave_platform_data i2c_pdata;
-	int (*init)(struct bcm590xx *bcm590xx, int flag);
+	int (*pmu_event_cb)(int flag, int param);
 	struct bcm590xx_battery_pdata *battery_pdata;
 	struct bcm590xx_audio_pdata *audio_pdata;
 	struct bcm590xx_regulator_pdata *regl_pdata;

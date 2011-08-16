@@ -33,11 +33,14 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <linux/bh1715.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_s32.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
 #include <linux/akm8975.h>
+#include <mach/dma_mmap.h>
+#include <mach/sdma.h>
 
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -65,6 +68,12 @@
 
 #include "island.h"
 #include "common.h"
+
+#include <mach/io_map.h>
+#include <mach/aram_layout.h>
+
+#include <linux/vchiq_platform_data_hana.h>
+#include <linux/vchiq_platform_data_memdrv_hana.h>
 
 #define KONA_SDIO0_PA   SDIO1_BASE_ADDR
 #define KONA_SDIO1_PA   SDIO2_BASE_ADDR
@@ -416,6 +425,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.id = 0,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_WIFI,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.wifi_gpio = {
 			.reset		= 179,
 			.reg		= 177,
@@ -431,6 +441,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.data_pullup = 0,
 		.is_8bit = 1,
 		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
 		.peri_clk_name = "sdio2_clk",
 		.ahb_clk_name = "sdio2_ahb_clk",
 		.sleep_clk_name = "sdio2_sleep_clk",
@@ -441,6 +452,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.data_pullup = 0,
 		.cd_gpio = 106,
 		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE ,
 		.peri_clk_name = "sdio3_clk",
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
@@ -1065,8 +1077,30 @@ static struct bcm590xx_battery_pdata bcm590xx_battery_plat_data = {
 
 
 
+#define IPC_SHARED_CHANNEL_VIRT     ( KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
+#define IPC_SHARED_CHANNEL_PHYS     ( INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET )
 
+static VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T vchiq_display_data_memdrv_hana = {
+    .memdrv = {
+        .common = {
+            .instance_name = "display",
+            .dev_type      = VCHIQ_DEVICE_TYPE_SHARED_MEM,
+        },
+        .sharedMemVirt  = (void *)(IPC_SHARED_CHANNEL_VIRT),
+        .sharedMemPhys  = IPC_SHARED_CHANNEL_PHYS,
+    },
+    .ipcIrq                =  BCM_INT_ID_IPC_OPEN,
+};
 
+static struct platform_device vchiq_display_device = {
+    .name = "vchiq_memdrv_hana",
+    .id = 0,
+    .dev = {
+        .platform_data = &vchiq_display_data_memdrv_hana,
+    },
+};
+
+struct platform_device * vchiq_devices[] __initdata = {&vchiq_display_device};
 
 #define BMA150_IRQ_PIN 120
 
@@ -1112,6 +1146,13 @@ static struct i2c_board_info __initdata akm8975_info[] =
 		I2C_BOARD_INFO("akm8975", 0x0C ),
 		.platform_data = &akm8975_plat_data,
 		.irq = gpio_to_irq(AKM8975_IRQ_PIN),
+	},
+};
+
+
+static struct i2c_board_info __initdata bh1715_info[] = {
+	[0] = {
+		I2C_BOARD_INFO(BH1715_DRV_NAME, 0x5C ),
 	},
 };
 
@@ -1168,7 +1209,7 @@ static struct platform_device *board_devices[] __initdata = {
 	&board_i2c_adap_devices[3],
 	&island_sdio1_device,
 	&island_sdio2_device,
-	&island_ipc_device,
+//	&island_ipc_device,
 	&board_gpio_keys_device,
 	&islands_leds_device,
 	&android_pmem,
@@ -1217,42 +1258,25 @@ static void __init board_add_devices(void)
 		akm8975_info,
 		ARRAY_SIZE(akm8975_info));
 	
+	i2c_register_board_info(3,
+		bh1715_info,
+		ARRAY_SIZE(bh1715_info));
+
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 	platform_add_devices(bcm59055_userspace_consumer_devices, ARRAY_SIZE(bcm59055_userspace_consumer_devices));
 #endif
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
 	platform_add_devices(bcm59055_virtual_consumer_devices, ARRAY_SIZE(bcm59055_virtual_consumer_devices));
 #endif
-}
 
-void __init pinmux_setup(void)
-{
-	void __iomem *chipRegBase = IOMEM(KONA_CHIPREG_VA);
-	uint32_t val;
+   platform_add_devices( vchiq_devices, ARRAY_SIZE( vchiq_devices ) );
 
-	/* Setup pin muxing for PMU interrupt pin.
-	*/
-	val = ( 3 << CHIPREG_PMU_INT_PINSEL_2_0_SHIFT ) |
-		( 1 << CHIPREG_PMU_INT_PUP_PMU_INT_SHIFT ) |
-		( 3 << CHIPREG_PMU_INT_SEL_2_0_SHIFT ) ;
-	writel( val, chipRegBase + CHIPREG_PMU_INT_OFFSET );
-
-	/* Setup pin muxing for sensor interrupt pin.
-	*/
-	val = ( 3 << CHIPREG_SIM2_DET_PINSEL_2_0_SHIFT ) |
-	( 3 << CHIPREG_SIM2_DET_SEL_2_0_SHIFT );
-	writel( val, chipRegBase + CHIPREG_SIM2_DET_OFFSET ) ;
-
-	/* Setup pin muxing for compass data ready pin.
-	*/
-	val = ( 3 << CHIPREG_NORFLSH_AD_05_PINSEL_2_0_SHIFT ) |
-	( 3 << CHIPREG_NORFLSH_AD_05_SEL_2_0_SHIFT )	 ;
-	writel( val, chipRegBase + CHIPREG_NORFLSH_AD_05_OFFSET ) ;
 }
 
 void __init board_init(void)
 {
-	pinmux_setup();
+	dma_mmap_init();
+	sdma_init();	
 	/*
 	 * Add common platform devices that do not have board dependent HW
 	 * configurations

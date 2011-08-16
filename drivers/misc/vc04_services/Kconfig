@@ -65,7 +65,7 @@ config BCM_VCHIQ_VC04
 config VC_VCHIQ_MEMDRV
 	tristate "VCHIQ BUS Driver (internal videocore)"
 	depends on BRCM_VIDEOCORE_SERVICES
-	default n
+	default y
 	select VC_VCHIQ
         help
            Causes the vchiq stack used for communicating with
@@ -74,8 +74,20 @@ config VC_VCHIQ_MEMDRV
 config VC_VCHIQ_MEMDRV_HANA
 	tristate "VCHIQ Internal Videocore (HANA)"
 	depends on VC_VCHIQ_MEMDRV
-	default n
+	default y
         help
            Enables the internal videocore driver used on the Hana chip.
+		   
+config VC_VMCS_FB
+	tristate "VMCS Frame Buffer"
+	depends on FB
+    select FB_CFB_FILLRECT
+    select FB_CFB_COPYAREA
+    select FB_CFB_IMAGEBLIT	
+	default y
+        help
+          Support for the VC framebuffer on the Broadcom reference
+          phone. Uses the VCHIQ stack.	   
+	   
 
 

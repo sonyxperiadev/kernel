@@ -31,3 +31,10 @@ config VC_CAMERA
 	default BRCM_MISC_DRIVERS
 	help
 		Camera driver based on VC IPC
+
+config BCM_VCHIQ_VC04
+        tristate "VC04 VCHIQ driver"
+        depends on BRCM_MISC_DRIVERS
+        default BRCM_MISC_DRIVERS
+        help
+          VC04 VCHIQ driver

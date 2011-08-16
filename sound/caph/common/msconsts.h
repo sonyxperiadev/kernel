@@ -108,6 +108,7 @@
 #define TASKPRI_CP_Audio_ISR			(TPriority_t)(NORMAL-4)
 #define TASKPRI_AUDMAN					(TPriority_t)(NORMAL-4)
 #define TASKPRI_AUDMIX					(TPriority_t)(NORMAL-4)
+#define TASKPRI_AUDDRV					(TPriority_t)(NORMAL-4)
 #define TASKPRI_ARDEV_BTS				(TPriority_t)(NORMAL-4)
 #define TASKPRI_ARDEV_BTTAP				(TPriority_t)(NORMAL-4)
 #define TASKPRI_ARDEV_PCMOUT			(TPriority_t)(NORMAL-4)
@@ -213,6 +214,7 @@
 #define TASKNAME_ATC                    (TName_t)"ATC"
 #define TASKNAME_SDLTRACE               (TName_t)"SDLTRACE"
 #define TASKNAME_LOG                    (TName_t)"LOG"
+#define TASKNAME_PROFILE                (TName_t)"PROFILE"
 #define TASKNAME_V24                    (TName_t)"V24"
 #define TASKNAME_RFCALL1                (TName_t)"RFCALL1"
 #define TASKNAME_RFCAL                  (TName_t)"RFCAL"
@@ -238,6 +240,7 @@
 #define TASKNAME_AUDIO					(TName_t)"AUDIO"
 #define TASKNAME_AUDMAN					(TName_t)"AUDMAN"
 #define TASKNAME_AUDMIX					(TName_t)"AUDMIX"
+#define TASKNAME_AUDDRV					(TName_t)"AUDDRV"
 #define TASKNAME_ARDEV_BTS				(TName_t)"ARDEV_BTS"
 #define TASKNAME_ARDEV_BTTAP			(TName_t)"ARDEV_BTTAP"
 #define TASKNAME_ARDEV_PCMOUT			(TName_t)"ARDEV_PCMOUT"
@@ -379,6 +382,7 @@
 #define STACKSIZE_AUDMAN				(STACKSIZE_BASIC + (2048*4))
 #define STACKSIZE_CP_Audio_ISR				(STACKSIZE_BASIC + (2048*4))
 #define STACKSIZE_AUDMIX				(STACKSIZE_BASIC + 4096 + 512)
+#define STACKSIZE_AUDDRV				(STACKSIZE_BASIC + 2048)
 #define STACKSIZE_ARDEV_BTS				(STACKSIZE_BASIC + 4096 + 512)
 #define STACKSIZE_ARDEV_BTTAP			(STACKSIZE_BASIC + 4096 + 512)
 #define STACKSIZE_ARDEV_PCMOUT			(STACKSIZE_BASIC + 4096 + 512)
@@ -497,6 +501,7 @@
 #define QUEUESIZE_CP_ISRMSG				128
 #define QUEUESIZE_AUDMAN				48
 #define QUEUESIZE_AUDMIX				128
+#define QUEUESIZE_AUDDRV				16
 #define QUEUESIZE_ARDEV_BTS				16
 #define QUEUESIZE_ARDEV_PCMOUT			48
 #define QUEUESIZE_AUDDRV_AUDRENDER		48

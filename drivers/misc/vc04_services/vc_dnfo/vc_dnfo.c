@@ -188,7 +188,11 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
    int ret;
    unsigned char kbuf[PROC_WRITE_BUF_SIZE];
    char name[PROC_WRITE_BUF_SIZE];
+<<<<<<< HEAD
    int value;
+=======
+   unsigned int value;
+>>>>>>> mps-lmp
 
    if ( count > PROC_WRITE_BUF_SIZE )
    {
@@ -210,7 +214,11 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
    */
    ret = count;
 
+<<<<<<< HEAD
    if( sscanf( kbuf, "%s %d", name, &value ) != 2 )
+=======
+   if( sscanf( kbuf, "%s %u", name, &value ) != 2 )
+>>>>>>> mps-lmp
    {
       LOG_ERR( "[%s]: echo <name> <value> > /proc/%s",
                __func__,
@@ -221,6 +229,7 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
       goto out;
    }
 
+<<<<<<< HEAD
    if ( (value < 0) &&
         (strcmp( name, "layer" ) != 0) )
    {
@@ -233,6 +242,8 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
       goto out;
    }
 
+=======
+>>>>>>> mps-lmp
    /* Big case to assign the desired value.  Make this a lookup table
    ** eventually.
    */
@@ -272,6 +283,7 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
    {
       vc_dnfo_info.ydpi = value;
    }
+<<<<<<< HEAD
    else
    {
       LOG_ERR( "[%s]: attribute '%s' is **unknown** to driver '%s'",
@@ -280,6 +292,8 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
                DRIVER_NAME );
       goto out;
    }
+=======
+>>>>>>> mps-lmp
 
    /* Done.
    */

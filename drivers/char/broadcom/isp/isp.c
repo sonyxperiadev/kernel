@@ -62,6 +62,7 @@ static struct class *isp_class;
 static void __iomem *isp_base = NULL;
 static void __iomem *mmclk_base = NULL;
 static struct clk *isp_clk;
+static int interrupt_irq = 0;
 
 typedef struct {
     unsigned int  status;
@@ -199,7 +200,7 @@ static int isp_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, u
     case ISP_IOCTL_WAIT_IRQ:
     {        
         dbg_print("Enabling ISP interrupt\n");
-
+        interrupt_irq = 0;
         enable_irq(IRQ_ISP);
         dbg_print("Waiting for interrupt\n");
         if (down_interruptible(&dev->irq_sem))
@@ -215,8 +216,20 @@ static int isp_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, u
         
         dbg_print("Disabling ISP interrupt\n");
         disable_irq(IRQ_ISP);
+        if (interrupt_irq) {
+            err_print("interrupted irq ioctl\n");
+            return -EIO;
+        }		
     }
     break;
+
+    case ISP_IOCTL_RELEASE_IRQ:
+    {
+        interrupt_irq = 1;
+        dbg_print("Interrupting irq ioctl\n");
+	 up(&dev->irq_sem);
+    }
+    break;	
 	
     case ISP_IOCTL_CLK_RESET:
     {

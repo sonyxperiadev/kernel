@@ -393,6 +393,10 @@ RPC_Result_t RPC_PACKET_RegisterFilterCbk(UInt8 rpcClientID,
 									RPC_PACKET_DataIndCallBackFunc_t dataIndFunc);
 
 
+RPC_Result_t RPC_PACKET_FreeBufferEx(PACKET_BufHandle_t dataBufHandle, UInt8 rpcClientID);
+
+UInt32 RPC_PACKET_IncrementBufferRef(PACKET_BufHandle_t dataBufHandle, UInt8 rpcClientID);
+
 /** \endcond   */
 
 #endif

@@ -107,6 +107,10 @@
 #define	VP_STATUSQ_SIZE					8		// Number of status queue entries
 #define G711_FRAME_SIZE                 40    	// packed 80 samples (10ms) frame 	
 
+#define NUM_OF_8K_SAMP_PER_INT0_INT     8       // Number of 8kHz samples per INT0 interrupt (for 16kHz * 2)
+                                                // Should be same as in hwregs.inc
+
+
 #if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
 //#define FPGA_AUDIO_HUB_VERIFICATION
 #endif
@@ -920,7 +924,7 @@ typedef enum
 	* 			 
 	* 			 @param  UInt16  	{
 	*								Bit 0: Enable_48kHz_Speaker_Output: 0 = Disable, 1 = Enable
-	*                                                    Bit 1: Interrupt is enabled for this 
+	*                                                    Bit 1: Interrupt is enabled for this  // Not supported currently
 	*                                                    Bit 2: = 0 Mono, = 1 Stereo // Currently only supports mono 
 	*							}
 	*
@@ -2293,6 +2297,12 @@ EXTERN dummy2_config_t shared_SP_right_config								AP_SHARED_SEC_GEN_AUDIO;
 EXTERN dummy3_queries_t shared_SP_params_left								AP_SHARED_SEC_GEN_AUDIO;
 EXTERN dummy3_queries_t shared_SP_params_right								AP_SHARED_SEC_GEN_AUDIO;
 #if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
+/**
+ * This variable tells about the audio sampling rate to the DSP, while using AADMAC during a regular
+ * phone call.
+ */
+EXTERN UInt16 shared_aadmac_audio_samp_rate									AP_SHARED_SEC_GEN_AUDIO;
+
 /** @addtogroup Shared_Audio_Buffers 
  * @{ */
 /**
@@ -2316,24 +2326,45 @@ EXTERN UInt32 shared_aud_out_buf_48k[2][IHF_48K_BUF_SIZE]                   AP_S
  */
 
 /**
- * @addtogroup EANC_48K_INPUT
+ * @addtogroup HANDSET_AADMAC_BUFFERS
  *
- * This interface is used for receiving 48KHz input data from the AADMAC which then passed over to the EANC 
- * coefficient adaptation algorithm. This interface only supports mono.
+ * This interface is used for receiving 8/16 KHz input data from the AADMAC which then passed over to the regular hand-set.
  *
- * \see COMMAND_ENABLE_EANC
+ * \see
  * @{
  */
 /**
- * These buffers are used for get mono data for EANC from AADMAC. 
+ * These buffers are used for getting mono data for primary mic from AADMAC.
  *
- * \see COMMAND_ENABLE_EANC
+ * \see
  *
  * \note The order of the buffers below is important. First should be the low buffer followed by
  *       the high buffer.
  */
-EXTERN UInt32 shared_eanc_buf1_low[IHF_48K_BUF_SIZE]                   AP_SHARED_SEC_GEN_AUDIO;
-EXTERN UInt32 shared_eanc_buf1_high[IHF_48K_BUF_SIZE]                  AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_pri_mic_low[NUM_OF_8K_SAMP_PER_INT0_INT*2]                   AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_pri_mic_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]                  AP_SHARED_SEC_GEN_AUDIO;
+
+/**
+ * These buffers are used for getting mono data for primary mic from AADMAC.
+ *
+ * \see
+ *
+ * \note The order of the buffers below is important. First should be the low buffer followed by
+ *       the high buffer.
+ */
+EXTERN UInt32 shared_aadmac_sec_mic_low[NUM_OF_8K_SAMP_PER_INT0_INT*2]                   AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_sec_mic_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]                  AP_SHARED_SEC_GEN_AUDIO;
+
+/**
+ * These buffers are used for sending mono data for speaker from AADMAC (all paths other than IHF).
+ *
+ * \see
+ *
+ * \note The order of the buffers below is important. First should be the low buffer followed by
+ *       the high buffer.
+ */
+EXTERN UInt32 shared_aadmac_spkr_low[NUM_OF_8K_SAMP_PER_INT0_INT*2]                   AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt32 shared_aadmac_spkr_high[NUM_OF_8K_SAMP_PER_INT0_INT*2]                  AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
@@ -2527,6 +2558,7 @@ EXTERN Audio_Logging_Buf_t shared_audio_stream_1[2]                         AP_S
 EXTERN Audio_Logging_Buf_t shared_audio_stream_2[2]           				AP_SHARED_SEC_DIAGNOS;                        // 8KHz 20ms double buffer of Audio
 EXTERN Audio_Logging_Buf_t shared_audio_stream_3[2]           				AP_SHARED_SEC_DIAGNOS;                        // 8KHz 20ms double buffer of Audio                                                                          
 EXTERN UInt16 shared_usb_status_option				           				AP_SHARED_SEC_DIAGNOS;                        // STATUS_USB_HEADSET_BUFFER ptr option 0 or 1                                                                          
+
 #if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
 EXTERN UInt16 shared_rhea_audio_test_select			           				AP_SHARED_SEC_DIAGNOS;                        // STATUS_USB_HEADSET_BUFFER ptr option 0 or 1                                                                          
 #endif
@@ -2536,16 +2568,6 @@ EXTERN UInt32 NOT_USE_shared_memory_end                                     AP_S
 } AP_SharedMem_t;
 #endif
 
-#ifdef MSP
-
-typedef        AP_SharedMem_t SharedMem_t;
-typedef        AP_SharedMem_t VPSharedMem_t;
-
-AP_SharedMem_t  *SHAREDMEM_GetDsp_SharedMemPtr(void);                    // Return pointer to shared memory
-
-extern  AP_SharedMem_t    *vp_shared_mem;
-
-#endif // #ifdef MSP
 
 //******************************************************************************
 // Function Prototypes

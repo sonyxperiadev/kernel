@@ -29,6 +29,7 @@ typedef enum
 {
     CAPH_ARM,
     CAPH_DSP,
+    CAPH_SSP,
 }CAPH_ARM_DSP_e;
 
 /**

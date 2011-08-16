@@ -30,7 +30,7 @@ Broadcom's express prior written consent.
 *
 *  @return
 *****************************************************************************/
-void csl_caph_hwctrl_init(CSL_CAPH_HWCTRL_BASE_ADDR_t addr);
+void csl_caph_hwctrl_init(void);
 
 /**
 *
@@ -62,6 +62,40 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 *****************************************************************************/
 Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 
+/**
+*
+*  @brief  switch the source/sink of a caph HW path 
+*
+*  @param   pathID  (in) Caph HW path id
+*  @param   config  (in) Caph HW path configuration parameters
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t csl_caph_hwctrl_SwitchPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config);
+
+
+/**
+*
+*  @brief  Add a source/sink to a caph HW path 
+*
+*  @param   pathID  (in) Caph HW path id
+*  @param   config  (in) Caph HW path configuration parameters
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config);
+
+
+/**
+*
+*  @brief  Remove a source/sink from a caph HW path 
+*
+*  @param   pathID  (in) Caph HW path id
+*  @param   config  (in) Caph HW path configuration parameters
+*
+*  @return Result_t status
+*****************************************************************************/
+Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config);
 
 /**
 *
@@ -444,13 +478,15 @@ void csl_caph_hwctrl_SetMixOutGain(CSL_CAPH_PathID pathID,
 *
 *  @brief  Set Hw gain. For audio tuning purpose only.
 *
+*  @param   pathID  (in) path handle of HW path
 *  @param   hw (in) which hw gain to set
-*  @param   gain  (in) Mixing gain
+*  @param   gain  (in) Mixing gain in Q15.0 format.
 *  @param   dev  (in) device
 *
 *  @return
 ****************************************************************************/
-void csl_caph_hwctrl_SetHWGain(CSL_CAPH_HW_GAIN_e hw, 
+void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID,
+        CSL_CAPH_HW_GAIN_e hw, 
 		UInt32 gain, 
 		CSL_CAPH_DEVICE_e dev);
 

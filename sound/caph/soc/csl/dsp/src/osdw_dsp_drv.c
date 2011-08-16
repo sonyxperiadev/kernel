@@ -57,13 +57,12 @@
 *
 ****************************************************************************/
 #include "mobcom_types.h"
-
+#include "platform_mconfig_rhea.h"
 #include <linux/sched.h>
 #include <linux/interrupt.h>
 #include "msconsts.h"
 #include "log.h"
 #include "shared.h"
-#include "shared_cp.h"
 #include "csl_dsp.h"
 
 #include "nandsdram_memmap.h"
@@ -94,6 +93,7 @@ typedef struct
 } Dspdrv;
 
 static Dspdrv dsp_drv;
+static AP_SharedMem_t 			*global_shared_mem = NULL;
 
 /* Local function declarations */
 
@@ -186,10 +186,18 @@ void DSPDRV_Init( )
 //******************************************************************************
 static UInt32 DSPDRV_GetSharedMemoryAddress( )
 {
-	UInt32 dsp_shared_mem;
+	static UInt32 dsp_shared_mem=NULL;
 
-    dsp_shared_mem = (UInt32)SHAREDMEM_GetDsp_SharedMemPtr();
+	 if(dsp_shared_mem == NULL)
+	 {
+		 dsp_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		 if (!dsp_shared_mem) {
+			 Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping shared memory failed\n\r");
+			 return NULL;
+		 }
+	}
 
+		
 	return dsp_shared_mem;
 }
 
@@ -306,4 +314,20 @@ void VPSHAREDMEM_TriggerRIPInt()
 	IRQ_TriggerRIPInt();
 
 }
+
+// Temporary till audio code contains references to this function
+//******************************************************************************
+//
+// Function Name:	SHAREDMEM_GetSharedMemPtr
+//
+// Description:		Return pointer to shared memory
+//
+// Notes:
+//
+//******************************************************************************
+AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memory
+{
+        global_shared_mem = DSPDRV_GetSharedMemoryAddress();
+	return global_shared_mem;
+}	
 
