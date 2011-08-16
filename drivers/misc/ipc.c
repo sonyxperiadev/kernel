@@ -26,6 +26,7 @@
 #include <linux/ipc/ipc.h>
 
 #include <asm/uaccess.h>
+#include <asm/mach/irq.h>
 
 #include <mach/irqs.h>
 #include <mach/io_map.h>
@@ -119,21 +120,21 @@ static inline u32 IRQ_TO_IPC(u32 irq_num)
 }
 #endif
 
-static void ipc_mask_irq(unsigned int irq)
+static void ipc_mask_irq(struct irq_data *data)
 {
 	return;
 }
 
-static void ipc_unmask_irq(unsigned int irq)
+static void ipc_unmask_irq(struct irq_data *data)
 {
 	return;
 }
 
 static struct irq_chip ipc_irq_chip = {
 	.name           = "IPC_VIC",
-	.ack            = ipc_mask_irq,
-	.mask           = ipc_mask_irq,
-	.unmask         = ipc_unmask_irq,
+	.irq_ack            = ipc_mask_irq,
+	.irq_mask           = ipc_mask_irq,
+	.irq_unmask         = ipc_unmask_irq,
 };
 
 #define IPC_VC_ARM_LOCK_BASE_OFFSET     (IPC_VC_ARM_INTERRUPT_OFFSET + 0x20)
@@ -216,8 +217,9 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 {
 	u32 vc_irq_status, ipc_id;
 	unsigned long irq_flags;
+	struct irq_chip *chip = irq_desc_get_chip(desc);
 
-	desc->chip->ack(irq);
+	chained_irq_enter(chip, desc);
 
 	g_ipc_data_p->ipc_chip_p->clear_doorbell_irq();
 
@@ -244,7 +246,7 @@ static void ipc_isr_handler( unsigned int irq, struct irq_desc *desc )
 			generic_handle_irq(ipc_id + g_ipc_data_p->ipc_chip_p->irq_base);
 	}
 
-	desc->chip->unmask(irq);
+	chained_irq_exit(chip, desc);
 }
 
 typedef struct
@@ -475,11 +477,10 @@ static int ipc_probe(struct platform_device *pdev)
 
 	/* Enable the doorbell interrupt from the other side and set up the irq chip. */
 	for (i = 0; i < ipc_data_p->ipc_chip_p->num_channels; i++) {
-		set_irq_chip(ipc_data_p->ipc_chip_p->irq_base + i, &ipc_irq_chip);
-		set_irq_handler(ipc_data_p->ipc_chip_p->irq_base + i, handle_simple_irq);
+		irq_set_chip_and_handler(ipc_data_p->ipc_chip_p->irq_base + i, &ipc_irq_chip, handle_simple_irq);
 		set_irq_flags(ipc_data_p->ipc_chip_p->irq_base + i, IRQF_VALID);
 	}
-	set_irq_chained_handler(ipc_data_p->irq, ipc_isr_handler);
+	irq_set_chained_handler(ipc_data_p->irq, ipc_isr_handler);
 
 	if (NULL == ipc_create_proc_entry( "inter_processor_comm", ipc_dummy_read, ipc_init_write )) {
 		ipc_error("Failed to register ipc proc entry\n");

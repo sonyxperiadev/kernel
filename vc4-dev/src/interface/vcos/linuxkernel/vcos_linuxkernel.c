@@ -39,7 +39,7 @@ static VCOS_THREAD_ATTR_T default_attrs = {
    VCOS_DEFAULT_STACK_SIZE,
 };
 
-DECLARE_MUTEX(lock);
+DEFINE_SEMAPHORE(lock);
 
 typedef void (*LEGACY_ENTRY_FN_T)(int, void *);
 

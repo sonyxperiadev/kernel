@@ -1,7 +1,7 @@
 #include "vcos_build_info.h"
 #include "vcinclude/vc_debug_sym.h"
 
-VC_DEBUG_DECLARE_STRING_VAR( vcos_build_hostname, "LBRMN-COREVIDEO" );
+VC_DEBUG_DECLARE_STRING_VAR( vcos_build_hostname, "rpan-ubuntu" );
 VC_DEBUG_DECLARE_STRING_VAR( vcos_build_version, "unknown" );
 VC_DEBUG_DECLARE_STRING_VAR( vcos_build_time,    __TIME__ );
 VC_DEBUG_DECLARE_STRING_VAR( vcos_build_date,    __DATE__ );
