@@ -97,6 +97,8 @@ typedef struct AUDIO_DRIVER_CallBackParams_t
 {
 	AUDIO_DRIVER_InterruptPeriodCB_t	pfCallBack;
 	void	*pPrivateData;
+	AUDIO_DRIVER_VoipCB_t				voipULCallback;
+	AUDIO_DRIVER_VoipCB_t				voipDLCallback;
 
 }AUDIO_DRIVER_CallBackParams_t;
 

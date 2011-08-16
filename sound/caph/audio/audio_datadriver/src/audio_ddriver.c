@@ -68,6 +68,7 @@ typedef struct AUDIO_DDRIVER_t
     AUDIO_DRIVER_TYPE_t                     drv_type;
     AUDIO_DRIVER_InterruptPeriodCB_t        pCallback;
 	void	*								pCBPrivate;
+	void	*								pVoIPCBPrivate;
     UInt32                                  interrupt_period;
     AUDIO_SAMPLING_RATE_t                   sample_rate;
     AUDIO_CHANNEL_NUM_t		                num_channel;
@@ -949,7 +950,7 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	UInt16 *codec_type = 0;
+	UInt32 *codec_type;
 	UInt32 size=0;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::%d \n",ctrl_cmd );
@@ -958,29 +959,23 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
     {
         case AUDIO_DRIVER_START:
             {     
-				if( (aud_drv->pVoipULCallback == NULL) ||
-					(aud_drv->pVoipDLCallback == NULL)
-					)
-				{
-					Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::All Configuration is not set yet	\n"  );
-					return result_code;
-				}
 
 				if(pCtrlStruct != NULL)
-			    	codec_type = (UInt16 *)pCtrlStruct;
-					
+			    	codec_type = (UInt32 *)pCtrlStruct;
+
+					//Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::codec_type %d	\n",*codec_type);
 					if(*codec_type == 0)
 						aud_drv->codec_type = VOIP_PCM;
 					else if(*codec_type == 1) 
-						aud_drv->codec_type = VOIP_PCM_16K;
+						aud_drv->codec_type = VOIP_FR; 
 					else if(*codec_type == 2) 
 						aud_drv->codec_type = VOIP_AMR475;
 					else if(*codec_type == 3) 
-						aud_drv->codec_type = VOIP_AMR_WB_MODE_7k;
+						aud_drv->codec_type = VOIP_G711_U; 
 					else if(*codec_type == 4) 
-						aud_drv->codec_type = VOIP_FR;
+						aud_drv->codec_type = VOIP_PCM_16K;
 					else if(*codec_type == 5) 
-						aud_drv->codec_type = VOIP_G711_U;
+						aud_drv->codec_type = VOIP_AMR_WB_MODE_7k;
 					else
 					{
 						Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n" );
@@ -1008,25 +1003,35 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
             break;
         case AUDIO_DRIVER_SET_VOIP_UL_CB:
             {
-				if(pCtrlStruct == NULL)
+
+				AUDIO_DRIVER_CallBackParams_t *pCbParams;
+                if(pCtrlStruct == NULL)
                 {
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr  \n"  );
                     return result_code;
                 }
                 //assign the call back
-                aud_drv->pVoipULCallback = (AUDIO_DRIVER_VoipCB_t)pCtrlStruct;
+                pCbParams = (AUDIO_DRIVER_CallBackParams_t *)pCtrlStruct;
+                aud_drv->pVoipULCallback = pCbParams->voipULCallback;
+				aud_drv->pVoIPCBPrivate = pCbParams->pPrivateData;
+
+		
                 result_code = RESULT_OK;
 		    }
             break;
         case AUDIO_DRIVER_SET_VOIP_DL_CB:
-            {
-	            if(pCtrlStruct == NULL)
+            {				
+				AUDIO_DRIVER_CallBackParams_t *pCbParams;
+                if(pCtrlStruct == NULL)
                 {
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr  \n"  );
                     return result_code;
                 }
                 //assign the call back
-                aud_drv->pVoipDLCallback = (AUDIO_DRIVER_VoipCB_t)pCtrlStruct;
+                pCbParams = (AUDIO_DRIVER_CallBackParams_t *)pCtrlStruct;
+                aud_drv->pVoipDLCallback = pCbParams->voipDLCallback;
+				aud_drv->pVoIPCBPrivate = pCbParams->pPrivateData;
+
                 result_code = RESULT_OK;
 		    }
             break;
@@ -1386,6 +1391,7 @@ static Boolean VOIP_DumpUL_CB(
 	UInt8 index = 0;
 	VOIP_Buffer_t *voipBufPtr = NULL;
 	UInt16 codecType;
+	UInt32 ulSize = 0;
 	
     aud_drv = audio_voip_driver;
     if((aud_drv == NULL))
@@ -1400,9 +1406,11 @@ static Boolean VOIP_DumpUL_CB(
 		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: Invalid codecType = 0x%x\n", codecType);
 	else
 	{
-		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: codecType = 0x%x, index = %d\n", codecType, index);		
+		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: codecType = 0x%x, index = %d pSrc 0x%x\n", codecType, index, pSrc);		
+		ulSize = sVoIPDataLen[(codecType & 0xf000) >> 12];
 	    if(aud_drv->pVoipULCallback != NULL)
-			aud_drv->pVoipULCallback(aud_drv, (pSrc + 2), codecType); // 2 bytes for codec type
+			aud_drv->pVoipULCallback(aud_drv->pVoIPCBPrivate, (pSrc + 2),(ulSize - 2) ); // check if it has to be ulsize-2 or ulsize ?????
+				
 	}    
     return TRUE;
 };
@@ -1421,7 +1429,7 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
 	aud_drv->tmp_buffer[0] = aud_drv->codec_type;
 	dlSize = sVoIPDataLen[(aud_drv->codec_type & 0xf000) >> 12];
 	Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->codec_type, dlSize);
-	aud_drv->pVoipDLCallback(aud_drv, aud_drv->tmp_buffer, dlSize);
+	aud_drv->pVoipDLCallback(aud_drv->pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[2], (dlSize - 2)); // 2 bytes for codec type
 	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->codec_type, aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->codec_type, FALSE);
 	return TRUE;
 };
