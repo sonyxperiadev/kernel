@@ -31,6 +31,7 @@
  */
 enum PIN_NAME {
 	/* GPIO 178 */ PN_NORFLSH_CE1_N,
+	/* GPIO 177 */ PN_NORFLSH_CE0_N,
 	/* GPIO 175 */ PN_NORFLSH_ADDR_23,
 	/* GPIO 174 */ PN_NORFLSH_ADDR_22,
 	/* GPIO 173 */ PN_NORFLSH_ADDR_21,
@@ -38,6 +39,7 @@ enum PIN_NAME {
 	/* GPIO 171 */ PN_NORFLSH_ADDR_19,
 	/* GPIO 167 */ PN_NORFLSH_AADLAT_EN,
 	/* GPIO 166 */ PN_NORFLSH_ADLAT_EN,
+	/* GPIO 165 */ PN_NORFLSH_AD_05,
         /* GPIO 164 */ PN_NORFLSH_AD_14,
 	/* GPIO 163 */ PN_NORFLSH_AD_13,
 	/* GPIO 162 */ PN_NORFLSH_AD_12,
@@ -95,6 +97,9 @@ enum PIN_NAME {
 	/* GPIO 100 */ PN_NAND_AD_1,
 	/* GPIO 99 */  PN_NAND_AD_0,
 
+	/* GPIO 98 */  PN_UARTB4_UTXD,
+	/* GPIO 97 */  PN_UARTB4_URXD,
+
 	/* GPIO 96 */ PN_SDIO2_DATA_3,
 	/* GPIO 95 */ PN_SDIO2_DATA_2,
 	/* GPIO 94 */ PN_SDIO2_DATA_1,
@@ -116,6 +121,31 @@ enum PIN_NAME {
 	              PN_TRACEDT02,
 	              PN_TRACEDT03,
 	              PN_TRACEDT07,
+
+        /* GPIO 84 */  PN_SSP0_FS,
+        /* GPIO 83 */  PN_SSP0_CLK,
+        /* GPIO 82 */  PN_SSP0_RXD,
+        /* GPIO 81 */  PN_SSP0_TXD,
+
+        /* GPIO 80 */  PN_SSP1_FS,
+        /* GPIO 79 */  PN_SSP1_CLK,
+        /* GPIO 78 */  PN_SSP1_RXD,
+        /* GPIO 77 */  PN_SSP1_TXD,
+
+        /* GPIO 76 */  PN_SSP2_FS_0,
+        /* GPIO 75 */  PN_SSP2_CLK,
+        /* GPIO 74 */  PN_SSP2_RXD_0,
+        /* GPIO 73 */  PN_SSP2_TXD_0,
+        /* GPIO 72 */  PN_SSP2_FS_1,
+        /* GPIO 71 */  PN_SSP2_RXD_1,
+        /* GPIO 70 */  PN_SSP2_TXD_1,
+        /* GPIO 69 */  PN_SSP2_FS_2,
+
+        /* GPIO 68 */  PN_SSP3_FS,
+        /* GPIO 67 */  PN_SSP3_CLK,
+        /* GPIO 66 */  PN_SSP3_RXD,
+        /* GPIO 65 */  PN_SSP3_TXD,
+        /* GPIO 64 */  PN_SSP3_EXTCLK,
 
 	/* GPIO 61 */ PN_PMU_SCL,
         /* GPIO 60 */ PN_PMU_SDA,
@@ -160,7 +190,14 @@ enum PIN_NAME {
         /* GPIO 22 */ PN_LCD_VSYNC,
         /* GPIO 21 */ PN_LCD_OE,  
         /* GPIO 20 */ PN_LCD_PCLK,
-		/* GPIO 10 */ PN_PMU_INT,
+
+        /* GPIO 15 */  PN_DIGMIC1_CLK,
+        /* GPIO 14 */  PN_DIGMIC1_DQ,
+        /* GPIO 13 */  PN_DIGMIC2_CLK,
+        /* GPIO 12 */  PN_DIGMIC2_DQ,
+
+        /* GPIO 10 */ PN_PMU_INT,
+        /* GPIO 6 */  PN_GPIO_6,
 	/* GPIO 3 */  PN_GPIO_3,  
         /* GPIO 2 */  PN_GPIO_2,
 
@@ -179,11 +216,14 @@ enum PIN_FUNC {
 	PF_PWM_O_0,
         PF_PWM_O_2,
 
+        PF_VC_PWM_1,
+
 	PF_VC_GPIO_0,
 	PF_VC_GPIO_1,
         PF_VC_GPIO_7,
 
 	PF_NORFLSH_CE1_N,
+        PF_NORFLSH_CE0_N,
 	PF_NORFLSH_ADDR_23,
         PF_NORFLSH_ADDR_22,
         PF_NORFLSH_ADDR_21,
@@ -191,6 +231,7 @@ enum PIN_FUNC {
 	PF_NORFLSH_ADDR_19,
 	PF_NORFLSH_AADLAT_EN,
 	PF_NORFLSH_ADLAT_EN,
+        PF_NORFLSH_AD_05,
         PF_NORFLSH_AD_14,
 	PF_NORFLSH_AD_13,
 	PF_NORFLSH_AD_12,
@@ -214,6 +255,7 @@ enum PIN_FUNC {
 	PF_KP_ROW_OP_4,
 	PF_KP_ROW_OP_5,
 	PF_KP_ROW_OP_6,
+        PF_KP_ROW_OP_7,
 
         PF_KP_COL_IP_0,
         PF_KP_COL_IP_1,
@@ -269,6 +311,11 @@ enum PIN_FUNC {
         PF_NAND_AD_1,
         PF_NAND_AD_0,
 
+	PF_UARTB4_UTXD,
+	PF_UARTB4_URXD,
+	PF_UARTB4_URTSN,
+	PF_UARTB4_UCTSN,
+
 	PF_SDIO1_DATA_3,
         PF_SDIO1_DATA_2,
         PF_SDIO1_DATA_1,
@@ -313,7 +360,41 @@ enum PIN_FUNC {
 	PF_PTI_DAT1,
 	PF_PTI_DAT2,
 	PF_PTI_DAT3,
-	PF_UARTB2_URXD,
+
+        PF_SSP0_FS,
+        PF_SSP0_CLK,
+        PF_SSP0_RXD,
+        PF_SSP0_TXD,
+
+        PF_UARTB2_URXD,
+        PF_UARTB2_UTXD,
+        PF_UARTB2_URTSN,
+        PF_UARTB2_UCTSN,
+
+        PF_SSP1_FS,
+        PF_SSP1_CLK,
+        PF_SSP1_RXD,
+        PF_SSP1_TXD,
+
+        PF_UARTB3_URXD,
+        PF_UARTB3_UTXD,
+        PF_UARTB3_URTSN,
+        PF_UARTB3_UCTSN,
+
+        PF_SSP2_FS_0,
+        PF_SSP2_CLK,
+        PF_SSP2_RXD_0,
+        PF_SSP2_TXD_0,
+        PF_SSP2_FS_1,
+        PF_SSP2_RXD_1,
+        PF_SSP2_TXD_1,
+        PF_SSP2_FS_2,
+
+        PF_SSP3_FS,
+        PF_SSP3_CLK,
+        PF_SSP3_RXD,
+        PF_SSP3_TXD,
+        PF_SSP3_EXTCLK,
 
 	PF_PMU_SCL,
         PF_PMU_SDA,
@@ -362,13 +443,18 @@ enum PIN_FUNC {
         PF_LCD_OE,
         PF_LCD_PCLK,
 
-		PF_PMU_INT, 
+        PF_DIGMIC1_CLK,
+        PF_DIGMIC1_DQ,
+        PF_DIGMIC2_CLK,
+        PF_DIGMIC2_DQ,
+
+        PF_PMU_INT, 
 		
-		PF_GPIO_3,
+        PF_GPIO_3,
         PF_GPIO_2,
 
-		PF_VC_GPCLK_0,
-		PF_VC_GPCLK_1,
+        PF_VC_GPCLK_0,
+        PF_VC_GPCLK_1,
 
 	PF_NAND_CEN_1,
 	PF_SDIO4_DATA_1,

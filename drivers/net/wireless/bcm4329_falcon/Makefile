@@ -7,7 +7,7 @@ DHDCFLAGS = -DBCMWPA2 -DSDTEST -DDONGLEOVERLAYS \
 	    -DDHD_GPL -DDHD_SCHED -DBDC -DTOE -DDHD_BCMEVENTS \
 	    -DSHOW_EVENTS -DBCMSDIO -DBCMLXSDMMC -DBCMPLATFORM_BUS \
 	    -DSDIO_ISR_THREAD -DWIFI_ACT_FRAME -DDEFAULT_HW \
-	    -Wall -Wstrict-prototypes -Werror \
+	    -Wall -Wstrict-prototypes \
 	    -DWLPFN -DWLCNT -DWLBTAMP -DRWL_SOCKET -DRWL_WIFI -DRWL_DONGLE \
 	    -Idrivers/net/wireless/bcm4329_falcon/dhd/sys \
 	    -Idrivers/net/wireless/bcm4329_falcon/dongle \

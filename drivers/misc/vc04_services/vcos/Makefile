@@ -1,4 +1,4 @@
-EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -Werror -O2 -Wno-declaration-after-statement -Wno-parentheses
+EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -O2 -Wno-declaration-after-statement -Wno-parentheses
 
 EXTRA_CFLAGS  += -I"vc4-dev/src/"
 EXTRA_CFLAGS  += -I"vc4-dev/src/interface/vcos"
@@ -12,6 +12,7 @@ EXTRA_CFLAGS  += -D__VCCOREVER__=0
 EXTRA_CFLAGS  += -D__linux__
 EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -DHAVE_VCOS_VERSION
+EXTRA_CFLAGS  += -Werror
 
 obj-y += vcos-mod.o
 

@@ -19,7 +19,11 @@
 #include <linux/init.h>
 #include <asm/clkdev.h>
 #include <linux/list.h>
+#include <plat/pi_mgr.h>
 #include <mach/clock.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 
 #define GET_BIT_USING_MASK(reg_val, mask)	(!!((reg_val) & (mask)))
 #define SET_BIT_USING_MASK(reg_val, mask)	((reg_val) | (mask))
@@ -75,9 +79,9 @@
 #define CCU_POLICY_TGT_VLD_CLR			1
 
 #define CCU_FREQ_POLICY0_SHIFT	0
-#define CCU_FREQ_POLICY1_SHIFT	3
-#define CCU_FREQ_POLICY2_SHIFT	6
-#define CCU_FREQ_POLICY3_SHIFT	9
+#define CCU_FREQ_POLICY1_SHIFT	8
+#define CCU_FREQ_POLICY2_SHIFT	16
+#define CCU_FREQ_POLICY3_SHIFT	24
 #define CCU_FREQ_POLICY_MASK	7
 
 #define CCU_ACT_INT_SHIFT	1
@@ -98,6 +102,9 @@
 #define CCU_VLT6_SHIFT	16
 #define CCU_VLT7_SHIFT	24
 #define CCU_VLT_MASK	0xF
+
+#define CCU_POLICY_DBG_FREQ_MASK	7
+#define CCU_POLICY_DBG_POLICY_MASK	3
 
 
 #define CLK_OFF_DELAY_EN	1
@@ -140,6 +147,13 @@
 
 #define FREQ_MHZ(x) ((x)*1000*1000)
 #define FREQ_KHZ(x) ((x)*1000)
+
+#define CCU_PI_ENABLE(ccu,en) if((ccu)->pi_id != -1) \
+				{\
+					struct pi* pi = pi_mgr_get((ccu)->pi_id);\
+					BUG_ON(pi == NULL);\
+					pi_enable(pi,en);\
+				}
 
 /* CCU Policy ids*/
 enum
@@ -254,6 +268,7 @@ enum {
     RATE_FIXED			= (1 << 7), /*used for peri ...clk set/get rate functions uses .rate field*/
     NOTIFY_STATUS_TO_CCU	= (1 << 8),
     DONOT_NOTIFY_STATUS_TO_CCU	= (1 << 9),
+	REQUEST_OPP			= (1 << 10),
 
     /* CCU specific flags */
     CCU_TARGET_LOAD		= (1 << 16),
@@ -309,8 +324,21 @@ struct bus_clk_ops
 {
 };
 
+struct ccu_clk;
 struct ccu_clk_ops
 {
+	int (*write_access)(struct ccu_clk* ccu_clk, int enable);
+	int (*policy_engine_resume)(struct ccu_clk* ccu_clk, int load_type);
+	int (*policy_engine_stop)(struct ccu_clk* ccu_clk);
+	int (*set_policy_ctrl)(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action);
+	int (*int_enable)(struct ccu_clk* ccu_clk, int int_type, int enable);
+	int (*int_status_clear)(struct ccu_clk* ccu_clk,int int_type);
+	int (*set_freq_policy)(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
+	int (*get_freq_policy)(struct ccu_clk * ccu_clk, int policy_id);
+	int (*set_peri_voltage)(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage);
+	int (*set_voltage)(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
+	int (*set_active_policy)(struct ccu_clk * ccu_clk, u32 policy);
+	int (*get_active_policy)(struct ccu_clk * ccu_clk);
 };
 
 struct clk_div
@@ -374,6 +402,7 @@ struct ccu_clk {
 	int pi_id;
 	struct list_head peri_list;
 	struct list_head bus_list;
+	struct list_head ref_list;
 
 	u32 pol_engine_dis_cnt;
 	u32 write_access_en_count;
@@ -402,6 +431,12 @@ struct ccu_clk {
 	struct ccu_clk_ops* ccu_ops;
 	u8 active_policy;
 	u32*	freq_tbl[MAX_CCU_FREQ_COUNT];
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *dent_ccu_dir;
+	u32 policy_dbg_offset;
+	u32 policy_dbg_act_freq_shift;
+	u32 policy_dbg_act_policy_shift;
+#endif
 
 };
 
@@ -419,7 +454,8 @@ struct peri_clk {
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
 	u32 volt_lvl_mask;
-
+	u32 opp;
+	struct pi_mgr_dfs_node* pi_mgr_dfs_node;
 	struct peri_clk_ops* peri_ops;
 
 	struct clk_div  clk_div;
@@ -440,6 +476,9 @@ struct bus_clk {
 	int freq_tbl_index;
 	struct clk* src_clk;
 	struct bus_clk_ops* bus_ops;
+	u32 opp;
+	struct pi_mgr_dfs_node* pi_mgr_dfs_node;
+
 };
 
 struct ref_clk {
@@ -498,6 +537,8 @@ extern struct gen_clk_ops gen_bus_clk_ops;
 extern struct gen_clk_ops gen_ccu_clk_ops;
 extern struct gen_clk_ops gen_peri_clk_ops;
 
+extern struct ccu_clk_ops gen_ccu_ops;
+
 extern int clk_debug;
 int __init clock_init(void);
 int __init clock_late_init(void);
@@ -506,16 +547,32 @@ unsigned long clock_get_xtal(void);
 #ifdef CONFIG_DEBUG_FS
 int clock_debug_init(void);
 int clock_debug_add_clock(struct clk *c);
+int __init clock_debug_add_ccu(struct clk *c);
 #else
 #define	clock_debug_init() do {} while(0)
 #define	clock_debug_add_clock(clk) do {} while(0)
+#define	clock_debug_add_ccu(clk) do {} while(0)
 #endif
 
 int clk_init(struct clk* clk);
+int clk_is_enabled(struct clk* clk);
 int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
-int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
+int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
 int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay);
+int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source);
+int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
+int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type);
+int ccu_policy_engine_stop(struct ccu_clk* ccu_clk);
+int ccu_set_policy_ctrl(struct ccu_clk* ccu_clk, int pol_ctrl_id, int action);
+int ccu_int_enable(struct ccu_clk* ccu_clk, int int_type, int enable);
+int ccu_int_status_clear(struct ccu_clk* ccu_clk,int int_type);
+int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
+int ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id);
+int ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage);
+int ccu_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage);
+int ccu_set_active_policy(struct ccu_clk * ccu_clk, u32 policy);
+int ccu_get_active_policy(struct ccu_clk * ccu_clk);
 
 #if defined(DEBUG)
 #define	clk_dbg printk

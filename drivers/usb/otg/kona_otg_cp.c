@@ -33,8 +33,9 @@
 
 #define DRIVER_NAME "kona-otg-cp"
 
-#define VBUS_MONITOR_USECS	1000
-#define VBUS_MONITOR_JIFFIES	(VBUS_MONITOR_USECS * (HZ / 1000000UL))
+/* set VBUS line monitoring workqueue work item to run every 100 ms */
+#define VBUS_MONITOR_JIFFIES	(HZ / 10)
+
 #define NUM_VBUS_IRQS           3
 
 struct otg_drv {
@@ -145,7 +146,6 @@ void otg_vbus_drive_work(struct work_struct *work)
 		 * UTMI+ VBUS interrupt.
 		 */
 		cnt = 0;
-		printk(KERN_ERR "turning off this freaking VBUS crap\n");		
 		KDBG("BCM_INT_ID_USB_OTG_DRV_VBUS status=%d", status);
 		drv->cp->ops->vbus_drive(drv->cp, false);
 		enable_irq(drv->vbus_irq[0]);

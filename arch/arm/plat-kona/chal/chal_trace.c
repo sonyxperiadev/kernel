@@ -28,6 +28,7 @@
 #include "plat/chal/chal_trace.h"
 #include "plat/mobcom_types.h"
 #include "mach/rdb/brcm_rdb_util.h"
+#include "mach/rdb/brcm_rdb_atbfilter.h"
 #include <mach/io_map.h>
 #if defined(_HERA_)
 #include "mach/rdb/brcm_rdb_apbtoatb.h"
@@ -81,13 +82,24 @@ static cUInt32 chal_trace_axitrace_get_baseaddr (CHAL_HANDLE handle, CHAL_TRACE_
 //
 // Description: 
 //
-//**************************************************************************
+//**************************************************************************/
 cBool chal_trace_init(CHAL_TRACE_DEV_t * pTraceDev_baseaddr)
 {
     chal_dprintf(CDBG_INFO, "chal_trace_init\n");
+    
+    // All register config values taken from T32 script
+    
+    // Config ATB Filter rm id's for STM
+    BRCM_WRITE_REG(KONA_ATBFILTER_VA, ATBFILTER_ATB_FILTER, 0x203);
+    // Config Funnels
+    BRCM_WRITE_REG(KONA_FUNNEL_VA, CSTF_FUNNEL_CONTROL, 0xe40);
+    BRCM_WRITE_REG(KONA_FIN_FUNNEL_VA, CSTF_FUNNEL_CONTROL, 0xe02);
+    // Config STM
+    BRCM_WRITE_REG(KONA_STM_VA, ATB_STM_CONFIG, 0x102);
+    BRCM_WRITE_REG(KONA_SWSTM_VA, SWSTM_R_CONFIG, 0x82);
+    BRCM_WRITE_REG(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG, 0x82);
 
-    /* Hack to ungate PTI & TPIU clocks */
-	
+    /* Hack to ungate PTI & TPIU clocks */	
 #if defined(CONFIG_ARCH_RHEA)
     BRCM_WRITE_REG_FIELD(pTraceDev_baseaddr->CHIPREGS_base,
                          CHIPREG_PERIPH_SPARE_CONTROL1, PTI_CLK_IS_IDLE, 0);

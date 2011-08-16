@@ -17,7 +17,7 @@
 #include <linux/fb.h>
 #include <linux/backlight.h>
 #include <linux/err.h>
-#include <linux/pwm.h>
+#include <linux/pwm/pwm.h>
 #include <linux/pwm_backlight.h>
 #include <linux/slab.h>
 
@@ -44,12 +44,13 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	if (pb->notify)
 		brightness = pb->notify(pb->dev, brightness);
 
+	pwm_set_period_ns(pb->pwm, pb->period);
 	if (brightness == 0) {
-		pwm_config(pb->pwm, 0, pb->period);
-		pwm_disable(pb->pwm);
+		pwm_set_duty_ns(pb->pwm, 0);
+		pwm_stop(pb->pwm);
 	} else {
-		pwm_config(pb->pwm, brightness * pb->period / max, pb->period);
-		pwm_enable(pb->pwm);
+		pwm_set_duty_ns(pb->pwm, brightness * pb->period / max);
+		pwm_start(pb->pwm);
 	}
 	return 0;
 }
@@ -94,7 +95,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	pb->notify = data->notify;
 	pb->dev = &pdev->dev;
 
-	pb->pwm = pwm_request(data->pwm_id, "backlight");
+	pb->pwm = pwm_request(data->pwm_name, "backlight");
 	if (IS_ERR(pb->pwm)) {
 		dev_err(&pdev->dev, "unable to request PWM for backlight\n");
 		ret = PTR_ERR(pb->pwm);
@@ -113,13 +114,14 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	}
 
 	bl->props.brightness = data->dft_brightness;
+	pwm_set_polarity(pb->pwm, 0);
 	backlight_update_status(bl);
 
 	platform_set_drvdata(pdev, bl);
 	return 0;
 
 err_bl:
-	pwm_free(pb->pwm);
+	pwm_release(pb->pwm);
 err_pwm:
 	kfree(pb);
 err_alloc:
@@ -135,9 +137,10 @@ static int pwm_backlight_remove(struct platform_device *pdev)
 	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
 
 	backlight_device_unregister(bl);
-	pwm_config(pb->pwm, 0, pb->period);
-	pwm_disable(pb->pwm);
-	pwm_free(pb->pwm);
+	pwm_set_duty_ns(pb->pwm, 0);
+	pwm_stop(pb->pwm);
+	pwm_release(pb->pwm);
+
 	kfree(pb);
 	if (data->exit)
 		data->exit(&pdev->dev);
@@ -153,8 +156,9 @@ static int pwm_backlight_suspend(struct platform_device *pdev,
 
 	if (pb->notify)
 		pb->notify(pb->dev, 0);
-	pwm_config(pb->pwm, 0, pb->period);
-	pwm_disable(pb->pwm);
+	pwm_set_duty_ns(pb->pwm, 0);
+	pwm_stop(pb->pwm);
+
 	return 0;
 }
 

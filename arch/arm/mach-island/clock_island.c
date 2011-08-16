@@ -44,7 +44,8 @@ static struct ccu_clk CLK_NAME(root) = {
 	    .name = ROOT_CCU_CLK_NAME_STR,
 	    .id = CLK_ROOT_CCU_CLK_ID,
 	},
-	.pi_id = -1,	
+	.ccu_ops = &gen_ccu_ops,
+	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
 };
@@ -526,6 +527,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -1572,6 +1574,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(AON_CLK_BASE_ADDR),
 	.wr_access_offset = KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -2278,6 +2281,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_CLK_BASE_ADDR),
 	.wr_access_offset = KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -2857,6 +2861,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 				.clk_type = CLK_TYPE_CCU,
 				.ops = &gen_ccu_clk_ops,
 		},
+	.ccu_ops = &gen_ccu_ops,
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_CLK_BASE_ADDR),
 	.wr_access_offset = IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
@@ -4308,7 +4313,7 @@ static struct __init clk_lookup island_clk_tbl[] =
 
 int __init island_clock_init(void)
 {
-    int i;
+    int i, base;
 
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 
@@ -4321,7 +4326,9 @@ int __init island_clock_init(void)
      * -- To be revised based on future fixes.
      *********************************************************************/
     /*clock_module_temp_fixes(); */
-
+	base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR);
+    writel (0x1, base  + IROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+    writel (0x1, base  + IROOT_CLK_MGR_REG_VAR8PH_DIVMODE_OFFSET);
     return 0;
 }
 //early_initcall(island_clock_init);

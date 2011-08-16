@@ -28,7 +28,8 @@ obj-$(CONFIG_MACH_ISLAND_FF) += chal/
 #obj-$(CONFIG_MACH_SAMOA_RAY) += csl/
 obj-$(CONFIG_DMAC_PL330) += dmux.o dma.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += kona_pm.o
-ifneq ($(CONFIG_ARCH_SAMOA),y) 
-	obj-y += pwr_mgr.o pi_mgr.o
-endif
+obj-$(CONFIG_KONA_POWER_MGR) += pwr_mgr.o
+obj-$(CONFIG_KONA_PI_MGR) += pi_mgr.o
+obj-$(CONFIG_KONA_CPU_FREQ_DRV) += kona_cpufreq.o
+obj-$(CONFIG_KONA_AVS) += kona_avs.o
 

@@ -5,8 +5,6 @@ All rights reserved.
 
 Project  :  VideoCore
 Module   :  VideoCore specific header (common)
-File     :  $RCSfile: common.h,v $
-Revision :  $Revision$
 
 FILE DESCRIPTION
 Common types and helper macros for C/C++.
@@ -18,7 +16,9 @@ Common types and helper macros for C/C++.
 #include "interface/vcos/vcos_stdint.h"
 #include "interface/vctypes/vc_image_types.h"
 
-#if defined(__HIGHC__)                     // This is only available with MW
+#if defined(__HIGHC__) && defined(_VIDEOCORE) && !defined(_I386)
+// __HIGHC__ is only available with MW
+// The scvc plugins are compiled (bizarrely) on an x86 with _VIDEOCORE set!
 #include <vc/intrinsics.h>
 #endif
 

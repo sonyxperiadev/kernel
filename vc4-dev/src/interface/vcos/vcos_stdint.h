@@ -177,6 +177,10 @@ typedef int16_t            int_least16_t;
 #define INT_LEAST16_MAX INT16_MAX
 #define INT_LEAST16_MAX INT16_MAX
 
+#elif defined (__HIGHC__) && defined(_I386)
+
+#include <stdint.h>
+
 #else
 #error Unknown platform
 #endif
