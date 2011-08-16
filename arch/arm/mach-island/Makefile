@@ -44,7 +44,6 @@ CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
 
-<<<<<<< HEAD
 # Today the 28160 tablet is almost identical to the 11160 tablet from
 # Linux's point-of-view so we include it's hw_cfg directory and only
 # override where necessary, which today is no-where.
@@ -59,6 +58,3 @@ obj-$(CONFIG_MACH_ISLAND_TABLET_CP) += board_tablet_cp.o pinmux_island_tablet_cp
 CFLAGS_board_tablet_cp.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET_CP \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
-
-=======
->>>>>>> mps-lmp
