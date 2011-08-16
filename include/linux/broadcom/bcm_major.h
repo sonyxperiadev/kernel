@@ -34,6 +34,7 @@
 #define BCM_GE_MAJOR       150
 #define BCM_GEMEMALLOC_MAJOR     151
 
+#define BCM_BSC_MAJOR         199
 #define BCM_CNTIN_MAJOR		  200
 #define BCM_KRIL_MAJOR        201
 #define BCM_LOG_MAJOR	      202
@@ -45,7 +46,9 @@
 #define BCM_ALSA_VOIP_MAJOR   209
 #define BCM_VDEC_MAJOR        210
 #define BCM_VENC_MAJOR        211
-#define BCM_GPS_MAJOR		   212
+#define BCM_GPS_MAJOR         212
+#define BCM_AMXR_MAJOR        213
+#define BCM_AAA_MAJOR         214
 #define BCM_AACENC_MAJOR	226
 #define BCM_AUDIO_MAJOR	227
 #define BCM_WLAN_DRV_MAJOR    228

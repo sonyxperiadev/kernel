@@ -20,6 +20,7 @@
 // Maximum message length
 #define VC_SM_MAX_MSG_LEN (sizeof( VC_SM_MSG_UNION_T ) + \
                            sizeof( VC_SM_MSG_HDR_T ))
+#define VC_SM_MAX_RSP_LEN (sizeof( VC_SM_MSG_UNION_T ))
 
 // Resource name maximum size
 #define VC_SM_RESOURCE_NAME 32
@@ -33,6 +34,10 @@ typedef enum
    VC_SM_MSG_TYPE_FREE,                // Free shared memory block
    VC_SM_MSG_TYPE_RESIZE,              // Resize a shared memory block
    VC_SM_MSG_TYPE_WALK_ALLOC,          // Walk the allocated shared memory block(s)
+
+   VC_SM_MSG_TYPE_ACTION_CLEAN,        // A previously applied action will need to be reverted
+   VC_SM_MSG_TYPE_FREE_ALL,            // Immediate free of all allocated resources belonging to a given allocator
+   VC_SM_MSG_TYPE_FREE_POST_MORTEM,    // Post mortem free of all allocated resources belonging to a given allocator
    VC_SM_MSG_TYPE_MAX
 
 } VC_SM_MSG_TYPE;
@@ -48,8 +53,9 @@ typedef enum
 // Message header for all messages in HOST->VC direction
 typedef struct
 {
-   int32_t type;     // Message type (VC_SM_MSG_TYPE)
-   uint8_t body[0];  // Pointer to message body (if exists)
+   int32_t type;      // Message type (VC_SM_MSG_TYPE)
+   uint32_t trans_id; // Transaction identifier (unique)
+   uint8_t body[0];   // Pointer to message body (if exists)
 
 } VC_SM_MSG_HDR_T;
 
@@ -60,6 +66,7 @@ typedef struct
    uint32_t base_unit;      // byte amount of data to allocate per unit
    uint32_t num_unit;       // number of unit to allocate
    uint32_t alignement;     // alignement to be applied on allocation
+   uint32_t allocator;      // identity of who allocated this block
    char     name[VC_SM_RESOURCE_NAME]; // resource name (for easier tracking on vc side)
 
 } VC_SM_ALLOC_T;
@@ -67,6 +74,8 @@ typedef struct
 // Result of a requested memory allocation (VC->HOST)
 typedef struct
 {
+   uint32_t trans_id;      // Transaction identifier
+
    uint32_t res_handle;    // Resource handle
    void    *res_mem;       // Pointer to resource buffer
    uint32_t res_base_size; // Resource base size (bytes)
@@ -102,6 +111,8 @@ typedef struct
 // Result of a requested memory lock (VC->HOST)
 typedef struct
 {
+   uint32_t trans_id;      // Transaction identifier
+
    uint32_t res_handle;    // Resource handle
    void    *res_mem;       // Pointer to resource buffer
    void    *res_old_mem;   // Pointer to former resource buffer if the memory
@@ -112,9 +123,26 @@ typedef struct
 // Generic result for a request (VC->HOST)
 typedef struct
 {
-   int32_t success;  // Success value
+   uint32_t trans_id; // Transaction identifier
+
+   int32_t success;   // Success value
 
 } VC_SM_RESULT_T;
+
+// Request to revert a previously applied action (HOST->VC)
+typedef struct
+{
+   VC_SM_MSG_TYPE res_action;    // Action of interest
+   uint32_t action_trans_id;     // Transaction identifier for the action of interest
+
+} VC_SM_ACTION_CLEAN_T;
+
+// Request to remove all data associated with a given allocator (HOST->VC)
+typedef struct
+{
+   uint32_t allocator;           // Allocator identifier
+
+} VC_SM_FREE_ALL_T;
 
 // Union of ALL messages
 typedef union
@@ -122,7 +150,13 @@ typedef union
    VC_SM_ALLOC_T         alloc;
    VC_SM_ALLOC_RESULT_T  alloc_result;
    VC_SM_FREE_T          free;
+   VC_SM_ACTION_CLEAN_T  action_clean;
+   // VC_SM_LOCK_UNLOCK_T   lock_unlock;    Same as 'free'
+   VC_SM_RESIZE_T        resize;
+   VC_SM_LOCK_RESULT_T   lock_result;
    VC_SM_RESULT_T        result;
+   VC_SM_FREE_ALL_T      free_all;
+
 } VC_SM_MSG_UNION_T;
 
 #endif /* __VC_SM_DEFS_H__INCLUDED__ */

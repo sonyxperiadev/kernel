@@ -25,7 +25,7 @@ if ( -d "$root/.git" ) {
 	# on a linux build host, as cygwin builds are
 	# already slow enough
 
-	if ( -f "/usr/bin/git" ) {
+	if ( -f "/usr/bin/git" || -f "/usr/local/bin/git" ) {
 		if (not open(F, "git --git-dir $root/.git rev-parse --verify HEAD|")) {
 			$version = "no git version";
 		}

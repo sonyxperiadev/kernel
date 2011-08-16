@@ -414,7 +414,9 @@ static int ep_queue(struct usb_ep *usb_ep, struct usb_request *usb_req,
 #if defined(PCI_INTERFACE)
 #error	"need to take care cache coherence"
 #else
+	/* Turn on this assert to test for unaligned buffers
 	BUG_ON (usb_req->dma != DWC_INVALID_DMA_ADDR);
+	*/
 
 	/*
 	 * DWC OTG DMA engine only accepts 4byte-aligned address

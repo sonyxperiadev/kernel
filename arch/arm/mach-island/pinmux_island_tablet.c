@@ -39,6 +39,9 @@ static struct __init pin_config board_pin_config[] = {
        	PIN_BSC_CFG(PMU_SCL, PMU_SCL, 0x08),
        	PIN_BSC_CFG(PMU_SDA, PMU_SDA, 0x08),
 
+        /* PWM */
+        PIN_CFG(SIM_DATA,          PWM_O_2,     0, OFF, OFF, 0, 0, 8MA),
+
         /* Keypad */
         PIN_CFG(NORFLSH_AD_14,     KP_ROW_OP_0, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AD_13,     KP_ROW_OP_1, 0, OFF, OFF, 0, 0, 8MA),
@@ -46,7 +49,6 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(NORFLSH_AD_11,     KP_ROW_OP_3, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AD_10,     KP_ROW_OP_4, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AD_09,     KP_ROW_OP_5, 0, OFF, OFF, 0, 0, 8MA),
-        PIN_CFG(NORFLSH_AD_08,     KP_ROW_OP_6, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADLAT_EN,  KP_COL_IP_1, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_AADLAT_EN, KP_COL_IP_2, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(NORFLSH_ADDR_20,   KP_COL_IP_3, 0, OFF, OFF, 0, 0, 8MA),
@@ -158,9 +160,43 @@ static struct __init pin_config board_pin_config[] = {
         PIN_CFG(LCD_OE,    LCD_OE,    0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(LCD_PCLK,  LCD_PCLK,  0, OFF, OFF, 0, 0, 8MA),
 
+   /* Digital Mics*/
+   PIN_CFG( DIGMIC1_CLK, DIGMIC1_CLK, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC1_DQ,  DIGMIC1_DQ,  0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC2_CLK, DIGMIC2_CLK, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( DIGMIC2_DQ,  DIGMIC2_DQ,  0, OFF, OFF, 0, 0, 8MA ),
+
 	/* VC GP clock */
 	PIN_CFG(GPIO_3, VC_GPCLK_0, 0, OFF, OFF, 0, 0, 8MA),
         PIN_CFG(GPIO_2, VC_GPCLK_1, 0, OFF, OFF, 0, 0, 8MA),
+
+   /* SSP0 */
+   PIN_CFG( SSP0_FS,  SSP0_FS,   0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( SSP0_CLK, SSP0_CLK,  0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( SSP0_RXD, SSP0_RXD,  0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( SSP0_TXD, SSP0_TXD,  0, OFF, OFF, 0, 0, 8MA ),
+
+   /* UARTB3 */
+   PIN_CFG( SSP1_FS,  UARTB3_URXD,  0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( SSP1_CLK, UARTB3_UTXD,  0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( SSP1_RXD, UARTB3_URTSN, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( SSP1_TXD, UARTB3_UCTSN, 0, OFF, OFF, 0, 0, 8MA ),
+
+	/* UARTB4 */
+	PIN_CFG(SSP2_FS_0,  UARTB4_URXD,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SSP2_CLK,   UARTB4_UTXD,  0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SSP2_RXD_0, UARTB4_URTSN, 0, OFF, OFF, 0, 0, 8MA),
+	PIN_CFG(SSP2_TXD_0, UARTB4_UCTSN, 0, OFF, OFF, 0, 0, 8MA),
+
+   /* AUDIOH */
+   PIN_CFG( UARTB4_UTXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( UARTB4_URXD,   GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( NORFLSH_AD_08, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+
+   /* BT GPIO */
+   PIN_CFG( NORFLSH_CE0_N, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+   PIN_CFG( NORFLSH_AD_05, GPIO, 0, OFF, OFF, 0, 0, 8MA ),
+
 };
 
 /* board level init */

@@ -60,7 +60,7 @@ EXTRA_CFLAGS += -I ./arch/arm/mach-island/include/mach/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/chal/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/osabstract/
 
-obj-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)		+= snd-brcm-omx.o
+obj-$(CONFIG_BCM_ALSA_SOUND)		+= snd-brcm-omx.o
 snd-brcm-omx-objs := brcm_alsa_dev.o 
 snd-brcm-omx-objs += brcm_auddrv_test.o
 snd-brcm-omx-objs += brcm_alsa_ctl.o
@@ -141,8 +141,8 @@ snd-brcm-omx-objs += audio/audio_vdriver/src/audio_rpc.o
 #snd-brcm-omx-objs += soc/csl/dsp/src/sharedmem_ap.o
 
 
-#ccflags-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)	+= -DDEBUG
+#ccflags-$(CONFIG_BCM_ALSA_SOUND)	+= -DDEBUG
 
-#obj-$(CONFIG_BRCM_SOUND_BIG_ISLAND_ALSA)		+= snd-brcm-omx.o
+#obj-$(CONFIG_BCM_ALSA_SOUND)		+= snd-brcm-omx.o
 #snd-brcm-omx-objs := brcm_alsa_dev.o 
 #snd-brcm-omx-objs += brcm_auddrv_test.o

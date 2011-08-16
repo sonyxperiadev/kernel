@@ -1,4 +1,6 @@
 #ifndef __PROFILE_TIMER_H
+#define __PROFILE_TIMER_H
+
 #ifdef __KERNEL__
 
 typedef unsigned int timer_tick_count_t;

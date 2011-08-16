@@ -146,7 +146,7 @@ void RIPCMDQ_SetupToneGeneric(
 
 
 void RIPCMDQ_EnableAudio(
-	Boolean	audio_on,
+	UInt16	audio_on,
 	Boolean MMVPU_16KHz_sample_rate,  //WB-AMR
 	Boolean voice_call_16KHz_sample_rate  //voice call
 	);

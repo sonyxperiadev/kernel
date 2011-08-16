@@ -82,6 +82,10 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/sched.h>
 
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+#include <linux/broadcom/knllog.h>
+#endif
+
 /*
  * Convert user-nice values [ -20 ... 0 ... 19 ]
  * to static priority [ MAX_RT_PRIO..MAX_PRIO-1 ],
@@ -3617,6 +3621,10 @@ need_resched_nonpreemptible:
 
 	put_prev_task(rq, prev);
 	next = pick_next_task(rq);
+
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+	if (gKnllogIrqSchedEnable & KNLLOG_THREAD) KNLLOG("%d -> %d\n", (int)prev->pid, (int)next->pid);
+#endif
 
 	if (likely(prev != next)) {
 		sched_info_switch(prev, next);

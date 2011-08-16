@@ -67,6 +67,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "atc_kernel.h"
 
 extern void KRIL_SysRpc_Init( void ) ;
+extern Boolean is_CP_running( void ) ;
 
 /**
  * Incoming AT command queue
@@ -244,11 +245,16 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
         ATC_KERNEL_TRACE2(( "**regulator already open\n") ) ;
     }
 #else
-    if( !sysrpc_initialized )
+    if (is_CP_running() && !sysrpc_initialized)
     {
 	sysrpc_initialized = 1; 
         KRIL_SysRpc_Init( ) ;
         ATC_ATRPCInit();
+    }
+    else
+    {
+       ATC_KERNEL_TRACE(( "ATC_KERNEL_Open: Error - CP is not running\n") ) ;
+       return -1;
     }
 #endif
 
@@ -281,6 +287,12 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
     unsigned long       irql ;
     
     ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl\n" )) ;
+
+    if(!is_CP_running())
+    {
+        ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl: Error - CP is not running\n" )) ;
+        return -1;
+    }
 
     switch( cmd )
     {
@@ -436,6 +448,12 @@ static unsigned int ATC_KERNEL_Poll(struct file *filp, poll_table *wait)
     unsigned long       irql ;
 
     ATC_KERNEL_TRACE(("Enter ATC_KERNEL_Poll()"));
+
+    if(!is_CP_running())
+    {
+        ATC_KERNEL_TRACE(( "ATC_KERNEL_Poll: Error - CP is not running\n" )) ;
+        return -1;
+    }
 
     //if data exist already, just return
     spin_lock_irqsave(&sModule.mRespLock, irql);
