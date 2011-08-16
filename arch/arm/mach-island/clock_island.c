@@ -251,15 +251,6 @@ Ref clock name REF_52M
 */
 static struct ref_clk CLK_NAME(ref_52m) = {
 
-<<<<<<< HEAD
-DECLARE_BUS_CLK(ssp2_apb, SSP2, SSP2_APB, kps_ccu, KONA_SLV, IKPS,
-	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
-	 52*CLOCK_1M,  78*CLOCK_1M);
-
-DECLARE_BUS_CLK(dmac_mux_apb, DMAC_MUX, DMAC_MUX_APB, kps_ccu, KONA_SLV, IKPS,
-	 26*CLOCK_1M,  26*CLOCK_1M,  39*CLOCK_1M,  52*CLOCK_1M,
-	 52*CLOCK_1M,  78*CLOCK_1M);
-=======
  .clk =	{
 				.flags = REF_52M_REF_CLK_FLAGS,
 				.clk_type = CLK_TYPE_REF,
@@ -269,7 +260,6 @@ DECLARE_BUS_CLK(dmac_mux_apb, DMAC_MUX, DMAC_MUX_APB, kps_ccu, KONA_SLV, IKPS,
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
->>>>>>> mps-lmp
 
 };
 
@@ -344,26 +334,10 @@ static struct ref_clk CLK_NAME(var_500m) = {
 
 
 
-<<<<<<< HEAD
-DECLARE_BUS_CLK(ssp3_apb, SSP3, SSP3_APB, khub_ccu, HUB, KHUB,
-	 26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,
-	 26*CLOCK_1M,  26*CLOCK_1M, 26*CLOCK_1M, CLOCK_UNUSED);
-
-DECLARE_BUS_CLK(ssp4_apb, SSP4, SSP4_APB, khub_ccu, HUB, KHUB,
-	 26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,  26*CLOCK_1M,
-	 26*CLOCK_1M,  26*CLOCK_1M, 26*CLOCK_1M, CLOCK_UNUSED);
-
-/* audioh_156m and audioh_2p4m clocks resemple BUS clock, hence declaring as
- *  * bus clokc. */
-DECLARE_BUS_CLK(audioh_156m, AUDIOH, AUDIOH_156M, khub_ccu, HUB, KHUB,
-	156*CLOCK_1M,  156*CLOCK_1M, 156*CLOCK_1M, 156*CLOCK_1M,
-	156*CLOCK_1M, 156*CLOCK_1M, 156*CLOCK_1M, CLOCK_UNUSED);
-=======
 /*
 Ref clock name VAR_208M
 */
 static struct ref_clk CLK_NAME(var_208m) = {
->>>>>>> mps-lmp
 
  .clk =	{
 				.flags = VAR_208M_REF_CLK_FLAGS,
@@ -701,28 +675,6 @@ Bus clock name TPIU_APB
 */
 static struct bus_clk CLK_NAME(tpiu_apb) = {
 
-<<<<<<< HEAD
-static struct clk *ssp2_audio_clk_src_tbl[] =
-{
-	name_to_clk(crystal),
-	name_to_clk(ref_312m),
-	name_to_clk(ref_cx40),
-};
-
-static struct clk_src ssp2_audio_clk_src = {
-	.total		=	ARRAY_SIZE(ssp2_audio_clk_src_tbl),
-	.sel		=	2,
-	.parents	=	ssp2_audio_clk_src_tbl,
-};
-
-DECLARE_PERI_CLK_PRE_DIV3(ssp2_audio, SSP2, SSP2_AUDIO, SSP2_AUDIO, ref_cx40, 153600*CLOCK_1K, 1, DIV_TRIG, KONA_SLV, IKPS, 0);
-
-static struct clk *uart_clk_src_tbl[] =
-{
-	name_to_clk(crystal),
-	name_to_clk(var_156m),
-	name_to_clk(ref_156m),
-=======
  .clk =	{
 				.flags = TPIU_APB_BUS_CLK_FLAGS,
 				.clk_type = CLK_TYPE_BUS,
@@ -741,7 +693,6 @@ KHUB_CLK_MGR_REG_TPIU_CLKGATE_TPIU_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_TPIU_CLKGATE_TPIU_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
->>>>>>> mps-lmp
 };
 
 /*
@@ -3090,15 +3041,6 @@ static struct bus_clk CLK_NAME(bsc2_apb) = {
  .src_clk = NULL,
 };
 
-<<<<<<< HEAD
-static struct clk_src ssp3_audio_clk_src = {
-	.total          =       ARRAY_SIZE(ssp3_audio_clk_src_tbl),
-	.sel            =       2,
-	.parents        =       ssp3_audio_clk_src_tbl,
-};
-
-DECLARE_PERI_CLK_PRE_DIV3(ssp3_audio, SSP3, SSP3_AUDIO, SSP3_AUDIO, ref_cx40, 153600*CLOCK_1K, 1, PERIPH_SEG_TRG, HUB, KHUB, 0);
-=======
 /*
 Bus clock name PWM_APB
 */
@@ -3127,7 +3069,6 @@ static struct bus_clk CLK_NAME(pwm_apb) = {
 Bus clock name irda_APB
 */
 static struct bus_clk CLK_NAME(irda_apb) = {
->>>>>>> mps-lmp
 
  .clk =	{
 				.flags = IRDA_APB_BUS_CLK_FLAGS,
@@ -3150,12 +3091,6 @@ Bus clock name d1w_APB
 */
 static struct bus_clk CLK_NAME(d1w_apb) = {
 
-<<<<<<< HEAD
-static struct clk_src ssp4_audio_clk_src = {
-	.total          =       ARRAY_SIZE(ssp4_audio_clk_src_tbl),
-	.sel            =       2,
-	.parents        =       ssp4_audio_clk_src_tbl,
-=======
  .clk =	{
 				.flags = D1W_APB_BUS_CLK_FLAGS,
 				.clk_type = CLK_TYPE_BUS,
@@ -3171,16 +3106,12 @@ static struct clk_src ssp4_audio_clk_src = {
  .stprsts_mask = IKPS_CLK_MGR_REG_D1W_CLKGATE_D1W_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
->>>>>>> mps-lmp
 };
 /*
 Bus clock name auxadc_APB
 */
 static struct bus_clk CLK_NAME(auxadc_apb) = {
 
-<<<<<<< HEAD
-DECLARE_PERI_CLK_PRE_DIV3(ssp4_audio, SSP4, SSP4_AUDIO, SSP4_AUDIO, ref_cx40, 153600*CLOCK_1K, 1, PERIPH_SEG_TRG, HUB, KHUB, 0);
-=======
  .clk =	{
 				.flags = AUXADC_APB_BUS_CLK_FLAGS,
 				.clk_type = CLK_TYPE_BUS,
@@ -3201,7 +3132,6 @@ DECLARE_PERI_CLK_PRE_DIV3(ssp4_audio, SSP4, SSP4_AUDIO, SSP4_AUDIO, ref_cx40, 15
 Bus clock name SSP0_APB
 */
 static struct bus_clk CLK_NAME(ssp0_apb) = {
->>>>>>> mps-lmp
 
  .clk =	{
 				.flags = SSP0_APB_BUS_CLK_FLAGS,
@@ -4234,107 +4164,6 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 /* table for registering clock */
 static struct __init clk_lookup island_clk_tbl[] =
 {
-<<<<<<< HEAD
-	CLK_LK(arm),
-
-	/* Reference clocks */
-	CLK_LK(arm_periph),
-	CLK_LK(crystal),
-	CLK_LK(frac_1m),
-	CLK_LK(ref_96m_varVDD),
-	CLK_LK(var_96m),
-	CLK_LK(ref_96m),
-	CLK_LK(var_500m_varVDD),
-	CLK_LK(ref_32k),
-	CLK_LK(misc_32k),
-	CLK_LK(ref_312m),
-	CLK_LK(ref_208m),
-	CLK_LK(ref_104m),
-	CLK_LK(ref_52m),
-	CLK_LK(ref_13m),
-	CLK_LK(ref_26m),
-	CLK_LK(var_312m),
-	CLK_LK(var_208m),
-	CLK_LK(var_156m),
-	CLK_LK(var_52m),
-	CLK_LK(var_13m),
-	CLK_LK(ref_cx40),
-
-	/* CCUs */
-	CLK_LK(kpm_ccu),
-	CLK_LK(kps_ccu),
-	CLK_LK(khub_ccu),
-	CLK_LK(khubaon_ccu),
-
-	/* Bus clocks */
-	CLK_LK(usb_otg),
-	CLK_LK(usbh_ahb),
-	CLK_LK(sdio1_ahb),
-	CLK_LK(sdio2_ahb),
-	CLK_LK(sdio3_ahb),
-	CLK_LK(sdio4_ahb),
-	CLK_LK(sdio1_sleep),
-	CLK_LK(sdio2_sleep),
-	CLK_LK(sdio3_sleep),
-	CLK_LK(sdio4_sleep),
-	CLK_LK(bsc1_apb),
-	CLK_LK(bsc2_apb),
-	CLK_LK(bbl_apb),
-	CLK_LK(timers_apb),
-	CLK_LK(uartb_apb),
-	CLK_LK(uartb2_apb),
-	CLK_LK(uartb3_apb),
-	CLK_LK(uartb4_apb),
-	CLK_LK(pmu_bsc_apb),
-	CLK_LK(hsm_ahb),
-	CLK_LK(hsm_apb),
-	CLK_LK(spum_open_apb),
-	CLK_LK(spum_sec_apb),
-	CLK_LK(spum_open_apb),
-	CLK_LK(spum_sec_apb),
-	CLK_LK(dmac_mux_apb),
-	CLK_LK(ssp0_apb),
-	CLK_LK(ssp2_apb),
-	CLK_LK(ssp3_apb),
-	CLK_LK(ssp4_apb),
-	CLK_LK(pwm_apb),
-	CLK_LK(gpiokp_apb),
-	CLK_LK(apb1),
-	CLK_LK(apb2),
-
-	/* Peripheral clocks */
-	CLK_LK(hub),
-	CLK_LK(usbh_48m),
-	CLK_LK(usbh_12m),
-	CLK_LK(sdio1),
-	CLK_LK(sdio2),
-	CLK_LK(sdio3),
-	CLK_LK(sdio4),
-	CLK_LK(bsc1),
-	CLK_LK(bsc2),
-	CLK_LK(uartb),
-	CLK_LK(uartb2),
-	CLK_LK(uartb3),
-	CLK_LK(uartb4),
-	CLK_LK(pmu_bsc),
-	CLK_LK(pwm),
-	CLK_LK(ssp0),
-	CLK_LK(ssp0_audio),
-	CLK_LK(ssp2_audio),
-	CLK_LK(timers),
-	CLK_LK(spum_open),
-	CLK_LK(spum_sec),
-	CLK_LK(caph_srcmixer),
-	CLK_LK(ssp3_audio),
-	CLK_LK(ssp4_audio),
-	CLK_LK(audioh_apb),
-	CLK_LK(audioh_156m),
-	CLK_LK(audioh_2p4m),
-	CLK_LK(audioh_26m),
-};
-
-int __init clock_init(void)
-=======
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),
@@ -4483,7 +4312,6 @@ int __init clock_init(void)
 };
 
 int __init island_clock_init(void)
->>>>>>> mps-lmp
 {
     int i, base;
 

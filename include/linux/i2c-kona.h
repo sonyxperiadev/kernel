@@ -41,11 +41,8 @@ enum bsc_bus_speed
  */
 struct bsc_adap_cfg
 {
-	/* I2C bus speed in KHz. It should be the first member in this struct */
-	enum bsc_bus_speed speed;
 	/* to explicitly disable the I2C adapter */
 	int disable;
-<<<<<<< HEAD
 
 	/* I2C bus speed */
 	enum bsc_bus_speed speed;
@@ -58,8 +55,6 @@ struct bsc_adap_cfg
 	int dynamic_speed;
 
 	/* BSC clocks */
-=======
->>>>>>> mps-lmp
 	char *bsc_clk;
 	char *bsc_apb_clk;
 };
@@ -71,6 +66,7 @@ struct bsc_adap_cfg
  */
 struct i2c_slave_platform_data
 {
+	/* I2C bus speed in KHz. It should be the first member in this struct */
 	enum bsc_bus_speed i2c_speed;
 };
 

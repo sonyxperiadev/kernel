@@ -16,8 +16,12 @@ obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
 
 obj-$(CONFIG_KONA_POWER_MGR) += island_pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += island_pi_mgr.o
+
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
-obj-$(CONFIG_NET_ISLAND) += ethHw.o ethHw_asm.o
+
+obj-$(CONFIG_NET_ISLAND) += ethHw_driver.o
+ethHw_driver-objs := ethHw.o ethHw_asm.o
+
 obj-$(CONFIG_KONA_POWER) += pm_island.o
 
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o
@@ -27,7 +31,17 @@ obj-$(CONFIG_MACH_ISLAND_FF) += board_ff.o pinmux_island_ff.o board-bcm59055.o
 obj-$(CONFIG_MAP_SDMA) += chal/
 obj-$(CONFIG_MAP_SDMA) += sdmac.o dma_mmap.o dump-mem.o dma_mmap_test.o
 
+obj-$(CONFIG_MAP_AADMA) += chal/
+obj-$(CONFIG_MAP_AADMA) += aadmac.o
+
+obj-$(CONFIG_MAP_SSASW) += chal/
+obj-$(CONFIG_MAP_SSASW) += ssasw.o
+
+obj-$(CONFIG_MAP_LITTLE_ISLAND_MEMC_QOS) += memc_qos.o
+
 obj-$(CONFIG_IPC) += chal/
+
+obj-$(CONFIG_MACH_ISLAND_AUDIOH_CHAL) += chal/
 
 obj-$(CONFIG_MACH_ISLAND_BASE) += board_base.o
 CFLAGS_board_base.o += -Iarch/arm/mach-island/hw_cfg/BASE
