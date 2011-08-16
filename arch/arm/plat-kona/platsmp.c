@@ -20,9 +20,11 @@
 #include <linux/delay.h>
 
 #include <asm/cacheflush.h>
+#include <asm/hardware/gic.h>
 #include <asm/smp_scu.h>
-#include <asm/localtimer.h>
+//#include <asm/localtimer.h>
 #include <asm/io.h>
+#include <mach/smp.h>
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 
@@ -55,21 +57,20 @@ void __init smp_init_cpus(void)
 
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
+
+	set_smp_cross_call(gic_raise_softirq);
 }
 
 static DEFINE_SPINLOCK(boot_lock);
 
 void __cpuinit platform_secondary_init(unsigned int cpu)
 {
-	trace_hardirqs_off();
-
 	/*
 	 * If any interrupts are already enabled for the primary
 	 * core (e.g. timer irq), then they will not have been enabled
 	 * for us: do so
 	 */
-
-    gic_cpu_init(0, __io(KONA_GICCPU_VA));
+	gic_secondary_init(0);
 
 	/*
 	 * let the primary processor know we're out of the
@@ -119,6 +120,8 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		udelay(10);
 	}
 
+	gic_raise_softirq(cpumask_of(cpu), 1);
+
 	/*
 	 * Now the secondary core is starting up let it run its
 	 * calibrations, then wait for it to finish
@@ -139,13 +142,18 @@ static void __init wakeup_secondary(void)
 
 	smp_wmb();
 
-	set_event();
+	/*
+	 * Send a 'sev' to wake the secondary core from WFE.
+	 * Drain the outstanding writes to memory
+	 */
+	dsb_sev();
+	
 	mb();
 #endif
 }
 
 
-void __init smp_prepare_cpus(unsigned int max_cpus)
+void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 {
 	unsigned int ncores = get_core_count();
 	unsigned int cpu = smp_processor_id();
@@ -165,7 +173,7 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		       ncores, NR_CPUS);
 		ncores = NR_CPUS;
 	}
-	smp_store_cpu_info(cpu);
+	//smp_store_cpu_info(cpu);
 
 	/*
 	 * are we trying to boot more cores than exist?
@@ -185,7 +193,7 @@ void __init smp_prepare_cpus(unsigned int max_cpus)
 		 * Enable the local timer or broadcast device for the
 		 * boot CPU, but only if we have more than one CPU.
 		 */
-		percpu_timer_setup();
+		//percpu_timer_setup();
 
 		/*
 		 * Initialise the SCU and wake up the secondary core using

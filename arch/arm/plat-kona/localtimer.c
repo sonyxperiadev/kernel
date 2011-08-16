@@ -21,11 +21,13 @@
 #include <asm/localtimer.h>
 
 #define IRQ_LOCALTIMER BCM_INT_ID_PPI13
+
 /*
  * Setup the local clock events for a CPU.
  */
-void __cpuinit local_timer_setup(struct clock_event_device *evt)
+int __cpuinit local_timer_setup(struct clock_event_device *evt)
 {
 	evt->irq = IRQ_LOCALTIMER;
 	twd_timer_setup(evt);
+	return 0;
 }
