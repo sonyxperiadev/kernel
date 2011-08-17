@@ -182,6 +182,8 @@ static CSL_CAPH_HWConfig_Table_t *csl_caph_hwctrl_GetPath_FromStreamID(CSL_CAPH_
 static CSL_CAPH_CFIFO_SAMPLERATE_e csl_caph_hwctrl_GetCSLSampleRate(AUDIO_SAMPLING_RATE_t sampleRate);
 static CSL_CAPH_HWConfig_DMA_t csl_caph_hwctrl_getDMACH(CSL_CAPH_DEVICE_e source,
                                                         CSL_CAPH_DEVICE_e sink);
+static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
+                                          CSL_CAPH_PathID pathID);
 static void csl_caph_hwctrl_removeHWResource(UInt32 fifoAddr,
                                           CSL_CAPH_PathID pathID);
 static Boolean csl_caph_hwctrl_readHWResource(UInt32 fifoAddr,
@@ -1254,6 +1256,12 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 	swCfg->status = csl_caph_switch_config_channel(path->sw[blockIdx]);
 	//path->sw[blockIdx].FIFO_dst2Addr = path->sw[blockIdx].FIFO_dstAddr; //hw
 	//csl_caph_switch_add_dst(path->sw[blockIdx].chnl, path->sw[blockIdx].FIFO_dst2Addr);
+
+	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_srcAddr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dstAddr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dst2Addr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dst3Addr, pathID);
+	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dst4Addr, pathID);
 }
 
 // ==========================================================================
@@ -2001,6 +2009,60 @@ static CSL_CAPH_HWConfig_DMA_t csl_caph_hwctrl_getDMACH(CSL_CAPH_DEVICE_e source
                     "csl_caph_hwctrl_getDMACH::Source=0x%x, Sink=0x%x\n",
                     source, sink));
     return HWConfig_DMA_Table[sink][source];
+}
+
+/****************************************************************************
+*
+*  Function Name: void  csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
+*                                         CSL_CAPH_PathID pathID)
+*
+*  Description: Add path ID to the HW resource table.
+*
+****************************************************************************/
+static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
+                                          CSL_CAPH_PathID pathID)
+{
+    UInt8 i = 0;
+    UInt8 j = 0;
+       Log_DebugPrintf(LOGID_SOC_AUDIO,
+                    "csl_caph_hwctrl_addHWResource::fifo=0x%lx, pathID=0x%x\n",
+                    fifoAddr, pathID);
+    if (fifoAddr == 0x0) return;
+    for (j=0; j<CSL_CAPH_FIFO_MAX_NUM; j++)
+    {
+        if (HWResource_Table[j].fifoAddr == fifoAddr)
+        {
+            for (i=0; i<MAX_AUDIO_PATH; i++)
+            {
+                //If pathID already exists. Just return.
+                if (HWResource_Table[j].pathID[i] == pathID)
+                    return;
+            }
+            //Add the new pathID
+            for (i=0; i<MAX_AUDIO_PATH; i++)
+            {
+                if (HWResource_Table[j].pathID[i] == 0)
+                {
+                    HWResource_Table[j].pathID[i] = pathID;
+                    return;
+                }
+            }
+        }
+    }
+    //fifoAddr does not exist. So add it.
+    for (j=0; j<CSL_CAPH_FIFO_MAX_NUM; j++)
+    {
+        if (HWResource_Table[j].fifoAddr == 0x0)
+        {
+            HWResource_Table[j].fifoAddr = fifoAddr;
+            HWResource_Table[j].pathID[0] = pathID;
+            return;
+        }
+    }
+    //Should not run to here.
+    //Size of the table is not big enough.
+    audio_xassert(0, j);
+    return;
 }
 
 /****************************************************************************
