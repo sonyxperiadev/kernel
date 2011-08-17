@@ -468,7 +468,7 @@ static struct ref_clk CLK_NAME(ref_cx40) = {
 				.clk_type = CLK_TYPE_REF,
 				.id	= CLK_REF_CX40_REF_CLK_ID,
 				.name = REF_CX40_REF_CLK_NAME_STR,
-				.rate = 40000000,
+				.rate = 153600000,
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
@@ -3747,20 +3747,20 @@ static struct peri_clk CLK_NAME(ssp0_audio) = {
 	.stprsts_mask = IKPS_CLK_MGR_REG_SSP0_CLKGATE_SSP0_AUDIO_STPRSTS_MASK,
 	.volt_lvl_mask = IKPS_CLK_MGR_REG_SSP0_CLKGATE_SSP0_VOLTAGE_LEVEL_MASK,
 	.clk_div = {
-					.div_offset = IKPS_CLK_MGR_REG_SSP0_DIV_OFFSET,
-					.div_mask = IKPS_CLK_MGR_REG_SSP0_DIV_SSP0_DIV_MASK,
-					.div_shift = IKPS_CLK_MGR_REG_SSP0_DIV_SSP0_DIV_SHIFT,
+					.div_offset = IKPS_CLK_MGR_REG_SSP0_AUDIO_DIV_OFFSET,
+					.div_mask = IKPS_CLK_MGR_REG_SSP0_AUDIO_DIV_SSP0_AUDIO_DIV_MASK,
+					.div_shift = IKPS_CLK_MGR_REG_SSP0_AUDIO_DIV_SSP0_AUDIO_DIV_SHIFT,
 					.div_trig_offset= IKPS_CLK_MGR_REG_DIV_TRIG_OFFSET,
 					.div_trig_mask= IKPS_CLK_MGR_REG_DIV_TRIG_SSP0_AUDIO_TRIGGER_MASK,
 					.prediv_trig_offset= IKPS_CLK_MGR_REG_DIV_TRIG_OFFSET,
 					.prediv_trig_mask= IKPS_CLK_MGR_REG_DIV_TRIG_SSP0_AUDIO_PRE_TRIGGER_MASK,
-					.pll_select_offset= IKPS_CLK_MGR_REG_SSP0_DIV_OFFSET,
-					.pll_select_mask= IKPS_CLK_MGR_REG_SSP0_DIV_SSP0_PLL_SELECT_MASK,
-					.pll_select_shift= IKPS_CLK_MGR_REG_SSP0_DIV_SSP0_PLL_SELECT_SHIFT,
+					.pll_select_offset= IKPS_CLK_MGR_REG_SSP0_AUDIO_DIV_OFFSET,
+					.pll_select_mask= IKPS_CLK_MGR_REG_SSP0_AUDIO_DIV_SSP0_AUDIO_PRE_PLL_SELECT_MASK,
+					.pll_select_shift= IKPS_CLK_MGR_REG_SSP0_AUDIO_DIV_SSP0_AUDIO_PRE_PLL_SELECT_SHIFT,
 				},
 	.src_clk = {
 					.count = 3,
-					.src_inx = 0,
+					.src_inx = 2,
 					.clk = ssp0_audio_peri_clk_src_list,
 				},
 };
@@ -4313,7 +4313,7 @@ static struct __init clk_lookup island_clk_tbl[] =
 
 int __init island_clock_init(void)
 {
-    int i, base;
+    int base;
 
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 
