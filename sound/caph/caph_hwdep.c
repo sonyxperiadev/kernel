@@ -53,7 +53,6 @@ the GPL, without Broadcom's express prior written consent.
 
 #include "csl_aud_drv.h"
 #include "audio_controller.h"
-#include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"
 #include "bcm_audio_thread.h"
@@ -110,7 +109,7 @@ static UInt8 sVoIPAMRSilenceFrame[1] = {0x000f};
 static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, UInt8	*pSrc, UInt32 nSize);
 static void HWDEP_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize);
 
-static UInt8 * FillSilenceFrame(UInt32 codec_type, UInt32 frame_size)
+static void FillSilenceFrame(UInt32 codec_type, UInt32 frame_size,UInt8 *pDst)
 {
 	VOIP_Buffer_t tmpBuf;
 	memset(&tmpBuf, 0, frame_size);
@@ -129,8 +128,8 @@ static UInt8 * FillSilenceFrame(UInt32 codec_type, UInt32 frame_size)
 	{
 		tmpBuf.voip_frame.frame_g711[0].frame_type = 1;
 		tmpBuf.voip_frame.frame_g711[1].frame_type = 1; 		
-	}
-	return (UInt8 *)&tmpBuf;
+	}	
+	memcpy(pDst, &tmpBuf,frame_size);
 }
 
 static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, UInt8	*pSrc, UInt32 nSize)
@@ -173,7 +172,7 @@ static void HWDEP_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize)
 		  if(pVoIP->frames_available_to_write == 0)
           {
        		/* fill with silent data based on the frame type  */
-              pDst = FillSilenceFrame(pVoIP->voip_driver_input.codec_type,nSize);
+              FillSilenceFrame(pVoIP->voip_driver_input.codec_type,nSize,pDst);
           }
 		  else
 		  {

@@ -67,7 +67,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "msconsts.h"
 #include "shared.h"
 #include "csl_aud_queue.h"
-#include "dspif_voice_play.h"
 #include "csl_vpu.h"
 #include "csl_arm2sp.h"
 #ifdef CONFIG_ARM2SP_PLAYBACK
@@ -161,7 +160,6 @@ static void AudDrv_VOIP_DumpUL_CB (void *pPrivate, UInt8	*pSrc, UInt32 nSize)
 	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL ready, size = 0x%lx, copied = 0x%lx\n",  nSize, copied);
 	OSSEMAPHORE_Release (sVtQueue_Sema);
 	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL done \n");
-	return TRUE;
 }
 
 static void AudDrv_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize)
@@ -172,7 +170,6 @@ static void AudDrv_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize)
 	printk(KERN_INFO "\n VOIP_FillDL_CB DL ready, size =0x%lx, copied = 0x%lx\n", nSize, copied);
 	
     OSSEMAPHORE_Release (AUDDRV_BufDoneSema);
-	return TRUE;  
 }
 
 
