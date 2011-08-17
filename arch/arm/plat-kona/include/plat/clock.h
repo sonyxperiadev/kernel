@@ -46,7 +46,7 @@
 #define	CLOCK_1M		(CLOCK_1K * 1000)
 
 #define	MAX_DEP_CLKS			4
-#define	CLK_RATE_MAX_DIFF		99
+#define	CLK_RATE_MAX_DIFF		9999
 #define	MAX_CCU_FREQ_COUNT		8
 #define	MAX_CCU_POLICY_COUNT 		4
 #define	MAX_CCU_PERI_VLT_COUNT		2
