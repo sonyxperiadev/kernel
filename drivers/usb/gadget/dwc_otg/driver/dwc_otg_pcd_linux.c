@@ -1347,65 +1347,6 @@ void pcd_remove(
 }
 
 /**
- * This function registers a gadget driver with the PCD.
- *
- * When a driver is successfully registered, it will receive control
- * requests including set_configuration(), which enables non-control
- * requests.  then usb traffic follows until a disconnect is reported.
- * then a host may connect again, or the driver might get unbound.
- *
- * @param driver The driver being registered
- */
-int usb_gadget_register_driver(struct usb_gadget_driver *driver)
-{
-	int retval;
-
-	DWC_DEBUGPL(DBG_PCD, "registering gadget driver '%s'\n",
-		    driver->driver.name);
-
-	if (!driver || driver->speed == USB_SPEED_UNKNOWN ||
-	    !driver->bind ||
-	    !driver->unbind || !driver->disconnect || !driver->setup) {
-		DWC_DEBUGPL(DBG_PCDV, "EINVAL\n");
-		return -EINVAL;
-	}
-	if (gadget_wrapper == 0) {
-		DWC_DEBUGPL(DBG_PCDV, "ENODEV\n");
-		return -ENODEV;
-	}
-	if (gadget_wrapper->driver != 0) {
-		DWC_DEBUGPL(DBG_PCDV, "EBUSY (%p)\n", gadget_wrapper->driver);
-		return -EBUSY;
-	}
-
-	/* hook up the driver */
-	gadget_wrapper->driver = driver;
-	gadget_wrapper->gadget.dev.driver = &driver->driver;
-
-	/* Default is to connect to USB host. Gadget driver may override
-	 * this during its bind using the pullup() API.
-	 */
-	dwc_otg_pcd_disconnect(gadget_wrapper->pcd, false);
-
-	DWC_DEBUGPL(DBG_PCD, "bind to driver %s\n", driver->driver.name);
-	retval = driver->bind(&gadget_wrapper->gadget);
-	if (retval) {
-		DWC_ERROR("bind to driver %s --> error %d\n",
-			  driver->driver.name, retval);
-		dwc_otg_pcd_disconnect(gadget_wrapper->pcd, true);
-		gadget_wrapper->driver = 0;
-		gadget_wrapper->gadget.dev.driver = 0;
-		return retval;
-	}
-	DWC_DEBUGPL(DBG_ANY, "registered gadget driver '%s'\n",
-		    driver->driver.name);
-
-	return 0;
-}
-
-EXPORT_SYMBOL(usb_gadget_register_driver);
-
-/**
  * This function unregisters a gadget driver
  *
  * @param driver The driver being unregistered
@@ -1435,5 +1376,63 @@ int usb_gadget_unregister_driver(struct usb_gadget_driver *driver)
 }
 
 EXPORT_SYMBOL(usb_gadget_unregister_driver);
+
+/*
+ * when a driver is successfully registered, it will receive
+ * control requests including set_configuration(), which enables
+ * non-control requests.  then usb traffic follows until a
+ * disconnect is reported.  then a host may connect again, or
+ * the driver might get unbound.
+ */
+
+int usb_gadget_probe_driver(struct usb_gadget_driver *driver,
+		int (*bind)(struct usb_gadget *))
+{
+		int retval;
+
+		DWC_DEBUGPL(DBG_PCD, "probing gadget driver '%s'\n",
+				driver->driver.name);
+
+		if (!driver || driver->speed == USB_SPEED_UNKNOWN ||
+			!bind ||
+			!driver->unbind || !driver->disconnect || !driver->setup) {
+			DWC_DEBUGPL(DBG_PCDV, "EINVAL\n");
+			return -EINVAL;
+		}
+		if (gadget_wrapper == 0) {
+			DWC_DEBUGPL(DBG_PCDV, "ENODEV\n");
+			return -ENODEV;
+		}
+		if (gadget_wrapper->driver != 0) {
+			DWC_DEBUGPL(DBG_PCDV, "EBUSY (%p)\n", gadget_wrapper->driver);
+			return -EBUSY;
+		}
+
+		/* hook up the driver */
+		gadget_wrapper->driver = driver;
+		gadget_wrapper->gadget.dev.driver = &driver->driver;
+
+		/* Default is to connect to USB host. Gadget driver may override
+		 * this during its bind using the pullup() API.
+		 */
+		dwc_otg_pcd_disconnect(gadget_wrapper->pcd, false);
+
+		DWC_DEBUGPL(DBG_PCD, "bind to driver %s\n", driver->driver.name);
+		retval = bind(&gadget_wrapper->gadget);
+		if (retval) {
+			DWC_ERROR("bind to driver %s --> error %d\n",
+				  driver->driver.name, retval);
+			dwc_otg_pcd_disconnect(gadget_wrapper->pcd, true);
+			gadget_wrapper->driver = 0;
+			gadget_wrapper->gadget.dev.driver = 0;
+			return retval;
+		}
+		DWC_DEBUGPL(DBG_ANY, "probed gadget driver '%s'\n",
+				driver->driver.name);
+
+		return 0;
+
+}
+EXPORT_SYMBOL(usb_gadget_probe_driver);
 
 #endif				/* DWC_HOST_ONLY */

@@ -901,7 +901,7 @@ config ARCH_BCM2708
 	select ARM_AMBA
 	select HAVE_CLK
 	select COMMON_CLKDEV
-	select GENERIC_CLOCKEVENTS
+	select CLKDEV_LOOKUP
 	select ARM_ERRATA_411920
 	select MACH_BCM2708
 	select VC4

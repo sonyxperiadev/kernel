@@ -17,7 +17,6 @@
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
-
 #include "u_serial.h"
 #include "gadget_chips.h"
 
@@ -332,7 +331,6 @@ static int acm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	/* SET_LINE_CODING ... just read and save what the host sends */
 	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_REQ_SET_LINE_CODING:
-		w_index = composite_actual_intf(cdev, w_index);
 		if (w_length != sizeof(struct usb_cdc_line_coding)
 				|| w_index != acm->ctrl_id)
 			goto invalid;
@@ -345,7 +343,6 @@ static int acm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	/* GET_LINE_CODING ... return what host sent, or initial value */
 	case ((USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_REQ_GET_LINE_CODING:
-		w_index = composite_actual_intf(cdev, w_index);
 		if (w_index != acm->ctrl_id)
 			goto invalid;
 
@@ -357,7 +354,6 @@ static int acm_setup(struct usb_function *f, const struct usb_ctrlrequest *ctrl)
 	/* SET_CONTROL_LINE_STATE ... save what the host sent */
 	case ((USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) << 8)
 			| USB_CDC_REQ_SET_CONTROL_LINE_STATE:
-		w_index = composite_actual_intf(cdev, w_index);
 		if (w_index != acm->ctrl_id)
 			goto invalid;
 
@@ -469,7 +465,6 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 	const unsigned			len = sizeof(*notify) + length;
 	void				*buf;
 	int				status;
-	struct usb_composite_dev 	*cdev = acm->port.func.config->cdev;
 
 	req = acm->notify_req;
 	acm->notify_req = NULL;
@@ -483,7 +478,7 @@ static int acm_cdc_notify(struct f_acm *acm, u8 type, u16 value,
 			| USB_RECIP_INTERFACE;
 	notify->bNotificationType = type;
 	notify->wValue = cpu_to_le16(value);
-	notify->wIndex = cpu_to_le16(composite_actual_intf(cdev, acm->ctrl_id));
+	notify->wIndex = cpu_to_le16(acm->ctrl_id);
 	notify->wLength = cpu_to_le16(length);
 	memcpy(buf, data, length);
 
@@ -791,27 +786,3 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 	return status;
 }
 
-#ifdef CONFIG_USB_ANDROID_ACM
-
-int acm_function_bind_config(struct usb_configuration *c)
-{
-	int ret = acm_bind_config(c, 0);
-	if (ret == 0)
-		gserial_setup(c->cdev->gadget, 2);
-	return ret;
-}
-
-static struct android_usb_function acm_function = {
-	.name = "acm",
-	.bind_config = acm_function_bind_config,
-};
-
-static int __init init(void)
-{
-	printk(KERN_INFO "f_acm init\n");
-	android_register_function(&acm_function);
-	return 0;
-}
-module_init(init);
-
-#endif /* CONFIG_USB_ANDROID_ACM */

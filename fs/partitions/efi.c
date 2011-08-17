@@ -97,7 +97,6 @@
 #include <linux/ctype.h>
 #include <linux/math64.h>
 #include <linux/slab.h>
-#include <linux/nls.h>
 #include "check.h"
 #include "efi.h"
 
@@ -621,7 +620,6 @@ static unsigned long apanic_partition_start;
  */
 int efi_partition(struct parsed_partitions *state)
 {
-	char* partition_name = NULL;
 	gpt_header *gpt = NULL;
 	gpt_entry *ptes = NULL;
 	u32 i;
@@ -633,13 +631,7 @@ int efi_partition(struct parsed_partitions *state)
 	if (!partition_name)
 		return 0;
 
-	partition_name = kzalloc(sizeof(ptes->partition_name), GFP_KERNEL);
-
-	if (!partition_name)
-		return 0;
-
 	if (!find_valid_gpt(state, &gpt, &ptes) || !gpt || !ptes) {
-		kfree(partition_name);
 		kfree(gpt);
 		kfree(ptes);
 		return 0;
@@ -697,8 +689,14 @@ int efi_partition(struct parsed_partitions *state)
 			label_count++;
 		}
 		state->parts[i + 1].has_info = true;
+
+#ifdef CONFIG_APANIC_ON_MMC
+		if(strncmp(info->volname,CONFIG_APANIC_PLABEL,label_count) == 0) {
+			apanic_partition_start = start * ssz;
+			pr_debug("apanic partition found starts at %d \r\n", apanic_partition_start);
+		}
+#endif
 	}
-	kfree(partition_name);
 	kfree(ptes);
 	kfree(gpt);
 	strlcat(state->pp_buf, "\n", PAGE_SIZE);

@@ -108,6 +108,9 @@ struct usb_function {
 	struct usb_descriptor_header	**hs_descriptors;
 
 	struct usb_configuration	*config;
+	
+	/* disabled is zero if the function is enabled */
+	int				disabled;
 
 	/* REVISIT:  bind() functions can be marked __init, which
 	 * makes trouble for section mismatch analysis.  See if
@@ -358,9 +361,6 @@ struct usb_composite_dev {
 	 * data/status stages till delayed_status is zero.
 	 */
 	int				delayed_status;
-
-	/* protects deactivations and delayed_status counts*/
-	spinlock_t			lock;
 
 	/* protects deactivations and delayed_status counts*/
 	spinlock_t			lock;

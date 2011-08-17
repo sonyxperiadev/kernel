@@ -275,6 +275,7 @@ int netpoll_free_memory(void)
 	spin_unlock_irqrestore(&skb_pool.lock, flags);
 	return free_skbs<<10;
 }
+EXPORT_SYMBOL(netpoll_free_memory);
 
 /**
  * void netpoll_recycle_skbs(struct sk_buff *skb) - recycle the skb buf for the logging to avoid to run out of memory

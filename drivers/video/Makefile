@@ -148,10 +148,6 @@ obj-$(CONFIG_FB_UVESA)            += uvesafb.o
 obj-$(CONFIG_FB_VESA)             += vesafb.o
 obj-$(CONFIG_FB_EFI)              += efifb.o
 obj-$(CONFIG_FB_VGA16)            += vga16fb.o
-obj-$(CONFIG_FB_VCEB)		  += vceb_fb/
-ifeq ($(CONFIG_FB_VCEB),m)
-obj-y += vceb_fb/
-endif
 obj-$(CONFIG_FB_OF)               += offb.o
 obj-$(CONFIG_FB_BF537_LQ035)      += bf537-lq035.o
 obj-$(CONFIG_FB_BF54X_LQ043)	  += bf54x-lq043fb.o
@@ -163,7 +159,10 @@ obj-$(CONFIG_FB_DA8XX)		  += da8xx-fb.o
 obj-$(CONFIG_FB_MXS)		  += mxsfb.o
 obj-$(CONFIG_FB_VCEB)        += vceb_fb/vceb_fb.o
 obj-$(CONFIG_FB_VCEB)        += brcm_fb.o
-obj-$(CONFIG_FB_VCEB)		  += vceb_fb/vceb_fb.o
+obj-$(CONFIG_FB_VCEB)		  += vceb_fb/
+ifeq ($(CONFIG_FB_VCEB),m)
+obj-y += vceb_fb/
+endif
 
 # the test framebuffer is last
 obj-$(CONFIG_FB_VIRTUAL)          += vfb.o

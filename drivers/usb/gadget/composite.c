@@ -886,20 +886,7 @@ static void composite_setup_complete(struct usb_ep *ep, struct usb_request *req)
 				req->status, req->actual, req->length);
 }
 
-u8 composite_actual_intf (struct usb_composite_dev *cdev, u8 intf)
-{
-	u8 actual;
 
-	if (!cdev || !cdev->config)
-		return intf;
-
-	for (actual = 0; actual < MAX_CONFIG_INTERFACES; actual++) {
-		struct usb_function	*f = cdev->config->interface[actual];
-		if (f && !f->disabled && !intf--)
-			break;
-	}
-	return actual;
-}
 /*
  * The setup() callback implements all the ep0 functionality that's
  * not handled lower down, in hardware or the hardware driver(like
@@ -928,8 +915,6 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	req->complete = composite_setup_complete;
 	req->length = 0;
 	gadget->ep0->driver_data = cdev;
-
-	intf = composite_actual_intf(cdev, intf);
 
 	switch (ctrl->bRequest) {
 

@@ -129,7 +129,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          goto err_free_gpio_shutdown;
       }
       gpio_direction_input(gpio->host_wake);
-
+      
       rc = irq_set_irq_type(gpio_to_irq(gpio->host_wake), IRQ_TYPE_EDGE_RISING);
       if (rc < 0)
       {

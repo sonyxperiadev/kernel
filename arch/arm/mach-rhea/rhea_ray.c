@@ -102,7 +102,7 @@
 #define BCM_KEY_COL_7  7
 
 #ifdef CONFIG_MFD_BCM_PMU590XX
-static int __init bcm590xx_event_callback(int flag, int param)
+static int bcm590xx_event_callback(int flag, int param)
 {
 	int ret;
 	printk("REG: pmu_init_platform_hw called \n") ;
@@ -549,15 +549,17 @@ static unsigned long pmem_base = 0;
 static unsigned int pmem_size = SZ_16M;
 static int __init setup_pmem_pages(char *str)
 {
-	if(str){
-		pmem_size = memparse((const char *)str, NULL);
-	}
-	printk(KERN_INFO "PMEM size is  0x%08x Bytes\n", pmem_size);
-	pmem_base = virt_to_phys((void *)alloc_bootmem_pages(pmem_size));
-	if(!pmem_base)
-		printk(KERN_ERR "Failed to allocate the PMEM memory\n");
-	else
+	char * endp = NULL;
+	if(str)	{
+		pmem_size = memparse((const char *)str, &endp);
+		printk(KERN_INFO "PMEM size is   0x%08x Bytes\n", pmem_size);
+		if (*endp == '@')
+			pmem_base =  memparse(endp + 1, NULL);
 		printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
+	} else	{
+		printk("\"pmem=\" option is not set!!!\n");
+		printk("Unable to determine the memory region for pmem!!!\n");
+	}
 	return 0;
 }
 __setup("pmem=", setup_pmem_pages);
@@ -611,7 +613,6 @@ struct platform_device haptic_pwm_device = {
 #ifdef CONFIG_GPIO_PCA953X
 #define GPIO_SIM2LDOVSET	(KONA_MAX_GPIO + 7)
 #endif
-
 #define TPS728XX_REGL_ID        (BCM59055_MAX_LDO + 0)
 struct regulator_consumer_supply sim2_supply[] = {
 	{ .supply = "sim2_vcc" },
@@ -788,9 +789,7 @@ struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
 /* Rhea Ray specific i2c devices */
 static void __init rhea_ray_add_i2c_devices (void)
 {
-#ifdef CONFIG_MFD_BCM_PMU590XX
 	/* 59055 on BSC - PMU */
-#endif
 #ifdef CONFIG_MFD_BCM_PMU590XX
 	i2c_register_board_info(2,
 			pmu_info,
