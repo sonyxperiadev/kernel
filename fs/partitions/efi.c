@@ -97,6 +97,7 @@
 #include <linux/ctype.h>
 #include <linux/math64.h>
 #include <linux/slab.h>
+#include <linux/nls.h>
 #include "check.h"
 #include "efi.h"
 
@@ -620,6 +621,7 @@ static unsigned long apanic_partition_start;
  */
 int efi_partition(struct parsed_partitions *state)
 {
+	char* partition_name = NULL;
 	gpt_header *gpt = NULL;
 	gpt_entry *ptes = NULL;
 	u32 i;
