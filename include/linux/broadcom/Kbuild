@@ -11,3 +11,5 @@ header-y += vcp_msg.h
 header-y += vcp_conference.h
 header-y += amxr.h
 header-y += amxr_ioctl.h
+header-y += amxr_port.h
+header-y += amxr_port_ioctl.h

@@ -42,6 +42,7 @@
 #include <linux/broadcom/knllog.h>           /* For debugging */
 #include <linux/broadcom/amxr.h>             /* Audio mixer API */
 #include <linux/broadcom/amxr_ioctl.h>       /* Audio mixer user API */
+#include <linux/broadcom/amxr_port.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>                     /* User access routines */
 #include <asm/atomic.h>                      /* Atomic operations */

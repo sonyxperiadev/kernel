@@ -1406,8 +1406,8 @@ int aadma_stop_transfer( AADMA_Handle_t handle )
    chal_caph_cfifo_disable( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch );
    chal_caph_cfifo_clr_fifo( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch );
 
-   chal_caph_intc_disable_cfifo_intr( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch, CAPH_ARM );
-   chal_caph_intc_disable_cfifo_int_err( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch, CAPH_ARM );
+   chal_caph_intc_disable_cfifo_intr( chal_handle->chalAhintcHandle, channel->caph_cfifo_ch, CAPH_ARM );
+   chal_caph_intc_disable_cfifo_int_err( chal_handle->chalAhintcHandle, channel->caph_cfifo_ch, CAPH_ARM );
 
    chal_caph_dma_free_channel( chal_handle->chalAadmacHandle, channel->caph_dma_ch );
    chal_caph_cfifo_free_channel( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch );
