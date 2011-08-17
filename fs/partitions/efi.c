@@ -97,7 +97,6 @@
 #include <linux/ctype.h>
 #include <linux/math64.h>
 #include <linux/slab.h>
-#include <linux/nls.h>
 #include "check.h"
 #include "efi.h"
 
@@ -621,25 +620,13 @@ static unsigned long apanic_partition_start;
  */
 int efi_partition(struct parsed_partitions *state)
 {
-	char* partition_name = NULL;
 	gpt_header *gpt = NULL;
 	gpt_entry *ptes = NULL;
 	u32 i;
 	unsigned ssz = bdev_logical_block_size(state->bdev) / 512;
 	u8 unparsed_guid[37];
 
-	partition_name = kzalloc(sizeof(ptes->partition_name), GFP_KERNEL);
-
-	if (!partition_name)
-		return 0;
-
-	partition_name = kzalloc(sizeof(ptes->partition_name), GFP_KERNEL);
-
-	if (!partition_name)
-		return 0;
-
 	if (!find_valid_gpt(state, &gpt, &ptes) || !gpt || !ptes) {
-		kfree(partition_name);
 		kfree(gpt);
 		kfree(ptes);
 		return 0;
@@ -648,7 +635,6 @@ int efi_partition(struct parsed_partitions *state)
 	pr_debug("GUID Partition Table is valid!  Yea!\n");
 
 	for (i = 0; i < le32_to_cpu(gpt->num_partition_entries) && i < state->limit-1; i++) {
-		int partition_name_len;
 		struct partition_meta_info *info;
 		unsigned label_count = 0;
 		unsigned label_max;
@@ -659,18 +645,6 @@ int efi_partition(struct parsed_partitions *state)
 		if (!is_pte_valid(&ptes[i], last_lba(state->bdev)))
 			continue;
 
-		partition_name_len = utf16s_to_utf8s(ptes[i].partition_name,
-						     sizeof(ptes[i].partition_name),
-						     UTF16_LITTLE_ENDIAN,
-						     partition_name,
-                             sizeof(ptes[i].partition_name));
-
-#ifdef CONFIG_APANIC_ON_MMC
-		if(strncmp(partition_name,CONFIG_APANIC_PLABEL,partition_name_len) == 0) {
-			apanic_partition_start = start * ssz;
-			pr_debug("apanic partition found starts at %d \r\n", apanic_partition_start);
-		}
-#endif
 		put_partition(state, i+1, start * ssz, size * ssz);
 
 		/* If this is a RAID volume, tell md */
@@ -697,8 +671,14 @@ int efi_partition(struct parsed_partitions *state)
 			label_count++;
 		}
 		state->parts[i + 1].has_info = true;
+
+#ifdef CONFIG_APANIC_ON_MMC
+		if(strncmp(info->volname,CONFIG_APANIC_PLABEL,label_count) == 0) {
+			apanic_partition_start = start * ssz;
+			pr_debug("apanic partition found starts at %d \r\n", apanic_partition_start);
+		}
+#endif
 	}
-	kfree(partition_name);
 	kfree(ptes);
 	kfree(gpt);
 	strlcat(state->pp_buf, "\n", PAGE_SIZE);
