@@ -365,14 +365,40 @@ void WaitForCpIpc (void* pSmBase)
 	int k = 0, ret = 0;
 
     printk( KERN_ALERT  "ipcs_init Waiting for CP IPC to init ....\n");
-	while ( (ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU )) == 0)
+
+    ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    while (ret == 0)
+    {
+        // Wait up to 2s for CP to init
+        if (k++ > 200)
+            break;
+        else
+            msleep(10);
+        ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    }
+
+	if (ret == 1)
 	{
-//		for (i=0; i<2048; i++);	// do not fight for accessing shared memory
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout (100);
-		k++;
+		printk(KERN_INFO  "ipcs_init CP IPC initialized ret=%d\n", ret);
 	}
-    printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+	else if (ret == 0)
+	{
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "*       CP IPC NOT INITIALIZED - SYSTEM BOOTS WITH AP ONLY!!!      *\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		BUG_ON(ret == 0);
+	}
+	else
+	{
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "*                             CP CRASHED !!!                       *\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		BUG_ON(ret);
+	}
 }
 
 
@@ -610,5 +636,4 @@ static void __exit ipcs_module_exit(void)
   return;
 }
 
-module_init(ipcs_module_init);
-module_exit(ipcs_module_exit);
+late_initcall(ipcs_module_init);
