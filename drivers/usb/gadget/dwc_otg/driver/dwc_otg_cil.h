@@ -676,6 +676,12 @@ typedef struct dwc_otg_core_params {
 	 */
 	int32_t power_down;
 
+	/** Stop PHY clock mode
+	 * 0 - PHY clock is not stopped 
+	 * 1 - PHY clock is stopped
+	 */
+	int32_t stop_phy_clk;
+
 	/** OTG revision supported
 	 * 0 - OTG 1.3 revision
 	 * 1 - OTG 2.0 revision
@@ -908,6 +914,9 @@ struct dwc_otg_core_if {
 
 	/** Power Down Enable */
 	uint32_t power_down;
+
+	/** Stop PHY Clock Enable */
+	uint32_t stop_phy_clk;
 
 	/** ADP support Enable */
 	uint32_t adp_enable;
