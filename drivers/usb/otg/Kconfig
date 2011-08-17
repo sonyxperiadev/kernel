@@ -76,10 +76,10 @@ config USB_BCM_OTG
        select USB_OTG_UTILS
        help
          Enable this to support Broadcom USB OTG transceiver
+
 config KONA_OTG_CP
 	tristate "Kona OTG Control"
 	depends on ARCH_KONA
-	select USB_OTG_UTILS
 	help
 	 Enable this to support dynamic USB OTG (host/device) on Kona based
 	 chips.

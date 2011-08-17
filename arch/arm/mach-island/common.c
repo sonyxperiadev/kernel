@@ -271,7 +271,7 @@ static struct platform_device pmu_device = {
        .num_resources = 1,
 };
 
-#ifdef CONFIG_USB
+#ifdef CONFIG_USB_BCM_OTG
 static struct resource kona_hsotgctrl_platform_resource[] = {
 	[0] = {
 		.start = HSOTG_CTRL_BASE_ADDR,
@@ -527,7 +527,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_stm_device,
 #endif
 	&pmu_device,
-#ifdef CONFIG_USB
+#ifdef CONFIG_USB_BCM_OTG
 	&board_kona_hsotgctrl_platform_device,
 #endif
 #ifdef CONFIG_USB_DWC_OTG

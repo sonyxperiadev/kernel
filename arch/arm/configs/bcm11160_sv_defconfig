@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Tue Aug 16 14:11:09 2011
+# Wed Aug 17 11:15:08 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1392,7 +1392,6 @@ CONFIG_USB_ANDROID_MTP=y
 #
 # OTG and related infrastructure
 #
-CONFIG_USB_OTG_UTILS=y
 # CONFIG_USB_GPIO_VBUS is not set
 # CONFIG_USB_ULPI is not set
 # CONFIG_NOP_USB_XCEIV is not set
