@@ -81,7 +81,7 @@
 
 #define _RHEA_
 #include <linux/broadcom/bcm_fuse_memmap.h>
-#include <linux/broadcom/platform_mconfig.h>
+#include <mach/comms/platform_mconfig.h>
 
 #include <video/kona_fb.h>
 

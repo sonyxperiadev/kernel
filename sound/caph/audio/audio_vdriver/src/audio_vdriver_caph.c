@@ -57,7 +57,7 @@
 #include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
 #include "csl_caph_gain.h"
-#include "platform_mconfig_rhea.h"
+#include <mach/comms/platform_mconfig.h>
 #include "io.h"
 
 
