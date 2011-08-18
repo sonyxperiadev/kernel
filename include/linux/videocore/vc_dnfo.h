@@ -31,6 +31,8 @@ struct vc_dnfo_display_info
 
    unsigned int   xdpi;       /* x-axis dpi */
    unsigned int   ydpi;       /* y-axis dpi */
+
+   unsigned int   smtex;      /* Whether to use shared memory for texture upload */
 };
 
 #define VC_DNFO_IOC_MAGIC  'I'

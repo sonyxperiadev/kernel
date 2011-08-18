@@ -30,12 +30,6 @@
 
 #define vchiq_status_to_vchi(status) ((int32_t)status)
 
-typedef enum {
-   MODE_NONE,
-   MODE_CALLBACK,
-   MODE_BLOCKING
-} SHIM_BULK_MODE_T;
-
 typedef struct {
    VCHIQ_SERVICE_HANDLE_T handle;
 
@@ -43,22 +37,6 @@ typedef struct {
 
    VCHI_CALLBACK_T callback;
    void *callback_param;
-
-   /*
-      bulk blocking stuff
-   */
-
-   struct {
-      SHIM_BULK_MODE_T mode;
-      VCOS_EVENT_T event;
-      int retcode;
-   } receive;
-
-   struct {
-      SHIM_BULK_MODE_T mode;
-      VCOS_EVENT_T event;
-      int retcode;
-   } transmit;
 } SHIM_SERVICE_T;
 
 /* ----------------------------------------------------------------------
@@ -187,8 +165,8 @@ int32_t vchi_msg_queue( VCHI_SERVICE_HANDLE_T handle,
    status = vchiq_queue_message(service->handle, &element, 1);
 
    // On some platforms, like linux kernel, vchiq_queue_message() may return
-   // VCHIQ_RETRY, so we need to implment a retry mechanism since this funcion
-   // is suppose to block until queued
+   // VCHIQ_RETRY, so we need to implment a retry mechanism since this
+   // function is supposed to block until queued
    while ( status == VCHIQ_RETRY )
    {
       vcos_sleep( 1 );
@@ -219,31 +197,40 @@ int32_t vchi_bulk_queue_receive( VCHI_SERVICE_HANDLE_T handle,
                                  void * bulk_handle )
 {
    SHIM_SERVICE_T *service = (SHIM_SERVICE_T *)handle;
+   VCHIQ_BULK_MODE_T mode;
+   VCHIQ_STATUS_T status;
 
    switch ((int)flags) {
    case VCHI_FLAGS_CALLBACK_WHEN_OP_COMPLETE | VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
-      vcos_assert(service->receive.mode != MODE_BLOCKING);
-      service->receive.mode = MODE_CALLBACK;
+      vcos_assert(service->callback);
+      mode = VCHIQ_BULK_MODE_CALLBACK;
       break;
    case VCHI_FLAGS_BLOCK_UNTIL_OP_COMPLETE:
-      vcos_assert(service->receive.mode != MODE_CALLBACK);
-      service->receive.mode = MODE_BLOCKING;
+      mode = VCHIQ_BULK_MODE_BLOCKING;
+      break;
+   case VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
+   case VCHI_FLAGS_NONE:
+      mode = VCHIQ_BULK_MODE_NOCALLBACK;
       break;
    default:
       vcos_assert(0);
-      break;
+      return vchiq_status_to_vchi(VCHIQ_ERROR);
    }
 
-   vchiq_queue_bulk_receive(service->handle, data_dst, data_size, bulk_handle);
+   status = vchiq_bulk_receive(service->handle, data_dst, data_size,
+      bulk_handle, mode);
 
-   if (flags == VCHI_FLAGS_BLOCK_UNTIL_OP_COMPLETE)
+   // On some platforms, like linux kernel, vchiq_bulk_receive() may return
+   // VCHIQ_RETRY, so we need to implment a retry mechanism since this
+   // function is supposed to block until queued
+   while ( status == VCHIQ_RETRY )
    {
-      VCOS_STATUS_T status = vcos_event_wait(&service->receive.event);
-      vcos_assert(status == VCOS_SUCCESS);
-      return service->receive.retcode;
+      vcos_sleep( 1 );
+      status = vchiq_bulk_receive(service->handle, data_dst, data_size,
+         bulk_handle, mode);
    }
 
-   return 0;
+   return vchiq_status_to_vchi(status);
 }
 
 /***********************************************************
@@ -269,31 +256,40 @@ int32_t vchi_bulk_queue_receive_reloc( const VCHI_SERVICE_HANDLE_T handle,
                                        void * const bulk_handle )
 {
    SHIM_SERVICE_T *service = (SHIM_SERVICE_T *)handle;
+   VCHIQ_BULK_MODE_T mode;
+   VCHIQ_STATUS_T status;
 
    switch ((int)flags) {
    case VCHI_FLAGS_CALLBACK_WHEN_OP_COMPLETE | VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
-      vcos_assert(service->receive.mode != MODE_BLOCKING);
-      service->receive.mode = MODE_CALLBACK;
+      vcos_assert(service->callback);
+      mode = VCHIQ_BULK_MODE_CALLBACK;
       break;
    case VCHI_FLAGS_BLOCK_UNTIL_OP_COMPLETE:
-      vcos_assert(service->receive.mode != MODE_CALLBACK);
-      service->receive.mode = MODE_BLOCKING;
+      mode = VCHIQ_BULK_MODE_BLOCKING;
+      break;
+   case VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
+   case VCHI_FLAGS_NONE:
+      mode = VCHIQ_BULK_MODE_NOCALLBACK;
       break;
    default:
       vcos_assert(0);
-      break;
+      return vchiq_status_to_vchi(VCHIQ_ERROR);
    }
 
-   vchiq_queue_bulk_receive_handle(service->handle, h, (void*)offset, data_size, bulk_handle);
+   status = vchiq_bulk_receive_handle(service->handle, h, (void*)offset,
+      data_size, bulk_handle, mode);
 
-   if (flags == VCHI_FLAGS_BLOCK_UNTIL_OP_COMPLETE)
+   // On some platforms, like linux kernel, vchiq_bulk_receive_handle() may
+   // return VCHIQ_RETRY, so we need to implment a retry mechanism since
+   // this function is supposed to block until queued
+   while ( status == VCHIQ_RETRY )
    {
-      VCOS_STATUS_T status = vcos_event_wait(&service->receive.event);
-      vcos_assert(status == VCOS_SUCCESS);
-      return service->receive.retcode;
+      vcos_sleep( 1 );
+      status = vchiq_bulk_receive_handle(service->handle, h, (void*)offset,
+         data_size, bulk_handle, mode);
    }
 
-   return 0;
+   return vchiq_status_to_vchi(status);
 }
 
 /***********************************************************
@@ -317,35 +313,40 @@ int32_t vchi_bulk_queue_transmit( VCHI_SERVICE_HANDLE_T handle,
                                   void * bulk_handle )
 {
    SHIM_SERVICE_T *service = (SHIM_SERVICE_T *)handle;
+   VCHIQ_BULK_MODE_T mode;
+   VCHIQ_STATUS_T status;
 
    switch ((int)flags) {
    case VCHI_FLAGS_CALLBACK_WHEN_OP_COMPLETE | VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
-      vcos_assert(service->transmit.mode != MODE_BLOCKING);
-      service->transmit.mode = MODE_CALLBACK;
+      vcos_assert(service->callback);
+      mode = VCHIQ_BULK_MODE_CALLBACK;
       break;
-
-   // hack: This blocks too much (although should be correct), and any code with VCHI_FLAGS_BLOCK_UNTIL_QUEUED will suffer a performance penalty
-   // and should use either (VCHI_FLAGS_CALLBACK_WHEN_OP_COMPLETE | VCHI_FLAGS_BLOCK_UNTIL_QUEUED) or VCHI_FLAGS_BLOCK_UNTIL_DATA_READ directly.
-   /* FIXME: */ case VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
    case VCHI_FLAGS_BLOCK_UNTIL_DATA_READ:
-      vcos_assert(service->transmit.mode != MODE_CALLBACK);
-      service->transmit.mode = MODE_BLOCKING;
+      mode = VCHIQ_BULK_MODE_BLOCKING;
+      break;
+   case VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
+   case VCHI_FLAGS_NONE:
+      mode = VCHIQ_BULK_MODE_NOCALLBACK;
       break;
    default:
       vcos_assert(0);
-      break;
+      return vchiq_status_to_vchi(VCHIQ_ERROR);
    }
 
-   vchiq_queue_bulk_transmit(service->handle, data_src, data_size, bulk_handle);
+   status = vchiq_bulk_transmit(service->handle, data_src, data_size,
+      bulk_handle, mode);
 
-   if (flags == VCHI_FLAGS_BLOCK_UNTIL_DATA_READ)
+   // On some platforms, like linux kernel, vchiq_bulk_transmit() may return
+   // VCHIQ_RETRY, so we need to implment a retry mechanism since this
+   // function is supposed to block until queued
+   while ( status == VCHIQ_RETRY )
    {
-      VCOS_STATUS_T status = vcos_event_wait(&service->transmit.event);
-      vcos_assert(status == VCOS_SUCCESS);
-      return service->transmit.retcode;
+      vcos_sleep( 1 );
+      status = vchiq_bulk_transmit(service->handle, data_src, data_size,
+         bulk_handle, mode);
    }
 
-   return 0;
+   return vchiq_status_to_vchi(status);
 }
 
 /***********************************************************
@@ -372,35 +373,40 @@ int32_t vchi_bulk_queue_transmit_reloc( VCHI_SERVICE_HANDLE_T handle,
                                         void * const bulk_handle )
 {
    SHIM_SERVICE_T *service = (SHIM_SERVICE_T *)handle;
+   VCHIQ_BULK_MODE_T mode;
+   VCHIQ_STATUS_T status;
 
    switch ((int)flags) {
    case VCHI_FLAGS_CALLBACK_WHEN_OP_COMPLETE | VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
-      vcos_assert(service->transmit.mode != MODE_BLOCKING);
-      service->transmit.mode = MODE_CALLBACK;
+      vcos_assert(service->callback);
+      mode = VCHIQ_BULK_MODE_CALLBACK;
       break;
-
-   // hack: This blocks too much (although should be correct), and any code with VCHI_FLAGS_BLOCK_UNTIL_QUEUED will suffer a performance penalty
-   // and should use either (VCHI_FLAGS_CALLBACK_WHEN_OP_COMPLETE | VCHI_FLAGS_BLOCK_UNTIL_QUEUED) or VCHI_FLAGS_BLOCK_UNTIL_DATA_READ directly.
-   /* FIXME: */ case VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
    case VCHI_FLAGS_BLOCK_UNTIL_DATA_READ:
-      vcos_assert(service->transmit.mode != MODE_CALLBACK);
-      service->transmit.mode = MODE_BLOCKING;
+      mode = VCHIQ_BULK_MODE_BLOCKING;
+      break;
+   case VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
+   case VCHI_FLAGS_NONE:
+      mode = VCHIQ_BULK_MODE_NOCALLBACK;
       break;
    default:
       vcos_assert(0);
-      break;
+      return vchiq_status_to_vchi(VCHIQ_ERROR);
    }
 
-   vchiq_queue_bulk_transmit_handle(service->handle, h_src, (void*)offset, data_size, bulk_handle);
+   status = vchiq_bulk_transmit_handle(service->handle, h_src, (void*)offset,
+      data_size, bulk_handle, mode);
 
-   if (flags == VCHI_FLAGS_BLOCK_UNTIL_DATA_READ)
+   // On some platforms, like linux kernel, vchiq_bulk_transmit_handle() may
+   // return VCHIQ_RETRY, so we need to implment a retry mechanism since this
+   // function is supposed to block until queued
+   while ( status == VCHIQ_RETRY )
    {
-      VCOS_STATUS_T status = vcos_event_wait(&service->transmit.event);
-      vcos_assert(status == VCOS_SUCCESS);
-      return service->transmit.retcode;
+      vcos_sleep( 1 );
+      status = vchiq_bulk_transmit_handle(service->handle, h_src, (void*)offset,
+         data_size, bulk_handle, mode);
    }
 
-   return 0;
+   return vchiq_status_to_vchi(status);
 }
 
 /***********************************************************
@@ -744,34 +750,12 @@ static VCHIQ_STATUS_T shim_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
          service->callback(service->callback_param, VCHI_CALLBACK_MSG_AVAILABLE, NULL);
       break;
    case VCHIQ_BULK_TRANSMIT_DONE:
-      switch (service->transmit.mode) {
-      case MODE_CALLBACK:
-         if (service->callback)
-            service->callback(service->callback_param, VCHI_CALLBACK_BULK_SENT, bulk_user);
-         break;
-      case MODE_BLOCKING:
-         service->transmit.retcode = 0;
-         vcos_event_signal(&service->transmit.event);
-         break;
-      case MODE_NONE:
-         vcos_assert(0);
-         break;
-      }
+      if (service->callback)
+         service->callback(service->callback_param, VCHI_CALLBACK_BULK_SENT, bulk_user);
       break;
    case VCHIQ_BULK_RECEIVE_DONE:
-      switch (service->receive.mode) {
-      case MODE_CALLBACK:
-         if (service->callback)
-            service->callback(service->callback_param, VCHI_CALLBACK_BULK_RECEIVED, bulk_user);
-         break;
-      case MODE_BLOCKING:
-         service->receive.retcode = 0;
-         vcos_event_signal(&service->receive.event);
-         break;
-      case MODE_NONE:
-         vcos_assert(0);
-         break;
-      }
+      if (service->callback)
+         service->callback(service->callback_param, VCHI_CALLBACK_BULK_RECEIVED, bulk_user);
       break;
    case VCHIQ_SERVICE_CLOSED:
       if (service->callback)
@@ -781,35 +765,13 @@ static VCHIQ_STATUS_T shim_callback(VCHIQ_REASON_T reason, VCHIQ_HEADER_T *heade
       /* No equivalent VCHI reason */
       break;
    case VCHIQ_BULK_TRANSMIT_ABORTED:
-      switch (service->transmit.mode) {
-      case MODE_CALLBACK:
-         if (service->callback)
-            service->callback(service->callback_param, VCHI_CALLBACK_BULK_TRANSMIT_ABORTED, bulk_user);
-         break;
-      case MODE_BLOCKING:
-         service->transmit.retcode = -1;
-         vcos_event_signal(&service->transmit.event);
-         break;
-      case MODE_NONE:
-         vcos_assert(0);
-         break;
-      }
-   case VCHIQ_BULK_RECEIVE_ABORTED:
-      switch (service->receive.mode) {
-      case MODE_CALLBACK:
-         if (service->callback)
-            service->callback(service->callback_param, VCHI_CALLBACK_BULK_RECEIVE_ABORTED, bulk_user);
-         break;
-      case MODE_BLOCKING:
-         service->receive.retcode = -1;
-         vcos_event_signal(&service->receive.event);
-         break;
-      case MODE_NONE:
-         vcos_assert(0);
-         break;
-      }
+      if (service->callback)
+         service->callback(service->callback_param, VCHI_CALLBACK_BULK_TRANSMIT_ABORTED, bulk_user);
       break;
-
+   case VCHIQ_BULK_RECEIVE_ABORTED:
+      if (service->callback)
+         service->callback(service->callback_param, VCHI_CALLBACK_BULK_RECEIVE_ABORTED, bulk_user);
+      break;
    default:
       vcos_assert(0);
       break;
@@ -831,12 +793,6 @@ static SHIM_SERVICE_T *service_alloc(VCHIQ_INSTANCE_T instance,
       {
          service->callback = setup->callback;
          service->callback_param = setup->callback_param;
-
-         service->receive.mode = MODE_NONE;
-         vcos_event_create(&service->receive.event, "vchi");
-
-         service->transmit.mode = MODE_NONE;
-         vcos_event_create(&service->transmit.event, "vchi");
       }
       else
       {
@@ -852,8 +808,6 @@ static void service_free(SHIM_SERVICE_T *service)
 {
    if (service)
    {
-      vcos_event_delete(&service->receive.event);
-      vcos_event_delete(&service->transmit.event);
       vchiu_queue_delete(&service->queue);
       vcos_free((void*)service);
    }

@@ -172,6 +172,8 @@ static int vc_dnfo_proc_read( char *buf, char **start, off_t offset, int count, 
                   vc_dnfo_info.xdpi );
     p += sprintf( p, "     \'ydpi\'        : %d\n",
                   vc_dnfo_info.ydpi );
+    p += sprintf( p, "     \'smtex\'       : %s\n",
+                  vc_dnfo_info.smtex ? "yes" : "no" );
 
     *eof = 1;
     return p - buf;
@@ -272,6 +274,10 @@ static int vc_dnfo_proc_write( struct file *file, const char __user *buffer, uns
    {
       vc_dnfo_info.ydpi = value;
    }
+   else if ( strcmp( name, "smtex" ) == 0 )
+   {
+      vc_dnfo_info.smtex = value;
+   }
    else
    {
       LOG_ERR( "[%s]: attribute '%s' is **unknown** to driver '%s'",
@@ -353,6 +359,7 @@ static int __init vc_dnfo_init( void )
     vc_dnfo_info.layer   = 1;
     vc_dnfo_info.xdpi    = 200;
     vc_dnfo_info.ydpi    = 200;
+    vc_dnfo_info.smtex   = 0;
 
     return 0;
 
