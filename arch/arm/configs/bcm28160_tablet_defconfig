@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Wed Aug 17 11:15:10 2011
+# Thu Aug 18 15:27:00 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -756,6 +756,7 @@ CONFIG_BMP18X_I2C=y
 CONFIG_SENSORS_BMA150=y
 CONFIG_SENSORS_MPU3050=y
 # CONFIG_SENSORS_AK8975 is not set
+CONFIG_SENSORS_AK8975_BRCM=y
 # CONFIG_DS1682 is not set
 # CONFIG_UID_STAT is not set
 # CONFIG_WL127X_RFKILL is not set
