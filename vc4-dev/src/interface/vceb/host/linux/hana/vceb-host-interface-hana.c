@@ -255,7 +255,6 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     {
         printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n",
                 __func__, platform_data->disp_gpio.lcd_bl_en, rc );
-                __func__, platform_data->disp_gpio.lcd_bl_en, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwm, "bl-pwm" )) != 0 )

@@ -27,7 +27,7 @@ obj-y 	+= vc_dnfo/
 obj-y 	+= vc_hnfo/
 obj-y 	+= vc_omx/
 
-#obj-y	+= ../../../vc4-dev/src/interface/vceb/host/linux/
+obj-y	+= ../../../vc4-dev/src/interface/vceb/host/linux/
 
 endif
 

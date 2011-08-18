@@ -14,7 +14,7 @@ EXTRA_CFLAGS  += -D__KERNEL__
 EXTRA_CFLAGS  += -D__linux__
 EXTRA_CFLAGS  += -Werror
 
-obj-y := vc-vmcs_sm.o
+obj-m := vc-vmcs_sm.o
 
 vc-vmcs_sm-objs := \
     vmcs_sm.o \
