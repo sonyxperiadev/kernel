@@ -1,44 +1,56 @@
-/*****************************************************************************
-* Copyright 2011 Broadcom Corporation.  All rights reserved.
-*
-* Unless you and Broadcom execute a separate written software license
-* agreement governing use of this software, this software is licensed to you
-* under the terms of the GNU General Public License version 2, available at
-* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
-*
-* Notwithstanding the above, under no circumstances may you combine this
-* software in any way with any other Broadcom software provided under a
-* license other than the GPL, without Broadcom's express prior written
-* consent.
-*****************************************************************************/
-
-
 /*
  * Definitions for akm8975 compass chip.
  */
-#ifndef __AKM8975_H__
-#define __AKM8975_H__
+#ifndef AKM8975_H
+#define AKM8975_H
 
+#include <linux/ioctl.h>
 
-<<<<<<< HEAD
-/* Axis switching stuff should be common header as same enum exists for accelerometer and gyro */
-typedef enum
-{
-   compass_x_dir,
-   compass_y_dir,
-   compass_z_dir,
-   compass_x_dir_rev,
-   compass_y_dir_rev,
-   compass_z_dir_rev
-} akm8975_axis_change_enum;
+/*! \name AK8975 operation mode
+ \anchor AK8975_Mode
+ Defines an operation mode of the AK8975.*/
+/*! @{*/
+#define AK8975_MODE_SNG_MEASURE   0x01
+#define	AK8975_MODE_SELF_TEST     0x08
+#define	AK8975_MODE_FUSE_ACCESS   0x0F
+#define	AK8975_MODE_POWER_DOWN    0x00
+/*! @}*/
 
-struct t_akm8975_axis_change
-{
-   int x_change;
-   int y_change;
-   int z_change;
-}; 
-=======
+#define RBUFF_SIZE		8	/* Rx buffer size */
+
+/*! \name AK8975 register address
+\anchor AK8975_REG
+Defines a register address of the AK8975.*/
+/*! @{*/
+#define AK8975_REG_WIA		0x00
+#define AK8975_REG_INFO		0x01
+#define AK8975_REG_ST1		0x02
+#define AK8975_REG_HXL		0x03
+#define AK8975_REG_HXH		0x04
+#define AK8975_REG_HYL		0x05
+#define AK8975_REG_HYH		0x06
+#define AK8975_REG_HZL		0x07
+#define AK8975_REG_HZH		0x08
+#define AK8975_REG_ST2		0x09
+#define AK8975_REG_CNTL		0x0A
+#define AK8975_REG_RSV		0x0B
+#define AK8975_REG_ASTC		0x0C
+#define AK8975_REG_TS1		0x0D
+#define AK8975_REG_TS2		0x0E
+#define AK8975_REG_I2CDIS	0x0F
+/*! @}*/
+
+/*! \name AK8975 fuse-rom address
+\anchor AK8975_FUSE
+Defines a read-only address of the fuse ROM of the AK8975.*/
+/*! @{*/
+#define AK8975_FUSE_ASAX	0x10
+#define AK8975_FUSE_ASAY	0x11
+#define AK8975_FUSE_ASAZ	0x12
+/*! @}*/
+
+#define AKMIO                   0xA1
+
 /* IOCTLs for AKM library */
 #define ECS_IOCTL_WRITE                 _IOW(AKMIO, 0x02, char[5])
 #define ECS_IOCTL_READ                  _IOWR(AKMIO, 0x03, char[5])
@@ -56,12 +68,16 @@ struct t_akm8975_axis_change
 #define ECS_IOCTL_APP_SET_MVFLAG	_IOW(AKMIO, 0x19, short)
 /* Get raw magnetic vector flag */
 #define ECS_IOCTL_APP_GET_MVFLAG	_IOR(AKMIO, 0x1A, short)
->>>>>>> mps-lmp
 
 
-#define AKM8975_DEVICE_NAME   "compass"
-#define AKM8975_DRV_NAME      "akm8975"
+struct akm8975_platform_data {
+	int intr;
 
+	int (*init)(void);
+	void (*exit)(void);
+	int (*power_on)(void);
+	int (*power_off)(void);
+};
 
 #endif
 
