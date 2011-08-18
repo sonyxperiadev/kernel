@@ -509,15 +509,5 @@ UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVIC
 void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 
 
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_allPathsDisabled
-*
-*  Description: Check whether all paths are disabled.
-*
-****************************************************************************/
-Boolean csl_caph_hwctrl_allPathsDisabled(void);
-
-
 #endif // _CSL_CAPH_HWCTRL_
 

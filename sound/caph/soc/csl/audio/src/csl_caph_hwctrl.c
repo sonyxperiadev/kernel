@@ -224,6 +224,7 @@ static void csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(
 static void csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(
                                          CSL_CAPH_PathID pathID, 
                                          CSL_CAPH_SRCM_MIX_GAIN_t mixGain);
+static Boolean csl_caph_hwctrl_allPathsDisabled(void);
 static void csl_caph_hwctrl_configre_fm_fifo(CSL_CAPH_HWConfig_Table_t *path);
 static CSL_CAPH_PathID csl_caph_hwctrl_GetInvalidPath_FromPathSettings(
                                          CSL_CAPH_DEVICE_e source,
@@ -1555,53 +1556,67 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 
 static void csl_caph_ControlHWClock(Boolean enable)
 {
+    static Boolean sCurEnabled = FALSE;
+
+    if (enable == TRUE && sCurEnabled == FALSE)
+    {
+        sCurEnabled = TRUE;
 #if !(defined(_SAMOA_))
-//Enable CAPH clock.
-    clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
+        //Enable CAPH clock.
+        clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 #ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
                                 This is a workaround before a solution from clock */
-    if ( clkID[0]->use_cnt )
-    {
-        clk_disable(clkID[0]);
-    }
+        if ( clkID[0]->use_cnt )
+        {
+            clk_disable(clkID[0]);
+        }
 #endif
-	clk_set_rate(clkID[0], 156000000);
-    clk_enable(clkID[0]);
-    
+	    clk_set_rate(clkID[0], 156000000);
+        clk_enable(clkID[0]);
 
-	//clkID[1] = clk_get(NULL, "audioh_apb_clk");
-    //clk_enable(clkID[1]);
-    //clk_set_rate(clkID[1], 156000000);
 #ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
-	clkID[1] = clk_get(NULL, "ssp3_audio_clk");
-    clk_enable(clkID[1]);
-    //clk_set_rate(clkID[1], 156000000);
+	    clkID[1] = clk_get(NULL, "ssp3_audio_clk");
+        clk_enable(clkID[1]);
+        //clk_set_rate(clkID[1], 156000000);
 #endif
     
-	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_2P4M_CLK, CLOCK_CLK_EN, clock_op_enable);
-    clkID[2] = clk_get(NULL, "audioh_2p4m_clk");
-    clk_enable(clkID[2]);
-    // no need to set speed, it is fixed
-    //clk_set_rate(clkID[2], 26000000);
-                                
-	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_26M_CLK, CLOCK_CLK_EN, clock_op_enable);
-    clkID[3] = clk_get(NULL,"audioh_26m_clk");
-    clk_enable(clkID[3]);
-	// no need to set the speed. it is fixed
-    //clk_set_rate(clkID[3],  26000000);
+        // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_2P4M_CLK, CLOCK_CLK_EN, clock_op_enable);
+        clkID[2] = clk_get(NULL, "audioh_2p4m_clk");
+        clk_enable(clkID[2]);
+        // no need to set speed, it is fixed
+        //clk_set_rate(clkID[2], 26000000);
+                                    
+        // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_26M_CLK, CLOCK_CLK_EN, clock_op_enable);
+        clkID[3] = clk_get(NULL,"audioh_26m_clk");
+        clk_enable(clkID[3]);
+        // no need to set the speed. it is fixed
+        //clk_set_rate(clkID[3],  26000000);
 
-	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_156M_CLK, CLOCK_CLK_EN, clock_op_enable);
-    clkID[4] = clk_get(NULL,"audioh_156m_clk");
-    clk_enable(clkID[4]);
-    //clk_set_rate(clkID[4], 26000000);
+        // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_156M_CLK, CLOCK_CLK_EN, clock_op_enable);
+        clkID[4] = clk_get(NULL,"audioh_156m_clk");
+        clk_enable(clkID[4]);
+        //clk_set_rate(clkID[4], 26000000);
 
-	// chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
+        // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
 #ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
-    clkID[5] = clk_get(NULL, "ssp4_audio_clk");
-    clk_enable(clkID[5]);
-    //clk_set_rate(clkID[5], 156000000);
+        clkID[5] = clk_get(NULL, "ssp4_audio_clk");
+        clk_enable(clkID[5]);
+        //clk_set_rate(clkID[5], 156000000);
 #endif
 #endif // !defined(_SAMOA_)
+    }
+    else if (enable == FALSE && sCurEnabled == TRUE)
+    {
+        UInt32 count = 0;
+        sCurEnabled = FALSE;
+        for (count = 0; count <  MAX_AUDIO_CLOCK_NUM; count++)
+        {
+            clk_disable(clkID[count]);
+        }
+    }
+            
+    Log_DebugPrintf(LOGID_AUDIO, "csl_caph_ControlHWClock: action = %d, result = %d\r\n", enable, sCurEnabled);
+  
     return;
 }
 
@@ -2532,6 +2547,88 @@ static void csl_caph_hwctrl_ACIControl()
 
 /****************************************************************************
 *
+*  Function Name: Boolean csl_caph_hwctrl_allPathsDisabled(void)
+*
+*  Description: Check whether all paths are disabled.
+*
+****************************************************************************/
+static Boolean csl_caph_hwctrl_allPathsDisabled(void)
+{
+    UInt8 i = 0;
+    for (i=0; i<MAX_AUDIO_PATH; i++)
+    {
+        if (HWConfig_Table[i].pathID != 0)
+        {
+	        Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_allPathDisabled: FALSE\r\n");
+            return FALSE;
+        }
+    }
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_allPathDisabled: TRUE\r\n");
+    return TRUE;
+}
+
+
+/****************************************************************************
+*
+*  Function Name:void csl_caph_hwctrl_configre_fm_fifo(CSL_CAPH_HWConfig_Table_t *path)
+*
+*  Description: Apply a CIFIO and configure it.
+*
+****************************************************************************/
+
+
+static void csl_caph_hwctrl_configre_fm_fifo(CSL_CAPH_HWConfig_Table_t *path)
+{
+
+    CSL_CAPH_CFIFO_FIFO_e fifo = CSL_CAPH_CFIFO_NONE;
+    CSL_CAPH_CFIFO_DIRECTION_e direction = CSL_CAPH_CFIFO_OUT;
+    CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate = CSL_CAPH_SRCM_UNDEFINED; 
+    UInt16 threshold = 0;
+
+	// FM playback is not started yet, apply a FIFO at here, and remember CFIFO to
+	// fm_capture_cfifo.
+
+	if(fmRecRunning == FALSE)
+	{
+   		// config cfifo
+		if (path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
+		{
+			sampleRate = csl_caph_hwctrl_GetCSLSampleRate(path->src_sampleRate);
+			//fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+			fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
+		}
+		else
+		if (path->bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
+		{
+			sampleRate = csl_caph_hwctrl_GetCSLSampleRate(path->src_sampleRate);
+       		//fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+			fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
+		}
+		else
+		{
+			audio_xassert(0, path->bitPerSample );
+		}
+
+		// Save the fifo information
+		path->cfifo[0] = fifo;
+
+		direction = CSL_CAPH_CFIFO_OUT;
+		threshold = csl_caph_cfifo_get_fifo_thres(fifo);
+		csl_caph_cfifo_config_fifo(fifo, direction, threshold);
+
+		fm_capture_cfifo = fifo;
+		fmRecRunning = TRUE;
+
+	}
+
+}
+
+//************************************************************************///
+///****************** START OF PUBLIC FUNCTIONS **************************///
+//************************************************************************///
+
+/****************************************************************************
+*
 *  Function Name: void csl_caph_hwctrl_init(CSL_CAPH_HWCTRL_BASE_ADDR_t addr)
 *
 *  Description: init CAPH HW control driver
@@ -2541,18 +2638,9 @@ void csl_caph_hwctrl_init(void)
 {
 
 	CSL_CAPH_HWCTRL_BASE_ADDR_t addr;
-#if 0
-#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)                                 
-	AUDDRV_HISR_HANDLE = OSINTERRUPT_Create( (IEntry_t)&AUDDRV_HISR, HISRNAME_CAPH, IPRIORITY_HIGH, HISRSTACKSIZE_CAPH);
     
-    // Register the LISR to the IRQ.
-    IRQ_Register(CAPH_NORM_IRQ, AUDDRV_LISR);
-    IRQ_Clear(CAPH_NORM_IRQ);  
-    IRQ_Enable(CAPH_NORM_IRQ);  
+    csl_caph_ControlHWClock(TRUE);
 
-#endif  
-#endif 
-	csl_caph_ControlHWClock (TRUE);
 	CAPHIRQ_Init();
     memset(&addr, 0, sizeof(CSL_CAPH_HWCTRL_BASE_ADDR_t));
     addr.cfifo_baseAddr = CFIFO_BASE_ADDR1;
@@ -2596,7 +2684,7 @@ void csl_caph_hwctrl_init(void)
     csl_caph_srcmixer_init(addr.srcmixer_baseAddr);
     csl_caph_audioh_init(addr.audioh_baseAddr, addr.sdt_baseAddr);
 
-
+    csl_caph_ControlHWClock(FALSE);
 
 	return;
 }
@@ -2621,35 +2709,6 @@ void csl_caph_hwctrl_deinit(void)
 	   }	
 #endif	 
     
-#ifndef CONFIG_AUDIO_BUILD
-#if !defined(_SAMOA_)
-	clk_disable(clkID[0]);
-	clk_disable(clkID[1]);
-	clk_disable(clkID[2]);
-	clk_disable(clkID[3]);
-	clk_disable(clkID[4]);
-	clk_disable(clkID[5]);
-#endif
-#else
-    //Disable CAPH clock.
-    PRM_set_clock_state(id[0], RESOURCE_CAPH, CLOCK_OFF);
-    PRM_client_deregister(id[0]);
-
-    //PRM_set_clock_state(id[1], RESOURCE_SSP3_AUDIO, CLOCK_OFF);
-    //PRM_client_deregister(id[1]);
-
-    PRM_set_clock_state(id[2], RESOURCE_AUDIOH_2P4M, CLOCK_OFF);
-    PRM_client_deregister(id[2]);
-
-    PRM_set_clock_state(id[3], RESOURCE_AUDIOH, CLOCK_OFF);
-    PRM_client_deregister(id[3]);
-
-    PRM_set_clock_state(id[4], RESOURCE_AUDIOH_156M, CLOCK_OFF);
-    PRM_client_deregister(id[4]);
-
-    //PRM_set_clock_state(id[5], RESOURCE_SSP4_AUDIO, CLOCK_OFF);
-    //PRM_client_deregister(id[5]);	
-#endif
     memset(HWConfig_Table, 0, sizeof(HWConfig_Table));
     csl_caph_cfifo_deinit();
     csl_caph_dma_deinit();
@@ -2660,8 +2719,6 @@ void csl_caph_hwctrl_deinit(void)
     csl_pcm_deinit(pcmHandleSSP);
     csl_i2s_deinit(fmHandleSSP);
 
-	csl_caph_ControlHWClock (FALSE);
-    
 	return;
 }
 
@@ -2753,6 +2810,9 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_EnablePath::  Source: %d, Sink: %d, streamID %d.\r\n", 
             config.source, config.sink, config.streamID));
+
+    // try to enable all audio clock first
+	csl_caph_ControlHWClock (TRUE);
 
 	if(config.source == CSL_CAPH_DEV_DSP && config.sink == CSL_CAPH_DEV_MEMORY) 
 	{
@@ -3495,6 +3555,13 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	}
 
 	csl_caph_hwctrl_RemovePathInTable(path->pathID);
+	
+    // shutdown all audio clock if no audio activity, at last
+    if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
+    {
+        csl_caph_ControlHWClock (FALSE);
+    }
+    
 	return RESULT_OK;
 }
 
@@ -5165,80 +5232,4 @@ void csl_caph_hwctrl_SetSspTdmMode(Boolean status)
 }
 
 
-/****************************************************************************
-*
-*  Function Name: Boolean csl_caph_hwctrl_allPathsDisabled(void)
-*
-*  Description: Check whether all paths are disabled.
-*
-****************************************************************************/
-Boolean csl_caph_hwctrl_allPathsDisabled(void)
-{
-    UInt8 i = 0;
-    for (i=0; i<MAX_AUDIO_PATH; i++)
-    {
-        if (HWConfig_Table[i].pathID != 0)
-        {
-	        Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_allPathDisabled: FALSE\r\n");
-            return FALSE;
-        }
-    }
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_allPathDisabled: TRUE\r\n");
-    return TRUE;
-}
 
-
-/****************************************************************************
-*
-*  Function Name:void csl_caph_hwctrl_configre_fm_fifo(CSL_CAPH_HWConfig_Table_t *path)
-*
-*  Description: Apply a CIFIO and configure it.
-*
-****************************************************************************/
-
-
-static void csl_caph_hwctrl_configre_fm_fifo(CSL_CAPH_HWConfig_Table_t *path)
-{
-
-    CSL_CAPH_CFIFO_FIFO_e fifo = CSL_CAPH_CFIFO_NONE;
-    CSL_CAPH_CFIFO_DIRECTION_e direction = CSL_CAPH_CFIFO_OUT;
-    CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate = CSL_CAPH_SRCM_UNDEFINED; 
-    UInt16 threshold = 0;
-
-	// FM playback is not started yet, apply a FIFO at here, and remember CFIFO to
-	// fm_capture_cfifo.
-
-	if(fmRecRunning == FALSE)
-	{
-   		// config cfifo
-		if (path->bitPerSample == AUDIO_16_BIT_PER_SAMPLE)
-		{
-			sampleRate = csl_caph_hwctrl_GetCSLSampleRate(path->src_sampleRate);
-			//fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
-			fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, sampleRate);
-		}
-		else
-		if (path->bitPerSample == AUDIO_24_BIT_PER_SAMPLE)
-		{
-			sampleRate = csl_caph_hwctrl_GetCSLSampleRate(path->src_sampleRate);
-       		//fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
-			fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_24BIT_MONO, sampleRate);
-		}
-		else
-		{
-			audio_xassert(0, path->bitPerSample );
-		}
-
-		// Save the fifo information
-		path->cfifo[0] = fifo;
-
-		direction = CSL_CAPH_CFIFO_OUT;
-		threshold = csl_caph_cfifo_get_fifo_thres(fifo);
-		csl_caph_cfifo_config_fifo(fifo, direction, threshold);
-
-		fm_capture_cfifo = fifo;
-		fmRecRunning = TRUE;
-
-	}
-
-}
