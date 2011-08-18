@@ -395,8 +395,8 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
         return CSL_PCM_ERR_HANDLE;
     }
 
-	if((devCfg->protocol == CSL_PCM_PROTOCOL_MONO) &&
-		(devCfg->format == CSL_PCM_WORD_LENGTH_16_BIT))
+    if((devCfg->protocol == CSL_PCM_PROTOCOL_MONO) && 
+		(devCfg->format == CSL_PCM_WORD_LENGTH_16_BIT || devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT))
         protocol = SSPI_PROT_MONO_16B_PCM;
 	else if((devCfg->protocol == CSL_PCM_PROTOCOL_MONO) &&
 			(devCfg->format == CSL_PCM_WORD_LENGTH_24_BIT))
@@ -514,14 +514,22 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		chal_sspi_set_fifo_size(pDevice,
 								SSPI_FIFO_ID_TX3, SSPI_FIFO_SIZE_NONE);
 
-		chal_sspi_set_fifo_pack(pDevice,
-								SSPI_FIFO_ID_RX0, SSPI_FIFO_DATA_PACK_NONE);
-		chal_sspi_set_fifo_pack(pDevice,
-								SSPI_FIFO_ID_RX1, SSPI_FIFO_DATA_PACK_NONE);
-		chal_sspi_set_fifo_pack(pDevice,
-								SSPI_FIFO_ID_TX0, SSPI_FIFO_DATA_PACK_NONE);
-		chal_sspi_set_fifo_pack(pDevice,
-								SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_NONE);
+		if(devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT)
+		{
+			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_RX0, SSPI_FIFO_DATA_PACK_16BIT);
+			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_RX1, SSPI_FIFO_DATA_PACK_NONE);
+			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX0, SSPI_FIFO_DATA_PACK_16BIT);
+			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_NONE);
+		} else {
+			chal_sspi_set_fifo_pack(pDevice,
+									SSPI_FIFO_ID_RX0, SSPI_FIFO_DATA_PACK_NONE);
+			chal_sspi_set_fifo_pack(pDevice,
+									SSPI_FIFO_ID_RX1, SSPI_FIFO_DATA_PACK_NONE);
+			chal_sspi_set_fifo_pack(pDevice,
+									SSPI_FIFO_ID_TX0, SSPI_FIFO_DATA_PACK_NONE);
+			chal_sspi_set_fifo_pack(pDevice,
+									SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_NONE);
+		}
 		break;
 
 	case SSPI_PROT_MONO_25B_PCM:
@@ -698,7 +706,8 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
     // setting from asic team
     chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
     chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX1, 0x3, 0x3);
-    chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x1, 0x1);
+	//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x1, 0x1); //this requires bigger CFIFO size, does not work well with SRC either.
+	chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c); //audio quality from SRC is greatly improved.
     chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX1, 0x3, 0x3);
     
 	switch(protocol) {

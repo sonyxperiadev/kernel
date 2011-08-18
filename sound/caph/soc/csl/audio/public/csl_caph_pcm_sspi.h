@@ -161,8 +161,9 @@ typedef enum
 *****************************************************************************/
 typedef enum
 {
-  CSL_PCM_WORD_LENGTH_16_BIT,                       ///< 16 bit word length
-  CSL_PCM_WORD_LENGTH_24_BIT                        ///< 25 bit word length
+  CSL_PCM_WORD_LENGTH_16_BIT,                       ///< unpacked 16 bit word length
+  CSL_PCM_WORD_LENGTH_24_BIT,                       ///< 25 bit word length
+  CSL_PCM_WORD_LENGTH_PACK_16_BIT,                  ///< packed 16 bit word length
 } csl_pcm_data_format_t;
 
 /**

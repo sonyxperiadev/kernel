@@ -802,6 +802,7 @@ static UInt32 csl_caph_get_fifo_addr(CSL_CAPH_PathID pathID, int blockPathIdx, i
 	default:
 		break;
 	}
+	if(!addr) audio_xassert(0, pathID);
 	return addr;
 }
 
@@ -842,6 +843,10 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 	dataFormat = csl_caph_get_dataformat(path->bitPerSample, path->chnlNum); //dataFormat would change according to block combination.
 	srOut = path->src_sampleRate;
 	if(path->source==CSL_CAPH_DEV_DSP) dataFormat = CSL_CAPH_24BIT_MONO; //dsp data is 24bit mono
+	if(path->sink==CSL_CAPH_DEV_BT_SPKR)
+	{
+		path->snk_sampleRate = AUDIO_SAMPLING_RATE_8000;
+	}
 
 	if(mode==OBTAIN_BLOCKS_NORMAL) 	//non-zero for switching or multicasting during playback
 	{
@@ -919,10 +924,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 		case CAPH_CFIFO:
 			if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink == CSL_CAPH_DEV_IHF) {
 				fifo = csl_caph_dma_get_csl_cfifo(path->dma[0]);
-			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO
-					|| path->sink == CSL_CAPH_DEV_FM_TX
-					|| path->source == CSL_CAPH_DEV_BT_SPKR 
-					|| path->sink == CSL_CAPH_DEV_FM_TX) {
+			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink == CSL_CAPH_DEV_FM_TX) {
 				fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			} else {
 				fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
@@ -985,7 +987,11 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			srcmTap = csl_caph_srcmixer_get_tapoutchnl_from_inchnl(srcmIn);
 
 			if(path->sink == CSL_CAPH_DEV_DSP_throughMEM) srOut = AUDIO_SAMPLING_RATE_8000; //arm2sp 8kHz
-			else srOut = path->snk_sampleRate;
+			else if(path->sink == CSL_CAPH_DEV_BT_SPKR) 
+			{
+				srOut = path->snk_sampleRate;
+				dataFormat = CSL_CAPH_16BIT_MONO;
+			} else srOut = path->snk_sampleRate;
 			pSrcmRoute->inChnl = srcmIn;
 			pSrcmRoute->tapOutChnl = srcmTap;
 			pSrcmRoute->outDataFmt = dataFormat;
@@ -1035,6 +1041,9 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			if(sink==CSL_CAPH_DEV_DSP_throughMEM)
 			{
 				sink = CSL_CAPH_DEV_IHF; //should be done in csl_caph_srcmixer_obtain_outchnl
+				dataFormat = CSL_CAPH_16BIT_MONO;
+			} else if(sink==CSL_CAPH_DEV_BT_SPKR) {
+				sink = CSL_CAPH_DEV_EP;
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			}
 			dataFormat = csl_caph_get_sink_dataformat(dataFormat, sink);
@@ -1376,7 +1385,8 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 		pcmCfg.mode = CSL_PCM_MASTER_MODE;
 		pcmCfg.protocol = CSL_PCM_PROTOCOL_MONO; 
 		pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
-		pcmCfg.sample_rate = path->src_sampleRate;
+		if(path->source == CSL_CAPH_DEV_MEMORY) pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT;
+		pcmCfg.sample_rate = path->snk_sampleRate;
 		pcmCfg.interleave = TRUE;
 		pcmCfg.ext_bits = 0;
 		pcmCfg.xferSize = CSL_PCM_SSP_TSIZE;
@@ -3060,8 +3070,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         /* Set up the path for BT playback: DDR->CFIFO->SSP4(BT_SPKR)
          */
 		{
-			//CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_NONE}; //more complete path
-			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE}; //only for 8/16kHz mono
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_NONE}; //more complete path
+			//CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE}; //only for 8/16kHz mono
 
 			csl_caph_config_blocks(path->pathID, blocks);
 			csl_caph_start_blocks(path->pathID);

@@ -476,18 +476,11 @@ cVoid chal_caph_switch_free_channel(CHAL_HANDLE handle,
             BRCM_WRITE_REG_IDX(pchal_cb->base, CPH_SSASW_CH01_SRC, reg_idx,reg_val);
             
             //Add delay: 20 cycles of CAPH 26MHz clock, 
-            //i.e. 0.77 microseconds
-            //From ASIC team: when disable SRC_EN, need wait for a moment
-            //before changing other bits inside this register.
-            //Otherwise, SSASW HW statemachine will run into the
-            //erroneous state.
-			//ARM is 800MHz, to generate 0.77 uS, 616 cycles of 800MHz clock is
-			//is needed. Choose loopCount as 5000. It should provide more
-			//then 0.77 uS delay.
-            for (loopCount = 5000; loopCount != 0; loopCount--)
-                ;
-
-            reg_val = BRCM_READ_REG_IDX( pchal_cb->base,  CPH_SSASW_CH01_SRC, reg_idx);
+			//ASIC team (Chin-Sieh Less):
+            //Instead of doing a timing loops, just do 5 reads to
+            //any SSASW register. It should give 20 cycles delay.
+            for (loopCount = 5; loopCount != 0; loopCount--)
+                reg_val = BRCM_READ_REG_IDX( pchal_cb->base,  CPH_SSASW_CH01_SRC, reg_idx);
             reg_val &= ~CPH_SSASW_CH01_SRC_CH01_TWO_WORDS_MASK;
             reg_val &= ~CPH_SSASW_CH01_SRC_CH01_TRIGGER_SEL_MASK;
             reg_val &= ~CPH_SSASW_CH01_SRC_CH01_SRC_ADDR_MASK;
