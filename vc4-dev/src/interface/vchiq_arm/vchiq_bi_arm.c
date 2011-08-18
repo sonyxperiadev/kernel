@@ -1024,7 +1024,10 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
    status = vchiq_init_state(state, g_vchiq_slot_zero, 1/*master*/);
 
    if (status != VCHIQ_SUCCESS)
+   {
+      vcos_log_error("%s: vchiq_init_state failed", __func__);
       goto failed_init_state;
+   }
 
    ipcHandle = chal_ipc_config( NULL );
    chal_icd_set_security (0, BCM_INT_ID_IPC_OPEN, eINT_STATE_SECURE );
