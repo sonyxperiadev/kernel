@@ -55,7 +55,14 @@
  * 2. Add DEBOUNCE_TIME as a part of the platform data in the board file to be
  * accessed in the driver - to make it board specific and not driver generic */
 
-#define DEBOUNCE_TIME	64
+/*
+ * The gpio_set_debounce expects the debounce argument in micro seconds
+ * Previously the kona implementation which is called from gpio_set_debounce
+ * was expecting the argument as milliseconds which was incorrect. 
+ * The commit 38598aea6cb57290ef6ed3518b75b9f398b7694f fixed it. Hence we have to 
+ * change to the correct way of passing the time in microseconds resolution.
+ */
+#define DEBOUNCE_TIME	(64000)
 #define KEY_PRESS_REF_TIME	msecs_to_jiffies(100)
 #define KEY_DETECT_DELAY	msecs_to_jiffies(128)
 #define ACI_S1  0
