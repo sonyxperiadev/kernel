@@ -163,3 +163,10 @@ config BCM_GIST
     ---help---
     This utility provides low latency non-blocking reads from and writes to files.
 
+config BCM_SIGMORPH
+    tristate "Audio Packet Processing"
+    default n
+    ---help---
+    Codec Streaming eXtensions interface to attenuate/mix audio
+   
+
