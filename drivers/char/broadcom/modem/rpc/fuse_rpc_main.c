@@ -209,5 +209,4 @@ static void __exit bcm_fuse_rpc_exit_module(void)
 }
 
 
-module_init(bcm_fuse_rpc_init_module);
-module_exit(bcm_fuse_rpc_exit_module);
+late_initcall(bcm_fuse_rpc_init_module);

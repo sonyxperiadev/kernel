@@ -2033,10 +2033,6 @@ static int ref_clk_init(struct clk* clk)
 	ccu_write_access_enable(ref_clk->ccu_clk, false);
 	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
 
-
-	INIT_LIST_HEAD(&clk->list);
-	list_add(&clk->list, &ref_clk->ccu_clk->ref_list);
-
 	return 0;
 }
 
@@ -2401,7 +2397,8 @@ int __init clock_debug_add_clock(struct clk *c)
 	default:
 		return -EINVAL;
 	}
-	BUG_ON(!dent_ccu_dir);
+	if (!dent_ccu_dir)
+		return -ENOMEM;
 
 	/* create root clock dir /clock/clk_a */
 	dent_clk_dir	=	debugfs_create_dir(c->name, dent_ccu_dir);
