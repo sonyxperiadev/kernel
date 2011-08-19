@@ -97,9 +97,55 @@ typedef struct AUDIO_DRIVER_CallBackParams_t
 {
 	AUDIO_DRIVER_InterruptPeriodCB_t	pfCallBack;
 	void	*pPrivateData;
+	AUDIO_DRIVER_VoipCB_t				voipULCallback;
+	AUDIO_DRIVER_VoipCB_t				voipDLCallback;
 
 }AUDIO_DRIVER_CallBackParams_t;
 
+/* ARM2SP declarations */
+
+typedef enum VORENDER_PLAYBACK_MODE_t
+{
+	VORENDER_PLAYBACK_NONE,
+	VORENDER_PLAYBACK_DL,
+	VORENDER_PLAYBACK_UL,
+	VORENDER_PLAYBACK_BOTH
+} VORENDER_PLAYBACK_MODE_t;
+						
+
+typedef enum VORENDER_VOICE_MIX_MODE_t
+{
+	VORENDER_VOICE_MIX_NONE,
+	VORENDER_VOICE_MIX_DL,
+	VORENDER_VOICE_MIX_UL,
+	VORENDER_VOICE_MIX_BOTH
+} VORENDER_VOICE_MIX_MODE_t;
+
+typedef enum
+{
+	VORENDER_ARM2SP_INSTANCE1,
+	VORENDER_ARM2SP_INSTANCE2,
+	VORENDER_ARM2SP_INSTANCE_TOTAL
+} VORENDER_ARM2SP_INSTANCE_e;
+
+/* Voice capture declarations */
+
+typedef enum VOCAPTURE_RECORD_MODE_t
+{
+	VOCAPTURE_RECORD_NONE,
+	VOCAPTURE_RECORD_UL,		
+	VOCAPTURE_RECORD_DL,
+	VOCAPTURE_RECORD_BOTH
+} VOCAPTURE_RECORD_MODE_t;
+						
+
+typedef enum VOCAPTURE_VOICE_MIX_MODE_t
+{
+	VOCAPTURE_VOICE_MIX_NONE,
+	VOCAPTURE_VOICE_MIX_DL,
+	VOCAPTURE_VOICE_MIX_UL,
+	VOCAPTURE_VOICE_MIX_BOTH
+} VOCAPTURE_VOICE_MIX_MODE_t;
 
 
 /**
@@ -185,5 +231,36 @@ void AUDIO_DRIVER_UpdateBuffer (AUDIO_DRIVER_HANDLE_t drv_handle,
 
 
 UInt32 StreamIdOfDriver(AUDIO_DRIVER_HANDLE_t h);
+
+// ==========================================================================
+//
+// Function Name: ARM2SP_Render_Request
+//
+// Description: Callback for ARM2SP1 playback
+//
+// =========================================================================
+
+void ARM2SP_Render_Request(UInt16 buf_index);
+
+// ==========================================================================
+//
+// Function Name: ARM2SP2_Render_Request
+//
+// Description: Callback for ARM2SP2 playback
+//
+// =========================================================================
+
+void ARM2SP2_Render_Request(UInt16 buf_index);
+
+// ===================================================================
+//
+// Function Name: VPU_Capture_Request
+//
+// Description: Send a VPU capture request for voice capture driver to copy
+// data from DSP shared memory.
+//
+// ====================================================================
+void VPU_Capture_Request(UInt16 buf_index);
+
 
 #endif //#define __AUDIO_DDRIVER_H__

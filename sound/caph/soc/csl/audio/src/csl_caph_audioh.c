@@ -550,45 +550,14 @@ void csl_caph_audioh_start(int path_id)
             /* Power up the earpiece DAC */
             chal_audio_earpath_set_dac_pwr(handle, CHAL_AUDIO_ENABLE);
 
-            /* Wait for 40msec */
-            OSTASK_Sleep(40);	//	SysTimeDelayMilliSec(AUDIOH_HW_DACPWRUP_SETTLE_TIME);
-
 			chal_audio_earpath_set_gain(handle, 0);
             /* Powerup the Ear Piece Driver */
             chal_audio_earpath_set_drv_pwr(handle, CHAL_AUDIO_ENABLE);
 
-            /* Wait for 40msec */
-            OSTASK_Sleep(40);	// SysTimeDelayMilliSec(AUDIOH_HW_SLOWRAMP_RAMP1UP_TIME);
-
-            /* External Pop-Click sequence */
-            chal_audio_earpath_set_slowramp_ctrl(handle, CHAL_AUDIO_AUDIOTX_SR_EXT_POPCLICK);
-
-            /* Cause a raising edge on SR_PUP_ED_DRV_TRIG and END_PWRDOWN to 1*/
-            chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);
-            chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN);
-
-            /* Wait for 150usec */
-            OSTASK_Sleep(1);	//	SysTimeDelayMicroSec(AUDIOH_HW_SLOWRAMP_PWRDN_PULSE_TIME);
-
-            /* END_PWRDOWN to 0. This will create a 150usec pulse for this signal */
-            chal_audio_earpath_clear_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN);
-            chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_EN_RAMP1_45M);
-            chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PU_ENABLE);
-
-
-            /* End RAMP1_45M and Start RAMP2_5M */
-            chal_audio_earpath_clear_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_EN_RAMP1_45M);
-            chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_EN_RAMP2_5M);
-
-            /* Wait for 5msec */
-            OSTASK_Sleep(5);	// SysTimeDelayMilliSec(AUDIOH_HW_SLOWRAMP_RAMP2UP_TIME);
-
-            /* End RAMP2_5M */
-            chal_audio_earpath_clear_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_EN_RAMP2_5M);
-            chal_audio_earpath_clear_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PU_ENABLE);
-            chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_END_PWRUP);
-
 			chal_audio_earpath_enable(handle, CHAL_AUDIO_ENABLE);	// Enable the Earpiece path
+
+            /* Cause a raising edge on SR_PUP_ED_DRV_TRIG */
+            chal_audio_earpath_set_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);
 
 			break;
 
@@ -734,6 +703,8 @@ void csl_caph_audioh_stop_keep_config(int path_id)
 			chal_audio_earpath_int_enable(handle, FALSE, FALSE);
 			chal_audio_earpath_enable(handle, 0);	// Disable the Earpiece path
 			chal_audio_earpath_set_dac_pwr(handle, 0);
+            /* Cause a raising edge on SR_PUP_ED_DRV_TRIG */
+            chal_audio_earpath_clear_slowramp_ctrl(handle,CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG);
 
 			break;
 
