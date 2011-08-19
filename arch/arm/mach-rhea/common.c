@@ -49,6 +49,7 @@
 #include <plat/spi_kona.h>
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
+#include <linux/usb/android_composite.h>
 
 #ifdef CONFIG_KONA_AVS
 #include <plat/kona_avs.h>
