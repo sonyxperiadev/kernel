@@ -345,12 +345,10 @@ SSPI_hw_status_t SSPI_hw_i2c_send_stop_sequence(SSPI_hw_core_t *pCore)
 }
 #endif
 
-
-SSPI_hw_status_t SSPI_hw_i2c_do_read_transaction(SSPI_hw_core_t *pCore, 
-						 unsigned char *rx_buf, 
-						 unsigned int rx_len, 
-						 unsigned char *tx_buf,
-						 unsigned int tx_len)
+SSPI_hw_status_t SSPI_hw_i2c_do_transaction(SSPI_hw_core_t *pCore, 
+					 unsigned char *rx_buf, unsigned int rx_len, 
+					 unsigned char *tx_buf, unsigned int tx_len,
+					 unsigned int buf_len, SSPI_hw_i2c_transaction_t tran_type)
 {
 	chal_sspi_task_conf_t tk_conf;
 	chal_sspi_seq_conf_t seq_conf;
@@ -362,231 +360,253 @@ SSPI_hw_status_t SSPI_hw_i2c_do_read_transaction(SSPI_hw_core_t *pCore,
 	memset(&tk_conf, 0, sizeof(tk_conf));
 	tk_conf.cs_sel = SSPI_CS_SEL_CS0;
 	tk_conf.chan_sel = SSPI_CHAN_SEL_CHAN0;
-    	tk_conf.rx_sel = SSPI_RX_SEL_COPY_TX0;
-    	tk_conf.tx_sel = SSPI_TX_SEL_TX0;
+	tk_conf.rx_sel = SSPI_RX_SEL_COPY_TX0;
+	tk_conf.tx_sel = SSPI_TX_SEL_TX0;
 	tk_conf.div_sel = SSPI_CLK_DIVIDER0;
 	tk_conf.seq_ptr = 0;
 	tk_conf.loop_cnt = 0;
 	tk_conf.init_cond_mask = 0;
-    	if(chal_sspi_set_task(pCore->handle, 0, SSPI_PROT_I2C, &tk_conf))
+	if(chal_sspi_set_task(pCore->handle, 0, SSPI_PROT_I2C, &tk_conf))
 		return(SSPI_HW_ERR_TASK);
 
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 0;
-	seq_conf.rx_enable = 0;
-	seq_conf.cs_activate = 0;
-	seq_conf.cs_deactivate = 0;
-	seq_conf.pattern_mode = 1;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 0;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 0, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
+	if(tran_type == I2C_WRRD_TRANSACTION) {
+		memset(&seq_conf, 0, sizeof(seq_conf));
+		seq_conf.tx_enable = 0;
+		seq_conf.rx_enable = 0;
+		seq_conf.cs_activate = 0;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 1;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 0, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 1;
+		seq_conf.rx_enable = 1;
+		seq_conf.cs_activate = 1;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 0;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 1, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 1;
+		seq_conf.rx_enable = 1;
+		seq_conf.cs_activate = 1;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 0;
+		seq_conf.rep_cnt = tx_len - 1;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 2, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 0;
+		seq_conf.rx_enable = 0;
+		seq_conf.cs_activate = 0;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 1;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 3, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 1;
+		seq_conf.rx_enable = 1;
+		seq_conf.cs_activate = 1;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 0;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 4, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 1;
+		seq_conf.rx_enable = 1;
+		seq_conf.cs_activate = 1;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 0;
+		seq_conf.rep_cnt = rx_len - 1;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 1;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 5, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 0;
+		seq_conf.rx_enable = 0;
+		seq_conf.cs_activate = 0;
+		seq_conf.cs_deactivate = 1;
+		seq_conf.pattern_mode = 1;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 1;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 6, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+	}
+	else if(tran_type == I2C_RDONLY_TRANSACTION) {
+		memset(&seq_conf, 0, sizeof(seq_conf));
+		seq_conf.tx_enable = 0;
+		seq_conf.rx_enable = 0;
+		seq_conf.cs_activate = 0;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 1;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 0, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 1;
+		seq_conf.rx_enable = 1;
+		seq_conf.cs_activate = 1;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 0;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 1, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 1;
+		seq_conf.rx_enable = 1;
+		seq_conf.cs_activate = 1;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 0;
+		seq_conf.rep_cnt = rx_len - 1;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 1;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 2, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+
+		seq_conf.tx_enable = 0;
+		seq_conf.rx_enable = 0;
+		seq_conf.cs_activate = 0;
+		seq_conf.cs_deactivate = 1;
+		seq_conf.pattern_mode = 1;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 1;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 3, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+	}
+	else {
+		memset(&seq_conf, 0, sizeof(seq_conf));
+		seq_conf.tx_enable = 0;
+		seq_conf.rx_enable = 0;
+		seq_conf.cs_activate = 0;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 1;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 0, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
 
 
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 1;
-	seq_conf.rx_enable = 1;
-	seq_conf.cs_activate = 1;
-	seq_conf.cs_deactivate = 0;
-	seq_conf.pattern_mode = 0;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 0;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 1, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
+		memset(&seq_conf, 0, sizeof(seq_conf));
+		seq_conf.tx_enable = 1;
+		seq_conf.rx_enable = 1;
+		seq_conf.cs_activate = 1;
+		seq_conf.cs_deactivate = 0;
+		seq_conf.pattern_mode = 0;
+		seq_conf.rep_cnt = tx_len; // tx_len also includes the byte for Slave Addr
+		seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 0;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 1, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
 
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 1;
-	seq_conf.rx_enable = 1;
-	seq_conf.cs_activate = 1;
-	seq_conf.cs_deactivate = 0;
-	seq_conf.pattern_mode = 0;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 0;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 2, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
+		memset(&seq_conf, 0, sizeof(seq_conf));
+		seq_conf.tx_enable = 0;
+		seq_conf.rx_enable = 0;
+		seq_conf.cs_activate = 0;
+		seq_conf.cs_deactivate = 1;
+		seq_conf.pattern_mode = 1;
+		seq_conf.rep_cnt = 0;
+		seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;
+		seq_conf.rx_fifo_sel = 0;
+		seq_conf.tx_fifo_sel = 0;
+		seq_conf.frm_sel = 1;
+		seq_conf.rx_sidetone_on = 0;
+		seq_conf.tx_sidetone_on = 0;
+		seq_conf.next_pc = 0;
+		if(chal_sspi_set_sequence(pCore->handle, 2, SSPI_PROT_I2C, &seq_conf))
+			return(SSPI_HW_ERR_SEQUENCE);
+	}
 
-
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 0;
-	seq_conf.rx_enable = 0;
-	seq_conf.cs_activate = 0;
-	seq_conf.cs_deactivate = 0;
-	seq_conf.pattern_mode = 1;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 0;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 3, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
-
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 1;
-	seq_conf.rx_enable = 1;
-	seq_conf.cs_activate = 1;
-	seq_conf.cs_deactivate = 0;
-	seq_conf.pattern_mode = 0;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 0;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 4, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
-
-
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 1;
-	seq_conf.rx_enable = 1;
-	seq_conf.cs_activate = 1;
-	seq_conf.cs_deactivate = 0;
-	seq_conf.pattern_mode = 0;
-	seq_conf.rep_cnt = rx_len - 1 - 1 -1 -1 ;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 1;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 5, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
-
-
-
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 0;
-	seq_conf.rx_enable = 0;
-	seq_conf.cs_activate = 0;
-	seq_conf.cs_deactivate = 1;
-	seq_conf.pattern_mode = 1;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 1;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 6, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
-
-	chal_sspi_write_data(pCore->handle, SSPI_FIFO_ID_TX0, SSPI_PROT_I2C, tx_buf, tx_len);
-
+	// tx_buf and rx_buf actually have the same length
+	chal_sspi_write_data(pCore->handle, SSPI_FIFO_ID_TX0, SSPI_PROT_I2C, tx_buf, buf_len);
 	chal_sspi_enable_scheduler(pCore->handle, 1);
-
-	chal_sspi_read_data(pCore->handle, SSPI_FIFO_ID_RX0, SSPI_PROT_I2C, rx_buf, rx_len);
-
-	return 0;
-}
-
-SSPI_hw_status_t SSPI_hw_i2c_do_write_transaction(SSPI_hw_core_t *pCore, 
-						 unsigned char *rx_buf, 
-						 unsigned int rx_len, 
-						 unsigned char *tx_buf,
-						 unsigned int tx_len)
-{
-	chal_sspi_task_conf_t tk_conf;
-	chal_sspi_seq_conf_t seq_conf;
-
-
-	if (!pCore->handle)
-		return(SSPI_HW_ERR_HANDLE);
-
-	memset(&tk_conf, 0, sizeof(tk_conf));
-	tk_conf.cs_sel = SSPI_CS_SEL_CS0;
-	tk_conf.chan_sel = SSPI_CHAN_SEL_CHAN0;
-    	tk_conf.rx_sel = SSPI_RX_SEL_COPY_TX0;
-    	tk_conf.tx_sel = SSPI_TX_SEL_TX0;
-	tk_conf.div_sel = SSPI_CLK_DIVIDER0;
-	tk_conf.seq_ptr = 0;
-	tk_conf.loop_cnt = 0;
-	tk_conf.init_cond_mask = 0;
-    	if(chal_sspi_set_task(pCore->handle, 0, SSPI_PROT_I2C, &tk_conf))
-		return(SSPI_HW_ERR_TASK);
-
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 0;
-	seq_conf.rx_enable = 0;
-	seq_conf.cs_activate = 0;
-	seq_conf.cs_deactivate = 0;
-	seq_conf.pattern_mode = 1;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 0;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 0, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
-
-
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 1;
-	seq_conf.rx_enable = 1;
-	seq_conf.cs_activate = 1;
-	seq_conf.cs_deactivate = 0;
-	seq_conf.pattern_mode = 0;
-	seq_conf.rep_cnt = tx_len -1;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_NEXT_PC;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 0;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 1, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
-
-	memset(&seq_conf, 0, sizeof(seq_conf));
-	seq_conf.tx_enable = 0;
-	seq_conf.rx_enable = 0;
-	seq_conf.cs_activate = 0;
-	seq_conf.cs_deactivate = 1;
-	seq_conf.pattern_mode = 1;
-	seq_conf.rep_cnt = 0;
-	seq_conf.opcode = SSPI_SEQ_OPCODE_STOP;
-	seq_conf.rx_fifo_sel = 0;
-	seq_conf.tx_fifo_sel = 0;
-	seq_conf.frm_sel = 1;
-	seq_conf.rx_sidetone_on = 0;
-	seq_conf.tx_sidetone_on = 0;
-	seq_conf.next_pc = 0;
-	if(chal_sspi_set_sequence(pCore->handle, 2, SSPI_PROT_I2C, &seq_conf))
-		return(SSPI_HW_ERR_SEQUENCE);
-
-	chal_sspi_write_data(pCore->handle, SSPI_FIFO_ID_TX0, SSPI_PROT_I2C, tx_buf, tx_len);
-
-	chal_sspi_enable_scheduler(pCore->handle, 1);
-
-	chal_sspi_read_data(pCore->handle, SSPI_FIFO_ID_RX0, SSPI_PROT_I2C, rx_buf, rx_len);
-
+	chal_sspi_read_data(pCore->handle, SSPI_FIFO_ID_RX0, SSPI_PROT_I2C, rx_buf, buf_len);
 	return 0;
 }
 

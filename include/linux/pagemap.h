@@ -448,6 +448,7 @@ static inline int fault_in_pages_readable(const char __user *uaddr, int size)
 		if (((unsigned long)uaddr & PAGE_MASK) !=
 				((unsigned long)end & PAGE_MASK)) {
 		 	ret = __get_user(c, end);
+        	/* Fix "variable 'c' set but not used" warning. */
 			(void)c;
 		}
 	}

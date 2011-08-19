@@ -17,7 +17,7 @@ Broadcom's express prior written consent.
 *   @brief  This file contains the gain distribution tables for driver layer
 *
 ****************************************************************************/
-#include "mobcom_types.h"
+
 
 #ifndef _CSL_CAPH_GAIN_H_
 #define _CSL_CAPH_GAIN_H_
@@ -56,8 +56,7 @@ typedef enum
 	SPKR_EP_DSP,  //Voice Call EP
 	SPKR_IHF_HS_DSP,  //Voice Call IHF and HS
 	SPKR_EP, //Multimedia EP
-	SPKR_IHF,  // Multimedia IHF
-	SPKR_HS,  // Multimedia HS
+	SPKR_IHF_HS,  // Multimedia IHF an HS
 	SPKR_PATH_MAX
 }csl_caph_SPKR_Path_e;
 

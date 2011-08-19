@@ -65,7 +65,9 @@
 /* ---- Private Function Prototypes -------------------------------------- */
 static void __exit dwc_otg_device_exit(void);
 static int __init  dwc_otg_device_init(void);
+#ifdef LM_INTERFACE
 static int __init  dwc_otg_device_register( unsigned irq, unsigned base_addr );
+#endif
 
 /* ---- Private Variables ------------------------------------------------ */
 
@@ -75,7 +77,14 @@ static unsigned int otghost = 0;
 #else
 static unsigned int otghost = 1;
 #endif
+#ifdef CONFIG_ARCH_RHEA
+/* Rhea needs to default to device mode until
+ * dynamic switching through ID pin is supported
+ */
+static unsigned int otgdevice = 1;
+#else
 static unsigned int otgdevice = 0;
+#endif
 
 #ifdef LM_INTERFACE
 static struct lm_device *lmdev = NULL;
@@ -130,7 +139,7 @@ static void __exit dwc_otg_device_exit(void)
 	}
 #endif
 }
-
+#if 0
 /****************************************************************************
  *
  ***************************************************************************/
@@ -241,6 +250,7 @@ static ssize_t dump_konahsotgctrl(struct device *dev,
 	return sprintf(buf, "konahsotgctrl register dump\n");
 }
 static DEVICE_ATTR(konahsotgctrldump, S_IRUSR, dump_konahsotgctrl, NULL);
+#endif
 
 /****************************************************************************
  *

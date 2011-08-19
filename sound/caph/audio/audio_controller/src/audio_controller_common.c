@@ -38,17 +38,13 @@
 #include "resultcode.h"
 
 #include "audio_consts.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
-#include "csl_aud_drv.h"
+
 #endif
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
 #include "audio_gain_table.h"
-#include "auddrv_def.h"
 #include "audio_vdriver.h"
-#include "dspcmd.h"
 #include "audio_controller.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "i2s.h"
@@ -56,7 +52,6 @@
 #endif
 #include "log.h"
 #include "xassert.h"
-#include "audioapi_asic.h"
 
 #if !defined(NO_PMU)
 #if defined(EXTERNAL_AMP_CONTROL)
@@ -390,6 +385,99 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 	AUDDRV_SetAudioMode( mode, AUDDRV_MIC1|AUDDRV_MIC2|AUDDRV_SPEAKER);
 }
 #endif
+
+
+//*********************************************************************
+//Description:
+//	Get audio mode from sink
+//Parameters
+//	mode -- audio mode
+//	sink -- Sink device coresponding to audio mode
+//Return    none
+//**********************************************************************/
+void AUDCTRL_GetAudioModeBySink(AUDCTRL_SPEAKER_t sink, AudioMode_t *mode)
+{
+	switch(sink)
+	{
+        case AUDCTRL_SPK_HANDSET:
+            *mode = AUDIO_MODE_HANDSET;
+            break;
+        case AUDCTRL_SPK_HEADSET:
+            *mode = AUDIO_MODE_HEADSET;
+            break;
+        case AUDCTRL_SPK_HANDSFREE:
+            *mode = AUDIO_MODE_HANDSFREE;
+            break;
+        case AUDCTRL_SPK_BTM:
+        case AUDCTRL_SPK_BTS:
+            *mode = AUDIO_MODE_BLUETOOTH;
+            break;
+        case AUDCTRL_SPK_LOUDSPK:
+            *mode = AUDIO_MODE_SPEAKERPHONE;
+            break;
+        case AUDCTRL_SPK_TTY:
+            *mode = AUDIO_MODE_TTY;
+            break;
+        case AUDCTRL_SPK_HAC:
+            *mode = AUDIO_MODE_HAC;
+            break;
+        case AUDCTRL_SPK_USB:
+            *mode = AUDIO_MODE_USB;
+            break;
+        case AUDCTRL_SPK_I2S:
+        case AUDCTRL_SPK_VIBRA:
+            *mode = AUDIO_MODE_INVALID;
+            break;
+		
+        default:
+            Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetAudioModeBySink(): sink %d is out of range\n", sink);
+			break;
+	}
+}
+
+//*********************************************************************
+//Description:
+//	Get sink and source device by audio mode
+//Parameters
+//	mode -- audio mode
+//	pMic -- Source device coresponding to audio mode
+//	pSpk -- Sink device coresponding to audio mode
+//Return   none
+//**********************************************************************/
+void AUDCTRL_GetVoiceSrcSinkByMode(AudioMode_t mode, AUDCTRL_MICROPHONE_t *pMic, AUDCTRL_SPEAKER_t *pSpk)
+{
+
+	switch(mode)
+	{
+		case	AUDIO_MODE_HANDSET:
+		case	AUDIO_MODE_HANDSET_WB:
+        case    AUDIO_MODE_HAC:
+        case    AUDIO_MODE_HAC_WB:                
+			*pMic = AUDCTRL_MIC_MAIN;
+			*pSpk = AUDCTRL_SPK_HANDSET;
+			break;
+		case	AUDIO_MODE_HEADSET:
+		case	AUDIO_MODE_HEADSET_WB:
+        case    AUDIO_MODE_TTY:
+        case    AUDIO_MODE_TTY_WB:
+			*pMic = AUDCTRL_MIC_AUX;
+			*pSpk = AUDCTRL_SPK_HEADSET;
+			break;
+		case	AUDIO_MODE_BLUETOOTH:
+		case	AUDIO_MODE_BLUETOOTH_WB:
+			*pMic = AUDCTRL_MIC_BTM;
+			*pSpk = AUDCTRL_SPK_BTM;
+			break;
+		case	AUDIO_MODE_SPEAKERPHONE:
+		case	AUDIO_MODE_SPEAKERPHONE_WB:
+			*pMic = AUDCTRL_MIC_MAIN;
+			*pSpk = AUDCTRL_SPK_LOUDSPK;
+			break;
+		default:
+            Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetVoiceSrcSinkByMode() mode %d is out of range\n", mode);
+			break;
+	}
+}
 
 //=============================================================================
 // Private function definitions

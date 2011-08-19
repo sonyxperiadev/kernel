@@ -32,6 +32,7 @@ typedef struct _TIDChanOfPlaybackDev
 typedef struct _TIDChanOfCaptureDev
 {
     AUDIO_DRIVER_TYPE_t     drv_type;
+	AUDIO_HW_ID_t     		hw_sink;
     AUDIO_HW_ID_t           hw_id;
     AUDCTRL_MICROPHONE_t       mic;
 	AUDDRV_DEVICE_e aud_dev;

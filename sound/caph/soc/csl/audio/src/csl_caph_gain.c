@@ -22,7 +22,7 @@ Broadcom's express prior written consent.
 #include "log.h"
 // why use PMU in csl here????
 #include "linux/broadcom/bcm59055-audio.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "csl_caph_gain.h"
 #include "string.h"

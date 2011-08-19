@@ -65,6 +65,20 @@ typedef struct
 } DMA_MMAP_SEGMENT_T;
 
 /*
+ * A pagelist represents a region of user memory, which may be discontiguous
+ * in physical memory. The precise address and byte count are stored in the
+ * region. */
+typedef struct
+{
+    enum dma_data_direction dir;   /* Direction this transfer is intended for */
+    struct mm_struct *mm;          /* This is needed if get_user_pages fails. */
+    int numLockedPages;            /* The size of the following array. A zero
+                                    * indicates that get_user_pages failed. */
+    struct page *pages[0];         /* The array of page pointers, as
+                                      initialised by get_user_pages. */
+} DMA_MMAP_PAGELIST_T;
+
+/*
  * A region represents a virtually contiguous chunk of memory, which may be
  * made up of multiple segments
  */
@@ -83,14 +97,10 @@ typedef struct
     DMA_MMAP_SEGMENT_T     *segment;
 
     /*
-     * When a region corresponds to user memory, we need to lock all of the
-     * pages down before we can figure out the physical addresses. The
-     * lockedPage array contains the pages that were locked, and which
-     * subsequently need to be unlocked once the memory is unmapped
+     * When a region corresponds to user memory, the calling client must
+     * supply a pagelist which describes the memory.
      */
-    unsigned                numLockedPages;
-    struct page           **lockedPages;
-
+    DMA_MMAP_PAGELIST_T    *pagelist;
 } DMA_MMAP_REGION_T;
 
 typedef struct
@@ -100,11 +110,11 @@ typedef struct
     enum dma_data_direction dir;   /* Direction this transfer is intended for */
 
     /*
-     * In the event that we're mapping user memory, we need to know which task
-     * the memory is for, so that we can obtain the correct mm locks.
+     * In the event that we're mapping user memory, the client must supply
+     * a pagelist which describes the memory.
      */
 
-    struct task_struct     *userTask;
+    DMA_MMAP_PAGELIST_T    *pagelist;
 
     int                     numRegionsUsed;
     int                     numRegionsAllocated;
@@ -150,19 +160,6 @@ extern DMA_MMAP_TYPE_T dma_mmap_mem_type
 (
    void *addr
 );
-
-/*
- * Sets the process (aka userTask) associated with a mem map. This is
- * required if user-mode segments will be added to the mapping
- */
-static inline void dma_mmap_set_user_task
-(
-   DMA_MMAP_CFG_T *memMap,
-   struct task_struct *task
-)
-{
-   memMap->userTask = task;
-}
 
 /*
  * Looks at a memory address and determines if we support DMA'ing to/from that
@@ -321,5 +318,39 @@ extern int dma_mmap_add_desc
  * Main init function to be called once in arch
  */
 extern int dma_mmap_init(void);
+
+/*
+ * Crate a pagelist describing the supplied user-space buffer, and return it
+ * through the pagelist_out pointer. After calling, the buffer pages should
+ * be locked, ready for DMA in the indicated direction.
+ *
+ * Returns the number of locked pages, or a negative error code.
+ */
+extern int dma_mmap_create_pagelist
+(
+   char __user             *addr,
+   size_t                   numBytes,
+   enum dma_data_direction  dir,
+   struct task_struct      *userTask,
+   DMA_MMAP_PAGELIST_T    **pagelist_out
+);
+
+/*
+ * Free a pagelist previously allocated using dma_mmap_create_pagelist.
+ * This will unlock any locked pages.
+ */
+extern void dma_mmap_free_pagelist
+(
+   DMA_MMAP_PAGELIST_T *pagelist
+);
+
+/*
+ * Specifies a pagelist up front, to get it into dma_mmap_add_region.
+ */
+extern void dma_mmap_set_pagelist
+(
+   DMA_MMAP_CFG_T      *memMap,
+   DMA_MMAP_PAGELIST_T *pagelist
+);
 
 #endif /* ASM_ARM_ARCH_BCMHANA_DMA_MMAP_H */

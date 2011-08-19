@@ -15,7 +15,6 @@
 #ifndef VC_VCHI_FB_H
 #define VC_VCHI_FB_H
 
-//#include "vchost_config.h"
 #include "interface/vchi/vchi.h"
 #include "interface/vcos/vcos.h"
 #include "vc_fb_defs.h"

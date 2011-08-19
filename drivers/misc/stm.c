@@ -16,11 +16,6 @@
 #include <trace/stm.h>
 #ifdef CONFIG_BCM_STM
 #include "plat/mobcom_types.h"
-#include "mach/rdb/brcm_rdb_util.h"
-#include "mach/rdb/brcm_rdb_swstm.h"
-#include "mach/rdb/brcm_rdb_atb_stm.h"
-#include "mach/rdb/brcm_rdb_cstf.h"
-#include "mach/rdb/brcm_rdb_atbfilter.h"
 #ifdef CONFIG_ARCH_RHEA
 #include "mach/rdb/brcm_rdb_padctrlreg.h"
 #endif
@@ -101,38 +96,6 @@ static CHAL_TRACE_DEV_t trace_base_addr = {
 	.GICTR_base = KONA_GICTR_VA,	
 };
 static CHAL_HANDLE kona_trace_handle = NULL;
-
-static void kona_tracepad_init(void)
-{
-    // All register config values taken from T32 script
-    
-    // clear pti_clk_is_idle
-#ifdef CONFIG_ARCH_RHEA
-    BRCM_WRITE_REG(KONA_CHIPREG_VA, CHIPREG_PERIPH_SPARE_CONTROL1, 0x2);
-#endif
-    // Config ATB Filter rm id's for STM
-    BRCM_WRITE_REG(KONA_ATBFILTER_VA, ATBFILTER_ATB_FILTER, 0x203);
-    // Config Funnels
-    BRCM_WRITE_REG(KONA_FUNNEL_VA, CSTF_FUNNEL_CONTROL, 0xe40);
-    BRCM_WRITE_REG(KONA_FIN_FUNNEL_VA, CSTF_FUNNEL_CONTROL, 0xe02);
-    // Config STM
-    BRCM_WRITE_REG(KONA_STM_VA, ATB_STM_CONFIG, 0x102);
-    BRCM_WRITE_REG(KONA_SWSTM_VA, SWSTM_R_CONFIG, 0x82);
-    BRCM_WRITE_REG(KONA_SWSTM_ST_VA, SWSTM_R_CONFIG, 0x82);
-
-#if defined(CONFIG_ARCH_RHEA)
-    // Not tracepad setup, but RXD clock setup
-    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x000) = 0xA5A501; // WR_ACCESS
-    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x01C) |= 0x50000; // UARTB3_POLICY3_MASK
-    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x034) = 0x01;		// LVM_EN
-    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x00C) = 0x05;		// POLICY_CTL
-    *(volatile UInt32*)(KONA_SLV_CLK_VA +0x408) = 0x0F;		// UARTB3
-#elif defined(CONFIG_ARCH_ISLAND)	
-    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0x000) = 0xA5A501; // WR_ACCESS 35001000
-    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0xa24) = 0x1; 
-    *(volatile UInt32*)(KONA_ROOT_CLK_VA +0x000) = 0xA5A500;
-#endif
-}
 
 static int kona_trace_funnel_set_enable(CHAL_TRACE_FUNNEL_t funnel_type,
 					    uint8_t port_n, int enable)
@@ -236,8 +199,6 @@ static int __init kona_trace_init(void)
 
 	if (kona_trace_handle)
 		return 0;
-		
-	kona_tracepad_init();
 
 	chal_trace_init(&trace_base_addr);
 	kona_trace_handle = &trace_base_addr;

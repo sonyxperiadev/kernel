@@ -130,6 +130,20 @@ static void hcd_start_func(void *_vp)
 	}
 }
 
+#ifdef CONFIG_USB_OTG_UTILS
+/**
+ * Work queue function for disabling VBUS. 
+ * otg_set_vbus() must be called in a process context.
+ */
+static void disable_vbus_func(void *_vp)
+{
+	dwc_otg_core_if_t *core_if = _vp;
+
+	if (core_if->xceiver->set_vbus)
+		core_if->xceiver->set_vbus(core_if->xceiver, false);
+}
+#endif
+
 static void del_xfer_timers(dwc_otg_hcd_t * hcd)
 {
 #ifdef DEBUG
@@ -289,6 +303,11 @@ static int32_t dwc_otg_hcd_disconnect_cb(void *p)
 			hprt0.b.prtpwr = 0;
 			dwc_write_reg32(dwc_otg_hcd->core_if->host_if->hprt0,
 					hprt0.d32);
+#ifdef CONFIG_USB_OTG_UTILS
+			DWC_WORKQ_SCHEDULE(dwc_otg_hcd->core_if->wq_otg,
+					   disable_vbus_func,
+					   dwc_otg_hcd->core_if, "disconnect");
+#endif
 		}
 
 		dwc_otg_disable_host_interrupts(dwc_otg_hcd->core_if);
@@ -439,6 +458,10 @@ void dwc_otg_hcd_stop(dwc_otg_hcd_t * hcd)
 	hprt0.b.prtpwr = 0;
 	dwc_write_reg32(hcd->core_if->host_if->hprt0, hprt0.d32);
 	dwc_mdelay(1);
+#ifdef CONFIG_USB_OTG_UTILS
+	if (hcd->core_if->xceiver->set_vbus)
+		hcd->core_if->xceiver->set_vbus(hcd->core_if->xceiver, false);
+#endif
 }
 
 int dwc_otg_hcd_urb_enqueue(dwc_otg_hcd_t * hcd,
@@ -2080,6 +2103,11 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t * dwc_otg_hcd,
 			hprt0.d32 = dwc_otg_read_hprt0(core_if);
 			hprt0.b.prtpwr = 0;
 			dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+#ifdef CONFIG_USB_OTG_UTILS
+			if (core_if->xceiver->set_vbus)
+				core_if->xceiver->set_vbus(core_if->xceiver,
+							   false);
+#endif
 			break;
 		case UHF_PORT_INDICATOR:
 			DWC_DEBUGPL(DBG_HCD, "DWC OTG HCD HUB CONTROL - "
@@ -2436,6 +2464,11 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t * dwc_otg_hcd,
 			hprt0.d32 = dwc_otg_read_hprt0(core_if);
 			hprt0.b.prtpwr = 1;
 			dwc_write_reg32(core_if->host_if->hprt0, hprt0.d32);
+#ifdef CONFIG_USB_OTG_UTILS
+			if (core_if->xceiver->set_vbus)
+				core_if->xceiver->set_vbus(core_if->xceiver,
+							   true);
+#endif
 			break;
 		case UHF_PORT_RESET:
 			if ((core_if->power_down == 2) && (core_if->hibernation_suspend == 1) ) {

@@ -284,10 +284,9 @@ static int vceb_init_write(struct file *file, const char *buffer, unsigned long 
    char *init_string = NULL;
    int init = 0;
    int noreset = 0;
-   int resume = 0;
+//   int resume = 0;
    char *cmd_params[ VCEB_LINUX_MAX_CMD_PARAMS ];
    int num_args_parsed = 0;
-   char *params = "";
    VCEB_LINUX_INSTANCE_T linux_inst = data;
    int32_t  success;
 
@@ -318,10 +317,12 @@ static int vceb_init_write(struct file *file, const char *buffer, unsigned long 
    {
       init = 1;
    }
+#if 0
    else if( 0 == strncmp( "resume", init_string, strlen( "resume" ) ) )
    {
       resume = 1;
    }
+#endif
 
    //parse the rest of the args
    //    [instance_name] [instance_params]      
@@ -330,9 +331,6 @@ static int vceb_init_write(struct file *file, const char *buffer, unsigned long 
                                           VCEB_LINUX_MAX_CMD_PARAMS,
                                           1 /* we expect 2 words followed by lots of spaces */ );
 
-   if( num_args_parsed == 2 )
-      params = cmd_params[1];
-      
    //get a ptr to this bus interface
 
    //make sure we want to init this
@@ -487,10 +485,6 @@ static int vceb_download_write(struct file *file, const char *buffer, unsigned l
       void *file_buffer = NULL;
       uint32_t file_size = 0;
       const uint32_t max_file_size = 3072 * 1024;
-      char *path_end = NULL;
-
-      //first, prune the string to remove any trailing characters
-      path_end = cmd_params[0] + strlen(cmd_params[0]) - 1;
 
       if(*(cmd_params[0]) == '\n')
          *(cmd_params[0]) = 0;

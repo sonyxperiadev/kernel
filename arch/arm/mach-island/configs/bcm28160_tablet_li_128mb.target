@@ -1,0 +1,7 @@
+name   = bcm28160_tablet_li_128mb
+arch   = arm
+family = island
+chip   = 28160
+board  = tablet_28160
+option = li_128mb
+

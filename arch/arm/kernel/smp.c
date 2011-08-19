@@ -40,6 +40,10 @@
 #include <asm/ptrace.h>
 #include <asm/localtimer.h>
 
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+#include <linux/broadcom/knllog.h>
+#endif
+
 /*
  * as from 2.5, kernels no longer have an init_tasks structure
  * so we need some other way of telling a new secondary core
@@ -456,10 +460,20 @@ asmlinkage void __exception_irq_entry do_local_timer(struct pt_regs *regs)
 	struct pt_regs *old_regs = set_irq_regs(regs);
 	int cpu = smp_processor_id();
 
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+	if (gKnllogIrqSchedEnable & KNLLOG_IRQ)
+		KNLLOG("in  [0x%x]\n", twd_base);
+#endif
+
 	if (local_timer_ack()) {
 		__inc_irq_stat(cpu, local_timer_irqs);
 		ipi_timer();
 	}
+
+#ifdef CONFIG_BCM_KNLLOG_IRQ
+	if (gKnllogIrqSchedEnable & KNLLOG_IRQ)
+		KNLLOG("out [0x%x]\n", twd_base);
+#endif
 
 	set_irq_regs(old_regs);
 }

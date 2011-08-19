@@ -265,6 +265,7 @@
 
 #define		DSP_FEATURE_COMMAND_QBC_STAR_STOPCNT
 #define		DSP_FEATURE_AUDIO_ENHANCEMENT		//	OMEGA, ALPHA, KAPPA, BETA
+#define		DSP_FEATURE_NEW_SMC_RECORDS
 
 
 //******************************************************************
@@ -304,7 +305,8 @@ typedef enum
 typedef enum
 {
     MOD_GMSK = 0,
-    MOD_8PSK = 1
+    MOD_8PSK = 1,
+    MOD_DUMMY= 2
 } Modulation_t;
 
 

@@ -102,7 +102,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
 {
     int                         rc;
     //gpiomux_rc_e                gpiomux_rc;
-    VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
+//    VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
     VCEB_HOST_INTERFACE_STATE_T state = instance->state;
 #if 0
     DBG_LOG( BootTrace, "called, vc_boot_mode = '%s'", vc_boot_mode );

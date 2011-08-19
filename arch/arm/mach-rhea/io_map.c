@@ -57,6 +57,7 @@ static struct map_desc rhea_io_desc[] __initdata =
 	* NOTE: The following are alphabetically ordered.
 	***************************************************/
 
+	IO_DESC( KONA_PROC_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_AON_CLK_VA, SZ_4K	),
 	IO_DESC( KONA_ATBFILTER_VA, SZ_4K  ),
 	IO_DESC( KONA_BINTC_BASE_ADDR, SZ_4K  ),
@@ -76,6 +77,7 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_SLV_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_L2C_VA, SZ_4K ),
 	IO_DESC( KONA_MPHI_VA, SZ_4K ),
+	IO_DESC(KONA_MEMC0_NS_VA, SZ_4K),
 	IO_DESC( KONA_MPU_VA, SZ_4K ),
 	IO_DESC( KONA_OTP_VA, SZ_4K ),
 	IO_DESC( KONA_PKA_VA, SZ_4K ),
@@ -105,9 +107,9 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_SSP0_VA, SZ_4K ),
 	IO_DESC( KONA_SSP3_VA, SZ_4K ),
 
-	IO_DESC( KONA_STM_VA, SZ_4K ),  
-	IO_DESC( KONA_SWSTM_VA, SZ_4K ),  
-	IO_DESC( KONA_SWSTM_ST_VA, SZ_4K ),  
+	IO_DESC( KONA_STM_VA, SZ_4K ),
+	IO_DESC( KONA_SWSTM_VA, SZ_4K ),
+	IO_DESC( KONA_SWSTM_ST_VA, SZ_4K ),
 	IO_DESC( KONA_SSP4_VA, SZ_4K ),
 
 	IO_DESC( KONA_SYSTMR_VA, SZ_4K ),  /* 32-bit kona gp timer */

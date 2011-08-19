@@ -26,8 +26,6 @@ Broadcom's express prior written consent.
 #include "sysparm.h"
 #endif
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
 #include "dspif_voice_play.h"
 #include "log.h"
 #include "sharedmem.h"
@@ -39,6 +37,9 @@ Broadcom's express prior written consent.
 #define	ARM2SP_MONO_ST			0x0080				//bit7=[0,1]=[MONO,STEREO] (not used if not 48k)
 
 static playback_data_cb_t play_cb[VORENDER_ARM2SP_INSTANCE_TOTAL] = {NULL};
+
+extern AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr(void);
+
 
 /**
 *
@@ -73,7 +74,7 @@ Result_t dspif_VPU_play_start ( VORENDER_PLAYBACK_MODE_t	playbackMode,
 	UInt8 i;
 	
 	VPlayBack_Buffer_t *pBuf;
-	SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
+	AP_SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
 
 	Log_DebugPrintf(LOGID_AUDIO, " dspif_VPU_play_start::Start VPU play, playbackMode = %d,  speechMode = %ld, dataRate = %ld, mixMode = %d\n", 
 							playbackMode, speechMode, dataRateSelection, mixMode);
@@ -132,7 +133,7 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 								UInt8						audMode)
 {
 	UInt16 arg0;
-	SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
+	AP_SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
 
 	// restrict numFramesPerInterrupt due to the shared memory size 
 	if (samplingRate == AUDIO_SAMPLING_RATE_8000 && numFramesPerInterrupt > 4)
@@ -319,7 +320,7 @@ Result_t dspif_AMRWB_play_start ( VORENDER_PLAYBACK_MODE_t	playbackMode,
 								UInt32						dataRateSelection, // used by AMRNB and AMRWB
 								UInt32						numFramesPerInterrupt)
 {
-	SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
+	AP_SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
 	UInt16 output_buf_select = 0; // fifo0 [0 2], dsp index depends on output buf select
 	
 	Log_DebugPrintf(LOGID_AUDIO, " dspif_AMRWB_play_start::Start AMRWB play, playbackMode = %d,  speechMode = %ld, dataRate = %ld, mixMode = %d\n", 
@@ -349,7 +350,7 @@ Result_t dspif_AMRWB_play_start ( VORENDER_PLAYBACK_MODE_t	playbackMode,
 // =========================================================================
 Result_t dspif_AMRWB_play_init_stop ( void)
 {
-	SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
+	AP_SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
 
 	Log_DebugPrintf(LOGID_AUDIO, "dspif_AMRWB_play_init_stop::Tell DSP to stop AMRWB voice play\n");;
 
