@@ -456,13 +456,10 @@ enum PIN_FUNC {
         PF_VC_GPCLK_0,
         PF_VC_GPCLK_1,
 
-	PF_NAND_CEN_1,
-	PF_SDIO4_DATA_1,
+        PF_NAND_CEN_1,
+        PF_SDIO4_DATA_1,
 
-	PF_NAND_CEN_1,
-	PF_SDIO4_DATA_1,
-
-	PF_MAX
+        PF_MAX
 };
 
 /* each Pin has up to 6 functions */
