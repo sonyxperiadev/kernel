@@ -19,14 +19,17 @@
 
 struct vc_ovl_info
 {
-   unsigned int   format;
-   unsigned int   xaxis;
-   unsigned int   yaxis;
-   unsigned int   width;
-   unsigned int   height;
-   unsigned int   rotation;
-   unsigned int   h_flip;
-   unsigned int   v_flip;
+   unsigned int   in_width;      // Input original width
+   unsigned int   in_height;     // Input original height
+   unsigned int   format;        // Input format
+
+   unsigned int   xaxis;         // Overlay x-coordinate
+   unsigned int   yaxis;         // Overlay y-coordinate
+   unsigned int   width;         // Overlay width
+   unsigned int   height;        // Overlay height
+   unsigned int   rotation;      // Overlay rotation
+   unsigned int   h_flip;        // Overlay horizontal flip
+   unsigned int   v_flip;        // Overlay vertical flip
 };
 
 struct vc_ovl_handle
