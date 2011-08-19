@@ -4,6 +4,8 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/list.h>
+#include <linux/clk.h>
+#include <linux/clkdev.h>
 #include <asm/io.h>
 
 #include <plat/pi_mgr.h>
@@ -12,7 +14,6 @@
 #include <mach/io_map.h>
 #include <mach/clock.h>
 #include <plat/clock.h>
-#include <linux/clk.h>
 
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>

@@ -25,6 +25,7 @@
 #include <linux/clk.h>
 #include <linux/spinlock.h>
 #include <linux/io.h>
+#include <linux/clkdev.h>
 #include <asm/clkdev.h>
 #include <plat/clock.h>
 #include <asm/io.h>

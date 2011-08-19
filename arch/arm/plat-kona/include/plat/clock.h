@@ -17,6 +17,7 @@
 #include <linux/errno.h>
 #include <linux/spinlock.h>
 #include <linux/init.h>
+#include <linux/clkdev.h>
 #include <asm/clkdev.h>
 #include <linux/list.h>
 #include <plat/pi_mgr.h>

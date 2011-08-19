@@ -20,7 +20,9 @@
 #include <linux/math64.h>
 #include <linux/delay.h>
 #include <linux/clk.h>
+#include <linux/clkdev.h>
 #include <asm/io.h>
+
 #include <plat/clock.h>
 #include <mach/clock.h>
 #include <mach/io_map.h>
