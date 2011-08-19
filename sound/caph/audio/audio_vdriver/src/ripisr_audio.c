@@ -38,21 +38,15 @@
 #include "ostask.h"
 #include "osqueue.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
+
 #include "resultcode.h"
 
 #include "shared.h"
-#include "shared_cp.h"
-#include "vpu.h"
 #include "dspif_voice_play.h"
-#include "audio_vdriver_voice_play.h"
 #include "dspif_voice_record.h"
-#include "audio_vdriver_voice_record.h"
-#include "audio_vdriver_voif.h"
-#include "audio_vdriver_usb.h"
 
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
+
+#include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "auddrv_audlog.h"
 #include "msconsts.h"

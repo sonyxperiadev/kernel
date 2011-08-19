@@ -26,8 +26,6 @@ Broadcom's express prior written consent.
 #include "sysparm.h"
 #endif
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
 #include "dspif_voice_play.h"
 #include "log.h"
 #include "sharedmem.h"
@@ -37,6 +35,12 @@ Broadcom's express prior written consent.
 #include "audio_vdriver.h"
 #define	ARM2SP_48K				0x0004				//bit2=[0,1]=[not_48K, 48K]
 #define	ARM2SP_MONO_ST			0x0080				//bit7=[0,1]=[MONO,STEREO] (not used if not 48k)
+
+static playback_data_cb_t play_cb[VORENDER_ARM2SP_INSTANCE_TOTAL] = {NULL};
+
+extern AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr(void);
+
+
 /**
 *
 * @addtogroup AudioDriverGroup
@@ -70,7 +74,7 @@ Result_t dspif_VPU_play_start ( VORENDER_PLAYBACK_MODE_t	playbackMode,
 	UInt8 i;
 	
 	VPlayBack_Buffer_t *pBuf;
-	SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
+	AP_SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
 
 	Log_DebugPrintf(LOGID_AUDIO, " dspif_VPU_play_start::Start VPU play, playbackMode = %d,  speechMode = %ld, dataRate = %ld, mixMode = %d\n", 
 							playbackMode, speechMode, dataRateSelection, mixMode);
@@ -129,7 +133,7 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 								UInt8						audMode)
 {
 	UInt16 arg0;
-	SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
+	AP_SharedMem_t *sh_mem = SHAREDMEM_GetDsp_SharedMemPtr();
 
 	// restrict numFramesPerInterrupt due to the shared memory size 
 	if (samplingRate == AUDIO_SAMPLING_RATE_8000 && numFramesPerInterrupt > 4)
@@ -141,8 +145,8 @@ Result_t dspif_ARM2SP_play_start ( UInt32 instanceID,
 	arg0 = ARM2SP_BuildCommandArg0 (samplingRate, playbackMode, mixMode, numFramesPerInterrupt, audMode);
     
 						
-	Log_DebugPrintf(LOGID_AUDIO, " dspif_ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%lx\n", 
-						playbackMode, mixMode, arg0, instanceID);
+	Log_DebugPrintf(LOGID_AUDIO, " dspif_ARM2SP_play_start::Start render, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=0x%lx samplingRate = %ld\n", 
+						playbackMode, mixMode, arg0, instanceID,samplingRate);
 
 	if (instanceID == VORENDER_ARM2SP_INSTANCE1)
 	{
@@ -256,6 +260,47 @@ Result_t dspif_ARM2SP_play_flush( UInt32 instanceID)
 	return RESULT_OK;
 }
 
+// ==========================================================================
+//
+// Function Name: dspif_ARM2SP_play_set_cb
+//
+// Description: set the callback for ARM2SP playback
+//
+// =========================================================================
+void dspif_ARM2SP_play_set_cb (UInt32 instanceId, playback_data_cb_t playback_data_cb)
+{
+   	play_cb[instanceId] = playback_data_cb;
+}
+
+// ==========================================================================
+//
+// Function Name: ARM2SP_Render_Request
+//
+// Description: Start the data transfer of ARM2SP playback
+//
+// =========================================================================
+
+void ARM2SP_Render_Request(UInt16 bufferPosition)
+{
+	//Log_DebugPrintf(LOGID_AUDIO, "ARM2SP_Render_Request\n");
+    if(play_cb[VORENDER_ARM2SP_INSTANCE1] != NULL)
+        play_cb[VORENDER_ARM2SP_INSTANCE1](bufferPosition);
+}
+
+// ==========================================================================
+//
+// Function Name: ARM2SP2_Render_Request
+//
+// Description: Start the data transfer of ARM2SP playback
+//
+// =========================================================================
+
+void ARM2SP2_Render_Request(UInt16 bufferPosition)
+{
+	//Log_DebugPrintf(LOGID_AUDIO, "ARM2SP2_Render_Request\n");
+    if(play_cb[VORENDER_ARM2SP_INSTANCE2] != NULL)
+        play_cb[VORENDER_ARM2SP_INSTANCE2](bufferPosition);
+}
 
 //
 // APIs of AMRWB
@@ -275,7 +320,7 @@ Result_t dspif_AMRWB_play_start ( VORENDER_PLAYBACK_MODE_t	playbackMode,
 								UInt32						dataRateSelection, // used by AMRNB and AMRWB
 								UInt32						numFramesPerInterrupt)
 {
-	SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
+	AP_SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
 	UInt16 output_buf_select = 0; // fifo0 [0 2], dsp index depends on output buf select
 	
 	Log_DebugPrintf(LOGID_AUDIO, " dspif_AMRWB_play_start::Start AMRWB play, playbackMode = %d,  speechMode = %ld, dataRate = %ld, mixMode = %d\n", 
@@ -305,7 +350,7 @@ Result_t dspif_AMRWB_play_start ( VORENDER_PLAYBACK_MODE_t	playbackMode,
 // =========================================================================
 Result_t dspif_AMRWB_play_init_stop ( void)
 {
-	SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
+	AP_SharedMem_t* pSharedMem = SHAREDMEM_GetDsp_SharedMemPtr();
 
 	Log_DebugPrintf(LOGID_AUDIO, "dspif_AMRWB_play_init_stop::Tell DSP to stop AMRWB voice play\n");;
 

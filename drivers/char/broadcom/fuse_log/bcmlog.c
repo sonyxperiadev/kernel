@@ -500,7 +500,7 @@ static int __init BCMLOG_ModuleInit(void)
 
 //#ifdef CONFIG_BRCM_UNIFIED_LOGGING
 {
-//	extern int bcmlog_mtt_on;
+	extern int bcmlog_mtt_on;
 	extern unsigned short bcmlog_log_ulogging_id;
 
 	extern int brcm_retrive_early_printk(void);
@@ -508,7 +508,7 @@ static int __init BCMLOG_ModuleInit(void)
 	bcmlog_log_ulogging_id = BCMLOG_LOG_ULOGGING_ID;
 	BCMLOG_EnableLogId( bcmlog_log_ulogging_id, 1 ) ;
 	
-//	bcmlog_mtt_on = 1;
+	bcmlog_mtt_on = 1;
 
 	ret= brcm_retrive_early_printk();
 	if (ret < 0)

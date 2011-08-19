@@ -33,6 +33,7 @@
 #include <linux/semaphore.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/jiffies.h>
 #ifdef CONFIG_BRCM_FUSE_IPC_CIB
 #include <linux/broadcom/ipcinterface.h>
 #else
@@ -55,6 +56,9 @@
 #include <mach/rdb/brcm_rdb_bintc.h>
 #include <mach/irqs.h>
 
+#ifndef CONFIG_BCM_MODEM_HEADER_SIZE
+#define CONFIG_BCM_MODEM_HEADER_SIZE 0
+#endif
 // definitions for Rhea/BI BModem IRQ's
 // extracted from chip_irq.h for Rhea
 #define NUM_KONAIRQs          224
@@ -62,7 +66,6 @@
 #define FIRST_BMIRQ           (LAST_KONAIRQ+1)
 #define NUM_BMIRQs            56
 #define IRQ_TO_BMIRQ(irq)         ((irq)-FIRST_BMIRQ)
-
 
 #define IPC_MAJOR (204)
 
@@ -78,6 +81,8 @@ typedef struct
   struct workqueue_struct *crash_dump_workqueue;
   void __iomem *apcp_shmem;
 }ipcs_info_t;
+
+static Boolean cp_running = 0;//FALSE;
 
 // flag used to track occurence of early CP interrupt; 
 // CP interrupt before IPC configured indicates early CP
@@ -140,28 +145,17 @@ static IPC_ReturnCode_T EventClear (void * Event)
     return IPC_OK;   
 }
 
-static IPC_ReturnCode_T EventWait (void * Event, IPC_U32 MilliSeconds)
+static IPC_ReturnCode_T EventWait(void *Event, IPC_U32 MilliSeconds)
 {
-    IPC_Evt_t* ipcEvt = (IPC_Evt_t*)Event;
-	IPC_ReturnCode_T  rtnCode = IPC_OK;
+	IPC_Evt_t *ipcEvt = (IPC_Evt_t *)Event;
 
-	if(MilliSeconds == IPC_WAIT_FOREVER)
-	{
-		wait_event( (ipcEvt->evt_wait), (ipcEvt->evt == 1) );
-	}
-	else
-	{
-	    int timeout = 0;
-	    // timeout in "jiffies" (apparently 10ms/jiffie in android?)
-		timeout = wait_event_timeout( (ipcEvt->evt_wait), (ipcEvt->evt == 1), MilliSeconds/10 );
-		// returns 0 if we timed out, > 0 otherwise
-		if ( timeout == 0 )
-		{
-		    rtnCode = IPC_TIMEOUT;
-		}
-	}
-	
-	return rtnCode;
+	if (MilliSeconds == IPC_WAIT_FOREVER)
+		wait_event((ipcEvt->evt_wait), (ipcEvt->evt == 1));
+	else if (!wait_event_timeout((ipcEvt->evt_wait), (ipcEvt->evt == 1),
+				    msecs_to_jiffies(MilliSeconds)))
+		return IPC_TIMEOUT;
+
+	return IPC_OK;
 }
 
 static int ipcs_open(struct inode *inode, struct file *file)
@@ -213,6 +207,14 @@ static struct file_operations ipc_ops =
   .mmap  = NULL,
   .release = ipcs_release,
 };
+
+/** 
+   @fn Boolean is_CP_running(void);
+*/
+Boolean is_CP_running(void)
+{
+   return cp_running;
+}
 
 /** 
    @fn void ipcs_ipc_initialised(void);
@@ -360,17 +362,34 @@ extern int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu);
 
 void WaitForCpIpc (void* pSmBase)
 {
-	int k = 0, ret = 0;
+    int k = 0, ret = 0;
 
     printk( KERN_ALERT  "ipcs_init Waiting for CP IPC to init ....\n");
-	while ( (ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU )) == 0)
-	{
-//		for (i=0; i<2048; i++);	// do not fight for accessing shared memory
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout (100);
-		k++;
-	}
-    printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+
+    ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    while (ret == 0)
+    {
+        // Wait up to 2s for CP to init
+        if (k++ > 200)
+            break;
+        else
+            msleep(10);
+        ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    }
+
+    if (ret == 0)
+    {
+        printk( KERN_ALERT  "********************************************************************\n");
+        printk( KERN_ALERT  "*                                                                  *\n");
+        printk( KERN_ALERT  "*       CP IPC NOT INITIALIZED - SYSTEM BOOTS WITH AP ONLY!!!      *\n");
+        printk( KERN_ALERT  "*                                                                  *\n");
+        printk( KERN_ALERT  "********************************************************************\n");
+    }
+    else
+    {
+        printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+        cp_running = 1;//TRUE;
+    }
 }
 
 
@@ -381,7 +400,6 @@ void WaitForCpIpc (void* pSmBase)
 static int __init ipcs_init(void *smbase, unsigned int size)
 {
   int rc = 0;
-  IPC_Boolean ret = 0;
 
   //Wait for CP to initialize
   WaitForCpIpc(smbase);
@@ -411,10 +429,61 @@ static int __init ipcs_init(void *smbase, unsigned int size)
   return(0);
 }
 
+
+#if (CONFIG_BCM_MODEM_HEADER_SIZE > 0)
+static int CP_Boot(void)
+{
+    int started = 0;
+    void __iomem *cp_boot_itcm;
+    void __iomem *cp_bmodem_r4cfg;
+    unsigned int r4init;
+    unsigned int jump_instruction = 0xEA000000;
+
+    #define BMODEM_SYSCFG_R4_CFG0  0x3a004000
+    #define CP_SYSCFG_BASE_SIZE    0x8
+
+    cp_bmodem_r4cfg = ioremap(BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
+    if (!cp_bmodem_r4cfg) {
+        printk(KERN_ERR "%s: ioremap error %x\n", __func__, BMODEM_SYSCFG_R4_CFG0);
+        return started;
+    }
+
+    r4init = *(unsigned int *)(cp_bmodem_r4cfg);
+
+    /* check if the CP is already booted, and if not, then boot it */
+    if ((0x5 != (r4init & 0x5)))
+    {
+        printk(KERN_ALERT "%s: boot (R4 COMMS) ...\n", __func__);
+
+        /* Set the CP jump to address.  CP must jump to DTCM offset 0x400 */
+        cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
+        if (!cp_boot_itcm) {
+            printk(KERN_ERR "%s: ioremap error %x\n", __func__, MODEM_ITCM_ADDRESS);
+            return 0;
+        }
+        jump_instruction |= (0x00FFFFFFUL & (((0x10000 + CONFIG_BCM_MODEM_HEADER_SIZE) / 4) - 2));
+        *(unsigned int *)(cp_boot_itcm) = jump_instruction;
+
+        iounmap(cp_boot_itcm);
+
+        /* boot CP */
+        *(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
+    }
+    iounmap(cp_bmodem_r4cfg);
+
+    return started;
+}
+#endif
+
+
 void Comms_Start(void)
 {
     void __iomem *apcp_shmem;
     void __iomem *cp_boot_base;
+
+#if (CONFIG_BCM_MODEM_HEADER_SIZE > 0)
+    CP_Boot();
+#endif
 
     apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
     if (!apcp_shmem) {
@@ -425,7 +494,7 @@ void Comms_Start(void)
     memset(apcp_shmem, 0, IPC_SIZE);
     iounmap(apcp_shmem);
 
-    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS, CP_BOOT_BASE_SIZE);
+    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS+CONFIG_BCM_MODEM_HEADER_SIZE, CP_BOOT_BASE_SIZE);
     if (!cp_boot_base) {
         printk(KERN_ERR "%s: ioremap error\n", __func__);
         return;
@@ -482,17 +551,6 @@ static int __init ipcs_module_init(void)
     goto out_unregister;
   } 
 
-
-  printk( KERN_ALERT  "[ipc]: request_irq\n");
-  rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND, "ipc-intr", &g_ipc_info);
-  if (rc) 
-  {
-    IPC_DEBUG(DBG_ERROR,"[ipc]: request_irq error\n");
-    goto out_del;
-  }
-  
-  printk( KERN_ALERT  "[ipc]: IRQ Clear and Enable\n");
-  
   /**
      Make sure this is not cache'd because CP has to know about any changes
      we write to this memory immediately.
@@ -505,9 +563,6 @@ static int __init ipcs_module_init(void)
     IPC_DEBUG(DBG_ERROR,"[ipc]: Could not map shmem\n");
     goto out_del;
   }
-#ifdef CONFIG_HAS_WAKELOCK
-  wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
-#endif
 
   printk( KERN_ALERT  "[ipc]: ipcs_init\n");
   if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE))
@@ -517,8 +572,23 @@ static int __init ipcs_module_init(void)
     goto out_del;
   }
   
-  printk( KERN_ALERT "[ipc]: ipcs_module_init ok\n");
+  printk(KERN_ALERT "[ipc]: ipcs_module_init ok\n");
   
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
+#endif
+
+  printk(KERN_ALERT  "[ipc]: request_irq\n");
+  rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND, "ipc-intr",
+			&g_ipc_info);
+
+	if (rc) {
+		IPC_DEBUG(DBG_ERROR, "[ipc]: request_irq error\n");
+		goto out_del;
+	}
+
+  printk(KERN_ALERT  "[ipc]: IRQ Clear and Enable\n");
+
   if ( sEarlyCPInterrupt )
   {
     printk( KERN_ALERT "[ipc]: early CP interrupt - doing crash dump...\n");

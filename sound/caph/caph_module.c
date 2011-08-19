@@ -47,11 +47,11 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
+#include "csl_aud_drv.h"
 
 
 #include "audio_controller.h"
+#include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"
 
@@ -73,7 +73,7 @@ MODULE_DESCRIPTION("Broadcom CAPH sound interface");
 MODULE_LICENSE("GPL");
 
 //global
-int gAudioDebugLevel = 2; 
+int gAudioDebugLevel = 0; 
 static brcm_alsa_chip_t *sgpCaph_chip=NULL;
 
 // AUDIO LOGGING
@@ -132,8 +132,10 @@ static int __devinit DriverProbe(struct platform_device *pdev)
 	err = ControlDeviceNew(card);
 	if (err)
     	goto err;
-	
-
+	//HWDEP interface
+	err = HwdepDeviceNew(card);
+	if (err)
+    	goto err;
 
 	//TODO: other interface
 	

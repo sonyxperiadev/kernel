@@ -66,6 +66,7 @@ struct bsc_adap_cfg
  */
 struct i2c_slave_platform_data
 {
+	/* I2C bus speed in KHz. It should be the first member in this struct */
 	enum bsc_bus_speed i2c_speed;
 };
 

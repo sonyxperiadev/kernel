@@ -114,7 +114,9 @@ void csl_i2s_config(CSL_HANDLE handle,CSL_I2S_CONFIG_t *config)
 	CSL_SSPI_HANDLE_T *pDevice = NULL;
     SSPI_hw_status_t status=SSPI_HW_NOERR;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "+csl_i2s_config \r\n");
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_i2s_config:: handle %p mode %d txEn %d rxEn %d txLbEn %d rxLbEn %d trans_size %d.\r\n", 
+		handle, config->mode, config->tx_ena, config->rx_ena, config->tx_loopback_ena, config->rx_loopback_ena, config->trans_size));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_i2s_config:: prot %d interleave %d sr %d.\r\n", config->prot, config->interleave, config->sampleRate));
 
 	if (config->mode == CSL_I2S_MASTER_MODE){ 
 		pDevice = (CSL_SSPI_HANDLE_T *)handle;
@@ -331,8 +333,8 @@ static SSPI_hw_status_t SSPI_hw_i2s_init(CSL_HANDLE handle,
     CHAL_SSPI_PROT_t mode;
 //	CHAL_SSPI_CLK_SRC_t clk_source;
 	CHAL_SSPI_FIFO_DATA_PACK_t fifo_pack;
-	cUInt32 clk_div;
-	cUInt32 temp;
+	cUInt32 clk_div = 0;
+	cUInt32 temp = 0;
 //    CSL_SSPI_HANDLE_T *pDevice = (CSL_SSPI_HANDLE_T *)handle;
 
     if(config->prot == SSPI_HW_I2S_MODE1)

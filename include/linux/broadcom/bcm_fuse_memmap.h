@@ -16,6 +16,7 @@
 #ifndef _BCM_FUSE_MEMMAP_H_
 #define _BCM_FUSE_MEMMAP_H_
 
+#define MODEM_ITCM_ADDRESS 0x3AC00000
 #define MODEM_DTCM_ADDRESS 0x3AD00000
 
 #define MAIN_ADDRESS_OFFSET 0x30
@@ -23,5 +24,6 @@
 #define INIT_ADDRESS_OFFSET 0x34
 
 #define CP_BOOT_BASE_SIZE (0x40) //FIXME we actually don't need that much
+#define CP_ITCM_BASE_SIZE (0x8) 
 
 #endif /* _BCM_FUSE_MEMMAP_H_ */

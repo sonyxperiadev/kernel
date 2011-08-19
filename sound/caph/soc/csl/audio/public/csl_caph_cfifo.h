@@ -54,6 +54,18 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataForma
 
 /**
 *
+*  @brief  assign a free caph cfifo buffer based on data information
+*
+*  @param   dataFormat  (in) format of the data to be transffered through this buffer
+*  @param   sampleRate  (in) Sample Rate of the data to be transffered through this buffer
+*
+*  @return CSL_CAPH_CFIFO_FIFO_e   assigned CFIFO buffer
+*****************************************************************************/
+CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat,
+                                                 CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate);
+
+/**
+*
 *  @brief  get a fifo's threshold
 *  
 *  @param   fifo  (in) CFIFO fifo
@@ -84,6 +96,7 @@ void csl_caph_cfifo_release_fifo(CSL_CAPH_CFIFO_FIFO_e fifo);
 void csl_caph_cfifo_config_fifo(CSL_CAPH_CFIFO_FIFO_e fifo, 
                                 CSL_CAPH_CFIFO_DIRECTION_e  direction, 
                                 UInt16 threshold);
+
 /**
 *
 *  @brief  Get the caph cfifo buffer address 
@@ -137,5 +150,17 @@ UInt32 csl_caph_cfifo_read_fifo_status(CSL_CAPH_CFIFO_FIFO_e csl_fifo);
 UInt16 csl_caph_cfifo_read_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo, 
                                 UInt32* data, 
                                 UInt16 size);
+/****************************************************************************
+*
+* Function Name: CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(
+* CSL_CAPH_DATAFOMAT_e dataFormat,
+* CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate)
+*
+* Description: Obtain a CAPH CFIFO buffer
+*
+****************************************************************************/
+CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat,
+ CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate);
+
 #endif // _CSL_CAPH_CFIFO_
 

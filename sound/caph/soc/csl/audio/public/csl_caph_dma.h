@@ -76,6 +76,7 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CHNL_e dmaCH);
 *  @return void
 *****************************************************************************/
 void csl_caph_dma_release_channel(CSL_CAPH_DMA_CHNL_e chnl);
+
 /**
 *
 *  @brief  configure the caph dma channel 
@@ -103,6 +104,7 @@ void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config);
 *  @return void
 *****************************************************************************/
 void csl_caph_dma_switch_buffer(CSL_CAPH_DMA_CONFIG_t chnl_config);
+
 /**
 *
 *  @brief  start the transferring on the caph dma channel 

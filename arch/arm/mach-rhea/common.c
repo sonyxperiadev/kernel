@@ -51,6 +51,10 @@
 #include <plat/chal/chal_trace.h>
 #include <trace/stm.h>
 
+#ifdef CONFIG_KONA_AVS
+#include <plat/kona_avs.h>
+#endif
+
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
@@ -64,6 +68,33 @@
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
 #endif
+
+#define PID_PLATFORM				0xE600
+#define FD_MASS_PRODUCT_ID			0x0001
+#define FD_SICD_PRODUCT_ID			0x0002
+#define FD_VIDEO_PRODUCT_ID			0x0004
+#define FD_DFU_PRODUCT_ID			0x0008
+#define FD_MTP_ID					0x000C
+#define FD_CDC_ACM_PRODUCT_ID		0x0020
+#define FD_CDC_RNDIS_PRODUCT_ID		0x0040
+#define FD_CDC_OBEX_PRODUCT_ID		0x0080
+
+
+#define	BRCM_VENDOR_ID				0x0a5c
+#define	BIG_ISLAND_PRODUCT_ID		0x2816
+
+/* FIXME borrow Google Nexus One ID to use windows driver */
+#define	GOOGLE_VENDOR_ID			0x18d1
+#define	NEXUS_ONE_PROD_ID			0x0d02
+
+#define	VENDOR_ID					GOOGLE_VENDOR_ID
+#define	PRODUCT_ID					NEXUS_ONE_PROD_ID
+
+/* use a seprate PID for RNDIS */
+#define RNDIS_PRODUCT_ID			0x4e13
+#define ACM_PRODUCT_ID				0x8888
+#define OBEX_PRODUCT_ID				0x685E
+
 
 #define KONA_8250PORT(name,clk)				\
 {								\
@@ -105,8 +136,26 @@ static char *android_function_rndis[] = {
 static char *android_function_acm[] = {
 #ifdef CONFIG_USB_ANDROID_ACM
 	"acm",
+	"acm1",
 #endif
 };
+
+static char *android_function_msc_acm[] = {
+#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
+	"usb_mass_storage",
+#endif
+#ifdef CONFIG_USB_ANDROID_ACM
+	"acm",
+	"acm1",
+#endif
+};
+
+static char *android_function_obex[] = {
+#ifdef CONFIG_USB_ANDROID_OBEX
+	"obex",
+#endif
+};
+
 static char *android_function_adb_msc[] = {
 #ifdef CONFIG_USB_ANDROID_MASS_STORAGE
 	"usb_mass_storage",
@@ -129,21 +178,10 @@ static char *android_functions_all[] = {
 #ifdef CONFIG_USB_ANDROID_ACM
 	"acm",
 #endif
+#ifdef CONFIG_USB_ANDROID_OBEX
+	"obex",
+#endif
 };
-
-#define	BRCM_VENDOR_ID		0x0a5c
-#define	BIG_ISLAND_PRODUCT_ID	0x2816
-
-/* FIXME borrow Google Nexus One ID to use windows driver */
-#define	GOOGLE_VENDOR_ID	0x18d1
-#define	NEXUS_ONE_PROD_ID	0x0d02
-
-#define	VENDOR_ID		GOOGLE_VENDOR_ID
-#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
-
-/* use a seprate PID for RNDIS */
-#define RNDIS_PRODUCT_ID	0x4e13
-#define ACM_PRODUCT_ID		0x8888
 
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
@@ -182,14 +220,24 @@ static struct android_usb_product android_products[] = {
 		.functions	=	android_function_adb_msc,
 	},
 	{
-		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
+		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_RNDIS_PRODUCT_ID),
 		.num_functions	=	ARRAY_SIZE(android_function_rndis),
 		.functions	=	android_function_rndis,
 	},
 	{
-		.product_id	= 	__constant_cpu_to_le16(ACM_PRODUCT_ID),
+		.product_id	= 	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID),
 		.num_functions	=	ARRAY_SIZE(android_function_acm),
 		.functions	=	android_function_acm,
+	},
+	{
+		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_ACM_PRODUCT_ID | FD_MASS_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_msc_acm),
+		.functions	=	android_function_msc_acm,
+	},
+	{
+		.product_id =	__constant_cpu_to_le16(PID_PLATFORM | FD_CDC_OBEX_PRODUCT_ID),
+		.num_functions	=	ARRAY_SIZE(android_function_obex),
+		.functions	=	android_function_obex,
 	},
 };
 
@@ -260,6 +308,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.data_pullup = 0,
 		.cd_gpio = SD_CARDDET_GPIO_PIN,
 		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.peri_clk_name = "sdio1_clk",
 		.ahb_clk_name = "sdio1_ahb_clk",
 		.sleep_clk_name = "sdio1_sleep_clk",
@@ -270,6 +319,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.data_pullup = 0,
 		.is_8bit = 1,
 		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
 		.peri_clk_name = "sdio2_clk",
 		.ahb_clk_name = "sdio2_ahb_clk",
 		.sleep_clk_name = "sdio2_sleep_clk",
@@ -278,7 +328,8 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 	{ /* SDIO2 */
 		.id = 2,
 		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_EMMC,
+		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.peri_clk_name = "sdio3_clk",
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
@@ -377,6 +428,7 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.speed = BSC_BUS_SPEED_50K,
 		.dynamic_speed = 1,
 		.bsc_clk = "pmu_bsc_clk",
+		.bsc_apb_clk = "pmu_bsc_apb",
 	},
 };
 
@@ -412,7 +464,7 @@ static struct platform_device board_i2c_adap_devices[] =
 	},
 };
 
-/* ARM performance monitor unit */ 
+/* ARM performance monitor unit */
 static struct resource pmu_resource = {
        .start = BCM_INT_ID_PMU_IRQ0,
        .end = BCM_INT_ID_PMU_IRQ0,
@@ -532,6 +584,113 @@ static struct platform_device rng_device =
 };
 #endif
 
+#ifdef CONFIG_USB
+static struct resource kona_hsotgctrl_platform_resource[] = {
+	[0] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+};
+
+static struct platform_device board_kona_hsotgctrl_platform_device =
+{
+	.name = "bcm_hsotgctrl",
+	.id = -1,
+	.resource = kona_hsotgctrl_platform_resource,
+	.num_resources = ARRAY_SIZE(kona_hsotgctrl_platform_resource),
+};
+#endif
+
+#ifdef CONFIG_USB_DWC_OTG
+static struct resource kona_otg_platform_resource[] = {
+	[0] = { /* Keep HSOTG_BASE_ADDR as first IORESOURCE_MEM to be compatible with legacy code */
+		.start = HSOTG_BASE_ADDR,
+		.end = HSOTG_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = HSOTG_CTRL_BASE_ADDR,
+		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[2] = {
+		.start = BCM_INT_ID_USB_HSOTG,
+		.end = BCM_INT_ID_USB_HSOTG,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct platform_device board_kona_otg_platform_device =
+{
+	.name = "dwc_otg",
+	.id = -1,
+	.resource = kona_otg_platform_resource,
+	.num_resources = ARRAY_SIZE(kona_otg_platform_resource),
+};
+#endif
+
+#ifdef CONFIG_KONA_AVS
+
+static u32 svt_pmos_bin[3+1] = {125,146,171,201};
+static u32 svt_nmos_bin[3+1] = {75,96,126,151};
+
+static u32 lvt_pmos_bin[3+1] = {150,181,216,251};
+static u32 lvt_nmos_bin[3+1] = {90,111,146,181};
+
+u32 svt_silicon_type_lut[3][3] =
+	{
+		{SILICON_TYPE_SLOW,SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL},
+		{SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL},
+		{SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST}
+	};
+
+u32 lvt_silicon_type_lut[3][3] =
+	{
+		{SILICON_TYPE_SLOW,SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL},
+		{SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL},
+		{SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST}
+	};
+
+u32 ss_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xe, 0xe, 0xe,
+						0xe, 0xe, 0xe, 0xe, 0x13, 0x13, 0x13, 0x13};
+
+u32 tt_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xb, 0xb, 0xb,
+							0xb, 0xb, 0xb, 0xb,  0xd,  0xd,  0xd, 0xd};
+
+u32 ff_vlt_tbl[] = { 0x3, 0x3, 0x4, 0x4,0x4, 0x4, 0xb, 0xb,
+							0xb, 0xb, 0xb, 0xb, 0xb, 0xd, 0xd, 0xd };
+static u32* volt_table[] = {ss_vlt_tbl, tt_vlt_tbl, ff_vlt_tbl};
+
+static struct kona_avs_pdata avs_pdata =
+{
+	.avs_type = AVS_TYPE_OPEN,
+	.nmos_bin_size = 3,
+	.pmos_bin_size = 3,
+
+	.svt_pmos_bin = svt_pmos_bin,
+	.svt_nmos_bin = svt_nmos_bin,
+
+	.lvt_pmos_bin = lvt_pmos_bin,
+	.lvt_nmos_bin = lvt_nmos_bin,
+
+	.svt_silicon_type_lut =(u32**) svt_silicon_type_lut,
+	.lvt_silicon_type_lut = (u32**)lvt_silicon_type_lut,
+
+	.volt_table = volt_table,
+	.otp_row = 8,
+};
+
+struct platform_device kona_avs_device = {
+	.name = "kona-avs",
+	.id = -1,
+	.dev = {
+	        .platform_data = &avs_pdata,
+	},
+};
+
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -541,7 +700,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&android_rndis_device,
 	&android_mass_storage_device,
 	&android_usb,
-	&pmu_device,	
+	&pmu_device,
 	&kona_pwm_device,
 	&kona_sspi_spi0_device,
 #ifdef CONFIG_SENSORS_KONA
@@ -552,6 +711,16 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_HW_RANDOM_KONA)
 	&rng_device,
+#endif
+#ifdef CONFIG_USB
+	&board_kona_hsotgctrl_platform_device,
+#endif
+#ifdef CONFIG_USB_DWC_OTG
+	&board_kona_otg_platform_device,
+#endif
+
+#ifdef CONFIG_KONA_AVS
+	&kona_avs_device,
 #endif
 };
 

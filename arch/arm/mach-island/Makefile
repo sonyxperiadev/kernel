@@ -14,12 +14,15 @@
 
 obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
 
+obj-$(CONFIG_KONA_POWER_MGR) += island_pwr_mgr.o
+obj-$(CONFIG_KONA_PI_MGR) += island_pi_mgr.o
+
 obj-$(CONFIG_HAVE_CLK) += clock_island.o
 
 obj-$(CONFIG_NET_ISLAND) += ethHw_driver.o
 ethHw_driver-objs := ethHw.o ethHw_asm.o
 
-obj-$(CONFIG_PM) += pm.o
+obj-$(CONFIG_KONA_POWER) += pm_island.o
 
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o
 obj-$(CONFIG_MACH_ISLAND_BU) += board_bu.o pinmux_island_bu.o
@@ -69,4 +72,3 @@ obj-$(CONFIG_MACH_ISLAND_TABLET_CP) += board_tablet_cp.o pinmux_island_tablet_cp
 CFLAGS_board_tablet_cp.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET_CP \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
-

@@ -42,6 +42,8 @@
 #include "dwc_otg_core_if.h"
 #include "dwc_otg_adp.h"
 
+#include <linux/usb/otg.h>
+
 /**
  * @file
  * This file contains the interface to the Core Interface Layer.
@@ -921,6 +923,11 @@ struct dwc_otg_core_if {
 
 	/** OTG status flag used for HNP polling */
 	uint8_t otg_sts;
+
+#ifdef CONFIG_USB_OTG_UTILS
+	/** OTG transceiver */
+	struct otg_transceiver *xceiver;
+#endif
 };
 
 #ifdef DEBUG

@@ -79,7 +79,6 @@ struct sdio_dev {
 	struct sdio_wifi_gpio_cfg *wifi_gpio;
 	struct procfs proc;
 	struct clk *peri_clk;
-	struct clk *ahb_clk;
 	struct clk *sleep_clk;
 };
 
@@ -91,6 +90,12 @@ module_param(clock, uint, 0444);
 
 static struct proc_dir_entry *gProcParent;
 static struct sdio_dev *gDevs[SDIO_DEV_TYPE_MAX];
+
+#ifdef CONFIG_MACH_KONA_FPGA
+int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable) { }
+#else
+int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
+#endif
 
 #define DRIVER_NAME "sdio"
 /*
@@ -224,13 +229,14 @@ static int bcm_kona_sd_init(struct sdio_dev *dev)
  */
 static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 {
-	struct sdhci_host *host = dev->host;
+   struct sdhci_host *host = dev->host;
    uint32_t val;
    unsigned long flags;
 
    /* this function can be called from various contexts including ISR */
    spin_lock_irqsave(&host->lock, flags);
 
+   sdhci_pltfm_clk_enable(host, 1);
    val = sdhci_readl(host, KONA_SDHOST_CORESTAT);
 
    if (insert) {
@@ -359,71 +365,28 @@ static irqreturn_t sdhci_pltfm_cd_interrupt(int irq, void *dev_id)
    return IRQ_HANDLED;
 }
 
-static int sdhci_pltfm_clk_enable(struct platform_device *pdev, int enable)
+int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 {
 #ifdef  CONFIG_ARCH_SAMOA
 	return 0;
 #else
-	struct sdio_dev *dev;
-	struct sdio_platform_cfg *hw_cfg;
 	int ret = 0;
-
-	BUG_ON (!pdev);
-
-	dev = platform_get_drvdata(pdev);
+	struct sdio_dev *dev = sdhci_priv(host);
 	BUG_ON (!dev);
-
-	hw_cfg = pdev->dev.platform_data;
-	BUG_ON (!hw_cfg);
-
 	if (enable) {
-		BUG_ON(dev->peri_clk || !hw_cfg->peri_clk_name);
-		BUG_ON(dev->ahb_clk || !hw_cfg->ahb_clk_name);
-		BUG_ON(dev->sleep_clk || !hw_cfg->sleep_clk_name);
-
 		/* peripheral clock */
-		dev->peri_clk = clk_get(&pdev->dev, hw_cfg->peri_clk_name);
-		if (!dev->peri_clk)
-			return -EINVAL;
-		ret = clk_set_rate(dev->peri_clk, hw_cfg->peri_clk_rate);
-		if (ret)
-			return ret;
 		ret = clk_enable(dev->peri_clk);
 		if(ret)
 			return ret;
-
-		/* AHB clock */
-		dev->ahb_clk = clk_get(&pdev->dev, hw_cfg->ahb_clk_name);
-		if (!dev->ahb_clk)
-			return -EINVAL;
-		ret = clk_enable(dev->ahb_clk);
-		if(ret)
-			return ret;
-
 		/* sleep clock */
-		dev->sleep_clk = clk_get(&pdev->dev, hw_cfg->sleep_clk_name);
-		if(!dev->sleep_clk)
-			return -EINVAL;
 		ret = clk_enable(dev->sleep_clk);
-		if(ret)
-			return ret;
-	}
-	else {
-		if (dev->peri_clk) {
+		if(ret) {
 			clk_disable(dev->peri_clk);
-			clk_put(dev->peri_clk);
-			dev->peri_clk = NULL;
+			return ret;
 		}
-		if (dev->ahb_clk) {
-			clk_disable(dev->ahb_clk);
-			clk_put(dev->ahb_clk);
-			dev->ahb_clk = NULL;
-		}
-		if (dev->sleep_clk) {
-			clk_disable(dev->sleep_clk);
-			clk_put(dev->sleep_clk);
-			dev->sleep_clk = NULL;
-		}
+	} else {
+		clk_disable(dev->peri_clk);
+		clk_disable(dev->sleep_clk);
 	}
 	return ret;
 #endif
@@ -460,9 +423,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	}
 
 	if (pdev->dev.parent)
-		host = sdhci_alloc_host(pdev->dev.parent, 0);
+		host = sdhci_alloc_host(pdev->dev.parent, sizeof(struct sdio_dev));
 	else
-		host = sdhci_alloc_host(&pdev->dev, 0);
+		host = sdhci_alloc_host(&pdev->dev, sizeof(struct sdio_dev));
 	if (IS_ERR(host)) {
 		ret = PTR_ERR(host);
 		goto err;
@@ -471,6 +434,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	host->hw_name = "bcm_kona_sd";
 	host->ops = &sdhci_pltfm_ops;
 	host->irq = platform_get_irq(pdev, 0);
+
+	if (hw_cfg->flags & KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE)
+		host->mmc->caps |= MMC_CAP_NONREMOVABLE;
 
 	if (!request_mem_region(iomem->start, resource_size(iomem),
 		mmc_hostname(host->mmc))) {
@@ -486,14 +452,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		goto err_free_mem_region;
 	}
 
-	/* allocate memory for our private data structure */
-	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
-	if (!dev) {
-		dev_err(&pdev->dev, "unable to allocate mem for private data\n");
-		ret = -ENOMEM;
-		goto err_io_unmap;
-	}
-
+	dev = sdhci_priv(host);
 	dev->dev = &pdev->dev;
 	dev->host = host;
 	dev->devtype = hw_cfg->devtype;
@@ -502,6 +461,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		dev->wifi_gpio = &hw_cfg->wifi_gpio;
 
 	gDevs[dev->devtype] = dev;
+
 	platform_set_drvdata(pdev, dev);
 
 	snprintf(devname, sizeof(devname), "%s%d", DEV_NAME, pdev->id);
@@ -515,8 +475,20 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		dev->clk_hz = gClock[dev->devtype];
 	}
 #else
+	/* peripheral clock */
+	dev->peri_clk = clk_get(&pdev->dev, hw_cfg->peri_clk_name);
+	if(IS_ERR_OR_NULL (dev->peri_clk))
+		return -EINVAL;
+	ret = clk_set_rate(dev->peri_clk, hw_cfg->peri_clk_rate);
+	if (ret)
+		return ret;
 
-	ret = sdhci_pltfm_clk_enable(pdev, 1);
+	/* sleep clock */
+	dev->sleep_clk = clk_get(&pdev->dev, hw_cfg->sleep_clk_name);
+	if(IS_ERR_OR_NULL (dev->sleep_clk))
+		return -EINVAL;
+
+	ret = sdhci_pltfm_clk_enable(host, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core clock for %s\n", devname);
 		ret = -EFAULT;
@@ -572,6 +544,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 			goto err_free_cd_gpio;
 		}
 
+		sdhci_writel(host, sdhci_readl(host, KONA_SDHOST_CORESTAT)
+				| KONA_SDHOST_CD_SW, KONA_SDHOST_CORESTAT);
 		/*
 		* Since the card detection GPIO interrupt is configured to be edge
 		* sensitive, check the initial GPIO value here
@@ -584,6 +558,7 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 
 	atomic_set(&dev->initialized, 1);
 
+	sdhci_pltfm_clk_enable(host, 0);
 	printk(KERN_INFO "%s initialized properly\n", devname);
 
 	return 0;
@@ -603,14 +578,9 @@ err_reset:
 	bcm_kona_sd_reset(dev);
 
 err_term_clk:
-#ifndef CONFIG_MACH_KONA_FPGA
-	sdhci_pltfm_clk_enable(pdev, 0);
-#endif
+	sdhci_pltfm_clk_enable(host, 0);
 err_unset_pltfm:
 	platform_set_drvdata(pdev, NULL);
-	kfree(dev);
-
-err_io_unmap:
 	iounmap(host->ioaddr);
 
 err_free_mem_region:
@@ -648,10 +618,6 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 		dead = 1;
 	sdhci_remove_host(host, dead);
 
-#ifndef CONFIG_MACH_KONA_FPGA
-	sdhci_pltfm_clk_enable(pdev, 0);
-#endif
-
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);
 	iounmap(host->ioaddr);
@@ -680,18 +646,6 @@ static int sdhci_pltfm_suspend(struct platform_device *pdev, pm_message_t state)
 		return ret;
 	}
 
-#ifndef CONFIG_MACH_KONA_FPGA
-	/* disable clocks */
-	ret = sdhci_pltfm_clk_enable(pdev, 0);
-	if (ret) {
-		dev_err(&pdev->dev, "Unable to disable sdio clocks err=%d\n",
-				ret);
-		sdhci_resume_host(host);
-
-		return ret;
-	}
-#endif
-	
 	return 0;
 }
 
@@ -701,22 +655,9 @@ static int sdhci_pltfm_resume(struct platform_device *pdev)
 	struct sdio_dev *dev = platform_get_drvdata(pdev);
 	struct sdhci_host *host = dev->host;
 
-#ifndef CONFIG_MACH_KONA_FPGA
-	/* enable clocks */
-	ret = sdhci_pltfm_clk_enable(pdev, 1);
-	if (ret) {
-		dev_err(&pdev->dev, "Unable to enable sdio clocks err=%d\n",
-				ret);
-		return ret;
-	}
-#endif
-
 	ret = sdhci_resume_host(host);
 	if (ret) {
 		dev_err(&pdev->dev, "Unable to resume sdhci host err=%d\n", ret);
-#ifndef CONFIG_MACH_KONA_FPGA
-		sdhci_pltfm_clk_enable(pdev, 0);
-#endif
 		return ret;
 	}
 

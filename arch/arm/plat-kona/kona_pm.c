@@ -8,48 +8,57 @@
 #include <linux/list.h>
 
 #include <plat/kona_pm.h>
-#include <mach/pm.h>
+#include <plat/pwr_mgr.h>
 
-#ifdef CONFIG_CPU_IDLE
-#ifndef KONA_MACH_MAX_IDLE_STATE 
-#define KONA_MACH_MAX_IDLE_STATE 1
-#endif /*KONA_MACH_MAX_IDLE_STATE*/
+
 
 enum
 {
 	KONA_PM_LOG_LVL_NONE = 0,
 	KONAL_PM_LOG_LVL_ERROR	= 1,
-	KONAL_PM_LOG_LVL_FLOW = (1 << 1)
+	KONAL_PM_LOG_LVL_FLOW = (1 << 1),
+	KONAL_PM_LOG_LVL_TEST = (1 << 2)
 };
+
 
 static int kona_pm_log_lvl = KONAL_PM_LOG_LVL_ERROR;
 module_param_named(kona_pm_log_lvl, kona_pm_log_lvl, int, S_IRUGO | S_IWUSR | S_IWGRP);
 
+static struct kona_idle_state* def_suspend_state = NULL;
 #define LOG_LEVEL_ENABLED(lvl) ((lvl) & kona_pm_log_lvl)
+#ifdef CONFIG_CPU_IDLE
 
-struct kona_idle_state_info idle_states[KONA_MACH_MAX_IDLE_STATE];
 
-__weak void kona_mach_init_idle_states(struct kona_idle_state_info* state_info)
+
+__weak int kona_mach_get_idle_states(struct kona_idle_state** idle_states)
 {
-	memset(state_info,0,sizeof(struct kona_idle_state_info)*KONA_MACH_MAX_IDLE_STATE);
-	state_info[0].valid = true;
+	static struct kona_idle_state def_state = {
+		.name = "kona_c0",
+		.desc = "kona default state",
+	};
+
+	*idle_states = &def_state;
+	return 1;
 }
 
-__weak int kona_mach_enter_idle_state(struct cpuidle_device *dev,
-			struct cpuidle_state *state)
+__weak int kona_mach_enter_idle_state(struct cpuidle_device *dev,struct cpuidle_state *state)
 {
 	ktime_t	t1, t2;
 	s64 diff;
 	int ret;
+	int mach_ret = -1;
+	struct kona_idle_state* kona_state = cpuidle_get_statedata(state);
+	BUG_ON(kona_state == NULL);
 
 	t1 = ktime_get();
 	local_irq_disable();
 	local_fiq_disable();
-	
-	if(LOG_LEVEL_ENABLED(KONAL_PM_LOG_LVL_FLOW))
-		pr_info("--%s--\n",__func__);
-	cpu_do_idle();	
-	
+
+	if(kona_state && kona_state->enter)
+		mach_ret = kona_state->enter(kona_state);
+	else
+		cpu_do_idle();
+
 	local_irq_enable();
 	local_fiq_enable();
 
@@ -59,7 +68,7 @@ __weak int kona_mach_enter_idle_state(struct cpuidle_device *dev,
 		diff = INT_MAX;
 
 	ret = (int) diff;
-	return ret;
+	return (mach_ret == -1) ? ret : mach_ret;
 }
 
 DEFINE_PER_CPU(struct cpuidle_device, kona_idle_dev);
@@ -101,12 +110,20 @@ __weak int kona_mach_pm_enter(suspend_state_t state)
 
 	if(LOG_LEVEL_ENABLED(KONAL_PM_LOG_LVL_FLOW))
 		pr_info("--%s: state = %d --\n",__func__,state);
-	
-	switch (state) 
+
+	switch (state)
 	{
 	case PM_SUSPEND_STANDBY:
 	case PM_SUSPEND_MEM:
-		cpu_do_idle();
+		if(def_suspend_state && def_suspend_state->enter)
+		{
+			if(LOG_LEVEL_ENABLED(KONAL_PM_LOG_LVL_FLOW))
+				pr_info("--%s:def_suspend_state--\n",__func__);
+
+			def_suspend_state->enter(def_suspend_state);
+		}
+		else
+			cpu_do_idle();
 		break;
 	default:
 		ret = -EINVAL;
@@ -128,7 +145,7 @@ __weak int kona_mach_pm_valid(suspend_state_t state)
 		pr_info("--%s--\n",__func__);
 
 	return suspend_valid_only_mem(state);
-} 
+}
 static struct platform_suspend_ops kona_pm_ops = {
 	.begin		= kona_mach_pm_begin,
 	.end		= kona_mach_pm_end,
@@ -144,27 +161,29 @@ static struct platform_suspend_ops kona_pm_ops = {
  * kona_pm_init - init function init Kona platform idle/suspend
  * handlers
  */
-int __init kona_pm_init(void)
+int __init kona_pm_init()
 {
 
 
 #ifdef CONFIG_CPU_IDLE
-	int i, count;
+	int i,num_states;
 	struct cpuidle_device *dev;
 	struct cpuidle_state *state;
-	
+	struct kona_idle_state* idle_states = NULL;
+
 	pr_info("--%s : registering cpu_ilde hanlders\n",__func__);
-	kona_mach_init_idle_states(idle_states);
+	num_states = kona_mach_get_idle_states(&idle_states);
+	BUG_ON(num_states > CPUIDLE_STATE_MAX ||
+		num_states <= 0 || idle_states == NULL);
 	cpuidle_register_driver(&kona_idle_driver);
+
 
 	dev = &per_cpu(kona_idle_dev, smp_processor_id());
 
-	for (i = 0,count = 0; i < KONA_MACH_MAX_IDLE_STATE; i++) 
+	for (i = 0; i < num_states; i++)
 	{
 		state = &dev->states[i];
 
-		if (!idle_states[i].valid)
-			continue;
 		cpuidle_set_statedata(state, &idle_states[i]);
 		state->exit_latency = idle_states[i].latency;
 		state->target_residency = idle_states[i].target_residency;
@@ -172,19 +191,18 @@ int __init kona_pm_init(void)
 		state->enter = kona_mach_enter_idle_state;
 		if (i == 0)
 			dev->safe_state = state;
-		strcpy(state->name,idle_states[i].name);
-		count++;
+		strncpy(state->name,idle_states[i].name,CPUIDLE_NAME_LEN);
+		strncpy(state->desc,idle_states[i].desc,CPUIDLE_DESC_LEN);
 	}
+	def_suspend_state = &idle_states[num_states-1];
 
-	if (!count)
-		return -EINVAL;
-	dev->state_count = count;
+	dev->state_count = i;
 
-	if (cpuidle_register_device(dev)) 
+	if (cpuidle_register_device(dev))
 	{
 		printk(KERN_ERR "%s: CPUidle register device failed\n",
 		       __func__);
-		cpuidle_unregister_driver(&kona_idle_driver);	   
+		cpuidle_unregister_driver(&kona_idle_driver);
 		return -EIO;
 	}
 #endif /*CONFIG_CPU_IDLE*/
@@ -193,8 +211,7 @@ int __init kona_pm_init(void)
 	pr_info("--%s : registering suspend hanlders\n",__func__);
 	suspend_set_ops(&kona_pm_ops);
 #endif /*CONFIG_SUSPEND*/
-	
+
 	return 0;
 }
 
-device_initcall(kona_pm_init);

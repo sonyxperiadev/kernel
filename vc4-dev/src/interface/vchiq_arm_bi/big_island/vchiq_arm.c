@@ -43,8 +43,6 @@
 #include "vchiq_if.h"
 #include "vchiq_memdrv.h"
 
-#include "interface/vceb/host/vceb.h"
-
 #define DEVICE_NAME "vchiq"
 
 /* Override the default prefix, which would be vchiq_arm (from the filename) */
@@ -299,7 +297,6 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
 
 VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platform_data )
 {
-    VCEB_INSTANCE_T         vceb_instance;
     VCHIQ_KERNEL_STATE_T   *kernState;
 
     printk( "%s: vchiq_num_instances = %d, VCHIQ_NUM_VIDEOCORES = %d\n",
@@ -310,13 +307,6 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
         printk( KERN_ERR "%s: already created %d instances\n", __func__,
                 VCHIQ_NUM_VIDEOCORES );
 
-        return VCHIQ_ERROR;
-    }
-
-    if ( vceb_get_instance( platform_data->instance_name, &vceb_instance ) != 0 )
-    {
-        /* No instance registered with vceb, which means the videocore is not
-           present */
         return VCHIQ_ERROR;
     }
 
@@ -369,6 +359,18 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
         return VCHIQ_ERROR;
     }
 
+    /* Direct connect the vchiq to get vmcs-fb and vmcs-sm device module built in */
+    if ( vchiq_memdrv_initialise() != VCHIQ_SUCCESS )
+    {
+        printk( KERN_ERR "%s: failed to initialize vchiq for '%s'\n",
+                    __func__, kernState->instance_name );
+    }
+    else
+    {
+        printk( KERN_INFO "%s: initialized vchiq for '%s'\n", __func__,
+                    kernState->instance_name );
+    }	
+	
     printk( KERN_INFO "%s: successfully initialized '%s' videocore\n",
             __func__, kernState->instance_name );
 

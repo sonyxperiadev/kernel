@@ -565,6 +565,10 @@
 #define BCM59055_REG_PWMLEDCTRL1_PWM_FREQ_256           2
 #define BCM59055_REG_PWMLEDCTRL1_PWM_FREQ_256_SHIFT     5
 
+#define BCM59055_REG_FGACCM_SIGNBIT 	(1<<25)
+#define BCM59055_REG_FGACCM_VALMASK		0x1ffffff
+#define BCM59055_REG_FGACCM_VALID		0x80000000
+
 /* PMU Interrupts IDs  --------------------------------------------------------------- */
 typedef enum {
 	BCM59055_IRQID_INT1_POK_PRESSED,
@@ -650,6 +654,13 @@ typedef enum {
 
 	BCM59055_TOTAL_IRQ
 } BCM59038_InterruptId;
+
+enum {
+	BCM59055_CHARGER_UNKNOWN = 0,
+	BCM59055_CHARGER_SDP,
+	BCM59055_CHARGER_CDP,
+	BCM59055_CHARGER_DCP
+};
 
 struct bcm590xx;
 

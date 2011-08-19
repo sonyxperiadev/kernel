@@ -44,6 +44,11 @@ static void sdhci_finish_data(struct sdhci_host *);
 
 static void sdhci_send_command(struct sdhci_host *, struct mmc_command *);
 static void sdhci_finish_command(struct sdhci_host *);
+#ifdef CONFIG_MMC_BCM_SD
+extern int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
+#else
+#define sdhci_pltfm_clk_enable(..)	do { }while(0)
+#endif
 
 static void sdhci_dumpregs(struct sdhci_host *host)
 {
@@ -1114,6 +1119,7 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 
 	WARN_ON(host->mrq != NULL);
 
+	sdhci_pltfm_clk_enable(host, 1);
 #ifndef SDHCI_USE_LEDS_CLASS
 	sdhci_activate_led(host);
 #endif
@@ -1150,6 +1156,7 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	if (host->flags & SDHCI_DEVICE_DEAD)
 		goto out;
 
+	sdhci_pltfm_clk_enable(host, 1);
 	/*
 	 * Reset the chip on each power off.
 	 * Should clear out any weird states.
@@ -1211,6 +1218,7 @@ static void sdhci_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	if(host->quirks & SDHCI_QUIRK_RESET_CMD_DATA_ON_IOS)
 		sdhci_reset(host, SDHCI_RESET_CMD | SDHCI_RESET_DATA);
 
+	sdhci_pltfm_clk_enable(host, 0);
 out:
 	mmiowb();
 	spin_unlock_irqrestore(&host->lock, flags);
@@ -1226,11 +1234,13 @@ static int sdhci_get_ro(struct mmc_host *mmc)
 
 	spin_lock_irqsave(&host->lock, flags);
 
+	sdhci_pltfm_clk_enable(host, 1);
 	if (host->flags & SDHCI_DEVICE_DEAD)
 		present = 0;
 	else
 		present = sdhci_readl(host, SDHCI_PRESENT_STATE);
 
+	sdhci_pltfm_clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	if (host->quirks & SDHCI_QUIRK_INVERTED_WRITE_PROTECT)
@@ -1297,6 +1307,7 @@ static void sdhci_tasklet_card(unsigned long param)
 		}
 	}
 
+	sdhci_pltfm_clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	mmc_detect_change(host->mmc, msecs_to_jiffies(200));
@@ -1351,6 +1362,7 @@ static void sdhci_tasklet_finish(unsigned long param)
 #endif
 
 	mmiowb();
+	sdhci_pltfm_clk_enable(host, 0);
 	spin_unlock_irqrestore(&host->lock, flags);
 
 	mmc_request_done(host->mmc, mrq);

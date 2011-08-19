@@ -43,15 +43,20 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
+#include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 #include "osdal_os.h"
-#include "auddrv_def.h"
+#include "osheap.h"
 #include "log.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
+#include "csl_apcmd.h"
 #include "csl_audio_render.h"
 #include "csl_audio_capture.h"
 #include "dspif_voice_record.h"
-
+#include "csl_arm2sp.h"
+#include "csl_vpu.h"
+#include "dspif_voip.h"
 
 #define VOICE_CAPT_FRAME_SIZE 320
 
@@ -77,7 +82,13 @@ typedef struct AUDIO_DDRIVER_t
     UInt32                                  frame_size;
     UInt32                                  speech_mode;
     UInt8*                                  tmp_buffer;
-
+	UInt32 									instanceID; //ARM2SP1 or ARM2SP2
+	UInt32									bufferSize_inBytes;
+	UInt32 									num_periods;
+	UInt8 									audMode;
+	AUDIO_DRIVER_VoipCB_t					pVoipULCallback;
+	AUDIO_DRIVER_VoipCB_t					pVoipDLCallback;
+	UInt16									codec_type;
 }AUDIO_DDRIVER_t;
 
 
@@ -86,7 +97,17 @@ typedef struct AUDIO_DDRIVER_t
 // Private Type and Constant declarations
 //=============================================================================
 static AUDIO_DDRIVER_t* audio_render_driver[CSL_CAPH_STREAM_TOTAL];
+
+static AUDIO_DDRIVER_t* audio_voice_driver[VORENDER_ARM2SP_INSTANCE_TOTAL]; // 2 ARM2SP instances
+
+static AUDIO_DDRIVER_t* audio_voip_driver = NULL;
+
 static AUDIO_DDRIVER_t* audio_capture_driver = NULL;
+
+static int index = 1;
+static Boolean endOfBuffer = FALSE;
+static const UInt16 sVoIPDataLen[] = {0, 322, 160, 38, 166, 642, 70};
+
 
 //=============================================================================
 // Private function prototypes
@@ -94,6 +115,10 @@ static AUDIO_DDRIVER_t* audio_capture_driver = NULL;
 static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           AUDIO_DRIVER_CTRL_t ctrl_cmd,
                                           void* pCtrlStruct);
+static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
+                                          AUDIO_DRIVER_CTRL_t ctrl_cmd,
+                                          void* pCtrlStruct);
+
 
 static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
                                           AUDIO_DRIVER_CTRL_t ctrl_cmd,
@@ -103,12 +128,28 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                                           AUDIO_DRIVER_CTRL_t ctrl_cmd,
                                           void* pCtrlStruct);
 
+static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
+                                          AUDIO_DRIVER_CTRL_t ctrl_cmd,
+                                          void* pCtrlStruct);
+
+
 static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                                           AUDIO_DRIVER_CTRL_t ctrl_cmd,
                                           void* pCtrlStruct);
 
 static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id);
 static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id);
+static void AUDIO_DRIVER_RenderVoiceCallback1(UInt16 buf_index);
+static void AUDIO_DRIVER_RenderVoiceCallback2(UInt16 buf_index);
+static void AUDIO_DRIVER_CaptureVoiceCallback(UInt16 buf_index);
+
+static Boolean VOIP_DumpUL_CB(
+		UInt8		*pSrc,		// pointer to start of speech data
+		UInt32		amrMode		// AMR codec mode of speech data
+		);
+
+static Boolean VOIP_FillDL_CB(UInt32 nFrames);
+
 
 //=============================================================================
 // Functions
@@ -298,18 +339,14 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
             break;
+			
         case AUDIO_DRIVER_CAPT_HQ:
-            {
-	           audio_capture_driver = aud_drv;
-			}
-            break;
         case AUDIO_DRIVER_CAPT_VOICE:
-            {
-             #ifdef CONFIG_AUDIO_BUILD // no function available 
-		 dspif_VPU_record_init ();
-	     #endif
-                audio_capture_driver = aud_drv;
-            }
+            audio_capture_driver = aud_drv;
+            break;
+			
+		case AUDIO_DRIVER_VOIP:
+            audio_voip_driver = aud_drv;
             break;
 
         default:
@@ -337,12 +374,13 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
         return;
     }
 
-    if ( aud_drv->tmp_buffer )
-        OSDAL_FREEHEAPMEM(aud_drv->tmp_buffer);
-
     switch (aud_drv->drv_type)
     {
         case AUDIO_DRIVER_PLAY_VOICE:
+			{
+				audio_voice_driver[aud_drv->instanceID] = NULL;
+       		}
+		break;
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
             {
@@ -359,11 +397,15 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
             break;
         case AUDIO_DRIVER_CAPT_VOICE:
             {
-		#ifdef CONFIG_AUDIO_BUILD
-		dspif_VPU_record_deinit (); // no function available
-                #endif
-		audio_capture_driver = NULL;
+				audio_capture_driver = NULL;
             }
+            break;
+		case AUDIO_DRIVER_VOIP:
+			{
+            audio_voip_driver = NULL;
+			OSHEAP_Delete(aud_drv->tmp_buffer);
+			aud_drv->tmp_buffer = NULL;
+			}
             break;
         default:
             Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Close::Unsupported driver  \n"  );
@@ -418,7 +460,6 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 {
     AUDIO_DDRIVER_t*  aud_drv = (AUDIO_DDRIVER_t*)drv_handle;
     Result_t result_code = RESULT_ERROR;
-    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::  \n"  );
 
     if(aud_drv == NULL)
     {
@@ -436,6 +477,10 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
     switch (aud_drv->drv_type)
     {
         case AUDIO_DRIVER_PLAY_VOICE:
+			{
+                result_code =  AUDIO_DRIVER_ProcessVoiceRenderCmd(aud_drv,ctrl_cmd,pCtrlStruct);
+            }
+			break;
         case AUDIO_DRIVER_PLAY_AUDIO:
         case AUDIO_DRIVER_PLAY_RINGER:
             {
@@ -452,6 +497,12 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
                 result_code =  AUDIO_DRIVER_ProcessCaptureVoiceCmd(aud_drv,ctrl_cmd,pCtrlStruct);
             }
             break;
+
+		 case AUDIO_DRIVER_VOIP:
+            { 
+				result_code =  AUDIO_DRIVER_ProcessVoIPCmd(aud_drv,ctrl_cmd,pCtrlStruct);
+		 	}
+		 	break;
         default:
             Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::Unsupported driver  \n"  );
             break;
@@ -459,7 +510,7 @@ void AUDIO_DRIVER_Ctrl(AUDIO_DRIVER_HANDLE_t drv_handle,
 
     if(result_code == RESULT_ERROR)
     {
-        Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::command processing failed  \n"  );
+        Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Ctrl::command processing failed aud_drv->drv_type %d ctrl_cmd %d \n",aud_drv->drv_type,ctrl_cmd);
     }
     return;
 }
@@ -528,16 +579,16 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                  */
                 //((aud_drv->sample_rate/1000) * (aud_drv->num_channel) * 2 * (aud_drv->interrupt_period));  **period_size comes directly
                 block_size = aud_drv->interrupt_period;
-		num_blocks = 2; //limitation for RHEA
+				num_blocks = 2; //limitation for RHEA
 
                 // configure the render driver before starting
                 result_code = csl_audio_render_configure ( aud_drv->sample_rate, 
-						                      aud_drv->num_channel,
-                			                              aud_drv->bits_per_sample,
-						                      (UInt8 *)aud_drv->ring_buffer_phy_addr,
-						                      num_blocks,
-						                      block_size,
-						                      (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
+									                      aud_drv->num_channel,
+                			                	          aud_drv->bits_per_sample,
+									                      (UInt8 *)aud_drv->ring_buffer_phy_addr,
+									                      num_blocks,
+						            			          block_size,
+						                      			  (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
                                         			      aud_drv->stream_id);
 
                 //start render
@@ -570,7 +621,125 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
     return result_code;
 }
 
-#if 1
+//============================================================================
+//
+// Function Name: AUDIO_DRIVER_ProcessRenderCmd
+//
+// Description:   This function is used to process voice render control commands
+//
+//============================================================================
+
+static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
+                                          AUDIO_DRIVER_CTRL_t ctrl_cmd,
+                                          void* pCtrlStruct)
+{
+	Result_t result_code = RESULT_ERROR;
+	VORENDER_PLAYBACK_MODE_t playbackMode;
+	VORENDER_VOICE_MIX_MODE_t *mixMode;
+	UInt32 numFramesPerInterrupt;
+	
+	Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoiceRenderCmd::%d \n",ctrl_cmd );
+	switch (ctrl_cmd)
+	{
+		  case AUDIO_DRIVER_START:
+		  {
+						  
+			  if(pCtrlStruct != NULL)
+				  mixMode = ( VORENDER_VOICE_MIX_MODE_t *)pCtrlStruct;
+				  
+			  //check if callback is already set or not
+			  if( (aud_drv->pCallback == NULL) ||
+				  (aud_drv->interrupt_period == 0) ||
+				  (aud_drv->sample_rate == 0) ||
+				  (aud_drv->num_channel == 0) ||
+				  (aud_drv->bits_per_sample == 0) ||
+				  (aud_drv->ring_buffer == NULL) ||
+				  (aud_drv->ring_buffer_size == 0)
+				  )
+			  {
+				  Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoiceRenderCmd::All Configuration is not set yet	\n"  );
+				  return result_code;
+			  }
+
+			  audio_voice_driver[aud_drv->instanceID] =  aud_drv;
+
+			  aud_drv->num_periods = aud_drv->ring_buffer_size/aud_drv->interrupt_period;
+	  
+			  numFramesPerInterrupt = 4; // use default value
+
+			  //equal to half of sizeof(shared_Arm2SP_InBuf): 4 frames, for Narrow band,160 words *4 = 1280 bytes.
+			  aud_drv->bufferSize_inBytes = (ARM2SP_INPUT_SIZE/4)*numFramesPerInterrupt;
+				  
+			  if(aud_drv->sample_rate == AUDIO_SAMPLING_RATE_16000)
+			  {
+					aud_drv->bufferSize_inBytes *= 2;
+			  }     
+			  
+	          //set the callback
+	          if(aud_drv->instanceID == VORENDER_ARM2SP_INSTANCE1) //instance 1
+	  	          dspif_ARM2SP_play_set_cb(aud_drv->instanceID,(playback_data_cb_t)AUDIO_DRIVER_RenderVoiceCallback1);		
+			  else if(aud_drv->instanceID == VORENDER_ARM2SP_INSTANCE2) //instance 2
+				  dspif_ARM2SP_play_set_cb(aud_drv->instanceID,(playback_data_cb_t)AUDIO_DRIVER_RenderVoiceCallback2);		
+
+			  // Based on the mix mode, decide the playback mode as well
+			  if(*mixMode == VORENDER_VOICE_MIX_DL)
+			  {
+			  		playbackMode = VORENDER_PLAYBACK_DL;
+			  }
+			  else if(*mixMode == VORENDER_VOICE_MIX_UL)
+			  {
+			  		playbackMode = VORENDER_PLAYBACK_UL;
+			  }
+			  else if(*mixMode == VORENDER_VOICE_MIX_BOTH)
+			  {
+			  		playbackMode = VORENDER_PLAYBACK_BOTH;
+			  }
+			  else if(*mixMode == VORENDER_VOICE_MIX_NONE)
+			  {
+			  		playbackMode = VORENDER_PLAYBACK_DL; //for standalone testing
+			  }
+				
+				
+			 //start render
+
+			 aud_drv->audMode = (aud_drv->num_channel == AUDIO_CHANNEL_STEREO)? 1 : 0; 
+				  
+			 result_code = dspif_ARM2SP_play_start(aud_drv->instanceID,
+			  										playbackMode, 
+													*mixMode, 
+													aud_drv->sample_rate,
+													numFramesPerInterrupt,
+													aud_drv->audMode); 
+		  }
+		  break;
+		  case AUDIO_DRIVER_STOP:
+		  {
+			  //stop render
+			  result_code = dspif_ARM2SP_play_stop (aud_drv->instanceID);
+			  index = 1; //reset
+			  endOfBuffer = FALSE;
+		  }
+		  break;
+		  case AUDIO_DRIVER_PAUSE:
+          {
+               //pause render
+               result_code = dspif_ARM2SP_play_pause (aud_drv->instanceID);
+          }
+          break;
+          case AUDIO_DRIVER_RESUME:
+          {
+               //resume render
+               result_code = dspif_ARM2SP_play_pause (aud_drv->instanceID);
+          }
+          break;
+		  default:
+			  Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoiceRenderCmd::Unsupported command  \n"	);
+			  break;
+	  }
+	
+	  return result_code;
+
+}
 //============================================================================
 //
 // Function Name: AUDIO_DRIVER_ProcessCaptureCmd
@@ -669,7 +838,8 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-
+	VOCAPTURE_RECORD_MODE_t *recordMode;
+	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureVoiceCmd::%d \n",ctrl_cmd );
 
     switch (ctrl_cmd)
@@ -679,13 +849,12 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 block_size;
                 UInt32 frame_size;
                 UInt32 num_frames;
-                UInt32 left_over;
-               #ifdef CONFIG_AUDIO_BUILD
-		UInt32 speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_8K;
-               #else
-		UInt32 speech_mode = 0;
-	       #endif 
-		//check if callback is already set or not
+				UInt32 speech_mode = VP_SPEECH_MODE_LINEAR_PCM_8K;
+
+				if(pCtrlStruct != NULL)
+					  recordMode = (VOCAPTURE_RECORD_MODE_t *)pCtrlStruct;
+					  
+				//check if callback is already set or not
                 if( (aud_drv->pCallback == NULL) ||
                     (aud_drv->interrupt_period == 0) ||
                     (aud_drv->sample_rate == 0) ||
@@ -701,9 +870,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 }
 
                 //set the callback
-             #ifdef CONFIG_AUDIO_BUILD // no function available 
-                dspif_VPU_record_set_cb (AUDIO_DRIVER_CaptureVoiceCallback);
-             #endif   
+                dspif_VPU_record_set_cb ((capture_data_cb_t) AUDIO_DRIVER_CaptureVoiceCallback);
 
          /* **CAUTION: Check if we need to hardcode number of frames and handle the interrupt period seperately
                 * Block size = interrupt_period
@@ -716,61 +883,49 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 block_size = aud_drv->interrupt_period;
 			    num_frames = (block_size/frame_size);
 
-                aud_drv->tmp_buffer = (UInt8*) OSDAL_ALLOCHEAPMEM(block_size);
+				aud_drv->num_periods = aud_drv->ring_buffer_size/aud_drv->interrupt_period;
 
-                left_over = block_size % frame_size;
-
-                if(left_over)
-                {
-                    Log_DebugPrintf(LOGID_AUDIO,"Period is not multiple of 20ms-%ld  \n",left_over);
-                    num_frames++;  // increase frame count by 1 more so that we have all data when we signal
-                }
                 if(aud_drv->sample_rate == 16000)
-                   #ifdef CONFIG_AUDIO_BUILD
-		    speech_mode = VOCAPTURE_SPEECH_MODE_LINEAR_PCM_16K;
-                   #else  
-		   speech_mode = 0;
+				    speech_mode = VP_SPEECH_MODE_LINEAR_PCM_16K;
 
-		   #endif
 
                 // update num_frames and frame_size
-                aud_drv->num_frames = num_frames;
-                aud_drv->frame_size = frame_size;
-                aud_drv->speech_mode = speech_mode;
+                aud_drv->num_frames 				= num_frames;
+                aud_drv->frame_size 				= frame_size;
+                aud_drv->speech_mode 				= speech_mode;
+			
+				if(*recordMode == VOCAPTURE_RECORD_NONE)
+					*recordMode = VOCAPTURE_RECORD_BOTH; //default capture mode
 
-                
-
-                result_code = dspif_VPU_record_start ( VOCAPTURE_RECORD_BOTH,
+                result_code = dspif_VPU_record_start ( *recordMode,
 								aud_drv->sample_rate,
 								speech_mode, 
 								0, // used by AMRNB and AMRWB
 								0,
 								0,
 								num_frames);
-
+	
             }
             break;
         case AUDIO_DRIVER_STOP:
             {
                 //stop capture
                 result_code = dspif_VPU_record_stop ();
+				index = 1; //reset
+				endOfBuffer = FALSE;
             }
             break;
         case AUDIO_DRIVER_PAUSE:
             {
                 //pause capture
-             #ifdef CONFIG_AUDIO_BUILD // no function available 
                 result_code = dspif_VPU_record_pause ();
-             #endif
-	    }
+		    }
             break;
         case AUDIO_DRIVER_RESUME:
             {
                 //resume capture
-             #ifdef CONFIG_AUDIO_BUILD // no function available 
                 result_code = dspif_VPU_record_resume ();
-             #endif
-	    }
+		    }
             break;
         default:
             Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureVoiceCmd::Unsupported command  \n"  );
@@ -779,7 +934,110 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 
     return result_code;
 }
-#endif
+
+
+//============================================================================
+//
+// Function Name: AUDIO_DRIVER_ProcessVoIPCmd
+//
+// Description:   This function is used to process VoIP commands
+//
+//============================================================================
+
+static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
+                                          AUDIO_DRIVER_CTRL_t ctrl_cmd,
+                                          void* pCtrlStruct)
+{
+    Result_t result_code = RESULT_ERROR;
+	UInt16 *codec_type = 0;
+	UInt32 size=0;
+	
+    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::%d \n",ctrl_cmd );
+
+    switch (ctrl_cmd)
+    {
+        case AUDIO_DRIVER_START:
+            {     
+				if( (aud_drv->pVoipULCallback == NULL) ||
+					(aud_drv->pVoipDLCallback == NULL)
+					)
+				{
+					Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::All Configuration is not set yet	\n"  );
+					return result_code;
+				}
+
+				if(pCtrlStruct != NULL)
+			    	codec_type = (UInt16 *)pCtrlStruct;
+					
+					if(*codec_type == 0)
+						aud_drv->codec_type = VOIP_PCM;
+					else if(*codec_type == 1) 
+						aud_drv->codec_type = VOIP_PCM_16K;
+					else if(*codec_type == 2) 
+						aud_drv->codec_type = VOIP_AMR475;
+					else if(*codec_type == 3) 
+						aud_drv->codec_type = VOIP_AMR_WB_MODE_7k;
+					else if(*codec_type == 4) 
+						aud_drv->codec_type = VOIP_FR;
+					else if(*codec_type == 5) 
+						aud_drv->codec_type = VOIP_G711_U;
+					else
+					{
+						Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n" );
+						break;
+					}
+
+				size = sVoIPDataLen[(aud_drv->codec_type & 0xf000) >> 12];
+			
+				Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd:: aud_drv->codec_type %d size = %ld\n", aud_drv->codec_type,size );
+
+				aud_drv->tmp_buffer = OSHEAP_Alloc(size); 
+
+				if(aud_drv->tmp_buffer == NULL)
+					break;
+				else
+					memset(aud_drv->tmp_buffer,0,size);
+			
+				result_code = AP_VoIP_StartTelephony(VOIP_DumpUL_CB, VOIP_FillDL_CB);
+            }
+            break;
+        case AUDIO_DRIVER_STOP:
+            {
+				result_code = AP_VoIP_StopTelephony();
+            }
+            break;
+        case AUDIO_DRIVER_SET_VOIP_UL_CB:
+            {
+				if(pCtrlStruct == NULL)
+                {
+                    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr  \n"  );
+                    return result_code;
+                }
+                //assign the call back
+                aud_drv->pVoipULCallback = (AUDIO_DRIVER_VoipCB_t)pCtrlStruct;
+                result_code = RESULT_OK;
+		    }
+            break;
+        case AUDIO_DRIVER_SET_VOIP_DL_CB:
+            {
+	            if(pCtrlStruct == NULL)
+                {
+                    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Invalid Ptr  \n"  );
+                    return result_code;
+                }
+                //assign the call back
+                aud_drv->pVoipDLCallback = (AUDIO_DRIVER_VoipCB_t)pCtrlStruct;
+                result_code = RESULT_OK;
+		    }
+            break;
+        default:
+            Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::Unsupported command  \n"  );
+            break;
+    }
+
+    return result_code;
+}
+
 
 //============================================================================
 //
@@ -810,6 +1068,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
                 aud_drv->sample_rate = pAudioConfig->sample_rate;
                 aud_drv->num_channel = pAudioConfig->num_channel;
                 aud_drv->bits_per_sample = pAudioConfig->bits_per_sample;
+				aud_drv->instanceID = pAudioConfig->instanceId; // to decide on ARM2SP1 or ARM2SP2
                 result_code = RESULT_OK;
             }
             break;
@@ -836,7 +1095,6 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
                     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCommonCmd::Invalid Ptr  \n"  );
                     return result_code;
                 }
-                //assign the call back
                 aud_drv->interrupt_period = *((UInt32*)pCtrlStruct);
                 result_code = RESULT_OK;
             }
@@ -873,7 +1131,6 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
             break;
             
         default:
-            Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCommonCmd::Unsupported command  \n"  );
             break;
     }
 
@@ -883,7 +1140,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
 //
 // Function Name: AUDIO_DRIVER_RenderDmaCallback
 //
-// Description:   This function processes the callback from the dsp
+// Description:   This function processes the callback from the CAPH
 //
 //============================================================================
 
@@ -909,6 +1166,119 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
     
     return;
 }
+
+//============================================================================
+//
+// Function Name: AUDIO_DRIVER_RenderVoiceCallback
+//
+// Description:   This function processes the callback from the dsp
+//
+//============================================================================
+
+static void AUDIO_DRIVER_RenderVoiceCallback1(UInt16 buf_index)
+{
+	Boolean in48K = FALSE;
+	AUDIO_DDRIVER_t* pAudDrv;
+	UInt8 *pSrc = NULL;
+	UInt32 srcIndex,copied_bytes;
+
+	pAudDrv = audio_voice_driver[VORENDER_ARM2SP_INSTANCE1];
+	
+	pSrc = pAudDrv->ring_buffer;
+	srcIndex = pAudDrv->read_index;
+
+	//copy the data from ring buffer to shared memory
+	
+	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K, pAudDrv->audMode );
+
+	srcIndex += copied_bytes;
+
+	if(srcIndex >= pAudDrv->ring_buffer_size)
+	{
+		srcIndex -= pAudDrv->ring_buffer_size;
+		endOfBuffer = TRUE;
+	}
+	
+	pAudDrv->read_index = srcIndex;
+
+
+	if((pAudDrv->read_index >= (pAudDrv->interrupt_period * index)) || (endOfBuffer == TRUE))	
+	{
+		// then send the period elapsed
+		if(pAudDrv->pCallback != NULL) //ARM2SP1 instance
+    	{
+	    	//Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_RenderVoiceCallback1::  callback done index %d\n",index);
+        	pAudDrv->pCallback(pAudDrv->pCBPrivate);			
+    	}
+
+		if(index == pAudDrv->num_periods)
+		{
+			index = 1; //reset back 
+			endOfBuffer = FALSE; 
+		}
+		else
+		{
+			index++;
+		}
+	}
+	
+}
+
+//============================================================================
+//
+// Function Name: AUDIO_DRIVER_RenderVoiceCallback2
+//
+// Description:   This function processes the callback from the dsp
+//
+//============================================================================
+
+static void AUDIO_DRIVER_RenderVoiceCallback2(UInt16 buf_index)
+{
+	Boolean in48K = FALSE;
+	AUDIO_DDRIVER_t* pAudDrv;
+	UInt8 *pSrc = NULL;
+	UInt32 srcIndex,copied_bytes;
+	
+	pAudDrv = audio_voice_driver[VORENDER_ARM2SP_INSTANCE2];
+		
+	pSrc = pAudDrv->ring_buffer;
+	srcIndex = pAudDrv->read_index;
+		
+	//copy the data from ring buffer to shared memory
+		
+	copied_bytes = CSL_ARM2SP_Write( (pSrc + srcIndex), pAudDrv->bufferSize_inBytes, buf_index, in48K, pAudDrv->audMode );
+	
+	srcIndex += copied_bytes;
+	
+	if(srcIndex >= pAudDrv->ring_buffer_size)
+	{
+		srcIndex -= pAudDrv->ring_buffer_size;
+		endOfBuffer = TRUE;
+	}
+		
+	pAudDrv->read_index = srcIndex;
+	if((pAudDrv->read_index >= (pAudDrv->interrupt_period * index)) || (endOfBuffer == TRUE)) 
+	{
+		// then send the period elapsed
+		if(pAudDrv->pCallback != NULL) //ARM2SP2 instance
+		{
+			//Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_RenderVoiceCallback2::  callback done index %d\n",index);
+			pAudDrv->pCallback(pAudDrv->pCBPrivate);			
+		}
+	
+		if(index == pAudDrv->num_periods)
+		{
+			index = 1; //reset back 
+			endOfBuffer = FALSE; 
+		}
+		else
+		{
+			index++;
+		}
+	}
+
+}
+
 
 //============================================================================
 //
@@ -939,7 +1309,7 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
     return;
 }
 
-#if 0
+
 //============================================================================
 //
 // Function Name: AUDIO_DRIVER_CaptureVoiceCallback
@@ -948,71 +1318,111 @@ static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id)
 //
 //============================================================================
 
-static void AUDIO_DRIVER_CaptureVoiceCallback(UInt32 buf_index)
+static void AUDIO_DRIVER_CaptureVoiceCallback(UInt16 buf_index)
 {
-#ifdef CONFIG_AUDIO_BUILD
-    Int32		dest_index, num_bytes_to_copy, split,end_size = 0;
+    Int32		dest_index, num_bytes_to_copy;
 	UInt8 *	pdest_buf;
-    UInt32      dst_buf_size,recv_size;
+    UInt32      recv_size;
     AUDIO_DDRIVER_t* aud_drv;
 
+    aud_drv = audio_capture_driver;
 
-    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_CaptureVoiceCallback::\n");
-
-
-    if((audio_capture_driver == NULL))
+    if((aud_drv == NULL))
     {
         Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_CaptureVoiceCallback:: Spurious call back\n");
 		return;
     }
 
+    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_CaptureVoiceCallback:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
+
     //Copy the data to the ringbuffer from dsp shared memory
-    aud_drv = audio_capture_driver;
     dest_index = aud_drv->write_index;
     pdest_buf= aud_drv->ring_buffer;
-    dst_buf_size = aud_drv->ring_buffer_size;
-    num_bytes_to_copy = (aud_drv->num_frames) * (aud_drv->frame_size);
+    num_bytes_to_copy = (aud_drv->num_frames) * (aud_drv->frame_size); 
 
-    
-
-    split = (dest_index+num_bytes_to_copy) - dst_buf_size;
-
-    //Log_DebugPrintf(LOGID_AUDIO,"dest_index-%d  dst_buf_size-%d num_bytes_to_copy-%d\n",dest_index,dst_buf_size,num_bytes_to_copy);
-    //Log_DebugPrintf(LOGID_AUDIO,"num_frames-%d  frame_size-%d split-%d\n",aud_drv->num_frames,aud_drv->frame_size,split);
-
-    if( split >  0)
-    {
-        //It should not come here underlying API does not update the src pointer internally so we will copy same thing twice
-        Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_CaptureVoiceCallback::Split > 0 *******\n");
-        Log_DebugPrintf(LOGID_AUDIO,"dest_index-%d  dst_buf_size-%d num_bytes_to_copy-%d\n",dest_index,dst_buf_size,num_bytes_to_copy);
-        Log_DebugPrintf(LOGID_AUDIO,"num_frames-%d  frame_size-%d split-%d\n",aud_drv->num_frames,aud_drv->frame_size,split);
-
-        end_size = dst_buf_size - dest_index;
-        recv_size = dspif_VPU_record_read_PCM ( aud_drv->tmp_buffer, num_bytes_to_copy, buf_index, aud_drv->speech_mode,aud_drv->num_frames);
-        memcpy(pdest_buf+dest_index, aud_drv->tmp_buffer, end_size);
-        memcpy(pdest_buf, aud_drv->tmp_buffer + end_size, split);
-    }
-    else
-    {
-        recv_size = dspif_VPU_record_read_PCM ( pdest_buf+dest_index, num_bytes_to_copy, buf_index, aud_drv->speech_mode,aud_drv->num_frames);
-    }
-
-    dest_index += num_bytes_to_copy;
-
-    if(dest_index >= dst_buf_size)
-        dest_index -= dst_buf_size;
-
+    recv_size = CSL_VPU_ReadPCM ( pdest_buf+dest_index, num_bytes_to_copy, buf_index, aud_drv->speech_mode);
+	
     // update the write index
-    aud_drv->write_index = dest_index;
+    dest_index += recv_size;
 
-    // call the callback
-    if(audio_capture_driver->pCallback != NULL)
-    {
-        audio_capture_driver->pCallback(audio_capture_driver);
-    }
-    else
-        Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_CaptureDmaCallback:: No callback registerd\n");
- #endif
+	if(dest_index >= aud_drv->ring_buffer_size)
+    {  
+	   	dest_index -= aud_drv->ring_buffer_size;
+  	    endOfBuffer = TRUE;					
+	}
+	
+	aud_drv->write_index = dest_index;
+	
+	if((dest_index >= (aud_drv->interrupt_period * index)) || (endOfBuffer == TRUE))
+	{
+		// then send the period elapsed
+		
+		if(aud_drv->pCallback != NULL) 
+		{
+			//Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_CaptureVoiceCallback::  callback done index %d\n",index);
+			aud_drv->pCallback(aud_drv->pCBPrivate);			
+		}
+		
+		if(index == aud_drv->num_periods) 
+		{
+			endOfBuffer = FALSE; 
+			index = 1; //reset back 
+		}
+		else
+		{
+			index++;
+		}
+	}
     return;
 }
-#endif
+
+static Boolean VOIP_DumpUL_CB(
+		UInt8		*pSrc,		// pointer to start of speech data
+		UInt32		amrMode		// AMR codec mode of speech data
+		)
+{
+
+    AUDIO_DDRIVER_t* aud_drv;
+	UInt8 index = 0;
+	VOIP_Buffer_t *voipBufPtr = NULL;
+	UInt16 codecType;
+	
+    aud_drv = audio_voip_driver;
+    if((aud_drv == NULL))
+    {
+        Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB:: Spurious call back\n");
+        return TRUE;
+    }
+	voipBufPtr = (VOIP_Buffer_t *)pSrc;
+	codecType = voipBufPtr->voip_vocoder;
+	index = (codecType & 0xf000) >> 12;
+	if (index >= 7)
+		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: Invalid codecType = 0x%x\n", codecType);
+	else
+	{
+		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: codecType = 0x%x, index = %d\n", codecType, index);		
+	    if(aud_drv->pVoipULCallback != NULL)
+			aud_drv->pVoipULCallback(aud_drv, (pSrc + 2), codecType); // 2 bytes for codec type
+	}    
+    return TRUE;
+};
+
+static Boolean VOIP_FillDL_CB( UInt32 nFrames)
+{
+    AUDIO_DDRIVER_t* aud_drv;
+	UInt32 dlSize = 0;
+
+    aud_drv = audio_voip_driver;
+    if(aud_drv == NULL)
+    {
+        Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB:: Spurious call back\n");
+        return TRUE;
+    }
+	aud_drv->tmp_buffer[0] = aud_drv->codec_type;
+	dlSize = sVoIPDataLen[(aud_drv->codec_type & 0xf000) >> 12];
+	Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->codec_type, dlSize);
+	aud_drv->pVoipDLCallback(aud_drv, aud_drv->tmp_buffer, dlSize);
+	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->codec_type, aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->codec_type, FALSE);
+	return TRUE;
+};
+
