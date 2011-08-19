@@ -107,12 +107,13 @@ UInt32 csl_audio_render_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
    		dmaCH = csl_caph_dma_obtain_channel();
 	    audio_xassert(dmaCH<CSL_CAPH_DMA_CH12, dmaCH);
 	}
-
+/*
+	//second DMA channel will be obtained during blocks config in csl_caph_hwctrl.c
 	if(sink == CSL_CAPH_DEV_DSP_throughMEM)
 	{
 		dmaCH2 = csl_caph_dma_obtain_channel();
 	}
-
+*/
 	if (dmaCH == CSL_CAPH_DMA_NONE)
 		return streamID;
 	

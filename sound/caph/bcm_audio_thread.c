@@ -286,7 +286,7 @@ void AUDIO_Ctrl_Process(
 			}
 			else if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_VOICE)
 			{
-				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode);
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,NULL);
 			}
         }
         break;

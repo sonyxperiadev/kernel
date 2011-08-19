@@ -75,6 +75,7 @@ typedef struct AUDIO_DRIVER_CONFIG_t
 	AUDIO_CHANNEL_NUM_t         num_channel;
 	AUDIO_BITS_PER_SAMPLE_t     bits_per_sample;
 	UInt32 						instanceId; //ARM2SP1/ARM2SP2 mapped to PCMOUT1/PCMOUT2
+	UInt32 						arm2sp_mixMode;
 } AUDIO_DRIVER_CONFIG_t;
 
 typedef struct AUDIO_DRIVER_BUFFER_t

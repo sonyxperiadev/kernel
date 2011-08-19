@@ -121,6 +121,7 @@ static struct snd_pcm_hardware brcm_playback_hw =
 	.periods_max = 2,//limitation for RHEA
 };
 
+#ifndef ENABLE_DMA_ARM2SP
 static struct snd_pcm_hardware brcm_voice_playback_hw =
 {
 	.info = (SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_INTERLEAVED |
@@ -137,7 +138,7 @@ static struct snd_pcm_hardware brcm_voice_playback_hw =
 	.periods_min = 2,
 	.periods_max = 2,
 };
-
+#endif
 
 static struct snd_pcm_hardware brcm_capture_hw =
 {
@@ -253,16 +254,17 @@ static int PcmPlaybackOpen(
 	param_open.drv_handle = NULL;
 	param_open.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
 
+#ifndef ENABLE_DMA_ARM2SP
 	if(callMode == 1) //in call mode
 	{
 		//route the playback to DSP
 		runtime->hw = brcm_voice_playback_hw;
 		chip->streamCtl[substream_number].dev_prop.u.p.drv_type = AUDIO_DRIVER_PLAY_VOICE;
-
 		err = snd_pcm_hw_constraint_step(runtime,0,SNDRV_PCM_HW_PARAM_BUFFER_BYTES,
-										1280); 
+								1280); 	
 	}
 	else
+#endif
 	{
 		//route the playback to CAPH
 		runtime->hw = brcm_playback_hw; 
@@ -328,7 +330,7 @@ static int PcmPlaybackPrepare(
 )
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-//	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     unsigned long period_bytes;
     AUDIO_DRIVER_BUFFER_t buf_param;
@@ -356,16 +358,6 @@ static int PcmPlaybackPrepare(
     buf_param.pBuf = runtime->dma_area;// virtual address
     buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
 
-	if(callMode == 1) //speech playback
-	{
-		//check if the buffer size is multiple of SM size (1280). If not, return error
-		if((buf_param.buf_size % ARM2SP_INPUT_SIZE) != 0)
-		{
-			BCM_AUDIO_DEBUG("For Playback during call, buf_size = %d should be multiple of 1280\n",runtime->dma_bytes);
-			return -EINVAL;
-		}
-	}
-    
     BCM_AUDIO_DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
 
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
@@ -375,6 +367,7 @@ static int PcmPlaybackPrepare(
     drv_config.num_channel = runtime->channels;
     drv_config.bits_per_sample = AUDIO_16_BIT_PER_SAMPLE;
 	drv_config.instanceId = substream->number; 
+	drv_config.arm2sp_mixMode = chip->pi32SpeechMixOption[substream->number];
     AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);
 
 //	BCM_AUDIO_DEBUG("\n%lx:playback_prepare period bytes=%d, periods =%d, buffersize=%d\n",jiffies, g_brcm_alsa_chip->period_bytes[0], runtime->periods, runtime->dma_bytes);
@@ -404,6 +397,10 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 
 	if(callMode == 1) //call mode
 	{
+#ifdef ENABLE_DMA_ARM2SP
+		chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_DSP_VOICE;	
+		chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_DSP_throughMEM;
+#else		
 		switch(cmd)
 		{
 			case SNDRV_PCM_TRIGGER_START:
@@ -412,8 +409,6 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
                 BRCM_AUDIO_Param_Start_t param_start;
 
 				param_start.drv_handle = drv_handle;
-				//update the mixMode from the chip 
-				param_start.mixMode = chip->pi32SpeechMixOption[substream_number];
 				param_start.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
 				AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay,&param_start,NULL,0);
 			}
@@ -449,48 +444,53 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 			}
 			break;
 		}
+#endif
 	}	
+#ifndef ENABLE_DMA_ARM2SP
 	else	//Idle Mode 
+#endif
 	{
 		//route the playback to CAPH
 		pSel = chip->streamCtl[substream_number].iLineSelect;
 
-		//Update Sink, volume , mute info from mixer controls
-		if(pSel[0]==AUDCTRL_SPK_HANDSET)
+		if(callMode != 1)		
 		{
-			chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_EARPIECE_OUT;
-			chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_EP;
+			//Update Sink, volume , mute info from mixer controls
+			if(pSel[0]==AUDCTRL_SPK_HANDSET)
+			{
+				chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_EARPIECE_OUT;
+				chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_EP;
+			}
+			else if(pSel[0]==AUDCTRL_SPK_HEADSET)
+			{
+				chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_HEADSET_OUT;
+				chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_HS;		
+			}
+			else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE) 
+			{
+				chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_IHF_OUT;
+				chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_IHF;		
+			}
+			else if(pSel[0]==AUDCTRL_SPK_BTM)
+			{
+				chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_MONO_BT_OUT;
+				chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_BT_SPKR;
+			}
+			else if(pSel[0]==AUDCTRL_SPK_I2S)
+			{
+				chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_I2S_OUT;
+				chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_FM_TX; 	
+			}
+			else
+			{
+				BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
+				chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_EARPIECE_OUT;
+				chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_EP;
+			}
 		}
-		else if(pSel[0]==AUDCTRL_SPK_HEADSET)
-		{
-			chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_HEADSET_OUT;
-			chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_HS;		
-		}
-		else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE) 
-		{
-			chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_IHF_OUT;
-			chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_IHF;		
-		}
-		else if(pSel[0]==AUDCTRL_SPK_BTM)
-		{
-			chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_MONO_BT_OUT;
-			chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_BT_SPKR;
-		}
-		else if(pSel[0]==AUDCTRL_SPK_I2S)
-		{
-			chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_I2S_OUT;
-			chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_FM_TX; 	
-		}
-		else
-		{
-			BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
-			chip->streamCtl[substream_number].dev_prop.u.p.hw_id = AUDIO_HW_EARPIECE_OUT;
-			chip->streamCtl[substream_number].dev_prop.u.p.aud_dev = AUDDRV_DEV_EP;
-		}
+		chip->streamCtl[substream_number].dev_prop.u.p.speaker = pSel[0]; //FIXME, how to support multiple output
 
-	chip->streamCtl[substream_number].dev_prop.u.p.speaker = pSel[0]; //FIXME, how to support multiple output
-
-	switch (cmd) 
+		switch (cmd) 
 		{
 			case SNDRV_PCM_TRIGGER_START:
 			{
@@ -510,7 +510,7 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
                 
 
 			}
-				break;
+			break;
 			
 			case SNDRV_PCM_TRIGGER_STOP:
             {
@@ -523,9 +523,9 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 
                 
             }
-
-				break;
-        case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+			break;
+			
+        	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
             {
                 BRCM_AUDIO_Param_Pause_t param_pause;
 
@@ -535,7 +535,7 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
                 AUDIO_Ctrl_Trigger(ACTION_AUD_PausePlay,&param_pause,NULL,0);
 			    
 	        }
-				break;
+			break;
     	
 			case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
             {
@@ -551,8 +551,7 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
                 AUDIO_Ctrl_Trigger(ACTION_AUD_ResumePlay,&param_resume,NULL,0);
 
             }
-				break;
-		
+			break;		
 		
 			default:
 				return -EINVAL;

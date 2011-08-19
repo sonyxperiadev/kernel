@@ -509,5 +509,17 @@ UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVIC
 void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 
 
+#ifdef ENABLE_DMA_ARM2SP
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_arm2sp_set_mixMode
+*
+*  Description: control the MixMode for ARM2SP feature
+*
+****************************************************************************/
+void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId);
+
+#endif
 #endif // _CSL_CAPH_HWCTRL_
 

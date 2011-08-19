@@ -41,6 +41,7 @@ Broadcom's express prior written consent.
 #include <mach/io_map.h>
 #include "clock.h"
 #include "clk.h"
+#include "platform_mconfig_rhea.h"
 #endif
 
 //#define CONFIG_VOICE_LOOPBACK_TEST
@@ -271,6 +272,8 @@ typedef struct
 	CSL_CAPH_SWITCH_TRIGGER_e trigger;
 	AUDIO_CHANNEL_NUM_t chNumOut;
 	UInt16 arg0;
+	UInt32 mixMode;
+	UInt32 playbackMode;
 } ARM2SP_CONFIG_t;
 
 ARM2SP_CONFIG_t arm2spCfg;
@@ -327,12 +330,25 @@ typedef enum
 	VORENDER_ARM2SP_INSTANCE_TOTAL
 } VORENDER_ARM2SP_INSTANCE_e;
 
-extern AP_SharedMem_t	*vp_shared_mem;
+static UInt8 arm2sp_start[VORENDER_ARM2SP_INSTANCE_TOTAL] = {FALSE}; 
+
+static UInt32 ARM2SP_GetPhysicalSharedMemoryAddress(void)
+{
+	return (UInt32) AP_SH_BASE;
+}
+
+AP_SharedMem_t	*csl_arm2sp_shared_mem;
 
 static void ARM2SP_DMA_Req(UInt16 bufferPosition)
 {
 	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP_DMA_Req:: render interrupt callback. arg1 = 0x%x\n", bufferPosition);
 }
+
+static void ARM2SP2_DMA_Req(UInt16 bufferPosition)
+{
+	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP2_DMA_Req:: render interrupt callback. arg1 = 0x%x\n", bufferPosition);
+}
+
 
 // ==============================================================================
 // Function Name: DMA_ARM2SP_BuildCommandArg0
@@ -475,8 +491,6 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
 
-	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
-	arm2spCfg.instanceID = 1;
 	arm2spCfg.dmaBytes = ARM2SP_INPUT_SIZE*2;
 
 	arm2spCfg.path=arm2spPath; //?
@@ -529,10 +543,29 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 	}
 
 	arm2spCfg.arg0 = DMA_ARM2SP_BuildCommandArg0 (arm2spCfg.srOut,
-								VORENDER_PLAYBACK_DL, //playbackMode
-								VORENDER_VOICE_MIX_DL, //mixMode 
+								(VORENDER_PLAYBACK_MODE_t)arm2spCfg.playbackMode, 
+								(VORENDER_VOICE_MIX_MODE_t)arm2spCfg.mixMode, 
 								arm2spCfg.numFramesPerInterrupt,
 								arm2spCfg.chNumOut);
+}
+
+
+void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_arm2sp_set_Mode mixMode %d, instanceId %d\r\n", mixMode, instanceId);
+
+	arm2spCfg.mixMode = mixMode;
+
+	arm2spCfg.instanceID = instanceId;
+	
+	if(mixMode == VORENDER_VOICE_MIX_DL)
+    	arm2spCfg.playbackMode = VORENDER_PLAYBACK_DL;
+	else if(mixMode == VORENDER_VOICE_MIX_UL)
+  		arm2spCfg.playbackMode = VORENDER_PLAYBACK_UL;
+    else if(mixMode == VORENDER_VOICE_MIX_BOTH)
+ 		arm2spCfg.playbackMode = VORENDER_PLAYBACK_BOTH;
+	else if(mixMode == VORENDER_VOICE_MIX_NONE)
+	  	arm2spCfg.playbackMode = VORENDER_PLAYBACK_DL; //for standalone testing
 }
 #endif
 
@@ -545,6 +578,24 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 // =========================================================================
 static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 {
+
+#ifdef ENABLE_DMA_ARM2SP
+	if(!arm2sp_start[arm2spCfg.instanceID])
+	{
+		if(arm2spCfg.instanceID == 1)
+		{	
+			CSL_ARM2SP_Init();
+			VPRIPCMDQ_SetARM2SP( arm2spCfg.arg0, 0 ); 
+		}
+		else if(arm2spCfg.instanceID == 2)
+		{
+			CSL_ARM2SP2_Init();
+			VPRIPCMDQ_SetARM2SP2( arm2spCfg.arg0, 0 ); 
+		}
+		
+		arm2sp_start[arm2spCfg.instanceID] = TRUE;
+	}
+#endif	
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE)
 	{	
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDIO_DMA_CB2:: low ch=0x%x \r\n", chnl));
@@ -1121,7 +1172,9 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
 		dmaCfg.direction = CSL_CAPH_DMA_OUT;
 		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
 #if defined(ENABLE_DMA_ARM2SP)
-		dmaCfg.mem_addr = (void*)vp_shared_mem->shared_Arm2SP_InBuf;
+		/* Linux Specific - For DMA, we need to pass the physical address of AP SM */
+		csl_arm2sp_shared_mem = (AP_SharedMem_t *)ARM2SP_GetPhysicalSharedMemoryAddress();
+		dmaCfg.mem_addr = (void *)csl_arm2sp_shared_mem->shared_Arm2SP_InBuf;
 		dmaCfg.mem_size = arm2spCfg.dmaBytes;
 		dmaCfg.dmaCB = AUDIO_DMA_CB2;
 #endif
@@ -1520,12 +1573,19 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 #if defined(ENABLE_DMA_ARM2SP)
 	if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
 	{
-		if(arm2spCfg.instanceID==1)
+		if(arm2spCfg.instanceID == 1) 
 		{
 			CSL_RegisterARM2SPRenderStatusHandler((void*)&ARM2SP_DMA_Req);
+			// don't start immediately,start the ARM2SP after the 1st DMA interrrupt
+			/*
 			CSL_ARM2SP_Init();
 			VPRIPCMDQ_SetARM2SP( arm2spCfg.arg0, 0 ); //when to start ARM2SP? Maybe after the 1st DMA?
 			Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start instance %d, arg0=0x%x.\r\n", arm2spCfg.instanceID, arm2spCfg.arg0);
+			*/
+		}
+		else if(arm2spCfg.instanceID == 2)
+		{
+			CSL_RegisterARM2SP2RenderStatusHandler((void*)&ARM2SP2_DMA_Req);
 		}
 	}
 #endif
@@ -2685,6 +2745,9 @@ void csl_caph_hwctrl_init(void)
     csl_caph_audioh_init(addr.audioh_baseAddr, addr.sdt_baseAddr);
 
     csl_caph_ControlHWClock(FALSE);
+#ifdef ENABLE_DMA_ARM2SP
+	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
+#endif
 
 	return;
 }
@@ -3470,7 +3533,14 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 #if defined(ENABLE_DMA_ARM2SP)
 	if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
 	{
-		VPRIPCMDQ_SetARM2SP( 0, 0 ); //assume instance 1
+		if(arm2spCfg.instanceID == 1)
+			VPRIPCMDQ_SetARM2SP( 0, 0 ); 
+		else if(arm2spCfg.instanceID == 2)
+			VPRIPCMDQ_SetARM2SP2( 0, 0 ); 
+		arm2sp_start[arm2spCfg.instanceID] = FALSE; //reset
+
+		if(arm2sp_start[1] == FALSE && arm2sp_start[2] == FALSE)
+			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
 	}
 #endif
 

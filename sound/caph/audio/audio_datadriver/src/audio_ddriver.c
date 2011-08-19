@@ -59,6 +59,7 @@
 #include "csl_vpu.h"
 #include "dspcmd.h"
 #include "csl_voip.h"
+#include "csl_caph_hwctrl.h"
 
 //=============================================================================
 // Public Variable declarations
@@ -645,7 +646,9 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 						            			          block_size,
 						                      			  (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
                                         			      aud_drv->stream_id);
-
+#ifdef ENABLE_DMA_ARM2SP
+				csl_caph_arm2sp_set_param((UInt32)aud_drv->arm2sp_config.mixMode,(aud_drv->arm2sp_config.instanceID+1)); //0 is instance_none
+#endif
                 //start render
                 result_code = csl_audio_render_start (aud_drv->stream_id);
             }
@@ -689,7 +692,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
 	Result_t result_code = RESULT_ERROR;
-	VORENDER_VOICE_MIX_MODE_t *mixMode;
+	VORENDER_VOICE_MIX_MODE_t mixMode;
 	UInt32 numFramesPerInterrupt;
 	
 	Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoiceRenderCmd::%d \n",ctrl_cmd );
@@ -697,10 +700,6 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 	{
 		  case AUDIO_DRIVER_START:
 		  {
-						  
-			  if(pCtrlStruct != NULL)
-				  mixMode = ( VORENDER_VOICE_MIX_MODE_t *)pCtrlStruct;
-				  
 			  //check if callback is already set or not
 			  if( (aud_drv->pCallback == NULL) ||
 				  (aud_drv->interrupt_period == 0) ||
@@ -718,6 +717,8 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  audio_voice_driver[aud_drv->arm2sp_config.instanceID] =  aud_drv;
 
 			  aud_drv->num_periods = aud_drv->ring_buffer_size/aud_drv->interrupt_period;
+
+			  mixMode = aud_drv->arm2sp_config.mixMode;
 	  
 			  numFramesPerInterrupt = 4; // use default value
 
@@ -730,24 +731,15 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  }     
 			  
 			  // Based on the mix mode, decide the playback mode as well
-			  if(*mixMode == VORENDER_VOICE_MIX_DL)
-			  {
+			  if(mixMode == VORENDER_VOICE_MIX_DL)
 			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_DL;
-			  }
-			  else if(*mixMode == VORENDER_VOICE_MIX_UL)
-			  {
+			  else if(mixMode == VORENDER_VOICE_MIX_UL)
 			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_UL;
-			  }
-			  else if(*mixMode == VORENDER_VOICE_MIX_BOTH)
-			  {
+			  else if(mixMode == VORENDER_VOICE_MIX_BOTH)
 			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_BOTH;
-			  }
-			  else if(*mixMode == VORENDER_VOICE_MIX_NONE)
-			  {
+			  else if(mixMode == VORENDER_VOICE_MIX_NONE)
 			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_DL; //for standalone testing
-			  }
 				
-	  		  aud_drv->arm2sp_config.mixMode = *mixMode;
 			  aud_drv->arm2sp_config.audMode = (aud_drv->num_channel == AUDIO_CHANNEL_STEREO)? 1 : 0; 
 			 
 			  //start render
@@ -1118,6 +1110,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
                 aud_drv->num_channel = pAudioConfig->num_channel;
                 aud_drv->bits_per_sample = pAudioConfig->bits_per_sample;
 				aud_drv->arm2sp_config.instanceID = pAudioConfig->instanceId; // to decide on ARM2SP1 or ARM2SP2
+				aud_drv->arm2sp_config.mixMode = pAudioConfig->arm2sp_mixMode;
                 result_code = RESULT_OK;
             }
             break;
