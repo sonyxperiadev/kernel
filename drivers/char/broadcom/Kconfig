@@ -168,5 +168,7 @@ config BCM_SIGMORPH
     default n
     ---help---
     Codec Streaming eXtensions interface to attenuate/mix audio
-   
+
+source "drivers/char/broadcom/csx/Kconfig"
+
 

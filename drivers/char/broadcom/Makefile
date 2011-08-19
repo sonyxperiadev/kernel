@@ -24,3 +24,4 @@ obj-$(CONFIG_BCM_GIST)                 += gist.o
 obj-$(CONFIG_BCM_SIGMORPH)              += sigmorph.o
 #obj-$(CONFIG_BCM_SIGMORPH)              += sigmorph-test.o
 
+obj-$(CONFIG_BCM_CSX)                  += csx/
