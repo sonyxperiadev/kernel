@@ -37,7 +37,7 @@
 
 //#define memset(x,y,z)  
 
-#define OSTASK_Sleep(x)  msleep(x)
+#define OSTASK_Sleep(x)  mdelay(x)
 
 
 //#if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
