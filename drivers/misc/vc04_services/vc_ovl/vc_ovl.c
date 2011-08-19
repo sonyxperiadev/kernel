@@ -45,6 +45,7 @@ typedef struct vc_ovl_data_int
    struct vc_ovl_info        ovl_info;
    struct vc_ovl_handle      ovl_handle;
    unsigned int              ovl_changed;
+   unsigned int              ovl_pending;
 
 } vc_ovl_data_int_t;
 
@@ -304,10 +305,17 @@ static long vc_ovl_ioctl( struct file *file, unsigned int cmd, unsigned long arg
             // Not found...  ignore.
             goto out;
          }
+         
+         if ( memcmp ( &(ovl->ovl_info),
+                       &(ovl_data.ovl_info),
+                       sizeof( struct vc_ovl_info ) ) != 0 )
+         {
+            memcpy ( &(ovl->ovl_info),
+                     &(ovl_data.ovl_info),
+                     sizeof( struct vc_ovl_info ) );
 
-         memcpy ( &(ovl->ovl_info),
-                  &(ovl_data.ovl_info),
-                  sizeof( struct vc_ovl_info ) );
+            ovl->ovl_pending = 1;
+         }
          break;
       }
 
@@ -329,7 +337,11 @@ static long vc_ovl_ioctl( struct file *file, unsigned int cmd, unsigned long arg
          }
 
          // Overlay characteristics have changed.
-         ovl->ovl_changed = 1;
+         if ( ovl->ovl_pending )
+         {
+            ovl->ovl_changed = 1;
+            ovl->ovl_pending = 0;
+         }
          break;
       }
 
@@ -385,6 +397,7 @@ static long vc_ovl_ioctl( struct file *file, unsigned int cmd, unsigned long arg
          // up and dealt with, so reset the flag now.
          if ( ovl->ovl_changed )
          {
+            ovl->ovl_pending = 0;
             ovl->ovl_changed = 0;
          }
 
@@ -444,17 +457,23 @@ static int vc_ovl_proc_read( char *buf, char **start, off_t offset, int count, i
    while ( ovl != NULL )
    {
       ix++;
-      p += sprintf( p, "\tovl: %x\t(fmt:%d, x:%d, y:%d, %dx%d, r:%d, h:%d, v:%d)\t%s\n",
-                    ovl->ovl_handle.handle,
-                    ovl->ovl_info.format,
+      p += sprintf( p, "\tovl: %x\n",
+                    ovl->ovl_handle.handle );
+      p += sprintf( p, "\torig: (%dx%d, fmt:%d)\n",
+                    ovl->ovl_info.in_width,
+                    ovl->ovl_info.in_height,
+                    ovl->ovl_info.format );
+      p += sprintf( p, "\tpos: (x:%d, y:%d, %dx%d, r:%d, h:%d, v:%d)\n",
                     ovl->ovl_info.xaxis,
                     ovl->ovl_info.yaxis,
                     ovl->ovl_info.width,
                     ovl->ovl_info.height,
                     ovl->ovl_info.rotation,
                     ovl->ovl_info.h_flip,
-                    ovl->ovl_info.v_flip,
-                    ovl->ovl_changed ? "Changed" : "Unchanged" );
+                    ovl->ovl_info.v_flip );
+      p += sprintf( p, "\tstatus: c:%s, p:%s\n",
+                    ovl->ovl_changed ? "yes" : "no",
+                    ovl->ovl_pending ? "yes" : "no" );
 
       ovl = ovl->next;
    }
