@@ -20,6 +20,9 @@
 #include <linux/input.h>
 #include <linux/interrupt.h>
 #include <linux/slab.h>
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif
 
 /* Version */
 #define QT602240_VER_20			20
@@ -282,27 +285,47 @@ static const u8 init_vals_ver_21[] = {
 static const u8 init_vals_ver_22[] = {
 	/* QT602240_GEN_COMMAND(6) */
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	/* [SPT_USERDATA_T38 INSTANCE 0] */
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	/* QT602240_GEN_POWER(7) */
-	0x20, 0xff, 0x32,
+	/*
+	 * IDLEACQINT (Idle Acquisition Interval) - 60ms
+	 * ACTVACQINT (Active Acquisition Interval) - 37ms
+	 * ACTV2IDLETO (Active to Idle time out) - 60ms
+	 *
+	 * Configuring the ACTVACQINT to 50ms in conjunction with
+	 * making the controller operate on Mode1 (QT602240_SPT_COMMSCONFIG)
+	 * brought down the number of interrupts sent to the Host.
+	 * This value seems optimal with respect to sytem load when multi-touch
+	 * is enabled.
+	 */
+	0x3C, 0x1B, 0x3C,
 	/* QT602240_GEN_ACQUIRE(8) */
 	0x0a, 0x00, 0x05, 0x00, 0x00, 0x00, 0x09, 0x23,
 	/* QT602240_TOUCH_MULTI(9) */
-	0x00, 0x00, 0x00, 0x13, 0x0b, 0x00, 0x00, 0x00, 0x02, 0x00,
-	0x00, 0x01, 0x01, 0x0e, 0x0a, 0x0a, 0x0a, 0x0a, 0x00, 0x00,
-	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	/*
+	 * Touch Threshold TCHTHR - 30 (typical 30 to 80)
+	 * Lower the Threshold value the more sensitive the touch is.
+	 * Programming the least value recommended in the Data sheet
+	 */
+	0x83, 0x00, 0x00, 0x0f, 0x0b, 0x00, 0x21, 0x46, 0x02, 0x07,
+	0x00, 0x01, 0x01, 0x00, 0x0a, 0x0a, 0x0a, 0x0a, 0xFF, 0x03,
+	0xFF, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00,
 	/* QT602240_TOUCH_KEYARRAY(15) */
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00,
+	/* QT602240_SPT_COMMSCONFIG(18) */
+	0x01, 0x00,
 	/* QT602240_SPT_GPIOPWM(19) */
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	/* QT602240_PROCI_GRIPFACE(20) */
-	0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x28, 0x04,
+	0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x50, 0x28, 0x04,
 	0x0f, 0x0a,
 	/* QT602240_PROCG_NOISE(22) */
-	0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x23, 0x00,
-	0x00, 0x05, 0x0f, 0x19, 0x23, 0x2d, 0x03,
+	0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x2d, 0x00,
+	0x00, 0x05, 0x0f, 0x19, 0x23, 0x2b, 0x03,
 	/* QT602240_TOUCH_PROXIMITY(23) */
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00,
@@ -315,7 +338,7 @@ static const u8 init_vals_ver_22[] = {
 	/* QT602240_PROCI_TWOTOUCH(27) */
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 	/* QT602240_SPT_CTECONFIG(28) */
-	0x00, 0x00, 0x00, 0x08, 0x10, 0x00,
+	0x00, 0x00, 0x00, 0x10, 0x20, 0x3c,
 };
 
 struct qt602240_info {
@@ -361,6 +384,9 @@ struct qt602240_data {
 	struct qt602240_info info;
 	struct qt602240_finger finger[QT602240_MAX_FINGER];
 	unsigned int irq;
+#ifdef CONFIG_HAS_EARLYSUSPEND
+	struct early_suspend suspend_desc;
+#endif
 };
 
 static bool qt602240_object_readable(unsigned int type)
@@ -401,9 +427,11 @@ static bool qt602240_object_writable(unsigned int type)
 	case QT602240_PROCG_NOISE:
 	case QT602240_PROCI_ONETOUCH:
 	case QT602240_PROCI_TWOTOUCH:
+	case QT602240_SPT_COMMSCONFIG:
 	case QT602240_SPT_GPIOPWM:
 	case QT602240_SPT_SELFTEST:
 	case QT602240_SPT_CTECONFIG:
+	case QT602240_SPT_USERDATA:
 		return true;
 	default:
 		return false;
@@ -826,16 +854,16 @@ static int qt602240_check_matrix_size(struct qt602240_data *data)
 static int qt602240_make_highchg(struct qt602240_data *data)
 {
 	struct device *dev = &data->client->dev;
+	struct qt602240_message message;
 	int count = 10;
 	int error;
-	u8 val;
 
 	/* Read dummy message to make high CHG pin */
 	do {
-		error = qt602240_read_object(data, QT602240_GEN_MESSAGE, 0, &val);
+		error = qt602240_read_message(data, &message);
 		if (error)
 			return error;
-	} while ((val != 0xff) && --count);
+	} while (message.reportid != 0xff && --count);
 
 	if (!count) {
 		dev_err(dev, "CHG pin isn't cleared\n");
@@ -991,10 +1019,6 @@ static int qt602240_initialize(struct qt602240_data *data)
 
 	/* Check X/Y matrix size */
 	error = qt602240_check_matrix_size(data);
-	if (error)
-		return error;
-
-	error = qt602240_make_highchg(data);
 	if (error)
 		return error;
 
@@ -1208,8 +1232,16 @@ static const struct attribute_group qt602240_attr_group = {
 static void qt602240_start(struct qt602240_data *data)
 {
 	/* Touch enable */
-	qt602240_write_object(data,
-			QT602240_TOUCH_MULTI, QT602240_TOUCH_CTRL, 0x83);
+
+	/*
+	 * Writing 0x03 does not enable the SCANEN bit.
+	 * which is optimized for not notifying the Host with unnecessary
+	 * messages.
+	 * The data sheet says that, if there are some issues in detecting
+	 * multiple touches try, enabling this bit i.e write 0x83
+	 */
+	 qt602240_write_object(data,
+			QT602240_TOUCH_MULTI, QT602240_TOUCH_CTRL, 0x03);
 }
 
 static void qt602240_stop(struct qt602240_data *data)
@@ -1234,6 +1266,74 @@ static void qt602240_input_close(struct input_dev *dev)
 
 	qt602240_stop(data);
 }
+
+#if defined(CONFIG_PM) || defined(CONFIG_HAS_EARLYSUSPEND)
+static int qt602240_suspend(struct i2c_client *client, pm_message_t mesg)
+{
+	struct qt602240_data *data = i2c_get_clientdata(client);
+	struct input_dev *input_dev = data->input_dev;
+
+	mutex_lock(&input_dev->mutex);
+
+	if (input_dev->users) {
+	    qt602240_stop(data);
+	    /* A setting of zero to QT602240_POWER_IDLEACQINT &
+	     * QT602240_POWER_ACTVACQINT forces the device to deep sleep
+	     * Deep sleep is used to conserve maximum power - It also avoids
+	     * indeterminate behavior*/
+	    qt602240_write_object(data, QT602240_GEN_POWER,
+		QT602240_POWER_IDLEACQINT, init_vals_ver_22[6]);
+	    qt602240_write_object(data, QT602240_GEN_POWER,
+		QT602240_POWER_ACTVACQINT, init_vals_ver_22[7]);
+	}
+
+	mutex_unlock(&input_dev->mutex);
+
+	return 0;
+}
+
+static int qt602240_resume(struct i2c_client *client)
+{
+	struct qt602240_data *data = i2c_get_clientdata(client);
+	struct input_dev *input_dev = data->input_dev;
+
+	mutex_lock(&input_dev->mutex);
+
+	if (input_dev->users) {
+	    /* Restore QT602240_POWER_IDLEACQINT & QT602240_POWER_ACTVACQINT
+	     * settings to get out of deep sleep*/
+	    qt602240_write_object(data, QT602240_GEN_POWER,
+		QT602240_POWER_IDLEACQINT, init_vals_ver_22[14]);
+	    qt602240_write_object(data, QT602240_GEN_POWER,
+		QT602240_POWER_ACTVACQINT, init_vals_ver_22[15]);
+	    qt602240_start(data);
+	}
+
+	mutex_unlock(&input_dev->mutex);
+
+	return 0;
+}
+#else
+#define qt602240_suspend	NULL
+#define qt602240_resume		NULL
+#endif
+
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void qt602240_early_suspend(struct early_suspend *desc)
+{
+        struct qt602240_data *data = container_of(desc, struct qt602240_data, suspend_desc);
+        pm_message_t mesg = {
+                .event = PM_EVENT_SUSPEND,
+                };
+        qt602240_suspend(data->client, mesg);
+}
+
+static void qt602240_late_resume(struct early_suspend *desc)
+{
+        struct qt602240_data *data = container_of(desc, struct qt602240_data, suspend_desc);
+        qt602240_resume(data->client);
+}
+#endif
 
 static int __devinit qt602240_probe(struct i2c_client *client,
 		const struct i2c_device_id *id)
@@ -1303,7 +1403,10 @@ static int __devinit qt602240_probe(struct i2c_client *client,
 #ifdef CONFIG_QT602240_BRCM_FIX
 	// clear any new pending IRQ.Should be a generic fix
 	disable_irq(data->irq);
-	qt602240_make_highchg(data);
+	error = qt602240_make_highchg(data);
+	if (error)
+		goto err_free_object;
+
 
 	/* Set max X and Y for touchscreen to the x_size and y_size passed
 	 * into platform data. This is necessary, otherwise Android will calculate
@@ -1319,15 +1422,17 @@ static int __devinit qt602240_probe(struct i2c_client *client,
 
 	/* for single touch */
 	input_set_abs_params(input_dev, ABS_X,
-			     0, data->pdata->y_size, 0, 0);
+			     data->pdata->x_min, data->pdata->x_size, 0, 0);
 	input_set_abs_params(input_dev, ABS_Y,
-			     0, data->pdata->x_size, 0, 0);
+			     data->pdata->y_min, data->pdata->y_size, 0, 0);
 
 	/* for multi touch */
+	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR,
+			     0, data->pdata->max_area, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X,
-			     0, data->pdata->y_size, 0, 0);
+			     0, data->pdata->x_max, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y,
-			     0, data->pdata->x_size, 0, 0);
+			     0, data->pdata->y_max, 0, 0);
 #endif
 
 	error = request_threaded_irq(client->irq, NULL, qt602240_interrupt,
@@ -1345,6 +1450,12 @@ static int __devinit qt602240_probe(struct i2c_client *client,
 	if (error)
 		goto err_unregister_device;
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+        data->suspend_desc.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN,
+        data->suspend_desc.suspend = qt602240_early_suspend,
+        data->suspend_desc.resume = qt602240_late_resume,
+        register_early_suspend(&data->suspend_desc);
+#endif
 	return 0;
 
 err_unregister_device:
@@ -1379,46 +1490,6 @@ static int __devexit qt602240_remove(struct i2c_client *client)
 	return 0;
 }
 
-#ifdef CONFIG_PM
-static int qt602240_suspend(struct i2c_client *client, pm_message_t mesg)
-{
-	struct qt602240_data *data = i2c_get_clientdata(client);
-	struct input_dev *input_dev = data->input_dev;
-
-	mutex_lock(&input_dev->mutex);
-
-	if (input_dev->users)
-		qt602240_stop(data);
-
-	mutex_unlock(&input_dev->mutex);
-
-	return 0;
-}
-
-static int qt602240_resume(struct i2c_client *client)
-{
-	struct qt602240_data *data = i2c_get_clientdata(client);
-	struct input_dev *input_dev = data->input_dev;
-
-	/* Soft reset */
-	qt602240_write_object(data, QT602240_GEN_COMMAND,
-			QT602240_COMMAND_RESET, 1);
-
-	msleep(QT602240_RESET_TIME);
-
-	mutex_lock(&input_dev->mutex);
-
-	if (input_dev->users)
-		qt602240_start(data);
-
-	mutex_unlock(&input_dev->mutex);
-
-	return 0;
-}
-#else
-#define qt602240_suspend	NULL
-#define qt602240_resume		NULL
-#endif
 
 static const struct i2c_device_id qt602240_id[] = {
 	{ "qt602240_ts", 0 },
@@ -1433,8 +1504,10 @@ static struct i2c_driver qt602240_driver = {
 	},
 	.probe		= qt602240_probe,
 	.remove		= __devexit_p(qt602240_remove),
+#ifndef CONFIG_HAS_EARLYSUSPEND
 	.suspend	= qt602240_suspend,
 	.resume		= qt602240_resume,
+#endif
 	.id_table	= qt602240_id,
 };
 

@@ -19,6 +19,9 @@
 #include <linux/platform_device.h>
 #include <linux/delay.h>
 #include <linux/usb/otg.h>
+#include <linux/usb.h>
+#include <linux/usb/gadget.h>
+#include <linux/usb/hcd.h>
 #include <linux/err.h>
 #include <linux/notifier.h>
 #include <linux/slab.h>
@@ -34,6 +37,7 @@ struct bcm_otg_data {
 	struct bcm590xx *bcm590xx;
 	struct otg_transceiver xceiver;
 	bool host;
+	bool vbus_enabled;
 	struct clk *otg_clk;
 };
 
@@ -45,31 +49,135 @@ struct bcm_otg_data {
 #define HOST_TO_PERIPHERAL_DELAY_MS 1000
 #define PERIPHERAL_TO_HOST_DELAY_MS 100
 
-static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled) ;
-
-static void bcm_otg_set_vbus(struct bcm_otg_data *otg_data,
-			     bool on)
+static int bcm_otg_set_vbus(struct otg_transceiver *otg, bool enabled)
 {
+	struct bcm_otg_data *otg_data = dev_get_drvdata(otg->dev);
 	int stat;
 
-	if (on) {
+	/* The order of these operations has temporarily been
+	 * swapped due to overcurrent issue caused by slow I2C
+	 * operations. I2C operations take >200ms to complete */
+	bcm_hsotgctrl_phy_set_vbus_stat(enabled);
+	
+	if (enabled) {
 		dev_info(otg_data->dev, "Turning on VBUS\n");
+		otg_data->vbus_enabled = true;
 		stat =
 		    bcm590xx_reg_write(otg_data->bcm590xx,
 				       BCM59055_REG_OTGCTRL1,
 				       OTGCTRL1_VBUS_ON);
 	} else {
 		dev_info(otg_data->dev, "Turning off VBUS\n");
+		otg_data->vbus_enabled = false;
 		stat =
 		    bcm590xx_reg_write(otg_data->bcm590xx,
 				       BCM59055_REG_OTGCTRL1,
 				       OTGCTRL1_VBUS_OFF);
 	}
 
-	if (stat < 0) {
+	if (stat < 0)
 		dev_warn(otg_data->dev, "Failed to set VBUS\n");
-	}
+		
+	return stat;
 }
+
+static int bcm_otg_set_peripheral(struct otg_transceiver *otg,
+				  struct usb_gadget *gadget)
+{
+	struct bcm_otg_data *otg_data = dev_get_drvdata(otg->dev);
+
+	dev_info(otg_data->dev, "Setting Peripheral\n");
+	otg->gadget = gadget;
+
+	return 0;
+}
+
+static int bcm_otg_set_host(struct otg_transceiver *otg,
+			    struct usb_bus *host)
+{
+	struct bcm_otg_data *otg_data = dev_get_drvdata(otg->dev);
+
+	dev_info(otg_data->dev, "Setting Host\n");
+	otg->host = host;
+
+	return 0;
+}
+
+static ssize_t bcm_otg_wake_store(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t count)
+{
+	struct usb_gadget *gadget;
+	ssize_t result = 0;
+	unsigned int val;
+	struct bcm_otg_data *otg_data = dev_get_drvdata(dev);
+	int error;
+
+	gadget = otg_data->xceiver.gadget;
+
+	result = sscanf(buf, "%u\n", &val);
+	if (result != 1) {
+		result = -EINVAL;
+	} else if (val == 0) {
+		dev_warn(otg_data->dev, "Illegal value\n");
+	} else {
+		dev_info(otg_data->dev, "Waking up host\n");
+		error = usb_gadget_wakeup(gadget);
+		if (error)
+			dev_err(otg_data->dev,
+				"Failed to issue wakeup\n");
+	}
+
+	return result < 0 ? result : count;
+}
+static DEVICE_ATTR(wake, S_IWUSR, NULL, bcm_otg_wake_store);
+
+static ssize_t bcm_otg_vbus_show(struct device *dev,
+				 struct device_attribute *attr, char *buf)
+{
+	struct bcm_otg_data *otg_data = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%s\n", otg_data->vbus_enabled ? "1" : "0");
+}
+
+static ssize_t bcm_otg_vbus_store(struct device *dev,
+				  struct device_attribute *attr,
+				  const char *buf, size_t count)
+{
+	struct usb_hcd *hcd;
+	ssize_t result = 0;
+	unsigned int val;
+	struct bcm_otg_data *otg_data = dev_get_drvdata(dev);
+	int error;
+
+	hcd = bus_to_hcd(otg_data->xceiver.host);
+
+	result = sscanf(buf, "%u\n", &val);
+	if (result != 1) {
+		result = -EINVAL;
+	} else if (val == 0) {
+		dev_info(otg_data->dev, "Clearing PORT_POWER feature\n");
+		error = hcd->driver->hub_control(hcd, ClearPortFeature,
+						 USB_PORT_FEAT_POWER, 1, NULL,
+						 0);
+		if (error)
+			dev_err(otg_data->dev,
+				"Failed to clear PORT_POWER feature\n");
+	} else {
+		dev_info(otg_data->dev, "Setting PORT_POWER feature\n");
+		error = hcd->driver->hub_control(hcd, SetPortFeature,
+						 USB_PORT_FEAT_POWER, 1, NULL,
+						 0);
+		if (error)
+			dev_err(otg_data->dev,
+				"Failed to set PORT_POWER feature\n");
+	}
+
+	return result < 0 ? result : count;
+}
+
+static DEVICE_ATTR(vbus, S_IRUGO | S_IWUSR, bcm_otg_vbus_show,
+		   bcm_otg_vbus_store);
 
 static ssize_t bcm_otg_host_show(struct device *dev,
 				 struct device_attribute *attr, char *buf)
@@ -110,21 +218,6 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcm_otg_host_show,
 		   bcm_otg_host_store);
 
-static int bcm_otg_control_vbus(struct otg_transceiver *otg, bool enabled)
-{
-	struct bcm_otg_data *otg_data = dev_get_drvdata(otg->dev);
-
-	if (NULL == otg_data)
-		return -EINVAL;
-
-	/* The order of these function calls has temporarily been
-	 * swapped due to overcurrent issue caused by slow I2C
-	 * operations. I2C operations take >200ms to complete */
-	bcm_hsotgctrl_phy_set_vbus_stat(enabled);
-	bcm_otg_set_vbus(otg_data, enabled);	
-	return 0;
-}
-
 static int __devinit bcm_otg_probe(struct platform_device *pdev)
 {
 	int error = 0;
@@ -144,6 +237,7 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 	otg_data->xceiver.dev = otg_data->dev;
 	otg_data->xceiver.label = "bcm_otg";
 	otg_data->host = false;
+	otg_data->vbus_enabled = false;
 
 	otg_data->otg_clk = clk_get(NULL, "usb_otg_clk");
 	if (!otg_data->otg_clk) {
@@ -152,23 +246,41 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
-	otg_data->xceiver.set_vbus = bcm_otg_control_vbus;
+	otg_data->xceiver.set_vbus = bcm_otg_set_vbus;
+	otg_data->xceiver.set_peripheral = bcm_otg_set_peripheral;
+	otg_data->xceiver.set_host = bcm_otg_set_host;
 	otg_set_transceiver(&otg_data->xceiver);
 
 	platform_set_drvdata(pdev, otg_data);
 
 	error = device_create_file(&pdev->dev, &dev_attr_host);
-
-	if (error)
-	{
+	if (error) {
 		dev_warn(&pdev->dev, "Failed to create HOST file\n");
-		goto Error_bcm_otg_probe;
+		goto error_attr_host;;
+	}
+
+	error = device_create_file(&pdev->dev, &dev_attr_vbus);
+	if (error) {
+		dev_warn(&pdev->dev, "Failed to create VBUS file\n");
+		goto error_attr_vbus;
+	}
+
+	error = device_create_file(&pdev->dev, &dev_attr_wake);
+	if (error) {
+		dev_warn(&pdev->dev, "Failed to create WAKE file\n");
+		goto error_attr_wake;
 	}
 
 	dev_info(&pdev->dev, "Probing successful\n");
 	return 0;
 
-Error_bcm_otg_probe:
+error_attr_wake:
+	device_remove_file(otg_data->dev, &dev_attr_vbus);
+
+error_attr_vbus:
+	device_remove_file(otg_data->dev, &dev_attr_host);
+
+error_attr_host:
 	clk_put(otg_data->otg_clk);
 	kfree(otg_data);
 	return error;
@@ -178,6 +290,8 @@ static int __exit bcm_otg_remove(struct platform_device *pdev)
 {
 	struct bcm_otg_data *otg_data = platform_get_drvdata(pdev);
 
+	device_remove_file(otg_data->dev, &dev_attr_wake);
+	device_remove_file(otg_data->dev, &dev_attr_vbus);
 	device_remove_file(otg_data->dev, &dev_attr_host);
 
 	clk_put(otg_data->otg_clk);

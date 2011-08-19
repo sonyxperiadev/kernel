@@ -43,6 +43,12 @@
 #include <mach/rdb/brcm_rdb_padctrlreg.h>
 #endif
 
+#ifdef CONFIG_KONA_AVS
+#include <plat/kona_avs.h>
+#endif
+
+#define VLT_LUT_SIZE	16
+
 #ifdef CONFIG_DEBUG_FS
 const char* _rhea__event2str[] =
 {
@@ -288,8 +294,11 @@ static const struct i2c_cmd i2c_cmd[] = {
 
 						  };
 
-/*Look up takbe for 59055 PMU*/
-static const u8 voltage_lookup[] = {
+/*Default voltage lookup table
+Need to move this to board-file
+*/
+static u8 pwrmgr_default_volt_lut[] =
+								{
 									0x03,
 									0x03,
 									0x04,
@@ -307,8 +316,6 @@ static const u8 voltage_lookup[] = {
 									0x13,
 									0x13
 								};
-
-
 
 
 int __init rhea_pwr_mgr_init()
@@ -344,8 +351,9 @@ int __init rhea_pwr_mgr_init()
 	pwr_mgr_pm_i2c_enable(false);
 	/*Program I2C sequencer*/
 	pwr_mgr_pm_i2c_cmd_write(i2c_cmd,ARRAY_SIZE(i2c_cmd));
-	/*Program voltage lookup table*/
-	pwr_mgr_pm_i2c_var_data_write(voltage_lookup,ARRAY_SIZE(voltage_lookup));
+	/*Program voltage lookup table
+	AVS driver may chnage this later*/
+	pwr_mgr_pm_i2c_var_data_write(pwrmgr_default_volt_lut,VLT_LUT_SIZE);
 	/*populate the jump voltage table */
 	pwr_mgr_set_v0x_specific_i2c_cmd_ptr(VOLT0,&v_ptr);
 	pwr_mgr_pm_i2c_enable(true);
@@ -383,6 +391,13 @@ int __init rhea_pwr_mgr_init()
 		pi = pi_mgr_get(i);
 		BUG_ON(pi == NULL);
 		pi_init(pi);
+	}
+	/*All the initializations are done. Clear override bit here so that
+	 * appropriate policies take effect*/
+	for (i = 0; i < PI_MGR_PI_ID_MODEM;i++) {
+	    pi = pi_mgr_get(i);
+	    BUG_ON(pi == NULL);
+	    pwr_mgr_pi_set_wakeup_override(pi->id,true/*clear*/);
 	}
 
 return 0;
