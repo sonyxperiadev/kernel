@@ -1,5 +1,5 @@
 
-EXTRA_CFLAGS := -fno-inline -Wno-multichar -O0
+EXTRA_CFLAGS := -fno-inline -Wno-multichar -O2
 
 obj-y += v3d/
 obj-y += vce/
