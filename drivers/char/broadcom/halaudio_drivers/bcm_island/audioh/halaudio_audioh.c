@@ -2289,6 +2289,11 @@ static int audiohResetGainBlocks( void )
          }
       }
    }
+
+   /* Must set bit to enable pop-click suppression.  This will allow earpiece
+    * to becom audible. */
+   chal_audio_audiotx_set_spare_bit( gChalAudioHandle );
+
    return 0;
 }
 

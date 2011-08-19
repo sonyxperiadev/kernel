@@ -2764,6 +2764,18 @@ extern void chal_audio_audiotx_set_dac_ctrl(CHAL_HANDLE handle, uint32_t ctrl);
 extern  uint32_t chal_audio_audiotx_get_dac_ctrl(CHAL_HANDLE handle);
 
 
+/**
+*
+* Function Name: void chal_audio_audiotx_set_spare_bit(CHAL_HANDLE handle)
+*
+* Description:  Set the audiotx spare bit
+*
+* Parameters:   handle             - audio chal handle.
+*
+* Return:       None.
+*
+*****************************************************************************/
+void chal_audio_audiotx_set_spare_bit(CHAL_HANDLE handle);
 
 
 /**
