@@ -7,6 +7,7 @@
 #include <linux/plist.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
+#include <linux/clkdev.h>
 #include <linux/pm_qos_params.h>
 
 #include <plat/clock.h>
@@ -202,6 +203,9 @@ static int pi_def_init(struct pi *pi)
 	pi_dbg("%s:%s\n",__func__,pi->name);
 	if(pi->init)
 		return 0;
+	
+	pi->pm_qos = kzalloc(sizeof(*pi->pm_qos), GFP_KERNEL);
+
 	spin_lock(&pi_mgr_lock);
 	pi->init = 1;
 	pi->usg_cnt = 0;
@@ -225,14 +229,14 @@ static int pi_def_init(struct pi *pi)
 	{
 		qos = &pi_mgr.qos[pi->id];
 		BLOCKING_INIT_NOTIFIER_HEAD(&qos->notifiers);
-		plist_head_init(&qos->requests,&pi_mgr_list_lock);
+		plist_head_init(&qos->requests);
 		BUG_ON(pi->num_states > PI_MGR_MAX_STATE_ALLOWED);
 
 		qos->default_latency = pi->pi_state[pi->num_states-1].hw_wakeup_latency;
 		pi->state_allowed = pi->num_states-1;
 		pi_dbg( "qos->default_latency = %d state_allowed = %d\n", qos->default_latency,pi->state_allowed );
 		if(pi->flags & UPDATE_PM_QOS)
-			pi->pm_qos	= pm_qos_add_request(PM_QOS_CPU_DMA_LATENCY,PM_QOS_DEFAULT_VALUE);
+			pm_qos_add_request(pi->pm_qos, PM_QOS_CPU_DMA_LATENCY,PM_QOS_DEFAULT_VALUE);
 	}
 
 	if((pi->flags & PI_NO_DFS) == 0)
@@ -240,7 +244,7 @@ static int pi_def_init(struct pi *pi)
 		pi_dbg( "pi->opp_active = %d\n",pi->opp_active);
 		dfs = &pi_mgr.dfs[pi->id];
 		BLOCKING_INIT_NOTIFIER_HEAD(&dfs->notifiers);
-		plist_head_init(&dfs->requests,&pi_mgr_list_lock);
+		plist_head_init(&dfs->requests);
 
 		dfs->default_opp = 0;
 		BUG_ON(pi->num_opp && pi->pi_opp == NULL);
