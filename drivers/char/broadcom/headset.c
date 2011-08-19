@@ -75,7 +75,7 @@ static struct headset_info gHeadset[1] =
    },
 };
 
-static spinlock_t detlock = SPIN_LOCK_UNLOCKED;
+static spinlock_t detlock = __SPIN_LOCK_UNLOCKED(detlock);
 
 /* ---- Private Function Prototypes -------------------------------------- */
 static int  headset_open( struct inode *inode, struct file *file );
