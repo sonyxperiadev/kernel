@@ -697,6 +697,7 @@ static struct kona_fb_platform_data alex_dsi_display_fb_data = {
 	.screen_width		= 360,
 	.screen_height		= 640,
 	.bytes_per_pixel	= 4,
+	.gpio			= (KONA_MAX_GPIO + 3),  
 	.pixel_format		= XRGB8888,
 };
 
@@ -715,6 +716,7 @@ static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
+	.gpio			= 41, 
 	.pixel_format		= RGB565,
 };
 
@@ -733,6 +735,7 @@ static struct kona_fb_platform_data r61581_smi_display_fb_data = {
 	.screen_width		= 320,
 	.screen_height		= 480,
 	.bytes_per_pixel	= 2,
+	.gpio			= 41,
 	.pixel_format		= RGB565,
 };
 
