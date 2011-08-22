@@ -25,16 +25,17 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/fs.h>
+#include <linux/semaphore.h>
 
 #include <linux/broadcom/halaudio.h>
 #include <linux/broadcom/csx.h>
 #include <linux/broadcom/csx_framework.h>
-#include <linux/broadcom/gos/gos.h>
 
 /* ---- Public Variables ------------------------------------------------- */
 /* ---- Private Constants and Types -------------------------------------- */
 
 #define CSX_HALAUDIO_SEMAPHORE_TIME_WAIT_MS        10
+#define CSX_HALAUDIO_SEMAPHORE_TIME_WAIT_JIFFIES   (msecs_to_jiffies(CSX_HALAUDIO_SEMAPHORE_TIME_WAIT_MS))
 
 /* ---- Private Function Prototypes -------------------------------------- */
 
@@ -56,7 +57,7 @@ static CSX_MODULE_FNCS gModuleFncs =
    .csx_module_set_point = csx_halaudio_set_point,
 };
 
-static GOS_SEM csx_halaudio_sem;
+DECLARE_MUTEX(csx_halaudio_sem);
 
 /* HAL Audio specific information */
 static int gNumCodecs;
@@ -90,11 +91,11 @@ static int csx_halaudio_set_point( int csx_device_id,
       return -EINVAL;
    }
 
-   err = gosSemTimedTake( csx_halaudio_sem, CSX_HALAUDIO_SEMAPHORE_TIME_WAIT_MS );
+   err = down_timeout( &csx_halaudio_sem, CSX_HALAUDIO_SEMAPHORE_TIME_WAIT_JIFFIES );
    if (!err)
    {
       err = halAudioSetCsxIoPoints( csx_device_id, csx_point_id, csx_io_point_fncs, csx_priv );
-      gosSemGive( csx_halaudio_sem );
+      up( &csx_halaudio_sem );
    }
 
    return err;
@@ -129,13 +130,6 @@ static int __init csx_halaudio_init( void )
    HALAUDIO_HW_INFO hwinfo;
 
    printk( banner );
-
-   err = gosSemAlloc( "csx_halaudio_sem", 1, &csx_halaudio_sem );
-   if ( err )
-   {
-      gosSemFree( csx_halaudio_sem );
-      return err;
-   }
 
    gHalHdl = halAudioAllocateClient();
 
@@ -190,8 +184,6 @@ static void __exit csx_halaudio_exit( void )
    /* Free the Hal Audio handle */
    halAudioFreeClient( gHalHdl );
 
-   /* Free the semaphore */
-   gosSemFree( csx_halaudio_sem );
 }
 
 module_init( csx_halaudio_init );

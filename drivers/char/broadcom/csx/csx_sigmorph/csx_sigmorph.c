@@ -24,10 +24,10 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/init.h>
+#include <linux/semaphore.h>
 
 #include <linux/broadcom/gist.h>
 #include <linux/broadcom/csx_framework.h>
-#include <linux/broadcom/gos/gos.h>              /* semaphore */
 
 #include <linux/broadcom/csx_sigmorph.h>
 #include <linux/broadcom/sigmorph.h>
@@ -53,6 +53,7 @@
 /* ---- Private Constants and Types -------------------------------------- */
 
 #define CSX_SIGMORPH_SEMAPHORE_TIME_WAIT_MS        (10)
+#define CSX_SIGMORPH_SEMAPHORE_TIME_WAIT_JIFFIES   (msecs_to_jiffies(CSX_SIGMORPH_SEMAPHORE_TIME_WAIT_MS))
 #define CSX_SIGMORPH_BUF_SIZE                      (1 << 8)
 
 /* Unique bit fields for each CSX_SIGMORPH operation */
@@ -131,7 +132,7 @@ static int csx_sigmorph_syncregistry_pending [CSX_IO_MODULE_NUM_MAX];
 static int csx_sigmorph_syncregistry_enable  [CSX_IO_MODULE_NUM_MAX];
 static unsigned int point_registry_active;
 static unsigned int point_registry_count = 0;
-static GOS_SEM csx_sigmorph_sem;
+DECLARE_MUTEX(csx_sigmorph_sem);
 
 /* ---- Functions -------------------------------------------------------- */
 
@@ -388,7 +389,7 @@ static int csx_sigmorph_cleanup_point( int index )
    
    (void) memset( &csx_ops, 0, sizeof(CSX_IO_POINT_FNCS) );
 
-   err = gosSemTimedTake( csx_sigmorph_sem, CSX_SIGMORPH_SEMAPHORE_TIME_WAIT_MS );
+   err = down_timeout( &csx_sigmorph_sem, CSX_SIGMORPH_SEMAPHORE_TIME_WAIT_JIFFIES );
    if ( err )
    {
       return err;
@@ -440,7 +441,7 @@ static int csx_sigmorph_cleanup_point( int index )
    /* END Critical section */
    } while (0);
    
-   gosSemGive(csx_sigmorph_sem);
+   up(&csx_sigmorph_sem);
    return err;
 }
 
@@ -469,7 +470,7 @@ int csx_sigmorph_add_point(   CSX_IO_POINT_INFO *csx_info ,
    CSX_MODULE_FNCS *csx_mod_ops;
    CSX_SIGMORPH_IO_POINT_INFO *slot;
 
-   err = gosSemTimedTake( csx_sigmorph_sem, CSX_SIGMORPH_SEMAPHORE_TIME_WAIT_MS );
+   err = down_timeout( &csx_sigmorph_sem, CSX_SIGMORPH_SEMAPHORE_TIME_WAIT_JIFFIES );
    if ( err )
    {
       return err;
@@ -481,7 +482,7 @@ int csx_sigmorph_add_point(   CSX_IO_POINT_INFO *csx_info ,
    {
       printk( KERN_ERR "%s: No available ports. Remove unused points\n", __FUNCTION__);
       *csx_handle = CSX_HANDLE_INVALID;
-      (void) gosSemGive( csx_sigmorph_sem );
+      up( &csx_sigmorph_sem );
       return -ENOSPC;
    }
 
@@ -588,7 +589,7 @@ int csx_sigmorph_add_point(   CSX_IO_POINT_INFO *csx_info ,
       (void) csx_sigmorph_cleanup_point( available_index );
       *csx_handle = GIST_INVALID_HANDLE;
    }
-   (void) gosSemGive( csx_sigmorph_sem );
+   up( &csx_sigmorph_sem );
    return err;
 }
 
@@ -697,12 +698,6 @@ static int __init csx_sigmorph_init( void )
       .csx_util_sync_disable           = &csx_sigmorph_sync_disable,
    };
 
-   /* setup mutual exclusion construct */
-   err = gosSemAlloc( "csx_sigmorph_sem", 1, &csx_sigmorph_sem );
-   if ( err )
-   {
-      return err;
-   }
 
    /* clear ALL allocated data structures */
    memset ( (void *)&point_registry[0], 0, CSX_SIGMORPH_IO_POINT_NUM_MAX
@@ -733,7 +728,6 @@ static void __exit csx_sigmorph_exit( void )
    }
 
    err = csx_deregister_util( CSX_IO_UTIL_SIGMORPH ); /* unhook from CSX framework */
-   err = gosSemFree( csx_sigmorph_sem );
    (void) err;
 }
 

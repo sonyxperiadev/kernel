@@ -25,8 +25,8 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <linux/fs.h>
+#include <linux/semaphore.h>
 
-#include <linux/broadcom/gos/gos.h>
 #include <linux/broadcom/gist.h>
 #include <linux/broadcom/csx_gist.h>
 #include <linux/broadcom/csx_framework.h>
@@ -53,8 +53,8 @@
 #define CSX_GIST_HANDLE_GET_SYNC_FLAG(x)      ( (x >> CSX_GIST_HANDLE_SYNC_FLAG_OFFSET) & CSX_GIST_HANDLE_SYNC_FLAG_MASK )
 #define CSX_GIST_HANDLE_GET_MAGIC_NUM(x)      ( (x >> CSX_GIST_HANDLE_MAGIC_NUM_OFFSET) & CSX_GIST_HANDLE_MAGIC_NUM_MASK )
 
-#define CSX_GIST_SEMAPHORE_TIME_WAIT_MS         10
-
+#define CSX_GIST_SEMAPHORE_TIME_WAIT_MS         (10)
+#define CSX_GIST_SEMAPHORE_TIME_WAIT_JIFFIES    (msecs_to_jiffies(CSX_GIST_SEMAPHORE_TIME_WAIT_MS))
 typedef struct csx_gist_io_point_info
 {
    CSX_IO_POINT_INFO csx_io_point_info;
@@ -99,7 +99,8 @@ static unsigned int gNumPointsAdded = 0;
 /* Track the number of active points in CSX_GIST. */
 static unsigned int gNumPointsActive;
 
-static GOS_SEM csx_gist_sem;
+
+DECLARE_MUTEX(csx_gist_sem);
 
 static int gSyncEnablePending[CSX_IO_MODULE_NUM_MAX];
 static int gSyncEnable[CSX_IO_MODULE_NUM_MAX];
@@ -567,7 +568,7 @@ static int csx_gist_cleanup_point( int index )
 
    memset( &csx_ops, 0, sizeof(CSX_IO_POINT_FNCS) );
 
-   err = gosSemTimedTake( csx_gist_sem, CSX_GIST_SEMAPHORE_TIME_WAIT_MS );
+   err = down_timeout( &csx_gist_sem, CSX_GIST_SEMAPHORE_TIME_WAIT_JIFFIES );
    if ( err )
    {
       return err;
@@ -585,7 +586,7 @@ static int csx_gist_cleanup_point( int index )
          err = csx_mod_ops->csx_module_set_point( csx_info->csx_device_id, csx_info->csx_point_id, &csx_ops, (void*)csx_io_handle );
          if ( err )
          {
-            gosSemGive( csx_gist_sem );
+            up( &csx_gist_sem );
             return err;
          }
       }
@@ -607,11 +608,11 @@ static int csx_gist_cleanup_point( int index )
    }
    else
    {
-      gosSemGive( csx_gist_sem );
+      up( &csx_gist_sem );
       /* Handle passed in selects non-active I/O point */
       return -EINVAL;
    }
-   gosSemGive( csx_gist_sem );
+   up( &csx_gist_sem );
    return 0;
 }
 
@@ -633,7 +634,7 @@ int csx_gist_add_point( CSX_IO_POINT_INFO *csx_info,
    int err;
    int i;
 
-   err = gosSemTimedTake( csx_gist_sem, CSX_GIST_SEMAPHORE_TIME_WAIT_MS );
+   err = down_timeout( &csx_gist_sem, CSX_GIST_SEMAPHORE_TIME_WAIT_JIFFIES );
    if ( err )
    {
       return err;
@@ -652,7 +653,7 @@ int csx_gist_add_point( CSX_IO_POINT_INFO *csx_info,
              pInfo->csx_point_id == csx_info->csx_point_id )
          {
             /* Point exists in list.  Must remove point prior to add */
-            gosSemGive( csx_gist_sem );
+            up( &csx_gist_sem );
             printk( KERN_ERR "%s: I/O point specified already exists, must remove prior to adding\n", __FUNCTION__);
             *csx_handle = CSX_HANDLE_INVALID;
             return -EEXIST;
@@ -673,7 +674,7 @@ int csx_gist_add_point( CSX_IO_POINT_INFO *csx_info,
    if ( first_inactive_index < 0 )
    {
       /* Exceeded the maximum number of I/O points allowable */
-      gosSemGive( csx_gist_sem );
+      up( &csx_gist_sem );
       printk( KERN_ERR "%s: Cannot exceed maximum number of I/O points (%d)\n", __FUNCTION__, CSX_GIST_IO_POINT_NUM_MAX);
       *csx_handle = CSX_HANDLE_INVALID;
       return -ENOSPC;
@@ -687,7 +688,7 @@ int csx_gist_add_point( CSX_IO_POINT_INFO *csx_info,
 
    if ( err )
    {
-      gosSemGive( csx_gist_sem );
+      up( &csx_gist_sem );
       *csx_handle = CSX_HANDLE_INVALID;
       return err;
    }
@@ -734,7 +735,7 @@ int csx_gist_add_point( CSX_IO_POINT_INFO *csx_info,
    }
    else
    {
-      gosSemGive( csx_gist_sem );
+      up( &csx_gist_sem );
       printk( KERN_ERR "%s: CSX Module selected for I/O point not registered\n", __FUNCTION__ );
       return CSX_HANDLE_INVALID;
    }
@@ -754,12 +755,12 @@ int csx_gist_add_point( CSX_IO_POINT_INFO *csx_info,
    {
       /* Clear information as I/O point could not be added */
       memset( &gPointInfoList[first_inactive_index], 0, sizeof(CSX_GIST_IO_POINT_INFO) );
-      gosSemGive( csx_gist_sem );
+      up( &csx_gist_sem );
       *csx_handle = CSX_HANDLE_INVALID;
       return err;
    }
 
-   gosSemGive( csx_gist_sem );
+   up( &csx_gist_sem );
    *csx_handle = handle;
    return 0;
 }
@@ -894,13 +895,6 @@ static int __init csx_gist_init( void )
 
    printk( banner );
 
-   err = gosSemAlloc( "csx_gist_sem", 1, &csx_gist_sem );
-   if ( err )
-   {
-      gosSemFree( csx_gist_sem );
-      return err;
-   }
-
    memset( &gPointInfoList, 0, (sizeof(CSX_GIST_IO_POINT_INFO) * CSX_GIST_IO_POINT_NUM_MAX) );
 
    /* Default disabled capture/inject sync */
@@ -936,8 +930,6 @@ static void __exit csx_gist_exit( void )
 
    /* De-register ourselves from CSX framework */
    csx_deregister_util( CSX_IO_UTIL_GIST );
-
-   gosSemFree( csx_gist_sem );
 }
 
 module_init( csx_gist_init );
