@@ -181,6 +181,40 @@ enum	AT_AUD_Handler_t
 };
 
 
+typedef enum voip_start_stop_type
+{
+	VoIP_DL_UL=0,
+	VoIP_DL,
+	VoIP_UL,
+	VoIP_Total
+}voip_start_stop_type_t;
+
+typedef struct voip_data
+{
+	UInt32 codec_type;
+	UInt16 mic;
+	UInt16 spk; 	
+}voip_data_t;
+
+typedef enum voip_codec_type
+{
+	VoIP_Codec_PCM_8K,
+	VoIP_Codec_FR,
+	VoIP_Codec_AMR475,
+	VOIP_Codec_G711_U,
+	VoIP_Codec_PCM_16K,
+	VOIP_Codec_AMR_WB_7K
+}voip_codec_type_t;
+
+enum { 
+  VoIP_Ioctl_GetVersion = _IOR ('H', 0x10, int), 
+  VoIP_Ioctl_Start = _IOW ('H', 0x11, voip_start_stop_type_t), 
+  VoIP_Ioctl_Stop = _IOW ('H', 0x12, voip_start_stop_type_t),	 
+  VoIP_Ioctl_SetParms = _IOR('H', 0x13, voip_data_t), 
+  VoIP_Ioctl_GetParms   = _IOW('H', 0x14, voip_data_t) 
+ }; 
+
+
 #define	CAPH_CTL_PRIVATE(dev, line, function) ((dev)<<16|(line)<<8|(function))
 #define	STREAM_OF_CTL(private)		(((private)>>16)&0xFF)
 #define	DEV_OF_CTL(private)			(((private)>>8)&0xFF)

@@ -1023,8 +1023,6 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
 
 				size = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
 			
-				Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd:: aud_drv->codec_type %d size = %ld\n", aud_drv->voip_config.codec_type,size );
-
 				aud_drv->tmp_buffer = OSHEAP_Alloc(size); 
 
 				if(aud_drv->tmp_buffer == NULL)
@@ -1032,12 +1030,14 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
 				else
 					memset(aud_drv->tmp_buffer,0,size);
 			
-				result_code = VoIP_StartTelephony();
-            }
+				VoIP_StartTelephony();
+				result_code = RESULT_OK;
+			}
             break;
         case AUDIO_DRIVER_STOP:
             {
-				result_code = VoIP_StopTelephony();
+				VoIP_StopTelephony();
+				result_code = RESULT_OK;
             }
             break;
         case AUDIO_DRIVER_SET_VOIP_UL_CB:
@@ -1763,7 +1763,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 	if (prev_amr_mode == 0xffff || prev_amr_mode != encode_amr_mode)
 	{
 	
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "=====VoIP_StartMainAMRDecodeEncode UL codecType=0x%x, send VP_COMMAND_MAIN_AMR_RUN to DSP", encode_amr_mode);
+		//Log_DebugPrintf(LOGID_SOC_AUDIO, "=====VoIP_StartMainAMRDecodeEncode UL codecType=0x%x, send VP_COMMAND_MAIN_AMR_RUN to DSP", encode_amr_mode);
 		prev_amr_mode = encode_amr_mode;
 		VPRIPCMDQ_DSP_AMR_RUN((UInt16)encode_amr_mode, telephony_amr_if2, FALSE);
 	}
@@ -1784,8 +1784,6 @@ void AP_ProcessStatusMainAMRDone(UInt16 codecType)
 {
  	static UInt16 Buf[321]; // buffer to hold UL data and codec type
 
-	//Log_DebugPrintf(LOGID_SOC_AUDIO,"=====AP_ProcessStatusMainAMRDone \r\n");
-	
 	// encoded uplink AMR speech data now ready in DSP shared memory, copy it to application
 	// pBuf is to point the start of the encoded speech data buffer
 	
@@ -1826,7 +1824,7 @@ static Boolean VOIP_DumpUL_CB(
 		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: Invalid codecType = 0x%x\n", codecType);
 	else
 	{
-		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: codecType = 0x%x, index = %d pSrc 0x%x\n", codecType, index, pSrc);		
+		//Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: codecType = 0x%x, index = %d pSrc 0x%x\n", codecType, index, pSrc);		
 		ulSize = sVoIPDataLen[(codecType & 0xf000) >> 12];
 	    if(aud_drv->voip_config.pVoipULCallback != NULL)
 			aud_drv->voip_config.pVoipULCallback(aud_drv->voip_config.pVoIPCBPrivate, (pSrc + 2),(ulSize - 2) ); 
@@ -1856,7 +1854,7 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
     }
 	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	dlSize = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
-	Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
+	//Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
 	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[2], (dlSize - 2)); // 2 bytes for codec type
 	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->voip_config.codec_type, aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
 	return TRUE;
