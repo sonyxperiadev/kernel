@@ -23,7 +23,9 @@
 #include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
 
-extern void enter_wfi_state(void);
+extern void enter_wfi(void);
+extern void dormant_enter(void);
+
 static u32 force_retention = 0;
 static u32 pm_debug = 2;
 static u32 pm_en_self_refresh = 0;
@@ -92,6 +94,19 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.state = RHEA_STATE_C0,
 		.enter = enter_idle_state,
 	},
+
+#ifdef CONFIG_RHEA_DORMANT_MODE
+
+	{
+		.name = "C1",
+		.desc = "dormant",
+		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.latency = 1000,
+		.target_residency = 1000,
+		.state = RHEA_STATE_C1,
+		.enter = enter_idle_state,
+	},
+#else
 	{
 		.name = "C1",
 		.desc = "retention",
@@ -101,6 +116,7 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.state = RHEA_STATE_C1,
 		.enter = enter_idle_state,
 	},
+#endif
 };
 
 
@@ -347,12 +363,24 @@ int enter_idle_state(struct kona_idle_state* state)
 
 	if(state->state == RHEA_STATE_C1)
 	{
-		writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 		pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 		pi_enable(pi,0);
-	}
+#ifdef CONFIG_RHEA_DORMANT_MODE
+	/*Ignore dap power-up request and clear the bits that disallow dormant*/
+	/*TBD - Change pwrmgr interface function*/
+	writel(0x06600000,
+		KONA_PWRMGR_VA+PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+	dormant_enter();
 
-	enter_wfi_state();
+#else
+		writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+		enter_wfi();
+#endif
+	}
+	else
+	{
+		enter_wfi(); /*C0 - simple WFI*/
+	}
 
 	if(pm_debug != 2)
 		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
@@ -361,7 +389,9 @@ int enter_idle_state(struct kona_idle_state* state)
 	if(state->state == RHEA_STATE_C1)
 	{
 		pi_enable(pi,1);
+#ifndef CONFIG_RHEA_DORMANT_MODE
 		writel(0, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+#endif
 	}
 
 	if(pm_en_self_refresh)
