@@ -91,6 +91,7 @@ static histo_t vi_d1, vi_d2, vi_d3, vi_d4;
 
 #if defined(SOFTAP)
 extern bool ap_cfg_running;
+extern bool ap_fw_loaded;
 #endif
 
 /* enable HOSTIP cache update from the host side when an eth0:N is up */
@@ -289,7 +290,7 @@ module_param(dhd_sysioc, uint, 0);
 module_param(dhd_msg_level, int, 0);
 
 /* load firmware and/or nvram values from the filesystem */
-module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0);
+module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0660);
 module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0);
 
 /* Watchdog interval */
@@ -442,6 +443,10 @@ static void dhd_htsf_addrxts(dhd_pub_t *dhdp, void *pktbuf);
 static void dhd_dump_htsfhisto(histo_t *his, char *s);
 #endif /* WLMEDIA_HTSF */
 
+/* Monitor interface */
+int dhd_monitor_init(void *dhd_pub);
+int dhd_monitor_uninit(void);
+
 
 #if defined(CONFIG_WIRELESS_EXT)
 struct iw_statistics *dhd_get_wireless_stats(struct net_device *dev);
@@ -491,6 +496,7 @@ extern int register_pm_notifier(struct notifier_block *nb);
 extern int unregister_pm_notifier(struct notifier_block *nb);
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP) */
 	/* && defined(DHD_GPL) */
+
 static void dhd_set_packet_filter(int value, dhd_pub_t *dhd)
 {
 #ifdef PKT_FILTER_SUPPORT
@@ -959,20 +965,25 @@ dhd_op_if(dhd_if_t *ifp)
 		}
 		if (ret == 0) {
 			strncpy(ifp->net->name, ifp->name, IFNAMSIZ);
-#ifdef WL_CFG80211
-			if (dhd->dhd_state & DHD_ATTACH_STATE_CFG80211)
-				wl_cfg80211_notify_ifadd(ifp->net);
-#endif
-
 			ifp->net->name[IFNAMSIZ - 1] = '\0';
 			memcpy(netdev_priv(ifp->net), &dhd, sizeof(dhd));
+#ifdef WL_CFG80211
+			if (dhd->dhd_state & DHD_ATTACH_STATE_CFG80211)
+				if (!wl_cfg80211_notify_ifadd(ifp->net, ifp->idx, ifp->bssidx,
+					dhd_net_attach)) {
+					ifp->state = 0;
+					return;
+			}
+
+#endif
+
 			if ((err = dhd_net_attach(&dhd->pub, ifp->idx)) != 0) {
 				DHD_ERROR(("%s: dhd_net_attach failed, err %d\n",
 					__FUNCTION__, err));
 				ret = -EOPNOTSUPP;
 			} else {
 #if defined(SOFTAP)
-		if (ap_cfg_running && !(dhd->dhd_state & DHD_ATTACH_STATE_CFG80211)) {
+		if (ap_fw_loaded && !(dhd->dhd_state & DHD_ATTACH_STATE_CFG80211)) {
 				 /* semaphore that the soft AP CODE waits on */
 				flags = dhd_os_spin_lock(&dhd->pub);
 
@@ -992,6 +1003,9 @@ dhd_op_if(dhd_if_t *ifp)
 	case WLC_E_IF_DEL:
 		if (ifp->net != NULL) {
 			DHD_TRACE(("\n%s: got 'WLC_E_IF_DEL' state\n", __FUNCTION__));
+#ifdef WL_CFG80211
+			wl_cfg80211_ifdel_ops(ifp->net);
+#endif
 			netif_stop_queue(ifp->net);
 			unregister_netdev(ifp->net);
 			ret = DHD_DEL_IF;	/* Make sure the free_netdev() is called */
@@ -1234,7 +1248,7 @@ dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 	return ret;
 }
 
-static int
+int
 dhd_start_xmit(struct sk_buff *skb, struct net_device *net)
 {
 	int ret;
@@ -1370,7 +1384,7 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 	struct sk_buff *skb;
 	uchar *eth;
 	uint len;
-	void *data, *pnext, *save_pktbuf;
+	void *data, *pnext = NULL, *save_pktbuf;
 	int i;
 	dhd_if_t *ifp;
 	wl_event_msg_t event;
@@ -1382,6 +1396,16 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 	for (i = 0; pktbuf && i < numpkt; i++, pktbuf = pnext) {
 		struct ether_header *eh;
 		struct dot11_llc_snap_header *lsh;
+
+		ifp = dhd->iflist[ifidx];
+
+		/* Dropping packets before registering net device to avoid kernel panic */
+		if (!ifp->net || ifp->net->reg_state != NETREG_REGISTERED) {
+			DHD_ERROR(("%s: net device is NOT registered yet. drop packet\n",
+			__FUNCTION__));
+			PKTFREE(dhdp->osh, pktbuf, TRUE);
+			continue;
+		}
 
 		pnext = PKTNEXT(dhdp->osh, pktbuf);
 		PKTSETNEXT(wl->sh.osh, pktbuf, NULL);
@@ -1461,7 +1485,6 @@ dhd_rx_frame(dhd_pub_t *dhdp, int ifidx, void *pktbuf, int numpkt, uint8 chan)
 				dhd_bta_doevt(dhdp, data, event.datalen);
 			}
 		}
-
 
 		ASSERT(ifidx < DHD_MAX_IFS && dhd->iflist[ifidx]);
 		if (dhd->iflist[ifidx] && !dhd->iflist[ifidx]->state)
@@ -2205,6 +2228,13 @@ dhd_open(struct net_device *net)
 	int ifidx;
 	int32 ret = 0;
 
+	/* Update FW path if it was changed */
+	if ((firmware_path != NULL) && (firmware_path[0] != '\0')) {
+		if (firmware_path[strlen(firmware_path)-1] == '\n')
+			firmware_path[strlen(firmware_path)-1] = '\0';
+		strcpy(fw_path, firmware_path);
+		firmware_path[0] = '\0';
+	}
 #if !defined(WL_CFG80211)
 	/** Force start if ifconfig_up gets called before START command
 	 *  We keep WEXT's wl_control_wl_start to provide backward compatibility
@@ -2326,6 +2356,7 @@ dhd_add_if(dhd_info_t *dhd, int ifidx, void *handle, char *name,
 	if (handle == NULL) {
 		ifp->state = WLC_E_IF_ADD;
 		ifp->idx = ifidx;
+		ifp->bssidx = bssidx;
 		ASSERT(&dhd->thr_sysioc_ctl.thr_pid >= 0);
 		up(&dhd->thr_sysioc_ctl.sema);
 	} else
@@ -2362,7 +2393,6 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 
 	dhd_attach_states_t dhd_state = DHD_ATTACH_STATE_INIT;
 	DHD_TRACE(("%s: Enter\n", __FUNCTION__));
-
 
 	/* updates firmware nvram path if it was provided as module parameters */
 	if ((firmware_path != NULL) && (firmware_path[0] != '\0'))
@@ -2469,6 +2499,8 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		DHD_ERROR(("wl_cfg80211_attach failed\n"));
 		goto fail;
 	}
+
+	dhd_monitor_init(&dhd->pub);
 	dhd_state |= DHD_ATTACH_STATE_CFG80211;
 #endif
 #if defined(CONFIG_WIRELESS_EXT)
@@ -2562,7 +2594,6 @@ fail:
 		dhd_detach(&dhd->pub);
 		dhd_free(&dhd->pub);
 	}
-
 
 	return NULL;
 }
@@ -2665,7 +2696,11 @@ dhd_bus_start(dhd_pub_t *dhdp)
 	setbit(dhdp->eventmask, WLC_E_TXFAIL);
 	setbit(dhdp->eventmask, WLC_E_JOIN_START);
 	setbit(dhdp->eventmask, WLC_E_SCAN_COMPLETE);
-
+	setbit(dhdp->eventmask, WLC_E_ACTION_FRAME_RX);
+	setbit(dhdp->eventmask, WLC_E_ACTION_FRAME_COMPLETE);
+#if defined(WLP2P)
+	setbit(dhdp->eventmask, WLC_E_P2P_PROBREQ_MSG);
+#endif /* WLP2P */
 #ifdef PNO_SUPPORT
 	setbit(dhdp->eventmask, WLC_E_PFN_NET_FOUND);
 #endif /* PNO_SUPPORT */
@@ -2694,10 +2729,6 @@ dhd_bus_start(dhd_pub_t *dhdp)
 	dhd_write_macaddr(dhd->pub.mac.octet);
 #endif
 
-#if defined(CONFIG_SYSCTL) && defined(WL_CFG80211)
-	wl_cfg80211_sysctl_export_devaddr(&dhd->pub);
-#endif
-
 	return 0;
 }
 
@@ -2724,6 +2755,7 @@ dhd_iovar(dhd_pub_t *pub, int ifidx, char *name, char *cmd_buf, uint cmd_len, in
 
 	return ret;
 }
+
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 31))
 static struct net_device_ops dhd_ops_pri = {
 	.ndo_open = dhd_open,
@@ -2774,20 +2806,27 @@ int dhd_change_mtu(dhd_pub_t *dhdp, int new_mtu, int ifidx)
 /* add or remove AOE host ip(s) (up to 8 IPs on the interface)  */
 void aoe_update_host_ipv4_table(dhd_pub_t *dhd_pub, u32 ipa, bool add)
 {
-	u32 ipv4_buf[8]; /* temp save for AOE host_ip table */
+	u32 ipv4_buf[MAX_IPV4_ENTRIES]; /* temp save for AOE host_ip table */
 	int i;
+	int ret;
 
 	bzero(ipv4_buf, sizeof(ipv4_buf));
 
 	/* display what we've got */
-	dhd_arp_get_arp_hostip_table(dhd_pub, ipv4_buf, sizeof(ipv4_buf));
+	ret = dhd_arp_get_arp_hostip_table(dhd_pub, ipv4_buf, sizeof(ipv4_buf));
 	DHD_ARPOE(("%s: hostip table read from Dongle:\n", __FUNCTION__));
+#ifdef AOE_DBG
 	dhd_print_buf(ipv4_buf, 32, 4); /* max 8 IPs 4b each */
-
+#endif
 	/* now we saved hoste_ip table, clr it in the dongle AOE */
 	dhd_aoe_hostip_clr(dhd_pub);
 
-	for (i = 0; i < 8; i++) {
+	if (ret) {
+		DHD_ERROR(("%s failed\n", __FUNCTION__));
+		return;
+	}
+
+	for (i = 0; i < MAX_IPV4_ENTRIES; i++) {
 
 		if (add && (ipv4_buf[i] == 0)) {
 
@@ -2848,6 +2887,8 @@ static int dhd_device_event(struct notifier_block *this,
 					__FUNCTION__));
 				aoe_update_host_ipv4_table(dhd_pub, ifa->ifa_address, TRUE);
 			}
+			else
+				aoe_update_host_ipv4_table(dhd_pub, ifa->ifa_address, TRUE);
 #endif
 			break;
 
@@ -2923,12 +2964,18 @@ dhd_net_attach(dhd_pub_t *dhdp, int ifidx)
 	 * We have to use the primary MAC for virtual interfaces
 	 */
 		memcpy(temp_addr, dhd->iflist[ifidx]->mac_addr, ETHER_ADDR_LEN);
-		if (ifidx == 1) {
-			DHD_TRACE(("%s ACCESS POINT MAC: \n", __FUNCTION__));
-			/*  ACCESSPOINT INTERFACE CASE */
-			temp_addr[0] |= 0x02;  /* set bit 2 , - Locally Administered address  */
+		/*
+		 * Android sets the locally administered bit to indicate that this is a
+		 * portable hotspot.  This will not work in simultaneous AP/STA mode,
+		 * nor with P2P.  Need to set the Donlge's MAC address, and then use that.
+		 */
+		if (ifidx > 0) {
+			DHD_ERROR(("%s interface [%s]: set locally administered bit in MAC\n",
+			__func__, net->name));
+			temp_addr[0] |= 0x02;
 		}
 	}
+
 	net->hard_header_len = ETH_HLEN + dhd->pub.hdrlen;
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 24)
 	net->ethtool_ops = &dhd_ethtool_ops;
@@ -2951,11 +2998,11 @@ dhd_net_attach(dhd_pub_t *dhdp, int ifidx)
 		DHD_ERROR(("couldn't register the net device, err %d\n", err));
 		goto fail;
 	}
-
-	printf("%s: Driver up: Broadcom Dongle Host Driver mac=%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
+	printf("Broadcom Dongle Host Driver: register interface [%s]"
+		" MAC: %.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
 		net->name,
-	       dhd->pub.mac.octet[0], dhd->pub.mac.octet[1], dhd->pub.mac.octet[2],
-	       dhd->pub.mac.octet[3], dhd->pub.mac.octet[4], dhd->pub.mac.octet[5]);
+		net->dev_addr[0], net->dev_addr[1], net->dev_addr[2],
+		net->dev_addr[3], net->dev_addr[4], net->dev_addr[5]);
 
 #if defined(SOFTAP) && defined(CONFIG_WIRELESS_EXT) && !defined(WL_CFG80211)
 		wl_iw_iscan_set_scan_broadcast_prep(net, 1);
@@ -3012,6 +3059,7 @@ void dhd_detach(dhd_pub_t *dhdp)
 {
 	dhd_info_t *dhd;
 	unsigned long flags;
+	int timer_valid = FALSE;
 
 	if (!dhdp)
 		return;
@@ -3073,17 +3121,23 @@ void dhd_detach(dhd_pub_t *dhdp)
 		if (ifp->net->netdev_ops == &dhd_ops_pri)
 #endif
 		{
-			unregister_netdev(ifp->net);
+			if (ifp->net) {
+				unregister_netdev(ifp->net);
+				free_netdev(ifp->net);
+				ifp->net = NULL;
+			}
 			MFREE(dhd->pub.osh, ifp, sizeof(*ifp));
-
+			dhd->iflist[0] = NULL;
 		}
 	}
 
 	/* Clear the watchdog timer */
 	flags = dhd_os_spin_lock(&dhd->pub);
+	timer_valid = dhd->wd_timer_valid;
 	dhd->wd_timer_valid = FALSE;
 	dhd_os_spin_unlock(&dhd->pub, flags);
-	del_timer_sync(&dhd->timer);
+	if (timer_valid)
+		del_timer_sync(&dhd->timer);
 
 	if (dhd->dhd_state & DHD_ATTACH_STATE_THREADS_CREATED) {
 #ifdef DHDTHREAD
@@ -3106,8 +3160,10 @@ void dhd_detach(dhd_pub_t *dhdp)
 	}
 
 #ifdef WL_CFG80211
-	if (dhd->dhd_state & DHD_ATTACH_STATE_CFG80211)
+	if (dhd->dhd_state & DHD_ATTACH_STATE_CFG80211) {
 		wl_cfg80211_detach();
+		dhd_monitor_uninit();
+	}
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27)) && defined(CONFIG_PM_SLEEP)
@@ -3120,6 +3176,7 @@ void dhd_detach(dhd_pub_t *dhdp)
 		wake_lock_destroy(&dhd->wl_rxwake);
 #endif
 	}
+
 }
 
 
@@ -3210,6 +3267,9 @@ dhd_module_init(void)
 		DHD_ERROR(("%s: sdio_register_driver timeout\n", __FUNCTION__));
 		goto fail_2;
 		}
+#endif
+#if defined(WL_CFG80211)
+	error = wl_android_post_init();
 #endif
 
 	return error;
@@ -4079,6 +4139,30 @@ int net_os_wake_unlock(struct net_device *dev)
 	return ret;
 }
 
+int dhd_ioctl_entry_local(struct net_device *net, wl_ioctl_t *ioc, int cmd)
+{
+	int ifidx;
+	int ret = 0;
+	dhd_info_t *dhd = NULL;
+
+	if (!net || !netdev_priv(net)) {
+		DHD_ERROR(("%s invalid parameter\n", __FUNCTION__));
+		return -EINVAL;
+	}
+
+	dhd = *(dhd_info_t **)netdev_priv(net);
+	ifidx = dhd_net2idx(dhd, net);
+	if (ifidx == DHD_BAD_IF) {
+		DHD_ERROR(("%s bad ifidx\n", __FUNCTION__));
+		return -ENODEV;
+	}
+
+	DHD_OS_WAKE_LOCK(&dhd->pub);
+	ret = dhd_wl_ioctl(&dhd->pub, ifidx, ioc, ioc->buf, ioc->len);
+	DHD_OS_WAKE_UNLOCK(&dhd->pub);
+
+	return ret;
+}
 
 #ifdef PROP_TXSTATUS
 extern int dhd_wlfc_interface_entry_update(void* state,	ewlfc_mac_entry_action_t action, uint8 ifid,
