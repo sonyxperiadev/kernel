@@ -20,6 +20,11 @@ config MACH_HERA_RAY
         help
           Support for the Broadcom Hera Ray board.
 
+config MACH_RHEA_BERRI
+        bool "Support Broadcom Rhea Berri board"
+        help
+          Support for the Broadcom Rhea Berri board.
+
 endchoice
 
 endmenu
