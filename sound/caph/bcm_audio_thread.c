@@ -218,8 +218,11 @@ Result_t AUDIO_Ctrl_Trigger(
 	    {
             //wait for output from output fifo
 		    len = kfifo_out_locked(&sgThreadData.m_pkfifo_out, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock_out);
+	/* Commenting debug prints to eliminate compilation errors for kfifo member access */
+	/*
 		    if( (len != sizeof(TMsgAudioCtrl)) && (len!=0) )
-			    //BCM_AUDIO_DEBUG("Error AUDIO_Ctrl_Trigger len=%d expected %d in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl), sgThreadData.m_pkfifo_out.in, sgThreadData.m_pkfifo_out.out);
+			    BCM_AUDIO_DEBUG("Error AUDIO_Ctrl_Trigger len=%d expected %d in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl), sgThreadData.m_pkfifo_out.in, sgThreadData.m_pkfifo_out.out);
+	*/
 		    if(len == 0) //FIFO empty sleep
 			    return status;
             if(arg_param)
