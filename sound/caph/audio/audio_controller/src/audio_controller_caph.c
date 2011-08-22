@@ -69,8 +69,6 @@
 #endif
 #endif
 
-
-
 //=============================================================================
 // Public Variable declarations
 //=============================================================================
@@ -3366,9 +3364,12 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		if ( HS_IsOn != TRUE )
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", hs_gain);
+            //printk("richlu before 59055 hs_set_gain \n");
 #ifdef PMU_BCM59055
             bcm59055_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
+            //printk("richlu after 59055 hs_set_gain and before hs_power\n");
             bcm59055_hs_power(TRUE);
+            //printk("richlu  after 59055 hs_power \n");
 #elif defined(CONFIG_BCMPMU_AUDIO)
             bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
             bcmpmu_hs_power(TRUE);

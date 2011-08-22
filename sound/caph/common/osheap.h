@@ -1,5 +1,5 @@
 /*******************************************************************************
- * * Copyright 2010 Broadcom Corporation.  All rights reserved.
+ * * Copyright 2010 Broadcom Corporation.  All rights reserved.                                
  * *
  * *       @file   arch/arm/plat-bcmap/include/plat/osdal_os.h
  * *
