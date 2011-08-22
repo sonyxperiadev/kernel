@@ -57,7 +57,7 @@
 *
 ****************************************************************************/
 #include "mobcom_types.h"
-#include "platform_mconfig_rhea.h"
+#include <mach/comms/platform_mconfig.h>
 #include <linux/sched.h>
 #include <linux/interrupt.h>
 #include "msconsts.h"

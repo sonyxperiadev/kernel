@@ -25,10 +25,9 @@
 #include <linux/kernel.h>
 #include <linux/io.h>
 #include <linux/init.h>
+#include <linux/jiffies.h>
 
 #include "ipc_stubs.h"
-//FixMe -- guojin
-#include <mach/timer.h>
 
 
 // ******************************************************************************
@@ -40,9 +39,10 @@
 ********************************************************************************/
 UInt32 TIMER_GetValue(void)
 {
-//FixMe -- guojin
-//    return timer_get_cp_tick_count();
-return 0;
+    // **FixMe** Does not match the CP's timer (required for matching AP/CP
+    // timestamps), but good enough for AP side debugging.
+    return jiffies;
+//    return timer_get_tick_count();
 }
 
 
