@@ -24,12 +24,11 @@ Broadcom's express prior written consent.
 #include "chal_types.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
-#include "auddrv_def.h"
+#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
 #include "csl_caph_gain.h"
 #include "log.h"
-
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
@@ -81,6 +80,11 @@ static UInt8 micStatus = 0x0;
 //******************************************************************************
 // local function definitions
 //******************************************************************************
+
+//******************************************************************************
+// Global function definitions
+//******************************************************************************
+
 
 
 //============================================================================
@@ -145,6 +149,7 @@ void csl_caph_audioh_unconfig(int path_id)
 	path[path_id].eanc_output = 0;
 	return;
 }	
+
 //============================================================================
 //
 // Function Name: void csl_caph_audioh_config(int path_id)
@@ -160,6 +165,9 @@ void csl_caph_audioh_unconfig(int path_id)
 void csl_caph_audioh_config(int path_id, void *p)
 {
 	audio_config_t *pcfg = (void *)p;
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_config:: path %d sr %d bits %d chNum %d pack %d eanc %d:%d.\r\n", 
+		path_id, pcfg->sample_rate, pcfg->sample_size, pcfg->sample_mode, pcfg->sample_pack, pcfg->eanc_input, pcfg->eanc_output));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_config:: st out %d tr mode %d.\r\n", pcfg->sidetone_output, pcfg->data_handle_mode));
 
 	path[path_id].sample_rate = pcfg->sample_rate;
 	path[path_id].sample_size = pcfg->sample_size;

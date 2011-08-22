@@ -37,6 +37,27 @@ struct sdio_wifi_gpio_cfg {
 	int host_wake;
 };
 
+/*
+ * SDIO Platform flags:
+ *
+ * Bit Map
+ * -------
+ *
+ *  -----------------------------
+ * | BIT 31 | ~~~~~~~~~~ | BIT 0 |
+ *  -----------------------------
+ *                          |
+ *                           --------> 0 - Device connected to this controller
+ *                                         is removable
+ *                                     1 - Device connected to this controller
+ *                                         is removable
+ */
+enum kona_sdio_plat_flags {
+	KONA_SDIO_FLAGS_DEVICE_REMOVABLE = 0,
+	KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE = 1 << 0,
+	/* More flags can be added here */
+};
+
 struct sdio_platform_cfg {
 	/* specify which SDIO device */
 	unsigned id;
@@ -53,6 +74,11 @@ struct sdio_platform_cfg {
 	/* card detection GPIO, required for SD/MMC */
 	int cd_gpio;
 	enum sdio_devtype devtype;
+
+	/* Flags describing various platform options
+	 * removable or not, for example while the SD is removable eMMC is not
+	 */
+	enum kona_sdio_plat_flags flags;
 
 	/* clocks */
 	char *peri_clk_name;

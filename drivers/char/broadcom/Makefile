@@ -1,5 +1,5 @@
 
-EXTRA_CFLAGS := -fno-inline -Wno-multichar -O0
+EXTRA_CFLAGS := -fno-inline -Wno-multichar -O2
 
 obj-y += v3d/
 obj-y += vce/
@@ -8,4 +8,14 @@ obj-y += modem/
 obj-y += isp/
 obj-y += unicam/
 obj-$(CONFIG_BCM_GPS)    	 += gps.o
+obj-$(CONFIG_BCM_IDLE_PROFILER)		+= idle_profiler/
 obj-$(CONFIG_GPIO_USER_MODE_SUPPORT)	+= user-gpio.o
+obj-$(CONFIG_BCM_HALAUDIO_CORE)        += halaudio/
+obj-$(CONFIG_BCM_HALAUDIO)             += halaudio/ halaudio_drivers/
+obj-$(CONFIG_BCM_AMXR)                 += amxr_drv.o
+obj-$(CONFIG_BCM_AMXR_CORE)                 += amxr_core/
+obj-$(CONFIG_BCM_AAA)                  += aaa.o
+obj-$(CONFIG_BCM_BSC)                  += bsc.o
+obj-$(CONFIG_BCM_HAPTICS)              += haptics/
+obj-$(CONFIG_BCM_HEADSET_SW)           += headset.o
+

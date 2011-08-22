@@ -76,9 +76,9 @@ void bcmpmu_ihf_power(bool on)
 		reg.val &= ~BCMPMU_IHFTOP_IDDQ;  //IHFTOP
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,reg.val,PMU_BITMASK_ALL);
 
-		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,&reg.val,PMU_BITMASK_ALL);
-		reg.val |= BCMPMU_IHFPOP_PUP;  //IHFPOP
-		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,reg.val,PMU_BITMASK_ALL);
+		//bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,&reg.val,PMU_BITMASK_ALL);
+		//reg.val |= BCMPMU_IHFPOP_PUP;  //IHFPOP
+		//bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,reg.val,PMU_BITMASK_ALL);
 
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,&reg.val,PMU_BITMASK_ALL);
 		reg.val |= BCMPMU_IHFLDO_PUP;  //IHFLDO
@@ -95,9 +95,9 @@ void bcmpmu_ihf_power(bool on)
 		reg.val &= ~BCMPMU_IHFPOP_PUP;  //IHFPOP
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,reg.val,PMU_BITMASK_ALL);
 
-		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,&reg.val,PMU_BITMASK_ALL);
-		reg.val &= ~BCMPMU_IHFLDO_PUP; //IHFLDO
-		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,reg.val,PMU_BITMASK_ALL);
+		//bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,&reg.val,PMU_BITMASK_ALL);
+		//reg.val &= ~BCMPMU_IHFLDO_PUP; //IHFLDO
+		//bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,reg.val,PMU_BITMASK_ALL);
 
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,&reg.val,PMU_BITMASK_ALL);
 		reg.val |= BCMPMU_IHFTOP_IDDQ;  //IHFTOP

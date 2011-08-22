@@ -115,6 +115,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_HSPGA2_GAIN] =		{.map = 0x01, .addr = 0x9F, .mask = 0x3F, .ro = 0},
 	[PMU_REG_PMUID] =		{.map = 0x01, .addr = 0xF7, .mask = 0xFF, .ro = 0},
 	[PMU_REG_PMUREV] =		{.map = 0x01, .addr = 0xF8, .mask = 0xFF, .ro = 0},
+	[PMU_REG_PLLCTRL] =		{.map = 0x00, .addr = 0x0b, .mask = 0xFF, .ro = 0},
 };
 
 static const struct bcmpmu_irq_map bcm59055_irq_map[PMU_IRQ_MAX] = {//revisit

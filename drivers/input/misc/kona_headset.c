@@ -30,7 +30,6 @@
 #include <mach/io_map.h>
 #include <mach/kona_headset_pd.h>
 #include <mach/rdb/brcm_rdb_aci.h>
-#include <mach/rdb/brcm_rdb_sysmap_a9.h>
 #include <mach/rdb/brcm_rdb_auxmic.h>
 #include <mach/rdb/brcm_rdb_audioh.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
@@ -53,6 +52,10 @@
 #define DEBOUNCE_TIME	64
 #define KEY_PRESS_REF_TIME	msecs_to_jiffies(100)
 #define KEY_DETECT_DELAY	msecs_to_jiffies(128)
+#define ACI_S1  0
+#define ACI_T1  0xFE
+#define ACI_M1  0x500
+#define ACI_MT1 0x400
 
 struct mic_t {
 	int hsirq;
@@ -117,6 +120,7 @@ static void switch_work(struct work_struct *work)
 	unsigned headset_state = gpio_get_value(irq_to_gpio(p->hsirq));
 
 	headset_state = (headset_state ^ p->headset_pd->hs_default_state);
+
 #ifdef CONFIG_SWITCH
 	switch_set_state(&(p->sdev), headset_state);
 #endif
@@ -344,7 +348,19 @@ static int headset_default(struct platform_device *pdev, struct mic_t *mic)
 	       mic->auxmic_base + AUXMIC_F_PWRDWN_OFFSET);
 
 	/* ACI Initialization */
-	writel(ACI_ACI_CTRL_SW_MIC_DATAB_MASK,
+
+    writel(ACI_COMP1MODE_COMP1MODE_CMD_INTEGRATE_AND_DUMP,
+	       mic->aci_base + ACI_COMP1MODE_OFFSET);
+    writel(((ACI_S1_RESERVED_MASK & ACI_S1_S1_MASK) | ACI_S1),
+	       mic->aci_base + ACI_S1_OFFSET);
+    writel(((ACI_T1_RESERVED_MASK &  ACI_T1_T1_MASK) | ACI_T1),
+	       mic->aci_base + ACI_T1_OFFSET);
+    writel(((ACI_M1_RESERVED_MASK & ACI_M1_M1_MASK) | ACI_M1),
+	       mic->aci_base + ACI_M1_OFFSET);
+    writel(((ACI_MT1_RESERVED_MASK & ACI_MT1_MT1_MASK) | ACI_MT1),
+	       mic->aci_base + ACI_MT1_OFFSET);
+ 
+    writel(ACI_ACI_CTRL_SW_MIC_DATAB_MASK,
 	       mic->aci_base + ACI_ACI_CTRL_OFFSET);
 	writel((ACI_ADC_CTRL_AUDIORX_VREF_PWRUP_MASK |
 		ACI_ADC_CTRL_AUDIORX_BIAS_PWRUP_MASK),

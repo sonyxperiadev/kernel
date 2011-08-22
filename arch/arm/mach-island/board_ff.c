@@ -33,6 +33,7 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#include <linux/bh1715.h>
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_s32.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
@@ -56,7 +57,6 @@
 #include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
 #include <linux/regulator/max8649.h>
-#include <linux/usb/android_composite.h>
 #include <linux/kernel_stat.h>
 #include <linux/android_pmem.h>
 
@@ -425,6 +425,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.id = 0,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_WIFI,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
 		.wifi_gpio = {
 			.reset		= 179,
 			.reg		= 177,
@@ -440,6 +441,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.data_pullup = 0,
 		.is_8bit = 1,
 		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
 		.peri_clk_name = "sdio2_clk",
 		.ahb_clk_name = "sdio2_ahb_clk",
 		.sleep_clk_name = "sdio2_sleep_clk",
@@ -450,6 +452,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.data_pullup = 0,
 		.cd_gpio = 106,
 		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE ,
 		.peri_clk_name = "sdio3_clk",
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
@@ -1147,124 +1150,9 @@ static struct i2c_board_info __initdata akm8975_info[] =
 };
 
 
-static char *android_function_rndis[] = {
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis"
-#endif
-};
-
-static char *android_function_acm[] = {
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm"
-#endif
-};
-
-static char *android_function_adb_msc[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ADB
-	"adb",
-#endif
-};
-
-static char *android_functions_all[] = {
-#ifdef CONFIG_USB_ANDROID_MASS_STORAGE
-	"usb_mass_storage",
-#endif
-#ifdef CONFIG_USB_ANDROID_ADB
-	"adb",
-#endif
-#ifdef CONFIG_USB_ANDROID_RNDIS
-	"rndis",
-#endif
-#ifdef CONFIG_USB_ANDROID_ACM
-	"acm",
-#endif
-};
-
-#define	BRCM_VENDOR_ID		0x0a5c
-#define	BIG_ISLAND_PRODUCT_ID	0x2816
-
-/* FIXME borrow Google Nexus One ID to use windows driver */
-#define	GOOGLE_VENDOR_ID	0x18d1
-#define	NEXUS_ONE_PROD_ID	0x0d02
-
-#define	VENDOR_ID		GOOGLE_VENDOR_ID
-#define	PRODUCT_ID		NEXUS_ONE_PROD_ID
-
-/* use a seprate PID for RNDIS */
-#define RNDIS_PRODUCT_ID	0x4e13
-#define ACM_PRODUCT_ID		0x8888
-
-
-static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
-	.nluns		=	1,
-	.vendor		=	"Broadcom",
-	.product	=	"Big Island",
-	.release	=	0x0100
-};
-
-static struct platform_device android_mass_storage_device = {
-	.name	=	"usb_mass_storage",
-	.id	=	-1,
-	.dev	=	{
-		.platform_data	=	&android_mass_storage_pdata,
-	}
-};
-
-static struct usb_ether_platform_data android_rndis_pdata = {
-	/* ethaddr FIXME */
-	.vendorID = __constant_cpu_to_le16(VENDOR_ID),
-	.vendorDescr = "Broadcom RNDIS",
-};
-
-static struct platform_device android_rndis_device = {
-	.name	= "rndis",
-	.id	= -1,
-	.dev	= {
-		.platform_data = &android_rndis_pdata,
-	},
-};
-
-static struct android_usb_product android_products[] = {
-	{
-		.product_id	= 	__constant_cpu_to_le16(PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_adb_msc),
-		.functions	=	android_function_adb_msc,
-	},
-	{
-		.product_id	= 	__constant_cpu_to_le16(RNDIS_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_rndis),
-		.functions	=	android_function_rndis,
-	},
-	{
-		.product_id	= 	__constant_cpu_to_le16(ACM_PRODUCT_ID),
-		.num_functions	=	ARRAY_SIZE(android_function_acm),
-		.functions	=	android_function_acm,
-	},
-};
-
-static struct android_usb_platform_data android_usb_data = {
-	.vendor_id		= 	__constant_cpu_to_le16(VENDOR_ID),
-	.product_id		=	__constant_cpu_to_le16(PRODUCT_ID),
-	.version		=	0,
-	.product_name		=	"Big Island",
-	.manufacturer_name	= 	"Broadcom",
-	.serial_number		=	"0123456789ABCDEF",
-
-	.num_products		=	ARRAY_SIZE(android_products),
-	.products		=	android_products,
-
-	.num_functions		=	ARRAY_SIZE(android_functions_all),
-	.functions		=	android_functions_all,
-};
-
-static struct platform_device android_usb = {
-	.name 	= "android_usb",
-	.id	= 1,
-	.dev	= {
-		.platform_data = &android_usb_data,
+static struct i2c_board_info __initdata bh1715_info[] = {
+	[0] = {
+		I2C_BOARD_INFO(BH1715_DRV_NAME, 0x5C ),
 	},
 };
 
@@ -1324,9 +1212,6 @@ static struct platform_device *board_devices[] __initdata = {
 //	&island_ipc_device,
 	&board_gpio_keys_device,
 	&islands_leds_device,
-	&android_rndis_device,
-	&android_mass_storage_device,
-	&android_usb,
 	&android_pmem,
 	&island_leds_gpio_device,
 	&island_sdio0_device,
@@ -1373,6 +1258,10 @@ static void __init board_add_devices(void)
 		akm8975_info,
 		ARRAY_SIZE(akm8975_info));
 	
+	i2c_register_board_info(3,
+		bh1715_info,
+		ARRAY_SIZE(bh1715_info));
+
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 	platform_add_devices(bcm59055_userspace_consumer_devices, ARRAY_SIZE(bcm59055_userspace_consumer_devices));
 #endif
@@ -1384,25 +1273,8 @@ static void __init board_add_devices(void)
 
 }
 
-void __init pinmux_setup(void)
-{
-	void __iomem *chipRegBase = IOMEM(KONA_CHIPREG_VA);
-	uint32_t traceVal;
-	
-	traceVal = 0x107;
-	
-	/* trace clock setting */
-	writel( traceVal, chipRegBase + CHIPREG_TRACECLK_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT07_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT03_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT02_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT01_OFFSET ) ;
-	writel( traceVal, chipRegBase + CHIPREG_TRACEDT00_OFFSET ) ;
-}
-
 void __init board_init(void)
 {
-	pinmux_setup();
 	dma_mmap_init();
 	sdma_init();	
 	/*

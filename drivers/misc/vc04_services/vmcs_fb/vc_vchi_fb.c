@@ -14,8 +14,8 @@
 
 // ---- Include Files --------------------------------------------------------
 
-//#include "interface/vchi/os/os.h"
 #include "interface/vcos/vcos.h"
+
 #include "vc_vchi_fb.h"
 
 // ---- Private Constants and Types ------------------------------------------

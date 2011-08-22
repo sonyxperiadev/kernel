@@ -165,6 +165,7 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd, UInt32 para
 static void RpcListCleanup(UInt8 clientId);
 
 /*****************************************************************/
+extern Boolean is_CP_running( void ) ;
 extern UInt32 RPC_GetMaxPktSize(PACKET_InterfaceType_t interfaceType, UInt32 size);
 extern void KRIL_SysRpc_Init( void ) ;
 extern unsigned char SYS_GenClientID(void);
@@ -220,13 +221,17 @@ static int rpcipc_open(struct inode *inode, struct file *file)
     priv->clientId = 0;
     file->private_data = priv;
 
-    if( !sysrpc_initialized )
+    if (is_CP_running() && !sysrpc_initialized)
     {
-		sysrpc_initialized = 1; 
+	sysrpc_initialized = 1; 
         KRIL_SysRpc_Init( ) ;
+        return 0;
     }
-
-    return 0;
+    else
+    {
+       RPC_TRACE(( "rpcipc_open: Error - CP is not running\n") ) ;
+       return -1;
+    }
 }
 
 
@@ -277,6 +282,12 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 {
     int retVal = 0;
     
+    if(!is_CP_running())
+    {
+        RPC_TRACE(( "rpcipc_ioctl: Error - CP is not running\n" )) ;
+        return -1;
+    }
+
 	if ( _IOC_TYPE(cmd) != RPC_SERVER_IOC_MAGIC || _IOC_NR(cmd) >= RPC_SERVER_IOC_MAXNR) 
 	{
 		RPC_TRACE(( "rpcipc_ioctl ERROR cmd=0x%x\n", cmd )) ;
@@ -459,6 +470,13 @@ static unsigned int rpcipc_poll(struct file *filp, poll_table *wait)
 	RpcClientInfo_t *cInfo;
     RpcIpc_PrivData_t *priv = filp->private_data;
     
+    if(!is_CP_running())
+    {
+        RPC_TRACE(( "rpcipc_poll: Error - CP is not running\n" )) ;
+        return -1;
+    }
+
+ 
     if( !priv )
 	{
 		RPC_TRACE(("k:rpcipc_poll invalid priv data\n"));

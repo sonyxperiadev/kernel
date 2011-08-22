@@ -65,6 +65,7 @@
 #define CMD_BTCOEXSCAN_STOP	"BTCOEXSCAN-STOP"
 #define CMD_BTCOEXMODE		"BTCOEXMODE"
 #define CMD_SETSUSPENDOPT	"SETSUSPENDOPT"
+#define CMD_P2P_DEV_ADDR	"P2P_DEV_ADDR"
 #define CMD_SETFWPATH		"SETFWPATH"
 #define CMD_SETBAND		"SETBAND"
 #define CMD_GETBAND		"GETBAND"
@@ -91,7 +92,7 @@ typedef struct cmd_tlv {
 	char subver;
 	char reserved;
 } cmd_tlv_t;
-#endif
+#endif /* PNO_SUPPORT */
 
 typedef struct android_wifi_priv_cmd {
 	char *buf;
@@ -105,6 +106,11 @@ typedef struct android_wifi_priv_cmd {
 void dhd_customer_gpio_wlan_ctrl(int onoff);
 uint dhd_dev_reset(struct net_device *dev, uint8 flag);
 void dhd_dev_init_ioctl(struct net_device *dev);
+#ifdef WL_CFG80211
+int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr);
+#else
+int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr) { return 0; }
+#endif
 
 extern bool ap_fw_loaded;
 #ifdef CUSTOMER_HW2
@@ -143,22 +149,25 @@ static int wl_android_get_link_speed(struct net_device *net, char *command, int 
 
 static int wl_android_get_rssi(struct net_device *net, char *command, int total_len)
 {
-	wlc_ssid_t ssid;
+	wlc_ssid_t ssid = {0};
 	int rssi;
-	int bytes_written;
+	int bytes_written = 0;
 	int error;
 
 	error = wldev_get_rssi(net, &rssi);
 	if (error)
 		return -1;
-
 	error = wldev_get_ssid(net, &ssid);
 	if (error)
 		return -1;
-	memcpy(command, ssid.SSID, ssid.SSID_len);
-	bytes_written = ssid.SSID_len;
+	if ((ssid.SSID_len == 0) || (ssid.SSID_len > DOT11_MAX_SSID_LEN)) {
+		DHD_ERROR(("%s: wldev_get_ssid failed\n", __FUNCTION__));
+	} else {
+		memcpy(command, ssid.SSID, ssid.SSID_len);
+		bytes_written = ssid.SSID_len;
+	}
 	bytes_written += snprintf(&command[bytes_written], total_len, " rssi %d", rssi);
-	DHD_INFO(("%s: command result is %s \n", __FUNCTION__, command));
+	DHD_INFO(("%s: command result is %s (%d)\n", __FUNCTION__, command, bytes_written));
 	return bytes_written;
 }
 
@@ -210,7 +219,7 @@ static int wl_android_set_pno_setup(struct net_device *dev, char *command, int t
 	int pno_repeat = 0;
 	int pno_freq_expo_max = 0;
 
-	DHD_ERROR(("%s: command=%s, len=%d\n", __FUNCTION__, command, total_len));
+	DHD_INFO(("%s: command=%s, len=%d\n", __FUNCTION__, command, total_len));
 
 	if (total_len < (strlen(CMD_PNOSETUP_SET) + sizeof(cmd_tlv_t))) {
 		DHD_ERROR(("%s argument=%d less min size\n", __FUNCTION__, total_len));
@@ -274,7 +283,19 @@ static int wl_android_set_pno_setup(struct net_device *dev, char *command, int t
 exit_proc:
 	return res;
 }
-#endif
+#endif /* PNO_SUPPORT */
+
+static int wl_android_get_p2p_dev_addr(struct net_device *ndev, char *command, int total_len)
+{
+	int ret;
+	int bytes_written = 0;
+
+	ret = wl_cfg80211_get_p2p_dev_addr(ndev, (struct ether_addr*)command);
+	if (ret)
+		return 0;
+	bytes_written = sizeof(struct ether_addr);
+	return bytes_written;
+}
 
 /**
  * Global function definitions (declared in wl_android.h)
@@ -317,10 +338,10 @@ int wl_android_wifi_off(struct net_device *dev)
 	dhd_net_if_lock(dev);
 	if (g_wifi_on) {
 		dhd_dev_reset(dev, 1);
-		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		sdioh_stop(NULL);
 		/* clean up dtim_skip setting */
 		net_os_set_dtim_skip(dev, TRUE);
+		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
 		g_wifi_on = 0;
 	}
 	dhd_net_if_unlock(dev);
@@ -349,24 +370,26 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	int ret = 0;
 	char *command = NULL;
 	int bytes_written = 0;
-	android_wifi_priv_cmd *priv_cmd;
+	android_wifi_priv_cmd priv_cmd;
 
 	net_os_wake_lock(net);
 
-	priv_cmd = (android_wifi_priv_cmd*)ifr->ifr_data;
-	if (!priv_cmd)
-	{
+	if (!ifr->ifr_data) {
 		ret = -EINVAL;
 		goto exit;
 	}
-	command = kmalloc(priv_cmd->total_len, GFP_KERNEL);
+	if (copy_from_user(&priv_cmd, ifr->ifr_data, sizeof(android_wifi_priv_cmd))) {
+		ret = -EFAULT;
+		goto exit;
+	}
+	command = kmalloc(priv_cmd.total_len, GFP_KERNEL);
 	if (!command)
 	{
 		DHD_ERROR(("%s: failed to allocate memory\n", __FUNCTION__));
 		ret = -ENOMEM;
 		goto exit;
 	}
-	if (copy_from_user(command, priv_cmd->buf, priv_cmd->total_len)) {
+	if (copy_from_user(command, priv_cmd.buf, priv_cmd.total_len)) {
 		ret = -EFAULT;
 		goto exit;
 	}
@@ -378,12 +401,12 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		bytes_written = wl_android_wifi_on(net);
 	}
 	else if (strnicmp(command, CMD_SETFWPATH, strlen(CMD_SETFWPATH)) == 0) {
-		bytes_written = wl_android_set_fwpath(net, command, priv_cmd->total_len);
+		bytes_written = wl_android_set_fwpath(net, command, priv_cmd.total_len);
 	}
 
 	if (!g_wifi_on) {
 		DHD_ERROR(("%s: Ignore private cmd \"%s\" - iface %s is down\n",
-				__FUNCTION__, command, ifr->ifr_name));
+			__FUNCTION__, command, ifr->ifr_name));
 		ret = 0;
 		goto exit;
 	}
@@ -398,10 +421,10 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		/* TBD: SCAN-PASSIVE */
 	}
 	else if (strnicmp(command, CMD_RSSI, strlen(CMD_RSSI)) == 0) {
-		bytes_written = wl_android_get_rssi(net, command, priv_cmd->total_len);
+		bytes_written = wl_android_get_rssi(net, command, priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_LINKSPEED, strlen(CMD_LINKSPEED)) == 0) {
-		bytes_written = wl_android_get_link_speed(net, command, priv_cmd->total_len);
+		bytes_written = wl_android_get_link_speed(net, command, priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_RXFILTER_START, strlen(CMD_RXFILTER_START)) == 0) {
 		bytes_written = net_os_set_packet_filter(net, 1);
@@ -427,30 +450,33 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 		/* TBD: BTCOEXMODE */
 	}
 	else if (strnicmp(command, CMD_SETSUSPENDOPT, strlen(CMD_SETSUSPENDOPT)) == 0) {
-		bytes_written = wl_android_set_suspendopt(net, command, priv_cmd->total_len);
+		bytes_written = wl_android_set_suspendopt(net, command, priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_SETBAND, strlen(CMD_SETBAND)) == 0) {
 		uint band = *(command + strlen(CMD_SETBAND) + 1) - '0';
 		bytes_written = wldev_set_band(net, band);
 	}
 	else if (strnicmp(command, CMD_GETBAND, strlen(CMD_GETBAND)) == 0) {
-		bytes_written = wl_android_get_band(net, command, priv_cmd->total_len);
+		bytes_written = wl_android_get_band(net, command, priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_COUNTRY, strlen(CMD_COUNTRY)) == 0) {
 		char *country_code = command + strlen(CMD_COUNTRY) + 1;
 		bytes_written = wldev_set_country(net, country_code);
-#ifdef PNO_SUPPORT
 	}
+#ifdef PNO_SUPPORT
 	else if (strnicmp(command, CMD_PNOSSIDCLR_SET, strlen(CMD_PNOSSIDCLR_SET)) == 0) {
 		bytes_written = dhd_dev_pno_reset(net);
 	}
 	else if (strnicmp(command, CMD_PNOSETUP_SET, strlen(CMD_PNOSETUP_SET)) == 0) {
-		bytes_written = wl_android_set_pno_setup(net, command, priv_cmd->total_len);
+		bytes_written = wl_android_set_pno_setup(net, command, priv_cmd.total_len);
 	}
 	else if (strnicmp(command, CMD_PNOENABLE_SET, strlen(CMD_PNOENABLE_SET)) == 0) {
 		uint pfn_enabled = *(command + strlen(CMD_PNOENABLE_SET) + 1) - '0';
 		bytes_written = dhd_dev_pno_enable(net, pfn_enabled);
+	}
 #endif
+	else if (strnicmp(command, CMD_P2P_DEV_ADDR, strlen(CMD_P2P_DEV_ADDR)) == 0) {
+		bytes_written = wl_android_get_p2p_dev_addr(net, command, priv_cmd.total_len);
 	} else {
 		DHD_ERROR(("Unknown PRIVATE command %s - ignored\n", command));
 		snprintf(command, 3, "OK");
@@ -458,9 +484,14 @@ int wl_android_priv_cmd(struct net_device *net, struct ifreq *ifr, int cmd)
 	}
 
 	if (bytes_written > 0) {
-		bytes_written++;
-		priv_cmd->used_len = bytes_written;
-		if (copy_to_user(priv_cmd->buf, command, bytes_written)) {
+		if (bytes_written > priv_cmd.total_len) {
+			DHD_ERROR(("%s: bytes_written = %d\n", __FUNCTION__, bytes_written));
+			bytes_written = priv_cmd.total_len;
+		} else {
+			bytes_written++;
+		}
+		priv_cmd.used_len = bytes_written;
+		if (copy_to_user(priv_cmd.buf, command, bytes_written)) {
 			DHD_ERROR(("%s: failed to copy data to user buffer\n", __FUNCTION__));
 			ret = -EFAULT;
 		}
@@ -499,6 +530,17 @@ int wl_android_exit(void)
 	return ret;
 }
 
+int wl_android_post_init(void)
+{
+	int ret = 0;
+	if (!dhd_download_fw_on_driverload) {
+		/* Call customer gpio to turn off power with WL_REG_ON signal */
+		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
+		g_wifi_on = 0;
+
+	}
+	return ret;
+}
 
 /**
  * Functions for Android WiFi card detection

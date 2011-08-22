@@ -373,7 +373,7 @@ static int rndis_function_bind_config(struct android_usb_function *f,
 		rndis->ethaddr[0], rndis->ethaddr[1], rndis->ethaddr[2],
 		rndis->ethaddr[3], rndis->ethaddr[4], rndis->ethaddr[5]);
 
-	ret = gether_setup(c->cdev->gadget, rndis->ethaddr);
+	ret = gether_setup_name(c->cdev->gadget, rndis->ethaddr, "rndis");
 	if (ret) {
 		pr_err("%s: gether_setup failed\n", __func__);
 		return ret;
@@ -1040,7 +1040,6 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 	struct android_dev		*dev = _android_dev;
 	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
 	struct usb_request		*req = cdev->req;
-	struct android_usb_function	**functions = dev->functions;
 	struct android_usb_function	*f;
 	int value = -EOPNOTSUPP;
 	unsigned long flags;
@@ -1050,7 +1049,7 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 	req->length = 0;
 	gadget->ep0->driver_data = cdev;
 
-	while ((f = *functions++)) {
+	list_for_each_entry(f, &dev->enabled_functions, enabled_list) {
 		if (f->ctrlrequest) {
 			value = f->ctrlrequest(f, cdev, c);
 			if (value >= 0)

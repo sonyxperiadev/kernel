@@ -67,6 +67,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "atc_kernel.h"
 
 extern void KRIL_SysRpc_Init( void ) ;
+extern Boolean is_CP_running( void ) ;
 
 /**
  * Incoming AT command queue
@@ -140,7 +141,6 @@ static void ATC_HandleAtcEventRspCb(RPC_Msg_t* pMsg,
                                     UInt32 userContextData);
 static Result_t ATC_RegisterCPTerminal(UInt8 chan, Boolean unsolicited);
 static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void* atResp, UInt32 atRespLen);
-//static void ATC_AddRespToQueue(const AtCmdInfo_t* atResp);
 
 
 // XDR table for AT command serialization/deserialization
@@ -245,11 +245,16 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
         ATC_KERNEL_TRACE2(( "**regulator already open\n") ) ;
     }
 #else
-    if( !sysrpc_initialized )
+    if (is_CP_running() && !sysrpc_initialized)
     {
 	sysrpc_initialized = 1; 
         KRIL_SysRpc_Init( ) ;
         ATC_ATRPCInit();
+    }
+    else
+    {
+       ATC_KERNEL_TRACE(( "ATC_KERNEL_Open: Error - CP is not running\n") ) ;
+       return -1;
     }
 #endif
 
@@ -282,6 +287,12 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
     unsigned long       irql ;
     
     ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl\n" )) ;
+
+    if(!is_CP_running())
+    {
+        ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl: Error - CP is not running\n" )) ;
+        return -1;
+    }
 
     switch( cmd )
     {
@@ -327,6 +338,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 }
 
                 newCmdQueueItem->mATCmd.fChan = inAtCmd->fChan;
+                newCmdQueueItem->mATCmd.fSimId = inAtCmd->fSimId;
 
                 //add to queue
                 spin_lock_irqsave( &sModule.mCmdLock, irql ) ;
@@ -343,16 +355,16 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 ATC_KERNEL_ATResp_t atRespU;
                 struct list_head *entry;
                 AT_RespQueue_t *respItem = NULL;
-		  UInt16 len = ATC_KERNEL_RESULT_BUFFER_LEN_MAX - 1;
+				UInt16 len = ATC_KERNEL_RESULT_BUFFER_LEN_MAX - 1;
                 
-		  ATC_KERNEL_TRACE(("cmd - ATC_KERNEL_Get_AT_RESP\n"));
+				ATC_KERNEL_TRACE(("cmd - ATC_KERNEL_Get_AT_RESP\n"));
 
-		  if (copy_from_user(&atRespU, (ATC_KERNEL_ATResp_t*)arg, sizeof(atRespU)))
-		  {
-			retVal = -1;
-			break;
-		  }
 
+                if (copy_from_user(&atRespU, (ATC_KERNEL_ATResp_t*)arg, sizeof(atRespU)))
+                {
+                    retVal = -1;
+                    break;
+                }
                 /* Get one resp from the queue */
                 spin_lock_irqsave( &sModule.mRespLock, irql ) ;
                 if (list_empty(&sModule.mRespQueue.mList))
@@ -365,11 +377,11 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 
                 entry = sModule.mRespQueue.mList.next;
                 respItem = list_entry(entry, AT_RespQueue_t, mList);
-				
-		  atRespU.chan = respItem->mATResp.chan;
-		  atRespU.msgId = respItem->mATResp.msgId;
-		  atRespU.dataLen = respItem->mATResp.dataLen;
-		  
+
+                atRespU.chan = respItem->mATResp.chan;
+                atRespU.msgId = respItem->mATResp.msgId;
+                atRespU.dataLen = respItem->mATResp.dataLen;
+
                 if (copy_to_user(atRespU.buffPtr, respItem->mATResp.buffPtr, respItem->mATResp.dataLen) != 0)
                 {
                     ATC_KERNEL_TRACE(( "ATC_KERNEL_Ioctl() - copy_to_user() had error\n" ));
@@ -387,7 +399,7 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
                 }
 				
                 list_del(entry);
-		  kfree(respItem->mATResp.buffPtr);
+                kfree(respItem->mATResp.buffPtr);
                 kfree(respItem);
 
                 spin_unlock_irqrestore(&sModule.mRespLock, irql);
@@ -400,6 +412,20 @@ static long ATC_KERNEL_Ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
             // trigger crash instantly
             panic("Forced assertion");
             break;
+
+        case ATC_KERNEL_REG_AT_TERMINAL:
+            {
+                ATC_KERNEL_AtRegisterInfo_t *inRegInfo = (ATC_KERNEL_AtRegisterInfo_t*)arg ;
+
+                if( inRegInfo == NULL )
+                {
+                    retVal = -1 ;
+                    break ;
+                }
+
+                ATC_RegisterCPTerminal(inRegInfo->channel, inRegInfo->unsolicited);
+                break ;
+            }
 
         default:
             retVal = -1 ;
@@ -422,6 +448,12 @@ static unsigned int ATC_KERNEL_Poll(struct file *filp, poll_table *wait)
     unsigned long       irql ;
 
     ATC_KERNEL_TRACE(("Enter ATC_KERNEL_Poll()"));
+
+    if(!is_CP_running())
+    {
+        ATC_KERNEL_TRACE(( "ATC_KERNEL_Poll: Error - CP is not running\n" )) ;
+        return -1;
+    }
 
     //if data exist already, just return
     spin_lock_irqsave(&sModule.mRespLock, irql);
@@ -521,8 +553,6 @@ static void ATC_ATRPCInit(void)
 		
 		sModule.mRPCHandle = RPC_SYS_RegisterClient(&params);
 
-        ATC_RegisterCPTerminal(0, TRUE);
-
         ATC_KERNEL_TRACE(( "AT_InitRpc done\n"));
 
 	}
@@ -552,7 +582,6 @@ Result_t ATC_SendRpcMsg(UInt32 msgId, void *val)
     }
 
     msg.tid = 0;
-    // **FIXME** need to support chan->ID, ID->chan, like CP
     msg.clientID = 70;
     msg.msgId = (MsgType_t)msgId;
     msg.dataBuf = val;
@@ -775,10 +804,7 @@ static void ATC_KERNEL_CommandThread(struct work_struct *inCmdWorker)
         //pass to capi2
         ATC_KERNEL_TRACE(("Sending to RPC \n"));
 
-        // **FIXME** will need to be updated for dual SIM - IOCTL interface will
-        // need to support passing SIM ID to kernel AT driver. For now, always 
-        // specify single SIM case.
-        ATC_SendRPCATCmd(cmdEntry->mATCmd.fChan, cmdEntry->mATCmd.fATCmdStr, SIM_SINGLE  );
+        ATC_SendRPCATCmd(cmdEntry->mATCmd.fChan, cmdEntry->mATCmd.fATCmdStr, cmdEntry->mATCmd.fSimId);
 
         spin_lock_irqsave( &sModule.mCmdLock, irql ) ;
         list_del(listptr);

@@ -12,7 +12,6 @@
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
-//#include "string.h"
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "taskmsgs.h"
@@ -27,14 +26,13 @@
 
 #include "xassert.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
-#include "drv_caph.h"
-#include "drv_caph_hwctrl.h"
+#include "csl_aud_drv.h"
+
+
 #include "audio_vdriver.h"
 #include "sharedmem.h"
 #include "dspcmd.h"
 #include "csl_apcmd.h"
-#include "audioapi_asic.h"
 #include "log.h"
 
 static UInt8 audioClientId = 0;
@@ -114,7 +112,6 @@ void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
                             ResultDataBufHandle_t dataBufHandle,
                             UInt32 userContextData)
 {   
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* TeST 3G WB *\n\r");
 	if (MSG_AUDIO_CALL_STATUS_IND == pMsg->msgId )
 	{
 		UInt32* codecID = NULL;
@@ -157,7 +154,7 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		UInt32 val = audio_control_dsp(p->param1,p->param2,p->param3,p->param4,p->param5,p->param6);
 		
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_CTRL_DSP_RSP, &val);
-#ifdef CONFIG_AUDIO_BUILD	
+//#ifdef CONFIG_AUDIO_BUILD	
 	}
 	else if(pMsg->msgId == MSG_AUDIO_COMP_FILTER_REQ)
 	{
@@ -165,7 +162,7 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		UInt32 val = audio_cmf_filter(p);
 		
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_COMP_FILTER_RSP, &val);
-#endif
+//#endif
 	}
 	else
 		xassert(0, pMsg->msgId);

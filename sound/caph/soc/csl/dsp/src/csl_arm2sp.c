@@ -88,10 +88,11 @@ void CSL_ARM2SP_Init(void)
 *   @param    inSize_inBytes  (in)	data size to write
 *   @param    writeIndex	(in)	index of ping-pong buffer
 *   @param    in48K         (in)    48K signal?
+*   @param    audMode		(in)    stereo?
 *   @return   UInt32				number of bytes written to the buffer
 *
 **********************************************************************/
-UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K)
+UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K, UInt8 audMode)
 {
 	UInt32 offset = 0;
 	UInt32  bufSize_inWords;
@@ -103,7 +104,7 @@ UInt32 CSL_ARM2SP_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, 
 		
 	//beginning of the buffer or the half point in the buffer.
 	offset = (writeIndex == 0)? (bufSize_inWords/2) : 0; // offset is in 16bit words
-
+	if(in48K && audMode==0) offset >>= 1; //48k mono uses only half buffer
 
 	totalCopied_bytes = (inSize_inBytes < halfBufSize_inBytes) ? inSize_inBytes : halfBufSize_inBytes;
 
@@ -137,10 +138,11 @@ void CSL_ARM2SP2_Init(void)
 *   @param    inSize_inBytes  (in)	data size to write
 *   @param    writeIndex	(in)	index of ping-pong buffer
 *   @param    in48K         (in)    48K signal?
+*   @param    audMode		(in)    stereo?
 *   @return   UInt32				number of bytes written to the buffer
 *
 **********************************************************************/
-UInt32 CSL_ARM2SP2_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K)
+UInt32 CSL_ARM2SP2_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex, Boolean in48K, UInt8 audMode)
 {
 	UInt32 offset = 0;
 	UInt32  bufSize_inWords;
@@ -152,7 +154,7 @@ UInt32 CSL_ARM2SP2_Write(UInt8* inBuf, UInt32 inSize_inBytes, UInt16 writeIndex,
 		
 	//beginning of the buffer or the half point in the buffer.
 	offset = (writeIndex == 0)? (bufSize_inWords/2) : 0; // offset is in 16bit words
-
+	if(in48K && audMode==0) offset >>= 1; //48k mono uses only half buffer
 
 	totalCopied_bytes = (inSize_inBytes < halfBufSize_inBytes) ? inSize_inBytes : halfBufSize_inBytes;
 

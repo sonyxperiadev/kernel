@@ -108,7 +108,7 @@
 #endif
 #endif
 
-#define __WVGA_BUSW_16__
+#define __WVGA_BUSW_08__
 #define __WVGA_MODE_565__
 // output color mdoe must be defined before including EC .H
 #include "dispdrv_ec_par_nt35582.h"  // NOVATEK NT35582 External Disp Controller    

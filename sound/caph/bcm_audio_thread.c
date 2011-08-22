@@ -39,9 +39,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "auddrv_def.h"
 #include "ossemaphore.h"
-#include "drv_caph.h"
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
@@ -112,8 +110,11 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 		//get operation code from fifo
 		len = kfifo_out_locked(&sgThreadData.m_pkfifo, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock);		
 
+	/* Commenting debug prints to eliminate compilation errors for kfifo member accesses */
+	/*
 		if( (len != sizeof(TMsgAudioCtrl)) && (len!=0) )
 			BCM_AUDIO_DEBUG("Error AUDIO_Ctrl len=%d expected %d in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl), sgThreadData.m_pkfifo.in, sgThreadData.m_pkfifo.out);
+	*/
 		if(len == 0) //FIFO empty sleep
 			return;
 		
@@ -134,9 +135,15 @@ int LaunchAudioCtrlThread(void)
 	sgThreadData.m_lock =  __SPIN_LOCK_UNLOCKED();
 	
 	ret = kfifo_alloc(&sgThreadData.m_pkfifo,KFIFO_SIZE, GFP_KERNEL);
+	/* Commenting debug prints to eliminate compilation errors for kfifo member access*/
+	/*
 	BCM_AUDIO_DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo.size);
+	*/
     ret = kfifo_alloc(&sgThreadData.m_pkfifo_out, KFIFO_SIZE, GFP_KERNEL);
-  	BCM_AUDIO_DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo_out.size);
+	/* Commenting debug prints to eliminate compilation errors for kfifo member access */
+  	/*
+	BCM_AUDIO_DEBUG("LaunchAudioCtrlThread KFIFO_SIZE= %d actual =%d\n", KFIFO_SIZE,sgThreadData.m_pkfifo_out.size);
+	*/
 	INIT_WORK(&sgThreadData.mwork, AudioCtrlWorkThread);
 	
 	sgThreadData.pWorkqueue_AudioControl = create_workqueue("AudioCtrlWq");
@@ -211,8 +218,11 @@ Result_t AUDIO_Ctrl_Trigger(
 	    {
             //wait for output from output fifo
 		    len = kfifo_out_locked(&sgThreadData.m_pkfifo_out, (unsigned char *)&msgAudioCtrl, sizeof(TMsgAudioCtrl), &sgThreadData.m_lock_out);
+	/* Commenting debug prints to eliminate compilation errors for kfifo member access */
+	/*
 		    if( (len != sizeof(TMsgAudioCtrl)) && (len!=0) )
 			    BCM_AUDIO_DEBUG("Error AUDIO_Ctrl_Trigger len=%d expected %d in=%d, out=%d\n", len, sizeof(TMsgAudioCtrl), sgThreadData.m_pkfifo_out.in, sgThreadData.m_pkfifo_out.out);
+	*/
 		    if(len == 0) //FIFO empty sleep
 			    return status;
             if(arg_param)
@@ -335,8 +345,8 @@ void AUDIO_Ctrl_Process(
 			if(param_resume->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 
-           // Enable the playback the path
-            AUDCTRL_EnablePlay(AUDIO_HW_MEM,	
+           		// Enable the playback the path
+            	AUDCTRL_EnablePlay(AUDIO_HW_MEM,	
                                    param_resume->pdev_prop->u.p.hw_id,
                                    AUDIO_HW_NONE,
                                    param_resume->pdev_prop->u.p.speaker,
@@ -349,20 +359,24 @@ void AUDIO_Ctrl_Process(
         case ACTION_AUD_StartRecord:
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
-
-
-            AUDCTRL_EnableRecord(param_start->pdev_prop->u.c.hw_id,
-				                     AUDIO_HW_MEM,	
+			
+			if(param_start->callMode != 1) 
+			{
+	        	AUDCTRL_EnableRecord(param_start->pdev_prop->u.c.hw_id,
+				                     param_start->pdev_prop->u.c.hw_sink,	
                                      param_start->pdev_prop->u.c.mic,
 				                     param_start->channels,
                                      param_start->rate);
-            AUDCTRL_SetRecordGain(param_start->pdev_prop->u.c.hw_id,
+	            AUDCTRL_SetRecordGain(param_start->pdev_prop->u.c.hw_id,
                                   param_start->pdev_prop->u.c.mic,
                                   AUDIO_GAIN_FORMAT_Q13_2,
                                   param_start->vol[0],
                                   param_start->vol[1]);
-
-            AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.c.aud_dev); 
+			}
+			if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_CAPT_HQ)
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.c.aud_dev); 
+			else
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode); 
 			
         }
         break;
@@ -372,9 +386,12 @@ void AUDIO_Ctrl_Process(
                
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-            AUDCTRL_DisableRecord(param_stop->pdev_prop->u.c.hw_id,
+			if(param_stop->callMode != 1) 
+			{		
+            	AUDCTRL_DisableRecord(param_stop->pdev_prop->u.c.hw_id,
                                       AUDIO_HW_MEM,
-                                      param_stop->pdev_prop->u.c.mic); 
+                                      param_stop->pdev_prop->u.c.mic);
+			}
 
         }
         break;

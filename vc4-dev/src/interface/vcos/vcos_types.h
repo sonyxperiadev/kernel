@@ -2,11 +2,6 @@
 Copyright (c) 2009 Broadcom Europe Limited.
 All rights reserved.
 
-Project  :  vcfw
-Module   :  osal
-File     :  $RCSfile: $
-Revision :  $Revision$
-
 FILE DESCRIPTION
 VideoCore OS Abstraction Layer - basic types
 =============================================================================*/
@@ -58,6 +53,7 @@ typedef enum
    VCOS_ENOSYS,
    VCOS_EEXIST,
    VCOS_ENXIO,
+   VCOS_EINTR
 } VCOS_STATUS_T;
 
 /* Some compilers (MetaWare) won't inline with -g turned on, which then results

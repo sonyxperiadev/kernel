@@ -906,6 +906,14 @@ composite_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *ctrl)
 	u16				w_length = le16_to_cpu(ctrl->wLength);
 	struct usb_function		*f = NULL;
 	u8				endp;
+	unsigned long                   flags;
+
+	spin_lock_irqsave(&cdev->lock, flags);
+	if (!cdev->connected) {
+		cdev->connected = 1;
+		schedule_work(&cdev->switch_work);
+	}
+	spin_unlock_irqrestore(&cdev->lock, flags);
 
 	/* partial re-init of the response message; the function or the
 	 * gadget might need to intercept e.g. a control-OUT completion
@@ -1099,6 +1107,9 @@ static void composite_disconnect(struct usb_gadget *gadget)
 		reset_config(cdev);
 	if (composite->disconnect)
 		composite->disconnect(cdev);
+
+	cdev->connected = 0;
+	schedule_work(&cdev->switch_work);
 	spin_unlock_irqrestore(&cdev->lock, flags);
 }
 
@@ -1142,6 +1153,10 @@ composite_unbind(struct usb_gadget *gadget)
 		usb_ep_free_request(gadget->ep0, cdev->req);
 	}
 	device_remove_file(&gadget->dev, &dev_attr_suspended);
+
+	switch_dev_unregister(&cdev->sw_connected);
+	switch_dev_unregister(&cdev->sw_config);
+
 	kfree(cdev);
 	set_gadget_data(gadget, NULL);
 	composite = NULL;
@@ -1158,6 +1173,30 @@ static u8 override_id(struct usb_composite_dev *cdev, u8 *desc)
 	}
 
 	return *desc;
+}
+
+static void
+composite_switch_work(struct work_struct *data)
+{
+	struct usb_composite_dev	*cdev =
+		container_of(data, struct usb_composite_dev, switch_work);
+	struct usb_configuration *config = cdev->config;
+	int connected;
+	unsigned long flags;
+
+	spin_lock_irqsave(&cdev->lock, flags);
+	if (cdev->connected != cdev->sw_connected.state) {
+		connected = cdev->connected;
+		spin_unlock_irqrestore(&cdev->lock, flags);
+		switch_set_state(&cdev->sw_connected, connected);
+	} else {
+		spin_unlock_irqrestore(&cdev->lock, flags);
+	}
+
+	if (config)
+		switch_set_state(&cdev->sw_config, config->bConfigurationValue);
+	else
+		switch_set_state(&cdev->sw_config, 0);
 }
 
 static int composite_bind(struct usb_gadget *gadget)
@@ -1238,6 +1277,17 @@ static int composite_bind(struct usb_gadget *gadget)
 	if (iProduct || (!cdev->desc.iProduct && composite->iProduct))
 		cdev->product_override =
 			override_id(cdev, &cdev->desc.iProduct);
+
+	cdev->sw_connected.name = "usb_connected";
+	status = switch_dev_register(&cdev->sw_connected);
+	if (status < 0)
+		goto fail;
+	cdev->sw_config.name = "usb_configuration";
+	status = switch_dev_register(&cdev->sw_config);
+	if (status < 0)
+		goto fail;
+
+	INIT_WORK(&cdev->switch_work, composite_switch_work);
 
 	if (iSerialNumber)
 		cdev->serial_override =

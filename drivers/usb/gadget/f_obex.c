@@ -501,7 +501,7 @@ MODULE_LICENSE("GPL");
 #ifdef CONFIG_USB_ANDROID_OBEX
 int obex_function_bind_config(struct usb_configuration *c)
 {
-	int ret = obex_bind_config(c, 1);
+	int ret = obex_bind_config(c, 2);
 	return ret;
 }
 

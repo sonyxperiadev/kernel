@@ -138,7 +138,7 @@ static int sspi_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 	unsigned short index, j;
 	unsigned char *tx_buf, *rx_buf, addr;
 	SSPI_hw_i2c_transaction_t rw_flag;
-	unsigned int tx_idx, rx_idx, rx_idx_checker;
+	unsigned int buf_idx, rx_idx_checker, tx_len, rx_len;
 	unsigned long time_left;
 
 
@@ -156,9 +156,10 @@ static int sspi_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 
 	SSPI_hw_i2c_prepare_for_xfr(&dev->hw_core);
 
-	tx_idx = 0;
-	rx_idx =  0;
-	rw_flag = I2C_WRITE_TRANSACTION;
+	buf_idx = 0;
+	tx_len = 0;
+	rx_len = 0;
+	rw_flag = I2C_WRONLY_TRANSACTION;
 
 	for (index = 0; index < num; index++) {
 		pmsg = &msgs[index];
@@ -171,29 +172,32 @@ static int sspi_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 			if (pmsg->flags & I2C_M_REV_DIR_ADDR)
 			addr ^= 1;
 
-	      		tx_buf[tx_idx++] = addr; 
-			rx_idx++;
+			tx_buf[buf_idx++] = addr;
 			BSC_DBG(dev, "\n%s segment#id=%d tranfer start seq and addr=0x%02x, ignore_nack=%s\n", __func__, index, addr, (pmsg->flags & I2C_M_IGNORE_NAK)?"yes":"no");
 
 		}
 
-      		/* read from the slave */
-      		if (pmsg->flags & I2C_M_RD) {
-			memset(&tx_buf[tx_idx], 0xFE, pmsg->len);
-			tx_idx += pmsg->len;
-			rx_idx += pmsg->len;
-			rw_flag = I2C_READ_TRANSACTION;
+		/* read from the slave */
+		if (pmsg->flags & I2C_M_RD) {
+			memset(&tx_buf[buf_idx], 0xFE, pmsg->len);
+			buf_idx += pmsg->len;
+			rx_len += pmsg->len;
+			if(index == 0)
+				rw_flag = I2C_RDONLY_TRANSACTION;
+			else if (rw_flag == I2C_WRONLY_TRANSACTION)
+				rw_flag = I2C_WRRD_TRANSACTION;
+
 			BSC_DBG(dev, "%s segment#id=%d will rx %d bytes\n", __func__, index, pmsg->len);
 		}
 		else {/* write to the slave */
-			if (I2C_READ_TRANSACTION == rw_flag) {
-				printk(KERN_ERR "It is neither a read nor write transaction\n");
+			if (I2C_WRONLY_TRANSACTION != rw_flag) {
+				printk(KERN_ERR "write transactions cannot stay behind read transactions\n");
 				rc = -EIO;
 				goto error_i2c_trans;
 			}
-			memcpy(&tx_buf[tx_idx], pmsg->buf, pmsg->len);
-			tx_idx += pmsg->len;
-			rx_idx += pmsg->len;
+			memcpy(&tx_buf[buf_idx], pmsg->buf, pmsg->len);
+			buf_idx += pmsg->len;
+			tx_len += pmsg->len;
 			BSC_DBG(dev, "%s segment#id=%d will tx %d bytes:\n", __func__, index, pmsg->len);
 			for (j = 0; j < pmsg->len; j++) {
 				if (j % 16)
@@ -205,30 +209,20 @@ static int sspi_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 		}
 	}
 	
-	if (tx_idx != rx_idx) {
-		printk(KERN_ERR "TX and RX buf shall have the same length\n");
-		rc = -EIO;
-		goto error_i2c_trans;
-	}
-
 	/* mark as incomplete before sending the data */
 	INIT_COMPLETION(dev->ses_done);
 
-	if (I2C_READ_TRANSACTION == rw_flag) {
-		tx_buf[tx_idx-1] = 0xFF;
-		BSC_DBG(dev, "do HW read with rx_len = %d\n", rx_idx);
-		rc = SSPI_hw_i2c_do_read_transaction(&dev->hw_core, rx_buf, rx_idx, tx_buf, tx_idx);
-		if (rc < 0) {
-			printk(KERN_ERR "SSPI HW read error\n");
-			goto error_i2c_trans;
-		}
+	if (I2C_WRONLY_TRANSACTION != rw_flag) {
+		tx_buf[buf_idx-1] = 0xFF;
+		BSC_DBG(dev, "do HW read with rx_len = %d\n", buf_idx);
 	} else {
-		BSC_DBG(dev, "do HW write with tx_len = %d\n", tx_idx);
-		rc = SSPI_hw_i2c_do_write_transaction(&dev->hw_core, rx_buf, rx_idx, tx_buf, tx_idx);
-		if (rc < 0) {
-			printk(KERN_ERR "SSPI HW write error\n");
-			goto error_i2c_trans;
-		}
+		BSC_DBG(dev, "do HW write with tx_len = %d\n", buf_idx);
+	}
+	rc = SSPI_hw_i2c_do_transaction(&dev->hw_core, rx_buf, rx_len,
+									tx_buf, tx_len, buf_idx, rw_flag);
+	if (rc < 0) {
+		printk(KERN_ERR "SSPI HW trans error\n");
+		goto error_i2c_trans;
 	}
 
 	/*
@@ -284,7 +278,7 @@ static int sspi_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 		}
 	}
 
-	if (rx_idx_checker != rx_idx) {
+	if (rx_idx_checker != buf_idx) {
 		printk(KERN_ERR "RX buf length is not correct\n");
 		rc = -EIO;
 	}

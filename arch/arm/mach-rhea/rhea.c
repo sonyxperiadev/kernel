@@ -30,6 +30,7 @@
 #include <asm/io.h>
 #include <asm/mach/map.h>
 #include <asm/hardware/cache-l2x0.h>
+#include <mach/pwr_mgr.h>
 #include <mach/clock.h>
 #include <linux/mfd/bcm590xx/core.h>
 #include <mach/gpio.h>
@@ -73,16 +74,16 @@ void __init rhea_ray_timer_init (void)
 
 	/*
 	 * IMPORTANT:
-	 * If we have to use slave-timer as system timer, two modifications are required 
+	 * If we have to use slave-timer as system timer, two modifications are required
 	 * 1) modify the name of timer as, gpt_setup.name = "slave-timer";
 	 * 2) By default when the clock manager comes up it disables most of
 	 *    the clock. So if we switch to slave-timer we should prevent the
 	 *    clock manager from doing this. So, modify plat-kona/include/mach/clock.h
-	 * 
+	 *
 	 * By default aon-timer as system timer the following is the config
 	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
          * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE)
-	 * 
+	 *
 	 * change it as follows to use slave timer as system timer
 	 *
 	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE)
@@ -91,7 +92,7 @@ void __init rhea_ray_timer_init (void)
 	gpt_setup.name   = "aon-timer";
 	gpt_setup.ch_num = 0;
 	gpt_setup.rate = CLOCK_TICK_RATE;
-	
+
 	/* Call the init function of timer module */
 	gp_timer_init(&gpt_setup);
 	profile_timer_init(IOMEM(KONA_PROFTMR_VA));
@@ -110,15 +111,13 @@ static int __init rhea_init(void)
 	rhea_l2x0_init();
 #endif
 
-#ifdef CONFIG_HAVE_CLK
-	clock_init();
-#endif
 	pinmux_init();
 
 #ifdef CONFIG_GPIOLIB
-	/* rhea has 4 banks of GPIO pins */ 
+	/* rhea has 4 banks of GPIO pins */
 	kona_gpio_init(4);
 #endif
+
 
 	return 0;
 }

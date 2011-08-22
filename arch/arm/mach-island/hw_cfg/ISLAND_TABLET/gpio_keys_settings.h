@@ -19,24 +19,15 @@
 #ifndef GPIO_KEYS_SETTINGS_H
 #define GPIO_KEYS_SETTINGS_H
 
-#include <linux/input.h>
-#include <linux/gpio_keys.h>
-
-/* GPIO led definitions for Hana tablet */
-static struct gpio_keys_button tabletKeys[] =
-{
-    {
-		.code = KEY_POWER,
-        .desc = "Power",
-        .gpio = 4,    /* GPIO #4 */
-		.active_low	= 1,
-    }
+#define GPIO_KEYS_SETTINGS \
+{ \
+    { \
+        .code = KEY_POWER, \
+        .desc = "Power", \
+        .gpio = 4, \
+        .active_low = 1, \
+    } \
 };
 
-static struct gpio_keys_platform_data gpio_keys_data =
-{
-    .nbuttons = ARRAY_SIZE(tabletKeys),
-    .buttons = tabletKeys,
-};
 
 #endif /* GPIO_KEYS_SETTINGS_H */

@@ -33,6 +33,7 @@
 #include <linux/semaphore.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/jiffies.h>
 #ifdef CONFIG_BRCM_FUSE_IPC_CIB
 #include <linux/broadcom/ipcinterface.h>
 #else
@@ -80,6 +81,8 @@ typedef struct
   struct workqueue_struct *crash_dump_workqueue;
   void __iomem *apcp_shmem;
 }ipcs_info_t;
+
+static Boolean cp_running = 0;//FALSE;
 
 // flag used to track occurence of early CP interrupt; 
 // CP interrupt before IPC configured indicates early CP
@@ -142,28 +145,17 @@ static IPC_ReturnCode_T EventClear (void * Event)
     return IPC_OK;   
 }
 
-static IPC_ReturnCode_T EventWait (void * Event, IPC_U32 MilliSeconds)
+static IPC_ReturnCode_T EventWait(void *Event, IPC_U32 MilliSeconds)
 {
-    IPC_Evt_t* ipcEvt = (IPC_Evt_t*)Event;
-	IPC_ReturnCode_T  rtnCode = IPC_OK;
+	IPC_Evt_t *ipcEvt = (IPC_Evt_t *)Event;
 
-	if(MilliSeconds == IPC_WAIT_FOREVER)
-	{
-		wait_event( (ipcEvt->evt_wait), (ipcEvt->evt == 1) );
-	}
-	else
-	{
-	    int timeout = 0;
-	    // timeout in "jiffies" (apparently 10ms/jiffie in android?)
-		timeout = wait_event_timeout( (ipcEvt->evt_wait), (ipcEvt->evt == 1), MilliSeconds/10 );
-		// returns 0 if we timed out, > 0 otherwise
-		if ( timeout == 0 )
-		{
-		    rtnCode = IPC_TIMEOUT;
-		}
-	}
-	
-	return rtnCode;
+	if (MilliSeconds == IPC_WAIT_FOREVER)
+		wait_event((ipcEvt->evt_wait), (ipcEvt->evt == 1));
+	else if (!wait_event_timeout((ipcEvt->evt_wait), (ipcEvt->evt == 1),
+				    msecs_to_jiffies(MilliSeconds)))
+		return IPC_TIMEOUT;
+
+	return IPC_OK;
 }
 
 static int ipcs_open(struct inode *inode, struct file *file)
@@ -215,6 +207,14 @@ static struct file_operations ipc_ops =
   .mmap  = NULL,
   .release = ipcs_release,
 };
+
+/** 
+   @fn Boolean is_CP_running(void);
+*/
+Boolean is_CP_running(void)
+{
+   return cp_running;
+}
 
 /** 
    @fn void ipcs_ipc_initialised(void);
@@ -362,17 +362,44 @@ extern int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu);
 
 void WaitForCpIpc (void* pSmBase)
 {
-	int k = 0, ret = 0;
+    int k = 0, ret = 0;
 
     printk( KERN_ALERT  "ipcs_init Waiting for CP IPC to init ....\n");
-	while ( (ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU )) == 0)
+
+    ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    while (ret == 0)
+    {
+        // Wait up to 2s for CP to init
+        if (k++ > 200)
+            break;
+        else
+            msleep(10);
+        ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
+    }
+
+	if (ret == 1)
 	{
-//		for (i=0; i<2048; i++);	// do not fight for accessing shared memory
-		set_current_state(TASK_INTERRUPTIBLE);
-		schedule_timeout (100);
-		k++;
+		printk(KERN_INFO  "ipcs_init CP IPC initialized ret=%d\n", ret);
+		cp_running = 1;//TRUE;
 	}
-    printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
+	else if (ret == 0)
+	{
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "*       CP IPC NOT INITIALIZED - SYSTEM BOOTS WITH AP ONLY!!!      *\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		BUG_ON(ret == 0);
+	}
+	else
+	{
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "*                             CP CRASHED !!!                       *\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		BUG_ON(ret);
+	}
 }
 
 
@@ -534,17 +561,6 @@ static int __init ipcs_module_init(void)
     goto out_unregister;
   } 
 
-
-  printk( KERN_ALERT  "[ipc]: request_irq\n");
-  rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND, "ipc-intr", &g_ipc_info);
-  if (rc) 
-  {
-    IPC_DEBUG(DBG_ERROR,"[ipc]: request_irq error\n");
-    goto out_del;
-  }
-  
-  printk( KERN_ALERT  "[ipc]: IRQ Clear and Enable\n");
-  
   /**
      Make sure this is not cache'd because CP has to know about any changes
      we write to this memory immediately.
@@ -557,9 +573,6 @@ static int __init ipcs_module_init(void)
     IPC_DEBUG(DBG_ERROR,"[ipc]: Could not map shmem\n");
     goto out_del;
   }
-#ifdef CONFIG_HAS_WAKELOCK
-  wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
-#endif
 
   printk( KERN_ALERT  "[ipc]: ipcs_init\n");
   if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE))
@@ -569,8 +582,23 @@ static int __init ipcs_module_init(void)
     goto out_del;
   }
   
-  printk( KERN_ALERT "[ipc]: ipcs_module_init ok\n");
+  printk(KERN_ALERT "[ipc]: ipcs_module_init ok\n");
   
+#ifdef CONFIG_HAS_WAKELOCK
+	wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
+#endif
+
+  printk(KERN_ALERT  "[ipc]: request_irq\n");
+  rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND, "ipc-intr",
+			&g_ipc_info);
+
+	if (rc) {
+		IPC_DEBUG(DBG_ERROR, "[ipc]: request_irq error\n");
+		goto out_del;
+	}
+
+  printk(KERN_ALERT  "[ipc]: IRQ Clear and Enable\n");
+
   if ( sEarlyCPInterrupt )
   {
     printk( KERN_ALERT "[ipc]: early CP interrupt - doing crash dump...\n");
@@ -610,5 +638,4 @@ static void __exit ipcs_module_exit(void)
   return;
 }
 
-module_init(ipcs_module_init);
-module_exit(ipcs_module_exit);
+late_initcall(ipcs_module_init);

@@ -393,4 +393,8 @@
 #define GICDIST_BASE_ADDR         0x3FF01000 /* brcm_rdb_gicdist.h */
 
 /**** VC EMI ****/
+#if defined(CONFIG_MAP_LITTLE_ISLAND_MODE)
+#define VC_EMI                    0x80000000 /* VC4 EMI */
+#else
 #define VC_EMI                    0x40000000 /* VC4 EMI */
+#endif

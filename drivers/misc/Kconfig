@@ -258,8 +258,7 @@ config SGI_XP
 
 config CS5535_MFGPT
 	tristate "CS5535/CS5536 Geode Multi-Function General Purpose Timer (MFGPT) support"
-	depends on PCI
-	depends on X86
+	depends on PCI && X86 && MFD_CS5535
 	default n
 	help
 	  This driver provides access to MFGPT functionality for other
@@ -336,6 +335,14 @@ config APDS9802ALS
 
 	  This driver can also be built as a module.  If so, the module
 	  will be called apds9802als.
+
+config BRCM_VIRTUAL_SENSOR
+	tristate "Broadcom Virtual Sensor driver"
+	default n
+	---help---
+	If you say yes here you get support of multiplexing of sensor drivers
+	on the kernel level. Sensor drivers must implement registration with the
+	virtual sensor driver.
 
 config ISL29003
 	tristate "Intersil ISL29003 ambient light sensor"

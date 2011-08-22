@@ -74,10 +74,10 @@ void *v3d_mempool_base = NULL;
 int v3d_mempool_size = V3D_MEMPOOL_SIZE;
 
 //Maximum number of relocatable heap that can be created in V3D mem pool
-unsigned int 	max_slots = 1;
+volatile unsigned int 	max_slots = 1;
 //Simple way to keep track of slot allocation
-unsigned int 	g_mem_slots = 0;
-uint32_t		v3d_relocatable_chunk_size = 0;
+volatile unsigned int 	g_mem_slots = 0;
+volatile uint32_t		v3d_relocatable_chunk_size = 0;
 
 struct trace_entry {
 	unsigned long timestamp;
@@ -93,7 +93,7 @@ static struct {
 	struct semaphore work_lock;
 	struct proc_dir_entry *proc_info;
 	struct class *v3d_class;
-	uint32_t	irq_enabled;
+	volatile uint32_t	irq_enabled;
 	int traceptr;
 	spinlock_t trace_lock;
 	int num_trace_ents;
@@ -104,7 +104,7 @@ typedef struct {
 	mem_t mempool;
 	struct semaphore irq_sem;
 	unsigned int mem_slot;
-	int		v3d_acquired;
+	volatile int	v3d_acquired;
 } v3d_t;
 
 /***** Function Prototypes **************/
@@ -113,7 +113,6 @@ static void reset_v3d(void);
 static unsigned int get_reloc_mem_slot(void);
 static void free_reloc_mem_slot(unsigned int slot);
 static void v3d_enable_irq(void);
-static void v3d_disable_irq(void);
 /******************************************************************
 	Simple slot management to give out chunks of V3D mem pool
 	Every user creates a relocatable heap in their memory chunk.
@@ -321,6 +320,8 @@ static irqreturn_t v3d_isr(int irq, void *unused)
 	if( v3d_state.g_irq_sem )
 		up(v3d_state.g_irq_sem);
 
+	v3d_state.irq_enabled = 0;
+	disable_irq_nosync(IRQ_GRAPHICS);
 	return IRQ_HANDLED;
 }
 
@@ -329,17 +330,10 @@ static void v3d_enable_irq(void)
 	down(&v3d_state.work_lock);
 	//Don't enable irq if it's already enabled
 	if( !v3d_state.irq_enabled )
+	{
+		v3d_state.irq_enabled = 1;
 		enable_irq(IRQ_GRAPHICS);
-	v3d_state.irq_enabled = 1;
-	up(&v3d_state.work_lock);
-}
-
-static void v3d_disable_irq(void)
-{
-	down(&v3d_state.work_lock);
-	if( v3d_state.irq_enabled )
-		disable_irq(IRQ_GRAPHICS);
-	v3d_state.irq_enabled = 0;
+	}
 	up(&v3d_state.work_lock);
 }
 
@@ -375,6 +369,7 @@ static int v3d_release(struct inode *inode, struct file *filp)
 		//V3D hardware to go idle before letting any other process touch it.
 		//Otherwise it can cause a AXI lockup or other bad things :-(
 		down(&v3d_state.work_lock);
+		v3d_state.g_irq_sem = NULL;		//Free up the g_irq_sem
 		while(v3d_is_not_idle())
                    udelay(100);
 		up(&v3d_state.work_lock);
@@ -386,9 +381,7 @@ static int v3d_release(struct inode *inode, struct file *filp)
 	}
 
 	//Enable the IRQ here if someone is waiting for IRQ
-	//This is any process exits, then it disables in interrupt
-	if( v3d_state.g_irq_sem )
-		v3d_enable_irq();
+	v3d_enable_irq();
 
 	if (dev)
 		kfree(dev);
@@ -501,12 +494,9 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			dbg_print("Waiting for interrupt\n");
 			if (down_interruptible(&dev->irq_sem))
 			{
-				v3d_disable_irq();
 				err_print("Wait for IRQ failed\n");
 				return -ERESTARTSYS;
 			}
-			dbg_print("Disabling v3d interrupt\n");
-			v3d_disable_irq();
 		}
 		break;
 
@@ -730,7 +720,7 @@ int __init v3d_init(void)
 
 	dbg_print("V3D driver Init\n");
 
-		/* initialize the gencmd struct */
+    /* initialize the V3D struct */
 	memset(&v3d_state, 0, sizeof(v3d_state));
 
 	if( !v3d_mempool_base ){
@@ -763,8 +753,7 @@ int __init v3d_init(void)
 	if (v3d_base == NULL)
 		goto err;
 
-
-	/* Map the V3D registers */
+	/* Map the V3D hw reset registers */
 	mm_rst_base = (void __iomem *)ioremap_nocache(MM_RST_BASE_ADDR, SZ_4K);
 	if (mm_rst_base == NULL)
 		goto err1;
@@ -773,7 +762,11 @@ int __init v3d_init(void)
 	dbg_print("V3D Identification 0 = 0X%x\n", readl(v3d_base + V3D_IDENT0_OFFSET));
 	dbg_print("V3D Identification 1 = 0X%x\n", readl(v3d_base + V3D_IDENT1_OFFSET));
 	dbg_print("V3D Identification 2 = 0X%x\n", readl(v3d_base + V3D_IDENT2_OFFSET));
-	dbg_print("V3D register base address (remaped) = 0X%p\n", v3d_base);
+	err_print("V3D register base address (remaped) = 0X%p\n", v3d_base);
+
+	/* Initialize the V3D acquire_sem and work_lock*/
+	sema_init(&v3d_state.acquire_sem, 1); //First request should succeed
+	sema_init(&v3d_state.work_lock, 1); //First request should succeed
 
 	/* Request the V3D IRQ */
 	ret = request_irq(IRQ_GRAPHICS, v3d_isr,
@@ -783,10 +776,6 @@ int __init v3d_init(void)
 		goto err2;
 	}
 	disable_irq(IRQ_GRAPHICS);
-
-	/* Initialize the V3D acquire_sem and work_lock*/
-	sema_init(&v3d_state.acquire_sem, 1); //First request should succeed
-	sema_init(&v3d_state.work_lock, 1); //First request should succeed
 
 	/* Initialize the trace buffer */
 	v3d_state.traceptr = 0;
