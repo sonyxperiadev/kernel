@@ -98,10 +98,12 @@ void KRIL_SysRpc_Init( void )
 
     if ( !inited )
     {
-        UInt16 battLvl;
-        
+        UInt16 battLvl;        
         HAL_EM_BATTMGR_ErrorCode_en_t errCode;
-        
+
+        // make sure we can't be re-initialized...
+        inited = 1;
+
         wake_lock_init(&sKrilSysRpcWakeLock, WAKE_LOCK_SUSPEND, "kril_sysrpc_wake_lock");
 
         KRIL_DEBUG(DBG_INFO," calling SYS_InitRpc\n");
