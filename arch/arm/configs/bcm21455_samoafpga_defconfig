@@ -518,6 +518,7 @@ CONFIG_UID_STAT=y
 # CONFIG_APANIC is not set
 # CONFIG_INTER_PROCESSOR_COMM is not set
 # CONFIG_BCM_BT_LPM is not set
+# CONFIG_BRALLOC_MEM is not set
 # CONFIG_STM_TRACE is not set
 # CONFIG_C2PORT is not set
 

@@ -30,6 +30,7 @@
 #include <linux/interrupt.h>
 #include <linux/serial_8250.h>
 #include <linux/irq.h>
+#include <linux/dma-contiguous.h>
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -275,8 +276,6 @@ static struct platform_device android_usb = {
 		.platform_data = &android_usb_data,
 	},
 };
-
-
 
 static struct resource board_i2c0_resource[] = {
 	[0] =
@@ -666,6 +665,16 @@ static struct platform_device board_unicam_device = {
 };
 #endif
 
+static u64 bralloc_dma_mask = DMA_BIT_MASK(32);
+static struct platform_device bralloc_device = {
+	.name 	= "bralloc",
+	.id	= 0,
+	.dev	= {
+		.dma_mask		= &bralloc_dma_mask,
+		.coherent_dma_mask	= DMA_BIT_MASK(32),
+	},
+};
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -707,10 +716,31 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 };
 
+static unsigned long bralloc_mem_size = 0;
+static int __init early_bralloc_mem(char *p)
+{
+	bralloc_mem_size = memparse(p, &p);
+	return 0;
+}
+early_param("bralloc_mem", early_bralloc_mem);
 
-
+void __init board_common_reserve(void)
+{
+	/* if bralloc_mem_size is set, then declare bralloc CMA area of the same
+	 * size from the end of memory
+	 */
+	if (bralloc_mem_size)
+		dma_declare_contiguous(&bralloc_device.dev, bralloc_mem_size, 0, 0);
+}
 
 void __init board_add_common_devices(void)
 {
 	platform_add_devices(board_common_plat_devices, ARRAY_SIZE(board_common_plat_devices));
+	/*
+	 * add the bralloc device only iff we were given memory for
+	 * it's cma region
+	 */
+	if (bralloc_mem_size)
+		platform_device_register(&bralloc_device);
+
 }

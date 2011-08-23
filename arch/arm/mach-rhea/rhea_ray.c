@@ -38,7 +38,6 @@
 #include <linux/i2c-kona.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
-#include <linux/dma-contiguous.h>
 #include <asm/gpio.h>
 #include <mach/sdio_platform.h>
 #ifdef CONFIG_GPIO_PCA953X
@@ -1037,7 +1036,6 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 #ifdef CONFIG_DMAC_PL330
 	&pl330_dmac_device,
 #endif
-	&android_pmem,
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
 #endif
@@ -1119,28 +1117,10 @@ static int __init rhea_ray_add_lateInit_devices (void)
 	return 0;
 }
 
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
-static u64 bralloc_dma_mask = DMA_BIT_MASK(32);
-
-static struct platform_device bralloc_device = {
-	.name 	= "bralloc",
-	.id	= 0,
-	.dev	= {
-		.dma_mask		= &bralloc_dma_mask,
-		.coherent_dma_mask	= DMA_BIT_MASK(32),
-	},
-};
-
 static void __init rhea_ray_reserve(void)
 {
-	/* if bralloc_mem_size is set, then declare bralloc CMA area of the same
-	 * size from the end of memory
-	 */
-	if (bralloc_mem_size)
-		dma_declare_contiguous(&bralloc_device.dev, bralloc_mem_size, 0, 0);
+	board_common_reserve();
 }
-#endif /* CONFIG_MACH_RHEA_RAY_EDN1X */
-
 
 /* All Rhea Ray specific devices */
 static void __init rhea_ray_add_devices(void)
@@ -1161,9 +1141,12 @@ static void __init rhea_ray_add_devices(void)
 	platform_add_devices(rhea_ray_virtual_consumer_devices, ARRAY_SIZE(rhea_ray_virtual_consumer_devices));
 #endif
 
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
-	platform_device_register(&bralloc_device);
-#endif
+	if (pmem_base && pmem_size) {
+		android_pmem_data.start = (unsigned long)pmem_base;
+		android_pmem_data.size  = pmem_size;
+		platform_device_register(&android_pmem);
+	}
+
 	spi_register_board_info(spi_slave_board_info,
 				ARRAY_SIZE(spi_slave_board_info));
 }
@@ -1234,7 +1217,5 @@ MACHINE_START(RHEA, "RheaRay")
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
 	.init_machine = board_init,
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	.reserve = rhea_ray_reserve
-#endif
 MACHINE_END

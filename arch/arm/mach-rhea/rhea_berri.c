@@ -1015,6 +1015,11 @@ static int __init rhea_berri_add_lateInit_devices (void)
 	return 0;
 }
 
+static void __init rhea_berri_reserve(void)
+{
+	board_common_reserve();
+}
+
 static void enable_smi_display_clks(void)
 {
 	struct clk *smi_axi;
@@ -1081,4 +1086,5 @@ MACHINE_START(RHEA_BERRI, "RheaBerri")
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
 	.init_machine = board_init,
+	.reserve = rhea_berri_reserve
 MACHINE_END

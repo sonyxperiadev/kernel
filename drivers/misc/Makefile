@@ -76,3 +76,4 @@ obj-$(CONFIG_MONITOR_BQ27541_I2C)	+= bq27541.o
 obj-$(CONFIG_MACH_RHEA_SELFTEST)	+= bcm_selftest_bb.o
 obj-$(CONFIG_BCM_RFKILL)	+= bcmbt_rfkill.o
 obj-$(CONFIG_BCM_BT_LPM)	+= bcmbt_lpm.o
+obj-$(CONFIG_BRALLOC_MEM)	+= bralloc_mem.o
