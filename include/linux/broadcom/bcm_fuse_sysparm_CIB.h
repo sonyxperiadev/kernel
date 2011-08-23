@@ -18,13 +18,6 @@
 
 #include <linux/broadcom/chip_version.h>
 
-/* **FIXME** MAG - Athena sysparm addrs/sizes; may be different for other */
-/* CIB platforms */
-#define PARM_IND_BASE               0x80120000
-#define PARM_IND_SIZE               0x20000
-#define PARM_DEP_BASE               0x80140000
-#define PARM_DEP_SIZE		        0x10000
-
 #define SYSPARM_INDEX_READY_INDICATOR   0x5059504D	/* SYSP */
 #define MAX_SYSPARM_NAME_SIZE   128
 

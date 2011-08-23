@@ -43,6 +43,7 @@
 *****************************************************************************/
 #ifndef _PLATFORM_MCONFIG_RHEA_H_
 #define _PLATFORM_MCONFIG_RHEA_H_
+// !< --- PreProcess --- >!
 
 #ifdef __cplusplus
 extern "C" {
@@ -271,6 +272,13 @@ extern "C" {
 #define CP_LOAD_ROM2_SIZE_MAX                                  (DSP_DRAM_RAM_ADDR - CP_LOAD_ROM2_BASE)
 #endif
 
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define IPC_OFFSET                             0x1800000                    // 256kB IPC shared RAM
+#elif defined(CNEON_LMP)
+#define IPC_OFFSET                             0x1C00000                    // 256kB IPC shared RAM
+#else
+#define IPC_OFFSET                             0x1E00000                    // 256kB IPC shared RAM
+#endif
 
 #else  // BRCM_RTOS
 /*****************************************************************************/
@@ -281,6 +289,17 @@ extern "C" {
 
 // Memory map for Linux build
 #define EXT_RAM_BASE_ADDR  CONFIG_BCM_RAM_BASE
+
+#ifdef CONFIG_BCM_IPC_OFFSET
+/* 256kB IPC shared RAM */
+#define IPC_OFFSET             CONFIG_BCM_IPC_OFFSET
+#else
+#define IPC_OFFSET             0x01E00000
+#endif
+
+#define PARM_DEP_RAM_OFFSET    0x140000
+#define PARM_DEP_RAM_ADDR      (EXT_RAM_BASE_ADDR + PARM_DEP_RAM_OFFSET)
+#define PARM_DEP_SIZE          0x00010000
 
 #endif
 
@@ -301,18 +320,14 @@ extern "C" {
 #define AP_SH_BASE                             (DSP_SH_BASE+CP_SH_SIZE)
 #define AP_SH_SIZE                                             0x00020000    // 128k  AP/DSP sharedmem
 
-#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
-#define IPC_OFFSET                             0x1800000                    // 256kB IPC shared RAM
-#else
-#define IPC_OFFSET                             0x1E00000                    // 256kB IPC shared RAM
-#endif   
 #define IPC_BASE                               (EXT_RAM_BASE_ADDR + IPC_OFFSET)
 #define IPC_SIZE                                               0x00200000
-
 
 #ifdef __cplusplus
 }
 #endif
+
+// !< --- PreProcess --- >!
 
 #endif //_PLATFORM_MCONFIG_RHEA_H_
 
