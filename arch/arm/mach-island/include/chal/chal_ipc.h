@@ -116,6 +116,11 @@ BCM_ERR_CODE chal_ipc_read_mailbox (
     uint32_t *value
     );
 
+BCM_ERR_CODE chal_ipc_query_wakeup_vc (
+    CHAL_IPC_HANDLE handle,
+    uint32_t *result
+    );
+
 BCM_ERR_CODE chal_ipc_wakeup_vc (
     CHAL_IPC_HANDLE handle,
     uint32_t address

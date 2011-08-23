@@ -4,15 +4,15 @@
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
 * under the terms of the GNU General Public License version 2, available at
-* http://www.broadcom.com/licenses/GPLv2.php (the "GPL"). 
+* http://www.broadcom.com/licenses/GPLv2.php (the "GPL").
 *
 * Notwithstanding the above, under no circumstances may you combine this
 * software in any way with any other Broadcom software provided under a
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
-/* This driver is now applied to BCM911160 and several changes have been made to 
- * improve the readability and functionality of GPS 
+/* This driver is now applied to BCM911160 and several changes have been made to
+ * improve the readability and functionality of GPS
  */
 /* This driver is based on bcm4760 GPS driver and include below all the fixes applied.
  * Different from BCM4760, BCM11211 have external UART pin attached to 4751 modules.
@@ -25,33 +25,33 @@
  * Changelog:
  *
  * 19-Feb-2009  KOM  Initial version for refs #811:
- *                 
+ *
  * 22-Feb-2009  KOM  GPS initialization modified.
- *                 ADDED::    
+ *                 ADDED::
  *                    - 02.001: Call gps_reset() and gps_power(0) added in gps_mod_init()
- *                 FIXME:: 
+ *                 FIXME::
  *                    - 03.001: No print if KERN_WARNING is being used in printk()
- *                    - 03.002: Using gps_power(0) instead of gps_power(1) because serial driver 
+ *                    - 03.002: Using gps_power(0) instead of gps_power(1) because serial driver
  *                              puts extra 0 during identification interruput in amba-pl011.c::pl011_startup()
  * 25-Mar-2009  KOM  Startup BUGFIXED in gps_mod_init() and gps_mod_exit(). FIXME Need fix in in amba-pl011.c.
- *                   ADDED in gps_mod_init()::    
+ *                   ADDED in gps_mod_init()::
  *                    - gps_reset() added firsttime after power on otherwise nRESET deasserted
  *                    - After delay udelay(156) (5 RTS clks) nSTANDBY deasserted gps_power(1) for 80ms added
  *                    - nSTANDBY asserted gps_power(0) added because ser.driver puts extra 0 during identification interruput
- *                   ADDED in gps_mod_exit()::    
- *                    - nSTANDBY asserted gps_power(0) added 
- * 25-Mar-2009  KOM  FIXME: Temporary fix. Need fix Startup bug in amba-pl011.c. 
- *                   Apparently optimization is wrong therefore I am using external IO functions __read...() and __write...() from gps.c.  
+ *                   ADDED in gps_mod_exit()::
+ *                    - nSTANDBY asserted gps_power(0) added
+ * 25-Mar-2009  KOM  FIXME: Temporary fix. Need fix Startup bug in amba-pl011.c.
+ *                   Apparently optimization is wrong therefore I am using external IO functions __read...() and __write...() from gps.c.
  *                   I wil debug it.
  * 27-Apr-2009  KOM  - Startup BUGFIXED: mdelay(80) added IOW_GPS_ON:gps_power(1) and IOW_GPS_OFF:after gps_power(0)
  *                   - Unlock added before Deactivating GPS_RESET in gps_mod_init()
  * 05-May-2009  KOM  - udelay(156) added instead of mdelay(80) in IOW_GPS_OFF:after gps_power(0).
  *                   - PK_WARN and PK_DBG are nothing now.
- *                   - Using volatile xxx_save variables for I/O to/from CMU and PML blocks in gps_power(), gps_reset() and 
+ *                   - Using volatile xxx_save variables for I/O to/from CMU and PML blocks in gps_power(), gps_reset() and
  *                     gps_passthrough_mode() added. Startup problem should be fixed in gps_power(). I think so.
  *
- * 12-08-2009   JLH  Modified name of pl011_serial_get_port_info to bcm4760_uart_serial_get_port_info for new serial driver.        
- */                  
+ * 12-08-2009   JLH  Modified name of pl011_serial_get_port_info to bcm4760_uart_serial_get_port_info for new serial driver.
+ */
 
 /* Includes */ 
 #include <linux/module.h>
@@ -67,13 +67,12 @@
 #include <asm/uaccess.h>
 #include <asm/ioctls.h>
 
-#include <linux/delay.h>     
+#include <linux/delay.h>
 
-#include <linux/broadcom/bcm_major.h>
-#include <linux/kernel.h> 
+#include <linux/kernel.h>
 #include <asm/gpio.h>
 
-#include <linux/broadcom/gps.h>  
+#include <linux/broadcom/gps.h>
 
 #include <asm/io.h>
 #include <asm/sizes.h>
@@ -110,7 +109,7 @@ static void __iomem * gpio_base;
 
 #define GPIO_DATA_L_OFFSET               0x0000  //gpio0-31
 #define GPIO_DATA_H_OFFSET               0x0800     //gpio32-63
-  
+
 #define     gpio_read(offset)               readl(gpio_base+(offset))
 #define gpio_write(offset, value)     writel((value), gpio_base+(offset))
 
@@ -118,7 +117,7 @@ static void __iomem * gpio_base;
 //extern int bcm4760_uart_serial_get_port_info(int line,char *szBuf);
 
 
-//KOM FIXME: __attribute__ ((noinline)) forces compilation error 
+//KOM FIXME: __attribute__ ((noinline)) forces compilation error
 //void gps_reset(void) __attribute__ ((noinline));
 //static void gps_passthrough_mode(unsigned on) __attribute__ ((noinline));
 //void gps_power(unsigned on) __attribute__ ((noinline));
@@ -146,15 +145,15 @@ void gpio_clear_pin(int gpio)
     if (value)
         value &= ~(1 << shift);
     gps_write(value, offset);
-}     
+}
 #else
 #define gpio_set_pin(gpio)     gpio_set_value(gpio, 1)
 #define gpio_clear_pin(gpio)     gpio_set_value(gpio, 0)
 #endif
-          
+
 /*   This function turns Standby GPS device on/off
  * Input:
- *       unsigned on - 1 is Standby GPS device off, 0 - on 
+ *       unsigned on - 1 is Standby GPS device off, 0 - on
  * Output:
  *       None
  * References:
@@ -164,22 +163,22 @@ void gpio_clear_pin(int gpio)
  * History :
  *       KOM::19-Feb-2009 Initial Version
  *       KOM::05-May-2009 Using volatile xxx_save for I/O CMU and PML blocks
- *                        Startup problem should be fixed in gps_power(). I think so. 
- *                        Look at explanation below.                        
+ *                        Startup problem should be fixed in gps_power(). I think so.
+ *                        Look at explanation below.
  */
 void gps_power(struct gps_platform_data *pt_gps_platform_data, unsigned on)
 {
-    PK_DBG("Standby GPS device %s\n", on==0 ? "on" : "off");     
-   
-    if (on) 
+    PK_DBG("Standby GPS device %s\n", on==0 ? "on" : "off");
+
+    if (on)
     {
         gpio_set_pin(pt_gps_platform_data->gpio_power);
-    } 
-    else 
-    { 
+    }
+    else
+    {
         gpio_clear_pin(pt_gps_platform_data->gpio_power);
     }
-     
+
     printk("gps_power(%d) after return nSTANDBY=%d\n", on, gpio_get_value(pt_gps_platform_data->gpio_power));
 }
 
@@ -195,12 +194,12 @@ void gps_power(struct gps_platform_data *pt_gps_platform_data, unsigned on)
  * History :
  *       KOM::19-Feb-2009 Initial Version
  *       KOM::05-May-2009 Using volatile xxx_save for I/O CMU and PML blocks
- *                        Startup problem should be fixed in gps_power(). Look at explanation above. 
+ *                        Startup problem should be fixed in gps_power(). Look at explanation above.
  */
 
 void gps_reset(struct gps_platform_data *pt_gps_platform_data)
 {
-   
+
    PK_DBG("Resetting GPS device\n");
 
     /* Pull down reset pin. */
@@ -208,17 +207,17 @@ void gps_reset(struct gps_platform_data *pt_gps_platform_data)
 
     printk("gps_reset before return nRESET=%d\n", gpio_get_value(pt_gps_platform_data->gpio_reset));
     mdelay(50);
-     
+
     /* Pull up reset pin. */
     gpio_set_pin(pt_gps_platform_data->gpio_reset);
-     
+
     printk("gps_reset after return nRESET=%d\n", gpio_get_value(pt_gps_platform_data->gpio_reset));
 }
 
 
 /*   This function turns passthrough mode on/off for GPS device
  * Input:
- *       unsigned on - 1 is turn on, 0 - off 
+ *       unsigned on - 1 is turn on, 0 - off
  * Output:
  *       None
  * References:
@@ -228,10 +227,10 @@ void gps_reset(struct gps_platform_data *pt_gps_platform_data)
  * History :
  *       KOM::19-Feb-2009 Initial Version
  *       KOM::05-May-2009 Using volatile xxx_save for I/O CMU and PML blocks
- *                        Startup problem should be fixed in gps_power(). Look at explanation above. 
+ *                        Startup problem should be fixed in gps_power(). Look at explanation above.
  */
 
-static void gps_passthrough_mode(unsigned on)        
+static void gps_passthrough_mode(unsigned on)
 {
     PK_DBG("Passthrough GPS/UART1 %s not implemented\n", on ? "on" : "off");
 }
@@ -245,7 +244,7 @@ static long gps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
     int ret = 0;
     //unsigned long flags;
 
-    switch (cmd) 
+    switch (cmd)
     {
         case IOW_GPS_ON:
             PK_WARN("WARNING: Not Ignoring IOW_GPS_ON\n");
@@ -267,12 +266,12 @@ static long gps_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
         case IOW_GPS_PASSTHROUGH_MODE_ON:
             PK_WARN("WARNING: Not Ignoring IOW_GPS_PASSTHROUGH_MODE_ON\n");
             printk("GPS IOW_GPS_PASSTHROUGH_MODE_ON called\n");
-            gps_passthrough_mode(1);        
+            gps_passthrough_mode(1);
             break;
         case IOW_GPS_PASSTHROUGH_MODE_OFF:
             printk("GPS IOW_GPS_PASSTHROUGH_MODE_OFF called\n");
             PK_WARN("WARNING: Not Ignoring IOW_GPS_PASSTHROUGH_MODE_OFF\n");
-            gps_passthrough_mode(0);        
+            gps_passthrough_mode(0);
             break;
         case IOR_GET_SERIAL_PORT_INFO:
             PK_ERR("IOR_GET_SERIAL_PORT_INFO not supported\n");
@@ -326,36 +325,36 @@ static struct file_operations gps_fops = {
 
 static  char     gBanner[] __initdata = KERN_INFO "Broadcom GPS Driver: 1.03, June 27, 2011\n";
 
-static  dev_t           gGpsDrvDevNum = MKDEV( BCM_GPS_MAJOR, 0 );
+static  dev_t           gGpsDrvDevNum;
 static  struct class   *gGpsDrvClass = NULL;
 static  struct  cdev    gGpsDrvCDev;
 
 static int setup_gpios(struct gps_platform_data *pt_platform_data)
 {
    int rc_req, rc_dir;
-   
+
     if (pt_platform_data == NULL)
     {
         return -1;
     }
-   
+
     if (pt_platform_data->gpio_reset >= 0)
     {
-        rc_req = gpio_request(pt_platform_data->gpio_reset, "gps reset");      
+        rc_req = gpio_request(pt_platform_data->gpio_reset, "gps reset");
         rc_dir = gpio_direction_output(pt_platform_data->gpio_reset, 1);
-      
+
         if (rc_req != 0 || rc_dir != 0)
         {
             gpio_free(pt_platform_data->gpio_reset);
             return -1;
-        }      
+        }
     }
-   
+
     if (pt_platform_data->gpio_power >= 0)
     {
         rc_req = gpio_request(pt_platform_data->gpio_power, "gps power");
         rc_dir = gpio_direction_output(pt_platform_data->gpio_power, 1);
-      
+
         if (rc_req != 0 || rc_dir != 0)
         {
             gpio_free(pt_platform_data->gpio_reset);
@@ -363,12 +362,12 @@ static int setup_gpios(struct gps_platform_data *pt_platform_data)
             return -1;
         }
     }
-   
+
     if (pt_platform_data->gpio_interrupt >= 0)
     {
         printk("gps.c %s() interrupt not supported\n", __FUNCTION__);
-    }   
-   
+    }
+
     return 0;
 }
 
@@ -390,12 +389,12 @@ static int gps_suspend(struct platform_device *dev, pm_message_t state)
 static int gps_resume(struct platform_device *dev)
 {
     struct gps_platform_data *pt_gps_platform_data  = (struct gps_platform_data *)dev->dev.platform_data;
-   
+
     printk("Broadcom GPS resume\n");
     gps_power(pt_gps_platform_data,1);
-    mdelay(80);                         // allow 80ms for ASIC to come up     
+    mdelay(80);                         // allow 80ms for ASIC to come up
     gps_power(pt_gps_platform_data,0);                         // turn off  by default
-    
+
     return 0;
 }
 #else
@@ -406,7 +405,7 @@ static int gps_resume(struct platform_device *dev)
 void gps_exit(struct gps_platform_data *pt_gps_platform_data)
 {
     printk("Broadcom GPS exit\n");
-        
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
     device_destroy( gGpsDrvClass, gGpsDrvDevNum );
 #else
@@ -420,13 +419,13 @@ void gps_exit(struct gps_platform_data *pt_gps_platform_data)
     cdev_del( &gGpsDrvCDev );
 
     unregister_chrdev_region( gGpsDrvDevNum, 1 );
-        
+
     return;
 }
 static void gps_shutdown(struct platform_device *dev)
 {
     struct gps_platform_data *pt_gps_platform_data  = (struct gps_platform_data *)dev->dev.platform_data;
-    
+
     printk("Broadcom GPS shutdown\n");
     gps_exit(pt_gps_platform_data);
     return;
@@ -435,7 +434,7 @@ static void gps_shutdown(struct platform_device *dev)
 static int __devexit gps_remove(struct platform_device *dev)
 {
    struct gps_platform_data *pt_gps_platform_data = (struct gps_platform_data *)dev->dev.platform_data;
-   
+
     // remove the gps by power off the pin
     printk("Broadcom GPS remove\n");
     gps_power(pt_gps_platform_data, 0);
@@ -451,10 +450,10 @@ static ssize_t store_gps_nstdby(struct device *dev, struct device_attribute *att
 {
     struct gps_platform_data *pt_gps_platform_data = (struct gps_platform_data *)dev->platform_data;
     int n;
-      
+
     if (count <= 0)
         return 0;
-        
+
     sscanf(buf, "%d", &n);
     gps_power(pt_gps_platform_data, n == 0? 0: 1);
 
@@ -464,7 +463,7 @@ static ssize_t store_gps_nstdby(struct device *dev, struct device_attribute *att
 static ssize_t show_gps_nstdby(struct device *dev, struct device_attribute *attr, char *buf)
 {
     struct gps_platform_data *pt_gps_platform_data = (struct gps_platform_data *)dev->platform_data;
-    
+
     return (sprintf(buf, "%d\n", gpio_get_value(pt_gps_platform_data->gpio_power)));
 }
 
@@ -474,10 +473,10 @@ static ssize_t store_gps_nrst(struct device *dev, struct device_attribute *attr,
 {
     struct gps_platform_data *pt_gps_platform_data = (struct gps_platform_data *)dev->platform_data;
     int n;
-   
+
     if (count <= 0)
         return 0;
-        
+
     sscanf(buf, "%d", &n);
     printk("store_gps_nrst GPIO %d n=%d\n", pt_gps_platform_data->gpio_reset, n);
     if (n == 0)
@@ -491,7 +490,7 @@ static ssize_t store_gps_nrst(struct device *dev, struct device_attribute *attr,
 static ssize_t show_gps_nrst(struct device *dev, struct device_attribute *attr, char *buf)
 {
    struct gps_platform_data *pt_gps_platform_data = (struct gps_platform_data *)dev->platform_data;
-   
+
     return (sprintf(buf, "%d\n", gpio_get_value(pt_gps_platform_data->gpio_reset)));
 }
 
@@ -519,7 +518,7 @@ static int __devinit gps_probe(struct platform_device *p_dev)
     struct gps_platform_data *pt_gps_platform_data;
 
     printk( gBanner );
-        
+
     if (p_dev->dev.platform_data == NULL)
     {  /* Need this information. */
        printk("%s() error p_dev->dev.platform_data == NULL\n", __FUNCTION__);
@@ -528,40 +527,40 @@ static int __devinit gps_probe(struct platform_device *p_dev)
 
     pt_gps_platform_data  = (struct gps_platform_data *)p_dev->dev.platform_data;
     gpt_gps_platform_data = pt_gps_platform_data;
-   
+
     // dummy implmentation
     make_sysfs_files(&p_dev->dev);
-   
+
     if ((rc = setup_gpios(pt_gps_platform_data)) != 0)
     {   /* Need this information. */
         printk("%s() error setup_gpios() failed\n", __FUNCTION__);
         return -1;
     }
-   
-    if (firsttime) 
+
+    if (firsttime)
     {
         firsttime = 0;
 
         /* bootloader cold boot, reset GPS */
         gps_reset(pt_gps_platform_data);
-    } 
-    
+    }
+
     udelay(156);                        // t2 (5 RTS clks) = Delay from the time when nRESET is deasserted 
                                         //     to the time when nSTANDBY is deasserted = 1/6 ms
     gps_power(pt_gps_platform_data, 1);
     mdelay(80);                         // allow 80ms for ASIC to come up 
-    
+
     gps_power(pt_gps_platform_data, 0);  //turn off  by default
-   
+
     /*
      * KOM FIXME 03.002:: Using gps_power(0) instead of gps_power(1) because serial driver 
      *                   puts extra 0 during identification interruput in amba-pl011.c::pl011_startup()
      * Use the statically assigned major number
     */
-    if (( rc = register_chrdev_region( gGpsDrvDevNum, 1, GPS_DEVNAME )) < 0 )
+    if (( rc = alloc_chrdev_region( &gGpsDrvDevNum, 0, 1, GPS_DEVNAME )) < 0 )
     {
-        PK_WARN("Unable to register driver for major %d; err: %d\n", BCM_GPS_MAJOR, rc );
-        goto free_sysfs_device;
+         PK_WARN("gps: Unable to register driver for major; err: %d\n", rc );
+         goto free_sysfs_device;
     }
 
     cdev_init( &gGpsDrvCDev, &gps_fops );
@@ -602,9 +601,9 @@ free_sysfs_device:
     //remove_sysfs_files(&gps_platform_device->dev);
     remove_sysfs_files(&p_dev->dev);
 
-    free_gpios(pt_gps_platform_data);    
+    free_gpios(pt_gps_platform_data);
     printk("Broadcom GPS Probe failure\n");
-    return -1;   
+    return -1;
 }
 
 static struct platform_driver gps_driver = {
@@ -625,7 +624,7 @@ static int __init gps_mod_init(void)
     int     rc = 0;
 
     rc = platform_driver_register(&gps_driver);
-    if (rc) 
+    if (rc)
     {
         printk(KERN_ERR "GPS: Unable to platform driver register\n");
         rc = -1;

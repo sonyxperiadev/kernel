@@ -84,6 +84,11 @@
 #include <bmp18x_i2c_settings.h>
 #endif
 
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE)
+#include <linux/akm8975.h>
+#include <akm8975_i2c_settings.h>
+#endif
+
 #if defined(CONFIG_NET_ISLAND)
 #include <mach/net_platform.h>
 #include <net_settings.h>
@@ -122,7 +127,6 @@
 #if defined(CONFIG_MONITOR_ADC121C021_I2C)  || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
 #include <linux/broadcom/adc121c021_driver.h>
 #include <adc121c021_settings.h>
-#include <battery_settings.h>
 #endif
 
 #if defined(CONFIG_MONITOR_BQ27541_I2C) || defined(CONFIG_MONITOR_BQ27541_I2C_MODULE)
@@ -161,6 +165,11 @@
 #if defined(CONFIG_BCM_HEADSET_SW)
 #include <linux/broadcom/headset_cfg.h>
 #include <headset_settings.h>
+#endif
+
+#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE ) \
+ || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
+#include <vceb_settings.h>
 #endif
 
 #include "island.h"
@@ -698,7 +707,7 @@ static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
         .host_param = &vceb_hana_display_data,
     },
 
-    .vcMemAddr          = KONA_VC_EMI,
+    .vcMemAddr          = VC_EMI,
     .vcSramAddr         = KONA_INT_SRAM_BASE + BCMHANA_ARAM_VC_OFFSET,
 
     .bootFromKernel     = 1,
@@ -712,6 +721,12 @@ static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
     .gpiomux_jtag_id     = 0,
     .gpiomux_jtag_label  = "vc-jtag",
 #endif
+
+    .disp_gpio.lcd_bl_pwr_en = HW_CFG_LCD_BL_PWR_EN,
+    .disp_gpio.lcd_bl_en     = HW_CFG_LCD_BL_EN,
+    .disp_gpio.lcd_bl_pwm    = HW_CFG_LCD_BL_PWM,
+    .disp_gpio.lcd_rst       = HW_CFG_LCD_RST,
+    .disp_gpio.lcd_pwr_en    = HW_CFG_LCD_PWR_EN,
 };
 
 static struct platform_device vceb_display_device = {
@@ -810,7 +825,7 @@ struct platform_device * vchiq_devices[] __initdata = { &vceb_display_device, &v
 #define board_bma150_axis_change concatenate(ISLAND_BOARD_ID, _bma150_axis_change)
 
 #ifdef BMA150_DRIVER_AXIS_SETTINGS
-   static struct t_bma150_axis_change board_bma150_axis_change = BMA150_DRIVER_AXIS_SETTINGS;
+static struct t_bma150_axis_change board_bma150_axis_change = BMA150_DRIVER_AXIS_SETTINGS;
 #endif
 
 static struct i2c_board_info __initdata i2c_bma150_info[] =
@@ -823,6 +838,26 @@ static struct i2c_board_info __initdata i2c_bma150_info[] =
    }, 
 };
 #endif
+
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE)
+
+#define board_akm8975_axis_change concatenate(ISLAND_BOARD_ID, _akm150_axis_change)
+
+#ifdef AKM8975_DRIVER_AXIS_SETTINGS
+static struct t_akm8975_axis_change board_akm8975_axis_change = AKM8975_DRIVER_AXIS_SETTINGS;
+#endif
+
+static struct i2c_board_info __initdata i2c_akm8975_info[] = 
+{
+	{
+		I2C_BOARD_INFO(AKM8975_DRV_NAME, AKM8975_I2C_ADDR),
+#ifdef AKM8975_DRIVER_AXIS_SETTINGS
+      .platform_data  = &board_akm8975_axis_change,
+#endif
+	},
+};
+#endif     // CONFIG_SENSORS_AK8975
+
 
 #if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 static struct i2c_board_info __initdata i2c_bh1715_info[] =
@@ -924,12 +959,19 @@ static struct i2c_board_info board_bq27541_i2c_boardinfo[] =
 #endif
 
 #if defined(CONFIG_BATTERY_MAX17040) || defined(CONFIG_BATTERY_MAX17040_MODULE)
-#define board_hana_max17040_info concatenate(ISLAND_BOARD_ID, _hana_max17040_info)
-static struct max17040_platform_data board_hana_max17040_info = 
+#define board_max17040_info concatenate(ISLAND_BOARD_ID, _max17040_info)
+static struct max17040_platform_data board_max17040_info = 
 {     /* Function pointers used to discover battery or AC power status using GPIOs */
       .battery_online = NULL,
       .charger_online = NULL,
       .charger_enable = NULL,
+
+#if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
+      .gpio_ac_power = HW_MAX17040_GPIO_AC_POWER,
+      .ac_power_on_level = HW_MAX17040_AC_POWER_ON_LEVEL,
+      .gpio_charger = HW_MAX17040_GPIO_CHARGER,
+      .battery_max_voltage = HW_BATTERY_MAX_VOLTAGE,
+#endif
 };
 
 #define board_max17040_i2c_boardinfo concatenate(ISLAND_BOARD_ID, _max17040_i2c_boardinfo)
@@ -938,22 +980,22 @@ static struct i2c_board_info board_max17040_i2c_boardinfo[] =
    {
       .type = HW_MAX17040_DRIVER_NAME,             /* "max17040" */
       .addr = HW_MAX17040_SLAVE_ADDR,              /* 0x36       */  
-      .platform_data = &board_hana_max17040_info,
+      .platform_data = &board_max17040_info,
    },
 };
 #endif
 
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
-#define board_hana_cmp_battery_multi_info concatenate(ISLAND_BOARD_ID, _board_hana_cmp_battery_multi_info)
-static struct cbm_platform_data board_hana_cmp_battery_multi_info = CMP_BATTERY_MULTI_SETTINGS;
+#define board_cmp_battery_multi_info concatenate(ISLAND_BOARD_ID, _board_cmp_battery_multi_info)
+static struct cbm_platform_data board_cmp_battery_multi_info = CMP_BATTERY_MULTI_SETTINGS;
 
 #define board_battery_multi concatenate(ISLAND_BOARD_ID, _board_battery_multi)
 static struct platform_device board_battery_multi = 
 {
-   .name = "cmp-battery",
+   .name = HW_CMP_MULTI_DRIVER_NAME,
    .id = -1,
    .dev = {
-      .platform_data = &board_hana_cmp_battery_multi_info,
+      .platform_data = &board_cmp_battery_multi_info,
    },
 };
 #endif
@@ -1117,6 +1159,18 @@ static void __init add_i2c_device(void)
       i2c_mpu3050_info, ARRAY_SIZE(i2c_mpu3050_info));
 #endif
 
+
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE)
+   i2c_register_board_info(
+#ifdef AKM8975_I2C_BUS_ID
+      AKM8975_I2C_BUS_ID,  
+#else
+      -1,
+#endif
+      i2c_akm8975_info, ARRAY_SIZE(i2c_akm8975_info));
+#endif
+
+
 #if defined(CONFIG_BMP18X_I2C) || defined(CONFIG_BMP18X_I2C_MODULE)
 			i2c_register_board_info(
 #ifdef BMP18X_I2C_BUS_ID
@@ -1136,6 +1190,10 @@ static void __init add_i2c_device(void)
    board_adc121c021_i2c_param.battery_min_voltage = HW_BATTERY_MIN_VOLTAGE;
    board_adc121c021_i2c_param.resistor_1          = HW_ADC121C021_RESISTOR_1;
    board_adc121c021_i2c_param.resistor_2          = HW_ADC121C021_RESISTOR_2;
+
+   board_adc121c021_i2c_param.gpio_ac_power       = HW_ADC121C021_GPIO_AC_POWER;
+   board_adc121c021_i2c_param.ac_power_on_level   = HW_ADC121C021_AC_POWER_ON_LEVEL;
+   board_adc121c021_i2c_param.gpio_charger        = HW_ADC121C021_GPIO_CHARGER;
 
    printk("board_template.c %s() IRQ pin %d\n", __FUNCTION__, board_adc121c021_i2c_param.gpio_irq_pin);
    board_adc121c021_i2c_boardinfo[0].irq = 

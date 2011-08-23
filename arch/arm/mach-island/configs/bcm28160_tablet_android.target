@@ -1,4 +1,3 @@
-name   = bcm28160_tablet_android
 arch   = arm
 family = island
 chip   = 28160

@@ -50,7 +50,7 @@
 #include <linux/broadcom/knllog.h>           /* for debugging */
 #include <linux/broadcom/halaudio.h>
 #include <linux/broadcom/halaudio_lib.h>
-#include <linux/broadcom/amxr.h>
+#include <linux/broadcom/amxr_port.h>
 
 #include <chal/chal_audio.h>
 
@@ -131,12 +131,11 @@
 
 /* Power up ramp delay time */
 #define AUDIOH_DACPWRUP_SETTLE_TIME              (400)         /* Milli Seconds */
-#define AUDIOH_SLOWRAMP_PWRDN_PULSE_TIME         (150)         /* Micro Seconds */
 #define AUDIOH_SLOWRAMP_RAMP1UP_TIME             (40)          /* Milli Seconds */
-#define AUDIOH_SLOWRAMP_RAMP2UP_TIME             (5)           /* Milli Seconds */
+#define AUDIOH_SLOWRAMP_RAMP2UP_TIME             (10)           /* Milli Seconds */
 #define AUDIOH_SLOWRAMP_RAMP2DOWN_TIME           (35)          /* Milli Seconds */
 #define AUDIOH_SLOWRAMP_RAMP1DOWN_TIME           (10)          /* Milli Seconds */
-#define AUDIOH_PATHENDIS_SETTLING_TIME           (1)           /* Milli Seconds */
+#define AUDIOH_PATHENDIS_SETTLING_TIME           (10)           /* Milli Seconds */
 
 #define AUDIOH_DISABLE_CAPH_TIME                 5           /* Milli Seconds */
 
@@ -480,7 +479,6 @@ struct audioh_gain
 struct audioh_sidetone
 {
    int db;               /* Gain in dB */
-   int enable;           /* Enable flag */
 };
 
 /* Audio Hub channel configuration and parameters */
@@ -516,7 +514,7 @@ struct audioh_ch_cfg
 
    struct audioh_ch_errs         errs;          /* Channel errors */
 
-   struct audioh_fifo_mask       masks;         /* Channel masks */
+   const struct audioh_fifo_mask masks;         /* Channel masks */
 
    /* Debug facilities */
    int                           debug;         /* Flag to indicate in debug mode */
@@ -587,8 +585,8 @@ static atomic_t            gAudiohRefIgrCount;
 static atomic_t            gActive_ig_idx;       /* Index to active buffer in ingress double buffers */
 static atomic_t            gActive_eg_idx;       /* Index to active buffer in egress double buffers */
 
-static atomic_t            gPwrDacLevel;
-static atomic_t            gPwrTransducerLevel;
+static int                 gPwrDacLevel = 0;
+static int                 gPwrTransducerLevel = 0;
 
 /* Ingress channel counter */
 static int                 gNumIngressChannels = 0;
@@ -604,10 +602,13 @@ static struct caph_dma_device_attr gCaphDmaDevAttr[CAPH_DMA_NUM_DEVICE_ENTRIES];
 struct semaphore gProcBufLock;   /* acquired when accessing buffer in proc entry */
 struct semaphore gPwrLock;       /* acquired when powering up/down transducers and dacs */
 
+static spinlock_t gGainLock;     /* acquired when adjusting gains */
+
 /* Proc entry buffer */
 int16_t gProcbuf_active[AUDIOH_MAX_DMA_BUF_SIZE_BYTES];
 
-static short gHalFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+static short gIgrHalFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+static short gEgrHalFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 
 const static struct freq_map_array gAudiohFreqMap[AUDIOH_MAX_NUM_CHANS] =
 {
@@ -1591,7 +1592,7 @@ static void audiohDmaEgressDoTransfer(
 
       if( ch->equ.len )
       {
-         halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, gHalFiltHist,
+         halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, gEgrHalFiltHist,
             ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
       }
 
@@ -1822,7 +1823,7 @@ static void audiohDmaIngressHandler(
 
          if( ch->equ.len )
          {
-            halAudioEquProcess( (int16_t *)ingressp, ch->equ.coeffs, gHalFiltHist,
+            halAudioEquProcess( (int16_t *)ingressp, ch->equ.coeffs, gIgrHalFiltHist,
                   ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
          }
 
@@ -1977,7 +1978,7 @@ static void audiohDmaEgressHandler(
 
          if( ch->equ.len )
          {
-            halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, gHalFiltHist,
+            halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, gEgrHalFiltHist,
                   ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
          }
 
@@ -2267,11 +2268,9 @@ static int audiohResetGainBlocks( void )
    /* Reset gain for each codec channel */
    for ( i = 0; i < AUDIOH_MAX_NUM_CHANS; i++, ch++ )
    {
-#if AUDIOH_SIDETONE_SUPPORT
       /* Mute sidetone */
       ch->sidetone.db = HALAUDIO_GAIN_MUTE;
       audiohSidetoneGainSet( ch->ch_no, ch->sidetone.db );
-#endif
 
       /*Unity digital gain for each channel */
       ch->dig_gain = 0; /* Default unity gain */
@@ -2505,9 +2504,6 @@ static int audiohEarpathPowerRamp( int enable )
       chal_audio_earpath_set_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG );
       chal_audio_earpath_set_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN );
 
-      /* Wait for 150usec */
-      schedule_timeout_uninterruptible( HZ * AUDIOH_SLOWRAMP_PWRDN_PULSE_TIME / 1000000 );
-
       /* END_PWRDOWN to 0. This will create a 150usec pulse for this signal */
       chal_audio_earpath_clear_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN );
       chal_audio_earpath_set_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_EN_RAMP1_45M );
@@ -2523,7 +2519,7 @@ static int audiohEarpathPowerRamp( int enable )
       chal_audio_earpath_clear_slowramp_ctrl( gChalAudioHandle ,CHAL_AUDIO_AUDIOTX_SR_EN_RAMP1_45M );
       chal_audio_earpath_set_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_EN_RAMP2_5M );
 
-      /* Wait for 5msec */
+      /* Wait for 10 msec */
       schedule_timeout_uninterruptible( HZ * AUDIOH_SLOWRAMP_RAMP2UP_TIME / 1000 );
 
       /* End RAMP2_5M */
@@ -2551,9 +2547,6 @@ static int audiohEarpathPowerRamp( int enable )
       chal_audio_earpath_set_slowramp_ctrl(gChalAudioHandle,CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN);
       chal_audio_earpath_clear_slowramp_ctrl(gChalAudioHandle,CHAL_AUDIO_AUDIOTX_SR_PD_ENABLE);
 
-      /* Wait for 150usec */
-      schedule_timeout_uninterruptible( HZ * AUDIOH_SLOWRAMP_PWRDN_PULSE_TIME / 1000000 );
-
       chal_audio_earpath_clear_slowramp_ctrl(gChalAudioHandle,CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN);
 
       /* power down the earpiece Driver  */
@@ -2562,7 +2555,7 @@ static int audiohEarpathPowerRamp( int enable )
       /* Isolate Input = 1 */
       chal_audio_earpath_set_isolation_ctrl(gChalAudioHandle, CHAL_AUDIO_AUDIOTX_ISO_IN);
 
-      /* Wait for 1 msec */
+      /* Wait for 10 msec */
       schedule_timeout_uninterruptible( HZ * AUDIOH_PATHENDIS_SETTLING_TIME / 1000 );
    }
 
@@ -2628,7 +2621,8 @@ static int audiohHandsfreepathEnable( int enable )
 
 static int audiohChPowerTransducer( int powerup )
 {
-   if ( powerup && !atomic_read(&gPwrTransducerLevel) )
+   down( &gPwrLock );
+   if ( powerup && !gPwrTransducerLevel )
    {
       /* Power up analog microphones */
       chal_audio_enable_aci_auxmic(gChalAudioHandle, 1 );
@@ -2646,9 +2640,9 @@ static int audiohChPowerTransducer( int powerup )
       audiohHandsfreepathEnable( 1 );
 #endif
 
-      atomic_set( &gPwrTransducerLevel, 1 );
+      gPwrTransducerLevel = 1;
    }
-   else if ( !powerup && atomic_read(&gPwrTransducerLevel) )
+   else if ( !powerup && gPwrTransducerLevel )
    {
       /* Power down analog microphones */
       chal_audio_mic_pwrctrl(gChalAudioHandle, 0);
@@ -2665,15 +2659,17 @@ static int audiohChPowerTransducer( int powerup )
 #if AUDIOH_HANDSFREE_ENABLE
       audiohHandsfreepathEnable( 0 );
 #endif
-      atomic_set( &gPwrTransducerLevel, 0 );
+      gPwrTransducerLevel = 0;
    }
+   up( &gPwrLock );
 
    return 0;
 }
 
 static int audiohChPowerDac( int powerup )
 {
-   if ( powerup && !atomic_read(&gPwrDacLevel) )
+   down( &gPwrLock );
+   if ( powerup && !gPwrDacLevel )
    {
 
 #if AUDIOH_EARPIECE_ENABLE
@@ -2691,9 +2687,9 @@ static int audiohChPowerDac( int powerup )
 #if AUDIOH_VIBRA_ENABLE
       chal_audio_vibra_set_dac_pwr( gChalAudioHandle, CHAL_AUDIO_ENABLE );
 #endif
-      atomic_set( &gPwrDacLevel, 1 );
+      gPwrDacLevel = 1;
    }
-   else if ( !powerup && atomic_read(&gPwrDacLevel) )
+   else if ( !powerup && gPwrDacLevel )
    {
 
 #if AUDIOH_EARPIECE_ENABLE
@@ -2711,8 +2707,9 @@ static int audiohChPowerDac( int powerup )
 #if AUDIOH_VIBRA_ENABLE
       chal_audio_vibra_set_dac_pwr( gChalAudioHandle, CHAL_AUDIO_DISABLE );
 #endif
-      atomic_set( &gPwrDacLevel, 0 );
+      gPwrDacLevel = 0;
    }
+   up( &gPwrLock );
 
    return 0;
 }
@@ -2782,6 +2779,8 @@ static int audiohInit(
    /* Initialize lock */
    sema_init( &gProcBufLock , 1 );
    sema_init( &gPwrLock, 1 );
+
+   spin_lock_init( &gGainLock );
 
    /* Set threshold interrupt default to be off */
    gAudioh.thresh_intr_en = 0;
@@ -2916,6 +2915,7 @@ static int audiohPrepare( void )
 {
    int rc = 0;
    int i;
+   int ingressChannels = 0;
    struct audioh_ch_cfg   *ch;
 
    if( atomic_read( &gAudioh.running ) || atomic_read( &gAudioh.prepared ) )
@@ -2926,9 +2926,6 @@ static int audiohPrepare( void )
    /* Reset the AudioH ISR count */
    gAudioh.audioh_isr_cnt = 0;
 
-   /* Reset synchronized ingress channel counter */
-   gNumIngressChannels = 0;
-
    /* Determine number of synchronized ingress channels */
    for( i = 0; i < AUDIOH_MAX_NUM_CHANS; i++ )
    {
@@ -2936,10 +2933,12 @@ static int audiohPrepare( void )
       {
          if( AUDIOH_SYNC_FREQ( gAudioh.ch[i].samp_freq ) )
          {
-            gNumIngressChannels++;
+            ingressChannels++;
          }
       }
    }
+
+   gNumIngressChannels = ingressChannels;
 
    /* Configure settings for each channel */
    audiohChConfigAll();
@@ -3147,7 +3146,6 @@ cleanup_dma_channels:
          ch->dma_config.caph_handle = NULL;
       }
    }
-
    return rc;
 }
 
@@ -3415,7 +3413,6 @@ static int audiohAnaPowerDown(
    int powerdn                      /*<< (i) 1 to power down, 0 to power up */
 )
 {
-   down( &gPwrLock );
    if ( powerdn )
    {
       audiohChPowerTransducer( 0 );
@@ -3428,7 +3425,6 @@ static int audiohAnaPowerDown(
       audiohChPowerTransducer( 1 );
       AUDIOH_LOG( "Power up" );
    }
-   up( &gPwrLock );
 
    return 0;
 };
@@ -3597,6 +3593,7 @@ static int audiohAnaGainSet( int chno, int db, HALAUDIO_DIR dir, HALAUDIO_HWSEL 
    unsigned int fifo_ch = 0;
    unsigned int mux_pos = 0;
    int rc = 0;
+   unsigned long flags;
 
    if( chno >= AUDIOH_MAX_NUM_CHANS )
    {
@@ -3620,6 +3617,8 @@ static int audiohAnaGainSet( int chno, int db, HALAUDIO_DIR dir, HALAUDIO_HWSEL 
       return -EINVAL;
    }
 
+   spin_lock_irqsave( &gGainLock, flags );
+
    /* Only set hardware parameters when interface has been prepared/powered */
    if ( atomic_read( &gAudioh.prepared ))
    {
@@ -3631,6 +3630,8 @@ static int audiohAnaGainSet( int chno, int db, HALAUDIO_DIR dir, HALAUDIO_HWSEL 
    }
    ch->anahwsel = hwsel;   /* Save mux position */
    ch->anadb = db;
+
+   spin_unlock_irqrestore( &gGainLock, flags );
 
    return rc;
 }
@@ -3720,7 +3721,8 @@ static int audiohEquParmSet(
 )
 {
    HALAUDIO_EQU         *saved_equ;
-   struct audioh_ch_cfg   *ch;
+   struct audioh_ch_cfg *ch;
+   unsigned long        flags;
 
    ch = &gAudioh.ch[chno];
 
@@ -3736,7 +3738,9 @@ static int audiohEquParmSet(
 
    saved_equ = &ch->equ;
 
+   local_irq_save( flags );
    memcpy( saved_equ, equ, sizeof(*saved_equ) );
+   local_irq_restore( flags );
 
    return 0;
 }
@@ -3771,6 +3775,7 @@ static int audiohEquParmGet(
 static int audiohDigGainSet( int chno, int db, HALAUDIO_DIR dir )
 {
    struct audioh_ch_cfg *ch;
+   unsigned long flags;
 
    if( chno >= AUDIOH_MAX_NUM_CHANS )
    {
@@ -3799,6 +3804,8 @@ static int audiohDigGainSet( int chno, int db, HALAUDIO_DIR dir )
       db = HALAUDIO_GAIN_MUTE;
    }
 
+   spin_lock_irqsave( &gGainLock, flags );
+
    if ( !AUDIOH_SYNC_FREQ( ch->samp_freq ) )
    {
       /* Call to switch to set SRC mixer gain settings */
@@ -3806,6 +3813,8 @@ static int audiohDigGainSet( int chno, int db, HALAUDIO_DIR dir )
    }
 
    ch->dig_gain = db;
+
+   spin_unlock_irqrestore( &gGainLock, flags );
 
    return 0;
 }
@@ -3844,6 +3853,7 @@ static int audiohSidetoneGainSet( int chno, int db )
 #if AUDIOH_SIDETONE_SUPPORT
    struct audioh_ch_cfg *ch;
    short lin_gain;
+   unsigned long flags;
 
    ch = &gAudioh.ch[chno];
 
@@ -3854,6 +3864,8 @@ static int audiohSidetoneGainSet( int chno, int db )
    }
 
    lin_gain = dbToLinearQ12( &db );
+
+   spin_lock_irqsave( &gGainLock, flags );
 
    /* Update filter coefficients, use the same control taps for both upper and lower */
    chal_audio_stpath_load_filter( gChalAudioHandle, (uint32_t *)sidetoneFirCoeff, 0/*unused*/ );
@@ -3887,6 +3899,7 @@ static int audiohSidetoneGainSet( int chno, int db )
          break;
 #endif
       default:
+         spin_unlock_irqrestore( &gGainLock, flags );
          return -EINVAL;
    }
 
@@ -3904,6 +3917,8 @@ static int audiohSidetoneGainSet( int chno, int db )
    chal_audio_stpath_int_enable( gChalAudioHandle, 0, (lin_gain ? CHAL_AUDIO_ENABLE : CHAL_AUDIO_DISABLE) );
 
    ch->sidetone.db = db;
+
+   spin_unlock_irqrestore( &gGainLock, flags );
 
    return 0;
 
@@ -4568,7 +4583,7 @@ err_platform_exit:
    return err;
 }
 
-static int __exit audioh_remove( struct platform_device *pdev )
+static int audioh_remove( struct platform_device *pdev )
 {
    HALAUDIO_AUDIOH_PLATFORM_INFO *info = &gAudiohPlatformInfo;
 
@@ -4589,7 +4604,7 @@ static struct platform_driver audioh_driver =
       .owner = THIS_MODULE,
    },
    .probe = audioh_probe,
-   .remove = audioh_remove,
+   .remove = __devexit_p(audioh_remove),
 };
 
 

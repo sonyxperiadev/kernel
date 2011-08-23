@@ -29,7 +29,6 @@
 #include <linux/timer.h>
 #include <linux/delay.h>
 #include <linux/wait.h>
-#include <linux/broadcom/timer.h>
 #include <linux/signal.h>
 #include <linux/syscalls.h>
 #include <linux/slab.h>

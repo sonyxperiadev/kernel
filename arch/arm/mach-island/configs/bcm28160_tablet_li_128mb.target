@@ -1,4 +1,3 @@
-name   = bcm28160_tablet_li_128mb
 arch   = arm
 family = island
 chip   = 28160

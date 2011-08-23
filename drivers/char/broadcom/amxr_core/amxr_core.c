@@ -55,6 +55,7 @@
 
 #include <linux/broadcom/knllog.h>           /* For debugging */
 #include <linux/broadcom/amxr.h>             /* Audio mixer API */
+#include <linux/broadcom/amxr_port.h>
 #include <linux/errno.h>         	     /* Needed for -EINVAL */
 
 #include "amxr_resamp.h"                     /* Resampler definitions */
@@ -709,7 +710,8 @@ int amxrCoreGetCnxListBySrc(
 {
    struct amxr_port_node     *srcportp;
    struct amxr_cnxlist_node  *cnxlp;
-   int                        err, mem_required;
+   int                        err = 0;
+   int                        mem_required;
    AMXR_PORT_CNXINFO         *portinfop;
    int                        cnxs;
 
@@ -789,7 +791,8 @@ int amxrCoreGetCnxListByDst(
 {
    struct amxr_port_node     *dstportp;
    struct amxr_cnxlist_node  *cnxlp;
-   int                        err, mem_required, cnxs;
+   int                        err = 0;
+   int                        mem_required, cnxs;
    AMXR_PORT_CNXINFO         *portinfop;
 
    dstportp = getPort( dst_port );
@@ -2461,7 +2464,7 @@ static int amxr_add_cnx(
    AMXR_RESAMP_TYPE         rtype      /*<< (i) Resampler type */
 )
 {
-   int err;
+   int err = 0;
 
    mutex_lock( &gCnxs.mutex );
    err = amxr_add_cnx_unsafe( srcportp, dstportp, desc, rtype, 0 /* default no loss */ );
@@ -2490,7 +2493,8 @@ static int amxr_add_cnx_unsafe(
 )
 {
    struct amxr_cnxlist_node  *cnxlp;
-   int                        foundcnx, err;
+   int                        foundcnx;
+   int                        err = 0;
    unsigned long              state;
    struct amxr_cnxdstl_t     *dstlp;
    AMXR_CONNECT_TYPE          cnx_type;
@@ -3096,7 +3100,7 @@ static void __exit amxr_exit( void )
    amxr_free_resources();
 }
 
-module_init( amxr_init );
+arch_initcall( amxr_init );
 module_exit( amxr_exit );
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "Audio Mixer Driver" );

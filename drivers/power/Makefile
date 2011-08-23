@@ -14,6 +14,7 @@ obj-$(CONFIG_WM831X_POWER)	+= wm831x_power.o
 obj-$(CONFIG_WM8350_POWER)	+= wm8350_power.o
 obj-$(CONFIG_TEST_POWER)	+= test_power.o
 
+obj-$(CONFIG_BCM_CMP_BATTERY_MULTI) += cmp_battery_multi.o
 obj-$(CONFIG_BATTERY_DS2760)	+= ds2760_battery.o
 obj-$(CONFIG_BATTERY_DS2780)	+= ds2780_battery.o
 obj-$(CONFIG_BATTERY_DS2782)	+= ds2782_battery.o
@@ -38,6 +39,9 @@ obj-$(CONFIG_CHARGER_MAX8903)	+= max8903_charger.o
 obj-$(CONFIG_CHARGER_TWL4030)	+= twl4030_charger.o
 obj-$(CONFIG_CHARGER_GPIO)	+= gpio-charger.o
 obj-$(CONFIG_BATTERY_BCM59055)	+= bcm59055_battery.o
+obj-$(CONFIG_MONITOR_ADC121C021_I2C)    += adc121c021_driver.o
+obj-$(CONFIG_MONITOR_BQ27541_I2C)       += bq27541.o
+
 
 ifeq ($(CONFIG_BCM_CMP_BATTERY_MULTI),m)
 obj-m += cmp_battery.o

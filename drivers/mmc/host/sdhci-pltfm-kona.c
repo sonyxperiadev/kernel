@@ -757,11 +757,7 @@ struct mmc_card *sdio_get_mmc_card(enum sdio_devtype devtype)
 
    rc = sdio_dev_is_initialized(devtype);
    if (rc <= 0)
-   {
-      //TODO
-      printk(KERN_ERR "dev is not inited!!!\n");
       return NULL;
-   }
 
    dev = gDevs[devtype];
    return dev->host->mmc->card;

@@ -40,9 +40,9 @@
 #include <linux/list.h>                      /* Linked list */
 
 #include <linux/broadcom/knllog.h>           /* For debugging */
-#include <linux/broadcom/bcm_major.h>        /* For BCM_AMXR_MAJOR */
 #include <linux/broadcom/amxr.h>             /* Audio mixer API */
 #include <linux/broadcom/amxr_ioctl.h>       /* Audio mixer user API */
+#include <linux/broadcom/amxr_port.h>
 #include <asm/io.h>
 #include <asm/uaccess.h>                     /* User access routines */
 #include <asm/atomic.h>                      /* Atomic operations */
@@ -107,6 +107,7 @@ union amxr_ioctl_params
 
 /* ---- Private Variables ------------------------------------------------ */
 
+static int gDriverMajor;
 static struct class *amxr_class;
 static struct device *amxr_dev;
 
@@ -966,10 +967,11 @@ static int __init amxr_init( void )
    gDbgPrintLevel = 0;
    amxr_debug_init();
 
-   err = register_chrdev( BCM_AMXR_MAJOR, "amxr", &gfops );
-   if ( err )
+   gDriverMajor = register_chrdev( 0, "amxr", &gfops );
+   if ( gDriverMajor < 0 )
    {
-      printk( KERN_ERR "%s: failed to register character device major=%d\n", __FUNCTION__, BCM_AMXR_MAJOR );
+      printk( KERN_ERR "AMXR: Failed to register character device major\n" );
+      err = -EFAULT;
       goto failed_cleanup;
    }
 
@@ -981,7 +983,7 @@ static int __init amxr_init( void )
 		goto err_unregister_chrdev;
 	}
 	
-	amxr_dev = device_create( amxr_class, NULL, MKDEV( BCM_AMXR_MAJOR, 0 ), NULL, "amxr" );
+	amxr_dev = device_create( amxr_class, NULL, MKDEV( gDriverMajor, 0 ), NULL, "amxr" );
 	if ( IS_ERR( amxr_dev ))
 	{
 		printk( KERN_ERR "AMXR: Device create failed\n" );
@@ -993,7 +995,7 @@ static int __init amxr_init( void )
 err_class_destroy: 
 	class_destroy( amxr_class ); 
 err_unregister_chrdev: 
-	unregister_chrdev( BCM_AMXR_MAJOR, "amxr" );
+	unregister_chrdev( gDriverMajor, "amxr" );
 failed_cleanup:
 	printk( KERN_ERR "failed_cleanup\n" );
 
@@ -1013,9 +1015,9 @@ static void __exit amxr_exit( void )
 
    amxr_debug_exit();
 
-   unregister_chrdev( BCM_AMXR_MAJOR, "amxr" );
-	device_destroy( amxr_class, MKDEV( BCM_AMXR_MAJOR, 0 ));
+   device_destroy( amxr_class, MKDEV( gDriverMajor, 0 ));
 	class_destroy( amxr_class );
+   unregister_chrdev( gDriverMajor, "amxr" );
 }
 
 /***************************************************************************/
@@ -1161,7 +1163,7 @@ static void amxr_debug_exit( void )
    }
 }
 
-module_init( amxr_init );
+arch_initcall( amxr_init );
 module_exit( amxr_exit );
 MODULE_AUTHOR( "Broadcom" );
 MODULE_DESCRIPTION( "Audio Mixer Driver" );

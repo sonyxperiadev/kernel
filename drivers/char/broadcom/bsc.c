@@ -19,7 +19,6 @@
 #include <linux/device.h>
 #include <linux/proc_fs.h>
 
-#include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/bsc.h>
 
 #include <asm/uaccess.h>
@@ -50,6 +49,7 @@ static DEFINE_SEMAPHORE(gBscLock);
 #endif
 static LIST_HEAD(gBscList);
 
+static int gDriverMajor;
 static struct class *bsc_class;
 static struct device *bsc_dev;
 
@@ -547,10 +547,10 @@ static int __init bsc_init(void)
 {
    int rc;
 
-   rc = register_chrdev(BCM_BSC_MAJOR, "bsc", &bsc_fops);
-   if (rc < 0) {
-      printk(KERN_WARNING "BSC: register_chrdev failed for major %d\n",
-            BCM_BSC_MAJOR);
+   gDriverMajor = register_chrdev(0, "bsc", &bsc_fops);
+   if (gDriverMajor < 0) {
+      printk(KERN_WARNING "BSC: register_chrdev failed for major\n");
+      rc = -EFAULT;
       goto err_exit;
    }
 
@@ -561,7 +561,7 @@ static int __init bsc_init(void)
       goto err_drv_unreg;
    }
    
-   bsc_dev = device_create(bsc_class, NULL, MKDEV(BCM_BSC_MAJOR, 0), NULL,
+   bsc_dev = device_create(bsc_class, NULL, MKDEV(gDriverMajor, 0), NULL,
          "bsc");
    if (IS_ERR(bsc_dev)) {
 	   printk(KERN_ERR "BSC: Device creation failed\n");
@@ -580,13 +580,13 @@ static int __init bsc_init(void)
    return 0;
    
 err_device_destroy:
-   device_destroy(bsc_class, MKDEV(BCM_BSC_MAJOR, 0));
+   device_destroy(bsc_class, MKDEV(gDriverMajor, 0));
 
 err_class_destroy:
    class_destroy(bsc_class);
 
 err_drv_unreg:
-   unregister_chrdev(BCM_BSC_MAJOR, "bsc");
+   unregister_chrdev(gDriverMajor, "bsc");
 
 err_exit:
    return rc;
@@ -600,10 +600,10 @@ static void __exit bsc_exit(void)
    
    proc_term();
 
-   device_destroy(bsc_class, MKDEV(BCM_BSC_MAJOR, 0));
+   device_destroy(bsc_class, MKDEV(gDriverMajor, 0));
    class_destroy(bsc_class); 
 
-   unregister_chrdev(BCM_BSC_MAJOR, "bsc");
+   unregister_chrdev(gDriverMajor, "bsc");
    
    down(&gBscLock);
    /* go through list */

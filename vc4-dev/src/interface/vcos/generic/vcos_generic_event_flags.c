@@ -6,10 +6,10 @@ FILE DESCRIPTION
 VideoCore OS Abstraction Layer - event flags implemented via mutexes
 =============================================================================*/
 
-#include <stddef.h>
-
 #include "interface/vcos/vcos.h"
 #include "interface/vcos/generic/vcos_generic_event_flags.h"
+
+#include <stddef.h>
 
 /** A structure created by a thread that waits on the event flags
   * for a particular combination of flags to arrive.

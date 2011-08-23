@@ -1,5 +1,5 @@
 EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs
 EXTRA_CFLAGS  += -Werror
 
-obj-y := vc_dnfo.o
+obj-m := vc_dnfo.o
 

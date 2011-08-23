@@ -41,20 +41,32 @@ enum bsc_bus_speed
  */
 struct bsc_adap_cfg
 {
-	/* I2C bus speed in KHz. It should be the first member in this struct */
-	enum bsc_bus_speed speed;
 	/* to explicitly disable the I2C adapter */
 	int disable;
+
+	/* I2C bus speed */
+	enum bsc_bus_speed speed;
+
+	/*
+	 * flag to turn on dynamic speed support. If this flag is turned on
+	 * in the bus driver, all slave drivers using the bus driver need to
+	 * set its i2c_speed in its platform_data data structure
+	 */
+	int dynamic_speed;
+
+	/* BSC clocks */
 	char *bsc_clk;
 	char *bsc_apb_clk;
 };
 
-/*  I2C slave platform data, for I2C slaves to specify the bus speed.
- *  Note: This struct should be the first member if included as part
- *  of the client specific platform data structure.
+/*
+ * I2C slave platform data, for I2C slaves to specify the bus speed.
+ * Note: This struct should be the first member if included as part
+ * of the client specific platform data structure.
  */
 struct i2c_slave_platform_data
 {
+	/* I2C bus speed in KHz. It should be the first member in this struct */
 	enum bsc_bus_speed i2c_speed;
 };
 
