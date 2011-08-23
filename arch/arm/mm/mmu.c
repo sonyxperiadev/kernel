@@ -894,18 +894,27 @@ static inline void prepare_page_table(void)
  */
 void __init arm_mm_memblock_reserve(void)
 {
+	phys_addr_t swapper_pa = __pa(swapper_pg_dir);
+
 	/*
 	 * Reserve the page tables.  These are already in use,
 	 * and can only be in node 0.
 	 */
-	memblock_reserve(__pa(swapper_pg_dir), PTRS_PER_PGD * sizeof(pgd_t));
+	memblock_reserve(swapper_pa, PTRS_PER_PGD * sizeof(pgd_t));
 
 #ifdef CONFIG_SA1111
 	/*
 	 * Because of the SA1111 DMA bug, we want to preserve our
 	 * precious DMA-able memory...
 	 */
-	memblock_reserve(PHYS_OFFSET, __pa(swapper_pg_dir) - PHYS_OFFSET);
+	memblock_reserve(PHYS_OFFSET, swapper_pa - PHYS_OFFSET);
+#else
+	/*
+	 * Reserve the page immediately below swapper to use as a
+	 * temporary stack and a holding area for secondary CPUs when we
+	 * are kexec'd.
+	 */
+	memblock_reserve(swapper_pa - PAGE_SIZE, PAGE_SIZE);
 #endif
 }
 
