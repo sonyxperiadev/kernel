@@ -1319,6 +1319,13 @@ static HALAUDIO_AUDIOH_PLATFORM_INFO board_halaudio_audioh_info =
       .headset_en = -1,
 #endif
    },
+
+#ifdef HALAUDIO_AUDIOH_SETTINGS_EARPIECE_SPARE_BIT_EN
+   .earpiece_spare_bit_en = HALAUDIO_AUDIOH_SETTINGS_EARPIECE_SPARE_BIT_EN,
+#else
+   .earpiece_spare_bit_en = 1,
+#endif
+
 };
 
 #define board_halaudio_audioh_device concatenate(ISLAND_BOARD_ID, _halaudio_audioh_device)
