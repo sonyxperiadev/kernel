@@ -1142,7 +1142,9 @@ out:
 //******************************************************************************
 static int __init sysparm_module_init(void)
 {
-	sysparm_init( ) ;	/// DEBUG ! ! ! ! ! ! ! ! ! ! DO NOT CHECK IN! ! ! !
+#if SKELETON_DRIVER
+	sysparm_init( ) ;
+#endif // SKELETON_DRIVER
     return 0;
 }
 
