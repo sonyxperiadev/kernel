@@ -1,6 +1,7 @@
 #include <linux/kernel.h>
 
 #include <asm/cputype.h>
+#include <asm/idmap.h>
 #include <asm/pgalloc.h>
 #include <asm/pgtable.h>
 
@@ -70,6 +71,10 @@ void identity_mapping_del(pgd_t *pgd, unsigned long addr, unsigned long end)
 		next = pgd_addr_end(addr, end);
 		idmap_del_pud(pgd, addr, next);
 	} while (pgd++, addr = next, addr != end);
+}
+#else
+void identity_mapping_del(pgd_t *pgd, unsigned long addr, unsigned long end)
+{
 }
 #endif
 
