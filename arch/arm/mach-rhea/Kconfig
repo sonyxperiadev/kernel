@@ -15,6 +15,14 @@ config MACH_RHEA_RAY_EDN1X
 	help
 	  Support for the Broadcom Rhea Ray EDN1X board.
 
+config MACH_RHEA_DALTON
+	bool "Support Nokia Dalton board"
+	help
+	  Support for the Nokia Dalton board.
+	  This will be based on RheaLC program and
+	  form one of the platforms for Nokia.
+	  Rhea plus delta RF modules.
+
 config MACH_HERA_RAY
         bool "Support Broadcom Hera Ray board"
         help
