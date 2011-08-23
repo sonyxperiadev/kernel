@@ -336,7 +336,11 @@ static struct platform_device board_kona_otg_platform_device =
 
 #if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
-   .nluns = 1,
+#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
+	.nluns		=	2,
+#else
+	.nluns		=	1,
+#endif
    .vendor = "Broadcom",
    .product = "Media Broadcom Reference Design",
    .release = 0x0100,
