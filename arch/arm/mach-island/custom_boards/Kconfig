@@ -1,0 +1,4 @@
+menu	"Custom Island SoC based Machine types"
+	depends on ARCH_ISLAND
+
+endmenu
