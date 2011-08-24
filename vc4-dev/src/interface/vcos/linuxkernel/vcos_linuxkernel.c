@@ -17,6 +17,7 @@ VideoCore OS Abstraction Layer - pthreads types
 #include <linux/time.h>
 #include <linux/pid.h>
 #include <linux/mm.h>
+#include <linux/version.h>
 
 #if defined( CONFIG_BCM_KNLLOG_SUPPORT )
 #include <linux/broadcom/knllog.h>
@@ -39,7 +40,11 @@ static VCOS_THREAD_ATTR_T default_attrs = {
    VCOS_DEFAULT_STACK_SIZE,
 };
 
-DEFINE_SEMAPHORE(lock);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+static DEFINE_SEMAPHORE(lock);
+#else
+static DECLARE_MUTEX(lock);
+#endif
 
 typedef void (*LEGACY_ENTRY_FN_T)(int, void *);
 

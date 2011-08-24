@@ -36,6 +36,13 @@ typedef struct bulk_waiter_struct
    int actual;
 } BULK_WAITER_T;
 
+typedef struct vchiq_open_payload_struct{
+   int fourcc;
+   int client_id;
+   short version;
+   short version_min;
+} VCHIQ_OPEN_PAYLOAD_T;
+
 vcos_static_assert(sizeof(VCHIQ_HEADER_T) == 8);   /* we require this for consistency between endpoints */
 vcos_static_assert(IS_POW2(sizeof(VCHIQ_HEADER_T)));
 vcos_static_assert(IS_POW2(VCHIQ_NUM_CURRENT_BULKS));
@@ -875,11 +882,12 @@ parse_rx_slots(VCHIQ_STATE_T *state)
       switch (type) {
       case VCHIQ_MSG_OPEN:
          vcos_assert(VCHIQ_MSG_DSTPORT(msgid) == 0);
-         if (vcos_verify(size == 4 || size == 8)) {
+         if (vcos_verify(size == sizeof(VCHIQ_OPEN_PAYLOAD_T))) {
+            const VCHIQ_OPEN_PAYLOAD_T *payload = (VCHIQ_OPEN_PAYLOAD_T *)header->data;
             unsigned short remoteport = VCHIQ_MSG_SRCPORT(msgid);
             unsigned int fourcc;
 
-            fourcc = *(int *)header->data;
+            fourcc = payload->fourcc;
             vcos_log_info("%d: prs OPEN@%x (%d->'%c%c%c%c')",
                state->id, (unsigned int)header,
                VCHIQ_MSG_SRCPORT(msgid),
@@ -890,6 +898,20 @@ parse_rx_slots(VCHIQ_STATE_T *state)
             if (service)
             {
                /* A matching service exists */
+               short version = payload->version;
+               short version_min = payload->version_min;
+               if ((service->version < version_min) ||
+                  (version < service->version_min))
+               {
+                  /* Version mismatch */
+                  vcos_log_error("%d: service %d (%c%c%c%c) version mismatch -"
+                     " local (%d, min %d) vs. remote (%d, min %d)",
+                     state->id, service->localport,
+                     VCHIQ_FOURCC_AS_4CHARS(fourcc),
+                     service->version, service->version_min,
+                     version, version_min);
+                  goto fail_open;
+               }
                if (service->srvstate == VCHIQ_SRVSTATE_LISTENING)
                {
                   /* Acknowledge the OPEN */
@@ -903,7 +925,7 @@ parse_rx_slots(VCHIQ_STATE_T *state)
                }
 
                service->remoteport = remoteport;
-               service->client_id = ((size == 8) ? ((int *)header->data)[1] : 0);
+               service->client_id = ((int *)header->data)[1];
                if (make_service_callback(service, VCHIQ_SERVICE_OPENED,
                   NULL, NULL) == VCHIQ_RETRY)
                {
@@ -916,7 +938,7 @@ parse_rx_slots(VCHIQ_STATE_T *state)
                break;
             }
          }
-
+      fail_open:
          /* No available service, or an invalid request - send a CLOSE */
          if (queue_message(state, NULL,
             VCHIQ_MAKE_MSG(VCHIQ_MSG_CLOSE, 0, VCHIQ_MSG_SRCPORT(msgid)),
@@ -1470,8 +1492,8 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
 
 /* Called from application thread when a client or server service is created. */
 VCHIQ_SERVICE_T *
-vchiq_add_service_internal(VCHIQ_STATE_T *state, int fourcc,
-   VCHIQ_CALLBACK_T callback, void *userdata, int srvstate,
+vchiq_add_service_internal(VCHIQ_STATE_T *state,
+   const VCHIQ_SERVICE_PARAMS_T *params, int srvstate,
    VCHIQ_INSTANCE_T instance)
 {
    VCHIQ_SERVICE_T *service = NULL;
@@ -1494,9 +1516,9 @@ vchiq_add_service_internal(VCHIQ_STATE_T *state, int fourcc,
          VCHIQ_SERVICE_T *srv = &state->services[i];
          if (srv->srvstate == VCHIQ_SRVSTATE_FREE) {
             service = srv;
-         } else if ((srv->public_fourcc == fourcc) &&
+         } else if ((srv->public_fourcc == params->fourcc) &&
             ((srv->instance != instance)
-            || (srv->base.callback != callback))) {
+            || (srv->base.callback != params->callback))) {
             /* There is another server using this fourcc which doesn't match */
             service = NULL;
             break;
@@ -1511,17 +1533,19 @@ vchiq_add_service_internal(VCHIQ_STATE_T *state, int fourcc,
                      "%s Service %c%c%c%c SrcPort:%d",
                      ( srvstate == VCHIQ_SRVSTATE_OPENING )
                      ? "Open" : "Add",
-                     VCHIQ_FOURCC_AS_4CHARS(fourcc),
+                     VCHIQ_FOURCC_AS_4CHARS(params->fourcc),
                      service->localport );
       }
       service->state = state;
-      service->base.fourcc = fourcc;
-      service->base.callback = callback;
-      service->base.userdata = userdata;
+      service->base.fourcc   = params->fourcc;
+      service->base.callback = params->callback;
+      service->base.userdata = params->userdata;
+      service->version       = params->version;
+      service->version_min   = params->version_min;
       vchiq_set_service_state(service, srvstate);
       service->public_fourcc =
          (srvstate ==
-         VCHIQ_SRVSTATE_OPENING) ? VCHIQ_FOURCC_INVALID : fourcc;
+         VCHIQ_SRVSTATE_OPENING) ? VCHIQ_FOURCC_INVALID : params->fourcc;
       service->instance = instance;
       service->remoteport = VCHIQ_PORT_FREE;
       service->client_id = 0;
@@ -1551,8 +1575,13 @@ vchiq_add_service_internal(VCHIQ_STATE_T *state, int fourcc,
 VCHIQ_STATUS_T
 vchiq_open_service_internal(VCHIQ_SERVICE_T *service, int client_id)
 {
-   int payload[2] = { service->base.fourcc, client_id };
-   VCHIQ_ELEMENT_T body = { payload, sizeof(payload) };
+   VCHIQ_OPEN_PAYLOAD_T payload = {
+      service->base.fourcc,
+      client_id,
+      service->version,
+      service->version_min
+   };
+   VCHIQ_ELEMENT_T body = { &payload, sizeof(payload) };
    VCHIQ_STATUS_T status = queue_message(service->state, NULL,
                      VCHIQ_MAKE_MSG(VCHIQ_MSG_OPEN, service->localport, 0),
                      &body, 1, sizeof(payload), 1);

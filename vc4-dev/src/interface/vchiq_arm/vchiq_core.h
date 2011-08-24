@@ -209,6 +209,8 @@ typedef struct vchiq_service_struct {
    int client_id;
    int auto_close;
    VCOS_ATOMIC_FLAGS_T poll_flags;
+   short version;
+   short version_min;
 
    VCHIQ_STATE_T *state;
    VCHIQ_INSTANCE_T instance;
@@ -356,8 +358,8 @@ extern VCHIQ_STATUS_T
 vchiq_connect_internal(VCHIQ_STATE_T *state, VCHIQ_INSTANCE_T instance);
 
 extern VCHIQ_SERVICE_T *
-vchiq_add_service_internal(VCHIQ_STATE_T *state, int fourcc,
-   VCHIQ_CALLBACK_T callback, void *userdata, int srvstate,
+vchiq_add_service_internal(VCHIQ_STATE_T *state,
+   const VCHIQ_SERVICE_PARAMS_T *params, int srvstate,
    VCHIQ_INSTANCE_T instance);
 
 extern VCHIQ_STATUS_T

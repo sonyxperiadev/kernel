@@ -815,7 +815,18 @@ static struct platform_device vceb_fb_device = {
 };
 #endif  /* CONFIG_FB_VCEB */
 
-struct platform_device * vchiq_devices[] __initdata = { &vceb_display_device, &vchiq_display_device, &vceb_fb_device };
+struct platform_device * vchiq_devices[] __initdata = 
+{
+#if defined( VCEB_DISPLAY_DEVICE )
+	&vceb_display_device,
+#endif
+#if defined( VCHIQ_DISPLAY_DEVICE )
+	&vchiq_display_device,
+#endif
+#if defined( VCEB_FB_DEVICE )
+	&vceb_fb_device,
+#endif
+};
 
 #endif  /* CONFIG_VC_VCHIQ */
 

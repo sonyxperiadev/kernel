@@ -247,6 +247,8 @@ BCM_ERR_CODE chal_ipc_sleep_vc (
    CHAL_REG_WRITE32( device->ipc_secure_reg_base + IPCSEC_IPCAWAKE_OFFSET,
       CHAL_REG_READ32( device->ipc_secure_reg_base + IPCSEC_IPCAWAKE_OFFSET ) &
       ~IPCSEC_IPCAWAKE_WAKEUP_MASK );
+
+   return BCM_SUCCESS;
 }
 
 /*

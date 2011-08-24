@@ -729,22 +729,24 @@ ipc_dma( void *vcaddr, void *armaddr, int len, DMA_MMAP_PAGELIST_T *pagelist, en
    }
    else
    {
-#if 1
-       if (( (unsigned long)vcaddr & 7uL ) != 0 )
-       {
-           vcos_log_warn( "%s: vcaddr 0x%p isn't a multiple of 8", __func__, vcaddr );
-       }
-       if (( (unsigned long)armaddr & 7uL ) != 0 )
-       {
-           vcos_log_warn( "%s: armaddr 0x%p isn't a multiple of 8", __func__, armaddr );
-       }
-       if (( len & 3 ) != 0 )
-       {
-           vcos_log_warn( "%s: len %d isn't a multiple of 4", __func__, len );
-       }
-#endif
+      static int warned_vcaddr = 0;
+      static int warned_armaddr = 0;
+      static int warned_len = 0;
 
-       dmaDev = DMA_DEVICE_NONE;
+      if (!warned_vcaddr && (( (unsigned long)vcaddr & 7uL ) != 0 ))
+      {
+         vcos_log_warn( "%s: vcaddr 0x%p isn't a multiple of 8", __func__, (warned_vcaddr = 1, vcaddr) );
+      }
+      if (!warned_armaddr && (( (unsigned long)armaddr & 7uL ) != 0 ))
+      {
+         vcos_log_warn( "%s: armaddr 0x%p isn't a multiple of 8", __func__, (warned_armaddr = 1, armaddr) );
+      }
+      if (!warned_len && (( len & 3 ) != 0 ))
+      {
+         vcos_log_warn( "%s: len %d isn't a multiple of 4", __func__, (warned_len = 1, len) );
+      }
+
+      dmaDev = DMA_DEVICE_NONE;
    }
 
    if ( dmaDev == DMA_DEVICE_NONE )
@@ -1023,7 +1025,10 @@ VCHIQ_STATUS_T vchiq_memdrv_initialise(void)
    status = vchiq_init_state(state, g_vchiq_slot_zero, 1/*master*/);
 
    if (status != VCHIQ_SUCCESS)
+   {
+      vcos_log_error("%s: vchiq_init_state failed", __func__);
       goto failed_init_state;
+   }
 
    ipcHandle = chal_ipc_config( NULL );
    chal_icd_set_security (0, BCM_INT_ID_IPC_OPEN, eINT_STATE_SECURE );
