@@ -27,6 +27,7 @@
 #include <mach/rdb/brcm_rdb_iroot_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
+#include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <mach/pi_mgr.h>
@@ -35,6 +36,28 @@ unsigned long clock_get_xtal(void)
 {
 	return FREQ_MHZ(26);
 }
+
+/*
+Proc clocks
+*/
+static struct proc_clock CLK_NAME(arm) = {
+	.clk	=	{
+		.name	=	PROC_CLK_NAME_STR,
+		.id	=	-1,
+		.ops	=	&proc_clk_ops,
+	},
+
+	.proc_clk_mgr_base = PROC_CLK_BASE_ADDR,
+   .proc_clk_mgr_pll_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
+   .proc_clk_mgr_pll_ctrl_div_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK,
+   .proc_clk_mgr_pll_ctrl_div_shift = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT,
+   .proc_clk_mgr_pll_arm_a_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
+   .proc_clk_mgr_pll_arm_a_div_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK,
+   .proc_clk_mgr_pll_arm_a_div_shift = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT,
+   .proc_clk_mgr_pll_arm_b_offset = KPROC_CLK_MGR_REG_PLLARMB_OFFSET,
+   .proc_clk_mgr_pll_arm_b_div_frac_mask = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK,
+   .proc_clk_mgr_pll_arm_b_div_frac_shift = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT,
+};
 
 /*
 Root CCU clock
@@ -4164,6 +4187,7 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 /* table for registering clock */
 static struct __init clk_lookup island_clk_tbl[] =
 {
+	BRCM_REGISTER_CLK(PROC_CLK_NAME_STR,NULL,arm),
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),

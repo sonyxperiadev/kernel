@@ -395,7 +395,16 @@ struct clk
 /* to be revisited and tuned according to A9 CCU clock */
 struct proc_clock {
 	struct clk	clk;
-	unsigned long	proc_clk_mgr_base;
+	unsigned long proc_clk_mgr_base;
+   unsigned long proc_clk_mgr_pll_ctrl_offset;
+   unsigned long proc_clk_mgr_pll_ctrl_div_mask;
+   unsigned long proc_clk_mgr_pll_ctrl_div_shift;
+   unsigned long proc_clk_mgr_pll_arm_a_offset;
+   unsigned long proc_clk_mgr_pll_arm_a_div_mask;
+   unsigned long proc_clk_mgr_pll_arm_a_div_shift;
+   unsigned long proc_clk_mgr_pll_arm_b_offset;
+   unsigned long proc_clk_mgr_pll_arm_b_div_frac_mask;
+   unsigned long proc_clk_mgr_pll_arm_b_div_frac_shift;
 };
 
 struct ccu_clk {
@@ -533,6 +542,7 @@ static inline int is_same_clock(struct clk *a, struct clk *b)
 	return (a==b);
 }
 
+extern struct gen_clk_ops proc_clk_ops;
 extern struct gen_clk_ops gen_ref_clk_ops;
 extern struct gen_clk_ops gen_bus_clk_ops;
 extern struct gen_clk_ops gen_ccu_clk_ops;

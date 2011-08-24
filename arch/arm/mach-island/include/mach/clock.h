@@ -18,6 +18,7 @@
 #define	CLK_WR_ACCESS_PASSWORD	0x00A5A5
 
 
+#define  PROC_CLK_NAME_STR          "arm_clk"
 #define ROOT_CCU_CLK_NAME_STR			"root_ccu_clk"
 #define CRYSTAL_REF_CLK_NAME_STR		"crystal"
 #define	FRAC_1M_REF_CLK_NAME_STR		"frac_1m_clk"

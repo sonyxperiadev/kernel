@@ -619,6 +619,55 @@ static int ccu_clk_get_active_policy(struct ccu_clk * ccu_clk)
 
 }
 
+static unsigned int __proc_clk_get_vco_rate(void __iomem *base, struct proc_clock *proc_clk)
+{
+	unsigned long xtal = clock_get_xtal();
+	unsigned int ndiv_int, ndiv_frac, vco_rate;
+
+	ndiv_int = (readl(base + proc_clk->proc_clk_mgr_pll_arm_a_offset) & proc_clk->proc_clk_mgr_pll_arm_a_div_mask)
+		>> proc_clk->proc_clk_mgr_pll_arm_a_div_shift;
+	ndiv_frac = (readl(base + proc_clk->proc_clk_mgr_pll_arm_b_offset) & proc_clk->proc_clk_mgr_pll_arm_b_div_frac_mask)
+		>> proc_clk->proc_clk_mgr_pll_arm_b_div_frac_shift;
+
+	vco_rate = ndiv_int * xtal;
+
+	vco_rate += (unsigned long) (u64) (((u64)ndiv_frac * (u64)xtal) >> 20);
+
+	clk_dbg ("xtal %d, int %d, frac %d, vco %d\n", (int)xtal, ndiv_int, ndiv_frac, vco_rate);
+	return vco_rate;
+}
+
+static unsigned int __proc_clk_get_rate(void __iomem *base, struct proc_clock *proc_clk )
+{
+	unsigned int vco_rate = __proc_clk_get_vco_rate (base, proc_clk);
+	int div = (readl(base + proc_clk->proc_clk_mgr_pll_ctrl_offset) & proc_clk->proc_clk_mgr_pll_ctrl_div_mask)
+		>> proc_clk->proc_clk_mgr_pll_ctrl_div_shift;
+
+	return vco_rate /div;
+}
+
+/* Processor clock functions */
+static unsigned long proc_clk_get_rate(struct clk *c)
+{
+	struct proc_clock *proc_clk = to_proc_clk(c);
+	void __iomem *base;
+
+	base = ioremap (proc_clk->proc_clk_mgr_base, SZ_4K);
+	if (!base)
+   {
+		return -ENOMEM;
+   }
+
+	c->rate = __proc_clk_get_rate(base, proc_clk);
+	iounmap (base);
+	return c->rate;
+}
+
+struct gen_clk_ops proc_clk_ops =
+{
+	.get_rate	=	proc_clk_get_rate,
+};
+
 struct ccu_clk_ops gen_ccu_ops =
 {
     .write_access = ccu_clk_write_access_enable,

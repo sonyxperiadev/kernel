@@ -147,7 +147,7 @@ static int knllogWake;
 static  char *knllogDumpMemFmt = "dump_mem";
 
 /* storage for the spinlock that protects against log collisions by different threads. */
-static spinlock_t knllock = SPIN_LOCK_UNLOCKED;
+static DEFINE_SPINLOCK(knllock);
 
 /* sysctl */
 static  struct ctl_table_header    *gSysCtlHeader;
