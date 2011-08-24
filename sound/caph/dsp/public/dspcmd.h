@@ -1,5 +1,5 @@
 /****************************************************************************
- * ©1999-2008 Broadcom Corporation
+ * ©1999-2011 Broadcom Corporation
 * This program is the proprietary software of Broadcom Corporation and/or its licensors, and may only be used, duplicated, 
 * modified or distributed pursuant to the terms and conditions of a separate, written license agreement executed between 
 * you and Broadcom (an "Authorized License").  Except as set forth in an Authorized License, Broadcom grants no license 
@@ -96,8 +96,8 @@ typedef enum
 	DSPCMD_TYPE_CHECK_DSP_AUDIO,
 	DSPCMD_TYPE_SET_DSP_TONE_VOLUME,
 	DSPCMD_TYPE_SET_DSP_AMR_VOLUME,  //to be removed
-	DSPCMD_TYPE_SET_DSP_UL_GAIN,
-	DSPCMD_TYPE_MUTE_DSP_UL,
+	///DSPCMD_TYPE_SET_DSP_UL_GAIN,
+	DSPCMD_TYPE_MUTE_DSP_UL = (DSPCMD_TYPE_SET_DSP_AMR_VOLUME + 2),
 	DSPCMD_TYPE_UNMUTE_DSP_UL,
 
 //misc command
@@ -565,7 +565,8 @@ void DSPPROC_EGPRSModeFilt(UInt8 MCS_mode);
 void DSPPROC_GPRSModeFilt(RxCode_t coding_scheme);
 void DSPPROC_ResetPacketModeFilt(void); 
 void DSPPROC_SetSoftSymbolScaling(void);
-void DSPPROC_Set_SAIC_adapt(Boolean flag);         
+void DSPPROC_Set_SAIC_adapt(Boolean flag);      
+void DSPPROC_Enable_logging(void);
 
 #endif
 
