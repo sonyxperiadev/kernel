@@ -5123,8 +5123,9 @@ int __init island_clock_init(void)
      *********************************************************************/
     /*clock_module_temp_fixes(); */
 	base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR);
-    writel (0x1, base  + IROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+    writel (0xA5A501, base);
     writel (0x1, base  + IROOT_CLK_MGR_REG_VAR8PH_DIVMODE_OFFSET);
+    writel (0xA5A500, base);
     return 0;
 }
 
