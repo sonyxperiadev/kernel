@@ -4,3 +4,4 @@ chip   = 11160
 board  = tablet
 option = initrd
 option = suspend_invalid
+option = android
