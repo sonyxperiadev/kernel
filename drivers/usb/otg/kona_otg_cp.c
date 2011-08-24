@@ -462,7 +462,7 @@ static int __devinit otg_cp_probe(struct platform_device *pdev)
 	drv->dev = &pdev->dev;
 	platform_set_drvdata(pdev, drv);
 
-	init_MUTEX(&drv->cp_lock);
+	sema_init(&drv->cp_lock, 1);
 	spin_lock_init(&drv->spinlock);
 	gDrv = drv;
 	
