@@ -204,9 +204,18 @@ config REGULATOR_88PM8607
 config REGULATOR_BCMPMU
 	bool "BCM PMU Regulator"
 	depends on MFD_BCMPMU
+	default n
 	help
 	  This driver supports the voltage regulators provided by
 	  this family of companion chips.
+	  
+config REGULATOR_BCM59055
+	bool "BCM59055 Regulator"
+	depends on MFD_BCMPMU && REGULATOR_BCMPMU
+	default n
+	help
+	  This driver supports the voltage regulators provided by
+	  PMU 59055.	  
 
 config REGULATOR_BCM_PMU59055
 	bool "BCM PMU59055 Regulator"
@@ -218,22 +227,13 @@ config REGULATOR_BCM_PMU59055
 config REGULATOR_BCMSAMOA
 	bool "BCMSAMOA Regulator"
 	depends on MFD_BCMPMU && REGULATOR_BCMPMU
+	default n
 	help
 	  This driver supports the voltage regulators provided by SAMOA PMU
 
-config REGULATOR_BCMPMU
-	bool "BCM PMU Regulator"
-	depends on MFD_BCMPMU
-	help
-	  This driver supports the voltage regulators provided by
-	  this family of companion chips.
 
-config REGULATOR_BCM59055
-	bool "BCM59055 Regulator"
-	depends on MFD_BCMPMU && REGULATOR_BCMPMU
-	help
-	  This driver supports the voltage regulators provided by
-	  PMU 59055.
+
+
 
 config REGULATOR_TPS728XX
 	bool "TPS28XX Regulator"

@@ -171,4 +171,18 @@ config BCM_CMP_BATTERY_BQ24616
           CMP driver based on BQ24616 for supplying battery and power supply
           information to Power Supply system.
 
+config POWER_BCMPMU
+	tristate "BCMPMU battery and charger driver"
+	depends on MFD_BCMPMU
+	default n
+	help
+	 Say Y to include support of battery and charger drivers for BCM PMUs.
+
+config BCMPMU_EM
+	tristate "BCMPMU charging and gauging driver"
+	depends on POWER_BCMPMU
+	default n
+	help
+	 Say Y to include kernel charging and gauging module for BCM PMUs.
+
 endif # POWER_SUPPLY

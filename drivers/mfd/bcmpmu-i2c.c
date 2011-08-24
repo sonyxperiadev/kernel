@@ -47,6 +47,7 @@ static int bcmpmu_i2c_read_device(struct bcmpmu *bcmpmu, int reg, unsigned int *
 		err = i2c_smbus_read_byte_data(acc->i2c_client1, map.addr);
 	else err = -ENODEV;
 	mutex_unlock(&acc->i2c_mutex);
+
 	if (err < 0) return err;
 	err = err & msk;
 	err = err & map.mask;
@@ -83,14 +84,14 @@ static int bcmpmu_i2c_write_device(struct bcmpmu *bcmpmu, int reg, unsigned int 
 	else err = -ENODEV;
 err:
 	mutex_unlock(&acc->i2c_mutex);
-
-	return err;	
+	return err;
 }
 
 static int bcmpmu_i2c_read_device_direct(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, unsigned int msk)
 {
 	int err;
 	struct bcmpmu_i2c *acc = (struct bcmpmu_i2c *)bcmpmu->accinfo;
+	if ((addr == 0) && (msk == 0))  return -ENODEV;
 
 	mutex_lock(&acc->i2c_mutex);
 	if (map == 0)
@@ -99,6 +100,7 @@ static int bcmpmu_i2c_read_device_direct(struct bcmpmu *bcmpmu, int map, int add
 		err = i2c_smbus_read_byte_data(acc->i2c_client1, addr);
 	else err = -ENODEV;
 	mutex_unlock(&acc->i2c_mutex);
+
 	if (err < 0) return err;
 	err = err & msk;
 	*val = err;
@@ -110,6 +112,7 @@ static int bcmpmu_i2c_write_device_direct(struct bcmpmu *bcmpmu, int map, int ad
 	int err;
 	u8 value = (u8)val;
 	struct bcmpmu_i2c *acc = (struct bcmpmu_i2c *)bcmpmu->accinfo;
+	if ((addr == 0) && (msk == 0))  return -ENODEV;
 
 	mutex_lock(&acc->i2c_mutex);
 	if (map == 0)
@@ -129,8 +132,7 @@ static int bcmpmu_i2c_write_device_direct(struct bcmpmu *bcmpmu, int map, int ad
 	else err = -ENODEV;
 err:
 	mutex_unlock(&acc->i2c_mutex);
-
-	return err;	
+	return err;
 }
 
 static int bcmpmu_i2c_read_device_direct_bulk(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, int len)
