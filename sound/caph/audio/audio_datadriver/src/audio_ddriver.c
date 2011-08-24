@@ -50,8 +50,8 @@
 #include "osdal_os.h"
 #include "osheap.h"
 #include "log.h"
-#include "csl_aud_drv.h"
 #include "csl_caph.h"
+#include "audio_vdriver.h"
 #include "csl_apcmd.h"
 #include "csl_audio_render.h"
 #include "csl_audio_capture.h"
@@ -248,113 +248,6 @@ static int ResetPlaybackStreamHandle(UInt32 streamID)
 	audio_render_driver[streamID] = NULL;
 
 	return 0;
-}
-
-
-static CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
-{
-      CSL_CAPH_DEVICE_e cslDev = CSL_CAPH_DEV_NONE;
-
-      switch (dev)
-      {
-        case AUDDRV_DEV_NONE:
-            cslDev = CSL_CAPH_DEV_NONE;
-            break;
-			
-         case AUDDRV_DEV_EP:
-            cslDev = CSL_CAPH_DEV_EP;
-            break;
-			
-         case AUDDRV_DEV_HS:
-            cslDev = CSL_CAPH_DEV_HS;
-            break;	
-			
-         case AUDDRV_DEV_IHF:
-            cslDev = CSL_CAPH_DEV_IHF;
-            break;
-			
-         case AUDDRV_DEV_VIBRA:
-            cslDev = CSL_CAPH_DEV_VIBRA;
-            break;
-			
-         case AUDDRV_DEV_FM_TX:
-            cslDev = CSL_CAPH_DEV_FM_TX;
-            break;
-			
-         case AUDDRV_DEV_BT_SPKR:
-            cslDev = CSL_CAPH_DEV_BT_SPKR;
-            break;	
-			
-         case AUDDRV_DEV_DSP:
-            cslDev = CSL_CAPH_DEV_DSP;
-            break;
-			
-         case AUDDRV_DEV_DIGI_MIC:
-            cslDev = CSL_CAPH_DEV_DIGI_MIC;
-            break;
-
-
-         case AUDDRV_DEV_DIGI_MIC_L:
-            cslDev = CSL_CAPH_DEV_DIGI_MIC_L;
-            break;
-
-         case AUDDRV_DEV_DIGI_MIC_R:
-            cslDev = CSL_CAPH_DEV_DIGI_MIC_R;
-            break;
-			
-         case AUDDRV_DEV_EANC_DIGI_MIC:
-            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC;
-            break;
-			
-         case AUDDRV_DEV_EANC_DIGI_MIC_L:
-            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_L;
-            break;
-
-         case AUDDRV_DEV_EANC_DIGI_MIC_R:
-            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_R;
-            break;
-
-         case AUDDRV_DEV_SIDETONE_INPUT:
-            cslDev = CSL_CAPH_DEV_SIDETONE_INPUT;
-            break;	
-			
-         case AUDDRV_DEV_EANC_INPUT:
-            cslDev = CSL_CAPH_DEV_EANC_INPUT;
-            break;
-			
-         case AUDDRV_DEV_ANALOG_MIC:
-            cslDev = CSL_CAPH_DEV_ANALOG_MIC;
-            break;
-			
-         case AUDDRV_DEV_HS_MIC:
-            cslDev = CSL_CAPH_DEV_HS_MIC;
-            break;
-			
-         case AUDDRV_DEV_BT_MIC:
-            cslDev = CSL_CAPH_DEV_BT_MIC;
-            break;	
-			
-         case AUDDRV_DEV_FM_RADIO:
-            cslDev = CSL_CAPH_DEV_FM_RADIO;
-            break;
-			
-         case AUDDRV_DEV_MEMORY:
-            cslDev = CSL_CAPH_DEV_MEMORY;
-            break;
-
-         case AUDDRV_DEV_SRCM:
-            cslDev = CSL_CAPH_DEV_SRCM;
-            break;
-		
-        case AUDDRV_DEV_DSP_throughMEM:
-            cslDev = CSL_CAPH_DEV_DSP_throughMEM;
-            break;
-    	    
-        default:
-		break;	
-    };
-
-    return cslDev;
 }
 
 

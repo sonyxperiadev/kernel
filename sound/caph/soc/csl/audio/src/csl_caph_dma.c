@@ -35,7 +35,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "mobcom_types.h"
 #include "chal_caph_dma.h"
 #include "chal_caph_intc.h"
-#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "csl_caph_srcmixer.h"
 #include "csl_caph_dma.h"

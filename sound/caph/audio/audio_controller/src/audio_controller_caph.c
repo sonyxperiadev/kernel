@@ -42,7 +42,6 @@
 
 #include "csl_vpu.h"
 #include "audio_consts.h"
-#include "csl_aud_drv.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
 #include "ostask.h"
@@ -57,9 +56,6 @@
 #include "log.h"
 #include "osheap.h"
 #include "xassert.h"
-
-#include "drv_audio_capture.h"
-#include "drv_audio_render.h"
 
 #if !defined(NO_PMU)
 #ifdef PMU_BCM59055
@@ -416,7 +412,7 @@ static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
-static AUDDRV_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
+static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTableWithSrcSink(AUDIO_HW_ID_t src,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
@@ -2531,31 +2527,6 @@ void AUDCTRL_SetEQ(
 				AudioEqualizer_en_t  equType
 				)
 { 
-	/* Will fill in code.
-	AUDDRV_SetEquType( AUDDRV_TYPE_AUDIO_OUTPUT, equType );
-	AUDDRV_SetEquType( AUDDRV_TYPE_RINGTONE_OUTPUT, equType );
-	*/
-}
-
-void AUDCTRL_ConfigSSP( UInt8 fm_port, UInt8 pcm_port)
-{
-	CSL_CAPH_SSP_Config_t sspConfig;
-	memset(&sspConfig, 0, sizeof(CSL_CAPH_SSP_Config_t));
-	
-	sspConfig.fm_port = (CSL_CAPH_SSP_e)fm_port;
-	sspConfig.pcm_port = (CSL_CAPH_SSP_e)pcm_port;
-
-	if (sspConfig.fm_port == CSL_CAPH_SSP_3)
-		sspConfig.fm_baseAddr = SSP3_BASE_ADDR1;
-	else if (sspConfig.fm_port == CSL_CAPH_SSP_4)
-		sspConfig.fm_baseAddr = SSP4_BASE_ADDR1;
-
-	if (sspConfig.pcm_port == CSL_CAPH_SSP_3)
-		sspConfig.pcm_baseAddr = SSP3_BASE_ADDR1;
-	else if (sspConfig.pcm_port == CSL_CAPH_SSP_4)
-		sspConfig.pcm_baseAddr = SSP4_BASE_ADDR1;
-
-	csl_caph_hwctrl_ConfigSSP(sspConfig);
 }
 
 //============================================================================

@@ -49,11 +49,10 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "chal_types.h"
-#include "csl_aud_drv.h"
 #include "log.h"
 
-
-
+#include "csl_caph.h"
+#include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"
@@ -72,7 +71,6 @@ the GPL, without Broadcom's express prior written consent.
 #ifdef CONFIG_ARM2SP_PLAYBACK
 #include "audio_vdriver_voice_play.h"
 #endif
-#include "audio_vdriver.h"
 #include "osdal_os.h"
 
 static UInt8 *samplePCM16_inaudiotest = NULL;
@@ -696,34 +694,7 @@ static int HandleControlCommand()
         {
             DEBUG(" Enable telephony\n");
             AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET);
-	    /*{
-			AUDDRV_HWCTRL_CONFIG_t config;
-           //DL
-			config.streamID = AUDDRV_STREAM_NONE;
-			config.pathID = 0;
-			config.source = AUDDRV_DEV_DSP;
-			config.sink = AUDDRV_DEV_EP; //AUDDRV_GetDRVDeviceFromSpkr(speaker);
-			config.dmaCH = CSL_CAPH_DMA_NONE;    
-			config.src_sampleRate = AUDIO_SAMPLING_RATE_8000; //sample_rate;
-			config.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;	
-			config.chnlNum = AUDIO_CHANNEL_MONO;
-			config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-
-			DLPathID = AUDDRV_HWControl_EnablePath(config);
-
-			//UL
-			config.streamID = AUDDRV_STREAM_NONE;
-			config.pathID = 0;
-			config.source = AUDDRV_DEV_ANALOG_MIC; //AUDDRV_GetDRVDeviceFromMic(mic);
-			config.sink = AUDDRV_DEV_DSP;
-			config.dmaCH = CSL_CAPH_DMA_NONE;    
-			config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
-			config.snk_sampleRate = AUDIO_SAMPLING_RATE_8000; //sample_rate;	
-			config.chnlNum = AUDIO_CHANNEL_MONO;
-			config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-
-			ULPathID = AUDDRV_HWControl_EnablePath(config);
-		}*/		           
+	    		           
             DEBUG(" Telephony enabled \n");
         }
         break;
@@ -731,21 +702,7 @@ static int HandleControlCommand()
         {
             DEBUG(" Disable telephony\n");
             AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET);   
-			/*{
-				AUDDRV_HWCTRL_CONFIG_t config;
-				config.streamID = AUDDRV_STREAM_NONE;
-				config.pathID = ULPathID;
-
-				(void)AUDDRV_HWControl_DisablePath(config);
-				ULPathID = 0;
-
-				config.streamID = AUDDRV_STREAM_NONE;
-				config.pathID = DLPathID;
-
-				(void)AUDDRV_HWControl_DisablePath(config);
-				DLPathID = 0;
-			}*/
-            DEBUG(" Telephony disabled \n");
+		            DEBUG(" Telephony disabled \n");
         }
 		break;
 #ifdef CONFIG_VOIP_DRIVER_TEST

@@ -37,7 +37,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "chal_types.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
-#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
 #include "csl_caph_gain.h"

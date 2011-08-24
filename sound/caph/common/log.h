@@ -58,6 +58,8 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 #define Log_DebugPrintf(logID,args...)
 #endif
 
+#define audio_xassert(a, b) (Log_DebugPrintf(LOGID_AUDIO, "%s assert line %d, %d, 0x%lx.\r\n", __FUNCTION__, __LINE__, a, (UInt32)b))
+
 
 #define OSTASK_Sleep(x)  \
 {\

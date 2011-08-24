@@ -36,7 +36,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "log.h"
 #include "msconsts.h"
 #include "audio_consts.h"
-#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "csl_caph_dma.h"
 #include "csl_caph_hwctrl.h"

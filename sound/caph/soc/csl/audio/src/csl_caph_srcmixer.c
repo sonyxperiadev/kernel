@@ -33,7 +33,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "log.h"
 #include "xassert.h"
 #include "mobcom_types.h"
-#include "csl_aud_drv.h"
 #include "csl_caph.h"
 #include "chal_caph_srcmixer.h"
 #include "csl_caph_srcmixer.h"

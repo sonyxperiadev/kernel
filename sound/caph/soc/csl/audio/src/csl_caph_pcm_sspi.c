@@ -35,7 +35,6 @@
 ****************************************************************************/
 #include <string.h>
 #include "mobcom_types.h"
-#include "csl_aud_drv.h"
 #include "chal_types.h"
 #include "chal_sspi.h"
 #include "csl_caph_pcm_sspi.h"

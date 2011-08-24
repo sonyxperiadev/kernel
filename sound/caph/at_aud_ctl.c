@@ -47,10 +47,10 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/tlv.h>
 #include "mobcom_types.h"
 #include "resultcode.h"
-#include "csl_aud_drv.h"
 #include "audio_consts.h"
 #include "audio_ddriver.h"
 
+#include "csl_caph.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "bcm_audio_devices.h"

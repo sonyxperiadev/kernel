@@ -37,7 +37,6 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "csl_aud_drv.h"
 #include "shared.h"
 #include "dspcmd.h"
 #ifdef CONFIG_AUDIO_BUILD
@@ -95,7 +94,6 @@ Boolean inVoiceCall = FALSE;
 //static Boolean voiceInPathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN for both voiceIn and voiceOut
 static Boolean voicePlayOutpathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN
 
-//static AudioEqualizer_en_t	sEqualizerType = EQU_NORMAL;
 static void *sUserCB = NULL;
 #if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 #if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
@@ -110,10 +108,6 @@ static Boolean eciEQOn = FALSE; // If TRUE, bypass EQ filter setting request fro
 
 static Boolean bInVoiceCall = FALSE;
 static UInt32 audDev = 0;
-
-//static CB_GetAudioMode_t  client_GetAudioMode = NULL;
-//static CB_SetAudioMode_t  client_SetAudioMode = NULL;
-//static CB_SetMusicMode_t  client_SetMusicMode = NULL;
 
 //#if	defined(FUSE_COMMS_PROCESSOR)
 static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
@@ -768,47 +762,6 @@ void AUDDRV_EnableDSPInput (
 
 //=============================================================================
 //
-// Function Name: AUDDRV_Disable_Output
-//
-// Description:   Disable audio output for voice call
-//
-//=============================================================================
-
-void AUDDRV_Disable_Output ( AUDDRV_InOut_Enum_t  path )
-{
-}
-
-
-//=============================================================================
-//
-// Function Name: AUDDRV_Enable_Input
-//
-// Description:   Enable audio input for voice call
-//
-//=============================================================================
-
-void AUDDRV_Enable_Input (
-                    AUDDRV_InOut_Enum_t      input_path,
-                    AUDDRV_MIC_Enum_t        mic_selection,
-					AUDIO_SAMPLING_RATE_t    sample_rate )
-{
-}
-
-
-//=============================================================================
-//
-// Function Name: AUDDRV_Disable_Input
-//
-// Description:   Disable audio input for voice call
-//
-//=============================================================================
-
-void AUDDRV_Disable_Input (  AUDDRV_InOut_Enum_t      path )
-{
-}
-
-//=============================================================================
-//
 // Function Name: AUDDRV_SetULSpeechRecordGain
 //
 // Description:   set UL speech recording gain
@@ -989,59 +942,6 @@ Boolean AUDDRV_GetVCflag( void )
 
 
 
-/********************************************************************
-*  @brief  Register up callback for getting audio mode
-*
-*  @param  cb  (in)  callback function pointer
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_RegisterCB_getAudioMode( CB_GetAudioMode_t	cb )
-{
-//	client_GetAudioMode = cb;
-}
-
-/********************************************************************
-*  @brief  Register up callback for setting audio mode
-*
-*  @param  cb  (in)  callback function pointer
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_RegisterCB_setAudioMode( CB_SetAudioMode_t	cb )
-{
-//	client_SetAudioMode = cb;
-}
-
-/********************************************************************
-*  @brief  Register up callback for setting music audio mode
-*
-*  @param  cb  (in)  callback function pointer
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_RegisterCB_setMusicMode( CB_SetMusicMode_t	cb )
-{
-}
-
-
-//=============================================================================
-//
-// Function Name: AUDDRV_GetEquType
-//
-// Description:   Get Equalizer Type
-//
-//=============================================================================
-
-AudioEqualizer_en_t AUDDRV_GetEquType( AUDDRV_TYPE_Enum_t   path )
-{
-	return (AudioEqualizer_en_t)0;
-}
-
-
 //=============================================================================
 //
 // Function Name: AUDDRV_SetDSPFilter
@@ -1136,59 +1036,6 @@ void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
 
 	csl_caph_hwctrl_SetHWGain(NULL, hw, gain, dev);
 	return;
-}
-//=============================================================================
-//
-// Function Name: AUDDRV_SetEquType
-//
-// Description:   Set Equalizer Type
-//
-//=============================================================================
-
-void AUDDRV_SetEquType( 
-					AUDDRV_TYPE_Enum_t   path,
-					AudioEqualizer_en_t	 equ_id
-					)
-{
-#if 0
-
-#if ( defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
-	sEqualizerType = equ_id;
-
-	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_SetEquType (AP) %d \n\r", sEqualizerType);
-	audio_control_generic( AUDDRV_CPCMD_WRITE_AUDVOC_AEQMODE, (UInt32) equ_id, 0, 0, 0, 0 );
-
-#else
-
-	SysCalDataInd_t* pSysparm;
-	pSysparm = SYSPARM_GetAudioParmAccessPtr();
-
-	sEqualizerType = equ_id;
-
-	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_SetEquType (CP) %d \n\r", sEqualizerType);
-
-	  // CP: update audvoc_aeqMode in sysinterface/dsp/audio/audioapi.c
-	AUDIO_SetAudioParam( PARAM_AUDVOC_AEQMODE, (void *) & sEqualizerType );
-
-	 //set these parameters
-	AUDDRV_SetFilter( AUDDRV_AEQPATHGAIN, (const UInt16 *)& pSysparm->AUDVOC_AEQPATHGAIN[ sEqualizerType ][0] );
-	AUDDRV_SetFilter( AUDDRV_AEQ, (const UInt16 *)& pSysparm->AUDVOC_AEQCOF[ sEqualizerType ][0] );
-
-	AUDDRV_SetFilter( AUDDRV_PEQPATHGAIN, (const UInt16 *)& pSysparm->AUDVOC_PEQPATHGAIN[ sEqualizerType ][0] );
-	AUDDRV_SetFilter( AUDDRV_PEQ, (const UInt16 *)& pSysparm->AUDVOC_PEQCOF[ sEqualizerType ][0] );
-	//AUDDRV_SetFilter( AUDDRV_PEQPATHOFST, (const UInt16 *)& pSysparm->AUDVOC_PEQCOF[ sEqualizerType ][0] );
-
-	//to remove this after the sys parm are readable at AP
-
-	AUDDRV_SetFilter( AUDDRV_AFIR,			(const UInt16 *) & SYSPARM_GetAudioParmAccessPtr()->AUDVOC_ADAC_FIR[0] );
-	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_SetEquType (CP) FIR [0] %x, [32] %x, [33] %x \n\r", 
-			SYSPARM_GetAudioParmAccessPtr()->AUDVOC_ADAC_FIR[0],
-			SYSPARM_GetAudioParmAccessPtr()->AUDVOC_ADAC_FIR[32],
-			SYSPARM_GetAudioParmAccessPtr()->AUDVOC_ADAC_FIR[33]
-			);
-
-#endif
-#endif	
 }
 
 
@@ -1336,7 +1183,7 @@ static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* 
 
 /****************************************************************************
 *
-*  Function Name: Result_t AUDDRV_HWControl_EnableSideTone(AUDDRV_PathID pathI)    
+*  Function Name: Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode)    
 *  
 *  Description: Enable Sidetone path
 *
@@ -1952,6 +1799,111 @@ UInt16 AUDDRV_GetPMUGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
     return outGain.spkrPMUGain;
 }
 
+CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
+{
+      CSL_CAPH_DEVICE_e cslDev = CSL_CAPH_DEV_NONE;
+
+      switch (dev)
+      {
+        case AUDDRV_DEV_NONE:
+            cslDev = CSL_CAPH_DEV_NONE;
+            break;
+			
+         case AUDDRV_DEV_EP:
+            cslDev = CSL_CAPH_DEV_EP;
+            break;
+			
+         case AUDDRV_DEV_HS:
+            cslDev = CSL_CAPH_DEV_HS;
+            break;	
+			
+         case AUDDRV_DEV_IHF:
+            cslDev = CSL_CAPH_DEV_IHF;
+            break;
+			
+         case AUDDRV_DEV_VIBRA:
+            cslDev = CSL_CAPH_DEV_VIBRA;
+            break;
+			
+         case AUDDRV_DEV_FM_TX:
+            cslDev = CSL_CAPH_DEV_FM_TX;
+            break;
+			
+         case AUDDRV_DEV_BT_SPKR:
+            cslDev = CSL_CAPH_DEV_BT_SPKR;
+            break;	
+			
+         case AUDDRV_DEV_DSP:
+            cslDev = CSL_CAPH_DEV_DSP;
+            break;
+			
+         case AUDDRV_DEV_DIGI_MIC:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC;
+            break;
+
+
+         case AUDDRV_DEV_DIGI_MIC_L:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC_L;
+            break;
+
+         case AUDDRV_DEV_DIGI_MIC_R:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC_R;
+            break;
+			
+         case AUDDRV_DEV_EANC_DIGI_MIC:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC;
+            break;
+			
+         case AUDDRV_DEV_EANC_DIGI_MIC_L:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_L;
+            break;
+
+         case AUDDRV_DEV_EANC_DIGI_MIC_R:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_R;
+            break;
+
+         case AUDDRV_DEV_SIDETONE_INPUT:
+            cslDev = CSL_CAPH_DEV_SIDETONE_INPUT;
+            break;	
+			
+         case AUDDRV_DEV_EANC_INPUT:
+            cslDev = CSL_CAPH_DEV_EANC_INPUT;
+            break;
+			
+         case AUDDRV_DEV_ANALOG_MIC:
+            cslDev = CSL_CAPH_DEV_ANALOG_MIC;
+            break;
+			
+         case AUDDRV_DEV_HS_MIC:
+            cslDev = CSL_CAPH_DEV_HS_MIC;
+            break;
+			
+         case AUDDRV_DEV_BT_MIC:
+            cslDev = CSL_CAPH_DEV_BT_MIC;
+            break;	
+			
+         case AUDDRV_DEV_FM_RADIO:
+            cslDev = CSL_CAPH_DEV_FM_RADIO;
+            break;
+			
+         case AUDDRV_DEV_MEMORY:
+            cslDev = CSL_CAPH_DEV_MEMORY;
+            break;
+
+         case AUDDRV_DEV_SRCM:
+            cslDev = CSL_CAPH_DEV_SRCM;
+            break;
+		
+        case AUDDRV_DEV_DSP_throughMEM:
+            cslDev = CSL_CAPH_DEV_DSP_throughMEM;
+            break;
+    	    
+        default:
+		break;	
+    };
+
+    return cslDev;
+}
 
 
 //#endif

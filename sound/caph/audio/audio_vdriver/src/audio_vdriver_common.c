@@ -48,14 +48,12 @@
 #include "audio_consts.h"
 //#include "ripcmdq.h"
 
-#include "csl_aud_drv.h"
+#include "csl_dsp.h"
+#include "csl_caph.h"
 #include "audio_vdriver.h"
 //#include "sysparm.h"
 #include "ostask.h"
 #include "log.h"
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
-#include "csl_dsp.h"
-#endif
 
 extern void VPU_Capture_Request(UInt16 buf_index);
 extern void VPU_Render_Request(UInt16 bufferIndex);
@@ -151,12 +149,6 @@ void AUDDRV_Init( void )
 #endif
 	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
 
-	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
-	AUDDRV_RegisterCB_setAudioMode( (CB_SetAudioMode_t) &AUDDRV_SetAudioMode );
-	AUDDRV_RegisterCB_setMusicMode( (CB_SetMusicMode_t) &AUDDRV_SetMusicMode );
-#if defined(USE_NEW_AUDIO_PARAM)
-	AUDDRV_RegisterCB_getAudioApp( (CB_GetAudioApp_t) &AUDDRV_GetAudioApp );
-#endif
 	Audio_InitRpc();
 #else  //#if defined(FUSE_APPS_PROCESSOR)
 	Audio_InitRpc();
@@ -176,11 +168,7 @@ void AUDDRV_Init( void )
 	}
 
 #if !defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
-	AUDDRV_RegisterCB_setAudioMode( (CB_SetAudioMode_t) &AUDDRV_SetAudioMode );
-	AUDDRV_RegisterCB_setMusicMode( (CB_SetMusicMode_t) &AUDDRV_SetMusicMode );
 #if defined(USE_NEW_AUDIO_PARAM)
-	AUDDRV_RegisterCB_getAudioApp( (CB_GetAudioApp_t) &AUDDRV_GetAudioApp );
 #endif
 #else
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Init : Registering CP_Audio_ISR_Handler*\n\r");

@@ -45,7 +45,7 @@
 #include "audio_consts.h"
 #include "audio_ddriver.h"
 
-#include "csl_aud_drv.h"
+#include "csl_caph.h"
 #include "audio_vdriver.h"
 #include "csl_aud_queue.h"
 #include "auddrv_audlog.h"

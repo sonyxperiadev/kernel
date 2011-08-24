@@ -32,7 +32,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 ****************************************************************************/
 #include "resultcode.h"
 #include "mobcom_types.h"
-#include "csl_aud_drv.h"
 #include "xassert.h"
 #include "msconsts.h"
 #include "log.h"
@@ -62,6 +61,20 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
 //****************************************************************************
+
+/**
+* Globale Constants
+******************************************************************************/
+#define AUDIOH_BASE_ADDR1            KONA_AUDIOH_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define SDT_BASE_ADDR1            KONA_SDT_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define SRCMIXER_BASE_ADDR1          KONA_SRCMIXER_BASE_VA /* brcm_rdb_srcmixer.h */
+#define CFIFO_BASE_ADDR1             KONA_CFIFO_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define AADMAC_BASE_ADDR1            KONA_AADMAC_BASE_VA /* brcm_rdb_cph_aadmac.h */
+#define SSASW_BASE_ADDR1             KONA_SSASW_BASE_VA /* brcm_rdb_cph_ssasw.h */
+#define AHINTC_BASE_ADDR1            KONA_AHINTC_BASE_VA /* brcm_rdb_ahintc.h */	
+#define SSP4_BASE_ADDR1            KONA_SSP4_BASE_VA /* brcm_rdb_sspil.h */
+#define SSP3_BASE_ADDR1            KONA_SSP3_BASE_VA /* brcm_rdb_sspil.h */
+
 
 //****************************************************************************
 // global variable definitions

@@ -26,9 +26,8 @@
 
 #include "xassert.h"
 #include "audio_consts.h"
-#include "csl_aud_drv.h"
 
-
+#include "csl_caph.h"
 #include "audio_vdriver.h"
 #include "sharedmem.h"
 #include "dspcmd.h"

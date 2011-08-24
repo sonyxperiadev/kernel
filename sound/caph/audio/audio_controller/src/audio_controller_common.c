@@ -38,11 +38,11 @@
 #include "resultcode.h"
 
 #include "audio_consts.h"
-#include "csl_aud_drv.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"
 
 #endif
+#include "csl_caph.h"
 #include "audio_gain_table.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"

@@ -35,7 +35,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "log.h"
 #include "resultcode.h"
 #include "mobcom_types.h"
-#include "csl_aud_drv.h"
 #include "chal_caph_switch.h"
 #include "csl_caph.h"
 #include "csl_caph_audioh.h"
