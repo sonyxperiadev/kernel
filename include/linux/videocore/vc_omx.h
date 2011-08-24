@@ -31,6 +31,9 @@
 
 #define OMX_PLUGIN__COMPONENT_NAME_LEN                   128
 
+#define OMX_PLUGIN__ENCODING__YUV420                     0
+#define OMX_PLUGIN__ENCODING__YUVUV128                   1
+#define OMX_PLUGIN__ENCODING__OPAQUE                     2
 
 struct vc_omx_comp_status
 {
@@ -38,9 +41,15 @@ struct vc_omx_comp_status
    unsigned int   enabled;
 };
 
+struct vc_omx_enc_color
+{
+   unsigned int   format;
+};
+
 #define VC_OMX_IOC_MAGIC  'K'
 
 #define VC_OMX_IOC_COMP_STATUS    _IOR( VC_OMX_IOC_MAGIC, 0, struct vc_omx_comp_status )
+#define VC_OMX_IOC_ENC_COLOR      _IOR( VC_OMX_IOC_MAGIC, 1, struct vc_omx_enc_color )
 
 #endif  /* VC_OMX_H */
 
