@@ -39,8 +39,7 @@ Broadcom's express prior written consent.
 #include "osdw_caph_drv.h"
 #ifdef UNDER_LINUX
 #include <mach/io_map.h>
-#include "clock.h"
-#include "clk.h"
+#include <linux/clk.h>
 #endif
 
 //#define CONFIG_VOICE_LOOPBACK_TEST

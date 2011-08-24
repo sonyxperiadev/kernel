@@ -5,6 +5,7 @@
 #include <linux/plist.h>
 #include <linux/notifier.h>
 #include <linux/pm_qos_params.h>
+#include <linux/version.h>
 #include <mach/pi_mgr.h>
 
 #define PI_MGR_QOS_DEFAULT_VALUE 	0xFFFFFFFF
@@ -103,8 +104,12 @@ struct pi
 	struct pm_pi_info pi_info;
 	u32* dep_pi;
 	u32 num_dep_pi;
-	struct pm_qos_request_list* pm_qos;
 	struct pi_ops* ops;
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
+	struct pm_qos_request_list* pm_qos;
+#else	
+	struct pm_qos_request_list pm_qos;
+#endif
 };
 
 struct pi_ops

@@ -649,10 +649,8 @@ static int arm_clk_init(struct clk* clk)
 
     peri_clk_hyst_enable(peri_clk,HYST_ENABLE & clk->flags,
     	(clk->flags & HYST_HIGH) ? CLK_HYST_HIGH: CLK_HYST_LOW);
-    /* ARM clock is never disabled by Software. So set use_cnt to 1 and
-    * update CCU count */
+    /* ARM clock is never disabled by Software. So set use_cnt to 1*/
     clk->use_cnt = 1;
-    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
 
     vco_rate = __proc_clk_get_vco_rate (peri_clk->ccu_clk->ccu_clk_mgr_base);
     /* to get minimium clock >= desired_rate */
