@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2004 - 2008 Broadcom Corporation.  All rights reserved.
+* Copyright 2010 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -12,19 +12,35 @@
 * consent.
 *****************************************************************************/
 
-#ifndef HALAUDIO_AUDIOH_SETTINGS_H_
-#define HALAUDIO_AUDIOH_SETTINGS_H_
+/**
+ *  sigmorph.h
+ *
+ *  PURPOSE:
+ *     This file contains the interface to the Generic DSP utility
+ *
+ *  NOTES:
+ *
+ *****************************************************************************/
+
+#if !defined( SIGMORPH_H )
+#define SIGMORPH_H
 
 /* ---- Include Files ---------------------------------------- */
 /* ---- Constants and Types ---------------------------------- */
 
-#define HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_LEFT_EN     98
-#define HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_RIGHT_EN    158
-#define HALAUDIO_AUDIOH_SETTINGS_GPIO_HEADSET_EN            97
+/* Sigmorph arithmetic ranges */
+#define SIGMORPH_SATURATION_MAX     (0x7FFF)
+#define SIGMORPH_SATURATION_MIN     (-SIGMORPH_SATURATION_MAX-1)
 
-#define HALAUDIO_AUDIOH_SETTINGS_EARPIECE_SPARE_BIT_EN      0
+/* Q12 gain min and max ranges */
+#define SIGMORPH_MAX_DB_GAIN        (18)
+#define SIGMORPH_MIN_DB_GAIN        (-50)
 
+#if defined( __KERNEL__ )
 /* ---- Variable Externs ------------------------------------- */
 /* ---- Function Prototypes ---------------------------------- */
+extern int sigmorph_amplify( int16_t *buf_ptr, int buf_size, int16_t db_gain );
+extern int sigmorph_mix ( int16_t *output, int16_t *op1,  int16_t *op2, int size );
 
-#endif /* HALAUDIO_AUDIOH_SETTINGS_H_ */
+#endif /* __KERNEL__ */
+#endif /* SIGMORPH_H */

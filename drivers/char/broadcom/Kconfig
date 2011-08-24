@@ -163,3 +163,19 @@ config BCM_HAPTICS
     ---help---
     Select m to build the generic HAPTICS driver. This driver must be
     built as a loadable module otherwise initialization will fail.
+    
+config BCM_GIST
+    tristate "Generic I/O Streaming (GIST)"
+    default n
+    ---help---
+    This utility provides low latency non-blocking reads from and writes to files.
+
+config BCM_SIGMORPH
+    tristate "Audio Packet Processing"
+    default n
+    ---help---
+    Codec Streaming eXtensions interface to attenuate/mix audio
+
+source "drivers/char/broadcom/csx/Kconfig"
+
+
