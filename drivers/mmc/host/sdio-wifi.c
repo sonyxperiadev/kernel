@@ -100,6 +100,7 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          PRINT_ERR("unable to request reg GPIO pin %d\n", gpio->reg);
          return -EBUSY;
       }
+      PRINT_INFO("current value of reg GPIO: %d\n", gpio_get_value(gpio->reg));
       gpio_direction_output(gpio->reg, 1);
       gpio_set_value(gpio->reg, 1);
    }
@@ -112,6 +113,8 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          PRINT_ERR("unable to request reset GPIO pin %d\n", gpio->reset);
          goto err_free_gpio_reg;
       }
+      PRINT_INFO("current value of reset GPIO: %d\n", 
+		 gpio_get_value(gpio->reset));
       gpio_direction_output(gpio->reset, 1);
       gpio_set_value(gpio->reset, 1);
    }
@@ -124,6 +127,8 @@ static int wifi_gpio_request(struct sdio_wifi_gpio_cfg *gpio)
          PRINT_ERR("unable to request shutdown GPIO pin %d\n", gpio->shutdown);
          goto err_free_gpio_reset;
       }
+      PRINT_INFO("current value of shutdown GPIO: %d\n", 
+		 gpio_get_value(gpio->shutdown));
       gpio_direction_output(gpio->shutdown, 1);
       gpio_set_value(gpio->shutdown, 1);
    }

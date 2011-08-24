@@ -24,12 +24,12 @@
 // ---- Include Files ----------------------------------------
 
 // ---- Constants and Types ----------------------------------
+/* BCMBLT_RFKILL_GPIO is defined as BT_RST_B - meaning "BlueTooth
+   reset". However it is currently connected in such a way that setting it to
+   high powers BT chip on, and setting it to low powers BT chip off */
 #define BCMBLT_RFKILL_GPIO	177
 #define GPIO_BT_WAKE		165
 #define GPIO_HOST_WAKE 		175
-
-#define BT_WAKE_ASSERT 1
-#define BT_WAKE_DEASSERT !(BT_WAKE_ASSERT)
 
 // ---- Variable Externs -------------------------------------
 // ---- Function Prototypes ----------------------------------

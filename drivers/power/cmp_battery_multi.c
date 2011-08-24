@@ -109,6 +109,15 @@ struct multi_data
 #define INT_SETUP_SLEEP_MSECS      50
 
 /* ---- Private Variables ------------------------------------------------ */
+
+/* Debug macro */
+#define PRINT_DEBUG(format, args...) \
+    do { if (mod_debug) printk(KERN_WARNING "[cmp_battery_multi]: " format, ## args); } while (0)
+
+/* define mod_debug module parameter to enable/disable debug messages */
+static int mod_debug = 0x0;
+module_param(mod_debug, int, 0644);
+
 static const __devinitconst char gBanner[] =
     KERN_INFO "Multi Battery Driver: 1.02\n";
 
@@ -322,11 +331,11 @@ static int get_voltage(void)
          voltage = g_multi_data.pt_platform_data->battery_min_voltage*1000;
       }
       
-      printk(KERN_DEBUG "%s() battery_voltage: %d\n", __FUNCTION__, voltage);
+      PRINT_DEBUG("%s() battery_voltage: %d\n", __FUNCTION__, voltage);
    }
    else
    {
-      printk(KERN_DEBUG "%s() battery monitor get_battery_voltage_fn() "
+      PRINT_DEBUG("%s() battery monitor get_battery_voltage_fn() "
              "not configured\n", __FUNCTION__);
       voltage = g_multi_data.pt_platform_data->battery_max_voltage*1000;
    }
@@ -343,11 +352,11 @@ static int get_charge()
    {      
       charge_percent = 
          pt_battery_monitor->get_charge_fn(g_multi_data.pt_battery_monitor_data);
-      printk(KERN_DEBUG "%s() battery_charge: %d\n", __FUNCTION__, charge_percent);      
+      PRINT_DEBUG("%s() battery_charge: %d\n", __FUNCTION__, charge_percent);
    }
    else
    {
-      printk(KERN_DEBUG "%s() battery monitor get_charge_fn() not configured\n",
+      PRINT_DEBUG("%s() battery monitor get_charge_fn() not configured\n",
              __FUNCTION__);
 
       /* calculate charge */
@@ -367,7 +376,7 @@ static int get_charge()
    {  
       /* Need to keep this value in range. */
       charge_percent = 100;
-      printk(KERN_DEBUG "%s() charge out of range %d, setting to 100\n",
+      PRINT_DEBUG("%s() charge out of range %d, setting to 100\n",
                 __FUNCTION__, charge_percent);
    }         
    return charge_percent;
@@ -378,8 +387,7 @@ static int battery_get_property(struct power_supply *pt_power_supply,
                                 union power_supply_propval *val)
 {
    int ret = 0;
-   printk(KERN_DEBUG "%s() requested property: %d\n", 
-          __FUNCTION__, psp);
+   PRINT_DEBUG("%s() requested property: %d\n", __FUNCTION__, psp);
    
    switch (psp) 
    {
@@ -424,7 +432,7 @@ static int battery_get_property(struct power_supply *pt_power_supply,
          break;
    }
 
-   printk(KERN_DEBUG "%s() property: %d value: %d\n", __FUNCTION__, psp, val->intval);
+   PRINT_DEBUG("%s() property: %d value: %d\n", __FUNCTION__, psp, val->intval);
    return ret;
 }
 
@@ -442,7 +450,7 @@ static int power_get_property(struct power_supply *pt_power_supply,
          return -EINVAL;
    }
    
-   printk(KERN_DEBUG "%s() property: %d value: %d\n", 
+   PRINT_DEBUG("%s() property: %d value: %d\n", 
           __FUNCTION__, psp, val->intval);
    return 0;
 }
@@ -461,7 +469,7 @@ static int usbpower_get_property(struct power_supply *pt_power_supply,
          return -EINVAL;
    }
    
-   printk(KERN_DEBUG "%s() property: %d value: %d\n",
+   PRINT_DEBUG("%s() property: %d value: %d\n",
           __FUNCTION__, psp, val->intval);
    return 0;
 }
@@ -500,12 +508,12 @@ static void ac_power_isr_handler_work(struct work_struct *p_work)
    if (is_ac_connected())
    {  
       wake_lock(&g_multi_data.wakelock);
-      printk(KERN_DEBUG "%s() taking wake lock\n", __FUNCTION__);
+      PRINT_DEBUG("%s() taking wake lock\n", __FUNCTION__);
    }
    else
    {  
       wake_unlock(&g_multi_data.wakelock);
-      printk(KERN_DEBUG "%s() releasing wake lock\n", __FUNCTION__);
+      PRINT_DEBUG("%s() releasing wake lock\n", __FUNCTION__);
    }
 
    /* send uEvent indicating that power PSY has been changed */
@@ -514,7 +522,7 @@ static void ac_power_isr_handler_work(struct work_struct *p_work)
 
 static void battery_external_power_changed(struct power_supply *t_power_supply)
 {   
-   printk(KERN_DEBUG "%s() called\n", __FUNCTION__);
+   PRINT_DEBUG("%s() called\n", __FUNCTION__);
 }
 
 static void cmp_battery_multi_power_off(void)
@@ -526,11 +534,12 @@ static int setup_gpios(struct battery_monitor *pt_battery_monitor)
 {
    int rc;
    
-   printk(KERN_DEBUG "%s() power down gpio: %d\n", __FUNCTION__, g_gpio_power_control);
-   printk(KERN_DEBUG "%s() ac power gpio  : %d\n",
-          __FUNCTION__, pt_battery_monitor->gpio_ac_power); 
-   printk(KERN_DEBUG "%s() charger gpio   : %d\n",
-          __FUNCTION__, pt_battery_monitor->gpio_charger); 
+   printk(KERN_INFO "%s() power on/off gpio: %d ac power gpio: %d "
+	  "charger gpio: %d\n", 
+	  __FUNCTION__,
+	  g_gpio_power_control,
+	  pt_battery_monitor->gpio_ac_power,
+	  pt_battery_monitor->gpio_charger);
 
    if (g_gpio_power_control >= 0)
    {   
@@ -554,7 +563,8 @@ static int setup_gpios(struct battery_monitor *pt_battery_monitor)
       }   
    }
 
-   /* handle AC power gpio. We are assuming that its presence was already checked */
+   /* handle AC power gpio. We are assuming that its presence was already 
+      checked */
    rc = gpio_request_one(pt_battery_monitor->gpio_ac_power,
                          GPIOF_IN, "ac power");
    if (rc)
@@ -640,16 +650,17 @@ static int __devinit battery_probe(struct platform_device *p_dev)
 
    if (p_dev->dev.platform_data == NULL)
    {  /* Need this information. */
-      printk(KERN_ERR "%s() error p_dev->dev.platform_data == NULL\n", __FUNCTION__);
+      printk(KERN_ERR "%s() error p_dev->dev.platform_data == NULL\n",
+	     __FUNCTION__);
       return -ENODATA;
    }
    
    pt_cbm_platform_data = (struct cbm_platform_data *)p_dev->dev.platform_data;
-   
-   printk(KERN_DEBUG "battery max voltage: %d\n", 
-          pt_cbm_platform_data->battery_max_voltage);
-   printk(KERN_DEBUG "battery min voltage: %d\n", 
-          pt_cbm_platform_data->battery_min_voltage);
+
+   printk(KERN_INFO "%s() battery max voltage: %d battery min voltage: %d\n", 
+	  __FUNCTION__, 
+	  pt_cbm_platform_data->battery_max_voltage,
+	  pt_cbm_platform_data->battery_min_voltage);
 
    /* Needed to turn off the device. */   
    g_gpio_power_control = pt_cbm_platform_data->gpio_power_control;
@@ -674,7 +685,8 @@ static int __devinit battery_probe(struct platform_device *p_dev)
    wake_lock_init(&g_multi_data.wakelock, WAKE_LOCK_SUSPEND, wake_lock_name);
 
    /* Prepare to start the delayed work. */
-   INIT_DELAYED_WORK_DEFERRABLE(&g_multi_data.t_battery_dwork, multi_battery_work);
+   INIT_DELAYED_WORK_DEFERRABLE(&g_multi_data.t_battery_dwork, 
+				multi_battery_work);
 
    /* register battery PSY with power supply framework */
    ret = power_supply_register(&p_dev->dev, &g_multi_data.battery_psy);
@@ -710,14 +722,11 @@ static int __devinit battery_probe(struct platform_device *p_dev)
    destroy_workqueue(isr_wq);
   err_isr_wq:
    pm_power_off = NULL;
-   printk(KERN_DEBUG "%s(): return %d\n", __FUNCTION__, ret);
    return ret;
 }
 
 static int __devexit battery_remove(struct platform_device *p_dev)
 {
-   printk(KERN_DEBUG "%s() entering ...\n", __FUNCTION__);
-
    /* unregister power supplies from PSY framework */
    power_supply_unregister(&g_multi_data.battery_psy);
    power_supply_unregister(&g_multi_data.ac_power_psy);
@@ -743,8 +752,6 @@ static int __devexit battery_remove(struct platform_device *p_dev)
       close_gpios(g_multi_data.pt_battery_monitor);
 
    wake_lock_destroy(&g_multi_data.wakelock);
-
-   printk(KERN_DEBUG "%s() exiting ...\n", __FUNCTION__);   
    return 0;
 }
 

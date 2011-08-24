@@ -570,7 +570,10 @@ err_del_event:
 err_close_services:
    for ( i = 0; i < instance->num_connections; i++ )
    {
-      vchi_service_close( instance->vchi_handle[i] );
+      if ( instance->vchi_handle[i] != NULL )
+      {
+         vchi_service_close( instance->vchi_handle[i] );
+      }
    }
    vcos_mutex_delete( &instance->rsp_lock );
 err_delete_cmd_lock:
