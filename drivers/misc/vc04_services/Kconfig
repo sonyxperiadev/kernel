@@ -88,6 +88,44 @@ config VC_VMCS_FB
         help
           Support for the VC framebuffer on the Broadcom reference
           phone. Uses the VCHIQ stack.	   
+
+config VC_VMCS_SM
+	tristate "VMCS Shared Memory"
+	default m
+        help
+          Support for the VC shared memory on the Broadcom reference
+          design. Uses the VCHIQ stack.	   
 	   
+config VC_OVL
+	tristate "Videocore Overlay"
+	default n
+        help
+          Tracker for videocore overlay allocation, used in integration
+          with Android for multimedia support.	   
 
+config VC_OMX
+	tristate "Videocore OpenMAX"
+	default n
+        help
+          Tracker for videocore openmax capabilities, used in integration
+          with Android for multimedia support of StageFright.	   
 
+config VC_HNFO
+	tristate "Videocore HDMI Information"
+	default n
+        help
+          Tracker for videocore hdmi capabilities, used in integration
+          with Android for multimedia support.	   
+
+config VC_DNFO
+	tristate "Videocore Display Information"
+	default n
+        help
+          Tracker for videocore display capabilities, used in integration
+          with Android.	   
+
+config VC_MEM
+	tristate "Videocore Memory"
+	default m
+        help
+          Helper for videocore memory access and total size allocation.	   
