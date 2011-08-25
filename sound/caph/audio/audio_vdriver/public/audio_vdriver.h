@@ -314,7 +314,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 void AUDDRV_Telephony_DeinitHW(void *pData);
 
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off );
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
 		UInt32 dev, 
 		SysAudioParm_t* pAudioParm);

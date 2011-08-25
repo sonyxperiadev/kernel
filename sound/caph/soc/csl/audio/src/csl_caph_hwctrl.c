@@ -2791,7 +2791,7 @@ void csl_caph_hwctrl_init(void)
 void csl_caph_hwctrl_deinit(void)
 {
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_deinit:: \n"));
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_FPGA_TEST
 	// this is just for fpga test. in real code may not need this.
 	IRQ_Disable(CAPH_NORM_IRQ);
 	 if (AUDDRV_HISR_HANDLE )

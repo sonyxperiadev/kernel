@@ -42,9 +42,8 @@
 
 #include "csl_vpu.h"
 #include "audio_consts.h"
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 #include "sysparm.h"
-#include "ostask.h"
 #endif
 #include "audio_gain_table.h"
 #include "csl_caph.h"
@@ -52,10 +51,17 @@
 #include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
-//#include "i2s.h"
 #include "log.h"
 #include "osheap.h"
 #include "xassert.h"
+
+#ifdef CONFIG_DIGI_MIC
+#if !defined(NO_PMU)
+#include "pmu.h"
+#include "hal_pmu.h"
+#include "hal_pmu_private.h"
+#endif
+#endif
 
 #if !defined(NO_PMU)
 #ifdef PMU_BCM59055
@@ -385,7 +391,7 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain);
 
 #if  ( defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
 
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 #if !defined(NO_PMU)
 //on AP:
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
@@ -421,7 +427,6 @@ static void AUDCTRL_UpdatePath (CSL_CAPH_PathID pathID,
                                                 AUDIO_HW_ID_t sink,
                                                 AUDCTRL_SPEAKER_t spk,
                                                 AUDCTRL_MICROPHONE_t mic);
-static Int16 AUDCTRL_ConvertScale2Millibel(Int16 ScaleValue);
 #if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
 static HS_PMU_GainMapping_t getHSPMUGain(Int16 gain);
 static IHF_PMU_GainMapping_t getIHFPMUGain(Int16 gain);
@@ -1753,10 +1758,8 @@ void AUDCTRL_EnableRecord(
 	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	{
-#ifdef CONFIG_AUDIO_BUILD
 		// Enable power to digital microphone
 		powerOnDigitalMic(TRUE);
-#endif		
 	}
 
 	if(mic==AUDCTRL_DUAL_MIC_DIGI12 
@@ -1859,9 +1862,7 @@ void AUDCTRL_DisableRecord(
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	{
 		// Disable power to digital microphone
-#ifdef CONFIG_AUDIO_BUILD		
 		powerOnDigitalMic(FALSE);
-#endif		
 	}	
 }
 
@@ -2112,69 +2113,69 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 		}
                 break;
         case AUDCTRL_MIX_EAR_TONE:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
+		dspGain = (Int16)gain;
 		// It is decided that tone will always use
 		// ARM2SP interface #2.
-	        if(FALSE == CSL_SetARM2Speech2DLGain(dspGain))
+	    if(FALSE == CSL_SetARM2Speech2DLGain(dspGain))
 		{
                     audio_xassert(0,0);
 		}
 		break;
         case AUDCTRL_MIX_EAR_SPEECH_PLAY:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
+		dspGain = (Int16)gain;
 		// It is decided that speech playback will always use
 		// ARM2SP interface #1.
-	        if(FALSE == CSL_SetARM2SpeechDLGain(dspGain))
+	    if(FALSE == CSL_SetARM2SpeechDLGain(dspGain))
 		{
                     audio_xassert(0,0);
 		}
 		break;
         case AUDCTRL_MIX_EAR_DL:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
-	        if(FALSE == CSL_SetInpSpeechToARM2SpeechMixerDLGain(dspGain))
+		dspGain = (Int16)gain;
+	    if(FALSE == CSL_SetInpSpeechToARM2SpeechMixerDLGain(dspGain))
 		{
                     audio_xassert(0,0);
 		}
 		break;	
         case AUDCTRL_MIX_UL_MIC:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
-	        if(FALSE == CSL_SetInpSpeechToARM2SpeechMixerULGain(dspGain))
+		dspGain = (Int16)gain;
+	    if(FALSE == CSL_SetInpSpeechToARM2SpeechMixerULGain(dspGain))
 		{
                     audio_xassert(0,0);
 		}
 		break;	
         case AUDCTRL_MIX_UL_TONE:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
+		dspGain = (Int16)gain;
 		// It is decided that tone will always use
 		// ARM2SP interface #2.		
-	        if(FALSE == CSL_SetARM2Speech2ULGain(dspGain))
+	    if(FALSE == CSL_SetARM2Speech2ULGain(dspGain))
 		{
                     audio_xassert(0,0);
 		}
 		break;	
         case AUDCTRL_MIX_UL_SPEECH_PLAY:
         case AUDCTRL_MIX_UL_AUDIO_PLAY:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
+		dspGain = (Int16)gain;
 		// It is decided that speech/music playback will always use
 		// ARM2SP interface #1.
-	        if(FALSE == CSL_SetARM2SpeechULGain(dspGain))
+	    if(FALSE == CSL_SetARM2SpeechULGain(dspGain))
 		{
                     audio_xassert(0,0);
 		}
 		break;	
         case AUDCTRL_MIX_SPEECH_REC_TONE:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
-	        if(FALSE == CSL_SetARM2SpeechULGain(dspGain))
+		dspGain = (Int16)gain;
+	    if(FALSE == CSL_SetARM2SpeechULGain(dspGain))
 		{
                     audio_xassert(0,0);
 		}
 		break;	
         case AUDCTRL_MIX_SPEECH_REC_MIC:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
+		dspGain = (Int16)gain;
 	    AUDDRV_SetULSpeechRecordGain(dspGain);
 		break;	
         case AUDCTRL_MIX_SPEECH_REC_DL:
-		dspGain = AUDCTRL_ConvertScale2Millibel((Int16)gain);
+		dspGain = (Int16)gain;
         if(FALSE == CSL_SetDlSpeechRecGain(dspGain))
 		{
                     audio_xassert(0,0);
@@ -2272,9 +2273,7 @@ void AUDCTRL_SetAudioLoopback(
     AUDIO_HW_ID_t audPlayHw, audRecHw;
 
     CSL_CAPH_HWCTRL_CONFIG_t hwCtrlConfig;
-#ifdef CONFIG_AUDIO_BUILD
     Int16 tempGain = 0;
-#endif
 	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
 
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
@@ -2407,10 +2406,8 @@ void AUDCTRL_SetAudioLoopback(
     	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
     	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	    {
-#ifdef CONFIG_AUDIO_BUILD
 		    // Enable power to digital microphone
     		powerOnDigitalMic(TRUE);
-#endif		
         }
 	// enable HW path
         hwCtrlConfig.streamID = CSL_CAPH_STREAM_NONE;
@@ -2420,7 +2417,7 @@ void AUDCTRL_SetAudioLoopback(
         hwCtrlConfig.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
         hwCtrlConfig.chnlNum = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
         hwCtrlConfig.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 
         tempGain = (Int16)(AUDIO_GetParmAccessPtr()[audio_mode].srcmixer_input_gain_l);	
         hwCtrlConfig.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
@@ -2495,9 +2492,7 @@ void AUDCTRL_SetAudioLoopback(
 	       || (mic == AUDCTRL_MIC_SPEECH_DIGI))		
 	    {
 			// Enable power to digital microphone
-#ifdef CONFIG_AUDIO_BUILD			
 			powerOnDigitalMic(FALSE);
-#endif			
 		}	
 
         memset(&hwCtrlConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
@@ -2603,38 +2598,6 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
 // Private function definitions
 //=============================================================================
 
-
-//============================================================================
-//
-// Function Name: AUDCTRL_ConvertScale2Millibel
-//
-// Description:   converts gain from fixed point to millibel .
-//
-//============================================================================
-
-/* fixed point scale factor implementation */
-#define GAIN_FRACTION_BITS_NUMBER         16
-#define FIXED_POINT_UNITY_GAIN            (1<<GAIN_FRACTION_BITS_NUMBER)
-
-static Int16 AUDCTRL_ConvertScale2Millibel(Int16 ScaleValue)
-{
-#ifdef CONFIG_AUDIO_BUILD
-
-    float scale;
-
-    /* get scale value in floating point format */
-    scale = ((float)(ScaleValue)) * (1.0/(float)FIXED_POINT_UNITY_GAIN);
-
-    /* convert millibel to linear scale factor */
-    scale = 2000.0 * log(scale);
-
-    /* return in fixed point format */
-    return ((Int16)(scale)); 
-#else
-	return 	ScaleValue;
-#endif	
-
-}
 
 //============================================================================
 //
@@ -3335,7 +3298,7 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 #if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
 		hs_path = PMU_AUDIO_HS_BOTH;
 #endif
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 #else
 		// hardcode for test
@@ -3395,7 +3358,7 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	{
 		int i;
 		int ihf_gain;
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
 #else
 		// hardcode for test purpose
@@ -3453,14 +3416,14 @@ void powerOnDigitalMic(Boolean powerOn)
 #if !defined(NO_PMU)
 	if (powerOn == TRUE)
 	{
-#ifdef CONFIG_AUDIO_BUILD	
+#ifdef CONFIG_DIGI_MIC
 		// Enable power to digital microphone
 		PMU_SetLDOMode(PMU_HVLDO7CTRL,0);
 #endif		
 	}
 	else //powerOn == FALSE
 	{
-#ifdef CONFIG_AUDIO_BUILD	
+#ifdef CONFIG_DIGI_MIC
 		// Enable power to digital microphone
 		PMU_SetLDOMode(PMU_HVLDO7CTRL,1);
 #endif		

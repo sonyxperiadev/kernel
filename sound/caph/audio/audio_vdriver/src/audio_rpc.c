@@ -48,6 +48,7 @@ typedef struct
 }Audio_Params_t;
 
 static bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp);
+static bool_t xdr_AudioCompfilter_t(void* xdrs, AudioCompfilter_t *rsp);
 #define _T(a) a
 
 /*************************************  FRAMEWORK CODE *******************************************************************/
@@ -58,10 +59,8 @@ static RPC_XdrInfo_t AUDIO_Prim_dscrm[] = {
 	{ MSG_AUDIO_CTRL_GENERIC_RSP,_T("MSG_AUDIO_CTRL_GENERIC_RSP"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
 	{ MSG_AUDIO_CTRL_DSP_REQ,_T("MSG_AUDIO_CTRL_DSP_REQ"), (xdrproc_t) xdr_Audio_Params_t,  sizeof( Audio_Params_t ), 0},
 	{ MSG_AUDIO_CTRL_DSP_RSP,_T("MSG_AUDIO_CTRL_DSP_RSP"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
-#ifdef CONFIG_AUDIO_BUILD	
 	{ MSG_AUDIO_COMP_FILTER_REQ,_T("MSG_AUDIO_COMP_FILTER_REQ"), (xdrproc_t)xdr_AudioCompfilter_t, sizeof( AudioCompfilter_t ), 0 },
 	{ MSG_AUDIO_COMP_FILTER_RSP,_T("MSG_AUDIO_COMP_FILTER_RSP"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
-#endif	
 	{ MSG_AUDIO_CALL_STATUS_IND,_T("MSG_AUDIO_CALL_STATUS_IND"), (xdrproc_t)xdr_UInt32, sizeof( UInt32 ), 0 },
 	{ (MsgType_t)__dontcare__, "",NULL_xdrproc_t, 0,0 } 
 };
@@ -105,7 +104,6 @@ void HandleCallStatusIndCb(InterTaskMsg_t *taskMsg)
 	}
 }
 #endif
-//#ifdef CONFIG_AUDIO_BUILD
 #if defined(FUSE_APPS_PROCESSOR)
 void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
                             ResultDataBufHandle_t dataBufHandle,
@@ -128,7 +126,6 @@ void HandleAudioEventrespCb(RPC_Msg_t* pMsg,
         Log_DebugPrintf(LOGID_MISC, "HandleAudioEventrespCb : dataBufHandle is NULL \r\n");
 }
 #endif
-//#endif
 
 void HandleAudioEventReqCb(RPC_Msg_t* pMsg, 
 						 ResultDataBufHandle_t dataBufHandle, 
@@ -153,7 +150,6 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		UInt32 val = audio_control_dsp(p->param1,p->param2,p->param3,p->param4,p->param5,p->param6);
 		
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_CTRL_DSP_RSP, &val);
-//#ifdef CONFIG_AUDIO_BUILD	
 	}
 	else if(pMsg->msgId == MSG_AUDIO_COMP_FILTER_REQ)
 	{
@@ -161,7 +157,6 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		UInt32 val = audio_cmf_filter(p);
 		
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_COMP_FILTER_RSP, &val);
-//#endif
 	}
 	else
 		xassert(0, pMsg->msgId);
@@ -272,7 +267,6 @@ bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp)
 	else
 		return FALSE;
 }
-#ifdef CONFIG_AUDIO_BUILD
 bool_t xdr_DlCompfilter_t(void* xdrs, EQDlCompfilter_t *rsp)
 {
 	XDR_LOG(xdrs,"EQDlCompfilter_t")
@@ -321,7 +315,7 @@ bool_t xdr_AudioCompfilter_t(void* xdrs, AudioCompfilter_t *rsp)
 	else
 		return FALSE;
 }
-#endif
+
 #if defined(FUSE_APPS_PROCESSOR) 
 
 UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4,UInt32 param5,UInt32 param6)
@@ -436,7 +430,6 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 
 void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t* cf)
 {
-#ifdef CONFIG_AUDIO_BUILD
 	RPC_Msg_t msg;
 	
 	msg.msgId = MSG_AUDIO_COMP_FILTER_REQ;
@@ -445,13 +438,11 @@ void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t* cf)
 	msg.dataBuf = (void*)cf;
 	msg.dataLen = 0;
 	RPC_SerializeReq(&msg);
-#endif	
 }
 
 UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
 {
 	UInt32 val = (UInt32)0;
-#ifdef CONFIG_AUDIO_BUILD
 	UInt32 tid;
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
@@ -460,7 +451,6 @@ UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
 	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
 	CAPI2_audio_cmf_filter(tid, audioClientId,cf);
 	RPC_SyncWaitForResponse( tid,audioClientId, &ackResult, &msgType, NULL );
-#endif
 	return val;
 }
 

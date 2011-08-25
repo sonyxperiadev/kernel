@@ -39,12 +39,9 @@
 #include "audio_consts.h"
 #include "shared.h"
 #include "dspcmd.h"
-#ifdef CONFIG_AUDIO_BUILD
-#include "ripcmdq.h"
-#endif
 #include "csl_apcmd.h"
 #include "audio_consts.h"
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 #include "sysparm.h"
 #endif
 #include "ostask.h"
@@ -64,8 +61,6 @@
 * @addtogroup AudioDriverGroup
 * @{
 */
-//This flag should be removed when Rhea DSP image can support IHF.
-#define RHEA_DSP_IHF_FEATURE
 
 //=============================================================================
 // Public Variable declarations
@@ -118,11 +113,11 @@ static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain);
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void);
 #define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
 #endif
-
+static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void);
 //=============================================================================
 // Functions
 //=============================================================================
@@ -201,16 +196,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     sink = config.sink;
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
-		// Linux only change - Start
-        // special path for IHF voice call 
-        // need to use the physical address  
-		// Linux only change
-		AP_SharedMem_t *ap_shared_mem_ptr = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
-		// Linux only : to get the physical address use the virtual address to compute offset and 
-		// add to the base address 
-   		UInt32 *memAddr = AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0]) 
-                                       - (UInt32)ap_shared_mem_ptr); 
-
+		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
        
         config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
@@ -224,9 +210,8 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 	{
 	    config.source = CSL_CAPH_DEV_DSP;
 	}
-	// Linux only change - End
 
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
     config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
@@ -274,7 +259,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 
         ((AUDDRV_PathID_t *)pData)->ul2PathID = csl_caph_hwctrl_EnablePath(config);
     }
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
     //Config sidetone
     AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
 				AUDIO_GetParmAccessPtr());
@@ -315,11 +300,9 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
     (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
-#ifdef RHEA_DSP_IHF_FEATURE		
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
 							FALSE,
 							FALSE);
-#endif		
 	}	    
     
     currSpkr = AUDDRV_SPKR_NONE;
@@ -487,17 +470,11 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 
 	if(AUDDRV_GetDRVDeviceFromSpkr(currSpkr) == CSL_CAPH_DEV_IHF)
 	{
-#ifdef CONFIG_AUDIO_BUILD	
-#ifdef RHEA_DSP_IHF_FEATURE		
-		memAddr = AUDIO_Return_IHF_48kHz_buffer_base_address();
-#endif		
-#endif
+		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-#ifdef RHEA_DSP_IHF_FEATURE		
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
 							FALSE,
 							FALSE);
-#endif		
 	}	
 	
 	//Enable the new speaker path
@@ -534,14 +511,10 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 	sink = config.sink;
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
-#ifdef CONFIG_AUDIO_BUILD	
-#ifdef RHEA_DSP_IHF_FEATURE		
-		memAddr = AUDIO_Return_IHF_48kHz_buffer_base_address();
-#endif		
-#endif
+		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
 	}	
-#ifdef CONFIG_AUDIO_BUILD	
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
     config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
@@ -559,15 +532,13 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
-#ifdef RHEA_DSP_IHF_FEATURE		
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
 							FALSE,
 							FALSE); //integrate SDB CL 366484 
-#endif		
 	}	
 
 	((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 	//Config sidetone
 	AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
 			AUDIO_GetParmAccessPtr());    
@@ -841,7 +812,7 @@ UInt32 AUDDRV_GetAudioDev()
 
 void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 dev)
 {
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 	SysAudioParm_t* pAudioParm;
 	pAudioParm = AUDIO_GetParmAccessPtr();
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() audio_mode==%d\n\r", audio_mode );
@@ -949,7 +920,7 @@ Boolean AUDDRV_GetVCflag( void )
 // Description:   Set DSP UL and DL filter
 //
 //=============================================================================
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
         UInt32 dev,
 		SysAudioParm_t* pAudioParm)
@@ -1121,15 +1092,17 @@ void AUDDRV_User_HandleDSPInt ( UInt32 param1, UInt32 param2, UInt32 param3 )
 
 Boolean AUDDRV_IsDualMicEnabled(void)
 {
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
     AudioMode_t mode = AUDIO_MODE_HANDSET;
     mode = AUDDRV_GetAudioMode();
     return (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);
 #else
-	return FALSE; /* remove when above CONFIG_AUDIO_BUILD enabled */
+	return FALSE; /* remove when above CONFIG_DEPENDENCY_READY_SYSPARM enabled */
 #endif
 }
-#ifdef CONFIG_AUDIO_BUILD
+
+
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 
 //=============================================================================
 //
@@ -1905,6 +1878,21 @@ CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
     return cslDev;
 }
 
+
+static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void)
+{
+        // special path for IHF voice call 
+        // need to use the physical address  
+		// Linux only change
+		AP_SharedMem_t *ap_shared_mem_ptr = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		// Linux only : to get the physical address use the virtual address to compute offset and 
+		// add to the base address 
+   		UInt32 *memAddr = AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0]) 
+                                       - (UInt32)ap_shared_mem_ptr); 
+        
+        return memAddr;
+
+}
 
 //#endif
 

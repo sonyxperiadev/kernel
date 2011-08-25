@@ -783,13 +783,6 @@ typedef enum
 //}CSL_CAPH_HWCTRL_INFO_t;
 
 
-#ifdef CONFIG_AUDIO_BUILD
-/**
-* CAPH Audio PathID for audio path. Used by Audio Controller
-******************************************************************************/
-typedef UInt8 CSL_CAPH_PathID;
-#endif
-
 /**
 * CAPH HW path configuration parameters
 ******************************************************************************/

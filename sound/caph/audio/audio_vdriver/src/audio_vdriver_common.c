@@ -133,7 +133,7 @@ void AUDDRV_Init( void )
 #ifndef _SAMOA_
 	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
 #endif	
-#ifdef CONFIG_AUDIO_BUILD
+#if 0  // These features are not needed in LMP now.
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
 	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
 	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_ISR_Handler);
@@ -156,7 +156,7 @@ void AUDDRV_Init( void )
 	//split file to CP and AP.
 	{
 	UInt8 cur_mode = (UInt8) AUDDRV_GetAudioMode();
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 #if defined(USE_NEW_AUDIO_PARAM)
 	UInt8 cur_app = 0; 
 	UInt16 voice_vol_init_in_dB = SYSPARM_GetAudioParamsFromFlash( cur_mode, cur_app )->voice_volume_init;  //dB
