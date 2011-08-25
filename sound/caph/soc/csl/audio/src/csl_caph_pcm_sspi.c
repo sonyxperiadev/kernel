@@ -516,9 +516,9 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 		if(devCfg->format == CSL_PCM_WORD_LENGTH_PACK_16_BIT)
 		{
 			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_RX0, SSPI_FIFO_DATA_PACK_16BIT);
-			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_RX1, SSPI_FIFO_DATA_PACK_NONE);
+			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_RX1, SSPI_FIFO_DATA_PACK_16BIT);
 			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX0, SSPI_FIFO_DATA_PACK_16BIT);
-			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_NONE);
+			chal_sspi_set_fifo_pack(pDevice, SSPI_FIFO_ID_TX1, SSPI_FIFO_DATA_PACK_16BIT);
 		} else {
 			chal_sspi_set_fifo_pack(pDevice,
 									SSPI_FIFO_ID_RX0, SSPI_FIFO_DATA_PACK_NONE);
@@ -703,7 +703,7 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
     chal_sspi_enable(pDevice, 1);
 
     // setting from asic team
-    chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
+    chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0x3, 0x1c); // chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX0, 0xf, 0x1);
     chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_RX1, 0x3, 0x3);
 	//chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x1, 0x1); //this requires bigger CFIFO size, does not work well with SRC either.
 	chal_sspi_set_fifo_pio_threshhold(pDevice, SSPI_FIFO_ID_TX0, 0x3, 0x1c); //audio quality from SRC is greatly improved.

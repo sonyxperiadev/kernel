@@ -194,6 +194,9 @@ static CSL_CAPH_CFIFO_FIFO_e fm_capture_cfifo = CSL_CAPH_CFIFO_NONE;
 
 static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
 
+static int ssp_pcm_usecount = 0;
+
+
 //****************************************************************************
 // local function declarations
 //****************************************************************************
@@ -3210,6 +3213,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 			csl_caph_config_blocks(path->pathID, blocks);
 			csl_caph_start_blocks(path->pathID);
+			ssp_pcm_usecount++;
 			return path->pathID;
 		}
     }   
@@ -3224,6 +3228,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 			csl_caph_config_blocks(path->pathID, blocks);
 			csl_caph_start_blocks(path->pathID);
+			ssp_pcm_usecount++;
 			return path->pathID;
 		}
     }
@@ -3640,13 +3645,15 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			ssp_bt_running = FALSE;
 		}
 	} else if(path->source == CSL_CAPH_DEV_BT_MIC || path->sink == CSL_CAPH_DEV_BT_SPKR) {
-		if (pcmRunning == TRUE)
+		ssp_pcm_usecount--;
+		if ((pcmRunning == TRUE) && (ssp_pcm_usecount <= 0))
 		{
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
 			pcmRunning = FALSE;
+			ssp_pcm_usecount = 0;
 		}
 	}
 

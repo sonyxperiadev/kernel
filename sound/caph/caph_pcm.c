@@ -793,6 +793,11 @@ static int PcmCaptureTrigger(
 		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_NONE;
 		chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_DIGI_MIC_L;
 	}
+	else if(pSel[0]==AUDCTRL_MIC_BTM)
+	{
+		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_MONO_BT_IN;
+		chip->streamCtl[substream_number].dev_prop.u.c.aud_dev = AUDDRV_DEV_BT_MIC; 	
+	}
 	else if(pSel[0]==AUDCTRL_MIC_I2S)
 	{
 		chip->streamCtl[substream_number].dev_prop.u.c.hw_id = AUDIO_HW_I2S_IN;
