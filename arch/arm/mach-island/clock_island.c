@@ -4362,8 +4362,12 @@ int __init clock_late_init(void)
 #ifdef CONFIG_DEBUG_FS
 	int i;
 	clock_debug_init();
-	for (i=0; i<ARRAY_SIZE(island_clk_tbl); i++)
-		clock_debug_add_clock (island_clk_tbl[i].clk);
+	for (i=0; i<ARRAY_SIZE(island_clk_tbl); i++) {
+		if (island_clk_tbl[i].clk->clk_type == CLK_TYPE_CCU)
+			clock_debug_add_ccu(island_clk_tbl[i].clk);
+		else
+			clock_debug_add_clock (island_clk_tbl[i].clk);
+	}
 #endif
 	return 0;
 }
