@@ -57,7 +57,7 @@ static CSX_MODULE_FNCS gModuleFncs =
    .csx_module_set_point = csx_halaudio_set_point,
 };
 
-DECLARE_MUTEX(csx_halaudio_sem);
+DEFINE_SEMAPHORE(csx_halaudio_sem);
 
 /* HAL Audio specific information */
 static int gNumCodecs;

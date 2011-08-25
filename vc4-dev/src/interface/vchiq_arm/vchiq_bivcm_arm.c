@@ -123,7 +123,7 @@ static FRAGMENTS_T *g_fragments_base;
 static FRAGMENTS_T *g_free_fragments;
 static int          g_free_fragments_count;
 struct semaphore    g_free_fragments_sema;
-DECLARE_MUTEX(g_free_fragments_mutex);
+DEFINE_SEMAPHORE(g_free_fragments_mutex);
 
 static irqreturn_t
 vchiq_doorbell_irq(int irq, void *dev_id);

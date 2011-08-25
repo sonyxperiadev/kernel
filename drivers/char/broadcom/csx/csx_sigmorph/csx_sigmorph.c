@@ -132,7 +132,7 @@ static int csx_sigmorph_syncregistry_pending [CSX_IO_MODULE_NUM_MAX];
 static int csx_sigmorph_syncregistry_enable  [CSX_IO_MODULE_NUM_MAX];
 static unsigned int point_registry_active;
 static unsigned int point_registry_count = 0;
-DECLARE_MUTEX(csx_sigmorph_sem);
+DEFINE_SEMAPHORE(csx_sigmorph_sem);
 
 /* ---- Functions -------------------------------------------------------- */
 

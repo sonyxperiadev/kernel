@@ -100,7 +100,7 @@ static unsigned int gNumPointsAdded = 0;
 static unsigned int gNumPointsActive;
 
 
-DECLARE_MUTEX(csx_gist_sem);
+DEFINE_SEMAPHORE(csx_gist_sem);
 
 static int gSyncEnablePending[CSX_IO_MODULE_NUM_MAX];
 static int gSyncEnable[CSX_IO_MODULE_NUM_MAX];
