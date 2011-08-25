@@ -91,6 +91,10 @@ typedef struct histo_ {
 static histo_t vi_d1, vi_d2, vi_d3, vi_d4;
 #endif /* WLMEDIA_HTSF */
 
+#ifdef SOFTAP
+extern bool ap_cfg_running; /* DL 20110812 merge from PR96418 */
+#endif /* SOFTAP */
+
 #ifdef PROP_TXSTATUS
 #include <wlfc_proto.h>
 #include <dhd_wlfc.h>
@@ -1082,6 +1086,7 @@ dhd_op_if(dhd_if_t *ifp)
 				ret = -EOPNOTSUPP;
 			} else {
 #ifdef SOFTAP
+	if (ap_cfg_running) { /* DL 20110812 merge from PR96418 */
 				 /* semaphore that the soft AP CODE waits on */
 				flags = dhd_os_spin_lock(&dhd->pub);
 
@@ -1090,6 +1095,7 @@ dhd_op_if(dhd_if_t *ifp)
 				 /* signal to the SOFTAP 'sleeper' thread, wl0.1 is ready */
 				up(&ap_eth_ctl.sema);
 				dhd_os_spin_unlock(&dhd->pub, flags);
+	} /* DL 20110812 merge from PR96418 */
 #endif
 				DHD_TRACE(("\n ==== pid:%x, net_device for if:%s created ===\n\n",
 					current->pid, ifp->net->name));
