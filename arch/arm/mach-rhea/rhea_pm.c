@@ -333,7 +333,7 @@ int enter_idle_state(struct kona_idle_state* state)
 	}
 
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT,SOFTWARE_0_EVENT-1);
+	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
 
 	if(pm_en_self_refresh)
 	{
@@ -448,11 +448,11 @@ int enter_idle_state(struct kona_idle_state* state)
 #endif
 
 	clear_wakeup_interrupts();
-	pwr_mgr_process_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT,true);
-	pwr_mgr_process_events(USBOTG_EVENT,SOFTWARE_0_EVENT-1,true);
+	pwr_mgr_process_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT,false);
+	pwr_mgr_process_events(USBOTG_EVENT,PHY_RESUME_EVENT,false);
 
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
-	pwr_mgr_event_clear_events(USBOTG_EVENT,SOFTWARE_0_EVENT-1);
+	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
 
 	if(force_retention)
 		enable_sleep_prevention_clock(1);
