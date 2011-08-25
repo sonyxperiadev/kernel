@@ -1417,6 +1417,13 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
    state->remote = remote;
    state->slot_data = (VCHIQ_SLOT_T *)slot_zero;
 
+   if (local->initialised)
+   {
+      vcos_log_error("%s is already initialised - is there a master/slave mismatch?",
+         is_master ? "master" : "slave");
+      return VCHIQ_ERROR;
+   }
+
    /*
       initialize events and mutexes
     */
@@ -2347,6 +2354,11 @@ vchiq_dump_state(void *dump_context, VCHIQ_STATE_T *state)
       (uint32_t)state->tx_data + (state->local_tx_pos & VCHIQ_SLOT_MASK),
       state->rx_pos,
       (uint32_t)state->rx_data + (state->rx_pos & VCHIQ_SLOT_MASK));
+   vchiq_dump(dump_context, buf, len + 1);
+
+   len = vcos_snprintf(buf, sizeof(buf),
+      "  Version: %d (min %d)",
+      VCHIQ_VERSION, VCHIQ_VERSION_MIN);
    vchiq_dump(dump_context, buf, len + 1);
 
    len = vcos_snprintf(buf, sizeof(buf),
