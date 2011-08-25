@@ -22,6 +22,8 @@
 #define HALAUDIO_AUDIOH_SETTINGS_GPIO_HANDSFREE_RIGHT_EN    158
 #define HALAUDIO_AUDIOH_SETTINGS_GPIO_HEADSET_EN            97
 
+#define HALAUDIO_AUDIOH_SETTINGS_EARPIECE_SPARE_BIT_EN      0
+
 /* ---- Variable Externs ------------------------------------- */
 /* ---- Function Prototypes ---------------------------------- */
 

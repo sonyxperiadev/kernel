@@ -1330,6 +1330,13 @@ static HALAUDIO_AUDIOH_PLATFORM_INFO board_halaudio_audioh_info =
       .headset_en = -1,
 #endif
    },
+
+#ifdef HALAUDIO_AUDIOH_SETTINGS_EARPIECE_SPARE_BIT_EN
+   .earpiece_spare_bit_en = HALAUDIO_AUDIOH_SETTINGS_EARPIECE_SPARE_BIT_EN,
+#else
+   .earpiece_spare_bit_en = 1,
+#endif
+
 };
 
 #define board_halaudio_audioh_device concatenate(ISLAND_BOARD_ID, _halaudio_audioh_device)
@@ -1496,8 +1503,8 @@ static void __init board_init(void)
 /*
  * Template used by board-xxx.c to create new board instance
  */
-#define CREATE_BOARD_INSTANCE(name) \
-MACHINE_START(name, #name) \
+#define CREATE_BOARD_INSTANCE(id,name) \
+MACHINE_START(id, name) \
 	.map_io = island_map_io, \
 	.init_irq = kona_init_irq, \
 	.timer  = &kona_timer, \

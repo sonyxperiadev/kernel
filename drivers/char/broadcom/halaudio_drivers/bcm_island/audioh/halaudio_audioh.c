@@ -2263,7 +2263,9 @@ static int audiohResetGainBlocks( void )
 {
    int i, j, k;
    struct audioh_ch_cfg   *ch;
+   HALAUDIO_AUDIOH_PLATFORM_INFO *info;
 
+   info = &gAudiohPlatformInfo;
    ch = gAudioh.ch;
    /* Reset gain for each codec channel */
    for ( i = 0; i < AUDIOH_MAX_NUM_CHANS; i++, ch++ )
@@ -2289,6 +2291,14 @@ static int audiohResetGainBlocks( void )
          }
       }
    }
+
+   if( info->earpiece_spare_bit_en )
+   {
+      /* Must set bit to enable pop-click suppression.  This will allow earpiece
+       * to becom audible. */
+      chal_audio_audiotx_set_spare_bit( gChalAudioHandle );
+   }
+
    return 0;
 }
 
