@@ -66,10 +66,9 @@ extern unsigned char SYS_GenClientID(void);
    Packet Data EndPoint buffer pool info
  */
 #define BCM_NET_MAX_DATA_LEN       1600 //bytes
-#define BCM_NET_MAX_NUM_PKTS       64 //packets
-#define BCM_NET_START_THRESHOLD     1 
-#define BCM_NET_STOP_THRESHOLD      0
+#define BCM_NET_MAX_NUM_PKTS       250 //packets
 
+#define BCM_DUALSIM_SIMID_NETIOCTL (SIOCDEVPRIVATE + 1)
 
 typedef enum
 {
@@ -82,6 +81,7 @@ typedef struct
     net_dev_entry_stat_t entry_stat;
     struct net_device *dev_ptr;
     uint8_t  pdp_context_id;
+    uint8_t  sim_id;
     unsigned long  ip_addr;
     struct net_device_stats stats;
 }net_drvr_info_t; 
@@ -100,18 +100,23 @@ static uint8_t bcm_fuse_net_pdp_id(net_drvr_info_t *drvr_info_ptr);
 static uint8_t bcm_fuse_net_find_entry(net_drvr_info_t *ndrvr_info_ptr);
 static void bcm_fuse_net_free_entry(uint8_t pdp_cid);
 
-
 /**
    @fn void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char8 cid);
  */
 static void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char cid)
 {
     struct net_device *dev_ptr = NULL;
-    net_drvr_info_t *ndrvr_info_ptr = NULL;
+    //net_drvr_info_t *ndrvr_info_ptr = NULL;
+    int i;
 
-    if (printk_ratelimit())
-        BNET_DEBUG(DBG_INFO,"%s: flow control cid:%d \n", __FUNCTION__, cid);
+    //if (printk_ratelimit())
+    //   BNET_DEBUG(DBG_INFO,"%s: flow control for all data channel \n", __FUNCTION__);
 
+    //Note that, cid here from rpc_ipc.c implmentation is the pool index, where current
+    //implementation in ipc is that "All channels use the same buffer pool"
+    //so when buffer pool is close to the limit, all channels have to stop flow.
+    //"cid" here means nothing then.
+#if 0 //leave the code there incase later on ipc supports multi pool for multi data channel
     //ndrvr_info_ptr = &g_net_dev_tbl[0];//bcm_fuse_net_device_pool_lookup(pool);
     ndrvr_info_ptr = bcm_fuse_net_device_cid_lookup(cid);
     if (ndrvr_info_ptr == NULL)
@@ -122,31 +127,33 @@ static void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char cid)
     }
 
     dev_ptr = ndrvr_info_ptr->dev_ptr;
+#endif
 
-    switch(event)
+    if ( (event != RPC_FLOW_START) && (event != RPC_FLOW_STOP) )
     {
-        case RPC_FLOW_START :
-        {
-            if (printk_ratelimit())
-                BNET_DEBUG(DBG_INFO,"%s: RECVD RPC_FLOW_START !!\n", __FUNCTION__);
-            if (netif_queue_stopped(dev_ptr))
-                netif_wake_queue(dev_ptr);
-        }
-        break;
+	BNET_DEBUG(DBG_ERROR,"%s: RECVD Unknown Flow Control Message !!\n", __FUNCTION__);
+	return;
+    }
 
-        case RPC_FLOW_STOP :
-        {
-            if (printk_ratelimit())
-                BNET_DEBUG(DBG_INFO,"%s: RECVD RPC_FLOW_STOP !!\n", __FUNCTION__);
-            netif_stop_queue(dev_ptr);
+    for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
+    {
+        if (g_net_dev_tbl[i].entry_stat == EInUse)
+        { 
+	    dev_ptr = g_net_dev_tbl[i].dev_ptr;
+            if (event==RPC_FLOW_START)
+            {
+                if (printk_ratelimit())
+                    BNET_DEBUG(DBG_INFO,"%s: RECVD RPC_FLOW_START!! cid=%d\n", __FUNCTION__, g_net_dev_tbl[i].pdp_context_id);
+                if (netif_queue_stopped(dev_ptr))
+                    netif_wake_queue(dev_ptr);
+            }
+            else 
+	    {
+                if (printk_ratelimit())
+                    BNET_DEBUG(DBG_INFO,"%s: RECVD RPC_FLOW_STOP!! cid=%d\n", __FUNCTION__, g_net_dev_tbl[i].pdp_context_id);
+                netif_stop_queue(dev_ptr);
+	    }
         }
-        break;
-
-        default:
-        {
-            BNET_DEBUG(DBG_ERROR,"%s: RECVD Unknown Flow Control Message on cid %d!!\n", __FUNCTION__, cid);
-        }
-        break;
     }
     return;
 }
@@ -198,7 +205,9 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType, uns
     ndrvr_info_ptr->dev_ptr->last_rx = jiffies;
 
     ndrvr_info_ptr->stats.rx_packets++;
-    ndrvr_info_ptr->stats.rx_bytes += data_len;
+    ndrvr_info_ptr->stats.rx_bytes += data_len; 
+
+    BNET_DEBUG(DBG_INFO,"%s: rx_bytes:%d\n", __FUNCTION__,ndrvr_info_ptr->stats.rx_bytes);
 
     netif_rx(skb);
 
@@ -248,10 +257,11 @@ static int bcm_fuse_net_open(struct net_device *dev)
     }
 
     spin_lock_irqsave(&g_dev_lock, flags);
-    g_net_dev_tbl[idx].pdp_context_id = idx+1;
-
+    //g_net_dev_tbl[idx].pdp_context_id = idx+1;
+    g_net_dev_tbl[idx].pdp_context_id = RMNET_TO_CID(idx);
+	
     spin_unlock_irqrestore(&g_dev_lock, flags);
-    BNET_DEBUG(DBG_INFO,"%s: BCM_FUSE_NET_ACTIVATE_PDP: pdp_info.cid [%d]\n", __FUNCTION__, g_net_dev_tbl[idx].pdp_context_id);
+    BNET_DEBUG(DBG_INFO,"%s: BCM_FUSE_NET_ACTIVATE_PDP: rmnet[%d] pdp_info.cid=%d\n", __FUNCTION__, idx, g_net_dev_tbl[idx].pdp_context_id);
 
     netif_start_queue(dev);
     return 0;
@@ -265,7 +275,7 @@ static int bcm_fuse_net_stop(struct net_device *dev)
     {
         if (g_net_dev_tbl[i].dev_ptr == dev)
         {
-            bcm_fuse_net_free_entry(g_net_dev_tbl[i].pdp_context_id);
+            bcm_fuse_net_free_entry(g_net_dev_tbl[i].pdp_context_id);            
             BNET_DEBUG(DBG_INFO,"%s: free g_net_dev_tbl[%d].cid:%d\n", __FUNCTION__, i, g_net_dev_tbl[i].pdp_context_id);
             break;
         }
@@ -282,32 +292,34 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
     void *buff_data_ptr;
     uint8_t pdp_cid = BCM_NET_MAX_PDP_CNTXS;
     PACKET_BufHandle_t buffer;
-    static net_drvr_info_t *ndrvr_info_ptr = NULL; //consider for multiple case??
+ 
+    static int sim_id;
+    net_drvr_info_t *t_ndrvr_info_ptr = NULL;
     int i;
 
-    //ndrvr_info_ptr = &g_net_dev_tbl[0];
-    if (NULL == ndrvr_info_ptr) //only run the first tx
-    {
-        for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
+ 
+    for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
         {
             if (g_net_dev_tbl[i].dev_ptr == dev)
-            {
-                ndrvr_info_ptr = &g_net_dev_tbl[i];
-                BNET_DEBUG(DBG_INFO,"%s: g_net_dev_tbl[%d]=0x%x \n", __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]));
+            {                
+                sim_id = g_net_dev_tbl[i].sim_id;
+                t_ndrvr_info_ptr = &g_net_dev_tbl[i];
+                BNET_DEBUG(DBG_INFO,"%s: g_net_dev_tbl[%d]=0x%x, a_sim_id %d, sim_id %d \n", __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]), g_net_dev_tbl[i].sim_id, sim_id);
                 break;
             }
         }
-    }
+ 
 
-    if (NULL == ndrvr_info_ptr)
+    if (NULL == t_ndrvr_info_ptr)
     {
+	BNET_DEBUG(DBG_ERROR,"bcm_fuse_net_tx(), no device found\n");
         return(-EINVAL);
     }
 
     if (BCM_NET_MAX_DATA_LEN < skb->len) 
     {
         BNET_DEBUG(DBG_ERROR,"%s: len[%d] exceeds supported len[%d] failed\n", __FUNCTION__, skb->len, BCM_NET_MAX_DATA_LEN);
-        ndrvr_info_ptr->stats.tx_errors++;
+        t_ndrvr_info_ptr->stats.tx_errors++;
         return(-1);
     }
 
@@ -317,12 +329,12 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
         return(-1);
     }
 
-    //pdp_cid = 1;
-    pdp_cid = bcm_fuse_net_pdp_id(ndrvr_info_ptr);
+  
+    pdp_cid = bcm_fuse_net_pdp_id(t_ndrvr_info_ptr);
     if (BCM_NET_INVALID_PDP_CNTX == pdp_cid)
     {
         BNET_DEBUG(DBG_ERROR,"%s: net device to pdp context id mapping failed\n", __FUNCTION__);
-        ndrvr_info_ptr->stats.tx_errors++;
+        t_ndrvr_info_ptr->stats.tx_errors++;
         return(-1);
     }
 
@@ -331,7 +343,7 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
     if(!buffer) 
     {
         BNET_DEBUG(DBG_ERROR,"%s: Error buffer Handle cid %d\n", __FUNCTION__, pdp_cid);
-        ndrvr_info_ptr->stats.tx_errors++;
+        t_ndrvr_info_ptr->stats.tx_errors++;
         return(-ENOBUFS);
     }
 
@@ -340,7 +352,7 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
     if (buff_data_ptr == NULL)
     {
         BNET_DEBUG(DBG_ERROR,"%s: RPC_PACKET_GetBufferData() failed\n", __FUNCTION__);
-        ndrvr_info_ptr->stats.tx_errors++;
+        t_ndrvr_info_ptr->stats.tx_errors++;
         return(-ENOBUFS);
     }
 
@@ -350,14 +362,15 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
     RPC_PACKET_SetBufferLength(buffer, skb->len);
 
     dev->trans_start = jiffies; /* save the timestamp */
-
+    RPC_PACKET_SetContext(INTERFACE_PACKET, buffer, sim_id);
     RPC_PACKET_SendData(g_NetClientId, INTERFACE_PACKET, pdp_cid, buffer);
 
     /**
       The IPC buffer is freed by the receiving end point.
     */
-    ndrvr_info_ptr->stats.tx_packets++;
-    ndrvr_info_ptr->stats.tx_bytes += skb->len;
+    t_ndrvr_info_ptr->stats.tx_packets++;
+    t_ndrvr_info_ptr->stats.tx_bytes += skb->len;
+    BNET_DEBUG(DBG_INFO,"%s: tx_bytes:%d simid:%d cid:%d\n", __FUNCTION__,t_ndrvr_info_ptr->stats.tx_bytes,sim_id,pdp_cid);
 
     dev_kfree_skb(skb);
 
@@ -398,6 +411,35 @@ int bcm_fuse_net_config(struct net_device *dev_ptr, struct ifmap *map)
 
 
 /**
+   @fn int bcm_fuse_net_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd);
+*/
+int bcm_fuse_net_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
+{
+
+    int i, sim_id = 3;
+
+    if (BCM_DUALSIM_SIMID_NETIOCTL != cmd)
+        BNET_DEBUG(DBG_INFO,"%s: Incorrect IOCTL ID 0x%x \n", __FUNCTION__, cmd);
+
+    for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
+    {
+        if (g_net_dev_tbl[i].dev_ptr == dev)
+        {    
+            sim_id = *(int*)ifr->ifr_data;
+            g_net_dev_tbl[i].sim_id = sim_id;
+            BNET_DEBUG(DBG_ERROR,"%s: g_net_dev_tbl[%d]=0x%x, a_sim_id:%d, sim_id:%d \n", __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]),g_net_dev_tbl[i].sim_id, sim_id);
+            break;
+        }
+    }
+
+  
+    BNET_DEBUG(DBG_ERROR,"%s: Use A SIM ID:%d, SIM ID:%d \n", __FUNCTION__, g_net_dev_tbl[i].sim_id, sim_id);
+
+    return 0;
+}
+
+
+/**
    Initialize a net device. (Called from kernel in alloc_netdev())
 
    @fn static void bcm_fuse_net_init(struct net_device *dev_ptr);
@@ -409,6 +451,7 @@ static const struct net_device_ops bcm_netdev_ops = {
         .ndo_start_xmit         = bcm_fuse_net_tx,
         .ndo_get_stats          = bcm_fuse_net_stats,
         .ndo_set_config         = bcm_fuse_net_config,
+        .ndo_do_ioctl           = bcm_fuse_net_ioctl,
 };
 
 static void bcm_fuse_net_init(struct net_device *dev)
@@ -416,7 +459,7 @@ static void bcm_fuse_net_init(struct net_device *dev)
     dev->netdev_ops = &bcm_netdev_ops;
 
     dev->mtu             = BCM_NET_MAX_DATA_LEN;
-    dev->tx_queue_len    = (BCM_NET_MAX_NUM_PKTS - BCM_NET_START_THRESHOLD);
+    dev->tx_queue_len    = BCM_NET_MAX_NUM_PKTS;
     dev->flags       = IFF_NOARP | IFF_DYNAMIC;
 }
 
@@ -451,6 +494,7 @@ static int bcm_fuse_net_attach(unsigned int dev_index)
     g_net_dev_tbl[dev_index].dev_ptr = dev_ptr;
     g_net_dev_tbl[dev_index].entry_stat = EFree;
     g_net_dev_tbl[dev_index].pdp_context_id = BCM_NET_MAX_PDP_CNTXS;
+    g_net_dev_tbl[dev_index].sim_id = 1; //default set to SIM ID 1
     BNET_DEBUG(DBG_INFO,"%s: g_net_dev_tbl[%d] = 0x%x, dev_ptr 0x%x\n", __FUNCTION__, dev_index, (unsigned int)(&g_net_dev_tbl[dev_index]), (unsigned int)dev_ptr);
     BNET_DEBUG(DBG_INFO,"%s: entry_stat 0x%x\n", __FUNCTION__, g_net_dev_tbl[dev_index].entry_stat);
 
@@ -489,6 +533,7 @@ static int bcm_fuse_net_deattach(unsigned int dev_index)
     g_net_dev_tbl[dev_index].entry_stat = EFree;
     g_net_dev_tbl[dev_index].ip_addr = 0;
     g_net_dev_tbl[dev_index].pdp_context_id = BCM_NET_MAX_PDP_CNTXS;
+    g_net_dev_tbl[dev_index].sim_id = 0;
     memset(&g_net_dev_tbl[dev_index].stats, 0, sizeof(struct net_device_stats));
 
     spin_unlock_irqrestore(&g_dev_lock, flags);
