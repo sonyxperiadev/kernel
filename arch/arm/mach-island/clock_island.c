@@ -563,7 +563,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 /* post divider for ARM PLL */
 static inline void __proc_clk_set_pll_div(u32 base, int div)
 {
-	clk_dbg ("%s: div %d\n", __func__, div);
+   printk(KERN_ERR "%s: div %d\n", __func__, div);
 	writel(div, base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
 	writel((div<<KPROC_CLK_MGR_REG_PLLARMC_PLLARM_MDIV_SHIFT) | KPROC_CLK_MGR_REG_PLLARMC_PLLARM_LOAD_EN_MASK,
 		base + KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET);
@@ -603,7 +603,7 @@ static unsigned long __proc_clk_get_vco_rate(u32 base)
 	unsigned long xtal = clock_get_xtal();
 	unsigned long vco_rate;
 	unsigned int ndiv_int, ndiv_frac;
-	clk_dbg ("%s: \n", __func__);
+   printk(KERN_ERR "%s: \n", __func__);
 	ndiv_int = (readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET)& KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
 		>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
 	ndiv_frac = (readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET) & KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK)
@@ -613,7 +613,7 @@ static unsigned long __proc_clk_get_vco_rate(u32 base)
 
 	vco_rate += (unsigned long) (u64) (((u64)ndiv_frac * (u64)xtal) >> 20);
 
-	clk_dbg ("xtal %d, int %d, frac %d, vco %lu\n", (int)xtal, ndiv_int, ndiv_frac, vco_rate);
+   printk(KERN_ERR "xtal %d, int %d, frac %d, vco %lu\n", (int)xtal, ndiv_int, ndiv_frac, vco_rate);
 	return vco_rate;
 }
 
@@ -643,7 +643,7 @@ static int arm_clk_init(struct clk* clk)
     BUG_ON(peri_clk->ccu_clk == NULL);
 
     clk_dbg("%s, clock name: %s \n",__func__, clk->name);
-
+    clk_dbg("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY \n");
     /* enable write access*/
     ccu_write_access_enable(peri_clk->ccu_clk, true);
 
@@ -656,7 +656,7 @@ static int arm_clk_init(struct clk* clk)
 
     vco_rate = __proc_clk_get_vco_rate (peri_clk->ccu_clk->ccu_clk_mgr_base);
     /* to get minimium clock >= desired_rate */
-    div = vco_rate/(700 * CLOCK_1M);
+    div = vco_rate/(600 * CLOCK_1M);
     div = min (max (2, div), 255);
     clk->rate = vco_rate / div;
     /* set the PLL divider such that default ARM freq is 700MHz*/
@@ -1055,7 +1055,7 @@ static int arm1_clk_init(struct clk* clk)
     BUG_ON(peri_clk->ccu_clk == NULL);
 
     clk_dbg("%s, clock name: %s \n",__func__, clk->name);
-
+    clk_dbg("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX \n");
     /* enable write access*/
     ccu_write_access_enable(peri_clk->ccu_clk, true);
 
@@ -1068,7 +1068,7 @@ static int arm1_clk_init(struct clk* clk)
 
     vco_rate = __proc_clk_get_vco_rate (peri_clk->ccu_clk->ccu_clk_mgr_base);
     /* to get minimium clock >= desired_rate */
-    div = vco_rate/(700 * CLOCK_1M);
+    div = vco_rate/(600 * CLOCK_1M);
     div = min (max (2, div), 255);
     clk->rate = vco_rate / div;
     /* set the PLL divider such that default ARM freq is 700MHz*/
@@ -4953,7 +4953,7 @@ static struct __init clk_lookup island_clk_tbl[] =
 {
 
 	/* All the CCUs are registered first */
-	/*BRCM_REGISTER_CLK(KPROC_CCU_CLK_NAME_STR,NULL,kproc),*/
+    BRCM_REGISTER_CLK(KPROC_CCU_CLK_NAME_STR,NULL,kproc),
 	BRCM_REGISTER_CLK(ROOT_CCU_CLK_NAME_STR,NULL,root),
 	BRCM_REGISTER_CLK(KHUB_CCU_CLK_NAME_STR,NULL,khub),
 	BRCM_REGISTER_CLK(KHUBAON_CCU_CLK_NAME_STR,NULL,khubaon),
@@ -4962,8 +4962,8 @@ static struct __init clk_lookup island_clk_tbl[] =
 	/* CCU registration end */
 
 
-	/*BRCM_REGISTER_CLK(ARM_PERI_CLK_NAME_STR,NULL,arm),*/
-	/*BRCM_REGISTER_CLK(ARM1_PERI_CLK_NAME_STR,NULL,arm1),*/
+	BRCM_REGISTER_CLK(ARM_PERI_CLK_NAME_STR,NULL,arm),
+//	BRCM_REGISTER_CLK(ARM1_PERI_CLK_NAME_STR,NULL,arm1),
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),
@@ -5109,10 +5109,20 @@ static struct __init clk_lookup island_clk_tbl[] =
 
 int __init island_clock_init(void)
 {
-	int base;
+	unsigned int base;
+	unsigned int freq_int;
+	unsigned int freq_frac;
+	unsigned int ndiv_int;
+	unsigned int ndiv_frac;
+	unsigned int pdiv;
+	unsigned int osc_in_10khz;
+	unsigned int div;
+	unsigned long vco_rate;
+	unsigned long rate;	
 
     printk(KERN_INFO "%s registering clocks.\n", __func__);
 
+    printk(KERN_ERR "XXXXXXXXXXXXXXXXXXXXXX %s registering clocks.\n", __func__);
 	if(clk_register(island_clk_tbl,ARRAY_SIZE(island_clk_tbl)))
 		printk(KERN_INFO "%s clk_register failed !!!!\n", __func__);
 
@@ -5123,8 +5133,46 @@ int __init island_clock_init(void)
      *********************************************************************/
     /*clock_module_temp_fixes(); */
 	base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR);
-    writel (0x1, base  + IROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
+	writel (0xA5A501, base + IROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
     writel (0x1, base  + IROOT_CLK_MGR_REG_VAR8PH_DIVMODE_OFFSET);
+	writel (0xA5A500, base + IROOT_CLK_MGR_REG_WR_ACCESS_OFFSET);
+
+	base = HW_IO_PHYS_TO_VIRT(PROC_CLK_BASE_ADDR);
+	writel (0xA5A501, base + KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET);
+	printk(KERN_ERR "policy freq      0x%08x\n", readl(base+KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET));
+	printk(KERN_ERR "policy_ctrl      0x%08x\n", readl(base+KPROC_CLK_MGR_REG_POLICY_CTL_OFFSET));
+	printk(KERN_ERR "arma             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMA_OFFSET));
+	printk(KERN_ERR "armb             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMB_OFFSET));
+	printk(KERN_ERR "armc             0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMC_OFFSET));
+	printk(KERN_ERR "armctrl3         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET));
+	printk(KERN_ERR "armctrl5         0x%08x\n", readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET));
+	printk(KERN_ERR "lvm_en           0x%08x\n", readl(base+KPROC_CLK_MGR_REG_LVM_EN_OFFSET));
+	printk(KERN_ERR "arm_div          0x%08x\n", readl(base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET));
+	ndiv_int = readl(base+KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+	ndiv_int = (ndiv_int & (0x03FF << 8))>>8;
+	ndiv_frac = readl(base+KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
+	ndiv_frac = (ndiv_frac & 0x0FFFFF);
+	pdiv = readl(base+KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+	pdiv = (pdiv & (0x7 << 24))>>24;
+	
+	osc_in_10khz = 2600;
+		
+	/* calculate VCO frequency: F = OSC x [ndiv_int + ndiv_frac/2^20]/[pdiv] */
+	freq_int = (osc_in_10khz * ndiv_int) / (pdiv);
+	freq_int = freq_int * 10000;
+	
+	freq_frac = (osc_in_10khz * ndiv_frac) / (1 << 20);
+	freq_frac = freq_frac * 10000;
+	freq_frac = freq_frac / (pdiv);
+	vco_rate=freq_int+ freq_frac;
+    printk(KERN_ERR "XXXXXXXXXXXXXXXXXXXXXX %ld  vco clocks.\n",vco_rate);
+	div = (readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET)& KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK)
+		>> KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT;
+
+	rate= vco_rate /div;
+    printk(KERN_ERR "XXXXXXXXXXXXXXXXXXXXXX %ld  clocks.\n",rate);
+
+	writel (0xA5A500, base + KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET);
     return 0;
 }
 
