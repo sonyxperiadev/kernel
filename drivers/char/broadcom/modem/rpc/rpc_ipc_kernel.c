@@ -44,7 +44,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <asm/pgtable.h>
 #include <linux/io.h>
 
-#include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/ipc_sharedmemory.h>
 #include <linux/broadcom/ipcinterface.h>
 
