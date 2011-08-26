@@ -20,6 +20,8 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _BCM_AUDIO_DEVICES_H__
 #define _BCM_AUDIO_DEVICES_H__
 
+#define MAX_PLAYBACK_DEV 2
+
 typedef struct _TIDChanOfPlaybackDev
 {
     AUDIO_DRIVER_TYPE_t     drv_type;
@@ -50,11 +52,9 @@ typedef struct _TIDChanOfVoiceCallDev
 
 typedef struct _TIDChanOfDev
 {
-	union {
-		TIDChanOfPlaybackDev	p;
-		TIDChanOfCaptureDev		c;
-		TIDChanOfVoiceCallDev	v;
-		}u;
+	TIDChanOfPlaybackDev	p[MAX_PLAYBACK_DEV];
+	TIDChanOfCaptureDev		c;
+	TIDChanOfVoiceCallDev	v;
 }TIDChanOfDev;
 
 

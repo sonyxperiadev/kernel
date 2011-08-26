@@ -376,7 +376,7 @@ static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 //static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
 #endif
 
-static telephony_digital_gain_dB = 12;  //dB
+static UInt32 telephony_digital_gain_dB = 12;  //dB
 
 //=============================================================================
 // Private function prototypes
@@ -653,10 +653,10 @@ void AUDCTRL_SetTelephonySpkrVolume(
 {
 #if defined(FUSE_APPS_PROCESSOR) &&	defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 
-	Int16 dspDLGain = 0;
+//	Int16 dspDLGain = 0;
 	Int16 pmuGain = 0;
-	Int16	volume_max = 0;
-	CSL_CAPH_PathID pathID = 0;
+//	Int16	volume_max = 0;
+//	CSL_CAPH_PathID pathID = 0;
 
 
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x\n", volume);
@@ -1560,8 +1560,10 @@ void AUDCTRL_SwitchPlaySpk(
 //
 //============================================================================
 void AUDCTRL_AddPlaySpk(
-				AUDIO_HW_ID_t			sink,
-				AUDCTRL_SPEAKER_t		spk
+				AUDIO_HW_ID_t			curSink,
+				AUDCTRL_SPEAKER_t		curSpk,
+				AUDIO_HW_ID_t			newSink,
+				AUDCTRL_SPEAKER_t		newSpk
 				)
 {
     CSL_CAPH_HWCTRL_CONFIG_t config;
@@ -1569,11 +1571,11 @@ void AUDCTRL_AddPlaySpk(
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_AddPlaySpk: sink = 0x%x,  spk = 0x%x\n", 
-                    sink, spk);
+                    "AUDCTRL_AddPlaySpk: newSink = 0x%x,  newSpk = 0x%x\n", 
+                    newSink, newSpk);
 
 
-    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
+    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
     if(pathID == 0)
     {
 	    audio_xassert(0,pathID);
@@ -1581,15 +1583,19 @@ void AUDCTRL_AddPlaySpk(
     }
    
 
-    speaker = GetDeviceFromSpkr(spk);
+    speaker = GetDeviceFromSpkr(newSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
+		//Enable the PMU for HS/IHF.
+		if ((newSink == AUDIO_HW_HEADSET_OUT)||(newSink == AUDIO_HW_IHF_OUT))
+			powerOnExternalAmp( newSpk, AudioUseExtSpkr, TRUE );
+
         config.source = CSL_CAPH_DEV_MEMORY;
         config.sink = speaker;
         (void) csl_caph_hwctrl_AddPath(pathID, config);
     }
     
-    AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, sink, spk, AUDCTRL_MIC_UNDEFINED); 
+//    AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
     
     return;
     
@@ -1603,8 +1609,10 @@ void AUDCTRL_AddPlaySpk(
 //
 //============================================================================
 void AUDCTRL_RemovePlaySpk(
-				AUDIO_HW_ID_t			sink,
-				AUDCTRL_SPEAKER_t		spk
+				AUDIO_HW_ID_t			priSink,
+				AUDCTRL_SPEAKER_t		priSpk,
+				AUDIO_HW_ID_t			secSink,
+				AUDCTRL_SPEAKER_t		secSpk
 				)
 {
     CSL_CAPH_HWCTRL_CONFIG_t config;
@@ -1613,10 +1621,10 @@ void AUDCTRL_RemovePlaySpk(
 
 	Log_DebugPrintf(LOGID_AUDIO,
                     "AUDCTRL_RemovePlaySpk: sink = 0x%x,  spk = 0x%x\n", 
-                    sink, spk);
+                    secSink, secSpk);
 
 
-    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, sink, spk, AUDCTRL_MIC_UNDEFINED);
+    pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, priSink, priSpk, AUDCTRL_MIC_UNDEFINED);
     if(pathID == 0)
     {
 	    audio_xassert(0,pathID);
@@ -1624,9 +1632,13 @@ void AUDCTRL_RemovePlaySpk(
     }
     
 
-    speaker = GetDeviceFromSpkr(spk);
+    speaker = GetDeviceFromSpkr(secSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
+		//Disable the PMU for HS/IHF.
+		if ((secSink == AUDIO_HW_HEADSET_OUT)||(secSink == AUDIO_HW_IHF_OUT))
+			powerOnExternalAmp( secSpk, AudioUseExtSpkr, FALSE );
+
         config.source = CSL_CAPH_DEV_MEMORY;
         config.sink = speaker;
         (void) csl_caph_hwctrl_RemovePath(pathID, config);
@@ -2646,8 +2658,8 @@ static void AUDCTRL_CreateTable(void)
 //============================================================================
 void AUDCTRL_AddToTable(AUDCTRL_Config_t* data)
 {
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, sink = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
     AUDCTRL_Table_t* newNode = NULL;
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, sink = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
     newNode = (AUDCTRL_Table_t *)OSHEAP_Alloc(sizeof(AUDCTRL_Table_t));
 	memset(newNode, 0, sizeof(AUDCTRL_Table_t));
     memcpy(&(newNode->data), data, sizeof(AUDCTRL_Config_t));

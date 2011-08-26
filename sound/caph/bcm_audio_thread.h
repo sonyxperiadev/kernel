@@ -35,6 +35,7 @@ typedef enum
     ACTION_AUD_StopRecord,
     ACTION_AUD_OpenRecord,
     ACTION_AUD_CloseRecord,
+    ACTION_AUD_AddChannel,
 	ACTION_AUD_TOTAL			
 } BRCM_AUDIO_ACTION_en_t;
 
