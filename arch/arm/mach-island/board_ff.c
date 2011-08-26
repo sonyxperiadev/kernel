@@ -35,7 +35,7 @@
 #include <linux/input.h>
 #include <linux/bh1715.h>
 #include <linux/i2c/tsc2007.h>
-#include <linux/i2c/tango_s32.h>
+#include <linux/i2c/tango_ts.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
 #include <linux/akm8975.h>

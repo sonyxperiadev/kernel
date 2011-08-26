@@ -39,7 +39,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #include <linux/i2c/tsc2007.h>
-#include <linux/i2c/tango_s32.h>
+#include <linux/i2c/tango_ts.h>
 #include <mach/kona.h>
 #include <mach/rhea.h>
 #include <mach/rdb/brcm_rdb_uartb.h>
