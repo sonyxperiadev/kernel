@@ -79,9 +79,9 @@
 
 #define GPIODRV_Set_Bit(pin, val) gpio_set_value_cansleep(pin, val)
 
-#undef HAL_LCD_RESET
-#define HAL_LCD_RESET_B  (KONA_MAX_GPIO + 3)
-#define HAL_LCD_RESET_C  (KONA_MAX_GPIO + 2)
+//#undef HAL_LCD_RESET
+//#define HAL_LCD_RESET_B  (KONA_MAX_GPIO + 3)
+//#define HAL_LCD_RESET_C  (KONA_MAX_GPIO + 2)
 
 typedef struct
 {
@@ -579,7 +579,7 @@ Int32 BCM91008_ALEX_Exit ( void )
     return ( -1 );
 }
 
-
+#if 0
 //*****************************************************************************
 //
 // Function Name: DISPDRV_Reset
@@ -596,7 +596,7 @@ static Int32 DISPDRV_Reset( Boolean force )
     Boolean         rst1present = FALSE;
     Boolean         rst2present = FALSE;
     static Boolean  resetDone   = FALSE;
-    
+   
     #ifdef HAL_LCD_RESET
     rst0present = TRUE;
     rst0pin     = HAL_LCD_RESET;
@@ -628,9 +628,25 @@ static Int32 DISPDRV_Reset( Boolean force )
     
     if( !rst0present )
     {
+	printk(KERN_ERR "the main reset is not used");
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
             "WARNING Only HAL_LCD_RESET B/C defined\n");
     }
+
+    if( !rst1present )
+    {
+	printk(KERN_ERR "the reset B is not used");
+        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
+            "WARNING Only HAL_LCD_RESET B/C defined\n");
+    }
+
+    if( !rst2present )
+    {
+	printk(KERN_ERR "the reset C is not used");
+        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
+            "WARNING Only HAL_LCD_RESET B/C defined\n");
+    }
+
 
     if ( !resetDone || force )
     {
@@ -677,7 +693,7 @@ static Int32 DISPDRV_Reset( Boolean force )
 
     return ( 0 );
 } // DISPDRV_Reset
-
+#endif
 
 
 
@@ -732,7 +748,7 @@ Int32 BCM91008_ALEX_Open (
         return ( -1 );
     }    
     
-    DISPDRV_Reset( FALSE );
+    //DISPDRV_Reset( FALSE );
     
     dsiCfg.bus = busId;
     

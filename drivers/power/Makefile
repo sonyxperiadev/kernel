@@ -38,13 +38,13 @@ obj-$(CONFIG_CHARGER_MAX8903)	+= max8903_charger.o
 obj-$(CONFIG_CHARGER_TWL4030)	+= twl4030_charger.o
 obj-$(CONFIG_CHARGER_GPIO)	+= gpio-charger.o
 obj-$(CONFIG_BATTERY_BCM59055)	+= bcm59055_battery.o
-
 ifeq ($(CONFIG_BCM_CMP_BATTERY_MULTI),m)
 obj-m += cmp_battery.o
 cmp_battery-objs += cmp_battery_multi.o
 endif
-
 ifeq ($(CONFIG_BCM_CMP_BATTERY_BQ24616),m)
 obj-m += cmp_battery.o
 cmp_battery-objs += cmp_battery_bq24616.o
 endif
+obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt.o bcmpmu-chrgr.o
+obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em.o

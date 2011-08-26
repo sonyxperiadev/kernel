@@ -157,3 +157,4 @@ void __init rhea_map_io(void)
 {
 	iotable_init(rhea_io_desc, ARRAY_SIZE(rhea_io_desc));
 }
+

@@ -318,8 +318,6 @@ static u8 pwrmgr_default_volt_lut[] =
 								};
 
 
-
-
 int __init rhea_pwr_mgr_init()
 {
 	struct v0x_spec_i2c_cmd_ptr v_ptr;

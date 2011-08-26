@@ -20,10 +20,9 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/wait.h>
+#include <linux/power_supply.h>
 #include <linux/platform_device.h>
 #include <linux/regulator/machine.h>
-#include <linux/regulator/consumer.h>
-#include <linux/regulator/userspace-consumer.h>
 
 #define	PMU_BITMASK_ALL		0xFFFFFFFF
 
@@ -151,6 +150,25 @@ enum bcmpmu_reg {
 	PMU_REG_HVLDO9CTRL,
 	PMU_REG_HVLDO10CTRL,
 	PMU_REG_SIMLDOCTRL,
+	PMU_REG_SIMLDO2PMCTRL,
+	PMU_REG_USBLDOPMCTRL,
+	PMU_REG_DVSLDO1PMCTRL,
+	PMU_REG_DVSLDO2PMCTRL,
+	PMU_REG_DVSLDO1VSEL1,
+	PMU_REG_DVSLDO1VSEL2,
+	PMU_REG_DVSLDO1VSEL3,
+	PMU_REG_DVSLDO2VSEL1,
+	PMU_REG_DVSLDO2VSEL2,
+	PMU_REG_DVSLDO2VSEL3,
+	PMU_REG_SIM2OPMODCTRL,
+	PMU_REG_SIMLDO2CTRL,
+	PMU_REG_USBOPMODCTRL,
+	PMU_REG_USBLDOCTRL,
+	PMU_REG_BCDLDOCTRL,
+	PMU_REG_DVS1OPMODCTRL,
+	PMU_REG_DVS2OPMODCTRL,
+	PMU_REG_SIMLDOEN,
+	PMU_REG_SIMLDO2EN,
 	PMU_REG_PWR_GRP_DLY,
 	PMU_REG_CSRCTRL1,
 	PMU_REG_CSRCTRL2,
@@ -191,6 +209,8 @@ enum bcmpmu_reg {
 	PMU_REG_ENV5,
 	PMU_REG_ENV6,
 	PMU_REG_ENV7,
+	PMU_REG_ENV8,
+	PMU_REG_ENV9,
 	PMU_REG_IHFTOP_IHF_IDDQ,
 	PMU_REG_IHFLDO_PUP,
 	PMU_REG_IHFPOP_PUP,
@@ -199,28 +219,61 @@ enum bcmpmu_reg {
 	PMU_REG_HSPUP2_HS_PWRUP,
 	PMU_REG_HSPGA1_GAIN,
 	PMU_REG_HSPGA2_GAIN,
+	/* Charge */
+	PMU_REG_CHRGR_ICC_FC,
+	PMU_REG_CHRGR_ICC_QC,
+	PMU_REG_CHRGR_VFLOAT,
+	PMU_REG_CHRGR_EOC,
+	PMU_REG_CHRGR_BCDLDO,
+	PMU_REG_CHRGR_BCDLDO_AON,
+	/* fuel gauge */
+	PMU_REG_FG_ACCM0,
+	PMU_REG_FG_ACCM1,
+	PMU_REG_FG_ACCM2,
+	PMU_REG_FG_ACCM3,
+	PMU_REG_FG_CNT0,
+	PMU_REG_FG_CNT1,
+	PMU_REG_FG_SLEEPCNT0,
+	PMU_REG_FG_SLEEPCNT1,
+	PMU_REG_FG_HOSTEN,
+	PMU_REG_FG_RESET,
+	PMU_REG_FG_FRZREAD,
+	PMU_REG_FG_FRZSMPL,
+	/* usb control */
+	PMU_REG_OTG_VBUS_PULSE,
+	PMU_REG_OTG_VBUS_BOOST,
+	PMU_REG_OTG_VBUS_DISCHRG,
+	PMU_REG_OTG_ENABLE,
+	PMU_REG_ADP_SENSE,
+	PMU_REG_ADP_COMP_DB_TM,
+	PMU_REG_ADP_PRB,
+	PMU_REG_ADP_CAL_PRB,
+	PMU_REG_ADP_PRB_MOD,
+	PMU_REG_ADP_PRB_CYC_TIME,
+	PMU_REG_ADP_COMP_METHOD,
+	PMU_REG_ADP_ENABLE,
+	PMU_REG_ADP_PRB_COMP,
+	PMU_REG_ADP_PRB_REG_RST,
+	PMU_REG_ADP_SNS_COMP,
+	PMU_REG_ADP_SNS_AON,
+	/* usb status */
+	PMU_REG_USB_STATUS_ID_CODE,
+	PMU_REG_OTG_STATUS_VBUS,
+	PMU_REG_OTG_STATUS_SESS,
+	PMU_REG_OTG_STATUS_SESS_END,
+	PMU_REG_ADP_STATUS_ATTACH_DET,
+	PMU_REG_ADP_STATUS_SNS_DET,
+	PMU_REG_ADP_STATUS_RISE_TIMES_LSB,
+	PMU_REG_ADP_STATUS_RISE_TIMES_MSB,
+	/* interrupt */
+	PMU_REG_INT_START,
+	PMU_REG_INT_MSK_START,
+	/* generic */
+	PMU_REG_SWUP,
 	PMU_REG_PMUID,
 	PMU_REG_PMUREV,
 	PMU_REG_PLLCTRL,
-	PMU_REG_SIMLDO2PMCTRL,
-	PMU_REG_USBLDOPMCTRL,
-	PMU_REG_DVSLDO1PMCTRL,
-	PMU_REG_DVSLDO2PMCTRL,
-	PMU_REG_DVSLDO1VSEL1,
-	PMU_REG_DVSLDO1VSEL2,
-	PMU_REG_DVSLDO1VSEL3,
-	PMU_REG_DVSLDO2VSEL1,
-	PMU_REG_DVSLDO2VSEL2,
-	PMU_REG_DVSLDO2VSEL3,
-	PMU_REG_SIM2OPMODCTRL,
-	PMU_REG_SIMLDO2CTRL,
-	PMU_REG_USBOPMODCTRL,
-	PMU_REG_USBLDOCTRL,
-	PMU_REG_BCDLDOCTRL,
-	PMU_REG_DVS1OPMODCTRL,
-	PMU_REG_DVS2OPMODCTRL,
-	PMU_REG_SIMLDOEN,
-	PMU_REG_SIMLDO2EN,
+	PMU_REG_MBCCTRL3,
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
@@ -249,6 +302,8 @@ enum bcmpmu_irq {
 	PMU_IRQ_BATRM,
 	PMU_IRQ_GBAT_PLUG_IN,
 	PMU_IRQ_SMPL_INT,
+	PMU_IRQ_CHGINS,
+	PMU_IRQ_CHGRM,
 	PMU_IRQ_USBINS,
 	PMU_IRQ_USBRM,
 	PMU_IRQ_USBOV,
@@ -298,6 +353,11 @@ enum bcmpmu_irq {
 	PMU_IRQ_UART_INS,
 	PMU_IRQ_ID_INS,
 	PMU_IRQ_ID_RM,
+	PMU_IRQ_ADP_CHANGE,
+	PMU_IRQ_ADP_SNS_END,
+	PMU_IRQ_SESSION_END_VLD,
+	PMU_IRQ_SESSION_END_INVLD,
+	PMU_IRQ_VBUS_OVERCURRENT,
 	PMU_IRQ_MAX,
 };
 
@@ -310,6 +370,8 @@ enum bcmpmu_adc_sig {
 	PMU_ADC_BSI,
 	PMU_ADC_32KTEMP,
 	PMU_ADC_RTM,
+	PMU_ADC_FG_CURRSMPL,
+	PMU_ADC_FG_VMBATT,
 	PMU_ADC_MAX,
 };
 
@@ -330,6 +392,128 @@ enum bcmpmu_adc_timing_t {
 	PMU_ADC_TM_MAX,
 };
 
+enum bcmpmu_chrgr_fc_curr_t {
+	PMU_CHRGR_CURR_50,
+	PMU_CHRGR_CURR_100,
+	PMU_CHRGR_CURR_150,
+	PMU_CHRGR_CURR_200,
+	PMU_CHRGR_CURR_250,
+	PMU_CHRGR_CURR_300,
+	PMU_CHRGR_CURR_350,
+	PMU_CHRGR_CURR_400,
+	PMU_CHRGR_CURR_450,
+	PMU_CHRGR_CURR_500,
+	PMU_CHRGR_CURR_550,
+	PMU_CHRGR_CURR_600,
+	PMU_CHRGR_CURR_650,
+	PMU_CHRGR_CURR_700,
+	PMU_CHRGR_CURR_750,
+	PMU_CHRGR_CURR_800,
+	PMU_CHRGR_CURR_850,
+	PMU_CHRGR_CURR_900,
+	PMU_CHRGR_CURR_950,
+	PMU_CHRGR_CURR_1000,
+	PMU_CHRGR_CURR_MAX,
+};
+
+enum bcmpmu_chrgr_qc_curr_t {
+	PMU_CHRGR_QC_CURR_50,
+	PMU_CHRGR_QC_CURR_60,
+	PMU_CHRGR_QC_CURR_70,
+	PMU_CHRGR_QC_CURR_80,
+	PMU_CHRGR_QC_CURR_90,
+	PMU_CHRGR_QC_CURR_100,
+	PMU_CHRGR_QC_CURR_MAX,
+};
+
+enum bcmpmu_chrgr_eoc_curr_t {
+	PMU_CHRGR_EOC_CURR_50,
+	PMU_CHRGR_EOC_CURR_60,
+	PMU_CHRGR_EOC_CURR_70,
+	PMU_CHRGR_EOC_CURR_80,
+	PMU_CHRGR_EOC_CURR_90,
+	PMU_CHRGR_EOC_CURR_100,
+	PMU_CHRGR_EOC_CURR_110,
+	PMU_CHRGR_EOC_CURR_120,
+	PMU_CHRGR_EOC_CURR_130,
+	PMU_CHRGR_EOC_CURR_140,
+	PMU_CHRGR_EOC_CURR_150,
+	PMU_CHRGR_EOC_CURR_160,
+	PMU_CHRGR_EOC_CURR_170,
+	PMU_CHRGR_EOC_CURR_180,
+	PMU_CHRGR_EOC_CURR_190,
+	PMU_CHRGR_EOC_CURR_200,
+	PMU_CHRGR_EOC_CURR_MAX,
+};
+
+enum bcmpmu_chrgr_volt_t {
+	PMU_CHRGR_VOLT_3600,
+	PMU_CHRGR_VOLT_3625,
+	PMU_CHRGR_VOLT_3650,
+	PMU_CHRGR_VOLT_3675,
+	PMU_CHRGR_VOLT_3700,
+	PMU_CHRGR_VOLT_3725,
+	PMU_CHRGR_VOLT_3750,
+	PMU_CHRGR_VOLT_3775,
+	PMU_CHRGR_VOLT_3800,
+	PMU_CHRGR_VOLT_3825,
+	PMU_CHRGR_VOLT_3850,
+	PMU_CHRGR_VOLT_3875,
+	PMU_CHRGR_VOLT_3900,
+	PMU_CHRGR_VOLT_3925,
+	PMU_CHRGR_VOLT_3950,
+	PMU_CHRGR_VOLT_3975,
+	PMU_CHRGR_VOLT_4000,
+	PMU_CHRGR_VOLT_4025,
+	PMU_CHRGR_VOLT_4050,
+	PMU_CHRGR_VOLT_4075,
+	PMU_CHRGR_VOLT_4100,
+	PMU_CHRGR_VOLT_4125,
+	PMU_CHRGR_VOLT_4150,
+	PMU_CHRGR_VOLT_4175,
+	PMU_CHRGR_VOLT_4200,
+	PMU_CHRGR_VOLT_4225,
+	PMU_CHRGR_VOLT_4250,
+	PMU_CHRGR_VOLT_4275,
+	PMU_CHRGR_VOLT_4300,
+	PMU_CHRGR_VOLT_4325,
+	PMU_CHRGR_VOLT_4350,
+	PMU_CHRGR_VOLT_4375,
+	PMU_CHRGR_VOLT_MAX,
+};
+
+enum bcmpmu_chrgr_type_t {
+	PMU_CHRGR_TYPE_NONE,
+	PMU_CHRGR_TYPE_USB,
+	PMU_CHRGR_TYPE_AC,
+	PMU_CHRGR_TYPE_DCP,
+	PMU_CHRGR_TYPE_TYPE1,
+	PMU_CHRGR_TYPE_TYPE2,
+	PMU_CHRGR_TYPE_MAX,
+};
+
+enum bcmpmu_usb_type_t {
+	PMU_USB_TYPE_NONE,
+	PMU_USB_TYPE_SDP,
+	PMU_USB_TYPE_CDP,
+	PMU_USB_TYPE_ACA,
+	PMU_USB_TYPE_MAX,
+};
+
+enum bcmpmu_usb_adp_mode_t {
+	PMU_USB_ADP_MODE_REPEAT,
+	PMU_USB_ADP_MODE_CALIBRATE,
+	PMU_USB_ADP_MODE_ONESHOT,
+};
+
+enum bcmpmu_usb_id_lvl_t {
+	PMU_USB_ID_NOT_SUPPORTED,
+	PMU_USB_ID_GROUND,
+	PMU_USB_ID_RID_A,
+	PMU_USB_ID_RID_B,
+	PMU_USB_ID_RID_C,
+	PMU_USB_ID_FLOAT,
+};
 
 struct bcmpmu_rw_data {
 	unsigned int map;
@@ -446,6 +630,48 @@ enum bcmpmu_env_bit_t {
 	PMU_ENV_MAX,
 };
 
+enum bcmpmu_usb_chrgr_event_t {
+	BCMPMU_USB_EVENT_USB_CHRGR_CHANGE,
+	BCMPMU_USB_EVENT_CHRG_CURR_LMT,
+};
+
+enum bcmpmu_usb_event_t {
+	BCMPMU_USB_EVENT_USB_DETECTION,
+	BCMPMU_USB_EVENT_ADP_CHANGE,
+	BCMPMU_USB_EVENT_ADP_SENSE_END,
+	BCMPMU_USB_EVENT_ADP_CALIBRATION_DONE,
+	BCMPMU_USB_EVENT_ID_CHANGE,
+	BCMPMU_USB_EVENT_VBUS_VALID,
+	BCMPMU_USB_EVENT_VBUS_INVALID,
+	BCMPMU_USB_EVENT_SESSION_VALID,
+	BCMPMU_USB_EVENT_SESSION_INVALID,
+	BCMPMU_USB_EVENT_SESSION_END_INVALID,
+	BCMPMU_USB_EVENT_SESSION_END_VALID,
+	BCMPMU_USB_EVENT_VBUS_OVERCURRENT,
+};
+
+enum bcmpmu_usb_ctrl_t {
+	BCMPMU_USB_CTRL_CHRG_CURR_LMT,
+	BCMPMU_USB_CTRL_VBUS_ON_OFF,
+	BCMPMU_USB_CTRL_SET_VBUS_DEB_TIME,
+	BCMPMU_USB_CTRL_SRP_VBUS_PULSE,
+	BCMPMU_USB_CTRL_DISCHRG_VBUS,
+	BCMPMU_USB_CTRL_START_STOP_ADP_SENS_PRB,
+	BCMPMU_USB_CTRL_START_STOP_ADP_PRB,
+	BCMPMU_USB_CTRL_START_ADP_CAL_PRB,
+	BCMPMU_USB_CTRL_SET_ADP_PRB_MOD,
+	BCMPMU_USB_CTRL_SET_ADP_PRB_CYC_TIME,
+	BCMPMU_USB_CTRL_SET_ADP_COMP_METHOD,
+	BCMPMU_USB_CTRL_GET_ADP_CHANGE_STATUS,
+	BCMPMU_USB_CTRL_GET_ADP_SENSE_STATUS,
+	BCMPMU_USB_CTRL_GET_ADP_PRB_RISE_TIMES,
+	BCMPMU_USB_CTRL_GET_VBUS_STATUS,
+	BCMPMU_USB_CTRL_GET_SESSION_STATUS,
+	BCMPMU_USB_CTRL_GET_SESSION_END_STATUS,
+	BCMPMU_USB_CTRL_GET_ID_VALUE,
+	BCMPMU_USB_CTRL_SW_UP,
+};
+
 #define	PMU_ENV_BITMASK_MBWV_DELTA		0x00001
 #define	PMU_ENV_BITMASK_CGPD_ENV		0x00002
 #define	PMU_ENV_BITMASK_UBPD_ENV		0x00004
@@ -463,17 +689,36 @@ struct bcmpmu_env_info {
 	unsigned long bitmask;
 };
 
+struct bcmpmu_batt_state {
+	int capacity;
+	int voltage;
+	int temp;
+	int present;
+	int capacity_lvl;
+	int status;
+	int health;
+};
+
+struct bcmpmu_usb_accy_data {
+	enum bcmpmu_chrgr_type_t chrgr_type;
+	enum bcmpmu_usb_type_t usb_type;
+	int max_curr_chrgr;
+};
+
 struct bcmpmu_platform_data;
 struct bcmpmu {
 	struct device *dev;
-	void *coreinfo;
 	void *accinfo;
 	void *irqinfo;
 	void *adcinfo;
 	void *battinfo;
 	void *chrgrinfo;
 	void *rtcinfo;
+	void *envinfo;
+	void *fginfo;
+	void *accyinfo;
 
+	/* reg access */
 	int (*read_dev)(struct bcmpmu *bcmpmu, int reg, unsigned int *val, unsigned int mask);
 	int (*write_dev)(struct bcmpmu *bcmpmu, int reg, unsigned int val, unsigned int mask);
 	int (*read_dev_drct)(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, unsigned int mask);
@@ -481,23 +726,52 @@ struct bcmpmu {
 	int (*read_dev_bulk)(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, int len);
 	int (*write_dev_bulk)(struct bcmpmu *bcmpmu, int map, int addr, unsigned int *val, int len);
 	const struct bcmpmu_reg_map *regmap;
-	
+	/* irq */	
 	int (*register_irq)(struct bcmpmu *pmu, enum bcmpmu_irq irq,
 		void (*callback)(enum bcmpmu_irq irq, void *), void *data);
 	int (*unregister_irq)(struct bcmpmu *pmu, enum bcmpmu_irq irq);
 	int (*mask_irq)(struct bcmpmu *pmu, enum bcmpmu_irq irq);
 	int (*unmask_irq)(struct bcmpmu *pmu, enum bcmpmu_irq irq);
 
+	/* adc */
 	int (*adc_req)(struct bcmpmu *pmu, struct bcmpmu_adc_req *req);
 
+	/* env */
 	void (*update_env_status)(struct bcmpmu *pmu, unsigned long *env);
 	bool (*is_env_bit_set)(struct bcmpmu *pmu, enum bcmpmu_env_bit_t env_bit);
 	bool (*get_env_bit_status)(struct bcmpmu *pmu, enum bcmpmu_env_bit_t env_bit);
 
-	int (*set_chrg_curr)(struct bcmpmu *pmu, int curr);
-	int (*set_chrg_volt)(struct bcmpmu *pmu, int volt);
+	/* charge */
+	int (*set_icc_fc)(struct bcmpmu *pmu, int curr);
+	int (*set_icc_qc)(struct bcmpmu *pmu, int curr);
+	int (*set_eoc)(struct bcmpmu *pmu, int curr);
+	int (*set_vfloat)(struct bcmpmu *pmu, int volt);
+	
+	/* fg */
+	int (*fg_currsmpl)(struct bcmpmu *pmu, int *data);
+	int (*fg_vmbatt)(struct bcmpmu *pmu, int *data);
+	int (*fg_acc_mas)(struct bcmpmu *pmu, int *data);
+	int (*fg_enable)(struct bcmpmu *pmu, int en);
+	int (*fg_reset)(struct bcmpmu *pmu);
+	
+	/* battery */
 	int (*charging_mgr)(struct bcmpmu *pmu, enum bcmpmu_batt_event event);
 	int (*metering_mgr)(struct bcmpmu *pmu, enum bcmpmu_batt_event event);
+
+	/* usb accy */
+	struct bcmpmu_usb_accy_data usb_accy_data;
+	int (* register_usb_callback)(struct bcmpmu *pmu,
+			void (*callback)(struct bcmpmu *pmu,
+				unsigned char event, void *, void *),
+			void *data);
+	int (* register_chrgr_callback)(struct bcmpmu *pmu,
+			void (*callback)(struct bcmpmu *pmu,
+				unsigned char event, void *, void *),
+			void *data);
+	int (*usb_set)(struct bcmpmu *pmu,
+				enum bcmpmu_usb_ctrl_t ctrl, unsigned long val);
+	int (*usb_get)(struct bcmpmu *pmu,
+				enum bcmpmu_usb_ctrl_t ctrl, void *val);
 
 	struct bcmpmu_platform_data *pdata;
 	struct regulator_desc *rgltr_desc;
@@ -523,13 +797,15 @@ struct bcmpmu_platform_data {
 	int i2c_adapter_id;
 	int i2c_pagesize;
 	int irq;
-	u32 baseaddr;
 	struct bcmpmu_rw_data *init_data;
 	int init_max;
 	struct bcmpmu_regulator_init_data *regulator_init_data;
 	const struct bcmpmu_temp_map *batt_temp_map;
 	int batt_temp_map_len;
 	const struct bcmpmu_adc_setting *adc_setting;
+	int fg_smpl_rate;
+	int fg_slp_rate;
+	int fg_slp_curr_ua;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
@@ -541,6 +817,7 @@ const struct bcmpmu_adc_map *bcmpmu_get_adcmap(void);
 const struct bcmpmu_reg_map *bcmpmu_get_irqregmap(int *len);
 const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(void);
 const struct bcmpmu_env_info *bcmpmu_get_envregmap(int *len);
+const int *bcmpmu_get_usb_id_map(int *len);
 
 const struct regulator_desc *bcmpmu_rgltr_desc(void);
 const struct bcmpmu_reg_info *bcmpmu_rgltr_info(void);

@@ -1006,7 +1006,6 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	clk_dbg("%s:%d, clock name: %s \n",__func__,enable, clk->name);
 
 	BUG_ON(!peri_clk->ccu_clk || (peri_clk->clk_gate_offset == 0));
-	BUG_ON( !peri_clk->clk_en_mask && !CLK_FLG_ENABLED(clk,AUTO_GATE));
 
 	if((enable) && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU) && !(clk->flags & AUTO_GATE))
 	{
@@ -1070,7 +1069,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 
 	clk_dbg("%s:%s use count = %d\n",__func__,clk->name,peri_clk->clk.use_cnt);
 
-	if(clk->flags & AUTO_GATE)
+	if(clk->flags & AUTO_GATE || !peri_clk->clk_en_mask)
 	{
 		clk_dbg("%s:%s: is auto gated\n",__func__, clk->name);
 		goto dis_pi;

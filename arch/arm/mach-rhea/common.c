@@ -191,7 +191,11 @@ static char *android_functions_all[] = {
 
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
+#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
+	.nluns		=	2,
+#else
 	.nluns		=	1,
+#endif
 	.vendor		=	"Broadcom",
 	.product	=	"Rhea",
 	.release	=	0x0100
@@ -331,11 +335,11 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-	{ /* SDIO2 */
+	{ /* SDIO2 - SDIO2 on customer board is used for eMMC */
 		.id = 2,
 		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_SDMMC,
-		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
 		.peri_clk_name = "sdio3_clk",
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
@@ -421,16 +425,19 @@ static struct resource board_pmu_bsc_resource[] = {
 static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 	{ /* for BSC0 */
 		.speed = BSC_BUS_SPEED_50K,
+		.dynamic_speed = 1,
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
 	},
 	{ /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
+		.dynamic_speed = 1,
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
 	},
 	{ /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
+		.dynamic_speed = 1,
 		.bsc_clk = "pmu_bsc_clk",
 		.bsc_apb_clk = "pmu_bsc_apb",
 	},
@@ -614,11 +621,6 @@ static struct resource kona_otg_platform_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = HSOTG_CTRL_BASE_ADDR,
-		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[2] = {
 		.start = BCM_INT_ID_USB_HSOTG,
 		.end = BCM_INT_ID_USB_HSOTG,
 		.flags = IORESOURCE_IRQ,
@@ -646,6 +648,7 @@ void avs_silicon_type_notify(u32 silicon_type)
 #endif
 	pr_info("%s:silicon_type = %d\n",__func__,silicon_type);
 }
+
 static u32 svt_pmos_bin[3+1] = {125,146,171,201};
 static u32 svt_nmos_bin[3+1] = {75,96,126,151};
 

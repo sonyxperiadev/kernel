@@ -252,10 +252,16 @@ void fb_fps_display(struct fb_fps_info *fps_info, void *dst, int x, int y, int d
 	if (fps_info->frame_count == FPS_CALC_INTERVAL || disp_now) {
 		
 		tms = jiffies_to_msecs(curr_time - fps_info->interval_start_time);
-		fps_quotient = (FPS_CALC_INTERVAL * 1000)/tms;
-		fps_decimal  = ( ( (FPS_CALC_INTERVAL * 1000)%tms ) * 100 ) /tms;
+		if (tms != 0) {
+			fps_quotient = (FPS_CALC_INTERVAL * 1000)/tms;
+			fps_decimal  = ( ( (FPS_CALC_INTERVAL * 1000)%tms ) * 100 ) /tms;
+			snprintf(print_str, FPS_STR_LEN, "%d.%d", fps_quotient, fps_decimal);
+		} else {
+			snprintf(print_str, FPS_STR_LEN, "*.*");
+			printk(KERN_ERR "This should not happen. start time=%lu jiffies end time=%lu jiffies tms=%d",
+					fps_info->interval_start_time, curr_time, tms);
+		}
 
-		snprintf(print_str, FPS_STR_LEN, "%d.%d", fps_quotient, fps_decimal);
 		fb_fps_str_to_img(fps_info, print_str, strlen(print_str), x, y);
 		fps_info->frame_count = 0;
 		fps_info->interval_start_time = curr_time;

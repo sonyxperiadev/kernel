@@ -95,9 +95,9 @@
 
 #define GPIODRV_Set_Bit(pin, val) gpio_set_value(pin, val)
 
-#define HAL_LCD_RESET	 41
-#define HAL_LCD_RESET_B  95
-#define HAL_LCD_RESET_C  96
+//#define HAL_LCD_RESET	 41
+//#define HAL_LCD_RESET_B  95
+//#define HAL_LCD_RESET_C  96
 
 typedef struct
 {
@@ -661,6 +661,7 @@ Int32 R61581_HVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
 // Description:   Generic Reset To All DISPLAY Modules
 //                
 //*****************************************************************************
+#if 0
 static Int32 DISPDRV_Reset( Boolean force )
 {
     UInt32          rst0pin     = 0;
@@ -702,6 +703,21 @@ static Int32 DISPDRV_Reset( Boolean force )
     
     if( !rst0present )
     {
+	printk(KERN_ERR "the reset 0 is not used");
+        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
+            "WARNING Only HAL_LCD_RESET B/C defined\n");
+    }
+
+    if( !rst1present )
+    {
+	printk(KERN_ERR "the reset B is not used");
+        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
+            "WARNING Only HAL_LCD_RESET B/C defined\n");
+    }
+
+    if( !rst2present )
+    {
+	printk(KERN_ERR "the reset C is not used");
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
             "WARNING Only HAL_LCD_RESET B/C defined\n");
     }
@@ -751,9 +767,7 @@ static Int32 DISPDRV_Reset( Boolean force )
 
     return ( 0 );
 } // DISPDRV_Reset
-
-
-
+#endif
 
 //*****************************************************************************
 //
@@ -822,7 +836,7 @@ Int32 R61581_HVGA_SMI_Open (
     panelData = &R61581_HVGA_SMI_Info;
     
 
-    DISPDRV_Reset( FALSE );
+    //DISPDRV_Reset( FALSE );
 
 #if defined(__HVGA_MODE_888__) 
     pPanel->bpp         = 4;
