@@ -13,3 +13,13 @@ header-y += amxr.h
 header-y += amxr_ioctl.h
 header-y += amxr_port.h
 header-y += amxr_port_ioctl.h
+header-y += sigmorph.h
+header-y += gist.h
+header-y += csx.h
+header-y += csx_af.h
+header-y += csx_framework.h
+header-y += csx_gist.h
+header-y += csx_sigmorph.h
+header-y += csx_util.h
+header-y += csx_util_ioctl.h
+

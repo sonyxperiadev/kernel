@@ -1,5 +1,5 @@
 /*****************************************************************************
-* Copyright 2006 - 2010 Broadcom Corporation.  All rights reserved.
+* Copyright 2001 - 2008 Broadcom Corporation.  All rights reserved.
 *
 * Unless you and Broadcom execute a separate written software license
 * agreement governing use of this software, this software is licensed to you
@@ -11,12 +11,23 @@
 * license other than the GPL, without Broadcom's express prior written
 * consent.
 *****************************************************************************/
+/**
+*
+*  @file    csx.h
+*
+*  @brief:  This file contains the API for the CSX interface
+*
+*****************************************************************************/
 
-#ifndef BATTERY_SETTINGS_H
-#define BATTERY_SETTINGS_H
+#if !defined( CSX_UTIL_H )
+#define CSX_UTIL_H
 
-/* determine which GPIO pins are used for Battery Charging circuit */
-#define HW_BATTERY_CTL_PWR          85 /* GPIO #85 */
-#define HW_BATTERY_ACP_SHDN        181 /* GPIO #181 */
+/* ---- Include Files ---------------------------------------------------- */
 
-#endif
+/* ---- Constants and Types ---------------------------------- */
+
+typedef void CSX_UTIL_INFO;
+typedef void CSX_UTIL_POINT;
+
+#endif /* CSX_UTIL_H */
+

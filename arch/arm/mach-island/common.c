@@ -331,11 +331,11 @@ static struct platform_device board_kona_otg_platform_device =
 
 #define GOOGLE_VENDOR_ID        0x18d1
 #define VENDOR_ID               GOOGLE_VENDOR_ID
-#define PRODUCT_ID              0x0001
+#define PRODUCT_ID              0x0d02
 
 /* FIXME need revise these IDs*/
 #define UMS_PRODUCT_ID          PRODUCT_ID
-#define UMS_ADB_PRODUCT_ID      0x0002
+#define UMS_ADB_PRODUCT_ID      PRODUCT_ID
 #define RNDIS_PRODUCT_ID        0x0ffe
 #define RNDIS_ADB_PRODUCT_ID    0x0ffc
 

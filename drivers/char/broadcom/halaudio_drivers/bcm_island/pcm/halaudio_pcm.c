@@ -103,7 +103,7 @@
 #define PCM_DEFAULT_SLOT_CHANS_USED       1        /* slot channels used */
 #define PCM_DEFAULT_BCLK_FREQ_KHZ         128      /* bit clock in kHz */
 #define PCM_DEFAULT_SAMP_WIDTH            2        /* sample byte width */
-#define PCM_DEFAULT_SAMP_FREQ             8000     /* In Hz  */
+#define PCM_DEFAULT_SAMP_FREQ             16000    /* In Hz  */
 
 #define CALCFRAMESZ(freq,period,sampwidth)   ((freq) * (period) * (sampwidth) / 1000000 ) /* in bytes */
 #define PCM_DEFAULT_FRAME_SIZE            CALCFRAMESZ( PCM_DEFAULT_SAMP_FREQ, PCM_DEFAULT_FRAME_PERIOD, PCM_DEFAULT_SAMP_WIDTH ) /* do not change */
@@ -120,10 +120,12 @@
 #define PCM_DMA_ALIGN_IN_BYTES            8        /* DMA buffers should be 64-bit aligned for efficiency */
 #define PCM_DMA_ALLOC_CROSS_RESTRICT      0
 
+#define PCM_FIFO_SIZE_BYTES               128
+
 /* Egress Priming configuration */
 #define PCM_DEFAULT_PRIME_PERIOD          PCM_DEFAULT_FRAME_PERIOD
-#define PCM_DEFAULT_PRIME_SIZE_BYTES      PCM_DEFAULT_DMA_FRAME_SIZE
-#define PCM_MAX_PRIME_BUFFER_SIZE_BYTES   (PCM_MAX_DMA_FRAME_SIZE * 2)
+#define PCM_DEFAULT_PRIME_SIZE_BYTES      (PCM_FIFO_SIZE_BYTES + (PCM_DEFAULT_DMA_FRAME_SIZE / 2))      /* Provide 1.5 frames delay */
+#define PCM_MAX_PRIME_BUFFER_SIZE_BYTES   (PCM_MAX_DMA_FRAME_SIZE * 4)
 
 /* CSX Data stucture */
 struct pcm_csx_data
@@ -1036,7 +1038,7 @@ static int pcmSetFreq(
     */
    frame_size     = (freqHz * PCM_DEFAULT_FRAME_PERIOD * PCM_DEFAULT_SAMP_WIDTH) / 1000000; /* in bytes */
    frame_period   = (frame_size * (1000000/PCM_DEFAULT_SAMP_WIDTH)) / freqHz;               /* in usec */
-   dma_prime_egr  = (freqHz * PCM_DEFAULT_PRIME_PERIOD * PCM_DEFAULT_SAMP_WIDTH) / 1000000;
+   dma_prime_egr  = (PCM_FIFO_SIZE_BYTES + (((freqHz * PCM_DEFAULT_PRIME_PERIOD * PCM_DEFAULT_SAMP_WIDTH) / 1000000) / 2));
 
    ch->frame_period     = frame_period;
    ch->samp_freq        = freqHz;
