@@ -1029,8 +1029,6 @@ static const struct rtc_class_ops bcmhana_rtcops = {
     .set_time = bcmhana_rtc_settime,
     .read_alarm = bcmhana_rtc_getalarm,
     .set_alarm = bcmhana_rtc_setalarm,
-    .irq_set_freq = bcmhana_rtc_setfreq,
-    .irq_set_state = bcmhana_rtc_setpie,
     .proc = bcmhana_rtc_proc,
 };
 
