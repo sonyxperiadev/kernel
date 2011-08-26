@@ -44,7 +44,6 @@ static int em_release(struct inode *inode, struct file *file);
 static const struct file_operations em_fops = {
 	.owner		= THIS_MODULE,
 	.open		= em_open,
-	.ioctl		= em_ioctl,
 	.release	= em_release,
 	.poll		= em_poll,
 };

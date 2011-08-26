@@ -328,7 +328,6 @@ static struct rtc_class_ops bcmpmu_rtc_ops = {
 	.read_alarm		= bcmpmu_read_alarm,
 	.set_alarm		= bcmpmu_set_alarm,
 	.alarm_irq_enable	= bcmpmu_alarm_irq_enable,
-	.update_irq_enable	= bcmpmu_update_irq_enable,
 };
 
 static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
