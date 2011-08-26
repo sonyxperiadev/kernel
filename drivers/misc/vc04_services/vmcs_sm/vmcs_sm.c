@@ -1330,7 +1330,6 @@ static void vcsm_vma_cache_clean_page_range(unsigned long addr, unsigned long en
    pmd_t *pmd;
    pte_t *pte;
    unsigned long pgd_next, pud_next, pmd_next;
-   struct vm_area_struct *vma;
 
    if (addr >= end)
       return;
@@ -1340,7 +1339,6 @@ static void vcsm_vma_cache_clean_page_range(unsigned long addr, unsigned long en
    do {
       pgd_next = pgd_addr_end(addr, end);
 
-      vma = find_vma(current->mm, addr);
       if (pgd_none(*pgd) || pgd_bad(*pgd))
          continue;
 
