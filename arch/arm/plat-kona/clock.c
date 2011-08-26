@@ -64,6 +64,11 @@ int clk_init(struct clk *clk)
 	return ret;
 }
 
+int clk_is_enabled(struct clk* clk)
+{
+	return (!!clk->use_cnt);
+}
+
 int clk_register(struct clk_lookup *clk_lkup,int num_clks)
 {
     int ret = 0;
@@ -420,7 +425,6 @@ static int ccu_clk_int_status_clear(struct ccu_clk* ccu_clk,int int_type)
 static int ccu_clk_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id)
 {
 	u32 reg_val = 0;
-	struct pi* pi =  NULL;
 	u32 shift;
 
 	clk_dbg("%s:%s ccu , freq_id = %d policy_id = %d\n",__func__,
@@ -448,14 +452,7 @@ static int ccu_clk_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int f
 	}
 
 	/*Make sure that PI is enabled ...*/
-	if(ccu_clk->pi_id != -1)
-	{
-		pi = pi_mgr_get(ccu_clk->pi_id);
-
-		BUG_ON(!pi);
-		pi_enable(pi,1);
-	}
-
+	CCU_PI_ENABLE(ccu_clk,1);
 	reg_val = readl(CCU_POLICY_FREQ_REG(ccu_clk));
 	clk_dbg("%s: reg_val:%08x shift:%d\n",__func__, reg_val, shift);
 	reg_val &= ~(CCU_FREQ_POLICY_MASK << shift);
@@ -469,8 +466,9 @@ static int ccu_clk_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int f
 	ccu_policy_engine_resume(ccu_clk,
 		ccu_clk->clk.flags & CCU_TARGET_LOAD ? CCU_LOAD_TARGET : CCU_LOAD_ACTIVE);
 	ccu_write_access_enable(ccu_clk,false);
-	if(pi)
-		pi_enable(pi,0);
+
+	CCU_PI_ENABLE(ccu_clk,0);
+
 	return 0;
 }
 
@@ -584,6 +582,26 @@ static int ccu_clk_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage
 	return 0;
 }
 
+static int ccu_policy_dbg_get_act_freqid(struct ccu_clk * ccu_clk)
+{
+    u32 reg_val;
+
+    reg_val = readl(ccu_clk->ccu_clk_mgr_base + ccu_clk->policy_dbg_offset);
+    reg_val = (reg_val >> ccu_clk->policy_dbg_act_freq_shift) & CCU_POLICY_DBG_FREQ_MASK;
+
+    return (int)reg_val;
+}
+
+static int ccu_policy_dbg_get_act_policy(struct ccu_clk * ccu_clk)
+{
+    u32 reg_val;
+
+    reg_val = readl(ccu_clk->ccu_clk_mgr_base + ccu_clk->policy_dbg_offset);
+    reg_val = (reg_val >> ccu_clk->policy_dbg_act_policy_shift) & CCU_POLICY_DBG_POLICY_MASK;
+
+    return (int)reg_val;
+}
+
 static int ccu_clk_set_active_policy(struct ccu_clk * ccu_clk, u32 policy)
 {
 	ccu_clk->active_policy = policy;
@@ -592,7 +610,12 @@ static int ccu_clk_set_active_policy(struct ccu_clk * ccu_clk, u32 policy)
 
 static int ccu_clk_get_active_policy(struct ccu_clk * ccu_clk)
 {
+#ifdef CONFIG_DEBUG_FS
+	return ccu_policy_dbg_get_act_policy(ccu_clk);
+#else
 	return ccu_clk->active_policy;
+#endif
+
 }
 
 struct ccu_clk_ops gen_ccu_ops =
@@ -610,7 +633,6 @@ struct ccu_clk_ops gen_ccu_ops =
     .set_active_policy = ccu_clk_set_active_policy,
     .get_active_policy = ccu_clk_get_active_policy,
 };
-
 
 /*Generic ccu ops functions*/
 
@@ -657,7 +679,6 @@ static int ccu_clk_init(struct clk* clk)
 {
 	struct ccu_clk * ccu_clk;
 	int inx;
-	struct pi* pi = NULL;
 	u32 reg_val;
 	if(clk->clk_type != CLK_TYPE_CCU)
 		return -EPERM;
@@ -671,15 +692,21 @@ static int ccu_clk_init(struct clk* clk)
 	clk_dbg("%s - %s\n",__func__, clk->name);
 
 	ccu_clk->write_access_en_count = 0;
+	INIT_LIST_HEAD(&ccu_clk->peri_list);
+	INIT_LIST_HEAD(&ccu_clk->bus_list);
+	INIT_LIST_HEAD(&ccu_clk->ref_list);
+
+
 
 	if(ccu_clk->pi_id != -1)
 	{
-		pi = pi_mgr_get(ccu_clk->pi_id);
+		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
 		BUG_ON(!pi);
 		pi_init(pi);
-		pi_enable(pi,1);
 	}
 
+
+	CCU_PI_ENABLE(ccu_clk,1);
 
 	/* enable write access*/
 	ccu_write_access_enable(ccu_clk,true);
@@ -730,12 +757,7 @@ static int ccu_clk_init(struct clk* clk)
 		ccu_policy_engine_resume(ccu_clk, CCU_LOAD_ACTIVE);
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
-
-	if(ccu_clk->pi_id != -1)
-	{
-		pi_enable(pi,0);
-	}
-
+	CCU_PI_ENABLE(ccu_clk,0);
 
 	return 0;
 }
@@ -887,7 +909,7 @@ static int peri_clk_get_pll_select(struct peri_clk * peri_clk)
 }
 EXPORT_SYMBOL(peri_clk_get_pll_select);
 
-static int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source)
+int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source)
 {
 	u32 reg_val;
 	if(!peri_clk->clk_div.pll_select_offset ||
@@ -934,7 +956,7 @@ int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay)
 }
 EXPORT_SYMBOL(peri_clk_hyst_enable);
 
-static int peri_clk_get_gating_status(struct peri_clk * peri_clk)
+int peri_clk_get_gating_status(struct peri_clk * peri_clk)
 {
 	u32 reg_val;
 
@@ -944,7 +966,6 @@ static int peri_clk_get_gating_status(struct peri_clk * peri_clk)
 
 	return GET_BIT_USING_MASK(reg_val, peri_clk->stprsts_mask);
 }
-EXPORT_SYMBOL(peri_clk_get_gating_status);
 
 static int peri_clk_set_voltage_lvl(struct peri_clk * peri_clk, int voltage_lvl)
 {
@@ -965,7 +986,6 @@ static int peri_clk_set_voltage_lvl(struct peri_clk * peri_clk, int voltage_lvl)
 
 	return 0;
 }
-EXPORT_SYMBOL(peri_clk_set_voltage_lvl);
 
 static int peri_clk_enable(struct clk* clk, int enable)
 {
@@ -990,7 +1010,8 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	if((enable) && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU) && !(clk->flags & AUTO_GATE))
 	{
 	    clk_dbg("%s: peri clock %s incrementing CCU count\n",__func__, clk->name);
-	    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
+	    if (peri_clk->ccu_clk->clk.ops && peri_clk->ccu_clk->clk.ops->enable)
+		peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
 	}
 
 	/*Make sure that all dependent & src clks are enabled/disabled*/
@@ -1017,7 +1038,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	{
 		/*Increment usage count... return if already enabled*/
 		if(peri_clk->clk.use_cnt++ != 0)
-			goto enable_done1;
+			goto enable_done;
 
 		/*Update DFS request to opp before enabling the clock */
 		if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
@@ -1026,6 +1047,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 			pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,peri_clk->opp);
 		}
 
+		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 		/*TBD - MAY NEED TO REVISIT*/
 		if(clk->flags & ENABLE_HVT)
 			peri_clk_set_voltage_lvl(peri_clk,VLT_HIGH);
@@ -1034,25 +1056,27 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	{
 		/*decrment usage count... return if already disabled or usage count is non-zero*/
 		if(peri_clk->clk.use_cnt == 0)
-		    goto enable_done1;
-		if(--peri_clk->clk.use_cnt != 0)
 		    goto enable_done;
+		if(--peri_clk->clk.use_cnt != 0)
+		    goto notify_ccu;
+
+		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 
 		/*MAY NEED TO REVISIT*/
 		if(clk->flags & ENABLE_HVT)
 			peri_clk_set_voltage_lvl(peri_clk,VLT_NORMAL);
 	}
 
-	/* enable write access*/
-	ccu_write_access_enable(peri_clk->ccu_clk, true);
-
 	clk_dbg("%s:%s use count = %d\n",__func__,clk->name,peri_clk->clk.use_cnt);
 
 	if(clk->flags & AUTO_GATE)
 	{
 		clk_dbg("%s:%s: is auto gated\n",__func__, clk->name);
-		goto enable_done1;
+		goto dis_pi;
 	}
+
+		/* enable write access*/
+	ccu_write_access_enable(peri_clk->ccu_clk, true);
 
 	reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk,peri_clk->clk_gate_offset));
 	clk_dbg("%s, Before change clk_gate reg value: %08x  \n",__func__, reg_val);
@@ -1089,13 +1113,17 @@ static int peri_clk_enable(struct clk* clk, int enable)
 		pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,PI_MGR_DFS_MIN_VALUE);
 	}
 
-enable_done:
+dis_pi:
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
+
+notify_ccu:
 	if(!enable && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU) && !(clk->flags& AUTO_GATE))
 	{
 	    clk_dbg("%s: peri clock %s decrementing CCU count\n",__func__, clk->name);
-	    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 0);
+	    if (peri_clk->ccu_clk->clk.ops && peri_clk->ccu_clk->clk.ops->enable)
+		peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 0);
 	}
-enable_done1:
+enable_done:
 	/* disable write access*/
 
 	clk_dbg("*************%s: peri clock %s count after %s : %d ***************\n",
@@ -1390,7 +1418,6 @@ static int peri_clk_init(struct clk* clk)
 	struct peri_clk * peri_clk;
 	struct src_clk * src_clks;
 	int inx;
-	struct pi* pi = NULL;
 
 	if(clk->clk_type != CLK_TYPE_PERI)
 		return -EPERM;
@@ -1398,17 +1425,13 @@ static int peri_clk_init(struct clk* clk)
 	if(clk->init)
 		return 0;
 
+	clk->init = 1;
 	peri_clk = to_peri_clk(clk);
 	BUG_ON(peri_clk->ccu_clk == NULL);
 
 	clk_dbg("%s, clock name: %s \n",__func__, clk->name);
 	clk->use_cnt = 0;
-	if(peri_clk->ccu_clk->pi_id != -1)
-	{
-		pi = pi_mgr_get(peri_clk->ccu_clk->pi_id);
-		BUG_ON(pi == NULL);
-		pi_enable(pi,1);
-	}
+	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++)
 	{
 		if(clk->dep_clks[inx]->ops && clk->dep_clks[inx]->ops->init)
@@ -1484,15 +1507,15 @@ static int peri_clk_init(struct clk* clk)
 	}
 	/* Disable write access*/
 	ccu_write_access_enable(peri_clk->ccu_clk, false);
-	clk->init = 1;
+
 	clk_dbg("*************%s: peri clock %s count after init %d **************\n",
 		__func__, clk->name, clk->use_cnt);
 
-	if(peri_clk->ccu_clk->pi_id != -1)
-	{
-		pi_enable(pi,0);
-	}
 
+	INIT_LIST_HEAD(&clk->list);
+	list_add(&clk->list, &peri_clk->ccu_clk->peri_list);
+
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
 	return 0;
 }
 
@@ -1538,6 +1561,8 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 
 	}
 
+	CCU_PI_ENABLE(peri_clk->ccu_clk,1);
+
 	clk_div = &peri_clk->clk_div;
 	if(clk_div->div_offset && clk_div->div_mask)
 	{
@@ -1560,7 +1585,7 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 	}
 	if(clk_div->pll_select_offset && clk_div->pll_select_mask)
 	{
-		reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->div_offset));
+		reg_val = readl(CCU_REG_ADDR(peri_clk->ccu_clk, clk_div->pll_select_offset));
 		sel = GET_VAL_USING_MASK_SHIFT(reg_val, clk_div->pll_select_mask, clk_div->pll_select_shift);
 		clk_dbg("pll_sel : %u\n", sel);
 	}
@@ -1577,6 +1602,7 @@ static unsigned long peri_clk_get_rate(struct clk *clk)
 	clk_dbg("%s clock name %s, src_rate %u sel %d div %u pre_div %u dither %u rate %u\n",
 		__func__, clk->name, peri_clk->src_clk.clk[sel]->rate, sel, div, pre_div, dither, clk->rate);
 
+	CCU_PI_ENABLE(peri_clk->ccu_clk,0);
 	return clk->rate;
 }
 
@@ -1728,6 +1754,8 @@ static int bus_clk_enable(struct clk *clk, int enable)
 		goto enable_done;
 	}
 
+	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
+
 	/* enable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, true);
 
@@ -1770,6 +1798,7 @@ static int bus_clk_enable(struct clk *clk, int enable)
 	/* disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);
 
+	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
 enable_done:
 	if(!enable && !(clk->flags & AUTO_GATE) && (clk->flags & NOTIFY_STATUS_TO_CCU))
 	{
@@ -1791,15 +1820,17 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 
 	BUG_ON(!bus_clk->ccu_clk);
 	ccu_clk= bus_clk->ccu_clk;
+	CCU_PI_ENABLE(ccu_clk,1);
 	if(bus_clk->freq_tbl_index == -1)
 	{
 		if(!bus_clk->src_clk || !bus_clk->src_clk->ops || !bus_clk->src_clk->ops->get_rate)
 		{
 		    clk_dbg("This bus clock freq depends on internal dividers\n");
 		    c->rate = 0;
+		    goto ret;
 		}
 		c->rate =  bus_clk->src_clk->ops->get_rate(bus_clk->src_clk);
-		return c->rate;
+		goto ret;
 	}
 	current_policy = ccu_get_active_policy(ccu_clk);
 
@@ -1807,7 +1838,9 @@ static unsigned long bus_clk_get_rate(struct clk *c)
 	clk_dbg("current_policy: %d freq_id %d freq_tbl_index :%d\n",
 			current_policy, freq_id, bus_clk->freq_tbl_index);
 	c->rate = ccu_clk->freq_tbl[freq_id][bus_clk->freq_tbl_index];
+ret:
 	clk_dbg("clock rate: %ld\n", (long int)c->rate);
+	CCU_PI_ENABLE(ccu_clk,0);
 	return c->rate;
 }
 
@@ -1815,24 +1848,20 @@ static int bus_clk_init(struct clk *clk)
 {
 	struct bus_clk * bus_clk;
 	int inx;
-	struct pi* pi = NULL;
 
 	if(clk->clk_type != CLK_TYPE_BUS)
 		return -EPERM;
 	if(clk->init)
 		return 0;
 
+	clk->init = 1;
 	bus_clk = to_bus_clk(clk);
 	BUG_ON(bus_clk->ccu_clk == NULL);
 
 	clk_dbg("%s - %s\n", __func__, clk->name);
 	clk->use_cnt = 0;
-	if(bus_clk->ccu_clk->pi_id != -1)
-	{
-		pi = pi_mgr_get(bus_clk->ccu_clk->pi_id);
-		BUG_ON(!pi);
-		pi_enable(pi,1);
-	}
+
+	CCU_PI_ENABLE(bus_clk->ccu_clk,1);
 
 	for (inx = 0; inx < MAX_DEP_CLKS && clk->dep_clks[inx]; inx++)
 	{
@@ -1880,14 +1909,14 @@ static int bus_clk_init(struct clk *clk)
 
 	/* Disable write access*/
 	ccu_write_access_enable(bus_clk->ccu_clk, false);
-	clk->init = 1;
 	clk_dbg("%s init complete\n", clk->name);
 	clk_dbg("*************%s: bus clock %s count after init %d ***************\n",
 		__func__, clk->name, clk->use_cnt);
-	if(bus_clk->ccu_clk->pi_id != -1)
-	{
-		pi_enable(pi,0);
-	}
+
+	CCU_PI_ENABLE(bus_clk->ccu_clk,0);
+
+	INIT_LIST_HEAD(&clk->list);
+	list_add(&clk->list, &bus_clk->ccu_clk->bus_list);
 
 	return 0;
 }
@@ -1951,11 +1980,14 @@ static int ref_clk_init(struct clk* clk)
 	if(clk->init)
 		return 0;
 
+	clk->init = 1;
 	ref_clk = to_ref_clk(clk);
 	BUG_ON(ref_clk->ccu_clk == NULL);
 
 	clk_dbg("%s, clock name: %s \n",__func__, clk->name);
 
+
+	CCU_PI_ENABLE(ref_clk->ccu_clk,1);
 	/* enable write access*/
 	ccu_write_access_enable(ref_clk->ccu_clk, true);
 	if(ref_clk_get_gating_status(ref_clk) == 1)
@@ -1991,7 +2023,11 @@ static int ref_clk_init(struct clk* clk)
 
 	/* Disable write access*/
 	ccu_write_access_enable(ref_clk->ccu_clk, false);
-	clk->init = 1;
+	CCU_PI_ENABLE(ref_clk->ccu_clk,0);
+
+
+	INIT_LIST_HEAD(&clk->list);
+	list_add(&clk->list, &ref_clk->ccu_clk->ref_list);
 
 	return 0;
 }
@@ -2028,42 +2064,39 @@ static int clk_debug_set_rate(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(clock_rate_fops, clk_debug_get_rate,
 						clk_debug_set_rate, "%llu\n");
 
-static int clk_debug_get_ccu(void *data, u64 *val)
+static int ccu_debug_get_freqid(void *data, u64 *val)
 {
 	struct clk *clock = data;
-	struct peri_clk *peri_clk;
-	struct bus_clk *bus_clk;
-	struct ref_clk *ref_clk;
+	struct ccu_clk *ccu_clk;
+	int freq_id;
 
-	switch (clock->clk_type)
-	{
-	case CLK_TYPE_PERI:
-		peri_clk = to_peri_clk(clock);
-		clk_dbg("Perepheral Clock in CCU : %s\n", peri_clk->ccu_clk->clk.name);
-		if (clock->flags & DONOT_NOTIFY_STATUS_TO_CCU)
-		    clk_dbg("%s Not considered for PM \n", clock->name);
-		break;
-	case CLK_TYPE_BUS:
-		bus_clk = to_bus_clk(clock);
-		clk_dbg("BUS Clock in CCU : %s\n", bus_clk->ccu_clk->clk.name);
-		if (clock->flags & NOTIFY_STATUS_TO_CCU && !(clock->flags & AUTO_GATE))
-		    clk_dbg("%s Considered for PM \n", clock->name);
-		break;
-	case CLK_TYPE_REF:
-		ref_clk = to_ref_clk(clock);
-		clk_dbg("REF Clock in CCU : %s\n", ref_clk->ccu_clk->clk.name);
-		break;
-	case CLK_TYPE_CCU:
-		clk_dbg("CCU Clock, CCU : %s\n", clock->name);
-		break;
-	default:
-		clk_dbg("Unknown clock type\n");
-	}
-	*val = 0;
-	return *val;
+	ccu_clk = to_ccu_clk(clock);
+	freq_id = ccu_policy_dbg_get_act_freqid(ccu_clk);
+
+	*val = freq_id;
+	return 0;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(clock_holding_ccu_fops, clk_debug_get_ccu, NULL, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(ccu_freqid_fops, ccu_debug_get_freqid,
+						NULL, "%llu\n");
+
+static int ccu_debug_get_policy(void *data, u64 *val)
+{
+	struct clk *clock = data;
+	struct ccu_clk *ccu_clk;
+	int policy;
+
+	ccu_clk = to_ccu_clk(clock);
+	policy = ccu_policy_dbg_get_act_policy(ccu_clk);
+
+	*val = policy;
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(ccu_policy_fops, ccu_debug_get_policy,
+						NULL, "%llu\n");
+
+
 
 static int _get_clk_status(struct clk *c)
 {
@@ -2126,6 +2159,75 @@ static int clk_debug_set_enable(void *data, u64 val)
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(clock_enable_fops, NULL, clk_debug_set_enable, "%llu\n");
+
+static int ccu_active_clks_show(struct seq_file *seq, void *p)
+{
+    struct clk *clock = seq->private;
+    struct ccu_clk *ccu_clk;
+    struct ref_clk *ref_clk;
+    struct bus_clk *bus_clk;
+    struct peri_clk *peri_clk;
+    struct clk *temp_clk;
+    int status;
+
+    ccu_clk = to_ccu_clk(clock);
+
+    list_for_each_entry(temp_clk, &ccu_clk->ref_list, list) {
+	ref_clk = to_ref_clk(temp_clk);
+	status = ref_clk_get_gating_status(ref_clk);
+	if (status < 0)
+	    seq_printf(seq, "Ref clock %s \t\tstauts: unavailable\n", temp_clk->name);
+	else if (status == 0)
+	    seq_printf(seq, "Ref clock %s \t\tstauts: Disabled \n", temp_clk->name);
+	else
+	    seq_printf(seq, "Ref clock %s \t\tstauts: Enabled \n", temp_clk->name);
+    }
+
+    list_for_each_entry(temp_clk, &ccu_clk->peri_list, list) {
+	peri_clk = to_peri_clk(temp_clk);
+	status = peri_clk_get_gating_status(peri_clk);
+	if (status < 0)
+	    seq_printf(seq, "Peri clock %s \t\t\tstauts: unavailable; \t\t", temp_clk->name);
+	else if (status == 0)
+	    seq_printf(seq, "Peri clock %s \t\t\tstauts: Disabled; \t\t", temp_clk->name);
+	else
+	    seq_printf(seq, "Peri clock %s \t\t\tstauts: Enabled; \t\t", temp_clk->name);
+	if (temp_clk->flags & DONOT_NOTIFY_STATUS_TO_CCU)
+	    seq_printf(seq, " DOES NOT notify PI\n");
+	else
+	    seq_printf(seq, " Notifies PI\n");
+    }
+
+    list_for_each_entry(temp_clk, &ccu_clk->bus_list, list) {
+	bus_clk = to_bus_clk(temp_clk);
+	status = bus_clk_get_gating_status(bus_clk);
+	if (status < 0)
+	    seq_printf(seq, "Bus clock %s \t\t\tstauts: unavailable; \t\t", temp_clk->name);
+	else if (status == 0)
+	    seq_printf(seq, "Bus clock %s \t\t\tstauts: Disabled; \t\t", temp_clk->name);
+	else
+	    seq_printf(seq, "Bus clock %s \t\t\tstauts: Enabled; \t\t", temp_clk->name);
+	if (temp_clk->flags & NOTIFY_STATUS_TO_CCU && !(clock->flags & AUTO_GATE))
+	    seq_printf(seq, " Notifies PI\n");
+	else
+	    seq_printf(seq, " DOES NOT notify PI\n");
+    }
+
+    return 0;
+}
+
+static int fops_ccu_active_clks_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, ccu_active_clks_show, inode->i_private);
+}
+
+static const struct file_operations ccu_active_clks_fops =
+{
+	.open			= fops_ccu_active_clks_open,
+	.read			= seq_read,
+	.llseek 		= seq_lseek,
+	.release		= single_release,
+};
 
 static int clk_parent_show(struct seq_file *seq, void *p)
 {
@@ -2236,28 +2338,75 @@ static const struct file_operations clock_source_fops =
 static struct dentry *dent_clk_root_dir;
 int __init clock_debug_init(void)
 {
-	/* create root clock dir /clock */
-	dent_clk_root_dir = debugfs_create_dir("clock", 0);
-	if(!dent_clk_root_dir)
-		return -ENOMEM;
+    /* create root clock dir /clock */
+    dent_clk_root_dir = debugfs_create_dir("clock", 0);
+    if(!dent_clk_root_dir)
+	return -ENOMEM;
+    if(!debugfs_create_u32("debug", 0644, dent_clk_root_dir, (int*)&clk_debug))
+	return -ENOMEM;
 
-	if(!debugfs_create_u32("debug", 0644, dent_clk_root_dir, (int*)&clk_debug))
-		return -ENOMEM;
+    return 0;
+}
+
+int __init clock_debug_add_ccu(struct clk *c)
+{
+	struct ccu_clk *ccu_clk;
+	struct dentry *dent_active_clocks = 0, *dent_freqid=0, *dent_policy =0;
+
+	BUG_ON(!dent_clk_root_dir);
+	ccu_clk = to_ccu_clk(c);
+
+	ccu_clk->dent_ccu_dir = debugfs_create_dir(c->name, dent_clk_root_dir);
+	if(!ccu_clk->dent_ccu_dir)
+	    goto err;
+
+	dent_active_clocks = debugfs_create_file("active_clocks", 0644, ccu_clk->dent_ccu_dir, c, &ccu_active_clks_fops);
+	if(!dent_active_clocks)
+	    goto err;
+
+	dent_freqid = debugfs_create_file("freq_id", 0644, ccu_clk->dent_ccu_dir, c, &ccu_freqid_fops);
+	if(!dent_freqid)
+	    goto err;
+
+	dent_policy = debugfs_create_file("policy", 0644, ccu_clk->dent_ccu_dir, c, &ccu_policy_fops);
+	if(!dent_policy)
+	    goto err;
 
 	return 0;
+err:
+	debugfs_remove(ccu_clk->dent_ccu_dir);
+	debugfs_remove(dent_active_clocks);
+	return -ENOMEM;
 }
 
 int __init clock_debug_add_clock(struct clk *c)
 {
 	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_enable=0,
-										*dent_status=0,
-										*dent_div=0,
-										*dent_use_cnt=0, *dent_id=0,
-												*dent_parent=0, *dent_source=0;
-	BUG_ON(!dent_clk_root_dir);
+		*dent_status=0, *dent_div=0, *dent_use_cnt=0, *dent_id=0,
+		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0;
+	struct peri_clk *peri_clk;
+	struct bus_clk *bus_clk;
+	struct ref_clk *ref_clk;
+	switch(c->clk_type) {
+	case CLK_TYPE_REF:
+		ref_clk = to_ref_clk(c);
+		dent_ccu_dir = ref_clk->ccu_clk->dent_ccu_dir;
+		break;
+	case CLK_TYPE_BUS:
+		bus_clk = to_bus_clk(c);
+		dent_ccu_dir = bus_clk->ccu_clk->dent_ccu_dir;
+		break;
+	case CLK_TYPE_PERI:
+		peri_clk = to_peri_clk(c);
+		dent_ccu_dir = peri_clk->ccu_clk->dent_ccu_dir;
+		break;
+	default:
+		return -EINVAL;
+	}
+	BUG_ON(!dent_ccu_dir);
 
 	/* create root clock dir /clock/clk_a */
-	dent_clk_dir	=	debugfs_create_dir(c->name, dent_clk_root_dir);
+	dent_clk_dir	=	debugfs_create_dir(c->name, dent_ccu_dir);
 	if(!dent_clk_dir)
 		goto err;
 

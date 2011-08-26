@@ -21,6 +21,9 @@
 #include <linux/list.h>
 #include <plat/pi_mgr.h>
 #include <mach/clock.h>
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#endif
 
 #define GET_BIT_USING_MASK(reg_val, mask)	(!!((reg_val) & (mask)))
 #define SET_BIT_USING_MASK(reg_val, mask)	((reg_val) | (mask))
@@ -100,6 +103,9 @@
 #define CCU_VLT7_SHIFT	24
 #define CCU_VLT_MASK	0xF
 
+#define CCU_POLICY_DBG_FREQ_MASK	7
+#define CCU_POLICY_DBG_POLICY_MASK	3
+
 
 #define CLK_OFF_DELAY_EN	1
 
@@ -141,6 +147,13 @@
 
 #define FREQ_MHZ(x) ((x)*1000*1000)
 #define FREQ_KHZ(x) ((x)*1000)
+
+#define CCU_PI_ENABLE(ccu,en) if((ccu)->pi_id != -1) \
+				{\
+					struct pi* pi = pi_mgr_get((ccu)->pi_id);\
+					BUG_ON(pi == NULL);\
+					pi_enable(pi,en);\
+				}
 
 /* CCU Policy ids*/
 enum
@@ -389,6 +402,7 @@ struct ccu_clk {
 	int pi_id;
 	struct list_head peri_list;
 	struct list_head bus_list;
+	struct list_head ref_list;
 
 	u32 pol_engine_dis_cnt;
 	u32 write_access_en_count;
@@ -417,6 +431,12 @@ struct ccu_clk {
 	struct ccu_clk_ops* ccu_ops;
 	u8 active_policy;
 	u32*	freq_tbl[MAX_CCU_FREQ_COUNT];
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *dent_ccu_dir;
+	u32 policy_dbg_offset;
+	u32 policy_dbg_act_freq_shift;
+	u32 policy_dbg_act_policy_shift;
+#endif
 
 };
 
@@ -527,16 +547,20 @@ unsigned long clock_get_xtal(void);
 #ifdef CONFIG_DEBUG_FS
 int clock_debug_init(void);
 int clock_debug_add_clock(struct clk *c);
+int __init clock_debug_add_ccu(struct clk *c);
 #else
 #define	clock_debug_init() do {} while(0)
 #define	clock_debug_add_clock(clk) do {} while(0)
+#define	clock_debug_add_ccu(clk) do {} while(0)
 #endif
 
 int clk_init(struct clk* clk);
+int clk_is_enabled(struct clk* clk);
 int clk_register(struct clk_lookup *clk_lkup,int num_clks);
 int ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int freq_id);
 int peri_clk_set_hw_gating_ctrl(struct clk *clk, int gating_ctrl);
 int peri_clk_hyst_enable(struct peri_clk * peri_clk, int enable, int delay);
+int peri_clk_set_pll_select(struct peri_clk * peri_clk, int source);
 int ccu_write_access_enable(struct ccu_clk* ccu_clk, int enable);
 int ccu_policy_engine_resume(struct ccu_clk* ccu_clk, int load_type);
 int ccu_policy_engine_stop(struct ccu_clk* ccu_clk);

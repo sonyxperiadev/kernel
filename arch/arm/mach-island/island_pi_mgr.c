@@ -71,11 +71,13 @@ static struct pi arm_core_pi =
 	{
 		.name = "arm_core",
 		.id = PI_MGR_PI_ID_ARM_CORE,
-		.flags = PI_ARM_CORE,
+		.flags = PI_ENABLE_ON_INIT|PI_ARM_CORE|UPDATE_PM_QOS,
 		.ccu_id = armc_core_ccu,
+		.num_ccu_id = ARRAY_SIZE(armc_core_ccu),
 		.state_allowed = ARM_CORE_STATE_DORMANT,
 		.pi_state = arm_core_states,
-		.opp_active = 0,
+		.num_states = ARRAY_SIZE(arm_core_states),
+		.opp_active = 1,
 		.pi_opp =  &arm_opp,
 		.num_opp = 3,
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
@@ -94,7 +96,7 @@ static struct pi arm_core_pi =
 				},
 		.ops = &gen_pi_ops,
 	};
-
+#if 0
 /*MM PI CCU Id*/
 static char* mm_ccu[] = {MM_CCU_CLK_NAME_STR};
 struct pi_opp mm_opp = {
@@ -123,6 +125,7 @@ static struct pi mm_pi =
 		.num_ccu_id = ARRAY_SIZE(mm_ccu),
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = mm_states,
+		.num_states = ARRAY_SIZE(mm_states),
 		.opp_active = 0,
 		.pi_opp =  &mm_opp,
 		.num_opp = 3,
@@ -142,7 +145,7 @@ static struct pi mm_pi =
 				},
 		.ops = &gen_pi_ops,
 	};
-
+#endif
 /*HUB PI CCU Id*/
 static char* hub_ccu[] = {KHUB_CCU_CLK_NAME_STR};
 struct pi_opp hub_opp = {
@@ -156,7 +159,7 @@ struct pi_opp hub_opp = {
 static struct pi_state hub_states[] =
 		{
 			PI_STATE(PI_STATE_ACTIVE,RUN_POLICY,0),
-			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100)
+			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100),
 
 		};
 
@@ -169,6 +172,7 @@ static struct pi hub_pi =
 		.num_ccu_id = ARRAY_SIZE(hub_ccu),
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = hub_states,
+		.num_states = ARRAY_SIZE(hub_states),
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
 		.pi_opp =  &hub_opp,
@@ -203,8 +207,7 @@ struct pi_opp aon_opp = {
 static struct pi_state aon_states[] =
 		{
 			PI_STATE(PI_STATE_ACTIVE,RUN_POLICY,0),
-			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100)
-
+			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100),
 		};
 
 
@@ -212,10 +215,12 @@ static struct pi aon_pi =
 	{
 		.name = "aon",
 		.id = PI_MGR_PI_ID_HUB_AON,
+		//.flags = PI_ENABLE_ON_INIT,
 		.ccu_id = aon_ccu,
 		.num_ccu_id = ARRAY_SIZE(aon_ccu),
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = aon_states,
+		.num_states = ARRAY_SIZE(aon_states),
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
 		.pi_opp =  &aon_opp,
@@ -258,7 +263,7 @@ struct pi_opp sub_sys_opp[2] = 	{
 static struct pi_state sub_sys_states[] =
 		{
 			PI_STATE(PI_STATE_ACTIVE,RUN_POLICY,0),
-			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100)
+			PI_STATE(PI_STATE_RETENTION,RETN_POLICY,100),
 
 		};
 
@@ -271,6 +276,7 @@ static struct pi sub_sys_pi =
 		.num_ccu_id = ARRAY_SIZE(sub_sys_ccu),
 		.state_allowed = PI_STATE_RETENTION,
 		.pi_state = sub_sys_states,
+		.num_states = ARRAY_SIZE(sub_sys_states),
 		.opp_active = 0,
 		/*opp frequnecies ...need to revisit*/
 		.pi_opp =  sub_sys_opp,
@@ -323,21 +329,19 @@ static struct pi modem_pi =
 		.ops = NULL,
 	};
 
-
-
-void __init island_pi_mgr_init()
-{
-	int i;
-	struct pi* pi_list[] =
-	{
+struct pi* pi_list[] = 	{
 		&arm_core_pi,
-		&mm_pi,
+		/*&mm_pi,*/
 		&hub_pi,
 		&aon_pi,
 		&sub_sys_pi,
 		&modem_pi
 
-	};
+};
+
+void __init island_pi_mgr_init()
+{
+	int i;
 	pi_mgr_init();
 
 	for(i = 0; i < ARRAY_SIZE(pi_list);i++)
@@ -349,4 +353,19 @@ void __init island_pi_mgr_init()
 
 }
 EXPORT_SYMBOL(island_pi_mgr_init);
+#ifdef CONFIG_DEBUG_FS
 
+int __init pi_mgr_late_init(void)
+{
+    int i;
+    pi_debug_init();
+    for(i=0;i<ARRAY_SIZE(pi_list);i++)
+    {
+		pi_debug_add_pi(pi_list[i]);
+    }
+    return 0;
+}
+
+late_initcall(pi_mgr_late_init);
+
+#endif /* CONFIG_DEBUG_FS */
