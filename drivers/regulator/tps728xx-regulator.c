@@ -98,7 +98,7 @@ static int tps728xx_regulator_is_enabled(struct regulator_dev *rdev)
 		return 0;
 	}
 
-	status = gpio_get_value(tps728xx->enable_gpio);
+	status = gpio_get_value_cansleep(tps728xx->enable_gpio);
 	if (status == 1)
 		return 1;
 	return 0;

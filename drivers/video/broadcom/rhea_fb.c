@@ -223,11 +223,11 @@ static void reset_display(u32 gpio)
 	if (gpio != 0) {
 		gpio_request(gpio, "LCD_RST1");
 		gpio_direction_output(gpio, 0);
-		gpio_set_value(gpio, 1);
+		gpio_set_value_cansleep(gpio, 1);
 		msleep(1);
-		gpio_set_value(gpio, 0);
+		gpio_set_value_cansleep(gpio, 0);
 		msleep(1);
-		gpio_set_value(gpio, 1);
+		gpio_set_value_cansleep(gpio, 1);
 		msleep(20);
 	}
 }
