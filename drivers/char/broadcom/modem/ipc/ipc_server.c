@@ -49,7 +49,7 @@
 #include "bcmlog.h"
 
 #include <linux/broadcom/bcm_fuse_memmap.h>
-#include <linux/broadcom/platform_mconfig.h>
+#include <mach/comms/platform_mconfig.h>
 
 #include <mach/io_map.h>
 // for BINTC register offsets
@@ -377,19 +377,29 @@ void WaitForCpIpc (void* pSmBase)
         ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
     }
 
-    if (ret == 0)
-    {
-        printk( KERN_ALERT  "********************************************************************\n");
-        printk( KERN_ALERT  "*                                                                  *\n");
-        printk( KERN_ALERT  "*       CP IPC NOT INITIALIZED - SYSTEM BOOTS WITH AP ONLY!!!      *\n");
-        printk( KERN_ALERT  "*                                                                  *\n");
-        printk( KERN_ALERT  "********************************************************************\n");
-    }
-    else
-    {
-        printk( KERN_ALERT  "ipcs_init CP IPC initialized ret=%d\n", ret);
-        cp_running = 1;//TRUE;
-    }
+	if (ret == 1)
+	{
+		printk(KERN_INFO  "ipcs_init CP IPC initialized ret=%d\n", ret);
+		cp_running = 1;//TRUE;
+	}
+	else if (ret == 0)
+	{
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "*       CP IPC NOT INITIALIZED - SYSTEM BOOTS WITH AP ONLY!!!      *\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		BUG_ON(ret == 0);
+	}
+	else
+	{
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "*                             CP CRASHED !!!                       *\n");
+		IPC_DEBUG(DBG_ERROR, "*                                                                  *\n");
+		IPC_DEBUG(DBG_ERROR, "********************************************************************\n");
+		BUG_ON(ret);
+	}
 }
 
 
@@ -628,5 +638,4 @@ static void __exit ipcs_module_exit(void)
   return;
 }
 
-module_init(ipcs_module_init);
-module_exit(ipcs_module_exit);
+late_initcall(ipcs_module_init);
