@@ -41,12 +41,11 @@
 #include "csl_arm2sp.h"
 
 #include "csl_vpu.h"
-#include "audio_consts.h"
 #include "csl_aud_drv.h"
-#ifdef CONFIG_AUDIO_BUILD
-#include "sysparm.h"
-#include "ostask.h"
-#endif
+#include "audio_consts.h"
+
+#include "bcm_fuse_sysparm_CIB.h"
+
 #include "audio_gain_table.h"
 #include "csl_caph.h"
 #include "csl_caph_gain.h"
@@ -382,7 +381,7 @@ static AUDCTRL_MIC_Mapping_t MIC_Mapping_Table[AUDCTRL_MIC_TOTAL_COUNT] =
 //static AudioMode_t stAudioMode = AUDIO_MODE_INVALID;
 #endif
 
-static telephony_digital_gain_dB = 12;  //dB
+static int telephony_digital_gain_dB = 12;  //dB
 
 //=============================================================================
 // Private function prototypes
@@ -391,7 +390,6 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain);
 
 #if  ( defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
 
-#ifdef CONFIG_AUDIO_BUILD
 #if !defined(NO_PMU)
 //on AP:
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
@@ -403,12 +401,11 @@ static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
 #endif
 }
 
-
 #define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
 #define AUDIOMODE_PARM_MM_ACCESSOR(mode)	 AUDIO_GetParmMMAccessPtr()[mode]
 
-#endif
-#endif
+#endif  //#if !defined(NO_PMU)
+
 static void AUDCTRL_CreateTable(void);
 static void AUDCTRL_DeleteTable(void);
 static CSL_CAPH_DEVICE_e GetDeviceFromHWID(AUDIO_HW_ID_t hwID);
@@ -668,6 +665,8 @@ void AUDCTRL_SetTelephonySpkrVolume(
 	Int16	volume_max = 0;
 	CSL_CAPH_PathID pathID = 0;
 
+	pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
+	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: PMU audio gain = 0x%x\n", pmuGain);
 
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = 0x%x\n", volume);
 	if (gain_format == AUDIO_GAIN_FORMAT_VOL_LEVEL)

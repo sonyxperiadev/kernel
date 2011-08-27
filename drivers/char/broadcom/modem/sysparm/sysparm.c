@@ -1,5 +1,5 @@
 /*****************************************************************************
-*  Copyright 2003 - 2007 Broadcom Corporation.  All rights reserved.
+*  Copyright 2003 - 2011 Broadcom Corporation.  All rights reserved.
 *
 *  Unless you and Broadcom execute a separate written software license
 *  agreement governing use of this software, this software is licensed to you
@@ -18,7 +18,7 @@
 //	the sysparms interface.  The skeleton driver maps to COMMS sysparm 
 //	shared memory but does not implement specific sysparm accessor APIs.  
 //
-#define SKELETON_DRIVER 1
+#define SKELETON_DRIVER 0
 
 #include <linux/io.h>
 #include <linux/init.h>
@@ -42,11 +42,13 @@ volatile static UInt32 *sysparm_ready_ind_ptr;
 volatile static UInt32 *total_index_ptr;
 
 #if !SKELETON_DRIVER
-static SysAudioParm_t audio_parm_table[AUDIO_APP_NUMBER][AUDIO_MODE_NUMBER];
-static SysIndMultimediaAudioParm_t mm_audio_parm_table[AUDIO_APP_NUMBER][AUDIO_MODE_NUMBER];
-static UInt16 AUDVOC_PEQCOF[ AUDIO_5BAND_EQ_MODE_NUMBER][ PR_DAC_IIR_SIZE];
-static UInt16 AUDVOC_PEQPATHGAIN[ AUDIO_5BAND_EQ_MODE_NUMBER][ EQPATH_SIZE - 1 ];
-static UInt16 AUDVOC_ADAC_FIR[65];
+  // need to match sysparm.h from RTOS
+  // SysAudioParm_t	audio_parm[AUDIO_MODE_NUMBER_VOICE];  //(number of audio devices) X (modes per device)
+  // SysIndMultimediaAudioParm_t mmaudio_parm[AUDIO_MODE_NUMBER];  //(number of audio devices)
+#define	AUDIO_MODE_NUMBER		9	///< Up to 9 Audio Profiles (modes) after 213x1
+#define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*2)
+static SysAudioParm_t audio_parm_table[AUDIO_MODE_NUMBER_VOICE];
+static SysIndMultimediaAudioParm_t mm_audio_parm_table[AUDIO_MODE_NUMBER];
 
 
 static UInt8 gpioInit_table[GPIO_INIT_REC_NUM][GPIO_INIT_FIELD_NUM];
@@ -249,6 +251,7 @@ int SYSPARM_GetParmU32ByName(char *name, unsigned int *parm)
 
 int SYSPARM_GetPMURegSettings(int index, unsigned int *parm)
 {
+/******
 	UInt32  parm_addr;
 	UInt8   *parm_ptr;
 
@@ -279,6 +282,7 @@ int SYSPARM_GetPMURegSettings(int index, unsigned int *parm)
 	*parm = ioread8(parm_ptr + index);
 
 	iounmap(parm_ptr);
+*****/
 	return 0;
 }
 
@@ -343,7 +347,7 @@ SysAudioParm_t* APSYSPARM_GetAudioParmAccessPtr(void)
 	static int loaded_audio_parm_table=0;
 
 	if(loaded_audio_parm_table)
-	    return &audio_parm_table[0][0];
+	    return &audio_parm_table[0];
     
     if(!fuse_sysparm_initialised)
     {
@@ -368,10 +372,10 @@ SysAudioParm_t* APSYSPARM_GetAudioParmAccessPtr(void)
         return 0;
     }
     
-    memcpy(&audio_parm_table[0][0], audio_parm_ptr, sizeof(audio_parm_table));
+    memcpy(&audio_parm_table[0], audio_parm_ptr, sizeof(audio_parm_table));
     iounmap(audio_parm_ptr);
 	loaded_audio_parm_table = 1;
-    return &audio_parm_table[0][0];
+    return &audio_parm_table[0];
 }
 
 //******************************************************************************
@@ -392,7 +396,7 @@ SysIndMultimediaAudioParm_t* APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
     // don't copy again if we've already populated our local cache
     if ( mm_audioparm_inited )
     {
-        return &mm_audio_parm_table[0][0];
+        return &mm_audio_parm_table[0];
     }
 
     if(!fuse_sysparm_initialised)
@@ -418,10 +422,10 @@ SysIndMultimediaAudioParm_t* APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
         return 0;
     }
 
-    memcpy(&mm_audio_parm_table[0][0], mm_audio_parm_ptr, sizeof(mm_audio_parm_table));
+    memcpy(&mm_audio_parm_table[0], mm_audio_parm_ptr, sizeof(mm_audio_parm_table));
     iounmap(mm_audio_parm_ptr);
     mm_audioparm_inited = 1;
-    return &mm_audio_parm_table[0][0];
+    return &mm_audio_parm_table[0];
 }
 
 //******************************************************************************
@@ -437,6 +441,7 @@ SysIndMultimediaAudioParm_t* APSYSPARM_GetMultimediaAudioParmAccessPtr(void)
 //******************************************************************************
 SysAudioParm_t* SYSPARM_GetExtAudioParmAccessPtr(UInt8 AudioApp)
 {
+/*****
     UInt32 audio_parm_addr;
     SysAudioParm_t *audio_parm_ptr;
 	static int loaded_audio_parm_table=0;
@@ -471,6 +476,8 @@ SysAudioParm_t* SYSPARM_GetExtAudioParmAccessPtr(UInt8 AudioApp)
     iounmap(audio_parm_ptr);
 	loaded_audio_parm_table = 1;
     return &audio_parm_table[AudioApp][0];
+*****/
+    return (SysAudioParm_t*) NULL;
 }
 
 //******************************************************************************
@@ -482,6 +489,7 @@ SysAudioParm_t* SYSPARM_GetExtAudioParmAccessPtr(UInt8 AudioApp)
 //******************************************************************************
 UInt16* SYSPARM_Get_AUDVOC_ADAC_FIR_Ptr( void )
 {
+/*****
     UInt32 AUDVOC_ADAC_FIR_parm_addr;
     UInt16* AUDVOC_ADAC_FIR_ptr;
     
@@ -511,6 +519,8 @@ UInt16* SYSPARM_Get_AUDVOC_ADAC_FIR_Ptr( void )
     memcpy(AUDVOC_ADAC_FIR, AUDVOC_ADAC_FIR_ptr, sizeof(AUDVOC_ADAC_FIR));
     iounmap(AUDVOC_ADAC_FIR_ptr);
     return (UInt16*)AUDVOC_ADAC_FIR;
+*****/
+    return (UInt16*)NULL;
 }
 
 //******************************************************************************
@@ -522,6 +532,7 @@ UInt16* SYSPARM_Get_AUDVOC_ADAC_FIR_Ptr( void )
 //******************************************************************************
 UInt16* SYSPARM_Get_AUDVOC_PEQPATHGAIN_Ptr( void )
 {
+/*****
     UInt32 AUDVOC_PEQPATHGAIN_parm_addr;
     UInt16* AUDVOC_PEQPATHGAIN_ptr;
     
@@ -551,6 +562,8 @@ UInt16* SYSPARM_Get_AUDVOC_PEQPATHGAIN_Ptr( void )
     memcpy(AUDVOC_PEQPATHGAIN, AUDVOC_PEQPATHGAIN_ptr, sizeof(AUDVOC_PEQPATHGAIN));
     iounmap(AUDVOC_PEQPATHGAIN_ptr);
     return (UInt16*)AUDVOC_PEQPATHGAIN;
+*****/
+    return (UInt16*)NULL;
 }
 
 //******************************************************************************
@@ -562,6 +575,7 @@ UInt16* SYSPARM_Get_AUDVOC_PEQPATHGAIN_Ptr( void )
 //******************************************************************************
 UInt16* SYSPARM_Get_AUDVOC_PEQCOF_Ptr( void )
 {
+/*****
     UInt32 AUDVOC_PEQCOF_parm_addr;
     UInt16* AUDVOC_PEQCOF_ptr;
     
@@ -591,6 +605,8 @@ UInt16* SYSPARM_Get_AUDVOC_PEQCOF_Ptr( void )
     memcpy(AUDVOC_PEQCOF, AUDVOC_PEQCOF_ptr, sizeof(AUDVOC_PEQCOF));
     iounmap(AUDVOC_PEQCOF_ptr);
     return (UInt16*)AUDVOC_PEQCOF;
+*****/
+    return (UInt16*)NULL;
 }
 
 //******************************************************************************
@@ -777,7 +793,7 @@ UInt16 SYSPARM_GetActualLowVoltReading(void)
 // Notes:
 //
 //******************************************************************************
-UInt16 SYSPARM_GetBattEmptyThresh()
+UInt16 SYSPARM_GetBattEmptyThresh(void)
 {
     UInt32 default_batt_empty_thresh_addr;
     UInt16* default_batt_empty_thresh_ptr;
@@ -1085,7 +1101,6 @@ static int sysparm_init(void)
 #if !SKELETON_DRIVER
 #ifdef SYSPARM_DEBUG
     {
-        int i;
         UInt16 tmp;
 
         SysIndMultimediaAudioParm_t* pMMAudioTmp; 
@@ -1104,10 +1119,9 @@ static int sysparm_init(void)
             pr_err("[sysparm]: SYSPARM_GetMultimediaAudioParmAccessPtr failed\n");
         }
         
-        pr_info("audvoc_pslopgain 0x%x\n",pMMAudioTmp->audvoc_pslopgain);
-        pr_info("audvoc_aslopgain 0x%x\n",pMMAudioTmp->audvoc_aslopgain);
-        for (i=0;i<25;i++)
-            pr_info("0 PR_DAC_IIR[%d] 0x%x\n",i,pMMAudioTmp->PR_DAC_IIR[i]);
+        pr_info("ext_speaker_pga_l 0x%x\n", pAudioTmp->ext_speaker_pga_l);
+        pr_info("ext_speaker_pga_l 0x%x\n", audio_parm_table[0].ext_speaker_pga_l);
+        pr_info("mode 1, ext_speaker_pga_l 0x%x\n",audio_parm_table[1].ext_speaker_pga_l);
 
         tmp = SYSPARM_GetBattEmptyThresh();
         pr_info("SYSPARM_GetBattEmptyThresh: %d\n",tmp);
