@@ -4,8 +4,6 @@ All rights reserved.
 
 Project  :  vcfw
 Module   :  vcos
-File     :  $RCSfile: $
-Revision :  $Revision: $
 
 FILE DESCRIPTION
 VideoCore OS Abstraction Layer - pthreads types

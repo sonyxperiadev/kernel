@@ -4,8 +4,6 @@ All rights reserved.
 
 Project  :  vcfw
 Module   :  osal
-File     :  $RCSfile: $
-Revision :  $Revision: $
 
 FILE DESCRIPTION
 VideoCore OS Abstraction Layer - platform-specific types and defines

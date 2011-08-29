@@ -1166,7 +1166,8 @@ parse_rx_slots(VCHIQ_STATE_T *state)
             state->id, (unsigned int)header, size);
          /* Release the slot mutex */
          vcos_mutex_unlock(&state->slot_mutex);
-         resume_bulks(state);
+         if (state->is_master)
+            resume_bulks(state);
          vchiq_set_conn_state(state, VCHIQ_CONNSTATE_CONNECTED);
          vchiq_platform_resumed(state);
          break;
@@ -1238,7 +1239,8 @@ slot_handler_func(void *v)
                VCHIQ_MAKE_MSG(VCHIQ_MSG_RESUME, 0, 0), NULL, 0, 0, 0)
                != VCHIQ_RETRY)
             {
-               resume_bulks(state);
+               if (state->is_master)
+                  resume_bulks(state);
                vchiq_set_conn_state(state, VCHIQ_CONNSTATE_CONNECTED);
                vchiq_platform_resumed(state);
             }
@@ -1394,14 +1396,6 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
       return VCHIQ_ERROR;
    }
 
-   memset(state, 0, sizeof(VCHIQ_STATE_T));
-   state->id = id++;
-   state->is_master = is_master;
-
-   /*
-      initialize shared state pointers
-    */
-
    if (is_master)
    {
       local = &slot_zero->master;
@@ -1413,16 +1407,26 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
       remote = &slot_zero->master;
    }
 
+   if (local->initialised)
+   {
+      if (remote->initialised)
+         vcos_log_error("vchiq: FATAL: local state has already been initialised");
+      else
+         vcos_log_error("vchiq: FATAL: master/slave mismatch - two %ss", is_master ? "master" : "slave");
+      return VCHIQ_ERROR;
+   }
+
+   memset(state, 0, sizeof(VCHIQ_STATE_T));
+   state->id = id++;
+   state->is_master = is_master;
+
+   /*
+      initialize shared state pointers
+    */
+
    state->local = local;
    state->remote = remote;
    state->slot_data = (VCHIQ_SLOT_T *)slot_zero;
-
-   if (local->initialised)
-   {
-      vcos_log_error("%s is already initialised - is there a master/slave mismatch?",
-         is_master ? "master" : "slave");
-      return VCHIQ_ERROR;
-   }
 
    /*
       initialize events and mutexes

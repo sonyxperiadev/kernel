@@ -172,6 +172,11 @@
 #include <vceb_settings.h>
 #endif
 
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+#include <linux/broadcom/hdmi_cfg.h>
+#include <hdmi_settings.h>
+#endif
+
 #include "island.h"
 #include "common.h"
 
@@ -421,6 +426,36 @@ static void __init board_add_headsetdet_device(void)
 
 #endif /* CONFIG_BCM_HEADSET_SW */
 
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+
+#define board_hdmidet_data concatenate(ISLAND_BOARD_ID, _hdmidet_data)
+static struct hdmi_hw_cfg board_hdmidet_data =
+#ifdef HW_CFG_HDMI
+   HW_CFG_HDMI;
+#else
+{
+   .gpio_hdmi_det = -1,
+};
+#endif
+
+#define board_hdmidet_device concatenate(ISLAND_BOARD_ID, _hdmidet_device)
+static struct platform_device board_hdmidet_device =
+{
+   .name = "hdmi-detect",
+   .id = -1,
+   .dev =
+   {
+      .platform_data = &board_hdmidet_data,
+   },
+};
+
+#define board_add_hdmidet_device concatenate(ISLAND_BOARD_ID, _add_hdmidet_device)
+static void __init board_add_hdmidet_device(void)
+{
+   platform_device_register(&board_hdmidet_device);
+}
+
+#endif /* #if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE) */
 
 static struct usbh_cfg usbh_param =
 #ifdef HW_USBH_PARAM
@@ -1460,6 +1495,10 @@ static void __init add_devices(void)
 
 	add_usbh_device();
 	add_usb_otg_device();
+
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+   board_add_hdmidet_device();
+#endif   
 
    board_add_halaudio_device();
 

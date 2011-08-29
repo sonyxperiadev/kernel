@@ -4,8 +4,6 @@ All rights reserved.
 
 Project  :  vcfw
 Module   :  chip driver
-File     :  $RCSfile: $
-Revision :  $Revision: $
 
 FILE DESCRIPTION
 VideoCore OS Abstraction Layer - reentrant mutex public header file
