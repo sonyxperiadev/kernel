@@ -165,6 +165,13 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
      * platform that has a different GPIO muxing.
      */
 
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+    /* leave the gpio alone so it can be claimed by the hot-plug detection
+    ** driver.
+    */
+    printk( KERN_INFO "%s: skipping gpio mux for HDMI hotplug detect pin\n",
+            __func__ );
+#else
     /* request HDMI hot plug gpio */
  #define HDMI_HOT_PLUG    62
     if (( rc = gpio_request( HDMI_HOT_PLUG, "hdmi_hot_plug" )) != 0 )
@@ -175,6 +182,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     }
     //explicitly set the direction for GPIO pins that are muxed to the host
     gpio_direction_input( 62 );   //HDMI_HOT_DETECT
+#endif
 
 #define CAM1_PWR_EN  50
 #define CAM1_RST_B   51
