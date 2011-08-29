@@ -22,7 +22,6 @@
 #include <asm/cacheflush.h>
 #include <asm/hardware/gic.h>
 #include <asm/smp_scu.h>
-//#include <asm/localtimer.h>
 #include <asm/io.h>
 #include <mach/smp.h>
 #include <mach/io_map.h>
@@ -38,22 +37,13 @@ volatile int pen_release = -1;
 static void __iomem *scu_base = (void __iomem *)(KONA_SCU_VA);
 
 /*
- * Use SCU config register to count number of cores
- */
-static inline unsigned int get_core_count(void)
-{
-	if (scu_base)
-		return scu_get_core_count(scu_base);
-	return 1;
-}
-
-/*
  * Initialise the CPU possible map early - this describes the CPUs
  * which may be present or become present in the system.
  */
 void __init smp_init_cpus(void)
 {
-	unsigned int i, ncores = get_core_count();
+	unsigned int i, ncores = scu_get_core_count(scu_base);
+	
 
 	for (i = 0; i < ncores; i++)
 		set_cpu_possible(i, true);
@@ -120,8 +110,6 @@ int __cpuinit boot_secondary(unsigned int cpu, struct task_struct *idle)
 		udelay(10);
 	}
 
-	gic_raise_softirq(cpumask_of(cpu), 1);
-
 	/*
 	 * Now the secondary core is starting up let it run its
 	 * calibrations, then wait for it to finish
@@ -155,32 +143,8 @@ static void __init wakeup_secondary(void)
 
 void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 {
-	unsigned int ncores = get_core_count();
-	unsigned int cpu = smp_processor_id();
 	int i;
-
-	/* sanity check */
-	if (ncores == 0) {
-		printk(KERN_ERR
-		       "KONA: strange core count of 0? Default to 1\n");
-		ncores = 1;
-	}
-
-	if (ncores > NR_CPUS) {
-		printk(KERN_WARNING
-		       "KONA: no. of cores (%d) greater than configured "
-		       "maximum of %d - clipping\n",
-		       ncores, NR_CPUS);
-		ncores = NR_CPUS;
-	}
-	//smp_store_cpu_info(cpu);
-
-	/*
-	 * are we trying to boot more cores than exist?
-	 */
-	if (max_cpus > ncores)
-		max_cpus = ncores;
-
+	
 	/*
 	 * Initialise the present map, which describes the set of CPUs
 	 * actually populated at the present time.
@@ -188,18 +152,10 @@ void __init platform_smp_prepare_cpus(unsigned int max_cpus)
 	for (i = 0; i < max_cpus; i++)
 		set_cpu_present(i, true);
 
-	if (max_cpus > 1) {
-		/*
-		 * Enable the local timer or broadcast device for the
-		 * boot CPU, but only if we have more than one CPU.
-		 */
-		//percpu_timer_setup();
-
-		/*
-		 * Initialise the SCU and wake up the secondary core using
-		 * wakeup_secondary().
-		 */
-		scu_enable(scu_base);
-		wakeup_secondary();
-	}
+	/*
+	 * Initialise the SCU and wake up the secondary core using
+	 * wakeup_secondary().
+	 */
+	scu_enable(scu_base);
+	wakeup_secondary();
 }
