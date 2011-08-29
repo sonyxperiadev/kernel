@@ -51,6 +51,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_RTCYR_ALM] =		{.map = 0x00, .addr = 0x2C, .mask = 0xFF, .ro = 0},
 	[PMU_REG_RTC_CORE] =		{.map = 0x00, .addr = 0x2D, .mask = 0xFF, .ro = 0},
 	[PMU_REG_RTC_C2C1_XOTRIM] =	{.map = 0x00, .addr = 0x2E, .mask = 0xFF, .ro = 0},
+	[PMU_REG_OTGCTRL1] =		{.map = 0x00, .addr = 0x70, .mask = 0xFF, .ro = 0},
 	[PMU_REG_RFOPMODCTRL] =		{.map = 0x00, .addr = 0xA0, .mask = 0xFF, .ro = 0},
 	[PMU_REG_CAMOPMODCTRL] =	{.map = 0x00, .addr = 0xA1, .mask = 0xFF, .ro = 0},
 	[PMU_REG_HV1OPMODCTRL] =	{.map = 0x00, .addr = 0xA2, .mask = 0xFF, .ro = 0},

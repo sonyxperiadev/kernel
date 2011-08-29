@@ -77,8 +77,8 @@ static unsigned int otghost = 0;
 #else
 static unsigned int otghost = 1;
 #endif
-#ifdef CONFIG_ARCH_RHEA
-/* Rhea needs to default to device mode until
+#if defined(CONFIG_ARCH_RHEA) || defined(CONFIG_ARCH_ISLAND)
+/* Rhea and Island need to default to device mode until
  * dynamic switching through ID pin is supported
  */
 static unsigned int otgdevice = 1;

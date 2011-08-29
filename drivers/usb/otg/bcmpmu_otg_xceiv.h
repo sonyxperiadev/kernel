@@ -26,7 +26,11 @@ struct bcm_otg_xceiver {
 
 struct bcm_otg_data {
 	struct device *dev;
+#ifdef CONFIG_MFD_BCMPMU
+	struct bcmpmu *bcmpmu;
+#else
 	struct bcm590xx *bcm590xx;
+#endif
 	struct clk *otg_clk;
 	struct bcm_otg_xceiver otg_xceiver;
 	bool host;

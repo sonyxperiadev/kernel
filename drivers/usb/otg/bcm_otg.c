@@ -26,15 +26,17 @@
 #include <linux/notifier.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
+#ifdef CONFIG_MFD_BCMPMU
+#include <linux/mfd/bcmpmu.h>
+#else
 #include <linux/mfd/bcm590xx/core.h>
+#endif
 
 #include <asm/io.h>
 #include <mach/io_map.h>
 #include "bcm_hsotgctrl.h"
 #include "bcm_otg_adp.h"
 #include "bcmpmu_otg_xceiv.h"
-
-//#define xceiver_to_data(x) container_of((x), struct bcm_otg_data, xceiver);
 
 #define OTGCTRL1_VBUS_ON 0xDC
 #define OTGCTRL1_VBUS_OFF 0xD8
@@ -55,17 +57,33 @@ static int bcm_otg_set_vbus(struct otg_transceiver *otg, bool enabled)
 	if (enabled) {
 		dev_info(otg_data->dev, "Turning on VBUS\n");
 		otg_data->vbus_enabled = true;
+#ifdef CONFIG_MFD_BCMPMU
+		stat =
+		    otg_data->bcmpmu->write_dev(otg_data->bcmpmu,
+						PMU_REG_OTGCTRL1,
+						OTGCTRL1_VBUS_ON,
+						PMU_BITMASK_ALL);
+#else
 		stat =
 		    bcm590xx_reg_write(otg_data->bcm590xx,
 				       BCM59055_REG_OTGCTRL1,
 				       OTGCTRL1_VBUS_ON);
+#endif
 	} else {
 		dev_info(otg_data->dev, "Turning off VBUS\n");
 		otg_data->vbus_enabled = false;
+#ifdef CONFIG_MFD_BCMPMU
+		stat =
+		    otg_data->bcmpmu->write_dev(otg_data->bcmpmu,
+						PMU_REG_OTGCTRL1,
+						OTGCTRL1_VBUS_OFF,
+						PMU_BITMASK_ALL);
+#else
 		stat =
 		    bcm590xx_reg_write(otg_data->bcm590xx,
 				       BCM59055_REG_OTGCTRL1,
 				       OTGCTRL1_VBUS_OFF);
+#endif
 	}
 
 	if (stat < 0)
@@ -215,7 +233,11 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 {
 	int error = 0;
 	struct bcm_otg_data *otg_data;
+#ifdef CONFIG_MFD_BCMPMU
+	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+#else
 	struct bcm590xx *bcm590xx = dev_get_drvdata(pdev->dev.parent);
+#endif
 
 	dev_info(&pdev->dev, "Probing started...\n");
 
@@ -226,7 +248,11 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 	}
 
 	otg_data->dev = &pdev->dev;
+#ifdef CONFIG_MFD_BCMPMU
+	otg_data->bcmpmu = bcmpmu;
+#else
 	otg_data->bcm590xx = bcm590xx;
+#endif
 	otg_data->otg_xceiver.xceiver.dev = otg_data->dev;
 	otg_data->otg_xceiver.xceiver.label = "bcm_otg";
 	otg_data->host = false;
