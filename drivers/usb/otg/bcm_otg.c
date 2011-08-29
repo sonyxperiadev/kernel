@@ -31,17 +31,10 @@
 #include <asm/io.h>
 #include <mach/io_map.h>
 #include "bcm_hsotgctrl.h"
+#include "bcm_otg_adp.h"
+#include "bcmpmu_otg_xceiv.h"
 
-struct bcm_otg_data {
-	struct device *dev;
-	struct bcm590xx *bcm590xx;
-	struct otg_transceiver xceiver;
-	bool host;
-	bool vbus_enabled;
-	struct clk *otg_clk;
-};
-
-#define xceiver_to_data(x) container_of((x), struct bcm_otg_data, xceiver);
+//#define xceiver_to_data(x) container_of((x), struct bcm_otg_data, xceiver);
 
 #define OTGCTRL1_VBUS_ON 0xDC
 #define OTGCTRL1_VBUS_OFF 0xD8
@@ -113,7 +106,7 @@ static ssize_t bcm_otg_wake_store(struct device *dev,
 	struct bcm_otg_data *otg_data = dev_get_drvdata(dev);
 	int error;
 
-	gadget = otg_data->xceiver.gadget;
+	gadget = otg_data->otg_xceiver.xceiver.gadget;
 
 	result = sscanf(buf, "%u\n", &val);
 	if (result != 1) {
@@ -150,7 +143,7 @@ static ssize_t bcm_otg_vbus_store(struct device *dev,
 	struct bcm_otg_data *otg_data = dev_get_drvdata(dev);
 	int error;
 
-	hcd = bus_to_hcd(otg_data->xceiver.host);
+	hcd = bus_to_hcd(otg_data->otg_xceiver.xceiver.host);
 
 	result = sscanf(buf, "%u\n", &val);
 	if (result != 1) {
@@ -234,8 +227,8 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 
 	otg_data->dev = &pdev->dev;
 	otg_data->bcm590xx = bcm590xx;
-	otg_data->xceiver.dev = otg_data->dev;
-	otg_data->xceiver.label = "bcm_otg";
+	otg_data->otg_xceiver.xceiver.dev = otg_data->dev;
+	otg_data->otg_xceiver.xceiver.label = "bcm_otg";
 	otg_data->host = false;
 	otg_data->vbus_enabled = false;
 
@@ -246,10 +239,14 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
-	otg_data->xceiver.set_vbus = bcm_otg_set_vbus;
-	otg_data->xceiver.set_peripheral = bcm_otg_set_peripheral;
-	otg_data->xceiver.set_host = bcm_otg_set_host;
-	otg_set_transceiver(&otg_data->xceiver);
+	otg_data->otg_xceiver.xceiver.set_vbus = bcm_otg_set_vbus;
+	otg_data->otg_xceiver.xceiver.set_peripheral = bcm_otg_set_peripheral;
+	otg_data->otg_xceiver.xceiver.set_host = bcm_otg_set_host;
+	otg_data->otg_xceiver.do_adp_calibration_probe = bcm_otg_do_adp_calibration_probe;
+	otg_data->otg_xceiver.do_adp_probe = bcm_otg_do_adp_probe;
+	otg_data->otg_xceiver.do_adp_sense = bcm_otg_do_adp_sense;
+	otg_data->otg_xceiver.do_adp_sense_then_probe = bcm_otg_do_adp_sense_then_probe;
+	otg_set_transceiver(&otg_data->otg_xceiver.xceiver);
 
 	platform_set_drvdata(pdev, otg_data);
 
