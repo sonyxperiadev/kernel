@@ -57,13 +57,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "caph_common.h"
 #include "auddrv_audlog.h"
 
-#if !defined(NO_PMU)
-#ifdef PMU_BCM59055
-#include "linux/broadcom/bcm59055-audio.h"
-#elif defined(CONFIG_BCMPMU_AUDIO)
-#include "bcmpmu_audio.h"
-#endif
-#endif
+#include "audio_pmu_adapt.h"
 
 
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
@@ -299,36 +293,18 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB) 
                      || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
 				{
-#ifdef PMU_BCM59055
-                    bcm59055_ihf_power(FALSE);
-                    bcm59055_hs_power(TRUE);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-                    bcmpmu_ihf_power(FALSE);
-                    bcmpmu_hs_power(TRUE);
-#endif
+                    AUDIO_PMU_IHF_POWER(FALSE);
+                    AUDIO_PMU_HS_POWER(TRUE);
                     gain = Params[2]; // gain
-#ifdef PMU_BCM59055
-                    bcm59055_hs_set_gain(PMU_AUDIO_HS_BOTH, gain);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-                    bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, gain);
-#endif
+                    AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, gain);
                     BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d \n", __FUNCTION__, Params[2]);		
 				}
 				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
 				{
-#ifdef PMU_BCM59055
-                    bcm59055_hs_power(FALSE);
-                    bcm59055_ihf_power(TRUE);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-                    bcmpmu_hs_power(FALSE);
-                    bcmpmu_ihf_power(TRUE);
-#endif
+                    AUDIO_PMU_HS_POWER(FALSE);
+                    AUDIO_PMU_IHF_POWER(TRUE);
                     gain = Params[2]; // gain
-#ifdef PMU_BCM59055
-                    bcm59055_ihf_set_gain(gain);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-                    bcmpmu_ihf_set_gain(gain);
-#endif
+                    AUDIO_PMU_IHF_SET_GAIN(gain);
                     BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d \n", __FUNCTION__, Params[2]);		
 				}
 #endif

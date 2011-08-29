@@ -519,11 +519,6 @@ void csl_caph_audioh_start(int path_id)
 			chal_audio_hspath_set_gain(handle, 0);
 			chal_audio_hspath_enable(handle, chnl_enable);	
 
-#ifdef PMU_BCM59055
-
-//			PMU_DRV_AUDIO_HS_PowerUp(TRUE,NULL);
-	
-#endif			
 			break;
 
 		case AUDDRV_PATH_IHF_OUTPUT:
@@ -549,10 +544,7 @@ void csl_caph_audioh_start(int path_id)
 			chal_audio_ihfpath_set_dac_pwr(handle,chnl_enable);			
 			chal_audio_ihfpath_set_gain(handle, 0);
 			chal_audio_ihfpath_enable(handle, chnl_enable);	
-#ifdef PMU_BCM59055
-//			PMU_DRV_AUDIO_IHF_PowerUp (NULL);
 
-#endif			
 			break;
 
 		case AUDDRV_PATH_EARPICEC_OUTPUT:
@@ -691,21 +683,12 @@ void csl_caph_audioh_stop_keep_config(int path_id)
 			break;
 
 		case AUDDRV_PATH_HEADSET_OUTPUT:
-#ifdef PMU_BCM59055
-		
-//			PMU_DRV_AUDIO_HS_PowerUp(FALSE,NULL);
-
-#endif
 			chal_audio_hspath_int_enable(handle, FALSE, FALSE);
 			chal_audio_hspath_enable(handle, 0);
 			chal_audio_hspath_set_dac_pwr(handle,0);
 			break;
 
 		case AUDDRV_PATH_IHF_OUTPUT:
-#ifdef PMU_BCM59055
-//			PMU_DRV_AUDIO_IHF_PowerDown(NULL);
-
-#endif				
 			chal_audio_ihfpath_int_enable(handle, FALSE, FALSE);
 			chal_audio_ihfpath_enable(handle, 0);
 			chal_audio_ihfpath_set_dac_pwr(handle, 0);				
