@@ -164,6 +164,14 @@ config BCM_HAPTICS
     Select m to build the generic HAPTICS driver. This driver must be
     built as a loadable module otherwise initialization will fail.
     
+config BCM_VCP
+    bool "Video Calling driver support"
+    depends on BRCM_CHAR_DRIVERS
+    default n
+    help
+      Say Y to enable VCP driver support which is used to support
+      video calling framework.
+
 config BCM_GIST
     tristate "Generic I/O Streaming (GIST)"
     default n
