@@ -43,6 +43,10 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SIM DATA needs a pull up */
 	PIN_CFG(SIM_DATA, SIM_DATA, 0, OFF, ON, 0, 0, 12MA),
+
+        /* HDMI Hotplug Detect */
+        PIN_CFG(NORFLSH_ADDR_19, GPIO, 0, OFF, OFF, 0, 0, 8MA),
+
 };
 
 /* board level init */
