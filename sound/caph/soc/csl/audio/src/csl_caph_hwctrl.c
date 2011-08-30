@@ -1554,9 +1554,9 @@ static void csl_caph_ControlHWClock(Boolean enable)
     clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 #ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
                                 This is a workaround before a solution from clock */
-    if ( clkID[0]->use_cnt )
+ //   if ( (clkID[0])->use_cnt )
     {
-        clk_disable(clkID[0]);
+ //       clk_disable(clkID[0]);
     }
 #endif
 	clk_set_rate(clkID[0], 156000000);
