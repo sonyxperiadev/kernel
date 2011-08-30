@@ -48,14 +48,12 @@
 #include "audio_consts.h"
 //#include "ripcmdq.h"
 
-#include "csl_aud_drv.h"
+#include "csl_dsp.h"
+#include "csl_caph.h"
 #include "audio_vdriver.h"
 //#include "sysparm.h"
 #include "ostask.h"
 #include "log.h"
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
-#include "csl_dsp.h"
-#endif
 
 extern void VPU_Capture_Request(UInt16 buf_index);
 extern void VPU_Render_Request(UInt16 bufferIndex);
@@ -135,7 +133,7 @@ void AUDDRV_Init( void )
 #ifndef _SAMOA_
 	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
 #endif	
-#ifdef CONFIG_AUDIO_BUILD
+#if 0  // These features are not needed in LMP now.
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
 	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
 	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_ISR_Handler);
@@ -151,12 +149,6 @@ void AUDDRV_Init( void )
 #endif
 	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
 
-	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
-	AUDDRV_RegisterCB_setAudioMode( (CB_SetAudioMode_t) &AUDDRV_SetAudioMode );
-	AUDDRV_RegisterCB_setMusicMode( (CB_SetMusicMode_t) &AUDDRV_SetMusicMode );
-#if defined(USE_NEW_AUDIO_PARAM)
-	AUDDRV_RegisterCB_getAudioApp( (CB_GetAudioApp_t) &AUDDRV_GetAudioApp );
-#endif
 	Audio_InitRpc();
 #else  //#if defined(FUSE_APPS_PROCESSOR)
 	Audio_InitRpc();
@@ -164,7 +156,7 @@ void AUDDRV_Init( void )
 	//split file to CP and AP.
 	{
 	UInt8 cur_mode = (UInt8) AUDDRV_GetAudioMode();
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 #if defined(USE_NEW_AUDIO_PARAM)
 	UInt8 cur_app = 0; 
 	UInt16 voice_vol_init_in_dB = SYSPARM_GetAudioParamsFromFlash( cur_mode, cur_app )->voice_volume_init;  //dB
@@ -176,11 +168,7 @@ void AUDDRV_Init( void )
 	}
 
 #if !defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
-	AUDDRV_RegisterCB_setAudioMode( (CB_SetAudioMode_t) &AUDDRV_SetAudioMode );
-	AUDDRV_RegisterCB_setMusicMode( (CB_SetMusicMode_t) &AUDDRV_SetMusicMode );
 #if defined(USE_NEW_AUDIO_PARAM)
-	AUDDRV_RegisterCB_getAudioApp( (CB_GetAudioApp_t) &AUDDRV_GetAudioApp );
 #endif
 #else
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Init : Registering CP_Audio_ISR_Handler*\n\r");
@@ -336,8 +324,6 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
-	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
-	
 	if( AUDDRV_GetAudioMode() >= AUDIO_MODE_NUMBER )
 		AUDDRV_Telephony_InitHW ( mic, 
 				speaker, 
@@ -349,6 +335,9 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 				AUDIO_SAMPLING_RATE_8000,
 			       	pData);
 
+	// This one has to be done after enable HW, otherwise dsp will start write to caph register without audio hardware clock.
+    audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
+	
 	//after AUDDRV_Telephony_InitHW to make SRST.
 	AUDDRV_SetVCflag(TRUE);  //let HW control logic know.
 
@@ -477,7 +466,6 @@ void AUDDRV_Telephony_Deinit (void *pData)
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, FALSE, 0, 0, 0, 0 );
 	
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
-
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
 		OSTASK_Sleep( 3 ); //make sure audio is off

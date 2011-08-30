@@ -100,6 +100,7 @@ static uint8_t bcm_fuse_net_pdp_id(net_drvr_info_t *drvr_info_ptr);
 static uint8_t bcm_fuse_net_find_entry(net_drvr_info_t *ndrvr_info_ptr);
 static void bcm_fuse_net_free_entry(uint8_t pdp_cid);
 
+
 /** 
 	Definitions for bcm_fuse_net proc entry
 */
@@ -381,7 +382,6 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
             if (g_net_dev_tbl[i].dev_ptr == dev)
             {                
                 sim_id = g_net_dev_tbl[i].sim_id;
-
                 t_ndrvr_info_ptr = &g_net_dev_tbl[i];
                 BNET_DEBUG(DBG_INFO,"%s: g_net_dev_tbl[%d]=0x%x, a_sim_id %d, sim_id %d \n", __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]), g_net_dev_tbl[i].sim_id, sim_id);
                 break;
@@ -441,7 +441,6 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
     RPC_PACKET_SetBufferLength(buffer, skb->len);
 
     dev->trans_start = jiffies; /* save the timestamp */
-
     RPC_PACKET_SetContext(INTERFACE_PACKET, buffer, sim_id);
     RPC_PACKET_SendData(g_NetClientId, INTERFACE_PACKET, pdp_cid, buffer);
 

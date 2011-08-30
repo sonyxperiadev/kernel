@@ -646,7 +646,7 @@ typedef enum {
 	PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,           // 303
 
 	AUDIO_PARM_NUMBER   						// 304
- 	
+
 } AudioParam_t;
 
 typedef enum { 

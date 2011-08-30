@@ -65,8 +65,6 @@
 #include "shared.h"
 #include "csl_dsp.h"
 
-#include "nandsdram_memmap.h"
-
 #include "brcm_rdb_sysmap.h"
 #include "io_map.h"
 

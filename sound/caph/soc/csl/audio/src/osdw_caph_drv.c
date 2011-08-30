@@ -39,12 +39,7 @@
 #include "consts.h"
 #include "msconsts.h"
 #include "log.h"
-#ifdef CONFIG_AUDIO_BUILD
-#include "brcm_rdb_sysmap.h"
-#include "nandsdram_memmap.h"
 #include "osdw_caph_drv.h"
-#endif
-#include "csl_aud_drv.h"
 #include "assert.h"
 #include "chal_caph_intc.h"
 #include "chip_irq.h"

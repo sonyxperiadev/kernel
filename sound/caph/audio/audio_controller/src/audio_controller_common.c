@@ -38,30 +38,15 @@
 #include "resultcode.h"
 
 #include "audio_consts.h"
-#include "csl_aud_drv.h"
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 #include "sysparm.h"
-
 #endif
+#include "csl_caph.h"
 #include "audio_gain_table.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
-#ifdef CONFIG_AUDIO_BUILD
-#include "i2s.h"
-#include "ostask.h"
-#endif
 #include "log.h"
 #include "xassert.h"
-
-#if !defined(NO_PMU)
-#if defined(EXTERNAL_AMP_CONTROL)
-#ifdef CONFIG_AUDIO_BUILD
-#include "pmu.h"
-#endif
-#include "hal_pmu.h"
-#include "hal_pmu_private.h"
-#endif
-#endif
 
 //=============================================================================
 // Public Variable declarations
@@ -255,17 +240,13 @@ void AUDCTRL_SetTelephonyMicSpkr(
 	   || (mic == AUDCTRL_DUAL_MIC_DIGI21)
 	   || (mic == AUDCTRL_MIC_SPEECH_DIGI))
 	{
-#ifdef CONFIG_AUDIO_BUILD
 		// Enable power to digital microphone
 		powerOnDigitalMic(TRUE);
-#endif	
 	}	
 	else
 	{
-#ifdef CONFIG_AUDIO_BUILD	
 		// Disable power to digital microphone
 		powerOnDigitalMic(FALSE);
-#endif
 	}	
 		
 	OSTASK_Sleep( 100 );  //depending on switch to headset or off of headset, PMU is first off or last on.
