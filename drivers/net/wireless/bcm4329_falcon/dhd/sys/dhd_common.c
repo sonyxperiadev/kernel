@@ -1461,7 +1461,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	memset(buf, 0, sizeof(buf));
 	ptr = buf;
 	bcm_mkiovar("ver", (char *)&buf, 4, buf, sizeof(buf));
-	dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, sizeof(buf), TRUE, 0);
+	dhd_wl_ioctl_cmd(dhd, WLC_GET_VAR, buf, sizeof(buf), FALSE, 0);
 	bcmstrtok(&ptr, "\n", 0);
 	/* Print fw version info */
 	DHD_ERROR(("Firmware version = %s\n", buf));
