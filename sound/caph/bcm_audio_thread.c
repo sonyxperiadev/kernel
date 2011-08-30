@@ -371,7 +371,7 @@ void AUDIO_Ctrl_Process(
                                   param_start->vol[0],
                                   param_start->vol[1]);
 			}
-			if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_CAPT_HQ)
+			if(param_start->pdev_prop->c.drv_type == AUDIO_DRIVER_CAPT_HQ)
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->c.aud_dev); 
 			else
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode); 

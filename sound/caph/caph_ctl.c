@@ -211,7 +211,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 				{
 					//call audio driver to set volume
 					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetRecordGain pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
-					AUDCTRL_SetRecordGain (pChip->streamCtl[stream-1].dev_prop.p[0].hw_id,
+					AUDCTRL_SetRecordGain (pChip->streamCtl[stream-1].dev_prop.c.hw_id,
 											pChip->streamCtl[stream-1].dev_prop.c.mic, AUDIO_GAIN_FORMAT_Q13_2,
 											pVolume[0], pVolume[1]);
 				}
@@ -540,7 +540,7 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
 			{
 				//call audio driver to set mute
-				AUDCTRL_SetRecordMute (pChip->streamCtl[stream-1].dev_prop.p[0].hw_id,
+				AUDCTRL_SetRecordMute (pChip->streamCtl[stream-1].dev_prop.c.hw_id,
 						pChip->streamCtl[stream-1].dev_prop.c.mic, 
 						pMute[0]);	//currently driver doesnt handle Mute for left/right channels
 			}			
