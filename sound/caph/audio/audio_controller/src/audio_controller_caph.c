@@ -541,9 +541,6 @@ void AUDCTRL_EnableTelephony(
 	// in case it was muted from last voice call,
 	//AUDCTRL_SetTelephonyMicMute (ulSrc, mic, FALSE); 
 
-
-	OSTASK_Sleep( 100 );
-	
 	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
 
     //Load the mic gains from sysparm.
@@ -609,7 +606,6 @@ void AUDCTRL_DisableTelephony(
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_DisableTelephony \n" );
 
 	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, FALSE );
-	OSTASK_Sleep( 100 );
 
 	// The following is the sequence we need to follow
 	AUDDRV_Telephony_Deinit ((void*)&telephonyPathID);
@@ -1182,7 +1178,13 @@ void AUDCTRL_EnablePlay(
     config.chnlNum = numCh;
     config.bitPerSample = AUDIO_16_BIT_PER_SAMPLE;
 
-	if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk==AUDCTRL_SPK_USB)
+    //Enable the PMU for HS/IHF.
+    if ((sink == AUDIO_HW_HEADSET_OUT)||(sink == AUDIO_HW_IHF_OUT)) 
+    {
+		powerOnExternalAmp( spk, AudioUseExtSpkr, TRUE );
+    }
+	
+    if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk==AUDCTRL_SPK_USB)
 	{	//USB call
 		config.source = CSL_CAPH_DEV_DSP;
 		config.sink = CSL_CAPH_DEV_MEMORY;
@@ -1209,12 +1211,6 @@ void AUDCTRL_EnablePlay(
     data.numCh = numCh;
     data.sr = sr;
     AUDCTRL_AddToTable(&data);
-
-    //Enable the PMU for HS/IHF.
-    if ((sink == AUDIO_HW_HEADSET_OUT)||(sink == AUDIO_HW_IHF_OUT)) 
-    {
-		powerOnExternalAmp( spk, AudioUseExtSpkr, TRUE );
-    }
 
     //Load the speaker gains form sysparm.
     //Can not call this following API here.
@@ -1261,9 +1257,8 @@ void AUDCTRL_DisablePlay(
 	audio_xassert(0,pathID);
 	return;
     }
-    
-
-	if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk==AUDCTRL_SPK_USB)
+	
+    if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk==AUDCTRL_SPK_USB)
 	{	//USB call
 		config.source = CSL_CAPH_DEV_DSP;
 		config.sink = CSL_CAPH_DEV_MEMORY;
@@ -1277,9 +1272,6 @@ void AUDCTRL_DisablePlay(
 		(void) csl_caph_hwctrl_DisablePath(config);
 	}
 
-        //Save this path to the path table.
-    AUDCTRL_RemoveFromTable(pathID);
-
     //Disable the PMU for HS/IHF.
 	pathID = AUDCTRL_GetPathIDFromTableWithSrcSink(src, sink, spk, AUDCTRL_MIC_UNDEFINED);
 	if(pathID)
@@ -1291,6 +1283,9 @@ void AUDCTRL_DisablePlay(
 			powerOnExternalAmp( spk, AudioUseExtSpkr, FALSE );
 		}
 	}
+    
+    //Save this path to the path table.
+    AUDCTRL_RemoveFromTable(pathID);
 }
 //============================================================================
 //
@@ -1533,6 +1528,8 @@ void AUDCTRL_SwitchPlaySpk(
     }
  
     // add new spk first... 
+    if ((curSpk == AUDCTRL_SPK_LOUDSPK)||(curSpk == AUDCTRL_SPK_HEADSET))	
+        powerOnExternalAmp( curSpk, AudioUseExtSpkr, FALSE );	    
     speaker = GetDeviceFromSpkr(newSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
@@ -1540,8 +1537,6 @@ void AUDCTRL_SwitchPlaySpk(
         config.sink = speaker;
         (void) csl_caph_hwctrl_AddPath(pathID, config);
     }
-    if ((curSpk == AUDCTRL_SPK_LOUDSPK)||(curSpk == AUDCTRL_SPK_HEADSET))	
-        powerOnExternalAmp( curSpk, AudioUseExtSpkr, FALSE );	    
    
     // remove current spk
     speaker = GetDeviceFromSpkr(curSpk);
@@ -2438,6 +2433,10 @@ void AUDCTRL_SetAudioLoopback(
         pathID = csl_caph_hwctrl_EnablePath(hwCtrlConfig);
 
         // Enable Loopback ctrl
+	    //Enable PMU for headset/IHF
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+    	    ||(speaker == AUDCTRL_SPK_HEADSET))	
+	        powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
 		// up merged : remove the comment later on
 		// after mergining latest changes
 	    if (((source == CSL_CAPH_DEV_ANALOG_MIC) 
@@ -2456,10 +2455,6 @@ void AUDCTRL_SetAudioLoopback(
         data.numCh = (speaker == AUDCTRL_SPK_HEADSET) ? AUDIO_CHANNEL_STEREO : AUDIO_CHANNEL_MONO;
         data.sr = AUDIO_SAMPLING_RATE_48000;
         AUDCTRL_AddToTable(&data);
-	//Enable PMU for headset/IHF
-    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
-    	    ||(speaker == AUDCTRL_SPK_HEADSET))	
-	        powerOnExternalAmp( speaker, AudioUseExtSpkr, TRUE );	    
     }
     else
     {
@@ -2497,12 +2492,6 @@ void AUDCTRL_SetAudioLoopback(
 			powerOnDigitalMic(FALSE);
 #endif			
 		}	
-	    //Enable PMU for headset/IHF
-    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
-	        ||(speaker == AUDCTRL_SPK_HEADSET))	
-		{
-			powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
-		}
 
         memset(&hwCtrlConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
         pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, speaker, mic);
@@ -2525,6 +2514,13 @@ if (((source == CSL_CAPH_DEV_ANALOG_MIC)
 		    csl_caph_audio_loopback_control(audSpkr, 0, enable_lpbk);
 		}
 
+	    //Enable PMU for headset/IHF
+    	if ((speaker == AUDCTRL_SPK_LOUDSPK)
+	        ||(speaker == AUDCTRL_SPK_HEADSET))	
+		{
+			powerOnExternalAmp( speaker, AudioUseExtSpkr, FALSE );	    
+		}
+        
         //Remove this path to the path table.
         AUDCTRL_RemoveFromTable(pathID);
     }
@@ -3329,10 +3325,13 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 ////////////////////////////////////////////////////////////////////////////////////
 			
 #ifdef PMU_BCM59055
+            bcm59055_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
             bcm59055_hs_power(FALSE);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+            bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
             bcmpmu_hs_power(FALSE);
 #endif
+            OSTASK_Sleep(20);
 
 /////////////////////////////////////////////////////////////////////////////////
 //  End PMU code. Linux version only
@@ -3367,10 +3366,13 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu HS amp, gain %d\n", hs_gain);
 #ifdef PMU_BCM59055
+            bcm59055_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
             bcm59055_hs_power(TRUE);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+            bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
             bcmpmu_hs_power(TRUE);
 #endif
+            OSTASK_Sleep(75);
 
 		}
 #ifdef PMU_BCM59055
@@ -3387,8 +3389,10 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu IHF amp\n");
 #ifdef PMU_BCM59055
+            bcm59055_ihf_set_gain(PMU_IHFGAIN_MUTE),
             bcm59055_ihf_power(FALSE);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+            bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
             bcmpmu_ihf_power(FALSE);
 #endif
             if (retValue == AUDCTRL_AMP_NO_ACTION) 
@@ -3419,8 +3423,10 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power ON pmu IHF amp, gain %d\n", ihf_gain);
 #ifdef PMU_BCM59055
+            bcm59055_ihf_set_gain(PMU_IHFGAIN_MUTE),
 			bcm59055_ihf_power(TRUE);
 #elif defined(CONFIG_BCMPMU_AUDIO)
+            bcmpmu_ihf_set_gain(PMU_IHFGAIN_MUTE),
 			bcmpmu_ihf_power(TRUE);
 #endif
 		}

@@ -4,6 +4,7 @@
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 
 #ifdef CONFIG_DEBUG_FS
+#include <linux/stringify.h>
 #include <mach/rdb/brcm_rdb_bmdm_pwrmgr.h>
 #endif
 
@@ -12,6 +13,11 @@
 #define PWRMGR_EVENT_POSEDGE_CONDITION_ENABLE_MASK	PWRMGR_LCDTE_EVENT_LCDTE_POSEDGE_CONDITION_ENABLE_MASK
 #define PWRMGR_EVENT_CONDITION_ACTIVE_MASK		PWRMGR_LCDTE_EVENT_LCDTE_CONDITION_ACTIVE_MASK
 
+#ifdef CONFIG_DEBUG_FS
+extern const char* _island__event2str[];
+#define PWRMGR_EVENT_ID_TO_STR(e) _island__event2str[e]
+
+#endif
 
 enum {
     LCDTE_EVENT = 0,

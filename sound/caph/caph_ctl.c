@@ -49,7 +49,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "csl_aud_drv.h"
 #include "audio_consts.h"
-#include "dspif_voice_play.h"
 #include "audio_ddriver.h"
 
 #include "audio_controller.h"

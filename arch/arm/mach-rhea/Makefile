@@ -20,3 +20,4 @@ obj-$(CONFIG_KONA_POWER_MGR) += rhea_pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += rhea_pi_mgr.o
 obj-$(CONFIG_KONA_CPU_PM_HANDLER) += rhea_pm.o rhea_sleep.o
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += rhea_ray.o rhea_ray_pinmux.o
+obj-$(CONFIG_MACH_RHEA_BERRI) += rhea_berri.o rhea_berri_pinmux.o

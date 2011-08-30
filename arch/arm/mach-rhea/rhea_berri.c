@@ -81,7 +81,7 @@
 
 #define _RHEA_
 #include <linux/broadcom/bcm_fuse_memmap.h>
-#include <mach/comms/platform_mconfig.h>
+#include <linux/broadcom/platform_mconfig.h>
 
 #include <video/kona_fb.h>
 
@@ -618,7 +618,7 @@ struct platform_device haptic_pwm_device = {
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
-#if defined (CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
+#if defined (CONFIG_MACH_RHEA_BERRI) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X
@@ -697,6 +697,7 @@ static struct kona_fb_platform_data alex_dsi_display_fb_data = {
 	.screen_width		= 360,
 	.screen_height		= 640,
 	.bytes_per_pixel	= 4,
+	.gpio			= (KONA_MAX_GPIO + 3),  
 	.pixel_format		= XRGB8888,
 };
 
@@ -715,6 +716,7 @@ static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
+	.gpio			= 41, 
 	.pixel_format		= RGB565,
 };
 
@@ -733,6 +735,7 @@ static struct kona_fb_platform_data r61581_smi_display_fb_data = {
 	.screen_width		= 320,
 	.screen_height		= 480,
 	.bytes_per_pixel	= 2,
+	.gpio			= 41,
 	.pixel_format		= RGB565,
 };
 
@@ -779,7 +782,7 @@ static struct platform_device kona_cpufreq_device = {
 #endif /*CONFIG_KONA_CPU_FREQ_DRV*/
 
 /* Rhea Ray specific platform devices */
-static struct platform_device *rhea_ray_plat_devices[] __initdata = {
+static struct platform_device *rhea_berri_plat_devices[] __initdata = {
 #ifdef CONFIG_KEYBOARD_BCM
 	&bcm_kp_device,
 #endif
@@ -811,7 +814,7 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 
 /* Add all userspace regulator consumer devices here */
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
-struct platform_device *rhea_ray_userspace_consumer_devices[] __initdata = {
+struct platform_device *rhea_berri_userspace_consumer_devices[] __initdata = {
 #if defined(CONFIG_REGULATOR_BCM_PMU59055) && defined(CONFIG_MFD_BCM_PMU590XX)
 	&bcm59055_uc_device_sim,
 #endif
@@ -823,7 +826,7 @@ struct platform_device *rhea_ray_userspace_consumer_devices[] __initdata = {
 
 /* Add all virtual regulator consumer devices here */
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
-struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
+struct platform_device *rhea_berri_virtual_consumer_devices[] __initdata = {
 #if defined(CONFIG_REGULATOR_BCM_PMU59055) && defined(CONFIG_MFD_BCM_PMU590XX)
 	&bcm59055_vc_device_sim,
 #endif
@@ -835,7 +838,7 @@ struct platform_device *rhea_ray_virtual_consumer_devices[] __initdata = {
 
 
 /* Rhea Ray specific i2c devices */
-static void __init rhea_ray_add_i2c_devices (void)
+static void __init rhea_berri_add_i2c_devices (void)
 {
 	/* 59055 on BSC - PMU */
 #ifdef CONFIG_MFD_BCM_PMU590XX
@@ -851,7 +854,7 @@ static void __init rhea_ray_add_i2c_devices (void)
 			ARRAY_SIZE(qt602240_info));
 }
 
-static int __init rhea_ray_add_lateInit_devices (void)
+static int __init rhea_berri_add_lateInit_devices (void)
 {
 	board_add_sdio_devices();
 	return 0;
@@ -878,7 +881,7 @@ static void enable_smi_display_clks(void)
 }
 
 /* All Rhea Ray specific devices */
-static void __init rhea_ray_add_devices(void)
+static void __init rhea_berri_add_devices(void)
 {
 	enable_smi_display_clks();
 
@@ -888,14 +891,14 @@ static void __init rhea_ray_add_devices(void)
 #ifdef CONFIG_KEYBOARD_BCM
 	bcm_kp_device.dev.platform_data = &bcm_keypad_data;
 #endif
-	platform_add_devices(rhea_ray_plat_devices, ARRAY_SIZE(rhea_ray_plat_devices));
+	platform_add_devices(rhea_berri_plat_devices, ARRAY_SIZE(rhea_berri_plat_devices));
 
-	rhea_ray_add_i2c_devices();
+	rhea_berri_add_i2c_devices();
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
-	platform_add_devices(rhea_ray_userspace_consumer_devices, ARRAY_SIZE(rhea_ray_userspace_consumer_devices));
+	platform_add_devices(rhea_berri_userspace_consumer_devices, ARRAY_SIZE(rhea_berri_userspace_consumer_devices));
 #endif
 #ifdef CONFIG_REGULATOR_VIRTUAL_CONSUMER
-	platform_add_devices(rhea_ray_virtual_consumer_devices, ARRAY_SIZE(rhea_ray_virtual_consumer_devices));
+	platform_add_devices(rhea_berri_virtual_consumer_devices, ARRAY_SIZE(rhea_berri_virtual_consumer_devices));
 #endif
 
 	spi_register_board_info(spi_slave_board_info,
@@ -905,7 +908,7 @@ static void __init rhea_ray_add_devices(void)
 void __init board_init(void)
 {
 	board_add_common_devices();
-	rhea_ray_add_devices();
+	rhea_berri_add_devices();
 	return;
 }
 
@@ -916,9 +919,9 @@ void __init board_map_io(void)
 	rhea_map_io();
 }
 
-late_initcall(rhea_ray_add_lateInit_devices);
+late_initcall(rhea_berri_add_lateInit_devices);
 
-MACHINE_START(RHEA, "RheaRay")
+MACHINE_START(RHEA_BERRI, "RheaBerri")
 	.phys_io = IO_START,
 	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,

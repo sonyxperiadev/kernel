@@ -62,6 +62,8 @@ static struct map_desc island_io_desc[] __initdata =
 	* NOTE: The following are alphabetically ordered.
 	***************************************************/
 
+	IO_DESC( KONA_PROC_CLK_VA, SZ_4K ),
+	IO_DESC( KONA_AON_CLK_VA, SZ_4K	),
 	IO_DESC( KONA_ACI_VA, SZ_4K  ),
 	IO_DESC( KONA_ATBFILTER_VA, SZ_4K  ),
 	IO_DESC( KONA_BINTC_BASE_ADDR, SZ_4K  ),

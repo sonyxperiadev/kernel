@@ -41,21 +41,45 @@ enum bsc_bus_speed
  */
 struct bsc_adap_cfg
 {
-	/* I2C bus speed in KHz. It should be the first member in this struct */
-	enum bsc_bus_speed speed;
 	/* to explicitly disable the I2C adapter */
 	int disable;
+
+	/* I2C bus speed */
+	enum bsc_bus_speed speed;
+
+	/*
+	 * flag to turn on dynamic speed support. If this flag is turned on
+	 * in the bus driver, all slave drivers using the bus driver need to
+	 * set its i2c_speed in its platform_data data structure
+	 */
+	int dynamic_speed;
+
+	/* BSC clocks */
 	char *bsc_clk;
 	char *bsc_apb_clk;
 };
 
-/*  I2C slave platform data, for I2C slaves to specify the bus speed.
- *  Note: This struct should be the first member if included as part
- *  of the client specific platform data structure.
+/*
+ * I2C slave platform data, for I2C slaves to specify the bus speed.
+ *
+ *  NOTE: This struct should be included as first member of client
+ *  specific platform data. Otherwise, default speed of the adapter
+ *  will be used for that slave device.
  */
 struct i2c_slave_platform_data
 {
+	/* Magic number to validate */
+	unsigned long spd_magic;
 	enum bsc_bus_speed i2c_speed;
 };
+
+/* Magic number = "spd" in ascii codes */
+#define SLAVE_SPD_MAGIC_NUM            0x00647073
+
+#define ADD_I2C_SLAVE_SPEED(s) {   .spd_magic = SLAVE_SPD_MAGIC_NUM,       \
+                                   .i2c_speed = s,                         \
+                               }
+
+#define I2C_SPEED_IS_VALID(x)  (x->spd_magic == SLAVE_SPD_MAGIC_NUM)
 
 #endif // _I2C_KONA_H_
