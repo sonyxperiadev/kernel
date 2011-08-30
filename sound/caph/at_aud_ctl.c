@@ -65,7 +65,7 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 {
 	va_list args;
 	
-	if (gAudioDebugLevel < level)
+	if(!(gAudioDebugLevel & level))
 	{
 //		printk("gAudioDebugLevel=%d level=%d\n", gAudioDebugLevel, level);
 		return;

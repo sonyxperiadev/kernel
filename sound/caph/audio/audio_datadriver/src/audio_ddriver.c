@@ -326,28 +326,10 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
     switch (aud_drv->drv_type)
     {
         case AUDIO_DRIVER_PLAY_VOICE:
-			{
-				audio_voice_driver[aud_drv->arm2sp_config.instanceID] = NULL;
-       		}
-		break;
         case AUDIO_DRIVER_PLAY_AUDIO:
-        case AUDIO_DRIVER_PLAY_RINGER:
-            {
-                // un initialize audvoc render
-                csl_audio_render_deinit (aud_drv->stream_id);
-				ResetPlaybackStreamHandle(aud_drv->stream_id);
-            }
-            break;
+        case AUDIO_DRIVER_PLAY_RINGER:		
         case AUDIO_DRIVER_CAPT_HQ:
-            {
-                csl_audio_capture_deinit (aud_drv->stream_id);
-                audio_capture_driver = NULL;
-            }
-            break;
         case AUDIO_DRIVER_CAPT_VOICE:
-            {
-				audio_capture_driver = NULL;
-            }
             break;
 		case AUDIO_DRIVER_VOIP:
 			{
@@ -550,6 +532,9 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
             {
                 //stop render
                 result_code = csl_audio_render_stop (aud_drv->stream_id);
+				/* de-init during stop itself as the sequence is open->start->stop->start in android */
+                csl_audio_render_deinit (aud_drv->stream_id);
+				ResetPlaybackStreamHandle(aud_drv->stream_id);
             }
             break;
         case AUDIO_DRIVER_PAUSE:
@@ -654,6 +639,8 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  }
 			  index = 1; //reset
 			  endOfBuffer = FALSE;
+			  /*de-init during stop as the android sequence is open->start->stop->start */
+			  audio_voice_driver[aud_drv->arm2sp_config.instanceID] = NULL;
 		  }
 		  break;
 		  case AUDIO_DRIVER_PAUSE:
@@ -697,8 +684,6 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
     Result_t result_code = RESULT_ERROR;
     AUDDRV_DEVICE_e *aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
 
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureCmd::%d \n",ctrl_cmd );
-
     switch (ctrl_cmd)
     {
         case AUDIO_DRIVER_START:
@@ -721,11 +706,11 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                 }
                 aud_drv->stream_id = csl_audio_capture_init (AUDDRV_GetCSLDevice(*aud_dev),CSL_CAPH_DEV_MEMORY);
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
-                 * Number of blocks = buffer size/block size
-                 *
-                 */
+				* Number of blocks = buffer size/block size
+				*
+				*/
                 block_size = aud_drv->interrupt_period;
-		num_blocks = 2; //limitation for RHEA
+				num_blocks = 2; //limitation for RHEA
 
                 // configure the render driver before starting
                 result_code = csl_audio_capture_configure ( aud_drv->sample_rate, 
@@ -745,6 +730,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
             {
                 //stop capture
                 result_code = csl_audio_capture_stop (aud_drv->stream_id);
+				/*de-init as the sequence is open->start->stop->start in android */
+                csl_audio_capture_deinit (aud_drv->stream_id);
+                audio_capture_driver = NULL;
             }
             break;
         case AUDIO_DRIVER_PAUSE:
@@ -855,6 +843,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 				result_code = RESULT_OK;
 				index = 1; //reset
 				endOfBuffer = FALSE;
+
+				/* de-init during stop as the android sequence is open->start->stop->start */
+				audio_capture_driver = NULL;
             }
             break;
         case AUDIO_DRIVER_PAUSE:
@@ -1579,11 +1570,11 @@ void VPU_Capture_Request(UInt16 buf_index)
 
     if((aud_drv == NULL))
     {
-        Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_CaptureVoiceCallback:: Spurious call back\n");
+        Log_DebugPrintf(LOGID_AUDIO, "VPU_Capture_Request:: Spurious call back\n");
 		return;
     }
 
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_CaptureVoiceCallback:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
+    Log_DebugPrintf(LOGID_AUDIO,"VPU_Capture_Request:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
 
     //Copy the data to the ringbuffer from dsp shared memory
     dest_index = aud_drv->write_index;

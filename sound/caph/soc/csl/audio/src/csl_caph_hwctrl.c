@@ -3019,7 +3019,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	{
 		// Audio Router will control the Audio HW.
 		path = csl_caph_hwctrl_GetPath_FromStreamID(config.streamID);
-
+		if(path == NULL)
+		    return RESULT_ERROR;
 		if(((path->source == CSL_CAPH_DEV_MEMORY)
 			&&(path->sink==CSL_CAPH_DEV_DSP))
 		  ||((path->source == CSL_CAPH_DEV_DSP)

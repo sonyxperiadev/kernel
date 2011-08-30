@@ -319,11 +319,10 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	case CTL_STREAM_PANEL_PCMOUT1: //pcmout 1
 	case CTL_STREAM_PANEL_PCMOUT2: //pcmout 2
 		{
-            AUDIO_HW_ID_t newSink = AUDIO_HW_NONE;
-            AUDIO_HW_ID_t curSink = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
-            AUDCTRL_SPEAKER_t newSpk = pSel[0];
-            AUDCTRL_SPEAKER_t curSpk = pCurSel[0];
-
+			AUDIO_HW_ID_t newSink = AUDIO_HW_NONE;
+			AUDIO_HW_ID_t curSink = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
+			AUDCTRL_SPEAKER_t newSpk = pSel[0];
+			AUDCTRL_SPEAKER_t curSpk = pCurSel[0];
 
 			if(pChip->streamCtl[stream-1].pSubStream != NULL)
 				pStream = (struct snd_pcm_substream *)pChip->streamCtl[stream-1].pSubStream;
@@ -334,89 +333,94 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 
 			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED)
 			{
-				//call audio driver to set sink, or do switching
+				//call audio driver to set sink, or do switching if the current and new device are not same
                 //update Sink, volume , mute info from mixer controls, all these should be done in audio_thread.c
-                if(pSel[0]==AUDCTRL_SPK_HANDSET)
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
-                }
-                else if(pSel[0]==AUDCTRL_SPK_HEADSET)
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_HEADSET_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_HS;		
-                }
-                else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE) 
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_IHF_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_IHF;		
-                }
-                else if(pSel[0]==AUDCTRL_SPK_BTM)
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_MONO_BT_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_BT_SPKR;
-                }
-                else if(pSel[0]==AUDCTRL_SPK_I2S)
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_I2S_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_FM_TX; 	
-                }
-                else
-                {
-                    BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
-                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
-                }
 
-                pChip->streamCtl[stream-1].dev_prop.p[0].speaker = pSel[0];
-
-                // do the real switching now.
-                newSink =  pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
-                AUDCTRL_SwitchPlaySpk(curSink, curSpk, newSink, newSpk);
-
-				// Handle secondary output device
-                if(pSel[1]==AUDCTRL_SPK_HANDSET)
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_EARPIECE_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_EP;
-                }
-                else if(pSel[1]==AUDCTRL_SPK_HEADSET)
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_HEADSET_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_HS;		
-                }
-                else if(pSel[1]==AUDCTRL_SPK_LOUDSPK || pSel[1]==AUDCTRL_SPK_HANDSFREE) 
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_IHF_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_IHF;		
-                }
-                else if(pSel[1]==AUDCTRL_SPK_BTM)
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_MONO_BT_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_BT_SPKR;
-                }
-                else if(pSel[1]==AUDCTRL_SPK_I2S)
-                {
-                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_I2S_OUT;
-                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_FM_TX; 	
-                }
-                else
-                {
-                    BCM_AUDIO_DEBUG("No secondary output device! hw_id for dev2 %ld ?\n", pSel[1]);
-                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_NONE;
-                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_NONE;
-                }
-
-                pChip->streamCtl[stream-1].dev_prop.p[1].speaker = pSel[1];
-				
-                
-				if (pChip->streamCtl[stream-1].dev_prop.p[1].hw_id != AUDIO_HW_NONE)
+				if(pSel[0] != pCurSel[0])
 				{
-                	newSink =  pChip->streamCtl[stream-1].dev_prop.p[1].hw_id;
-					newSpk = pSel[1];
-					AUDCTRL_AddPlaySpk( pChip->streamCtl[stream-1].dev_prop.p[0].hw_id,
-										pChip->streamCtl[stream-1].dev_prop.p[0].speaker,
-										newSink, newSpk);
+	                if(pSel[0]==AUDCTRL_SPK_HANDSET)
+	                {
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+	                }
+	                else if(pSel[0]==AUDCTRL_SPK_HEADSET)
+	                {
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_HEADSET_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_HS;
+					}
+	                else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE)
+					{
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_IHF_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_IHF;
+					}
+	                else if(pSel[0]==AUDCTRL_SPK_BTM)
+	                {
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_MONO_BT_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_BT_SPKR;
+	                }
+	                else if(pSel[0]==AUDCTRL_SPK_I2S)
+	                {
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_I2S_OUT;
+						pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_FM_TX;	
+	                }
+	                else
+	                {
+	                    BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+	                }
+
+	                pChip->streamCtl[stream-1].dev_prop.p[0].speaker = pSel[0];
+
+	                // do the real switching now.
+	                newSink =  pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
+		            AUDCTRL_SwitchPlaySpk(curSink, curSpk, newSink, newSpk);
+				}
+
+				if(pSel[1] != pCurSel[1])
+				{
+					// Handle secondary output device
+	                if(pSel[1]==AUDCTRL_SPK_HANDSET)
+	                {
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_EARPIECE_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_EP;
+	                }
+	                else if(pSel[1]==AUDCTRL_SPK_HEADSET)
+	                {
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_HEADSET_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_HS;
+					}
+	                else if(pSel[1]==AUDCTRL_SPK_LOUDSPK || pSel[1]==AUDCTRL_SPK_HANDSFREE)
+					{
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_IHF_OUT;
+						pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_IHF;
+					}
+	                else if(pSel[1]==AUDCTRL_SPK_BTM)
+	                {
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_MONO_BT_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_BT_SPKR;
+	                }
+	                else if(pSel[1]==AUDCTRL_SPK_I2S)
+	                {
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_I2S_OUT;
+	                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_FM_TX;
+					}
+	                else
+	                {
+	                    BCM_AUDIO_DEBUG("No secondary output device! hw_id for dev2 %ld ?\n", pSel[1]);
+						pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_NONE;
+						pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_NONE;
+	                }
+
+	                pChip->streamCtl[stream-1].dev_prop.p[1].speaker = pSel[1];
+					if (pChip->streamCtl[stream-1].dev_prop.p[1].hw_id != AUDIO_HW_NONE)
+					{
+						newSink =  pChip->streamCtl[stream-1].dev_prop.p[1].hw_id;
+						newSpk = pSel[1];
+						AUDCTRL_AddPlaySpk( pChip->streamCtl[stream-1].dev_prop.p[0].hw_id,
+											pChip->streamCtl[stream-1].dev_prop.p[0].speaker,
+											newSink, newSpk);
+					}
 				}
 			}
 		}
@@ -437,12 +441,11 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
             AUDCTRL_SPEAKER_t curMic = pCurSel[0];
             AUDCTRL_SPEAKER_t newSpk = pSel[1];
             AUDCTRL_SPEAKER_t curSpk = pCurSel[1];
-                
-	        // save the mode first. We should have a spk to mode conversion to handle WB modes.
-	        AUDCTRL_SaveAudioModeFlag(pSel[1]);
-			//AUDCTRL_SetTelephonyMicSpkr(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pSel[0],pSel[1]);
-            AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, curMic, curSpk);
-            AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, newMic, newSpk);
+
+			// save the mode first. We should have a spk to mode conversion to handle WB modes.
+			AUDCTRL_SaveAudioModeFlag(pSel[1]);
+			AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, curMic, curSpk);
+			AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, newMic, newSpk);
          }
 		break;
 

@@ -284,9 +284,7 @@ static int PcmPlaybackOpen(
 
     substream->runtime->private_data = drv_handle;
 
-    BCM_AUDIO_DEBUG("chip-0x%lx substream-0x%lx drv_handle-0x%lx \n",(UInt32)chip,(UInt32)substream,(UInt32)drv_handle);
-
-	chip->streamCtl[substream_number].stream_hw_ptr = 0;
+    BCM_AUDIO_DEBUG("chip-0x%lx substream-0x%lx drv_handle-0x%lx \n",(UInt32)chip,(UInt32)substream,(UInt32)drv_handle);	
 		
 	return err;
 }
@@ -342,6 +340,7 @@ static int PcmPlaybackPrepare(
 	BCM_AUDIO_DEBUG("\nplayback_prepare period=%d period_size=%d bufsize=%d threshold=%ld frame_bits %d\n", (int)runtime->periods, 
 			(int)runtime->period_size, (int)runtime->buffer_size, runtime->stop_threshold, runtime->frame_bits);
 
+	chip->streamCtl[substream->number].stream_hw_ptr = 0;
     drv_handle = substream->runtime->private_data;
 
 
@@ -697,9 +696,7 @@ static int PcmCaptureOpen(struct snd_pcm_substream * substream)
 	if (err<0)
 		return err;
 
-	BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d\n",jiffies, substream_number);
-
-	chip->streamCtl[substream_number].stream_hw_ptr = 0;
+	BCM_AUDIO_DEBUG("\n %lx:capture_open subdevice=%d\n",jiffies, substream_number);	
 	
 	return 0;
 
@@ -740,16 +737,19 @@ static int PcmCaptureClose(struct snd_pcm_substream * substream)
 static int PcmCapturePrepare(struct snd_pcm_substream * substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
-    //brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
+    brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     unsigned long period_bytes;
     AUDIO_DRIVER_BUFFER_t buf_param;
     AUDIO_DRIVER_CONFIG_t drv_config;
 	AUDIO_DRIVER_CallBackParams_t	cbParams;
+	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 
 	BCM_AUDIO_DEBUG("\n %lx:capture_prepare: subdevice=%d rate =%d format =%d channel=%d dma_area=0x%x dma_bytes=%d period_bytes=%d avail_min=%d periods=%d buffer_size=%d\n",
 		         jiffies,	substream->number, runtime->rate, runtime->format, runtime->channels, (unsigned int)runtime->dma_area, runtime->dma_bytes,
 		         frames_to_bytes(runtime, runtime->period_size), frames_to_bytes(runtime, runtime->control->avail_min), runtime->periods, (int)runtime->buffer_size);
+
+	chip->streamCtl[substream_number].stream_hw_ptr = 0;
 	
     drv_handle = substream->runtime->private_data;
 
@@ -776,7 +776,7 @@ static int PcmCapturePrepare(struct snd_pcm_substream * substream)
     drv_config.sample_rate = runtime->rate;
     drv_config.num_channel = runtime->channels;
     drv_config.bits_per_sample = AUDIO_16_BIT_PER_SAMPLE;
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);
+    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);	
 
 	return 0;
 }
