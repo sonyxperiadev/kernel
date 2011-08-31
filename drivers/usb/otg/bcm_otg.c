@@ -227,6 +227,42 @@ static ssize_t bcm_otg_host_store(struct device *dev,
 static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcm_otg_host_show,
 		   bcm_otg_host_store);
 
+static void bcm_otg_vbus_invalid_handler(struct work_struct *work)
+{
+	struct bcm_otg_data *otg_data = container_of(work, struct bcm_otg_data, bcm_otg_vbus_invalid_work);
+	dev_info(otg_data->dev, "Vbus invalid\n");
+}
+
+static void bcm_otg_vbus_valid_handler(struct work_struct *work)
+{
+	struct bcm_otg_data *otg_data = container_of(work, struct bcm_otg_data, bcm_otg_vbus_valid_work);
+	dev_info(otg_data->dev, "Vbus valid\n");
+}
+
+static void bcm_otg_vbus_a_invalid_handler(struct work_struct *work)
+{
+	struct bcm_otg_data *otg_data = container_of(work, struct bcm_otg_data, bcm_otg_vbus_a_invalid_work);
+	dev_info(otg_data->dev, "A session invalid\n");
+}
+
+static void bcm_otg_vbus_a_valid_handler(struct work_struct *work)
+{
+	struct bcm_otg_data *otg_data = container_of(work, struct bcm_otg_data, bcm_otg_vbus_a_valid_work);
+	dev_info(otg_data->dev, "A session valid\n");
+}
+
+static void bcm_otg_adp_cprb_done_handler(struct work_struct *work)
+{
+	struct bcm_otg_data *otg_data = container_of(work, struct bcm_otg_data, bcm_otg_adp_cprb_done_work);
+	dev_info(otg_data->dev, "ADP calibration probe done\n");
+}
+
+static void bcm_otg_adp_change_handler(struct work_struct *work)
+{
+	struct bcm_otg_data *otg_data = container_of(work, struct bcm_otg_data, bcm_otg_adp_change_work);
+	dev_info(otg_data->dev, "ADP change detected\n");
+}
+
 static int __devinit bcm_otg_probe(struct platform_device *pdev)
 {
 	int error = 0;
@@ -255,6 +291,21 @@ static int __devinit bcm_otg_probe(struct platform_device *pdev)
 	otg_data->otg_xceiver.xceiver.label = "bcm_otg";
 	otg_data->host = false;
 	otg_data->vbus_enabled = false;
+
+	/* Create a work queue for OTG work items */
+	otg_data->bcm_otg_work_queue = create_workqueue("bcm_otg_events");
+	if (otg_data->bcm_otg_work_queue == NULL) {
+		dev_warn(&pdev->dev, "BCM OTG events work queue creation failed\n");
+		return -ENOMEM;
+	}
+
+	/* Create one work item per deferrable function */
+	INIT_WORK(&otg_data->bcm_otg_vbus_invalid_work, bcm_otg_vbus_invalid_handler);
+	INIT_WORK(&otg_data->bcm_otg_vbus_valid_work, bcm_otg_vbus_valid_handler);
+	INIT_WORK(&otg_data->bcm_otg_vbus_a_invalid_work, bcm_otg_vbus_a_invalid_handler);
+	INIT_WORK(&otg_data->bcm_otg_vbus_a_valid_work, bcm_otg_vbus_a_valid_handler);
+	INIT_WORK(&otg_data->bcm_otg_adp_cprb_done_work, bcm_otg_adp_cprb_done_handler);
+	INIT_WORK(&otg_data->bcm_otg_adp_change_work, bcm_otg_adp_change_handler);
 
 	otg_data->otg_clk = clk_get(NULL, "usb_otg_clk");
 	if (!otg_data->otg_clk) {
@@ -302,6 +353,7 @@ error_attr_vbus:
 	device_remove_file(otg_data->dev, &dev_attr_host);
 
 error_attr_host:
+	destroy_workqueue(otg_data->bcm_otg_work_queue);
 	clk_put(otg_data->otg_clk);
 	kfree(otg_data);
 	return error;
@@ -315,6 +367,7 @@ static int __exit bcm_otg_remove(struct platform_device *pdev)
 	device_remove_file(otg_data->dev, &dev_attr_vbus);
 	device_remove_file(otg_data->dev, &dev_attr_host);
 
+	destroy_workqueue(otg_data->bcm_otg_work_queue);
 	clk_put(otg_data->otg_clk);
 	kfree(otg_data);
 

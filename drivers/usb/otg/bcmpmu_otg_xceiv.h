@@ -33,6 +33,15 @@ struct bcm_otg_data {
 #endif
 	struct clk *otg_clk;
 	struct bcm_otg_xceiver otg_xceiver;
+
+	/* OTG Work queue and work struct for each item for work queue */
+	struct workqueue_struct *bcm_otg_work_queue;
+	struct work_struct bcm_otg_vbus_invalid_work;
+	struct work_struct bcm_otg_vbus_valid_work;
+	struct work_struct bcm_otg_vbus_a_invalid_work;
+	struct work_struct bcm_otg_vbus_a_valid_work;
+	struct work_struct bcm_otg_adp_cprb_done_work;
+	struct work_struct bcm_otg_adp_change_work;
 	bool host;
 	bool vbus_enabled;
 };
