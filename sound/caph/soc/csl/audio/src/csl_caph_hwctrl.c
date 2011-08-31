@@ -650,14 +650,14 @@ static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
 {
 	if(!path) return;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "path %d caph block[0-2]:: %s-%d %s-%d %s-%d.\r\n", path->pathID, blockName[path->block[0]], path->blockIdx[0], blockName[path->block[1]], path->blockIdx[1], blockName[path->block[2]], path->blockIdx[2]));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "path %d caph block[0-2]:: %s-%d-->%s-%d-->%s-%d\r\n", path->pathID, blockName[path->block[0]], path->blockIdx[0], blockName[path->block[1]], path->blockIdx[1], blockName[path->block[2]], path->blockIdx[2]));
 	if(path->block[3]!=CAPH_NONE)
 	{
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[3-5]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[3]], path->blockIdx[3], blockName[path->block[4]], path->blockIdx[4], blockName[path->block[5]], path->blockIdx[5]));
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[3-5]:: -->%s-%d-->%s-%d-->%s-%d\r\n", blockName[path->block[3]], path->blockIdx[3], blockName[path->block[4]], path->blockIdx[4], blockName[path->block[5]], path->blockIdx[5]));
 	}
 	if(path->block[6]!=CAPH_NONE)
 	{
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[6-8]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[6]], path->blockIdx[6], blockName[path->block[7]], path->blockIdx[7], blockName[path->block[8]], path->blockIdx[8]));
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[6-8]:: -->%s-%d-->%s-%d-->%s-%d\r\n", blockName[path->block[6]], path->blockIdx[6], blockName[path->block[7]], path->blockIdx[7], blockName[path->block[8]], path->blockIdx[8]));
 	}
 }
 
@@ -1130,7 +1130,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				sink = CSL_CAPH_DEV_IHF; //should be done in csl_caph_srcmixer_obtain_outchnl
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			} else if(sink==CSL_CAPH_DEV_BT_SPKR) {
-				sink = CSL_CAPH_DEV_EP;
+				sink = CSL_CAPH_DEV_IHF; //in order to support BTM play + BTM-to-EP simultaneously.
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			}
 			dataFormat = csl_caph_get_sink_dataformat(dataFormat, sink);
@@ -3071,7 +3071,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	        ||(path->sink == CSL_CAPH_DEV_IHF)
 	        ||(path->sink == CSL_CAPH_DEV_VIBRA)))
     {
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Music playback: DDR->DMA->CFIFO->SSASW->SRC->SSASW->AUDIOH(EP/IHF/HS/Vibra)\r\n"));
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Music playback: DDR->AUDIOH(EP/IHF/HS/Vibra)\r\n"));
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE};
 
@@ -3095,7 +3095,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
 	    && (path->sink == CSL_CAPH_DEV_MEMORY))
     {
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Music Recording: AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->SSASW->CFIFO->DMA->DDR\r\n"));
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Music Recording: AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->DDR\r\n"));
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE};
 
@@ -3262,7 +3262,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         /* Set up the path for BT playback: SSP4->AudioH(EP)
          */
 		{
-			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE}; //why dma and cfifo are involved in the current implementation? why no src?
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE};
 
 			csl_caph_config_blocks(path->pathID, blocks);
 			csl_caph_start_blocks(path->pathID);
@@ -3272,7 +3272,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else
     if ((path->source == CSL_CAPH_DEV_DSP_throughMEM)&&(path->sink == CSL_CAPH_DEV_IHF))	
     {
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice DL: DDR->DMA->CFIFO->SSASW->AUDIOH(IHF)\r\n"));
+		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice DL: DDR->AUDIOH(IHF)\r\n"));
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE};
 
@@ -3286,7 +3286,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         &&((path->sink == CSL_CAPH_DEV_EP)
         ||(path->sink == CSL_CAPH_DEV_HS)))
     {
-        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice DL: DSP->SRCMixer->SSASW->AUDIOH(EP/HS)\r\n"));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice DL: DSP->AUDIOH(EP/HS)\r\n"));
 		{
 #if defined(ENABLE_DMA_VOICE)
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE};
@@ -3309,7 +3309,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
          ||(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
         &&(path->sink == CSL_CAPH_DEV_DSP))
     {
-	    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice UL: AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->SSASW->SRCMixer->DSP\r\n"));
+	    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "Voice UL: AudioH(AnalogMic/HSMic/DMIC1/2/3/4)->DSP\r\n"));
 		{
 #if defined(ENABLE_DMA_VOICE)
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE};
