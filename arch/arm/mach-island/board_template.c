@@ -89,6 +89,11 @@
 #include <akm8975_i2c_settings.h>
 #endif
 
+#if defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
+#include <linux/akm8975_brcm.h>
+#include <akm8975_i2c_settings.h>
+#endif
+
 #if defined(CONFIG_NET_ISLAND)
 #include <mach/net_platform.h>
 #include <net_settings.h>
@@ -885,7 +890,8 @@ static struct i2c_board_info __initdata i2c_bma150_info[] =
 };
 #endif
 
-#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE)
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) || \
+	defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
 
 #define board_akm8975_axis_change concatenate(ISLAND_BOARD_ID, _akm150_axis_change)
 
@@ -1206,7 +1212,8 @@ static void __init add_i2c_device(void)
 #endif
 
 
-#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE)
+#if defined(CONFIG_SENSORS_AK8975) || defined(CONFIG_SENSORS_AK8975_MODULE) \
+	|| defined(CONFIG_SENSORS_AK8975_BRCM) || defined(CONFIG_SENSORS_AK8975_BRCM_MODULE)
    i2c_register_board_info(
 #ifdef AKM8975_I2C_BUS_ID
       AKM8975_I2C_BUS_ID,  
