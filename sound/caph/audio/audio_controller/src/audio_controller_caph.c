@@ -2552,7 +2552,6 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
 //============================================================================
  void  AUDCTRL_EnableBypassVibra(void)
  {
-	 csl_caph_ControlHWClock (TRUE);
 	 csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, TRUE);
  }
 
@@ -2566,11 +2565,6 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
  void  AUDCTRL_DisableBypassVibra(void)
  {
 	 csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, FALSE);
-    // shutdown all audio clock if no audio activity, at last
-    if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
-    {
-        csl_caph_ControlHWClock (FALSE);
-    }
  }
 
 //============================================================================

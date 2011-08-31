@@ -152,7 +152,7 @@ static struct clk *clkID[MAX_AUDIO_CLOCK_NUM] = {NULL,NULL,NULL,NULL,NULL,NULL};
 //****************************************************************************
 //static void AUDDRV_LISR(void);
 //static void AUDDRV_HISR(void);
-//static void csl_caph_ControlHWClock(Boolean enable);
+static void csl_caph_ControlHWClock(Boolean enable);
 
 //****************************************************************************
 // local typedef declarations
@@ -254,6 +254,7 @@ static void csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(
 static void csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(
                                          CSL_CAPH_PathID pathID, 
                                          CSL_CAPH_SRCM_MIX_GAIN_t mixGain);
+static Boolean csl_caph_hwctrl_allPathsDisabled(void);
 static void csl_caph_hwctrl_configre_fm_fifo(CSL_CAPH_HWConfig_Table_t *path);
 static CSL_CAPH_PathID csl_caph_hwctrl_GetInvalidPath_FromPathSettings(
                                          CSL_CAPH_DEVICE_e source,
@@ -1642,7 +1643,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 //
 // =========================================================================
 
-void csl_caph_ControlHWClock(Boolean enable)
+static void csl_caph_ControlHWClock(Boolean enable)
 {
     static Boolean sCurEnabled = FALSE;
 
@@ -2640,7 +2641,7 @@ static void csl_caph_hwctrl_ACIControl()
 *  Description: Check whether all paths are disabled.
 *
 ****************************************************************************/
-Boolean csl_caph_hwctrl_allPathsDisabled(void)
+static Boolean csl_caph_hwctrl_allPathsDisabled(void)
 {
     UInt8 i = 0;
     for (i=0; i<MAX_AUDIO_PATH; i++)
@@ -4904,10 +4905,20 @@ void csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_MODE_Enum_t mode, Boolean enable_v
 	// Bypass mode
 	if(mode == 0)
 	{
+		if(enable_vibrator) csl_caph_ControlHWClock(TRUE);
 		chal_audio_vibra_set_bypass(lp_handle, enable_vibrator);
 		chal_audio_vibra_write_fifo(lp_handle, &strength, 1, TRUE);
 		chal_audio_vibra_set_dac_pwr(lp_handle, enable_vibrator);
 		chal_audio_vibra_enable(lp_handle, enable_vibrator);
+
+		// shutdown all audio clock if no audio activity, at last
+		if(!enable_vibrator)
+		{
+			if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
+			{
+				csl_caph_ControlHWClock (FALSE);
+			}
+		}
 	}
 	// PCM mode
 	else
