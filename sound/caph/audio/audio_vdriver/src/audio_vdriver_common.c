@@ -127,7 +127,6 @@ void AUDDRV_Init( void )
     AUDDRV_SPKRInit (AUDDRV_SPKR_EP, AUDIO_SPKR_CHANNEL_DIFF);  //Purpose: to initialize the CHAL Audio code with AHB_AUDIO_BASE_ADDR, SYSCFG_BASE_ADDR, AUXMIC_BASE_ADDR.
 #endif
 
-#if defined(FUSE_APPS_PROCESSOR)
 
 	/* register DSP VPU status processing handlers */
 #ifndef _SAMOA_
@@ -149,33 +148,6 @@ void AUDDRV_Init( void )
 #endif
 	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
 
-	Audio_InitRpc();
-#else  //#if defined(FUSE_APPS_PROCESSOR)
-	Audio_InitRpc();
-
-	//split file to CP and AP.
-	{
-	UInt8 cur_mode = (UInt8) AUDDRV_GetAudioMode();
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
-#if defined(USE_NEW_AUDIO_PARAM)
-	UInt8 cur_app = 0; 
-	UInt16 voice_vol_init_in_dB = SYSPARM_GetAudioParamsFromFlash( cur_mode, cur_app )->voice_volume_init;  //dB
-#else
-	UInt16 voice_vol_init_in_dB = SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  //dB
-#endif
-#endif
-	VOLUMECTRL_SetBasebandVolume( voice_vol_init_in_dB, 0, 0, 0 );  //param4 is OmegaVoice volume step
-	}
-
-#if !defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if defined(USE_NEW_AUDIO_PARAM)
-#endif
-#else
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Init : Registering CP_Audio_ISR_Handler*\n\r");
-	RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &CP_Audio_ISR_Handler );
-#endif
-
-#endif	
 	sAudDrv.isRunning = TRUE;
 }
 

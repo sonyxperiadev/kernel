@@ -35,6 +35,7 @@
 #include "log.h"
 
 static UInt8 audioClientId = 0;
+static Boolean audioRpcInited = FALSE;
 
 //If this struct is changed then please change xdr_Audio_Params_t() also.
 typedef struct
@@ -194,9 +195,7 @@ static Boolean AudioCopyPayload( MsgType_t msgType,
 
 void Audio_InitRpc(void)
 {
-	static int first_time = 1;
-
-	if(first_time)
+	if(!audioRpcInited)
 	{
 		RPC_Handle_t handle;
 		RPC_InitParams_t params={0};
@@ -220,7 +219,7 @@ void Audio_InitRpc(void)
 		SYS_RegisterForMSEvent(HandleCallStatusIndCb, 0);
 #endif
 
-		first_time = 0;
+		audioRpcInited = TRUE;
 		Log_DebugPrintf(LOGID_MISC, "Audio_InitRpc %d", audioClientId);
 	}
 }
@@ -250,6 +249,19 @@ void CAPI2_audio_control_dsp(UInt32 tid, UInt8 clientID, Audio_Params_t* params)
 	msg.dataLen = 0;
 	RPC_SerializeReq(&msg);
 }
+
+void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t* cf)
+{
+	RPC_Msg_t msg;
+	
+	msg.msgId = MSG_AUDIO_COMP_FILTER_REQ;
+	msg.tid = tid;
+	msg.clientID = clientID;
+	msg.dataBuf = (void*)cf;
+	msg.dataLen = 0;
+	RPC_SerializeReq(&msg);
+}
+
 
 bool_t xdr_Audio_Params_t(void* xdrs, Audio_Params_t *rsp)
 {
@@ -326,6 +338,9 @@ UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 pa
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 
+    if (!audioRpcInited)
+        Audio_InitRpc();
+
 	audioParam.param1 = param1;
 	audioParam.param2 = param2;
 	audioParam.param3 = param3;
@@ -349,6 +364,9 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* audio_control_dsp (AP) param1 %ld, param2 %ld param3 %ld param4 %ld *\n\r", param1, param2, param3, param4);
+
+    if (!audioRpcInited)
+        Audio_InitRpc();
 
 	switch (param1)
 	{
@@ -428,18 +446,6 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 
 }
 
-void CAPI2_audio_cmf_filter(UInt32 tid, UInt8 clientID, AudioCompfilter_t* cf)
-{
-	RPC_Msg_t msg;
-	
-	msg.msgId = MSG_AUDIO_COMP_FILTER_REQ;
-	msg.tid = tid;
-	msg.clientID = clientID;
-	msg.dataBuf = (void*)cf;
-	msg.dataLen = 0;
-	RPC_SerializeReq(&msg);
-}
-
 UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
 {
 	UInt32 val = (UInt32)0;
@@ -447,6 +453,9 @@ UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 	Log_DebugPrintf(LOGID_AUDIO, "audio_cmf_filter (AP) ");
+
+    if (!audioRpcInited)
+        Audio_InitRpc();
 
 	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
 	CAPI2_audio_cmf_filter(tid, audioClientId,cf);
