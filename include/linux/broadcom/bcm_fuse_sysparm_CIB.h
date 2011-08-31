@@ -441,8 +441,6 @@ typedef struct {
 	Int32 voice_mic1_eq[NUM_OF_MIC_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];
 	UInt16 voice_mic1_hpf_enable;
 	UInt16 voice_mic1_hpf_cutoff_freq;
-	// uncomment this line when newer CP image is used: UInt16 voice_mic1_hpf_enable;
-	// uncomment this line when newer CP image is used: UInt16 voice_mic1_hpf_cutoff_freq;
 	
 	UInt16 voice_mic2_biquad_num;
 	Int16 voice_mic2_scale_input[NUM_OF_MIC_EQ_BIQUAD];	
@@ -450,8 +448,6 @@ typedef struct {
 	Int32 voice_mic2_eq[NUM_OF_MIC_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];
 	UInt16 voice_mic2_hpf_enable;
 	UInt16 voice_mic2_hpf_cutoff_freq;
-	// uncomment this line when newer CP image is used: UInt16 voice_mic2_hpf_enable;
-	// uncomment this line when newer CP image is used: UInt16 voice_mic2_hpf_cutoff_freq;
 	
 	UInt16 voice_speaker_biquad_num;
 	Int16 voice_speaker_scale_input[NUM_OF_SPEAKER_EQ_BIQUAD];	

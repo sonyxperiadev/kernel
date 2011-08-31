@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                                */
+Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.                                */
 
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
 /*     use of this software, this software is licensed to you under the terms of the GNU        */
@@ -1146,8 +1146,8 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 	{
 		path->audiohCfg[audiohSinkPathIdx].sample_size = 16;
 		if(dataFormat==CSL_CAPH_24BIT_MONO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_size = 24;
-		path->audiohCfg[audiohSinkPathIdx].sample_mode = 1;
-		if(dataFormat==CSL_CAPH_16BIT_STEREO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_mode = 2;
+		path->audiohCfg[audiohSinkPathIdx].sample_mode = (AUDIO_CHANNEL_NUM_t) 1;
+		if(dataFormat==CSL_CAPH_16BIT_STEREO || dataFormat==CSL_CAPH_24BIT_STEREO) path->audiohCfg[audiohSinkPathIdx].sample_mode = (AUDIO_CHANNEL_NUM_t) 2;
 		path->audiohPath[audiohSinkPathIdx] = csl_caph_get_audio_path(sink);
 	}
 	csl_caph_hwctrl_PrintPath(path);
@@ -1400,7 +1400,7 @@ static void csl_caph_config_src(CSL_CAPH_PathID pathID, int blockPathIdx)
 	int blockIdx;
 	CAPH_BLOCK_t block;
 	CSL_CAPH_HWConfig_Table_t *path;
-	CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
+	//CSL_CAPH_SRCM_ROUTE_t *pSrcmRoute;
 
 	if(!pathID) return;
 	path = &HWConfig_Table[pathID-1];
@@ -1408,7 +1408,7 @@ static void csl_caph_config_src(CSL_CAPH_PathID pathID, int blockPathIdx)
 	if(block!=CAPH_SRC) return;
 	blockIdx = path->blockIdx[blockPathIdx];
 
-	pSrcmRoute = &path->srcmRoute[blockIdx];
+	//pSrcmRoute = &path->srcmRoute[blockIdx];
 
 	csl_caph_srcmixer_config_src_route(path->srcmRoute[blockIdx]);
 }
