@@ -864,31 +864,9 @@ static int __init rhea_ray_add_lateInit_devices (void)
 	return 0;
 }
 
-static void enable_smi_display_clks(void)
-{
-	struct clk *smi_axi;
-	struct clk *mm_dma;
-	struct clk *smi;
-
-	smi_axi = clk_get (NULL, "smi_axi_clk");
-	mm_dma = clk_get (NULL, "mm_dma_axi_clk");
-
-	smi = clk_get (NULL, "smi_clk");
-	BUG_ON (!smi_axi || !smi || !mm_dma);
-
-
-	clk_set_rate (smi, 250000000);
-
-	clk_enable (smi_axi);
-	clk_enable (smi);
-	clk_enable(mm_dma);
-}
-
 /* All Rhea Ray specific devices */
 static void __init rhea_ray_add_devices(void)
 {
-	enable_smi_display_clks();
-
 	android_pmem_data.start = (unsigned long)pmem_base;
 	android_pmem_data.size  = pmem_size;
 
