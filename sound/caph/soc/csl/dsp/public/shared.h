@@ -149,7 +149,7 @@
 #define NONINTERL_PER_CH_AUDIO_SIZE_PER_PAGE    ((UInt16) 2048)
 //Arm2SP
 #define ARM2SP_INPUT_SIZE          ((UInt16) 1280  )      //max size of input of Arm2SP (160*8) 8 PCM speech frames
-#define ARM2SP_INPUT_SIZE_48K      ((UInt16) 7680  )      //
+#define ARM2SP_INPUT_SIZE_48K      ((UInt16) 3840  )      //
 
 #define DSP_SYNC_LIST_SIZE		   			 24		// # of cells that can be sync'ed
 
