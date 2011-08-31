@@ -126,6 +126,7 @@ typedef struct brcm_alsa_chip
 	Int32	pi32SpeechMixOption[3];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
 	//AT-AUD
 	Int32	i32AtAudHandlerParms[7];	
+	Int32	pi32BypassVibraParam[3];	//Bypass Vibra: bEnable, strength, direction
  } brcm_alsa_chip_t;
 
 
@@ -160,6 +161,7 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_FM_ENABLE,
 	CTL_FUNCTION_FM_FORMAT,
 	CTL_FUNCTION_AT_AUDIO,
+	CTL_FUNCTION_BYPASS_VIBRA,
 };
 
 enum	AT_AUD_Ctl_t

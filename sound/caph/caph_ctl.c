@@ -363,6 +363,11 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	                    pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_I2S_OUT;
 						pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_FM_TX;	
 	                }
+					else if(pSel[0]==AUDCTRL_SPK_VIBRA)
+					{
+						pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_VIBRA_OUT;
+						pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_VIBRA;
+					}
 	                else
 	                {
 	                    BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
@@ -404,6 +409,11 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	                {
 	                    pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_I2S_OUT;
 	                    pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_FM_TX;
+					}
+					else if(pSel[1]==AUDCTRL_SPK_VIBRA)
+					{
+						pChip->streamCtl[stream-1].dev_prop.p[1].hw_id = AUDIO_HW_VIBRA_OUT;
+						pChip->streamCtl[stream-1].dev_prop.p[1].aud_dev = AUDDRV_DEV_VIBRA;	
 					}
 	                else
 	                {
@@ -622,6 +632,13 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			if(kcontrol->id.index==1) //val[0] is at command handler, val[1] is 1st parameter of the AT command parameters
 				uinfo->count = 1;
 			break;			
+		case CTL_FUNCTION_BYPASS_VIBRA:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 3;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 100;
+			uinfo->value.integer.step = 1; 
+			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
 				break;
@@ -673,6 +690,11 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				ucontrol->value.integer.value[1],ucontrol->value.integer.value[2], ucontrol->value.integer.value[3], ucontrol->value.integer.value[4],
 				ucontrol->value.integer.value[5],ucontrol->value.integer.value[6]);
 		}
+			break;
+		case CTL_FUNCTION_BYPASS_VIBRA:
+			ucontrol->value.integer.value[0] = pChip->pi32BypassVibraParam[0];
+			ucontrol->value.integer.value[1] = pChip->pi32BypassVibraParam[1];
+			ucontrol->value.integer.value[2] = pChip->pi32BypassVibraParam[2];
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -769,6 +791,20 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			rtn = AtAudCtlHandler_put(kcontrol->id.index, pChip, info.count, ucontrol->value.integer.value);
 			break;
 		}
+		case CTL_FUNCTION_BYPASS_VIBRA:
+			pChip->pi32BypassVibraParam[0] = ucontrol->value.integer.value[0];
+			pChip->pi32BypassVibraParam[1] = ucontrol->value.integer.value[1];
+			pChip->pi32BypassVibraParam[2] = ucontrol->value.integer.value[2];
+
+			if (pChip->pi32BypassVibraParam[0] == 1) // Enable
+			{
+				AUDCTRL_EnableBypassVibra();
+				AUDCTRL_SetBypassVibraStrength(pChip->pi32BypassVibraParam[1]/*strength*/, pChip->pi32BypassVibraParam[2]/*direction*/);
+			}
+			else
+				AUDCTRL_DisableBypassVibra();
+			BCM_AUDIO_DEBUG("MiscCtrlPut BypassVibra enable %d, strength %d, direction %d.\n", pChip->pi32BypassVibraParam[0], pChip->pi32BypassVibraParam[1], pChip->pi32BypassVibraParam[2]);
+			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
 			break;
@@ -1063,6 +1099,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 
 	   struct snd_kcontrol_new kctlFMEnable = BRCM_MIXER_CTRL_MISC(0, 0, "FM-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_FM_ENABLE));
 	   struct snd_kcontrol_new kctlFMFormat = BRCM_MIXER_CTRL_MISC(0, 0, "FM-FMT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_FM_FORMAT));
+	   struct snd_kcontrol_new ctlBypassVibra = BRCM_MIXER_CTRL_MISC(0, 0, "BYP-VIB", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BYPASS_VIBRA) );
 
 			   
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlLoopTest, pChip))) < 0)
@@ -1120,6 +1157,12 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlFMFormat, pChip))) < 0)
 	   {
 		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlFMFormat.name, err);
+		   return err;
+	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlBypassVibra, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add bypass vibra control err=%d\n", err); 		   
 		   return err;
 	   }
 

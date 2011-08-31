@@ -534,5 +534,23 @@ void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId);
 
 #endif
+
+/*****************************************************************************
+*  Function Name: csl_caph_ControlHWClock
+*
+*  Description: This is to enable/disable the audio HW clocks
+*  @param   enable (in) turn on/off HW clocks
+*
+****************************************************************************/
+void csl_caph_ControlHWClock(Boolean enable);
+
+/****************************************************************************
+*
+*  Function Name: Boolean csl_caph_hwctrl_allPathsDisabled(void)
+*
+*  Description: Check whether all paths are disabled.
+*
+****************************************************************************/
+Boolean csl_caph_hwctrl_allPathsDisabled(void);
 #endif // _CSL_CAPH_HWCTRL_
 
