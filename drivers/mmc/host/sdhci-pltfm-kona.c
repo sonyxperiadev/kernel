@@ -235,8 +235,9 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
 
    /* this function can be called from various contexts including ISR */
    spin_lock_irqsave(&host->lock, flags);
-
+#ifndef CONFIG_ARCH_ISLAND
    sdhci_pltfm_clk_enable(host, 1);
+#endif
    val = sdhci_readl(host, KONA_SDHOST_CORESTAT);
 
    if (insert) {
@@ -557,8 +558,9 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	}
 
 	atomic_set(&dev->initialized, 1);
-
+#ifndef CONFIG_ARCH_ISLAND
 	sdhci_pltfm_clk_enable(host, 0);
+#endif
 	printk(KERN_INFO "%s initialized properly\n", devname);
 
 	return 0;

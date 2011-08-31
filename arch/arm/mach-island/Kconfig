@@ -40,10 +40,10 @@ config MACH_ISLAND_TABLET_28160
         help
           Support for the Broadcom Island 28160 Tablet board.
 
-config MACH_ISLAND_TABLET_CP
-        bool "Support Broadcom Island Compal Tablet board"
+config MACH_ISLAND_CUSTOM_BOARDS_SUPPORT
+        bool "Support Custom Island boards"
         help
-          Support for the Broadcom Island Compal Tablet board.
+          Support for the Custom Island board designs.
 
 endchoice
 
@@ -95,3 +95,6 @@ config IPC
 	  Support for IPC.
 
 endmenu
+
+source "arch/arm/mach-island/custom_boards/Kconfig"
+

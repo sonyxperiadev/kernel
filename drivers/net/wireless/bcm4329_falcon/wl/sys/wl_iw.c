@@ -105,7 +105,7 @@ bool g_set_essid_before_scan = TRUE;
 #if defined(SOFTAP)
 #define WL_SOFTAP(x)
 static struct net_device *priv_dev;
-static bool		ap_cfg_running = FALSE;
+extern bool		ap_cfg_running; /* DL 20110812 merge from PR96418 */
 bool            ap_fw_loaded = FALSE;
 struct net_device *ap_net_dev = NULL;
 tsk_ctl_t	ap_eth_ctl;  

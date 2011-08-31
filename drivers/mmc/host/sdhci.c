@@ -44,10 +44,10 @@ static void sdhci_finish_data(struct sdhci_host *);
 
 static void sdhci_send_command(struct sdhci_host *, struct mmc_command *);
 static void sdhci_finish_command(struct sdhci_host *);
-#ifdef CONFIG_MMC_BCM_SD
+#if defined(CONFIG_MMC_BCM_SD) && !defined(CONFIG_ARCH_ISLAND)
 extern int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
 #else
-#define sdhci_pltfm_clk_enable(..)	do { }while(0)
+#define sdhci_pltfm_clk_enable(host, enable)   do { } while(0)
 #endif
 
 static void sdhci_dumpregs(struct sdhci_host *host)
