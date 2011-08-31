@@ -59,10 +59,9 @@ static int bcm_otg_set_vbus(struct otg_transceiver *otg, bool enabled)
 		otg_data->vbus_enabled = true;
 #ifdef CONFIG_MFD_BCMPMU
 		stat =
-		    otg_data->bcmpmu->write_dev(otg_data->bcmpmu,
-						PMU_REG_OTGCTRL1,
-						OTGCTRL1_VBUS_ON,
-						PMU_BITMASK_ALL);
+		    otg_data->bcmpmu->usb_set(otg_data->bcmpmu,
+					      BCMPMU_USB_CTRL_VBUS_ON_OFF,
+					      1);
 #else
 		stat =
 		    bcm590xx_reg_write(otg_data->bcm590xx,
@@ -74,10 +73,9 @@ static int bcm_otg_set_vbus(struct otg_transceiver *otg, bool enabled)
 		otg_data->vbus_enabled = false;
 #ifdef CONFIG_MFD_BCMPMU
 		stat =
-		    otg_data->bcmpmu->write_dev(otg_data->bcmpmu,
-						PMU_REG_OTGCTRL1,
-						OTGCTRL1_VBUS_OFF,
-						PMU_BITMASK_ALL);
+		    otg_data->bcmpmu->usb_set(otg_data->bcmpmu,
+					      BCMPMU_USB_CTRL_VBUS_ON_OFF,
+					      0);
 #else
 		stat =
 		    bcm590xx_reg_write(otg_data->bcm590xx,
