@@ -2267,7 +2267,6 @@ void AUDCTRL_SetAudioLoopback(
     AUDIO_HW_ID_t audPlayHw, audRecHw;
 
     CSL_CAPH_HWCTRL_CONFIG_t hwCtrlConfig;
-    Int16 tempGain = 0;
 	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
 
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
@@ -2498,7 +2497,6 @@ void AUDCTRL_SetAudioLoopback(
 	    }
 	
         hwCtrlConfig.pathID = pathID;
-		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig);
 		// up merged : remove the comment later on
 		// after mergining latest changes
 if (((source == CSL_CAPH_DEV_ANALOG_MIC) 
@@ -2509,6 +2507,8 @@ if (((source == CSL_CAPH_DEV_ANALOG_MIC)
 		{
 		    csl_caph_audio_loopback_control(audSpkr, 0, enable_lpbk);
 		}
+
+		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig); //clock will be disabled here, so no register access after this.
 
 	    //Enable PMU for headset/IHF
     	if ((speaker == AUDCTRL_SPK_LOUDSPK)
@@ -2552,6 +2552,7 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
 //============================================================================
  void  AUDCTRL_EnableBypassVibra(void)
  {
+	 csl_caph_ControlHWClock (TRUE);
 	 csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, TRUE);
  }
 
@@ -2565,6 +2566,11 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
  void  AUDCTRL_DisableBypassVibra(void)
  {
 	 csl_caph_hwctrl_vibrator(AUDDRV_VIBRATOR_BYPASS_MODE, FALSE);
+    // shutdown all audio clock if no audio activity, at last
+    if (csl_caph_hwctrl_allPathsDisabled() == TRUE)
+    {
+        csl_caph_ControlHWClock (FALSE);
+    }
  }
 
 //============================================================================

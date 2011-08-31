@@ -254,7 +254,6 @@ static void csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(
 static void csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(
                                          CSL_CAPH_PathID pathID, 
                                          CSL_CAPH_SRCM_MIX_GAIN_t mixGain);
-static Boolean csl_caph_hwctrl_allPathsDisabled(void);
 static void csl_caph_hwctrl_configre_fm_fifo(CSL_CAPH_HWConfig_Table_t *path);
 static CSL_CAPH_PathID csl_caph_hwctrl_GetInvalidPath_FromPathSettings(
                                          CSL_CAPH_DEVICE_e source,
@@ -1643,7 +1642,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 //
 // =========================================================================
 
-static void csl_caph_ControlHWClock(Boolean enable)
+void csl_caph_ControlHWClock(Boolean enable)
 {
     static Boolean sCurEnabled = FALSE;
 
@@ -2641,7 +2640,7 @@ static void csl_caph_hwctrl_ACIControl()
 *  Description: Check whether all paths are disabled.
 *
 ****************************************************************************/
-static Boolean csl_caph_hwctrl_allPathsDisabled(void)
+Boolean csl_caph_hwctrl_allPathsDisabled(void)
 {
     UInt8 i = 0;
     for (i=0; i<MAX_AUDIO_PATH; i++)
@@ -3019,7 +3018,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	{
 		// Audio Router will control the Audio HW.
 		path = csl_caph_hwctrl_GetPath_FromStreamID(config.streamID);
-
+		if(path == NULL)
+		    return RESULT_ERROR;
 		if(((path->source == CSL_CAPH_DEV_MEMORY)
 			&&(path->sink==CSL_CAPH_DEV_DSP))
 		  ||((path->source == CSL_CAPH_DEV_DSP)
@@ -3068,8 +3068,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE};
 
-			if((path->src_sampleRate == AUDIO_SAMPLING_RATE_48000) && 
-					(path->chnlNum == AUDIO_CHANNEL_MONO)) //no 48kHz mono pass-thru on A0, bypass mixer.
+			if(path->sink == CSL_CAPH_DEV_VIBRA || //vibra does not go thru mixer
+			   (path->src_sampleRate == AUDIO_SAMPLING_RATE_48000 && path->chnlNum == AUDIO_CHANNEL_MONO)) //no 48kHz mono pass-thru on A0, bypass mixer.
 			{
 				blocks[3] = CAPH_NONE;
 				blocks[4] = CAPH_NONE;
