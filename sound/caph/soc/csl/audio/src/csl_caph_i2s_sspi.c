@@ -646,8 +646,16 @@ static SSPI_hw_status_t SSPI_hw_interleave_init(CSL_HANDLE handle,
 //                                 (config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0,
 //                                 0x10);
 
-    chal_sspi_set_fifo_pio_threshhold(handle,
-		(config->rx_ena) ? SSPI_FIFO_ID_RX0 : SSPI_FIFO_ID_TX0, 0x3, 0x3);
+    if (config->rx_ena) 
+    {
+        chal_sspi_set_fifo_pio_threshhold(handle, SSPI_FIFO_ID_RX0, 0x1c, 0x3);     
+    }
+
+    if (config->tx_ena) 
+    {
+        chal_sspi_set_fifo_pio_threshhold(handle, SSPI_FIFO_ID_TX0, 0x3, 0x1c);
+    }
+
     chal_sspi_set_fifo_pio_threshhold(handle,
 		(config->rx_ena) ? SSPI_FIFO_ID_RX1 : SSPI_FIFO_ID_TX1, 0x3, 0x3);
 

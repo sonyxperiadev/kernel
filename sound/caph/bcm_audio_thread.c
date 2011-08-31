@@ -358,7 +358,7 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 			
-			if(param_start->callMode != 1) 
+			if((param_start->callMode != 1) || (param_start->pdev_prop->c.mic == AUDCTRL_MIC_I2S)) // allow FM recording in call mode
 			{
 	        	AUDCTRL_EnableRecord(param_start->pdev_prop->c.hw_id,
 				                     param_start->pdev_prop->c.hw_sink,	
@@ -384,7 +384,7 @@ void AUDIO_Ctrl_Process(
                
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-			if(param_stop->callMode != 1) 
+			if((param_stop->callMode != 1) || (param_stop->pdev_prop->c.mic == AUDCTRL_MIC_I2S)) // allow FM recording in call mode
 			{		
             	AUDCTRL_DisableRecord(param_stop->pdev_prop->c.hw_id,
                                       AUDIO_HW_MEM,

@@ -166,6 +166,7 @@ static CSL_HANDLE fmHandleSSP = 0;
 static CSL_HANDLE pcmHandleSSP = 0;
 static Boolean fmRunning = FALSE;
 static Boolean fmPlayTx = FALSE;
+static Boolean fmPlayRx = FALSE;
 static Boolean pcmRunning = FALSE;
 static Boolean ssp_bt_running = FALSE;
 static CSL_CAPH_SWITCH_TRIGGER_e fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0; 
@@ -920,6 +921,11 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 	memset(&pcmTxCfg, 0, sizeof(pcmTxCfg));
 	memset(&pcmCfg, 0, sizeof(pcmCfg));
 	memset(&fmCfg, 0, sizeof(fmCfg));
+
+    if(path->source == CSL_CAPH_DEV_FM_RADIO)
+    {
+        path->chnlNum = 2;  //force the channel configuration to stereo.
+    }
 
 	dataFormat = csl_caph_get_dataformat(path->bitPerSample, path->chnlNum); //dataFormat would change according to block combination.
 	srOut = path->src_sampleRate;
@@ -3106,7 +3112,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM recording *** \r\n"));
 
 		// FM radio playback  is on 
-		if(fmRunning == TRUE && fmPlayTx == FALSE)
+		if(fmRunning == TRUE && fmPlayRx == TRUE)
 		{
 			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP/HS recording *** \r\n"));
 	
@@ -3190,16 +3196,17 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         ((path->sink == CSL_CAPH_DEV_EP) ||
          (path->sink == CSL_CAPH_DEV_HS)))
     {
-        /* Set up the path for FM Radio playback: SSP3->AudioH(EP/HS)
+        /* Set up the path for FM Radio playback: SSP4->SW->Mixer->SW->AudioH(EP/HS)
          */
 		{
-			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_NONE};
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_MIXER, CAPH_SW,CAPH_NONE};         
 			//fm samplerate 8 or 48kHz?
-			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP *****\r\n"));
+			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP or HS *****\r\n"));
 
 			csl_caph_config_blocks(path->pathID, blocks);
 			memcpy(&fm_sw_config, & path->sw[0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
 			csl_caph_start_blocks(path->pathID);
+            fmPlayRx = TRUE;
 			return path->pathID;
 		}
     }   
@@ -3615,6 +3622,8 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 				fmRunning = FALSE;
 			}
 			if (path->sink == CSL_CAPH_DEV_FM_TX) fmPlayTx = FALSE;
+            if ((path->source == CSL_CAPH_DEV_FM_RADIO) && ((path->sink == CSL_CAPH_DEV_EP) || (path->sink == CSL_CAPH_DEV_HS)))
+                fmPlayRx = FALSE;
 		}
 	}
 

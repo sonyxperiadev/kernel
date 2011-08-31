@@ -240,7 +240,8 @@ static int PcmPlaybackOpen(
 	int err=0;
     int substream_number = substream->number ;
 
-    BCM_AUDIO_DEBUG("\n %lx:playback_open subdevice=%d PCM_TOTAL_BUF_BYTES=%d chip->iEnablePhoneCall=%d\n",jiffies, substream->number, PCM_TOTAL_BUF_BYTES,(unsigned int)chip->iEnablePhoneCall);
+    BCM_AUDIO_DEBUG("\n %lx:playback_open subdevice=%d PCM_TOTAL_BUF_BYTES=%d chip->iEnablePhoneCall=%d speaker=%d\n",
+         jiffies, substream->number, PCM_TOTAL_BUF_BYTES,(unsigned int)chip->iEnablePhoneCall,chip->streamCtl[substream_number].iLineSelect[0]);
 
 	callMode = chip->iEnablePhoneCall; 
 	
@@ -255,7 +256,8 @@ static int PcmPlaybackOpen(
 	param_open.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
 
 #ifndef ENABLE_DMA_ARM2SP
-	if(callMode == 1) //in call mode
+
+	if((callMode == 1) && (chip->streamCtl[substream_number].iLineSelect[0] != AUDCTRL_SPK_I2S)) //in call mode & not FM Tx playback
 	{
 		//route the playback to DSP
 		runtime->hw = brcm_voice_playback_hw;
@@ -266,6 +268,7 @@ static int PcmPlaybackOpen(
 	else
 #endif
 	{
+        BCM_AUDIO_DEBUG("\n %lx:playback_open route the playback to CAPH\n");
 		//route the playback to CAPH
 		runtime->hw = brcm_playback_hw; 
 		chip->streamCtl[substream_number].dev_prop.p[0].drv_type = AUDIO_DRIVER_PLAY_AUDIO;
@@ -395,7 +398,7 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 
     drv_handle = substream->runtime->private_data;
 
-	if(callMode == 1) //call mode
+	if((callMode == 1) && (chip->streamCtl[substream_number].iLineSelect[0] != AUDCTRL_SPK_I2S)) //call mode & not FM Tx playback
 	{
 #ifdef ENABLE_DMA_ARM2SP
 		chip->streamCtl[substream_number].dev_prop.p[0].hw_id = AUDIO_HW_DSP_VOICE;	
@@ -453,8 +456,10 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 		//route the playback to CAPH
 		pSel = chip->streamCtl[substream_number].iLineSelect;
 
-		if(callMode != 1)		
+		if((callMode != 1) || (chip->streamCtl[substream_number].iLineSelect[0] == AUDCTRL_SPK_I2S))
 		{
+            BCM_AUDIO_DEBUG("\n playback_trigger route playback to CAPH \n");
+
 			//Update Sink, volume , mute info from mixer controls
 			if(pSel[0]==AUDCTRL_SPK_HANDSET)
 			{
@@ -622,7 +627,7 @@ static snd_pcm_uframes_t PcmPlaybackPointer(struct snd_pcm_substream * substream
     snd_pcm_uframes_t pos=0;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
 	UInt16	dmaPointer = 0;
-	if(callMode == 0)
+	if((callMode == 0) || (chip->streamCtl[substream->number].iLineSelect[0] == AUDCTRL_SPK_I2S))
 	{
 		dmaPointer = csl_audio_render_get_current_position( StreamIdOfDriver(runtime->private_data));	
 		if(bytes_to_frames(runtime, dmaPointer)>=runtime->period_size)
