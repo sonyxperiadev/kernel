@@ -235,9 +235,10 @@ static struct brcm_netconsole_target *alloc_param_target(char *target_config)
 	remote_mac [3] = 0xdd;
 	remote_mac [4] = 0xee;
 	remote_mac [5] = 0xff;
-	memcpy(nt->np.remote_mac, remote_mac, ETH_ALEN);	
-	nt->np.remote_ip = in_aton("21.53.0.2");
-	nt->np.local_ip = in_aton("21.53.0.1");		
+	memcpy(nt->np.remote_mac, remote_mac, ETH_ALEN);
+	nt->np.remote_ip = in_aton("192.168.42.130");
+       nt->np.local_ip = in_aton("192.168.42.129");
+
 	
 	/* Parse parameters and setup netpoll */
 #if 0 /* kevin */
@@ -677,9 +678,9 @@ static struct config_item *make_brcm_netconsole_target(struct config_group *grou
 	remote_mac [3] = 0xdd;
 	remote_mac [4] = 0xee;
 	remote_mac [5] = 0xff;
-	memcpy(nt->np.remote_mac, remote_mac, ETH_ALEN);	
-	nt->np.remote_ip = in_aton("21.53.0.2");
-	nt->np.local_ip = in_aton("21.53.0.1");		
+	memcpy(nt->np.remote_mac, remote_mac, ETH_ALEN);
+	nt->np.remote_ip = in_aton("192.168.42.130");
+	nt->np.local_ip = in_aton("192.168.42.129");
 	
 	/* Initialize the config_item member */
 	config_item_init_type_name(&nt->item, name, &brcm_netconsole_target_type);
