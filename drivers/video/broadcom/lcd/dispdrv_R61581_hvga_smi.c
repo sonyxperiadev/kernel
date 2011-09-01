@@ -84,6 +84,7 @@
 #include "dispdrv_mipi_dcs.h"
 #include "dispdrv_common.h" 
 #include "display_drv.h" 
+#include "lcd_clock.h"
 
 #endif /*  __KERNEL__ */
 
@@ -118,6 +119,7 @@ typedef struct
     void*                frameBuffer;
     DISP_DRV_STATE       drvState;
     DISP_PWR_STATE       pwrState;
+    struct pi_mgr_dfs_node* dfs_node;
 } R61581_HVGA_SMI_PANEL_T;   
 
 
@@ -646,6 +648,13 @@ Int32 R61581_HVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
         }        
     }    
 
+    if (brcm_disable_smi_lcd_clocks(lcdDrv->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
     if ( res != -1 )
     {
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
@@ -811,7 +820,14 @@ Int32 R61581_HVGA_SMI_Open (
             __FUNCTION__  );
         return ( -1 );
     }    
-   
+  
+    if (brcm_enable_smi_lcd_clocks(&pPanel->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
     pSmiCfg  = &R61581_HVGA_SMI_SmiCtrlCfg;
 
     if ( pSmiCfg->usesTE ) 
