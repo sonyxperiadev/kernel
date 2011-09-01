@@ -669,21 +669,21 @@ static inline const char *dma_data_direction_as_str( enum dma_data_direction dir
 *
 ***************************************************************************/
 
-static void dma_device_handler( DMA_Device_t dev, int reason, void *userData )
+static void dma_device_handler( DMA_Device_t dev, DMA_Status_t *dma_status, void *userData )
 {
     vcos_unused(dev);
     vcos_unused(userData);
 
     struct completion *dmaDone = userData;
 
-    if ( reason & DMA_HANDLER_REASON_TRANSFER_COMPLETE )
+    if ( dma_status->reason & DMA_HANDLER_REASON_TRANSFER_COMPLETE )
     {
         complete( dmaDone );
     }
 
-    if ( reason != DMA_HANDLER_REASON_TRANSFER_COMPLETE )
+    if ( dma_status->reason != DMA_HANDLER_REASON_TRANSFER_COMPLETE )
     {
-        vcos_log_error( "%s: called with reason = 0x%x", __func__, reason );
+        vcos_log_error( "%s: called with reason = 0x%x", __func__, dma_status->reason );
     }
 }
 

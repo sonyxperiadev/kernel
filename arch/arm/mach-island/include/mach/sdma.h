@@ -133,7 +133,14 @@ typedef enum
 
 } DMA_UpdateMode_t;
 
-typedef void (*DMA_DeviceHandler_t)( DMA_Device_t dev, int reason, void *userData );
+typedef struct
+{
+   int reason;
+   uint32_t desc_idx;
+
+} DMA_Status_t;
+
+typedef void (*DMA_DeviceHandler_t)( DMA_Device_t dev, DMA_Status_t *status, void *userData );
 
 #define DMA_DEVICE_FLAG_ON_DMA0             0x00000001
 #define DMA_DEVICE_FLAG_ON_DMA1             0x00000002
