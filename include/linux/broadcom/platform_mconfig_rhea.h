@@ -207,7 +207,10 @@ extern "C" {
 #define AP_SH_BASE                             (DSP_SH_BASE+CP_SH_SIZE)
 #define AP_SH_SIZE                                             0x00020000    // 128k  AP/DSP sharedmem
 
-#define IPC_BASE                               (EXT_RAM_BASE_ADDR+0x01E00000)      // 256kB IPC shared RAM
+/* 256kB IPC shared RAM */
+#define IPC_OFFSET             CONFIG_BCM_IPC_OFFSET
+
+#define IPC_BASE                               (EXT_RAM_BASE_ADDR + IPC_OFFSET)
 #define IPC_SIZE                                               0x00200000
 
 
