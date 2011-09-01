@@ -292,10 +292,25 @@ static int kona_pwmc_config(struct pwm_device *p, struct pwm_config *c)
 
     if (test_bit(PWM_CONFIG_START, &c->config_mask)
         || (!test_bit(PWM_CONFIG_STOP, &c->config_mask))) {
-            kona_pwmc_start(ap, chan);
+        /* Restore duty ticks cater for STOP case. */
+        struct pwm_config d = {
+            .config_mask = PWM_CONFIG_DUTY_TICKS,
+            .duty_ticks = p->duty_ticks,
+        };
+        kona_pwmc_config_duty_ticks(ap, chan, &d);
+        kona_pwmc_start(ap, chan);
     }
     if (test_bit(PWM_CONFIG_STOP, &c->config_mask))
-        kona_pwmc_stop(ap, chan);
+    {
+        struct pwm_config d = {
+            .config_mask = PWM_CONFIG_DUTY_TICKS,
+            .duty_ticks = 0,
+        };
+        /* If we stop the channel the default output is high, which equates to a fully on backlight. */
+        /* This isn't the behavior that Andriod expects; a stopped channel should be fully off.      */
+        kona_pwmc_config_duty_ticks(ap, chan, &d);
+        kona_pwmc_start(ap, chan);
+    }
 
     return 0;
 }
