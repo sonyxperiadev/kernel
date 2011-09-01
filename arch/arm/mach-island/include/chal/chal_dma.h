@@ -375,36 +375,7 @@ void chal_dma_get_capabilities
    CHAL_DMA_CAPABILITIES_t  *pCap
 );
 
-/**
-*
-*  @brief   Get total number of descriptors added towards specified channel
-*
-*  @param   handle   (in) Handle returned in chal_dma_config_channel()
-*
-*  @return  Number of descriptors allocated towards channel
-*
-*  @note
-******************************************************************************/
-uint32_t chal_dma_get_channel_descriptor_count
-(
-   CHAL_CHANNEL_HANDLE handle
-);
 
-/**
-*
-*  @brief   Get current descriptor index in use for channel
-*
-*  @param   handle   (in) Handle returned in chal_dma_config_channel()
-*
-*  @return  Index of current descriptor in use
-*
-*  @note
-******************************************************************************/
-int chal_dma_get_current_channel_descriptor_index
-(
-   CHAL_CHANNEL_HANDLE handle,
-   uint32_t *desc_idx
-);
 
 
 /**

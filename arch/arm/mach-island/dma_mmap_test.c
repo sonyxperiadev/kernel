@@ -150,10 +150,10 @@ static void free_mem(void *buf, dma_addr_t addr, size_t len, enum mem_t type)
    }
 }
 
-static void dma_isr(DMA_Device_t dev, DMA_Status_t status, void *data)
+static void dma_isr(DMA_Device_t dev, int reason, void *data)
 {
    struct test_cfg *cfg = (struct test_cfg *)data;
-
+   
    complete(&cfg->dma_done);
 }
 

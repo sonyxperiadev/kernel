@@ -128,7 +128,7 @@ spinlock_t                       gDmaDevLock;
         .srcBurstLen     = CHAL_DMA_BURST_LEN_4, \
         .srcBurstSize    = CHAL_DMA_BURST_SIZE_4_BYTES, \
         .srcEndpoint     = CHAL_DMA_ENDPOINT_MEMORY, \
-        .descType        = CHAL_DMA_DESC_RING, \
+        .descType        = CHAL_DMA_DESC_LIST, \
         .alwaysBurst     = FALSE, \
     }, \
     .peripheralId = periph_id, \
@@ -541,11 +541,8 @@ static irqreturn_t sdma_interrupt_handler( int irq, void *dev_id )
    SDMA_Channel_t *channel;
    SDMA_DeviceAttribute_t *devAttr;
    CHAL_HANDLE chal_hdl;
-   DMA_Status_t dma_status;
    volatile uint32_t status;
    int i;
-   int rc;
-   int desc_idx;
 
    /* Obtain secure/open DMA handle */
    chal_hdl = *(CHAL_HANDLE *)dev_id;
@@ -585,21 +582,10 @@ static irqreturn_t sdma_interrupt_handler( int irq, void *dev_id )
             devAttr->transferBytes += devAttr->numBytes;
             //devAttr->transferTicks += (timer_get_tick_count() - devAttr->transferStartTime);
 
-            /* Get current descriptor index */
-            rc = chal_dma_get_current_channel_descriptor_index( channel->sdmacHandle, &desc_idx );
-            if ( rc )
-            {
-               printk( KERN_ERR "%s: Unable to determine current descriptor index\n", __func__ );
-            }
-
-            /* Fill in status struct */
-            dma_status.reason = reason;
-            dma_status.desc_idx = desc_idx;
-
             /* Call installed handler */
             if ( devAttr->devHandler )
             {
-               devAttr->devHandler( channel->devType, &dma_status, devAttr->userData );
+               devAttr->devHandler( channel->devType, reason, devAttr->userData );
             }
          }
          status >>= 1;
