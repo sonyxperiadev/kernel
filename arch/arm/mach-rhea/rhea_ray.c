@@ -252,6 +252,9 @@ static const char *pmu_clients[] = {
 #ifdef CONFIG_BCMPMU_OTG_XCEIV
 	"bcmpmu_otg_xceiv",
 #endif
+#ifdef CONFIG_MACH_RHEA_SELFTEST
+       "bcm_selftest_bb",
+#endif
 };
 
 static struct bcm590xx_platform_data bcm590xx_plat_data = {

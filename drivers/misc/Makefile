@@ -57,3 +57,4 @@ obj-$(CONFIG_BCMBLT_RFKILL)	+= bcmblt-rfkill.o
 obj-$(CONFIG_BTHID)		+= bthid.o
 obj-$(CONFIG_MONITOR_ADC121C021_I2C)	+= adc121c021_driver.o
 obj-$(CONFIG_MONITOR_BQ27541_I2C)	+= bq27541.o
+obj-$(CONFIG_MACH_RHEA_SELFTEST)	+= bcm_selftest_bb.o

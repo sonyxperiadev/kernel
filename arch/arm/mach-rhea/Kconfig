@@ -40,6 +40,13 @@ config RHEA_DORMANT_MODE
        help
 	Say Y if you want to enable dormant mode support for Rhea platform
 
+config MACH_RHEA_SELFTEST
+        bool "Selftest CSAPI"
+	depends on MFD_BCM_PMU590XX
+	default n
+        help
+          Selftest CSAPI support.
+
 endmenu
 
 
