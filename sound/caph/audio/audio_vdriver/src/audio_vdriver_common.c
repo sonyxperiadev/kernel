@@ -148,6 +148,8 @@ void AUDDRV_Init( void )
 #endif
 	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
 
+    Audio_InitRpc();
+
 	sAudDrv.isRunning = TRUE;
 }
 
