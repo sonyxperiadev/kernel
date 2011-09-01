@@ -3194,15 +3194,19 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else
     if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
         ((path->sink == CSL_CAPH_DEV_EP) ||
+         (path->sink == CSL_CAPH_DEV_BT_SPKR) ||
          (path->sink == CSL_CAPH_DEV_HS)))
     {
         /* Set up the path for FM Radio playback: SSP4->SW->Mixer->SW->AudioH(EP/HS)
          */
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_MIXER, CAPH_SW,CAPH_NONE};         
-			//fm samplerate 8 or 48kHz?
-			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP or HS *****\r\n"));
+			CAPH_BLOCK_t blocks_btm[MAX_PATH_LEN] = {CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_NONE};         
+			CAPH_BLOCK_t *p_blocks = blocks;
 
+			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP or HS or BTM *****\r\n"));
+
+			if(path->sink == CSL_CAPH_DEV_BT_SPKR) p_blocks = blocks_btm;
 			csl_caph_config_blocks(path->pathID, blocks);
 			memcpy(&fm_sw_config, & path->sw[0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
 			csl_caph_start_blocks(path->pathID);
@@ -3622,7 +3626,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 				fmRunning = FALSE;
 			}
 			if (path->sink == CSL_CAPH_DEV_FM_TX) fmPlayTx = FALSE;
-            if ((path->source == CSL_CAPH_DEV_FM_RADIO) && ((path->sink == CSL_CAPH_DEV_EP) || (path->sink == CSL_CAPH_DEV_HS)))
+            if ((path->source == CSL_CAPH_DEV_FM_RADIO) && ((path->sink == CSL_CAPH_DEV_EP) || (path->sink == CSL_CAPH_DEV_HS) || (path->sink == CSL_CAPH_DEV_BT_SPKR)))
                 fmPlayRx = FALSE;
 		}
 	}
