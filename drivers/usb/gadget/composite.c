@@ -239,10 +239,13 @@ static int config_buf(struct usb_configuration *config,
 		enum usb_device_speed speed, void *buf, u8 type)
 {
 	struct usb_config_descriptor	*c = buf;
+	struct usb_interface_descriptor *intf;
 	void				*next = buf + USB_DT_CONFIG_SIZE;
 	int				len = USB_BUFSIZ - USB_DT_CONFIG_SIZE;
 	struct usb_function		*f;
 	int				status;
+	int				interfaceCount = 0;
+	u8 *dest;
 
 	/* write the config descriptor */
 	c = buf;
