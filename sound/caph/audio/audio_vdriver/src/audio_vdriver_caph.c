@@ -291,20 +291,9 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
                     "\n\r\t* AUDDRV_Telephony_DeinitHW *\n\r");
 
     memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-
 #if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 #if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
 
-    // Need to be done before we disable all the HW clock
-    // Disable sidetone.
-    (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
-	if(sink == CSL_CAPH_DEV_IHF)
-	{
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
-							FALSE,
-							FALSE);
-	}	    
-    
     currSpkr = AUDDRV_SPKR_NONE;
     currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
 
@@ -320,6 +309,10 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 
         (void)csl_caph_hwctrl_DisablePath(config);
     }
+	VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE, 
+   							FALSE, 
+   							FALSE); 
+
 
     currMic = AUDDRV_MIC_NONE;
     config.streamID = CSL_CAPH_STREAM_NONE;
@@ -327,6 +320,16 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 
     (void)csl_caph_hwctrl_DisablePath(config);
 
+    // Disable sidetone.
+    (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
+	if(sink == CSL_CAPH_DEV_IHF)
+	{
+#ifdef RHEA_DSP_IHF_FEATURE		
+		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
+							FALSE,
+							FALSE);
+#endif		
+	}	
 	sink = CSL_CAPH_DEV_NONE;
 	audDev = 0;
 

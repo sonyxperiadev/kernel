@@ -296,6 +296,8 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
+	
 	if( AUDDRV_GetAudioMode() >= AUDIO_MODE_NUMBER )
 		AUDDRV_Telephony_InitHW ( mic, 
 				speaker, 
@@ -307,9 +309,6 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 				AUDIO_SAMPLING_RATE_8000,
 			       	pData);
 
-	// This one has to be done after enable HW, otherwise dsp will start write to caph register without audio hardware clock.
-    audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
-	
 	//after AUDDRV_Telephony_InitHW to make SRST.
 	AUDDRV_SetVCflag(TRUE);  //let HW control logic know.
 
@@ -438,6 +437,7 @@ void AUDDRV_Telephony_Deinit (void *pData)
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, FALSE, 0, 0, 0, 0 );
 	
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
+
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
 		OSTASK_Sleep( 3 ); //make sure audio is off
