@@ -61,11 +61,18 @@ static void island_restart(char mode, const char *cmd)
 static void __init island_l2x0_init(void)
 {
 	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
+	uint32_t aux_val = 0;
+	uint32_t aux_mask = 0xC200ffff;
 
-	/*
-	 * 32KB way size, 16-way associativity
-	 */
-	l2x0_init(l2cache_base, 0x00050000, 0xfff0ffff);
+
+	aux_val |= ( 1 << 16 );	/* 16-way cache */
+	aux_val |= ( 1 << 27 );	/* Allow non-secure access */
+	aux_val |= ( 1 << 28 );	/* Data prefetch */
+	aux_val |= ( 1 << 29 );	/* Instruction prefetch */
+	aux_val |= ( 1 << 30 );	/* Early BRESP */
+	aux_val |= ( 2 << 17 );	/* 32KB */
+
+	l2x0_init(l2cache_base, aux_val, aux_mask);
 }
 #endif
 
