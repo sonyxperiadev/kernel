@@ -1324,6 +1324,22 @@ uint32_t dwc_otg_pcd_is_otg(dwc_otg_pcd_t * pcd)
 }
 
 /**
+ * Returns whether registered pcd is OTG2.0 capable or not
+ */
+uint32_t dwc_otg_pcd_is_otg20(dwc_otg_pcd_t * pcd)
+{
+	dwc_otg_core_if_t *core_if = GET_CORE_IF(pcd);
+	gotgctl_data_t otgctl = {.d32 = 0 };
+
+	otgctl.d32 = dwc_read_reg32(&core_if->core_global_regs->gotgctl);
+	if (!otgctl.b.otgver) {
+		return 0;
+	}
+
+	return 1;
+}
+
+/**
  * This function assigns periodic Tx FIFO to an periodic EP
  * in shared Tx FIFO mode
  */

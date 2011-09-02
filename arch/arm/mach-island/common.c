@@ -314,7 +314,7 @@ static struct platform_device board_kona_otg_platform_device =
 
 #if defined(CONFIG_USB_ANDROID)
 /* FIXME borrow GOOGLE vendor ID to use windows driver */
-#define PID_PLATFORM				0xE600
+#define PID_PLATFORM				0xE700
 #define FD_MASS_PRODUCT_ID			0x0001
 #define FD_SICD_PRODUCT_ID			0x0002
 #define FD_VIDEO_PRODUCT_ID			0x0004
@@ -326,17 +326,21 @@ static struct platform_device board_kona_otg_platform_device =
 
 #define GOOGLE_VENDOR_ID        0x18d1
 #define VENDOR_ID               GOOGLE_VENDOR_ID
-#define PRODUCT_ID              0x0001
+#define PRODUCT_ID              0x0d02
 
 /* FIXME need revise these IDs*/
 #define UMS_PRODUCT_ID          PRODUCT_ID
-#define UMS_ADB_PRODUCT_ID      0x0002
-#define RNDIS_PRODUCT_ID        0x0ffe
-#define RNDIS_ADB_PRODUCT_ID    0x0ffc
+#define UMS_ADB_PRODUCT_ID      PRODUCT_ID
+#define RNDIS_PRODUCT_ID        0x4e13
+#define RNDIS_ADB_PRODUCT_ID    0x4e14
 
 #if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
-   .nluns = 1,
+#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
+	.nluns		=	2,
+#else
+	.nluns		=	1,
+#endif
    .vendor = "Broadcom",
    .product = "Media Broadcom Reference Design",
    .release = 0x0100,

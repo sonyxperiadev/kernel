@@ -1005,7 +1005,6 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	clk_dbg("%s:%d, clock name: %s \n",__func__,enable, clk->name);
 
 	BUG_ON(!peri_clk->ccu_clk || (peri_clk->clk_gate_offset == 0));
-	BUG_ON( !peri_clk->clk_en_mask && !CLK_FLG_ENABLED(clk,AUTO_GATE));
 
 	if((enable) && !(clk->flags & DONOT_NOTIFY_STATUS_TO_CCU) && !(clk->flags & AUTO_GATE))
 	{
@@ -1069,7 +1068,7 @@ static int peri_clk_enable(struct clk* clk, int enable)
 
 	clk_dbg("%s:%s use count = %d\n",__func__,clk->name,peri_clk->clk.use_cnt);
 
-	if(clk->flags & AUTO_GATE)
+	if(clk->flags & AUTO_GATE || !peri_clk->clk_en_mask)
 	{
 		clk_dbg("%s:%s: is auto gated\n",__func__, clk->name);
 		goto dis_pi;
@@ -1492,6 +1491,14 @@ static int peri_clk_init(struct clk* clk)
 
 	else if(CLK_FLG_ENABLED(clk,DISABLE_ON_INIT))
 	{
+		/*
+		Disable call may decrement the usage count of CCU, dependent & src clks
+		Make sure that clock counts are incremented as needed before decrementing
+		the count. PI may enter retention state when clock is in use if the use count of all
+		dependent clks are not updated correctly
+
+		*/
+		clk->ops->enable(clk, 1);
 		if(clk->ops->enable)
 		{
 			clk->ops->enable(clk, 0);
@@ -1640,7 +1647,7 @@ static int bus_clk_set_gating_ctrl(struct bus_clk * bus_clk, int  gating_ctrl)
 		return -EINVAL;
 
 	reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
-	if(CLK_GATING_SW)
+	if(gating_ctrl == CLK_GATING_SW)
 		reg_val = SET_BIT_USING_MASK(reg_val, bus_clk->gating_sel_mask);
 	else
 		reg_val = RESET_BIT_USING_MASK(reg_val, bus_clk->gating_sel_mask);
@@ -2171,42 +2178,26 @@ static int ccu_active_clks_show(struct seq_file *seq, void *p)
     list_for_each_entry(temp_clk, &ccu_clk->ref_list, list) {
 	ref_clk = to_ref_clk(temp_clk);
 	status = ref_clk_get_gating_status(ref_clk);
-	if (status < 0)
-	    seq_printf(seq, "Ref clock %s \t\tstauts: unavailable\n", temp_clk->name);
-	else if (status == 0)
-	    seq_printf(seq, "Ref clock %s \t\tstauts: Disabled \n", temp_clk->name);
-	else
-	    seq_printf(seq, "Ref clock %s \t\tstauts: Enabled \n", temp_clk->name);
+	    seq_printf(seq, "Ref clock:%20s\t\ten_status:%d\t\tuse count:%d\t\tAUTO_GATE = %d\n",
+		temp_clk->name, status, temp_clk->use_cnt, CLK_FLG_ENABLED(temp_clk, AUTO_GATE));
     }
 
     list_for_each_entry(temp_clk, &ccu_clk->peri_list, list) {
 	peri_clk = to_peri_clk(temp_clk);
 	status = peri_clk_get_gating_status(peri_clk);
-	if (status < 0)
-	    seq_printf(seq, "Peri clock %s \t\t\tstauts: unavailable; \t\t", temp_clk->name);
-	else if (status == 0)
-	    seq_printf(seq, "Peri clock %s \t\t\tstauts: Disabled; \t\t", temp_clk->name);
-	else
-	    seq_printf(seq, "Peri clock %s \t\t\tstauts: Enabled; \t\t", temp_clk->name);
-	if (temp_clk->flags & DONOT_NOTIFY_STATUS_TO_CCU)
-	    seq_printf(seq, " DOES NOT notify PI\n");
-	else
-	    seq_printf(seq, " Notifies PI\n");
+	seq_printf(seq, "Peri clock:%20s\t\ten_status:%d\t\tuse count:%d\t\tAUTO_GATE:%d\t\tNOTIFY PI:%d\n",
+			temp_clk->name, status, temp_clk->use_cnt, CLK_FLG_ENABLED(temp_clk, AUTO_GATE),
+					!CLK_FLG_ENABLED(temp_clk, DONOT_NOTIFY_STATUS_TO_CCU));
+
     }
 
     list_for_each_entry(temp_clk, &ccu_clk->bus_list, list) {
 	bus_clk = to_bus_clk(temp_clk);
 	status = bus_clk_get_gating_status(bus_clk);
-	if (status < 0)
-	    seq_printf(seq, "Bus clock %s \t\t\tstauts: unavailable; \t\t", temp_clk->name);
-	else if (status == 0)
-	    seq_printf(seq, "Bus clock %s \t\t\tstauts: Disabled; \t\t", temp_clk->name);
-	else
-	    seq_printf(seq, "Bus clock %s \t\t\tstauts: Enabled; \t\t", temp_clk->name);
-	if (temp_clk->flags & NOTIFY_STATUS_TO_CCU && !(clock->flags & AUTO_GATE))
-	    seq_printf(seq, " Notifies PI\n");
-	else
-	    seq_printf(seq, " DOES NOT notify PI\n");
+
+	seq_printf(seq, "Bus clock:%20s\t\ten_status:%d\t\tuse count:%d\t\tAUTO_GATE:%d\t\tNOTIFY PI:%d\n",
+			temp_clk->name, status, temp_clk->use_cnt, CLK_FLG_ENABLED(temp_clk, AUTO_GATE),
+			CLK_FLG_ENABLED(temp_clk, NOTIFY_STATUS_TO_CCU) && !CLK_FLG_ENABLED(temp_clk, AUTO_GATE));
     }
 
     return 0;
@@ -2348,6 +2339,7 @@ int __init clock_debug_add_ccu(struct clk *c)
 {
 	struct ccu_clk *ccu_clk;
 	struct dentry *dent_active_clocks = 0, *dent_freqid=0, *dent_policy =0;
+	struct dentry * dent_count;
 
 	BUG_ON(!dent_clk_root_dir);
 	ccu_clk = to_ccu_clk(c);
@@ -2367,6 +2359,11 @@ int __init clock_debug_add_ccu(struct clk *c)
 	dent_policy = debugfs_create_file("policy", 0644, ccu_clk->dent_ccu_dir, c, &ccu_policy_fops);
 	if(!dent_policy)
 	    goto err;
+
+	dent_count = debugfs_create_u32("use_cnt", 0444, ccu_clk->dent_ccu_dir, &c->use_cnt);
+	if(!dent_count)
+	    goto err;
+
 
 	return 0;
 err:
