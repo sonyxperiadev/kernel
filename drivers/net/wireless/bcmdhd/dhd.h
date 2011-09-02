@@ -56,7 +56,7 @@
 #define ALL_INTERFACES	0xff
 
 #include <wlioctl.h>
-
+#include <dngl_stats.h>
 
 /* Forward decls */
 struct dhd_bus;

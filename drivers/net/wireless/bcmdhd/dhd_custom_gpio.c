@@ -33,6 +33,7 @@
 
 #include <wlioctl.h>
 #include <wl_iw.h>
+extern void bcm_sdiowl_reset_b(int onoff);
 
 #define WL_ERROR(x) printf x
 #define WL_TRACE(x)
@@ -132,6 +133,7 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW2
 			wifi_set_power(0, 0);
 #endif
+			bcm_sdiowl_reset_b(0);
 			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
 		break;
 
@@ -144,6 +146,7 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW2
 			wifi_set_power(1, 0);
 #endif
+			bcm_sdiowl_reset_b(1);
 			WL_ERROR(("=========== WLAN going back to live  ========\n"));
 		break;
 
