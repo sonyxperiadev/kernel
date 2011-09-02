@@ -369,8 +369,23 @@ static int headset_default(struct mic_t *mic)
 	unsigned hs_gpio;
 
 	/* Initial settings for GPIO */
-	/* Set the GPIO debounce */
 	hs_gpio = irq_to_gpio(mic->hsirq);
+
+	/* Request the gpio 
+	 * Note that this is an optional call for setting direction/debounce
+	 * values. But set debounce will throw out warning messages if we 
+	 * call gpio_set_debounce without calling gpio_request. 
+	 * Note that it just throws out Warning messages and proceeds
+	 * to auto request the same. We are adding this call here to 
+	 * suppress the warning message.
+	 */
+	status = gpio_request (hs_gpio, "hs_detect");
+	if (status < 0) {
+		pr_err("%s: gpio request failed \r\n", __func__);
+		return status;
+	}
+
+	/* Set the GPIO debounce */
 	status = gpio_set_debounce(hs_gpio, DEBOUNCE_TIME);
 	if (status < 0) {
 		pr_err("%s: gpio set debounce failed\n", __func__);
