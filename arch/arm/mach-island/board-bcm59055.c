@@ -266,6 +266,26 @@ static struct regulator_init_data bcm59055_simldo_data = {
 	.consumer_supplies = sim_supply,
 };
 
+
+
+struct regulator_consumer_supply sim2_supply[] = {
+	{.supply = "sim2_vcc"},
+};
+static struct regulator_init_data bcm59055_sim2ldo_data = {
+	.constraints = {
+		.name = "sim2ldo",
+		.min_uV = 1300000,
+		.max_uV = 3300000,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+		.always_on = 0,
+		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
+	},
+	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
+	.consumer_supplies = sim2_supply,
+};
+
+
+
 struct regulator_consumer_supply csr_supply[] = {
 	{.supply = "csr_uc"},
 };
@@ -325,6 +345,7 @@ struct bcmpmu_regulator_init_data bcm59055_regulators[BCMPMU_REGULATOR_MAX] = {
 	{BCMPMU_REGULATOR_HV6LDO, &bcm59055_hv6ldo_data},
 	{BCMPMU_REGULATOR_HV7LDO, &bcm59055_hv7ldo_data},
 	{BCMPMU_REGULATOR_SIMLDO, &bcm59055_simldo_data},
+	{BCMPMU_REGULATOR_SIM2LDO, &bcm59055_sim2ldo_data},
 	{BCMPMU_REGULATOR_CSR, &bcm59055_csr_data},
 	{BCMPMU_REGULATOR_IOSR, &bcm59055_iosr_data},
 	{BCMPMU_REGULATOR_SDSR, &bcm59055_sdsr_data}
