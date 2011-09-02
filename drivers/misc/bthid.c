@@ -348,5 +348,5 @@ static void __exit bthid_exit(void)
     printk("bthid_exit: done\n");
 }
 
-module_init(bthid_init);
+late_initcall(bthid_init);
 module_exit(bthid_exit);
