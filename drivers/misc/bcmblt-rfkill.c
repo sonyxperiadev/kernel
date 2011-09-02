@@ -18,7 +18,7 @@
 
 #include <linux/module.h>
 #include <linux/init.h>
-#include <asm/gpio.h>
+#include <linux/gpio.h>
 #include <linux/broadcom/bcmblt-rfkill.h>
 #include <linux/platform_device.h>
 #include <linux/rfkill.h>
