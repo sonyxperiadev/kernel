@@ -12,6 +12,7 @@
 * consent.
 *****************************************************************************/
 
+#include <linux/device.h>
 #include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>

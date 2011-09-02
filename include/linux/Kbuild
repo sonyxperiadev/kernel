@@ -53,6 +53,7 @@ header-y += const.h
 header-y += cgroupstats.h
 header-y += cramfs_fs.h
 header-y += cycx_cfm.h
+header-${CONFIG_I2C_DAC6571} += dac6571.h
 header-y += dcbnl.h
 header-y += dlmconstants.h
 header-y += dlm_device.h
