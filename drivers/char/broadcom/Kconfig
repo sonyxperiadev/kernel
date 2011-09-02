@@ -176,6 +176,14 @@ config BCM_SIGMORPH
     ---help---
     Codec Streaming eXtensions interface to attenuate/mix audio
 
+config BCM_FRAME_PROFILER_SUPPORT
+    bool "Enable frame profiling"
+    depends on ARCH_BCM116X || ARCH_BCMRING
+    default y
+    ---help---
+      Maintain a history of time spent processing frames.      
+
+
 source "drivers/char/broadcom/csx/Kconfig"
 
 
