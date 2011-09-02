@@ -1702,14 +1702,16 @@ static void csl_caph_ControlHWClock(Boolean enable)
     }
     else if (enable == FALSE && sCurEnabled == TRUE)
     {
+/*
+	// don't disable the clocks even if the request comes. Keep the clocks always ON 
         UInt32 count = 0;
         sCurEnabled = FALSE;
         for (count = 0; count <  MAX_AUDIO_CLOCK_NUM; count++)
         {
             clk_disable(clkID[count]);
         }
+*/
     }
-            
     Log_DebugPrintf(LOGID_AUDIO, "csl_caph_ControlHWClock: action = %d, result = %d\r\n", enable, sCurEnabled);
   
     return;
