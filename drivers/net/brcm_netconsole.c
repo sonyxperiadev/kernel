@@ -226,7 +226,7 @@ static struct brcm_netconsole_target *alloc_param_target(char *target_config)
 	}
 
 	nt->np.name = "brcm_netconsole";
-	strlcpy(nt->np.dev_name, "usb0", IFNAMSIZ);
+	strlcpy(nt->np.dev_name, "rndis0", IFNAMSIZ);
 	nt->np.local_port = 5042;
 	nt->np.remote_port = 5042;
 	remote_mac [0] = 0xaa;
@@ -669,7 +669,7 @@ static struct config_item *make_brcm_netconsole_target(struct config_group *grou
 	}
 
 	nt->np.name = "brcm_netconsole";
-	strlcpy(nt->np.dev_name, "usb0", IFNAMSIZ);
+	strlcpy(nt->np.dev_name, "rndis0", IFNAMSIZ);
 	nt->np.local_port = 5042;
 	nt->np.remote_port = 5042;
 	remote_mac [0] = 0xaa;
