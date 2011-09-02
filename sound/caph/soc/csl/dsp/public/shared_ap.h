@@ -116,27 +116,19 @@
 #endif
 
 
-
-typedef struct
-{ 
-	UInt16 array1[8];
-
-
-} dummy1_control_t;
-
 typedef struct
 {
-	Int16 array2[70];
+	UInt32 array2[35];
 } dummy2_config_t; 
 
 typedef struct
 {
- Int16 array3[20];
+ UInt32 array3[10];
 } dummy3_queries_t;
 
 typedef struct
 {
-	Int16 array4[4];											   
+	UInt32 array4[2];											   
 } dummy4_input_t;										
 
 typedef struct

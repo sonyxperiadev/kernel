@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 Broadcom Corporation.  All rights reserved.                                
 
 Unless you and Broadcom execute a separate written software license agreement 
 governing use of this software, this software is licensed to you under the 
@@ -40,7 +40,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "ossemaphore.h"
-#include "csl_aud_drv.h"
+#include "csl_caph.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
@@ -240,7 +240,7 @@ void AUDIO_Ctrl_Process(
 		{
 			BRCM_AUDIO_Param_Open_t* param_open = (BRCM_AUDIO_Param_Open_t*) arg_param;
 			
-			param_open->drv_handle = AUDIO_DRIVER_Open(param_open->pdev_prop->u.p.drv_type);
+			param_open->drv_handle = AUDIO_DRIVER_Open(param_open->pdev_prop->p[0].drv_type);
 		    if(param_open->drv_handle == NULL)
     		{
          		BCM_AUDIO_DEBUG("\n %lx:AUDIO_Ctrl_Process-AUDIO_DRIVER_Open  failed\n",jiffies);
@@ -262,31 +262,31 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
-			if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 
-	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->u.p.speaker );
+	            AUDCTRL_SaveAudioModeFlag( param_start->pdev_prop->p[0].speaker );
 
             // Enable the playback the path
             AUDCTRL_EnablePlay(AUDIO_HW_MEM, 
-                                   param_start->pdev_prop->u.p.hw_id,
+                                   param_start->pdev_prop->p[0].hw_id,
                                    AUDIO_HW_NONE,
-                                   param_start->pdev_prop->u.p.speaker,
+                                   param_start->pdev_prop->p[0].speaker,
 				                   param_start->channels,
                                    param_start->rate, 
                                    NULL);
 
-			AUDCTRL_SetPlayVolume (param_start->pdev_prop->u.p.hw_id,
-					param_start->pdev_prop->u.p.speaker, 
+			AUDCTRL_SetPlayVolume (param_start->pdev_prop->p[0].hw_id,
+					param_start->pdev_prop->p[0].speaker, 
 					AUDIO_GAIN_FORMAT_Q13_2, 
 					param_start->vol[0], param_start->vol[1]); //0DB 
 
-     			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.p.aud_dev);
+     			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->p[0].aud_dev);
 			
 			}
-			else if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_VOICE)
+			else if(param_start->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_VOICE)
 			{
-				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode);
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,NULL);
 			}
         }
         break;
@@ -296,12 +296,23 @@ void AUDIO_Ctrl_Process(
 	 
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-		    if(param_stop->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			// Remove secondary playback path if it's in use
+			if(param_stop->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			{
+            	AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_id,
+										param_stop->pdev_prop->p[0].speaker,
+										param_stop->pdev_prop->p[1].hw_id,
+										param_stop->pdev_prop->p[1].speaker);
+				param_stop->pdev_prop->p[1].hw_id = AUDIO_HW_NONE;
+				param_stop->pdev_prop->p[1].speaker = AUDDRV_DEV_NONE;
+			}
+
+		    if(param_stop->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 			     //disable the playback path
     	    	   AUDCTRL_DisablePlay(AUDIO_HW_MEM, 
-                        param_stop->pdev_prop->u.p.hw_id,
-                        param_stop->pdev_prop->u.p.speaker,0
+                        param_stop->pdev_prop->p[0].hw_id,
+                        param_stop->pdev_prop->p[0].speaker,0
                     );
 		    }
 			BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process Stop Playback completed \n");
@@ -311,12 +322,12 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Pause_t* param_pause = (BRCM_AUDIO_Param_Pause_t*) arg_param;
 			
-			if(param_pause->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			if(param_pause->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
             	//disable the playback path
              	AUDCTRL_DisablePlay(AUDIO_HW_MEM,	
-                        param_pause->pdev_prop->u.p.hw_id,
-                        param_pause->pdev_prop->u.p.speaker,0
+                        param_pause->pdev_prop->p[0].hw_id,
+                        param_pause->pdev_prop->p[0].speaker,0
                     ); 
 			}
             AUDIO_DRIVER_Ctrl(param_pause->drv_handle,AUDIO_DRIVER_PAUSE,NULL);
@@ -329,14 +340,14 @@ void AUDIO_Ctrl_Process(
 
             AUDIO_DRIVER_Ctrl(param_resume->drv_handle,AUDIO_DRIVER_RESUME,NULL);
 		
-			if(param_resume->pdev_prop->u.p.drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			if(param_resume->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
 
            		// Enable the playback the path
             	AUDCTRL_EnablePlay(AUDIO_HW_MEM,	
-                                   param_resume->pdev_prop->u.p.hw_id,
+                                   param_resume->pdev_prop->p[0].hw_id,
                                    AUDIO_HW_NONE,
-                                   param_resume->pdev_prop->u.p.speaker,
+                                   param_resume->pdev_prop->p[0].speaker,
 				                   param_resume->channels,
                                    param_resume->rate, NULL
 								    );
@@ -347,21 +358,21 @@ void AUDIO_Ctrl_Process(
         {
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 			
-			if(param_start->callMode != 1) 
+			if((param_start->callMode != 1) || (param_start->pdev_prop->c.mic == AUDCTRL_MIC_I2S)) // allow FM recording in call mode
 			{
-	        	AUDCTRL_EnableRecord(param_start->pdev_prop->u.c.hw_id,
-				                     param_start->pdev_prop->u.c.hw_sink,	
-                                     param_start->pdev_prop->u.c.mic,
+	        	AUDCTRL_EnableRecord(param_start->pdev_prop->c.hw_id,
+				                     param_start->pdev_prop->c.hw_sink,	
+                                     param_start->pdev_prop->c.mic,
 				                     param_start->channels,
                                      param_start->rate);
-	            AUDCTRL_SetRecordGain(param_start->pdev_prop->u.c.hw_id,
-                                  param_start->pdev_prop->u.c.mic,
+	            AUDCTRL_SetRecordGain(param_start->pdev_prop->c.hw_id,
+                                  param_start->pdev_prop->c.mic,
                                   AUDIO_GAIN_FORMAT_Q13_2,
                                   param_start->vol[0],
                                   param_start->vol[1]);
 			}
-			if(param_start->pdev_prop->u.p.drv_type == AUDIO_DRIVER_CAPT_HQ)
-				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->u.c.aud_dev); 
+			if(param_start->pdev_prop->c.drv_type == AUDIO_DRIVER_CAPT_HQ)
+				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->c.aud_dev); 
 			else
 				AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->mixMode); 
 			
@@ -373,11 +384,11 @@ void AUDIO_Ctrl_Process(
                
             AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
-			if(param_stop->callMode != 1) 
+			if((param_stop->callMode != 1) || (param_stop->pdev_prop->c.mic == AUDCTRL_MIC_I2S)) // allow FM recording in call mode
 			{		
-            	AUDCTRL_DisableRecord(param_stop->pdev_prop->u.c.hw_id,
+            	AUDCTRL_DisableRecord(param_stop->pdev_prop->c.hw_id,
                                       AUDIO_HW_MEM,
-                                      param_stop->pdev_prop->u.c.mic);
+                                      param_stop->pdev_prop->c.mic);
 			}
 
         }
@@ -386,7 +397,7 @@ void AUDIO_Ctrl_Process(
 		{
          	BRCM_AUDIO_Param_Open_t* param_open = (BRCM_AUDIO_Param_Open_t*) arg_param;
 
-            param_open->drv_handle = AUDIO_DRIVER_Open(param_open->pdev_prop->u.c.drv_type);
+            param_open->drv_handle = AUDIO_DRIVER_Open(param_open->pdev_prop->c.drv_type);
 
             BCM_AUDIO_DEBUG("param_open->drv_handle -  0x%lx \n",(UInt32)param_open->drv_handle);
 		
@@ -397,6 +408,19 @@ void AUDIO_Ctrl_Process(
 			BRCM_AUDIO_Param_Close_t* param_close = (BRCM_AUDIO_Param_Close_t*) arg_param;
 			
 			AUDIO_DRIVER_Close(param_close->drv_handle);
+		}
+		break;
+		case ACTION_AUD_AddChannel:
+		{
+            BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
+
+			if(param_start->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			{
+            	AUDCTRL_AddPlaySpk(param_start->pdev_prop->p[0].hw_id,
+                                   param_start->pdev_prop->p[0].speaker,
+									param_start->pdev_prop->p[1].hw_id,
+									param_start->pdev_prop->p[1].speaker);
+			}
 		}
 		break;
         default:
