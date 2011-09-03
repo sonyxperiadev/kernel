@@ -24,9 +24,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #define GPS_DEVNAME                   "gps"
-
-// # define GPS_MAJOR                     247 
-//   Look at file linux/broadcom/bcm_major.h 
                                 
 #define GPS_DRIVER_MAGIC              'U'
 #define IOW_GPS_ON                    _IO(GPS_DRIVER_MAGIC, 1)
