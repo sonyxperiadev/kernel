@@ -619,49 +619,30 @@ static u32 compute_vco_rate(u32 ndiv_int, u32 nfrac, u32 pdiv)
 static unsigned long __proc_clk_set_vco_rate(u32 base, u32 rate)
 {
 	const u32 max_ndiv = 512; /*512  == 0*/
-	u32 pdiv;
+	const u32 frac_div = 0x100000; //2^20
+	u32 pdiv = 1;
 	u32 ndiv_int, ndiv_frac;
 	u32 temp_rate;
 	u32 new_rate;
+	unsigned long xtal = clock_get_xtal();
+	u64 temp_frac;
 	u32 reg_val;
 
-	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+	ndiv_int = rate/xtal; /*pdiv = 1*/
+	temp_frac= ((u64)rate - (u64)ndiv_int*xtal)*frac_div;
+	do_div(temp_frac, xtal);
 
-	ndiv_int = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
-					>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
-	pdiv = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK)
-					>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT;
-	ndiv_frac = (readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET) & KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK)
-					>> KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
-	temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
+    ndiv_frac = (u32)temp_frac;
 
-	if(temp_rate < 	rate)
-	{
-		for(;ndiv_int < max_ndiv;ndiv_int++)
-		{
-			temp_rate = compute_vco_rate(ndiv_int+1,0,1);
-			if(temp_rate >= rate)
-				break;
-		}
-	}
-	else if(temp_rate > rate)
-	{
-		for(;ndiv_int > 0;ndiv_int--)
-		{
-			temp_rate = compute_vco_rate(ndiv_int-1,0,1);
-			if(temp_rate <= rate)
-			{
-			    ndiv_int--;
-			    break;
-			}
+    ndiv_frac  &= 0xFFFFF;
 
-		}
-	}
+    pr_info("ndiv_frac  = %x\n",ndiv_frac );
+    temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
 
 	if(temp_rate != rate)
 	{
 
-        for(ndiv_frac = 0; ndiv_frac  < 0xFFFFF; ndiv_frac++)
+        for(; ndiv_frac  < 0xFFFFF; ndiv_frac++)
         {
             temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,1);
             if(temp_rate > rate)
@@ -671,21 +652,36 @@ static unsigned long __proc_clk_set_vco_rate(u32 base, u32 rate)
         }
 	}
 
+
 	if(ndiv_int == max_ndiv)
 		ndiv_int = 0;
 	pr_info("%s:ndiv_int = %x ndiv_frac = %x pdiv = %x\n", __func__,ndiv_int, ndiv_frac, pdiv);
 
-	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-	reg_val &= ~(KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK |
-				KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK);
-	reg_val |= ndiv_int << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
-	reg_val |= pdiv << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT;
+	/*Set PLLARMCTRL3 to 0x8102000 if vco freq > 1.75Ghz
+			set to 0x8000000 otherwise
+	*/
+	if(rate > FREQ_MHZ(1750))
+	{
+		writel(0x8102000,base + KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET);
+	}
+	else
+		writel(0x8000000,base + KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET);
+
+	reg_val = (pdiv << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT)
+			| (ndiv_int<<KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT)
+			| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK
+			| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK;
+
 	writel(reg_val, base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
 
 	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
 	reg_val &= ~KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK;
 	reg_val |= ndiv_frac << KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
 	writel(reg_val, base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
+
+	  /* wait for pll to lock */
+	while (! (readl(base +KPROC_CLK_MGR_REG_PLLARMA_OFFSET)
+			& KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_MASK) );
 
 	new_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
 	pr_info("%s:new rate =  %u\n",__func__,new_rate);
