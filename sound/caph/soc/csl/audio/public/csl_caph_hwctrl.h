@@ -521,6 +521,7 @@ UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVIC
 ****************************************************************************/
 void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 
+void csl_caph_ControlHWClock(Boolean enable);
 
 #ifdef ENABLE_DMA_ARM2SP
 

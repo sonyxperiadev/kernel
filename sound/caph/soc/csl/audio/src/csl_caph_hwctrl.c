@@ -152,7 +152,7 @@ static struct clk *clkID[MAX_AUDIO_CLOCK_NUM] = {NULL,NULL,NULL,NULL,NULL,NULL};
 //****************************************************************************
 //static void AUDDRV_LISR(void);
 //static void AUDDRV_HISR(void);
-static void csl_caph_ControlHWClock(Boolean enable);
+//static void csl_caph_ControlHWClock(Boolean enable);
 
 //****************************************************************************
 // local typedef declarations
@@ -1649,7 +1649,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 //
 // =========================================================================
 
-static void csl_caph_ControlHWClock(Boolean enable)
+/*static*/ void csl_caph_ControlHWClock(Boolean enable)
 {
     static Boolean sCurEnabled = FALSE;
 
