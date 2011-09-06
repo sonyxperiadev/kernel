@@ -1,0 +1,11 @@
+header-y += bsc.h
+header-y += halaudio_ioctl.h
+header-y += halaudio.h
+header-y += halaudio_cfg.h
+header-y += aaa_ioctl.h
+header-y += hdmi.h
+header-y += vcp.h
+header-y += vcp_device.h
+header-y += vcp_ioctl.h
+header-y += vcp_msg.h
+header-y += vcp_conference.h

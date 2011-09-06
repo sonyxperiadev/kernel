@@ -237,7 +237,7 @@ static struct brcm_netconsole_target *alloc_param_target(char *target_config)
 	remote_mac [5] = 0xff;
 	memcpy(nt->np.remote_mac, remote_mac, ETH_ALEN);
 	nt->np.remote_ip = in_aton("255.255.255.255");
-       nt->np.local_ip = in_aton("192.168.42.129");
+    nt->np.local_ip = in_aton("192.168.42.129");
 
 	
 	/* Parse parameters and setup netpoll */

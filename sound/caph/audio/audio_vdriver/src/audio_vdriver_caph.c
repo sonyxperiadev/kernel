@@ -44,7 +44,6 @@
 #include "ripcmdq.h"
 #endif
 #include "csl_apcmd.h"
-#include "ripisr.h"
 #include "audio_consts.h"
 #ifdef CONFIG_AUDIO_BUILD
 #include "sysparm.h"

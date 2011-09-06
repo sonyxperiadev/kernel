@@ -73,6 +73,8 @@
 
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
+#else
+#define SD_CARDDET_GPIO_PIN      75
 #endif
 
 #define PID_PLATFORM				0xE600

@@ -20,7 +20,10 @@
 #define VCHIQ_CFG_H
 
 #define VCHIQ_MAGIC              VCHIQ_MAKE_FOURCC('V','C','H','I')
+/* The version of VCHIQ - change with any non-trivial change */
 #define VCHIQ_VERSION            1
+/* The minimum compatible version - update to match VCHIQ_VERSION with any incompatible change */
+#define VCHIQ_VERSION_MIN        0
 
 #define VCHIQ_MAX_SERVICES       128
 #define VCHIQ_MAX_SLOTS          128
