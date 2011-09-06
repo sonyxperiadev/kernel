@@ -887,6 +887,41 @@ static long aaa_ioctl(
       }
       break;
 
+      case AAA_CMD_DSC_WRT_CODEC:
+      {
+#if defined(AAA_RUNS_AT_44_1_KHz)
+         /* Reset gains on all codecs we use.
+         */
+         aaa_441KHz_gain_reset();
+#else
+         /* Remove existing connection.
+         */
+         if ( g_hal_wrt_device.name[0] != 0 )
+         {
+            amxrDisconnectByName ( g_amxr_client,
+                                   AAA_PORT_NAME,
+                                   g_hal_wrt_device.info.mport_name );
+
+            /* If speaker is currently used, disconnect the right speaker which
+            ** goes through "audioh4".
+            */
+            if ( strcmp( g_hal_wrt_device.name, "handsfree-spkr" ) == 0 )
+            {
+               amxrDisconnectByName ( g_amxr_client,
+                                      AAA_PORT_NAME,
+                                      "halaudio.audioh4" );
+            }
+         }
+#endif /* defined(AAA_RUNS_AT_44_1_KHz) */
+
+         memset( &g_hal_wrt_device,
+                 0,
+                 sizeof(g_hal_wrt_device) );
+
+         rc = 0;
+      }
+      break;
+
       case AAA_CMD_SET_RD_CODEC:
       {
          if ( strcmp( g_hal_rd_device.name, parm.setrdcodec.name ) == 0 )
