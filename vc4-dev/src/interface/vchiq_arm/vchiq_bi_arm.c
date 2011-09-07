@@ -894,7 +894,6 @@ ipc_dma( void *vcaddr, void *armaddr, int len, DMA_MMAP_PAGELIST_T *pagelist, en
    {
       struct resource *res;
       void *vcVirtAddr;
-<<<<<<< HEAD
 
       /* Request an I/O memory region for remapping */
       res = request_mem_region( vcPhysAddr, len, "vchiq" );
@@ -919,32 +918,6 @@ ipc_dma( void *vcaddr, void *armaddr, int len, DMA_MMAP_PAGELIST_T *pagelist, en
       /* Unmap the videocore memory */
       iounmap( vcVirtAddr );
 
-=======
-
-      /* Request an I/O memory region for remapping */
-      res = request_mem_region( vcPhysAddr, len, "vchiq" );
-      if ( res == NULL )
-      {
-         vcos_log_error( "%s: failed to request I/O memory region", __func__ );
-         goto failed_request_mem_region;
-      }
-
-      /* I/O remap the videocore memory */
-      vcVirtAddr = ioremap_nocache( res->start, resource_size( res ));
-      if ( vcVirtAddr == NULL )
-      {
-         vcos_log_error( "%s: failed to I/O remap videocore bulk buffer",
-                         __func__ );
-         release_mem_region( res->start, resource_size( res ));
-         goto failed_ioremap;
-      }
-
-      dma_mmap_memcpy( &gVchiqDmaMmap, vcVirtAddr );
-
-      /* Unmap the videocore memory */
-      iounmap( vcVirtAddr );
-
->>>>>>> mps-lmp
       /* Release the I/O memory region */
       release_mem_region( res->start, resource_size( res ));
    }
