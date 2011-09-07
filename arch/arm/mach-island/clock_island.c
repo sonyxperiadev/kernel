@@ -712,7 +712,7 @@ static unsigned long __proc_clk_get_vco_rate(u32 base)
 	if(ndiv_int == 0)
 		ndiv_int = max_ndiv;
 	vco_rate = compute_vco_rate(ndiv_int, ndiv_frac, pdiv);
-	pr_info("%s vco_rate = %lu reg_val = %x ndiv_frac = %x\n",__func__, vco_rate,reg_val,ndiv_frac);
+	//pr_info("%s vco_rate = %lu reg_val = %x ndiv_frac = %x\n",__func__, vco_rate,reg_val,ndiv_frac);
 	return vco_rate;
 }
 
