@@ -28,8 +28,6 @@
 #include "vchiq_ioctl.h"
 #include "vchiq_arm.h"
 
-#include "interface/vceb/host/vceb.h"
-
 #define DEVICE_NAME "vchiq"
 
 /* Override the default prefix, which would be vchiq_arm (from the filename) */
@@ -374,6 +372,7 @@ vchiq_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
          VCHIQ_CREATE_SERVICE_T args;
          VCHIQ_SERVICE_T *service = NULL;
          USER_SERVICE_T *user_service = NULL;
+         void *userdata;
          int srvstate;
 
          if (copy_from_user
@@ -411,18 +410,19 @@ vchiq_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
          vcos_mutex_lock(&instance->state->mutex);
 
+         userdata = args.params.userdata;
+         args.params.callback = service_callback;
+         args.params.userdata = user_service;
          service =
              vchiq_add_service_internal(instance->state,
-                         args.fourcc,
-                         service_callback,
-                         user_service, srvstate,
+                         &args.params, srvstate,
                          instance);
 
          vcos_mutex_unlock(&instance->state->mutex);
 
          if (service != NULL) {
             user_service->service = service;
-            user_service->userdata = args.service_userdata;
+            user_service->userdata = userdata;
             user_service->instance = instance;
             user_service->handle = i;
             user_service->is_vchi = args.is_vchi;
@@ -1039,19 +1039,23 @@ vchiq_dump_platform_instances(void *dump_context)
 
    for (i = 0; i < state->unused_service; i++)
    {
-      VCHIQ_SERVICE_T *service = &state->services[i];
-      VCHIQ_INSTANCE_T instance = service->instance;
+      VCHIQ_SERVICE_T *service = state->services[i];
+      VCHIQ_INSTANCE_T instance;
 
-      if (instance && (service->base.callback == service_callback))
+      if (service
+         && ((instance = service->instance) != NULL)
+         && (service->base.callback == service_callback))
          instance->mark = 0;
    }
 
    for (i = 0; i < state->unused_service; i++)
    {
-      VCHIQ_SERVICE_T *service = &state->services[i];
-      VCHIQ_INSTANCE_T instance = service->instance;
+      VCHIQ_SERVICE_T *service = state->services[i];
+      VCHIQ_INSTANCE_T instance;
 
-      if (instance && (service->base.callback == service_callback))
+      if (service
+         && ((instance = service->instance) != NULL)
+         && (service->base.callback == service_callback))
       {
          if (!instance->mark)
          {
