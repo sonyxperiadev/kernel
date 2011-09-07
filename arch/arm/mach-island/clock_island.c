@@ -37,7 +37,7 @@
 
 #include <plat/pi_mgr.h>
 
-#define UPDATE_LPJ 1
+#define UPDATE_LPJ 0
 
 
 unsigned long clock_get_xtal(void)
