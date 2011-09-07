@@ -45,7 +45,6 @@
 
 #include "bcm_fuse_sysparm_CIB.h"
 
-#include "audio_gain_table.h"
 #include "csl_caph.h"
 #include "csl_caph_gain.h"
 #include "csl_caph_hwctrl.h"
