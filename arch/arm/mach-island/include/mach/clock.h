@@ -114,11 +114,7 @@
 #define	SIM2_PERI_CLK_NAME_STR "sim2_clk"
 #define	HUB_TIMER_PERI_CLK_NAME_STR "hub_timer_clk"
 #define	PMU_BSC_PERI_CLK_NAME_STR "pmu_bsc_clk"
-<<<<<<< HEAD
-#define	KPM_CCU_CLK_NAME_STR "kpm_ccu_clk"
-=======
 #define	KPM_CCU_CLK_NAME_STR "kpm_ccu"
->>>>>>> mps-lmp
 #define	USB_OTG_AHB_BUS_CLK_NAME_STR "usb_otg_clk"
 #define	SDIO2_AHB_BUS_CLK_NAME_STR "sdio2_ahb_clk"
 #define	SDIO3_AHB_BUS_CLK_NAME_STR "sdio3_ahb_clk"
@@ -136,15 +132,9 @@
 #define	SDIO1_SLEEP_PERI_CLK_NAME_STR "sdio1_sleep_clk"
 #define	SDIO4_PERI_CLK_NAME_STR "sdio4"
 #define	SDIO4_SLEEP_PERI_CLK_NAME_STR "sdio4_sleep"
-<<<<<<< HEAD
 #define	USBH_48M_PERI_CLK_NAME_STR "usbh_48m_clk"
 #define	USBH_12M_PERI_CLK_NAME_STR "usbh_12m_clk"
-#define	KPS_CCU_CLK_NAME_STR "kps_ccu_clk"
-=======
-#define	USBH_48M_PERI_CLK_NAME_STR "usbh_48m"
-#define	USBH_12M_PERI_CLK_NAME_STR "usbh_12m"
 #define	KPS_CCU_CLK_NAME_STR "kps_ccu"
->>>>>>> mps-lmp
 #define	UARTB_APB_BUS_CLK_NAME_STR "uartb_apb_clk"
 #define	UARTB2_APB_BUS_CLK_NAME_STR "uartb2_apb_clk"
 #define	UARTB3_APB_BUS_CLK_NAME_STR "uartb3_apb_clk"

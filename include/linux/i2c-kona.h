@@ -61,14 +61,6 @@ struct bsc_adap_cfg
 
 /*
  * I2C slave platform data, for I2C slaves to specify the bus speed.
-<<<<<<< HEAD
- * Note: This struct should be the first member if included as part
- * of the client specific platform data structure.
- */
-struct i2c_slave_platform_data
-{
-	/* I2C bus speed in KHz. It should be the first member in this struct */
-=======
  *
  *  NOTE: This struct should be included as first member of client
  *  specific platform data. Otherwise, default speed of the adapter
@@ -78,7 +70,6 @@ struct i2c_slave_platform_data
 {
 	/* Magic number to validate */
 	unsigned long spd_magic;
->>>>>>> mps-lmp
 	enum bsc_bus_speed i2c_speed;
 };
 

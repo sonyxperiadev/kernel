@@ -561,12 +561,6 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 			BSC_DBG(dev, "client addr=0x%x, speed=0x%x\n",
 					client->addr, pd->i2c_speed);
 			
-<<<<<<< HEAD
-			if (pd->i2c_speed < BSC_BUS_SPEED_MAX)
-				set_speed = pd->i2c_speed;
-			else
-				set_speed = dev->speed;
-=======
 			if (I2C_SPEED_IS_VALID(pd) && (pd->i2c_speed < BSC_BUS_SPEED_MAX))  {
 				set_speed = pd->i2c_speed;
 				BSC_DBG(dev,"i2c addr=0x%x dynamic slave speed:%d\n",
@@ -577,7 +571,6 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 				BSC_DBG(dev,"i2c addr=0x%x using default speed:%d\n",
 							client->addr, set_speed);
 			}
->>>>>>> mps-lmp
 		}
 		else {
 			BSC_DBG(dev, "client addr=0x%x no platform data found!\n", client->addr);
@@ -628,15 +621,8 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
    int rc;
    unsigned short i, nak_ok;
 
-<<<<<<< HEAD
    down(&dev->dev_lock);
 
-=======
-   down(&dev->xfer_lock);
-
-   bsc_enable_clk(dev);
-
->>>>>>> mps-lmp
    /* set the bus speed dynamically if dynamic speed support is turned on */
    if (dev->dynamic_speed)
       client_speed_set(adapter, msgs[0].addr);   
