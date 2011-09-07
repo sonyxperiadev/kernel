@@ -19,33 +19,13 @@
 #ifndef VCHIQ_BIVCM_H
 #define VCHIQ_BIVCM_H
 
+#include "vchiq_pagelist.h"
 #include "vcinclude/bigisland_chip/ipc_shared_mem.h"
 
 #define IPC_SHARED_MEM_SLOTS      (IPC_SHARED_MEM_BASE + IPC_SHARED_MEM_VC_OFFSET)
 #define IPC_SHARED_MEM_SLOTS_SIZE (IPC_SHARED_MEM_CLOCK_DEBUG_OFFSET)
 
-#ifndef PAGE_SIZE
-#define PAGE_SIZE 4096
-#endif
-#define CACHE_LINE_SIZE 32
-#define PAGELIST_WRITE 0
-#define PAGELIST_READ 1
-#define PAGELIST_READ_WITH_FRAGMENTS 2
-
 #define VCHIQ_PLATFORM_FRAGMENTS_OFFSET_IDX 0
 #define VCHIQ_PLATFORM_FRAGMENTS_COUNT_IDX  1
-
-typedef struct pagelist_struct {
-	unsigned long length;
-	unsigned short type;
-	unsigned short offset;
-	unsigned long addrs[1];	/* N.B. 12 LSBs hold the number of following
-				   pages at consecutive addresses. */
-} PAGELIST_T;
-
-typedef struct fragments_struct {
-	char headbuf[CACHE_LINE_SIZE];
-	char tailbuf[CACHE_LINE_SIZE];
-} FRAGMENTS_T;
 
 #endif /* VCHIQ_BIVCM_H */

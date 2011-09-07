@@ -158,6 +158,52 @@ VCHIQ_STATUS_T vchiq_add_service(
    void                   *userdata,
    VCHIQ_SERVICE_HANDLE_T *pservice)
 {
+   VCHIQ_SERVICE_PARAMS_T params;
+
+   params.fourcc        = fourcc;
+   params.callback      = callback;
+   params.userdata      = userdata;
+   params.version       = 0;
+   params.version_min   = 0;
+
+   return vchiq_add_service_params(instance, &params, pservice);
+}
+
+/****************************************************************************
+*
+*   vchiq_open_service
+*
+***************************************************************************/
+
+VCHIQ_STATUS_T vchiq_open_service(
+   VCHIQ_INSTANCE_T        instance,
+   int                     fourcc,
+   VCHIQ_CALLBACK_T        callback,
+   void                   *userdata,
+   VCHIQ_SERVICE_HANDLE_T *pservice)
+{
+   VCHIQ_SERVICE_PARAMS_T params;
+
+   params.fourcc        = fourcc;
+   params.callback      = callback;
+   params.userdata      = userdata;
+   params.version       = 0;
+   params.version_min   = 0;
+
+   return vchiq_open_service_params(instance, &params, pservice);
+}
+
+/****************************************************************************
+*
+*   vchiq_add_service_params
+*
+***************************************************************************/
+
+VCHIQ_STATUS_T vchiq_add_service_params(
+   VCHIQ_INSTANCE_T              instance,
+   const VCHIQ_SERVICE_PARAMS_T *params,
+   VCHIQ_SERVICE_HANDLE_T       *pservice)
+{
    VCHIQ_STATUS_T status;
    VCHIQ_STATE_T *state = instance->state;
    VCHIQ_SERVICE_T *service;
@@ -175,9 +221,7 @@ VCHIQ_STATUS_T vchiq_add_service(
 
    service = vchiq_add_service_internal(
       state,
-      fourcc,
-      callback,
-      userdata,
+      params,
       srvstate,
       instance);
 
@@ -200,16 +244,14 @@ VCHIQ_STATUS_T vchiq_add_service(
 
 /****************************************************************************
 *
-*   vchiq_open_service
+*   vchiq_open_service_params
 *
 ***************************************************************************/
 
-VCHIQ_STATUS_T vchiq_open_service(
-   VCHIQ_INSTANCE_T        instance,
-   int                     fourcc,
-   VCHIQ_CALLBACK_T        callback,
-   void                   *userdata,
-   VCHIQ_SERVICE_HANDLE_T *pservice)
+VCHIQ_STATUS_T vchiq_open_service_params(
+   VCHIQ_INSTANCE_T              instance,
+   const VCHIQ_SERVICE_PARAMS_T *params,
+   VCHIQ_SERVICE_HANDLE_T       *pservice)
 {
    VCHIQ_STATUS_T   status = VCHIQ_ERROR;
    VCHIQ_STATE_T   *state = instance->state;
@@ -225,9 +267,7 @@ VCHIQ_STATUS_T vchiq_open_service(
    vcos_mutex_lock(&state->mutex);
 
    service = vchiq_add_service_internal(state,
-      fourcc,
-      callback,
-      userdata,
+      params,
       VCHIQ_SRVSTATE_OPENING,
       instance);
 
@@ -253,3 +293,5 @@ EXPORT_SYMBOL(vchiq_shutdown);
 EXPORT_SYMBOL(vchiq_connect);
 EXPORT_SYMBOL(vchiq_add_service);
 EXPORT_SYMBOL(vchiq_open_service);
+EXPORT_SYMBOL(vchiq_add_service_params);
+EXPORT_SYMBOL(vchiq_open_service_params);
