@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/types.h>
 #include <linux/errno.h>
@@ -123,7 +124,11 @@ static FRAGMENTS_T *g_fragments_base;
 static FRAGMENTS_T *g_free_fragments;
 static int          g_free_fragments_count;
 struct semaphore    g_free_fragments_sema;
-DECLARE_MUTEX(g_free_fragments_mutex);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+static DEFINE_SEMAPHORE(g_free_fragments_mutex);
+#else
+static DECLARE_MUTEX(g_free_fragments_mutex);
+#endif
 
 static irqreturn_t
 vchiq_doorbell_irq(int irq, void *dev_id);

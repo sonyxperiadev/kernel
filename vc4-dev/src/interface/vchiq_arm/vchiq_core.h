@@ -67,6 +67,7 @@ vcos_static_assert(IS_POW2(VCHIQ_MAX_SLOTS_PER_SIDE));
 /* Ensure the fields are wide enough */
 vcos_static_assert(VCHIQ_MSG_SRCPORT(VCHIQ_MAKE_MSG(0,0,VCHIQ_PORT_MAX)) == 0);
 vcos_static_assert(VCHIQ_MSG_TYPE(VCHIQ_MAKE_MSG(0,VCHIQ_PORT_MAX,0)) == 0);
+vcos_static_assert((unsigned int)VCHIQ_PORT_MAX < (unsigned int)VCHIQ_PORT_FREE);
 
 #define VCHIQ_MSGID_PADDING            VCHIQ_MAKE_MSG(VCHIQ_MSG_PADDING,0,0)
 #define VCHIQ_MSGID_CLAIMED            0x40000000
@@ -209,12 +210,12 @@ typedef struct vchiq_service_struct {
    int client_id;
    int auto_close;
    VCOS_ATOMIC_FLAGS_T poll_flags;
+   short version;
+   short version_min;
 
    VCHIQ_STATE_T *state;
    VCHIQ_INSTANCE_T instance;
 
-   int slot_quota;
-   int slot_use_count;
    int previous_tx_index;
 
    VCHIQ_BULK_QUEUE_T bulk_tx;
@@ -222,7 +223,6 @@ typedef struct vchiq_service_struct {
 
    VCOS_EVENT_T remove_event;
    VCOS_EVENT_T bulk_remove_event;
-   VCOS_EVENT_T quota_event;
    VCOS_MUTEX_T bulk_mutex;
 
    struct service_stats_struct
@@ -232,6 +232,16 @@ typedef struct vchiq_service_struct {
       int bulk_stalls;
    } stats;
 } VCHIQ_SERVICE_T;
+
+/* The quota information is outside VCHIQ_SERVICE_T so that it can be
+   statically allocated, since for accounting reasons a service's slot
+   usage is carried over between users of the same port number.
+ */
+typedef struct vchiq_service_quota_struct {
+   int slot_quota;
+   int slot_use_count;
+   VCOS_EVENT_T quota_event;
+} VCHIQ_SERVICE_QUOTA_T;
 
 typedef struct vchiq_shared_state_struct {
 
@@ -342,7 +352,8 @@ struct vchiq_state_struct {
       int slot_stalls;
    } stats;
 
-   VCHIQ_SERVICE_T services[VCHIQ_MAX_SERVICES];
+   VCHIQ_SERVICE_T *services[VCHIQ_MAX_SERVICES];
+   VCHIQ_SERVICE_QUOTA_T service_quotas[VCHIQ_MAX_SERVICES];
    VCHIQ_SLOT_INFO_T slot_info[VCHIQ_MAX_SLOTS];
 };
 
@@ -356,8 +367,8 @@ extern VCHIQ_STATUS_T
 vchiq_connect_internal(VCHIQ_STATE_T *state, VCHIQ_INSTANCE_T instance);
 
 extern VCHIQ_SERVICE_T *
-vchiq_add_service_internal(VCHIQ_STATE_T *state, int fourcc,
-   VCHIQ_CALLBACK_T callback, void *userdata, int srvstate,
+vchiq_add_service_internal(VCHIQ_STATE_T *state,
+   const VCHIQ_SERVICE_PARAMS_T *params, int srvstate,
    VCHIQ_INSTANCE_T instance);
 
 extern VCHIQ_STATUS_T
