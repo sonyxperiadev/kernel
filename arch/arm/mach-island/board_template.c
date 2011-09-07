@@ -147,7 +147,7 @@
 #if defined(CONFIG_BCM_CMP_BATTERY_BQ24616) || defined(CONFIG_BCM_CMP_BATTERY_BQ24616_MODULE)
 #include <linux/broadcom/cmp_battery_bq24616.h>
 #include <battery_settings.h>
-/* Until proper solution for docking station is found, compal docking station is
+/* Until proper solution for docking station is found, cp docking station is
    handled in bq24616 battery driver */
 #include <dock_settings.h>
 #endif

@@ -22,11 +22,7 @@
 #define HALAUDIO_CFG_H
 
 /* ---- Include Files ---------------------------------------------------- */
-#if defined( __KERNEL__ )
 #include <linux/broadcom/halaudio.h>
-#else
-#include <halaudio.h>
-#endif
 
 /* ---- Constants and Types ---------------------------------------------- */
 #define HALAUDIO_CFG_NAME_LEN    20
