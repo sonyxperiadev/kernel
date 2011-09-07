@@ -2538,11 +2538,6 @@ mxt_td60		MACH_MXT_TD60		MXT_TD60		2550
 esyx			MACH_ESYX		ESYX			2551
 dove_db2		MACH_DOVE_DB2		DOVE_DB2		2552
 bulldog			MACH_BULLDOG		BULLDOG			2553
-<<<<<<< HEAD:arch/arm/tools/mach-types
-<<<<<<< HEAD:arch/arm/tools/mach-types
-=======
-<<<<<<< HEAD
->>>>>>> ae6e6049532af25b6191e438a15c66ec80cdcf32:arch/arm/tools/mach-types
 derell_me2000		MACH_DERELL_ME2000	DERELL_ME2000		2554
 bcmring_base		MACH_BCMRING_BASE	BCMRING_BASE		2555
 bcmring_evm		MACH_BCMRING_EVM	BCMRING_EVM		2556
@@ -2964,5 +2959,9 @@ island_sv		MACH_ISLAND_SV		ISLAND_SV		2701
 island_tablet		MACH_ISLAND_TABLET	ISLAND_TABLET		2701
 bcm21455		ARCH_BCM21455		BCM21455   		2702
 island_tablet_28160	MACH_ISLAND_TABLET_28160 ISLAND_TABLET_28160	2703
+<<<<<<< HEAD
 island_tablet_cp	MACH_ISLAND_TABLET_CP	ISLAND_TABLET_CP	2701
 
+=======
+rhea_berri              MACH_RHEA_BERRI          RHEA_BERRI             2701
+>>>>>>> mps-lmp

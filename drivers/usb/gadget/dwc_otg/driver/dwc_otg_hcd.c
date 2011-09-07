@@ -2423,7 +2423,7 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t * dwc_otg_hcd,
 				DWC_SPINUNLOCK_IRQRESTORE(dwc_otg_hcd->lock, flags);
 			}
 			/* Suspend the Phy Clock */
-			{
+			if (core_if->stop_phy_clk) {
 				pcgcctl_data_t pcgcctl = {.d32 = 0 };
 				pcgcctl.b.stoppclk = 1;
 				dwc_modify_reg32(core_if->pcgcctl, 0,

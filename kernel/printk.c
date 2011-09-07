@@ -876,9 +876,6 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 
 	p = printk_buf;
 
-	/* Send printk buffer to MIPI STM trace hardware too if enable */
-	stm_dup_printk(printk_buf, printed_len);
-
 	/* Do we have a loglevel in the string? */
 	if (p[0] == '<') {
 		unsigned char c = p[1];

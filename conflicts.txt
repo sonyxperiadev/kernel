@@ -1,100 +1,14 @@
-Remaining conflict files:
+2011.09.07 mps-lmp --merge--> map_integration conflicts:
 
-	both modified:      drivers/misc/akm8975.c
-	both modified:      include/linux/akm8975.h
-	both modified:      vc4-dev/src/interface/vceb/host/linux/hana/vceb-host-interface-hana.c
-
-
-If you need to compare the BASE, LOCAL (map_integration), REMOTE (mps-lmp) and merged results, do the following:
-
-> git checkout map_integration (1d5bc59035b967f)
-> git checkout -b merge_branch    # create temp branch
-> git merge mps-lmp (23decd11cca511)
-
-Then you can use the git mergetool to compare BASE, LOCAL, REMOTE, merged versions of the conflict files. Make sure your actual conflict resolution is done in the mps_staging branch instead of the merge_branch.
-
-Remove this file when all conflicts are resolved.
-
-initial set of conflicts:
-
-# Unmerged paths:
-#   (use "git add/rm <file>..." as appropriate to mark resolution)
-#
-#	both modified:      arch/arm/mach-island/Makefile
-#	both modified:      arch/arm/mach-island/clock_island.c
-#	both modified:      arch/arm/mach-island/include/mach/chip_pinmux.h
-#	both modified:      arch/arm/mach-island/island_pinmux.c
-#	deleted by them:    arch/arm/plat-kona/include/mach/clock.h
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_ipc_kernel.c
+#	both modified:      arch/arm/mach-island/clock_island.c  (Resolved by Sherman Yin)
+#	both modified:      arch/arm/mach-island/include/mach/clock.h
+#	both modified:      arch/arm/tools/mach-types
 #	both modified:      drivers/i2c/busses/i2c-bsc.c
-#	both modified:      drivers/misc/akm8975.c
-#	both added:         drivers/misc/vc04_services/vc_dnfo/vc_dnfo.c
-#	both added:         drivers/misc/vc04_services/vc_mem/vc_mem.c
-#	both added:         drivers/misc/vc04_services/vmcs_fb/vc_fb_defs.h
-#	both added:         drivers/misc/vc04_services/vmcs_fb/vc_vchi_fb.c
-#	both added:         drivers/misc/vc04_services/vmcs_fb/vc_vchi_fb.h
-#	both added:         drivers/misc/vc04_services/vmcs_sm/vc_sm_defs.h
-#	both added:         drivers/misc/vc04_services/vmcs_sm/vc_vchi_sm.c
-#	both added:         drivers/misc/vc04_services/vmcs_sm/vc_vchi_sm.h
-#	both added:         drivers/misc/vc04_services/vmcs_sm/vmcs_sm.c
-#	both modified:      include/linux/akm8975.h
+#	both added:         drivers/misc/vc04_services/vc_hnfo/Makefile
+#	both added:         drivers/misc/vc04_services/vc_ovl/Makefile
+#	both modified:      drivers/misc/vc04_services/vmcs_sm/vmcs_sm.c
+#	both added:         include/linux/broadcom/Kbuild
 #	both modified:      include/linux/i2c-kona.h
-#	both added:         include/linux/videocore/vc_dnfo.h
 #	both modified:      vc4-dev/src/interface/vceb/host/linux/hana/vceb-host-interface-hana.c
-#	both added:         vc4-dev/src/interface/vchi/vchi_mh.h
-#	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_arm.h
-#	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_bi_arm.c
-#	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_core.c
-#	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_core.h
-#	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_memdrv_hana.c
-#	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_shim.c
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_cmd.c
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_common.h
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_generic_event_flags.h
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_generic_named_sem.h
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_generic_quickslow_mutex.h
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_generic_reentrant_mtx.h
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_joinable_thread_from_plain.h
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_logcat.c
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_mem_from_malloc.c
-#	both added:         vc4-dev/src/interface/vcos/generic/vcos_mem_from_malloc.h
-#	both added:         vc4-dev/src/interface/vcos/linuxkernel/stdint.h
-#	both added:         vc4-dev/src/interface/vcos/linuxkernel/vcos_linuxkernel.c
-#	both added:         vc4-dev/src/interface/vcos/linuxkernel/vcos_linuxkernel_cfg.c
-#	both added:         vc4-dev/src/interface/vcos/linuxkernel/vcos_linuxkernel_misc.c
-#	both added:         vc4-dev/src/interface/vcos/linuxkernel/vcos_mod_init.c
-#	both added:         vc4-dev/src/interface/vcos/linuxkernel/vcos_platform.h
-#	both added:         vc4-dev/src/interface/vcos/linuxkernel/vcos_platform_types.h
-#	both added:         vc4-dev/src/interface/vcos/linuxkernel/vcos_thread_map.c
-#	both added:         vc4-dev/src/interface/vcos/vcos.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_assert.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_atomic_flags.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_build_info.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_cfg.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_cmd.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_ctype.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_event.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_event_flags.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_genversion
-#	both added:         vc4-dev/src/interface/vcos/vcos_init.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_logging.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_lowlevel_thread.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_mem.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_mutex.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_named_semaphore.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_once.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_quickslow_mutex.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_reentrant_mutex.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_semaphore.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_stdint.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_string.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_thread.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_thread_attr.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_timer.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_tls.h
-#	both added:         vc4-dev/src/interface/vcos/vcos_types.h
-#	both added:         vc4-dev/src/vcinclude/bigisland_chip/ipc_shared_mem.h
-#	both added:         vc4-dev/src/vcinclude/common.h
-#	both added:         vc4-dev/src/vcinclude/vc_debug_sym.h
-#
+#	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_bi_arm.c
 

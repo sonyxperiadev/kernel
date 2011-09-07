@@ -9,6 +9,7 @@ header-y += vcp_device.h
 header-y += vcp_ioctl.h
 header-y += vcp_msg.h
 header-y += vcp_conference.h
+<<<<<<< HEAD
 header-y += amxr.h
 header-y += amxr_ioctl.h
 header-y += amxr_port.h
@@ -25,3 +26,5 @@ header-y += csx_util_ioctl.h
 header-y += af_server.h
 header-y += frame_profiler.h
 
+=======
+>>>>>>> mps-lmp

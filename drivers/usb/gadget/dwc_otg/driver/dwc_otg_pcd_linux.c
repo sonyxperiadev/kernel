@@ -1402,6 +1402,12 @@ int usb_gadget_register_driver(struct usb_gadget_driver *driver)
 	DWC_DEBUGPL(DBG_ANY, "registered gadget driver '%s'\n",
 		    driver->driver.name);
 
+#ifdef CONFIG_USB_OTG_UTILS
+	if (gadget_wrapper->pcd->core_if->xceiver->set_peripheral)
+		otg_set_peripheral(gadget_wrapper->pcd->core_if->xceiver,
+				   &gadget_wrapper->gadget);
+#endif
+
 	return 0;
 }
 

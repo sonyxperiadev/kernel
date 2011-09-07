@@ -116,7 +116,10 @@ static void csl_caph_switch_setDSTStatus(CAPH_SWITCH_CHNL_e chal_chnl,
     for (i=0; i<(Int8)CAPH_SWITCH_CHNL_NUM; i++)
     {
         if(dstStatusTable[i].chal_chnl == chal_chnl)
-            dstStatusTable[i].dstStatus = dstStatus;
+		{
+			dstStatusTable[i].dstStatus = dstStatus;
+			return;
+		}
     }
     //Should not run to here.
     audio_xassert(0, chal_chnl);

@@ -647,6 +647,104 @@ EXPORT_SYMBOL( vchiq_userdrv_resume );
 
 /****************************************************************************
 *
+* vchiq_userdrv_suspend
+*
+*   The lower level drivers (vchiq_memdrv or vchiq_busdrv) will call this
+*   function to suspend each videcore.
+*
+***************************************************************************/
+
+VCHIQ_STATUS_T vchiq_userdrv_suspend( const VCHIQ_PLATFORM_DATA_T *platform_data )
+{
+   VCHIQ_KERNEL_STATE_T *kernState = NULL;
+   VCHIQ_STATUS_T status;
+   int i;
+
+   for (i = 0; i < vchiq_num_instances; i++)
+   {
+      if (vchiq_kernel_state[i]->platform_data == platform_data)
+      {
+         kernState = vchiq_kernel_state[i];
+         break;
+      }
+   }
+
+   if (!kernState)
+   {
+      vcos_log_error( "%s: failed to find state for instance %s", __func__,
+         platform_data->instance_name );
+
+      return VCHIQ_ERROR;
+   }
+
+   status = vchiq_platform_suspend(g_vchiq_state);
+   if ( status == VCHIQ_SUCCESS )
+   {
+      vcos_log_warn( "%s: suspended vchiq for '%s'", __func__,
+         kernState->instance_name );
+   }
+   else
+   {
+      vcos_log_error( "%s: failed to suspend vchiq '%s'",
+         __func__, kernState->instance_name );
+   }
+
+   return status;
+}
+
+EXPORT_SYMBOL( vchiq_userdrv_suspend );
+
+/****************************************************************************
+*
+* vchiq_userdrv_resume
+*
+*   The lower level drivers (vchiq_memdrv or vchiq_busdrv) will call this
+*   function to resume each videcore.
+*
+***************************************************************************/
+
+VCHIQ_STATUS_T vchiq_userdrv_resume( const VCHIQ_PLATFORM_DATA_T *platform_data )
+{
+   VCHIQ_KERNEL_STATE_T *kernState = NULL;
+   VCHIQ_STATUS_T status;
+   int i;
+
+   for (i = 0; i < vchiq_num_instances; i++)
+   {
+      if (vchiq_kernel_state[i]->platform_data == platform_data)
+      {
+         kernState = vchiq_kernel_state[i];
+         break;
+      }
+   }
+
+   if (!kernState)
+   {
+      vcos_log_error( "%s: failed to find state for instance %s", __func__,
+         platform_data->instance_name );
+
+      return VCHIQ_ERROR;
+   }
+
+   status = vchiq_platform_resume(g_vchiq_state);
+   if ( status == VCHIQ_SUCCESS )
+   {
+      vcos_log_warn( "%s: resumed vchiq for '%s'", __func__,
+         kernState->instance_name );
+   }
+   else
+   {
+      vcos_log_error( "%s: failed to resume vchiq '%s'",
+         __func__, kernState->instance_name );
+   }
+
+   return status;
+}
+
+EXPORT_SYMBOL( vchiq_userdrv_resume );
+
+/****************************************************************************
+*
 *   Function which translates a dma direction into a printable string.
 *
 ***************************************************************************/
@@ -796,6 +894,7 @@ ipc_dma( void *vcaddr, void *armaddr, int len, DMA_MMAP_PAGELIST_T *pagelist, en
    {
       struct resource *res;
       void *vcVirtAddr;
+<<<<<<< HEAD
 
       /* Request an I/O memory region for remapping */
       res = request_mem_region( vcPhysAddr, len, "vchiq" );
@@ -820,6 +919,32 @@ ipc_dma( void *vcaddr, void *armaddr, int len, DMA_MMAP_PAGELIST_T *pagelist, en
       /* Unmap the videocore memory */
       iounmap( vcVirtAddr );
 
+=======
+
+      /* Request an I/O memory region for remapping */
+      res = request_mem_region( vcPhysAddr, len, "vchiq" );
+      if ( res == NULL )
+      {
+         vcos_log_error( "%s: failed to request I/O memory region", __func__ );
+         goto failed_request_mem_region;
+      }
+
+      /* I/O remap the videocore memory */
+      vcVirtAddr = ioremap_nocache( res->start, resource_size( res ));
+      if ( vcVirtAddr == NULL )
+      {
+         vcos_log_error( "%s: failed to I/O remap videocore bulk buffer",
+                         __func__ );
+         release_mem_region( res->start, resource_size( res ));
+         goto failed_ioremap;
+      }
+
+      dma_mmap_memcpy( &gVchiqDmaMmap, vcVirtAddr );
+
+      /* Unmap the videocore memory */
+      iounmap( vcVirtAddr );
+
+>>>>>>> mps-lmp
       /* Release the I/O memory region */
       release_mem_region( res->start, resource_size( res ));
    }

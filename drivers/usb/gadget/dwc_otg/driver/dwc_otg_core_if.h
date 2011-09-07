@@ -450,6 +450,11 @@ extern int dwc_otg_set_param_power_down(dwc_otg_core_if_t * core_if,
 extern int32_t dwc_otg_get_param_power_down(dwc_otg_core_if_t * core_if);
 #define dwc_param_power_down_default 0
 
+extern int dwc_otg_set_param_stop_phy_clk(dwc_otg_core_if_t * core_if,
+					  int32_t val);
+extern int32_t dwc_otg_get_param_stop_phy_clk(dwc_otg_core_if_t * core_if);
+#define dwc_param_stop_phy_clk_default 0
+
 extern int dwc_otg_set_param_otg_ver(dwc_otg_core_if_t * core_if, int32_t val);
 extern int32_t dwc_otg_get_param_otg_ver(dwc_otg_core_if_t * core_if);
 #define dwc_param_otg_ver_default 1

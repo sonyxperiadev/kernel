@@ -169,6 +169,7 @@ struct dwc_otg_driver_module_params {
 	int32_t ic_usb_cap;
 	int32_t ahb_thr_ratio;
 	int32_t power_down;
+	int32_t stop_phy_clk;
 	int32_t otg_ver;
 	int32_t adp_enable;
 };
@@ -252,6 +253,7 @@ static struct dwc_otg_driver_module_params dwc_otg_module_params = {
 	.ic_usb_cap = -1,
 	.ahb_thr_ratio = -1,
 	.power_down = -1,
+	.stop_phy_clk = -1,
 	.otg_ver = -1,
 	.adp_enable = -1,
 };
@@ -520,6 +522,10 @@ static int set_parameters(dwc_otg_core_if_t * core_if)
 	if (dwc_otg_module_params.power_down != -1) {
 		retval +=
 		    dwc_otg_set_param_power_down(core_if, dwc_otg_module_params.power_down);
+	}
+	if (dwc_otg_module_params.stop_phy_clk != -1) {
+		retval +=
+		    dwc_otg_set_param_stop_phy_clk(core_if, dwc_otg_module_params.stop_phy_clk);
 	}
 	if (dwc_otg_module_params.otg_ver != -1) {
 		retval +=
@@ -1267,6 +1273,8 @@ module_param_named(ahb_thr_ratio, dwc_otg_module_params.ahb_thr_ratio, int, 0444
 MODULE_PARM_DESC(ahb_thr_ratio, "AHB Threshold Ratio");
 module_param_named(power_down, dwc_otg_module_params.power_down, int, 0444);
 MODULE_PARM_DESC(power_down, "Power Down Mode");
+module_param_named(stop_phy_clk, dwc_otg_module_params.stop_phy_clk, int, 0444);
+MODULE_PARM_DESC(stop_phy_clk, "Stop PHY Clock Mode");
 module_param_named(adp_enable, dwc_otg_module_params.adp_enable, int, 0444);
 MODULE_PARM_DESC(adp_enable, "ADP Enable 0=ADP Disabled 1=ADP Enabled");
 module_param_named(otg_ver, dwc_otg_module_params.otg_ver, int, 0444);

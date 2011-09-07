@@ -145,6 +145,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     /* we will have to request the non muxed gpio pins here and set it to the appropriate values */
 
     /*
+<<<<<<< HEAD
      * Check the IPC Awake register to see ig the videocore is already running.
      * If it's running, then we assume that u-boot initialized it.
      */
@@ -160,6 +161,8 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     }
 
     /*
+=======
+>>>>>>> mps-lmp
      * FIXME All the hardcoded GPIO pin numbers should be moved to the
      * platform_data! Otherwise this code may not work when we move to another
      * platform that has a different GPIO muxing.
@@ -247,35 +250,56 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
 
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwr_en, "bl-pwr-en" )) != 0 )
     {
+<<<<<<< HEAD
         printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwr-en' ) failed: %d\n",
+=======
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwr-en' ) failed: %d\n", 
+>>>>>>> mps-lmp
                 __func__, platform_data->disp_gpio.lcd_bl_pwr_en, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_en, "bl-en" )) != 0 )
     {
+<<<<<<< HEAD
         printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n",
+=======
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n", 
+>>>>>>> mps-lmp
                 __func__, platform_data->disp_gpio.lcd_bl_en, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwm, "bl-pwm" )) != 0 )
     {
+<<<<<<< HEAD
         printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwm' ) failed: %d\n",
+=======
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwm' ) failed: %d\n", 
+>>>>>>> mps-lmp
                 __func__, platform_data->disp_gpio.lcd_bl_pwm, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_rst, "lcd-reset" )) != 0 )
     {
+<<<<<<< HEAD
         printk( KERN_ERR "%s: gpio_request( %d, 'lcd-reset' ) failed: %d\n",
+=======
+        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-reset' ) failed: %d\n", 
+>>>>>>> mps-lmp
                 __func__, platform_data->disp_gpio.lcd_rst, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_pwr_en, "lcd-pwr-en" )) != 0 )
     {
+<<<<<<< HEAD
         printk( KERN_ERR "%s: gpio_request( %d, 'lcd-pwr-en' ) failed: %d\n",
+=======
+        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-pwr-en' ) failed: %d\n", 
+>>>>>>> mps-lmp
                 __func__, platform_data->disp_gpio.lcd_pwr_en, rc );
         return -ENODEV;
     }
 
+<<<<<<< HEAD
     if ( vceb_is_videocore_running )
     {
         /*
@@ -304,6 +328,19 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
         gpio_set_value( platform_data->disp_gpio.lcd_bl_en,     1 );
         gpio_set_value( platform_data->disp_gpio.lcd_bl_pwm,    1 );
     }
+=======
+    gpio_direction_output( platform_data->disp_gpio.lcd_rst,       0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_pwr_en,    0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwm,    0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_bl_en,     0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwr_en, 0 );
+
+    gpio_set_value( platform_data->disp_gpio.lcd_pwr_en,    1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_rst,       1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_bl_pwr_en, 1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_bl_en,     1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_bl_pwm,    1 );
+>>>>>>> mps-lmp
 
     return 0;
 }

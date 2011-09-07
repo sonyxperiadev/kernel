@@ -55,6 +55,12 @@
 #include <plat/kona_avs.h>
 #endif
 
+#ifdef CONFIG_KONA_POWER_MGR
+#include <plat/pwr_mgr.h>
+
+#define VLT_LUT_SIZE 16
+#endif
+
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
@@ -67,6 +73,8 @@
 
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
+#else
+#define SD_CARDDET_GPIO_PIN      75
 #endif
 
 #define PID_PLATFORM				0xE600
@@ -325,11 +333,11 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-	{ /* SDIO2 */
+	{ /* SDIO2 - SDIO2 on customer board is used for eMMC */
 		.id = 2,
 		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_SDMMC,
-		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
 		.peri_clk_name = "sdio3_clk",
 		.ahb_clk_name = "sdio3_ahb_clk",
 		.sleep_clk_name = "sdio3_sleep_clk",
@@ -610,11 +618,6 @@ static struct resource kona_otg_platform_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = HSOTG_CTRL_BASE_ADDR,
-		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[2] = {
 		.start = BCM_INT_ID_USB_HSOTG,
 		.end = BCM_INT_ID_USB_HSOTG,
 		.flags = IORESOURCE_IRQ,
@@ -632,35 +635,46 @@ static struct platform_device board_kona_otg_platform_device =
 
 #ifdef CONFIG_KONA_AVS
 
+void avs_silicon_type_notify(u32 silicon_type)
+{
+#ifdef CONFIG_KONA_POWER_MGR
+	u8* volt_lut = kona_avs_get_volt_table();
+	BUG_ON(volt_lut == NULL);
+/*re-program volt lookup table based on silicon type*/
+	pwr_mgr_pm_i2c_var_data_write(volt_lut,VLT_LUT_SIZE);
+#endif
+	pr_info("%s:silicon_type = %d\n",__func__,silicon_type);
+}
+
 static u32 svt_pmos_bin[3+1] = {125,146,171,201};
 static u32 svt_nmos_bin[3+1] = {75,96,126,151};
 
 static u32 lvt_pmos_bin[3+1] = {150,181,216,251};
 static u32 lvt_nmos_bin[3+1] = {90,111,146,181};
 
-u32 svt_silicon_type_lut[3][3] =
+u32 svt_silicon_type_lut[3*3] =
 	{
-		{SILICON_TYPE_SLOW,SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL},
-		{SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL},
-		{SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST}
+		SILICON_TYPE_SLOW,SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,
+		SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,
+		SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST
 	};
 
-u32 lvt_silicon_type_lut[3][3] =
+u32 lvt_silicon_type_lut[3*3] =
 	{
-		{SILICON_TYPE_SLOW,SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL},
-		{SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL},
-		{SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST}
+		SILICON_TYPE_SLOW,SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,
+		SILICON_TYPE_SLOW,SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,
+		SILICON_TYPE_TYPICAL,SILICON_TYPE_TYPICAL,SILICON_TYPE_FAST
 	};
 
-u32 ss_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xe, 0xe, 0xe,
+u8 ss_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xe, 0xe, 0xe,
 						0xe, 0xe, 0xe, 0xe, 0x13, 0x13, 0x13, 0x13};
 
-u32 tt_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xb, 0xb, 0xb,
+u8 tt_vlt_tbl[] = {0x3, 0x3, 0x4, 0x4, 0x4, 0xb, 0xb, 0xb,
 							0xb, 0xb, 0xb, 0xb,  0xd,  0xd,  0xd, 0xd};
 
-u32 ff_vlt_tbl[] = { 0x3, 0x3, 0x4, 0x4,0x4, 0x4, 0xb, 0xb,
+u8 ff_vlt_tbl[] = { 0x3, 0x3, 0x4, 0x4,0x4, 0x4, 0xb, 0xb,
 							0xb, 0xb, 0xb, 0xb, 0xb, 0xd, 0xd, 0xd };
-static u32* volt_table[] = {ss_vlt_tbl, tt_vlt_tbl, ff_vlt_tbl};
+static u8* volt_table[] = {ss_vlt_tbl, tt_vlt_tbl, ff_vlt_tbl};
 
 static struct kona_avs_pdata avs_pdata =
 {
@@ -674,11 +688,12 @@ static struct kona_avs_pdata avs_pdata =
 	.lvt_pmos_bin = lvt_pmos_bin,
 	.lvt_nmos_bin = lvt_nmos_bin,
 
-	.svt_silicon_type_lut =(u32**) svt_silicon_type_lut,
-	.lvt_silicon_type_lut = (u32**)lvt_silicon_type_lut,
+	.svt_silicon_type_lut = svt_silicon_type_lut,
+	.lvt_silicon_type_lut = lvt_silicon_type_lut,
 
 	.volt_table = volt_table,
 	.otp_row = 8,
+	.silicon_type_notify = avs_silicon_type_notify,
 };
 
 struct platform_device kona_avs_device = {
