@@ -893,8 +893,6 @@ void __init board_map_io(void)
 late_initcall(rhea_berri_add_lateInit_devices);
 
 MACHINE_START(RHEA_BERRI, "RheaBerri")
-	.phys_io = IO_START,
-	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer  = &kona_timer,
