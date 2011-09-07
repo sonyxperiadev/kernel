@@ -142,6 +142,7 @@ snd-brcm-omx-objs += soc/csl/dsp/src/csl_log.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_voip.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_voif.o
 snd-brcm-omx-objs += soc/csl/dsp/src/osdw_dsp_drv.o
+snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_caph_control_api.o
 
 
 #ccflags-$(CONFIG_BCM_ALSA_SOUND)	+= -DDEBUG

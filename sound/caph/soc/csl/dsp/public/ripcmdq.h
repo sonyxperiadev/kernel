@@ -432,5 +432,7 @@ void RIPCMDQ_ControlDownlinkNoiseSuppression(Boolean control);
 void RIPCMDQ_AbortSearch(UInt16 abort_slot,  UInt16 abort_frame);
 
 void RIPCMDQ_PostCmd_LISR(UInt16 cmd, UInt16 arg0, UInt16 arg1, UInt16 arg2);
+void RIPCMDQ_PostCmd_PWRMGR_Req(UInt16 arg0, UInt16 arg1);
+
 
 #endif	//_RIPCMDQ_H_
