@@ -55,6 +55,9 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 #include "clk.h"
 #include "platform_mconfig_rhea.h"
 #endif
+#if defined(ENABLE_DMA_VOICE)
+#include "csl_dsp_caph_control_api.h"
+#endif
 
 //#define CONFIG_VOICE_LOOPBACK_TEST
 
@@ -972,10 +975,28 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				15 ARM2SP DSP channel? Since DSP does not take arm2sp interrupt, so it can be dynamic.
 				16 ARM2SP2 DSP channel?
 				*/
-				if(path->source==CSL_CAPH_DEV_DSP) dmaCH = CSL_CAPH_DMA_CH12;
-				else if(path->sink==CSL_CAPH_DEV_DSP) {
-					if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R) dmaCH = CSL_CAPH_DMA_CH14;
-					else dmaCH = CSL_CAPH_DMA_CH13;
+				if(path->source==CSL_CAPH_DEV_DSP) 
+				{
+					dmaCH = CSL_CAPH_DMA_CH12;
+#if defined(ENABLE_DMA_VOICE)
+					path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SPKR_EN);
+					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp spk buf@ 0x%x\r\n", path->pBuf);
+#endif					
+				} else if(path->sink==CSL_CAPH_DEV_DSP) {
+					if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R) 
+					{
+						dmaCH = CSL_CAPH_DMA_CH14;
+#if defined(ENABLE_DMA_VOICE)
+						path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SEC_MIC_EN);
+						Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp sec buf@ 0x%x\r\n", path->pBuf);
+#endif						
+					} else { 
+						dmaCH = CSL_CAPH_DMA_CH13;
+#if defined(ENABLE_DMA_VOICE)
+						path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_PRI_MIC_EN);
+						Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp pri buf@ 0x%x\r\n", path->pBuf);
+#endif						
+					}
 				} /*else {
 					path->dma[0] = csl_caph_dma_obtain_channel();
 				}*/
@@ -1009,6 +1030,27 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			}
 			break;
 		case CAPH_CFIFO:
+#if defined(ENABLE_DMA_VOICE)
+			if(path->source==CSL_CAPH_DEV_DSP)
+			{
+				fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH12);
+				Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp spk cfifo# 0x%x\r\n", fifo);
+			}
+			else if(path->sink==CSL_CAPH_DEV_DSP) 
+			{
+				if (path->source ==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
+				{
+					fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH14);
+					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp sec cfifo# 0x%x\r\n", fifo);
+				}
+				else
+				{
+					fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH13);
+					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp pri cfifo# 0x%x\r\n", fifo);
+				}
+			}
+			else
+#endif
 			if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink == CSL_CAPH_DEV_IHF) {
 				fifo = csl_caph_dma_get_csl_cfifo(path->dma[0]);
 			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink == CSL_CAPH_DEV_FM_TX) {
@@ -1058,7 +1100,28 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			{	//if not the first srcmixer block, assume 16bit mono output?
 				dataFormat = CSL_CAPH_16BIT_MONO;
 			}
-#if !defined(ENABLE_DMA_VOICE)
+#if defined(ENABLE_DMA_VOICE)			
+			// unconditionally assign fixed src channel to dsp
+			if(path->source==CSL_CAPH_DEV_DSP)
+			{
+				srcmIn = CSL_CAPH_SRCM_MONO_CH1;
+				csl_caph_srcmixer_set_inchnl_status(srcmIn);
+			}
+			else if(path->sink==CSL_CAPH_DEV_DSP)
+			{
+				if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
+				{
+					srcmIn = CSL_CAPH_SRCM_MONO_CH2;
+					csl_caph_srcmixer_set_inchnl_status(srcmIn);
+				}
+				else 
+				{
+					srcmIn = CSL_CAPH_SRCM_MONO_CH3;
+					csl_caph_srcmixer_set_inchnl_status(srcmIn);
+				}
+			}
+			else
+#else
 			if (path->sink == CSL_CAPH_DEV_DSP) 
 			{
 				// fix the SRC-Mixer in channel for DSP
@@ -1107,7 +1170,28 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			sink = path->sink;
 			if(sink2) sink = sink2;
 
-#if !defined(ENABLE_DMA_VOICE)
+#if defined(ENABLE_DMA_VOICE)			
+			// unconditionally assign fixed src channel to dsp
+			if(path->source==CSL_CAPH_DEV_DSP)
+			{
+				srcmIn = CSL_CAPH_SRCM_MONO_CH1;
+				csl_caph_srcmixer_set_inchnl_status(srcmIn);
+			}
+			else if(path->sink==CSL_CAPH_DEV_DSP)
+			{
+				if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
+				{
+					srcmIn = CSL_CAPH_SRCM_MONO_CH2;
+					csl_caph_srcmixer_set_inchnl_status(srcmIn);
+				}
+				else 
+				{
+					srcmIn = CSL_CAPH_SRCM_MONO_CH3;
+					csl_caph_srcmixer_set_inchnl_status(srcmIn);
+				}
+			}
+			else
+#else
 			if (path->source == CSL_CAPH_DEV_DSP) 
 			{
 				srcmIn = SPEAKER_DL_FROM_DSP_CHNL; // fixed the SRC-Mixer in channel for DSP: DL is always using ch1
@@ -1223,9 +1307,26 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
 		audio_xassert(0, pathID);
 	}
 
+#if defined(ENABLE_DMA_VOICE)	
+	if ((dmaCfg.dma_ch < CSL_CAPH_DMA_CH12) || (dmaCfg.dma_ch > CSL_CAPH_DMA_CH14))
+#endif
 	csl_caph_dma_config_channel(dmaCfg);
+#if defined(ENABLE_DMA_VOICE)
+	else // config dma 12,13,14 per dsp
+		csl_caph_dma_set_buffer_address(dmaCfg);
+#endif
 #if !defined(ENABLE_DMA_LOOPBACK)
+#if defined(ENABLE_DMA_VOICE)
+	/* intr goes to dsp */
+	if(dmaCfg.dma_ch==CSL_CAPH_DMA_CH13) 
+		csl_caph_dma_enable_intr(dmaCfg.dma_ch, CSL_CAPH_DSP);
+#else
 	if(dmaCfg.dma_ch>=CSL_CAPH_DMA_CH12) owner = CSL_CAPH_DSP;
+#endif
+#endif
+#if defined(ENABLE_DMA_VOICE)
+	/* intr goes to arm */
+	if ((dmaCfg.dma_ch < CSL_CAPH_DMA_CH12) || (dmaCfg.dma_ch > CSL_CAPH_DMA_CH14))
 #endif
 	csl_caph_dma_enable_intr(dmaCfg.dma_ch, owner);
 }
@@ -1588,6 +1689,9 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 		for(i=0; i<MAX_BLOCK_NUM; i++)
 		{
 			if(!path->dma[i]) break;
+#if defined(ENABLE_DMA_VOICE)
+			if ((path->dma[blockIdx] < CSL_CAPH_DMA_CH12)||(path->dma[blockIdx] > CSL_CAPH_DMA_CH14))
+#endif
 			csl_caph_dma_start_transfer(path->dma[i]);
 			Log_DebugPrintf(LOGID_SOC_AUDIO, "dma %d.\r\n", path->dma[i]);
 		}

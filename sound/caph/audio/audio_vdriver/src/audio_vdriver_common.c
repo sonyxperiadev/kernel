@@ -54,6 +54,9 @@
 //#include "sysparm.h"
 #include "ostask.h"
 #include "log.h"
+#if defined(ENABLE_DMA_VOICE)
+#include "csl_dsp_caph_control_api.h"
+#endif
 
 extern void VPU_Capture_Request(UInt16 buf_index);
 extern void VPU_Render_Request(UInt16 bufferIndex);
@@ -298,28 +301,46 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
+#if defined(ENABLE_DMA_VOICE)
+	csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
-	
+#else
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
+#endif	
 	if( AUDDRV_GetAudioMode() >= AUDIO_MODE_NUMBER )
+	{
 		AUDDRV_Telephony_InitHW ( mic, 
 				speaker, 
 				AUDIO_SAMPLING_RATE_16000,
 			      	pData);
-	else
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
+#endif
+	} else {
 		AUDDRV_Telephony_InitHW ( mic, 
 				speaker, 
 				AUDIO_SAMPLING_RATE_8000,
 			       	pData);
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+#endif
+	}
 
 	//after AUDDRV_Telephony_InitHW to make SRST.
 	AUDDRV_SetVCflag(TRUE);  //let HW control logic know.
 
+#if defined(ENABLE_DMA_VOICE)
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0 );
+#else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0, 0 );
-
+#endif
 	OSTASK_Sleep( 40 );
 
+#if defined(ENABLE_DMA_VOICE)
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0 );
+#else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0, 0 );
-
+#endif
 	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
 #if !(defined(_SAMOA_))
 	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
@@ -379,8 +400,14 @@ void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 	AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), 0);
 
 	//AUDDRV_Enable_Output (AUDDRV_VOICE_OUTPUT, speaker, TRUE, AUDIO_SAMPLING_RATE_8000);
+#if defined(ENABLE_DMA_VOICE)
+	if (AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ))
+		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
+	else
+		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+#else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
-
+#endif
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0 );
 
 	//AUDDRV_Enable_Input ( AUDDRV_VOICE_INPUT, mic, AUDIO_SAMPLING_RATE_8000);
@@ -439,12 +466,17 @@ void AUDDRV_Telephony_Deinit (void *pData)
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, FALSE, 0, 0, 0, 0 );
 	
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
-
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN);
+#endif
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
 		OSTASK_Sleep( 3 ); //make sure audio is off
 
 		AUDDRV_Telephony_DeinitHW(pData);
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_PRI_MIC_EN|(UInt16)DSP_AADMAC_SEC_MIC_EN);
+#endif
 	}
 
 	if (AUDIO_CHNL_BLUETOOTH == AUDDRV_GetAudioMode() )
