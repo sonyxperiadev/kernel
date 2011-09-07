@@ -29,6 +29,17 @@
 #include <asm/io.h>
 #include <mach/chip_pinmux.h>
 
+#ifdef CONFIG_KONA_ATAG_DT
+/*
+  This is a Broadcom Kona specific ATAG for pin-mux.
+  Put it here instead of setup.h to avoid conflict when merging upstream.
+*/
+#define ATAG_DTBLOB	0x54411122
+
+extern int early_init_dt_scan_pinmux(unsigned long node, const
+				char *uname,int depth, void *data);
+#endif
+
 /* Pull up/down*/
 #define	PULL_UP_ON		1
 #define	PULL_UP_OFF		0
