@@ -299,8 +299,7 @@ typedef enum
     SRC_48K16K = 2                                    //SRC 48KHz to 16KHz
 }SampleRateC_t;
 
-
-
+// ---- Typedef Declarations -----------------------------------------
 /**
  * @addtogroup AP_Queues
  * @{
@@ -2294,6 +2293,12 @@ EXTERN dummy3_queries_t shared_SP_params_right								AP_SHARED_SEC_GEN_AUDIO;
  * phone call.
  */
 EXTERN UInt16 shared_aadmac_audio_samp_rate									AP_SHARED_SEC_GEN_AUDIO;
+
+/**
+ * This variable tells what audio paths are enabled.
+ */
+EXTERN UInt16 shared_aadmac_aud_enable            									AP_SHARED_SEC_GEN_AUDIO;
+
 
 /** @addtogroup Shared_Audio_Buffers 
  * @{ */
