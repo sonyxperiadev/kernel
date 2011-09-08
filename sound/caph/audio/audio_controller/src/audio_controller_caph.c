@@ -52,7 +52,6 @@
 #include "audio_controller.h"
 #include "log.h"
 #include "osheap.h"
-#include "xassert.h"
 
 #ifdef CONFIG_DIGI_MIC
 #if !defined(NO_PMU)

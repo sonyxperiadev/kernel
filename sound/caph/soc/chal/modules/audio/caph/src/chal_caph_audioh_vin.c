@@ -35,7 +35,6 @@ Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.               
 #include "chal_caph_audioh_int.h"
 #include "brcm_rdb_audioh.h"
 #include "brcm_rdb_util.h"
-#include "xassert.h"
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -854,7 +853,7 @@ cVoid chal_audio_vinpath_set_each_cic_scale(CHAL_HANDLE handle,
 	    break;
 	    
 	default:
-	    xassert(0, micGainSelect);
+        break;
     }
 	    
     /* Set the required setting */

@@ -32,7 +32,6 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 ****************************************************************************/
 #include "resultcode.h"
 #include "mobcom_types.h"
-#include "xassert.h"
 #include "msconsts.h"
 #include "log.h"
 //#include "chal_bmodem_intc_inc.h"

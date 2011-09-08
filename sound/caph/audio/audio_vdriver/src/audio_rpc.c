@@ -24,7 +24,6 @@
 #include "rpc_api.h"
 #include "rpc_sync_api.h"
 
-#include "xassert.h"
 #include "audio_consts.h"
 
 #include "csl_caph.h"
@@ -160,7 +159,7 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_COMP_FILTER_RSP, &val);
 	}
 	else
-		xassert(0, pMsg->msgId);
+		audio_xassert(0, pMsg->msgId);
 #endif
 
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
@@ -175,7 +174,7 @@ static Boolean AudioCopyPayload( MsgType_t msgType,
 {
 	UInt32 len;
 
-	xassert(srcDataBuf != NULL, 0);
+	audio_xassert(srcDataBuf != NULL, 0);
 
 	len = RPC_GetMsgPayloadSize(msgType);
 

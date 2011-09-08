@@ -36,7 +36,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "csl_caph_cfifo.h"
 #include "csl_caph_dma.h"
 #include "log.h"
-#include "xassert.h"
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -192,7 +191,7 @@ static CAPH_CFIFO_e csl_caph_cfifo_get_chal_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
             break;
 			
         default:
-            xassert(0, csl_fifo);
+            audio_xassert(0, csl_fifo);
 		break;	
     };
 
@@ -239,7 +238,7 @@ static void csl_caph_cfifo_fifo_init(void)
 		total_fifo_size += CSL_CFIFO_table[id].size;
 	}
 
-	xassert(total_fifo_size <= CSL_CFIFO_TOTAL_SIZE, total_fifo_size);
+	audio_xassert(total_fifo_size <= CSL_CFIFO_TOTAL_SIZE, total_fifo_size);
 	
 	return;
 }

@@ -45,7 +45,6 @@
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "log.h"
-#include "xassert.h"
 
 //=============================================================================
 // Public Variable declarations

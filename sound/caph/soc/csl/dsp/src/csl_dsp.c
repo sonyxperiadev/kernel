@@ -57,7 +57,6 @@
 *
 ****************************************************************************/
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "log.h"
 #include "shared.h"

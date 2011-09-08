@@ -46,13 +46,12 @@ LIMITED REMEDY.
 **/
 /*******************************************************************************************/
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
+#include "osdw_dsp_drv.h"
 #include "csl_dsp.h"
 #include "dspcmd.h"
 #include "csl_dsp_caph_control_api.h"
-#include "xassert.h"
 #include "log.h"
 
 extern AP_SharedMem_t	*vp_shared_mem;
@@ -90,7 +89,7 @@ UInt32 * csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_Audio_Connecti
             break;
         default:
             //Assert
-            xassert(0,aadmac_audio_connection);
+            assert(0);
             break;
     }
 
@@ -118,7 +117,7 @@ void csl_dsp_caph_control_aadmac_set_samp_rate(UInt16 value)
     if ( (value != 8000) && (value != 16000) )
     {
         //Assert
-        xassert(0,value);
+        assert(0);
     }
     else
     {
@@ -146,7 +145,7 @@ void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
     if ( path & (UInt16)(~(DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN|DSP_AADMAC_SPKR_EN)) )
     {
         //Assert
-        xassert(0,path);
+        assert(0);
     }
     else
     {
@@ -179,7 +178,7 @@ void csl_dsp_caph_control_aadmac_disable_path(UInt16 path)
     if ( path & (UInt16)(~(DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN|DSP_AADMAC_SPKR_EN)) )
     {
         //Assert
-        xassert(0,path);
+        assert(0);
     }
     else
     {

@@ -30,7 +30,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 *  @brief  csl layer driver for caph dma driver
 *
 ****************************************************************************/
-#include "xassert.h"
 #include "log.h"
 #include "mobcom_types.h"
 #include "chal_caph_dma.h"
@@ -170,7 +169,7 @@ static CSL_CAPH_DMA_CHNL_e csl_caph_dma_get_csl_chnl(CAPH_DMA_CHANNEL_e chal_chn
             break;
 			
         default:
-            xassert(0, chal_chnl);
+            audio_xassert(0, chal_chnl);
 		break;	
     };
 
@@ -259,7 +258,7 @@ static CAPH_DMA_CHANNEL_e csl_caph_dma_get_chal_chnl(CSL_CAPH_DMA_CHNL_e csl_chn
             break;
 			
         default:
-            xassert(0, chal_chnl);
+            audio_xassert(0, chal_chnl);
 		break;	
     };
 
@@ -348,7 +347,7 @@ static CAPH_CFIFO_e csl_caph_cfifo_get_chal_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
             break;
 			
         default:
-            xassert(0, csl_fifo);
+            audio_xassert(0, csl_fifo);
 		break;	
     };
 
@@ -885,7 +884,7 @@ void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e 
 		chal_caph_intc_enable_ssp_intr(intc_handle, 2, owner);
 	else
 		// should not get here.
-		xassert(0, csl_sspid);
+		audio_xassert(0, csl_sspid);
 }
 
 /****************************************************************************
@@ -910,7 +909,7 @@ void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e
 		chal_caph_intc_disable_ssp_intr(intc_handle, 2, owner);
 	else
 		// should not get here.
-		xassert(0, csl_sspid);
+		audio_xassert(0, csl_sspid);
 }
 
 /****************************************************************************
@@ -1105,7 +1104,7 @@ CSL_CAPH_DMA_CHNL_FIFO_STATUS_e csl_caph_dma_get_ddrfifo_status(CSL_CAPH_DMA_CHN
         case CAPH_READY_HIGHLOW:
             return CSL_CAPH_READY_HIGHLOW;
         default:
-            xassert(0, dmaCH_ctrl[chnl].eFifoStatus); 
+            audio_xassert(0, dmaCH_ctrl[chnl].eFifoStatus); 
     }
     return CSL_CAPH_READY_NONE;
 }

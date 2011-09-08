@@ -31,7 +31,6 @@ Copyright 2009 - 2010 Broadcom Corporation.  All rights reserved.               
 *
 ****************************************************************************/
 
-#include "xassert.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
 #include "chal_caph_audioh_int.h"
@@ -823,7 +822,7 @@ cVoid chal_audio_nvinpath_set_each_cic_scale(CHAL_HANDLE handle,
 	    break;
 	    
 	default:
-	    xassert(0, micGainSelect);
+        break;
     }
 	    
     /* Set the required setting */
