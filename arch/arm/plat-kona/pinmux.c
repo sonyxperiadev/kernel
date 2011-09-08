@@ -40,16 +40,17 @@ int __init early_init_dt_scan_pinmux(unsigned long node, const char *uname,
 				     int depth, void *data)
 {
 	const char *prop;
-	uint32_t size, i, *p;
+	unsigned long size, i;
+	uint32_t *p;
 
-	printk(KERN_INFO "%s: node=0x%x, uname=%s, depth=%d\n", __func__, node, uname, depth);
+	printk(KERN_INFO "%s: node=0x%lx, uname=%s, depth=%d\n", __func__, node, uname, depth);
 
 	if (depth != 1 || strcmp(uname, "pinmux") != 0)
 		return 0; /* not found, continue... */
 
 	prop = of_get_flat_dt_prop(node, "reg", &i);
 
-	p = prop;
+	p = (uint32_t *)prop;
 	i = be32_to_cpu(p[1]);
 	printk(KERN_INFO "reg: 0x%x, 0x%x\n", be32_to_cpu(p[0]), be32_to_cpu(p[1]));
 
@@ -60,12 +61,12 @@ int __init early_init_dt_scan_pinmux(unsigned long node, const char *uname,
 	}
 
 	prop = of_get_flat_dt_prop(node, "data", &size);
-	printk("data(0x%x): size=%ld\n", prop, size);
+	printk("data(0x%x): size=%ld\n", (unsigned int)prop, size);
 
 	/* Save it */
 	dt_pinmux_nr = size/4;
 	if (i != dt_pinmux_nr) {
-		printk(KERN_ERR "Mismatch size! %d & %d\n", i, dt_pinmux_nr);
+		printk(KERN_ERR "Mismatch size! %ld & %d\n", i, dt_pinmux_nr);
 		dt_pinmux_nr = 0;
 	}
 	else if (dt_pinmux_nr > PN_MAX) {
@@ -73,7 +74,7 @@ int __init early_init_dt_scan_pinmux(unsigned long node, const char *uname,
 		dt_pinmux_nr = 0;
 	}
 	else {
-		p = prop;
+		p = (uint32_t *)prop;
 		for (i = 0; i < dt_pinmux_nr; i++){
 			dt_pinmux[i] = be32_to_cpu(p[i]);
 			//printk(KERN_INFO "%d: 0x%x\n", i, dt_pinmux[i]);
@@ -90,7 +91,7 @@ int __init pinmux_init()
 	void __iomem *base;
 	int i;
 
-	/* unlock and set bae */
+	/* unlock and set base */
 	pinmux_chip_init();
 
 	base = g_chip_pin_desc.base;
@@ -98,6 +99,10 @@ int __init pinmux_init()
 	if (!dt_pinmux_nr) {
 		printk (KERN_ERR "%s Invalid DT-Pinmux! The board may not boot!\n", __func__);
 		return -EINVAL;
+	}
+
+	if (dt_pinmux_nr != PN_MAX) {
+		printk (KERN_WARNING "%s Not enough pins in DT-Pinmux! The board may not boot!\n", __func__);
 	}
 
 	printk(KERN_INFO "Configuring pin-mux...\n");
