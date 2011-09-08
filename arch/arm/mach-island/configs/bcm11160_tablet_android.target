@@ -4,3 +4,5 @@ chip   = 11160
 board  = tablet
 option = initrd
 option = suspend_invalid
+option = ext4
+option = mmc 
