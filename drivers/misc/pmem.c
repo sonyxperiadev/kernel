@@ -49,13 +49,14 @@
 #define PMEM_FLAGS_SUBMAP 0x1 << 3
 #define PMEM_FLAGS_UNSUBMAP 0x1 << 4
 
+#define PMEM_FLAGS_DIRTY_REGION (0x1 << 5)
 
 struct pmem_data {
 	/* in alloc mode: an index into the bitmap
 	 * in no_alloc mode: the size of the allocation */
 	int index;
 	/* see flags above for descriptions */
-	unsigned int flags;
+	volatile unsigned int flags;
 	/* protects this data field, if the mm_mmap sem will be held at the
 	 * same time as this sem, the mm sem must be taken first (as this is
 	 * the order for vma_open and vma_close ops */
@@ -825,6 +826,53 @@ end:
 	up_read(&data->sem);
 }
 
+
+static inline void
+do_cache_op(unsigned long start, unsigned long end, int flags)
+{
+	struct mm_struct *mm = current->active_mm;
+	struct vm_area_struct *vma;
+
+	if (end < start || flags)
+		return;
+
+	down_read(&mm->mmap_sem);
+	vma = find_vma(mm, start);
+	if (vma && vma->vm_start < end) {
+		if (start < vma->vm_start)
+			start = vma->vm_start;
+		if (end > vma->vm_end)
+			end = vma->vm_end;
+
+		up_read(&mm->mmap_sem);
+		flush_cache_user_range(start, end);
+		return;
+	}
+	up_read(&mm->mmap_sem);
+}
+
+void flush_pmem_process_file(struct file *file, void *virt_base, unsigned long offset)
+{
+	struct pmem_data *data;
+	int id;
+	void *vaddr;
+
+	if (!is_pmem_file(file) || !has_allocation(file)) {
+		return;
+	}
+
+	id = get_id(file);
+	data = (struct pmem_data *)file->private_data;
+	if (!pmem[id].cached || file->f_flags & O_SYNC)
+		return;
+
+	down_read(&data->sem);
+	vaddr = virt_base;
+	printk(KERN_ERR "%s start=0x%08x end=0x%08x", __func__, (unsigned long)vaddr + offset, (unsigned long)vaddr + pmem_len(id, data));
+	do_cache_op((unsigned long)vaddr + offset, (unsigned long)vaddr + pmem_len(id, data), 0);
+	up_read(&data->sem);
+}
+
 static int pmem_connect(unsigned long connect, struct file *file)
 {
 	struct pmem_data *data = (struct pmem_data *)file->private_data;
@@ -1119,9 +1167,30 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 	case PMEM_GET_SIZE:
 		{
+#if 0
 			struct pmem_region region;
 			DLOG("get_size\n");
 			pmem_get_size(&region, file);
+			if (copy_to_user((void __user *)arg, &region,
+						sizeof(struct pmem_region)))
+				return -EFAULT;
+			break;
+#endif
+			struct pmem_region region;
+
+			DLOG("get_size\n");
+			if (!has_allocation(file))
+				return -EINVAL;
+			data = (struct pmem_data *)file->private_data;
+			down_write(&data->sem);
+			if (data->flags & PMEM_FLAGS_DIRTY_REGION) {
+				region.len = 1;
+				data->flags &= ~PMEM_FLAGS_DIRTY_REGION;
+			} else
+				region.len = 0;
+
+			up_write(&data->sem);
+
 			if (copy_to_user((void __user *)arg, &region,
 						sizeof(struct pmem_region)))
 				return -EFAULT;
@@ -1141,11 +1210,20 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 		}
 	case PMEM_ALLOCATE:
 		{
+#if 0
 			if (has_allocation(file))
 				return -EINVAL;
 			data = (struct pmem_data *)file->private_data;
 			data->index = pmem_allocate(id, arg);
 			break;
+#endif
+			if (!has_allocation(file))
+				return -EINVAL;
+			data = (struct pmem_data *)file->private_data;
+			down_write(&data->sem);
+			data->flags |= PMEM_FLAGS_DIRTY_REGION;
+			up_write(&data->sem);
+			break;	
 		}
 	case PMEM_CONNECT:
 		DLOG("connect\n");
@@ -1154,11 +1232,23 @@ static long pmem_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	case PMEM_CACHE_FLUSH:
 		{
 			struct pmem_region region;
-			DLOG("flush\n");
+			data = (struct pmem_data *)file->private_data;
+
 			if (copy_from_user(&region, (void __user *)arg,
 					   sizeof(struct pmem_region)))
 				return -EFAULT;
+#if 0
+			if (pmem_len(id, data) <= region.offset)
+				return -EINVAL;
+#endif
+#if 1
+			DLOG("flush with offset=0x%08x len=0x%08x \n", region.offset, region.len);
 			flush_pmem_file(file, region.offset, region.len);
+#endif
+#if 0
+			printk(KERN_ERR "%s base=0x%08x len=0x%08x", __func__, region.len, region.offset);
+			flush_pmem_process_file(file, (void *)region.len, region.offset);
+#endif
 			break;
 		}
 	default:
