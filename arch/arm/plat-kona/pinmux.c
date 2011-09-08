@@ -43,7 +43,7 @@ int __init early_init_dt_scan_pinmux(unsigned long node, const char *uname,
 	unsigned long size, i;
 	uint32_t *p;
 
-	printk(KERN_INFO "%s: node=0x%lx, uname=%s, depth=%d\n", __func__, node, uname, depth);
+	/*printk(KERN_INFO "%s: node=0x%lx, uname=%s, depth=%d\n", __func__, node, uname, depth);*/
 
 	if (depth != 1 || strcmp(uname, "pinmux") != 0)
 		return 0; /* not found, continue... */

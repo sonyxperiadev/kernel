@@ -36,11 +36,11 @@ static int __init parse_tag_dt(const struct tag *tag)
 	unsigned long dt_root;
 
 	/* set DT base address so we can use kernel flat tree API */
-	initial_boot_params = tag->u.cmdline.cmdline;
+	initial_boot_params = (struct boot_param_header *)tag->u.cmdline.cmdline;
 
 	dt_root = of_get_flat_dt_root();
-	printk(KERN_INFO "kona dt @0x%x, size of 0x%x words, rooted @ 0x%x\n",
-		tag->u.cmdline.cmdline, tag->hdr.size, dt_root);
+	printk(KERN_INFO "Kona dt @0x%x, size of 0x%x words, rooted @ 0x%lx\n",
+		(unsigned int)tag->u.cmdline.cmdline, tag->hdr.size, dt_root);
 
 	/* Retrieve info from the /pinmux node */
 	of_scan_flat_dt(early_init_dt_scan_pinmux, NULL);
