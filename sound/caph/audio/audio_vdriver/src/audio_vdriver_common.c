@@ -42,7 +42,6 @@
 #include "shared.h"
 #include "dspcmd.h"
 
-#include "ripisr.h"
 #include "osqueue.h"
 #include "msconsts.h"
 
@@ -58,12 +57,12 @@
 #include "csl_dsp.h"
 #endif
 
-extern void VPU_Capture_Request(UInt16 bufferIndex);
+extern void VPU_Capture_Request(UInt16 buf_index);
 extern void VPU_Render_Request(UInt16 bufferIndex);
 extern Result_t AUDDRV_USB_HandleDSPInt(UInt16 arg0, UInt16 inBuf, UInt16 outBuf);
 extern void VOIF_ISR_Handler (UInt32 bufferIndex, UInt32 samplingRate);
-extern void ARM2SP_Render_Request(UInt16 bufferPosition);
-extern void ARM2SP2_Render_Request(UInt16 bufferPosition);
+extern void ARM2SP_Render_Request(UInt16 buf_index);
+extern void ARM2SP2_Render_Request(UInt16 buf_index);
 extern void AP_ProcessStatusMainAMRDone(UInt16 codecType);
 extern void VOIP_ProcessVOIPDLDone(void);
 extern void AUDDRV_User_HandleDSPInt(UInt32 param1, UInt32 param2, UInt32 param3);

@@ -52,7 +52,7 @@ struct avs_info
     u32 svt_silicon_type;
     u32 lvt_silicon_type;
 
-    u32* volt_tbl;
+    u8* volt_tbl;
     struct kona_avs_pdata *pdata;
 };
 
@@ -79,10 +79,11 @@ struct otp_val
 
 static int otp_read(int row, struct otp_val* otp_val)
 {
+	pr_info("%s:row = %d\n",__func__,row);
        if(row < 0)
             return -EINVAL;
-        otp_val->val0 = (123 << MONITOR_VAL0_SHIFT) | (200 << MONITOR_VAL1_SHIFT) | (175 << MONITOR_VAL2_SHIFT) ;
-        otp_val->val1 =  234;
+        otp_val->val0 = (146 << MONITOR_VAL0_SHIFT) | (180 << MONITOR_VAL1_SHIFT) | (95 << MONITOR_VAL2_SHIFT) ;
+        otp_val->val1 =  170;
 
         return 0;
 }
@@ -91,12 +92,14 @@ static int otp_read(int row, struct otp_val* otp_val)
 
 u32 kona_avs_get_solicon_type()
 {
+	BUG_ON(avs_info.pdata == NULL);
     return avs_info.silicon_type;
 }
 EXPORT_SYMBOL(kona_avs_get_solicon_type);
 
-u32* kona_avs_get_volt_table()
+u8* kona_avs_get_volt_table()
 {
+	BUG_ON(avs_info.pdata == NULL);
     return avs_info.volt_tbl;
 }
 EXPORT_SYMBOL(kona_avs_get_volt_table);
@@ -109,10 +112,14 @@ int kona_avs_get_mon_val(struct avs_info* avs_inf_ptr)
     if(!ret)
     {
 
+		pr_info("%s:opt:val0 = %x val1 = %x\n",__func__,otp_val.val0,otp_val.val1);
         avs_inf_ptr->monitor_val0 = (otp_val.val0 >> MONITOR_VAL0_SHIFT) & MONITOR_VAL_MASK;
         avs_inf_ptr->monitor_val1 = (otp_val.val0 >> MONITOR_VAL1_SHIFT) & MONITOR_VAL_MASK;
         avs_inf_ptr->monitor_val2 = (otp_val.val0 >> MONITOR_VAL2_SHIFT) & MONITOR_VAL_MASK;
         avs_inf_ptr->monitor_val3 = (otp_val.val1 >> MONITOR_VAL3_SHIFT) & MONITOR_VAL_MASK;
+
+		pr_info("%s:monitor_val0 = %d monitor_val1= %d monitor_val2 = %d monitor_val3 = %d\n",__func__,
+			avs_inf_ptr->monitor_val0 ,avs_inf_ptr->monitor_val1 ,avs_inf_ptr->monitor_val2 ,avs_inf_ptr->monitor_val3 );
     }
     return ret;
 }
@@ -146,10 +153,14 @@ static u32 kona_avs_get_svt_type(struct avs_info* avs_inf_ptr)
         }
     }
 
+	pr_info("%s:svt_pmos = %d svt_nmos = %d\n",
+			__func__,svt_pmos_inx,svt_nmos_inx);
+
+
     if(svt_nmos_inx == -1 || svt_pmos_inx == -1)
         return SILICON_TYPE_SLOW;
 
-    return pdata->svt_silicon_type_lut[svt_pmos_inx][svt_nmos_inx];
+    return pdata->svt_silicon_type_lut[svt_pmos_inx*pdata->nmos_bin_size + svt_nmos_inx];
 }
 
 
@@ -166,7 +177,7 @@ static u32 kona_avs_get_lvt_type(struct avs_info* avs_inf_ptr)
     for(i = 0; i < pdata->pmos_bin_size; i++)
     {
         if(avs_inf_ptr->monitor_val1 >= pdata->lvt_pmos_bin[i] &&
-                avs_inf_ptr->monitor_val0 < pdata->lvt_pmos_bin[i+1])
+                avs_inf_ptr->monitor_val1 < pdata->lvt_pmos_bin[i+1])
         {
            lvt_pmos_inx = i;
            break;
@@ -182,11 +193,13 @@ static u32 kona_avs_get_lvt_type(struct avs_info* avs_inf_ptr)
            break;
         }
     }
+	pr_info("%s:lvt_pmos = %d lvt_nmos = %d\n",
+			__func__,lvt_pmos_inx,lvt_nmos_inx);
 
     if(lvt_nmos_inx == -1 || lvt_pmos_inx == -1)
         return SILICON_TYPE_SLOW;
 
-    return pdata->lvt_silicon_type_lut[lvt_pmos_inx][lvt_nmos_inx];
+    return pdata->lvt_silicon_type_lut[lvt_pmos_inx*pdata->nmos_bin_size + lvt_nmos_inx];
 }
 
 static int kona_avs_drv_probe(struct platform_device *pdev)
@@ -205,18 +218,20 @@ static int kona_avs_drv_probe(struct platform_device *pdev)
 
 	avs_info.pdata = pdata;
 
-    ret = kona_avs_get_mon_val(&avs_info);
-    if(!ret)
+	ret = kona_avs_get_mon_val(&avs_info);
+	if(ret)
         goto error;
 
     avs_info.svt_silicon_type = kona_avs_get_svt_type(&avs_info);
     avs_info.lvt_silicon_type = kona_avs_get_lvt_type(&avs_info);
 
-    avs_info.silicon_type = MIN(avs_info.lvt_silicon_type,avs_info.svt_silicon_type);
+	 avs_info.silicon_type = MIN(avs_info.lvt_silicon_type,avs_info.svt_silicon_type);
     avs_info.volt_tbl = pdata->volt_table[avs_info.silicon_type];
 
     if(pdata->silicon_type_notify)
         pdata->silicon_type_notify(avs_info.silicon_type);
+	pr_info("%s:svt type: %d lvt type: %d  silicon type: %d \n",__func__,
+			avs_info.svt_silicon_type,avs_info.lvt_silicon_type, avs_info.silicon_type);
 error:
 	return ret;
 }
@@ -237,8 +252,8 @@ static int __init kona_avs_drv_init(void)
 {
 	return platform_driver_register(&kona_avs_drv);
 }
+arch_initcall(kona_avs_drv_init);
 
-fs_initcall(kona_avs_drv_init);
 static void __exit kona_avs_drv_exit(void)
 {
 	platform_driver_unregister(&kona_avs_drv);

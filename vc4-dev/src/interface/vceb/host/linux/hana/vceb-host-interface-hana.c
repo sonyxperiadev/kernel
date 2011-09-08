@@ -255,31 +255,31 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
 
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwr_en, "bl-pwr-en" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwr-en' ) failed: %d\n",
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwr-en' ) failed: %d\n", 
                 __func__, platform_data->disp_gpio.lcd_bl_pwr_en, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_en, "bl-en" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n",
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n", 
                 __func__, platform_data->disp_gpio.lcd_bl_en, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwm, "bl-pwm" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwm' ) failed: %d\n",
+        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwm' ) failed: %d\n", 
                 __func__, platform_data->disp_gpio.lcd_bl_pwm, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_rst, "lcd-reset" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-reset' ) failed: %d\n",
+        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-reset' ) failed: %d\n", 
                 __func__, platform_data->disp_gpio.lcd_rst, rc );
         return -ENODEV;
     }
     if (( rc = gpio_request( platform_data->disp_gpio.lcd_pwr_en, "lcd-pwr-en" )) != 0 )
     {
-        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-pwr-en' ) failed: %d\n",
+        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-pwr-en' ) failed: %d\n", 
                 __func__, platform_data->disp_gpio.lcd_pwr_en, rc );
         return -ENODEV;
     }

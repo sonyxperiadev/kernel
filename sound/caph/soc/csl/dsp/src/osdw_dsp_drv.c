@@ -80,7 +80,6 @@
 #include "csl_apcmd.h"
 #include "chal_bmodem_intc_inc.h"
 #include "csl_arm2sp.h"
-#include "ripisr.h"
 #if 0
 static Audio_ISR_Handler_t	client_Audio_ISR_Handler = NULL;
 static VPU_ProcessStatus_t	client_VPU_ProcessStatus = NULL;

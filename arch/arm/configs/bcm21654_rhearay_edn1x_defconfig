@@ -1,6 +1,11 @@
 #
 # Automatically generated make config: don't edit
+<<<<<<< HEAD
 # Linux/arm 3.0.0-rc7 Kernel Configuration
+=======
+# Linux kernel version: 2.6.35.7
+# Fri Aug 12 02:34:27 2011
+>>>>>>> map_integration
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -277,6 +282,7 @@ CONFIG_BCM_RAM_START_RESERVED_SIZE=0x02000000
 CONFIG_KONA_CPU_FREQ_DRV=y
 CONFIG_KONA_POWER_MGR=y
 CONFIG_KONA_PI_MGR=y
+CONFIG_KONA_AVS=y
 
 #
 # Rhea SoC based Machine types
@@ -854,7 +860,27 @@ CONFIG_QT602240_BRCM_FIX=y
 # CONFIG_TOUCHSCREEN_ST1232 is not set
 # CONFIG_TOUCHSCREEN_TPS6507X is not set
 # CONFIG_TOUCHSCREEN_EGALAX_I2C is not set
+<<<<<<< HEAD
 # CONFIG_INPUT_MISC is not set
+=======
+CONFIG_INPUT_MISC=y
+# CONFIG_INPUT_AD714X is not set
+# CONFIG_INPUT_ATI_REMOTE is not set
+# CONFIG_INPUT_ATI_REMOTE2 is not set
+# CONFIG_INPUT_KEYCHORD is not set
+# CONFIG_INPUT_KEYSPAN_REMOTE is not set
+# CONFIG_INPUT_POWERMATE is not set
+# CONFIG_INPUT_YEALINK is not set
+# CONFIG_INPUT_CM109 is not set
+# CONFIG_INPUT_UINPUT is not set
+# CONFIG_INPUT_GPIO is not set
+# CONFIG_INPUT_PCF8574 is not set
+# CONFIG_INPUT_GPIO_ROTARY_ENCODER is not set
+# CONFIG_INPUT_SMB380 is not set
+CONFIG_INPUT_BCM59055_ONKEY=y
+# CONFIG_INPUT_BCM2850_MIC_DETECT is not set
+CONFIG_KONA_HEADSET=y
+>>>>>>> map_integration
 
 #
 # Hardware I/O ports

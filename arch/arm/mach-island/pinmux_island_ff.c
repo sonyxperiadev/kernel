@@ -41,6 +41,8 @@ static struct __init pin_config board_pin_config[] = {
 	/* FIXME: Touchscreen has problems if GPIO selected? */
 	PIN_CFG(NAND_CEN_1, NAND_CEN_1, 0, OFF, OFF, 0, 0, 16MA),
 
+	/* SIM DATA needs a pull up */
+	PIN_CFG(SIM_DATA, SIM_DATA, 0, OFF, ON, 0, 0, 12MA),
 };
 
 /* board level init */

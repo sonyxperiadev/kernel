@@ -20,8 +20,10 @@ obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o
 obj-$(CONFIG_HAVE_CLK) += clock.o
 obj-$(CONFIG_MACH_RHEA_RAY) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += chal/
+obj-$(CONFIG_MACH_RHEA_BERRI) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY) += csl/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += csl/
+obj-$(CONFIG_MACH_RHEA_BERRI) += csl/
 obj-$(CONFIG_MACH_SAMOA_RAY) += chal/
 obj-$(CONFIG_MACH_ISLAND_FF) += chal/
 # SAMOA RAY bringup only has keypad at this point, so no CSL

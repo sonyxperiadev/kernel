@@ -32,4 +32,3 @@ obj-y	+= ../../../vc4-dev/src/interface/vceb/host/linux/
 
 endif
 
-

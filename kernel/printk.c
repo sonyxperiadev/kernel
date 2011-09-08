@@ -999,6 +999,7 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 
 	p = printk_buf;
 
+<<<<<<< HEAD
 	/* Send printk buffer to MIPI STM trace hardware too if enable */
 	stm_dup_printk(printk_buf, printed_len);
 
@@ -1017,6 +1018,25 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 			if (!new_text_line) {
 				emit_log_char('\n');
 				new_text_line = 1;
+=======
+	/* Do we have a loglevel in the string? */
+	if (p[0] == '<') {
+		unsigned char c = p[1];
+		if (c && p[2] == '>') {
+			switch (c) {
+			case '0' ... '7': /* loglevel */
+				current_log_level = c - '0';
+			/* Fallthrough - make sure we're on a new line */
+			case 'd': /* KERN_DEFAULT */
+				if (!new_text_line) {
+					emit_log_char('\n');
+					new_text_line = 1;
+				}
+			/* Fallthrough - skip the loglevel */
+			case 'c': /* KERN_CONT */
+				p += 3;
+				break;
+>>>>>>> map_integration
 			}
 		}
 	}

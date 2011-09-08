@@ -259,8 +259,8 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	 * PMU in Fast mode. Once the Rhea clock changes are in place,
 	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
 	 */
-	/*.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_HS, },*/
-	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_400K, },
+	/*.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),*/
+	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), 
 	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
@@ -403,7 +403,7 @@ static int pca953x_platform_exit_hw(struct i2c_client *client,
 }
 
 static struct pca953x_platform_data board_expander_info = {
-	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_100K, },
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
 	.gpio_base	= KONA_MAX_GPIO,
 	.irq_base	= gpio_to_irq(KONA_MAX_GPIO),
 	.setup		= pca953x_platform_init_hw,
@@ -445,14 +445,19 @@ static void qt602240_platform_exit_hw(void)
 }
 
 static struct qt602240_platform_data qt602240_platform_data = {
-	.i2c_pdata	= { .i2c_speed = BSC_BUS_SPEED_100K, },
-	.x_line		= 17,
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.x_line		= 15,
 	.y_line		= 11,
-	.x_size		= 800,
-	.y_size		= 480,
-	.blen		= 0x21,
-	.threshold	= 0x28,
-	.voltage	= 2800000,              /* 2.8V */
+	.x_size		= 1023,
+	.y_size		= 1023,
+	.x_min		= 90,
+	.y_min		= 90,
+	.x_max		= 0x3ff,
+	.y_max		= 0x3ff,
+	.max_area	= 0xff,
+	.blen		= 33,
+	.threshold	= 70,
+	.voltage	= 2700000,              /* 2.8V */
 	.orient		= QT602240_DIAGONAL_COUNTER,
 	.init_platform_hw = qt602240_platform_init_hw,
 	.exit_platform_hw = qt602240_platform_exit_hw,

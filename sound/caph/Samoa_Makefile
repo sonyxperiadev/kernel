@@ -128,9 +128,6 @@ snd-brcm-omx-objs += soc/csl/audio/src/csl_aud_queue.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_caph.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_common.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_rpc.o
-snd-brcm-omx-objs += audio/audio_vdriver/src/dspif_voice_record.o
-snd-brcm-omx-objs += audio/audio_vdriver/src/dspif_voice_play.o
-snd-brcm-omx-objs += audio/audio_vdriver/src/dspif_voip.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/ripisr_audio.o
 snd-brcm-omx-objs += audio/audio_vdriver/src/audio_vdriver_audlog.o
 

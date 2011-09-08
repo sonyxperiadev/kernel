@@ -23,4 +23,4 @@ header-y += csx_sigmorph.h
 header-y += csx_util.h
 header-y += csx_util_ioctl.h
 header-y += af_server.h
-
+header-y += frame_profiler.h

@@ -99,6 +99,7 @@ header-y += cramfs_fs.h
 header-y += cuda.h
 header-y += cyclades.h
 header-y += cycx_cfm.h
+header-${CONFIG_I2C_DAC6571} += dac6571.h
 header-y += dcbnl.h
 header-y += dccp.h
 header-y += dlm.h

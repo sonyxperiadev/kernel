@@ -37,6 +37,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_v3d.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/gpio.h>
+#include <plat/pi_mgr.h>
 
 #define V3D_DEV_NAME	"v3d"
 
@@ -98,6 +99,7 @@ static struct {
 	spinlock_t trace_lock;
 	int num_trace_ents;
 	struct trace_entry *tracebuf;
+	struct pi_mgr_dfs_node* dfs_node;
 } v3d_state;
 
 typedef struct {
@@ -146,16 +148,17 @@ static int setup_v3d_clock(void)
 	unsigned long rate;
 	int rc;
 
+	v3d_state.dfs_node = pi_mgr_dfs_add_request("v3d", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
+	if (!v3d_state.dfs_node)
+	{
+	    err_print("Failed to add dfs request for V3D\n");
+	    return  -EIO;
+	}
+
 	v3d_clk = clk_get(NULL, "v3d_axi_clk");
 	if (!v3d_clk) {
 		err_print("%s: error get clock\n", __func__);
 		return -EIO;
-	}
-
-	rc = clk_set_rate( v3d_clk, 249600000);
-	if (rc) {
-		//err_print("%s: error changing clock rate\n", __func__);
-		//return -EIO;
 	}
 
 	rc = clk_enable(v3d_clk);
