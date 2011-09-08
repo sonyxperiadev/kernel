@@ -103,7 +103,7 @@ static unsigned int kona_cpufreq_get_speed(unsigned int cpu)
     int i;
 
     opp = pi_get_active_opp(b->pi_id);
-	pr_info("%s: opp = %d\n",__func__,opp);
+	kcf_dbg("%s: opp = %d\n",__func__,opp);
 
 	if(opp < 0)
 		return 0;
