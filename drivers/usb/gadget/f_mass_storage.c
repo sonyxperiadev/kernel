@@ -3199,7 +3199,10 @@ int mass_storage_bind_config(struct usb_configuration *c)
 		c->bmAttributes |= USB_CONFIG_ATT_WAKEUP;
 
 		if (gadget_is_otg2(c->cdev->gadget))
-			c->bmAttributes |= USB_OTG_ADP;
+		{
+			otg_descriptor.bcdOTG = __constant_cpu_to_le16(0x0200);
+			otg_descriptor.bmAttributes |= USB_OTG_ADP;
+		}
 	}
 
 	common = fsg_common_init(NULL, c->cdev, &fsg_cfg);
