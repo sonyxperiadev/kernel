@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Wed Sep  7 11:27:29 2011
+# Wed Sep  7 17:08:50 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -860,6 +860,7 @@ CONFIG_INPUT_TOUCHSCREEN=y
 # CONFIG_TOUCHSCREEN_INEXIO is not set
 # CONFIG_TOUCHSCREEN_MK712 is not set
 # CONFIG_TOUCHSCREEN_PENMOUNT is not set
+# CONFIG_TOUCHSCREEN_QT602240 is not set
 # CONFIG_TOUCHSCREEN_SYNAPTICS_I2C_RMI is not set
 # CONFIG_TOUCHSCREEN_TOUCHRIGHT is not set
 # CONFIG_TOUCHSCREEN_TOUCHWIN is not set
