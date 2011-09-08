@@ -5537,10 +5537,25 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(DIG_CH0_PERI_CLK_NAME_STR,NULL,dig_ch3),
 };
 
+#ifndef CONFIG_KONA_POWER_MGR
+static int set_mm_override(void)
+{
+    u32 reg_val = 0;
+
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+    reg_val |= PWRMGR_PI_DEFAULT_POWER_STATE_PI_MM_WAKEUP_OVERRIDE_MASK;
+    writel(reg_val, KONA_PWRMGR_VA + PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+
+    return 0;
+}
+#endif
 
 int __init rhea_clock_init(void)
 {
 
+#ifndef CONFIG_KONA_POWER_MGR
+	set_mm_override();
+#endif
 	/*overrride callback functions b4 registering the clks*/
 
 	/*only write_access function is needed for root ccu*/
@@ -5561,7 +5576,6 @@ int __init rhea_clock_init(void)
     return 0;
 }
 
-#if 1
 int __init clock_late_init(void)
 {
 #ifdef CONFIG_DEBUG_FS
@@ -5577,5 +5591,7 @@ int __init clock_late_init(void)
 	return 0;
 }
 
-late_initcall(clock_late_init);
+#ifndef CONFIG_KONA_POWER_MGR
+early_initcall(rhea_clock_init);
 #endif
+late_initcall(clock_late_init);

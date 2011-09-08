@@ -117,6 +117,8 @@ struct pi_ops
 
 extern struct pi_ops gen_pi_ops;
 
+#ifdef CONFIG_KONA_PI_MGR
+struct pi* pi_mgr_get(int pi_id);
 struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id, u32 lat_value);
 int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32 lat_value);
 int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node);
@@ -129,13 +131,40 @@ int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp);
 int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node);
 int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier);
 int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier);
+#else
+static inline struct pi* pi_mgr_get(int pi_id) {return NULL;}
+static inline struct pi_mgr_qos_node* pi_mgr_qos_add_request(char* client_name, u32 pi_id,
+	u32 lat_value) {return NULL;}
+static inline int pi_mgr_qos_request_update(struct pi_mgr_qos_node* node, u32
+	lat_value) {return 0;}
+static inline int pi_mgr_qos_request_remove(struct pi_mgr_qos_node* node) {return 0;}
+static inline int pi_mgr_qos_add_notifier(u32 pi_id, struct notifier_block *notifier)
+	{return 0;}
+static inline int pi_mgr_qos_remove_notifier(u32 pi_id, struct notifier_block *notifier)
+	{return 0;}
+static inline int pi_set_policy(const struct pi *pi, u32 policy,int type) {return 0;}
+
+static inline struct pi_mgr_dfs_node* pi_mgr_dfs_add_request(char* client_name, u32 pi_id,
+	u32 opp) {return NULL;}
+static inline int pi_mgr_dfs_request_update(struct pi_mgr_dfs_node* node, u32 opp)
+	{return	0;}
+static inline int pi_mgr_dfs_request_remove(struct pi_mgr_dfs_node* node) {return 0;}
+static inline int pi_mgr_dfs_add_notifier(u32 pi_id, struct notifier_block *notifier)
+	{return 0;}
+static inline int pi_mgr_dfs_remove_notifier(u32 pi_id, struct notifier_block *notifier)
+	{return 0;}
+
+#endif
 
 int pi_state_allowed(int pi_id);
 int pi_mgr_register(struct pi* pi);
-struct pi* pi_mgr_get(int pi_id);
 int pi_mgr_init(void);
 u32 pi_get_active_qos(int pi_id);
 u32 pi_get_active_opp(int pi_id);
+
+
+
+
 
 #ifdef CONFIG_DEBUG_FS
 int __init pi_debug_init(void);

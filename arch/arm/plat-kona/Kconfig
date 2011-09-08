@@ -113,18 +113,19 @@ config BCM_IPC_OFFSET
 
 config KONA_CPU_PM_HANDLER
 	bool "Enable Kona platform PM (idle/suspend) handler."
-	depends on CPU_IDLE || SUSPEND
+	depends on KONA_POWER_MGR && (CPU_IDLE || SUSPEND)
 	help
 	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.
 
 config KONA_CPU_FREQ_DRV
        bool "Enable CPU frequency scaling for kona chips"
-       depends on CPU_FREQ
+       depends on KONA_POWER_MGR && CPU_FREQ
        help
 	Say Y if you want to enable generic Kona cpu-freq driver for Kona platforms
 
 config KONA_POWER_MGR
        bool "Enable Kona power manager driver"
+       select KONA_PI_MGR
        help
 	Say Y if you want to enable Kona power manager driver
 

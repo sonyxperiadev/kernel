@@ -661,7 +661,7 @@ static int ccu_clk_enable(struct clk *clk, int enable)
 	}
 	clk_dbg("*******************%s ccu name:%s count after %s : %d***********\n",
 			__func__, clk->name, enable?"enable":"disable",clk->use_cnt);
-
+#ifdef CONFIG_KONA_PI_MGR
 	if(ccu_clk->pi_id != -1)
 	{
 		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
@@ -669,6 +669,7 @@ static int ccu_clk_enable(struct clk *clk, int enable)
 		BUG_ON(!pi);
 		pi_enable(pi,enable);
 	}
+#endif
 	clk_dbg("*******************%s ccu name:%s enable complete. count :%d***********\n",
 			__func__, clk->name, clk->use_cnt);
 	return ret;
@@ -697,14 +698,14 @@ static int ccu_clk_init(struct clk* clk)
 	INIT_LIST_HEAD(&ccu_clk->ref_list);
 
 
-
+#ifdef CONFIG_KONA_PI_MGR
 	if(ccu_clk->pi_id != -1)
 	{
 		struct pi* pi = pi_mgr_get(ccu_clk->pi_id);
 		BUG_ON(!pi);
 		pi_init(pi);
 	}
-
+#endif
 
 	CCU_PI_ENABLE(ccu_clk,1);
 
@@ -1042,8 +1043,8 @@ static int peri_clk_enable(struct clk* clk, int enable)
 		/*Update DFS request to opp before enabling the clock */
 		if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
 		{
-			BUG_ON(peri_clk->pi_mgr_dfs_node == NULL);
-			pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,peri_clk->opp);
+			if (peri_clk->pi_mgr_dfs_node != NULL)
+			    pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,peri_clk->opp);
 		}
 
 		CCU_PI_ENABLE(peri_clk->ccu_clk,1);
@@ -1108,8 +1109,8 @@ static int peri_clk_enable(struct clk* clk, int enable)
 	/*Update DFS request to PI_MGR_DFS_MIN_VALUE after disabling the clock */
 	if(CLK_FLG_ENABLED(clk,REQUEST_OPP) && !enable)
 	{
-		BUG_ON(peri_clk->pi_mgr_dfs_node == NULL);
-		pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,PI_MGR_DFS_MIN_VALUE);
+		if (peri_clk->pi_mgr_dfs_node != NULL)
+		    pi_mgr_dfs_request_update(peri_clk->pi_mgr_dfs_node,PI_MGR_DFS_MIN_VALUE);
 	}
 
 dis_pi:
@@ -1741,8 +1742,8 @@ static int bus_clk_enable(struct clk *clk, int enable)
 		/*Update DFS request to opp before enabling the clock */
 		if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
 		{
-			BUG_ON(bus_clk->pi_mgr_dfs_node == NULL);
-			pi_mgr_dfs_request_update(bus_clk->pi_mgr_dfs_node,bus_clk->opp);
+			if(bus_clk->pi_mgr_dfs_node != NULL)
+			    pi_mgr_dfs_request_update(bus_clk->pi_mgr_dfs_node,bus_clk->opp);
 		}
 
 	}
