@@ -20,7 +20,7 @@
 #	both modified:      drivers/misc/vc04_services/vc_omx/Makefile (fixed by Sherman Yin)
 #	both modified:      drivers/usb/gadget/dwc_otg/driver/dwc_otg_pcd_linux.c (fixed by Sherman Yin)
 #	both modified:      kernel/printk.c
-#	deleted by us:      vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv.c
+#	deleted by us:      vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv.c (fixed by Edmund Szeto)
 
 conflict undetected by git status:
 
