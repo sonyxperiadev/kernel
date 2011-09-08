@@ -260,6 +260,39 @@ static int bcmpmu_set_eoc(struct bcmpmu *bcmpmu, int curr)
 	return ret;
 }
 
+static int bcmpmu_chrgr_usb_en(struct bcmpmu *bcmpmu, int en)
+{
+	int ret;
+	if (en == 0)
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_USB_EN,
+			0,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_EN].mask);
+	else
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_USB_EN,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_EN].mask,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_EN].mask);
+	return ret;
+}
+
+static int bcmpmu_chrgr_wac_en(struct bcmpmu *bcmpmu, int en)
+{
+	int ret;
+	if (en == 0)
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_WAC_EN,
+			0,
+			bcmpmu->regmap[PMU_REG_CHRGR_WAC_EN].mask);
+	else
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_WAC_EN,
+			bcmpmu->regmap[PMU_REG_CHRGR_WAC_EN].mask,
+			bcmpmu->regmap[PMU_REG_CHRGR_WAC_EN].mask);
+	return ret;
+}
+
+
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static ssize_t
 dbgmsk_show(struct device *dev, struct device_attribute *attr,
@@ -362,11 +395,22 @@ bcmpmu_dbg_set_eoc(struct device *dev, struct device_attribute *attr,
 	return n;
 }
 
+static ssize_t
+bcmpmu_dbg_usb_en(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned long val = simple_strtoul(buf, NULL, 0);
+	bcmpmu->chrgr_usb_en(bcmpmu, (int)val);
+	return n;
+}
+
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
 static DEVICE_ATTR(vfloat, 0644, bcmpmu_dbg_show_vfloat, bcmpmu_dbg_set_vfloat);
 static DEVICE_ATTR(icc_fc, 0644, bcmpmu_dbg_show_icc_fc, bcmpmu_dbg_set_icc_fc);
 static DEVICE_ATTR(icc_qc, 0644, bcmpmu_dbg_show_icc_qc, bcmpmu_dbg_set_icc_qc);
 static DEVICE_ATTR(eoc, 0644, bcmpmu_dbg_show_eoc, bcmpmu_dbg_set_eoc);
+static DEVICE_ATTR(usb_en, 0644, NULL, bcmpmu_dbg_usb_en);
 
 static struct attribute *bcmpmu_chrgr_attrs[] = {
 	&dev_attr_dbgmsk.attr,
@@ -374,6 +418,7 @@ static struct attribute *bcmpmu_chrgr_attrs[] = {
 	&dev_attr_icc_fc.attr,
 	&dev_attr_icc_qc.attr,
 	&dev_attr_eoc.attr,
+	&dev_attr_usb_en.attr,
 	NULL
 };
 
@@ -401,6 +446,8 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	pchrgr->bcmpmu = bcmpmu;
 	bcmpmu->chrgrinfo = (void *)pchrgr;
 
+	bcmpmu->chrgr_usb_en = bcmpmu_chrgr_usb_en;
+	bcmpmu->chrgr_wac_en = bcmpmu_chrgr_wac_en;
 	bcmpmu->set_icc_fc = bcmpmu_set_icc_fc;
 	bcmpmu->set_icc_qc = bcmpmu_set_icc_qc;
 	bcmpmu->set_eoc = bcmpmu_set_eoc;
