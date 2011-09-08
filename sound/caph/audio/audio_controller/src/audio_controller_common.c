@@ -42,7 +42,6 @@
 #include "sysparm.h"
 #endif
 #include "csl_caph.h"
-#include "audio_gain_table.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "log.h"

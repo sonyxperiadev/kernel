@@ -54,7 +54,9 @@
 #include "csl_caph_gain.h"
 #include <mach/comms/platform_mconfig.h>
 #include "io.h"
-
+#if defined(ENABLE_DMA_VOICE)
+#include "csl_dsp_caph_control_api.h"
+#endif
 
 /**
 *
@@ -656,13 +658,25 @@ void AUDDRV_EnableDSPOutput (
 		//if inVoiceCall== TRUE, assume the telphony_init() function sends ENABLE and CONNECT_DL
 		if (sample_rate == AUDIO_SAMPLING_RATE_8000)
 		{
+#if defined(ENABLE_DMA_VOICE)
+			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_SPKR_EN, 0, 0, 0, 0 );
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 0, 0, 0, 0 );
+#else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 0, 0, 0, 0 );
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 0, 0, 0, 0 );
+#endif
 		}
 		else
 		{
+#if defined(ENABLE_DMA_VOICE)
+			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_SPKR_EN, 0, 0, 0, 0 );
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 0, 0, 0, 0 );
+#else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 1, 0, 0, 0 );
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_DL, 1, 1, 0, 0, 0 );
+#endif
 		}
 		voicePlayOutpathEnabled = TRUE;
 
@@ -686,7 +700,7 @@ void AUDDRV_EnableDSPOutput (
 
 //=============================================================================
 //
-// Function Name: AUDDRV_EnableDSPOutput
+// Function Name: AUDDRV_EnableDSPInput
 //
 // Description:   Enable audio DSP output for voice call
 //
@@ -705,13 +719,25 @@ void AUDDRV_EnableDSPInput (
 		//if inVoiceCall== TRUE, assume the telphony_init() function sends ENABLE and CONNECT_UL
 		if (sample_rate == AUDIO_SAMPLING_RATE_8000)
 		{
+#if defined(ENABLE_DMA_VOICE)
+			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+#else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 0, 0, 0, 0 );
+#endif
 		}
 		else
 		{
+#if defined(ENABLE_DMA_VOICE)
+			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+#else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 1, 0, 0, 0);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 1, 0, 0, 0 );
+#endif
 		}
 //		voiceInPathEnabled = TRUE;
 	}

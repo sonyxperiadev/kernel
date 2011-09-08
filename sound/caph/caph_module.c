@@ -447,7 +447,7 @@ static void __devexit ALSAModuleExit(void)
 }
 
 // lower down the CAPH module init priority, so it can be done after RPC init.
-//module_init(ALSAModuleInit);
-late_initcall(ALSAModuleInit);
-//module_exit(ALSAModuleExit);
+module_init(ALSAModuleInit);
+//late_initcall(ALSAModuleInit);
+module_exit(ALSAModuleExit);
 
