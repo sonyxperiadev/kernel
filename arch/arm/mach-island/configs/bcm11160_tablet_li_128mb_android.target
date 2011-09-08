@@ -1,0 +1,9 @@
+arch   = arm
+family = island
+chip   = 11160
+board  = tablet
+option = li_128mb
+option = initrd
+option = suspend_invalid
+option = android
+
