@@ -194,8 +194,8 @@ typedef enum voip_start_stop_type
 typedef struct voip_data
 {
 	UInt32 codec_type;
-	UInt16 mic;
-	UInt16 spk; 	
+	AUDCTRL_MIC_Enum_t mic;
+	AUDCTRL_SPEAKER_t spk; 	
 }voip_data_t;
 
 typedef enum voip_codec_type
@@ -212,8 +212,12 @@ enum {
   VoIP_Ioctl_GetVersion = _IOR ('H', 0x10, int), 
   VoIP_Ioctl_Start = _IOW ('H', 0x11, voip_start_stop_type_t), 
   VoIP_Ioctl_Stop = _IOW ('H', 0x12, voip_start_stop_type_t),	 
-  VoIP_Ioctl_SetParms = _IOR('H', 0x13, voip_data_t), 
-  VoIP_Ioctl_GetParms   = _IOW('H', 0x14, voip_data_t) 
+  VoIP_Ioctl_SetSource = _IOW('H', 0x13, int),
+  VoIP_Ioctl_SetSink = _IOW('H', 0x14, int),
+  VoIP_Ioctl_SetCodecType = _IOW('H', 0x15, int),
+  VoIP_Ioctl_GetSource = _IOR('H', 0x16, int),
+  VoIP_Ioctl_GetSink = _IOR('H', 0x17, int),
+  VoIP_Ioctl_GetCodecType = _IOR('H', 0x18, int),
  }; 
 
 

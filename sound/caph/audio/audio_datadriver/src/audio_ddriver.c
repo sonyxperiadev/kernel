@@ -65,6 +65,9 @@
 // Public Variable declarations
 //=============================================================================
 
+
+#define VOIP_MAX_FRAME_LEN     642
+
 typedef struct ARM2SP_PLAYBACK_t
 {
 	VORENDER_PLAYBACK_MODE_t playbackMode;
@@ -106,7 +109,7 @@ typedef struct AUDIO_DDRIVER_t
     UInt32                                  stream_id;
     UInt32                                  read_index;
     UInt32                                  write_index;
-    UInt8*                                  tmp_buffer;	
+    UInt16*                                  tmp_buffer;	
 	UInt32									bufferSize_inBytes;
 	UInt32 									num_periods;
 	ARM2SP_PLAYBACK_t						arm2sp_config;
@@ -875,7 +878,6 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
 {
     Result_t result_code = RESULT_ERROR;
 	UInt32 *codec_type;
-	UInt32 size=0;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::%d \n",ctrl_cmd );
 
@@ -904,15 +906,13 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
 					Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n" );
 					break;
 				}
-
-				size = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
 			
-				aud_drv->tmp_buffer = OSHEAP_Alloc(size); 
+				aud_drv->tmp_buffer = (UInt16 *)OSHEAP_Alloc(VOIP_MAX_FRAME_LEN); 
 
 				if(aud_drv->tmp_buffer == NULL)
 					break;
 				else
-					memset(aud_drv->tmp_buffer,0,size);
+					memset(aud_drv->tmp_buffer,0,VOIP_MAX_FRAME_LEN);
 			
 				VoIP_StartTelephony();
 				result_code = RESULT_OK;
@@ -1736,11 +1736,12 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
         Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB:: Spurious call back\n");
         return TRUE;
     }
-	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	dlSize = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
+	memset(aud_drv->tmp_buffer,0,VOIP_MAX_FRAME_LEN);
+	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	//Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
-	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[2], (dlSize - 2)); // 2 bytes for codec type
-	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->voip_config.codec_type, aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
+	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[1], (dlSize - 2)); // 2 bytes for codec type
+	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->voip_config.codec_type, (UInt8 *)aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
 	return TRUE;
 };
 
