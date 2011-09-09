@@ -55,6 +55,15 @@
 #define AUDIO_PMU_IHF_POWER bcmpmu_ihf_power
 #define AUDIO_PMU_DEINIT bcmpmu_audio_deinit
 
+#else
+#include "bcmpmu_audio.h"
+
+#define AUDIO_PMU_INIT() NULL  
+#define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
+#define AUDIO_PMU_HS_POWER(a) NULL 
+#define AUDIO_PMU_IHF_SET_GAIN(a) NULL 
+#define AUDIO_PMU_IHF_POWER(a) NULL 
+#define AUDIO_PMU_DEINIT() NULL 
 
 #endif
 
