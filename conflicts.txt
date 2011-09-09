@@ -12,8 +12,8 @@
 #	both modified:      kernel/printk.c (fixed by Ray Jui)
 
 conflicts undetected by git status:
-arch/arm/configs/bcm21654_rhearay_defconfig
-arch/arm/configs/bcm21654_rhearay_edn1x_defconfig
+arch/arm/configs/bcm21654_rhearay_defconfig (fixed by copying from mps-lmp-3.0)
+arch/arm/configs/bcm21654_rhearay_edn1x_defconfig (fixed by copying from mps-lmp-3.0)
 
 
 2011.09.08 map_integration -> map_30work_staging merge

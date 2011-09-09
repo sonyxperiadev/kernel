@@ -1,15 +1,6 @@
 #
 # Automatically generated make config: don't edit
-<<<<<<< HEAD
-<<<<<<< HEAD
-# Linux/arm 3.0.0-rc7 Kernel Configuration
-=======
-# Linux kernel version: 2.6.35.7
-# Fri Aug 12 02:34:27 2011
->>>>>>> map_integration
-=======
 # Linux/arm 3.0.1 Kernel Configuration
->>>>>>> mps-lmp-3.0
 #
 CONFIG_ARM=y
 CONFIG_SYS_SUPPORTS_APM_EMULATION=y
@@ -880,12 +871,6 @@ CONFIG_QT602240_BRCM_FIX=y
 # CONFIG_TOUCHSCREEN_ST1232 is not set
 # CONFIG_TOUCHSCREEN_TPS6507X is not set
 # CONFIG_TOUCHSCREEN_EGALAX_I2C is not set
-<<<<<<< HEAD
-<<<<<<< HEAD
-# CONFIG_INPUT_MISC is not set
-=======
-=======
->>>>>>> mps-lmp-3.0
 CONFIG_INPUT_MISC=y
 # CONFIG_INPUT_AD714X is not set
 # CONFIG_INPUT_ATI_REMOTE is not set
@@ -905,10 +890,6 @@ CONFIG_INPUT_MISC=y
 CONFIG_INPUT_BCM59055_ONKEY=y
 # CONFIG_INPUT_BCM2850_MIC_DETECT is not set
 CONFIG_KONA_HEADSET=y
-<<<<<<< HEAD
->>>>>>> map_integration
-=======
->>>>>>> mps-lmp-3.0
 
 #
 # Hardware I/O ports
