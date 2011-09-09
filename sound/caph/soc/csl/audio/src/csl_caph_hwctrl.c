@@ -978,7 +978,9 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				{
 					dmaCH = CSL_CAPH_DMA_CH12;
 #if defined(ENABLE_DMA_VOICE)
-					path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SPKR_EN);
+					//path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SPKR_EN);
+					csl_arm2sp_shared_mem = (AP_SharedMem_t *)ARM2SP_GetPhysicalSharedMemoryAddress();
+					path->pBuf = (void *)csl_arm2sp_shared_mem->shared_aadmac_spkr_low;
 					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp spk buf@ 0x%x\r\n", path->pBuf);
 #endif					
 				} else if(path->sink==CSL_CAPH_DEV_DSP) {
@@ -986,13 +988,17 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 					{
 						dmaCH = CSL_CAPH_DMA_CH14;
 #if defined(ENABLE_DMA_VOICE)
-						path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SEC_MIC_EN);
+						//path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SEC_MIC_EN);
+						csl_arm2sp_shared_mem = (AP_SharedMem_t *)ARM2SP_GetPhysicalSharedMemoryAddress();
+						path->pBuf = (void *)csl_arm2sp_shared_mem->shared_aadmac_sec_mic_low;
 						Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp sec buf@ 0x%x\r\n", path->pBuf);
 #endif						
 					} else { 
 						dmaCH = CSL_CAPH_DMA_CH13;
 #if defined(ENABLE_DMA_VOICE)
-						path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_PRI_MIC_EN);
+						//path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_PRI_MIC_EN);
+						csl_arm2sp_shared_mem = (AP_SharedMem_t *)ARM2SP_GetPhysicalSharedMemoryAddress();
+						path->pBuf = (void *)csl_arm2sp_shared_mem->shared_aadmac_pri_mic_low;
 						Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp pri buf@ 0x%x\r\n", path->pBuf);
 #endif						
 					}
@@ -1449,10 +1455,7 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 		}
 	}
 
-	//path->sw[blockIdx].FIFO_dst2Addr = path->sw[blockIdx].FIFO_dstAddr; //hw
 	swCfg->status = csl_caph_switch_config_channel(path->sw[blockIdx]);
-	//path->sw[blockIdx].FIFO_dst2Addr = path->sw[blockIdx].FIFO_dstAddr; //hw
-	//csl_caph_switch_add_dst(path->sw[blockIdx].chnl, path->sw[blockIdx].FIFO_dst2Addr);
 
 	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_srcAddr, pathID);
 	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dstAddr, pathID);
@@ -2372,6 +2375,7 @@ static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
                                           CSL_CAPH_PathID pathID)
 {
     CSL_CAPH_CFIFO_FIFO_e fifo = CSL_CAPH_CFIFO_NONE;
+	CSL_CAPH_ARM_DSP_e owner = CSL_CAPH_ARM;
     UInt32 fifoAddr = 0;
 
     if ((dmaCH == CSL_CAPH_DMA_NONE)||(pathID == 0)) return;
@@ -2383,8 +2387,11 @@ static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
 
     if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
     {
-        csl_caph_dma_clear_intr(dmaCH, CSL_CAPH_ARM);
-        csl_caph_dma_disable_intr(dmaCH, CSL_CAPH_ARM);
+#if !defined(ENABLE_DMA_LOOPBACK)
+		if(dmaCH>=CSL_CAPH_DMA_CH12 && dmaCH<=CSL_CAPH_DMA_CH14) owner = CSL_CAPH_DSP;
+#endif
+        csl_caph_dma_clear_intr(dmaCH, owner);
+        csl_caph_dma_disable_intr(dmaCH, owner);
         csl_caph_dma_stop_transfer(dmaCH);
         csl_caph_dma_release_channel(dmaCH); 
     }

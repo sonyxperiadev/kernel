@@ -722,7 +722,8 @@ void AUDDRV_EnableDSPInput (
 #if defined(ENABLE_DMA_VOICE)
 			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
-			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+			//audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0 ); //no second mic on lmp
 #else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 0, 0, 0, 0 );
@@ -733,7 +734,8 @@ void AUDDRV_EnableDSPInput (
 #if defined(ENABLE_DMA_VOICE)
 			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
-			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+			//audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0 ); //no second mic on lmp
 #else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 1, 0, 0, 0);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 1, 0, 0, 0 );

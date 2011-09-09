@@ -302,8 +302,9 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
 #if defined(ENABLE_DMA_VOICE)
-	csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
-	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
+	//csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
+	csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN)); //LMP does not enable secondary mic
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 ); //different sequence with rtos, to avoid ihf noise
 #else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
 #endif	
@@ -465,18 +466,16 @@ void AUDDRV_Telephony_Deinit (void *pData)
 		audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, FALSE, 0, 0, 0, 0 );
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, FALSE, 0, 0, 0, 0 );
 	
-		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
+		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 ); //different sequence with rtos, caph clock may be turned off in AUDDRV_Telephony_DeinitHW
 #if defined(ENABLE_DMA_VOICE)
-		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN);
+		//csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN | (UInt16)DSP_AADMAC_SEC_MIC_EN);
+		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN); //no second mic on lmp
 #endif
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
-		OSTASK_Sleep( 3 ); //make sure audio is off
+		OSTASK_Sleep( 3 ); //make sure audio is off, rtos does not have this.
 
 		AUDDRV_Telephony_DeinitHW(pData);
-#if defined(ENABLE_DMA_VOICE)
-		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_PRI_MIC_EN|(UInt16)DSP_AADMAC_SEC_MIC_EN);
-#endif
 	}
 
 	if (AUDIO_CHNL_BLUETOOTH == AUDDRV_GetAudioMode() )
