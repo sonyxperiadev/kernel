@@ -55,6 +55,10 @@
 #include <plat/kona_avs.h>
 #endif
 
+#ifdef CONFIG_UNICAM
+#include <plat/kona_unicam.h>
+#endif
+
 #ifdef CONFIG_KONA_POWER_MGR
 #include <plat/pwr_mgr.h>
 
@@ -732,6 +736,23 @@ static struct platform_device board_spum_device = {
        .id             =       0,
        .resource       =       board_spum_resource,
        .num_resources  =       ARRAY_SIZE(board_spum_resource),
+#endif
+
+#ifdef CONFIG_UNICAM
+static struct kona_unicam_platform_data unicam_pdata =
+{
+	.csi0_gpio = 12,
+	.csi1_gpio = 13,
+};
+
+static struct platform_device board_unicam_device = {
+	.name = "bcm_unicam",
+	.id = 1,
+	.resource = board_sdio1_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
+	.dev      = {
+		.platform_data = &unicam_pdata,
+	},
 };
 #endif
 
@@ -766,8 +787,13 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_KONA_AVS
 	&kona_avs_device,
 #endif
+
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
        &board_spum_device,
+#endif
+
+#ifdef CONFIG_UNICAM
+       &board_unicam_device,
 #endif
 };
 
