@@ -11,15 +11,15 @@
 #	both modified:      arch/arm/configs/bcm28160_tablet_android_defconfig (fixed by script)
 #	both modified:      arch/arm/configs/bcm28160_tablet_defconfig (fixed by script)
 #	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_defconfig (fixed by script)
-#	both modified:      arch/arm/mach-island/clock_island.c
-#	both modified:      arch/arm/mach-island/configs/linux.config
-#	both modified:      arch/arm/mach-island/include/mach/clock.h
+#	both modified:      arch/arm/mach-island/clock_island.c (fixed by Ray Jui)
+#	both modified:      arch/arm/mach-island/configs/linux.config (fixed by Ray Jui)
+#	both modified:      arch/arm/mach-island/include/mach/clock.h (fixed by Ray Jui)
 #	both modified:      arch/arm/tools/mach-types (fixed by Sherman Yin)
 #	both modified:      drivers/char/broadcom/Kconfig (fixed by Sherman Yin)
 #	both modified:      drivers/i2c/Makefile (fixed by Sherman Yin)
 #	both modified:      drivers/misc/vc04_services/vc_omx/Makefile (fixed by Sherman Yin)
 #	both modified:      drivers/usb/gadget/dwc_otg/driver/dwc_otg_pcd_linux.c (fixed by Sherman Yin)
-#	both modified:      kernel/printk.c
+#	both modified:      kernel/printk.c (fixed by Ray Jui)
 #	deleted by us:      vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv.c (fixed by Edmund Szeto)
 
 conflict undetected by git status:

@@ -53,27 +53,6 @@ static struct gen_clk_ops root_ccu_clk_ops =
 {
 	.init		= 	root_ccu_clk_init,
 };
-/*
-Proc clocks
-*/
-static struct proc_clock CLK_NAME(arm) = {
-	.clk	=	{
-		.name	=	PROC_CLK_NAME_STR,
-		.id	=	-1,
-		.ops	=	&proc_clk_ops,
-	},
-
-	.proc_clk_mgr_base = PROC_CLK_BASE_ADDR,
-   .proc_clk_mgr_pll_ctrl_offset = KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET,
-   .proc_clk_mgr_pll_ctrl_div_mask = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK,
-   .proc_clk_mgr_pll_ctrl_div_shift = KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT,
-   .proc_clk_mgr_pll_arm_a_offset = KPROC_CLK_MGR_REG_PLLARMA_OFFSET,
-   .proc_clk_mgr_pll_arm_a_div_mask = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK,
-   .proc_clk_mgr_pll_arm_a_div_shift = KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT,
-   .proc_clk_mgr_pll_arm_b_offset = KPROC_CLK_MGR_REG_PLLARMB_OFFSET,
-   .proc_clk_mgr_pll_arm_b_div_frac_mask = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK,
-   .proc_clk_mgr_pll_arm_b_div_frac_shift = KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT,
-};
 
 /*
 Root CCU clock
@@ -5019,10 +4998,6 @@ int root_ccu_clk_init(struct clk* clk)
 /* table for registering clock */
 static struct __init clk_lookup island_clk_tbl[] =
 {
-<<<<<<< HEAD
-	BRCM_REGISTER_CLK(PROC_CLK_NAME_STR,NULL,arm),
-=======
-
 	/* All the CCUs are registered first */
 	BRCM_REGISTER_CLK(KPROC_CCU_CLK_NAME_STR,NULL,kproc),
 	BRCM_REGISTER_CLK(ROOT_CCU_CLK_NAME_STR,NULL,root),
@@ -5035,7 +5010,6 @@ static struct __init clk_lookup island_clk_tbl[] =
 
 	BRCM_REGISTER_CLK(ARM_PERI_CLK_NAME_STR,NULL,arm),
 	BRCM_REGISTER_CLK(ARM1_PERI_CLK_NAME_STR,NULL,arm1),
->>>>>>> map_integration
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),

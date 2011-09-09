@@ -17,16 +17,10 @@
 /*Defines used by Kona*/
 #define	CLK_WR_ACCESS_PASSWORD	0x00A5A5
 
-<<<<<<< HEAD
-
-#define  PROC_CLK_NAME_STR          "arm_clk"
-#define ROOT_CCU_CLK_NAME_STR			"root_ccu_clk"
-=======
 #define	ARM_PERI_CLK_NAME_STR			"arm_clk"
 #define	ARM1_PERI_CLK_NAME_STR			"arm1_clk"
 #define KPROC_CCU_CLK_NAME_STR			"proc_ccu"
 #define ROOT_CCU_CLK_NAME_STR			"root_ccu"
->>>>>>> map_integration
 #define CRYSTAL_REF_CLK_NAME_STR		"crystal"
 #define	FRAC_1M_REF_CLK_NAME_STR		"frac_1m_clk"
 #define	REF_96M_VARVDD_REF_CLK_NAME_STR		"ref_96m_varvdd_clk"
