@@ -193,7 +193,11 @@ static char *android_functions_all[] = {
 
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
+#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
+	.nluns		=	2,
+#else
 	.nluns		=	1,
+#endif
 	.vendor		=	"Broadcom",
 	.product	=	"Rhea",
 	.release	=	0x0100

@@ -18,11 +18,14 @@
 #include <mach/rdb/brcm_rdb_csr.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 #include <mach/rdb/brcm_rdb_root_clk_mgr_reg.h>
+#include <mach/rdb/brcm_rdb_gicdist.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
 
-extern void enter_wfi_state(void);
+extern void enter_wfi(void);
+extern void dormant_enter(void);
+
 static u32 force_retention = 0;
 static u32 pm_debug = 2;
 static u32 pm_en_self_refresh = 0;
@@ -91,6 +94,19 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.state = RHEA_STATE_C0,
 		.enter = enter_idle_state,
 	},
+
+#ifdef CONFIG_RHEA_DORMANT_MODE
+
+	{
+		.name = "C1",
+		.desc = "dormant",
+		.flags = CPUIDLE_FLAG_TIME_VALID,
+		.latency = 1000,
+		.target_residency = 1000,
+		.state = RHEA_STATE_C1,
+		.enter = enter_idle_state,
+	},
+#else
 	{
 		.name = "C1",
 		.desc = "retention",
@@ -100,6 +116,7 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.state = RHEA_STATE_C1,
 		.enter = enter_idle_state,
 	},
+#endif
 };
 
 
@@ -225,6 +242,43 @@ static int print_clock_count(void)
 
 }
 
+/*
+For timebeing, COMMON_INT_TO_AC_EVENT related functions are added here
+We may have to move these fucntions to somewhere else later
+*/
+static void clear_wakeup_interrupts(void)
+{
+// clear interrupts for COMMON_INT_TO_AC_EVENT
+	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR0_OFFSET);
+	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR1_OFFSET);
+	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR2_OFFSET);
+	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR3_OFFSET);
+	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR4_OFFSET);
+	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR5_OFFSET);
+	writel(0,KONA_CHIPREG_VA+CHIPREG_ENABLE_CLR6_OFFSET);
+
+}
+
+static void config_wakeup_interrupts(void)
+{
+	/*all enabled interrupts can trigger COMMON_INT_TO_AC_EVENT*/
+
+	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET1_OFFSET),
+		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET0_OFFSET);
+	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET2_OFFSET),
+		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET1_OFFSET);
+	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET3_OFFSET),
+		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET2_OFFSET);
+	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET4_OFFSET),
+		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET3_OFFSET);
+	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET5_OFFSET),
+		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET4_OFFSET);
+	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET6_OFFSET),
+		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET5_OFFSET);
+	writel(readl(KONA_GICDIST_VA+GICDIST_ENABLE_SET7_OFFSET),
+		KONA_CHIPREG_VA+CHIPREG_ENABLE_SET6_OFFSET);
+}
+
 int print_sw_event_info()
 {
     u32 reg_val = 0;
@@ -278,7 +332,7 @@ int enter_idle_state(struct kona_idle_state* state)
 		}
 	}
 
-	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
+	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,SOFTWARE_0_EVENT-1);
 
 	if(pm_en_self_refresh)
@@ -301,17 +355,32 @@ int enter_idle_state(struct kona_idle_state* state)
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
 
+	clear_wakeup_interrupts();
+	config_wakeup_interrupts();
+
 	if(force_retention)
 		enable_sleep_prevention_clock(0);
 
 	if(state->state == RHEA_STATE_C1)
 	{
-		writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 		pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 		pi_enable(pi,0);
-	}
+#ifdef CONFIG_RHEA_DORMANT_MODE
+	/*Ignore dap power-up request and clear the bits that disallow dormant*/
+	/*TBD - Change pwrmgr interface function*/
+	writel(0x06600000,
+		KONA_PWRMGR_VA+PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+	dormant_enter();
 
-	enter_wfi_state();
+#else
+		writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+		enter_wfi();
+#endif
+	}
+	else
+	{
+		enter_wfi(); /*C0 - simple WFI*/
+	}
 
 	if(pm_debug != 2)
 		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
@@ -320,7 +389,9 @@ int enter_idle_state(struct kona_idle_state* state)
 	if(state->state == RHEA_STATE_C1)
 	{
 		pi_enable(pi,1);
+#ifndef CONFIG_RHEA_DORMANT_MODE
 		writel(0, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+#endif
 	}
 
 	if(pm_en_self_refresh)
@@ -330,11 +401,57 @@ int enter_idle_state(struct kona_idle_state* state)
 		reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
 		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	}
-	
-	pwr_mgr_process_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT,true);
+#ifdef PM_DEBUG
+	if(pwr_mgr_is_event_active(COMMON_INT_TO_AC_EVENT))
+	{
+		pm_dbg("%s:GIC act status1 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS1_OFFSET));
+		pm_dbg("%s:GIC act status2 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS2_OFFSET));
+
+		pm_dbg("%s:GIC act status3 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS3_OFFSET));
+
+		pm_dbg("%s:GIC act status4 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS4_OFFSET));
+
+		pm_dbg("%s:GIC act status5 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS5_OFFSET));
+
+		pm_dbg("%s:GIC act status6 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS6_OFFSET));
+
+		pm_dbg("%s:GIC act status7 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_ACTIVE_STATUS7_OFFSET));
+
+		pm_dbg("%s:GIC pending status1 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET1_OFFSET));
+		pm_dbg("%s:GIC pending status2 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET2_OFFSET));
+
+		pm_dbg("%s:GIC pending status3 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
+
+		pm_dbg("%s:GIC pending status4 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET4_OFFSET));
+
+		pm_dbg("%s:GIC pending status5 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET5_OFFSET));
+
+		pm_dbg("%s:GIC pending status6 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET6_OFFSET));
+
+		pm_dbg("%s:GIC pending status7 = %x\n",__func__,
+			readl(KONA_GICDIST_VA+GICDIST_PENDING_SET7_OFFSET));
+
+	}
+#endif
+
+	clear_wakeup_interrupts();
+	pwr_mgr_process_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT,true);
 	pwr_mgr_process_events(USBOTG_EVENT,SOFTWARE_0_EVENT-1,true);
 
-	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
+	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,SOFTWARE_0_EVENT-1);
 
 	if(force_retention)

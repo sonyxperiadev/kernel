@@ -999,9 +999,12 @@ asmlinkage int vprintk(const char *fmt, va_list args)
 
 	p = printk_buf;
 
+<<<<<<< HEAD
 	/* Send printk buffer to MIPI STM trace hardware too if enable */
 	stm_dup_printk(printk_buf, printed_len);
 
+=======
+>>>>>>> mps-lmp-3.0
 	/* Read log level and handle special printk prefix */
 	plen = log_prefix(p, &current_log_level, &special);
 	if (plen) {

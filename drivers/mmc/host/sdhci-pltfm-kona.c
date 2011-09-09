@@ -535,7 +535,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 		}
 		gpio_direction_input(dev->cd_gpio);
 
-		ret = request_irq(gpio_to_irq(dev->cd_gpio),
+		ret = request_threaded_irq(gpio_to_irq(dev->cd_gpio),
+			NULL,
 			sdhci_pltfm_cd_interrupt,
 			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
 			"sdio cd",

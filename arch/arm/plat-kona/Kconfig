@@ -102,7 +102,7 @@ config BCM_RAM_START_RESERVED_SIZE
 	 may be used for LCD frame buffer, DSP, modem, etc.
 
 config KONA_CPU_PM_HANDLER
-	bool "Enable Kona platform PM (idle/suspend) hanlder."
+	bool "Enable Kona platform PM (idle/suspend) handler."
 	depends on CPU_IDLE || SUSPEND
 	help
 	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.
@@ -128,5 +128,17 @@ config KONA_AVS
        bool "Enable Kona AVS driver"
        help
 	Say Y if you want to enable Kona AVS  driver
+
+config KONA_ATAG_DT
+       bool "Enable ATAG-based DT support"
+       select USE_OF
+       select OF
+       select OF_FLATTREE
+       select OF_EARLY_FLATTREE
+       select DTC
+       default n
+       help
+         Say Y if you want to enable ATAG-based DeviceTree
+
 endmenu
 

@@ -19,9 +19,11 @@ obj-$(CONFIG_HOTPLUG_CPU)  += hotplug.o
 obj-$(CONFIG_ARCH_REQUIRE_GPIOLIB)  += gpio.o
 obj-$(CONFIG_HAVE_CLK) += clock.o
 obj-$(CONFIG_MACH_RHEA_RAY) += chal/
+obj-$(CONFIG_MACH_RHEA_DALTON) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += chal/
 obj-$(CONFIG_MACH_RHEA_BERRI) += chal/
 obj-$(CONFIG_MACH_RHEA_RAY) += csl/
+obj-$(CONFIG_MACH_RHEA_DALTON) += csl/
 obj-$(CONFIG_MACH_RHEA_RAY_EDN1X) += csl/
 obj-$(CONFIG_MACH_RHEA_BERRI) += csl/
 obj-$(CONFIG_MACH_SAMOA_RAY) += chal/
@@ -34,4 +36,5 @@ obj-$(CONFIG_KONA_POWER_MGR) += pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += pi_mgr.o
 obj-$(CONFIG_KONA_CPU_FREQ_DRV) += kona_cpufreq.o
 obj-$(CONFIG_KONA_AVS) += kona_avs.o
+obj-$(CONFIG_KONA_ATAG_DT) += atag_dt.o
 

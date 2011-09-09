@@ -1,3 +1,21 @@
+2011.09.08 mps-lmp-3.0 -> map_30work_staging merge
+
+# Unmerged paths:
+#   (use "git add/rm <file>..." as appropriate to mark resolution)
+#
+#	both modified:      arch/arm/mach-island/common.c
+#	both modified:      arch/arm/mach-rhea/rhea_ray.c (fixed by Sherman Yin)
+#	both modified:      arch/arm/tools/mach-types (fixed by Sherman Yin)
+#	both modified:      drivers/mfd/Kconfig (fixed by Sherman Yin)
+#	both modified:      drivers/power/Kconfig (fixed by Sherman Yin)
+#	both modified:      drivers/power/Makefile (fixed by Sherman Yin)
+#	both modified:      kernel/printk.c
+
+conflicts undetected by git status:
+arch/arm/configs/bcm21654_rhearay_defconfig
+arch/arm/configs/bcm21654_rhearay_edn1x_defconfig
+
+
 2011.09.08 map_integration -> map_30work_staging merge
 
 # Unmerged paths:

@@ -53,13 +53,8 @@ the GPL, without Broadcom's express prior written consent.
 /* Always check for idle at every reset:  TODO: make this configurable? */
 #define V3D_RESET_IMPLIES_ASSERT_IDLE
 
-//#define V3D_DEBUG
-#ifdef V3D_DEBUG
-	#define dbg_print(fmt, arg...) \
-			printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
-#else
-	#define dbg_print(fmt, arg...)	do { } while (0)
-#endif
+#define dbg_print(fmt, arg...) \
+		printk(KERN_DEBUG "%s():" fmt, __func__, ##arg)
 
 #define err_print(fmt, arg...) \
 		printk(KERN_ERR "%s():" fmt, __func__, ##arg)
@@ -466,7 +461,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			{
 				down(&v3d_state.work_lock);
 				dev->mem_slot = get_reloc_mem_slot();
-				if( dev->mem_slot == MEM_SLOT_UNAVAILABLE )
+				if( dev->mem_slot == MEM_SLOT_UNAVAILABLE || !v3d_mempool_base )
 				{
 					err_print("Failed to find slot in relocatable heap\n");
 					up(&v3d_state.work_lock);
@@ -725,11 +720,6 @@ int __init v3d_init(void)
 
     /* initialize the V3D struct */
 	memset(&v3d_state, 0, sizeof(v3d_state));
-
-	if( !v3d_mempool_base ){
-		err_print("Failed: Required relocatable heap memory is not present\n");
-		return -EINVAL;
-	}
 
 	//Calculate relocatable heap Chunks size based on max users that can fit into v3d_mempool
 	v3d_relocatable_chunk_size = v3d_mempool_size / max_slots;
