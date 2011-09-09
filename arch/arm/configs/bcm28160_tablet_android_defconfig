@@ -1,7 +1,7 @@
 #
 # Automatically generated make config: don't edit
 # Linux kernel version: 2.6.35.7
-# Wed Sep  7 17:08:55 2011
+# Fri Sep  9 07:37:35 2011
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -252,7 +252,7 @@ CONFIG_MMU=y
 # CONFIG_PLAT_SPEAR is not set
 # CONFIG_ARCH_BCM2708 is not set
 CONFIG_ARCH_KONA=y
-CONFIG_BCM_ZRELADDR=0x88008000
+CONFIG_BCM_ZRELADDR=0x80208000
 
 #
 # Broadcom KONA architecture based implementations
@@ -1368,7 +1368,7 @@ CONFIG_USB_DYNAMIC_MINORS=y
 # CONFIG_USB_C67X00_HCD is not set
 CONFIG_USB_EHCI_HCD=y
 CONFIG_USB_EHCI_ROOT_HUB_TT=y
-CONFIG_USB_EHCI_TT_NEWSCHED=y
+# CONFIG_USB_EHCI_TT_NEWSCHED is not set
 CONFIG_USB_BCM_ISLAND=y
 CONFIG_USB_EHCI_BCM=y
 # CONFIG_USB_OXU210HP_HCD is not set
