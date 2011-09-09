@@ -331,13 +331,8 @@ static struct platform_device board_kona_otg_platform_device =
 /* FIXME need revise these IDs*/
 #define UMS_PRODUCT_ID          PRODUCT_ID
 #define UMS_ADB_PRODUCT_ID      PRODUCT_ID
-<<<<<<< HEAD
 #define RNDIS_PRODUCT_ID        0x0ffe
 #define RNDIS_ADB_PRODUCT_ID    0x0ffc
-=======
-#define RNDIS_PRODUCT_ID        0x4e13
-#define RNDIS_ADB_PRODUCT_ID    0x4e14
->>>>>>> mps-lmp-3.0
 
 #if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
 static struct usb_mass_storage_platform_data mass_storage_pdata = {

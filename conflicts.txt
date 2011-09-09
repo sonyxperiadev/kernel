@@ -3,13 +3,13 @@
 # Unmerged paths:
 #   (use "git add/rm <file>..." as appropriate to mark resolution)
 #
-#	both modified:      arch/arm/mach-island/common.c
+#	both modified:      arch/arm/mach-island/common.c (fixed by Ray Jui)
 #	both modified:      arch/arm/mach-rhea/rhea_ray.c (fixed by Sherman Yin)
 #	both modified:      arch/arm/tools/mach-types (fixed by Sherman Yin)
 #	both modified:      drivers/mfd/Kconfig (fixed by Sherman Yin)
 #	both modified:      drivers/power/Kconfig (fixed by Sherman Yin)
 #	both modified:      drivers/power/Makefile (fixed by Sherman Yin)
-#	both modified:      kernel/printk.c
+#	both modified:      kernel/printk.c (fixed by Ray Jui)
 
 conflicts undetected by git status:
 arch/arm/configs/bcm21654_rhearay_defconfig
