@@ -67,7 +67,13 @@ typedef enum
 
 } AADMA_Device_t;
 
-typedef void (*AADMA_DeviceHandler_t)( AADMA_Device_t dev, int dma_status, void *userData );
+typedef struct
+{
+   int dma_status;
+
+} AADMA_Status_t;
+
+typedef void (*AADMA_DeviceHandler_t)( AADMA_Device_t dev, AADMA_Status_t *dma_status, void *userData );
 
 /* ---- Constants and Types ---------------------------------------------- */
 

@@ -133,7 +133,7 @@
 (register_bits).reg_offset)
 
 /*Helper Macros*/
-#define CLK_FLG_ENABLED(clk,flg) ((clk)->flags & flg)
+#define CLK_FLG_ENABLED(clk,flg) (!!((clk)->flags & flg))
 #define GET_CLK_NAME_STR(x) ((x)->clk.name)
 #define CLK_NAME(x) clk_##x
 #define CLK_PTR(x)  (&(clk_##x).clk)

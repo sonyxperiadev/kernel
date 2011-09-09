@@ -37,6 +37,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/rdb/brcm_rdb_v3d.h>
 #include <mach/rdb/brcm_rdb_mm_rst_mgr_reg.h>
 #include <mach/gpio.h>
+#include <plat/pi_mgr.h>
 
 #define V3D_DEV_NAME	"v3d"
 
@@ -52,13 +53,8 @@ the GPL, without Broadcom's express prior written consent.
 /* Always check for idle at every reset:  TODO: make this configurable? */
 #define V3D_RESET_IMPLIES_ASSERT_IDLE
 
-//#define V3D_DEBUG
-#ifdef V3D_DEBUG
-	#define dbg_print(fmt, arg...) \
-			printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
-#else
-	#define dbg_print(fmt, arg...)	do { } while (0)
-#endif
+#define dbg_print(fmt, arg...) \
+		printk(KERN_DEBUG "%s():" fmt, __func__, ##arg)
 
 #define err_print(fmt, arg...) \
 		printk(KERN_ERR "%s():" fmt, __func__, ##arg)
@@ -98,6 +94,7 @@ static struct {
 	spinlock_t trace_lock;
 	int num_trace_ents;
 	struct trace_entry *tracebuf;
+	struct pi_mgr_dfs_node* dfs_node;
 } v3d_state;
 
 typedef struct {
@@ -146,16 +143,17 @@ static int setup_v3d_clock(void)
 	unsigned long rate;
 	int rc;
 
+	v3d_state.dfs_node = pi_mgr_dfs_add_request("v3d", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
+	if (!v3d_state.dfs_node)
+	{
+	    err_print("Failed to add dfs request for V3D\n");
+	    return  -EIO;
+	}
+
 	v3d_clk = clk_get(NULL, "v3d_axi_clk");
 	if (!v3d_clk) {
 		err_print("%s: error get clock\n", __func__);
 		return -EIO;
-	}
-
-	rc = clk_set_rate( v3d_clk, 249600000);
-	if (rc) {
-		//err_print("%s: error changing clock rate\n", __func__);
-		//return -EIO;
 	}
 
 	rc = clk_enable(v3d_clk);
@@ -463,7 +461,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			{
 				down(&v3d_state.work_lock);
 				dev->mem_slot = get_reloc_mem_slot();
-				if( dev->mem_slot == MEM_SLOT_UNAVAILABLE )
+				if( dev->mem_slot == MEM_SLOT_UNAVAILABLE || !v3d_mempool_base )
 				{
 					err_print("Failed to find slot in relocatable heap\n");
 					up(&v3d_state.work_lock);
@@ -722,11 +720,6 @@ int __init v3d_init(void)
 
     /* initialize the V3D struct */
 	memset(&v3d_state, 0, sizeof(v3d_state));
-
-	if( !v3d_mempool_base ){
-		err_print("Failed: Required relocatable heap memory is not present\n");
-		return -EINVAL;
-	}
 
 	//Calculate relocatable heap Chunks size based on max users that can fit into v3d_mempool
 	v3d_relocatable_chunk_size = v3d_mempool_size / max_slots;

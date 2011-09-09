@@ -141,7 +141,11 @@ static char *android_functions_all[] = {
 #define BRCM_RNDIS_PROD_ID 0xABCD
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
+#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
+	.nluns		=	2,
+#else
 	.nluns		=	1,
+#endif
 	.vendor		=	"Broadcom",
 	.product	=	"Samoa",
 	.release	=	0x0100
@@ -405,11 +409,6 @@ static struct resource kona_otg_platform_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = HSOTG_CTRL_BASE_ADDR,
-		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[2] = {
 		.start = BCM_INT_ID_USB_HSOTG,
 		.end = BCM_INT_ID_USB_HSOTG,
 		.flags = IORESOURCE_IRQ,

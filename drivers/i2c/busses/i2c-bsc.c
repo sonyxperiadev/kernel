@@ -12,6 +12,7 @@
 * consent.
 *****************************************************************************/
 
+#include <linux/device.h>
 #include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
@@ -725,10 +726,16 @@ static void client_speed_set(struct i2c_adapter *adapter, unsigned short addr)
 			BSC_DBG(dev, "client addr=0x%x, speed=0x%x\n",
 					client->addr, pd->i2c_speed);
 			
-			if (pd->i2c_speed < BSC_BUS_SPEED_MAX)
+			if (I2C_SPEED_IS_VALID(pd) && (pd->i2c_speed < BSC_BUS_SPEED_MAX))  {
 				set_speed = pd->i2c_speed;
-			else
+				BSC_DBG(dev,"i2c addr=0x%x dynamic slave speed:%d\n",
+							client->addr, set_speed);
+			}
+			else	{
 				set_speed = dev->speed;
+				BSC_DBG(dev,"i2c addr=0x%x using default speed:%d\n",
+							client->addr, set_speed);
+			}
 		}
 		else {
 			BSC_DBG(dev, "client addr=0x%x no platform data found!\n", client->addr);

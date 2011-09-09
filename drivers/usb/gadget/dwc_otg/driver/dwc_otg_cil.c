@@ -1220,6 +1220,7 @@ void dwc_otg_core_init(dwc_otg_core_if_t * core_if)
 
 	core_if->adp_enable = core_if->core_params->adp_supp_enable;
 	core_if->power_down = core_if->core_params->power_down;
+	core_if->stop_phy_clk = core_if->core_params->stop_phy_clk;
 		
 	/* Initialize parameters from Hardware configuration registers. */
 	dev_if->num_in_eps = calc_num_in_eps(core_if);
@@ -4822,6 +4823,7 @@ static int dwc_otg_setup_params(dwc_otg_core_if_t * core_if)
 					dwc_param_rx_thr_length_default);
 	dwc_otg_set_param_ahb_thr_ratio(core_if, dwc_param_ahb_thr_ratio_default);
 	dwc_otg_set_param_power_down(core_if, dwc_param_power_down_default);
+	dwc_otg_set_param_stop_phy_clk(core_if, dwc_param_stop_phy_clk_default);
 	dwc_otg_set_param_otg_ver(core_if, dwc_param_otg_ver_default);
 	dwc_otg_set_param_adp_enable(core_if, dwc_param_adp_enable_default);
 	return 0;
@@ -5937,6 +5939,21 @@ int dwc_otg_set_param_power_down(dwc_otg_core_if_t * core_if, int32_t val)
 int32_t dwc_otg_get_param_power_down(dwc_otg_core_if_t *core_if)
 {
 	return core_if->core_params->power_down;
+}
+
+int dwc_otg_set_param_stop_phy_clk(dwc_otg_core_if_t * core_if, int32_t val)
+{
+	if (DWC_OTG_PARAM_TEST(val, 0, 1)) {
+		DWC_WARN("`%d' invalid for parameter `stop_phy_clk'\n", val);
+		return -DWC_E_INVALID;
+	}
+	core_if->core_params->stop_phy_clk = val;
+	return 0;
+}
+
+int32_t dwc_otg_get_param_stop_phy_clk(dwc_otg_core_if_t * core_if)
+{
+	return core_if->core_params->stop_phy_clk;
 }
 
 int dwc_otg_set_param_otg_ver(dwc_otg_core_if_t * core_if,

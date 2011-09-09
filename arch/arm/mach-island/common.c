@@ -297,11 +297,6 @@ static struct resource kona_otg_platform_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = HSOTG_CTRL_BASE_ADDR,
-		.end = HSOTG_CTRL_BASE_ADDR + SZ_4K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[2] = {
 		.start = BCM_INT_ID_USB_HSOTG,
 		.end = BCM_INT_ID_USB_HSOTG,
 		.flags = IORESOURCE_IRQ,
@@ -319,7 +314,7 @@ static struct platform_device board_kona_otg_platform_device =
 
 #if defined(CONFIG_USB_ANDROID)
 /* FIXME borrow GOOGLE vendor ID to use windows driver */
-#define PID_PLATFORM				0xE600
+#define PID_PLATFORM				0xE700
 #define FD_MASS_PRODUCT_ID			0x0001
 #define FD_SICD_PRODUCT_ID			0x0002
 #define FD_VIDEO_PRODUCT_ID			0x0004
@@ -341,7 +336,11 @@ static struct platform_device board_kona_otg_platform_device =
 
 #if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
-   .nluns = 1,
+#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
+	.nluns		=	2,
+#else
+	.nluns		=	1,
+#endif
    .vendor = "Broadcom",
    .product = "Media Broadcom Reference Design",
    .release = 0x0100,

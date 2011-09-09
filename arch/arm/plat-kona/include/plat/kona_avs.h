@@ -30,10 +30,10 @@ struct kona_avs_pdata
     u32* lvt_pmos_bin;
     u32* lvt_nmos_bin;
 
-    u32** svt_silicon_type_lut;
-    u32** lvt_silicon_type_lut;
+    u32* svt_silicon_type_lut;
+    u32* lvt_silicon_type_lut;
 
-    u32** volt_table;
+    u8** volt_table;
 
     u32 otp_row;
 
@@ -41,6 +41,6 @@ struct kona_avs_pdata
 
 
 u32 kona_avs_get_solicon_type(void);
-u32* kona_avs_get_volt_table(void);
+u8* kona_avs_get_volt_table(void);
 
 #endif /*__KONA_AVS___*/

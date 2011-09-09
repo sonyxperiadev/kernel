@@ -3,7 +3,7 @@ menu	"Rhea SoC based Machine types"
 
 choice
 	prompt "Rhea SoC based board type"
-	default MACH_RHEA_RAY	
+	default MACH_RHEA_RAY
 
 config MACH_RHEA_RAY
 	bool "Support Broadcom Rhea Ray board"
@@ -15,12 +15,32 @@ config MACH_RHEA_RAY_EDN1X
 	help
 	  Support for the Broadcom Rhea Ray EDN1X board.
 
+config MACH_RHEA_DALTON
+	bool "Support Nokia Dalton board"
+	help
+	  Support for the Nokia Dalton board.
+	  This will be based on RheaLC program and
+	  form one of the platforms for Nokia.
+	  Rhea plus delta RF modules.
+
 config MACH_HERA_RAY
         bool "Support Broadcom Hera Ray board"
         help
           Support for the Broadcom Hera Ray board.
 
+config MACH_RHEA_BERRI
+        bool "Support Broadcom Rhea Berri board"
+        help
+          Support for the Broadcom Rhea Berri board.
+
 endchoice
 
+config RHEA_DORMANT_MODE
+       bool "Enable dormant mode support for Rhea platform"
+       help
+	Say Y if you want to enable dormant mode support for Rhea platform
+
 endmenu
+
+
 

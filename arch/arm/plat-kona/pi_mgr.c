@@ -71,7 +71,6 @@ enum
 };
 
 static DEFINE_SPINLOCK(pi_mgr_lock);
-static DEFINE_SPINLOCK(pi_mgr_list_lock);
 
 struct pi_mgr_qos_node
 {
@@ -203,8 +202,6 @@ static int pi_def_init(struct pi *pi)
 	pi_dbg("%s:%s\n",__func__,pi->name);
 	if(pi->init)
 		return 0;
-	
-	pi->pm_qos = kzalloc(sizeof(*pi->pm_qos), GFP_KERNEL);
 
 	spin_lock(&pi_mgr_lock);
 	pi->init = 1;
@@ -236,7 +233,13 @@ static int pi_def_init(struct pi *pi)
 		pi->state_allowed = pi->num_states-1;
 		pi_dbg( "qos->default_latency = %d state_allowed = %d\n", qos->default_latency,pi->state_allowed );
 		if(pi->flags & UPDATE_PM_QOS)
-			pm_qos_add_request(pi->pm_qos, PM_QOS_CPU_DMA_LATENCY,PM_QOS_DEFAULT_VALUE);
+		{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
+			pi->pm_qos	= pm_qos_add_request(PM_QOS_CPU_DMA_LATENCY,PM_QOS_DEFAULT_VALUE);
+#else
+			pm_qos_add_request(&pi->pm_qos, PM_QOS_CPU_DMA_LATENCY,PM_QOS_DEFAULT_VALUE);
+#endif
+		}
 	}
 
 	if((pi->flags & PI_NO_DFS) == 0)
@@ -264,7 +267,6 @@ static int pi_def_init(struct pi *pi)
 		pi_dbg("%s: %s %s on init\n",__func__,pi->name,pi->flags & PI_ENABLE_ON_INIT ? "enable" : "disable" );
 
 		pi_enable(pi,pi->flags & PI_ENABLE_ON_INIT);
-		pwr_mgr_pi_set_wakeup_override(pi->id,true/*clear*/);
 	}
 	spin_unlock(&pi_mgr_lock);
 	printk(KERN_INFO " %s: count = %d\n",__func__,pi->usg_cnt);
@@ -500,8 +502,12 @@ static u32 pi_mgr_qos_update(struct pi_mgr_qos_node* node, u32 pi_id, int action
 
 		if(pi->flags & UPDATE_PM_QOS)
 		{
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 36))
 			BUG_ON(pi->pm_qos == NULL);
 			pm_qos_update_request(pi->pm_qos, new_val);
+#else
+			pm_qos_update_request(&pi->pm_qos, new_val);
+#endif
 		}
 
 	}

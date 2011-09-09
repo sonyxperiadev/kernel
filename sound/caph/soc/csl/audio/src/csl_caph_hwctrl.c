@@ -39,8 +39,7 @@ Broadcom's express prior written consent.
 #include "osdw_caph_drv.h"
 #ifdef UNDER_LINUX
 #include <mach/io_map.h>
-#include "clock.h"
-#include "clk.h"
+#include <linux/clk.h>
 #endif
 
 //#define CONFIG_VOICE_LOOPBACK_TEST
@@ -141,7 +140,6 @@ static Boolean fmRunning = FALSE;
 static Boolean fmPlayTx = FALSE;
 static Boolean pcmRunning = FALSE;
 static Boolean ssp_bt_running = FALSE;
-static Boolean ssp_fm_running = FALSE;
 static CSL_CAPH_SWITCH_TRIGGER_e fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0; 
 static CSL_CAPH_SWITCH_TRIGGER_e fmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0; 
 #if defined(CNEON_MODEM) || defined(CNEON_COMMON)
@@ -569,7 +567,7 @@ static void csl_caph_hwctrl_PrintPath(CSL_CAPH_HWConfig_Table_t *path)
 {
 	if(!path) return;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[0-2]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[0]], path->blockIdx[0], blockName[path->block[1]], path->blockIdx[1], blockName[path->block[2]], path->blockIdx[2]));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "path %d caph block[0-2]:: %s-%d %s-%d %s-%d.\r\n", path->pathID, blockName[path->block[0]], path->blockIdx[0], blockName[path->block[1]], path->blockIdx[1], blockName[path->block[2]], path->blockIdx[2]));
 	if(path->block[3]!=CAPH_NONE)
 	{
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "caph block[3-5]:: %s-%d %s-%d %s-%d.\r\n", blockName[path->block[3]], path->blockIdx[3], blockName[path->block[4]], path->blockIdx[4], blockName[path->block[5]], path->blockIdx[5]));
@@ -1487,15 +1485,11 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 	//have to start dma in the end?
 	if(!(path->source==CSL_CAPH_DEV_DSP_throughMEM && path->sink==CSL_CAPH_DEV_IHF))//ihf call, dsp starts dma.
 	{
-		for(i=0; i<MAX_PATH_LEN; i++)
+		for(i=0; i<MAX_BLOCK_NUM; i++)
 		{
-			block = path->block[i];
-			if(block==CAPH_NONE) break;
-			if(block!=CAPH_DMA) continue;
-			blockIdx = path->blockIdx[i];
-			
-			csl_caph_dma_start_transfer(path->dma[blockIdx]);
-			Log_DebugPrintf(LOGID_SOC_AUDIO, "dma %d.\r\n", path->dma[blockIdx]);
+			if(!path->dma[i]) break;
+			csl_caph_dma_start_transfer(path->dma[i]);
+			Log_DebugPrintf(LOGID_SOC_AUDIO, "dma %d.\r\n", path->dma[i]);
 		}
 	}
 
@@ -1555,10 +1549,13 @@ static void csl_caph_ControlHWClock(Boolean enable)
     clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 #ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
                                 This is a workaround before a solution from clock */
-    if ( clkID[0]->use_cnt )
+
+   #if 0
+    if ( (clkID[0])->use_cnt )
     {
         clk_disable(clkID[0]);
     }
+    #endif
 #endif
 	clk_set_rate(clkID[0], 156000000);
     clk_enable(clkID[0]);
@@ -2155,6 +2152,7 @@ static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
     UInt32 fifoAddr = 0;
 
     if ((dmaCH == CSL_CAPH_DMA_NONE)||(pathID == 0)) return;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeDMA path %d, dma %d.\r\n", pathID, dmaCH);
     
     fifo = csl_caph_dma_get_csl_cfifo(dmaCH);
     fifoAddr = csl_caph_cfifo_get_fifo_addr(fifo);
@@ -2190,6 +2188,7 @@ static void csl_caph_hwctrl_closeCFifo(CSL_CAPH_CFIFO_FIFO_e fifo,
     UInt32 fifoAddr = 0;
     
     if((fifo == CSL_CAPH_CFIFO_NONE)||(pathID == 0)) return;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeCFifo path %d, fifo %d.\r\n", pathID, fifo);
 
     fifoAddr = csl_caph_cfifo_get_fifo_addr(fifo);
     csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
@@ -2275,6 +2274,7 @@ static void csl_caph_hwctrl_closeSwitchCH(CSL_CAPH_SWITCH_CONFIG_t switchCH,
                                           CSL_CAPH_PathID pathID)
 {
     if((switchCH.chnl == CSL_CAPH_SWITCH_NONE)||(pathID == 0)) return;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeSwitch path %d, sw %d.\r\n", pathID, switchCH);
 
     csl_caph_hwctrl_removeHWResource(switchCH.FIFO_srcAddr, pathID);
     csl_caph_hwctrl_removeHWResource(switchCH.FIFO_dstAddr, pathID);
@@ -2329,6 +2329,7 @@ static void csl_caph_hwctrl_closeSRCMixer(CSL_CAPH_SRCM_ROUTE_t routeConfig,
     CAPH_SRCMixer_FIFO_e chal_fifo = CAPH_CH_INFIFO_NONE;
 
     if(pathID == 0) return;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeSRCMixer path %d, in 0x%x, tap %d, out %d.\r\n", pathID, routeConfig.inChnl, routeConfig.tapOutChnl, routeConfig.outChnl);
 
     if (routeConfig.inChnl != CSL_CAPH_SRCM_INCHNL_NONE)
     {
@@ -2385,6 +2386,7 @@ static void csl_caph_hwctrl_closeSRCMixerOutput(CSL_CAPH_SRCM_ROUTE_t routeConfi
     CAPH_SRCMixer_FIFO_e chal_fifo = CAPH_CH_INFIFO_NONE;
 
     if(pathID == 0) return;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeSRCMixerOutput path %d, in 0x%x, tap %d, out %d.\r\n", pathID, routeConfig.inChnl, routeConfig.tapOutChnl, routeConfig.outChnl);
 
     if (routeConfig.tapOutChnl != CSL_CAPH_SRCM_TAP_CH_NONE)
     {
@@ -2433,6 +2435,7 @@ static void csl_caph_hwctrl_closeAudioH(CSL_CAPH_DEVICE_e dev,
     AUDDRV_PATH_Enum_t	audioh_path = AUDDRV_PATH_EARPICEC_OUTPUT;	
 
     if((dev == CSL_CAPH_DEV_NONE)||(pathID == 0)) return;
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeAudioH path %d, dev %d.\r\n", pathID, dev);
 
 	memset(&audiohBufAddr, 0, sizeof(CSL_CAPH_AUDIOH_BUFADDR_t));
     switch(dev)
@@ -3332,6 +3335,8 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 {
     CSL_CAPH_HWConfig_Table_t *path, *path2;
 	CSL_CAPH_PathID pathID2 = (CSL_CAPH_PathID)0;
+	CSL_CAPH_SRCM_INCHNL_e srcmIn;
+	int i;
 
     _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_DisablePath:: streamID: %d, pathID %d.\r\n",
             config.streamID, config.pathID));
@@ -3384,403 +3389,102 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
         return RESULT_ERROR;
     }
 
-    if ((path->source == CSL_CAPH_DEV_MEMORY)
-         &&((path->sink == CSL_CAPH_DEV_EP)
-	        ||(path->sink == CSL_CAPH_DEV_HS)
-	        ||(path->sink == CSL_CAPH_DEV_IHF)
-	        ||(path->sink == CSL_CAPH_DEV_VIBRA)
-            ||(path->sink2 == CSL_CAPH_DEV_EP)
-	        ||(path->sink2 == CSL_CAPH_DEV_HS)
-	        ||(path->sink2 == CSL_CAPH_DEV_IHF)
-	        ||(path->sink2 == CSL_CAPH_DEV_VIBRA)))
- 
-    {
-        // Stop DMA transfer, release channe
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
+#if !defined(ENABLE_DMA_VOICE)
+	if(path->sink==CSL_CAPH_DEV_DSP) //UL to dsp
+	{
+		// stop the src intc to dsp
+		if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)) srcmIn = EANC_MIC_UL_TO_DSP_CHNL;
+		else srcmIn = MAIN_MIC_UL_TO_DSP_CHNL;
+		csl_caph_intc_disable_tapout_intr(srcmIn, CSL_CAPH_DSP);
+	}
+#endif
 
-        // Stop and release all switch channels
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        if (path->sw[1].chnl != CSL_CAPH_SWITCH_NONE)        
-            csl_caph_hwctrl_closeSwitchCH(path->sw[1], path->pathID);
-        if (path->sw[2].chnl != CSL_CAPH_SWITCH_NONE)        
-            csl_caph_hwctrl_closeSwitchCH(path->sw[2], path->pathID);
+#if defined(ENABLE_DMA_ARM2SP)
+	if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
+	{
+		VPRIPCMDQ_SetARM2SP( 0, 0 ); //assume instance 1
+	}
+#endif
 
-        // Stop and release SRCMixer channels
-        csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[0], path->pathID);
-        if (path->srcmRoute[1].inChnl != CSL_CAPH_SRCM_INCHNL_NONE)        
-            csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[1], path->pathID);
-        // stop cfifo transfer, release fifo
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        // stop audioH
-        csl_caph_hwctrl_closeAudioH(path->sink, path->pathID);
-        if (path->sink2 != CSL_CAPH_DEV_NONE)        
-            csl_caph_hwctrl_closeAudioH(path->sink2, path->pathID);
-    }
-    else
-    if (((path->source == CSL_CAPH_DEV_DIGI_MIC)&&(path->sink == CSL_CAPH_DEV_MEMORY))
-        ||((path->source == CSL_CAPH_DEV_DIGI_MIC)&&(path->sink == CSL_CAPH_DEV_DSP_throughMEM))
-        ||((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(path->sink == CSL_CAPH_DEV_MEMORY))
-        ||((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(path->sink == CSL_CAPH_DEV_DSP_throughMEM)))
-        
-    {
-	    // Stop DMA transfer, release channe
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-        csl_caph_hwctrl_closeDMA(path->dma[1], path->pathID);
+	//stopping sequence may be important in some cases: dma, cfifo, switch, srcmixer, source/sink
+	for(i=0; i<MAX_BLOCK_NUM; i++)
+	{
+		if(!path->dma[i]) break;
+		csl_caph_hwctrl_closeDMA(path->dma[i], path->pathID);
+		path->dma[i] = 0;
+	}
 
-		// stop cfifo transfer, release fifo, deinit				
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        csl_caph_hwctrl_closeCFifo(path->cfifo[1], path->pathID);
-		// stop switch transfer, release channel, deinit				
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        csl_caph_hwctrl_closeSwitchCH(path->sw[1], path->pathID);
+	for(i=0; i<MAX_BLOCK_NUM; i++)
+	{
+		if(!path->cfifo[i]) break;
+		csl_caph_hwctrl_closeCFifo(path->cfifo[i], path->pathID);
+		path->cfifo[i] = CSL_CAPH_CFIFO_NONE;
+	}
 
-		// stop audioh						
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-    }    
-    else
-    if(((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(path->sink == CSL_CAPH_DEV_EP))
-        ||((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(path->sink == CSL_CAPH_DEV_HS))
-        ||((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC)&&(path->sink == CSL_CAPH_DEV_IHF)))
-    {
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-    }    
-    else
-    if (((path->source == CSL_CAPH_DEV_ANALOG_MIC)
-	    || (path->source == CSL_CAPH_DEV_HS_MIC)
-	    || (path->source == CSL_CAPH_DEV_DIGI_MIC_L)
-	    || (path->source == CSL_CAPH_DEV_DIGI_MIC_R)
-	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
-	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-	    && (path->sink == CSL_CAPH_DEV_MEMORY))
-    {
-	    // Stop DMA transfer, release channe
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-
-		// stop cfifo transfer, release fifo, deinit				
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-
-		// stop switch transfer, release channel, deinit
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-
-		// stop audioh, deinit						
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-    }
-    else
-    if ((path->source == CSL_CAPH_DEV_FM_RADIO)&&(path->sink == CSL_CAPH_DEV_MEMORY))
-    {
-		if(fmRecRunning)
+	if((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink == CSL_CAPH_DEV_MEMORY) && fmRecRunning)
+	{
+		//do not close switch in this case
+		fm_capture_cfifo = CSL_CAPH_CFIFO_NONE;
+		fmRecRunning = FALSE;
+	} else {
+		for(i=0; i<MAX_BLOCK_NUM; i++)
 		{
-            csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-            csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-            fm_capture_cfifo = CSL_CAPH_CFIFO_NONE;
-			fmRecRunning     = FALSE;
+			if(!path->sw[i].chnl) break;
+			csl_caph_hwctrl_closeSwitchCH(path->sw[i], path->pathID);
+			path->sw[i].chnl = CSL_CAPH_SWITCH_NONE;
 		}
-		else
+		if ((path->source == CSL_CAPH_DEV_FM_RADIO) || (path->sink == CSL_CAPH_DEV_FM_TX))
 		{
-            csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-            csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-            csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
 			if (fmRunning == TRUE)
 			{
 				csl_i2s_stop_tx(fmHandleSSP);
 				csl_i2s_stop_rx(fmHandleSSP);
 				fmRunning = FALSE;
 			}
+			if (path->sink == CSL_CAPH_DEV_FM_TX) fmPlayTx = FALSE;
 		}
-    }    
-    else
-    if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink == CSL_CAPH_DEV_FM_TX))
-    {
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        if (fmRunning == TRUE)
-        {
-            csl_i2s_stop_tx(fmHandleSSP);
-            csl_i2s_stop_rx(fmHandleSSP);            
-            fmRunning = FALSE;
-			fmPlayTx = FALSE;
-        }
-    }    
-    else
-    if ((path->source == CSL_CAPH_DEV_ANALOG_MIC)&&(path->sink == CSL_CAPH_DEV_FM_RADIO))
-    {
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-    }    
-    else
-    if ((path->source == CSL_CAPH_DEV_FM_RADIO) &&
-        ((path->sink == CSL_CAPH_DEV_EP) ||
-         (path->sink == CSL_CAPH_DEV_HS)))
-    {
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-
-        // stop audioh, deinit				
-        csl_caph_hwctrl_closeAudioH(path->sink, path->pathID);
-        if (fmRunning == TRUE)
-        {
-            csl_i2s_stop_tx(fmHandleSSP);
-            csl_i2s_stop_rx(fmHandleSSP);            
-            fmRunning = FALSE;
-        }
-    }    
-    else
-    if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_MEMORY))
-    {
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        if (pcmRunning == TRUE)
-        {
-            csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-            csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
-            csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-            csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
-            pcmRunning = FALSE;
-        }
-    }    
-    else
-    if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink == CSL_CAPH_DEV_BT_SPKR))
-    {
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        if (pcmRunning == TRUE)
-        {
-            csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-            csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
-            csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-            csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
-            pcmRunning = FALSE;
-        }
-    }
-    else
-    if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink == CSL_CAPH_DEV_BT_SPKR)) ||
-		((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_DSP)))	
-    {
-        if (ssp_bt_running == TRUE)
-        {        
-            csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-            csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-            csl_caph_intc_disable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
-	        ssp_bt_running = FALSE;
-	        // make sure fm is not running before disable the scheduler
-	        if (ssp_fm_running == FALSE)
-	        {
-		        csl_pcm_enable_scheduler(pcmHandleSSP, FALSE);
-	            pcmRunning = FALSE;
-	        }
-        }
-    }
-    else
-    if ((path->source == CSL_CAPH_DEV_FM_TX)&&(path->sink == CSL_CAPH_DEV_EP))
-    {
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        if (ssp_fm_running == TRUE)
-        {
-            csl_pcm_stop_tx(fmHandleSSP, CSL_PCM_CHAN_TX1);
-            csl_pcm_stop_rx(fmHandleSSP, CSL_PCM_CHAN_RX1);
-            ssp_fm_running = FALSE;
-	        // make sure bt is not running before disable scheduler
-	        if (ssp_bt_running == FALSE)
-	        {
-	            csl_pcm_enable_scheduler(fmHandleSSP, FALSE);	            
-	            pcmRunning = FALSE;	
-	        }
-        }
-    }    	
-    else
-    if ((path->source == CSL_CAPH_DEV_ANALOG_MIC)&&(path->sink == CSL_CAPH_DEV_BT_SPKR))
-    {
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-    }    
-    else
-    if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_EP))
-    {
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        csl_caph_hwctrl_closeAudioH(path->sink, path->pathID);
-        if (pcmRunning == TRUE)
-        {
-            csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
-            csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
-            csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
-            csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
-            pcmRunning = FALSE;
-        }
-    }	
-    else //DSP-->SRC-->SW-->AUDIOH
-    if (((path->source == CSL_CAPH_DEV_DSP)
-            &&((path->sink == CSL_CAPH_DEV_EP)
-                ||(path->sink == CSL_CAPH_DEV_HS)
-                ||(path->sink2 == CSL_CAPH_DEV_EP)
-    	        ||(path->sink2 == CSL_CAPH_DEV_HS)))
-        ||((path->source == CSL_CAPH_DEV_DSP_throughMEM)
-            &&(path->sink == CSL_CAPH_DEV_IHF)))
-    {
-#if defined(ENABLE_DMA_VOICE)
-		if(path->dma[0]) csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-		if(path->cfifo[0]) csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-		if(path->sw[1].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[1], path->pathID);
-#endif
-		// stop switch transfer, release channel					
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        if (path->sw[1].chnl != CSL_CAPH_SWITCH_NONE)        
-            csl_caph_hwctrl_closeSwitchCH(path->sw[1], path->pathID);
- 
-       	// stop audioh				
-        csl_caph_hwctrl_closeAudioH(path->sink, path->pathID);
-        if (path->sink2 != CSL_CAPH_DEV_NONE)        
-            csl_caph_hwctrl_closeAudioH(path->sink2, path->pathID);
- 
-   		// release the src chnl
-        csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[0], path->pathID);
-        if (path->srcmRoute[1].inChnl != CSL_CAPH_SRCM_INCHNL_NONE)        
-            csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[1], path->pathID);
-  		// release the DMA chnl, since IHF uses it.
-#if !defined(ENABLE_DMA_VOICE)
-      	if (path->sink == CSL_CAPH_DEV_IHF)		
-	    {
-            csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-            // stop cfifo transfer, release fifo
-            csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-#endif
-	    }
-    }	
-    else //AUDIOH-->SW-->SRC-->DSP
-    if (((path->source == CSL_CAPH_DEV_ANALOG_MIC)
-	    || (path->source == CSL_CAPH_DEV_HS_MIC)
-	    || (path->source == CSL_CAPH_DEV_DIGI_MIC_L)
-	    || (path->source == CSL_CAPH_DEV_DIGI_MIC_R)
-	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
-	    || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-	    && (path->sink == CSL_CAPH_DEV_DSP))
-    {
-#if defined(ENABLE_DMA_VOICE) //the sequence seems important, o.w. next attempt gives no sound.
-		if(path->dma[0]) csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-		if(path->cfifo[0]) csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-		if(path->sw[1].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[1], path->pathID);
-#else
-    	// stop the src intc to dsp
-	    if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L)
-	        ||(path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-        {
-       	    csl_caph_intc_disable_tapout_intr(EANC_MIC_UL_TO_DSP_CHNL, 
-                                            CSL_CAPH_DSP);
-        }
-        else
-        {
-       	    csl_caph_intc_disable_tapout_intr(MAIN_MIC_UL_TO_DSP_CHNL, 
-                                            CSL_CAPH_DSP);
-        }
-#endif        
-        
-		// stop audioh					
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-		// stop switch transfer, release channel				
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-   		// release the src chnl
-        csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[0], path->pathID);
-    }
-    else //AUDIOH-->SW-->SRC-->DSP
-    if ((path->source == CSL_CAPH_DEV_DIGI_MIC)&&(path->sink == CSL_CAPH_DEV_DSP))
-    {
-    	// stop the src intc to dsp
-       	csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_MONO_CH2, CSL_CAPH_DSP);
-		// stop audioh					
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-		// stop switch transfer, release channel				
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-        csl_caph_hwctrl_closeSwitchCH(path->sw[1], path->pathID);
-   		// release the src chnl
-        csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[0], path->pathID);
-        csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[1], path->pathID);
-    }
-    else  //HW loopback: Analog MIC (HP Mic)/HS Mic -> EP/IHF  
-    if (((path->source == CSL_CAPH_DEV_ANALOG_MIC) 
-            ||(path->source == CSL_CAPH_DEV_HS_MIC)) 
-        && ((path->sink == CSL_CAPH_DEV_EP) 
-            ||(path->sink == CSL_CAPH_DEV_IHF) 
-            ||(path->sink == CSL_CAPH_DEV_HS)))
-    {
-       	// stop audioh				
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-        csl_caph_hwctrl_closeAudioH(path->sink, path->pathID);
-    }
-    else // For HW loopback use only: DIGI_MIC1/2/3/4 -> SSASW -> Handset Ear/IHF
-    if (((path->source == CSL_CAPH_DEV_DIGI_MIC_L) ||
-	    (path->source == CSL_CAPH_DEV_DIGI_MIC_R) ||
-	    (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) ||
-	    (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-	    && ((path->sink == CSL_CAPH_DEV_EP) ||
-		(path->sink == CSL_CAPH_DEV_IHF)))
-    {
-    	// stop switch transfer, release channel					
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-       	// stop audioh				
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-        csl_caph_hwctrl_closeAudioH(path->sink, path->pathID);
-    } 
-    else //HW loopback only, AUDIOH-->SWMixer --> HS Speaker, Handset MIC/HS MIC/DIGI MIC -> HS EAR
-    if (((path->source == CSL_CAPH_DEV_DIGI_MIC_L) ||
-        (path->source == CSL_CAPH_DEV_DIGI_MIC_R) ||
-	    (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) ||
-	    (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R))
-        && (path->sink == CSL_CAPH_DEV_HS) )
-    {
-        csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
-        csl_caph_hwctrl_closeAudioH(path->sink, path->pathID);
-        // Stop DMA transfer, release channe
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-        // stop cfifo transfer, release fifo
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        // stop switch transfer, release channel
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID); 
-        
-        // release the src chnl
-        csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[0], path->pathID);
-    } 
-	else  // DDR --> HW src --> HW src tapout --> DSP
- 	if ((path->source == CSL_CAPH_DEV_MEMORY)&&(path->sink == CSL_CAPH_DEV_DSP))
-    {
-		// disable interrupt to DSP
-		csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_MONO_CH2, CSL_CAPH_DSP);
-
-        // dma
-        csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-        
-		// stop cfifo transfer, release fifo
-        csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-        // switch
-        csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-		// release the src chnl
-        csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[0], path->pathID);
 	}
-#if defined(ENABLE_DMA_ARM2SP)
-	else if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
+
+	for(i=0; i<MAX_BLOCK_NUM; i++)
 	{
-		if(path->dma[0]) csl_caph_hwctrl_closeDMA(path->dma[0], path->pathID);
-		if(path->dma[1]) csl_caph_hwctrl_closeDMA(path->dma[1], path->pathID);
-		if(path->cfifo[0]) csl_caph_hwctrl_closeCFifo(path->cfifo[0], path->pathID);
-		if(path->cfifo[1]) csl_caph_hwctrl_closeCFifo(path->cfifo[1], path->pathID);
-		if(path->sw[0].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[0], path->pathID);
-		if(path->sw[1].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[1], path->pathID);
-		if(path->sw[2].chnl) csl_caph_hwctrl_closeSwitchCH(path->sw[2], path->pathID);
-		if(path->srcmRoute[0].inChnl) csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[0], path->pathID);
-		if(path->srcmRoute[1].inChnl) csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[1], path->pathID);
-
-		Log_DebugPrintf(LOGID_AUDIO, "disablePath:: dmaCh %d:%d, fifo %d:%d, switch %d:%d:%d.\r\n", path->dma[0], path->dma[1], path->cfifo[0], path->cfifo[1], path->sw[0].chnl, path->sw[1].chnl, path->sw[2].chnl);
-		Log_DebugPrintf(LOGID_AUDIO, "disablePath:: srcmixer in 0x%x tap %d out %d.\r\n", path->srcmRoute[0].inChnl, path->srcmRoute[0].tapOutChnl, path->srcmRoute[0].outChnl);
-		Log_DebugPrintf(LOGID_AUDIO, "disablePath:: srcmixer in 0x%x tap %d out %d.\r\n", path->srcmRoute[1].inChnl, path->srcmRoute[1].tapOutChnl, path->srcmRoute[1].outChnl);
-
-		VPRIPCMDQ_SetARM2SP( 0, 0 ); //assume instance 1
+		if(!path->srcmRoute[i].inChnl) break;
+		csl_caph_hwctrl_closeSRCMixer(path->srcmRoute[i], path->pathID);
+		path->srcmRoute[i].inChnl = CSL_CAPH_SRCM_INCHNL_NONE;
 	}
-#endif //ENABLE_DMA_ARM2SP
+
+	if(path->audiohPath[0]) csl_caph_hwctrl_closeAudioH(path->source, path->pathID);
+	if(path->audiohPath[1]) csl_caph_hwctrl_closeAudioH(path->sink, path->pathID);
+	if(path->audiohPath[2]) csl_caph_hwctrl_closeAudioH(path->sink2, path->pathID);
+
+	//this is for debug purpose only
+	for(i=0; i<MAX_BLOCK_NUM; i++)
+	{
+		if(path->dma[i]) audio_xassert(0, path->dma[i]);
+		if(path->sw[i].chnl) audio_xassert(0, path->sw[i].chnl);
+		if(path->srcmRoute[i].inChnl) audio_xassert(0, path->srcmRoute[i].inChnl);
+		if(path->cfifo[i]) audio_xassert(0, path->cfifo[i]);
+	}
+
+	if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink == CSL_CAPH_DEV_BT_SPKR)) ||
+		((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_DSP)))	
+	{
+		if (ssp_bt_running == TRUE)
+		{
+			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+			csl_caph_intc_disable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
+			ssp_bt_running = FALSE;
+		}
+	} else if(path->source == CSL_CAPH_DEV_BT_MIC || path->sink == CSL_CAPH_DEV_BT_SPKR) {
+		if (pcmRunning == TRUE)
+		{
+			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX1);
+			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX1);
+			pcmRunning = FALSE;
+		}
+	}
 
 	csl_caph_hwctrl_RemovePathInTable(path->pathID);
 	return RESULT_OK;

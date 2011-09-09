@@ -163,6 +163,14 @@ config BCM_HAPTICS
     Select m to build the generic HAPTICS driver. This driver must be
     built as a loadable module otherwise initialization will fail.
     
+config BCM_VCP
+    bool "Video Calling driver support"
+    depends on BRCM_CHAR_DRIVERS
+    default n
+    help
+      Say Y to enable VCP driver support which is used to support
+      video calling framework.
+
 config BCM_GIST
     tristate "Generic I/O Streaming (GIST)"
     default n
@@ -188,6 +196,14 @@ config BCM_HDMI_DET_SWITCH
     ---help---
     Say Y to enable the switch class support in the HDMI detection driver,
     needed for Android HDMI integration.
+
+config BCM_FRAME_PROFILER_SUPPORT
+    bool "Enable frame profiling"
+    depends on ARCH_BCM116X || ARCH_BCMRING
+    default y
+    ---help---
+      Maintain a history of time spent processing frames.      
+
 
 source "drivers/char/broadcom/csx/Kconfig"
 

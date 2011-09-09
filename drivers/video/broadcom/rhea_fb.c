@@ -20,6 +20,7 @@
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
 #include <linux/vt_kern.h>
+#include <linux/gpio.h>
 #include <video/kona_fb.h>
 
 #include <mach/io.h>
@@ -216,7 +217,22 @@ static void rhea_fb_late_resume(android_early_suspend_t *h)
 }
 #endif
 
-static int enable_display(struct rhea_fb *fb)
+
+static void reset_display(u32 gpio)
+{
+	if (gpio != 0) {
+		gpio_request(gpio, "LCD_RST1");
+		gpio_direction_output(gpio, 0);
+		gpio_set_value_cansleep(gpio, 1);
+		msleep(1);
+		gpio_set_value_cansleep(gpio, 0);
+		msleep(1);
+		gpio_set_value_cansleep(gpio, 1);
+		msleep(20);
+	}
+}
+
+static int enable_display(struct rhea_fb *fb, u32 gpio)
 {
 	int ret = 0;
 	DISPDRV_OPEN_PARM_T local_DISPDRV_OPEN_PARM_T;
@@ -231,6 +247,8 @@ static int enable_display(struct rhea_fb *fb)
 	 * Since the display driver is not using this field, 
 	 * we use it to pass the dma addr.
 	 */
+	reset_display(gpio);
+
 	local_DISPDRV_OPEN_PARM_T.busId = fb->phys_fbbase;
 	local_DISPDRV_OPEN_PARM_T.busCh = 0;
 	ret = fb->display_ops->open((void *)&local_DISPDRV_OPEN_PARM_T, &fb->display_hdl);
@@ -440,7 +458,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 		goto err_fbmem_alloc_failed;
 	}
 
-	ret = enable_display(fb);
+	ret = enable_display(fb, fb_data->gpio);
 	if (ret) {
 		rheafb_error("Failed to enable this display device\n");
 		goto err_enable_display_failed;

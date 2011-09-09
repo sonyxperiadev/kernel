@@ -171,8 +171,8 @@ struct pcm_ch_cfg
    HALAUDIO_WRITE       write;            /* Write state */
 
    /* ISR Status */
-   int                  active_idx;       /* Index to active buffer for ingress double buffers */
-   atomic_t             queued_pkts_egr;  /* Num of egress packets awaiting to be DMA'd. Should not exceed 2. When 0, means DMA is idle */
+   atomic_t             active_idx_igr;   /* Index to active buffer for ingress double buffers */
+   atomic_t             active_idx_egr;   /* Index to active buffer for ingress double buffers */
    struct pcm_ch_errs   errs;             /* Channel errors */
 
    /* Debug facilities */
@@ -186,8 +186,10 @@ struct pcm_ch_cfg
    uint16_t             rampseed_igr;     /* Ingress ramp seed */
    uint16_t             rampseed_egr;     /* Egress ramp seed */
    HALAUDIO_SINECTL     sinectl;          /* Sine generation state */
-   unsigned int         isrcount_igr;     /* Ingress ISR counter */
-   unsigned int         isrcount_egr;     /* Egress ISR counter */
+   atomic_t             isrcount_igr;     /* Ingress ISR counter */
+   atomic_t             isrcount_egr;     /* Egress ISR counter */
+   atomic_t             isrcount_delta;   /* Delta between ISR counts */
+   int                  debug;            /* Debug mode flag */
 
    /* Mixer facilities */
    AMXR_PORT_ID         mixer_port;       /* Mixer port handle for channel */
@@ -372,8 +374,8 @@ static irqreturn_t pcmIsr( int irq, void *dev_id );
 static int  pcmIoRemap( void );
 static int  pcmDmaInit( void );
 static int  pcmDmaTerm( void );
-static void pcmDmaIngressHandler( DMA_Device_t dev, int reason, void *data );
-static void pcmDmaEgressHandler( DMA_Device_t dev, int reason, void *data );
+static void pcmDmaIngressHandler( DMA_Device_t dev, DMA_Status_t *status, void *data );
+static void pcmDmaEgressHandler( DMA_Device_t dev, DMA_Status_t *status, void *data );
 static void pcmDmaEgressDoTransfer( struct pcm_ch_cfg *ch );
 static void pcmProcInit( void );
 static void pcmProcTerm( void );
@@ -716,14 +718,15 @@ static int pcmPrepare( void )
    for ( i = info->channel_select; i < (info->channel_select + info->channels); i++, ch++ )
    {
       /* Index is pre-incremented before use. Set to second buffer to start */
-      ch->active_idx    = 1;
-      ch->isrcount_igr  = 0;
-      ch->isrcount_egr  = 0;
+      atomic_set( &ch->active_idx_igr, 1);
+      atomic_set( &ch->active_idx_egr, 1);
+      atomic_set( &ch->isrcount_igr, 0);
+      atomic_set( &ch->isrcount_egr, 0);
       memset( &ch->errs, 0, sizeof(ch->errs) );
 
       /* Install DMA handlers */
-      sdma_set_device_handler( ch->dma_egr.device, pcmDmaEgressHandler, ch );
-      sdma_set_device_handler( ch->dma_igr.device, pcmDmaIngressHandler, ch );
+      sdma_set_device_handler_extended( ch->dma_egr.device, pcmDmaEgressHandler, ch );
+      sdma_set_device_handler_extended( ch->dma_igr.device, pcmDmaIngressHandler, ch );
 
       /* Request egress DMA channel */
       ch->dma_egr.handle = sdma_request_channel( ch->dma_egr.device );
@@ -739,16 +742,26 @@ static int pcmPrepare( void )
       memset( ch->buf_egr[0].virt, 0, ch->dma_frame_size );
       memset( ch->buf_egr[1].virt, 0, ch->dma_frame_size );
 
-      atomic_set( &ch->queued_pkts_egr, 1 );
+      /* Allocate ingress double buffer DMA descriptors */
+      rc = sdma_alloc_double_src_descriptors( ch->dma_egr.handle,
+            ch->buf_egr[0].phys, ch->buf_egr[1].phys, ch->dma_egr.fifo_addr,
+            ch->frame_size );
+      if ( rc != 2 )
+      {
+         printk( KERN_ERR "%s: [ch=%u] %d descs allocated instead of 2.\n",
+               __FUNCTION__, ch->ch, rc );
+         goto cleanup_dma_channels;
+      }
 
-      /* Start egress DMA channel to begin priming */
-      rc = sdma_transfer( ch->dma_egr.handle, gPcm.zero.phys, ch->dma_egr.fifo_addr, ch->frame_size + ch->dma_prime_egr );
+      /* Start egress channel and will pend when FIFO is full */
+      rc = sdma_start_transfer( ch->dma_egr.handle);
       if ( rc != 0 )
       {
          printk( KERN_ERR "%s: [ch=%u] Failed to start egress DMA\n",
                __FUNCTION__, ch->ch );
          goto cleanup_dma_channels;
       }
+
 
       /* Request ingress DMA channel */
       ch->dma_igr.handle = sdma_request_channel( ch->dma_igr.device );
@@ -1162,6 +1175,7 @@ static irqreturn_t pcmIsr( int irq, void *dev_id )
       if( status & SSPIL_INTR_STATUS_DMA_TX0 )
       {
          ch->errs.dma_egr++;
+         PCMLOG("SSPIL_INTR_STATUS_DMA_TX0");
       }
       if( status & SSPIL_INTR_STATUS_DMA_RX0 )
       {
@@ -1170,6 +1184,7 @@ static irqreturn_t pcmIsr( int irq, void *dev_id )
       if( status & SSPIL_INTR_STATUS_DMA_TX1 )
       {
          ch->errs.dma_egr++;
+         PCMLOG("SSPIL_INTR_STATUS_DMA_TX1");
       }
       if( status & SSPIL_INTR_STATUS_DMA_RX1 )
       {
@@ -1182,10 +1197,12 @@ static irqreturn_t pcmIsr( int irq, void *dev_id )
       if( status & SSPIL_INTR_STATUS_FIFO_UNDERRUN )
       {
          ch->errs.dma_egr++;
+         PCMLOG("SSPIL_INTR_STATUS_FIFO_UNDERRUN");
       }
       if( status & SSPIL_INTR_STATUS_APB_TX_ERROR )
       {
          ch->errs.dma_egr++;
+         PCMLOG("SSPIL_INTR_STATUS_APB_TX_ERROR");
       }
       if( status & SSPIL_INTR_STATUS_APB_RX_ERROR )
       {
@@ -1665,13 +1682,15 @@ static int pcm_sspi_hw_dma_disable_rx( struct pcm_sspi_hw_core_t *pCore )
 */
 static void pcmDmaIngressHandler(
    DMA_Device_t   dev,           /**< (i) Device that triggered callback */
-   int            reason,        /**< (i) Reason for interrupt */
+   DMA_Status_t  *status,        /**< (i) DMA status information */
    void          *data           /**< (i) User data pointer */
 )
 {
    struct pcm_ch_cfg          *ch;
    uint16_t                   *rawdatap;  /* Raw pointer to DMA data */
    int                         frame_size;
+   int                         sync_count;
+   int                         debug_mode = 0;
    HALAUDIO_PCM_PLATFORM_INFO *info;
 
    info = &gPcmPlatformInfo;
@@ -1679,20 +1698,39 @@ static void pcmDmaIngressHandler(
    (void) dev;    /* unused */
 
    ch = data;
-   PCMLOG( "%u: ch=%i", ch->isrcount_igr, ch->ch );
+   PCMLOG( "%u: ch=%i", atomic_read(&ch->isrcount_igr), ch->ch );
 
-   if ( reason != DMA_HANDLER_REASON_TRANSFER_COMPLETE )
+   if ( status->reason != DMA_HANDLER_REASON_TRANSFER_COMPLETE )
    {
       ch->errs.dma_igr++;
       return;
    }
 
-   ch->isrcount_igr++;
+   if( atomic_read(&ch->isrcount_igr) == 0 )
+   {
+      atomic_set( &ch->isrcount_delta ,(atomic_read(&ch->isrcount_egr)) - (atomic_read(&ch->isrcount_igr)) );
+   }
+   else
+   {
+      sync_count = (atomic_read(&ch->isrcount_egr)) - (atomic_read(&ch->isrcount_igr));
+
+      if( sync_count != atomic_read(&ch->isrcount_delta) )
+      {
+         /* We have a sync error */
+         PCMLOG( "Sync err: egr=%u igr=%u egr_init=%u", atomic_read(&ch->isrcount_egr), atomic_read(&ch->isrcount_igr), atomic_read(&ch->isrcount_delta) );
+         ch->errs.dma_sync++;
+
+         /* Update expected delta */
+         atomic_set( &ch->isrcount_delta, sync_count );
+      }
+   }
+
+   atomic_inc(&ch->isrcount_igr);
 
    /* Point to buffer index with actual samples */
-   ch->active_idx = (ch->active_idx + 1) & 1;
+   atomic_set( &ch->active_idx_igr, ((status->desc_idx + 1) & 1) );
 
-   rawdatap    = ch->buf_igr[ch->active_idx].virt;
+   rawdatap    = ch->buf_igr[atomic_read(&ch->active_idx_igr)].virt;
    frame_size  = ch->frame_size;
 
    /* Extract data from raw DMA buffer */
@@ -1707,18 +1745,34 @@ static void pcmDmaIngressHandler(
 
    if ( ch->ramp_check )
    {
+      debug_mode = 1;
       /* Verify against data from 2 frames ago */
-      halAudioCompareData( rawdatap, ch->buf_egr[ch->active_idx].virt,
+      halAudioCompareData( rawdatap, ch->buf_egr[atomic_read(&ch->active_idx_egr)].virt,
             ch->dma_frame_size/sizeof(uint16_t), &ch->ramp_check_errs, &ch->ramp_check_delta );
    }
    if ( ch->ramp_igr )
    {
+      debug_mode = 1;
       halAudioGenerateRamp( ch->igrdatap, &ch->rampseed_igr, frame_size/sizeof(uint16_t), ch->interchs );
    }
 
    if ( ch->csx_data[HALAUDIO_CSX_POINT_ADC].csx_ops.csxCallback )
    {
+      debug_mode = 1;
       ch->csx_data[HALAUDIO_CSX_POINT_ADC].csx_ops.csxCallback( ch->igrdatap, frame_size, ch->csx_data[HALAUDIO_CSX_POINT_ADC].priv );
+   }
+
+   if ( debug_mode )
+   {
+      ch->debug = 1;
+   }
+   else if ( ch->debug )
+   {
+      /* Clear samples */
+      memset( ch->buf_igr[0].virt, 0, ch->frame_size );
+      memset( ch->buf_igr[1].virt, 0, ch->frame_size );
+
+      ch->debug = 0;
    }
 
    /* Trigger callback when all ingress processing have completed.
@@ -1748,28 +1802,27 @@ static void pcmDmaIngressHandler(
 */
 static void pcmDmaEgressHandler(
    DMA_Device_t   dev,           /**< (i) Device that triggered callback */
-   int            reason,        /**< (i) Reason for interrupt */
+   DMA_Status_t  *status,        /**< (i) DMA status information */
    void          *data           /**< (i) User data pointer */
 )
 {
    struct pcm_ch_cfg *ch;
 
    ch = data;
-   PCMLOG( "dev=%u reason=%i isr=%u", dev, reason, ch->isrcount_egr );
-   ch->isrcount_egr++;
+   PCMLOG( "dev=%u reason=%i isr=%u", dev, status->reason, atomic_read(&ch->isrcount_egr) );
 
-   if ( reason != DMA_HANDLER_REASON_TRANSFER_COMPLETE )
+   if ( status->reason != DMA_HANDLER_REASON_TRANSFER_COMPLETE )
    {
+      PCMLOG("Error in reason code %d\n", status->reason);
       ch->errs.dma_egr++;
       return;
    }
+   atomic_inc( &ch->isrcount_egr );
 
-   atomic_dec( &ch->queued_pkts_egr );
+   /* Point to buffer index with actual samples */
+   atomic_set( &ch->active_idx_egr, ((status->desc_idx + 1) & 1) );
 
-   if( atomic_read( &ch->queued_pkts_egr ) > 0 )
-   {
-      pcmDmaEgressDoTransfer( ch );
-   }
+   pcmDmaEgressDoTransfer( ch );
 
    /* PCMLOG( "end dev=%u", dev ); */
 }
@@ -1790,14 +1843,7 @@ static void pcmDmaEgressDoTransfer(
 )
 {
    int frame_size;
-   int rc;
-
-   /* Check that egress ISR is in sync with ingress ISR */
-   if ( ch->isrcount_egr != ch->isrcount_igr )
-   {
-      PCMLOG( "egress sync err: egr=%u igr=%u", ch->isrcount_egr, ch->isrcount_igr );
-      ch->errs.dma_sync++;
-   }
+   int debug_mode = 0;
 
    frame_size  = ch->frame_size;
 
@@ -1813,32 +1859,43 @@ static void pcmDmaEgressDoTransfer(
 
    if ( ch->ramp_egr )
    {
+      debug_mode = 1;
       halAudioGenerateRamp( ch->egrdatap, &ch->rampseed_egr, frame_size/sizeof(uint16_t), ch->interchs );
    }
    else if ( ch->sinectl.freq )
    {
+      debug_mode = 1;
       halAudioSine( ch->egrdatap, &ch->sinectl, frame_size/sizeof(uint16_t), ch->interchs );
    }
    else if ( ch->loop_ig2eg )
    {
+      debug_mode = 1;
+
       /* software loopback ingress to egress */
       memcpy( ch->egrdatap, ch->igrdatap, frame_size );
    }
 
    if ( ch->csx_data[HALAUDIO_CSX_POINT_DAC].csx_ops.csxCallback )
    {
+      debug_mode = 1;
       ch->csx_data[HALAUDIO_CSX_POINT_DAC].csx_ops.csxCallback( (char *)ch->egrdatap, frame_size, ch->csx_data[HALAUDIO_CSX_POINT_DAC].priv );
    }
 
-   /* Interleave data for DMA */
-   interleave_data( ch->buf_egr[ch->active_idx].virt, ch->egrdatap, ch->dma_frame_size, 1 /*ch->slotchansused*/ );
-
-   /* DMA egress samples */
-   rc = sdma_transfer( ch->dma_egr.handle, ch->buf_egr[ch->active_idx].phys, ch->dma_egr.fifo_addr, frame_size );
-   if ( rc )
+   if ( debug_mode )
    {
-      ch->errs.dma_egr++;
+      ch->debug = 1;
    }
+   else if ( ch->debug )
+   {
+      /* Clear samples */
+      memset( ch->buf_egr[0].virt, 0, ch->frame_size );
+      memset( ch->buf_egr[1].virt, 0, ch->frame_size );
+
+      ch->debug = 0;
+   }
+
+   /* Interleave data for DMA */
+   interleave_data( ch->buf_egr[atomic_read(&ch->active_idx_egr)].virt, ch->egrdatap, ch->dma_frame_size, 1 /*ch->slotchansused*/ );
 }
 
 /***************************************************************************/
@@ -2052,7 +2109,7 @@ static int pcmReadProc( char *buf, char **start, off_t offset, int count, int *e
          2 /* word width */, 0 /* print_addr */, 0 /* addr */ );
 
    /* Error report and other information */
-   len += sprintf( buf+len, "Irqs:        igress=%u egress=%u\n", ch->isrcount_igr, ch->isrcount_egr );
+   len += sprintf( buf+len, "Irqs:        igress=%u egress=%u\n", atomic_read(&ch->isrcount_igr), atomic_read(&ch->isrcount_egr) );
    len += sprintf( buf+len, "DMA errors:  igress=%i egress=%i sync=%i\n", ch->errs.dma_igr, ch->errs.dma_egr, ch->errs.dma_sync );
 
    if ( ch->ramp_check )
@@ -2148,31 +2205,6 @@ static int16_t *pcmMixerCb_EgressGetPtr(
    return ptr;
 }
 
-static void pcmMixerCb_EgressDone(
-   int   numBytes,            /**< (i) frame size in bytes */
-   void *privdata             /**< (i) private data */
-)
-{
-   struct pcm_ch_cfg *ch;
-
-   ch  = (struct pcm_ch_cfg *)privdata;
-
-   PCMLOG( "PCM [ch %i] pkts=%i bytes=%i running=%i", ch->ch, atomic_read( &ch->queued_pkts_egr ), numBytes, atomic_read( &gPcm.running ));
-
-   /* Take action only when PCM channels are actually running */
-   if ( atomic_read( &gPcm.running ))
-   {
-      /* new packet arrived */
-      atomic_inc( &ch->queued_pkts_egr );
-
-      /* Exactly 1 packet awaits, thus DMA was idle. Start a new transfer right away. */
-      if ( atomic_read( &ch->queued_pkts_egr ) == 1 )
-      {
-         pcmDmaEgressDoTransfer( ch );
-      }
-   }
-}
-
 /***************************************************************************/
 /**
 *  PCM mixer callback to flush the egress buffers when the last destination
@@ -2216,7 +2248,6 @@ static int pcmMixerPortsRegister( void )
       memset( &cb, 0, sizeof(cb) );
       cb.getsrc         = pcmMixerCb_IngressGetPtr;
       cb.getdst         = pcmMixerCb_EgressGetPtr;
-      cb.dstdone        = pcmMixerCb_EgressDone;
       cb.dstcnxsremoved = pcmMixerCb_EgressFlush;
 
       sprintf( name, "halaudio.pcm%i", ch->ch );

@@ -36,6 +36,7 @@
 #include <plat/pl330-pdata.h>
 #include <mach/dma.h>
 #include <plat/dmux.h>
+#include <mach/clock.h>
 
 /**
  * struct pl330_chan_desc - Peripheral channel descriptor.
@@ -66,6 +67,7 @@ struct pl330_dmac_desc {
 	int irq_end;		/* Last Irq number mapped */
 	struct list_head chan_list;	/* List of channel descriptors */
 	int chan_count;		/* channel descriptors count */
+	struct clk *clk; /* clock struct for DMAC */
 };
 
 /* PL330 DMAC Descriptor structure */
@@ -735,13 +737,19 @@ int dma_start_transfer(unsigned int chan)
 {
 	unsigned long flags;
 	struct pl330_chan_desc *c;
+	int ret;
 
 	spin_lock_irqsave(&lock, flags);
+
+	/* Enable the clock before the transfer */
+	ret = clk_enable(dmac->clk);
+	if (ret)
+	    goto err;
 
 	c = chan_id_to_cdesc(chan);
 
 	if (!c || !c->is_setup || c->in_use)
-		goto err;
+		goto err1;
 
 	/* Acquire DMUX semaphore while microcode loading
 	 * This call always success because protect(unprotect) happen
@@ -763,6 +771,8 @@ int dma_start_transfer(unsigned int chan)
 	return 0;
       err2:
 	dmux_sema_unprotect();
+      err1:
+	clk_disable(dmac->clk);
       err:
 	spin_unlock_irqrestore(&lock, flags);
 	return -1;
@@ -788,6 +798,9 @@ int dma_stop_transfer(unsigned int chan)
 	c->is_setup = false;
 	/* free memory allocated for this request */
 	_cleanup_req(&c->req);
+
+	/* Disable clock after transfer */
+	clk_disable(dmac->clk);
 
 	spin_unlock_irqrestore(&lock, flags);
 	return 0;
@@ -916,6 +929,13 @@ static int pl330_probe(struct platform_device *pdev)
 	if (!pd) {
 		ret = -ENOMEM;
 		goto probe_err4;
+	}
+
+	/* Get the clock struct */
+	pd->clk = clk_get(NULL, DMAC_MUX_APB_BUS_CLK_NAME_STR);
+	if (pd->clk == NULL) {
+	    ret = -ENOENT;
+	    goto probe_err4;
 	}
 
 	/* Hook the info */

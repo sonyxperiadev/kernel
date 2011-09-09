@@ -181,10 +181,12 @@ static void kona_pwmc_get_field(const struct kona_pwmc *ap, unsigned int offset,
 static void kona_pwmc_stop(const struct kona_pwmc *ap, int chan)
 {
     kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_enable_shift,0) ;
+    clk_disable(ap->clk);
 }
 
 static void kona_pwmc_start(const struct kona_pwmc *ap, int chan)
 {
+    clk_enable(ap->clk);
     kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_enable_shift,1) ;
 }
 
@@ -329,7 +331,6 @@ static int kona_pwmc_request(struct pwm_device *p)
 static void kona_pwmc_release(struct pwm_device *p)
 {
     struct kona_pwmc *ap = pwm_get_drvdata(p);
-    clk_disable(ap->clk);
 }
 
 static const struct pwm_device_ops kona_pwm_ops = {

@@ -70,6 +70,10 @@
 #include "dwc_otg_dbg.h"
 #include "dwc_otg_driver.h"
 
+#ifdef CONFIG_USB_OTG_UTILS
+#include "dwc_otg_hcd.h"
+#endif
+
 /**
  * Gets the endpoint number from a _bEndpointAddress argument. The endpoint is
  * qualified with its direction (possible 32 endpoints per device).
@@ -445,6 +449,13 @@ int hcd_init(
 	}
 
 	dwc_otg_hcd_set_priv_data(dwc_otg_hcd, hcd);
+
+#ifdef CONFIG_USB_OTG_UTILS
+	if (dwc_otg_hcd->core_if->xceiver->set_host)
+		otg_set_host(dwc_otg_hcd->core_if->xceiver,
+			     &hcd->self);
+#endif
+
 	return 0;
 
       error2:
