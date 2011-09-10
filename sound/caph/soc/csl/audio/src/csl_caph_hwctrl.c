@@ -199,7 +199,7 @@ static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
 
 static int ssp_pcm_usecount = 0;
 
-
+static Boolean isSTIHF = FALSE;
 //****************************************************************************
 // local function declarations
 //****************************************************************************
@@ -5474,4 +5474,15 @@ void csl_caph_hwctrl_SetSspTdmMode(Boolean status)
 }
 
 
-
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetIHFmode
+*
+*  Description: Set IHF mode (stereo/mono)
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetIHFmode(Boolean stIHF)
+{
+	isSTIHF = stIHF;
+	csl_caph_srcmixer_SetSTIHF(isSTIHF);
+}

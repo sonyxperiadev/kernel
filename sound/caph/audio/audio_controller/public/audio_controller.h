@@ -918,4 +918,14 @@ AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic);
 ****************************************************************************/
 AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
 
+/********************************************************************
+*  @brief  Set IHF mode
+*
+*  @param  IHF mode status (TRUE: stereo | FALSE: mono).
+*
+*  @return  none
+*
+****************************************************************************/
+void AUDCTRL_SetIHFmode (Boolean stIHF);
+
 #endif //#define __AUDIO_CONTROLLER_H__

@@ -523,6 +523,15 @@ void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 
 void csl_caph_ControlHWClock(Boolean enable);
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetIHFmode
+*
+*  Description: Set IHF mode (stereo/mono)
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetIHFmode(Boolean stIHF);
+
 #ifdef ENABLE_DMA_ARM2SP
 
 /****************************************************************************

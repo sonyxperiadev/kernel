@@ -919,4 +919,23 @@ typedef struct
 #define MAIN_MIC_UL_TO_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH2
 #define EANC_MIC_UL_TO_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH3
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetIHFmode
+*
+*  Description: Set IHF mode (stereo/mono)
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetIHFmode(Boolean stIHF);
+
+/********************************************************************
+*  @brief  Set IHF mode
+*
+*  @param  IHF mode status (TRUE: stereo | FALSE: mono).
+*
+*  @return  none
+*
+****************************************************************************/
+Boolean csl_caph_hwctrl_GetIHFmode (void);
+
 #endif // _CSL_CAPH_

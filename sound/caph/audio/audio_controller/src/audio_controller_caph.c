@@ -2544,6 +2544,18 @@ AUDCTRL_Config_t AUDCTRL_GetFromTable(CSL_CAPH_PathID pathID)
 
 }
 
+/********************************************************************
+*  @brief  Set IHF mode
+*
+*  @param  IHF mode status (TRUE: stereo | FALSE: mono).
+*
+*  @return  none
+*
+****************************************************************************/
+void AUDCTRL_SetIHFmode (Boolean stIHF)
+{
+    csl_caph_hwctrl_SetIHFmode(stIHF);
+}
 
 //============================================================================
 //
