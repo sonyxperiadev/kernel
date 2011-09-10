@@ -48,7 +48,7 @@ static int __devinit vchiq_memdrv_hana_interface_probe( struct platform_device *
      * This needs to be moved up into vchiq_memdrv.c
     */
 
-    if ( vchiq_userdrv_create_instance( &platform_data->memdrv.common) != VCHIQ_SUCCESS )
+    if ( vchiq_userdrv_create_instance( &platform_data->memdrv.common ) != VCHIQ_SUCCESS )
     {
         printk( KERN_ERR "vchiq_memdrv_hana: Failed to create vchiq instance for '%s'\n",
                 name );
@@ -77,6 +77,48 @@ static int vchiq_memdrv_hana_interface_remove( struct platform_device *pdev )
 
 /****************************************************************************
 *
+* vchiq_memdrv_hana_interface_suspend
+*
+*   Pass the suspend call down to the implementation.
+*
+***************************************************************************/
+
+VCHIQ_STATUS_T vchiq_userdrv_suspend( const VCHIQ_PLATFORM_DATA_T *platform_data );
+
+static int vchiq_memdrv_hana_interface_suspend( struct platform_device *pdev, pm_message_t state )
+{
+    VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T *platform_data = pdev->dev.platform_data;
+    VCHIQ_STATUS_T status;
+
+    (void)state;
+
+    status = vchiq_userdrv_suspend( &platform_data->memdrv.common );
+
+    return (status == VCHIQ_SUCCESS) ? 0 : -EIO;
+}
+
+/****************************************************************************
+*
+* vchiq_memdrv_hana_interface_resume
+*
+*   Pass the suspend call down to the implementation.
+*
+***************************************************************************/
+
+VCHIQ_STATUS_T vchiq_userdrv_resume( const VCHIQ_PLATFORM_DATA_T *platform_data );
+
+static int vchiq_memdrv_hana_interface_resume( struct platform_device *pdev )
+{
+    VCHIQ_PLATFORM_DATA_MEMDRV_HANA_T *platform_data = pdev->dev.platform_data;
+    VCHIQ_STATUS_T status;
+
+    status = vchiq_userdrv_resume( &platform_data->memdrv.common );
+
+    return (status == VCHIQ_SUCCESS) ? 0 : -EIO;
+}
+
+/****************************************************************************
+*
 * vchiq_memdrv_hana_interface_driver
 *
 *   Register a "driver". We do this so that the probe routine will be called
@@ -88,6 +130,8 @@ static struct platform_driver vchiq_memdrv_hana_interface_driver =
 {
     .probe          = vchiq_memdrv_hana_interface_probe,
     .remove         = vchiq_memdrv_hana_interface_remove,
+    .suspend        = vchiq_memdrv_hana_interface_suspend,
+    .resume         = vchiq_memdrv_hana_interface_resume,
     .driver = {
         .name	    = "vchiq_memdrv_hana",
     }

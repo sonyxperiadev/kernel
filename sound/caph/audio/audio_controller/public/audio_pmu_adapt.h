@@ -25,17 +25,51 @@
 
 /**
 *
-* @file   ripisr_audio.h
-* @brief  
+* @file   audio_pmu_adapt.h
+* @brief  Audio PMU adaptation for various PMU devices 
 *
 ******************************************************************************/
-#ifndef	__RIPISR_AUDIO_H__
-#define	__RIPISR_AUDIO_H__
+
+#ifndef __AUDIO_PMU_ADAPT_H__
+#define __AUDIO_PMU_ADAPT_H__
+
+#if !defined(NO_PMU)
+#ifdef PMU_BCM59055 
+
+#include "linux/broadcom/bcm59055-audio.h"
+#define AUDIO_PMU_INIT bcm59055_audio_init
+#define AUDIO_PMU_HS_SET_GAIN bcm59055_hs_set_gain
+#define AUDIO_PMU_HS_POWER bcm59055_hs_power
+#define AUDIO_PMU_IHF_SET_GAIN bcm59055_ihf_set_gain
+#define AUDIO_PMU_IHF_POWER bcm59055_ihf_power
+#define AUDIO_PMU_DEINIT bcm59055_audio_deinit
 
 
+#elif defined(CONFIG_BCMPMU_AUDIO)
 
-typedef void (*capture_request_handler_t)(VPStatQ_t reqMsg);
+#include "bcmpmu_audio.h"
+#define AUDIO_PMU_INIT bcmpmu_audio_init
+#define AUDIO_PMU_HS_SET_GAIN bcmpmu_hs_set_gain
+#define AUDIO_PMU_HS_POWER bcmpmu_hs_power
+#define AUDIO_PMU_IHF_SET_GAIN bcmpmu_ihf_set_gain
+#define AUDIO_PMU_IHF_POWER bcmpmu_ihf_power
+#define AUDIO_PMU_DEINIT bcmpmu_audio_deinit
 
-void register_capture_request_handler( capture_request_handler_t capture_cb );
+#else
+#include "bcmpmu_audio.h"
+
+#define AUDIO_PMU_INIT() NULL  
+#define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
+#define AUDIO_PMU_HS_POWER(a) NULL 
+#define AUDIO_PMU_IHF_SET_GAIN(a) NULL 
+#define AUDIO_PMU_IHF_POWER(a) NULL 
+#define AUDIO_PMU_DEINIT() NULL 
 
 #endif
+
+#endif
+
+
+
+#endif	//__AUDIO_PMU_ADAPT_H__
+

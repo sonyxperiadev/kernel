@@ -116,27 +116,19 @@
 #endif
 
 
-
-typedef struct
-{ 
-	UInt16 array1[8];
-
-
-} dummy1_control_t;
-
 typedef struct
 {
-	Int16 array2[70];
+	UInt32 array2[35];
 } dummy2_config_t; 
 
 typedef struct
 {
- Int16 array3[20];
+ UInt32 array3[10];
 } dummy3_queries_t;
 
 typedef struct
 {
-	Int16 array4[4];											   
+	UInt32 array4[2];											   
 } dummy4_input_t;										
 
 typedef struct
@@ -307,8 +299,7 @@ typedef enum
     SRC_48K16K = 2                                    //SRC 48KHz to 16KHz
 }SampleRateC_t;
 
-
-
+// ---- Typedef Declarations -----------------------------------------
 /**
  * @addtogroup AP_Queues
  * @{
@@ -2302,6 +2293,12 @@ EXTERN dummy3_queries_t shared_SP_params_right								AP_SHARED_SEC_GEN_AUDIO;
  * phone call.
  */
 EXTERN UInt16 shared_aadmac_audio_samp_rate									AP_SHARED_SEC_GEN_AUDIO;
+
+/**
+ * This variable tells what audio paths are enabled.
+ */
+EXTERN UInt16 shared_aadmac_aud_enable            									AP_SHARED_SEC_GEN_AUDIO;
+
 
 /** @addtogroup Shared_Audio_Buffers 
  * @{ */

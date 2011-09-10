@@ -61,6 +61,10 @@
 extern "C" {
 #endif
 
+//Define the other mic which is used for Noise Cancellation.
+//It is product-dependent.
+#define MIC_NOISE_CANCEL CSL_CAPH_DEV_EANC_DIGI_MIC_R
+
 typedef enum {
 	//AP->CP->DSP cmd to reuse the enum in dspcmd.h
 	//AP->CP cmd to be listed here including filter loading.
@@ -95,6 +99,60 @@ typedef enum AUDDRV_REQUEST_ID_t
     AUDDRV_RATE_CHANGE_REQ,     //0x00
 	AUDDRV_REQUEST_ID_TOTAL_COUNT
 } AUDDRV_REQUEST_ID_t;
+
+/**
+* Devices
+******************************************************************************/
+typedef enum
+{
+	AUDDRV_DEV_NONE,
+
+	AUDDRV_RENDER_DEV_AUDIO, /* Athena AUDIO path */
+	AUDDRV_RENDER_DEV_POLYRINGER, /*Athena POLY path */
+	AUDDRV_CAPTURE_DEV_AUDIO,
+	AUDDRV_CAPTURE_DEV_BTW,
+
+	AUDDRV_DEV_EP,  /*Earpiece*/
+	AUDDRV_DEV_HS,  /*Headset speaker*/
+	AUDDRV_DEV_IHF,  /*IHF speaker*/
+	AUDDRV_DEV_VIBRA,  /*Vibra output*/
+	AUDDRV_DEV_FM_TX,  /*FM TX broadcaster*/
+	AUDDRV_DEV_BT_SPKR,  /*Bluetooth headset speaker*/
+	AUDDRV_DEV_DSP,  /*DSP direct connection with SRCMixer in voice call*/
+	AUDDRV_DEV_DIGI_MIC,  /*Two Digital microphones*/
+//	AUDDRV_DEV_DIGI_MIC_L = AUDDRV_DEV_DIGI_MIC,  /*Digital microphone: L-channel*/
+	AUDDRV_DEV_DIGI_MIC_L,  /*Digital microphone: L-channel*/
+	AUDDRV_DEV_DIGI_MIC_R,  /*Digital microphone: R-channel*/
+	AUDDRV_DEV_EANC_DIGI_MIC,  /*Two Noise Digital microphones for EANC control*/
+	AUDDRV_DEV_EANC_DIGI_MIC_L,  /*ENAC Digital microphone: L-channel*/
+	AUDDRV_DEV_EANC_DIGI_MIC_R,  /*ENAC Digital microphone: R-channel*/
+	AUDDRV_DEV_SIDETONE_INPUT,  /*Sidetone path input*/
+	AUDDRV_DEV_EANC_INPUT,  /*EANC Anti-noise input*/
+	AUDDRV_DEV_ANALOG_MIC,  /*Phone analog mic*/
+	AUDDRV_DEV_HS_MIC,  /*Headset mic*/
+	AUDDRV_DEV_BT_MIC,  /*Bluetooth headset mic*/
+	AUDDRV_DEV_FM_RADIO,  /*FM Radio playback*/
+	AUDDRV_DEV_MEMORY,  /*DDR memory*/
+	AUDDRV_DEV_SRCM,  /*SRCMixer*/
+	AUDDRV_DEV_DSP_throughMEM,  /*DSP connection through Shared mem*/
+}AUDDRV_DEVICE_e;
+
+/**
+* CAPH HW filters
+******************************************************************************/
+typedef enum
+{
+    AUDDRV_EANC_FILTER1, 
+    AUDDRV_EANC_FILTER2, 
+    AUDDRV_SIDETONE_FILTER, 
+}AUDDRV_HWCTRL_FILTER_e;
+
+
+typedef enum {
+	AUDDRV_MIC1 = 0x1,
+	AUDDRV_MIC2 = 0x2,
+	AUDDRV_SPEAKER = 0x4
+} AUDDRV_DSPFILTER_DEVICE_Enum_t;
 
 // audio controller request message structure
 typedef struct AUDDRV_REQUEST_MSG_t
@@ -216,29 +274,6 @@ void AUDDRV_EnableDSPInput (
 				AUDIO_SAMPLING_RATE_t	 sample_rate
 				);
 
-// Enable audio output path and audio processing.
-void AUDDRV_Enable_Output (
-				AUDDRV_InOut_Enum_t     input_path_to_mixer,
-				AUDDRV_SPKR_Enum_t      mixer_speaker_selection,
-				Boolean                 enable_speaker,
-				AUDIO_SAMPLING_RATE_t   sample_rate,
-				AUDIO_CHANNEL_NUM_t     input_to_mixer,
-                void *                 callback
-				);
-
-// Disable audio output path. 
-void AUDDRV_Disable_Output ( AUDDRV_InOut_Enum_t  path );
-
-// Enable audio input and digital processing.
-void AUDDRV_Enable_Input (
-				AUDDRV_InOut_Enum_t 	 input_path,
-				AUDDRV_MIC_Enum_t		 mic_selection,
-				AUDIO_SAMPLING_RATE_t	 sample_rate
-				);
-
-// Disable audio input and digital processing.
-void AUDDRV_Disable_Input (  AUDDRV_InOut_Enum_t  path );
-
 Boolean AUDDRV_IsVoiceCallWB(AudioMode_t audio_mode);
 Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode);
 Boolean AUDDRV_InVoiceCall( void );
@@ -270,8 +305,6 @@ void AUDDRV_User_CtrlDSP (
 
 void AUDDRV_User_HandleDSPInt ( UInt32 param1, UInt32 param2, UInt32 param3 );
 void AUDDRV_SetPCMOnOff(Boolean	on_off);
-AudioEqualizer_en_t AUDDRV_GetEquType( AUDDRV_TYPE_Enum_t path );
-void AUDDRV_SetEquType( AUDDRV_TYPE_Enum_t path, AudioEqualizer_en_t equ_id );
 
 void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 			  AUDDRV_SPKR_Enum_t speaker,
@@ -281,7 +314,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 void AUDDRV_Telephony_DeinitHW(void *pData);
 
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off );
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
 		UInt32 dev, 
 		SysAudioParm_t* pAudioParm);

@@ -50,8 +50,8 @@
 #include "osdal_os.h"
 #include "osheap.h"
 #include "log.h"
-#include "csl_aud_drv.h"
 #include "csl_caph.h"
+#include "audio_vdriver.h"
 #include "csl_apcmd.h"
 #include "csl_audio_render.h"
 #include "csl_audio_capture.h"
@@ -59,6 +59,7 @@
 #include "csl_vpu.h"
 #include "dspcmd.h"
 #include "csl_voip.h"
+#include "csl_caph_hwctrl.h"
 
 //=============================================================================
 // Public Variable declarations
@@ -250,113 +251,6 @@ static int ResetPlaybackStreamHandle(UInt32 streamID)
 }
 
 
-static CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
-{
-      CSL_CAPH_DEVICE_e cslDev = CSL_CAPH_DEV_NONE;
-
-      switch (dev)
-      {
-        case AUDDRV_DEV_NONE:
-            cslDev = CSL_CAPH_DEV_NONE;
-            break;
-			
-         case AUDDRV_DEV_EP:
-            cslDev = CSL_CAPH_DEV_EP;
-            break;
-			
-         case AUDDRV_DEV_HS:
-            cslDev = CSL_CAPH_DEV_HS;
-            break;	
-			
-         case AUDDRV_DEV_IHF:
-            cslDev = CSL_CAPH_DEV_IHF;
-            break;
-			
-         case AUDDRV_DEV_VIBRA:
-            cslDev = CSL_CAPH_DEV_VIBRA;
-            break;
-			
-         case AUDDRV_DEV_FM_TX:
-            cslDev = CSL_CAPH_DEV_FM_TX;
-            break;
-			
-         case AUDDRV_DEV_BT_SPKR:
-            cslDev = CSL_CAPH_DEV_BT_SPKR;
-            break;	
-			
-         case AUDDRV_DEV_DSP:
-            cslDev = CSL_CAPH_DEV_DSP;
-            break;
-			
-         case AUDDRV_DEV_DIGI_MIC:
-            cslDev = CSL_CAPH_DEV_DIGI_MIC;
-            break;
-
-
-         case AUDDRV_DEV_DIGI_MIC_L:
-            cslDev = CSL_CAPH_DEV_DIGI_MIC_L;
-            break;
-
-         case AUDDRV_DEV_DIGI_MIC_R:
-            cslDev = CSL_CAPH_DEV_DIGI_MIC_R;
-            break;
-			
-         case AUDDRV_DEV_EANC_DIGI_MIC:
-            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC;
-            break;
-			
-         case AUDDRV_DEV_EANC_DIGI_MIC_L:
-            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_L;
-            break;
-
-         case AUDDRV_DEV_EANC_DIGI_MIC_R:
-            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_R;
-            break;
-
-         case AUDDRV_DEV_SIDETONE_INPUT:
-            cslDev = CSL_CAPH_DEV_SIDETONE_INPUT;
-            break;	
-			
-         case AUDDRV_DEV_EANC_INPUT:
-            cslDev = CSL_CAPH_DEV_EANC_INPUT;
-            break;
-			
-         case AUDDRV_DEV_ANALOG_MIC:
-            cslDev = CSL_CAPH_DEV_ANALOG_MIC;
-            break;
-			
-         case AUDDRV_DEV_HS_MIC:
-            cslDev = CSL_CAPH_DEV_HS_MIC;
-            break;
-			
-         case AUDDRV_DEV_BT_MIC:
-            cslDev = CSL_CAPH_DEV_BT_MIC;
-            break;	
-			
-         case AUDDRV_DEV_FM_RADIO:
-            cslDev = CSL_CAPH_DEV_FM_RADIO;
-            break;
-			
-         case AUDDRV_DEV_MEMORY:
-            cslDev = CSL_CAPH_DEV_MEMORY;
-            break;
-
-         case AUDDRV_DEV_SRCM:
-            cslDev = CSL_CAPH_DEV_SRCM;
-            break;
-		
-        case AUDDRV_DEV_DSP_throughMEM:
-            cslDev = CSL_CAPH_DEV_DSP_throughMEM;
-            break;
-    	    
-        default:
-		break;	
-    };
-
-    return cslDev;
-}
-
-
 //============================================================================
 //
 // Function Name: AUDIO_DRIVER_Open
@@ -432,28 +326,10 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
     switch (aud_drv->drv_type)
     {
         case AUDIO_DRIVER_PLAY_VOICE:
-			{
-				audio_voice_driver[aud_drv->arm2sp_config.instanceID] = NULL;
-       		}
-		break;
         case AUDIO_DRIVER_PLAY_AUDIO:
-        case AUDIO_DRIVER_PLAY_RINGER:
-            {
-                // un initialize audvoc render
-                csl_audio_render_deinit (aud_drv->stream_id);
-				ResetPlaybackStreamHandle(aud_drv->stream_id);
-            }
-            break;
+        case AUDIO_DRIVER_PLAY_RINGER:		
         case AUDIO_DRIVER_CAPT_HQ:
-            {
-                csl_audio_capture_deinit (aud_drv->stream_id);
-                audio_capture_driver = NULL;
-            }
-            break;
         case AUDIO_DRIVER_CAPT_VOICE:
-            {
-				audio_capture_driver = NULL;
-            }
             break;
 		case AUDIO_DRIVER_VOIP:
 			{
@@ -645,7 +521,9 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 						            			          block_size,
 						                      			  (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
                                         			      aud_drv->stream_id);
-
+#ifdef ENABLE_DMA_ARM2SP
+				csl_caph_arm2sp_set_param((UInt32)aud_drv->arm2sp_config.mixMode,(aud_drv->arm2sp_config.instanceID+1)); //0 is instance_none
+#endif
                 //start render
                 result_code = csl_audio_render_start (aud_drv->stream_id);
             }
@@ -654,6 +532,9 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
             {
                 //stop render
                 result_code = csl_audio_render_stop (aud_drv->stream_id);
+				/* de-init during stop itself as the sequence is open->start->stop->start in android */
+                csl_audio_render_deinit (aud_drv->stream_id);
+				ResetPlaybackStreamHandle(aud_drv->stream_id);
             }
             break;
         case AUDIO_DRIVER_PAUSE:
@@ -689,7 +570,7 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
 	Result_t result_code = RESULT_ERROR;
-	VORENDER_VOICE_MIX_MODE_t *mixMode;
+	VORENDER_VOICE_MIX_MODE_t mixMode;
 	UInt32 numFramesPerInterrupt;
 	
 	Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoiceRenderCmd::%d \n",ctrl_cmd );
@@ -697,10 +578,6 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 	{
 		  case AUDIO_DRIVER_START:
 		  {
-						  
-			  if(pCtrlStruct != NULL)
-				  mixMode = ( VORENDER_VOICE_MIX_MODE_t *)pCtrlStruct;
-				  
 			  //check if callback is already set or not
 			  if( (aud_drv->pCallback == NULL) ||
 				  (aud_drv->interrupt_period == 0) ||
@@ -718,6 +595,8 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  audio_voice_driver[aud_drv->arm2sp_config.instanceID] =  aud_drv;
 
 			  aud_drv->num_periods = aud_drv->ring_buffer_size/aud_drv->interrupt_period;
+
+			  mixMode = aud_drv->arm2sp_config.mixMode;
 	  
 			  numFramesPerInterrupt = 4; // use default value
 
@@ -730,24 +609,15 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  }     
 			  
 			  // Based on the mix mode, decide the playback mode as well
-			  if(*mixMode == VORENDER_VOICE_MIX_DL)
-			  {
+			  if(mixMode == VORENDER_VOICE_MIX_DL)
 			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_DL;
-			  }
-			  else if(*mixMode == VORENDER_VOICE_MIX_UL)
-			  {
+			  else if(mixMode == VORENDER_VOICE_MIX_UL)
 			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_UL;
-			  }
-			  else if(*mixMode == VORENDER_VOICE_MIX_BOTH)
-			  {
+			  else if(mixMode == VORENDER_VOICE_MIX_BOTH)
 			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_BOTH;
-			  }
-			  else if(*mixMode == VORENDER_VOICE_MIX_NONE)
-			  {
+			  else if(mixMode == VORENDER_VOICE_MIX_NONE)
 			  		aud_drv->arm2sp_config.playbackMode = VORENDER_PLAYBACK_DL; //for standalone testing
-			  }
 				
-	  		  aud_drv->arm2sp_config.mixMode = *mixMode;
 			  aud_drv->arm2sp_config.audMode = (aud_drv->num_channel == AUDIO_CHANNEL_STEREO)? 1 : 0; 
 			 
 			  //start render
@@ -769,6 +639,8 @@ static Result_t AUDIO_DRIVER_ProcessVoiceRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 			  }
 			  index = 1; //reset
 			  endOfBuffer = FALSE;
+			  /*de-init during stop as the android sequence is open->start->stop->start */
+			  audio_voice_driver[aud_drv->arm2sp_config.instanceID] = NULL;
 		  }
 		  break;
 		  case AUDIO_DRIVER_PAUSE:
@@ -812,8 +684,6 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
     Result_t result_code = RESULT_ERROR;
     AUDDRV_DEVICE_e *aud_dev = (AUDDRV_DEVICE_e *)pCtrlStruct;
 
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessCaptureCmd::%d \n",ctrl_cmd );
-
     switch (ctrl_cmd)
     {
         case AUDIO_DRIVER_START:
@@ -836,11 +706,11 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
                 }
                 aud_drv->stream_id = csl_audio_capture_init (AUDDRV_GetCSLDevice(*aud_dev),CSL_CAPH_DEV_MEMORY);
                 /* Block size = (smaples per ms) * (number of channeles) * (bytes per sample) * (interrupt period in ms) 
-                 * Number of blocks = buffer size/block size
-                 *
-                 */
+				* Number of blocks = buffer size/block size
+				*
+				*/
                 block_size = aud_drv->interrupt_period;
-		num_blocks = 2; //limitation for RHEA
+				num_blocks = 2; //limitation for RHEA
 
                 // configure the render driver before starting
                 result_code = csl_audio_capture_configure ( aud_drv->sample_rate, 
@@ -860,6 +730,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureCmd(AUDIO_DDRIVER_t* aud_drv,
             {
                 //stop capture
                 result_code = csl_audio_capture_stop (aud_drv->stream_id);
+				/*de-init as the sequence is open->start->stop->start in android */
+                csl_audio_capture_deinit (aud_drv->stream_id);
+                audio_capture_driver = NULL;
             }
             break;
         case AUDIO_DRIVER_PAUSE:
@@ -970,6 +843,9 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 				result_code = RESULT_OK;
 				index = 1; //reset
 				endOfBuffer = FALSE;
+
+				/* de-init during stop as the android sequence is open->start->stop->start */
+				audio_capture_driver = NULL;
             }
             break;
         case AUDIO_DRIVER_PAUSE:
@@ -1031,8 +907,6 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
 
 				size = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
 			
-				Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd:: aud_drv->codec_type %d size = %ld\n", aud_drv->voip_config.codec_type,size );
-
 				aud_drv->tmp_buffer = OSHEAP_Alloc(size); 
 
 				if(aud_drv->tmp_buffer == NULL)
@@ -1040,12 +914,14 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
 				else
 					memset(aud_drv->tmp_buffer,0,size);
 			
-				result_code = VoIP_StartTelephony();
-            }
+				VoIP_StartTelephony();
+				result_code = RESULT_OK;
+			}
             break;
         case AUDIO_DRIVER_STOP:
             {
-				result_code = VoIP_StopTelephony();
+				VoIP_StopTelephony();
+				result_code = RESULT_OK;
             }
             break;
         case AUDIO_DRIVER_SET_VOIP_UL_CB:
@@ -1118,6 +994,7 @@ static Result_t AUDIO_DRIVER_ProcessCommonCmd(AUDIO_DDRIVER_t* aud_drv,
                 aud_drv->num_channel = pAudioConfig->num_channel;
                 aud_drv->bits_per_sample = pAudioConfig->bits_per_sample;
 				aud_drv->arm2sp_config.instanceID = pAudioConfig->instanceId; // to decide on ARM2SP1 or ARM2SP2
+				aud_drv->arm2sp_config.mixMode = pAudioConfig->arm2sp_mixMode;
                 result_code = RESULT_OK;
             }
             break;
@@ -1693,11 +1570,11 @@ void VPU_Capture_Request(UInt16 buf_index)
 
     if((aud_drv == NULL))
     {
-        Log_DebugPrintf(LOGID_AUDIO, "AUDIO_DRIVER_CaptureVoiceCallback:: Spurious call back\n");
+        Log_DebugPrintf(LOGID_AUDIO, "VPU_Capture_Request:: Spurious call back\n");
 		return;
     }
 
-    Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_CaptureVoiceCallback:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
+    Log_DebugPrintf(LOGID_AUDIO,"VPU_Capture_Request:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
 
     //Copy the data to the ringbuffer from dsp shared memory
     dest_index = aud_drv->write_index;
@@ -1770,7 +1647,7 @@ static void VoIP_StartMainAMRDecodeEncode(
 	if (prev_amr_mode == 0xffff || prev_amr_mode != encode_amr_mode)
 	{
 	
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "=====VoIP_StartMainAMRDecodeEncode UL codecType=0x%x, send VP_COMMAND_MAIN_AMR_RUN to DSP", encode_amr_mode);
+		//Log_DebugPrintf(LOGID_SOC_AUDIO, "=====VoIP_StartMainAMRDecodeEncode UL codecType=0x%x, send VP_COMMAND_MAIN_AMR_RUN to DSP", encode_amr_mode);
 		prev_amr_mode = encode_amr_mode;
 		VPRIPCMDQ_DSP_AMR_RUN((UInt16)encode_amr_mode, telephony_amr_if2, FALSE);
 	}
@@ -1791,8 +1668,6 @@ void AP_ProcessStatusMainAMRDone(UInt16 codecType)
 {
  	static UInt16 Buf[321]; // buffer to hold UL data and codec type
 
-	//Log_DebugPrintf(LOGID_SOC_AUDIO,"=====AP_ProcessStatusMainAMRDone \r\n");
-	
 	// encoded uplink AMR speech data now ready in DSP shared memory, copy it to application
 	// pBuf is to point the start of the encoded speech data buffer
 	
@@ -1833,7 +1708,7 @@ static Boolean VOIP_DumpUL_CB(
 		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: Invalid codecType = 0x%x\n", codecType);
 	else
 	{
-		Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: codecType = 0x%x, index = %d pSrc 0x%x\n", codecType, index, pSrc);		
+		//Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB :: codecType = 0x%x, index = %d pSrc 0x%x\n", codecType, index, pSrc);		
 		ulSize = sVoIPDataLen[(codecType & 0xf000) >> 12];
 	    if(aud_drv->voip_config.pVoipULCallback != NULL)
 			aud_drv->voip_config.pVoipULCallback(aud_drv->voip_config.pVoIPCBPrivate, (pSrc + 2),(ulSize - 2) ); 
@@ -1863,7 +1738,7 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
     }
 	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	dlSize = sVoIPDataLen[(aud_drv->voip_config.codec_type & 0xf000) >> 12];
-	Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
+	//Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
 	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[2], (dlSize - 2)); // 2 bytes for codec type
 	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->voip_config.codec_type, aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
 	return TRUE;

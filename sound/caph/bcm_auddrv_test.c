@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 Broadcom Corporation.  All rights reserved.                                
 
 Unless you and Broadcom execute a separate written software license agreement 
 governing use of this software, this software is licensed to you under the 
@@ -49,11 +49,10 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "audio_consts.h"
 #include "chal_types.h"
-#include "csl_aud_drv.h"
 #include "log.h"
 
-
-
+#include "csl_caph.h"
+#include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"
@@ -72,7 +71,6 @@ the GPL, without Broadcom's express prior written consent.
 #ifdef CONFIG_ARM2SP_PLAYBACK
 #include "audio_vdriver_voice_play.h"
 #endif
-#include "audio_vdriver.h"
 #include "osdal_os.h"
 
 static UInt8 *samplePCM16_inaudiotest = NULL;
@@ -105,10 +103,6 @@ UInt8 playback_audiotest_srcmixer[165856] = {
 
 static int sgBrcm_auddrv_TestValues[BRCM_AUDDRV_TESTVAL];
 static char *sgBrcm_auddrv_TestName[]={"Aud_play","Aud_Rec","Aud_control"};
-
-#ifdef CONFIG_AUDIO_BUILD
-static void __iomem *ahb_audio_base = NULL;
-#endif
  
 // SysFS interface to test the Audio driver level API
 ssize_t Brcm_auddrv_TestSysfs_show(struct device *dev, struct device_attribute *attr, char *buf);
@@ -696,34 +690,7 @@ static int HandleControlCommand()
         {
             DEBUG(" Enable telephony\n");
             AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET);
-	    /*{
-			AUDDRV_HWCTRL_CONFIG_t config;
-           //DL
-			config.streamID = AUDDRV_STREAM_NONE;
-			config.pathID = 0;
-			config.source = AUDDRV_DEV_DSP;
-			config.sink = AUDDRV_DEV_EP; //AUDDRV_GetDRVDeviceFromSpkr(speaker);
-			config.dmaCH = CSL_CAPH_DMA_NONE;    
-			config.src_sampleRate = AUDIO_SAMPLING_RATE_8000; //sample_rate;
-			config.snk_sampleRate = AUDIO_SAMPLING_RATE_48000;	
-			config.chnlNum = AUDIO_CHANNEL_MONO;
-			config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-
-			DLPathID = AUDDRV_HWControl_EnablePath(config);
-
-			//UL
-			config.streamID = AUDDRV_STREAM_NONE;
-			config.pathID = 0;
-			config.source = AUDDRV_DEV_ANALOG_MIC; //AUDDRV_GetDRVDeviceFromMic(mic);
-			config.sink = AUDDRV_DEV_DSP;
-			config.dmaCH = CSL_CAPH_DMA_NONE;    
-			config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
-			config.snk_sampleRate = AUDIO_SAMPLING_RATE_8000; //sample_rate;	
-			config.chnlNum = AUDIO_CHANNEL_MONO;
-			config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
-
-			ULPathID = AUDDRV_HWControl_EnablePath(config);
-		}*/		           
+	    		           
             DEBUG(" Telephony enabled \n");
         }
         break;
@@ -731,21 +698,7 @@ static int HandleControlCommand()
         {
             DEBUG(" Disable telephony\n");
             AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,AUDCTRL_MIC_MAIN,AUDCTRL_SPK_HANDSET);   
-			/*{
-				AUDDRV_HWCTRL_CONFIG_t config;
-				config.streamID = AUDDRV_STREAM_NONE;
-				config.pathID = ULPathID;
-
-				(void)AUDDRV_HWControl_DisablePath(config);
-				ULPathID = 0;
-
-				config.streamID = AUDDRV_STREAM_NONE;
-				config.pathID = DLPathID;
-
-				(void)AUDDRV_HWControl_DisablePath(config);
-				DLPathID = 0;
-			}*/
-            DEBUG(" Telephony disabled \n");
+		            DEBUG(" Telephony disabled \n");
         }
 		break;
 #ifdef CONFIG_VOIP_DRIVER_TEST
@@ -1334,138 +1287,6 @@ static void AUDIO_DRIVER_TEST_CaptInterruptPeriodCB(void *pPrivate)
 
     return;
 }
-
-#ifdef CONFIG_AUDIO_BUILD
-// Test code 
-
-//#define AHB_AUDIO_BASE_ADDR      0x30800000 
-#define SIZE_64K 0xffff
-//#define DSP_AUDIO_AIFIFODATA0_R_OFFSET                                    0x00000400
-//#define DSP_AUDIO_AIFIFODATA1_R_OFFSET                                    0x00000404
-//#define DSP_AUDIO_STEREOAUDMOD_R_OFFSET                                   0x00000FA0
-
-
-void dump_audio_registers()
-{
-    UInt32* fifo_addr;
-    UInt16* saudm_addr;
-    UInt32 cnt=0;
-    char MsgBuf[128];
-    UInt8* ahb_au_base;
-
-    // map the audio base
-    if(ahb_audio_base == NULL)
-    {
-        ahb_audio_base = ioremap_nocache(AHB_AUDIO_BASE_ADDR, SIZE_64K);
-        if (!ahb_audio_base) {
-            DEBUG("\n\r\t* Mapping ahb_audio base failed*\n\r");
-            return;
-        }
-    }
-    ahb_au_base = (UInt8*)ahb_audio_base;
-
-
-
-
-
-            sprintf( MsgBuf, "SYSCFG_DSPCTRL  =0x%04x ", 	*((UInt32 *) (SYSCFG_BASE_ADDR+SYSCFG_DSPCTRL_OFFSET)));
-			DEBUG(MsgBuf);
-
-
-			sprintf( MsgBuf, "AMCR =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_AMCR_R_OFFSET)));
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "AUDIOINPATH_CTRL =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_AUDIOINPATH_CTRL_R_OFFSET)));
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "VOICEFIFO_STATUS =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_VOICEFIFO_STATUS_R_OFFSET)));
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "AUDIOLOOPBACK_CTRL =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_AUDIOLOOPBACK_CTRL_R_OFFSET)));
-			DEBUG(MsgBuf);
-			
-			sprintf( MsgBuf, "VCFGR =0x%04x, VMUT =0x%04x, VSLOPGAIN =0x%04x ",
-						*((UInt16 *) (ahb_au_base+DSP_AUDIO_VCFGR_R_OFFSET)),
-						*((UInt16 *) (ahb_au_base+DSP_AUDIO_VMUT_R_OFFSET)),
-						*((UInt16 *) (ahb_au_base+DSP_AUDIO_VSLOPGAIN_R_OFFSET)) );
-			DEBUG(MsgBuf);
-
-			sprintf( MsgBuf, "ADCCONTROL =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_ADCCONTROL_R_OFFSET)));
-			DEBUG(MsgBuf);
-
-			sprintf( MsgBuf, "POLYAUDMOD =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_POLYAUDMOD_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "PIFIFOST =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_PIFIFOST_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "PLRCH =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_PLRCH_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "PLSLOPGAIN =0x%04x, PRSLOPGAIN =0x%04x ",
-						*((UInt16 *) (ahb_au_base+DSP_AUDIO_PLSLOPGAIN_R_OFFSET)),
-						*((UInt16 *) (ahb_au_base+DSP_AUDIO_PRSLOPGAIN_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "PEQPATHGAIN1 =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_PEQPATHGAIN1_R_OFFSET)) );
-			DEBUG(MsgBuf);
-
-			sprintf( MsgBuf, "STEREOAUDMOD =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_STEREOAUDMOD_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "AIFIFOST =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_AIFIFOST_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "ALRCH =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_ALRCH_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "ALSLOPGAIN =0x%04x, ARSLOPGAIN =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_ALSLOPGAIN_R_OFFSET)), *((UInt16 *) (ahb_au_base+DSP_AUDIO_ARSLOPGAIN_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			sprintf( MsgBuf, "AEQPATHGAIN1 =0x%04x, AEQPATHGAIN2 =0x%04x ", *((UInt16 *) (ahb_au_base+DSP_AUDIO_AEQPATHGAIN1_R_OFFSET)), *((UInt16 *) (ahb_au_base+DSP_AUDIO_AEQPATHGAIN2_R_OFFSET)) );
-			DEBUG(MsgBuf);
-
-/**
-08 unsigned VOICE_IN_ONLY_INT 1: Voice input only mode interrupt flag, Write '0' to this bit will clean the flag, Writing '1' does nothing to the flag (Type: R/W)
-Reset value is 0x0. 
-07 unsigned BTTAP_NB_INT 1: BT Taps narrow band interrupt flag, Write '0' to this bit will clean the flag, Writing '1' does nothing to the flag (Type: R/W)
-Reset value is 0x0. 
-06 unsigned BTTAP_WB_INT 1: BT Taps wide band interrupt flag, Write '0' to this bit will clean the flag, Writing '1' does nothing to the flag (Type: R/W)
-Reset value is 0x0. 
-05 unsigned Reserved Reserved bit must be written with 0.  A read returns an unknown value. 
-04 unsigned POLYRINGER_INT 1: DAC Polyringer path interrupt flag, Write '0' to this bit will clean the flag, Writing '1' does nothing to the flag (Type: R/W)
-Reset value is 0x0. 
-03 unsigned ADC_AUDIO_INT 1: ADC Audio path interrupt flag, Write '0' to this bit will clean the flag, Writing '1' does nothing to the flag (Type: R/W)
-Reset value is 0x0. 
-02 unsigned DAC_AUDIO_INT 1: DAC Audio path interrupt flag, Write '0' to this bit will clean the flag, Writing '1' does nothing to the flag (Type: R/W)
-Reset value is 0x0. 
-01 unsigned VOICE_INT 1: Voice band interrupt flag, Write '0' to this bit will clean the flag, Writing '1' does nothing to the flag (Type: R/W)
-Reset value is 0x0. 
-00 unsigned PCM_INT 1: PCM interrupt flag, Write '0' to this bit will clean the flag, Writing '1' does nothing to the flag (Type: R/W)
-Reset value is 0x0. 
-*/
-			sprintf( MsgBuf, "AUDVOC_ISR =0x%04x ", *((UInt16 *)(ahb_au_base+DSP_AUDIO_AUDVOC_ISR_R_OFFSET)) );
-			DEBUG(MsgBuf);
-
-			sprintf( MsgBuf, "MIXER_INPUT_SEL =0x%04x ", *((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_INPUT_SEL_R_OFFSET)) );
-			DEBUG(MsgBuf);
-
-			*((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_GAIN_CHSEL_R_OFFSET)) = 0;
-			sprintf( MsgBuf, "MIXER1_GAIN =0x%04x ", *((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_GAIN_ADJUST_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			*((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_GAIN_CHSEL_R_OFFSET)) = 1;
-			sprintf( MsgBuf, "MIXER2_GAIN =0x%04x ", *((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_GAIN_ADJUST_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			*((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_GAIN_CHSEL_R_OFFSET) ) = 2;
-			sprintf( MsgBuf, "MIXER3_GAIN =0x%04x ", *((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_GAIN_ADJUST_R_OFFSET)) );
-			DEBUG(MsgBuf);
-			*((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_GAIN_CHSEL_R_OFFSET) ) = 3;
-			sprintf( MsgBuf, "MIXER4_GAIN =0x%04x ", *((UInt16 *)(ahb_au_base+DSP_AUDIO_MIXER_GAIN_ADJUST_R_OFFSET)) );
-			DEBUG(MsgBuf);
-
-			sprintf( MsgBuf, "BIQUAD_CFG =0x%04x ", *((UInt16 *)(ahb_au_base+DSP_AUDIO_BIQUAD_CFG_R_OFFSET)) );
-			DEBUG(MsgBuf);
-
-			sprintf( MsgBuf, "AHB_AUDIO_BTMIXER_CFG_R =0x%04x,  AUDIO_BTMIXER_CFG2_R ==0x%04x, AHB_AUDIO_BTMIXER_GAIN_L_R =0x%04x, AHB_AUDIO_BTMIXER_GAIN_R_R =0x%04x ", 
-				*((UInt16 *)(ahb_au_base+DSP_AUDIO_BTMIXER_CFG_R_OFFSET) ), *((UInt16 *)(ahb_au_base+DSP_AUDIO_BTMIXER_CFG2_R_OFFSET)),
-				*((UInt16 *)(ahb_au_base+DSP_AUDIO_BTMIXER_GAIN_L_R_OFFSET) ), *((UInt16 *)(ahb_au_base+DSP_AUDIO_BTMIXER_GAIN_R_R_OFFSET))
-				);
-			DEBUG(MsgBuf);
-
-   			return;
-}
-
-#endif	    
-
 
 #ifdef CONFIG_ARM2SP_PLAYBACK_TEST
 

@@ -102,7 +102,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
 {
     int                         rc;
     //gpiomux_rc_e                gpiomux_rc;
-//    VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
+    VCEB_PLATFORM_DATA_HANA_T  *platform_data = instance->host_param;
     VCEB_HOST_INTERFACE_STATE_T state = instance->state;
 #if 0
     DBG_LOG( BootTrace, "called, vc_boot_mode = '%s'", vc_boot_mode );
@@ -140,6 +140,12 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     state->ipcHandle = chal_ipc_config( NULL );
     /* gpio pin mux is setup as part of the board configuration */
     /* we will have to request the non muxed gpio pins here and set it to the appropriate values */
+
+    /*
+     * FIXME All the hardcoded GPIO pin numbers should be moved to the
+     * platform_data! Otherwise this code may not work when we move to another
+     * platform that has a different GPIO muxing.
+     */
 
     /* request HDMI hot plug gpio */
  #define HDMI_HOT_PLUG    62
@@ -218,57 +224,51 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     }
 
     /*
-     * This code doesn't really belong here, but it's good enough for now.
+     * FIXME This code doesn't really belong here, but it's good enough for now.
      */
 
- #define LCD_BL_POWER_ENABLE 141
- #define LCD_BL_ENABLE        69
- #define LCD_BL_PWM          145
- #define LCD_RESET           146
- #define LCD_POWER_ENABLE    142
-
-    if (( rc = gpio_request( LCD_BL_POWER_ENABLE, "bl-pwr-en" )) != 0 )
+    if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwr_en, "bl-pwr-en" )) != 0 )
     {
         printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwr-en' ) failed: %d\n", 
-                __func__, LCD_BL_POWER_ENABLE, rc );
+                __func__, platform_data->disp_gpio.lcd_bl_pwr_en, rc );
         return -ENODEV;
     }
-    if (( rc = gpio_request( LCD_BL_ENABLE, "bl-en" )) != 0 )
+    if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_en, "bl-en" )) != 0 )
     {
         printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n", 
-                __func__, LCD_BL_ENABLE, rc );
+                __func__, platform_data->disp_gpio.lcd_bl_en, rc );
         return -ENODEV;
     }
-    if (( rc = gpio_request( LCD_BL_PWM, "bl-pwm" )) != 0 )
+    if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwm, "bl-pwm" )) != 0 )
     {
         printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwm' ) failed: %d\n", 
-                __func__, LCD_BL_PWM, rc );
+                __func__, platform_data->disp_gpio.lcd_bl_pwm, rc );
         return -ENODEV;
     }
-    if (( rc = gpio_request( LCD_RESET, "lcd-reset" )) != 0 )
+    if (( rc = gpio_request( platform_data->disp_gpio.lcd_rst, "lcd-reset" )) != 0 )
     {
         printk( KERN_ERR "%s: gpio_request( %d, 'lcd-reset' ) failed: %d\n", 
-                __func__, LCD_RESET, rc );
+                __func__, platform_data->disp_gpio.lcd_rst, rc );
         return -ENODEV;
     }
-    if (( rc = gpio_request( LCD_POWER_ENABLE, "lcd-pwr-en" )) != 0 )
+    if (( rc = gpio_request( platform_data->disp_gpio.lcd_pwr_en, "lcd-pwr-en" )) != 0 )
     {
         printk( KERN_ERR "%s: gpio_request( %d, 'lcd-pwr-en' ) failed: %d\n", 
-                __func__, LCD_POWER_ENABLE, rc );
+                __func__, platform_data->disp_gpio.lcd_pwr_en, rc );
         return -ENODEV;
     }
 
-    gpio_direction_output( LCD_RESET,           0 );
-    gpio_direction_output( LCD_POWER_ENABLE,    0 );
-    gpio_direction_output( LCD_BL_PWM,          0 );
-    gpio_direction_output( LCD_BL_ENABLE,       0 );
-    gpio_direction_output( LCD_BL_POWER_ENABLE, 0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_rst,       0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_pwr_en,    0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwm,    0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_bl_en,     0 );
+    gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwr_en, 0 );
 
-    gpio_set_value( LCD_POWER_ENABLE,    1 );
-    gpio_set_value( LCD_RESET,           1 );
-    gpio_set_value( LCD_BL_POWER_ENABLE, 1 );
-    gpio_set_value( LCD_BL_ENABLE,       1 );
-    gpio_set_value( LCD_BL_PWM,          1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_pwr_en,    1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_rst,       1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_bl_pwr_en, 1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_bl_en,     1 );
+    gpio_set_value( platform_data->disp_gpio.lcd_bl_pwm,    1 );
 
     return 0;
 }

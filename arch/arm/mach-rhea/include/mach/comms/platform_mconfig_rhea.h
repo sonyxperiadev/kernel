@@ -43,28 +43,30 @@
 *****************************************************************************/
 #ifndef _PLATFORM_MCONFIG_RHEA_H_
 #define _PLATFORM_MCONFIG_RHEA_H_
+// !< --- PreProcess --- >!
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-// temp solution for memory config
-#define CONFIG_TEMP_MEMMAP_FIX
 
-
-#ifndef CONFIG_TEMP_MEMMAP_FIX
-// Memory map for RTOS build
-
-
+#ifdef BRCM_RTOS
 /*****************************************************************************/
 /*                                                                           */
-/*    RHEA MEMERY MAP                                                        */
+/*    RHEA MEMERY MAP     (RTOS SPECIFIC)                                    */
 /*                                                                           */
 /*****************************************************************************/
 //      name                   ROM address     RAM address     size
 //      ================       ==========      ==========      ==========
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define EXT_RAM_BASE_ADDR                      0xA0000000
+#elif defined (CNEON_LMP)
+#define EXT_RAM_BASE_ADDR                      0xA0200000
+#elif defined (RAM_BASE_ADDRESS)
+#define EXT_RAM_BASE_ADDR                      RAM_BASE_ADDRESS
+#else
 #define EXT_RAM_BASE_ADDR                      0x80000000
-
+#endif
 #if defined (RAM_SIZE)
 #define EXT_RAM_SIZE                                           RAM_SIZE
 #else
@@ -103,42 +105,90 @@ extern "C" {
 #define CUSTOM_CERT_SIZE                                       0x00020000
 
 #define PARM_IND_ROM_ADDR      0x00080000
-#define PARM_IND_RAM_ADDR                      0x80100000
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define PARM_IND_RAM_OFFSET                    0xC0000
+#else
+#define PARM_IND_RAM_OFFSET                    0x100000
+#endif
+#define PARM_IND_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_IND_RAM_OFFSET)
 #define PARM_IND_SIZE                                          0x00040000
    
 #define PARM_DEP_ROM_ADDR      0x000C0000
-#define PARM_DEP_RAM_ADDR                      0x80140000
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define PARM_DEP_RAM_OFFSET                    0x160000
+#else
+#define PARM_DEP_RAM_OFFSET                    0x140000
+#endif
+#define PARM_DEP_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_DEP_RAM_OFFSET)
 #define PARM_DEP_SIZE                                          0x00010000
    
 #define PARM_SPML_IND_ROM_ADDR 0x000D0000
-#define PARM_SPML_IND_RAM_ADDR                 0x801B0000 
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define PARM_SPML_IND_RAM_OFFSET               0x170000 
+#else
+#define PARM_SPML_IND_RAM_OFFSET               0x1B0000 
+#endif
+#define PARM_SPML_IND_RAM_ADDR                 (EXT_RAM_BASE_ADDR + PARM_SPML_IND_RAM_OFFSET)
 #define PARM_SPML_IND_SIZE                                     0x00040000
 
 #define PARM_SPML_DEP_ROM_ADDR 0x00110000
-#define PARM_SPML_DEP_RAM_ADDR                 0x801F0000 
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define PARM_SPML_DEP_RAM_OFFSET               0x1B0000 
+#else
+#define PARM_SPML_DEP_RAM_OFFSET               0x1F0000 
+#endif
+#define PARM_SPML_DEP_RAM_ADDR                 (EXT_RAM_BASE_ADDR + PARM_SPML_DEP_RAM_OFFSET)
 #define PARM_SPML_DEP_SIZE                                     0x00010000   
    
 #define DSP_PRAM_ROM_ADDR      0x01F20000
-#define DSP_PRAM_RAM_ADDR                      0x80160000
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define DSP_PRAM_RAM_OFFSET                    0x1E0000
+#else
+#define DSP_PRAM_RAM_OFFSET                    0x160000
+#endif
+#define DSP_PRAM_RAM_ADDR                      (EXT_RAM_BASE_ADDR + DSP_PRAM_RAM_OFFSET)
 #define DSP_PRAM_SIZE                                          0x00004000
    
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define MODEMHOSTSEC_HOST_BUFF 0xA01E4000
+#define MODEMHOSTSEC_HOST_BUFF_SIZE                            0x00000400
+
+#define MODEMHOSTSEC_MODEM_BUFF  0xA01E4400
+#define MODEMHOSTSEC_MODEM_BUFF_SIZE                           0x00000400
+
+#define MODEMHOSTSEC_BUFF_BASE MODEMHOSTSEC_HOST_BUFF
+#define MODEMHOSTSEC_BUFF_SIZE                                 (MODEMHOSTSEC_HOST_BUFF_SIZE + MODEMHOSTSEC_MODEM_BUFF_SIZE)
+#endif   
+
 #define UMTS_CAL_ROM_ADDR      0x001D0000
-#define UMTS_CAL_RAM_ADDR                      0x80064000
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define UMTS_CAL_RAM_OFFSET                    0x1C0000
+#else
+#define UMTS_CAL_RAM_OFFSET                    0x64000
+#endif   
+#define UMTS_CAL_RAM_ADDR                      (EXT_RAM_BASE_ADDR + UMTS_CAL_RAM_OFFSET)
 #define UMTS_CAL_SIZE                                          0x00020000
    
 #define DSP_DRAM_ROM_ADDR      0x02000000
-#define DSP_DRAM_RAM_ADDR                      0x81800000     
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define DSP_DRAM_RAM_OFFSET                    0x1A00000     
+#else
+#define DSP_DRAM_RAM_OFFSET                    0x1800000     
+#endif   
+#define DSP_DRAM_RAM_ADDR                      (EXT_RAM_BASE_ADDR + DSP_DRAM_RAM_OFFSET)
 #define DSP_DRAM_SIZE                                          0x00200000
 
 #define TL3_DSP_EXT_BASE                       DSP_DRAM_RAM_ADDR
 #define TL3_DSP_EXT_SIZE                                       DSP_DRAM_SIZE
 
 #define AP_RO_ROM_ADDR         0x02200000
-#define AP_RO_RAM_ADDR                         0x82300000
+#define AP_RO_RAM_OFFSET                       0x2300000
+#define AP_RO_RAM_ADDR                         (EXT_RAM_BASE_ADDR + AP_RO_RAM_OFFSET)
 
 #define CP_RO_ROM_ADDR         0x00200000
-#define CP_RO_RAM_ADDR                         0x80200000
-
+#define CP_RO_RAM_OFFSET                       0x200000
+#define CP_RO_RAM_ADDR                         (EXT_RAM_BASE_ADDR + CP_RO_RAM_OFFSET)
+ 
 #define FFS_ROM_ADDR           0x03800000
 #define FFS_SIZE                                               0x03000000
 
@@ -156,14 +206,34 @@ extern "C" {
 /*****************************************************************************/
 /*   scatter loading definition                                              */
 /*****************************************************************************/
-#define AP_MMU_L1L2_ADDR                       0x82140000
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define AP_MMU_L1L2_OFFSET                     0x2290000
+#else
+#define AP_MMU_L1L2_OFFSET                     0x2140000
+#endif   
+#define AP_MMU_L1L2_ADDR                       (EXT_RAM_BASE_ADDR + AP_MMU_L1L2_OFFSET)
 
 #define MMU_L1L2_SIZE                                          0x00010000
 
+
+
+#define DORMANT_DATA_BASE                             (AP_SH_BASE+AP_SH_SIZE)    
+#define DORMANT_DATA_SIZE                                             0x00001000    // 4k reserved to save dormant data
+
+
 #ifndef FUSE_AP_BSP
 #ifdef VMF_INCLUDE_NEW
-#define VMF_PAGE1_BASE                         0x81A00000
-#define VMF_PAGE2_BASE                         0x81B00000
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define VMF_PAGE1_OFFSET                       0x1600000
+#define VMF_PAGE2_OFFSET                       0x1700000
+#else
+#define VMF_PAGE1_OFFSET                       0x1A00000
+#define VMF_PAGE2_OFFSET                       0x1B00000
+#endif   
+
+#define VMF_PAGE1_BASE                         (EXT_RAM_BASE_ADDR + VMF_PAGE1_OFFSET)
+#define VMF_PAGE2_BASE                         (EXT_RAM_BASE_ADDR + VMF_PAGE2_OFFSET)
+
 #define VMF_PAGE_SIZE                                          0x00100000      // Increasing size to 1MB for each instance for future use in Phase-3
 #define VMF_TOTAL_SIZE                                         2 * VMF_PAGE_SIZE
 #endif
@@ -175,7 +245,11 @@ extern "C" {
 
 // MM data region size and 1M alignment
 #define MM_DATA_ALIGN                                          0x00100000
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define MM_DATA_SIZE                                           0x01000000
+#else
 #define MM_DATA_SIZE                                           0x02200000
+#endif
 
 //4K alignment on each region for MMU configuration
 #define MMU_ALIGN_4K                                           0x00001000
@@ -187,17 +261,56 @@ extern "C" {
 // LOAD_ROM2 region base address and maximum size.
 #define AP_LOAD_ROM2_BASE                      AP_RO_RAM_ADDR
 #define CP_LOAD_ROM2_BASE                      CP_RO_RAM_ADDR
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define AP_LOAD_ROM2_SIZE_MAX                                  0x01D00000
+#else
 #define AP_LOAD_ROM2_SIZE_MAX                                  0x00FC0000
+#endif
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))// || defined (CNEON_LMP))
+#define CP_LOAD_ROM2_SIZE_MAX                                  (DSP_DRAM_RAM_ADDR - CP_LOAD_ROM2_BASE - 0x300000)
+#else
 #define CP_LOAD_ROM2_SIZE_MAX                                  (DSP_DRAM_RAM_ADDR - CP_LOAD_ROM2_BASE)
+#endif
 
+#if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
+#define IPC_OFFSET                             0x1800000                    // 256kB IPC shared RAM
+#elif defined(CNEON_LMP)
+#define IPC_OFFSET                             0x1C00000                    // 256kB IPC shared RAM
+#else
+#define IPC_OFFSET                             0x1E00000                    // 256kB IPC shared RAM
+#endif
 
-#else  // CONFIG_TEMP_MEMMAP_FIX
+#else  // BRCM_RTOS
+/*****************************************************************************/
+/*                                                                           */
+/*    RHEA MEMERY MAP     (NON-RTOS SPECIFIC, ex. Linux)                     */
+/*                                                                           */
+/*****************************************************************************/
+
 // Memory map for Linux build
 #define EXT_RAM_BASE_ADDR  CONFIG_BCM_RAM_BASE
 
-#endif // CONFIG_TEMP_MEMMAP_FIX
+#ifdef CONFIG_BCM_IPC_OFFSET
+/* 256kB IPC shared RAM */
+#define IPC_OFFSET             CONFIG_BCM_IPC_OFFSET
+#else
+#define IPC_OFFSET             0x01E00000
+#endif
+
+#define PARM_DEP_RAM_OFFSET    0x140000
+#define PARM_DEP_RAM_ADDR      (EXT_RAM_BASE_ADDR + PARM_DEP_RAM_OFFSET)
+#define PARM_DEP_SIZE          0x00010000
+
+#endif
+
+/*****************************************************************************/
+/*                                                                           */
+/*    RHEA MEMERY MAP     (COMMON to all platforms. Ex. LINUX, RTOS, WINDOWS)*/
+/*                                                                           */
+/*****************************************************************************/
 
 // Shared memory defines; commonly used by RTOS and Linux builds
+
 #define DSP_SH_BASE                            EXT_RAM_BASE_ADDR     // DSP sharedmem
 #define DSP_SH_SIZE                                            0x00064000
 
@@ -207,16 +320,14 @@ extern "C" {
 #define AP_SH_BASE                             (DSP_SH_BASE+CP_SH_SIZE)
 #define AP_SH_SIZE                                             0x00020000    // 128k  AP/DSP sharedmem
 
-/* 256kB IPC shared RAM */
-#define IPC_OFFSET             CONFIG_BCM_IPC_OFFSET
-
 #define IPC_BASE                               (EXT_RAM_BASE_ADDR + IPC_OFFSET)
 #define IPC_SIZE                                               0x00200000
-
 
 #ifdef __cplusplus
 }
 #endif
+
+// !< --- PreProcess --- >!
 
 #endif //_PLATFORM_MCONFIG_RHEA_H_
 

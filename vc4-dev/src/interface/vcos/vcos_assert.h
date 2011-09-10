@@ -93,7 +93,7 @@ VideoCore OS Abstraction Layer - Assertion and error-handling macros.
  *    The previous state of the flag.
  *
  * Function:
- *    int vcos_verify_bkpts_enabled(int enable);
+ *    int vcos_verify_bkpts_enabled(void);
  * Use:
  *    Queries the state of the global flag enabling breakpoints on vcos_verify
  *    failures.

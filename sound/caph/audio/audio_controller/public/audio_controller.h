@@ -527,29 +527,37 @@ void AUDCTRL_SwitchPlaySpk(
 /********************************************************************
 *  @brief  Add a speaker to a playback path
 *
-*  @param  sink	(in)  playback sink
-*  @param  speaker	(in)  speaker selection
+*  @param   curSink	current Sink device
+*  @param   curSpk  current speaker
+*  @param  secondary sink	(in)  playback sink
+*  @param  secondary speaker	(in)  speaker selection
 *
 *  @return none
 *
 ****************************************************************************/
 void AUDCTRL_AddPlaySpk(
-				AUDIO_HW_ID_t			sink,
-				AUDCTRL_SPEAKER_t		spk
+				AUDIO_HW_ID_t			curSink,
+				AUDCTRL_SPEAKER_t		curSpk,
+				AUDIO_HW_ID_t			newSink,
+				AUDCTRL_SPEAKER_t		newSpk
 				);
 
 /********************************************************************
 *  @brief  Remove a speaker to a playback path
 *
-*  @param  sink	(in)  playback sink  
-*  @param  speaker	(in)  speaker selection
+*  @param   PriSink	current Sink device
+*  @param   PriSpk  current speaker
+*  @param  SecSink	(in)  playback sink  
+*  @param  SecSpeaker	(in)  speaker selection
 *
 *  @return none
 *
 ****************************************************************************/
 void AUDCTRL_RemovePlaySpk(
-				AUDIO_HW_ID_t			sink,
-				AUDCTRL_SPEAKER_t		spk
+				AUDIO_HW_ID_t			PriSink,
+				AUDCTRL_SPEAKER_t		PriSpk,
+				AUDIO_HW_ID_t			SecSink,
+				AUDCTRL_SPEAKER_t		SecSpk
 				);
 
 
@@ -909,7 +917,7 @@ AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic);
 *
 ****************************************************************************/
 AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
-#ifdef CONFIG_AUDIO_BUILD
+
 #if !defined(NO_PMU) && ( defined( PMU_BCM59038) || defined( PMU_BCM59055 ) || defined( PMU_MAX8986) )
 /********************************************************************
 *  @brief  Convert Headset gain dB value to PMU-format gain value
@@ -919,7 +927,8 @@ AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
 *  @return PMU_HS_Gain_t PMU-format gain value
 *
 ****************************************************************************/
-PMU_HS_Gain_t map2pmu_hs_gain( Int16 db_gain );
+UInt32 map2pmu_hs_gain( Int16 db_gain );
+
 /********************************************************************
 *  @brief  Convert IHF gain dB value to PMU-format gain value
 *
@@ -928,7 +937,8 @@ PMU_HS_Gain_t map2pmu_hs_gain( Int16 db_gain );
 *  @return PMU_HS_Gain_t PMU-format gain value
 *
 ****************************************************************************/
-PMU_IHF_Gain_t map2pmu_ihf_gain( Int16 db_gain );
+UInt32 map2pmu_ihf_gain( Int16 db_gain );
+
 #endif
-#endif
+
 #endif //#define __AUDIO_CONTROLLER_H__

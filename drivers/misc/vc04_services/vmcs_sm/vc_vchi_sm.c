@@ -294,8 +294,9 @@ static SM_CMD_RSP_BLK_T * vc_vchi_rsp_from_tid( SM_INSTANCE_T *instance,
       blk = blk->next;
    }
 
-out:
    mutex_unlock ( &(instance->rsp_lock) );
+
+out:
    return NULL;
 }
 
@@ -315,7 +316,6 @@ static SM_CMD_RSP_BLK_T * vc_vchi_cmd_top( SM_INSTANCE_T *instance )
    return blk;
 
 out:
-   mutex_unlock ( &(instance->cmd_lock) );
    return NULL;
 }
 
@@ -570,7 +570,10 @@ err_del_event:
 err_close_services:
    for ( i = 0; i < instance->num_connections; i++ )
    {
-      vchi_service_close( instance->vchi_handle[i] );
+      if ( instance->vchi_handle[i] != NULL )
+      {
+         vchi_service_close( instance->vchi_handle[i] );
+      }
    }
    vcos_mutex_delete( &instance->rsp_lock );
 err_delete_cmd_lock:
