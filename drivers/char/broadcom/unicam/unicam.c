@@ -19,6 +19,8 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/fs.h>
 #include <linux/interrupt.h>
 #include <linux/semaphore.h>
+#include <linux/platform_device.h>
+#include <plat/kona_unicam.h>
 #include <linux/mutex.h>
 #include <mach/irqs.h>
 #include <asm/io.h>
@@ -48,16 +50,16 @@ the GPL, without Broadcom's express prior written consent.
 
 
 //TODO - define the major device ID
-#define UNICAM_DEV_MAJOR	0
+#define UNICAM_DEV_MAJOR    0
 
-#define RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS	   MM_CSI0_BASE_ADDR
+#define RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS       MM_CSI0_BASE_ADDR
 #define RHEA_MM_CFG_BASE_ADDRESS               MM_CFG_BASE_ADDR
 #define RHEA_MM_CLK_BASE_ADDRESS               MM_CLK_BASE_ADDR
 #define RHEA_PAD_CTRL_BASE_ADDRESS             PAD_CTRL_BASE_ADDR
 #define RHEA_CSR_BASE_ADDRESS                  MEMC0_OPEN_BASE_ADDR
 
 
-#define IRQ_UNICAM	     (156+32)
+#define IRQ_UNICAM         (156+32)
 
 #define CSI0_UNICAM_PORT     0
 #define CSI0_UNICAM_CLK      0
@@ -117,13 +119,14 @@ static inline void reg_write(void __iomem *, unsigned int reg, unsigned int valu
 static irqreturn_t unicam_isr(int irq, void *dev_id)
 {
     unicam_t *dev;
-    
+    dev = (unicam_t *)dev_id;  
+	
     dev->unicam_isr_reg_status.rx_status = reg_read(unicam_base, CAM_STA_OFFSET);
     dev->unicam_isr_reg_status.image_intr = reg_read(unicam_base, CAM_ISTA_OFFSET);
-    reg_write(unicam_base, CAM_ISTA_OFFSET, dev->unicam_isr_reg_status.image_intr);	// enable access		
-    reg_write(unicam_base, CAM_STA_OFFSET, dev->unicam_isr_reg_status.rx_status);	// enable access		
-		
-    dev = (unicam_t *)dev_id;	
+    reg_write(unicam_base, CAM_ISTA_OFFSET, dev->unicam_isr_reg_status.image_intr);    // enable access        
+    reg_write(unicam_base, CAM_STA_OFFSET, dev->unicam_isr_reg_status.rx_status);    // enable access        
+        
+  
     up(&dev->irq_sem);
 
     return IRQ_RETVAL(1);
@@ -138,7 +141,7 @@ static int unicam_open(struct inode *inode, struct file *filp)
         return -ENOMEM;
 
     filp->private_data = dev;
-	
+    
 
     sema_init(&dev->irq_sem, 0);
     
@@ -202,7 +205,7 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
 {
     unicam_t *dev;
     int ret = 0;
-	static int interrupt_irq = 0;
+    static int interrupt_irq = 0;
 
     if(_IOC_TYPE(cmd) != BCM_UNICAM_MAGIC)
         return -ENOTTY;
@@ -226,7 +229,7 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
     case UNICAM_IOCTL_WAIT_IRQ:
     {        
         dbg_print("Enabling unicam interrupt\n");
-		interrupt_irq = 0;
+        interrupt_irq = 0;
         dev->unicam_isr_reg_status.rx_status = 0;
         dev->unicam_isr_reg_status.image_intr = 0;
         enable_irq(IRQ_UNICAM);
@@ -238,21 +241,21 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
         }
         dbg_print("Disabling unicam interrupt\n");
         disable_irq(IRQ_UNICAM);
-		if (interrupt_irq) {
-			printk(KERN_ERR"interrupted irq ioctl\n");
-			return -EIO;
-		}
+        if (interrupt_irq) {
+            printk(KERN_ERR"interrupted irq ioctl\n");
+            return -EIO;
+        }
         if (copy_to_user((cam_isr_reg_status_st_t*)arg, &dev->unicam_isr_reg_status, sizeof(cam_isr_reg_status_st_t)))
             ret = -EPERM;
     }
     break;
-	case UNICAM_IOCTL_RETURN_IRQ:
-	{
-		interrupt_irq = 1;
-		printk(KERN_ERR"Interrupting irq ioctl\n");
-		up(&dev->irq_sem);
-	}
-	break;
+    case UNICAM_IOCTL_RETURN_IRQ:
+    {
+        interrupt_irq = 1;
+        printk(KERN_ERR"Interrupting irq ioctl\n");
+        up(&dev->irq_sem);
+    }
+    break;
 
     case UNICAM_IOCTL_OPEN_CSI0:
     {        
@@ -293,7 +296,7 @@ static int unicam_ioctl(struct inode *inode, struct file *filp, unsigned int cmd
         unicam_sensor_control(sensor_ctrl.sensor_id, sensor_ctrl.enable);
     }
     break;
-	
+    
     default:
     break;
    }
@@ -351,39 +354,39 @@ static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 {
     unsigned int value, ret;
-    struct clk *dig_chan_clk;	
+    struct clk *dig_chan_clk;    
    
-    if (port == 0) {	
+    if (port == 0) {    
         // Set Camera CSI0 Phy & Clock Registers
         reg_write(mmcfg_base, MM_CFG_CSI0_LDO_CTL_OFFSET, 0x5A00000F);
     
-        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
-        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET, 0x00000888);	// csi0_rx0_bclkhs	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);    // enable access    
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET, 0x00000888);    // csi0_rx0_bclkhs    
         reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_DIV_OFFSET, 0x00000040);
         reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET, 0x00000303);  // default value
-        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000303);	// ...	
-        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT)); // CSI0 trigger change	
-    		        
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000303);    // ...    
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI0_LP_TRIGGER_SHIFT)); // CSI0 trigger change    
+                    
         // Select Camera Phy AFE 0 
         // AFE 0 Select:  CSI0 has PHY selection.
         value = reg_read(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET) & 0x7fffffff;
-        reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	// enable access	
+        reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);    // enable access    
     }
     else {
         // Set Camera CSI1 Phy & Clock Registers
         reg_write(mmcfg_base, MM_CFG_CSI1_LDO_CTL_OFFSET, 0x5A00000F);
     
-        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
-        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET, 0x00000888);	// csi1_rx0_bclkhs	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);    // enable access    
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET, 0x00000888);    // csi1_rx0_bclkhs    
         reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_DIV_OFFSET, 0x00000040);
         reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET, 0x00000303);  // default value
-        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000303);	// ...	
-        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_SHIFT)); // CSI1 trigger change	
-    		        
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000303);    // ...    
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, (1 << MM_CLK_MGR_REG_DIV_TRIG_CSI1_LP_TRIGGER_SHIFT)); // CSI1 trigger change    
+                    
         // Select Camera Phy AFE 1 
         // AFE 1 Select:  CSI0 has PHY selection.
         value = reg_read(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET) | 0x80000000;
-        reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);	// enable access	
+        reg_write(mmcfg_base, MM_CFG_CSI0_PHY_CTRL_OFFSET, value);    // enable access    
     }
         
     if (clk_src == 0) {            
@@ -391,7 +394,7 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
         // Select DCLK1  ( bits 10:8 = 0x000 => DCLK1 , bits 2:0 = 3 => 8 mAmps strength
         value = reg_read(padctl_base, PADCTRLREG_DCLK1_OFFSET) & (~PADCTRLREG_DCLK1_PINSEL_DCLK1_MASK);
         reg_write(padctl_base, PADCTRLREG_DCLK1_OFFSET, value);
-		
+        
         dig_chan_clk = clk_get(NULL, "dig_ch0_clk");
         if (!dig_chan_clk) {
             err_print("%s: error get clock\n", __func__);
@@ -406,8 +409,8 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
         if (ret) {
             err_print("%s: error changing clock rate\n", __func__);
         }
-		
-        dbg_print("dig_chan_clk rate %lu\n", clk_get_rate(dig_chan_clk));	
+        
+        dbg_print("dig_chan_clk rate %lu\n", clk_get_rate(dig_chan_clk));    
     }
     else  //if (clk_src == 1)
     {                   
@@ -432,8 +435,8 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
         if (ret) {
             err_print("%s: error changing clock rate\n", __func__);
         }
-		
-        dbg_print("dig_chan_clk rate %lu\n", clk_get_rate(dig_chan1_clk));
+        
+        dbg_print("dig_chan_clk rate %lu\n", clk_get_rate(dig_chan_clk));
     }
     
 // Rhea A0, Need to disable DDR PLL PWRDN mode to prevent data errors when capturing camera data
@@ -453,19 +456,19 @@ static void unicam_open_csi(unsigned int port, unsigned int clk_src)
 static void unicam_close_csi(unsigned int port, unsigned int clk_src)
 {
     unsigned int value;
-    struct clk *dig_chan_clk;	
+    struct clk *dig_chan_clk;    
     
     if (port == 0) {
         // Disable Camera CSI0 Phy & Clock Registers
-        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);    // enable access    
         reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_LP_CLKGATE_OFFSET, 0x00000302);  // default value
-        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000302);	// ...	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_OFFSET, 0x00000302);    // ...    
     }
     else {
         // Disable Camera CSI1 Phy & Clock Registers
-        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);	// enable access	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_WR_ACCESS_OFFSET, 0xA5A501);    // enable access    
         reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_LP_CLKGATE_OFFSET, 0x00000302);  // default value
-        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000302);	// ...	
+        reg_write(mmclk_base, MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_OFFSET, 0x00000302);    // ...    
     } 
         
     if (clk_src == 0) {                   
@@ -502,7 +505,7 @@ static int enable_unicam_clock(void)
     unsigned long rate;
     int ret;
     struct clk *unicam_clk;
-	
+    
     unicam_clk = clk_get(NULL, "csi0_axi_clk");
     if (!unicam_clk) {
         err_print("%s: error get clock\n", __func__);
@@ -539,48 +542,33 @@ static void disable_unicam_clock(void)
 
 static int __devexit unicam_drv_remove(struct platform_device *pdev)
 {
-	return 0;
+    return 0;
 }
 
 static int unicam_drv_probe(struct platform_device *pdev)
 {
     int ret = 0;
-	struct kona_unicam_pdata *pdata = pdev->dev.platform_data;
+    struct kona_unicam_platform_data *pdata = pdev->dev.platform_data;
 
-	dbg_print("%s\n", __func__);
+    dbg_print("%s\n", __func__);
 
-	if(!pdata)
-	{
-		dbg_print("%s : invalid paltform data !!\n", __func__);
-		ret = -EPERM;
-		goto error;
-	}
-
-	avs_info.pdata = pdata;
-
-	ret = kona_avs_get_mon_val(&avs_info);
-	if(ret)
+    if(!pdata) {
+        dbg_print("%s : invalid paltform data !!\n", __func__);
+        ret = -EPERM;
         goto error;
+    }
 
-    avs_info.svt_silicon_type = kona_avs_get_svt_type(&avs_info);
-    avs_info.lvt_silicon_type = kona_avs_get_lvt_type(&avs_info);
-
-	 avs_info.silicon_type = MIN(avs_info.lvt_silicon_type,avs_info.svt_silicon_type);
-    avs_info.volt_tbl = pdata->volt_table[avs_info.silicon_type];
-
-    if(pdata->silicon_type_notify)
-        pdata->silicon_type_notify(avs_info.silicon_type);
-	pr_info("%s:svt type: %d lvt type: %d  silicon type: %d \n",__func__,
-			avs_info.svt_silicon_type,avs_info.lvt_silicon_type, avs_info.silicon_type);
+    unicam_info.csi0_unicam_gpio = pdata->csi0_gpio;
+    unicam_info.csi1_unicam_gpio = pdata->csi1_gpio;
 error:
-	return ret;
+    return ret;
 }
 
 static struct platform_driver unicam_drv =
 {
-	.probe  =  unicam_drv_probe,
-	.remove = __devexit_p(unicam_drv_remove),
-	.driver = { .name =	 "bcm_unicam",},
+    .probe  =  unicam_drv_probe,
+    .remove = __devexit_p(unicam_drv_remove),
+    .driver = { .name =     "kona-unicam",},
 };
 
 int __init unicam_init(void)
@@ -605,12 +593,12 @@ int __init unicam_init(void)
     device_create(unicam_class, NULL, MKDEV(unicam_major, 0), NULL, UNICAM_DEV_NAME);
     
     enable_unicam_clock();
-	
+    
     // Map the unicam registers 
     unicam_base = (void __iomem *)ioremap_nocache(RHEA_UNICAM_BASE_PERIPHERAL_ADDRESS, SZ_4K);
     if (unicam_base == NULL)
         goto err;
-		
+        
     mmcfg_base = (void __iomem *)ioremap_nocache(RHEA_MM_CFG_BASE_ADDRESS, SZ_4K);
     if (mmcfg_base == NULL)
         goto err;
@@ -621,12 +609,12 @@ int __init unicam_init(void)
 
     padctl_base = (void __iomem *)ioremap_nocache(RHEA_PAD_CTRL_BASE_ADDRESS, SZ_4K);
     if (padctl_base == NULL)
-        goto err;		
+        goto err;        
 
 #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
     csr_base = (void __iomem *)ioremap_nocache(RHEA_CSR_BASE_ADDRESS, SZ_4K);
     if (csr_base == NULL)
-        goto err;		
+        goto err;        
 #endif
 
     ret = platform_driver_register(&unicam_drv);
@@ -644,7 +632,7 @@ void __exit unicam_exit(void)
     dbg_print("unicam driver Exit\n");
     if (unicam_base)
         iounmap(unicam_base);
-		
+        
     if (mmcfg_base)
         iounmap(mmcfg_base);
 
@@ -653,20 +641,20 @@ void __exit unicam_exit(void)
 
     if (padctl_base)
         iounmap(padctl_base);
-	
+    
 
 #ifdef CSR_DDR_PLL_REG_UNSET_FLAG
     if (csr_base)
-        iounmap(csr_base);	
+        iounmap(csr_base);    
 #endif
 
-    disable_unicam_clock();		
+    disable_unicam_clock();        
    
     device_destroy(unicam_class, MKDEV(unicam_major, 0));
     class_destroy(unicam_class);
     unregister_chrdev(unicam_major, UNICAM_DEV_NAME);
-	
-	platform_driver_unregister(&unicam_drv);
+    
+    platform_driver_unregister(&unicam_drv);
 }
 
 module_init(unicam_init);

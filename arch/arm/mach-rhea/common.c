@@ -746,10 +746,8 @@ static struct kona_unicam_platform_data unicam_pdata =
 };
 
 static struct platform_device board_unicam_device = {
-	.name = "bcm_unicam",
+	.name = "kona-unicam",
 	.id = 1,
-	.resource = board_sdio1_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
 	.dev      = {
 		.platform_data = &unicam_pdata,
 	},
