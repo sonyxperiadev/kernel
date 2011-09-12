@@ -15,7 +15,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/ioctl.h>
 
 #define VCE_DEV_NAME	"vce"
-#define BCM_VCE_MAGIC	('V' << 0 || 'C' << 6 || 'E' << 12)
+#define BCM_VCE_MAGIC	(('V'<<3 ^ 'C'<<1 ^ 'E'<<0)&_IOC_TYPEMASK)
 #ifdef __KERNEL__
 #endif
 
@@ -33,15 +33,20 @@ enum {
 	VCE_CMD_HW_RELEASE,
 	VCE_CMD_RESET,
 	VCE_CMD_ASSERT_IDLE,
-	VCE_CMD_LAST
+	VCE_CMD_LAST,
+
+	VCE_CMD_DEBUG_XXYYZZ = 0x40,
+	VCE_CMD_DEBUG_FETCH_KSTAT_IRQS,
+	VCE_CMD_DEBUG_LAST
 };
 
 /* TODO: review (these were copy/psted from v3d) */
-#define VCE_IOCTL_WAIT_IRQ      _IOR(BCM_VCE_MAGIC, VCE_CMD_WAIT_IRQ, unsigned int)
-#define VCE_IOCTL_EXIT_IRQ_WAIT _IOR(BCM_VCE_MAGIC, VCE_CMD_EXIT_IRQ_WAIT, unsigned int)
-#define VCE_IOCTL_RESET         _IOR(BCM_VCE_MAGIC, VCE_CMD_RESET, unsigned int)
-#define VCE_IOCTL_HW_ACQUIRE    _IOR(BCM_VCE_MAGIC, VCE_CMD_HW_ACQUIRE, unsigned int)
-#define VCE_IOCTL_HW_RELEASE    _IOR(BCM_VCE_MAGIC, VCE_CMD_HW_RELEASE, unsigned int)
-#define VCE_IOCTL_ASSERT_IDLE   _IOR(BCM_VCE_MAGIC, VCE_CMD_ASSERT_IDLE, unsigned int)
+#define VCE_IOCTL_WAIT_IRQ      _IO(BCM_VCE_MAGIC, VCE_CMD_WAIT_IRQ)
+#define VCE_IOCTL_EXIT_IRQ_WAIT _IO(BCM_VCE_MAGIC, VCE_CMD_EXIT_IRQ_WAIT)
+#define VCE_IOCTL_RESET         _IO(BCM_VCE_MAGIC, VCE_CMD_RESET)
+#define VCE_IOCTL_HW_ACQUIRE    _IO(BCM_VCE_MAGIC, VCE_CMD_HW_ACQUIRE)
+#define VCE_IOCTL_HW_RELEASE    _IO(BCM_VCE_MAGIC, VCE_CMD_HW_RELEASE)
+#define VCE_IOCTL_ASSERT_IDLE   _IO(BCM_VCE_MAGIC, VCE_CMD_ASSERT_IDLE)
+#define VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS  _IOR(BCM_VCE_MAGIC, VCE_CMD_DEBUG_FETCH_KSTAT_IRQS, unsigned int)
 
 #endif

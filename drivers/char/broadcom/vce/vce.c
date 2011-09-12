@@ -20,6 +20,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/file.h>
 #include <linux/fs.h>
 #include <linux/interrupt.h>
+#include <linux/kernel_stat.h>
 #include <linux/mm.h>
 #include <linux/proc_fs.h>
 #include <linux/semaphore.h>
@@ -201,10 +202,26 @@ static irqreturn_t vce_isr(int irq, void *unused)
 
 	dbg_print("Got vce interrupt\n");
 
+	if (!(vce_reg_peek(STATUS) & VCE_STATUS_VCE_INTERRUPT_POS_MASK))
+	{
+		err_print("VCE Interrupt went away.  Almost certainly a bug.\n");
+	}
 	vce_reg_poke_1field(SEMA_CLEAR, CLR_INT_REQ, 1);
+
+	/* We can't make any assertion about the contents of the
+	 * status register we read below, because it's perfectly legal
+	 * for another interrupt to come in, however, we can use this
+	 * read to stall until the write is committed which will avoid
+	 * a race which results in spurious extra interrupts.  This is
+	 * arguably costly.  If the interrupt latency proves too big,
+	 * we may choose to remove the read at the cost of potential
+	 * spurious re-fires of the ISR */
+	(void)vce_reg_peek(STATUS);
 
 	if( vce_state.g_irq_sem )
 		up(vce_state.g_irq_sem);
+	else
+		err_print("Got VCE interrupt but noone wants it\n");
 
 	return IRQ_HANDLED;
 }
@@ -215,6 +232,8 @@ static void vce_enable_irq(void)
 	//Don't enable irq if it's already enabled
 	if( !vce_state.irq_enabled )
 		enable_irq(IRQ_VCE);
+	else
+		err_print("vce_enable_irq but already enabled!\n");
 	vce_state.irq_enabled = 1;
 	up(&vce_state.work_lock);
 }
@@ -224,6 +243,8 @@ static void vce_disable_irq(void)
 	down(&vce_state.work_lock);
 	if( vce_state.irq_enabled )
 		disable_irq(IRQ_VCE);
+	else
+		err_print("vce_disable_irq but already disabled!\n");
 	vce_state.irq_enabled = 0;
 	up(&vce_state.work_lock);
 }
@@ -283,16 +304,16 @@ static int vce_release(struct inode *inode, struct file *filp)
 		reset_vce();
 
 		//Just free up the VCE HW
+		vce_state.g_irq_sem = NULL;
 		up(&vce_state.acquire_sem);
 	}
 
-	//Enable the IRQ here if someone is waiting for IRQ
-	//This is any process exits, then it disables in interrupt
-	if( vce_state.g_irq_sem )
-		vce_enable_irq();
+	if (!down_trylock(&dev->irq_sem))
+	{
+		err_print("VCE driver closing with unacknowledged interrupts\n");
+	}
 
-	if (dev)
-		kfree(dev);
+	kfree(dev);
 
 	return 0;
 }
@@ -416,7 +437,23 @@ static int vce_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, u
 		}
 		break;
 
+		/* Some DEBUG stuff -- we may wish to lose this in production driver... */
+		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
+		{
+			unsigned int dacount;
+			unsigned int copyerr;
+			dacount = kstat_irqs_cpu(IRQ_VCE, /*cpu=*/0);
+			copyerr = copy_to_user((void *)arg, &dacount, sizeof(dacount));
+			if (copyerr != 0) {
+				ret = -EINVAL;
+			}
+		}
+		break;
+
 		default:
+		{
+			ret = -ENOTTY;
+		}
 		break;
 	}
 
