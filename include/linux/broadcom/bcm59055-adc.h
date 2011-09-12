@@ -122,6 +122,7 @@ extern int bcm59055_saradc_enable_ntc_block(void);
 extern int bcm59055_saradc_disable_ntc_block(void);
 extern int bcm59055_saradc_read_data(int sel);
 extern int bcm59055_saradc_request_rtm(int ch_sel);
+extern int bcm59055_saradc_rtm_read(int ch_sel, bool adc_sync, u32 delay);
 extern int bcm59055_saradc_set_rtm_delay(int delay);
 #endif
 

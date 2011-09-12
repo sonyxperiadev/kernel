@@ -51,24 +51,33 @@
 #include <mach/irqs.h>
 #include <linux/stringify.h>
 #include <linux/broadcom/bcm59055-adc.h>
+#include <linux/broadcom/bcmtypes.h>
 
 struct bcm59055_saradc {
 	struct bcm590xx *bcm59055;
 	int mode;
 	int rtm_dly_usec;
 	bool rtm_ignored;
+	bool rtm_overridden;
 	struct mutex lock;
 	struct completion rtm_req;
 };
 
 static struct bcm59055_saradc *bcm59055_saradc;
 
-#define CLOCK_CYCLE_IN_USEC	32
+#define CLOCK_CYCLE_IN_USEC		32
+#define CYCLE_TO_COMPLETE_I2C_RTM	23
+#define DELTA_CYCLE_I2C_RTM		(320 - 23) /* Need to come up with optimum delta, for now with 320 cycle no RTM interrupt missed */
+#define CYCLE_TO_COMPLETE_ADCSYN_RTM	18
+#define DELTA_CYCLE_ADCSYN_RTM		100 /* This one must have max timing for delay between two CP wakeup evetns */
+#define INT_REG_READ_TIME_IN_USEC	63
 /* 23 RTC clock cycle is taken by a RTM req without delay
  * taken in consideration.
 */
-#define RTM_TIME		(usecs_to_jiffies((23) * (CLOCK_CYCLE_IN_USEC)))
-#define RTM_EXECUTION_TIMEOUT	((RTM_TIME) + (usecs_to_jiffies(bcm59055_saradc->rtm_dly_usec)))
+#define I2C_RTM_TIME			(usecs_to_jiffies((CYCLE_TO_COMPLETE_I2C_RTM + DELTA_CYCLE_I2C_RTM) * (CLOCK_CYCLE_IN_USEC)))
+#define I2C_RTM_EXECUTION_TIMEOUT	((I2C_RTM_TIME) + usecs_to_jiffies(bcm59055_saradc->rtm_dly_usec + INT_REG_READ_TIME_IN_USEC))
+#define ADCSYN_RTM_TIME			(usecs_to_jiffies((CYCLE_TO_COMPLETE_ADCSYN_RTM + DELTA_CYCLE_ADCSYN_RTM) * (CLOCK_CYCLE_IN_USEC)))
+#define ADCSYN_RTM_EXECUTION_TIMEOUT	((ADCSYN_RTM_TIME) + usecs_to_jiffies(bcm59055_saradc->rtm_dly_usec + INT_REG_READ_TIME_IN_USEC))
 
 
 /* ---- Private Function Prototypes -------------------------------------- */
@@ -256,6 +265,7 @@ int bcm59055_saradc_read_data(int sel)
 		regD2 = BCM59055_REG_ADCCTRL24;
 		break;
 	default:
+		mutex_unlock(&bcm59055_saradc->lock);
 		return -EPERM;
 	}
 	/* Read ADC data register according to the BCM59055_SARADC_SELECT */
@@ -287,6 +297,28 @@ EXPORT_SYMBOL(bcm59055_saradc_read_data);
 
 int bcm59055_saradc_request_rtm(int ch_sel)
 {
+	return bcm59055_saradc_rtm_read(ch_sel, FALSE, ADCCTRL2_RTM_DELAY_468_75_USEC);
+}
+
+EXPORT_SYMBOL(bcm59055_saradc_request_rtm);
+
+/******************************************************************************
+ * *
+ * * Function Name: bcm59055_saradc__rtm_read
+ * *
+ * * Description: Called to start Real Time Measurement either via I2C or ADC_SYNC.
+ * * User for RTM data, must call this API even if they are waiting for ADC_SYNC
+ * * to trigger the RTM convertion. So, that they get notified on RTM_DATA_RDY
+ * * interrpt as well ADC driver will have the knowledge about ADC_SYNC triggered
+ * * RTM conversion.
+ * * Exception: If any RTM conversion is going on and that time ADC_SYNC trigger
+ * * another RTM conversion, current request will be overridden, and -EIO will be
+ * * returned. User must re-request after sometimes.
+ * * Return:
+ * ******************************************************************************/
+
+int bcm59055_saradc_rtm_read(int ch_sel, bool adc_sync, u32 delay)
+{
 	u8 regVal;
 	u16 adcData;
 	int ret;
@@ -304,27 +336,51 @@ int bcm59055_saradc_request_rtm(int ch_sel)
 
 	mutex_lock(&bcm59055_saradc->lock);
 	INIT_COMPLETION(bcm59055_saradc->rtm_req);
+	/* set the delay */
+	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ADCCTRL2);
+	regVal &= ~BCM59055_ADCCTRL2_RTM_DLY_MASK;	/* Clear the delay */
+	regVal |= (delay & BCM59055_ADCCTRL2_RTM_DLY_MASK);
+	bcm59055_saradc->rtm_dly_usec = delay * CLOCK_CYCLE_IN_USEC;
+	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_ADCCTRL2, regVal);
+	if (ret) {
+		mutex_unlock(&bcm59055_saradc->lock);
+		pr_info("%s: Error writing RTM delay\n", __func__);
+		return ret;
+	}
 	bcm59055 = bcm59055_saradc->bcm59055;
 	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ADCCTRL1);
 	regVal &= ~(BCM59055_ADCCTRL1_RTM_CH_MASK <<
 				BCM59055_ADCCTRL1_RTM_CH_MASK_SHIFT);	/* Clear Channel Select */
-	regVal &= ~(BCM59055_ADCCTRL1_RTM_ENABLE | BCM59055_ADCCTRL1_RTM_START);
+	/* Unmask RTM conversion */
+	regVal &= ~(BCM59055_ADCCTRL1_RTM_START | BCM59055_ADCCTRL1_RTM_ENABLE);
 	regVal |= (ch_sel << BCM59055_ADCCTRL1_RTM_CH_MASK_SHIFT);
 	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_ADCCTRL1, regVal); /* set channel and enable RTM req */
-	if (ret)
+	if (ret) {
+		mutex_unlock(&bcm59055_saradc->lock);
 		return ret;
-	regVal |= BCM59055_ADCCTRL1_RTM_START;
-	bcm590xx_enable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DATA_RDY);	/* Enable RTM DATA RDY INT */
+	}
+	/* Enable the interrupts */
+	bcm590xx_enable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DATA_RDY);
 	bcm590xx_enable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DURING_CON_MEAS);	/* Enable RTM WHILE CONT INT */
+	bcm590xx_enable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_IGNORE);		/* Enable RTM_IGNORE INT */
+	bcm590xx_enable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_OVERRIDDEN);	/* Enable RTM OVERRIDDEN INT */
 	bcm590xx_enable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_UPPER_BOUND);	/* Enable RTM UPPER BOUND RDY INT */
-	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_ADCCTRL1, regVal);	/* Start RTM Conversion */
-	if (ret)
-		return ret;
-	time_left = wait_for_completion_timeout(&bcm59055_saradc->rtm_req, RTM_EXECUTION_TIMEOUT);
+	if (!adc_sync) {
+		regVal |= BCM59055_ADCCTRL1_RTM_START;
+		ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_ADCCTRL1, regVal);	/* Start RTM Conversion */
+		if (ret) {
+			mutex_unlock(&bcm59055_saradc->lock);
+			return ret;
+		}
+		time_left = wait_for_completion_timeout(&bcm59055_saradc->rtm_req, I2C_RTM_EXECUTION_TIMEOUT);
+	} else
+		time_left = wait_for_completion_timeout(&bcm59055_saradc->rtm_req, ADCSYN_RTM_EXECUTION_TIMEOUT);
+	/* Disable the interrupts */
 	bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DATA_RDY);       /* Disable RTM DATA RDY INT */
 	bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_DURING_CON_MEAS);        /* Enable RTM WHILE CONT INT */
 	bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_UPPER_BOUND);    /* Enable RTM UPPER BOUND RDY INT */
-
+	bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_OVERRIDDEN);
+	bcm590xx_disable_irq(bcm59055, BCM59055_IRQID_INT9_RTM_IGNORE);
 	if (time_left == 0) {
 		pr_info("%s: RTM request timeout..No RTM READY interrupt\n", __func__);
 		mutex_unlock(&bcm59055_saradc->lock);
@@ -336,6 +392,13 @@ int bcm59055_saradc_request_rtm(int ch_sel)
 		mutex_unlock(&bcm59055_saradc->lock);
 		return -EIO;
 	}
+	if (bcm59055_saradc->rtm_overridden) {
+		pr_info("%s: RTM request has been overridden due to ADC_SYNC \
+				triggered conversion\n", __func__);
+		bcm59055_saradc->rtm_overridden = 0;
+		mutex_unlock(&bcm59055_saradc->lock);
+		return -EIO;
+	}
 	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ADCCTRL26);
 	adcData = regVal;
 	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ADCCTRL25);
@@ -344,7 +407,7 @@ int bcm59055_saradc_request_rtm(int ch_sel)
 	return adcData;
 }
 
-EXPORT_SYMBOL(bcm59055_saradc_request_rtm);
+EXPORT_SYMBOL(bcm59055_saradc_rtm_read);
 
 /******************************************************************************
 *
@@ -371,7 +434,7 @@ int bcm59055_saradc_set_rtm_delay(int delay)
 
 	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ADCCTRL2);
 	regVal &= ~BCM59055_ADCCTRL2_RTM_DLY_MASK;	/* Clear the delay */
-	regVal |= delay;
+	regVal |= (delay & BCM59055_ADCCTRL2_RTM_DLY_MASK);
 	bcm59055_saradc->rtm_dly_usec = delay * CLOCK_CYCLE_IN_USEC;
 	ret = bcm590xx_reg_write(bcm59055, BCM59055_REG_ADCCTRL2, regVal);
 	mutex_unlock(&bcm59055_saradc->lock);
@@ -415,7 +478,11 @@ static void bcm59055_saradc_isr(int intr, void *data)
 	case BCM59055_IRQID_INT9_RTM_OVERRIDDEN:
 		pr_debug("%s: BCM59055_IRQID_INT9_RTM_OVERRIDDEN\n",
 			__func__);
-		/* This INT shouldn't be coming, taken care in driver code */
+		/* This INT will come if I2C RTM conversion has been overridden by ADC_SYNC
+		 * triggered conversion
+		*/
+		saradc->rtm_overridden = 1;
+		complete(&saradc->rtm_req);
 		break;
 	default:
 		return;
@@ -472,6 +539,7 @@ static int __devinit bcm59055_saradc_probe(struct platform_device *pdev)
 
 	mutex_lock(&saradc->lock);
 	saradc->rtm_ignored = 0;
+	saradc->rtm_overridden = 0;
 	mutex_unlock(&saradc->lock);
 	saradc->bcm59055 = bcm59055;
 	bcm59055_saradc = saradc;
