@@ -1712,7 +1712,8 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 	}
 
 #if defined(ENABLE_DMA_ARM2SP)
-	if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
+	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM) || 
+        (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink == CSL_CAPH_DEV_DSP_throughMEM))
 	{
 		if(arm2spCfg.instanceID == 1) 
 		{
@@ -3223,7 +3224,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM recording *** \r\n"));
 
-		// FM radio playback  is on 
+		// FM radio playback  is on (no voice call)
 		if(fmRunning == TRUE && fmPlayRx == TRUE)
 		{
 			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP/HS recording *** \r\n"));
@@ -3326,6 +3327,26 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			return path->pathID;
 		}
     }   
+#if defined(ENABLE_DMA_ARM2SP)
+    else
+    if ((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink == CSL_CAPH_DEV_DSP_throughMEM))
+    {
+        /* Set up the path for FM Radio playback: 
+        I2S Rx --> SW1--> SRC Mixer --SW2--> SRC --SW3--> CFIFO2 --DMA2--> SharedMem, 48/44k stereo to 8/16k mono
+         */
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE};            
+			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP/HS via arm2sp (during voice call) *****\r\n"));
+
+			csl_caph_config_arm2sp(path->pathID);
+			csl_caph_config_blocks(path->pathID, blocks);
+			//memcpy(&fm_sw_config, & path->sw[0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+			csl_caph_start_blocks(path->pathID);
+            //fmPlayRx = TRUE;
+			return path->pathID;
+		}
+    }
+#endif //ENABLE_DMA_ARM2SP   
     else
     if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_MEMORY))
     {
@@ -3689,7 +3710,8 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 #endif
 
 #if defined(ENABLE_DMA_ARM2SP)
-	if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
+	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM) ||
+        (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink == CSL_CAPH_DEV_DSP_throughMEM))
 	{
 		if(arm2spCfg.instanceID == 1)
 			VPRIPCMDQ_SetARM2SP( 0, 0 ); 

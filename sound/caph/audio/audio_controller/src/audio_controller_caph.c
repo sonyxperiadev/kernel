@@ -1014,7 +1014,7 @@ void AUDCTRL_EnablePlay(
 	}
 
 #if defined(ENABLE_DMA_ARM2SP)
-	if (src == AUDIO_HW_MEM && sink == AUDIO_HW_DSP_VOICE && spk!=AUDCTRL_SPK_USB)
+	if ((src == AUDIO_HW_MEM || src == AUDIO_HW_I2S_IN) && sink == AUDIO_HW_DSP_VOICE && spk!=AUDCTRL_SPK_USB)
 	{
 		config.sink = CSL_CAPH_DEV_DSP_throughMEM; //convert from AUDDRV_DEV_EP
 	}
@@ -2347,6 +2347,19 @@ if (((source == CSL_CAPH_DEV_ANALOG_MIC)
         //Remove this path to the path table.
         AUDCTRL_RemoveFromTable(pathID);
     }
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_SetArm2spParam
+//
+// Description:   Set Arm2Sp Parameter
+// 
+//============================================================================
+
+void AUDCTRL_SetArm2spParam( UInt32 mixMode, UInt32 instanceId )
+{
+    csl_caph_arm2sp_set_param(mixMode, instanceId);
 }
 
 //============================================================================

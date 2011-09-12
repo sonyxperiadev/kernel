@@ -123,10 +123,11 @@ typedef struct brcm_alsa_chip
 	Int32	pi32LoopBackTestParam[3];	//loopback test
 	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
-	Int32	pi32SpeechMixOption[3];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
+	Int32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
 	//AT-AUD
 	Int32	i32AtAudHandlerParms[7];	
 	Int32	pi32BypassVibraParam[3];	//Bypass Vibra: bEnable, strength, direction
+    Int32   iEnableFM;                  //Enable/disable FM radio receiving
  } brcm_alsa_chip_t;
 
 

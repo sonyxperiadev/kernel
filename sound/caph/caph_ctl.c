@@ -437,6 +437,74 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
          }
 		break;
 
+    case CTL_STREAM_PANEL_FM:      // FM
+        if((pChip->iEnableFM) && (!(pChip->iEnablePhoneCall))) 
+        {
+            //disable the playback path first
+            AUDCTRL_DisablePlay(AUDIO_HW_I2S_IN,   
+                       pChip->streamCtl[stream-1].dev_prop.p[0].hw_id,
+                       pChip->streamCtl[stream-1].dev_prop.p[0].speaker, 0 );
+
+            // change the sink/spk
+            if(pSel[0]==AUDCTRL_SPK_HANDSET)
+            {
+                pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+            }
+            else if(pSel[0]==AUDCTRL_SPK_HEADSET)
+            {
+                pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_HEADSET_OUT;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_HS;		
+            }
+            else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE) 
+            {
+                pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_IHF_OUT;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_IHF;		
+            }
+            else if(pSel[0]==AUDCTRL_SPK_BTM)
+            {
+                pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_MONO_BT_OUT;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_BT_SPKR;
+            }
+            else if(pSel[0]==AUDCTRL_SPK_I2S)
+            {
+                pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_I2S_OUT;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_FM_TX; 	
+            }
+            else if(pSel[0]==AUDCTRL_SPK_VIBRA)
+			{
+				pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_VIBRA_OUT;
+				pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_VIBRA;
+			}
+            else
+            {
+                BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
+                pChip->streamCtl[stream-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
+                pChip->streamCtl[stream-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+            }
+
+            pChip->streamCtl[stream-1].dev_prop.p[0].speaker = pSel[0];    
+                
+            // re-enable FM
+            AUDCTRL_SaveAudioModeFlag( pChip->streamCtl[stream-1].dev_prop.p[0].speaker );
+
+            // Enable the playback path
+            AUDCTRL_EnablePlay(AUDIO_HW_I2S_IN, 
+                       pChip->streamCtl[stream-1].dev_prop.p[0].hw_id,  
+                       AUDIO_HW_NONE,
+                       pChip->streamCtl[stream-1].dev_prop.p[0].speaker,
+			           AUDIO_CHANNEL_STEREO, 
+                       AUDIO_SAMPLING_RATE_48000, // param_start->rate, 
+                       NULL);
+
+            AUDCTRL_SetPlayVolume (pChip->streamCtl[stream-1].dev_prop.p[0].hw_id,
+                       pChip->streamCtl[stream-1].dev_prop.p[0].speaker, 
+                       AUDIO_GAIN_FORMAT_Q13_2, 
+                       pChip->streamCtl[stream-1].ctlLine[pSel[0]].iVolume[0], 
+                       pChip->streamCtl[stream-1].ctlLine[pSel[0]].iVolume[1]); //0DB
+         }
+        break;
+
 	default:
 			break;
 	}
@@ -656,6 +724,8 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				ucontrol->value.integer.value[0] = pChip->pi32SpeechMixOption[stream-1]; 
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
+            BCM_AUDIO_DEBUG("CTL_FUNCTION_FM_ENABLE, status=%d\n", pChip->iEnableFM); 		
+            ucontrol->value.integer.value[0] = pChip->iEnableFM;
 			break;
 		case CTL_FUNCTION_FM_FORMAT:
 			break;
@@ -693,7 +763,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int function = priv&0xFF;
-	Int32	*pSel;
+	Int32	*pSel, callMode;
 	int	stream = STREAM_OF_CTL(priv);
     int rtn = 0;
 
@@ -757,8 +827,96 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 			pChip->pi32SpeechMixOption[stream-1] = ucontrol->value.integer.value[0]; 
+			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_SPEECH_MIXING_OPTION stream = %d, option = %d\n", stream, pChip->pi32SpeechMixOption[stream-1]);
 			break;
 		case CTL_FUNCTION_FM_ENABLE:
+            callMode = pChip->iEnablePhoneCall;
+			pChip->iEnableFM = ucontrol->value.integer.value[0];
+			pSel = pChip->streamCtl[CTL_STREAM_PANEL_FM-1].iLineSelect;
+			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_FM_ENABLE stream = %d, status = %d, pSel[0] = %ld-%ld \n", stream, pChip->iEnableFM,pSel[0],pSel[1]);
+
+			if(!pChip->iEnableFM)  // disable FM
+            {              
+                //disable the playback path
+                AUDCTRL_DisablePlay(AUDIO_HW_I2S_IN,   
+                                    pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id,
+                                    pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].speaker, 0 );
+            }
+			else  // enable FM
+			{	
+                //route the playback to CAPH
+                pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].drv_type = AUDIO_DRIVER_PLAY_AUDIO; 
+
+                if (callMode)
+                {
+                    pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_DSP_VOICE;	//sink
+                    pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_DSP_throughMEM;  // used by ddriver
+                }
+                else
+                {
+                    //Update Sink, volume , mute info from mixer controls
+                    if(pSel[0]==AUDCTRL_SPK_HANDSET)
+                    {
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+                    }
+                    else if(pSel[0]==AUDCTRL_SPK_HEADSET)
+                    {
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_HEADSET_OUT;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_HS;		
+                    }
+                    else if(pSel[0]==AUDCTRL_SPK_LOUDSPK || pSel[0]==AUDCTRL_SPK_HANDSFREE) 
+                    {
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_IHF_OUT;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_IHF;		
+                    }
+                    else if(pSel[0]==AUDCTRL_SPK_BTM)
+                    {
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_MONO_BT_OUT;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_BT_SPKR;
+                    }
+                    else if(pSel[0]==AUDCTRL_SPK_I2S)
+                    {
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_I2S_OUT;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_FM_TX; 	
+                    }
+                    else if(pSel[0]==AUDCTRL_SPK_VIBRA)
+        			{
+        				pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_VIBRA_OUT;
+        				pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_VIBRA;
+        			}
+                    else
+                    {
+                        BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[0]);
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id = AUDIO_HW_EARPIECE_OUT;
+                        pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].aud_dev = AUDDRV_DEV_EP;
+                    }
+                }
+
+                pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].speaker = pSel[0];    
+
+                AUDCTRL_SaveAudioModeFlag( pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].speaker );
+#ifdef ENABLE_DMA_ARM2SP
+                if (callMode) 
+                {                       
+                    AUDCTRL_SetArm2spParam((UInt32)pChip->pi32SpeechMixOption[CTL_STREAM_PANEL_FM-1], 1); // use ARM2SP instance 1 for FM
+                }
+#endif
+                // Enable the playback the path
+                AUDCTRL_EnablePlay(AUDIO_HW_I2S_IN, 
+                               pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id,  // =AUDIO_HW_DSP_VOICE if CallMode = 1
+                               AUDIO_HW_NONE,
+                               pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].speaker,
+			                   AUDIO_CHANNEL_STEREO, 
+                               AUDIO_SAMPLING_RATE_48000,  
+                               NULL);
+
+                AUDCTRL_SetPlayVolume (pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id,
+                                       pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].speaker, 
+                                       AUDIO_GAIN_FORMAT_Q13_2, 
+                                       pChip->streamCtl[CTL_STREAM_PANEL_FM-1].ctlLine[pSel[0]].iVolume[0], 
+                                       pChip->streamCtl[CTL_STREAM_PANEL_FM-1].ctlLine[pSel[0]].iVolume[1]); //0DB 
+			}
 			break;
 		case CTL_FUNCTION_FM_FORMAT:
 			break;
@@ -1073,7 +1231,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 
 	   //kctlSpeechInMixingOption is for CTL_STREAM_PANEL_SPEECHIN
 	   struct snd_kcontrol_new kctlSpeechInMixingOption = BRCM_MIXER_CTRL_MISC(0, 0, "C2-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_SPEECHIN, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));
-	   
+       struct snd_kcontrol_new kctlFMMixingOption = BRCM_MIXER_CTRL_MISC(0, 0, "FM-MIX", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_FM, 0, CTL_FUNCTION_SPEECH_MIXING_OPTION));	   
 
 	   struct snd_kcontrol_new kctlFMEnable = BRCM_MIXER_CTRL_MISC(0, 0, "FM-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_FM_ENABLE));
 	   struct snd_kcontrol_new kctlFMFormat = BRCM_MIXER_CTRL_MISC(0, 0, "FM-FMT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_FM_FORMAT));
@@ -1123,6 +1281,12 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlSpeechInMixingOption, pChip))) < 0)
 	   {
 		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlSpeechInMixingOption.name, err);
+		   return err;
+	   }
+
+       if ((err = snd_ctl_add(card, snd_ctl_new1(&kctlFMMixingOption, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", kctlFMMixingOption.name, err);
 		   return err;
 	   }
 

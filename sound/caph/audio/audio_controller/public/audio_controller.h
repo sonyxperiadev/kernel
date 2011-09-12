@@ -827,6 +827,17 @@ void AUDCTRL_SetAMRVolume_DL(UInt16 uVol);
 void AUDCTRL_SetAMRVolume_UL(UInt16 uVol);
 
 /********************************************************************
+*  @brief  Set Arm2Sp Parameter
+*
+*  @param  mixMode        For selection of mixing with voice DL, UL, or both
+*  @param  instanceId     Instance ID: 1 for arm2sp1, 2 for arm2sp2
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SetArm2spParam( UInt32 mixMode, UInt32 instanceId );
+
+/********************************************************************
 *  @brief  Configure fm/pcm port
 *
 *  @param  fm_port  fm port number
