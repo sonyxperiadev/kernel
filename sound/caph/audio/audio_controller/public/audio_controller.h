@@ -807,21 +807,6 @@ void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID);
 void AUDCTRL_AddToTable(AUDCTRL_Config_t* data);
 
 /********************************************************************
-*  @brief  enable or disable audio HW loopback
-*
-*  @param  enable_lpbk (in)  the audio mode
-*  @param  mic         (in)  the input to loopback
-*  @param  speaker     (in)  the output from loopback
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetEQ( 
-				AUDIO_HW_ID_t	audioPath,
-				AudioEqualizer_en_t  equType
-				);
-
-/********************************************************************
 *  @brief  set gain on the VPU playback path on the downlink path
 *
 *  @param  uVol (in)  amr volume

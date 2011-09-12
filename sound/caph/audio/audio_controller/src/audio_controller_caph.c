@@ -2349,14 +2349,6 @@ if (((source == CSL_CAPH_DEV_ANALOG_MIC)
     }
 }
 
-
-void AUDCTRL_SetEQ( 
-				AUDIO_HW_ID_t	audioPath,
-				AudioEqualizer_en_t  equType
-				)
-{ 
-}
-
 //============================================================================
 //
 // Function Name: AUDCTRL_SetSspTdmMode
