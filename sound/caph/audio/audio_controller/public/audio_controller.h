@@ -918,27 +918,4 @@ AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic);
 ****************************************************************************/
 AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
 
-#if !defined(NO_PMU) && ( defined( PMU_BCM59038) || defined( PMU_BCM59055 ) || defined( PMU_MAX8986) )
-/********************************************************************
-*  @brief  Convert Headset gain dB value to PMU-format gain value
-*
-*  @param  Headset gain dB galue
-*
-*  @return PMU_HS_Gain_t PMU-format gain value
-*
-****************************************************************************/
-UInt32 map2pmu_hs_gain( Int16 db_gain );
-
-/********************************************************************
-*  @brief  Convert IHF gain dB value to PMU-format gain value
-*
-*  @param  IHF gain dB galue
-*
-*  @return PMU_HS_Gain_t PMU-format gain value
-*
-****************************************************************************/
-UInt32 map2pmu_ihf_gain( Int16 db_gain );
-
-#endif
-
 #endif //#define __AUDIO_CONTROLLER_H__
