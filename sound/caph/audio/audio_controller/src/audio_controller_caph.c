@@ -1094,6 +1094,8 @@ void AUDCTRL_DisablePlay(
 		config.pathID = pathID;
 		(void) csl_caph_hwctrl_DisablePath(config);
 	}
+	//Remove this path from the path table.
+	AUDCTRL_RemoveFromTable(pathID);
 
     //Disable the PMU for HS/IHF.
 	pathID = AUDCTRL_GetPathIDFromTableWithSrcSink(src, sink, spk, AUDCTRL_MIC_UNDEFINED);
@@ -1106,9 +1108,6 @@ void AUDCTRL_DisablePlay(
 			powerOnExternalAmp( spk, AudioUseExtSpkr, FALSE );
 		}
 	}
-    
-    //Save this path to the path table.
-    AUDCTRL_RemoveFromTable(pathID);
 }
 //============================================================================
 //
