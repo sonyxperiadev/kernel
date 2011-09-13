@@ -22,15 +22,16 @@
 #include <linux/mfd/bcmpmu.h>
 
 
-static int bcmpmuldo_get_voltage(struct regulator_dev *rdev) ;
-static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv) ;
-static int bcmpmuldo_list_voltage(struct regulator_dev *rdev, unsigned index) ;
-static unsigned int bcmpmureg_get_mode (struct regulator_dev *rdev) ;
-static int bcmpmureg_set_mode(struct regulator_dev *rdev, unsigned mode) ;
-static int bcmpmureg_get_status(struct regulator_dev *rdev) ;
-static int bcmpmureg_disable(struct regulator_dev *rdev) ;
-static int bcmpmureg_enable(struct regulator_dev *rdev) ;
-static int bcmpmureg_is_enabled(struct regulator_dev *rdev) ;
+static int bcmpmuldo_get_voltage(struct regulator_dev *rdev);
+static int bcmpmuldo_set_voltage(struct regulator_dev *rdev,
+	int min_uv, int max_uv, unsigned *selector);
+static int bcmpmuldo_list_voltage(struct regulator_dev *rdev, unsigned selector);
+static unsigned int bcmpmureg_get_mode (struct regulator_dev *rdev);
+static int bcmpmureg_set_mode(struct regulator_dev *rdev, unsigned mode);
+static int bcmpmureg_get_status(struct regulator_dev *rdev);
+static int bcmpmureg_disable(struct regulator_dev *rdev);
+static int bcmpmureg_enable(struct regulator_dev *rdev);
+static int bcmpmureg_is_enabled(struct regulator_dev *rdev);
 
 
 /** voltage regulator details.  */
@@ -39,10 +40,10 @@ struct regulator_ops bcmpmuldo_ops = {
 	.enable		= bcmpmureg_enable,
 	.disable	= bcmpmureg_disable,
 	.is_enabled	= bcmpmureg_is_enabled,
-	.get_mode 	= bcmpmureg_get_mode ,
+	.get_mode 	= bcmpmureg_get_mode,
 	.set_mode	= bcmpmureg_set_mode,
 	.get_status	= bcmpmureg_get_status,
-	.set_voltage	= bcmpmuldo_set_voltage, 
+	.set_voltage	= bcmpmuldo_set_voltage,
 	.get_voltage	= bcmpmuldo_get_voltage,
 };
 
@@ -242,18 +243,20 @@ static int bcmpmureg_set_mode(struct regulator_dev *rdev, unsigned mode)
  *	regulator_desc.n_voltages.  Voltages may be reported in any order.
  *	*/
 
-static int bcmpmuldo_list_voltage(struct regulator_dev *rdev, unsigned index)
+static int bcmpmuldo_list_voltage(struct regulator_dev *rdev, unsigned selector)
 {
 	struct bcmpmu *bcmpmu = rdev_get_drvdata(rdev);
-	struct bcmpmu_reg_info *info = bcmpmu->rgltr_info + rdev_get_id(rdev); 
-
-	return ( info->v_table[index] ) ;
+	struct bcmpmu_reg_info *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
+	if ((selector < 0) || (selector >= info->num_voltages))
+		return -EINVAL;
+	return ( info->v_table[selector] );
 }
 
 /* @set_voltage: Set the voltage for the regulator within the range specified.
  *               The driver should select the voltage closest to min_uV.
  *               */
-static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv)
+static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max_uv,
+	unsigned *selector)
 {
 	struct bcmpmu	*bcmpmu = rdev_get_drvdata(rdev);
 	struct bcmpmu_reg_info  *info = bcmpmu->rgltr_info + rdev_get_id(rdev);
@@ -263,6 +266,7 @@ static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max
 	int	rc;
 	int	ret;
 	unsigned int val;
+	*selector = -1;
 
 	for (rc = 0; rc < info->num_voltages ; rc++) {
 		int uv = info->v_table[rc] ;
@@ -287,6 +291,7 @@ static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max
 					return -EINVAL;
 				}
 			}
+			*selector = rc;
 			rc = ( val & (~(info->vout_mask)) )  | rc ;
 			return ( bcmpmu->write_dev(bcmpmu, addr, rc, info->vout_mask) ) ;
 		}
