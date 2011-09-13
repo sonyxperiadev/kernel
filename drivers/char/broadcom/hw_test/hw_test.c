@@ -1,5 +1,5 @@
 /*******************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2011 Broadcom Corporation.  All rights reserved.
 
 Unless you and Broadcom execute a separate written software license agreement
 governing use of this software, this software is licensed to you under the
@@ -28,8 +28,9 @@ the GPL, without Broadcom's express prior written consent.
 #include <mach/sdio_platform.h>
 #include <linux/clk.h>
 #include <plat/clock.h>
+#include <linux/i2c.h>
+#include <linux/i2c-kona.h>
 
-//#include "../../../i2c/busses/i2c-bsc.h"
 typedef enum{
     BSC_SPD_32K = 0,      /*< 32KHZ */
     BSC_SPD_50K,          /*< 50KHZ */
@@ -74,8 +75,105 @@ static int Device_Open = 0;	/* Is device open?  */
 #define BSC_READ_REG_FIELD(addr,mask,shift)       ((readl(addr) & mask ) >> shift )
 #define BSC_WRITE_REG(addr,data)                  (writel(data,addr))
 #define BSC_READ_REG(addr)						  (readl(addr))
+#define MAX_PROC_NAME_SIZE        15
 
- 
+struct procfs
+{
+   char name[MAX_PROC_NAME_SIZE];
+   struct proc_dir_entry *parent;
+};
+/*
+ * BSC (I2C) private data structure
+ */
+struct bsc_i2c_dev
+{
+	struct device *dev;
+
+	/* iomapped base virtual address of the registers */
+	void __iomem *virt_base;
+
+	/* I2C bus speed */
+	enum bsc_bus_speed speed;
+
+	/* Current I2C bus speed configured */
+	enum bsc_bus_speed current_speed;
+
+	/* flag to support dynamic bus speed configuration for multiple slaves */
+	int dynamic_speed;
+
+	/* the 8-bit master code (0000 1XXX, 0x08) used for high speed mode */
+	unsigned char mastercode;
+
+	/* to save the old BSC TIM register value */
+	volatile uint32_t tim_val;
+
+	/* flag to indicate whether the I2C bus is in high speed mode */
+	unsigned int high_speed_mode;
+
+	/* IRQ line number */
+	int irq;
+
+	/* Linux I2C adapter struct */
+	struct i2c_adapter adapter;
+
+	/* lock for data transfer */
+	struct semaphore xfer_lock;
+
+	/* to signal the command completion */
+	struct completion	ses_done;
+
+	struct procfs proc;
+
+	volatile int debug;
+
+	struct clk *bsc_clk;
+	struct clk *bsc_apb_clk;
+};
+
+static int __bsc_i2c_get_client(struct device *dev, void *addrp)
+{
+    struct i2c_client *client = i2c_verify_client(dev);
+    int addr = *(int *)addrp;
+
+    if (client && client->addr == addr)
+        return true;
+
+    return 0;
+}
+
+static struct device *bsc_i2c_get_client(struct i2c_adapter *adapter,
+                         int addr)
+{
+    return device_find_child(&adapter->dev, &addr,
+                 __bsc_i2c_get_client);
+}
+
+int set_i2c_bus_speed(int bus, enum bsc_bus_speed speed, unsigned short addr)
+{
+	struct bsc_i2c_dev *dev;
+	struct device *d;
+	struct i2c_adapter *adap;
+	if(bus > 2)
+		return -ENODEV;
+	adap = i2c_get_adapter(bus);
+	if(!adap)
+		return -ENODEV;
+	dev = i2c_get_adapdata(adap);
+	dev->speed = speed;
+	d = bsc_i2c_get_client(adap, addr);
+	if(d) {
+		struct i2c_client *client = NULL;
+		struct i2c_slave_platform_data *pd = NULL;
+		client = i2c_verify_client(d);
+		pd = (struct i2c_slave_platform_data *)client->dev.platform_data;
+		if (pd) {
+			pd->i2c_speed = speed;
+		}
+	}
+	//dbg_print("i2c bus speed =%d\n", speed);
+	  
+	return 0;
+}
 /*
  * Methods
  */
@@ -139,7 +237,7 @@ static ssize_t hw_test_read(struct file *filp,	/* see include/linux/fs.h   */
 	iounmap(virt_base);
 	return length;
 }
-extern int set_i2c_bus_speed(int bus, BSC_SPEED_t speed);
+//extern int set_i2c_bus_speed(int bus, BSC_SPEED_t speed, unsigned short addr);
 /*  
  * Called when a process writes to dev file: echo "hi" > /dev/hello 
  */
@@ -155,7 +253,7 @@ hw_test_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 	unsigned int *data, address;
 	unsigned long clock_rate;
 	struct clk *clk;
-	BSC_SPEED_t speed;
+	enum bsc_bus_speed speed;
 	//dbg_print("command: %s \n", buff);
 	if(buff != NULL && !strncmp(buff, "REG", 3))
 	{
@@ -236,6 +334,11 @@ hw_test_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 	}
 	while(isspace(*result) && (*result != 0))
 		result++;
+	address = simple_strtoul(result, NULL, 16);
+	while(!isspace(*result) && (*result != 0))
+		result++;
+	while(isspace(*result) && (*result != 0))
+		result++;
 	if(*result == 0)
 	{
 		dbg_print("Invalid parameters.\n");
@@ -247,14 +350,15 @@ hw_test_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 		speed =  BSC_SPD_100K;
 	else
 	{
-		dbg_print("Invalid parameters.\n");
-		return len;	
+		speed =  BSC_SPD_50K;       /* Default speed */
 	}
+	/*
 	if(speed == BSC_SPD_100K)
-		dbg_print("Parameters: device = %x speed = 100K \n", device);
+		dbg_print("Parameters: device = %x addr = %x speed = 100K \n", device, address);
 	else
-		dbg_print("Parameters: device = %x speed = 400K \n", device);
-	/* 
+		dbg_print("Parameters: device = %x addr = %x speed = 400K \n", device, address);
+	
+	
 	virt_base = ioremap(device, 1024);
 	if(!virt_base)
 	{
@@ -262,7 +366,7 @@ hw_test_write(struct file *filp, const char *buff, size_t len, loff_t * off)
 		return len;
 	}
 	*/
-	//set_i2c_bus_speed(device, speed);
+	set_i2c_bus_speed(device, speed, address);
 	//iounmap(virt_base);
 
 	return len;
