@@ -1,0 +1,77 @@
+USB Device Mode configuration
+
+Table of Contents
+
+1	Introduction	
+2	USB Modes
+3	atlog.sh
+4	usb_tether.sh
+5	usbdev.sh
+
+1 Introduction
+==============
+
+This document provides an overview of configuring usb device mode. 
+
+2 USB Modes
+===========================
+The Broadcom kernel is compile to support RNDIS, ACM (2 instances), MSC, ADB.  
+In the 2.6 kernel the usb modes can be selected from userspace by writing to 
+the sysfs in /sys/class/usb_composite whene each mode has a folder and an 
+enable subfile.  Each mode must be set and the order of setting determines the 
+interface number supplied to the host PC.  This can affect the PC driver .inf 
+files.  It is prone to error so we have created scripts to abstract the details 
+away.  Also with the change to the 3.0 kernel the sysfs file structure has 
+changed so it adds more knowledge just to switch modes.  The scripts handle 
+both the 3.0 and 2.6 sysfs structures
+
+
+Kernel 2.6 example
+echo 1 > /sys/class/usb_composite/enabe
+
+*** NOTE ***
+Android boot_mode needs to run sh from busybox
+/system/xbin/busybox sh /system/etc/atlog.sh rndis
+
+3 atlog.sh script
+===============================
+This script selects usb modes and sets up the AT and Logging interface.  The 
+bash environment on Android is restricted and shell scripted "if" logic doesn't 
+work so the scripts need to be run busybox sh so we can use the "if [ xxx ]" 
+logic.  This script uses the usbdev.sh to actually set the modes.  The atlog.sh 
+just calls the usbdev.sh to set the mode and sets up the AT and Logging 
+application to the right mode.
+
+Example for RNDIS
+sh /system/etc/atlog.sh rndis
+or when in Android boot_mode
+/system/xbin/busybox sh /system/etc/atlog.sh rndis
+
+Example for ACM
+sh /system/etc/atlog.sh acm
+or when in Android boot_mode
+/system/xbin/busybox sh /system/etc/atlog.sh acm
+
+4 usb_tether.sh script
+===============================
+This script selects usb rndis mode and set up the network to MASQUERADE
+
+
+5 usbdev.sh script
+===============================
+This script is main mode selecting script.  The scripts usb_tether.sh and 
+atlog.sh use this script to select the mode.  It can detect 2.6 or 3.0 kernel 
+and uses the appropriate commands.
+
+Modes Supported
+rndis 		- Selects RNDIS and sets up the network
+acm 		- Selects dual instance ACM
+acm_msc		- Selects dual instance ACM and MSC
+adb			- Selects Android ADB mode
+adb_msc		- Selects Android ADB mode and MSC
+msc			- Selects MSC mode
+none		- Turns off usb device mode
+
+
+
+
