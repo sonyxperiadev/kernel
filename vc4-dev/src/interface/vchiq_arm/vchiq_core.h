@@ -91,6 +91,7 @@ vcos_static_assert((sizeof(BITSET_T) * 8) == 32);
 
 #define VCHIQ_STATS_INC(state, stat) (state->stats. stat ++)
 #define VCHIQ_SERVICE_STATS_INC(service, stat) (service->stats. stat ++)
+#define VCHIQ_SERVICE_STATS_ADD(service, stat, addend) (service->stats. stat += addend)
 
 enum
 {
@@ -216,8 +217,6 @@ typedef struct vchiq_service_struct {
    VCHIQ_STATE_T *state;
    VCHIQ_INSTANCE_T instance;
 
-   int previous_tx_index;
-
    VCHIQ_BULK_QUEUE_T bulk_tx;
    VCHIQ_BULK_QUEUE_T bulk_rx;
 
@@ -230,6 +229,16 @@ typedef struct vchiq_service_struct {
       int quota_stalls;
       int slot_stalls;
       int bulk_stalls;
+      int error_count;
+      int ctrl_tx_count;
+      int ctrl_rx_count;
+      int bulk_tx_count;
+      int bulk_rx_count;
+      int bulk_aborted_count;
+      uint64_t ctrl_tx_bytes;
+      uint64_t ctrl_rx_bytes;
+      uint64_t bulk_tx_bytes;
+      uint64_t bulk_rx_bytes;
    } stats;
 } VCHIQ_SERVICE_T;
 
@@ -241,6 +250,7 @@ typedef struct vchiq_service_quota_struct {
    int slot_quota;
    int slot_use_count;
    VCOS_EVENT_T quota_event;
+   int previous_tx_index;
 } VCHIQ_SERVICE_QUOTA_T;
 
 typedef struct vchiq_shared_state_struct {
@@ -350,6 +360,9 @@ struct vchiq_state_struct {
    struct state_stats_struct
    {
       int slot_stalls;
+      int ctrl_tx_count;
+      int ctrl_rx_count;
+      int error_count;
    } stats;
 
    VCHIQ_SERVICE_T *services[VCHIQ_MAX_SERVICES];

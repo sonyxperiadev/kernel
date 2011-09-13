@@ -81,8 +81,8 @@ static struct early_suspend g_vchiq_early_suspend =
 #define TOTAL_SLOTS (VCHIQ_SLOT_ZERO_SLOTS + 2 * 32)
 
 #define VCHIQ_DOORBELL_IRQ BCM_INT_ID_IPC_OPEN
-#define VIRT_TO_VC(x) ((unsigned long)x - PAGE_OFFSET + 0xe0200000)
-#define PHYS_TO_VC(x) ((unsigned long)x - PHYS_OFFSET + 0xe0200000)
+#define VIRT_TO_VC(x) ((unsigned long)x - PAGE_OFFSET + CONFIG_BCM_RAM_START_RESERVED_SIZE + 0xe0000000)
+#define PHYS_TO_VC(x) ((unsigned long)x - PHYS_OFFSET + CONFIG_BCM_RAM_START_RESERVED_SIZE + 0xe0000000)
 
 #define VCOS_LOG_CATEGORY (&vchiq_arm_log_category)
 
@@ -449,26 +449,15 @@ vchiq_late_resume(struct early_suspend *h)
 
 VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platform_data )
 {
-   VCEB_INSTANCE_T       vceb_instance;
    VCHIQ_KERNEL_STATE_T   *kernState;
 
-   vcos_log_warn( "%s: vchiq_num_instances = %d, VCHIQ_NUM_VIDEOCORES = %d",
+   vcos_log_warn( "%s: [bivcm] vchiq_num_instances = %d, VCHIQ_NUM_VIDEOCORES = %d",
       __func__, vchiq_num_instances, VCHIQ_NUM_VIDEOCORES );
 
    if ( vchiq_num_instances >= VCHIQ_NUM_VIDEOCORES )
    {
       vcos_log_error( "%s: already created %d instances", __func__,
          VCHIQ_NUM_VIDEOCORES );
-
-      return VCHIQ_ERROR;
-   }
-
-   if ( vceb_get_instance( platform_data->instance_name, &vceb_instance ) != 0 )
-   {
-      /* No instance registered with vceb, which means the videocore is not
-         present */
-      vcos_log_error( "%s: failed to find vceb instance '%s'", __func__,
-         platform_data->instance_name );
 
       return VCHIQ_ERROR;
    }
@@ -520,6 +509,19 @@ VCHIQ_STATUS_T vchiq_userdrv_create_instance( const VCHIQ_PLATFORM_DATA_T *platf
       vcos_log_error( "%s: failed to create proc entry", __func__ );
 
       return VCHIQ_ERROR;
+   }
+
+ 
+   /* Direct connect the vchiq to get vmcs-fb and vmcs-sm device module built in */
+   if ( vchiq_memdrv_initialise() != VCHIQ_SUCCESS )
+   {
+       printk( KERN_ERR "%s: failed to initialize vchiq for '%s'\n",
+                   __func__, kernState->instance_name );
+   }
+   else
+   {
+       printk( KERN_INFO "%s: initialized vchiq for '%s'\n", __func__,
+                   kernState->instance_name );
    }
 
    vcos_log_warn( "%s: successfully initialized '%s' videocore",
