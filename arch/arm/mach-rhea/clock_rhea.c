@@ -34,10 +34,10 @@
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <mach/pi_mgr.h>
-
+#include <asm/div64.h>
 #include <plat/pi_mgr.h>
 
-
+#define UPDATE_LPJ 1
 
 unsigned long clock_get_xtal(void)
 {
@@ -596,40 +596,165 @@ static inline void __proc_clk_dump_register (u32 base)
 	clk_dbg ("arm_div          0x%08x\n", readl(base+KPROC_CLK_MGR_REG_ARM_DIV_OFFSET));
 }
 
+static u32 compute_vco_rate(u32 ndiv_int, u32 nfrac, u32 pdiv)
+{
+	unsigned long xtal = clock_get_xtal();
+	u64 temp;
+	const u32 frac_div = 0x100000; //2^20
+	/*
+		vco_rate = 26Mhz*(ndiv_int + ndiv_frac/frac_div)/pdiv
+		 = 26(*ndiv_int*frac_div + ndiv_frac)/(pdiv*frac_div)
+	*/
+	//pr_info("%s:pdiv = %x, nfrac = %x ndiv_int = %x\n", __func__, pdiv, nfrac, ndiv_int);
+	temp = ((u64)(ndiv_int*frac_div + nfrac)*xtal);
+
+	//pr_info("%s: temp = %llu\n",__func__,temp);
+	do_div(temp, pdiv*frac_div);
+
+	//pr_info("%s: after div temp = %llu\n",__func__,temp);
+	return (unsigned long)temp;
+}
+
+
+static unsigned long __proc_clk_set_vco_rate(u32 base, u32 rate)
+{
+	const u32 max_ndiv = 512; /*512  == 0*/
+	u32 pdiv;
+	u32 ndiv_int, ndiv_frac;
+	u32 temp_rate;
+	u32 new_rate;
+	u32 reg_val;
+
+	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+
+	ndiv_int = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
+					>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
+	pdiv = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK)
+					>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT;
+	ndiv_frac = (readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET) & KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK)
+					>> KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
+	temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
+
+	if(temp_rate < 	rate)
+	{
+		for(;ndiv_int < max_ndiv;ndiv_int++)
+		{
+			temp_rate = compute_vco_rate(ndiv_int+1,0,1);
+			if(temp_rate >= rate)
+				break;
+		}
+	}
+	else if(temp_rate > rate)
+	{
+		for(;ndiv_int > 0;ndiv_int--)
+		{
+			temp_rate = compute_vco_rate(ndiv_int-1,0,1);
+			if(temp_rate <= rate)
+			{
+			    ndiv_int--;
+			    break;
+			}
+
+		}
+	}
+
+	if(temp_rate != rate)
+	{
+
+        for(ndiv_frac = 0; ndiv_frac  < 0xFFFFF; ndiv_frac++)
+        {
+            temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,1);
+            if(temp_rate > rate)
+            {
+                 break;
+            }
+        }
+	}
+
+	if(ndiv_int == max_ndiv)
+		ndiv_int = 0;
+	pr_info("%s:ndiv_int = %x ndiv_frac = %x pdiv = %x\n", __func__,ndiv_int, ndiv_frac, pdiv);
+
+	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+	reg_val &= ~(KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK |
+				KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK);
+	reg_val |= ndiv_int << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
+	reg_val |= pdiv << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT;
+	writel(reg_val, base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+
+	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
+	reg_val &= ~KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK;
+	reg_val |= ndiv_frac << KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
+	writel(reg_val, base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
+
+	new_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
+	pr_info("%s:new rate =  %u\n",__func__,new_rate);
+
+    return new_rate;
+}
 
 static unsigned long __proc_clk_get_vco_rate(u32 base)
 {
-	unsigned long xtal = clock_get_xtal();
 	unsigned long vco_rate;
-	unsigned int ndiv_int, ndiv_frac;
+	const u32 max_ndiv = 512; /*512  == 0*/
+	u32 pdiv;
+	u32 reg_val;
+	u32 ndiv_int, ndiv_frac;
 
-	ndiv_int = (readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET)& KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
-		>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
+	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+
+	ndiv_int = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
+					>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
+	pdiv = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK) >> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT;
 	ndiv_frac = (readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET) & KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK)
 		>> KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
 
-	vco_rate = ndiv_int * xtal;
-
-	vco_rate += (unsigned long) (u64) (((u64)ndiv_frac * (u64)xtal) >> 20);
-
-	clk_dbg ("xtal %d, int %d, frac %d, vco %lu\n", (int)xtal, ndiv_int, ndiv_frac, vco_rate);
+	if(ndiv_int == 0)
+		ndiv_int = max_ndiv;
+	vco_rate = compute_vco_rate(ndiv_int, ndiv_frac, pdiv);
+	pr_info("%s vco_rate = %lu\n",__func__, vco_rate);
 	return vco_rate;
 }
 
+static u32 freq_lut[] =
+	{
+		FREQ_MHZ(26),
+		FREQ_MHZ(52),
+		FREQ_MHZ(156),
+		FREQ_MHZ(156),
+		FREQ_MHZ(312),
+		FREQ_MHZ(312)
+	};
+
 static unsigned long __proc_clk_get_rate(u32 base)
 {
-	unsigned long vco_rate = __proc_clk_get_vco_rate (base);
-	int div = (readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET)& KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK)
+	unsigned long vco_rate;
+	u32 reg_val;
+	u32 freq_id;
+	int div;
+
+	reg_val = readl(base+KPROC_CLK_MGR_REG_POLICY_FREQ_OFFSET);
+
+	/*active policy 5 assumed*/
+	freq_id =  (reg_val& KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_MASK)
+					>> KPROC_CLK_MGR_REG_POLICY_FREQ_POLICY1_FREQ_SHIFT;
+	if(freq_id < 6)
+		return freq_lut[freq_id];
+
+	vco_rate = __proc_clk_get_vco_rate (base);
+	div = (readl(base+KPROC_CLK_MGR_REG_PLLARMCTRL5_OFFSET)& KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_MASK)
 		>> KPROC_CLK_MGR_REG_PLLARMCTRL5_PLLARM_H_MDIV_SHIFT;
+
+	if(freq_id == 6)
+		div++;
 
 	return vco_rate /div;
 }
-
+static int arm_clk_set_rate(struct clk* clk, u32 rate);
+static unsigned long arm_clk_get_rate(struct clk *clk);
 static int arm_clk_init(struct clk* clk)
 {
     struct peri_clk * peri_clk;
-    unsigned long vco_rate;
-    int div = 2;
 
     if(clk->clk_type != CLK_TYPE_PERI)
 	return -EPERM;
@@ -647,19 +772,11 @@ static int arm_clk_init(struct clk* clk)
 
     peri_clk_hyst_enable(peri_clk,HYST_ENABLE & clk->flags,
     	(clk->flags & HYST_HIGH) ? CLK_HYST_HIGH: CLK_HYST_LOW);
-    /* ARM clock is never disabled by Software. So set use_cnt to 1 and
-    * update CCU count */
+    /* ARM clock is never disabled by Software. So set use_cnt to 1*/
     clk->use_cnt = 1;
-    peri_clk->ccu_clk->clk.ops->enable(&peri_clk->ccu_clk->clk, 1);
 
-    vco_rate = __proc_clk_get_vco_rate (peri_clk->ccu_clk->ccu_clk_mgr_base);
-    /* to get minimium clock >= desired_rate */
-    div = vco_rate/(700 * CLOCK_1M);
-    div = min (max (2, div), 255);
-    clk->rate = vco_rate / div;
-    /* set the PLL divider such that default ARM freq is 700MHz*/
-    __proc_clk_set_pll_div (peri_clk->ccu_clk->ccu_clk_mgr_base, div);
-
+	/*Temp hack....need to move this somewhere else*/
+	arm_clk_set_rate(clk,FREQ_MHZ(700));
     /* Disable write access*/
     ccu_write_access_enable(peri_clk->ccu_clk, false);
     clk->init = 1;
@@ -675,6 +792,19 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
     struct peri_clk * peri_clk;
     unsigned long vco_rate;
     int div = 2;
+#if UPDATE_LPJ
+	u64 lpj;
+	static unsigned long lpj_ref = 0;
+	static unsigned long lpj_freq_ref = 0;
+
+	if(lpj_ref == 0)
+	{
+		lpj_ref = loops_per_jiffy;
+		lpj_freq_ref = arm_clk_get_rate(clk)/1000;
+	}
+
+#endif
+
 
     if(clk->clk_type != CLK_TYPE_PERI)
 	return -EPERM;
@@ -687,6 +817,13 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
 
     vco_rate = __proc_clk_get_vco_rate (peri_clk->ccu_clk->ccu_clk_mgr_base);
     div = vco_rate/rate;
+
+
+	if(div < 2 || rate*div != vco_rate)
+	{
+		vco_rate = __proc_clk_set_vco_rate(peri_clk->ccu_clk->ccu_clk_mgr_base,rate*2);
+		div = vco_rate/rate;
+	}
     /* to get minimium clock >= desired_rate */
     div = min (max (2, div), 255);
     clk->rate = vco_rate / div;
@@ -696,6 +833,14 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
     /* disable write access*/
     ccu_write_access_enable(peri_clk->ccu_clk,false);
 
+	/*Update lpj*/
+#if UPDATE_LPJ
+ 	/*new_lpj =  lpj_ref*new_freq/ref_freq*/
+	lpj = ((u64) lpj_ref) * ((u64) arm_clk_get_rate(clk)/1000);
+	do_div(lpj, lpj_freq_ref);
+	loops_per_jiffy = (unsigned long)lpj;
+	pr_info("%s:new lpj = %llu\n",__func__,lpj);
+#endif
     clk_dbg("ARM clock set rate done \n");
 
     return 0;

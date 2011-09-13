@@ -1,14 +1,27 @@
 /*******************************************************************************************
-Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                                */
 
-Unless you and Broadcom execute a separate written software license agreement governing use 
-of this software, this software is licensed to you under the terms of the GNU General Public 
-License version 2, available at http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 
-Notwithstanding the above, under no circumstances may you combine this software in any way 
-with any other Broadcom software provided under a license other than the GPL, without 
-Broadcom's express prior written consent.
-*******************************************************************************************/
 
 /**
 *
@@ -509,15 +522,18 @@ UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVIC
 void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 
 
+#ifdef ENABLE_DMA_ARM2SP
+
 /****************************************************************************
 *
-*  Function Name: csl_caph_hwctrl_allPathsDisabled
+*  Function Name: csl_caph_arm2sp_set_mixMode
 *
-*  Description: Check whether all paths are disabled.
+*  Description: control the MixMode for ARM2SP feature
 *
 ****************************************************************************/
-Boolean csl_caph_hwctrl_allPathsDisabled(void);
+void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId);
 
+#endif
 
 #endif // _CSL_CAPH_HWCTRL_
 

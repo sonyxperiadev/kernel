@@ -24,6 +24,7 @@ struct kona_fb_platform_data {
 	u32	screen_width;
 	u32	screen_height;
 	u32	bytes_per_pixel;
+	u32	gpio;
 	pixel_format_t	pixel_format;
 };
 

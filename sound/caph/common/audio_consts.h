@@ -45,7 +45,6 @@
 
 #include "tones_def.h"
 
-//move to sysInterface?
 /*
 	Audio Volume
 */
@@ -68,6 +67,8 @@ typedef enum AUDIO_GAIN_FORMAT_t
 	AUDIO_GAIN_FORMAT_Q14_1,     // gain in Q14.1 
 	AUDIO_GAIN_FORMAT_Q1_14,      // gain in Q1.14
 	AUDIO_GAIN_FORMAT_Q13_2,      // gain in Q13.2
+	AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN,      // DSP voice volume dB from sysparm
+	AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE      // FM Radio audio gain table
 } AUDIO_GAIN_FORMAT_t;
 
 /**
@@ -117,6 +118,24 @@ typedef enum  AUDIO_INPUT_CHANNEL_t
 //#if defined(USE_NEW_AUDIO_PARAM)
 #define	AUDIO_APP_NUMBER		3	///< 3 applications, can be extended
 //#endif
+
+#define NUM_OF_ENTRY_IN_DSP_VOICE_VOLUME_TABLE		15 
+#define NUM_OF_ENTRY_IN_FM_RADIO_DIGITAL_VOLUME		15 
+
+/**
+	audio application (2-D audio parameters profile)
+**/
+typedef enum {
+	AUDIO_APP_VOICE_CALL = 0,
+	AUDIO_APP_VOICE_CALL_WB,
+	AUDIO_APP_RESERVED1,
+	AUDIO_APP_RESERVED2,
+	AUDIO_APP_RESERVED3,
+	AUDIO_APP_RESERVED4
+} AudioApp_t; // audio profiles (Audio applications)
+
+#define AudioProfile_t AudioApp_t
+
 /**
 	audio modes (audio parameters profile)
 **/
@@ -281,7 +300,7 @@ typedef enum AudioEqualizer_en_t {
 #define PR_DAC_IIR_SIZE				25
 
 typedef enum {
-    PARAM_AUDIO_AGC_DL_DECAY,							// 0
+    PARAM_AUDIO_AGC_DL_DECAY,							// 0  to delete
     PARAM_AUDIO_AGC_DL_ENABLE,							// 1
     PARAM_AUDIO_AGC_DL_HI_THRESH,						// 2
     PARAM_AUDIO_AGC_DL_LOW_THRESH,						// 3
@@ -358,13 +377,13 @@ typedef enum {
     PARAM_SIDETONE,										// 74
     PARAM_VOICE_ADC,									// 75
     PARAM_VOICE_DAC,									// 76
-	PARAM_AUDIO_CHANNEL,								// 77
+	PARAM_AUDIO_CHANNEL,								// 77   to delete
 	//PARAM_AUDIO_DEVICE_TYPE,							// 78
 	PARAM_NOISE_SUPP_MIN=79,								// 79
 	PARAM_UL_NOISE_SUPP_MAX,							// 80
 	PARAM_VOLUME_STEP_SIZE,								// 81
 	PARAM_NUM_SUPPORTED_VOLUME_LEVELS,					// 82
-	PARAM_DAC_FILTER_SCALE_FACTOR,						// 83
+	PARAM_DAC_FILTER_SCALE_FACTOR,						// 83   to delete
 	
 	PARAM_ECHO_DUAL_EC_ECLEN = 84,						// 84
 	PARAM_ECHO_DUAL_EC_DT_TH_ERL_dB = 87,				// 87
@@ -620,8 +639,14 @@ typedef enum {
 	
 	PARAM_DL_NOISE_SUPP_MAX,					// 298
     PARAM_DL_NOISE_SUPPRESSION_ENABLE,			// 299	
-	AUDIO_PARM_NUMBER   						// 300
- 	
+
+	PARAM_VOICE_MIC1_HPF_ENABLE,                // 300	
+	PARAM_VOICE_MIC1_HPF_CUTOFF_FREQ,           // 301
+	PARAM_VOICE_MIC2_HPF_ENABLE,                // 302	
+	PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,           // 303
+
+	AUDIO_PARM_NUMBER   						// 304
+
 } AudioParam_t;
 
 typedef enum { 
@@ -641,7 +666,7 @@ typedef enum
 	AUDIO_SPKR_CHANNEL_INVALID
 } AUDIO_SPKR_CH_Mode_t;
 
-#endif
+#endif   //_INC_AUDIO_CONSTS_H_
 
 //#define ENABLE_AUDMIX_V2	//define to avoid SW mixer for headset/EP
 #if defined(ENABLE_AUDMIX_V2)

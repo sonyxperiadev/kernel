@@ -48,14 +48,12 @@
 #include "audio_consts.h"
 //#include "ripcmdq.h"
 
-#include "csl_aud_drv.h"
+#include "csl_dsp.h"
+#include "csl_caph.h"
 #include "audio_vdriver.h"
 //#include "sysparm.h"
 #include "ostask.h"
 #include "log.h"
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
-#include "csl_dsp.h"
-#endif
 
 extern void VPU_Capture_Request(UInt16 buf_index);
 extern void VPU_Render_Request(UInt16 bufferIndex);
@@ -129,13 +127,12 @@ void AUDDRV_Init( void )
     AUDDRV_SPKRInit (AUDDRV_SPKR_EP, AUDIO_SPKR_CHANNEL_DIFF);  //Purpose: to initialize the CHAL Audio code with AHB_AUDIO_BASE_ADDR, SYSCFG_BASE_ADDR, AUXMIC_BASE_ADDR.
 #endif
 
-#if defined(FUSE_APPS_PROCESSOR)
 
 	/* register DSP VPU status processing handlers */
 #ifndef _SAMOA_
 	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
 #endif	
-#ifdef CONFIG_AUDIO_BUILD
+#if 0  // These features are not needed in LMP now.
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
 	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
 	CSL_RegisterVOIFStatusHandler((VOIFStatusCB_t)&VOIF_ISR_Handler);
@@ -151,43 +148,6 @@ void AUDDRV_Init( void )
 #endif
 	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
 
-	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
-	AUDDRV_RegisterCB_setAudioMode( (CB_SetAudioMode_t) &AUDDRV_SetAudioMode );
-	AUDDRV_RegisterCB_setMusicMode( (CB_SetMusicMode_t) &AUDDRV_SetMusicMode );
-#if defined(USE_NEW_AUDIO_PARAM)
-	AUDDRV_RegisterCB_getAudioApp( (CB_GetAudioApp_t) &AUDDRV_GetAudioApp );
-#endif
-	Audio_InitRpc();
-#else  //#if defined(FUSE_APPS_PROCESSOR)
-	Audio_InitRpc();
-
-	//split file to CP and AP.
-	{
-	UInt8 cur_mode = (UInt8) AUDDRV_GetAudioMode();
-#ifdef CONFIG_AUDIO_BUILD
-#if defined(USE_NEW_AUDIO_PARAM)
-	UInt8 cur_app = 0; 
-	UInt16 voice_vol_init_in_dB = SYSPARM_GetAudioParamsFromFlash( cur_mode, cur_app )->voice_volume_init;  //dB
-#else
-	UInt16 voice_vol_init_in_dB = SYSPARM_GetAudioParamsFromFlash( cur_mode )->voice_volume_init;  //dB
-#endif
-#endif
-	VOLUMECTRL_SetBasebandVolume( voice_vol_init_in_dB, 0, 0, 0 );  //param4 is OmegaVoice volume step
-	}
-
-#if !defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-	AUDDRV_RegisterCB_getAudioMode( (CB_GetAudioMode_t) &AUDDRV_GetAudioMode );
-	AUDDRV_RegisterCB_setAudioMode( (CB_SetAudioMode_t) &AUDDRV_SetAudioMode );
-	AUDDRV_RegisterCB_setMusicMode( (CB_SetMusicMode_t) &AUDDRV_SetMusicMode );
-#if defined(USE_NEW_AUDIO_PARAM)
-	AUDDRV_RegisterCB_getAudioApp( (CB_GetAudioApp_t) &AUDDRV_GetAudioApp );
-#endif
-#else
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Init : Registering CP_Audio_ISR_Handler*\n\r");
-	RIPISR_Register_AudioISR_Handler( (Audio_ISR_Handler_t) &CP_Audio_ISR_Handler );
-#endif
-
-#endif	
 	sAudDrv.isRunning = TRUE;
 }
 

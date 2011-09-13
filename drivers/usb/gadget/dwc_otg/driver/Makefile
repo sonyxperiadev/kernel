@@ -5,6 +5,7 @@ DWC_COMMON_PORT_DIR	:= $(PWD)/drivers/usb/gadget/dwc_otg/dwc_common_port
 
 EXTRA_CFLAGS	+=  -DDWC_LINUX
 EXTRA_CFLAGS	+=   -I$(DWC_COMMON_PORT_DIR)
+ccflags-$(CONFIG_USB_BCM_OTG) += -DDWC_DEV_SRPCAP
 
 obj-$(CONFIG_USB_DWC_OTG)	+= kona_otg_device.o
 obj-$(CONFIG_USB_DWC_OTG)	+= dwc_otg.o

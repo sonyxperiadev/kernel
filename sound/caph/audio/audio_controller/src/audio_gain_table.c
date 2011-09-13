@@ -37,11 +37,7 @@
 #include "mobcom_types.h"
 #include "audio_consts.h"
 
-#ifdef PMU_BCM59055
-#include "linux/broadcom/bcm59055-audio.h"
-#elif defined(CONFIG_BCMPMU_AUDIO)
-#include "bcmpmu_audio.h"
-#endif
+#include "audio_pmu_adapt.h"
 
 #include "audio_gain_table.h"
 

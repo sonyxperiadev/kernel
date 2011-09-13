@@ -48,7 +48,7 @@
 char* armc_core_ccu[] = {KPROC_CCU_CLK_NAME_STR};
 struct pi_opp arm_opp = {
 							.opp =  {
-						//				[PI_OPP_ECONOMY] = 3,
+										[PI_OPP_ECONOMY] = 3,
 										[PI_OPP_NORMAL] = 6,
 										[PI_OPP_TURBO] = 7,
 									},
@@ -73,7 +73,7 @@ static struct pi arm_core_pi =
 		.state_allowed = ARM_CORE_STATE_DORMANT,
 		.pi_state = arm_core_states,
 		.num_states = ARRAY_SIZE(arm_core_states),
-		.opp_active = 1,
+		.opp_active = 2,
 		.pi_opp =  &arm_opp,
 		.num_opp = 3,
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
