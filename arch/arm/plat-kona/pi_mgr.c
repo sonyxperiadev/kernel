@@ -538,12 +538,11 @@ EXPORT_SYMBOL(pi_get_active_qos);
 
 u32 pi_get_active_opp(int pi_id)
 {
-	struct pi_mgr_dfs_object* dfs = &pi_mgr.dfs[pi_id];
-	if(dfs)
-		return pi_mgr_dfs_get_opp(dfs);
-	else
-		pi_dbg("%s:invalid param \n",__func__);
-	return 0;
+	int ret = -EINVAL;
+	struct pi* pi = pi_mgr_get(pi_id);
+	if(pi)
+		ret = pi->opp_active;
+	return ret;
 }
 EXPORT_SYMBOL(pi_get_active_opp);
 

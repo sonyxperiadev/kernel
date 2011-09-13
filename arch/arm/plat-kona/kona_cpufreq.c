@@ -103,6 +103,7 @@ static unsigned int kona_cpufreq_get_speed(unsigned int cpu)
     int i;
 
     opp = pi_get_active_opp(b->pi_id);
+	kcf_dbg("%s: opp = %d\n",__func__,opp);
 
 	if(opp < 0)
 		return 0;
@@ -129,7 +130,7 @@ static int kona_cpufreq_verify_speed(struct cpufreq_policy *policy)
 			b->kona_freqs_table);
 	kcf_dbg("%s: after cpufreq verify: min:%d->max:%d kHz\n",
 			__func__, policy->min, policy->max);
-	
+
 
 	return 0;
 	return ret;
@@ -207,6 +208,7 @@ static int kona_cpufreq_init(struct cpufreq_policy *policy)
 	}
 	/* Set default policy and cpuinfo */
 	policy->cur = kona_cpufreq_get_speed(policy->cpu);
+	pr_info("%s:policy->cur = %d\n",__func__, policy->cur);
 	/* FIXME: Tune this value */
 	policy->cpuinfo.transition_latency = info->kona_latency;
 
@@ -300,7 +302,8 @@ static int cpufreq_drv_probe(struct platform_device *pdev)
 		kona_cpufreq[i].pi_id = plat->info[i].pi_id;
 		/*Add a DFS client for ARM CCU. this client will be used later
 		 * for changinf ARM freq via cpu-freq.*/
-		kona_cpufreq[i].dfs_node = pi_mgr_dfs_add_request("cpu_freq", kona_cpufreq[i].pi_id, PI_OPP_NORMAL);
+		kona_cpufreq[i].dfs_node = pi_mgr_dfs_add_request("cpu_freq", kona_cpufreq[i].pi_id,
+				pi_get_active_opp(kona_cpufreq[i].pi_id));
 		if (!kona_cpufreq[i].dfs_node)
 		{
 		    kcf_dbg("Failed add dfs request for CPU\n");
@@ -411,7 +414,7 @@ static ssize_t kona_cpufreq_bogmips_get(struct file *file, char __user *user_buf
 	len += snprintf(buf+len, sizeof(buf)-len,
 			"%lu.%02lu BogoMIPS (lpj=%lu)\n", lpj/(500000/HZ),
 		(lpj/(5000/HZ)) % 100, lpj);
-		
+
 	return simple_read_from_buffer(user_buf, count, ppos, buf, len);
 }
 
@@ -437,7 +440,7 @@ int __init kona_cpufreq_debug_init(void)
 }
 
 late_initcall(kona_cpufreq_debug_init);
-	
+
 
 #endif
 

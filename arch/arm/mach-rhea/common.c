@@ -683,7 +683,8 @@ static u8* volt_table[] = {ss_vlt_tbl, tt_vlt_tbl, ff_vlt_tbl};
 
 static struct kona_avs_pdata avs_pdata =
 {
-	.avs_type = AVS_TYPE_OPEN,
+	.flags = AVS_TYPE_OPEN|AVS_READ_FROM_MEM,
+	.param = 0x3404BFA8, /*AVS_READ_FROM_MEM - Address location where monitor values are copied by ABI */
 	.nmos_bin_size = 3,
 	.pmos_bin_size = 3,
 
@@ -697,7 +698,7 @@ static struct kona_avs_pdata avs_pdata =
 	.lvt_silicon_type_lut = lvt_silicon_type_lut,
 
 	.volt_table = volt_table,
-	.otp_row = 8,
+
 	.silicon_type_notify = avs_silicon_type_notify,
 };
 

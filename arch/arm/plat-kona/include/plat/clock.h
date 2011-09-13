@@ -149,12 +149,16 @@
 #define FREQ_MHZ(x) ((x)*1000*1000)
 #define FREQ_KHZ(x) ((x)*1000)
 
+#ifdef CONFIG_KONA_PI_MGR
 #define CCU_PI_ENABLE(ccu,en) if((ccu)->pi_id != -1) \
 				{\
 					struct pi* pi = pi_mgr_get((ccu)->pi_id);\
 					BUG_ON(pi == NULL);\
 					pi_enable(pi,en);\
 				}
+#else
+#define CCU_PI_ENABLE(ccu,en)	{}
+#endif
 
 /* CCU Policy ids*/
 enum
