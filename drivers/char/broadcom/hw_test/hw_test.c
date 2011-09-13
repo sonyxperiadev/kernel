@@ -237,7 +237,6 @@ static ssize_t hw_test_read(struct file *filp,	/* see include/linux/fs.h   */
 	iounmap(virt_base);
 	return length;
 }
-//extern int set_i2c_bus_speed(int bus, BSC_SPEED_t speed, unsigned short addr);
 /*  
  * Called when a process writes to dev file: echo "hi" > /dev/hello 
  */
