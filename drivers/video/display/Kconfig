@@ -18,6 +18,12 @@ config DISPLAY_SUPPORT
 	  To have support for your specific display panel you will have to
 	  select the proper drivers which depend on this option.
 
+config TFT_PANEL
+	tristate "TFT Panel Power control"
+	default n
+	---help---
+	This driver controls power for TFT Panel.
+
 comment "Display hardware drivers"
 	depends on DISPLAY_SUPPORT
 

@@ -1360,6 +1360,7 @@ CONFIG_BACKLIGHT_PWM=y
 # Display device support
 #
 # CONFIG_DISPLAY_SUPPORT is not set
+CONFIG_TFT_PANEL=y
 
 #
 # Console display driver support

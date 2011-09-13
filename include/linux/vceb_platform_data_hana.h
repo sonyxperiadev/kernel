@@ -71,15 +71,6 @@ typedef struct vceb_platform_data_hana_t
     int             gpiomux_jtag_id;
     const char     *gpiomux_jtag_label;
 #endif
-    struct
-    {
-        int         lcd_bl_pwr_en;
-        int         lcd_bl_en;
-        int         lcd_bl_pwm;
-        int         lcd_rst;
-        int         lcd_pwr_en;
-    } disp_gpio;
-
 } VCEB_PLATFORM_DATA_HANA_T;
 
 #endif  /* VCEB_PLATFORM_DATA_HANA_H_ */

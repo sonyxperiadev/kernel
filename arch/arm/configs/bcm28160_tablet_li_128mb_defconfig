@@ -1353,6 +1353,7 @@ CONFIG_FB_CFB_IMAGEBLIT=m
 # Display device support
 #
 # CONFIG_DISPLAY_SUPPORT is not set
+CONFIG_TFT_PANEL=y
 
 #
 # Console display driver support

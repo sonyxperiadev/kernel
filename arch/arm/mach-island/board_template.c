@@ -172,15 +172,16 @@
 #include <headset_settings.h>
 #endif
 
-#if defined( CONFIG_VC_VCHIQ_MEMDRV_HANA ) || defined( CONFIG_VC_VCHIQ_MEMDRV_HANA_MODULE ) \
- || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM ) || defined( CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM_MODULE )
-#include <vceb_settings.h>
-#endif
-
 #if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
 #include <linux/broadcom/hdmi_cfg.h>
 #include <hdmi_settings.h>
 #endif
+
+#if defined(CONFIG_TFT_PANEL) || defined(CONFIG_TFT_PANEL_MODULE)
+#include <linux/broadcom/tft_panel.h>
+#include <tft_panel_settings.h>
+#endif
+
 
 #include "island.h"
 #include "common.h"
@@ -461,6 +462,28 @@ static void __init board_add_hdmidet_device(void)
 }
 
 #endif /* #if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE) */
+
+#if defined(CONFIG_TFT_PANEL) || defined(CONFIG_TFT_PANEL_MODULE)
+#define board_tft_panel_data concatenate(ISLAND_BOARD_ID, _tft_panel_data)
+static struct tft_panel_platform_data board_tft_panel_data = TFT_PANEL_SETTINGS;
+
+#define board_tft_panel_device concatenate(ISLAND_BOARD_ID, _tft_panel_device)
+static struct platform_device board_tft_panel_device =
+{
+   .name = TFT_PANEL_DRIVER_NAME,
+   .id = -1,
+   .dev =
+   {
+      .platform_data = &board_tft_panel_data,
+   },
+};
+
+#define board_add_tft_panel_device concatenate(ISLAND_BOARD_ID, _add_tft_panel_device)
+static void __init board_add_tft_panel_device(void)
+{
+   platform_device_register(&board_tft_panel_device);
+}
+#endif
 
 static struct usbh_cfg usbh_param =
 #ifdef HW_USBH_PARAM
@@ -761,12 +784,6 @@ static VCEB_PLATFORM_DATA_HANA_T vceb_hana_display_data =
     .gpiomux_jtag_id     = 0,
     .gpiomux_jtag_label  = "vc-jtag",
 #endif
-
-    .disp_gpio.lcd_bl_pwr_en = HW_CFG_LCD_BL_PWR_EN,
-    .disp_gpio.lcd_bl_en     = HW_CFG_LCD_BL_EN,
-    .disp_gpio.lcd_bl_pwm    = HW_CFG_LCD_BL_PWM,
-    .disp_gpio.lcd_rst       = HW_CFG_LCD_RST,
-    .disp_gpio.lcd_pwr_en    = HW_CFG_LCD_PWR_EN,
 };
 
 static struct platform_device vceb_display_device = {
@@ -1506,6 +1523,10 @@ static void __init add_devices(void)
 #if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
    board_add_hdmidet_device();
 #endif   
+
+#if defined(CONFIG_TFT_PANEL) || defined(CONFIG_TFT_PANEL_MODULE)
+   board_add_tft_panel_device();
+#endif
 
    board_add_halaudio_device();
 
