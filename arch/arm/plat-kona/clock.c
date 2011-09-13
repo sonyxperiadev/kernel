@@ -1640,7 +1640,7 @@ static int bus_clk_set_gating_ctrl(struct bus_clk * bus_clk, int  gating_ctrl)
 		return -EINVAL;
 
 	reg_val = readl(CCU_REG_ADDR(bus_clk->ccu_clk, bus_clk->clk_gate_offset));
-	if(CLK_GATING_SW)
+	if(gating_ctrl == CLK_GATING_SW)
 		reg_val = SET_BIT_USING_MASK(reg_val, bus_clk->gating_sel_mask);
 	else
 		reg_val = RESET_BIT_USING_MASK(reg_val, bus_clk->gating_sel_mask);
