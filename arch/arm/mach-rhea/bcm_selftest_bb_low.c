@@ -943,6 +943,7 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	/* TEST 1 */
 	/**********/
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  INPUT TEST");
+	ST_DBG("GLUE_SELFTEST::TEST 1");
 	/* 1.   Enable test mode (driving buffer enabled) (i_hs_enst[1:0]  =  '11') on PMU */
 	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
 					   BCM59055_REG_HSIST);
@@ -984,6 +985,7 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	/**********/
 	/* TEST 2 */
 	/**********/
+	ST_DBG("GLUE_SELFTEST::TEST 2");
 #ifdef USE_AUDIOH_RDB_HS
 	BRCM_WRITE_REG_FIELD(KONA_AUDIOH_VA, AUDIOH_DAC_CTRL, AUDIOTX_BB_STI, 0x03);
 #else
@@ -1018,6 +1020,7 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	/* TEST 3 */
 	/**********/
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  OUTPUT TEST");
+	ST_DBG("GLUE_SELFTEST::TEST 3");
 	/*1.	 Enable test mode (driving buffer disabled) (i_hs_enst[1:0]  =  '10') on PMU */
 	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
 					  BCM59055_REG_HSIST);
@@ -1059,6 +1062,7 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	/**********/
 	/* TEST 4 */
 	/**********/
+	ST_DBG("GLUE_SELFTEST::TEST 4");
 	/*5.	 Set Output (i_hs_ist  =  '0') on BB */ /* AUDIOTX_BB_STI[1:0]  =  '00' */
 #ifdef USE_AUDIOH_RDB_HS
 	BRCM_WRITE_REG_FIELD(KONA_AUDIOH_VA,
@@ -1082,15 +1086,6 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  RA[0] = %u,RA[1] = %u,RA[2] = %u,RA[3] = %u",
 		   ResultArray[0], ResultArray[1], ResultArray[2], ResultArray[3]);
 
-	mdelay(1000);
-	{
-		int reg;
-		ST_DBG("GLUE_SELFTEST::std_selftest_headset() Pre Restore");
-		for (reg = 0x98 ; reg <= 0xAF ; reg++) {
-			ReadValue = (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM590XX_REG_ENCODE(reg, BCM590XX_SLAVE2_I2C_ADDRESS));
-			ST_DBG("GLUE_SELFTEST::std_selftest_headset()  PMU2 Reg[0x%02X] = 0x%02X", reg, ReadValue);
-		}
-	}
 	/* Restore PMU register values */
 	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPGA1,
 			   StoredRegValue8[0]);
@@ -1293,7 +1288,7 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 	/* a.   Check if  o_IHFsto[1:0] == '00'  = > No pull-up resistor from the output pins to Supply*/
 	/* b.   Check if  o_IHFsto[1:0] < >'00'  = > Either or both output pins are short to Supply*/
 	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS2,
-				  (ReadValue&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI, ResultArray2, ST_SELFTEST_BAD_CONNECTION);
+				  (ReadValue&PMU_IHFSTO_MASK_O_IHFSTO)>>PMU_IHFSTO_OFFSET_O_IHFSTO, ResultArray2, ST_SELFTEST_BAD_CONNECTION_OR_POWER);
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 2.2");
 	/*3.	 i_IHFsto[1:0]  =  '1x'*/
@@ -1307,7 +1302,7 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 	/* a.    Check o_IHFsto[1:0] = '00'  = > No pull-down resistor from the output pins to ground*/
 	/* b.    Check o_IHFsto[1:0] < >'00'  = > Either or both output pins are short to ground*/
 	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS2,
-				  (ReadValue&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI, ResultArray2, ST_SELFTEST_BAD_CONNECTION);
+				  (ReadValue&PMU_IHFSTO_MASK_O_IHFSTO)>>PMU_IHFSTO_OFFSET_O_IHFSTO, ResultArray2, ST_SELFTEST_BAD_CONNECTION_OR_GROUND);
 
 	/* Restore PMU register values */
 	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev,
@@ -1576,6 +1571,7 @@ void std_selftest_pmu(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 	if (!overallResult) {
 		ST_DBG("GLUE_SELFTEST::hal_selftest_pmu() returned ----------> ST_SELFTEST_FAILED");
 		cmddata->testStatus  =  ST_SELFTEST_FAILED;
+		return;
 	}
 
 	ST_DBG("GLUE_SELFTEST::hal_selftest_pmu() returned ----------> ST_SELFTEST_OK");
