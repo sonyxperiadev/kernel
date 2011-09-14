@@ -57,7 +57,6 @@
 *
 ****************************************************************************/
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "shared.h"
 #include "csl_arm2sp.h"

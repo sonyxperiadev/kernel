@@ -65,6 +65,7 @@
 #endif
 
 #include "dispdrv_common.h"        // Disp Drv Commons
+#include "lcd_clock.h"
 
 #if (defined (_HERA_) || defined(_RHEA_))
 #ifndef UNDER_LINUX
@@ -79,9 +80,9 @@
 
 #define GPIODRV_Set_Bit(pin, val) gpio_set_value(pin, val)
 
-#undef HAL_LCD_RESET
-#define HAL_LCD_RESET_B  (KONA_MAX_GPIO + 3)
-#define HAL_LCD_RESET_C  (KONA_MAX_GPIO + 2)
+//#undef HAL_LCD_RESET
+//#define HAL_LCD_RESET_B  (KONA_MAX_GPIO + 3)
+//#define HAL_LCD_RESET_C  (KONA_MAX_GPIO + 2)
 
 typedef struct
 {
@@ -105,7 +106,7 @@ typedef struct
     LCD_DRV_RECT_t      win;
     void*               pFb;
     void*               pFbA;
-    
+    struct pi_mgr_dfs_node* dfs_node;
 } BCM91008_ALEX_PANEL_T;   
 
 
@@ -579,7 +580,7 @@ Int32 BCM91008_ALEX_Exit ( void )
     return ( -1 );
 }
 
-
+#if 0
 //*****************************************************************************
 //
 // Function Name: DISPDRV_Reset
@@ -596,7 +597,7 @@ static Int32 DISPDRV_Reset( Boolean force )
     Boolean         rst1present = FALSE;
     Boolean         rst2present = FALSE;
     static Boolean  resetDone   = FALSE;
-    
+   
     #ifdef HAL_LCD_RESET
     rst0present = TRUE;
     rst0pin     = HAL_LCD_RESET;
@@ -628,9 +629,25 @@ static Int32 DISPDRV_Reset( Boolean force )
     
     if( !rst0present )
     {
+	printk(KERN_ERR "the main reset is not used");
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
             "WARNING Only HAL_LCD_RESET B/C defined\n");
     }
+
+    if( !rst1present )
+    {
+	printk(KERN_ERR "the reset B is not used");
+        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
+            "WARNING Only HAL_LCD_RESET B/C defined\n");
+    }
+
+    if( !rst2present )
+    {
+	printk(KERN_ERR "the reset C is not used");
+        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
+            "WARNING Only HAL_LCD_RESET B/C defined\n");
+    }
+
 
     if ( !resetDone || force )
     {
@@ -677,7 +694,7 @@ static Int32 DISPDRV_Reset( Boolean force )
 
     return ( 0 );
 } // DISPDRV_Reset
-
+#endif
 
 
 
@@ -732,7 +749,7 @@ Int32 BCM91008_ALEX_Open (
         return ( -1 );
     }    
     
-    DISPDRV_Reset( FALSE );
+    //DISPDRV_Reset( FALSE );
     
     dsiCfg.bus = busId;
     
@@ -759,6 +776,13 @@ Int32 BCM91008_ALEX_Open (
         pPanel->teOut  = TE_VC4L_OUT_DSI1_TE0;
     }
 #endif
+
+    if (brcm_enable_dsi_lcd_clocks(&pPanel->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
 
     if( bcm91008_AlexTeOn ( pPanel ) ==  -1 )
     {
@@ -856,7 +880,14 @@ Int32 BCM91008_ALEX_Close ( DISPDRV_HANDLE_T drvH )
 #if (defined (_HERA_) || defined(_RHEA_))
     bcm91008_AlexTeOff ( pPanel );
 #endif
-    
+   
+    if (brcm_disable_dsi_lcd_clocks(pPanel->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
     pPanel->pwrState = DISP_PWR_OFF;
     pPanel->drvState = DRV_STATE_INIT;
     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );

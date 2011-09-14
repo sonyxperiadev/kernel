@@ -45,7 +45,6 @@
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "log.h"
-#include "xassert.h"
 
 //=============================================================================
 // Public Variable declarations
@@ -116,7 +115,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
 
 #if defined(_ATHENA_)	
 	//driver needs to know mode!
-	if(stAudioMode == AUDIO_MODE_USB) AUDCTRL_SetAudioMode ( AUDIO_MODE_HANDSET ); //hw
+	if(stAudioMode == AUDIO_MODE_USB) AUDCTRL_SetAudioMode ( AUDIO_MODE_HANDSET );
 	else AUDCTRL_SetAudioMode ( stAudioMode );
 #else
 	AUDCTRL_SaveAudioModeFlag(stAudioMode);	

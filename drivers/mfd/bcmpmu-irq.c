@@ -27,6 +27,7 @@
 #define BCMPMU_PRINT_ERROR (1U << 0)
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
+#define BCMPMU_PRINT_DATA (1U << 3)
 
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 module_param_named(debug_mask, debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP);
@@ -49,6 +50,7 @@ struct bcmpmu_irq_data {
 	const struct bcmpmu_reg_map *irqregmap;
 	int irqreg_size;
 	int *irq_regs;
+	int *irq_msks;
 	struct bcmpmu *bcmpmu;
 	struct irq_cb irq_cb[PMU_IRQ_MAX];
 	struct mutex ilock;
@@ -68,15 +70,24 @@ static int bcmpmu_read_irq_regs(struct bcmpmu_irq_data *idata)
 {
 	int i;
 	int count = 0;
+	int int_mask;
 	
+	idata->bcmpmu->read_dev_bulk(idata->bcmpmu,
+			idata->bcmpmu->regmap[PMU_REG_INT_START].map,
+			idata->bcmpmu->regmap[PMU_REG_INT_START].addr,
+			&idata->irq_regs[0],
+			idata->irqreg_size);
+	idata->bcmpmu->read_dev_bulk(idata->bcmpmu,
+			idata->bcmpmu->regmap[PMU_REG_INT_MSK_START].map,
+			idata->bcmpmu->regmap[PMU_REG_INT_MSK_START].addr,
+			&idata->irq_msks[0],
+			idata->irqreg_size);
 	for (i=0; i<idata->irqreg_size; i++) {
-		idata->bcmpmu->read_dev_drct(idata->bcmpmu,
-			idata->irqregmap[i].map,
-			idata->irqregmap[i].addr,
-			&idata->irq_regs[i],
-			idata->irqregmap[i].mask);
-		if (idata->irq_regs[i]) count++;
+		pr_irq(DATA, "%s int=0x%X, mask=0x%X\n",
+			__func__, idata->irq_regs[i],idata->irq_msks[i]);
+		if (idata->irq_regs[i] & ~idata->irq_msks[i]) count++;
 	}
+	pr_irq(FLOW, "%s count=%d, callback\n",__func__, count);
 	return count;
 }
 
@@ -185,7 +196,7 @@ int bcmpmu_mask_irq(struct bcmpmu *pmu, enum bcmpmu_irq irq)
 	int ret = 0;
 	if (irq >= PMU_IRQ_MAX) return -ENODEV; 
 	map = idata->irqmap[irq];
-	if ((map.int_addr == 0) && (map.int_addr == 0)) return -ENODEV;
+	if ((map.int_addr == 0) && (map.mask_addr == 0)) return -ENODEV;
 
 	ret = pmu->write_dev_drct(pmu, map.map, map.mask_addr, map.bit_mask, map.bit_mask);
 	if (ret == 0)
@@ -201,7 +212,7 @@ int bcmpmu_unmask_irq(struct bcmpmu *pmu, enum bcmpmu_irq irq)
 	int ret = 0;
 	if (irq >= PMU_IRQ_MAX) return -ENODEV; 
 	map = idata->irqmap[irq];
-	if ((map.int_addr == 0) && (map.int_addr == 0)) return -ENODEV;
+	if ((map.int_addr == 0) && (map.mask_addr == 0)) return -ENODEV;
 
 	ret = pmu->write_dev_drct(pmu, map.map, map.mask_addr, 0, map.bit_mask);
 	if (ret == 0)
@@ -267,7 +278,6 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	int *irqregs;
 	struct bcmpmu_reg_map *irqregmap;
 	int i;
-    unsigned int val,j;
 
 	idata = kzalloc(sizeof(struct bcmpmu_irq_data), GFP_KERNEL);
 	if (idata == NULL) {
@@ -297,6 +307,13 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 		return ret;
 	}
 	idata->irq_regs = irqregs;
+	irqregs = kzalloc((idata->irqreg_size * sizeof(int)), GFP_KERNEL);
+	if (irqregs == NULL) {
+		ret = -ENOMEM;
+		dev_err(bcmpmu->dev, "%s: kzalloc failed: %d\n", __func__, ret);
+		return ret;
+	}
+	idata->irq_msks = irqregs;
 	idata->bcmpmu = bcmpmu;
 	mutex_init(&idata->ilock);
 	idata->workq = create_workqueue("bcmpmu-irq");
@@ -319,7 +336,6 @@ static int __devinit bcmpmu_irq_probe(struct platform_device *pdev)
 	bcmpmu_read_irq_regs(idata);
 	bcmpmu_clear_irqs(bcmpmu);
 
-
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_irq_attr_group);
 #endif
@@ -336,6 +352,8 @@ static int __devexit bcmpmu_irq_remove(struct platform_device *pdev)
 	if (idata->irq)
 		free_irq(bcmpmu->pdata->irq, bcmpmu);
 	if (idata->irq_regs)
+		kzfree(idata->irq_regs);
+	if (idata->irq_msks)
 		kzfree(idata->irq_regs);
 	kzfree(bcmpmu->irqinfo);
 	return 0;

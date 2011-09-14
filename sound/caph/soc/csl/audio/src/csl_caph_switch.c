@@ -31,7 +31,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 *
 ****************************************************************************/
 
-#include "xassert.h"
 #include "log.h"
 #include "resultcode.h"
 #include "mobcom_types.h"

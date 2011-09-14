@@ -23,44 +23,13 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-/**
-*
-*   @file   xassert.h
-*
-*   @brief  This file contains definitions for assertion.
-*
-****************************************************************************/
+#include <linux/clk.h>
+#include <plat/pi_mgr.h>
+ 
+extern int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node);
 
-/* Requires the following header files before its inclusion in a c file
-#include "memmap.h"
-*/
-#ifndef __xassert_h
-#define __xassert_h
+extern int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node);
 
-#include <assert.h>
+extern int brcm_enable_dsi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node);
 
-#if defined WIN32 || defined UHT_HOST_BUILD
-#define xassert(e,v)	assert( e )
-
-#else
-#ifndef _NODEBUG
-
-extern void __xassert( char *,char *, int, int );
-//#define xassert(e,v) ((e) ? (void)0 : __xassert(#e, __FILE__, __LINENUM__, (int)v))
-#define xassert(e,v)
-
-#else
-//Send a UART-A Break character on assertion
-#define xassert(e,v) {if(e) { (void)0; } else {(*((unsigned char *) (SERIAL_PORT_A + 0x0C + 3)) |= (unsigned char)0x40);}}
-
-#endif	/* _NODEBUG */
-
-#endif	/* WIN32 */
-
-#ifdef SDTENV
-#undef xassert
-#define xassert(e,v)
-#endif // SDTENV
-
-#endif	/* _xassert_h */
-
+extern int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node);

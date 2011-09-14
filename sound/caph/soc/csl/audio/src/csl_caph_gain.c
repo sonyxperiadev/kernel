@@ -31,7 +31,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 *
 ****************************************************************************/
 #include "mobcom_types.h"
-#include "xassert.h"
 #include "log.h"
 // why use PMU in csl here????
 #include "linux/broadcom/bcm59055-audio.h"

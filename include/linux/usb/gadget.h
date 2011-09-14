@@ -485,10 +485,14 @@ struct usb_gadget {
 	enum usb_device_speed		speed;
 	unsigned			is_dualspeed:1;
 	unsigned			is_otg:1;
+	u16				otg_version;
+#define UDC_OTG1 0x0000
+#define UDC_OTG2 0x0001
 	unsigned			is_a_peripheral:1;
 	unsigned			b_hnp_enable:1;
 	unsigned			a_hnp_support:1;
 	unsigned			a_alt_hnp_support:1;
+	unsigned 			host_request:1;
 	const char			*name;
 	struct device			dev;
 };
@@ -534,6 +538,20 @@ static inline int gadget_is_otg(struct usb_gadget *g)
 {
 #ifdef CONFIG_USB_OTG
 	return g->is_otg;
+#else
+	return 0;
+#endif
+}
+
+/**
+ * gadget_is_otg2 - return true if UDC is compliant to OTG 2.0
+ * @g: controller that might have a Mini-AB/Micro-AB connector
+ *
+ */
+static inline int gadget_is_otg2(struct usb_gadget *g)
+{
+#ifdef CONFIG_USB_OTG
+	return g->otg_version && UDC_OTG2;
 #else
 	return 0;
 #endif

@@ -32,7 +32,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 ****************************************************************************/
 #include "mobcom_types.h"
 #include "resultcode.h"
-#include "xassert.h"
 #include "log.h"
 #include "msconsts.h"
 #include "audio_consts.h"
@@ -500,11 +499,11 @@ UInt16 csl_audio_render_get_current_position (UInt32 streamID)
 	else
 	{	
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "%s :: Unknown streamID = 0x%x\n", __FILE__, streamID));
-		return NULL; /*audio_xassert(0, streamID);*/
+		return 0;
 	}
 	
 	if (audDrv->dmaCH != CSL_CAPH_DMA_NONE )
 	    return csl_caph_dma_read_currmempointer(audDrv->dmaCH);
 	else
-		return NULL; /* audio_xassert(0, audDrv->dmaCH);*/
+		return 0;
 }

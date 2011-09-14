@@ -34,6 +34,7 @@
 #define __AUDIO_PMU_ADAPT_H__
 
 #if !defined(NO_PMU)
+
 #ifdef PMU_BCM59055 
 
 #include "linux/broadcom/bcm59055-audio.h"
@@ -43,7 +44,6 @@
 #define AUDIO_PMU_IHF_SET_GAIN bcm59055_ihf_set_gain
 #define AUDIO_PMU_IHF_POWER bcm59055_ihf_power
 #define AUDIO_PMU_DEINIT bcm59055_audio_deinit
-
 
 #elif defined(CONFIG_BCMPMU_AUDIO)
 
@@ -55,12 +55,62 @@
 #define AUDIO_PMU_IHF_POWER bcmpmu_ihf_power
 #define AUDIO_PMU_DEINIT bcmpmu_audio_deinit
 
+#else
+#include "bcmpmu_audio.h"
+
+#define AUDIO_PMU_INIT() NULL  
+#define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
+#define AUDIO_PMU_HS_POWER(a) NULL 
+#define AUDIO_PMU_IHF_SET_GAIN(a) NULL 
+#define AUDIO_PMU_IHF_POWER(a) NULL 
+#define AUDIO_PMU_DEINIT() NULL 
 
 #endif
 
-#endif
+
+/********************************************************************
+*  @brief  Convert Headset gain dB value to PMU-format gain value
+*
+*  @param  Headset gain dB galue
+*
+*  @return PMU_HS_Gain_t PMU-format gain value
+*
+****************************************************************************/
+UInt32 map2pmu_hs_gain_fromDB( Int16 db_gain );
+
+/********************************************************************
+*  @brief  Convert IHF gain dB value to PMU-format gain value
+*
+*  @param  IHF gain dB galue
+*
+*  @return PMU_HS_Gain_t PMU-format gain value
+*
+****************************************************************************/
+UInt32 map2pmu_ihf_gain_fromDB( Int16 db_gain );
 
 
+/********************************************************************
+*  @brief  Convert Headset gain dB value to PMU-format gain value
+*
+*  @param  Headset gain (Q13.2 dB)
+*
+*  @return PMU_HS_Gain_t PMU-format gain value
+*
+****************************************************************************/
+UInt32 map2pmu_hs_gain_fromQ13dot2( Int16 gain );
+
+/********************************************************************
+*  @brief  Convert IHF gain dB value to PMU-format gain value
+*
+*  @param  IHF gain (Q13.2 dB)
+*
+*  @return PMU_HS_Gain_t PMU-format gain value
+*
+****************************************************************************/
+UInt32 map2pmu_ihf_gain_fromQ13dot2( Int16 gain );
+
+
+#endif  //#if !defined(NO_PMU)
 
 #endif	//__AUDIO_PMU_ADAPT_H__
 

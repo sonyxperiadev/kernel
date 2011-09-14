@@ -25,17 +25,37 @@ the GPL, without Broadcom's express prior written consent.
 
 typedef enum
 {
-	ACTION_AUD_OpenPlay,		
-	ACTION_AUD_ClosePlay,		
-	ACTION_AUD_StartPlay,		
-	ACTION_AUD_StopPlay,	
-	ACTION_AUD_PausePlay,			
-	ACTION_AUD_ResumePlay,		
-    ACTION_AUD_StartRecord,
-    ACTION_AUD_StopRecord,
+	ACTION_AUD_OpenPlay,
+	ACTION_AUD_ClosePlay,
+	ACTION_AUD_StartPlay,
+	ACTION_AUD_StopPlay,
+	ACTION_AUD_PausePlay,
+	ACTION_AUD_ResumePlay,
+	ACTION_AUD_StartRecord,
+	ACTION_AUD_StopRecord,
     ACTION_AUD_OpenRecord,
     ACTION_AUD_CloseRecord,
+    ACTION_AUD_SetPrePareParameters,
     ACTION_AUD_AddChannel,
+    ACTION_AUD_EnableTelephony,
+    ACTION_AUD_DisableTelephony,
+    ACTION_AUD_MutePlayback,
+    ACTION_AUD_MuteRecord,
+    ACTION_AUD_MuteTelephony,
+    ACTION_AUD_EnableByPassVibra,
+    ACTION_AUD_DisableByPassVibra,
+    ACTION_AUD_SetVibraStrength,
+    ACTION_AUD_SetPlaybackVolume,
+    ACTION_AUD_SetRecordGain,
+	ACTION_AUD_SetTelephonySpkrVolume,  
+    ACTION_AUD_SwitchSpkr,
+    ACTION_AUD_AddSpkr,
+    ACTION_AUD_MuteVoicecall,
+    ACTION_AUD_SetHWLoopback,
+    ACTION_AUD_SetAudioMode,
+    ACTION_AUD_EnableFMPlay,
+    ACTION_AUD_DisableFMPlay,
+    ACTION_AUD_SetARM2SPInst,
 	ACTION_AUD_TOTAL			
 } BRCM_AUDIO_ACTION_en_t;
 
@@ -88,19 +108,92 @@ typedef struct
 
 }BRCM_AUDIO_Param_Close_t;
 
+typedef struct
+{
+	unsigned long period_bytes;
+	AUDIO_DRIVER_HANDLE_t  drv_handle;
+    AUDIO_DRIVER_BUFFER_t buf_param;
+    AUDIO_DRIVER_CONFIG_t drv_config;
+	AUDIO_DRIVER_CallBackParams_t	cbParams;
+}BRCM_AUDIO_Param_Prepare_t;
+
+typedef struct
+{
+   Int32 hw_id; //source or sink
+   Int32 device; //mic or speaker
+   Int32 volume1;
+   Int32 volume2;
+
+}BRCM_AUDIO_Param_Volume_t;
+
+typedef struct
+{
+   Int32 hw_id; //source or sink
+   Int32 device; //mic or speaker
+   Int32 mute1;
+   Int32 mute2;
+
+}BRCM_AUDIO_Param_Mute_t;
 
 
-typedef union{	
-	BRCM_AUDIO_Param_Start_t 			param_start;
-    BRCM_AUDIO_Param_Stop_t 			param_stop;
-	BRCM_AUDIO_Param_Pause_t 			param_pause;
-    BRCM_AUDIO_Param_Resume_t 			param_resume;
-	BRCM_AUDIO_Param_Open_t				parm_open;
-	BRCM_AUDIO_Param_Close_t			parm_close;
-	
+typedef struct
+{
+   Int32 cur_sink;
+   Int32 new_sink;
+   Int32 cur_spkr;
+   Int32 new_spkr;
 
-} BRCM_AUDIO_Control_Params_un_t; 
+}BRCM_AUDIO_Param_Spkr_t;
 
+typedef struct
+{
+   Int32 cur_spkr;
+   Int32 new_spkr;
+   Int32 cur_mic;
+   Int32 new_mic;
+
+}BRCM_AUDIO_Param_Call_t;
+
+typedef struct
+{
+   Int32 parm;
+   Int32 mic;
+   Int32 spkr;
+}BRCM_AUDIO_Param_Loopback_t;
+
+typedef struct
+{
+   Int32 strength;
+   Int32 direction;
+}BRCM_AUDIO_Param_Vibra_t;
+
+typedef struct
+{
+   Int32 hw_id;
+   Int32 device;
+   Int32 volume1;
+   Int32 volume2;
+   UInt32 fm_mix;
+}BRCM_AUDIO_Param_FM_t;
+
+
+typedef union{
+	BRCM_AUDIO_Param_Start_t	param_start;
+	BRCM_AUDIO_Param_Stop_t		param_stop;
+	BRCM_AUDIO_Param_Pause_t	param_pause;
+	BRCM_AUDIO_Param_Resume_t	param_resume;
+	BRCM_AUDIO_Param_Open_t		parm_open;
+	BRCM_AUDIO_Param_Close_t	parm_close;
+	BRCM_AUDIO_Param_Volume_t	parm_vol;
+	BRCM_AUDIO_Param_Mute_t		parm_mute;
+	BRCM_AUDIO_Param_Spkr_t		parm_spkr;
+	BRCM_AUDIO_Param_Call_t		parm_call;
+	BRCM_AUDIO_Param_Loopback_t	parm_loop;
+	BRCM_AUDIO_Param_Vibra_t	parm_vibra;
+	BRCM_AUDIO_Param_FM_t		parm_FM;
+	BRCM_AUDIO_Param_Prepare_t	parm_prepare;
+
+} BRCM_AUDIO_Control_Params_un_t;
 
 int LaunchAudioCtrlThread(void);
 

@@ -87,6 +87,7 @@
 #include "dispdrv_mipi_dcs.h"
 #include "dispdrv_common.h" 
 #include "display_drv.h" 
+#include "lcd_clock.h"
 
 #endif /*  __KERNEL__ */
 
@@ -115,9 +116,9 @@
 
 #define GPIODRV_Set_Bit(pin, val) gpio_set_value(pin, val)
 
-#define HAL_LCD_RESET	41
-#define HAL_LCD_RESET_B  95
-#define HAL_LCD_RESET_C  96
+//#define HAL_LCD_RESET	41
+//#define HAL_LCD_RESET_B  95
+//#define HAL_LCD_RESET_C  96
 
 typedef struct
 {
@@ -138,6 +139,7 @@ typedef struct
     void*                frameBuffer;
     DISP_DRV_STATE       drvState;
     DISP_PWR_STATE       pwrState;
+    struct pi_mgr_dfs_node* dfs_node;
 } NT35582_WVGA_SMI_PANEL_T;   
 
 
@@ -688,6 +690,13 @@ Int32 NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
         }        
     }    
 
+    if (brcm_disable_smi_lcd_clocks(lcdDrv->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
     if ( res != -1 )
     {
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );
@@ -703,6 +712,7 @@ Int32 NT35582_WVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
 // Description:   Generic Reset To All DISPLAY Modules
 //                
 //*****************************************************************************
+#if 0
 static Int32 DISPDRV_Reset( Boolean force )
 {
     UInt32          rst0pin     = 0;
@@ -744,6 +754,20 @@ static Int32 DISPDRV_Reset( Boolean force )
     
     if( !rst0present )
     {
+        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
+            "WARNING Only HAL_LCD_RESET B/C defined\n");
+    }
+
+    if( !rst1present )
+    {
+	printk(KERN_ERR "the reset B is not used");
+        LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
+            "WARNING Only HAL_LCD_RESET B/C defined\n");
+    }
+
+    if( !rst2present )
+    {
+	printk(KERN_ERR "the reset C is not used");
         LCD_DBG ( LCD_DBG_ID, "[DISPDRV] DISPDRV_Reset: "
             "WARNING Only HAL_LCD_RESET B/C defined\n");
     }
@@ -793,9 +817,7 @@ static Int32 DISPDRV_Reset( Boolean force )
 
     return ( 0 );
 } // DISPDRV_Reset
-
-
-
+#endif
 
 //*****************************************************************************
 //
@@ -839,7 +861,14 @@ Int32 NT35582_WVGA_SMI_Open (
             __FUNCTION__  );
         return ( -1 );
     }    
-   
+  
+    if (brcm_enable_smi_lcd_clocks(&pPanel->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
     pSmiCfg  = &NT35582_WVGA_SMI_SmiCtrlCfg;
 
     if ( pSmiCfg->usesTE ) 
@@ -864,7 +893,7 @@ Int32 NT35582_WVGA_SMI_Open (
     panelData = &NT35582_WVGA_SMI_Info;
     
 
-    DISPDRV_Reset( FALSE );
+    //DISPDRV_Reset( FALSE );
 
 #if defined(__WVGA_MODE_888__) 
     pPanel->bpp         = 4;

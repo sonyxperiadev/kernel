@@ -73,6 +73,8 @@
 
 #ifdef CONFIG_GPIO_PCA953X
 #define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
+#else
+#define SD_CARDDET_GPIO_PIN      75
 #endif
 
 #define PID_PLATFORM				0xE600
@@ -191,7 +193,11 @@ static char *android_functions_all[] = {
 
 
 static struct usb_mass_storage_platform_data android_mass_storage_pdata = {
+#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
+	.nluns		=	2,
+#else
 	.nluns		=	1,
+#endif
 	.vendor		=	"Broadcom",
 	.product	=	"Rhea",
 	.release	=	0x0100
@@ -704,6 +710,30 @@ struct platform_device kona_avs_device = {
 
 #endif
 
+#if defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH)
+static struct resource board_spum_resource[] = {
+       [0] =
+       {
+               .start  =       SEC_SPUM_NS_APB_BASE_ADDR,
+               .end    =       SEC_SPUM_NS_APB_BASE_ADDR + SZ_64K - 1,
+               .flags  =       IORESOURCE_MEM,
+       },
+       [1] =
+       {
+               .start  =       SPUM_NS_BASE_ADDR,
+               .end    =       SPUM_NS_BASE_ADDR + SZ_64K - 1,
+               .flags  =       IORESOURCE_MEM,
+       }
+};
+
+static struct platform_device board_spum_device = {
+       .name           =       "brcm-spum",
+       .id             =       0,
+       .resource       =       board_spum_resource,
+       .num_resources  =       ARRAY_SIZE(board_spum_resource),
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -734,6 +764,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_KONA_AVS
 	&kona_avs_device,
+#endif
+#ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
+       &board_spum_device,
 #endif
 };
 

@@ -32,7 +32,6 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 ****************************************************************************/
 #include "resultcode.h"
 #include "mobcom_types.h"
-#include "xassert.h"
 #include "msconsts.h"
 #include "log.h"
 //#include "chal_bmodem_intc_inc.h"
@@ -200,7 +199,8 @@ static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
 
 static int ssp_pcm_usecount = 0;
 
-
+static Boolean isSTIHF = FALSE;
+static Boolean bBTTest = FALSE;
 //****************************************************************************
 // local function declarations
 //****************************************************************************
@@ -979,7 +979,9 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				{
 					dmaCH = CSL_CAPH_DMA_CH12;
 #if defined(ENABLE_DMA_VOICE)
-					path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SPKR_EN);
+					//path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SPKR_EN);
+					csl_arm2sp_shared_mem = (AP_SharedMem_t *)ARM2SP_GetPhysicalSharedMemoryAddress();
+					path->pBuf = (void *)csl_arm2sp_shared_mem->shared_aadmac_spkr_low;
 					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp spk buf@ 0x%x\r\n", path->pBuf);
 #endif					
 				} else if(path->sink==CSL_CAPH_DEV_DSP) {
@@ -987,13 +989,17 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 					{
 						dmaCH = CSL_CAPH_DMA_CH14;
 #if defined(ENABLE_DMA_VOICE)
-						path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SEC_MIC_EN);
+						//path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_SEC_MIC_EN);
+						csl_arm2sp_shared_mem = (AP_SharedMem_t *)ARM2SP_GetPhysicalSharedMemoryAddress();
+						path->pBuf = (void *)csl_arm2sp_shared_mem->shared_aadmac_sec_mic_low;
 						Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp sec buf@ 0x%x\r\n", path->pBuf);
 #endif						
 					} else { 
 						dmaCH = CSL_CAPH_DMA_CH13;
 #if defined(ENABLE_DMA_VOICE)
-						path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_PRI_MIC_EN);
+						//path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_PRI_MIC_EN);
+						csl_arm2sp_shared_mem = (AP_SharedMem_t *)ARM2SP_GetPhysicalSharedMemoryAddress();
+						path->pBuf = (void *)csl_arm2sp_shared_mem->shared_aadmac_pri_mic_low;
 						Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp pri buf@ 0x%x\r\n", path->pBuf);
 #endif						
 					}
@@ -1450,10 +1456,7 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 		}
 	}
 
-	//path->sw[blockIdx].FIFO_dst2Addr = path->sw[blockIdx].FIFO_dstAddr; //hw
 	swCfg->status = csl_caph_switch_config_channel(path->sw[blockIdx]);
-	//path->sw[blockIdx].FIFO_dst2Addr = path->sw[blockIdx].FIFO_dstAddr; //hw
-	//csl_caph_switch_add_dst(path->sw[blockIdx].chnl, path->sw[blockIdx].FIFO_dst2Addr);
 
 	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_srcAddr, pathID);
 	csl_caph_hwctrl_addHWResource(path->sw[blockIdx].FIFO_dstAddr, pathID);
@@ -1710,7 +1713,8 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 	}
 
 #if defined(ENABLE_DMA_ARM2SP)
-	if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
+	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM) || 
+        (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink == CSL_CAPH_DEV_DSP_throughMEM))
 	{
 		if(arm2spCfg.instanceID == 1) 
 		{
@@ -1806,7 +1810,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
     }
     else if (enable == FALSE && sCurEnabled == TRUE)
     {
-/*
 	// don't disable the clocks even if the request comes. Keep the clocks always ON 
         UInt32 count = 0;
         sCurEnabled = FALSE;
@@ -1814,7 +1817,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
         {
             clk_disable(clkID[count]);
         }
-*/
     }
     Log_DebugPrintf(LOGID_AUDIO, "csl_caph_ControlHWClock: action = %d, result = %d\r\n", enable, sCurEnabled);
   
@@ -2373,6 +2375,7 @@ static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
                                           CSL_CAPH_PathID pathID)
 {
     CSL_CAPH_CFIFO_FIFO_e fifo = CSL_CAPH_CFIFO_NONE;
+	CSL_CAPH_ARM_DSP_e owner = CSL_CAPH_ARM;
     UInt32 fifoAddr = 0;
 
     if ((dmaCH == CSL_CAPH_DMA_NONE)||(pathID == 0)) return;
@@ -2384,8 +2387,11 @@ static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
 
     if (FALSE == csl_caph_hwctrl_readHWResource(fifoAddr, pathID))
     {
-        csl_caph_dma_clear_intr(dmaCH, CSL_CAPH_ARM);
-        csl_caph_dma_disable_intr(dmaCH, CSL_CAPH_ARM);
+#if !defined(ENABLE_DMA_LOOPBACK)
+		if(dmaCH>=CSL_CAPH_DMA_CH12 && dmaCH<=CSL_CAPH_DMA_CH14) owner = CSL_CAPH_DSP;
+#endif
+        csl_caph_dma_clear_intr(dmaCH, owner);
+        csl_caph_dma_disable_intr(dmaCH, owner);
         csl_caph_dma_stop_transfer(dmaCH);
         csl_caph_dma_release_channel(dmaCH); 
     }
@@ -3217,7 +3223,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM recording *** \r\n"));
 
-		// FM radio playback  is on 
+		// FM radio playback  is on (no voice call)
 		if(fmRunning == TRUE && fmPlayRx == TRUE)
 		{
 			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP/HS recording *** \r\n"));
@@ -3320,6 +3326,26 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			return path->pathID;
 		}
     }   
+#if defined(ENABLE_DMA_ARM2SP)
+    else
+    if ((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink == CSL_CAPH_DEV_DSP_throughMEM))
+    {
+        /* Set up the path for FM Radio playback: 
+        I2S Rx --> SW1--> SRC Mixer --SW2--> SRC --SW3--> CFIFO2 --DMA2--> SharedMem, 48/44k stereo to 8/16k mono
+         */
+		{
+			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_CFIFO, CAPH_DMA, CAPH_NONE};            
+			_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP/HS via arm2sp (during voice call) *****\r\n"));
+
+			csl_caph_config_arm2sp(path->pathID);
+			csl_caph_config_blocks(path->pathID, blocks);
+			//memcpy(&fm_sw_config, & path->sw[0], sizeof(CSL_CAPH_SWITCH_CONFIG_t));
+			csl_caph_start_blocks(path->pathID);
+            //fmPlayRx = TRUE;
+			return path->pathID;
+		}
+    }
+#endif //ENABLE_DMA_ARM2SP   
     else
     if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_MEMORY))
     {
@@ -3342,10 +3368,10 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
          */
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_NONE}; //more complete path
-			CAPH_BLOCK_t blocks_8k[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE}; //only for 8/16kHz mono
+			CAPH_BLOCK_t blocks_bt_test[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE}; //only for 8/16kHz mono
 			CAPH_BLOCK_t *p_blocks = blocks;
 
-			if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000) p_blocks = blocks_8k; //avoid SRC for production test.
+			if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) p_blocks = blocks_bt_test; //avoid SRC for production test.
 
 			csl_caph_config_blocks(path->pathID, p_blocks);
 			csl_caph_start_blocks(path->pathID);
@@ -3683,7 +3709,8 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 #endif
 
 #if defined(ENABLE_DMA_ARM2SP)
-	if (path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM)
+	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink == CSL_CAPH_DEV_DSP_throughMEM) ||
+        (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink == CSL_CAPH_DEV_DSP_throughMEM))
 	{
 		if(arm2spCfg.instanceID == 1)
 			VPRIPCMDQ_SetARM2SP( 0, 0 ); 
@@ -5468,4 +5495,28 @@ void csl_caph_hwctrl_SetSspTdmMode(Boolean status)
 }
 
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetIHFmode
+*
+*  Description: Set IHF mode (stereo/mono)
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetIHFmode(Boolean stIHF)
+{
+	isSTIHF = stIHF;
+	csl_caph_srcmixer_SetSTIHF(isSTIHF);
+}
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetBTMode
+*
+*  Description: Set BT mode
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetBTMode(Boolean mode)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetBTMode from %d to %d\r\n", bBTTest, mode);
+	bBTTest = mode;
+}

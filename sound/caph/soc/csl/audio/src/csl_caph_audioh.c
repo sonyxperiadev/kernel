@@ -33,7 +33,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 
 #include "mobcom_types.h"
 #include "ostask.h"
-#include "xassert.h"
 #include "chal_types.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"

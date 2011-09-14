@@ -41,6 +41,7 @@
 #define SYSCFG_BASE_ADDR      0x08880000      /* SYSCFG core */
 #include "shared.h"
 #include "dspcmd.h"
+#include "csl_apcmd.h"
 
 #include "osqueue.h"
 #include "msconsts.h"
@@ -277,6 +278,13 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 		AUDDRV_SPKR_Enum_t speaker,
 	        void *pData)
 {
+    ///////////////////////////////////////////////////////////////////////
+    // Phone Setup Sequence
+    // 1. Init CAPH HW
+    // 2. Send DSP command DSPCMD_TYPE_AUDIO_ENABLE
+    // 3. If requires 48KHz for example in IHF mode, Send VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
+    //////////////////////////////////////////////////////////////////////
+
 	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_Init");
 
 	currVoiceMic = mic;
@@ -301,12 +309,6 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
-#if defined(ENABLE_DMA_VOICE)
-	csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
-	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
-#else
-	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
-#endif	
 	if( AUDDRV_GetAudioMode() >= AUDIO_MODE_NUMBER )
 	{
 		AUDDRV_Telephony_InitHW ( mic, 
@@ -325,6 +327,22 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
 #endif
 	}
+
+#if defined(ENABLE_DMA_VOICE)
+	csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
+#else
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
+#endif	
+
+    // The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done since it is a command via CP. 
+    OSTASK_Sleep(1);
+	if(speaker == AUDDRV_SPKR_IHF)
+	{
+		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
+						FALSE,
+						FALSE);
+    }
 
 	//after AUDDRV_Telephony_InitHW to make SRST.
 	AUDDRV_SetVCflag(TRUE);  //let HW control logic know.
@@ -465,18 +483,24 @@ void AUDDRV_Telephony_Deinit (void *pData)
 		audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, FALSE, 0, 0, 0, 0 );
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, FALSE, 0, 0, 0, 0 );
 	
+	    if(currVoiceSpkr == AUDDRV_SPKR_IHF)
+    	{
+		    VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
+							FALSE,
+							FALSE);
+    	}	
+
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
+
 #if defined(ENABLE_DMA_VOICE)
-		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN);
+		//csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN | (UInt16)DSP_AADMAC_SEC_MIC_EN);
+		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN); //no second mic on lmp
 #endif
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
-		OSTASK_Sleep( 3 ); //make sure audio is off
+		OSTASK_Sleep( 3 ); //make sure audio is off, rtos does not have this.
 
 		AUDDRV_Telephony_DeinitHW(pData);
-#if defined(ENABLE_DMA_VOICE)
-		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_PRI_MIC_EN|(UInt16)DSP_AADMAC_SEC_MIC_EN);
-#endif
 	}
 
 	if (AUDIO_CHNL_BLUETOOTH == AUDDRV_GetAudioMode() )

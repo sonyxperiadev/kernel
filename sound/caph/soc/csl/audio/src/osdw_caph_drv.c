@@ -40,7 +40,6 @@
 #include "msconsts.h"
 #include "log.h"
 #include "osdw_caph_drv.h"
-#include "assert.h"
 #include "chal_caph_intc.h"
 #include "chip_irq.h"
 #include "csl_caph_dma.h"

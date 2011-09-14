@@ -67,15 +67,6 @@
 //=============================================================================
 // Public Variable declarations
 //=============================================================================
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_COMMS_PROCESSOR) && defined(IPC_AUDIO))
-extern void CP_Audio_ISR_Handler(StatQ_t status_msg);
-#endif
-
-#if !(defined(FUSE_APPS_PROCESSOR) && (defined(IPC_FOR_BSP_ONLY) || defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE)))
-#else
-extern void IPC_Audio_Create_BufferPool( void );
-#endif
-
 
 typedef void (*AUDDRV_User_CB) (UInt32 param1, UInt32 param2, UInt32 param3);
 
@@ -92,16 +83,11 @@ Boolean inVoiceCall = FALSE;
 static Boolean voicePlayOutpathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN
 
 static void *sUserCB = NULL;
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
 static CSL_CAPH_DEVICE_e sink = CSL_CAPH_DEV_NONE;
 static AUDDRV_SPKR_Enum_t currSpkr = AUDDRV_SPKR_NONE;
 static AUDDRV_MIC_Enum_t currMic = AUDDRV_MIC_NONE;
 static AUDIO_SAMPLING_RATE_t currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED; 
 static Boolean eciEQOn = FALSE; // If TRUE, bypass EQ filter setting request from audio controller.
-
-#endif
-#endif
 
 static Boolean bInVoiceCall = FALSE;
 static UInt32 audDev = 0;
@@ -142,12 +128,8 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     Int16 tempGain = 0;
     AudioMode_t mode = AUDIO_MODE_HANDSET;
 
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))    
     UInt32 *memAddr = 0;
 
-#endif
-#endif    
     pData = pData;
     mode = mode; 
     tempGain = tempGain;
@@ -157,9 +139,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 	
     memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
 
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
-   
     currSpkr = speaker;
     currMic = mic;
     currSampleRate = sample_rate;
@@ -194,7 +173,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 
     config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
-// Linux only change - End
     sink = config.sink;
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
@@ -204,9 +182,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 		config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
         
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-						FALSE,
-						FALSE);
 	}
 	else
 	{
@@ -267,9 +242,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 				AUDIO_GetParmAccessPtr());
 #endif				
 
-#endif
-#endif   
-
     // Set new filter coef.
     AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), dev);
  
@@ -293,11 +265,12 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
                     "\n\r\t* AUDDRV_Telephony_DeinitHW *\n\r");
 
     memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
 
     currSpkr = AUDDRV_SPKR_NONE;
     currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
+
+    // Disable sidetone.
+    (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
 
     config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
@@ -311,32 +284,16 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 
         (void)csl_caph_hwctrl_DisablePath(config);
     }
-	VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE, 
-   							FALSE, 
-   							FALSE); 
-
-
+	
     currMic = AUDDRV_MIC_NONE;
     config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
 
     (void)csl_caph_hwctrl_DisablePath(config);
 
-    // Disable sidetone.
-    (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
-	if(sink == CSL_CAPH_DEV_IHF)
-	{
-#ifdef RHEA_DSP_IHF_FEATURE		
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
-							FALSE,
-							FALSE);
-#endif		
-	}	
 	sink = CSL_CAPH_DEV_NONE;
 	audDev = 0;
 
-#endif
-#endif        
     return;
 }
 
@@ -437,19 +394,13 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     AudioMode_t mode = AUDIO_MODE_HANDSET;
 	UInt32 dev = 0;
     Int16 tempGain = 0;
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))    
     UInt32 *memAddr = 0;
 
-#endif
-#endif      
     mode = mode; 
     tempGain = tempGain;
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_Telephony_SelectMicSpkr mic %d, spkr %d *\n\r", mic, speaker);
 
     memset(&config, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))    
 
     mode = AUDDRV_GetAudioMode();
 	// The sequence from dsp is:
@@ -600,8 +551,6 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
             ((AUDDRV_PathID_t *)pData)->ul2PathID = csl_caph_hwctrl_EnablePath(config);
         }
     }
-#endif
-#endif      
     // Set new filter coef.
     AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), dev);
 
@@ -722,7 +671,8 @@ void AUDDRV_EnableDSPInput (
 #if defined(ENABLE_DMA_VOICE)
 			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
-			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+			//audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0 ); //no second mic on lmp
 #else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 0, 0, 0, 0 );
@@ -733,7 +683,8 @@ void AUDDRV_EnableDSPInput (
 #if defined(ENABLE_DMA_VOICE)
 			csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 0, 0, 0, 0);
-			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+			//audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN|DSP_AADMAC_SEC_MIC_EN, 0, 0, 0, 0 );
+			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, DSP_AADMAC_PRI_MIC_EN, 0, 0, 0, 0 ); //no second mic on lmp
 #else
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_CONNECT_UL, 1, 1, 0, 0, 0);
 			audio_control_dsp(DSPCMD_TYPE_AUDIO_ENABLE, 1, 1, 0, 0, 0 );
@@ -871,11 +822,7 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 dev)
 	}
 #endif
 
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
 	audDev = dev;
-#endif
-#endif
 
 #else
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() audio_mode==%d\n\r", audio_mode );
@@ -954,16 +901,9 @@ void AUDDRV_SetDSPFilter( AudioMode_t audio_mode,
         UInt32 dev,
 		SysAudioParm_t* pAudioParm)
 {
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
 	if (eciEQOn == FALSE)
 		audio_control_generic( AUDDRV_CPCMD_SetFilter, 
 				audio_mode, dev, (UInt32)pAudioParm, 0, 0 );
-#elif (!defined (FUSE_APPS_PROCESSOR) && defined (FUSE_COMMS_PROCESSOR))
-		audio_control_generic( AUDDRV_CPCMD_SetFilter, 
-				audio_mode, dev, (UInt32)pAudioParm, 0, 0 );
-#endif
-#endif
 	return;
 }
 
@@ -1049,8 +989,6 @@ void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
 
 void AUDDRV_User_CtrlDSP ( AudioDrvUserParam_t audioDrvUserParam, void *user_CB, UInt32 param1, UInt32 param2 )
 {
-#if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
-#if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
 	Boolean spkProtEna = FALSE;
 
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_User_CtrlDSP *\n\r");
@@ -1092,8 +1030,6 @@ void AUDDRV_User_CtrlDSP ( AudioDrvUserParam_t audioDrvUserParam, void *user_CB,
 			Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_User_CtrlDSP: Invalid request %d \n\r", audioDrvUserParam);
 			break;
 	}
-#endif
-#endif
 }
 
 //=============================================================================

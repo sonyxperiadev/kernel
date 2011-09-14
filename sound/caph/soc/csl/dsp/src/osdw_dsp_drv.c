@@ -68,7 +68,6 @@
 #include "brcm_rdb_sysmap.h"
 #include "io_map.h"
 
-#include "assert.h"
 #include "osdw_dsp_drv.h"
 #include "chal_intc_inc.h"
 #include "chip_irq.h"

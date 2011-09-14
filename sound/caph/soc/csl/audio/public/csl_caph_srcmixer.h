@@ -312,5 +312,15 @@ void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 ****************************************************************************/
 CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
 
+/**
+*
+*  @brief	Set isSTIHF flag. TRUE: stereo; FALSE: mono
+*
+*  @param   stIHF : TRUE-stereo, FALSE-mono 
+*
+*  @return void
+****************************************************************************/
+void csl_caph_srcmixer_SetSTIHF(Boolean stIHF);
+
 #endif // _CSL_CAPH_SRCMIXER_
 

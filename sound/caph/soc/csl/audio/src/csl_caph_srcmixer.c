@@ -31,7 +31,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 *
 ****************************************************************************/
 #include "log.h"
-#include "xassert.h"
 #include "mobcom_types.h"
 #include "csl_caph.h"
 #include "chal_caph_srcmixer.h"
@@ -77,6 +76,7 @@ typedef struct
 // local variable definitions
 //****************************************************************************
 static CHAL_HANDLE handle = 0x0;
+static isSTIHF = FALSE;
 
 /* SRCMixer input channel status table */
 static CSL_CAPH_SRCM_INCHNL_STATUS_t inChnlStatus[MAX_INCHNLS] =
@@ -1155,6 +1155,7 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 {
     UInt16 chalInChnlM = 0x0;
     CAPH_SRCMixer_CHNL_e chalInChnl = CAPH_SRCM_CH_NONE;
+    CAPH_SRCMixer_CHNL_e inChaltoSTOut = CAPH_SRCM_CH_NONE;
     CAPH_SRCMixer_SRC_e srcSampleRate = CAPH_8KHz_48KHz;
     CAPH_SRCMixer_FIFO_e fifo = CAPH_CH_INFIFO_NONE;
     CAPH_DATA_FORMAT_e dataFmt = CAPH_MONO_16BIT;
@@ -1274,7 +1275,14 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 			if (chalOutChnl & (UInt8)CAPH_M0_Left)
 			{
 				chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M0_Left, routeConfig.mixGain.mixInGainL);
-				chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M0_Left );
+
+				// Do not mix stereo signal to HS output.
+				if (chalInChnl == CAPH_SRCM_CH5 || chalInChnl == CAPH_SRCM_PASSCH1 || chalInChnl == CAPH_SRCM_PASSCH2)
+					inChaltoSTOut = chalInChnl & ~(CAPH_SRCM_CH5_R | CAPH_SRCM_PASSCH1_R | CAPH_SRCM_PASSCH1_R);
+				else
+					inChaltoSTOut = chalInChnl;
+					
+				chal_caph_srcmixer_enable_mixing(handle, inChaltoSTOut, CAPH_M0_Left );
 				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Left, routeConfig.mixGain.mixOutCoarseGainL);
 				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M0_Left, MIX_IN_GAINSTEP);
 				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Left, routeConfig.mixGain.mixOutGainL);	
@@ -1282,7 +1290,14 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 			if (chalOutChnl & (UInt8)CAPH_M0_Right)
 			{
 				chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M0_Right, routeConfig.mixGain.mixInGainR);
-				chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M0_Right );
+
+				// Do not mix stereo signal to HS output.
+				if (chalInChnl == CAPH_SRCM_CH5 || chalInChnl == CAPH_SRCM_PASSCH1 || chalInChnl == CAPH_SRCM_PASSCH2)
+					inChaltoSTOut = chalInChnl & ~(CAPH_SRCM_CH5_L | CAPH_SRCM_PASSCH1_L | CAPH_SRCM_PASSCH1_L);
+				else
+					inChaltoSTOut = chalInChnl;
+					
+				chal_caph_srcmixer_enable_mixing(handle, inChaltoSTOut, CAPH_M0_Right );
 				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M0_Right, routeConfig.mixGain.mixOutCoarseGainR);
 				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M0_Right, MIX_IN_GAINSTEP);
 				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M0_Right, routeConfig.mixGain.mixOutGainR);	
@@ -1290,7 +1305,19 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 			if (chalOutChnl & (UInt8)CAPH_M1_Left)
 			{
 				chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M1_Left, routeConfig.mixGain.mixInGainL);
-				chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M1_Left );
+
+				// Do not mix stereo signal to stereo IHF.
+				if (isSTIHF == TRUE)
+				{
+					if (chalInChnl == CAPH_SRCM_CH5 || chalInChnl == CAPH_SRCM_PASSCH1 || chalInChnl == CAPH_SRCM_PASSCH2)
+						inChaltoSTOut = chalInChnl & ~(CAPH_SRCM_CH5_R | CAPH_SRCM_PASSCH1_R | CAPH_SRCM_PASSCH1_R);
+					else
+						inChaltoSTOut = chalInChnl;
+				}
+				else
+					inChaltoSTOut = chalInChnl;
+					
+				chal_caph_srcmixer_enable_mixing(handle, inChaltoSTOut, CAPH_M1_Left );
 				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Left, routeConfig.mixGain.mixOutCoarseGainL);
 				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M1_Left, MIX_IN_GAINSTEP);
 				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Left, routeConfig.mixGain.mixOutGainL);	
@@ -1298,7 +1325,19 @@ void csl_caph_srcmixer_config_mix_route(CSL_CAPH_SRCM_ROUTE_t routeConfig)
 			if (chalOutChnl & (UInt8)CAPH_M1_Right)
 			{
 				chal_caph_srcmixer_set_mixingain(handle, chalInChnl, CAPH_M1_Right, routeConfig.mixGain.mixInGainR);
-				chal_caph_srcmixer_enable_mixing(handle, chalInChnl, CAPH_M1_Right );
+
+				// Do not mix stereo signal to stereo IHF.
+				if (isSTIHF == TRUE)
+				{
+					if (chalInChnl == CAPH_SRCM_CH5 || chalInChnl == CAPH_SRCM_PASSCH1 || chalInChnl == CAPH_SRCM_PASSCH2)
+						inChaltoSTOut = chalInChnl & ~(CAPH_SRCM_CH5_L | CAPH_SRCM_PASSCH1_L | CAPH_SRCM_PASSCH1_L);
+					else
+						inChaltoSTOut = chalInChnl;
+				}
+				else
+					inChaltoSTOut = chalInChnl;
+					
+				chal_caph_srcmixer_enable_mixing(handle, inChaltoSTOut, CAPH_M1_Right );
 				chal_caph_srcmixer_set_spkrgain_bitsel(handle, CAPH_M1_Right, routeConfig.mixGain.mixOutCoarseGainR);
 				chal_caph_srcmixer_set_mixingainstep(handle, chalInChnl, CAPH_M1_Right, MIX_IN_GAINSTEP);
 				chal_caph_srcmixer_set_spkrgain(handle, CAPH_M1_Right, routeConfig.mixGain.mixOutGainR);	
@@ -1816,3 +1855,14 @@ CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAP
 	return outChnl;
 }
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_srcmixer_SetSTIHF
+*
+*  Description: Set isSTIHF flag. TRUE: stereo; FALSE: mono
+*
+****************************************************************************/
+void csl_caph_srcmixer_SetSTIHF(Boolean stIHF)
+{
+    isSTIHF = stIHF;
+}

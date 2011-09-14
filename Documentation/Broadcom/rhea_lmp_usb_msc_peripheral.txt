@@ -1,0 +1,56 @@
+USB MSC Peripheral driver requirements, configuration and test information
+
+Table of Contents
+
+1	Introduction	
+2	Overview and requirements
+3	USB MSC peripheral driver configuration options	
+4	SD insertion/removal daemon
+5	Raw Ramdisk
+6	Current methods to test USB MSC peripheral driver
+
+1 Introduction
+==============
+
+This document provides an overview of requirements, configuration and test information for USB MSC peripheral driver on Rhea LMP. 
+
+2 Overview and requirements
+===========================
+
+USB Mass storage peripheral uses a standard USB mass storage device class specification. From usage perspective, it supports different types of media (including removable medium such as SD card) and also supports multiple logical units. Typically, we would support SD card, flash and/or ramdisk accesible via USB MSC. Generally speaking, SD card is the default media used with USB MSC. Flash disk support over USB MSC is done only upon customer request. To demonstrate and test USB MSC, we need to interface with at leat one of the supported media. This adds a dependency for USB MSC. To eliminate that, interfacing with Ramdisk is desirable as this removes any dependency on other 
+non-USB drivers for testing this feature. As a result, we add support for raw ramdisk device that can be formatted from the host/PC. It has an added benefit of being able to test multi-LUN support in USB MSC. 
+
+
+3 USB MSC configuration options
+===============================
+
+To support peripheral side USB MSC, CONFIG_USB_GADGET, CONFIG_USB_ANDROID_MASS_STORAGE must be selected. To support dual-disk with Ramdisk, CONFIG_USB_DUAL_DISK_SUPPORT must be selected. Currently, we create raw ramdisk in android_setup.sh (in kernel/initramfs) that runs after initialization so if raw ramdisk is required then use_raw_ramdisk=1 should be defined in android_setup.sh. This will create a 256KB raw ramdisk [See dd if=/dev/zero of=/dev/raw-ramdisk bs=512 count=512]. 
+
+
+4 SD insertion/removal daemon
+=============================
+
+It would be desirable to use a user mode application/daemon that manages the dynamic insertion and removal of SD card. This daemon will be responsible for communicating the device name and insertion/removal status to all modules that would be using this medium. USB MSC LUNs can be opened and closed based on this status. Currently, there is no such daemon hooked with USB comminicating with user mode applications so dynamic insertion and removal of SD does not work well when used with USB MSC.
+
+5 Raw Ramdisk
+=============
+Configuration options and procedure to creatre ramdisk is described in item 3 above. This is registered with USB MSC peripheral as second LUN in android_setup.sh [See echo /dev/raw-ramdisk > /sys/devices/platform/usb_mass_storage/lun1/file]. When Rhearay board is plugged to PC via USB with mass storage class enabled, two USB drives will show up viz., one for SD and one for ramdisk. Selecting the Ramdisk will prompt the user to format it. One can format raw ramdisk from PC and use it for testing USB MSC.
+
+
+6 Current methods to test USB MSC
+=================================
+1) Plug in SD card in the slot of Rhearay board
+2) Power on Rhearay (Plugging in SD card after bootup will not work for USB MSC in current scheme of things)
+3) 'ls /sys/devices/platform/usb_mass_storage'. If you see lun0 and lun1 that means the platform supports dual disk/multi LUNs. If it only     shows lun or lun0 then it means it supports single LUN. If raw ramdisk is not support then you would see a message "Raw ramdisk NOT        created to demonstrate multi-LUN support in USB MSC" from android_setup.sh
+4) 'cat /sys/devices/platform/usb_mass_storage/lun0/file'. This shows the backing file name used by USB MSC for SD card 
+   [e.g.: /dev/mmcblk1p1]
+5) By default, USB mass storage class is enabled [just in case not then use 'echo 1 > /sys/class/usb_composite/usb_mass_storage/enable']
+6) Plug in USB cable to PC
+7) Depending on whether system has single LUN or two LUNs, one or two drives will appear [e.g. e: (for SD) and f: (for ramdisk) drives]
+8) Selecting SD drive, one can format, read, write etc.
+9) Selecting ramdisk, one can format, read, write etc.
+10) Remove SD card. Typically, this should update the status with USB  MSC automatically but since there is no infrastructure for this     yet, one has to manually type following commad: 'echo > /sys/devices/platform/usb_mass_storage/lun0/file' This will close the LUN used 
+    for SD
+11) Try clicking on the USB-SD drive. This should show something like "Please insert a disk into E:"
+12) Plugging in SD card after this step will not work with USB MSC in current implementation. Please refer to section 4 above.
+

@@ -112,7 +112,7 @@ config BCM_IPC_OFFSET
 	  CP and AP to communicate through the IPC shared RAM.
 
 config KONA_CPU_PM_HANDLER
-	bool "Enable Kona platform PM (idle/suspend) hanlder."
+	bool "Enable Kona platform PM (idle/suspend) handler."
 	depends on CPU_IDLE || SUSPEND
 	help
 	  Say Y if you want to Enable Kona platform PM (idle/suspend) default handlers.
