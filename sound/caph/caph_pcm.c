@@ -333,46 +333,30 @@ static int PcmPlaybackPrepare(
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
-    AUDIO_DRIVER_HANDLE_t  drv_handle;
-    unsigned long period_bytes;
-    AUDIO_DRIVER_BUFFER_t buf_param;
-    AUDIO_DRIVER_CONFIG_t drv_config;
-	AUDIO_DRIVER_CallBackParams_t	cbParams;
+	BRCM_AUDIO_Param_Prepare_t	parm_prepare;
 
 
 	BCM_AUDIO_DEBUG("\nplayback_prepare period=%d period_size=%d bufsize=%d threshold=%ld frame_bits %d\n", (int)runtime->periods, 
 			(int)runtime->period_size, (int)runtime->buffer_size, runtime->stop_threshold, runtime->frame_bits);
 
 	chip->streamCtl[substream->number].stream_hw_ptr = 0;
-    drv_handle = substream->runtime->private_data;
-
-
-    //set the callback
-    cbParams.pfCallBack = AUDIO_DRIVER_InterruptPeriodCB;
-	cbParams.pPrivateData = (void *)substream;
- 	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)&cbParams);
-
-    //set the interrupt period
-    period_bytes = frames_to_bytes(runtime, runtime->period_size);
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_INT_PERIOD,(void*)&period_bytes);
-    
-    //set the buffer params
-    buf_param.buf_size = runtime->dma_bytes;
-    buf_param.pBuf = runtime->dma_area;// virtual address
-    buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
+    parm_prepare.drv_handle = substream->runtime->private_data;
+	parm_prepare.cbParams.pfCallBack = AUDIO_DRIVER_InterruptPeriodCB;
+	parm_prepare.cbParams.pPrivateData = (void *)substream;
+	parm_prepare.period_bytes = frames_to_bytes(runtime, runtime->period_size);
+	parm_prepare.buf_param.buf_size = runtime->dma_bytes;
+    parm_prepare.buf_param.pBuf = runtime->dma_area;// virtual address
+    parm_prepare.buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
 
     BCM_AUDIO_DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
 
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
+    parm_prepare.drv_config.sample_rate = runtime->rate;
+    parm_prepare.drv_config.num_channel = runtime->channels;
+    parm_prepare.drv_config.bits_per_sample = AUDIO_16_BIT_PER_SAMPLE;
+	parm_prepare.drv_config.instanceId = substream->number;
+	parm_prepare.drv_config.arm2sp_mixMode = chip->pi32SpeechMixOption[substream->number];
 
-    //Configure stream params  
-    drv_config.sample_rate = runtime->rate;
-    drv_config.num_channel = runtime->channels;
-    drv_config.bits_per_sample = AUDIO_16_BIT_PER_SAMPLE;
-	drv_config.instanceId = substream->number; 
-	drv_config.arm2sp_mixMode = chip->pi32SpeechMixOption[substream->number];
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);
-
+	AUDIO_Ctrl_Trigger(ACTION_AUD_SetPrePareParameters,&parm_prepare,NULL,0);
 //	BCM_AUDIO_DEBUG("\n%lx:playback_prepare period bytes=%d, periods =%d, buffersize=%d\n",jiffies, g_brcm_alsa_chip->period_bytes[0], runtime->periods, runtime->dma_bytes);
 	return 0;
 }
@@ -753,12 +737,8 @@ static int PcmCapturePrepare(struct snd_pcm_substream * substream)
 {
 	struct snd_pcm_runtime *runtime = substream->runtime;
     brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
-    AUDIO_DRIVER_HANDLE_t  drv_handle;
-    unsigned long period_bytes;
-    AUDIO_DRIVER_BUFFER_t buf_param;
-    AUDIO_DRIVER_CONFIG_t drv_config;
-	AUDIO_DRIVER_CallBackParams_t	cbParams;
 	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
+	BRCM_AUDIO_Param_Prepare_t  parm_prepare;
 
 	BCM_AUDIO_DEBUG("\n %lx:capture_prepare: subdevice=%d rate =%d format =%d channel=%d dma_area=0x%x dma_bytes=%d period_bytes=%d avail_min=%d periods=%d buffer_size=%d\n",
 		         jiffies,	substream->number, runtime->rate, runtime->format, runtime->channels, (unsigned int)runtime->dma_area, runtime->dma_bytes,
@@ -766,32 +746,24 @@ static int PcmCapturePrepare(struct snd_pcm_substream * substream)
 
 	chip->streamCtl[substream_number].stream_hw_ptr = 0;
 	
-    drv_handle = substream->runtime->private_data;
+    parm_prepare.drv_handle = substream->runtime->private_data;
 
+    parm_prepare.cbParams.pfCallBack = AUDIO_DRIVER_CaptInterruptPeriodCB;
+	parm_prepare.cbParams.pPrivateData = (void *)substream;
 
-	//set the callback
-    cbParams.pfCallBack = AUDIO_DRIVER_CaptInterruptPeriodCB;
-	cbParams.pPrivateData = (void *)substream;
- 	AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_CB,(void*)&cbParams);
-
-    //set the interrupt period
-    period_bytes = frames_to_bytes(runtime, runtime->period_size);
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_INT_PERIOD,(void*)&period_bytes);
+    parm_prepare.period_bytes = frames_to_bytes(runtime, runtime->period_size);
     
-    //set the buffer params
-    buf_param.buf_size = runtime->dma_bytes;
-    buf_param.pBuf = runtime->dma_area;// virtual address
-    buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
+    parm_prepare.buf_param.buf_size = runtime->dma_bytes;
+    parm_prepare.buf_param.pBuf = runtime->dma_area;// virtual address
+    parm_prepare.buf_param.phy_addr = (UInt32)(runtime->dma_addr);// physical address
     
     BCM_AUDIO_DEBUG("buf_size = %d pBuf=0x%lx phy_addr=0x%x \n",runtime->dma_bytes,(UInt32)runtime->dma_area,runtime->dma_addr);
 
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&buf_param);
+    parm_prepare.drv_config.sample_rate = runtime->rate;
+    parm_prepare.drv_config.num_channel = runtime->channels;
+    parm_prepare.drv_config.bits_per_sample = AUDIO_16_BIT_PER_SAMPLE;
 
-    //Configure stream params  **** CAUTION:Check the mappng here
-    drv_config.sample_rate = runtime->rate;
-    drv_config.num_channel = runtime->channels;
-    drv_config.bits_per_sample = AUDIO_16_BIT_PER_SAMPLE;
-    AUDIO_DRIVER_Ctrl(drv_handle,AUDIO_DRIVER_CONFIG,(void*)&drv_config);	
+	AUDIO_Ctrl_Trigger(ACTION_AUD_SetPrePareParameters,&parm_prepare,NULL,0);
 
 	return 0;
 }
