@@ -65,6 +65,7 @@
 #endif
 
 #include "dispdrv_common.h"        // Disp Drv Commons
+#include "lcd_clock.h"
 
 #if (defined (_HERA_) || defined(_RHEA_))
 #ifndef UNDER_LINUX
@@ -105,7 +106,7 @@ typedef struct
     LCD_DRV_RECT_t      win;
     void*               pFb;
     void*               pFbA;
-    
+    struct pi_mgr_dfs_node* dfs_node;
 } BCM91008_ALEX_PANEL_T;   
 
 
@@ -776,6 +777,13 @@ Int32 BCM91008_ALEX_Open (
     }
 #endif
 
+    if (brcm_enable_dsi_lcd_clocks(&pPanel->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
     if( bcm91008_AlexTeOn ( pPanel ) ==  -1 )
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: "
@@ -872,7 +880,14 @@ Int32 BCM91008_ALEX_Close ( DISPDRV_HANDLE_T drvH )
 #if (defined (_HERA_) || defined(_RHEA_))
     bcm91008_AlexTeOff ( pPanel );
 #endif
-    
+   
+    if (brcm_disable_dsi_lcd_clocks(pPanel->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
     pPanel->pwrState = DISP_PWR_OFF;
     pPanel->drvState = DRV_STATE_INIT;
     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: OK\n\r", __FUNCTION__ );

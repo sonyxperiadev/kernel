@@ -712,6 +712,30 @@ struct platform_device kona_avs_device = {
 
 #endif
 
+#if defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH)
+static struct resource board_spum_resource[] = {
+       [0] =
+       {
+               .start  =       SEC_SPUM_NS_APB_BASE_ADDR,
+               .end    =       SEC_SPUM_NS_APB_BASE_ADDR + SZ_64K - 1,
+               .flags  =       IORESOURCE_MEM,
+       },
+       [1] =
+       {
+               .start  =       SPUM_NS_BASE_ADDR,
+               .end    =       SPUM_NS_BASE_ADDR + SZ_64K - 1,
+               .flags  =       IORESOURCE_MEM,
+       }
+};
+
+static struct platform_device board_spum_device = {
+       .name           =       "brcm-spum",
+       .id             =       0,
+       .resource       =       board_spum_resource,
+       .num_resources  =       ARRAY_SIZE(board_spum_resource),
+};
+#endif
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -742,6 +766,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_KONA_AVS
 	&kona_avs_device,
+#endif
+#ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
+       &board_spum_device,
 #endif
 };
 

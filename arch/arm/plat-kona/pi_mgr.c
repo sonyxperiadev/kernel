@@ -127,8 +127,8 @@ static int pi_set_ccu_freq(struct pi *pi, u32 policy, u32 opp_inx)
 
 	for(inx =0; inx < pi->num_ccu_id;inx++)
 	{
-		pi_dbg("%s:pi:%s clock str:%s\n",__func__,pi->name,
-				pi->ccu_id[inx]);
+		pi_dbg("%s:pi:%s clock str:%s opp_inx = %d\n",__func__,pi->name,
+				pi->ccu_id[inx],opp_inx);
 
 		clk = clk_get(NULL,pi->ccu_id[inx]);
 		BUG_ON(clk == 0 || IS_ERR(clk));

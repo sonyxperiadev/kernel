@@ -38,6 +38,10 @@
 #include <plat/dmux.h>
 #include <mach/clock.h>
 
+#ifdef CONFIG_KONA_PI_MGR
+#include <plat/pi_mgr.h>
+#endif
+
 /**
  * struct pl330_chan_desc - Peripheral channel descriptor.
  */
@@ -56,6 +60,9 @@ struct pl330_chan_desc {
 	bool in_use;		/* is DMA channel busy */
 	bool is_setup;		/* Is 'pl330_req' having valid transfer setup */
 	struct pl330_req req;	/* A DMA request item */
+#ifdef CONFIG_KONA_PI_MGR
+	struct pi_mgr_dfs_node *dfs_node; /* dfs node for DMA */
+#endif
 };
 
 /**
@@ -69,6 +76,12 @@ struct pl330_dmac_desc {
 	int chan_count;		/* channel descriptors count */
 	struct clk *clk; /* clock struct for DMAC */
 };
+
+#ifdef CONFIG_KONA_PI_MGR
+/* Array storing the names all the channels */
+char *dma_chan[9] = {"dma_chan_0", "dma_chan_1", "dma_chan_2", "dma_chan_3",
+"dma_chan_4", "dma_chan_5", "dma_chan_6", "dma_chan_7", "dma_chan_8"};
+#endif
 
 /* PL330 DMAC Descriptor structure */
 static struct pl330_dmac_desc *dmac = NULL;	/* Allocate on platform device probe */
@@ -162,6 +175,45 @@ static void pl330_req_callback(void *token, enum pl330_op_err err)
 	}
 }
 
+/* Function that allows dynamic change of frequency for a dma channel on
+ * request by the user
+ * Return - 0 on success and negative on failure*/
+#ifdef CONFIG_KONA_PI_MGR
+int dma_change_bus_speed(int chan, u32 opp)
+{
+    struct pl330_chan_desc *cdesc = NULL;
+    int err = 0;
+
+    /* Check if the mode of operation asked for is valid. DMA supports only
+     * normal and economy modes */
+    if (opp != PI_OPP_ECONOMY && opp != PI_OPP_NORMAL) {
+	err = -1;
+	pr_err("%s : Error: invalid operation mode or mode not supported\n", __func__);
+	return err;
+    }
+
+    /* Get the channel descriptor for the requested channel number and check
+     * if its valid */
+    cdesc = chan_id_to_cdesc(chan);
+    if (cdesc == NULL){
+	err = -1;
+	pr_err("%s : Error: invalid channel number. request not granted\n", __func__);
+	return err;
+    }
+
+    /* Request for a update on the bus speed */
+    err = pi_mgr_dfs_request_update(cdesc->dfs_node, opp);
+
+    /* Check if the request was handled or not */
+    if(err) {
+	pr_err("%s : Error: could not change the bus speed\n", __func__);
+	return err;
+    }
+
+    return err;
+}
+#endif
+
 int dma_request_chan(unsigned int *chan, const char *name)
 {
 	int ch, err = -1;
@@ -234,6 +286,16 @@ int dma_request_chan(unsigned int *chan, const char *name)
 	/* Attach cdesc to DMAC channel list */
 	list_add_tail(&cdesc->node, &dmac->chan_list);
 	dmac->chan_count++;
+
+#ifdef CONFIG_KONA_PI_MGR
+	/* Add dfs request */
+	cdesc->dfs_node = pi_mgr_dfs_add_request(dma_chan[ch],
+		PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_OPP_ECONOMY);
+
+	if (!cdesc->dfs_node)
+	    goto err_4;
+#endif
+
 	spin_unlock_irqrestore(&lock, flags);
 
 	/* Give the channel ID to client */
@@ -261,6 +323,11 @@ int dma_free_chan(unsigned int chan)
 	cdesc = chan_id_to_cdesc(chan);
 	if (!cdesc || cdesc->in_use)	/* can free id channel is active */
 		goto err;
+
+#ifdef CONFIG_KONA_PI_MGR
+	/* Remove dfs request */
+	pi_mgr_dfs_request_remove(cdesc->dfs_node);
+#endif
 
 	_cleanup_req(&cdesc->req);
 
@@ -1039,3 +1106,6 @@ EXPORT_SYMBOL(dma_start_transfer);
 EXPORT_SYMBOL(dma_stop_transfer);
 EXPORT_SYMBOL(dma_register_callback);
 EXPORT_SYMBOL(dma_free_callback);
+#ifdef CONFIG_KONA_PI_MGR
+EXPORT_SYMBOL(dma_change_bus_speed);
+#endif

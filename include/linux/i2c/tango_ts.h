@@ -12,8 +12,8 @@
 * consent.
 *****************************************************************************/
 
-#ifndef _TANGO_S32_H_
-#define _TANGO_S32_H_
+#ifndef _TANGO_TS_H_
+#define _TANGO_TS_H_
 
 #define I2C_TS_DRIVER_NAME			"tango_ts"
 #define TANGO_S32_SLAVE_ADDR		0x5C
@@ -72,5 +72,5 @@ struct TANGO_I2C_TS_t
 	int panel_width;  /* LCD panel width in millimeters */
 };
 
-#endif    /* _I2C_TS_H_ */
+#endif    /* _TANGO_TS_H_ */
 

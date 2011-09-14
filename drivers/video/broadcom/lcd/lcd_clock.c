@@ -23,19 +23,109 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-/**
-*
-* @file   ripisr_audio.h
-* @brief  
-*
-******************************************************************************/
-#ifndef	__RIPISR_AUDIO_H__
-#define	__RIPISR_AUDIO_H__
+#include "lcd_clock.h" 
 
+int brcm_enable_smi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node)
+{
+	struct clk *smi_axi;
+	struct clk *mm_dma_axi;
+	struct clk *smi;
 
+	*dfs_node = pi_mgr_dfs_add_request("smi_lcd", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
+	if (!*dfs_node)
+	{
+	    printk(KERN_ERR "Failed to add dfs request for SMI LCD\n");
+	    return  -EIO;
+	}
 
-typedef void (*capture_request_handler_t)(VPStatQ_t reqMsg);
+	smi_axi = clk_get (NULL, "smi_axi_clk");
+	mm_dma_axi = clk_get(NULL, "mm_dma_axi_clk");
+	smi = clk_get (NULL, "smi_clk");
+	BUG_ON (!smi_axi || !smi || !mm_dma_axi);
 
-void register_capture_request_handler( capture_request_handler_t capture_cb );
+	if (clk_set_rate(smi, 250000000)) {
+		printk(KERN_ERR "Failed to set the SMI peri clock to 250MHZ");
+		return -EIO;
+	}
 
-#endif
+	if (clk_enable(smi)) {
+		printk(KERN_ERR "Failed to enable the SMI peri clock");
+		return -EIO;
+	}
+
+	if (clk_enable (smi_axi)) {
+		printk(KERN_ERR "Failed to enable the SMI bus clock");
+		return -EIO;
+	}
+
+	if (clk_enable(mm_dma_axi)) {
+		printk(KERN_ERR "Failed to enable the MM DMA bus clock");
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int brcm_disable_smi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
+{
+	struct clk *smi_axi;
+	struct clk *mm_dma_axi;
+	struct clk *smi;
+
+	smi_axi = clk_get (NULL, "smi_axi_clk");
+	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
+	smi = clk_get (NULL, "smi_clk");
+	BUG_ON (!smi_axi || !smi || !mm_dma_axi);
+
+	clk_disable(smi);
+	clk_disable(smi_axi);
+	clk_disable(mm_dma_axi);
+
+	if (pi_mgr_dfs_request_remove(dfs_node))
+	{
+	    printk(KERN_ERR "Failed to remove dfs request for SMI LCD\n");
+	    return  -EIO;
+	}
+
+	return 0;
+}
+
+int brcm_enable_dsi_lcd_clocks(struct pi_mgr_dfs_node** dfs_node)
+{
+	struct clk *mm_dma_axi;
+
+	*dfs_node = pi_mgr_dfs_add_request("dsi_lcd", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
+	if (!*dfs_node)
+	{
+	    printk(KERN_ERR "Failed to add dfs request for DSI LCD\n");
+	    return  -EIO;
+	}
+
+	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
+	BUG_ON (!mm_dma_axi);
+
+	if (clk_enable(mm_dma_axi)) {
+		printk(KERN_ERR "Failed to enable the MM DMA bus clock");
+		return -EIO;
+	}
+
+	return 0;
+}
+
+int brcm_disable_dsi_lcd_clocks(struct pi_mgr_dfs_node* dfs_node)
+{
+	struct clk *mm_dma_axi;
+
+	mm_dma_axi = clk_get (NULL, "mm_dma_axi_clk");
+	BUG_ON (!mm_dma_axi);
+
+	clk_disable(mm_dma_axi);
+
+	if (pi_mgr_dfs_request_remove(dfs_node))
+	{
+	    printk(KERN_ERR "Failed to remove dfs request for SMI LCD\n");
+	    return  -EIO;
+	}
+
+	return 0;
+}

@@ -45,7 +45,7 @@
 #include <linux/hrtimer.h>
 #include <asm/io.h>
 
-#include <linux/i2c/tango_s32.h>
+#include <linux/i2c/tango_ts.h>
 
 /* ---- Public Variables ------------------------------------------------- */
 /* ---- Private Constants and Types -------------------------------------- */

@@ -100,6 +100,85 @@ static uint8_t bcm_fuse_net_pdp_id(net_drvr_info_t *drvr_info_ptr);
 static uint8_t bcm_fuse_net_find_entry(net_drvr_info_t *ndrvr_info_ptr);
 static void bcm_fuse_net_free_entry(uint8_t pdp_cid);
 
+
+/** 
+	Definitions for bcm_fuse_net proc entry
+*/
+#define BCM_FUSE_NET_PROC_MAX_STR_LEN       15
+static struct proc_dir_entry *bcm_fuse_net_config_proc_entry;
+
+/** 
+	Write function for bcm_fuse_net proc entry
+*/
+static ssize_t bcm_fuse_net_proc_write(struct file *procFp, const char __user *ubuff, unsigned long len, void *data)
+{
+	char uStr[BCM_FUSE_NET_PROC_MAX_STR_LEN];
+	bool error = TRUE;
+	int length = len;
+	int proc_idx;
+	int proc_c_id;
+	int proc_sim_id;
+
+	BNET_DEBUG(DBG_INFO,"%s: New user settings %s\n", __FUNCTION__, ubuff);
+
+	if (len > BCM_FUSE_NET_PROC_MAX_STR_LEN)
+	{
+		BNET_DEBUG(DBG_INFO,"%s: New settings string is too long!\n", __FUNCTION__);
+	}
+	else if (copy_from_user(uStr, ubuff, len))
+	{
+		BNET_DEBUG(DBG_INFO,"%s: Failed to copy new settings!\n", __FUNCTION__);
+		length = 0;
+	}
+	else if (sscanf(uStr, "%d %d %d", &proc_idx, &proc_c_id, &proc_sim_id) != 3)
+	{
+		BNET_DEBUG(DBG_INFO,"%s: Failed to get new settings!\n", __FUNCTION__);
+	}
+	else if ((proc_idx < 0) || (proc_idx >= BCM_NET_MAX_PDP_CNTXS) ||
+		(proc_c_id < 1) || (proc_c_id > BCM_NET_MAX_PDP_CNTXS) ||
+		(proc_sim_id < 1) || (proc_sim_id > 2))
+	{
+		BNET_DEBUG(DBG_INFO,"%s: Invalid new settings! idx %d   c_id %d   sim_id %d\n", __FUNCTION__, proc_idx, proc_c_id, proc_sim_id);
+	}
+	else
+	{
+		BNET_DEBUG(DBG_INFO,"%s: New settings:  idx %d   c_id %d   sim_id %d\n", __FUNCTION__, proc_idx, proc_c_id, proc_sim_id);
+		error = FALSE;
+	}
+
+	if (!error)
+	{
+		g_net_dev_tbl[proc_idx].pdp_context_id = proc_c_id;
+		g_net_dev_tbl[proc_idx].sim_id = proc_sim_id;
+	}
+
+	return ((ssize_t) length);
+}
+
+
+/** 
+	Read function for bcm_fuse_net proc entry
+*/
+static int bcm_fuse_net_proc_read(char *ubuff, char **start, off_t off, int count, int *eof, void *data)
+{
+	int len = 0;
+	int i;
+
+	len += sprintf(ubuff + len, "IFC     CID     SIM ID     Active\n");
+	len += sprintf(ubuff + len, "---     ---     ------     ------\n");
+	for (i = 0; i < BCM_NET_MAX_PDP_CNTXS; i++)
+	{
+		if (g_net_dev_tbl[i].dev_ptr != NULL)
+		{
+			len += sprintf(ubuff + len, "%s  %d      %d         %d\n", g_net_dev_tbl[i].dev_ptr->name, g_net_dev_tbl[i].pdp_context_id, g_net_dev_tbl[i].sim_id, g_net_dev_tbl[i].entry_stat);
+		}
+	}
+
+	return len;
+}
+
+
+
 /**
    @fn void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char8 cid);
  */
@@ -727,6 +806,20 @@ static int __init bcm_fuse_net_init_module(void)
         bcm_fuse_net_attach(i);
     }
 
+	/* proc entry for net config settings */
+	bcm_fuse_net_config_proc_entry = create_proc_entry("bcm_fuse_net_config", 0644, NULL);
+	if (bcm_fuse_net_config_proc_entry == NULL)
+	{
+		BNET_DEBUG(DBG_INFO,"%s: Couldn't create bcm_fuse_net_config_proc_entry! \n", __FUNCTION__);
+	}
+	else
+	{
+		BNET_DEBUG(DBG_INFO,"%s: bcm_fuse_net_config_proc_entry created \n", __FUNCTION__);
+		bcm_fuse_net_config_proc_entry->write_proc = bcm_fuse_net_proc_write;
+		bcm_fuse_net_config_proc_entry->read_proc = bcm_fuse_net_proc_read;
+	} 
+
+
     return(0);
 }
 
@@ -743,6 +836,8 @@ static void __exit bcm_fuse_net_exit_module(void)
       bcm_fuse_net_deattach(i);
    }
 
+	remove_proc_entry("bcm_fuse_net_sim", bcm_fuse_net_config_proc_entry);
+ 
    return;
 }
 

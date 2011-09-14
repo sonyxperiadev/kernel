@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 Broadcom Corporation.  All rights reserved.                                
 
 Unless you and Broadcom execute a separate written software license agreement 
 governing use of this software, this software is licensed to you under the 
@@ -19,6 +19,8 @@ the GPL, without Broadcom's express prior written consent.
 
 #ifndef _BCM_AUDIO_DEVICES_H__
 #define _BCM_AUDIO_DEVICES_H__
+
+#define MAX_PLAYBACK_DEV 2
 
 typedef struct _TIDChanOfPlaybackDev
 {
@@ -50,11 +52,9 @@ typedef struct _TIDChanOfVoiceCallDev
 
 typedef struct _TIDChanOfDev
 {
-	union {
-		TIDChanOfPlaybackDev	p;
-		TIDChanOfCaptureDev		c;
-		TIDChanOfVoiceCallDev	v;
-		}u;
+	TIDChanOfPlaybackDev	p[MAX_PLAYBACK_DEV];
+	TIDChanOfCaptureDev		c;
+	TIDChanOfVoiceCallDev	v;
 }TIDChanOfDev;
 
 

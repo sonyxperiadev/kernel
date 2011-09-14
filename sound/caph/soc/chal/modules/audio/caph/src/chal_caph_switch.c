@@ -1,14 +1,27 @@
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 Broadcom Corporation.  All rights reserved.                                */
 
-Unless you and Broadcom execute a separate written software license agreement governing use 
-of this software, this software is licensed to you under the terms of the GNU General Public 
-License version 2, available at http://www.gnu.org/copyleft/gpl.html (the "GPL"). 
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 
-Notwithstanding the above, under no circumstances may you combine this software in any way 
-with any other Broadcom software provided under a license other than the GPL, without 
-Broadcom's express prior written consent.
-*******************************************************************************************/
 
 /**
 *
@@ -476,18 +489,11 @@ cVoid chal_caph_switch_free_channel(CHAL_HANDLE handle,
             BRCM_WRITE_REG_IDX(pchal_cb->base, CPH_SSASW_CH01_SRC, reg_idx,reg_val);
             
             //Add delay: 20 cycles of CAPH 26MHz clock, 
-            //i.e. 0.77 microseconds
-            //From ASIC team: when disable SRC_EN, need wait for a moment
-            //before changing other bits inside this register.
-            //Otherwise, SSASW HW statemachine will run into the
-            //erroneous state.
-			//ARM is 800MHz, to generate 0.77 uS, 616 cycles of 800MHz clock is
-			//is needed. Choose loopCount as 5000. It should provide more
-			//then 0.77 uS delay.
-            for (loopCount = 5000; loopCount != 0; loopCount--)
-                ;
-
-            reg_val = BRCM_READ_REG_IDX( pchal_cb->base,  CPH_SSASW_CH01_SRC, reg_idx);
+			//ASIC team (Chin-Sieh Less):
+            //Instead of doing a timing loops, just do 5 reads to
+            //any SSASW register. It should give 20 cycles delay.
+            for (loopCount = 5; loopCount != 0; loopCount--)
+                reg_val = BRCM_READ_REG_IDX( pchal_cb->base,  CPH_SSASW_CH01_SRC, reg_idx);
             reg_val &= ~CPH_SSASW_CH01_SRC_CH01_TWO_WORDS_MASK;
             reg_val &= ~CPH_SSASW_CH01_SRC_CH01_TRIGGER_SEL_MASK;
             reg_val &= ~CPH_SSASW_CH01_SRC_CH01_SRC_ADDR_MASK;
