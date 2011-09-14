@@ -33,8 +33,8 @@
 #define DBG_DATA	0x10
 #define DBG_DATA2	0x20
 
-#define DBG_DEFAULT_LEVEL	(DBG_ERROR)
-//#define DBG_DEFAULT_LEVEL	(DBG_ERROR|DBG_INFO|DBG_TRACE|DBG_TRACE2)
+//#define DBG_DEFAULT_LEVEL	(DBG_ERROR)
+#define DBG_DEFAULT_LEVEL	(DBG_ERROR|DBG_INFO|DBG_TRACE|DBG_TRACE2)
 
 #define KRIL_DEBUG(level,fmt,args...) do { if (level & logLevel) printk( "%s:: " fmt, __FUNCTION__, ##args ); } while (0)
 //#define KRIL_DEBUG(level,fmt,args...)
