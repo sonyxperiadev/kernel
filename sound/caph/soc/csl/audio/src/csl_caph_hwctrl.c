@@ -1777,11 +1777,9 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 	    clk_set_rate(clkID[0], 156000000);
         clk_enable(clkID[0]);
 
-#ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
 	    clkID[1] = clk_get(NULL, "ssp3_audio_clk");
         clk_enable(clkID[1]);
         //clk_set_rate(clkID[1], 156000000);
-#endif
     
         // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_2P4M_CLK, CLOCK_CLK_EN, clock_op_enable);
         clkID[2] = clk_get(NULL, "audioh_2p4m_clk");
