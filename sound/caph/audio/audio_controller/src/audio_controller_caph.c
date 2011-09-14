@@ -2376,6 +2376,18 @@ void AUDCTRL_SetSspTdmMode( Boolean status )
 
 //============================================================================
 //
+// Function Name: AUDCTRL_SetBtMode
+//
+// Description:   Set BT mode
+// 
+//============================================================================
+void  AUDCTRL_SetBTMode(Boolean mode)
+{
+	 csl_caph_hwctrl_SetBTMode(mode);
+}
+
+//============================================================================
+//
 // Function Name: AUDCTRL_EnableBypassVibra
 //
 // Description:   Enable the Vibrator bypass

@@ -924,4 +924,14 @@ AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
 ****************************************************************************/
 void AUDCTRL_SetIHFmode (Boolean stIHF);
 
+/********************************************************************
+*  @brief  Set BT mode
+*
+*  @param  BT mode status for BT production test.
+*
+*  @return  none
+*
+****************************************************************************/
+void  AUDCTRL_SetBTMode(Boolean mode);
+
 #endif //#define __AUDIO_CONTROLLER_H__

@@ -128,6 +128,7 @@ typedef struct brcm_alsa_chip
 	Int32	i32AtAudHandlerParms[7];	
 	Int32	pi32BypassVibraParam[3];	//Bypass Vibra: bEnable, strength, direction
     Int32   iEnableFM;                  //Enable/disable FM radio receiving
+	Int32	iEnableBTTest;				//Enable/disable BT production test
  } brcm_alsa_chip_t;
 
 
@@ -163,6 +164,7 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_FM_FORMAT,
 	CTL_FUNCTION_AT_AUDIO,
 	CTL_FUNCTION_BYPASS_VIBRA,
+	CTL_FUNCTION_BT_TEST,
 };
 
 enum	AT_AUD_Ctl_t

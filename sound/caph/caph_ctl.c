@@ -685,6 +685,13 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->value.integer.max = 100;
 			uinfo->value.integer.step = 1; 
 			break;
+		case CTL_FUNCTION_BT_TEST:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_BOOLEAN;
+			uinfo->count = 1;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 1;
+			uinfo->value.integer.step = 1; 
+			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
 				break;
@@ -743,6 +750,9 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			ucontrol->value.integer.value[0] = pChip->pi32BypassVibraParam[0];
 			ucontrol->value.integer.value[1] = pChip->pi32BypassVibraParam[1];
 			ucontrol->value.integer.value[2] = pChip->pi32BypassVibraParam[2];
+			break;
+		case CTL_FUNCTION_BT_TEST:
+			ucontrol->value.integer.value[0] = pChip->iEnableBTTest;
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -940,6 +950,10 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			else
 				AUDCTRL_DisableBypassVibra();
 			BCM_AUDIO_DEBUG("MiscCtrlPut BypassVibra enable %d, strength %d, direction %d.\n", pChip->pi32BypassVibraParam[0], pChip->pi32BypassVibraParam[1], pChip->pi32BypassVibraParam[2]);
+			break;
+		case CTL_FUNCTION_BT_TEST:
+			pChip->iEnableBTTest = ucontrol->value.integer.value[0];
+			AUDCTRL_SetBTMode(pChip->iEnableBTTest);
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -1236,6 +1250,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   struct snd_kcontrol_new kctlFMEnable = BRCM_MIXER_CTRL_MISC(0, 0, "FM-SWT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT1, 0, CTL_FUNCTION_FM_ENABLE));
 	   struct snd_kcontrol_new kctlFMFormat = BRCM_MIXER_CTRL_MISC(0, 0, "FM-FMT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_FM_FORMAT));
 	   struct snd_kcontrol_new ctlBypassVibra = BRCM_MIXER_CTRL_MISC(0, 0, "BYP-VIB", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BYPASS_VIBRA) );
+	   struct snd_kcontrol_new ctlBTTest = BRCM_MIXER_CTRL_MISC(0, 0, "BT-TST", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BT_TEST) );
 
 			   
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlLoopTest, pChip))) < 0)
@@ -1305,6 +1320,12 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlBypassVibra, pChip))) < 0)
 	   {
 		   BCM_AUDIO_DEBUG("error to add bypass vibra control err=%d\n", err); 		   
+		   return err;
+	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlBTTest, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add BT test control err=%d\n", err); 		   
 		   return err;
 	   }
 

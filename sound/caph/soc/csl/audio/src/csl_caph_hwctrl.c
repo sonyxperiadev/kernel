@@ -200,6 +200,7 @@ static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
 static int ssp_pcm_usecount = 0;
 
 static Boolean isSTIHF = FALSE;
+static Boolean bBTTest = FALSE;
 //****************************************************************************
 // local function declarations
 //****************************************************************************
@@ -3367,10 +3368,10 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
          */
 		{
 			CAPH_BLOCK_t blocks[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_SRC, CAPH_SW, CAPH_NONE}; //more complete path
-			CAPH_BLOCK_t blocks_8k[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE}; //only for 8/16kHz mono
+			CAPH_BLOCK_t blocks_bt_test[MAX_PATH_LEN] = {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_NONE}; //only for 8/16kHz mono
 			CAPH_BLOCK_t *p_blocks = blocks;
 
-			if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000) p_blocks = blocks_8k; //avoid SRC for production test.
+			if(path->src_sampleRate <= AUDIO_SAMPLING_RATE_16000 && bBTTest) p_blocks = blocks_bt_test; //avoid SRC for production test.
 
 			csl_caph_config_blocks(path->pathID, p_blocks);
 			csl_caph_start_blocks(path->pathID);
@@ -5505,4 +5506,17 @@ void csl_caph_hwctrl_SetIHFmode(Boolean stIHF)
 {
 	isSTIHF = stIHF;
 	csl_caph_srcmixer_SetSTIHF(isSTIHF);
+}
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetBTMode
+*
+*  Description: Set BT mode
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetBTMode(Boolean mode)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetBTMode from %d to %d\r\n", bBTTest, mode);
+	bBTTest = mode;
 }
