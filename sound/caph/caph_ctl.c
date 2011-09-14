@@ -372,7 +372,6 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 						{
 							pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_IHF_OUT;
 							pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_IHF;
-							//AUDCTRL_SetIHFmode(isSTIHF); This function should be called in SetIHFmode API function.
 						}
 						else if(pSel[i]==AUDCTRL_SPK_BTM)
 						{
@@ -697,6 +696,14 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->value.integer.max = 1;
 			uinfo->value.integer.step = 1; 
 			break;
+		case CTL_FUNCTION_CFG_IHF:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 2;	//integer[0] -- 1 for mono, 2 for stereo; integer[1] -- data mixing option if channel is mono,  1 for left, 2 for right, 3 for (L+R)/2
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 3;
+			uinfo->value.integer.step = 1; 
+			break;
+			
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
 				break;
@@ -758,6 +765,11 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			break;
 		case CTL_FUNCTION_BT_TEST:
 			ucontrol->value.integer.value[0] = pChip->iEnableBTTest;
+			break;
+		case CTL_FUNCTION_CFG_IHF:
+			ucontrol->value.integer.value[0] = pChip->pi32CfgIHF[0];
+			ucontrol->value.integer.value[1] = pChip->pi32CfgIHF[1];			
+
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -953,6 +965,24 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_BT_TEST:
 			pChip->iEnableBTTest = ucontrol->value.integer.value[0];
 			AUDCTRL_SetBTMode(pChip->iEnableBTTest);
+			break;
+		case CTL_FUNCTION_CFG_IHF:
+			pChip->pi32CfgIHF[0] = ucontrol->value.integer.value[0];
+			pChip->pi32CfgIHF[1] = ucontrol->value.integer.value[1];			
+			if (ucontrol->value.integer.value[0] == 1) // Mono IHF	
+			{
+				isSTIHF = FALSE;
+				AUDCTRL_SetIHFmode(isSTIHF);
+			}
+			else if(ucontrol->value.integer.value[0] == 2) //stereo IHF	
+			{
+				isSTIHF = TRUE;
+				AUDCTRL_SetIHFmode(isSTIHF);
+			}
+			else
+			{
+				BCM_AUDIO_DEBUG("%s, Invalid value for setting IHF mode: %d, 1-mono, 2-stereo.", __FUNCTION__, ucontrol->value.integer.value[0]);
+			}
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -1250,6 +1280,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   struct snd_kcontrol_new kctlFMFormat = BRCM_MIXER_CTRL_MISC(0, 0, "FM-FMT", 0, CAPH_CTL_PRIVATE(CTL_STREAM_PANEL_PCMOUT2, 0, CTL_FUNCTION_FM_FORMAT));
 	   struct snd_kcontrol_new ctlBypassVibra = BRCM_MIXER_CTRL_MISC(0, 0, "BYP-VIB", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BYPASS_VIBRA) );
 	   struct snd_kcontrol_new ctlBTTest = BRCM_MIXER_CTRL_MISC(0, 0, "BT-TST", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BT_TEST) );
+	   struct snd_kcontrol_new ctlCfgIHF = BRCM_MIXER_CTRL_MISC(0, 0, "CFG-IHF", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_IHF) );
 
 			   
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlLoopTest, pChip))) < 0)
@@ -1325,6 +1356,12 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlBTTest, pChip))) < 0)
 	   {
 		   BCM_AUDIO_DEBUG("error to add BT test control err=%d\n", err); 		   
+		   return err;
+	   }
+
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlCfgIHF, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", ctlCfgIHF.name, err);
 		   return err;
 	   }
 
