@@ -808,6 +808,7 @@ void flush_pmem_file(struct file *file, unsigned long offset, unsigned long len)
 	/* if this isn't a submmapped file, flush the whole thing */
 	if (unlikely(!(data->flags & PMEM_FLAGS_CONNECTED))) {
 		dmac_flush_range(vaddr, vaddr + pmem_len(id, data));
+		outer_flush_range(pmem_start_addr(id, data), pmem_start_addr(id, data)+pmem_len(id, data));
 		goto end;
 	}
 	/* otherwise, flush the region of the file we are drawing */
