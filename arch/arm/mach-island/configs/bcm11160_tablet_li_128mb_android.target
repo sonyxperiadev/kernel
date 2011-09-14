@@ -1,8 +1,9 @@
 arch   = arm
 family = island
-chip   = 28160
-board  = tablet_28160
+chip   = 11160
+board  = tablet
+option = li_128mb
 option = initrd
 option = suspend_invalid
 option = android
-option = usb_ehci
+
