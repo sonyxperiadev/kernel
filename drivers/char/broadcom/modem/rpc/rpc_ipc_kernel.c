@@ -204,16 +204,16 @@ static int gEp = 0;
 static int rpcipc_open(struct inode *inode, struct file *file)
 {
     static int sysrpc_initialized = 0 ;
-   RpcIpc_PrivData_t *priv;
+    RpcIpc_PrivData_t *priv;
 
-    RPC_TRACE(( "rpcipc_open\n") ) ;
+    RPC_TRACE(("rpcipc_open begin file=%x\n", file));
 
     priv = kmalloc(sizeof(RpcIpc_PrivData_t), GFP_KERNEL);
     
     if (!priv) 
     {
-        RPC_TRACE(( "ENOMEM\n") ) ;
-        return -ENOMEM;
+		RPC_TRACE(("rpcipc_open mem allocation fail file=%x\n", file));
+		return -ENOMEM;
     }
 
     priv->mUserfile = file;
@@ -221,15 +221,22 @@ static int rpcipc_open(struct inode *inode, struct file *file)
     priv->clientId = 0;
     file->private_data = priv;
 
-    if (is_CP_running() && !sysrpc_initialized)
+    if (is_CP_running())
     {
-	sysrpc_initialized = 1; 
-        KRIL_SysRpc_Init( ) ;
-        return 0;
+		RPC_TRACE(("rpcipc_open success file=%x sysrpc_initialized=%d\n", file, sysrpc_initialized));
+
+		if (!sysrpc_initialized)
+		{
+			sysrpc_initialized = 1;
+			KRIL_SysRpc_Init();
+		}
+
+		return 0;
     }
     else
     {
-       RPC_TRACE(( "rpcipc_open: Error - CP is not running\n") ) ;
+		RPC_TRACE(("rpcipc_open FAIL CP is NOT running file=%x\n", file));
+
        return -1;
     }
 }
