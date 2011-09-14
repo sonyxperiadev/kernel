@@ -3,4 +3,5 @@ family = island
 chip   = 11160
 board  = sv
 option = li_128mb
-
+option = ext4
+option = mmc 
