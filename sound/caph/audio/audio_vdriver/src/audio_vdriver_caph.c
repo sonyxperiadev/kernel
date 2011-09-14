@@ -173,7 +173,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 
     config.bitPerSample = AUDIO_24_BIT_PER_SAMPLE;
 
-// Linux only change - End
     sink = config.sink;
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
@@ -183,9 +182,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 		config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
         
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
-						FALSE,
-						FALSE);
 	}
 	else
 	{
@@ -273,6 +269,9 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
     currSpkr = AUDDRV_SPKR_NONE;
     currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
 
+    // Disable sidetone.
+    (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
+
     config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
 
@@ -285,27 +284,13 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 
         (void)csl_caph_hwctrl_DisablePath(config);
     }
-	VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE, 
-   							FALSE, 
-   							FALSE); 
-
-
+	
     currMic = AUDDRV_MIC_NONE;
     config.streamID = CSL_CAPH_STREAM_NONE;
     config.pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
 
     (void)csl_caph_hwctrl_DisablePath(config);
 
-    // Disable sidetone.
-    (void)AUDDRV_HWControl_DisableSideTone(AUDDRV_GetAudioMode());
-	if(sink == CSL_CAPH_DEV_IHF)
-	{
-#ifdef RHEA_DSP_IHF_FEATURE		
-		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
-							FALSE,
-							FALSE);
-#endif		
-	}	
 	sink = CSL_CAPH_DEV_NONE;
 	audDev = 0;
 

@@ -1809,7 +1809,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
     }
     else if (enable == FALSE && sCurEnabled == TRUE)
     {
-/*
 	// don't disable the clocks even if the request comes. Keep the clocks always ON 
         UInt32 count = 0;
         sCurEnabled = FALSE;
@@ -1817,7 +1816,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
         {
             clk_disable(clkID[count]);
         }
-*/
     }
     Log_DebugPrintf(LOGID_AUDIO, "csl_caph_ControlHWClock: action = %d, result = %d\r\n", enable, sCurEnabled);
   
