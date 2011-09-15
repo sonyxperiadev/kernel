@@ -16,17 +16,17 @@
 #define TFT_PANEL_H
 
 #define HW_CFG_LCD_PWR_EN     (142)
-#define HW_CFG_LCD_RST        (146)
+#define HW_CFG_LCD_RST_B      (146)
 #define HW_CFG_LCD_BL_EN      (69)
-#define HW_CFG_LCD_BL_PWR_EN  (141)
+#define HW_CFG_LCD_EN         (141)
 #define HW_CFG_LCD_BL_PWM     (145)
 
 #define TFT_PANEL_SETTINGS \
 {  \
    .gpio_lcd_pwr_en     = HW_CFG_LCD_PWR_EN, \
-   .gpio_lcd_reset      = HW_CFG_LCD_RST, \
+   .gpio_lcd_reset      = HW_CFG_LCD_RST_B, \
    .gpio_bl_en          = HW_CFG_LCD_BL_EN, \
-   .gpio_bl_pwr_en      = HW_CFG_LCD_BL_PWR_EN, \
+   .gpio_bl_pwr_en      = HW_CFG_LCD_EN, \
    .gpio_bl_pwm         = HW_CFG_LCD_BL_PWM, \
 }
 

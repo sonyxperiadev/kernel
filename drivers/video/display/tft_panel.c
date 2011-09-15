@@ -13,7 +13,7 @@
  *****************************************************************************/
 
 /*
- * Platform device driver to control LCD power
+ * Platform device driver to control TFT Panel
  */
  
 #include <linux/kernel.h>
@@ -160,7 +160,7 @@ static int __devinit tft_panel_probe(struct platform_device *plt_dev)
 {
     int ret;
 
-    printk(KERN_INFO "Broadcom LCD Power Driver");
+    printk(KERN_INFO "Broadcom TFT Panel Control Driver");
 
     if (plt_dev->dev.platform_data == NULL) {  
         printk(KERN_ERR "%s() platform data is not present\n", __FUNCTION__);
@@ -181,7 +181,7 @@ static int __devinit tft_panel_probe(struct platform_device *plt_dev)
     printk(KERN_INFO "%s() register for early suspend\n", __FUNCTION__);
 #endif /* CONFIG_HAS_EARLYSUSPEND */
 
-    printk(KERN_INFO "%s() lcd power driver probed\n", __FUNCTION__);
+    printk(KERN_INFO "%s() TFT Panel Control Driver probed\n", __FUNCTION__);
     return 0;
 }
 
