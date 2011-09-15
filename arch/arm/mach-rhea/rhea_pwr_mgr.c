@@ -228,23 +228,23 @@ static const struct rhea_event_table event_table[] = {
 
 static const struct i2c_cmd i2c_cmd[] = {
 							{REG_ADDR,0},		//0 - NOP
-							{SET_PC_PINS,0xC0},	//other: 1 - Set PC3/4 pins to 0 to begin transaction (HW has semaphore)
-							{REG_ADDR,0},		//2 - NOP
-							{REG_ADDR,0x20},	//3 - Set Address for i2cmmhs BSC_CS register
-							{REG_DATA,0x0B},	//4 - Set Start condition - write 3 to CS register
-							{WAIT_TIMER,0x08},	//5 - Wait..
-							{REG_DATA,1},  		//6 - Clear Start Condition - write 1 to CS
-							{WAIT_TIMER,0x08},	//7 - Wait..
-							{I2C_DATA,0x10},	//8 - PMU client addr  - 8 ..write to FIFO
+							{JUMP_VOLTAGE,0},		//1 - jump to address based on current voltage request
+							{REG_ADDR,0},		//other:2 - NOP
+							{SET_PC_PINS,0xC0},	//3 - Set PC3/4 pins to 0 to begin transaction (HW has semaphore)
+							{REG_ADDR,0},		//4 - NOP
+							{REG_ADDR,0x20},	//5 - Set Address for i2cmmhs BSC_CS register
+							{REG_DATA,0x03},	//6 - Set Start condition - write 3 to CS register
+							{WAIT_TIMER,0x10},	//7 - Wait..
+							{REG_DATA,1},  		//8 - Clear Start Condition - write 1 to CS
 							{WAIT_TIMER,0x08},	//9 - Wait..
-							{I2C_DATA,0xC0},	//10 - PMU register addr C0 (CSRSTRL1)
-							{WAIT_TIMER,0x08},	//11 - Wait..
-							{I2C_VAR,0},		//12 - Data - Write the requested voltage
-							{WAIT_TIMER,0x50},	//13 - Wait..
-							{SET_PC_PINS,0xCC},	//14 - Set PC3/4 to 1 to signal End of transaction
-							{END,0},			//15 - End
-							{REG_ADDR,0},		//16 - NOP
-							{REG_ADDR,0},		//17 - NOP
+							{I2C_DATA,0x10},	//10 - PMU client addr  - 8 ..write to FIFO
+							{WAIT_TIMER,0x80},	//11 - Wait..
+							{I2C_DATA,0xC0},	//12 - PMU register addr C0 (CSRSTRL1)
+							{WAIT_TIMER,0x80},	//13 - Wait..
+							{I2C_VAR,0},		//14 - Data - Write the requested voltage
+							{WAIT_TIMER,0x80},	//15 - Wait..
+							{SET_PC_PINS,0xCC},	//16 - Set PC3/4 to 1 to signal End of transaction
+							{END,0},			//17 - End
 							{REG_ADDR,0},		//18 - NOP
 							{REG_ADDR,0},		//19 - NOP
 							{REG_ADDR,0},		//20 - NOP
@@ -327,10 +327,10 @@ int __init rhea_pwr_mgr_init()
 	cfg.ac = 1;
 	cfg.atl = 0;
 
-	v_ptr.other_ptr = 1;
+	v_ptr.other_ptr = 2;
 	v_ptr.set2_val = 1; /*Retention voltage inx*/
 	v_ptr.set2_ptr = 45;
-	v_ptr.set1_val = 2;/*Should be 8 ????Wakeup override*/
+	v_ptr.set1_val = 2;/*wakeup from retention voltage inx*/
 	v_ptr.set1_ptr = 49;
 	v_ptr.zerov_ptr = 45; /*Not used for Rhea*/
 
