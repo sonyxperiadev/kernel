@@ -48,6 +48,8 @@
 #include <linux/mtd/bcmnand.h>
 #include <linux/slab.h>
 #include <chal/chal_nand.h>
+#include <linux/clk.h>
+	struct clk		*clk;
 
 #define ENTER() printk(KERN_INFO "%s: line %d\n", __func__, __LINE__)
 
@@ -763,6 +765,9 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 
 	ENTER();
 
+        clk = clk_get(&pdev->dev, "nand_clk");
+	clk_enable(clk);
+
 	info = kzalloc(sizeof(*info), GFP_KERNEL);
 	if (info == NULL) {
 		dev_err(&pdev->dev, "no memory for flash info\n");
@@ -879,7 +884,8 @@ static int __devexit bcmnand_remove(struct platform_device *pdev)
 #endif
 	kfree(info->chip.buffers);
 	kfree(info);
-
+	clk_disable(clk);
+	clk_put(clk);
 	return 0;
 }
 
