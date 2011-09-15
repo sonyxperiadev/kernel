@@ -114,6 +114,39 @@ typedef enum
 }CSL_CAPH_DATAFORMAT_e;
 
 /**
+* CAPH Devices
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_DEV_NONE,
+	CSL_CAPH_DEV_EP,  /*Earpiece*/
+	CSL_CAPH_DEV_HS,  /*Headset speaker*/
+	CSL_CAPH_DEV_IHF,  /*IHF speaker*/
+	CSL_CAPH_DEV_VIBRA,  /*Vibra output*/
+	CSL_CAPH_DEV_FM_TX,  /*FM TX broadcaster*/
+	CSL_CAPH_DEV_BT_SPKR,  /*Bluetooth headset speaker*/
+	CSL_CAPH_DEV_DSP,  /*DSP direct connection with SRCMixer in voice call*/
+	CSL_CAPH_DEV_DIGI_MIC,  /*Two Digital microphones*/
+//	CSL_CAPH_DEV_DIGI_MIC_L=CSL_CAPH_DEV_DIGI_MIC,  /*Digital microphones: left channel*/
+	CSL_CAPH_DEV_DIGI_MIC_L,  /*Digital microphones: left channel*/
+	CSL_CAPH_DEV_DIGI_MIC_R,  /*Digital microphones: right channel*/	
+	CSL_CAPH_DEV_EANC_DIGI_MIC,  /*Two Noise Digital microphones for EANC control*/
+	CSL_CAPH_DEV_EANC_DIGI_MIC_L,  /*ENAC digital microphones: left channel*/
+	CSL_CAPH_DEV_EANC_DIGI_MIC_R,  /*ENAC digital microphones: right channel*/
+	CSL_CAPH_DEV_SIDETONE_INPUT,  /*Sidetone path input*/
+	CSL_CAPH_DEV_EANC_INPUT,  /*EANC Anti-noise input*/
+	CSL_CAPH_DEV_ANALOG_MIC,  /*Phone analog mic*/
+	CSL_CAPH_DEV_HS_MIC,  /*Headset mic*/
+	CSL_CAPH_DEV_BT_MIC,  /*Bluetooth headset mic*/
+	CSL_CAPH_DEV_FM_RADIO,  /*FM Radio playback*/
+	CSL_CAPH_DEV_MEMORY,  /*DDR memory*/
+	CSL_CAPH_DEV_SRCM,  /*SRCMixer*/
+	CSL_CAPH_DEV_DSP_throughMEM,  /*DSP connection through shared mem*/
+    CSL_CAPH_DEV_MAXNUM,
+}CSL_CAPH_DEVICE_e;
+#define CSL_AUDIO_DEVICE_e CSL_CAPH_DEVICE_e
+
+/**
 * CAPH CFIFO Data Sample Rate
 ******************************************************************************/
 typedef enum
@@ -524,6 +557,7 @@ typedef struct
 	CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
 	CSL_CAPH_DATAFORMAT_e outDataFmt;
 	CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
+	CSL_CAPH_DEVICE_e sink;
 }CSL_CAPH_SRCM_ROUTE_t;
 
 /**
@@ -732,38 +766,6 @@ typedef enum
 	CSL_CAPH_STREAM_TOTAL,
 } CSL_CAPH_STREAM_e;
 
-/**
-* CAPH Devices
-******************************************************************************/
-typedef enum
-{
-	CSL_CAPH_DEV_NONE,
-	CSL_CAPH_DEV_EP,  /*Earpiece*/
-	CSL_CAPH_DEV_HS,  /*Headset speaker*/
-	CSL_CAPH_DEV_IHF,  /*IHF speaker*/
-	CSL_CAPH_DEV_VIBRA,  /*Vibra output*/
-	CSL_CAPH_DEV_FM_TX,  /*FM TX broadcaster*/
-	CSL_CAPH_DEV_BT_SPKR,  /*Bluetooth headset speaker*/
-	CSL_CAPH_DEV_DSP,  /*DSP direct connection with SRCMixer in voice call*/
-	CSL_CAPH_DEV_DIGI_MIC,  /*Two Digital microphones*/
-//	CSL_CAPH_DEV_DIGI_MIC_L=CSL_CAPH_DEV_DIGI_MIC,  /*Digital microphones: left channel*/
-	CSL_CAPH_DEV_DIGI_MIC_L,  /*Digital microphones: left channel*/
-	CSL_CAPH_DEV_DIGI_MIC_R,  /*Digital microphones: right channel*/	
-	CSL_CAPH_DEV_EANC_DIGI_MIC,  /*Two Noise Digital microphones for EANC control*/
-	CSL_CAPH_DEV_EANC_DIGI_MIC_L,  /*ENAC digital microphones: left channel*/
-	CSL_CAPH_DEV_EANC_DIGI_MIC_R,  /*ENAC digital microphones: right channel*/
-	CSL_CAPH_DEV_SIDETONE_INPUT,  /*Sidetone path input*/
-	CSL_CAPH_DEV_EANC_INPUT,  /*EANC Anti-noise input*/
-	CSL_CAPH_DEV_ANALOG_MIC,  /*Phone analog mic*/
-	CSL_CAPH_DEV_HS_MIC,  /*Headset mic*/
-	CSL_CAPH_DEV_BT_MIC,  /*Bluetooth headset mic*/
-	CSL_CAPH_DEV_FM_RADIO,  /*FM Radio playback*/
-	CSL_CAPH_DEV_MEMORY,  /*DDR memory*/
-	CSL_CAPH_DEV_SRCM,  /*SRCMixer*/
-	CSL_CAPH_DEV_DSP_throughMEM,  /*DSP connection through shared mem*/
-    CSL_CAPH_DEV_MAXNUM,
-}CSL_CAPH_DEVICE_e;
-#define CSL_AUDIO_DEVICE_e CSL_CAPH_DEVICE_e
 /**
 * CAPH HW filters
 ******************************************************************************/
