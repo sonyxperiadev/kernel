@@ -229,6 +229,14 @@ static struct platform_device wdt_device =
 };
 #endif
 
+#if defined(CONFIG_MTD_BCMNAND)
+static struct platform_device nand_device =
+{
+   .name          = "bcmnand",
+   .id            = -1,
+};
+#endif
+
 #if defined(CONFIG_RTC_DRV_ISLAND)
 static struct resource rtc_device_resource[] = {
     [0] = {
@@ -513,6 +521,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_RTC_DRV_ISLAND)
         &rtc_device,
+#endif
+#if defined(CONFIG_MTD_BCMNAND)
+        &nand_device,
 #endif
 #if defined(CONFIG_KONA_PWMC)
         &pwm_device,
