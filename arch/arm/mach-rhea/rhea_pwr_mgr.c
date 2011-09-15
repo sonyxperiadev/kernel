@@ -195,15 +195,15 @@ struct rhea_event_table
 };
 
 static const struct rhea_event_table event_table[] = {
-			/*event_id				trig_type			modem		arm_core 	arm_sub		aon		hub		mm*/
+			/*event_id				trig_type		modem		arm_core 	arm_sub		aon		hub		mm*/
 	{	SOFTWARE_0_EVENT,			PM_TRIG_BOTH_EDGE,		1,		1, 		5,		5,		5,		1, },
 	{	SOFTWARE_1_EVENT,			PM_TRIG_NONE,			1,		1,		1,		1,		1,		1,	},
 	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		1,		5,		4,		4,		4,		1,	},
-	{	MODEMBUS_ACTIVE_EVENT, 		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	VREQ_NONZERO_PI_MODEM_EVENT,PM_TRIG_POS_EDGE,		5,		1,		1,		5,		5,		1,	},
-	{	COMMON_INT_TO_AC_EVENT,		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	COMMON_TIMER_1_EVENT,		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	UBRX_EVENT,					PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
+	{	MODEMBUS_ACTIVE_EVENT, 			PM_TRIG_POS_EDGE,		1,		1,		5,		5,		5,		1,	},
+	{	VREQ_NONZERO_PI_MODEM_EVENT,		PM_TRIG_POS_EDGE,		5,		1,		1,		5,		5,		1,	},
+	{	COMMON_INT_TO_AC_EVENT,			PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
+	{	COMMON_TIMER_1_EVENT,			PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
+	{	UBRX_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	UB2RX_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	SIMDET_EVENT,				PM_TRIG_BOTH_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	SIM2DET_EVENT,				PM_TRIG_BOTH_EDGE,		1,		5,		5,		5,		5,		1,	},
@@ -222,7 +222,7 @@ static const struct rhea_event_table event_table[] = {
 	{	GPIO74_A_EVENT,				PM_TRIG_BOTH_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	GPIO111_A_EVENT,			PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
 	{	DBR_IRQ_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	ACI_EVENT,					PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	}
+	{	ACI_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	}
 
 };
 

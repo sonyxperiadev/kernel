@@ -73,14 +73,13 @@ const char *sleep_prevent_clocks[] = {
 		"spum_sec",
 		"ssp0_clk",
 
+		"usb_otg_clk",
 		"sdio1_clk",
 		"sdio1_sleep_clk",
 		"sdio2_clk",
 		"sdio2_sleep_clk",
 		"sdio3_clk",
 		"sdio3_sleep_clk",
-
-
 
 		};
 
@@ -316,6 +315,7 @@ int print_sw_event_info()
 int enter_idle_state(struct kona_idle_state* state)
 {
     static struct clk *clk = NULL;
+    static struct peri_clk *peri_clk = NULL;
 	struct pi* pi = NULL;
 	u32 reg_val;
 
@@ -330,6 +330,7 @@ int enter_idle_state(struct kona_idle_state* state)
 			BUG_ON(1);
 			return -EINVAL;
 		}
+		peri_clk = to_peri_clk(clk);
 	}
 
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
@@ -343,7 +344,12 @@ int enter_idle_state(struct kona_idle_state* state)
 		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	}
 
+	ccu_write_access_enable(peri_clk->ccu_clk, true);
 	peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_AUTO);
+	ccu_write_access_enable(peri_clk->ccu_clk, false);
+
+
+
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 	clk_set_crystal_pwr_on_idle(true);
@@ -468,7 +474,10 @@ int enter_idle_state(struct kona_idle_state* state)
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, false);
 	clk_set_crystal_pwr_on_idle(false);
 
+	ccu_write_access_enable(peri_clk->ccu_clk, true);
 	peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_SW);
+	ccu_write_access_enable(peri_clk->ccu_clk, false);
+
 	return -1;
 }
 

@@ -1904,8 +1904,18 @@ static int bus_clk_init(struct clk *clk)
 	}
 	if(CLK_FLG_ENABLED(clk,DISABLE_ON_INIT))
 	{
+		/*
+		Disable call may decrement the usage count of CCU, dependent & src clks
+		Make sure that clock counts are incremented as needed before decrementing
+		the count. PI may enter retention state when clock is in use if the use count of all
+		dependent clks are not updated correctly
+
+		*/
+		clk->ops->enable(clk, 1);
 		if(clk->ops->enable)
+		{
 			clk->ops->enable(clk, 0);
+		}
 	}
 	/*Add DSF request if the flag is enabled */
 	if(CLK_FLG_ENABLED(clk,REQUEST_OPP))
