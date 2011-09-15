@@ -245,6 +245,7 @@ static struct platform_device bcm59055_vc_device_sim = {
 #endif
 
 static const char *pmu_clients[] = {
+	"bcmpmu_usb",
 #ifdef CONFIG_INPUT_BCM59055_ONKEY
 	"bcm590xx-onkey",
 #endif
@@ -264,7 +265,10 @@ static const char *pmu_clients[] = {
 	"bcm59055-rtc",
 #endif
 #ifdef CONFIG_BATTERY_BCM59055
-	"bcm590xx-power",
+	/* Power driver need to be updated as some of its job
+	 * has been distributed to newly added USB driver
+	*/
+	//"bcm590xx-power",
 #endif
 #ifdef CONFIG_BCM59055_ADC_CHIPSET_API
 	"bcm59055-adc_chipset_api",
