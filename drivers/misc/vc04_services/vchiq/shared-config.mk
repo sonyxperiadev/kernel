@@ -21,5 +21,5 @@ VCHIQ_FLAVOUR := vchiq_arm
 #                    bi    - ARM is the master
 #                    bivcm - VC is the master
 #
-VCHIQ_PLATFORM := bivcm
+VCHIQ_PLATFORM := bi
 
