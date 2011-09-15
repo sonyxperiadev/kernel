@@ -545,10 +545,13 @@ claim_slot(VCHIQ_SLOT_INFO_T *slot)
 static void
 release_slot(VCHIQ_STATE_T *state, VCHIQ_SLOT_INFO_T *slot_info)
 {
+   int release_count;
    vcos_mutex_lock(&state->recycle_mutex);
 
-   slot_info->release_count++;
-   if (slot_info->release_count == slot_info->use_count)
+   release_count = slot_info->release_count;
+   slot_info->release_count = ++release_count;
+
+   if (release_count == slot_info->use_count)
    {
       int slot_queue_recycle;
       /* Add to the freed queue */
@@ -1380,12 +1383,12 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
    static int id = 0;
    int i;
 
-   vcos_log_warn( "%s: slot_zero = 0x%08lx, is_master = %d\n", __func__, (unsigned long)slot_zero, is_master );
-
    vcos_log_register("vchiq_core", &vchiq_core_log_category);
    vcos_log_register("vchiq_core_msg", &vchiq_core_msg_log_category);
    vcos_log_set_level(&vchiq_core_log_category, vchiq_default_core_log_level);
    vcos_log_set_level(&vchiq_core_msg_log_category, vchiq_default_core_msg_log_level);
+
+   vcos_log_warn( "%s: slot_zero = 0x%08lx, is_master = %d\n", __func__, (unsigned long)slot_zero, is_master );
 
    /* Check the input configuration */
 
@@ -1679,7 +1682,6 @@ vchiq_close_service_internal(VCHIQ_SERVICE_T *service, int close_recvd)
 {
    VCHIQ_STATE_T *state = service->state;
    VCHIQ_STATUS_T status = VCHIQ_SUCCESS;
-   int i;
 
    vcos_log_trace("%d: csi:%d (%s)",
       service->state->id, service->localport,
@@ -1774,47 +1776,6 @@ vchiq_close_service_internal(VCHIQ_SERVICE_T *service, int close_recvd)
    {
       /* Complete the close process */
 
-      if (status != VCHIQ_RETRY)
-      {
-         int slot_last = state->remote->slot_last;
-
-         /* Release any claimed messages */
-         for (i = state->remote->slot_first; i <= slot_last; i++)
-         {
-            VCHIQ_SLOT_INFO_T *slot_info = SLOT_INFO_FROM_INDEX(state, i);
-            if (slot_info->release_count != slot_info->use_count)
-            {
-               char *data = (char *)SLOT_DATA_FROM_INDEX(state, i);
-               int pos, end;
-
-               end = VCHIQ_SLOT_SIZE;
-               if (data == state->rx_data)
-               {
-                  /* This buffer is still being read from - stop at the current read position */
-                  end = state->rx_pos & VCHIQ_SLOT_MASK;
-               }
-
-               pos = 0;
-
-               while (pos < end)
-               {
-                  VCHIQ_HEADER_T *header = (VCHIQ_HEADER_T *)(data + pos);
-                  int msgid = header->msgid;
-                  int port = VCHIQ_MSG_DSTPORT(msgid);
-                  if (port == service->localport)
-                  {
-                     if (msgid & VCHIQ_MSGID_CLAIMED)
-                     {
-                        header->msgid = msgid & ~VCHIQ_MSGID_CLAIMED;
-                        release_slot(state, slot_info);
-                     }
-                  }
-                  pos += calc_stride(header->size);
-               }
-            }
-         }
-      }
-
       service->client_id = 0;
 
       /* Now tell the client that the services is closed */
@@ -1877,10 +1838,50 @@ void
 vchiq_free_service_internal(VCHIQ_SERVICE_T *service)
 {
    VCHIQ_STATE_T *state = service->state;
+   int slot_last = state->remote->slot_last;
+   int i;
 
    vcos_log_info("%d: fsi - (%d)", state->id, service->localport);
 
    vcos_mutex_lock(&state->mutex);
+
+   /* Release any claimed messages */
+   for (i = state->remote->slot_first; i <= slot_last; i++)
+   {
+      VCHIQ_SLOT_INFO_T *slot_info = SLOT_INFO_FROM_INDEX(state, i);
+      if (slot_info->release_count != slot_info->use_count)
+      {
+         char *data = (char *)SLOT_DATA_FROM_INDEX(state, i);
+         int pos, end;
+
+         end = VCHIQ_SLOT_SIZE;
+         if (data == state->rx_data)
+         {
+            /* This buffer is still being read from - stop at the current read position */
+            end = state->rx_pos & VCHIQ_SLOT_MASK;
+         }
+
+         pos = 0;
+
+         while (pos < end)
+         {
+            VCHIQ_HEADER_T *header = (VCHIQ_HEADER_T *)(data + pos);
+            int msgid = header->msgid;
+            int port = VCHIQ_MSG_DSTPORT(msgid);
+            if (port == service->localport)
+            {
+               if (msgid & VCHIQ_MSGID_CLAIMED)
+               {
+                  header->msgid = msgid & ~VCHIQ_MSGID_CLAIMED;
+                  //vcos_log_info("  fsi - hdr %x", header);
+                  release_slot(state, slot_info);
+               }
+            }
+            pos += calc_stride(header->size);
+         }
+      }
+   }
+
    vcos_assert(state->services[service->localport] == service);
    vchiq_set_service_state(service, VCHIQ_SRVSTATE_FREE);
    state->services[service->localport] = NULL;
@@ -1998,6 +1999,7 @@ vchiq_close_service(VCHIQ_SERVICE_HANDLE_T handle)
    {
       if (service->srvstate == VCHIQ_SRVSTATE_CLOSEWAIT)
       {
+         /* This is a non-auto-close server */
          vchiq_set_service_state(service, VCHIQ_SRVSTATE_LISTENING);
          status = VCHIQ_SUCCESS;
       }
