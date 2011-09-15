@@ -90,26 +90,88 @@ static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 	return stat;
 }
 
+#ifdef CONFIG_MFD_BCMPMU
+static void bcmpmu_usb_event_notif_callback(struct bcmpmu * pmu_handle, unsigned char event, void *param1, void *otg_data)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = (struct bcmpmu_otg_xceiv_data *)otg_data;
+
+	if (!otg_data) {
+		dev_info(xceiv_data->dev, "ERROR: xceiver data not passed by PMU callback\n");
+		return;
+	}
+
+	switch (event) {
+		case BCMPMU_USB_EVENT_SESSION_VALID:
+			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_vbus_a_valid_work);
+			break;
+		case BCMPMU_USB_EVENT_SESSION_INVALID:
+			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_vbus_a_invalid_work);
+			break;
+		case BCMPMU_USB_EVENT_ID_CHANGE:
+			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
+			break;
+		default:
+			break;
+	}
+}
+#endif
+
 static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 					   struct usb_gadget *gadget)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
+	int status = 0;
 
 	dev_info(xceiv_data->dev, "Setting Peripheral\n");
 	otg->gadget = gadget;
 
-	return 0;
+#ifdef CONFIG_MFD_BCMPMU
+	if (xceiv_data->bcmpmu->register_usb_callback) {
+		/* Register callback functions for PMU events */
+		status = xceiv_data->bcmpmu->register_usb_callback(xceiv_data->bcmpmu, bcmpmu_usb_event_notif_callback, (void*)xceiv_data);
+	}
+
+	/* Come up as host or device based on current ID value */
+	queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
+#endif
+
+	return status;
 }
 
 static int bcmpmu_otg_xceiv_set_host(struct otg_transceiver *otg,
 				     struct usb_bus *host)
 {
 	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
+	int status = 0;
 
 	dev_info(xceiv_data->dev, "Setting Host\n");
 	otg->host = host;
 
-	return 0;
+#ifdef CONFIG_MFD_BCMPMU
+	if (xceiv_data->bcmpmu->register_usb_callback) {
+		/* Register callback functions for PMU events */
+		status = xceiv_data->bcmpmu->register_usb_callback(xceiv_data->bcmpmu, bcmpmu_usb_event_notif_callback, (void*)xceiv_data);
+	}
+#endif
+
+	return status;
+}
+
+static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xceiv_data, bool enable)
+{
+	if (enable) {
+		dev_info(xceiv_data->dev, "Switching to Host\n");
+		xceiv_data->host = true;
+		bcm_hsotgctrl_phy_set_vbus_stat(false);
+		msleep(PERIPHERAL_TO_HOST_DELAY_MS);
+		bcm_hsotgctrl_phy_set_id_stat(false);
+	} else {
+		dev_info(xceiv_data->dev, "Switching to Peripheral\n");
+		xceiv_data->host = false;
+		bcm_hsotgctrl_phy_set_id_stat(true);
+		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
+		bcm_hsotgctrl_phy_set_vbus_stat(true);
+	}
 }
 
 static ssize_t bcmpmu_otg_xceiv_wake_store(struct device *dev,
@@ -209,18 +271,8 @@ static ssize_t bcmpmu_otg_xceiv_host_store(struct device *dev,
 	result = sscanf(buf, "%u\n", &val);
 	if (result != 1) {
 		result = -EINVAL;
-	} else if (val == 0) {
-		dev_info(xceiv_data->dev, "Switching to Peripheral\n");
-		xceiv_data->host = false;
-		bcm_hsotgctrl_phy_set_id_stat(true);
-		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
-		bcm_hsotgctrl_phy_set_vbus_stat(true);
 	} else {
-		dev_info(xceiv_data->dev, "Switching to Host\n");
-		xceiv_data->host = true;
-		bcm_hsotgctrl_phy_set_vbus_stat(false);
-		msleep(PERIPHERAL_TO_HOST_DELAY_MS);
-		bcm_hsotgctrl_phy_set_id_stat(false);
+		bcmpmu_otg_xceiv_select_host_mode(xceiv_data, !!val);
 	}
 
 	return result < 0 ? result : count;
@@ -228,6 +280,7 @@ static ssize_t bcmpmu_otg_xceiv_host_store(struct device *dev,
 
 static DEVICE_ATTR(host, S_IRUGO | S_IWUSR, bcmpmu_otg_xceiv_host_show,
 		   bcmpmu_otg_xceiv_host_store);
+
 
 static void bcmpmu_otg_xceiv_vbus_invalid_handler(struct work_struct *work)
 {
@@ -275,6 +328,22 @@ static void bcmpmu_otg_xceiv_adp_change_handler(struct work_struct *work)
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_adp_change_work);
 	dev_info(xceiv_data->dev, "ADP change detected\n");
+}
+
+static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
+{
+#ifdef CONFIG_MFD_BCMPMU
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+		container_of(work, struct bcmpmu_otg_xceiv_data,
+			     bcm_otg_id_status_change_work);
+	unsigned int data;
+
+	dev_info(xceiv_data->dev, "ID change detected\n");
+	xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
+
+	/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
+	bcmpmu_otg_xceiv_select_host_mode(xceiv_data, (data == PMU_USB_ID_GROUND));
+#endif
 }
 
 static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
@@ -326,6 +395,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		  bcmpmu_otg_xceiv_adp_cprb_done_handler);
 	INIT_WORK(&xceiv_data->bcm_otg_adp_change_work,
 		  bcmpmu_otg_xceiv_adp_change_handler);
+	INIT_WORK(&xceiv_data->bcm_otg_id_status_change_work,
+		  bcmpmu_otg_xceiv_id_change_handler);
 
 	xceiv_data->otg_clk = clk_get(NULL, "usb_otg_clk");
 	if (!xceiv_data->otg_clk) {

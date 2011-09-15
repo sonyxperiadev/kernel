@@ -49,6 +49,7 @@ struct bcmpmu_otg_xceiv_data {
 	struct work_struct bcm_otg_vbus_a_valid_work;
 	struct work_struct bcm_otg_adp_cprb_done_work;
 	struct work_struct bcm_otg_adp_change_work;
+	struct work_struct bcm_otg_id_status_change_work;
 	bool host;
 	bool vbus_enabled;
 };
