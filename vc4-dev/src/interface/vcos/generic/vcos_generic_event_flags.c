@@ -68,63 +68,59 @@ void vcos_generic_event_flags_set(VCOS_EVENT_FLAGS_T *flags,
    /* Now wake up any threads that have now become signalled. */
    if (flags->waiters.head != NULL)
    {
-      VCOS_UNSIGNED consume = 0;
-      VCOS_EVENT_WAITER_T **psuspend_ptr = &flags->waiters.head;
+      VCOS_UNSIGNED consumed_events = 0;
+      VCOS_EVENT_WAITER_T **pcurrent_waiter = &flags->waiters.head;
+      VCOS_EVENT_WAITER_T *prev_waiter = NULL;
 
-
-      /* Walk the chain of tasks suspend on this event flag group to determin
+      /* Walk the chain of tasks suspend on this event flag group to determine
        * if any of their requests can be satisfied.
        */
-      while ((*psuspend_ptr) != NULL)
+      while ((*pcurrent_waiter) != NULL)
       {
-         VCOS_EVENT_WAITER_T **pnext, *suspend_ptr = *psuspend_ptr;
+         VCOS_EVENT_WAITER_T *curr_waiter = *pcurrent_waiter;
 
          /* Determine if this request has been satisfied */
 
          /* First, find the event flags in common. */
-         VCOS_UNSIGNED compare = flags->events & suspend_ptr->requested_events;
+         VCOS_UNSIGNED waiter_satisfied = flags->events & curr_waiter->requested_events;
 
          /* Second, determine if all the event flags must match */
-         if (suspend_ptr->op & VCOS_AND)
+         if (curr_waiter->op & VCOS_AND)
          {
             /* All requested events must be present */
-            compare = (compare == suspend_ptr->requested_events);
+            waiter_satisfied = (waiter_satisfied == curr_waiter->requested_events);
          }
-         /* Find next item in list before we wake up this one, as the suspend block
-          * will no longer be valid once it starts running.
-          */
-         pnext = &(suspend_ptr->next);
 
          /* Wake this one up? */
-         if (compare)
+         if (waiter_satisfied)
          {
-            int at_end;
 
-            if (suspend_ptr->op & VCOS_CONSUME)
+            if (curr_waiter->op & VCOS_CONSUME)
             {
-               consume |= suspend_ptr->requested_events;
+               consumed_events |= curr_waiter->requested_events;
             }
+
             /* remove this block from the list, taking care at the end */
-            at_end = suspend_ptr->next == NULL;
-            *psuspend_ptr = suspend_ptr->next;
-            if (at_end)
-               flags->waiters.tail = flags->waiters.head;
+            *pcurrent_waiter = curr_waiter->next;
+            if (curr_waiter->next == NULL)
+               flags->waiters.tail = prev_waiter;
 
             vcos_assert(waiter_list_valid(flags));
 
-            suspend_ptr->return_status = VCOS_SUCCESS;
-            suspend_ptr->actual_events = flags->events;
+            curr_waiter->return_status = VCOS_SUCCESS;
+            curr_waiter->actual_events = flags->events;
 
-            _vcos_thread_sem_post(suspend_ptr->thread);
+            _vcos_thread_sem_post(curr_waiter->thread);
          }
          else
          {
             /* move to next element in the list */
-            psuspend_ptr = pnext;
+            prev_waiter = *pcurrent_waiter;
+            pcurrent_waiter = &(curr_waiter->next);
          }
       }
 
-      flags->events &= ~consume;
+      flags->events &= ~consumed_events;
 
    }
 
@@ -240,6 +236,7 @@ static void event_flags_timer_expired(void *cxt)
    VCOS_EVENT_WAITER_T *waitreq = (VCOS_EVENT_WAITER_T *)cxt;
    VCOS_EVENT_FLAGS_T *flags = waitreq->flags;
    VCOS_EVENT_WAITER_T **plist;
+   VCOS_EVENT_WAITER_T *prev = NULL;
    VCOS_THREAD_T *thread = 0;
 
    vcos_assert(waitreq);
@@ -277,10 +274,11 @@ static void event_flags_timer_expired(void *cxt)
          /* link past */
          *plist = (*plist)->next;
          if (at_end)
-            flags->waiters.tail = flags->waiters.head;
+            flags->waiters.tail = prev;
 
          break;
       }
+      prev = *plist;
       plist = &(*plist)->next;
    }
    vcos_assert(waiter_list_valid(flags));

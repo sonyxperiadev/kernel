@@ -26,8 +26,7 @@
 #define VCHIQ_INVALID_HANDLE -1
 
 typedef struct {
-   int fourcc;
-   void *service_userdata;
+   VCHIQ_SERVICE_PARAMS_T params;
    int is_open;
    int is_vchi;
    int handle;       /* OUT */
