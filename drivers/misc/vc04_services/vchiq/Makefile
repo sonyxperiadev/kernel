@@ -1,3 +1,5 @@
+include $(srctree)/drivers/misc/vc04_services/vchiq/shared-config.mk
+
 # String based config options have quotes around them, which we don't want.
 EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs -O2 -Wno-declaration-after-statement -Wno-parentheses
 
@@ -16,6 +18,8 @@ EXTRA_CFLAGS  += -Werror
 #EXTRA_CFLAGS  += -I$(BRCM_VIDEOCORE_VCEB_DIR)/..
 #EXTRA_CFLAGS  += -I$(BRCM_VIDEOCORE_VCEB_DIR)/../common
 #EXTRA_CFLAGS  += -I$(BRCM_VIDEOCORE_VCEB_DIR)/../../common
+
+
 
 ifneq ($(CONFIG_VC_VCHIQ_BUSDRV_SHAREDMEM),)
 VCHIQ_HOST_BUS_ALIGNMENT = 7
@@ -42,7 +46,7 @@ vc-vchiq-objs := \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_kern_lib.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_shim.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_util.o \
-    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_bi_arm.o
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_$(VCHIQ_PLATFORM)_arm.o
 
 obj-$(CONFIG_VC_VCHIQ_MEMDRV_HANA) += vchiq-memdrv-hana.o
 
