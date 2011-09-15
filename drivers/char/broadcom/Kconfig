@@ -171,6 +171,13 @@ config BCM_VCP
       Say Y to enable VCP driver support which is used to support
       video calling framework.
 
+config BCM_VCPTEST
+    tristate "Video Calling driver test"
+    depends on BCM_VCP
+    default n
+    help
+      Say Y to enable VCP driver test.
+
 config BCM_GIST
     tristate "Generic I/O Streaming (GIST)"
     default n

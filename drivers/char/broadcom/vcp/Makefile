@@ -4,6 +4,7 @@ $(info ++++++++++++++++++++++)
 $(info CONFIG_BCM_VCP = $(CONFIG_BCM_VCP))
 
 obj-$(CONFIG_BCM_VCP) += vcp.o
+obj-$(CONFIG_BCM_VCPTEST)	+= test/
 
 vcp-objs := vcpdrv.o vcpdrv_user.o
 
