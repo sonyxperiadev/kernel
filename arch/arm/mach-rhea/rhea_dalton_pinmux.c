@@ -65,9 +65,9 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(SDDAT0, SDDAT0, 0, OFF, ON, 0, 0, 8MA),
 
 	/*
-	PIN_CFG(ICUSBDP, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, ON, 0, 0, 8MA),
 	*/
-	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
 
 	/* Pinmux for keypad */
 	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
@@ -107,7 +107,7 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* LCD */
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(LCDRES, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(LCDRES, GPIO41, 0, OFF, ON, 0, 0, 8MA),
 
 	/* STM trace - PTI */
 	PIN_CFG(TRACECLK, PTI_CLK, 0, OFF, ON, 0, 0, 8MA),
@@ -149,7 +149,7 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
 	/*
-	PIN_CFG(GPS_CALREQ, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
 	*/
 };
 
