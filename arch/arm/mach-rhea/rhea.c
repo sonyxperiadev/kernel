@@ -102,6 +102,11 @@ struct sys_timer kona_timer = {
 	.init	= rhea_ray_timer_init,
 };
 
+#ifdef CONFIG_KONA_ATAG_DT
+/* rhea has 4 banks of GPIO pins */
+uint32_t dt_pinmux_gpio_mask[4] = {0, 0, 0, 0};
+#endif
+
 static int __init rhea_init(void)
 {
 	pm_power_off = rhea_poweroff;
@@ -112,6 +117,12 @@ static int __init rhea_init(void)
 #endif
 
 	pinmux_init();
+
+#ifdef CONFIG_KONA_ATAG_DT
+	printk(KERN_INFO "pinmux_gpio_mask: 0x%x, 0x%x, 0x%x, 0x%x\n",
+		dt_pinmux_gpio_mask[0], dt_pinmux_gpio_mask[1],
+		dt_pinmux_gpio_mask[2], dt_pinmux_gpio_mask[3]);
+#endif
 
 #ifdef CONFIG_GPIOLIB
 	/* rhea has 4 banks of GPIO pins */

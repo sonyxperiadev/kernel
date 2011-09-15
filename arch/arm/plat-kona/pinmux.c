@@ -33,8 +33,10 @@
 #include <linux/of_fdt.h>
 
 /* pin-mux configuration data from DT */
-uint32_t dt_pinmux[PN_MAX];
-uint32_t dt_pinmux_nr;
+static uint32_t dt_pinmux[PN_MAX];
+static uint32_t dt_pinmux_nr;
+
+extern uint32_t dt_pinmux_gpio_mask[];
 
 int __init early_init_dt_scan_pinmux(unsigned long node, const char *uname,
 				     int depth, void *data)
@@ -89,7 +91,7 @@ int __init pinmux_init()
 {
 #ifdef CONFIG_KONA_ATAG_DT
 	void __iomem *base;
-	int i;
+	int i, sel, gpio;
 
 	/* unlock and set base */
 	pinmux_chip_init();
@@ -105,12 +107,27 @@ int __init pinmux_init()
 		printk (KERN_WARNING "%s Not enough pins in DT-Pinmux! The board may not boot!\n", __func__);
 	}
 
-	printk(KERN_INFO "Configuring pin-mux...\n");
 	for (i = 0; i < dt_pinmux_nr; i++) {
 		writel(dt_pinmux[i], base + i*4);
 		//printk(KERN_INFO "0x%08x /* pad 0x%x*/\n", readl(base+i*4),i*4);
-		/* Do somthing if this is a GPIO */
+
+		sel = ((union pinmux_reg)dt_pinmux[i]).b.sel;
+		if (sel >= MAX_ALT_FUNC){
+			printk(KERN_ERR "function %d out of bound for pad %d\n", sel, i);
+			sel %= MAX_ALT_FUNC;
+		}
+
+		/* Set GPIO mask if this is a GPIO */
+		if (g_chip_pin_desc.desc_tbl[i].f_tbl[sel] >= PF_GPIO0 &&
+			g_chip_pin_desc.desc_tbl[i].f_tbl[sel] <= PF_LAST_GPIO) {
+
+			gpio = g_chip_pin_desc.desc_tbl[i].f_tbl[sel] - PF_GPIO0;
+			dt_pinmux_gpio_mask[(gpio/32)] |= (1 << (gpio%32));
+			printk(KERN_INFO "pad%d (0x%x) is used as GPIO%d (sel=%d)\n",
+				i, i*4, gpio, sel);
+		}
 	}
+	printk(KERN_INFO "Configured pin-mux per dt!\n");
 #else
 	pinmux_chip_init();
 	pinmux_board_init();
