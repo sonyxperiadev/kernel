@@ -330,6 +330,12 @@ static struct platform_device bcmpmu_rtc_device = {
 	.dev.platform_data 	= NULL,
 };
 
+static struct platform_device bcmpmu_ponkey_device = {
+	.name 			= "bcmpmu_ponkey",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+
 static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_irq_device,
 	&bcmpmu_hwmon_device,
@@ -337,6 +343,7 @@ static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_batt_device,
 	&bcmpmu_chrgr_device,
 	&bcmpmu_accy_device,
+	&bcmpmu_ponkey_device,
 };
 
 static int __devinit bcmpmu_probe(struct platform_device *pdev)

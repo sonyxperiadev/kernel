@@ -43,6 +43,7 @@
 #define PMU_DEVICE_INT_GPIO	10
 
 static const struct bcmpmu_rw_data register_init_data[] = {
+	{.map=0, .addr=0x0c, .val=0x1b, .mask=0xFF},
 	{.map=0, .addr=0x40, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x41, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x42, .val=0xFF, .mask=0xFF},

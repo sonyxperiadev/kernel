@@ -714,6 +714,7 @@ struct bcmpmu {
 	void *fginfo;
 	void *accyinfo;
 	void *eminfo;
+	void *ponkeyinfo;
 
 	/* reg access */
 	int (*read_dev)(struct bcmpmu *bcmpmu, int reg, unsigned int *val, unsigned int mask);
