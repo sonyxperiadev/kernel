@@ -4678,7 +4678,6 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
 {
     CSL_CAPH_HWConfig_Table_t *path;
     int path_id = 0;
-    memset(&path, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
 
 	if (!pathID) return;
 	path = &HWConfig_Table[pathID-1];
@@ -4712,8 +4711,7 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
       	    audio_xassert(0, path->sink );
     }
 
-    csl_caph_audioh_mute(path_id, 0);
-
+	csl_caph_audioh_mute(path_id, 0);
 	return;
 }
 

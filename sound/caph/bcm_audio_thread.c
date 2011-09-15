@@ -446,6 +446,7 @@ void AUDIO_Ctrl_Process(
 									parm_mute->device,
 									parm_mute->mute1);	//currently driver doesnt handle Mute for left/right channels
 		}
+		break;
 		case ACTION_AUD_MuteRecord:
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
@@ -580,6 +581,14 @@ void AUDIO_Ctrl_Process(
 			AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&parm_prepare->buf_param);
 			//Configure stream params
 			AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_CONFIG,(void*)&parm_prepare->drv_config);
+		}
+		break;
+		case ACTION_AUD_MuteTelephony:
+		{
+			BRCM_AUDIO_Param_Mute_t	*parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
+			AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
+										parm_mute->device,
+										parm_mute->mute1);
 		}
 		break;
         default:

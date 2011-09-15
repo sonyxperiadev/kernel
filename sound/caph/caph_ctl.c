@@ -258,12 +258,11 @@ static int SelCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info 
 	{
 		uinfo->value.integer.min = AUDCTRL_MIC_MAIN;
 		uinfo->value.integer.max = MIC_TOTAL_COUNT_FOR_USER;//FIXME
-	
 	}
 	else
 	{
-		uinfo->value.integer.min = AUDCTRL_SPK_HANDSET; // disabling the voice call path
-		uinfo->value.integer.max = AUDCTRL_SPK_VIBRA;//FIXME
+		uinfo->value.integer.min = AUDCTRL_SPK_HANDSET;
+		uinfo->value.integer.max = AUDCTRL_SPK_TOTAL_COUNT;//last valid device is AUDCTRL_SPK_VIBRA
 	}
 	uinfo->value.integer.step = 1;
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -323,7 +322,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 
 	pSel[0] = ucontrol->value.integer.value[0];
 	pSel[1] = ucontrol->value.integer.value[1];
-	
+
 	if (pSel[0] == pSel[1])
 		pSel[1] = AUDCTRL_SPK_TOTAL_COUNT;
 
@@ -831,28 +830,25 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			
 			break;
 		case CTL_FUNCTION_PHONE_CALL_MIC_MUTE:
-			//if( pChip->iEnablePhoneCall && (pChip->iMutePhoneCall[0] != ucontrol->value.integer.value[0]||pChip->iMutePhoneCall[1] != ucontrol->value.integer.value[1]) )
+			if(pChip->iMutePhoneCall[0] != ucontrol->value.integer.value[0])
 			{
 				pChip->iMutePhoneCall[0] = ucontrol->value.integer.value[0]; 
 				//pChip->iMutePhoneCall[1] = ucontrol->value.integer.value[1]; 
 
-				pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect;
+				if(pChip->iEnablePhoneCall)//only in call
+				{
+					pSel = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect;
 				
-				BCM_AUDIO_DEBUG("MiscCtrlPut pSel[0] = %ld pMute[0] =%ld pMute[1] =%ld\n", pSel[0], pChip->iMutePhoneCall[0], pChip->iMutePhoneCall[1]);
+					BCM_AUDIO_DEBUG("MiscCtrlPut pSel[0] = %ld pMute[0] =%ld pMute[1] =%ld\n", pSel[0], pChip->iMutePhoneCall[0], pChip->iMutePhoneCall[1]);
 			
-				//call audio driver to mute UL/DL
-				//AUDCTRL_SetTelephonySpkrMute (AUDIO_HW_VOICE_OUT, pSel[1], pChip->iMutePhoneCall[1]);
-				parm_mute.device =  pSel[0];
-				parm_mute.mute1 = pChip->iMutePhoneCall[0];
-				AUDIO_Ctrl_Trigger(ACTION_AUD_MuteTelephony,&parm_mute,NULL,0);
+					//call audio driver to mute
+					parm_mute.device =  pSel[0];
+					parm_mute.mute1 = pChip->iMutePhoneCall[0];
+					AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
+												parm_mute.device,
+												parm_mute.mute1);
+				}
 			}
-			//else
-			//{
-				//pChip->iMutePhoneCall[0] = ucontrol->value.integer.value[0]; 
-				//pChip->iMutePhoneCall[1] = ucontrol->value.integer.value[1]; 
-			//}
-			
-			
 			break;
 		case CTL_FUNCTION_SPEECH_MIXING_OPTION:
 			pChip->pi32SpeechMixOption[stream-1] = ucontrol->value.integer.value[0]; 
