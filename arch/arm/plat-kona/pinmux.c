@@ -85,13 +85,13 @@ int __init early_init_dt_scan_pinmux(unsigned long node, const char *uname,
 
 	return 1;
 }
-#endif  /* CONFIG_KONA_DT_PINMUX */
+#endif  /* CONFIG_KONA_ATAG_DT */
 
 int __init pinmux_init()
 {
 #ifdef CONFIG_KONA_ATAG_DT
 	void __iomem *base;
-	int i, sel, gpio;
+	int i, sel, gpio, gpio_cnt;
 
 	/* unlock and set base */
 	pinmux_chip_init();
@@ -107,6 +107,7 @@ int __init pinmux_init()
 		printk (KERN_WARNING "%s Not enough pins in DT-Pinmux! The board may not boot!\n", __func__);
 	}
 
+	gpio_cnt = 0;
 	for (i = 0; i < dt_pinmux_nr; i++) {
 		writel(dt_pinmux[i], base + i*4);
 		//printk(KERN_INFO "0x%08x /* pad 0x%x*/\n", readl(base+i*4),i*4);
@@ -125,9 +126,10 @@ int __init pinmux_init()
 			dt_pinmux_gpio_mask[(gpio/32)] |= (1 << (gpio%32));
 			printk(KERN_INFO "pad%d (0x%x) is used as GPIO%d (sel=%d)\n",
 				i, i*4, gpio, sel);
+			gpio_cnt++;
 		}
 	}
-	printk(KERN_INFO "Configured pin-mux per dt!\n");
+	printk(KERN_INFO "Configured pin-mux! %d gpio pins!\n", gpio_cnt);
 #else
 	pinmux_chip_init();
 	pinmux_board_init();
