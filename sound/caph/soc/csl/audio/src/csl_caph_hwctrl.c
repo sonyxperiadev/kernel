@@ -3862,6 +3862,7 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_
 		CAPH_BLOCK_t blocks[4] = {CAPH_SAME, CAPH_MIXER, CAPH_SW, CAPH_NONE};
 		//playback blocks: {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE}
 		//voice call DL: {CAPH_MIXER, CAPH_SW, CAPH_NONE}
+        //FM playback blocks: {CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE}
 
 		// If sink is the same changed, do nothing.
 		if ((path->sink == config.sink && path->audiohPath[1]) || (path->sink2 == config.sink))
@@ -3871,6 +3872,7 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_
 		{
 			mode=OBTAIN_BLOCKS_MULTICAST;
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
+            else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 3;
 			else blockPathIdx = 5; //where 2nd path starts
 			audiohIdx = 2;
 			srcmPathIdx = blockPathIdx+1;
@@ -3954,12 +3956,14 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 		if(path->sink2==config.sink)
 		{
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
+			else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 3;
 			else blockPathIdx = 5; //where 2nd path starts
 			audiohIdx = 2;
 			srcmPathIdx = blockPathIdx+1;
 			path->sink2 = CSL_CAPH_DEV_NONE;
 		} else {
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
+            else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 1;
 			else blockPathIdx = 3;
 			audiohIdx = 1;
 			srcmPathIdx = blockPathIdx;
@@ -3977,6 +3981,7 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 		if(path->sink2) //align all structure members.
 		{
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
+			else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 1;
 			else blockPathIdx = 3;
 
 			memcpy(&path->block[blockPathIdx], &path->block[blockPathIdx+3], 4*sizeof(CAPH_BLOCK_t));

@@ -1327,6 +1327,7 @@ void AUDCTRL_SetPlayMute(
 //
 //============================================================================
 void AUDCTRL_SwitchPlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			curSink,
 				AUDCTRL_SPEAKER_t		curSpk,
 				AUDIO_HW_ID_t			newSink,
@@ -1338,8 +1339,8 @@ void AUDCTRL_SwitchPlaySpk(
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_SwitchPlaySpk curSink = 0x%x,  curSpk = 0x%x, newSink = 0x%x,  newSpk = 0x%x\n", 
-                    curSink, curSpk, newSink, newSpk);
+                    "AUDCTRL_SwitchPlaySpk src = 0x%x, curSink = 0x%x,  curSpk = 0x%x, newSink = 0x%x,  newSpk = 0x%x\n", 
+                    src, curSink, curSpk, newSink, newSpk);
 
 
     pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
@@ -1355,7 +1356,7 @@ void AUDCTRL_SwitchPlaySpk(
     speaker = GetDeviceFromSpkr(newSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
-        config.source = CSL_CAPH_DEV_MEMORY;
+        config.source = GetDeviceFromHWID(src);
         config.sink = speaker;
         (void) csl_caph_hwctrl_AddPath(pathID, config);
     }
@@ -1364,7 +1365,7 @@ void AUDCTRL_SwitchPlaySpk(
     speaker = GetDeviceFromSpkr(curSpk);
     if (speaker != CSL_CAPH_DEV_NONE)
     {
-        config.source = CSL_CAPH_DEV_MEMORY;
+        config.source = GetDeviceFromHWID(src);
         config.sink = speaker;
         (void) csl_caph_hwctrl_RemovePath(pathID, config);
     } 
@@ -1373,7 +1374,7 @@ void AUDCTRL_SwitchPlaySpk(
     
 
     // update path structure
-    AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
+    AUDCTRL_UpdatePath(pathID, src, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
 
     return;
     
@@ -1387,6 +1388,7 @@ void AUDCTRL_SwitchPlaySpk(
 //
 //============================================================================
 void AUDCTRL_AddPlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			curSink,
 				AUDCTRL_SPEAKER_t		curSpk,
 				AUDIO_HW_ID_t			newSink,
@@ -1398,8 +1400,8 @@ void AUDCTRL_AddPlaySpk(
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_AddPlaySpk: newSink = 0x%x,  newSpk = 0x%x\n", 
-                    newSink, newSpk);
+                    "AUDCTRL_AddPlaySpk: src = 0x%x, newSink = 0x%x,  newSpk = 0x%x\n", 
+                    src, newSink, newSpk);
 
 
     pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, curSink, curSpk, AUDCTRL_MIC_UNDEFINED);
@@ -1417,12 +1419,12 @@ void AUDCTRL_AddPlaySpk(
 		if ((newSink == AUDIO_HW_HEADSET_OUT)||(newSink == AUDIO_HW_IHF_OUT))
 			powerOnExternalAmp( newSpk, AudioUseExtSpkr, TRUE );
 
-        config.source = CSL_CAPH_DEV_MEMORY;
+        config.source = GetDeviceFromHWID(src);
         config.sink = speaker;
         (void) csl_caph_hwctrl_AddPath(pathID, config);
     }
     
-//    AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
+//    AUDCTRL_UpdatePath(pathID, src, newSink, newSpk, AUDCTRL_MIC_UNDEFINED); 
     
     return;
     
@@ -1436,6 +1438,7 @@ void AUDCTRL_AddPlaySpk(
 //
 //============================================================================
 void AUDCTRL_RemovePlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			priSink,
 				AUDCTRL_SPEAKER_t		priSpk,
 				AUDIO_HW_ID_t			secSink,
@@ -1447,8 +1450,8 @@ void AUDCTRL_RemovePlaySpk(
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
 
 	Log_DebugPrintf(LOGID_AUDIO,
-                    "AUDCTRL_RemovePlaySpk: sink = 0x%x,  spk = 0x%x\n", 
-                    secSink, secSpk);
+                    "AUDCTRL_RemovePlaySpk: src = 0x%x, sink = 0x%x,  spk = 0x%x\n", 
+                    src, secSink, secSpk);
 
 
     pathID = AUDCTRL_GetPathIDFromTable(AUDIO_HW_NONE, priSink, priSpk, AUDCTRL_MIC_UNDEFINED);
@@ -1466,13 +1469,13 @@ void AUDCTRL_RemovePlaySpk(
 		if ((secSink == AUDIO_HW_HEADSET_OUT)||(secSink == AUDIO_HW_IHF_OUT))
 			powerOnExternalAmp( secSpk, AudioUseExtSpkr, FALSE );
 
-        config.source = CSL_CAPH_DEV_MEMORY;
+        config.source = GetDeviceFromHWID(src);
         config.sink = speaker;
         (void) csl_caph_hwctrl_RemovePath(pathID, config);
     }
     
     // don't know how to update the path now.
-    //AUDCTRL_UpdatePath(pathID, AUDIO_HW_MEM, sink, spk, AUDCTRL_MIC_UNDEFINED); 
+    //AUDCTRL_UpdatePath(pathID, src, sink, spk, AUDCTRL_MIC_UNDEFINED); 
     
     return;
 }

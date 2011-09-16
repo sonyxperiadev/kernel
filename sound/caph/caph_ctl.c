@@ -355,6 +355,8 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 
 				for (i = 0; i < MAX_PLAYBACK_DEV; i++)
 				{
+                    pChip->streamCtl[stream-1].dev_prop.p[i].hw_src = AUDIO_HW_MEM;
+
 					if(pSel[i] != pCurSel[i])
 					{
 						if(pSel[i]==AUDCTRL_SPK_HANDSET)
@@ -405,6 +407,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 						{
 							// do the real switching now.
 							newSink =  pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
+                            parm_spkr.src = pChip->streamCtl[stream-1].dev_prop.p[0].hw_src;
 							parm_spkr.cur_sink = curSink;
 							parm_spkr.cur_spkr = curSpk;
 							parm_spkr.new_sink = newSink;
@@ -417,6 +420,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 							{
 								newSink =  pChip->streamCtl[stream-1].dev_prop.p[1].hw_id;
 								newSpk = pSel[1];
+                                parm_spkr.src = pChip->streamCtl[stream-1].dev_prop.p[0].hw_src;
 								parm_spkr.cur_sink = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
 								parm_spkr.cur_spkr = pChip->streamCtl[stream-1].dev_prop.p[0].speaker;
 								parm_spkr.new_sink = newSink;
@@ -451,13 +455,15 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 		break;
 
     case CTL_STREAM_PANEL_FM:      // FM
-        if((pChip->iEnableFM) && (!(pChip->iEnablePhoneCall))) 
+       {
+        AUDIO_HW_ID_t newSink = AUDIO_HW_NONE;
+		AUDIO_HW_ID_t curSink = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
+		AUDCTRL_SPEAKER_t newSpk = pSel[0];
+		AUDCTRL_SPEAKER_t curSpk = pCurSel[0];
+        pChip->streamCtl[stream-1].dev_prop.p[0].hw_src = AUDIO_HW_I2S_IN;
+    
+        if((pChip->iEnableFM) && (!(pChip->iEnablePhoneCall)) && (curSpk != newSpk)) 
         {
-            //disable the playback path first
-             parm_FM.hw_id = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
-			 parm_FM.device = pChip->streamCtl[stream-1].dev_prop.p[0].speaker;
-			 AUDIO_Ctrl_Trigger(ACTION_AUD_DisableFMPlay,&parm_FM,NULL,0);
-
             // change the sink/spk
             if(pSel[0]==AUDCTRL_SPK_HANDSET)
             {
@@ -498,13 +504,16 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 
             pChip->streamCtl[stream-1].dev_prop.p[0].speaker = pSel[0];    
                 
-           // Enable the playback path
-			parm_FM.hw_id = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
-			parm_FM.device = pChip->streamCtl[stream-1].dev_prop.p[0].speaker;
-			parm_FM.volume1 = pChip->streamCtl[stream-1].ctlLine[pSel[0]].iVolume[0];
-			parm_FM.volume2 = pChip->streamCtl[stream-1].ctlLine[pSel[0]].iVolume[1];
-			AUDIO_Ctrl_Trigger(ACTION_AUD_EnableFMPlay,&parm_FM,NULL,0);\
-		}
+
+            newSink =  pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
+            parm_spkr.src = pChip->streamCtl[stream-1].dev_prop.p[0].hw_src;
+			parm_spkr.cur_sink = curSink;
+			parm_spkr.cur_spkr = curSpk;
+			parm_spkr.new_sink = newSink;
+			parm_spkr.new_spkr = newSpk;
+			AUDIO_Ctrl_Trigger(ACTION_AUD_SwitchSpkr,&parm_spkr,NULL,0);
+		 }
+        }
         break;
 
 	default:
@@ -857,6 +866,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_FM_ENABLE:
             callMode = pChip->iEnablePhoneCall;
 			pChip->iEnableFM = ucontrol->value.integer.value[0];
+            pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_src = AUDIO_HW_I2S_IN;
 			pSel = pChip->streamCtl[CTL_STREAM_PANEL_FM-1].iLineSelect;
 			BCM_AUDIO_DEBUG("MiscCtrlPut CTL_FUNCTION_FM_ENABLE stream = %d, status = %d, pSel[0] = %ld-%ld \n", stream, pChip->iEnableFM,pSel[0],pSel[1]);
 
@@ -1164,7 +1174,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		{
 			.iFlags = MIXER_STREAM_FLAGS_FM,
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_LOUDSPK},
+			.iLineSelect = {AUDCTRL_SPK_HEADSET, AUDCTRL_SPK_HEADSET},
 			.strStreamName = "FM",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},		

@@ -381,6 +381,8 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 	BCM_AUDIO_DEBUG("\n %lx:playback_trigger cmd=%d \n",jiffies,cmd);
 
     drv_handle = substream->runtime->private_data;
+    chip->streamCtl[substream_number].dev_prop.p[0].hw_src = AUDIO_HW_MEM;	
+    chip->streamCtl[substream_number].dev_prop.p[1].hw_src = AUDIO_HW_MEM;	
 
 	if((callMode == 1) && (chip->streamCtl[substream_number].iLineSelect[0] != AUDCTRL_SPK_I2S)) //call mode & not FM Tx playback
 	{

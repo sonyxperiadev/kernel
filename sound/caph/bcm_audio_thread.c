@@ -297,7 +297,8 @@ void AUDIO_Ctrl_Process(
 			// Remove secondary playback path if it's in use
 			if(param_stop->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
-            	AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_id,
+            	AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_src,
+                                       param_stop->pdev_prop->p[0].hw_id,
 										param_stop->pdev_prop->p[0].speaker,
 										param_stop->pdev_prop->p[1].hw_id,
 										param_stop->pdev_prop->p[1].speaker);
@@ -414,7 +415,8 @@ void AUDIO_Ctrl_Process(
 
 			if(param_start->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
-            	AUDCTRL_AddPlaySpk(param_start->pdev_prop->p[0].hw_id,
+            	AUDCTRL_AddPlaySpk( param_start->pdev_prop->p[0].hw_src,
+                                    param_start->pdev_prop->p[0].hw_id,
                                    param_start->pdev_prop->p[0].speaker,
 									param_start->pdev_prop->p[1].hw_id,
 									param_start->pdev_prop->p[1].speaker);
@@ -503,7 +505,8 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_SwitchSpkr:
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-			AUDCTRL_SwitchPlaySpk(parm_spkr->cur_sink,
+			AUDCTRL_SwitchPlaySpk( parm_spkr->src,
+                                    parm_spkr->cur_sink,
 									parm_spkr->cur_spkr,
 									parm_spkr->new_sink,
 									parm_spkr->new_spkr);
@@ -512,7 +515,8 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_AddSpkr:
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-			AUDCTRL_AddPlaySpk(parm_spkr->cur_sink,
+			AUDCTRL_AddPlaySpk(parm_spkr->src,
+                               parm_spkr->cur_sink,
 								parm_spkr->cur_spkr,
 								parm_spkr->new_sink,
 								parm_spkr->new_spkr);

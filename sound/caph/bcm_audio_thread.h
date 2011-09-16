@@ -137,6 +137,7 @@ typedef struct
 
 typedef struct
 {
+   Int32 src;
    Int32 cur_sink;
    Int32 new_sink;
    Int32 cur_spkr;
