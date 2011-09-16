@@ -48,6 +48,7 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 #include "csl_caph_pcm_sspi.h"
 #include "csl_caph_gain.h"
 #include "osdw_caph_drv.h"
+#include "csl_caph_hwctrl.h"
 #ifdef UNDER_LINUX
 #include <mach/io_map.h>
 #include "clock.h"
@@ -217,8 +218,6 @@ static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_DEVICE_e source,
 static void csl_caph_hwctrl_RemovePathInTable(CSL_CAPH_PathID pathID);
 static CSL_CAPH_HWConfig_Table_t *csl_caph_hwctrl_GetPath_FromStreamID(CSL_CAPH_STREAM_e streamI);
 static CSL_CAPH_CFIFO_SAMPLERATE_e csl_caph_hwctrl_GetCSLSampleRate(AUDIO_SAMPLING_RATE_t sampleRate);
-static CSL_CAPH_HWConfig_DMA_t csl_caph_hwctrl_getDMACH(CSL_CAPH_DEVICE_e source,
-                                                        CSL_CAPH_DEVICE_e sink);
 static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
                                           CSL_CAPH_PathID pathID);
 static void csl_caph_hwctrl_removeHWResource(UInt32 fifoAddr,
@@ -1043,26 +1042,26 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 #if defined(ENABLE_DMA_VOICE)
 			if(path->source==CSL_CAPH_DEV_DSP)
 			{
-				fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH12);
+				fifo = csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH12);
 				Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp spk cfifo# 0x%x\r\n", fifo);
 			}
 			else if(path->sink==CSL_CAPH_DEV_DSP) 
 			{
 				if (path->source ==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
 				{
-					fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH14);
+					fifo = csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH14);
 					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp sec cfifo# 0x%x\r\n", fifo);
 				}
 				else
 				{
-					fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH13);
+					fifo = csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH13);
 					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp pri cfifo# 0x%x\r\n", fifo);
 				}
 			}
 			else
 #endif
 			if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink == CSL_CAPH_DEV_IHF) {
-				fifo = csl_caph_dma_get_csl_cfifo(path->dma[0]);
+				fifo = csl_caph_cfifo_get_fifo_by_dma(path->dma[0]);
 			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink == CSL_CAPH_DEV_FM_TX) {
 				fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			} else {
@@ -2222,24 +2221,6 @@ static CSL_CAPH_CFIFO_SAMPLERATE_e csl_caph_hwctrl_GetCSLSampleRate(AUDIO_SAMPLI
 
 /****************************************************************************
 *
-*  Function Name: CSL_CAPH_HWConfig_DMA_t csl_caph_hwctrl_getDMACH(
-*                                                 CSL_CAPH_DEVICE_e source
-*                                                 CSL_CAPH_DEVICE_e sink)
-*
-*  Description: Get the DMA channel configuration from a pre-defined look-up table.
-*
-****************************************************************************/
-static CSL_CAPH_HWConfig_DMA_t csl_caph_hwctrl_getDMACH(CSL_CAPH_DEVICE_e source,
-                                                        CSL_CAPH_DEVICE_e sink)
-{
-   	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_hwctrl_getDMACH::Source=0x%x, Sink=0x%x\n",
-                    source, sink));
-    return HWConfig_DMA_Table[sink][source];
-}
-
-/****************************************************************************
-*
 *  Function Name: void  csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
 *                                         CSL_CAPH_PathID pathID)
 *
@@ -2385,7 +2366,7 @@ static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
     if ((dmaCH == CSL_CAPH_DMA_NONE)||(pathID == 0)) return;
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeDMA path %d, dma %d.\r\n", pathID, dmaCH);
     
-    fifo = csl_caph_dma_get_csl_cfifo(dmaCH);
+    fifo = csl_caph_cfifo_get_fifo_by_dma(dmaCH);
     fifoAddr = csl_caph_cfifo_get_fifo_addr(fifo);
     csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
 
@@ -3065,79 +3046,44 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			return pathID;
 		}
 
-		if(path->dma[0] == CSL_CAPH_DMA_NONE)
-		{
-			dmaCHSetting = csl_caph_hwctrl_getDMACH(config.source, config.sink);
-		}
-		else
-		{
-			dmaCHSetting.dmaNum = 0;
-			dmaCHs.dmaCH = path->dma[0];
-			dmaCHs.dmaCH2 = path->dma[1];
-		}
-        if (dmaCHSetting.dmaNum == 2)
+        // The following code is to make sure we use reserved DMA channels for some special use cases.
+        if (config.source == CSL_CAPH_DEV_DSP_throughMEM && config.sink == CSL_CAPH_DEV_IHF)
         {
-            if (dmaCHSetting.dma[0] == 0)
-            {
-           	    dmaCHs.dmaCH = csl_caph_dma_obtain_channel();            
-                if (dmaCHs.dmaCH == CSL_CAPH_DMA_NONE)
-                {
-                    // No DMA Channel availble for dmaCH. 
-                    // Clean up the table.
-                    // Return zero pathID.
-                    csl_caph_hwctrl_RemovePathInTable(pathID);
-                    return 0;
-                }
-	            audio_xassert(dmaCHs.dmaCH<CSL_CAPH_DMA_CH12, dmaCHs.dmaCH);            
-            }
-            else
-            {
-       	    	dmaCHs.dmaCH = csl_caph_dma_obtain_given_channel(dmaCHSetting.dma[0]);
-            }
-
-            if (dmaCHSetting.dma[1] == 0)
-            {
-                dmaCHs.dmaCH2 = csl_caph_dma_obtain_channel();
-                if (dmaCHs.dmaCH2 == CSL_CAPH_DMA_NONE)
-                {
-                    // No DMA Channel availble for dmaCH2. Release dmaCH.
-                    // Clean up the table.
-                    // Return zero pathID
-                    csl_caph_dma_release_channel(dmaCHs.dmaCH);
-                    csl_caph_hwctrl_RemovePathInTable(pathID);
-                    return 0;
-                }
-                audio_xassert(dmaCHs.dmaCH2<CSL_CAPH_DMA_CH12, dmaCHs.dmaCH2);
-            }
-            else
-            {
-           		dmaCHs.dmaCH2 = csl_caph_dma_obtain_given_channel(dmaCHSetting.dma[1]);
-            }
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH12;
         }
-        else
-        if (dmaCHSetting.dmaNum == 1)
+        else if (config.source == CSL_CAPH_DEV_DIGI_MIC && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
         {
-            if (dmaCHSetting.dma[0] == 0)
-            {
-           	    dmaCHs.dmaCH = csl_caph_dma_obtain_channel();            
-                if (dmaCHs.dmaCH == CSL_CAPH_DMA_NONE)
-                {
-                    // No DMA Channel availble for dmaCH. 
-                    // Clean up the table.
-                    // Return zero pathID.
-                    csl_caph_hwctrl_RemovePathInTable(pathID);
-                    return 0;
-                }
-	            audio_xassert(dmaCHs.dmaCH<CSL_CAPH_DMA_CH12, dmaCHs.dmaCH);            
-            }
-            else
-            {
-           		dmaCHs.dmaCH = csl_caph_dma_obtain_given_channel(dmaCHSetting.dma[0]);
-            }
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH13;
+            dmaCHs.dmaCH2 = CSL_CAPH_DMA_CH14;
+        }
+        else if (config.source == CSL_CAPH_DEV_DIGI_MIC_L && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH13;
+        }
+        else if (config.source == CSL_CAPH_DEV_DIGI_MIC_R && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH2 = CSL_CAPH_DMA_CH14;
+        }
+        else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH13;
+            dmaCHs.dmaCH2 = CSL_CAPH_DMA_CH15;
+        }
+        else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH13;
+        }
+        else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH2 = CSL_CAPH_DMA_CH15;
+        }
+        else if (config.source == CSL_CAPH_DEV_EANC_INPUT && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH16;
         }
     }
-
-	if (config.streamID != CSL_CAPH_STREAM_NONE)
+	
+    if (config.streamID != CSL_CAPH_STREAM_NONE)
 	{
 		// Audio Router will control the Audio HW.
 		path = csl_caph_hwctrl_GetPath_FromStreamID(config.streamID);

@@ -51,6 +51,10 @@
 #ifndef	__AUDIO_VDRIVER_H__
 #define	__AUDIO_VDRIVER_H__
 
+
+//richlu
+#include "csl_caph_hwctrl.h"
+
 /**
 *
 * @addtogroup Audio

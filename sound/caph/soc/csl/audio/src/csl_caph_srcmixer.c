@@ -43,9 +43,13 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 //****************************************************************************
 // global variable definitions
 //****************************************************************************
-extern UInt16 srcmixer_input_gain_ramp;
-extern UInt16 srcmixer_output_gain_slope;
-extern UInt8 srcmixer_fifo_thres2;
+/* Mixer input gain ramping setting */
+UInt16 srcmixer_input_gain_ramp = 0x0000;
+/* Mixer output gain slope setting */
+UInt16 srcmixer_output_gain_slope = 0x0000;
+/* FIFO Threshold2 */
+UInt8 srcmixer_fifo_thres2 = 0;
+
 
 //****************************************************************************
 //                         L O C A L   S E C T I O N

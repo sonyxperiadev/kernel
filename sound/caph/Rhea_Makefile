@@ -112,7 +112,6 @@ snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_pcm_sspi.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_i2s_sspi.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_hwctrl.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_dma.o
-snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_config.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_cfifo.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_capture.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_audioh.o

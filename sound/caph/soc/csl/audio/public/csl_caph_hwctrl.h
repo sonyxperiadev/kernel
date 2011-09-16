@@ -35,6 +35,95 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #ifndef _CSL_CAPH_HWCTRL_
 #define _CSL_CAPH_HWCTRL_
 
+#include "csl_caph.h"
+#include "csl_caph_cfifo.h"
+#include "csl_caph_dma.h"
+#include "csl_caph_audioh.h"
+
+/**
+* CAPH Render/Capture CSL configuration parameters
+******************************************************************************/
+typedef struct
+{
+CSL_CAPH_DMA_CHNL_e dmaCH;
+CSL_CAPH_CFIFO_FIFO_e fifo;
+UInt8* pBuf;
+UInt32 size;
+CSL_CAPH_DMA_CALLBACK_p dmaCB;
+}CSL_CAPH_STREAM_CONFIG_t;
+
+/**
+* CAPH HW path configuration parameters
+******************************************************************************/
+typedef struct
+{
+    CSL_CAPH_STREAM_e streamID;
+    CSL_CAPH_PathID pathID;    
+    CSL_CAPH_DEVICE_e source;
+    CSL_CAPH_DEVICE_e sink;
+    CSL_CAPH_DMA_CHNL_e dmaCH;
+    CSL_CAPH_DMA_CHNL_e dmaCH2;
+    AUDIO_SAMPLING_RATE_t src_sampleRate;
+    AUDIO_SAMPLING_RATE_t snk_sampleRate;	
+    AUDIO_CHANNEL_NUM_t chnlNum;
+    AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+    CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
+}CSL_CAPH_HWCTRL_CONFIG_t;
+
+
+/**
+* CAPH HW path configuration parameters
+******************************************************************************/
+typedef struct
+{
+    CSL_CAPH_STREAM_e streamID;
+    AUDIO_SAMPLING_RATE_t src_sampleRate;
+    AUDIO_SAMPLING_RATE_t snk_sampleRate;
+    AUDIO_CHANNEL_NUM_t chnlNum;
+    AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+    UInt8* pBuf;
+    UInt8* pBuf2;
+    UInt32 size;
+    CSL_CAPH_DMA_CALLBACK_p dmaCB;    
+}CSL_CAPH_HWCTRL_STREAM_REGISTER_t;
+
+
+/**
+* CAPH HW register base address
+******************************************************************************/
+typedef struct
+{
+    UInt32 audioh_baseAddr;
+    UInt32 sdt_baseAddr;
+    UInt32 srcmixer_baseAddr;
+    UInt32 cfifo_baseAddr;
+    UInt32 aadmac_baseAddr;
+    UInt32 ssasw_baseAddr;
+    UInt32 ahintc_baseAddr;
+    UInt32 ssp3_baseAddr;
+    UInt32 ssp4_baseAddr;	
+}CSL_CAPH_HWCTRL_BASE_ADDR_t;
+
+/**
+* CAPH HW filters
+******************************************************************************/
+typedef enum
+{
+    CSL_CAPH_EANC_FILTER1, 
+    CSL_CAPH_EANC_FILTER2, 
+    CSL_CAPH_SIDETONE_FILTER, 
+}CSL_CAPH_HWCTRL_FILTER_e;
+
+/**
+* CAPH HW Resource management information
+******************************************************************************/
+typedef struct
+{
+    UInt32 fifoAddr;
+    CSL_CAPH_PathID pathID[MAX_AUDIO_PATH];
+}CSL_CAPH_HWResource_Table_t;
+
+
 /**
 *
 *  @brief  initialize the caph HW control CSL

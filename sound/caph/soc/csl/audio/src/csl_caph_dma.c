@@ -45,7 +45,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 //****************************************************************************
 // global variable definitions
 //****************************************************************************
-extern CSL_CFIFO_TABLE_t CSL_CFIFO_table[];
 
 //****************************************************************************
 //                         L O C A L   S E C T I O N
@@ -441,37 +440,6 @@ static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_dma_get_chal_direction(CSL_CAPH_DMA_
 	if (direct == CSL_CAPH_DMA_OUT) chalDirect = CAPH_CFIFO_OUT;
 	if (direct == CSL_CAPH_DMA_IN) chalDirect = CAPH_CFIFO_IN;
 	return chalDirect;
-}
-
-/****************************************************************************
-*
-*  Function Name:CSL_CAPH_CFIFO_FIFO_e csl_caph_dma_get_csl_cfifo(
-*                                          CSL_CAPH_DMA_CHNL_e dmaCH)
-*
-*  Description: get csl cfifo which is linked to this dma chan for dsp
-*
-****************************************************************************/
-CSL_CAPH_CFIFO_FIFO_e csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CHNL_e dmaCH)
-{
-	UInt16 id = 0;
-	
-	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_get_csl_cfifo:: \n");
-
-	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
-	{
-		if ((CSL_CFIFO_table[id].dmaCH == dmaCH) 
-			&&(CSL_CFIFO_table[id].status == 0)
-			&&(CSL_CFIFO_table[id].owner == CAPH_DSP))
-		{
-			csl_caph_cfifo_ch = (CSL_CAPH_CFIFO_FIFO_e)id;
-			CSL_CFIFO_table[id].status = 1;
-			break;
-		}
-	}
-
-	return csl_caph_cfifo_ch;
 }
 
 /****************************************************************************
