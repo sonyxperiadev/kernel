@@ -27,7 +27,7 @@
 
 #include <linux/of.h>
 #include <linux/of_fdt.h>
-#include <mach/pinmux.h>
+#include <mach/atag_dt.h>
 #include <mach/hardware.h>
 
 
@@ -44,6 +44,9 @@ static int __init parse_tag_dt(const struct tag *tag)
 
 	/* Retrieve info from the /pinmux node */
 	of_scan_flat_dt(early_init_dt_scan_pinmux, NULL);
+
+	/* Retrieve info from the /gpio node */
+	of_scan_flat_dt(early_init_dt_scan_gpio, NULL);
 
 	/* Retrieve info from other nodes ... */
 

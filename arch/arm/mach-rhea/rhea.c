@@ -105,6 +105,7 @@ struct sys_timer kona_timer = {
 #ifdef CONFIG_KONA_ATAG_DT
 /* rhea has 4 banks of GPIO pins */
 uint32_t dt_pinmux_gpio_mask[4] = {0, 0, 0, 0};
+uint32_t dt_gpio[128];
 #endif
 
 static int __init rhea_init(void)
