@@ -29,6 +29,7 @@ struct pwm_bl_data {
 	int			(*notify)(struct device *,
 					  int brightness);
 	int			(*check_fb)(struct device *, struct fb_info *);
+	int 			pwm_started;
 };
 
 static int pwm_backlight_update_status(struct backlight_device *bl)
@@ -49,10 +50,16 @@ static int pwm_backlight_update_status(struct backlight_device *bl)
 	pwm_set_period_ns(pb->pwm, pb->period);
 	if (brightness == 0) {
 		pwm_set_duty_ns(pb->pwm, 0);
-		pwm_stop(pb->pwm);
+		if(pb->pwm_started != 0){ 
+			pwm_stop(pb->pwm);
+			pb->pwm_started = 0;
+		}
 	} else {
 		pwm_set_duty_ns(pb->pwm, brightness * pb->period / max);
-		pwm_start(pb->pwm);
+		if(pb->pwm_started == 0){
+			pwm_start(pb->pwm);
+			pb->pwm_started = 1;
+		}
 	}
 	return 0;
 }
@@ -172,7 +179,10 @@ static int pwm_backlight_suspend(struct platform_device *pdev,
 	if (pb->notify)
 		pb->notify(pb->dev, 0);
 	pwm_set_duty_ns(pb->pwm, 0);
-	pwm_stop(pb->pwm);
+	if(pb->pwm_started != 0){
+		pwm_stop(pb->pwm);
+		pb->pwm_started = 0;
+	}
 
 	return 0;
 }
@@ -180,6 +190,12 @@ static int pwm_backlight_suspend(struct platform_device *pdev,
 static int pwm_backlight_resume(struct platform_device *pdev)
 {
 	struct backlight_device *bl = platform_get_drvdata(pdev);
+	struct pwm_bl_data *pb = dev_get_drvdata(&bl->dev);
+
+	if(pb->pwm_started == 0){
+		pwm_start(pb->pwm);
+		pb->pwm_started = 1;
+	}
 
 	backlight_update_status(bl);
 	return 0;
