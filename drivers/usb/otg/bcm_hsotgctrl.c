@@ -18,6 +18,7 @@
 #include <linux/stat.h>
 #include <linux/platform_device.h>
 #include <linux/delay.h>
+#include <linux/sched.h>
 #include <linux/err.h>
 #include <linux/slab.h>
 #include <linux/clk.h>
@@ -25,6 +26,8 @@
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include "bcm_hsotgctrl.h"
+
+#define	PHY_MODE_OTG		2
 
 struct bcm_hsotgctrl_drv_data {
 	struct device *dev;
@@ -84,6 +87,102 @@ static ssize_t do_phy_shutdown(struct device *dev,
 }
 static DEVICE_ATTR(phy_shutdown, S_IWUSR, NULL, do_phy_shutdown);
 
+int bcm_hsotgctrl_phy_init(void)
+{
+	int rc;
+	int val;
+	unsigned long rate;
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->hsotg_ctrl_base) || (!bcm_hsotgctrl_handle->dev))
+		return -EIO;
+
+	dev_info(bcm_hsotgctrl_handle->dev, "\n%s: Setting up USB OTG PHY and Clock\n", __func__);
+
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_STATUS_OFFSET);
+	if (val & HSOTG_CTRL_BC11_STATUS_BC_DONE_MASK) {
+		dev_info(bcm_hsotgctrl_handle->dev, "\nbc11 done\n");
+	}
+	else {
+		dev_info(bcm_hsotgctrl_handle->dev, "\nbc11 not done\n");
+	}
+
+	/* clear bit 15 RDB error */
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_P1CTL_PLL_SUSPEND_ENABLE_MASK;
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	schedule_timeout_interruptible(HZ/10);
+
+	/* set Phy to driving mode */
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_P1CTL_NON_DRIVING_MASK;
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10);
+
+	/* S/W reset Phy, actively low */
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
+	val &= ~HSOTG_CTRL_PHY_P1CTL_PHY_MODE_MASK;
+	val |= PHY_MODE_OTG << HSOTG_CTRL_PHY_P1CTL_PHY_MODE_SHIFT; // use OTG mode
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10);
+
+	/* bring Phy out of reset */
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+	val |= HSOTG_CTRL_PHY_P1CTL_SOFT_RESET_MASK;
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10);
+
+	/* set the phy to functional state */
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+	val &= ~HSOTG_CTRL_PHY_CFG_PHY_IDDQ_I_MASK;
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_CFG_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10);
+
+	val = HSOTG_CTRL_USBOTGCONTROL_OTGSTAT2_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT1_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_USB_ON_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_PRST_N_SW_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_HRESET_N_SW_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_PHY_RESETB_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_DLDO_PDN_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_SOFT_ALDO_PDN_MASK;
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_USBOTGCONTROL_OFFSET);
+
+	schedule_timeout_interruptible(HZ/10*3);
+
+	dev_info(bcm_hsotgctrl_handle->dev, "\n%s: Setup USB OTG PHY and Clock Completed\n", __func__);
+
+	return (rc);
+
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_init);
+
+int bcm_hsotgctrl_phy_deinit(void)
+{
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+		return -EIO;
+
+	/* Add shutdown sequence here later */
+
+	/* Disable the OTG core AHB clock */
+	clk_disable(bcm_hsotgctrl_handle->otg_clk);
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_deinit);
+
 static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 {
 	int error = 0;
@@ -111,6 +210,12 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 		return -EIO;
 	}
 
+	error = clk_enable(hsotgctrl_drvdata->otg_clk);
+	if (error) {
+		dev_warn(&pdev->dev, "%s: error enable clock\n", __func__);
+		return -EIO;
+	}
+
 	hsotgctrl_drvdata->hsotg_ctrl_base = ioremap(resource->start, SZ_4K);
 	if (!hsotgctrl_drvdata->hsotg_ctrl_base) {
 		dev_warn(&pdev->dev, "IO remap failed\n");
@@ -120,6 +225,9 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, hsotgctrl_drvdata);
+
+	/* Init the PHY. Later we will add our init/shutdown sequence */
+	bcm_hsotgctrl_phy_init();
 
 	error = device_create_file(&pdev->dev, &dev_attr_hsotgctrldump);
 
