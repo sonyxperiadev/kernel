@@ -510,6 +510,7 @@ void AUDCTRL_SetPlayMute(
 /********************************************************************
 *  @brief  switch speaker of playback 
 *
+*  @param   src  Source
 *  @param   curSink	current Sink device
 *  @param   curSpk  current speaker
 *  @param   newSink	new Sink device
@@ -518,6 +519,7 @@ void AUDCTRL_SetPlayMute(
 *
 ****************************************************************************/
 void AUDCTRL_SwitchPlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			curSink,
 				AUDCTRL_SPEAKER_t		curSpk,
 				AUDIO_HW_ID_t			newSink,
@@ -527,6 +529,7 @@ void AUDCTRL_SwitchPlaySpk(
 /********************************************************************
 *  @brief  Add a speaker to a playback path
 *
+*  @param   src  Source
 *  @param   curSink	current Sink device
 *  @param   curSpk  current speaker
 *  @param  secondary sink	(in)  playback sink
@@ -536,6 +539,7 @@ void AUDCTRL_SwitchPlaySpk(
 *
 ****************************************************************************/
 void AUDCTRL_AddPlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			curSink,
 				AUDCTRL_SPEAKER_t		curSpk,
 				AUDIO_HW_ID_t			newSink,
@@ -545,6 +549,7 @@ void AUDCTRL_AddPlaySpk(
 /********************************************************************
 *  @brief  Remove a speaker to a playback path
 *
+*  @param   src  Source
 *  @param   PriSink	current Sink device
 *  @param   PriSpk  current speaker
 *  @param  SecSink	(in)  playback sink  
@@ -554,6 +559,7 @@ void AUDCTRL_AddPlaySpk(
 *
 ****************************************************************************/
 void AUDCTRL_RemovePlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			PriSink,
 				AUDCTRL_SPEAKER_t		PriSpk,
 				AUDIO_HW_ID_t			SecSink,

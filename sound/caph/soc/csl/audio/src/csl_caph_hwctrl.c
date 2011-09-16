@@ -48,6 +48,7 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 #include "csl_caph_pcm_sspi.h"
 #include "csl_caph_gain.h"
 #include "osdw_caph_drv.h"
+#include "csl_caph_hwctrl.h"
 #ifdef UNDER_LINUX
 #include <mach/io_map.h>
 #include "clock.h"
@@ -67,16 +68,6 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 /**
 * Globale Constants
 ******************************************************************************/
-#define AUDIOH_BASE_ADDR1            KONA_AUDIOH_BASE_VA /* brcm_rdb_cph_cfifo.h */
-#define SDT_BASE_ADDR1            KONA_SDT_BASE_VA /* brcm_rdb_cph_cfifo.h */
-#define SRCMIXER_BASE_ADDR1          KONA_SRCMIXER_BASE_VA /* brcm_rdb_srcmixer.h */
-#define CFIFO_BASE_ADDR1             KONA_CFIFO_BASE_VA /* brcm_rdb_cph_cfifo.h */
-#define AADMAC_BASE_ADDR1            KONA_AADMAC_BASE_VA /* brcm_rdb_cph_aadmac.h */
-#define SSASW_BASE_ADDR1             KONA_SSASW_BASE_VA /* brcm_rdb_cph_ssasw.h */
-#define AHINTC_BASE_ADDR1            KONA_AHINTC_BASE_VA /* brcm_rdb_ahintc.h */	
-#define SSP4_BASE_ADDR1            KONA_SSP4_BASE_VA /* brcm_rdb_sspil.h */
-#define SSP3_BASE_ADDR1            KONA_SSP3_BASE_VA /* brcm_rdb_sspil.h */
-
 
 //****************************************************************************
 // global variable definitions
@@ -99,6 +90,20 @@ extern CHAL_HANDLE lp_handle;
 
 #define MAX_BLOCK_NUM	4	//max number of same block in a path
 #define MAX_PATH_LEN	20	//max block number in a path
+
+#if defined(WIN32)
+#define AP_SH_BASE 0
+#else
+#define AUDIOH_BASE_ADDR1            KONA_AUDIOH_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define SDT_BASE_ADDR1            KONA_SDT_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define SRCMIXER_BASE_ADDR1          KONA_SRCMIXER_BASE_VA /* brcm_rdb_srcmixer.h */
+#define CFIFO_BASE_ADDR1             KONA_CFIFO_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define AADMAC_BASE_ADDR1            KONA_AADMAC_BASE_VA /* brcm_rdb_cph_aadmac.h */
+#define SSASW_BASE_ADDR1             KONA_SSASW_BASE_VA /* brcm_rdb_cph_ssasw.h */
+#define AHINTC_BASE_ADDR1            KONA_AHINTC_BASE_VA /* brcm_rdb_ahintc.h */	
+#define SSP4_BASE_ADDR1            KONA_SSP4_BASE_VA /* brcm_rdb_sspil.h */
+#define SSP3_BASE_ADDR1            KONA_SSP3_BASE_VA /* brcm_rdb_sspil.h */
+
 typedef enum
 {
 	CAPH_NONE,
@@ -141,6 +146,7 @@ typedef struct
 	AUDDRV_PATH_Enum_t audiohPath[3]; //0 for source, 1 for sink, 2 for sink2
 	audio_config_t audiohCfg[3];
 }CSL_CAPH_HWConfig_Table_t;
+#endif
 
 //****************************************************************************
 // local variable definitions
@@ -170,7 +176,6 @@ static Boolean fmRunning = FALSE;
 static Boolean fmPlayTx = FALSE;
 static Boolean fmPlayRx = FALSE;
 static Boolean pcmRunning = FALSE;
-static Boolean ssp_bt_running = FALSE;
 static CSL_CAPH_SWITCH_TRIGGER_e fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0; 
 static CSL_CAPH_SWITCH_TRIGGER_e fmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0; 
 #if defined(CNEON_MODEM) || defined(CNEON_COMMON)
@@ -213,8 +218,6 @@ static CSL_CAPH_PathID csl_caph_hwctrl_AddPathInTable(CSL_CAPH_DEVICE_e source,
 static void csl_caph_hwctrl_RemovePathInTable(CSL_CAPH_PathID pathID);
 static CSL_CAPH_HWConfig_Table_t *csl_caph_hwctrl_GetPath_FromStreamID(CSL_CAPH_STREAM_e streamI);
 static CSL_CAPH_CFIFO_SAMPLERATE_e csl_caph_hwctrl_GetCSLSampleRate(AUDIO_SAMPLING_RATE_t sampleRate);
-static CSL_CAPH_HWConfig_DMA_t csl_caph_hwctrl_getDMACH(CSL_CAPH_DEVICE_e source,
-                                                        CSL_CAPH_DEVICE_e sink);
 static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
                                           CSL_CAPH_PathID pathID);
 static void csl_caph_hwctrl_removeHWResource(UInt32 fifoAddr,
@@ -1039,26 +1042,26 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 #if defined(ENABLE_DMA_VOICE)
 			if(path->source==CSL_CAPH_DEV_DSP)
 			{
-				fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH12);
+				fifo = csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH12);
 				Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp spk cfifo# 0x%x\r\n", fifo);
 			}
 			else if(path->sink==CSL_CAPH_DEV_DSP) 
 			{
 				if (path->source ==CSL_CAPH_DEV_EANC_DIGI_MIC_R)
 				{
-					fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH14);
+					fifo = csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH14);
 					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp sec cfifo# 0x%x\r\n", fifo);
 				}
 				else
 				{
-					fifo = csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CH13);
+					fifo = csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CH13);
 					Log_DebugPrintf(LOGID_SOC_AUDIO, "caph dsp pri cfifo# 0x%x\r\n", fifo);
 				}
 			}
 			else
 #endif
 			if (path->source == CSL_CAPH_DEV_DSP_throughMEM && path->sink == CSL_CAPH_DEV_IHF) {
-				fifo = csl_caph_dma_get_csl_cfifo(path->dma[0]);
+				fifo = csl_caph_cfifo_get_fifo_by_dma(path->dma[0]);
 			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink == CSL_CAPH_DEV_FM_TX) {
 				fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			} else {
@@ -1102,6 +1105,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			pSrcmRoute->outThres = 3;
 			pSrcmRoute->inDataFmt = dataFormat;
 			pSrcmRoute->inSampleRate = csl_caph_srcmixer_get_srcm_insamplerate(srOut);
+			pSrcmRoute->sink = path->sink;
 			if(path->srcmRoute[0].inChnl)
 			{	//if not the first srcmixer block, assume 16bit mono output?
 				dataFormat = CSL_CAPH_16BIT_MONO;
@@ -1171,6 +1175,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			pSrcmRoute->outThres = 3;
 			pSrcmRoute->inDataFmt = dataFormat;
 			pSrcmRoute->inSampleRate = csl_caph_srcmixer_get_srcm_insamplerate(srOut);
+			pSrcmRoute->sink = path->sink;
 
 			srOut = AUDIO_SAMPLING_RATE_48000;
 			sink = path->sink;
@@ -1777,11 +1782,9 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 	    clk_set_rate(clkID[0], 156000000);
         clk_enable(clkID[0]);
 
-#ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
 	    clkID[1] = clk_get(NULL, "ssp3_audio_clk");
         clk_enable(clkID[1]);
         //clk_set_rate(clkID[1], 156000000);
-#endif
     
         // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_2P4M_CLK, CLOCK_CLK_EN, clock_op_enable);
         clkID[2] = clk_get(NULL, "audioh_2p4m_clk");
@@ -2218,24 +2221,6 @@ static CSL_CAPH_CFIFO_SAMPLERATE_e csl_caph_hwctrl_GetCSLSampleRate(AUDIO_SAMPLI
 
 /****************************************************************************
 *
-*  Function Name: CSL_CAPH_HWConfig_DMA_t csl_caph_hwctrl_getDMACH(
-*                                                 CSL_CAPH_DEVICE_e source
-*                                                 CSL_CAPH_DEVICE_e sink)
-*
-*  Description: Get the DMA channel configuration from a pre-defined look-up table.
-*
-****************************************************************************/
-static CSL_CAPH_HWConfig_DMA_t csl_caph_hwctrl_getDMACH(CSL_CAPH_DEVICE_e source,
-                                                        CSL_CAPH_DEVICE_e sink)
-{
-   	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
-                    "csl_caph_hwctrl_getDMACH::Source=0x%x, Sink=0x%x\n",
-                    source, sink));
-    return HWConfig_DMA_Table[sink][source];
-}
-
-/****************************************************************************
-*
 *  Function Name: void  csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
 *                                         CSL_CAPH_PathID pathID)
 *
@@ -2381,7 +2366,7 @@ static void csl_caph_hwctrl_closeDMA(CSL_CAPH_DMA_CHNL_e dmaCH,
     if ((dmaCH == CSL_CAPH_DMA_NONE)||(pathID == 0)) return;
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "closeDMA path %d, dma %d.\r\n", pathID, dmaCH);
     
-    fifo = csl_caph_dma_get_csl_cfifo(dmaCH);
+    fifo = csl_caph_cfifo_get_fifo_by_dma(dmaCH);
     fifoAddr = csl_caph_cfifo_get_fifo_addr(fifo);
     csl_caph_hwctrl_removeHWResource(fifoAddr, pathID);
 
@@ -3061,79 +3046,44 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 			return pathID;
 		}
 
-		if(path->dma[0] == CSL_CAPH_DMA_NONE)
-		{
-			dmaCHSetting = csl_caph_hwctrl_getDMACH(config.source, config.sink);
-		}
-		else
-		{
-			dmaCHSetting.dmaNum = 0;
-			dmaCHs.dmaCH = path->dma[0];
-			dmaCHs.dmaCH2 = path->dma[1];
-		}
-        if (dmaCHSetting.dmaNum == 2)
+        // The following code is to make sure we use reserved DMA channels for some special use cases.
+        if (config.source == CSL_CAPH_DEV_DSP_throughMEM && config.sink == CSL_CAPH_DEV_IHF)
         {
-            if (dmaCHSetting.dma[0] == 0)
-            {
-           	    dmaCHs.dmaCH = csl_caph_dma_obtain_channel();            
-                if (dmaCHs.dmaCH == CSL_CAPH_DMA_NONE)
-                {
-                    // No DMA Channel availble for dmaCH. 
-                    // Clean up the table.
-                    // Return zero pathID.
-                    csl_caph_hwctrl_RemovePathInTable(pathID);
-                    return 0;
-                }
-	            audio_xassert(dmaCHs.dmaCH<CSL_CAPH_DMA_CH12, dmaCHs.dmaCH);            
-            }
-            else
-            {
-       	    	dmaCHs.dmaCH = csl_caph_dma_obtain_given_channel(dmaCHSetting.dma[0]);
-            }
-
-            if (dmaCHSetting.dma[1] == 0)
-            {
-                dmaCHs.dmaCH2 = csl_caph_dma_obtain_channel();
-                if (dmaCHs.dmaCH2 == CSL_CAPH_DMA_NONE)
-                {
-                    // No DMA Channel availble for dmaCH2. Release dmaCH.
-                    // Clean up the table.
-                    // Return zero pathID
-                    csl_caph_dma_release_channel(dmaCHs.dmaCH);
-                    csl_caph_hwctrl_RemovePathInTable(pathID);
-                    return 0;
-                }
-                audio_xassert(dmaCHs.dmaCH2<CSL_CAPH_DMA_CH12, dmaCHs.dmaCH2);
-            }
-            else
-            {
-           		dmaCHs.dmaCH2 = csl_caph_dma_obtain_given_channel(dmaCHSetting.dma[1]);
-            }
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH12;
         }
-        else
-        if (dmaCHSetting.dmaNum == 1)
+        else if (config.source == CSL_CAPH_DEV_DIGI_MIC && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
         {
-            if (dmaCHSetting.dma[0] == 0)
-            {
-           	    dmaCHs.dmaCH = csl_caph_dma_obtain_channel();            
-                if (dmaCHs.dmaCH == CSL_CAPH_DMA_NONE)
-                {
-                    // No DMA Channel availble for dmaCH. 
-                    // Clean up the table.
-                    // Return zero pathID.
-                    csl_caph_hwctrl_RemovePathInTable(pathID);
-                    return 0;
-                }
-	            audio_xassert(dmaCHs.dmaCH<CSL_CAPH_DMA_CH12, dmaCHs.dmaCH);            
-            }
-            else
-            {
-           		dmaCHs.dmaCH = csl_caph_dma_obtain_given_channel(dmaCHSetting.dma[0]);
-            }
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH13;
+            dmaCHs.dmaCH2 = CSL_CAPH_DMA_CH14;
+        }
+        else if (config.source == CSL_CAPH_DEV_DIGI_MIC_L && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH13;
+        }
+        else if (config.source == CSL_CAPH_DEV_DIGI_MIC_R && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH2 = CSL_CAPH_DMA_CH14;
+        }
+        else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH13;
+            dmaCHs.dmaCH2 = CSL_CAPH_DMA_CH15;
+        }
+        else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_L && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH13;
+        }
+        else if (config.source == CSL_CAPH_DEV_EANC_DIGI_MIC_R && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH2 = CSL_CAPH_DMA_CH15;
+        }
+        else if (config.source == CSL_CAPH_DEV_EANC_INPUT && config.sink == CSL_CAPH_DEV_DSP_throughMEM)
+        {
+            dmaCHs.dmaCH = CSL_CAPH_DMA_CH16;
         }
     }
-
-	if (config.streamID != CSL_CAPH_STREAM_NONE)
+	
+    if (config.streamID != CSL_CAPH_STREAM_NONE)
 	{
 		// Audio Router will control the Audio HW.
 		path = csl_caph_hwctrl_GetPath_FromStreamID(config.streamID);
@@ -3531,7 +3481,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else  if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink == CSL_CAPH_DEV_BT_SPKR)) ||
              ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_DSP)))
     {
-        if (pcmRunning == FALSE)
+        if (pcmRunning == FALSE && !sspTDM_enabled)
         {
 	        // config sspi4 to master mono
 	        pcm_dev.mode       = CSL_PCM_MASTER_MODE;
@@ -3564,16 +3514,15 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		    csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 		    csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);		 
 	        pcmRunning = TRUE;	
-		    ssp_bt_running = TRUE;	
         }		
-	  else if ((sspTDM_enabled) && (ssp_bt_running == FALSE))
+	  else if (sspTDM_enabled && !pcmRunning)
 	  {
 	        // ssp was already configured by FM, only need to start BT part
 	        // start sspi
 	        csl_caph_intc_enable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
 		    csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 		    csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);				  
-		    ssp_bt_running = TRUE;			
+		    pcmRunning = TRUE;			
 	  }
     }
 	else  // DSP --> HW src --> HW src mixerout --> CFIFO->Memory
@@ -3699,7 +3648,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     }
 
 #if !defined(ENABLE_DMA_VOICE)
-	if(path->sink==CSL_CAPH_DEV_DSP) //UL to dsp
+	if(path->sink==CSL_CAPH_DEV_DSP && path->source != CSL_CAPH_DEV_BT_MIC) //UL to dsp
 	{
 		// stop the src intc to dsp
 		if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)) srcmIn = EANC_MIC_UL_TO_DSP_CHNL;
@@ -3787,12 +3736,12 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink == CSL_CAPH_DEV_BT_SPKR)) ||
 		((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_DSP)))	
 	{
-		if (ssp_bt_running == TRUE)
+		if (pcmRunning)
 		{
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 			csl_caph_intc_disable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
-			ssp_bt_running = FALSE;
+			pcmRunning = FALSE;
 		}
 	} else if(path->source == CSL_CAPH_DEV_BT_MIC || path->sink == CSL_CAPH_DEV_BT_SPKR) {
 		ssp_pcm_usecount--;
@@ -3859,6 +3808,7 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_
 		CAPH_BLOCK_t blocks[4] = {CAPH_SAME, CAPH_MIXER, CAPH_SW, CAPH_NONE};
 		//playback blocks: {CAPH_DMA, CAPH_CFIFO, CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE}
 		//voice call DL: {CAPH_MIXER, CAPH_SW, CAPH_NONE}
+        //FM playback blocks: {CAPH_SW, CAPH_MIXER, CAPH_SW, CAPH_NONE}
 
 		// If sink is the same changed, do nothing.
 		if ((path->sink == config.sink && path->audiohPath[1]) || (path->sink2 == config.sink))
@@ -3868,6 +3818,7 @@ Result_t csl_caph_hwctrl_AddPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_
 		{
 			mode=OBTAIN_BLOCKS_MULTICAST;
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
+            else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 3;
 			else blockPathIdx = 5; //where 2nd path starts
 			audiohIdx = 2;
 			srcmPathIdx = blockPathIdx+1;
@@ -3951,12 +3902,14 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 		if(path->sink2==config.sink)
 		{
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 2;
+			else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 3;
 			else blockPathIdx = 5; //where 2nd path starts
 			audiohIdx = 2;
 			srcmPathIdx = blockPathIdx+1;
 			path->sink2 = CSL_CAPH_DEV_NONE;
 		} else {
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
+            else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 1;
 			else blockPathIdx = 3;
 			audiohIdx = 1;
 			srcmPathIdx = blockPathIdx;
@@ -3974,6 +3927,7 @@ Result_t csl_caph_hwctrl_RemovePath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONF
 		if(path->sink2) //align all structure members.
 		{
 			if(path->source == CSL_CAPH_DEV_DSP) blockPathIdx = 0;
+			else if(path->source == CSL_CAPH_DEV_FM_RADIO) blockPathIdx = 1;
 			else blockPathIdx = 3;
 
 			memcpy(&path->block[blockPathIdx], &path->block[blockPathIdx+3], 4*sizeof(CAPH_BLOCK_t));
@@ -4678,7 +4632,6 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
 {
     CSL_CAPH_HWConfig_Table_t *path;
     int path_id = 0;
-    memset(&path, 0, sizeof(CSL_CAPH_HWConfig_Table_t));
 
 	if (!pathID) return;
 	path = &HWConfig_Table[pathID-1];
@@ -4712,8 +4665,7 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
       	    audio_xassert(0, path->sink );
     }
 
-    csl_caph_audioh_mute(path_id, 0);
-
+	csl_caph_audioh_mute(path_id, 0);
 	return;
 }
 

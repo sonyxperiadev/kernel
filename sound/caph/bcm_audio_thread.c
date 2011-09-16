@@ -297,7 +297,8 @@ void AUDIO_Ctrl_Process(
 			// Remove secondary playback path if it's in use
 			if(param_stop->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
-            	AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_id,
+            	AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_src,
+                                       param_stop->pdev_prop->p[0].hw_id,
 										param_stop->pdev_prop->p[0].speaker,
 										param_stop->pdev_prop->p[1].hw_id,
 										param_stop->pdev_prop->p[1].speaker);
@@ -414,7 +415,8 @@ void AUDIO_Ctrl_Process(
 
 			if(param_start->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
 			{
-            	AUDCTRL_AddPlaySpk(param_start->pdev_prop->p[0].hw_id,
+            	AUDCTRL_AddPlaySpk( param_start->pdev_prop->p[0].hw_src,
+                                    param_start->pdev_prop->p[0].hw_id,
                                    param_start->pdev_prop->p[0].speaker,
 									param_start->pdev_prop->p[1].hw_id,
 									param_start->pdev_prop->p[1].speaker);
@@ -446,6 +448,7 @@ void AUDIO_Ctrl_Process(
 									parm_mute->device,
 									parm_mute->mute1);	//currently driver doesnt handle Mute for left/right channels
 		}
+		break;
 		case ACTION_AUD_MuteRecord:
 		{
 			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
@@ -502,7 +505,8 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_SwitchSpkr:
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-			AUDCTRL_SwitchPlaySpk(parm_spkr->cur_sink,
+			AUDCTRL_SwitchPlaySpk( parm_spkr->src,
+                                    parm_spkr->cur_sink,
 									parm_spkr->cur_spkr,
 									parm_spkr->new_sink,
 									parm_spkr->new_spkr);
@@ -511,7 +515,8 @@ void AUDIO_Ctrl_Process(
 		case ACTION_AUD_AddSpkr:
 		{
 			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-			AUDCTRL_AddPlaySpk(parm_spkr->cur_sink,
+			AUDCTRL_AddPlaySpk(parm_spkr->src,
+                               parm_spkr->cur_sink,
 								parm_spkr->cur_spkr,
 								parm_spkr->new_sink,
 								parm_spkr->new_spkr);
@@ -580,6 +585,14 @@ void AUDIO_Ctrl_Process(
 			AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&parm_prepare->buf_param);
 			//Configure stream params
 			AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_CONFIG,(void*)&parm_prepare->drv_config);
+		}
+		break;
+		case ACTION_AUD_MuteTelephony:
+		{
+			BRCM_AUDIO_Param_Mute_t	*parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
+			AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
+										parm_mute->device,
+										parm_mute->mute1);
 		}
 		break;
         default:

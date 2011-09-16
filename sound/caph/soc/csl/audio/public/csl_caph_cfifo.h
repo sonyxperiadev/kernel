@@ -34,7 +34,52 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 
 #ifndef _CSL_CAPH_CFIFO_
 #define _CSL_CAPH_CFIFO_
+
 #include "csl_caph.h"
+
+// total ring buffer size for cfifo. make sure sync with cfifo config table 
+#if defined (_RHEA_)
+#define CSL_CFIFO_TOTAL_SIZE 0x2000
+#elif defined (_SAMOA_)
+#define CSL_CFIFO_TOTAL_SIZE 0x1000
+#endif
+
+/**
+* CAPH CFIFO Data Sample Rate
+******************************************************************************/
+typedef enum
+{
+    CSL_CAPH_SRCM_UNDEFINED,
+    CSL_CAPH_SRCM_8KHZ,
+    CSL_CAPH_SRCM_16KHZ,
+    CSL_CAPH_SRCM_48KHZ,
+}CSL_CAPH_CFIFO_SAMPLERATE_e;
+
+
+/**
+* CAPH CFIFO FIFO buffer direction: IN: DDR->CFIFO, OUT: CFIFO->DDR
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_CFIFO_OUT = 0x00,
+	CSL_CAPH_CFIFO_IN = 0x01,
+}CSL_CAPH_CFIFO_DIRECTION_e;
+
+/**
+* CAPH CFIFO FIFO buffer table
+******************************************************************************/
+typedef struct 
+{
+    CSL_CAPH_CFIFO_FIFO_e fifo;
+    UInt16 address;	
+    UInt16 size;
+    UInt16 threshold;
+    UInt8 owner;	
+    UInt8 status;
+    CSL_CAPH_DMA_CHNL_e dmaCH;	
+}CSL_CFIFO_TABLE_t;
+
+
 /**
 *
 *  @brief  initialize the caph cfifo block
@@ -174,6 +219,17 @@ UInt16 csl_caph_cfifo_read_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo,
 ****************************************************************************/
 CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_DATAFORMAT_e dataFormat,
  CSL_CAPH_CFIFO_SAMPLERATE_e sampleRate);
+
+/****************************************************************************
+*
+*  Function Name:CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(
+*                                          CSL_CAPH_DMA_CHNL_e dmaCH)
+*
+*  Description: get csl cfifo which is linked to this dma chan for dsp
+*
+****************************************************************************/
+CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CHNL_e dmaCH);
+
 
 #endif // _CSL_CAPH_CFIFO_
 

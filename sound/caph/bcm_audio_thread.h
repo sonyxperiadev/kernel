@@ -50,8 +50,7 @@ typedef enum
 	ACTION_AUD_SetTelephonySpkrVolume,  
     ACTION_AUD_SwitchSpkr,
     ACTION_AUD_AddSpkr,
-    ACTION_AUD_MuteVoicecall,
-    ACTION_AUD_SetHWLoopback,
+	ACTION_AUD_SetHWLoopback,
     ACTION_AUD_SetAudioMode,
     ACTION_AUD_EnableFMPlay,
     ACTION_AUD_DisableFMPlay,
@@ -138,6 +137,7 @@ typedef struct
 
 typedef struct
 {
+   Int32 src;
    Int32 cur_sink;
    Int32 new_sink;
    Int32 cur_spkr;
