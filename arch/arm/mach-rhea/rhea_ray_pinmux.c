@@ -156,6 +156,11 @@ static struct __init pin_config board_pin_config[] = {
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
 	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
 
+        /* Bluetooth related GPIOS */
+        PIN_CFG(GPIO04, GPIO4, 0, ON, OFF, 0, 0, 8MA),
+        PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
+
+
 };
 
 /* board level init */

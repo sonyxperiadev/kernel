@@ -550,6 +550,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.lvm_en_offset = KPROC_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KPROC_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPROC_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = KPROC_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
@@ -619,49 +620,30 @@ static u32 compute_vco_rate(u32 ndiv_int, u32 nfrac, u32 pdiv)
 static unsigned long __proc_clk_set_vco_rate(u32 base, u32 rate)
 {
 	const u32 max_ndiv = 512; /*512  == 0*/
-	u32 pdiv;
+	const u32 frac_div = 0x100000; //2^20
+	u32 pdiv = 1;
 	u32 ndiv_int, ndiv_frac;
 	u32 temp_rate;
 	u32 new_rate;
+	unsigned long xtal = clock_get_xtal();
+	u64 temp_frac;
 	u32 reg_val;
 
-	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
+	ndiv_int = rate/xtal; /*pdiv = 1*/
+	temp_frac= ((u64)rate - (u64)ndiv_int*xtal)*frac_div;
+	do_div(temp_frac, xtal);
 
-	ndiv_int = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK)
-					>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
-	pdiv = (reg_val & KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK)
-					>> KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT;
-	ndiv_frac = (readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET) & KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK)
-					>> KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
-	temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
+    ndiv_frac = (u32)temp_frac;
 
-	if(temp_rate < 	rate)
-	{
-		for(;ndiv_int < max_ndiv;ndiv_int++)
-		{
-			temp_rate = compute_vco_rate(ndiv_int+1,0,1);
-			if(temp_rate >= rate)
-				break;
-		}
-	}
-	else if(temp_rate > rate)
-	{
-		for(;ndiv_int > 0;ndiv_int--)
-		{
-			temp_rate = compute_vco_rate(ndiv_int-1,0,1);
-			if(temp_rate <= rate)
-			{
-			    ndiv_int--;
-			    break;
-			}
+    ndiv_frac  &= 0xFFFFF;
 
-		}
-	}
+    pr_info("ndiv_frac  = %x\n",ndiv_frac );
+    temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
 
 	if(temp_rate != rate)
 	{
 
-        for(ndiv_frac = 0; ndiv_frac  < 0xFFFFF; ndiv_frac++)
+        for(; ndiv_frac  < 0xFFFFF; ndiv_frac++)
         {
             temp_rate = compute_vco_rate(ndiv_int,ndiv_frac,1);
             if(temp_rate > rate)
@@ -671,21 +653,36 @@ static unsigned long __proc_clk_set_vco_rate(u32 base, u32 rate)
         }
 	}
 
+
 	if(ndiv_int == max_ndiv)
 		ndiv_int = 0;
 	pr_info("%s:ndiv_int = %x ndiv_frac = %x pdiv = %x\n", __func__,ndiv_int, ndiv_frac, pdiv);
 
-	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
-	reg_val &= ~(KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_MASK |
-				KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_MASK);
-	reg_val |= ndiv_int << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT;
-	reg_val |= pdiv << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT;
+	/*Set PLLARMCTRL3 to 0x8102000 if vco freq > 1.75Ghz
+			set to 0x8000000 otherwise
+	*/
+	if(rate > FREQ_MHZ(1750))
+	{
+		writel(0x8102000,base + KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET);
+	}
+	else
+		writel(0x8000000,base + KPROC_CLK_MGR_REG_PLLARMCTRL3_OFFSET);
+
+	reg_val = (pdiv << KPROC_CLK_MGR_REG_PLLARMA_PLLARM_PDIV_SHIFT)
+			| (ndiv_int<<KPROC_CLK_MGR_REG_PLLARMA_PLLARM_NDIV_INT_SHIFT)
+			| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_RESETB_MASK
+			| KPROC_CLK_MGR_REG_PLLARMA_PLLARM_SOFT_POST_RESETB_MASK;
+
 	writel(reg_val, base + KPROC_CLK_MGR_REG_PLLARMA_OFFSET);
 
 	reg_val = readl(base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
 	reg_val &= ~KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_MASK;
 	reg_val |= ndiv_frac << KPROC_CLK_MGR_REG_PLLARMB_PLLARM_NDIV_FRAC_SHIFT;
 	writel(reg_val, base + KPROC_CLK_MGR_REG_PLLARMB_OFFSET);
+
+	  /* wait for pll to lock */
+	while (! (readl(base +KPROC_CLK_MGR_REG_PLLARMA_OFFSET)
+			& KPROC_CLK_MGR_REG_PLLARMA_PLLARM_LOCK_MASK) );
 
 	new_rate = compute_vco_rate(ndiv_int,ndiv_frac,pdiv);
 	pr_info("%s:new rate =  %u\n",__func__,new_rate);
@@ -1216,6 +1213,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.lvm_en_offset = KHUB_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KHUB_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KHUB_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = KHUB_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KHUB_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
@@ -2225,6 +2223,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.lvm_en_offset = KHUBAON_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KHUBAON_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KHUBAON_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = KHUBAON_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KHUBAON_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
@@ -2937,6 +2936,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.lvm_en_offset = KPM_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KPM_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPM_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = KPM_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KPM_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
@@ -3522,6 +3522,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.lvm_en_offset = KPS_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = KPS_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = KPS_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = KPS_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = KPS_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
@@ -4473,6 +4474,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.lvm_en_offset = MM_CLK_MGR_REG_LVM_EN_OFFSET,
 	.lvm0_3_offset = MM_CLK_MGR_REG_LVM0_3_OFFSET,
 	.vlt0_3_offset = MM_CLK_MGR_REG_VLT0_3_OFFSET,
+	.vlt4_7_offset = MM_CLK_MGR_REG_VLT4_7_OFFSET,
 #ifdef CONFIG_DEBUG_FS
 	.policy_dbg_offset = MM_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
@@ -5362,6 +5364,59 @@ static int mm_ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
 	return ((reg_val >> shift) & CCU_FREQ_POLICY_MASK);
 }
 
+static int mm_ccu_clk_set_voltage(struct ccu_clk * ccu_clk, int volt_id, u8 voltage)
+{
+	u32 shift, reg_val;
+	u32 reg_addr;
+
+	if(volt_id >= ccu_clk->freq_count)
+		return -EINVAL;
+
+	ccu_clk->freq_volt[volt_id] = voltage & CCU_VLT_MASK;
+	switch(volt_id)
+	{
+	case CCU_VLT0:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_00_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT1:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_01_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT2:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_02_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT3:
+		shift = MM_CLK_MGR_REG_VLT0_3_VLT0_3_VV_03_SHIFT;
+		reg_addr = CCU_VLT0_3_REG(ccu_clk);
+		break;
+	case CCU_VLT4:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_04_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT5:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_05_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT6:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_06_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	case CCU_VLT7:
+		shift = MM_CLK_MGR_REG_VLT4_7_VLT4_7_VV_07_SHIFT;
+		reg_addr = CCU_VLT4_7_REG(ccu_clk);
+		break;
+	default:
+		return -EINVAL;
+	}
+	reg_val =  readl(reg_addr);
+	reg_val = (reg_val & ~(CCU_VLT_MASK << shift)) |
+			  ((voltage & CCU_VLT_MASK) << shift);
+	writel(reg_val, reg_addr);
+
+	return 0;
+}
 
 
 
@@ -5541,10 +5596,25 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(DIG_CH0_PERI_CLK_NAME_STR,NULL,dig_ch3),
 };
 
+#ifndef CONFIG_KONA_POWER_MGR
+static int set_mm_override(void)
+{
+    u32 reg_val = 0;
+
+    reg_val = readl(KONA_PWRMGR_VA + PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+    reg_val |= PWRMGR_PI_DEFAULT_POWER_STATE_PI_MM_WAKEUP_OVERRIDE_MASK;
+    writel(reg_val, KONA_PWRMGR_VA + PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET);
+
+    return 0;
+}
+#endif
 
 int __init rhea_clock_init(void)
 {
 
+#ifndef CONFIG_KONA_POWER_MGR
+	set_mm_override();
+#endif
 	/*overrride callback functions b4 registering the clks*/
 
 	/*only write_access function is needed for root ccu*/
@@ -5553,6 +5623,7 @@ int __init rhea_clock_init(void)
 	mm_ccu_ops = gen_ccu_ops;
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
 	mm_ccu_ops.get_freq_policy = mm_ccu_get_freq_policy;
+	mm_ccu_ops.set_voltage = mm_ccu_clk_set_voltage;
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
@@ -5565,7 +5636,6 @@ int __init rhea_clock_init(void)
     return 0;
 }
 
-#if 1
 int __init clock_late_init(void)
 {
 #ifdef CONFIG_DEBUG_FS
@@ -5581,5 +5651,7 @@ int __init clock_late_init(void)
 	return 0;
 }
 
-late_initcall(clock_late_init);
+#ifndef CONFIG_KONA_POWER_MGR
+early_initcall(rhea_clock_init);
 #endif
+late_initcall(clock_late_init);

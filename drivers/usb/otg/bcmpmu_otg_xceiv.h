@@ -18,13 +18,20 @@
 struct bcm_otg_xceiver {
 	struct otg_transceiver xceiver;
 	/* ADP functions and associated data structures */
+#ifdef CONFIG_MFD_BCMPMU
+	int (*do_adp_calibration_probe)(struct bcmpmu *bcmpmu);
+	int (*do_adp_probe)(struct bcmpmu *bcmpmu);
+	int (*do_adp_sense)(struct bcmpmu *bcmpmu);
+	int (*do_adp_sense_then_probe)(struct bcmpmu *bcmpmu);
+#else
 	int (*do_adp_calibration_probe)(struct bcm590xx *bcm590xx);
 	int (*do_adp_probe)(struct bcm590xx *bcm590xx);
 	int (*do_adp_sense)(struct bcm590xx *bcm590xx);
-	int (*do_adp_sense_then_probe)(struct bcm590xx *bcm590xx);	
+	int (*do_adp_sense_then_probe)(struct bcm590xx *bcm590xx);
+#endif	
 };
 
-struct bcm_otg_data {
+struct bcmpmu_otg_xceiv_data {
 	struct device *dev;
 #ifdef CONFIG_MFD_BCMPMU
 	struct bcmpmu *bcmpmu;
@@ -42,6 +49,7 @@ struct bcm_otg_data {
 	struct work_struct bcm_otg_vbus_a_valid_work;
 	struct work_struct bcm_otg_adp_cprb_done_work;
 	struct work_struct bcm_otg_adp_change_work;
+	struct work_struct bcm_otg_id_status_change_work;
 	bool host;
 	bool vbus_enabled;
 };

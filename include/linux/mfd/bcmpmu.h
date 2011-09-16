@@ -220,6 +220,8 @@ enum bcmpmu_reg {
 	PMU_REG_HSPGA1_GAIN,
 	PMU_REG_HSPGA2_GAIN,
 	/* Charge */
+	PMU_REG_CHRGR_USB_EN,
+	PMU_REG_CHRGR_WAC_EN,
 	PMU_REG_CHRGR_ICC_FC,
 	PMU_REG_CHRGR_ICC_QC,
 	PMU_REG_CHRGR_VFLOAT,
@@ -273,7 +275,6 @@ enum bcmpmu_reg {
 	PMU_REG_PMUID,
 	PMU_REG_PMUREV,
 	PMU_REG_PLLCTRL,
-	PMU_REG_MBCCTRL3,
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
@@ -302,8 +303,6 @@ enum bcmpmu_irq {
 	PMU_IRQ_BATRM,
 	PMU_IRQ_GBAT_PLUG_IN,
 	PMU_IRQ_SMPL_INT,
-	PMU_IRQ_CHGINS,
-	PMU_IRQ_CHGRM,
 	PMU_IRQ_USBINS,
 	PMU_IRQ_USBRM,
 	PMU_IRQ_USBOV,
@@ -589,17 +588,9 @@ enum bcmpmu_ioctl {
 #define PMU_EM_ADC_LOAD_CAL _IOW(0, PMU_EM_IOCTL_ADC_LOAD_CAL, u8*)
 #define PMU_EM_ENV_STATUS _IOR(0, PMU_EM_IOCTL_ENV_STATUS, unsigned long*)
 
-enum bcmpmu_batt_event {
-	PMU_BATT_EVENT_WAKEUP,
-	PMU_BATT_EVENT_CHRGR_INS,
-	PMU_BATT_EVENT_CHRGR_RMV,
-	PMU_BATT_EVENT_USB_INS,
-	PMU_BATT_EVENT_USB_RMV,
-	PMU_BATT_EVENT_USB_ENUM_500,
-	PMU_BATT_EVENT_USB_ENUM_100,
-	PMU_BATT_EVENT_USB_ENUM_0,
-	PMU_BATT_EVENT_SUSPEND,
-	PMU_BATT_EVENT_RESUME,
+enum bcmpmu_batt_event_t {
+	PMU_BATT_EVENT_PRESENT,
+	PMU_BATT_EVENT_MBOV,
 };
 
 enum bcmpmu_usb_accy_t {
@@ -627,6 +618,8 @@ enum bcmpmu_env_bit_t {
 	PMU_ENV_P_CGPD_CHG,
 	PMU_ENV_P_UBPD_CHR,
 	PMU_ENV_PORT_DISABLE,
+	PMU_ENV_MBPD,
+	PMU_ENV_MBOV,
 	PMU_ENV_MAX,
 };
 
@@ -672,17 +665,19 @@ enum bcmpmu_usb_ctrl_t {
 	BCMPMU_USB_CTRL_SW_UP,
 };
 
-#define	PMU_ENV_BITMASK_MBWV_DELTA		0x00001
-#define	PMU_ENV_BITMASK_CGPD_ENV		0x00002
-#define	PMU_ENV_BITMASK_UBPD_ENV		0x00004
-#define	PMU_ENV_BITMASK_UBPD_USBDET		0x00008
-#define	PMU_ENV_BITMASK_CGPD_PRI		0x00010
-#define	PMU_ENV_BITMASK_UBPD_PRI		0x00020
-#define	PMU_ENV_BITMASK_WAC_VALID		0x00040
-#define	PMU_ENV_BITMASK_USB_VALID		0x00080
-#define	PMU_ENV_BITMASK_P_CGPD_CHG		0x00100
-#define	PMU_ENV_BITMASK_P_UBPD_CHR		0x00200
-#define	PMU_ENV_BITMASK_PORT_DISABLE		0x00400
+#define	PMU_ENV_BITMASK_MBWV_DELTA		1<<0
+#define	PMU_ENV_BITMASK_CGPD_ENV		1<<1
+#define	PMU_ENV_BITMASK_UBPD_ENV		1<<2
+#define	PMU_ENV_BITMASK_UBPD_USBDET		1<<3
+#define	PMU_ENV_BITMASK_CGPD_PRI		1<<4
+#define	PMU_ENV_BITMASK_UBPD_PRI		1<<5
+#define	PMU_ENV_BITMASK_WAC_VALID		1<<6
+#define	PMU_ENV_BITMASK_USB_VALID		1<<7
+#define	PMU_ENV_BITMASK_P_CGPD_CHG		1<<8
+#define	PMU_ENV_BITMASK_P_UBPD_CHR		1<<9
+#define	PMU_ENV_BITMASK_PORT_DISABLE		1<<10
+#define	PMU_ENV_BITMASK_MBPD			1<<11
+#define	PMU_ENV_BITMASK_MBOV			1<<12
 
 struct bcmpmu_env_info {
  	struct bcmpmu_reg_map regmap;
@@ -703,6 +698,7 @@ struct bcmpmu_usb_accy_data {
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	enum bcmpmu_usb_type_t usb_type;
 	int max_curr_chrgr;
+	int batt_present;
 };
 
 struct bcmpmu_platform_data;
@@ -717,6 +713,8 @@ struct bcmpmu {
 	void *envinfo;
 	void *fginfo;
 	void *accyinfo;
+	void *eminfo;
+	void *ponkeyinfo;
 
 	/* reg access */
 	int (*read_dev)(struct bcmpmu *bcmpmu, int reg, unsigned int *val, unsigned int mask);
@@ -742,6 +740,8 @@ struct bcmpmu {
 	bool (*get_env_bit_status)(struct bcmpmu *pmu, enum bcmpmu_env_bit_t env_bit);
 
 	/* charge */
+	int (*chrgr_usb_en)(struct bcmpmu *bcmpmu, int en);
+	int (*chrgr_wac_en)(struct bcmpmu *bcmpmu, int en);
 	int (*set_icc_fc)(struct bcmpmu *pmu, int curr);
 	int (*set_icc_qc)(struct bcmpmu *pmu, int curr);
 	int (*set_eoc)(struct bcmpmu *pmu, int curr);
@@ -755,6 +755,11 @@ struct bcmpmu {
 	int (*fg_reset)(struct bcmpmu *pmu);
 	
 	/* battery */
+	int (* register_batt_event)(struct bcmpmu *pmu,
+			void (*callback)(struct bcmpmu *pmu,
+				unsigned char event, void *, void *),
+			void *data);
+	/* battery algorithms */
 	int (*charging_mgr)(struct bcmpmu *pmu, enum bcmpmu_batt_event event);
 	int (*metering_mgr)(struct bcmpmu *pmu, enum bcmpmu_batt_event event);
 

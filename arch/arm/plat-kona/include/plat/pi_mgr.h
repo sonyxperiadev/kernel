@@ -167,6 +167,10 @@ int pi_mgr_init(void);
 u32 pi_get_active_qos(int pi_id);
 u32 pi_get_active_opp(int pi_id);
 
+
+
+
+
 #ifdef CONFIG_DEBUG_FS
 int __init pi_debug_init(void);
 int __init pi_debug_add_pi(struct pi *pi);

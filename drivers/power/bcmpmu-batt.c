@@ -37,8 +37,15 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 		} \
 	} while (0)
 
+struct batt_cb {
+	void (*callback)(struct bcmpmu *,
+		unsigned char event, void *, void *);
+	void *clientdata;
+};
+
 struct bcmpmu_batt {
 	struct bcmpmu *bcmpmu;
+	struct batt_cb batt_cb;
 	struct power_supply batt;
 	struct bcmpmu_batt_state state;
 	wait_queue_head_t wait;
@@ -49,15 +56,16 @@ static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_batt *pbatt = data;
 	int ret;
-			
-	if (irq == PMU_IRQ_RTM_DATA_RDY) {
-	}
-	else if ((irq == PMU_IRQ_RTM_IN_CON_MEAS) ||
-		(irq == PMU_IRQ_RTM_UPPER) ||
-		(irq == PMU_IRQ_RTM_IGNORE) ||
-		(irq == PMU_IRQ_RTM_OVERRIDDEN)) {
-	}
-	else {
+	
+	switch (irq) {
+	case PMU_IRQ_BATINS:
+		break;
+	case PMU_IRQ_BATRM:
+		break;
+	case PMU_IRQ_MBOV:
+	case PMU_IRQ_MBOV_DIS:
+	default:
+		break;
 	}
 }
 
@@ -190,6 +198,25 @@ static const struct attribute_group bcmpmu_batt_attr_group = {
 };
 #endif
 
+static int bcmpmu_register_batt_event_callback(struct bcmpmu *bcmpmu,
+	void (*callback)(struct bcmpmu *pmu,
+		unsigned char event, void *, void *),
+	void *data)
+{
+	struct bcmpmu_batt *pbatt = (struct bcmpmu_batt *)bcmpmu->battinfo;
+	int ret = -EINVAL;
+	bool batt_present = true;
+
+	if (pbatt != NULL) {
+		pbatt->batt_cb.callback = callback;
+		pbatt->batt_cb.clientdata = data;
+		ret = 0;
+	}
+	if (bcmpmu->get_env_bit_status)
+		batt_present = bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_MBPD);
+	return ret;
+}
+
 static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 {
 	int ret;
@@ -215,7 +242,6 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	pbatt->batt.set_property = bcmpmu_set_batt_property;
 	pbatt->batt.name = "battery";
 	pbatt->batt.type = POWER_SUPPLY_TYPE_BATTERY;
-	
 	ret = power_supply_register(&pdev->dev, &pbatt->batt);
 	if (ret)
 		goto err;
@@ -234,6 +260,11 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_BBLOW, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_LOWBAT, bcmpmu_batt_isr, pbatt);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_VERYLOWBAT, bcmpmu_batt_isr, pbatt);
+
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_BATINS);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_BATRM);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV);
+	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);

@@ -151,6 +151,24 @@ static ssize_t store_rgltr(struct device *dev, struct device_attribute *attr,
 	regulator_put(rgltr);
 	return count;
 }
+static ssize_t store_regbulk(struct device *dev, struct device_attribute *attr,
+				char *buf, size_t count)
+{
+	int i;
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned int map, addr, len;
+	unsigned int val[16];
+	sscanf(buf, "%x, %x, %x", &map, &addr, &len);
+	printk("BCMPMU map=0x%X, addr=0x%X, length=0x%X\n", map, addr, len);
+	if ((map<2) &&
+		((addr+len)<255) &&
+		(len < 16)) {
+		bcmpmu->read_dev_bulk(bcmpmu, map, addr, &val[0], len);
+		for (i = 0; i < len; i++)
+			printk("BCMPMU register=0x%X, value=0x%X\n", addr+i, val[i]);
+	}
+	return count;
+}
 
 static DEVICE_ATTR(regread, 0644, show_reg_read, NULL);
 static DEVICE_ATTR(regwrite, 0644, NULL, store_reg_write);
@@ -160,6 +178,7 @@ static DEVICE_ATTR(map, 0644, bcmpmu_show_map, bcmpmu_set_map);
 static DEVICE_ATTR(addr, 0644, bcmpmu_show_addr, bcmpmu_set_addr);
 static DEVICE_ATTR(value, 0644, bcmpmu_show_value, bcmpmu_set_value);
 static DEVICE_ATTR(mask, 0644, bcmpmu_show_mask, bcmpmu_set_mask);
+static DEVICE_ATTR(regbulk, 0644, NULL, store_regbulk);
 
 static struct attribute *bcmpmu_core_attrs[] = {
 	&dev_attr_regread.attr,
@@ -170,6 +189,7 @@ static struct attribute *bcmpmu_core_attrs[] = {
 	&dev_attr_addr.attr,
 	&dev_attr_value.attr,
 	&dev_attr_mask.attr,
+	&dev_attr_regbulk.attr,
 	NULL
 };
 
@@ -310,6 +330,12 @@ static struct platform_device bcmpmu_rtc_device = {
 	.dev.platform_data 	= NULL,
 };
 
+static struct platform_device bcmpmu_ponkey_device = {
+	.name 			= "bcmpmu_ponkey",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+
 static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_irq_device,
 	&bcmpmu_hwmon_device,
@@ -317,6 +343,7 @@ static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_batt_device,
 	&bcmpmu_chrgr_device,
 	&bcmpmu_accy_device,
+	&bcmpmu_ponkey_device,
 };
 
 static int __devinit bcmpmu_probe(struct platform_device *pdev)

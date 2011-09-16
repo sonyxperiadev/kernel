@@ -8,6 +8,8 @@ EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/inc
 
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/sysinterface/util/public/
+EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc
+EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/soc/public
 
 EXTRA_CFLAGS += -Ifs/cifs/
 EXTRA_CFLAGS += -DUNDER_LINUX

@@ -16,7 +16,6 @@
 #ifndef __KONA_AVS___
 #define __KONA_AVS___
 
-
 enum
 {
 	SILICON_TYPE_SLOW,
@@ -53,7 +52,6 @@ struct kona_avs_pdata
 	u8** volt_table;
 
 };
-
 
 u32 kona_avs_get_solicon_type(void);
 u8* kona_avs_get_volt_table(void);

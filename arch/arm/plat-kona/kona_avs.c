@@ -48,7 +48,6 @@ struct avs_info
 
 struct avs_info avs_info = {.silicon_type = SILICON_TYPE_SLOW,};
 
-
 module_param_named(silicon_type, avs_info.silicon_type, int, S_IRUGO);
 module_param_named(svt_silicon_type, avs_info.svt_silicon_type, int, S_IRUGO);
 module_param_named(lvt_silicon_type, avs_info.lvt_silicon_type, int, S_IRUGO);
@@ -77,7 +76,6 @@ static int otp_read(int row, struct mon_val* mon_val)
 
 	return 0;
 }
-
 #endif
 
 u32 kona_avs_get_solicon_type()
@@ -85,6 +83,8 @@ u32 kona_avs_get_solicon_type()
 	BUG_ON(avs_info.pdata == NULL);
 	return avs_info.silicon_type;
 }
+
+
 EXPORT_SYMBOL(kona_avs_get_solicon_type);
 
 u8* kona_avs_get_volt_table()
@@ -92,6 +92,8 @@ u8* kona_avs_get_volt_table()
 	BUG_ON(avs_info.pdata == NULL);
 	return avs_info.volt_tbl;
 }
+
+
 EXPORT_SYMBOL(kona_avs_get_volt_table);
 
 int kona_avs_get_mon_val(struct avs_info* avs_inf_ptr)
@@ -147,6 +149,7 @@ int kona_avs_get_mon_val(struct avs_info* avs_inf_ptr)
 	return ret;
 }
 
+
 static u32 kona_avs_get_svt_type(struct avs_info* avs_inf_ptr)
 {
 	int i;
@@ -186,7 +189,6 @@ static u32 kona_avs_get_svt_type(struct avs_info* avs_inf_ptr)
 }
 
 
-
 static u32 kona_avs_get_lvt_type(struct avs_info* avs_inf_ptr)
 {
 	int i;
@@ -223,6 +225,7 @@ static u32 kona_avs_get_lvt_type(struct avs_info* avs_inf_ptr)
 
 	return pdata->lvt_silicon_type_lut[lvt_pmos_inx*pdata->nmos_bin_size + lvt_nmos_inx];
 }
+
 
 static int kona_avs_drv_probe(struct platform_device *pdev)
 {
@@ -261,10 +264,12 @@ static int kona_avs_drv_probe(struct platform_device *pdev)
 	return ret;
 }
 
+
 static int __devexit kona_avs_drv_remove(struct platform_device *pdev)
 {
 	return 0;
 }
+
 
 static struct platform_driver kona_avs_drv =
 {
@@ -277,12 +282,15 @@ static int __init kona_avs_drv_init(void)
 {
 	return platform_driver_register(&kona_avs_drv);
 }
+
+
 arch_initcall(kona_avs_drv_init);
 
 static void __exit kona_avs_drv_exit(void)
 {
 	platform_driver_unregister(&kona_avs_drv);
 }
+
 
 module_exit(kona_avs_drv_exit);
 

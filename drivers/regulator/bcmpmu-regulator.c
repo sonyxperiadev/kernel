@@ -450,10 +450,6 @@ static void __exit bcmpmu_regulator_exit(void)
 module_exit(bcmpmu_regulator_exit);
 
 /* Module information */
-MODULE_AUTHOR("Saringni Addepally");
-MODULE_DESCRIPTION("BCMPMU voltage and current regulator driver");
-MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:bcmpmu-regulator");
-
 MODULE_DESCRIPTION("BCMPMU regulator driver");
 MODULE_LICENSE("GPL");
+MODULE_ALIAS("platform:bcmpmu-regulator");
