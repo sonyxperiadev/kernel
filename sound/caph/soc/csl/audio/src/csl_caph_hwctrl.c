@@ -67,16 +67,6 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 /**
 * Globale Constants
 ******************************************************************************/
-#define AUDIOH_BASE_ADDR1            KONA_AUDIOH_BASE_VA /* brcm_rdb_cph_cfifo.h */
-#define SDT_BASE_ADDR1            KONA_SDT_BASE_VA /* brcm_rdb_cph_cfifo.h */
-#define SRCMIXER_BASE_ADDR1          KONA_SRCMIXER_BASE_VA /* brcm_rdb_srcmixer.h */
-#define CFIFO_BASE_ADDR1             KONA_CFIFO_BASE_VA /* brcm_rdb_cph_cfifo.h */
-#define AADMAC_BASE_ADDR1            KONA_AADMAC_BASE_VA /* brcm_rdb_cph_aadmac.h */
-#define SSASW_BASE_ADDR1             KONA_SSASW_BASE_VA /* brcm_rdb_cph_ssasw.h */
-#define AHINTC_BASE_ADDR1            KONA_AHINTC_BASE_VA /* brcm_rdb_ahintc.h */	
-#define SSP4_BASE_ADDR1            KONA_SSP4_BASE_VA /* brcm_rdb_sspil.h */
-#define SSP3_BASE_ADDR1            KONA_SSP3_BASE_VA /* brcm_rdb_sspil.h */
-
 
 //****************************************************************************
 // global variable definitions
@@ -99,6 +89,20 @@ extern CHAL_HANDLE lp_handle;
 
 #define MAX_BLOCK_NUM	4	//max number of same block in a path
 #define MAX_PATH_LEN	20	//max block number in a path
+
+#if defined(WIN32)
+#define AP_SH_BASE 0
+#else
+#define AUDIOH_BASE_ADDR1            KONA_AUDIOH_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define SDT_BASE_ADDR1            KONA_SDT_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define SRCMIXER_BASE_ADDR1          KONA_SRCMIXER_BASE_VA /* brcm_rdb_srcmixer.h */
+#define CFIFO_BASE_ADDR1             KONA_CFIFO_BASE_VA /* brcm_rdb_cph_cfifo.h */
+#define AADMAC_BASE_ADDR1            KONA_AADMAC_BASE_VA /* brcm_rdb_cph_aadmac.h */
+#define SSASW_BASE_ADDR1             KONA_SSASW_BASE_VA /* brcm_rdb_cph_ssasw.h */
+#define AHINTC_BASE_ADDR1            KONA_AHINTC_BASE_VA /* brcm_rdb_ahintc.h */	
+#define SSP4_BASE_ADDR1            KONA_SSP4_BASE_VA /* brcm_rdb_sspil.h */
+#define SSP3_BASE_ADDR1            KONA_SSP3_BASE_VA /* brcm_rdb_sspil.h */
+
 typedef enum
 {
 	CAPH_NONE,
@@ -141,6 +145,7 @@ typedef struct
 	AUDDRV_PATH_Enum_t audiohPath[3]; //0 for source, 1 for sink, 2 for sink2
 	audio_config_t audiohCfg[3];
 }CSL_CAPH_HWConfig_Table_t;
+#endif
 
 //****************************************************************************
 // local variable definitions
@@ -170,7 +175,6 @@ static Boolean fmRunning = FALSE;
 static Boolean fmPlayTx = FALSE;
 static Boolean fmPlayRx = FALSE;
 static Boolean pcmRunning = FALSE;
-static Boolean ssp_bt_running = FALSE;
 static CSL_CAPH_SWITCH_TRIGGER_e fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0; 
 static CSL_CAPH_SWITCH_TRIGGER_e fmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0; 
 #if defined(CNEON_MODEM) || defined(CNEON_COMMON)
@@ -3531,7 +3535,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     else  if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink == CSL_CAPH_DEV_BT_SPKR)) ||
              ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_DSP)))
     {
-        if (pcmRunning == FALSE)
+        if (pcmRunning == FALSE && !sspTDM_enabled)
         {
 	        // config sspi4 to master mono
 	        pcm_dev.mode       = CSL_PCM_MASTER_MODE;
@@ -3564,16 +3568,15 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		    csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 		    csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);		 
 	        pcmRunning = TRUE;	
-		    ssp_bt_running = TRUE;	
         }		
-	  else if ((sspTDM_enabled) && (ssp_bt_running == FALSE))
+	  else if (sspTDM_enabled && !pcmRunning)
 	  {
 	        // ssp was already configured by FM, only need to start BT part
 	        // start sspi
 	        csl_caph_intc_enable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
 		    csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 		    csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);				  
-		    ssp_bt_running = TRUE;			
+		    pcmRunning = TRUE;			
 	  }
     }
 	else  // DSP --> HW src --> HW src mixerout --> CFIFO->Memory
@@ -3699,7 +3702,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     }
 
 #if !defined(ENABLE_DMA_VOICE)
-	if(path->sink==CSL_CAPH_DEV_DSP) //UL to dsp
+	if(path->sink==CSL_CAPH_DEV_DSP && path->source != CSL_CAPH_DEV_BT_MIC) //UL to dsp
 	{
 		// stop the src intc to dsp
 		if ((path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_L) || (path->source == CSL_CAPH_DEV_EANC_DIGI_MIC_R)) srcmIn = EANC_MIC_UL_TO_DSP_CHNL;
@@ -3787,12 +3790,12 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink == CSL_CAPH_DEV_BT_SPKR)) ||
 		((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink == CSL_CAPH_DEV_DSP)))	
 	{
-		if (ssp_bt_running == TRUE)
+		if (pcmRunning)
 		{
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 			csl_caph_intc_disable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
-			ssp_bt_running = FALSE;
+			pcmRunning = FALSE;
 		}
 	} else if(path->source == CSL_CAPH_DEV_BT_MIC || path->sink == CSL_CAPH_DEV_BT_SPKR) {
 		ssp_pcm_usecount--;
