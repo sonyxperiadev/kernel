@@ -314,24 +314,10 @@ int print_sw_event_info()
 
 int enter_idle_state(struct kona_idle_state* state)
 {
-    static struct clk *clk = NULL;
-    static struct peri_clk *peri_clk = NULL;
 	struct pi* pi = NULL;
 	u32 reg_val;
 
 	BUG_ON(!state);
-
-	if(!clk)
-	{
-		clk = clk_get(NULL, PMU_BSC_PERI_CLK_NAME_STR);
-		if(IS_ERR_OR_NULL(clk))
-		{
-			pr_err("Inavlid clock name: %s\n", __func__);
-			BUG_ON(1);
-			return -EINVAL;
-		}
-		peri_clk = to_peri_clk(clk);
-	}
 
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
@@ -343,12 +329,6 @@ int enter_idle_state(struct kona_idle_state* state)
 		reg_val |=CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
 		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	}
-
-	ccu_write_access_enable(peri_clk->ccu_clk, true);
-	peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_AUTO);
-	ccu_write_access_enable(peri_clk->ccu_clk, false);
-
-
 
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
@@ -473,10 +453,6 @@ int enter_idle_state(struct kona_idle_state* state)
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, false);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, false);
 	clk_set_crystal_pwr_on_idle(false);
-
-	ccu_write_access_enable(peri_clk->ccu_clk, true);
-	peri_clk_set_hw_gating_ctrl(clk, CLK_GATING_SW);
-	ccu_write_access_enable(peri_clk->ccu_clk, false);
 
 	return -1;
 }
