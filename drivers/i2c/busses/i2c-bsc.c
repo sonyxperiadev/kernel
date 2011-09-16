@@ -104,6 +104,8 @@ struct bsc_i2c_dev
 
 	struct clk *bsc_clk;
 	struct clk *bsc_apb_clk;
+
+	int err_flag; /* Set if there is a bus error */
 };
 
 static const __devinitconst char gBanner[] = KERN_INFO "Broadcom BSC (I2C) Driver: 1.00\n";
@@ -160,7 +162,8 @@ static irqreturn_t bsc_isr(int irq, void *devid)
    
    if (status & I2C_MM_HS_ISR_ERR_MASK)
    {
-      dev_err(dev->dev, "bus error interrupt (timeout)\n");
+      dev->err_flag = 1;
+      dev_err(dev->dev, "bus error interrupt (timeout) - status = %x\n", status);
    }
    
    return IRQ_HANDLED;
@@ -232,11 +235,12 @@ static int bsc_send_cmd(struct bsc_i2c_dev *dev, BSC_CMD_t cmd)
    time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
    bsc_disable_intr((uint32_t)dev->virt_base,
          I2C_MM_HS_IER_I2C_INT_EN_MASK);
-   if (time_left == 0)
+   if (time_left == 0 || dev->err_flag == 1)
    {
       BSC_DBG(dev, "controller timed out\n");
 
       /* clear command */
+      dev->err_flag = 0;
       isl_bsc_send_cmd((uint32_t)dev->virt_base, BSC_CMD_NOACTION);
 
       return -ETIMEDOUT;
@@ -379,8 +383,9 @@ static int bsc_xfer_write_byte(struct i2c_adapter *adapter, uint16_t nak_ok,
    time_left = wait_for_completion_timeout(&dev->ses_done, SES_TIMEOUT);
    bsc_disable_intr((uint32_t)dev->virt_base,
          I2C_MM_HS_IER_I2C_INT_EN_MASK);
-   if (time_left == 0)
+   if (time_left == 0 || dev->err_flag == 1)
    {
+      dev->err_flag = 0;
       BSC_DBG(dev, "controller timed out\n");
       return -ETIMEDOUT;
    }
@@ -759,12 +764,21 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
       }
       bsc_stop_highspeed((uint32_t)dev->virt_base);
    }
-   
+   else
+   {
+	bsc_set_autosense((uint32_t)dev->virt_base, 0);
+   }
+
    bsc_disable_clk(dev);
    up(&dev->xfer_lock);
    return (rc < 0) ? rc : num;
 
  hs_ret:
+
+   /* send stop command */
+   rc = bsc_xfer_stop(adapter);
+   if (rc < 0)
+      dev_err(dev->dev, "stop command failed\n");
 
    if (dev->high_speed_mode)
    {
@@ -777,6 +791,10 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
          clk_enable(dev->bsc_clk);
       }
       bsc_stop_highspeed((uint32_t)dev->virt_base);
+   }
+   else
+   {
+	bsc_set_autosense((uint32_t)dev->virt_base, 0);
    }
 
    bsc_disable_clk(dev);
@@ -1004,6 +1022,9 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 		dev->bsc_apb_clk = NULL;
 	}
 
+	/* Initialize the error flag */
+	dev->err_flag = 0;
+
 	/* validate the speed parameter */
 	if (dev->speed >= BSC_BUS_SPEED_MAX) {
 		dev_err(&pdev->dev, "invalid bus speed parameter\n");
@@ -1093,6 +1114,7 @@ static int __devinit bsc_probe(struct platform_device *pdev)
 	adap->algo = &bsc_algo;
 	adap->dev.parent = &pdev->dev;
 	adap->nr = pdev->id;
+	adap->retries = hw_cfg->retries;
 
 	/* TODO: register proc entries here */
 
