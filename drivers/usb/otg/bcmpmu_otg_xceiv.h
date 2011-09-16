@@ -38,7 +38,6 @@ struct bcmpmu_otg_xceiv_data {
 #else
 	struct bcm590xx *bcm590xx;
 #endif
-	struct clk *otg_clk;
 	struct bcm_otg_xceiver otg_xceiver;
 
 	/* OTG Work queue and work struct for each item for work queue */

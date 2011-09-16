@@ -162,6 +162,7 @@ static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xcei
 	if (enable) {
 		dev_info(xceiv_data->dev, "Switching to Host\n");
 		xceiv_data->host = true;
+		bcm_hsotgctrl_set_phy_off(false);
 		bcm_hsotgctrl_phy_set_vbus_stat(false);
 		msleep(PERIPHERAL_TO_HOST_DELAY_MS);
 		bcm_hsotgctrl_phy_set_id_stat(false);
@@ -170,7 +171,6 @@ static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xcei
 		xceiv_data->host = false;
 		bcm_hsotgctrl_phy_set_id_stat(true);
 		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
-		bcm_hsotgctrl_phy_set_vbus_stat(true);
 	}
 }
 
@@ -300,10 +300,15 @@ static void bcmpmu_otg_xceiv_vbus_valid_handler(struct work_struct *work)
 
 static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 {
+	unsigned int data;
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_a_invalid_work);
 	dev_info(xceiv_data->dev, "A session invalid\n");
+
+	bcm_hsotgctrl_phy_set_vbus_stat(false);
+	bcm_hsotgctrl_phy_set_non_driving(true);
+	bcm_hsotgctrl_set_phy_off(true);
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
@@ -312,6 +317,10 @@ static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_a_valid_work);
 	dev_info(xceiv_data->dev, "A session valid\n");
+
+	bcm_hsotgctrl_set_phy_off(false);
+	bcm_hsotgctrl_phy_set_vbus_stat(true);
+	bcm_hsotgctrl_phy_set_non_driving(false);
 }
 
 static void bcmpmu_otg_xceiv_adp_cprb_done_handler(struct work_struct *work)
@@ -398,12 +407,6 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 	INIT_WORK(&xceiv_data->bcm_otg_id_status_change_work,
 		  bcmpmu_otg_xceiv_id_change_handler);
 
-	xceiv_data->otg_clk = clk_get(NULL, "usb_otg_clk");
-	if (!xceiv_data->otg_clk) {
-		dev_warn(&pdev->dev, "Clock allocation failed\n");
-		kfree(xceiv_data);
-		return -EIO;
-	}
 
 	xceiv_data->otg_xceiver.xceiver.set_vbus =
 		bcmpmu_otg_xceiv_set_vbus;
@@ -454,7 +457,6 @@ error_attr_vbus:
 
 error_attr_host:
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
-	clk_put(xceiv_data->otg_clk);
 	kfree(xceiv_data);
 	return error;
 }
@@ -468,8 +470,8 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	device_remove_file(xceiv_data->dev, &dev_attr_host);
 
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
-	clk_put(xceiv_data->otg_clk);
 	kfree(xceiv_data);
+	bcm_hsotgctrl_phy_deinit();
 
 	return 0;
 }

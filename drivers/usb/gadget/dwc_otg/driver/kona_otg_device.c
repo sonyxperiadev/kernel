@@ -62,13 +62,6 @@
 #define	PHY_MODE_HOST		0
 #define	BC11_OVR_KEY		0x2AAB
 
-/* ---- Private Function Prototypes -------------------------------------- */
-static void __exit dwc_otg_device_exit(void);
-static int __init  dwc_otg_device_init(void);
-#ifdef LM_INTERFACE
-static int __init  dwc_otg_device_register( unsigned irq, unsigned base_addr );
-#endif
-
 /* ---- Private Variables ------------------------------------------------ */
 
 static unsigned int fshost = 0;
@@ -90,8 +83,6 @@ static unsigned int otgdevice = 0;
 static struct lm_device *lmdev = NULL;
 #endif
 
-static struct clk *otg_clk;
-
 /*-------------------------------------------------------------------------*/
 
 /* ==== Public Functions ================================================= */
@@ -112,9 +103,6 @@ MODULE_DESCRIPTION("DWC OTG Device");
 MODULE_LICENSE("GPL");
 MODULE_VERSION("2.91a");
 
-module_init(dwc_otg_device_init);
-module_exit(dwc_otg_device_exit);
-
 /* ==== Private Functions ================================================= */
 static int __init otghost_setup(char *str)
 {
@@ -122,6 +110,19 @@ static int __init otghost_setup(char *str)
 	return 1;
 }
 __setup("otghost=", otghost_setup);
+
+#ifndef CONFIG_ARCH_ISLAND
+/* ---- Private Function Prototypes -------------------------------------- */
+static void __exit dwc_otg_device_exit(void);
+static int __init  dwc_otg_device_init(void);
+#ifdef LM_INTERFACE
+static int __init  dwc_otg_device_register( unsigned irq, unsigned base_addr );
+#endif
+
+static struct clk *otg_clk;
+
+module_init(dwc_otg_device_init);
+module_exit(dwc_otg_device_exit);
 
 static void __exit dwc_otg_device_exit(void)
 {
@@ -330,3 +331,4 @@ static int __init  dwc_otg_device_register( unsigned irq, unsigned base_addr )
 	return (rc);
 }
 #endif
+#endif //Not Island
