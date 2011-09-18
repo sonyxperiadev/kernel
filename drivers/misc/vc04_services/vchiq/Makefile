@@ -42,7 +42,10 @@ vc-vchiq-objs := \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_kern_lib.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_shim.o \
     ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_util.o \
-    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_bi_arm.o
+    ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_bivcm_arm.o
+
+#   ../../../../vc4-dev/src/interface/vchiq_arm/vchiq_bi_arm.o
+
 
 obj-$(CONFIG_VC_VCHIQ_MEMDRV_HANA) += vchiq-memdrv-hana.o
 
