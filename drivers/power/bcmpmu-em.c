@@ -457,7 +457,7 @@ static int __init bcmpmu_em_init(void)
 {
 	return platform_driver_register(&bcmpmu_em_driver);
 }
-module_init(bcmpmu_em_init);
+late_initcall(bcmpmu_em_init);
 
 static int __exit bcmpmu_em_exit(void)
 {
