@@ -269,7 +269,10 @@ DISPCTRL_REC_T NT35582_Init[] = {
 #else
 #error "dispdrv_ec_par_nt35582.h: Color Mode Must Be Defined In A Diplay Driver!" 
 #endif
-    
+ 
+    {DISPCTRL_WR_CMND_DATA    , 0xB101    , (0x00)},
+    {DISPCTRL_WR_CMND_DATA    , 0xB102    , (0xFF)},
+
     {DISPCTRL_WR_CMND_DATA    , NT35582_GMACTRL_1_00    , (0x0E)},
     {DISPCTRL_WR_CMND_DATA    , NT35582_GMACTRL_1_01    , (0x14)},
     {DISPCTRL_WR_CMND_DATA    , NT35582_GMACTRL_1_02    , (0x29)},

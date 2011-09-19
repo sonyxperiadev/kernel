@@ -172,7 +172,7 @@ static inline Task_t OSTASK_Create(					// returns the newly-created task
 	struct TaskStruct_t *new_task = kzalloc(sizeof(struct TaskStruct_t), GFP_KERNEL);
 	if(new_task)
 	{
-		new_task->wrk_q = create_workqueue(task_name);
+		new_task->wrk_q = create_rt_workqueue(task_name);
 		INIT_WORK(&new_task->wrk, (work_func_t)entry);
 		queue_work(new_task->wrk_q, &new_task->wrk);
 	}

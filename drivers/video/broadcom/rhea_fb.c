@@ -72,6 +72,13 @@ struct rhea_fb {
 #endif
 };
 
+struct partial_update_region {
+	u32	l;
+	u32	t;
+	u32	w;
+	u32	h;
+};
+
 static struct rhea_fb *g_rhea_fb = NULL;
 
 static inline u32 convert_bitfield(int val, struct fb_bitfield *bf)
@@ -124,7 +131,7 @@ static int rhea_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info
 			return -EINVAL;
 		}
 	}
-
+#if 0
 	if((var->xoffset != info->var.xoffset) ||
 	   (var->bits_per_pixel != info->var.bits_per_pixel) ||
 	   (var->grayscale != info->var.grayscale)) {
@@ -138,6 +145,7 @@ static int rhea_fb_check_var(struct fb_var_screeninfo *var, struct fb_info *info
 		rheafb_alert("BRCM fb does not support partial FB updates\n");
 		return -EINVAL;
 	}
+#endif
 
 	return 0;
 }
@@ -170,6 +178,7 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	void *dst;
 #endif
+	struct partial_update_region region;
 
 	/* We are here only if yoffset is '0' or 'yres',
 	 * so if yoffset = 0, update first buffer or update second
@@ -194,6 +203,17 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 	} else {
 		atomic_set(&fb->is_graphics_started, 1);
 		down(&fb->prev_buf_done_sem);
+		if (var->reserved[0] == 0x54445055) {
+			region.l	= var->reserved[1] >> 16;
+			region.t	= (u16)var->reserved[1]; 
+			region.w	= (var->reserved[2] >> 16) - region.l;
+			region.h	= (u16)var->reserved[2] - region.t;
+//    m->info.reserved[0] = 0x54445055; // "UPDT";
+//    m->info.reserved[1] = (uint16_t)l | ((uint32_t)t << 16);
+//    m->info.reserved[2] = (uint16_t)(l+w) | ((uint32_t)(t+h) << 16);
+			rheafb_error("We are doing partial update in region (l %d t%d w %d h %d)\n",
+					region.l, region.t, region.w, region.h);
+		}
 		ret = fb->display_ops->update(fb->display_hdl, buff_idx,(DISPDRV_CB_T)rhea_display_done_cb);
 	}
 	
@@ -493,6 +513,11 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.fix.accel	= FB_ACCEL_NONE;
 	fb->fb.fix.ypanstep	= 1;
 	fb->fb.fix.xpanstep	= 4;
+//#define PARTIAL_UPDATE_SUPPORT
+#ifdef PARTIAL_UPDATE_SUPPORT
+	fb->fb.fix.reserved[0]	=  0x5444;
+	fb->fb.fix.reserved[1]	=  0x5055;
+#endif
 
 	fb->fb.var.xres		= width;
 	fb->fb.var.yres		= height;
