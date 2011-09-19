@@ -65,6 +65,7 @@
 #define VLT_LUT_SIZE 16
 #endif
 
+#include <plat/bcm_pwm_block.h>
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
@@ -505,12 +506,25 @@ static struct resource kona_pwm_resource = {
                 .flags = IORESOURCE_MEM,
 };
 
+static struct pwm_platform_data pwm_dev = {
+        .max_pwm_id = 6,
+        .syscfg_inf = NULL,
+};
+
+void set_pwm_board_sysconfig(int (*syscfg_inf) (uint32_t module, uint32_t op))
+{
+	pwm_dev.syscfg_inf = syscfg_inf;
+}
+
 static struct platform_device kona_pwm_device = {
+		.dev = {
+			.platform_data = &pwm_dev, 
+		},
                 .name = "kona_pwmc",
                 .id = -1,
                 .resource = &kona_pwm_resource,
                 .num_resources  = 1,
-} ;
+};
 
 /* SPI configuration */
 static struct resource kona_sspi_spi0_resource[] = {

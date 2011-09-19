@@ -40,6 +40,8 @@
 #include <linux/completion.h>
 #include <linux/pwm/pwm.h>
 #include <mach/rdb/brcm_rdb_pwm_top.h>
+#include <plat/bcm_pwm_block.h>
+#include <plat/syscfg.h>
 
 #define KONA_PWM_CHANNEL_CNT 6
 #define PWM_PRESCALER_MAX    7
@@ -49,6 +51,7 @@ struct kona_pwmc {
     struct pwm_device_ops ops;
     void __iomem *iobase;
     struct clk *clk;
+    int (*syscfg_inf) (uint32_t module, uint32_t op);
 };
 
 struct pwm_control {
@@ -182,12 +185,18 @@ static void kona_pwmc_stop(const struct kona_pwmc *ap, int chan)
 {
     kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_enable_shift,0) ;
     clk_disable(ap->clk);
+
+     if (ap->syscfg_inf)
+        ap->syscfg_inf(SYSCFG_PWM0 + chan, SYSCFG_DISABLE);
 }
 
 static void kona_pwmc_start(const struct kona_pwmc *ap, int chan)
 {
     clk_enable(ap->clk);
     kona_pwmc_clear_set_bit(ap,pwm_chan_ctrl_info[chan].offset, pwm_chan_ctrl_info[chan].pwmout_enable_shift,1) ;
+
+    if (ap->syscfg_inf)
+	ap->syscfg_inf(SYSCFG_PWM0 + chan, SYSCFG_ENABLE);
 }
 
 static void kona_pwmc_config_polarity(struct kona_pwmc *ap, int chan,
@@ -332,12 +341,15 @@ static int __devinit kona_pwmc_probe(struct platform_device *pdev)
     struct resource *r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
     int chan;
     int ret = 0;
+    struct pwm_platform_data *pdata = pdev->dev.platform_data;
 
     ap = kzalloc(sizeof(*ap), GFP_KERNEL);
     if (!ap) {
         ret = -ENOMEM;
         goto err_kona_pwmc_alloc;
     }
+
+    ap->syscfg_inf = pdata->syscfg_inf;
 
     platform_set_drvdata(pdev, ap);
     ap->clk = clk_get(&pdev->dev, "pwm_clk");
