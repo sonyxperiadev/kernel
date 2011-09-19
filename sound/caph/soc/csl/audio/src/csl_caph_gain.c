@@ -68,6 +68,10 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 // local variable definitions
 //****************************************************************************
 
+#if defined(WIN32)
+#pragma warning (disable:4305)
+#endif
+
 //Gain Distribution of Analog and headset Mic gain.
 static csl_caph_Mic_Gain_t AMic_GainTable[AMIC_GAIN_LEVEL_NUM]=
 {

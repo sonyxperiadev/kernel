@@ -70,6 +70,7 @@ typedef enum
 	SPKR_IHF_HS_DSP,  //Voice Call IHF and HS
 	SPKR_EP, //Multimedia EP
 	SPKR_IHF_HS,  // Multimedia IHF an HS
+	SPKR_HS,
 	SPKR_PATH_MAX
 }csl_caph_SPKR_Path_e;
 
