@@ -32,6 +32,7 @@
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <mach/pinmux.h>
 #include <mach/hardware.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
@@ -94,6 +95,8 @@
 
 #include <video/kona_fb.h>
 #include <linux/pwm_backlight.h>
+#include <plat/syscfg.h>
+#include <plat/bcm_pwm_block.h>
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 #include <linux/broadcom/bcmbt_rfkill.h>
@@ -996,8 +999,53 @@ static void __init rhea_ray_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
+#ifdef CONFIG_BACKLIGHT_PWM
+static struct pin_config pwm4_pin_config =
+PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA);
+static struct pin_config pwm5_pin_config =
+PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA);
+
+static struct pin_config gpio95_pin_config =
+PIN_CFG(DCLK4, GPIO, 0, ON, OFF, 0, 0, 8MA);
+static struct pin_config gpio111_pin_config =
+PIN_CFG(DCLKREQ4, GPIO, 0, ON, OFF, 0, 0, 8MA);
+
+int pwm_board_sysconfig(uint32_t module, uint32_t op)
+{
+	static DEFINE_SPINLOCK(bcm_syscfg_lock);
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&bcm_syscfg_lock, flags);	
+	switch (module) {
+	case SYSCFG_PWM0 + 4:
+		if ((op == SYSCFG_INIT) || (op == SYSCFG_ENABLE))
+			ret = pinmux_set_pin_config(&pwm4_pin_config);
+		else if (op == SYSCFG_DISABLE)
+			ret = pinmux_set_pin_config(&gpio95_pin_config);
+		break;
+	case SYSCFG_PWM0 + 5:
+		if ((op == SYSCFG_INIT) || (op == SYSCFG_ENABLE))
+			ret = pinmux_set_pin_config(&pwm5_pin_config);
+		else if (op == SYSCFG_DISABLE)
+			ret = pinmux_set_pin_config(&gpio111_pin_config);
+		break;
+	default:
+		pr_info("%s: inval arguments\n", __func__);
+		spin_unlock_irqrestore(&bcm_syscfg_lock, flags);
+		return -EINVAL;	
+	}
+
+	spin_unlock_irqrestore(&bcm_syscfg_lock, flags);
+	return ret;
+}
+#endif
+
 void __init board_init(void)
 {
+#ifdef CONFIG_BACKLIGHT_PWM
+	set_pwm_board_sysconfig(pwm_board_sysconfig);
+#endif
 	board_add_common_devices();
 	rhea_ray_add_devices();
 	return;
