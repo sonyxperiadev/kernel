@@ -685,7 +685,7 @@ void std_selftest_digimic(struct SelftestDevData_t *dev, struct SelftestUserCmdD
 		bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HV7OPMODCTRL, 0x00);	/* Turn on HVLDO7 in all cases b00000000 = 0x00 */
 		/*1.	 Setup DMIC0CLK as Mic clock output*/
 		PIN_GPIO_Setup.name  =  PMUX_DQ_CONNECTION[MicIf];
-		PIN_GPIO_Setup.func  =  PF_GPIO;
+		PIN_GPIO_Setup.func  =  PF_GPIO123;
 		PIN_GPIO_Setup.reg.val  =  0;
 		PIN_GPIO_Setup.reg.b.drv_sth  =  DRIVE_STRENGTH_8MA;
 		pinmux_set_pin_config(&PIN_GPIO_Setup);
