@@ -80,7 +80,7 @@ typedef struct
 // local variable definitions
 //****************************************************************************
 static CHAL_HANDLE handle = 0x0;
-static isSTIHF = FALSE;
+static Boolean isSTIHF = FALSE;
 
 /* SRCMixer input channel status table */
 static CSL_CAPH_SRCM_INCHNL_STATUS_t inChnlStatus[MAX_INCHNLS] =
