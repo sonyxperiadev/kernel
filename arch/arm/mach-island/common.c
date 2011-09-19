@@ -37,6 +37,8 @@
 #include <trace/stm.h>
 #include <asm/pmu.h>
 
+#include <plat/bcm_pwm_block.h>
+
 #if defined(CONFIG_USB_ANDROID)
 #include <linux/usb/android_composite.h>
 #endif
@@ -151,8 +153,21 @@ static struct resource pwm_device_resource[] = {
     },
 };
 
+static struct pwm_platform_data pwm_dev = {
+        .max_pwm_id = 6,
+        .syscfg_inf = NULL,
+};
+
+void set_pwm_board_sysconfig(int (*syscfg_inf) (uint32_t module, uint32_t op))
+{
+	pwm_dev.syscfg_inf = syscfg_inf;
+}
+
 static struct platform_device pwm_device =
 {
+   .dev	          = {
+			.platform_data = &pwm_dev,
+		    },
    .name          = "kona_pwmc",
    .id            = -1,
    .resource	  = pwm_device_resource,
