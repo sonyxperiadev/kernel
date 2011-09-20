@@ -311,7 +311,6 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	struct snd_pcm_substream *pStream=NULL;
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
 	BRCM_AUDIO_Param_Call_t parm_call;
-	BRCM_AUDIO_Param_FM_t parm_FM;
 	int i = 0;
 	
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);

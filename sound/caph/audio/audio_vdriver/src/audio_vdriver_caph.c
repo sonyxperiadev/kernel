@@ -93,10 +93,14 @@ static Boolean bInVoiceCall = FALSE;
 static UInt32 audDev = 0;
 
 //#if	defined(FUSE_COMMS_PROCESSOR)
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
+
 static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
 static Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
-static Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);    
 static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain);
+#endif
+
+static Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);
 //#endif
 //=============================================================================
 // Private function prototypes
@@ -949,6 +953,8 @@ void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
 {
 	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
 	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
+	CSL_CAPH_PathID pathID = 0;
+
 	audio_mode = AUDDRV_GetAudioMode();
 	if ((audio_mode == AUDIO_MODE_HANDSET)
 		||(audio_mode == AUDIO_MODE_HANDSET_WB)
@@ -974,7 +980,7 @@ void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
 	}
 
 
-	csl_caph_hwctrl_SetHWGain(NULL, hw, gain, dev);
+	csl_caph_hwctrl_SetHWGain(pathID, hw, gain, dev);
 	return;
 }
 
@@ -1102,6 +1108,8 @@ static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
 
 
 //#if	defined(FUSE_COMMS_PROCESSOR)
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
+
 /****************************************************************************
 *
 *  Function Name: Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, 
@@ -1157,6 +1165,20 @@ static Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode)
 
 /****************************************************************************
 *
+*  Function Name:Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain)
+*
+*  Description: Set the sidetone gain
+*
+****************************************************************************/
+static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain)
+{
+	csl_caph_audioh_sidetone_set_gain(gain);
+	return RESULT_OK;
+}
+#endif
+
+/****************************************************************************
+*
 *  Function Name: Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode)    
 *  
 *  Description: Disable Sidetone path
@@ -1191,18 +1213,7 @@ static Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode)
     return RESULT_OK;
 }
 
-/****************************************************************************
-*
-*  Function Name:Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain)    
-*  
-*  Description: Set the sidetone gain
-*
-****************************************************************************/
-static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain)
-{
-	csl_caph_audioh_sidetone_set_gain(gain);
-	return RESULT_OK;
-}
+
 
 
 // move from drv_audio_commom.c
@@ -1491,12 +1502,12 @@ Int16 AUDDRV_GetHWDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain)
 	    case CSL_CAPH_DEV_EP:
 		    cslSpkr = SPKR_EP;
 		    break;
-	    
-	    case CSL_CAPH_DEV_HS:
 	    case CSL_CAPH_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
-
+	    case CSL_CAPH_DEV_HS:
+			cslSpkr = SPKR_HS;
+		    break;
 	    case CSL_CAPH_DEV_BT_SPKR:
 		    // For Bluetooth, it is yet
 		    // to decide whether DSP DL gain is 
@@ -1547,11 +1558,13 @@ Int16 AUDDRV_GetHWDLGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
 		    cslSpkr = SPKR_EP;
 		    break;
 	    
-	    case CSL_CAPH_DEV_HS:
 	    case CSL_CAPH_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
+		case CSL_CAPH_DEV_HS:
+			cslSpkr = SPKR_HS;
+		    break;
 
 	    case CSL_CAPH_DEV_BT_SPKR:
 		    // For Bluetooth, it is yet
@@ -1649,10 +1662,14 @@ UInt16 AUDDRV_GetPMUGain(CSL_CAPH_DEVICE_e spkr, Int16 gain)
 		    cslSpkr = SPKR_EP;
 		    break;
 	    
-	    case CSL_CAPH_DEV_HS:
 	    case CSL_CAPH_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
+
+		case CSL_CAPH_DEV_HS:
+			cslSpkr = SPKR_HS;
+		    break;
+
 
 	    case CSL_CAPH_DEV_BT_SPKR:
 		    // For Bluetooth, it is yet
@@ -1704,11 +1721,13 @@ UInt16 AUDDRV_GetPMUGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
 		    cslSpkr = SPKR_EP;
 		    break;
 	    
-	    case CSL_CAPH_DEV_HS:
 	    case CSL_CAPH_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS;
+		    cslSpkr = SPKR_IHF;
 		    break;
 
+		case CSL_CAPH_DEV_HS:
+			cslSpkr = SPKR_HS;
+		    break;
 
 	    case CSL_CAPH_DEV_BT_SPKR:
 		    // For Bluetooth, it is yet
@@ -1852,8 +1871,8 @@ static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void)
 		AP_SharedMem_t *ap_shared_mem_ptr = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
 		// Linux only : to get the physical address use the virtual address to compute offset and 
 		// add to the base address 
-   		UInt32 *memAddr = AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0]) 
-                                       - (UInt32)ap_shared_mem_ptr); 
+		UInt32 *memAddr = (UInt32 *)(AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0])
+													- (UInt32)ap_shared_mem_ptr)); 
         
         return memAddr;
 

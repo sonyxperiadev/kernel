@@ -45,8 +45,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "log.h"
 #include "csl_aud_queue.h"
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
 
 // use it to debug if you suspect sw corrupt the data of ring buffer.
 #ifdef DEBUG_RING_BUFFER
