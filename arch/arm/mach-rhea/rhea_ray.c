@@ -651,6 +651,9 @@ static struct platform_pwm_backlight_data bcm_backlight_data = {
 	.pwm_name 	= "kona_pwmc:4",
 	.max_brightness = 32,   /* Android calibrates to 32 levels*/
 	.dft_brightness = 32,
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	.polarity       = 1,    /* Inverted polarity */
+#endif
 	.pwm_period_ns 	=  5000000,
 };
 
