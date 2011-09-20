@@ -185,14 +185,17 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.speed = BSC_BUS_SPEED_50K,
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
+		.retries = 1,
 	},
 	[1] = { /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
+		.retries = 3,
 	},
 	[2] = { /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
+		.retries = 1,
 	},
 };
 
