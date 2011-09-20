@@ -45,6 +45,15 @@
 // Local Definitions and Declarations
 //==========================================================================
 
+/*
+ * CONFIG_AUDIOH_REGS
+ * Added the above macro to protect all AUDIOH register configuration.
+ * Not sure why the MIC BIAS configuration of ACI should go and touch AUDIOH
+ * registers as well. We tested Accessory detection, button press & release
+ * without accessing AUDIOH registes and it looks good.
+ * Until we understand the resason to do this, keeping AUDIOH accesses 
+ * protected  under undefined macro.
+ */
 
 #define ADC_FS_BIG_SMALL_B_LOW_RANGE                            0   // Sets ADC low scale: 0 = 1150 mV
 #define ADC_FS_BIG_SMALL_B_FULL_RANGE                           1   // Sets ADC full scale: 1= 2300 mV
@@ -212,7 +221,9 @@ cVoid chal_aci_set_mic_route( CHAL_HANDLE handle, CHAL_ACI_mic_route_t route )
         chal_aci_disable_aci();
         break;
     case CHAL_ACI_MIC_ROUTE_ALL_OFF:
+#ifdef CONFIG_AUDIOH_REGS
         BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC,    AUDIORX_VAUXMIC_CTRL,   AUDIORX_VAUXMIC_2_10V );
+#endif
         BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,           COMP1_PWD,              ACI_COMP_PWD_COMP1_PWD_CMD_POWER_DOWN);
         BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_COMP_PWD,           COMP2_PWD,              ACI_COMP_PWD_COMP2_PWD_CMD_POWER_DOWN);
         BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_PWD,            ADC1_PWD,               ACI_ADC_PWD_ADC1_PWD_CMD_POWER_DOWN);
@@ -221,8 +232,11 @@ cVoid chal_aci_set_mic_route( CHAL_HANDLE handle, CHAL_ACI_mic_route_t route )
         BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_BIAS_PWRUP,     AUDIORX_BIAS_PWRUP_POWERDOWN);
         BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR, AUXMIC_F_PWRDWN,        FORCE_PWR_DWN,          1 );
         BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
+
+#ifdef CONFIG_AUDIOH_REGS
         BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
         BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_NORMAL);
+#endif
         break;
     default:
         CHAL_ASSERT(0);
@@ -533,8 +547,9 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         switch (bias_config->mode)
         {
         case CHAL_ACI_MIC_BIAS_ON:
-            /* Powerup generic detection block (including bias) */
+	    /* Powerup generic detection block (including bias) */
             BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_F_PWRDWN,     FORCE_PWR_DWN,          0 );
+
             /* Configure Continuous measurement mode */
             BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_CMC,          CONT_MSR_CTRL,          1 );
             BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,       ACI_MIC_BIAS,        MIC_BIAS,               ACI_MIC_BIAS_MIC_BIAS_CMD_PERIODIC_MEASUREMENT_DIS);
@@ -542,17 +557,23 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
             // Set Bias Voltage
             if (bias_config->voltage == CHAL_ACI_MIC_BIAS_0_45V)
             {   //disable, bias = 0.45V
+#ifdef CONFIG_AUDIOH_REGS
                 BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
+#endif
                 BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              0 );
             }
             else if (bias_config->voltage == CHAL_ACI_MIC_BIAS_2_5V)
             {   //enable, bias = 2.5V
+#ifdef CONFIG_AUDIOH_REGS
                 BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_40V );
+#endif
                 BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
             }
             else
             {   //enable, bias = 2.1V
+#ifdef CONFIG_AUDIOH_REGS
                 BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
+#endif
                 BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
             }
             break;
@@ -560,17 +581,23 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
             // Set Bias Voltage
             if (bias_config->voltage == CHAL_ACI_MIC_BIAS_0_45V)
             {   //disable, bias = 0.45V
+#ifdef CONFIG_AUDIOH_REGS
                 BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
+#endif
                 BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              0 );
             }
             else if (bias_config->voltage == CHAL_ACI_MIC_BIAS_2_5V)
             {   //enable, bias = 2.5V
-                BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_40V );
-                BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
+#ifdef CONFIG_AUDIOH_REGS
+                BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_40V ); 
+#endif
+		BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
             }
             else
             {   //enable, bias = 2.1V
+#ifdef CONFIG_AUDIOH_REGS
                 BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VMIC, AUDIORX_VAUXMIC_CTRL, AUDIORX_VAUXMIC_2_10V );
+#endif
                 BRCM_WRITE_REG_FIELD( AUXMIC_BASE_ADDR,    AUXMIC_AUXEN,    MICAUX_EN,              1 );
             }
             BRCM_WRITE_REG( AUXMIC_BASE_ADDR,           AUXMIC_PRB_CYC,     bias_config->probe_cycle );
@@ -630,23 +657,29 @@ static void chal_aci_block_ctrl_arg( CHAL_HANDLE handle, CHAL_ACI_block_action_t
         {
         case CHAL_ACI_VREF_FAST_ON:
             /* Vref Powerup */
+#ifdef CONFIG_AUDIOH_REGS
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_FAST);
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_FAST);
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
+#endif
             BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
             break;
         case CHAL_ACI_VREF_ON:
             /* Vref Powerup */
+#ifdef CONFIG_AUDIOH_REGS
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_FAST);
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
+#endif
             BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERUP);
             break;
         case CHAL_ACI_VREF_OFF:
             /* Vref Poweroff */
+#ifdef CONFIG_AUDIOH_REGS
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_POWERCYCLE,AUDIORX_VREF_POWERCYCLE_NORMAL);
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_FASTSETTLE,AUDIORX_VREF_FASTSETTLE_NORMAL);
             BRCM_WRITE_REG_FIELD( AUDIOH_BASE_ADDR, AUDIOH_AUDIORX_VREF,    AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
+#endif
             BRCM_WRITE_REG_FIELD( ACI_BASE_ADDR,    ACI_ADC_CTRL,           AUDIORX_VREF_PWRUP,     AUDIORX_VREF_PWRUP_POWERDOWN);
             break;
         default:
