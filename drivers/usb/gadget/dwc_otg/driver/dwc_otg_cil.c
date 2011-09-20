@@ -3001,6 +3001,8 @@ void dwc_otg_ep0_activate(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 
 	dwc_write_reg32(&dev_if->in_ep_regs[0]->diepctl, diepctl.d32);
 
+	/* Set NAK for non-SETUP packets until OUT data phase is requested */
+	doepctl.b.snak = 1;
 	/* Enable OUT EP for receive */
 	doepctl.b.epena = 1;
 	dwc_write_reg32(&dev_if->out_ep_regs[0]->doepctl, doepctl.d32);
