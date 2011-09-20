@@ -136,7 +136,7 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 	}
 
 	bl->props.brightness = data->dft_brightness;
-	pwm_set_polarity(pb->pwm, 0);
+	pwm_set_polarity(pb->pwm, data->polarity);
 	backlight_update_status(bl);
 
 	platform_set_drvdata(pdev, bl);
