@@ -192,7 +192,7 @@ struct amxr_client_node
 #endif
 
 /* Console log */
-#define AMXR_LOG( fmt, args... ) KNLLOG( fmt, ## args )
+#define AMXR_LOG( fmt, args... ) printk( "%s:" fmt "\n", __FUNCTION__, ## args )
 
 /* Extra debug logs */
 #define AMXR_DEBUG_SUPPORT       0
