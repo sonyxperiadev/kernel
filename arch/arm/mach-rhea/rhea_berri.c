@@ -700,7 +700,7 @@ struct platform_device haptic_pwm_device = {
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
-#if defined (CONFIG_MACH_RHEA_BERRI) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
+#if defined (CONFIG_MACH_RHEA_BERRI) || defined (CONFIG_MACH_RHEALC_BERRI) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X
@@ -802,7 +802,11 @@ struct kona_freq_tbl kona_freq_tbl[] =
 {
 //    FTBL_INIT(156000000, PI_OPP_ECONOMY),
     FTBL_INIT(467000, PI_OPP_NORMAL),
+#ifdef CONFIG_MACH_RHEALC_BERRI
+    FTBL_INIT(600000, PI_OPP_TURBO),
+#else
     FTBL_INIT(700000, PI_OPP_TURBO),
+#endif
 };
 
 struct kona_cpu_info kona_cpu_info[] = {

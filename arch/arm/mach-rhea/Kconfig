@@ -33,6 +33,11 @@ config MACH_RHEA_BERRI
         help
           Support for the Broadcom Rhea Berri board.
 
+config MACH_RHEALC_BERRI
+        bool "Support Broadcom RheaLC Berri board"
+        help
+          Support for the Broadcom RheaLC Berri board.
+
 endchoice
 
 config RHEA_DORMANT_MODE
