@@ -140,7 +140,8 @@ void std_selftest_control_gps_io(struct SelftestDevData_t *dev,
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK_Setup_as_GPIO");
 			StoredValue_GPS_PABLANK.name = PN_GPS_PABLANK;
 			pinmux_get_pin_config(&StoredValue_GPS_PABLANK);
-            GPIOSetup.func          = PF_GPIO98;
+			GPIOSetup.name = PN_GPS_PABLANK;
+			GPIOSetup.func = PF_GPIO98;
 			pinmux_set_pin_config(&GPIOSetup);
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () 0x%08X",
 				   StoredValue_GPS_PABLANK.reg.val);
@@ -155,15 +156,16 @@ void std_selftest_control_gps_io(struct SelftestDevData_t *dev,
 		}
 		switch (direction) {
 		case ST_SELFTEST_GPS_WRITE:{
-			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Write");
 			switch (*state) {
 			case ST_SELFTEST_GPS_HIGH:
 				 gpio_direction_output(GPIO_GPS_PABLANK, 1);
 				 gpio_set_value(GPIO_GPS_PABLANK, 1);
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Write - High");
 				 break;
 			case ST_SELFTEST_GPS_LOW:
 				 gpio_direction_output(GPIO_GPS_PABLANK, 0);
 				 gpio_set_value(GPIO_GPS_PABLANK, 0);
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Write - Low");
 				 break;
 			case ST_SELFTEST_GPS_RELEASE:
 			default:
@@ -201,7 +203,8 @@ void std_selftest_control_gps_io(struct SelftestDevData_t *dev,
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK_Setup_as_GPIO");
 			StoredValue_GPS_TMARK.name = PN_GPS_TMARK;
 			pinmux_get_pin_config(&StoredValue_GPS_TMARK);
-            GPIOSetup.func          = PF_GPIO97;
+			GPIOSetup.name = PN_GPS_TMARK;
+			GPIOSetup.func = PF_GPIO97;
 			pinmux_set_pin_config(&GPIOSetup);
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () 0x%08X",
 				   StoredValue_GPS_TMARK.reg.val);
@@ -216,15 +219,16 @@ void std_selftest_control_gps_io(struct SelftestDevData_t *dev,
 		}
 		switch (direction) {
 		case ST_SELFTEST_GPS_WRITE:{
-			 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Write");
 			switch (*state) {
 			case ST_SELFTEST_GPS_HIGH:
 				 gpio_direction_output(GPIO_GPS_TMARK, 1);
 				 gpio_set_value(GPIO_GPS_TMARK, 1);
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Write - High");
 				 break;
 			case ST_SELFTEST_GPS_LOW:
 				 gpio_direction_output(GPIO_GPS_TMARK, 0);
 				 gpio_set_value(GPIO_GPS_TMARK, 0);
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Write - Low");
 				 break;
 			case ST_SELFTEST_GPS_RELEASE:
 			default:
