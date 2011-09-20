@@ -63,6 +63,9 @@
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
 #endif
+#ifdef CONFIG_KEYBOARD_LM8325
+#include <linux/i2c/lm8325.h>
+#endif
 #ifdef CONFIG_DMAC_PL330
 #include <mach/irqs.h>
 #include <plat/pl330-pdata.h>
@@ -375,6 +378,83 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #endif
 
+#ifdef CONFIG_KEYBOARD_LM8325
+static s16 rheaberri_keymap[] = {
+	[0x40] = KEY_MENU,
+	[0x50] = KEY_SEND,
+	[0x05] = KEY_Q,
+	[0x04] = KEY_W,
+	[0x03] = KEY_E,
+	[0x02] = KEY_R,
+	[0x01] = KEY_T,
+	[0x00] = KEY_Y,
+	[0x45] = KEY_U,
+	[0x44] = KEY_I,
+	[0x43] = KEY_O,
+	[0x42] = KEY_P,
+	[0x15] = KEY_A,
+	[0x14] = KEY_S,
+	[0x13] = KEY_D,
+	[0x12] = KEY_F,
+	[0x11] = KEY_G,
+	[0x10] = KEY_H,
+	[0x55] = KEY_J,
+	[0x54] = KEY_K,
+	[0x53] = KEY_L,
+	[0x52] = KEY_BACKSPACE,
+	[0x25] = KEY_LEFTSHIFT,
+	[0x24] = KEY_Z,
+	[0x23] = KEY_X,
+	[0x22] = KEY_C,
+	[0x21] = KEY_V,
+	[0x20] = KEY_B,
+	[0x65] = KEY_N,
+	[0x64] = KEY_M,
+	[0x63] = KEY_COMMA,
+	[0x62] = KEY_ENTER,
+	[0x35] = KEY_BACK,
+	[0x34] = KEY_HOME,
+	[0x33] = KEY_OK,
+	[0x32] = KEY_TAB,
+	[0x31] = KEY_SPACE,
+	[0x30] = KEY_COMMA,
+	[0x41] = KEY_DOT,
+	[0x51] = KEY_SEMICOLON,
+	[0x61] = KEY_CAPSLOCK,
+	[0x26] = KEY_VOLUMEUP,
+	[0x36] = KEY_VOLUMEDOWN,
+	[0x16] = KEY_CAMERA,
+};
+
+static struct lm8325_platform_data lm8325_pdata = {
+	/* This client supports both 100k and 400k, but we are setting it to
+	 * 100k */
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_230K),
+	.size_x = 8,
+	.size_y = 8,
+	.debounce_time = 0x80,
+	.settle_time = 0x80,
+	.iocfg = 0xF8,
+	.autosleep = 0,
+	.keymap = rheaberri_keymap,
+	.repeat = 1,
+	.name = "rheaberri_keyboard",
+};
+static struct i2c_board_info __initdata lm8325_info[] = {
+	{
+	    /* The client bus address is 0x88. But since the I2C spec
+	     * specifies that only the bits [7:1] are used for the
+	     * transaction, we will be passing 0x44. The I2C core driver in
+	     * turn will left this this once and then OR it with the R/W bit
+	     * before the transaction */
+	    I2C_BOARD_INFO("lm8325_kp", 0x44),
+	    .platform_data = &lm8325_pdata,
+	    /* .flags = I2C_M_TEN, */ /* To be used if ten bit addressing is
+	    required*/
+	    .irq = gpio_to_irq(121),
+	},
+};
+#endif
 #ifdef CONFIG_GPIO_PCA953X
 
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
@@ -822,6 +902,11 @@ static void __init rhea_berri_add_i2c_devices (void)
 	i2c_register_board_info(1,
 			qt602240_info,
 			ARRAY_SIZE(qt602240_info));
+#endif
+#ifdef CONFIG_KEYBOARD_LM8325
+	i2c_register_board_info(1,
+			lm8325_info,
+			ARRAY_SIZE(lm8325_info));
 #endif
 }
 
