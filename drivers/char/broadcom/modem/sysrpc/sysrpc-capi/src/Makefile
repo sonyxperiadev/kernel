@@ -27,5 +27,8 @@ EXTRA_CFLAGS += -DUNDER_LINUX
 EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
 
 obj-y += \
-	src/
+	sys_gen_rpc.o \
+	sys_hal_rpc.o \
+	sys_msg.o \
+	sys_rpc.o
 
