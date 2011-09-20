@@ -166,18 +166,6 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 
 /**
 *
-*  @brief  switch the source/sink of a caph HW path 
-*
-*  @param   pathID  (in) Caph HW path id
-*  @param   config  (in) Caph HW path configuration parameters
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_SwitchPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config);
-
-
-/**
-*
 *  @brief  Add a source/sink to a caph HW path 
 *
 *  @param   pathID  (in) Caph HW path id
@@ -285,85 +273,6 @@ void csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID);
 *  @return
 *****************************************************************************/
 void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID);
-/**
-*
-*  @brief  Switch to another sink
-*
-*  @param  sink  (in) Sink of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_SwitchSink(CSL_CAPH_DEVICE_e sink);
-
-/**
-*
-*  @brief  Add a new sink
-*
-*  @param  sink  (in) Sink of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_AddSink(CSL_CAPH_DEVICE_e sink); 
-/**
-*
-*  @brief  Remove a sink
-*
-*  @param  sink  (in) Sink of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_RemoveSink(CSL_CAPH_DEVICE_e sink);
-
-/**
-*
-*  @brief  Switch to another source
-*
-*  @param  source  (in) Source of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_SwitchSource(CSL_CAPH_DEVICE_e source);    
-
-/**
-*
-*  @brief  Add a new source
-*
-*  @param  source  (in) Source of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_AddSource(CSL_CAPH_DEVICE_e source); 
-
-/**
-*
-*  @brief  Remove a source
-*
-*  @param  source  (in) Source of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_RemoveSource(CSL_CAPH_DEVICE_e source); 
-
-/**
-*
-*  @brief  Load filter coefficients
-*
-*  @param  filter  (in) the filter to load coefficients
-*  @param  coeff  (in) the filter coefficients to load
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_SetFilter(CSL_CAPH_HWCTRL_FILTER_e filter, void* coeff);
-
-/**
-*
-*  @brief  Enable the Sidetone path
-*
-*  @param  void
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_EnableSideTone(void);
 
 /**
 *
@@ -374,36 +283,6 @@ void csl_caph_hwctrl_EnableSideTone(void);
 *  @return
 *****************************************************************************/
 void csl_caph_hwctrl_DisableSideTone(void);
-
-/**
-*
-*  @brief  Set the sidetone gain
-*
-*  @param  gain_mB (in) the gain in mB
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_SetSideToneGain(UInt32 gain_mB);
-
-/**
-*
-*  @brief  Enable the EANC path
-*
-*  @param  void
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_EnableEANC(void);
-
-/**
-*
-*  @brief  Disable the EANC path
-*
-*  @param  void
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_DisableEANC(void);
 
 /**
 *
@@ -591,15 +470,6 @@ void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID,
         CSL_CAPH_HW_GAIN_e hw, 
 		UInt32 gain, 
 		CSL_CAPH_DEVICE_e dev);
-
-/****************************************************************************
-*
-*  Function Name: csl_caph_hwctrl_CountSameSrcSink
-*
-*  Description: count paths with the same source and sink.
-*
-****************************************************************************/
-UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink);
 
 /****************************************************************************
 *
