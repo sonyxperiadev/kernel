@@ -140,7 +140,7 @@ void std_selftest_control_gps_io(struct SelftestDevData_t *dev,
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK_Setup_as_GPIO");
 			StoredValue_GPS_PABLANK.name = PN_GPS_PABLANK;
 			pinmux_get_pin_config(&StoredValue_GPS_PABLANK);
-            GPIOSetup.func          = PF_GPIO098;
+            GPIOSetup.func          = PF_GPIO98;
 			pinmux_set_pin_config(&GPIOSetup);
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () 0x%08X",
 				   StoredValue_GPS_PABLANK.reg.val);
@@ -201,7 +201,7 @@ void std_selftest_control_gps_io(struct SelftestDevData_t *dev,
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK_Setup_as_GPIO");
 			StoredValue_GPS_TMARK.name = PN_GPS_TMARK;
 			pinmux_get_pin_config(&StoredValue_GPS_TMARK);
-            GPIOSetup.func          = PF_GPIO097;
+            GPIOSetup.func          = PF_GPIO97;
 			pinmux_set_pin_config(&GPIOSetup);
 			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () 0x%08X",
 				   StoredValue_GPS_TMARK.reg.val);
