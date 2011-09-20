@@ -55,6 +55,20 @@ config VC_VCHIQ
 	help
 	  VCHIQ kernel service module used by almost all other services.
 
+config VC_VCOS
+	tristate "VCOS module"
+	depends on BRCM_VIDEOCORE_SERVICES
+	default BRCM_VIDEOCORE_SERVICES
+	help
+	  VCOS kernel module used by all videocore kernel services.
+
+config VC_VCEB
+	tristate "VCEB module"
+	depends on BRCM_VIDEOCORE_SERVICES
+	default BRCM_VIDEOCORE_SERVICES
+	help
+	  VCEB - early boot kernel module.
+
 config BCM_VCHIQ_VC04
 	tristate "VCHIQ stack model"
 	default BRCM_VIDEOCORE_SERVICES
