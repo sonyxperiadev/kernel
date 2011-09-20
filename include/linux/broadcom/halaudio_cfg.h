@@ -21,9 +21,6 @@
 #if !defined( HALAUDIO_CFG_H )
 #define HALAUDIO_CFG_H
 
-/* ---- Include Files ---------------------------------------------------- */
-#include <linux/broadcom/halaudio.h>
-
 /* ---- Constants and Types ---------------------------------------------- */
 #define HALAUDIO_CFG_NAME_LEN    20
 
