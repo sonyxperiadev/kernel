@@ -23,12 +23,6 @@
 #if !defined( CSX_SIGMORPH_H )
 #define CSX_SIGMORPH_H
 
-/* ---- Include Files ---------------------------------------------------- */
-
-#include <linux/broadcom/csx.h>
-#include <linux/broadcom/gist.h>
-#include <linux/broadcom/sigmorph.h>
-
 /* ---- Constants and Types ---------------------------------------------- */
 
 #define CSX_SIGMORPH_IO_POINT_NUM_MAX     (80)  /* Maximum number of CSX I/O 
