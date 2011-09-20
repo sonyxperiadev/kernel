@@ -13,6 +13,7 @@ config ARCH_ISLAND
 
 config ARCH_RHEA
 	bool "BROADCOM Rhea SoC"
+	select HAVE_PWM
 	help
 	  Support for the Broadcom Rhea SoC platform.
 

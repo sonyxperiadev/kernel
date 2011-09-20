@@ -93,6 +93,7 @@
 
 
 #include <video/kona_fb.h>
+#include <linux/pwm_backlight.h>
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 #include <linux/broadcom/bcmbt_rfkill.h>
@@ -643,6 +644,26 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
+#ifdef CONFIG_BACKLIGHT_PWM
+
+static struct platform_pwm_backlight_data bcm_backlight_data = {
+/* backlight */
+	.pwm_name 	= "kona_pwmc:4",
+	.max_brightness = 32,   /* Android calibrates to 32 levels*/
+	.dft_brightness = 32,
+	.pwm_period_ns 	=  5000000,
+};
+
+static struct platform_device bcm_backlight_devices = {
+	.name 	= "pwm-backlight",
+	.id 	= 0,
+	.dev 	= {
+		.platform_data  =       &bcm_backlight_data,
+	},
+};
+
+#endif /*CONFIG_BACKLIGHT_PWM */
+
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
 	|| defined(CONFIG_MACH_RHEA_DALTON)
@@ -870,6 +891,9 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&android_pmem,
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
+#endif
+#ifdef CONFIG_BACKLIGHT_PWM
+	&bcm_backlight_devices,
 #endif
 /* TPS728XX device registration */
 #ifdef CONFIG_REGULATOR_TPS728XX
