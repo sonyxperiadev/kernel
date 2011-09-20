@@ -124,9 +124,13 @@ typedef IPC_U32 IPC_EndpointId_T;
 #define IPC_EP_EemAP		11
 //Used for sending and receiving ethernet data on the CP
 #define IPC_EP_EemCP		12
+//Used for sending and receiving serial data on the AP
+#define IPC_EP_SerialAP		13
+//Used for sending and receiving serial data on the CP
+#define IPC_EP_SerialCP		14
 
 //This should always be the last endpoint ID
-#define	IPC_EndpointId_Count	13
+#define	IPC_EndpointId_Count	15
 
 
 //**************************************************
