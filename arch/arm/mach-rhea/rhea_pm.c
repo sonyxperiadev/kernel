@@ -22,6 +22,10 @@
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
+#include <mach/rdb/brcm_rdb_kona_gptimer.h>
+
+
+#define HUB_TIMER_AFTER_WFI_WORK_AROUND 1
 
 extern void enter_wfi(void);
 extern void dormant_enter(void);
