@@ -1,7 +1,7 @@
 # Unmerged paths:
 #   (use "git add/rm <file>..." as appropriate to mark resolution)
 #
-#	both modified:      arch/arm/mach-island/common.c
+#	both modified:      arch/arm/mach-island/common.c (fixed by Jason Wong)
 #	both modified:      drivers/power/Kconfig (fixed by Sherman Yin)
 #	both modified:      drivers/power/Makefile (fixed by Sherman Yin)
 #	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_bivcm.h
