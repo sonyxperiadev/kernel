@@ -37,8 +37,10 @@
  */
 extern char brcm_netconsole_register_callbacks(struct brcm_netconsole_callbacks *_cb) ;
 
+#if 0
 static int acm_start_cb( void ) ;
 static int acm_stop_cb( void ) ;
+#endif
 
 #ifdef CONFIG_BRCM_NETCONSOLE
 
@@ -83,11 +85,13 @@ struct acm_callbacks
 	int (*stop) (void);	
 };
 
+#if 0
 static struct acm_callbacks _acm_cb =	//	ACM flow control callbacks
 {
 	.start = acm_start_cb,
 	.stop  = acm_stop_cb 
 } ;
+#endif
 
 
 typedef struct 
@@ -138,6 +142,7 @@ static int netconsole_stop_cb( void )
 }
 #endif
 
+#if 0
 /**
  *	flow control callback for ACM (start flow), called when ACM
  *	available to transport data
@@ -159,6 +164,7 @@ static int acm_stop_cb( void )
 	printk( "BCMLOG: ACM device stopped\n" ) ;
 	return 0 ;
 }
+#endif
 
 /*
  *	Create a file name for logging, based on system time.

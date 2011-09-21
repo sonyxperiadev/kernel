@@ -300,7 +300,6 @@ static void bcmpmu_otg_xceiv_vbus_valid_handler(struct work_struct *work)
 
 static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 {
-	unsigned int data;
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_a_invalid_work);

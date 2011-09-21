@@ -91,7 +91,6 @@ int bcm_hsotgctrl_phy_init(void)
 {
 	int rc;
 	int val;
-	unsigned long rate;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
 
 	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->hsotg_ctrl_base) || (!bcm_hsotgctrl_handle->dev))

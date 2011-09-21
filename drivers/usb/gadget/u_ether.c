@@ -749,6 +749,7 @@ static char *host_addr;
 module_param(host_addr, charp, S_IRUGO);
 MODULE_PARM_DESC(host_addr, "Host Ethernet Address");
 
+#if 0 // See gether_setup
 static int get_ether_addr(const char *str, u8 *dev_addr)
 {
 	if (str) {
@@ -769,6 +770,7 @@ static int get_ether_addr(const char *str, u8 *dev_addr)
 	random_ether_addr(dev_addr);
 	return 1;
 }
+#endif
 
 static struct eth_dev *the_dev;
 
