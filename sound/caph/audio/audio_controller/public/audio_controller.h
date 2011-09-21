@@ -510,6 +510,7 @@ void AUDCTRL_SetPlayMute(
 /********************************************************************
 *  @brief  switch speaker of playback 
 *
+*  @param   src  Source
 *  @param   curSink	current Sink device
 *  @param   curSpk  current speaker
 *  @param   newSink	new Sink device
@@ -518,6 +519,7 @@ void AUDCTRL_SetPlayMute(
 *
 ****************************************************************************/
 void AUDCTRL_SwitchPlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			curSink,
 				AUDCTRL_SPEAKER_t		curSpk,
 				AUDIO_HW_ID_t			newSink,
@@ -527,6 +529,7 @@ void AUDCTRL_SwitchPlaySpk(
 /********************************************************************
 *  @brief  Add a speaker to a playback path
 *
+*  @param   src  Source
 *  @param   curSink	current Sink device
 *  @param   curSpk  current speaker
 *  @param  secondary sink	(in)  playback sink
@@ -536,6 +539,7 @@ void AUDCTRL_SwitchPlaySpk(
 *
 ****************************************************************************/
 void AUDCTRL_AddPlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			curSink,
 				AUDCTRL_SPEAKER_t		curSpk,
 				AUDIO_HW_ID_t			newSink,
@@ -545,6 +549,7 @@ void AUDCTRL_AddPlaySpk(
 /********************************************************************
 *  @brief  Remove a speaker to a playback path
 *
+*  @param   src  Source
 *  @param   PriSink	current Sink device
 *  @param   PriSpk  current speaker
 *  @param  SecSink	(in)  playback sink  
@@ -554,6 +559,7 @@ void AUDCTRL_AddPlaySpk(
 *
 ****************************************************************************/
 void AUDCTRL_RemovePlaySpk(
+                AUDIO_HW_ID_t           src,
 				AUDIO_HW_ID_t			PriSink,
 				AUDCTRL_SPEAKER_t		PriSpk,
 				AUDIO_HW_ID_t			SecSink,
@@ -615,21 +621,6 @@ void AUDCTRL_SetRecordGain(
                 AUDIO_GAIN_FORMAT_t     gainFormat,
 				UInt32					gainL,
 				UInt32					gainR
-				);
-
-/**
-*  @brief  Set Tap gain (only wideband)
-*
-*  @param  src	(in)  
-*  @param  spr	(in)  speaker selection
-*  @param  gain	(in)  
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetTapGain(
-				AUDIO_HW_ID_t			tap,
-				UInt32					gain
 				);
 
 
@@ -807,21 +798,6 @@ void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID);
 void AUDCTRL_AddToTable(AUDCTRL_Config_t* data);
 
 /********************************************************************
-*  @brief  enable or disable audio HW loopback
-*
-*  @param  enable_lpbk (in)  the audio mode
-*  @param  mic         (in)  the input to loopback
-*  @param  speaker     (in)  the output from loopback
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetEQ( 
-				AUDIO_HW_ID_t	audioPath,
-				AudioEqualizer_en_t  equType
-				);
-
-/********************************************************************
 *  @brief  set gain on the VPU playback path on the downlink path
 *
 *  @param  uVol (in)  amr volume
@@ -840,6 +816,17 @@ void AUDCTRL_SetAMRVolume_DL(UInt16 uVol);
 *
 ****************************************************************************/
 void AUDCTRL_SetAMRVolume_UL(UInt16 uVol);
+
+/********************************************************************
+*  @brief  Set Arm2Sp Parameter
+*
+*  @param  mixMode        For selection of mixing with voice DL, UL, or both
+*  @param  instanceId     Instance ID: 1 for arm2sp1, 2 for arm2sp2
+*
+*  @return none
+*
+****************************************************************************/
+void AUDCTRL_SetArm2spParam( UInt32 mixMode, UInt32 instanceId );
 
 /********************************************************************
 *  @brief  Configure fm/pcm port
@@ -918,27 +905,24 @@ AUDDRV_MIC_Enum_t AUDCTRL_GetDrvMic (AUDCTRL_MICROPHONE_t mic);
 ****************************************************************************/
 AUDDRV_SPKR_Enum_t AUDCTRL_GetDrvSpk (AUDCTRL_SPEAKER_t speaker);
 
-#if !defined(NO_PMU) && ( defined( PMU_BCM59038) || defined( PMU_BCM59055 ) || defined( PMU_MAX8986) )
 /********************************************************************
-*  @brief  Convert Headset gain dB value to PMU-format gain value
+*  @brief  Set IHF mode
 *
-*  @param  Headset gain dB galue
+*  @param  IHF mode status (TRUE: stereo | FALSE: mono).
 *
-*  @return PMU_HS_Gain_t PMU-format gain value
+*  @return  none
 *
 ****************************************************************************/
-UInt32 map2pmu_hs_gain( Int16 db_gain );
+void AUDCTRL_SetIHFmode (Boolean stIHF);
 
 /********************************************************************
-*  @brief  Convert IHF gain dB value to PMU-format gain value
+*  @brief  Set BT mode
 *
-*  @param  IHF gain dB galue
+*  @param  BT mode status for BT production test.
 *
-*  @return PMU_HS_Gain_t PMU-format gain value
+*  @return  none
 *
 ****************************************************************************/
-UInt32 map2pmu_ihf_gain( Int16 db_gain );
-
-#endif
+void  AUDCTRL_SetBTMode(Boolean mode);
 
 #endif //#define __AUDIO_CONTROLLER_H__

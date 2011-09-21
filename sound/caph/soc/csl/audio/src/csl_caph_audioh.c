@@ -33,7 +33,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 
 #include "mobcom_types.h"
 #include "ostask.h"
-#include "xassert.h"
 #include "chal_types.h"
 #include "chal_caph.h"
 #include "chal_caph_audioh.h"
@@ -49,11 +48,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 // global variable definitions
 //****************************************************************************
 CHAL_HANDLE lp_handle = 0x0;
-extern const unsigned int eancAIIRFilterCoeff[];
-extern const unsigned int eancAFIRFilterCoeff[];
-extern const unsigned int eanc96kIIRFilterCoeff[];
-extern const unsigned int eanc48kIIRFilterCoeff[];
-extern const unsigned int stoneFirCoeff[];
 //****************************************************************************
 //                         L O C A L   S E C T I O N
 //****************************************************************************
@@ -82,6 +76,253 @@ static CHAL_HANDLE handle = 0x0;
 //Bit 4-7: Reserved
 static UInt8 micStatus = 0x0;
 
+
+#if defined(USE_SYSPARM_FILE)  
+#else
+
+
+const unsigned int eancAIIRFilterCoeff[] = {
+    /* AIIR Coefficients */
+    0xd97f9b ,
+    0x02b858 ,
+    0x437495 ,
+    0x0011a1 ,
+    0x02b858 ,
+
+    0xc33f30 ,
+    0x7fffff ,
+    0x3caef9 ,
+    0xa47395 ,
+    0x7fffff ,
+
+    0xe7c868 ,
+    0x0bee0c ,
+    0x498cfc ,
+    0x11e06c ,
+    0x0bee0c ,
+
+    0xcbc082 ,
+    0x7fffff ,
+    0x3e2bf2 ,
+    0xba3b71 ,
+    0x7fffff
+};
+
+const unsigned int eancAFIRFilterCoeff[2][10] = {
+    /* AFIR Coefficients */
+    {0x006b01f0,    0xf4c5f9ef,    0x1ed7ff08,    0x56754518,    0x1ed74518,
+    0xf4c5ff08,    0x006bf9ef,    0x000001f0,    0x00000000 ,    0x00000000},
+
+    {0x008901d2,    0xf4e3f9ec,     0x1ed7ff0b,     0x56754518,     0x1ed74518,
+    0xf4c5ff08,  0x006bf9ef,     0x000001f0,     0x00000000,     0x00000000}
+};
+
+
+const unsigned int eanc96kIIRFilterCoeff[] =
+{
+    0x000000  ,
+    0x000000  ,
+    0x2ef74e  ,
+    0x02514d  ,
+    0x02514d  ,
+    0xc81f2f ,
+    0x237811 ,
+    0x662535 ,
+    0xdab293 ,
+    0x237811 ,
+    0xd68f5a ,
+    0x568790 ,
+    0x5fd504 ,
+    0xe7dc24 ,
+    0x568790 ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x7fffff ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x7fffff ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x7fffff
+};
+
+
+const unsigned int eanc48kIIRFilterCoeff[] =
+{
+    0xCBD48C ,
+    0x0A292D ,
+    0x6BE454 ,
+    0xEF0B30 ,
+    0x0A292D ,
+    0x000000 ,
+    0x000000 ,
+    0x2C9707 ,
+    0x5F7C41,
+    0x5F7C41,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x7fffff ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x7fffff ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x7fffff ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x000000 ,
+    0x7fffff
+};
+
+////////////////// Side tone filter coeffient //////////////
+
+
+const unsigned int stoneFirCoeff[] =
+{
+	0x000003c4,
+    0xfffffdae,
+    0xfffffa74,
+    0xfffff504,
+    0xffffed64,
+    0xffffe3d2,
+    0xffffd8d8,
+    0xffffcd63,
+    0xffffc2bd,
+    0xffffba76,
+    0xffffb640,
+    0xffffb7be,
+    0xffffc041,
+    0xffffd08a,
+    0xffffe88a,
+    0x00000736,
+    0x00002a76,
+    0x00004f2e,
+    0x0000716c,
+    0x00008cc6,
+    0x00009cce,
+    0x00009da3,
+    0x00008c81,
+    0x00006857,
+    0x0000322e,
+    0xffffed64,
+    0xffff9fa9,
+    0xffff50ac,
+    0xffff0983,
+    0xfffed3c2,
+    0xfffeb86b,
+    0xfffebec4,
+    0xfffeeb30,
+    0xffff3e40,
+    0xffffb40e,
+    0x0000440e,
+    0x0000e162,
+    0x00017bbb,
+    0x000200bd,
+    0x00025dd8,
+    0x00028257,
+    0x0002618e,
+    0x0001f4d5,
+    0x00013d1a,
+    0x000043db,
+    0xffff1b4f,
+    0xfffddda8,
+    0xfffcab83,
+    0xfffba96b,
+    0xfffafcce,
+    0xfffac88c,
+    0xfffb296f,
+    0xfffc32f3,
+    0xfffdecad,
+    0x00005094,
+    0x00034a76,
+    0x0006b8a6,
+    0x000a6deb,
+    0x000e3490,
+    0x0011d257,
+    0x00150cf4,
+    0x0017aeb2,
+    0x00198ad3,
+    0x001a8143,
+    0x001a8143,
+    0x00198ad3,
+    0x0017aeb2,
+    0x00150cf4,
+    0x0011d257,
+    0x000e3490,
+    0x000a6deb,
+    0x0006b8a6,
+    0x00034a76,
+    0x00005094,
+    0xfffdecad,
+    0xfffc32f3,
+    0xfffb296f,
+    0xfffac88c,
+    0xfffafcce,
+    0xfffba96b,
+    0xfffcab83,
+    0xfffddda8,
+    0xffff1b4f,
+    0x000043db,
+    0x00013d1a,
+    0x0001f4d5,
+    0x0002618e,
+    0x00028257,
+    0x00025dd8,
+    0x000200bd,
+    0x00017bbb,
+    0x0000e162,
+    0x0000440e,
+    0xffffb40e,
+    0xffff3e40,
+    0xfffeeb30,
+    0xfffebec4,
+    0xfffeb86b,
+    0xfffed3c2,
+    0xffff0983,
+    0xffff50ac,
+    0xffff9fa9,
+    0xffffed64,
+    0x0000322e,
+    0x00006857,
+    0x00008c81,
+    0x00009da3,
+    0x00009cce,
+    0x00008cc6,
+    0x0000716c,
+    0x00004f2e,
+    0x00002a76,
+    0x00000736,
+    0xffffe88a,
+    0xffffd08a,
+    0xffffc041,
+    0xffffb7be,
+    0xffffb640,
+    0xffffba76,
+    0xffffc2bd,
+    0xffffcd63,
+    0xffffd8d8,
+    0xffffe3d2,
+    0xffffed64,
+    0xfffff504,
+    0xfffffa74,
+    0xfffffdae,
+    0x000003c4
+};
+
+#endif
 
 //****************************************************************************
 // local function declarations

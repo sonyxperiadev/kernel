@@ -62,8 +62,11 @@
 
 #include "mobcom_types.h"
 
+#define assert(exp) BUG_ON(!(exp)) 
+
 void DSPDRV_Init(void);
 
 void VPSHAREDMEM_TriggerRIPInt(void);
+
 
 #endif //_OSDW_DSP_DRV_H_

@@ -97,6 +97,7 @@ typedef enum
 	INTERFACE_CSD,				///< for csd data
 	INTERFACE_LOGGING,			///< for logging
 	INTERFACE_USB_EEM,				///< for usb EEM interface
+	INTERFACE_SERIAL,				///< for serial interface
 	INTERFACE_TOTAL				///< total interfaces
 }PACKET_InterfaceType_t;
 

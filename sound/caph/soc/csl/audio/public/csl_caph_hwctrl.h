@@ -35,6 +35,95 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #ifndef _CSL_CAPH_HWCTRL_
 #define _CSL_CAPH_HWCTRL_
 
+#include "csl_caph.h"
+#include "csl_caph_cfifo.h"
+#include "csl_caph_dma.h"
+#include "csl_caph_audioh.h"
+
+/**
+* CAPH Render/Capture CSL configuration parameters
+******************************************************************************/
+typedef struct
+{
+CSL_CAPH_DMA_CHNL_e dmaCH;
+CSL_CAPH_CFIFO_FIFO_e fifo;
+UInt8* pBuf;
+UInt32 size;
+CSL_CAPH_DMA_CALLBACK_p dmaCB;
+}CSL_CAPH_STREAM_CONFIG_t;
+
+/**
+* CAPH HW path configuration parameters
+******************************************************************************/
+typedef struct
+{
+    CSL_CAPH_STREAM_e streamID;
+    CSL_CAPH_PathID pathID;    
+    CSL_CAPH_DEVICE_e source;
+    CSL_CAPH_DEVICE_e sink;
+    CSL_CAPH_DMA_CHNL_e dmaCH;
+    CSL_CAPH_DMA_CHNL_e dmaCH2;
+    AUDIO_SAMPLING_RATE_t src_sampleRate;
+    AUDIO_SAMPLING_RATE_t snk_sampleRate;	
+    AUDIO_CHANNEL_NUM_t chnlNum;
+    AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+    CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
+}CSL_CAPH_HWCTRL_CONFIG_t;
+
+
+/**
+* CAPH HW path configuration parameters
+******************************************************************************/
+typedef struct
+{
+    CSL_CAPH_STREAM_e streamID;
+    AUDIO_SAMPLING_RATE_t src_sampleRate;
+    AUDIO_SAMPLING_RATE_t snk_sampleRate;
+    AUDIO_CHANNEL_NUM_t chnlNum;
+    AUDIO_BITS_PER_SAMPLE_t bitPerSample;
+    UInt8* pBuf;
+    UInt8* pBuf2;
+    UInt32 size;
+    CSL_CAPH_DMA_CALLBACK_p dmaCB;    
+}CSL_CAPH_HWCTRL_STREAM_REGISTER_t;
+
+
+/**
+* CAPH HW register base address
+******************************************************************************/
+typedef struct
+{
+    UInt32 audioh_baseAddr;
+    UInt32 sdt_baseAddr;
+    UInt32 srcmixer_baseAddr;
+    UInt32 cfifo_baseAddr;
+    UInt32 aadmac_baseAddr;
+    UInt32 ssasw_baseAddr;
+    UInt32 ahintc_baseAddr;
+    UInt32 ssp3_baseAddr;
+    UInt32 ssp4_baseAddr;	
+}CSL_CAPH_HWCTRL_BASE_ADDR_t;
+
+/**
+* CAPH HW filters
+******************************************************************************/
+typedef enum
+{
+    CSL_CAPH_EANC_FILTER1, 
+    CSL_CAPH_EANC_FILTER2, 
+    CSL_CAPH_SIDETONE_FILTER, 
+}CSL_CAPH_HWCTRL_FILTER_e;
+
+/**
+* CAPH HW Resource management information
+******************************************************************************/
+typedef struct
+{
+    UInt32 fifoAddr;
+    CSL_CAPH_PathID pathID[MAX_AUDIO_PATH];
+}CSL_CAPH_HWResource_Table_t;
+
+
 /**
 *
 *  @brief  initialize the caph HW control CSL
@@ -74,18 +163,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 *  @return Result_t status
 *****************************************************************************/
 Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config);
-
-/**
-*
-*  @brief  switch the source/sink of a caph HW path 
-*
-*  @param   pathID  (in) Caph HW path id
-*  @param   config  (in) Caph HW path configuration parameters
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_SwitchPath(CSL_CAPH_PathID pathID, CSL_CAPH_HWCTRL_CONFIG_t config);
-
 
 /**
 *
@@ -143,6 +220,7 @@ Result_t csl_caph_hwctrl_ResumePath(CSL_CAPH_HWCTRL_CONFIG_t config);
 *  @return
 *****************************************************************************/
 void csl_caph_hwctrl_SetSinkGain(CSL_CAPH_PathID pathID, 
+                                      CSL_CAPH_DEVICE_e dev,
                                       UInt16 gainL,
                                       UInt16 gainR);
 
@@ -168,7 +246,8 @@ void csl_caph_hwctrl_SetSourceGain(CSL_CAPH_PathID pathID,
 *
 *  @return
 *****************************************************************************/
-void csl_caph_hwctrl_MuteSink(CSL_CAPH_PathID pathID);
+void csl_caph_hwctrl_MuteSink(CSL_CAPH_PathID pathID,
+                                   CSL_CAPH_DEVICE_e dev );
 /**
 *
 *  @brief  Mute the source
@@ -186,7 +265,8 @@ void csl_caph_hwctrl_MuteSource(CSL_CAPH_PathID pathID);
 *
 *  @return
 *****************************************************************************/
-void csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID);
+void csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID,
+                                      CSL_CAPH_DEVICE_e dev);
 /**
 *
 *  @brief  Unmute the source
@@ -196,85 +276,6 @@ void csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID);
 *  @return
 *****************************************************************************/
 void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID);
-/**
-*
-*  @brief  Switch to another sink
-*
-*  @param  sink  (in) Sink of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_SwitchSink(CSL_CAPH_DEVICE_e sink);
-
-/**
-*
-*  @brief  Add a new sink
-*
-*  @param  sink  (in) Sink of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_AddSink(CSL_CAPH_DEVICE_e sink); 
-/**
-*
-*  @brief  Remove a sink
-*
-*  @param  sink  (in) Sink of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_RemoveSink(CSL_CAPH_DEVICE_e sink);
-
-/**
-*
-*  @brief  Switch to another source
-*
-*  @param  source  (in) Source of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_SwitchSource(CSL_CAPH_DEVICE_e source);    
-
-/**
-*
-*  @brief  Add a new source
-*
-*  @param  source  (in) Source of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_AddSource(CSL_CAPH_DEVICE_e source); 
-
-/**
-*
-*  @brief  Remove a source
-*
-*  @param  source  (in) Source of HW path
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_RemoveSource(CSL_CAPH_DEVICE_e source); 
-
-/**
-*
-*  @brief  Load filter coefficients
-*
-*  @param  filter  (in) the filter to load coefficients
-*  @param  coeff  (in) the filter coefficients to load
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_SetFilter(CSL_CAPH_HWCTRL_FILTER_e filter, void* coeff);
-
-/**
-*
-*  @brief  Enable the Sidetone path
-*
-*  @param  void
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_EnableSideTone(void);
 
 /**
 *
@@ -285,36 +286,6 @@ void csl_caph_hwctrl_EnableSideTone(void);
 *  @return
 *****************************************************************************/
 void csl_caph_hwctrl_DisableSideTone(void);
-
-/**
-*
-*  @brief  Set the sidetone gain
-*
-*  @param  gain_mB (in) the gain in mB
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_SetSideToneGain(UInt32 gain_mB);
-
-/**
-*
-*  @brief  Enable the EANC path
-*
-*  @param  void
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_EnableEANC(void);
-
-/**
-*
-*  @brief  Disable the EANC path
-*
-*  @param  void
-*
-*  @return
-*****************************************************************************/
-void csl_caph_hwctrl_DisableEANC(void);
 
 /**
 *
@@ -505,15 +476,6 @@ void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID,
 
 /****************************************************************************
 *
-*  Function Name: csl_caph_hwctrl_CountSameSrcSink
-*
-*  Description: count paths with the same source and sink.
-*
-****************************************************************************/
-UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVICE_e sink);
-
-/****************************************************************************
-*
 *  Function Name: csl_caph_hwctrl_SetSspTdmMode
 *
 *  Description: control the ssp tdm feature
@@ -521,6 +483,25 @@ UInt32 csl_caph_hwctrl_CountSameSrcSink(CSL_CAPH_DEVICE_e source, CSL_CAPH_DEVIC
 ****************************************************************************/
 void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 
+void csl_caph_ControlHWClock(Boolean enable);
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetIHFmode
+*
+*  Description: Set IHF mode (stereo/mono)
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetIHFmode(Boolean stIHF);
+
+/****************************************************************************
+*
+*  Function Name: csl_caph_hwctrl_SetBTMode
+*
+*  Description: Set BT mode
+*
+****************************************************************************/
+void csl_caph_hwctrl_SetBTMode(Boolean mode);
 
 #ifdef ENABLE_DMA_ARM2SP
 

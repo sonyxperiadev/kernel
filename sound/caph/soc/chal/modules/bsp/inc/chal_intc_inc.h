@@ -324,7 +324,6 @@ __forceinline Boolean chal_intc_is_interrupt_active(CHAL_HANDLE h, cUInt32 Id )
 //
 __forceinline void chal_intc_set_soft_int(CHAL_HANDLE h, cUInt32 Id, cUInt32 cpu_mask)
 {
-    assert(FALSE);
 }
 
 

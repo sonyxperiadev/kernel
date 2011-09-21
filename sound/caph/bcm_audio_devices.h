@@ -25,6 +25,7 @@ the GPL, without Broadcom's express prior written consent.
 typedef struct _TIDChanOfPlaybackDev
 {
     AUDIO_DRIVER_TYPE_t     drv_type;
+	AUDIO_HW_ID_t     		hw_src;
     AUDIO_HW_ID_t           hw_id;
     AUDCTRL_SPEAKER_t       speaker;
 	AUDDRV_DEVICE_e aud_dev;

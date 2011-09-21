@@ -57,7 +57,6 @@
 *
 ****************************************************************************/
 #include <string.h>
-#include "assert.h"
 #include "mobcom_types.h"
 #include "log.h"
 #include "shared.h"
@@ -167,7 +166,7 @@ static Boolean VPSHAREDMEM_ReadStatusQ(VPStatQ_t *status_msg)
 	UInt8	status_out = vp_shared_mem->vp_shared_statusq_out;
 	UInt8	status_in = vp_shared_mem->vp_shared_statusq_in;
 
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
+//	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_ReadStatusQ: status_in=0x%x, status_out=0x%x \n", vp_shared_mem->vp_shared_statusq_in, vp_shared_mem->vp_shared_statusq_out);
 	if ( status_out == status_in )
 	{
 		return FALSE;

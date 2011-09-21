@@ -445,6 +445,8 @@ static void __devexit ALSAModuleExit(void)
 	BCM_AUDIO_DEBUG("\n %lx:exit done \n",jiffies);
 }
 
+// lower down the CAPH module init priority, so it can be done after RPC init.
 module_init(ALSAModuleInit);
+//late_initcall(ALSAModuleInit);
 module_exit(ALSAModuleExit);
 

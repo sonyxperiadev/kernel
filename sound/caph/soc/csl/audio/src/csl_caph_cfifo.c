@@ -32,11 +32,10 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 ****************************************************************************/
 #include "mobcom_types.h"
 #include "chal_caph_cfifo.h"
-#include "csl_caph.h"
+//#include "csl_caph.h"
 #include "csl_caph_cfifo.h"
-#include "csl_caph_dma.h"
+//#include "csl_caph_dma.h"
 #include "log.h"
-#include "xassert.h"
 
 //****************************************************************************
 //                        G L O B A L   S E C T I O N
@@ -45,9 +44,10 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 //****************************************************************************
 // global variable definitions
 //****************************************************************************
-extern UInt32 cfifo_arb_key;
-extern CAPH_CFIFO_QUEUE_e cfifo_queue;
-extern CSL_CFIFO_TABLE_t CSL_CFIFO_table[];
+UInt32 cfifo_arb_key = 0x24924924;
+CAPH_CFIFO_QUEUE_e cfifo_queue = CAPH_CFIFO_QUEUE1;
+
+
 //****************************************************************************
 //                         L O C A L   S E C T I O N
 //****************************************************************************
@@ -68,6 +68,61 @@ extern CSL_CFIFO_TABLE_t CSL_CFIFO_table[];
 //****************************************************************************
 static CHAL_HANDLE handle = 0;
 
+#if defined (_RHEA_)
+CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
+{
+// FIFO map, address, size, threshold, owner: 0=ARM, 1=DSP, status: 0=UNUSED, 1=USED
+// CFIFO/DMA 11-16 are reserved and connected for DSP
+    {CSL_CAPH_CFIFO_NONE,   0x0000, 0x0,  0x0,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO1,  0x0000, 0x80, 0x8, 	CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO2,  0x0080, 0x80, 0x8,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO3,  0x0100, 0x80, 0x8,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO4,  0x0180, 0x80, 0x8,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO5,  0x0200, 0x80, 0x8,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO6,  0x0280, 0x80, 0x8,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO7,  0x0300, 0x80, 0x8,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO8,  0x0380, 0x80, 0x8,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO9,  0x0400, 0x80, 0x8,  CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO10, 0x0480, 0x200, 0x100,  CAPH_SSP, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO11, 0x0680, 0x200, 0x100,  CAPH_SSP, 0, CSL_CAPH_DMA_NONE},
+#if defined(ENABLE_DMA_VOICE)
+    {CSL_CAPH_CFIFO_FIFO12, 0x0880, 0x8, 0x1, CAPH_DSP, 0, CSL_CAPH_DMA_CH12},
+    {CSL_CAPH_CFIFO_FIFO13, 0x0900, 0x8, 0x7, CAPH_DSP, 0, CSL_CAPH_DMA_CH13},
+    {CSL_CAPH_CFIFO_FIFO14, 0x0980, 0x8, 0x7,  CAPH_DSP, 0, CSL_CAPH_DMA_CH14},
+    {CSL_CAPH_CFIFO_FIFO15, 0x0A00, 0x80, 0x8,  CAPH_DSP, 0, CSL_CAPH_DMA_CH15},
+    {CSL_CAPH_CFIFO_FIFO16, 0x0A80, 0x80, 0x8,  CAPH_DSP, 0, CSL_CAPH_DMA_CH16}
+#else
+    {CSL_CAPH_CFIFO_FIFO12, 0x0880, 0x200, 0x100, CAPH_DSP, 0, CSL_CAPH_DMA_CH12},
+    {CSL_CAPH_CFIFO_FIFO13, 0x0A80, 0x200, 0x100, CAPH_DSP, 0, CSL_CAPH_DMA_CH13},
+    {CSL_CAPH_CFIFO_FIFO14, 0x0C80, 0x4,    0x2,  CAPH_DSP, 0, CSL_CAPH_DMA_CH14},
+    {CSL_CAPH_CFIFO_FIFO15, 0x0C84, 0x4,    0x2,  CAPH_DSP, 0, CSL_CAPH_DMA_CH15},
+    {CSL_CAPH_CFIFO_FIFO16, 0x0C88, 0x4,    0x2,  CAPH_DSP, 0, CSL_CAPH_DMA_CH16}
+#endif
+};
+#elif defined (_SAMOA_)
+CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
+{
+// FIFO map, address, size in bytes, threshold, owner: 0=ARM, 1=DSP, status: 0=UNUSED, 1=USED
+// CFIFO/DMA 11-16 are reserved and connected for DSP
+    {CSL_CAPH_CFIFO_NONE,   0x0000, 0x0,     0x0,    CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO1,   0x0000, 0x200, 0x100, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO2,   0x0200, 0x200, 0x100, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO3,   0x0400, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO4,   0x0500, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO5,   0x0600, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO6,   0x0700, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO7,   0x0800, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO8,   0x0900, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO9,   0x0a00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO10, 0x0b00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO11, 0x0c00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
+    {CSL_CAPH_CFIFO_FIFO12, 0x0d00, 0x100, 0x080, CAPH_DSP, 0, CSL_CAPH_DMA_CH12},
+    {CSL_CAPH_CFIFO_FIFO13, 0x0e00, 0x100, 0x080, CAPH_DSP, 0, CSL_CAPH_DMA_CH13},
+    {CSL_CAPH_CFIFO_FIFO14, 0x0f00, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH14},
+    {CSL_CAPH_CFIFO_FIFO15, 0x0f20, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH15},
+    {CSL_CAPH_CFIFO_FIFO16, 0x0f40, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH16}
+};
+#endif
 
 //****************************************************************************
 // local function declarations
@@ -192,7 +247,7 @@ static CAPH_CFIFO_e csl_caph_cfifo_get_chal_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
             break;
 			
         default:
-            xassert(0, csl_fifo);
+            audio_xassert(0, csl_fifo);
 		break;	
     };
 
@@ -239,7 +294,7 @@ static void csl_caph_cfifo_fifo_init(void)
 		total_fifo_size += CSL_CFIFO_table[id].size;
 	}
 
-	xassert(total_fifo_size <= CSL_CFIFO_TOTAL_SIZE, total_fifo_size);
+	audio_xassert(total_fifo_size <= CSL_CFIFO_TOTAL_SIZE, total_fifo_size);
 	
 	return;
 }
@@ -499,5 +554,37 @@ UInt16 csl_caph_cfifo_read_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo, UInt32* data, UI
         num = chal_caph_cfifo_read_fifo(handle, chal_fifo, data, size, FALSE); 
 
 	return num;
+}
+
+
+/****************************************************************************
+*
+*  Function Name:CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(
+*                                          CSL_CAPH_DMA_CHNL_e dmaCH)
+*
+*  Description: get csl cfifo which is linked to this dma chan for dsp
+*
+****************************************************************************/
+CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CHNL_e dmaCH)
+{
+	UInt16 id = 0;
+	
+	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_get_csl_cfifo:: \n");
+
+	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
+	{
+		if ((CSL_CFIFO_table[id].dmaCH == dmaCH) 
+			&&(CSL_CFIFO_table[id].status == 0)
+			&&(CSL_CFIFO_table[id].owner == CAPH_DSP))
+		{
+			csl_caph_cfifo_ch = (CSL_CAPH_CFIFO_FIFO_e)id;
+			CSL_CFIFO_table[id].status = 1;
+			break;
+		}
+	}
+
+	return csl_caph_cfifo_ch;
 }
 

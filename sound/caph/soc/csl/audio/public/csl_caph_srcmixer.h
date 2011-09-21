@@ -36,6 +36,8 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #define _CSL_CAPH_SRCMIXER_
 #include "chal_caph.h"
 
+#include "csl_caph_switch.h"
+
 /* Total number of input channels */
 #define MAX_INCHNLS 0x7
 /* Total number of single input channels */
@@ -57,6 +59,138 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #define MIX_OUT_FINE_GAIN_DEFAULT 0x0
 /* SRCMixer Input FIFO threshold */
 #define INFIFO_NO_THRES	0x0
+
+/**
+* CAPH SRCMixer Mixer gains
+******************************************************************************/
+typedef struct CSL_CAPH_SRCM_MIX_GAIN_t
+{
+	UInt16 mixInGainL;
+	UInt16 mixInGainR;
+	UInt16 mixOutGainL;
+	UInt16 mixOutGainR;
+	UInt16 mixOutCoarseGainL;
+	UInt16 mixOutCoarseGainR;
+}CSL_CAPH_SRCM_MIX_GAIN_t;
+
+/**
+* CAPH SRCMixer input channel sample rate
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_SRCMIN_8KHZ,
+	CSL_CAPH_SRCMIN_16KHZ,
+	CSL_CAPH_SRCMIN_44_1KHZ,
+	CSL_CAPH_SRCMIN_48KHZ,
+}CSL_CAPH_SRCM_INSAMPLERATE_e;
+
+/**
+* CAPH SRCMixer input channel
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_SRCM_INCHNL_NONE = 0x0000,
+    CSL_CAPH_SRCM_MONO_CH1 = 0x0001,
+	CSL_CAPH_SRCM_MONO_CH2 = 0x0002,
+	CSL_CAPH_SRCM_MONO_CH3 = 0x0004,
+	CSL_CAPH_SRCM_MONO_CH4 = 0x0008,
+	CSL_CAPH_SRCM_STEREO_PASS_CH1_L = 0x0010,
+	CSL_CAPH_SRCM_STEREO_PASS_CH1_R = 0x0020,
+	CSL_CAPH_SRCM_STEREO_PASS_CH2_L = 0x0040,
+	CSL_CAPH_SRCM_STEREO_PASS_CH2_R = 0x0080,
+	CSL_CAPH_SRCM_STEREO_CH5_L = 0x0100,
+	CSL_CAPH_SRCM_STEREO_CH5_R = 0x0200,    
+    CSL_CAPH_SRCM_MONO_CH = (CSL_CAPH_SRCM_MONO_CH1
+                            |CSL_CAPH_SRCM_MONO_CH2
+                            |CSL_CAPH_SRCM_MONO_CH3
+                            |CSL_CAPH_SRCM_MONO_CH4),
+    CSL_CAPH_SRCM_STEREO_PASS_CH1 = (CSL_CAPH_SRCM_STEREO_PASS_CH1_L
+                                    |CSL_CAPH_SRCM_STEREO_PASS_CH1_R),
+	CSL_CAPH_SRCM_STEREO_PASS_CH2 = (CSL_CAPH_SRCM_STEREO_PASS_CH2_L
+                                    |CSL_CAPH_SRCM_STEREO_PASS_CH2_R),
+	CSL_CAPH_SRCM_STEREO_PASS_CH = (CSL_CAPH_SRCM_STEREO_PASS_CH1
+                                    |CSL_CAPH_SRCM_STEREO_PASS_CH2),    
+	CSL_CAPH_SRCM_STEREO_CH5 = (CSL_CAPH_SRCM_STEREO_CH5_L
+                                |CSL_CAPH_SRCM_STEREO_CH5_R),
+}CSL_CAPH_SRCM_INCHNL_e;
+
+/**
+* CAPH SRCMixer TAP outnput channel
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_SRCM_TAP_CH_NONE,
+	CSL_CAPH_SRCM_TAP_MONO_CH1,
+	CSL_CAPH_SRCM_TAP_MONO_CH2,
+	CSL_CAPH_SRCM_TAP_MONO_CH3,
+	CSL_CAPH_SRCM_TAP_MONO_CH4,
+	CSL_CAPH_SRCM_TAP_STEREO_CH5,
+}CSL_CAPH_SRCM_SRC_OUTCHNL_e;
+
+/**
+* CAPH SRCMixer output channel
+******************************************************************************/
+typedef enum
+{
+    CSL_CAPH_SRCM_CH_NONE = 0x00,
+	CSL_CAPH_SRCM_STEREO_CH1_L = 0x01,
+    CSL_CAPH_SRCM_STEREO_CH1_R = 0x02,
+	CSL_CAPH_SRCM_STEREO_CH1 = (CSL_CAPH_SRCM_STEREO_CH1_L|CSL_CAPH_SRCM_STEREO_CH1_R),
+    CSL_CAPH_SRCM_STEREO_CH2_L = 0x04,
+	CSL_CAPH_SRCM_STEREO_CH2_R = 0x08,
+}CSL_CAPH_SRCM_MIX_OUTCHNL_e;
+
+/**
+* CAPH SRCMixer output channel sample rate
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_SRCMOUT_8KHZ,
+	CSL_CAPH_SRCMOUT_16KHZ,
+	CSL_CAPH_SRCMOUT_48KHZ,
+}CSL_CAPH_SRCM_OUTSAMPLERATE_e;
+
+/**
+* CAPH SRCMixer SRC/Mixing Route Configuration Parameters
+******************************************************************************/
+typedef struct 
+{
+	CSL_CAPH_SRCM_INCHNL_e inChnl;
+	UInt8 inThres;
+	CSL_CAPH_SRCM_INSAMPLERATE_e inSampleRate;
+	CSL_CAPH_DATAFORMAT_e inDataFmt;
+	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl;
+	CSL_CAPH_SRCM_SRC_OUTCHNL_e tapOutChnl;
+	UInt8 outThres;
+	CSL_CAPH_SRCM_OUTSAMPLERATE_e outSampleRate;
+	CSL_CAPH_DATAFORMAT_e outDataFmt;
+	CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
+    CSL_CAPH_DEVICE_e sink;
+}CSL_CAPH_SRCM_ROUTE_t;
+
+/**
+* CAPH SRCMixer FIFO buffer
+******************************************************************************/
+typedef enum
+{
+    CSL_CAPH_SRCM_FIFO_NONE,
+    CSL_CAPH_SRCM_MONO_CH1_FIFO,
+    CSL_CAPH_SRCM_MONO_CH2_FIFO,
+    CSL_CAPH_SRCM_MONO_CH3_FIFO,
+    CSL_CAPH_SRCM_MONO_CH4_FIFO,
+    CSL_CAPH_SRCM_STEREO_PASS_CH1_FIFO,
+    CSL_CAPH_SRCM_STEREO_PASS_CH2_FIFO,
+    CSL_CAPH_SRCM_STEREO_CH5_FIFO,
+    CSL_CAPH_SRCM_TAP_MONO_CH1_FIFO,
+    CSL_CAPH_SRCM_TAP_MONO_CH2_FIFO,
+    CSL_CAPH_SRCM_TAP_MONO_CH3_FIFO,
+    CSL_CAPH_SRCM_TAP_MONO_CH4_FIFO,
+    CSL_CAPH_SRCM_TAP_STEREO_CH5_FIFO,
+    CSL_CAPH_SRCM_STEREO_CH1_FIFO,
+    CSL_CAPH_SRCM_STEREO_CH2_L_FIFO,
+    CSL_CAPH_SRCM_STEREO_CH2_R_FIFO,
+}CSL_CAPH_SRCM_FIFO_e;
+
 
 /**
 *
@@ -311,6 +445,16 @@ void csl_caph_srcmixer_unuse_outchnl(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 *  @return CSL_CAPH_SRCM_SRC_OUTCHNL_e SRC TAP output channel
 ****************************************************************************/
 CSL_CAPH_SRCM_SRC_OUTCHNL_e csl_caph_srcmixer_get_tapoutchnl_from_inchnl(CSL_CAPH_SRCM_INCHNL_e inChnl);
+
+/**
+*
+*  @brief	Set isSTIHF flag. TRUE: stereo; FALSE: mono
+*
+*  @param   stIHF : TRUE-stereo, FALSE-mono 
+*
+*  @return void
+****************************************************************************/
+void csl_caph_srcmixer_SetSTIHF(Boolean stIHF);
 
 #endif // _CSL_CAPH_SRCMIXER_
 

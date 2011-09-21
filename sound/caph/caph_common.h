@@ -123,10 +123,13 @@ typedef struct brcm_alsa_chip
 	Int32	pi32LoopBackTestParam[3];	//loopback test
 	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
 	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
-	Int32	pi32SpeechMixOption[3];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
+	Int32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
 	//AT-AUD
 	Int32	i32AtAudHandlerParms[7];	
 	Int32	pi32BypassVibraParam[3];	//Bypass Vibra: bEnable, strength, direction
+    Int32   iEnableFM;                  //Enable/disable FM radio receiving
+	Int32	iEnableBTTest;				//Enable/disable BT production test
+	Int32	pi32CfgIHF[2];	//integer[0] -- 1 for mono, 2 for stereo; integer[1] -- data mixing option if channel is mono,  1 for left, 2 for right, 3 for (L+R)/2
  } brcm_alsa_chip_t;
 
 
@@ -162,6 +165,8 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_FM_FORMAT,
 	CTL_FUNCTION_AT_AUDIO,
 	CTL_FUNCTION_BYPASS_VIBRA,
+	CTL_FUNCTION_BT_TEST,
+	CTL_FUNCTION_CFG_IHF
 };
 
 enum	AT_AUD_Ctl_t
@@ -194,8 +199,8 @@ typedef enum voip_start_stop_type
 typedef struct voip_data
 {
 	UInt32 codec_type;
-	UInt16 mic;
-	UInt16 spk; 	
+	AUDCTRL_MIC_Enum_t mic;
+	AUDCTRL_SPEAKER_t spk; 	
 }voip_data_t;
 
 typedef enum voip_codec_type
@@ -212,8 +217,12 @@ enum {
   VoIP_Ioctl_GetVersion = _IOR ('H', 0x10, int), 
   VoIP_Ioctl_Start = _IOW ('H', 0x11, voip_start_stop_type_t), 
   VoIP_Ioctl_Stop = _IOW ('H', 0x12, voip_start_stop_type_t),	 
-  VoIP_Ioctl_SetParms = _IOR('H', 0x13, voip_data_t), 
-  VoIP_Ioctl_GetParms   = _IOW('H', 0x14, voip_data_t) 
+  VoIP_Ioctl_SetSource = _IOW('H', 0x13, int),
+  VoIP_Ioctl_SetSink = _IOW('H', 0x14, int),
+  VoIP_Ioctl_SetCodecType = _IOW('H', 0x15, int),
+  VoIP_Ioctl_GetSource = _IOR('H', 0x16, int),
+  VoIP_Ioctl_GetSink = _IOR('H', 0x17, int),
+  VoIP_Ioctl_GetCodecType = _IOR('H', 0x18, int),
  }; 
 
 

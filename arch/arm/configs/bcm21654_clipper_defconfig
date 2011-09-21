@@ -291,11 +291,14 @@ CONFIG_MACH_RHEA_RAY=y
 # CONFIG_MACH_HERA_RAY is not set
 # CONFIG_MACH_RHEA_BERRI is not set
 # CONFIG_RHEA_DORMANT_MODE is not set
+## <<<<<<< HEAD
 CONFIG_MACH_RHEA_SELFTEST=y
 
 #
 # System MMU
 #
+## =======
+## >>>>>>> remotes/origin/mps-lmp-capi
 
 #
 # Processor Type
@@ -724,10 +727,13 @@ CONFIG_WLAN=y
 # CONFIG_USB_USBNET is not set
 # CONFIG_USB_IPHETH is not set
 # CONFIG_WAN is not set
+## <<<<<<< HEAD
 
 #
 # CAIF transport drivers
 #
+## =======
+## >>>>>>> remotes/origin/mps-lmp-capi
 CONFIG_PPP=y
 CONFIG_PPP_MULTILINK=y
 CONFIG_PPP_FILTER=y
@@ -737,6 +743,12 @@ CONFIG_PPP_DEFLATE=y
 CONFIG_PPP_BSDCOMP=y
 CONFIG_PPP_MPPE=y
 CONFIG_PPPOE=y
+## <<<<<<< HEAD
+## =======
+## CONFIG_PPPOL2TP=y
+## CONFIG_PPPOLAC=y
+## CONFIG_PPPOPNS=y
+## >>>>>>> remotes/origin/mps-lmp-capi
 # CONFIG_SLIP is not set
 CONFIG_SLHC=y
 # CONFIG_NETCONSOLE is not set
@@ -1322,7 +1334,11 @@ CONFIG_USB=y
 # CONFIG_USB_DEVICE_CLASS is not set
 CONFIG_USB_DYNAMIC_MINORS=y
 CONFIG_USB_SUSPEND=y
+## <<<<<<< HEAD
 # CONFIG_USB_OTG is not set
+## =======
+## CONFIG_USB_OTG=y
+## >>>>>>> remotes/origin/mps-lmp-capi
 # CONFIG_USB_OTG_WHITELIST is not set
 # CONFIG_USB_OTG_BLACKLIST_HUB is not set
 # CONFIG_USB_MON is not set
@@ -1408,7 +1424,10 @@ CONFIG_USB_STORAGE=y
 # CONFIG_USB_IOWARRIOR is not set
 # CONFIG_USB_TEST is not set
 # CONFIG_USB_ISIGHTFW is not set
+## <<<<<<< HEAD
 # CONFIG_USB_YUREX is not set
+## =======
+## >>>>>>> remotes/origin/mps-lmp-capi
 CONFIG_USB_DUAL_DISK_SUPPORT=y
 CONFIG_USB_GADGET=y
 # CONFIG_USB_GADGET_DEBUG is not set
@@ -1438,6 +1457,7 @@ CONFIG_USB_GADGET_DUALSPEED=y
 # CONFIG_USB_G_SERIAL is not set
 # CONFIG_USB_MIDI_GADGET is not set
 # CONFIG_USB_G_PRINTER is not set
+## <<<<<<< HEAD
 CONFIG_USB_G_ANDROID=y
 CONFIG_USB_G_ANDROID_ACM=y
 CONFIG_USB_G_ANDROID_ADB=y
@@ -1446,6 +1466,16 @@ CONFIG_USB_G_ANDROID_MASS_STORAGE=y
 CONFIG_USB_G_ANDROID_RNDIS=y
 # CONFIG_USB_G_ANDROID_RNDIS_WCEIS is not set
 CONFIG_USB_G_ANDROID_OBEX=y
+## =======
+## CONFIG_USB_ANDROID=y
+## CONFIG_USB_ANDROID_ACM=y
+## CONFIG_USB_ANDROID_ADB=y
+## CONFIG_USB_ANDROID_MASS_STORAGE=y
+## # CONFIG_USB_ANDROID_MTP is not set
+## CONFIG_USB_ANDROID_RNDIS=y
+## # CONFIG_USB_ANDROID_RNDIS_WCEIS is not set
+## CONFIG_USB_ANDROID_OBEX=y
+## >>>>>>> remotes/origin/mps-lmp-capi
 # CONFIG_USB_CDC_COMPOSITE is not set
 # CONFIG_USB_G_MULTI is not set
 # CONFIG_USB_G_HID is not set

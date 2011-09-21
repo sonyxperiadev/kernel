@@ -24,7 +24,6 @@
 #include "rpc_api.h"
 #include "rpc_sync_api.h"
 
-#include "xassert.h"
 #include "audio_consts.h"
 
 #include "csl_caph.h"
@@ -160,7 +159,7 @@ void HandleAudioEventReqCb(RPC_Msg_t* pMsg,
 		SendAudioRspForRequest(pMsg, MSG_AUDIO_COMP_FILTER_RSP, &val);
 	}
 	else
-		xassert(0, pMsg->msgId);
+		audio_xassert(0, pMsg->msgId);
 #endif
 
 	RPC_SYSFreeResultDataBuffer(dataBufHandle);
@@ -175,7 +174,7 @@ static Boolean AudioCopyPayload( MsgType_t msgType,
 {
 	UInt32 len;
 
-	xassert(srcDataBuf != NULL, 0);
+	audio_xassert(srcDataBuf != NULL, 0);
 
 	len = RPC_GetMsgPayloadSize(msgType);
 
@@ -338,9 +337,6 @@ UInt32 audio_control_generic(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 pa
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 
-    if (!audioRpcInited)
-        Audio_InitRpc();
-
 	audioParam.param1 = param1;
 	audioParam.param2 = param2;
 	audioParam.param3 = param3;
@@ -364,9 +360,6 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* audio_control_dsp (AP) param1 %ld, param2 %ld param3 %ld param4 %ld *\n\r", param1, param2, param3, param4);
-
-    if (!audioRpcInited)
-        Audio_InitRpc();
 
 	switch (param1)
 	{
@@ -453,9 +446,6 @@ UInt32 audio_cmf_filter(AudioCompfilter_t* cf)
 	MsgType_t msgType;
 	RPC_ACK_Result_t ackResult;
 	Log_DebugPrintf(LOGID_AUDIO, "audio_cmf_filter (AP) ");
-
-    if (!audioRpcInited)
-        Audio_InitRpc();
 
 	tid = RPC_SyncCreateTID( &val, sizeof( UInt32 ) );
 	CAPI2_audio_cmf_filter(tid, audioClientId,cf);

@@ -30,7 +30,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 *  @brief  csl layer driver for caph dma driver
 *
 ****************************************************************************/
-#include "xassert.h"
 #include "log.h"
 #include "mobcom_types.h"
 #include "chal_caph_dma.h"
@@ -46,7 +45,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 //****************************************************************************
 // global variable definitions
 //****************************************************************************
-extern CSL_CFIFO_TABLE_t CSL_CFIFO_table[];
 
 //****************************************************************************
 //                         L O C A L   S E C T I O N
@@ -170,7 +168,7 @@ static CSL_CAPH_DMA_CHNL_e csl_caph_dma_get_csl_chnl(CAPH_DMA_CHANNEL_e chal_chn
             break;
 			
         default:
-            xassert(0, chal_chnl);
+            audio_xassert(0, chal_chnl);
 		break;	
     };
 
@@ -259,7 +257,7 @@ static CAPH_DMA_CHANNEL_e csl_caph_dma_get_chal_chnl(CSL_CAPH_DMA_CHNL_e csl_chn
             break;
 			
         default:
-            xassert(0, chal_chnl);
+            audio_xassert(0, chal_chnl);
 		break;	
     };
 
@@ -348,7 +346,7 @@ static CAPH_CFIFO_e csl_caph_cfifo_get_chal_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
             break;
 			
         default:
-            xassert(0, csl_fifo);
+            audio_xassert(0, csl_fifo);
 		break;	
     };
 
@@ -442,37 +440,6 @@ static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_dma_get_chal_direction(CSL_CAPH_DMA_
 	if (direct == CSL_CAPH_DMA_OUT) chalDirect = CAPH_CFIFO_OUT;
 	if (direct == CSL_CAPH_DMA_IN) chalDirect = CAPH_CFIFO_IN;
 	return chalDirect;
-}
-
-/****************************************************************************
-*
-*  Function Name:CSL_CAPH_CFIFO_FIFO_e csl_caph_dma_get_csl_cfifo(
-*                                          CSL_CAPH_DMA_CHNL_e dmaCH)
-*
-*  Description: get csl cfifo which is linked to this dma chan for dsp
-*
-****************************************************************************/
-CSL_CAPH_CFIFO_FIFO_e csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CHNL_e dmaCH)
-{
-	UInt16 id = 0;
-	
-	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_get_csl_cfifo:: \n");
-
-	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
-	{
-		if ((CSL_CFIFO_table[id].dmaCH == dmaCH) 
-			&&(CSL_CFIFO_table[id].status == 0)
-			&&(CSL_CFIFO_table[id].owner == CAPH_DSP))
-		{
-			csl_caph_cfifo_ch = (CSL_CAPH_CFIFO_FIFO_e)id;
-			CSL_CFIFO_table[id].status = 1;
-			break;
-		}
-	}
-
-	return csl_caph_cfifo_ch;
 }
 
 /****************************************************************************
@@ -885,7 +852,7 @@ void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e 
 		chal_caph_intc_enable_ssp_intr(intc_handle, 2, owner);
 	else
 		// should not get here.
-		xassert(0, csl_sspid);
+		audio_xassert(0, csl_sspid);
 }
 
 /****************************************************************************
@@ -910,7 +877,7 @@ void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e
 		chal_caph_intc_disable_ssp_intr(intc_handle, 2, owner);
 	else
 		// should not get here.
-		xassert(0, csl_sspid);
+		audio_xassert(0, csl_sspid);
 }
 
 /****************************************************************************
@@ -1105,7 +1072,7 @@ CSL_CAPH_DMA_CHNL_FIFO_STATUS_e csl_caph_dma_get_ddrfifo_status(CSL_CAPH_DMA_CHN
         case CAPH_READY_HIGHLOW:
             return CSL_CAPH_READY_HIGHLOW;
         default:
-            xassert(0, dmaCH_ctrl[chnl].eFifoStatus); 
+            audio_xassert(0, dmaCH_ctrl[chnl].eFifoStatus); 
     }
     return CSL_CAPH_READY_NONE;
 }

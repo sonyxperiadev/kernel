@@ -35,6 +35,90 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #ifndef _CSL_CAPH_DMA_
 #define _CSL_CAPH_DMA_
 #include "csl_caph.h"
+
+#include "csl_caph_srcmixer.h"
+
+/**
+* CAPH AADMAC Channels
+******************************************************************************/
+typedef struct
+{
+    CSL_CAPH_DMA_CHNL_e dmaCH;
+    CSL_CAPH_DMA_CHNL_e dmaCH2;
+}CSL_CAPH_DMA_CHNL_t;
+
+/**
+* CAPH AADMAC Channel direction: IN: DDR->CFIFO, OUT: CFIFO->DDR
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_DMA_IN,
+	CSL_CAPH_DMA_OUT,
+}CSL_CAPH_DMA_DIRECTION_e;
+
+/**
+* CAPH HW DMA channel Configuration for different audio HW paths.
+******************************************************************************/
+typedef struct
+{
+    UInt8 dmaNum; // 0 <= dmaNum <= 2.
+    CSL_CAPH_DMA_CHNL_e dma[2];
+}CSL_CAPH_HWConfig_DMA_t;
+
+
+/**
+* CAPH DMA Callback function
+******************************************************************************/
+typedef void (*CSL_CAPH_DMA_CALLBACK_p)(CSL_CAPH_DMA_CHNL_e chnl);
+
+/**
+* CAPH AADMAC Channel configuration parameter
+******************************************************************************/
+typedef struct
+{
+    CSL_CAPH_DMA_DIRECTION_e direction;
+    CSL_CAPH_CFIFO_FIFO_e fifo;
+    CSL_CAPH_DMA_CHNL_e dma_ch;
+    UInt8* mem_addr;
+    UInt32 mem_size;
+    UInt8 Tsize;
+    CSL_CAPH_DMA_CALLBACK_p dmaCB;
+}CSL_CAPH_DMA_CONFIG_t;
+
+/**
+*  CSL CAPH DMA CHANNEL FIFO status
+******************************************************************************/
+typedef enum
+{
+    CSL_CAPH_READY_NONE = 0x00,
+    CSL_CAPH_READY_LOW = 0x01,
+    CSL_CAPH_READY_HIGH =  0x02,
+    CSL_CAPH_READY_HIGHLOW = 0x03
+} CSL_CAPH_DMA_CHNL_FIFO_STATUS_e;
+
+/**
+* CAPH AADMAC Channel interrupt
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_DMA_INT1 = 0x0001,
+	CSL_CAPH_DMA_INT2 = 0x0002,
+	CSL_CAPH_DMA_INT3 = 0x0004,
+	CSL_CAPH_DMA_INT4 = 0x0008,
+	CSL_CAPH_DMA_INT5 = 0x0010,
+	CSL_CAPH_DMA_INT6 = 0x0020,
+	CSL_CAPH_DMA_INT7 = 0x0040,
+	CSL_CAPH_DMA_INT8 = 0x0080,
+	CSL_CAPH_DMA_INT9 = 0x0100,
+	CSL_CAPH_DMA_INT10 = 0x0200,
+	CSL_CAPH_DMA_INT11 = 0x0400,
+	CSL_CAPH_DMA_INT12 = 0x0800,
+	CSL_CAPH_DMA_INT13 = 0x1000,
+	CSL_CAPH_DMA_INT14 = 0x2000,
+	CSL_CAPH_DMA_INT15 = 0x4000,
+	CSL_CAPH_DMA_INT16 = 0x8000,
+}CSL_CAPH_DMA_INT_e;
+
 /**
 *
 *  @brief  initialize the caph dma block
@@ -71,15 +155,6 @@ CSL_CAPH_DMA_CHNL_e csl_caph_dma_obtain_channel(void);
 *  @return CSL_CAPH_DMA_CHNL_e
 *****************************************************************************/
 CSL_CAPH_DMA_CHNL_e csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CHNL_e csl_caph_aadmac_ch);    
-/**
-*
-*  @brief  obtain a connected cfifo from dma for dsp
-*
-*  @param  CSL_CAPH_DMA_CHNL_e
-*
-*  @return CSL_CAPH_CFIFO_FIFO_e
-*****************************************************************************/
-CSL_CAPH_CFIFO_FIFO_e csl_caph_dma_get_csl_cfifo(CSL_CAPH_DMA_CHNL_e dmaCH);
 /**
 *
 *  @brief  release a caph dma channel
