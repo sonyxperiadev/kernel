@@ -40,6 +40,7 @@ Broadcom's express prior written consent.
 #include <asm/unaligned.h>
 #include <trace/events/napi.h>
 #ifdef CONFIG_BRCM_NETCONSOLE
+#include "../../drivers/usb/gadget/u_ether.h"
 #include "../../drivers/usb/gadget/rndis.h"
 #endif
 
