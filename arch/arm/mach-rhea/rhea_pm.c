@@ -22,6 +22,10 @@
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
+#include <mach/rdb/brcm_rdb_kona_gptimer.h>
+
+
+#define HUB_TIMER_AFTER_WFI_WORK_AROUND 1
 
 extern void enter_wfi(void);
 extern void dormant_enter(void);
@@ -316,6 +320,10 @@ int enter_idle_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
 	u32 reg_val;
+#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+	u32 timer_lsw = 0;
+#endif
+
 
 	BUG_ON(!state);
 
@@ -367,6 +375,11 @@ int enter_idle_state(struct kona_idle_state* state)
 	{
 		enter_wfi(); /*C0 - simple WFI*/
 	}
+#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
+	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
+	while(timer_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
+#endif
 
 	if(pm_debug != 2)
 		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
