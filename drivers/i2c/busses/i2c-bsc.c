@@ -775,9 +775,10 @@ static int bsc_xfer(struct i2c_adapter *adapter, struct i2c_msg msgs[],
 
  hs_ret:
 
+   /* Here we should not code such as rc = bsc_xfer_stop(), since it would
+    * change the value of rc, which need to be passed to the caller */
    /* send stop command */
-   rc = bsc_xfer_stop(adapter);
-   if (rc < 0)
+   if(bsc_xfer_stop(adapter) < 0)
       dev_err(dev->dev, "stop command failed\n");
 
    if (dev->high_speed_mode)
