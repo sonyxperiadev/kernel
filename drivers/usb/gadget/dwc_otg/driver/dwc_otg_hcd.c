@@ -41,7 +41,21 @@
 
 #include "dwc_otg_hcd.h"
 #include "dwc_otg_regs.h"
-		
+
+#ifdef CONFIG_USB_OTG_UTILS
+/**
+ * Work queue function for disabling VBUS.
+ * otg_set_vbus() must be called in a process context.
+ */
+static void disable_vbus_func(void *_vp)
+{
+	dwc_otg_core_if_t *core_if = _vp;
+
+	if (core_if->xceiver->set_vbus)
+		core_if->xceiver->set_vbus(core_if->xceiver, false);
+}
+#endif
+
 dwc_otg_hcd_t *dwc_otg_hcd_alloc_hcd(void)
 {
 	return dwc_alloc(sizeof(dwc_otg_hcd_t));
@@ -53,9 +67,21 @@ dwc_otg_hcd_t *dwc_otg_hcd_alloc_hcd(void)
  */
 void dwc_otg_hcd_connect_timeout(void *ptr)
 {
+	dwc_otg_hcd_t * hcd = (dwc_otg_hcd_t *)ptr;
+	hprt0_data_t hprt0 = {.d32 = 0 };
+
 	DWC_DEBUGPL(DBG_HCDV, "%s(%p)\n", __func__, ptr);
 	DWC_PRINTF("Connect Timeout\n");
 	__DWC_ERROR("Device Not Connected/Responding\n");
+
+	hprt0.b.prtpwr = 0;
+	dwc_write_reg32(hcd->core_if->host_if->hprt0, hprt0.d32);
+
+#ifdef CONFIG_USB_OTG_UTILS
+	DWC_WORKQ_SCHEDULE(hcd->core_if->wq_otg,
+					   disable_vbus_func,
+					   hcd->core_if, "no_connect");
+#endif
 }
 
 #ifdef DEBUG
@@ -129,20 +155,6 @@ static void hcd_start_func(void *_vp)
 		hcd->fops->start(hcd);
 	}
 }
-
-#ifdef CONFIG_USB_OTG_UTILS
-/**
- * Work queue function for disabling VBUS. 
- * otg_set_vbus() must be called in a process context.
- */
-static void disable_vbus_func(void *_vp)
-{
-	dwc_otg_core_if_t *core_if = _vp;
-
-	if (core_if->xceiver->set_vbus)
-		core_if->xceiver->set_vbus(core_if->xceiver, false);
-}
-#endif
 
 static void del_xfer_timers(dwc_otg_hcd_t * hcd)
 {
@@ -836,7 +848,7 @@ int dwc_otg_hcd_init(dwc_otg_hcd_t * hcd, dwc_otg_core_if_t * core_if)
 
 	/* Initialize the Connection timeout timer. */
 	hcd->conn_timer = DWC_TIMER_ALLOC("Connection timer",
-					  dwc_otg_hcd_connect_timeout, 0);
+					  dwc_otg_hcd_connect_timeout, (void*)hcd);
 
 	/* Initialize reset tasklet. */
 	hcd->reset_tasklet = DWC_TASK_ALLOC(reset_tasklet_func, hcd);
@@ -2468,6 +2480,7 @@ int dwc_otg_hcd_hub_control(dwc_otg_hcd_t * dwc_otg_hcd,
 			if (core_if->xceiver->set_vbus)
 				core_if->xceiver->set_vbus(core_if->xceiver,
 							   true);
+			cil_hcd_session_start(core_if);
 #endif
 			break;
 		case UHF_PORT_RESET:
