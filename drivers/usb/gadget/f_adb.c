@@ -584,11 +584,6 @@ static int adb_setup(void)
 
 	INIT_LIST_HEAD(&dev->tx_idle);
 
-	/* start enabled */
-	/* host can get correct interface information before adb daemon starts*/
-	/* it shows offline before adbd starts */
-	dev->function.disabled = 0;
-
 	/* _adb_dev must be set before calling usb_gadget_register_driver */
 	_adb_dev = dev;
 
