@@ -38,13 +38,6 @@
 #include <linux/seq_file.h>
 #endif
 
-struct bcmpmu_core_data {
-	struct bcmpmu *bcmpmu;
-	const struct bcmpmu_env_info *envregmap;
-	unsigned int *env_regs;
-	int env_size;
-	unsigned long int env_status;
-};
 static struct bcmpmu *bcmpmu_core;
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
@@ -158,43 +151,45 @@ static ssize_t store_rgltr(struct device *dev, struct device_attribute *attr,
 	regulator_put(rgltr);
 	return count;
 }
-
-static ssize_t show_envupdate(struct device *dev, struct device_attribute *attr,
+static ssize_t store_regbulk(struct device *dev, struct device_attribute *attr,
 				char *buf, size_t count)
 {
 	int i;
 	struct bcmpmu *bcmpmu = dev->platform_data;
-	struct bcmpmu_core_data *pcore = bcmpmu->coreinfo;
-	unsigned long status;
-	bcmpmu->update_env_status(bcmpmu, &status);
-
-	for (i=0; i<pcore->env_size; i++) {
-		sprintf(buf, "%8X\n", pcore->env_regs[i]);
-		buf += 9;
+	unsigned int map, addr, len;
+	unsigned int val[16];
+	sscanf(buf, "%x, %x, %x", &map, &addr, &len);
+	printk("BCMPMU map=0x%X, addr=0x%X, length=0x%X\n", map, addr, len);
+	if ((map<2) &&
+		((addr+len)<255) &&
+		(len < 16)) {
+		bcmpmu->read_dev_bulk(bcmpmu, map, addr, &val[0], len);
+		for (i = 0; i < len; i++)
+			printk("BCMPMU register=0x%X, value=0x%X\n", addr+i, val[i]);
 	}
-	return pcore->env_size * 9;
+	return count;
 }
 
 static DEVICE_ATTR(regread, 0644, show_reg_read, NULL);
 static DEVICE_ATTR(regwrite, 0644, NULL, store_reg_write);
 static DEVICE_ATTR(adcreq, 0644, NULL, store_adc_req);
 static DEVICE_ATTR(rgltr, 0644, NULL, store_rgltr);
-static DEVICE_ATTR(envupdate, 0644, show_envupdate, NULL);
 static DEVICE_ATTR(map, 0644, bcmpmu_show_map, bcmpmu_set_map);
 static DEVICE_ATTR(addr, 0644, bcmpmu_show_addr, bcmpmu_set_addr);
 static DEVICE_ATTR(value, 0644, bcmpmu_show_value, bcmpmu_set_value);
 static DEVICE_ATTR(mask, 0644, bcmpmu_show_mask, bcmpmu_set_mask);
+static DEVICE_ATTR(regbulk, 0644, NULL, store_regbulk);
 
 static struct attribute *bcmpmu_core_attrs[] = {
 	&dev_attr_regread.attr,
 	&dev_attr_regwrite.attr,
 	&dev_attr_adcreq.attr,
 	&dev_attr_rgltr.attr,
-	&dev_attr_envupdate.attr,
 	&dev_attr_map.attr,
 	&dev_attr_addr.attr,
 	&dev_attr_value.attr,
 	&dev_attr_mask.attr,
+	&dev_attr_regbulk.attr,
 	NULL
 };
 
@@ -305,8 +300,8 @@ static struct platform_device bcmpmu_irq_device = {
 	.dev.platform_data 	= NULL,
 };
 
-static struct platform_device bcmpmu_adc_device = {
-	.name 			= "bcmpmu_adc",
+static struct platform_device bcmpmu_hwmon_device = {
+	.name 			= "bcmpmu_hwmon",
 	.id			= -1,
 	.dev.platform_data 	= NULL,
 };
@@ -337,44 +332,12 @@ static struct platform_device bcmpmu_rtc_device = {
 
 static struct platform_device *bcmpmu_fellow_devices[] = {
 	&bcmpmu_irq_device,
-	&bcmpmu_adc_device,
+	&bcmpmu_hwmon_device,
 	&bcmpmu_rtc_device,
-	&bcmpmu_accy_device,
 	&bcmpmu_batt_device,
 	&bcmpmu_chrgr_device,
+	&bcmpmu_accy_device,
 };
-
-static void bcmpmu_update_env_status(struct bcmpmu *bcmpmu, unsigned long *env_status)
-{
-	struct bcmpmu_core_data *pcore = bcmpmu->coreinfo;
-	bcmpmu->read_dev_bulk(bcmpmu, bcmpmu->regmap[PMU_REG_ENV1].map,
-		bcmpmu->regmap[PMU_REG_ENV1].addr, pcore->env_regs, pcore->env_size);
-}
-
-static bool bcmpmu_is_env_bit_set(struct bcmpmu *bcmpmu, enum bcmpmu_env_bit_t env_bit)
-{
-	struct bcmpmu_core_data *pcore = bcmpmu->coreinfo;
-	int index;
-	if (pcore->envregmap[env_bit].regmap.mask == 0) return false;
-	index = pcore->envregmap[env_bit].regmap.addr - bcmpmu->regmap[PMU_REG_ENV1].addr;
-	if (pcore->env_regs[index] & pcore->envregmap[index].regmap.mask)
-		return true;
-	else
-		return false;
-}
-
-static bool bcmpmu_get_env_bit_status(struct bcmpmu *bcmpmu, enum bcmpmu_env_bit_t env_bit)
-{
-	struct bcmpmu_core_data *pcore = bcmpmu->coreinfo;
-	unsigned int val;
-	if (pcore->envregmap[env_bit].regmap.mask == 0) return false;
-	bcmpmu->read_dev_drct(bcmpmu, pcore->envregmap[env_bit].regmap.map,
-		pcore->envregmap[env_bit].regmap.addr, &val, pcore->envregmap[env_bit].regmap.mask);
-	if (val != 0)
-		return true;
-	else
-		return false;
-}
 
 static int __devinit bcmpmu_probe(struct platform_device *pdev)
 {
@@ -382,31 +345,10 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 
 	int i;
 	unsigned int val;
-	struct bcmpmu_core_data *pcore;
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
-	int *envregs;
-	unsigned int regaddr, rval;
 
-	pcore = kzalloc(sizeof(struct bcmpmu_core_data), GFP_KERNEL);
-	if (pcore == NULL) {
-		ret = -ENOMEM;
-		dev_err(bcmpmu->dev, "%s: kzalloc failed: %d\n", __func__, ret);
-		return ret;
-	}
-	pcore->envregmap = bcmpmu_get_envregmap(&pcore->env_size);
-	envregs = kzalloc((pcore->env_size * sizeof(int)), GFP_KERNEL);
-	if (envregs == NULL) {
-		ret = -ENOMEM;
-		dev_err(bcmpmu->dev, "%s: kzalloc failed: %d\n", __func__, ret);
-		return ret;
-	}
-	pcore->env_regs = envregs;
 	bcmpmu->regmap = bcmpmu_get_regmap();
-	bcmpmu->update_env_status = bcmpmu_update_env_status;
-	bcmpmu->get_env_bit_status = bcmpmu_get_env_bit_status;
-	bcmpmu->is_env_bit_set = bcmpmu_is_env_bit_set;
-	bcmpmu->coreinfo = pcore;
 	
 	printk(KERN_INFO "%s: called.\n", __func__);
 

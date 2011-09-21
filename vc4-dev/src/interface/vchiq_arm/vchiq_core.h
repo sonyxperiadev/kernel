@@ -217,6 +217,11 @@ typedef struct vchiq_service_struct {
    VCHIQ_STATE_T *state;
    VCHIQ_INSTANCE_T instance;
 
+<<<<<<< HEAD
+=======
+   int previous_tx_index;
+
+>>>>>>> mps-lmp
    VCHIQ_BULK_QUEUE_T bulk_tx;
    VCHIQ_BULK_QUEUE_T bulk_rx;
 
@@ -250,7 +255,10 @@ typedef struct vchiq_service_quota_struct {
    int slot_quota;
    int slot_use_count;
    VCOS_EVENT_T quota_event;
+<<<<<<< HEAD
    int previous_tx_index;
+=======
+>>>>>>> mps-lmp
 } VCHIQ_SERVICE_QUOTA_T;
 
 typedef struct vchiq_shared_state_struct {

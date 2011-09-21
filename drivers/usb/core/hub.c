@@ -1583,6 +1583,13 @@ void usb_disconnect(struct usb_device **pdev)
 	usb_set_device_state(udev, USB_STATE_NOTATTACHED);
 	dev_info (&udev->dev, "USB disconnect, address %d\n", udev->devnum);
 
+#ifdef CONFIG_USB_OTG
+	if (udev->bus->hnp_support && udev->portnum == udev->bus->otg_port) {
+		cancel_delayed_work_sync(&udev->bus->hnp_polling);
+		udev->bus->hnp_support = 0;
+	}
+#endif
+
 	usb_lock_device(udev);
 
 	/* Free up all the children before we remove this device */
@@ -1693,15 +1700,31 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
 					(port1 == bus->otg_port)
 						? "" : "non-");
 
-				/* enable HNP before suspend, it's simpler */
-				if (port1 == bus->otg_port)
-					bus->b_hnp_enable = 1;
+				/* a_alt_hnp_support is obsoleted */
+				if (port1 != bus->otg_port)
+					goto fail;
+
+				bus->hnp_support = 1;
+
+				/* a_hnp_support is not required for devices
+				 * compliant to revision 2.0 or subsequent
+				 * versions.
+				 */
+				if (desc->bLength == sizeof(*desc) &&
+						le16_to_cpu(desc->bcdOTG) >= 0x200)
+						goto out;
+
+				/* Legacy B-device i.e. compliant to spec
+				 * revision 1.3 expect A-device to set
+				 * a_hnp_support or b_hnp_enable before
+				 * selecting configuration. b_hnp_enable
+				 * is set before suspending the port.
+				 */
+
 				err = usb_control_msg(udev,
 					usb_sndctrlpipe(udev, 0),
 					USB_REQ_SET_FEATURE, 0,
-					bus->b_hnp_enable
-						? USB_DEVICE_B_HNP_ENABLE
-						: USB_DEVICE_A_ALT_HNP_SUPPORT,
+					USB_DEVICE_A_HNP_SUPPORT,
 					0, NULL, 0, USB_CTRL_SET_TIMEOUT);
 				if (err < 0) {
 					/* OTG MESSAGE: report errors here,
@@ -1712,7 +1735,7 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
 						err);
                                         dev_printk(KERN_CRIT, &udev->dev, "Device Not Connected/Responding\n");
 
-					bus->b_hnp_enable = 0;
+					bus->hnp_support = 0;
 				}
 				else {
 					dev_info(&udev->dev,
@@ -1722,33 +1745,27 @@ static int usb_enumerate_device_otg(struct usb_device *udev)
 		}
 	}
 
+out:
 	if (!is_targeted(udev)) {
 
 		/* Maybe it can talk to us, though we can't talk to it.
 		 * (Includes HNP test device.)
 		 */
-		if (udev->bus->b_hnp_enable || udev->bus->is_b_host ||
-		    udev->descriptor.idVendor == 0x1a0a) {
+		if (udev->bus->hnp_support) {
 			err = usb_port_suspend(udev, PMSG_SUSPEND);
-			if (err < 0) {
+			if (err < 0)
 				dev_dbg(&udev->dev, "HNP fail, %d\n", err);
-			} else {
-			    /* Return Connection Refused(ECONNREFUSED)
-			     * instead of No Device(ENODEV) so that the
-			     * retry loop in hub_port_connect_change() is
-			     * exited without disabling the port
-			     */
-			    err = -ECONNREFUSED;
-			    goto fail;
-			}
-                }
-		//err = -ENOTSUPP;
-		/* Return Not Connected (ENOTCONN) instead of No 
-		 * Device(ENODEV) so that the retry loop in 
-		 * hub_port_connect_change() is exited
-		 */
-		err = -ENOTCONN;
-                goto fail;
+              }
+		err = -ENOTSUPP;
+	} else if (udev->bus->hnp_support &&
+					udev->portnum == udev->bus->otg_port) {
+		/* HNP polling is introduced in OTG supplement Rev 2.0
+		* and older devices does not support. Work is not
+		* re-armed if device returns STALL. B-Host also performs
+		* HNP polling.
+		*/
+		schedule_delayed_work(&udev->bus->hnp_polling,
+				msecs_to_jiffies(THOST_REQ_POLL));
 	}
 fail:
 #endif
@@ -2230,6 +2247,21 @@ int usb_port_suspend(struct usb_device *udev, pm_message_t msg)
 		}
 	}
 
+#ifdef CONFIG_USB_OTG
+	if (!udev->bus->is_b_host && udev->bus->hnp_support &&
+					udev->portnum == udev->bus->otg_port) {
+		status = usb_control_msg(udev, usb_sndctrlpipe(udev, 0),
+						USB_REQ_SET_FEATURE, 0,
+						USB_DEVICE_B_HNP_ENABLE,
+						0, NULL, 0, USB_CTRL_SET_TIMEOUT);
+		if (status < 0)
+			dev_dbg(&udev->dev, "can't enable HNP on port %d, "
+							"status %d\n", port1, status);
+		else
+			udev->bus->b_hnp_enable = 1;
+	}
+#endif
+
 	/* see 7.1.7.6 */
 	status = set_port_feature(hub->hdev, port1, USB_PORT_FEAT_SUSPEND);
 	if (status) {
@@ -2371,6 +2403,12 @@ int usb_port_resume(struct usb_device *udev, pm_message_t msg)
 	int		port1 = udev->portnum;
 	int		status;
 	u16		portchange, portstatus;
+
+#ifdef CONFIG_USB_OTG
+	if (!udev->bus->is_b_host && udev->bus->hnp_support &&
+					udev->portnum == udev->bus->otg_port)
+		udev->bus->b_hnp_enable = 0;
+#endif
 
 	/* Skip the initial Clear-Suspend step for a remote wakeup */
 	status = hub_port_status(hub, port1, &portstatus, &portchange);

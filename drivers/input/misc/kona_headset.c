@@ -554,7 +554,30 @@ err2:
 	return ret;
 }
 
-static struct platform_driver headset_driver = {
+/*
+ * Note that there is a __refdata added to the headset_driver platform driver
+ * structure. What is the meaning for it and why its required.
+ *
+ * The probe function: 
+ * From the platform driver documentation its advisable to keep the probe
+ * function of a driver in the __init section if the device is NOT hot pluggable. 
+ * Note that in headset case even though the headset is hot pluggable, the driver 
+ * is not. That is a new node will not be created and the probe will not be called 
+ * again. So it makes sense to keep the hs_probe in __init section so as to 
+ * reduce the driver's run time foot print.
+ * 
+ * The Warning message:
+ * But since the functions address (reference) is stored in a structure that
+ * will be available even after init (in case of remove, suspend etc) there
+ * is a Warning message from the compiler
+ *
+ * The __refdata keyword can be used to suppress this warning message. Tells the
+ * compiler not to throw out this warning. And in this scenario even though
+ * we store the function pointer from __init section to the platform driver
+ * structure that lives after __init, we wont be referring the probe function
+ * in the life time until headset_driver lives, so its OK to suppress.
+ */
+static struct platform_driver __refdata headset_driver = {
 	.probe = hs_probe,
 	.remove = hs_remove,
 	.driver = {

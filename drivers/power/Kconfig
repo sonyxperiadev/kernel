@@ -184,4 +184,18 @@ config MONITOR_BQ27541_I2C
         help
          Say Y here if you want to support BQ27541 battery monitor.
 
+config POWER_BCMPMU
+	tristate "BCMPMU battery and charger driver"
+	depends on MFD_BCMPMU
+	default n
+	help
+	 Say Y to include support of battery and charger drivers for BCM PMUs.
+
+config BCMPMU_EM
+	tristate "BCMPMU charging and gauging driver"
+	depends on POWER_BCMPMU
+	default n
+	help
+	 Say Y to include kernel charging and gauging module for BCM PMUs.
+
 endif # POWER_SUPPLY

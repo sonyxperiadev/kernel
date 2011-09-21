@@ -18,13 +18,6 @@
 
 #include <linux/broadcom/chip_version.h>
 
-/* **FIXME** MAG - Athena sysparm addrs/sizes; may be different for other */
-/* CIB platforms */
-#define PARM_IND_BASE               0x80120000
-#define PARM_IND_SIZE               0x20000
-#define PARM_DEP_BASE               0x80140000
-#define PARM_DEP_SIZE		        0x10000
-
 #define SYSPARM_INDEX_READY_INDICATOR   0x5059504D	/* SYSP */
 #define MAX_SYSPARM_NAME_SIZE   128
 
@@ -42,33 +35,22 @@
 /** audio related defines */
 #define AUDIO_MAGIC_SIZE    16
 
-/* **FIXME** MAG - always 9 for CIB */
-/* #if defined(_BCM213x1_) || defined(_BCM2153_) || defined(_BCM21551_)  FIXME This is not good, you have to add the new #define when we have a new version later. */
-#define AUDIO_MODE_NUMBER   9	/* /< Up to 10 Audio Profiles (modes) after 213x1 */
-/* #else */
-/* #define AUDIO_MODE_NUMBER   6 ///< Up to only 6 Audio Profiles (modes) in older chips */
-/* #endif */
-#define AUDIO_MODE_NUMBER_VOICE	(AUDIO_MODE_NUMBER*2)
-
-#define AUDIO_5BAND_EQ_MODE_NUMBER    6	/* /< Up to 6 Audio EQ Profiles (modes) */
-
-#define PR_DAC_IIR_SIZE				25
-
- /* path 0-5 in EQ. */
- #define EQPATH_SIZE					6 
-
-#define NUM_OF_VOICE_COEFF      35
-
-#define COEF_PER_GROUP      5	/* /< VOICE_DAC/VOICE_ADC */
-#define DSP_SUBBAND_COMPANDER_FIR_TAP 11	/* /<11 taps */
-#define DSP_SUBBAND_NLP_FREQ_BINS_WB 24 ///<24 freq bins
-
-#define NUM_OF_SIDETONE_FILTER_COEFF 10
-#define NUM_OF_ECHO_FAR_IN_FILTER_COEFF 10
-#define NUM_OF_ECHO_NLP_CNG_FILTER  10
-#define NUM_OF_BIQUAD_FILTER_COEF 10
+#define NUM_OF_FREQ_OFFSETS			8
+#define NUM_OF_VOICE_COEFF			35
+#define NUM_OF_MIC_EQ_BIQUAD			12
+#define NUM_OF_SPEAKER_EQ_BIQUAD			12
+#define COEF_NUM_OF_EACH_EQ_BIQUAD		5
+#define COEF_NUM_OF_EACH_GROUP_HW_SIDETONE		8
+#define NUM_OF_GROUP_HW_SIDETONE		16
+#define	NUM_OF_SIDETONE_FILTER_COEFF 10
+#define	NUM_OF_ECHO_FAR_IN_FILTER_COEFF	10
+#define NUM_OF_ECHO_NLP_CNG_FILTER	10
+#define NUM_OF_BIQUAD_FILTER_COEF	10
 #define NUM_OF_ECHO_STABLE_COEF_THRESH 2
-#define NUM_OF_ECHO_NLP_GAIN    6
+#define NUM_OF_ECHO_NLP_GAIN		6
+
+#define DSP_SUBBAND_COMPANDER_FIR_TAP 11 ///<11 taps
+#define DSP_SUBBAND_NLP_FREQ_BINS_WB 24 ///<24 freq bins
 
 #define GPIO_INIT_FIELD_NUM 5
 #define GPIO_INIT_REC_NUM 64
@@ -102,6 +84,8 @@
 // Not defined for Big Island
 //#define   tempInterface_DSP_FEATURE_DUALMIC_BTOUTPUTGAINS
 #define   _ATHENA_
+#undef   _ATHENA_
+#define   _RHEA_
 
 #define   NUM_OMEGA_VOICE_BANDS 3
 #define   NUM_OMEGA_VOICE_MAX_VOLUME_LEVELS 11
@@ -191,11 +175,7 @@ typedef struct
 	UInt16			echo_nlp_ul_idle_dl_loss_min_val;
 	UInt16			echo_nlp_dl_idle_dl_gain;
 #ifdef DSP_FEATURE_SUBBAND_NLP
-#ifdef	tempInterface_DSP_FEATURE_BETA_VOICE
 	UInt16          echo_subband_nlp_distortion_thresh[DSP_SUBBAND_NLP_FREQ_BINS_WB];
-#else
-	UInt16          echo_subband_nlp_erl_erle_adj[DSP_SUBBAND_NLP_FREQ_BINS_WB];
-#endif
 	UInt16 			echo_subband_nlp_dl_delay_adj;
 	UInt16 			echo_subband_nlp_ul_margin[DSP_SUBBAND_NLP_FREQ_BINS_WB];
 	UInt16          echo_subband_nlp_noise_margin[DSP_SUBBAND_NLP_FREQ_BINS_WB];
@@ -205,14 +185,15 @@ typedef struct
 	UInt16 			echo_subband_nlp_filtered_gain_alpha;
 	UInt16 			echo_subband_nlp_hpf_coef_a;
 	UInt16 			echo_subband_nlp_hpf_coef_b;
-#ifdef	tempInterface_DSP_FEATURE_BETA_VOICE
 	UInt16			echo_subband_nlp_dt_fine_control;
-#endif
+	UInt16			nlp_distortion_coupling;		 //Used in NLP distortion coupling estimate
+	UInt16			reverb_time_constant;			 //Used in reverb control
+	Int16			reverb_level;					 //Used in reverb control
 #endif
 } EchoNlp_t;
 
 typedef struct {
-	UInt16 audio_agc_enable;	/* /< Enable/Disable uplink and downlink audio agc */
+	UInt16			audio_agc_enable;	///< Enable/Disable uplink and downlink audio agc
 	UInt16 max_thresh;
 	UInt16 hi_thresh;
 	UInt16 low_thresh;
@@ -238,22 +219,31 @@ typedef struct {
 	Int16 step3;
 	Int16 step4;
 } Subband_Compander_Band_t;
+typedef	struct
+{
+
+	UInt16			g2t2;
+	UInt16          env;
+	Int16			g1lin;
+} Smart_Compressor_t;
 #endif
 
 typedef struct {
 	UInt8 audio_parm_magic[AUDIO_MAGIC_SIZE];
 	UInt16 audio_channel;
 	UInt16 speaker_pga;  //level, index
-	Int16  ext_speaker_pga;  //dB
-	Int16  ext_speaker_preamp_pga;  //dB
+#if defined(_ATHENA_)	
+	Int16  ext_speaker_pga;
+	Int16  ext_speaker_preamp_pga;
+#endif	
 	UInt16 mic_pga;      //level, index
 	UInt16 max_mic_gain;
+#if defined(_ATHENA_)	
 	UInt32 audvoc_anacr0;
 
 	UInt16 audvoc_vslopgain;
 	UInt16 audvoc_mixergain;
 	UInt16 audvoc_vcfgr;
-#if defined(_ATHENA_) || defined(_HERA_) || defined(_RHEA_)
     UInt16 MPM_Dga_G;
 	UInt16 MPM_Niir_Coefficient;
 	UInt16 MPM_Gain_Attack_Step;
@@ -280,10 +270,12 @@ typedef struct {
 	UInt16 MPMbiquad_cfg;
 #endif
 	UInt16 sidetone;
-	UInt16 audio_dsp_sidetone;	/* means dsp_sidetone_enable. */
+	UInt16 audio_dsp_sidetone;  //means dsp_sidetone_enable.
 	UInt16 audio_dl_idle_pga_adj;
 	UInt16 audio_ns_ul_idle_adj;
+#if defined(_ATHENA_)	
 	UInt16 dac_filter_scale_factor;
+#endif	
 	UInt16 ty_mic_gain;
 	UInt16 sidetone_tty;
 	AudioAGC_t ul_agc;
@@ -295,7 +287,6 @@ typedef struct {
 	UInt16 echo_far_in_filter[NUM_OF_ECHO_FAR_IN_FILTER_COEFF];
 	UInt16 comp_filter_coef[NUM_OF_BIQUAD_FILTER_COEF];
 	UInt16 comp_biquad_gain;
-	UInt16 echo_farIn_filt_gain;
 	UInt16 echo_adapt_norm_factor;
 	UInt16 echo_stable_coef_thresh[NUM_OF_ECHO_STABLE_COEF_THRESH];
 	UInt16 echo_cancel_dtd_hang;
@@ -316,44 +307,29 @@ typedef struct {
 	UInt16 echo_en_far_scale_factor;
 	UInt16 echo_nlp_downlink_volume_ctrl;
 	UInt16 echo_nlp_timeout_val;
-	UInt16 noise_suppression_enable;
-	UInt16 noise_supp_input_gain;
-	UInt16 noise_supp_output_gain;
-	UInt16 voice_dac[NUM_OF_VOICE_COEFF];	/* should be NUM_OF_DAC_VOICE_COEFF */
-	UInt16 voice_adc[NUM_OF_VOICE_COEFF];	/* should be NUM_OF_ADC_VOICE_COEFF */
-	UInt16 voice_adc_16khz[NUM_OF_VOICE_COEFF];	/* should be NUM_OF_ADC_VOICE_COEFF */
+	UInt16 ul_noise_suppression_enable;
+	UInt16 ul_noise_supp_input_gain;
+	UInt16 ul_noise_supp_output_gain;
+	UInt16 dl_noise_suppression_enable;
+#if defined(_ATHENA_)
+	UInt16 voice_dac[ NUM_OF_VOICE_COEFF ];  //should be NUM_OF_DAC_VOICE_COEFF
+	UInt16 voice_adc[ NUM_OF_VOICE_COEFF ];		//should be NUM_OF_ADC_VOICE_COEFF
+	UInt16 voice_adc_16khz[ NUM_OF_VOICE_COEFF ];  //should be NUM_OF_ADC_VOICE_COEFF
+	UInt16 voice_dac_hpf_enable;
+	UInt16 voice_dac_hpf_cutoff_freq;
+#endif	
 	UInt16 ecLen;
-	UInt16 blockSize;
-	UInt16 block_ms;
-	UInt16 SoutUpdateSizeModij;
-	UInt16 numBlkPerFrameMinus1;
-	UInt16 lpc_r_window_size;
-	UInt16 RinLpcBuffSize;
-	UInt16 Rin_short_term_len;
-	UInt16 Rin_short_term_len_inv;
-	UInt16 RinCirBuffSizeModij;
-	UInt16 VAD_TH_dB;
-	UInt16 VAD_SHORT_TH_dB;
 	Int16 DT_TH_ERL_dB;
-	UInt16 DT_TH_SOUT_dB;
-	UInt16 DT_HANGOVER_TIME_ms;
-	UInt16 hangover_counter;
 	UInt16 echo_step_size_gain;
 
 	UInt16	compander_flag ;
 	UInt16	expander_alpha;
 	UInt16	expander_beta;
-#ifdef	tempInterface_DSP_FEATURE_BETA_VOICE
 	UInt16	expander_upper_limit;
-#endif
 	UInt16	expander_b;
 	UInt16	expander_c;
 	UInt16	expander_c_div_b;
 	UInt16	expander_inv_b;
-	UInt16	compressor_output_gain;
-	UInt16	compressor_gain;
-	UInt16	compressor_alpha;
-	UInt16	compressor_beta;
 	UInt16	expander_flag_sidetone ;
 	UInt16	expander_alpha_sidetone;
 	UInt16	expander_beta_sidetone;
@@ -364,14 +340,11 @@ typedef struct {
 	UInt16	compander_flag_ul ;
 	UInt16	expander_alpha_ul;
 	UInt16	expander_beta_ul;
-#ifdef	tempInterface_DSP_FEATURE_BETA_VOICE
 	UInt16	expander_upper_limit_ul;
-#endif
 	UInt16	expander_b_ul;
 	UInt16	expander_c_ul;
 	UInt16	expander_c_div_b_ul;
 	UInt16	expander_inv_b_ul;
-	UInt16	compressor_output_gain_ul;
 	UInt16	compressor_gain_ul;
 	UInt16	compressor_alpha_ul;
 	UInt16	compressor_beta_ul;
@@ -382,14 +355,15 @@ typedef struct {
 
 	UInt16	second_amr_out_gain;
 	Int16	noise_supp_min;
-	Int16	noise_supp_max;
+	Int16	ul_noise_supp_max;
+	Int16	dl_noise_supp_max;
 	/* 2133A5, 2124A2,2152A4, 213x1/2153A3 and beyond*/
 	UInt16	arm2speech_call_gain;
 	UInt16 volume_step_size;
 	UInt16 num_supported_volume_levels;
 
-	UInt16 voice_volume_max;	/* in dB. */
-	UInt16 voice_volume_init;	/* in dB. */
+	UInt16 voice_volume_max;  //in dB.
+	UInt16 voice_volume_init; //in dB.
 
 	UInt16 sidetone_output_gain;
 	UInt16 sidetone_biquad_scale_factor;
@@ -409,15 +383,15 @@ typedef struct {
 
 #ifdef DSP_FEATURE_SUBBAND_INF_COMP
 	UInt16 dl_subband_compander_flag;
-	Subband_Compander_Band_t fir1;	/* midband */
-	Subband_Compander_Band_t fir2;	/* lowband */
-	Subband_Compander_Band_t stream3;	/* highband */
-	Subband_Compander_Band_t fullband;	/* fullband */
+	Subband_Compander_Band_t fir1;    //midband
+	Subband_Compander_Band_t fir2;    //lowband
+	Subband_Compander_Band_t stream3; //highband
+	Subband_Compander_Band_t fullband; //fullband
 	Int16 compress_coef_fir1[DSP_SUBBAND_COMPANDER_FIR_TAP];
 	Int16 compress_coef_fir2[DSP_SUBBAND_COMPANDER_FIR_TAP];
 #endif
 
-#if 1  //defined(_ATHENA_)
+#if defined(_ATHENA_)	
 	UInt32 AUDVOC_MIXER_IIR[60];  //Mixer output IIR
 #endif
 
@@ -427,33 +401,92 @@ typedef struct {
 	AlphaVoice_Sysparm_t alpha_voice_parms;
 	KappaVoice_Sysparm_t kappa_voice_parms;
 
-#ifdef	tempInterface_DSP_FEATURE_DUALMIC_BTOUTPUTGAINS
 	UInt16 dual_mic_enable;						
 	UInt16 dual_mic_anc_enable;
 	UInt16 dual_mic_nlp_enable;
 	UInt16 dual_mic_pre_wnr_enable;
 	UInt16 dual_mic_post_wnr_enable;
 	UInt16 dual_mic_ns_level;
-#endif 
-} SysAudioParm_t;
 
+	UInt16 echo_cancel_mic2_input_gain; 
+	UInt16 echo_cancel_mic2_output_gain;
+	UInt16 echo_mic2_feed_forward_gain;
+
+#if defined(_RHEA_) || defined(_SAMOA_)	
+	UInt16 amic_dga_coarse_gain;
+	UInt16 amic_dga_fine_gain;
+	UInt16 dmic1_dga_coarse_gain;
+	UInt16 dmic1_dga_fine_gain;
+	UInt16 dmic2_dga_coarse_gain;
+	UInt16 dmic2_dga_fine_gain;
+	UInt16 dmic3_dga_coarse_gain;
+	UInt16 dmic3_dga_fine_gain;
+	UInt16 dmic4_dga_coarse_gain;
+	UInt16 dmic4_dga_fine_gain;
+
+	UInt16 srcmixer_input_gain_l;
+	UInt16 srcmixer_output_coarse_gain_l;
+	UInt16 srcmixer_output_fine_gain_l;
+	UInt16 srcmixer_input_gain_r;
+	UInt16 srcmixer_output_coarse_gain_r;
+	UInt16 srcmixer_output_fine_gain_r;
+
+	UInt16 ext_speaker_high_gain_mode_enable;
+	UInt16 ext_speaker_pga_l;
+	UInt16 ext_speaker_pga_r;
+
+	UInt16 voice_mic1_biquad_num;
+	Int16 voice_mic1_scale_input[NUM_OF_MIC_EQ_BIQUAD];
+	Int32 voice_mic1_scale_output;	
+	Int32 voice_mic1_eq[NUM_OF_MIC_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];
+	UInt16 voice_mic1_hpf_enable;
+	UInt16 voice_mic1_hpf_cutoff_freq;
+	
+	UInt16 voice_mic2_biquad_num;
+	Int16 voice_mic2_scale_input[NUM_OF_MIC_EQ_BIQUAD];	
+	Int32 voice_mic2_scale_output;	
+	Int32 voice_mic2_eq[NUM_OF_MIC_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];
+	UInt16 voice_mic2_hpf_enable;
+	UInt16 voice_mic2_hpf_cutoff_freq;
+	
+	UInt16 voice_speaker_biquad_num;
+	Int16 voice_speaker_scale_input[NUM_OF_SPEAKER_EQ_BIQUAD];	
+	Int32 voice_speaker_scale_output;	
+	Int32 voice_speaker_eq[NUM_OF_SPEAKER_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];	
+	UInt16 voice_speaker_hpf_enable;
+	UInt16 voice_speaker_hpf_cutoff_freq;
+	
+#if 0
+	UInt16 music_speaker_biquad_num;
+	Int16 music_speaker_scale_input[NUM_OF_SPEAKER_EQ_BIQUAD];	
+	Int32 music_speaker_scale_output;	
+	Int32 music_speaker_eq[NUM_OF_SPEAKER_EQ_BIQUAD*COEF_NUM_OF_EACH_EQ_BIQUAD];
+#endif	
+	UInt16 hw_sidetone_enable;
+	UInt16 hw_sidetone_gain;
+	Int32 hw_sidetone_eq[COEF_NUM_OF_EACH_GROUP_HW_SIDETONE*NUM_OF_GROUP_HW_SIDETONE];
+#endif 
+
+	UInt16 echo_path_change_detection_threshold;				//Used in echo path change detection
+	Smart_Compressor_t smart_compressor;    				//smart compressor
+} SysAudioParm_t;
 typedef struct
 {
+#if defined(_ATHENA_)
 	UInt16 audvoc_pslopgain;
 	UInt16 audvoc_aslopgain;
-	UInt16 PR_DAC_IIR[25];	 /*  Polyringer DAC IIR coefficients */
+	UInt16 PR_DAC_IIR[25];	 // Polyringer DAC IIR coefficients
 	UInt16 AUDVOC_ADAC_IIR[25];
 	UInt16 AUDVOC_ADAC_IIR_hpf_enable;
-	UInt16 AUDVOC_ADAC_IIR_hpf_cutoff_freq;	
-
+	UInt16 AUDVOC_ADAC_IIR_hpf_cutoff_freq;
+#endif
+	UInt32 treq_biquad_num;
+	UInt32 treq_coef[12*10];	
 } SysIndMultimediaAudioParm_t;
 
 UInt16 SYSPARM_GetLogFormat(void);
-SysAudioParm_t* SYSPARM_GetAudioParmAccessPtr(UInt8 AudioMode);
-SysIndMultimediaAudioParm_t* SYSPARM_GetMultimediaAudioParmAccessPtr(UInt8 inAudioMode);
-UInt16* SYSPARM_Get_AUDVOC_ADAC_FIR_Ptr( void );
-UInt16* SYSPARM_Get_AUDVOC_PEQPATHGAIN_Ptr( void );
-UInt16* SYSPARM_Get_AUDVOC_PEQCOF_Ptr( void );
+SysAudioParm_t* APSYSPARM_GetAudioParmAccessPtr(void);
+SysIndMultimediaAudioParm_t * APSYSPARM_GetMultimediaAudioParmAccessPtr(void);
 
 UInt16 SYSPARM_GetDefault4p2VoltReading(void);
 UInt16 SYSPARM_GetActual4p2VoltReading(void);

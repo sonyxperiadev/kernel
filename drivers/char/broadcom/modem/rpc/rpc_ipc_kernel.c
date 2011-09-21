@@ -47,7 +47,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/broadcom/ipc_sharedmemory.h>
 #include <linux/broadcom/ipcinterface.h>
 
-#include <linux/broadcom/platform_mconfig.h>
+#include <mach/comms/platform_mconfig.h>
 
 #include "resultcode.h"
 #include "taskmsgs.h"

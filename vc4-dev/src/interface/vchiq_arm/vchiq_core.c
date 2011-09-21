@@ -420,7 +420,11 @@ queue_message(VCHIQ_STATE_T *state, VCHIQ_SERVICE_T *service,
       service_quota = &state->service_quotas[service->localport];
 
       /* ...ensure it doesn't use more than its quota of slots */
+<<<<<<< HEAD
       while ((tx_end_index != service_quota->previous_tx_index) &&
+=======
+      while ((tx_end_index != service->previous_tx_index) &&
+>>>>>>> mps-lmp
          (service_quota->slot_use_count == service_quota->slot_quota))
       {
          vcos_log_trace("%d: qm:%d %s,%x - quota stall",
@@ -888,11 +892,14 @@ parse_rx_slots(VCHIQ_STATE_T *state)
       localport = VCHIQ_MSG_DSTPORT(msgid);
       remoteport = VCHIQ_MSG_SRCPORT(msgid);
 
+<<<<<<< HEAD
       if (type != VCHIQ_MSG_DATA)
       {
          VCHIQ_STATS_INC(state, ctrl_rx_count);
       }
 
+=======
+>>>>>>> mps-lmp
       switch (type)
       {
       case VCHIQ_MSG_OPENACK:
@@ -1076,12 +1083,15 @@ parse_rx_slots(VCHIQ_STATE_T *state)
                   DEBUG_TRACE(PARSE_LINE);
                   return;  /* Bail out if not ready */
                }
+<<<<<<< HEAD
                VCHIQ_SERVICE_STATS_INC(service, ctrl_rx_count);
                VCHIQ_SERVICE_STATS_ADD(service, ctrl_rx_bytes, size);
             }
             else
             {
                VCHIQ_STATS_INC(state, error_count);
+=======
+>>>>>>> mps-lmp
             }
          }
          break;
@@ -1629,7 +1639,11 @@ vchiq_add_service_internal(VCHIQ_STATE_T *state,
       init_bulk_queue(&service->bulk_rx);
       service_quota->slot_quota = state->default_slot_quota;
       if (service_quota->slot_use_count == 0)
+<<<<<<< HEAD
          service_quota->previous_tx_index =
+=======
+         service->previous_tx_index =
+>>>>>>> mps-lmp
             SLOT_QUEUE_INDEX_FROM_POS(state->local_tx_pos) - 1;
       memset(&service->stats, 0, sizeof(service->stats));
       vcos_atomic_flags_create(&service->poll_flags);
@@ -2447,12 +2461,15 @@ vchiq_dump_state(void *dump_context, VCHIQ_STATE_T *state)
    vchiq_dump(dump_context, buf, len + 1);
 
    len = vcos_snprintf(buf, sizeof(buf),
+<<<<<<< HEAD
       "  Stats: ctrl_tx_count=%d, ctrl_rx_count=%d, error_count=%d",
       state->stats.ctrl_tx_count, state->stats.ctrl_rx_count,
       state->stats.slot_stalls);
    vchiq_dump(dump_context, buf, len + 1);
 
    len = vcos_snprintf(buf, sizeof(buf),
+=======
+>>>>>>> mps-lmp
       "  Slots: %d available, %d recyclable, %d stalls",
       state->slot_queue_available - SLOT_QUEUE_INDEX_FROM_POS(state->local_tx_pos),
       state->local->slot_queue_recycle - state->slot_queue_available,
@@ -2506,6 +2523,7 @@ vchiq_dump_service_state(void *dump_context, VCHIQ_SERVICE_T *service)
          remoteport,
          service_quota->slot_use_count,
          service_quota->slot_quota);
+<<<<<<< HEAD
       vchiq_dump(dump_context, buf, len + 1);
 
       len = vcos_snprintf(buf, sizeof(buf),
@@ -2518,6 +2536,8 @@ vchiq_dump_service_state(void *dump_context, VCHIQ_SERVICE_T *service)
          "  Bulk: tx_count=%d, tx_bytes=%" PRIu64 ", rx_count=%d, rx_bytes=%" PRIu64,
          service->stats.bulk_tx_count, service->stats.bulk_tx_bytes,
          service->stats.bulk_rx_count, service->stats.bulk_rx_bytes);
+=======
+>>>>>>> mps-lmp
       vchiq_dump(dump_context, buf, len + 1);
 
       len = vcos_snprintf(buf, sizeof(buf),

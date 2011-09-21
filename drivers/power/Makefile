@@ -40,13 +40,13 @@ obj-$(CONFIG_BATTERY_BCM59055)	+= bcm59055_battery.o
 obj-$(CONFIG_MONITOR_ADC121C021_I2C)    += adc121c021_driver.o
 obj-$(CONFIG_MONITOR_BQ27541_I2C)       += bq27541.o
 
-
 ifeq ($(CONFIG_BCM_CMP_BATTERY_MULTI),m)
 obj-m += cmp_battery.o
 cmp_battery-objs += cmp_battery_multi.o
 endif
-
 ifeq ($(CONFIG_BCM_CMP_BATTERY_BQ24616),m)
 obj-m += cmp_battery.o
 cmp_battery-objs += cmp_battery_bq24616.o
 endif
+obj-$(CONFIG_POWER_BCMPMU)	+= bcmpmu-batt.o bcmpmu-chrgr.o
+obj-$(CONFIG_BCMPMU_EM) 	+= bcmpmu-em.o

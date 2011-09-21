@@ -42,6 +42,10 @@
 #include "resultcode.h"
 
 #include "shared.h"
+#include "dspif_voice_play.h"
+#include "dspif_voice_record.h"
+
+
 #include "csl_aud_drv.h"
 #include "audio_vdriver.h"
 #include "auddrv_audlog.h"

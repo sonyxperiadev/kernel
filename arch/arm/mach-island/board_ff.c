@@ -35,7 +35,7 @@
 #include <linux/input.h>
 #include <linux/bh1715.h>
 #include <linux/i2c/tsc2007.h>
-#include <linux/i2c/tango_s32.h>
+#include <linux/i2c/tango_ts.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
 #include <linux/akm8975.h>
@@ -321,14 +321,14 @@ static struct i2c_board_info __initdata tsc2007_info[] =
 
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_TANGO_S32
+#ifdef CONFIG_TOUCHSCREEN_TANGO
 static struct TANGO_I2C_TS_t tango_plat_data = {
 	.i2c_slave_address	= 0,
 	.gpio_irq_pin		= TANGO_GPIO_IRQ_PIN,
 	.gpio_reset_pin		= TANGO_GPIO_RESET_PIN,
 	.x_max_value		= 480,
 	.y_max_value		= 800,
-	.layout			= X_RIGHT_Y_UP,
+	.layout			= TANGO_S32_LAYOUT,
 	.num_bytes_to_read = TANGO_I2C_TS_DRIVER_NUM_BYTES_TO_READ,
 	.is_multi_touch		= IS_MULTI_TOUCH,
 	.is_resetable		= 1,
@@ -357,7 +357,7 @@ static struct TANGO_I2C_TS_t tango_plat_data = {
 static struct i2c_board_info __initdata tango_info[] =
 {
 	{	/* New touch screen i2c slave address. */
-		I2C_BOARD_INFO(I2C_TS_DRIVER_NAME, 0x5C),
+		I2C_BOARD_INFO(I2C_TS_DRIVER_NAME, TANGO_S32_SLAVE_ADDR),
 		.platform_data = &tango_plat_data,
 		.irq = gpio_to_irq(TANGO_GPIO_IRQ_PIN),
 	},
@@ -1227,7 +1227,7 @@ static void __init board_add_devices(void)
 		ARRAY_SIZE(tsc2007_info));
 #endif
 
-#ifdef CONFIG_TOUCHSCREEN_TANGO_S32
+#ifdef CONFIG_TOUCHSCREEN_TANGO
 	i2c_register_board_info(1,
 		tango_info,
 		ARRAY_SIZE(tango_info));

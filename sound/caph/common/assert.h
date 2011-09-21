@@ -2,7 +2,7 @@
 /***
 *assert.h - define the assert macro
 *
-*       Copyright (c) 1985-1997, Microsoft Corporation. All rights reserved.
+*       Copyright (c) 1985-1997, Microsoft Corporation. All rights reserved.                                
 *
 *Purpose:
 *       Defines the assert(exp) macro.

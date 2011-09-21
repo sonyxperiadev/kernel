@@ -28,8 +28,6 @@
 #include "vchiq_ioctl.h"
 #include "vchiq_arm.h"
 
-#include "interface/vceb/host/vceb.h"
-
 #define DEVICE_NAME "vchiq"
 
 /* Override the default prefix, which would be vchiq_arm (from the filename) */

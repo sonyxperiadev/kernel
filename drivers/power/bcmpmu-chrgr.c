@@ -1,0 +1,557 @@
+/*****************************************************************************
+*  Copyright 2001 - 2008 Broadcom Corporation.  All rights reserved.
+*
+*  Unless you and Broadcom execute a separate written software license
+*  agreement governing use of this software, this software is licensed to you
+*  under the terms of the GNU General Public License version 2, available at
+*  http://www.gnu.org/licenses/old-license/gpl-2.0.html (the "GPL").
+*
+*  Notwithstanding the above, under no circumstances may you combine this
+*  software in any way with any other Broadcom software provided under a
+*  license other than the GPL, without Broadcom's express prior written
+*  consent.
+*
+*****************************************************************************/
+
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/init.h>
+#include <linux/bug.h>
+#include <linux/device.h>
+#include <linux/delay.h>
+#include <linux/interrupt.h>
+#include <linux/workqueue.h>
+#include <linux/fs.h>
+#include <linux/power_supply.h>
+
+#include <linux/mfd/bcmpmu.h>
+
+#define BCMPMU_PRINT_ERROR (1U << 0)
+#define BCMPMU_PRINT_INIT (1U << 1)
+#define BCMPMU_PRINT_FLOW (1U << 2)
+#define BCMPMU_PRINT_DATA (1U << 3)
+
+static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
+#define pr_chrgr(debug_level, args...) \
+	do { \
+		if (debug_mask & BCMPMU_PRINT_##debug_level) { \
+			pr_info(args); \
+		} \
+	} while (0)
+
+extern const unsigned int bcmpmu_chrgr_icc_fc_settings[PMU_CHRGR_CURR_MAX];
+extern const unsigned int bcmpmu_chrgr_icc_qc_settings[PMU_CHRGR_QC_CURR_MAX];
+extern const unsigned int bcmpmu_chrgr_eoc_settings[PMU_CHRGR_EOC_CURR_MAX];
+extern const unsigned int bcmpmu_chrgr_vfloat_settings[PMU_CHRGR_VOLT_MAX];
+
+struct bcmpmu_chrgr {
+	struct bcmpmu *bcmpmu;
+	struct power_supply chrgr;
+	struct power_supply usb;
+	wait_queue_head_t wait;
+	struct mutex lock;
+	int eoc;
+	int chrgrcurr_max;
+	enum bcmpmu_chrgr_type_t chrgrtype;
+	enum bcmpmu_usb_type_t usbtype;
+	int chrgr_online;
+	int usb_online;
+};
+
+static char *usb_names[PMU_USB_TYPE_MAX] = {
+	[PMU_USB_TYPE_NONE]	= "none",
+	[PMU_USB_TYPE_SDP]	= "sdp",
+	[PMU_USB_TYPE_CDP]	= "cdp",
+	[PMU_USB_TYPE_ACA]	= "aca",
+};
+
+static char *chrgr_names[PMU_CHRGR_TYPE_MAX] = {
+	[PMU_CHRGR_TYPE_NONE]	= "none",
+	[PMU_CHRGR_TYPE_AC]	= "ac",
+	[PMU_CHRGR_TYPE_USB]	= "usb",
+	[PMU_CHRGR_TYPE_DCP]	= "dcp",
+	[PMU_CHRGR_TYPE_TYPE1]	= "type1",
+	[PMU_CHRGR_TYPE_TYPE2]	= "type2",
+};
+
+
+static enum power_supply_property bcmpmu_chrgr_props[] = {
+	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
+	POWER_SUPPLY_PROP_MODEL_NAME,
+};
+
+static enum power_supply_property bcmpmu_usb_props[] = {
+	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_MODEL_NAME,
+};
+
+static int bcmpmu_chrgr_set_property(struct power_supply *ps,
+		enum power_supply_property property,
+		union power_supply_propval *propval)
+{
+	int ret = 0;
+	struct bcmpmu_chrgr *pchrgr = container_of(ps,
+		struct bcmpmu_chrgr, chrgr);
+	switch (property) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		pchrgr->chrgr_online = propval->intval;
+		break;
+
+	case POWER_SUPPLY_PROP_TYPE:
+		pchrgr->chrgrtype = propval->intval;
+		break;
+
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		pchrgr->chrgrcurr_max = propval->intval;
+		break;
+
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
+static int bcmpmu_chrgr_get_property(struct power_supply *ps,
+	enum power_supply_property prop,
+	union power_supply_propval *val)
+{
+	int ret = 0;
+	struct bcmpmu_chrgr *pchrgr = container_of(ps,
+		struct bcmpmu_chrgr, chrgr);
+	switch(prop) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		val->intval = pchrgr->chrgr_online;
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		val->intval = pchrgr->chrgrcurr_max;
+		break;
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		val->strval = chrgr_names[pchrgr->chrgrtype];
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
+static int bcmpmu_usb_set_property(struct power_supply *ps,
+		enum power_supply_property property,
+		union power_supply_propval *propval)
+{
+	int ret = 0;
+	struct bcmpmu_chrgr *pchrgr = container_of(ps,
+		struct bcmpmu_chrgr, usb);
+	switch (property) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		pchrgr->usb_online = propval->intval;
+		break;
+
+	case POWER_SUPPLY_PROP_TYPE:
+		pchrgr->usbtype = propval->intval;
+		break;
+
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
+static int bcmpmu_usb_get_property(struct power_supply *ps,
+	enum power_supply_property prop,
+	union power_supply_propval *val)
+{
+	int ret = 0;
+	struct bcmpmu_chrgr *pchrgr = container_of(ps,
+		struct bcmpmu_chrgr, usb);
+	switch(prop) {
+	case POWER_SUPPLY_PROP_ONLINE:
+		val->intval = pchrgr->usb_online;
+		break;
+
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		val->strval = usb_names[pchrgr->usbtype];
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+	return ret;
+}
+
+static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
+{
+	struct bcmpmu_chrgr *pchrgr = data;
+	int ret;
+}
+
+
+static int bcmpmu_set_icc_qc(struct bcmpmu *bcmpmu, int curr)
+{
+	int ret;
+	enum bcmpmu_chrgr_qc_curr_t setting;
+	if (curr < 50)
+		setting = PMU_CHRGR_QC_CURR_50;
+	else if (curr > 100)
+		setting = PMU_CHRGR_QC_CURR_100;
+	else
+		setting = (curr - 50)/10;
+	ret = bcmpmu->write_dev(bcmpmu,
+				PMU_REG_CHRGR_ICC_QC,
+				bcmpmu_chrgr_icc_qc_settings[setting],
+				PMU_BITMASK_ALL);
+	return ret;
+}
+
+static int bcmpmu_set_icc_fc(struct bcmpmu *bcmpmu, int curr)
+{
+	int ret;
+	enum bcmpmu_chrgr_fc_curr_t setting;
+	if (curr < 50)
+		setting = PMU_CHRGR_CURR_50;
+	else if (curr > 1000)
+		setting = PMU_CHRGR_CURR_1000;
+	else
+		setting = (curr - 50)/50;
+	ret = bcmpmu->write_dev(bcmpmu,
+				PMU_REG_CHRGR_ICC_FC,
+				bcmpmu_chrgr_icc_fc_settings[setting],
+				PMU_BITMASK_ALL);
+	return ret;
+}
+
+static int bcmpmu_set_vfloat(struct bcmpmu *bcmpmu, int volt)
+{
+	int ret;
+	enum bcmpmu_chrgr_volt_t setting;
+	if (volt < 3600)
+		setting = PMU_CHRGR_VOLT_3600;
+	else if (volt > 4375)
+		setting = PMU_CHRGR_VOLT_4375;
+	else
+		setting = (volt - 3600)/25;
+	ret = bcmpmu->write_dev(bcmpmu,
+				PMU_REG_CHRGR_VFLOAT,
+				bcmpmu_chrgr_vfloat_settings[setting],
+				PMU_BITMASK_ALL);
+	return ret;
+}
+
+static int bcmpmu_set_eoc(struct bcmpmu *bcmpmu, int curr)
+{
+	int ret;
+	enum bcmpmu_chrgr_eoc_curr_t setting;
+	struct bcmpmu_chrgr *pchrgr = bcmpmu->chrgrinfo;
+	pchrgr->eoc = curr;
+
+	if (curr < 50)
+		setting = PMU_CHRGR_EOC_CURR_50;
+	else if (curr > 200)
+		setting = PMU_CHRGR_EOC_CURR_200;
+	else
+		setting = (curr - 50)/10;
+	ret = bcmpmu->write_dev(bcmpmu,
+				PMU_REG_CHRGR_EOC,
+				bcmpmu_chrgr_eoc_settings[setting],
+				PMU_BITMASK_ALL);
+	return ret;
+}
+
+static int bcmpmu_chrgr_usb_en(struct bcmpmu *bcmpmu, int en)
+{
+	int ret;
+	if (en == 0)
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_USB_EN,
+			0,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_EN].mask);
+	else
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_USB_EN,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_EN].mask,
+			bcmpmu->regmap[PMU_REG_CHRGR_USB_EN].mask);
+	return ret;
+}
+
+static int bcmpmu_chrgr_wac_en(struct bcmpmu *bcmpmu, int en)
+{
+	int ret;
+	if (en == 0)
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_WAC_EN,
+			0,
+			bcmpmu->regmap[PMU_REG_CHRGR_WAC_EN].mask);
+	else
+		ret = bcmpmu->write_dev(bcmpmu,
+			PMU_REG_CHRGR_WAC_EN,
+			bcmpmu->regmap[PMU_REG_CHRGR_WAC_EN].mask,
+			bcmpmu->regmap[PMU_REG_CHRGR_WAC_EN].mask);
+	return ret;
+}
+
+
+#ifdef CONFIG_MFD_BCMPMU_DBG
+static ssize_t
+dbgmsk_show(struct device *dev, struct device_attribute *attr,
+				char *buf)
+{
+	return sprintf(buf, "debug_mask is %x\n", debug_mask);
+}
+
+static ssize_t
+dbgmsk_set(struct device *dev, struct device_attribute *attr,
+				char *buf, size_t count)
+{
+	unsigned long val = simple_strtoul(buf, NULL, 0);
+	if (val > 0xFF || val == 0)
+		return -EINVAL;
+	debug_mask = val;
+	return count;
+}
+
+bcmpmu_dbg_show_vfloat(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	int val;
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	bcmpmu->read_dev(bcmpmu, PMU_REG_CHRGR_VFLOAT,
+			&val, PMU_BITMASK_ALL);
+	return sprintf(buf, "%X\n", val);
+}
+
+static ssize_t
+bcmpmu_dbg_set_vfloat(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned long val = simple_strtoul(buf, NULL, 0);
+	bcmpmu->set_vfloat(bcmpmu, (int)val);
+	return n;
+}
+
+static ssize_t
+bcmpmu_dbg_show_icc_fc(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	int val;
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	bcmpmu->read_dev(bcmpmu, PMU_REG_CHRGR_ICC_FC,
+			&val, PMU_BITMASK_ALL);
+	return sprintf(buf, "%X\n", val);
+}
+
+static ssize_t
+bcmpmu_dbg_set_icc_fc(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned long val = simple_strtoul(buf, NULL, 0);
+	bcmpmu->set_icc_fc(bcmpmu, (int)val);
+	return n;
+}
+
+static ssize_t
+bcmpmu_dbg_show_icc_qc(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	int val;
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	bcmpmu->read_dev(bcmpmu, PMU_REG_CHRGR_ICC_QC,
+			&val, PMU_BITMASK_ALL);
+	return sprintf(buf, "%X\n", val);
+}
+
+static ssize_t
+bcmpmu_dbg_set_icc_qc(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned long val = simple_strtoul(buf, NULL, 0);
+	bcmpmu->set_icc_qc(bcmpmu, (int)val);
+	return n;
+}
+
+static ssize_t
+bcmpmu_dbg_show_eoc(struct device *dev, struct device_attribute *attr,
+		char *buf)
+{
+	int val;
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	bcmpmu->read_dev(bcmpmu, PMU_REG_CHRGR_EOC,
+			&val, PMU_BITMASK_ALL);
+	return sprintf(buf, "%X\n", val);
+}
+
+static ssize_t
+bcmpmu_dbg_set_eoc(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned long val = simple_strtoul(buf, NULL, 0);
+	bcmpmu->set_eoc(bcmpmu, (int)val);
+	return n;
+}
+
+static ssize_t
+bcmpmu_dbg_usb_en(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	unsigned long val = simple_strtoul(buf, NULL, 0);
+	bcmpmu->chrgr_usb_en(bcmpmu, (int)val);
+	return n;
+}
+
+static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
+static DEVICE_ATTR(vfloat, 0644, bcmpmu_dbg_show_vfloat, bcmpmu_dbg_set_vfloat);
+static DEVICE_ATTR(icc_fc, 0644, bcmpmu_dbg_show_icc_fc, bcmpmu_dbg_set_icc_fc);
+static DEVICE_ATTR(icc_qc, 0644, bcmpmu_dbg_show_icc_qc, bcmpmu_dbg_set_icc_qc);
+static DEVICE_ATTR(eoc, 0644, bcmpmu_dbg_show_eoc, bcmpmu_dbg_set_eoc);
+static DEVICE_ATTR(usb_en, 0644, NULL, bcmpmu_dbg_usb_en);
+
+static struct attribute *bcmpmu_chrgr_attrs[] = {
+	&dev_attr_dbgmsk.attr,
+	&dev_attr_vfloat.attr,
+	&dev_attr_icc_fc.attr,
+	&dev_attr_icc_qc.attr,
+	&dev_attr_eoc.attr,
+	&dev_attr_usb_en.attr,
+	NULL
+};
+
+static const struct attribute_group bcmpmu_chrgr_attr_group = {
+	.attrs = bcmpmu_chrgr_attrs,
+};
+#endif
+
+static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
+{
+	int ret;
+
+	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu_chrgr *pchrgr;
+	
+	printk("bcmpmu_chrgr: chrgr_probe called \n") ;
+
+	pchrgr = kzalloc(sizeof(struct bcmpmu_chrgr), GFP_KERNEL);
+	if (pchrgr == NULL) {
+		printk("bcmpmu_chrgr: failed to alloc mem.\n") ;
+		return -ENOMEM;
+	}
+	init_waitqueue_head(&pchrgr->wait);
+	mutex_init(&pchrgr->lock);
+	pchrgr->bcmpmu = bcmpmu;
+	bcmpmu->chrgrinfo = (void *)pchrgr;
+
+	bcmpmu->chrgr_usb_en = bcmpmu_chrgr_usb_en;
+	bcmpmu->chrgr_wac_en = bcmpmu_chrgr_wac_en;
+	bcmpmu->set_icc_fc = bcmpmu_set_icc_fc;
+	bcmpmu->set_icc_qc = bcmpmu_set_icc_qc;
+	bcmpmu->set_eoc = bcmpmu_set_eoc;
+	bcmpmu->set_vfloat = bcmpmu_set_vfloat;
+
+	pchrgr->eoc = 0;
+	
+	pchrgr->chrgr.properties = bcmpmu_chrgr_props;
+	pchrgr->chrgr.num_properties = ARRAY_SIZE(bcmpmu_chrgr_props);
+	pchrgr->chrgr.get_property = bcmpmu_chrgr_get_property;
+	pchrgr->chrgr.set_property = bcmpmu_chrgr_set_property;
+	pchrgr->chrgr.name = "charger";
+	pchrgr->chrgr.type = POWER_SUPPLY_TYPE_MAINS;
+
+	pchrgr->usb.properties = bcmpmu_usb_props;
+	pchrgr->usb.num_properties = ARRAY_SIZE(bcmpmu_usb_props);
+	pchrgr->usb.get_property = bcmpmu_usb_get_property;
+	pchrgr->usb.set_property = bcmpmu_usb_set_property;
+	pchrgr->usb.name = "usb";
+	pchrgr->usb.type = POWER_SUPPLY_TYPE_USB;
+
+	ret = power_supply_register(&pdev->dev, &pchrgr->chrgr);
+	if (ret)
+		goto err;
+	ret = power_supply_register(&pdev->dev, &pchrgr->usb);
+	if (ret)
+		goto err;
+
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_EOC, bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV_DIS, bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHGERRDIS, bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBOV, bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_RESUME_VBUS, bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_HW_TTR_EXP, bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_HW_TCH_EXP, bcmpmu_chrgr_isr, pchrgr);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_SW_TMR_EXP, bcmpmu_chrgr_isr, pchrgr);
+
+#ifdef CONFIG_MFD_BCMPMU_DBG
+	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_chrgr_attr_group);
+#endif
+
+	pchrgr->chrgrcurr_max = bcmpmu->usb_accy_data.max_curr_chrgr;
+	pchrgr->chrgrtype = bcmpmu->usb_accy_data.chrgr_type;
+	pchrgr->usbtype = bcmpmu->usb_accy_data.usb_type;
+	pchrgr->chrgr_online = 0;
+	pchrgr->usb_online = 0;
+	if ((pchrgr->chrgrtype > PMU_CHRGR_TYPE_NONE) &&
+		(pchrgr->chrgrtype < PMU_CHRGR_TYPE_MAX))
+		pchrgr->chrgr_online = 1;
+	if ((pchrgr->usbtype > PMU_USB_TYPE_NONE) &&
+		(pchrgr->usbtype < PMU_USB_TYPE_MAX))
+		pchrgr->usb_online = 1;
+
+	return 0;
+
+err:
+	power_supply_unregister(&pchrgr->chrgr);
+	power_supply_unregister(&pchrgr->usb);
+	return ret;
+}
+
+static int __devexit bcmpmu_chrgr_remove(struct platform_device *pdev)
+{
+	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu_chrgr *pchrgr = bcmpmu->chrgrinfo;
+
+	power_supply_unregister(&pchrgr->chrgr);
+	power_supply_unregister(&pchrgr->usb);
+
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_EOC);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV_DIS);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHGERRDIS);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_USBOV);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_RESUME_VBUS);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHG_HW_TTR_EXP);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHG_HW_TCH_EXP);
+	bcmpmu->unregister_irq(bcmpmu, PMU_IRQ_CHG_SW_TMR_EXP);
+
+#ifdef CONFIG_MFD_BCMPMU_DBG
+	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_chrgr_attr_group);
+#endif
+	return 0;
+}
+
+static struct platform_driver bcmpmu_chrgr_driver = {
+	.driver = {
+		.name = "bcmpmu_chrgr",
+	},
+	.probe = bcmpmu_chrgr_probe,
+	.remove = __devexit_p(bcmpmu_chrgr_remove),
+};
+
+static int __init bcmpmu_chrgr_init(void)
+{
+	return platform_driver_register(&bcmpmu_chrgr_driver);
+}
+module_init(bcmpmu_chrgr_init);
+
+static int __exit bcmpmu_chrgr_exit(void)
+{
+	platform_driver_unregister(&bcmpmu_chrgr_driver);
+	return 0;
+}
+module_exit(bcmpmu_chrgr_exit);
+
+MODULE_DESCRIPTION("BCM PMIC charger driver");
+MODULE_LICENSE("GPL");
