@@ -327,6 +327,7 @@ int bcm59055_saradc_rtm_read(int ch_sel, bool adc_sync, u32 delay)
 	pr_info("inside %s\n", __func__);
 	if(!bcm59055_saradc || !bcm59055_saradc->bcm59055)
 		return -EPERM;
+	bcm59055 = bcm59055_saradc->bcm59055;
 
 
 	if ((ch_sel < 0) || (ch_sel >= ADC_NULL_CHANNEL)) {
@@ -347,7 +348,6 @@ int bcm59055_saradc_rtm_read(int ch_sel, bool adc_sync, u32 delay)
 		pr_info("%s: Error writing RTM delay\n", __func__);
 		return ret;
 	}
-	bcm59055 = bcm59055_saradc->bcm59055;
 	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ADCCTRL1);
 	regVal &= ~(BCM59055_ADCCTRL1_RTM_CH_MASK <<
 				BCM59055_ADCCTRL1_RTM_CH_MASK_SHIFT);	/* Clear Channel Select */
