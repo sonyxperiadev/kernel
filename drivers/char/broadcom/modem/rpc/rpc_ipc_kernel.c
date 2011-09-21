@@ -69,7 +69,7 @@ MODULE_LICENSE("GPL");
 void kRpcDebugPrintf(char* fmt, ...);
 ssize_t kRpcReadLogData(char *destBuf, size_t len);
 
-#define RPC_TRACE_TRACE_ON
+//#define RPC_TRACE_TRACE_ON
 #ifdef RPC_TRACE_TRACE_ON
 #define RPC_TRACE(str) kRpcDebugPrintf str
 //#define RPC_TRACE(str) printk str

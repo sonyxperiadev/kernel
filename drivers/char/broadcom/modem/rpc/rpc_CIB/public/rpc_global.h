@@ -61,9 +61,13 @@ extern UInt32 g_dwLogLEVEL;
 extern int RpcLog_DebugPrintf(char *fmt, ...);
 extern int RpcLog_DetailLogEnabled();
 
-#define RPC_TRACE RpcLog_DebugPrintf
-#define RPC_TRACE_DETAIL RpcLog_DebugPrintf
-#define RPC_TRACE_INFO RpcLog_DebugPrintf
+// **FIXME** MAG - turn off all RPC logging for now...
+//#define RPC_TRACE RpcLog_DebugPrintf
+//#define RPC_TRACE_DETAIL RpcLog_DebugPrintf
+//#define RPC_TRACE_INFO RpcLog_DebugPrintf
+#define RPC_TRACE
+#define RPC_TRACE_DETAIL
+#define RPC_TRACE_INFO
 //#define RPC_TRACE_DATA_DETAIL RpcLog_DebugPrintf
 #define RPC_TRACE_DATA_DETAIL
 
