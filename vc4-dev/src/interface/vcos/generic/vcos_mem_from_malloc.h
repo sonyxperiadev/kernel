@@ -4,8 +4,6 @@ All rights reserved.
 
 Project  :  VMCS Host Apps
 Module   :  Framework - VMCS
-File     :  $RCSfile: platform.c,v $
-Revision :  $Revision: #18 $
 
 FILE DESCRIPTION
 Create the vcos_malloc API from the regular system malloc/free

@@ -50,6 +50,7 @@
 #include <linux/broadcom/knllog.h>           /* for debugging */
 #include <linux/broadcom/halaudio.h>
 #include <linux/broadcom/halaudio_lib.h>
+#include <linux/broadcom/amxr.h>
 #include <linux/broadcom/amxr_port.h>
 
 #include <chal/chal_audio.h>

@@ -83,6 +83,11 @@ config MAP_ISLAND_PCM_CHAL
    help
       Support for CHAL libraries for PCM on Island
 
+config MAP_ISLAND_NAND_CHAL
+   bool "MAP NAND CHAL"
+   help
+      Support for CHAL libraries for NAND on Island
+
 config MAP_ISLAND_SUSPEND_INVALID
    bool "MAP SUSPEND INVALID"
    depends on SUSPEND

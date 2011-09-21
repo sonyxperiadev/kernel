@@ -56,17 +56,14 @@
 //
 #define CONFIG_SM_VC_DEFAULT_GUID_SHIFT            (12)
 
-// Uncomment the following line to enable debug messages
-//#define ENABLE_LOG_DBG
-
 // Logging macros (for remapping to other logging mechanisms, i.e., vcos_log)
-#ifdef ENABLE_LOG_DBG
-#define LOG_DBG(  fmt, arg... )  printk( KERN_INFO "[D] " fmt "\n", ##arg )
-#else
-#define LOG_DBG(  fmt, arg... )
-#endif
-#define LOG_INFO( fmt, arg... )  printk( KERN_INFO "[I] " fmt "\n", ##arg )
-#define LOG_ERR(  fmt, arg... )  printk( KERN_ERR  "[E] " fmt "\n", ##arg )
+#define LOG_DBG( exp, fmt, arg... )  if ( exp ) printk( KERN_INFO "[D] " fmt "\n", ##arg )
+#define LOG_INFO( fmt, arg... )      printk( KERN_INFO "[I] " fmt "\n", ##arg )
+#define LOG_ERR( fmt, arg... )       printk( KERN_ERR  "[E] " fmt "\n", ##arg )
+
+#define LOG_DBG_LEVEL_MIN          1
+#define LOG_DBG_LEVEL_INTER_1      2
+#define LOG_DBG_LEVEL_MAX          3
 
 #define DEVICE_NAME              "vcsm"
 #define DEVICE_MINOR             0
@@ -78,6 +75,7 @@
 #define PROC_STATS               "statistics"
 #define PROC_CFG_GUID_SHIFT      "guid-shift"
 #define PROC_RESOURCES           "resources"
+#define PROC_DEBUG               "debug"
 #define PROC_WRITE_BUF_SIZE      128
 
 /* Statistics tracked per resource and globally.
@@ -157,6 +155,7 @@ typedef struct
    struct proc_dir_entry *dir_alloc;            // Proc entries allocations sub-tree.
    SM_PDE_T              dir_stats;             // Proc entries statistics sub-tree.
    SM_PDE_T              dir_state;             // Proc entries state sub-tree.
+   struct proc_dir_entry *debug;                // Proc entries debug.
 
    struct mutex          map_lock;              // Global map lock.
    struct list_head      map_list;              // List of maps.
@@ -233,6 +232,7 @@ typedef struct
 // ---- Private Variables ----------------------------------------------------
 
 static SM_STATE_T *sm_state;
+static unsigned int sm_debug_log = 0;
 
 static const char * sm_cache_map_vector[] =
 {
@@ -299,17 +299,21 @@ static unsigned int vmcs_sm_vc_handle_from_pid_and_address( unsigned int pid,
 
    /* Lookup the resource.
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( map->res_pid != pid || map->res_addr != addr )
-         continue;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         if ( map->res_pid != pid || map->res_addr != addr )
+            continue;
 
-      LOG_DBG( "[%s]: global map %p (pid %u, addr %lx) -> vc-hdl %x (usr-hdl %x)",
-               __func__, map, map->res_pid, map->res_addr,
-               map->res_vc_hdl, map->res_usr_hdl );
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: global map %p (pid %u, addr %lx) -> vc-hdl %x (usr-hdl %x)",
+                  __func__, map, map->res_pid, map->res_addr,
+                  map->res_vc_hdl, map->res_usr_hdl );
 
-      handle = map->res_vc_hdl;
-      break;
+         handle = map->res_vc_hdl;
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -325,7 +329,8 @@ out:
    */
    if ( handle == 0 )
    {
-      LOG_DBG( "[%s]: not a valid map (pid %u, addr %x)",
+      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+               "[%s]: not a valid map (pid %u, addr %x)",
                __func__, pid, addr );
    }
 
@@ -350,17 +355,21 @@ static unsigned int vmcs_sm_usr_handle_from_pid_and_address( unsigned int pid,
 
    /* Lookup the resource.
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( map->res_pid != pid || map->res_addr != addr )
-         continue;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         if ( map->res_pid != pid || map->res_addr != addr )
+            continue;
 
-      LOG_DBG( "[%s]: global map %p (pid %u, addr %lx) -> usr-hdl %x (vc-hdl %x)",
-               __func__, map, map->res_pid, map->res_addr,
-               map->res_usr_hdl, map->res_vc_hdl );
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: global map %p (pid %u, addr %lx) -> usr-hdl %x (vc-hdl %x)",
+                  __func__, map, map->res_pid, map->res_addr,
+                  map->res_usr_hdl, map->res_vc_hdl );
 
-      handle = map->res_usr_hdl;
-      break;
+         handle = map->res_usr_hdl;
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -376,7 +385,8 @@ out:
    */
    if ( handle == 0 )
    {
-      LOG_DBG( "[%s]: not a valid map (pid %u, addr %x)",
+      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+               "[%s]: not a valid map (pid %u, addr %x)",
                __func__, pid, addr );
    }
 
@@ -402,17 +412,21 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_vc_handle( unsigned int pid
 
    /* Lookup the resource.
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( map->res_pid != pid || map->res_vc_hdl != hdl )
-         continue;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         if ( map->res_pid != pid || map->res_vc_hdl != hdl )
+            continue;
 
-      LOG_DBG( "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
-               __func__, map, map->res_pid, map->res_vc_hdl,
-               map->res_usr_hdl, map->res_addr );
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
+                  __func__, map, map->res_pid, map->res_vc_hdl,
+                  map->res_usr_hdl, map->res_addr );
 
-      addr = map->res_addr;
-      break;
+         addr = map->res_addr;
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -428,7 +442,8 @@ out:
    */
    if ( addr == 0 )
    {
-      LOG_DBG( "[%s]: not a valid map (pid %u, hdl %x)",
+      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+               "[%s]: not a valid map (pid %u, hdl %x)",
                __func__, pid, hdl );
    }
 
@@ -454,17 +469,21 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_usr_handle( unsigned int pi
 
    /* Lookup the resource.
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( map->res_pid != pid || map->res_usr_hdl != hdl )
-         continue;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         if ( map->res_pid != pid || map->res_usr_hdl != hdl )
+            continue;
 
-      LOG_DBG( "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
-               __func__, map, map->res_pid, map->res_vc_hdl,
-               map->res_usr_hdl, map->res_addr );
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
+                  __func__, map, map->res_pid, map->res_vc_hdl,
+                  map->res_usr_hdl, map->res_addr );
 
-      addr = map->res_addr;
-      break;
+         addr = map->res_addr;
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -480,7 +499,8 @@ out:
    */
    if ( addr == 0 )
    {
-      LOG_DBG( "[%s]: not a valid map (pid %u, hdl %x)",
+      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+               "[%s]: not a valid map (pid %u, hdl %x)",
                __func__, pid, hdl );
    }
 
@@ -507,7 +527,8 @@ static void vmcs_sm_add_map( SM_STATE_T *state,
 
    mutex_unlock ( &(state->map_lock) );
 
-   LOG_DBG( "[%s]: added map %p (pid %u, vc-hdl %x, usr-hdl %x, addr %lx)",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+            "[%s]: added map %p (pid %u, vc-hdl %x, usr-hdl %x, addr %lx)",
             __func__, map, map->res_pid, map->res_vc_hdl,
             map->res_usr_hdl, map->res_addr );
 }
@@ -532,7 +553,8 @@ static void vmcs_sm_remove_map( SM_STATE_T *state,
 
    mutex_unlock ( &(state->map_lock) );
 
-   LOG_DBG( "[%s]: removed map %p (pid %d, vc-hdl %x, usr-hdl %x, addr %lx)",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+            "[%s]: removed map %p (pid %d, vc-hdl %x, usr-hdl %x, addr %lx)",
             __func__, map, map->res_pid, map->res_vc_hdl,
             map->res_usr_hdl, map->res_addr );
 
@@ -562,6 +584,27 @@ static int vc_sm_cfg_proc_read( char *buffer,
    return len;
 }
 
+/* Read callback for the debug proc entry.
+*/
+static int vc_sm_debug_proc_read( char *buffer,
+                                  char **start,
+                                  off_t off,
+                                  int count,
+                                  int *eof,
+                                  void *data )
+{
+   int len = 0;
+
+   len += sprintf( buffer + len,
+                   "debug log level set to %u\n",
+                   (unsigned int) sm_debug_log );
+   len += sprintf( buffer + len,
+                   "level is one increment in [0 (disabled), %u (highest)]\n",
+                   LOG_DBG_LEVEL_MAX );
+
+   return len;
+}
+
 /* Read callback for the global state proc entry.
 */
 static int vc_sm_global_state_proc_read( struct seq_file *s )
@@ -582,15 +625,18 @@ static int vc_sm_global_state_proc_read( struct seq_file *s )
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      map_count++;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         map_count++;
 
-      seq_printf( s, "\nMapping                0x%x\n", (unsigned int)map );
-      seq_printf( s, "           TGID        %u\n", map->res_pid );
-      seq_printf( s, "           VC-HDL      0x%x\n", map->res_vc_hdl );
-      seq_printf( s, "           USR-HDL     0x%x\n", map->res_usr_hdl );
-      seq_printf( s, "           USR-ADDR    0x%lx\n", map->res_addr );
+         seq_printf( s, "\nMapping                0x%x\n", (unsigned int)map );
+         seq_printf( s, "           TGID        %u\n", map->res_pid );
+         seq_printf( s, "           VC-HDL      0x%x\n", map->res_vc_hdl );
+         seq_printf( s, "           USR-HDL     0x%x\n", map->res_usr_hdl );
+         seq_printf( s, "           USR-ADDR    0x%lx\n", map->res_addr );
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -683,28 +729,31 @@ static int vc_sm_statistics_proc_read( struct seq_file *s )
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+   if ( !list_empty ( &file_data->resource_list ) )
    {
-      res_count++;
+      list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+      {
+         res_count++;
 
-      seq_printf( s, "\nGUID:         0x%x\n\n", resource->res_guid );
-      for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
-      {
-         if ( resource->res_stats[ ix ] > 0 )
+         seq_printf( s, "\nGUID:         0x%x\n\n", resource->res_guid );
+         for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
          {
-            seq_printf( s, "                %u\t%s\n",
-                        resource->res_stats[ ix ],
-                        sm_stats_human_read[ ix ] );
+            if ( resource->res_stats[ ix ] > 0 )
+            {
+               seq_printf( s, "                %u\t%s\n",
+                           resource->res_stats[ ix ],
+                           sm_stats_human_read[ ix ] );
+            }
          }
-      }
-      seq_printf( s, "\n" );
-      for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
-      {
-         if ( resource->res_stats[ ix + END_ATTEMPT ] > 0 )
+         seq_printf( s, "\n" );
+         for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
          {
-            seq_printf( s, "                %u\tFAILED %s\n",
-                        resource->res_stats[ ix + END_ATTEMPT ],
-                        sm_stats_human_read[ ix ] );
+            if ( resource->res_stats[ ix + END_ATTEMPT ] > 0 )
+            {
+               seq_printf( s, "                %u\tFAILED %s\n",
+                           resource->res_stats[ ix + END_ATTEMPT ],
+                           sm_stats_human_read[ ix ] );
+            }
          }
       }
    }
@@ -740,17 +789,20 @@ static int vc_sm_alloc_proc_read( struct seq_file *s )
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+   if ( !list_empty ( &file_data->resource_list ) )
    {
-         alloc_count++;
+      list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+      {
+            alloc_count++;
 
-         seq_printf( s, "\nGUID:              0x%x\n", resource->res_guid );
-         seq_printf( s, "Reference Count:   %u\n", resource->ref_count );
-         seq_printf( s, "Mapped:            %s\n", (resource->map_count ? "yes" : "no") );
-         seq_printf( s, "VC-handle:         0x%x\n", resource->res_handle );
-         seq_printf( s, "VC-address:        0x%p\n", resource->res_base_mem );
-         seq_printf( s, "VC-size (bytes):   %u\n", resource->res_size );
-         seq_printf( s, "Cache:             %s\n", sm_cache_map_vector[ resource->res_cached ] );
+            seq_printf( s, "\nGUID:              0x%x\n", resource->res_guid );
+            seq_printf( s, "Reference Count:   %u\n", resource->ref_count );
+            seq_printf( s, "Mapped:            %s\n", (resource->map_count ? "yes" : "no") );
+            seq_printf( s, "VC-handle:         0x%x\n", resource->res_handle );
+            seq_printf( s, "VC-address:        0x%p\n", resource->res_base_mem );
+            seq_printf( s, "VC-size (bytes):   %u\n", resource->res_size );
+            seq_printf( s, "Cache:             %s\n", sm_cache_map_vector[ resource->res_cached ] );
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -821,6 +873,76 @@ out:
    return ret;
 }
 
+/* Write callback for the debug proc entry.
+*/
+static int vc_sm_debug_proc_write( struct file *file,
+                                   const char __user *buffer,
+                                   unsigned long count,
+                                   void *data )
+{
+   int ret;
+   unsigned char kbuf[PROC_WRITE_BUF_SIZE];
+   uint32_t debug_value;
+
+   if ( count > PROC_WRITE_BUF_SIZE )
+   {
+      count = PROC_WRITE_BUF_SIZE;
+   }
+
+   if ( copy_from_user( kbuf,
+                        buffer,
+                        count ) != 0 )
+   {
+      LOG_ERR( "[%s]: failed to copy-from-user",
+               __func__ );
+
+      ret = -EFAULT;
+      goto out;
+   }
+
+   /* Return read value no matter what from there on.
+   */
+   ret = count;
+
+   if( sscanf( kbuf, "%u", &debug_value ) != 1 )
+   {
+      LOG_ERR( "[%s]: echo <value> > /proc/%s/%s",
+               __func__,
+               PROC_DIR_ROOT_NAME,
+               PROC_DEBUG );
+
+      /* Failed to assign the proper value.
+      */
+      goto out;
+   }
+
+   if ( debug_value > LOG_DBG_LEVEL_MAX )
+   {
+      LOG_ERR( "[%s]: echo [0,%u] > /proc/%s/%s",
+               __func__,
+               LOG_DBG_LEVEL_MAX,
+               PROC_DIR_ROOT_NAME,
+               PROC_DEBUG );
+
+      /* Failed to assign the proper value.
+      */
+      goto out;
+   }
+
+   LOG_INFO( "[%s]: debug log change from level %u to level %u",
+            __func__,
+            sm_debug_log,
+            debug_value );
+   sm_debug_log = debug_value;
+
+   /* Done.
+   */
+   goto out;
+
+out:
+   return ret;
+}
+
 static int vc_sm_seq_file_proc_read( struct seq_file *s, void *unused )
 {
     SM_PDE_T *sm_pde;
@@ -858,7 +980,8 @@ static void vmcs_sm_add_resource( SM_PRIV_DATA_T *privdata,
    list_add( &resource->resource_list, &privdata->resource_list );
    mutex_unlock ( &(sm_state->map_lock) );
 
-   LOG_DBG( "[%s]: added resource %p (base addr %p, hdl %x, size %u, cache %u)",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+            "[%s]: added resource %p (base addr %p, hdl %x, size %u, cache %u)",
             __func__, resource, resource->res_base_mem, resource->res_handle,
             resource->res_size, resource->res_cached );
 }
@@ -873,7 +996,8 @@ static void vmcs_sm_remove_resource( SM_PRIV_DATA_T *privdata,
    list_del(&resource->resource_list);
    mutex_unlock ( &(sm_state->map_lock) );
 
-   LOG_DBG( "[%s]: located resource %p (base addr %p, hdl %x, size %u, cache %u)",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+            "[%s]: located resource %p (base addr %p, hdl %x, size %u, cache %u)",
             __func__, resource, resource->res_base_mem,
             resource->res_handle, resource->res_size,
             resource->res_cached );
@@ -892,19 +1016,23 @@ static void vmcs_sm_remove_resource( SM_PRIV_DATA_T *privdata,
 static SM_RESOURCE_T *vmcs_sm_get_resource_with_guid( SM_PRIV_DATA_T *privdata,
                                                       unsigned int res_guid )
 {
-   SM_RESOURCE_T *resource;
+   SM_RESOURCE_T *resource = NULL;
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( resource, &privdata->resource_list, resource_list )
+   if ( !list_empty( &privdata->resource_list ) )
    {
-      if ( resource->res_guid != res_guid )
-         continue;
+      list_for_each_entry ( resource, &privdata->resource_list, resource_list )
+      {
+         if ( resource->res_guid != res_guid )
+            continue;
 
-      LOG_DBG( "[%s]: located resource %p (guid: %u, base addr %p, hdl %x, size %u, cache %u)",
-               __func__, resource, resource->res_guid, resource->res_base_mem,
-               resource->res_handle, resource->res_size, resource->res_cached );
-      break;
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: located resource %p (guid: %u, base addr %p, hdl %x, size %u, cache %u)",
+                  __func__, resource, resource->res_guid, resource->res_base_mem,
+                  resource->res_handle, resource->res_size, resource->res_cached );
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -927,12 +1055,14 @@ static SM_GLOBAL_MAP_T *vmcs_sm_map_from_resource( SM_RESOURCE_T *resource, unsi
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( map, &resource->map_list, resource_map_list )
+   if ( !list_empty ( &resource->map_list ) )
    {
-      if ( map->res_addr == addr )
-         break;
+      list_for_each_entry ( map, &resource->map_list, resource_map_list )
+      {
+         if ( map->res_addr == addr )
+            break;
+      }
    }
-
    mutex_unlock ( &(sm_state->map_lock) );
 
    return map;
@@ -959,13 +1089,16 @@ static void vmcs_sm_host_walk_map_per_pid( int pid )
 
    /* Log all applicable mapping(s).
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( pid == -1 || map->res_pid == pid )
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
       {
-         LOG_INFO( "[%s]: tgid: %u - vc-hdl: %x, usr-hdl: %x, usr-addr: %lx",
-                  __func__, map->res_pid, map->res_vc_hdl,
-                  map->res_usr_hdl, map->res_addr );
+         if ( pid == -1 || map->res_pid == pid )
+         {
+            LOG_INFO( "[%s]: tgid: %u - vc-hdl: %x, usr-hdl: %x, usr-addr: %lx",
+                     __func__, map->res_pid, map->res_vc_hdl,
+                     map->res_usr_hdl, map->res_addr );
+         }
       }
    }
 
@@ -991,12 +1124,15 @@ static void vmcs_sm_host_walk_alloc( SM_PRIV_DATA_T *file_data )
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+   if ( !list_empty ( &file_data->resource_list ) )
    {
-      LOG_INFO( "[%s]: guid: %x - hdl: %x, vc-mem: %p, size: %u, cache: %u",
-                __func__, resource->res_guid, resource->res_handle,
-                resource->res_base_mem, resource->res_size,
-                resource->res_cached );
+      list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+      {
+         LOG_INFO( "[%s]: guid: %x - hdl: %x, vc-mem: %p, size: %u, cache: %u",
+                   __func__, resource->res_guid, resource->res_handle,
+                   resource->res_base_mem, resource->res_size,
+                   resource->res_cached );
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -1085,7 +1221,8 @@ static int vc_sm_open( struct inode *inode, struct file *file )
       }
    }
 
-   LOG_DBG( "[%s]: private data allocated %p",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+            "[%s]: private data allocated %p",
             __func__,
             file_data );
 
@@ -1118,7 +1255,8 @@ static int vc_sm_release( struct inode *inode, struct file *file )
 
    file_data = (SM_PRIV_DATA_T *) file->private_data;
 
-   LOG_DBG( "[%s]: using private data %p",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+            "[%s]: using private data %p",
             __func__,
             file_data );
 
@@ -1145,7 +1283,8 @@ static int vc_sm_release( struct inode *inode, struct file *file )
       {
          VC_SM_ACTION_CLEAN_T action_clean;
 
-         LOG_DBG( "[%s]: releasing following VCOS_EINTR on %u (trans_id: %u) (likely due to signal)...",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                  "[%s]: releasing following VCOS_EINTR on %u (trans_id: %u) (likely due to signal)...",
                   __func__,
                   file_data->int_action,
                   file_data->int_trans_id );
@@ -1165,16 +1304,17 @@ static int vc_sm_release( struct inode *inode, struct file *file )
       ** NOTE: Do we need to care about multiple allocated/mapped?
       */
       mutex_lock ( &(sm_state->map_lock) );
-
-      list_for_each_entry_safe ( resource, resource_tmp, &file_data->resource_list, resource_list )
+      if ( !list_empty ( &file_data->resource_list ) )
       {
-         /* Free up the local resource tracking this allocation.
-         */
-         vc_sm_resource_deceased( resource, 1 );
-         kfree ( resource );
-         freed_up++;
+         list_for_each_entry_safe ( resource, resource_tmp, &file_data->resource_list, resource_list )
+         {
+            /* Free up the local resource tracking this allocation.
+            */
+            vc_sm_resource_deceased( resource, 1 );
+            kfree ( resource );
+            freed_up++;
+         }
       }
-
       mutex_unlock ( &(sm_state->map_lock) );
 
       /* Free up the videocore allocated resource left for this allocator.
@@ -1217,7 +1357,8 @@ static void vcsm_vma_open(struct vm_area_struct *vma)
 {
    SM_GLOBAL_MAP_T *map = (SM_GLOBAL_MAP_T *)vma->vm_private_data;
 
-   LOG_DBG( "[%s]: virt %lx-%lx, pid %i, pfn %i",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+            "[%s]: virt %lx-%lx, pid %i, pfn %i",
             __func__, vma->vm_start, vma->vm_end, (int)current->tgid, (int)vma->vm_pgoff);
 
    map->ref_count++;
@@ -1227,7 +1368,8 @@ static void vcsm_vma_close(struct vm_area_struct *vma)
 {
    SM_GLOBAL_MAP_T *map = (SM_GLOBAL_MAP_T *)vma->vm_private_data;
 
-   LOG_DBG( "[%s]: virt %lx-%lx, pid %i, pfn %i",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+            "[%s]: virt %lx-%lx, pid %i, pfn %i",
             __func__, vma->vm_start, vma->vm_end, (int)current->tgid, (int)vma->vm_pgoff);
 
    map->ref_count--;
@@ -1259,7 +1401,8 @@ static int vcsm_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
       lock_unlock.res_handle = resource->res_handle;
       lock_unlock.res_mem    = resource->res_base_mem;
 
-      LOG_DBG( "[%s]: attempt to lock data - hdl %x, base address %p",
+      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+               "[%s]: attempt to lock data - hdl %x, base address %p",
                __func__,
                lock_unlock.res_handle,
                lock_unlock.res_mem );
@@ -1393,7 +1536,8 @@ static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
       return -EPERM;
    }
 
-   LOG_DBG( "[%s]: using private data %p",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+            "[%s]: using private data %p",
             __func__,
             file_data );
  
@@ -1415,7 +1559,8 @@ static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
    ** We use the offset information as the key to tell us which resource
    ** we are mapping.
    */
-   LOG_DBG( "[%s]: resource handle from user guid %x (shift %x)",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+            "[%s]: resource handle from user guid %x (shift %x)",
             __func__,
             (unsigned int) vma->vm_pgoff,
             ((unsigned int) vma->vm_pgoff << sm_state->guid_shift) );
@@ -1489,7 +1634,8 @@ static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
       vma->vm_page_prot = pgprot_noncached( vma->vm_page_prot );
    }
 
-   LOG_DBG( "[%s]: resource %p (guid %x) - cnt %u, base address %p, handle %x, size %u (%u), cache %u",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+            "[%s]: resource %p (guid %x) - cnt %u, base address %p, handle %x, size %u (%u), cache %u",
             __func__,
             resource,
             resource->res_guid,
@@ -1500,7 +1646,8 @@ static int vc_sm_mmap( struct file *file, struct vm_area_struct *vma )
             (unsigned int) (vma->vm_end - vma->vm_start),
             resource->res_cached );
 
-   LOG_DBG( "[%s]: resource %p (base address %p, handle %x) - map-count %d, usr-addr %x",
+   LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+            "[%s]: resource %p (base address %p, handle %x) - map-count %d, usr-addr %x",
             __func__,
             resource,
             resource->res_base_mem,
@@ -1558,7 +1705,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
    {
       VC_SM_ACTION_CLEAN_T action_clean;
 
-      LOG_DBG( "[%s]: clean up of action %u (trans_id: %u) following VCOS_EINTR",
+      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MIN),
+               "[%s]: clean up of action %u (trans_id: %u) following VCOS_EINTR",
                __func__,
                file_data->int_action,
                file_data->int_trans_id );
@@ -1641,7 +1789,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
                                     ** mmap'ed later on.
                                     */
 
-         LOG_DBG( "[%s]: attempt to allocate \"%s\" data - type %u, base %u (%u), num %u, alignement %u",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MIN),
+                  "[%s]: attempt to allocate \"%s\" data - type %u, base %u (%u), num %u, alignement %u",
                   __func__,
                   alloc.name,
                   alloc.type,
@@ -1661,7 +1810,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
                                     &(file_data->int_trans_id) );
          if ( status == VCOS_EINTR )
          {
-            LOG_DBG( "[%s]: requesting allocate memory action restart (trans_id: %u)",
+            LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                     "[%s]: requesting allocate memory action restart (trans_id: %u)",
                      __func__,
                      file_data->int_trans_id );
 
@@ -1708,7 +1858,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          vmcs_sm_add_resource ( file_data,
                                 resource );
 
-         LOG_DBG( "[%s]: allocated data - guid %x, hdl %x, base address %p, size %d, cache %d",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MIN),
+                  "[%s]: allocated data - guid %x, hdl %x, base address %p, size %d, cache %d",
                   __func__,
                   resource->res_guid,
                   resource->res_handle,
@@ -1777,7 +1928,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          lock_unlock.res_handle = resource->res_handle;
          lock_unlock.res_mem    = resource->res_base_mem;
 
-         LOG_DBG( "[%s]: attempt to lock-cache data - guid %x, hdl %x, base address %p",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                  "[%s]: attempt to lock-cache data - guid %x, hdl %x, base address %p",
                   __func__,
                   ioparam.handle,
                   lock_unlock.res_handle,
@@ -1792,7 +1944,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
          if ( status == VCOS_EINTR )
          {
-            LOG_DBG( "[%s]: requesting lock-cache memory action restart (trans_id: %u)",
+            LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                     "[%s]: requesting lock-cache memory action restart (trans_id: %u)",
                      __func__,
                      file_data->int_trans_id );
 
@@ -1822,7 +1975,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          */
          resource->ref_count++;
 
-         LOG_DBG( "[%s]: succeed to lock-cache data - hdl %x, base address %p, ref-cnt %d",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                  "[%s]: succeed to lock-cache data - hdl %x, base address %p, ref-cnt %d",
                   __func__,
                   lock_unlock.res_handle,
                   lock_unlock.res_mem,
@@ -1885,7 +2039,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          lock_unlock.res_handle = resource->res_handle;
          lock_unlock.res_mem    = resource->res_base_mem;
 
-         LOG_DBG( "[%s]: attempt to lock data - guid %x, hdl %x, base address %p",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                  "[%s]: attempt to lock data - guid %x, hdl %x, base address %p",
                   __func__,
                   ioparam.handle,
                   lock_unlock.res_handle,
@@ -1900,7 +2055,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
          if ( status == VCOS_EINTR )
          {
-            LOG_DBG( "[%s]: requesting lock memory action restart (trans_id: %u)",
+            LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                     "[%s]: requesting lock memory action restart (trans_id: %u)",
                      __func__,
                      file_data->int_trans_id );
 
@@ -1930,7 +2086,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          */
          resource->ref_count++;
 
-         LOG_DBG( "[%s]: succeed to lock data - hdl %x, base address %p, ref-cnt %d",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                  "[%s]: succeed to lock data - hdl %x, base address %p, ref-cnt %d",
                   __func__,
                   lock_unlock.res_handle,
                   lock_unlock.res_mem,
@@ -2014,7 +2171,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          lock_unlock.res_handle = resource->res_handle;
          lock_unlock.res_mem    = resource->res_base_mem;
 
-         LOG_DBG( "[%s]: attempt to unlock data - guid %x, hdl %x, base address %p",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                  "[%s]: attempt to unlock data - guid %x, hdl %x, base address %p",
                   __func__,
                   ioparam.handle,
                   lock_unlock.res_handle,
@@ -2024,10 +2182,15 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          if ( resource->ref_count == 1 )
          {
             down_read( &current->mm->mmap_sem );
-            list_for_each_entry ( map, &resource->map_list, resource_map_list )
+            if ( !list_empty ( &resource->map_list ) )
             {
-               if ( map->vma )
-                  zap_vma_ptes( map->vma, map->vma->vm_start, map->vma->vm_end - map->vma->vm_start );
+               list_for_each_entry ( map, &resource->map_list, resource_map_list )
+               {
+                  if ( map->vma )
+                  {
+                     zap_vma_ptes( map->vma, map->vma->vm_start, map->vma->vm_end - map->vma->vm_start );
+                  }
+               }
             }
             up_read( &current->mm->mmap_sem );
          }
@@ -2042,7 +2205,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
             if ( status == VCOS_EINTR )
             {
-               LOG_DBG( "[%s]: requesting unlock memory action restart (trans_id: %u)",
+               LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                        "[%s]: requesting unlock memory action restart (trans_id: %u)",
                         __func__,
                         file_data->int_trans_id );
 
@@ -2072,7 +2236,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
             resource->ref_count--;
          }
 
-         LOG_DBG( "[%s]: success to unlock data - hdl %x, base address %p, ref-cnt %d",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_INTER_1),
+                  "[%s]: success to unlock data - hdl %x, base address %p, ref-cnt %d",
                   __func__,
                   lock_unlock.res_handle,
                   lock_unlock.res_mem,
@@ -2143,7 +2308,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          resize.res_mem      = (resource != NULL) ? resource->res_base_mem : NULL;
          resize.res_new_size = ioparam.new_size;
 
-         LOG_DBG( "[%s]: attempt to resize data - guid %x, hdl %x, base address %p",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: attempt to resize data - guid %x, hdl %x, base address %p",
                   __func__,
                   ioparam.handle,
                   resize.res_handle,
@@ -2157,7 +2323,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
          if ( status == VCOS_EINTR )
          {
-            LOG_DBG( "[%s]: requesting resize memory action restart (trans_id: %u)",
+            LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                     "[%s]: requesting resize memory action restart (trans_id: %u)",
                      __func__,
                      file_data->int_trans_id );
 
@@ -2179,7 +2346,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
          file_data->restart_sys = VCOS_SUCCESS;
 
-         LOG_DBG( "[%s]: success to resize data - hdl %x, size %d -> %d",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: success to resize data - hdl %x, size %d -> %d",
                   __func__,
                   resize.res_handle,
                   resource->res_size,
@@ -2246,7 +2414,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          free.res_handle = resource->res_handle;
          free.res_mem    = resource->res_base_mem;
 
-         LOG_DBG( "[%s]: attempt to free data - guid %x, hdl %x, base address %p",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MIN),
+                  "[%s]: attempt to free data - guid %x, hdl %x, base address %p",
                   __func__,
                   ioparam.handle,
                   free.res_handle,
@@ -2254,9 +2423,12 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
          /* Make sure the resource we're removing is unmapped first */
          down_write( &current->mm->mmap_sem );
-         list_for_each_entry_safe( map, map_tmp, &resource->map_list, resource_map_list )
+         if ( resource->map_count && !list_empty ( &resource->map_list ) )
          {
-            ret = do_munmap( current->mm, map->res_addr, resource->res_size );
+            list_for_each_entry_safe( map, map_tmp, &resource->map_list, resource_map_list )
+            {
+               ret = do_munmap( current->mm, map->res_addr, resource->res_size );
+            }
          }
          up_write( &current->mm->mmap_sem );
 
@@ -2267,7 +2439,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
                                    &(file_data->int_trans_id) );
          if ( status == VCOS_EINTR )
          {
-            LOG_DBG( "[%s]: requesting free memory action restart (trans_id: %u)",
+            LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MIN),
+                     "[%s]: requesting free memory action restart (trans_id: %u)",
                      __func__,
                      file_data->int_trans_id );
 
@@ -2293,7 +2466,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
          file_data->restart_sys = VCOS_SUCCESS;
 
-         LOG_DBG( "[%s]: %s to free data - hdl %x, base address %p",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MIN),
+                  "[%s]: %s to free data - hdl %x, base address %p",
                   __func__,
                   ( status == VCOS_SUCCESS ) ? "SUCCEEDED" : "FAILED",
                   free.res_handle,
@@ -2315,7 +2489,8 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
       */
       case VMCS_SM_CMD_VC_WALK_ALLOC:
       {
-         LOG_DBG( "[%s]: invoking walk alloc",
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: invoking walk alloc",
                   __func__ );
 
          if ( vc_vchi_sm_walk_alloc( sm_state->sm_handle ) != VCOS_SUCCESS )
@@ -3047,6 +3222,24 @@ static int __init vc_sm_init( void )
       goto err_stop_sm_service;
    }
 
+   sm_state->debug = create_proc_entry( PROC_DEBUG,
+                                        0,
+                                        sm_state->dir_root );
+   if ( sm_state->debug == NULL )
+   {
+      LOG_ERR( "[%s]: failed to create \'%s\' entry",
+               __func__,
+               PROC_DEBUG );
+
+      ret = -EPERM;
+      goto err_remove_proc_dir;
+   }
+   else
+   {
+      sm_state->debug->read_proc = &vc_sm_debug_proc_read;
+      sm_state->debug->write_proc = &vc_sm_debug_proc_write;
+   }
+
    sm_state->dir_state.dir_entry = create_proc_entry( PROC_STATE,
                                                       0,
                                                       sm_state->dir_root );
@@ -3057,7 +3250,7 @@ static int __init vc_sm_init( void )
                PROC_STATE );
 
       ret = -EPERM;
-      goto err_remove_proc_dir;
+      goto err_remove_proc_debug;
    }
    else
    {
@@ -3161,6 +3354,8 @@ err_remove_proc_statistics:
    remove_proc_entry( PROC_STATS, sm_state->dir_root );
 err_remove_proc_state:
    remove_proc_entry( PROC_STATE, sm_state->dir_root );
+err_remove_proc_debug:
+   remove_proc_entry( PROC_DEBUG, sm_state->dir_root );
 err_remove_proc_dir:
    remove_proc_entry( PROC_DIR_ROOT_NAME, NULL );
 err_stop_sm_service:
@@ -3190,6 +3385,7 @@ static void __exit vc_sm_exit( void )
    remove_proc_entry( PROC_CFG_GUID_SHIFT, sm_state->dir_cfg );
    remove_proc_entry( PROC_DIR_CFG_NAME,   sm_state->dir_root );
    remove_proc_entry( PROC_DIR_ALLOC_NAME, sm_state->dir_root );
+   remove_proc_entry( PROC_DEBUG,          sm_state->dir_root );
    remove_proc_entry( PROC_STATE,          sm_state->dir_root );
    remove_proc_entry( PROC_STATS,          sm_state->dir_root );
    remove_proc_entry( PROC_DIR_ROOT_NAME,  NULL );

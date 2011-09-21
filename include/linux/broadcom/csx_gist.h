@@ -23,10 +23,6 @@
 #if !defined( CSX_GIST_H )
 #define CSX_GIST_H
 
-/* ---- Include Files ---------------------------------------------------- */
-#include <linux/broadcom/csx.h>
-#include <linux/broadcom/gist.h>
-
 /* ---- Constants and Types ---------------------------------------------- */
 
 typedef int CSX_GIST_HDL;

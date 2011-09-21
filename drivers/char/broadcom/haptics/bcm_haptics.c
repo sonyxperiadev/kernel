@@ -28,6 +28,7 @@
 #include <linux/err.h>
 #include <linux/timer.h>
 #include <linux/broadcom/bcm_haptics.h>
+#include <linux/broadcom/amxr.h>
 #include <linux/broadcom/amxr_port.h>
 #include "../../../staging/android/timed_output.h"
 

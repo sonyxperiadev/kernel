@@ -857,6 +857,7 @@ static noinline int init_post(void)
 	run_init_process("/sbin/init");
 	run_init_process("/etc/init");
 	run_init_process("/bin/init");
+	run_init_process("/bin/systemd");
 	run_init_process("/bin/sh");
 
 	panic("No init found.  Try passing init= option to kernel. "

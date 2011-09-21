@@ -4,8 +4,6 @@ All rights reserved.
 
 Project  :  vcfw
 Module   :  vcos
-File     :  $RCSfile: $
-Revision :  $Revision: $
 
 FILE DESCRIPTION
 Categorized logging for VCOS - a generic implementation.

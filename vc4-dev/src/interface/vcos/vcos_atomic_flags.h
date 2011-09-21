@@ -4,8 +4,6 @@ All rights reserved.
 
 Project  :  vcfw
 Module   :  chip driver (just for consistency with the rest of vcos ;)
-File     :  $RCSfile: $
-Revision :  $Revision: $
 
 FILE DESCRIPTION
 VideoCore OS Abstraction Layer - public header file

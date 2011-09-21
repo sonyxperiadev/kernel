@@ -19,13 +19,6 @@
 #if !defined( AMXR_PORTS_H )
 #define AMXR_PORTS_H
 
-/* ---- Include Files ---------------------------------------------------- */
-#if defined( __KERNEL__ )
-#include <linux/broadcom/amxr.h>
-#else
-#include <amxr.h>
-#endif
-
 /* ---- Constants and Types ---------------------------------------------- */
 
 /* MakeDefs: Off */
