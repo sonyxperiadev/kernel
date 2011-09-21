@@ -89,7 +89,7 @@ static DEVICE_ATTR(phy_shutdown, S_IWUSR, NULL, do_phy_shutdown);
 
 int bcm_hsotgctrl_phy_init(void)
 {
-	int rc;
+	int rc=0;
 	int val;
 	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
 
@@ -147,6 +147,7 @@ int bcm_hsotgctrl_phy_init(void)
 			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT2_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_REG_OTGSTAT1_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_OTGSTAT_CTRL_MASK |
+			HSOTG_CTRL_USBOTGCONTROL_UTMIOTG_IDDIG_SW_MASK | //Come up as device until we check PMU ID status to avoid turning on Vbus before checking
 			HSOTG_CTRL_USBOTGCONTROL_USB_HCLK_EN_DIRECT_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_USB_ON_IS_HCLK_EN_MASK |
 			HSOTG_CTRL_USBOTGCONTROL_USB_ON_MASK |
