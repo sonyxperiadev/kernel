@@ -3688,6 +3688,7 @@ Result_t csl_caph_hwctrl_ResumePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 /****************************************************************************
 *
 *  Function Name: Result_t csl_caph_hwctrl_SetSinkGain(CSL_CAPH_PathID pathID, 
+*                                                       CSL_CAPH_DEVICE_e dev,
 *                                                       UInt16 gainL,
 *                                                       UInt16 gainR)
 *
@@ -3712,18 +3713,19 @@ Result_t csl_caph_hwctrl_ResumePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 *
 ****************************************************************************/
 void csl_caph_hwctrl_SetSinkGain(CSL_CAPH_PathID pathID, 
+                                      CSL_CAPH_DEVICE_e dev,
                                       UInt16 gainL,
                                       UInt16 gainR)
 {
 
     // No HW gain control on the Speaker path. But
     // Mixer output gain can be used for volume control.	
-    CSL_CAPH_HWConfig_Table_t *path;
+//    CSL_CAPH_HWConfig_Table_t *path;
     csl_caph_Mixer_GainMapping_t mixGainL, mixGainR;
     CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
 
-	if (!pathID) return;
-	path = &HWConfig_Table[pathID-1];
+//	if (!pathID) return;
+//	path = &HWConfig_Table[pathID-1];
     memset(&mixGainL, 0, sizeof(csl_caph_Mixer_GainMapping_t));
     memset(&mixGainR, 0, sizeof(csl_caph_Mixer_GainMapping_t));
     memset(&mixGain, 0, sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
@@ -3731,33 +3733,42 @@ void csl_caph_hwctrl_SetSinkGain(CSL_CAPH_PathID pathID,
     mixGainL = csl_caph_gain_GetMixerGain((Int16)gainL);
     mixGainR = csl_caph_gain_GetMixerGain((Int16)gainR);
 
-    if ((path->srcmRoute[0].outChnl == CSL_CAPH_SRCM_STEREO_CH1_L)
-        ||(path->srcmRoute[0].outChnl == CSL_CAPH_SRCM_STEREO_CH1)
-        ||(path->srcmRoute[0].outChnl == CSL_CAPH_SRCM_STEREO_CH2_L))
+    if (dev == CSL_CAPH_DEV_EP)
     {
-        csl_caph_srcmixer_set_mixoutgain(path->srcmRoute[0].outChnl, 
-                                     mixGainL.mixerOutputFineGain&0x1FFF);
+		csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_STEREO_CH2_L, 
+								 mixGainL.mixerOutputFineGain&0x1FFF);
     }
-    if ((path->srcmRoute[0].outChnl == CSL_CAPH_SRCM_STEREO_CH1_R)
-        ||(path->srcmRoute[0].outChnl == CSL_CAPH_SRCM_STEREO_CH1)
-        ||(path->srcmRoute[0].outChnl == CSL_CAPH_SRCM_STEREO_CH2_R))
-    {
-        csl_caph_srcmixer_set_mixoutgain(path->srcmRoute[0].outChnl, 
-                                     mixGainR.mixerOutputFineGain&0x1FFF);
-    }
-    //Save the mixer gain information.
-    //So that it can be picked up by the
-    //next call of csl_caph_hwctrl_EnablePath().
-    //This is to overcome the problem that
-    //_SetSinkGain() is called before _EnablePath() 
-    mixGain.mixOutGainL = mixGainL.mixerOutputFineGain&0x1FFF;
-    mixGain.mixOutGainR = mixGainR.mixerOutputFineGain&0x1FFF;
-    csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(
-                                         pathID, 
-                                         mixGain);
-    csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(
-                                         pathID, 
-                                         mixGain);
+	else
+	if (dev == CSL_CAPH_DEV_IHF)
+	{
+		csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_STEREO_CH2_R,
+							 mixGainL.mixerOutputFineGain&0x1FFF);
+	    //for the case of Stereo_IHF
+		csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_STEREO_CH2_L, 
+								 mixGainL.mixerOutputFineGain&0x1FFF);
+	}
+	else
+	if (dev == CSL_CAPH_DEV_HS)
+	{
+		csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_STEREO_CH1, 
+							 mixGainL.mixerOutputFineGain&0x1FFF);
+	}
+
+	//I think the following can be deleted?
+
+	//Save the mixer gain information.
+	//So that it can be picked up by the
+	//next call of csl_caph_hwctrl_EnablePath().
+	//This is to overcome the problem that
+	//_SetSinkGain() is called before _EnablePath() 
+	mixGain.mixOutGainL = mixGainL.mixerOutputFineGain&0x1FFF;
+	mixGain.mixOutGainR = mixGainR.mixerOutputFineGain&0x1FFF;
+	csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainL(
+										 pathID, 
+										 mixGain);
+	csl_caph_hwctrl_SetPathRouteConfigMixerOutputFineGainR(
+										 pathID, 
+										 mixGain);
     return;
 }
 
@@ -3844,18 +3855,18 @@ void csl_caph_hwctrl_SetSourceGain(CSL_CAPH_PathID pathID,
 
 /****************************************************************************
 *
-*  Function Name: Result_t csl_caph_hwctrl_MuteSink(CSL_CAPH_PathID pathID)
+*  Function Name: Result_t csl_caph_hwctrl_MuteSink(CSL_CAPH_PathID pathID, CSL_CAPH_DEVICE_e dev)
 *
 *  Description: Mute sink
 *
 ****************************************************************************/
-void csl_caph_hwctrl_MuteSink(CSL_CAPH_PathID pathID)
+void csl_caph_hwctrl_MuteSink(CSL_CAPH_PathID pathID_not_use, CSL_CAPH_DEVICE_e dev)
 {
-    CSL_CAPH_HWConfig_Table_t *path;
-	if (!pathID) return;
-	path = &HWConfig_Table[pathID-1];
+    //CSL_CAPH_HWConfig_Table_t *path;
+	//if (!pathID) return;
+	//path = &HWConfig_Table[pathID-1];
 
-    switch(path->sink)
+    switch(dev)
     {
 	case CSL_CAPH_DEV_EP:
 	    csl_caph_audioh_mute(AUDDRV_PATH_EARPICEC_OUTPUT, 1);
@@ -3873,7 +3884,7 @@ void csl_caph_hwctrl_MuteSink(CSL_CAPH_PathID pathID)
 	    // Need to study what to put here!!! 
 	    break;	    
 	default:
-      	    audio_xassert(0, path->sink );
+      	break;
     }
     return;
 }
@@ -3929,18 +3940,18 @@ void csl_caph_hwctrl_MuteSource(CSL_CAPH_PathID pathID)
 
 /****************************************************************************
 *
-*  Function Name: Result_t csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID)
+*  Function Name: Result_t csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID, CSL_CAPH_DEVICE_e dev)
 *
 *  Description: Unmute sink
 *
 ****************************************************************************/
-void csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID)
+void csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID_not_use, CSL_CAPH_DEVICE_e dev)
 {
-    CSL_CAPH_HWConfig_Table_t *path;
-	if (!pathID) return;
-	path = &HWConfig_Table[pathID-1];
+    //CSL_CAPH_HWConfig_Table_t *path;
+	//if (!pathID) return;
+	//path = &HWConfig_Table[pathID-1];
 
-    switch(path->sink)
+    switch(dev)
     {
 	case CSL_CAPH_DEV_EP:
 	    csl_caph_audioh_mute(AUDDRV_PATH_EARPICEC_OUTPUT, 0);
@@ -3958,7 +3969,7 @@ void csl_caph_hwctrl_UnmuteSink(CSL_CAPH_PathID pathID)
 	    // Need to study what to put here!!! 
 	    break;	    
 	default:
-      	    audio_xassert(0, path->sink );
+		break;
     }
     return;	
 }
@@ -4418,13 +4429,12 @@ void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID, CSL_CAPH_HW_GAIN_e hw, UI
     CSL_CAPH_HWConfig_Table_t *path = NULL;
     CSL_CAPH_SRCM_MIX_GAIN_t mixGain;
     csl_caph_Mixer_GainMapping_t outGain;
-    csl_caph_Mixer_GainMapping2_t outGain2;
+    unsigned long mixer_out_bitsel=0; //bit_select
 	CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl = CSL_CAPH_SRCM_CH_NONE; 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_SetHW. hwgain = %d\r\n", hw));
 
     memset(&mixGain, 0, sizeof(CSL_CAPH_SRCM_MIX_GAIN_t));
     memset(&outGain, 0, sizeof(csl_caph_Mixer_GainMapping_t));
-    memset(&outGain2, 0, sizeof(csl_caph_Mixer_GainMapping2_t));
 
     if ((hw == CSL_CAPH_AMIC_PGA_GAIN)
 		||(hw == CSL_CAPH_AMIC_DGA_COARSE_GAIN)
@@ -4569,17 +4579,16 @@ void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID, CSL_CAPH_HW_GAIN_e hw, UI
 				break;
 		case CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L:
 		case CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R:
-            outGain2 = csl_caph_gain_GetMixerOutputCoarseGain((Int16)gain);
-			csl_caph_srcmixer_set_mixoutcoarsegain(outChnl, 
-                                           outGain2.mixerOutputCoarseGain);
+            mixer_out_bitsel = csl_caph_gain_GetMixerOutputCoarseGain((Int16)gain);
+			csl_caph_srcmixer_set_mixoutcoarsegain(outChnl, mixer_out_bitsel);
             //Save the mixer gain information.
             //So that it can be picked up by the
             //next call of csl_caph_hwctrl_EnablePath().
             //This is to overcome the situation in music playback that
             //_SetHWGain() is called before Render Driver calls
             //_EnablePath() 
-            mixGain.mixOutCoarseGainL = outGain2.mixerOutputCoarseGain&0x7;
-            mixGain.mixOutCoarseGainR = outGain2.mixerOutputCoarseGain&0x7;
+            mixGain.mixOutCoarseGainL = (mixer_out_bitsel & 0x7);
+            mixGain.mixOutCoarseGainR = (mixer_out_bitsel & 0x7);
             if (hw == CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L) 
     	        csl_caph_hwctrl_SetPathRouteConfigMixerOutputCoarseGainL(pathID, mixGain);
             else if (hw == CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R) 

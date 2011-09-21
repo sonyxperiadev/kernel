@@ -581,6 +581,10 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 
 			BCM_AUDIO_DEBUG("SwitchCtrlPut stream state = %d\n",pStream->runtime->status->state);
 
+			BCM_AUDIO_DEBUG("SwitchCtrlPut hw_id = %d\n",pChip->streamCtl[stream-1].dev_prop.p[0].hw_id);
+			BCM_AUDIO_DEBUG("SwitchCtrlPut speaker = %d\n",pChip->streamCtl[stream-1].dev_prop.p[0].speaker);
+			BCM_AUDIO_DEBUG("SwitchCtrlPut pMute[0] = %d\n",pMute[0]);
+
 			if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
 			{
 				//call audio driver to set mute
@@ -591,12 +595,7 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 			}			
 		}
 			break;
-		case CTL_STREAM_PANEL_VOICECALL:
-		{
-			BCM_AUDIO_DEBUG("Unexpected SwitchCtrlPut caling AUDCTRL_SetPlayMute pMute[0] =%ld, pMute[1]=%ld\n", pMute[0],pMute[1]);
 
-		}
-		break;
 		case CTL_STREAM_PANEL_PCMIN:
 		{
 			if(pChip->streamCtl[stream-1].pSubStream != NULL)

@@ -623,21 +623,6 @@ void AUDCTRL_SetRecordGain(
 				UInt32					gainR
 				);
 
-/**
-*  @brief  Set Tap gain (only wideband)
-*
-*  @param  src	(in)  
-*  @param  spr	(in)  speaker selection
-*  @param  gain	(in)  
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetTapGain(
-				AUDIO_HW_ID_t			tap,
-				UInt32					gain
-				);
-
 
 /**
 *  @brief  Set Mixing gain in DSP/HW

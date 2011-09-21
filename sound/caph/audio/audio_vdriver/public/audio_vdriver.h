@@ -391,16 +391,6 @@ Int16 AUDDRV_GetDSPULGain(CSL_CAPH_DEVICE_e mic, Int16 gain);
 *
 *  @param  CSL_CAPH_DEVICE_e (in) Driver speaker selection
 *
-*  @return DSP gain in dB in Q1.14
-*****************************************************************************/
-Int16 AUDDRV_GetDSPDLGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain);
-
-/**
-*
-*  @brief  Get the DSP DL gain
-*
-*  @param  CSL_CAPH_DEVICE_e (in) Driver speaker selection
-*
 *  @return DSP gain in mdB in Q15
 *****************************************************************************/
 Int16 AUDDRV_GetDSPDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
@@ -452,17 +442,6 @@ UInt16 AUDDRV_GetMixerOutputCoarseGain(Int16 gain);
 *  @return HW gain
 *****************************************************************************/
 Int16 AUDDRV_GetHWDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
-
-/**
-*
-*  @brief  Get the HW DL gain
-*
-*  @param  spkr (in) Driver speaker selection
-*  @param  gain (in) Gain in Q1.14 
-*
-*  @return HW gain
-*****************************************************************************/
-Int16 AUDDRV_GetHWDLGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain);
 
 
 /**

@@ -90,13 +90,6 @@ typedef struct csl_caph_Mixer_GainMapping_t
 	UInt16 mixerOutputFineGain;  // Bit12:0, Output Fine Gain
 }csl_caph_Mixer_GainMapping_t;
 
-typedef struct csl_caph_Mixer_GainMapping2_t
-{
-	Int16 hwGain; // dB in Q13.2
-	UInt16 mixerOutputCoarseGain;  // Bit2:0, Output Coarse Gain
-}csl_caph_Mixer_GainMapping2_t;
-
-
 /**
 *
 *  @brief  read the mic pah gains.
@@ -170,7 +163,7 @@ csl_caph_Mixer_GainMapping_t csl_caph_gain_GetMixerGain(Int16 gain);
 *  		output coarse gain.
 *****************************************************************************/
 
-csl_caph_Mixer_GainMapping2_t csl_caph_gain_GetMixerOutputCoarseGain(Int16 gain);
+unsigned long csl_caph_gain_GetMixerOutputCoarseGain(Int16 gain_quarterDB);
 
 #endif // _CSL_CAPH_GAIN_H_
 

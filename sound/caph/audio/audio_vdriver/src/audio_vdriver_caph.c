@@ -314,11 +314,7 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 void AUDDRV_Telephony_MuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 					void *pData)
 {
-    CSL_CAPH_PathID pathID = 0;
-	pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
-    speaker = speaker; //speaker is not currently used.
-    (void)csl_caph_hwctrl_MuteSink(pathID);
-    return;
+    audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkMute, 0, 0, 0, 0, 0);
 }
 
 
@@ -333,13 +329,8 @@ void AUDDRV_Telephony_MuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 void AUDDRV_Telephony_UnmuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 					void *pData)
 {
-    CSL_CAPH_PathID pathID = 0;
-	pathID = ((AUDDRV_PathID_t *)pData)->dlPathID;
-    speaker = speaker; //speaker is not currently used.
-    (void)csl_caph_hwctrl_UnmuteSink(pathID);
-    return;
+    audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkUnmute, 0, 0, 0, 0, 0);
 }
-
 
 
 
@@ -354,11 +345,7 @@ void AUDDRV_Telephony_UnmuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 void AUDDRV_Telephony_MuteMic (AUDDRV_MIC_Enum_t mic,
 					void *pData)
 {
-	CSL_CAPH_PathID pathID = 0;
-	pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
-    mic = mic; //mic is not currently used.
-    (void)csl_caph_hwctrl_MuteSource(pathID);
-    return;
+	audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 }
 
 
@@ -373,11 +360,7 @@ void AUDDRV_Telephony_MuteMic (AUDDRV_MIC_Enum_t mic,
 void AUDDRV_Telephony_UnmuteMic (AUDDRV_MIC_Enum_t mic,
 					void *pData)
 {
-    CSL_CAPH_PathID pathID = 0;
-	pathID = ((AUDDRV_PathID_t *)pData)->ulPathID;
-    mic = mic; //mic is not currently used.
-    (void)csl_caph_hwctrl_UnmuteSource(pathID);
-    return;
+	audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
 }
 
 
@@ -1372,60 +1355,6 @@ Int16 AUDDRV_GetDSPULGain(CSL_CAPH_DEVICE_e mic, Int16 gain)
     return outGain.micDSPULGain;
 }
 
-/****************************************************************************
-*
-*  Function Name: Int16 AUDDRV_GetDSPDLGain_Q1_14(
-*                                         CSL_CAPH_DEVICE_e mic, Int16 gain)
-*
-*  Description: read the DSP DL gain in dB in Q1.14
-*
-****************************************************************************/
-Int16 AUDDRV_GetDSPDLGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
-{
-    csl_caph_Spkr_Gain_t outGain;
-    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
-
-    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
-
-    switch (spkr)
-    {
-	    case CSL_CAPH_DEV_EP:
-		    cslSpkr = SPKR_EP_DSP;
-		    break;
-	    
-	    case CSL_CAPH_DEV_HS:
-	    case CSL_CAPH_DEV_IHF:
-		    cslSpkr = SPKR_IHF_HS_DSP;
-		    break;
-
-
-	    case CSL_CAPH_DEV_BT_SPKR:
-		    // For Bluetooth, it is yet
-		    // to decide whether DSP DL gain is 
-		    // needed or not.
-		    cslSpkr = SPKR_EP_DSP;
-		    break;
-
-	    case CSL_CAPH_DEV_MEMORY:
-		    // This is for USB headset. It is
-		    // to decide whether DSP DL gain is 
-		    // needed or not.
-		    cslSpkr = SPKR_EP_DSP;
-		    break;
-		    
-	    default:
-		    // For all others, just use
-		    // DSP DL gain as Earpiece.
-		    cslSpkr = SPKR_EP_DSP;
-		    break;
-
-    }
-
-    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetDSPDLGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain);
-    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
-    return outGain.spkrDSPDLGain;
-}
-
 
 /****************************************************************************
 *
@@ -1536,65 +1465,6 @@ Int16 AUDDRV_GetHWDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain)
 }
 
 
-
-/****************************************************************************
-*
-*  Function Name: Int16 AUDDRV_GetHWDLGain_Q1_14(
-*                                         CSL_CAPH_DEVICE_e mic, Int16 gain)
-*
-*  Description: read the HW DL gain in dB in Q1.14
-*
-****************************************************************************/
-Int16 AUDDRV_GetHWDLGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
-{
-    csl_caph_Spkr_Gain_t outGain;
-    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
-
-    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
-
-    switch (spkr)
-    {
-	    case CSL_CAPH_DEV_EP:
-		    cslSpkr = SPKR_EP;
-		    break;
-	    
-	    case CSL_CAPH_DEV_IHF:
-		    cslSpkr = SPKR_IHF;
-		    break;
-
-		case CSL_CAPH_DEV_HS:
-			cslSpkr = SPKR_HS;
-		    break;
-
-	    case CSL_CAPH_DEV_BT_SPKR:
-		    // For Bluetooth, it is yet
-		    // to decide whether DSP DL gain is 
-		    // needed or not.
-		    cslSpkr = SPKR_EP;
-		    break;
-
-	    case CSL_CAPH_DEV_MEMORY:
-		    // This is for USB headset. It is
-		    // to decide whether DSP DL gain is 
-		    // needed or not.
-		    cslSpkr = SPKR_EP;
-		    break;
-		    
-	    default:
-		    // For all others, just use
-		    // DSP DL gain as Earpiece.
-		    cslSpkr = SPKR_EP;
-		    break;
-
-    }
-
-    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetHWDLGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain);
-    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
-    return outGain.spkrHWGain;
-}
-
-
-
 /****************************************************************************
 *
 *  Function Name: UInt16 AUDDRV_GetMixerInputGain(Int16 gain)
@@ -1636,9 +1506,7 @@ UInt16 AUDDRV_GetMixerOutputFineGain(Int16 gain)
 ****************************************************************************/
 UInt16 AUDDRV_GetMixerOutputCoarseGain(Int16 gain)
 {
-    csl_caph_Mixer_GainMapping2_t outGain;
-    outGain = csl_caph_gain_GetMixerOutputCoarseGain(gain);
-    return outGain.mixerOutputCoarseGain;
+    return (UInt16) csl_caph_gain_GetMixerOutputCoarseGain(gain);
 }
 
 /****************************************************************************

@@ -96,6 +96,59 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 //	pChip -- Pointer to chip data structure
 //   ParamCount -- Count of parameter array
 //	Params  --- P1,P2,...,P6
+//
+/**
+typedef enum AUDCTRL_SPEAKER_t
+{
+	AUDCTRL_SPK_HANDSET,
+	AUDCTRL_SPK_HEADSET,
+	AUDCTRL_SPK_HANDSFREE,
+	AUDCTRL_SPK_BTM,  //Bluetooth HFP
+	AUDCTRL_SPK_LOUDSPK,
+	AUDCTRL_SPK_TTY,
+	AUDCTRL_SPK_HAC,	
+	AUDCTRL_SPK_USB,
+	AUDCTRL_SPK_BTS,  //Bluetooth A2DP
+	AUDCTRL_SPK_I2S,
+	AUDCTRL_SPK_VIBRA,
+	AUDCTRL_SPK_UNDEFINED,
+	AUDCTRL_SPK_TOTAL_COUNT
+} AUDCTRL_SPEAKER_t;
+
+typedef enum AUDCTRL_MIC_Enum_t
+{
+	AUDCTRL_MIC_UNDEFINED,
+	AUDCTRL_MIC_MAIN,
+	AUDCTRL_MIC_AUX,
+	AUDCTRL_MIC_DIGI1,
+	AUDCTRL_MIC_DIGI2,
+	AUDCTRL_DUAL_MIC_DIGI12,
+	AUDCTRL_DUAL_MIC_DIGI21,
+	AUDCTRL_DUAL_MIC_ANALOG_DIGI1,
+	AUDCTRL_DUAL_MIC_DIGI1_ANALOG,
+	AUDCTRL_MIC_BTM,  //Bluetooth Mono Headset Mic
+	//AUDCTRL_MIC_BTS,	//not exist
+	AUDCTRL_MIC_USB,  //USB headset Mic
+	AUDCTRL_MIC_I2S,
+	AUDCTRL_MIC_DIGI3, //Only for loopback path
+	AUDCTRL_MIC_DIGI4, //Only for loopback path
+	AUDCTRL_MIC_SPEECH_DIGI, //Digital Mic1/Mic2 in recording/Normal Quality Voice call.
+	AUDCTRL_MIC_EANC_DIGI, //Digital Mic1/2/3/4 for Supreme Quality Voice Call.
+	AUDCTRL_MIC_NOISE_CANCEL, //Mic for noise cancellation. Used in Dual mic case.
+	AUDCTRL_MIC_TOTAL_COUNT
+} AUDCTRL_MIC_Enum_t;
+
+loopback:
+at*maudmode=11, 1, 0  //HANDSET
+at*maudmode=12  //disable loopback
+
+at*maudmode=11, 1, 4  //main mic to IHF
+at*maudmode=12
+
+at*maudmode=11,2,1  //headset
+at*maudmode=12
+
+**/
 //---------------------------------------------------------------------------
 int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
@@ -298,6 +351,46 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
     switch(Params[0])//P1
     {
+
+		case 25:
+			AUDCTRL_SetPlayVolume(
+                      AUDIO_HW_NONE,
+                      Params[1],  //	  //speaker channel
+                      AUDIO_GAIN_FORMAT_Q13_2,
+					  Params[2],  //left volume
+                      Params[3]  //right volume
+				);
+		
+            BCM_AUDIO_DEBUG( "Set speaker volume left %d right %d \n", Params[2], Params[3] );
+			return 0;
+			
+		
+		//! typedef enum AUDCTRL_SPEAKER_t {
+		//!	AUDCTRL_SPK_HANDSET,
+		//!	AUDCTRL_SPK_HEADSET,
+		//!	AUDCTRL_SPK_HANDSFREE,
+		//!	AUDCTRL_SPK_BTM,  //Bluetooth HFP
+		//!	AUDCTRL_SPK_LOUDSPK,
+		//!	AUDCTRL_SPK_TTY,
+		//!	AUDCTRL_SPK_HAC,	
+		//!	AUDCTRL_SPK_USB,
+		//!	AUDCTRL_SPK_BTS,  //Bluetooth A2DP
+		//!	AUDCTRL_SPK_I2S,
+		//!	AUDCTRL_SPK_VIBRA,
+		//! -------------------------------------------------------------------------------------
+		case 26:
+			AUDCTRL_SetPlayMute( AUDIO_HW_NONE,
+				     Params[1],  //speaker channel
+				     Params[2]  // mute flag   1 - mute   0 - un-mute
+                     );				     
+
+			if( Params[2] ==0)
+				BCM_AUDIO_DEBUG( "Set speaker un-mute \n" );
+			else
+				BCM_AUDIO_DEBUG( "Set speaker mute \n" );
+
+			return 0;
+
 
         case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
             if (Params[1] == 0) // EXT_SPEAKER_PGA
