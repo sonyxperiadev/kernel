@@ -195,6 +195,10 @@ struct pcm_ch_cfg
    /* Mixer facilities */
    AMXR_PORT_ID         mixer_port;       /* Mixer port handle for channel */
 
+   /* Equalizer history */
+   short halDacFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+   short halAdcFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+
    /* CSX data */
    struct pcm_csx_data  csx_data[HALAUDIO_NUM_CSX_POINTS]; /* Array of CSX data structures */
 };
@@ -233,9 +237,6 @@ struct pcm_sspi_hw_core_t
 #endif
 
 /* ---- Private Variables ------------------------------------ */
-
-static short halDacFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
-static short halAdcFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 
 static HALAUDIO_PCM_PLATFORM_INFO gPcmPlatformInfo;
 
@@ -1740,7 +1741,7 @@ static void pcmDmaIngressHandler(
    /* put through software equalizer */
    if ( ch->equ_igr.len )
    {
-      halAudioEquProcess( ch->igrdatap, ch->equ_igr.coeffs, halAdcFiltHist,
+      halAudioEquProcess( ch->igrdatap, ch->equ_igr.coeffs, ch->halAdcFiltHist,
             ch->equ_igr.len, ch->frame_size/2 /* 16-bit samples */ );
    }
 
@@ -1851,7 +1852,7 @@ static void pcmDmaEgressDoTransfer(
    /* put through software equalizer */
    if ( ch->equ_egr.len )
    {
-      halAudioEquProcess( ch->egrdatap, ch->equ_egr.coeffs, halDacFiltHist,
+      halAudioEquProcess( ch->egrdatap, ch->equ_egr.coeffs, ch->halDacFiltHist,
             ch->equ_egr.len, ch->frame_size/2 /* 16-bit samples */ );
    }
 

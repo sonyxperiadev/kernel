@@ -501,6 +501,8 @@ struct audioh_ch_cfg
    struct audioh_sidetone        sidetone;      /* Active sidetone settings */
    int16_t                       dig_gain;      /* Digital gain in dB per codec channel */
 
+   short                         halAudioFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+
    /* Write state */
    HALAUDIO_WRITE                write;         /* Write state */
 
@@ -594,9 +596,6 @@ static spinlock_t gGainLock;     /* acquired when adjusting gains */
 
 /* Proc entry buffer */
 int16_t gProcbuf_active[AUDIOH_MAX_DMA_BUF_SIZE_BYTES];
-
-static short gIgrHalFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
-static short gEgrHalFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 
 const static struct freq_map_array gAudiohFreqMap[AUDIOH_MAX_NUM_CHANS] =
 {
@@ -1666,7 +1665,7 @@ static void audiohDmaIngressHandler(
 
          if( ch->equ.len )
          {
-            halAudioEquProcess( (int16_t *)ingressp, ch->equ.coeffs, gIgrHalFiltHist,
+            halAudioEquProcess( (int16_t *)ingressp, ch->equ.coeffs, ch->halAudioFiltHist,
                   ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
          }
 
@@ -1794,7 +1793,7 @@ static void audiohDmaEgressHandler(
 
          if( ch->equ.len )
          {
-            halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, gEgrHalFiltHist,
+            halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, ch->halAudioFiltHist,
                   ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
          }
 
