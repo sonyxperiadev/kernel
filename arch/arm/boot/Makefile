@@ -12,6 +12,7 @@
 #
 
 MKIMAGE         := $(srctree)/scripts/mkuboot.sh
+MKDTB           := $(srctree)/scripts/mkdtb.sh
 
 ifneq ($(MACHINE),)
 include $(srctree)/$(MACHINE)/Makefile.boot
@@ -27,7 +28,16 @@ INITRD_PHYS := $(initrd_phys-y)
 
 export ZRELADDR INITRD_PHYS PARAMS_PHYS
 
-targets := Image zImage xipImage bootpImage uImage
+targets := Image zImage xipImage bootpImage uImage dt-blob
+
+$(obj)/dt-blob:
+ifeq ($(CONFIG_KONA_ATAG_DT),y)
+	$(CONFIG_SHELL) $(MKDTB) $(srctree)/arch/arm/boot/dts/$(CONFIG_KONA_ATAG_DT_DTS_FILE).dts \
+				$(srctree)/arch/arm/boot/$(CONFIG_KONA_ATAG_DT_DTS_FILE).dtb
+	@echo '  dt-blob is ready.'
+else
+	@echo '  dt-blob is not needed'
+endif
 
 ifeq ($(CONFIG_XIP_KERNEL),y)
 
