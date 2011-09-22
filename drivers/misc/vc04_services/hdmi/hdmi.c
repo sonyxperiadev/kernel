@@ -96,7 +96,7 @@ static struct cdev hdmi_cdev;
 /* hdmi channel information */
 static struct hdmi_info gHDMI[1] = {{0}};
 
-static spinlock_t detlock = SPIN_LOCK_UNLOCKED;
+static spinlock_t detlock = __SPIN_LOCK_UNLOCKED(detlock);
 
 /* ---- Private Function Prototypes -------------------------------------- */
 static int  hdmi_open( struct inode *inode, struct file *file );
