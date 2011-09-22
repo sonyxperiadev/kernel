@@ -35,4 +35,4 @@
 #	deleted by them:    sound/caph/soc/chal/modules/audio/caph/GNUmakefile
 #	deleted by them:    sound/caph/soc/chal/modules/audio/caph/common.mk
 #	both modified:      sound/caph/soc/csl/audio/src/csl_caph_hwctrl.c
-#	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_core.c
+#	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_core.c (Edmund Szeto)
