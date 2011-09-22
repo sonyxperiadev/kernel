@@ -151,5 +151,11 @@ config KONA_ATAG_DT
        help
          Say Y if you want to enable ATAG-based DeviceTree
 
+config KONA_ATAG_DT_DTS_FILE
+       string "DTS file name"
+       depends on KONA_ATAG_DT
+       help
+         DeviceTree source file name
+
 endmenu
 
