@@ -33,7 +33,7 @@
 /* The maximum number of input samples that can be processed by 
  * the software equalizer at one time.
  */
-#define HALAUDIO_SWEQU_MAX_SAMPLES     160
+#define HALAUDIO_SWEQU_MAX_SAMPLES     240
 
 typedef struct halaudio_sinectl
 {

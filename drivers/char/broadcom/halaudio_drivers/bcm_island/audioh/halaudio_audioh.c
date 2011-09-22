@@ -501,7 +501,7 @@ struct audioh_ch_cfg
    struct audioh_sidetone        sidetone;      /* Active sidetone settings */
    int16_t                       dig_gain;      /* Digital gain in dB per codec channel */
 
-   short                         halAudioFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+   int16_t                       halAudioFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 
    /* Write state */
    HALAUDIO_WRITE                write;         /* Write state */
@@ -3504,6 +3504,19 @@ static int audiohEquParmSet(
 
    if( ch->ch_dir == AUDIOH_CH_DIR_EGRESS && dir != HALAUDIO_DIR_DAC )
    {
+      return -EINVAL;
+   }
+
+   /* Check lengths */
+   if ( ch->frame_size/AUDIOH_SAMP_WIDTH > HALAUDIO_SWEQU_MAX_SAMPLES )
+   {
+      printk( KERN_ERR "%s Max frame size exceeded for equalizer\n", __FUNCTION__ );
+      return -EINVAL;
+   }
+
+   if ( equ->len > HALAUDIO_EQU_COEFS_MAX_NUM )
+   {
+      printk( KERN_ERR "%s Max number of coefficients exceeded for equalizer\n", __FUNCTION__ );
       return -EINVAL;
    }
 

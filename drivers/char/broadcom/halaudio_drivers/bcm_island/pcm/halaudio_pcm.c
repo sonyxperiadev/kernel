@@ -196,8 +196,8 @@ struct pcm_ch_cfg
    AMXR_PORT_ID         mixer_port;       /* Mixer port handle for channel */
 
    /* Equalizer history */
-   short halDacFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
-   short halAdcFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+   uint16_t halDacFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+   uint16_t halAdcFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 
    /* CSX data */
    struct pcm_csx_data  csx_data[HALAUDIO_NUM_CSX_POINTS]; /* Array of CSX data structures */
@@ -1115,6 +1115,19 @@ static int pcmEquParmSet(
 
    ch = &gPcm.ch[chno];
 
+   /* Check lengths */
+   if ( ch->frame_size/PCM_DEFAULT_SAMP_WIDTH > HALAUDIO_SWEQU_MAX_SAMPLES )
+   {
+      printk( KERN_ERR "%s Max frame size exceeded for equalizer\n", __FUNCTION__ );
+      return -EINVAL;
+   }
+
+   if ( equ->len > HALAUDIO_EQU_COEFS_MAX_NUM )
+   {
+      printk( KERN_ERR "%s Max number of coefficients exceeded for equalizer\n", __FUNCTION__ );
+      return -EINVAL;
+   }
+
    if ( dir == HALAUDIO_DIR_ADC )
    {
       saved_equ   = &ch->equ_igr;
@@ -1853,7 +1866,7 @@ static void pcmDmaEgressDoTransfer(
    if ( ch->equ_egr.len )
    {
       halAudioEquProcess( ch->egrdatap, ch->equ_egr.coeffs, ch->halDacFiltHist,
-            ch->equ_egr.len, ch->frame_size/2 /* 16-bit samples */ );
+            ch->equ_egr.len, ch->frame_size/PCM_DEFAULT_SAMP_WIDTH /* 16-bit samples */ );
    }
 
    /* Write request */
