@@ -18,7 +18,7 @@
 #	both modified:      arch/arm/mach-island/common.c (Sherman Yin)
 #	both modified:      arch/arm/mach-island/configs/bcm11160_tablet_android.target (Sherman Yin)
 #	both modified:      arch/arm/mach-island/configs/bcm28160_tablet_android.target (Sherman Yin)
-#	both modified:      arch/arm/mach-island/configs/linux.config (?)
+#	both modified:      arch/arm/mach-island/configs/linux.config (Jason Wong)
 #	both added:         conflicts.txt (Sherman Yin)
 #	both modified:      drivers/char/broadcom/modem/Makefile (Sherman Yin)
 #	both modified:      drivers/crypto/Kconfig (Sherman Yin)
@@ -27,7 +27,7 @@
 #	both modified:      drivers/net/brcm_netconsole.c (Sherman Yin)
 #	both modified:      drivers/usb/gadget/composite.c (?)
 #	both modified:      drivers/usb/gadget/f_mass_storage.c 
-#	both modified:      drivers/usb/otg/Kconfig (?)
+#	both modified:      drivers/usb/otg/Kconfig (Jason Wong)
 #	both modified:      drivers/usb/otg/Makefile (Sherman Yin)
 #	both modified:      include/linux/usb/ch9.h (Sherman Yin)
 #	both modified:      sound/caph/Island_Makefile (Sherman Yin)

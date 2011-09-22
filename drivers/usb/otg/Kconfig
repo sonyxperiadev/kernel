@@ -94,7 +94,6 @@ config NOP_USB_XCEIV
 	 built-in with usb ip or which are autonomous and doesn't require any
 	 phy programming such as ISP1x04 etc.
 
-<<<<<<< HEAD
 config USB_LANGWELL_OTG
 	tristate "Intel Langwell USB OTG dual-role support"
 	depends on USB && PCI && INTEL_SCU_IPC
@@ -138,15 +137,6 @@ config FSL_USB2_OTG
 	select USB_OTG_UTILS
 	help
 	  Enable this to support Freescale USB OTG transceiver.
-=======
-config USB_BCM_OTG
-       tristate "Broadcom USB Transceiver Driver"
-       depends on MFD_BCM_PMU590XX || MFD_BCMPMU
-       select USB_OTG
-       select USB_OTG_UTILS
-       help
-         Enable this to support Broadcom USB OTG transceiver
->>>>>>> map_integration
 
 config KONA_OTG_CP
 	tristate "Kona OTG Control"
@@ -169,7 +159,7 @@ config MAX3353
 
 config USB_BCM_OTG
        tristate "Broadcom USB Transceiver Driver"
-       depends on MFD_BCM_PMU590XX
+       depends on MFD_BCM_PMU590XX || MFD_BCMPMU
        select USB_OTG
        select USB_OTG_UTILS
        help
