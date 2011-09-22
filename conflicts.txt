@@ -31,8 +31,8 @@
 #	both modified:      drivers/usb/otg/Makefile (Sherman Yin)
 #	both modified:      include/linux/usb/ch9.h (Sherman Yin)
 #	both modified:      sound/caph/Island_Makefile (Sherman Yin)
-#	both modified:      sound/caph/Makefile_orig
-#	deleted by them:    sound/caph/soc/chal/modules/audio/caph/GNUmakefile
-#	deleted by them:    sound/caph/soc/chal/modules/audio/caph/common.mk
-#	both modified:      sound/caph/soc/csl/audio/src/csl_caph_hwctrl.c
+#	both modified:      sound/caph/Makefile_orig (Sherman Yin)
+#	deleted by them:    sound/caph/soc/chal/modules/audio/caph/GNUmakefile (Sherman Yin)
+#	deleted by them:    sound/caph/soc/chal/modules/audio/caph/common.mk (Sherman Yin)
+#	both modified:      sound/caph/soc/csl/audio/src/csl_caph_hwctrl.c (Sherman Yin)
 #	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_core.c (Edmund Szeto)

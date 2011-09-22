@@ -51,13 +51,9 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 #include "osdw_caph_drv.h"
 #ifdef UNDER_LINUX
 #include <mach/io_map.h>
-<<<<<<< HEAD
-#include <linux/clk.h>
-=======
 #include "clock.h"
 #include "clk.h"
 #include "platform_mconfig_rhea.h"
->>>>>>> map_integration
 #endif
 
 //#define CONFIG_VOICE_LOOPBACK_TEST
@@ -1665,20 +1661,11 @@ static void csl_caph_ControlHWClock(Boolean enable)
         clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 #ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
                                 This is a workaround before a solution from clock */
-<<<<<<< HEAD
 
-   #if 0
-    if ( (clkID[0])->use_cnt )
-    {
-        clk_disable(clkID[0]);
-    }
-    #endif
-=======
         if ( clkID[0]->use_cnt )
         {
             clk_disable(clkID[0]);
         }
->>>>>>> map_integration
 #endif
 	    clk_set_rate(clkID[0], 156000000);
         clk_enable(clkID[0]);

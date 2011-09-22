@@ -1,11 +1,6 @@
 #
 # Automatically generated make config: don't edit
-<<<<<<< HEAD
 # Linux/arm 3.0.1 Kernel Configuration
-=======
-# Linux kernel version: 2.6.35.7
-# Thu Sep 22 10:18:47 2011
->>>>>>> map_integration
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -1597,10 +1592,7 @@ CONFIG_USB_SERIAL=y
 # CONFIG_USB_IOWARRIOR is not set
 # CONFIG_USB_TEST is not set
 # CONFIG_USB_ISIGHTFW is not set
-<<<<<<< HEAD
 # CONFIG_USB_YUREX is not set
-=======
->>>>>>> map_integration
 # CONFIG_USB_DUAL_DISK_SUPPORT is not set
 CONFIG_USB_GADGET=y
 CONFIG_USB_GADGET_DEBUG_FILES=y

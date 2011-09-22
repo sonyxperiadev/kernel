@@ -1,11 +1,6 @@
 #
 # Automatically generated make config: don't edit
-<<<<<<< HEAD
 # Linux/arm 3.0.1 Kernel Configuration
-=======
-# Linux kernel version: 2.6.35.7
-# Thu Sep 22 10:18:52 2011
->>>>>>> map_integration
 #
 CONFIG_ARM=y
 CONFIG_HAVE_PWM=y
@@ -267,14 +262,10 @@ CONFIG_MMU=y
 # CONFIG_PLAT_SPEAR is not set
 # CONFIG_ARCH_VT8500 is not set
 CONFIG_ARCH_KONA=y
-<<<<<<< HEAD
 # CONFIG_ARCH_BCM2708 is not set
 CONFIG_BCM_ZRELADDR=0x80208000
 # CONFIG_GPIO_PCA953X is not set
 # CONFIG_KEYBOARD_GPIO_POLLED is not set
-=======
-CONFIG_BCM_ZRELADDR=0x80208000
->>>>>>> map_integration
 
 #
 # Broadcom KONA architecture based implementations
@@ -292,10 +283,7 @@ CONFIG_KONA_DCACHE_INVALIDATION=y
 CONFIG_BCM_PARAMS_PHYS=0x80200000
 CONFIG_BCM_RAM_BASE=0x80000000
 CONFIG_BCM_RAM_START_RESERVED_SIZE=0x200000
-<<<<<<< HEAD
-=======
 CONFIG_BCM_IPC_OFFSET=0x01E00000
->>>>>>> map_integration
 # CONFIG_KONA_CPU_PM_HANDLER is not set
 CONFIG_KONA_POWER_MGR=y
 CONFIG_KONA_PI_MGR=y
@@ -1487,11 +1475,7 @@ CONFIG_USB_DYNAMIC_MINORS=y
 # CONFIG_USB_C67X00_HCD is not set
 CONFIG_USB_EHCI_HCD=y
 CONFIG_USB_EHCI_ROOT_HUB_TT=y
-<<<<<<< HEAD
 CONFIG_USB_EHCI_TT_NEWSCHED=y
-=======
-# CONFIG_USB_EHCI_TT_NEWSCHED is not set
->>>>>>> map_integration
 CONFIG_USB_BCM_ISLAND=y
 CONFIG_USB_EHCI_BCM=y
 # CONFIG_USB_OXU210HP_HCD is not set
@@ -1622,10 +1606,7 @@ CONFIG_USB_SERIAL=y
 # CONFIG_USB_IOWARRIOR is not set
 # CONFIG_USB_TEST is not set
 # CONFIG_USB_ISIGHTFW is not set
-<<<<<<< HEAD
 # CONFIG_USB_YUREX is not set
-=======
->>>>>>> map_integration
 # CONFIG_USB_DUAL_DISK_SUPPORT is not set
 CONFIG_USB_GADGET=y
 CONFIG_USB_GADGET_DEBUG_FILES=y
