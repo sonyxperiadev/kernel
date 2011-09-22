@@ -131,7 +131,7 @@ static	void bcm590xx_rd_cl_dis_intrs( struct bcm590xx *bcm590xx, int set_to_clea
 {
 	unsigned int i = 0;
 	unsigned int temp = 0;
-	printk("inside %s\n", __func__);
+	pr_debug("inside %s\n", __func__);
 	/*Read & clear all interrupts */
 	for (i = 0; i < BCM590XX_MAX_INT_REGS; i++) {
 		temp = bcm590xx_reg_read(bcm590xx, (BCM590XX_INT_REG_BASE + i));
@@ -167,7 +167,7 @@ int bcm590xx_disable_irq(struct bcm590xx *bcm590xx, int irq)
 	u8 reg_val;
 	struct bcm_pmu_irq *handler;
 
-	printk(" Inside %s\n", __func__);
+	pr_debug(" Inside %s\n", __func__);
 
 	if (irq < 0 || irq > BCM590XX_TOTAL_IRQ)
 		return -EINVAL;
@@ -206,7 +206,7 @@ int bcm590xx_enable_irq(struct bcm590xx *bcm590xx, int irq)
 	u8 reg_val;
 	struct bcm_pmu_irq *handler;
 
-	printk(" Inside %s, enabling irq %d \n", __func__, irq );
+	pr_debug(" Inside %s, enabling irq %d \n", __func__, irq );
 
 	if (irq < 0 || irq > BCM590XX_TOTAL_IRQ)
 		return -EINVAL;
@@ -243,7 +243,7 @@ int bcm590xx_request_irq(struct bcm590xx *bcm590xx, int irq, bool enable_irq,
 			 void (*handler) (int, void *), void *data)
 {
 	struct bcm_pmu_irq *irq_info;
-	printk(" Inside %s Interrupt no. 0x%x\n", __func__, irq);
+	pr_debug(" Inside %s Interrupt no. 0x%x\n", __func__, irq);
 	if (irq < 0 || irq >= BCM590XX_TOTAL_IRQ|| !handler)
 		return -EINVAL;
 	if (WARN_ON(bcm590xx_find_irq_handler(bcm590xx, irq))) {
@@ -273,7 +273,7 @@ EXPORT_SYMBOL(bcm590xx_request_irq);
 int bcm590xx_free_irq(struct bcm590xx *bcm590xx, int irq)
 {
 	struct bcm_pmu_irq *irq_info;
-	printk(" Inside %s\n", __func__);
+	pr_debug(" Inside %s\n", __func__);
 	if (irq < 0 || irq >= BCM590XX_TOTAL_IRQ)
 		return -EINVAL;
 	irq_info = bcm590xx_find_irq_handler(bcm590xx, irq);
@@ -296,7 +296,7 @@ static void bcm590xx_irq_workq(struct work_struct *work)
 	int i;
 	u8 intStatus[BCM590XX_MAX_INT_REGS];
 	struct bcm_pmu_irq *handler;
-	printk("inside %s\n", __func__);
+	pr_debug("inside %s\n", __func__);
 
 	/* Read all interrupt status registers. All interrupt status registers are R&C */
 	for (i = 0; i < BCM590XX_MAX_INT_REGS; i++) {
@@ -318,7 +318,7 @@ static irqreturn_t pmu_irq_handler(int irq, void *dev_id)
 {
 	struct bcm590xx *bcm590xx = dev_id;
 
-	printk("inside %s\n", __func__);
+	pr_debug("inside %s\n", __func__);
 	if (queue_work(bcm590xx ->pmu_workqueue, &bcm590xx ->work) == 0) {
 		pr_info("%s: Work previously queued\n", __func__);
 	}
@@ -328,7 +328,7 @@ static irqreturn_t pmu_irq_handler(int irq, void *dev_id)
 static int bcm590xx_client_dev_register(struct bcm590xx *bcm590xx, const char *name)
 {
 	struct mfd_cell cell = { };
-	printk("inside %s\n", __func__);
+	pr_debug("inside %s\n", __func__);
 
 	cell.name = name;
 	return mfd_add_devices(bcm590xx->dev, -1, &cell, 1, NULL, 0);
