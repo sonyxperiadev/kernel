@@ -33,7 +33,7 @@ targets := Image zImage xipImage bootpImage uImage dt-blob
 $(obj)/dt-blob:
 ifeq ($(CONFIG_KONA_ATAG_DT),y)
 	$(CONFIG_SHELL) $(MKDTB) $(srctree)/arch/arm/boot/dts/$(CONFIG_KONA_ATAG_DT_DTS_FILE).dts \
-				$(srctree)/arch/arm/boot/$(CONFIG_KONA_ATAG_DT_DTS_FILE).dtb
+				$(srctree)/arch/arm/boot/dt-blob
 	@echo '  dt-blob is ready.'
 else
 	@echo '  dt-blob is not needed'
