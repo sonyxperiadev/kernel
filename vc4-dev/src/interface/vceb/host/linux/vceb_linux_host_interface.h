@@ -22,8 +22,8 @@ int32_t vceb_linux_host_interface_alloc( const VCEB_HOST_INTERFACE_CREATE_PARAMS
                                          const VCEB_HOST_INTERFACE_FUNCS_T *funcs,
                                          VCEB_HOST_INTERFACE_INSTANCE_T *instance );
 
-// Matching free function.
+// Matching free function.
 void vceb_linux_host_interface_free( VCEB_HOST_INTERFACE_INSTANCE_T instance );
-
+
 #endif /* VCEB_LINUX_HOST_INTERFACE_H_ */
 

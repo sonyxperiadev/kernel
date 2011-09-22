@@ -952,10 +952,6 @@ parse_rx_slots(VCHIQ_STATE_T *state)
          vcos_assert(VCHIQ_MSG_DSTPORT(msgid) == 0);
          if (vcos_verify(size == sizeof(VCHIQ_OPEN_PAYLOAD_T))) {
             const VCHIQ_OPEN_PAYLOAD_T *payload = (VCHIQ_OPEN_PAYLOAD_T *)header->data;
-<<<<<<< HEAD
-            unsigned short remoteport = VCHIQ_MSG_SRCPORT(msgid);
-=======
->>>>>>> map_integration
             unsigned int fourcc;
 
             fourcc = payload->fourcc;
@@ -2451,15 +2447,12 @@ vchiq_dump_state(void *dump_context, VCHIQ_STATE_T *state)
    vchiq_dump(dump_context, buf, len + 1);
 
    len = vcos_snprintf(buf, sizeof(buf),
-<<<<<<< HEAD
-=======
       "  Stats: ctrl_tx_count=%d, ctrl_rx_count=%d, error_count=%d",
       state->stats.ctrl_tx_count, state->stats.ctrl_rx_count,
       state->stats.slot_stalls);
    vchiq_dump(dump_context, buf, len + 1);
 
    len = vcos_snprintf(buf, sizeof(buf),
->>>>>>> map_integration
       "  Slots: %d available, %d recyclable, %d stalls",
       state->slot_queue_available - SLOT_QUEUE_INDEX_FROM_POS(state->local_tx_pos),
       state->local->slot_queue_recycle - state->slot_queue_available,
