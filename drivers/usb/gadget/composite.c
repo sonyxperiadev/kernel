@@ -1171,19 +1171,14 @@ composite_unbind(struct usb_gadget *gadget)
 		kfree(cdev->req->buf);
 		usb_ep_free_request(gadget->ep0, cdev->req);
 	}
-	device_remove_file(&gadget->dev, &dev_attr_suspended);
 
 	switch_dev_unregister(&cdev->sw_connected);
 	switch_dev_unregister(&cdev->sw_config);
 
 	kfree(cdev);
 	set_gadget_data(gadget, NULL);
-<<<<<<< HEAD
-    Sherman:  Should the 2nd device_remove_file be moved up 5 lines as well?
-=======    
 	device_remove_file(&gadget->dev, &dev_attr_host_request);
 	device_remove_file(&gadget->dev, &dev_attr_suspended);
->>>>>>> map_integration
 	composite = NULL;
 }
 

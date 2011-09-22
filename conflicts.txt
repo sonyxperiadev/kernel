@@ -25,7 +25,7 @@
 #	both modified:      drivers/crypto/Makefile (Sherman Yin)
 #	both modified:      drivers/misc/vc04_services/vmcs_sm/vmcs_sm.c (Sherman Yin)
 #	both modified:      drivers/net/brcm_netconsole.c (Sherman Yin)
-#	both modified:      drivers/usb/gadget/composite.c (?)
+#	both modified:      drivers/usb/gadget/composite.c (Sherman Yin)
 #	both modified:      drivers/usb/gadget/f_mass_storage.c (Jason Wong)
 #	both modified:      drivers/usb/otg/Kconfig (Jason Wong)
 #	both modified:      drivers/usb/otg/Makefile (Sherman Yin)
