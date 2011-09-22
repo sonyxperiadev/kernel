@@ -679,6 +679,7 @@ config MONITOR_BQ27541_I2C
 
 config BCM_RFKILL
         bool "BCM RFKILL driver support for Bluetooth"
+	depends on RFKILL
         default n
         ---help---
         This driver adds RFKILL support for Broadcom bluetooth

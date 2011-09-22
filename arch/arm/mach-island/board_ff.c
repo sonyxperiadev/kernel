@@ -53,6 +53,15 @@
 #include <mach/rdb/brcm_rdb_uartb.h>
 #include <mach/rdb/brcm_rdb_chipreg.h>
 
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+#include <linux/broadcom/bcmbt_rfkill.h>
+#endif
+
+#ifdef CONFIG_BCM_BT_LPM
+#include <linux/broadcom/bcmbt_lpm.h>
+#endif
+
+
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/mfd/bcm590xx/pmic.h>
 #include <linux/mfd/bcm590xx/bcm59055_A0.h>
@@ -1205,6 +1214,54 @@ void __init board_map_io(void)
 	island_map_io();
 }
 
+
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+
+#define BCMBT_VREG_GPIO       (118) 
+#define BCMBT_N_RESET_GPIO    (-1) 
+#define BCMBT_AUX0_GPIO        (-1)   /* clk32 */
+#define BCMBT_AUX1_GPIO        (-1)    /* UARTB_SEL */
+
+static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg = {
+        .vreg_gpio = BCMBT_VREG_GPIO,
+        .n_reset_gpio = BCMBT_N_RESET_GPIO,
+        .aux0_gpio = BCMBT_AUX0_GPIO,  /* CLK32 */
+        .aux1_gpio = BCMBT_AUX1_GPIO,  /* UARTB_SEL, probably not required */
+};
+
+static struct platform_device board_bcmbt_rfkill_device = {
+        .name = "bcmbt-rfkill",
+        .id = -1,
+        .dev = 
+	{
+		.platform_data=&board_bcmbt_rfkill_cfg,
+	},
+};
+
+
+#endif
+
+#ifdef CONFIG_BCM_BT_LPM
+#define GPIO_BT_WAKE 117
+#define GPIO_HOST_WAKE 116
+
+
+static struct bcm_bt_lpm_platform_data brcm_bt_lpm_data = {
+        .gpio_bt_wake = GPIO_BT_WAKE,
+        .gpio_host_wake = GPIO_HOST_WAKE,
+};
+
+static struct platform_device board_bcmbt_lpm_device = {
+        .name = "bcmbt-lpm",
+        .id = -1,
+        .dev = 
+	{
+		.platform_data=&brcm_bt_lpm_data,
+	},
+};
+#endif
+
+
 static struct platform_device *board_devices[] __initdata = {
 	&board_i2c_adap_devices[0],
 	&board_i2c_adap_devices[1],
@@ -1218,6 +1275,13 @@ static struct platform_device *board_devices[] __initdata = {
 	&android_pmem,
 	&island_leds_gpio_device,
 	&island_sdio0_device,
+#if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
+    &board_bcmbt_rfkill_device,
+#endif
+#ifdef CONFIG_BCM_BT_LPM
+    &board_bcmbt_lpm_device,
+#endif
+
 };
 
 static void __init board_add_devices(void)
