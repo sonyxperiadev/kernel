@@ -1,10 +1,15 @@
+2011.09.21
+mps-lmp -> map_integration_staging merge
+
 # Unmerged paths:
 #   (use "git add/rm <file>..." as appropriate to mark resolution)
 #
 #	both modified:      arch/arm/mach-island/common.c (fixed by Jason Wong)
 #	both modified:      drivers/power/Kconfig (fixed by Sherman Yin)
 #	both modified:      drivers/power/Makefile (fixed by Sherman Yin)
-#	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_bivcm.h
+
+vc4-dev/ directory reverted to reflect the latest map_integration version before mps-lmp merge (Edmund Szeto)
+#	both added:         vc4-dev/src/interface/vchiq_arm/vchiq_bivcm.h 
 #	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_core.c
 #	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_core.h
 

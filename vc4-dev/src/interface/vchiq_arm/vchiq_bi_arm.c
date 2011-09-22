@@ -32,6 +32,8 @@
 
 #include "vchiq_memdrv.h"
 
+#include "interface/vceb/host/vceb.h"
+
 #include <linux/dma-mapping.h>
 #include <mach/sdma.h>
 #include <mach/dma_mmap.h>
