@@ -1,45 +1,38 @@
-2011.09.08 mps-lmp-3.0 -> map_30work_staging merge
+2011.09.22 map_integration -> map_30work_staging merge
 
 # Unmerged paths:
 #   (use "git add/rm <file>..." as appropriate to mark resolution)
 #
-#	both modified:      arch/arm/mach-island/common.c (fixed by Ray Jui)
-#	both modified:      arch/arm/mach-rhea/rhea_ray.c (fixed by Sherman Yin)
-#	both modified:      arch/arm/tools/mach-types (fixed by Sherman Yin)
-#	both modified:      drivers/mfd/Kconfig (fixed by Sherman Yin)
-#	both modified:      drivers/power/Kconfig (fixed by Sherman Yin)
-#	both modified:      drivers/power/Makefile (fixed by Sherman Yin)
-#	both modified:      kernel/printk.c (fixed by Ray Jui)
-
-conflicts undetected by git status:
-arch/arm/configs/bcm21654_rhearay_defconfig (fixed by copying from mps-lmp-3.0)
-arch/arm/configs/bcm21654_rhearay_edn1x_defconfig (fixed by copying from mps-lmp-3.0)
-
-
-2011.09.08 map_integration -> map_30work_staging merge
-
-# Unmerged paths:
-#   (use "git add/rm <file>..." as appropriate to mark resolution)
-#
-#	both modified:      arch/arm/configs/bcm11160_sv_defconfig (fixed by script)
-#	both modified:      arch/arm/configs/bcm11160_sv_li_128mb_defconfig (fixed by script)
-#	both modified:      arch/arm/configs/bcm11160_tablet_android_defconfig (fixed by script)
-#	both modified:      arch/arm/configs/bcm11160_tablet_defconfig (fixed by script)
-#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_defconfig (fixed by script)
-#	both modified:      arch/arm/configs/bcm28160_tablet_android_defconfig (fixed by script)
-#	both modified:      arch/arm/configs/bcm28160_tablet_defconfig (fixed by script)
-#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_defconfig (fixed by script)
-#	both modified:      arch/arm/mach-island/clock_island.c (fixed by Ray Jui)
-#	both modified:      arch/arm/mach-island/configs/linux.config (fixed by Ray Jui)
-#	both modified:      arch/arm/mach-island/include/mach/clock.h (fixed by Ray Jui)
-#	both modified:      arch/arm/tools/mach-types (fixed by Sherman Yin)
-#	both modified:      drivers/char/broadcom/Kconfig (fixed by Sherman Yin)
-#	both modified:      drivers/i2c/Makefile (fixed by Sherman Yin)
-#	both modified:      drivers/misc/vc04_services/vc_omx/Makefile (fixed by Sherman Yin)
-#	both modified:      drivers/usb/gadget/dwc_otg/driver/dwc_otg_pcd_linux.c (fixed by Sherman Yin)
-#	both modified:      kernel/printk.c (fixed by Ray Jui)
-#	deleted by us:      vc4-dev/src/interface/vchiq_arm_bi/vchiq_memdrv.c (fixed by Edmund Szeto)
-
-conflict undetected by git status:
-
-arch/arm/mach-rhea/rhea_ray.c (fixed by Sherman Yin)
+#	both modified:      arch/arm/configs/bcm11160_sv_li_128mb_defconfig
+#	both modified:      arch/arm/configs/bcm11160_tablet_android_defconfig
+#	both modified:      arch/arm/configs/bcm11160_tablet_defconfig
+#	both added:         arch/arm/configs/bcm11160_tablet_li_128mb_android_defconfig
+#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_defconfig
+#	both modified:      arch/arm/configs/bcm21654_rheaberri_ednxx_defconfig
+#	both modified:      arch/arm/configs/bcm21654_rhearay_defconfig
+#	both modified:      arch/arm/configs/bcm28150_islandstone_defconfig
+#	both modified:      arch/arm/configs/bcm28160_tablet_android_defconfig
+#	both modified:      arch/arm/configs/bcm28160_tablet_defconfig
+#	both added:         arch/arm/configs/bcm28160_tablet_li_128mb_android_defconfig
+#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_defconfig
+#	both modified:      arch/arm/mach-island/common.c (Sherman Yin)
+#	both modified:      arch/arm/mach-island/configs/bcm11160_tablet_android.target (Sherman Yin)
+#	both modified:      arch/arm/mach-island/configs/bcm28160_tablet_android.target (Sherman Yin)
+#	both modified:      arch/arm/mach-island/configs/linux.config (?)
+#	both added:         conflicts.txt (Sherman Yin)
+#	both modified:      drivers/char/broadcom/modem/Makefile (Sherman Yin)
+#	both modified:      drivers/crypto/Kconfig (Sherman Yin)
+#	both modified:      drivers/crypto/Makefile (Sherman Yin)
+#	both modified:      drivers/misc/vc04_services/vmcs_sm/vmcs_sm.c (Sherman Yin)
+#	both modified:      drivers/net/brcm_netconsole.c (Sherman Yin)
+#	both modified:      drivers/usb/gadget/composite.c (?)
+#	both modified:      drivers/usb/gadget/f_mass_storage.c 
+#	both modified:      drivers/usb/otg/Kconfig (?)
+#	both modified:      drivers/usb/otg/Makefile (Sherman Yin)
+#	both modified:      include/linux/usb/ch9.h (Sherman Yin)
+#	both modified:      sound/caph/Island_Makefile (Sherman Yin)
+#	both modified:      sound/caph/Makefile_orig
+#	deleted by them:    sound/caph/soc/chal/modules/audio/caph/GNUmakefile
+#	deleted by them:    sound/caph/soc/chal/modules/audio/caph/common.mk
+#	both modified:      sound/caph/soc/csl/audio/src/csl_caph_hwctrl.c
+#	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_core.c

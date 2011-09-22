@@ -51,7 +51,7 @@ static const struct bcmpmu_rw_data register_init_data[] = {
 	{.map=0, .addr=0x45, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x46, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x47, .val=0xFF, .mask=0xFF},
-        {.map=0, .addr=0x48, .val=0xFF, .mask=0xFF},
+	{.map=0, .addr=0x48, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x49, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x4a, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x4b, .val=0xFF, .mask=0xFF},
@@ -342,9 +342,20 @@ static struct platform_device bcmpmu_em_device = {
 	.dev.platform_data 	= NULL,
 };
 
+/* The name of this client device will eventually
+ * change to match the naming convention used by 
+ * other client devices
+ */
+static struct platform_device bcmpmu_otg_device = {
+	.name 			= "bcm_otg",
+	.id			= -1,
+	.dev.platform_data 	= NULL,
+};
+
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
 	&bcmpmu_em_device,
+	&bcmpmu_otg_device,
 };
 
 static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
@@ -391,8 +402,8 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.adc_setting = &adc_setting,
 	.regulator_init_data = &bcm59055_regulators,
 	.fg_smpl_rate = 2083,
-        .fg_slp_rate = 32000,
-        .fg_slp_curr_ua = 1000,
+	.fg_slp_rate = 32000,
+	.fg_slp_curr_ua = 1000,
 };
 
 static struct i2c_board_info __initdata pmu_info[] =

@@ -2,4 +2,5 @@ arch   = arm
 family = island
 chip   = 11160
 board  = sv
-
+option = ext4
+option = mmc 

@@ -38,4 +38,10 @@ static inline void __vcos_bkpt( void ) { BUG(); }
 
 #define VCOS_ASSERT_MSG(...) printk( KERN_ERR "vcos_assert: " __VA_ARGS__ )
 
+#define PRId64 "lld"
+#define PRIi64 "lli"
+#define PRIo64 "llo"
+#define PRIu64 "llu"
+#define PRIx64 "llx"
+
 #endif

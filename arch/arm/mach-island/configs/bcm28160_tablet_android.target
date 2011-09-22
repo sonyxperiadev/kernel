@@ -6,3 +6,5 @@ option = initrd
 option = suspend_invalid
 option = android
 option = usb_ehci
+option = ext4 
+option = mmc 

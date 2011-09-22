@@ -229,6 +229,14 @@ static struct platform_device wdt_device =
 };
 #endif
 
+#if defined(CONFIG_MTD_BCMNAND)
+static struct platform_device nand_device =
+{
+   .name          = "bcmnand",
+   .id            = -1,
+};
+#endif
+
 #if defined(CONFIG_RTC_DRV_ISLAND)
 static struct resource rtc_device_resource[] = {
     [0] = {
@@ -331,8 +339,8 @@ static struct platform_device board_kona_otg_platform_device =
 /* FIXME need revise these IDs*/
 #define UMS_PRODUCT_ID          PRODUCT_ID
 #define UMS_ADB_PRODUCT_ID      PRODUCT_ID
-#define RNDIS_PRODUCT_ID        0x0ffe
-#define RNDIS_ADB_PRODUCT_ID    0x0ffc
+#define RNDIS_PRODUCT_ID        0x4e13
+#define RNDIS_ADB_PRODUCT_ID    0x4e14
 
 #if defined(CONFIG_USB_ANDROID_MASS_STORAGE)
 static struct usb_mass_storage_platform_data mass_storage_pdata = {
@@ -517,6 +525,9 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 #if defined(CONFIG_RTC_DRV_ISLAND)
         &rtc_device,
+#endif
+#if defined(CONFIG_MTD_BCMNAND)
+        &nand_device,
 #endif
 #if defined(CONFIG_KONA_PWMC)
         &pwm_device,

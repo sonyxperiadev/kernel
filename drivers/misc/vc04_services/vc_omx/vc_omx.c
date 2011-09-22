@@ -226,16 +226,17 @@ static int vc_omx_proc_read( char *buf, char **start, off_t offset, int count, i
 static int vc_omx_proc_write( struct file *file, const char __user *buffer, unsigned long count, void *data )
 {
    int ret;
-   unsigned char kbuf[PROC_WRITE_BUF_SIZE];
+   unsigned char kbuf[PROC_WRITE_BUF_SIZE+1];
    char name[PROC_WRITE_BUF_SIZE];
    unsigned int value;
    int index;
 
-   if ( count > PROC_WRITE_BUF_SIZE )
+   if ( count >= PROC_WRITE_BUF_SIZE )
    {
       count = PROC_WRITE_BUF_SIZE;
    }
 
+   memset( kbuf, 0, PROC_WRITE_BUF_SIZE+1 );
    if ( copy_from_user( kbuf,
                         buffer,
                         count ) != 0 )
@@ -249,6 +250,7 @@ static int vc_omx_proc_write( struct file *file, const char __user *buffer, unsi
 
    /* Return read value no matter what from there on.
    */
+   kbuf[ count ] = '\0';
    ret = count;
 
    if( sscanf( kbuf, "%s %u", name, &value ) != 2 )

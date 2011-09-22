@@ -39,6 +39,7 @@
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
 
+#include <linux/broadcom/amxr.h>
 #include <linux/broadcom/amxr_port.h>
 #include <linux/broadcom/amxr_port_ioctl.h>
 

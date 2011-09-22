@@ -15,7 +15,7 @@
  *
  */
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.
+Copyright 2010 Broadcom Corporation.  All rights reserved.                                
 
 Unless you and Broadcom execute a separate written software license agreement 
 governing use of this software, this software is licensed to you under the 
@@ -47,23 +47,17 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/tlv.h>
 #include "mobcom_types.h"
 #include "resultcode.h"
-#include "csl_aud_drv.h"
 #include "audio_consts.h"
 #include "audio_ddriver.h"
 
+#include "csl_caph.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "bcm_audio_devices.h"
 #include "caph_common.h"
 #include "auddrv_audlog.h"
 
-#if !defined(NO_PMU)
-#ifdef PMU_BCM59055
-#include "linux/broadcom/bcm59055-audio.h"
-#elif defined(CONFIG_BCMPMU_AUDIO)
-#include "bcmpmu_audio.h"
-#endif
-#endif
+#include "audio_pmu_adapt.h"
 
 
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
@@ -71,7 +65,7 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 {
 	va_list args;
 	
-	if (gAudioDebugLevel < level)
+	if(!(gAudioDebugLevel & level))
 	{
 //		printk("gAudioDebugLevel=%d level=%d\n", gAudioDebugLevel, level);
 		return;
@@ -299,36 +293,18 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB) 
                      || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
 				{
-#ifdef PMU_BCM59055
-                    bcm59055_ihf_power(FALSE);
-                    bcm59055_hs_power(TRUE);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-                    bcmpmu_ihf_power(FALSE);
-                    bcmpmu_hs_power(TRUE);
-#endif
+                    AUDIO_PMU_IHF_POWER(FALSE);
+                    AUDIO_PMU_HS_POWER(TRUE);
                     gain = Params[2]; // gain
-#ifdef PMU_BCM59055
-                    bcm59055_hs_set_gain(PMU_AUDIO_HS_BOTH, gain);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-                    bcmpmu_hs_set_gain(PMU_AUDIO_HS_BOTH, gain);
-#endif
+                    AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, gain);
                     BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d \n", __FUNCTION__, Params[2]);		
 				}
 				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
 				{
-#ifdef PMU_BCM59055
-                    bcm59055_hs_power(FALSE);
-                    bcm59055_ihf_power(TRUE);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-                    bcmpmu_hs_power(FALSE);
-                    bcmpmu_ihf_power(TRUE);
-#endif
+                    AUDIO_PMU_HS_POWER(FALSE);
+                    AUDIO_PMU_IHF_POWER(TRUE);
                     gain = Params[2]; // gain
-#ifdef PMU_BCM59055
-                    bcm59055_ihf_set_gain(gain);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-                    bcmpmu_ihf_set_gain(gain);
-#endif
+                    AUDIO_PMU_IHF_SET_GAIN(gain);
                     BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d \n", __FUNCTION__, Params[2]);		
 				}
 #endif

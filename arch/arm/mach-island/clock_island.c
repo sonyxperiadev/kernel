@@ -3100,6 +3100,28 @@ static struct bus_clk CLK_NAME(sdio3_ahb) = {
 };
 
 /*
+Bus clock name NAND_AHB
+*/
+static struct bus_clk CLK_NAME(nand_ahb) = {
+
+ .clk =	{
+				.flags = NAND_AHB_BUS_CLK_FLAGS,
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_NAND_AHB_BUS_CLK_ID,
+				.name = NAND_AHB_BUS_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(kpm),
+ .clk_gate_offset  = KPM_CLK_MGR_REG_NAND_CLKGATE_OFFSET,
+ .clk_en_mask = KPM_CLK_MGR_REG_NAND_CLKGATE_NAND_AHB_CLK_EN_MASK,
+ .gating_sel_mask = KPM_CLK_MGR_REG_NAND_CLKGATE_NAND_AHB_HW_SW_GATING_SEL_MASK,
+ .stprsts_mask = KPM_CLK_MGR_REG_NAND_CLKGATE_NAND_AHB_STPRSTS_MASK,
+ .freq_tbl_index = 1,
+ .src_clk = NULL,
+};
+
+/*
 Bus clock name SDIO1_AHB
 */
 static struct bus_clk CLK_NAME(sdio1_ahb) = {
@@ -3361,6 +3383,47 @@ static struct peri_clk CLK_NAME(sdio3_sleep) = {
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_SLEEP_STPRSTS_MASK,
 	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_VOLTAGE_LEVEL_MASK,
+};
+
+/*
+Peri clock name NAND
+*/
+/*peri clk src list*/
+static struct clk* nand_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(var_208m),CLK_PTR(ref_208m));
+static struct peri_clk CLK_NAME(nand) = {
+
+	.clk =	{
+				.flags = NAND_PERI_CLK_FLAGS,
+				.clk_type = CLK_TYPE_PERI,
+				.id	= CLK_NAND_PERI_CLK_ID,
+				.name = NAND_PERI_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(CLK_PTR(nand_ahb),NULL),
+				.ops = &gen_peri_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(kpm),
+	.mask_set = 0,
+	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_NAND_POLICY0_MASK_MASK,
+	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
+	.clk_gate_offset = KPM_CLK_MGR_REG_NAND_CLKGATE_OFFSET,
+	.clk_en_mask = KPM_CLK_MGR_REG_NAND_CLKGATE_NAND_CLK_EN_MASK,
+	.gating_sel_mask = KPM_CLK_MGR_REG_NAND_CLKGATE_NAND_HW_SW_GATING_SEL_MASK,
+	.stprsts_mask = KPM_CLK_MGR_REG_NAND_CLKGATE_NAND_STPRSTS_MASK,
+	.volt_lvl_mask = KPM_CLK_MGR_REG_NAND_CLKGATE_NAND_VOLTAGE_LEVEL_MASK,
+	.clk_div = {
+		.div_offset = KPM_CLK_MGR_REG_NAND_DIV_OFFSET,
+		.div_mask = KPM_CLK_MGR_REG_NAND_DIV_NAND_DIV_MASK,
+		.div_shift = KPM_CLK_MGR_REG_NAND_DIV_NAND_DIV_SHIFT,
+		.div_trig_offset= KPM_CLK_MGR_REG_DIV_TRIG_OFFSET,
+		.div_trig_mask= KPM_CLK_MGR_REG_DIV_TRIG_NAND_TRIGGER_MASK,
+		.pll_select_offset= KPM_CLK_MGR_REG_NAND_DIV_OFFSET,
+		.pll_select_mask= KPM_CLK_MGR_REG_NAND_DIV_NAND_PLL_SELECT_MASK,
+		.pll_select_shift= KPM_CLK_MGR_REG_NAND_DIV_NAND_PLL_SELECT_SHIFT,
+	},
+	.src_clk = {
+		.count = 3,
+		.src_inx = 0,
+		.clk = nand_peri_clk_src_list,
+	},
 };
 
 /*
@@ -5098,11 +5161,13 @@ static struct __init clk_lookup island_clk_tbl[] =
 	BRCM_REGISTER_CLK(MASTER_SWITCH_AHB_BUS_CLK_NAME_STR,NULL,master_switch_ahb),
 	BRCM_REGISTER_CLK(MASTER_SWITCH_AXI_BUS_CLK_NAME_STR,NULL,master_switch_axi),
 	BRCM_REGISTER_CLK(USBH_AHB_BUS_CLK_NAME_STR,NULL,usbh_ahb),
+	BRCM_REGISTER_CLK(NAND_AHB_BUS_CLK_NAME_STR,NULL,nand_ahb),
 	BRCM_REGISTER_CLK(SDIO1_AHB_BUS_CLK_NAME_STR,NULL,sdio1_ahb),
 	BRCM_REGISTER_CLK(SDIO2_PERI_CLK_NAME_STR,NULL,sdio2),
 	BRCM_REGISTER_CLK(SDIO2_SLEEP_PERI_CLK_NAME_STR,NULL,sdio2_sleep),
 	BRCM_REGISTER_CLK(SDIO3_PERI_CLK_NAME_STR,NULL,sdio3),
 	BRCM_REGISTER_CLK(SDIO3_SLEEP_PERI_CLK_NAME_STR,NULL,sdio3_sleep),
+	BRCM_REGISTER_CLK(NAND_PERI_CLK_NAME_STR,NULL,nand),
 	BRCM_REGISTER_CLK(SDIO1_PERI_CLK_NAME_STR,NULL,sdio1),
 	BRCM_REGISTER_CLK(SDIO1_SLEEP_PERI_CLK_NAME_STR,NULL,sdio1_sleep),
 	BRCM_REGISTER_CLK(SDIO4_PERI_CLK_NAME_STR,NULL,sdio4),

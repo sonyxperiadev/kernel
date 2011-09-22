@@ -27,6 +27,7 @@
 #include <linux/vmalloc.h>
 #include <linux/semaphore.h>
 
+#include <linux/broadcom/amxr.h>
 #include <linux/broadcom/amxr_port.h>
 #include <linux/broadcom/aaa_ioctl.h>
 #include <linux/broadcom/bsc.h>

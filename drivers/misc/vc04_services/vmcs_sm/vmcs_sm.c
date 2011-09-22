@@ -299,18 +299,21 @@ static unsigned int vmcs_sm_vc_handle_from_pid_and_address( unsigned int pid,
 
    /* Lookup the resource.
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( map->res_pid != pid || map->res_addr != addr )
-         continue;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         if ( map->res_pid != pid || map->res_addr != addr )
+            continue;
 
-      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
-               "[%s]: global map %p (pid %u, addr %lx) -> vc-hdl %x (usr-hdl %x)",
-               __func__, map, map->res_pid, map->res_addr,
-               map->res_vc_hdl, map->res_usr_hdl );
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: global map %p (pid %u, addr %lx) -> vc-hdl %x (usr-hdl %x)",
+                  __func__, map, map->res_pid, map->res_addr,
+                  map->res_vc_hdl, map->res_usr_hdl );
 
-      handle = map->res_vc_hdl;
-      break;
+         handle = map->res_vc_hdl;
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -352,18 +355,21 @@ static unsigned int vmcs_sm_usr_handle_from_pid_and_address( unsigned int pid,
 
    /* Lookup the resource.
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( map->res_pid != pid || map->res_addr != addr )
-         continue;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         if ( map->res_pid != pid || map->res_addr != addr )
+            continue;
 
-      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
-               "[%s]: global map %p (pid %u, addr %lx) -> usr-hdl %x (vc-hdl %x)",
-               __func__, map, map->res_pid, map->res_addr,
-               map->res_usr_hdl, map->res_vc_hdl );
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: global map %p (pid %u, addr %lx) -> usr-hdl %x (vc-hdl %x)",
+                  __func__, map, map->res_pid, map->res_addr,
+                  map->res_usr_hdl, map->res_vc_hdl );
 
-      handle = map->res_usr_hdl;
-      break;
+         handle = map->res_usr_hdl;
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -406,18 +412,21 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_vc_handle( unsigned int pid
 
    /* Lookup the resource.
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( map->res_pid != pid || map->res_vc_hdl != hdl )
-         continue;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         if ( map->res_pid != pid || map->res_vc_hdl != hdl )
+            continue;
 
-      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
-               "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
-               __func__, map, map->res_pid, map->res_vc_hdl,
-               map->res_usr_hdl, map->res_addr );
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
+                  __func__, map, map->res_pid, map->res_vc_hdl,
+                  map->res_usr_hdl, map->res_addr );
 
-      addr = map->res_addr;
-      break;
+         addr = map->res_addr;
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -460,18 +469,21 @@ static unsigned int vmcs_sm_usr_address_from_pid_and_usr_handle( unsigned int pi
 
    /* Lookup the resource.
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( map->res_pid != pid || map->res_usr_hdl != hdl )
-         continue;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         if ( map->res_pid != pid || map->res_usr_hdl != hdl )
+            continue;
 
-      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
-               "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
-               __func__, map, map->res_pid, map->res_vc_hdl,
-               map->res_usr_hdl, map->res_addr );
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: global map %p (pid %u, vc-hdl %x, usr-hdl %x) -> addr %lx",
+                  __func__, map, map->res_pid, map->res_vc_hdl,
+                  map->res_usr_hdl, map->res_addr );
 
-      addr = map->res_addr;
-      break;
+         addr = map->res_addr;
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -613,15 +625,18 @@ static int vc_sm_global_state_proc_read( struct seq_file *s )
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      map_count++;
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
+      {
+         map_count++;
 
-      seq_printf( s, "\nMapping                0x%x\n", (unsigned int)map );
-      seq_printf( s, "           TGID        %u\n", map->res_pid );
-      seq_printf( s, "           VC-HDL      0x%x\n", map->res_vc_hdl );
-      seq_printf( s, "           USR-HDL     0x%x\n", map->res_usr_hdl );
-      seq_printf( s, "           USR-ADDR    0x%lx\n", map->res_addr );
+         seq_printf( s, "\nMapping                0x%x\n", (unsigned int)map );
+         seq_printf( s, "           TGID        %u\n", map->res_pid );
+         seq_printf( s, "           VC-HDL      0x%x\n", map->res_vc_hdl );
+         seq_printf( s, "           USR-HDL     0x%x\n", map->res_usr_hdl );
+         seq_printf( s, "           USR-ADDR    0x%lx\n", map->res_addr );
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -714,28 +729,31 @@ static int vc_sm_statistics_proc_read( struct seq_file *s )
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+   if ( !list_empty ( &file_data->resource_list ) )
    {
-      res_count++;
+      list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+      {
+         res_count++;
 
-      seq_printf( s, "\nGUID:         0x%x\n\n", resource->res_guid );
-      for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
-      {
-         if ( resource->res_stats[ ix ] > 0 )
+         seq_printf( s, "\nGUID:         0x%x\n\n", resource->res_guid );
+         for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
          {
-            seq_printf( s, "                %u\t%s\n",
-                        resource->res_stats[ ix ],
-                        sm_stats_human_read[ ix ] );
+            if ( resource->res_stats[ ix ] > 0 )
+            {
+               seq_printf( s, "                %u\t%s\n",
+                           resource->res_stats[ ix ],
+                           sm_stats_human_read[ ix ] );
+            }
          }
-      }
-      seq_printf( s, "\n" );
-      for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
-      {
-         if ( resource->res_stats[ ix + END_ATTEMPT ] > 0 )
+         seq_printf( s, "\n" );
+         for ( ix = 0 ; ix < END_ATTEMPT ; ix++ )
          {
-            seq_printf( s, "                %u\tFAILED %s\n",
-                        resource->res_stats[ ix + END_ATTEMPT ],
-                        sm_stats_human_read[ ix ] );
+            if ( resource->res_stats[ ix + END_ATTEMPT ] > 0 )
+            {
+               seq_printf( s, "                %u\tFAILED %s\n",
+                           resource->res_stats[ ix + END_ATTEMPT ],
+                           sm_stats_human_read[ ix ] );
+            }
          }
       }
    }
@@ -771,17 +789,20 @@ static int vc_sm_alloc_proc_read( struct seq_file *s )
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+   if ( !list_empty ( &file_data->resource_list ) )
    {
-         alloc_count++;
+      list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+      {
+            alloc_count++;
 
-         seq_printf( s, "\nGUID:              0x%x\n", resource->res_guid );
-         seq_printf( s, "Reference Count:   %u\n", resource->ref_count );
-         seq_printf( s, "Mapped:            %s\n", (resource->map_count ? "yes" : "no") );
-         seq_printf( s, "VC-handle:         0x%x\n", resource->res_handle );
-         seq_printf( s, "VC-address:        0x%p\n", resource->res_base_mem );
-         seq_printf( s, "VC-size (bytes):   %u\n", resource->res_size );
-         seq_printf( s, "Cache:             %s\n", sm_cache_map_vector[ resource->res_cached ] );
+            seq_printf( s, "\nGUID:              0x%x\n", resource->res_guid );
+            seq_printf( s, "Reference Count:   %u\n", resource->ref_count );
+            seq_printf( s, "Mapped:            %s\n", (resource->map_count ? "yes" : "no") );
+            seq_printf( s, "VC-handle:         0x%x\n", resource->res_handle );
+            seq_printf( s, "VC-address:        0x%p\n", resource->res_base_mem );
+            seq_printf( s, "VC-size (bytes):   %u\n", resource->res_size );
+            seq_printf( s, "Cache:             %s\n", sm_cache_map_vector[ resource->res_cached ] );
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -995,20 +1016,23 @@ static void vmcs_sm_remove_resource( SM_PRIV_DATA_T *privdata,
 static SM_RESOURCE_T *vmcs_sm_get_resource_with_guid( SM_PRIV_DATA_T *privdata,
                                                       unsigned int res_guid )
 {
-   SM_RESOURCE_T *resource;
+   SM_RESOURCE_T *resource = NULL;
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( resource, &privdata->resource_list, resource_list )
+   if ( !list_empty( &privdata->resource_list ) )
    {
-      if ( resource->res_guid != res_guid )
-         continue;
+      list_for_each_entry ( resource, &privdata->resource_list, resource_list )
+      {
+         if ( resource->res_guid != res_guid )
+            continue;
 
-      LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
-               "[%s]: located resource %p (guid: %u, base addr %p, hdl %x, size %u, cache %u)",
-               __func__, resource, resource->res_guid, resource->res_base_mem,
-               resource->res_handle, resource->res_size, resource->res_cached );
-      break;
+         LOG_DBG( (sm_debug_log >= LOG_DBG_LEVEL_MAX),
+                  "[%s]: located resource %p (guid: %u, base addr %p, hdl %x, size %u, cache %u)",
+                  __func__, resource, resource->res_guid, resource->res_base_mem,
+                  resource->res_handle, resource->res_size, resource->res_cached );
+         break;
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -1031,12 +1055,14 @@ static SM_GLOBAL_MAP_T *vmcs_sm_map_from_resource( SM_RESOURCE_T *resource, unsi
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( map, &resource->map_list, resource_map_list )
+   if ( !list_empty ( &resource->map_list ) )
    {
-      if ( map->res_addr == addr )
-         break;
+      list_for_each_entry ( map, &resource->map_list, resource_map_list )
+      {
+         if ( map->res_addr == addr )
+            break;
+      }
    }
-
    mutex_unlock ( &(sm_state->map_lock) );
 
    return map;
@@ -1063,13 +1089,16 @@ static void vmcs_sm_host_walk_map_per_pid( int pid )
 
    /* Log all applicable mapping(s).
    */
-   list_for_each_entry ( map, &sm_state->map_list, map_list )
+   if ( !list_empty ( &sm_state->map_list ) )
    {
-      if ( pid == -1 || map->res_pid == pid )
+      list_for_each_entry ( map, &sm_state->map_list, map_list )
       {
-         LOG_INFO( "[%s]: tgid: %u - vc-hdl: %x, usr-hdl: %x, usr-addr: %lx",
-                  __func__, map->res_pid, map->res_vc_hdl,
-                  map->res_usr_hdl, map->res_addr );
+         if ( pid == -1 || map->res_pid == pid )
+         {
+            LOG_INFO( "[%s]: tgid: %u - vc-hdl: %x, usr-hdl: %x, usr-addr: %lx",
+                     __func__, map->res_pid, map->res_vc_hdl,
+                     map->res_usr_hdl, map->res_addr );
+         }
       }
    }
 
@@ -1095,12 +1124,15 @@ static void vmcs_sm_host_walk_alloc( SM_PRIV_DATA_T *file_data )
 
    mutex_lock ( &(sm_state->map_lock) );
 
-   list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+   if ( !list_empty ( &file_data->resource_list ) )
    {
-      LOG_INFO( "[%s]: guid: %x - hdl: %x, vc-mem: %p, size: %u, cache: %u",
-                __func__, resource->res_guid, resource->res_handle,
-                resource->res_base_mem, resource->res_size,
-                resource->res_cached );
+      list_for_each_entry ( resource, &file_data->resource_list, resource_list )
+      {
+         LOG_INFO( "[%s]: guid: %x - hdl: %x, vc-mem: %p, size: %u, cache: %u",
+                   __func__, resource->res_guid, resource->res_handle,
+                   resource->res_base_mem, resource->res_size,
+                   resource->res_cached );
+      }
    }
 
    mutex_unlock ( &(sm_state->map_lock) );
@@ -1272,16 +1304,17 @@ static int vc_sm_release( struct inode *inode, struct file *file )
       ** NOTE: Do we need to care about multiple allocated/mapped?
       */
       mutex_lock ( &(sm_state->map_lock) );
-
-      list_for_each_entry_safe ( resource, resource_tmp, &file_data->resource_list, resource_list )
+      if ( !list_empty ( &file_data->resource_list ) )
       {
-         /* Free up the local resource tracking this allocation.
-         */
-         vc_sm_resource_deceased( resource, 1 );
-         kfree ( resource );
-         freed_up++;
+         list_for_each_entry_safe ( resource, resource_tmp, &file_data->resource_list, resource_list )
+         {
+            /* Free up the local resource tracking this allocation.
+            */
+            vc_sm_resource_deceased( resource, 1 );
+            kfree ( resource );
+            freed_up++;
+         }
       }
-
       mutex_unlock ( &(sm_state->map_lock) );
 
       /* Free up the videocore allocated resource left for this allocator.
@@ -2149,10 +2182,15 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
          if ( resource->ref_count == 1 )
          {
             down_read( &current->mm->mmap_sem );
-            list_for_each_entry ( map, &resource->map_list, resource_map_list )
+            if ( !list_empty ( &resource->map_list ) )
             {
-               if ( map->vma )
-                  zap_vma_ptes( map->vma, map->vma->vm_start, map->vma->vm_end - map->vma->vm_start );
+               list_for_each_entry ( map, &resource->map_list, resource_map_list )
+               {
+                  if ( map->vma )
+                  {
+                     zap_vma_ptes( map->vma, map->vma->vm_start, map->vma->vm_end - map->vma->vm_start );
+                  }
+               }
             }
             up_read( &current->mm->mmap_sem );
          }
@@ -2385,9 +2423,12 @@ static long vc_sm_ioctl( struct file *file, unsigned int cmd, unsigned long arg 
 
          /* Make sure the resource we're removing is unmapped first */
          down_write( &current->mm->mmap_sem );
-         list_for_each_entry_safe( map, map_tmp, &resource->map_list, resource_map_list )
+         if ( resource->map_count && !list_empty ( &resource->map_list ) )
          {
-            ret = do_munmap( current->mm, map->res_addr, resource->res_size );
+            list_for_each_entry_safe( map, map_tmp, &resource->map_list, resource_map_list )
+            {
+               ret = do_munmap( current->mm, map->res_addr, resource->res_size );
+            }
          }
          up_write( &current->mm->mmap_sem );
 

@@ -108,9 +108,22 @@ struct bcmpmu_adc_irq_data {
 	struct bcmpmu_adc_req *req;
 };
 
-static int adc_map_batt_temp(int cal)
+static int adc_map_batt_temp(struct bcmpmu_adc *padc, int adc)
 {
-	return cal;
+	int i;
+	int temp = padc->btmap[i].temp;
+	int index;
+	for (i = 0; i < padc->btmap_len; i++) {
+		if ((adc <= padc->btmap[i].adc) &&
+			(adc > padc->btmap[i+1].adc)) {
+			index = ((padc->btmap[i].adc - adc) * 1000)/
+				(padc->btmap[i].adc - padc->btmap[i+1].adc);
+			temp = padc->btmap[i].temp + 
+				((padc->btmap[i+1].temp - padc->btmap[i].temp) * index)/1000;
+			break;
+		}
+	}
+	return temp;
 }
 
 static int read_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
@@ -160,6 +173,13 @@ static int read_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 	return ret;
 }
 
+static int adc_adjust_curr(struct bcmpmu_adc *padc, int raw_curr)
+{
+	unsigned short ucurr = (unsigned short)raw_curr;
+	short curr = (short) ucurr; 
+	return (int)(curr/4);
+}
+
 static void cal_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 {
 	req->cal = req->raw * adc_cal[req->sig].gain;
@@ -178,11 +198,13 @@ static void cnv_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req)
 			req->cnv = (req->cal * padc->adcmap[req->sig].vrng)/1024;
 			break;	
 		case PMU_ADC_NTC:
-			req->cnv = adc_map_batt_temp(req->cal);
+			req->cnv = adc_map_batt_temp(padc, req->cal);
+			break;
+		case PMU_ADC_FG_CURRSMPL:
+			req->cnv = adc_adjust_curr(padc, req->cal);
 			break;
 		case PMU_ADC_BSI:
 		case PMU_ADC_32KTEMP:
-		case PMU_ADC_FG_CURRSMPL:
 		default:
 			req->cnv = req->cal;
 			break;
@@ -193,6 +215,14 @@ static int update_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req
 {
 	int ret;
 	req->raw = -EINVAL;
+	if (req->sig == PMU_ADC_FG_CURRSMPL) {
+		ret = padc->bcmpmu->write_dev(padc->bcmpmu,
+			PMU_REG_FG_FRZSMPL,
+			padc->bcmpmu->regmap[PMU_REG_FG_FRZSMPL].mask,
+			padc->bcmpmu->regmap[PMU_REG_FG_FRZSMPL].mask);
+		if (ret != 0) return ret;
+	}
+
 	while (req->raw == -EINVAL) {
 		ret = read_adc_result(padc, req);
 		if (ret != 0) return ret;
@@ -535,8 +565,8 @@ static bool bcmpmu_get_fg_currsmpl(struct bcmpmu *bcmpmu, int *data)
 	struct bcmpmu_adc_req req;
 	ret = bcmpmu->write_dev(bcmpmu,
 			PMU_REG_FG_FRZSMPL,
-			1,
-			PMU_BITMASK_ALL);
+			bcmpmu->regmap[PMU_REG_FG_FRZSMPL].mask,
+			bcmpmu->regmap[PMU_REG_FG_FRZSMPL].mask);
 	if (ret != 0) {
 		pr_hwmon(ERROR, "%s failed to latch fg smpl.\n", __func__);
 		return ret;
@@ -678,8 +708,8 @@ static int bcmpmu_fg_enable(struct bcmpmu *bcmpmu, int en)
 	int ret;
 	ret = bcmpmu->write_dev(bcmpmu,
 			PMU_REG_FG_HOSTEN,
-			en,
-			PMU_BITMASK_ALL);
+			en << bcmpmu->regmap[PMU_REG_FG_HOSTEN].shift,
+			bcmpmu->regmap[PMU_REG_FG_HOSTEN].mask);
 	if (ret != 0)
 		pr_hwmon(ERROR, "%s failed to write device.\n", __func__);
 	return ret;
@@ -690,8 +720,8 @@ static int bcmpmu_fg_reset(struct bcmpmu *bcmpmu)
 	int ret;
 	ret = bcmpmu->write_dev(bcmpmu,
 			PMU_REG_FG_RESET,
-			1,
-			PMU_BITMASK_ALL);
+			1 << bcmpmu->regmap[PMU_REG_FG_RESET].shift,
+			bcmpmu->regmap[PMU_REG_FG_RESET].mask);
 	if (ret != 0)
 		pr_hwmon(ERROR, "%s failed to write device.\n", __func__);
 	return ret;
@@ -723,10 +753,10 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	padc->ctrlmap = bcmpmu_get_adc_ctrl_map();
 	padc->btmap = bcmpmu->pdata->batt_temp_map;
 	padc->btmap_len = bcmpmu->pdata->batt_temp_map_len;
-	padc->bcmpmu->adc_req = bcmpmu_adc_request;
 	padc->rtmreq = NULL;
 	padc->adcsetting = bcmpmu->pdata->adc_setting;
 	bcmpmu->adcinfo = (void *)padc;
+	bcmpmu->adc_req = bcmpmu_adc_request;
 
 	penv = kzalloc(sizeof(struct bcmpmu_env), GFP_KERNEL);
 	if (penv == NULL) {

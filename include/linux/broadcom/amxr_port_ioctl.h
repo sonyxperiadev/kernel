@@ -23,6 +23,7 @@
 
 /* ---- Include Files ---------------------------------------------------- */
 #include <linux/ioctl.h>
+#include <linux/broadcom/amxr.h>
 #include <linux/broadcom/amxr_port.h>
 
 /* ---- Constants and Types ---------------------------------------------- */

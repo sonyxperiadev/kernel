@@ -1041,19 +1041,23 @@ vchiq_dump_platform_instances(void *dump_context)
 
    for (i = 0; i < state->unused_service; i++)
    {
-      VCHIQ_SERVICE_T *service = &state->services[i];
-      VCHIQ_INSTANCE_T instance = service->instance;
+      VCHIQ_SERVICE_T *service = state->services[i];
+      VCHIQ_INSTANCE_T instance;
 
-      if (instance && (service->base.callback == service_callback))
+      if (service
+         && ((instance = service->instance) != NULL)
+         && (service->base.callback == service_callback))
          instance->mark = 0;
    }
 
    for (i = 0; i < state->unused_service; i++)
    {
-      VCHIQ_SERVICE_T *service = &state->services[i];
-      VCHIQ_INSTANCE_T instance = service->instance;
+      VCHIQ_SERVICE_T *service = state->services[i];
+      VCHIQ_INSTANCE_T instance;
 
-      if (instance && (service->base.callback == service_callback))
+      if (service
+         && ((instance = service->instance) != NULL)
+         && (service->base.callback == service_callback))
       {
          if (!instance->mark)
          {

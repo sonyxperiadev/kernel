@@ -67,6 +67,7 @@ vcos_static_assert(IS_POW2(VCHIQ_MAX_SLOTS_PER_SIDE));
 /* Ensure the fields are wide enough */
 vcos_static_assert(VCHIQ_MSG_SRCPORT(VCHIQ_MAKE_MSG(0,0,VCHIQ_PORT_MAX)) == 0);
 vcos_static_assert(VCHIQ_MSG_TYPE(VCHIQ_MAKE_MSG(0,VCHIQ_PORT_MAX,0)) == 0);
+vcos_static_assert((unsigned int)VCHIQ_PORT_MAX < (unsigned int)VCHIQ_PORT_FREE);
 
 #define VCHIQ_MSGID_PADDING            VCHIQ_MAKE_MSG(VCHIQ_MSG_PADDING,0,0)
 #define VCHIQ_MSGID_CLAIMED            0x40000000
@@ -90,6 +91,7 @@ vcos_static_assert((sizeof(BITSET_T) * 8) == 32);
 
 #define VCHIQ_STATS_INC(state, stat) (state->stats. stat ++)
 #define VCHIQ_SERVICE_STATS_INC(service, stat) (service->stats. stat ++)
+#define VCHIQ_SERVICE_STATS_ADD(service, stat, addend) (service->stats. stat += addend)
 
 enum
 {
@@ -215,16 +217,11 @@ typedef struct vchiq_service_struct {
    VCHIQ_STATE_T *state;
    VCHIQ_INSTANCE_T instance;
 
-   int slot_quota;
-   int slot_use_count;
-   int previous_tx_index;
-
    VCHIQ_BULK_QUEUE_T bulk_tx;
    VCHIQ_BULK_QUEUE_T bulk_rx;
 
    VCOS_EVENT_T remove_event;
    VCOS_EVENT_T bulk_remove_event;
-   VCOS_EVENT_T quota_event;
    VCOS_MUTEX_T bulk_mutex;
 
    struct service_stats_struct
@@ -232,8 +229,29 @@ typedef struct vchiq_service_struct {
       int quota_stalls;
       int slot_stalls;
       int bulk_stalls;
+      int error_count;
+      int ctrl_tx_count;
+      int ctrl_rx_count;
+      int bulk_tx_count;
+      int bulk_rx_count;
+      int bulk_aborted_count;
+      uint64_t ctrl_tx_bytes;
+      uint64_t ctrl_rx_bytes;
+      uint64_t bulk_tx_bytes;
+      uint64_t bulk_rx_bytes;
    } stats;
 } VCHIQ_SERVICE_T;
+
+/* The quota information is outside VCHIQ_SERVICE_T so that it can be
+   statically allocated, since for accounting reasons a service's slot
+   usage is carried over between users of the same port number.
+ */
+typedef struct vchiq_service_quota_struct {
+   int slot_quota;
+   int slot_use_count;
+   VCOS_EVENT_T quota_event;
+   int previous_tx_index;
+} VCHIQ_SERVICE_QUOTA_T;
 
 typedef struct vchiq_shared_state_struct {
 
@@ -342,9 +360,13 @@ struct vchiq_state_struct {
    struct state_stats_struct
    {
       int slot_stalls;
+      int ctrl_tx_count;
+      int ctrl_rx_count;
+      int error_count;
    } stats;
 
-   VCHIQ_SERVICE_T services[VCHIQ_MAX_SERVICES];
+   VCHIQ_SERVICE_T *services[VCHIQ_MAX_SERVICES];
+   VCHIQ_SERVICE_QUOTA_T service_quotas[VCHIQ_MAX_SERVICES];
    VCHIQ_SLOT_INFO_T slot_info[VCHIQ_MAX_SLOTS];
 };
 

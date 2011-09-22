@@ -1102,6 +1102,7 @@ static void composite_disconnect(struct usb_gadget *gadget)
 	struct usb_composite_dev	*cdev = get_gadget_data(gadget);
 	unsigned long			flags;
 
+	gadget->host_request = 0;
 	/* REVISIT:  should we have config and device level
 	 * disconnect callbacks?
 	 */
@@ -1129,6 +1130,21 @@ static ssize_t composite_show_suspended(struct device *dev,
 }
 
 static DEVICE_ATTR(suspended, 0444, composite_show_suspended, NULL);
+
+static ssize_t composite_set_host_request(struct device *dev,
+								struct device_attribute *attr,
+								const char *buf, size_t count)
+{
+	struct usb_gadget *gadget = dev_to_usb_gadget(dev);
+	int value;
+
+	if (sscanf(buf, "%d", &value) != 1)
+		return -EINVAL;
+
+	gadget->host_request = !!value;
+	return count;
+}
+static DEVICE_ATTR(host_request, S_IWUSR, NULL, composite_set_host_request);
 
 static void
 composite_unbind(struct usb_gadget *gadget)
@@ -1162,6 +1178,12 @@ composite_unbind(struct usb_gadget *gadget)
 
 	kfree(cdev);
 	set_gadget_data(gadget, NULL);
+<<<<<<< HEAD
+    Sherman:  Should the 2nd device_remove_file be moved up 5 lines as well?
+=======    
+	device_remove_file(&gadget->dev, &dev_attr_host_request);
+	device_remove_file(&gadget->dev, &dev_attr_suspended);
+>>>>>>> map_integration
 	composite = NULL;
 }
 
@@ -1302,6 +1324,10 @@ static int composite_bind(struct usb_gadget *gadget)
 
 	/* finish up */
 	status = device_create_file(&gadget->dev, &dev_attr_suspended);
+	if (status)
+		goto fail;
+
+	status = device_create_file(&gadget->dev, &dev_attr_host_request);
 	if (status)
 		goto fail;
 

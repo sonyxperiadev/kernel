@@ -28,6 +28,7 @@
 #include <linux/semaphore.h>
 
 #include <linux/broadcom/gist.h>
+#include <linux/broadcom/csx.h>
 #include <linux/broadcom/csx_gist.h>
 #include <linux/broadcom/csx_framework.h>
 

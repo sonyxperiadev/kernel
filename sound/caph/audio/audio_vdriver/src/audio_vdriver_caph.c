@@ -37,15 +37,11 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "csl_aud_drv.h"
 #include "shared.h"
 #include "dspcmd.h"
-#ifdef CONFIG_AUDIO_BUILD
-#include "ripcmdq.h"
-#endif
 #include "csl_apcmd.h"
 #include "audio_consts.h"
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 #include "sysparm.h"
 #endif
 #include "ostask.h"
@@ -56,7 +52,7 @@
 #include "csl_caph_hwctrl.h"
 #include "audio_vdriver.h"
 #include "csl_caph_gain.h"
-#include "platform_mconfig_rhea.h"
+#include <mach/comms/platform_mconfig.h>
 #include "io.h"
 
 
@@ -65,8 +61,6 @@
 * @addtogroup AudioDriverGroup
 * @{
 */
-//This flag should be removed when Rhea DSP image can support IHF.
-#define RHEA_DSP_IHF_FEATURE
 
 //=============================================================================
 // Public Variable declarations
@@ -95,7 +89,6 @@ Boolean inVoiceCall = FALSE;
 //static Boolean voiceInPathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN for both voiceIn and voiceOut
 static Boolean voicePlayOutpathEnabled = FALSE;  //this is needed because DSPCMD_AUDIO_ENABLE sets/clears AMCR.AUDEN
 
-//static AudioEqualizer_en_t	sEqualizerType = EQU_NORMAL;
 static void *sUserCB = NULL;
 #if defined (FUSE_DUAL_PROCESSOR_ARCHITECTURE)
 #if (defined (FUSE_APPS_PROCESSOR) && !defined (FUSE_COMMS_PROCESSOR))
@@ -111,10 +104,6 @@ static Boolean eciEQOn = FALSE; // If TRUE, bypass EQ filter setting request fro
 static Boolean bInVoiceCall = FALSE;
 static UInt32 audDev = 0;
 
-//static CB_GetAudioMode_t  client_GetAudioMode = NULL;
-//static CB_SetAudioMode_t  client_SetAudioMode = NULL;
-//static CB_SetMusicMode_t  client_SetMusicMode = NULL;
-
 //#if	defined(FUSE_COMMS_PROCESSOR)
 static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
 static Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
@@ -124,11 +113,11 @@ static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain);
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void);
 #define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
 #endif
-
+static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void);
 //=============================================================================
 // Functions
 //=============================================================================
@@ -207,16 +196,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     sink = config.sink;
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
-		// Linux only change - Start
-        // special path for IHF voice call 
-        // need to use the physical address  
-		// Linux only change
-		AP_SharedMem_t *ap_shared_mem_ptr = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
-		// Linux only : to get the physical address use the virtual address to compute offset and 
-		// add to the base address 
-   		UInt32 *memAddr = AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0]) 
-                                       - (UInt32)ap_shared_mem_ptr); 
-
+		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
        
         config.src_sampleRate = AUDIO_SAMPLING_RATE_48000;
 		config.source = CSL_CAPH_DEV_DSP_throughMEM; //csl_caph_EnablePath() handles the case DSP_MEM when sink is IHF
@@ -230,9 +210,8 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 	{
 	    config.source = CSL_CAPH_DEV_DSP;
 	}
-	// Linux only change - End
 
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
     config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
@@ -280,7 +259,7 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 
         ((AUDDRV_PathID_t *)pData)->ul2PathID = csl_caph_hwctrl_EnablePath(config);
     }
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
     //Config sidetone
     AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
 				AUDIO_GetParmAccessPtr());
@@ -494,17 +473,11 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 
 	if(AUDDRV_GetDRVDeviceFromSpkr(currSpkr) == CSL_CAPH_DEV_IHF)
 	{
-#ifdef CONFIG_AUDIO_BUILD	
-#ifdef RHEA_DSP_IHF_FEATURE		
-		memAddr = AUDIO_Return_IHF_48kHz_buffer_base_address();
-#endif		
-#endif
+		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
-#ifdef RHEA_DSP_IHF_FEATURE		
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
 							FALSE,
 							FALSE);
-#endif		
 	}	
 	
 	//Enable the new speaker path
@@ -541,14 +514,10 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 	sink = config.sink;
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
-#ifdef CONFIG_AUDIO_BUILD	
-#ifdef RHEA_DSP_IHF_FEATURE		
-		memAddr = AUDIO_Return_IHF_48kHz_buffer_base_address();
-#endif		
-#endif
+		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
 	}	
-#ifdef CONFIG_AUDIO_BUILD	
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
     config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
@@ -566,15 +535,13 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
-#ifdef RHEA_DSP_IHF_FEATURE		
 		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
 							FALSE,
 							FALSE); //integrate SDB CL 366484 
-#endif		
 	}	
 
 	((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
 	//Config sidetone
 	AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
 			AUDIO_GetParmAccessPtr());    
@@ -769,47 +736,6 @@ void AUDDRV_EnableDSPInput (
 
 //=============================================================================
 //
-// Function Name: AUDDRV_Disable_Output
-//
-// Description:   Disable audio output for voice call
-//
-//=============================================================================
-
-void AUDDRV_Disable_Output ( AUDDRV_InOut_Enum_t  path )
-{
-}
-
-
-//=============================================================================
-//
-// Function Name: AUDDRV_Enable_Input
-//
-// Description:   Enable audio input for voice call
-//
-//=============================================================================
-
-void AUDDRV_Enable_Input (
-                    AUDDRV_InOut_Enum_t      input_path,
-                    AUDDRV_MIC_Enum_t        mic_selection,
-					AUDIO_SAMPLING_RATE_t    sample_rate )
-{
-}
-
-
-//=============================================================================
-//
-// Function Name: AUDDRV_Disable_Input
-//
-// Description:   Disable audio input for voice call
-//
-//=============================================================================
-
-void AUDDRV_Disable_Input (  AUDDRV_InOut_Enum_t      path )
-{
-}
-
-//=============================================================================
-//
 // Function Name: AUDDRV_SetULSpeechRecordGain
 //
 // Description:   set UL speech recording gain
@@ -889,7 +815,7 @@ UInt32 AUDDRV_GetAudioDev()
 
 void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 dev)
 {
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 	SysAudioParm_t* pAudioParm;
 	pAudioParm = AUDIO_GetParmAccessPtr();
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() audio_mode==%d\n\r", audio_mode );
@@ -990,59 +916,6 @@ Boolean AUDDRV_GetVCflag( void )
 
 
 
-/********************************************************************
-*  @brief  Register up callback for getting audio mode
-*
-*  @param  cb  (in)  callback function pointer
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_RegisterCB_getAudioMode( CB_GetAudioMode_t	cb )
-{
-//	client_GetAudioMode = cb;
-}
-
-/********************************************************************
-*  @brief  Register up callback for setting audio mode
-*
-*  @param  cb  (in)  callback function pointer
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_RegisterCB_setAudioMode( CB_SetAudioMode_t	cb )
-{
-//	client_SetAudioMode = cb;
-}
-
-/********************************************************************
-*  @brief  Register up callback for setting music audio mode
-*
-*  @param  cb  (in)  callback function pointer
-*
-*  @return none
-*
-****************************************************************************/
-void AUDDRV_RegisterCB_setMusicMode( CB_SetMusicMode_t	cb )
-{
-}
-
-
-//=============================================================================
-//
-// Function Name: AUDDRV_GetEquType
-//
-// Description:   Get Equalizer Type
-//
-//=============================================================================
-
-AudioEqualizer_en_t AUDDRV_GetEquType( AUDDRV_TYPE_Enum_t   path )
-{
-	return (AudioEqualizer_en_t)0;
-}
-
-
 //=============================================================================
 //
 // Function Name: AUDDRV_SetDSPFilter
@@ -1050,7 +923,7 @@ AudioEqualizer_en_t AUDDRV_GetEquType( AUDDRV_TYPE_Enum_t   path )
 // Description:   Set DSP UL and DL filter
 //
 //=============================================================================
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
         UInt32 dev,
 		SysAudioParm_t* pAudioParm)
@@ -1138,59 +1011,6 @@ void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
 	csl_caph_hwctrl_SetHWGain(NULL, hw, gain, dev);
 	return;
 }
-//=============================================================================
-//
-// Function Name: AUDDRV_SetEquType
-//
-// Description:   Set Equalizer Type
-//
-//=============================================================================
-
-void AUDDRV_SetEquType( 
-					AUDDRV_TYPE_Enum_t   path,
-					AudioEqualizer_en_t	 equ_id
-					)
-{
-#if 0
-
-#if ( defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) )
-	sEqualizerType = equ_id;
-
-	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_SetEquType (AP) %d \n\r", sEqualizerType);
-	audio_control_generic( AUDDRV_CPCMD_WRITE_AUDVOC_AEQMODE, (UInt32) equ_id, 0, 0, 0, 0 );
-
-#else
-
-	SysCalDataInd_t* pSysparm;
-	pSysparm = SYSPARM_GetAudioParmAccessPtr();
-
-	sEqualizerType = equ_id;
-
-	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_SetEquType (CP) %d \n\r", sEqualizerType);
-
-	  // CP: update audvoc_aeqMode in sysinterface/dsp/audio/audioapi.c
-	AUDIO_SetAudioParam( PARAM_AUDVOC_AEQMODE, (void *) & sEqualizerType );
-
-	 //set these parameters
-	AUDDRV_SetFilter( AUDDRV_AEQPATHGAIN, (const UInt16 *)& pSysparm->AUDVOC_AEQPATHGAIN[ sEqualizerType ][0] );
-	AUDDRV_SetFilter( AUDDRV_AEQ, (const UInt16 *)& pSysparm->AUDVOC_AEQCOF[ sEqualizerType ][0] );
-
-	AUDDRV_SetFilter( AUDDRV_PEQPATHGAIN, (const UInt16 *)& pSysparm->AUDVOC_PEQPATHGAIN[ sEqualizerType ][0] );
-	AUDDRV_SetFilter( AUDDRV_PEQ, (const UInt16 *)& pSysparm->AUDVOC_PEQCOF[ sEqualizerType ][0] );
-	//AUDDRV_SetFilter( AUDDRV_PEQPATHOFST, (const UInt16 *)& pSysparm->AUDVOC_PEQCOF[ sEqualizerType ][0] );
-
-	//to remove this after the sys parm are readable at AP
-
-	AUDDRV_SetFilter( AUDDRV_AFIR,			(const UInt16 *) & SYSPARM_GetAudioParmAccessPtr()->AUDVOC_ADAC_FIR[0] );
-	Log_DebugPrintf(LOGID_AUDIO, " AUDDRV_SetEquType (CP) FIR [0] %x, [32] %x, [33] %x \n\r", 
-			SYSPARM_GetAudioParmAccessPtr()->AUDVOC_ADAC_FIR[0],
-			SYSPARM_GetAudioParmAccessPtr()->AUDVOC_ADAC_FIR[32],
-			SYSPARM_GetAudioParmAccessPtr()->AUDVOC_ADAC_FIR[33]
-			);
-
-#endif
-#endif	
-}
 
 
 //=============================================================================
@@ -1275,15 +1095,17 @@ void AUDDRV_User_HandleDSPInt ( UInt32 param1, UInt32 param2, UInt32 param3 )
 
 Boolean AUDDRV_IsDualMicEnabled(void)
 {
-#ifdef CONFIG_AUDIO_BUILD
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
     AudioMode_t mode = AUDIO_MODE_HANDSET;
     mode = AUDDRV_GetAudioMode();
     return (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);
 #else
-	return FALSE; /* remove when above CONFIG_AUDIO_BUILD enabled */
+	return FALSE; /* remove when above CONFIG_DEPENDENCY_READY_SYSPARM enabled */
 #endif
 }
-#ifdef CONFIG_AUDIO_BUILD
+
+
+#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 
 //=============================================================================
 //
@@ -1337,7 +1159,7 @@ static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* 
 
 /****************************************************************************
 *
-*  Function Name: Result_t AUDDRV_HWControl_EnableSideTone(AUDDRV_PathID pathI)    
+*  Function Name: Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode)    
 *  
 *  Description: Enable Sidetone path
 *
@@ -1953,7 +1775,127 @@ UInt16 AUDDRV_GetPMUGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
     return outGain.spkrPMUGain;
 }
 
+CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
+{
+      CSL_CAPH_DEVICE_e cslDev = CSL_CAPH_DEV_NONE;
 
+      switch (dev)
+      {
+        case AUDDRV_DEV_NONE:
+            cslDev = CSL_CAPH_DEV_NONE;
+            break;
+			
+         case AUDDRV_DEV_EP:
+            cslDev = CSL_CAPH_DEV_EP;
+            break;
+			
+         case AUDDRV_DEV_HS:
+            cslDev = CSL_CAPH_DEV_HS;
+            break;	
+			
+         case AUDDRV_DEV_IHF:
+            cslDev = CSL_CAPH_DEV_IHF;
+            break;
+			
+         case AUDDRV_DEV_VIBRA:
+            cslDev = CSL_CAPH_DEV_VIBRA;
+            break;
+			
+         case AUDDRV_DEV_FM_TX:
+            cslDev = CSL_CAPH_DEV_FM_TX;
+            break;
+			
+         case AUDDRV_DEV_BT_SPKR:
+            cslDev = CSL_CAPH_DEV_BT_SPKR;
+            break;	
+			
+         case AUDDRV_DEV_DSP:
+            cslDev = CSL_CAPH_DEV_DSP;
+            break;
+			
+         case AUDDRV_DEV_DIGI_MIC:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC;
+            break;
+
+
+         case AUDDRV_DEV_DIGI_MIC_L:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC_L;
+            break;
+
+         case AUDDRV_DEV_DIGI_MIC_R:
+            cslDev = CSL_CAPH_DEV_DIGI_MIC_R;
+            break;
+			
+         case AUDDRV_DEV_EANC_DIGI_MIC:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC;
+            break;
+			
+         case AUDDRV_DEV_EANC_DIGI_MIC_L:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_L;
+            break;
+
+         case AUDDRV_DEV_EANC_DIGI_MIC_R:
+            cslDev = CSL_CAPH_DEV_EANC_DIGI_MIC_R;
+            break;
+
+         case AUDDRV_DEV_SIDETONE_INPUT:
+            cslDev = CSL_CAPH_DEV_SIDETONE_INPUT;
+            break;	
+			
+         case AUDDRV_DEV_EANC_INPUT:
+            cslDev = CSL_CAPH_DEV_EANC_INPUT;
+            break;
+			
+         case AUDDRV_DEV_ANALOG_MIC:
+            cslDev = CSL_CAPH_DEV_ANALOG_MIC;
+            break;
+			
+         case AUDDRV_DEV_HS_MIC:
+            cslDev = CSL_CAPH_DEV_HS_MIC;
+            break;
+			
+         case AUDDRV_DEV_BT_MIC:
+            cslDev = CSL_CAPH_DEV_BT_MIC;
+            break;	
+			
+         case AUDDRV_DEV_FM_RADIO:
+            cslDev = CSL_CAPH_DEV_FM_RADIO;
+            break;
+			
+         case AUDDRV_DEV_MEMORY:
+            cslDev = CSL_CAPH_DEV_MEMORY;
+            break;
+
+         case AUDDRV_DEV_SRCM:
+            cslDev = CSL_CAPH_DEV_SRCM;
+            break;
+		
+        case AUDDRV_DEV_DSP_throughMEM:
+            cslDev = CSL_CAPH_DEV_DSP_throughMEM;
+            break;
+    	    
+        default:
+		break;	
+    };
+
+    return cslDev;
+}
+
+
+static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void)
+{
+        // special path for IHF voice call 
+        // need to use the physical address  
+		// Linux only change
+		AP_SharedMem_t *ap_shared_mem_ptr = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
+		// Linux only : to get the physical address use the virtual address to compute offset and 
+		// add to the base address 
+   		UInt32 *memAddr = AP_SH_BASE + ((UInt32)&(ap_shared_mem_ptr->shared_aud_out_buf_48k[0][0]) 
+                                       - (UInt32)ap_shared_mem_ptr); 
+        
+        return memAddr;
+
+}
 
 //#endif
 

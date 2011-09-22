@@ -341,6 +341,9 @@ extern uint32_t dwc_otg_pcd_is_dualspeed(dwc_otg_pcd_t * pcd);
 /** This function returns whether device is otg. */
 extern uint32_t dwc_otg_pcd_is_otg(dwc_otg_pcd_t * pcd);
 
+/** This function returns whether device is otg2.0. */
+uint32_t dwc_otg_pcd_is_otg20(dwc_otg_pcd_t * pcd);
+
 /** These functions allow to get hnp parameters */
 extern uint32_t get_b_hnp_enable(dwc_otg_pcd_t * pcd);
 extern uint32_t get_a_hnp_support(dwc_otg_pcd_t * pcd);

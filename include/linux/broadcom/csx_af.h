@@ -23,10 +23,6 @@
 #if !defined( CSX_AF_H )
 #define CSX_AF_H
 
-/* ---- Include Files ---------------------------------------------------- */
-#include <linux/broadcom/csx.h>
-#include <linux/broadcom/af_server.h>
-
 /* ---- Constants and Types ---------------------------------------------- */
 
 typedef int CSX_AF_HDL;

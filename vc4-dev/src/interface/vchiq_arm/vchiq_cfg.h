@@ -25,7 +25,7 @@
 /* The minimum compatible version - update to match VCHIQ_VERSION with any incompatible change */
 #define VCHIQ_VERSION_MIN        2
 
-#define VCHIQ_MAX_SERVICES       128
+#define VCHIQ_MAX_SERVICES       4096
 #define VCHIQ_MAX_SLOTS          128
 #define VCHIQ_MAX_SLOTS_PER_SIDE 64
 

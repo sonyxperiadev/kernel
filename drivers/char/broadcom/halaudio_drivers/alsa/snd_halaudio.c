@@ -49,7 +49,8 @@
 #endif
 #include <linux/broadcom/halaudio.h>         /* HAL Audio API */
 #include <linux/broadcom/halaudio_cfg.h>     /* HAL Audio configurations */
-#include <linux/broadcom/amxr_port.h>        /* Audio mixer API */
+#include <linux/broadcom/amxr.h>             /* Audio mixer API */
+#include <linux/broadcom/amxr_port.h>        /* Audio mixer port API */
 #include <asm/io.h>
 #include <asm/uaccess.h>                     /* User access routines */
 #include <asm/atomic.h>                      /* Atomic operations */

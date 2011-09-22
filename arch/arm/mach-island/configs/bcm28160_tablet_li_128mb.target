@@ -3,4 +3,6 @@ family = island
 chip   = 28160
 board  = tablet_28160
 option = li_128mb
+option = ext4 
+option = mmc 
 
