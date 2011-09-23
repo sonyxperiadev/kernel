@@ -556,7 +556,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.policy_dbg_act_freq_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,4,0xb,0xb,0xb,0xe),
+	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,4,0xb,0xb,0xe,0xe),
 	.freq_count = 8,
 	.freq_policy = DEFINE_ARRAY_ARGS(7,7,7,7),
 };
