@@ -18,4 +18,5 @@ int bcm_hsotgctrl_set_phy_off(bool on);
 int bcm_hsotgctrl_phy_set_id_stat(bool floating);
 int bcm_hsotgctrl_phy_init(void);
 int bcm_hsotgctrl_phy_deinit(void);
+int bcm_hsotgctrl_en_clock(bool on);
 
