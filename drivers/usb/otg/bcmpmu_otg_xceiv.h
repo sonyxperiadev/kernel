@@ -38,6 +38,7 @@ struct bcmpmu_otg_xceiv_data {
 #else
 	struct bcm590xx *bcm590xx;
 #endif
+
 	struct bcm_otg_xceiver otg_xceiver;
 
 	/* OTG Work queue and work struct for each item for work queue */
@@ -49,6 +50,13 @@ struct bcmpmu_otg_xceiv_data {
 	struct work_struct bcm_otg_adp_cprb_done_work;
 	struct work_struct bcm_otg_adp_change_work;
 	struct work_struct bcm_otg_id_status_change_work;
+	struct work_struct bcm_otg_chg_detect_work;
+
+	/* OTG notifier blocks for each event */
+	struct notifier_block bcm_otg_vbus_validity_notifier;
+	struct notifier_block bcm_otg_vbus_a_invalid_notifier;
+	struct notifier_block bcm_otg_chg_detection_notifier;
+
 	bool host;
 	bool vbus_enabled;
 };
