@@ -165,6 +165,13 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
      * platform that has a different GPIO muxing.
      */
 
+#if defined(CONFIG_BCM_HDMI_DET) || defined(CONFIG_BCM_HDMI_DET_MODULE)
+    /* leave the gpio alone so it can be claimed by the hot-plug detection
+    ** driver.
+    */
+    printk( KERN_INFO "%s: skipping gpio mux for HDMI hotplug detect pin\n",
+            __func__ );
+#else
     /* request HDMI hot plug gpio */
  #define HDMI_HOT_PLUG    62
     if (( rc = gpio_request( HDMI_HOT_PLUG, "hdmi_hot_plug" )) != 0 )
@@ -175,6 +182,7 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
     }
     //explicitly set the direction for GPIO pins that are muxed to the host
     gpio_direction_input( 62 );   //HDMI_HOT_DETECT
+#endif
 
 #define CAM1_PWR_EN  50
 #define CAM1_RST_B   51
@@ -239,70 +247,6 @@ int32_t vceb_hana_interface_initialize( VCEB_HOST_INTERFACE_INSTANCE_T instance 
         {
            mpuHw_setSRAM_AccessMode( region, mpuHw_MEMORY_ACCESS_OPEN );
         }
-    }
-
-    /*
-     * FIXME This code doesn't really belong here, but it's good enough for now.
-     */
-
-    if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwr_en, "bl-pwr-en" )) != 0 )
-    {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwr-en' ) failed: %d\n", 
-                __func__, platform_data->disp_gpio.lcd_bl_pwr_en, rc );
-        return -ENODEV;
-    }
-    if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_en, "bl-en" )) != 0 )
-    {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-en' ) failed: %d\n", 
-                __func__, platform_data->disp_gpio.lcd_bl_en, rc );
-        return -ENODEV;
-    }
-    if (( rc = gpio_request( platform_data->disp_gpio.lcd_bl_pwm, "bl-pwm" )) != 0 )
-    {
-        printk( KERN_ERR "%s: gpio_request( %d, 'bl-pwm' ) failed: %d\n", 
-                __func__, platform_data->disp_gpio.lcd_bl_pwm, rc );
-        return -ENODEV;
-    }
-    if (( rc = gpio_request( platform_data->disp_gpio.lcd_rst, "lcd-reset" )) != 0 )
-    {
-        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-reset' ) failed: %d\n", 
-                __func__, platform_data->disp_gpio.lcd_rst, rc );
-        return -ENODEV;
-    }
-    if (( rc = gpio_request( platform_data->disp_gpio.lcd_pwr_en, "lcd-pwr-en" )) != 0 )
-    {
-        printk( KERN_ERR "%s: gpio_request( %d, 'lcd-pwr-en' ) failed: %d\n", 
-                __func__, platform_data->disp_gpio.lcd_pwr_en, rc );
-        return -ENODEV;
-    }
-
-    if ( vceb_is_videocore_running )
-    {
-        /*
-         * We call gpio_direction_output so that the gpiolib will think that
-         * the pins are configured as output. Otherwise it will falsely
-         * assume that they're inputs.
-         */
-
-        gpio_direction_output( platform_data->disp_gpio.lcd_rst,       1 );
-        gpio_direction_output( platform_data->disp_gpio.lcd_pwr_en,    1 );
-        gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwm,    1 );
-        gpio_direction_output( platform_data->disp_gpio.lcd_bl_en,     1 );
-        gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwr_en, 1 );
-    }
-    else
-    {
-        gpio_direction_output( platform_data->disp_gpio.lcd_rst,       0 );
-        gpio_direction_output( platform_data->disp_gpio.lcd_pwr_en,    0 );
-        gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwm,    0 );
-        gpio_direction_output( platform_data->disp_gpio.lcd_bl_en,     0 );
-        gpio_direction_output( platform_data->disp_gpio.lcd_bl_pwr_en, 0 );
-
-        gpio_set_value( platform_data->disp_gpio.lcd_pwr_en,    1 );
-        gpio_set_value( platform_data->disp_gpio.lcd_rst,       1 );
-        gpio_set_value( platform_data->disp_gpio.lcd_bl_pwr_en, 1 );
-        gpio_set_value( platform_data->disp_gpio.lcd_bl_en,     1 );
-        gpio_set_value( platform_data->disp_gpio.lcd_bl_pwm,    1 );
     }
 
     return 0;
