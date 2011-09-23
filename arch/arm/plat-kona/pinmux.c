@@ -124,8 +124,7 @@ int __init pinmux_init()
 
 			gpio = g_chip_pin_desc.desc_tbl[i].f_tbl[sel] - PF_GPIO0;
 			dt_pinmux_gpio_mask[(gpio/32)] |= (1 << (gpio%32));
-			printk(KERN_INFO "pad%d (0x%x) is used as GPIO%d (sel=%d)\n",
-				i, i*4, gpio, sel);
+			//printk(KERN_INFO "pad%d (0x%x) is used as GPIO%d (sel=%d)\n",i, i*4, gpio, sel);
 			gpio_cnt++;
 		}
 	}

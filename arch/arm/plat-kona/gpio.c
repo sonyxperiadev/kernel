@@ -98,7 +98,7 @@ int __init early_init_dt_scan_gpio(unsigned long node, const char *uname,
 	unsigned long size, i;
 	uint32_t *p, gpio, cfg;
 
-	printk(KERN_INFO "%s: node=0x%lx, uname=%s, depth=%d\n", __func__, node, uname, depth);
+	//printk(KERN_INFO "%s: node=0x%lx, uname=%s, depth=%d\n", __func__, node, uname, depth);
 
 	if (depth != 1 || strcmp(uname, "gpio") != 0)
 		return 0; /* not found, continue... */
@@ -483,7 +483,8 @@ int __init kona_gpio_init(int num_bank)
 	struct kona_gpio_bank *bank;
 	int i;
 #ifdef CONFIG_KONA_ATAG_DT
-	int gpio, mask, j;
+	uint32_t gpio, mask, j, val;
+	void __iomem * reg_base = kona_gpio.reg_base;
 #endif
 
 	kona_gpio_reset(num_bank);
@@ -516,7 +517,25 @@ int __init kona_gpio_init(int num_bank)
 			if (dt_gpio[gpio] & DT_GPIO_VALID) {
 				/* Cross-check against pinmux node */
 				if (dt_pinmux_gpio_mask[GPIO_BANK(gpio)] & (1<<GPIO_BIT(gpio))) {
-					printk(KERN_INFO "Configure GPIO%d to 0x%x\n", gpio, dt_gpio[gpio]);
+					//printk(KERN_INFO "Configure GPIO%d to 0x%x\n", gpio, dt_gpio[gpio]);
+
+					if (dt_gpio[gpio] & DT_GPIO_INPUT){
+						val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+						val &= ~GPIO_GPCTR0_IOTR_MASK;
+						val |= GPIO_GPCTR0_IOTR_CMD_INPUT;
+						__raw_writel(val, reg_base + GPIO_CTRL(gpio));
+					}
+					else { /* output */
+						val = __raw_readl(reg_base + GPIO_CTRL(gpio));
+						val &= ~GPIO_GPCTR0_IOTR_MASK;
+						val |= GPIO_GPCTR0_IOTR_CMD_0UTPUT;
+						__raw_writel(val, reg_base + GPIO_CTRL(gpio));
+
+						val = __raw_readl(reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
+						val = (dt_gpio[gpio] & DT_GPIO_OUTPUT_VAL) ?
+							(val | (1 << GPIO_BIT(gpio))) : (val & (~(1 << GPIO_BIT(gpio))));
+						__raw_writel(val, reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
+					}
 				}
 				else{
 					printk(KERN_ERR "Mismatch GPIO%d. The board may not boot!\n", gpio);
