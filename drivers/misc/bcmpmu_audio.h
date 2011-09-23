@@ -113,7 +113,8 @@ typedef enum {
 	PMU_HSGAIN_3P5DB_N,
 	PMU_HSGAIN_3DB_N,
 	PMU_HSGAIN_2P5DB_N,
-	PMU_HSGAIN_2DB_N
+	PMU_HSGAIN_2DB_N,
+	PMU_HSGAIN_NUM
 } bcmpmu_hs_gain_t ;
 
 typedef enum {
@@ -171,6 +172,7 @@ typedef enum {
 	PMU_IHFGAIN_2DB_N,
 	PMU_IHFGAIN_1P5DB_N,
 	PMU_IHFGAIN_1DB_N,
+	PMU_IHFGAIN_P5DB_N,
 	PMU_IHFGAIN_0DB,
 	PMU_IHFGAIN_P5DB_P,
 	PMU_IHFGAIN_1DB_P,
@@ -179,7 +181,8 @@ typedef enum {
 	PMU_IHFGAIN_2P5DB_P,
 	PMU_IHFGAIN_3DB_P,
 	PMU_IHFGAIN_3P5DB_P,
-	PMU_IHFGAIN_4DB_P
+	PMU_IHFGAIN_4DB_P,
+	PMU_IHFGAIN_NUM
 } bcmpmu_ihf_gain_t;
 
 extern void bcmpmu_audio_init(void);
