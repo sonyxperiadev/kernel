@@ -31,6 +31,7 @@ typedef struct {
 typedef struct {
     unsigned int rx_status;
     unsigned int image_intr;
+    unsigned int dropped_frames;
 } cam_isr_reg_status_st_t;	
 
 enum {
