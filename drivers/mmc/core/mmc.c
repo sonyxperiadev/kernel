@@ -26,6 +26,8 @@
 #include "../host/sdhci.h"
 #endif
 
+#define TEMP_DISABLE_SDIO_HIGHSPEED 1 //@@@TEMP DL 20110727 for 4330 wifi card
+
 static const unsigned int tran_exp[] = {
 	10000,		100000,		1000000,	10000000,
 	0,		0,		0,		0
@@ -714,6 +716,12 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			goto free_card;
 	}
 
+#ifdef TEMP_DISABLE_SDIO_HIGHSPEED //@@@TEMP DL 20110727 for 4330 wifi card
+	printk(KERN_ERR "@@@mmc %s: disable SDIO HS, set hs_max_dtr to 0 (was %u)\n",
+		__FUNCTION__, card->ext_csd.hs_max_dtr);
+	card->ext_csd.hs_max_dtr = 0;
+#endif /* TEMP_DISABLE_SDIO_HIGHSPEED */
+
 	/*
 	 * Activate high speed (if supported)
 	 */
@@ -732,8 +740,12 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 			       mmc_hostname(card->host));
 			err = 0;
 		} else {
+#ifdef TEMP_DISABLE_SDIO_HIGHSPEED //@@@TEMP DL 20110727 for 4330 wifi card
+			printk(KERN_ERR "@@@mmc %s: TEMP - skip HS timing\n", __FUNCTION__);
+#else
 			mmc_card_set_highspeed(card);
 			mmc_set_timing(card->host, MMC_TIMING_MMC_HS);
+#endif /* TEMP_DISABLE_SDIO_HIGHSPEED */
 		}
 	}
 

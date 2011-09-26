@@ -31,6 +31,8 @@
 #include <linux/mmc/sdio_ids.h>
 #endif
 
+#define TEMP_DISABLE_SDIO_HIGHSPEED 1 //@@@TEMP DL 20110727 for 4330 wifi card
+
 static int sdio_read_fbr(struct sdio_func *func)
 {
 	int ret;
@@ -468,6 +470,12 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
 	}
 #endif
 
+#ifdef TEMP_DISABLE_SDIO_HIGHSPEED //@@@TEMP DL 20110727 for 4330 wifi card
+	printk(KERN_ERR "@@@mmc %s: forcing high_speed=0 (was %u)\n",
+		__FUNCTION__, card->cccr.high_speed);
+	card->cccr.high_speed = 0;
+#endif /* TEMP_DISABLE_SDIO_HIGHSPEED */
+
 #ifdef CONFIG_MMC_EMBEDDED_SDIO
 	if (host->embedded_sdio_data.cis)
 		memcpy(&card->cis, host->embedded_sdio_data.cis, sizeof(struct sdio_cis));
@@ -522,6 +530,12 @@ static int mmc_sdio_init_card(struct mmc_host *host, u32 ocr,
 		mmc_sd_go_highspeed(card);
 	else if (err)
 		goto remove;
+
+#ifdef TEMP_DISABLE_SDIO_HIGHSPEED //@@@TEMP DL 20110727 for 4330 wifi card
+	printk(KERN_ERR "@@@mmc %s: forcing cis.max_dtr=25000000 (was %u)\n",
+		__FUNCTION__, card->cis.max_dtr);
+	card->cis.max_dtr = 25000000;
+#endif /* TEMP_DISABLE_SDIO_HIGHSPEED */
 
 #ifdef CONFIG_BCM_SDIOWL
 	if ((card->cis.max_dtr == 0) ||
