@@ -54,9 +54,7 @@ static struct clk *clk;
 
 #define ENTER() printk(KERN_INFO "%s: line %d\n", __func__, __LINE__)
 
-#ifdef CONFIG_MTD_PARTITIONS
 const char *part_probes[] = { "cmdlinepart", NULL };
-#endif
 
 /*
  * The RS oob is 38 bytes free at the start, but RS is deprecated,
@@ -985,7 +983,7 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 			ret = -EIO;
 			goto out_free_info;
 		}
-		add_mtd_partitions(mtd, partition_info, nr_partitions);
+		mtd_device_register(mtd, partition_info, nr_partitions);
 	}
 
 	platform_set_drvdata(pdev, info);
