@@ -69,7 +69,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define UNICAM_MEM_POOL_SIZE   SZ_8M
 
-#define UNICAM_DEBUG
+//#define UNICAM_DEBUG
 #ifdef UNICAM_DEBUG
     #define dbg_print(fmt, arg...) \
     printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
