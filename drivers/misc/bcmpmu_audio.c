@@ -46,12 +46,12 @@ void bcmpmu_hs_power(bool on)
 	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_HSPUP2_HS_PWRUP,&reg2.val,PMU_BITMASK_ALL);
 
 	if (on) {
-		reg1.val &= ~BCMPMU_HSPUP1_IDDQ_PWRDN;  //HSPUP1
-		reg2.val |= BCMPMU_HSPUP2_HS_PWRUP;     //HSPUP2
+		reg1.val &= ~BCMPMU_HSPUP1_IDDQ_PWRDN;  /*HSPUP1*/
+		reg2.val |= BCMPMU_HSPUP2_HS_PWRUP;     /*HSPUP2*/
 		bcmpmu_audio->HS_On = true;
 	} else {
-		reg1.val |= BCMPMU_HSPUP1_IDDQ_PWRDN;  //HSPUP1
-		reg2.val &= ~BCMPMU_HSPUP2_HS_PWRUP;   //HSPUP2
+		reg1.val |= BCMPMU_HSPUP1_IDDQ_PWRDN;  /*HSPUP1*/
+		reg2.val &= ~BCMPMU_HSPUP2_HS_PWRUP;   /*HSPUP2*/
 		bcmpmu_audio->HS_On = false;
 	}
 	bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_HSPUP1_IDDQ_PWRDWN,reg1.val,PMU_BITMASK_ALL);
@@ -63,44 +63,35 @@ EXPORT_SYMBOL(bcmpmu_hs_power);
 
 void bcmpmu_ihf_power(bool on)
 {
-    struct bcmpmu_rw_data reg;
+	struct bcmpmu_rw_data reg;
 
 	if(on) {
-	    if(bcmpmu_audio->IHF_On) {
+		if(bcmpmu_audio->IHF_On) {
 			printk(KERN_INFO "%s: IHF is already on.\n", __func__);
-			return -EPERM;
+			return;
 		}
 		bcmpmu_audio->IHF_On = true;
 
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,&reg.val,PMU_BITMASK_ALL);
-		reg.val &= ~BCMPMU_IHFTOP_IDDQ;  //IHFTOP
+		reg.val &= ~BCMPMU_IHFTOP_IDDQ;  /*IHFTOP*/
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,reg.val,PMU_BITMASK_ALL);
 
-		//bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,&reg.val,PMU_BITMASK_ALL);
-		//reg.val |= BCMPMU_IHFPOP_PUP;  //IHFPOP
-		//bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,reg.val,PMU_BITMASK_ALL);
-
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,&reg.val,PMU_BITMASK_ALL);
-		reg.val |= BCMPMU_IHFLDO_PUP;  //IHFLDO
+		reg.val |= BCMPMU_IHFLDO_PUP;  /*IHFLDO*/
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,reg.val,PMU_BITMASK_ALL);
-	}
-    else{
-	    if(!bcmpmu_audio->IHF_On) {
+	} else {
+		if(!bcmpmu_audio->IHF_On) {
 			printk(KERN_INFO "%s: IHF is already off.\n", __func__);
-			return -EPERM;
+			return;
 		}
 		bcmpmu_audio->IHF_On = false;
 
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,&reg.val,PMU_BITMASK_ALL);
-		reg.val &= ~BCMPMU_IHFPOP_PUP;  //IHFPOP
+		reg.val &= ~BCMPMU_IHFPOP_PUP;  /*IHFPOP*/
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,reg.val,PMU_BITMASK_ALL);
 
-		//bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,&reg.val,PMU_BITMASK_ALL);
-		//reg.val &= ~BCMPMU_IHFLDO_PUP; //IHFLDO
-		//bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFLDO_PUP,reg.val,PMU_BITMASK_ALL);
-
 		bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,&reg.val,PMU_BITMASK_ALL);
-		reg.val |= BCMPMU_IHFTOP_IDDQ;  //IHFTOP
+		reg.val |= BCMPMU_IHFTOP_IDDQ;  /*IHFTOP*/
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFTOP_IHF_IDDQ,reg.val,PMU_BITMASK_ALL);
 
 	}
@@ -116,8 +107,8 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
 	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_HSPGA2_GAIN,&reg2.val,PMU_BITMASK_ALL);
 
 	if(path == PMU_AUDIO_HS_LEFT) {
-        reg1.val &= ~BCMPMU_HS_GAIN_MASK;
-        reg1.val |= (gain & BCMPMU_HS_GAIN_MASK);
+	reg1.val &= ~BCMPMU_HS_GAIN_MASK;
+	reg1.val |= (gain & BCMPMU_HS_GAIN_MASK);
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_HSPGA1_GAIN,reg1.val,PMU_BITMASK_ALL);
 		return;
 	}
@@ -127,7 +118,7 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
 		bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_HSPGA2_GAIN,reg2.val,PMU_BITMASK_ALL);
 		return;
 	}
-	else{  //for PMU_AUDIO_HS_BOTH
+	else{  /*for PMU_AUDIO_HS_BOTH*/
 		reg1.val &= ~BCMPMU_HS_GAIN_MASK;
 		reg1.val |= (gain & BCMPMU_HS_GAIN_MASK);
 		reg2.val &= ~BCMPMU_HS_GAIN_MASK;
@@ -137,8 +128,6 @@ void bcmpmu_hs_set_gain(bcmpmu_hs_path_t path, bcmpmu_hs_gain_t gain)
 	}
 }
 EXPORT_SYMBOL(bcmpmu_hs_set_gain);
-
-
 
 void bcmpmu_ihf_set_gain(bcmpmu_ihf_gain_t gain)
 {
@@ -220,13 +209,11 @@ DEFINE_SIMPLE_ATTRIBUTE(dbg_ihf_on, NULL,
 
 static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 {
-	int ret;
-
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_audio *pdata;
 	struct bcmpmu_rw_data reg;
 #ifdef CONFIG_DEBUG_FS
-	struct dentry *audio_dir, *hs_gain, *ihf_gain, *hs_on, *ihf_on;
+	struct dentry *audio_dir = NULL, *hs_gain = NULL, *ihf_gain = NULL, *hs_on = NULL, *ihf_on = NULL;
 #endif
 		
 	printk(KERN_INFO "%s: called.\n", __func__);
@@ -242,9 +229,9 @@ static int __devinit bcmpmu_audio_probe(struct platform_device *pdev)
 	bcmpmu_audio->HS_On = false;
 	bcmpmu_audio->IHF_On = false;
 
-        // Enable auto sequence for IHF power up and power down
+	/* Enable auto sequence for IHF power up and power down */
 	bcmpmu_audio->bcmpmu->read_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,&reg.val,PMU_BITMASK_ALL);
-	reg.val |= BCMPMU_IHFPOP_AUTOSEQ;  //IHFPOP
+	reg.val |= BCMPMU_IHFPOP_AUTOSEQ;  /*IHFPOP*/
 	bcmpmu_audio->bcmpmu->write_dev(bcmpmu_audio->bcmpmu,PMU_REG_IHFPOP_PUP,reg.val,PMU_BITMASK_ALL);
 
 #ifdef CONFIG_DEBUG_FS
@@ -277,8 +264,6 @@ debugfs_err:
 
 static int __devexit bcmpmu_audio_remove(struct platform_device *pdev)
 {
-	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
-
 	kfree(bcmpmu_audio);
 	return 0;
 }
@@ -297,10 +282,9 @@ static int __init bcmpmu_audio_drv_init(void)
 }
 module_init(bcmpmu_audio_drv_init);
 
-static int __exit bcmpmu_audio_drv_exit(void)
+static void __exit bcmpmu_audio_drv_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_audio_driver);
-	return 0;
 }
 module_exit(bcmpmu_audio_drv_exit);
 

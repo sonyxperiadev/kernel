@@ -27,12 +27,6 @@
 
 #include <linux/mfd/bcmpmu.h>
 
-/* To test SIM */
-#ifdef CONFIG_MFD_BCMSAMOA
-#include <mach/io_map.h>
-#include <linux/io.h>
-#endif
-
 #ifdef CONFIG_DEBUG_FS
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
@@ -42,6 +36,7 @@ static struct bcmpmu *bcmpmu_core;
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static unsigned int map, addr, value, mask;
+static ssize_t
 bcmpmu_show_map(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
@@ -76,22 +71,6 @@ bcmpmu_set_addr(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t
-bcmpmu_show_value(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	return sprintf(buf, "%X\n", value);
-}
-
-static ssize_t
-bcmpmu_set_value(struct device *dev, struct device_attribute *attr,
-		const char *buf, size_t n)
-{
-	unsigned long val = simple_strtoul(buf, NULL, 0);
-	value = val;
-	return n;
-}
-
-static ssize_t
 bcmpmu_show_mask(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
@@ -107,8 +86,9 @@ bcmpmu_set_mask(struct device *dev, struct device_attribute *attr,
 	return n;
 }
 
-static ssize_t show_reg_read(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+static ssize_t
+show_reg_read(struct device *dev, struct device_attribute *attr,
+				char *buf)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	bcmpmu->read_dev_drct(bcmpmu, map, addr, &value, mask);
@@ -116,15 +96,18 @@ static ssize_t show_reg_read(struct device *dev, struct device_attribute *attr,
 		"Read register map=0x%X, addr=0x%X, value=0x%X, mask=0x%x\n",
 		map, addr, value, mask);
 }
-static ssize_t store_reg_write(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+static ssize_t
+store_reg_write(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
 {
 	struct bcmpmu *bcmpmu = dev->platform_data;
+	sscanf(buf, "%x", &value);
 	bcmpmu->write_dev_drct(bcmpmu, map, addr, value, mask);
 	return count;
 }
-static ssize_t store_adc_req(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+static ssize_t
+store_adc_req(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
 {
 	struct bcmpmu_adc_req adc;
 	struct bcmpmu *bcmpmu = dev->platform_data;
@@ -132,8 +115,9 @@ static ssize_t store_adc_req(struct device *dev, struct device_attribute *attr,
 	bcmpmu->adc_req(bcmpmu, &adc);
 	return count;
 }
-static ssize_t store_rgltr(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+static ssize_t
+store_rgltr(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
 {
 	int volt, mode, enable;
 	char name[10];
@@ -176,7 +160,6 @@ static DEVICE_ATTR(adcreq, 0644, NULL, store_adc_req);
 static DEVICE_ATTR(rgltr, 0644, NULL, store_rgltr);
 static DEVICE_ATTR(map, 0644, bcmpmu_show_map, bcmpmu_set_map);
 static DEVICE_ATTR(addr, 0644, bcmpmu_show_addr, bcmpmu_set_addr);
-static DEVICE_ATTR(value, 0644, bcmpmu_show_value, bcmpmu_set_value);
 static DEVICE_ATTR(mask, 0644, bcmpmu_show_mask, bcmpmu_set_mask);
 static DEVICE_ATTR(regbulk, 0644, NULL, store_regbulk);
 
@@ -187,7 +170,6 @@ static struct attribute *bcmpmu_core_attrs[] = {
 	&dev_attr_rgltr.attr,
 	&dev_attr_map.attr,
 	&dev_attr_addr.attr,
-	&dev_attr_value.attr,
 	&dev_attr_mask.attr,
 	&dev_attr_regbulk.attr,
 	NULL
@@ -354,7 +336,9 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 	unsigned int val;
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
-
+#ifdef CONFIG_DEBUG_FS
+	struct dentry *root_dir = NULL;
+#endif
 	bcmpmu->regmap = bcmpmu_get_regmap();
 	
 	printk(KERN_INFO "%s: called.\n", __func__);
@@ -369,39 +353,11 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 		printk(KERN_INFO "%s: Chip Version = 0x%0X.\n", __func__, val);
 	}
 
-
 	bcmpmu_register_init(bcmpmu);
-
-#ifdef CONFIG_MFD_BCMSAMOA
-	/* Remove this later - START */
-	regaddr = KONA_SIMI_VA + 0x6C;
-	/* Read before write */
-	rval = __raw_readl(regaddr);
-	printk("bcmpmu_apb_write_device: read value = 0x%X\n", rval);
-	rval = rval | 0x1;
-		
-	printk("bcmpmu_apb_write_device: write value = 0x%X\n", rval);
-	
-	/* write */
-	__raw_writel(rval, regaddr);
-	
-	regaddr = KONA_SIMI2_VA + 0x6C;
-	/* Read before write */
-	rval = __raw_readl(regaddr);
-	printk("bcmpmu_apb_write_device: read value = 0x%X\n", rval);
-	rval = rval | 0x1;
-		
-	printk("bcmpmu_apb_write_device: write value = 0x%X\n", rval);
-	
-	/* write */
-	__raw_writel(rval, regaddr);
-	/* Remove this later - END */
-	
-#endif
 	misc_register(&bcmpmu_device);
 
 #ifdef CONFIG_DEBUG_FS
-	struct dentry *root_dir = debugfs_create_dir("bcmpmu", 0);
+	root_dir = debugfs_create_dir("bcmpmu", 0);
 	if (!root_dir) {
 		bcmpmu->debugfs_root_dir = NULL;
 		printk(KERN_INFO "%s: failed to create debugfs dir.\n", __func__);
@@ -427,7 +383,7 @@ static int __devinit bcmpmu_probe(struct platform_device *pdev)
 	}
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
-	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_core_attr_group);
+	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_core_attr_group);
 #endif
 	return 0;
 
@@ -437,7 +393,6 @@ err:
 
 static int __devexit bcmpmu_remove(struct platform_device *pdev)
 {
-	int i;
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
 

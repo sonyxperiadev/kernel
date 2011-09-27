@@ -40,7 +40,7 @@ struct bcmpmu_ponkey {
 	struct bcmpmu		*bcmpmu;
 };
 
-static void bcmpmu_ponkey_isr(int irq, void *data)
+static void bcmpmu_ponkey_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_ponkey *ponkey = data;
 	int val = 0;
@@ -98,7 +98,7 @@ static int __devinit bcmpmu_ponkey_probe(struct platform_device *pdev)
 	/* Request PRESSED and RELEASED interrupts.
 	 */
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_F, bcmpmu_ponkey_isr, ponkey);
-        bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_R, bcmpmu_ponkey_isr, ponkey);
+	bcmpmu->register_irq(bcmpmu, PMU_IRQ_PONKEYB_R, bcmpmu_ponkey_isr, ponkey);
 	
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_PONKEYB_F);
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_PONKEYB_R);

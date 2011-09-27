@@ -244,7 +244,7 @@ dbgmsk_show(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 dbgmsk_set(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 0xFF || val == 0)
@@ -814,7 +814,8 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy = kzalloc(sizeof(struct bcmpmu_accy), GFP_KERNEL);
 	if (paccy == NULL) {
 		pr_accy(INIT, "%s: failed to alloc mem.\n", __func__);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err;
 	}
 
 	paccy->bcmpmu = bcmpmu;
@@ -875,6 +876,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	return 0;
 
 err:
+	kfree(paccy);
 	return ret;
 }
 

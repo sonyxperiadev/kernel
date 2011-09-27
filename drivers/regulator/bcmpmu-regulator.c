@@ -264,8 +264,6 @@ static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max
 	unsigned int addr = 0 ;
 	unsigned int mode = 0 ;
 	int	rc;
-	int	ret;
-	unsigned int val;
 	*selector = -1;
 
 	for (rc = 0; rc < info->num_voltages ; rc++) {
@@ -292,7 +290,6 @@ static int bcmpmuldo_set_voltage(struct regulator_dev *rdev, int min_uv, int max
 				}
 			}
 			*selector = rc;
-			rc = ( val & (~(info->vout_mask)) )  | rc ;
 			return ( bcmpmu->write_dev(bcmpmu, addr, rc, info->vout_mask) ) ;
 		}
 	}

@@ -202,19 +202,21 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 		
 	pdata = (struct bcmpmu_platform_data *)i2c->dev.platform_data;
 	
-	printk(KERN_INFO, "%s called\n", __func__);
+	printk(KERN_INFO "%s called\n", __func__);
 	
 	bcmpmu = kzalloc(sizeof(struct bcmpmu), GFP_KERNEL);
 	if (bcmpmu == NULL) {
-		printk(KERN_ERR,"%s: failed to alloc mem.\n", __func__);
+		printk(KERN_ERR "%s: failed to alloc mem.\n", __func__);
 		kfree(i2c);
-		return -ENOMEM;
+		ret = -ENOMEM;
+		goto err;
 	}
 
 	bcmpmu_i2c = kzalloc(sizeof(struct bcmpmu_i2c), GFP_KERNEL);
 	if (bcmpmu_i2c == NULL) {
-		printk(KERN_ERR,"%s: failed to alloc mem.\n", __func__);
-		return -ENOMEM;
+		printk(KERN_ERR "%s: failed to alloc mem.\n", __func__);
+		ret = -ENOMEM;
+		goto err;
 	}
 
 	i2c_set_clientdata(i2c, bcmpmu);
@@ -224,7 +226,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	adp = i2c_get_adapter(pdata->i2c_adapter_id);
 	clt = i2c_new_device(adp, pdata->i2c_board_info_map1);
 	if (!clt)
-		printk(KERN_ERR,"%s: add new device for map1 failed\n", __func__);
+		printk(KERN_ERR "%s: add new device for map1 failed\n", __func__);
 
 	bcmpmu_i2c->i2c_client1 = clt;
 	mutex_init(&bcmpmu_i2c->i2c_mutex);
@@ -246,6 +248,7 @@ static int bcmpmu_i2c_probe(struct i2c_client *i2c,
 	return ret;
 
 err:
+	kfree(bcmpmu->accinfo);
 	kfree(bcmpmu);
 	return ret;
 }
@@ -255,6 +258,7 @@ static int bcmpmu_i2c_remove(struct i2c_client *i2c)
 	struct bcmpmu *bcmpmu = i2c_get_clientdata(i2c);
 
 	platform_device_unregister(&bcmpmu_core_device);
+	kfree(bcmpmu->accinfo);
 	kfree(bcmpmu);
 
 	return 0;

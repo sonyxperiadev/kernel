@@ -58,10 +58,10 @@ u32 bcm59055_sr_v_table[] = {
 	1320000,
 	1340000,
 	1800000,  /*0x1b*/
-    1200000,
-    1200000,
-    1200000,
-    1200000,  /*0x1f*/
+	1200000,
+	1200000,
+	1200000,
+	1200000,  /*0x1f*/
 };
 
 struct regulator_desc bcm59055_desc[BCMPMU_REGULATOR_MAX] = {
@@ -434,11 +434,11 @@ struct bcmpmu_reg_info bcm59055_register_info[BCMPMU_REGULATOR_MAX] = {
 	},
 };
 
-const struct regulator_desc *bcmpmu_rgltr_desc(void)
+struct regulator_desc *bcmpmu_rgltr_desc(void)
 {
 	return bcm59055_desc;
 }
-const struct bcmpmu_reg_info *bcmpmu_rgltr_info(void)
+struct bcmpmu_reg_info *bcmpmu_rgltr_info(void)
 {
 	return bcm59055_register_info;
 }
