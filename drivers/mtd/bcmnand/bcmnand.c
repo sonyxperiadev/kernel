@@ -716,10 +716,13 @@ static int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 #if 0 // FIXME REMOVE LATER
 	printk("%s line %d ops->retlen=0x%x ops->len=0x%x readlen=0x%x\n",
 		__func__, __LINE__, ops->retlen, ops->len, readlen);
-	printk("%s line %d mtd->ecc_stats.failed=0x%x stats.failed=0x%x\n",
-		__func__, __LINE__, mtd->ecc_stats.failed, stats.failed);
-	printk("%s line %d mtd->ecc_stats.corrected=0x%x stats.corrected=0x%x\n",
-		__func__, __LINE__, mtd->ecc_stats.failed, stats.failed);
+	if (mtd->ecc_stats.failed != stats.failed)
+		printk("%s line %d mtd->ecc_stats.failed=0x%x stats.failed=0x%x\n",
+			__func__, __LINE__, mtd->ecc_stats.failed, stats.failed);
+
+	if (mtd->ecc_stats.corrected != stats.corrected)
+		printk("%s line %d mtd->ecc_stats.corrected=0x%x stats.corrected=0x%x\n",
+			__func__, __LINE__, mtd->ecc_stats.corrected, stats.corrected);
 #endif
 
 	if (ret)
@@ -765,6 +768,12 @@ static int nand_read(struct mtd_info *mtd, loff_t from, size_t len,
 
 	nand_release_device(mtd);
 
+#if 0
+	printk("%s from=0x%llx len=0x%x retlen=0x%x ret=%d %02x%02x%02x%02x%02x%02x%02x%02x\n", 
+		__func__, from, len, *retlen, ret, 
+		buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7] );
+#endif
+
 	return ret;
 }
 
@@ -779,7 +788,7 @@ static int bcmnand_init_chip(struct bcmnand_info *info)
 {
 	uint32_t rc;
 	uint32_t dma = 1;
-	uint32_t ecc = 1;
+	uint32_t ecc = 0;
 	uint8_t flags;
 	chal_nand_info_t *pni = &info->chip.chal_nand;
 
