@@ -42,7 +42,7 @@
 #define PMU_DEVICE_I2C_ADDR1	0x0C
 #define PMU_DEVICE_INT_GPIO	10
 
-static const struct bcmpmu_rw_data register_init_data[] = {
+static struct bcmpmu_rw_data register_init_data[] = {
 	{.map=0, .addr=0x0c, .val=0x1b, .mask=0xFF},
 	{.map=0, .addr=0x40, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x41, .val=0xFF, .mask=0xFF},
@@ -72,7 +72,7 @@ static const struct bcmpmu_rw_data register_init_data[] = {
 	{.map=0, .addr=0x69, .val=0x10, .mask=0xFF},
 };
 
-static const struct bcmpmu_temp_map batt_temp_map[] = {
+static struct bcmpmu_temp_map batt_temp_map[] = {
 /* This table is hardware dependent and need to get from platform team */
 /*	adc		temp*/
 	{0x3FF,		233},/* -40 C */
@@ -401,7 +401,7 @@ static struct i2c_board_info pmu_info_map1 = {
 	I2C_BOARD_INFO("bcmpmu_map1", PMU_DEVICE_I2C_ADDR1),
 };
 
-static const struct bcmpmu_adc_setting adc_setting = {
+static struct bcmpmu_adc_setting adc_setting = {
 	.tx_rx_sel_addr = 0,
 	.tx_delay = 0,
 	.rx_delay = 0,
@@ -413,12 +413,12 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.i2c_board_info_map1 = &pmu_info_map1,
 	.i2c_adapter_id = 2,
 	.i2c_pagesize = 256,
-	.init_data = &register_init_data,
+	.init_data = &register_init_data[0],
 	.init_max = ARRAY_SIZE(register_init_data),
-	.batt_temp_map = &batt_temp_map,
+	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
-	.regulator_init_data = &bcm59055_regulators,
+	.regulator_init_data = bcm59055_regulators,
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,

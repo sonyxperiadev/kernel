@@ -759,10 +759,6 @@ struct bcmpmu {
 			void (*callback)(struct bcmpmu *pmu,
 				unsigned char event, void *, void *),
 			void *data);
-	/* battery algorithms */
-	int (*charging_mgr)(struct bcmpmu *pmu, enum bcmpmu_batt_event event);
-	int (*metering_mgr)(struct bcmpmu *pmu, enum bcmpmu_batt_event event);
-
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
 	int (* register_usb_callback)(struct bcmpmu *pmu,
@@ -805,9 +801,9 @@ struct bcmpmu_platform_data {
 	struct bcmpmu_rw_data *init_data;
 	int init_max;
 	struct bcmpmu_regulator_init_data *regulator_init_data;
-	const struct bcmpmu_temp_map *batt_temp_map;
+	struct bcmpmu_temp_map *batt_temp_map;
 	int batt_temp_map_len;
-	const struct bcmpmu_adc_setting *adc_setting;
+	struct bcmpmu_adc_setting *adc_setting;
 	int fg_smpl_rate;
 	int fg_slp_rate;
 	int fg_slp_curr_ua;
@@ -824,8 +820,8 @@ const struct bcmpmu_reg_map *bcmpmu_get_adc_ctrl_map(void);
 const struct bcmpmu_env_info *bcmpmu_get_envregmap(int *len);
 const int *bcmpmu_get_usb_id_map(int *len);
 
-const struct regulator_desc *bcmpmu_rgltr_desc(void);
-const struct bcmpmu_reg_info *bcmpmu_rgltr_info(void);
+struct regulator_desc *bcmpmu_rgltr_desc(void);
+struct bcmpmu_reg_info *bcmpmu_rgltr_info(void);
 
 void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
 void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);

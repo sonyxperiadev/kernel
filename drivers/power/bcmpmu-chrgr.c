@@ -88,7 +88,7 @@ static enum power_supply_property bcmpmu_usb_props[] = {
 
 static int bcmpmu_chrgr_set_property(struct power_supply *ps,
 		enum power_supply_property property,
-		union power_supply_propval *propval)
+		const union power_supply_propval *propval)
 {
 	int ret = 0;
 	struct bcmpmu_chrgr *pchrgr = container_of(ps,
@@ -139,7 +139,7 @@ static int bcmpmu_chrgr_get_property(struct power_supply *ps,
 
 static int bcmpmu_usb_set_property(struct power_supply *ps,
 		enum power_supply_property property,
-		union power_supply_propval *propval)
+		const union power_supply_propval *propval)
 {
 	int ret = 0;
 	struct bcmpmu_chrgr *pchrgr = container_of(ps,
@@ -184,8 +184,6 @@ static int bcmpmu_usb_get_property(struct power_supply *ps,
 
 static void bcmpmu_chrgr_isr(enum bcmpmu_irq irq, void *data)
 {
-	struct bcmpmu_chrgr *pchrgr = data;
-	int ret;
 }
 
 
@@ -303,7 +301,7 @@ dbgmsk_show(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 dbgmsk_set(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				 const char *buf, size_t count)
 {
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 0xFF || val == 0)
@@ -312,6 +310,7 @@ dbgmsk_set(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 
+static ssize_t
 bcmpmu_dbg_show_vfloat(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
@@ -485,10 +484,6 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_HW_TCH_EXP, bcmpmu_chrgr_isr, pchrgr);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_CHG_SW_TMR_EXP, bcmpmu_chrgr_isr, pchrgr);
 
-#ifdef CONFIG_MFD_BCMPMU_DBG
-	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_chrgr_attr_group);
-#endif
-
 	pchrgr->chrgrcurr_max = bcmpmu->usb_accy_data.max_curr_chrgr;
 	pchrgr->chrgrtype = bcmpmu->usb_accy_data.chrgr_type;
 	pchrgr->usbtype = bcmpmu->usb_accy_data.usb_type;
@@ -501,11 +496,15 @@ static int __devinit bcmpmu_chrgr_probe(struct platform_device *pdev)
 		(pchrgr->usbtype < PMU_USB_TYPE_MAX))
 		pchrgr->usb_online = 1;
 
+#ifdef CONFIG_MFD_BCMPMU_DBG
+	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_chrgr_attr_group);
+#endif
 	return 0;
 
 err:
 	power_supply_unregister(&pchrgr->chrgr);
 	power_supply_unregister(&pchrgr->usb);
+	kfree(pchrgr);
 	return ret;
 }
 
@@ -546,10 +545,9 @@ static int __init bcmpmu_chrgr_init(void)
 }
 module_init(bcmpmu_chrgr_init);
 
-static int __exit bcmpmu_chrgr_exit(void)
+static void __exit bcmpmu_chrgr_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_chrgr_driver);
-	return 0;
 }
 module_exit(bcmpmu_chrgr_exit);
 

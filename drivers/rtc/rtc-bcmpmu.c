@@ -71,7 +71,6 @@ struct bcmpmu_rtc {
 static void bcmpmu_rtc_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_rtc *rdata = data;
-	int ret;
 
 	switch (irq) {
 		case PMU_IRQ_RTC_ALARM:
@@ -377,9 +376,9 @@ static int __devinit bcmpmu_rtc_probe(struct platform_device *pdev)
 
 	device_set_wakeup_capable(&pdev->dev, 1);
 	rtc_sysfs_add_device(rdata->rtc);
-	device_create_file(&rdata->rtc->dev, &dev_attr_dbgmask);
+	ret = device_create_file(&rdata->rtc->dev, &dev_attr_dbgmask);
 	
-	return ret;
+	return 0;
 
 err:
 	platform_set_drvdata(pdev, NULL);
@@ -411,10 +410,9 @@ static int __init bcmpmu_rtc_init(void)
 }
 module_init(bcmpmu_rtc_init);
 
-static int __exit bcmpmu_rtc_exit(void)
+static void __exit bcmpmu_rtc_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_rtc_driver);
-	return 0;
 }
 module_exit(bcmpmu_rtc_exit);
 

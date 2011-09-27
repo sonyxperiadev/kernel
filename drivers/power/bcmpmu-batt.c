@@ -54,19 +54,6 @@ struct bcmpmu_batt {
 
 static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 {
-	struct bcmpmu_batt *pbatt = data;
-	int ret;
-	
-	switch (irq) {
-	case PMU_IRQ_BATINS:
-		break;
-	case PMU_IRQ_BATRM:
-		break;
-	case PMU_IRQ_MBOV:
-	case PMU_IRQ_MBOV_DIS:
-	default:
-		break;
-	}
 }
 
 static enum power_supply_property bcmpmu_batt_props[] = {
@@ -130,7 +117,7 @@ static int bcmpmu_get_batt_property(struct power_supply *battery,
 
 static int bcmpmu_set_batt_property(struct power_supply *ps,
 		enum power_supply_property property,
-		union power_supply_propval *propval)
+		const union power_supply_propval *propval)
 {
 	int ret = 0;
 	struct bcmpmu_batt *pbatt = container_of(ps,
@@ -168,6 +155,7 @@ static int bcmpmu_set_batt_property(struct power_supply *ps,
 		ret = -EINVAL;
 		break;
 	}
+	return ret;
 }
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static ssize_t
@@ -179,7 +167,7 @@ dbgmsk_show(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 dbgmsk_set(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 0xFF || val == 0)
@@ -267,7 +255,7 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
-	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);
+	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);
 #endif
 	return 0;
 
@@ -314,10 +302,9 @@ static int __init bcmpmu_batt_init(void)
 }
 module_init(bcmpmu_batt_init);
 
-static int __exit bcmpmu_batt_exit(void)
+static void __exit bcmpmu_batt_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_batt_driver);
-	return 0;
 }
 module_exit(bcmpmu_batt_exit);
 
