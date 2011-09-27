@@ -588,7 +588,7 @@ int bcm590xx_device_init(struct bcm590xx *bcm590xx, int irq,
 	}
 	// Register IRQ.
 	if (irq > 0) {
-		ret = request_irq(irq, pmu_irq_handler, IRQF_TRIGGER_FALLING,
+		ret = request_irq(irq, pmu_irq_handler, IRQF_TRIGGER_FALLING|IRQF_NO_SUSPEND,
 				"pmu-bcm590xx", bcm590xx);
 		if (ret) {
 			printk(KERN_ERR "%s can't get IRQ %d, ret %d\n", __func__, irq, ret);
