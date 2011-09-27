@@ -516,7 +516,7 @@ int __init kona_gpio_init(int num_bank)
 		{
 			if (dt_gpio[gpio] & DT_GPIO_VALID) {
 				/* Cross-check against pinmux node */
-				if (dt_pinmux_gpio_mask[GPIO_BANK(gpio)] & (1<<GPIO_BIT(gpio))) {
+				if (mask & (1<<GPIO_BIT(gpio))) {
 					//printk(KERN_INFO "Configure GPIO%d to 0x%x\n", gpio, dt_gpio[gpio]);
 
 					if (dt_gpio[gpio] & DT_GPIO_INPUT){
@@ -536,12 +536,16 @@ int __init kona_gpio_init(int num_bank)
 							(val | (1 << GPIO_BIT(gpio))) : (val & (~(1 << GPIO_BIT(gpio))));
 						__raw_writel(val, reg_base + GPIO_OUT_SET(GPIO_BANK(gpio)));
 					}
+					mask &= ~(1<<GPIO_BIT(gpio));
 				}
 				else{
 					printk(KERN_ERR "Mismatch GPIO%d. The board may not boot!\n", gpio);
 				}
 			}
 			gpio++;
+		}
+		if (mask) {
+			printk(KERN_ERR "Missing initial cfg for GPIO bank%d (mask=0x%x)\n", i, mask);
 		}
 #endif
 	}
