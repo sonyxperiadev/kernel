@@ -732,7 +732,7 @@ struct tps728xx_plat_data tps728xx_data = {
 	.gpio_vset	= GPIO_SIM2LDOVSET,
 	.gpio_en	= GPIO_SIM2LDO_EN,
 	.vout0		= 1800000,
-	.vout1		= 3100000,
+	.vout1		= 3000000,
 	.initdata	= &tps728xx_regl_initdata,
 };
 
