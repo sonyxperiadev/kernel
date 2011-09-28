@@ -104,7 +104,7 @@
 #define PCM_DEFAULT_SLOT_CHANS_USED       1        /* slot channels used */
 #define PCM_DEFAULT_BCLK_FREQ_KHZ         128      /* bit clock in kHz */
 #define PCM_DEFAULT_SAMP_WIDTH            2        /* sample byte width */
-#define PCM_DEFAULT_SAMP_FREQ             16000    /* In Hz  */
+#define PCM_DEFAULT_SAMP_FREQ             8000     /* In Hz  */
 
 #define CALCFRAMESZ(freq,period,sampwidth)   ((freq) * (period) * (sampwidth) / 1000000 ) /* in bytes */
 #define PCM_DEFAULT_FRAME_SIZE            CALCFRAMESZ( PCM_DEFAULT_SAMP_FREQ, PCM_DEFAULT_FRAME_PERIOD, PCM_DEFAULT_SAMP_WIDTH ) /* do not change */
