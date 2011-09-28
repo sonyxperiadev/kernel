@@ -30,7 +30,7 @@ export ZRELADDR INITRD_PHYS PARAMS_PHYS
 
 targets := Image zImage xipImage bootpImage uImage dt-blob
 
-$(obj)/dt-blob:
+$(obj)/dt-blob: FORCE
 ifeq ($(CONFIG_KONA_ATAG_DT),y)
 	$(CONFIG_SHELL) $(MKDTB) $(srctree)/arch/arm/boot/dts/$(CONFIG_KONA_ATAG_DT_DTS_FILE).dts \
 				$(srctree)/arch/arm/boot/dt-blob
