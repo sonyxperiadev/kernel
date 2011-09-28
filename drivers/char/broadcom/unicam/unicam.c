@@ -344,23 +344,28 @@ static inline void reg_write(void __iomem * base_addr, unsigned int reg, unsigne
 static void unicam_init_camera_intf(void)
 {   
     // Init GPIO's to off
-    gpio_request(unicam_info.csi0_unicam_gpio, "CAM_STNDBY0");
-    gpio_direction_output(unicam_info.csi0_unicam_gpio, 0);
-    gpio_set_value(unicam_info.csi0_unicam_gpio, 0);
-    gpio_request(unicam_info.csi1_unicam_gpio, "CAM_STNDBY1");
-    gpio_direction_output(unicam_info.csi1_unicam_gpio, 0);
-    gpio_set_value(unicam_info.csi1_unicam_gpio, 0);
+    if (unicam_info.csi0_unicam_gpio != 0xffffffff) {
+        gpio_request(unicam_info.csi0_unicam_gpio, "CAM_STNDBY0");
+        gpio_direction_output(unicam_info.csi0_unicam_gpio, 0);
+        gpio_set_value(unicam_info.csi0_unicam_gpio, 0);
+    }
+
+    if (unicam_info.csi1_unicam_gpio != 0xffffffff) {
+        gpio_request(unicam_info.csi1_unicam_gpio, "CAM_STNDBY1");
+        gpio_direction_output(unicam_info.csi1_unicam_gpio, 0);
+        gpio_set_value(unicam_info.csi1_unicam_gpio, 0);
+    }
     msleep(10);
 }
 
 static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 {
     // primary sensor 
-    if (sensor_id == 0) {
+    if ((sensor_id == 0) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
         gpio_set_value(unicam_info.csi0_unicam_gpio, enable);
     }
     // secondary sensor
-    else if (sensor_id == 1) {
+    else if ((sensor_id == 1) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
         gpio_set_value(unicam_info.csi1_unicam_gpio, enable);    
     }
     msleep(10);
