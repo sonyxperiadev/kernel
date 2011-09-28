@@ -52,7 +52,7 @@
 
 static struct clk *clk;
 
-#define ENTER() printk(KERN_INFO "%s: line %d\n", __func__, __LINE__)
+#define TRACE() printk(KERN_INFO "%s: line %d\n", __func__, __LINE__)
 
 const char *part_probes[] = { "cmdlinepart", NULL };
 
@@ -61,17 +61,14 @@ const char *part_probes[] = { "cmdlinepart", NULL };
  * so we use the 8/16/32 byte format from BCH for everything.
  */
 static struct nand_ecclayout nand_hw_eccoob_2048 = {
-	.oobavail = 8,
 	.oobfree = {{.offset = 0,.length = 8}}
 };
 
 static struct nand_ecclayout nand_hw_eccoob_4096 = {
-	.oobavail = 16,
 	.oobfree = {{.offset = 0,.length = 16}}
 };
 
 static struct nand_ecclayout nand_hw_eccoob_8192 = {
-	.oobavail = 32,
 	.oobfree = {{.offset = 0,.length = 32}}
 };
 
@@ -79,7 +76,6 @@ static int check_offs_len(struct mtd_info *mtd, loff_t ofs, uint64_t len)
 {
 	struct bcmnand_chip *chip = mtd->priv;
 	int ret = 0;
-	ENTER();
 
 	/* Start address must align on block boundary */
 	if (ofs & ((1 << chip->phys_erase_shift) - 1)) {
@@ -262,7 +258,6 @@ static int nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 	int block = (int)(ofs >> chip->phys_erase_shift);
 	int ret;
 
-	ENTER();
 	if ((ret = nand_block_isbad(mtd, ofs))) {
 		/* If it was bad already, return success and do nothing. */
 		if (ret > 0)
@@ -295,7 +290,6 @@ static int nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 	struct bcmnand_chip *chip = mtd->priv;
 	loff_t len;
 
-	ENTER();
 	DEBUG(MTD_DEBUG_LEVEL3, "%s: start = 0x%012llx, len = %llu\n",
 	      __func__, (unsigned long long)instr->addr,
 	      (unsigned long long)instr->len);
@@ -315,7 +309,7 @@ static int nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 	/* Calculate pages in each block */
 	pages_per_block = 1 << (chip->phys_erase_shift - chip->page_shift);
 
-#if 0				// fixme
+#if 0	// Enable for Capri - not supported on BI 
 	/* Check, if it is write protected */
 	if (nand_check_wp(mtd)) {
 		DEBUG(MTD_DEBUG_LEVEL0, "%s: Device is write protected!!!\n",
@@ -396,7 +390,6 @@ static int nand_write_oob(struct mtd_info *mtd, loff_t to,
 	int ret = -ENOTSUPP;
 	int bank = (int)(to >> chip->chip_shift);
 
-	ENTER();
 	ops->retlen = 0;
 
 	/* Do not allow writes past end of device */
@@ -452,8 +445,6 @@ static int nand_read_oob(struct mtd_info *mtd, loff_t from,
 	int ret = -ENOTSUPP;
 	int bank = (int)(from >> chip->chip_shift);
 
-	//ENTER();
-
 	ops->retlen = 0;
 
 	/* Do not allow reads past end of device */
@@ -485,12 +476,6 @@ static int nand_read_oob(struct mtd_info *mtd, loff_t from,
 					from / mtd->writesize, ops->datbuf);
 
 	if (ret != CHAL_NAND_RC_SUCCESS) {
-#if 1 // REMOVE LATER
-		printk("mode=%d len=%d ooblen=%d ooboffs=%d datbuf=%p oobbuf=%p\n",
-			ops->mode,ops->len,ops->ooblen,ops->ooboffs,ops->datbuf,ops->oobbuf);
-		printk("&chip->chal_nand=%p bank=%d from=0x%x, page=0x%x\n", 
-			&chip->chal_nand, bank, (int)from, (int)((int)from/mtd->writesize));
-#endif
 		nandPrintError(ret);
 		ret = -EIO;
 	}
@@ -524,7 +509,6 @@ static int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
 	uint8_t *buf = ops->datbuf;
 	int ret;
 
-	ENTER();
 	ops->retlen = 0;
 	if (!writelen)
 		return 0;
@@ -536,7 +520,7 @@ static int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
 		return -EINVAL;
 	}
 
-#if 0
+#if 0	// Enable for Capri - not supported on BI 
 	/* Check, if it is write protected */
 	if (nand_check_wp(mtd))
 		return -EIO;
@@ -595,7 +579,6 @@ static int nand_write(struct mtd_info *mtd, loff_t to, size_t len,
 	struct bcmnand_chip *chip = mtd->priv;
 	int ret;
 
-	ENTER();
 	/* Do not allow reads past end of device */
 	if ((to + len) > mtd->size)
 		return -EINVAL;
@@ -646,10 +629,6 @@ static int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 	col = (int)(from & (mtd->writesize - 1));
 
 	buf = ops->datbuf;
-#if 0 // FIXME REMOVE LATER
-	printk("%s line %d from=0x%llx, chip->chip_shift=%d, chipnr=%d, realpage=0x%x, page=0x%x, col=0x%x, buf=%p\n", 
-		__func__, __LINE__, from, chip->chip_shift, chipnr, realpage, page, col, buf);
-#endif
 
 	while (1) {
 		bytes = min(mtd->writesize - col, readlen);
@@ -713,17 +692,6 @@ static int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 	}
 
 	ops->retlen = ops->len - (size_t) readlen;
-#if 0 // FIXME REMOVE LATER
-	printk("%s line %d ops->retlen=0x%x ops->len=0x%x readlen=0x%x\n",
-		__func__, __LINE__, ops->retlen, ops->len, readlen);
-	if (mtd->ecc_stats.failed != stats.failed)
-		printk("%s line %d mtd->ecc_stats.failed=0x%x stats.failed=0x%x\n",
-			__func__, __LINE__, mtd->ecc_stats.failed, stats.failed);
-
-	if (mtd->ecc_stats.corrected != stats.corrected)
-		printk("%s line %d mtd->ecc_stats.corrected=0x%x stats.corrected=0x%x\n",
-			__func__, __LINE__, mtd->ecc_stats.corrected, stats.corrected);
-#endif
 
 	if (ret)
 		return ret;
@@ -768,12 +736,6 @@ static int nand_read(struct mtd_info *mtd, loff_t from, size_t len,
 
 	nand_release_device(mtd);
 
-#if 0
-	printk("%s from=0x%llx len=0x%x retlen=0x%x ret=%d %02x%02x%02x%02x%02x%02x%02x%02x\n", 
-		__func__, from, len, *retlen, ret, 
-		buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7] );
-#endif
-
 	return ret;
 }
 
@@ -792,7 +754,6 @@ static int bcmnand_init_chip(struct bcmnand_info *info)
 	uint8_t flags;
 	chal_nand_info_t *pni = &info->chip.chal_nand;
 
-	ENTER();
 	/* Initialize hardware. */
 
 	/* Note - it is assumed that the pinmux and clocks are already setup by the 
@@ -857,8 +818,6 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 	struct bcmnand_chip *chip;
 	chal_nand_info_t *pni;
 
-	ENTER();
-
 	clk = clk_get(&pdev->dev, "nand_clk");
 	clk_enable(clk);
 
@@ -906,11 +865,8 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 	mtd->erasesize = CHAL_NAND_BLOCK_SIZE(pni);
 	mtd->writesize = CHAL_NAND_PAGE_SIZE(pni);
 	mtd->oobsize = CHAL_NAND_OOB_SIZE(pni);
-
-#if 0
-	/* Don't use this since this is relevant to RS only right now */
 	mtd->oobavail = CHAL_NAND_AUX_DATA_SIZE(pni);
-#endif
+
 	mtd->name = "Island NAND";
 	mtd->priv = pni;
 
@@ -926,15 +882,12 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 
 	switch (mtd->writesize) {	/* writesize is the pagesize */
 	case 8192:
-		mtd->oobavail = 32;
 		mtd->ecclayout = &nand_hw_eccoob_8192;
 		break;
 	case 4096:
-		mtd->oobavail = 16;
 		mtd->ecclayout = &nand_hw_eccoob_4096;
 		break;
 	case 2048:
-		mtd->oobavail = 8;
 		mtd->ecclayout = &nand_hw_eccoob_2048;
 		break;
 	default:
@@ -944,7 +897,7 @@ static int __devinit bcmnand_probe(struct platform_device *pdev)
 			return -EINVAL;
 		}
 	}
-	printk("mtd->oobavail=%d, mtd->ecclayout=%p\n", mtd->oobavail, mtd->ecclayout);
+	mtd->ecclayout->oobavail = mtd->oobavail;
 
 	mtd->subpage_sft = 0;	/* subpages not supported */
 
@@ -1013,7 +966,6 @@ static int __devexit bcmnand_remove(struct platform_device *pdev)
 	unsigned long size = resource_size(res);
 #endif
 
-	ENTER();
 	platform_set_drvdata(pdev, NULL);
 
 #if 0				// FIXME - maybe add resources later if appropriate
