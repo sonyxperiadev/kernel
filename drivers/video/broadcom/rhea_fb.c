@@ -49,7 +49,7 @@ struct rhea_fb {
 	struct semaphore thread_sem;
 	struct semaphore update_sem;
 	struct semaphore prev_buf_done_sem;
-#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI)
 	struct semaphore refresh_wait_sem;
 #endif
 	atomic_t buff_idx;
@@ -320,7 +320,7 @@ static int disable_display(struct rhea_fb *fb)
 	return ret;
 }
 
-#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI)
 static int rhea_refresh_thread(void *arg)
 {
 	struct rhea_fb *fb = arg;
@@ -408,7 +408,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_graphics_started, 0);
 	sema_init(&fb->thread_sem, 0);
 
-#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI)
 	sema_init(&fb->refresh_wait_sem, 0);
 
 	fb->thread = kthread_run(rhea_refresh_thread, fb, "lcdrefresh_d");
@@ -584,7 +584,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	atomic_set(&fb->is_fb_registered, 1);
 	rheafb_info("RHEA Framebuffer probe successfull\n");
 
-#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI)
 	register_vt_notifier(&vt_notifier_block);
 #endif
 
@@ -612,7 +612,7 @@ err_set_var_failed:
 
 err_enable_display_failed:
 err_fbmem_alloc_failed:
-#ifndef CONFIG_MACH_RHEA_RAY_EDN1X
+#if !defined(CONFIG_MACH_RHEA_RAY_EDN1X) && !defined(CONFIG_MACH_RHEA_BERRI)
 thread_create_failed:
 #endif
 fb_data_failed:
