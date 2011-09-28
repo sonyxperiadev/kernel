@@ -60,6 +60,7 @@ int dhd_msg_level;
 
 char fw_path[MOD_PARAM_PATHLEN];
 char nv_path[MOD_PARAM_PATHLEN];
+char if_prefix[MOD_PARAM_PREFIXLEN];
 
 #ifdef SOFTAP
 char fw_path2[MOD_PARAM_PATHLEN];
@@ -201,6 +202,12 @@ dhd_common_init(osl_t *osh)
 #else /* CONFIG_BCM4329_NVRAM_PATH */
 	nv_path[0] = '\0';
 #endif /* CONFIG_BCM4329_NVRAM_PATH */
+#ifdef CONFIG_BCM4329_FALCON_IF_PREFIX
+	bcm_strncpy_s(if_prefix, sizeof(if_prefix), CONFIG_BCM4329_FALCON_IF_PREFIX, MOD_PARAM_PREFIXLEN-1);
+#else /* CONFIG_BCM4329_FALCON_IF_PREFIX */
+	if_prefix[0] = '\0';
+#endif /* CONFIG_BCM4329_FALCON_IF_PREFIX */
+
 #ifdef SOFTAP
 	fw_path2[0] = '\0';
 #endif
