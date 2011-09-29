@@ -12,10 +12,13 @@
 *   other than the GPL, without Broadcom's express prior written consent.
 *
 ****************************************************************************/
+#include <linux/kernel.h>
+#include <linux/io.h>
 #include "bcm_kril_common.h"
 #include "bcm_kril_sysrpc_handler.h"
 #include "bcm_cp_cmd_handler.h"
 #include "bcm_kril_ioctl.h"
+#include <linux/broadcom/ipcinterface.h>
 
 #include <linux/regulator/consumer.h>
 #include <linux/regulator/driver.h>
@@ -49,12 +52,14 @@ static void HandleBattMgrLowEvent( void );
 static void HandleBattMgrLevelEvent( UInt16 level, UInt16 adc_avg, UInt16 total_levels );
 static void KRIL_SysRpc_OpenRegulator(PMU_SIMLDO_t ldo);
 
-
 #define THREE_VOLTS_IN_MICRO_VOLTS 3000000
 #define THREE_PT_THREE_VOLTS_IN_MICRO_VOLTS 3300000
 #define THREE_PT_ONE_VOLTS_IN_MICRO_VOLTS 3100000
 #define TWO_PT_FIVE_VOLTS_IN_MICRO_VOLTS 2500000
 #define ONE_PT_EIGHT_VOLTS_IN_MICRO_VOLTS 1800000
+
+// file for storing CP NV data
+static const char* sCpNVDataFileName = "/data/cp_data.txt";
 
 typedef struct
 {
@@ -182,11 +187,210 @@ void KRIL_SysRpc_SendFFSControlRsp( UInt32 inTid, UInt8 inClientId, UInt32 inFFS
 //
 Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t* pReqMsg, UInt32 cmd, UInt32 address, UInt32 offset, UInt32 size)
 {
-#if 0 // gary
-    CAPI2_FFS_Control(pReqMsg->tid, pReqMsg->clientID, cmd, address, offset, size);
-#endif // gary
-    KRIL_SysRpc_SendFFSControlRsp(pReqMsg->tid, pReqMsg->clientID,0);
+    IPC_PersistentDataStore_t dataPtr;
+    FFS_Control_Result_en_t ffsctrlResult = FFS_CONTROL_PASS;
+    int retval;
+    struct file *hFileTmp = NULL;
+    struct inode *inode   = NULL;
+    UInt32 fsize, tmpSize;
+    UInt32 tid = pReqMsg->tid;
+    UInt8 clientID = pReqMsg->clientID;
+    void __iomem* pPersistDataAddr = NULL;
+    mm_segment_t orgfs = get_fs();
+    char* tmpBuf = NULL;
+    set_fs(KERNEL_DS);
+
+    KRIL_DEBUG(DBG_ERROR,"tid:%lu clientID:%u cmd:%lu address:0x%lX offset:%lu size:%lu\n",
+        tid, clientID, cmd, address, offset, size);
+
+    IPC_GetPersistentData(&dataPtr);
     
+    if ((offset >= dataPtr.DataLength) ||
+        (size > dataPtr.DataLength) || (!size) ||
+        ((offset + size) > dataPtr.DataLength))
+    {
+        KRIL_DEBUG(DBG_ERROR,"FFS Parameter Error!! dataPtr.DataLength:%d offset:%lu size:%lu\n",
+            dataPtr.DataLength, offset, size);
+        ffsctrlResult = FFS_CONTROL_INVALID_PARAM;
+        goto Exit_No_Close;
+    }
+
+    pPersistDataAddr = dataPtr.DataPtr;
+
+    switch (cmd)
+    {
+        case FFS_CONTROL_COPY_NVS_FILE_TO_SM: // copy the NVS file to shared memory
+        {
+            hFileTmp = filp_open(sCpNVDataFileName, O_RDONLY, 0);
+            if (IS_ERR(hFileTmp))
+            {
+                KRIL_DEBUG(DBG_ERROR,"Open %s failed (maybe first boot)\n", sCpNVDataFileName);
+                ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+                goto Exit_No_Close;
+            }
+
+            if (hFileTmp->f_path.dentry)
+            {
+                inode = hFileTmp->f_path.dentry->d_inode;
+                fsize = (UInt32)inode->i_size;
+
+                if(offset >= fsize || offset+size > fsize)
+                {
+                    KRIL_DEBUG(DBG_ERROR,"fsize:%lu, requested data does not exist (maybe first boot VM2 init)\n", fsize);
+                    ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+                    goto Exit;
+                }
+            }
+            else
+            {
+                KRIL_DEBUG(DBG_ERROR,"hFileTmp->f_path.dentry is invalid\n");
+                ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+                goto Exit;
+            }
+
+            if (hFileTmp->f_op->llseek && hFileTmp->f_op->llseek != no_llseek)
+            {
+                if (hFileTmp->f_op->llseek(hFileTmp, offset, SEEK_SET) < 0)
+                {
+                    KRIL_DEBUG(DBG_ERROR,"hFileTmp does not have a llseek method\n");
+                    ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+                    goto Exit;
+                }
+            }
+
+            if (hFileTmp->f_op && hFileTmp->f_op->read)
+            {
+                // we can't read directly into shared mem (get EFAULT error)
+                // even though it is already mapped in (done during IPC init, where io_remap(...)
+                // is done for entire IPC shared memory space), so for now, read into a temporary
+                // buffer, then copy to shared memory
+                tmpBuf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+                if ( !tmpBuf )
+                {
+                    KRIL_DEBUG(DBG_ERROR,"failed to allocate temp buf\n");
+                    ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+                    goto Exit;
+                }
+
+                while (size > 0)
+                {
+                   tmpSize = (size > PAGE_SIZE) ? PAGE_SIZE : size;
+                   retval = hFileTmp->f_op->read(hFileTmp, tmpBuf, tmpSize, &hFileTmp->f_pos);
+                   if (retval > 0)
+                   {
+                      memcpy( pPersistDataAddr+offset, tmpBuf, retval );
+                      offset += retval;
+                      size   -= retval;
+                   }
+                   else
+                   {
+                      KRIL_DEBUG(DBG_ERROR,"COPY_NVS_FILE_TO_SM failed!! retval:%d dataPtr.DataLength:%d\n",
+                                 retval, dataPtr.DataLength);
+                      ffsctrlResult = FFS_CONTROL_IPCAP_PDS_OP_FAIL;
+                      break;
+                   }
+                }
+
+                kfree( tmpBuf );
+                tmpBuf = NULL;
+            }
+            else
+            {
+                KRIL_DEBUG(DBG_ERROR,"hFileTmp does not have a read method\n");
+                ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+            }
+            break;
+        }
+
+        case FFS_CONTROL_COPY_SM_TO_NVS_FILE: // copy shared memory to the NVS file
+        {
+            hFileTmp = filp_open(sCpNVDataFileName, O_WRONLY, 0);
+
+            if (IS_ERR(hFileTmp))
+            {
+               // if the file does not exist, create it
+               hFileTmp = filp_open(sCpNVDataFileName, O_CREAT|O_WRONLY, 0);
+            }
+
+            if (IS_ERR(hFileTmp))
+            {
+                KRIL_DEBUG(DBG_ERROR,"Create %s failed!!\n", sCpNVDataFileName);
+                ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+                goto Exit_No_Close;
+            }
+
+            if (hFileTmp->f_op->llseek && hFileTmp->f_op->llseek != no_llseek)
+            {
+                if (hFileTmp->f_op->llseek(hFileTmp, offset, SEEK_SET) < 0)
+                {
+                    KRIL_DEBUG(DBG_ERROR,"hFileTmp does not have a llseek method\n");
+                    ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+                    goto Exit;
+                }
+            }
+
+            if (hFileTmp->f_op && hFileTmp->f_op->write)
+            {
+                // we can't read directly from shared mem (get EFAULT error)
+                // even though it is already mapped in (done during IPC init, where io_remap(...)
+                // is done for entire IPC shared memory space), so for now, copy to a temp buffer,
+                // then make write call
+                tmpBuf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+                if ( !tmpBuf )
+                {
+                    KRIL_DEBUG(DBG_ERROR,"failed to allocate temp buf\n");
+                    ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+                    goto Exit;
+                }
+
+                while (size > 0)
+                {
+                    tmpSize = (size > PAGE_SIZE) ? PAGE_SIZE : size;
+                    memcpy( tmpBuf, pPersistDataAddr+offset, tmpSize );
+
+                    // Write only partial data indicated by CP (for dual SIM case, MsDBNvData/cp_data.txt = 720 / 22528 = 3.2%)
+                    retval = hFileTmp->f_op->write(hFileTmp, tmpBuf, tmpSize, &hFileTmp->f_pos);
+                    if (retval <= 0)
+                    {
+                        KRIL_DEBUG(DBG_ERROR,"COPY_SM_TO_NVS_FILE failed!! retval:%d dataPtr.DataLength:%d ptr:0x%lx\n",
+                                   retval, dataPtr.DataLength, (UInt32)(pPersistDataAddr+offset));
+                        ffsctrlResult = FFS_CONTROL_IPCAP_PDS_OP_FAIL;
+                        break;
+                    }
+                    else
+                    {
+                        offset += retval;
+                        size   -= retval;
+                    }
+                }
+                kfree( tmpBuf );
+                tmpBuf = NULL;
+            }
+            else
+            {
+                KRIL_DEBUG(DBG_ERROR,"hFileTmp does not have a write method\n");
+                ffsctrlResult = FFS_CONTROL_FILE_OP_FAIL;
+            }
+            break;
+        }
+
+        default:
+        {
+            KRIL_DEBUG(DBG_ERROR,"FFS_CONTROL_UNKNOWN_CMD=> cmd value (0x%x) \n",cmd);
+            ffsctrlResult = FFS_CONTROL_UNKNOWN_CMD;
+            goto Exit_No_Close;
+        }
+    }
+
+Exit:
+    if ( NULL != hFileTmp )
+       filp_close(hFileTmp, NULL);
+
+Exit_No_Close:
+    set_fs(orgfs);
+
+    KRIL_SysRpc_SendFFSControlRsp( (UInt32)tid, (UInt8)clientID, ffsctrlResult );
+
     return RESULT_OK;
 }
 
@@ -475,4 +679,3 @@ void SYS_SyncTaskMsg( void )
 //    Boolean ret = RPC_SetProperty(RPC_PROP_AP_TASKMSGS_READY, 1);
     KRIL_DEBUG(DBG_INFO," SYS_SyncTaskMsg - ignoring\n");
 }
-
