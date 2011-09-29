@@ -70,6 +70,15 @@ static struct bcmpmu_rw_data register_init_data[] = {
 	{.map=0, .addr=0x59, .val=0x00, .mask=0xFF},
 	{.map=0, .addr=0x5a, .val=0x07, .mask=0xFF},
 	{.map=0, .addr=0x69, .val=0x10, .mask=0xFF},
+/* OTG registers */
+	{.map=0, .addr=0x71, .val=0x09, .mask=0xFF},
+	{.map=0, .addr=0x77, .val=0xD4, .mask=0xFF},
+	{.map=0, .addr=0x78, .val=0x98, .mask=0xFF},
+	{.map=0, .addr=0x79, .val=0xF0, .mask=0xFF},
+	{.map=0, .addr=0x7A, .val=0x60, .mask=0xFF},
+	{.map=0, .addr=0x7B, .val=0xC3, .mask=0xFF},
+	{.map=0, .addr=0x7C, .val=0xA7, .mask=0xFF},
+	{.map=0, .addr=0x7D, .val=0x08, .mask=0xFF},
 };
 
 static struct bcmpmu_temp_map batt_temp_map[] = {

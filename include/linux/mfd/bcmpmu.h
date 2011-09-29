@@ -495,6 +495,7 @@ enum bcmpmu_usb_type_t {
 	PMU_USB_TYPE_NONE,
 	PMU_USB_TYPE_SDP,
 	PMU_USB_TYPE_CDP,
+	PMU_USB_TYPE_DCP,
 	PMU_USB_TYPE_ACA,
 	PMU_USB_TYPE_MAX,
 };
@@ -589,8 +590,9 @@ enum bcmpmu_ioctl {
 #define PMU_EM_ENV_STATUS _IOR(0, PMU_EM_IOCTL_ENV_STATUS, unsigned long*)
 
 enum bcmpmu_batt_event_t {
-	PMU_BATT_EVENT_PRESENT,
-	PMU_BATT_EVENT_MBOV,
+	BCMPMU_BATT_EVENT_PRESENT,
+	BCMPMU_BATT_EVENT_MBOV,
+	BCMPMU_BATT_EVENT_MAX,
 };
 
 enum bcmpmu_usb_accy_t {
@@ -623,13 +625,10 @@ enum bcmpmu_env_bit_t {
 	PMU_ENV_MAX,
 };
 
-enum bcmpmu_usb_chrgr_event_t {
-	BCMPMU_USB_EVENT_USB_CHRGR_CHANGE,
-	BCMPMU_USB_EVENT_CHRG_CURR_LMT,
-};
-
 enum bcmpmu_usb_event_t {
+	/* events for usb driver */
 	BCMPMU_USB_EVENT_USB_DETECTION,
+	BCMPMU_USB_EVENT_IN_RM,
 	BCMPMU_USB_EVENT_ADP_CHANGE,
 	BCMPMU_USB_EVENT_ADP_SENSE_END,
 	BCMPMU_USB_EVENT_ADP_CALIBRATION_DONE,
@@ -641,6 +640,11 @@ enum bcmpmu_usb_event_t {
 	BCMPMU_USB_EVENT_SESSION_END_INVALID,
 	BCMPMU_USB_EVENT_SESSION_END_VALID,
 	BCMPMU_USB_EVENT_VBUS_OVERCURRENT,
+	BCMPMU_USB_EVENT_RIC_C_TO_FLOAT,
+	/* events for battery charging */
+	BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
+	BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
+	BCMPMU_EVENT_MAX,
 };
 
 enum bcmpmu_usb_ctrl_t {
@@ -754,18 +758,9 @@ struct bcmpmu {
 	int (*fg_enable)(struct bcmpmu *pmu, int en);
 	int (*fg_reset)(struct bcmpmu *pmu);
 	
-	/* battery */
-	int (* register_batt_event)(struct bcmpmu *pmu,
-			void (*callback)(struct bcmpmu *pmu,
-				unsigned char event, void *, void *),
-			void *data);
 	/* usb accy */
 	struct bcmpmu_usb_accy_data usb_accy_data;
 	int (* register_usb_callback)(struct bcmpmu *pmu,
-			void (*callback)(struct bcmpmu *pmu,
-				unsigned char event, void *, void *),
-			void *data);
-	int (* register_chrgr_callback)(struct bcmpmu *pmu,
 			void (*callback)(struct bcmpmu *pmu,
 				unsigned char event, void *, void *),
 			void *data);
@@ -825,5 +820,9 @@ struct bcmpmu_reg_info *bcmpmu_rgltr_info(void);
 
 void bcmpmu_reg_dev_init(struct bcmpmu *bcmpmu);
 void bcmpmu_reg_dev_exit(struct bcmpmu *bcmpmu);
+int bcmpmu_usb_add_notifier(u32, struct notifier_block *);
+int bcmpmu_usb_remove_notifier(u32, struct notifier_block *);
+int bcmpmu_batt_add_notifier(u32, struct notifier_block *);
+int bcmpmu_batt_remove_notifier(u32, struct notifier_block *);
 
 #endif

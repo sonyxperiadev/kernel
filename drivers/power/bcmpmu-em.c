@@ -53,6 +53,7 @@ struct bcmpmu_em {
 	wait_queue_head_t wait;
 	struct delayed_work work;
 	struct mutex lock;
+	struct notifier_block nb;
 	int chrgr_curr;
 	enum bcmpmu_chrgr_type_t chrgr_type;
 	unsigned char batt_status;
@@ -86,8 +87,6 @@ static int em_ioctl(struct inode *inode, struct file *file,
 {
 	int ret = 0;
 	struct bcmpmu_em *data = file->private_data;
-	struct bcmpmu_adc_req adc;
-	unsigned long env_status;
 
 	if (data == NULL) {
 		printk("bcmpmu em_ioctl, no platform data.\n");
@@ -119,6 +118,7 @@ static int em_release(struct inode *inode, struct file *file)
 static unsigned int em_poll(struct file *file, poll_table *wait)
 {
 	/* To handle inerrupts and other events */
+	return 0;
 }
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
@@ -131,7 +131,7 @@ dbgmsk_show(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 dbgmsk_set(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 0xFF || val == 0)
@@ -191,19 +191,6 @@ static unsigned char em_batt_get_batt_health(struct bcmpmu *pmu, int volt, int t
 	else
 		health = POWER_SUPPLY_HEALTH_GOOD;
 	return health;
-}
-
-static void print_dbg(struct bcmpmu *bcmpmu)
-{
-	unsigned int val[16];
-	int i;
-	pr_em(FLOW, "%s, getting pmu registers\n");
-	bcmpmu->read_dev_bulk(bcmpmu, 0, 0x50, &val[0], 16);
-	for (i=0; i<16; i++)
-		pr_em(FLOW, "%s, reg=0x%X, val=0x%X\n", __func__, 0x50+i, val[i]);
-	bcmpmu->read_dev_bulk(bcmpmu, 0, 0xE0, &val[0], 16);
-	for (i=0; i<16; i++)
-		pr_em(FLOW, "%s, reg=0x%X, val=0x%X\n", __func__, 0xE0+i, val[i]);
 }
 
 static void em_algorithm(struct work_struct *work)
@@ -340,21 +327,18 @@ static void em_algorithm(struct work_struct *work)
 		schedule_delayed_work(&pem->work, msecs_to_jiffies(5000));
 }
 
-static void em_charger_event_handler(struct bcmpmu *bcmpmu,
-	enum bcmpmu_usb_chrgr_event_t event, void *para, void *data)
+static int em_charger_event_handler(struct notifier_block *nb,
+		unsigned long event, void *para)
 {
-	int ret;
-	struct bcmpmu_em *pem = bcmpmu->eminfo;
-
-	pr_em(FLOW, "%s, event=%d\n", __func__, event);
+	struct bcmpmu_em *pem = container_of(nb, struct bcmpmu_em, nb);
 
 	switch(event) {
-	case BCMPMU_USB_EVENT_USB_CHRGR_CHANGE:
+	case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
 		pem->chrgr_type = *(enum bcmpmu_chrgr_type_t *)para;
 		pr_em(FLOW, "%s, chrgr type=%d\n", __func__, pem->chrgr_type);
 		break;
 
-	case BCMPMU_USB_EVENT_CHRG_CURR_LMT:
+	case BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT:
 		pem->chrgr_curr = *(int *)para;
 		pr_em(FLOW, "%s, chrgr curr=%d\n", __func__, pem->chrgr_curr);
 
@@ -364,15 +348,7 @@ static void em_charger_event_handler(struct bcmpmu *bcmpmu,
 	}
 	cancel_delayed_work_sync(&pem->work);
 	schedule_delayed_work(&pem->work, 0);
-}
-
-static void em_battery_event_handler(struct bcmpmu *pmu,
-	enum bcmpmu_batt_event_t event, void *para, void *data)
-{
-	switch(event) {
-	default:
-		break;
-	}
+	return 0;
 }
 
 static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
@@ -405,21 +381,22 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	
 	INIT_DELAYED_WORK(&pem->work, em_algorithm);
 	misc_register(&bcmpmu_em_device);
-
-	if (bcmpmu->register_chrgr_callback)
-		ret = bcmpmu->register_chrgr_callback(bcmpmu,
-			em_charger_event_handler, NULL);
-	if (ret != 0)
-		pr_em(INIT, "%s, failed to register accy detect chrgr callback, err=%d\n",
+	pem->nb.notifier_call = em_charger_event_handler;
+	ret = bcmpmu_usb_add_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pem->nb);
+	if (ret) {
+		pr_em(INIT, "%s, failed to register usb notifier, err=%d\n",
 			__func__, ret);
-
-	if (bcmpmu->register_batt_event)
-		ret = bcmpmu->register_batt_event(bcmpmu,
-			em_battery_event_handler, NULL);
-	if (ret != 0)
-		pr_em(INIT, "%s, failed to register battery callback, err=%d\n",
+		goto err;
+	}
+	ret = bcmpmu_usb_add_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &pem->nb);
+	if (ret) {
+		pr_em(INIT, "%s, failed to register usb notifier, err=%d\n",
 			__func__, ret);
-
+		goto err;
+	}
+	pem->chrgr_type = bcmpmu->usb_accy_data.chrgr_type;
+	pem->chrgr_curr = bcmpmu->usb_accy_data.max_curr_chrgr;
+	
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_em_attr_group);
 #endif
@@ -428,19 +405,25 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	return 0;
 
 err:
+	ret = bcmpmu_usb_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pem->nb);
+	ret = bcmpmu_usb_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &pem->nb);
+	kfree(pem);
 	return ret;
 }
 
 static int __devexit bcmpmu_em_remove(struct platform_device *pdev)
 {
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu_em *pem = bcmpmu->eminfo;
+	int ret;
 
 	misc_deregister(&bcmpmu_em_device);
-
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	sysfs_remove_group(&pdev->dev.kobj, &bcmpmu_em_attr_group);
 #endif
-	kfree(bcmpmu_em);
+	ret = bcmpmu_usb_remove_notifier(BCMPMU_CHRGR_EVENT_CHGR_DETECTION, &pem->nb);
+	ret = bcmpmu_usb_remove_notifier(BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT, &pem->nb);
+	kfree(pem);
 
 	return 0;
 }
@@ -459,10 +442,9 @@ static int __init bcmpmu_em_init(void)
 }
 late_initcall(bcmpmu_em_init);
 
-static int __exit bcmpmu_em_exit(void)
+static void __exit bcmpmu_em_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_em_driver);
-	return 0;
 }
 module_exit(bcmpmu_em_exit);
 
