@@ -36,7 +36,10 @@
 #include <string.h>
 #include "mobcom_types.h"
 #include "chal_types.h"
+#include "chal_caph.h"
 #include "chal_sspi.h"
+#include "chal_caph_intc.h"
+#include "csl_caph.h"
 #include "csl_caph_pcm_sspi.h"
 #include "brcm_rdb_padctrlreg.h"
 #include "brcm_rdb_sysmap.h"
@@ -62,6 +65,7 @@
 //******************************************************************************
 static chal_sspi_task_conf_t task_conf;
 static chal_sspi_seq_conf_t seq_conf;
+static CHAL_HANDLE intc_handle = 0x0;
 
 //******************************************************************************
 //
@@ -70,7 +74,7 @@ static chal_sspi_seq_conf_t seq_conf;
 //  Description:	This function initializes the CSL layer
 //
 //******************************************************************************
-CSL_PCM_HANDLE csl_pcm_init(cUInt32 baseAddr)
+CSL_PCM_HANDLE csl_pcm_init(UInt32 baseAddr, UInt32 caphIntcHandle)
 {
 	CSL_PCM_HANDLE handle = 0;
 	CSL_PCM_HANDLE_t *pDevice;
@@ -85,6 +89,8 @@ CSL_PCM_HANDLE csl_pcm_init(cUInt32 baseAddr)
     }
     
     chal_sspi_set_type(handle, SSPI_TYPE_LITE);
+
+    intc_handle = (CHAL_HANDLE)caphIntcHandle;
 
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "-csl_pcm_init base address 0x%x\r\n",
 					(unsigned int)pDevice->base);
@@ -1484,3 +1490,54 @@ UInt32 csl_pcm_get_rx1_fifo_data_port(CSL_PCM_HANDLE handle)
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
 	return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY1RX_OFFSET);
 }
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
+*
+*  Description: enable pcm intr
+*
+****************************************************************************/
+void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
+{
+	CAPH_ARM_DSP_e owner = CAPH_ARM;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_enable_pcm_intr:: \n");
+
+	if (csl_owner == CSL_CAPH_DSP)
+		owner = CAPH_DSP;
+	
+	if (csl_sspid == CSL_CAPH_SSP_3)
+    	chal_caph_intc_enable_ssp_intr(intc_handle, 1, owner);
+	else if (csl_sspid == CSL_CAPH_SSP_4)
+		chal_caph_intc_enable_ssp_intr(intc_handle, 2, owner);
+	else
+		// should not get here.
+		audio_xassert(0, csl_sspid);
+}
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
+*
+*  Description: disable pcm intr
+*
+****************************************************************************/
+void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
+{
+	CAPH_ARM_DSP_e owner = CAPH_ARM;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_enable_pcm_intr:: \n");
+
+	if (csl_owner == CSL_CAPH_DSP)
+		owner = CAPH_DSP;
+	
+	if (csl_sspid == CSL_CAPH_SSP_3)
+    	chal_caph_intc_disable_ssp_intr(intc_handle, 1, owner);
+	else if (csl_sspid == CSL_CAPH_SSP_4)
+		chal_caph_intc_disable_ssp_intr(intc_handle, 2, owner);
+	else
+		// should not get here.
+		audio_xassert(0, csl_sspid);
+}
+

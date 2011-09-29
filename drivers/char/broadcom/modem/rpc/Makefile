@@ -8,8 +8,8 @@ EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/inc
 
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/sysinterface/util/public/
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc
-EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/soc/public
+
+EXTRA_CFLAGS += -I drivers/char/broadcom/fuse_log/
 
 EXTRA_CFLAGS += -Ifs/cifs/
 EXTRA_CFLAGS += -DUNDER_LINUX
@@ -17,10 +17,6 @@ EXTRA_CFLAGS += -DUNDER_LINUX_MODEM
 EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
 EXTRA_CFLAGS += -DRPC_INCLUDED
 EXTRA_CFLAGS += -D_RHEA_
-
-#	fuse_rpc_main.o \
-#	rpc_ipc_kernel.o
-
 
 obj-$(CONFIG_BCM_MODEM) += \
 	rpc_stubs.o \
@@ -37,8 +33,3 @@ obj-$(CONFIG_BCM_MODEM) += \
 	rpc_CIB/xdr/src/xdr_reference.o	\
 	rpc_ipc_kernel.o	\
 	fuse_rpc_main.o
-
-
-
-
-

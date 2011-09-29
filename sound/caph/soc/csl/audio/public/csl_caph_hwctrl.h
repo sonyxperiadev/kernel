@@ -35,22 +35,110 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #ifndef _CSL_CAPH_HWCTRL_
 #define _CSL_CAPH_HWCTRL_
 
-#include "csl_caph.h"
-#include "csl_caph_cfifo.h"
+#include "csl_caph_srcmixer.h"
 #include "csl_caph_dma.h"
 #include "csl_caph_audioh.h"
+
+#define MAX_AUDIO_PATH 32
+#define DATA_UNPACKED	0
+
+/**
+* Voice Call UL/DL to/from DSP channel
+******************************************************************************/
+#define SPEAKER_DL_FROM_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH1
+#define MAIN_MIC_UL_TO_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH2
+#define EANC_MIC_UL_TO_DSP_CHNL  CSL_CAPH_SRCM_MONO_CH3
+
+typedef UInt8 CSL_CAPH_PathID;
+
+/**
+* CAPH Audio Stream ID
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_STREAM_NONE,
+	CSL_CAPH_STREAM1,
+	CSL_CAPH_STREAM2,
+	CSL_CAPH_STREAM3,
+	CSL_CAPH_STREAM4,
+	CSL_CAPH_STREAM5,
+	CSL_CAPH_STREAM6,
+	CSL_CAPH_STREAM7,
+	CSL_CAPH_STREAM8,
+	CSL_CAPH_STREAM9,
+	CSL_CAPH_STREAM10,
+	CSL_CAPH_STREAM11,
+	CSL_CAPH_STREAM12,
+	CSL_CAPH_STREAM13,
+	CSL_CAPH_STREAM14,
+	CSL_CAPH_STREAM15,
+	CSL_CAPH_STREAM16,
+	CSL_CAPH_STREAM_TOTAL,
+} CSL_CAPH_STREAM_e;
+
+
+/**
+* CAPH FIFO buffer
+******************************************************************************/
+typedef enum
+{
+	CSL_CAPH_AUDIOH_EP_FIFO,
+	CSL_CAPH_AUDIOH_HS_FIFO,
+	CSL_CAPH_AUDIOH_IHF_FIFO,
+	CSL_CAPH_AUDIOH_VIBRA_FIFO,
+	CSL_CAPH_AUDIOH_EANC_FIFO,
+	CSL_CAPH_AUDIOH_DIGI_MIC1_FIFO,
+	CSL_CAPH_AUDIOH_DIGI_MIC2_FIFO,
+	CSL_CAPH_AUDIOH_DIGI_MIC3_FIFO,
+	CSL_CAPH_AUDIOH_DIGI_MIC4_FIFO,
+	CSL_CAPH_SSP3_FIFO,
+	CSL_CAPH_SSP4_FIFO,
+	CSL_CAPH_SRCMIXER_CH1_FIFO,
+	CSL_CAPH_SRCMIXER_CH2_FIFO,
+	CSL_CAPH_SRCMIXER_CH3_FIFO,
+	CSL_CAPH_SRCMIXER_CH4_FIFO,
+	CSL_CAPH_SRCMIXER_CH5_FIFO,
+	CSL_CAPH_SRCMIXER_PASSCH1_FIFO,
+	CSL_CAPH_SRCMIXER_PASSCH2_FIFO,
+	CSL_CAPH_SRCMIXER_TAP_OUTCH1_FIFO,
+	CSL_CAPH_SRCMIXER_TAP_OUTCH2_FIFO,
+	CSL_CAPH_SRCMIXER_TAP_OUTCH3_FIFO,
+	CSL_CAPH_SRCMIXER_TAP_OUTCH4_FIFO,
+	CSL_CAPH_SRCMIXER_TAP_OUTCH5_FIFO,
+	CSL_CAPH_SRCMIXER_MIXER1_OUTFIFO,
+	CSL_CAPH_SRCMIXER_MIXER2_LOUTFIFO,
+	CSL_CAPH_SRCMIXER_MIXER2_ROUTFIFO,
+	CSL_CAPH_CFIFO_FIFO_1,
+	CSL_CAPH_CFIFO_FIFO_2,
+	CSL_CAPH_CFIFO_FIFO_3,
+	CSL_CAPH_CFIFO_FIFO_4,
+	CSL_CAPH_CFIFO_FIFO_5,
+	CSL_CAPH_CFIFO_FIFO_6,
+	CSL_CAPH_CFIFO_FIFO_7,
+	CSL_CAPH_CFIFO_FIFO_8,
+	CSL_CAPH_CFIFO_FIFO_9,
+	CSL_CAPH_CFIFO_FIFO_10,
+	CSL_CAPH_CFIFO_FIFO_11,
+	CSL_CAPH_CFIFO_FIFO_12,
+	CSL_CAPH_CFIFO_FIFO_13,
+	CSL_CAPH_CFIFO_FIFO_14,
+	CSL_CAPH_CFIFO_FIFO_15,
+	CSL_CAPH_CFIFO_FIFO_16,
+	CSL_CAPH_FIFO_MAX_NUM
+}CSL_CAPH_FIFO_e;
 
 /**
 * CAPH Render/Capture CSL configuration parameters
 ******************************************************************************/
 typedef struct
 {
-CSL_CAPH_DMA_CHNL_e dmaCH;
-CSL_CAPH_CFIFO_FIFO_e fifo;
-UInt8* pBuf;
-UInt32 size;
-CSL_CAPH_DMA_CALLBACK_p dmaCB;
+    CSL_CAPH_DMA_CHNL_e dmaCH;
+    CSL_CAPH_CFIFO_FIFO_e fifo;
+    UInt8* pBuf;
+    UInt32 size;
+    CSL_CAPH_DMA_CALLBACK_p dmaCB;
 }CSL_CAPH_STREAM_CONFIG_t;
+
 
 /**
 * CAPH HW path configuration parameters
@@ -281,11 +369,11 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID);
 *
 *  @brief  Disable the Sidetone path
 *
-*  @param  void
+*  @param    sink (in)  HW path Sink info
 *
 *  @return
 *****************************************************************************/
-void csl_caph_hwctrl_DisableSideTone(void);
+void csl_caph_hwctrl_DisableSidetone(CSL_AUDIO_DEVICE_e sink);
 
 /**
 *
@@ -353,17 +441,6 @@ void csl_caph_hwctrl_setDSPSharedMemForIHF(UInt32 addr);
 
 /****************************************************************************
 *
-*  @brief   Configure fm/pcm port 
-*
-*  @param    sspConfig (in) fm/pcm port configuration info
-*
-*  @return
-****************************************************************************/
-void csl_caph_hwctrl_ConfigSSP(CSL_CAPH_SSP_Config_t sspConfig);
-
-
-/****************************************************************************
-*
 *  @brief   control vibrator on CSL  
 * 
 *
@@ -393,13 +470,11 @@ void csl_caph_hwctrl_vibrator_strength(int strength);
 *
 *  @brief   Enable/Disable a HW Sidetone path  
 *
-*  @param    config (in)  HW path Configuration info
-*  @param    ctrl (in)  Enable/Disable
+*  @param    sink (in)  HW path Sink info
 *  @return
 ****************************************************************************/
 
-void csl_caph_hwctrl_EnableSidetone(CSL_CAPH_HWCTRL_CONFIG_t config,
-						Boolean ctrl);
+void csl_caph_hwctrl_EnableSidetone(CSL_AUDIO_DEVICE_e sink);
 
 
 

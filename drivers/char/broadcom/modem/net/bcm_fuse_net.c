@@ -39,7 +39,6 @@
 #include "taskmsgs.h"
 
 #include <linux/broadcom/ipcproperties.h>
-#include "rpc_global.h"
 #include "rpc_ipc.h"
 
 #include "xdr_porting_layer.h"

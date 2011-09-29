@@ -13,6 +13,7 @@ EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc/sysrpc-capi/public/
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc/sysrpc-capi/gen/
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc/sysrpc-capi/
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/sysrpc/
+EXTRA_CFLAGS += -I drivers/char/broadcom/fuse_log/
 
 
 EXTRA_CFLAGS += -D_BSDTYPES_DEFINED -DTYPEDEF_U_CHAR -DTYPEDEF_U_SHORT
@@ -29,5 +30,8 @@ EXTRA_CFLAGS += -DLINUX_RPC_KERNEL
 obj-$(CONFIG_BCM_MODEM) += \
 	sysrpc.o \
 	bcm_kril_sysrpc_handler.o \
-	sysrpc-capi/ \
+	sysrpc-capi/src/sys_gen_rpc.o \
+	sysrpc-capi/src/sys_hal_rpc.o \
+	sysrpc-capi/src/sys_msg.o \
+	sysrpc-capi/src/sys_rpc.o \
 

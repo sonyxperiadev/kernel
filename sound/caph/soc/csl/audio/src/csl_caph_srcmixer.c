@@ -33,7 +33,9 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "log.h"
 #include "mobcom_types.h"
 #include "csl_caph.h"
+#include "chal_caph_intc.h"
 #include "chal_caph_srcmixer.h"
+#include "csl_caph_switch.h"
 #include "csl_caph_srcmixer.h"
 
 //****************************************************************************
@@ -54,7 +56,7 @@ UInt8 srcmixer_fifo_thres2 = 0;
 //****************************************************************************
 //                         L O C A L   S E C T I O N
 //****************************************************************************
-
+static CHAL_HANDLE intc_handle = 0;
 
 //****************************************************************************
 // local macro declarations
@@ -837,12 +839,12 @@ static UInt16 csl_caph_srcmixer_read_outchnltable(CSL_CAPH_SRCM_MIX_OUTCHNL_e ou
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_srcmixer_init(cUInt32 baseAddress)    
+*  Function Name: void csl_caph_srcmixer_init(cUInt32 baseAddress, UInt32 caphIntcHandle)    
 *
 *  Description: init CAPH srcmixer block
 *
 ****************************************************************************/
-void csl_caph_srcmixer_init(UInt32 baseAddress)    
+void csl_caph_srcmixer_init(UInt32 baseAddress, UInt32 caphIntcHandle)    
 {
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_init:: \n"));
 
@@ -859,6 +861,8 @@ void csl_caph_srcmixer_init(UInt32 baseAddress)
     /* ENable all mixer output gain slope */
     // disable this line for V3.7 fpga image until got detailed rdb info.
     //csl_caph_srcmixer_enable_all_spkrgain_slope(handle);
+
+    intc_handle = (CHAL_HANDLE)caphIntcHandle;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_srcmixer_init:: baseAddress = 0x%lx\n", 
@@ -1504,6 +1508,8 @@ void csl_caph_srcmixer_set_mixingain(CSL_CAPH_SRCM_INCHNL_e inChnl,
     CAPH_SRCMixer_CHNL_e chalInChnl = CAPH_SRCM_CH_NONE;
     UInt8 chalOutChnl = 0x0;
 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_set_mixingain:: ch %x:%x gain 0x%x:%x.\r\n", inChnl, outChnl, gainL, gainR));
+
     /* Map CSL SRCM input channel to cHAL SRC Input channel */
     chalInChnl = csl_caph_srcmixer_get_single_chal_inchnl(inChnl);
     /* get the cHAL output channel from CSL output channel */
@@ -1702,6 +1708,8 @@ void csl_caph_srcmixer_set_mixoutgain(CSL_CAPH_SRCM_MIX_OUTCHNL_e outChnl,
 {
     UInt8 chalOutChnl = 0x0;
 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_set_mixoutgain:: ch %x gain 0x%x.\r\n", outChnl, gain));
+
     /* get the cHAL output channel from CSL output channel */
     chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
     /* Set the mixer left/right channel output gain */    
@@ -1732,6 +1740,8 @@ void csl_caph_srcmixer_set_mixoutcoarsegain(
                 UInt16 gain)
 {
     UInt8 chalOutChnl = 0x0;
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_srcmixer_set_mixoutcoarsegain:: ch %x gain 0x%x.\r\n", outChnl, gain));
 
     /* get the cHAL output channel from CSL output channel */
     chalOutChnl = csl_caph_srcmixer_get_chaloutchnl(outChnl);
@@ -1876,3 +1886,104 @@ void csl_caph_srcmixer_SetSTIHF(Boolean stIHF)
 {
     isSTIHF = stIHF;
 }
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_intc_enable_tapin_intr(CAPH_SRCMixer_CHNL_e chnl,
+*                                           CSL_CAPH_ARM_DSP_e csl_owner)
+*
+*  Description: enable tap out intr
+*
+****************************************************************************/
+void csl_caph_intc_enable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_ARM_DSP_e csl_owner)
+{
+	CAPH_ARM_DSP_e owner = CAPH_ARM;
+	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_enable_tapin_intr:: \n");
+
+	if (csl_owner == CSL_CAPH_DSP)
+		owner = CAPH_DSP;
+
+	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
+	
+	chal_caph_intc_enable_tap_intr(intc_handle, (cUInt8)chnl, owner);
+
+	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_disable_tapin_intr(CAPH_SRCMixer_CHNL_e chnl,
+*                                           CSL_CAPH_ARM_DSP_e csl_owner)
+*
+*  Description: disable tap out intr
+*
+****************************************************************************/
+void csl_caph_intc_disable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_ARM_DSP_e csl_owner)
+{
+	CAPH_ARM_DSP_e owner = CAPH_ARM;
+	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_disable_tapin_intr:: \n");
+
+	if (csl_owner == CSL_CAPH_DSP)
+		owner = CAPH_DSP;
+	
+	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
+
+	chal_caph_intc_disable_tap_intr(intc_handle, (cUInt8)chnl, owner);
+
+	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_intc_enable_tapout_intr(CAPH_SRCMixer_CHNL_e chnl,
+*                                           CSL_CAPH_ARM_DSP_e csl_owner)
+*
+*  Description: enable tap out intr
+*
+****************************************************************************/
+void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_ARM_DSP_e csl_owner)
+{
+	CAPH_ARM_DSP_e owner = CAPH_ARM;
+	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_enable_tapout_intr:: \n");
+
+	if (csl_owner == CSL_CAPH_DSP)
+		owner = CAPH_DSP;
+
+	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
+	
+	chal_caph_intc_enable_tapout_intr(intc_handle, (cUInt8)chnl, owner);
+
+	return;
+}
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_disable_tapout_intr(CAPH_SRCMixer_CHNL_e chnl,
+*                                           CSL_CAPH_ARM_DSP_e csl_owner)
+*
+*  Description: disable tap out intr
+*
+****************************************************************************/
+void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_ARM_DSP_e csl_owner)
+{
+	CAPH_ARM_DSP_e owner = CAPH_ARM;
+	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_disable_tapout_intr:: \n");
+
+	if (csl_owner == CSL_CAPH_DSP)
+		owner = CAPH_DSP;
+	
+	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
+
+	chal_caph_intc_disable_tapout_intr(intc_handle, (cUInt8)chnl, owner);
+
+	return;
+}
+

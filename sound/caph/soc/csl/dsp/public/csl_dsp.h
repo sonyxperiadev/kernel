@@ -73,6 +73,7 @@ typedef void (*MainAMRStatusCB_t)(UInt16 codecType);
 typedef void (*VoIPStatusCB_t)(void);
 typedef void (*UserStatusCB_t)(UInt32 param1, UInt32 param2, UInt32 param3);
 typedef void (*AudioLogStatusCB_t)(UInt16 bufferIndex);
+typedef void (*AudioEnableDoneStatusCB_t)(UInt16 enabled_audio_path);
 
 //*********************************************************************
 /**
@@ -82,17 +83,7 @@ typedef void (*AudioLogStatusCB_t)(UInt16 bufferIndex);
 *   @param    dsp_shared_mem (in)	AP shared memory address 
 * 
 **********************************************************************/
-void VPSHAREDMEM_Init(UInt32 dsp_shared_mem);
-
-//*********************************************************************
-/**
-*
-*   VPSHAREDMEM_PostCmdQ writes an entry to the VPU command queue.
-*
-*   @param    status_msg	(in)	input status message pointer 
-* 
-**********************************************************************/
-void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg);
+void VPSHAREDMEM_Init(UInt32 *dsp_shared_mem);
 
 //*********************************************************************
 /**
@@ -197,6 +188,18 @@ void CSL_RegisterUserStatusHandler(UserStatusCB_t callbackFunction);
 * 
 **********************************************************************/
 void CSL_RegisterAudioLogHandler(AudioLogStatusCB_t callbackFunction);
+
+//*********************************************************************
+/**
+*
+*   CSL_RegisterAudioEnableDoneHandler registers audio enable done 
+*   status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t callbackFunction);
+
 
 //*********************************************************************
 /**

@@ -61,8 +61,14 @@
 #include "shared.h"
 #include "csl_arm2sp.h"
 #include "csl_dsp_common_util.h"
+#include "log.h"
+#include "osdw_dsp_drv.h"
 
 extern AP_SharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress( void);
+extern void VPRIPCMDQ_SetARM2SP(UInt16 arg0, UInt16 arg1);
+extern void VPRIPCMDQ_SetARM2SP2(UInt16 arg0, UInt16 arg1);
+
 
 //*********************************************************************
 /**
@@ -688,3 +694,376 @@ void CSL_MuteARM2Speech2CallRecord(void)
 
 } // CSL_MuteARM2Speech2CallRecord
 
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_arm2sp_get_phy_base_addr
+*
+*   @note     This function returns the base address of the low part of ARM2SP Input Buffer
+*             for programming the AADMAC (this function should not be used for any software
+*             access).
+*                                                                                         
+*   @return   Physical Base address of the low half of the ARM2SP input buffer
+*
+**/
+/*******************************************************************************************/
+UInt16 *csl_dsp_arm2sp_get_phy_base_addr(void)
+{
+    AP_SharedMem_t   *ap_shared_mem_ptr;
+    ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
+
+    return(&(ap_shared_mem_ptr->shared_Arm2SP_InBuf[0]));
+}
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_arm2sp2_get_phy_base_addr
+*
+*   @note     This function returns the base address of the low part of ARM2SP2 Input Buffer
+*             for programming the AADMAC (this function should not be used for any software
+*             access).
+*                                                                                         
+*   @return   Physical Base address of the low half of the ARM2SP2 input buffer
+*
+**/
+/*******************************************************************************************/
+UInt16 *csl_dsp_arm2sp2_get_phy_base_addr(void)
+{
+    AP_SharedMem_t   *ap_shared_mem_ptr;
+    ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
+
+    return(&(ap_shared_mem_ptr->shared_Arm2SP2_InBuf[0]));
+}
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_arm2sp_get_size
+*
+*   @note     This function returns the size of the whole of ARM2SP Input Buffer
+*             for programming the AADMAC
+*                                               
+*   @param    Rate = 8000, 16000 or 48000                                     
+*   @return   Size of the entire ARM2SP input buffer
+*
+**/
+/*******************************************************************************************/
+UInt16 csl_dsp_arm2sp_get_size(UInt32 rate)
+{
+    AP_SharedMem_t   *ap_shared_mem_ptr;
+    UInt16           size=0;
+
+    if ( (rate == 8000) || (rate == 16000) )
+    {
+        size = ARM2SP_INPUT_SIZE*2;
+    }
+    else if (rate == 48000)
+    {
+        size = sizeof(ap_shared_mem_ptr->shared_Arm2SP_InBuf);
+    }
+    else
+    {
+        //Assert
+        assert(0);
+    }
+
+    return(size);
+}
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_arm2sp2_get_size
+*
+*   @note     This function returns the size of the whole of ARM2SP2 Input Buffer
+*             for programming the AADMAC
+*                                                                                         
+*   @param    Rate = 8000, 16000 or 48000                                     
+*   @return   Size of the entire ARM2SP2 input buffer
+*
+**/
+/*******************************************************************************************/
+UInt16 csl_dsp_arm2sp2_get_size(UInt32 rate)
+{
+    AP_SharedMem_t   *ap_shared_mem_ptr;
+    UInt16           size=0;
+
+    if ( (rate == 8000) || (rate == 16000) )
+    {
+        size = ARM2SP_INPUT_SIZE*2;
+    }
+    else if (rate == 48000)
+    {
+        size = sizeof(ap_shared_mem_ptr->shared_Arm2SP2_InBuf);
+    }
+    else
+    {
+        //Assert
+        assert(0);
+    }
+
+    return(size);
+}
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_arm2sp_set_arm2sp
+*
+*   @note     This function Starts and Stops the ARM2SP interface.
+*                                                                                         
+*   @param    UInt32 Rate = 8000, 16000 or 48000                                     
+*   @param    CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
+*   @param    CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
+*   @param    UInt32 numFramesPerInterrupt
+*   @param    UInt8 audMode = 0 -> Mono \BR
+*                           = 1 -> Stereo
+*   @param    UInt16 Reset_out_ptr_flag \BR
+*                                        =0, reset output pointer - shared_Arm2SP2_InBuf_out - of buffer
+*                                            shared_Arm2SP2_InBuf[] to 0. Used for new arm2sp2 session.\BR
+*                                        =1, keep output pointer - shared_Arm2SP2_InBuf_out - unchange. 
+*                                            Used for PAUSE/RESUME the same arm2sp2 session.
+*
+*   @return   None
+*
+**/
+/*******************************************************************************************/
+void csl_arm2sp_set_arm2sp(UInt32               		samplingRate,
+						   CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+						   CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+						   UInt32						numFramesPerInterrupt,
+						   UInt8						audMode,
+                           UInt16                       Reset_out_ptr_flag
+						   )
+{
+	UInt16 arg0 = 0;
+
+	// samplingRate
+	if (samplingRate == 16000)
+		arg0 |= ARM2SP_16KHZ_SAMP_RATE;
+
+	if (samplingRate == 48000)
+		arg0 |= ARM2SP_48K;
+
+	if (audMode)
+		arg0 |= ARM2SP_MONO_ST;
+
+	// set number of frames per interrupt
+	arg0 |= (numFramesPerInterrupt << ARM2SP_FRAME_NUM_BIT_SHIFT);
+
+	// set ul
+	switch (playbackMode)
+	{
+		case CSL_ARM2SP_PLAYBACK_UL:
+			// set UL_enable
+			arg0 |= ARM2SP_UL_ENABLE_MASK;
+
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL 
+				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			{
+				// mixing UL
+				arg0 |= ARM2SP_UL_MIX;
+			}
+			else
+			{
+				//overwrite UL
+				arg0 |= ARM2SP_UL_OVERWRITE;
+			}
+			break;
+
+		case CSL_ARM2SP_PLAYBACK_DL:
+			// set DL_enable
+			arg0 |= ARM2SP_DL_ENABLE_MASK;
+
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL 
+				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			{
+				// mixing DL
+				arg0 |= ARM2SP_DL_MIX;
+			}
+			else
+			{
+				//overwirte DL
+				arg0 |= ARM2SP_DL_OVERWRITE;
+			}
+			break;
+
+		case CSL_ARM2SP_PLAYBACK_BOTH:
+			// set UL_enable
+			arg0 |= ARM2SP_UL_ENABLE_MASK;
+
+			// set DL_enable
+			arg0 |= ARM2SP_DL_ENABLE_MASK;
+
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL 
+				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			{
+				// mixing UL
+				arg0 |= ARM2SP_UL_MIX;
+			}
+			else
+			{
+				// overwirte UL
+				arg0 |= ARM2SP_UL_OVERWRITE;
+			}
+			
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL 
+				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			{
+				// mixing DL
+				arg0 |= ARM2SP_DL_MIX;
+			}
+			else
+			{
+				// overwirte DL
+				arg0 |= ARM2SP_DL_OVERWRITE;
+			}
+			break;
+
+		case CSL_ARM2SP_PLAYBACK_NONE:
+            arg0 = 0;
+			break;
+
+		default:
+            //Assert
+            //xassert(0,playbackMode);
+			break;
+	}
+
+	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=1, Reset_out_ptr_flag = %d\n",
+						playbackMode, mixMode, arg0, Reset_out_ptr_flag);
+
+    VPRIPCMDQ_SetARM2SP(arg0, Reset_out_ptr_flag);
+}
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_arm2sp_set_arm2sp2
+*
+*   @note     This function Starts and Stops the ARM2SP2 interface.
+*                                                                                         
+*   @param    UInt32 Rate = 8000, 16000 or 48000                                     
+*   @param    CSL_ARM2SP_PLAYBACK_MODE_t playbackMode
+*   @param    CSL_ARM2SP_VOICE_MIX_MODE_t mixMode
+*   @param    UInt32 numFramesPerInterrupt
+*   @param    UInt8 audMode = 0 -> Mono \BR
+*                           = 1 -> Stereo
+*   @param    UInt16 Reset_out_ptr_flag \BR
+*                                        =0, reset output pointer - shared_Arm2SP2_InBuf_out - of buffer
+*                                            shared_Arm2SP2_InBuf[] to 0. Used for new arm2sp2 session.\BR
+*                                        =1, keep output pointer - shared_Arm2SP2_InBuf_out - unchange. 
+*                                            Used for PAUSE/RESUME the same arm2sp2 session.
+*
+*   @return   None
+*
+**/
+/*******************************************************************************************/
+void csl_arm2sp_set_arm2sp2(UInt32               		samplingRate,
+						   CSL_ARM2SP_PLAYBACK_MODE_t	playbackMode,
+						   CSL_ARM2SP_VOICE_MIX_MODE_t	mixMode,
+						   UInt32						numFramesPerInterrupt,
+						   UInt8						audMode,
+                           UInt16                       Reset_out_ptr_flag
+						   )
+{
+	UInt16 arg0 = 0;
+
+	// samplingRate
+	if (samplingRate == 16000)
+		arg0 |= ARM2SP_16KHZ_SAMP_RATE;
+
+	if (samplingRate == 48000)
+		arg0 |= ARM2SP_48K;
+
+	if (audMode)
+		arg0 |= ARM2SP_MONO_ST;
+
+	// set number of frames per interrupt
+	arg0 |= (numFramesPerInterrupt << ARM2SP_FRAME_NUM_BIT_SHIFT);
+
+	// set ul
+	switch (playbackMode)
+	{
+		case CSL_ARM2SP_PLAYBACK_UL:
+			// set UL_enable
+			arg0 |= ARM2SP_UL_ENABLE_MASK;
+
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL 
+				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			{
+				// mixing UL
+				arg0 |= ARM2SP_UL_MIX;
+			}
+			else
+			{
+				//overwrite UL
+				arg0 |= ARM2SP_UL_OVERWRITE;
+			}
+			break;
+
+		case CSL_ARM2SP_PLAYBACK_DL:
+			// set DL_enable
+			arg0 |= ARM2SP_DL_ENABLE_MASK;
+
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL 
+				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			{
+				// mixing DL
+				arg0 |= ARM2SP_DL_MIX;
+			}
+			else
+			{
+				//overwirte DL
+				arg0 |= ARM2SP_DL_OVERWRITE;
+			}
+			break;
+
+		case CSL_ARM2SP_PLAYBACK_BOTH:
+			// set UL_enable
+			arg0 |= ARM2SP_UL_ENABLE_MASK;
+
+			// set DL_enable
+			arg0 |= ARM2SP_DL_ENABLE_MASK;
+
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_UL 
+				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			{
+				// mixing UL
+				arg0 |= ARM2SP_UL_MIX;
+			}
+			else
+			{
+				// overwirte UL
+				arg0 |= ARM2SP_UL_OVERWRITE;
+			}
+			
+			if (mixMode == CSL_ARM2SP_VOICE_MIX_DL 
+				|| mixMode == CSL_ARM2SP_VOICE_MIX_BOTH)
+			{
+				// mixing DL
+				arg0 |= ARM2SP_DL_MIX;
+			}
+			else
+			{
+				// overwirte DL
+				arg0 |= ARM2SP_DL_OVERWRITE;
+			}
+			break;
+
+		case CSL_ARM2SP_PLAYBACK_NONE:
+            arg0 = 0;
+			break;
+
+		default:
+            //Assert
+            //xassert(0,playbackMode);
+			break;
+	}
+
+	Log_DebugPrintf(LOGID_AUDIO, "ARM2SP Start, playbackMode = %d,  mixMode = %d, arg0 = 0x%x instanceID=2, Reset_out_ptr_flag = %d\n",
+						playbackMode, mixMode, arg0, Reset_out_ptr_flag);
+
+	VPRIPCMDQ_SetARM2SP2(arg0, Reset_out_ptr_flag);
+}

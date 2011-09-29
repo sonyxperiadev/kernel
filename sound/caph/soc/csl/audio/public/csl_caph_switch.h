@@ -34,7 +34,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 
 #ifndef _CSL_CAPH_SWITCH_
 #define _CSL_CAPH_SWITCH_
-#include "resultcode.h"
 
 /**
 * CAPH SSASW trigger
@@ -183,7 +182,7 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
 *
 *  @return void
 *****************************************************************************/
-Result_t csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr);
+void csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr);
 
 /**
 *

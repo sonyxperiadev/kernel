@@ -65,7 +65,6 @@
 #include "csl_arm2sp.h"
 #include "csl_vpu.h"
 
-
 AP_SharedMem_t	*vp_shared_mem;
 
 static VPUCaptureStatusCB_t VPUCaptureStatusHandler = NULL;
@@ -80,7 +79,8 @@ static VoIPStatusCB_t VoIPStatusHandler = NULL;
 static UserStatusCB_t UserStatusHandler = NULL;
 #endif
 static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
-
+static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
+void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg);
 
 //*********************************************************************
 /**
@@ -90,11 +90,11 @@ static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 *   @param    dsp_shared_mem (in)	AP shared memory address 
 * 
 **********************************************************************/
-void VPSHAREDMEM_Init(UInt32 dsp_shared_mem)
+void VPSHAREDMEM_Init(UInt32 *dsp_shared_mem)
 {
 	vp_shared_mem = (AP_SharedMem_t*) dsp_shared_mem;
 	
-	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", dsp_shared_mem);
+	Log_DebugPrintf(LOGID_AUDIO, " VPSHAREDMEM_Init: dsp_shared_mem=0x%lx, \n", (UInt32)dsp_shared_mem);
 
 	/* Clear out shared memory */
 	memset(vp_shared_mem, 0, sizeof(AP_SharedMem_t));
@@ -335,6 +335,21 @@ void CSL_RegisterAudioLogHandler(AudioLogStatusCB_t callbackFunction)
 
 }
 
+//*********************************************************************
+/**
+*
+*   CSL_RegisterAudioEnableDoneHandler registers audio enable done 
+*   status handler.
+*
+*   @param    callbackFunction	(in)	callback function to register 
+* 
+**********************************************************************/
+void CSL_RegisterAudioEnableDoneHandler(AudioEnableDoneStatusCB_t callbackFunction)
+{
+	AudioEnableDoneHandler = callbackFunction;
+
+}
+
 
 //*********************************************************************
 /**
@@ -481,6 +496,19 @@ void AP_ProcessStatus(void)
 				else
 				{
 					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: AudioLogStatusHandler is not registered");
+				}
+				break;		
+			}
+
+			case VP_STATUS_AUDIO_ENABLE_DONE:
+			{
+				if(AudioEnableDoneHandler != NULL)
+				{
+					AudioEnableDoneHandler(status_msg.arg0);
+				}
+				else
+				{
+					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: AudioEnableDoneHandler is not registered");
 				}
 				break;		
 			}

@@ -1429,6 +1429,8 @@ void csl_caph_audioh_sidetone_load_filter(UInt32 *coeff)
 void csl_caph_audioh_sidetone_set_gain(UInt32 gain)
 {
 	chal_audio_stpath_set_gain(handle, gain);
+    //Set LOWER_FIT_TAP and UPPER_FIT_TAP to 63.
+    chal_audio_stpath_set_filter_taps(handle, 63, 63);
 	return;
 }	
 

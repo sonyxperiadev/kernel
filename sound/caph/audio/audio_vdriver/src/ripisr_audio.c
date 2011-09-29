@@ -41,7 +41,6 @@
 
 #include "resultcode.h"
 
-#include "shared.h"
 #include "dspif_voice_play.h"
 #include "dspif_voice_record.h"
 

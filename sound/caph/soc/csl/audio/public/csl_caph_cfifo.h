@@ -35,8 +35,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #ifndef _CSL_CAPH_CFIFO_
 #define _CSL_CAPH_CFIFO_
 
-#include "csl_caph.h"
-
 // total ring buffer size for cfifo. make sure sync with cfifo config table 
 #if defined (_RHEA_)
 #define CSL_CFIFO_TOTAL_SIZE 0x2000

@@ -38,9 +38,6 @@
 #include "resultcode.h"
 
 #include "audio_consts.h"
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
-#include "sysparm.h"
-#endif
 #include "csl_caph.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"

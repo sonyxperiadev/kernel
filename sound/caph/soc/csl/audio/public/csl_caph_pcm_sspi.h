@@ -43,6 +43,7 @@ extern "C" {
  * @{
  */
 
+
 // undef this for RHEA, define for SAMOA
 // #define SSPI_TDM_MODE
 
@@ -52,6 +53,23 @@ extern "C" {
 *
 *****************************************************************************/
 #define CSL_PCM_HANDLE CHAL_HANDLE
+
+//According to PCM/I2S SSP CSL design, the transfer size for pcm and i2s should be 
+//defined as following.  If the size is less then the following value, the transferring
+//will be one-time shot. Otherwise it will be transferred continuously.
+#define CSL_PCM_SSP_TSIZE   8192
+
+
+/**
+* CAPH SSP ID
+******************************************************************************/
+typedef enum
+{
+    CSL_CAPH_SSP_NONE,
+    CSL_CAPH_SSP_3,
+    CSL_CAPH_SSP_4,
+}CSL_CAPH_SSP_e;
+
 
 typedef struct
 {
@@ -218,7 +236,7 @@ typedef struct
 *  @return device CSL handle
 *
 *****************************************************************************/
-CSL_PCM_HANDLE csl_pcm_init(cUInt32 baseAddr);
+CSL_PCM_HANDLE csl_pcm_init(UInt32 baseAddr, UInt32 caphIntcHandle);
 
 /**
 *  @brief  This function deitializes the PCM CSL layer
@@ -371,6 +389,29 @@ UInt32 csl_pcm_get_tx1_fifo_data_port(CSL_PCM_HANDLE handle);
 *
 *****************************************************************************/
 UInt32 csl_pcm_get_rx1_fifo_data_port(CSL_PCM_HANDLE handle);
+
+/**
+*
+*  @brief  enable caph pcm intr  
+*
+*  @param   csl_owner  (in) owner of this caph pcm channel
+*  @param   csl_sspid  (in) ssp of this caph pcm channel
+*
+*  @return void
+*****************************************************************************/
+
+void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid);
+/**
+*
+*  @brief  disable caph pcm intr  
+*
+*  @param   csl_owner  (in) owner of this caph pcm channel
+*  @param   csl_sspid  (in) ssp of this caph pcm channel
+*
+*
+*  @return void
+*****************************************************************************/
+void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid);
 
 #ifdef __cplusplus
 }

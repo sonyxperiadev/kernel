@@ -356,7 +356,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			AUDCTRL_SetPlayVolume(
                       AUDIO_HW_NONE,
                       Params[1],  //	  //speaker channel
-                      AUDIO_GAIN_FORMAT_Q13_2,
+                      AUDIO_GAIN_FORMAT_mB,
 					  Params[2],  //left volume
                       Params[3]  //right volume
 				);
@@ -839,7 +839,8 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 	{
 	case 6:	//at*maudvol=6
 		//Get volume from driver
-		Params[0] = AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_VOL_LEVEL );
+		Params[0] = AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_mB );
+		Params[0] = Params[0]/100;  //dB
 		//or
 		//pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
 		//Params[0] = pVolume[0];
@@ -854,8 +855,8 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		pVolume[1] = Params[1];
 		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_HW_NONE,
 									AUDCTRL_SPK_UNDEFINED,
-									Params[1],   //in dB
-									AUDIO_GAIN_FORMAT_VOL_LEVEL
+									(Params[1]*100),   //Params[1] in dB
+									AUDIO_GAIN_FORMAT_mB
 									);
 
 		BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d \n", __FUNCTION__, pVolume[0],mode); 
