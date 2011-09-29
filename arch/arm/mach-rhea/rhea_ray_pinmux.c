@@ -96,7 +96,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
 
 	/* SSP4 - I2S */
-#ifdef CONFIG_MACH_RHEA_RAY
+#if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
@@ -107,9 +107,9 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(LCDRES, GPIO41, 0, OFF, ON, 0, 0, 8MA),
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
-	/* conflicts with SSP4 */
-	PIN_CFG(DCLK4, GPIO95, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(DCLKREQ4, GPIO96, 0, OFF, ON, 0, 0, 8MA),
+	/* conflicts with SSP4 so comment it out.  Leave the code here for possible future change */
+//	PIN_CFG(DCLK4, GPIO95, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(DCLKREQ4, GPIO96, 0, OFF, ON, 0, 0, 8MA),
 #endif
 
 	/* STM trace - PTI */
@@ -148,9 +148,9 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* PWM config - PWM4, PWM5*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
-	/* conflicts with SSP4 */
-	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
+	/* conflicts with SSP4 so comment it out. Leave the code here for possible future change */
+//	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
 #endif
 
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
