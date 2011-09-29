@@ -60,6 +60,8 @@
 #include <linux/android_pmem.h>
 #include <linux/bootmem.h>
 #include "common.h"
+#include <mach/sdio_platform.h>
+
 #ifdef CONFIG_KEYBOARD_BCM
 #include <mach/bcm_keypad.h>
 #endif
@@ -92,6 +94,14 @@
 
 #define PMU_DEVICE_I2C_ADDR_0   0x08
 #define PMU_IRQ_PIN           29
+
+
+#ifdef CONFIG_GPIO_PCA953X
+#define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
+#else
+#define SD_CARDDET_GPIO_PIN      75
+#endif
+
 
 // keypad map
 #define BCM_KEY_ROW_0  0
@@ -698,6 +708,136 @@ struct platform_device haptic_pwm_device = {
 };
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
+
+#if 1 //Shri
+
+static struct resource board_sdio0_resource[] = {
+	[0] = {
+		.start = SDIO1_BASE_ADDR,
+		.end = SDIO1_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO0,
+		.end = BCM_INT_ID_SDIO0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_sdio1_resource[] = {
+	[0] = {
+		.start = SDIO2_BASE_ADDR,
+		.end = SDIO2_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO1,
+		.end = BCM_INT_ID_SDIO1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_sdio2_resource[] = {
+	[0] = {
+		.start = SDIO3_BASE_ADDR,
+		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+static struct sdio_platform_cfg board_sdio_param[] = {
+	{ /* SDIO0 */
+		.id = 0,
+		.data_pullup = 0,
+		.cd_gpio = SD_CARDDET_GPIO_PIN,
+		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.peri_clk_name = "sdio1_clk",
+		.ahb_clk_name = "sdio1_ahb_clk",
+		.sleep_clk_name = "sdio1_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+	{ /* SDIO1 */
+		.id = 1,
+		.data_pullup = 0,
+		.is_8bit = 1,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
+		.peri_clk_name = "sdio2_clk",
+		.ahb_clk_name = "sdio2_ahb_clk",
+		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
+	},
+	{ /* SDIO2 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 38,
+			.reg		= -1,
+			.host_wake	= 1,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+};
+
+static struct platform_device board_sdio0_device = {
+	.name = "sdhci",
+	.id = 0,
+	.resource = board_sdio0_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio0_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[0],
+	},
+};
+
+static struct platform_device board_sdio1_device = {
+	.name = "sdhci",
+	.id = 1,
+	.resource = board_sdio1_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[1],
+	},
+};
+
+static struct platform_device board_sdio2_device = {
+	.name = "sdhci",
+	.id = 2,
+	.resource = board_sdio2_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[2],
+	},
+};
+
+
+/* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
+static struct platform_device *board_sdio_plat_devices[] __initdata = {
+	&board_sdio1_device,
+	&board_sdio2_device,
+	&board_sdio0_device,
+};
+
+void __init board_add_sdio_devices(void)
+{
+	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
+}
+
+
+#endif //Shri
+
+
+
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined (CONFIG_MACH_RHEA_BERRI) || defined (CONFIG_MACH_RHEALC_BERRI) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)

@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: linuxver.h,v 13.53.2.2 2010-12-22 23:47:26 Exp $
+ * $Id: linuxver.h 275790 2011-08-04 23:02:47Z $
  */
 
 
@@ -70,7 +70,9 @@
 #include <linux/pci.h>
 #include <linux/interrupt.h>
 #include <linux/netdevice.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 27))
 #include <linux/semaphore.h>
+#endif 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 28))
 #undef IP_TOS
 #endif 
@@ -480,7 +482,11 @@ typedef struct {
 #define DBG_THR(x)
 #endif
 
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 0))
+#define SMP_RD_BARRIER_DEPENDS(x) smp_read_barrier_depends(x)
+#else
 #define SMP_RD_BARRIER_DEPENDS(x) smp_rmb(x)
+#endif
 
 
 #define PROC_START(thread_func, owner, tsk_ctl, flags) \
