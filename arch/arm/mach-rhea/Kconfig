@@ -45,6 +45,13 @@ config RHEA_DORMANT_MODE
        help
 	Say Y if you want to enable dormant mode support for Rhea platform
 
+config RHEA_PM_ASIC_WORKAROUND
+       depends on ARCH_RHEA
+       bool "Enable ASIC workarounds for Power management"
+       default y
+       help
+       Say Y if you want to enable Rhea ASIC workarounds for Power management
+
 config MACH_RHEA_SELFTEST
         bool "Selftest CSAPI"
 	depends on MFD_BCM_PMU590XX

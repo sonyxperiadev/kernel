@@ -375,18 +375,21 @@ int enter_dormant_state(struct kona_idle_state* state)
 	if(state->state == RHEA_STATE_C2)
 		clk_set_crystal_pwr_on_idle(true);
 
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+#endif
 
 	clear_wakeup_interrupts();
 	config_wakeup_interrupts();
-
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	if(force_retention)
 		enable_sleep_prevention_clock(0);
+#endif
 
 	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
 	pi_enable(pi,0);
@@ -477,15 +480,19 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
 
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	if(force_retention)
 		enable_sleep_prevention_clock(1);
+#endif
 
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val |= ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
 	reg_val |= ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+#endif
 
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, false);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, false);
