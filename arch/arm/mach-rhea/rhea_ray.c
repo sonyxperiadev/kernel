@@ -948,7 +948,9 @@ static struct platform_device r61581_smi_display_device = {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] =
 {
-//    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#ifndef CONFIG_RHEA_PM_ASIC_WORKAROUND
+    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
     FTBL_INIT(700000, PI_OPP_TURBO),
 };

@@ -5276,10 +5276,11 @@ int root_ccu_clk_init(struct clk* clk)
     reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
     /* Var_312M and Var_96M clocks default PLL is wrong. correcting here.*/
     writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
     writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
-
+#endif
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
 	clk->init = 1;
