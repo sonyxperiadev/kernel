@@ -39,7 +39,6 @@
 #include "audio_consts.h"
 
 #define SYSCFG_BASE_ADDR      0x08880000      /* SYSCFG core */
-#include "shared.h"
 #include "dspcmd.h"
 #include "csl_apcmd.h"
 
@@ -47,7 +46,6 @@
 #include "msconsts.h"
 
 #include "audio_consts.h"
-//#include "ripcmdq.h"
 
 #include "csl_dsp.h"
 #include "csl_caph.h"
@@ -90,6 +88,9 @@ typedef struct Audio_Driver_t
 
 static Audio_Driver_t sAudDrv = {0};
 static UInt32 voiceCallSampleRate = 8000;  // defalut to 8K Hz
+
+static Boolean IsBTM_WB = FALSE;  //this flag remembers if the Bluetooth headset is a wideband headset (16KHz voice)
+
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -554,6 +555,13 @@ Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode)
 		case	AUDIO_MODE_RESERVE_WB:
 			is_call16k = TRUE;
 			break;
+
+		
+		case	AUDIO_MODE_BLUETOOTH: //BT headset needs to consider NB or WB too
+		case	AUDIO_MODE_BLUETOOTH_WB: //BT headset needs to consider NB or WB too
+			is_call16k = IsBTM_WB; 
+			break;
+			
 		default:
 			break;
 		}
@@ -585,5 +593,33 @@ Boolean AUDDRV_InVoiceCall( void )
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off )
 {
 	controlFlagForCustomGain = on_off;
+}
+
+
+//*********************************************************************
+/**
+*	Get BTM headset NB or WB info
+
+*	@return 	Boolean, TRUE for WB and FALSE for NB (8k) 
+*	@note	   
+**********************************************************************/
+Boolean AUDDRV_IsBTMWB( void )
+{
+	return IsBTM_WB;
+}
+
+//*********************************************************************
+/**
+*	Set BTM type 
+
+*	@param		Boolean isWB 
+*	@return 	none
+*
+*	@note	isWB=TRUE for BT WB headset; =FALSE for BT NB (8k) headset.
+**********************************************************************/
+void AUDDRV_SetBTMTypeWB( Boolean isWB)
+{
+	IsBTM_WB = isWB;
+	//AUDDRV_SetPCMRate(IsBTM_WB); 
 }
 

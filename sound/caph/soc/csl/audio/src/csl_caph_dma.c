@@ -444,17 +444,16 @@ static CAPH_CFIFO_CHNL_DIRECTION_e csl_caph_dma_get_chal_direction(CSL_CAPH_DMA_
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 baseAddressIntc)    
+*  Function Name: void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)    
 *
 *  Description: init CAPH dma block
 *
 ****************************************************************************/
-void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 baseAddressIntc)    
+void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle)    
 {
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_init:: \n");
 	handle = chal_caph_dma_init(baseAddressDma);
-	intc_handle = chal_caph_intc_init(baseAddressIntc);
-	chal_caph_intc_reset(intc_handle);
+	intc_handle = (CHAL_HANDLE)caphIntcHandle;
 	memset(dmaCH_ctrl, 0, sizeof(dmaCH_ctrl));
 	return;
 }
@@ -470,7 +469,6 @@ void csl_caph_dma_deinit(void)
 {
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_deinit:: \n");
 	chal_caph_dma_deinit(handle);
-	chal_caph_intc_deinit(intc_handle);
 	memset(dmaCH_ctrl, 0, sizeof(dmaCH_ctrl));
 	return;
 }
@@ -732,156 +730,6 @@ void csl_caph_dma_disable_intr(CSL_CAPH_DMA_CHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_
 
 /****************************************************************************
 *
-*  Function Name: void csl_caph_intc_enable_tapin_intr(CAPH_SRCMixer_CHNL_e chnl,
-*                                           CSL_CAPH_ARM_DSP_e csl_owner)
-*
-*  Description: enable tap out intr
-*
-****************************************************************************/
-void csl_caph_intc_enable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_ARM_DSP_e csl_owner)
-{
-	CAPH_ARM_DSP_e owner = CAPH_ARM;
-	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_enable_tapin_intr:: \n");
-
-	if (csl_owner == CSL_CAPH_DSP)
-		owner = CAPH_DSP;
-
-	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
-	
-	chal_caph_intc_enable_tap_intr(intc_handle, (cUInt8)chnl, owner);
-
-	return;
-}
-
-/****************************************************************************
-*
-*  Function Name: void csl_caph_disable_tapin_intr(CAPH_SRCMixer_CHNL_e chnl,
-*                                           CSL_CAPH_ARM_DSP_e csl_owner)
-*
-*  Description: disable tap out intr
-*
-****************************************************************************/
-void csl_caph_intc_disable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_ARM_DSP_e csl_owner)
-{
-	CAPH_ARM_DSP_e owner = CAPH_ARM;
-	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_disable_tapin_intr:: \n");
-
-	if (csl_owner == CSL_CAPH_DSP)
-		owner = CAPH_DSP;
-	
-	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
-
-	chal_caph_intc_disable_tap_intr(intc_handle, (cUInt8)chnl, owner);
-
-	return;
-}
-
-/****************************************************************************
-*
-*  Function Name: void csl_caph_intc_enable_tapout_intr(CAPH_SRCMixer_CHNL_e chnl,
-*                                           CSL_CAPH_ARM_DSP_e csl_owner)
-*
-*  Description: enable tap out intr
-*
-****************************************************************************/
-void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_ARM_DSP_e csl_owner)
-{
-	CAPH_ARM_DSP_e owner = CAPH_ARM;
-	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_enable_tapout_intr:: \n");
-
-	if (csl_owner == CSL_CAPH_DSP)
-		owner = CAPH_DSP;
-
-	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
-	
-	chal_caph_intc_enable_tapout_intr(intc_handle, (cUInt8)chnl, owner);
-
-	return;
-}
-
-/****************************************************************************
-*
-*  Function Name: void csl_caph_disable_tapout_intr(CAPH_SRCMixer_CHNL_e chnl,
-*                                           CSL_CAPH_ARM_DSP_e csl_owner)
-*
-*  Description: disable tap out intr
-*
-****************************************************************************/
-void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e csl_chnl, CSL_CAPH_ARM_DSP_e csl_owner)
-{
-	CAPH_ARM_DSP_e owner = CAPH_ARM;
-	CAPH_SRCMixer_CHNL_e chnl = CAPH_SRCM_CH_NONE;
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_disable_tapout_intr:: \n");
-
-	if (csl_owner == CSL_CAPH_DSP)
-		owner = CAPH_DSP;
-	
-	chnl = csl_caph_srcmixer_get_single_chal_inchnl(csl_chnl);
-
-	chal_caph_intc_disable_tapout_intr(intc_handle, (cUInt8)chnl, owner);
-
-	return;
-}
-
-/****************************************************************************
-*
-*  Function Name: void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
-*
-*  Description: enable pcm intr
-*
-****************************************************************************/
-void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
-{
-	CAPH_ARM_DSP_e owner = CAPH_ARM;
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_enable_pcm_intr:: \n");
-
-	if (csl_owner == CSL_CAPH_DSP)
-		owner = CAPH_DSP;
-	
-	if (csl_sspid == CSL_CAPH_SSP_3)
-    	chal_caph_intc_enable_ssp_intr(intc_handle, 1, owner);
-	else if (csl_sspid == CSL_CAPH_SSP_4)
-		chal_caph_intc_enable_ssp_intr(intc_handle, 2, owner);
-	else
-		// should not get here.
-		audio_xassert(0, csl_sspid);
-}
-
-/****************************************************************************
-*
-*  Function Name: void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
-*
-*  Description: disable pcm intr
-*
-****************************************************************************/
-void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid)
-{
-	CAPH_ARM_DSP_e owner = CAPH_ARM;
-
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_enable_pcm_intr:: \n");
-
-	if (csl_owner == CSL_CAPH_DSP)
-		owner = CAPH_DSP;
-	
-	if (csl_sspid == CSL_CAPH_SSP_3)
-    	chal_caph_intc_disable_ssp_intr(intc_handle, 1, owner);
-	else if (csl_sspid == CSL_CAPH_SSP_4)
-		chal_caph_intc_disable_ssp_intr(intc_handle, 2, owner);
-	else
-		// should not get here.
-		audio_xassert(0, csl_sspid);
-}
-
-/****************************************************************************
-*
 *  Function Name: void csl_caph_dma_get_intr(CSL_CAPH_DMA_CHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner)
 *
 *  Description: get intr
@@ -1028,7 +876,7 @@ void csl_caph_dma_clear_ddrfifo_status(CSL_CAPH_DMA_CHNL_e chnl)
 void csl_caph_dma_process_interrupt(void)
 {
     CSL_CAPH_DMA_CHNL_e channel = CSL_CAPH_DMA_NONE;
-	
+    	
 	//Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_process_interrupt \n");
 
 	for(channel = CSL_CAPH_DMA_CH1; channel <= CSL_CAPH_DMA_CH16; channel++)
@@ -1039,7 +887,7 @@ void csl_caph_dma_process_interrupt(void)
         // if the interrupt happens, call the callback and clear the interrupt.
         if(csl_caph_dma_get_intr(channel, CSL_CAPH_ARM))
         {
-		    csl_caph_dma_clear_intr(channel, CSL_CAPH_ARM);
+            csl_caph_dma_clear_intr(channel, CSL_CAPH_ARM);
             if(dmaCH_ctrl[channel].eFifoStatus && dmaCH_ctrl[channel].caphDmaCb)
             {
                 dmaCH_ctrl[channel].caphDmaCb(channel);

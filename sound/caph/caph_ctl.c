@@ -104,6 +104,7 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 			}
 			break;
 		case CTL_STREAM_PANEL_PCMIN:
+		case CTL_STREAM_PANEL_SPEECHIN:
 		case CTL_STREAM_PANEL_VOIPIN:
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0; //Q13.2
@@ -207,6 +208,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 		}
 		break;
 		case CTL_STREAM_PANEL_PCMIN:
+		case CTL_STREAM_PANEL_SPEECHIN:
 		{
 			if(pCurSel[0] == dev) //if current sink is diffent, dont call the driver to change the volume
 			{
@@ -325,8 +327,19 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	if (pSel[0] == pSel[1])
 		pSel[1] = AUDCTRL_SPK_TOTAL_COUNT;
 
-    if ((pSel[0] == AUDCTRL_SPK_LOUDSPK) && (isSTIHF == TRUE))
-        pSel[1] = AUDCTRL_SPK_HANDSET;
+	// Currently support only two output playback devices, this setting is for stereo IHF R channel
+	pSel[2] = AUDCTRL_SPK_TOTAL_COUNT;
+	if (isSTIHF == TRUE)
+	{
+		if (pSel[0] == AUDCTRL_SPK_LOUDSPK)
+		{
+			if (pSel[1] != AUDCTRL_SPK_TOTAL_COUNT)
+        		pSel[2] = pSel[1];
+			pSel[1] = AUDCTRL_SPK_HANDSET;
+		}
+		else if (pSel[1] == AUDCTRL_SPK_LOUDSPK)
+			pSel[2] = AUDCTRL_SPK_HANDSET;
+	}
 
 	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld, pSel[1]=%ld\n", stream,pSel[0],pSel[1]);
 	
@@ -396,10 +409,6 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 								pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
 								pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_EP;
 							}
-							else
-							{ 
-								BCM_AUDIO_DEBUG("No secondary output device! hw_id for dev2 %ld ?\n", pSel[1]);
-							}
 						}
 						pChip->streamCtl[stream-1].dev_prop.p[i].speaker = pSel[i];
 						if (i == 0)
@@ -415,10 +424,10 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 						}
 						else
 						{
-							if (pChip->streamCtl[stream-1].dev_prop.p[1].hw_id != AUDIO_HW_NONE)
+							if (pChip->streamCtl[stream-1].dev_prop.p[i].hw_id != AUDIO_HW_NONE)
 							{
-								newSink =  pChip->streamCtl[stream-1].dev_prop.p[1].hw_id;
-								newSpk = pSel[1];
+								newSink =  pChip->streamCtl[stream-1].dev_prop.p[i].hw_id;
+								newSpk = pSel[i];
                                 parm_spkr.src = pChip->streamCtl[stream-1].dev_prop.p[0].hw_src;
 								parm_spkr.cur_sink = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
 								parm_spkr.cur_spkr = pChip->streamCtl[stream-1].dev_prop.p[0].speaker;
@@ -1091,8 +1100,8 @@ x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_EANC_DIGI
 
 #define	BCM_CTL_SRC_LINES	{ \
 						{.strName = "", .iVolume = {0,0},}, 		\
-						{.strName = "MIC", 	.iVolume = {28,28},},	\
-						{.strName = "AUX",	.iVolume = {28,28},},	\
+						{.strName = "MIC", 	.iVolume = {120,120},},	\
+						{.strName = "AUX",	.iVolume = {120,120},},	\
 						{.strName = "DG1",	.iVolume = {28,28},},	\
 						{.strName = "DG2",	.iVolume = {28,28},},	\
 						{.strName = "",	.iVolume = {28,28},},		\

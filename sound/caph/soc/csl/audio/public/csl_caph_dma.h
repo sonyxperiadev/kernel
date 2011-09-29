@@ -34,9 +34,12 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 
 #ifndef _CSL_CAPH_DMA_
 #define _CSL_CAPH_DMA_
+
 #include "csl_caph.h"
 
-#include "csl_caph_srcmixer.h"
+//Per ASIC people, To get the transfer size of 4 32bit words, need to set as 3.
+#define CSL_AADMAC_TSIZE    0x3
+
 
 /**
 * CAPH AADMAC Channels
@@ -127,7 +130,7 @@ typedef enum
 *
 *  @return 
 *****************************************************************************/
-void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 baseAddressIntc);
+void csl_caph_dma_init(UInt32 baseAddressDma, UInt32 caphIntcHandle);
 /**
 *
 *  @brief  deinitialize the caph dma 
@@ -232,67 +235,7 @@ void csl_caph_dma_enable_intr(CSL_CAPH_DMA_CHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_o
 *  @return void
 *****************************************************************************/
 void csl_caph_dma_disable_intr(CSL_CAPH_DMA_CHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
-/**
-*
-*  @brief  enable caph tapin intr 
-*
-*  @param   chnl  (in) caph src channel
-*  @param   csl_owner  (in) owner of this caph src channel
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_intc_enable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
-/**
-*
-*  @brief  disable caph tapin intr  
-*
-*  @param   chnl  (in) caph src channel
-*  @param   csl_owner  (in) owner of this caph src channel
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_intc_disable_tapin_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
-/**
-*
-*  @brief  enable caph tapout intr 
-*
-*  @param   chnl  (in) caph src channel
-*  @param   csl_owner  (in) owner of this caph src channel
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_intc_enable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
-/**
-*
-*  @brief  disable caph tapout intr  
-*
-*  @param   chnl  (in) caph src channel
-*  @param   csl_owner  (in) owner of this caph src channel
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_intc_disable_tapout_intr(CSL_CAPH_SRCM_INCHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
-/**
-*
-*  @brief  enable caph pcm intr  
-*
-*  @param   csl_owner  (in) owner of this caph pcm channel
-*  @param   csl_sspid  (in) ssp of this caph pcm channel
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid);
-/**
-*
-*  @brief  disable caph pcm intr  
-*
-*  @param   csl_owner  (in) owner of this caph pcm channel
-*  @param   csl_sspid  (in) ssp of this caph pcm channel
-*
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_intc_disable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e csl_sspid);
+
 /**
 *
 *  @brief  get caph dma intr 

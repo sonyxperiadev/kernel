@@ -54,7 +54,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_ddriver.h"
 #include "bcm_audio_devices.h"
 
-#include "shared.h"
 #include "auddrv_audlog.h"
 
 #include "caph_common.h"

@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.                                
+Copyright 2010-2011 Broadcom Corporation.  All rights reserved.                                
 
 Unless you and Broadcom execute a separate written software license agreement 
 governing use of this software, this software is licensed to you under the 
@@ -243,6 +243,7 @@ void AUDIO_Ctrl_Process(
 {
    	TMsgAudioCtrl	msgAudioCtrl;
 	unsigned int	len;
+	int i;
 
 	BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
 	
@@ -288,8 +289,8 @@ void AUDIO_Ctrl_Process(
 
 			AUDCTRL_SetPlayVolume (param_start->pdev_prop->p[0].hw_id,
 					param_start->pdev_prop->p[0].speaker, 
-					AUDIO_GAIN_FORMAT_Q13_2, 
-					param_start->vol[0], param_start->vol[1]); //0DB 
+					AUDIO_GAIN_FORMAT_mB, 
+					param_start->vol[0], param_start->vol[1]);
 
      			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->p[0].aud_dev);
 			
@@ -307,15 +308,16 @@ void AUDIO_Ctrl_Process(
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
 			// Remove secondary playback path if it's in use
-			if(param_stop->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			for (i = (MAX_PLAYBACK_DEV-1); i > 0; i--)
 			{
-            	AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_src,
-                                       param_stop->pdev_prop->p[0].hw_id,
+				if (param_stop->pdev_prop->p[i].hw_id != AUDIO_HW_NONE)
+				{
+           			AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_src,
+										param_stop->pdev_prop->p[0].hw_id,
 										param_stop->pdev_prop->p[0].speaker,
-										param_stop->pdev_prop->p[1].hw_id,
-										param_stop->pdev_prop->p[1].speaker);
-				param_stop->pdev_prop->p[1].hw_id = AUDIO_HW_NONE;
-				param_stop->pdev_prop->p[1].speaker = AUDDRV_DEV_NONE;
+										param_stop->pdev_prop->p[i].hw_id,
+										param_stop->pdev_prop->p[i].speaker);
+				}
 			}
 
 		    if(param_stop->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
@@ -378,7 +380,7 @@ void AUDIO_Ctrl_Process(
                                      param_start->rate);
 	            AUDCTRL_SetRecordGain(param_start->pdev_prop->c.hw_id,
                                   param_start->pdev_prop->c.mic,
-                                  AUDIO_GAIN_FORMAT_Q13_2,
+                                  AUDIO_GAIN_FORMAT_mB,
                                   param_start->vol[0],
                                   param_start->vol[1]);
 			}
@@ -425,13 +427,16 @@ void AUDIO_Ctrl_Process(
 		{
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
-			if(param_start->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			for (i = 1; i < MAX_PLAYBACK_DEV; i++)
 			{
-            	AUDCTRL_AddPlaySpk( param_start->pdev_prop->p[0].hw_src,
+				if(param_start->pdev_prop->p[i].hw_id != AUDIO_HW_NONE)
+				{
+            		AUDCTRL_AddPlaySpk( param_start->pdev_prop->p[0].hw_src,
                                     param_start->pdev_prop->p[0].hw_id,
                                    param_start->pdev_prop->p[0].speaker,
-									param_start->pdev_prop->p[1].hw_id,
-									param_start->pdev_prop->p[1].speaker);
+									param_start->pdev_prop->p[i].hw_id,
+									param_start->pdev_prop->p[i].speaker);
+				}
 			}
 		}
 		break;
@@ -490,7 +495,7 @@ void AUDIO_Ctrl_Process(
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
 			AUDCTRL_SetPlayVolume (parm_vol->hw_id,
 								   parm_vol->device,
-								   AUDIO_GAIN_FORMAT_Q13_2,
+								   AUDIO_GAIN_FORMAT_mB,
 								   parm_vol->volume1,
 								   parm_vol->volume2);
 		}
@@ -500,7 +505,7 @@ void AUDIO_Ctrl_Process(
 			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
 			AUDCTRL_SetRecordGain (parm_vol->hw_id,
 								   parm_vol->device,
-								   AUDIO_GAIN_FORMAT_Q13_2,
+								   AUDIO_GAIN_FORMAT_mB,
 								   parm_vol->volume1,
 								   parm_vol->volume2);
 		}
@@ -511,7 +516,7 @@ void AUDIO_Ctrl_Process(
 			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
 											parm_vol->device,
 											parm_vol->volume1,
-											AUDIO_GAIN_FORMAT_Q13_2);//DL
+											AUDIO_GAIN_FORMAT_mB);
 		}
 		break;
 		case ACTION_AUD_SwitchSpkr:
@@ -566,7 +571,7 @@ void AUDIO_Ctrl_Process(
 
             AUDCTRL_SetPlayVolume (parm_FM->hw_id,
                                        parm_FM->device,
-                                       AUDIO_GAIN_FORMAT_Q13_2,
+                                       AUDIO_GAIN_FORMAT_mB,
                                        parm_FM->volume1,
                                        parm_FM->volume2);
 		}

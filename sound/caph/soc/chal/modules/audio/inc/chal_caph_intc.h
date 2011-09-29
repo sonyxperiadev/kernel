@@ -598,7 +598,7 @@ cVoid chal_caph_intc_clr_audioh_intr(CHAL_HANDLE handle,
 *
 *  @return cUInt8
 *****************************************************************************/
-UInt8 chal_caph_intc_read_audioh_intr(CHAL_HANDLE handle, 
+cUInt8 chal_caph_intc_read_audioh_intr(CHAL_HANDLE handle, 
 			CAPH_ARM_DSP_e owner);
 
 /**
@@ -652,7 +652,7 @@ cVoid chal_caph_intc_clr_audioh_int_err(CHAL_HANDLE handle,
 *
 *  @return cUInt8
 *****************************************************************************/
-UInt8 chal_caph_intc_read_audioh_int_err(CHAL_HANDLE handle, 
+cUInt8 chal_caph_intc_read_audioh_int_err(CHAL_HANDLE handle, 
 			CAPH_ARM_DSP_e owner);
 
 /**
@@ -744,7 +744,7 @@ cVoid chal_caph_intc_clr_tap_intr(CHAL_HANDLE handle,
 *
 *  @return cUInt8
 *****************************************************************************/
-UInt8 chal_caph_intc_read_tap_intr(CHAL_HANDLE handle, 
+cUInt8 chal_caph_intc_read_tap_intr(CHAL_HANDLE handle, 
 			CAPH_ARM_DSP_e owner);
 
 /**

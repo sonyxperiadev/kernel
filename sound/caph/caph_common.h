@@ -60,6 +60,10 @@ the GPL, without Broadcom's express prior written consent.
 #define	IS_PCM_MEM_PREALLOCATED		0
 #endif
 
+#ifndef MAX_PLAYBACK_DEV
+#define MAX_PLAYBACK_DEV 3
+#endif
+
 #if !defined(CONFIG_SND_BCM_AUDIO_DEBUG_OFF)
 //#if 1
 void _bcm_snd_printk(unsigned int level, const char *path, int line, const char *format, ...);
@@ -100,7 +104,7 @@ typedef	struct _TPcm_Stream_Ctrls
 {
 	Int32	 iFlags;
 	Int32	 iTotalCtlLines;
-	Int32	 iLineSelect[2];	//Multiple selection, For playback sink, one bit represent one sink; for capture source, 
+	Int32	 iLineSelect[MAX_PLAYBACK_DEV];	//Multiple selection, For playback sink, one bit represent one sink; for capture source, 
 	char strStreamName[CAPH_MIXER_NAME_LENGTH];
 	TCtrl_Line	ctlLine[CAPH_MAX_CTRL_LINES];
 	snd_pcm_uframes_t	 stream_hw_ptr;

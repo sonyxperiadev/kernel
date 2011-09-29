@@ -2316,6 +2316,8 @@ unsigned long csl_caph_gain_GetMixerOutputCoarseGain(Int16 gain_quarterDB )
 		return 6;
 	else if( gain_quarterDB >= 164 )           //(7 * 6.02 * 4) = 42.14 dB = 168.56 qdB
 		return 7;
+	
+	return 0; //to avoid compile warning
 }
 
 
