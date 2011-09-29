@@ -86,8 +86,14 @@ static int chrgr_curr_lmt[PMU_CHRGR_TYPE_MAX] = {
 	[PMU_CHRGR_TYPE_TYPE2] = 1000,
 };
 
+struct event_notifier {
+	u32 event_id;
+	struct blocking_notifier_head notifiers;
+};
+
 struct bcmpmu_accy {
 	struct bcmpmu *bcmpmu;
+	struct event_notifier event[BCMPMU_EVENT_MAX];
 	const int *usb_id_map;
 	int usb_id_map_len;
 	wait_queue_head_t wait;
@@ -96,10 +102,46 @@ struct bcmpmu_accy {
 	struct mutex lock;
 	struct wake_lock wake_lock;
 	struct accy_cb usb_cb;
-	struct accy_cb chrgr_cb;
 	int adp_cal_done;
 	enum bcmpmu_usb_det_state_t det_state;
+	int otg_block_enabled;
+	int adp_block_enabled;
+	int adp_prob_comp;
+	int adp_sns_comp;
 };
+static struct bcmpmu_accy *bcmpmu_accy;
+
+int bcmpmu_usb_add_notifier(u32 event_id, struct notifier_block *notifier)
+{ 
+	if (!bcmpmu_accy) {
+		pr_accy(ERROR,"%s: BCMPMU Accy driver is not initialized\n", __func__);
+		return -EAGAIN;
+	}
+	if (unlikely(event_id >= BCMPMU_EVENT_MAX)) {
+		pr_accy(ERROR,"%s: Invalid event id\n", __func__);
+		return -EINVAL;
+	}
+	return blocking_notifier_chain_register(
+			&bcmpmu_accy->event[event_id].notifiers, notifier);
+}
+EXPORT_SYMBOL_GPL(bcmpmu_usb_add_notifier);
+
+int bcmpmu_usb_remove_notifier(u32 event_id, struct notifier_block *notifier)
+{
+	if (!bcmpmu_accy) {
+		pr_accy(ERROR,"%s: BCMPMU accy driver is not initialized\n", __func__);
+		return -EAGAIN;
+	}
+	if (unlikely(event_id >= BCMPMU_EVENT_MAX)) {
+		pr_accy(ERROR,"%s: Invalid event id\n", __func__);
+		return -EINVAL;
+	}
+
+	return blocking_notifier_chain_unregister(
+			&bcmpmu_accy->event[event_id].notifiers, notifier);
+}
+EXPORT_SYMBOL_GPL(bcmpmu_usb_remove_notifier);
+
 
 static void send_usb_event(struct bcmpmu *pmu,
 	enum bcmpmu_usb_event_t event, void *para)
@@ -107,12 +149,15 @@ static void send_usb_event(struct bcmpmu *pmu,
 	struct power_supply *ps;
 	union power_supply_propval propval;
 	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)pmu->accyinfo;
+
 	if (paccy->usb_cb.callback != NULL) {
 		paccy->usb_cb.callback(paccy->bcmpmu, event, para,
 			paccy->usb_cb.clientdata);
 		pr_accy(FLOW, "%s, event=%d, val=%p\n", __func__,
 			event, para);
 	}
+	blocking_notifier_call_chain(&paccy->event[event].notifiers,
+				event, para);
 
 	if (event != BCMPMU_USB_EVENT_USB_DETECTION) return;
 	/* update power supply usb property  */
@@ -132,21 +177,18 @@ static void send_usb_event(struct bcmpmu *pmu,
 }
 
 static void send_chrgr_event(struct bcmpmu *pmu,
-	enum bcmpmu_usb_chrgr_event_t event, void *para)
+	enum bcmpmu_usb_event_t event, void *para)
 {
 	struct power_supply *ps;
 	union power_supply_propval propval;
 	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)pmu->accyinfo;
-	if (paccy->chrgr_cb.callback != NULL) {
-		paccy->chrgr_cb.callback(paccy->bcmpmu, event, para,
-			paccy->chrgr_cb.clientdata);
-		pr_accy(FLOW, "%s, event=%d, val=%p\n", __func__,
-			event, para);
-	}
+
+	blocking_notifier_call_chain(&paccy->event[event].notifiers,
+				event, para);
 
 	ps = power_supply_get_by_name("charger");
 	if (ps == 0) return;
-	if (event == BCMPMU_USB_EVENT_USB_CHRGR_CHANGE) {
+	if (event == BCMPMU_CHRGR_EVENT_CHGR_DETECTION) {
 		pr_accy(FLOW, "%s, chrgr change, chrgr_type=0x%X\n",
 			__func__, paccy->bcmpmu->usb_accy_data.chrgr_type);
 		propval.intval = paccy->bcmpmu->usb_accy_data.chrgr_type;
@@ -156,7 +198,7 @@ static void send_chrgr_event(struct bcmpmu *pmu,
 		else 
 			propval.intval = 0;
 		ps->set_property(ps, POWER_SUPPLY_PROP_ONLINE, &propval);
-	} else if (event == BCMPMU_USB_EVENT_CHRG_CURR_LMT) {
+	} else if (event == BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT) {
 		pr_accy(FLOW, "%s, charge current limit =0x%X\n",
 			__func__, paccy->bcmpmu->usb_accy_data.max_curr_chrgr);
 		propval.intval = paccy->bcmpmu->usb_accy_data.max_curr_chrgr;
@@ -269,21 +311,6 @@ bcmpmu_dbg_show_bb_usbotg_regs(struct device *dev, struct device_attribute *attr
 }
 
 static ssize_t
-bcmpmu_dbg_show_pmu_mbc_regs(struct device *dev, struct device_attribute *attr,
-		char *buf)
-{
-	int i;
-	struct bcmpmu *bcmpmu = dev->platform_data;
-	unsigned int regval[10];
-	bcmpmu->read_dev_bulk(bcmpmu, 0, 0x50, &regval[0], 10);
-	for (i=0; i<10; i++) {
-		sprintf(buf, "%8X\n", regval[i]);
-		buf += 9;
-	}
-	return 10 * 9;
-}
-
-static ssize_t
 bcmpmu_dbg_show_usb_otg_clkgate(struct device *dev, struct device_attribute *attr,
 		char *buf)
 {
@@ -374,6 +401,33 @@ bcmpmu_dbg_set_bc_cfg(struct device *dev, struct device_attribute *attr,
 	return n;
 }
 
+static ssize_t
+bcmpmu_dbg_usb_set(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	int ctrl, val;
+	sscanf(buf, "%x, %x", &ctrl, &val);
+	bcmpmu->usb_set(bcmpmu, ctrl, val);
+	pr_accy(FLOW, "%s, ctrl=0x%X, val=0x%X\n",
+		__func__, ctrl, val);
+
+	return n;
+}
+
+static ssize_t
+bcmpmu_dbg_usb_get(struct device *dev, struct device_attribute *attr,
+		const char *buf, size_t n)
+{
+	struct bcmpmu *bcmpmu = dev->platform_data;
+	int ctrl, val;
+	sscanf(buf, "%x", &ctrl);
+	bcmpmu->usb_get(bcmpmu, ctrl, &val);
+	pr_accy(FLOW, "%s, ctrl=0x%X, val=0x%X\n",
+		__func__, ctrl, val);
+	return n;
+}
+
 static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_set);
 static DEVICE_ATTR(usbotgcontrol, 0644, bcmpmu_dbg_show_usbotgcontrol, bcmpmu_dbg_set_usbotgcontrol);
 static DEVICE_ATTR(phy_cfg, 0644, bcmpmu_dbg_show_phy_cfg, bcmpmu_dbg_set_phy_cfg);
@@ -382,8 +436,10 @@ static DEVICE_ATTR(bc_status, 0644, bcmpmu_dbg_show_bc_status, NULL);
 static DEVICE_ATTR(bc_cfg, 0644, bcmpmu_dbg_show_bc_cfg, bcmpmu_dbg_set_bc_cfg);
 
 static DEVICE_ATTR(bb_usbotg_regs, 0644, bcmpmu_dbg_show_bb_usbotg_regs, NULL);
-static DEVICE_ATTR(pmu_mbc_regs, 0644, bcmpmu_dbg_show_pmu_mbc_regs, NULL);
 static DEVICE_ATTR(usb_otg_clkgate, 0644, bcmpmu_dbg_show_usb_otg_clkgate, NULL);
+
+static DEVICE_ATTR(usb_set, 0644, NULL, bcmpmu_dbg_usb_set);
+static DEVICE_ATTR(usb_get, 0644, NULL, bcmpmu_dbg_usb_get);
 
 static struct attribute *bcmpmu_accy_attrs[] = {
 	&dev_attr_dbgmsk.attr,
@@ -393,8 +449,9 @@ static struct attribute *bcmpmu_accy_attrs[] = {
 	&dev_attr_bc_status.attr,
 	&dev_attr_bc_cfg.attr,
 	&dev_attr_bb_usbotg_regs.attr,
-	&dev_attr_pmu_mbc_regs.attr,
 	&dev_attr_usb_otg_clkgate.attr,
+	&dev_attr_usb_get.attr,
+	&dev_attr_usb_set.attr,
 	NULL
 };
 
@@ -406,8 +463,8 @@ static const struct attribute_group bcmpmu_accy_attr_group = {
 static void usb_det_work(struct work_struct *work)
 {
 	int ret;
-	enum bcmpmu_chrgr_type_t chrgr_type;
-	enum bcmpmu_usb_type_t usb_type;
+	enum bcmpmu_chrgr_type_t chrgr_type = PMU_USB_TYPE_NONE;
+	enum bcmpmu_usb_type_t usb_type = PMU_CHRGR_TYPE_NONE;
 	unsigned int bc_status;
 	int vbus_status;
 	struct bcmpmu_accy  *paccy =
@@ -457,7 +514,9 @@ static void usb_det_work(struct work_struct *work)
 					bcmpmu->regmap[PMU_REG_CHRGR_BCDLDO].mask);
 				schedule_delayed_work(&paccy->det_work,
 					msecs_to_jiffies(100));
-			}
+			} else
+				schedule_delayed_work(&paccy->det_work,
+					msecs_to_jiffies(100));
 		} else {
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
@@ -512,10 +571,10 @@ static void usb_det_work(struct work_struct *work)
 		bcmpmu->usb_accy_data.chrgr_type = chrgr_type;
 		bcmpmu->usb_accy_data.max_curr_chrgr = chrgr_curr_lmt[chrgr_type];
 		send_chrgr_event(paccy->bcmpmu,
-			BCMPMU_USB_EVENT_USB_CHRGR_CHANGE,
+			BCMPMU_CHRGR_EVENT_CHGR_DETECTION,
 			&chrgr_type);
 		send_chrgr_event(paccy->bcmpmu,
-			BCMPMU_USB_EVENT_CHRG_CURR_LMT,
+			BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 			&chrgr_curr_lmt[chrgr_type]);
 	}
 }
@@ -540,7 +599,7 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
 	switch(ctrl) {
 	case BCMPMU_USB_CTRL_CHRG_CURR_LMT:
 		paccy->bcmpmu->usb_accy_data.max_curr_chrgr = (int)data;
-		send_chrgr_event(paccy->bcmpmu, BCMPMU_USB_EVENT_CHRG_CURR_LMT,
+		send_chrgr_event(paccy->bcmpmu, BCMPMU_CHRGR_EVENT_CHRG_CURR_LMT,
 			&paccy->bcmpmu->usb_accy_data.max_curr_chrgr);
 		break;
 		
@@ -585,10 +644,29 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
 			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_SENSE,
 				0,
 				bcmpmu->regmap[PMU_REG_ADP_SENSE].mask);
-		else
+		else {
+			if (paccy->otg_block_enabled == 0) {
+				ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTG_ENABLE,
+					bcmpmu->regmap[PMU_REG_OTG_ENABLE].mask,
+					bcmpmu->regmap[PMU_REG_OTG_ENABLE].mask);
+				paccy->otg_block_enabled = 1;
+			}
+			if (paccy->adp_block_enabled == 0) {
+				ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_ENABLE,
+					bcmpmu->regmap[PMU_REG_ADP_ENABLE].mask,
+					bcmpmu->regmap[PMU_REG_ADP_ENABLE].mask);
+				paccy->adp_block_enabled = 1;
+			}
+			if (paccy->adp_sns_comp == 0) {
+				ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_SNS_COMP,
+					bcmpmu->regmap[PMU_REG_ADP_SNS_COMP].mask,
+					bcmpmu->regmap[PMU_REG_ADP_SNS_COMP].mask);
+				paccy->adp_sns_comp = 1;
+			}
 			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_SENSE,
 				bcmpmu->regmap[PMU_REG_ADP_SENSE].mask,
 				bcmpmu->regmap[PMU_REG_ADP_SENSE].mask);
+		}
 		break;
 
 	case BCMPMU_USB_CTRL_START_STOP_ADP_PRB:
@@ -596,22 +674,51 @@ int bcmpmu_usb_set(struct bcmpmu *bcmpmu,
 			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_PRB,
 				0,
 				bcmpmu->regmap[PMU_REG_ADP_PRB].mask);
-		else
+		else {
+			if (paccy->otg_block_enabled == 0) {
+				ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTG_ENABLE,
+					bcmpmu->regmap[PMU_REG_OTG_ENABLE].mask,
+					bcmpmu->regmap[PMU_REG_OTG_ENABLE].mask);
+				paccy->otg_block_enabled = 1;
+			}
+			if (paccy->adp_block_enabled == 0) {
+				ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_ENABLE,
+					bcmpmu->regmap[PMU_REG_ADP_ENABLE].mask,
+					bcmpmu->regmap[PMU_REG_ADP_ENABLE].mask);
+				paccy->adp_block_enabled = 1;
+			}
+			if (paccy->adp_prob_comp == 0) {
+				ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_PRB_COMP,
+					bcmpmu->regmap[PMU_REG_ADP_PRB_COMP].mask,
+					bcmpmu->regmap[PMU_REG_ADP_PRB_COMP].mask);
+				paccy->adp_prob_comp = 1;
+			}
+
 			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_PRB,
 				bcmpmu->regmap[PMU_REG_ADP_PRB].mask,
 				bcmpmu->regmap[PMU_REG_ADP_PRB].mask);
+		}
 		break;
 
 	case BCMPMU_USB_CTRL_START_ADP_CAL_PRB:
-		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTG_ENABLE,
-			bcmpmu->regmap[PMU_REG_OTG_ENABLE].mask,
-			bcmpmu->regmap[PMU_REG_OTG_ENABLE].mask);
-		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_ENABLE,
-			bcmpmu->regmap[PMU_REG_ADP_ENABLE].mask,
-			bcmpmu->regmap[PMU_REG_ADP_ENABLE].mask);
-		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_PRB_COMP,
-			bcmpmu->regmap[PMU_REG_ADP_PRB_COMP].mask,
-			bcmpmu->regmap[PMU_REG_ADP_PRB_COMP].mask);
+		if (paccy->otg_block_enabled == 0) {
+			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_OTG_ENABLE,
+				bcmpmu->regmap[PMU_REG_OTG_ENABLE].mask,
+				bcmpmu->regmap[PMU_REG_OTG_ENABLE].mask);
+			paccy->otg_block_enabled = 1;
+		}
+		if (paccy->adp_block_enabled == 0) {
+			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_ENABLE,
+				bcmpmu->regmap[PMU_REG_ADP_ENABLE].mask,
+				bcmpmu->regmap[PMU_REG_ADP_ENABLE].mask);
+			paccy->adp_block_enabled = 1;
+		}
+		if (paccy->adp_prob_comp == 0) {
+			ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_PRB_COMP,
+				bcmpmu->regmap[PMU_REG_ADP_PRB_COMP].mask,
+				bcmpmu->regmap[PMU_REG_ADP_PRB_COMP].mask);
+			paccy->adp_prob_comp = 1;
+		}
 		ret = bcmpmu->write_dev(bcmpmu, PMU_REG_ADP_PRB_MOD,
 			PMU_USB_ADP_MODE_CALIBRATE <<
 				bcmpmu->regmap[PMU_REG_ADP_PRB_MOD].shift,
@@ -757,57 +864,12 @@ static int bcmpmu_register_usb_callback(struct bcmpmu *pmu,
 	return ret;
 }
 
-static int bcmpmu_register_chrgr_callback(struct bcmpmu *pmu,
-	void (*callback)(struct bcmpmu *pmu,
-		unsigned char event, void *, void *),
-	void *data)
-{
-	struct bcmpmu_accy *paccy = (struct bcmpmu_accy *)pmu->accyinfo;
-	int ret = -EINVAL;
-
-	if (paccy != NULL) {
-		paccy->chrgr_cb.callback = callback;
-		paccy->chrgr_cb.clientdata = data;
-		ret = 0;
-	}
-	send_chrgr_event(paccy->bcmpmu,
-		BCMPMU_USB_EVENT_USB_CHRGR_CHANGE,
-			&paccy->bcmpmu->usb_accy_data.chrgr_type);
-	send_chrgr_event(paccy->bcmpmu,
-		BCMPMU_USB_EVENT_CHRG_CURR_LMT,
-			&paccy->bcmpmu->usb_accy_data.max_curr_chrgr);
-	return ret;
-}
-
-static BLOCKING_NOTIFIER_HEAD(bcmpmu_usb_notifier_list);
-static BLOCKING_NOTIFIER_HEAD(bcmpmu_accy_notifier_list);
-void bcmpmu_usb_register_notify(struct notifier_block *nb)
-{
-	blocking_notifier_chain_register(&bcmpmu_usb_notifier_list, nb);
-}
-EXPORT_SYMBOL(bcmpmu_usb_register_notify);
-void bcmpmu_usb_unregister_notify(struct notifier_block *nb)
-{
-	blocking_notifier_chain_unregister(&bcmpmu_usb_notifier_list, nb);
-}
-EXPORT_SYMBOL(bcmpmu_usb_unregister_notify);
-void bcmpmu_accy_register_notify(struct notifier_block *nb)
-{
-	blocking_notifier_chain_register(&bcmpmu_accy_notifier_list, nb);
-}
-EXPORT_SYMBOL(bcmpmu_accy_register_notify);
-void bcmpmu_accy_unregister_notify(struct notifier_block *nb)
-{
-	blocking_notifier_chain_unregister(&bcmpmu_accy_notifier_list, nb);
-}
-EXPORT_SYMBOL(bcmpmu_accy_unregister_notify);
-
-
 static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
 	struct bcmpmu_accy *paccy;
+	int i;
 
 	pr_accy(INIT, "%s, called\n", __func__);
 
@@ -820,8 +882,9 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 
 	paccy->bcmpmu = bcmpmu;
 	bcmpmu->accyinfo = paccy;
+	bcmpmu_accy = paccy;
 	bcmpmu->register_usb_callback = bcmpmu_register_usb_callback;
-	bcmpmu->register_chrgr_callback = bcmpmu_register_chrgr_callback;
+
 	bcmpmu->usb_get = bcmpmu_usb_get;
 	bcmpmu->usb_set = bcmpmu_usb_set;
 	bcmpmu->usb_accy_data.usb_type = PMU_USB_TYPE_MAX;
@@ -830,15 +893,21 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 
 	paccy->usb_cb.callback = NULL;
 	paccy->usb_cb.clientdata = NULL;
-	paccy->chrgr_cb.callback = NULL;
-	paccy->chrgr_cb.clientdata = NULL;
 	paccy->adp_cal_done = 0;
 	paccy->det_state = USB_DETECT;
 	paccy->usb_id_map = bcmpmu_get_usb_id_map(&paccy->usb_id_map_len);
+	paccy->otg_block_enabled = 0;
+	paccy->adp_block_enabled = 0;
+	paccy->adp_prob_comp = 0;
+	paccy->adp_sns_comp = 0;
 	
 	INIT_DELAYED_WORK(&paccy->adp_work, usb_adp_work);
 	INIT_DELAYED_WORK(&paccy->det_work, usb_det_work);
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
+	for (i = 0; i <= BCMPMU_EVENT_MAX; i++) {
+		paccy->event[i].event_id = i;
+		BLOCKING_INIT_NOTIFIER_HEAD(&paccy->event[i].notifiers);
+	}
 
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBINS, bcmpmu_accy_isr, paccy);
 	bcmpmu->register_irq(bcmpmu, PMU_IRQ_USBRM, bcmpmu_accy_isr, paccy);

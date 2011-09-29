@@ -37,15 +37,8 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 		} \
 	} while (0)
 
-struct batt_cb {
-	void (*callback)(struct bcmpmu *,
-		unsigned char event, void *, void *);
-	void *clientdata;
-};
-
 struct bcmpmu_batt {
 	struct bcmpmu *bcmpmu;
-	struct batt_cb batt_cb;
 	struct power_supply batt;
 	struct bcmpmu_batt_state state;
 	wait_queue_head_t wait;
@@ -186,24 +179,6 @@ static const struct attribute_group bcmpmu_batt_attr_group = {
 };
 #endif
 
-static int bcmpmu_register_batt_event_callback(struct bcmpmu *bcmpmu,
-	void (*callback)(struct bcmpmu *pmu,
-		unsigned char event, void *, void *),
-	void *data)
-{
-	struct bcmpmu_batt *pbatt = (struct bcmpmu_batt *)bcmpmu->battinfo;
-	int ret = -EINVAL;
-	bool batt_present = true;
-
-	if (pbatt != NULL) {
-		pbatt->batt_cb.callback = callback;
-		pbatt->batt_cb.clientdata = data;
-		ret = 0;
-	}
-	if (bcmpmu->get_env_bit_status)
-		batt_present = bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_MBPD);
-	return ret;
-}
 
 static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 {
