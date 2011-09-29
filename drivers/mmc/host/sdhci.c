@@ -2577,10 +2577,12 @@ int sdhci_add_host(struct sdhci_host *host)
 	if ((host->version >= SDHCI_SPEC_300) &&
 	    ((host->flags & SDHCI_USE_ADMA) ||
 	     !(host->flags & SDHCI_USE_SDMA))) {
-#ifndef CONFIG_MACH_ISLAND_FF
+#ifndef CONFIG_ARCH_ISLAND
 		host->flags |= SDHCI_AUTO_CMD23;
-#endif
 		DBG("%s: Auto-CMD23 available\n", mmc_hostname(mmc));
+#else
+		DBG("%s: Auto-CMD23 unavailable\n", mmc_hostname(mmc));
+#endif
 	} else {
 		DBG("%s: Auto-CMD23 unavailable\n", mmc_hostname(mmc));
 	}

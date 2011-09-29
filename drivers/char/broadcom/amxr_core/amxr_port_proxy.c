@@ -454,9 +454,9 @@ int amxrCreatePortProxy(
 	}
 
 	callbacks.getsrc = cb->getsrc ? getsrc_cb : NULL;
-	callbacks.srcdone = cb->srcdone ? srcdone_cb : NULL;
+	callbacks.srcdone = srcdone_cb;
 	callbacks.getdst = cb->getdst ? getdst_cb : NULL;
-	callbacks.dstdone = cb->dstdone ? dstdone_cb : NULL;
+	callbacks.dstdone = dstdone_cb;
 	callbacks.dstcnxsremoved = cb->dstcnxsremoved ? dstcnxsremoved_cb : NULL;
 
 	rc = amxrCreatePort( name, &callbacks, nodep /* kernel priv data */,
