@@ -447,7 +447,6 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 
 			for (i = 0; i < MAX_PLAYBACK_DEV; i++)
 			{
-            BCM_AUDIO_DEBUG("\n sazhang : playback_trigger pSel[%d] = %d \n", i, pSel[i]);
 				//Update Sink, volume , mute info from mixer controls
 				if(pSel[i]==AUDCTRL_SPK_HANDSET)
 				{
