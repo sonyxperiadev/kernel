@@ -1125,7 +1125,7 @@ static struct smb380_platform_data bma150_plat_data = {
 static struct i2c_board_info __initdata bma150_info[] =
 {
 	[0] = {
-		I2C_BOARD_INFO("smb380", 0x38 ),
+		I2C_BOARD_INFO("bma150", 0x38 ),
 		.platform_data = &bma150_plat_data,
 		.irq = gpio_to_irq(BMA150_IRQ_PIN)
 	}
