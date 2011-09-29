@@ -38,7 +38,7 @@
       .peri_clk_name = "sdio1_clk", \
       .ahb_clk_name = "sdio1_ahb_clk", \
       .sleep_clk_name = "sdio1_sleep_clk", \
-      .peri_clk_rate = 48000000, \
+      .peri_clk_rate = 52000000, \
       .devtype = SDIO_DEV_TYPE_WIFI, \
    }, \
    { /* SDIO1 */ \
