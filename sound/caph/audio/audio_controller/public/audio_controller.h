@@ -652,17 +652,6 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
 
 
 /**
-*  @brief  Set External amplifier gain
-*
-*  @param  gain	(in)  
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetGainOnExternalAmp(UInt32 gain);
-
-
-/**
 *  @brief  Load the UL gains from Sysparm
 *
 *  @param  ulPathID	(in)  UL path ID  

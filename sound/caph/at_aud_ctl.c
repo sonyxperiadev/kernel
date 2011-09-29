@@ -154,7 +154,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
 	AUDCTRL_MICROPHONE_t mic = AUDCTRL_MIC_MAIN;
 	AUDCTRL_SPEAKER_t spk = AUDCTRL_SPK_HANDSET;
-    int rtn = 0;
+    int rtn = 0;  //0 means Ok
     static UInt8 loopback_status = 0, loopback_input = 0, loopback_output = 0;
 	AudioMode_t mode;
     Int32 pCurSel[2];
@@ -266,6 +266,50 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
         case 15: //at*maudmode=15  --> set current mode and operation
             BCM_AUDIO_DEBUG("%s set current mode and operation is not supported \n", __FUNCTION__);  
             rtn = -1;
+			break;
+
+		case 99: //at*maudmode=99  --> stop tuning
+			break;
+
+		case 100: //at*maudmode=100  --> set external audio amplifer gain in PMU
+#if !defined(NO_PMU)
+            {
+            int gain;
+
+			if (Params[1] == 3)
+			if( Params[2]==PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL || Params[2]==PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL ) // EXT_SPEAKER_PGA
+			{
+				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB) 
+					 || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
+				{
+					AUDIO_PMU_IHF_POWER(FALSE);
+					AUDIO_PMU_HS_POWER(TRUE);
+					gain = Params[3]; // gain
+					BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d \n", __FUNCTION__, gain);
+					gain = map2pmu_hs_gain_fromQ13dot2(Params[3]);
+					BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d after lookup \n", __FUNCTION__, gain);
+
+					if( Params[2]==PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL )
+						AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_LEFT, gain);
+					else
+					if( Params[2]==PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL )
+						AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT, gain);
+					
+				}
+				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
+				{
+					AUDIO_PMU_HS_POWER(FALSE);
+					AUDIO_PMU_IHF_POWER(TRUE);
+					gain = Params[3]; // gain
+					BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d \n", __FUNCTION__, gain);
+					gain = map2pmu_ihf_gain_fromQ13dot2(Params[3]);
+					BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d after lookup \n", __FUNCTION__, gain);
+					AUDIO_PMU_IHF_SET_GAIN(gain);
+				}
+			}
+            }
+#endif
+							
 			break;
 
 		default:

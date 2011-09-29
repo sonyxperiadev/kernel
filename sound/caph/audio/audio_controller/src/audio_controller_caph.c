@@ -236,7 +236,7 @@ static int telephony_ul_gain_mB = 0;  // 0 mB
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain);
+static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int gain, int left_right);
 
 //on AP:
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
@@ -519,7 +519,7 @@ void AUDCTRL_SetTelephonySpkrVolume(
 					//Read from sysparm.
 					pmuGain = (Int16)volume; //AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;  //dB
 				}
-				SetGainOnExternalAmp(speaker, (void *)&pmuGain);
+				SetGainOnExternalAmp(speaker, pmuGain, PMU_AUDIO_HS_BOTH);
 			}
 		}
 	}
@@ -808,7 +808,10 @@ void AUDCTRL_LoadSpkrGain(CSL_CAPH_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, B
 	
 	//Load PMU gain from sysparm.
 	pmuGain = AUDIO_GetParmAccessPtr()[mode].ext_speaker_pga_l;
-	SetGainOnExternalAmp(speaker, (void *)&pmuGain);
+	SetGainOnExternalAmp(speaker, pmuGain, PMU_AUDIO_HS_LEFT);
+	
+	pmuGain = AUDIO_GetParmAccessPtr()[mode].ext_speaker_pga_r;
+	SetGainOnExternalAmp(speaker, pmuGain, PMU_AUDIO_HS_RIGHT);
 	
     return;
 }
@@ -1024,7 +1027,9 @@ void AUDCTRL_SetPlayVolume(
 				csl_caph_hwctrl_SetHWGain(pathID,
 								   CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R, 
 								   gainHW5,  speaker);
-				(void) csl_caph_hwctrl_SetSinkGain(pathID, speaker, (UInt16)gainHW, (UInt16)gainHW2);
+
+				Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: pathID = 0x%x, speaker = 0x%x, gainHW %d, gainHW2 = 0x%x(%d)\n", pathID, speaker, (UInt16)gainHW, (UInt16)gainHW2);
+				csl_caph_hwctrl_SetSinkGain(pathID, speaker, (UInt16)gainHW, (UInt16)gainHW2);
 		}
 	
     }
@@ -1038,12 +1043,15 @@ void AUDCTRL_SetPlayVolume(
     if (pmuGain == (Int16)GAIN_SYSPARM)
     {
 		pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
-        SetGainOnExternalAmp(spk, &(pmuGain));
+        SetGainOnExternalAmp(spk, pmuGain, PMU_AUDIO_HS_LEFT);
+
+		pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_r;
+		SetGainOnExternalAmp(spk, pmuGain, PMU_AUDIO_HS_RIGHT);
     }
     else
     if (pmuGain != (Int16)GAIN_NA)
     {
-        SetGainOnExternalAmp(spk, &(pmuGain));
+        SetGainOnExternalAmp(spk, pmuGain, PMU_AUDIO_HS_BOTH);
     }
     return;
 
@@ -1773,54 +1781,6 @@ void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
     return;
 }
 
-//============================================================================
-//
-// Function Name: AUDCTRL_SetGainOnExternalAmp
-//
-// Description:   Set gain on external amplifier driver. Gain in Q13.2
-//
-//============================================================================
-void AUDCTRL_SetGainOnExternalAmp(UInt32 gain)
-{
-	AudioMode_t audio_mode = AUDIO_MODE_HANDSET;
-	AUDCTRL_SPEAKER_t speaker = AUDCTRL_SPK_UNDEFINED;
-	audio_mode = AUDDRV_GetAudioMode();
-	if ((audio_mode == AUDIO_MODE_HANDSET)
-		||(audio_mode == AUDIO_MODE_HANDSET_WB))		
-	{
-		speaker = AUDCTRL_SPK_HANDSET;
-	}
-	else
-	if ((audio_mode == AUDIO_MODE_HAC)
-		||(audio_mode == AUDIO_MODE_HAC_WB))		
-	{
-		speaker = AUDCTRL_SPK_HAC;
-	}
-	else
-	if ((audio_mode == AUDIO_MODE_HEADSET)
-		||(audio_mode == AUDIO_MODE_HEADSET_WB))
-		
-	{
-		speaker = AUDCTRL_SPK_HEADSET;
-	}
-	else
-	if ((audio_mode == AUDIO_MODE_TTY)
-		||(audio_mode == AUDIO_MODE_TTY_WB))
-		
-	{
-		speaker = AUDCTRL_SPK_TTY;
-	}	
-	else
-	if ((audio_mode == AUDIO_MODE_SPEAKERPHONE)
-		||(audio_mode == AUDIO_MODE_SPEAKERPHONE_WB))
-	{
-		speaker = AUDCTRL_SPK_LOUDSPK;
-	}
-
-	
-	SetGainOnExternalAmp(speaker, (void*)&gain);
-	return;
-}
 
 //============================================================================
 //
@@ -2505,53 +2465,41 @@ static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
 //
 // Description:   Set gain on external amplifier driver. Gain in Q13.2
 //
+// parameter:
+//  left_right is of this enum
+//enum {
+//		PMU_AUDIO_HS_RIGHT,
+//		PMU_AUDIO_HS_LEFT,
+//		PMU_AUDIO_HS_BOTH
+//};
+//
 //============================================================================
-static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, void* gain)  //change it to int gain? good for diff gain format?
+static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_right)
 {
-
-/////////////////////////////////////////////////////////////////////////////////
-//  Start  Linux version only
-////////////////////////////////////////////////////////////////////////////////////
-
-	int hs_gain;
-    int hs_path;
-	int ihf_gain;
 #if !defined(NO_PMU)
-	Log_DebugPrintf(LOGID_AUDIO,
-                    "SetGainOnExternalAmp, speaker = %d, gain=%d\n",
-                    speaker, *((int*)gain));
+	int gain=0;
 
 	switch(speaker)
 	{
 		case AUDCTRL_SPK_HEADSET:
 		case AUDCTRL_SPK_TTY:
-			hs_gain = map2pmu_hs_gain_fromQ13dot2(*((int*)gain));
-		    hs_path = PMU_AUDIO_HS_BOTH;
-#ifdef CONFIG_BCM59055_AUDIO
-		    bcm59055_hs_set_gain( hs_path, hs_gain);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-		    bcmpmu_hs_set_gain( hs_path, hs_gain);
-#endif
+			gain = map2pmu_hs_gain_fromQ13dot2( arg_gain );
+			AUDIO_PMU_HS_SET_GAIN( left_right, gain );
 			break;
 
 		case AUDCTRL_SPK_LOUDSPK:
-			ihf_gain = map2pmu_ihf_gain_fromQ13dot2(*((int *)gain));
-#ifdef CONFIG_BCM59055_AUDIO
-    		bcm59055_ihf_set_gain( ihf_gain);
-#elif defined(CONFIG_BCMPMU_AUDIO)
-			bcmpmu_ihf_set_gain( ihf_gain);
-#endif
+			gain = map2pmu_ihf_gain_fromQ13dot2( arg_gain );
+			AUDIO_PMU_IHF_SET_GAIN( gain );
 			break;
 
 		default:
 			break;
 	}
+
+	Log_DebugPrintf(LOGID_AUDIO, 
+				"SetGainOnExternalAmp, speaker = %d, arg_gain=%d, gain=%d \n",
+				speaker, arg_gain, gain);
 #endif
-
-/////////////////////////////////////////////////////////////////////////////////
-//  End . Linux version only
-////////////////////////////////////////////////////////////////////////////////////
-
 }
 
 //============================================================================
@@ -2694,15 +2642,12 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 //  Start PMU code. Linux version only
 ////////////////////////////////////////////////////////////////////////////////////
 
-		int i;
 		int hs_path;	
-		int hs_gain;
+		int hs_gain = 0;
 #if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
 		hs_path = PMU_AUDIO_HS_BOTH;
 #endif
 
-		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
-		hs_gain = i;
 		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (HS on), telephonyUseHS = %d, audioUseHS= %d\n", telephonyUseHS, audioUseHS);
 
 		if ( HS_IsOn != TRUE )
@@ -2716,7 +2661,14 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
             OSTASK_Sleep(75);
 
 		}
-		AUDIO_PMU_HS_SET_GAIN(hs_path, hs_gain);
+		
+		//the ext_speaker_pga_l is in q13.2 format
+		hs_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
+		SetGainOnExternalAmp( AUDCTRL_SPK_HEADSET, hs_gain, PMU_AUDIO_HS_LEFT);
+
+		hs_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_r;
+		SetGainOnExternalAmp( AUDCTRL_SPK_HEADSET, hs_gain, PMU_AUDIO_HS_RIGHT);
+
 		HS_IsOn = TRUE;
 	}
 
@@ -2741,11 +2693,8 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	}
 	else
 	{
-		int i;
-		int ihf_gain;
+		int ihf_gain = 0;
 
-		i = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
-		ihf_gain = i;
 		Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp (IHF on), telephonyUseIHF = %d, audioUseIHF= %d\n", telephonyUseIHF, audioUseIHF);
 
 		if ( IHF_IsOn != TRUE )
@@ -2754,11 +2703,15 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
             AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
 			AUDIO_PMU_IHF_POWER(TRUE);
 		}
-		AUDIO_PMU_IHF_SET_GAIN(ihf_gain);
+
+		//the ext_speaker_pga_l is in q13.2 format		
+		ihf_gain = AUDIO_GetParmAccessPtr()[ AUDDRV_GetAudioMode() ].ext_speaker_pga_l;
+		SetGainOnExternalAmp( AUDCTRL_SPK_LOUDSPK, ihf_gain, PMU_AUDIO_HS_BOTH);
+
 		IHF_IsOn = TRUE;
 	}
 
-	if (use == FALSE)
+	if ( IHF_IsOn==FALSE && HS_IsOn==FALSE )
 		AUDIO_PMU_DEINIT();    //disable the audio PLL after power OFF
     Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp: retValue %d\n", retValue);
 #endif    
