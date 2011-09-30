@@ -155,6 +155,7 @@ Int32           BCM91008_ALEX_PowerControl  ( DISPDRV_HANDLE_T drvH,
 Int32           BCM91008_ALEX_Update       ( 
                     DISPDRV_HANDLE_T    drvH, 
 		    int			fb_idx,
+	            DISPDRV_WIN_t*	p_win,
                     DISPDRV_CB_T        apiCb ); 
 
 Int32           BCM91008_ALEX_Update_ExtFb ( 
@@ -1164,6 +1165,7 @@ Int32 BCM91008_ALEX_Update_ExtFb (
 Int32 BCM91008_ALEX_Update ( 
     DISPDRV_HANDLE_T    drvH, 
     int			fb_idx,
+    DISPDRV_WIN_t*	p_win,
     DISPDRV_CB_T        apiCb
     )
 {

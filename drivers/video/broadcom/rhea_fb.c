@@ -72,13 +72,6 @@ struct rhea_fb {
 #endif
 };
 
-struct partial_update_region {
-	u32	l;
-	u32	t;
-	u32	w;
-	u32	h;
-};
-
 static struct rhea_fb *g_rhea_fb = NULL;
 
 static inline u32 convert_bitfield(int val, struct fb_bitfield *bf)
@@ -178,7 +171,7 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 #ifdef CONFIG_FRAMEBUFFER_FPS
 	void *dst;
 #endif
-	struct partial_update_region region;
+        DISPDRV_WIN_t region, *p_region;
 
 	/* We are here only if yoffset is '0' or 'yres',
 	 * so if yoffset = 0, update first buffer or update second
@@ -198,23 +191,30 @@ static int rhea_fb_pan_display(struct fb_var_screeninfo *var, struct fb_info *in
 	fb_fps_display(fb->fps_info, dst, 5, 2, 0);
 #endif
 	
+        
 	if (!atomic_read(&fb->is_fb_registered)) {
-		ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL /* Callback */);
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx, NULL, NULL /* Callback */);
 	} else {
 		atomic_set(&fb->is_graphics_started, 1);
 		down(&fb->prev_buf_done_sem);
 		if (var->reserved[0] == 0x54445055) {
-			region.l	= var->reserved[1] >> 16;
-			region.t	= (u16)var->reserved[1]; 
-			region.w	= (var->reserved[2] >> 16) - region.l;
-			region.h	= (u16)var->reserved[2] - region.t;
+			region.t	= var->reserved[1] >> 16;
+			region.l	= (u16)var->reserved[1]; 
+			region.b	= (var->reserved[2] >> 16) -1;
+			region.r	= (u16)var->reserved[2] - 1;
+			region.w	= region.r - region.l + 1;
+			region.h	= region.b - region.t + 1;
 //    m->info.reserved[0] = 0x54445055; // "UPDT";
 //    m->info.reserved[1] = (uint16_t)l | ((uint32_t)t << 16);
 //    m->info.reserved[2] = (uint16_t)(l+w) | ((uint32_t)(t+h) << 16);
-			rheafb_error("We are doing partial update in region (l %d t%d w %d h %d)\n",
-					region.l, region.t, region.w, region.h);
+			//rheafb_error("We are doing partial update in region (l %d t%d w %d h %d)\n",
+			//		region.l, region.t, region.w, region.h);
+                        p_region = &region;                
+		} else {
+			p_region = NULL;	
 		}
-		ret = fb->display_ops->update(fb->display_hdl, buff_idx,(DISPDRV_CB_T)rhea_display_done_cb);
+                
+		ret = fb->display_ops->update(fb->display_hdl, buff_idx, p_region, (DISPDRV_CB_T)rhea_display_done_cb);
 	}
 	
 	up(&fb->update_sem);
@@ -362,7 +362,7 @@ static int rhea_refresh_thread(void *arg)
 	do {
 		down(&fb->refresh_wait_sem);
 		down(&fb->update_sem);
-		fb->display_ops->update(fb->display_hdl, 0, NULL);
+		fb->display_ops->update(fb->display_hdl, 0, NULL, NULL);
 		fb->base_update_count++;
 		up(&fb->update_sem);
 	} while (1);
@@ -513,7 +513,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.fix.accel	= FB_ACCEL_NONE;
 	fb->fb.fix.ypanstep	= 1;
 	fb->fb.fix.xpanstep	= 4;
-//#define PARTIAL_UPDATE_SUPPORT
+#define PARTIAL_UPDATE_SUPPORT
 #ifdef PARTIAL_UPDATE_SUPPORT
 	fb->fb.fix.reserved[0]	=  0x5444;
 	fb->fb.fix.reserved[1]	=  0x5055;
@@ -631,7 +631,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	/*  Display the default logo/splash screen. */
 	fb_prepare_logo(&fb->fb, 0);
 	fb_show_logo(&fb->fb, 0);
-	fb->display_ops->update(fb->display_hdl, 0, NULL /* Callback */);
+	fb->display_ops->update(fb->display_hdl, 0, NULL, NULL /* Callback */);
 #endif
 
 

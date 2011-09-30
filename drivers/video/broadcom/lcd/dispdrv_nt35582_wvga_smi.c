@@ -123,21 +123,12 @@
 //#define HAL_LCD_RESET_B  95
 //#define HAL_LCD_RESET_C  96
 
-typedef struct
-{
-    UInt32              left;                
-    UInt32              right;                  
-    UInt32              top;  
-    UInt32              bottom;  
-    UInt32              width; 
-    UInt32              height;
-} NT35582_WVGA_SMI_RECT_t;
-
 typedef struct   
 {
     CSL_LCD_HANDLE       cslH;
     DISPDRV_INFO_T*      panelData;
-    NT35582_WVGA_SMI_RECT_t win;
+    DISPDRV_WIN_t	 win_cur;
+    DISPDRV_WIN_t	 win_dim;
     UInt32               bpp;
     void*                frameBuffer;
     DISP_DRV_STATE       drvState;
@@ -200,6 +191,7 @@ Int32   NT35582_WVGA_SMI_SetWindow ( DISPDRV_HANDLE_T dispH );
 Int32   NT35582_WVGA_SMI_Update ( 
             DISPDRV_HANDLE_T    dispH, 
 	    int			fb_idx,
+            DISPDRV_WIN_t*      p_win,
             DISPDRV_CB_T        apiCb ); 
 
 Int32   NT35582_WVGA_SMI_Update_ExtFb ( 
@@ -475,55 +467,60 @@ void nt35582wvgaSmi_ExecCmndList(
 //
 //*****************************************************************************
 Int32 nt35582wvgaSmi_SetWindow ( 
-    DISPDRV_HANDLE_T dispH,
-    Boolean useOs,
-    Boolean update, 
-    UInt32  left,
-    UInt32  right,
-    UInt32  top,
-    UInt32  bottom )
+    DISPDRV_HANDLE_T 	dispH,
+    Boolean 		useOs,
+    Boolean 		update, 
+    DISPDRV_WIN_t* 	p_win ) 
 {
-    Int32                   res = 0;
-    NT35582_WVGA_SMI_PANEL_T*    lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
+    	Int32                   	res = 0;
+    	NT35582_WVGA_SMI_PANEL_T*    	lcdDrv = (NT35582_WVGA_SMI_PANEL_T*) dispH;
     
-    lcdDrv->win.left   = left;
-    lcdDrv->win.right  = right;
-    lcdDrv->win.top    = top;
-    lcdDrv->win.bottom = bottom; 
+    	if(    (lcdDrv->win_cur.l != p_win->l) 
+    	    || (lcdDrv->win_cur.r != p_win->r)
+    	    || (lcdDrv->win_cur.t != p_win->t)
+    	    || (lcdDrv->win_cur.b != p_win->b) ) 
+    	{
+    		lcdDrv->win_cur = *p_win;		
     
-    lcdDrv->win.width  = right - left + 1;
-    lcdDrv->win.height = bottom - top + 1;
-    
-    if ( update )
-    {    
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_S_MSB, 
-            lcdDrv->win.left   >> 8 );
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_S_LSB, 
-            lcdDrv->win.left  );
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_E_MSB, 
-            lcdDrv->win.right  >> 8 );
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_E_MSB, 
-            lcdDrv->win.right );
-        
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_S_MSB, 
-            lcdDrv->win.top   >> 8  );
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_S_LSB, 
-            lcdDrv->win.top   );
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_E_MSB, 
-            lcdDrv->win.bottom >> 8);
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_E_LSB, 
-            lcdDrv->win.bottom);
-        
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_MSB, 
-            lcdDrv->win.top  >> 8 );
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_LSB, 
-            lcdDrv->win.top  );
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_MSB, 
-            lcdDrv->win.left >> 8 );
-        nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_LSB, 
-            lcdDrv->win.left );
-    }        
-
+    		if ( update )
+    		{    
+    			nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_S_MSB, 
+    		        	p_win->l   >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_S_LSB, 
+    		    	    	p_win->l  );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_E_MSB, 
+    		    	    	p_win->r  >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_HOR_ADDR_E_LSB, 
+    		    	    	p_win->r );
+    		    
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_S_MSB, 
+    		    	    	p_win->t   >> 8  );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_S_LSB, 
+    		    	    	p_win->t   );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_E_MSB, 
+    		    	    	p_win->b >> 8);
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_VER_ADDR_E_LSB, 
+    		    	    	p_win->b );
+    		    	/*
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_MSB, 
+    		    	    	p_win->t >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_LSB, 
+    		    	    	p_win->t  );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_MSB, 
+    		    	    	p_win->l >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_LSB, 
+    		    	    	p_win->l );
+                        */        
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_MSB, 
+    		    	    	p_win->l >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_X_LSB, 
+    		    	    	p_win->l  );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_MSB, 
+    		    	    	p_win->t >> 8 );
+    		    	nt35582wvgaSmi_WrCmndP1( dispH, useOs, NT35582_SET_RAM_ADDR_Y_LSB, 
+    		    	    	p_win->t );
+    		}        
+    }
     return ( res );
 } // nt35582wvgaSmi_SetWindow
 
@@ -904,12 +901,12 @@ Int32 NT35582_WVGA_SMI_Open (
     pPanel->bpp         = 2;
 #endif    
     pPanel->panelData   = panelData;
-    pPanel->win.left    = 0;  
-    pPanel->win.right   = 479; 
-    pPanel->win.top     = 0;  
-    pPanel->win.bottom  = 799;
-    pPanel->win.width   = 480; 
-    pPanel->win.height  = 800;
+    pPanel->win_dim.l   = 0;  
+    pPanel->win_dim.r   = 479; 
+    pPanel->win_dim.t   = 0;  
+    pPanel->win_dim.b   = 799;
+    pPanel->win_dim.w   = 480; 
+    pPanel->win_dim.h   = 800;
     
     pPanel->frameBuffer = (void *)pOpenParm->busId ;
     
@@ -960,7 +957,7 @@ Int32 NT35582_WVGA_SMI_PowerControl (
                 case DISP_PWR_OFF:
                     nt35582wvgaSmi_ExecCmndList ( dispH, TRUE, &NT35582_Init[0]);
                     nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_SET_TEAR_ON );
-                    nt35582wvgaSmi_SetWindow ( dispH, TRUE, TRUE, 0, 479, 0, 799 );
+                    nt35582wvgaSmi_SetWindow ( dispH, TRUE, TRUE, &pPanel->win_dim );
 
                     pPanel->pwrState = DISP_PWR_SLEEP_OFF;
                     LCD_DBG ( LCD_DBG_INIT_ID, "[DISPDRV] %s: INIT-SEQ\n\r",
@@ -1176,6 +1173,7 @@ Int32 NT35582_WVGA_SMI_Update_ExtFb (
 Int32 NT35582_WVGA_SMI_Update ( 
     DISPDRV_HANDLE_T    dispH, 
     int			fb_idx,
+    DISPDRV_WIN_t*	p_win,
     DISPDRV_CB_T        apiCb
     )
 {
@@ -1196,7 +1194,6 @@ Int32 NT35582_WVGA_SMI_Update (
     }
     
     CSL_SMI_Lock ( lcdDrv->cslH );
-    nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_WR_MEM_START );
 
     if (0 == fb_idx)
     	req.buff           = lcdDrv->frameBuffer;
@@ -1206,8 +1203,17 @@ Int32 NT35582_WVGA_SMI_Update (
 
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s fb phys = 0x%08x\n", __FUNCTION__,  (unsigned int)req.buff);
 
-    req.lineLenP       = lcdDrv->panelData->width;
-    req.lineCount      = lcdDrv->panelData->height;
+    // update the whole screen 
+    if ( p_win == NULL ) 
+    	p_win = &lcdDrv->win_dim;
+
+    nt35582wvgaSmi_SetWindow( dispH, TRUE, TRUE,  p_win );
+    nt35582wvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_WR_MEM_START );
+
+    req.lineLenP       = p_win->w;
+    req.lineCount      = p_win->h;
+    req.xStrideB       = (lcdDrv->panelData->width - req.lineLenP       ) * lcdDrv->bpp;
+    req.buff          += (lcdDrv->panelData->width * p_win->t + p_win->l) * lcdDrv->bpp;
     req.timeOut_ms     = 100;
     req.buffBpp        = lcdDrv->bpp;
     

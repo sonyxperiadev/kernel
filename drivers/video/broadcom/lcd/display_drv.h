@@ -262,6 +262,15 @@ typedef enum
 } DISPDRV_CB_RES_T;
 
 
+typedef struct {
+	u32	l;
+	u32	t;
+	u32	r;
+	u32	b;
+	u32	w;
+	u32	h;
+} DISPDRV_WIN_t;
+
 /**
 *
 *  API CallBack Function
@@ -298,7 +307,8 @@ typedef struct
     Int32    (*update_no_os)(DISPDRV_HANDLE_T handle, void *fb );                                                                          ///< Routine to update a frame (EXT fb)
     Int32    (*update_dma_os)(DISPDRV_HANDLE_T handle, void *fb, DISPDRV_CB_API_1_1_T apiCb);                                              ///< Routine to update a frame (EXT fb)
     // !!! OCT 07 2010 update will become obsolete once transition to update_dma_os is complete                                                
-    Int32    (*update)(DISPDRV_HANDLE_T handle, int fb_idx, DISPDRV_CB_T apiCb);                                                                       ///< Routine to update a frame (INT fb)
+//    Int32    (*update)(DISPDRV_HANDLE_T handle, int fb_idx, DISPDRV_CB_T apiCb);                                                                       ///< Routine to update a frame (INT fb)
+    Int32    (*update)(DISPDRV_HANDLE_T handle, int fb_idx, DISPDRV_WIN_t *p_win, DISPDRV_CB_T apiCb);                                                                       ///< Routine to update a frame (INT fb)
     Int32    (*set_control)(DISPDRV_HANDLE_T handle, DISPDRV_CTRL_ID_T controlID, void* controlParams);                                    ///< Routine to set control for the display panel
     Int32    (*get_control)(DISPDRV_HANDLE_T handle, DISPDRV_CTRL_ID_T controlID, void* controlParams);                                    ///< Routine to get control for the display panel
 
