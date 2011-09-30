@@ -73,8 +73,8 @@ const char *sleep_prevent_clocks[] = {
 		"bsc2_clk",
 		"pwm_clk",
 		//"uartb_clk",
-		"uartb2_clk",
-		"uartb3_clk",
+		//"uartb2_clk",
+		//"uartb3_clk",
 		"spum_open",
 		"spum_sec",
 		"ssp0_clk",
@@ -539,6 +539,7 @@ static void uartb_wq_handler(struct work_struct *work)
 #ifdef CONFIG_UART_FORCE_RETENTION_TST
 void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 {
+#ifdef CONFIG_UART_FORCE_RETENTION
 	if(force_retention)
 	{
 		if(!clk_active)
@@ -554,6 +555,7 @@ void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 		schedule_delayed_work(&uartb_wq,
 				msecs_to_jiffies(3000));
 	}
+#endif
 }
 #endif
 
