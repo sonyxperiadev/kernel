@@ -126,6 +126,8 @@ extern VCHIQ_STATUS_T vchiq_open_service_params(VCHIQ_INSTANCE_T instance,
    VCHIQ_SERVICE_HANDLE_T *pservice);
 extern VCHIQ_STATUS_T vchiq_close_service(VCHIQ_SERVICE_HANDLE_T service);
 extern VCHIQ_STATUS_T vchiq_remove_service(VCHIQ_SERVICE_HANDLE_T service);
+extern VCHIQ_STATUS_T vchiq_use_service(VCHIQ_SERVICE_HANDLE_T service);
+extern VCHIQ_STATUS_T vchiq_release_service(VCHIQ_SERVICE_HANDLE_T service);
 
 extern VCHIQ_STATUS_T vchiq_queue_message(VCHIQ_SERVICE_HANDLE_T service, const VCHIQ_ELEMENT_T *elements, int count);
 extern void           vchiq_release_message(VCHIQ_SERVICE_HANDLE_T service, VCHIQ_HEADER_T *header);

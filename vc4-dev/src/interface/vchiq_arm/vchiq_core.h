@@ -23,8 +23,6 @@
 
 #include "vchiq.h"
 
-#define DEBUG_ENABLED
-
 #define IS_POW2(x) (x && ((x & (x - 1)) == 0))
 
 /* Ensure that the slot size and maximum number of slots are powers of 2 */
@@ -89,14 +87,20 @@ vcos_static_assert((sizeof(BITSET_T) * 8) == 32);
 #define BITSET_SET(bs, b)     (bs[BITSET_WORD(b)] |= BITSET_BIT(b))
 #define BITSET_CLR(bs, b)     (bs[BITSET_WORD(b)] &= ~BITSET_BIT(b))
 
+#if VCHIQ_ENABLE_STATS
 #define VCHIQ_STATS_INC(state, stat) (state->stats. stat ++)
 #define VCHIQ_SERVICE_STATS_INC(service, stat) (service->stats. stat ++)
 #define VCHIQ_SERVICE_STATS_ADD(service, stat, addend) (service->stats. stat += addend)
+#else
+#define VCHIQ_STATS_INC(state, stat) ((void)0)
+#define VCHIQ_SERVICE_STATS_INC(service, stat) ((void)0)
+#define VCHIQ_SERVICE_STATS_ADD(service, stat, addend) ((void)0)
+#endif
 
 enum
 {
    DEBUG_ENTRIES,
-#ifdef DEBUG_ENABLED
+#if VCHIQ_ENABLE_DEBUG
    DEBUG_SLOT_HANDLER_COUNT,
    DEBUG_SLOT_HANDLER_LINE,
    DEBUG_PARSE_LINE,
@@ -111,21 +115,21 @@ enum
    DEBUG_MAX
 };
 
-#ifdef DEBUG_ENABLED
+#if VCHIQ_ENABLE_DEBUG
 
 #define DEBUG_INITIALISE(local) volatile int *debug_ptr = (local)->debug;
 #define DEBUG_TRACE(d) debug_ptr[DEBUG_ ## d] = __LINE__
 #define DEBUG_VALUE(d,v) debug_ptr[DEBUG_ ## d] = (v)
 #define DEBUG_COUNT(d) debug_ptr[DEBUG_ ## d]++
 
-#else /* DEBUG_ENABLED */
+#else /* VCHIQ_ENABLE_DEBUG */
 
 #define DEBUG_INITIALISE(local)
 #define DEBUG_TRACE(d)
 #define DEBUG_VALUE(d,v)
 #define DEBUG_COUNT(d)
 
-#endif /* DEBUG_ENABLED */
+#endif /* VCHIQ_ENABLE_DEBUG */
 
 typedef enum
 {
@@ -216,6 +220,8 @@ typedef struct vchiq_service_struct {
 
    VCHIQ_STATE_T *state;
    VCHIQ_INSTANCE_T instance;
+
+   int service_use_count;
 
    VCHIQ_BULK_QUEUE_T bulk_tx;
    VCHIQ_BULK_QUEUE_T bulk_rx;
@@ -316,12 +322,15 @@ struct vchiq_state_struct {
 
    VCOS_THREAD_T slot_handler_thread;  // processes incoming messages
    VCOS_THREAD_T recycle_thread;       // processes recycled slots
+   VCOS_THREAD_T lp_thread;            // processes low priority messages (eg suspend)
 
    /* Local implementation of the trigger remote event */
    VCOS_EVENT_T trigger_event;
 
    /* Local implementation of the recycle remote event */
    VCOS_EVENT_T recycle_event;
+
+   VCOS_EVENT_T lp_evt;
 
    char *tx_data;
    char *rx_data;
@@ -330,6 +339,17 @@ struct vchiq_state_struct {
    VCOS_MUTEX_T slot_mutex;
 
    VCOS_MUTEX_T recycle_mutex;
+
+   VCOS_MUTEX_T suspend_resume_mutex;
+   VCOS_MUTEX_T use_count_mutex;
+
+   /* Global use count for videocore.
+    * This is equal to the sum of the use counts for all services.  When this hits
+    * zero the videocore suspend procedure will be initiated. */
+   int videocore_use_count;
+
+   /* Flag to indicate whether videocore is currently suspended */
+   int videocore_suspended;
 
    /* Indicates the byte position within the stream from where the next message
       will be read. The least significant bits are an index into the slot.

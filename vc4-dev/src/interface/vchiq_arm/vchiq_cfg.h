@@ -32,4 +32,12 @@
 #define VCHIQ_NUM_CURRENT_BULKS        32
 #define VCHIQ_NUM_SERVICE_BULKS        4
 
+#ifndef VCHIQ_ENABLE_DEBUG
+#define VCHIQ_ENABLE_DEBUG             1
+#endif
+
+#ifndef VCHIQ_ENABLE_STATS
+#define VCHIQ_ENABLE_STATS             1
+#endif
+
 #endif /* VCHIQ_CFG_H */
