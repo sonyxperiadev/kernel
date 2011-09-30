@@ -104,7 +104,11 @@ extern "C" {
 #define CUSTOM_CERT_ROM_ADDR   0x00040000
 #define CUSTOM_CERT_SIZE                                       0x00020000
 
+#ifndef ISLANDRAY
 #define PARM_IND_ROM_ADDR      0x00080000
+#else
+#define PARM_IND_ROM_ADDR      0x00300000
+#endif
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define PARM_IND_RAM_OFFSET                    0xC0000
 #else
@@ -112,15 +116,23 @@ extern "C" {
 #endif
 #define PARM_IND_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_IND_RAM_OFFSET)
 #define PARM_IND_SIZE                                          0x00040000
-   
+
+#ifndef ISLANDRAY
 #define PARM_DEP_ROM_ADDR      0x000C0000
+#else
+#define PARM_DEP_ROM_ADDR      0x00380000
+#endif
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define PARM_DEP_RAM_OFFSET                    0x160000
 #else
 #define PARM_DEP_RAM_OFFSET                    0x140000
 #endif
 #define PARM_DEP_RAM_ADDR                      (EXT_RAM_BASE_ADDR + PARM_DEP_RAM_OFFSET)
+#ifndef ISLANDRAY
 #define PARM_DEP_SIZE                                          0x00010000
+#else
+#define PARM_DEP_SIZE                                          0x00020000
+#endif
    
 #define PARM_SPML_IND_ROM_ADDR 0x000D0000
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
@@ -139,15 +151,24 @@ extern "C" {
 #endif
 #define PARM_SPML_DEP_RAM_ADDR                 (EXT_RAM_BASE_ADDR + PARM_SPML_DEP_RAM_OFFSET)
 #define PARM_SPML_DEP_SIZE                                     0x00010000   
-   
+
+#ifndef ISLANDRAY   
 #define DSP_PRAM_ROM_ADDR      0x01F20000
+#else
+#define DSP_PRAM_ROM_ADDR      0x00400000
+#endif
+
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define DSP_PRAM_RAM_OFFSET                    0x1E0000
 #else
 #define DSP_PRAM_RAM_OFFSET                    0x160000
 #endif
 #define DSP_PRAM_RAM_ADDR                      (EXT_RAM_BASE_ADDR + DSP_PRAM_RAM_OFFSET)
+//#ifndef ISLANDRAY 
 #define DSP_PRAM_SIZE                                          0x00004000
+//#else
+//#define DSP_PRAM_SIZE                                          0x000a0000
+//#endif
    
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define MODEMHOSTSEC_HOST_BUFF 0xA01E4000
@@ -160,23 +181,40 @@ extern "C" {
 #define MODEMHOSTSEC_BUFF_SIZE                                 (MODEMHOSTSEC_HOST_BUFF_SIZE + MODEMHOSTSEC_MODEM_BUFF_SIZE)
 #endif   
 
+#ifndef ISLANDRAY
 #define UMTS_CAL_ROM_ADDR      0x001D0000
+#else
+#define UMTS_CAL_ROM_ADDR      0x00280000
+#endif
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define UMTS_CAL_RAM_OFFSET                    0x1C0000
 #else
 #define UMTS_CAL_RAM_OFFSET                    0x64000
 #endif   
 #define UMTS_CAL_RAM_ADDR                      (EXT_RAM_BASE_ADDR + UMTS_CAL_RAM_OFFSET)
+#ifndef ISLANDRAY
 #define UMTS_CAL_SIZE                                          0x00020000
-   
+#else
+#define UMTS_CAL_SIZE                                          0x00080000
+#endif
+
+#ifndef ISLANDRAY   
 #define DSP_DRAM_ROM_ADDR      0x02000000
+#else
+#define DSP_DRAM_ROM_ADDR      0x00800000
+#endif
+
 #if (defined (CNEON_COMMON) || defined (CNEON_MODEM))
 #define DSP_DRAM_RAM_OFFSET                    0x1A00000     
 #else
 #define DSP_DRAM_RAM_OFFSET                    0x1800000     
 #endif   
 #define DSP_DRAM_RAM_ADDR                      (EXT_RAM_BASE_ADDR + DSP_DRAM_RAM_OFFSET)
+//#ifndef ISLANDRAY 
 #define DSP_DRAM_SIZE                                          0x00200000
+//#else
+//#define DSP_DRAM_SIZE                                          0x00400000
+//#endif
 
 #define TL3_DSP_EXT_BASE                       DSP_DRAM_RAM_ADDR
 #define TL3_DSP_EXT_SIZE                                       DSP_DRAM_SIZE
@@ -290,12 +328,7 @@ extern "C" {
 // Memory map for Linux build
 #define EXT_RAM_BASE_ADDR  CONFIG_BCM_RAM_BASE
 
-#ifdef CONFIG_BCM_IPC_OFFSET
-/* 256kB IPC shared RAM */
-#define IPC_OFFSET             CONFIG_BCM_IPC_OFFSET
-#else
 #define IPC_OFFSET             0x01E00000
-#endif
 
 #define PARM_DEP_RAM_OFFSET    0x140000
 #define PARM_DEP_RAM_ADDR      (EXT_RAM_BASE_ADDR + PARM_DEP_RAM_OFFSET)
