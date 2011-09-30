@@ -71,8 +71,8 @@ const char *sleep_prevent_clocks[] = {
 		"bsc2_clk",
 		"pwm_clk",
 		//"uartb_clk",
-		"uartb2_clk",
-		"uartb3_clk",
+		//"uartb2_clk",
+		//"uartb3_clk",
 		"spum_open",
 		"spum_sec",
 		"ssp0_clk",
@@ -515,6 +515,7 @@ static void uartb_wq_handler(struct work_struct *work)
 
 void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 {
+#ifdef CONFIG_UART_FORCE_RETENTION
 	if(force_retention)
 	{
 		if(!clk_active)
@@ -530,6 +531,7 @@ void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 		schedule_delayed_work(&uartb_wq,
 				msecs_to_jiffies(3000));
 	}
+#endif
 }
 
 static struct dentry *dent_rhea_pm_root_dir;
@@ -539,8 +541,10 @@ int __init rhea_pm_debug_init(void)
 	INIT_DELAYED_WORK(&uartb_wq,
 		uartb_wq_handler);
 
+#ifdef CONFIG_UART_FORCE_RETENTION 
 	pwr_mgr_register_event_handler(UBRX_EVENT, uartb_pwr_mgr_event_cb,
 											NULL);
+#endif
 
 
 	/* create root clock dir /clock */

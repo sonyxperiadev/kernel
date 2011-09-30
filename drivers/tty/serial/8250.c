@@ -55,6 +55,20 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 
+#ifdef CONFIG_ARCH_RHEA
+
+/*
+ * NOTE: We are using  ARCH specific flag to protect the PI MGR code
+ * because this functionality is not fully up on island.
+ */
+
+#ifdef CONFIG_KONA_PI_MGR
+#include <mach/pi_mgr.h>
+#include <plat/pi_mgr.h>
+#endif
+
+#endif
+
 #include <asm/io.h>
 #include <asm/irq.h>
 
@@ -170,6 +184,43 @@ struct uart_8250_port {
 	unsigned char		lsr_saved_flags;
 #define MSR_SAVE_FLAGS UART_MSR_ANY_DELTA
 	unsigned char		msr_saved_flags;
+
+#ifdef CONFIG_ARCH_RHEA
+	/*
+	 * Kona PM - QOS service
+	 */
+#ifdef CONFIG_KONA_PI_MGR
+	struct pi_mgr_qos_node* qos_tx_node;
+	struct pi_mgr_qos_node* qos_rx_node;
+	struct timer_list	rx_shutoff_timer;
+#define RX_SHUTOFF_DELAY_MSECS	3000
+#else
+	void *qos_tx_node;
+	void *qos_rx_node;
+/*
+ * Stubs - If KONA_PI_MGR is not defined let the functions be dummy
+ * otherwise the code looks ugly with too many #ifdefs
+ */
+
+#define pi_mgr_qos_add_request(a,b,c) (0)
+#define pi_mgr_qos_request_update(a,b) 
+#define PI_MGR_QOS_DEFAULT_VALUE 1
+#define PI_MGR_PI_ID_ARM_SUB_SYSTEM 1
+
+#endif /* KONA_PI_MGR not defined */
+
+#else /* Rhea not defined */
+
+/* Apart from Rhea platforms (i.e island for now) these calls are stubs */
+	void *qos_tx_node;
+	void *qos_rx_node;
+#define pi_mgr_qos_add_request(a,b,c) (0)
+#define pi_mgr_qos_request_update(a,b) 
+#define PI_MGR_QOS_DEFAULT_VALUE 1
+#define PI_MGR_PI_ID_ARM_SUB_SYSTEM 1
+
+#endif
+
 };
 
 struct irq_info {
@@ -1403,6 +1454,8 @@ static void serial8250_start_tx(struct uart_port *port)
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
+	pi_mgr_qos_request_update(up->qos_tx_node,0);	
+
 	if (!(up->ier & UART_IER_THRI)) {
 		up->ier |= UART_IER_THRI;
 		serial_out(up, UART_IER, up->ier);
@@ -1425,6 +1478,7 @@ static void serial8250_start_tx(struct uart_port *port)
 		up->acr &= ~UART_ACR_TXDIS;
 		serial_icr_write(up, UART_ACR, up->acr);
 	}
+
 }
 
 static void serial8250_stop_rx(struct uart_port *port)
@@ -1435,6 +1489,7 @@ static void serial8250_stop_rx(struct uart_port *port)
 	up->ier &= ~UART_IER_RLSI;
 	up->port.read_status_mask &= ~UART_LSR_DR;
 	serial_out(up, UART_IER, up->ier);
+	pi_mgr_qos_request_update(up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
 }
 
 static void serial8250_enable_ms(struct uart_port *port)
@@ -1478,6 +1533,45 @@ receive_chars(struct uart_8250_port *up, unsigned int *status)
 	unsigned char ch, lsr = *status;
 	int max_count = 256;
 	char flag;
+
+
+#ifdef CONFIG_ARCH_RHEA
+	/*
+	 * Handle port gets called from either the interrupt context
+	 * _OR_ from the timeout thread context (serial8250_timeout).
+	 *
+	 * Now first using qos APIs prevent the shutting down of UART clocks.
+	 * for RX context. For TX we can determine when to enable and disable
+	 * going to and coming out of retention. But for Rx, we need to have
+	 * a timer. Once a RX happens we restart the timer to expire after
+	 * say 'n' milliseconds. So when the timer function gets executed
+	 * we know that 'n' milliseconds has expired without any RX activity
+	 * so release the UART Rx context to go to retention.
+	 *
+	 * Now for from the tx perspective we'll enable the system to go to 
+	 * retention
+	 * i.e release the clocks when the tx circular buffer is empty and
+	 * the TX FIFO + THR is also empty.
+	 *
+	 * From the Power Mgr perspective if from both the TX and RX context
+ 	 * if we have released the clocks then this block will be put into
+	 * retention. Note that the aggregation is done by the Power
+	 * Management code.
+	 */
+
+	pi_mgr_qos_request_update(up->qos_rx_node,0);
+
+	/* 
+	 * Some RX activity has happened either byte received _OR_ some RX
+	 * error, whatever may be the case we have requested the PI MGR not
+	 * to go to retention, so start the timer immediately. If there are
+	 * no more Rx activity for another RX_SHUTOFF_DELAY_MSECS, then this
+	 * timer would come and call the pi mgr API to release the RX context
+	 *
+	 */
+	mod_timer(&up->rx_shutoff_timer,
+		jiffies + msecs_to_jiffies(RX_SHUTOFF_DELAY_MSECS));
+#endif
 
 	do {
 		if (likely(lsr & UART_LSR_DR))
@@ -1554,10 +1648,13 @@ ignore_char:
 	*status = lsr;
 }
 
+
 static void transmit_chars(struct uart_8250_port *up)
 {
 	struct circ_buf *xmit = &up->port.state->xmit;
 	int count;
+
+	pi_mgr_qos_request_update(up->qos_tx_node,0);	
 
 	if (up->port.x_char) {
 		serial_outp(up, UART_TX, up->port.x_char);
@@ -1567,10 +1664,13 @@ static void transmit_chars(struct uart_8250_port *up)
 	}
 	if (uart_tx_stopped(&up->port)) {
 		serial8250_stop_tx(&up->port);
+		pi_mgr_qos_request_update(up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+
 		return;
 	}
 	if (uart_circ_empty(xmit)) {
 		__stop_tx(up);
+		pi_mgr_qos_request_update(up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 		return;
 	}
 
@@ -1588,8 +1688,28 @@ static void transmit_chars(struct uart_8250_port *up)
 
 	DEBUG_INTR("THRE...");
 
-	if (uart_circ_empty(xmit))
+	/*
+	 * The below piece of code disables the TX interrupt if the 
+	 * circular buffer is empty. But please note that while using
+	 * the qos APIs we need to disable the uart peri clock 
+	 * when 
+	 * a) The THR is empty, The Transmit FIFO is empty &&
+	 * b) The circular buffer is also empty.
+	 *
+	 * But for that condition to happen we should not disable the
+	 * interrupt after copying the data from the circular buffer to the
+	 * FIFO and the circular buffer becomes empty. 
+	 * Instead we should keep the tx interrupt enabled and then when
+	 * the next interrupt happens condition a)might have happended, now
+	 * if the circular buffer is still empty there is nothing to transmit
+	 * so go and disable the clock
+	 */
+#ifndef CONFIG_ARCH_RHEA
+	if (uart_circ_empty(xmit)) {
 		__stop_tx(up);
+	}
+#endif
+
 }
 
 static unsigned int check_modem_status(struct uart_8250_port *up)
@@ -1618,6 +1738,7 @@ static unsigned int check_modem_status(struct uart_8250_port *up)
 /*
  * This handles the interrupt from one port.
  */
+
 static void serial8250_handle_port(struct uart_8250_port *up)
 {
 	unsigned int status;
@@ -1632,9 +1753,24 @@ static void serial8250_handle_port(struct uart_8250_port *up)
 	if (status & (UART_LSR_DR | UART_LSR_BI))
 		receive_chars(up, &status);
 	check_modem_status(up);
+
+#ifdef CONFIG_ARCH_RHEA
+	/*
+	 * Note that from the transmit_chars  we are NOT disabling the TX
+	 * interrupt when the circular buffer becomes empty. So we will get 
+	 * a TX over interrupt once the FIFO is flushed. In that case, go
+	 * and stop the Tx and disable the clocks so that the CCU can go to
+	 * retention.
+	 */
+	if ((status & BOTH_EMPTY) && uart_circ_empty(&up->port.state->xmit)) {
+		__stop_tx(up);
+		pi_mgr_qos_request_update(up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
+	} else if (status & UART_LSR_THRE)
+		transmit_chars(up);
+#else
 	if (status & UART_LSR_THRE)
 		transmit_chars(up);
-
+#endif
 	spin_unlock_irqrestore(&up->port.lock, flags);
 }
 
@@ -1992,14 +2128,23 @@ static int serial8250_get_poll_char(struct uart_port *port)
 {
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
-	unsigned char lsr = serial_inp(up, UART_LSR);
+	unsigned char lsr;
+	unsigned int val; 
 
-	if (!(lsr & UART_LSR_DR))
+	pi_mgr_qos_request_update(up->qos_rx_node,0);	
+
+	lsr = serial_inp(up, UART_LSR);
+
+	if (!(lsr & UART_LSR_DR)) {
+		pi_mgr_qos_request_update(up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
 		return NO_POLL_CHAR;
+	}
 
-	return serial_inp(up, UART_RX);
+	val = serial_inp(up, UART_RX);
+
+	pi_mgr_qos_request_update(up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
+	return val;
 }
-
 
 static void serial8250_put_poll_char(struct uart_port *port,
 			 unsigned char c)
@@ -2008,6 +2153,7 @@ static void serial8250_put_poll_char(struct uart_port *port,
 	struct uart_8250_port *up =
 		container_of(port, struct uart_8250_port, port);
 
+	pi_mgr_qos_request_update(up->qos_tx_node,0);	
 	/*
 	 *	First save the IER then disable the interrupts
 	 */
@@ -2034,6 +2180,8 @@ static void serial8250_put_poll_char(struct uart_port *port,
 	 */
 	wait_for_xmitr(up, BOTH_EMPTY);
 	serial_out(up, UART_IER, ier);
+
+	pi_mgr_qos_request_update(up->qos_tx_node, PI_MGR_QOS_DEFAULT_VALUE);
 }
 
 #endif /* CONFIG_CONSOLE_POLL */
@@ -3331,6 +3479,31 @@ static struct uart_8250_port *serial8250_find_match_or_unused(struct uart_port *
 	return NULL;
 }
 
+#ifdef CONFIG_ARCH_RHEA
+static void rx_timeout_handler(unsigned long data)
+{
+	struct uart_8250_port *up = (struct uart_8250_port *)data;
+	
+	if (up == NULL) 
+		printk(KERN_ERR"Invalid port handle \r\n");
+	else
+		/* Allow the CCU to go to retention */
+		pi_mgr_qos_request_update(up->qos_rx_node, PI_MGR_QOS_DEFAULT_VALUE);
+
+	/*
+	 * Once this happens there are two ways for the UART to become active
+	 * again.
+	 * 1 - The Transmit path when some data needs to be sent.
+	 * 2 - In the RX path if some data is received that triggers the Power
+ 	 *     Manager Event which will in turn wake the UART up. But in this
+	 *     case, if the HW itself does not hold the data and pass on the
+	 *     interrupt the first byte might be lost. During testing I
+	 *     observed no such loss.
+	 */
+	 return;
+}
+#endif
+
 /**
  *	serial8250_register_port - register a serial port
  *	@port: serial port template
@@ -3372,6 +3545,20 @@ int serial8250_register_port(struct uart_port *port, const unsigned char * clk_n
         clk_enable(uart->clk);
 
         uart->port.uartclk     = clk_get_rate(uart->clk);
+#endif
+
+#ifdef CONFIG_ARCH_RHEA
+		uart->qos_tx_node = pi_mgr_qos_add_request(clk_name,
+			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
+		uart->qos_rx_node = pi_mgr_qos_add_request(clk_name,
+			PI_MGR_PI_ID_ARM_SUB_SYSTEM, PI_MGR_QOS_DEFAULT_VALUE);
+
+		init_timer(&uart->rx_shutoff_timer);
+		uart->rx_shutoff_timer.function = rx_timeout_handler;
+		uart->rx_shutoff_timer.data = uart;
+		uart->rx_shutoff_timer.expires = 
+			jiffies + msecs_to_jiffies(RX_SHUTOFF_DELAY_MSECS);
+		add_timer(&uart->rx_shutoff_timer);
 #endif
 		uart->port.iobase       = port->iobase;
 		uart->port.membase      = port->membase;
