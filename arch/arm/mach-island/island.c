@@ -58,15 +58,66 @@ static void island_restart(char mode, const char *cmd)
 
 
 #ifdef CONFIG_CACHE_L2X0
+
+/* Default L2 settings */
+static int l2off = 0;
+static int l2_non_secure_access = 1;
+static int l2_d_prefetch = 0;
+static int l2_i_prefetch = 0;
+static int l2_early_bresp = 1;
+
+static int __init l2off_setup(char *str)
+{
+	l2off = 1;
+	return 1;
+}
+__setup("l2off", l2off_setup);
+
+
+static int __init l2_d_prefetch_setup(char *str)
+{
+	get_option(&str, &l2_d_prefetch);
+	return 1;
+}
+__setup("l2_dprefetch=", l2_d_prefetch_setup);
+
+static int __init l2_i_prefetch_setup(char *str)
+{
+	get_option(&str, &l2_i_prefetch);
+	return 1;
+}
+__setup("l2_iprefetch=", l2_i_prefetch_setup);
+
+static int __init l2_early_bresp_setup(char *str)
+{
+	get_option(&str, &l2_early_bresp);
+	return 1;
+}
+__setup("l2_early_bresp=", l2_early_bresp_setup);
+
 static void __init island_l2x0_init(void)
 {
 	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
+	uint32_t aux_val = 0;
+	uint32_t aux_mask = 0xC200ffff;
 
-	/*
-	 * 32KB way size, 16-way associativity
-	 */
-	l2x0_init(l2cache_base, 0x00050000, 0xfff0ffff);
+	if (l2off)
+	{
+		/*  cmdline argument l2off will turn off l2 cache even if configured on */
+		printk("%s: Warning: L2X0 *not* enabled due to l2off cmdline override\n", __func__);
+		return;
+	}
+
+	aux_val |= ( 1 << 16 );	/* 16-way cache */
+	aux_val |= ( ( l2_non_secure_access ? 1 : 0 ) << 27 );	/* Allow non-secure access */
+	aux_val |= ( ( l2_d_prefetch        ? 1 : 0 ) << 28 );	/* Data prefetch */
+	aux_val |= ( ( l2_i_prefetch        ? 1 : 0 ) << 29 );	/* Instruction prefetch */
+	aux_val |= ( ( l2_early_bresp       ? 1 : 0 ) << 30 );	/* Early BRESP */
+	aux_val |= ( 2 << 17 );	/* 32KB */
+
+	l2x0_init(l2cache_base, aux_val, aux_mask);
 }
+
 #endif
 
 static int __init island_init(void)
