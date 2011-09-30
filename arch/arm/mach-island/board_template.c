@@ -409,7 +409,9 @@ static struct headset_hw_cfg board_headsetdet_data =
 #else
 {
    .gpio_headset_det = -1,
+   .gpio_headset_active_low = 0,
    .gpio_mic_det = -1,
+   .gpio_mic_active_low = 0,
 };
 #endif
 
