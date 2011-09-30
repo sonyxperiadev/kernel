@@ -1159,6 +1159,8 @@ static int audiohDmaTerm( void );
 static int audiohIoRemap( void );
 static int16_t *audiohMixerCb_BufGetIgPtr( int numBytes, void *privdata );
 static int16_t *audiohMixerCb_BufGetEgPtr( int numBytes, void *privdata );
+static void audiohMixerCb_EgressDone( int numBytes, void *privdata );
+static void audiohDmaEgressPostProcess( struct audioh_ch_cfg *ch );
 static void audiohMixerCb_EgressFlush( void *privdata );
 static void audiohDmaIngressHandler( AADMA_Device_t dev, AADMA_Status_t *aadma_status, void *userData );
 static void audiohDmaEgressHandler( AADMA_Device_t dev, AADMA_Status_t *aadma_status, void *userData );
@@ -1580,6 +1582,99 @@ static int16_t *audiohMixerCb_BufGetEgPtr(
 
 /***************************************************************************/
 /**
+*  AUDIOH mixer callback to indicate that the egress data has been deposited.
+*
+*  @return     None
+*
+*  @remark
+*     This callback is used as a trigger to DMA more data to the DAC, if
+*     appropriate.
+*/
+static void audiohMixerCb_EgressDone(
+   int   numBytes,            /**< (i) frame size in bytes */
+   void *privdata             /**< (i) private data */
+)
+{
+   struct audioh_ch_cfg *ch;
+
+   ch  = (struct audioh_ch_cfg *)privdata;
+
+   /* Only perform post processing when syncronized */
+   if ( AUDIOH_SYNC_FREQ( ch->samp_freq ) )
+   {
+      audiohDmaEgressPostProcess( ch );
+   }
+}
+
+/***************************************************************************/
+/**
+*  Helper routine to do the egress DMA transfer for an AUDIOH channel
+*
+*  @return  None
+*
+*  @remark
+*     It is expected that egress DMA transfers only occur after ingress
+*     DMA transfers have completed.
+*
+*/
+static void audiohDmaEgressPostProcess(
+   struct audioh_ch_cfg *ch         /** (io) Ptr to AUDIOH channel */
+)
+{
+   unsigned short *egressp;
+   int debug_mode = 0;
+
+   /* Point to buffer index with actual samples */
+   egressp = ch->dma_buf[atomic_read( &ch->ch_active_idx )].virt;
+
+   /* Service write requests */
+   halAudioWriteService( &ch->write, egressp, ch->frame_size );
+
+   /* Apply software digital gain based on channel settings */
+   if( AUDIOH_SYNC_FREQ(ch->samp_freq) && ch->dig_gain != 0 )
+   {
+      audiohSoftDigGain( (int16_t *)egressp, (ch->frame_size/AUDIOH_SAMP_WIDTH), ch->dig_gain );
+   }
+
+   if( ch->equ.len )
+   {
+      halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, ch->halAudioFiltHist,
+            ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
+   }
+
+   if( ch->ramp )
+   {
+      debug_mode = 1;
+      halAudioGenerateRamp( (uint16_t *)egressp, &ch->rampseed, ch->frame_size/AUDIOH_SAMP_WIDTH, ch->num_fifo_ch );
+   }
+   else if( ch->sinectl.freq )
+   {
+      debug_mode = 1;
+      halAudioSine( (uint16_t *)egressp, &ch->sinectl, (ch->frame_size/AUDIOH_SAMP_WIDTH), ch->num_fifo_ch );
+   }
+
+   if( ch->csx_data[HALAUDIO_CSX_POINT_DAC].csx_ops.csxCallback )
+   {
+      debug_mode = 1;
+      ch->csx_data[HALAUDIO_CSX_POINT_DAC].csx_ops.csxCallback( (char *)egressp, ch->frame_size, ch->csx_data[HALAUDIO_CSX_POINT_DAC].priv );
+   }
+
+   if ( debug_mode )
+   {
+      ch->debug = 1;
+   }
+   else if ( ch->debug )
+   {
+      /* Clear samples */
+      memset( ch->dma_buf[0].virt, 0, ch->frame_size );
+      memset( ch->dma_buf[1].virt, 0, ch->frame_size );
+
+      ch->debug = 0;
+   }
+}
+
+/***************************************************************************/
+/**
 *  AUDIOH mixer callback to flush the egress buffers when the last destination
 *  connection is removed.
 *
@@ -1663,6 +1758,8 @@ static void audiohDmaIngressHandler(
             audiohSoftDigGain( (int16_t *)ingressp, (ch->frame_size/AUDIOH_SAMP_WIDTH), ch->dig_gain );
          }
 
+         AUDIOH_LOG( "equ.len=%d", ch->equ.len);
+
          if( ch->equ.len )
          {
             halAudioEquProcess( (int16_t *)ingressp, ch->equ.coeffs, ch->halAudioFiltHist,
@@ -1734,8 +1831,6 @@ static void audiohDmaEgressHandler(
 )
 {
    struct audioh_ch_cfg *ch;
-   unsigned short       *egressp;
-   int debug_mode = 0;
    int rc = 0;
 
    ch = userData;
@@ -1774,57 +1869,11 @@ static void audiohDmaEgressHandler(
             ch->errs.dma_err++;
          }
 
+         /* Perform the amxr exchange of data if not syncd and post process */
          if ( !AUDIOH_SYNC_FREQ( ch->samp_freq ) )
          {
             amxrServiceUnsyncPort( ch->mixer_port );
-         }
-
-         /* Point to buffer index with actual samples */
-         egressp = ch->dma_buf[atomic_read( &ch->ch_active_idx )].virt;
-
-         /* Service write requests */
-         halAudioWriteService( &ch->write, egressp, ch->frame_size );
-
-         /* Apply software digital gain based on channel settings */
-         if( AUDIOH_SYNC_FREQ(ch->samp_freq) && ch->dig_gain != 0 )
-         {
-            audiohSoftDigGain( (int16_t *)egressp, (ch->frame_size/AUDIOH_SAMP_WIDTH), ch->dig_gain );
-         }
-
-         if( ch->equ.len )
-         {
-            halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, ch->halAudioFiltHist,
-                  ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
-         }
-
-         if( ch->ramp )
-         {
-            debug_mode = 1;
-            halAudioGenerateRamp( (uint16_t *)egressp, &ch->rampseed, ch->frame_size/AUDIOH_SAMP_WIDTH, ch->num_fifo_ch );
-         }
-         else if( ch->sinectl.freq )
-         {
-            debug_mode = 1;
-            halAudioSine( (uint16_t *)egressp, &ch->sinectl, (ch->frame_size/AUDIOH_SAMP_WIDTH), ch->num_fifo_ch );
-         }
-
-         if( ch->csx_data[HALAUDIO_CSX_POINT_DAC].csx_ops.csxCallback )
-         {
-            debug_mode = 1;
-            ch->csx_data[HALAUDIO_CSX_POINT_DAC].csx_ops.csxCallback( (char *)egressp, ch->frame_size, ch->csx_data[HALAUDIO_CSX_POINT_DAC].priv );
-         }
-
-         if ( debug_mode )
-         {
-            ch->debug = 1;
-         }
-         else if ( ch->debug )
-         {
-            /* Clear samples */
-            memset( ch->dma_buf[0].virt, 0, ch->frame_size );
-            memset( ch->dma_buf[1].virt, 0, ch->frame_size );
-
-            ch->debug = 0;
+            audiohDmaEgressPostProcess( ch );
          }
       }
    }
@@ -1865,6 +1914,7 @@ static int audiohMixerPortsRegister( void )
       {
          cb.dstcnxsremoved = audiohMixerCb_EgressFlush;
          cb.getdst = audiohMixerCb_BufGetEgPtr;
+         cb.dstdone = audiohMixerCb_EgressDone;
       }
       else
       {
