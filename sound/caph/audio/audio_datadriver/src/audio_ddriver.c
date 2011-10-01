@@ -1457,7 +1457,7 @@ void VPU_Capture_Request(UInt16 buf_index)
 		return;
     }
 
-    Log_DebugPrintf(LOGID_AUDIO,"VPU_Capture_Request:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
+    //Log_DebugPrintf(LOGID_AUDIO,"VPU_Capture_Request:: buf_index %d aud_drv->write_index = %d \n",buf_index,aud_drv->write_index);
 
     //Copy the data to the ringbuffer from dsp shared memory
     dest_index = aud_drv->write_index;
