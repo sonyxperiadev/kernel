@@ -2159,14 +2159,16 @@ csl_caph_Spkr_Gain_t csl_caph_gain_GetSpkrGain(csl_caph_SPKR_Path_e spkr, Int16 
     if (gain >= Spkr_GainTable[spkr][0].spkrGain)
     {
         memcpy(&outGain, &Spkr_GainTable[spkr][0], sizeof(csl_caph_Spkr_Gain_t));
-        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "spkrGain=0x%x, spkrPMUGain=0x%x, spkrDSPDLGain=0x%x\n", outGain.spkrGain, outGain.spkrPMUGain, outGain.spkrDSPDLGain));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "A spkrGain=0x%x, spkrHWGain=0x%x, spkrPMUGain=0x%x, spkrDSPDLGain=0x%x\n",
+			outGain.spkrGain, outGain.spkrHWGain, outGain.spkrPMUGain, outGain.spkrDSPDLGain));
         return outGain;	    
     }
     else
     if (gain <= Spkr_GainTable[spkr][SPKR_GAIN_LEVEL_NUM-1].spkrGain)
     {
         memcpy(&outGain, &Spkr_GainTable[spkr][SPKR_GAIN_LEVEL_NUM-1], sizeof(csl_caph_Spkr_Gain_t));
-        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "spkrGain=0x%x, spkrPMUGain=0x%x, spkrDSPDLGain=0x%x\n", outGain.spkrGain, outGain.spkrPMUGain, outGain.spkrDSPDLGain));
+        _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "B spkrGain=0x%x, spkrHWGain=0x%x, spkrPMUGain=0x%x, spkrDSPDLGain=0x%x\n",
+			outGain.spkrGain, outGain.spkrHWGain, outGain.spkrPMUGain, outGain.spkrDSPDLGain));
         return outGain;	    
     }
     
@@ -2175,7 +2177,8 @@ csl_caph_Spkr_Gain_t csl_caph_gain_GetSpkrGain(csl_caph_SPKR_Path_e spkr, Int16 
         if(gain == Spkr_GainTable[spkr][i].spkrGain)
         {
             memcpy(&outGain, &Spkr_GainTable[spkr][i], sizeof(csl_caph_Spkr_Gain_t));
-            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "spkrGain=0x%x, spkrPMUGain=0x%x, spkrDSPDLGain=0x%x\n", outGain.spkrGain, outGain.spkrPMUGain, outGain.spkrDSPDLGain));
+            _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "C spkrGain=0x%x, spkrHWGain=0x%x, spkrPMUGain=0x%x, spkrDSPDLGain=0x%x\n",
+				outGain.spkrGain, outGain.spkrHWGain, outGain.spkrPMUGain, outGain.spkrDSPDLGain));
             return outGain;	    
 	    }	
     }

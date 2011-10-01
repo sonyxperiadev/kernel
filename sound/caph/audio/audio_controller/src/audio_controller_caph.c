@@ -982,13 +982,16 @@ void AUDCTRL_SetPlayVolume(
 				UInt32					vol_right
 				)
 {
+	Int16 gain_q13p2=0, gain_q13p2_p1=0;
     UInt32 gainHW, gainHW2, gainHW3, gainHW4, gainHW5, gainHW6;  //quarter dB
     int pmuGain = 0x00;
     CSL_CAPH_DEVICE_e speaker = CSL_CAPH_DEV_NONE;
     CSL_CAPH_PathID pathID = 0;
 
     gainHW = gainHW2 = gainHW3 = gainHW4 = gainHW5 = gainHW6 = 0;
-    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: sink = 0x%x, spk = 0x%x, gain_format %d, vol = 0x%x(%d)\n", sink, spk, gain_format, vol_left, vol_left);
+    Log_DebugPrintf(LOGID_AUDIO,
+		"AUDCTRL_SetPlayVolume: sink = 0x%x, spk = 0x%x, gain_format %d, vol_left = 0x%x(%d) vol_right 0x%x(%d)\n",
+		sink, spk, gain_format, vol_left, vol_left, vol_right, vol_right);
     
     speaker = GetDeviceFromSpkr(spk);
 
@@ -1004,8 +1007,19 @@ void AUDCTRL_SetPlayVolume(
 
 		if (gain_format == AUDIO_GAIN_FORMAT_mB)
 		{
-			gainHW = AUDDRV_GetHWDLGain(speaker, (Int16) (vol_left/25));
-			gainHW2 = AUDDRV_GetHWDLGain(speaker, (Int16) (vol_right/25) );	
+			gain_q13p2_p1 = (Int16) vol_left;
+			gain_q13p2 = gain_q13p2_p1/25;
+			Log_DebugPrintf(LOGID_AUDIO,
+				"AUDCTRL_SetPlayVolume: sink = 0x%x, spk = 0x%x, gain_q13p2_p1 = 0x%x(%d) gain_q13p2 0x%x(%d)\n",
+				sink, spk, gain_q13p2_p1, gain_q13p2_p1, gain_q13p2, gain_q13p2);
+			gainHW = AUDDRV_GetHWDLGain(speaker, gain_q13p2);
+			
+			gain_q13p2 = (Int16)(vol_right/25);
+			Log_DebugPrintf(LOGID_AUDIO,
+				"AUDCTRL_SetPlayVolume: sink = 0x%x, spk = 0x%x, vol_right = 0x%x(%d) gain_q13p2 0x%x(%d)\n",
+				sink, spk, vol_right, vol_right, gain_q13p2, gain_q13p2);
+			gainHW2 = AUDDRV_GetHWDLGain(speaker, gain_q13p2);	
+			
 			pmuGain = (Int16)AUDDRV_GetPMUGain(speaker, (Int16)(vol_left/25) );
 		}
 		
@@ -1028,7 +1042,8 @@ void AUDCTRL_SetPlayVolume(
 								   CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R, 
 								   gainHW5,  speaker);
 
-				Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: pathID = 0x%x, speaker = 0x%x, gainHW %d, gainHW2 = 0x%x(%d)\n", pathID, speaker, (UInt16)gainHW, (UInt16)gainHW2);
+				Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: pathID = 0x%x, speaker = 0x%x, gainHW %d(0x%x), gainHW2 = %d(0x%x)\n",
+					pathID, speaker, (UInt16)gainHW, (UInt16)gainHW, (UInt16)gainHW2, (UInt16)gainHW2 );
 				csl_caph_hwctrl_SetSinkGain(pathID, speaker, (UInt16)gainHW, (UInt16)gainHW2);
 		}
 	
