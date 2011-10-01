@@ -909,6 +909,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				fifo = csl_caph_cfifo_get_fifo_by_dma(path->dma[0]);
 			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink[0] == CSL_CAPH_DEV_FM_TX) {
 				fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
+				if(!fifo) fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED); //For FM TX + RX in call, 3 FIFOs are required.
 			} else {
 				fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			}
