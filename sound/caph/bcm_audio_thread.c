@@ -290,7 +290,9 @@ void AUDIO_Ctrl_Process(
 			AUDCTRL_SetPlayVolume (param_start->pdev_prop->p[0].hw_id,
 					param_start->pdev_prop->p[0].speaker, 
 					AUDIO_GAIN_FORMAT_mB, 
-					param_start->vol[0], param_start->vol[1]);
+					(param_start->vol[0])*25,  //from 0.25dB to mB
+					(param_start->vol[1])*25
+					);
 
      			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->p[0].aud_dev);
 			
@@ -496,8 +498,9 @@ void AUDIO_Ctrl_Process(
 			AUDCTRL_SetPlayVolume (parm_vol->hw_id,
 								   parm_vol->device,
 								   AUDIO_GAIN_FORMAT_mB,
-								   parm_vol->volume1,
-								   parm_vol->volume2);
+								   (parm_vol->volume1)*25,  //from 0.25dB to mB
+								   (parm_vol->volume2)*25
+								   );
 		}
 		break;
 		case ACTION_AUD_SetRecordGain:
@@ -572,8 +575,9 @@ void AUDIO_Ctrl_Process(
             AUDCTRL_SetPlayVolume (parm_FM->hw_id,
                                        parm_FM->device,
                                        AUDIO_GAIN_FORMAT_mB,
-                                       parm_FM->volume1,
-                                       parm_FM->volume2);
+                                       (parm_FM->volume1)*25,  //from 0.25dB to mB
+                                       (parm_FM->volume2)*25
+                                       );
 		}
 		break;
 		case ACTION_AUD_DisableFMPlay:
