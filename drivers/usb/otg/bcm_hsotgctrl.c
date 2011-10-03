@@ -223,6 +223,8 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 	dev_info(hsotgctrl_drvdata->dev, "\n%s: Setting up USB OTG PHY and Clock\n", __func__);
 	bcm_hsotgctrl_en_clock(true);
 
+	schedule_timeout_interruptible(HZ/10);
+
 	/* clear bit 15 RDB error */
 	val = readl(hsotgctrl_drvdata->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	val &= ~HSOTG_CTRL_PHY_P1CTL_PLL_SUSPEND_ENABLE_MASK;
