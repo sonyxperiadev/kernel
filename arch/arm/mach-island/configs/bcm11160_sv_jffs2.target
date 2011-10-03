@@ -4,3 +4,5 @@ chip   = 11160
 board  = sv
 option = nand
 option = jffs2
+option = ext4
+option = mmc 
