@@ -327,8 +327,6 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	if (pSel[0] == pSel[1])
 		pSel[1] = AUDCTRL_SPK_TOTAL_COUNT;
 
-	// Currently support only two output playback devices, this setting is for stereo IHF R channel
-	pSel[2] = AUDCTRL_SPK_TOTAL_COUNT;
 	if (isSTIHF == TRUE)
 	{
 		if (pSel[0] == AUDCTRL_SPK_LOUDSPK)
@@ -341,7 +339,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 			pSel[2] = AUDCTRL_SPK_HANDSET;
 	}
 
-	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld, pSel[1]=%ld\n", stream,pSel[0],pSel[1]);
+	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld, pSel[1]=%ld, pSel[2]=%ld,\n", stream,pSel[0],pSel[1],pSel[2]);
 	
 	switch(stream)
 	{
@@ -1121,7 +1119,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		//PCMOut1
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_HANDSET, AUDCTRL_SPK_TOTAL_COUNT},
+			.iLineSelect = {AUDCTRL_SPK_HANDSET, AUDCTRL_SPK_TOTAL_COUNT, AUDCTRL_SPK_TOTAL_COUNT},
 			.strStreamName = "P1",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
@@ -1129,12 +1127,11 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		//PCMOut2
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_TOTAL_COUNT},
+			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_TOTAL_COUNT, AUDCTRL_SPK_TOTAL_COUNT},
 			.strStreamName = "P2",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
-						
 		//VOIP Out
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
