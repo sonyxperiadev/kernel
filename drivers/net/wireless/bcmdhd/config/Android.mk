@@ -15,6 +15,8 @@
 #
 LOCAL_PATH := $(call my-dir)
 
+ifeq ($(BOARD_WLAN_DEVICE),bcmdhd)
+
 ########################
 
 include $(CLEAR_VARS)
@@ -36,3 +38,5 @@ LOCAL_SRC_FILES := android_dhcpcd.conf
 include $(BUILD_PREBUILT)
 
 ########################
+
+endif
