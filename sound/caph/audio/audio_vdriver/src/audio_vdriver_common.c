@@ -38,7 +38,6 @@
 #include "resultcode.h"
 #include "audio_consts.h"
 
-#define SYSCFG_BASE_ADDR      0x08880000      /* SYSCFG core */
 #include "dspcmd.h"
 #include "csl_apcmd.h"
 
@@ -128,15 +127,9 @@ void AUDDRV_Init( void )
                                 TASKPRI_AUDDRV,
                                 STACKSIZE_AUDDRV
                                 );
-#if !((defined(_RHEA_)||defined(_SAMOA_)))
-    AUDDRV_SPKRInit (AUDDRV_SPKR_EP, AUDIO_SPKR_CHANNEL_DIFF);  //Purpose: to initialize the CHAL Audio code with AHB_AUDIO_BASE_ADDR, SYSCFG_BASE_ADDR, AUXMIC_BASE_ADDR.
-#endif
-
 
 	/* register DSP VPU status processing handlers */
-#ifndef _SAMOA_
 	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
-#endif	
 #if 0  // These features are not needed in LMP now.
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
 	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
@@ -144,10 +137,8 @@ void AUDDRV_Init( void )
 #endif	
 	CSL_RegisterVoIPStatusHandler((VoIPStatusCB_t)&VOIP_ProcessVOIPDLDone);
 	CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);
-#ifndef _SAMOA_
 	CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);
 	CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);
-#endif
 #if defined(ENABLE_SPKPROT)
 	CSL_RegisterUserStatusHandler((UserStatusCB_t)&AUDDRV_User_HandleDSPInt);
 #endif
@@ -361,26 +352,21 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0, 0 );
 #endif
 	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
-#if !(defined(_SAMOA_))
 	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
-#endif
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
-#if !(defined(_SAMOA_))
     //per call basis: enable the DTX by calling stack api when call connected
 	audio_control_generic( AUDDRV_CPCMD_ENABLE_DSP_DTX, TRUE, 0, 0, 0, 0 );
 
 	if (speaker == AUDDRV_SPKR_PCM_IF)
 		AUDDRV_SetPCMOnOff( 1 );
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, TRUE, 0, 0, 0, 0 );
 	else
 	{
 		if(currVoiceMic != AUDDRV_MIC_PCM_IF) //need to check mic too.
 			AUDDRV_SetPCMOnOff( 0 );
-			//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 	}
-#endif
+
 	return;
 }
 

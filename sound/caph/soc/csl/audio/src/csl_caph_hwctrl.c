@@ -1680,7 +1680,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
     if (enable == TRUE && sCurEnabled == FALSE)
     {
         sCurEnabled = TRUE;
-#if !(defined(_SAMOA_))
+
         //Enable CAPH clock.
         clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 #ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
@@ -1720,7 +1720,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
         clk_enable(clkID[5]);
         //clk_set_rate(clkID[5], 156000000);
 #endif
-#endif // !defined(_SAMOA_)
+
     }
     else if (enable == FALSE && sCurEnabled == TRUE)
     {

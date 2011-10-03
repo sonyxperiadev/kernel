@@ -67,8 +67,8 @@
 
 typedef void (*AUDDRV_User_CB) (UInt32 param1, UInt32 param2, UInt32 param3);
 
-AUDDRV_MIC_Enum_t   currVoiceMic = AUDDRV_MIC_NONE;   //used in pcm i/f control. assume one mic, one spkr.
-AUDDRV_SPKR_Enum_t  currVoiceSpkr = AUDDRV_SPKR_NONE;  //used in pcm i/f control. assume one mic, one spkr.
+AUDDRV_MIC_Enum_t  currVoiceMic = AUDDRV_MIC_NONE;   //used in pcm i/f control. assume one mic, one spkr.
+AUDDRV_SPKR_Enum_t  currVoiceSpkr = AUDDRV_SPKR_NONE;	//used in pcm i/f control. assume one mic, one spkr.
 Boolean inVoiceCall = FALSE;
 
 //=============================================================================
@@ -541,30 +541,15 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), dev);
 
 #if 0
-	currVoiceMic = mic;
-	currVoiceSpkr = speaker;
-
-	//need to follow the sequence. avoid enable again
-	AUDDRV_SelectSpkr( AUDDRV_VOICE_OUTPUT, speaker, AUDDRV_SPKR_NONE );
-
-	//select mic input, include DMIC support
-	AUDDRV_SelectMic( AUDDRV_VOICE_INPUT, mic);
-
 	//if( speaker == AUDDRV_SPKR_PCM_IF || mic==AUDDRV_MIC_PCM_IF )
 	if( mic==AUDDRV_MIC_PCM_IF )
 	{
 		//use audio_control_dsp( ), and combine this file with csl_aud_drv_hw.c
 		AUDDRV_SetPCMOnOff( 1 );
-
-		//not reliable, sometimes there is no audio.
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, TRUE, 0, 0, 0, 0 );
 	}
 	else
 	{
 		AUDDRV_SetPCMOnOff( 0 );
-
-		//not reliable, sometimes there is no audio.
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 	}
 #endif    
 }
@@ -620,12 +605,10 @@ void AUDDRV_EnableDSPOutput (
 #if 0
 		if (currVoiceSpkr == AUDDRV_SPKR_PCM_IF)
 			AUDDRV_SetPCMOnOff( 1 );
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, TRUE, 0, 0, 0, 0 );
 		else
 		{
 			if(currVoiceMic != AUDDRV_MIC_PCM_IF) //need to check mic too.
 			AUDDRV_SetPCMOnOff( 0 );
-			//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 		}
 #endif
 				
@@ -680,16 +663,13 @@ void AUDDRV_EnableDSPInput (
 	}
 
 #if	0
-
 	currVoiceMic = mic_selection;
 	if (currVoiceMic == AUDDRV_MIC_PCM_IF)
 		AUDDRV_SetPCMOnOff( 1 );
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, TRUE, 0, 0, 0, 0 );
 	else
 	{
 		if (currVoiceSpkr != AUDDRV_SPKR_PCM_IF) //need to check spkr too.
 			AUDDRV_SetPCMOnOff( 0 );
-			//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 	}
 
 #endif
@@ -717,24 +697,15 @@ void AUDDRV_SetULSpeechRecordGain(Int16 gain)
 // Function Name: AUDDRV_SetPCMOnOff
 //
 // Description:   	set PCM on/off for BT
+//  this command will be removed from Rhea.
 // 
 //=============================================================================
 
 void AUDDRV_SetPCMOnOff(Boolean	on_off)
 {
-	  //return;
-
-#define DSP_AUDIO_REG_AMCR  0xe540
-
 	// By default the PCM port is occupied by trace port on development board
 	if(on_off)
 	{
-#define SYSCFG_IOCR0                     (SYSCFG_BASE_ADDR + 0x0000)  /* IOCR0 bit I/O Configuration Register 0       */
-#define SYSCFG_IOCR0_PCM_MUX                       0x00C00000 
-
-		//mux to PCM interface (set to 00)
-	//	*(volatile UInt32*) SYSCFG_IOCR0 &= ~(SYSCFG_IOCR0_PCM_MUX);
-
 		audio_control_dsp(DSPCMD_TYPE_COMMAND_DIGITAL_SOUND, on_off, 0, 0, 0, 0);
 
 	}
