@@ -45,6 +45,8 @@
 #include <linux/io.h>
 
 #include "mobcom_types.h"
+#include "bcm_kril_debug.h"
+#include "timer.h"
 
 #define MAX_CLIENT_NUM              30		
 #define AP_CLIENT_ID_START          64
@@ -273,7 +275,7 @@ Boolean IsBasicCapi2LoggingEnable(void)
 static char buf[MAX_BUF_SIZE];
 int RpcLog_DebugPrintf(char* fmt, ...)
 {
-#ifdef CONFIG_BRCM_UNIFIED_LOGGING
+#ifndef CONFIG_BRCM_UNIFIED_LOGGING
     va_list ap;
     va_start(ap, fmt);
     vsnprintf(buf, MAX_BUF_SIZE, fmt, ap);
@@ -294,6 +296,7 @@ int RpcLog_DebugPrintf(char* fmt, ...)
 		va_end(ap);
     }
 #endif
+
     return 1;
 }
 

@@ -374,10 +374,34 @@ Result_t Handle_CAPI2_FLASH_SaveImage(RPC_Msg_t* pReqMsg, UInt32 flash_addr, UIn
 {
 	Result_t result = RESULT_OK;
 	SYS_ReqRep_t data;
-    KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_FLASH_SaveImage\n");
+	char flashAddr[20];
+	char flashLen[10];
+	char flashSharedMemAddr[20];
+	int ret = 0;
+	char *argv[] = {"/system/bin/atx", "-S", flashAddr, flashLen, flashSharedMemAddr, NULL};
+	char *envp[] = {"HOME=/", "PATH=/sbin:/bin:/system/bin", NULL };
+
+	KRIL_DEBUG(DBG_INFO, "Handle_CAPI2_FLASH_SaveImage - Rx params from CP: 0x%x   0x%x   0x%x\n", (unsigned int) flash_addr, (unsigned int) length, (unsigned int) shared_mem_addr);
+	snprintf(flashAddr, 20, "%x\n", (unsigned int) flash_addr);
+	snprintf(flashLen, 10, "%x\n", (unsigned int) length);
+	snprintf(flashSharedMemAddr, 20, "%x\n", (unsigned int) shared_mem_addr);
+
+	ret = call_usermodehelper("/system/bin/atx", argv, envp, UMH_WAIT_EXEC);
+	if (ret != 0) {
+		KRIL_DEBUG(DBG_INFO, "ERROR in call to 'atx -S': %i\n", ret);
+		data.req_rep_u.CAPI2_FLASH_SaveImage_Rsp.val = FALSE;
+		result = RESULT_ERROR;
+	} else {
+		KRIL_DEBUG(DBG_INFO, "Calling 'atx -S' successfully\n");
+		data.req_rep_u.CAPI2_FLASH_SaveImage_Rsp.val = TRUE;
+	}
+
+/*
 
 	memset(&data, 0, sizeof(SYS_ReqRep_t));
 	data.req_rep_u.CAPI2_FLASH_SaveImage_Rsp.val = TRUE; //(Boolean)FlashSaveData(flash_addr,length,(UInt8*)shared_mem_addr);
+
+*/
 
 	data.result = result;
 	Send_SYS_RspForRequest(pReqMsg, MSG_FLASH_SAVEIMAGE_RSP, &data);

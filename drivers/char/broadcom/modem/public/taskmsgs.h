@@ -448,6 +448,11 @@ typedef enum
 	**/
 
 	MSG_DATACALL_ECDC_IND		= MSG_GRP_CC+0x23,	///<Payload type {::DataECDCLinkMsg_t}
+	
+	/**
+	This is the event confirming that a data call has been released. See ::Cause_t for list of release causes
+	**/
+	MSG_DATACALL_RELEASE_CNF	= MSG_GRP_CC+0x24,	///<Payload type {::DataCallReleaseMsg_t}
 
 	/**
 	This is the event indicating to all of the clients for an API call from one of the
@@ -1884,6 +1889,8 @@ typedef enum
 
 	MSG_SIM_PROC_SELECT_APPLICATION_REQ		= MSG_GRP_INT_SIM+0x55,	///<Payload type {::SIM_PROC_SELECT_APPLICATION_REQ_t} /* Request to select a non-USIM application */
 
+	MSG_SIM_PROC_DETECT_IND                 = MSG_GRP_INT_SIM+0x56, ///<Payload type {::Boolean}        /* SIM detection indication based on SIMIO interrupt */
+
 	//----------------------------------------------------------------------
 	// MSG_GRP_INT_STK, INTERNAL MESSAGE GROUP FOR STK (0x2600)
 	//----------------------------------------------------------------------
@@ -2144,6 +2151,10 @@ typedef enum
 	// MSG_GRP_INT_SECMODEM, MESSAGE GROUP FOR SECURE MODEM (0x2800)
 	//----------------------------------------------------------------------
 	MSG_SECMODEM_PROC_CONFIG_MODEM_REQ  = MSG_GRP_INT_SECMODEM + 0x00, ///<Payload type {::SecModemConfigModemReq_t}
+	MSG_SECMODEM_PROC_HOST_TO_MODEM_REQ = MSG_GRP_INT_SECMODEM + 0x01, ///<Payload type {::SecModemHostToModemReq_t}
+	MSG_SECMODEM_PROC_MODEM_TO_HOST_RSP = MSG_GRP_INT_SECMODEM + 0x02, ///<Payload type {::SecModemModemToHostRsp_t}
+
+	MSG_SECMODEM_PROC_SET_INFO_PP_BITS_REQ = MSG_GRP_INT_SECMODEM + 0x03, ///<Payload type {::SecModemSetInfoPPBitsReq_t}
 
 	// End of MSG_GRP_INT_SECMODEM, (0x2800)
 //TASKMSGS_INCLUDE taskmsgs_atc.i
@@ -2151,12 +2162,21 @@ typedef enum
 	MSG_AT_CMD_STR				= MSG_GRP_INT_ATC+0x35,	///<Payload type {::}
 	MSG_AT_COMMAND_REQ			= MSG_GRP_INT_ATC+0x52,	///<Payload type {::AtCmdInfo_t}
 	MSG_AT_COMMAND_IND			= MSG_GRP_INT_ATC+0x53,	///<Payload type {::AtCmdInfo_t}
-	MSG_AT_REGISTER_REQ			= MSG_GRP_INT_ATC+0x54, 	///<Payload type {::AtRegisterInfo_t}//TASKMSGS_INCLUDE taskmsgs_usb.i
-	MSG_AT_TONE_REQ = MSG_GRP_INT_ATC+0x55, ///<Payload type {::AtToneInfo_t}
-	MSG_AT_AUDIO_REQ = MSG_GRP_INT_ATC+0x56, ///<payload type {::Boolean}
-	MSG_AT_MICMUTE_REQ = MSG_GRP_INT_ATC+0x57, ///<payload type {::Boolean}
-	MSG_AT_SPEAKERMUTE_REQ = MSG_GRP_INT_ATC+0x58, ///<payload type {::Boolean}
-
+	MSG_AT_REGISTER_REQ			= MSG_GRP_INT_ATC+0x54, 	///<Payload type {::AtRegisterInfo_t}
+	MSG_AT_TONE_REQ				= MSG_GRP_INT_ATC+0x55, 	///<Payload type {::AtToneInfo_t}
+	MSG_AT_AUDIO_REQ			= MSG_GRP_INT_ATC+0x56,		///<payload type {::Boolean}
+	MSG_AT_MICMUTE_REQ			= MSG_GRP_INT_ATC+0x57,		///<payload type {::Boolean}
+	MSG_AT_SPEAKERMUTE_REQ			= MSG_GRP_INT_ATC+0x58,		///<payload type {::Boolean}
+	MSG_AT_SETSPEAKER_REQ			= MSG_GRP_INT_ATC+0x59, 	///<payload type {::UInt32}
+	MSG_AT_GETSPEAKER_REQ			= MSG_GRP_INT_ATC+0x5a, 	///<payload type {::void}
+	MSG_AT_GETSPEAKER_RSP		= MSG_GRP_INT_ATC+0x5b, 	///<payload type {::UInt32}
+	MSG_AT_SETMIC_REQ			= MSG_GRP_INT_ATC+0x5c, 	///<payload type {::UInt32}
+	MSG_AT_GETMIC_REQ			= MSG_GRP_INT_ATC+0x5d, 	///<payload type {::void}
+	MSG_AT_GETMIC_RSP		= MSG_GRP_INT_ATC+0x5e, 	///<payload type {::UInt32}
+	MSG_AT_DUN_CONNECT_REQ		= MSG_GRP_INT_ATC+0x5f, 	///<payload type {::UInt8}
+	MSG_AT_DUN_DISCONNECT_REQ		= MSG_GRP_INT_ATC+0x60, 	///<payload type {::UInt8}
+	
+//TASKMSGS_INCLUDE taskmsgs_usb.i
 	//---------------------------------------------------------------
 	// MSG_GRP_DEV, MESSAGE GROUP FOR DEVICES (0x0700)
 	//---------------------------------------------------------------
@@ -2184,6 +2204,9 @@ typedef enum
 	MSG_AUDIO_CTRL_DSP_RSP				= MSG_GRP_DEV+0x2A,
 	MSG_DEV_BCD_SUCCESSFUL				= MSG_GRP_DEV+0x2B,
 	MSG_DEV_BCD_FAILED					= MSG_GRP_DEV+0x2C,
+	MSG_AUDIO_COMP_FILTER_REQ			= MSG_GRP_DEV+0x2D,
+	MSG_AUDIO_COMP_FILTER_RSP			= MSG_GRP_DEV+0x2E,
+	MSG_AUDIO_CALL_STATUS_IND			= MSG_GRP_DEV+0x2F,
 
 	// End of MSG_GRP_DEV, (0x0700)
 
@@ -6197,7 +6220,7 @@ typedef enum
 	**/
 	MSG_SS_RESETCLIENTID_RSP  = MSG_GRP_CAPI2_SS + 0x3D,
 
-	MSG_GRP_CAPI2_SS_END = MSG_GRP_CAPI2_SS + 0x2A,
+	MSG_GRP_CAPI2_SS_END = MSG_GRP_CAPI2_SS + 0xFF,
 
 	 /** 
 	api is CAPI2_SatkApi_GetCachedRootMenuPtr 
@@ -6844,17 +6867,41 @@ typedef enum
 	**/
 	MSG_SEC_MODEM_TO_HOST_IND  = MSG_GRP_CAPI2_GEN_0 + 0x6D1,	///<Payload type {::UInt8}
 	 /** 
-	api is CAPI2_SecModemApi_ConfigModemReq 
-	**/
-	MSG_SECMODEM_CONFIG_MODEM_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6D4,
-	 /** 
 	api is CAPI2_SimApi_GetAdData 
 	**/
-	MSG_SIM_AD_DATA_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6DC,
+	MSG_SIM_AD_DATA_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6D6,
 	 /** 
 	payload is void 
 	**/
-	MSG_SIM_AD_DATA_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6DD,	///<Payload type {void}
+	MSG_SIM_AD_DATA_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6D7,	///<Payload type {void}
+	 /** 
+	api is CAPI2_SimApi_GetCurrentSimVoltage 
+	**/
+	MSG_SIM_GET_CURRENT_SIM_VOLTAGE_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6D8,
+	 /** 
+	payload is ::SimVoltage_t 
+	**/
+	MSG_SIM_GET_CURRENT_SIM_VOLTAGE_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6D9,	///<Payload type {::SimVoltage_t}
+	 /** 
+	api is CAPI2_MS_SetSupportedRATandBand 
+	**/
+	MSG_MS_SET_RAT_AND_BAND_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6DA,	///<Payload type {CAPI2_MS_SetSupportedRATandBand_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_MS_SET_RAT_AND_BAND_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6DB,
+	 /** 
+	api is CAPI2_SecModemApi_ConfigModemReq 
+	**/
+	MSG_SECMODEM_CONFIG_MODEM_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6DC,
+	 /** 
+	api is CAPI2_SecModemApi_SetInfoPPBitsReq 
+	**/
+	MSG_SECMODEM_SET_INFO_PP_BITS_REQ  = MSG_GRP_CAPI2_GEN_0 + 0x6F4,	///<Payload type {CAPI2_SecModemApi_SetInfoPPBitsReq_Req_t}
+	 /** 
+	payload is ::Result_t 
+	**/
+	MSG_SECMODEM_SET_INFO_PP_BITS_RSP  = MSG_GRP_CAPI2_GEN_0 + 0x6F5,
 
 	//MSG_GEN_REQ_END = 0x48FF
 

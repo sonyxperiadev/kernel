@@ -10,6 +10,8 @@ EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/CAPI2_CIB/public/"
 
 EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/public/"
 EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/public/sysinterface/util/public/"
+EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/sysrpc"
+EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/public/soc/public"
 
 EXTRA_CFLAGS += -I"fs/cifs/"
 EXTRA_CFLAGS += -DUNDER_LINUX
