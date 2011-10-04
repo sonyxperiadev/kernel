@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_iw.h,v 1.15.80.6 2010-12-23 01:13:23 Exp $
+ * $Id: wl_iw.h,v 1.15.80.6 2010-12-23 01:13:23 $
  */
 
 

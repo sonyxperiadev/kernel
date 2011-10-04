@@ -94,6 +94,7 @@ do {									\
 #define	WL_DBG(args)
 #endif				/* (WL_DBG_LEVEL > 0) */
 
+
 #define WL_SCAN_RETRY_MAX	3	/* used for ibss scan */
 #define WL_NUM_PMKIDS_MAX	MAXPMKID	/* will be used
 						 * for 2.6.33 kernel
@@ -129,6 +130,7 @@ enum wl_status {
 	WL_STATUS_SCAN_ABORTING,
 	WL_STATUS_CONNECTING,
 	WL_STATUS_CONNECTED,
+	WL_STATUS_DISCONNECTING,
 	WL_STATUS_AP_CREATING,
 	WL_STATUS_AP_CREATED
 };
@@ -194,7 +196,6 @@ struct wl_conf {
 
 typedef s32(*EVENT_HANDLER) (struct wl_priv *wl,
                             struct net_device *ndev, const wl_event_msg_t *e, void *data);
-
 
 /* bss inform structure for cfg80211 interface */
 struct wl_cfg80211_bss_info {
@@ -356,7 +357,7 @@ struct wl_priv {
 	/* control firwmare and nvram paramter downloading */
 	struct wl_fw_ctrl *fw;
 	struct wl_pmk_list *pmk_list;	/* wpa2 pmk list */
-	tsk_ctl_t event_tsk;		/* task of main event handler thread */
+	tsk_ctl_t event_tsk;  		/* task of main event handler thread */
 	unsigned long status;		/* current dongle status */
 	void *pub;
 	u32 channel;		/* current channel */

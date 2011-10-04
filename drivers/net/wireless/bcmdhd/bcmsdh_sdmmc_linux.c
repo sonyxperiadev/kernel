@@ -21,14 +21,15 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdh_sdmmc_linux.c,v 1.8.6.2 2011-02-01 18:38:36 Exp $
+ * $Id: bcmsdh_sdmmc_linux.c 275784 2011-08-04 22:41:49Z $
  */
 
 #include <typedefs.h>
 #include <bcmutils.h>
-#include <sdio.h>	/* SDIO Specs */
+#include <sdio.h>	/* SDIO Device and Protocol Specs */
 #include <bcmsdbus.h>	/* bcmsdh to/from specific controller APIs */
 #include <sdiovar.h>	/* to get msglevel bit values */
+#include <dngl_stats.h>
 #include <dhd.h>
 
 #include <linux/sched.h>	/* request_irq() */

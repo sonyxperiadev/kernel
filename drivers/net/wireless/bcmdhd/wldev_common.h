@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wldev_common.h,v 1.1.4.1.2.14 2011-02-09 01:40:07 Exp $
+ * $Id: wldev_common.h,v 1.1.4.1.2.14 2011-02-09 01:40:07 $
  */
 #ifndef __WLDEV_COMMON_H__
 #define __WLDEV_COMMON_H__

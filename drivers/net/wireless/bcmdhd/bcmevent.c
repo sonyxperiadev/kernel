@@ -20,7 +20,7 @@
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
- * $Id: bcmevent.c,v 1.8.2.7 2011-02-01 06:23:39 Exp $
+ * $Id: bcmevent.c 275693 2011-08-04 19:59:34Z $
  */
 
 #include <typedefs.h>

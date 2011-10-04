@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_sdio.c,v 1.274.2.40 2011-02-09 22:42:44 Exp $
+ * $Id: dhd_sdio.c 278681 2011-08-19 17:50:47Z $
  */
 
 #include <typedefs.h>
@@ -77,11 +77,7 @@
 
 #define TXRETRIES	2	/* # of retries for tx frames */
 
-#if defined(CONFIG_MACH_SANDGATE2G)
-#define DHD_RXBOUND	250	/* Default for max rx frames in one scheduling */
-#else
 #define DHD_RXBOUND	50	/* Default for max rx frames in one scheduling */
-#endif /* defined(CONFIG_MACH_SANDGATE2G) */
 
 #define DHD_TXBOUND	20	/* Default for max tx frames in one scheduling */
 
@@ -441,7 +437,7 @@ do { \
  * Mode 0:	Dongle writes the software host mailbox and host is interrupted.
  * Mode 1:	(sdiod core rev >= 4)
  *		Device sets a new bit in the intstatus whenever there is a packet
- *		available in fifo.  Host can't clear this specific status bit until all the 
+ *		available in fifo.  Host can't clear this specific status bit until all the
  *		packets are read from the FIFO.  No need to ack dongle intstatus.
  * Mode 2:	(sdiod core rev >= 4)
  *		Device sets a bit in the intstatus, and host acks this by writing
@@ -475,9 +471,9 @@ static void dhdsdio_sdtest_set(dhd_bus_t *bus, uint8 count);
 
 #ifdef DHD_DEBUG
 static int dhdsdio_checkdied(dhd_bus_t *bus, uint8 *data, uint size);
-static int dhdsdio_mem_dump(dhd_bus_t *bus);
 static int dhd_serialconsole(dhd_bus_t *bus, bool get, bool enable, int *bcmerror);
 #endif /* DHD_DEBUG */
+
 static int dhdsdio_download_state(dhd_bus_t *bus, bool enter);
 
 static void dhdsdio_release(dhd_bus_t *bus, osl_t *osh);
@@ -1540,9 +1536,9 @@ enum {
 	IOV_SD1IDLE,
 	IOV_SLEEP,
 	IOV_DONGLEISOLATION,
-	IOV_VARS
+	IOV_VARS,
 #ifdef SOFTAP
-    , IOV_FWPATH
+	IOV_FWPATH
 #endif
 };
 
@@ -1846,6 +1842,9 @@ dhdsdio_readshared(dhd_bus_t *bus, sdpcm_shared_t *sh)
 	sh->console_addr = ltoh32(sh->console_addr);
 	sh->msgtrace_addr = ltoh32(sh->msgtrace_addr);
 
+	if ((sh->flags & SDPCM_SHARED_VERSION_MASK) == 3 && SDPCM_SHARED_VERSION == 1)
+		return BCME_OK;
+
 	if ((sh->flags & SDPCM_SHARED_VERSION_MASK) != SDPCM_SHARED_VERSION) {
 		DHD_ERROR(("%s: sdpcm_shared version %d in dhd "
 		           "is different than sdpcm_shared version %d in dongle\n",
@@ -2036,12 +2035,6 @@ dhdsdio_checkdied(dhd_bus_t *bus, uint8 *data, uint size)
 		DHD_ERROR(("%s: %s\n", __FUNCTION__, strbuf.origbuf));
 	}
 
-#ifdef DHD_DEBUG
-	if (sdpcm_shared.flags & SDPCM_SHARED_TRAP) {
-		/* Mem dump to a file on device */
-		dhdsdio_mem_dump(bus);
-	}
-#endif /* DHD_DEBUG */
 
 done:
 	if (mbuffer)
@@ -2051,58 +2044,8 @@ done:
 
 	return bcmerror;
 }
+#endif /* #ifdef DHD_DEBUG */
 
-static int
-dhdsdio_mem_dump(dhd_bus_t *bus)
-{
-	int ret = 0;
-	int size; /* Full mem size */
-	int start = 0; /* Start address */
-	int read_size = 0; /* Read size of each iteration */
-	uint8 *buf = NULL, *databuf = NULL;
-
-	/* Get full mem size */
-	size = bus->ramsize;
-	buf = MALLOC(bus->dhd->osh, size);
-	if (!buf) {
-		printf("%s: Out of memory (%d bytes)\n", __FUNCTION__, size);
-		return -1;
-	}
-
-	/* Read mem content */
-	printf("Dump dongle memory");
-	databuf = buf;
-	while (size)
-	{
-		read_size = MIN(MEMBLOCK, size);
-		if ((ret = dhdsdio_membytes(bus, FALSE, start, databuf, read_size)))
-		{
-			printf("%s: Error membytes %d\n", __FUNCTION__, ret);
-			if (buf) {
-				MFREE(bus->dhd->osh, buf, size);
-			}
-			return -1;
-		}
-		printf(".");
-
-		/* Decrement size and increment start address */
-		size -= read_size;
-		start += read_size;
-		databuf += read_size;
-	}
-	printf("Done\n");
-
-	/* free buf before return !!! */
-	if (write_to_file(bus->dhd, buf, bus->ramsize))
-	{
-		printf("%s: Error writing to files\n", __FUNCTION__);
-		return -1;
-	}
-
-	/* buf free handled in write_to_file, not here */
-	return 0;
-}
-#endif /* defined(DHD_DEBUG) */
 
 int
 dhdsdio_downloadvars(dhd_bus_t *bus, void *arg, int len)
@@ -3049,6 +2992,7 @@ dhd_bus_stop(struct dhd_bus *bus, bool enforce_mutex)
 	if (enforce_mutex)
 		dhd_os_sdunlock(bus->dhd);
 }
+
 
 int
 dhd_bus_init(dhd_pub_t *dhdp, bool enforce_mutex)
@@ -4362,6 +4306,13 @@ dhdsdio_hostmail(dhd_bus_t *bus)
 		bus->flowcontrol = fcbits;
 	}
 
+#ifdef DHD_DEBUG
+	/* At least print a message if FW halted */
+	if (hmb_data & HMB_DATA_FWHALT) {
+		DHD_ERROR(("INTERNAL ERROR: FIRMWARE HALTED\n"));
+		dhdsdio_checkdied(bus, NULL, 0);
+	}
+#endif /* DHD_DEBUG */
 
 	/* Shouldn't be any others */
 	if (hmb_data & ~(HMB_DATA_DEVREADY |
@@ -5926,7 +5877,7 @@ err:
 	return bcmerror;
 }
 
-/* 
+/*
 	EXAMPLE: nvram_array
 	nvram_arry format:
 	name=value
@@ -6200,16 +6151,16 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 						dhd_enable_oob_intr(bus, TRUE);
 #endif /* defined(OOB_INTR_ONLY) */
 
-					bus->dhd->dongle_reset = FALSE;
-					bus->dhd->up = TRUE;
+						bus->dhd->dongle_reset = FALSE;
+						bus->dhd->up = TRUE;
 
 #if !defined(IGNORE_ETH0_DOWN)
-					/* Restore flow control  */
-					dhd_txflowcontrol(bus->dhd, ALL_INTERFACES, OFF);
+						/* Restore flow control  */
+						dhd_txflowcontrol(bus->dhd, ALL_INTERFACES, OFF);
 #endif 
-					dhd_os_wd_timer(dhdp, dhd_watchdog_ms);
+						dhd_os_wd_timer(dhdp, dhd_watchdog_ms);
 
-					DHD_TRACE(("%s: WLAN ON DONE\n", __FUNCTION__));
+						DHD_TRACE(("%s: WLAN ON DONE\n", __FUNCTION__));
 					} else {
 						dhd_bus_stop(bus, FALSE);
 						dhdsdio_release_dongle(bus, bus->dhd->osh,

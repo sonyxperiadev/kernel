@@ -23,7 +23,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: uamp_api.h,v 1.2.8.1 2011-02-05 00:16:14 Exp $
+ * $Id: uamp_api.h,v 1.2.8.1 2011-02-05 00:16:14 $
  *
  */
 #ifndef UAMP_API_H
