@@ -648,6 +648,31 @@ static struct platform_device board_spum_device = {
        .id             =       0,
        .resource       =       board_spum_resource,
        .num_resources  =       ARRAY_SIZE(board_spum_resource),
+};
+#endif
+
+#if defined(CONFIG_CRYPTO_DEV_BRCM_SPUM_AES)
+static struct resource board_spum_aes_resource[] = {
+	[0] =
+	{
+		.start  =       SEC_SPUM_NS_APB_BASE_ADDR,
+		.end    =       SEC_SPUM_NS_APB_BASE_ADDR + SZ_64K - 1,
+		.flags  =       IORESOURCE_MEM,
+	},
+	[1] =
+	{
+		.start  =       SPUM_NS_BASE_ADDR,
+		.end    =       SPUM_NS_BASE_ADDR + SZ_64K - 1,
+		.flags  =       IORESOURCE_MEM,
+	}
+};
+
+static struct platform_device board_spum_aes_device = {
+	.name           =       "brcm-spum-aes",
+	.id             =       0,
+	.resource       =       board_spum_aes_resource,
+	.num_resources  =       ARRAY_SIZE(board_spum_aes_resource),
+};
 #endif
 
 #ifdef CONFIG_UNICAM
@@ -700,6 +725,10 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
        &board_spum_device,
+#endif
+
+#ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_AES
+       &board_spum_aes_device,
 #endif
 
 #ifdef CONFIG_UNICAM
