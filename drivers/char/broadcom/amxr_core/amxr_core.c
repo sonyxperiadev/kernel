@@ -2816,9 +2816,8 @@ static void amxr_free_resamp(
 */
 static void amxr_free_resources( void )
 {
-   //These two calls do nothing if CONFIG_DEBUG_MUTEXES is not set
-   mutex_destroy( gCnxs.mutex );
-   mutex_destroy( gPorts.mutex );
+   mutex_destroy( &gCnxs.mutex );
+   mutex_destroy( &gPorts.mutex );
    if ( gScratchBufp )
    {
       kfree( gScratchBufp );
