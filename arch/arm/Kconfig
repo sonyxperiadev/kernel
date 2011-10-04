@@ -894,7 +894,7 @@ config ARCH_KONA
 	select GENERIC_CLOCKEVENTS
 	select ARCH_HAS_CPUFREQ
 	select ARM_ERRATA_743622
-    select ARM_ERRATA_751472
+	select ARM_ERRATA_751472 if SMP
 	help
 	  This enables support for system based on Broadcom KONA architecture
  
