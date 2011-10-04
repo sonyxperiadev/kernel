@@ -263,7 +263,7 @@ static const struct bcmpmu_adc_map bcm59055_adc_map[PMU_ADC_MAX] = {//revisit
 	[PMU_ADC_32KTEMP] =		{.map = 0, .addr0 = 0x93, .addr1 = 0x92, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x08, .vrng = 4800},
 	[PMU_ADC_RTM] =			{.map = 0, .addr0 = 0x99, .addr1 = 0x98, .dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
 	[PMU_ADC_FG_CURRSMPL] =		{.map = 1, .addr0 = 0xD1, .addr1 = 0xD0, .dmask = 0xFFFF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
-	[PMU_ADC_FG_VMBATT] =		{.map = 0, .addr0 = 0x83, .addr1 = 0x82, .dmask = 0x03FF, .vmask = 0x0400, .rtmsel = 0x00, .vrng = 4800},
+	[PMU_ADC_FG_VMBATT] =		{.map = 1, .addr0 = 0xD7, .addr1 = 0xD6, .dmask = 0x03FF, .vmask = 0x0400, .rtmsel = 0x00, .vrng = 4800},
 };
 
 static const struct bcmpmu_reg_map bcm59055_adc_ctrl_map[PMU_ADC_CTRL_MAX] = {//revisit

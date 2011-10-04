@@ -112,7 +112,7 @@ struct bcmpmu_accy {
 static struct bcmpmu_accy *bcmpmu_accy;
 
 int bcmpmu_usb_add_notifier(u32 event_id, struct notifier_block *notifier)
-{ 
+{
 	if (!bcmpmu_accy) {
 		pr_accy(ERROR,"%s: BCMPMU Accy driver is not initialized\n", __func__);
 		return -EAGAIN;

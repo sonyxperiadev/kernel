@@ -136,7 +136,7 @@ store_rgltr(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 static ssize_t store_regbulk(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	int i;
 	struct bcmpmu *bcmpmu = dev->platform_data;

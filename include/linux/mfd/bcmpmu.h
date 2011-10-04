@@ -574,6 +574,14 @@ struct bcmpmu_temp_map {
 	int temp;
 };
 
+struct bcmpmu_charge_zone {
+	int tl;
+	int th;
+	int v;
+	int fc;
+	int qc;
+};
+
 struct bcmpmu_adc_cal {
 	unsigned int gain;
 	unsigned int offset;
@@ -802,6 +810,8 @@ struct bcmpmu_platform_data {
 	int fg_smpl_rate;
 	int fg_slp_rate;
 	int fg_slp_curr_ua;
+	int chrg_1c_rate;
+	struct bcmpmu_charge_zone *chrg_zone_map;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
