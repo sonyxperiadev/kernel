@@ -66,7 +66,7 @@ extern "C" {
 typedef enum
 {
     CSL_CAPH_SSP_NONE,
-    CSL_CAPH_SSP_3,
+    CSL_CAPH_SSP_3 = 3,
     CSL_CAPH_SSP_4,
 }CSL_CAPH_SSP_e;
 
