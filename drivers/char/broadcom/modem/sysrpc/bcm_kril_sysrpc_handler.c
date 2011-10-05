@@ -103,7 +103,7 @@ void KRIL_SysRpc_Init( void )
 
     if ( !inited )
     {
-        UInt16 battLvl;        
+//      UInt16 battLvl;        
         HAL_EM_BATTMGR_ErrorCode_en_t errCode;
 
         // make sure we can't be re-initialized...
@@ -141,7 +141,7 @@ void KRIL_SysRpc_OpenRegulator(PMU_SIMLDO_t ldo)
 	curReg->handle = regulator_get(NULL,curReg->devName);
 	if (IS_ERR(curReg->handle))
 	{
-		KRIL_DEBUG(DBG_ERROR," **regulator_get (dev=%s) FAILED h=%x\n", curReg->devName, curReg->handle);
+		KRIL_DEBUG(DBG_ERROR," **regulator_get (dev=%s) FAILED h=%p\n", curReg->devName, curReg->handle);
 	}
 	else
 	{
@@ -149,7 +149,7 @@ void KRIL_SysRpc_OpenRegulator(PMU_SIMLDO_t ldo)
 		// just bumps up our ref count in the sim_regulator struct, so that the 
 		// regulator_disable() call below doesn't fail
 	    ret = regulator_enable(curReg->handle);
-		KRIL_DEBUG(DBG_ERROR," **regulator_get (dev=%s) PASS handle=%x ret=%d\n", curReg->devName, curReg->handle, ret);
+		KRIL_DEBUG(DBG_ERROR," **regulator_get (dev=%s) PASS handle=%p ret=%d\n", curReg->devName, curReg->handle, ret);
 	}
 }
 
@@ -168,7 +168,7 @@ void KRIL_SysRpc_SendFFSControlRsp( UInt32 inTid, UInt8 inClientId, UInt32 inFFS
     SYS_ReqRep_t data;
     RPC_Msg_t rsp;
 
-    KRIL_DEBUG(DBG_INFO, "KRIL_SysRpc_SendFFSControlRsp: result 0x%x\r\n", inFFSCtrlResult );
+    KRIL_DEBUG(DBG_INFO, "KRIL_SysRpc_SendFFSControlRsp: result 0x%x\r\n", (int) inFFSCtrlResult );
     memset(&data, 0, sizeof(SYS_ReqRep_t));
     data.req_rep_u.CAPI2_CPPS_Control_Rsp.val = inFFSCtrlResult;
     data.result = RESULT_OK;
@@ -376,7 +376,7 @@ Result_t Handle_CAPI2_CPPS_Control(RPC_Msg_t* pReqMsg, UInt32 cmd, UInt32 addres
 
         default:
         {
-            KRIL_DEBUG(DBG_ERROR,"FFS_CONTROL_UNKNOWN_CMD=> cmd value (0x%x) \n",cmd);
+            KRIL_DEBUG(DBG_ERROR,"FFS_CONTROL_UNKNOWN_CMD=> cmd value (0x%x) \n",(int)cmd);
             ffsctrlResult = FFS_CONTROL_UNKNOWN_CMD;
             goto Exit_No_Close;
         }
@@ -419,7 +419,7 @@ Result_t Handle_CAPI2_PMU_IsSIMReady(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo)
     
 	if(!IS_ERR(curReg->handle))
 	{
-		KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_IsSIMReady ldo=%d handle=%x\n\n", simldo, curReg->handle);
+		KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_IsSIMReady ldo=%d handle=%p\n\n", simldo, curReg->handle);
 		ret = regulator_is_enabled(curReg->handle);
 		KRIL_DEBUG(DBG_ERROR," regulator_is_enabled return %d\n", ret);
 	}
@@ -446,12 +446,12 @@ Result_t Handle_CAPI2_PMU_ActivateSIM(RPC_Msg_t* pReqMsg, PMU_SIMLDO_t simldo, P
 
 	if(IS_ERR(curReg->handle))
 	{
-		KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_ActivateSIM Invalid Handle ldo=%d handle=%x active=%d\n", simldo, curReg->handle, curReg->isSimInit);
+		KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_ActivateSIM Invalid Handle ldo=%d handle=%p active=%d\n", simldo, curReg->handle, curReg->isSimInit);
 		Send_SYS_RspForRequest(pReqMsg, MSG_PMU_ACTIVATE_SIM_RSP, &data);
 	    return result;
 	}
     
-    KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_ActivateSIM ldo=%d handle=%x active=%d\n", simldo, curReg->handle, curReg->isSimInit);
+    KRIL_DEBUG(DBG_ERROR," enter Handle_CAPI2_PMU_ActivateSIM ldo=%d handle=%p active=%d\n", simldo, curReg->handle, curReg->isSimInit);
     
     switch (volt)
     {
