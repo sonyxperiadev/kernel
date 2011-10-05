@@ -188,6 +188,10 @@ struct mmc_card {
 #define MMC_QUIRK_DISABLE_CD	(1<<5)		/* disconnect CD/DAT[3] resistor */
 #define MMC_QUIRK_INAND_CMD38	(1<<6)		/* iNAND devices have broken CMD38 */
 #define MMC_QUIRK_BLK_NO_CMD23	(1<<7)		/* Avoid CMD23 for regular multiblock */
+#define MMC_QUIRK_BLK_DISABLE_CMD23 (1<<8)  /* completely disable CMD23. MMC_QUIRK_BLK_NO_CMD23 
+                                             * still allows CMD23 for reliable writes.
+                                             */
+
 
 	unsigned int		erase_size;	/* erase size in sectors */
  	unsigned int		erase_shift;	/* if erase unit is power 2 */

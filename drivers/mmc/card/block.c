@@ -780,7 +780,8 @@ static int mmc_blk_issue_rw_rq(struct mmc_queue *mq, struct request *req)
 
 		if ((md->flags & MMC_BLK_CMD23) &&
 		    mmc_op_multi(brq.cmd.opcode) &&
-		    (do_rel_wr || !(card->quirks & MMC_QUIRK_BLK_NO_CMD23))) {
+		    (do_rel_wr || !(card->quirks & MMC_QUIRK_BLK_NO_CMD23)) &&
+		    (!(card->quirks & MMC_QUIRK_BLK_DISABLE_CMD23))) {
 			brq.sbc.opcode = MMC_SET_BLOCK_COUNT;
 			brq.sbc.arg = brq.data.blocks |
 				(do_rel_wr ? (1 << 31) : 0);
@@ -1266,8 +1267,12 @@ static const struct mmc_fixup blk_fixups[] =
 	 */
 	MMC_FIXUP("MMC08G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
+	/* 
+	 * CMD23 does not work on this Thoshiba eMMC card at all. 
+	 * We disable it even for reliable writes. 
+	 */
 	MMC_FIXUP("MMC16G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
-		  MMC_QUIRK_BLK_NO_CMD23),
+		  MMC_QUIRK_BLK_NO_CMD23 | MMC_QUIRK_BLK_DISABLE_CMD23),
 	MMC_FIXUP("MMC32G", 0x11, CID_OEMID_ANY, add_quirk_mmc,
 		  MMC_QUIRK_BLK_NO_CMD23),
 	END_FIXUP
