@@ -795,16 +795,26 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
     int div = 2;
 #if UPDATE_LPJ
 	u64 lpj;
+#ifdef CONFIG_SMP
 	static unsigned long lpj_ref0 = 0;
 	static unsigned long lpj_freq_ref0 = 0;
 
-	if(lpj_ref0 == 0)
+	if (lpj_ref0 == 0)
 	{
 		lpj_ref0 =  per_cpu(cpu_data, 0).loops_per_jiffy;
 		lpj_freq_ref0 = arm_clk_get_rate(clk)/1000;
 	}
-
 	pr_info("%s:lpj_ref0 = %ld lpj_freq_ref0 = %ld \n", __func__, lpj_ref0, lpj_freq_ref0);
+#else
+	static unsigned long lpj_ref = 0;
+	static unsigned long lpj_freq_ref = 0;
+
+	if (lpj_ref == 0)
+		{
+			lpj_ref = loops_per_jiffy;
+			lpj_freq_ref = arm_clk_get_rate(clk)/1000;
+		}
+#endif
 #endif
 
 
@@ -838,14 +848,18 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
 	/*Update lpj*/
 #if UPDATE_LPJ
  	/*new_lpj =  lpj_ref*new_freq/ref_freq*/
-	
+#ifdef CONFIG_SMP
 	lpj = ((u64) lpj_ref0) * ((u64) arm_clk_get_rate(clk)/1000);
 	do_div(lpj, lpj_freq_ref0);
 	per_cpu(cpu_data, 0).loops_per_jiffy = (unsigned long)lpj;
 	per_cpu(cpu_data, 1).loops_per_jiffy = (unsigned long)lpj;
-	pr_info("%s:new lpj ( = %llu\n",__func__,lpj);
-
-	
+	pr_info("%s:new lpj ( = %llu\n", __func__ , lpj);
+#else
+	lpj = ((u64) lpj_ref) * ((u64) arm_clk_get_rate(clk)/1000);
+	do_div(lpj, lpj_freq_ref);
+	loops_per_jiffy = (unsigned long)lpj;
+	pr_info("%s:new lpj = %llu\n", __func__ , lpj);
+#endif
 #endif
     clk_dbg("ARM clock set rate done \n");
 
