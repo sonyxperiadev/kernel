@@ -763,7 +763,7 @@ int __init v3d_init(void)
 
 	/* Request the V3D IRQ */
 	ret = request_irq(IRQ_GRAPHICS, v3d_isr,
-			IRQF_ONESHOT | IRQF_DISABLED | IRQF_TRIGGER_RISING, V3D_DEV_NAME, NULL);
+			IRQF_ONESHOT | IRQF_DISABLED | IRQF_TRIGGER_HIGH, V3D_DEV_NAME, NULL);
 	if (ret){
 		err_print("request_irq failed ret = %d\n", ret);
 		goto err2;
