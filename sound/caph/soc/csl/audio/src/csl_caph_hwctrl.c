@@ -83,6 +83,8 @@ extern CHAL_HANDLE lp_handle;
 //****************************************************************************
 // local macro declarations
 //****************************************************************************
+#define SSP3_FOR_FM //use SSP3 for FM, SSP4 for BT
+
 #define PATH_OCCUPIED   1
 #define PATH_AVAILABLE  0
 #define DATA_PACKED	1
@@ -1680,7 +1682,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
     if (enable == TRUE && sCurEnabled == FALSE)
     {
         sCurEnabled = TRUE;
-#if !(defined(_SAMOA_))
+
         //Enable CAPH clock.
         clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
 #ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
@@ -1720,7 +1722,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
         clk_enable(clkID[5]);
         //clk_set_rate(clkID[5], 156000000);
 #endif
-#endif // !defined(_SAMOA_)
+
     }
     else if (enable == FALSE && sCurEnabled == TRUE)
     {
@@ -2594,10 +2596,21 @@ void csl_caph_hwctrl_init(void)
     csl_caph_cfifo_init(addr.cfifo_baseAddr);
     csl_caph_dma_init(addr.aadmac_baseAddr, (UInt32)caph_intc_handle);
 
+#if defined(SSP3_FOR_FM)
+	fmTxTrigger = CSL_CAPH_TRIG_SSP3_TX0; 
+	fmRxTrigger = CSL_CAPH_TRIG_SSP3_RX0; 
+	pcmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0;
+	pcmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0;
+	sspidPcmUse = CSL_CAPH_SSP_4;
+
+    fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp3_baseAddr);
+    pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr.ssp4_baseAddr, (UInt32)caph_intc_handle);
+#else
     // Initialize SSP4 port for FM.
     fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr.ssp4_baseAddr);
     // Initialize SSP3 port for PCM.
     pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr.ssp3_baseAddr, (UInt32)caph_intc_handle);
+#endif
 #endif    
     csl_caph_srcmixer_init(addr.srcmixer_baseAddr, (UInt32)caph_intc_handle);
     csl_caph_audioh_init(addr.audioh_baseAddr, addr.sdt_baseAddr);
@@ -4656,4 +4669,51 @@ CSL_CAPH_DEVICE_e csl_caph_hwctrl_obtainMixerOutChannelSink(void)
 	}
 	return mixer_sink;
 }
-    
+
+/****************************************************************************
+*
+*  Function Name: void csl_caph_hwctrl_ConfigSSP
+*
+*  Description: Configure fm/pcm port
+*
+****************************************************************************/
+void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus)
+{
+	CSL_CAPH_SSP_e ssp_port;
+	UInt32 addr;
+	CSL_CAPH_SWITCH_TRIGGER_e tx_trigger, rx_trigger;
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_ConfigSSP:: port %d, bus %d, fmHandleSSP %p, pcmHandleSSP %p.\r\n", port, bus, fmHandleSSP, pcmHandleSSP));
+
+	if(port==CSL_SSP_3) 
+	{
+		ssp_port = CSL_CAPH_SSP_3;
+		addr = SSP3_BASE_ADDR1;
+		rx_trigger = CSL_CAPH_TRIG_SSP3_RX0;
+		tx_trigger = CSL_CAPH_TRIG_SSP3_TX0;
+	} else if(port==CSL_SSP_4) {
+		ssp_port = CSL_CAPH_SSP_4;
+		addr = SSP4_BASE_ADDR1;
+		rx_trigger = CSL_CAPH_TRIG_SSP4_RX0;
+		tx_trigger = CSL_CAPH_TRIG_SSP4_TX0;
+	} else {
+		return;
+	}
+
+	if(bus==CSL_SSP_I2S) 
+	{
+		if (fmHandleSSP && fmHandleSSP != pcmHandleSSP) csl_i2s_deinit(fmHandleSSP); //deinit only if other bus is not using the same port
+		fmTxTrigger = tx_trigger;
+		fmRxTrigger = rx_trigger;
+		fmHandleSSP = (CSL_HANDLE)csl_i2s_init(addr);
+	} else if(bus==CSL_SSP_PCM) {
+		if (pcmHandleSSP && fmHandleSSP != pcmHandleSSP) csl_pcm_deinit(pcmHandleSSP);
+		pcmTxTrigger = tx_trigger;
+		pcmRxTrigger = rx_trigger;
+		if(port==CSL_SSP_3) sspidPcmUse = CSL_CAPH_SSP_3;
+		else sspidPcmUse = CSL_CAPH_SSP_4;
+		pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr, (UInt32)caph_intc_handle);
+	}
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_ConfigSSP:: new fmHandleSSP %p, pcmHandleSSP %p.\r\n", fmHandleSSP, pcmHandleSSP));
+}
+

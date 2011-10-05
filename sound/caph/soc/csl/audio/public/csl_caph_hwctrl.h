@@ -211,6 +211,17 @@ typedef struct
     CSL_CAPH_PathID pathID[MAX_AUDIO_PATH];
 }CSL_CAPH_HWResource_Table_t;
 
+typedef enum
+{
+	CSL_SSP_4 = 1,
+	CSL_SSP_3
+} CSL_SSP_PORT_e;
+
+typedef enum
+{
+	CSL_SSP_PCM,
+	CSL_SSP_I2S
+} CSL_SSP_BUS_e;
 
 /**
 *
@@ -588,8 +599,8 @@ void csl_caph_hwctrl_SetBTMode(Boolean mode);
 *
 ****************************************************************************/
 void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId);
-
 #endif
 
+void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus);
 #endif // _CSL_CAPH_HWCTRL_
 

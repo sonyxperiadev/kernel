@@ -716,6 +716,13 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->value.integer.max = 3;
 			uinfo->value.integer.step = 1; 
 			break;
+		case CTL_FUNCTION_CFG_SSP:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 2;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 2;
+			uinfo->value.integer.step = 1; 
+			break;
 			
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
@@ -782,7 +789,9 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_CFG_IHF:
 			ucontrol->value.integer.value[0] = pChip->pi32CfgIHF[0];
 			ucontrol->value.integer.value[1] = pChip->pi32CfgIHF[1];			
-
+		case CTL_FUNCTION_CFG_SSP:
+			ucontrol->value.integer.value[0] = pChip->i32CfgSSP[0];
+			ucontrol->value.integer.value[1] = pChip->i32CfgSSP[1];
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -858,9 +867,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 					//call audio driver to mute
 					parm_mute.device =  pSel[0];
 					parm_mute.mute1 = pChip->iMutePhoneCall[0];
-					AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
-												parm_mute.device,
-												parm_mute.mute1);
+					AUDIO_Ctrl_Trigger(ACTION_AUD_MuteTelephony,&parm_mute,NULL,0);
 				}
 			}
 			break;
@@ -994,6 +1001,11 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 			{
 				BCM_AUDIO_DEBUG("%s, Invalid value for setting IHF mode: %d, 1-mono, 2-stereo.", __FUNCTION__, ucontrol->value.integer.value[0]);
 			}
+			break;
+		case CTL_FUNCTION_CFG_SSP:
+			pChip->i32CfgSSP[0] = ucontrol->value.integer.value[0];
+			pChip->i32CfgSSP[1] = ucontrol->value.integer.value[1];
+			AUDCTRL_ConfigSSP(pChip->i32CfgSSP[0], pChip->i32CfgSSP[1]);
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -1188,6 +1200,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 #define	MAX_CTL_NUMS	130
 #define	MAX_CTL_NAME_LENGTH	44
 static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __initdata; // MAX_CTL_NAME_LENGTH]; 
+static Int32 sgCaphSpeechMixCtrls[CAPH_MAX_PCM_STREAMS] __initdata = {1,1,0,3,3,0,0,1};
 
 //*****************************************************************
 // Functiona Name: ControlDeviceNew
@@ -1205,6 +1218,9 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		
 	strcpy(card->mixername, "Broadcom CAPH Mixer");
 	memcpy(pChip->streamCtl, &sgCaphStreamCtls, sizeof(sgCaphStreamCtls));
+
+	//setting the default mixer selection for speech mixing
+	memcpy(pChip->pi32SpeechMixOption, &sgCaphSpeechMixCtrls,sizeof(sgCaphSpeechMixCtrls));
 
 	for (idx = 0; idx < ARRAY_SIZE(sgCaphStreamCtls); idx++)
 	{
@@ -1291,7 +1307,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   struct snd_kcontrol_new ctlBypassVibra = BRCM_MIXER_CTRL_MISC(0, 0, "BYP-VIB", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BYPASS_VIBRA) );
 	   struct snd_kcontrol_new ctlBTTest = BRCM_MIXER_CTRL_MISC(0, 0, "BT-TST", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BT_TEST) );
 	   struct snd_kcontrol_new ctlCfgIHF = BRCM_MIXER_CTRL_MISC(0, 0, "CFG-IHF", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_IHF) );
-
+	   struct snd_kcontrol_new ctlCfgSSP = BRCM_MIXER_CTRL_MISC(0, 0, "SSP", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_SSP) );
 			   
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlLoopTest, pChip))) < 0)
 	   {
@@ -1375,6 +1391,11 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		   return err;
 	   }
 
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlCfgSSP, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", ctlCfgSSP.name, err);
+		   return err;
+	   }
    }
 
 	CAPH_ASSERT(nIndex<MAX_CTL_NUMS);

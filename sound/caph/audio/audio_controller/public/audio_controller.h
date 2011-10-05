@@ -150,6 +150,18 @@ typedef struct
 	AUDIO_SAMPLING_RATE_t	sr;
 } AUDCTRL_Config_t;
 
+typedef enum
+{
+	AUDCTRL_SSP_4 = 1, //SSPI1 --- ASIC SSPI4, SSPI2 --- ASIC SSPI3
+	AUDCTRL_SSP_3
+} AUDCTRL_SSP_PORT_e;
+
+typedef enum
+{
+	AUDCTRL_SSP_PCM,
+	AUDCTRL_SSP_I2S
+} AUDCTRL_SSP_BUS_e;
+
 /**
 *  @brief  This function is the Init entry point for Audio Controller 
 *
@@ -280,7 +292,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
 void AUDCTRL_SetTelephonySpkrVolume(
 				AUDIO_HW_ID_t			dlSink,
 				AUDCTRL_SPEAKER_t		speaker,
-				UInt32					volume,
+				Int32					volume,
 				AUDIO_GAIN_FORMAT_t		gain_format
 				);
 
@@ -820,14 +832,14 @@ void AUDCTRL_SetArm2spParam( UInt32 mixMode, UInt32 instanceId );
 /********************************************************************
 *  @brief  Configure fm/pcm port
 *
-*  @param  fm_port  fm port number
+*  @param  port  SSP port number
 *
-*  @param  pcm_port  pcm port number
+*  @param  bus   protocol (I2S or PCM)
 *
 *  @return none
 *
 ****************************************************************************/
-void AUDCTRL_ConfigSSP(UInt8 fm_port, UInt8 pcm_port);
+void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus);
 
 /********************************************************************
 *  @brief  Control ssp tdm mode

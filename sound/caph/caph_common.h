@@ -134,6 +134,7 @@ typedef struct brcm_alsa_chip
     Int32   iEnableFM;                  //Enable/disable FM radio receiving
 	Int32	iEnableBTTest;				//Enable/disable BT production test
 	Int32	pi32CfgIHF[2];	//integer[0] -- 1 for mono, 2 for stereo; integer[1] -- data mixing option if channel is mono,  1 for left, 2 for right, 3 for (L+R)/2
+	Int32	i32CfgSSP[2];	//integer[0] -- SSP port, 3 fo SSP3, 4 SSP4; integer[1] -- 0 for PCM, 1 I2S.
  } brcm_alsa_chip_t;
 
 
@@ -170,6 +171,7 @@ enum	CTL_FUNCTION_t
 	CTL_FUNCTION_AT_AUDIO,
 	CTL_FUNCTION_BYPASS_VIBRA,
 	CTL_FUNCTION_BT_TEST,
+	CTL_FUNCTION_CFG_SSP,
 	CTL_FUNCTION_CFG_IHF
 };
 
@@ -227,6 +229,8 @@ enum {
   VoIP_Ioctl_GetSource = _IOR('H', 0x16, int),
   VoIP_Ioctl_GetSink = _IOR('H', 0x17, int),
   VoIP_Ioctl_GetCodecType = _IOR('H', 0x18, int),
+  VoIP_Ioctl_SetMode = _IOW('H', 0x19, int),
+  VoIP_Ioctl_GetMode = _IOR('H', 0x1A, int),
  }; 
 
 
