@@ -2116,6 +2116,24 @@ void AUDCTRL_SetArm2spParam( UInt32 mixMode, UInt32 instanceId )
 
 //============================================================================
 //
+// Function Name: AUDCTRL_ConfigSSP
+//
+// Description:   Set FM/PCM SSP protocol, and port number
+// 
+//============================================================================
+void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus)
+{
+	CSL_SSP_PORT_e csl_port = CSL_SSP_3;
+	CSL_SSP_BUS_e csl_bus = CSL_SSP_PCM;
+
+	if(port==AUDCTRL_SSP_4) csl_port = CSL_SSP_4;
+	if(bus==AUDCTRL_SSP_I2S) csl_bus = CSL_SSP_I2S;
+	
+	csl_caph_hwctrl_ConfigSSP(csl_port, csl_bus);
+}
+
+//============================================================================
+//
 // Function Name: AUDCTRL_SetSspTdmMode
 //
 // Description:   Control SSP TDM feature

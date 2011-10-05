@@ -1502,7 +1502,7 @@ void csl_caph_intc_enable_pcm_intr(CSL_CAPH_ARM_DSP_e csl_owner, CSL_CAPH_SSP_e 
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_enable_pcm_intr:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_intc_enable_pcm_intr:: owner %d, ssp %d.\n", csl_owner, csl_sspid);
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
