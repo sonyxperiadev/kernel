@@ -109,7 +109,7 @@ static const char *ioctl_names[] =
    "RELEASE_SERIVCE"
 };
 
-VCOS_LOG_LEVEL_T vchiq_default_arm_log_level = VCOS_LOG_WARN;
+VCOS_LOG_LEVEL_T vchiq_default_arm_log_level = VCOS_LOG_ERROR;
 
 /****************************************************************************
 *
