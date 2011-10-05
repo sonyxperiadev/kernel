@@ -472,15 +472,11 @@ void AUDCTRL_DisableTelephony(
 void AUDCTRL_SetTelephonySpkrVolume(
 				AUDIO_HW_ID_t			dlSink,
 				AUDCTRL_SPEAKER_t		speaker,
-				UInt32					volume,
+				Int32					volume,
 				AUDIO_GAIN_FORMAT_t		gain_format
 				)
 {
-//	Int16 dspDLGain = 0;
 	int pmuGain = 0;
-//	Int16	volume_max = 0;
-//	CSL_CAPH_PathID pathID = 0;
-
 	pmuGain = AUDIO_GetParmAccessPtr()[AUDDRV_GetAudioMode()].ext_speaker_pga_l;
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetTelephonySpkrVolume: volume = %d, PMU audio gain = 0x%x\n", volume, pmuGain );
 

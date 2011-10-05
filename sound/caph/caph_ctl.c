@@ -858,9 +858,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 					//call audio driver to mute
 					parm_mute.device =  pSel[0];
 					parm_mute.mute1 = pChip->iMutePhoneCall[0];
-					AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
-												parm_mute.device,
-												parm_mute.mute1);
+					AUDIO_Ctrl_Trigger(ACTION_AUD_MuteTelephony,&parm_mute,NULL,0);
 				}
 			}
 			break;
@@ -1188,6 +1186,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 #define	MAX_CTL_NUMS	130
 #define	MAX_CTL_NAME_LENGTH	44
 static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __initdata; // MAX_CTL_NAME_LENGTH]; 
+static Int32 sgCaphSpeechMixCtrls[CAPH_MAX_PCM_STREAMS] __initdata = {1,1,0,3,3,0,0,1};
 
 //*****************************************************************
 // Functiona Name: ControlDeviceNew
@@ -1205,6 +1204,9 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		
 	strcpy(card->mixername, "Broadcom CAPH Mixer");
 	memcpy(pChip->streamCtl, &sgCaphStreamCtls, sizeof(sgCaphStreamCtls));
+
+	//setting the default mixer selection for speech mixing
+	memcpy(pChip->pi32SpeechMixOption, &sgCaphSpeechMixCtrls,sizeof(sgCaphSpeechMixCtrls));
 
 	for (idx = 0; idx < ARRAY_SIZE(sgCaphStreamCtls); idx++)
 	{
