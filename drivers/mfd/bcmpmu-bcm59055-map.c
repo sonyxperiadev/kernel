@@ -154,7 +154,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_ADP_SNS_COMP] =	{.map = 0, .addr = 0x7B, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_ADP_SNS_AON] =		{.map = 0, .addr = 0x7B, .mask = 0x04, .ro = 0, .shift = 2},
 	/* usb status */
-	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0xE3, .mask = 0x34, .ro = 0, .shift = 3},
+	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0xE3, .mask = 0x38, .ro = 0, .shift = 3},
 	[PMU_REG_OTG_STATUS_VBUS] =		{.map = 0, .addr = 0xE3, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_STATUS_SESS] =		{.map = 0, .addr = 0xE3, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_OTG_STATUS_SESS_END] =		{.map = 0, .addr = 0xE3, .mask = 0x04, .ro = 0, .shift = 2},

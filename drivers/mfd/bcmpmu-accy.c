@@ -900,11 +900,11 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 	paccy->adp_block_enabled = 0;
 	paccy->adp_prob_comp = 0;
 	paccy->adp_sns_comp = 0;
-	
+
 	INIT_DELAYED_WORK(&paccy->adp_work, usb_adp_work);
 	INIT_DELAYED_WORK(&paccy->det_work, usb_det_work);
 	wake_lock_init(&paccy->wake_lock, WAKE_LOCK_SUSPEND, "usb_accy");
-	for (i = 0; i <= BCMPMU_EVENT_MAX; i++) {
+	for (i = 0; i < BCMPMU_EVENT_MAX; i++) {
 		paccy->event[i].event_id = i;
 		BLOCKING_INIT_NOTIFIER_HEAD(&paccy->event[i].notifiers);
 	}
