@@ -213,8 +213,8 @@ typedef struct
 
 typedef enum
 {
-	CSL_SSP_3 = 3,
-	CSL_SSP_4
+	CSL_SSP_4 = 1,
+	CSL_SSP_3
 } CSL_SSP_PORT_e;
 
 typedef enum

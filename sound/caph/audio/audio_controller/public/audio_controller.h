@@ -152,8 +152,8 @@ typedef struct
 
 typedef enum
 {
-	AUDCTRL_SSP_3 = 3,
-	AUDCTRL_SSP_4
+	AUDCTRL_SSP_4 = 1, //SSPI1 --- ASIC SSPI4, SSPI2 --- ASIC SSPI3
+	AUDCTRL_SSP_3
 } AUDCTRL_SSP_PORT_e;
 
 typedef enum
