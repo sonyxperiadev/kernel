@@ -2123,11 +2123,16 @@ void AUDCTRL_SetArm2spParam( UInt32 mixMode, UInt32 instanceId )
 //============================================================================
 void AUDCTRL_ConfigSSP(AUDCTRL_SSP_PORT_e port, AUDCTRL_SSP_BUS_e bus)
 {
-	CSL_SSP_PORT_e csl_port = CSL_SSP_3;
-	CSL_SSP_BUS_e csl_bus = CSL_SSP_PCM;
+	CSL_SSP_PORT_e csl_port;
+	CSL_SSP_BUS_e csl_bus;
 
 	if(port==AUDCTRL_SSP_4) csl_port = CSL_SSP_4;
+	else if(port==AUDCTRL_SSP_3) csl_port = CSL_SSP_3;
+	else return;
+
 	if(bus==AUDCTRL_SSP_I2S) csl_bus = CSL_SSP_I2S;
+	else if(bus==AUDCTRL_SSP_PCM) csl_bus = CSL_SSP_PCM;
+	else return;
 	
 	csl_caph_hwctrl_ConfigSSP(csl_port, csl_bus);
 }

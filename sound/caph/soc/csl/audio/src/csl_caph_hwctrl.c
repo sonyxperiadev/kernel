@@ -83,7 +83,7 @@ extern CHAL_HANDLE lp_handle;
 //****************************************************************************
 // local macro declarations
 //****************************************************************************
-//#define SSP3_FOR_FM //bye default SSP4 is for FM, SSP3 for BT
+#define SSP3_FOR_FM //use SSP3 for FM, SSP4 for BT
 
 #define PATH_OCCUPIED   1
 #define PATH_AVAILABLE  0

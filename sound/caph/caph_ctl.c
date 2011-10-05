@@ -720,7 +720,7 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 2;
 			uinfo->value.integer.min = 0;
-			uinfo->value.integer.max = 4;
+			uinfo->value.integer.max = 2;
 			uinfo->value.integer.step = 1; 
 			break;
 			
