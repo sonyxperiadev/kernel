@@ -896,6 +896,7 @@ config ARCH_KONA
 	select ARM_ERRATA_743622
 	select ARM_ERRATA_751472 if SMP
 	select ARM_ERRATA_754322
+	select ARM_ERRATA_764369 if SMP
 	help
 	  This enables support for system based on Broadcom KONA architecture
  
@@ -1287,6 +1288,20 @@ config ARM_ERRATA_754322
 	  can populate the micro-TLB with a stale entry which may be hit with
 	  the new ASID. This workaround places two dsb instructions in the mm
 	  switching code so that no page table walks can cross the ASID switch.
+
+config ARM_ERRATA_764369
+	bool "ARM errata: Data cache line maintenance operation by MVA may not succeed"
+	depends on CPU_V7 && SMP
+	help
+	  This option enables the workaround for erratum 764369
+	  affecting Cortex-A9 MPCore with two or more processors (all
+	  current revisions). Under certain timing circumstances, a data
+	  cache line maintenance operation by MVA targeting an Inner
+	  Shareable memory region may fail to proceed up to either the
+	  Point of Coherency or to the Point of Unification of the
+	  system. This workaround adds a DSB instruction before the
+	  relevant cache maintenance functions and sets a specific bit
+	  in the diagnostic control register of the SCU.
 
 endmenu
 
