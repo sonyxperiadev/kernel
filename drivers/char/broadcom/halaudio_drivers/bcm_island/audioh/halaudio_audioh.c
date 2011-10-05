@@ -2939,6 +2939,8 @@ static int audiohPrepare( void )
    /* Forced power up */
    audiohAnaPowerDown(0);
 
+   atomic_set( &gAudioh.prepared, 1 );
+
    /* Engage microphone analog gains and muxes after power is enabled */
    ch = gAudioh.ch;
    for ( i = 0; i < AUDIOH_MAX_NUM_CHANS; i++, ch++ )
@@ -2953,8 +2955,6 @@ static int audiohPrepare( void )
          audiohDigGainSet( i, ch->dig_gain, HALAUDIO_DIR_DAC );
       }
    }
-
-   atomic_set( &gAudioh.prepared, 1 );
 
    return 0;
 
