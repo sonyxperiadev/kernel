@@ -154,7 +154,7 @@ static const struct bcmpmu_reg_map bcm59055_reg_map[PMU_REG_MAX] = {//revisit
 	[PMU_REG_ADP_SNS_COMP] =	{.map = 0, .addr = 0x7B, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_ADP_SNS_AON] =		{.map = 0, .addr = 0x7B, .mask = 0x04, .ro = 0, .shift = 2},
 	/* usb status */
-	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0xE3, .mask = 0x34, .ro = 0, .shift = 3},
+	[PMU_REG_USB_STATUS_ID_CODE] = 		{.map = 0, .addr = 0xE3, .mask = 0x38, .ro = 0, .shift = 3},
 	[PMU_REG_OTG_STATUS_VBUS] =		{.map = 0, .addr = 0xE3, .mask = 0x01, .ro = 0, .shift = 0},
 	[PMU_REG_OTG_STATUS_SESS] =		{.map = 0, .addr = 0xE3, .mask = 0x02, .ro = 0, .shift = 1},
 	[PMU_REG_OTG_STATUS_SESS_END] =		{.map = 0, .addr = 0xE3, .mask = 0x04, .ro = 0, .shift = 2},
@@ -263,7 +263,7 @@ static const struct bcmpmu_adc_map bcm59055_adc_map[PMU_ADC_MAX] = {//revisit
 	[PMU_ADC_32KTEMP] =		{.map = 0, .addr0 = 0x93, .addr1 = 0x92, .dmask = 0x3FF, .vmask = 0x0400, .rtmsel = 0x08, .vrng = 4800},
 	[PMU_ADC_RTM] =			{.map = 0, .addr0 = 0x99, .addr1 = 0x98, .dmask = 0x3FF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
 	[PMU_ADC_FG_CURRSMPL] =		{.map = 1, .addr0 = 0xD1, .addr1 = 0xD0, .dmask = 0xFFFF, .vmask = 0x0000, .rtmsel = 0x00, .vrng = 0000},
-	[PMU_ADC_FG_VMBATT] =		{.map = 0, .addr0 = 0x83, .addr1 = 0x82, .dmask = 0x03FF, .vmask = 0x0400, .rtmsel = 0x00, .vrng = 4800},
+	[PMU_ADC_FG_VMBATT] =		{.map = 1, .addr0 = 0xD7, .addr1 = 0xD6, .dmask = 0x03FF, .vmask = 0x0400, .rtmsel = 0x00, .vrng = 4800},
 };
 
 static const struct bcmpmu_reg_map bcm59055_adc_ctrl_map[PMU_ADC_CTRL_MAX] = {//revisit
