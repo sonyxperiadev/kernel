@@ -149,7 +149,7 @@ typedef struct
 
 mRingBuffer_t gLogBuffer={0};
 
-void InitRingBuffer()
+void InitRingBuffer(void)
 {
 	static int first_time = 1;
 	if(first_time)
@@ -259,7 +259,7 @@ ssize_t kRpcReadLogData(char *destBuf, size_t len)
 	return ret;
 }
 
-int RpcLog_DetailLogEnabled()
+int RpcLog_DetailLogEnabled(void)
 {
 	return 0;
 }

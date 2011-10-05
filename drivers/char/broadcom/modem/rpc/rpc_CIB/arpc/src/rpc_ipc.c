@@ -39,10 +39,7 @@
 
 //******************************************************************************
 //	 			Global defines
-//******************************************************************************
-
-
-
+//***************************************************************************
 
 /**
 	RPC IPC Data structure. Array of Interfaces.
@@ -67,9 +64,9 @@ typedef struct
 	IPC_EndpointId_T	destEpId;
 }RPC_IPCBufInfo_t;
 
-static RPC_IPCInfo_t		ipcInfoList[INTERFACE_TOTAL]={0};
+static RPC_IPCInfo_t		ipcInfoList[INTERFACE_TOTAL]={{0}};
 
-static RPC_IPCBufInfo_t		ipcBufList[INTERFACE_TOTAL]={0};
+static RPC_IPCBufInfo_t		ipcBufList[INTERFACE_TOTAL]={{{0}}};
 
 static RpcProcessorType_t gRpcProcType;
 
@@ -214,7 +211,7 @@ static void RPC_CreateBufferPool(PACKET_InterfaceType_t type, int channel_index)
 
 	_DBG_(RPC_TRACE("RPC_CreateBufferPool(%c) type:%d, index:%d, pool:%x\r\n", (gRpcProcType == RPC_COMMS)?'C':'A', type, channel_index, ipcInfoList[type].ipc_buf_pool[channel_index]));
 	
-	xassert(ipcInfoList[type].ipc_buf_pool[channel_index] != NULL, val);
+	xassert((void*)(ipcInfoList[type].ipc_buf_pool[channel_index]) != NULL, val);
 	
 	ipcInfoList[type].ipc_buf_id[channel_index] = channel_index+1;
 }
@@ -463,8 +460,8 @@ static void RPC_FlowCntrl(IPC_BufferPool Pool, IPC_FlowCtrlEvent_T Event)
     {
         pool_index = rpcGetPoolIndex((PACKET_InterfaceType_t)type, Pool);
 
-	    if(ipcInfoList[type].flowControlCb != NULL)
-		    ipcInfoList[type].flowControlCb((Event == IPC_FLOW_START)?RPC_FLOW_START:RPC_FLOW_STOP, 
+	    if(ipcInfoList[(int)type].flowControlCb != NULL)
+		    ipcInfoList[(int)type].flowControlCb((Event == IPC_FLOW_START)?RPC_FLOW_START:RPC_FLOW_STOP, 
                                             (UInt8)((pool_index >= 0)?(pool_index+1) : 0));
 		
 		_DBG_(RPC_TRACE("RPC_FlowCntrl(%c) type=%d event=%d\r\n",(gRpcProcType == RPC_COMMS)?'C':'A',type, Event));
@@ -484,16 +481,16 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 	{
 		_DBG_(RPC_TRACE("RPC_BufferDelivery (NEW) h=%d\r\n",(int)bufHandle));
 
-		if(ipcInfoList[type].pktIndCb != NULL)
-			result = ipcInfoList[type].pktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
+		if(ipcInfoList[(int)type].pktIndCb != NULL)
+			result = ipcInfoList[(int)type].pktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
 		else
 			_DBG_(RPC_TRACE("RPC_BufferDelivery(%c) FAIL destIP=%d handle=%x",(gRpcProcType == RPC_COMMS)?'C':'A',destId, bufHandle));
 
 		if(result != RPC_RESULT_PENDING)
 		{
-			if(ipcInfoList[type].filterPktIndCb != NULL)
+			if(ipcInfoList[(int)type].filterPktIndCb != NULL)
 			{
-				result = ipcInfoList[type].filterPktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
+				result = ipcInfoList[(int)type].filterPktIndCb((PACKET_InterfaceType_t)type, (UInt8)pCid[0], (PACKET_BufHandle_t)bufHandle);
 			}
 			else
 				result = RPC_RESULT_ERROR;
@@ -511,7 +508,7 @@ static void RPC_BufferDelivery(IPC_Buffer bufHandle)
 //	 			RPC CMD Callback Implementation
 //******************************************************************************
 
-IPC_BufferPool RPC_InternalGetCmdPoolHandle()
+IPC_BufferPool RPC_InternalGetCmdPoolHandle(void)
 {
 	return 	ipcInfoList[INTERFACE_CAPI2].ipc_buf_pool[0];
 }
@@ -631,8 +628,8 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 		{
 			for(index=0;index < MAX_CHANNELS;index++)
 			{
-				ipcBufList[itype].pkt_size[index]=CFG_RPC_PKTDATA_PKT_SIZE;
-				ipcBufList[itype].max_pkts[index]=(rpcProcType == RPC_COMMS)? CFG_RPC_PKTDATA_MAX_NW2TE_PACKETS: CFG_RPC_PKTDATA_MAX_TE2NW_PACKETS;
+				ipcBufList[itype].pkt_size[(int)index]=CFG_RPC_PKTDATA_PKT_SIZE;
+				ipcBufList[itype].max_pkts[(int)index]=(rpcProcType == RPC_COMMS)? CFG_RPC_PKTDATA_MAX_NW2TE_PACKETS: CFG_RPC_PKTDATA_MAX_TE2NW_PACKETS;
 			}
 			ipcBufList[itype].start_threshold=CFG_RPC_PKT_START_THRESHOLD;
 			ipcBufList[itype].end_threshold=CFG_RPC_PKT_END_THRESHOLD;
@@ -645,8 +642,8 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 		{
 			for(index=0;index < MAX_CHANNELS;index++)
 			{
-				ipcBufList[itype].pkt_size[index]=CFG_RPC_EEMDATA_PKT_SIZE;
-				ipcBufList[itype].max_pkts[index]=CFG_RPC_EEMDATA_MAX_PACKETS;
+				ipcBufList[itype].pkt_size[(int)index]=CFG_RPC_EEMDATA_PKT_SIZE;
+				ipcBufList[itype].max_pkts[(int)index]=CFG_RPC_EEMDATA_MAX_PACKETS;
 			}
 			ipcBufList[itype].start_threshold=CFG_RPC_EEM_START_THRESHOLD;
 			ipcBufList[itype].end_threshold=CFG_RPC_EEM_END_THRESHOLD;
@@ -660,8 +657,8 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 		{
 			for(index=0;index < MAX_CHANNELS;index++)
 			{
-				ipcBufList[itype].pkt_size[index]=CFG_RPC_CSDDATA_PKT_SIZE;
-				ipcBufList[itype].max_pkts[index]=CFG_RPC_CSDDATA_MAX_PACKETS;
+				ipcBufList[itype].pkt_size[(int)index]=CFG_RPC_CSDDATA_PKT_SIZE;
+				ipcBufList[itype].max_pkts[(int)index]=CFG_RPC_CSDDATA_MAX_PACKETS;
 			}
 			ipcBufList[itype].start_threshold=CFG_RPC_CSD_START_THRESHOLD;
 			ipcBufList[itype].end_threshold=CFG_RPC_CSD_END_THRESHOLD;

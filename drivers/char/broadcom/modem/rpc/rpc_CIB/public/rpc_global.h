@@ -58,13 +58,13 @@ extern UInt32 g_dwLogLEVEL;
 #ifndef NULL
 #define NULL 0
 #endif
-extern int RpcLog_DetailLogEnabled();
+extern int RpcLog_DetailLogEnabled(void);
 
 #define RPC_TRACE(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_BASIC, fmt, ##args )
 #define RPC_TRACE_DETAIL(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_DETAIL, fmt, ##args )
 #define RPC_TRACE_INFO(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_BASIC, fmt, ##args )
 //#define RPC_TRACE_DATA_DETAIL RpcLog_DebugPrintf
-#define RPC_TRACE_DATA_DETAIL
+#define RPC_TRACE_DATA_DETAIL(fmt,args...)
 
 #define DETAIL_LOG_ENABLED (RpcLog_DetailLogEnabled())
 #define DETAIL_DATA_LOG_ENABLED (RpcLog_DetailLogEnabled())

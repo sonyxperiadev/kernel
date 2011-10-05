@@ -94,7 +94,6 @@ static void bcm_fuse_net_fc_cb(RPC_FlowCtrlEvent_t event, unsigned char cid);
 static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType, unsigned char cid, PACKET_BufHandle_t dataBufHandle);
 static void bcm_fuse_net_init(struct net_device *dev_ptr);
 static net_drvr_info_t *bcm_fuse_net_device_pdp_lookup(uint8_t pdp_context_id);
-static net_drvr_info_t *bcm_fuse_net_device_cid_lookup(unsigned char cid);
 static uint8_t bcm_fuse_net_pdp_id(net_drvr_info_t *drvr_info_ptr);
 static uint8_t bcm_fuse_net_find_entry(net_drvr_info_t *ndrvr_info_ptr);
 static void bcm_fuse_net_free_entry(uint8_t pdp_cid);
@@ -285,7 +284,7 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType, uns
     ndrvr_info_ptr->stats.rx_packets++;
     ndrvr_info_ptr->stats.rx_bytes += data_len; 
 
-    BNET_DEBUG(DBG_TRACE,"%s: rx_bytes:%d\n", __FUNCTION__,ndrvr_info_ptr->stats.rx_bytes);
+    BNET_DEBUG(DBG_TRACE,"%s: rx_bytes:%ld\n", __FUNCTION__,ndrvr_info_ptr->stats.rx_bytes);
 
     netif_rx(skb);
 
@@ -448,7 +447,7 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
     */
     t_ndrvr_info_ptr->stats.tx_packets++;
     t_ndrvr_info_ptr->stats.tx_bytes += skb->len;
-    BNET_DEBUG(DBG_TRACE,"%s: tx_bytes:%d simid:%d cid:%d\n", __FUNCTION__,t_ndrvr_info_ptr->stats.tx_bytes,sim_id,pdp_cid);
+    BNET_DEBUG(DBG_TRACE,"%s: tx_bytes:%ld simid:%d cid:%d\n", __FUNCTION__,t_ndrvr_info_ptr->stats.tx_bytes,sim_id,pdp_cid);
 
     dev_kfree_skb(skb);
 
@@ -758,6 +757,7 @@ FOUND_ENTRY:
 /**
    @fn static net_drvr_info_t *bcm_fuse_net_device_cid_lookup(unsigned char cid);
 */
+#ifdef INCLUDE_UNUSED_CODE
 static net_drvr_info_t *bcm_fuse_net_device_cid_lookup(unsigned char cid)
 {
     int i = 0;
@@ -785,7 +785,7 @@ FOUND_ENTRY:
 
     return(drvr_info_ptr);
 }
-
+#endif //#ifdef INCLUDE_UNUSED_CODE
 
 static int __init bcm_fuse_net_init_module(void)
 {
