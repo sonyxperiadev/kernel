@@ -1192,6 +1192,7 @@ void set_enable_store(char *str, int value)
 
 	pr_info("%s, enable=%d\n",str, value);
 
+<<<<<<< HEAD
 	if(!strcmp(str,"adb")){ 
 	  b_adb = false; 
 	} 
