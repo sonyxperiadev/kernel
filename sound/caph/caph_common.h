@@ -227,6 +227,8 @@ enum {
   VoIP_Ioctl_GetSource = _IOR('H', 0x16, int),
   VoIP_Ioctl_GetSink = _IOR('H', 0x17, int),
   VoIP_Ioctl_GetCodecType = _IOR('H', 0x18, int),
+  VoIP_Ioctl_SetMode = _IOW('H', 0x19, int),
+  VoIP_Ioctl_GetMode = _IOR('H', 0x1A, int),
  }; 
 
 

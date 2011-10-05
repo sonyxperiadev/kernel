@@ -280,7 +280,7 @@ void AUDCTRL_SetTelephonyMicSpkr(
 void AUDCTRL_SetTelephonySpkrVolume(
 				AUDIO_HW_ID_t			dlSink,
 				AUDCTRL_SPEAKER_t		speaker,
-				UInt32					volume,
+				Int32					volume,
 				AUDIO_GAIN_FORMAT_t		gain_format
 				);
 
