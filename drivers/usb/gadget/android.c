@@ -1028,8 +1028,21 @@ static int android_bind(struct usb_composite_dev *cdev)
 	dev->cdev = cdev;
 
 #ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
-	ret = gether_setup(cdev->gadget, NULL);
+{
+	struct rndis_function_config *rndis;
+	struct android_usb_function *f;
+	struct android_usb_function **functions = dev->functions;
+
 	set_enable_store("mass_storage", 1);
+
+	while ((f = *functions++)) {
+		if (!strcmp("rndis", f->name)) {
+			rndis = (struct rndis_function_config *)f->config;
+			ret = gether_setup_name(cdev->gadget, rndis->ethaddr, "usb");
+			return 0;
+		}
+	}
+}
 #endif
 
 	return 0;
