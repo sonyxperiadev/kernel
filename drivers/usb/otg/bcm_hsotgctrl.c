@@ -29,6 +29,8 @@
 #include "bcm_hsotgctrl.h"
 
 #define	PHY_MODE_OTG		2
+#define 	BC11CFG_SW_OVERWRITE_KEY 0x55560000
+#define	BC_CONFIG_DELAY_MS 2
 
 struct bcm_hsotgctrl_drv_data {
 	struct device *dev;
@@ -145,6 +147,7 @@ int bcm_hsotgctrl_phy_init(void)
 	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_PHY_P1CTL_OFFSET);
 	schedule_timeout_interruptible(HZ/10);
 
+	bcm_hsotgctrl_bc_reset();
 	bcm_hsotgctrl_set_phy_off(false);
 	bcm_hsotgctrl_phy_set_non_driving(false);
 	bcm_hsotgctrl_phy_set_vbus_stat(true);
@@ -171,6 +174,63 @@ int bcm_hsotgctrl_phy_deinit(void)
 	return 0;
 }
 EXPORT_SYMBOL_GPL(bcm_hsotgctrl_phy_deinit);
+
+int bcm_hsotgctrl_bc_reset(void)
+{
+	int val;
+
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+		return -EIO;
+
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+
+	/* Clear overwrite key */
+	val &= ~(HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_MASK | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK);
+	val |= (BC11CFG_SW_OVERWRITE_KEY | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK); //We need this key written for this register access
+	val |= HSOTG_CTRL_BC11_CFG_SW_RST_MASK;
+
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET); //Reset BC1.1 state machine
+
+	msleep_interruptible(BC_CONFIG_DELAY_MS);
+
+	val &= ~HSOTG_CTRL_BC11_CFG_SW_RST_MASK;
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET); //Clear reset
+
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+
+	/* Clear overwrite key so we don't accidently write to these bits */
+	val &= ~(HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_MASK | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK);
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_reset);
+
+int bcm_hsotgctrl_bc_vdp_src_off(void)
+{
+	int val;
+
+	struct bcm_hsotgctrl_drv_data *bcm_hsotgctrl_handle = local_hsotgctrl_handle;
+
+	if ((!bcm_hsotgctrl_handle->otg_clk) || (!bcm_hsotgctrl_handle->dev))
+		return -EIO;
+
+	val = readl(bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+
+	/* Clear overwrite key */
+	val &= ~(HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_MASK | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK);
+	val |= (BC11CFG_SW_OVERWRITE_KEY | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK); //We need this key written for this register access
+	val &= ~HSOTG_CTRL_BC11_CFG_BC11_OVWR_SET_P0_MASK;
+
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET); //Reset BC1.1 state machine
+
+	msleep_interruptible(BC_CONFIG_DELAY_MS);
+
+	/* Clear overwrite key so we don't accidently write to these bits */
+	val &= ~(HSOTG_CTRL_BC11_CFG_BC11_OVWR_KEY_MASK | HSOTG_CTRL_BC11_CFG_SW_OVWR_EN_MASK);
+	writel(val, bcm_hsotgctrl_handle->hsotg_ctrl_base + HSOTG_CTRL_BC11_CFG_OFFSET);
+}
+EXPORT_SYMBOL_GPL(bcm_hsotgctrl_bc_vdp_src_off);
 
 static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 {
