@@ -41,6 +41,9 @@ struct bcmnand_chip {
 	flstate_t	state;
 	struct bcmnand_hw_control  *controller;
 	struct nand_buffers *buffers;
+#ifdef CONFIG_MTD_BCMNAND_VERIFY_WRITE
+	char *verifybuf;
+#endif
 	struct mtd_oob_ops ops;
 	void		*priv;
 };

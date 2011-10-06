@@ -378,7 +378,7 @@ static int  pcmDmaInit( void );
 static int  pcmDmaTerm( void );
 static void pcmDmaIngressHandler( DMA_Device_t dev, DMA_Status_t *status, void *data );
 static void pcmDmaEgressHandler( DMA_Device_t dev, DMA_Status_t *status, void *data );
-static void pcmDmaEgressDoTransfer( struct pcm_ch_cfg *ch );
+static void pcmDmaEgressPostProcess( struct pcm_ch_cfg *ch );
 static void pcmProcInit( void );
 static void pcmProcTerm( void );
 static int  pcmReadProc( char *buf, char **start, off_t offset, int count, int *eof, void *data );
@@ -1837,8 +1837,6 @@ static void pcmDmaEgressHandler(
    /* Point to buffer index with actual samples */
    atomic_set( &ch->active_idx_egr, ((status->desc_idx + 1) & 1) );
 
-   pcmDmaEgressDoTransfer( ch );
-
    /* PCMLOG( "end dev=%u", dev ); */
 }
 
@@ -1853,7 +1851,7 @@ static void pcmDmaEgressHandler(
 *     DMA transfers have completed.
 *
 */
-static void pcmDmaEgressDoTransfer(
+static void pcmDmaEgressPostProcess(
    struct pcm_ch_cfg *ch         /** (io) Ptr to PCM channel */
 )
 {
@@ -1911,6 +1909,8 @@ static void pcmDmaEgressDoTransfer(
 
    /* Interleave data for DMA */
    interleave_data( ch->buf_egr[atomic_read(&ch->active_idx_egr)].virt, ch->egrdatap, ch->dma_frame_size, 1 /*ch->slotchansused*/ );
+
+   PCMLOG( "end idx=%i ch=%d", atomic_read( &ch->active_idx_egr ), ch->ch);
 }
 
 /***************************************************************************/
@@ -2222,6 +2222,25 @@ static int16_t *pcmMixerCb_EgressGetPtr(
 
 /***************************************************************************/
 /**
+*  PCM mixer callback to indicate that the egress data has been deposited.
+*
+*  @return     None
+*
+*  @remark
+*     This callback is used to process data after mixer is complete
+*     with depositing samples.
+*/
+static void pcmMixerCb_EgressDone( int numBytes, void *privdata )
+{
+   struct pcm_ch_cfg *ch;
+
+   ch = (struct pcm_ch_cfg *)privdata;
+
+   pcmDmaEgressPostProcess( ch );
+}
+
+/***************************************************************************/
+/**
 *  PCM mixer callback to flush the egress buffers when the last destination
 *  connection is removed.
 *
@@ -2264,6 +2283,7 @@ static int pcmMixerPortsRegister( void )
       cb.getsrc         = pcmMixerCb_IngressGetPtr;
       cb.getdst         = pcmMixerCb_EgressGetPtr;
       cb.dstcnxsremoved = pcmMixerCb_EgressFlush;
+      cb.dstdone        = pcmMixerCb_EgressDone;
 
       sprintf( name, "halaudio.pcm%i", ch->ch );
 
