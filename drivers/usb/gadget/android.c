@@ -1192,6 +1192,10 @@ void set_enable_store(char *str, int value)
 
 	pr_info("%s, enable=%d\n",str, value);
 
+	if(!strcmp(str,"adb")){ 
+	  b_adb = false; 
+	} 
+
 	if(value){
 		//Setup PIDs for RNDIS and ADB
 		if(!strcmp(str,"rndis")){
@@ -1199,7 +1203,6 @@ void set_enable_store(char *str, int value)
 		}
 		else if(!strcmp(str,"adb")){
 			device_desc.idProduct = 0x0d02;
-			b_adb = false;
 		}
 		err = android_enable_function(dev, str);
 		list_for_each_safe(pos, n, &dev->enabled_functions)
