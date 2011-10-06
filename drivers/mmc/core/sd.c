@@ -312,6 +312,10 @@ static int mmc_read_switch(struct mmc_card *card)
 
 	if (card->scr.sda_spec3) {
 		card->sw_caps.sd3_bus_mode = status[13];
+                
+		/* Add high speed card check 2.x cards. Some may have 3.0 bit set*/
+		if (status[13] & 0x02)
+			card->sw_caps.hs_max_dtr = 50000000;
 
 		/* Find out Driver Strengths supported by the card */
 		err = mmc_sd_switch(card, 0, 2, 1, status);
