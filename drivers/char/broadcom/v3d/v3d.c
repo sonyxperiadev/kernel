@@ -52,9 +52,13 @@ the GPL, without Broadcom's express prior written consent.
 
 /* Always check for idle at every reset:  TODO: make this configurable? */
 #define V3D_RESET_IMPLIES_ASSERT_IDLE
-
+//#define V3D_DEBUG
+#ifdef V3D_DEBUG
 #define dbg_print(fmt, arg...) \
 		printk(KERN_DEBUG "%s():" fmt, __func__, ##arg)
+#else
+#define dbg_print(fmt, arg...)
+#endif
 
 #define err_print(fmt, arg...) \
 		printk(KERN_ERR "%s():" fmt, __func__, ##arg)
@@ -95,6 +99,7 @@ static struct {
 	int num_trace_ents;
 	struct trace_entry *tracebuf;
 	struct pi_mgr_dfs_node* dfs_node;
+	struct pi_mgr_qos_node* qos_node;
 } v3d_state;
 
 typedef struct {
@@ -518,6 +523,9 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				err_print("Wait for V3D HW failed\n");
 				return -ERESTARTSYS;
 			}
+			/* Request for SIMPLE wfi */
+			if (v3d_state.qos_node)
+				pi_mgr_qos_request_update(v3d_state.qos_node, 0);
 			v3d_state.g_irq_sem = &dev->irq_sem;	//Replace the irq sem with current process sem
 			dev->v3d_acquired = 1;		//Mark acquired: will come handy in cleanup process
 		}
@@ -526,6 +534,8 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case V3D_IOCTL_HW_RELEASE:
 		{
 			v3d_state.g_irq_sem = NULL;		//Free up the g_irq_sem
+			if (v3d_state.qos_node)
+				pi_mgr_qos_request_update(v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 			dev->v3d_acquired = 0;	//Not acquired anymore
 			up(&v3d_state.acquire_sem);		//V3D is up for grab
 		}
@@ -797,6 +807,11 @@ int __init v3d_init(void)
 		v3d_state.proc_info->read_proc = proc_v3d_read;
 	}
 
+	/* reigster qos client */
+	v3d_state.qos_node = pi_mgr_qos_add_request("v3d", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
+	if (NULL == v3d_state.qos_node) 
+		err_print("failed to register qos client. ACP wont work\n");
+	
 	return 0;
 
 err2:
@@ -812,6 +827,9 @@ err:
 void __exit v3d_exit(void)
 {
 	dbg_print("V3D driver Exit\n");
+
+	if (pi_mgr_qos_request_remove(v3d_state.qos_node))
+		err_print("failed to unregister qos client\n");
 
 	/* remove proc entry */
 	remove_proc_entry("v3d", NULL);
