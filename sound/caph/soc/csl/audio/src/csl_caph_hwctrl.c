@@ -176,6 +176,7 @@ CSL_CAPH_HWResource_Table_t HWResource_Table[CSL_CAPH_FIFO_MAX_NUM];
 static CHAL_HANDLE caph_intc_handle = 0;
 static CSL_HANDLE fmHandleSSP = 0;
 static CSL_HANDLE pcmHandleSSP = 0;
+static Boolean fmRxRunning = FALSE; //This is only to indicate FM direct playback
 static Boolean fmRunning = FALSE;
 static Boolean pcmRunning = FALSE;
 static CSL_CAPH_SWITCH_TRIGGER_e fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0; 
@@ -391,7 +392,7 @@ static void csl_caph_config_arm2sp(CSL_CAPH_PathID pathID)
 	arm2spCfg.path=arm2spPath; 
 	arm2spCfg.srOut = path->src_sampleRate;
 	arm2spCfg.chNumOut = path->chnlNum;
-	if(arm2spCfg.path==LIST_DMA_DMA) 
+	if(arm2spCfg.path==LIST_DMA_DMA || arm2spCfg.path==LIST_SW_DMA) 
 	{
 		if(path->src_sampleRate==AUDIO_SAMPLING_RATE_48000) 
 		{
@@ -797,6 +798,8 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 	if(path->sink[0]==CSL_CAPH_DEV_BT_SPKR)
 	{
 		path->snk_sampleRate = AUDIO_SAMPLING_RATE_8000;
+	} else if (path->snk_sampleRate==0) {
+		path->snk_sampleRate = AUDIO_SAMPLING_RATE_48000;
 	}
 
 	if(mode==OBTAIN_BLOCKS_NORMAL) 	//non-zero for switching or multicasting during playback
@@ -911,7 +914,6 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				fifo = csl_caph_cfifo_get_fifo_by_dma(path->dma[0]);
 			} else 	if (path->source == CSL_CAPH_DEV_FM_RADIO || path->sink[0] == CSL_CAPH_DEV_FM_TX) {
 				fifo = csl_caph_cfifo_ssp_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
-				if(!fifo) fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED); //For FM TX + RX in call, 3 FIFOs are required.
 			} else {
 				fifo = csl_caph_cfifo_obtain_fifo(CSL_CAPH_16BIT_MONO, CSL_CAPH_SRCM_UNDEFINED);
 			}
@@ -925,7 +927,7 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 			path->cfifo[blockIdx] = fifo;
 			break;
 		case CAPH_SW:
-			if(path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_MEMORY && fmRunning == TRUE) //FM recording during direct playback
+			if(path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_MEMORY && fmRxRunning == TRUE) //FM recording during direct playback
 				break; //share the same switch as direct playback path
 			sw = csl_caph_switch_obtain_channel();
 			blockIdx = (int)sw;
@@ -1262,7 +1264,7 @@ static void csl_caph_config_sw(CSL_CAPH_PathID pathID, int blockPathIdx)
 
 	swCfg = &path->sw[blockIdx];
 
-	if(path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_MEMORY && fmRunning == TRUE) //FM recording during direct playback
+	if(path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_MEMORY && fmRxRunning == TRUE) //FM recording during direct playback
 	{ 
 		// add this FIFO as second destination in switch
 		fm_sw_config.FIFO_dst2Addr = csl_caph_cfifo_get_fifo_addr(path->cfifo[0]);
@@ -2862,6 +2864,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP or HS or BTM *****\r\n"));
 
+		fmRxRunning = TRUE;
 		list = LIST_SW_MIX_SW;
 		if(path->sink[0] == CSL_CAPH_DEV_BT_SPKR) list = LIST_SW_MIX_SRC_SW;
     }   
@@ -2870,9 +2873,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_EnablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
     if ((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP/HS via arm2sp (during voice call) *****\r\n"));
-		if(path->src_sampleRate==AUDIO_SAMPLING_RATE_44100) arm2spPath = LIST_DMA_MIX_DMA;
-		//if(path->src_sampleRate==AUDIO_SAMPLING_RATE_44100 || path->src_sampleRate==AUDIO_SAMPLING_RATE_48000) arm2spPath = LIST_DMA_MIX_SRC_DMA;
-		else arm2spPath = LIST_DMA_DMA;
+		arm2spPath = LIST_SW_DMA; //FM is always 48kHz stereo
 		list = arm2spPath;
 		csl_caph_config_arm2sp(path->pathID);
     }
@@ -3115,6 +3116,7 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 				csl_i2s_stop_tx(fmHandleSSP);
 				csl_i2s_stop_rx(fmHandleSSP);
 				fmRunning = FALSE;
+				if(path->source == CSL_CAPH_DEV_FM_RADIO && fmRxRunning) fmRxRunning = FALSE;
 			}
 		}
 	}
