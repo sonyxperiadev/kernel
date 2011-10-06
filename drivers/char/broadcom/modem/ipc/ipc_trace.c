@@ -323,7 +323,9 @@ static const char* EndPointName[] =
 	"IpcEpCsdCp",
 	"IpcEpCsdAp",
 	"IpcEpCustomerAp",
-	"IpcEpCustomerCp"
+	"IpcEpCustomerCp",
+	"IpcEpSerialAp",
+	"IpcEpSerialCp"
 };
 
 const char* IPC_GetEndPointName(IPC_EndpointId_T ep)
