@@ -104,10 +104,6 @@ void IPC_TraceLinux (IPC_U32 Channel, char *Function, char * Text, IPC_U32 P1, I
 
 #endif // IPC_FOR_BSP_ONLY
 //============================================================
-#ifndef IPC_TRACE
-#define IPC_TRACE(...)
-#endif
-
 #ifdef  __cplusplus
 }
 #endif
