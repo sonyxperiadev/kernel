@@ -131,9 +131,6 @@ typedef struct
 	UInt8 clientId;
 }   RpcIpc_PrivData_t ;
 
-#define TEMP_STR_LEN 255
-static char gTempStr[TEMP_STR_LEN+1]={0};
-
 //local function protos
 
 //forward declarations used in 'struct file_operations' 
@@ -417,7 +414,6 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType, UInt8 c
 
 RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel, PACKET_BufHandle_t dataBufHandle)
 {
-	Boolean ret;
 	RpcClientInfo_t *cInfo;
 	UInt8 clientId, k;
 	UInt16 msgId = 0;

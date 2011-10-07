@@ -53,23 +53,18 @@ extern UInt32 g_dwLogLEVEL;
 
 #elif UNDER_LINUX_MODEM
 
-
+#include "bcmlog.h"
 
 #ifndef NULL
 #define NULL 0
 #endif
-extern int RpcLog_DebugPrintf(char *fmt, ...);
-extern int RpcLog_DetailLogEnabled();
+extern int RpcLog_DetailLogEnabled(void);
 
-// **FIXME** MAG - turn off all RPC logging for now...
-//#define RPC_TRACE RpcLog_DebugPrintf
-//#define RPC_TRACE_DETAIL RpcLog_DebugPrintf
-//#define RPC_TRACE_INFO RpcLog_DebugPrintf
-#define RPC_TRACE
-#define RPC_TRACE_DETAIL
-#define RPC_TRACE_INFO
+#define RPC_TRACE(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_BASIC, fmt, ##args )
+#define RPC_TRACE_DETAIL(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_DETAIL, fmt, ##args )
+#define RPC_TRACE_INFO(fmt,args...) BCMLOG_Printf( BCMLOG_RPC_KERNEL_BASIC, fmt, ##args )
 //#define RPC_TRACE_DATA_DETAIL RpcLog_DebugPrintf
-#define RPC_TRACE_DATA_DETAIL
+#define RPC_TRACE_DATA_DETAIL(fmt,args...)
 
 #define DETAIL_LOG_ENABLED (RpcLog_DetailLogEnabled())
 #define DETAIL_DATA_LOG_ENABLED (RpcLog_DetailLogEnabled())

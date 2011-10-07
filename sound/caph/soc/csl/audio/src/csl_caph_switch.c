@@ -686,7 +686,7 @@ CSL_CAPH_SWITCH_STATUS_e csl_caph_switch_config_channel(CSL_CAPH_SWITCH_CONFIG_t
 *  Description: Add one destination to a CAPH switch channel
 *
 ****************************************************************************/
-Result_t csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr)
+void csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr)
 {
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
@@ -700,10 +700,8 @@ Result_t csl_caph_switch_add_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAdd
     if (CAPH_DST_OK != chal_caph_switch_add_dst(handle, chal_chnl, (UInt16)FIFO_dstAddr))
     {
     	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_add_dst:: FAIL\n"));
-        return RESULT_ERROR;
     }
 
-	return RESULT_OK;
 }
 
 /****************************************************************************

@@ -104,6 +104,7 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 			}
 			break;
 		case CTL_STREAM_PANEL_PCMIN:
+		case CTL_STREAM_PANEL_SPEECHIN:
 		case CTL_STREAM_PANEL_VOIPIN:
 			uinfo->count = 1;
 			uinfo->value.integer.min = 0; //Q13.2
@@ -183,7 +184,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 				if(pStream->runtime->status->state == SNDRV_PCM_STATE_RUNNING || pStream->runtime->status->state == SNDRV_PCM_STATE_PAUSED) // SNDDRV_PCM_STATE_PAUSED 
 				{
 					//call audio driver to set volume
-					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%ld, pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
+					BCM_AUDIO_DEBUG("VolumeCtrlPut caling AUDCTRL_SetPlayVolume pVolume[0] =%ld (0.25dB), pVolume[1]=%ld\n", pVolume[0],pVolume[1]);
 					parm_vol.hw_id = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
 					parm_vol.device = pChip->streamCtl[stream-1].dev_prop.p[0].speaker;
 					parm_vol.volume1 = pVolume[0];
@@ -207,6 +208,7 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 		}
 		break;
 		case CTL_STREAM_PANEL_PCMIN:
+		case CTL_STREAM_PANEL_SPEECHIN:
 		{
 			if(pCurSel[0] == dev) //if current sink is diffent, dont call the driver to change the volume
 			{
@@ -325,10 +327,19 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	if (pSel[0] == pSel[1])
 		pSel[1] = AUDCTRL_SPK_TOTAL_COUNT;
 
-    if ((pSel[0] == AUDCTRL_SPK_LOUDSPK) && (isSTIHF == TRUE))
-        pSel[1] = AUDCTRL_SPK_HANDSET;
+	if (isSTIHF == TRUE)
+	{
+		if (pSel[0] == AUDCTRL_SPK_LOUDSPK)
+		{
+			if (pSel[1] != AUDCTRL_SPK_TOTAL_COUNT)
+        		pSel[2] = pSel[1];
+			pSel[1] = AUDCTRL_SPK_HANDSET;
+		}
+		else if (pSel[1] == AUDCTRL_SPK_LOUDSPK)
+			pSel[2] = AUDCTRL_SPK_HANDSET;
+	}
 
-	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld, pSel[1]=%ld\n", stream,pSel[0],pSel[1]);
+	BCM_AUDIO_DEBUG("SelCtrlPut stream =%d, pSel[0]=%ld, pSel[1]=%ld, pSel[2]=%ld,\n", stream,pSel[0],pSel[1],pSel[2]);
 	
 	switch(stream)
 	{
@@ -396,10 +407,6 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 								pChip->streamCtl[stream-1].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
 								pChip->streamCtl[stream-1].dev_prop.p[i].aud_dev = AUDDRV_DEV_EP;
 							}
-							else
-							{ 
-								BCM_AUDIO_DEBUG("No secondary output device! hw_id for dev2 %ld ?\n", pSel[1]);
-							}
 						}
 						pChip->streamCtl[stream-1].dev_prop.p[i].speaker = pSel[i];
 						if (i == 0)
@@ -415,10 +422,10 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 						}
 						else
 						{
-							if (pChip->streamCtl[stream-1].dev_prop.p[1].hw_id != AUDIO_HW_NONE)
+							if (pChip->streamCtl[stream-1].dev_prop.p[i].hw_id != AUDIO_HW_NONE)
 							{
-								newSink =  pChip->streamCtl[stream-1].dev_prop.p[1].hw_id;
-								newSpk = pSel[1];
+								newSink =  pChip->streamCtl[stream-1].dev_prop.p[i].hw_id;
+								newSpk = pSel[i];
                                 parm_spkr.src = pChip->streamCtl[stream-1].dev_prop.p[0].hw_src;
 								parm_spkr.cur_sink = pChip->streamCtl[stream-1].dev_prop.p[0].hw_id;
 								parm_spkr.cur_spkr = pChip->streamCtl[stream-1].dev_prop.p[0].speaker;
@@ -709,6 +716,13 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->value.integer.max = 3;
 			uinfo->value.integer.step = 1; 
 			break;
+		case CTL_FUNCTION_CFG_SSP:
+			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
+			uinfo->count = 2;
+			uinfo->value.integer.min = 0;
+			uinfo->value.integer.max = 2;
+			uinfo->value.integer.step = 1; 
+			break;
 			
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function);			
@@ -775,7 +789,9 @@ static int MiscCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 		case CTL_FUNCTION_CFG_IHF:
 			ucontrol->value.integer.value[0] = pChip->pi32CfgIHF[0];
 			ucontrol->value.integer.value[1] = pChip->pi32CfgIHF[1];			
-
+		case CTL_FUNCTION_CFG_SSP:
+			ucontrol->value.integer.value[0] = pChip->i32CfgSSP[0];
+			ucontrol->value.integer.value[1] = pChip->i32CfgSSP[1];
 			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
@@ -851,9 +867,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 					//call audio driver to mute
 					parm_mute.device =  pSel[0];
 					parm_mute.mute1 = pChip->iMutePhoneCall[0];
-					AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
-												parm_mute.device,
-												parm_mute.mute1);
+					AUDIO_Ctrl_Trigger(ACTION_AUD_MuteTelephony,&parm_mute,NULL,0);
 				}
 			}
 			break;
@@ -988,6 +1002,11 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 				BCM_AUDIO_DEBUG("%s, Invalid value for setting IHF mode: %d, 1-mono, 2-stereo.", __FUNCTION__, ucontrol->value.integer.value[0]);
 			}
 			break;
+		case CTL_FUNCTION_CFG_SSP:
+			pChip->i32CfgSSP[0] = ucontrol->value.integer.value[0];
+			pChip->i32CfgSSP[1] = ucontrol->value.integer.value[1];
+			AUDCTRL_ConfigSSP(pChip->i32CfgSSP[0], pChip->i32CfgSSP[1]);
+			break;
 		default:
 			BCM_AUDIO_DEBUG("Unexpected function code %d\n", function); 		
 			break;
@@ -1091,8 +1110,8 @@ x{.strName = "MIC_EANC_DIGI",	.iVolume = {30,30},},	//AUDCTRL_MIC_EANC_DIGI
 
 #define	BCM_CTL_SRC_LINES	{ \
 						{.strName = "", .iVolume = {0,0},}, 		\
-						{.strName = "MIC", 	.iVolume = {28,28},},	\
-						{.strName = "AUX",	.iVolume = {28,28},},	\
+						{.strName = "MIC", 	.iVolume = {120,120},},	\
+						{.strName = "AUX",	.iVolume = {120,120},},	\
 						{.strName = "DG1",	.iVolume = {28,28},},	\
 						{.strName = "DG2",	.iVolume = {28,28},},	\
 						{.strName = "",	.iVolume = {28,28},},		\
@@ -1112,7 +1131,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		//PCMOut1
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_HANDSET, AUDCTRL_SPK_TOTAL_COUNT},
+			.iLineSelect = {AUDCTRL_SPK_HANDSET, AUDCTRL_SPK_TOTAL_COUNT, AUDCTRL_SPK_TOTAL_COUNT},
 			.strStreamName = "P1",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
@@ -1120,12 +1139,11 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 		//PCMOut2
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
-			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_TOTAL_COUNT},
+			.iLineSelect = {AUDCTRL_SPK_LOUDSPK, AUDCTRL_SPK_TOTAL_COUNT, AUDCTRL_SPK_TOTAL_COUNT},
 			.strStreamName = "P2",
 			.ctlLine = BCM_CTL_SINK_LINES,
 		},
 
-						
 		//VOIP Out
 		{
 			.iTotalCtlLines = AUDCTRL_SPK_TOTAL_COUNT,
@@ -1182,6 +1200,7 @@ static	TPcm_Stream_Ctrls	sgCaphStreamCtls[CAPH_MAX_PCM_STREAMS] __initdata =
 #define	MAX_CTL_NUMS	130
 #define	MAX_CTL_NAME_LENGTH	44
 static char gStrCtlNames[MAX_CTL_NUMS][MAX_CTL_NAME_LENGTH] __initdata; // MAX_CTL_NAME_LENGTH]; 
+static Int32 sgCaphSpeechMixCtrls[CAPH_MAX_PCM_STREAMS] __initdata = {1,1,0,3,3,0,0,1};
 
 //*****************************************************************
 // Functiona Name: ControlDeviceNew
@@ -1199,6 +1218,9 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		
 	strcpy(card->mixername, "Broadcom CAPH Mixer");
 	memcpy(pChip->streamCtl, &sgCaphStreamCtls, sizeof(sgCaphStreamCtls));
+
+	//setting the default mixer selection for speech mixing
+	memcpy(pChip->pi32SpeechMixOption, &sgCaphSpeechMixCtrls,sizeof(sgCaphSpeechMixCtrls));
 
 	for (idx = 0; idx < ARRAY_SIZE(sgCaphStreamCtls); idx++)
 	{
@@ -1285,7 +1307,7 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 	   struct snd_kcontrol_new ctlBypassVibra = BRCM_MIXER_CTRL_MISC(0, 0, "BYP-VIB", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BYPASS_VIBRA) );
 	   struct snd_kcontrol_new ctlBTTest = BRCM_MIXER_CTRL_MISC(0, 0, "BT-TST", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_BT_TEST) );
 	   struct snd_kcontrol_new ctlCfgIHF = BRCM_MIXER_CTRL_MISC(0, 0, "CFG-IHF", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_IHF) );
-
+	   struct snd_kcontrol_new ctlCfgSSP = BRCM_MIXER_CTRL_MISC(0, 0, "SSP", 0, CAPH_CTL_PRIVATE(1, 1, CTL_FUNCTION_CFG_SSP) );
 			   
 	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlLoopTest, pChip))) < 0)
 	   {
@@ -1369,6 +1391,11 @@ int __devinit ControlDeviceNew(struct snd_card *card)
 		   return err;
 	   }
 
+	   if ((err = snd_ctl_add(card, snd_ctl_new1(&ctlCfgSSP, pChip))) < 0)
+	   {
+		   BCM_AUDIO_DEBUG("error to add %s control err=%d\n", ctlCfgSSP.name, err);
+		   return err;
+	   }
    }
 
 	CAPH_ASSERT(nIndex<MAX_CTL_NUMS);

@@ -154,7 +154,7 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
 	AUDCTRL_MICROPHONE_t mic = AUDCTRL_MIC_MAIN;
 	AUDCTRL_SPEAKER_t spk = AUDCTRL_SPK_HANDSET;
-    int rtn = 0;
+    int rtn = 0;  //0 means Ok
     static UInt8 loopback_status = 0, loopback_input = 0, loopback_output = 0;
 	AudioMode_t mode;
     Int32 pCurSel[2];
@@ -268,6 +268,50 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             rtn = -1;
 			break;
 
+		case 99: //at*maudmode=99  --> stop tuning
+			break;
+
+		case 100: //at*maudmode=100  --> set external audio amplifer gain in PMU
+#if !defined(NO_PMU)
+            {
+            int gain;
+
+			if (Params[1] == 3)
+			if( Params[2]==PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL || Params[2]==PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL ) // EXT_SPEAKER_PGA
+			{
+				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB) 
+					 || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
+				{
+					AUDIO_PMU_IHF_POWER(FALSE);
+					AUDIO_PMU_HS_POWER(TRUE);
+					gain = Params[3]; // gain
+					BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d \n", __FUNCTION__, gain);
+					gain = map2pmu_hs_gain_fromQ13dot2(Params[3]);
+					BCM_AUDIO_DEBUG("%s ext headset speaker gain = %d after lookup \n", __FUNCTION__, gain);
+
+					if( Params[2]==PARAM_PMU_SPEAKER_PGA_LEFT_CHANNEL )
+						AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_LEFT, gain);
+					else
+					if( Params[2]==PARAM_PMU_SPEAKER_PGA_RIGHT_CHANNEL )
+						AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_RIGHT, gain);
+					
+				}
+				else if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE) || (AUDDRV_GetAudioMode()==AUDIO_MODE_SPEAKERPHONE_WB) )
+				{
+					AUDIO_PMU_HS_POWER(FALSE);
+					AUDIO_PMU_IHF_POWER(TRUE);
+					gain = Params[3]; // gain
+					BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d \n", __FUNCTION__, gain);
+					gain = map2pmu_ihf_gain_fromQ13dot2(Params[3]);
+					BCM_AUDIO_DEBUG("%s ext IHF speaker gain = %d after lookup \n", __FUNCTION__, gain);
+					AUDIO_PMU_IHF_SET_GAIN(gain);
+				}
+			}
+            }
+#endif
+							
+			break;
+
 		default:
 			BCM_AUDIO_DEBUG("%s Unsupported cmd %d \n", __FUNCTION__, Params[0]);		
             rtn = -1;
@@ -356,7 +400,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			AUDCTRL_SetPlayVolume(
                       AUDIO_HW_NONE,
                       Params[1],  //	  //speaker channel
-                      AUDIO_GAIN_FORMAT_Q13_2,
+                      AUDIO_GAIN_FORMAT_mB,
 					  Params[2],  //left volume
                       Params[3]  //right volume
 				);
@@ -839,7 +883,8 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 	{
 	case 6:	//at*maudvol=6
 		//Get volume from driver
-		Params[0] = AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_VOL_LEVEL );
+		Params[0] = AUDCTRL_GetTelephonySpkrVolume( AUDIO_GAIN_FORMAT_mB );
+		Params[0] = Params[0]/100;  //dB
 		//or
 		//pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
 		//Params[0] = pVolume[0];
@@ -854,8 +899,8 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		pVolume[1] = Params[1];
 		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_HW_NONE,
 									AUDCTRL_SPK_UNDEFINED,
-									Params[1],   //in dB
-									AUDIO_GAIN_FORMAT_VOL_LEVEL
+									(Params[1]*100),   //Params[1] in dB
+									AUDIO_GAIN_FORMAT_mB
 									);
 
 		BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d \n", __FUNCTION__, pVolume[0],mode); 

@@ -54,6 +54,8 @@
 
 //richlu
 #include "csl_caph_hwctrl.h"
+#include "bcm_fuse_sysparm_CIB.h"
+
 
 /**
 *
@@ -318,13 +320,13 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 void AUDDRV_Telephony_DeinitHW(void *pData);
 
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off );
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
+
 void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
 		UInt32 dev, 
 		SysAudioParm_t* pAudioParm);
 void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode, 
 		SysAudioParm_t* pAudioParm);
-#endif		
+
 void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, 
 		UInt32 gain); 
 void AUDDRV_Telephony_UnmuteMic (AUDDRV_MIC_Enum_t mic,
@@ -338,6 +340,27 @@ void AUDDRV_Telephony_UnmuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 void AUDDRV_SetULSpeechRecordGain(Int16 gain);
 Boolean AUDDRV_IsDualMicEnabled(void);
 
+
+//*********************************************************************
+/**
+*	Get BTM headset NB or WB info
+
+*	@return 	Boolean, TRUE for WB and FALSE for NB (8k) 
+*	@note	   
+**********************************************************************/
+Boolean AUDDRV_IsBTMWB( void );
+
+
+//*********************************************************************
+/**
+*	Set BTM type 
+
+*	@param		Boolean isWB 
+*	@return 	none
+*
+*	@note	isWB=TRUE for BT WB headset; =FALSE for BT NB (8k) headset.
+**********************************************************************/
+void AUDDRV_SetBTMTypeWB( Boolean isWB);
 
 
 // move from drv_audio_commom.h
@@ -453,19 +476,6 @@ Int16 AUDDRV_GetHWDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
 *  @return PMU gain
 *****************************************************************************/
 UInt16 AUDDRV_GetPMUGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
-
-
-
-/**
-*
-*  @brief  Get the PMU gain
-*
-*  @param  CSL_CAPH_DEVICE_e (in) Driver speaker selection
-*
-*  @return PMU gain
-*****************************************************************************/
-UInt16 AUDDRV_GetPMUGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain);
-
 
 
 #ifdef __cplusplus

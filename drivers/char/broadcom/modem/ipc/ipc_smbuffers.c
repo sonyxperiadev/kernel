@@ -17,6 +17,6 @@
 
 #include "ipc_smbuffers.h"
 
-__attribute__((zero_init)) volatile unsigned char SmBuffer [IPC_SmSize];
+volatile unsigned char SmBuffer [IPC_SmSize]={0};
 
 

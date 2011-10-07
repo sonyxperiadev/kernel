@@ -77,10 +77,6 @@
 #include "csl_apcmd.h"
 #include "chal_bmodem_intc_inc.h"
 #include "csl_arm2sp.h"
-#if 0
-static Audio_ISR_Handler_t	client_Audio_ISR_Handler = NULL;
-static VPU_ProcessStatus_t	client_VPU_ProcessStatus = NULL;
-#endif
 
 typedef struct
 {
@@ -95,7 +91,7 @@ static AP_SharedMem_t 			*global_shared_mem = NULL;
 
 static void dsp_thread_proc(unsigned long data);
 static irqreturn_t rip_isr(int irq, void *dev_id);
-static UInt32 DSPDRV_GetSharedMemoryAddress(void);
+static UInt32 *DSPDRV_GetSharedMemoryAddress(void);
 AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr(void);
 
 /* Local function definitions */
@@ -138,7 +134,7 @@ static void IRQ_SoftInt_Clear(InterruptId_t Id)
 
 void DSPDRV_Init( )
 {
-	UInt32 dsp_shared_mem;
+	UInt32 *dsp_shared_mem;
     int rc;
 
 	Log_DebugPrintf(LOGID_AUDIO, " DSPDRV_Init:  \n");
@@ -180,14 +176,14 @@ void DSPDRV_Init( )
 // Notes:
 //
 //******************************************************************************
-static UInt32 DSPDRV_GetSharedMemoryAddress( )
+static UInt32 *DSPDRV_GetSharedMemoryAddress( )
 {
-	static UInt32 dsp_shared_mem=NULL;
+	static UInt32 *dsp_shared_mem=NULL;
 
 	 if(dsp_shared_mem == NULL)
 	 {
 		 dsp_shared_mem = ioremap_nocache(AP_SH_BASE, AP_SH_SIZE);
-		 if (!dsp_shared_mem) {
+		 if (dsp_shared_mem == NULL) {
 			 Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* mapping shared memory failed\n\r");
 			 return NULL;
 		 }
@@ -238,64 +234,6 @@ static void dsp_thread_proc(unsigned long data)
 
 //******************************************************************************
 //
-// Function Name:	Audio_ISR_Handler
-//
-// Description:		
-//
-// Notes:
-//
-//******************************************************************************
-
-//will figure out how to avoid vpu.c call this function.
-#if 0
-/*static*/ void Audio_ISR_Handler(StatQ_t msg)
-{
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP Audio_ISR_Handler\n\r");
-
-	if( client_Audio_ISR_Handler != NULL )
-	{
-		client_Audio_ISR_Handler( msg );
-	}
-
-}
-#endif
-//******************************************************************************
-//
-// Function Name:	RIPISR_Register_AudioISR_Handler
-//
-// Description:		This function registers audio isr handler.
-//
-// Notes:
-//
-//******************************************************************************
-#if 0
-void RIPISR_Register_AudioISR_Handler( Audio_ISR_Handler_t isr_cb )
-{
-
-	client_Audio_ISR_Handler = isr_cb;
-
-}
-#endif
-//******************************************************************************
-//
-// Function Name:	RIPISR_Register_VPU_ProcessStatus
-//
-// Description:		This function registers VPU Process handler
-//
-// Notes:
-//
-//******************************************************************************
-#if 0
-void RIPISR_Register_VPU_ProcessStatus( VPU_ProcessStatus_t hisr_cb )
-{
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AP RIPISR_Register_VPU_ProcessStatus, %p\n\r", hisr_cb);
-	
-	client_VPU_ProcessStatus = hisr_cb;
-
-}
-#endif
-//******************************************************************************
-//
 // Function Name:	VPSHAREDMEM_TriggerRIPInt
 //
 // Description: This function triggers DSP interrupt
@@ -323,7 +261,32 @@ void VPSHAREDMEM_TriggerRIPInt()
 //******************************************************************************
 AP_SharedMem_t *SHAREDMEM_GetDsp_SharedMemPtr()// Return pointer to shared memory
 {
-        global_shared_mem = DSPDRV_GetSharedMemoryAddress();
+        global_shared_mem = (AP_SharedMem_t *)DSPDRV_GetSharedMemoryAddress();
 	return global_shared_mem;
 }	
+
+//******************************************************************************
+//
+// Function Name:	DSPDRV_GetPhysicalSharedMemoryAddress
+//
+// @note Function to return physical address of the Shared Memory. 
+//              
+// @note This address is to be used only for setting certain registers and should
+//       not be used for accessing any buffers/variables in the shared memory.
+//
+// @note To be used only in the DSP CSL layer.
+//
+//   @param    None
+//
+//   @return   Physical Address to shared memory
+//
+//
+//******************************************************************************
+AP_SharedMem_t *DSPDRV_GetPhysicalSharedMemoryAddress( void)
+{
+	AP_SharedMem_t *dsp_shared_mem;
+
+	dsp_shared_mem = (AP_SharedMem_t *)AP_SH_BASE;
+	return dsp_shared_mem;
+}
 
