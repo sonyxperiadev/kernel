@@ -68,6 +68,11 @@ include/linux/compile.h
 include/linux/utsrelease.h
 include/linux/bounds.h
 
+#
+# Generated script/host tool
+#
+scripts/basic/hash
+
 # stgit generated dirs
 patches-*
 
