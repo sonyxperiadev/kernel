@@ -91,6 +91,14 @@ static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 	return stat;
 }
 
+static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
+
+	if (xceiv_data)
+		bcm_hsotgctrl_phy_deinit(); /* De-initialize OTG core and PHY */
+}
+
 #ifdef CONFIG_MFD_BCMPMU
 static void bcmpmu_usb_event_notif_callback(struct bcmpmu * pmu_handle, unsigned char event, void *param1, void *otg_data)
 {
@@ -355,7 +363,8 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 			     bcm_otg_vbus_a_invalid_work);
 	dev_info(xceiv_data->dev, "A session invalid\n");
 
-	bcm_hsotgctrl_phy_deinit();
+	/* Inform the core of session invalid level  */
+	bcm_hsotgctrl_phy_set_vbus_stat(false);
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
@@ -478,6 +487,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		bcmpmu_otg_xceiv_set_peripheral;
 	xceiv_data->otg_xceiver.xceiver.set_host =
 		bcmpmu_otg_xceiv_set_host;
+	xceiv_data->otg_xceiver.xceiver.shutdown =
+		bcmpmu_otg_xceiv_shutdown;
 
 	xceiv_data->otg_xceiver.do_adp_calibration_probe =
 		bcm_otg_do_adp_calibration_probe;
