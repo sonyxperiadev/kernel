@@ -86,7 +86,6 @@ static struct map_desc island_io_desc[] __initdata =
 	IO_DESC( KONA_KEK_VA, SZ_4K ),
 	IO_DESC( KONA_KPM_CLK_VA, SZ_4K ),
 	IO_DESC( KONA_SLV_CLK_VA, SZ_4K ),
-	IO_DESC( KONA_L2C_VA, SZ_4K ),
 	IO_DESC( KONA_MEMC0_NS_VA, SZ_1K ),
 	IO_DESC( KONA_MEMC1_NS_VA, SZ_1K ),
 	IO_DESC( KONA_MPHI_VA, SZ_4K ),
