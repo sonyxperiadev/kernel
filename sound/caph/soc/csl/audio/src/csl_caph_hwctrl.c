@@ -181,18 +181,8 @@ static Boolean fmRunning = FALSE;
 static Boolean pcmRunning = FALSE;
 static CSL_CAPH_SWITCH_TRIGGER_e fmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0; 
 static CSL_CAPH_SWITCH_TRIGGER_e fmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0; 
-#if defined(CNEON_MODEM) || defined(CNEON_COMMON)
-#if defined(HW_VARIANT_Rhea_EB10) || defined(HW_VARIANT_Rhea_EB15)
-static CSL_CAPH_SWITCH_TRIGGER_e    pcmTxTrigger = CSL_CAPH_TRIG_SSP4_TX0;
-static CSL_CAPH_SWITCH_TRIGGER_e   pcmRxTrigger = CSL_CAPH_TRIG_SSP4_RX0;
-#else
 static CSL_CAPH_SWITCH_TRIGGER_e pcmTxTrigger = CSL_CAPH_TRIG_SSP3_TX0;
 static CSL_CAPH_SWITCH_TRIGGER_e pcmRxTrigger = CSL_CAPH_TRIG_SSP3_RX0;
-#endif
-#else
-static CSL_CAPH_SWITCH_TRIGGER_e pcmTxTrigger = CSL_CAPH_TRIG_SSP3_TX0;
-static CSL_CAPH_SWITCH_TRIGGER_e pcmRxTrigger = CSL_CAPH_TRIG_SSP3_RX0;
-#endif
 static CSL_CAPH_SSP_e sspidPcmUse = CSL_CAPH_SSP_3;
 static Boolean sspTDM_enabled = FALSE;
 //static void *bmintc_handle = NULL;
@@ -2495,7 +2485,7 @@ static void csl_caph_hwctrl_closeAudioH(CSL_CAPH_DEVICE_e dev,
 ****************************************************************************/
 static void csl_caph_hwctrl_ACIControl()
 {
-#ifndef CNEON_COMMON // For CNEON, Accessory driver controls the ACI
+#if !defined(CNEON_COMMON) && !defined(CNEON_LMP) // For CNEON, Accessory driver controls the ACI
 //Power Up the AUX MIC by controlling ACI registers.
 //THis part may be implemented in ACI hal layer. 
 //Need to get confirmed.
