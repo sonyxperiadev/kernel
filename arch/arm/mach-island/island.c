@@ -95,9 +95,9 @@ static int __init l2_early_bresp_setup(char *str)
 }
 __setup("l2_early_bresp=", l2_early_bresp_setup);
 
-static void __init island_l2x0_init(void)
+static int __init island_l2x0_init(void)
 {
-	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
+	void __iomem *l2cache_base;
 	uint32_t aux_val = 0;
 	uint32_t aux_mask = 0xC200ffff;
 
@@ -105,26 +105,42 @@ static void __init island_l2x0_init(void)
 	{
 		/*  cmdline argument l2off will turn off l2 cache even if configured on */
 		printk("%s: Warning: L2X0 *not* enabled due to l2off cmdline override\n", __func__);
-		return;
+		return 0;
 	}
 
-	aux_val |= ( 1 << 16 );	/* 16-way cache */
-	aux_val |= ( ( l2_non_secure_access ? 1 : 0 ) << 27 );	/* Allow non-secure access */
-	aux_val |= ( ( l2_d_prefetch        ? 1 : 0 ) << 28 );	/* Data prefetch */
-	aux_val |= ( ( l2_i_prefetch        ? 1 : 0 ) << 29 );	/* Instruction prefetch */
-	aux_val |= ( ( l2_early_bresp       ? 1 : 0 ) << 30 );	/* Early BRESP */
-	aux_val |= ( 2 << 17 );	/* 32KB */
+	l2cache_base = ioremap(L2C_BASE_ADDR, SZ_4K);
+	BUG_ON(!l2cache_base);
+
+	/*
+	 * Zero bits in aux_mask will be cleared
+	 * One  bits in aux_val  will be set
+	 */
+
+	aux_val |= ( 1 << L2X0_AUX_CTRL_ASSOCIATIVITY_SHIFT );	/* 16-way cache */
+	aux_val |= ( ( l2_non_secure_access ? 1 : 0 ) << L2X0_AUX_CTRL_NS_INT_CTRL_SHIFT );		/* Allow non-secure access */
+	aux_val |= ( ( l2_d_prefetch        ? 1 : 0 ) << L2X0_AUX_CTRL_DATA_PREFETCH_SHIFT );	/* Data prefetch */
+	aux_val |= ( ( l2_i_prefetch        ? 1 : 0 ) << L2X0_AUX_CTRL_INSTR_PREFETCH_SHIFT );	/* Instruction prefetch */
+	aux_val |= ( ( l2_early_bresp       ? 1 : 0 ) << L2X0_AUX_CTRL_EARLY_BRESP_SHIFT );		/* Early BRESP */
+	aux_val |= ( 2 << L2X0_AUX_CTRL_WAY_SIZE_SHIFT );			/* 32KB */
+
+	/*
+	 * Set bit 22 in the auxiliary control register. If this bit
+	 * is cleared, PL310 treats Normal Shared Non-cacheable
+	 * accesses as Cacheable no-allocate.
+	 */
+	aux_val |= 1 << L2X0_AUX_CTRL_SHARE_OVERRIDE_SHIFT;
 
 	l2x0_init(l2cache_base, aux_val, aux_mask);
-}
 
+	return 0;
+}
 #endif
 
 static int __init island_init(void)
 {
 	pm_power_off = island_poweroff;
 	arm_pm_restart = island_restart;
-	
+
 #ifdef CONFIG_CACHE_L2X0
 	island_l2x0_init();
 #endif
@@ -135,7 +151,7 @@ static int __init island_init(void)
 
 	pinmux_init();
 
-	/* island has 6 banks of GPIO pins */ 
+	/* island has 6 banks of GPIO pins */
 	kona_gpio_init(6);
 
 	return 0;
@@ -152,16 +168,16 @@ static void __init island_timer_init(void)
 #endif
 	/*
 	 * IMPORTANT:
-	 * If we have to use slave-timer as system timer, two modifications are required 
+	 * If we have to use slave-timer as system timer, two modifications are required
 	 * 1) modify the name of timer as, gpt_setup.name = "slave-timer";
 	 * 2) By default when the clock manager comes up it disables most of
 	 *    the clock. So if we switch to slave-timer we should prevent the
 	 *    clock manager from doing this. So, modify plat-kona/include/mach/clock.h
-	 * 
+	 *
 	 * By default aon-timer as system timer the following is the config
 	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE | DISABLE_ON_INIT)
          * #define BCM2165x_CLK_HUB_TIMER_FLAGS  (TYPE_PERI_CLK | SW_GATE)
-	 * 
+	 *
 	 * change it as follows to use slave timer as system timer
 	 *
 	 * #define BCM2165x_CLK_TIMERS_FLAGS     (TYPE_PERI_CLK | SW_GATE)
