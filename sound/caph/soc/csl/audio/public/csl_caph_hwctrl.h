@@ -223,6 +223,19 @@ typedef enum
 	CSL_SSP_I2S
 } CSL_SSP_BUS_e;
 
+/*
+* CAPH Clock information
+*********************************************************************************/
+typedef enum
+{
+	CAPH_SRCMIXER_CLOCK,
+	AUDIO_SSP3_CLOCK,
+	AUDIO_SSP4_CLOCK,
+	AUDIOH_2P4M_CLOCK,
+	AUDIOH_26M_CLOCK,
+	AUDIOH_156M_CLOCK,
+}CAPH_Clock_t;
+
 /**
 *
 *  @brief  initialize the caph HW control CSL
@@ -569,7 +582,25 @@ void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID,
 ****************************************************************************/
 void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_ControlHWClock
+*
+*  Description: control the CAPH clock
+*
+****************************************************************************/
+
 void csl_caph_ControlHWClock(Boolean enable);
+
+// ==========================================================================
+//
+// Function Name: void csl_caph_QueryHWClock(Boolean enable)
+//
+// Description: This is to query if the CAPH clocks are enabled/disabled
+//
+// =========================================================================
+
+Boolean csl_caph_QueryHWClock(void);
 
 /****************************************************************************
 *

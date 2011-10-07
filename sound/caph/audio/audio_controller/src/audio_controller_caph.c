@@ -2786,7 +2786,33 @@ void powerOnDigitalMic(Boolean powerOn)
 #endif
 }
 
+//============================================================================
+//
+// Function Name: AUDCTRL_ControlHWClock
+//
+// Description:   Enable/Disable CAPH clock
+//
+//============================================================================
 
+void  AUDCTRL_ControlHWClock(Boolean enable)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_ControlHWClock enable %d\r\n",enable);
+	csl_caph_ControlHWClock(enable);
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_ControlHWClock
+//
+// Description:  Query if CAPH clock is enabled/disabled
+//
+//============================================================================
+
+Boolean  AUDCTRL_QueryHWClock(void)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_QueryHWClock \r\n");
+	return csl_caph_QueryHWClock();
+}
 
 #else  //#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)
 

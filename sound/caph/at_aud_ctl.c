@@ -161,6 +161,8 @@ int	AtMaudMode(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
 
+	AUDCTRL_ControlHWClock(TRUE);
+
 	switch(Params[0])//P1
 	{
 
@@ -393,6 +395,10 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
 
+	 //this test command argument 100/101 is provided to control the HW clock.In that case, dont enable the clock
+	if(Params[0] != 100 && Params[0] != 101)
+		AUDCTRL_ControlHWClock(TRUE);
+
     switch(Params[0])//P1
     {
 
@@ -406,7 +412,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 				);
 		
             BCM_AUDIO_DEBUG( "Set speaker volume left %d right %d \n", Params[2], Params[3] );
-			return 0;
+			break;
 			
 		
 		//! typedef enum AUDCTRL_SPEAKER_t {
@@ -433,10 +439,27 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			else
 				BCM_AUDIO_DEBUG( "Set speaker mute \n" );
 
-			return 0;
+			break;
 
+		case 100:
+			if(Params[1] == 1)
+			{
+				BCM_AUDIO_DEBUG( "Enable CAPH clock \n" );
+				AUDCTRL_ControlHWClock(TRUE);
+			}
+			else if(Params[1] == 0)
+			{
+				BCM_AUDIO_DEBUG( "Disable CAPH clock \n" );
+				AUDCTRL_ControlHWClock(FALSE);
+			}
+			break;
 
-        case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
+		case 101:
+			Params[0] = (Int32)AUDCTRL_QueryHWClock();
+			BCM_AUDIO_DEBUG( "AUDCTRL_QueryHWClock %d \n",Params[0] );
+			break;
+
+		case 121: //at*maudtst=121,x,y  // x=0: EXT_SPEAKER_PGA, x=1:EXT_SPEAKER_PREPGA, x=2: MIC_PGA, y: gain value register value(enum value)
             if (Params[1] == 0) // EXT_SPEAKER_PGA
             {
 #if !defined(NO_PMU)
@@ -476,8 +499,6 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 #define CHAL_CAPH_SRCM_MAX_FIFOS      15
 #define SRCMIXER_MIX_CH_GAIN_CTRL_OFFSET      ( (SRCMIXER_SRC_M1D1_CH1M_GAIN_CTRL_OFFSET - SRCMIXER_SRC_M1D0_CH1M_GAIN_CTRL_OFFSET)/4 ) //4bytes
-
-            csl_caph_ControlHWClock(TRUE);
 
 			address = (char*)ioremap_nocache((UInt32) (AUDIOH_BASE_ADDR + AUDIOH_AUDIORX_VRX1_OFFSET), sizeof(UInt32));
 			if(!address)
@@ -853,15 +874,16 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 			    value = ioread32(address);
 			    iounmap(address);
                 printk("SRCMIXER_BASE_ADDR + offset 0x%x, value = 0x%x \n", index, value );
-}
+			}
 
-            }
-            return 0;
+        }
+        break;
 
         default:
             BCM_AUDIO_DEBUG("%s Not supported command \n", __FUNCTION__);
             return -1;
     }
+	return 0;
 }
 
 //++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -878,6 +900,8 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 	int mode;
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+
+	AUDCTRL_ControlHWClock(TRUE);
 
 	switch(Params[0])//P1
 	{

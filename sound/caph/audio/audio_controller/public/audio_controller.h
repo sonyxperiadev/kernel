@@ -926,4 +926,25 @@ void AUDCTRL_SetIHFmode (Boolean stIHF);
 ****************************************************************************/
 void  AUDCTRL_SetBTMode(Boolean mode);
 
+/********************************************************************
+*  @brief  Enable/Disable CAPH clock
+*
+*  @param  enable/disable
+*
+*  @return  none
+*
+****************************************************************************/
+void  AUDCTRL_ControlHWClock(Boolean enable);
+
+/********************************************************************
+*  @brief  Query CAPH clock is enabled/disabled
+*
+*  @param  none
+*
+*  @return  Boolean
+*
+****************************************************************************/
+Boolean  AUDCTRL_QueryHWClock(void);
+
+
 #endif //#define __AUDIO_CONTROLLER_H__

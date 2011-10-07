@@ -38,6 +38,7 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 #include "chal_caph_audioh.h"
 #include "chal_caph_intc.h"
 #include "brcm_rdb_audioh.h"
+#include "brcm_rdb_khub_clk_mgr_reg.h"
 #include "csl_caph.h"
 #include "csl_caph_cfifo.h"
 #include "csl_caph_switch.h"
@@ -161,10 +162,6 @@ static struct clk *clkID[MAX_AUDIO_CLOCK_NUM] = {NULL,NULL,NULL,NULL,NULL,NULL};
 //****************************************************************************
 // local function declarations
 //****************************************************************************
-//static void AUDDRV_LISR(void);
-//static void AUDDRV_HISR(void);
-//static void csl_caph_ControlHWClock(Boolean enable);
-
 //****************************************************************************
 // local typedef declarations
 //****************************************************************************
@@ -191,6 +188,7 @@ static CSL_CAPH_SWITCH_CONFIG_t fm_sw_config;
 static int ssp_pcm_usecount = 0;
 static Boolean isSTIHF = FALSE;
 static Boolean bBTTest = FALSE;
+static Boolean sClkCurEnabled = FALSE;
 
 typedef enum //the naming does not count CFIFO and SW in the middle of the path.
 {
@@ -1645,15 +1643,97 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 	if (path->source == CSL_CAPH_DEV_HS_MIC) csl_caph_hwctrl_ACIControl();
 }
 
+#if 0
 // ==========================================================================
 //
-// Function Name: void AUDDRV_LISR(void)
+// Function Name: Boolean csl_caph_QueryHWClockReg(int clock)
 //
-// Description: CAPH_NORM_IRQ LISR
+// Description: This is to query if the CAPH HW clock are ON/OFF
+//                  KHUB_CAPH_SRCMIXER_CLK
+//                  KHUB_AUDIOH_2P4M_CLK
+//                  KHUB_AUDIOH_26M_CLK
+//                  KHUB_AUDIOH_156M_CLK
+//
+// =========================================================================
+static Boolean csl_caph_QueryHWClockReg(UInt8 clock)
+{
+
+	UInt32 reg_read = 0x00;
+	Boolean ret = FALSE;
+
+	/* Reading CLK MGR registers to make sure if they are not enabled. We need to read the registers as we don't have any 
+	* syncronization mechanism of clock control between AP and CP. Hence before enabling the clock, we will just read the
+	* registers if it is really enabled or not and then enable the clock. 
+	* Note : This function is platform specific (RDB)
+	*/
+
+#if defined(CONFIG_ARCH_ISLAND) || defined(CONFIG_ARCH_RHEA)
+
+	UInt32 base_addr = KONA_HUB_CLK_VA;
+	switch(clock)
+	{
+		case CAPH_SRCMIXER_CLOCK:
+		{
+			reg_read =  *((volatile UInt32 *) (base_addr + KHUB_CLK_MGR_REG_CAPH_CLKGATE_OFFSET));
+			if(reg_read & KHUB_CLK_MGR_REG_CAPH_CLKGATE_CAPH_SRCMIXER_CLK_EN_MASK)
+				ret = TRUE;
+		}
+		break;
+		case AUDIO_SSP3_CLOCK:
+		{
+			reg_read =  *((volatile UInt32 *) (base_addr + KHUB_CLK_MGR_REG_SSP3_CLKGATE_OFFSET));
+			if(reg_read & KHUB_CLK_MGR_REG_SSP3_CLKGATE_SSP3_AUDIO_CLK_EN_MASK)
+				ret = TRUE;
+		}
+		break;
+		case AUDIO_SSP4_CLOCK:
+		{
+			reg_read =  *((volatile UInt32 *) (base_addr + KHUB_CLK_MGR_REG_SSP4_CLKGATE_OFFSET));
+			if(reg_read & KHUB_CLK_MGR_REG_SSP4_CLKGATE_SSP4_AUDIO_CLK_EN_MASK)
+				ret = TRUE;
+		}
+		break;
+		case AUDIOH_2P4M_CLOCK:
+		{
+			reg_read =  *((volatile UInt32 *) (base_addr + KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET));
+			if(reg_read & KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_2P4M_CLK_EN_MASK)
+				ret = TRUE;
+		}
+		break;
+		case AUDIOH_26M_CLOCK:
+		{
+			reg_read =  *((volatile UInt32 *) (base_addr + KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET));
+			if(reg_read & KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_26M_CLK_EN_MASK)
+				ret = TRUE;
+		}
+		break;
+		case AUDIOH_156M_CLOCK:
+		{
+			reg_read =  *((volatile UInt32 *) (base_addr + KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_OFFSET));
+			if(reg_read & KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_156M_CLK_EN_MASK)
+				ret = TRUE;
+		}
+		break;
+		default:
+			break;
+	}
+#endif
+	return ret;
+}
+
+#endif
+// ==========================================================================
+//
+// Function Name: void csl_caph_QueryHWClock(Boolean enable)
+//
+// Description: This is to query if the CAPH clocks are enabled/disabled
 //
 // =========================================================================
 
-
+Boolean csl_caph_QueryHWClock(void)
+{
+	return sClkCurEnabled;
+}
 
 // ==========================================================================
 //
@@ -1667,69 +1747,55 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 //
 // =========================================================================
 
-/*static*/ void csl_caph_ControlHWClock(Boolean enable)
+void csl_caph_ControlHWClock(Boolean enable)
 {
-    static Boolean sCurEnabled = FALSE;
 
-    if (enable == TRUE && sCurEnabled == FALSE)
+    if (enable == TRUE && sClkCurEnabled == FALSE)
     {
-        sCurEnabled = TRUE;
+        sClkCurEnabled = TRUE;
 
         //Enable CAPH clock.
         clkID[0] = clk_get(NULL, "caph_srcmixer_clk");
-#ifdef CONFIG_ARCH_ISLAND     /* island srcmixer is not set correctly. 
-                                This is a workaround before a solution from clock */
-        if ( clkID[0]->use_cnt )
+	
+    /* island srcmixer is not set correctly.
+    		This is a workaround before a solution from clock */
+#ifdef CONFIG_ARCH_ISLAND
+		if ( clkID[0]->use_cnt )
         {
             clk_disable(clkID[0]);
         }
 #endif
 	    clk_set_rate(clkID[0], 156000000);
-        clk_enable(clkID[0]);
+		clk_enable(clkID[0]);
 
 	    clkID[1] = clk_get(NULL, "ssp3_audio_clk");
-        clk_enable(clkID[1]);
-        //clk_set_rate(clkID[1], 156000000);
+		clk_enable(clkID[1]);
     
-        // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_2P4M_CLK, CLOCK_CLK_EN, clock_op_enable);
-        clkID[2] = clk_get(NULL, "audioh_2p4m_clk");
-        clk_enable(clkID[2]);
-        // no need to set speed, it is fixed
-        //clk_set_rate(clkID[2], 26000000);
-                                    
-        // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_26M_CLK, CLOCK_CLK_EN, clock_op_enable);
+        clkID[2] = clk_get(NULL, "audioh_2p4m_clk");		
+		clk_enable(clkID[2]);
+
         clkID[3] = clk_get(NULL,"audioh_26m_clk");
-        clk_enable(clkID[3]);
-        // no need to set the speed. it is fixed
-        //clk_set_rate(clkID[3],  26000000);
+		clk_enable(clkID[3]);
 
-        // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_AUDIOH, KHUB_AUDIOH_156M_CLK, CLOCK_CLK_EN, clock_op_enable);
         clkID[4] = clk_get(NULL,"audioh_156m_clk");
-        clk_enable(clkID[4]);
-        //clk_set_rate(clkID[4], 26000000);
+		clk_enable(clkID[4]);
 
-        // chal_clock_set_gating_controls (get_ccu_chal_handle(CCU_KHUB), KHUB_SSP4, KHUB_SSP4_AUDIO_CLK, CLOCK_CLK_EN, clock_op_enable);
 #ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
         clkID[5] = clk_get(NULL, "ssp4_audio_clk");
-        clk_enable(clkID[5]);
-        //clk_set_rate(clkID[5], 156000000);
+		clk_enable(clkID[5]);
 #endif
 
     }
-    else if (enable == FALSE && sCurEnabled == TRUE)
-    {
-	// don't disable the clocks even if the request comes. Keep the clocks always ON 
-	/******* temp workaround. Will have a better solution.  *******
+    else if (enable == FALSE && sClkCurEnabled == TRUE)
+    {	
         UInt32 count = 0;
-        sCurEnabled = FALSE;
+        sClkCurEnabled = FALSE;
         for (count = 0; count <  MAX_AUDIO_CLOCK_NUM; count++)
         {
             clk_disable(clkID[count]);
         }
-        ****** temp workaround.*********/
     }
-    Log_DebugPrintf(LOGID_AUDIO, "csl_caph_ControlHWClock: action = %d, result = %d\r\n", enable, sCurEnabled);
-  
+    Log_DebugPrintf(LOGID_AUDIO, "csl_caph_ControlHWClock: action = %d, result = %d\r\n", enable, sClkCurEnabled);
     return;
 }
 
