@@ -700,7 +700,7 @@ static int lm8325_probe(struct i2c_client *client, struct i2c_device_id *id)
 		goto err1;
 	}
 
-	set_irq_wake(client->irq, 1);
+	irq_set_irq_wake(client->irq, 1);
 
 	/* 10. Input device creation logic for the keypad device */
 	/* 10a. Create a sysfs interface */
