@@ -951,6 +951,7 @@ extern void hc_xfer_timeout(void *ptr);
  * using during handling some interrupts
  */
 extern void w_conn_id_status_change(void *p);
+extern void w_shutdown_core(void *p);
 
 extern void w_wakeup_detected(void *p);
 
