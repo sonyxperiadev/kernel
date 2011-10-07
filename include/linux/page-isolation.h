@@ -36,6 +36,8 @@ extern void unset_migratetype_isolate(struct page *page);
 /* The below functions must be run on a range from a single zone. */
 extern unsigned long alloc_contig_freed_pages(unsigned long start,
 					      unsigned long end, gfp_t flag);
+extern int alloc_contig_range(unsigned long start, unsigned long end,
+			      gfp_t flags);
 extern void free_contig_pages(unsigned long pfn, unsigned nr_pages);
 
 /*
