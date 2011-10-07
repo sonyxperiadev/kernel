@@ -48,4 +48,5 @@ int test_pages_in_a_zone(unsigned long start_pfn, unsigned long end_pfn);
 unsigned long scan_lru_pages(unsigned long start, unsigned long end);
 int do_migrate_range(unsigned long start_pfn, unsigned long end_pfn);
 
+extern void init_cma_reserved_pageblock(struct page *page);
 #endif
