@@ -473,7 +473,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 {
     Result_t result_code = RESULT_ERROR;
 	AUDDRV_DEVICE_e *aud_dev;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
+	//Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessRenderCmd::%d \n",ctrl_cmd );
     switch (ctrl_cmd)
     {
         case AUDIO_DRIVER_START:
@@ -1288,7 +1288,7 @@ static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id)
 	
 	pAudDrv = GetPlaybackStreamHandle(stream_id);
 
-    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_RenderDmaCallback::\n");
+    //Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_RenderDmaCallback:: stream_id = %d\n", stream_id);
 
     if(( pAudDrv== NULL))
     {

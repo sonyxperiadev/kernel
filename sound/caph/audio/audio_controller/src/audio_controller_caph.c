@@ -909,7 +909,7 @@ void AUDCTRL_EnablePlay(
 		AUDDRV_EnableDSPOutput(DRVSPKR_Mapping_Table[spk].auddrv_spkr, sr);
 	}
 	if(pPathID) *pPathID = pathID;
-	Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %p, pathID %d.\r\n", pPathID, pathID);
+	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d.\r\n", *pPathID, pathID);
 }
 //
 // Function Name: AUDCTRL_DisablePlay
@@ -1838,6 +1838,7 @@ void AUDCTRL_SetAudioLoopback(
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: speaker = %d\n", speaker);
 
+    memset(&hwCtrlConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
     audPlayHw = audRecHw = AUDIO_HW_NONE;
     source = sink = CSL_CAPH_DEV_NONE;
     audSpkr = CSL_CAPH_DEV_NONE;
@@ -2089,9 +2090,8 @@ if (((source == CSL_CAPH_DEV_ANALOG_MIC)
 		}
 
 #ifdef HW_SIDETONE_LOOPBACK        
-				//Disable Sidetone path.
-				csl_caph_hwctrl_DisableSidetone(sink);
-				Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Sidetone Disabled\n");
+        //Disable Sidetone path.
+        csl_caph_hwctrl_DisableSidetone(sink);
 #endif
 
 		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig); //clocks are disabled here, so no register access after this.
@@ -2242,7 +2242,7 @@ static void AUDCTRL_CreateTable(void)
 void AUDCTRL_AddToTable(AUDCTRL_Config_t* data)
 {
     AUDCTRL_Table_t* newNode = NULL;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, sink = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
+	//Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
     newNode = (AUDCTRL_Table_t *)OSHEAP_Alloc(sizeof(AUDCTRL_Table_t));
 	memset(newNode, 0, sizeof(AUDCTRL_Table_t));
     memcpy(&(newNode->data), data, sizeof(AUDCTRL_Config_t));
@@ -2371,10 +2371,8 @@ static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
     AUDCTRL_Table_t* currentNode = tableHead;     
     while(currentNode != NULL)
     {
-
-        
-	    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
-                    (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
+	    //Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+        //            (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
 		
 	
         if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
