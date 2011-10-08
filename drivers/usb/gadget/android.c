@@ -1122,8 +1122,11 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 static void android_disconnect(struct usb_gadget *gadget)
 {
 	struct android_dev *dev = _android_dev;
+
+#ifndef CONFIG_USB_G_ANDROID_2_6_SYSFS
 	dev->connected = 0;
 	schedule_work(&dev->work);
+#endif
 	composite_disconnect(gadget);
 }
 
