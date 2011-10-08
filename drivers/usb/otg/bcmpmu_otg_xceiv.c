@@ -180,11 +180,6 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 
 	xceiv_data->bcm_otg_chg_detection_notifier.notifier_call = bcmpmu_otg_xceiv_chg_detection_notif_handler;
 	bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_CHGR_DETECTION, &xceiv_data->bcm_otg_chg_detection_notifier);
-
-	if ((0 == bcmpmu_usb_get(BCMPMU_CTRL_GET_VBUS_STATUS, xceiv_data->bcm590xx)) &&
-		(bcmpmu_usb_get(BCMPMU_CTRL_GET_ID_VALUE, xceiv_data->bcm590xx))) { //Not ground. Treat it as device for now (No ACA)
-		bcm_hsotgctrl_phy_deinit();
-	}
 #endif
 
 	return status;
