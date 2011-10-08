@@ -103,6 +103,14 @@ typedef struct AUDIO_DRIVER_CallBackParams_t
 
 }AUDIO_DRIVER_CallBackParams_t;
 
+typedef struct voip_data
+{
+	UInt32 codec_type;
+	UInt32 bitrate_index;
+	UInt32 mic;
+	UInt32 spk; 	
+}voip_data_t;
+
 /* ARM2SP declarations */
 
 typedef enum

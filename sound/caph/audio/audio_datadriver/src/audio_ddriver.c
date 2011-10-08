@@ -887,7 +887,8 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
                                           void* pCtrlStruct)
 {
     Result_t result_code = RESULT_ERROR;
-	UInt32 *codec_type;
+	UInt32 codec_type;
+	UInt32 bitrate_index = 0;
 	
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVoIPCmd::%d \n",ctrl_cmd );
 
@@ -897,26 +898,30 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
             {     
 
 				if(pCtrlStruct != NULL)
-			    	codec_type = (UInt32 *)pCtrlStruct;
+				{
+					codec_type = ((voip_data_t *)pCtrlStruct)->codec_type;
+					bitrate_index = ((voip_data_t *)pCtrlStruct)->bitrate_index;
+				}
 					
-				if(*codec_type == 0)
+				if(codec_type == 0)
 					aud_drv->voip_config.codec_type = VOIP_PCM;
-				else if(*codec_type == 1) 
+				else if(codec_type == 1) 
 					aud_drv->voip_config.codec_type = VOIP_FR; 
-				else if(*codec_type == 2) 
+				else if(codec_type == 2) 
 					aud_drv->voip_config.codec_type = VOIP_AMR475;
-				else if(*codec_type == 3) 
+				else if(codec_type == 3) 
 					aud_drv->voip_config.codec_type = VOIP_G711_U; 
-				else if(*codec_type == 4) 
+				else if(codec_type == 4) 
 					aud_drv->voip_config.codec_type = VOIP_PCM_16K;
-				else if(*codec_type == 5) 
+				else if(codec_type == 5) 
 					aud_drv->voip_config.codec_type = VOIP_AMR_WB_MODE_7k;
 				else
 				{
 					Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported\n" );
 					break;
 				}
-			
+
+				aud_drv->voip_config.codec_type += (bitrate_index<<8);
 				aud_drv->tmp_buffer = (UInt16 *)OSHEAP_Alloc(VOIP_MAX_FRAME_LEN); 
 
 				if(aud_drv->tmp_buffer == NULL)

@@ -125,7 +125,7 @@ static void FillSilenceFrame(UInt32 codec_type, UInt32 frame_size,UInt8 *pDst)
 	if (codec_type == VoIP_Codec_AMR475)
 		tmpBuf.voip_frame.frame_amr[0] = sVoIPAMRSilenceFrame[0];
 	else if (codec_type == VOIP_Codec_AMR_WB_7K)
-		tmpBuf.voip_frame.frame_amr_wb.frame_type = sVoIPAMRSilenceFrame[0];
+		tmpBuf.voip_frame.frame_amr_wb.frame_type = 0x7;
 	else if (codec_type == VoIP_Codec_FR)
 	{
 		tmpBuf.voip_frame.frame_fr[0] = 1;
@@ -381,7 +381,7 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 	
 					AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,AUDIO_HW_VOICE_OUT,pVoIP->mic,pVoIP->spk);
 					AUDCTRL_SetTelephonySpkrVolume(AUDIO_HW_VOICE_OUT, pVoIP->spk, 0, AUDIO_GAIN_FORMAT_mB);				
-					AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,AUDIO_DRIVER_START,&pVoIP->codec_type);
+					AUDIO_DRIVER_Ctrl(pVoIP->buffer_handle->drv_handle,AUDIO_DRIVER_START,&voip_data);
 
 					pVoIP->writecount = 1;										
 					pVoIP->status = VoIP_Hwdep_Status_Started;
@@ -445,6 +445,14 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetCodecType codec_type %d, \n",voip_data.codec_type);
 			}
 			break;
+			case VoIP_Ioctl_SetBitrate:
+			{
+				int data;
+				get_user(data,__user (int *)arg);
+				voip_data.bitrate_index = (UInt32)data;
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %d, \n",voip_data.bitrate_index);
+			}
+			break;
 			case VoIP_Ioctl_GetSource:
 			{
 				int data = (int)voip_data.mic;
@@ -461,6 +469,12 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 			{
 				int data = (int)voip_data.codec_type;
 				put_user(data,__user (int *)arg);				
+			}
+			break;
+			case VoIP_Ioctl_GetBitrate:
+			{
+				int data = (int)voip_data.bitrate_index;
+				put_user(data,__user (int *)arg);
 			}
 			break;
 			case VoIP_Ioctl_GetMode:
