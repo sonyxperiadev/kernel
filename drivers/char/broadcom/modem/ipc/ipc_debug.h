@@ -15,20 +15,20 @@
 
 #ifndef _BCM_IPC_DEBUG_H
 #define _BCM_IPC_DEBUG_H
+#ifdef __KERNEL__
 
-#define DBG_ERROR   0x01
-#define DBG_INFO    0x02
-#define DBG_TRACE   0x04
-#define DBG_TRACE2  0x08
-#define DBG_DATA    0x10
-#define DBG_DATA2   0x20
+#include <linux/printk.h>
+#define DBG_ERROR   KERN_ERR
+#define DBG_INFO    KERN_INFO
+#define DBG_TRACE   KERN_DEBUG
+#define DBG_TRACE2  KERN_DEBUG
+#define DBG_DATA    KERN_DEBUG
+#define DBG_DATA2   KERN_DEBUG
+#define IPC_DEBUG(level, fmt, args...)   \
+			printk(level "ipc:%s(): " fmt, __func__, ##args)
+#else
+#error "Error: IPC_DEBUG() macro is not defined for this platform!"
+#endif
 
-//#define DBG_DEFAULT_LEVEL (DBG_ERROR)
-//#define DBG_DEFAULT_LEVEL (DBG_ERROR|DBG_INFO|DBG_TRACE|DBG_TRACE2)
-#define DBG_DEFAULT_LEVEL (DBG_ERROR|DBG_INFO)
+#endif /* _BCM_IPC_DEBUG_H */
 
-static int logLevel = DBG_DEFAULT_LEVEL;
-
-#define IPC_DEBUG(level,fmt,args...) if (level & logLevel) printk( "%s:: " fmt, __FUNCTION__, ##args )
-
-#endif //_BCM_IPC_DEBUG_H
