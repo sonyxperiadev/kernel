@@ -411,8 +411,6 @@ int __init rhea_pwr_mgr_init()
 	}
 	/*Init all PIs*/
 
-	rhea_clock_init();
-
 
 	for(i = 0; i < PI_MGR_PI_ID_MODEM;i++)
 	{
@@ -420,12 +418,16 @@ int __init rhea_pwr_mgr_init()
 		BUG_ON(pi == NULL);
 		pi_init(pi);
 	}
+
+	/*init clks*/
+	rhea_clock_init();
+
 	/*All the initializations are done. Clear override bit here so that
 	 * appropriate policies take effect*/
 	for (i = 0; i < PI_MGR_PI_ID_MODEM;i++) {
 	    pi = pi_mgr_get(i);
 	    BUG_ON(pi == NULL);
-	    pwr_mgr_pi_set_wakeup_override(pi->id,true/*clear*/);
+	    pi_init_state(pi);
 	}
 
 return 0;

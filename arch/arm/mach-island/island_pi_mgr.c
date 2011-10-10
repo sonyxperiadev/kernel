@@ -38,20 +38,17 @@
 #include<plat/pi_mgr.h>
 
 #define RUN_POLICY PM_POLICY_5
-#define RETN_POLICY PM_POLICY_5
+#define RETN_POLICY PM_POLICY_1
 #define SHTDWN_POLICY PM_POLICY_0
 
 #define PI_STATE(state_id,policy,latency) \
 		{.id = state_id,.state_policy = policy,.hw_wakeup_latency = latency,}
 
 
-
-/*ARM core PI CCU Ids  -- TBD*/
-char* armc_core_ccu[] = {NULL};
-/*ARM core PI states  -- TBD*/
+char* armc_core_ccu[] = {KPROC_CCU_CLK_NAME_STR};
 struct pi_opp arm_opp = {
 							.opp =  {
-										[PI_OPP_ECONOMY] = 3,
+//										[PI_OPP_ECONOMY] = 3,
 										[PI_OPP_NORMAL] = 6,
 										[PI_OPP_TURBO] = 7,
 									},
@@ -63,7 +60,7 @@ static struct pi_state arm_core_states[] =
 			PI_STATE(ARM_CORE_STATE_ACTIVE,RUN_POLICY,0),
 			PI_STATE(ARM_CORE_STATE_SUSPEND,RUN_POLICY,0),
 			PI_STATE(ARM_CORE_STATE_RETENTION,RETN_POLICY,100),
-			PI_STATE(ARM_CORE_STATE_DORMANT,RETN_POLICY,10000)
+			PI_STATE(ARM_CORE_STATE_DORMANT,RETN_POLICY,10000),
 
 		};
 
@@ -199,8 +196,8 @@ static struct pi hub_pi =
 static char* aon_ccu[] = {KHUBAON_CCU_CLK_NAME_STR};
 struct pi_opp aon_opp = {
 							.opp =  {
-										[PI_OPP_ECONOMY] = 4, 
-										[PI_OPP_NORMAL] = 4,
+										[PI_OPP_ECONOMY] = 2, 
+										[PI_OPP_NORMAL] = 3,
 									},
 						};
 
@@ -248,13 +245,13 @@ struct pi_opp sub_sys_opp[2] = 	{
 									[0] = { /*KPM*/
 									.opp =	{
 												[PI_OPP_ECONOMY] = 2,
-												[PI_OPP_NORMAL] = 2,
+												[PI_OPP_NORMAL] = 3,
 											},
 										  },
 									[1] = { /*KPS*/
 									.opp =	{
-												[PI_OPP_ECONOMY] = 2, /* 0 */
-												[PI_OPP_NORMAL] = 2,
+												[PI_OPP_ECONOMY] = 1, /* 0 */
+												[PI_OPP_NORMAL] = 3,
 											},
 										  },
 

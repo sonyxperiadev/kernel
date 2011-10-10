@@ -124,6 +124,10 @@ static struct pi mm_pi =
 		.num_states = ARRAY_SIZE(mm_states),
 		.opp_active = 0,
 		.pi_opp =  &mm_opp,
+		.opp_def_weightage = {
+								[PI_OPP_ECONOMY] = 35,
+								[PI_OPP_NORMAL] = 50,
+							 },
 		.num_opp = 3,
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
 
@@ -172,6 +176,10 @@ static struct pi hub_pi =
 		.opp_active = 0,
 		.pi_opp =  &hub_opp,
 		.num_opp = 2,
+		.opp_def_weightage = {
+								[PI_OPP_ECONOMY] = 25,
+							 },
+
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 		.pi_info =
@@ -277,6 +285,10 @@ static struct pi sub_sys_pi =
 		.opp_active = 0,
 		.pi_opp =  sub_sys_opp,
 		.num_opp = 2,
+		.opp_def_weightage = {
+								[PI_OPP_ECONOMY] = 25,
+							 },
+
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 		.pi_info =

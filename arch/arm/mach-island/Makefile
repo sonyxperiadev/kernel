@@ -14,11 +14,10 @@
 
 obj-y := io_map.o island.o ipc_chip.o island_pinmux.o common.o
 
+obj-$(CONFIG_HAVE_CLK) += clock_island.o
 obj-$(CONFIG_KONA_POWER_MGR) += island_pwr_mgr.o
 obj-$(CONFIG_KONA_PI_MGR) += island_pi_mgr.o
-obj-$(CONFIG_HAVE_CLK) += clock_island.o
 obj-$(CONFIG_NET_ISLAND) += ethHw.o ethHw_asm.o
-obj-$(CONFIG_KONA_POWER) += pm_island.o
 
 obj-$(CONFIG_MACH_ISLAND_FPGA) += board_fpga.o
 obj-$(CONFIG_MACH_ISLAND_BU) += board_bu.o pinmux_island_bu.o
@@ -43,4 +42,5 @@ CFLAGS_board_tablet.o += -Iarch/arm/mach-island/hw_cfg/ISLAND_TABLET \
 -Iarch/arm/mach-island/hw_cfg/BASE \
 -Ivc4-dev/src/interface/vceb/host \
 -Ivc4-dev/src/interface/vceb/host/linux 
-
+obj-$(CONFIG_KONA_CPU_PM_HANDLER) += island_pm.o island_wfi.o
+obj-$(CONFIG_ISLAND_DORMANT_MODE) += rhea_dormant.o dm_pwr_policy_top.o

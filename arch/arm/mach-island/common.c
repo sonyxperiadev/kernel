@@ -43,6 +43,13 @@
 #include <linux/usb/android_composite.h>
 #endif
 
+#if defined (CONFIG_KONA_CPU_FREQ_DRV)
+#include <plat/kona_cpufreq_drv.h>
+#include <linux/cpufreq.h>
+#include <mach/pi_mgr.h>
+#endif
+
+
 #define KONA_UART0_PA   UARTB_BASE_ADDR
 #define KONA_UART1_PA   UARTB2_BASE_ADDR
 #define KONA_UART2_PA   UARTB3_BASE_ADDR
@@ -518,6 +525,35 @@ static struct platform_device android_usb_device = {
 };
 #endif /* CONFIG_USB_ANDROID */
 
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+struct kona_freq_tbl kona_freq_tbl[] =
+{
+#ifndef CONFIG_RHEA_PM_ASIC_WORKAROUND
+    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#endif
+    FTBL_INIT(467000, PI_OPP_NORMAL),
+    FTBL_INIT(700000, PI_OPP_TURBO),
+};
+
+struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
+
+	.flags = KONA_CPUFREQ_UPDATE_LPJ,
+    .freq_tbl = kona_freq_tbl,
+	.num_freqs = ARRAY_SIZE(kona_freq_tbl),
+	/*FIX ME: To be changed according to the cpu latency*/
+	.latency = 10*1000,
+	.pi_id = PI_MGR_PI_ID_ARM_CORE,
+};
+
+static struct platform_device kona_cpufreq_device = {
+	.name    = "kona-cpufreq-drv",
+	.id      = -1,
+	.dev = {
+		.platform_data		= &kona_cpufreq_drv_pdata,
+	},
+};
+#endif /*CONFIG_KONA_CPU_FREQ_DRV*/
+
 /* Common devices among all Island boards */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -560,6 +596,11 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
         &rndis_device,
 #endif /* CONFIG_USB_ANDROID_RNDIS */
 #endif /* CONFIG_USB_ANDROID */
+
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+	&kona_cpufreq_device,
+#endif
+
 };
 
 void __init board_add_common_devices(void)

@@ -54,6 +54,13 @@
 #include <plat/kona_avs.h>
 #endif
 
+#if defined (CONFIG_KONA_CPU_FREQ_DRV)
+#include <plat/kona_cpufreq_drv.h>
+#include <linux/cpufreq.h>
+#include <mach/pi_mgr.h>
+#endif
+
+
 #ifdef CONFIG_UNICAM
 #include <plat/kona_unicam.h>
 #endif
@@ -412,7 +419,7 @@ void set_pwm_board_sysconfig(int (*syscfg_inf) (uint32_t module, uint32_t op))
 
 static struct platform_device kona_pwm_device = {
 		.dev = {
-			.platform_data = &pwm_dev, 
+			.platform_data = &pwm_dev,
 		},
                 .name = "kona_pwmc",
                 .id = -1,
@@ -552,6 +559,34 @@ static struct platform_device board_kona_otg_platform_device =
 	.num_resources = ARRAY_SIZE(kona_otg_platform_resource),
 };
 #endif
+
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+struct kona_freq_tbl kona_freq_tbl[] =
+{
+#ifndef CONFIG_RHEA_PM_ASIC_WORKAROUND
+    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#endif
+    FTBL_INIT(467000, PI_OPP_NORMAL),
+    FTBL_INIT(700000, PI_OPP_TURBO),
+};
+
+struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
+
+    .freq_tbl = kona_freq_tbl,
+	.num_freqs = ARRAY_SIZE(kona_freq_tbl),
+	/*FIX ME: To be changed according to the cpu latency*/
+	.latency = 10*1000,
+	.pi_id = PI_MGR_PI_ID_ARM_CORE,
+};
+
+static struct platform_device kona_cpufreq_device = {
+	.name    = "kona-cpufreq-drv",
+	.id      = -1,
+	.dev = {
+		.platform_data		= &kona_cpufreq_drv_pdata,
+	},
+};
+#endif /*CONFIG_KONA_CPU_FREQ_DRV*/
 
 #ifdef CONFIG_KONA_AVS
 
@@ -721,6 +756,10 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 #ifdef CONFIG_KONA_AVS
 	&kona_avs_device,
+#endif
+
+#ifdef CONFIG_KONA_CPU_FREQ_DRV
+	&kona_cpufreq_device,
 #endif
 
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH

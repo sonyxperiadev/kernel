@@ -436,7 +436,7 @@ int	pwr_mgr_pi_set_wakeup_override(int pi_id, bool clear)
 		reg_val &= ~pi->pi_info.wakeup_overide_mask;
 	else
 		reg_val |= pi->pi_info.wakeup_overide_mask;
-
+	pr_info("%s:just before reg update...\n",__func__);
 	writel(reg_val,PWR_MGR_REG_ADDR(PWRMGR_PI_DEFAULT_POWER_STATE_OFFSET));
 	spin_unlock(&pwr_mgr_lock);
 	return 0;

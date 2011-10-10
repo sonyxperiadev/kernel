@@ -17,8 +17,8 @@
 #include <linux/errno.h>
 #include <linux/spinlock.h>
 #include <linux/init.h>
+#include <linux/clk.h>
 #include <linux/clkdev.h>
-#include <asm/clkdev.h>
 #include <linux/list.h>
 #include <plat/pi_mgr.h>
 #include <mach/clock.h>
@@ -154,7 +154,10 @@
 				{\
 					struct pi* pi = pi_mgr_get((ccu)->pi_id);\
 					BUG_ON(pi == NULL);\
-					pi_enable(pi,en);\
+					if(en)\
+						__pi_enable(pi);\
+					else\
+						__pi_disable(pi);\
 				}
 #else
 #define CCU_PI_ENABLE(ccu,en)	{}
@@ -273,7 +276,6 @@ enum {
     RATE_FIXED			= (1 << 7), /*used for peri ...clk set/get rate functions uses .rate field*/
     NOTIFY_STATUS_TO_CCU	= (1 << 8),
     DONOT_NOTIFY_STATUS_TO_CCU	= (1 << 9),
-	REQUEST_OPP			= (1 << 10),
 
     /* CCU specific flags */
     CCU_TARGET_LOAD		= (1 << 16),
@@ -379,6 +381,29 @@ struct src_clk
 	struct clk 	**clk;
 };
 
+#ifdef CONFIG_KONA_PI_MGR
+
+enum clk_dfs_policy
+{
+	CLK_DFS_POLICY_NONE,
+	CLK_DFS_POLICY_STATE,
+	CLK_DFS_POLICY_RATE
+};
+
+struct dfs_rate_thold
+{
+	u32 rate_thold;
+	u32 opp;
+};
+struct clk_dfs
+{
+	u32 dfs_policy;
+	u32 policy_param;
+	u32 opp_weightage[PI_OPP_MAX];
+		
+};
+
+#endif
 
 struct clk
 {
@@ -392,7 +417,7 @@ struct clk
 	u32			rate;
 	int 		clk_type;
 	struct clk* dep_clks[MAX_DEP_CLKS];
-
+	
 	struct gen_clk_ops 	*ops;
 
 };
@@ -459,13 +484,16 @@ struct peri_clk {
 	u32 hyst_en_mask;
 	u32 stprsts_mask;
 	u32 volt_lvl_mask;
-	u32 opp;
-	struct pi_mgr_dfs_node* pi_mgr_dfs_node;
 	struct peri_clk_ops* peri_ops;
 
 	struct clk_div  clk_div;
-
 	struct src_clk	src_clk;
+
+#ifdef CONFIG_KONA_PI_MGR	
+	struct clk_dfs* clk_dfs;
+	struct pi_mgr_dfs_node* dfs_node;
+#endif
+	
 };
 
 struct bus_clk {
@@ -481,8 +509,10 @@ struct bus_clk {
 	int freq_tbl_index;
 	struct clk* src_clk;
 	struct bus_clk_ops* bus_ops;
-	u32 opp;
-	struct pi_mgr_dfs_node* pi_mgr_dfs_node;
+#ifdef CONFIG_KONA_PI_MGR	
+	struct clk_dfs* clk_dfs;
+	struct pi_mgr_dfs_node* dfs_node;
+#endif
 
 };
 
