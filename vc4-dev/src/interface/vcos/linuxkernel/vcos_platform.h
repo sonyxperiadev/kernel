@@ -45,7 +45,7 @@ VideoCore OS Abstraction Layer - Linux kernel (partial) implementation.
 #define VCOS_HAVE_EVENT        1
 #define VCOS_HAVE_QUEUE        0
 #define VCOS_HAVE_LEGACY_ISR   0
-#define VCOS_HAVE_TIMER        0
+#define VCOS_HAVE_TIMER        1
 #define VCOS_HAVE_MEMPOOL      0
 #define VCOS_HAVE_ISR          0
 #define VCOS_HAVE_ATOMIC_FLAGS 1
