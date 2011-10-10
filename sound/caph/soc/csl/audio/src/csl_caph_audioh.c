@@ -1211,7 +1211,7 @@ void csl_caph_audioh_sidetone_control(int path_id, Boolean ctrl)
 			break;
 		
 		case AUDDRV_PATH_IHF_OUTPUT:
-            chal_audio_hspath_sidetone_in(handle, ctrl);
+            chal_audio_ihfpath_sidetone_in(handle, ctrl);
 			break;
 
 		case AUDDRV_PATH_EARPICEC_OUTPUT:
