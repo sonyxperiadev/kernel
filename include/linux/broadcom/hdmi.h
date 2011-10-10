@@ -45,16 +45,6 @@ typedef enum
 
 #define HDMI_STATE_INIT (hdmi_state)-1
 
-#ifdef __KERNEL__
-typedef enum
-{
-    HDMI_NULL = 0,       /* NULL event */
-    HDMI_REMOVED,        /* hdmi unplugged */
-    HDMI_INSERTED,       /* hdmi inserted */
-
-} hdmi_event;
-#endif
-
 /* ---- Constants and Types ---------------------------------------------- */
 
 #define HDMI_MAGIC   'h'
