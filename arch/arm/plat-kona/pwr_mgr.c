@@ -5,6 +5,7 @@
 #include <linux/module.h>
 #include <linux/list.h>
 #include <linux/clk.h>
+#include <linux/delay.h>
 #include <linux/clkdev.h>
 #include <asm/io.h>
 
@@ -76,6 +77,7 @@ struct pwr_mgr_event
 struct pwr_mgr
 {
 	struct pwr_mgr_info* info;
+	u32 i2c_sem_val;
 	struct pwr_mgr_event event_cb[PWR_MGR_NUM_EVENTS];
 
 };
@@ -646,39 +648,65 @@ int pwr_mgr_pi_counter_read(int pi_id,bool* over_flow)
 }
 EXPORT_SYMBOL(pwr_mgr_pi_counter_read);
 
-int	pwr_mgr_request_pm_i2c_ownership(int value)
+int pwr_mgr_pm_i2c_sem_lock()
 {
-	pwr_dbg("%s : value = %d\n",
-				__func__, value);
-
+	u32 value, read_val,write_val;
+	u32 max_val;
+	u32 ret = 0;
+	u32 insurance = 1000;
 	if(unlikely(!pwr_mgr.info))
 	{
 		pwr_dbg("%s:ERROR - pwr mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
-	writel(value & PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_MASK,
+
+	max_val = 1 + (PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_MASK >>
+				PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_SHIFT);
+
+	spin_lock(&pwr_mgr_lock);
+	pwr_mgr.i2c_sem_val = (pwr_mgr.i2c_sem_val+1)% max_val;
+	if(pwr_mgr.i2c_sem_val == 0)
+		pwr_mgr.i2c_sem_val++;
+
+	value = pwr_mgr.i2c_sem_val;
+	write_val = (value << PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_SHIFT)
+				& PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_I2C_HARDWARE_SEMAPHORE_WRITE_VALUE_MASK;
+	pwr_dbg("%s: value = %x max_val = %x\n",__func__,value,max_val);
+	do
+	{
+		writel(write_val,
 			PWR_MGR_REG_ADDR(PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_OFFSET));
-	return 0;
+		udelay(1);
+		read_val = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_HARDWARE_SEMAPHORE_READ_OFFSET));
+		read_val &= PWRMGR_I2C_HARDWARE_SEMAPHORE_READ_I2C_HARDWARE_SEMAPHORE_READ_VALUE_MASK;
+		read_val >>= PWRMGR_I2C_HARDWARE_SEMAPHORE_READ_I2C_HARDWARE_SEMAPHORE_READ_VALUE_SHIFT;
+		insurance--;
+	}while(read_val != value && insurance);
+	spin_unlock(&pwr_mgr_lock);
 
+	if(read_val != value)
+	{
+		pr_info("%s: failed to acquire PMU I2C HW sem !!\n",__func__);
+		ret = -EAGAIN;
+	}
+	return ret;
 }
-EXPORT_SYMBOL(pwr_mgr_request_pm_i2c_ownership);
+EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_lock);
 
-int pwr_mgr_verify_pm_i2c_ownership()
+int pwr_mgr_pm_i2c_sem_unlock()
 {
-	u32 reg_val;
 	if(unlikely(!pwr_mgr.info))
 	{
 		pwr_dbg("%s:ERROR - pwr mgr not initialized\n",__func__);
 		return -EINVAL;
 	}
-	reg_val = readl(PWR_MGR_REG_ADDR(PWRMGR_I2C_HARDWARE_SEMAPHORE_READ_OFFSET));
-	pwr_dbg("%s : value = %d\n",
-				__func__,
-		reg_val & PWRMGR_I2C_HARDWARE_SEMAPHORE_READ_I2C_HARDWARE_SEMAPHORE_READ_VALUE_MASK);
-	return reg_val & PWRMGR_I2C_HARDWARE_SEMAPHORE_READ_I2C_HARDWARE_SEMAPHORE_READ_VALUE_MASK;
-
+	spin_lock(&pwr_mgr_lock);
+	writel(0,
+			PWR_MGR_REG_ADDR(PWRMGR_I2C_HARDWARE_SEMAPHORE_WRITE_OFFSET));
+	spin_unlock(&pwr_mgr_lock);
+	return 0;
 }
-EXPORT_SYMBOL(pwr_mgr_verify_pm_i2c_ownership);
+EXPORT_SYMBOL(pwr_mgr_pm_i2c_sem_unlock);
 
 int	pwr_mgr_pm_i2c_enable(bool enable)
 {
@@ -1015,6 +1043,7 @@ EXPORT_SYMBOL(pwr_mgr_process_events);
 int pwr_mgr_init(struct pwr_mgr_info* info)
 {
 	pwr_mgr.info = info;
+	pwr_mgr.i2c_sem_val = 0;
 	return 0;
 }
 EXPORT_SYMBOL(pwr_mgr_init);
