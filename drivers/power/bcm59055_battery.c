@@ -210,6 +210,7 @@ static int get_batt_percentage(struct bcm59055_power *battery_data)
 	u16 count, slp_count;
 	u32 accm;
 	int ret;
+	pr_debug("Inside %s\n", __func__);
 	if (bcm59055_fg_offset_cal(FAST_CALIBRATION))
 		pr_info("%s: FAST Calibration for Fuel Gauge failed\n", __func__);
 	if (bcm59055_fg_init_read())
@@ -236,6 +237,7 @@ static int get_batt_voltage(struct bcm59055_power *battery_data)
 	int adc_val;
 	int voltage;
 	int i;
+	pr_debug("Inside %s\n", __func__);
 	/* TODO: Need to build the ADC-Voltage table for current voltage reading */
 	adc_val = bcm59055_saradc_read_data(ADC_VMBAT_CHANNEL);
 	for (i = 0; i < VOLTAGE_ADC_MAX_SAMPLE; i++)
@@ -552,6 +554,8 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 
 	if (get_batt_percentage(battery_data) < 0)
 		battery_data->batt_percentage = 50;
+	/* For now no FG and ADC is connected in rayboard so hardcoding the capacity */
+	battery_data->batt_percentage = 50;
 	battery_data->battery.name = "bcm59055-battery";
 	battery_data->battery.type = POWER_SUPPLY_TYPE_BATTERY;
 	battery_data->battery.properties = bcm59055_battery_props;
