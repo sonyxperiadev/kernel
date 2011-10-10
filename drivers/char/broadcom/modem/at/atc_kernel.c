@@ -200,11 +200,17 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
 
     ATC_KERNEL_TRACE(( "ATC_KERNEL_Open\n") ) ;
 
+    if (!is_CP_running())
+    {
+       ATC_KERNEL_TRACE(( "ATC_KERNEL_Open: Error - CP is not running\n") ) ;
+       return -1;
+    }
+	
     priv = kmalloc(sizeof(ATC_KERNEL_PrivData_t), GFP_KERNEL);
     
     if (!priv) 
     {
-        ATC_KERNEL_TRACE(( "ENOMEM\n") ) ;
+        ATC_KERNEL_TRACE(( "ATC_KERNEL_Open: Error ENOMEM\n") ) ;
         return -ENOMEM;
     }
 
@@ -244,17 +250,13 @@ static int ATC_KERNEL_Open(struct inode *inode, struct file *filp)
         ATC_KERNEL_TRACE2(( "**regulator already open\n") ) ;
     }
 #else
-    if (is_CP_running() && !sysrpc_initialized)
+    if (!sysrpc_initialized)
     {
-	sysrpc_initialized = 1; 
+		sysrpc_initialized = 1; 
         KRIL_SysRpc_Init( ) ;
         ATC_ATRPCInit();
     }
-    else
-    {
-       ATC_KERNEL_TRACE(( "ATC_KERNEL_Open: Error - CP is not running\n") ) ;
-       return -1;
-    }
+
 #endif
 
     return 0;
