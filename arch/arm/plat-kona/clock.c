@@ -3306,7 +3306,7 @@ static int pll_clk_set_rate(struct clk* clk, u32 rate)
 		cfg_ctrl = pll_clk->cfg_ctrl_info;
 		for(inx = 0; inx < cfg_ctrl->thold_count; inx++)
 		{
-			if(cfg_ctrl->vco_thold[inx] == -1
+			if(cfg_ctrl->vco_thold[inx] == PLL_VCO_RATE_MAX
 				|| new_rate < cfg_ctrl->vco_thold[inx])
 			{
 				pll_cfg_ctrl =

@@ -563,7 +563,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 PLL Clk name a9_pll
 */
 
-u32 a9_vc0_thold[] = {FREQ_MHZ(1750),-1};
+u32 a9_vc0_thold[] = {FREQ_MHZ(1750),PLL_VCO_RATE_MAX};
 u32 a9_cfg_val[] = {0x8000000,0x8102000};
 static struct pll_cfg_ctrl_info a9_cfg_ctrl =
 {

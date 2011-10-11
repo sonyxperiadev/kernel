@@ -163,6 +163,8 @@
 #define CCU_PI_ENABLE(ccu,en)	{}
 #endif
 
+#define PLL_VCO_RATE_MAX	0xFFFFFFFF
+
 /* CCU Policy ids*/
 enum
 {
