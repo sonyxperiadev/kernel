@@ -1,5 +1,4 @@
 /*
- *  linux/arch/arm/mach-bcm2708/vchiq_arm.c
  *
  *  Copyright (C) 2010 Broadcom
  *
