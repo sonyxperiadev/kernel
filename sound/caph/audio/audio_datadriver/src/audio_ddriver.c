@@ -128,7 +128,7 @@ static AUDIO_DDRIVER_t* audio_capture_driver = NULL;
 static int index = 1;
 static Boolean endOfBuffer = FALSE;
 static const UInt16 sVoIPDataLen[] = {0, 322, 160, 38, 166, 642, 70};
-static VP_Mode_AMR_t prev_amr_mode = (VP_Mode_AMR_t)0xffff;
+static CSL_VP_Mode_AMR_t prev_amr_mode = (CSL_VP_Mode_AMR_t)0xffff;
 static Boolean				telephony_amr_if2;
 
 
@@ -187,12 +187,12 @@ static Boolean VoIP_StartTelephony(void);
 
 static Boolean VoIP_StopTelephony(void);
 
-static void VoIP_StartMainAMRDecodeEncode(VP_Mode_AMR_t		decode_amr_mode,	// AMR mode for decoding the next speech frame
-													UInt8				*pBuf,		// buffer carrying the AMR speech data to be decoded
-													UInt16				length,		// number of bytes of the AMR speech data to be decoded
-													VP_Mode_AMR_t		encode_amr_mode,	// AMR mode for encoding the next speech frame
-													Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
-													);
+static void VoIP_StartMainAMRDecodeEncode(CSL_VP_Mode_AMR_t	decode_amr_mode,	// AMR mode for decoding the next speech frame
+										UInt8				*pBuf,		// buffer carrying the AMR speech data to be decoded
+										UInt16				length,		// number of bytes of the AMR speech data to be decoded
+										CSL_VP_Mode_AMR_t	encode_amr_mode,	// AMR mode for encoding the next speech frame
+										Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
+										);
 static void AUDIO_DRIVER_RenderDmaCallback(UInt32 stream_id);
 static void AUDIO_DRIVER_CaptureDmaCallback(UInt32 stream_id);
 static Boolean VOIP_DumpUL_CB(
@@ -792,7 +792,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
                 UInt32 block_size;
                 UInt32 frame_size;
                 UInt32 num_frames;
-				UInt32 speech_mode = VP_SPEECH_MODE_LINEAR_PCM_8K;
+				UInt32 speech_mode = CSL_VP_SPEECH_MODE_LINEAR_PCM_8K;
 
 				if(pCtrlStruct != NULL)
 					  recordMode = (VOCAPTURE_RECORD_MODE_t *)pCtrlStruct;
@@ -826,7 +826,7 @@ static Result_t AUDIO_DRIVER_ProcessCaptureVoiceCmd(AUDIO_DDRIVER_t* aud_drv,
 				aud_drv->num_periods = aud_drv->ring_buffer_size/aud_drv->interrupt_period;
 
                 if(aud_drv->sample_rate == 16000)
-				    speech_mode = VP_SPEECH_MODE_LINEAR_PCM_16K;
+				    speech_mode = CSL_VP_SPEECH_MODE_LINEAR_PCM_16K;
 
 
                 // update num_frames and frame_size
@@ -1270,7 +1270,7 @@ static Boolean VoIP_StopTelephony(void)
     destroy_workqueue(voip_workqueue);
 
     voip_workqueue = NULL;
-	prev_amr_mode = (VP_Mode_AMR_t)0xffff;
+	prev_amr_mode = (CSL_VP_Mode_AMR_t)0xffff;
 	return TRUE;
 }
 
@@ -1520,10 +1520,10 @@ void VPU_Capture_Request(UInt16 buf_index)
 //
 //******************************************************************************
 static void VoIP_StartMainAMRDecodeEncode(
-	VP_Mode_AMR_t		decode_amr_mode,	// AMR mode for decoding the next speech frame
+	CSL_VP_Mode_AMR_t	decode_amr_mode,	// AMR mode for decoding the next speech frame
 	UInt8				*pBuf,		// buffer carrying the AMR speech data to be decoded
 	UInt16				length,		// number of bytes of the AMR speech data to be decoded
-	VP_Mode_AMR_t		encode_amr_mode,	// AMR mode for encoding the next speech frame
+	CSL_VP_Mode_AMR_t	encode_amr_mode,	// AMR mode for encoding the next speech frame
 	Boolean				dtx_mode	// Turn DTX on (TRUE) or off (FALSE)
 	)
 {
@@ -1579,7 +1579,7 @@ static Boolean VOIP_DumpUL_CB(
 
     AUDIO_DDRIVER_t* aud_drv;
 	UInt8 index = 0;
-	VOIP_Buffer_t *voipBufPtr = NULL;
+	CSL_VOIP_Buffer_t *voipBufPtr = NULL;
 	UInt16 codecType;
 	UInt32 ulSize = 0;
 	
@@ -1589,7 +1589,7 @@ static Boolean VOIP_DumpUL_CB(
         Log_DebugPrintf(LOGID_AUDIO, "VOIP_DumpUL_CB:: Spurious call back\n");
         return TRUE;
     }
-	voipBufPtr = (VOIP_Buffer_t *)pSrc;
+	voipBufPtr = (CSL_VOIP_Buffer_t *)pSrc;
 	codecType = voipBufPtr->voip_vocoder;
 	index = (codecType & 0xf000) >> 12;
 	if (index >= 7)
@@ -1629,7 +1629,7 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
 	aud_drv->tmp_buffer[0] = aud_drv->voip_config.codec_type;
 	//Log_DebugPrintf(LOGID_AUDIO, "VOIP_FillDL_CB :: aud_drv->codec_type %d, dlSize = %d...\n", aud_drv->voip_config.codec_type, dlSize);
 	aud_drv->voip_config.pVoipDLCallback(aud_drv->voip_config.pVoIPCBPrivate, (UInt8 *)&aud_drv->tmp_buffer[1], (dlSize - 2)); // 2 bytes for codec type
-	VoIP_StartMainAMRDecodeEncode((VP_Mode_AMR_t)aud_drv->voip_config.codec_type, (UInt8 *)aud_drv->tmp_buffer, dlSize, (VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
+	VoIP_StartMainAMRDecodeEncode((CSL_VP_Mode_AMR_t)aud_drv->voip_config.codec_type, (UInt8 *)aud_drv->tmp_buffer, dlSize, (CSL_VP_Mode_AMR_t)aud_drv->voip_config.codec_type, FALSE);
 	return TRUE;
 };
 

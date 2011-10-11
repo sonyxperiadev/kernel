@@ -62,6 +62,17 @@
 // ---- Include Files -------------------------------------------------------
 #include "mobcom_types.h"
 
+typedef enum
+{
+    CSL_VP_SPEECH_MODE_NONE = 0,
+    CSL_VP_SPEECH_MODE_FR = 1,
+    CSL_VP_SPEECH_MODE_EFR = 2,
+    CSL_VP_SPEECH_MODE_LINEAR_PCM_8K= 3,
+    CSL_VP_SPEECH_MODE_AMR = 4,
+    CSL_VP_SPEECH_MODE_AMR_2 = 5,
+    CSL_VP_SPEECH_MODE_LINEAR_PCM_16K= 6
+} CSL_VP_Speech_Mode_t;
+
 
 /**
  * @addtogroup CSL VPU Interface

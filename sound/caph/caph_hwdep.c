@@ -59,7 +59,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "bcm_audio_thread.h"
 #include "caph_common.h"
 
-#include "shared.h"
+#include "csl_voip.h"
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
 #include "csl_audio_render.h"
@@ -119,8 +119,8 @@ static void HWDEP_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize);
 
 static void FillSilenceFrame(UInt32 codec_type, UInt32 frame_size,UInt8 *pDst)
 {
-	VOIP_Buffer_t tmpBuf;	
-	memset(&tmpBuf, 0, sizeof(VOIP_Buffer_t));
+	CSL_VOIP_Buffer_t tmpBuf;	
+	memset(&tmpBuf, 0, sizeof(CSL_VOIP_Buffer_t));
 	
 	if (codec_type == VoIP_Codec_AMR475)
 		tmpBuf.voip_frame.frame_amr[0] = sVoIPAMRSilenceFrame[0];
