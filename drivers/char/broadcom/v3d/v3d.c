@@ -100,6 +100,11 @@ static struct {
 	struct trace_entry *tracebuf;
 	struct pi_mgr_dfs_node* dfs_node;
 	struct pi_mgr_qos_node* qos_node;
+	unsigned long j1;  //jiffies of acquire
+	unsigned long j2;  //jiffies of release
+	unsigned long acquired_time;
+	unsigned long free_time;
+	bool show_v3d_usage;
 } v3d_state;
 
 typedef struct {
@@ -523,6 +528,13 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				err_print("Wait for V3D HW failed\n");
 				return -ERESTARTSYS;
 			}
+			v3d_state.j1 = jiffies;
+			v3d_state.free_time += v3d_state.j1 - v3d_state.j2;
+			if( (v3d_state.show_v3d_usage) && jiffies_to_msecs(v3d_state.free_time + v3d_state.acquired_time) >  5000){
+				err_print("V3D usage = %lu \n", (uint32_t) (v3d_state.acquired_time * 100 )/ (v3d_state.free_time + v3d_state.acquired_time) );
+				v3d_state.free_time = 0;
+				v3d_state.acquired_time = 0;
+			}
 			/* Request for SIMPLE wfi */
 			if (v3d_state.qos_node)
 				pi_mgr_qos_request_update(v3d_state.qos_node, 0);
@@ -537,6 +549,8 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			if (v3d_state.qos_node)
 				pi_mgr_qos_request_update(v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
 			dev->v3d_acquired = 0;	//Not acquired anymore
+			v3d_state.j2 = jiffies;
+			v3d_state.acquired_time += v3d_state.j2 - v3d_state.j1;
 			up(&v3d_state.acquire_sem);		//V3D is up for grab
 		}
 		break;
@@ -675,8 +689,20 @@ int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long c
 		/* TODO:  Nikhil already has some /proc control interface...  integrate this with that */
 		trace_control_stuff(v3d_req + 6);
 	}
-	else
-	if(!g_mem_slots)
+	else if (!strncmp("print_usage=on", v3d_req, 14)) {
+		v3d_state.show_v3d_usage = 1;
+	}
+	else if (!strncmp("print_usage=off", v3d_req, 15)) {
+		v3d_state.show_v3d_usage = 0;
+	}
+	else if (!strncmp("read_reg", v3d_req, 8)) {
+        err_print("CT0CA = 0X%x \tCT0EA = 0X%x\nCT1CA = 0X%x \tCT1EA = 0X%x\n", 
+                        readl(v3d_base + V3D_CT0CA_OFFSET),
+                        readl(v3d_base + V3D_CT0EA_OFFSET),
+                        readl(v3d_base + V3D_CT1CA_OFFSET),
+                        readl(v3d_base + V3D_CT1EA_OFFSET));
+	}
+	else if(!g_mem_slots)
 	{
 		input = simple_strtoul(v3d_req, (char**)NULL, 0);
 		if( input < 0 || ( (input != 1) && (input % 2))){
@@ -792,6 +818,8 @@ int __init v3d_init(void)
 		v3d_state.tracebuf = NULL;
 	}
 	v3d_state.trace_lock = __SPIN_LOCK_UNLOCKED();
+
+	v3d_state.show_v3d_usage = 0;
 
 	/* create a proc entry */
 	v3d_state.proc_info = create_proc_entry("v3d",
