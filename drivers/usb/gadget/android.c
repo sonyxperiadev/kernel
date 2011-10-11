@@ -579,6 +579,7 @@ static int mass_storage_function_init(struct android_usb_function *f,
 				"lun1");
 
 		if (err) {
+			sysfs_remove_link(&f->dev->kobj, "lun0"); /* Remove link to "lun0" before freeing config */
 			kfree(config);
 			return err;
 		}
