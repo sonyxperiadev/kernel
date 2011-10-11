@@ -163,7 +163,6 @@ static struct usb_configuration android_config_driver = {
 	.bMaxPower	= 0xFA, /* 500ma */
 };
 
-
 #ifndef CONFIG_USB_G_ANDROID_2_6_SYSFS
 static void android_work(struct work_struct *data)
 {
@@ -549,8 +548,16 @@ static int mass_storage_function_init(struct android_usb_function *f,
 	if (!config)
 		return -ENOMEM;
 
+#ifdef CONFIG_USB_DUAL_DISK_SUPPORT
+	config->fsg.nluns = 2;
+#else
 	config->fsg.nluns = 1;
+#endif
+
 	config->fsg.luns[0].removable = 1;
+
+	if (config->fsg.nluns > 1)
+		config->fsg.luns[1].removable = 1;
 
 	common = fsg_common_init(NULL, cdev, &config->fsg);
 	if (IS_ERR(common)) {
@@ -560,10 +567,21 @@ static int mass_storage_function_init(struct android_usb_function *f,
 
 	err = sysfs_create_link(&f->dev->kobj,
 				&common->luns[0].dev.kobj,
-				"lun");
+				"lun0");
 	if (err) {
 		kfree(config);
 		return err;
+	}
+
+	if (config->fsg.nluns > 1) {
+		err = sysfs_create_link(&f->dev->kobj,
+				&common->luns[1].dev.kobj,
+				"lun1");
+
+		if (err) {
+			kfree(config);
+			return err;
+		}
 	}
 
 	config->common = common;
