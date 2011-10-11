@@ -875,7 +875,7 @@ static struct peri_clk CLK_NAME(arm) = {
 		.flags = ARM_PERI_CLK_FLAGS,
 		.clk_type = CLK_TYPE_PERI,
 		.id	= CLK_ARM_PERI_CLK_ID,
-		.name = ARM_PERI_CLK_NAME_STR,
+		.name = ARM_CLK_NAME_STR,
 		.dep_clks = DEFINE_ARRAY_ARGS(NULL),
 		.ops = &arm_peri_clk_ops,
 	},
@@ -896,6 +896,35 @@ static struct peri_clk CLK_NAME(arm) = {
 		.pll_select_mask= KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_MASK,
 		.pll_select_shift= KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_SHIFT,
 	},
+};
+
+/*
+Bus clock name ARM_SWITCH
+*/
+static struct bus_clk CLK_NAME(arm_switch) = {
+
+ .clk =	{
+     /*JIRA HWRHEA-1111: Enable A9 AXI Auto gating for B0 */
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+				.flags = ARM_SWITCH_CLK_FLAGS,
+#else
+				.flags = ARM_SWITCH_CLK_FLAGS | AUTO_GATE,
+#endif
+				.clk_type = CLK_TYPE_BUS,
+				.id	= CLK_ARM_SWITCH_CLK_ID,
+				.name = ARM_SWITCH_CLK_NAME_STR,
+				.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+				.ops = &gen_bus_clk_ops,
+		},
+ .ccu_clk = &CLK_NAME(kproc),
+ .clk_gate_offset  = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_OFFSET,
+ .clk_en_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_CLK_EN_MASK,
+ .gating_sel_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_HW_SW_GATING_SEL_MASK,
+ .hyst_val_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_HYST_VAL_MASK,
+ .hyst_en_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_HYST_EN_MASK,
+ .stprsts_mask = KPROC_CLK_MGR_REG_ARM_SWITCH_CLKGATE_ARM_SWITCH_STPRSTS_MASK,
+ .freq_tbl_index = -1,
+ .src_clk = NULL,
 };
 
 static int dig_clk_set_gating_ctrl(struct peri_clk * peri_clk, int clk_id, int  gating_ctrl)
@@ -1469,7 +1498,13 @@ Bus clock name APB10
 static struct bus_clk CLK_NAME(apb10) = {
 
  .clk =	{
+     /*JIRA HWRHEA-848 HWRHEA-1444 : APB10 and APB 9 should be autogated for B0 */
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 				.flags = APB10_BUS_CLK_FLAGS,
+#else
+				.flags = APB10_BUS_CLK_FLAGS | AUTO_GATE,
+#endif
+
 				.clk_type = CLK_TYPE_BUS,
 				.id	= CLK_APB10_BUS_CLK_ID,
 				.name = APB10_BUS_CLK_NAME_STR,
@@ -1490,7 +1525,12 @@ Bus clock name APB9
 static struct bus_clk CLK_NAME(apb9) = {
 
  .clk =	{
+     /*JIRA HWRHEA-848 HWRHEA-1444 : APB10 and APB 9 should be autogated for B0 */
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 				.flags = APB9_BUS_CLK_FLAGS,
+#else
+				.flags = APB9_BUS_CLK_FLAGS | AUTO_GATE,
+#endif
 				.clk_type = CLK_TYPE_BUS,
 				.id	= CLK_APB9_BUS_CLK_ID,
 				.name = APB9_BUS_CLK_NAME_STR,
@@ -2366,6 +2406,31 @@ static struct ref_clk CLK_NAME(bbl_32k) = {
     .ccu_clk = &CLK_NAME(khubaon),
 };
 
+/*
+Bus clock name HUBAON.
+ This clock has dividers present in seperate register. Since its not used as
+ of now, we are declaring this as BUS clock and not initializing divider
+ values. Also, clock SW enable bit is present in DIV register for debug.
+ So this clock need to be autogated always from B0.
+*/
+static struct bus_clk CLK_NAME(hubaon) = {
+    .clk =	{
+	.flags = HUBAON_BUS_CLK_FLAGS,
+	.clk_type = CLK_TYPE_BUS,
+	.id	= CLK_HUBAON_BUS_CLK_ID,
+	.name = HUBAON_BUS_CLK_NAME_STR,
+	.dep_clks = DEFINE_ARRAY_ARGS(NULL),
+	.ops = &gen_bus_clk_ops,
+    },
+    .ccu_clk = &CLK_NAME(khubaon),
+    .clk_gate_offset  = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_OFFSET,
+    .gating_sel_mask = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_HUBAON_HW_SW_GATING_SEL_MASK,
+    .hyst_val_mask = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_HUBAON_HYST_VAL_MASK,
+    .hyst_en_mask = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_HUBAON_HYST_EN_MASK,
+    .stprsts_mask = KHUBAON_CLK_MGR_REG_HUB_CLKGATE_HUBAON_STPRSTS_MASK,
+    .freq_tbl_index = -1,
+    .src_clk = CLK_PTR(var_312m),
+};
 
 /*
 Bus clock name HUB_TIMER_APB
@@ -5498,11 +5563,16 @@ int root_ccu_clk_init(struct clk* clk)
     reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+    /* JIRA HWRHEA-877: remove this B0 */
     /* Var_312M and Var_96M clocks default PLL is wrong. correcting here.*/
     writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
     writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
 #endif
+
+    /* MobC00173104 : change the settling time to 4 ms */
+    writel (0x82, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CRYSTAL_STRTDLY_OFFSET);
+
 	/* disable write access*/
 	ccu_write_access_enable(ccu_clk, false);
 
@@ -5654,7 +5724,8 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	/* CCU registration end */
 
 	/* Clocks registration */
-	BRCM_REGISTER_CLK(ARM_PERI_CLK_NAME_STR,NULL,arm),
+	BRCM_REGISTER_CLK(ARM_CLK_NAME_STR,NULL,arm),
+	BRCM_REGISTER_CLK(ARM_SWITCH_CLK_NAME_STR,NULL,arm_switch),
 	BRCM_REGISTER_CLK(FRAC_1M_REF_CLK_NAME_STR,NULL,frac_1m),
 	BRCM_REGISTER_CLK(REF_96M_VARVDD_REF_CLK_NAME_STR,NULL,ref_96m_varvdd),
 	BRCM_REGISTER_CLK(REF_96M_REF_CLK_NAME_STR,NULL,ref_96m),
@@ -5731,6 +5802,7 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(PWRMGR_AXI_BUS_CLK_NAME_STR,NULL,pwrmgr_axi),
 	BRCM_REGISTER_CLK(APB6_BUS_CLK_NAME_STR,NULL,apb6),
 	BRCM_REGISTER_CLK(GPIOKP_APB_BUS_CLK_NAME_STR,NULL,gpiokp_apb),
+	BRCM_REGISTER_CLK(HUBAON_BUS_CLK_NAME_STR,NULL,hubaon),
 	BRCM_REGISTER_CLK(PMU_BSC_APB_BUS_CLK_NAME_STR,NULL,pmu_bsc_apb),
 	BRCM_REGISTER_CLK(CHIPREG_APB_BUS_CLK_NAME_STR,NULL,chipreg_apb),
 	BRCM_REGISTER_CLK(FMON_APB_BUS_CLK_NAME_STR,NULL,fmon_apb),

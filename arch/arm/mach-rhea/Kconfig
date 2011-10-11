@@ -45,7 +45,7 @@ config RHEA_DORMANT_MODE
        help
 	Say Y if you want to enable dormant mode support for Rhea platform
 
-config RHEA_PM_ASIC_WORKAROUND
+config RHEA_A0_PM_ASIC_WORKAROUND
        depends on ARCH_RHEA
        bool "Enable ASIC workarounds for Power management"
        default y

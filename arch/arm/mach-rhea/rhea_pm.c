@@ -351,6 +351,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
 	u32 reg_val;
+	u32 ddr_min_pwr_state_ap = 0;
 #ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
 	u32 timer_lsw = 0;
 #endif
@@ -362,6 +363,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 	if(pm_en_self_refresh)
 	{
+		ddr_min_pwr_state_ap = readl(KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
 		writel(0, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
 		reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 		reg_val |=CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
@@ -374,8 +376,8 @@ int enter_dormant_state(struct kona_idle_state* state)
 	/*Turn off XTAL only for deep sleep state*/
 	if(state->state == RHEA_STATE_C2)
 		clk_set_crystal_pwr_on_idle(true);
-
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+/*JIRA HWRHEA-1659 : Remove this workaround for B0*/
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
@@ -386,7 +388,8 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 	clear_wakeup_interrupts();
 	config_wakeup_interrupts();
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+/*JIRA HWRHEA-1541 : Remove force clock disabling for B0 */
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	if(force_retention)
 		enable_sleep_prevention_clock(0);
 #endif
@@ -422,7 +425,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 	if(pm_en_self_refresh)
 	{
-		writel(1, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
+		writel(ddr_min_pwr_state_ap, KONA_MEMC0_NS_VA + CSR_APPS_MIN_PWR_STATE_OFFSET);
 		reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 		reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
 		writel(reg_val,KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
@@ -480,12 +483,14 @@ int enter_dormant_state(struct kona_idle_state* state)
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
 
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+/*JIRA HWRHEA-1541 : Remove force clock disabling for B0 */
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	if(force_retention)
 		enable_sleep_prevention_clock(1);
 #endif
 
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+/*JIRA HWRHEA-1659 : Remove this workaround for B0*/
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val |= ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);

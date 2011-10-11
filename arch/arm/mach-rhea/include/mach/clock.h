@@ -17,7 +17,8 @@
 /*Defines used by Kona*/
 #define	CLK_WR_ACCESS_PASSWORD	0x00A5A5
 
-#define	ARM_PERI_CLK_NAME_STR			"arm_clk"
+#define	ARM_CLK_NAME_STR			"arm_clk"
+#define ARM_SWITCH_CLK_NAME_STR			"arm_switch_clk"
 #define KPROC_CCU_CLK_NAME_STR			"proc_ccu"
 #define ROOT_CCU_CLK_NAME_STR			"root_ccu"
 #define CRYSTAL_REF_CLK_NAME_STR		"crystal"
@@ -94,6 +95,7 @@
 #define	MDIOMASTER_PERI_CLK_NAME_STR "mdiomaster"
 #define	KHUBAON_CCU_CLK_NAME_STR "aon_ccu"
 #define	HUB_TIMER_APB_BUS_CLK_NAME_STR "hub_timer_apb_clk"
+#define	HUBAON_BUS_CLK_NAME_STR		"hubaon_clk"
 #define	ACI_APB_BUS_CLK_NAME_STR "aci_apb_clk"
 #define	SIM_APB_BUS_CLK_NAME_STR "sim_apb_clk"
 #define	SIM2_APB_BUS_CLK_NAME_STR "sim2_apb_clk"
@@ -198,6 +200,7 @@ Clock ids
 enum
 {
 	CLK_ARM_PERI_CLK_ID,
+	CLK_ARM_SWITCH_CLK_ID,
 	CLK_KPROC_CCU_CLK_ID,
 	CLK_ROOT_CCU_CLK_ID,
     CLK_FRAC_1M_REF_CLK_ID,
@@ -273,6 +276,7 @@ enum
 	CLK_BROM_PERI_CLK_ID,
 	CLK_MDIOMASTER_PERI_CLK_ID,
 	CLK_KHUBAON_CCU_CLK_ID,
+	CLK_HUBAON_BUS_CLK_ID,
 	CLK_HUB_TIMER_APB_BUS_CLK_ID,
 	CLK_ACI_APB_BUS_CLK_ID,
 	CLK_SIM_APB_BUS_CLK_ID,
@@ -375,6 +379,7 @@ enum
 };
 
 #define ARM_PERI_CLK_FLAGS			0
+#define ARM_SWITCH_CLK_FLAGS		0
 #define KPROC_CCU_CLK_FLAGS			CCU_TARGET_AC
 #define FRAC_1M_REF_CLK_FLAGS 			AUTO_GATE|ENABLE_ON_INIT
 #define REF_96M_VARVDD_REF_CLK_FLAGS 			0
@@ -450,6 +455,8 @@ enum
 #define BROM_PERI_CLK_FLAGS 			0
 #define MDIOMASTER_PERI_CLK_FLAGS 		0
 #define KHUBAON_CCU_CLK_FLAGS 			CCU_TARGET_AC
+/*JIRA HWRHEA-583: Enable Auto gating for HUBAON for B0*/
+#define HUBAON_BUS_CLK_FLAGS			AUTO_GATE
 #define HUB_TIMER_APB_BUS_CLK_FLAGS 		AUTO_GATE|ENABLE_ON_INIT
 #define ACI_APB_BUS_CLK_FLAGS 			0
 #define SIM_APB_BUS_CLK_FLAGS 			0

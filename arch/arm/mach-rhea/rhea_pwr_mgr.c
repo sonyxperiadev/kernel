@@ -203,11 +203,13 @@ static const struct rhea_event_table event_table[] = {
 		/*event_id				trig_type			modem		arm_core 	arm_sub		aon		hub		mm*/
 	{	SOFTWARE_0_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_RET, 	PM_DFS,		PM_DFS,		PM_DFS,		PM_RET, },
 	{	SOFTWARE_1_EVENT,			PM_TRIG_NONE,			PM_RET,		PM_RET,		PM_RET,		PM_RET,		PM_RET,		PM_RET,	},
-	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_ECO,		PM_ECO,		PM_ECO,		PM_RET,	},
+	/*JIRA HWRHEA-2093 : change HUB policy to 5 for all active events */
+	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_ECO,		PM_ECO,		PM_DFS,		PM_RET,	},
 	// This is a SW workaround for A0. Configure MODEMBUS_ACTIVE_EVENT to wake up AP at ECONOMY so that
 	// AP stays awake long enough until all CP activities that could trigger MODEMBUS_ACTIVE_EVENT have completed.
 	// For A0 chip, MODEMBUS_ACTIVE_EVENT is enabled to work around the JIRA that VREQ_NONZERO_PI_MODEM_EVENT is not auto-cleared.
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+	// JIRA HWRHEA-1253 : Remove MODEMBUS_ACTIVE_EVENT for B0
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	{	MODEMBUS_ACTIVE_EVENT, 			PM_TRIG_POS_EDGE,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
 #endif
 	{	VREQ_NONZERO_PI_MODEM_EVENT,		PM_TRIG_POS_EDGE,		PM_DFS,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_RET,	},
@@ -348,8 +350,8 @@ int __init rhea_pwr_mgr_init()
 	pwr_mgr_init(&rhea_pwr_mgr_info);
 	rhea_pi_mgr_init();
 
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
-	// HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
+	// JIRA HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
 	// is used to turn on mm power switches which results in mm clamps getting released before mm subsystem
 	// has powered up. This results in glitches on mm outputs which in some parts causes fake write
 	// transaction to memc with random ID. Next real write transfer to memc from mm creates write
@@ -363,7 +365,7 @@ int __init rhea_pwr_mgr_init()
 #endif
 	/*MM override is not set by default*/
 	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,false/*clear*/);
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
 	/* 14.5mA per switch */
 	reg_val |= 3;
 	writel(reg_val, (KONA_CHIPREG_VA +CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));

@@ -528,7 +528,7 @@ static struct platform_device android_usb_device = {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] =
 {
-#ifndef CONFIG_RHEA_PM_ASIC_WORKAROUND
+#ifndef CONFIG_RHEA_A0_PM_ASIC_WORKAROUND
     FTBL_INIT(156000000, PI_OPP_ECONOMY),
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
