@@ -54,7 +54,7 @@ static ssize_t dbgmsk_store(struct device *dev, struct device_attribute *attr,
 	sscanf(buf, "%x", &debug_mask);
 	return count;
 }
-static DEVICE_ATTR(dbgmsk, S_IRUGO, dbgmsk_show, dbgmsk_store);
+static DEVICE_ATTR(dbgmsk, 0644, dbgmsk_show, dbgmsk_store);
 #endif
 
 static struct bcmpmu_adc_cal adc_cal[PMU_ADC_MAX] = {
@@ -647,8 +647,10 @@ static int bcmpmu_get_fg_acc_mas(struct bcmpmu *bcmpmu, int *data)
 		return ret;
 	}
 	
-	if ((acc3 & 0x80) == 0)
+	if ((acc3 & 0x80) == 0) {
+		pr_hwmon(ERROR, "%s fg data invalid.\n", __func__);
 		return -EINVAL;
+	}
 	acc3 = acc3 & 0x03;
 	if (acc3 >= 2)	acc3 = acc3 | 0xFC;
 	

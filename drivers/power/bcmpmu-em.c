@@ -33,6 +33,7 @@
 #define BCMPMU_PRINT_INIT (1U << 1)
 #define BCMPMU_PRINT_FLOW (1U << 2)
 #define BCMPMU_PRINT_DATA (1U << 3)
+#define BCMPMU_PRINT_REPORT (1U << 4)
 
 static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 #define pr_em(debug_level, args...) \
@@ -79,6 +80,7 @@ struct bcmpmu_em {
 	int charge_1c_rate;
 	int batt_impedence;
 	int fg_capacity_full;
+	int support_fg;
 	int fg_capacity;
 	int chrgr_curr;
 	enum bcmpmu_chrgr_type_t chrgr_type;
@@ -184,16 +186,18 @@ static const struct attribute_group bcmpmu_em_attr_group = {
 };
 #endif
 
-static unsigned char em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr)
+static unsigned char em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int curr, bool comp)
 {
 	int capacity;
 	int batt_volt;
 
-	batt_volt = volt - (pem->batt_impedence * curr)/1000;
-	pr_em(FLOW, "%s, volt=%d, curr=%d, impedence=%d, batt_volt=%d\n",
-		__func__, volt, curr, pem->batt_impedence, batt_volt);
+	if (comp)
+		batt_volt = volt - (pem->batt_impedence * curr)/1000;
+	else
+		batt_volt = volt;
 	
-	if (batt_volt > 4100) capacity = 95;
+	if (batt_volt > 4150) capacity = 99;
+	else if (batt_volt > 4100) capacity = 95;
 	else if (batt_volt > 4050) capacity = 90;
 	else if (batt_volt > 4000) capacity = 85;
 	else if (batt_volt > 3950) capacity = 80;
@@ -207,8 +211,58 @@ static unsigned char em_batt_get_capacity(struct bcmpmu_em *pem, int volt, int c
 	else if (batt_volt > 3350) capacity = 2;
 	else capacity = 0;
 
-	pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
+	pr_em(FLOW, "%s, cpcty=%d, vlt=%d, crr=%d, imp=%d, cvolt=%d\n",
+		__func__, capacity, volt, curr,
+			pem->batt_impedence, batt_volt);
 
+	return capacity;
+}
+
+static int update_batt_capacity(struct bcmpmu_em *pem)
+{
+	struct bcmpmu_adc_req req;
+	int capacity = 0;
+	int capacity_v = 0;
+	int fg_result;
+	int ret;
+
+	req.sig = PMU_ADC_NTC;
+	req.tm = PMU_ADC_TM_HK;
+	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
+	pem->batt_temp = req.cnv;
+	req.sig = PMU_ADC_VMBATT;
+	req.tm = PMU_ADC_TM_HK;
+	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
+	pem->batt_volt = req.cnv;
+	req.sig = PMU_ADC_FG_CURRSMPL;
+	req.tm = PMU_ADC_TM_HK;
+	pem->bcmpmu->adc_req(pem->bcmpmu, &req);
+	pem->batt_curr = req.cnv;
+
+	if (pem->support_fg == 0) {
+		capacity = em_batt_get_capacity(pem,
+			pem->batt_volt, pem->batt_curr, 1);
+	} else {
+		ret = pem->bcmpmu->fg_acc_mas(pem->bcmpmu, &fg_result);
+		if (ret != 0) {
+			pr_em(ERROR, "%s, fg data invalid\n", __func__);
+			fg_result = 0;
+		}
+		pem->fg_capacity += fg_result;
+		if (pem->fg_capacity >= pem->fg_capacity_full)
+			pem->fg_capacity = pem->fg_capacity_full;
+		if (pem->fg_capacity <= 0)
+			pem->fg_capacity = 0;
+		capacity = (pem->fg_capacity * 100)
+			/pem->fg_capacity_full;
+		capacity_v = em_batt_get_capacity(pem,
+			pem->batt_volt, pem->batt_curr, 0);
+		if (capacity < capacity_v)
+			capacity = capacity_v;
+		pr_em(FLOW, "%s, fg_acc=%d, fg_cpcty=%d, cpcty=%d, vcpcty=%d, t=%d\n",
+			__func__, fg_result, pem->fg_capacity, capacity,
+			capacity_v, pem->batt_temp);
+	}
 	return capacity;
 }
 
@@ -293,7 +347,7 @@ static void em_algorithm(struct work_struct *work)
 	static int first_run = 0;
 	static int eoc_count = 0;
 	static int init_run = 0;
-	static int init_run_count = 8;
+	static int init_run_count = 0;
 	static int vacc = 0;
 	static int iacc = 0;
 
@@ -308,9 +362,16 @@ static void em_algorithm(struct work_struct *work)
 		if (req.cnv == 0) {
 			init_run = 1;
 			init_run_count = 8;
-		} else
+		} else {
 			pem->batt_volt = req.cnv;
+			capacity = em_batt_get_capacity(pem,
+				pem->batt_volt, 0, 0);
+			pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
+			pem->batt_capacity = capacity;
+		}
 		first_run = 1;
+		schedule_delayed_work(&pem->work, msecs_to_jiffies(500));
+		return;
 	}
 
 	if (init_run_count > 0) {
@@ -319,39 +380,27 @@ static void em_algorithm(struct work_struct *work)
 		bcmpmu->adc_req(bcmpmu, &req);
 		vacc += req.cnv;
 
-		req.sig = PMU_ADC_FG_CURRSMPL;
-		req.tm = PMU_ADC_TM_HK;
-		bcmpmu->adc_req(bcmpmu, &req);
-		iacc += req.cnv;
 		init_run_count--;
-		schedule_delayed_work(&pem->work, msecs_to_jiffies(500));
+		schedule_delayed_work(&pem->work, msecs_to_jiffies(50));
 		return;
 	}
 	if (init_run) {
+		bcmpmu->fg_reset(bcmpmu);
+		req.sig = PMU_ADC_FG_CURRSMPL;
+		req.tm = PMU_ADC_TM_HK;
+		bcmpmu->adc_req(bcmpmu, &req);
+		iacc = req.cnv;
 		pem->batt_volt = vacc/8;
-		pem->batt_curr = iacc/8;
-		capacity = em_batt_get_capacity(pem, pem->batt_volt, pem->batt_curr);
+		pem->batt_curr = iacc;
+		capacity = em_batt_get_capacity(pem,
+			pem->batt_volt, pem->batt_curr, 1);
+		pem->fg_capacity = (pem->fg_capacity_full * capacity)/100;
 		pem->batt_capacity = capacity;
 		init_run = 0;
+		pr_em(FLOW, "%s, init run complete.\n", __func__);
+		schedule_delayed_work(&pem->work, msecs_to_jiffies(500));
+		return;
 	}
-
-	req.sig = PMU_ADC_VMBATT;
-	req.tm = PMU_ADC_TM_HK;
-	bcmpmu->adc_req(bcmpmu, &req);
-	pem->batt_volt = req.cnv;
-
-	req.sig = PMU_ADC_FG_CURRSMPL;
-	req.tm = PMU_ADC_TM_HK;
-	bcmpmu->adc_req(bcmpmu, &req);
-	pem->batt_curr = req.cnv;
-
-	req.sig = PMU_ADC_NTC;
-	req.tm = PMU_ADC_TM_HK;
-	bcmpmu->adc_req(bcmpmu, &req);
-	pem->batt_temp = req.cnv;
-
-	capacity = em_batt_get_capacity(pem, pem->batt_volt, pem->batt_curr);
-
 
 	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE) {
 		if (pem->charge_state != CHRG_STATE_CHRG) {
@@ -365,6 +414,8 @@ static void em_algorithm(struct work_struct *work)
 		pem->charge_state = CHRG_STATE_IDLE;
 		pem->charge_zone = CHRG_ZONE_OUT;
 	}
+
+	capacity = update_batt_capacity(pem);
 
 	ps = power_supply_get_by_name("battery");
 
@@ -386,6 +437,7 @@ static void em_algorithm(struct work_struct *work)
 		eoc_count++;
 		if (eoc_count > 3) {
 			capacity = 100;
+			pem->fg_capacity = pem->fg_capacity_full;
 			if ((ps) && (pem->batt_status != POWER_SUPPLY_STATUS_FULL)) {
 				propval.intval = POWER_SUPPLY_STATUS_FULL;
 				ps->set_property(ps, POWER_SUPPLY_PROP_STATUS, &propval);
@@ -412,10 +464,8 @@ static void em_algorithm(struct work_struct *work)
 	propval.intval = pem->batt_volt;
 	ps->set_property(ps, POWER_SUPPLY_PROP_VOLTAGE_NOW, &propval);
 
-	if ((pem->charge_state == CHRG_STATE_CHRG) &&
-		(capacity < pem->batt_capacity))
-			capacity = pem->batt_capacity;
-	else if (capacity > pem->batt_capacity)
+	if ((pem->charge_state != CHRG_STATE_CHRG) &&
+		(capacity > pem->batt_capacity))
 		capacity = pem->batt_capacity;
 
 	propval.intval = capacity;
@@ -423,6 +473,7 @@ static void em_algorithm(struct work_struct *work)
 	if (pem->batt_capacity != capacity)
 		psy_changed = 1;
 	pem->batt_capacity = capacity;
+	pr_em(REPORT, "%s, update capacity=%d\n", __func__, capacity);
 
 	propval.intval = pem->batt_temp;
 	ps->set_property(ps, POWER_SUPPLY_PROP_TEMP, &propval);
@@ -457,11 +508,9 @@ static void em_algorithm(struct work_struct *work)
 	else
 		schedule_delayed_work(&pem->work, msecs_to_jiffies(5000));
 
-	pr_em(FLOW, "%s, bvolt=%d, btemp=%d, bcurr=%d, capacity=%d\n",
-		__func__, pem->batt_volt, pem->batt_temp, pem->batt_curr, pem->batt_capacity);
 	if (pem->chrgr_type != PMU_CHRGR_TYPE_NONE)
-		pr_em(FLOW, "%s, ctype=%d, ccurr=%d, czone=%d, ifc=%d, iqc=%d, vf=%d\n",
-		__func__, pem->chrgr_type, pem->chrgr_curr, pem->charge_zone,
+		pr_em(FLOW, "%s, cstate=%d, ctype=%d, ccurr=%d, czone=%d, ifc=%d, iqc=%d, vf=%d\n",
+		__func__, pem->charge_state, pem->chrgr_type, pem->chrgr_curr, pem->charge_zone,
 				pem->icc_fc, pem->icc_qc, pem->vfloat);
 }
 
@@ -519,7 +568,14 @@ static int __devinit bcmpmu_em_probe(struct platform_device *pdev)
 	pem->batt_capacity_lvl = POWER_SUPPLY_CAPACITY_LEVEL_UNKNOWN;
 	pem->batt_present = 1;
 	pem->batt_capacity = 50;
-	
+
+	pem->support_fg = pdata->support_fg;
+	if (pdata->fg_capacity_full)
+		pem->fg_capacity_full = pdata->fg_capacity_full;
+	else
+		pem->fg_capacity_full = 1000*3600;
+	pem->fg_capacity = pem->fg_capacity_full/2;
+
 	if (pdata->chrg_zone_map)
 		pem->zone = pdata->chrg_zone_map;
 	else

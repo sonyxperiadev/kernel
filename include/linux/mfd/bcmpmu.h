@@ -812,6 +812,8 @@ struct bcmpmu_platform_data {
 	int fg_slp_curr_ua;
 	int chrg_1c_rate;
 	struct bcmpmu_charge_zone *chrg_zone_map;
+	int fg_capacity_full;
+	int support_fg;
 };
 
 int bcmpmu_clear_irqs(struct bcmpmu *bcmpmu);
