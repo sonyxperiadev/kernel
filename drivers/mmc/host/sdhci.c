@@ -188,6 +188,7 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 			sdhci_dumpregs(host);
 			return;
 		}
+
 		cpu_relax();
 	}
 
@@ -1949,6 +1950,32 @@ static void sdhci_tasklet_finish(unsigned long param)
 	mmc_request_done(host->mmc, mrq);
 }
 
+#define MAX_ERASE_WAIT_LOOP 100
+
+/*
+ * Internal work. Work to wait for the ERASE operation to finish. Certain MMC
+ * cards can take a long time
+ */
+static void sdhci_work_wait_erase(struct work_struct *work)
+{
+	struct sdhci_host *host = container_of(work, struct sdhci_host,
+					      wait_erase_work);
+	int wait_cnt = 0;
+
+	while (wait_cnt++ < MAX_ERASE_WAIT_LOOP &&
+		(sdhci_readl(host, SDHCI_PRESENT_STATE) &
+			SDHCI_DATA_LVL_DAT0_MASK) == 0) {
+		msleep(100);
+        }
+	
+	if (wait_cnt >= MAX_ERASE_WAIT_LOOP)
+		printk(KERN_ERR "%s: Erase command takes too long to finish!\n",
+				mmc_hostname(host->mmc));
+
+	sdhci_finish_command(host);
+}
+
+
 static void sdhci_timeout_timer(unsigned long data)
 {
 	struct sdhci_host *host;
@@ -2132,6 +2159,25 @@ static void sdhci_data_irq(struct sdhci_host *host, u32 intmask)
 				sdhci_finish_command(host);
 				return;
 			}
+
+			/*
+			 * Some MMC takes a long time for the erase operation
+			 * to finish. Timeout might be triggered before erase
+			 * finishes. If this happens schedule a workqueue work
+			 * item to monitor the DAT0 line to wait for erase to
+			 * finish
+			 */
+			if (intmask & SDHCI_INT_DATA_TIMEOUT &&
+					host->cmd->opcode == MMC_ERASE) {
+				if ((sdhci_readl(host, SDHCI_PRESENT_STATE) &
+							SDHCI_DATA_LVL_DAT0_MASK) == 0) {
+					schedule_work(&host->wait_erase_work);
+					return;
+				} else {
+					sdhci_finish_command(host);
+					return;
+				}
+			}
 		}
 
 		printk(KERN_ERR "%s: Got data interrupt 0x%08x even "
@@ -2304,6 +2350,8 @@ int sdhci_suspend_host(struct sdhci_host *host, pm_message_t state)
 		mod_timer(&host->tuning_timer, jiffies +
 			host->tuning_count * HZ);
 	}
+
+	flush_work_sync(&host->wait_erase_work);
 
 	ret = mmc_suspend_host(host->mmc);
 	if (ret)
@@ -2802,6 +2850,8 @@ int sdhci_add_host(struct sdhci_host *host)
 
 	setup_timer(&host->timer, sdhci_timeout_timer, (unsigned long)host);
 
+	INIT_WORK(&host->wait_erase_work, sdhci_work_wait_erase);
+
 	if (host->version >= SDHCI_SPEC_300) {
 		init_waitqueue_head(&host->buf_ready_int);
 
@@ -2902,6 +2952,8 @@ void sdhci_remove_host(struct sdhci_host *host, int dead)
 		sdhci_reset(host, SDHCI_RESET_ALL);
 
 	free_irq(host->irq, host);
+
+	flush_work_sync(&host->wait_erase_work);
 
 	del_timer_sync(&host->timer);
 	if (host->version >= SDHCI_SPEC_300)
