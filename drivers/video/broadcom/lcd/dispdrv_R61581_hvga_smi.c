@@ -120,6 +120,7 @@ typedef struct
     DISP_DRV_STATE       drvState;
     DISP_PWR_STATE       pwrState;
     struct pi_mgr_dfs_node* dfs_node;
+    volatile int	 is_clock_gated;
 } R61581_HVGA_SMI_PANEL_T;   
 
 
@@ -537,7 +538,10 @@ Int32 R61581_HVGA_SMI_GetDispDrvFeatures (
 Int32 R61581_HVGA_SMI_Init ( void )
 {
     Int32   res = 0;
-    
+   
+    panel[0].is_clock_gated = 1;
+    panel[0].dfs_node = NULL;
+
     if(     panel[0].drvState != DRV_STATE_INIT 
          && panel[0].drvState != DRV_STATE_OPEN  )
     {
@@ -648,9 +652,9 @@ Int32 R61581_HVGA_SMI_Close ( DISPDRV_HANDLE_T dispH )
         }        
     }    
 
-    if (brcm_disable_smi_lcd_clocks(lcdDrv->dfs_node))
+    if (R61581_HVGA_SMI_Stop (dispH))
     {
-        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the clock\n",
             __FUNCTION__  );
         return ( -1 );
     }
@@ -820,8 +824,8 @@ Int32 R61581_HVGA_SMI_Open (
             __FUNCTION__  );
         return ( -1 );
     }    
-  
-    if (brcm_enable_smi_lcd_clocks(&pPanel->dfs_node))
+
+    if (R61581_HVGA_SMI_Start((DISPDRV_HANDLE_T)pPanel))
     {
         LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
             __FUNCTION__  );
@@ -975,12 +979,21 @@ Int32 R61581_HVGA_SMI_PowerControl (
 //*****************************************************************************
 Int32 R61581_HVGA_SMI_Start ( DISPDRV_HANDLE_T dispH )
 {
-//    Int32                       res    = 0;
-//    R61581_HVGA_SMI_PANEL_T*   lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
 
-//    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "R61581_HVGA_SMI_Start");
-//    r61581hvgaSmi_WrCmndP0 ( dispH, TRUE, NT35582_WR_MEM_START );
-    return ( 0 );
+    R61581_HVGA_SMI_PANEL_T*  lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
+
+    if (0 == lcdDrv->is_clock_gated)
+	return 0;
+
+    if (brcm_enable_smi_lcd_clocks(&lcdDrv->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    } else {
+	lcdDrv->is_clock_gated = 0;
+	return ( 0 );
+    }
 }
 
 //*****************************************************************************
@@ -992,10 +1005,21 @@ Int32 R61581_HVGA_SMI_Start ( DISPDRV_HANDLE_T dispH )
 //*****************************************************************************
 Int32 R61581_HVGA_SMI_Stop ( DISPDRV_HANDLE_T dispH )
 {
-    DISPDRV_CHECK_PTR_RET( dispH, &panel[0], "R61581_HVGA_SMI_Stop");
-    LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: Not Implemented\n", __FUNCTION__ );
-    
-    return ( -1 );
+    R61581_HVGA_SMI_PANEL_T*  lcdDrv = (R61581_HVGA_SMI_PANEL_T*) dispH;
+
+    if (1 == lcdDrv->is_clock_gated)
+	return 0;
+
+    if (brcm_disable_smi_lcd_clocks(lcdDrv->dfs_node))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    } else {
+	lcdDrv->is_clock_gated = 1;
+        return 0;
+    }
+
 }
 
 //*****************************************************************************
@@ -1053,7 +1077,13 @@ static void r61581hvgaSmi_Cb ( CSL_LCD_RES_T cslRes, pCSL_LCD_CB_REC pCbRec )
     }
         
     CSL_SMI_Unlock ( pCbRec->cslH );
-    
+   
+    if (R61581_HVGA_SMI_Stop((DISPDRV_HANDLE_T)&panel[0]))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the clock\n",
+            __FUNCTION__  );
+    }
+
     LCD_DBG ( LCD_DBG_ID, "[DISPDRV] -%s\r\n", __FUNCTION__ );
 }
 
@@ -1151,7 +1181,14 @@ Int32 R61581_HVGA_SMI_Update (
             __FUNCTION__ );
         return ( -1 );
     }
-    
+   
+    if (R61581_HVGA_SMI_Start(dispH))
+    {
+        LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to enable the clock\n",
+            __FUNCTION__  );
+        return ( -1 );
+    }
+
     CSL_SMI_Lock ( lcdDrv->cslH );
     r61581hvgaSmi_WrCmndP0 ( dispH, TRUE, MIPI_DCS_WRITE_MEMORY_START );
 
@@ -1187,6 +1224,12 @@ Int32 R61581_HVGA_SMI_Update (
         
     if( (res==-1) || (apiCb == NULL) )
     {
+	if (R61581_HVGA_SMI_Stop(dispH))
+	{
+            LCD_DBG ( LCD_DBG_ERR_ID, "[DISPDRV] %s: ERROR to disable the clock\n",
+	            __FUNCTION__  );
+    	}
+
         CSL_SMI_Unlock ( lcdDrv->cslH );
     }
         

@@ -257,12 +257,6 @@ static int enable_display(struct rhea_fb *fb, u32 gpio)
 		goto fail_to_open;
 	}
 
-	ret = fb->display_ops->start(fb->display_hdl);
-	if (ret != 0) {
-		rheafb_error("Failed to start this display device!\n");
-		goto fail_to_start;
-	}
-
 	ret = fb->display_ops->power_control(fb->display_hdl, DISPLAY_POWER_STATE_ON);
 	if (ret != 0) {
 		rheafb_error("Failed to power on this display device!\n");
@@ -273,8 +267,6 @@ static int enable_display(struct rhea_fb *fb, u32 gpio)
 	return 0;
  
 fail_to_power_control:
-	fb->display_ops->stop(fb->display_hdl);
-fail_to_start:
 	fb->display_ops->close(fb->display_hdl);
 fail_to_open:
 	fb->display_ops->exit();
@@ -320,8 +312,6 @@ static int disable_display(struct rhea_fb *fb)
 	/* TODO:  HACK
 	 * Need to fill the blank.
 	 */
-	fb->display_ops->stop(fb->display_hdl);
-
 	fb->display_ops->close(fb->display_hdl);
 
 	fb->display_ops->exit();
