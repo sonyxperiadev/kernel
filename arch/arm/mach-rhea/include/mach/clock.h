@@ -174,6 +174,10 @@
 #define	SPUM_SEC_PERI_CLK_NAME_STR "spum_sec"
 #define	MPHI_AHB_BUS_CLK_NAME_STR "mphi_ahb_clk"
 #define	MM_CCU_CLK_NAME_STR "mm_ccu"
+#define DSI_PLL_CLK_NAME_STR	"dsi_pll"
+#define DSI_PLL_CHNL0_CLK_NAME_STR "dsi_pll_chnl0"
+#define DSI_PLL_CHNL1_CLK_NAME_STR "dsi_pll_chnl1"
+#define DSI_PLL_CHNL2_CLK_NAME_STR "dsi_pll_chnl2"
 #define	mm_switch_axi_PERI_CLK_NAME_STR "mm_switch_axi_clk"
 #define	CSI0_AXI_BUS_CLK_NAME_STR "csi0_axi_clk"
 #define	CSI1_AXI_BUS_CLK_NAME_STR "csi1_axi_clk"
@@ -359,6 +363,10 @@ enum
 	CLK_SPUM_SEC_PERI_CLK_ID,
 	CLK_MPHI_AHB_BUS_CLK_ID,
 	CLK_MM_CCU_CLK_ID,
+	CLK_DSI_PLL_CLK_ID,
+	CLK_DSI_PLL_CHNL0_CLK_ID,
+	CLK_DSI_PLL_CHNL1_CLK_ID,
+	CLK_DSI_PLL_CHNL2_CLK_ID,
 	CLK_mm_switch_axi_PERI_CLK_ID,
 	CLK_CSI0_AXI_BUS_CLK_ID,
 	CLK_CSI1_AXI_BUS_CLK_ID,
@@ -543,6 +551,10 @@ enum
 #define SPUM_SEC_PERI_CLK_FLAGS 		DISABLE_ON_INIT|ENABLE_HVT
 #define MPHI_AHB_BUS_CLK_FLAGS 			DISABLE_ON_INIT
 #define MM_CCU_CLK_FLAGS 				CCU_TARGET_AC
+#define DSI_PLL_CLK_FLAGS 				AUTO_GATE
+#define DSI_PLL_CHNL0_CLK_FLAGS 		0
+#define DSI_PLL_CHNL1_CLK_FLAGS 		0
+#define DSI_PLL_CHNL2_CLK_FLAGS 		0
 #define mm_switch_axi_PERI_CLK_FLAGS	DONOT_NOTIFY_STATUS_TO_CCU
 #define CSI0_AXI_BUS_CLK_FLAGS 			0
 #define CSI1_AXI_BUS_CLK_FLAGS 			0

@@ -4584,6 +4584,124 @@ static struct ccu_clk CLK_NAME(mm) = {
 };
 
 /*
+PLL Clk name dsi_pll
+*/
+
+static u32 dsi_vc0_thold[] = {FREQ_MHZ(1750),PLL_VCO_RATE_MAX};
+static u32 dsi_cfg_val[] = {0x8000000,0x8102000};
+static struct pll_cfg_ctrl_info dsi_pll_cfg_ctrl =
+{
+	.pll_cfg_ctrl_offset = MM_CLK_MGR_REG_PLLDSI_CONFIG_OFFSET,
+	.pll_cfg_ctrl_mask = MM_CLK_MGR_REG_PLLDSI_CONFIG_PLLDSI_PLL_CONFIG_CTRL_MASK,
+	.pll_cfg_ctrl_shift = MM_CLK_MGR_REG_PLLDSI_CONFIG_PLLDSI_PLL_CONFIG_CTRL_SHIFT,
+
+	.vco_thold = dsi_vc0_thold,
+	.pll_config_value= dsi_cfg_val,
+	.thold_count = ARRAY_SIZE(dsi_vc0_thold),
+};
+
+static struct pll_clk CLK_NAME(dsi_pll) = {
+
+	.clk =	{
+				.flags = DSI_PLL_CLK_FLAGS,
+				.id	   = CLK_DSI_PLL_CLK_ID,
+				.name = DSI_PLL_CLK_NAME_STR,
+				.clk_type = CLK_TYPE_PLL,
+				.ops = &gen_pll_clk_ops,
+		},
+	.ccu_clk = &CLK_NAME(mm),
+	.pll_ctrl_offset = MM_CLK_MGR_REG_PLLDSIA_OFFSET,
+	.soft_post_resetb_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_SOFT_RESETB_MASK,
+	.soft_resetb_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_SOFT_POST_RESETB_MASK,
+	.pwrdwn_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_PWRDWN_MASK,
+	.idle_pwrdwn_sw_ovrride_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_IDLE_PWRDWN_SW_OVRRIDE_MASK,
+	.ndiv_int_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_NDIV_INT_MASK,
+	.ndiv_int_shift = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_NDIV_INT_SHIFT,
+	.ndiv_int_max = 512,
+	.pdiv_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_PDIV_MASK,
+	.pdiv_shift = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_PDIV_SHIFT,
+	.pdiv_max = 8,
+	.pll_lock = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_LOCK_MASK,
+
+	.ndiv_frac_offset = MM_CLK_MGR_REG_PLLDSIB_OFFSET,
+	.ndiv_frac_mask = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_MASK,
+	.ndiv_frac_shift = MM_CLK_MGR_REG_PLLDSIB_PLLDSI_NDIV_FRAC_SHIFT,
+
+	.cfg_ctrl_info = &dsi_pll_cfg_ctrl,
+};
+
+/*dsi pll - channel 0*/
+static struct pll_chnl_clk CLK_NAME(dsi_pll_chnl0) = {
+
+		.clk =	{
+				.flags = DSI_PLL_CHNL0_CLK_FLAGS,
+				.id	   = CLK_DSI_PLL_CHNL0_CLK_ID,
+				.name = DSI_PLL_CHNL0_CLK_NAME_STR,
+				.clk_type = CLK_TYPE_PLL_CHNL,
+				.ops = &gen_pll_chnl_clk_ops,
+		},
+
+		.ccu_clk = &CLK_NAME(mm),
+		.pll_clk = &CLK_NAME(dsi_pll),
+
+		.cfg_reg_offset = MM_CLK_MGR_REG_PLLDSIC_OFFSET,
+		.mdiv_mask = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_MDIV0_MASK,
+		.mdiv_shift = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_MDIV0_SHIFT,
+		.mdiv_max = 256,
+		.out_en_mask = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_ENB_CLKOUT0_MASK,
+		.load_en_mask = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_LOAD_EN0_MASK,
+		.hold_en_mask = MM_CLK_MGR_REG_PLLDSIC_PLLDSI_HOLD0_MASK,
+};
+
+/*dsi pll - channel 1*/
+static struct pll_chnl_clk CLK_NAME(dsi_pll_chnl1) = {
+
+		.clk =	{
+				.flags = DSI_PLL_CHNL1_CLK_FLAGS,
+				.id	   = CLK_DSI_PLL_CHNL1_CLK_ID,
+				.name = DSI_PLL_CHNL1_CLK_NAME_STR,
+				.clk_type = CLK_TYPE_PLL_CHNL,
+				.ops = &gen_pll_chnl_clk_ops,
+		},
+
+		.ccu_clk = &CLK_NAME(mm),
+		.pll_clk = &CLK_NAME(dsi_pll),
+
+		.cfg_reg_offset = MM_CLK_MGR_REG_PLLDSID_OFFSET,
+		.mdiv_mask = MM_CLK_MGR_REG_PLLDSID_PLLDSI_MDIV1_MASK,
+		.mdiv_shift = MM_CLK_MGR_REG_PLLDSID_PLLDSI_MDIV1_SHIFT,
+		.mdiv_max = 256,
+		.out_en_mask = MM_CLK_MGR_REG_PLLDSID_PLLDSI_ENB_CLKOUT1_MASK,
+		.load_en_mask = MM_CLK_MGR_REG_PLLDSID_PLLDSI_LOAD_EN1_MASK,
+		.hold_en_mask = MM_CLK_MGR_REG_PLLDSID_PLLDSI_HOLD1_MASK,
+};
+
+
+/*dsi pll - channel 1*/
+static struct pll_chnl_clk CLK_NAME(dsi_pll_chnl2) = {
+
+		.clk =	{
+				.flags = DSI_PLL_CHNL2_CLK_FLAGS,
+				.id	   = CLK_DSI_PLL_CHNL2_CLK_ID,
+				.name = DSI_PLL_CHNL2_CLK_NAME_STR,
+				.clk_type = CLK_TYPE_PLL_CHNL,
+				.ops = &gen_pll_chnl_clk_ops,
+		},
+
+		.ccu_clk = &CLK_NAME(mm),
+		.pll_clk = &CLK_NAME(dsi_pll),
+
+		.cfg_reg_offset = MM_CLK_MGR_REG_PLLDSIE_OFFSET,
+		.mdiv_mask = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_MDIV2_MASK,
+		.mdiv_shift = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_MDIV2_SHIFT,
+		.mdiv_max = 256,
+		.out_en_mask = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_ENB_CLKOUT2_MASK,
+		.load_en_mask = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_LOAD_EN2_MASK,
+		.hold_en_mask = MM_CLK_MGR_REG_PLLDSIE_PLLDSI_HOLD2_MASK,
+};
+
+
+/*
 Ref clock name CSI0_PIX_PHY
 */
 static struct ref_clk CLK_NAME(csi0_pix_phy) = {
@@ -5688,6 +5806,10 @@ static struct __init clk_lookup rhea_clk_tbl[] =
 	BRCM_REGISTER_CLK(DSI0_ESC_PERI_CLK_NAME_STR,NULL,dsi0_esc),
 	BRCM_REGISTER_CLK(DSI1_ESC_PERI_CLK_NAME_STR,NULL,dsi1_esc),
 	BRCM_REGISTER_CLK(DSI_PLL_O_DSI_PLL_PERI_CLK_NAME_STR,NULL,dsi_pll_o_dsi_pll),
+	BRCM_REGISTER_CLK(DSI_PLL_CLK_NAME_STR,NULL,dsi_pll),
+	BRCM_REGISTER_CLK(DSI_PLL_CHNL0_CLK_NAME_STR,NULL,dsi_pll_chnl0),
+	BRCM_REGISTER_CLK(DSI_PLL_CHNL1_CLK_NAME_STR,NULL,dsi_pll_chnl1),
+	BRCM_REGISTER_CLK(DSI_PLL_CHNL2_CLK_NAME_STR,NULL,dsi_pll_chnl2),
 	BRCM_REGISTER_CLK(DIG_CH0_PERI_CLK_NAME_STR,NULL,dig_ch0),
 	BRCM_REGISTER_CLK(DIG_CH0_PERI_CLK_NAME_STR,NULL,dig_ch1),
 	BRCM_REGISTER_CLK(DIG_CH0_PERI_CLK_NAME_STR,NULL,dig_ch2),
