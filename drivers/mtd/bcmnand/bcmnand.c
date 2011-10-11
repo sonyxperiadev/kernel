@@ -171,6 +171,46 @@ static void nand_release_device(struct mtd_info *mtd)
 }
 
 /**
+ * nand_block_bad - [DEFAULT] Read bad block marker from the chip
+ * @mtd:	MTD device structure
+ * @ofs:	offset from device start
+ * @getchip:	0, if the chip is already selected
+ *
+ * Check, if the block is bad.
+ */
+static int nand_block_bad(struct mtd_info *mtd, loff_t ofs, int getchip)
+{
+	int chipnr, ret;
+	struct bcmnand_chip *chip = mtd->priv;
+	int block;
+	uint8_t is_bad = 0;
+
+	/* Check for invalid offset */
+	if (ofs > mtd->size)
+		return -EINVAL;
+
+	chipnr = (int)(ofs >> chip->chip_shift);
+	block = (int)(ofs >> chip->phys_erase_shift);
+
+	if (getchip) {
+		nand_get_device(chip, mtd, FL_READING);
+	}
+
+	ret = chal_nand_block_isbad(&chip->chal_nand, chipnr, block, &is_bad);
+
+	if (getchip)
+		nand_release_device(mtd);
+
+	if (ret != CHAL_NAND_RC_SUCCESS) {
+		printk(KERN_INFO "%s ofs=0x%llx is_bad=%d\n", __func__, ofs,
+		       is_bad);
+		nandPrintError(ret);
+		/* If low level function fails, block may be good or bad - assume good */
+	}
+	return is_bad == 1;
+}
+
+/**
  * nand_check_wp - [GENERIC] check if the chip is write protected
  * @mtd:	MTD device structure
  * Check, if the device is write protected
@@ -185,11 +225,29 @@ static int nand_check_wp(struct mtd_info *mtd)
 	/* broken xD cards report WP despite being writable */
 	if (chip->options & NAND_BROKEN_XD)
 		return 0;
+
 	/* Check the WP bit */
 	chip->cmdfunc(mtd, NAND_CMD_STATUS, -1, -1);
 	return (chip->read_byte(mtd) & NAND_STATUS_WP) ? 0 : 1;
 #endif
 	return 0;
+}
+
+/**
+ * nand_block_checkbad - [GENERIC] Check if a block is marked bad
+ * @mtd:        MTD device structure
+ * @ofs:        offset from device start
+ * @getchip:    0, if the chip is already selected
+ * @allowbbt:   1, if its allowed to access the bbt area
+ *
+ * Check, if the block is bad. Either by reading the bad block table or
+ * calling of the scan function.
+ */
+static int nand_block_checkbad(struct mtd_info *mtd, loff_t ofs, int getchip,
+			       int allowbbt)
+{
+	(void)allowbbt;
+	return nand_block_bad(mtd, ofs, getchip);
 }
 
 /**
@@ -392,6 +450,13 @@ static int nand_do_read_ops(struct mtd_info *mtd, loff_t from,
 			}
 			mtd->ecc_stats.corrected += toterrs;
 
+			ret =
+			    chal_nand_oob_read(&chip->chal_nand, chipnr, page,
+					       bufpoi + mtd->writesize);
+			if (ret != CHAL_NAND_RC_SUCCESS) {
+				nandPrintError(ret);
+			}
+
 			/* Transfer not aligned data */
 			if (!aligned) {
 				if (!NAND_SUBPAGE_READ(chip) && !oob &&
@@ -531,15 +596,15 @@ static int nand_do_read_oob(struct mtd_info *mtd, loff_t from,
 	page = realpage & chip->pagemask;
 
 	while (1) {
-		int ret = 0;
-
-		len = min(len, readlen);
-		buf = nand_transfer_oob(chip, buf, ops, len);
+		int ret;
 
 		ret = chal_nand_oob_read(&chip->chal_nand, chipnr, page, buf);
 		if (ret != CHAL_NAND_RC_SUCCESS) {
 			nandPrintError(ret);
 		}
+
+		len = min(len, readlen);
+		buf = nand_transfer_oob(chip, buf, ops, len);
 
 		readlen -= len;
 		if (readlen <= 0) {
@@ -748,6 +813,18 @@ static int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
 			ret = -EIO;
 			break;
 		}
+
+		if (unlikely(oob)) {
+			ret =
+			    chal_nand_oob_write(&chip->chal_nand, chipnr, page,
+						chip->oob_poi);
+			if (ret != CHAL_NAND_RC_SUCCESS) {
+				nandPrintError(ret);
+				ret = -EIO;
+				break;
+			}
+		}
+
 #ifdef CONFIG_MTD_BCMNAND_VERIFY_WRITE
 		ret = chal_nand_page_read(&chip->chal_nand, chipnr, page,
 					  (uint8_t *) chip->verifybuf);
@@ -763,16 +840,6 @@ static int nand_do_write_ops(struct mtd_info *mtd, loff_t to,
 		}
 		//printk(KERN_NOTICE "%s: verify succeeded at page 0x%x\n", __func__, page);
 #endif
-
-		if (unlikely(oob)) {
-			ret = chal_nand_oob_write(&chip->chal_nand, chipnr, page,
-						chip->oob_poi);
-			if (ret != CHAL_NAND_RC_SUCCESS) {
-				nandPrintError(ret);
-				ret = -EIO;
-				break;
-			}
-		}
 
 		writelen -= bytes;
 		if (!writelen)
@@ -966,13 +1033,6 @@ static int nand_write_oob(struct mtd_info *mtd, loff_t to,
 	struct bcmnand_chip *chip = mtd->priv;
 	int ret = -ENOTSUPP;
 
-#if 0 
-	printk("%s to=0x%llx, len=%u %02x%02x%02x%02x%02x%02x%02x%02x\n",
-	       __func__, to, ops->len,
-	       ops->oobbuf[0], ops->oobbuf[1], ops->oobbuf[2], ops->oobbuf[3],
-	       ops->oobbuf[4], ops->oobbuf[5], ops->oobbuf[6], ops->oobbuf[7]);
-#endif
-
 	ops->retlen = 0;
 
 	/* Do not allow writes past end of device */
@@ -1051,12 +1111,12 @@ static int nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 	instr->state = MTD_ERASING;
 
 	while (len) {
-		int block, bank;
+		int block, chipnr;
 		loff_t addr = ((loff_t) page) << chip->page_shift;
 		/*
 		 * heck if we have a bad block, we do not erase bad blocks !
 		 */
-		if (nand_block_isbad(mtd, addr)) {
+		if (nand_block_checkbad(mtd, addr, 0, 0)) {
 			printk(KERN_WARNING "%s: attempt to erase a bad block "
 			       "at page 0x%08x\n", __func__, page);
 			instr->state = MTD_ERASE_FAILED;
@@ -1072,9 +1132,9 @@ static int nand_erase(struct mtd_info *mtd, struct erase_info *instr)
 			chip->pagebuf = -1;
 
 		block = (int)(addr >> chip->phys_erase_shift);
-		bank = (int)(addr >> chip->chip_shift);
+		chipnr = (int)(addr >> chip->chip_shift);
 
-		ret = chal_nand_block_erase(&chip->chal_nand, bank, block);
+		ret = chal_nand_block_erase(&chip->chal_nand, chipnr, block);
 		if (ret != CHAL_NAND_RC_SUCCESS) {
 			nandPrintError(ret);
 			instr->state = MTD_ERASE_FAILED;
@@ -1126,30 +1186,13 @@ static void nand_sync(struct mtd_info *mtd)
  * @mtd:	MTD device structure
  * @offs:	offset relative to mtd start
  */
-static int nand_block_isbad(struct mtd_info *mtd, loff_t ofs)
+static int nand_block_isbad(struct mtd_info *mtd, loff_t offs)
 {
-	int ret;
-	uint8_t is_bad;
-	struct bcmnand_chip *chip = mtd->priv;
-	int bank = (int)(ofs >> chip->chip_shift);
-	int block = (int)(ofs >> chip->phys_erase_shift);
-
 	/* Check for invalid offset */
-	if (ofs > mtd->size)
+	if (offs > mtd->size)
 		return -EINVAL;
 
-	nand_get_device(chip, mtd, FL_READING);
-	ret = chal_nand_block_isbad(&chip->chal_nand, bank, block, &is_bad);
-	nand_release_device(mtd);
-
-	if (ret != CHAL_NAND_RC_SUCCESS) {
-		printk(KERN_INFO "%s ofs=0x%llx is_bad=%d\n", __func__, ofs,
-		       is_bad);
-		nandPrintError(ret);
-		return -EIO;
-	}
-
-	return is_bad == 1;
+	return nand_block_checkbad(mtd, offs, 1, 0);
 }
 
 /**
@@ -1160,11 +1203,12 @@ static int nand_block_isbad(struct mtd_info *mtd, loff_t ofs)
 static int nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 {
 	struct bcmnand_chip *chip = mtd->priv;
-	int bank = (int)(ofs >> chip->chip_shift);
+	int chipnr = (int)(ofs >> chip->chip_shift);
 	int block = (int)(ofs >> chip->phys_erase_shift);
 	int ret;
 
-	if ((ret = nand_block_isbad(mtd, ofs))) {
+	ret = nand_block_isbad(mtd, ofs);
+	if (ret) {
 		/* If it was bad already, return success and do nothing. */
 		if (ret > 0)
 			return 0;
@@ -1172,7 +1216,7 @@ static int nand_block_markbad(struct mtd_info *mtd, loff_t ofs)
 	}
 
 	nand_get_device(chip, mtd, FL_WRITING);
-	ret = chal_nand_block_markbad(&chip->chal_nand, bank, block);
+	ret = chal_nand_block_markbad(&chip->chal_nand, chipnr, block);
 	nand_release_device(mtd);
 
 	if (ret != CHAL_NAND_RC_SUCCESS) {
