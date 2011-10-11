@@ -221,7 +221,7 @@ Boolean is_CP_running(void)
 */
 void ipcs_ipc_initialised(void)
 {
-   printk( KERN_ALERT "IPC Initialization completed\n");
+	IPC_DEBUG(DBG_TRACE, "IPC Initialization completed\n");
    g_ipc_info.ipc_state = 1;
 
    return;
@@ -244,8 +244,7 @@ void ipcs_get_ipc_state(int *state)
 */
 void ipcs_ipc_reset(void)
 {
-  printk( KERN_ALERT  ">> %s\n", __FUNCTION__);
-  printk( KERN_ALERT  "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "reset ...\n");
 
    return;
 }
@@ -267,8 +266,8 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 #if 0 // MTD (flash/panic partition) not supported
 		case BCMLOG_CPCRASH_MTD:
 			/* we kill AP when CP crashes */
-			printk( KERN_ALERT	"Crashing AP now...\n\n");
-			abort();  
+			IPC_DEBUG(DBG_ERROR, "Crashing AP now ...\n\n");
+			BUG_ON(1);
 			break;
 #endif // 0
 		case BCMLOG_OUTDEV_RNDIS:
@@ -276,7 +275,8 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 			g_ipc_info.crash_dump_workqueue = create_singlethread_workqueue("dump-wq");
 			if (!g_ipc_info.crash_dump_workqueue)
 			{
-			  IPC_DEBUG(DBG_ERROR,"[ipc]: cannot create cp crash dump workqueue\n");
+				IPC_DEBUG(DBG_ERROR,
+				"cannot create cp crash dump workqueue\n");
 			}
 			queue_work(g_ipc_info.crash_dump_workqueue, &g_ipc_info.cp_crash_dump_wq);
 			break;
@@ -297,7 +297,9 @@ void ipcs_intr_workqueue_process(struct work_struct *work)
 
 static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
 {
-   //printk( KERN_ALERT  "[ipc]: ipcs_interrupt %x %x \n", BINTC_ISWIR1_CLR_OFFSET, BINTC_ISWIR0_CLR_OFFSET);
+	/* IPC_DEBUG(DBG_TRACE, "%x %x\n",
+		BINTC_ISWIR1_CLR_OFFSET, BINTC_ISWIR0_CLR_OFFSET);
+	*/
    if((&g_ipc_info.intr_work)->func )
    {
 #ifdef CONFIG_HAS_WAKELOCK
@@ -310,7 +312,7 @@ static irqreturn_t ipcs_interrupt(int irq, void *dev_id)
    {
         // if we're interrupted before IPC is setup, that 
         // means CP has had an early crash....
-        printk( KERN_ALERT  "[ipc]: abnormal CP interrupt\n");
+	IPC_DEBUG(DBG_ERROR, "abnormal CP interrupt\n");
         sEarlyCPInterrupt = 1;
    }
 
@@ -364,7 +366,7 @@ void WaitForCpIpc (void* pSmBase)
 {
     int k = 0, ret = 0;
 
-    printk( KERN_ALERT  "ipcs_init Waiting for CP IPC to init ....\n");
+	IPC_DEBUG(DBG_TRACE, "Waiting for CP IPC to init ...\n");
 
     ret = IPC_IsCpIpcInit(pSmBase,IPC_AP_CPU);
     while (ret == 0)
@@ -379,7 +381,7 @@ void WaitForCpIpc (void* pSmBase)
 
 	if (ret == 1)
 	{
-		printk(KERN_INFO  "ipcs_init CP IPC initialized ret=%d\n", ret);
+		IPC_DEBUG(DBG_TRACE, "CP IPC initialized ret=%d\n", ret);
 		cp_running = 1;//TRUE;
 	}
 	else if (ret == 0)
@@ -434,7 +436,7 @@ static int __init ipcs_init(void *smbase, unsigned int size)
   IPC_Configured();
 
   //Wait for IPC initialized
-  printk( KERN_ALERT  "IPC_Configured() invoked\n");
+	IPC_DEBUG(DBG_TRACE, "IPC_Configured() invoked\n");
 
   return(0);
 }
@@ -454,7 +456,10 @@ static int CP_Boot(void)
 
     cp_bmodem_r4cfg = ioremap(BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
     if (!cp_bmodem_r4cfg) {
-        printk(KERN_ERR "%s: ioremap error %x\n", __func__, BMODEM_SYSCFG_R4_CFG0);
+	IPC_DEBUG(DBG_ERROR,
+		"BMODEM_SYSCFG_R4_CFG0=0x%x, CP_SYSCFG_BASE_SIZE=0x%x\n",
+		BMODEM_SYSCFG_R4_CFG0, CP_SYSCFG_BASE_SIZE);
+	IPC_DEBUG(DBG_ERROR, "ioremap cp_bmodem_r4cfg failed\n");
         return started;
     }
 
@@ -463,12 +468,15 @@ static int CP_Boot(void)
     /* check if the CP is already booted, and if not, then boot it */
     if ((0x5 != (r4init & 0x5)))
     {
-        printk(KERN_ALERT "%s: boot (R4 COMMS) ...\n", __func__);
+	IPC_DEBUG(KERN_TRACE, "boot (R4 COMMS) - init code 0x%x ...\n", r4init);
 
         /* Set the CP jump to address.  CP must jump to DTCM offset 0x400 */
         cp_boot_itcm = ioremap(MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
-        if (!cp_boot_itcm) {
-            printk(KERN_ERR "%s: ioremap error %x\n", __func__, MODEM_ITCM_ADDRESS);
+	if (!cp_boot_itcm) {
+		IPC_DEBUG(DBG_ERROR,
+			"MODEM_ITCM_ADDRESS=0x%x, CP_ITCM_BASE_SIZE=0x%x\n",
+			MODEM_ITCM_ADDRESS, CP_ITCM_BASE_SIZE);
+		IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_itcm failed\n");
             return 0;
         }
         jump_instruction |= (0x00FFFFFFUL & (((0x10000 + CONFIG_BCM_MODEM_HEADER_SIZE) / 4) - 2));
@@ -478,7 +486,11 @@ static int CP_Boot(void)
 
         /* boot CP */
         *(unsigned int *)(cp_bmodem_r4cfg) = 0x5;
+	} else {
+	IPC_DEBUG(KERN_TRACE,
+		"(R4 COMMS) already started - init code 0x%x ...\n", r4init);
     }
+
     iounmap(cp_bmodem_r4cfg);
 
     return started;
@@ -497,7 +509,9 @@ void Comms_Start(void)
 
     apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
     if (!apcp_shmem) {
-        printk(KERN_ERR "%s: ioremap shmem failed\n", __func__);
+	IPC_DEBUG(DBG_ERROR, "IPC_BASE=0x%x, IPC_SIZE=0x%x\n",
+		IPC_BASE, IPC_SIZE);
+	IPC_DEBUG(DBG_ERROR, "ioremap shmem failed\n");
         return;
     }
     /* clear first (9) 32-bit words in shared memory */
@@ -506,7 +520,11 @@ void Comms_Start(void)
 
     cp_boot_base = ioremap(MODEM_DTCM_ADDRESS+CONFIG_BCM_MODEM_HEADER_SIZE, CP_BOOT_BASE_SIZE);
     if (!cp_boot_base) {
-        printk(KERN_ERR "%s: ioremap error\n", __func__);
+	IPC_DEBUG(DBG_ERROR,
+		"DTCM Addr=0x%x, Header Size=0x%x, CP_BOOT_BASE_SIZE=0x%x",
+		MODEM_DTCM_ADDRESS, CONFIG_BCM_MODEM_HEADER_SIZE,
+		CP_BOOT_BASE_SIZE);
+	IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_base error\n");
         return;
     }
 
@@ -514,14 +532,14 @@ void Comms_Start(void)
     *(unsigned int *)(cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER) = *(unsigned int *)(cp_boot_base+MAIN_ADDRESS_OFFSET+RESERVED_HEADER);
 
     iounmap(cp_boot_base);
-    printk(KERN_ALERT "%s: modem (R4 COMMS) started....\n", __func__);
+	IPC_DEBUG(DBG_TRACE, "modem (R4 COMMS) started ...\n");
 }
 
 static int __init ipcs_module_init(void)
 {
   int rc;
   
-  printk( KERN_ALERT "[ipc]: ipcs_module_init start..\n");
+	IPC_DEBUG(DBG_TRACE, "start ...\n");
   
   Comms_Start();
 
@@ -534,7 +552,7 @@ static int __init ipcs_module_init(void)
   rc = register_chrdev_region(g_ipc_info.devnum, 1, "bcm_fuse_ipc");
   if (rc < 0) 
   {
-    IPC_DEBUG(DBG_ERROR,"Error registering the IPC device\n");
+	IPC_DEBUG(DBG_ERROR, "Error registering the IPC device\n");
     goto out;
   }
 
@@ -545,11 +563,11 @@ static int __init ipcs_module_init(void)
   rc = cdev_add(&g_ipc_info.cdev, g_ipc_info.devnum, 1);
   if (rc) 
   {
-    IPC_DEBUG(DBG_ERROR,"[ipc]: cdev_add errpr\n");
+	IPC_DEBUG(DBG_ERROR, "cdev_add errpr\n");
     goto out_unregister;
   }
 
-  printk( KERN_ALERT  "[ipc]: create_workqueue\n");
+	IPC_DEBUG(DBG_TRACE, "create workqueue\n");
  
   INIT_WORK(&g_ipc_info.cp_crash_dump_wq, ProcessCPCrashedDump);
   INIT_WORK(&g_ipc_info.intr_work, ipcs_intr_workqueue_process);
@@ -557,7 +575,7 @@ static int __init ipcs_module_init(void)
   g_ipc_info.intr_workqueue = create_singlethread_workqueue("ipc-wq");
   if (!g_ipc_info.intr_workqueue)
   {
-    IPC_DEBUG(DBG_ERROR,"[ipc]: cannot create workqueue\n");
+	IPC_DEBUG(DBG_ERROR, "cannot create workqueue\n");
     goto out_unregister;
   } 
 
@@ -565,43 +583,43 @@ static int __init ipcs_module_init(void)
      Make sure this is not cache'd because CP has to know about any changes
      we write to this memory immediately.
    */
-  printk( KERN_ALERT  "[ipc]: ioremap_nocache IPC_BASE\n");
+	IPC_DEBUG(DBG_TRACE, "ioremap_nocache IPC_BASE\n");
   g_ipc_info.apcp_shmem = ioremap_nocache(IPC_BASE, IPC_SIZE);
   if (!g_ipc_info.apcp_shmem) 
   {
     rc = -ENOMEM;
-    IPC_DEBUG(DBG_ERROR,"[ipc]: Could not map shmem\n");
+	IPC_DEBUG(DBG_ERROR, "Could not map shmem\n");
     goto out_del;
   }
 
-  printk( KERN_ALERT  "[ipc]: ipcs_init\n");
+	IPC_DEBUG(DBG_TRACE, "ipcs_init\n");
   if (ipcs_init((void *)g_ipc_info.apcp_shmem, IPC_SIZE))
   {
     rc = -1;
-    IPC_DEBUG(DBG_ERROR,"[ipc]: ipcs_init() failed\n");
+	IPC_DEBUG(DBG_ERROR, "ipcs_init() failed\n");
     goto out_del;
   }
   
-  printk(KERN_ALERT "[ipc]: ipcs_module_init ok\n");
+	IPC_DEBUG(DBG_TRACE, "ok\n");
   
 #ifdef CONFIG_HAS_WAKELOCK
 	wake_lock_init(&ipc_wake_lock, WAKE_LOCK_SUSPEND, "ipc_wake_lock");
 #endif
 
-  printk(KERN_ALERT  "[ipc]: request_irq\n");
+	IPC_DEBUG(DBG_TRACE, "request_irq\n");
   rc = request_irq(IRQ_IPC_C2A, ipcs_interrupt, IRQF_NO_SUSPEND, "ipc-intr",
 			&g_ipc_info);
 
 	if (rc) {
-		IPC_DEBUG(DBG_ERROR, "[ipc]: request_irq error\n");
+		IPC_DEBUG(DBG_ERROR, "request_irq error\n");
 		goto out_del;
 	}
 
-  printk(KERN_ALERT  "[ipc]: IRQ Clear and Enable\n");
+	IPC_DEBUG(DBG_TRACE, "IRQ Clear and Enable\n");
 
   if ( sEarlyCPInterrupt )
   {
-    printk( KERN_ALERT "[ipc]: early CP interrupt - doing crash dump...\n");
+	IPC_DEBUG(DBG_ERROR, "early CP interrupt - doing crash dump ...\n");
 #ifdef CONFIG_HAS_WAKELOCK
     wake_lock(&ipc_wake_lock);
 #endif
@@ -615,7 +633,7 @@ out_del:
 out_unregister:
   unregister_chrdev_region(g_ipc_info.devnum, 1);
 out:
-  IPC_DEBUG(DBG_ERROR,"IPC Driver Failed to initialise!\n");
+	IPC_DEBUG(DBG_ERROR, "IPC Driver Failed to initialise!\n");
   return rc;
 }
 
