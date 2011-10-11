@@ -17,8 +17,11 @@
 /*Defines used by Kona*/
 #define	CLK_WR_ACCESS_PASSWORD	0x00A5A5
 
-#define	ARM_CLK_NAME_STR			"arm_clk"
+#define	ARM_CORE_CLK_NAME_STR			"a9_core"
 #define ARM_SWITCH_CLK_NAME_STR			"arm_switch_clk"
+#define	A9_PLL_CLK_NAME_STR				"a9_pll_clk"
+#define	A9_PLL_CHNL0_CLK_NAME_STR		"a9_pll_chnl0_clk"
+#define	A9_PLL_CHNL1_CLK_NAME_STR		"a9_pll_chnl1_clk"
 #define KPROC_CCU_CLK_NAME_STR			"proc_ccu"
 #define ROOT_CCU_CLK_NAME_STR			"root_ccu"
 #define CRYSTAL_REF_CLK_NAME_STR		"crystal"
@@ -199,8 +202,11 @@ Clock ids
 */
 enum
 {
-	CLK_ARM_PERI_CLK_ID,
+	CLK_ARM_CORE_CLK_ID,
 	CLK_ARM_SWITCH_CLK_ID,
+	CLK_A9_PLL_CLK_ID,
+	CLK_A9_PLL_CHNL0_CLK_ID,
+	CLK_A9_PLL_CHNL1_CLK_ID,
 	CLK_KPROC_CCU_CLK_ID,
 	CLK_ROOT_CCU_CLK_ID,
     CLK_FRAC_1M_REF_CLK_ID,
@@ -378,8 +384,11 @@ enum
 
 };
 
-#define ARM_PERI_CLK_FLAGS			0
+#define ARM_CORE_CLK_FLAGS			UPDATE_LPJ
 #define ARM_SWITCH_CLK_FLAGS		0
+#define A9_PLL_CLK_FLAGS			AUTO_GATE
+#define A9_PLL_CHNL0_CLK_FLAGS		0
+#define A9_PLL_CHNL1_CLK_FLAGS		0
 #define KPROC_CCU_CLK_FLAGS			CCU_TARGET_AC
 #define FRAC_1M_REF_CLK_FLAGS 			AUTO_GATE|ENABLE_ON_INIT
 #define REF_96M_VARVDD_REF_CLK_FLAGS 			0

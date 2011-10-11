@@ -276,6 +276,7 @@ enum {
     RATE_FIXED			= (1 << 7), /*used for peri ...clk set/get rate functions uses .rate field*/
     NOTIFY_STATUS_TO_CCU	= (1 << 8),
     DONOT_NOTIFY_STATUS_TO_CCU	= (1 << 9),
+	UPDATE_LPJ			= (1 << 10),  /*used for core clock*/
 
     /* CCU specific flags */
     CCU_TARGET_LOAD		= (1 << 16),
@@ -294,7 +295,9 @@ enum
 	CLK_TYPE_PERI,
 	CLK_TYPE_BUS,
 	CLK_TYPE_REF,
-	CLK_TYPE_PLL
+	CLK_TYPE_CORE,
+	CLK_TYPE_PLL,
+	CLK_TYPE_PLL_CHNL,
 };
 
 struct clk;
@@ -400,7 +403,7 @@ struct clk_dfs
 	u32 dfs_policy;
 	u32 policy_param;
 	u32 opp_weightage[PI_OPP_MAX];
-		
+
 };
 
 #endif
@@ -417,7 +420,7 @@ struct clk
 	u32			rate;
 	int 		clk_type;
 	struct clk* dep_clks[MAX_DEP_CLKS];
-	
+
 	struct gen_clk_ops 	*ops;
 
 };
@@ -489,11 +492,11 @@ struct peri_clk {
 	struct clk_div  clk_div;
 	struct src_clk	src_clk;
 
-#ifdef CONFIG_KONA_PI_MGR	
+#ifdef CONFIG_KONA_PI_MGR
 	struct clk_dfs* clk_dfs;
 	struct pi_mgr_dfs_node* dfs_node;
 #endif
-	
+
 };
 
 struct bus_clk {
@@ -509,7 +512,7 @@ struct bus_clk {
 	int freq_tbl_index;
 	struct clk* src_clk;
 	struct bus_clk_ops* bus_ops;
-#ifdef CONFIG_KONA_PI_MGR	
+#ifdef CONFIG_KONA_PI_MGR
 	struct clk_dfs* clk_dfs;
 	struct pi_mgr_dfs_node* dfs_node;
 #endif
@@ -530,6 +533,81 @@ struct ref_clk {
 
 };
 
+struct pll_cfg_ctrl_info
+{
+	u32 pll_cfg_ctrl_offset;
+	u32 pll_cfg_ctrl_mask;
+	u32 pll_cfg_ctrl_shift;
+
+	u32* vco_thold;
+	u32* pll_config_value;
+	u32 thold_count;
+};
+
+struct pll_clk
+{
+	struct clk	clk;
+	struct ccu_clk*	ccu_clk;
+
+	u32 pll_ctrl_offset;
+	u32 soft_post_resetb_mask;
+	u32 soft_resetb_mask;
+	u32 pwrdwn_mask;
+	u32 idle_pwrdwn_sw_ovrride_mask;
+	u32 ndiv_int_mask;
+	u32 ndiv_int_shift;
+	u32 ndiv_int_max;
+	u32 pdiv_mask;
+	u32 pdiv_shift;
+	u32 pdiv_max;
+	u32 pll_lock;
+
+	u32 ndiv_frac_offset;
+	u32 ndiv_frac_mask;
+	u32 ndiv_frac_shift;
+
+	struct pll_cfg_ctrl_info* cfg_ctrl_info;
+};
+
+struct pll_chnl_clk
+{
+	struct clk	clk;
+	struct ccu_clk*	ccu_clk;
+	struct pll_clk*	pll_clk;
+
+	u32 cfg_reg_offset;
+	u32 mdiv_mask;
+	u32 mdiv_shift;
+	u32 mdiv_max;
+
+	u32 out_en_mask;
+
+	u32 load_en_mask;
+
+	u32 hold_en_mask;
+};
+
+struct core_clk
+{
+	struct clk	clk;
+	struct ccu_clk*	ccu_clk;
+	struct pll_clk*	pll_clk;
+	struct pll_chnl_clk** pll_chnl_clk;
+	u32 num_chnls;
+	u32 active_policy;
+	u32* pre_def_freq;
+	u32 num_pre_def_freq;
+
+	u32 policy_bit_mask;
+	u8 policy_mask_init[4];
+	u32 clk_gate_offset;
+	u32 clk_en_mask;
+	u32 gating_sel_mask;
+	u32 hyst_val_mask;
+	u32 hyst_en_mask;
+	u32 stprsts_mask;
+
+};
 
 
 #define	to_clk(p) (&((p)->clk))
@@ -561,6 +639,20 @@ static inline struct ref_clk *to_ref_clk(struct clk *clock)
 {
 	return container_of(clock, struct ref_clk, clk);
 }
+static inline struct pll_clk *to_pll_clk(struct clk *clock)
+{
+	return container_of(clock, struct pll_clk, clk);
+}
+
+static inline struct pll_chnl_clk *to_pll_chnl_clk(struct clk *clock)
+{
+	return container_of(clock, struct pll_chnl_clk, clk);
+}
+
+static inline struct core_clk *to_core_clk(struct clk *clock)
+{
+	return container_of(clock, struct core_clk, clk);
+}
 
 static inline int is_same_clock(struct clk *a, struct clk *b)
 {
@@ -571,7 +663,9 @@ extern struct gen_clk_ops gen_ref_clk_ops;
 extern struct gen_clk_ops gen_bus_clk_ops;
 extern struct gen_clk_ops gen_ccu_clk_ops;
 extern struct gen_clk_ops gen_peri_clk_ops;
-
+extern struct gen_clk_ops gen_pll_clk_ops;
+extern struct gen_clk_ops gen_pll_chnl_clk_ops;
+extern struct gen_clk_ops gen_core_clk_ops;
 extern struct ccu_clk_ops gen_ccu_ops;
 
 extern int clk_debug;
