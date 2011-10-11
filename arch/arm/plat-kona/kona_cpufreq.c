@@ -143,7 +143,6 @@ static int kona_cpufreq_set_speed(struct cpufreq_policy *policy,
 	unsigned int relation)
 {
 	struct cpufreq_freqs freqs;
-	struct kona_cpufreq_drv_pdata *pdata = kona_cpufreq->pdata;
 	int i, index;
 	int ret = 0;
 	u32 opp = PI_OPP_NORMAL;
