@@ -301,5 +301,4 @@ config CRYPTO_DEV_BRCM_SPUM_HASH
 	help
 	 Driver for Rhea SPUM crypto accelerator.
 
-
 endif # CRYPTO_HW

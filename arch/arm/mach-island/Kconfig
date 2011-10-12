@@ -40,6 +40,11 @@ config MACH_ISLAND_TABLET_28160
         help
           Support for the Broadcom Island 28160 Tablet board.
 
+config MACH_ISLAND_CUSTOM_BOARDS_SUPPORT
+        bool "Support Custom Island boards"
+        help
+          Support for the Custom Island board designs.
+
 endchoice
 
 config MAP_LITTLE_ISLAND_MODE
@@ -78,9 +83,23 @@ config MAP_ISLAND_PCM_CHAL
    help
       Support for CHAL libraries for PCM on Island
 
+config MAP_ISLAND_NAND_CHAL
+   bool "MAP NAND CHAL"
+   help
+      Support for CHAL libraries for NAND on Island
+
+config MAP_ISLAND_SUSPEND_INVALID
+   bool "MAP SUSPEND INVALID"
+   depends on SUSPEND
+   help
+      Make kernel to advertise all suspend states as invalid. 
+
 config IPC
 	bool "Inter-Processor Communication (IPC)"
 	help
 	  Support for IPC.
 
 endmenu
+
+source "arch/arm/mach-island/custom_boards/Kconfig"
+

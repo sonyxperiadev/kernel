@@ -13,7 +13,7 @@ all:
 
 else
 
-obj-m                                        += bcm_island/
+obj-$(CONFIG_ARCH_ISLAND)                    += bcm_island/
 obj-$(CONFIG_BCM_HALAUDIO_ALSA)              += alsa/
 obj-$(CONFIG_BCM_HALAUDIO_USB)               += usb/
 

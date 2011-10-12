@@ -2,13 +2,11 @@
 #define _BRCM_RDB_UTIL_H_
 
 // Register Access Macros:
-
-/*
- * FIXME conflict with some CHAL header files
+#ifndef _MOBCOM_TYPES_H_
 typedef unsigned long  UInt32;
 typedef unsigned short UInt16;
 typedef unsigned char  UInt8;
-*/
+#endif
 
 /*
 ** The following two macros create a "combine" routine which can be nested.

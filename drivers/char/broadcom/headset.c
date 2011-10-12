@@ -39,7 +39,6 @@
    #include <linux/switch.h>
 #endif
 
-#include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/headset.h>
 #include <linux/broadcom/headset_cfg.h>
 
@@ -59,6 +58,7 @@ struct headset_info
 
 /* ---- Private Variables ------------------------------------------------ */
 
+static int gDriverMajor;
 #if CONFIG_SYSFS
 static struct class *headset_class;
 static struct device *headset_dev;
@@ -428,10 +428,11 @@ static int __init headset_init( void )
       return rc;
    }
 
-   rc = register_chrdev( BCM_HEADSET_MAJOR, "headset", &headset_fops );
-   if ( rc < 0 )
+   gDriverMajor = register_chrdev( 0, "headset", &headset_fops );
+   if ( gDriverMajor < 0 )
    {
-      printk( "failed for to register device major %d\n", BCM_HEADSET_MAJOR );
+      printk( "HEADSET: Failed to register device major\n" );
+      rc = -EFAULT;
       goto err_unregister_platform;
    }
 
@@ -439,16 +440,16 @@ static int __init headset_init( void )
    headset_class = class_create( THIS_MODULE,"bcmisland-headset-det" );
    if ( IS_ERR( headset_class ))
    {
-      printk( "%s: Class create failed\n", __FUNCTION__ );
+      printk( "HEADSET: Class create failed\n" );
       rc = -EFAULT;
       goto err_unregister_chrdev;
    }
 
-   headset_dev = device_create( headset_class, NULL, MKDEV(BCM_HEADSET_MAJOR, 0),
+   headset_dev = device_create( headset_class, NULL, MKDEV(gDriverMajor, 0),
          NULL, "headset0" );
    if ( IS_ERR( headset_dev ))
    {
-      printk(KERN_ERR "%s: Device create failed\n", __FUNCTION__ );
+      printk(KERN_ERR "HEADSET: Device create failed\n" );
       rc = -EFAULT;
       goto err_class_destroy;
    }
@@ -468,13 +469,13 @@ static int __init headset_init( void )
 
 init_no_gpio:   
 #if CONFIG_SYSFS
-   device_destroy(headset_class, MKDEV( BCM_HEADSET_MAJOR, 0 ));
+   device_destroy(headset_class, MKDEV( gDriverMajor, 0 ));
 
 err_class_destroy:
    class_destroy( headset_class );
 
 err_unregister_chrdev:
-   unregister_chrdev( BCM_HEADSET_MAJOR, "headset" );
+   unregister_chrdev( gDriverMajor, "headset" );
 #endif
 
 err_unregister_platform:
@@ -492,11 +493,11 @@ err_unregister_platform:
 static void __exit headset_exit( void )
 {
 #if CONFIG_SYSFS
-   device_destroy( headset_class, MKDEV( BCM_HEADSET_MAJOR, 0 ));
+   device_destroy( headset_class, MKDEV( gDriverMajor, 0 ));
    class_destroy( headset_class );
 #endif
 
-   unregister_chrdev( BCM_HEADSET_MAJOR, "headset" );
+   unregister_chrdev( gDriverMajor, "headset" );
 
    platform_driver_unregister( &gPlatform_driver );
 }

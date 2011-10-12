@@ -34,9 +34,9 @@
 		.bsc_apb_clk = "bsc2_apb_clk", \
 	}, \
 	{ /* PMBSC */ \
-		.speed = BSC_BUS_SPEED_400K, \
 		.bsc_clk = "pmu_bsc_clk", \
 		.bsc_apb_clk = "pmu_bsc_apb_clk", \
+		.speed = BSC_BUS_SPEED_400K, \
 	}, \
 }
 #endif /* I2C_SETTINGS_H */

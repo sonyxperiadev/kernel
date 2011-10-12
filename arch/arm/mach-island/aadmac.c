@@ -67,11 +67,11 @@
 #define CHANNEL_FROM_HANDLE( handle )       (  (handle) & 0x0f )
 
 #define AADMA_DEF_BURST_SIZE           0x4
-#define AADMA_DEF_MONO_IGR_FIFO_SIZE   512
+#define AADMA_DEF_MONO_IGR_FIFO_SIZE   32
 #define AADMA_DEF_MONO_EGR_FIFO_SIZE   512
-#define AADMA_DEF_STEREO_IGR_FIFO_SIZE 1024
-#define AADMA_DEF_STEREO_EGR_FIFO_SIZE 1024
-#define AADMA_DEF_IGR_THRES1           (512-64)
+#define AADMA_DEF_STEREO_IGR_FIFO_SIZE 768
+#define AADMA_DEF_STEREO_EGR_FIFO_SIZE 768
+#define AADMA_DEF_IGR_THRES1           (32/*512-64*/)
 #define AADMA_DEF_EGR_THRES1           4
 #define AADMA_DEF_THRES2               0
 
@@ -360,6 +360,7 @@ static irqreturn_t aadma_interrupt_handler( int irq, void *dev_id )
    AADMA_Channel_t *channel;
    AADMA_DeviceAttribute_t *devAttr;
    AADMA_ChalHandle_t *chal_hdl;
+   AADMA_Status_t aadma_status;
    volatile uint32_t status;
    CAPH_DMA_CHANNEL_e dma_ch;
    CAPH_DMA_CHNL_FIFO_STATUS_e dma_status;
@@ -402,10 +403,12 @@ static irqreturn_t aadma_interrupt_handler( int irq, void *dev_id )
             devAttr->transferBytes += devAttr->numBytes;
             devAttr->transferTicks += (timer_get_tick_count() - devAttr->transferStartTime);
 
+            aadma_status.dma_status = dma_status;
+
             /* Call installed handler */
             if ( devAttr->devHandler )
             {
-               devAttr->devHandler( channel->devType, dma_status, devAttr->userData );
+               devAttr->devHandler( channel->devType, &aadma_status, devAttr->userData );
             }
          }
       }
@@ -769,6 +772,7 @@ void aadma_exit( void )
 {
    remove_proc_entry( "channels", gDmaDir );
    remove_proc_entry( "devices", gDmaDir );
+   remove_proc_entry( "aadma", NULL );
 
    free_irq( BCM_INT_ID_CAPH, &gChalHandle );
    aadma_ioremap_exit( &gChalHandle );
@@ -1405,8 +1409,8 @@ int aadma_stop_transfer( AADMA_Handle_t handle )
    chal_caph_cfifo_disable( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch );
    chal_caph_cfifo_clr_fifo( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch );
 
-   chal_caph_intc_disable_cfifo_intr( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch, CAPH_ARM );
-   chal_caph_intc_disable_cfifo_int_err( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch, CAPH_ARM );
+   chal_caph_intc_disable_cfifo_intr( chal_handle->chalAhintcHandle, channel->caph_cfifo_ch, CAPH_ARM );
+   chal_caph_intc_disable_cfifo_int_err( chal_handle->chalAhintcHandle, channel->caph_cfifo_ch, CAPH_ARM );
 
    chal_caph_dma_free_channel( chal_handle->chalAadmacHandle, channel->caph_dma_ch );
    chal_caph_cfifo_free_channel( chal_handle->chalCfifoHandle, channel->caph_cfifo_ch );

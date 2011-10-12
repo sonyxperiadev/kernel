@@ -510,6 +510,9 @@ extern uint dhd_pktgen_len;
 extern char fw_path[MOD_PARAM_PATHLEN];
 extern char nv_path[MOD_PARAM_PATHLEN];
 
+#define MOD_PARAM_PREFIXLEN 81
+extern char if_prefix[MOD_PARAM_PREFIXLEN];
+
 #ifdef SOFTAP
 extern char fw_path2[MOD_PARAM_PATHLEN];
 #endif

@@ -40,6 +40,10 @@
 #include <linux/irq.h>
 #include <linux/i2c/egalax_i2c_ts.h>
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+#include <linux/earlysuspend.h>
+#endif /* CONFIG_HAS_EARLYSUSPEND */
+
 #define MAX_I2C_LEN          10
 #define MAX_SUPPORT_POINT    4
 #define REPORTID_MOUSE       0x01
@@ -719,6 +723,52 @@ static int egalax_i2c_resume(struct i2c_client *client)
 #define egalax_i2c_resume        NULL
 #endif
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+static void egalax_i2c_early_suspend(struct early_suspend *h)
+{
+   int ret;
+
+   /* send the command to put the controller into sleep */
+   ret = i2c_master_send(p_egalax_i2c_dev->client, cmd_str_sleep, MAX_I2C_LEN);
+   if (ret != MAX_I2C_LEN)
+   {
+      TS_ERR("Early suspend failed to send sleep command ret=%d\n", ret);
+      return;
+   }
+
+   TS_DEBUG("Early suspend sleep command sent successfully\n");
+
+   /* disable interrupt */
+
+   /* Note that, we should be aware of the possibility that the regular linux
+      "suspend" is called subsequent to the early suspension. In this case
+      disable_irq() will be called twice. Any possible bad effects of this
+      should be properly tested when PM framework is available. */
+   disable_irq(p_egalax_i2c_dev->client->irq);
+
+   /* flush the workqueue to make sure all outstanding work items are done */
+   flush_workqueue(p_egalax_i2c_dev->ktouch_wq);
+   TS_INFO("device early suspended\n");
+}
+
+static void egalax_i2c_late_resume(struct early_suspend *h)
+{
+   enable_irq(p_egalax_i2c_dev->client->irq);
+   wakeup_controller(irq_to_gpio(p_egalax_i2c_dev->client->irq));
+
+   TS_INFO("device late resumed\n");
+}
+
+/* we early suspend handler to be called after EARLY_SUSPEND_LEVEL_BLANK_SCREEN
+   handler is called, so we increase priority by 10 */
+static struct early_suspend egalax_i2c_early_suspend_desc = {
+	.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + 10,
+	.suspend = egalax_i2c_early_suspend,
+	.resume = egalax_i2c_late_resume,
+};
+
+#endif /* CONFIG_HAS_EARLYSUSPEND */
+
 static struct input_dev *allocate_Input_Dev(void)
 {
    int ret;
@@ -925,6 +975,11 @@ static int __devinit egalax_i2c_probe(struct i2c_client *client,
       goto err_free_irq;
    }
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+   register_early_suspend(&egalax_i2c_early_suspend_desc);
+   TS_INFO("register for early suspend\n");
+#endif /* CONFIG_HAS_EARLYSUSPEND */
+
    TS_INFO("eGalax I2C touchscreen driver probed\n");
    TS_INFO("reset=%d event=%d irq=%d\n", cfg->gpio.reset, cfg->gpio.event,
          client->irq);
@@ -979,6 +1034,10 @@ static int __devexit egalax_i2c_remove(struct i2c_client *client)
    kfree(egalax_i2c);
    p_egalax_i2c_dev = NULL;
 
+#ifdef CONFIG_HAS_EARLYSUSPEND
+   unregister_early_suspend(&egalax_i2c_early_suspend_desc);
+   TS_INFO("unregister for early suspend\n");
+#endif /* CONFIG_HAS_EARLYSUSPEND */
    return 0;
 }
 

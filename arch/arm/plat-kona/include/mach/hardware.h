@@ -36,7 +36,6 @@
  *  *_BASE  is the virtual address
  */
 #define RAM_START		PHYS_OFFSET
-
 #define RAM_BASE		PAGE_OFFSET
 
 #define IO_START IO_START_PA

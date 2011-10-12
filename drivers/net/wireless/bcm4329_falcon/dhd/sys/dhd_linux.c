@@ -91,6 +91,10 @@ typedef struct histo_ {
 static histo_t vi_d1, vi_d2, vi_d3, vi_d4;
 #endif /* WLMEDIA_HTSF */
 
+#ifdef SOFTAP
+extern bool ap_cfg_running; /* DL 20110812 merge from PR96418 */
+#endif /* SOFTAP */
+
 #ifdef PROP_TXSTATUS
 #include <wlfc_proto.h>
 #include <dhd_wlfc.h>
@@ -388,6 +392,7 @@ typedef struct dhd_info {
  */
 char firmware_path[MOD_PARAM_PATHLEN];
 char nvram_path[MOD_PARAM_PATHLEN];
+char interface_prefix[MOD_PARAM_PREFIXLEN];
 
 extern int wl_control_wl_start(struct net_device *dev);
 extern int net_os_send_hang_message(struct net_device *dev);
@@ -406,6 +411,7 @@ module_param(dhd_msg_level, int, 0);
 /* load firmware and/or nvram values from the filesystem */
 module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0);
 module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0);
+module_param_string(interface_prefix, interface_prefix, MOD_PARAM_PREFIXLEN, 0);
 
 /* Watchdog interval */
 uint dhd_watchdog_ms = 10;
@@ -1068,7 +1074,11 @@ dhd_op_if(dhd_if_t *ifp)
 			free_netdev(ifp->net);
 		}
 		/* Allocate etherdev, including space for private structure */
+#ifdef CONFIG_BCM4329_FALCON_IF_PREFIX
+		if (!(ifp->net = alloc_netdev_mqs(sizeof(dhd), if_prefix, ether_setup, 1, 1))) {
+#else
 		if (!(ifp->net = alloc_etherdev(sizeof(dhd)))) {
+#endif
 			DHD_ERROR(("%s: OOM - alloc_etherdev\n", __FUNCTION__));
 			ret = -ENOMEM;
 		}
@@ -1082,6 +1092,7 @@ dhd_op_if(dhd_if_t *ifp)
 				ret = -EOPNOTSUPP;
 			} else {
 #ifdef SOFTAP
+	if (ap_cfg_running) { /* DL 20110812 merge from PR96418 */
 				 /* semaphore that the soft AP CODE waits on */
 				flags = dhd_os_spin_lock(&dhd->pub);
 
@@ -1090,6 +1101,7 @@ dhd_op_if(dhd_if_t *ifp)
 				 /* signal to the SOFTAP 'sleeper' thread, wl0.1 is ready */
 				up(&ap_eth_ctl.sema);
 				dhd_os_spin_unlock(&dhd->pub, flags);
+	} /* DL 20110812 merge from PR96418 */
 #endif
 				DHD_TRACE(("\n ==== pid:%x, net_device for if:%s created ===\n\n",
 					current->pid, ifp->net->name));
@@ -2420,9 +2432,15 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		strcpy(fw_path, firmware_path);
 	if ((nvram_path != NULL) && (nvram_path[0] != '\0'))
 		strcpy(nv_path, nvram_path);
+        if ((interface_prefix != NULL) && (interface_prefix[0] != '\0'))
+		strcpy(if_prefix, interface_prefix);
 
 	/* Allocate etherdev, including space for private structure */
+#ifdef CONFIG_BCM4329_FALCON_IF_PREFIX
+	if (!(net = alloc_netdev_mqs(sizeof(dhd), if_prefix, ether_setup, 1, 1))) {
+#else
 	if (!(net = alloc_etherdev(sizeof(dhd)))) {
+#endif
 		DHD_ERROR(("%s: OOM - alloc_etherdev\n", __FUNCTION__));
 		goto fail;
 	}

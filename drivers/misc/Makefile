@@ -1,7 +1,8 @@
 #
 # Makefile for misc devices that really don't fit anywhere else.
 #
-obj-$(CONFIG_BCM_VCHIQ_VC04)		+= vc04_services/
+
+bj-$(CONFIG_BCM_VCHIQ_VC04)           += vc04_services/
 obj-$(CONFIG_BRCM_VIDEOCORE_SERVICES)   += vc04_services/
 obj-$(CONFIG_IBM_ASM)		+= ibmasm/
 obj-$(CONFIG_AD525X_DPOT)	+= ad525x_dpot.o
@@ -60,6 +61,7 @@ obj-y				+= carma/
 obj-$(CONFIG_WL127X_RFKILL)	+= wl127x-rfkill.o
 obj-$(CONFIG_APANIC)		+= apanic.o
 obj-$(CONFIG_SENSORS_AK8975)	+= akm8975.o
+obj-$(CONFIG_SENSORS_AK8975_BRCM)	+= akm8975_brcm.o
 obj-$(CONFIG_INTER_PROCESSOR_COMM)	+= ipc.o
 obj-$(CONFIG_STM_TRACE)         += stm.o
 obj-$(CONFIG_BRCM_MISC_DRIVERS) += vmcs_services/

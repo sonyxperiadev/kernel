@@ -37,6 +37,7 @@
 #include <linux/broadcom/halaudio.h>
 #include <linux/broadcom/halaudio_lib.h>
 #include <linux/broadcom/amxr.h>
+#include <linux/broadcom/amxr_port.h>
 
 #include "halaudio_usbcore.h"
 
