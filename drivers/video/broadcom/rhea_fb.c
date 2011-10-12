@@ -513,7 +513,7 @@ static int rhea_fb_probe(struct platform_device *pdev)
 	fb->fb.fix.accel	= FB_ACCEL_NONE;
 	fb->fb.fix.ypanstep	= 1;
 	fb->fb.fix.xpanstep	= 4;
-#define PARTIAL_UPDATE_SUPPORT
+//#define PARTIAL_UPDATE_SUPPORT
 #ifdef PARTIAL_UPDATE_SUPPORT
 	fb->fb.fix.reserved[0]	=  0x5444;
 	fb->fb.fix.reserved[1]	=  0x5055;
