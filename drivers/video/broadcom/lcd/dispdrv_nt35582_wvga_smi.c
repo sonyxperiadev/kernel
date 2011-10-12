@@ -108,8 +108,11 @@
  //#define __WVGA_MODE_888__       // 8-bit or 16-bit bus 
 #endif
 #endif
-
+#ifdef CONFIG_MACH_RHEA_RAY_DEMO
+#define __WVGA_BUSW_16__
+#else
 #define __WVGA_BUSW_08__
+#endif
 #define __WVGA_MODE_565__
 // output color mdoe must be defined before including EC .H
 #include "dispdrv_ec_par_nt35582.h"  // NOVATEK NT35582 External Disp Controller    

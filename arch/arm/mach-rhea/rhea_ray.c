@@ -331,10 +331,17 @@ struct platform_device bcm_kp_device = {
 	GPIO07, GPIO12, GPIO13, for now keypad can only be set as a 2x2 matrix
 	by using pin GPIO04, GPIO05, GPIO14 and GPIO15 */
 static struct bcm_keymap newKeymap[] = {
+#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "Search Key", KEY_SEARCH},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "Back Key", KEY_BACK},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "Menu-Key", KEY_MENU},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "Home-Key", KEY_HOME},
+#else
+	{BCM_KEY_ROW_0, BCM_KEY_COL_0, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_1, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_2, "unused", 0},
+	{BCM_KEY_ROW_0, BCM_KEY_COL_3, "unused", 0},
+#endif
 	{BCM_KEY_ROW_0, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_5, "unused", 0},
 	{BCM_KEY_ROW_0, BCM_KEY_COL_6, "unused", 0},
@@ -385,16 +392,26 @@ static struct bcm_keymap newKeymap[] = {
 	{BCM_KEY_ROW_6, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_5, "unused", 0},
+#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "unused", 0},
+#else
+	{BCM_KEY_ROW_6, BCM_KEY_COL_6, "Search Key", KEY_SEARCH},
+	{BCM_KEY_ROW_6, BCM_KEY_COL_7, "Back Key", KEY_BACK},
+#endif
 	{BCM_KEY_ROW_7, BCM_KEY_COL_0, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_1, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_2, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_3, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_4, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_5, "unused", 0},
+#ifndef CONFIG_MACH_RHEA_RAY_DEMO
 	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "unused", 0},
 	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "unused", 0},
+#else
+	{BCM_KEY_ROW_7, BCM_KEY_COL_6, "Menu-Key", KEY_MENU},
+	{BCM_KEY_ROW_7, BCM_KEY_COL_7, "Home-Key", KEY_HOME},
+#endif
 };
 
 static struct bcm_keypad_platform_info bcm_keypad_data = {
@@ -889,7 +906,8 @@ static struct platform_device bcm_backlight_devices = {
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
-	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
+	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X) \
+	|| defined(CONFIG_MACH_RHEA_RAY_DEMO)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X
