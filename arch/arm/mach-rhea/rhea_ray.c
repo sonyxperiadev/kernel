@@ -249,6 +249,9 @@ static struct platform_device bcm59055_vc_device_sim = {
 #endif
 
 static const char *pmu_clients[] = {
+#ifdef CONFIG_BCM59055_WATCHDOG
+	"bcm59055-wdog",
+#endif
 	"bcmpmu_usb",
 #ifdef CONFIG_INPUT_BCM59055_ONKEY
 	"bcm590xx-onkey",
