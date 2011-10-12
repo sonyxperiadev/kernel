@@ -1114,15 +1114,17 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (!dev->connected) {
 		dev->connected = 1;
-		pr_info("%s: config -- %p\n", __FUNCTION__, cdev->config);
+#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
 		cdev->connected = 1;
 		schedule_work(&cdev->switch_work);
+#endif
 		schedule_work(&dev->work);
 	}
 	else if (c->bRequest == USB_REQ_SET_CONFIGURATION && cdev->config) {
-		pr_info("%s: config -- %p\n", __FUNCTION__, cdev->config);
+#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
 		cdev->connected = 1;
 		schedule_work(&cdev->switch_work);
+#endif
 		schedule_work(&dev->work);
 	}
 	spin_unlock_irqrestore(&cdev->lock, flags);
