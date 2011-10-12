@@ -64,7 +64,6 @@ extern void ARM2SP_Render_Request(UInt16 buf_index);
 extern void ARM2SP2_Render_Request(UInt16 buf_index);
 extern void AP_ProcessStatusMainAMRDone(UInt16 codecType);
 extern void VOIP_ProcessVOIPDLDone(void);
-extern void AUDDRV_User_HandleDSPInt(UInt32 param1, UInt32 param2, UInt32 param3);
 extern void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
 
 extern AUDDRV_MIC_Enum_t   currVoiceMic;   //used in pcm i/f control. assume one mic, one spkr.
@@ -139,9 +138,6 @@ void AUDDRV_Init( void )
 	CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);
 	CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);
 	CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);
-#if defined(ENABLE_SPKPROT)
-	CSL_RegisterUserStatusHandler((UserStatusCB_t)&AUDDRV_User_HandleDSPInt);
-#endif
 	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
 
     Audio_InitRpc();

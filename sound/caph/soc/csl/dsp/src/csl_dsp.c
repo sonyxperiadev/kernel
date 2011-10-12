@@ -75,12 +75,10 @@ static ARM2SPRenderStatusCB_t ARM2SPRenderStatusHandler = NULL;
 static ARM2SP2RenderStatusCB_t ARM2SP2RenderStatusHandler = NULL;
 static MainAMRStatusCB_t MainAMRStatusHandler = NULL;
 static VoIPStatusCB_t VoIPStatusHandler = NULL;
-#if defined(ENABLE_SPKPROT)
-static UserStatusCB_t UserStatusHandler = NULL;
-#endif
 static AudioLogStatusCB_t AudioLogStatusHandler = NULL;
 static AudioEnableDoneStatusCB_t AudioEnableDoneHandler = NULL;
 void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg);
+extern void sp_StatusUpdate(void);
 
 //*********************************************************************
 /**
@@ -305,21 +303,6 @@ void CSL_RegisterVoIPStatusHandler(VoIPStatusCB_t callbackFunction)
 
 }
 
-#if defined(ENABLE_SPKPROT)
-//*********************************************************************
-/**
-*
-*   CSL_RegisterAudioLogHandler registers user status handler.
-*
-*   @param    callbackFunction	(in)	callback function to register 
-* 
-**********************************************************************/
-void CSL_RegisterUserStatusHandler(UserStatusCB_t callbackFunction)
-{
-	UserStatusHandler = callbackFunction;
-
-}
-#endif
 
 //*********************************************************************
 /**
@@ -472,20 +455,13 @@ void AP_ProcessStatus(void)
 				break;
 			}
 
-#if defined(ENABLE_SPKPROT)
 			case VP_STATUS_SP:
 			{
-				if(UserStatusHandler != NULL)
-				{
-					UserStatusHandler((UInt32)status_msg.arg0, (UInt32)status_msg.arg1, (UInt32)status_msg.arg2);
-				}
-				else
-				{
-					Log_DebugPrintf(LOGID_AUDIO, "AP DSP Interrupt: UserStatusHandler is not registered");
-				}
+				sp_StatusUpdate();
+				
 				break;
+
 			}
-#endif
 
 			case VP_STATUS_AUDIO_STREAM_DATA_READY:
 			{
