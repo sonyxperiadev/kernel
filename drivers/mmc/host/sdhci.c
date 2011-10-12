@@ -50,7 +50,7 @@ static void sdhci_finish_command(struct sdhci_host *);
 static int sdhci_execute_tuning(struct mmc_host *mmc);
 static void sdhci_tuning_timer(unsigned long data);
 
-#if defined(CONFIG_MMC_BCM_SD) && !defined(CONFIG_ARCH_ISLAND)
+#if defined(CONFIG_MMC_BCM_SD)
 extern int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
 #else
 #define sdhci_pltfm_clk_enable(host, enable)	do { } while(0)
