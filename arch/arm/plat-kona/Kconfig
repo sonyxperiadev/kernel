@@ -17,11 +17,6 @@ config ARCH_RHEA
 	help
 	  Support for the Broadcom Rhea SoC platform.
 
-config ARCH_SAMOA
-	bool "BROADCOM Samoa SoC"
-	help
-	  Support for the Broadcom Samoa SoC platform.
-
 config ARCH_HANA
         bool "BROADCOM Hana SoC"
         help
@@ -37,13 +32,13 @@ config KONA_POWER
 
 config GP_TIMER_CLOCK_OFF_FIX
 	bool "Enable the fix for general purpose timer clock off issue."
-	depends on ARCH_RHEA || ARCH_SAMOA
+	depends on ARCH_RHEA
 	help
 	  Say Y if you want to enable the general purpose timer clock off fix
 
 config GP_TIMER_COMPARATOR_LOAD_DELAY
         bool "Enable the delay after loading general purpose timer compare register"
-        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_SAMOA || ARCH_HANA
+        depends on ARCH_RHEA || ARCH_ISLAND || ARCH_HANA
         default y
 
 config KONA_DCACHE_INVALIDATION
