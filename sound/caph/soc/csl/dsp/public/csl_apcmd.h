@@ -147,4 +147,40 @@ void VPRIPCMDQ_Clear_VoIPMode(UInt16 arg0);
  */
 void VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(Boolean enable, Boolean interrupt_enabled, Boolean stereo_enabled);
 
+#ifdef VOLTE_SUPPORT
+
+/** 
+ * 	Function Name: VPRIPCMDQ_VoLTE_Init
+ * 	@note Function initializes Jitter Buffer of VoLTE interface.
+ *
+ *
+ *	@retval	None
+ */
+void VPRIPCMDQ_VoLTE_Init(void);
+
+/** 
+ * 	Function Name: VPRIPCMDQ_VoLTE_Start_Stream
+ * 	@note Function flushes Jitter Buffer of VoLTE interface for new stream.
+ *
+ *
+ *	@retval	None
+ */
+void VPRIPCMDQ_VoLTE_Start_Stream(void);
+
+/** 
+ * 	Function Name: VPRIPCMDQ_VoLTE_Put_Frame
+ * 	@note Function puts a frame into Jitter Buffer of VoLTE interface.
+ *
+ * 	@param  UInt16  	16-bit LSB of RTP timestamp
+ * 	@param  UInt8	  	codec type
+ * 	@param  UInt8  		frame type
+ * 	@param  UInt8  		frame quality (0 - bad frame, 1 - good frame)
+ * 	@param  UInt8  		frame index
+ * 	@param  UInt8  		buffer Index
+ *
+ *	@retval	None
+*/
+void VPRIPCMDQ_VoLTE_Put_Frame(UInt16 timestamp, UInt8 codecType, UInt8 frameType, UInt8 frameQuality, UInt8 frameIndex, UInt8 bufferIndex);
+
+#endif // VOLTE_SUPPORT
 #endif

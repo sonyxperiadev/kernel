@@ -143,6 +143,24 @@ typedef struct
 } CSL_VOIP_Buffer_t;        
 
 
+typedef enum
+{
+	NB_AMR,
+	WB_AMR,
+	DTMF_EVENT
+} DJB_CODEC_TYPE;
+
+typedef struct
+{
+	UInt32			RTPTimestamp;
+	UInt8			*pFramePayload;
+	UInt16			payloadSize;
+	UInt8			frameIndex;
+	UInt8			codecType;				// DJB_CODEC_TYPE in UInt8
+	UInt8			frameType;
+	UInt8			frameQuality;
+} DJB_InputFrame;
+
 /**
  * @addtogroup CSL VoIP interface
  * @{
@@ -171,6 +189,38 @@ void CSL_WriteDLVoIPData(UInt16 codec_type, UInt16 *pSrc);
 * 
 **********************************************************************/
 UInt8 CSL_ReadULVoIPData(UInt16 codec_type, UInt16 *pDst);
+
+#ifdef VOLTE_SUPPORT
+
+//*********************************************************************
+/**
+*
+*   DJB_Init initializes Jitter Buffer of VoLTE interface
+*
+**********************************************************************/
+void DJB_Init(void);
+
+
+//*********************************************************************
+/**
+*
+*   DJB_Init flushes Jitter Buffer for new stream
+* 
+**********************************************************************/
+void DJB_StartStream(void);
+
+
+//*********************************************************************
+/**
+*
+*   DJB_PutFrame puts incoming frame into Jitter Buffer of VoLTE interface
+*
+*   @param    pInputFrame	(in)		input frame
+* 
+**********************************************************************/
+void DJB_PutFrame(DJB_InputFrame *pInputFrame);
+
+#endif // VOLTE_SUPPORT
 
 /** @} */
 
