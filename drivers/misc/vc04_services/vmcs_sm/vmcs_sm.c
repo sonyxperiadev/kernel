@@ -3558,6 +3558,47 @@ out:
 }
 EXPORT_SYMBOL_GPL(vc_sm_alloc);
 
+/* Get an internal resource handle mapped from the external one.
+*/
+int vc_sm_int_handle( int handle )
+{
+   int ret = 0;
+   SM_RESOURCE_T *resource   = NULL;
+
+   /* Validate we can work with this device.
+   */
+   if ( (sm_state == NULL) || (handle == 0) )
+   {
+      LOG_ERR( "[%s]: invalid input",
+               __func__ );
+
+      ret = -EPERM;
+      goto out;
+   }
+
+   /* Locate resource from GUID.
+   */
+   resource = vmcs_sm_get_resource_with_guid ( sm_state->data_knl,
+                                               handle );
+   if ( resource == NULL )
+   {
+      goto out;
+   }
+   else
+   {
+      ret = resource->res_handle;
+   }
+
+
+   /* Done.
+   */
+   goto out;
+
+out:
+   return ret;
+}
+EXPORT_SYMBOL_GPL(vc_sm_int_handle);
+
 /* Free a previously allocated shared memory handle and block.
 */
 int vc_sm_free( int handle )
@@ -3809,7 +3850,7 @@ EXPORT_SYMBOL_GPL(vc_sm_lock);
 
 /* Unlock a memory handle in use by kernel.
 */
-int vc_sm_unlock( int handle )
+int vc_sm_unlock( int handle, int flush )
 {
    int ret = 0;
    VCOS_STATUS_T status;
@@ -3857,7 +3898,7 @@ int vc_sm_unlock( int handle )
          {
             if ( map->res_addr )
             {
-               if ( resource->res_cached == VMCS_SM_CACHE_HOST )
+               if ( flush && (resource->res_cached == VMCS_SM_CACHE_HOST) )
                {
                   long unsigned int phys_addr;
                   phys_addr = (uint32_t)resource->res_base_mem & 0x3FFFFFFF;
