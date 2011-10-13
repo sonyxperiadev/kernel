@@ -37,6 +37,9 @@ struct regulator_init_data;
 /* LDO or Switcher def */
 #define BCMPMU_LDO    0x10
 #define BCMPMU_SR     0x11
+/* HOSTCTRL1 def*/
+#define BCMPMU_SW_SHDWN 0x04
+
 
 int bcmpmu_register_regulator(struct bcmpmu *bcmpmu, int reg,
 			      struct regulator_init_data *initdata);
@@ -275,6 +278,7 @@ enum bcmpmu_reg {
 	PMU_REG_PMUID,
 	PMU_REG_PMUREV,
 	PMU_REG_PLLCTRL,
+	PMU_REG_HOSTCTRL1,
 	PMU_REG_MAX,
 };
 enum bcmpmu_irq_reg {
@@ -836,5 +840,7 @@ int bcmpmu_usb_add_notifier(u32, struct notifier_block *);
 int bcmpmu_usb_remove_notifier(u32, struct notifier_block *);
 int bcmpmu_batt_add_notifier(u32, struct notifier_block *);
 int bcmpmu_batt_remove_notifier(u32, struct notifier_block *);
+
+void bcmpmu_client_power_off(void);
 
 #endif

@@ -180,6 +180,12 @@ static const struct attribute_group bcmpmu_core_attr_group = {
 };
 #endif
 
+void bcmpmu_client_power_off(void)
+{
+        bcmpmu_core->write_dev(bcmpmu_core,PMU_REG_HOSTCTRL1,BCMPMU_SW_SHDWN,BCMPMU_SW_SHDWN);
+}
+EXPORT_SYMBOL(bcmpmu_client_power_off);
+
 
 static int bcmpmu_open(struct inode *inode, struct file *file);
 static int bcmpmu_release(struct inode *inode, struct file *file);
