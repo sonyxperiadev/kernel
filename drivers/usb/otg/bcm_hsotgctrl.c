@@ -400,6 +400,7 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 static struct platform_driver bcm_hsotgctrl_driver = {
 	.driver = {
 		   .name = "bcm_hsotgctrl",
+		   .owner = THIS_MODULE,
 	},
 	.probe = bcm_hsotgctrl_probe,
 	.remove = bcm_hsotgctrl_remove,

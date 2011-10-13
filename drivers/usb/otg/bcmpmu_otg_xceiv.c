@@ -116,8 +116,14 @@ static void bcmpmu_usb_event_notif_callback(struct bcmpmu * pmu_handle, unsigned
 		case BCMPMU_USB_EVENT_SESSION_INVALID:
 			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_vbus_a_invalid_work);
 			break;
+		case BCMPMU_USB_EVENT_VBUS_VALID:
+			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_vbus_valid_work);
+			break;
 		case BCMPMU_USB_EVENT_ID_CHANGE:
 			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
+			break;
+		case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
 			break;
 		default:
 			break;
@@ -136,7 +142,7 @@ static int bcmpmu_otg_xceiv_vbus_notif_handler(struct notifier_block *nb, unsign
 
 	vbus_status = bcmpmu_usb_get(BCMPMU_CTRL_GET_VBUS_STATUS, xceiv_data->bcm590xx);
 
-	queue_work(xceiv_data->bcm_otg_work_queue, vbus_status? &xceiv_data->bcm_otg_vbus_valid_work : &xceiv_data->bcm_otg_vbus_a_invalid_work);
+	queue_work(xceiv_data->bcm_otg_work_queue, vbus_status ? &xceiv_data->bcm_otg_vbus_valid_work : &xceiv_data->bcm_otg_vbus_a_invalid_work);
 
 	return 0;
 }
@@ -170,9 +176,6 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 		/* Register callback functions for PMU events */
 		status = xceiv_data->bcmpmu->register_usb_callback(xceiv_data->bcmpmu, bcmpmu_usb_event_notif_callback, (void*)xceiv_data);
 	}
-
-	/* Come up as host or device based on current ID value */
-	queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
 #else
 	/* We would want to use A session invalid but that requires reading PMU reg for status. For now use insert/remove instead */
 	xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call = bcmpmu_otg_xceiv_vbus_notif_handler;
@@ -181,6 +184,9 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 	xceiv_data->bcm_otg_chg_detection_notifier.notifier_call = bcmpmu_otg_xceiv_chg_detection_notif_handler;
 	bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_CHGR_DETECTION, &xceiv_data->bcm_otg_chg_detection_notifier);
 #endif
+
+	/* Come up as host or device based on current ID value */
+	queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
 
 	return status;
 }
@@ -215,9 +221,11 @@ static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xcei
 		bcm_hsotgctrl_phy_set_id_stat(false);
 	} else {
 		dev_info(xceiv_data->dev, "Switching to Peripheral\n");
-		xceiv_data->host = false;
 		bcm_hsotgctrl_phy_set_id_stat(true);
-		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
+		if (xceiv_data->host) {
+			xceiv_data->host = false;
+			msleep(HOST_TO_PERIPHERAL_DELAY_MS);
+		}
 	}
 }
 
@@ -343,12 +351,6 @@ static void bcmpmu_otg_xceiv_vbus_valid_handler(struct work_struct *work)
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_valid_work);
 	dev_info(xceiv_data->dev, "Vbus valid\n");
-
-#ifdef CONFIG_MFD_BCMPMU
-	bcm_hsotgctrl_phy_init();
-#else
-	bcm_hsotgctrl_en_clock(true); //Enable clocks for PMU's BC detection to go through
-#endif
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
@@ -369,9 +371,7 @@ static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
 			     bcm_otg_vbus_a_valid_work);
 	dev_info(xceiv_data->dev, "A session valid\n");
 
-#ifdef CONFIG_MFD_BCMPMU
-	bcm_hsotgctrl_phy_init();
-#endif
+	bcm_hsotgctrl_phy_set_vbus_stat(true);
 }
 
 static void bcmpmu_otg_xceiv_adp_cprb_done_handler(struct work_struct *work)
@@ -392,34 +392,58 @@ static void bcmpmu_otg_xceiv_adp_change_handler(struct work_struct *work)
 
 static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 {
-#ifdef CONFIG_MFD_BCMPMU
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_id_status_change_work);
-	unsigned int data;
+	unsigned int data=0;
+	bool id_gnd = false;
+	int vbus_status;
 
 	dev_info(xceiv_data->dev, "ID change detected\n");
+
+#ifdef CONFIG_MFD_BCMPMU
 	xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
+	id_gnd = (data == PMU_USB_ID_GROUND);
+#else
+	data = bcmpmu_usb_get(BCMPMU_CTRL_GET_ID_VALUE, (void*)xceiv_data->bcm590xx);
+	id_gnd = !data; /* Non-ACA interpretation */
+#endif
 
 	/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
-	bcmpmu_otg_xceiv_select_host_mode(xceiv_data, (data == PMU_USB_ID_GROUND));
+	bcmpmu_otg_xceiv_select_host_mode(xceiv_data, id_gnd);
+
+	if (!id_gnd) {
+#ifdef CONFIG_MFD_BCMPMU
+		xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_VBUS_STATUS, &data);
+		vbus_status = data;
+#else
+		vbus_status = bcmpmu_usb_get(BCMPMU_CTRL_GET_VBUS_STATUS, xceiv_data->bcm590xx);
 #endif
+		if (!vbus_status)
+			bcm_hsotgctrl_phy_deinit(); /* Shutdown the core */
+	}
 }
 
 static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
 {
-#ifndef CONFIG_MFD_BCMPMU
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_chg_detect_work);
+	unsigned int data=0;
+	bool id_gnd = false;
 
 	dev_info(xceiv_data->dev, "Charger detect event\n");
 
-	if (bcmpmu_usb_get(BCMPMU_CTRL_GET_ID_VALUE, xceiv_data->bcm590xx)) {//Non-ACA interpretation of ID for now
-		bcm_hsotgctrl_en_clock(false); //Just balancing clock disable/enable until the PMU's bc detect clock management is resolved
-		bcm_hsotgctrl_phy_init();
-	}
+#ifdef CONFIG_MFD_BCMPMU
+	xceiv_data->bcmpmu->usb_get(xceiv_data->bcmpmu, BCMPMU_USB_CTRL_GET_ID_VALUE, &data);
+	id_gnd = (data == PMU_USB_ID_GROUND);
+#else
+	data = bcmpmu_usb_get(BCMPMU_CTRL_GET_ID_VALUE, xceiv_data->bcm590xx);
+	id_gnd = !data;
 #endif
+
+	if (!id_gnd) /* Non-ACA interpretation for now */
+		bcm_hsotgctrl_phy_init();
 }
 
 static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
