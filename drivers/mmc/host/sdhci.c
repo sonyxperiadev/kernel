@@ -2581,24 +2581,23 @@ int sdhci_add_host(struct sdhci_host *host)
 		host->flags |= SDHCI_AUTO_CMD12;
 
 	/* Auto-CMD23 stuff only works in ADMA or PIO. */
-	if ((host->version >= SDHCI_SPEC_300) &&
-	    ((host->flags & SDHCI_USE_ADMA) ||
-	     !(host->flags & SDHCI_USE_SDMA))) {
+	/*
+	 * In the 10.7 version of the SDHC controller AutoCMD23 has 
+	 * issues. 
+	 * 1) The controller sends unexpected CMD23 before CMD13
+	 * 2) When the driver enables Auto CMD23, the controller
+	 *    issues CMD23 and then issue CMD25. However, the controller
+	 *    resets all the response contents when it receives response
+	 *    for CMD25
+	 * So do not enable AutoCMD23 support if the vendor version is 0xA7 
+	 */  
+	if ( (host->version >= SDHCI_SPEC_300) &&
+	     ((host->flags & SDHCI_USE_ADMA) || !(host->flags & SDHCI_USE_SDMA)) &&
+             (vendor_version != 0xA7)
+	   ) {
 #ifndef CONFIG_MACH_ISLAND_FF
 		host->flags |= SDHCI_AUTO_CMD23;
 #endif
-		/*
-		 * In the 10.7 version of the SDHC controller AutoCMD23 has 
-		 * issues. 
-		 * 1) The controller sends unexpected CMD23 before CMD13
-		 * 2) When the driver enables Auto CMD23, the controller
-		 *    issues CMD23 and then issue CMD25. However, the controller
-		 *    resets all the response contents when it receives response
-		 *    for CMD25
-		 * So do not enable AutoCMD23 support if the vendor version is 0xA7 
-		 */  
-		if (vendor_version != 0xA7)
-			host->flags |= SDHCI_AUTO_CMD23;
 		DBG("%s: Auto-CMD23 available\n", mmc_hostname(mmc));
 	} else {
 		DBG("%s: Auto-CMD23 unavailable\n", mmc_hostname(mmc));
