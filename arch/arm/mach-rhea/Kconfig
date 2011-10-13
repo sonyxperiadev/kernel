@@ -2,6 +2,18 @@ menu	"Rhea SoC based Machine types"
 	depends on ARCH_RHEA
 
 choice
+	prompt "Choose Rhea SOC Silicon Version"
+	depends on ARCH_RHEA
+
+config  ARCH_RHEA_A0
+        bool "Rhea SOC Version - A0"
+	default y
+config  ARCH_RHEA_B0
+        bool "Rhea SOC Version - B0"
+	default n
+endchoice
+
+choice
 	prompt "Rhea SoC based board type"
 	default MACH_RHEA_RAY
 
@@ -14,6 +26,11 @@ config MACH_RHEA_RAY_EDN1X
 	bool "Support Broadcom Rhea Ray EDN1X board"
 	help
 	  Support for the Broadcom Rhea Ray EDN1X board.
+
+config MACH_RHEA_RAY_EDN2X
+	bool "Support Broadcom Rhea Ray EDN2X board"
+	help
+	  Support for the Broadcom Rhea Ray EDN2X board.
 
 config MACH_RHEA_DALTON
 	bool "Support Nokia Dalton board"
@@ -59,6 +76,21 @@ config MACH_RHEA_SELFTEST
         help
           Selftest CSAPI support.
 
+config RHEA_UART_RX_FIX
+	bool "Rhea UART Rx Fix"
+	depends on ARCH_RHEA
+	help
+	  UART RX interrupt happened but in LSR Data Ready is not set.
+	  This fix modifies the serial driver to take decission to 
+	  call receive_chars based on iir and not based on LSR
+
+config RHEA_I2C_USE_PMGR_HW_SEM
+	bool "use HW sem to sync i2c between sw & sequencer"
+	depends on ARCH_RHEA_B0
+	help
+	  The HW sequencer can generate i2c transcations on the PMU i2c
+	  bus while SW driver can still generate the same. To sync 
+	  between the two use HW semaphore.
 endmenu
 
 

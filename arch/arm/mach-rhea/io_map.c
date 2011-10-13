@@ -98,6 +98,9 @@ static struct map_desc rhea_io_desc[] __initdata =
 	IO_DESC( KONA_SDIO1_VA, SZ_64K ),
 	IO_DESC( KONA_SDIO2_VA, SZ_64K ),
 	IO_DESC( KONA_SDIO3_VA, SZ_64K ),
+#ifdef CONFIG_ARCH_RHEA_B0
+	IO_DESC( KONA_SDIO4_VA, SZ_64K ),
+#endif
 	IO_DESC( KONA_SEC_VA, SZ_4K ),
 	IO_DESC( KONA_SECWD_VA, SZ_4K ),
 	IO_DESC( KONA_SLV_CLK_VA, SZ_4K ),

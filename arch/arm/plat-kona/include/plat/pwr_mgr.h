@@ -186,8 +186,8 @@ int pm_get_pc_value(int pc_pin);
 int pwr_mgr_pi_counter_enable(int pi_id, bool enable);
 int pwr_mgr_pi_counter_read(int pi_id,bool* over_flow);
 
-int pwr_mgr_request_pm_i2c_ownership(int value);
-int pwr_mgr_verify_pm_i2c_ownership(void);
+int pwr_mgr_pm_i2c_sem_lock(void);
+int pwr_mgr_pm_i2c_sem_unlock(void);
 int pwr_mgr_pm_i2c_enable(bool enable);
 int pwr_mgr_set_v0x_specific_i2c_cmd_ptr(int v0x, const struct v0x_spec_i2c_cmd_ptr* cmd_ptr);
 int pwr_mgr_pm_i2c_cmd_write(const struct i2c_cmd* i2c_cmd , u32 num_cmds);

@@ -22,6 +22,10 @@
 /*     without Broadcom's express prior written consent.                                        */
 /*                                                                                              */
 /************************************************************************************************/
+
+/* Local macro test B0 build on A0 */ 
+#define CONFIG_DONOT_ENABLE_SDIO4
+
 #include <linux/version.h>
 #include <linux/init.h>
 #include <linux/device.h>
@@ -410,7 +414,7 @@ static struct bcm_keypad_platform_info bcm_keypad_data = {
 
 #ifdef CONFIG_GPIO_PCA953X
 
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#if defined(CONFIG_MACH_RHEA_RAY_EDN1X) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 #define GPIO_PCA953X_GPIO_PIN      121 /* Configure pad MMC1DAT4 to GPIO74 */
 #else
 #define GPIO_PCA953X_GPIO_PIN      74 /* Configure pad MMC1DAT4 to GPIO74 */
@@ -659,9 +663,7 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
-#if 1 //Shri
-
-static struct resource board_sdio0_resource[] = {
+static struct resource board_sdio1_resource[] = {
 	[0] = {
 		.start = SDIO1_BASE_ADDR,
 		.end = SDIO1_BASE_ADDR + SZ_64K - 1,
@@ -674,7 +676,7 @@ static struct resource board_sdio0_resource[] = {
 	},
 };
 
-static struct resource board_sdio1_resource[] = {
+static struct resource board_sdio2_resource[] = {
 	[0] = {
 		.start = SDIO2_BASE_ADDR,
 		.end = SDIO2_BASE_ADDR + SZ_64K - 1,
@@ -687,7 +689,7 @@ static struct resource board_sdio1_resource[] = {
 	},
 };
 
-static struct resource board_sdio2_resource[] = {
+static struct resource board_sdio3_resource[] = {
 	[0] = {
 		.start = SDIO3_BASE_ADDR,
 		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
@@ -699,8 +701,24 @@ static struct resource board_sdio2_resource[] = {
 		.flags = IORESOURCE_IRQ,
 	},
 };
+
+#ifdef CONFIG_ARCH_RHEA_B0
+static struct resource board_sdio4_resource[] = {
+	[0] = {
+		.start = SDIO4_BASE_ADDR,
+		.end = SDIO4_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_MMC, 
+		.end = BCM_INT_ID_SDIO_MMC,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+#endif
+
 static struct sdio_platform_cfg board_sdio_param[] = {
-	{ /* SDIO0 */
+	{ /* SDIO1 */
 		.id = 0,
 		.data_pullup = 0,
 		.cd_gpio = SD_CARDDET_GPIO_PIN,
@@ -711,7 +729,7 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio1_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
-	{ /* SDIO1 */
+	{ /* SDIO2 */
 		.id = 1,
 		.data_pullup = 0,
 		.is_8bit = 1,
@@ -722,7 +740,8 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio2_sleep_clk",
 		.peri_clk_rate = 52000000,
 	},
-	{ /* SDIO2 */
+#ifdef CONFIG_DONOT_ENABLE_SDIO4
+	{ /* SDIO3 */
 		.id = 2,
 		.data_pullup = 0,
 		.devtype = SDIO_DEV_TYPE_WIFI,
@@ -738,33 +757,81 @@ static struct sdio_platform_cfg board_sdio_param[] = {
 		.sleep_clk_name = "sdio3_sleep_clk",
 		.peri_clk_rate = 48000000,
 	},
+#else /* Enable this code for B0 - disabled to test the code on A0 */
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	{ /* SDIO3 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 70,
+			.reg		= -1,
+			.host_wake	= 85,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+#endif
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+	{ /* SDIO4 */
+		.id = 3,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 70,
+			.reg		= -1,
+			.host_wake	= 85,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio4_clk",
+		.ahb_clk_name = "sdio4_ahb_clk",
+		.sleep_clk_name = "sdio4_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+#endif
+#endif
 };
 
-static struct platform_device board_sdio0_device = {
+static struct platform_device board_sdio1_device = {
 	.name = "sdhci",
 	.id = 0,
-	.resource = board_sdio0_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio0_resource),
+	.resource = board_sdio1_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
 	.dev      = {
 		.platform_data = &board_sdio_param[0],
 	},
 };
 
-static struct platform_device board_sdio1_device = {
+static struct platform_device board_sdio2_device = {
 	.name = "sdhci",
 	.id = 1,
-	.resource = board_sdio1_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
+	.resource = board_sdio2_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
 	.dev      = {
 		.platform_data = &board_sdio_param[1],
 	},
 };
 
-static struct platform_device board_sdio2_device = {
+static struct platform_device board_sdio3_device = {
 	.name = "sdhci",
 	.id = 2,
-	.resource = board_sdio2_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
+#ifdef CONFIG_DONOT_ENABLE_SDIO4
+	.resource = board_sdio3_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
+#else /* Enable this code for B0 - disabled to test the code on A0 */
+#ifdef CONFIG_MACH_RHEA_RAY_EDN2X
+	.resource = board_sdio4_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
+#else 
+	.resource = board_sdio3_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
+#endif
+#endif
 	.dev      = {
 		.platform_data = &board_sdio_param[2],
 	},
@@ -773,19 +840,15 @@ static struct platform_device board_sdio2_device = {
 
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_sdio_plat_devices[] __initdata = {
-	&board_sdio1_device,
 	&board_sdio2_device,
-	&board_sdio0_device,
+	&board_sdio3_device,
+	&board_sdio1_device,
 };
 
 void __init board_add_sdio_devices(void)
 {
 	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
 }
-
-
-#endif //Shri
-
 
 #ifdef CONFIG_BACKLIGHT_PWM
 
@@ -812,7 +875,7 @@ static struct platform_device bcm_backlight_devices = {
 
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
-	|| defined(CONFIG_MACH_RHEA_DALTON)
+	|| defined(CONFIG_MACH_RHEA_DALTON) || defined(CONFIG_MACH_RHEA_RAY_EDN2X)
 #define GPIO_SIM2LDO_EN		99
 #endif
 #ifdef CONFIG_GPIO_PCA953X

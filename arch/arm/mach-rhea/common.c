@@ -330,6 +330,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
 		.retries = 1,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=false,
+#endif
 	},
 	{ /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
@@ -337,6 +340,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
 		.retries = 3,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=false,
+#endif
 	},
 	{ /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
@@ -344,6 +350,9 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.bsc_clk = "pmu_bsc_clk",
 		.bsc_apb_clk = "pmu_bsc_apb",
 		.retries = 1,
+#ifdef CONFIG_RHEA_I2C_USE_PMGR_HW_SEM 
+		.is_pmu_i2c=true,
+#endif
 	},
 };
 
