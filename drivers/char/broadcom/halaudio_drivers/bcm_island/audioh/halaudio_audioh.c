@@ -1742,7 +1742,7 @@ static void audiohDmaIngressHandler(
          }
 
          /* Continue DMA ring operation */
-         rc = caph_dma_continue_transfer( ch->dma_config.caph_handle, aadma_status->dma_status );
+         rc = caph_dma_continue_transfer( ch->dma_config.caph_handle, CAPH_READY_HIGHLOW );
 
          if( rc )
          {
@@ -1862,7 +1862,7 @@ static void audiohDmaEgressHandler(
          }
 
          /* Continue DMA ring operation */
-         rc = caph_dma_continue_transfer( ch->dma_config.caph_handle, aadma_status->dma_status );
+         rc = caph_dma_continue_transfer( ch->dma_config.caph_handle, CAPH_READY_HIGHLOW );
 
          if( rc )
          {
