@@ -59,6 +59,8 @@ typedef struct wifihdmi_snd_blk_t
    uint32_t                     handle;
    uint32_t                     size;
    uint32_t                     socket;
+   uint32_t                     address;
+   uint32_t                     port;
 
 } WIFIHDMI_SND_BLK_T;
 
@@ -536,6 +538,7 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 {
    WIFIHDMI_INSTANCE_T *instance = (WIFIHDMI_INSTANCE_T *)arg;
    uint32_t trans_id;
+   VCOS_STATUS_T status;
 
    switch ( event )
    {
@@ -614,10 +617,18 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
                   skt_data.data_handle = instance->data_in_handle;
 
-                  vc_vchi_wifihdmi_skt_data( instance,
-                                             &skt_data,
-                                             &result,
-                                             &trans_id ); 
+                  status = vc_vchi_wifihdmi_skt_data( instance,
+                                                      &skt_data,
+                                                      &result,
+                                                      &trans_id );
+                  if ( status != VCOS_SUCCESS )
+                  {
+                     /* What to do...  we are not able to pass the data to the
+                     ** actual consumer, should we retry, abandon? ... will depend
+                     ** on consequence(s), right now do nothing as it is always more
+                     ** relaxing to do so...
+                     */
+                  }
                }
                else
                {
@@ -743,6 +754,26 @@ static void *vc_vchi_wifihdmi_videocore_ctrl( void *arg )
             }
             break;
 
+            case VC_WIFIHDMI_MSG_TYPE_SKT_CLOSE:
+            {
+               rc = whdmi_close_socket ( (int) ctrlblk->handle );
+
+               LOG_DBG( "%s: close-socket %p, handle %x - returns %d",
+                        __func__, ctrlblk, ctrlblk->handle, rc );
+            }
+            break;
+
+            case VC_WIFIHDMI_MSG_TYPE_SKT_LISTEN:
+            {
+               rc = whdmi_create_tcp_listening_socket ( (int) ctrlblk->handle,
+                                                        (unsigned short) ctrlblk->port,
+                                                        0 );
+
+               LOG_DBG( "%s: listen-socket %p, handle %x, port %d - returns %d",
+                        __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
+            }
+            break;
+
             default:
             break;
          }
@@ -782,18 +813,28 @@ static void *vc_vchi_wifihdmi_videocore_snd( void *arg )
                           VC_SM_LOCK_CACHED,
                           &data_ptr ) == 0 )
          {
-            //LOG_DBG( "%s: data-pump de-queue %p, handle %x, size %d, @ 0x%lx",
-            //         __func__, sndblk, sndblk->handle, sndblk->size, data_ptr );
+            if ( (sndblk->address == 0) &&
+                 (sndblk->port == 0) )
+            {
+               LOG_DBG( "%s: control de-queue %p, handle %x, socket %x, size %d",
+                        __func__, sndblk, sndblk->handle, sndblk->socket,
+                        sndblk->size );
 
-            rc = whdmi_tcp_send( sndblk->socket,
-                                 sndblk->size,
-                                 (uint8_t *) data_ptr );
+               rc = whdmi_tcp_send( sndblk->socket,
+                                    sndblk->size,
+                                    (uint8_t *) data_ptr );
+            }
+            else
+            {
+               //LOG_DBG( "%s: data-pump de-queue %p, handle %x, size %d, @ 0x%lx",
+               //         __func__, sndblk, sndblk->handle, sndblk->size, data_ptr );
 
-            rc= whdmi_udp_send_to( sndblk->socket,
-                                   0, /* dest_addr */
-                                   0, /* dest_port */
-                                   sndblk->size,
-                                   (uint8_t *) data_ptr );
+               rc = whdmi_udp_send_to( sndblk->socket,
+                                       sndblk->address,
+                                       sndblk->port,
+                                       sndblk->size,
+                                       (uint8_t *) data_ptr );
+            }
 
             vc_sm_unlock( sndblk->handle,
                           0 );
@@ -968,9 +1009,11 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
 
                      if ( sndblk != NULL )
                      {
-                        sndblk->handle = txdata->res_handle;
-                        sndblk->size   = txdata->res_size;
-                        sndblk->socket = txdata->res_socket;
+                        sndblk->handle  = txdata->res_handle;
+                        sndblk->size    = txdata->res_size;
+                        sndblk->socket  = txdata->res_socket;
+                        sndblk->address = txdata->res_rem_addr;
+                        sndblk->port    = txdata->res_rem_port;
 
                         //LOG_DBG( "%s: data-pump queue %p, handle %x, size %d",
                         //         __func__, sndblk, sndblk->handle, sndblk->size );
@@ -983,6 +1026,8 @@ static void *vc_vchi_wifihdmi_videocore_io( void *arg )
                break;
 
                case VC_WIFIHDMI_MSG_TYPE_SKT_OPEN:
+               case VC_WIFIHDMI_MSG_TYPE_SKT_CLOSE:
+               case VC_WIFIHDMI_MSG_TYPE_SKT_LISTEN:
                   if ( msg_len ==
                          ( sizeof( VC_WIFIHDMI_MSG_HDR_T ) + sizeof( VC_WIFIHDMI_SKT_ACTION_T )) )
                   {

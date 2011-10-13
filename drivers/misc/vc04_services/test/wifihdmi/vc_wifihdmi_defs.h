@@ -15,6 +15,8 @@
 #ifndef __VC_WIFIHDMI_DEFS_H__INCLUDED__
 #define __VC_WIFIHDMI_DEFS_H__INCLUDED__
 
+typedef void* (*SOCKET_CALLBACK) (int socket_handle, void *data);
+
 // FourCC code used for VCHI connection
 #define VC_WIFIHDMI_SERVER_NAME MAKE_FOURCC("WOHS")
 #define VC_WIFIHDMI_NOTIFY_NAME MAKE_FOURCC("WOHN")
@@ -46,6 +48,8 @@ typedef enum
 
    // VC->HOST
    VC_WIFIHDMI_MSG_TYPE_SKT_OPEN,
+   VC_WIFIHDMI_MSG_TYPE_SKT_CLOSE,
+   VC_WIFIHDMI_MSG_TYPE_SKT_LISTEN,
    VC_WIFIHDMI_MSG_TYPE_TX_DATA,
 
    VC_WIFIHDMI_MSG_TYPE_MAX
@@ -100,6 +104,8 @@ typedef struct
    uint32_t res_handle;             // Handle reference
    uint32_t res_size;               // Payload to ship out
    uint32_t res_socket;             // "Socket" on which to send this payload
+   uint32_t res_rem_addr;           // Remote address to send this payload to
+   uint32_t res_rem_port;           // Remote port to send this payload to
 
 } VC_WIFIHDMI_TX_DATA_T;
 

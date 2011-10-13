@@ -128,3 +128,37 @@ int whdmi_tcp_send( int km_socket_handle,
 
    return 0;
 }
+
+/***************************************************************************/
+/**
+*  Instructs WIFI HDMI Driver to create a TCP listening socket 
+*
+*  @return  0 on success, otherwise -ve error.
+*   -EAGAIN - Not ready to handle operation, try again later
+*   -ENOMEM - Not enough memory to carry out operation
+*/
+int whdmi_create_tcp_listening_socket( int km_socket_handle,
+                                       unsigned short port,
+                                       int queue_len )
+{
+   WHDMI_REMOVE_UNUSED_PARAM_WARNING (km_socket_handle);
+   WHDMI_REMOVE_UNUSED_PARAM_WARNING (port);
+   WHDMI_REMOVE_UNUSED_PARAM_WARNING (queue_len);
+
+   return 0;
+}
+
+/***************************************************************************/
+/**
+*  Instructs WIFI HDMI Driver to close socket 
+*
+*  @return  0 on success, otherwise -ve error.
+*   -EAGAIN - Not ready to handle operation, try again later
+*   -EINVAL - Invalid argument
+*/
+int whdmi_close_socket( int km_socket_handle )
+{
+   WHDMI_REMOVE_UNUSED_PARAM_WARNING (km_socket_handle);
+
+   return 0;
+}
