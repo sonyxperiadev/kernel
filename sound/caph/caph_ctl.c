@@ -81,12 +81,12 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 			uinfo->count = 2;
 			if(dev == AUDCTRL_SPK_LOUDSPK)
 			{
-				uinfo->value.integer.min = -50<<2; //Q13.2
-				uinfo->value.integer.max = 12<<2;
+				uinfo->value.integer.min = -5000; //mB
+				uinfo->value.integer.max = 1200; //mB
 			}
 			else
 			{
-				uinfo->value.integer.min = -50<<2; //Q13.2
+				uinfo->value.integer.min = 5000; //mB
 				uinfo->value.integer.max = 0;
 			}
 			break;
@@ -94,12 +94,12 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 			uinfo->count = 1;
 			if(dev == AUDCTRL_SPK_LOUDSPK || dev == AUDCTRL_SPK_HEADSET)
 			{
-				uinfo->value.integer.min = -50<<2; //Q13.2
-				uinfo->value.integer.max = 12<<2;
+				uinfo->value.integer.min = -5000; //mB
+				uinfo->value.integer.max = 1200; //mB
 			}
 			else
 			{
-				uinfo->value.integer.min = -50<<2; //Q13.2
+				uinfo->value.integer.min = -5000; //mB
 				uinfo->value.integer.max = 0;
 			}
 			break;
@@ -107,8 +107,8 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 		case CTL_STREAM_PANEL_SPEECHIN:
 		case CTL_STREAM_PANEL_VOIPIN:
 			uinfo->count = 1;
-			uinfo->value.integer.min = 0; //Q13.2
-			uinfo->value.integer.max = 170;//42.5<<2 FIXME
+			uinfo->value.integer.min = 0; //mB
+			uinfo->value.integer.max = 4250;//42.5 FIXME
 			break;
 		default:
 			break;
@@ -1021,8 +1021,11 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 
 
 
-//Control value is in DB, minimium -50db, step 0.25db, minimium does not mean MUTE
-static const DECLARE_TLV_DB_SCALE(caph_db_scale_volume, -5000, 25, 0);
+//The DECLARE_TLV_DB_SCALE macro defines information about a mixer control where each step in the control's value changes the dB value by a constant dB amount. 
+//The first parameter is the name of the variable to be defined. The second parameter is the minimum value, in units of 0.01 dB. The third parameter is the step size, 
+//in units of 0.01 dB. Set the fourth parameter to 1 if the minimum value actually mutes the control. 
+//Control value is in mB, minimium -50db, step 0.01db, minimium does not mean MUTE
+static const DECLARE_TLV_DB_SCALE(caph_db_scale_volume, -5000, 1, 0);
 
 
 #define BRCM_MIXER_CTRL_GENERAL(nIface, iDevice, iSubdev, sName, iIndex, iAccess, iCount, fInfo, fGet, fPut, pTlv, lPriv_val) \
