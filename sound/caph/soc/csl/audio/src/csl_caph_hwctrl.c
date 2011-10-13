@@ -2110,10 +2110,10 @@ static void csl_caph_hwctrl_addHWResource(UInt32 fifoAddr,
 {
     UInt8 i = 0;
     UInt8 j = 0;
+	if (fifoAddr == 0x0) return;
        Log_DebugPrintf(LOGID_SOC_AUDIO,
                     "csl_caph_hwctrl_addHWResource::fifo=0x%lx, pathID=0x%x\n",
                     fifoAddr, pathID);
-    if (fifoAddr == 0x0) return;
     for (j=0; j<CSL_CAPH_FIFO_MAX_NUM; j++)
     {
         if (HWResource_Table[j].fifoAddr == fifoAddr)
@@ -2164,10 +2164,10 @@ static void csl_caph_hwctrl_removeHWResource(UInt32 fifoAddr,
 {
     UInt8 j = 0;
     UInt8 i = 0;
+    if (fifoAddr == 0x0) return;
    	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_hwctrl_removeHWResource::fifo=0x%lx, pathID=0x%x\n",
                     fifoAddr, pathID));
-    if (fifoAddr == 0x0) return;
     for (j=0; j<CSL_CAPH_FIFO_MAX_NUM; j++)
     {
         if (HWResource_Table[j].fifoAddr == fifoAddr)

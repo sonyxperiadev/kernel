@@ -716,6 +716,7 @@ void csl_caph_switch_remove_dst(CSL_CAPH_SWITCH_CHNL_e chnl, UInt32 FIFO_dstAddr
 {
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
+	if(FIFO_dstAddr==0) return;
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, 
                     "csl_caph_switch_remove_dst:: chnl = 0x%x, dstcAddr = 0x%lx\n",
                     chnl, FIFO_dstAddr));

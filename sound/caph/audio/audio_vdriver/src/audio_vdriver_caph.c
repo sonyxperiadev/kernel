@@ -281,7 +281,7 @@ void AUDDRV_Telephony_DeinitHW (void *pData)
 
     (void)csl_caph_hwctrl_DisablePath(config);
 
-    if(AUDDRV_IsDualMicEnabled()==TRUE)
+	if(((AUDDRV_PathID_t *)pData)->ul2PathID != 0)
     {
         config.streamID = CSL_CAPH_STREAM_NONE;
         config.pathID = ((AUDDRV_PathID_t *)pData)->ul2PathID;
@@ -495,8 +495,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 	    (void)csl_caph_hwctrl_DisablePath(config);
 	    ((AUDDRV_PathID_t *)pData)->ulPathID = 0;
 
-        if((AUDDRV_IsDualMicEnabled()==FALSE)
-            &&(((AUDDRV_PathID_t *)pData)->ul2PathID != 0))
+		if(((AUDDRV_PathID_t *)pData)->ul2PathID != 0)
         {
             config.streamID = CSL_CAPH_STREAM_NONE;
             config.pathID = ((AUDDRV_PathID_t *)pData)->ul2PathID;
