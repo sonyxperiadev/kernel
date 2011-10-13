@@ -317,45 +317,52 @@ vchiq_platform_suspend(VCHIQ_STATE_T *state)
       return VCHIQ_ERROR;
 
    vcos_mutex_lock(&state->suspend_resume_mutex);
-   vcos_log_info("vchiq_platform_suspend");
-
-   /* Invalidate the wake address */
-   ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0] = ~0;
-
-   status = vchiq_pause_internal(state);
-
-   if (status == VCHIQ_SUCCESS)
+   if(state->videocore_suspended)
    {
-      vcos_log_info("vchiq_platform_suspend - waiting for g_pause_event");
-      if (vcos_event_wait(&g_pause_event) != VCOS_SUCCESS)
-      {
-         status = VCHIQ_RETRY;
-         goto unlock;
-      }
-      vcos_log_info("vchiq_platform_suspend - g_pause_event received");
+      vcos_log_info("%s - already suspended", __func__);
+   }
+   else
+   {
+      vcos_log_info("%s - suspending", __func__);
 
-      do
-      {
-         //msleep(1);
-         g_wake_address = ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0];
-      } while (g_wake_address == ~0);
-
-      chal_ipc_sleep_vc( ipcHandle );
-      msleep(1);
+      /* Invalidate the wake address */
       ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0] = ~0;
-      vcos_wmb(g_vchiq_slot_zero->platform_data);
-      msleep(1);
 
-      if (g_wake_address == 0)
+      status = vchiq_pause_internal(state);
+
+      if (status == VCHIQ_SUCCESS)
       {
-         vcos_log_error("VideoCore suspend failed!");
-         status = VCHIQ_ERROR;
-         state->videocore_suspended = 0;
-      }
-      else
-      {
-         vcos_log_info("VideoCore suspended - wake address %x", g_wake_address);
-         state->videocore_suspended = 1;
+         vcos_log_info("%s - waiting for g_pause_event", __func__);
+         if (vcos_event_wait(&g_pause_event) != VCOS_SUCCESS)
+         {
+            status = VCHIQ_RETRY;
+            goto unlock;
+         }
+         vcos_log_info("%s - g_pause_event received", __func__);
+
+         do
+         {
+            //msleep(1);
+            g_wake_address = ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0];
+         } while (g_wake_address == ~0);
+
+         chal_ipc_sleep_vc( ipcHandle );
+         msleep(1);
+         ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0] = ~0;
+         vcos_wmb(g_vchiq_slot_zero->platform_data);
+         msleep(1);
+
+         if (g_wake_address == 0)
+         {
+            vcos_log_error("VideoCore suspend failed!");
+            status = VCHIQ_ERROR;
+            state->videocore_suspended = 0;
+         }
+         else
+         {
+            vcos_log_info("VideoCore suspended - wake address %x", g_wake_address);
+            state->videocore_suspended = 1;
+         }
       }
    }
 unlock:
@@ -406,25 +413,37 @@ unlock:
    return ret;
 }
 
+static VCHIQ_STATUS_T
+vchiq_check_resume(VCHIQ_STATE_T* state, int have_mutex)
+{
+   VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
+   if(!have_mutex)
+   {
+      vcos_mutex_lock(&state->use_count_mutex);
+   }
+
+   if (state->videocore_suspended && vchiq_videcore_wanted(state))
+   {
+      ret = vchiq_platform_resume(state);
+   }
+
+   if(!have_mutex)
+   {
+      vcos_mutex_unlock(&state->use_count_mutex);
+   }
+   return ret;
+}
+
+
 void
 vchiq_platform_resumed(VCHIQ_STATE_T *state)
 {
    vcos_event_signal(&g_pause_event);
 }
 
-#if VCOS_HAVE_TIMER
-static void suspend_timer_callback(void *context)
-{
-   VCHIQ_STATE_T *state = (VCHIQ_STATE_T *)context;
-   vcos_log_info( "suspend_timer_callback - suspend pending");
-   vcos_event_signal(&state->lp_evt);
-}
-#endif
-
 VCHIQ_STATUS_T
-vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
+vchiq_use_service_internal(VCHIQ_SERVICE_T *service)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
    VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
    VCHIQ_STATE_T* state = NULL;
 
@@ -444,7 +463,7 @@ vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
 #if VCOS_HAVE_TIMER
       if (g_use_suspend_timer)
       {
-         vcos_log_trace( "vchiq_use_service %c%c%c%c:%d - cancel suspend timer", VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id);
+         vcos_log_trace( "%s %c%c%c%c:%d - cancel suspend timer", __func__, VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id);
       }
       vcos_timer_cancel(&g_suspend_timer); // always cancel the timer in case g_use_suspend_timer has only just changed
 #endif
@@ -455,8 +474,7 @@ vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
 
    if (state->videocore_suspended && vchiq_videcore_wanted(state))
    {
-      vcos_log_info( "vchiq_use_service %c%c%c%c:%d service count %d, state count %d", VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
-      ret = vchiq_platform_resume(state);
+      ret = vchiq_check_resume(state, 1);
    }
 
    if (ret != VCHIQ_SUCCESS)
@@ -471,9 +489,8 @@ vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
 }
 
 VCHIQ_STATUS_T
-vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
+vchiq_release_service_internal(VCHIQ_SERVICE_T *service)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
    VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
    VCHIQ_STATE_T* state = NULL;
 
@@ -498,14 +515,14 @@ vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
 #if VCOS_HAVE_TIMER
          if (g_use_suspend_timer)
          {
-            vcos_log_trace( "vchiq_release_service %c%c%c%c:%d service count %d, state count %d - starting suspend timer", VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
+            vcos_log_trace( "%s %c%c%c%c:%d service count %d, state count %d - starting suspend timer", __func__, VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
             vcos_timer_cancel(&g_suspend_timer);
             vcos_timer_set(&g_suspend_timer, SUSPEND_TIMER_TIMEOUT_MS);
          }
          else
 #endif
          {
-            vcos_log_info( "vchiq_release_service %c%c%c%c:%d service count %d, state count %d - suspend pending", VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
+            vcos_log_info( "%s %c%c%c%c:%d service count %d, state count %d - suspend pending", __func__, VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
             vcos_event_signal(&state->lp_evt); // kick the lp thread to do the suspend
          }
       }
@@ -520,17 +537,96 @@ vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
    return ret;
 }
 
-VCHIQ_STATUS_T
-vchiq_check_service(VCHIQ_SERVICE_HANDLE_T handle)
+#if VCOS_HAVE_TIMER
+static void suspend_timer_callback(void* context)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
+   VCHIQ_STATE_T* state = (VCHIQ_STATE_T*)context;
+   vcos_log_info( "%s - suspend pending", __func__);
+   vcos_event_signal(&state->lp_evt);
+}
+#endif
+
+VCHIQ_STATUS_T
+vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
+{
+   VCHIQ_STATUS_T ret = VCHIQ_ERROR;
+   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *) handle;
+   if (service)
+   {
+      ret = vchiq_use_service_internal(service);
+   }
+   return ret;
+}
+
+VCHIQ_STATUS_T
+vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
+{
+   VCHIQ_STATUS_T ret = VCHIQ_ERROR;
+   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *) handle;
+   if (service)
+   {
+      ret = vchiq_release_service_internal(service);
+   }
+   return ret;
+}
+
+static void vchiq_dump_service_use_state(VCHIQ_STATE_T *state)
+{
+   int i;
+   vcos_mutex_lock(&state->suspend_resume_mutex);
+   if (state->videocore_suspended)
+   {
+      vcos_log_warn("--VIDEOCORE SUSPENDED--");
+   }
+   else
+   {
+      vcos_log_warn("--VIDEOCORE AWAKE--");
+   }
+   for (i = 0; i < state->unused_service; i++) {
+      VCHIQ_SERVICE_T *service_ptr = g_vchiq_state->services[i];
+      if (service_ptr && (service_ptr->srvstate != VCHIQ_SRVSTATE_FREE))
+      {
+         if (service_ptr->service_use_count)
+            vcos_log_error("----- %c%c%c%c:%d service count %d <-- preventing suspend", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id, service_ptr->service_use_count);
+         else
+            vcos_log_warn("----- %c%c%c%c:%d service count 0", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id);
+      }
+   }
+   vcos_log_warn("--- Overall vchiq instance use count %d", g_vchiq_state->videocore_use_count);
+#if defined(CONFIG_HAS_EARLYSUSPEND)
+   if (g_early_susp_ctrl)
+   {
+      vcos_log_warn("Early suspend state: suspend allowed=%d",g_earlysusp_suspend_allowed);
+   }
+   else
+   {
+      vcos_log_info("Early suspend control disabled");
+   }
+#endif
+#if VCOS_HAVE_TIMER
+   if(g_use_suspend_timer)
+   {
+      vcos_log_info("Suspend timer in use");
+   }
+   else
+   {
+      vcos_log_info("Suspend timer not in use");
+   }
+#endif
+   vcos_mutex_unlock(&state->suspend_resume_mutex);
+
+}
+
+VCHIQ_STATUS_T vchiq_check_service(VCHIQ_SERVICE_T * service)
+{
    VCHIQ_STATUS_T ret = VCHIQ_ERROR;
    if (service)
    {
       vcos_mutex_lock(&service->state->use_count_mutex);
       if (!service->service_use_count)
       {
-         vcos_log_error( "vchiq_check_service ERROR - %c%c%c%c:%d service count %d, state count %d, videocore_suspended %d",VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, service->state->videocore_use_count, service->state->videocore_suspended);
+         vcos_log_error( "%s ERROR - %c%c%c%c:%d service count %d, state count %d, videocore_suspended %d", __func__,VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, service->state->videocore_use_count, service->state->videocore_suspended);
+         vchiq_dump_service_use_state(service->state);
          BUG();
       }
       else
@@ -635,32 +731,11 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
    { // dump usage counts for all services to determine which service(s) are preventing suspend
       if (g_use_autosuspend)
       {
-         int i;
-         if (g_vchiq_state->videocore_suspended)
-         {
-            vcos_log_warn("--VIDEOCORE SUSPENDED--");
-         }
-         else
-         {
-            vcos_log_warn("--VIDEOCORE AWAKE--");
-         }
-         for (i = 0; i < g_vchiq_state->unused_service; i++) {
-            VCHIQ_SERVICE_T *service_ptr = g_vchiq_state->services[i];
-            if (service_ptr && (service_ptr->srvstate != VCHIQ_SRVSTATE_FREE))
-            {
-               if (service_ptr->service_use_count)
-                  vcos_log_error("----- %c%c%c%c:%d service count %d <-- preventing suspend", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id, service_ptr->service_use_count);
-               else
-                  vcos_log_warn("----- %c%c%c%c:%d service count 0", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id);
-            }
-         }
-         vcos_log_warn("--- Overall vchiq instance use count %d", g_vchiq_state->videocore_use_count);
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-         if (g_early_susp_ctrl)
-         {
-            vcos_log_warn("Early suspend state: suspend allowed=%d",g_earlysusp_suspend_allowed);
-         }
-#endif
+         vchiq_dump_service_use_state(g_vchiq_state);
+      }
+      else
+      {
+         vcos_log_warn("Autosuspend disabled.  Nothing to dump.");
       }
    }
 #if VCOS_HAVE_TIMER
@@ -925,7 +1000,7 @@ VCHIQ_STATUS_T vchiq_userdrv_resume( const VCHIQ_PLATFORM_DATA_T *platform_data 
       return VCHIQ_ERROR;
    }
 
-   status = vchiq_platform_resume(g_vchiq_state);
+   status = vchiq_check_resume(g_vchiq_state, 0);
    if ( status == VCHIQ_SUCCESS )
    {
       vcos_log_warn( "%s: resumed vchiq for '%s'", __func__,

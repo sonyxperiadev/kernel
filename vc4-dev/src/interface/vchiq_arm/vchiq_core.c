@@ -409,6 +409,12 @@ queue_message(VCHIQ_STATE_T *state, VCHIQ_SERVICE_T *service,
 
    vcos_assert(stride <= VCHIQ_SLOT_SIZE);
 
+   /* On platforms where vcos_mutex_lock cannot fail, the return will never
+      be taken and the compiler may optimise out that code. Let Coverity
+      know this is intentional.
+
+      coverity[constant_expression_result]
+   */
    if ((VCHIQ_MSG_TYPE(msgid) != VCHIQ_MSG_RESUME) &&
       (vcos_mutex_lock(&state->slot_mutex) != VCOS_SUCCESS))
       return VCHIQ_RETRY;
@@ -1559,22 +1565,26 @@ vchiq_init_state(VCHIQ_STATE_T *state, VCHIQ_SLOT_ZERO_T *slot_zero, int is_mast
    vcos_thread_attr_setstacksize(&attrs, VCHIQ_SLOT_HANDLER_STACK);
    vcos_thread_attr_setpriority(&attrs, VCOS_THREAD_PRI_REALTIME);
    vcos_snprintf(threadname, sizeof(threadname), "VCHIQ-%d", state->id);
-   vcos_thread_create(&state->slot_handler_thread, threadname,
-            &attrs, slot_handler_func, state);
+   if (vcos_thread_create(&state->slot_handler_thread, threadname,
+            &attrs, slot_handler_func, state) != VCOS_SUCCESS)
+      return VCHIQ_ERROR;
 
    vcos_thread_attr_init(&attrs);
    vcos_thread_attr_setstacksize(&attrs, VCHIQ_SLOT_HANDLER_STACK);
    vcos_thread_attr_setpriority(&attrs, VCOS_THREAD_PRI_REALTIME);
    vcos_snprintf(threadname, sizeof(threadname), "VCHIQr-%d", state->id);
-   vcos_thread_create(&state->recycle_thread, threadname,
-            &attrs, recycle_func, state);
+   if (vcos_thread_create(&state->recycle_thread, threadname,
+            &attrs, recycle_func, state) != VCOS_SUCCESS)
+      return VCHIQ_ERROR;
 
    vcos_thread_attr_init(&attrs);
    vcos_thread_attr_setstacksize(&attrs, VCHIQ_SLOT_HANDLER_STACK);
    vcos_thread_attr_setpriority(&attrs, VCOS_THREAD_PRI_LOWEST);
    vcos_snprintf(threadname, sizeof(threadname), "VCHIQl-%d", state->id);
-   vcos_thread_create(&state->lp_thread, threadname,
-            &attrs, lp_func, state);
+   if (vcos_thread_create(&state->lp_thread, threadname,
+            &attrs, lp_func, state) != VCOS_SUCCESS)
+      return VCHIQ_ERROR;
+
    /* Indicate readiness to the other side */
    local->initialised = 1;
 

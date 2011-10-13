@@ -83,8 +83,14 @@ static struct early_suspend g_vchiq_early_suspend =
 #define TOTAL_SLOTS (VCHIQ_SLOT_ZERO_SLOTS + 2 * 32)
 
 #define VCHIQ_DOORBELL_IRQ BCM_INT_ID_IPC_OPEN
-#define VIRT_TO_VC(x) ((unsigned long)x - PAGE_OFFSET + CONFIG_BCM_RAM_START_RESERVED_SIZE + 0xe0000000)
-#define PHYS_TO_VC(x) ((unsigned long)x - CONFIG_BCM_RAM_BASE + 0xe0000000)
+
+#ifdef CONFIG_MAP_LITTLE_ISLAND_MODE
+#define ARM_RAM_BASE_IN_VC 0xc0000000
+#else
+#define ARM_RAM_BASE_IN_VC 0xe0000000
+#endif
+#define VIRT_TO_VC(x) PHYS_TO_VC((unsigned long)x - PAGE_OFFSET + PHYS_OFFSET)
+#define PHYS_TO_VC(x) ((unsigned long)x - 0x80000000 + ARM_RAM_BASE_IN_VC)
 
 #define VCOS_LOG_CATEGORY (&vchiq_arm_log_category)
 
@@ -169,7 +175,7 @@ vchiq_platform_init(VCHIQ_STATE_T *state)
    g_vchiq_state = state;
    g_wake_address = 0;
 
-#if defined( CONFIG_ARCH_KONA ) || defined( CONFIG_ARCH_BCMHANA )
+#if (( defined( CONFIG_ARCH_KONA ) || defined( CONFIG_ARCH_BCMHANA )) && !defined( CONFIG_MAP_LITTLE_ISLAND_MODE ))
 
    /*
     * On Big Island, the videocore can only access the lower 512 Mb of the ARM memory. 
@@ -178,19 +184,18 @@ vchiq_platform_init(VCHIQ_STATE_T *state)
 
    #define MAX_BIVCM_MEM   (512 * 1024 * 1024)
 
-   if (( virt_to_phys( high_memory ) - CONFIG_BCM_RAM_BASE ) > MAX_BIVCM_MEM )
+   if (( num_physpages * PAGE_SIZE ) > MAX_BIVCM_MEM )
    {
       printk( KERN_ALERT "============================================================================\n" );
       printk( KERN_ALERT "============================================================================\n" );
       printk( KERN_ALERT "=====\n" );
       printk( KERN_ALERT "===== BIVCM can't be used when the kernel has more than 512 Mb of memory.\n" );
-      printk( KERN_ALERT "===== Either limit the amount of memory by using mem= on the kernel command\n" );
-      printk( KERN_ALERT "===== line, or switch to using BI instead.\n" );
+      printk( KERN_ALERT "===== Either limit the amount of memory by using mem=512M on the kernel\n" );
+      printk( KERN_ALERT "===== command line, or switch to using BI instead.\n" );
       printk( KERN_ALERT "=====\n" );
-      printk( KERN_ALERT "===== RAM Base:      0x%08x (phys)\n", CONFIG_BCM_RAM_BASE );
-      printk( KERN_ALERT "===== high_memory:   0x%08lx (phys)\n", (long unsigned int)virt_to_phys( high_memory ));
-      printk( KERN_ALERT "===== max supported: 0x%08x - high_memory can't exceed this to use BIVCM\n", 
-              CONFIG_BCM_RAM_BASE + MAX_BIVCM_MEM );
+      printk( KERN_ALERT "===== num_physpages: 0x%08lx (%4ld Mb)\n", num_physpages, num_physpages >> ( 20 - PAGE_SHIFT ));
+      printk( KERN_ALERT "===== max supported: 0x%08lx (%4d Mb) num_physpages can't exceed this to use BIVCM\n", 
+                         MAX_BIVCM_MEM / PAGE_SIZE, MAX_BIVCM_MEM >> 20 );
       printk( KERN_ALERT "=====\n" );
       printk( KERN_ALERT "============================================================================\n" );
       printk( KERN_ALERT "============================================================================\n" );
@@ -330,45 +335,52 @@ vchiq_platform_suspend(VCHIQ_STATE_T *state)
       return VCHIQ_ERROR;
 
    vcos_mutex_lock(&state->suspend_resume_mutex);
-   vcos_log_info("vchiq_platform_suspend");
-
-   /* Invalidate the wake address */
-   ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0] = ~0;
-
-   status = vchiq_pause_internal(state);
-
-   if (status == VCHIQ_SUCCESS)
+   if(state->videocore_suspended)
    {
-      vcos_log_info("vchiq_platform_suspend - waiting for g_pause_event");
-      if (vcos_event_wait(&g_pause_event) != VCOS_SUCCESS)
-      {
-         status = VCHIQ_RETRY;
-         goto unlock;
-      }
-      vcos_log_info("vchiq_platform_suspend - g_pause_event received");
+      vcos_log_info("%s - already suspended", __func__);
+   }
+   else
+   {
+      vcos_log_info("%s - suspending", __func__);
 
-      do
-      {
-         //msleep(1);
-         g_wake_address = ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0];
-      } while (g_wake_address == ~0);
-
-      chal_ipc_sleep_vc( ipcHandle );
-      msleep(1);
+      /* Invalidate the wake address */
       ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0] = ~0;
-      vcos_wmb(g_vchiq_slot_zero->platform_data);
-      msleep(1);
 
-      if (g_wake_address == 0)
+      status = vchiq_pause_internal(state);
+
+      if (status == VCHIQ_SUCCESS)
       {
-         vcos_log_error("VideoCore suspend failed!");
-         status = VCHIQ_ERROR;
-         state->videocore_suspended = 0;
-      }
-      else
-      {
-         vcos_log_info("VideoCore suspended - wake address %x", g_wake_address);
-         state->videocore_suspended = 1;
+         vcos_log_info("%s - waiting for g_pause_event", __func__);
+         if (vcos_event_wait(&g_pause_event) != VCOS_SUCCESS)
+         {
+            status = VCHIQ_RETRY;
+            goto unlock;
+         }
+         vcos_log_info("%s - g_pause_event received", __func__);
+
+         do
+         {
+            //msleep(1);
+            g_wake_address = ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0];
+         } while (g_wake_address == ~0);
+
+         chal_ipc_sleep_vc( ipcHandle );
+         msleep(1);
+         ((volatile unsigned int *)g_vchiq_slot_zero->platform_data)[0] = ~0;
+         vcos_wmb(g_vchiq_slot_zero->platform_data);
+         msleep(1);
+
+         if (g_wake_address == 0)
+         {
+            vcos_log_error("VideoCore suspend failed!");
+            status = VCHIQ_ERROR;
+            state->videocore_suspended = 0;
+         }
+         else
+         {
+            vcos_log_info("VideoCore suspended - wake address %x", g_wake_address);
+            state->videocore_suspended = 1;
+         }
       }
    }
 unlock:
@@ -419,25 +431,37 @@ unlock:
    return ret;
 }
 
+static VCHIQ_STATUS_T
+vchiq_check_resume(VCHIQ_STATE_T* state, int have_mutex)
+{
+   VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
+   if(!have_mutex)
+   {
+      vcos_mutex_lock(&state->use_count_mutex);
+   }
+
+   if (state->videocore_suspended && vchiq_videcore_wanted(state))
+   {
+      ret = vchiq_platform_resume(state);
+   }
+
+   if(!have_mutex)
+   {
+      vcos_mutex_unlock(&state->use_count_mutex);
+   }
+   return ret;
+}
+
+
 void
 vchiq_platform_resumed(VCHIQ_STATE_T *state)
 {
    vcos_event_signal(&g_pause_event);
 }
 
-#if VCOS_HAVE_TIMER
-static void suspend_timer_callback(void *context)
-{
-   VCHIQ_STATE_T *state = (VCHIQ_STATE_T *)context;
-   vcos_log_info( "suspend_timer_callback - suspend pending");
-   vcos_event_signal(&state->lp_evt);
-}
-#endif
-
 VCHIQ_STATUS_T
-vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
+vchiq_use_service_internal(VCHIQ_SERVICE_T *service)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
    VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
    VCHIQ_STATE_T* state = NULL;
 
@@ -457,7 +481,7 @@ vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
 #if VCOS_HAVE_TIMER
       if (g_use_suspend_timer)
       {
-         vcos_log_trace( "vchiq_use_service %c%c%c%c:%d - cancel suspend timer", VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id);
+         vcos_log_trace( "%s %c%c%c%c:%d - cancel suspend timer", __func__, VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id);
       }
       vcos_timer_cancel(&g_suspend_timer); // always cancel the timer in case g_use_suspend_timer has only just changed
 #endif
@@ -468,8 +492,7 @@ vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
 
    if (state->videocore_suspended && vchiq_videcore_wanted(state))
    {
-      vcos_log_info( "vchiq_use_service %c%c%c%c:%d service count %d, state count %d", VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
-      ret = vchiq_platform_resume(state);
+      ret = vchiq_check_resume(state, 1);
    }
 
    if (ret != VCHIQ_SUCCESS)
@@ -484,9 +507,8 @@ vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
 }
 
 VCHIQ_STATUS_T
-vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
+vchiq_release_service_internal(VCHIQ_SERVICE_T *service)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
    VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
    VCHIQ_STATE_T* state = NULL;
 
@@ -511,14 +533,14 @@ vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
 #if VCOS_HAVE_TIMER
          if (g_use_suspend_timer)
          {
-            vcos_log_trace( "vchiq_release_service %c%c%c%c:%d service count %d, state count %d - starting suspend timer", VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
+            vcos_log_trace( "%s %c%c%c%c:%d service count %d, state count %d - starting suspend timer", __func__, VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
             vcos_timer_cancel(&g_suspend_timer);
             vcos_timer_set(&g_suspend_timer, SUSPEND_TIMER_TIMEOUT_MS);
          }
          else
 #endif
          {
-            vcos_log_info( "vchiq_release_service %c%c%c%c:%d service count %d, state count %d - suspend pending", VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
+            vcos_log_info( "%s %c%c%c%c:%d service count %d, state count %d - suspend pending", __func__, VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, state->videocore_use_count);
             vcos_event_signal(&state->lp_evt); // kick the lp thread to do the suspend
          }
       }
@@ -533,17 +555,96 @@ vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
    return ret;
 }
 
-VCHIQ_STATUS_T
-vchiq_check_service(VCHIQ_SERVICE_HANDLE_T handle)
+#if VCOS_HAVE_TIMER
+static void suspend_timer_callback(void* context)
 {
-   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *)handle;
+   VCHIQ_STATE_T* state = (VCHIQ_STATE_T*)context;
+   vcos_log_info( "%s - suspend pending", __func__);
+   vcos_event_signal(&state->lp_evt);
+}
+#endif
+
+VCHIQ_STATUS_T
+vchiq_use_service(VCHIQ_SERVICE_HANDLE_T handle)
+{
+   VCHIQ_STATUS_T ret = VCHIQ_ERROR;
+   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *) handle;
+   if (service)
+   {
+      ret = vchiq_use_service_internal(service);
+   }
+   return ret;
+}
+
+VCHIQ_STATUS_T
+vchiq_release_service(VCHIQ_SERVICE_HANDLE_T handle)
+{
+   VCHIQ_STATUS_T ret = VCHIQ_ERROR;
+   VCHIQ_SERVICE_T *service = (VCHIQ_SERVICE_T *) handle;
+   if (service)
+   {
+      ret = vchiq_release_service_internal(service);
+   }
+   return ret;
+}
+
+static void vchiq_dump_service_use_state(VCHIQ_STATE_T *state)
+{
+   int i;
+   vcos_mutex_lock(&state->suspend_resume_mutex);
+   if (state->videocore_suspended)
+   {
+      vcos_log_warn("--VIDEOCORE SUSPENDED--");
+   }
+   else
+   {
+      vcos_log_warn("--VIDEOCORE AWAKE--");
+   }
+   for (i = 0; i < state->unused_service; i++) {
+      VCHIQ_SERVICE_T *service_ptr = g_vchiq_state->services[i];
+      if (service_ptr && (service_ptr->srvstate != VCHIQ_SRVSTATE_FREE))
+      {
+         if (service_ptr->service_use_count)
+            vcos_log_error("----- %c%c%c%c:%d service count %d <-- preventing suspend", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id, service_ptr->service_use_count);
+         else
+            vcos_log_warn("----- %c%c%c%c:%d service count 0", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id);
+      }
+   }
+   vcos_log_warn("--- Overall vchiq instance use count %d", g_vchiq_state->videocore_use_count);
+#if defined(CONFIG_HAS_EARLYSUSPEND)
+   if (g_early_susp_ctrl)
+   {
+      vcos_log_warn("Early suspend state: suspend allowed=%d",g_earlysusp_suspend_allowed);
+   }
+   else
+   {
+      vcos_log_info("Early suspend control disabled");
+   }
+#endif
+#if VCOS_HAVE_TIMER
+   if(g_use_suspend_timer)
+   {
+      vcos_log_info("Suspend timer in use");
+   }
+   else
+   {
+      vcos_log_info("Suspend timer not in use");
+   }
+#endif
+   vcos_mutex_unlock(&state->suspend_resume_mutex);
+
+}
+
+VCHIQ_STATUS_T vchiq_check_service(VCHIQ_SERVICE_T * service)
+{
    VCHIQ_STATUS_T ret = VCHIQ_ERROR;
    if (service)
    {
       vcos_mutex_lock(&service->state->use_count_mutex);
       if (!service->service_use_count)
       {
-         vcos_log_error( "vchiq_check_service ERROR - %c%c%c%c:%d service count %d, state count %d, videocore_suspended %d",VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, service->state->videocore_use_count, service->state->videocore_suspended);
+         vcos_log_error( "%s ERROR - %c%c%c%c:%d service count %d, state count %d, videocore_suspended %d", __func__,VCHIQ_FOURCC_AS_4CHARS(service->base.fourcc), service->client_id, service->service_use_count, service->state->videocore_use_count, service->state->videocore_suspended);
+         vchiq_dump_service_use_state(service->state);
          BUG();
       }
       else
@@ -648,32 +749,11 @@ static void vchiq_control_cfg_parse( VCOS_CFG_BUF_T buf, void *data )
    { // dump usage counts for all services to determine which service(s) are preventing suspend
       if (g_use_autosuspend)
       {
-         int i;
-         if (g_vchiq_state->videocore_suspended)
-         {
-            vcos_log_warn("--VIDEOCORE SUSPENDED--");
-         }
-         else
-         {
-            vcos_log_warn("--VIDEOCORE AWAKE--");
-         }
-         for (i = 0; i < g_vchiq_state->unused_service; i++) {
-            VCHIQ_SERVICE_T *service_ptr = g_vchiq_state->services[i];
-            if (service_ptr && (service_ptr->srvstate != VCHIQ_SRVSTATE_FREE))
-            {
-               if (service_ptr->service_use_count)
-                  vcos_log_error("----- %c%c%c%c:%d service count %d <-- preventing suspend", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id, service_ptr->service_use_count);
-               else
-                  vcos_log_warn("----- %c%c%c%c:%d service count 0", VCHIQ_FOURCC_AS_4CHARS(service_ptr->base.fourcc), service_ptr->client_id);
-            }
-         }
-         vcos_log_warn("--- Overall vchiq instance use count %d", g_vchiq_state->videocore_use_count);
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-         if (g_early_susp_ctrl)
-         {
-            vcos_log_warn("Early suspend state: suspend allowed=%d",g_earlysusp_suspend_allowed);
-         }
-#endif
+         vchiq_dump_service_use_state(g_vchiq_state);
+      }
+      else
+      {
+         vcos_log_warn("Autosuspend disabled.  Nothing to dump.");
       }
    }
 #if VCOS_HAVE_TIMER
@@ -938,7 +1018,7 @@ VCHIQ_STATUS_T vchiq_userdrv_resume( const VCHIQ_PLATFORM_DATA_T *platform_data 
       return VCHIQ_ERROR;
    }
 
-   status = vchiq_platform_resume(g_vchiq_state);
+   status = vchiq_check_resume(g_vchiq_state, 0);
    if ( status == VCHIQ_SUCCESS )
    {
       vcos_log_warn( "%s: resumed vchiq for '%s'", __func__,
@@ -1250,10 +1330,12 @@ create_pagelist(char __user *buf, size_t count, unsigned short type,
          addridx++;
          if (type == PAGELIST_READ)
          {
+            dmac_map_area(base_kaddr, size, DMA_FROM_DEVICE);
             outer_inv_range(base_addr, base_addr + size);
          }
          else
          {
+            dmac_map_area(base_kaddr, size, DMA_TO_DEVICE);
             outer_clean_range(base_addr, base_addr + size);
          }
 
@@ -1262,6 +1344,7 @@ create_pagelist(char __user *buf, size_t count, unsigned short type,
          next_addr = addr + PAGE_SIZE;
          count -= size;
          size = vcos_min(PAGE_SIZE, count);
+         offset = 0;
          run = 0;
       }
    }
@@ -1271,10 +1354,12 @@ create_pagelist(char __user *buf, size_t count, unsigned short type,
 
    if (type == PAGELIST_READ)
    {
+      dmac_map_area(base_kaddr, size, DMA_FROM_DEVICE);
       outer_inv_range(base_addr, base_addr + size);
    }
    else
    {
+      dmac_map_area(base_kaddr, size, DMA_TO_DEVICE);
       outer_clean_range(base_addr, base_addr + size);
    }
 
@@ -1318,6 +1403,8 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
 {
    struct page **pages;
    unsigned int num_pages, i;
+   unsigned long *addrs;
+   int len, offset, page_count;
 
    vcos_log_trace("free_pagelist - %x, %d", (unsigned int)pagelist, actual);
 
@@ -1325,6 +1412,9 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
        (pagelist->length + pagelist->offset + PAGE_SIZE - 1) / PAGE_SIZE;
 
    pages = (struct page **)(pagelist->addrs + num_pages);
+
+   len = pagelist->length;
+   offset = pagelist->offset;
 
    /* Deal with any partial cache lines (fragments) */
    if (pagelist->type >= PAGELIST_READ_WITH_FRAGMENTS) {
@@ -1342,6 +1432,8 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
             memcpy((char *)page_address(pages[0]) +
                    pagelist->offset, fragments->headbuf,
                    head_bytes);
+            offset += head_bytes;
+            len -= head_bytes;
          }
          if ((head_bytes < actual) &&
             (tail_bytes =
@@ -1351,6 +1443,7 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
                    ((pagelist->offset + actual) & (PAGE_SIZE -
                            1) & ~(CACHE_LINE_SIZE - 1)),
                    fragments->tailbuf, tail_bytes);
+            len -= tail_bytes;
          }
       }
 
@@ -1362,9 +1455,32 @@ free_pagelist(PAGELIST_T *pagelist, int actual)
       up(&g_free_fragments_sema);
    }
 
+   page_count = 0;
+   addrs = pagelist->addrs;
+
    for (i = 0; i < num_pages; i++) {
       if (pagelist->type != PAGELIST_WRITE)
+      {
+         if (!page_count)
+         {
+            int block_bytes;
+            page_count = (*(addrs++) & (PAGE_SIZE - 1)) + 1;
+            block_bytes = PAGE_SIZE * page_count - offset;
+            if (block_bytes > len)
+               block_bytes = len;
+            if (block_bytes)
+            {
+               void *base_kaddr = page_address(pages[i]) + offset;
+               unsigned long base_addr = PFN_PHYS(page_to_pfn(pages[i])) + offset;
+               dmac_unmap_area(base_kaddr, block_bytes, DMA_FROM_DEVICE);
+               outer_inv_range(base_addr, base_addr + block_bytes);
+            }
+            offset = 0;
+            len -= block_bytes;
+         }
+         page_count--;
          set_page_dirty(pages[i]);
+      }
       page_cache_release(pages[i]);
    }
 
