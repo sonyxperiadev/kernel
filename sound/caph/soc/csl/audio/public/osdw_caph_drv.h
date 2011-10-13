@@ -33,6 +33,8 @@
 #ifndef _OSDW_DSP_DRV_H_
 #define _OSDW_DSP_DRV_H_
 
+#define     CAPH_NORM_IRQ           156
+
 void CAPHIRQ_Init( void);
 
 #endif //_OSDW_DSP_DRV_H_

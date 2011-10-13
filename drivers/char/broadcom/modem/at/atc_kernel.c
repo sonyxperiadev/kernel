@@ -56,7 +56,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "xdr_porting_layer.h"
 #include "xdr.h"
 
-#include "rpc_global.h"
 #include "at_types.h"
 #include "at_rpc.h"
 
@@ -700,7 +699,7 @@ static void ATC_AddRespToQueue(UInt8 chan, UInt32 msgId, void* atResp, UInt32 at
 
     if( atResp == NULL )
     {
-        assert(0);
+        panic("NULL AT Resp");
         return;
     }
 

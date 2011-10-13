@@ -61,6 +61,11 @@
 #include "csl_dsp.h"
 #include "csl_apcmd.h"
 
+void VPRIPCMDQ_SetARM2SP(UInt16 arg0, UInt16 arg1);
+
+void VPRIPCMDQ_SetARM2SP2(UInt16 arg0, UInt16 arg1);
+
+extern void VPSHAREDMEM_PostCmdQ(VPCmdQ_t *cmd_msg);
 
 
 /** 

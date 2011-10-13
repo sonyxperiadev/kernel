@@ -32,9 +32,8 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 ****************************************************************************/
 #include "mobcom_types.h"
 #include "chal_caph_cfifo.h"
-//#include "csl_caph.h"
+#include "csl_caph.h"
 #include "csl_caph_cfifo.h"
-//#include "csl_caph_dma.h"
 #include "log.h"
 
 //****************************************************************************

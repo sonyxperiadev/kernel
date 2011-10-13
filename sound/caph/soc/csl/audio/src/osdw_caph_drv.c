@@ -41,20 +41,19 @@
 #include "log.h"
 #include "osdw_caph_drv.h"
 #include "chal_caph_intc.h"
-#include "chip_irq.h"
 #include "csl_caph_dma.h"
 #include "irqs.h"
 
 //****************************************************************************
 // local variable definitions
 //****************************************************************************
-static struct work_struct audio_play;
+static struct tasklet_struct caph_tasklet;
 
 //******************************************************************************
 // local function declarations
 //******************************************************************************
 
-static void worker_audio_playback(struct work_struct *work);
+static void caph_thread_proc(unsigned long data);
 static irqreturn_t caph_audio_isr(int irq, void *dev_id);
 
 //******************************************************************************
@@ -72,8 +71,9 @@ void CAPHIRQ_Init( void )
     int rc;
     Log_DebugPrintf(LOGID_AUDIO, " CAPHIRQ_Init:  \n");
 
-    INIT_WORK(&audio_play,worker_audio_playback);
-    //Plug in the ISR
+	tasklet_init(&caph_tasklet, caph_thread_proc,0);
+
+	//Plug in the ISR
     rc = request_irq(CAPH_NORM_IRQ, caph_audio_isr, IRQF_DISABLED,
 			 "caph-interrupt", NULL);
 
@@ -90,7 +90,7 @@ void CAPHIRQ_Init( void )
 // Function Name:	caph_audio_isr
 //
 // Description:		This function is the Low Level ISR for the CAPH interrupt.
-//					It simply schedules the worker thread.
+//					It simply schedules the tasklet
 //
 // Notes:
 //
@@ -100,21 +100,21 @@ static irqreturn_t caph_audio_isr(int irq, void *dev_id)
 /*	Log_DebugPrintf(LOGID_AUDIO,"CAPHIRQ_ISR: %s ISR called\n",
 		       __FUNCTION__);*/
 	disable_irq_nosync(BCM_INT_ID_CAPH);
-	schedule_work(&audio_play);
+	tasklet_schedule(&caph_tasklet);
 	return IRQ_HANDLED;
 }
 
 //******************************************************************************
 //
-// Function Name:	worker_audio_playback
+// Function Name:	caph_thread_proc
 //
-// Description:		This function is the CAPH interrupt service routine.
+// Description: This function processes the DMA interrupt.
 //
 // Notes:
 //
 //******************************************************************************
-static void worker_audio_playback(struct work_struct *work)
+static void caph_thread_proc(unsigned long data)
 {
-    	csl_caph_dma_process_interrupt();
+	csl_caph_dma_process_interrupt();
 	enable_irq(BCM_INT_ID_CAPH);
 }

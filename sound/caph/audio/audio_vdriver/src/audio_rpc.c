@@ -28,7 +28,6 @@
 
 #include "csl_caph.h"
 #include "audio_vdriver.h"
-#include "sharedmem.h"
 #include "dspcmd.h"
 #include "csl_apcmd.h"
 #include "log.h"
@@ -366,16 +365,6 @@ UInt32 audio_control_dsp(UInt32 param1,UInt32 param2,UInt32 param3,UInt32 param4
 
 		case DSPCMD_TYPE_COMMAND_DIGITAL_SOUND:
 			VPRIPCMDQ_DigitalSound((UInt16)param2);
-			break;
-
-		case DSPCMD_TYPE_COMMAND_SET_ARM2SP:
-			VPRIPCMDQ_SetARM2SP((UInt16)param2, (UInt16)param3);
-			
-			break;
-
-		case DSPCMD_TYPE_COMMAND_SET_ARM2SP2:
-			VPRIPCMDQ_SetARM2SP2((UInt16)param2, (UInt16)param3);
-			
 			break;
 			
 		case DSPCMD_TYPE_COMMAND_SET_BT_NB:

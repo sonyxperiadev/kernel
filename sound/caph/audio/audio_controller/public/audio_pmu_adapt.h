@@ -33,8 +33,16 @@
 #ifndef __AUDIO_PMU_ADAPT_H__
 #define __AUDIO_PMU_ADAPT_H__
 
-#if !defined(NO_PMU)
+#ifdef NO_PMU
 
+#include "bcmpmu_audio.h"
+#define AUDIO_PMU_INIT() NULL
+#define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
+#define AUDIO_PMU_HS_POWER(a) NULL
+#define AUDIO_PMU_IHF_SET_GAIN(a) NULL
+#define AUDIO_PMU_IHF_POWER(a) NULL
+#define AUDIO_PMU_DEINIT() NULL
+#else
 #ifdef PMU_BCM59055 
 
 #include "linux/broadcom/bcm59055-audio.h"
@@ -54,16 +62,6 @@
 #define AUDIO_PMU_IHF_SET_GAIN bcmpmu_ihf_set_gain
 #define AUDIO_PMU_IHF_POWER bcmpmu_ihf_power
 #define AUDIO_PMU_DEINIT bcmpmu_audio_deinit
-
-#else
-#include "bcmpmu_audio.h"
-
-#define AUDIO_PMU_INIT() NULL  
-#define AUDIO_PMU_HS_SET_GAIN(a, b) NULL
-#define AUDIO_PMU_HS_POWER(a) NULL 
-#define AUDIO_PMU_IHF_SET_GAIN(a) NULL 
-#define AUDIO_PMU_IHF_POWER(a) NULL 
-#define AUDIO_PMU_DEINIT() NULL 
 
 #endif
 

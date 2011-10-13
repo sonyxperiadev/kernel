@@ -37,13 +37,10 @@
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
-#include "shared.h"
 #include "dspcmd.h"
 #include "csl_apcmd.h"
 #include "audio_consts.h"
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
-#include "sysparm.h"
-#endif
+#include "bcm_fuse_sysparm_CIB.h"
 #include "ostask.h"
 #include "log.h"
 #include "csl_caph.h"
@@ -70,8 +67,8 @@
 
 typedef void (*AUDDRV_User_CB) (UInt32 param1, UInt32 param2, UInt32 param3);
 
-AUDDRV_MIC_Enum_t   currVoiceMic = AUDDRV_MIC_NONE;   //used in pcm i/f control. assume one mic, one spkr.
-AUDDRV_SPKR_Enum_t  currVoiceSpkr = AUDDRV_SPKR_NONE;  //used in pcm i/f control. assume one mic, one spkr.
+AUDDRV_MIC_Enum_t  currVoiceMic = AUDDRV_MIC_NONE;   //used in pcm i/f control. assume one mic, one spkr.
+AUDDRV_SPKR_Enum_t  currVoiceSpkr = AUDDRV_SPKR_NONE;	//used in pcm i/f control. assume one mic, one spkr.
 Boolean inVoiceCall = FALSE;
 
 //=============================================================================
@@ -92,23 +89,29 @@ static Boolean eciEQOn = FALSE; // If TRUE, bypass EQ filter setting request fro
 static Boolean bInVoiceCall = FALSE;
 static UInt32 audDev = 0;
 
-//#if	defined(FUSE_COMMS_PROCESSOR)
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
-
 static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
 static Result_t AUDDRV_HWControl_EnableSideTone(AudioMode_t audio_mode);
 static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain);
-#endif
 
 static Result_t AUDDRV_HWControl_DisableSideTone(AudioMode_t audio_mode);
-//#endif
+
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
-static SysAudioParm_t* AUDIO_GetParmAccessPtr(void);
-#define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
+
+//on AP:
+static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
+{
+#ifdef BSP_ONLY_BUILD
+	return NULL;
+#else
+	return APSYSPARM_GetAudioParmAccessPtr();
 #endif
+}
+
+#define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
+#define AUDIOMODE_PARM_MM_ACCESSOR(mode)	 AUDIO_GetParmMMAccessPtr()[mode]
+
 static UInt32* AUDIO_GetIHF48KHzBufferBaseAddress (void);
 //=============================================================================
 // Functions
@@ -192,7 +195,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 	    config.source = CSL_CAPH_DEV_DSP;
 	}
 
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
     config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
@@ -206,7 +208,6 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
     config.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);	
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r);
     config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
-#endif
 
     ((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
 
@@ -240,11 +241,10 @@ void AUDDRV_Telephony_InitHW (AUDDRV_MIC_Enum_t mic,
 
         ((AUDDRV_PathID_t *)pData)->ul2PathID = csl_caph_hwctrl_EnablePath(config);
     }
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
+
     //Config sidetone
     AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
 				AUDIO_GetParmAccessPtr());
-#endif				
 
     // Set new filter coef.
     AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), dev);
@@ -457,7 +457,7 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 		memAddr = AUDIO_GetIHF48KHzBufferBaseAddress();
 		csl_caph_hwctrl_setDSPSharedMemForIHF((UInt32)memAddr);
 	}	
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
+
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l);	
     config.mixGain.mixInGainL = AUDDRV_GetMixerInputGain(tempGain);
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l);
@@ -471,7 +471,6 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     config.mixGain.mixOutGainR = AUDDRV_GetMixerOutputFineGain(tempGain);	
     tempGain = (Int16)(AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r);
     config.mixGain.mixOutCoarseGainR = AUDDRV_GetMixerOutputCoarseGain(tempGain);
-#endif		
 
 	if(sink == CSL_CAPH_DEV_IHF)
 	{
@@ -481,11 +480,11 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
 	}	
 
 	((AUDDRV_PathID_t *)pData)->dlPathID = csl_caph_hwctrl_EnablePath(config);
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM 
+
 	//Config sidetone
 	AUDDRV_SetHWSidetoneFilter(AUDDRV_GetAudioMode(),
 			AUDIO_GetParmAccessPtr());    
-#endif			
+
     }
 
     if (mic != currMic)
@@ -542,30 +541,15 @@ void AUDDRV_Telephony_SelectMicSpkr (AUDDRV_MIC_Enum_t mic,
     AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), dev);
 
 #if 0
-	currVoiceMic = mic;
-	currVoiceSpkr = speaker;
-
-	//need to follow the sequence. avoid enable again
-	AUDDRV_SelectSpkr( AUDDRV_VOICE_OUTPUT, speaker, AUDDRV_SPKR_NONE );
-
-	//select mic input, include DMIC support
-	AUDDRV_SelectMic( AUDDRV_VOICE_INPUT, mic);
-
 	//if( speaker == AUDDRV_SPKR_PCM_IF || mic==AUDDRV_MIC_PCM_IF )
 	if( mic==AUDDRV_MIC_PCM_IF )
 	{
 		//use audio_control_dsp( ), and combine this file with csl_aud_drv_hw.c
 		AUDDRV_SetPCMOnOff( 1 );
-
-		//not reliable, sometimes there is no audio.
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, TRUE, 0, 0, 0, 0 );
 	}
 	else
 	{
 		AUDDRV_SetPCMOnOff( 0 );
-
-		//not reliable, sometimes there is no audio.
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 	}
 #endif    
 }
@@ -621,12 +605,10 @@ void AUDDRV_EnableDSPOutput (
 #if 0
 		if (currVoiceSpkr == AUDDRV_SPKR_PCM_IF)
 			AUDDRV_SetPCMOnOff( 1 );
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, TRUE, 0, 0, 0, 0 );
 		else
 		{
 			if(currVoiceMic != AUDDRV_MIC_PCM_IF) //need to check mic too.
 			AUDDRV_SetPCMOnOff( 0 );
-			//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 		}
 #endif
 				
@@ -681,16 +663,13 @@ void AUDDRV_EnableDSPInput (
 	}
 
 #if	0
-
 	currVoiceMic = mic_selection;
 	if (currVoiceMic == AUDDRV_MIC_PCM_IF)
 		AUDDRV_SetPCMOnOff( 1 );
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, TRUE, 0, 0, 0, 0 );
 	else
 	{
 		if (currVoiceSpkr != AUDDRV_SPKR_PCM_IF) //need to check spkr too.
 			AUDDRV_SetPCMOnOff( 0 );
-			//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 	}
 
 #endif
@@ -718,24 +697,15 @@ void AUDDRV_SetULSpeechRecordGain(Int16 gain)
 // Function Name: AUDDRV_SetPCMOnOff
 //
 // Description:   	set PCM on/off for BT
+//  this command will be removed from Rhea.
 // 
 //=============================================================================
 
 void AUDDRV_SetPCMOnOff(Boolean	on_off)
 {
-	  //return;
-
-#define DSP_AUDIO_REG_AMCR  0xe540
-
 	// By default the PCM port is occupied by trace port on development board
 	if(on_off)
 	{
-#define SYSCFG_IOCR0                     (SYSCFG_BASE_ADDR + 0x0000)  /* IOCR0 bit I/O Configuration Register 0       */
-#define SYSCFG_IOCR0_PCM_MUX                       0x00C00000 
-
-		//mux to PCM interface (set to 00)
-	//	*(volatile UInt32*) SYSCFG_IOCR0 &= ~(SYSCFG_IOCR0_PCM_MUX);
-
 		audio_control_dsp(DSPCMD_TYPE_COMMAND_DIGITAL_SOUND, on_off, 0, 0, 0, 0);
 
 	}
@@ -779,48 +749,39 @@ UInt32 AUDDRV_GetAudioDev()
 
 void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 dev)
 {
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 	SysAudioParm_t* pAudioParm;
 	pAudioParm = AUDIO_GetParmAccessPtr();
 	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() audio_mode==%d\n\r", audio_mode );
+
 	// load DSP parameters:
+	//if ( audio_mode >= AUDIO_MODE_NUMBER )
+	if ( audio_mode >= AUDIO_MODE_NUMBER_VOICE )
+		return;  //error
+
+	currAudioMode = audio_mode; // update mode
+	//currMusicAudioMode = currAudioMode;
+
+	if ( AUDDRV_InVoiceCall() )
+	{
+		// BTM needs to support NB or WB too
+		if ((audio_mode == AUDIO_MODE_BLUETOOTH_WB) || (audio_mode == AUDIO_MODE_BLUETOOTH) )
+		{
+			if (AUDDRV_IsBTMWB())
+				audio_mode = AUDIO_MODE_BLUETOOTH_WB;
+			else
+				audio_mode = AUDIO_MODE_BLUETOOTH;
+		}
+		Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() AUDDRV_InVoiceCall audio_mode=%d \n\r", audio_mode );
+	}
+
 	audio_control_generic( AUDDRV_CPCMD_PassAudioMode, 
 				(UInt32)audio_mode, 0, 0, 0, 0 );
 	audio_control_generic( AUDDRV_CPCMD_SetAudioMode, 
 				(UInt32)audio_mode, 0, 0, 0, 0 );
-	currAudioMode = audio_mode; // update mode
 
-	AUDDRV_SetDSPFilter(audio_mode, dev, &(pAudioParm[audio_mode]));
-#if 0
-	if ( AUDDRV_GetVCflag() )
-	{
-		  // AUDIO_MODE_BLUETOOTH_WB should not be used for voice call. it should be convert to AUDIO_MODE_BLUETOOTH.
-		if ( audio_mode >= AUDIO_MODE_NUMBER && (audio_mode != AUDIO_MODE_BLUETOOTH_WB) )
-			AUDDRV_SetVoicePathSampRate( AUDIO_SAMPLING_RATE_16000 );
-		else
-			AUDDRV_SetVoicePathSampRate( AUDIO_SAMPLING_RATE_8000 );
-	}
-	else
-	{
-		if ( audio_mode >= AUDIO_MODE_NUMBER )  //wideband 
-			AUDDRV_SetVoicePathSampRate( AUDIO_SAMPLING_RATE_16000 );
-		else
-			AUDDRV_SetVoicePathSampRate( AUDIO_SAMPLING_RATE_8000 );
-	}
-#endif
+///	AUDDRV_SetDSPFilter(audio_mode, dev, &(pAudioParm[audio_mode]));  // The address in LMP can not be used in CP, it causes CP crash.
 
 	audDev = dev;
-
-#else
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_SetAudioMode() audio_mode==%d\n\r", audio_mode );
-
-    //kenren: this code needs to be re-implemented for CAPH. 
-    //For now it is commented out.
-	// load DSP parameters:
-	audio_control_generic( AUDDRV_CPCMD_SetAudioMode, audio_mode, 0, 0, 0, 0 );
-	
-	currAudioMode = audio_mode; // update mode
-#endif
 
 }
 
@@ -883,15 +844,17 @@ Boolean AUDDRV_GetVCflag( void )
 // Description:   Set DSP UL and DL filter
 //
 //=============================================================================
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
         UInt32 dev,
 		SysAudioParm_t* pAudioParm)
 {
+	// The address in LMP can not be used in CP, it cause CP crash.
+	/******
 	if (eciEQOn == FALSE)
 		audio_control_generic( AUDDRV_CPCMD_SetFilter, 
 				audio_mode, dev, (UInt32)pAudioParm, 0, 0 );
 	return;
+	**********/
 }
 
 //=============================================================================
@@ -921,9 +884,10 @@ void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode,
 	gain = pAudioParm[audio_mode].hw_sidetone_gain;	
 	AUDDRV_HWControl_SetSideToneGain((UInt32)gain);	
 	AUDDRV_HWControl_EnableSideTone(audio_mode);
+
 	return;
 }
-#endif
+
 //=============================================================================
 //
 // Function Name: AUDDRV_SetHWGain
@@ -1046,52 +1010,13 @@ void AUDDRV_User_HandleDSPInt ( UInt32 param1, UInt32 param2, UInt32 param3 )
 
 Boolean AUDDRV_IsDualMicEnabled(void)
 {
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
     AudioMode_t mode = AUDIO_MODE_HANDSET;
     mode = AUDDRV_GetAudioMode();
-    return (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);
-#else
-	return FALSE; /* remove when above CONFIG_DEPENDENCY_READY_SYSPARM enabled */
-#endif
+    return (AUDIO_GetParmAccessPtr()[mode].dual_mic_enable != 0);   //in parm_audio.txt, VOICE_DUALMIC_ENABLE
 }
-
-
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
-
-//=============================================================================
-//
-// Function Name: AUDIO_GetParmAccessPtr
-//
-// Description:   Read audio sysparm address.
-//
-//=============================================================================
-#if	defined(FUSE_APPS_PROCESSOR)
-static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
-{
-#ifdef BSP_ONLY_BUILD
-	return NULL;
-#else
-	return APSYSPARM_GetAudioParmAccessPtr();
-#endif
-}
-#else
-static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
-{
-#ifdef BSP_ONLY_BUILD
-	return NULL;
-#else
-	return SYSPARM_GetAudioParmAccessPtr()->audio_parm;
-#endif
-}
-#endif
-
-#define AUDIOMODE_PARM_ACCESSOR(mode)	 AUDIO_GetParmAccessPtr()[mode]
-#define AUDIOMODE_PARM_MM_ACCESSOR(mode) AUDIO_GetParmMMAccessPtr()[mode]
-#endif
 
 
 //#if	defined(FUSE_COMMS_PROCESSOR)
-#ifdef CONFIG_DEPENDENCY_READY_SYSPARM
 
 /****************************************************************************
 *
@@ -1158,7 +1083,6 @@ static Result_t AUDDRV_HWControl_SetSideToneGain(UInt32 gain)
 	csl_caph_audioh_sidetone_set_gain(gain);
 	return RESULT_OK;
 }
-#endif
 
 /****************************************************************************
 *
@@ -1566,63 +1490,6 @@ UInt16 AUDDRV_GetPMUGain(CSL_CAPH_DEVICE_e spkr, Int16 gain)
     return outGain.spkrPMUGain;
 }
 
-
-
-/****************************************************************************
-*
-*  Function Name: UInt16 AUDDRV_GetPMUGain_Q1_14(
-*                                         CSL_CAPH_DEVICE_e mic, UInt16 gain)
-*
-*  Description: read the DSP DL gain in dB in Q1.14
-*
-****************************************************************************/
-UInt16 AUDDRV_GetPMUGain_Q1_14(CSL_CAPH_DEVICE_e spkr, Int16 gain)
-{
-    csl_caph_Spkr_Gain_t outGain;
-    csl_caph_SPKR_Path_e cslSpkr = SPKR_EP;
-
-    memset(&outGain, 0, sizeof(csl_caph_Spkr_Gain_t));
-
-    switch (spkr)
-    {
-	    case CSL_CAPH_DEV_EP:
-		    cslSpkr = SPKR_EP;
-		    break;
-	    
-	    case CSL_CAPH_DEV_IHF:
-		    cslSpkr = SPKR_IHF;
-		    break;
-
-		case CSL_CAPH_DEV_HS:
-			cslSpkr = SPKR_HS;
-		    break;
-
-	    case CSL_CAPH_DEV_BT_SPKR:
-		    // For Bluetooth, it is yet
-		    // to decide whether DSP DL gain is 
-		    // needed or not.
-		    cslSpkr = SPKR_EP;
-		    break;
-
-	    case CSL_CAPH_DEV_MEMORY:
-		    // This is for USB headset. It is
-		    // to decide whether DSP DL gain is 
-		    // needed or not.
-		    cslSpkr = SPKR_EP;
-		    break;
-		    
-	    default:
-		    // For all others, just use
-		    // DSP DL gain as Earpiece.
-		    cslSpkr = SPKR_EP;
-		    break;
-
-    }
-
-    Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDDRV_GetPMUGain_Q1_14::spkr=0x%x, gain=0x%x\n", spkr, gain);
-    outGain = csl_caph_gain_GetSpkrGain_Q1_14(cslSpkr, gain);
-    return outGain.spkrPMUGain;
-}
 
 CSL_CAPH_DEVICE_e AUDDRV_GetCSLDevice (AUDDRV_DEVICE_e dev)
 {

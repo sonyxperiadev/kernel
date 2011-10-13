@@ -45,8 +45,7 @@
 #include <linux/io.h>
 
 #include "mobcom_types.h"
-#include "bcm_kril_debug.h"
-#include "timer.h"
+#include "bcmlog.h"
 
 #define MAX_CLIENT_NUM              30		
 #define AP_CLIENT_ID_START          64
@@ -150,7 +149,7 @@ typedef struct
 
 mRingBuffer_t gLogBuffer={0};
 
-void InitRingBuffer()
+void InitRingBuffer(void)
 {
 	static int first_time = 1;
 	if(first_time)
@@ -260,7 +259,7 @@ ssize_t kRpcReadLogData(char *destBuf, size_t len)
 	return ret;
 }
 
-int RpcLog_DetailLogEnabled()
+int RpcLog_DetailLogEnabled(void)
 {
 	return 0;
 }
@@ -270,33 +269,3 @@ Boolean IsBasicCapi2LoggingEnable(void)
 {
 	return true;
 }
-
-#define MAX_BUF_SIZE 1024
-static char buf[MAX_BUF_SIZE];
-int RpcLog_DebugPrintf(char* fmt, ...)
-{
-#ifndef CONFIG_BRCM_UNIFIED_LOGGING
-    va_list ap;
-    va_start(ap, fmt);
-    vsnprintf(buf, MAX_BUF_SIZE, fmt, ap);
-    va_end(ap);
-    KRIL_DEBUG(DBG_INFO, "TS[%ld]%s\n", TIMER_GetValue(), buf);
-#else
-    if(IsBasicCapi2LoggingEnable())
-    {
-		va_list ap;
-		char* buf;
-		int index = 0;
-		
-		index = getNextWriteIndex(&gLogBuffer);
-
-		buf = gLogData[index].logData;
-		va_start(ap, fmt);
-		vsnprintf(buf, (MAX_LOG_SIZE-1), fmt, ap);
-		va_end(ap);
-    }
-#endif
-
-    return 1;
-}
-

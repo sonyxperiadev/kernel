@@ -55,6 +55,7 @@ LIMITED REMEDY.
 #include "log.h"
 
 extern AP_SharedMem_t	*vp_shared_mem;
+extern AP_SharedMem_t   *DSPDRV_GetPhysicalSharedMemoryAddress( void);
 
 
 /*****************************************************************************************/
@@ -75,17 +76,19 @@ extern AP_SharedMem_t	*vp_shared_mem;
 UInt32 * csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_Audio_Connections_t aadmac_audio_connection)
 {
     UInt32 *base_addr;
+    AP_SharedMem_t   *ap_shared_mem_ptr;
+    ap_shared_mem_ptr = DSPDRV_GetPhysicalSharedMemoryAddress();
 
     switch (aadmac_audio_connection)
     {
         case DSP_AADMAC_PRI_MIC_EN:
-            base_addr = &(vp_shared_mem->shared_aadmac_pri_mic_low[0]);
+            base_addr = &(ap_shared_mem_ptr->shared_aadmac_pri_mic_low[0]);
             break;
         case DSP_AADMAC_SEC_MIC_EN:
-            base_addr = &(vp_shared_mem->shared_aadmac_sec_mic_low[0]);
+            base_addr = &(ap_shared_mem_ptr->shared_aadmac_sec_mic_low[0]);
             break;
         case DSP_AADMAC_SPKR_EN:
-            base_addr = &(vp_shared_mem->shared_aadmac_spkr_low[0]);
+            base_addr = &(ap_shared_mem_ptr->shared_aadmac_spkr_low[0]);
             break;
         default:
             //Assert
@@ -152,7 +155,7 @@ void csl_dsp_caph_control_aadmac_enable_path(UInt16 path)
 
 
         vp_shared_mem->shared_aadmac_aud_enable |= path;
-    	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* vp_shared_mem = %x,&(vp_shared_mem->shared_aadmac_aud_enable) =%x, shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), vp_shared_mem->shared_aadmac_aud_enable);
+    	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* csl_dsp_caph_control_aadmac_enable_path: vp_shared_mem = %x,&(vp_shared_mem->shared_aadmac_aud_enable) =%x, shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), vp_shared_mem->shared_aadmac_aud_enable);
 
     }
 
@@ -183,6 +186,7 @@ void csl_dsp_caph_control_aadmac_disable_path(UInt16 path)
     else
     {
         vp_shared_mem->shared_aadmac_aud_enable &= ~path;
+    	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* csl_dsp_caph_control_aadmac_disable_path vp_shared_mem = %x,&(vp_shared_mem->shared_aadmac_aud_enable) =%x, shared_aadmac_aud_enable = %x*\n\r", (UInt32)vp_shared_mem, (UInt32)(&(vp_shared_mem->shared_aadmac_aud_enable)), vp_shared_mem->shared_aadmac_aud_enable);
     }
 
 }

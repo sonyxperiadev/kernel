@@ -354,8 +354,6 @@ static void HandleSysReqMsg(RPC_Msg_t* pMsg,
 				  ResultDataBufHandle_t dataBufHandle, 
 				  UInt32 userContextData)
 {
-	Boolean ret;
-
 	SYS_ReqRep_t* req = (SYS_ReqRep_t*)pMsg->dataBuf;
 
 	RPC_SendAckForRequest(dataBufHandle, 0);
@@ -452,7 +450,7 @@ void SYS_InitRpc(void)
 		params.iType = INTERFACE_RPC_DEFAULT;
 		params.respCb = HandleSysEventRspCb;
 		params.reqCb = HandleSysReqMsg;
-		params.mainProc = xdr_SYS_ReqRep_t;
+		params.mainProc = (xdrproc_t) xdr_SYS_ReqRep_t;
 		sysGetXdrStruct(&(params.xdrtbl), &(params.table_size));
 		params.maxDataBufSize = sizeof(SYS_ReqRep_t);
 		

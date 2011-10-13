@@ -1390,7 +1390,26 @@ typedef enum
 	VP_STATUS_CNC_EMERGENCY_CALL,				// 0x16		(  )
 	VP_STATUS_CNC_DETECTED,						// 0x17		(  )
 	VP_STATUS_VOIP_DL_DONE,						// 0x18		(  )
-	VP_STATUS_AUDIO_STREAM_DATA_READY			// 0x19 ( arg0 = shared_audio_stream_0_crtl, arg1 = shared_audio_stream_1_crtl, arg2 = audio_stream_buf_idx )
+	VP_STATUS_AUDIO_STREAM_DATA_READY,			// 0x19 ( arg0 = shared_audio_stream_0_crtl, arg1 = shared_audio_stream_1_crtl, arg2 = audio_stream_buf_idx )
+	   /** \HR */
+	   /** \par Module
+	    *                    Audio
+	    *  \par Command Code
+	    *                    0x20
+	    *  \par Description
+	    *       This reply is sent by the DSP after the initializations to be done by COMMAND_AUDIO_ENABLE are complete.
+	    *
+	    *              @param  UInt16 Value of shared_aadmac_aud_enable used in the initialization.
+	    *              @param  None
+	    *              @param  None
+	    *              @param  None
+	    *
+	    *   \par Associated Command
+	    *        For every COMMAND_AUDIO_ENABLE command in the CP's command queue, an associated VP_STATUS_AUDIO_ENABLE_DONE reply
+	    *        would be sent in the vp_status queue.
+	    *   \sa  shared_aadmac_aud_enable, UCOMMAND_AUDIO_ENABLE
+	    */
+	VP_STATUS_AUDIO_ENABLE_DONE                 // 0x20 ( )
 } VPStatus_t;
 /**
  * @}
