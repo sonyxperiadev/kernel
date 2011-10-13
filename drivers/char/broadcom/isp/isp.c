@@ -252,7 +252,8 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET), 
 				   reg_val );
 
-        msleep(1);
+        // sleep for 1ms
+        usleep_range(1000, 2000);
 	}
 
     default:
