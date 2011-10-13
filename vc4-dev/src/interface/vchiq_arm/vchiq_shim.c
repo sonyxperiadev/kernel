@@ -322,6 +322,7 @@ int32_t vchi_bulk_queue_transmit( VCHI_SERVICE_HANDLE_T handle,
       mode = VCHIQ_BULK_MODE_CALLBACK;
       break;
    case VCHI_FLAGS_BLOCK_UNTIL_DATA_READ:
+   case VCHI_FLAGS_BLOCK_UNTIL_OP_COMPLETE:
       mode = VCHIQ_BULK_MODE_BLOCKING;
       break;
    case VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
@@ -382,6 +383,7 @@ int32_t vchi_bulk_queue_transmit_reloc( VCHI_SERVICE_HANDLE_T handle,
       mode = VCHIQ_BULK_MODE_CALLBACK;
       break;
    case VCHI_FLAGS_BLOCK_UNTIL_DATA_READ:
+   case VCHI_FLAGS_BLOCK_UNTIL_OP_COMPLETE:
       mode = VCHIQ_BULK_MODE_BLOCKING;
       break;
    case VCHI_FLAGS_BLOCK_UNTIL_QUEUED:
@@ -923,10 +925,13 @@ vchi_writebuf_uint16( void *_ptr, uint16_t value )
  ***********************************************************/
 int32_t vchi_service_use( const VCHI_SERVICE_HANDLE_T handle )
 {
-   vcos_unused(handle);
-
-   //not used on videocore
-   return 0;
+   int32_t ret = -1;
+   SHIM_SERVICE_T *service = (SHIM_SERVICE_T *)handle;
+   if(service)
+   {
+      ret = vchiq_status_to_vchi(vchiq_use_service(service->handle));
+   }
+   return ret;
 }
 
 /***********************************************************
@@ -941,10 +946,13 @@ int32_t vchi_service_use( const VCHI_SERVICE_HANDLE_T handle )
  ***********************************************************/
 int32_t vchi_service_release( const VCHI_SERVICE_HANDLE_T handle )
 {
-   vcos_unused(handle);
-
-   //not used on videocore
-   return 0;
+   int32_t ret = -1;
+   SHIM_SERVICE_T *service = (SHIM_SERVICE_T *)handle;
+   if(service)
+   {
+      ret = vchiq_status_to_vchi(vchiq_release_service(service->handle));
+   }
+   return ret;
 }
 
 #if defined(__KERNEL__)
@@ -957,4 +965,6 @@ EXPORT_SYMBOL(vchi_msg_queuev);
 EXPORT_SYMBOL(vchi_service_close);
 EXPORT_SYMBOL(vchi_service_open);
 EXPORT_SYMBOL(vchi_service_create);
+EXPORT_SYMBOL(vchi_service_use);
+EXPORT_SYMBOL(vchi_service_release);
 #endif

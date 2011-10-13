@@ -85,6 +85,8 @@ typedef struct {
 #define VCHIQ_IOC_GET_CLIENT_ID        _IO(VCHIQ_IOC_MAGIC,   9)
 #define VCHIQ_IOC_GET_CONFIG           _IOW(VCHIQ_IOC_MAGIC, 10, VCHIQ_GET_CONFIG_T)
 #define VCHIQ_IOC_CLOSE_SERVICE        _IO(VCHIQ_IOC_MAGIC,  11)
-#define VCHIQ_IOC_MAX                  11
+#define VCHIQ_IOC_USE_SERVICE          _IO(VCHIQ_IOC_MAGIC,  12)
+#define VCHIQ_IOC_RELEASE_SERVICE      _IO(VCHIQ_IOC_MAGIC,  13)
+#define VCHIQ_IOC_MAX                  13
 
 #endif
