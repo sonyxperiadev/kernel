@@ -73,7 +73,12 @@
 #if defined (CONFIG_HAPTIC)
 #include <linux/haptic.h>
 #endif
-
+#if defined (CONFIG_BMP18X)
+#include <linux/bmp18x.h>
+#endif
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
+#include <linux/mpu.h>
+#endif
 #define _RHEA_
 #include <linux/broadcom/bcm_fuse_memmap.h>
 #include <mach/comms/platform_mconfig.h>
@@ -494,6 +499,63 @@ static struct i2c_board_info __initdata qt602240_info[] = {
 	},
 };
 #endif /* CONFIG_TOUCHSCREEN_QT602240 */
+#ifdef CONFIG_BMP18X
+static struct i2c_board_info __initdata bmp18x_info[] =
+{
+	{
+		I2C_BOARD_INFO("bmp18x", 0x77 ),
+		/*.irq = */
+	},
+};
+#endif
+#ifdef CONFIG_AL3006
+static struct i2c_board_info __initdata al3006_info[] =
+{
+	{
+		I2C_BOARD_INFO("al3006", 0x1d ),
+		/*.irq = */
+	},
+};
+#endif
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
+static struct mpu_platform_data mpu6050_data={
+	.int_config = 0x10,
+	.orientation =
+		{ 0,1,0,
+		  1,0,0,
+		  0,0,-1},
+	.level_shifter = 0,
+
+	.accel = {
+		 /*.get_slave_descr = mpu_get_slave_descr,*/
+		.adapt_num = 2,
+		.bus = EXT_SLAVE_BUS_SECONDARY,
+		.address = 0x38,
+		.orientation = 
+			{ 0,1,0,
+			  1,0,0,
+			  0,0,-1},
+	},
+	.compass = {
+		 /*.get_slave_descr = compass_get_slave_descr,*/
+		.adapt_num = 2,
+		.bus = EXT_SLAVE_BUS_PRIMARY,
+		.address = (0x50>>1),
+		.orientation =
+			{ 0,1,0,
+			  1,0,0,
+			  0,0,-1},
+	},
+};
+static struct i2c_board_info __initdata mpu6050_info[] =
+{
+	{
+		I2C_BOARD_INFO("mpu6050", 0x68),
+		 /*.irq = */
+		.platform_data = &mpu6050_data,
+	},
+};
+#endif
 
 #ifdef CONFIG_KONA_HEADSET
 #define HS_IRQ		gpio_to_irq(71)
@@ -1060,6 +1122,21 @@ static void __init rhea_ray_add_i2c_devices (void)
 	i2c_register_board_info(1,
 			qt602240_info,
 			ARRAY_SIZE(qt602240_info));
+#endif
+#ifdef CONFIG_BMP18X_I2C
+	i2c_register_board_info(1,
+			bmp18x_info,
+			ARRAY_SIZE(bmp18x_info));
+#endif
+#ifdef CONFIG_AL3006
+	i2c_register_board_info(1,
+			al3006_info,
+			ARRAY_SIZE(al3006_info));
+#endif
+#if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
+	i2c_register_board_info(1,
+			mpu6050_info,
+			ARRAY_SIZE(mpu6050_info));
 #endif
 }
 
