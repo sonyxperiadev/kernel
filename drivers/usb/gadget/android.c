@@ -163,7 +163,6 @@ static struct usb_configuration android_config_driver = {
 	.bMaxPower	= 0xFA, /* 500ma */
 };
 
-#ifndef CONFIG_USB_G_ANDROID_2_6_SYSFS
 static void android_work(struct work_struct *data)
 {
 	struct android_dev *dev = container_of(data, struct android_dev, work);
@@ -189,7 +188,6 @@ static void android_work(struct work_struct *data)
 		spin_unlock_irqrestore(&cdev->lock, flags);
 	}
 }
-#endif
 
 /*-------------------------------------------------------------------------*/
 /* Supported functions initialization */
@@ -1116,22 +1114,16 @@ android_setup(struct usb_gadget *gadget, const struct usb_ctrlrequest *c)
 	spin_lock_irqsave(&cdev->lock, flags);
 	if (!dev->connected) {
 		dev->connected = 1;
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
 		pr_info("%s: config -- %p\n", __FUNCTION__, cdev->config);
 		cdev->connected = 1;
 		schedule_work(&cdev->switch_work);
-#else
 		schedule_work(&dev->work);
-#endif
 	}
 	else if (c->bRequest == USB_REQ_SET_CONFIGURATION && cdev->config) {
-#ifdef CONFIG_USB_G_ANDROID_2_6_SYSFS
 		pr_info("%s: config -- %p\n", __FUNCTION__, cdev->config);
 		cdev->connected = 1;
 		schedule_work(&cdev->switch_work);
-#else
 		schedule_work(&dev->work);
-#endif
 	}
 	spin_unlock_irqrestore(&cdev->lock, flags);
 
@@ -1142,10 +1134,8 @@ static void android_disconnect(struct usb_gadget *gadget)
 {
 	struct android_dev *dev = _android_dev;
 
-#ifndef CONFIG_USB_G_ANDROID_2_6_SYSFS
 	dev->connected = 0;
 	schedule_work(&dev->work);
-#endif
 	composite_disconnect(gadget);
 }
 
@@ -1448,7 +1438,6 @@ composite_uevent(struct device *dev, struct kobj_uevent_env *env)
 	if(!strcmp(name,"mass_storage")){
 		strcpy(name,"usb_mass_storage");
 	}
-
 	if (add_uevent_var(env, "FUNCTION=%s", name))
 		return -ENOMEM;
 	if (add_uevent_var(env, "ENABLED=%d", enabled))
@@ -1508,9 +1497,7 @@ static int __init init(void)
 
 	dev->functions = supported_functions;
 	INIT_LIST_HEAD(&dev->enabled_functions);
-#ifndef CONFIG_USB_G_ANDROID_2_6_SYSFS
 	INIT_WORK(&dev->work, android_work);
-#endif
 
 	err = android_create_device(dev);
 	if (err) {
