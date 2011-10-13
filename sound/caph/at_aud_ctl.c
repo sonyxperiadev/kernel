@@ -441,6 +441,20 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
 			break;
 
+			//! AT*MAUDTST=32, p2, p3
+			//!
+			//! Function:	 Mute / un-mute microphone of an operation.
+			//!
+			//! Params: 	 p2 : operation
+			//! 			 p3 = mute flag
+			//! 				   1 - mute
+			//! 				   0 - un-mute
+			//! -------------------------------------------------------------------------------------
+		case 32:
+			AUDCTRL_SetTelephonyMicMute( AUDIO_HW_NONE, AUDCTRL_MIC_UNDEFINED, (Boolean) Params[2] );
+			break;
+
+
 		case 100:
 			if(Params[1] == 1)
 			{

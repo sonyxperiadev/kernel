@@ -69,6 +69,8 @@ extern void AUDLOG_ProcessLogChannel(UInt16 audio_stream_buffer_idx);
 extern AUDDRV_MIC_Enum_t   currVoiceMic;   //used in pcm i/f control. assume one mic, one spkr.
 extern AUDDRV_SPKR_Enum_t  currVoiceSpkr;  //used in pcm i/f control. assume one mic, one spkr.
 extern Boolean inVoiceCall;
+extern Boolean bmuteVoiceCall;
+
 //=============================================================================
 // Private Type and Constant declarations
 //=============================================================================
@@ -351,7 +353,22 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0, 0, 0 );
-	audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
+
+	//Right now, Android HWdep code switches audio device by doing Disable and Enable,
+	//therefore when switch audio device while muted we need to mute it here.
+	//
+	//for the next call, upper layer (HWdep) in Android unmute mic before start the next voice call.
+	//
+	//but in LMP (it has no Android code) the next call is also muted.
+	//I will fixed it in the next commit. Basically when switch audio device in voice call better
+	//use AUDDRV_Telephony_SelectMicSpkr( ) instead of calling TelephonyDeinit( ) and TelephonyInit( ).
+
+	//printk("bmuteVoiceCall = %d \r\n", bmuteVoiceCall);	
+	if (bmuteVoiceCall == FALSE)
+	{
+		//printk("UnMute\r\n");	
+	    audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
+	}
 
     //per call basis: enable the DTX by calling stack api when call connected
 	audio_control_generic( AUDDRV_CPCMD_ENABLE_DSP_DTX, TRUE, 0, 0, 0, 0 );
@@ -420,7 +437,12 @@ void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0, 0, 0 );
-	audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
+
+	if (bmuteVoiceCall == FALSE)
+	{
+	    audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
+	}
+
 	}
 
 	return;

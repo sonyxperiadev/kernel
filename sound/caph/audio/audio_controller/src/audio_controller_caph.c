@@ -622,12 +622,17 @@ void AUDCTRL_LoadMicGain(CSL_CAPH_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boo
 
 	// Set DSP UL gain from sysparm.
 	mode = AUDDRV_GetAudioMode();
+/***
+do not touch DSP UL gain in this function.
+this function shall be merged into AUDCTRL_SetAudioMode( ).
+
     if(isDSPNeeded == TRUE)
     {
 	    dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
 	    audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, 
 				dspULGain, 0, 0, 0, 0);		
     }
+***/
 
     if((mic == AUDCTRL_MIC_MAIN) 
        ||(mic == AUDCTRL_MIC_AUX)) 

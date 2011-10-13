@@ -87,6 +87,7 @@ static AUDIO_SAMPLING_RATE_t currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED;
 static Boolean eciEQOn = FALSE; // If TRUE, bypass EQ filter setting request from audio controller.
 
 static Boolean bInVoiceCall = FALSE;
+Boolean bmuteVoiceCall = FALSE;
 static UInt32 audDev = 0;
 
 static Result_t AUDDRV_HWControl_SetFilter(AUDDRV_HWCTRL_FILTER_e filter, void* coeff);
@@ -345,6 +346,8 @@ void AUDDRV_Telephony_UnmuteSpkr (AUDDRV_SPKR_Enum_t speaker,
 void AUDDRV_Telephony_MuteMic (AUDDRV_MIC_Enum_t mic,
 					void *pData)
 {
+    bmuteVoiceCall = TRUE;
+	//printk(" bmuteVoiceCall = TRUE\r\n");
 	audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 }
 
@@ -360,6 +363,8 @@ void AUDDRV_Telephony_MuteMic (AUDDRV_MIC_Enum_t mic,
 void AUDDRV_Telephony_UnmuteMic (AUDDRV_MIC_Enum_t mic,
 					void *pData)
 {
+    bmuteVoiceCall = FALSE;
+	//printk(" bmuteVoiceCall = FALSE\r\n");
 	audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
 }
 
