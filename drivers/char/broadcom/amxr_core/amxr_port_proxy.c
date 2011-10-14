@@ -57,9 +57,8 @@
 /* Number of message buffers used for messaging between kernel and
  * user proxy ports
  */
-#define NUM_MSGS		8
+#define NUM_MSGS		32
 
-#define DBG_PROC_NAME		"amxrproxyport"
 
 /* Debug trace */
 #define TRACE_ENABLED		0
@@ -68,6 +67,11 @@
 #define PPXY_TRACE		KNLLOG
 #else
 #define PPXY_TRACE(c...)
+#endif
+
+#define ENABLE_DBG_PROC		0
+#if ENABLE_DBG_PROC
+#define DBG_PROC_NAME		"amxrproxyport"
 #endif
 
 struct ppxy_buf
@@ -454,9 +458,9 @@ int amxrCreatePortProxy(
 	}
 
 	callbacks.getsrc = cb->getsrc ? getsrc_cb : NULL;
-	callbacks.srcdone = srcdone_cb;
+	callbacks.srcdone = ( cb->getsrc || cb->srcdone ) ? srcdone_cb : NULL;
 	callbacks.getdst = cb->getdst ? getdst_cb : NULL;
-	callbacks.dstdone = dstdone_cb;
+	callbacks.dstdone = ( cb->getdst || cb->dstdone ) ? dstdone_cb : NULL;
 	callbacks.dstcnxsremoved = cb->dstcnxsremoved ? dstcnxsremoved_cb : NULL;
 
 	rc = amxrCreatePort( name, &callbacks, nodep /* kernel priv data */,
@@ -867,6 +871,7 @@ static int ppxy_mmap( struct file *filp, struct vm_area_struct *vma )
 	return rc;
 }
 
+#if ENABLE_DBG_PROC
 /***************************************************************************/
 /**
 *  Debug proc read callback
@@ -915,6 +920,7 @@ static void __exit debug_exit( void )
 {
 	remove_proc_entry( DBG_PROC_NAME, NULL );
 }
+#endif
 
 /***************************************************************************/
 /**
@@ -962,7 +968,9 @@ static int __init amxr_ppxy_init( void )
 		goto out_class_destroy;
 	}
 
+#if ENABLE_DBG_PROC
 	debug_init();
+#endif
 
 	return 0;
 
@@ -982,7 +990,9 @@ out:
 */
 static void __exit amxr_ppxy_exit( void )
 {
+#if ENABLE_DBG_PROC
 	debug_exit();
+#endif
 
 	device_destroy( gClass, gDevno );
 	class_destroy( gClass );
