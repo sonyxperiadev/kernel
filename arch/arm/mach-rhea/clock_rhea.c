@@ -3118,6 +3118,7 @@ static struct bus_clk CLK_NAME(usb_ic_ahb) = {
 
 
 /*DFS def for SDIO */
+#ifdef CONFIG_KONA_PI_MGR
 static struct dfs_rate_thold sdio_rate_thold[2] =
 			{
 				{FREQ_MHZ(26), PI_OPP_ECONOMY},
@@ -3133,6 +3134,7 @@ static struct clk_dfs sdio_clk_dfs =
 						},
 
 	};
+#endif
 /*
 Peri clock name SDIO2
 */
@@ -3151,7 +3153,9 @@ static struct peri_clk CLK_NAME(sdio2) = {
 		},
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
 	.clk_dfs = &sdio_clk_dfs,
+#endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO2_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO2_CLKGATE_OFFSET,
@@ -3217,7 +3221,9 @@ static struct peri_clk CLK_NAME(sdio3) = {
 		},
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
 	.clk_dfs = &sdio_clk_dfs,
+#endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO3_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO3_CLKGATE_OFFSET,
@@ -3283,7 +3289,9 @@ static struct peri_clk CLK_NAME(sdio1) = {
 		},
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
 	.clk_dfs = &sdio_clk_dfs,
+#endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO1_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO1_CLKGATE_OFFSET,
@@ -3324,7 +3332,9 @@ static struct peri_clk CLK_NAME(sdio4) = {
 	},
 	.ccu_clk = &CLK_NAME(kpm),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
 	.clk_dfs = &sdio_clk_dfs,
+#endif
 	.policy_bit_mask = KPM_CLK_MGR_REG_POLICY0_MASK_SDIO4_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPM_CLK_MGR_REG_SDIO4_CLKGATE_OFFSET,
@@ -3567,6 +3577,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 Peri clock name CAPH_SRCMIXER
 */
 /*DFS def for CAPH */
+#ifdef CONFIG_KONA_PI_MGR
 static struct dfs_rate_thold caph_rate_thold[2] =
 			{
 				{FREQ_MHZ(26), PI_OPP_ECONOMY},
@@ -3582,6 +3593,7 @@ static struct clk_dfs caph_clk_dfs =
 						},
 
 	};
+#endif
 
 /*peri clk src list*/
 static struct clk* caph_srcmixer_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(ref_312m));
@@ -3596,7 +3608,9 @@ static struct peri_clk CLK_NAME(caph_srcmixer) = {
 				.ops = &gen_peri_clk_ops,
 		},
 	.ccu_clk = &CLK_NAME(khub),
+#ifdef CONFIG_KONA_PI_MGR
 	.clk_dfs = &caph_clk_dfs,
+#endif
 	.mask_set = 1,
 	.policy_bit_mask = KHUB_CLK_MGR_REG_POLICY0_MASK1_CAPH_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
@@ -4321,6 +4335,7 @@ static struct peri_clk CLK_NAME(pwm) = {
 /*
 Peri clock name SSP0
 */
+#ifdef CONFIG_KONA_PI_MGR
 static struct clk_dfs ssp0_dfs =
 	{
 		.dfs_policy = CLK_DFS_POLICY_STATE,
@@ -4331,6 +4346,7 @@ static struct clk_dfs ssp0_dfs =
 						},
 
 	};
+#endif
 
 /*peri clk src list*/
 static struct clk* ssp0_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(crystal),CLK_PTR(var_104m),CLK_PTR(ref_104m),CLK_PTR(var_96m),CLK_PTR(ref_96m));
@@ -4346,7 +4362,9 @@ static struct peri_clk CLK_NAME(ssp0) = {
 		},
 	.ccu_clk = &CLK_NAME(kps),
 	.mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
 	.clk_dfs = &ssp0_dfs,
+#endif
 	.policy_bit_mask = KPS_CLK_MGR_REG_POLICY0_MASK_SSP0_POLICY0_MASK_MASK,
 	.policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
 	.clk_gate_offset = KPS_CLK_MGR_REG_SSP0_CLKGATE_OFFSET,
@@ -4413,11 +4431,13 @@ static struct peri_clk CLK_NAME(timers) = {
 Peri clock name SPUM_OPEN
 */
 
+#ifdef CONFIG_KONA_PI_MGR
 static struct clk_dfs spum_dfs =
 	{
 		.dfs_policy = CLK_DFS_POLICY_STATE,
 		. policy_param = PI_OPP_NORMAL,
 	};
+#endif
 
 /*peri clk src list*/
 static struct clk* spum_open_peri_clk_src_list[] = DEFINE_ARRAY_ARGS(CLK_PTR(var_312m),CLK_PTR(ref_312m));
@@ -4433,7 +4453,9 @@ static struct peri_clk CLK_NAME(spum_open) = {
     },
     .ccu_clk = &CLK_NAME(kps),
     .mask_set = 0,
+#ifdef CONFIG_KONA_PI_MGR
 	.clk_dfs =  &spum_dfs,
+#endif
     .policy_bit_mask = KPS_CLK_MGR_REG_POLICY0_MASK_SPUM_OPEN_POLICY0_MASK_MASK,
     .policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
     .clk_gate_offset = KPS_CLK_MGR_REG_SPUM_OPEN_CLKGATE_OFFSET,
@@ -4476,7 +4498,9 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 	.ops = &gen_peri_clk_ops,
     },
     .ccu_clk = &CLK_NAME(kps),
+#ifdef CONFIG_KONA_PI_MGR
 	.clk_dfs =  &spum_dfs,
+#endif
     .mask_set = 0,
     .policy_bit_mask = KPS_CLK_MGR_REG_POLICY0_MASK_SPUM_SEC_POLICY0_MASK_MASK,
     .policy_mask_init = DEFINE_ARRAY_ARGS(1,1,1,1),
@@ -4507,11 +4531,13 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 /*
 BUS clock name MPHI_AHB
 */
+#ifdef CONFIG_KONA_PI_MGR
 static struct clk_dfs mphi_ahb_clk_dfs =
 	{
 		.dfs_policy = CLK_DFS_POLICY_STATE,
 		. policy_param = PI_OPP_NORMAL,
 	};
+#endif
 
 static struct bus_clk CLK_NAME(mphi_ahb) = {
 
@@ -4524,7 +4550,9 @@ static struct bus_clk CLK_NAME(mphi_ahb) = {
 				.ops = &gen_bus_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(kps),
+#ifdef CONFIG_KONA_PI_MGR
  .clk_dfs = &mphi_ahb_clk_dfs,
+#endif
  .clk_gate_offset  = KPS_CLK_MGR_REG_MPHI_CLKGATE_OFFSET,
  .clk_en_mask = KPS_CLK_MGR_REG_MPHI_CLKGATE_MPHI_AHB_CLK_EN_MASK,
  .gating_sel_mask =
