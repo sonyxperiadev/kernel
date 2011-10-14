@@ -48,10 +48,10 @@
 #define LOG_DBG_LEVEL_INTER_1      2
 #define LOG_DBG_LEVEL_MAX          3
 
-#define DEVICE_NAME              "vcsmt"
+#define DEVICE_NAME              "wht"
 #define DEVICE_MINOR             0
 
-#define PROC_DIR_ROOT_NAME       "vc-smt"
+#define PROC_DIR_ROOT_NAME       "wht"
 #define PROC_DEBUG               "debug"
 #define PROC_CONTROL             "ctrl"
 #define PROC_MODE                "mode"
@@ -95,7 +95,6 @@ typedef struct
 #define DEINIT_EVENT_MASK    0x8
 #define STATS_EVENT_MASK     0x10
 
-#define SM_TEST_STR "This is a test for the shared memory interface"
 
 // ---- Private Variables ----------------------------------------------------
 
