@@ -579,12 +579,54 @@ enum
 #define	DIG_CH3_PERI_CLK_FLAGS			0
 
 
+#define DIG_CHANNEL_AUTO_GATE_REQ_MASK	7
+
+
+enum
+{
+	CSI0_CAMPIX_PLL,
+	CSI1_CAMPIX_PLL,
+	CSI0_BYTE1_PLL,
+	CSI0_BYTE0_PLL,
+	CSI1_BYTE1_PLL,
+	CSI1_BYTE0_PLL,
+	DSI0_PIXEL_PLL,
+	DSI1_PIXEL_PLL
+};
+
+enum
+{
+	CSI_NO_CLOCK 		= 0,
+	CSI_REF_CRYSTAL_CLK 	= 0x3,
+	CSI_TESTDEBUG_DIV2_CLK 	= 0x4,
+	CSI_TESTDEBUG_CLK 	= 0x5,
+	CSI_RX1_BCLKHS 		= 0x6,
+	CSI_RX1_BCLKHS_N 	= 0x7,
+	CSI_RX0_BCLKHS 		= 0x8,
+	CSI_RX0_BCLKHS_N 	= 0x9
+};
+
+enum
+{
+	DSI_NO_CLOCK 		= 0,
+	DSI_REF_CRYSTAL_CLK 	= 0x1,
+	DSI_TESTDEBUG_DIV2_CLK 	= 0x2,
+	DSI_TESTDEBUG_CLK 	= 0x3,
+	DSI_TXDDRCLK 		= 0x4,
+	DSI_TXDDRCLK_N		= 0x5,
+	DSI_TXDDRCLK2 		= 0x6,
+	DSI_TXDDRCLK2_N 	= 0x7,
+	DSI_TX0_BCLKHS 		= 0x8,
+	DSI_TX0_BCLKHS_N	= 0x9
+};
+
+
 enum {
     ROOT_CCU_PLL0A,
     ROOT_CCU_PLL1A,
 };
-#define DIG_CHANNEL_AUTO_GATE_REQ_MASK	7
 
+int mm_ccu_set_pll_select(u32 clk_id, u32 value);
 int clk_set_pll_pwr_on_idle(int pll_id, int enable);
 int clk_set_crystal_pwr_on_idle(int enable);
 int rhea_clock_init(void);

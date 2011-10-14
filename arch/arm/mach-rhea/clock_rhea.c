@@ -4612,8 +4612,8 @@ static struct pll_clk CLK_NAME(dsi_pll) = {
 		},
 	.ccu_clk = &CLK_NAME(mm),
 	.pll_ctrl_offset = MM_CLK_MGR_REG_PLLDSIA_OFFSET,
-	.soft_post_resetb_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_SOFT_RESETB_MASK,
-	.soft_resetb_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_SOFT_POST_RESETB_MASK,
+	.soft_post_resetb_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_SOFT_POST_RESETB_MASK,
+	.soft_resetb_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_SOFT_RESETB_MASK,
 	.pwrdwn_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_PWRDWN_MASK,
 	.idle_pwrdwn_sw_ovrride_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_IDLE_PWRDWN_SW_OVRRIDE_MASK,
 	.ndiv_int_mask = MM_CLK_MGR_REG_PLLDSIA_PLLDSI_NDIV_INT_MASK,
@@ -5399,6 +5399,79 @@ static struct peri_clk CLK_NAME(dsi_pll_o_dsi_pll) = {
 
 
 /*Rhea specifc handlers*/
+
+int mm_ccu_set_pll_select(u32 clk_id, u32 value)
+{
+	u32 reg_val;
+	struct ccu_clk* ccu_clk = &CLK_NAME(mm);
+	u32 offset,mask, shift;
+
+	switch(clk_id)
+	{
+	case CSI0_CAMPIX_PLL:
+		offset = MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET;
+		mask = MM_CLK_MGR_REG_CSI0_PHY_DIV_CSI0_CAMPIX_PLL_SELECT_MASK;
+		shift = MM_CLK_MGR_REG_CSI0_PHY_DIV_CSI0_CAMPIX_PLL_SELECT_SHIFT;
+		break;
+
+	case CSI0_BYTE1_PLL:
+		offset = MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET;
+		mask = MM_CLK_MGR_REG_CSI0_PHY_DIV_CSI0_BYTE1_PLL_SELECT_MASK;
+		shift = MM_CLK_MGR_REG_CSI0_PHY_DIV_CSI0_BYTE1_PLL_SELECT_SHIFT;
+		break;
+
+	case CSI0_BYTE0_PLL:
+		offset = MM_CLK_MGR_REG_CSI0_PHY_DIV_OFFSET;
+		mask = MM_CLK_MGR_REG_CSI0_PHY_DIV_CSI0_BYTE0_PLL_SELECT_MASK;
+		shift = MM_CLK_MGR_REG_CSI0_PHY_DIV_CSI0_BYTE0_PLL_SELECT_SHIFT;
+		break;
+
+	case CSI1_CAMPIX_PLL:
+		offset = MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET;
+		mask = MM_CLK_MGR_REG_CSI1_PHY_DIV_CSI1_CAMPIX_PLL_SELECT_MASK;
+		shift = MM_CLK_MGR_REG_CSI1_PHY_DIV_CSI1_CAMPIX_PLL_SELECT_SHIFT;
+		break;
+
+	case CSI1_BYTE1_PLL:
+		offset = MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET;
+		mask = MM_CLK_MGR_REG_CSI1_PHY_DIV_CSI1_BYTE1_PLL_SELECT_MASK;
+		shift = MM_CLK_MGR_REG_CSI1_PHY_DIV_CSI1_BYTE1_PLL_SELECT_SHIFT;
+		break;
+
+	case CSI1_BYTE0_PLL:
+		offset = MM_CLK_MGR_REG_CSI1_PHY_DIV_OFFSET;
+		mask = MM_CLK_MGR_REG_CSI1_PHY_DIV_CSI1_BYTE0_PLL_SELECT_MASK;
+		shift = MM_CLK_MGR_REG_CSI1_PHY_DIV_CSI1_BYTE0_PLL_SELECT_SHIFT;
+		break;
+
+	case DSI0_PIXEL_PLL:
+		offset = MM_CLK_MGR_REG_DSI0_DIV_OFFSET;
+		mask = MM_CLK_MGR_REG_DSI0_DIV_DSI0_PIXEL_PLL_SELECT_MASK;
+		shift = MM_CLK_MGR_REG_DSI0_DIV_DSI0_PIXEL_PLL_SELECT_SHIFT;
+		break;
+
+	case DSI1_PIXEL_PLL:
+		offset = MM_CLK_MGR_REG_DSI1_DIV_OFFSET;
+		mask = MM_CLK_MGR_REG_DSI1_DIV_DSI1_PIXEL_PLL_SELECT_MASK;
+		shift = MM_CLK_MGR_REG_DSI1_DIV_DSI1_PIXEL_PLL_SELECT_SHIFT;
+		break;
+
+	default:
+		return -EINVAL;
+	}
+	CCU_PI_ENABLE(ccu_clk,1);
+	ccu_write_access_enable(ccu_clk,true);
+    reg_val = readl(CCU_REG_ADDR(ccu_clk,offset));
+	reg_val &= ~mask;
+	reg_val |= (value << shift) & mask;
+	writel(reg_val,CCU_REG_ADDR(ccu_clk,offset));
+	ccu_write_access_enable(ccu_clk,false);
+	CCU_PI_ENABLE(ccu_clk,0);
+	return 0;
+
+}
+EXPORT_SYMBOL(mm_ccu_set_pll_select);
+
 
 int clk_set_pll_pwr_on_idle(int pll_id, int enable)
 {

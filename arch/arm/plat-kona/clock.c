@@ -3434,7 +3434,6 @@ static int pll_clk_init(struct clk* clk)
 	ccu_write_access_enable(pll_clk->ccu_clk, true);
 
 	reg_val = readl(CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
-
 	if(clk->flags & AUTO_GATE)
 	{
 		reg_val |= pll_clk->idle_pwrdwn_sw_ovrride_mask;
@@ -3443,7 +3442,6 @@ static int pll_clk_init(struct clk* clk)
 	{
 		reg_val &= ~pll_clk->idle_pwrdwn_sw_ovrride_mask;
 	}
-
 	writel(reg_val,CCU_REG_ADDR(pll_clk->ccu_clk,pll_clk->pll_ctrl_offset));
 	/* Disable write access*/
 	ccu_write_access_enable(pll_clk->ccu_clk, false);
@@ -3575,6 +3573,10 @@ static int pll_chnl_clk_set_rate(struct clk* clk, u32 rate)
 
 	mdiv = 	vco_rate/rate;
 
+	if(mdiv == 0)
+		mdiv++;
+	if(abs(rate - vco_rate/mdiv) > abs(rate - vco_rate/(mdiv+1)))
+		mdiv++;
 	if(mdiv > pll_chnl_clk->mdiv_max)
 		mdiv = pll_chnl_clk->mdiv_max;
 
