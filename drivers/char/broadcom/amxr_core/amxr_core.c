@@ -2168,13 +2168,13 @@ void amxrElapsedTime(
    /* Issue done callbacks */
    llist_foreach_item( portp, &gPorts.list, lnode )
    {
-      if ( portp->cb.srcdone && AMXR_SYNC_FREQ( portp->info.src_hz ))
-      {
-         portp->cb.srcdone( portp->info.src_bytes, portp->privdata );
-      }
       if ( portp->cb.dstdone && AMXR_SYNC_FREQ( portp->info.dst_hz ))
       {
          portp->cb.dstdone( portp->info.dst_bytes, portp->privdata );
+      }
+      if ( portp->cb.srcdone && AMXR_SYNC_FREQ( portp->info.src_hz ))
+      {
+         portp->cb.srcdone( portp->info.src_bytes, portp->privdata );
       }
    }
 }
