@@ -179,17 +179,19 @@ static void sdhci_reset(struct sdhci_host *host, u8 mask)
 		host->clock = 0;
 
 	/* Wait max 100 ms */
-	timeout = jiffies + msecs_to_jiffies(100);
+	timeout = 1000;
 
 	/* hw clears the bit when it's done */
 	while (sdhci_readb(host, SDHCI_SOFTWARE_RESET) & mask) {
-		if (time_is_before_jiffies(timeout)) {
+		if (timeout == 0) {
 			printk(KERN_ERR "%s: Reset 0x%x never completed.\n",
 				mmc_hostname(host->mmc), (int)mask);
 			sdhci_dumpregs(host);
 			return;
 		}
-		cpu_relax();
+
+		timeout--;
+		udelay(100);
 	}
 
 	if (host->ops->platform_reset_exit)
