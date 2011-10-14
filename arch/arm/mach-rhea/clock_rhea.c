@@ -36,6 +36,7 @@
 #include <mach/pi_mgr.h>
 #include <asm/div64.h>
 #include <plat/pi_mgr.h>
+#include "volt_tbl.h"
 
 unsigned long clock_get_xtal(void)
 {
@@ -554,9 +555,9 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.policy_dbg_act_freq_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,4,0xb,0xb,0xe,0xe),
-	.freq_count = 8,
-	.freq_policy = DEFINE_ARRAY_ARGS(7,7,7,7),
+	.freq_volt = DEFINE_ARRAY_ARGS(PROC_CCU_FREQ_VOLT_TBL),
+	.freq_count = PROC_CCU_FREQ_VOLT_TBL_SZ,
+	.freq_policy = DEFINE_ARRAY_ARGS(PROC_CCU_FREQ_POLICY_TBL),
 };
 
 /*
@@ -1034,10 +1035,10 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.policy_dbg_act_freq_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,0xb,0xe,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(2,2,2,2),
+	.freq_volt = DEFINE_ARRAY_ARGS(HUB_CCU_FREQ_VOLT_TBL),
+	.freq_count = HUB_CCU_FREQ_VOLT_TBL_SZ,
+	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+	.freq_policy = DEFINE_ARRAY_ARGS(HUB_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(khub_clk_freq_list0,khub_clk_freq_list1,khub_clk_freq_list2,khub_clk_freq_list3,khub_clk_freq_list4,khub_clk_freq_list5,khub_clk_freq_list6),
 
 };
@@ -2150,10 +2151,10 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.policy_dbg_act_freq_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(0xe,0xe,0xe,0xe,0xe,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(4,4,4,4),
+	.freq_volt = DEFINE_ARRAY_ARGS(AON_CCU_FREQ_VOLT_TBL),
+	.freq_count = AON_CCU_FREQ_VOLT_TBL_SZ,
+	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+	.freq_policy = DEFINE_ARRAY_ARGS(AON_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(khubaon_clk_freq_list0,khubaon_clk_freq_list1,khubaon_clk_freq_list2,khubaon_clk_freq_list3,khubaon_clk_freq_list4),
 
 };
@@ -2888,10 +2889,10 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.policy_dbg_act_freq_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,0xb,0xb,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(2,2,2,2),
+	.freq_volt = DEFINE_ARRAY_ARGS(KPM_CCU_FREQ_VOLT_TBL),
+	.freq_count = KPM_CCU_FREQ_VOLT_TBL_SZ,
+	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+	.freq_policy = DEFINE_ARRAY_ARGS(KPM_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(kpm_clk_freq_list0,kpm_clk_freq_list1,kpm_clk_freq_list2,kpm_clk_freq_list3,kpm_clk_freq_list4,kpm_clk_freq_list5,kpm_clk_freq_list6,kpm_clk_freq_list7),
 
 };
@@ -3554,10 +3555,10 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.policy_dbg_act_freq_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,0xb,0xb,0xe,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(1,1,1,1),
+	.freq_volt = DEFINE_ARRAY_ARGS(KPS_CCU_FREQ_VOLT_TBL),
+	.freq_count = KPS_CCU_FREQ_VOLT_TBL_SZ,
+	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+	.freq_policy = DEFINE_ARRAY_ARGS(KPS_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(kps_clk_freq_list0,kps_clk_freq_list1,kps_clk_freq_list2,kps_clk_freq_list3,kps_clk_freq_list4,kps_clk_freq_list5),
 
 };
@@ -4575,10 +4576,10 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.policy_dbg_act_freq_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
 #endif
-	.freq_volt = DEFINE_ARRAY_ARGS(4,4,0xb,0xb,0xb,0xe,0xe,0xe),
-	.freq_count = 8,
-	.volt_peri = DEFINE_ARRAY_ARGS(4,2),
-	.freq_policy = DEFINE_ARRAY_ARGS(1,1,1,1),
+	.freq_volt = DEFINE_ARRAY_ARGS(MM_CCU_FREQ_VOLT_TBL),
+	.freq_count = MM_CCU_FREQ_VOLT_TBL_SZ,
+	.volt_peri = DEFINE_ARRAY_ARGS(VLT_NORMAL_PERI,VLT_HIGH_PERI),
+	.freq_policy = DEFINE_ARRAY_ARGS(MM_CCU_FREQ_POLICY_TBL),
 	.freq_tbl = DEFINE_ARRAY_ARGS(mm_clk_freq_list0,mm_clk_freq_list1,mm_clk_freq_list2,mm_clk_freq_list3,mm_clk_freq_list4,mm_clk_freq_list5),
 
 };
@@ -5541,6 +5542,31 @@ static int mm_ccu_set_freq_policy(struct ccu_clk* ccu_clk, int policy_id, int fr
 	return 0;
 }
 
+static int mm_ccu_set_peri_voltage(struct ccu_clk * ccu_clk, int peri_volt_id, u8 voltage)
+{
+
+	u32 shift, reg_val;
+
+	if(peri_volt_id == VLT_NORMAL)
+	{
+		shift = MM_CLK_MGR_REG_VLT_PERI_VLT_NORMAL_PERI_SHIFT;
+	}
+	else if(peri_volt_id == VLT_HIGH)
+	{
+		shift = MM_CLK_MGR_REG_VLT_PERI_VLT_HIGH_PERI_SHIFT;
+	}
+	else
+		return -EINVAL;
+
+	reg_val = readl(CCU_VLT_PERI_REG(ccu_clk));
+
+	reg_val  = (reg_val & ~(CCU_PERI_VLT_MASK << shift)) |
+	           ((voltage & CCU_PERI_VLT_MASK) << shift);
+
+	 writel(reg_val,CCU_VLT_PERI_REG(ccu_clk));
+	return 0;
+}
+
 /*Override ccu_clk_get_freq_policy for MM as the offset is different*/
 static int mm_ccu_get_freq_policy(struct ccu_clk * ccu_clk, int policy_id)
 {
@@ -5844,6 +5870,7 @@ int __init rhea_clock_init(void)
 	mm_ccu_ops.set_freq_policy = mm_ccu_set_freq_policy;
 	mm_ccu_ops.get_freq_policy = mm_ccu_get_freq_policy;
 	mm_ccu_ops.set_voltage = mm_ccu_clk_set_voltage;
+	mm_ccu_ops.set_peri_voltage = mm_ccu_set_peri_voltage;
 
 	dig_ch_peri_clk_ops = gen_peri_clk_ops;
 	dig_ch_peri_clk_ops.init = dig_clk_init;
