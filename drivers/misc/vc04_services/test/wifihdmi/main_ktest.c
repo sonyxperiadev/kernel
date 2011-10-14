@@ -54,6 +54,7 @@
 #define PROC_DIR_ROOT_NAME       "vc-smt"
 #define PROC_DEBUG               "debug"
 #define PROC_CONTROL             "ctrl"
+#define PROC_MODE                "mode"
 #define PROC_WRITE_BUF_SIZE      128
 
 #define SMT_ACTION_INIT          "init"
@@ -69,10 +70,12 @@ typedef struct
    VC_VCHI_WIFIHDMI_HANDLE_T   wifihdmi_handle; // Handle for videocore service.
 
    struct proc_dir_entry *dir_root;             // Proc entries root.
-   struct proc_dir_entry *control;              // Proc entries control.
-   struct proc_dir_entry *debug;                // Proc entries debug.
+   struct proc_dir_entry *control;              // Proc entry control.
+   struct proc_dir_entry *debug;                // Proc entry debug.
+   struct proc_dir_entry *mode;                 // Proc entry mode.
 
    char                  smt_cmd[PROC_WRITE_BUF_SIZE+1];
+   int                   smt_mode;
 
    struct cdev           smt_cdev;              // Device.
    dev_t                 smt_devid;             // Device identifier.
@@ -136,7 +139,14 @@ static void *vc_smt_ops_waiter( void *arg )
             memset ( &mode, 0, sizeof(mode) );
             memset ( &result, 0, sizeof(result) );
 
-            mode.loopback = 1;
+            if ( smt_state->smt_mode == 1 )
+            {
+               mode.wifihdmi = 1;
+            }
+            else
+            {
+               mode.loopback = 1;
+            }
 
             vc_vchi_wifihdmi_stop( smt_state->wifihdmi_handle,
                                    &mode, 
@@ -158,14 +168,21 @@ static void *vc_smt_ops_waiter( void *arg )
             memset ( &mode, 0, sizeof(mode) );
             memset ( &stats, 0, sizeof(stats) );
 
-            mode.loopback = 1;
+            if ( smt_state->smt_mode == 1 )
+            {
+               mode.wifihdmi = 1;
+            }
+            else
+            {
+               mode.loopback = 1;
+            }
 
             vc_vchi_wifihdmi_stats( smt_state->wifihdmi_handle,
                                     &mode, 
                                     &stats,
                                     &trans_id );
 
-            LOG_INFO( "[%s]: loopback stats tx:%d, tx-missed:%d, tx-busy:%d, tx-rec:%d",
+            LOG_INFO( "[%s]: stats tx:%d, tx-missed:%d, tx-busy:%d, tx-rec:%d",
                       __func__,
                       stats.tx_cnt,
                       stats.tx_miss_cnt,
@@ -178,7 +195,14 @@ static void *vc_smt_ops_waiter( void *arg )
             memset ( &mode, 0, sizeof(mode) );
             memset ( &result, 0, sizeof(result) );
 
-            mode.loopback = 1;
+            if ( smt_state->smt_mode == 1 )
+            {
+               mode.wifihdmi = 1;
+            }
+            else
+            {
+               mode.loopback = 1;
+            }
 
             vc_vchi_wifihdmi_start( smt_state->wifihdmi_handle,
                                     &mode, 
@@ -223,6 +247,29 @@ static int vc_smt_ctl_proc_read( char *buffer,
    len += sprintf( buffer + len,
                    "%s\n",
                    smt_state->smt_cmd );
+
+   return len;
+}
+
+/* Read callback for the mode proc entry.
+*/
+static int vc_smt_mode_proc_read( char *buffer,
+                                  char **start,
+                                  off_t off,
+                                  int count,
+                                  int *eof,
+                                  void *data )
+{
+   int len = 0;
+
+   if ( (smt_state == NULL) || (off > 0) )
+   {
+      return 0;
+   }
+
+   len += sprintf( buffer + len,
+                   "%s\n",
+                   (smt_state->smt_mode == 1) ? "wifihdmi" : "loopback" );
 
    return len;
 }
@@ -400,6 +447,77 @@ static int vc_smt_debug_proc_write( struct file *file,
             smt_debug_log,
             debug_value );
    smt_debug_log = debug_value;
+
+   /* Done.
+   */
+   goto out;
+
+out:
+   return ret;
+}
+
+/* Write callback for the mode proc entry.
+*/
+static int vc_smt_mode_proc_write( struct file *file,
+                                   const char __user *buffer,
+                                   unsigned long count,
+                                   void *data )
+{
+   int ret;
+   uint32_t mode_value;
+   unsigned char kbuf[PROC_WRITE_BUF_SIZE+1];
+
+   memset ( kbuf, 0, PROC_WRITE_BUF_SIZE+1 );
+   if ( count >= PROC_WRITE_BUF_SIZE )
+   {
+      count = PROC_WRITE_BUF_SIZE;
+   }
+
+   if ( copy_from_user( kbuf,
+                        buffer,
+                        count ) != 0 )
+   {
+      LOG_ERR( "[%s]: failed to copy-from-user",
+               __func__ );
+
+      ret = -EFAULT;
+      goto out;
+   }
+   kbuf[ count - 1 ] = 0;
+
+   /* Return read value no matter what from there on.
+   */
+   ret = count;
+
+   if( sscanf( kbuf, "%u", &mode_value ) != 1 )
+   {
+      LOG_ERR( "[%s]: echo <value> > /proc/%s/%s",
+               __func__,
+               PROC_DIR_ROOT_NAME,
+               PROC_MODE );
+
+      /* Failed to assign the proper value.
+      */
+      goto out;
+   }
+
+   if ( mode_value > 1 )
+   {
+      LOG_ERR( "[%s]: echo (0: loopback | 1: wifihdmi) > /proc/%s/%s",
+               __func__,
+               PROC_DIR_ROOT_NAME,
+               PROC_MODE );
+
+      /* Failed to assign the proper value.
+      */
+      goto out;
+   }
+
+   LOG_INFO( "[%s]: mode change from %s to %s",
+            __func__,
+            (smt_state->smt_mode == 1) ? "wifihdmi" : "loopback",
+            (mode_value == 1) ? "wifihdmi" : "loopback" );
+   smt_state->smt_mode = mode_value;
 
    /* Done.
    */
@@ -695,6 +813,24 @@ static int __init vc_smt_init( void )
       smt_state->control->write_proc = &vc_smt_ctl_proc_write;
    }
 
+   smt_state->mode = create_proc_entry( PROC_MODE,
+                                        0,
+                                        smt_state->dir_root );
+   if ( smt_state->mode == NULL )
+   {
+      LOG_ERR( "[%s]: failed to create \'%s\' entry",
+               __func__,
+               PROC_MODE );
+
+      ret = -EPERM;
+      goto err_remove_proc_control;
+   }
+   else
+   {
+      smt_state->mode->read_proc  = &vc_smt_mode_proc_read;
+      smt_state->mode->write_proc = &vc_smt_mode_proc_write;
+   }
+
    /* Create a shared memory test device.
    */
    ret = vc_smt_create_test();
@@ -702,7 +838,7 @@ static int __init vc_smt_init( void )
    {
       LOG_ERR( "[%s]: failed to create shared memory test device",
                __func__);
-      goto err_remove_proc_control;
+      goto err_remove_proc_mode;
    }
 
    // Create the thread which takes care of all io to/from videoocore.
@@ -733,6 +869,8 @@ static int __init vc_smt_init( void )
 
 err_remove_proc_smt_device:
    vc_smt_remove_test();
+err_remove_proc_mode:
+   remove_proc_entry( PROC_MODE, smt_state->dir_root );
 err_remove_proc_control:
    remove_proc_entry( PROC_CONTROL, smt_state->dir_root );
 err_remove_proc_debug:
@@ -765,6 +903,7 @@ static void __exit vc_smt_exit( void )
    */
    remove_proc_entry( PROC_DEBUG,          smt_state->dir_root );
    remove_proc_entry( PROC_CONTROL,        smt_state->dir_root );
+   remove_proc_entry( PROC_MODE,           smt_state->dir_root );
    remove_proc_entry( PROC_DIR_ROOT_NAME,  NULL );
 
    vcos_event_delete( &smt_state->smt_event );

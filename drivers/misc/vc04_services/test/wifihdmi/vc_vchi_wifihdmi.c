@@ -816,24 +816,33 @@ static void *vc_vchi_wifihdmi_videocore_snd( void *arg )
             if ( (sndblk->address == 0) &&
                  (sndblk->port == 0) )
             {
-               LOG_DBG( "%s: control de-queue %p, handle %x, socket %x, size %d",
-                        __func__, sndblk, sndblk->handle, sndblk->socket,
-                        sndblk->size );
-
                rc = whdmi_tcp_send( sndblk->socket,
                                     sndblk->size,
                                     (uint8_t *) data_ptr );
+
+               LOG_DBG( "%s: control de-queue %p, handle %x, socket %x, size %d - returns %d",
+                        __func__,
+                        sndblk,
+                        sndblk->handle,
+                        sndblk->socket,
+                        sndblk->size,
+                        rc );
             }
             else
             {
-               //LOG_DBG( "%s: data-pump de-queue %p, handle %x, size %d, @ 0x%lx",
-               //         __func__, sndblk, sndblk->handle, sndblk->size, data_ptr );
-
                rc = whdmi_udp_send_to( sndblk->socket,
                                        sndblk->address,
                                        sndblk->port,
                                        sndblk->size,
                                        (uint8_t *) data_ptr );
+
+               //LOG_DBG( "%s: data-pump de-queue %p, handle %x, size %d, @ 0x%lx - returns %d",
+               //         __func__,
+               //         sndblk,
+               //         sndblk->handle,
+               //         sndblk->size,
+               //         data_ptr,
+               //         rc );
             }
 
             vc_sm_unlock( sndblk->handle,
