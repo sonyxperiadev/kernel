@@ -143,3 +143,9 @@ config VC_MEM
 	default m
         help
           Helper for videocore memory access and total size allocation.	   
+
+config VC_TEST_WIFI_HDMI
+	tristate "Test Driver for WifiHdmi Service"
+	default n
+        help
+          Test driver for wifi over hdmi service.	   

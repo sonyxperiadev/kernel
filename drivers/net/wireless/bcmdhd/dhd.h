@@ -24,7 +24,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd.h,v 1.60.4.17 2011-01-09 08:11:56 Exp $
+ * $Id: dhd.h 278821 2011-08-20 00:26:12Z $
  */
 
 /****************
@@ -56,7 +56,7 @@
 #define ALL_INTERFACES	0xff
 
 #include <wlioctl.h>
-#include <dngl_stats.h>
+
 
 /* Forward decls */
 struct dhd_bus;
@@ -70,6 +70,7 @@ enum dhd_bus_state {
 	DHD_BUS_LOAD,		/* Download access only (CPU reset) */
 	DHD_BUS_DATA		/* Ready for frame transfers */
 };
+
 
 /* Firmware requested operation mode */
 #define STA_MASK			0x0001
@@ -381,7 +382,7 @@ extern void dhd_os_sdlock_rxq(dhd_pub_t * pub);
 extern void dhd_os_sdunlock_rxq(dhd_pub_t * pub);
 extern void dhd_os_sdlock_sndup_rxq(dhd_pub_t * pub);
 extern void dhd_customer_gpio_wlan_ctrl(int onoff);
-extern int  dhd_custom_get_mac_address(unsigned char *buf);
+extern int dhd_custom_get_mac_address(unsigned char *buf);
 extern void dhd_os_sdunlock_sndup_rxq(dhd_pub_t * pub);
 extern void dhd_os_sdlock_eventq(dhd_pub_t * pub);
 extern void dhd_os_sdunlock_eventq(dhd_pub_t * pub);
@@ -403,6 +404,7 @@ extern int dhd_get_dtim_skip(dhd_pub_t *dhd);
 #define DHD_MULTICAST6_FILTER_NUM	3
 extern int net_os_set_packet_filter(struct net_device *dev, int val);
 extern int net_os_rxfilter_add_remove(struct net_device *dev, int val, int num);
+
 
 #ifdef DHD_DEBUG
 extern int write_to_file(dhd_pub_t *dhd, uint8 *buf, int size);
@@ -430,6 +432,7 @@ extern void dhd_timeout_start(dhd_timeout_t *tmo, uint usec);
 extern int dhd_timeout_expired(dhd_timeout_t *tmo);
 
 extern int dhd_ifname2idx(struct dhd_info *dhd, char *name);
+extern int dhd_net2idx(struct dhd_info *dhd, struct net_device *net);
 extern struct net_device * dhd_idx2net(struct dhd_pub *dhd_pub, int ifidx);
 extern int wl_host_event(dhd_pub_t *dhd_pub, int *idx, void *pktdata,
                          wl_event_msg_t *, void **data_ptr);
@@ -543,6 +546,9 @@ extern uint dhd_pktgen_len;
 #define MOD_PARAM_PATHLEN	2048
 extern char fw_path[MOD_PARAM_PATHLEN];
 extern char nv_path[MOD_PARAM_PATHLEN];
+
+#define MOD_PARAM_PREFIXLEN 81
+extern char if_prefix[MOD_PARAM_PREFIXLEN];
 
 #ifdef SOFTAP
 extern char fw_path2[MOD_PARAM_PATHLEN];
@@ -696,4 +702,5 @@ void dhd_aoe_arp_clr(dhd_pub_t *dhd);
 int dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen);
 void dhd_arp_offload_add_ip(dhd_pub_t *dhd, uint32 ipaddr);
 #endif /* ARP_OFFLOAD_SUPPORT */
+
 #endif /* _dhd_h_ */

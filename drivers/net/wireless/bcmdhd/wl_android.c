@@ -2,13 +2,13 @@
  * Linux cfg80211 driver - Android related functions
  *
  * Copyright (C) 1999-2011, Broadcom Corporation
- *
+ * 
  *         Unless you and Broadcom execute a separate written software license
  * agreement governing use of this software, this software is licensed to you
  * under the terms of the GNU General Public License version 2 (the "GPL"),
  * available at http://www.broadcom.com/licenses/GPLv2.php, with the
  * following added to such license:
- *
+ * 
  *      As a special exception, the copyright holders of this software give you
  * permission to link this software with independent modules, and to copy and
  * distribute the resulting executable under terms of your choice, provided that
@@ -16,7 +16,7 @@
  * the license of that module.  An independent module is a module which is not
  * derived from this software.  The special exception does not apply to any
  * modifications of the software.
- *
+ * 
  *      Notwithstanding the above, under no circumstances may you combine this
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
@@ -109,7 +109,8 @@ void dhd_dev_init_ioctl(struct net_device *dev);
 #ifdef WL_CFG80211
 int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr);
 #else
-int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr) { return 0; }
+int wl_cfg80211_get_p2p_dev_addr(struct net_device *net, struct ether_addr *p2pdev_addr)
+{ return 0; }
 #endif
 
 extern bool ap_fw_loaded;
@@ -157,6 +158,7 @@ static int wl_android_get_rssi(struct net_device *net, char *command, int total_
 	error = wldev_get_rssi(net, &rssi);
 	if (error)
 		return -1;
+
 	error = wldev_get_ssid(net, &ssid);
 	if (error)
 		return -1;
@@ -186,7 +188,7 @@ static int wl_android_set_suspendopt(struct net_device *dev, char *command, int 
 	if (ret_now != suspend_flag) {
 		if (!(ret = net_os_set_suspend(dev, ret_now)))
 			DHD_INFO(("%s: Suspend Flag %d -> %d\n",
-					__FUNCTION__, ret_now, suspend_flag));
+				__FUNCTION__, ret_now, suspend_flag));
 		else
 			DHD_ERROR(("%s: failed %d\n", __FUNCTION__, ret));
 	}
@@ -533,6 +535,7 @@ int wl_android_exit(void)
 int wl_android_post_init(void)
 {
 	int ret = 0;
+
 	if (!dhd_download_fw_on_driverload) {
 		/* Call customer gpio to turn off power with WL_REG_ON signal */
 		dhd_customer_gpio_wlan_ctrl(WLAN_RESET_OFF);
@@ -541,7 +544,6 @@ int wl_android_post_init(void)
 	}
 	return ret;
 }
-
 /**
  * Functions for Android WiFi card detection
  */

@@ -441,6 +441,9 @@ static Int8 GetInterfaceType(IPC_EndpointId_T epId)
 	
 	else if(epId == IPC_EP_LogApps || epId == IPC_EP_LogCp)
 		return INTERFACE_LOGGING;
+	
+	else if(epId == IPC_EP_SerialAP || epId == IPC_EP_SerialCP)
+		return INTERFACE_SERIAL;
 
 #ifdef IPC_EP_EemAP
 	else if(epId == IPC_EP_EemAP || epId == IPC_EP_EemCP)
@@ -567,6 +570,7 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t rpcProcType)
 		IPC_EndpointRegister(IPC_EP_Capi2Cp,		RPC_FlowCntrl,	RPC_BufferDelivery,4);
 		IPC_EndpointRegister(IPC_EP_PsCpData,		RPC_FlowCntrl,	RPC_BufferDelivery,4 + PDCP_MAX_HEADER_SIZE);
 		IPC_EndpointRegister(IPC_EP_CsdCpCSDData,	RPC_FlowCntrl,	RPC_BufferDelivery,4);
+		IPC_EndpointRegister(IPC_EP_SerialCP,		RPC_FlowCntrl,	RPC_BufferDelivery,4);
 #ifdef IPC_EP_EemAP
 		IPC_EndpointRegister(IPC_EP_EemCP,			RPC_FlowCntrl,	RPC_BufferDelivery,4);
 #endif
@@ -576,6 +580,7 @@ RPC_Result_t RPC_IPC_EndPointInit(RpcProcessorType_t rpcProcType)
 		IPC_EndpointRegister(IPC_EP_Capi2App,			RPC_FlowCntrl,	RPC_BufferDelivery, 4);
 		IPC_EndpointRegister(IPC_EP_PsAppData,			RPC_FlowCntrl,	RPC_BufferDelivery,4 + PDCP_MAX_HEADER_SIZE);
 		IPC_EndpointRegister(IPC_EP_CsdAppCSDData,		RPC_FlowCntrl,	RPC_BufferDelivery,4);
+		IPC_EndpointRegister(IPC_EP_SerialAP,			RPC_FlowCntrl,	RPC_BufferDelivery,4);
 #ifndef UNDER_LINUX
 #ifndef UNDER_CE //modify for WinMo UDP log
 		IPC_EndpointRegister(IPC_EP_LogApps,			RPC_FlowCntrl,	RPC_BufferDelivery,4);
@@ -679,6 +684,20 @@ RPC_Result_t RPC_IPC_Init(RpcProcessorType_t rpcProcType)
 				ipcBufList[itype].srcEpId = (rpcProcType == RPC_COMMS)?IPC_EP_LogCp:IPC_EP_LogApps;
 				ipcBufList[itype].destEpId = (rpcProcType == RPC_COMMS)?IPC_EP_LogApps:IPC_EP_LogCp;
 			#endif
+		}
+		else if(itype == INTERFACE_SERIAL)
+		{
+			ipcBufList[itype].max_pkts[0]=CFG_RPC_SERIALDATA_MAX_PACKETS;
+			ipcBufList[itype].max_pkts[1]=CFG_RPC_SERIALDATA_MAX_PACKETS2;
+
+			ipcBufList[itype].pkt_size[0]=CFG_RPC_SERIALDATA_PKT_SIZE;
+			ipcBufList[itype].pkt_size[1]=CFG_RPC_SERIALDATA_PKT_SIZE2;
+			
+			ipcBufList[itype].start_threshold=CFG_RPC_SERIAL_START_THRESHOLD;
+			ipcBufList[itype].end_threshold=CFG_RPC_SERIAL_END_THRESHOLD;
+			
+			ipcBufList[itype].srcEpId = (rpcProcType == RPC_COMMS)?IPC_EP_SerialCP:IPC_EP_SerialAP;
+			ipcBufList[itype].destEpId = (rpcProcType == RPC_COMMS)?IPC_EP_SerialAP:IPC_EP_SerialCP;
 		}
 		else
 			xassert(0,itype);

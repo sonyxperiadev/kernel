@@ -28,8 +28,6 @@
 #include "vchiq_ioctl.h"
 #include "vchiq_arm.h"
 
-#include "interface/vceb/host/vceb.h"
-
 #define DEVICE_NAME "vchiq"
 
 /* Override the default prefix, which would be vchiq_arm (from the filename) */
@@ -106,7 +104,9 @@ static const char *ioctl_names[] =
    "DEQUEUE_MESSAGE",
    "GET_CLIENT_ID",
    "GET_CONFIG",
-   "CLOSE_SERVICE"
+   "CLOSE_SERVICE",
+   "USE_SERVICE",
+   "RELEASE_SERIVCE"
 };
 
 VCOS_LOG_LEVEL_T vchiq_default_arm_log_level = VCOS_LOG_WARN;
@@ -322,8 +322,8 @@ vchiq_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 
    vcos_log_trace("vchiq_ioctl - instance %x, cmd %s, arg %lx",
       (unsigned int)instance,
-      (_IOC_NR(cmd) <= VCHIQ_IOC_MAX) ? ioctl_names[_IOC_NR(cmd)] :
-      "<invalid>", arg);
+      ((_IOC_TYPE(cmd) == VCHIQ_IOC_MAGIC) && (_IOC_NR(cmd) <= VCHIQ_IOC_MAX)) ?
+      ioctl_names[_IOC_NR(cmd)] : "<invalid>", arg);
 
    switch (cmd) {
    case VCHIQ_IOC_SHUTDOWN:
@@ -509,6 +509,24 @@ vchiq_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             }
          } else
             ret = -EINVAL;
+      }
+      break;
+
+   case VCHIQ_IOC_USE_SERVICE:
+   case VCHIQ_IOC_RELEASE_SERVICE:
+      {
+         USER_SERVICE_T *user_service;
+         int handle = (int)arg;
+
+         user_service = find_service_by_handle(instance, handle);
+         if (user_service != NULL)
+         {
+            status = (cmd == VCHIQ_IOC_USE_SERVICE) ? vchiq_use_service(&user_service->service->base) : vchiq_release_service(&user_service->service->base);
+            if (status != VCHIQ_SUCCESS)
+            {
+               ret = -EINVAL; // ???
+            }
+         }
       }
       break;
 

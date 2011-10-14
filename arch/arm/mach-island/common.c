@@ -560,22 +560,6 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 
 void __init board_add_common_devices(void)
 {
-	struct clk *temp_clk;
-
-	/*
-	 * Pre-configure UARTB3 core clock to 29.5 MHz. Bluetooth needs to run
-	 * at 921K which can be derived from 29.5 MHz but not 13 MHz
-	 */
-	temp_clk = clk_get(NULL, uart_clk[2].bus_clk);
-	clk_enable(temp_clk);
-	clk_put(temp_clk);
-
-	temp_clk = clk_get(NULL, uart_clk[2].peri_clk);
-	clk_set_rate(temp_clk, 29500000);
-	uart_data[2].uartclk = 29500000;
-	clk_enable(temp_clk);
-	clk_put(temp_clk);
-
 	platform_add_devices(board_common_plat_devices,
 			ARRAY_SIZE(board_common_plat_devices));
 }

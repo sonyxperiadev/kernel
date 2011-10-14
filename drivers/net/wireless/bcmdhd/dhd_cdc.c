@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_cdc.c,v 1.51.6.31 2011-02-09 14:31:43 Exp $
+ * $Id: dhd_cdc.c 278681 2011-08-19 17:50:47Z $
  *
  * BDC is like CDC, except it includes a header for data packets to convey
  * packet priority over the bus, and flags (e.g. to indicate checksum status
@@ -587,7 +587,7 @@ dhd_wlfc_dump(dhd_pub_t *dhdp, struct bcmstrbuf *strbuf)
 	return;
 }
 
-/* Create a place to store all packet pointers submitted to the firmware until 
+/* Create a place to store all packet pointers submitted to the firmware until
 	a status comes back, suppress or otherwise.
 
 	hang-er: noun, a contrivance on which things are hung, as a hook.
@@ -916,7 +916,10 @@ _dhd_wlfc_send_signalonly_packet(athost_wl_status_info_t* ctx, wlfc_mac_descript
 #ifdef PROP_TXSTATUS_DEBUG
 		ctx->stats.signal_only_pkts_sent++;
 #endif
-		dhd_bus_txdata(((dhd_pub_t *)ctx->dhdp)->bus, p);
+		rc = dhd_bus_txdata(((dhd_pub_t *)ctx->dhdp)->bus, p);
+		if (rc != BCME_OK) {
+			PKTFREE(ctx->osh, p, TRUE);
+		}
 	}
 	else {
 		DHD_ERROR(("%s: couldn't allocate new %d-byte packet\n",
@@ -1367,7 +1370,7 @@ dhd_wlfc_commit_packets(void* state, f_commitpkt_t fcommit, void* commit_ctx)
 		return BCME_BADARG;
 	}
 
-	/* 
+	/*
 	Commit packets for regular AC traffic. Higher priority first.
 
 	-NOTE:
@@ -1977,7 +1980,7 @@ dhd_wlfc_enable(dhd_pub_t *dhd)
 		wlfc->hostif_flow_state[i] = OFF;
 	}
 
-	/* 
+	/*
 	create the SENDQ containing
 	sub-queues for all AC precedences + 1 for bc/mc traffic
 	*/
@@ -2236,50 +2239,6 @@ dhd_prot_dstats(dhd_pub_t *dhd)
 	return;
 }
 
-int dhd_set_suspend(int value, dhd_pub_t *dhd)
-{
-	int power_mode = PM_MAX;
-	wl_pkt_filter_enable_t	enable_parm;
-	char iovbuf[32];
-	int bcn_li_dtim = 3;
-
-#define htod32(i) i
-
-	if (dhd && dhd->up) {
-		if (value) {
-			dhd_wl_ioctl_cmd(dhd, WLC_SET_PM,
-				(char *)&power_mode, sizeof(power_mode), TRUE, 0);
-			/* Enable packet filter, only allow unicast packet to send up */
-			enable_parm.id = htod32(100);
-			enable_parm.enable = htod32(1);
-			bcm_mkiovar("pkt_filter_enable", (char *)&enable_parm,
-				sizeof(wl_pkt_filter_enable_t), iovbuf, sizeof(iovbuf));
-			dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
-			/* set bcn_li_dtim */
-			bcm_mkiovar("bcn_li_dtim", (char *)&bcn_li_dtim,
-				4, iovbuf, sizeof(iovbuf));
-			dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
-		} else {
-			power_mode = PM_FAST;
-			dhd_wl_ioctl_cmd(dhd, WLC_SET_PM, (char *)&power_mode,
-				sizeof(power_mode), TRUE, 0);
-			/* disable pkt filter */
-			enable_parm.id = htod32(100);
-			enable_parm.enable = htod32(0);
-			bcm_mkiovar("pkt_filter_enable", (char *)&enable_parm,
-				sizeof(wl_pkt_filter_enable_t), iovbuf, sizeof(iovbuf));
-			dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
-			/* set bcn_li_dtim */
-			bcn_li_dtim = 0;
-			bcm_mkiovar("bcn_li_dtim", (char *)&bcn_li_dtim,
-				4, iovbuf, sizeof(iovbuf));
-			dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
-		}
-	}
-
-	return 0;
-}
-
 int
 dhd_prot_init(dhd_pub_t *dhd)
 {
@@ -2300,7 +2259,9 @@ dhd_prot_init(dhd_pub_t *dhd)
 	ret = dhd_wlfc_init(dhd);
 #endif
 
+#ifndef WL_CFG80211
 	ret = dhd_preinit_ioctls(dhd);
+#endif /* WL_CFG80211 */
 
 	/* Always assumes wl for now */
 	dhd->iswl = TRUE;

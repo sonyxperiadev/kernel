@@ -392,6 +392,7 @@ typedef struct dhd_info {
  */
 char firmware_path[MOD_PARAM_PATHLEN];
 char nvram_path[MOD_PARAM_PATHLEN];
+char interface_prefix[MOD_PARAM_PREFIXLEN];
 
 extern int wl_control_wl_start(struct net_device *dev);
 extern int net_os_send_hang_message(struct net_device *dev);
@@ -410,6 +411,7 @@ module_param(dhd_msg_level, int, 0);
 /* load firmware and/or nvram values from the filesystem */
 module_param_string(firmware_path, firmware_path, MOD_PARAM_PATHLEN, 0);
 module_param_string(nvram_path, nvram_path, MOD_PARAM_PATHLEN, 0);
+module_param_string(interface_prefix, interface_prefix, MOD_PARAM_PREFIXLEN, 0);
 
 /* Watchdog interval */
 uint dhd_watchdog_ms = 10;
@@ -1072,7 +1074,11 @@ dhd_op_if(dhd_if_t *ifp)
 			free_netdev(ifp->net);
 		}
 		/* Allocate etherdev, including space for private structure */
+#ifdef CONFIG_BCM4329_FALCON_IF_PREFIX
+		if (!(ifp->net = alloc_netdev_mqs(sizeof(dhd), if_prefix, ether_setup, 1, 1))) {
+#else
 		if (!(ifp->net = alloc_etherdev(sizeof(dhd)))) {
+#endif
 			DHD_ERROR(("%s: OOM - alloc_etherdev\n", __FUNCTION__));
 			ret = -ENOMEM;
 		}
@@ -2426,9 +2432,15 @@ dhd_attach(osl_t *osh, struct dhd_bus *bus, uint bus_hdrlen)
 		strcpy(fw_path, firmware_path);
 	if ((nvram_path != NULL) && (nvram_path[0] != '\0'))
 		strcpy(nv_path, nvram_path);
+        if ((interface_prefix != NULL) && (interface_prefix[0] != '\0'))
+		strcpy(if_prefix, interface_prefix);
 
 	/* Allocate etherdev, including space for private structure */
+#ifdef CONFIG_BCM4329_FALCON_IF_PREFIX
+	if (!(net = alloc_netdev_mqs(sizeof(dhd), if_prefix, ether_setup, 1, 1))) {
+#else
 	if (!(net = alloc_etherdev(sizeof(dhd)))) {
+#endif
 		DHD_ERROR(("%s: OOM - alloc_etherdev\n", __FUNCTION__));
 		goto fail;
 	}

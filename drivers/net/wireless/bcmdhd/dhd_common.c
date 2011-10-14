@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dhd_common.c,v 1.57.2.22 2011-02-01 18:38:37 Exp $
+ * $Id: dhd_common.c 278875 2011-08-20 21:16:46Z $
  */
 #include <typedefs.h>
 #include <osl.h>
@@ -67,9 +67,11 @@ int dhd_msg_level = DHD_ERROR_VAL;
 
 char fw_path[MOD_PARAM_PATHLEN];
 char nv_path[MOD_PARAM_PATHLEN];
+char if_prefix[MOD_PARAM_PREFIXLEN];
 
 #ifdef SOFTAP
 char fw_path2[MOD_PARAM_PATHLEN];
+extern bool softap_enabled;
 #endif
 
 /* Last connection success/failure status */
@@ -87,7 +89,6 @@ extern int dhd_iscan_in_progress(void *h);
 void dhd_iscan_lock(void);
 void dhd_iscan_unlock(void);
 extern int dhd_change_mtu(dhd_pub_t *dhd, int new_mtu, int ifidx);
-
 bool ap_cfg_running = FALSE;
 bool ap_fw_loaded = FALSE;
 
@@ -211,6 +212,12 @@ dhd_common_init(osl_t *osh)
 #else /* CONFIG_BCMDHD_NVRAM_PATH */
 	nv_path[0] = '\0';
 #endif /* CONFIG_BCMDHD_NVRAM_PATH */
+#ifdef CONFIG_BCMDHD_IF_PREFIX
+	bcm_strncpy_s(if_prefix, sizeof(if_prefix), CONFIG_BCMDHD_IF_PREFIX, MOD_PARAM_PREFIXLEN-1);
+#else /* CONFIG_BCMDHD_IF_PREFIX */
+	if_prefix[0] = '\0';
+#endif /* CONFIG_BCMDHD_IF_PREFIX */
+
 #ifdef SOFTAP
 	fw_path2[0] = '\0';
 #endif
@@ -1015,27 +1022,27 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 
 	case WLC_E_IF:
 		{
-		dhd_if_event_t *ifevent = (dhd_if_event_t *)event_data;
+			dhd_if_event_t *ifevent = (dhd_if_event_t *)event_data;
 #ifdef PROP_TXSTATUS
-{
-		uint8* ea = pvt_data->eth.ether_dhost;
-		WLFC_DBGMESG(("WLC_E_IF: idx:%d, action:%s, iftype:%s, "
-		              "[%02x:%02x:%02x:%02x:%02x:%02x]\n",
-		              ifevent->ifidx,
-		              ((ifevent->action == WLC_E_IF_ADD) ? "ADD":"DEL"),
-		              ((ifevent->is_AP == 0) ? "STA":"AP "),
-		              ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]));
-		(void)ea;
+			{
+				uint8* ea = pvt_data->eth.ether_dhost;
+				WLFC_DBGMESG(("WLC_E_IF: idx:%d, action:%s, iftype:%s, "
+						"[%02x:%02x:%02x:%02x:%02x:%02x]\n",
+						ifevent->ifidx,
+						((ifevent->action == WLC_E_IF_ADD) ? "ADD":"DEL"),
+						((ifevent->is_AP == 0) ? "STA":"AP "),
+						ea[0], ea[1], ea[2], ea[3], ea[4], ea[5]));
+				(void)ea;
 
-		dhd_wlfc_interface_event(dhd_pub->info,
-		                         ((ifevent->action == WLC_E_IF_ADD) ?
-		                          eWLFC_MAC_ENTRY_ACTION_ADD : eWLFC_MAC_ENTRY_ACTION_DEL),
-		                         ifevent->ifidx, ifevent->is_AP, ea);
+				dhd_wlfc_interface_event(dhd_pub->info,
+					((ifevent->action == WLC_E_IF_ADD) ?
+					eWLFC_MAC_ENTRY_ACTION_ADD : eWLFC_MAC_ENTRY_ACTION_DEL),
+					ifevent->ifidx, ifevent->is_AP, ea);
 
-		/* dhd already has created an interface by default, for 0 */
-		if (ifevent->ifidx == 0)
-			break;
-}
+				/* dhd already has created an interface by default, for 0 */
+				if (ifevent->ifidx == 0)
+					break;
+			}
 #endif /* PROP_TXSTATUS */
 
 #ifdef WL_CFG80211
@@ -1043,7 +1050,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata,
 				DHD_ERROR(("%s:  ifidx %d for %s action %d\n",
 					__FUNCTION__, ifevent->ifidx,
 					event->ifname, ifevent->action));
-			if (ifevent->action == WLC_E_IF_ADD)
+				if (ifevent->action == WLC_E_IF_ADD)
 					wl_cfg80211_notify_ifchange();
 				return (BCME_OK);
 			}
@@ -1284,6 +1291,7 @@ dhd_pktfilter_offload_set(dhd_pub_t * dhd, char *arg)
 	char				*arg_save = 0, *arg_org = 0;
 #define BUF_SIZE		2048
 
+
 	if (!arg)
 		return;
 
@@ -1520,7 +1528,6 @@ int dhd_arp_get_arp_hostip_table(dhd_pub_t *dhd, void *buf, int buflen)
 	return 0;
 }
 #endif /* ARP_OFFLOAD_SUPPORT  */
-
 int
 dhd_preinit_ioctls(dhd_pub_t *dhd)
 {
@@ -1534,7 +1541,9 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	uint32 glom = 0;
 	uint bcn_timeout = 4;
 	uint retry_max = 3;
+#if defined(ARP_OFFLOAD_SUPPORT)
 	int arpoe = 1;
+#endif
 	int scan_assoc_time = 40;
 	int scan_unassoc_time = 40;
 	const char 				*str;
@@ -1553,7 +1562,8 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #endif
 #if (defined(AP) && !defined(WLP2P)) || (!defined(AP) && defined(WL_CFG80211))
 	uint32 mpc = 0; /* Turn MPC off for AP/APSTA mode */
-#endif /* AP */
+#endif
+
 #if defined(AP) || defined(WLP2P)
 	uint32 apsta = 1; /* Enable APSTA mode */
 #endif /* defined(AP) || defined(WLP2P) */
@@ -1589,7 +1599,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 #endif /* GET_CUSTOM_MAC_ENABLE */
 
 #ifdef SET_RANDOM_MAC_SOFTAP
-	if (strstr(fw_path, "apsta") != NULL) {
+	if (strstr(fw_path, "_apsta") != NULL) {
 		uint rand_mac;
 
 		srandom32((uint)jiffies);
@@ -1610,6 +1620,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	}
 #endif /* SET_RANDOM_MAC_SOFTAP */
 
+	DHD_TRACE(("Firmware = %s\n", fw_path));
 #if !defined(AP) && defined(WLP2P)
 	/* Check if firmware with WFD support used */
 	if (strstr(fw_path, "_p2p") != NULL) {
@@ -1619,10 +1630,13 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 			DHD_ERROR(("%s APSTA for WFD failed ret= %d\n", __FUNCTION__, ret));
 		} else {
 			dhd->op_mode |= WFD_MASK;
+#if defined(ARP_OFFLOAD_SUPPORT)
 			arpoe = 0;
+#endif /* (ARP_OFFLOAD_SUPPORT) */
+			dhd_pkt_filter_enable = FALSE;
 		}
 	}
-#endif /* !defined(AP) && defined(WLP2P) */
+#endif 
 
 #if !defined(AP) && defined(WL_CFG80211)
 	/* Check if firmware with HostAPD support used */
@@ -1634,10 +1648,21 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 				DHD_ERROR(("%s mpc for HostAPD failed  %d\n", __FUNCTION__, ret));
 			} else {
 				dhd->op_mode |= HOSTAPD_MASK;
+#if defined(ARP_OFFLOAD_SUPPORT)
 				arpoe = 0;
+#endif /* (ARP_OFFLOAD_SUPPORT) */
+				dhd_pkt_filter_enable = FALSE;
 			}
 	}
-#endif /* !defined(AP) && defined(WL_CFG80211) */
+#endif 
+
+	if ((dhd->op_mode != WFD_MASK) && (dhd->op_mode != HOSTAPD_MASK)) {
+		printf("dhd->op_mode=%d\n", dhd->op_mode);
+		/* STA only operation mode */
+		dhd->op_mode |= STA_MASK;
+		dhd_pkt_filter_enable = TRUE;
+	}
+
 	DHD_ERROR(("Firmware up: op_mode=%d, "
 			"Broadcom Dongle Host Driver mac=%.2x:%.2x:%.2x:%.2x:%.2x:%.2x\n",
 			dhd->op_mode,
@@ -1692,11 +1717,13 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	bcm_mkiovar("apsta", (char *)&apsta, 4, iovbuf, sizeof(iovbuf));
 	dhd_wl_ioctl_cmd(dhd, WLC_SET_VAR, iovbuf, sizeof(iovbuf), TRUE, 0);
 #endif /* defined(AP) && !defined(WLP2P) */
+
+
 #if defined(SOFTAP)
 	if (ap_fw_loaded == TRUE) {
 		dhd_wl_ioctl_cmd(dhd, WLC_SET_DTIMPRD, (char *)&dtim, sizeof(dtim), TRUE, 0);
 	}
-#endif
+#endif 
 
 #if defined(KEEP_ALIVE)
 	{
@@ -1705,7 +1732,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 
 #if defined(SOFTAP)
 	if (ap_fw_loaded == FALSE)
-#endif
+#endif 
 		if ((res = dhd_keep_alive_onoff(dhd)) < 0)
 			DHD_ERROR(("%s set keeplive failed %d\n",
 			__FUNCTION__, res));
@@ -1792,10 +1819,10 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	buf_len += WL_PKT_FILTER_FIXED_LEN;
 	buf_len += (WL_PKT_FILTER_PATTERN_FIXED_LEN + 2 * mask_size);
 
-	/* Keep-alive attributes are set in local	variable (keep_alive_pkt), and
-	** then memcpy'ed into buffer (keep_alive_pktp) since there is no
-	** guarantee that the buffer is properly aligned.
-	*/
+	/* Keep-alive attributes are set in local variable (keep_alive_pkt), and
+	 * then memcpy'ed into buffer (keep_alive_pktp) since there is no
+	 * guarantee that the buffer is properly aligned.
+	 */
 	memcpy((char *)pkt_filterp, &pkt_filter,
 		WL_PKT_FILTER_FIXED_LEN + WL_PKT_FILTER_PATTERN_FIXED_LEN);
 
@@ -2089,6 +2116,17 @@ exit:
 	return bcn_li_dtim;
 }
 
+/* Check if HostAPD or WFD mode setup */
+bool dhd_check_ap_wfd_mode_set(dhd_pub_t *dhd)
+{
+#ifdef  WL_CFG80211
+	if (((dhd->op_mode & HOSTAPD_MASK) == HOSTAPD_MASK) ||
+		((dhd->op_mode & WFD_MASK) == WFD_MASK))
+		return TRUE;
+	else
+#endif /* WL_CFG80211 */		
+		return FALSE;
+}
 
 #ifdef PNO_SUPPORT
 int
@@ -2132,6 +2170,9 @@ dhd_pno_enable(dhd_pub_t *dhd, int pfn_enabled)
 		DHD_ERROR(("%s error exit\n", __FUNCTION__));
 		return ret;
 	}
+
+	if (dhd_check_ap_wfd_mode_set(dhd) == TRUE)
+		return (ret);
 
 	memset(iovbuf, 0, sizeof(iovbuf));
 	/* Check if disassoc to enable pno */
@@ -2180,6 +2221,9 @@ dhd_pno_set(dhd_pub_t *dhd, wlc_ssid_t* ssids_local, int nssid, ushort scan_fr,
 		DHD_ERROR(("%s error exit\n", __FUNCTION__));
 		err = -1;
 	}
+
+	if (dhd_check_ap_wfd_mode_set(dhd) == TRUE)
+		return (err);
 
 	/* Check for broadcast ssid */
 	for (k = 0; k < nssid; k++) {
@@ -2288,15 +2332,18 @@ dhd_pno_get_status(dhd_pub_t *dhd)
 #if defined(KEEP_ALIVE)
 int dhd_keep_alive_onoff(dhd_pub_t *dhd)
 {
-	char			buf[256];
-	const char		*str;
+	char 				buf[256];
+	const char 			*str;
 	wl_mkeep_alive_pkt_t	mkeep_alive_pkt;
 	wl_mkeep_alive_pkt_t	*mkeep_alive_pktp;
-	int			buf_len;
-	int			str_len;
-	int res			= -1;
+	int					buf_len;
+	int					str_len;
+	int res 				= -1;
 
-	DHD_ERROR(("%s Enter\n", __FUNCTION__));
+	if (dhd_check_ap_wfd_mode_set(dhd) == TRUE)
+		return (res);
+
+	DHD_TRACE(("%s execution\n", __FUNCTION__));
 
 	str = "mkeep_alive";
 	str_len = strlen(str);
@@ -2311,7 +2358,7 @@ int dhd_keep_alive_onoff(dhd_pub_t *dhd)
 	mkeep_alive_pkt.keep_alive_id = 0;
 	mkeep_alive_pkt.len_bytes = 0;
 	buf_len += WL_MKEEP_ALIVE_FIXED_LEN;
-	/* Keep-alive attributes are set in local variable (mkeep_alive_pkt), and
+	/* Keep-alive attributes are set in local	variable (mkeep_alive_pkt), and
 	 * then memcpy'ed into buffer (mkeep_alive_pktp) since there is no
 	 * guarantee that the buffer is properly aligned.
 	 */

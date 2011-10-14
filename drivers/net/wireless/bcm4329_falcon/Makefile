@@ -3,7 +3,7 @@
 DHDCFLAGS = -DBCMWPA2 -DSDTEST -DDONGLEOVERLAYS \
 	    -DLINUX -DBCMDRIVER -DBCMDONGLEHOST -DUNRELEASEDCHIP -DBCMDMA32 \
 	    -DEMBEDDED_PLATFORM -DARP_OFFLOAD_SUPPORT -DPKT_FILTER_SUPPORT \
-	    -DSOFTAP -DCSCAN -DBCMFILEIMAGE -DCONFIG_WIRELESS_EXT -DDHDTHREAD \
+	    -DSOFTAP -DBCMFILEIMAGE -DCONFIG_WIRELESS_EXT -DDHDTHREAD \
 	    -DDHD_GPL -DDHD_SCHED -DBDC -DTOE -DDHD_BCMEVENTS \
 	    -DSHOW_EVENTS -DBCMSDIO -DBCMLXSDMMC -DBCMPLATFORM_BUS \
 	    -DSDIO_ISR_THREAD -DWIFI_ACT_FRAME -DDEFAULT_HW \
@@ -14,6 +14,12 @@ DHDCFLAGS = -DBCMWPA2 -DSDTEST -DDONGLEOVERLAYS \
 	    -Idrivers/net/wireless/bcm4329_falcon/wl/exe \
 	    -Idrivers/net/wireless/bcm4329_falcon/wl/sys \
 	    -Idrivers/net/wireless/bcm4329_falcon/include
+
+# need to turn on CSCAN for Android
+ifeq ($(CONFIG_ANDROID),y)
+DHDCFLAGS += -DCSCAN
+endif
+
 
 DHDO_BCMSDIO_SYS = bcmsdio/sys/bcmsdh.o bcmsdio/sys/bcmsdh_linux.o \
                    bcmsdio/sys/bcmsdh_sdmmc.o bcmsdio/sys/bcmsdh_sdmmc_linux.o 

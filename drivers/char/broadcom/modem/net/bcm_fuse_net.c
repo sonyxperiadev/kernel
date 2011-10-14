@@ -286,7 +286,7 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType, uns
     ndrvr_info_ptr->stats.rx_packets++;
     ndrvr_info_ptr->stats.rx_bytes += data_len; 
 
-    BNET_DEBUG(DBG_INFO,"%s: rx_bytes:%d\n", __FUNCTION__,ndrvr_info_ptr->stats.rx_bytes);
+    BNET_DEBUG(DBG_TRACE,"%s: rx_bytes:%d\n", __FUNCTION__,ndrvr_info_ptr->stats.rx_bytes);
 
     netif_rx(skb);
 
@@ -383,7 +383,7 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
             {                
                 sim_id = g_net_dev_tbl[i].sim_id;
                 t_ndrvr_info_ptr = &g_net_dev_tbl[i];
-                BNET_DEBUG(DBG_INFO,"%s: g_net_dev_tbl[%d]=0x%x, a_sim_id %d, sim_id %d \n", __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]), g_net_dev_tbl[i].sim_id, sim_id);
+                BNET_DEBUG(DBG_TRACE,"%s: g_net_dev_tbl[%d]=0x%x, a_sim_id %d, sim_id %d \n", __FUNCTION__, i, (unsigned int)(&g_net_dev_tbl[i]), g_net_dev_tbl[i].sim_id, sim_id);
                 break;
             }
         }
@@ -449,7 +449,7 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
     */
     t_ndrvr_info_ptr->stats.tx_packets++;
     t_ndrvr_info_ptr->stats.tx_bytes += skb->len;
-    BNET_DEBUG(DBG_INFO,"%s: tx_bytes:%d simid:%d cid:%d\n", __FUNCTION__,t_ndrvr_info_ptr->stats.tx_bytes,sim_id,pdp_cid);
+    BNET_DEBUG(DBG_TRACE,"%s: tx_bytes:%d simid:%d cid:%d\n", __FUNCTION__,t_ndrvr_info_ptr->stats.tx_bytes,sim_id,pdp_cid);
 
     dev_kfree_skb(skb);
 

@@ -30,17 +30,25 @@ struct bcmnand_hw_control {
  */
 struct bcmnand_chip {
 	chal_nand_info_t chal_nand;
-	int		page_shift;
-	int		phys_erase_shift;
-	int		chip_shift;
-	int		numchips;
-	uint64_t	chipsize;
-	int		pagemask;
-	int		pagebuf;
-	int		subpagesize;
-	flstate_t	state;
+	int page_shift;
+	int phys_erase_shift;
+	int chip_shift;
+	int numchips;
+	uint64_t chipsize;
+	int pagemask;
+	int pagebuf;
+	int subpagesize;
+
+	flstate_t state;
+
+	uint8_t *oob_poi;
 	struct bcmnand_hw_control  *controller;
+
+	struct nand_ecc_ctrl ecc;
 	struct nand_buffers *buffers;
+#ifdef CONFIG_MTD_BCMNAND_VERIFY_WRITE
+	char *verifybuf;
+#endif
 	struct mtd_oob_ops ops;
 	void		*priv;
 };

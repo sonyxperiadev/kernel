@@ -236,9 +236,8 @@ static int bcm_kona_sd_card_emulate(struct sdio_dev *dev, int insert)
    /* this function can be called from various contexts including ISR */
    spin_lock_irqsave(&host->lock, flags);
 
-#ifndef CONFIG_ARCH_ISLAND
    sdhci_pltfm_clk_enable(host, 1);
-#endif
+   
    val = sdhci_readl(host, KONA_SDHOST_CORESTAT);
 
    if (insert) {
@@ -380,15 +379,8 @@ int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable)
 		ret = clk_enable(dev->peri_clk);
 		if(ret)
 			return ret;
-		/* sleep clock */
-		ret = clk_enable(dev->sleep_clk);
-		if(ret) {
-			clk_disable(dev->peri_clk);
-			return ret;
-		}
 	} else {
 		clk_disable(dev->peri_clk);
-		clk_disable(dev->sleep_clk);
 	}
 	return ret;
 #endif
@@ -479,22 +471,32 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 #else
 	/* peripheral clock */
 	dev->peri_clk = clk_get(&pdev->dev, hw_cfg->peri_clk_name);
-	if(IS_ERR_OR_NULL (dev->peri_clk))
-		return -EINVAL;
+	if (IS_ERR_OR_NULL (dev->peri_clk)) {
+		ret = -EINVAL;
+		goto err_unset_pltfm;
+	}
 	ret = clk_set_rate(dev->peri_clk, hw_cfg->peri_clk_rate);
-	if (ret)
-		return ret;
+	if (ret) {
+		goto err_peri_clk_put;
+	}
 
 	/* sleep clock */
 	dev->sleep_clk = clk_get(&pdev->dev, hw_cfg->sleep_clk_name);
-	if(IS_ERR_OR_NULL (dev->sleep_clk))
-		return -EINVAL;
+	if (IS_ERR_OR_NULL (dev->sleep_clk)) {
+		ret = -EINVAL;
+		goto err_peri_clk_put;
+	}
+
+	ret = clk_enable(dev->sleep_clk);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to enable sleep clock for %s\n", devname);
+		goto err_sleep_clk_put;
+	}
 
 	ret = sdhci_pltfm_clk_enable(host, 1);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to initialize core clock for %s\n", devname);
-		ret = -EFAULT;
-		goto err_unset_pltfm;
+		goto err_sleep_clk_disable;
 	}
 	dev->clk_hz = clk_get_rate(dev->peri_clk);
 #endif
@@ -560,10 +562,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	}
 
 	atomic_set(&dev->initialized, 1);
-
-#ifndef CONFIG_ARCH_ISLAND
 	sdhci_pltfm_clk_enable(host, 0);
-#endif
+	
 	printk(KERN_INFO "%s initialized properly\n", devname);
 
 	return 0;
@@ -584,6 +584,18 @@ err_reset:
 
 err_term_clk:
 	sdhci_pltfm_clk_enable(host, 0);
+
+#ifndef CONFIG_MACH_BCM2850_FPGA
+err_sleep_clk_disable:
+	clk_disable(dev->sleep_clk);
+
+err_sleep_clk_put:
+	clk_put(dev->sleep_clk);
+
+err_peri_clk_put:
+	clk_put(dev->peri_clk);
+#endif
+
 err_unset_pltfm:
 	platform_set_drvdata(pdev, NULL);
 	iounmap(host->ioaddr);
@@ -622,6 +634,14 @@ static int __devexit sdhci_pltfm_remove(struct platform_device *pdev)
 	if (scratch == (u32)-1)
 		dead = 1;
 	sdhci_remove_host(host, dead);
+
+	sdhci_pltfm_clk_enable(host, 0);
+
+#ifndef CONFIG_MACH_BCM2850_FPGA
+	clk_disable(dev->sleep_clk);
+	clk_put(dev->sleep_clk);
+	clk_put(dev->peri_clk);
+#endif
 
 	platform_set_drvdata(pdev, NULL);
 	kfree(dev);

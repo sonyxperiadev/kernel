@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: bcmsdstd.h,v 13.21.2.6 2010-11-15 18:14:01 Exp $
+ * $Id: bcmsdstd.h 275703 2011-08-04 20:20:27Z $
  */
 #ifndef	_BCM_SD_STD_H
 #define	_BCM_SD_STD_H
@@ -78,6 +78,7 @@ extern void sdstd_osfree(sdioh_info_t *sd);
 #define SDIOH_CMD7_EXP_STATUS   0x00001E00
 
 #define RETRIES_LARGE 100000
+#define sdstd_os_yield(sd)	do {} while (0)
 #define RETRIES_SMALL 100
 
 
@@ -171,21 +172,6 @@ struct sdioh_info {
 
 #define USE_DMA(sd)		((bool)((sd->sd_dma_mode > 0) ? TRUE : FALSE))
 
-/* SDIO Host Control Register DMA Mode Definitions */
-#define SDIOH_SDMA_MODE			0
-#define SDIOH_ADMA1_MODE		1
-#define SDIOH_ADMA2_MODE		2
-#define SDIOH_ADMA2_64_MODE		3
-
-#define ADMA2_ATTRIBUTE_VALID		(1 << 0)	/* ADMA Descriptor line valid */
-#define ADMA2_ATTRIBUTE_END			(1 << 1)	/* End of Descriptor */
-#define ADMA2_ATTRIBUTE_INT			(1 << 2)	/* Interrupt when line is done */
-#define ADMA2_ATTRIBUTE_ACT_NOP		(0 << 4)	/* Skip current line, go to next. */
-#define ADMA2_ATTRIBUTE_ACT_RSV		(1 << 4)	/* Same as NOP */
-#define ADMA1_ATTRIBUTE_ACT_SET		(1 << 4)	/* ADMA1 Only - set transfer length */
-#define ADMA2_ATTRIBUTE_ACT_TRAN	(2 << 4)	/* Transfer Data of one descriptor line. */
-#define ADMA2_ATTRIBUTE_ACT_LINK	(3 << 4)	/* Link Descriptor */
-
 /* States for Tuning and corr data */
 #define TUNING_IDLE 			0
 #define TUNING_START 			1
@@ -194,17 +180,6 @@ struct sdioh_info {
 
 #define DATA_TRANSFER_IDLE 		0
 #define DATA_TRANSFER_ONGOING	1
-
-/* ADMA2 Descriptor Table Entry for 32-bit Address */
-typedef struct adma2_dscr_32b {
-	uint32 len_attr;
-	uint32 phys_addr;
-} adma2_dscr_32b_t;
-
-/* ADMA1 Descriptor Table Entry */
-typedef struct adma1_dscr {
-	uint32 phys_addr_attr;
-} adma1_dscr_t;
 
 /************************************************************
  * Internal interfaces: per-port references into bcmsdstd.c

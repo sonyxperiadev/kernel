@@ -22,7 +22,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wl_dbg.h,v 1.115.6.3 2010-12-15 21:42:23 Exp $
+ * $Id: wl_dbg.h,v 1.115.6.3 2010-12-15 21:42:23 $
  */
 
 

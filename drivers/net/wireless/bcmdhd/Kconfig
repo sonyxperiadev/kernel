@@ -24,6 +24,13 @@ config BCMDHD_NVRAM_PATH
 	---help---
 	  Path to the calibration file.
 
+config BCMDHD_IF_PREFIX
+	depends on BCMDHD
+	string "Wireless interface prefix"
+	default ""
+	---help---
+	  Name of wireless interface. The default value is "eth%d".
+
 config BCMDHD_WEXT
 	bool "Enable WEXT support"
 	depends on BCMDHD && CFG80211 = n

@@ -196,6 +196,8 @@ void *chal_nand_dma_setup_callback(uint8_t direction,
 					  __func__, physAddr, virtAddr);
 				SyncCpuToDev(virtAddr, physAddr, firstPageSize,
 					     direction);
+				SyncDevToCpu(virtAddr, physAddr, firstPageSize,
+					     direction);
 
 				if (prdidx >= MAX_DESC)
 					BUG();

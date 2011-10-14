@@ -100,6 +100,14 @@ typedef  enum {
 	SERIAL_DEVICE_USB2, 			//!< USB2, the usb device for the logging.
 	SERIAL_DEVICE_USB3, 			//!< USB3, the usb device for the Encap command.
 	SERIAL_DEVICE_BLUE_TOOTH,		//!< Bluetooth
+
+	SERIAL_DEVICE_RPC_0,		//!< Rpc channel 0 //8
+	SERIAL_DEVICE_RPC_1,		//!< Rpc channel 1
+	SERIAL_DEVICE_RPC_2,		//!< Rpc channel 2
+	SERIAL_DEVICE_RPC_3,		//!< Rpc channel 3
+	SERIAL_DEVICE_RPC_4,		//!< Rpc channel 4
+	SERIAL_DEVICE_RPC_MAX = SERIAL_DEVICE_RPC_4, //!< Rpc num channel
+
 #if defined (STM_INCLUDED)
 	SERIAL_DEVICE_STM,				// STM logging device
 #endif
@@ -175,6 +183,32 @@ typedef  UInt16  (*SerialDeviceReadDrvDMA_t)(DualBuffer_t* DualBufferPtr, UInt16
 //!  Driver entry point:  writeDrvDMA.  
 typedef  UInt16  (*SerialDeviceWriteDrvDMA_t)(DualBuffer_t* DualBufferPtr, UInt16 dataSize  );
 
+
+
+//! Asynchronous Event handler prototype used in notifyDrv
+typedef  void    (*SerialEventHandlerEx_t)(SerialDeviceID_t devId, UInt8 event,UInt8* eventData);
+//!  Driver entry point:  openDrv.
+typedef  Boolean (*SerialDeviceOpenDrvEx_t)(SerialDeviceID_t devId, DeviceCfg_t* deviceCfg);
+//!  Driver entry point:  closeDrv.
+typedef  Boolean (*SerialDeviceCloseDrvEx_t)(SerialDeviceID_t devId);
+//!  Driver entry point:  notifyDrv.  Asynch Event Notification
+typedef  Boolean (*SerialDeviceEventNotifyDrvEx_t)(SerialDeviceID_t devId, SerialEventHandlerEx_t handler);
+//!  Driver entry point:  enableRxDrv.  Enable/Disable flow Rx control.
+typedef  Boolean (*SerialDeviceEnableRxEx_t)(SerialDeviceID_t devId, Boolean enable);
+//!  Driver entry point:  freeTxSpaceDrv.  Determine free space in Tx buffer.
+typedef  UInt32	 (*SerialDeviceFreeTxSpaceEx_t)(SerialDeviceID_t devId);
+//!  Driver entry point:  readDrv.  
+typedef  UInt16  (*SerialDeviceReadDrvEx_t)( SerialDeviceID_t devId, UInt8* dataPtr, UInt16 maxReadSize);
+//!  Driver entry point:  writeDrv.  
+typedef  UInt16  (*SerialDeviceWriteDrvEx_t)( SerialDeviceID_t devId, UInt8* dataPtr, UInt16 dataSize  );
+//!  Driver entry point:  checkconfig.
+typedef  Boolean (*SerialDeviceCheckConfigEx_t)(SerialDeviceID_t devId, DeviceCfg_t* deviceCfg);
+
+//!  Driver entry point:  readDrvDMA. 
+typedef  UInt16  (*SerialDeviceReadDrvDMAEx_t)(SerialDeviceID_t devId, DualBuffer_t* DualBufferPtr, UInt16 maxReadSize);
+//!  Driver entry point:  writeDrvDMA.  
+typedef  UInt16  (*SerialDeviceWriteDrvDMAEx_t)(SerialDeviceID_t devId, DualBuffer_t* DualBufferPtr, UInt16 dataSize  );
+
 //! Function Name: Serial_ConfigureDevice
 //!
 //! Description:  Setup the driver entry points for serial deviceID.
@@ -212,6 +246,43 @@ int Serial_ConfigureDevice( SerialDeviceID_t				device,
 							SerialDeviceWriteDrvDMA_t		deviceWriteDMA						
 							);
 
+//! Function Name: Serial_ConfigureDevice
+//!
+//! Description:  Setup the driver entry points for serial deviceID.This is same as Serial_ConfigureDevice except the callbacks
+//!				   have SerialDeviceID_t notified,
+//!
+//! \param[in]  device          One of the valid serial devices as given in SerialDeviceID_t.
+//!	\param[in]	openDrv         device open routine
+//!	\param[in]	closeDrv  	    device close routine
+//!	\param[in]	readDrv   		device read routine
+//!	\param[in]	writeDrv		device write routine
+//!	\param[in]	enableRxDrv     routine to enable and disable flow control
+//!	\param[in]	freeTxSpaceDrv  routine to return number of bytes free in Tx buffer
+//!	\param[in]	notifyDrv	    asynchronous callback routine
+//!	\param[in]	checkconfig	    Configuration check routine
+//!	\param[in]	defaultCfg      pointer to DeviceCfg_t: default device configuration
+//!	\param[in]	deviceReadDMA   DMA device read routine
+//!	\param[in]	deviceWriteDMA  DMA device write routine
+//!
+//! \return int  deviceID value passed in, unchanged.
+//!
+//! \note  Called only by Serial_Init() to set up entry points.
+//!
+//! \sa  Serial_Init()
+//!
+int   Serial_ConfigureDeviceEx(SerialDeviceID_t				deviceID,
+							SerialDeviceOpenDrvEx_t			openDrv,
+							SerialDeviceCloseDrvEx_t			closeDrv,
+							SerialDeviceReadDrvEx_t			readDrv,
+							SerialDeviceWriteDrvEx_t			writeDrv,
+							SerialDeviceEnableRxEx_t			enableRxDrv,
+							SerialDeviceFreeTxSpaceEx_t		freeTxSpaceDrv,
+							SerialDeviceEventNotifyDrvEx_t	notifyDrv,
+							SerialDeviceCheckConfigEx_t		checkconfig,
+							DeviceCfg_t*                    defaultCfg,
+						    SerialDeviceReadDrvDMA_t		readDrvDMA,
+							SerialDeviceWriteDrvDMA_t		writeDrvDMA
+							);
 //!
 //!
 //! Function Name: Serial_OpenDevice
@@ -267,6 +338,24 @@ Result_t		Serial_CloseDevice(SerialHandle_t serialHandle);
 //!
 Result_t		Serial_RegisterEventCallBack(SerialHandle_t  serialHandler,
 											SerialEventHandler_t  eventCallback);
+
+//!
+//!
+//! Function Name: Serial_RegisterEventCallBackEx
+//!
+//! Description:  Register an asynchronous callback function with the driver.
+//!               Function is used to report device status changes.
+//!
+//! \param[in] serialHandler  serialHandle returned by Serial_OpenDevice()
+//! \param[in] eventCallbackEx  callback routine to register which has SerialDeviceID_t
+//!
+//! \return Result_t  RESULT_OK on success or RESULT_ERROR
+//!
+//! \note
+//!
+//!
+Result_t		Serial_RegisterEventCallBackEx(	SerialHandle_t  serialHandler,
+												SerialEventHandlerEx_t  eventCallbackEx);
 
 //!
 //!

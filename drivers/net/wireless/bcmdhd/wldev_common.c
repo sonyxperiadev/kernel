@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: wldev_common.c,v 1.1.4.1.2.14 2011-02-09 01:40:07 Exp $
+ * $Id: wldev_common.c,v 1.1.4.1.2.14 2011-02-09 01:40:07 $
  */
 
 #include <linux/module.h>
@@ -37,7 +37,6 @@
 #define dtoh16(i) i
 #define htodchanspec(i) i
 #define dtohchanspec(i) i
-
 extern int dhd_ioctl_entry_local(struct net_device *net, wl_ioctl_t *ioc, int cmd);
 
 s32 wldev_ioctl(
@@ -320,7 +319,7 @@ int wldev_set_country(
 	memcpy(cspec.ccode, country_code, WLC_CNTRY_BUF_SZ);
 	get_customized_country_code((char *)&cspec.country_abbrev, &cspec);
 	error = wldev_iovar_setbuf(dev, "country", &cspec, sizeof(cspec),
-					smbuf, sizeof(smbuf));
+		smbuf, sizeof(smbuf));
 	if (error < 0) {
 		DHD_ERROR(("%s: set country for %s as %s rev %d failed\n",
 			__FUNCTION__, country_code, cspec.ccode, cspec.rev));

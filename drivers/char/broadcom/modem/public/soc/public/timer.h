@@ -76,6 +76,8 @@
 #ifndef _INC_DEV_TIMER_H_
 #define _INC_DEV_TIMER_H_
 
+typedef UInt32 Ticks_t;
+
 #if defined(NUCLEUS_USES_GPTIMER)
 extern UInt32 g_system_time_ext;
 

@@ -37,6 +37,7 @@ obj-$(CONFIG_SENSORS_TSL2550)	+= tsl2550.o
 obj-$(CONFIG_SENSORS_BH1715)	+= bh1715.o
 obj-$(CONFIG_SENSORS_BMA150)	+= bma150.o
 obj-$(CONFIG_SENSORS_MPU3050)	+= mpu3050.o
+obj-$(CONFIG_MPU_SENSORS_MPU6050B1)	+= mpu3050/
 obj-$(CONFIG_BMP18X) += bmp18x-core.o
 obj-$(CONFIG_BMP18X_I2C) += bmp18x-i2c.o
 obj-$(CONFIG_BMP18X_SPI) += bmp18x-spi.o

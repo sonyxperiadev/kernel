@@ -23,10 +23,7 @@ typedef struct VCOS_EVENT_WAITER_T
    VCOS_EVENT_FLAGS_T *flags;       /**< Pointer to the original 'flags' structure */
    VCOS_THREAD_T *thread;           /**< Thread waiting */
    struct VCOS_EVENT_WAITER_T *next;
-   unsigned long magic;             /**< For detecting racy POSIX timers, see SW-6307 */
 } VCOS_EVENT_WAITER_T;
-
-#define WAITREQ_MAGIC   0x57414954
 
 #ifndef NDEBUG
 static int waiter_list_valid(VCOS_EVENT_FLAGS_T *flags);
@@ -191,7 +188,6 @@ extern VCOS_STATUS_T vcos_generic_event_flags_get(VCOS_EVENT_FLAGS_T *flags,
       waitreq.actual_events = 0;
       waitreq.thread = vcos_thread_current();
       waitreq.next = 0;
-      waitreq.magic = WAITREQ_MAGIC;
       vcos_assert(waitreq.thread != (VCOS_THREAD_T*)-1);
       VCOS_QUEUE_APPEND_TAIL(&flags->waiters, &waitreq);
 
@@ -211,13 +207,7 @@ extern VCOS_STATUS_T vcos_generic_event_flags_get(VCOS_EVENT_FLAGS_T *flags,
        * try to take the mutex.
        */
       if (suspend != (VCOS_UNSIGNED)-1)
-      {
-#ifdef VCOS_TIMERS_UNSAFE
-         waitreq.magic = ~waitreq.magic;
-#endif
          _vcos_task_timer_cancel();
-      }
-
    }
    else
    {
@@ -239,20 +229,8 @@ static void event_flags_timer_expired(void *cxt)
    VCOS_EVENT_WAITER_T *prev = NULL;
    VCOS_THREAD_T *thread = 0;
 
-   vcos_assert(waitreq);
-
-#ifdef VCOS_TIMERS_UNSAFE
-   if (waitreq->magic != WAITREQ_MAGIC)
-   {
-      /* Timer was cancelled, but after the expiry function was called
-       * by pthreads. There doesn't seem to be any way to detect this
-       * race condition other than a somewhat clunky test here.
-       */
-      return;
-   }
-#endif
-
    vcos_assert(flags);
+
    vcos_mutex_lock(&flags->lock);
 
    /* walk the list of waiting threads on this event group, and remove

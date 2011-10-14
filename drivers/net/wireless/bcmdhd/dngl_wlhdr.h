@@ -21,7 +21,7 @@
  * software in any way with any other Broadcom software provided under a license
  * other than the GPL, without Broadcom's express prior written consent.
  *
- * $Id: dngl_wlhdr.h,v 1.1 2009-01-08 01:21:12 Exp $
+ * $Id: dngl_wlhdr.h,v 1.1 2009-01-08 01:21:12 $
  */
 
 #ifndef _dngl_wlhdr_h_
