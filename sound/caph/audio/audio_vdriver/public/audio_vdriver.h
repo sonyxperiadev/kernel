@@ -321,9 +321,6 @@ void AUDDRV_Telephony_DeinitHW(void *pData);
 
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off );
 
-void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
-		UInt32 dev, 
-		SysAudioParm_t* pAudioParm);
 void AUDDRV_SetHWSidetoneFilter(AudioMode_t audio_mode, 
 		SysAudioParm_t* pAudioParm);
 

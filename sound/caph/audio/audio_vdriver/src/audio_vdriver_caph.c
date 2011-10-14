@@ -751,7 +751,7 @@ UInt32 AUDDRV_GetAudioDev()
 //
 //=============================================================================
 
-void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 dev)
+void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 dev )
 {
 	SysAudioParm_t* pAudioParm;
 	pAudioParm = AUDIO_GetParmAccessPtr();
@@ -783,7 +783,19 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 dev)
 	audio_control_generic( AUDDRV_CPCMD_SetAudioMode, 
 				(UInt32)audio_mode, 0, 0, 0, 0 );
 
-///	AUDDRV_SetDSPFilter(audio_mode, dev, &(pAudioParm[audio_mode]));  // The address in LMP can not be used in CP, it causes CP crash.
+	// Set DSP UL's and DL's EQ filter
+	//this part has been tested working with the CP code change CL#379137 together.
+	//Will enbale this part after the CP code change CL#379137 propagates to LMP's CP image.
+	/***
+	if (eciEQOn == FALSE)
+		//load speaker EQ filter and Mic EQ filter from sysparm to DSP
+		audio_control_generic( AUDDRV_CPCMD_SetFilter, audio_mode, dev, 0, 0, 0 );
+	***/
+		
+	//else
+		//There is no need to load the ECI-headset-provided speaker EQ filter and Mic EQ filter to DSP.
+		//The ECI headset enable/disable request comes with the data. It means we'll get the coefficient each time they want to switch ECI on.
+		//audio_cmf_filter((AudioCompfilter_t *) &copy_of_AudioCompfilter );
 
 	audDev = dev;
 
@@ -837,28 +849,6 @@ void AUDDRV_SetVCflag( Boolean inVoiceCall )
 Boolean AUDDRV_GetVCflag( void )
 {
 	return bInVoiceCall;
-}
-
-
-
-//=============================================================================
-//
-// Function Name: AUDDRV_SetDSPFilter
-//
-// Description:   Set DSP UL and DL filter
-//
-//=============================================================================
-void AUDDRV_SetDSPFilter( AudioMode_t audio_mode, 
-        UInt32 dev,
-		SysAudioParm_t* pAudioParm)
-{
-	// The address in LMP can not be used in CP, it cause CP crash.
-	/******
-	if (eciEQOn == FALSE)
-		audio_control_generic( AUDDRV_CPCMD_SetFilter, 
-				audio_mode, dev, (UInt32)pAudioParm, 0, 0 );
-	return;
-	**********/
 }
 
 //=============================================================================
@@ -976,11 +966,11 @@ void AUDDRV_User_CtrlDSP ( AudioDrvUserParam_t audioDrvUserParam, void *user_CB,
 
 			if ((Boolean)param2 == TRUE)
 			{
-				eciEQOn = TRUE;
+				eciEQOn = TRUE;  //ECI headset is plugged in
 				audio_cmf_filter((AudioCompfilter_t *) param1);
 			}
 			else
-				eciEQOn = FALSE;
+				eciEQOn = FALSE;  //ECI headset is unplugged
 
 			break;
 		default:
