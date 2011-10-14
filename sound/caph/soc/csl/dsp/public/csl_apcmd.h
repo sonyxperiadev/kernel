@@ -1,23 +1,31 @@
-//****************** Copyright 2011 Mobilink Telecom, Inc. *********************
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
+
 //
 // Description:  This file contains  prototypes of functions that write to RIP 
 //				command queue  to start various voice processing  tasks.
-//
-// $RCSfile: vpripcmdq.h $
-// $Revision: 1.1 $
-// $Date: 2000/01/27 13:45:26 $
-// $Author: awong $
-//
-//******************************** History *************************************
-//
-// $Log: vpripcmdq.h $
-// Revision 1.1  2000/01/27 13:45:26  awong
-// Initial revision
-//
-//
-// $Log: csl_apcmd.h $
-// Revision 2.0  2011/03/11 11:17:26  kochanov
-// Initial revision
 //
 //******************************************************************************
 
