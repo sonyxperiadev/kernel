@@ -59,6 +59,11 @@
 #include <bcmblt_rfkill_settings.h>
 #endif
 
+#if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
+#include <linux/broadcom/bcmbt_rfkill.h>
+#include <bcmbt_rfkill_settings.h>
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
 #include <linux/i2c/egalax_i2c_ts.h>
 #include <egalax_i2c_ts_settings.h>
@@ -1102,6 +1107,35 @@ static void __init board_add_bcmblt_rfkill_device(void)
 }
 #endif
 
+#if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
+#define board_bcmbt_rfkill_cfg concatenate(ISLAND_BOARD_ID, _bcmbt_rfkill_cfg)
+static struct bcmbt_rfkill_platform_data board_bcmbt_rfkill_cfg =
+{
+#if defined(BCMBT_VREG_GPIO)
+   .vreg_gpio = BCMBT_VREG_GPIO,
+#else
+   .vreg_gpio = -1,
+#endif
+	.n_reset_gpio = -1,
+	.aux0_gpio = -1,
+	.aux1_gpio = -1
+};
+#define board_bcmbt_rfkill_device concatenate(ISLAND_BOARD_ID, _bcmbt_rfkill_device)
+static struct platform_device board_bcmbt_rfkill_device =
+{
+   .name = "bcmbt-rfkill",
+   .id = 1,
+   .dev =
+   {
+      .platform_data = &board_bcmbt_rfkill_cfg,
+   },
+};
+
+static void __init board_add_bcmbt_rfkill_device(void)
+{
+   platform_device_register(&board_bcmbt_rfkill_device);
+}
+#endif
 
 #if defined(CONFIG_MONITOR_ADC121C021_I2C) || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
 
@@ -1610,6 +1644,10 @@ static void __init add_devices(void)
 
 #if defined(CONFIG_BCMBLT_RFKILL) || defined(CONFIG_BCMBLT_RFKILL_MODULE)
         board_add_bcmblt_rfkill_device();
+#endif
+
+#if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
+        board_add_bcmbt_rfkill_device();
 #endif
 
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
