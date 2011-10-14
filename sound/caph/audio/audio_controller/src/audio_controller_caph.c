@@ -616,13 +616,13 @@ void AUDCTRL_SetTelephonyMicMute(
 void AUDCTRL_LoadMicGain(CSL_CAPH_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded)
 {
     UInt16 gainTemp = 0;
-	Int16 dspULGain = 0;
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_LoadMicGain\n");
 
 	// Set DSP UL gain from sysparm.
 	mode = AUDDRV_GetAudioMode();
 /***
+	Int16 dspULGain = 0;
 do not touch DSP UL gain in this function.
 this function shall be merged into AUDCTRL_SetAudioMode( ).
 
@@ -2088,13 +2088,15 @@ if (((source == CSL_CAPH_DEV_ANALOG_MIC)
 #endif            
 		}
 
-		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig); //clock will be disabled here, so no register access after this.
 #ifdef HW_SIDETONE_LOOPBACK        
-        //Disable Sidetone path.
-		csl_caph_hwctrl_DisableSidetone(sink);
-        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Sidetone Disabled\n");
-#endif        
-	    //Enable PMU for headset/IHF
+				//Disable Sidetone path.
+				csl_caph_hwctrl_DisableSidetone(sink);
+				Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Sidetone Disabled\n");
+#endif
+
+		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig); //clocks are disabled here, so no register access after this.
+
+		//Enable PMU for headset/IHF
     	if ((speaker == AUDCTRL_SPK_LOUDSPK)
 	        ||(speaker == AUDCTRL_SPK_HEADSET))	
 		{
