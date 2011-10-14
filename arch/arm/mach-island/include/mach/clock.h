@@ -71,7 +71,7 @@
 #define	APB10_BUS_CLK_NAME_STR "apb10"
 #define	APB9_BUS_CLK_NAME_STR "apb9"
 #define	ATB_FILTER_APB_BUS_CLK_NAME_STR "atb_filter_apb"
-#define	AUDIOH_26M_PERI_CLK_NAME_STR "audioh_26m_clk"
+#define	AUDIOH_26M_PERI_CLK_NAME_STR "audioh_26m"
 #define	HUB_PERI_CLK_NAME_STR "hub_clk"
 #define	BT_SLIM_AHB_APB_BUS_CLK_NAME_STR "bt_slim_ahb_apb"
 #define	ETB2AXI_APB_BUS_CLK_NAME_STR "etb2axi_apb"
@@ -99,7 +99,7 @@
 #define	PWRMGR_AXI_BUS_CLK_NAME_STR "pwrmgr_axi"
 #define	APB6_BUS_CLK_NAME_STR "apb6"
 #define	GPIOKP_APB_BUS_CLK_NAME_STR "gpiokp_apb"
-#define	PMU_BSC_APB_BUS_CLK_NAME_STR "pmu_bsc_apb_clk"
+#define	PMU_BSC_APB_BUS_CLK_NAME_STR "pmu_bsc_apb"
 #define	CHIPREG_APB_BUS_CLK_NAME_STR "chipreg_apb"
 #define	FMON_APB_BUS_CLK_NAME_STR "fmon_apb"
 #define	HUB_TZCFG_APB_BUS_CLK_NAME_STR "hub_tzcfg_apb"
@@ -119,23 +119,21 @@
 #define	SDIO2_AHB_BUS_CLK_NAME_STR "sdio2_ahb_clk"
 #define	SDIO3_AHB_BUS_CLK_NAME_STR "sdio3_ahb_clk"
 #define	SDIO1_AHB_BUS_CLK_NAME_STR "sdio1_ahb_clk"
-#define	NAND_AHB_BUS_CLK_NAME_STR "nand_ahb_clk"
 #define	SDIO4_AHB_BUS_CLK_NAME_STR "sdio4_ahb"
 #define	SYS_SWITCH_AXI_BUS_CLK_NAME_STR "sys_switch_axi"
 #define	MASTER_SWITCH_AHB_BUS_CLK_NAME_STR "master_switch_ahb"
 #define	MASTER_SWITCH_AXI_BUS_CLK_NAME_STR "master_switch_axi"
-#define	USBH_AHB_BUS_CLK_NAME_STR "usbh_ahb_clk"
+#define	USBH_AHB_BUS_CLK_NAME_STR "usbh_ahb"
 #define	SDIO2_PERI_CLK_NAME_STR "sdio2_clk"
 #define	SDIO2_SLEEP_PERI_CLK_NAME_STR "sdio2_sleep_clk"
 #define	SDIO3_PERI_CLK_NAME_STR "sdio3_clk"
 #define	SDIO3_SLEEP_PERI_CLK_NAME_STR "sdio3_sleep_clk"
 #define	SDIO1_PERI_CLK_NAME_STR "sdio1_clk"
-#define	NAND_PERI_CLK_NAME_STR "nand_clk"
 #define	SDIO1_SLEEP_PERI_CLK_NAME_STR "sdio1_sleep_clk"
 #define	SDIO4_PERI_CLK_NAME_STR "sdio4"
 #define	SDIO4_SLEEP_PERI_CLK_NAME_STR "sdio4_sleep"
-#define	USBH_48M_PERI_CLK_NAME_STR "usbh_48m_clk"
-#define	USBH_12M_PERI_CLK_NAME_STR "usbh_12m_clk"
+#define	USBH_48M_PERI_CLK_NAME_STR "usbh_48m"
+#define	USBH_12M_PERI_CLK_NAME_STR "usbh_12m"
 #define	KPS_CCU_CLK_NAME_STR "kps_ccu"
 #define	UARTB_APB_BUS_CLK_NAME_STR "uartb_apb_clk"
 #define	UARTB2_APB_BUS_CLK_NAME_STR "uartb2_apb_clk"
@@ -310,7 +308,6 @@ enum
 	CLK_SDIO2_AHB_BUS_CLK_ID,
 	CLK_SDIO3_AHB_BUS_CLK_ID,
 	CLK_SDIO1_AHB_BUS_CLK_ID,
-	CLK_NAND_AHB_BUS_CLK_ID,
 	CLK_SDIO4_AHB_BUS_CLK_ID,
 	CLK_SYS_SWITCH_AXI_BUS_CLK_ID,
 	CLK_MASTER_SWITCH_AHB_BUS_CLK_ID,
@@ -321,7 +318,6 @@ enum
 	CLK_SDIO3_PERI_CLK_ID,
 	CLK_SDIO3_SLEEP_PERI_CLK_ID,
 	CLK_SDIO1_PERI_CLK_ID,
-	CLK_NAND_PERI_CLK_ID,
 	CLK_SDIO1_SLEEP_PERI_CLK_ID,
 	CLK_SDIO4_PERI_CLK_ID,
 	CLK_SDIO4_SLEEP_PERI_CLK_ID,
@@ -496,7 +492,6 @@ enum
 #define SDIO2_AHB_BUS_CLK_FLAGS 			0
 #define SDIO3_AHB_BUS_CLK_FLAGS 			0
 #define SDIO1_AHB_BUS_CLK_FLAGS 			0
-#define NAND_AHB_BUS_CLK_FLAGS 			0
 #define SDIO4_AHB_BUS_CLK_FLAGS 			0
 #define SYS_SWITCH_AXI_BUS_CLK_FLAGS 		HYST_ENABLE |HYST_HIGH
 #define MASTER_SWITCH_AHB_BUS_CLK_FLAGS 	HYST_ENABLE |HYST_HIGH
@@ -506,7 +501,6 @@ enum
 #define SDIO2_SLEEP_PERI_CLK_FLAGS 		0
 #define SDIO3_PERI_CLK_FLAGS 			DISABLE_ON_INIT
 #define SDIO3_SLEEP_PERI_CLK_FLAGS 		0
-#define NAND_PERI_CLK_FLAGS 			DISABLE_ON_INIT
 #define SDIO1_PERI_CLK_FLAGS 			DISABLE_ON_INIT
 #define SDIO1_SLEEP_PERI_CLK_FLAGS 		0
 #define SDIO4_PERI_CLK_FLAGS 			DISABLE_ON_INIT
