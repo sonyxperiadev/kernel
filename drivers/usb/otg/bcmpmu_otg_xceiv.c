@@ -177,12 +177,17 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 		status = xceiv_data->bcmpmu->register_usb_callback(xceiv_data->bcmpmu, bcmpmu_usb_event_notif_callback, (void*)xceiv_data);
 	}
 #else
-	/* We would want to use A session invalid but that requires reading PMU reg for status. For now use insert/remove instead */
-	xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call = bcmpmu_otg_xceiv_vbus_notif_handler;
-	bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
+	/* We want to register notifiers during probe but that is not possible right now and there is no direct
+	 ** link to remove these notifiers. Avoid an unnecessary remove notifer. Just check if it is already registered
+	*/
+	if (xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call == NULL) {
+		/* We would want to use A session invalid but that requires reading PMU reg for status. For now use insert/remove instead */
+		xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call = bcmpmu_otg_xceiv_vbus_notif_handler;
+		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
 
-	xceiv_data->bcm_otg_chg_detection_notifier.notifier_call = bcmpmu_otg_xceiv_chg_detection_notif_handler;
-	bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_CHGR_DETECTION, &xceiv_data->bcm_otg_chg_detection_notifier);
+		xceiv_data->bcm_otg_chg_detection_notifier.notifier_call = bcmpmu_otg_xceiv_chg_detection_notif_handler;
+		bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_CHGR_DETECTION, &xceiv_data->bcm_otg_chg_detection_notifier);
+	}
 #endif
 
 	/* Come up as host or device based on current ID value */
