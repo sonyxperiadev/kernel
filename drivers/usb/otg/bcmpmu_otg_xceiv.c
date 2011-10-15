@@ -30,6 +30,7 @@
 #include <linux/mfd/bcmpmu.h>
 #else
 #include <linux/mfd/bcm590xx/core.h>
+#include <linux/mfd/bcm590xx/bcm590xx-usb.h>
 #endif
 
 #include <asm/io.h>
@@ -90,6 +91,14 @@ static int bcmpmu_otg_xceiv_set_vbus(struct otg_transceiver *otg, bool enabled)
 	return stat;
 }
 
+static void bcmpmu_otg_xceiv_shutdown(struct otg_transceiver *otg)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data = dev_get_drvdata(otg->dev);
+
+	if (xceiv_data)
+		bcm_hsotgctrl_phy_deinit(); /* De-initialize OTG core and PHY */
+}
+
 #ifdef CONFIG_MFD_BCMPMU
 static void bcmpmu_usb_event_notif_callback(struct bcmpmu * pmu_handle, unsigned char event, void *param1, void *otg_data)
 {
@@ -114,6 +123,37 @@ static void bcmpmu_usb_event_notif_callback(struct bcmpmu * pmu_handle, unsigned
 			break;
 	}
 }
+#else
+static int bcmpmu_otg_xceiv_vbus_notif_handler(struct notifier_block *nb, unsigned long value, void *data)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+		container_of(nb, struct bcmpmu_otg_xceiv_data,
+			     bcm_otg_vbus_validity_notifier);
+	bool vbus_status = 0;
+
+	if (!xceiv_data)
+		return -EINVAL;
+
+	vbus_status = bcmpmu_usb_get(BCMPMU_CTRL_GET_VBUS_STATUS, xceiv_data->bcm590xx);
+
+	queue_work(xceiv_data->bcm_otg_work_queue, vbus_status? &xceiv_data->bcm_otg_vbus_valid_work : &xceiv_data->bcm_otg_vbus_a_invalid_work);
+
+	return 0;
+}
+
+static int bcmpmu_otg_xceiv_chg_detection_notif_handler(struct notifier_block *nb, unsigned long value, void *data)
+{
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+		container_of(nb, struct bcmpmu_otg_xceiv_data,
+			     bcm_otg_chg_detection_notifier);
+
+	if (xceiv_data)
+		queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
+	else
+		return -EINVAL;
+
+	return 0;
+}
 #endif
 
 static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
@@ -133,6 +173,13 @@ static int bcmpmu_otg_xceiv_set_peripheral(struct otg_transceiver *otg,
 
 	/* Come up as host or device based on current ID value */
 	queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
+#else
+	/* We would want to use A session invalid but that requires reading PMU reg for status. For now use insert/remove instead */
+	xceiv_data->bcm_otg_vbus_validity_notifier.notifier_call = bcmpmu_otg_xceiv_vbus_notif_handler;
+	bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_VBUS_VALID, &xceiv_data->bcm_otg_vbus_validity_notifier);
+
+	xceiv_data->bcm_otg_chg_detection_notifier.notifier_call = bcmpmu_otg_xceiv_chg_detection_notif_handler;
+	bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_CHGR_DETECTION, &xceiv_data->bcm_otg_chg_detection_notifier);
 #endif
 
 	return status;
@@ -162,6 +209,7 @@ static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xcei
 	if (enable) {
 		dev_info(xceiv_data->dev, "Switching to Host\n");
 		xceiv_data->host = true;
+		bcm_hsotgctrl_set_phy_off(false);
 		bcm_hsotgctrl_phy_set_vbus_stat(false);
 		msleep(PERIPHERAL_TO_HOST_DELAY_MS);
 		bcm_hsotgctrl_phy_set_id_stat(false);
@@ -170,7 +218,6 @@ static void bcmpmu_otg_xceiv_select_host_mode(struct bcmpmu_otg_xceiv_data *xcei
 		xceiv_data->host = false;
 		bcm_hsotgctrl_phy_set_id_stat(true);
 		msleep(HOST_TO_PERIPHERAL_DELAY_MS);
-		bcm_hsotgctrl_phy_set_vbus_stat(true);
 	}
 }
 
@@ -296,6 +343,12 @@ static void bcmpmu_otg_xceiv_vbus_valid_handler(struct work_struct *work)
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_valid_work);
 	dev_info(xceiv_data->dev, "Vbus valid\n");
+
+#ifdef CONFIG_MFD_BCMPMU
+	bcm_hsotgctrl_phy_init();
+#else
+	bcm_hsotgctrl_en_clock(true); //Enable clocks for PMU's BC detection to go through
+#endif
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
@@ -304,6 +357,9 @@ static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_a_invalid_work);
 	dev_info(xceiv_data->dev, "A session invalid\n");
+
+	/* Inform the core of session invalid level  */
+	bcm_hsotgctrl_phy_set_vbus_stat(false);
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
@@ -312,6 +368,10 @@ static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_a_valid_work);
 	dev_info(xceiv_data->dev, "A session valid\n");
+
+#ifdef CONFIG_MFD_BCMPMU
+	bcm_hsotgctrl_phy_init();
+#endif
 }
 
 static void bcmpmu_otg_xceiv_adp_cprb_done_handler(struct work_struct *work)
@@ -343,6 +403,22 @@ static void bcmpmu_otg_xceiv_id_change_handler(struct work_struct *work)
 
 	/* Non-ACA ID interpretation for now since RID_A is not tested yet on this platform */
 	bcmpmu_otg_xceiv_select_host_mode(xceiv_data, (data == PMU_USB_ID_GROUND));
+#endif
+}
+
+static void bcmpmu_otg_xceiv_chg_detect_handler(struct work_struct *work)
+{
+#ifndef CONFIG_MFD_BCMPMU
+	struct bcmpmu_otg_xceiv_data *xceiv_data =
+		container_of(work, struct bcmpmu_otg_xceiv_data,
+			     bcm_otg_chg_detect_work);
+
+	dev_info(xceiv_data->dev, "Charger detect event\n");
+
+	if (bcmpmu_usb_get(BCMPMU_CTRL_GET_ID_VALUE, xceiv_data->bcm590xx)) {//Non-ACA interpretation of ID for now
+		bcm_hsotgctrl_en_clock(false); //Just balancing clock disable/enable until the PMU's bc detect clock management is resolved
+		bcm_hsotgctrl_phy_init();
+	}
 #endif
 }
 
@@ -397,13 +473,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		  bcmpmu_otg_xceiv_adp_change_handler);
 	INIT_WORK(&xceiv_data->bcm_otg_id_status_change_work,
 		  bcmpmu_otg_xceiv_id_change_handler);
-
-	xceiv_data->otg_clk = clk_get(NULL, "usb_otg_clk");
-	if (!xceiv_data->otg_clk) {
-		dev_warn(&pdev->dev, "Clock allocation failed\n");
-		kfree(xceiv_data);
-		return -EIO;
-	}
+	INIT_WORK(&xceiv_data->bcm_otg_chg_detect_work,
+		  bcmpmu_otg_xceiv_chg_detect_handler);
 
 	xceiv_data->otg_xceiver.xceiver.set_vbus =
 		bcmpmu_otg_xceiv_set_vbus;
@@ -411,6 +482,8 @@ static int __devinit bcmpmu_otg_xceiv_probe(struct platform_device *pdev)
 		bcmpmu_otg_xceiv_set_peripheral;
 	xceiv_data->otg_xceiver.xceiver.set_host =
 		bcmpmu_otg_xceiv_set_host;
+	xceiv_data->otg_xceiver.xceiver.shutdown =
+		bcmpmu_otg_xceiv_shutdown;
 
 	xceiv_data->otg_xceiver.do_adp_calibration_probe =
 		bcm_otg_do_adp_calibration_probe;
@@ -454,7 +527,6 @@ error_attr_vbus:
 
 error_attr_host:
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
-	clk_put(xceiv_data->otg_clk);
 	kfree(xceiv_data);
 	return error;
 }
@@ -468,8 +540,8 @@ static int __exit bcmpmu_otg_xceiv_remove(struct platform_device *pdev)
 	device_remove_file(xceiv_data->dev, &dev_attr_host);
 
 	destroy_workqueue(xceiv_data->bcm_otg_work_queue);
-	clk_put(xceiv_data->otg_clk);
 	kfree(xceiv_data);
+	bcm_hsotgctrl_phy_deinit();
 
 	return 0;
 }

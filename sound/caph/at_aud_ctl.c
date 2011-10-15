@@ -391,8 +391,6 @@ int	AtMaudLog(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 //---------------------------------------------------------------------------
 int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
-	int gain;
-
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
 
 	 //this test command argument 100/101 is provided to control the HW clock.In that case, dont enable the clock
@@ -477,6 +475,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
             if (Params[1] == 0) // EXT_SPEAKER_PGA
             {
 #if !defined(NO_PMU)
+				int gain;
 				if ( (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET) || (AUDDRV_GetAudioMode()==AUDIO_MODE_HEADSET_WB) 
                      || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY) || (AUDDRV_GetAudioMode()==AUDIO_MODE_TTY_WB) )
 				{

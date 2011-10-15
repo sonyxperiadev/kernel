@@ -30,39 +30,6 @@
 
 struct kobject *bcm_kobj;
 
-static ssize_t
-mem_store(struct device *dev, struct device_attribute *attr,
-	  const char *buf, size_t n)
-{
-	uint32_t addr, val, count = 0, loop = 0;
-	void __iomem *vaddr;
-	char rw;
-
-	if (sscanf(buf, "%c %x %x", &rw, &addr, &val) == 3) {
-		pr_info("\n");
-		vaddr = ioremap(addr, PAGE_SIZE);
-		if (rw == 'W' || rw == 'w') {
-			writel(val, vaddr);
-			count = 4;
-		} else if (rw == 'R' || rw == 'r') {
-			count = val;	/* count read in val for simplicity */
-			if (count & 0x3)	/* Align to 4 */
-				count += (4 - (count & 0x3));
-		}
-		for (; loop < count; loop += 4) {
-			val = readl(vaddr + loop);
-			pr_info("[0x%08x] = 0x%08x\n", addr + loop, val);
-		}
-		iounmap(vaddr);
-		return n;
-	}
-	pr_info("\nUsage: echo <R - Read/W - write> <Physical Address>"
-		"<Value(Write)/Count(Read) > /sys/bcm/mem\n"
-		"E.g. echo R 0x88CE000 0x40 > /sys/bcm/mem\n"
-		"     echo w 0x88CE000 0xDEADBEAF > /sys/bcm/mem\n");
-	return -EINVAL;
-}
-
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 static ssize_t
 kona_timer_module_cfg(struct device *dev, struct device_attribute *attr,
@@ -175,8 +142,6 @@ out:
 }
 #endif
 
-static DEVICE_ATTR(mem, 0644, NULL, mem_store);
-
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 static DEVICE_ATTR(timer_module_cfg, 0666, NULL, kona_timer_module_cfg);
 static DEVICE_ATTR(timer_start_test, 0666, NULL, kona_timer_start_test);
@@ -184,7 +149,6 @@ static DEVICE_ATTR(timer_stop_test, 0666, NULL, kona_timer_stop_test);
 #endif
 
 static struct attribute *bcm_attrs[] = {
-	&dev_attr_mem.attr,
 #ifdef CONFIG_KONA_TIMER_UNIT_TESTS
 	&dev_attr_timer_module_cfg.attr,
 	&dev_attr_timer_start_test.attr,

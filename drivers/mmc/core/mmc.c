@@ -586,8 +586,20 @@ static int mmc_init_card(struct mmc_host *host, u32 ocr,
 		err = mmc_send_cid(host, cid);
 	else
 		err = mmc_all_send_cid(host, cid);
+#if 0 /* Original code before adding temporary workaround for broken MMC parts */
 	if (err)
 		goto err;
+#else
+	if (err){
+		if (err == -ETIMEDOUT || err == -EILSEQ) {
+			pr_debug("%s: Ignoring error %d for mmc_all_send_cid\n",
+				__func__, err);
+			err = 0;
+		} else {
+			goto err;
+		}
+	}
+#endif
 
 	if (oldcard) {
 		if (memcmp(cid, oldcard->raw_cid, sizeof(cid)) != 0) {

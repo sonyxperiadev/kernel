@@ -22,6 +22,10 @@
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
 #include <linux/workqueue.h>
 #include <mach/pwr_mgr.h>
+#include <mach/rdb/brcm_rdb_kona_gptimer.h>
+
+
+#define HUB_TIMER_AFTER_WFI_WORK_AROUND 1
 
 extern void enter_wfi(void);
 extern void dormant_enter(void);
@@ -67,8 +71,8 @@ const char *sleep_prevent_clocks[] = {
 		"bsc2_clk",
 		"pwm_clk",
 		//"uartb_clk",
-		"uartb2_clk",
-		"uartb3_clk",
+		//"uartb2_clk",
+		//"uartb3_clk",
 		"spum_open",
 		"spum_sec",
 		"ssp0_clk",
@@ -100,8 +104,8 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.name = "C1",
 		.desc = "dormant",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 1000,
-		.target_residency = 1000,
+		.latency = 500,
+		.target_residency = 500,
 		.state = RHEA_STATE_C1,
 		.enter = enter_idle_state,
 	},
@@ -110,8 +114,8 @@ static struct kona_idle_state rhea_cpu_states[] = {
 		.name = "C1",
 		.desc = "retention",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 1000,
-		.target_residency = 1000,
+		.latency = 500,
+		.target_residency = 500,
 		.state = RHEA_STATE_C1,
 		.enter = enter_idle_state,
 	},
@@ -316,6 +320,10 @@ int enter_idle_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
 	u32 reg_val;
+#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+	u32 timer_lsw = 0;
+#endif
+
 
 	BUG_ON(!state);
 
@@ -334,18 +342,21 @@ int enter_idle_state(struct kona_idle_state* state)
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 	clk_set_crystal_pwr_on_idle(true);
 
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+#endif
 
 	clear_wakeup_interrupts();
 	config_wakeup_interrupts();
-
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	if(force_retention)
 		enable_sleep_prevention_clock(0);
+#endif
 
 	if(state->state == RHEA_STATE_C1)
 	{
@@ -367,6 +378,11 @@ int enter_idle_state(struct kona_idle_state* state)
 	{
 		enter_wfi(); /*C0 - simple WFI*/
 	}
+#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
+	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
+	while(timer_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
+#endif
 
 	if(pm_debug != 2)
 		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
@@ -440,15 +456,19 @@ int enter_idle_state(struct kona_idle_state* state)
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
 
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	if(force_retention)
 		enable_sleep_prevention_clock(1);
+#endif
 
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val |= ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
 	reg_val |= ROOT_CLK_MGR_REG_PLL1CTRL0_PLL1_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL1CTRL0_OFFSET);
+#endif
 
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, false);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, false);
@@ -495,6 +515,7 @@ static void uartb_wq_handler(struct work_struct *work)
 
 void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 {
+#ifdef CONFIG_UART_FORCE_RETENTION
 	if(force_retention)
 	{
 		if(!clk_active)
@@ -510,6 +531,7 @@ void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 		schedule_delayed_work(&uartb_wq,
 				msecs_to_jiffies(3000));
 	}
+#endif
 }
 
 static struct dentry *dent_rhea_pm_root_dir;
@@ -519,8 +541,10 @@ int __init rhea_pm_debug_init(void)
 	INIT_DELAYED_WORK(&uartb_wq,
 		uartb_wq_handler);
 
+#ifdef CONFIG_UART_FORCE_RETENTION 
 	pwr_mgr_register_event_handler(UBRX_EVENT, uartb_pwr_mgr_event_cb,
 											NULL);
+#endif
 
 
 	/* create root clock dir /clock */

@@ -35,6 +35,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #include <linux/broadcom/vce.h>
 
+#define DRIVER_VERSION 10099
 #define VCE_DEV_MAJOR	0
 
 #define RHEA_VCE_BASE_PERIPHERAL_ADDRESS      VCE_BASE_ADDR
@@ -83,8 +84,6 @@ typedef struct {
 /***** Function Prototypes **************/
 static int setup_vce_clock(void);
 static void reset_vce(void);
-static void vce_enable_irq(void);
-static void vce_disable_irq(void);
 
 /******************************************************************
 	VCE HW specific functions
@@ -113,7 +112,7 @@ static int setup_vce_clock(void)
 	}
 
 	rate = clk_get_rate(vce_clk);
-	err_print("vce_clk_clk rate %lu\n", rate);
+	dbg_print("vce_clk_clk rate %lu\n", rate);
 
 	return (rc);
 }
@@ -224,29 +223,6 @@ static irqreturn_t vce_isr(int irq, void *unused)
 		err_print("Got VCE interrupt but noone wants it\n");
 
 	return IRQ_HANDLED;
-}
-
-static void vce_enable_irq(void)
-{
-	down(&vce_state.work_lock);
-	//Don't enable irq if it's already enabled
-	if( !vce_state.irq_enabled )
-		enable_irq(IRQ_VCE);
-	else
-		err_print("vce_enable_irq but already enabled!\n");
-	vce_state.irq_enabled = 1;
-	up(&vce_state.work_lock);
-}
-
-static void vce_disable_irq(void)
-{
-	down(&vce_state.work_lock);
-	if( vce_state.irq_enabled )
-		disable_irq(IRQ_VCE);
-	else
-		err_print("vce_disable_irq but already disabled!\n");
-	vce_state.irq_enabled = 0;
-	up(&vce_state.work_lock);
 }
 
 /******************************************************************
@@ -381,19 +357,12 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	{
 		case VCE_IOCTL_WAIT_IRQ:
 		{
-			//Enable VCE block to generate interrupt
-			dbg_print("Enabling vce interrupt\n");
-			vce_enable_irq();
-
 			dbg_print("Waiting for interrupt\n");
 			if (down_interruptible(&dev->irq_sem))
 			{
-				vce_disable_irq();
 				err_print("Wait for IRQ failed\n");
 				return -ERESTARTSYS;
 			}
-			dbg_print("Disabling vce interrupt\n");
-			vce_disable_irq();
 		}
 		break;
 
@@ -435,6 +404,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		}
 		break;
 
+#if 0
 		/* Some DEBUG stuff -- we may wish to lose this in production driver... */
 		case VCE_IOCTL_DEBUG_FETCH_KSTAT_IRQS:
 		{
@@ -447,6 +417,7 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			}
 		}
 		break;
+#endif
 
 		default:
 		{
@@ -484,14 +455,14 @@ static int proc_version_read(char *buffer, char **start, off_t offset, int bytes
 	spec_revision = (vce_version & VCE_VERSION_SPEC_REVISION_MASK) >> VCE_VERSION_SPEC_REVISION_SHIFT;
 	sub_revision = (vce_version & VCE_VERSION_SUB_REVISION_MASK) >> VCE_VERSION_SUB_REVISION_SHIFT;
 
-	if (bytes < 10) {
-		/* TODO: be a little more precise about the length of buffer required -- we know we write just 5 right now... */
+	if (bytes < 20) {
+		/* TODO: be a little more precise about the length of buffer required -- we know we write just 15 right now... */
 		ret = -1;
 		goto e0;
 	}
 
 	/* TODO: what's start and offset for? reading in chunks?  that'll never happen (hack!) */
-	len = sprintf(buffer, "%u.%u\n", spec_revision, sub_revision);
+	len = sprintf(buffer, "h:%u.%u\nk:%u\n", spec_revision, sub_revision, DRIVER_VERSION);
 
 	/* Not using these and don't really know how to: */
 	(void)start; (void)offset; (void)eof;
@@ -634,12 +605,11 @@ int __init vce_init(void)
 
 	/* Request the VCE IRQ */
 	ret = request_irq(IRQ_VCE, vce_isr,
-			IRQF_ONESHOT | IRQF_DISABLED | IRQF_TRIGGER_RISING, VCE_DEV_NAME, NULL);
+			IRQF_DISABLED | IRQF_TRIGGER_RISING, VCE_DEV_NAME, NULL);
 	if (ret){
 		err_print("request_irq failed ret = %d\n", ret);
 		goto err2;
 	}
-	disable_irq(IRQ_VCE);
 
 	/* Initialize the VCE acquire_sem and work_lock*/
 	sema_init(&vce_state.acquire_sem, 1); //First request should succeed
@@ -690,8 +660,8 @@ void __exit vce_exit(void)
 {
 	dbg_print("VCE driver Exit\n");
 
-	/* TODO: really ought to make sure we get the semaphore, so that we know the module isn't being used */
-	/* and, ought to make sure h/w is idle */
+	down(&vce_state.work_lock);
+	assert_idle_nolock();
 
 	/* remove proc entries */
 	remove_proc_entry("status", vce_state.proc_vcedir);

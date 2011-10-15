@@ -1143,7 +1143,7 @@ static u32 compute_rate(u32 rate, u32 div, u32 dither,u32 max_dither,u32 pre_div
 	clk_dbg("%s:src_rate = %d,div = %d, dither = %d,Max_dither = %d,pre_div = %d\n",
 		__func__, rate, div, dither, max_dither, pre_div);
 	res = ((res/100)*(max_dither + 1))/ (((max_dither + 1)*(div+1)) + dither);
-	clk_dbg("%s:result = %d\n",__func__,res);
+	clk_dbg("%s:result = %d\n",__func__,res*100);
 	return res*100;
 
 }
@@ -1169,6 +1169,7 @@ static u32 peri_clk_calculate_div(struct peri_clk * peri_clk, u32 rate, u32* div
 
 	if(clk_div->div_offset && clk_div->div_mask)
 		max_div = clk_div->div_mask >> clk_div->div_shift;
+	max_div = max_div >> clk_div->diether_bits;
 	max_diether = ~(0xFFFFFFFF << clk_div->diether_bits);
 
 	if(clk_div->pre_div_offset && clk_div->pre_div_mask)
@@ -1341,8 +1342,10 @@ static int peri_clk_set_rate(struct clk* clk, u32 rate)
 
 	if(abs(rate - new_rate) > CLK_RATE_MAX_DIFF)
 	{
-		clk_dbg("%s : %s - rate(%d) not supported\n",
+		printk("%s : %s - rate(%d) not supported\n",
 			__func__, clk->name,rate);
+		printk("%s : %s - Nearest possible rate:%d with div(+diether):%d, pre_div :%d source:%d\n",
+			__func__, clk->name, new_rate, div, pre_div, peri_clk->src_clk.clk[src]->rate);
 		/* Disable clock to compensate enable call before set rate */
 		clk->ops->enable(clk, 0);
 		return -EINVAL;
@@ -2079,6 +2082,21 @@ static int clk_debug_set_rate(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(clock_rate_fops, clk_debug_get_rate,
 						clk_debug_set_rate, "%llu\n");
 
+
+static int clk_debug_set_round_rate(void *data, u64 val)
+{
+	struct clk *clock = data;
+	u32 new_rate = 0;
+	new_rate = clk_round_rate(clock, val);
+	printk("nearest possible rate: %d\n", new_rate);
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(clock_round_rate_fops, NULL,
+						clk_debug_set_round_rate, "%llu\n");
+
+
 static int ccu_debug_get_freqid(void *data, u64 *val)
 {
 	struct clk *clock = data;
@@ -2388,7 +2406,7 @@ int __init clock_debug_add_clock(struct clk *c)
 {
 	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_enable=0,
 		*dent_status=0, *dent_div=0, *dent_use_cnt=0, *dent_id=0,
-		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0;
+		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0, *dent_round_rate=0;
 	struct peri_clk *peri_clk;
 	struct bus_clk *bus_clk;
 	struct ref_clk *ref_clk;
@@ -2430,6 +2448,12 @@ int __init clock_debug_add_clock(struct clk *c)
 	dent_rate	=	debugfs_create_file("rate", 0644, dent_clk_dir, c, &clock_rate_fops);
 	if(!dent_rate)
 		goto err;
+
+	/* file /clock/clk_a/round_rate */
+	dent_round_rate	=	debugfs_create_file("round_rate", 0644, dent_clk_dir, c, &clock_round_rate_fops);
+	if(!dent_round_rate)
+		goto err;
+
 #if 0
 	/* file /clock/clk_a/div */
 	dent_div	=	debugfs_create_u32("div", 0444, dent_clk_dir, (unsigned int*)&c->div);

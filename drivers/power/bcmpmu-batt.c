@@ -37,15 +37,8 @@ static int debug_mask = BCMPMU_PRINT_ERROR | BCMPMU_PRINT_INIT;
 		} \
 	} while (0)
 
-struct batt_cb {
-	void (*callback)(struct bcmpmu *,
-		unsigned char event, void *, void *);
-	void *clientdata;
-};
-
 struct bcmpmu_batt {
 	struct bcmpmu *bcmpmu;
-	struct batt_cb batt_cb;
 	struct power_supply batt;
 	struct bcmpmu_batt_state state;
 	wait_queue_head_t wait;
@@ -54,19 +47,6 @@ struct bcmpmu_batt {
 
 static void bcmpmu_batt_isr(enum bcmpmu_irq irq, void *data)
 {
-	struct bcmpmu_batt *pbatt = data;
-	int ret;
-	
-	switch (irq) {
-	case PMU_IRQ_BATINS:
-		break;
-	case PMU_IRQ_BATRM:
-		break;
-	case PMU_IRQ_MBOV:
-	case PMU_IRQ_MBOV_DIS:
-	default:
-		break;
-	}
 }
 
 static enum power_supply_property bcmpmu_batt_props[] = {
@@ -130,7 +110,7 @@ static int bcmpmu_get_batt_property(struct power_supply *battery,
 
 static int bcmpmu_set_batt_property(struct power_supply *ps,
 		enum power_supply_property property,
-		union power_supply_propval *propval)
+		const union power_supply_propval *propval)
 {
 	int ret = 0;
 	struct bcmpmu_batt *pbatt = container_of(ps,
@@ -168,6 +148,7 @@ static int bcmpmu_set_batt_property(struct power_supply *ps,
 		ret = -EINVAL;
 		break;
 	}
+	return ret;
 }
 #ifdef CONFIG_MFD_BCMPMU_DBG
 static ssize_t
@@ -179,7 +160,7 @@ dbgmsk_show(struct device *dev, struct device_attribute *attr,
 
 static ssize_t
 dbgmsk_set(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	unsigned long val = simple_strtoul(buf, NULL, 0);
 	if (val > 0xFF || val == 0)
@@ -198,24 +179,6 @@ static const struct attribute_group bcmpmu_batt_attr_group = {
 };
 #endif
 
-static int bcmpmu_register_batt_event_callback(struct bcmpmu *bcmpmu,
-	void (*callback)(struct bcmpmu *pmu,
-		unsigned char event, void *, void *),
-	void *data)
-{
-	struct bcmpmu_batt *pbatt = (struct bcmpmu_batt *)bcmpmu->battinfo;
-	int ret = -EINVAL;
-	bool batt_present = true;
-
-	if (pbatt != NULL) {
-		pbatt->batt_cb.callback = callback;
-		pbatt->batt_cb.clientdata = data;
-		ret = 0;
-	}
-	if (bcmpmu->get_env_bit_status)
-		batt_present = bcmpmu->get_env_bit_status(bcmpmu, PMU_ENV_MBPD);
-	return ret;
-}
 
 static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 {
@@ -267,7 +230,7 @@ static int __devinit bcmpmu_batt_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_MBOV_DIS);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
-	sysfs_create_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);
+	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_batt_attr_group);
 #endif
 	return 0;
 
@@ -314,10 +277,9 @@ static int __init bcmpmu_batt_init(void)
 }
 module_init(bcmpmu_batt_init);
 
-static int __exit bcmpmu_batt_exit(void)
+static void __exit bcmpmu_batt_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_batt_driver);
-	return 0;
 }
 module_exit(bcmpmu_batt_exit);
 

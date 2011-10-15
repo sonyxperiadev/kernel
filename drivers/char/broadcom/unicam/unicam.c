@@ -69,7 +69,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define UNICAM_MEM_POOL_SIZE   SZ_8M
 
-#define UNICAM_DEBUG
+//#define UNICAM_DEBUG
 #ifdef UNICAM_DEBUG
     #define dbg_print(fmt, arg...) \
     printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
@@ -91,6 +91,8 @@ static void __iomem *csr_base = NULL;
 typedef struct {
     struct semaphore irq_sem;
     cam_isr_reg_status_st_t unicam_isr_reg_status;
+    unsigned int irq_pending;
+    unsigned int irq_start;
 } unicam_t;
 
 typedef struct {
@@ -119,15 +121,24 @@ static inline void reg_write(void __iomem *, unsigned int reg, unsigned int valu
 static irqreturn_t unicam_isr(int irq, void *dev_id)
 {
     unicam_t *dev;
+    unsigned int rx_status, image_intr;
     dev = (unicam_t *)dev_id;  
 	
-    dev->unicam_isr_reg_status.rx_status = reg_read(unicam_base, CAM_STA_OFFSET);
-    dev->unicam_isr_reg_status.image_intr = reg_read(unicam_base, CAM_ISTA_OFFSET);
-    reg_write(unicam_base, CAM_ISTA_OFFSET, dev->unicam_isr_reg_status.image_intr);    // enable access        
-    reg_write(unicam_base, CAM_STA_OFFSET, dev->unicam_isr_reg_status.rx_status);    // enable access        
-        
-  
-    up(&dev->irq_sem);
+    rx_status = reg_read(unicam_base, CAM_STA_OFFSET);
+    image_intr = reg_read(unicam_base, CAM_ISTA_OFFSET);
+    reg_write(unicam_base, CAM_ISTA_OFFSET, image_intr);	// enable access		
+    reg_write(unicam_base, CAM_STA_OFFSET, rx_status);	    
+            
+    if (dev->irq_start == 1)
+    {	
+        if (dev->irq_pending == 0)
+        {	
+            dev->unicam_isr_reg_status.rx_status = rx_status;
+            dev->unicam_isr_reg_status.image_intr = image_intr;
+            up(&dev->irq_sem);
+        }
+        dev->irq_pending++;
+    }
 
     return IRQ_RETVAL(1);
 }
@@ -144,6 +155,8 @@ static int unicam_open(struct inode *inode, struct file *filp)
     
 
     sema_init(&dev->irq_sem, 0);
+    dev->irq_pending = 0;
+    dev->irq_start = 0;
     
     unicam_init_camera_intf();
 
@@ -153,7 +166,6 @@ static int unicam_open(struct inode *inode, struct file *filp)
         goto err;
     }
 
-    disable_irq(IRQ_UNICAM);
     return 0;
 
 err:
@@ -166,6 +178,7 @@ static int unicam_release(struct inode *inode, struct file *filp)
 {
     unicam_t *dev = (unicam_t *)filp->private_data;
     
+    disable_irq(IRQ_UNICAM);
     free_irq(IRQ_UNICAM, dev);
     if (dev)
         kfree(dev);
@@ -228,32 +241,34 @@ static long unicam_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
     case UNICAM_IOCTL_WAIT_IRQ:
     {        
-        dbg_print("Enabling unicam interrupt\n");
         interrupt_irq = 0;
-        dev->unicam_isr_reg_status.rx_status = 0;
-        dev->unicam_isr_reg_status.image_intr = 0;
-        enable_irq(IRQ_UNICAM);
-        dbg_print("Waiting for interrupt\n");
+	    dev->irq_start = 1;
+        dbg_print("UNICAM: Waiting for interrupt\n");
         if (down_interruptible(&dev->irq_sem))
         {
             disable_irq(IRQ_UNICAM);
             return -ERESTARTSYS;
         }
-        dbg_print("Disabling unicam interrupt\n");
-        disable_irq(IRQ_UNICAM);
         if (interrupt_irq) {
             printk(KERN_ERR"interrupted irq ioctl\n");
             return -EIO;
         }
+        dev->unicam_isr_reg_status.dropped_frames = dev->irq_pending-1;
         if (copy_to_user((cam_isr_reg_status_st_t*)arg, &dev->unicam_isr_reg_status, sizeof(cam_isr_reg_status_st_t)))
             ret = -EPERM;
+        dbg_print("UNICAM: Frame Received: dropped=%d\n", dev->unicam_isr_reg_status.dropped_frames);
+        dev->irq_pending = 0;       // allow a new frame
     }
     break;
     case UNICAM_IOCTL_RETURN_IRQ:
     {
         interrupt_irq = 1;
         printk(KERN_ERR"Interrupting irq ioctl\n");
-        up(&dev->irq_sem);
+        if (dev->irq_pending == 0)
+        {	
+            up(&dev->irq_sem);
+            dev->irq_pending = 1;
+        }
     }
     break;
 
@@ -329,23 +344,28 @@ static inline void reg_write(void __iomem * base_addr, unsigned int reg, unsigne
 static void unicam_init_camera_intf(void)
 {   
     // Init GPIO's to off
-    gpio_request(unicam_info.csi0_unicam_gpio, "CAM_STNDBY0");
-    gpio_direction_output(unicam_info.csi0_unicam_gpio, 0);
-    gpio_set_value(unicam_info.csi0_unicam_gpio, 0);
-    gpio_request(unicam_info.csi1_unicam_gpio, "CAM_STNDBY1");
-    gpio_direction_output(unicam_info.csi1_unicam_gpio, 0);
-    gpio_set_value(unicam_info.csi1_unicam_gpio, 0);
+    if (unicam_info.csi0_unicam_gpio != 0xffffffff) {
+        gpio_request(unicam_info.csi0_unicam_gpio, "CAM_STNDBY0");
+        gpio_direction_output(unicam_info.csi0_unicam_gpio, 0);
+        gpio_set_value(unicam_info.csi0_unicam_gpio, 0);
+    }
+
+    if (unicam_info.csi1_unicam_gpio != 0xffffffff) {
+        gpio_request(unicam_info.csi1_unicam_gpio, "CAM_STNDBY1");
+        gpio_direction_output(unicam_info.csi1_unicam_gpio, 0);
+        gpio_set_value(unicam_info.csi1_unicam_gpio, 0);
+    }
     msleep(10);
 }
 
 static void unicam_sensor_control(unsigned int sensor_id, unsigned int enable)
 {
     // primary sensor 
-    if (sensor_id == 0) {
+    if ((sensor_id == 0) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
         gpio_set_value(unicam_info.csi0_unicam_gpio, enable);
     }
     // secondary sensor
-    else if (sensor_id == 1) {
+    else if ((sensor_id == 1) && (unicam_info.csi0_unicam_gpio != 0xffffffff)) {
         gpio_set_value(unicam_info.csi1_unicam_gpio, enable);    
     }
     msleep(10);
