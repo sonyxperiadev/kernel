@@ -88,29 +88,29 @@ void _bcm_snd_printk(unsigned int level, const char *path, int line, const char 
 #define	MIC_TOTAL_COUNT_FOR_USER	AUDCTRL_MIC_DIGI3
 #define	CAPH_MAX_CTRL_LINES			((MIC_TOTAL_COUNT_FOR_USER>AUDCTRL_SPK_TOTAL_COUNT)?MIC_TOTAL_COUNT_FOR_USER:AUDCTRL_SPK_TOTAL_COUNT)
 #define	CAPH_MAX_PCM_STREAMS		8
-
+#define MAX_USERCTRL_DATA_SIZE		300
 
 
 typedef	struct _TCtrl_Line
 {
-	Int8 strName[CAPH_MIXER_NAME_LENGTH];
-	Int32 iVolume[2];
-	Int32 iMute[2];
+	s8 strName[CAPH_MIXER_NAME_LENGTH];
+	s32 iVolume[2];
+	s32 iMute[2];
 }TCtrl_Line, *PTCtrl_Line;
 
 
 
 typedef	struct _TPcm_Stream_Ctrls
 {
-	Int32	 iFlags;
-	Int32	 iTotalCtlLines;
-	Int32	 iLineSelect[MAX_PLAYBACK_DEV];	//Multiple selection, For playback sink, one bit represent one sink; for capture source, 
+	s32	 iFlags;
+	s32	 iTotalCtlLines;
+	s32	 iLineSelect[MAX_PLAYBACK_DEV];	//Multiple selection, For playback sink, one bit represent one sink; for capture source, 
 	char strStreamName[CAPH_MIXER_NAME_LENGTH];
 	TCtrl_Line	ctlLine[CAPH_MAX_CTRL_LINES];
 	snd_pcm_uframes_t	 stream_hw_ptr;
 	TIDChanOfDev	dev_prop;
 	void   *pSubStream;	
-	//Int32    drvHandle;
+	//s32    drvHandle;
 	
 }TPcm_Stream_Ctrls, *PTPcm_Stream_Ctrls;
 
@@ -124,17 +124,17 @@ typedef struct brcm_alsa_chip
 	struct work_struct work_play;
     struct work_struct work_capt;
 
-	Int32	pi32LoopBackTestParam[3];	//loopback test
-	Int32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
-	Int32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
-	Int32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
+	s32	pi32LoopBackTestParam[3];	//loopback test
+	s32	iEnablePhoneCall;			//Eanble/disable audio path for phone call
+	s32	iMutePhoneCall[2];	//UL mute and DL mute			//Mute MIC for phone call
+	s32	pi32SpeechMixOption[CAPH_MAX_PCM_STREAMS];//Sppech mixing option, 0x00 - none, 0x01 - Downlink, 0x02 - uplink, 0x03 - both
 	//AT-AUD
-	Int32	i32AtAudHandlerParms[7];	
-	Int32	pi32BypassVibraParam[3];	//Bypass Vibra: bEnable, strength, direction
-    Int32   iEnableFM;                  //Enable/disable FM radio receiving
-	Int32	iEnableBTTest;				//Enable/disable BT production test
-	Int32	pi32CfgIHF[2];	//integer[0] -- 1 for mono, 2 for stereo; integer[1] -- data mixing option if channel is mono,  1 for left, 2 for right, 3 for (L+R)/2
-	Int32	i32CfgSSP[2];	//integer[0] -- SSP port, 3 fo SSP3, 4 SSP4; integer[1] -- 0 for PCM, 1 I2S.
+	s32	i32AtAudHandlerParms[7];	
+	s32	pi32BypassVibraParam[3];	//Bypass Vibra: bEnable, strength, direction
+    s32   iEnableFM;                  //Enable/disable FM radio receiving
+	s32	iEnableBTTest;				//Enable/disable BT production test
+	s32	pi32CfgIHF[2];	//integer[0] -- 1 for mono, 2 for stereo; integer[1] -- data mixing option if channel is mono,  1 for left, 2 for right, 3 for (L+R)/2
+	s32	i32CfgSSP[2];	//integer[0] -- SSP port, 3 fo SSP3, 4 SSP4; integer[1] -- 0 for PCM, 1 I2S.
  } brcm_alsa_chip_t;
 
 
@@ -212,6 +212,11 @@ typedef enum voip_codec_type
 	VOIP_Codec_AMR_WB_7K
 }voip_codec_type_t;
 
+typedef struct __userCtrl_data
+{
+	s32 data[MAX_USERCTRL_DATA_SIZE];
+} UserCtrl_data_t;
+
 enum { 
   VoIP_Ioctl_GetVersion = _IOR ('H', 0x10, int), 
   VoIP_Ioctl_Start = _IOW ('H', 0x11, voip_start_stop_type_t), 
@@ -226,8 +231,11 @@ enum {
   VoIP_Ioctl_GetMode = _IOR('H', 0x1A, int),
   VoIP_Ioctl_SetBitrate = _IOW('H', 0x1B, int),
   VoIP_Ioctl_GetBitrate = _IOW('H', 0x1C, int),
+  DSPCtrl_Ioctl_SPCtrl = _IOW ('H', 0x30, UserCtrl_data_t),
+  DSPCtrl_Ioctl_SPSetVar = _IOW ('H', 0x31, UserCtrl_data_t),
+  DSPCtrl_Ioctl_SPQuery = _IOR('H', 0x32, UserCtrl_data_t),
+  DSPCtrl_Ioctl_EQCtrl = _IOW('H', 0x33, UserCtrl_data_t)
  }; 
-
 
 #define	CAPH_CTL_PRIVATE(dev, line, function) ((dev)<<16|(line)<<8|(function))
 #define	STREAM_OF_CTL(private)		(((private)>>16)&0xFF)
@@ -244,9 +252,8 @@ extern int __devinit PcmDeviceNew(struct snd_card *card);
 extern int __devinit ControlDeviceNew(struct snd_card *card);
 int __devinit HwdepDeviceNew(struct snd_card *card);
 
-extern int 	AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params); //at_aud_ctl.c
-extern int	AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params); //at_aud_ctl.c
-
+extern int  AtAudCtlHandler_put(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32  ParamCount, Int32 *Params); //at_aud_ctl.c
+extern int  AtAudCtlHandler_get(Int32 cmdIndex, brcm_alsa_chip_t* pChip, Int32  ParamCount, Int32 *Params); //at_aud_ctl.c
 
 #endif //__CAPH_COMMON_H__
 

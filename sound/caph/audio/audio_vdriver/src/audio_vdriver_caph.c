@@ -42,6 +42,7 @@
 #include "audio_consts.h"
 #include "bcm_fuse_sysparm_CIB.h"
 #include "ostask.h"
+#include "osheap.h"
 #include "log.h"
 #include "csl_caph.h"
 #include "csl_apcmd.h"
@@ -51,6 +52,7 @@
 #include "csl_caph_gain.h"
 #include <mach/comms/platform_mconfig.h>
 #include "io.h"
+#include "csl_dsp_cneon_api.h"
 #if defined(ENABLE_DMA_VOICE)
 #include "csl_dsp_caph_control_api.h"
 #endif
@@ -84,7 +86,7 @@ static CSL_CAPH_DEVICE_e sink = CSL_CAPH_DEV_NONE;
 static AUDDRV_SPKR_Enum_t currSpkr = AUDDRV_SPKR_NONE;
 static AUDDRV_MIC_Enum_t currMic = AUDDRV_MIC_NONE;
 static AUDIO_SAMPLING_RATE_t currSampleRate = AUDIO_SAMPLING_RATE_UNDEFINED; 
-static Boolean eciEQOn = FALSE; // If TRUE, bypass EQ filter setting request from audio controller.
+static Boolean userEQOn = FALSE; // If TRUE, bypass EQ filter setting request from audio controller.
 
 static Boolean bInVoiceCall = FALSE;
 Boolean bmuteVoiceCall = FALSE;
@@ -925,58 +927,108 @@ void AUDDRV_SetHWGain(CSL_CAPH_HW_GAIN_e hw, UInt32 gain)
 	return;
 }
 
-
 //=============================================================================
 //
 // Function Name: AUDDRV_User_CtrlDSP
 //
-// Description:   Control DSP Loudspeaker Protection
+// Description:   Control DSP Algo
 //
 //=============================================================================
-
-void AUDDRV_User_CtrlDSP ( AudioDrvUserParam_t audioDrvUserParam, void *user_CB, UInt32 param1, UInt32 param2 )
+int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32 size, void *param)
 {
-	Boolean spkProtEna = FALSE;
+    static Boolean ConfigSP = FALSE;
+    static UInt32 *spCtrl = NULL, *spVar = NULL;
 
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_User_CtrlDSP *\n\r");
-	if (user_CB != NULL)
-		sUserCB = user_CB;
+    Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_User_CtrlDSP *\n\r");
 
-	Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_User_CtrlDSP, UserCB = %lx *\n\r", (UInt32)sUserCB);
-	switch (audioDrvUserParam)
-	{
-		case AUDDRV_USER_GET_SPKPROT:
-			Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_GET_SPKPROT *\n\r");
-			
-			audio_control_dsp(DSPCMD_TYPE_COMMAND_SP, 3, (UInt16) param1, 0,0,0);
-			break;
-		case AUDDRV_USER_ENA_SPKPROT:
-			Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_ENA_SPKPROT *\n\r");
-			spkProtEna = (Boolean) param1;
-			if (spkProtEna)
-				
-				audio_control_dsp(DSPCMD_TYPE_COMMAND_SP, (UInt16) spkProtEna, (UInt16) param2, 1,0,0);
-			
-			else
-				audio_control_dsp(DSPCMD_TYPE_COMMAND_SP, (UInt16) spkProtEna, (UInt16) param2, 0,0,0);
-			
-			break;
-		case AUDDRV_USER_SET_EQ:
-			Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_SET_EQ *\n\r");
+    switch (UserCtrlType)
+    {
+        case AUDDRV_USER_SP_QUERY:
+            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_GET_SP *\n\r");
 
-			if ((Boolean)param2 == TRUE)
-			{
-				eciEQOn = TRUE;  //ECI headset is plugged in
-				audio_cmf_filter((AudioCompfilter_t *) param1);
-			}
-			else
-				eciEQOn = FALSE;  //ECI headset is unplugged
+            if (param == NULL)
+                return -EINVAL;
 
-			break;
-		default:
-			Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_User_CtrlDSP: Invalid request %d \n\r", audioDrvUserParam);
-			break;
-	}
+            csl_dsp_sp_query_msg((UInt32 *)param);
+            break;
+        case AUDDRV_USER_SP_CTRL:
+            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_ENA_SP *\n\r");
+
+            if (enable)
+            {
+                if (size <= 0 || param == NULL)
+                    return -EINVAL;
+
+                if (spVar != NULL)
+                    csl_dsp_sp_cnfg_msg((UInt16)enable, 0, 1, (UInt32 *)param, spVar);
+                else
+                {
+                    spCtrl = (UInt32 *) kzalloc(size, GFP_KERNEL);
+                    if (!spCtrl)
+                        return -ENOMEM;
+
+                    memcpy(spCtrl, param, size);
+                    ConfigSP = TRUE;
+                }
+            }
+            else
+            {
+                if (spVar != NULL)
+                    kfree(spVar);
+                if (spCtrl != NULL)
+                    kfree(spCtrl);
+                spVar = NULL;
+                spCtrl = NULL;
+                csl_dsp_sp_cnfg_msg((UInt16)enable, 0, 0, NULL, NULL);
+            }
+            break;
+        case AUDDRV_USER_SP_VAR:
+            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_SET_SP_VAR *\n\r");
+
+            if (ConfigSP == TRUE && spCtrl != NULL)
+            {
+                if (param == NULL)
+                    return -EINVAL;
+                csl_dsp_sp_cnfg_msg((UInt16)enable, 0, 1, (UInt32 *)param, spVar);
+                ConfigSP = FALSE;
+            }
+            else
+            {
+                if (size <= 0 || param == NULL)
+                    return -EINVAL;
+
+                if (spVar == NULL)
+                {
+                    spVar = (UInt32 *) kzalloc(size, GFP_KERNEL);
+                    if (!spVar)
+                        return -ENOMEM;
+                    memcpy(spVar, param, size);
+                }
+                csl_dsp_sp_ctrl_msg((UInt32 *)param);
+            }
+
+            break;
+        case AUDDRV_USER_EQ_CTRL:
+            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_SET_EQ *\n\r");
+
+            if (enable == TRUE)
+            {
+                if (param == NULL)
+                    return -EINVAL;
+
+                userEQOn = TRUE;
+                if (param != NULL)
+                    audio_cmf_filter((AudioCompfilter_t *) param);
+            }
+            else
+                userEQOn = FALSE;
+
+            break;
+        default:
+            Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_User_CtrlDSP: Invalid request %d \n\r", UserCtrlType);
+            break;
+    }
+    return 0;
 }
 
 //=============================================================================
@@ -1235,7 +1287,7 @@ CSL_CAPH_DEVICE_e AUDDRV_GetDRVDeviceFromSpkr (AUDDRV_SPKR_Enum_t spkr)
 
 /****************************************************************************
 *
-*  Function Name: csl_caUInt16ph_MicDSP_Gain_t AUDDRV_GetDSPULGain(
+*  Function Name: csl_caph_MicDSP_Gain_t AUDDRV_GetDSPULGain(
 *                                         CSL_CAPH_DEVICE_e mic, UInt16 gain)
 *
 *  Description: read the DSP UL gain
