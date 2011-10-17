@@ -36,6 +36,7 @@
 #include <linux/ioctl.h>
 #include <linux/spinlock.h>
 #include <linux/device.h>
+#include <linux/vmalloc.h>
 #include <asm/atomic.h>
 #include <asm/uaccess.h>
 
@@ -58,6 +59,11 @@
  * user proxy ports
  */
 #define NUM_MSGS		32
+
+/* Number of source buffers used for low latency direct write for providing
+ * source data instead of using AMXR src callbacks
+ */
+#define NUM_SRC_BUFS		4
 
 
 /* Debug trace */
@@ -90,6 +96,18 @@ struct ppxy_list
 	unsigned int		total;		/* Total elements in list */
 };
 
+struct ppxy_src_buf
+{
+	struct list_head	lnode;		/* List node */
+
+	atomic_t 		alloc;		/* Allocated flag */
+	char 			*bufp;		/* Buffer pointer */
+	int 			allocsz;	/* Allocated size in bytes */
+
+	int 			bytes;		/* Amount of data stored in bytes */
+	int 			offset;		/* Amount read */
+};
+
 /*
  * Port node definition
  *
@@ -100,6 +118,7 @@ struct ppxy_node
 {
 	struct list_head	lnode;		/* List node */
 	AMXR_PORT_ID		portid;		/* Real port ID */
+	AMXR_PORT_CB		user_cbks;	/* Copy of user callbacks */
 
 	struct ppxy_buf		src;
 	struct ppxy_buf		dst;
@@ -111,6 +130,12 @@ struct ppxy_node
 	atomic_t		msg_num;	/* Number of msgs */
 	struct semaphore	msg_avail;	/* Msg available sem */
 	atomic_t		msg_alloc_errs;	/* Msg alloc errors */
+
+	struct list_head	srcbuf_list;	/* List of active src buffers */
+	spinlock_t		srcbuf_list_lock;
+
+	struct ppxy_src_buf	srcbufs[NUM_SRC_BUFS];
+	struct mutex		srcbuf_alloc_mutex;
 };
 
 /* Union of IOCTL parameter structure used to reserve stack space */
@@ -134,6 +159,7 @@ static int ppxy_open( struct inode *inode, struct file *filp );
 static int ppxy_release( struct inode *inode, struct file *filp );
 static long ppxy_ioctl( struct file *file, unsigned int cmd, unsigned long arg );
 static int ppxy_mmap( struct file *filp, struct vm_area_struct *vma );
+static ssize_t ppxy_write( struct file *file, const char __user *buffer, size_t count, loff_t *ppos );
 
 /* ---- Functions -------------------------------------------------------- */
 
@@ -144,11 +170,13 @@ static struct file_operations gfops =
 	.release	= ppxy_release,
 	.unlocked_ioctl = ppxy_ioctl,
 	.mmap		= ppxy_mmap,
+	.write		= ppxy_write,
 };
 
 /***************************************************************************/
 /**
-*  Allocate port message buffer
+*  Allocate port message buffer used for sending control data to user
+*  client.
 *
 *  @return 	Pointer to alloc'd message buffer, otherwise NULL
 */
@@ -203,7 +231,142 @@ static void send_msg(
 
 /***************************************************************************/
 /**
-*  Callback for getting source data
+*  Allocate a buffer used to store source data for kernel proxy port.
+*/
+struct ppxy_src_buf *alloc_src_buf( struct ppxy_node *nodep, int bytes )
+{
+	int i;
+	struct ppxy_src_buf *srcbufp = nodep->srcbufs;
+	struct ppxy_src_buf *newsrcbufp = NULL;
+
+	mutex_lock( &nodep->srcbuf_alloc_mutex );
+	for ( i = 0; i < NUM_SRC_BUFS; i++, srcbufp++ )
+	{
+		if ( !atomic_read( &srcbufp->alloc ))
+		{
+			if ( srcbufp->allocsz < bytes )
+			{
+				/* Re-allocate buffer */
+				void *newbufp = vmalloc( bytes );
+				if ( newbufp )
+				{
+					vfree( srcbufp->bufp );
+					srcbufp->bufp = newbufp;
+					srcbufp->allocsz = bytes;
+				}
+				else
+				{
+					/* Insufficient memory */
+					break;
+				}
+			}
+			atomic_set( &srcbufp->alloc, 1 );
+			srcbufp->bytes = bytes;
+			srcbufp->offset = 0;
+			newsrcbufp = srcbufp;
+			break;
+		}
+	}
+	mutex_unlock( &nodep->srcbuf_alloc_mutex );
+
+	return newsrcbufp;
+}
+
+/***************************************************************************/
+/**
+*  Lazy free of source buffer. Actual memory is not freed, but instead
+*  buffer is marked to allow subsequent reuse. Typically called within
+*  an atomic context.
+*/
+static void free_src_buf( struct ppxy_src_buf *srcbufp )
+{
+	atomic_set( &srcbufp->alloc, 0 );
+}
+
+/***************************************************************************/
+/**
+*  Callback for getting source data from low latency ports
+*
+*  @return
+*     NULL     - non-matching frame size or non-existent buffer
+*     ptr      - pointer to source buffer
+*/
+static int16_t *getsrc_cb_lowlatency(
+	int	bytes,		/**< (i) frame size in bytes */
+	void 	*privdata	/**< (i) private data  */
+)
+{
+	struct ppxy_node *nodep = privdata;
+	struct ppxy_src_buf *srcbufp;
+
+	PPXY_TRACE( "bytes=%i", bytes );
+
+	if ( !list_empty( &nodep->srcbuf_list ))
+	{
+		srcbufp = list_first_entry( &nodep->srcbuf_list,
+				struct ppxy_src_buf, lnode );
+	}
+	else
+	{
+		PPXY_TRACE( "list empty" );
+		return NULL;
+	}
+
+	if ( bytes > ( srcbufp->bytes - srcbufp->offset ))
+	{
+		/* Sanity check */
+		PPXY_TRACE( "insufficient samples" );
+		return NULL;
+	}
+
+	PPXY_TRACE( "bytes=%i offset=%i", bytes, srcbufp->offset );
+
+	return (int16_t *)(srcbufp->bufp + srcbufp->offset);
+}
+
+/***************************************************************************/
+/**
+*  Callback for source data complete for low latency ports
+*/
+static void srcdone_cb_lowlatency(
+	int   bytes,		/**< (i) size of the buffer in bytes */
+	void *privdata		/**< (i) user supplied data */
+)
+{
+	struct ppxy_node *nodep = privdata;
+	struct ppxy_src_buf *srcbufp;
+
+	PPXY_TRACE( "bytes=%i ", bytes );
+
+	if ( !list_empty( &nodep->srcbuf_list ))
+	{
+		srcbufp = list_first_entry( &nodep->srcbuf_list,
+				struct ppxy_src_buf, lnode );
+
+		PPXY_TRACE( "offset=%i ", srcbufp->offset );
+		srcbufp->offset += bytes;
+
+		if ( srcbufp->offset >= srcbufp->bytes )
+		{
+			spin_lock( &nodep->srcbuf_list_lock );
+			list_del( &srcbufp->lnode );
+			spin_unlock( &nodep->srcbuf_list_lock );
+
+			free_src_buf( srcbufp );
+		}
+	}
+
+	if ( nodep->user_cbks.srcdone )
+	{
+		PPXY_TRACE( "user srcdone callback signaled" );
+		send_msg( nodep, AMXR_PORT_SRCDONE_MSG,
+				-1 /* no shared buffers */, bytes );
+	}
+}
+
+/***************************************************************************/
+/**
+*  Callback for getting source data for standard proxy ports.
 *
 *  @return
 *     NULL     - non-matching frame size or non-existent buffer
@@ -223,12 +386,16 @@ static int16_t *getsrc_cb(
 		return NULL;
 	}
 	PPXY_TRACE( "bytes=%i idx=%i", bytes, bp->bufidx );
+#if NUM_BUFS > 1
 	return (int16_t *)(bp->bufp + (bp->bufidx * bp->frame_bytes));
+#else
+	return (int16_t *)bp->bufp;
+#endif
 }
 
 /***************************************************************************/
 /**
-*  Callback for source data complete
+*  Callback for source data complete for standard proxy ports
 */
 static void srcdone_cb(
 	int   bytes,		/**< (i) size of the buffer in bytes */
@@ -250,6 +417,7 @@ static void srcdone_cb(
 	}
 	else
 	{
+		/* Indicate no buffers needed */
 		buf_pgoff = -1;
 	}
 
@@ -280,8 +448,12 @@ static int16_t *getdst_cb(
 		return NULL;
 	}
 	PPXY_TRACE( "bytes=%i idx=%i", bytes, bp->bufidx );
+#if NUM_BUFS > 1
 	return (int16_t *)(bp->bufp +
 			bp->frame_bytes * bp->bufidx);
+#else
+	return (int16_t *)bp->bufp;
+#endif
 }
 
 /***************************************************************************/
@@ -308,6 +480,7 @@ static void dstdone_cb(
 	}
 	else
 	{
+		/* Indicate no buffers needed */
 		buf_pgoff = -1;
 	}
 
@@ -420,6 +593,8 @@ int amxrCreatePortProxy(
 	struct ppxy_node *nodep;
 	AMXR_PORT_CB callbacks;
 	int rc;
+	int i;
+	struct ppxy_src_buf *tmpbufp;
 
 	/* Alloc is rounded up to next page size for page alignment */
 	nodep = kmalloc( (sizeof(*nodep)+PAGE_SIZE-1) & PAGE_MASK, GFP_KERNEL );
@@ -436,29 +611,70 @@ int amxrCreatePortProxy(
 	atomic_set( &nodep->msg_alloc_errs, 0 );
 	sema_init( &nodep->msg_avail, 0 );
 
-	/* Alloc src and dst buffers if corresponding callbacks exist */
-	if ( cb->getsrc && src_bytes && src_chans )
+	mutex_init( &nodep->srcbuf_alloc_mutex );
+	INIT_LIST_HEAD( &nodep->srcbuf_list );
+	spin_lock_init( &nodep->srcbuf_list_lock );
+
+	memcpy( &nodep->user_cbks, cb, sizeof(nodep->user_cbks) );
+	memset( &callbacks, 0, sizeof(callbacks) );
+
+	if ( cb->getsrc && src_bytes )
 	{
+		/* Allocate shared source buffer */
 		rc = realloc_data_buf( &nodep->src, src_bytes );
 		if ( rc < 0 )
 		{
 			goto out_free_mem;
 		}
 		*nodep->src.bufp = 0x55; /* debug magic */
+
+		callbacks.getsrc = getsrc_cb;
+	}
+	else if ( src_bytes )
+	{
+		/* Low-latency src buffer mode choosen since user getsrc
+		 * callback is not specified, but src channel properties are
+		 * non-zero.
+		 *
+		 * Pre-allocate low latency source buffers
+		 */
+		tmpbufp = nodep->srcbufs;
+		for ( i = 0; i < NUM_SRC_BUFS; i++, tmpbufp++ )
+		{
+			atomic_set( &tmpbufp->alloc, 0 );
+			tmpbufp->bufp = vmalloc( PAGE_SIZE );
+			if ( tmpbufp->bufp == NULL )
+			{
+				rc = -ENOMEM;
+				goto out_free_mem;
+			}
+			tmpbufp->allocsz = PAGE_SIZE;
+		}
+
+		callbacks.getsrc = getsrc_cb_lowlatency;
+		callbacks.srcdone = srcdone_cb_lowlatency;
 	}
 
-	if ( cb->getdst && dst_bytes && dst_chans )
+	if ( cb->getdst && dst_bytes )
 	{
+		/* Allocate shared dst buffer */
 		rc = realloc_data_buf( &nodep->dst, dst_bytes );
 		if ( rc < 0 )
 		{
 			goto out_free_mem2;
 		}
 		*nodep->dst.bufp = 0xdd; /* debug magic */
+
 	}
 
-	callbacks.getsrc = cb->getsrc ? getsrc_cb : NULL;
-	callbacks.srcdone = ( cb->getsrc || cb->srcdone ) ? srcdone_cb : NULL;
+	if ( callbacks.srcdone == NULL && ( cb->getsrc || cb->srcdone ))
+	{
+		/* Only init srcdone callback if not already set to
+		 * not overwrite low latency setup
+		 */
+		callbacks.srcdone = srcdone_cb;
+	}
+
 	callbacks.getdst = cb->getdst ? getdst_cb : NULL;
 	callbacks.dstdone = ( cb->getdst || cb->dstdone ) ? dstdone_cb : NULL;
 	callbacks.dstcnxsremoved = cb->dstcnxsremoved ? dstcnxsremoved_cb : NULL;
@@ -484,6 +700,14 @@ out_free_mem3:
 out_free_mem2:
 	free_data_buf( &nodep->src );
 out_free_mem:
+	tmpbufp = nodep->srcbufs;
+	for ( i = 0; i < NUM_SRC_BUFS; i++, tmpbufp++ )
+	{
+		if ( tmpbufp->bufp )
+		{
+			vfree( tmpbufp->bufp );
+		}
+	}
 	kfree( nodep );
 	return rc;
 }
@@ -509,7 +733,9 @@ int amxrRemovePortProxy(
 )
 {
 	struct ppxy_node *nodep = getNodep( portid );
+	struct ppxy_src_buf *tmpbufp;
 	int rc;
+	int i;
 
 	mutex_lock( &gPortList.mutex );
 	list_del( &nodep->lnode );
@@ -520,6 +746,15 @@ int amxrRemovePortProxy(
 
 	free_data_buf( &nodep->dst );
 	free_data_buf( &nodep->src );
+
+	tmpbufp = nodep->srcbufs;
+	for ( i = 0; i < NUM_SRC_BUFS; i++, tmpbufp++ )
+	{
+		if ( tmpbufp->bufp )
+		{
+			vfree( tmpbufp->bufp );
+		}
+	}
 	kfree( nodep );
 
 	return rc;
@@ -668,7 +903,7 @@ int getMsg(
 
 /***************************************************************************/
 /**
-*
+*  Driver open method
 */
 static int ppxy_open( struct inode *inode, struct file *filp )
 {
@@ -677,7 +912,7 @@ static int ppxy_open( struct inode *inode, struct file *filp )
 
 /***************************************************************************/
 /**
-*
+*  Driver close method
 */
 static int ppxy_release( struct inode *inode, struct file *filp )
 {
@@ -692,7 +927,7 @@ static int ppxy_release( struct inode *inode, struct file *filp )
 
 /***************************************************************************/
 /**
-*
+*  Driver ioctl method
 */
 static long ppxy_ioctl( struct file *filp, unsigned int cmd, unsigned long arg )
 {
@@ -840,7 +1075,7 @@ static long ppxy_ioctl( struct file *filp, unsigned int cmd, unsigned long arg )
 
 /***************************************************************************/
 /**
-*
+*  Driver memory map method
 */
 static int ppxy_mmap( struct file *filp, struct vm_area_struct *vma )
 {
@@ -871,6 +1106,50 @@ static int ppxy_mmap( struct file *filp, struct vm_area_struct *vma )
 	return rc;
 }
 
+/***************************************************************************/
+/**
+*  Driver write method
+*/
+static ssize_t ppxy_write( struct file *filp,g
+		const char __user *buffer, size_t count, loff_t *ppos )
+{
+	struct ppxy_node *nodep = filp->private_data;
+	struct ppxy_src_buf *srcbufp;
+	unsigned long flags;
+	int rc;
+
+	PPXY_TRACE( "count=%i\n", count );
+
+	if ( nodep == NULL || nodep->user_cbks.getsrc )
+	{
+		/* Need to have created a port or low latency method not
+		 * initially configured.
+		 */
+		return -EPERM;
+	}
+
+	srcbufp = alloc_src_buf( nodep, count );
+	if ( srcbufp == NULL )
+	{
+		return -ENOMEM;
+	}
+
+	rc = copy_from_user( srcbufp->bufp, buffer, count );
+	if ( rc < 0 )
+	{
+		free_src_buf( srcbufp );
+		return rc;
+	}
+
+	PPXY_TRACE( "alloc'd srcbufp=0x%x and added to list", (unsigned)srcbufp );
+
+	spin_lock_irqsave( &nodep->srcbuf_list_lock, flags );
+	list_add_tail( &srcbufp->lnode, &nodep->srcbuf_list );
+	spin_unlock_irqrestore( &nodep->srcbuf_list_lock, flags );
+
+	return count;
+}
+
 #if ENABLE_DBG_PROC
 /***************************************************************************/
 /**
@@ -878,7 +1157,8 @@ static int ppxy_mmap( struct file *filp, struct vm_area_struct *vma )
 *
 *  @return  Number of characters to print
 */
-static int read_proc( char *buf, char **start, off_t offset, int count, int *eof, void *data )
+static int read_proc( char *buf, char **start, off_t offset,
+		int count, int *eof, void *data )
 {
 	int len;
 	struct ppxy_node *nodep;
@@ -990,6 +1270,8 @@ out:
 */
 static void __exit amxr_ppxy_exit( void )
 {
+	struct ppxy_node *nodep;
+
 #if ENABLE_DBG_PROC
 	debug_exit();
 #endif
@@ -999,6 +1281,11 @@ static void __exit amxr_ppxy_exit( void )
 
 	cdev_del( &gCdev );
 	unregister_chrdev_region( gDevno, 1 );
+
+	list_for_each_entry_safe( nodep, &gPortList.list, lnode )
+	{
+		amxrRemovePortProxy( nodep );
+	}
 }
 
 module_init( amxr_ppxy_init );
