@@ -280,8 +280,8 @@ static const char *pmu_clients[] = {
 #ifdef CONFIG_BCMPMU_OTG_XCEIV
 	"bcmpmu_otg_xceiv",
 #endif
-#ifdef CONFIG_MACH_RHEA_SELFTEST
-       "bcm_selftest_bb",
+#ifdef CONFIG_BCM59055_SELFTEST
+       "bcm59055-selftest",
 #endif
 };
 

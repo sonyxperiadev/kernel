@@ -80,6 +80,7 @@ int bcm59055_ihf_bypass_en(bool enable)
 	if (enable) {
 		if (driv_data->IHFBypassEn) {
 			pr_info("%s: IHF Bypass already enabled\n", __func__);
+			mutex_unlock(&driv_data->lock);
 			return -EPERM;
 		}
 		data |= (BCM59055_IHFTOP_BYPASSPUP | BCM59055_IHFTOP_BYPASS);
@@ -87,6 +88,7 @@ int bcm59055_ihf_bypass_en(bool enable)
 	} else {
 		if (!driv_data->IHFBypassEn) {
 			pr_info("%s: IHF Bypass already disabled\n", __func__);
+			mutex_unlock(&driv_data->lock);
 			return -EPERM;
 		}
 		data &= ~(BCM59055_IHFTOP_BYPASSPUP | BCM59055_IHFTOP_BYPASS);
@@ -109,6 +111,7 @@ int bcm59055_ihf_power(bool on)
 	if (on) {
 		if (on && driv_data->IHFenabled) {
 			pr_info("%s: IHF is already enabled\n", __func__);
+			mutex_unlock(&driv_data->lock);
 			return -EPERM;
 		}
 		data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_IHFTOP);
@@ -122,6 +125,7 @@ int bcm59055_ihf_power(bool on)
 	} else {
 		if (!on && !driv_data->IHFenabled) {
 			pr_info("%s: IHF is already Off\n", __func__);
+			mutex_unlock(&driv_data->lock);
 			return -EPERM;
 		}
 		data = bcm590xx_reg_read(bcm590xx, BCM59055_REG_IHFPOP);
@@ -192,6 +196,7 @@ int bcm59055_hs_set_input_mode(int HSgain, int HSInputmode)
 	mutex_lock(&driv_data->lock);
 	if (HSInputmode == driv_data->HSInputMode) {
 		pr_info("%s: Input mode already configured\n", __func__);
+		mutex_unlock(&driv_data->lock);
 		return -EINVAL;
 	}
 
@@ -368,6 +373,93 @@ int bcm59055_audio_deinit(void)
 	return ret;
 }
 EXPORT_SYMBOL(bcm59055_audio_deinit);
+
+/* Functions for selftest */
+int bcm59055_audio_ihf_selftest_stimulus_input(int stimulus)
+{
+	int data;
+	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+
+	data  =  bcm590xx_reg_read(bcm590xx,
+				      BCM59055_REG_IHFSTIN);
+	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFSTIN,
+			   (data & ~PMU_IHFSTIN_MASK_I_IHFSTI)|(stimulus << PMU_IHFSTIN_OFFSET_I_IHFSTI));
+}
+EXPORT_SYMBOL(bcm59055_audio_ihf_selftest_stimulus_input);
+
+int bcm59055_audio_ihf_selftest_stimulus_output(int stimulus)
+{
+	int data;
+	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+	data  =  bcm590xx_reg_read(bcm590xx,
+				      BCM59055_REG_IHFSTIN);
+	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFSTIN, (data & ~PMU_IHFSTIN_MASK_I_IHFSTO) | (stimulus << PMU_IHFSTIN_OFFSET_I_IHFSTO));
+
+
+}
+EXPORT_SYMBOL(bcm59055_audio_ihf_selftest_stimulus_output);
+
+void bcm59055_audio_ihf_selftest_result(u8 *result)
+{
+	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+
+	*result = bcm590xx_reg_read(bcm590xx, BCM59055_REG_IHFSTO);
+
+	*result = (*result&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI;
+
+}
+EXPORT_SYMBOL(bcm59055_audio_ihf_selftest_result);
+
+int bcm59055_audio_ihf_testmode(int Mode)
+{
+	int data;
+	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+
+	data  =  bcm590xx_reg_read(bcm590xx,
+				      BCM59055_REG_IHFSTIN);
+	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_IHFSTIN,
+			   (data & ~PMU_IHFSTIN_MASK_I_IHFSELFTEST_EN)|(Mode << PMU_IHFSTIN_OFFSET_I_IHFSELFTEST_EN));
+}
+EXPORT_SYMBOL(bcm59055_audio_ihf_testmode);
+
+
+int bcm59055_audio_hs_selftest_stimulus(int stimulus)
+{
+	int data;
+	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+
+	data  =  (u8)bcm590xx_reg_read(bcm590xx,
+					   BCM59055_REG_HSIST);
+	bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSIST, (data & ~PMU_HSIST_MASK_I_HS_IST) | (stimulus << PMU_HSIST_OFFSET_I_HS_IST));
+
+}
+EXPORT_SYMBOL(bcm59055_audio_hs_selftest_stimulus);
+
+void bcm59055_audio_hs_selftest_result(u8 *result)
+{
+	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+
+	*result = bcm590xx_reg_read(bcm590xx, BCM59055_REG_HSOUT1);
+	*result = *result>>PMU_HSOUT1_OFFSET_O_HS_IST;
+}
+EXPORT_SYMBOL(bcm59055_audio_hs_selftest_result);
+
+int bcm59055_audio_hs_testmode(int Mode)
+{
+	int data;
+	struct bcm590xx *bcm590xx = driv_data->bcm590xx;
+
+
+	/* 1.   Enable test mode (driving buffer enabled) (i_hs_enst[1:0]  =  '11') on PMU */
+	data  =  (u8)bcm590xx_reg_read(bcm590xx,
+					   BCM59055_REG_HSIST);
+	return bcm590xx_reg_write(bcm590xx, BCM59055_REG_HSIST,
+			    (data & ~PMU_HSIST_MASK_I_HS_ENST)|(Mode << PMU_HSIST_OFFSET_I_HS_ENST));
+
+}
+EXPORT_SYMBOL(bcm59055_audio_hs_testmode);
+
+
 
 static int __devinit bcm59055_audio_probe(struct platform_device *pdev)
 {

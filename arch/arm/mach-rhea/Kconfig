@@ -52,13 +52,6 @@ config RHEA_A0_PM_ASIC_WORKAROUND
        help
        Say Y if you want to enable Rhea ASIC workarounds for Power management
 
-config MACH_RHEA_SELFTEST
-        bool "Selftest CSAPI"
-	depends on MFD_BCM_PMU590XX
-	default n
-        help
-          Selftest CSAPI support.
-
 endmenu
 
 

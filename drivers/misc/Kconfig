@@ -666,6 +666,13 @@ config BCM59055_ADC_CHIPSET_API
 	---help---
 	 BCM59055 ADC chispet API driver 
 
+config BCM59055_SELFTEST
+        bool "BCM59055 Selftest"
+	depends on MFD_BCM_PMU590XX && BCM59055_AUDIO
+	default n
+        help
+          Selftest support.
+
 config BCMPMU_AUDIO
         tristate "BCM PMU Audio Driver"
         depends on MFD_BCMPMU
@@ -699,6 +706,7 @@ config BCM_BT_LPM
         default n
         ---help---
         This driver adds Low Power mode support for Broadcom bluetooth
+
 
 source "drivers/misc/Kconfig.stm"
 source "drivers/misc/c2port/Kconfig"

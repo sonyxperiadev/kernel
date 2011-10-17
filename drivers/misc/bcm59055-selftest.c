@@ -1,29 +1,32 @@
 /************************************************************************************************/
-/*                                                                                              */
-/*  Copyright 2011  Broadcom Corporation                                                        */
-/*                                                                                              */
+/*      											*/
+/*  Copyright 2011  Broadcom Corporation							*/
+/*      											*/
 /*     Unless you and Broadcom execute a separate written software license agreement governing  */
-/*     use of this software, this software is licensed to you under the terms of the GNU        */
-/*     General Public License version 2 (the GPL), available at                                 */
-/*                                                                                              */
-/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
-/*                                                                                              */
-/*     with the following added to such license:                                                */
-/*                                                                                              */
+/*     use of this software, this software is licensed to you under the terms of the GNU	*/
+/*     General Public License version 2 (the GPL), available at 				*/
+/*      											*/
+/*          http://www.broadcom.com/licenses/GPLv2.php  					*/
+/*      											*/
+/*     with the following added to such license:						*/
+/*      											*/
 /*     As a special exception, the copyright holders of this software give you permission to    */
 /*     link this software with independent modules, and to copy and distribute the resulting    */
 /*     executable under terms of your choice, provided that you also meet, for each linked      */
-/*     independent module, the terms and conditions of the license of that module.              */
+/*     independent module, the terms and conditions of the license of that module.      	*/
 /*     An independent module is a module which is not derived from this software.  The special  */
-/*     exception does not apply to any modifications of the software.                           */
-/*                                                                                              */
+/*     exception does not apply to any modifications of the software.   			*/
+/*      											*/
 /*     Notwithstanding the above, under no circumstances may you combine this software in any   */
-/*     way with any other Broadcom software provided under a license other than the GPL,        */
-/*     without Broadcom's express prior written consent.                                        */
-/*                                                                                              */
+/*     way with any other Broadcom software provided under a license other than the GPL,	*/
+/*     without Broadcom's express prior written consent.					*/
+/*      											*/
 /************************************************************************************************/
 
 /* Tests supported in this file */
+#define GPS_TEST_SUPPORTED      /* GPS GPIO control */  /* Implemented in LMP */
+/* #define USB_ST_SUPPORTED */
+/* #define ADC_ST_SUPPORTED */
 #define SLEEPCLOCK_SUPPORTED	/* Implemented in LMP */ /* Test OK */
 #define DIGIMIC_SUPPORTED   	/* Implemented in LMP */ /* Test OK */
 #define HEADSET_ST_SUPPORTED	/* Implemented in LMP */ /* Test Fails */
@@ -35,7 +38,6 @@
 #define USE_AUDIOH_RDB_IHF
 #define USE_AUDIOH_RDB_HS
 
-
 /* Generel includes */
 #include <linux/string.h>
 #include <stdbool.h>
@@ -43,6 +45,7 @@
 #include "linux/delay.h"
 #include "linux/init.h"
 #include "linux/device.h"
+#include "linux/err.h"
 #include "linux/fs.h"
 #include "linux/proc_fs.h"
 #include "linux/types.h"
@@ -51,28 +54,16 @@
 #include <asm/io.h>
 #include <mach/hardware.h>
 
-/* CHAL */
-#if 0
-	#include "../arch/arm/plat-kona/include/plat/chal/chal_types.h"
-/*#include "../sound/caph/soc/chal/modules/audio/inc/chal_caph_audioh.h"*/
-typedef struct {
-	u32 bufAddr;
-	u32 buf2Addr;
-} CSL_CAPH_AUDIOH_BUFADDR_t;
-typedef enum {
-	CSL_CAPH_AMIC_PGA_GAIN,
-} CSL_CAPH_HW_GAIN_e;
-	#include "../sound/caph/soc/csl/audio/public/csl_caph_audioh.h"
-	#include "linux/broadcom/chal_caph_audioh_.h"
-#endif
-
-
-
 /* Generel Broadcom includes */
+
+/* PMU */
+#include "linux/mfd/bcm590xx/core.h"
 #include "linux/broadcom/bcm59055-adc.h"
-#include "linux/broadcom/bcm_selftest_bb.h"
-#include "mach/bcm_selftest_bb_low.h"
+#include "linux/broadcom/bcm59055-audio.h"
+#include "linux/broadcom/bcm59055-selftest.h"
 /*#include "chipset_iomap.h"*/
+/*#define ST_DBG(text,...) pr_debug (text"\n", ## __VA_ARGS__)*/
+/*#define ST_MDBG(text,...) pr_debug (text"\n", ## __VA_ARGS__)*/
 #define ST_DBG(text, ...) printk(KERN_INFO text"\n", ## __VA_ARGS__)
 #define ST_MDBG(text, ...) printk(KERN_INFO text"\n", ## __VA_ARGS__)
 
@@ -82,84 +73,34 @@ typedef enum {
 #include <mach/rdb/brcm_rdb_sysmap.h>
 #include <mach/rdb/brcm_rdb_audioh.h>
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h> /* For DigiMic test */
-#include <mach/rdb/brcm_rdb_sclkcal.h>  		/* For Sleep clock test */
+#include <mach/rdb/brcm_rdb_sclkcal.h>  	/* For Sleep clock test */
 #include <mach/rdb/brcm_rdb_bmdm_clk_mgr_reg.h> /* For Sleep clock test */
-#include <mach/rdb/brcm_rdb_simi.h>				/* For BARTM test */
-#include <mach/rdb/brcm_rdb_slptimer.h>			/* For PMU_CLK32 test test */
+#include <mach/rdb/brcm_rdb_simi.h>		/* For BARTM test */
+#include <mach/rdb/brcm_rdb_slptimer.h>		/* For PMU_CLK32 test test */
 #define UNDER_LINUX
 #include <mach/rdb/brcm_rdb_util.h>
+
 
 /* Pinmux */
 #include "mach/chip_pinmux.h"
 #include "mach/pinmux.h"
 
-/* PMU */
-#include "linux/mfd/bcm590xx/core.h"
-#include "linux/mfd/bcm590xx/bcm59055_A0.h"
 
 /* GPIO */
 #include "linux/gpio.h"
 #include "linux/interrupt.h"
 
-/* PMU Registers */
-/* HS */
-/* 0xA4 HSIST   reserved    i_oc_extrng   i_hs_ist  i_hs_enst [1:0] */
-#define PMU_HSIST   PMU_REG_HSIST
-#define  PMU_HSIST_MASK_I_HS_ENST	 0x03
-#define  PMU_HSIST_OFFSET_I_HS_ENST	 0
-#define  PMU_HSIST_MASK_I_HS_IST	 0x04
-#define  PMU_HSIST_OFFSET_I_HS_IST	 2
-/* 0xA9 HSOUT1  o_hs_ist[3:0]	o_rc_calcode[3:0] */
-#define PMU_HSOUT1  PMU_REG_HSOUT1
-#define PMU_HSOUT1_OFFSET_O_HS_IST	4
-/*0x9E  HSPGA1  i_pga_gainr i_pga_gainl i_pgal_ctl [5:0]*/
-#define PMU_HSPGA1  PMU_REG_HSPGA1
-#define  PMU_HSPGA1_MASK_IPGAL_CTL	 0x3F
-#define  PMU_HSPGA1_OFFSET_IPGAL_CTL	 0
-/*0x9F  HSPGA2  i_pga_cpctl[1:0]	  i_pgar_ctl [5:0]*/
-#define PMU_HSPGA2  PMU_REG_HSPGA2
-#define  PMU_HSPGA2_MASK_IPGAR_CTL	 0x3F
-#define  PMU_HSPGA2_OFFSET_IPGAR_CTL	 0
-/* 0xA0  HSPGA3  reserved    i_pga_inshort   i_pga_acinadj
-   i_ibctl_ffpga[1:0]  i_pga_enaccpl   i_pga_pulldnsj  i_pga_cmctl*/
-#define PMU_HSPGA3  PMU_REG_HSPGA3
-#define  PMU_HSPGA3_MASK_I_PGA_ENACCPL		0x04
-#define  PMU_HSPGA3_OFFSET_I_PGA_ENACCPL	2
-/* HSPUP1: i_pseq_byps  i_ocsj_pwrup	i_ocin_pwrup	i_iddq_pwrdn
-   i_cp_pwrup  i_ldo_pwrup i_rc_pwrup  i_fe_pwrup */
-#define PMU_HSPUP1  			 PMU_REG_HSPUP1
-#define  PMU_HSPUP1_OFFSET_I_IDDQ_PWRDN	4
-#define  PMU_HSPUP1_MASK_I_IDDQ_PWRDN	(0x01<<PMU_HSPUP1_OFFSET_I_IDDQ_PWRDN)
-#define  PMU_HSPUP1_OFFSET_I_CP_PWUP	3
-#define  PMU_HSPUP1_MASK_I_CP_PWUP	(0x01<<PMU_HSPUP1_OFFSET_I_IDDQ_PWRDN)
-#define  PMU_HSPUP1_OFFSET_I_LDO_PWRUP	2
-#define  PMU_HSPUP1_MASK_I_LDO_PWRUP	(0x01<<PMU_HSPUP1_OFFSET_I_LDO_PWRUP)
-/* HSPUP2:  i_drv1_pwrup	i_hs_pwrup  i_lf_reset  i_pop_shortmainaux
-   i_pop_onauxfb   i_pop_groundout i_drv2aux_pwrup i_drv2main_pwrup */
-#define PMU_HSPUP2  			 PMU_REG_HSPUP2
-#define  PMU_HSPUP2_OFFSET_I_HS_PWRUP	6
-#define  PMU_HSPUP2_MASK_I_HS_PWRUP	(0x01<<PMU_HSPUP2_OFFSET_I_HS_PWRUP)
-/* PLLCTRL: PLL_ATE_MODE reserved AUDIO_EN PLLCLKEN8M
-   PLLCLKEN1M  PLLENCLK26M PLLEN   PLLCLKSEL */
-#define PMU_PLLCTRL 			 PMU_REG_PLLCTRL
-#define  PMU_PLLCTRL_OFFSET_AUDIO_EN	5
-#define  PMU_PLLCTRL_MASK_AUDIO_EN	(0x01<<PMU_PLLCTRL_OFFSET_AUDIO_EN)
+#ifdef GPS_TEST_SUPPORTED
+/* GPS IO test variables */
+static bool GPS_PABLANK_Setup_as_GPIO = false;
+static struct pin_config StoredValue_GPS_PABLANK;
+static bool GPS_TMARK_Setup_as_GPIO = false;
+static struct pin_config StoredValue_GPS_TMARK;
+#endif
 
-/* IHF */
-/*0x8F  IHFSTIN reserved, i_IHFsto[1:0], i_IHFsti[1:0], i_IHFselftest_en[1:0] */
-#define PMU_IHFSTIN PMU_REG_IHFSTIN
-#define  PMU_IHFSTIN_MASK_I_IHFSELFTEST_EN	0x03
-#define  PMU_IHFSTIN_OFFSET_I_IHFSELFTEST_EN	0
-#define  PMU_IHFSTIN_MASK_I_IHFSTI		0x0C
-#define  PMU_IHFSTIN_OFFSET_I_IHFSTI		2
-#define  PMU_IHFSTIN_MASK_I_IHFSTO  		0x30
-#define  PMU_IHFSTIN_OFFSET_I_IHFSTO		4
-/*0x90  IHFSTO  reserved    o_IHFsto[1:0]	o_IHFsti[1:0] */
-#define PMU_IHFSTO  PMU_REG_IHFSTO
-#define  PMU_IHFSTO_MASK_O_IHFSTI	 0x03
-#define  PMU_IHFSTO_OFFSET_O_IHFSTI	 0
-#define  PMU_IHFSTO_MASK_O_IHFSTO	 0x0C
-#define  PMU_IHFSTO_OFFSET_O_IHFSTO	 2
+/* PMU Selftest Driver */
+static struct bcm590xx *bcm590xx_dev;
+
 
 /* DIGIMIC*/
 #define ST_GPIO_DMIC0DQ  GPIO_DMIC0DQ
@@ -172,26 +113,8 @@ typedef enum {
 #define AUDIO_SETTLING_TIME 15
 #define DMIC_SETTLING_TIME 30
 
-/* IHF */
-#define PMU_IHFSTIN PMU_REG_IHFSTIN /*0x8F  IHFSTIN reserved	i_IHFsto[1:0]    i_IHFsti[1:0]    i_IHFselftest_en[1:0] */
-#define  PMU_IHFSTIN_MASK_I_IHFSELFTEST_EN   0x03
-#define  PMU_IHFSTIN_OFFSET_I_IHFSELFTEST_EN 0
-#define  PMU_IHFSTIN_MASK_I_IHFSTI  	 0x0C
-#define  PMU_IHFSTIN_OFFSET_I_IHFSTI	 2
-#define  PMU_IHFSTIN_MASK_I_IHFSTO  	 0x30
-#define  PMU_IHFSTIN_OFFSET_I_IHFSTO	 4
-#define  PMU_IHFSTO  PMU_REG_IHFSTO /*0x90  IHFSTO  reserved	o_IHFsto[1:0]    o_IHFsti[1:0] */
-#define  PMU_IHFSTO_MASK_O_IHFSTI   	 0x03
-#define  PMU_IHFSTO_OFFSET_O_IHFSTI 	 0
-#define  PMU_IHFSTO_MASK_O_IHFSTO   	 0x0C
-#define  PMU_IHFSTO_OFFSET_O_IHFSTO 	 2
 
-/* Audio Test enable defines */
-#define PMU_TEST_READ_AND_ENABLE  0x03
-#define PMU_TEST_READ_AND_DISABLE 0x02
-#define PMU_TEST_ENABLE_NO_READ   0x01
-#define PMU_TEST_DISABLE_NO_READ  0x00
-
+/* Audio BB Test enable defines */
 #define BB_TEST_DISABLE 	0x00
 #define BB_TEST_10_KOHM 	0x01
 #define BB_TEST_500_OHM 	0x02
@@ -258,15 +181,21 @@ xReadValue, xResultArray, xErrorCode) \
 #define GPIO33  		 33
 #define GPIO_DMIC0CLK   	123
 #define GPIO34  		 34
+
+#define GPIO_GPS_TMARK       97
+#define GPIO_GPS_PABLANK     98
 /**********************************************************/
 /** Stuff that should be defined in header files - End   **/
 /**********************************************************/
+
+/* Missing Functions - where to find ?*/
+#define assert(x)
 
 /****************************/
 /* ST_SLEEP_CLOCK_FREQ_TEST */
 /****************************/
 #ifdef SLEEPCLOCK_SUPPORTED
-void std_selftest_sleepclk(struct SelftestDevData_t *dev,
+static void std_selftest_sleepclk(struct SelftestDevData_t *dev,
 			   struct SelftestUserCmdData_t *cmddata)
 {
 	bool isCalibrationStarted  =  false;
@@ -582,13 +511,14 @@ static irqreturn_t GPIO_DigiMicSelftestEventFunction(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-	#define DIGIMIC_SUBTESTS_PER_MIC 1
-	#define MAX_DIGIMIC_IF_COUNT 2
-	#define MAX_DIGIMIC_COUNT 4
-	#define DIGIMIC_NUMBER_OF_SUBTESTS 4
-	#define DIGIMIC_COMM_TEST 0 /* First digimic test */
+#define DIGIMIC_SUBTESTS_PER_MIC 1
+#define MAX_DIGIMIC_IF_COUNT 2
+#define MAX_DIGIMIC_COUNT 4
+#define DIGIMIC_NUMBER_OF_SUBTESTS 4
+#define DIGIMIC_COMM_TEST 0 /* First digimic test */
 
-void std_selftest_digimic(struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
+
+static void std_selftest_digimic(struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
 {
 	int Mic, MicIf;
 	int ret;
@@ -616,6 +546,10 @@ void std_selftest_digimic(struct SelftestDevData_t *dev, struct SelftestUserCmdD
 #endif
 	u8 Status[DIGIMIC_NUMBER_OF_SUBTESTS] = { ST_SELFTEST_OK, ST_SELFTEST_OK };
 
+#if 1
+	AUDIOH_hw_clkInit();
+	AUDIOH_hw_setClk(1);
+#endif
 
 	/* Pins: DMIC0CLK(GPIO123) Reg: PAD_CTRL - DMIC0CLK*/
 	/*  	 DMIC0DQ(GPIO124)  Reg: PAD_CTRL - DMIC0DQ*/
@@ -867,7 +801,7 @@ void st_audio_audiotx_get_dac_ctrl(CHAL_HANDLE audiohandle,
 #endif
 
 #ifdef HEADSET_ST_SUPPORTED
-void std_selftest_headset(struct SelftestDevData_t *dev,
+static void std_selftest_headset(struct SelftestDevData_t *dev,
 			  struct SelftestUserCmdData_t *cmddata)
 {
 	u8  ResultArray[HA_NUMBER_OF_SUBTESTS]  =  {ST_SELFTEST_OK,
@@ -885,6 +819,10 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	CHAL_HANDLE audiohandle;
 #endif
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset() called.");
+#if 1
+	AUDIOH_hw_clkInit();
+	AUDIOH_hw_setClk(1);
+#endif
 
 	/* Store PMU register Values */
 	StoredRegValue8[0]  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
@@ -922,23 +860,12 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset() Dump before setup");
 	/* Setup */
-	/* 1.    Disable AC-coupled input mode (i_pga_enaccpl  =  '0')   */
-	ReadValue = (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPGA3);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPGA3, (ReadValue & ~PMU_HSPGA3_MASK_I_PGA_ENACCPL)|(0x00 << PMU_HSPGA3_OFFSET_I_PGA_ENACCPL));
-	/* 2.    Power down HS amplifier (i_pgax_ctl [5:0] = '000000') */
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPGA1);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPGA1, (ReadValue & ~PMU_HSPGA1_MASK_IPGAL_CTL)|(0x00 << PMU_HSPGA1_OFFSET_IPGAL_CTL));
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPGA2);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPGA2, (ReadValue & ~PMU_HSPGA2_MASK_IPGAR_CTL)|(0x00 << PMU_HSPGA2_OFFSET_IPGAR_CTL));
-	/* 3. Power HS  */
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_PLLCTRL);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_PLLCTRL, (ReadValue & ~PMU_PLLCTRL_MASK_AUDIO_EN)|(0x01 << PMU_PLLCTRL_OFFSET_AUDIO_EN));
 	
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPUP1);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPUP1, (ReadValue & ~PMU_HSPUP1_MASK_I_IDDQ_PWRDN)|(0x00 << PMU_HSPUP1_OFFSET_I_IDDQ_PWRDN));
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPUP2);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSPUP2, (ReadValue & ~PMU_HSPUP2_MASK_I_HS_PWRUP)|(0x01 << PMU_HSPUP2_OFFSET_I_HS_PWRUP));
-	
+	bcm59055_hs_set_input_mode( 0, PMU_HS_DIFFERENTIAL_DC_COUPLED );
+	bcm59055_hs_set_gain(PMU_AUDIO_HS_BOTH,0);
+	bcm59055_audio_init();
+	bcm59055_hs_power(true);
+
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset() Dump after setup ");
 	/* PMU Input test */
 	/**********/
@@ -947,10 +874,9 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  INPUT TEST");
 	ST_DBG("GLUE_SELFTEST::TEST 1");
 	/* 1.   Enable test mode (driving buffer enabled) (i_hs_enst[1:0]  =  '11') on PMU */
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					   BCM59055_REG_HSIST);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSIST,
-			    (ReadValue & ~PMU_HSIST_MASK_I_HS_ENST)|(PMU_TEST_READ_AND_ENABLE << PMU_HSIST_OFFSET_I_HS_ENST));
+
+	bcm59055_audio_hs_testmode(PMU_TEST_READ_AND_ENABLE);
+
 	/*2.	 Disable Output (i_hs_enst  =  '0') on BB*/ /* AUDIOTX_TEST_EN[1:0]  =  '00' */
 #ifdef USE_AUDIOH_RDB_HS
 	BRCM_WRITE_REG_FIELD(KONA_AUDIOH_VA, AUDIOH_DAC_CTRL,
@@ -963,22 +889,18 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	st_audio_audiotx_set_dac_ctrl(audiohandle, &Dac_Ctrl);
 #endif
 	/*3.	 Set Output (i_hs_ist  =  '1') on PMU    */
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					   BCM59055_REG_HSIST);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSIST, (ReadValue & ~PMU_HSIST_MASK_I_HS_IST) | (0x01 << PMU_HSIST_OFFSET_I_HS_IST));
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					   BCM59055_REG_HSIST);
-	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  PMU_HSIST readvalue  =  0x%X", ReadValue);
+	bcm59055_audio_hs_selftest_stimulus(0x01);
+
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset() Dump before test");
 	/*4.	 Check result (o_hst_ist[3:0]). */
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset() Dump after test ");
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					   BCM59055_REG_HSOUT1);
+	bcm59055_audio_hs_selftest_result(&ReadValue);
+
 	/* a.    Bit High  = > Check passed   	*/
 	/* b.    Bit Low  = > Shorted to Ground*/
 	CHECKBIT_AND_ASSIGN_ERROR(0, HA_NUMBER_OF_SUBTESTS,
-				   ReadValue>>PMU_HSOUT1_OFFSET_O_HS_IST, ResultArray, ST_SELFTEST_SHORTED_GROUND);
+				   ReadValue, ResultArray, ST_SELFTEST_SHORTED_GROUND);
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  Test1 readvalue  =  0x%X -> 0x%X",
 	       ReadValue, (ReadValue>>PMU_HSOUT1_OFFSET_O_HS_IST));
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  RA[0] = %u,RA[1] = %u,RA[2] = %u,RA[3] = %u",
@@ -995,21 +917,14 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	st_audio_audiotx_set_dac_ctrl(audiohandle, &Dac_Ctrl);
 #endif
 	/*5.	 Set Output (i_hs_ist  =  '0') on PMU*/
-	ReadValue = (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					  BCM59055_REG_HSIST);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSIST,
-			   (ReadValue & ~PMU_HSIST_MASK_I_HS_IST)|(0x00 << PMU_HSIST_OFFSET_I_HS_IST));
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					  BCM59055_REG_HSIST);
-	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  BCM59055_REG_HSIST readvalue  =  0x%X", ReadValue);
+	bcm59055_audio_hs_selftest_stimulus(0x00);
 	/*6.	 Check result (o_hst_ist[3:0]).    */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					  BCM59055_REG_HSOUT1);
+	bcm59055_audio_hs_selftest_result(&ReadValue);
 	/* a.    Bit Low  = > Check passed	*/
 	/* b.    Bit High  = > Shorted to Power */
 	CHECKBIT_AND_ASSIGN_ERROR(1, HA_NUMBER_OF_SUBTESTS,
-				  ReadValue>>PMU_HSOUT1_OFFSET_O_HS_IST,
+				  ReadValue,
 				  ResultArray, ST_SELFTEST_SHORTED_POWER);
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  Test2 readvalue  =  0x%X -> 0x%X",
 	       ReadValue, (ReadValue>>PMU_HSOUT1_OFFSET_O_HS_IST));
@@ -1024,11 +939,7 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  OUTPUT TEST");
 	ST_DBG("GLUE_SELFTEST::TEST 3");
 	/*1.	 Enable test mode (driving buffer disabled) (i_hs_enst[1:0]  =  '10') on PMU */
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					  BCM59055_REG_HSIST);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_HSIST,
-			   (ReadValue & ~PMU_HSIST_MASK_I_HS_ENST)|(PMU_TEST_READ_AND_DISABLE << PMU_HSIST_OFFSET_I_HS_ENST));
-
+	bcm59055_audio_hs_testmode(PMU_TEST_READ_AND_DISABLE);
 #ifdef USE_AUDIOH_RDB_HS
 	/*2.	 Enable Output (i_hs_enst  =  '1') on BB */
 	/* AUDIOTX_TEST_EN[1:0]  =  '11' */
@@ -1049,12 +960,11 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 #endif
 	/*4.	 Check result (o_hst_ist[3:0]).   */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					  BCM59055_REG_HSOUT1);
+	bcm59055_audio_hs_selftest_result(&ReadValue);
 	/* a.    Bit High  = > Check passed   				  */
 	/* b.    Bit Low  = > Shorted to Ground or Not connected*/
 	CHECKBIT_AND_ASSIGN_ERROR(0, HA_NUMBER_OF_SUBTESTS,
-				   ReadValue>>PMU_HSOUT1_OFFSET_O_HS_IST, ResultArray,
+				   ReadValue, ResultArray,
 				   ST_SELFTEST_BAD_CONNECTION_OR_GROUND);
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  Test3 readvalue  =  0x%X -> 0x%X",
 		   ReadValue, (ReadValue>>PMU_HSOUT1_OFFSET_O_HS_IST));
@@ -1075,12 +985,12 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 #endif
 	/*6.	 Check result (o_hst_ist[3:0]).   */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  (u8)bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-					  BCM59055_REG_HSOUT1);
+	bcm59055_audio_hs_selftest_result(&ReadValue);
+
 	/* a.    Bit Low  = > Check passed						 */
 	/* b.    Bit High  = > Shorted to Power or Not connected   */
 	CHECKBIT_AND_ASSIGN_ERROR(1, HA_NUMBER_OF_SUBTESTS,
-				  ReadValue>>PMU_HSOUT1_OFFSET_O_HS_IST,
+				  ReadValue,
 				  ResultArray,
 				  ST_SELFTEST_BAD_CONNECTION_OR_POWER);
 	ST_DBG("GLUE_SELFTEST::std_selftest_headset()  Test4 readvalue  =  0x%X -> 0x%X",
@@ -1132,7 +1042,7 @@ void std_selftest_headset(struct SelftestDevData_t *dev,
 #endif
 
 #ifdef IHF_ST_SUPPORTED
-void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
+static void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
 {
 	u8  ResultArray1[IHF_NUMBER_OF_SUBTESTS1] = {ST_SELFTEST_OK, ST_SELFTEST_OK};
 	u8  ResultArray2[IHF_NUMBER_OF_SUBTESTS2] = {ST_SELFTEST_OK, ST_SELFTEST_OK};
@@ -1148,16 +1058,24 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 #endif
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() called.");
+#if 1
+	AUDIOH_hw_clkInit();
+	AUDIOH_hw_setClk(1);
+#endif
 
 	/* Store PMU register Values */
 	StoredRegValue8[0]  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
 					       BCM59055_REG_IHFSTIN);
 	StoredRegValue8[1]  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
 					       BCM59055_REG_IHFSTO);
+
 	/* Store BB register Values */
 #ifdef USE_AUDIOH_RDB_IHF
+	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() TEST-0");
 	StoredRegValue32[0]  =  BRCM_READ_REG(KONA_AUDIOH_VA, AUDIOH_DAC_CTRL);
+	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() TEST-1");
 	StoredRegValue32[1]  =  BRCM_READ_REG(KONA_AUDIOH_VA, AUDIOH_IHF_PWR);
+	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() TEST-2");
 #else
 	audiohandle  =  chal_audio_init(KONA_AUDIOH_VA, KONA_SDT_BASE_VA);
 	st_audio_audiotx_get_dac_ctrl(audiohandle, &Stored_dac_ctrl_Value);
@@ -1165,12 +1083,13 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 #endif
 	/* Subtest 1 + 2 - IHF DAC */
 	/* PMU Input test */
+	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() Init tests");
 	/* 1.   Enable test mode (driving buffer enabled) (i_hs_enst[1:0]  =  '11') on PMU */
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-				      BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN,
-			   (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSELFTEST_EN)|(PMU_TEST_READ_AND_ENABLE << PMU_IHFSTIN_OFFSET_I_IHFSELFTEST_EN));
+	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() Enable test mode");
+	bcm59055_audio_ihf_testmode(PMU_TEST_READ_AND_ENABLE);
+
 	/*2.	 Disable Output (i_hs_enst  =  '0') on BB*/ /* AUDIOTX_TEST_EN[1:0]  =  '00' */
+	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() Disable Output");
 #ifdef USE_AUDIOH_RDB_IHF
 	BRCM_WRITE_REG_FIELD(KONA_AUDIOH_VA, AUDIOH_DAC_CTRL,
 			     AUDIOTX_TEST_EN, BB_TEST_DISABLE);
@@ -1179,6 +1098,7 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 	st_audio_audiotx_set_dac_ctrl(audiohandle, &Dac_Ctrl);
 #endif
 	/*2a. Disable BB output drivers (High-Z) */
+	ST_DBG("GLUE_SELFTEST::std_selftest_ihf() Disable BB output drivers (High-Z)");
 #ifdef USE_AUDIOH_RDB_IHF
 	BRCM_WRITE_REG_FIELD(KONA_AUDIOH_VA, AUDIOH_IHF_PWR,
 			     AUDIOTX_IHF_DACR_PD, 1);
@@ -1189,34 +1109,33 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 #endif
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 1.1");
+
 	/*3.	 Set Output (i_hs_ist  =  '1') on PMU    */
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-				      BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN,
-			   (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSTI)|(0x02 << PMU_IHFSTIN_OFFSET_I_IHFSTI));
+	bcm59055_audio_ihf_selftest_stimulus_input(0x02);
+
 	/*4.	 Check result (o_hst_ist[3:0]). */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTO);
+	bcm59055_audio_ihf_selftest_result(&ReadValue);
+
 	/* a.    Bit High  = > Check passed   	*/
 	/* b.    Bit Low  = > Shorted to Ground*/
 	CHECKBIT_AND_ASSIGN_ERROR(0, IHF_NUMBER_OF_SUBTESTS1,
-				  (ReadValue&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI,
+				  ReadValue,
 				  ResultArray1, ST_SELFTEST_SHORTED_GROUND);
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test1 readvalue  =  0x%X",
 	       ReadValue);
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 1.2");
 	/*5.	 Set Output (i_hs_ist  =  '0') on PMU*/
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-				      BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN, (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSTI) | (0x00 << PMU_IHFSTIN_OFFSET_I_IHFSTI));
+	bcm59055_audio_ihf_selftest_stimulus_input(0x00);
+
 	/*6.	 Check result (o_hst_ist[3:0]).    */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-				      BCM59055_REG_IHFSTO);
+	bcm59055_audio_ihf_selftest_result(&ReadValue);
+
 	/* a.    Bit Low  = > Check passed	  */
 	/* b.    Bit High  = > Shorted to Power */
-	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS1, (ReadValue&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI, ResultArray1, ST_SELFTEST_SHORTED_POWER);
+	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS1, ReadValue, ResultArray1, ST_SELFTEST_SHORTED_POWER);
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test2 readvalue  =  0x%X",
 	       ReadValue);
 
@@ -1230,10 +1149,8 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 	st_audio_audiotx_set_dac_ctrl(audiohandle, &Dac_Ctrl);
 #endif
 	/*2.	 Enable test mode (Short or Open test) (i_IHFselftest_en[1:0]  =  '10') */
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-				      BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN,
-			   (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSELFTEST_EN)|(PMU_TEST_READ_AND_DISABLE << PMU_IHFSTIN_OFFSET_I_IHFSELFTEST_EN));
+	bcm59055_audio_ihf_testmode(PMU_TEST_READ_AND_DISABLE);
+
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 1.3");
 	/*3.	 Set Output (i_BB_sti  =  '11')*/
 #ifdef USE_AUDIOH_RDB_IHF
@@ -1243,15 +1160,16 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 	st_audio_audiotx_set_dac_ctrl(audiohandle, &Dac_Ctrl);
 #endif
 	/*3a.   Set (i_IHFsti  =  '0x')*/
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN, (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSTI)|(0x00 << PMU_IHFSTIN_OFFSET_I_IHFSTI));
+	bcm59055_audio_ihf_selftest_stimulus_input(0x00);
+
 	/*4.	 Check result (o_IHFsti). */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTO);
+	bcm59055_audio_ihf_selftest_result(&ReadValue);
+
 	/* a.    Bit High  = > Check passed*/
 	/* b.    Bit Low  = > Shorted to Ground*/
 	CHECKBIT_AND_ASSIGN_ERROR(0, IHF_NUMBER_OF_SUBTESTS1,
-				  (ReadValue&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI, ResultArray1, ST_SELFTEST_BAD_CONNECTION_OR_GROUND);
+				  ReadValue, ResultArray1, ST_SELFTEST_BAD_CONNECTION_OR_GROUND);
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 1.4");
 	/*5.	Set Output (i_BB_sti  =  '00')*/
@@ -1263,48 +1181,46 @@ void std_selftest_ihf(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 	st_audio_audiotx_set_dac_ctrl(audiohandle, &Dac_Ctrl);
 #endif
 	/*5a.   Set (i_IHFsti  =  '0x')*/
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN, (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSTI) | (0x00 << PMU_IHFSTIN_OFFSET_I_IHFSTI));
+	bcm59055_audio_ihf_selftest_stimulus_input(0x00);
+
 	/*6.	 Check result (o_IHFsti). */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTO);
+	bcm59055_audio_ihf_selftest_result(&ReadValue);
+
 	/* a.    Bit Low  = > Check passed*/
 	/* b.    Bit High  = > Shorted to Supply*/
-	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS1, (ReadValue&PMU_IHFSTO_MASK_O_IHFSTI)>>PMU_IHFSTO_OFFSET_O_IHFSTI, ResultArray1, ST_SELFTEST_BAD_CONNECTION_OR_POWER);
+	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS1, ReadValue, ResultArray1, ST_SELFTEST_BAD_CONNECTION_OR_POWER);
 
 	/* Subtest 3 + 4 - IHF Output  */
 	/*PMU Output Pins Test: */
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 2.1");
 	/*1.	 Enable by setting i_IHFselftest_en[0] to 1. */
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-				      BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN,
-			   (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSELFTEST_EN) | (PMU_TEST_ENABLE_NO_READ << PMU_IHFSTIN_OFFSET_I_IHFSELFTEST_EN));
+	bcm59055_audio_ihf_testmode(PMU_TEST_ENABLE_NO_READ);
+
 	/*2.	 i_IHFsto[1:0]  =  '0x'*/
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-				      BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN, (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSTO) | (0x00 << PMU_IHFSTIN_OFFSET_I_IHFSTO));
+	bcm59055_audio_ihf_selftest_stimulus_output(0x00);
+
 	/* Check */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTO);
+	bcm59055_audio_ihf_selftest_result(&ReadValue);
+
 	/* a.   Check if  o_IHFsto[1:0] == '00'  = > No pull-up resistor from the output pins to Supply*/
 	/* b.   Check if  o_IHFsto[1:0] < >'00'  = > Either or both output pins are short to Supply*/
 	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS2,
-				  (ReadValue&PMU_IHFSTO_MASK_O_IHFSTO)>>PMU_IHFSTO_OFFSET_O_IHFSTO, ResultArray2, ST_SELFTEST_BAD_CONNECTION_OR_POWER);
+				  ReadValue, ResultArray2, ST_SELFTEST_BAD_CONNECTION_OR_POWER);
 
 	ST_DBG("GLUE_SELFTEST::std_selftest_ihf()  Test 2.2");
 	/*3.	 i_IHFsto[1:0]  =  '1x'*/
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev,
-				      BCM59055_REG_IHFSTIN);
-	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTIN,
-			   (ReadValue & ~PMU_IHFSTIN_MASK_I_IHFSTO) | (0x02 << PMU_IHFSTIN_OFFSET_I_IHFSTO));
+	bcm59055_audio_ihf_selftest_stimulus_output(0x02);
+
 	/* Check */
 	mdelay(AUDIO_SETTLING_TIME);
-	ReadValue  =  bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_IHFSTO);
+	bcm59055_audio_ihf_selftest_result(&ReadValue);
+
 	/* a.    Check o_IHFsto[1:0] = '00'  = > No pull-down resistor from the output pins to ground*/
 	/* b.    Check o_IHFsto[1:0] < >'00'  = > Either or both output pins are short to ground*/
 	CHECKBIT_AND_ASSIGN_ERROR(1, IHF_NUMBER_OF_SUBTESTS2,
-				  (ReadValue&PMU_IHFSTO_MASK_O_IHFSTO)>>PMU_IHFSTO_OFFSET_O_IHFSTO, ResultArray2, ST_SELFTEST_BAD_CONNECTION_OR_GROUND);
+				  ReadValue, ResultArray2, ST_SELFTEST_BAD_CONNECTION_OR_GROUND);
 
 	/* Restore PMU register values */
 	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev,
@@ -1533,7 +1449,7 @@ static bool PMU_Pin_CLK32(struct SelftestDevData_t *dev)
 }
 
 
-void std_selftest_pmu(struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
+static void std_selftest_pmu(struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
 {
 	Pin_Status Selftest_PMU_Pin_Coverage[PMU_PIN_MAX] =	{
 		{ PMU_PIN_SCL_SDA,    true,  false,   PMU_Pin_SCL_SDA },
@@ -1580,7 +1496,7 @@ void std_selftest_pmu(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 	cmddata->testStatus  =  ST_SELFTEST_OK;
 }
 #else
-void std_selftest_pmu(struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
+static void std_selftest_pmu(struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
 {
 	ST_DBG("GLUE_SELFTEST::std_selftest_pmu() called.");
 
@@ -1591,14 +1507,276 @@ void std_selftest_pmu(struct SelftestDevData_t *dev, struct SelftestUserCmdData_
 }
 #endif
 
+
+#ifdef GPS_TEST_SUPPORTED
+/*---------------------------------------------------------------------------*/
+/*! \brief ST_SELFTEST_control_gps_io.
+ *  Self Test for gps control pins
+ *
+ *  \param name 	   - The logical name of the GenIO pin
+ *  \param direction       - Defines if read or write operation shall be performed
+ *  \param state	   - Pointer to data type that contains the pin state
+ *
+ *  \return     	   - The outcome of the self test procedure
+ */
+static void std_selftest_control_gps_io(struct SelftestDevData_t *dev,
+				 struct SelftestUserCmdData_t *cmddata)
+{
+	u8 result  = ST_SELFTEST_FAILED; /* set to default */
+	struct pin_config  GPIOSetup;
+	int ret;
+	/* Input */
+	u8 name      = cmddata->parm1;
+	u8 direction = cmddata->parm2;
+	u8 *state    = (u8 *)&cmddata->parm3;
+
+	ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () called -- ST_SELFTEST_GPS_READ/WRITE %x %x %x", name, direction, *state);
+
+	GPIOSetup.reg.val       = 0;
+	GPIOSetup.reg.b.drv_sth = DRIVE_STRENGTH_2MA;
+
+	switch (name) {
+	case ST_SELFTEST_GPS_TXP:
+		if (GPS_PABLANK_Setup_as_GPIO == false) {
+			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK_Setup_as_GPIO");
+			StoredValue_GPS_PABLANK.name = PN_GPS_PABLANK;
+			pinmux_get_pin_config(&StoredValue_GPS_PABLANK);
+			GPIOSetup.name = PN_GPS_PABLANK;
+			GPIOSetup.func = PF_GPIO98;
+			pinmux_set_pin_config(&GPIOSetup);
+			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () 0x%08X",
+				   StoredValue_GPS_PABLANK.reg.val);
+			ret = gpio_request(GPIO_GPS_PABLANK, "GPS PABLANK");
+			if (ret < 0) {
+				ST_DBG("GLUE_SELFTEST::gpio %u request failed",
+				       GPIO_GPS_PABLANK);
+/*				  dev_err(&pdev->dev, "Unable to request GPIO pin %d\n", GPIO_GPS_PABLANK);*/
+				result = ST_SELFTEST_FAILED;
+			}
+			GPS_PABLANK_Setup_as_GPIO = true;
+		}
+		switch (direction) {
+		case ST_SELFTEST_GPS_WRITE:{
+			switch (*state) {
+			case ST_SELFTEST_GPS_HIGH:
+				 gpio_direction_output(GPIO_GPS_PABLANK, 1);
+				 gpio_set_value(GPIO_GPS_PABLANK, 1);
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Write - High");
+				 break;
+			case ST_SELFTEST_GPS_LOW:
+				 gpio_direction_output(GPIO_GPS_PABLANK, 0);
+				 gpio_set_value(GPIO_GPS_PABLANK, 0);
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Write - Low");
+				 break;
+			case ST_SELFTEST_GPS_RELEASE:
+			default:
+			/* assume release state, defined in ISI */
+			if (GPS_PABLANK_Setup_as_GPIO == true) {
+				ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Restore");
+				pinmux_set_pin_config(&StoredValue_GPS_PABLANK);
+				gpio_free(GPIO_GPS_PABLANK);
+				GPS_PABLANK_Setup_as_GPIO = false;
+			}
+			break;
+			}
+			result = ST_SELFTEST_OK;
+			break;
+			}
+		case ST_SELFTEST_GPS_READ:
+			 gpio_direction_input(GPIO_GPS_PABLANK);
+			 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_PABLANK - Read");
+			 if (gpio_get_value(GPIO_GPS_PABLANK) == 1) {
+			     ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () >>>High");
+			     *state = ST_SELFTEST_GPS_HIGH;
+			 } else {
+			     ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () >>>Low");
+			     *state = ST_SELFTEST_GPS_LOW;
+			 }
+			 result = ST_SELFTEST_OK;
+			 break;
+		default:
+			assert(false);
+			break;
+		}
+		break;
+	case ST_SELFTEST_GPS_TIMESTAMP:
+		if (GPS_TMARK_Setup_as_GPIO == false) {
+			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK_Setup_as_GPIO");
+			StoredValue_GPS_TMARK.name = PN_GPS_TMARK;
+			pinmux_get_pin_config(&StoredValue_GPS_TMARK);
+			GPIOSetup.name = PN_GPS_TMARK;
+			GPIOSetup.func = PF_GPIO97;
+			pinmux_set_pin_config(&GPIOSetup);
+			ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () 0x%08X",
+				   StoredValue_GPS_TMARK.reg.val);
+			ret = gpio_request(GPIO_GPS_TMARK, "GPS TMARK");
+			if (ret < 0) {
+				ST_DBG("GLUE_SELFTEST::gpio %u request failed",
+				       GPIO_GPS_PABLANK);
+/*			  dev_err(&pdev->dev, "Unable to request GPIO pin %d\n", GPIO_GPS_PABLANK);*/
+				result = ST_SELFTEST_FAILED;
+			}
+			GPS_TMARK_Setup_as_GPIO = true;
+		}
+		switch (direction) {
+		case ST_SELFTEST_GPS_WRITE:{
+			switch (*state) {
+			case ST_SELFTEST_GPS_HIGH:
+				 gpio_direction_output(GPIO_GPS_TMARK, 1);
+				 gpio_set_value(GPIO_GPS_TMARK, 1);
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Write - High");
+				 break;
+			case ST_SELFTEST_GPS_LOW:
+				 gpio_direction_output(GPIO_GPS_TMARK, 0);
+				 gpio_set_value(GPIO_GPS_TMARK, 0);
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Write - Low");
+				 break;
+			case ST_SELFTEST_GPS_RELEASE:
+			default:
+				 /* assume release state, defined in ISI */
+				 if (GPS_TMARK_Setup_as_GPIO == true) {
+					ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Restore");
+					pinmux_set_pin_config(&StoredValue_GPS_TMARK);
+					gpio_free(GPIO_GPS_TMARK);
+					GPS_TMARK_Setup_as_GPIO = false;
+				 }
+				 break;
+			 }
+			 result = ST_SELFTEST_OK;
+			 break;
+		}
+
+		case ST_SELFTEST_GPS_READ:
+			 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () GPS_TMARK - Read");
+			 gpio_direction_input(GPIO_GPS_TMARK);
+			if (gpio_get_value(GPIO_GPS_TMARK) == 1) {
+				 ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () >>>High");
+				*state = ST_SELFTEST_GPS_HIGH;
+			} else {
+				ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () >>>Low");
+				*state = ST_SELFTEST_GPS_LOW;
+			}
+			result = ST_SELFTEST_OK;
+			break;
+		default:
+			assert(false);
+			break;
+		}
+		break;
+	default:
+		result = ST_SELFTEST_NOT_SUPPORTED;
+		break;
+	}
+
+	if (ST_SELFTEST_OK == result) {
+		ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () returned -----> ST_SELFTEST_OK");
+	} else {
+		ST_DBG("GLUE_SELFTEST::std_selftest_control_gps_io () returned -----> ST_SELFTEST_FAILED");
+	}
+
+	cmddata->testStatus = result;
+}
+#endif
+
+#ifdef USB_ST_SUPPORTED
+static u8 hal_selftest_usb_charger_latch_ok = 0;
+static u8 hal_selftest_usb_charger_called = 0;
+
+static void std_selftest_usb_charger(struct SelftestDevData_t *dev,
+			      struct SelftestUserCmdData_t *cmddata)
+{
+	u8 mbc5_orig, mbc5_bcd_aon, i;
+	u8 status;
+
+	if (!hal_selftest_usb_charger_called) {
+#ifdef NEED_TO_SIGNUP_FOR_EVENT_IN_LMP
+		status = HAL_EM_PMU_RegisterEventCB (PMU_DRV_CHGDET_LATCH, &hal_selftest_usb_charger_latch_cb);
+#endif
+		ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger() Status: %d", status);
+		hal_selftest_usb_charger_called = 1;
+	}
+
+	hal_selftest_usb_charger_latch_ok = 0;
+
+	/* Set PMU into BCDLDO Always on in MBCCTRL5 [1] */
+	mbc5_orig = bcm590xx_reg_read(dev->bcm_5900xx_pmu_dev, BCM59055_REG_MBCCTRL5);
+
+	if (mbc5_orig & BCM59055_REG_MBCCTRL5_USB_DET_LDO_EN) {
+		/* LDO is already on. */
+		mbc5_bcd_aon = mbc5_orig & ~(BCM59055_REG_MBCCTRL5_USB_DET_LDO_EN);
+		ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger(); USB_DET_LDO is already on, orig = %x aon = %x", mbc5_orig, mbc5_bcd_aon);
+		bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_MBCCTRL5, mbc5_bcd_aon);
+		mdelay(5);
+	}
+
+	mbc5_bcd_aon = mbc5_orig | BCM59055_REG_MBCCTRL5_BCDLDO_AON | BCM59055_REG_MBCCTRL5_USB_DET_LDO_EN | BCM59055_REG_MBCCTRL5_BC11_EN;
+	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_MBCCTRL5, mbc5_bcd_aon);
+
+	ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger() MBCCTRL5 original %x, aon %x", mbc5_orig, mbc5_bcd_aon);
+
+	for (i = 0; i < 200; i++) {
+		/* wait for CHGDET_LATCH status */
+		mdelay(2);
+		if (hal_selftest_usb_charger_latch_ok)
+			break;
+	}
+	/* Restore MBCCTRL5 */
+	mdelay(25);
+
+	bcm590xx_reg_write(dev->bcm_5900xx_pmu_dev, BCM59055_REG_MBCCTRL5, mbc5_orig);
+	/* IF chp_typ == 0x01, test is working correctly. chp_typ is located in bits 4 and 5.*/
+
+	if (hal_selftest_usb_charger_latch_ok) {
+		ST_DBG("GLUE_SELFTEST::hal_selftest_usb_charger() Connection is good");
+			cmddata->subtestCount = 0;
+			cmddata->subtestStatus[i] = ST_SELFTEST_OK;
+	} else {
+		cmddata->subtestCount = 1;
+		cmddata->subtestStatus[i] = ST_SELFTEST_FAILED;
+	}
+}
+#endif
+
+#ifdef ADC_ST_SUPPORTED
+static void std_selftest_adc(struct SelftestDevData_t *dev,
+		      struct SelftestUserCmdData_t *cmddata)
+{
+    ST_DBG("GLUE_SELFTEST::std_selftest_adc () called.");
+
+    /*...........*/
+    /*....TBD....*/
+    /*...........*/
+
+}
+#endif
+
+
 /********************************************************************/
 /* Command Handling */
 /********************************************************************/
-void SelftestHandleCommand_Low(enum SelftestUSCmds_e cmd, struct SelftestDevData_t *dev, struct SelftestUserCmdData_t *cmddata)
+
+static void SelftestHandleCommand(enum SelftestUSCmds_e cmd,
+				  struct SelftestDevData_t *dev,
+				  struct SelftestUserCmdData_t *cmddata)
 {
 	ST_DBG("SelftestHandleCommand::Cmd:%u", cmddata->testId);
 	/* Handle Userspace Commands */
 	switch (cmd) {
+	#ifdef GPS_TEST_SUPPORTED
+	case ST_SUSC_GPS_TEST:
+		std_selftest_control_gps_io(dev, cmddata);
+		break;
+	#endif
+	#ifdef USB_ST_SUPPORTED
+	case ST_SUSC_USB_ST:
+		std_selftest_usb_charger(dev, cmddata);
+		break;
+	#endif
+	#ifdef ADC_ST_SUPPORTED
+	case ST_SUSC_ADC_ST:
+		std_selftest_adc(dev, cmddata);
+		break;
+	#endif
 #ifdef DIGIMIC_SUPPORTED
 	case ST_SUSC_DIGIMIC:
 		ST_DBG("bcm_selftest_bb.c::SelftestHandleCommand::ST_SUSC_DIGIMIC");
@@ -1631,3 +1809,244 @@ void SelftestHandleCommand_Low(enum SelftestUSCmds_e cmd, struct SelftestDevData
 		break;
 	}
 }
+
+/********************************************************************/
+/* Selftest Sysfs file interface */
+/********************************************************************/
+static SelftestUserCmdData_t cmddata;
+static ssize_t show_TestResult (struct device_driver *d, char * buf)
+{
+	sprintf(buf, "%i %i %i %i %i %i %i %i %i %i %i %i %i",
+		cmddata.testId, 
+		cmddata.testStatus,
+		cmddata.subtestCount,
+		cmddata.subtestStatus[0], cmddata.subtestStatus[1],
+		cmddata.subtestStatus[2], cmddata.subtestStatus[3],
+		cmddata.subtestStatus[4], cmddata.subtestStatus[5],
+		cmddata.subtestStatus[6], cmddata.subtestStatus[7],
+		cmddata.subtestStatus[8], cmddata.subtestStatus[9] );
+	return strlen(buf); 
+}
+
+static ssize_t show_TestStart (struct device_driver *d, char * buf)
+{
+	sprintf(buf,"%i %i %i %i)", cmddata.testId, 
+			cmddata.parm1, cmddata.parm2, cmddata.parm3);
+	return  strlen(buf);; 
+}
+static ssize_t store_TestStart (struct device_driver *d, const char * buf, size_t count)
+{
+	int TestId, Parm1, Parm2, Parm3;
+	struct SelftestDevData_t dev;
+
+	ST_DBG("store_TestStart - Message received");
+
+	dev.bcm_5900xx_pmu_dev = bcm590xx_dev;
+
+	if ( (sscanf(buf, "%i %i %i %i", &TestId, &Parm1, &Parm2, &Parm3 )) != 4)
+		return -EINVAL;
+
+	cmddata.testId = TestId;
+	cmddata.parm1  = Parm1;
+	cmddata.parm2  = Parm2;
+	cmddata.parm3  = Parm3;
+
+	ST_DBG("store_TestStart (%i, %i, %i, %i)", TestId, Parm1, Parm2, Parm3 );
+	SelftestHandleCommand((enum SelftestUSCmds_e)cmddata.testId, &dev, &cmddata);
+	
+	return strnlen(buf, count);
+}
+
+static DRIVER_ATTR(TestResult, S_IRUGO, show_TestResult, NULL);
+static DRIVER_ATTR(TestStart, S_IRUGO | S_IWUSR, show_TestStart, store_TestStart);
+
+
+#define DRIVER_NAME "bcm59055-selftest"
+
+
+/********************************************************************/
+/* Selftest Procfs file interface */
+/********************************************************************/
+/***********************PMU PROC DEBUG Interface*********************/
+static int selftest_open(struct inode *inode, struct file *file)
+{
+	pr_debug("%s\n", __func__);
+	file->private_data = PDE(inode)->data;
+
+	return 0;
+}
+
+int selftest_release(struct inode *inode, struct file *file)
+{
+	file->private_data = NULL;
+	return 0;
+}
+static long selftest_unlocked_ioctl(struct file *filp, unsigned int cmd,
+				     unsigned long arg)
+{
+	struct SelftestUserCmdData_t cmddata;
+	struct SelftestDevData_t dev;
+	ST_DBG("Selftest command Received");
+	ST_DBG("Selftest copy_from_user");
+	dev.bcm_5900xx_pmu_dev = bcm590xx_dev;
+	if (copy_from_user((void *)&cmddata, (void*)arg,
+		sizeof(SelftestUserCmdData_t))) {
+	ST_DBG("Selftest copy_from_user Failed");
+	return -EFAULT;
+	}
+
+	cmddata.testId = cmd;
+	SelftestHandleCommand((enum SelftestUSCmds_e)cmd, &dev, &cmddata);
+
+	ST_DBG("Selftest copy_to_user");
+	if (copy_to_user ((void *)arg, (void*)&cmddata, sizeof(SelftestUserCmdData_t))) {
+		ST_DBG("Selftest copy_to_user Failed");
+		return -EFAULT;
+	}
+	return 0;
+}
+
+#define MAX_USER_INPUT_LEN 10
+static ssize_t selftest_write(struct file *file, const char __user *buffer,
+	size_t len, loff_t *offset)
+{
+	struct SelftestUserCmdData_t cmddata;
+	struct SelftestDevData_t dev;
+
+	if (len > MAX_USER_INPUT_LEN)
+		len = MAX_USER_INPUT_LEN;
+
+	dev.bcm_5900xx_pmu_dev = bcm590xx_dev;
+	cmddata.testId = buffer[0]-'a';
+	switch (cmddata.testId) {
+	case ST_SUSC_DIGIMIC:
+		cmddata.parm1 = 1; /* Enable DMIC 1 Test */
+		cmddata.parm2 = 1; /* Enable DMIC 2 Test */
+		break;
+	case ST_SUSC_GPS_TEST:
+		cmddata.parm1 = 0;
+		cmddata.parm2 = 0;
+		cmddata.parm3 = 0;
+		break;
+	default:
+		break;
+	}
+	SelftestHandleCommand(cmddata.testId, &dev, &cmddata);
+	if (cmddata.testStatus == 0) {
+		ST_DBG("Selftest OK");
+	} else {
+		ST_DBG("Selftest Failed (%u)", cmddata.testStatus);
+	}
+
+
+	*offset += len;
+	return len;
+}
+
+static const struct file_operations selftest_ops = {
+	.open = selftest_open,
+	.unlocked_ioctl = selftest_unlocked_ioctl,
+	.write = selftest_write,
+	.release = selftest_release,
+	.owner = THIS_MODULE,
+};
+
+/********************************************************************/
+/* Selftest Drivers Stuff */
+/********************************************************************/
+
+/******************************************************************************
+*
+* Function Name: selftest_pmu_probe
+*
+* Desc: Called to perform module initialization when the module is loaded.
+*
+******************************************************************************/
+static int __devinit selftest_pmu_probe(struct platform_device *pdev)
+{
+	bcm590xx_dev = dev_get_drvdata(pdev->dev.parent);
+
+	ST_DBG("Selftest CSAPI driver probed");
+
+	/* Register proc interface */
+	proc_create_data("selftest", S_IRWXUGO, NULL,
+		   &selftest_ops, NULL/*private data*/);
+
+	return 0;
+}
+
+static int __devexit selftest_pmu_remove(struct platform_device *pdev)
+{
+	return 0;
+}
+
+struct platform_driver selftestpmu_driver = {
+	.probe = selftest_pmu_probe,
+	.remove = __devexit_p(selftest_pmu_remove),
+	.driver = {
+		   .name = DRIVER_NAME,
+		   }
+};
+
+#if 0
+struct file_operations selftest_fops = {
+	.owner 		= THIS_MODULE,
+	.write 		= selftest_write,
+	.unlocked_ioctl = selftest_unlocked_ioctl,
+	.open 		= selftest_open,
+	.release 	= selftest_release,
+};
+
+struct miscdevice selftestpmu_miscdevice = {
+	.minor =    MISC_DYNAMIC_MINOR,
+	.name =     DRIVER_NAME,
+	.fops =     &selftest_fops
+};
+#endif
+
+
+/****************************************************************************
+*
+*  selftest_pmu_init
+*
+*     Called to perform module initialization when the module is loaded
+*
+***************************************************************************/
+
+static int __init selftest_pmu_init(void)
+{
+	/* Register driver */
+	platform_driver_register(&selftestpmu_driver);
+#if 0
+	misc_register(&selftestpmu_miscdevice);
+#endif
+	/* Register sysfs interface */
+	driver_create_file(&selftestpmu_driver.driver, &driver_attr_TestStart);
+	driver_create_file(&selftestpmu_driver.driver, &driver_attr_TestResult);
+
+	return 0;
+}
+
+/****************************************************************************
+*
+*  selftest_pmu_exit
+*
+*       Called to perform module cleanup when the module is unloaded.
+*
+***************************************************************************/
+
+static void __exit selftest_pmu_exit(void)
+{
+	platform_driver_unregister(&selftestpmu_driver);
+
+	driver_remove_file(&selftestpmu_driver.driver, &driver_attr_TestStart);
+	driver_remove_file(&selftestpmu_driver.driver, &driver_attr_TestResult);
+
+}
+
+
+module_init(selftest_pmu_init);
+module_exit(selftest_pmu_exit);
+
+MODULE_AUTHOR("PHERAGER");
+MODULE_DESCRIPTION("BCM SELFTEST BB");
