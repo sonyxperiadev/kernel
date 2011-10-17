@@ -57,6 +57,7 @@ static struct vc_omx_comp_supported vc_omx_info[OMX_PLUGIN__COMPONENT_SUPPORTED_
    { 1, OMX_PLUGIN__MKNAME( OMX_PLUGIN__COMPONENT_SUPPORTED__VIDEO_ENCODER, OMX_PLUGIN__COMPONENT_SUPPORTED__AVC )   },
 };
 static struct vc_omx_comp_status vc_omx_status;
+static struct vc_omx_enc_color vc_omx_color;
 // Proc entry
 static struct proc_dir_entry *vc_omx_proc_entry;
 
@@ -138,6 +139,18 @@ static long vc_omx_ioctl( struct file *file, unsigned int cmd, unsigned long arg
             }
             break;
         }
+
+        case VC_OMX_IOC_ENC_COLOR:
+        {
+            if ( copy_to_user( (void *)arg,
+                               &vc_omx_color,
+                               sizeof( vc_omx_color )) != 0 )
+            {
+               rc = -EFAULT;
+            }
+            break;
+        }
+
         default:
         {
             return -ENOTTY;
@@ -191,6 +204,15 @@ static int vc_omx_proc_read( char *buf, char **start, off_t offset, int count, i
                      vc_omx_info[index].enabled ? "Enabled" : "DISABLED" );
     }
 
+    p += sprintf( p, "\nPreferred Color Format Selected: %d\n\n",
+                  vc_omx_color.format );
+    p += sprintf( p, "\t(supported format): %d\tYUV-420\n",
+                  OMX_PLUGIN__ENCODING__YUV420 );
+    p += sprintf( p, "\t(supported format): %d\tYUVUV-128\n",
+                  OMX_PLUGIN__ENCODING__YUVUV128 );
+    p += sprintf( p, "\t(supported format): %d\tOPAQUE\n",
+                  OMX_PLUGIN__ENCODING__OPAQUE );
+
     *eof = 1;
     return p - buf;
 }
@@ -204,16 +226,17 @@ static int vc_omx_proc_read( char *buf, char **start, off_t offset, int count, i
 static int vc_omx_proc_write( struct file *file, const char __user *buffer, unsigned long count, void *data )
 {
    int ret;
-   unsigned char kbuf[PROC_WRITE_BUF_SIZE];
+   unsigned char kbuf[PROC_WRITE_BUF_SIZE+1];
    char name[PROC_WRITE_BUF_SIZE];
    unsigned int value;
    int index;
 
-   if ( count > PROC_WRITE_BUF_SIZE )
+   if ( count >= PROC_WRITE_BUF_SIZE )
    {
       count = PROC_WRITE_BUF_SIZE;
    }
 
+   memset( kbuf, 0, PROC_WRITE_BUF_SIZE+1 );
    if ( copy_from_user( kbuf,
                         buffer,
                         count ) != 0 )
@@ -227,6 +250,7 @@ static int vc_omx_proc_write( struct file *file, const char __user *buffer, unsi
 
    /* Return read value no matter what from there on.
    */
+   kbuf[ count ] = '\0';
    ret = count;
 
    if( sscanf( kbuf, "%s %u", name, &value ) != 2 )
@@ -240,13 +264,25 @@ static int vc_omx_proc_write( struct file *file, const char __user *buffer, unsi
       goto out;
    }
 
-   for ( index = 0 ; index < OMX_PLUGIN__COMPONENT_SUPPORTED__NUM ; index++ )
+   if ( strcmp( name, "color" ) == 0 )
    {
-      if ( strcmp( name,
-                   vc_omx_info[index].name ) == 0 )
+      if ( (value >= OMX_PLUGIN__ENCODING__YUV420) &&
+           (value <= OMX_PLUGIN__ENCODING__OPAQUE) )
       {
-         vc_omx_info[index].enabled = (value > 0 ? 1 : 0);
+         vc_omx_color.format = value;
          goto out;
+      }
+   }
+   else
+   {
+      for ( index = 0 ; index < OMX_PLUGIN__COMPONENT_SUPPORTED__NUM ; index++ )
+      {
+         if ( strcmp( name,
+                      vc_omx_info[index].name ) == 0 )
+         {
+            vc_omx_info[index].enabled = (value > 0 ? 1 : 0);
+            goto out;
+         }
       }
    }
 
@@ -311,6 +347,10 @@ static int __init vc_omx_init( void )
     }
     vc_omx_proc_entry->read_proc = vc_omx_proc_read;
     vc_omx_proc_entry->write_proc = vc_omx_proc_write;
+
+    /* Init configuration data.
+    */
+    vc_omx_color.format = OMX_PLUGIN__ENCODING__YUVUV128;
 
     return 0;
 
