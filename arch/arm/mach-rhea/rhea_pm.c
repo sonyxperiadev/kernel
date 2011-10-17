@@ -47,14 +47,12 @@ static u32 pm_en_self_refresh = 0;
 
 static int print_clock_count(void);
 static int print_sw_event_info(void);
-static int enter_dormant_state(struct kona_idle_state* state);
-static int enter_suspend_state(struct kona_idle_state* state);
+static int enter_idle_state(struct kona_idle_state* state);
 
 enum
 {
 	RHEA_STATE_C0,
-	RHEA_STATE_C1,
-	RHEA_STATE_C2
+	RHEA_STATE_C1
 };
 
 
@@ -91,57 +89,36 @@ const char *sleep_prevent_clocks[] = {
 
 static struct kona_idle_state rhea_cpu_states[] = {
 	{
-		.name = "suspend",
-		.desc = "suspend(Simle WFI)",
+		.name = "C0",
+		.desc = "suspend",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
 		.latency = 0,
 		.target_residency = 0,
 		.state = RHEA_STATE_C0,
-		.enter = enter_suspend_state,
+		.enter = enter_idle_state,
 	},
 
 #ifdef CONFIG_RHEA_DORMANT_MODE
 
 	{
-		.name = "suspend-dormant",
-		.desc = "suspend-dormant (XTAL ON)",
+		.name = "C1",
+		.desc = "dormant",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 200,
-		.target_residency = 200,
+		.latency = 500,
+		.target_residency = 500,
 		.state = RHEA_STATE_C1,
-		.enter = enter_dormant_state,
+		.enter = enter_idle_state,
 	},
-
-	{
-		.name = "deepsleep-dormant",
-		.desc = "deepsleep-dormant(XTAL OFF)",
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 300,
-		.target_residency = 300,
-		.state = RHEA_STATE_C2,
-		.enter = enter_dormant_state,
-	},
-
 #else
 	{
-		.name = "suspend-retention",
-		.desc = "suspend-retention (XTAL ON)",
+		.name = "C1",
+		.desc = "retention",
 		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 200,
-		.target_residency = 200,
+		.latency = 500,
+		.target_residency = 500,
 		.state = RHEA_STATE_C1,
-		.enter = enter_dormant_state,
+		.enter = enter_idle_state,
 	},
-	{
-		.name = "deepsleep-retention",
-		.desc = "deepsleep-retention (XTAL OFF)",
-		.flags = CPUIDLE_FLAG_TIME_VALID,
-		.latency = 300,
-		.target_residency = 300,
-		.state = RHEA_STATE_C2,
-		.enter = enter_dormant_state,
-	},
-
 #endif
 };
 
@@ -177,7 +154,7 @@ static int enable_sleep_prevention_clock(int enable)
 }
 
 
-static int pm_enable_scu_standby(bool enable)
+static int pm_enable_scu_standby(int enable)
 {
     u32 reg_val = 0;
     reg_val = readl(KONA_SCU_VA + SCU_CONTROL_OFFSET);
@@ -198,10 +175,10 @@ static int pm_config_deep_sleep(void)
 	pwr_mgr_ignore_power_ok_signal(true);
     clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
     clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
-    clk_set_crystal_pwr_on_idle(false);
+    clk_set_crystal_pwr_on_idle(true);
 
     pwr_mgr_arm_core_dormant_enable(true /*allow retention*/);
-    pm_enable_scu_standby(true);
+    pm_enable_scu_standby(1);
 
 	reg_val = readl(KONA_MEMC0_NS_VA+CSR_HW_FREQ_CHANGE_CNTRL_OFFSET);
 	reg_val &= ~CSR_HW_FREQ_CHANGE_CNTRL_DDR_PLL_PWRDN_ENABLE_MASK;
@@ -338,22 +315,15 @@ int print_sw_event_info()
 
    return 0;
 }
-int enter_suspend_state(struct kona_idle_state* state)
-{
-	pm_enable_scu_standby(false);
-	enter_wfi();
-	pm_enable_scu_standby(true);
-	return -1;
-}
 
-
-int enter_dormant_state(struct kona_idle_state* state)
+int enter_idle_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
 	u32 reg_val;
 #ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
 	u32 timer_lsw = 0;
 #endif
+
 
 	BUG_ON(!state);
 
@@ -370,10 +340,7 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, true);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
-
-	/*Turn off XTAL only for deep sleep state*/
-	if(state->state == RHEA_STATE_C2)
-		clk_set_crystal_pwr_on_idle(true);
+	clk_set_crystal_pwr_on_idle(true);
 
 #ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
@@ -391,8 +358,10 @@ int enter_dormant_state(struct kona_idle_state* state)
 		enable_sleep_prevention_clock(0);
 #endif
 
-	pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
-	pi_enable(pi,0);
+	if(state->state == RHEA_STATE_C1)
+	{
+		pi = pi_mgr_get(PI_MGR_PI_ID_ARM_CORE);
+		pi_enable(pi,0);
 #ifdef CONFIG_RHEA_DORMANT_MODE
 	/*Ignore dap power-up request and clear the bits that disallow dormant*/
 	/*TBD - Change pwrmgr interface function*/
@@ -401,10 +370,14 @@ int enter_dormant_state(struct kona_idle_state* state)
 	dormant_enter();
 
 #else
-	writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
-	enter_wfi();
+		writel(3, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+		enter_wfi();
 #endif
-
+	}
+	else
+	{
+		enter_wfi(); /*C0 - simple WFI*/
+	}
 #ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
 	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
 	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
@@ -415,10 +388,13 @@ int enter_dormant_state(struct kona_idle_state* state)
 		pr_info("SW2 state: %d\n", pwr_mgr_is_event_active(SOFTWARE_2_EVENT));
 	pwr_mgr_event_set(SOFTWARE_2_EVENT,1);
 
-	pi_enable(pi,1);
+	if(state->state == RHEA_STATE_C1)
+	{
+		pi_enable(pi,1);
 #ifndef CONFIG_RHEA_DORMANT_MODE
-	writel(0, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
+		writel(0, KONA_SCU_VA + SCU_POWER_STATUS_OFFSET);
 #endif
+	}
 
 	if(pm_en_self_refresh)
 	{
@@ -496,8 +472,8 @@ int enter_dormant_state(struct kona_idle_state* state)
 
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL0A, false);
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, false);
-	if(state->state == RHEA_STATE_C2)
-		clk_set_crystal_pwr_on_idle(false);
+	clk_set_crystal_pwr_on_idle(false);
+
 	return -1;
 }
 
@@ -519,6 +495,7 @@ int __init rhea_pm_init(void)
 
 #ifdef CONFIG_DEBUG_FS
 
+
 static struct clk* uartb_clk = NULL;
 static int clk_active = 1;
 struct delayed_work uartb_wq;
@@ -536,7 +513,6 @@ static void uartb_wq_handler(struct work_struct *work)
 	}
 }
 
-#ifdef CONFIG_UART_FORCE_RETENTION_TST
 void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 {
 #ifdef CONFIG_UART_FORCE_RETENTION
@@ -557,7 +533,6 @@ void uartb_pwr_mgr_event_cb(u32 event_id,void* param)
 	}
 #endif
 }
-#endif
 
 static struct dentry *dent_rhea_pm_root_dir;
 int __init rhea_pm_debug_init(void)
@@ -566,7 +541,7 @@ int __init rhea_pm_debug_init(void)
 	INIT_DELAYED_WORK(&uartb_wq,
 		uartb_wq_handler);
 
-#ifdef CONFIG_UART_FORCE_RETENTION_TST
+#ifdef CONFIG_UART_FORCE_RETENTION 
 	pwr_mgr_register_event_handler(UBRX_EVENT, uartb_pwr_mgr_event_cb,
 											NULL);
 #endif

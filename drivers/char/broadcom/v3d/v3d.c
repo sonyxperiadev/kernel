@@ -52,13 +52,9 @@ the GPL, without Broadcom's express prior written consent.
 
 /* Always check for idle at every reset:  TODO: make this configurable? */
 #define V3D_RESET_IMPLIES_ASSERT_IDLE
-//#define V3D_DEBUG
-#ifdef V3D_DEBUG
+
 #define dbg_print(fmt, arg...) \
 		printk(KERN_DEBUG "%s():" fmt, __func__, ##arg)
-#else
-#define dbg_print(fmt, arg...)
-#endif
 
 #define err_print(fmt, arg...) \
 		printk(KERN_ERR "%s():" fmt, __func__, ##arg)
@@ -99,13 +95,6 @@ static struct {
 	int num_trace_ents;
 	struct trace_entry *tracebuf;
 	struct pi_mgr_dfs_node* dfs_node;
-	struct pi_mgr_qos_node* qos_node;
-	unsigned long j1;  //jiffies of acquire
-	unsigned long j2;  //jiffies of release
-	unsigned long acquired_time;
-	unsigned long free_time;
-	bool show_v3d_usage;
-	volatile int is_clock_gated;
 } v3d_state;
 
 typedef struct {
@@ -116,8 +105,7 @@ typedef struct {
 } v3d_t;
 
 /***** Function Prototypes **************/
-static int enable_v3d_clock(void);
-static int disable_v3d_clock(void);
+static int setup_v3d_clock(void);
 static void reset_v3d(void);
 static unsigned int get_reloc_mem_slot(void);
 static void free_reloc_mem_slot(unsigned int slot);
@@ -150,12 +138,10 @@ static void free_reloc_mem_slot(unsigned int slot)
 /******************************************************************
 	V3D HW specific functions
 *******************************************************************/
-static int enable_v3d_clock(void)
+static int setup_v3d_clock(void)
 {
-	int rc = 0;
-
-	if (v3d_state.is_clock_gated == 0)
-		return 0;
+	unsigned long rate;
+	int rc;
 
 	v3d_state.dfs_node = pi_mgr_dfs_add_request("v3d", PI_MGR_PI_ID_MM, PI_OPP_TURBO);
 	if (!v3d_state.dfs_node)
@@ -176,39 +162,11 @@ static int enable_v3d_clock(void)
 		return -EIO;
 	}
 
-	v3d_state.is_clock_gated = 0;
+	rate = clk_get_rate(v3d_clk);
+	err_print("v3d_clk_clk rate %lu\n", rate);
 
 	return (rc);
 }
-
-
-static int disable_v3d_clock(void)
-{
-	int rc;
-
-	if (v3d_state.is_clock_gated == 1)
-		return 0;
-
-	v3d_clk = clk_get(NULL, "v3d_axi_clk");
-	if (!v3d_clk) {
-		err_print("%s: error get clock\n", __func__);
-		return -EIO;
-	}
-
-	clk_disable(v3d_clk);
-
-	 if (pi_mgr_dfs_request_remove(v3d_state.dfs_node))
-	{
-	    err_print("Failed to remove the dfs request for V3D\n");
-	    return  -EIO;
-	}
-
-	v3d_state.is_clock_gated = 1;
-
-	return (rc);
-}
-
-
 
 static bool v3d_is_not_idle(void)
 {
@@ -492,6 +450,8 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 
 			s = copy_from_user(&x, (const void *)arg, sizeof(x));
 			BUG_ON(s);
+			if (!s)
+				trace_add_entry(x.t, x.arg0, x.arg1, 0, 0, 0, x.l, 1);
 		}
 		break;
 
@@ -525,6 +485,8 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 			//Enable V3D block to generate interrupt
 			dbg_print("Enabling v3d interrupt\n");
 
+			trace_add_entry(TRACE_WAIT_IRQ, 0, 0, 0, 0, 0, 0, 1);
+
 			v3d_enable_irq();
 
 			dbg_print("Waiting for interrupt\n");
@@ -556,19 +518,6 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 				err_print("Wait for V3D HW failed\n");
 				return -ERESTARTSYS;
 			}
-			v3d_state.j1 = jiffies;
-			v3d_state.free_time += v3d_state.j1 - v3d_state.j2;
-			if( (v3d_state.show_v3d_usage) && jiffies_to_msecs(v3d_state.free_time + v3d_state.acquired_time) >  5000){
-				err_print("V3D usage = %lu \n", (uint32_t) (v3d_state.acquired_time * 100 )/ (v3d_state.free_time + v3d_state.acquired_time) );
-				v3d_state.free_time = 0;
-				v3d_state.acquired_time = 0;
-			}
-			/* Request for SIMPLE wfi */
-			if (v3d_state.qos_node)
-				pi_mgr_qos_request_update(v3d_state.qos_node, 0);
-
-			if (enable_v3d_clock())
-				err_print("V3D failed to enable clock");
 			v3d_state.g_irq_sem = &dev->irq_sem;	//Replace the irq sem with current process sem
 			dev->v3d_acquired = 1;		//Mark acquired: will come handy in cleanup process
 		}
@@ -577,15 +526,7 @@ static long v3d_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		case V3D_IOCTL_HW_RELEASE:
 		{
 			v3d_state.g_irq_sem = NULL;		//Free up the g_irq_sem
-			if (v3d_state.qos_node)
-				pi_mgr_qos_request_update(v3d_state.qos_node, PI_MGR_QOS_DEFAULT_VALUE);
-
 			dev->v3d_acquired = 0;	//Not acquired anymore
-			if (disable_v3d_clock())
-				err_print("V3D failed to enable clock");
-
-			v3d_state.j2 = jiffies;
-			v3d_state.acquired_time += v3d_state.j2 - v3d_state.j1;
 			up(&v3d_state.acquire_sem);		//V3D is up for grab
 		}
 		break;
@@ -724,21 +665,8 @@ int proc_v3d_write(struct file *file, const char __user *buffer, unsigned long c
 		/* TODO:  Nikhil already has some /proc control interface...  integrate this with that */
 		trace_control_stuff(v3d_req + 6);
 	}
-	else if (!strncmp("print_usage=on", v3d_req, 14)) {
-		v3d_state.show_v3d_usage = 1;
-	}
-	else if (!strncmp("print_usage=off", v3d_req, 15)) {
-		v3d_state.show_v3d_usage = 0;
-	}
-	else if (!strncmp("read_reg", v3d_req, 8)) {
-		if (v3d_state.is_clock_gated == 0)
-		        err_print("CT0CA = 0X%x \tCT0EA = 0X%x\nCT1CA = 0X%x \tCT1EA = 0X%x\n", 
-                	        readl(v3d_base + V3D_CT0CA_OFFSET),
-                        	readl(v3d_base + V3D_CT0EA_OFFSET),
-	                        readl(v3d_base + V3D_CT1CA_OFFSET),
-        	                readl(v3d_base + V3D_CT1EA_OFFSET));
-	}
-	else if(!g_mem_slots)
+	else
+	if(!g_mem_slots)
 	{
 		input = simple_strtoul(v3d_req, (char**)NULL, 0);
 		if( input < 0 || ( (input != 1) && (input % 2))){
@@ -811,7 +739,7 @@ int __init v3d_init(void)
 
 	device_create(v3d_state.v3d_class, NULL, MKDEV(v3d_major, 0), NULL, V3D_DEV_NAME);
 
-	v3d_state.is_clock_gated = 1;
+	setup_v3d_clock();
 
 	/* Map the V3D registers */
 	v3d_base = (void __iomem *)ioremap_nocache(RHEA_V3D_BASE_PERIPHERAL_ADDRESS, SZ_64K);
@@ -823,6 +751,10 @@ int __init v3d_init(void)
 	if (mm_rst_base == NULL)
 		goto err1;
 
+	/* Print out the V3D identification registers */
+	dbg_print("V3D Identification 0 = 0X%x\n", readl(v3d_base + V3D_IDENT0_OFFSET));
+	dbg_print("V3D Identification 1 = 0X%x\n", readl(v3d_base + V3D_IDENT1_OFFSET));
+	dbg_print("V3D Identification 2 = 0X%x\n", readl(v3d_base + V3D_IDENT2_OFFSET));
 	err_print("V3D register base address (remaped) = 0X%p\n", v3d_base);
 
 	/* Initialize the V3D acquire_sem and work_lock*/
@@ -831,7 +763,7 @@ int __init v3d_init(void)
 
 	/* Request the V3D IRQ */
 	ret = request_irq(IRQ_GRAPHICS, v3d_isr,
-			IRQF_ONESHOT | IRQF_DISABLED | IRQF_TRIGGER_HIGH, V3D_DEV_NAME, NULL);
+			IRQF_ONESHOT | IRQF_DISABLED | IRQF_TRIGGER_RISING, V3D_DEV_NAME, NULL);
 	if (ret){
 		err_print("request_irq failed ret = %d\n", ret);
 		goto err2;
@@ -851,8 +783,6 @@ int __init v3d_init(void)
 	}
 	v3d_state.trace_lock = __SPIN_LOCK_UNLOCKED();
 
-	v3d_state.show_v3d_usage = 0;
-
 	/* create a proc entry */
 	v3d_state.proc_info = create_proc_entry("v3d",
 			(S_IWUSR | S_IWGRP | S_IRUSR | S_IRGRP ), NULL);
@@ -867,11 +797,6 @@ int __init v3d_init(void)
 		v3d_state.proc_info->read_proc = proc_v3d_read;
 	}
 
-	/* reigster qos client */
-	v3d_state.qos_node = pi_mgr_qos_add_request("v3d", PI_MGR_PI_ID_ARM_CORE, PI_MGR_QOS_DEFAULT_VALUE);
-	if (NULL == v3d_state.qos_node) 
-		err_print("failed to register qos client. ACP wont work\n");
-	
 	return 0;
 
 err2:
@@ -887,9 +812,6 @@ err:
 void __exit v3d_exit(void)
 {
 	dbg_print("V3D driver Exit\n");
-
-	if (pi_mgr_qos_request_remove(v3d_state.qos_node))
-		err_print("failed to unregister qos client\n");
 
 	/* remove proc entry */
 	remove_proc_entry("v3d", NULL);
