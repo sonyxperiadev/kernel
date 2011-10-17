@@ -249,6 +249,11 @@ extern void dhd_enable_oob_intr(struct dhd_bus *bus, bool enable);
 MODULE_LICENSE("GPL v2");
 #endif /* LinuxVer */
 
+/* Add 'bcmdhd' as an alias for the driver name */
+#if defined(CONFIG_ANDROID)
+MODULE_ALIAS("bcmdhd");
+#endif /* CONFIG_ANDROID */
+
 #include <dhd_bus.h>
 
 #define DBUS_RX_BUFFER_SIZE_DHD(net)	(net->mtu + net->hard_header_len + dhd->pub.hdrlen)
