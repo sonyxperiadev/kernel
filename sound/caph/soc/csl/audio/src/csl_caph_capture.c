@@ -64,6 +64,7 @@ typedef	struct
 	UInt32		streamID;
 	CSL_AUDIO_DEVICE_e 		source;	
 	CSL_AUDIO_DEVICE_e 		sink;
+	CSL_CAPH_PathID         pathID;
 	CSL_AUDCAPTURE_CB dmaCB;	
 	CSL_CAPH_DMA_CHNL_e	    dmaCH;
 	CSL_CAPH_DMA_CHNL_e	    dmaCH2; //temp leave this back compatible
@@ -83,7 +84,7 @@ static CSL_CAPH_Drv_t	sCaphDrv[CSL_CAPH_STREAM_TOTAL] = {{0}};
 // local function declarations
 //****************************************************************************
 static CSL_CAPH_Drv_t* GetDriverByType (UInt32 streamID);
-static CSL_CAPH_STREAM_e CSL_GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH);
+static CSL_CAPH_STREAM_e GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH);
 static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 
 //******************************************************************************
@@ -100,44 +101,13 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl);
 ****************************************************************************/
 UInt32 csl_audio_capture_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink)
 {
-	CSL_CAPH_DMA_CHNL_t dmaCHs;
 	UInt32 streamID = CSL_CAPH_STREAM_NONE;
 	CSL_CAPH_Drv_t	*audDrv = NULL;
 	
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_init::source=0x%x sink=0x%x.\n", source, sink));
 
-    memset(&dmaCHs, 0, sizeof(CSL_CAPH_DMA_CHNL_t));
-	if (((source == CSL_CAPH_DEV_ANALOG_MIC) ||(source == CSL_CAPH_DEV_DIGI_MIC))
-		&& (sink == CSL_CAPH_DEV_DSP))
-	{
-		sink = CSL_CAPH_DEV_DSP_throughMEM;
-		dmaCHs.dmaCH = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH13);
-	}
-	// need to diff these 2 streams for eanc
-	else if ((source == CSL_CAPH_DEV_EANC_DIGI_MIC)&& (sink == CSL_CAPH_DEV_DSP))
-	{
-		sink = CSL_CAPH_DEV_DSP_throughMEM;
-		dmaCHs.dmaCH = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH14);
-                dmaCHs.dmaCH2 = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH15);	
-	}
-	else if ((source == CSL_CAPH_DEV_EANC_INPUT)&& (sink == CSL_CAPH_DEV_DSP))
-	{
-		sink = CSL_CAPH_DEV_DSP_throughMEM;
-		dmaCHs.dmaCH = csl_caph_dma_obtain_given_channel(CSL_CAPH_DMA_CH16);
-	}
-	else
-	{
-	    dmaCHs.dmaCH = csl_caph_dma_obtain_channel();
-        if (dmaCHs.dmaCH == CSL_CAPH_DMA_NONE)
-        {
-            // No DMA Channel availble for dmaCH. Return
-            return streamID;
-        }
-	    audio_xassert(dmaCHs.dmaCH<CSL_CAPH_DMA_CH12, dmaCHs.dmaCH);
-	}
-
-	streamID = CSL_GetStreamIDByDmaCH(dmaCHs.dmaCH);
-	
+    // allocate a unique streamID	
+	streamID = (UInt32)csl_caph_hwctrl_AllocateStreamID();
 	audDrv = GetDriverByType(streamID);
 	
 	memset(audDrv, 0, sizeof(CSL_CAPH_Drv_t));
@@ -145,8 +115,6 @@ UInt32 csl_audio_capture_init(CSL_AUDIO_DEVICE_e source, CSL_AUDIO_DEVICE_e sink
 	audDrv->streamID = streamID;
 	audDrv->source = source;
 	audDrv->sink = sink;	
-	audDrv->dmaCH = dmaCHs.dmaCH;	
-	audDrv->dmaCH2 = dmaCHs.dmaCH2;	
 	
     return audDrv->streamID;
 }
@@ -169,23 +137,6 @@ Result_t csl_audio_capture_deinit(UInt32 streamID)
 	
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_deinit::dmaCH=0x%x, dmaCH2-0x%x\n", 
                     audDrv->dmaCH, audDrv->dmaCH2));
-	
-    if (audDrv->dmaCH != CSL_CAPH_DMA_NONE)
-    {
-	   // For now comment the following line out.
-	   // DMA channel is already released by AUdio Controller.
-	   // This line hear can cause crash.
-	   // I plan to remove it. After more test. 	    
-//        csl_caph_dma_release_channel(audDrv->dmaCH);
-    }
-    if (audDrv->dmaCH2 != CSL_CAPH_DMA_NONE)
-    {
-	   // For now comment the following line out.
-	   // DMA channel is already released by AUdio Controller.
-	   // This line hear can cause crash.
-	   // I plan to remove it. After more test. 	    
-//        csl_caph_dma_release_channel(audDrv->dmaCH2);
-    }
 	
 	memset(audDrv, 0, sizeof(CSL_CAPH_Drv_t));
 	
@@ -218,16 +169,7 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 	if (audDrv == NULL)
 		return RESULT_ERROR;	
 
-    //Register StreamID to HW Ctrl Driver.
-	if(RESULT_OK != csl_caph_hwctrl_RegisterStreamID(audDrv->source, 
-                                            audDrv->sink, 
-                                            (CSL_CAPH_STREAM_e)audDrv->streamID)) 
-    {
-        audio_xassert(0, audDrv->streamID);
-        return RESULT_ERROR;
-    }
 	audDrv->dmaCB = csl_audio_capture_cb;
-
 	audDrv->ringBuffer = ringBuffer;
 	audDrv->blockSize = blockSize;
 	audDrv->numBlocks = numBlocks;
@@ -250,11 +192,14 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 		stream.src_sampleRate = AUDIO_SAMPLING_RATE_8000;
 	}
 	
-   if (RESULT_OK != csl_caph_hwctrl_RegisterStream(&stream))
-    {
-        audio_xassert(0, streamID);
-        return RESULT_ERROR;
-    }	
+    audDrv->pathID = csl_caph_hwctrl_RegisterStream(&stream);
+    if (audDrv->pathID == 0)
+	{
+		audio_xassert(0, audDrv->pathID);
+		return RESULT_ERROR;
+	}
+    audDrv->dmaCH = csl_caph_hwctrl_GetdmaCH(audDrv->pathID);
+	
 	return RESULT_OK;
 }
 
@@ -268,7 +213,6 @@ Result_t csl_audio_capture_configure( AUDIO_SAMPLING_RATE_t    sampleRate,
 Result_t csl_audio_capture_start (UInt32 streamID)
 {
 	CSL_CAPH_Drv_t	*audDrv = NULL;
-	CSL_CAPH_HWCTRL_CONFIG_t config;
 
 	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_audio_capture_start::streamID=0x%x\n", streamID));
 
@@ -276,17 +220,8 @@ Result_t csl_audio_capture_start (UInt32 streamID)
 
 	if (audDrv == NULL)
 		return RESULT_ERROR;	
-	
-	memset(&config, 0, sizeof(config));
-	config.streamID = (CSL_CAPH_STREAM_e)audDrv->streamID;
-	config.dmaCH = audDrv->dmaCH;
-	config.dmaCH2 = audDrv->dmaCH2;
-	
-	config.source = audDrv->source;
-	config.sink = audDrv->sink;
 
-    (void)csl_caph_hwctrl_EnablePath(config);
-	audDrv->bitPerSample = csl_caph_hwctrl_GetDataFormat(config.streamID);	
+    (void)csl_caph_hwctrl_StartPath(audDrv->pathID);
 	
     return RESULT_OK;
 }
@@ -362,10 +297,7 @@ static CSL_CAPH_Drv_t* GetDriverByType (UInt32 streamID)
 {
 	CSL_CAPH_Drv_t	*audDrv = NULL;
 
-	if (streamID != CSL_CAPH_STREAM_NONE)
-		audDrv = &sCaphDrv[streamID];
-	else
-		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "%s GetDriverByType:: Doesn't support audio driver streamID = 0x%x\n", __FILE__, streamID));
+	audDrv = &sCaphDrv[streamID];
 
 	return audDrv;
 }
@@ -396,7 +328,7 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 		//_DBG_(Log_DebugPrintf(LOGID_AUDIO, "DMARequest fill high half ch=0x%x \r\n", chnl));
 		csl_caph_dma_set_ddrfifo_status( chnl, CSL_CAPH_READY_HIGH);
 	}
-	streamID = CSL_GetStreamIDByDmaCH(chnl);
+	streamID = GetStreamIDByDmaCH(chnl);
 
 	audDrv = GetDriverByType(streamID);
 	
@@ -407,92 +339,30 @@ static void AUDIO_DMA_CB(CSL_CAPH_DMA_CHNL_e chnl)
 
 // ==========================================================================
 //
-// Function Name: CSL_GetStreamIDByDmaCH
+// Function Name: GetStreamIDByDmaCH
 //
 // Description: Get the audio streamID from the dma channel.
 //
 // =========================================================================
 //: this api can be shared bwteen capture and render, need to put in a common file.
-static CSL_CAPH_STREAM_e CSL_GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH)
+static CSL_CAPH_STREAM_e GetStreamIDByDmaCH (CSL_CAPH_DMA_CHNL_e dmaCH)
 {
 	CSL_CAPH_STREAM_e streamID = CSL_CAPH_STREAM_NONE;
-
-	//_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "CSL_GetStreamIDByDmaCH:: dmaCH = 0x%x\n", dmaCH));
-
-      switch (dmaCH)
-      {
-        case CSL_CAPH_DMA_NONE:
-            streamID = CSL_CAPH_STREAM_NONE;
-            break;
-			
-         case CSL_CAPH_DMA_CH1:
-            streamID = CSL_CAPH_STREAM1;
-            break;
-			
-         case CSL_CAPH_DMA_CH2:
-            streamID = CSL_CAPH_STREAM2;
-            break;	
-			
-         case CSL_CAPH_DMA_CH3:
-            streamID = CSL_CAPH_STREAM3;
-            break;
-			
-         case CSL_CAPH_DMA_CH4:
-            streamID = CSL_CAPH_STREAM4;
-            break;
-			
-         case CSL_CAPH_DMA_CH5:
-            streamID = CSL_CAPH_STREAM5;
-            break;
-			
-         case CSL_CAPH_DMA_CH6:
-            streamID = CSL_CAPH_STREAM6;
-            break;	
-			
-         case CSL_CAPH_DMA_CH7:
-            streamID = CSL_CAPH_STREAM7;
-            break;
-			
-         case CSL_CAPH_DMA_CH8:
-            streamID = CSL_CAPH_STREAM8;
-            break;
-			
-         case CSL_CAPH_DMA_CH9:
-            streamID = CSL_CAPH_STREAM9;
-            break;
-			
-         case CSL_CAPH_DMA_CH10:
-            streamID = CSL_CAPH_STREAM10;
-            break;	
-			
-         case CSL_CAPH_DMA_CH11:
-            streamID = CSL_CAPH_STREAM11;
-            break;
-			
-         case CSL_CAPH_DMA_CH12:
-            streamID = CSL_CAPH_STREAM12;
-            break;
-			
-         case CSL_CAPH_DMA_CH13:
-            streamID = CSL_CAPH_STREAM13;
-            break;
-			
-         case CSL_CAPH_DMA_CH14:
-            streamID = CSL_CAPH_STREAM14;
-            break;	
-			
-         case CSL_CAPH_DMA_CH15:
-            streamID = CSL_CAPH_STREAM15;
-            break;
-			
-         case CSL_CAPH_DMA_CH16:
-            streamID = CSL_CAPH_STREAM16;
-            break;
-			
-        default:
-            audio_xassert(0, dmaCH);
-		break;	
-    };
+	CSL_CAPH_Drv_t	*audDrv = NULL;
+    UInt32 i = 0;
+    
+    for (i = 0; i < CSL_CAPH_STREAM_TOTAL; i++)
+    {
+	    audDrv = GetDriverByType(i);
+        if (audDrv != NULL)
+        {
+            if (audDrv->dmaCH == dmaCH)
+            {
+                streamID = audDrv->streamID;
+                break;
+            }
+        }
+    }
 
 	return streamID;
 }

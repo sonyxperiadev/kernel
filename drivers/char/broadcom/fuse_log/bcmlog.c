@@ -95,7 +95,9 @@ static UInt8* sMemDumpSignalBuf = NULL;
 mm_segment_t sCrashDumpFS;
 
 
+#ifdef CONFIG_BRCM_CP_CRASH_DUMP
 static struct mtd_info *mtd = NULL;
+#endif
 static unsigned char *cp_buf = NULL;
 
 /**
@@ -1129,12 +1131,12 @@ void BCMLOG_HandleCpCrashDumpData( const char *buf, int size )
 		break;
 	case BCMLOG_OUTDEV_RNDIS:
 	    irql = AcquireOutputLock( ) ;
-		BCMLOG_Output( buf, size, 0 );
+		BCMLOG_Output( (unsigned char *)buf, size, 0 );
 		ReleaseOutputLock( irql ) ;
 		break;
 	case BCMLOG_OUTDEV_STM:
 	    irql = AcquireOutputLock( ) ;
-		BCMLOG_Output( buf, size, 0 );
+		BCMLOG_Output( (unsigned char *)buf, size, 0 );
 		ReleaseOutputLock( irql ) ;
 		break;
 	case BCMLOG_OUTDEV_NONE:

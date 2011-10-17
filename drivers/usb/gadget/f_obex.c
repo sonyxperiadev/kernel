@@ -26,7 +26,6 @@
 #include <linux/slab.h>
 #include <linux/kernel.h>
 #include <linux/device.h>
-#include <linux/usb/android_composite.h>
 
 #include "u_serial.h"
 #include "gadget_chips.h"
@@ -376,13 +375,11 @@ obex_bind(struct usb_configuration *c, struct usb_function *f)
 	 * OBEX server is active.
 	 */
 
-#ifndef CONFIG_USB_ANDROID_OBEX
 	status = usb_function_deactivate(f);
 	if (status < 0)
 		WARNING(cdev, "obex ttyGS%d: can't prevent enumeration, %d\n",
 			obex->port_num, status);
 	else
-#endif
 		obex->can_activate = true;
 
 
@@ -485,9 +482,7 @@ int __init obex_bind_config(struct usb_configuration *c, u8 port_num)
 	obex->port.func.set_alt = obex_set_alt;
 	obex->port.func.get_alt = obex_get_alt;
 	obex->port.func.disable = obex_disable;
-#ifdef CONFIG_USB_ANDROID_OBEX
-	obex->port.func.disabled = 1;
-#endif
+
 	status = usb_add_function(c, &obex->port.func);
 	if (status)
 		kfree(obex);
@@ -497,26 +492,3 @@ int __init obex_bind_config(struct usb_configuration *c, u8 port_num)
 
 MODULE_AUTHOR("Felipe Balbi");
 MODULE_LICENSE("GPL");
-
-#ifdef CONFIG_USB_ANDROID_OBEX
-int obex_function_bind_config(struct usb_configuration *c)
-{
-	int ret = obex_bind_config(c, 2);
-	return ret;
-}
-
-static struct android_usb_function obex_function = {
-	.name = "obex",
-	.bind_config = obex_function_bind_config,
-};
-
-static int __init init(void)
-{
-	printk(KERN_INFO "f_obex init\n");
-	android_register_function(&obex_function);
-	return 0;
-}
-module_init(init);
-
-#endif /* CONFIG_USB_ANDROID_OBEX */
-

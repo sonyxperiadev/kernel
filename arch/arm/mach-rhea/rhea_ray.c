@@ -32,12 +32,14 @@
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
+#include <mach/pinmux.h>
 #include <mach/hardware.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
 #include <asm/gpio.h>
+#include <mach/sdio_platform.h>
 #ifdef CONFIG_GPIO_PCA953X
 #include <linux/i2c/pca953x.h>
 #endif
@@ -93,10 +95,20 @@
 
 
 #include <video/kona_fb.h>
+#include <linux/pwm_backlight.h>
+#include <plat/syscfg.h>
+#include <plat/bcm_pwm_block.h>
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))
 #include <linux/broadcom/bcmbt_rfkill.h>
 #endif
+
+#ifdef CONFIG_GPIO_PCA953X
+#define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
+#else
+#define SD_CARDDET_GPIO_PIN      75
+#endif
+
 
 #ifdef CONFIG_BCM_BT_LPM
 #include <linux/broadcom/bcmbt_lpm.h>
@@ -241,6 +253,7 @@ static struct platform_device bcm59055_vc_device_sim = {
 #endif
 
 static const char *pmu_clients[] = {
+	"bcmpmu_usb",
 #ifdef CONFIG_INPUT_BCM59055_ONKEY
 	"bcm590xx-onkey",
 #endif
@@ -260,7 +273,10 @@ static const char *pmu_clients[] = {
 	"bcm59055-rtc",
 #endif
 #ifdef CONFIG_BATTERY_BCM59055
-	"bcm590xx-power",
+	/* Power driver need to be updated as some of its job
+	 * has been distributed to newly added USB driver
+	*/
+	//"bcm590xx-power",
 #endif
 #ifdef CONFIG_BCM59055_ADC_CHIPSET_API
 	"bcm59055-adc_chipset_api",
@@ -492,8 +508,9 @@ static struct i2c_board_info __initdata qt602240_info[] = {
 #endif /* CONFIG_TOUCHSCREEN_QT602240 */
 
 #ifdef CONFIG_KONA_HEADSET
-#define HS_IRQ	gpio_to_irq(71)
-#define HSB_IRQ	BCM_INT_ID_AUXMIC_COMP1
+#define HS_IRQ		gpio_to_irq(71)
+#define HSB_IRQ		BCM_INT_ID_AUXMIC_COMP2
+#define HSB_REL_IRQ 	BCM_INT_ID_AUXMIC_COMP2_INV
 static struct kona_headset_pd headset_data = {
 	.hs_default_state = 1, /* GPIO state read is 0 on HS insert and 1 for
 							* HS remove*/
@@ -515,15 +532,21 @@ static struct resource board_headset_resource[] = {
 		.end = HS_IRQ,
 		.flags = IORESOURCE_IRQ,
 	},
-	{	/* For Headset button IRQ */
+	{	/* For Headset button  press IRQ */
 		.start = HSB_IRQ,
 		.end = HSB_IRQ,
 		.flags = IORESOURCE_IRQ,
 	},
+	{	/* For Headset button  release IRQ */
+		.start = HSB_REL_IRQ,
+		.end = HSB_REL_IRQ,
+		.flags = IORESOURCE_IRQ,
+	},
+
 };
 
 struct platform_device headset_device = {
-	.name = "konaheadset",
+	.name = "konaaciheadset",
 	.id = -1,
 	.resource = board_headset_resource,
 	.num_resources	= ARRAY_SIZE(board_headset_resource),
@@ -636,6 +659,157 @@ struct platform_device haptic_pwm_device = {
 
 #endif /* CONFIG_HAPTIC_SAMSUNG_PWM */
 
+#if 1 //Shri
+
+static struct resource board_sdio0_resource[] = {
+	[0] = {
+		.start = SDIO1_BASE_ADDR,
+		.end = SDIO1_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO0,
+		.end = BCM_INT_ID_SDIO0,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_sdio1_resource[] = {
+	[0] = {
+		.start = SDIO2_BASE_ADDR,
+		.end = SDIO2_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO1,
+		.end = BCM_INT_ID_SDIO1,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+
+static struct resource board_sdio2_resource[] = {
+	[0] = {
+		.start = SDIO3_BASE_ADDR,
+		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
+		.flags = IORESOURCE_MEM,
+	},
+	[1] = {
+		.start = BCM_INT_ID_SDIO_NAND,
+		.end = BCM_INT_ID_SDIO_NAND,
+		.flags = IORESOURCE_IRQ,
+	},
+};
+static struct sdio_platform_cfg board_sdio_param[] = {
+	{ /* SDIO0 */
+		.id = 0,
+		.data_pullup = 0,
+		.cd_gpio = SD_CARDDET_GPIO_PIN,
+		.devtype = SDIO_DEV_TYPE_SDMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
+		.peri_clk_name = "sdio1_clk",
+		.ahb_clk_name = "sdio1_ahb_clk",
+		.sleep_clk_name = "sdio1_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+	{ /* SDIO1 */
+		.id = 1,
+		.data_pullup = 0,
+		.is_8bit = 1,
+		.devtype = SDIO_DEV_TYPE_EMMC,
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
+		.peri_clk_name = "sdio2_clk",
+		.ahb_clk_name = "sdio2_ahb_clk",
+		.sleep_clk_name = "sdio2_sleep_clk",
+		.peri_clk_rate = 52000000,
+	},
+	{ /* SDIO2 */
+		.id = 2,
+		.data_pullup = 0,
+		.devtype = SDIO_DEV_TYPE_WIFI,
+		.wifi_gpio = {
+			.reset		= 70,
+			.reg		= -1,
+			.host_wake	= 85,
+			.shutdown	= -1,
+		},
+		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
+		.peri_clk_name = "sdio3_clk",
+		.ahb_clk_name = "sdio3_ahb_clk",
+		.sleep_clk_name = "sdio3_sleep_clk",
+		.peri_clk_rate = 48000000,
+	},
+};
+
+static struct platform_device board_sdio0_device = {
+	.name = "sdhci",
+	.id = 0,
+	.resource = board_sdio0_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio0_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[0],
+	},
+};
+
+static struct platform_device board_sdio1_device = {
+	.name = "sdhci",
+	.id = 1,
+	.resource = board_sdio1_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[1],
+	},
+};
+
+static struct platform_device board_sdio2_device = {
+	.name = "sdhci",
+	.id = 2,
+	.resource = board_sdio2_resource,
+	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
+	.dev      = {
+		.platform_data = &board_sdio_param[2],
+	},
+};
+
+
+/* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
+static struct platform_device *board_sdio_plat_devices[] __initdata = {
+	&board_sdio1_device,
+	&board_sdio2_device,
+	&board_sdio0_device,
+};
+
+void __init board_add_sdio_devices(void)
+{
+	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
+}
+
+
+#endif //Shri
+
+
+#ifdef CONFIG_BACKLIGHT_PWM
+
+static struct platform_pwm_backlight_data bcm_backlight_data = {
+/* backlight */
+	.pwm_name 	= "kona_pwmc:4",
+	.max_brightness = 32,   /* Android calibrates to 32 levels*/
+	.dft_brightness = 32,
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+	.polarity       = 1,    /* Inverted polarity */
+#endif
+	.pwm_period_ns 	=  5000000,
+};
+
+static struct platform_device bcm_backlight_devices = {
+	.name 	= "pwm-backlight",
+	.id 	= 0,
+	.dev 	= {
+		.platform_data  =       &bcm_backlight_data,
+	},
+};
+
+#endif /*CONFIG_BACKLIGHT_PWM */
+
 #if defined (CONFIG_REGULATOR_TPS728XX)
 #if defined(CONFIG_MACH_RHEA_RAY) || defined(CONFIG_MACH_RHEA_RAY_EDN1X) \
 	|| defined(CONFIG_MACH_RHEA_DALTON)
@@ -668,7 +842,7 @@ struct tps728xx_plat_data tps728xx_data = {
 	.gpio_vset	= GPIO_SIM2LDOVSET,
 	.gpio_en	= GPIO_SIM2LDO_EN,
 	.vout0		= 1800000,
-	.vout1		= 3100000,
+	.vout1		= 3000000,
 	.initdata	= &tps728xx_regl_initdata,
 };
 
@@ -774,7 +948,9 @@ static struct platform_device r61581_smi_display_device = {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] =
 {
-//    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#ifndef CONFIG_RHEA_PM_ASIC_WORKAROUND
+    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
     FTBL_INIT(700000, PI_OPP_TURBO),
 };
@@ -863,6 +1039,9 @@ static struct platform_device *rhea_ray_plat_devices[] __initdata = {
 	&android_pmem,
 #ifdef CONFIG_HAPTIC_SAMSUNG_PWM
 	&haptic_pwm_device,
+#endif
+#ifdef CONFIG_BACKLIGHT_PWM
+	&bcm_backlight_devices,
 #endif
 /* TPS728XX device registration */
 #ifdef CONFIG_REGULATOR_TPS728XX
@@ -962,8 +1141,53 @@ static void __init rhea_ray_add_devices(void)
 				ARRAY_SIZE(spi_slave_board_info));
 }
 
+#ifdef CONFIG_BACKLIGHT_PWM
+static struct pin_config pwm4_pin_config =
+PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA);
+static struct pin_config pwm5_pin_config =
+PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA);
+
+static struct pin_config gpio95_pin_config =
+PIN_CFG(DCLK4, GPIO, 0, ON, OFF, 0, 0, 8MA);
+static struct pin_config gpio111_pin_config =
+PIN_CFG(DCLKREQ4, GPIO, 0, ON, OFF, 0, 0, 8MA);
+
+int pwm_board_sysconfig(uint32_t module, uint32_t op)
+{
+	static DEFINE_SPINLOCK(bcm_syscfg_lock);
+	unsigned long flags;
+	int ret = 0;
+
+	spin_lock_irqsave(&bcm_syscfg_lock, flags);	
+	switch (module) {
+	case SYSCFG_PWM0 + 4:
+		if ((op == SYSCFG_INIT) || (op == SYSCFG_ENABLE))
+			ret = pinmux_set_pin_config(&pwm4_pin_config);
+		else if (op == SYSCFG_DISABLE)
+			ret = pinmux_set_pin_config(&gpio95_pin_config);
+		break;
+	case SYSCFG_PWM0 + 5:
+		if ((op == SYSCFG_INIT) || (op == SYSCFG_ENABLE))
+			ret = pinmux_set_pin_config(&pwm5_pin_config);
+		else if (op == SYSCFG_DISABLE)
+			ret = pinmux_set_pin_config(&gpio111_pin_config);
+		break;
+	default:
+		pr_info("%s: inval arguments\n", __func__);
+		spin_unlock_irqrestore(&bcm_syscfg_lock, flags);
+		return -EINVAL;	
+	}
+
+	spin_unlock_irqrestore(&bcm_syscfg_lock, flags);
+	return ret;
+}
+#endif
+
 void __init board_init(void)
 {
+#ifdef CONFIG_BACKLIGHT_PWM
+	set_pwm_board_sysconfig(pwm_board_sysconfig);
+#endif
 	board_add_common_devices();
 	rhea_ray_add_devices();
 	return;

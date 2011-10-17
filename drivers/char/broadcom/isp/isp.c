@@ -47,7 +47,7 @@ the GPL, without Broadcom's express prior written consent.
 
 #define IRQ_ISP         (153+32)
 
-#define ISP_DEBUG
+//#define ISP_DEBUG
 #ifdef ISP_DEBUG
     #define dbg_print(fmt, arg...) \
     printk(KERN_ALERT "%s():" fmt, __func__, ##arg)
@@ -85,7 +85,6 @@ static irqreturn_t isp_isr(int irq, void *dev_id)
     isp_t *dev;
     unsigned long flags;
 
-    dbg_print("Got ISP interrupt\n");
     dev = (isp_t *)dev_id;
 
     spin_lock_irqsave(&dev->lock, flags);
@@ -199,8 +198,7 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     switch (cmd)
     {
     case ISP_IOCTL_WAIT_IRQ:
-    {        
-        dbg_print("Enabling ISP interrupt\n");
+    {
         interrupt_irq = 0;
         enable_irq(IRQ_ISP);
         dbg_print("Waiting for interrupt\n");
@@ -236,7 +234,6 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
     {
         unsigned int reg_val;	
         dbg_print("reset ISP clock\n");
-        
         reg_write( mmclk_base, 
 		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_WR_ACCESS_OFFSET), 
 				   0xA5A501 );
@@ -255,10 +252,7 @@ static long isp_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		           (RHEA_MM_RST_OFFSET + MM_RST_MGR_REG_SOFT_RSTN0_OFFSET), 
 				   reg_val );
 
-        msleep(5);				    
-				   
-        				   
-		reg_write(mmclk_base,ISP_STATUS_OFFSET, dev->isp_status.status);		
+        msleep(1);
 	}
 
     default:

@@ -13,6 +13,7 @@ config ARCH_ISLAND
 
 config ARCH_RHEA
 	bool "BROADCOM Rhea SoC"
+	select HAVE_PWM
 	help
 	  Support for the Broadcom Rhea SoC platform.
 
@@ -140,6 +141,12 @@ config KONA_ATAG_DT
        default n
        help
          Say Y if you want to enable ATAG-based DeviceTree
+
+config KONA_ATAG_DT_DTS_FILE
+       string "DTS file name"
+       depends on KONA_ATAG_DT
+       help
+         DeviceTree source file name
 
 endmenu
 

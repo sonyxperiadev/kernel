@@ -231,6 +231,7 @@ static int kona_cpufreq_init(struct cpufreq_policy *policy)
 			__func__);
 		goto err_cpufreqs_table;
 	}
+	cpufreq_frequency_table_get_attr(b->kona_freqs_table, policy->cpu);
 	b->policy = policy;
 
 	return 0;
@@ -242,6 +243,8 @@ err_cpufreqs_table:
 static int kona_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	kcf_dbg("%s\n", __func__);
+
+	cpufreq_frequency_table_put_attr(policy->cpu);
 
 	return 0;
 }

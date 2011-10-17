@@ -25,6 +25,7 @@
 
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/host.h>
+#include <linux/mmc/card.h>
 #define CONFIG_MMC_ARASAN_HOST_FIX
 
 #include "sdhci.h"
@@ -658,8 +659,14 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 	}
 
 	if (count >= 0xF) {
-		printk(KERN_WARNING "%s: Too large timeout requested for CMD%d!\n",
-		       mmc_hostname(host->mmc), cmd->opcode);
+		/*
+		 * On certain Micron eMMC cards this value somehow is alway too large.
+		 * Other than seeing this warning message, read or write to the card works okay.
+		 */
+		if ((0x13 != host->mmc->card->cid.manfid) || (0x100 != host->mmc->card->cid.oemid)) {
+				printk(KERN_WARNING "%s: Too large timeout requested for CMD%d!\n",
+					   mmc_hostname(host->mmc), cmd->opcode);
+		}
 		count = 0xE;
 	}
 #ifdef CONFIG_MMC_BCM_SD

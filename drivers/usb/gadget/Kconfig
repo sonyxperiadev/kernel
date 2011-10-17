@@ -1027,6 +1027,12 @@ config USB_G_ANDROID_OBEX
 	help
 	  Provides OBEX function for android gadget driver.
 
+config USB_G_ANDROID_2_6_SYSFS
+	boolean "Android gadget Kernel 2.6 sysfs interface"
+	depends on USB_G_ANDROID
+	help
+	  Provides 2.6 and 3.0 sysfs interface for Android Gingerbread UI.
+
 config USB_CDC_COMPOSITE
 	tristate "CDC Composite Device (Ethernet and ACM)"
 	depends on NET

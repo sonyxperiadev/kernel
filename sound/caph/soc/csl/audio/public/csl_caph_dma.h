@@ -177,6 +177,7 @@ void csl_caph_dma_release_channel(CSL_CAPH_DMA_CHNL_e chnl);
 *  @return void
 *****************************************************************************/
 void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config);
+
 /**
 *
 *  @brief  set the caph dma buf addr 

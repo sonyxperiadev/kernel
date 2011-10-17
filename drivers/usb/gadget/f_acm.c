@@ -581,9 +581,10 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 	status = usb_interface_id(c, f);
 	if (status < 0)
 		goto fail;
-	acm->ctrl_id = status;
-	acm_control_interface_desc.bInterfaceNumber = status;
+	acm->ctrl_id = status;	
 	acm_iad_descriptor.bFirstInterface = status;
+	
+	acm_control_interface_desc.bInterfaceNumber = status;
 	acm_union_desc .bMasterInterface0 = status;
 
 	status = usb_interface_id(c, f);
@@ -777,8 +778,7 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 	acm->port.func.unbind = acm_unbind;
 	acm->port.func.set_alt = acm_set_alt;
 	acm->port.func.setup = acm_setup;
-	acm->port.func.disable = acm_disable;
-	acm->port.func.disabled = 1;
+	acm->port.func.disable = acm_disable;	
 
 	status = usb_add_function(c, &acm->port.func);
 	if (status)

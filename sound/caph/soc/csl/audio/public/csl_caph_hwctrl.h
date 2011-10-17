@@ -39,7 +39,7 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "csl_caph_dma.h"
 #include "csl_caph_audioh.h"
 
-#define MAX_AUDIO_PATH 32
+#define MAX_AUDIO_PATH  16 
 #define DATA_UNPACKED	0
 
 /**
@@ -165,6 +165,8 @@ typedef struct
 typedef struct
 {
     CSL_CAPH_STREAM_e streamID;
+    CSL_CAPH_DEVICE_e source;
+    CSL_CAPH_DEVICE_e sink;
     AUDIO_SAMPLING_RATE_t src_sampleRate;
     AUDIO_SAMPLING_RATE_t snk_sampleRate;
     AUDIO_CHANNEL_NUM_t chnlNum;
@@ -223,6 +225,19 @@ typedef enum
 	CSL_SSP_I2S
 } CSL_SSP_BUS_e;
 
+/*
+* CAPH Clock information
+*********************************************************************************/
+typedef enum
+{
+	CAPH_SRCMIXER_CLOCK,
+	AUDIO_SSP3_CLOCK,
+	AUDIO_SSP4_CLOCK,
+	AUDIOH_2P4M_CLOCK,
+	AUDIOH_26M_CLOCK,
+	AUDIOH_156M_CLOCK,
+}CAPH_Clock_t;
+
 /**
 *
 *  @brief  initialize the caph HW control CSL
@@ -243,11 +258,31 @@ void csl_caph_hwctrl_init(void);
 *****************************************************************************/
 void csl_caph_hwctrl_deinit(void);
 
+/****************************************************************************
+*
+*  Function Name: Result_t csl_caph_hwctrl_AllocateStreamID()
+*
+*  Description: Allocate a streamID.
+*
+****************************************************************************/
+CSL_CAPH_STREAM_e csl_caph_hwctrl_AllocateStreamID(void);
+
+/**
+*
+*  @brief  Start a caph HW path
+*
+*  @param   Start  (in) Caph HW path configuration parameters
+*
+*  @return CSL_CAPH_PathID pathID
+*****************************************************************************/
+CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID);
+
 /**
 *
 *  @brief  Enable a caph HW path
 *
-*  @param   config  (in) Caph HW path configuration parameters
+*  @param   config  (in) Caph HW path configuration parameters for streaming. 
+*           config and start the HW path for non-streaming.
 *
 *  @return CSL_CAPH_PathID pathID
 *****************************************************************************/
@@ -386,20 +421,6 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID);
 *****************************************************************************/
 void csl_caph_hwctrl_DisableSidetone(CSL_AUDIO_DEVICE_e sink);
 
-/**
-*
-*  @brief  Register StreamID
-*
-*  @param  source  (in) the data source
-*  @param  sink     (in) the data destination
-*  @param  streamID     (in) the stream ID to differentiate in case source and sink are same
-*
-*  @return Result_t status
-*****************************************************************************/
-Result_t csl_caph_hwctrl_RegisterStreamID(CSL_CAPH_DEVICE_e source, 
-                                  CSL_CAPH_DEVICE_e sink,
-                                  CSL_CAPH_STREAM_e streamID);
-
 
 /**
 *
@@ -409,18 +430,17 @@ Result_t csl_caph_hwctrl_RegisterStreamID(CSL_CAPH_DEVICE_e source,
 *
 *  @return Result_t status
 *****************************************************************************/
-Result_t csl_caph_hwctrl_RegisterStream(CSL_CAPH_HWCTRL_STREAM_REGISTER_t* stream);
+CSL_CAPH_PathID csl_caph_hwctrl_RegisterStream(CSL_CAPH_HWCTRL_STREAM_REGISTER_t* stream);
 
-/**
-*
-*  @brief  Register Stream
-*
-*  @param  streamID  (in) the streamID of this stream
-*
-*  @return AUDIO_BITS_PER_SAMPLE_t data format of this stream
-*****************************************************************************/
-AUDIO_BITS_PER_SAMPLE_t csl_caph_hwctrl_GetDataFormat(CSL_CAPH_STREAM_e streamID);
 
+/****************************************************************************
+*
+*  Function Name:  CSL_CAPH_DMA_CHNL_e csl_caph_hwctrl_GetdmaCH(CSL_CAPH_PathID pathID)
+*
+*  Description: Get the DMA channel of the HW path.
+*
+****************************************************************************/
+CSL_CAPH_DMA_CHNL_e csl_caph_hwctrl_GetdmaCH(CSL_CAPH_PathID pathID);
 
 /****************************************************************************
 *
@@ -569,7 +589,25 @@ void csl_caph_hwctrl_SetHWGain(CSL_CAPH_PathID pathID,
 ****************************************************************************/
 void csl_caph_hwctrl_SetSspTdmMode(Boolean status);
 
+/****************************************************************************
+*
+*  Function Name: csl_caph_ControlHWClock
+*
+*  Description: control the CAPH clock
+*
+****************************************************************************/
+
 void csl_caph_ControlHWClock(Boolean enable);
+
+// ==========================================================================
+//
+// Function Name: void csl_caph_QueryHWClock(Boolean enable)
+//
+// Description: This is to query if the CAPH clocks are enabled/disabled
+//
+// =========================================================================
+
+Boolean csl_caph_QueryHWClock(void);
 
 /****************************************************************************
 *

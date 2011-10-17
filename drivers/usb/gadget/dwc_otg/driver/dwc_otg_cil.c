@@ -2094,6 +2094,7 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t * core_if)
 			if (core_if->xceiver->set_vbus)
 				core_if->xceiver->set_vbus(core_if->xceiver,
 							   true);
+			cil_hcd_session_start(core_if);
 #endif
 		}
 	}
@@ -6113,6 +6114,8 @@ void dwc_otg_set_prtpower(dwc_otg_core_if_t * core_if, uint32_t val)
 	if (core_if->xceiver->set_vbus)
 		core_if->xceiver->set_vbus(core_if->xceiver,
 					   val ? true : false);
+	if (val)
+		cil_hcd_session_start(core_if);
 #endif
 }
 

@@ -1,55 +1,27 @@
-//****************************************************************************
-//*
-//*     Copyright (c) 2007 Broadcom Corporation
-//*           All Rights Reserved
-//*
-//*           Broadcom Corporation
-//*           16215 Alton Parkway
-//*           P.O. Box 57013
-//*           Irvine, California 92619-7013
-//*
-//*        This program is the proprietary software of Broadcom Corporation
-//*        and/or its licensors, and may only be used, duplicated, modified
-//*        or distributed pursuant to the terms and conditions of a separate,
-//*        written license agreement executed between you and
-//*        Broadcom (an "Authorized License").
-//*
-//*        Except as set forth in an Authorized License, Broadcom grants no
-//*        license (express or implied), right to use, or waiver of any kind
-//*        with respect to the Software, and Broadcom expressly reserves all
-//*        rights in and to the Software and all intellectual property rights
-//*        therein.  IF YOU HAVE NO AUTHORIZED LICENSE, THEN YOU HAVE NO RIGHT
-//*        TO USE THIS SOFTWARE IN ANY WAY, AND SHOULD IMMEDIATELY NOTIFY
-//*        BROADCOM AND DISCONTINUE ALL USE OF THE SOFTWARE.
-//*
-//*        Except as expressly set forth in the Authorized License,
-//*
-//*        1. This program, including its structure, sequence and
-//*           organization, constitutes the valuable trade secrets of
-//*           Broadcom, and you shall use all reasonable efforts to protect
-//*           the confidentiality thereof, and to use this information only
-//*           in connection with your use of Broadcom integrated circuit products.
-//*
-//*        2. TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE SOFTWARE IS PROVIDED
-//*           "AS IS" AND WITH ALL FAULTS AND BROADCOM MAKES NO PROMISES,
-//*           REPRESENTATIONS OR WARRANTIES, EITHER EXPRESS, IMPLIED, STATUTORY,
-//*           OR OTHERWISE, WITH RESPECT TO THE SOFTWARE.  BROADCOM SPECIFICALLY
-//*           DISCLAIMS ANY AND ALL IMPLIED WARRANTIES OF TITLE, MERCHANTABILITY,
-//*           NONINFRINGEMENT, FITNESS FOR A PARTICULAR PURPOSE, LACK OF VIRUSES,
-//*           ACCURACY OR COMPLETENESS, QUIET ENJOYMENT, QUIET POSSESSION OR
-//*           CORRESPONDENCE TO DESCRIPTION. YOU ASSUME THE ENTIRE RISK ARISING
-//*           OUT OF USE OR PERFORMANCE OF THE SOFTWARE.
-//*
-//*        3. TO THE MAXIMUM EXTENT PERMITTED BY LAW, IN NO EVENT SHALL BROADCOM
-//*           OR ITS LICENSORS BE LIABLE FOR (i) CONSEQUENTIAL, INCIDENTAL,
-//*           SPECIAL, INDIRECT, OR EXEMPLARY DAMAGES WHATSOEVER ARISING OUT OF
-//*           OR IN ANY WAY RELATING TO YOUR USE OF OR INABILITY TO USE THE
-//*           SOFTWARE EVEN IF BROADCOM HAS BEEN ADVISED OF THE POSSIBILITY OF
-//*           SUCH DAMAGES; OR (ii) ANY AMOUNT IN EXCESS OF THE AMOUNT ACTUALLY
-//*           PAID FOR THE SOFTWARE ITSELF OR U.S. $1, WHICHEVER IS GREATER.
-//*           THESE LIMITATIONS SHALL APPLY NOTWITHSTANDING ANY FAILURE OF
-//*           ESSENTIAL PURPOSE OF ANY LIMITED REMEDY.
-//*
+/************************************************************************************************/
+/*                                                                                              */
+/*  Copyright 2011  Broadcom Corporation                                                        */
+/*                                                                                              */
+/*     Unless you and Broadcom execute a separate written software license agreement governing  */
+/*     use of this software, this software is licensed to you under the terms of the GNU        */
+/*     General Public License version 2 (the GPL), available at                                 */
+/*                                                                                              */
+/*          http://www.broadcom.com/licenses/GPLv2.php                                          */
+/*                                                                                              */
+/*     with the following added to such license:                                                */
+/*                                                                                              */
+/*     As a special exception, the copyright holders of this software give you permission to    */
+/*     link this software with independent modules, and to copy and distribute the resulting    */
+/*     executable under terms of your choice, provided that you also meet, for each linked      */
+/*     independent module, the terms and conditions of the license of that module.              */
+/*     An independent module is a module which is not derived from this software.  The special  */
+/*     exception does not apply to any modifications of the software.                           */
+/*                                                                                              */
+/*     Notwithstanding the above, under no circumstances may you combine this software in any   */
+/*     way with any other Broadcom software provided under a license other than the GPL,        */
+/*     without Broadcom's express prior written consent.                                        */
+/*                                                                                              */
+/************************************************************************************************/
 
 #ifndef    _INC_SHARED_AP_H_
 #define    _INC_SHARED_AP_H_
@@ -109,7 +81,7 @@
 
 #define NUM_OF_8K_SAMP_PER_INT0_INT     8       // Number of 8kHz samples per INT0 interrupt (for 16kHz * 2)
                                                 // Should be same as in hwregs.inc
-
+#define DJB_BUFFER_SIZE     			600		// 600 words ~ 300ms
 
 #if defined(_RHEA_)||defined(_HERA_)||defined(_SAMOA_)
 //#define FPGA_AUDIO_HUB_VERIFICATION
@@ -226,7 +198,16 @@ typedef struct
 	VPlayBack_Buffer_t vp_buf[2];   // Voice playback (ping-pong) buffer
 } shared_voice_buf_t;				// buffer for voice recording and playback
 
-
+typedef struct
+{
+   UInt16 * freeListp;
+   UInt16 * plStartp;
+   UInt16 * plEndp;
+   UInt16   freeListSize;
+   UInt16   numEntry;
+   UInt16   entrySizeInWords;
+   UInt16   numAlloc;
+} DJB_PAYLOADQ;
 
 //******************************************************************************
 // Shared memory enumerations
@@ -885,7 +866,7 @@ typedef enum
     *  \note Before getting this command ARM should have enabled the Audio Interrupts using COMMAND_AUDIO_ENABLE, and 
     *       the audio inputs and outputs enabled by COMMAND_AUDIO_CONNECT.
     *              
-    *              @param  UInt16 For VOIP: {bit15-bit8: VOIP mode, bit0 - Voip_DTX_Enable} \BR
+    *              @param  UInt16 For VOIP: {bit15-bit8: VOIP mode, bit1 - VoLTECallEnable, bit0 - Voip_DTX_Enable} \BR
     *                             For Non-VOIP: {bit15-bit8:0, bit4: 1/0=WB_AMR/NB_AFS, bit3-0: AMR UL Mode set}
     *                             
     *              @param  UInt16 AMR_IF2_flag   - AMR Iterface Format 2 flag
@@ -953,7 +934,41 @@ typedef enum
 	*
 	* 			 \see   
 	*/
-	VP_COMMAND_VPU_ENABLE	// 0x1F	  ( enable )	
+	VP_COMMAND_VPU_ENABLE,	// 0x1F	  ( enable )	
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x20
+    *  \par Description 
+    *       This command initializes Adaptive Jitter Buffer instance for VoLTE.
+    */    
+    VP_COMMAND_VOLTE_INIT,	// 0x20
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x21
+    *  \par Description 
+    *       This command flushes Adaptive Jitter Buffer for VoLTE.
+    */    
+    VP_COMMAND_VOLTE_START_STREAM,	// 0x21
+   /** \HR */
+   /** \par Module
+    *                    Audio 
+    *  \par Command Code         
+    *                    0x22
+    *  \par Description 
+    *       This command delivers VoLTE DL speech frame to the DSP.
+    *
+    *  \note Before getting this command ARM should have enabled AMR-NB or AMR-WB VoIP encoder with VP_COMMAND_MAIN_AMR_RUN
+    *              
+    *              @param  UInt16 RTP timestamp (least 16-bit) \BR
+    *                             
+    *              @param  UInt16 {bit15-bit8: codec type, bit4: frame quality, bit3-0: frame type } \BR
+    *              @param  UInt16 {bit15-bit8: buffer index, bit7-0: frame index } \BR
+    */    
+    VP_COMMAND_VOLTE_PUT_FRAME	// 0x22
 } VPCommand_t;                                 
 /**
  * @}
@@ -2564,6 +2579,10 @@ EXTERN Int16	shared_speech_rec_gain_dl[5]				 AP_SHARED_SEC_GEN_AUDIO;
 /**
  * @}
  */
+#if defined(VOLTE_SUPPORT)
+EXTERN DJB_PAYLOADQ ajcPayloadQueue							AP_SHARED_SEC_GEN_AUDIO;
+EXTERN UInt16 ajcPayloadBuffer[DJB_BUFFER_SIZE]				AP_SHARED_SEC_GEN_AUDIO;
+#endif
 
 EXTERN UInt16 shared_audio_stream_0_crtl									AP_SHARED_SEC_DIAGNOS;                        // Ctrl info specifying 1 out of N capture points for audio stream_0
 EXTERN UInt16 shared_audio_stream_1_crtl									AP_SHARED_SEC_DIAGNOS;                    	  // Ctrl info specifying 1 out of N capture points for audio stream_1

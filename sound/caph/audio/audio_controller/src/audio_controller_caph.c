@@ -616,18 +616,23 @@ void AUDCTRL_SetTelephonyMicMute(
 void AUDCTRL_LoadMicGain(CSL_CAPH_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded)
 {
     UInt16 gainTemp = 0;
-	Int16 dspULGain = 0;
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_LoadMicGain\n");
 
 	// Set DSP UL gain from sysparm.
 	mode = AUDDRV_GetAudioMode();
+/***
+	Int16 dspULGain = 0;
+do not touch DSP UL gain in this function.
+this function shall be merged into AUDCTRL_SetAudioMode( ).
+
     if(isDSPNeeded == TRUE)
     {
 	    dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
 	    audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, 
 				dspULGain, 0, 0, 0, 0);		
     }
+***/
 
     if((mic == AUDCTRL_MIC_MAIN) 
        ||(mic == AUDCTRL_MIC_AUX)) 
@@ -904,7 +909,7 @@ void AUDCTRL_EnablePlay(
 		AUDDRV_EnableDSPOutput(DRVSPKR_Mapping_Table[spk].auddrv_spkr, sr);
 	}
 	if(pPathID) *pPathID = pathID;
-	Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %p, pathID %d.\r\n", pPathID, pathID);
+	//Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnablePlay: pPathID %x, pathID %d.\r\n", *pPathID, pathID);
 }
 //
 // Function Name: AUDCTRL_DisablePlay
@@ -1833,6 +1838,7 @@ void AUDCTRL_SetAudioLoopback(
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: mic = %d\n", mic);
     Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: speaker = %d\n", speaker);
 
+    memset(&hwCtrlConfig, 0, sizeof(CSL_CAPH_HWCTRL_CONFIG_t));
     audPlayHw = audRecHw = AUDIO_HW_NONE;
     source = sink = CSL_CAPH_DEV_NONE;
     audSpkr = CSL_CAPH_DEV_NONE;
@@ -2083,13 +2089,14 @@ if (((source == CSL_CAPH_DEV_ANALOG_MIC)
 #endif            
 		}
 
-		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig); //clock will be disabled here, so no register access after this.
 #ifdef HW_SIDETONE_LOOPBACK        
         //Disable Sidetone path.
-		csl_caph_hwctrl_DisableSidetone(sink);
-        Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioLoopback: Sidetone Disabled\n");
-#endif        
-	    //Enable PMU for headset/IHF
+        csl_caph_hwctrl_DisableSidetone(sink);
+#endif
+
+		(void) csl_caph_hwctrl_DisablePath(hwCtrlConfig); //clocks are disabled here, so no register access after this.
+
+		//Enable PMU for headset/IHF
     	if ((speaker == AUDCTRL_SPK_LOUDSPK)
 	        ||(speaker == AUDCTRL_SPK_HEADSET))	
 		{
@@ -2235,7 +2242,7 @@ static void AUDCTRL_CreateTable(void)
 void AUDCTRL_AddToTable(AUDCTRL_Config_t* data)
 {
     AUDCTRL_Table_t* newNode = NULL;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, sink = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
+	//Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_AddToTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n", data->pathID, data->src, data->sink, data->mic, data->spk);
     newNode = (AUDCTRL_Table_t *)OSHEAP_Alloc(sizeof(AUDCTRL_Table_t));
 	memset(newNode, 0, sizeof(AUDCTRL_Table_t));
     memcpy(&(newNode->data), data, sizeof(AUDCTRL_Config_t));
@@ -2364,10 +2371,8 @@ static CSL_CAPH_PathID AUDCTRL_GetPathIDFromTable(AUDIO_HW_ID_t src,
     AUDCTRL_Table_t* currentNode = tableHead;     
     while(currentNode != NULL)
     {
-
-        
-	    Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
-                    (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
+	    //Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_GetPathIDFromTable: pathID = %d, src = %d, sink = %d, mic = %d, spk = %d\n",
+        //            (currentNode->data).pathID, (currentNode->data).src, (currentNode->data).sink, (currentNode->data).mic, (currentNode->data).spk);
 		
 	
         if ((((currentNode->data).src == src)&&((currentNode->data).mic == mic))
@@ -2786,7 +2791,33 @@ void powerOnDigitalMic(Boolean powerOn)
 #endif
 }
 
+//============================================================================
+//
+// Function Name: AUDCTRL_ControlHWClock
+//
+// Description:   Enable/Disable CAPH clock
+//
+//============================================================================
 
+void  AUDCTRL_ControlHWClock(Boolean enable)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_ControlHWClock enable %d\r\n",enable);
+	csl_caph_ControlHWClock(enable);
+}
+
+//============================================================================
+//
+// Function Name: AUDCTRL_ControlHWClock
+//
+// Description:  Query if CAPH clock is enabled/disabled
+//
+//============================================================================
+
+Boolean  AUDCTRL_QueryHWClock(void)
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_QueryHWClock \r\n");
+	return csl_caph_QueryHWClock();
+}
 
 #else  //#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)
 

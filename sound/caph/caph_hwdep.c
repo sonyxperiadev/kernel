@@ -59,7 +59,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "bcm_audio_thread.h"
 #include "caph_common.h"
 
-#include "shared.h"
+#include "csl_voip.h"
 #include "csl_dsp.h"
 #include "osdw_dsp_drv.h"
 #include "csl_audio_render.h"
@@ -80,16 +80,16 @@ typedef	enum{
 
 typedef struct __audio_voip_driver
 {
-    UInt32 voip_data_dl_rd_index;
-    UInt32 voip_data_dl_wr_index;
-    UInt32 voip_data_ul_rd_index;
-    UInt32 voip_data_ul_wr_index;
-    UInt8* voip_data_dl_buf_ptr;
-    UInt8* voip_data_ul_buf_ptr;
+    u32 voip_data_dl_rd_index;
+    u32 voip_data_dl_wr_index;
+    u32 voip_data_ul_rd_index;
+    u32 voip_data_ul_wr_index;
+    u8* voip_data_dl_buf_ptr;
+    u8* voip_data_ul_buf_ptr;
     AUDIO_DRIVER_HANDLE_t drv_handle;
 }audio_voip_driver_t;
 
-typedef struct __bcm_caph_hwdep
+typedef struct __bcm_caph_hwdep_voip
 {
 	int status;
 	int	frames_available_to_read;
@@ -99,28 +99,38 @@ typedef struct __bcm_caph_hwdep
 	audio_voip_driver_t* buffer_handle;
 	AUDCTRL_MIC_Enum_t mic; 
 	AUDCTRL_SPEAKER_t spk;
-	UInt32 codec_type;
-	UInt8 voip_type;
-	UInt32 frame_size; 
-	UInt32 buffer_size; 
-}bcm_caph_hwdep_t;
+	u32 codec_type;
+	u8 voip_type;
+	u32 frame_size; 
+	u32 buffer_size; 
+}bcm_caph_hwdep_voip_t;
 
-static const UInt16 sVoIPFrameLen[] = {320, 158, 36, 164, 640, 68};
+static const u16 sVoIPFrameLen[] = {320, 158, 36, 164, 640, 68};
 
-static UInt8 sVoIPAMRSilenceFrame[1] = {0x000f}; 
+static u8 sVoIPAMRSilenceFrame[1] = {0x000f}; 
 
-static UInt32 voipInstCnt = 0;
+static u32 voipInstCnt = 0;
 static voip_data_t voip_data;
 static Boolean setdefault = FALSE;
 
 /* local functions */
-static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, UInt8	*pSrc, UInt32 nSize);
-static void HWDEP_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize);
+static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, u8	*pSrc, u32 nSize);
+static void HWDEP_VOIP_FillDL_CB(void *pPrivate, u8 *pDst, u32 nSize);
+static void FillSilenceFrame(u32 codec_type, u32 frame_size,u8 *pDst);
+static long hwdep_read(struct snd_hwdep *hw, char __user *buf,	 long count, loff_t *offset);
+static long hwdep_write(struct snd_hwdep *hw, const char __user *buf, long count, loff_t *offset);
+static int hwdep_open(struct snd_hwdep *hw, struct file * file);
+static int hwdep_release(struct snd_hwdep *hw, struct file * file);
+static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsigned long arg);
+static int hwdep_mmap(struct snd_hwdep *hw, struct file *file, struct vm_area_struct *vma);
+static int hwdep_dsp_status(struct snd_hwdep *hw, struct snd_hwdep_dsp_status *status);
+static void hwdep_private_free (struct snd_hwdep *hwdep);
+static unsigned int hwdep_poll(struct snd_hwdep *hw, struct file *file, poll_table *wait);
 
-static void FillSilenceFrame(UInt32 codec_type, UInt32 frame_size,UInt8 *pDst)
+static void FillSilenceFrame(u32 codec_type, u32 frame_size,u8 *pDst)
 {
-	VOIP_Buffer_t tmpBuf;	
-	memset(&tmpBuf, 0, sizeof(VOIP_Buffer_t));
+	CSL_VOIP_Buffer_t tmpBuf;	
+	memset(&tmpBuf, 0, sizeof(CSL_VOIP_Buffer_t));
 	
 	if (codec_type == VoIP_Codec_AMR475)
 		tmpBuf.voip_frame.frame_amr[0] = sVoIPAMRSilenceFrame[0];
@@ -140,10 +150,10 @@ static void FillSilenceFrame(UInt32 codec_type, UInt32 frame_size,UInt8 *pDst)
 	memcpy(pDst, &(tmpBuf.voip_frame),frame_size);
 }
 
-static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, UInt8	*pSrc, UInt32 nSize)
+static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, u8	*pSrc, u32 nSize)
 {
-	bcm_caph_hwdep_t *pVoIP;
-	pVoIP = (bcm_caph_hwdep_t *)pPrivate;
+	bcm_caph_hwdep_voip_t *pVoIP;
+	pVoIP = (bcm_caph_hwdep_voip_t *)pPrivate;
 
 	//BCM_AUDIO_DEBUG("HWDEP_VOIP_DumpUL_CB nSize %d pVoIP 0x%x\n", nSize,pVoIP);
 
@@ -166,10 +176,10 @@ static void HWDEP_VOIP_DumpUL_CB(void *pPrivate, UInt8	*pSrc, UInt32 nSize)
 	wake_up(&pVoIP->sleep);
 }
 
-static void HWDEP_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize)
+static void HWDEP_VOIP_FillDL_CB(void *pPrivate, u8 *pDst, u32 nSize)
 {
-	bcm_caph_hwdep_t *pVoIP;
-	pVoIP = (bcm_caph_hwdep_t *)pPrivate;
+	bcm_caph_hwdep_voip_t *pVoIP;
+	pVoIP = (bcm_caph_hwdep_voip_t *)pPrivate;
 		
 	if( pVoIP->buffer_handle->voip_data_dl_buf_ptr )
     {
@@ -199,12 +209,12 @@ static void HWDEP_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize)
 
 //---------------------------------------------------------
 
-long voip_read(struct snd_hwdep *hw, char __user *buf,	 long count, loff_t *offset)
+static long hwdep_read(struct snd_hwdep *hw, char __user *buf,	 long count, loff_t *offset)
 {
-	bcm_caph_hwdep_t	*pVoIP;
+	bcm_caph_hwdep_voip_t	*pVoIP;
 	long ret = 0;
 
-	pVoIP = (bcm_caph_hwdep_t *)hw->private_data;	
+	pVoIP = (bcm_caph_hwdep_voip_t *)hw->private_data;	
 	//BCM_AUDIO_DEBUG("voip_read count %ld\n",count);
 	
 	if((pVoIP->status == VoIP_Hwdep_Status_Started) && (pVoIP->frames_available_to_read>0))
@@ -232,11 +242,11 @@ long voip_read(struct snd_hwdep *hw, char __user *buf,	 long count, loff_t *offs
 	return ret;
 }
 
-long voip_write(struct snd_hwdep *hw, const char __user *buf, long count, loff_t *offset)
+static long hwdep_write(struct snd_hwdep *hw, const char __user *buf, long count, loff_t *offset)
 {
-	bcm_caph_hwdep_t	*pVoIP;
+	bcm_caph_hwdep_voip_t	*pVoIP;
 	long ret;
-	pVoIP = (bcm_caph_hwdep_t	*)hw->private_data;	
+	pVoIP = (bcm_caph_hwdep_voip_t	*)hw->private_data;	
 
 	//BCM_AUDIO_DEBUG("voip_write pVoIP->frame_size %d,pVoIP->writecount %d\n",pVoIP->frame_size,pVoIP->writecount);
 
@@ -262,7 +272,7 @@ long voip_write(struct snd_hwdep *hw, const char __user *buf, long count, loff_t
 	return ret;
 }
 
-int voip_open(struct snd_hwdep *hw, struct file * file)
+static int hwdep_open(struct snd_hwdep *hw, struct file * file)
 {
 	BCM_AUDIO_DEBUG("VoIP_Ioctl_Open\n");    
 
@@ -278,41 +288,44 @@ int voip_open(struct snd_hwdep *hw, struct file * file)
 }
 
 
-int voip_release(struct snd_hwdep *hw, struct file * file)
+static int hwdep_release(struct snd_hwdep *hw, struct file * file)
 {	
-	bcm_caph_hwdep_t	*pVoIP;
-	pVoIP = (bcm_caph_hwdep_t	*)hw->private_data;
+	bcm_caph_hwdep_voip_t	*pVoIP;
+	pVoIP = (bcm_caph_hwdep_voip_t	*)hw->private_data;
 	
 	BCM_AUDIO_DEBUG("VoIP_Ioctl_Release\n");
 	return 0;
 }
 
-int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsigned long arg)
+static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsigned long arg)
 {
-		bcm_caph_hwdep_t	*pVoIP;
-		AUDIO_DRIVER_CallBackParams_t	cbParams;
-		int ret = 0;
-		AudioMode_t mode = AUDIO_MODE_HANDSET;
+	bcm_caph_hwdep_voip_t	*pVoIP;
+	AUDIO_DRIVER_CallBackParams_t	cbParams;
+	int ret = 0;
+	AudioMode_t mode = AUDIO_MODE_HANDSET;
+    Boolean enable = FALSE;
+    Int32 size = 0;
+    static UserCtrl_data_t *dataptr = NULL;
 		
-		pVoIP = (bcm_caph_hwdep_t	*)hw->private_data;
+	pVoIP = (bcm_caph_hwdep_voip_t	*)hw->private_data;
 
-		BCM_AUDIO_DEBUG("voip_ioctl cmd=%d\n",cmd);
-		
-		switch (cmd) {
-			case VoIP_Ioctl_GetVersion:
+	BCM_AUDIO_DEBUG("hwdep_ioctl cmd=%d\n",cmd);
+	
+	switch (cmd) {
+		case VoIP_Ioctl_GetVersion:
 			{
 				//ret = put_user(BrcmAACEncVersion, (int __user *)arg);
 			}
 			break;
-			case VoIP_Ioctl_Start:
+		case VoIP_Ioctl_Start:
 			{
 				BCM_AUDIO_DEBUG("VoIP_Ioctl_Start \n");
 				if(voipInstCnt == 0) //start VoIP only once
 				{
 					voipInstCnt++;
-					hw->private_data = kzalloc(sizeof(bcm_caph_hwdep_t), GFP_KERNEL);
+					hw->private_data = kzalloc(sizeof(bcm_caph_hwdep_voip_t), GFP_KERNEL);
 					CAPH_ASSERT(hw->private_data);
-					pVoIP = (bcm_caph_hwdep_t	*)hw->private_data;
+					pVoIP = (bcm_caph_hwdep_voip_t	*)hw->private_data;
 					init_waitqueue_head(&pVoIP->sleep);
 
 					pVoIP->mic = voip_data.mic;
@@ -320,9 +333,10 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 					pVoIP->codec_type = voip_data.codec_type;
 
 					AUDCTRL_GetAudioModeBySink(pVoIP->spk,&mode);
-					pVoIP->buffer_handle = (audio_voip_driver_t*) OSDAL_ALLOCHEAPMEM(sizeof(audio_voip_driver_t));				
+					pVoIP->buffer_handle = (audio_voip_driver_t*) kzalloc(sizeof(audio_voip_driver_t), GFP_KERNEL);
+
 					if ( pVoIP->buffer_handle )
-						memset((UInt8*) pVoIP->buffer_handle, 0, sizeof(audio_voip_driver_t));
+						memset((u8*) pVoIP->buffer_handle, 0, sizeof(audio_voip_driver_t));
 					else
 						return -ENOMEM;
 
@@ -330,33 +344,33 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 
 					pVoIP->buffer_size = pVoIP->frame_size * VOIP_FRAMES_IN_BUFFER;
 					
-					pVoIP->buffer_handle->voip_data_dl_buf_ptr = (UInt8*) OSDAL_ALLOCHEAPMEM(pVoIP->buffer_size);				
+					pVoIP->buffer_handle->voip_data_dl_buf_ptr = (u8*) kzalloc(pVoIP->buffer_size, GFP_KERNEL);
 					if( pVoIP->buffer_handle->voip_data_dl_buf_ptr )
 					{
 						memset(pVoIP->buffer_handle->voip_data_dl_buf_ptr, 0, pVoIP->buffer_size);
 					}
 					else
 					{
-						OSDAL_FREEHEAPMEM( pVoIP->buffer_handle );
+						kfree(pVoIP->buffer_handle);
 						return -ENOMEM;
 					}
 					
-					pVoIP->buffer_handle->voip_data_ul_buf_ptr = (UInt8*) OSDAL_ALLOCHEAPMEM(pVoIP->buffer_size);
+					pVoIP->buffer_handle->voip_data_ul_buf_ptr = (u8*) kzalloc(pVoIP->buffer_size, GFP_KERNEL);
 					if( pVoIP->buffer_handle->voip_data_ul_buf_ptr )
 						memset(pVoIP->buffer_handle->voip_data_ul_buf_ptr, 0, pVoIP->buffer_size);
 					else
 					{
-						OSDAL_FREEHEAPMEM( pVoIP->buffer_handle->voip_data_ul_buf_ptr );
-						OSDAL_FREEHEAPMEM( pVoIP->buffer_handle );
+						kfree(pVoIP->buffer_handle->voip_data_ul_buf_ptr);
+						kfree(pVoIP->buffer_handle);
 						return -ENOMEM;
 					}
 					
 					pVoIP->buffer_handle->drv_handle = AUDIO_DRIVER_Open(AUDIO_DRIVER_VOIP);
 					if ( !pVoIP->buffer_handle->drv_handle )
 					{
-						OSDAL_FREEHEAPMEM( pVoIP->buffer_handle->voip_data_dl_buf_ptr );
-						OSDAL_FREEHEAPMEM( pVoIP->buffer_handle->voip_data_ul_buf_ptr );
-						OSDAL_FREEHEAPMEM( pVoIP->buffer_handle);
+						kfree(pVoIP->buffer_handle->voip_data_dl_buf_ptr);
+						kfree(pVoIP->buffer_handle->voip_data_ul_buf_ptr);
+						kfree(pVoIP->buffer_handle);
 						return -ENOMEM;
 					}
 					
@@ -394,7 +408,7 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 			}
 				
 			break;
-			case VoIP_Ioctl_Stop:
+		case VoIP_Ioctl_Stop:
 			{
 				BCM_AUDIO_DEBUG("VoIP_Ioctl_Stop\n");
 
@@ -409,9 +423,9 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 						AUDCTRL_SetAudioMode(mode); //setting it back the original mode
 
 					AUDIO_DRIVER_Close(pVoIP->buffer_handle->drv_handle);			
-					OSDAL_FREEHEAPMEM( pVoIP->buffer_handle->voip_data_dl_buf_ptr );
-					OSDAL_FREEHEAPMEM( pVoIP->buffer_handle->voip_data_ul_buf_ptr );
-					OSDAL_FREEHEAPMEM( pVoIP->buffer_handle);				
+					kfree(pVoIP->buffer_handle->voip_data_dl_buf_ptr);
+					kfree(pVoIP->buffer_handle->voip_data_ul_buf_ptr);
+					kfree(pVoIP->buffer_handle);
 					pVoIP->status = VoIP_Hwdep_Status_Stopped;
 					wake_up(&pVoIP->sleep);
 					voipInstCnt = 0;
@@ -419,7 +433,7 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 		
 			}
 			break;
-			case VoIP_Ioctl_SetSource:
+		case VoIP_Ioctl_SetSource:
 			{
 				int data;
 				get_user(data,__user (int *)arg);
@@ -428,7 +442,7 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 			}
 			break;
 			
-			case VoIP_Ioctl_SetSink:
+		case VoIP_Ioctl_SetSink:
 			{
 				int data;
 				get_user(data,__user (int *)arg);
@@ -437,54 +451,54 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 			}
 			break;
 			
-			case VoIP_Ioctl_SetCodecType:
+		case VoIP_Ioctl_SetCodecType:
 			{
 				int data;
 				get_user(data,__user (int *)arg);
-				voip_data.codec_type = (UInt32)data;				
+				voip_data.codec_type = (u32)data;				
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetCodecType codec_type %d, \n",voip_data.codec_type);
 			}
 			break;
-			case VoIP_Ioctl_SetBitrate:
+		case VoIP_Ioctl_SetBitrate:
 			{
 				int data;
 				get_user(data,__user (int *)arg);
-				voip_data.bitrate_index = (UInt32)data;
+				voip_data.bitrate_index = (u32)data;
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetBitrate bitrate_index %d, \n",voip_data.bitrate_index);
 			}
 			break;
-			case VoIP_Ioctl_GetSource:
+		case VoIP_Ioctl_GetSource:
 			{
 				int data = (int)voip_data.mic;
 				put_user(data,__user (int *)arg);				
 			}
 			break;
-			case VoIP_Ioctl_GetSink:
+		case VoIP_Ioctl_GetSink:
 			{
 				int data = (int)voip_data.spk;
 				put_user(data,__user (int *)arg);				
 			}
 			break;
-			case VoIP_Ioctl_GetCodecType:
+		case VoIP_Ioctl_GetCodecType:
 			{
 				int data = (int)voip_data.codec_type;
 				put_user(data,__user (int *)arg);				
 			}
 			break;
-			case VoIP_Ioctl_GetBitrate:
+		case VoIP_Ioctl_GetBitrate:
 			{
 				int data = (int)voip_data.bitrate_index;
 				put_user(data,__user (int *)arg);
 			}
 			break;
-			case VoIP_Ioctl_GetMode:
+		case VoIP_Ioctl_GetMode:
 			{
 				AudioMode_t mode;
 				AUDCTRL_GetAudioModeBySink(pVoIP->spk,&mode);
 				put_user((int)mode,__user (int *)arg);
 			}
 			break;
-			case VoIP_Ioctl_SetMode:
+		case VoIP_Ioctl_SetMode:
 			{
 				int mode;
 				AUDCTRL_MICROPHONE_t cur_mic,new_mic;
@@ -514,39 +528,119 @@ int voip_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd, unsign
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetMode mode %d, \n",mode);
 			}
 			break;
-			default:
+    	case DSPCtrl_Ioctl_SPCtrl:
+			{
+				if (dataptr == NULL)
+					dataptr = (UserCtrl_data_t *) kzalloc(sizeof(UserCtrl_data_t), GFP_KERNEL);
+				else
+					memset(dataptr, 0, sizeof(UserCtrl_data_t));
+
+				if (!dataptr)
+					return -ENOMEM;
+
+				if (copy_from_user(dataptr, (int __user *)arg, sizeof(UserCtrl_data_t)))
+					return -EFAULT;
+
+				enable = (Boolean) dataptr->data[0];
+				size = dataptr->data[1];
+				ret = AUDDRV_User_CtrlDSP(AUDDRV_USER_SP_CTRL, enable, size, (void *)&(dataptr->data[2]));
+				if (!enable)
+				{
+					kfree(dataptr);
+					dataptr = NULL;
+				}
+			}
+        	break;
+		case DSPCtrl_Ioctl_SPSetVar:
+			{
+				// Will move this part later after we separate the voip and dspctrl connections.
+				if (dataptr == NULL)
+					dataptr = (UserCtrl_data_t *) kzalloc(sizeof(UserCtrl_data_t), GFP_KERNEL);
+				else
+					memset(dataptr, 0, sizeof(UserCtrl_data_t));
+
+				if (!dataptr)
+					return -ENOMEM;
+
+				if (copy_from_user(dataptr, (int __user *)arg, sizeof(UserCtrl_data_t)))
+					return -EFAULT;
+
+				size = dataptr->data[0];
+				ret = AUDDRV_User_CtrlDSP(AUDDRV_USER_SP_VAR, enable, size, (void *)&(dataptr->data[2]));
+			}
+			break;
+		case DSPCtrl_Ioctl_SPQuery:
+			{
+				if (dataptr == NULL)
+					dataptr = (UserCtrl_data_t *) kzalloc(sizeof(UserCtrl_data_t), GFP_KERNEL);
+				else
+					memset(dataptr, 0, sizeof(UserCtrl_data_t));
+
+				if (!dataptr)
+					return -ENOMEM;
+				ret = AUDDRV_User_CtrlDSP(AUDDRV_USER_SP_QUERY, enable, size, (void *)dataptr);
+				if (ret < 0)
+					return ret;
+
+				if(copy_to_user((int __user *)arg, dataptr, sizeof(UserCtrl_data_t)))
+					return -EFAULT;
+			}
+			break;
+		case DSPCtrl_Ioctl_EQCtrl:
+			{
+				if (dataptr == NULL)
+					dataptr = (UserCtrl_data_t *) kzalloc(sizeof(UserCtrl_data_t), GFP_KERNEL);
+				else
+					memset(dataptr, 0, sizeof(UserCtrl_data_t));
+
+				if (!dataptr)
+					return -ENOMEM;
+
+				if (copy_from_user(dataptr, (int __user *)arg, sizeof(UserCtrl_data_t)))
+					return -EFAULT;
+
+				enable = (Boolean) dataptr->data[0];
+				ret = AUDDRV_User_CtrlDSP(AUDDRV_USER_EQ_CTRL, enable, size, (void *)&(dataptr->data[2]));
+				if (!enable)
+				{
+					kfree(dataptr);
+					dataptr = NULL;
+				}
+			}
+			break;
+		default:
 			{
 				ret =  -ENOTTY;
 			}
-			break;
+		break;
 	
 		}
 	return ret;
 }
 
-int voip_mmap(struct snd_hwdep *hw, struct file *file, struct vm_area_struct *vma)
+static int hwdep_mmap(struct snd_hwdep *hw, struct file *file, struct vm_area_struct *vma)
 {
 	return 0;
 }
 
-int voip_dsp_status(struct snd_hwdep *hw, struct snd_hwdep_dsp_status *status)
+static int hwdep_dsp_status(struct snd_hwdep *hw, struct snd_hwdep_dsp_status *status)
 {
 	return 0;
 }
 
-void voip_private_free (struct snd_hwdep *hwdep)
+static void hwdep_private_free (struct snd_hwdep *hwdep)
 {
 	if(hwdep->private_data)
 		kfree(hwdep->private_data);
 }
 
 
-static unsigned int voip_poll(struct snd_hwdep *hw, struct file *file, poll_table *wait)
+static unsigned int hwdep_poll(struct snd_hwdep *hw, struct file *file, poll_table *wait)
 {	
 	unsigned int mask=0;
-	bcm_caph_hwdep_t	*pVoIP;
+	bcm_caph_hwdep_voip_t	*pVoIP;
 	
-	pVoIP = (bcm_caph_hwdep_t	*)hw->private_data;
+	pVoIP = (bcm_caph_hwdep_voip_t	*)hw->private_data;
 	poll_wait(file, &pVoIP->sleep, wait);
 	if(pVoIP->status == VoIP_Hwdep_Status_Started)
 	{
@@ -567,7 +661,7 @@ static unsigned int voip_poll(struct snd_hwdep *hw, struct file *file, poll_tabl
 //
 //  Function Name: HwdepDeviceNew
 //
-//  Description: Create HWDEP device for VoIP
+//  Description: Create HWDEP device
 //
 //------------------------------------------------------------
 int __devinit HwdepDeviceNew(struct snd_card *card)
@@ -582,15 +676,15 @@ int __devinit HwdepDeviceNew(struct snd_card *card)
 		return err;
 	}
 	pHwdep->iface = SNDRV_HWDEP_IFACE_OPL4;
-	pHwdep->ops.read = voip_read;
-	pHwdep->ops.write = voip_write;
-	pHwdep->ops.open = voip_open;
-	pHwdep->ops.release = voip_release;
-	pHwdep->ops.ioctl = voip_ioctl;
-	pHwdep->ops.mmap = voip_mmap;
-	pHwdep->ops.dsp_status = voip_dsp_status;
-	pHwdep->ops.poll = voip_poll;
-	pHwdep->private_free = voip_private_free;
+	pHwdep->ops.read = hwdep_read;
+	pHwdep->ops.write = hwdep_write;
+	pHwdep->ops.open = hwdep_open;
+	pHwdep->ops.release = hwdep_release;
+	pHwdep->ops.ioctl = hwdep_ioctl;
+	pHwdep->ops.mmap = hwdep_mmap;
+	pHwdep->ops.dsp_status = hwdep_dsp_status;
+	pHwdep->ops.poll = hwdep_poll;
+	pHwdep->private_free = hwdep_private_free;
 	
 	return err;
 }

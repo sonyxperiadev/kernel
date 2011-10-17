@@ -63,13 +63,8 @@ static struct __init pin_config board_pin_config[] = {
 	/* SD Detect*/
 	PIN_CFG(MMC1DAT3, GPIO75, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(DSI0TE, GPIO37, 0, OFF, ON, 0, 0, 8MA),
-#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
-	/* GPIO121 for TCA9539 IO expander */
+	/* GPIO121 LM8325 keypad interrupts */
 	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, ON, 0, 0, 8MA),
-#else
-	/* GPIO74 for TCA9539 IO expander */
-	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
-#endif
 	/*	Pinmux for keypad */
 	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
 	PIN_CFG(GPIO01, KEY_R1, 0, OFF, ON, 0, 0, 8MA),
@@ -157,6 +152,16 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
 	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
+	/*WLAN set  */
+	
+	PIN_CFG(MMC1DAT0, MMC1DAT0, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1DAT1, MMC1DAT1, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1DAT2, MMC1DAT2, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1DAT3, MMC1DAT3, 0, OFF, ON, 0, 0, 16MA),
+
+
+	PIN_CFG(MMC1CK, MMC1CK, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1CMD, MMC1CMD, 0, OFF, ON, 0, 0, 16MA),
 
 };
 
