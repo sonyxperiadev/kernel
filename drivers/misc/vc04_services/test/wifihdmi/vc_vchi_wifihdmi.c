@@ -564,7 +564,11 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
          {
             if ( skt_res.success )
             {
-               ptr->km_socket_handle_returned = skt_res.handle;   
+               ptr->km_socket_handle_returned = skt_res.handle; 
+
+               LOG_DBG( "%s: accepted socket %x, parent %x",
+                        __func__, skt_res.handle, skt.handle );
+
             }
          }
       }
