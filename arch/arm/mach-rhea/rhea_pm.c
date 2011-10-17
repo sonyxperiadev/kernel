@@ -571,6 +571,7 @@ int __init rhea_pm_debug_init(void)
 											NULL);
 #endif
 
+
 	/* create root clock dir /clock */
     dent_rhea_pm_root_dir = debugfs_create_dir("rhea_pm", 0);
     if(!dent_rhea_pm_root_dir)
