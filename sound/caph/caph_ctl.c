@@ -68,7 +68,6 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
-	int	dev = DEV_OF_CTL(priv);
 
 	uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 	uinfo->value.integer.step = 1;
@@ -78,36 +77,20 @@ static int VolumeCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_in
 		case CTL_STREAM_PANEL_PCMOUT2:
 		case CTL_STREAM_PANEL_VOIPOUT:
 			uinfo->count = 2;
-			if(dev == AUDCTRL_SPK_LOUDSPK)
-			{
-				uinfo->value.integer.min = -5000; //mB
-				uinfo->value.integer.max = 1200; //mB
-			}
-			else
-			{
-				uinfo->value.integer.min = -5000; //mB
-				uinfo->value.integer.max = 0;
-			}
+			uinfo->value.integer.min = MIN_VOLUME_mB;
+			uinfo->value.integer.max = MAX_VOLUME_mB;
 			break;
 		case CTL_STREAM_PANEL_VOICECALL:
 			uinfo->count = 1;
-			if(dev == AUDCTRL_SPK_LOUDSPK || dev == AUDCTRL_SPK_HEADSET)
-			{
-				uinfo->value.integer.min = -5000; //mB
-				uinfo->value.integer.max = 1200; //mB
-			}
-			else
-			{
-				uinfo->value.integer.min = -5000; //mB
-				uinfo->value.integer.max = 0;
-			}
+			uinfo->value.integer.min = MIN_VOICE_VOLUME_mB;
+			uinfo->value.integer.max = MAX_VOICE_VOLUME_mB;
 			break;
 		case CTL_STREAM_PANEL_PCMIN:
 		case CTL_STREAM_PANEL_SPEECHIN:
 		case CTL_STREAM_PANEL_VOIPIN:
 			uinfo->count = 1;
-			uinfo->value.integer.min = 0; //mB
-			uinfo->value.integer.max = 4250;//42.5 FIXME
+			uinfo->value.integer.min = MIN_GAIN_mB;
+			uinfo->value.integer.max = MAX_GAIN_mB;
 			break;
 		default:
 			break;
