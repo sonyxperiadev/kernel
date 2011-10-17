@@ -1110,7 +1110,7 @@ static int ppxy_mmap( struct file *filp, struct vm_area_struct *vma )
 /**
 *  Driver write method
 */
-static ssize_t ppxy_write( struct file *filp,g
+static ssize_t ppxy_write( struct file *filp,
 		const char __user *buffer, size_t count, loff_t *ppos )
 {
 	struct ppxy_node *nodep = filp->private_data;
@@ -1270,7 +1270,7 @@ out:
 */
 static void __exit amxr_ppxy_exit( void )
 {
-	struct ppxy_node *nodep;
+	struct ppxy_node *nodep, *tmpnodep;
 
 #if ENABLE_DBG_PROC
 	debug_exit();
@@ -1282,7 +1282,7 @@ static void __exit amxr_ppxy_exit( void )
 	cdev_del( &gCdev );
 	unregister_chrdev_region( gDevno, 1 );
 
-	list_for_each_entry_safe( nodep, &gPortList.list, lnode )
+	list_for_each_entry_safe( nodep, tmpnodep, &gPortList.list, lnode )
 	{
 		amxrRemovePortProxy( nodep );
 	}
