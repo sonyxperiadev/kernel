@@ -41,22 +41,6 @@ struct bcm_hsotgctrl_drv_data {
 
 static struct bcm_hsotgctrl_drv_data *local_hsotgctrl_handle = NULL;
 
-/**
- * Do OTG init. Currently only for testing dataline pulsing when Vbus is off
- */
-static ssize_t do_hsotgctrlinit(struct device *dev,
-			 struct device_attribute *attr,
-			 const char *buf, size_t count)
-{
-	bcm_hsotgctrl_phy_set_vbus_stat(false);
-	bcm_hsotgctrl_phy_set_non_driving(true);
-	bcm_hsotgctrl_phy_set_non_driving(false);
-
-	return count;
-	
-}
-static DEVICE_ATTR(hsotgctrlinit, S_IWUSR, NULL, do_hsotgctrlinit);
-
 static ssize_t dump_hsotgctrl(struct device *dev, 
 	struct device_attribute *attr,
 	char *buf)
@@ -77,19 +61,8 @@ static ssize_t dump_hsotgctrl(struct device *dev,
 
 	return sprintf(buf, "hsotgctrl register dump\n");
 }
-static DEVICE_ATTR(hsotgctrldump, S_IRUSR, dump_hsotgctrl, NULL);
+static DEVICE_ATTR(hsotgctrldump, S_IRUGO, dump_hsotgctrl, NULL);
 
-static ssize_t do_phy_shutdown(struct device *dev,
-				  struct device_attribute *attr,
-				  const char *buf, size_t count)
-{
-	bcm_hsotgctrl_phy_set_vbus_stat(false);
-	bcm_hsotgctrl_phy_set_non_driving(true);
-	bcm_hsotgctrl_set_phy_off(true);
-
-	return count;
-}
-static DEVICE_ATTR(phy_shutdown, S_IWUSR, NULL, do_phy_shutdown);
 
 int bcm_hsotgctrl_en_clock(bool on)
 {
@@ -349,22 +322,6 @@ static int __devinit bcm_hsotgctrl_probe(struct platform_device *pdev)
 		goto Error_bcm_hsotgctrl_probe;
 	}
 
-	error = device_create_file(&pdev->dev, &dev_attr_hsotgctrlinit);
-
-	if (error)
-	{
-		dev_warn(&pdev->dev, "Failed to create phy_shutdown file\n");
-		goto Error_bcm_hsotgctrl_probe;
-	}
-
-	error = device_create_file(&pdev->dev, &dev_attr_phy_shutdown);
-
-	if (error)
-	{
-		dev_warn(&pdev->dev, "Failed to create phy_shutdown file\n");
-		goto Error_bcm_hsotgctrl_probe;
-	}
-
 	return 0;
 
 Error_bcm_hsotgctrl_probe:
@@ -379,7 +336,6 @@ static int bcm_hsotgctrl_remove(struct platform_device *pdev)
 	struct bcm_hsotgctrl_drv_data *hsotgctrl_drvdata = platform_get_drvdata(pdev);
 
 	device_remove_file(&pdev->dev, &dev_attr_hsotgctrldump);
-	device_remove_file(&pdev->dev, &dev_attr_hsotgctrlinit);
 
 	iounmap(hsotgctrl_drvdata->hsotg_ctrl_base);
 
