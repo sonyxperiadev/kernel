@@ -261,7 +261,7 @@ int amxrSetPortSrcChannels(
 *                 is returned if there is insufficient memory to queue
 *                 data.
 */
-int amxrWriteSrcData(
+int amxrWritePortSrcData(
    AMXR_PORT_ID portid,             /**< (i) Source port id */
    const void *bufp,                /**< (i) Buffer ptr */
    size_t bytes                     /**< (i) Number of bytes to write */
