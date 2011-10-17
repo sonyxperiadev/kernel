@@ -14,9 +14,31 @@
 
 // ---- Include Files --------------------------------------------------------
 
+#include <linux/kernel.h>
+#include <linux/module.h>
+#include <linux/types.h>
+#include <linux/errno.h>
+#include <linux/cdev.h>
+#include <linux/mm.h>
+#include <linux/fs.h>
+#include <linux/device.h>
+#include <linux/pagemap.h>
+#include <linux/slab.h>
+#include <linux/ioctl.h>
+#include <linux/semaphore.h>
+#include <linux/proc_fs.h>
+#include <linux/dma-mapping.h>
+#include <linux/pfn.h>
+#include <linux/hugetlb.h>
+#include <linux/delay.h>
+
 #include <whdmi.h>
 
 // ---- Private Function Prototypes ------------------------------------------
+
+
+WHDMI_CALLBACK whdmi_stubs__callback = NULL;
+void *whdmi_stubs__callback_param = NULL;
 
 /* Special macro to be used to remove warnings on parameter not used within
 ** a function.
@@ -41,8 +63,8 @@ void *whdmi_unused_params_killer( void *param )
 int whdmi_set_callback( WHDMI_CALLBACK callback,
                         void *callback_param )
 {
-   WHDMI_REMOVE_UNUSED_PARAM_WARNING (callback);
-   WHDMI_REMOVE_UNUSED_PARAM_WARNING (callback_param);
+   whdmi_stubs__callback = callback;
+   whdmi_stubs__callback_param = callback_param;
 
    return 0;
 }
@@ -159,6 +181,33 @@ int whdmi_create_tcp_listening_socket( int km_socket_handle,
 int whdmi_close_socket( int km_socket_handle )
 {
    WHDMI_REMOVE_UNUSED_PARAM_WARNING (km_socket_handle);
+
+   return 0;
+}
+
+/***************************************************************************/
+/**
+*   
+*/
+int whdmi_incoming_socket( int km_socket_handle, int socket_port )
+{
+   WHDMI_EVENT_PARAM event;
+   WHDMI_EVENT_SOCKET_INCOMING_PARAM *param;
+   
+   param = (WHDMI_EVENT_SOCKET_INCOMING_PARAM *) &event.socket_incoming;
+
+   param->parent_km_socket_handle = km_socket_handle;
+   param->client_addr             = 0x7F000001;
+   param->client_port             = socket_port;
+   
+   printk( KERN_INFO "[D] whdmi_stubs__callback = %p\n", whdmi_stubs__callback );
+
+   if ( whdmi_stubs__callback )
+   {
+      whdmi_stubs__callback( WHDMI_EVENT_SOCKET_INCOMING,
+                             (WHDMI_EVENT_PARAM *) &event,
+                             whdmi_stubs__callback_param );
+   }
 
    return 0;
 }

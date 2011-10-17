@@ -62,6 +62,7 @@
 #define SMT_ACTION_START         "start"
 #define SMT_ACTION_STOP          "stop"
 #define SMT_ACTION_STATS         "stats"
+#define SMT_ACTION_SKTIN         "sktin"
 
 /* Global state information.
 */
@@ -84,6 +85,8 @@ typedef struct
 
    VCOS_THREAD_T         smt_thread;
    uint32_t              smt_event_mask;
+   uint32_t              smt_skt_hdl;
+   uint32_t              smt_port_hdl;
    VCOS_MUTEX_T          smt_lock;
    VCOS_EVENT_T          smt_event;
 
@@ -94,6 +97,7 @@ typedef struct
 #define INIT_EVENT_MASK      0x4
 #define DEINIT_EVENT_MASK    0x8
 #define STATS_EVENT_MASK     0x10
+#define SKTIN_EVENT_MASK     0x20
 
 
 // ---- Private Variables ----------------------------------------------------
@@ -102,6 +106,7 @@ static SMT_STATE_T *smt_state;
 static unsigned int smt_debug_log = 0;
 
 // ---- Private Function Prototypes ------------------------------------------
+extern int whdmi_incoming_socket( int km_socket_handle, int socket_port );
 
 // ---- Private Functions ----------------------------------------------------
 
@@ -221,6 +226,16 @@ static void *vc_smt_ops_waiter( void *arg )
                                       40,
                                       2048 );
          }
+
+         if ( event_mask & SKTIN_EVENT_MASK )
+         {
+            LOG_INFO( "[%s]: faking in accepted socket on %u, port %u",
+                      __func__, smt_state->smt_skt_hdl, smt_state->smt_port_hdl );
+
+            whdmi_incoming_socket( smt_state->smt_skt_hdl,
+                                   smt_state->smt_port_hdl );
+         }
+
       }
    }
 
@@ -334,7 +349,8 @@ static int vc_smt_ctl_proc_write( struct file *file,
         (strcmp ( kbuf, SMT_ACTION_STOP ) == 0)  ||
         (strcmp ( kbuf, SMT_ACTION_INIT ) == 0)  ||
         (strcmp ( kbuf, SMT_ACTION_DEINIT ) == 0) ||
-        (strcmp ( kbuf, SMT_ACTION_STATS ) == 0) )
+        (strcmp ( kbuf, SMT_ACTION_STATS ) == 0) ||
+        (strncmp ( kbuf, SMT_ACTION_SKTIN, strlen(SMT_ACTION_SKTIN) ) == 0) )
    {
       memcpy ( smt_state->smt_cmd,
                kbuf,
@@ -361,6 +377,22 @@ static int vc_smt_ctl_proc_write( struct file *file,
          else if ( !strcmp ( smt_state->smt_cmd, SMT_ACTION_STATS ) )
          {
             smt_state->smt_event_mask |= STATS_EVENT_MASK;
+         }
+         else if ( !strncmp ( smt_state->smt_cmd, SMT_ACTION_SKTIN, strlen(SMT_ACTION_SKTIN) ) )
+         {
+            unsigned int skt_val, port_val;
+            if ( sscanf( kbuf, "%s %u %u", smt_state->smt_cmd, &skt_val, &port_val ) != 3 )
+            {
+               LOG_ERR( "[%s]: sccanf parsing failed on \'%s\', expected \'sktin <skt_hdl> <port>\'",
+                        __func__,
+                        kbuf );
+            }
+            else
+            {
+               smt_state->smt_event_mask |= SKTIN_EVENT_MASK;
+               smt_state->smt_skt_hdl    = skt_val;
+               smt_state->smt_port_hdl   = port_val;
+            }
          }
          vcos_mutex_unlock ( &smt_state->smt_lock );
          vcos_event_signal( &smt_state->smt_event );
