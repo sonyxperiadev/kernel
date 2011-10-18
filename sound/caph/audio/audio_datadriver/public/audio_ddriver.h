@@ -109,6 +109,7 @@ typedef struct voip_data
 	UInt32 bitrate_index;
 	UInt32 mic;
 	UInt32 spk; 	
+	UInt8  isVoLTE;
 }voip_data_t;
 
 /* ARM2SP declarations */

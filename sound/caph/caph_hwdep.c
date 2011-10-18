@@ -107,7 +107,7 @@ typedef struct __bcm_caph_hwdep_voip
 
 static const u16 sVoIPFrameLen[] = {320, 158, 36, 164, 640, 68};
 
-static u8 sVoIPAMRSilenceFrame[1] = {0x000f}; 
+static u16 sVoIPAMRSilenceFrame[1] = {0x000f}; 
 
 static u32 voipInstCnt = 0;
 static voip_data_t voip_data;
@@ -526,6 +526,20 @@ static int hwdep_ioctl(struct snd_hwdep *hw, struct file *file, unsigned int cmd
 					AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, voip_data.mic, voip_data.spk);
 				}
 				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetMode mode %d, \n",mode);
+			}
+			break;
+		case VoIP_Ioctl_SetVoLTEFlag:
+			{
+				int data;
+				get_user(data,__user (int *)arg);
+				voip_data.isVoLTE = (u8)data;				
+				BCM_AUDIO_DEBUG(" VoIP_Ioctl_SetFlag isVoLTE %d, \n",voip_data.isVoLTE);
+			}
+			break;
+		case VoIP_Ioctl_GetVoLTEFlag:
+			{
+				int data = (int)voip_data.isVoLTE;
+				put_user(data,__user (int *)arg);				
 			}
 			break;
     	case DSPCtrl_Ioctl_SPCtrl:

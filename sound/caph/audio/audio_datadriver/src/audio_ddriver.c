@@ -47,7 +47,6 @@
 #include "audio_consts.h"
 #include "audio_ddriver.h"
 #include "osdal_os.h"
-#include "osheap.h"
 #include "log.h"
 #include "csl_caph.h"
 #include "audio_vdriver.h"
@@ -65,7 +64,14 @@
 //=============================================================================
 
 
-#define VOIP_MAX_FRAME_LEN     642
+#define VOIP_MAX_FRAME_LEN		642
+#ifdef VOLTE_SUPPORT
+#define VOLTECALLENABLE			0x2	
+#define VOLTEWBSTAMPSTEP		320
+#define VOLTENBSTAMPSTEP		160
+#define VOLTEFRAMEGOOD			1
+#define VOLTEFRAMESILENT		0
+#endif
 
 typedef struct ARM2SP_PLAYBACK_t
 {
@@ -90,6 +96,7 @@ typedef struct VOIP_t
 	AUDIO_DRIVER_VoipCB_t					pVoipULCallback;
 	AUDIO_DRIVER_VoipCB_t					pVoipDLCallback;
 	UInt16									codec_type;
+	Boolean									isVoLTECall;
 }VOIP_t;
 
 	
@@ -134,6 +141,11 @@ static Boolean				telephony_amr_if2;
 
 static struct work_struct voip_work;
 static struct workqueue_struct *voip_workqueue = NULL;
+#ifdef VOLTE_SUPPORT
+static UInt32 djbTimeStamp = 0;
+static DJB_InputFrame *djbBuf = NULL;
+static Boolean inVoLTECall = FALSE;
+#endif
 
 //=============================================================================
 // xternal prototypes
@@ -201,6 +213,10 @@ static Boolean VOIP_DumpUL_CB(
 		);
 static Boolean VOIP_FillDL_CB(UInt32 nFrames);
 
+#ifdef VOLTE_SUPPORT
+static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf);
+#endif
+
 //=============================================================================
 // Functions
 //=============================================================================
@@ -259,7 +275,7 @@ AUDIO_DRIVER_HANDLE_t  AUDIO_DRIVER_Open(AUDIO_DRIVER_TYPE_t drv_type)
     Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_Open::  \n"  );
 
     // allocate memory
-    aud_drv = (AUDIO_DDRIVER_t*) OSDAL_ALLOCHEAPMEM(sizeof(AUDIO_DDRIVER_t));
+	aud_drv = (AUDIO_DDRIVER_t*) kzalloc(sizeof(AUDIO_DDRIVER_t), GFP_KERNEL);
     aud_drv->drv_type = drv_type;
     aud_drv->pCallback = NULL;
     aud_drv->interrupt_period = 0;
@@ -329,7 +345,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
 		case AUDIO_DRIVER_VOIP:
 			{
             audio_voip_driver = NULL;
-			OSHEAP_Delete(aud_drv->tmp_buffer);
+			kfree(aud_drv->tmp_buffer);
 			aud_drv->tmp_buffer = NULL;
 			}
             break;
@@ -338,7 +354,7 @@ void AUDIO_DRIVER_Close(AUDIO_DRIVER_HANDLE_t drv_handle)
             break;
     }
     //free the driver structure
-    OSDAL_FREEHEAPMEM(aud_drv);
+    kfree(aud_drv);
     return;  
 }
 
@@ -922,13 +938,35 @@ static Result_t AUDIO_DRIVER_ProcessVoIPCmd(AUDIO_DDRIVER_t* aud_drv,
 				}
 
 				aud_drv->voip_config.codec_type += (bitrate_index<<8);
-				aud_drv->tmp_buffer = (UInt16 *)OSHEAP_Alloc(VOIP_MAX_FRAME_LEN); 
+				aud_drv->tmp_buffer = (UInt16 *) kzalloc(VOIP_MAX_FRAME_LEN, GFP_KERNEL);
 
 				if(aud_drv->tmp_buffer == NULL)
 					break;
 				else
 					memset(aud_drv->tmp_buffer,0,VOIP_MAX_FRAME_LEN);
-			
+
+#ifdef VOLTE_SUPPORT
+				// VoLTE call
+				inVoLTECall = ((voip_data_t *)pCtrlStruct)->isVoLTE;
+				if(inVoLTECall)
+				{
+					if ((aud_drv->voip_config.codec_type & VOIP_AMR475) ||
+						(aud_drv->voip_config.codec_type & VOIP_AMR_WB_MODE_7k)) 
+					{
+						if (djbBuf == NULL)
+							djbBuf = (DJB_InputFrame *) kzalloc(sizeof(DJB_InputFrame), GFP_KERNEL);
+
+						DJB_Init();
+						Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::VoLTE call starts, codec_type=%x\n",aud_drv->voip_config.codec_type );
+					}
+					else
+					{
+						Log_DebugPrintf(LOGID_AUDIO,"AUDIO_DRIVER_ProcessVOIPCmd::Codec Type not supported in VoLTE\n" );
+						return result_code;
+					}
+				}
+#endif
+
 				VoIP_StartTelephony();
 				result_code = RESULT_OK;
 			}
@@ -1270,7 +1308,17 @@ static Boolean VoIP_StopTelephony(void)
     destroy_workqueue(voip_workqueue);
 
     voip_workqueue = NULL;
-	prev_amr_mode = (CSL_VP_Mode_AMR_t)0xffff;
+	prev_amr_mode = (VP_Mode_AMR_t)0xffff;
+#ifdef VOLTE_SUPPORT
+	djbTimeStamp = 0;
+
+	if (djbBuf)
+	{
+		kfree(djbBuf);
+		djbBuf = NULL;
+	}
+	inVoLTECall = FALSE;
+#endif
 	return TRUE;
 }
 
@@ -1528,7 +1576,15 @@ static void VoIP_StartMainAMRDecodeEncode(
 	)
 {
 	// decode the next downlink AMR speech data from application
-	CSL_WriteDLVoIPData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
+#ifdef VOLTE_SUPPORT
+	if (inVoLTECall)
+	{
+		encode_amr_mode |= VOLTECALLENABLE;
+		VoLTE_WriteDLData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
+	}
+	else
+#endif
+		CSL_WriteDLVoIPData((UInt16)decode_amr_mode, (UInt16 *)pBuf);
 
 	// signal DSP to start AMR decoding and encoding
 	
@@ -1633,3 +1689,58 @@ static Boolean VOIP_FillDL_CB( UInt32 nFrames)
 	return TRUE;
 };
 
+#ifdef VOLTE_SUPPORT
+//============================================================================
+//
+// Function Name: VoLTE_WriteDLData
+//
+// Description:   Pass VoLTE DL Data to DSP
+//
+//============================================================================
+static Boolean VoLTE_WriteDLData(UInt16 decode_mode, UInt16 *pBuf)
+{
+	Boolean isAMRWB = FALSE;
+	VOIP_Buffer_t *dlBuf = (VOIP_Buffer_t *)pBuf;
+	UInt16 *dataPtr = pBuf;
+
+	if (djbBuf == NULL)
+	{
+		Log_DebugPrintf(LOGID_AUDIO, "VoLTE_WriteDLData, missing VoLTE init ...\n");
+		return FALSE;
+	}
+
+	memset(djbBuf,0,sizeof(DJB_InputFrame));
+	if (decode_mode >= VOIP_AMR475 && decode_mode < VOIP_G711_U)
+		isAMRWB = FALSE;
+	else if (decode_mode >= VOIP_AMR_WB_MODE_7k && decode_mode <= VOIP_AMR_WB_MODE_24k)
+		isAMRWB = TRUE;
+	else
+	{
+		Log_DebugPrintf(LOGID_AUDIO, "VoLTE_WriteDLData, unsupported codec type.\n");
+		return FALSE;
+	}
+	
+	djbTimeStamp += (isAMRWB)? VOLTEWBSTAMPSTEP : VOLTENBSTAMPSTEP;
+	djbBuf->RTPTimestamp = djbTimeStamp;
+	dataPtr += 3; // Move to data starting address
+	djbBuf->pFramePayload = (UInt8 *)dataPtr;
+	djbBuf->payloadSize = (UInt16) ((isAMRWB)? (AMR_WB_FRAME_SIZE<<1) : (AMR_FRAME_SIZE<<1)); // In bytes
+	djbBuf->frameIndex = 0;
+	djbBuf->codecType = (UInt8) ((isAMRWB)? WB_AMR : NB_AMR);
+	if (isAMRWB)
+	{
+		djbBuf->frameType = (UInt8) ((dlBuf->voip_frame).frame_amr_wb.frame_type);
+	}
+	else
+	{
+		djbBuf->frameType = (UInt8) ((dlBuf->voip_frame).frame_amr[0]);
+	}
+	// For silence frame, set quality to 0, otherwise 1
+	djbBuf->frameQuality = (djbBuf->frameType & 0x000f)? VOLTEFRAMESILENT : VOLTEFRAMEGOOD;
+
+//	Log_DebugPrintf(LOGID_AUDIO, "VoLTE_WriteDLData, TimeStamp=%d, payloadSize=%d,codecType=%d, quality=%d \n",
+//					djbBuf->RTPTimestamp, djbBuf->payloadSize,  djbBuf->codecType, djbBuf->frameQuality);
+	DJB_PutFrame(djbBuf);
+	return TRUE;
+}
+#endif
