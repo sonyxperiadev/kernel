@@ -36,6 +36,8 @@
 
 // ---- Private Function Prototypes ------------------------------------------
 
+#define LOG_INFO( fmt, arg... )      printk( KERN_INFO "[I] " fmt "\n", ##arg )
+
 
 WHDMI_CALLBACK whdmi_stubs__callback = NULL;
 void *whdmi_stubs__callback_param = NULL;
@@ -145,8 +147,11 @@ int whdmi_tcp_send( int km_socket_handle,
                     uint8_t *data )
 {
    WHDMI_REMOVE_UNUSED_PARAM_WARNING (km_socket_handle);
-   WHDMI_REMOVE_UNUSED_PARAM_WARNING (data_len);
-   WHDMI_REMOVE_UNUSED_PARAM_WARNING (data);
+
+   LOG_INFO( "[%s]: control sending %u bytes: \'%s\'",
+             __func__,
+             data_len,
+             data );
 
    return 0;
 }
