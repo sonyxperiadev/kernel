@@ -33,12 +33,17 @@
 #include <linux/irq.h>
 #include <linux/gpio_keys.h>
 #include <linux/input.h>
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 #include <linux/bh1715.h>
+#endif
 #include <linux/i2c/tsc2007.h>
 #include <linux/i2c/tango_ts.h>
 #include <linux/i2c/bcm2850_mic_detect.h>
 #include <linux/smb380.h>
 #include <linux/akm8975.h>
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+#include <linux/mpu3050.h>
+#endif
 #include <mach/dma_mmap.h>
 #include <mach/sdma.h>
 
@@ -1166,12 +1171,36 @@ static struct i2c_board_info __initdata akm8975_info[] =
 	},
 };
 
-
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 static struct i2c_board_info __initdata bh1715_info[] = {
 	[0] = {
 		I2C_BOARD_INFO(BH1715_DRV_NAME, BH1715_I2C_ADDR ),
 	},
 };
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+#define MPU3050_GPIO_IRQ_PIN 121
+
+// Application programmable full-scale range of +- 250, +-500,
+// +- 1000 or +- 2000 degrees/second.
+#define MPU3050_SCALE        250	
+
+static struct mpu3050_platform_data board_mpu3050_data = 
+{ 
+   .gpio_irq_pin = MPU3050_GPIO_IRQ_PIN,
+   .scale        = MPU3050_SCALE,
+   .p_axis_change = 0,
+};
+
+static struct i2c_board_info __initdata mpu3050_info[] = 
+{
+	[0] = {
+		I2C_BOARD_INFO(MPU3050_DRV_NAME, MPU3050_I2C_ADDR),
+		.platform_data  = &board_mpu3050_data,
+	},
+};
+#endif
 
 static struct android_pmem_platform_data android_pmem_data = {
 	.name = "pmem",
@@ -1330,9 +1359,17 @@ static void __init board_add_devices(void)
 		akm8975_info,
 		ARRAY_SIZE(akm8975_info));
 	
+#if defined(CONFIG_SENSORS_BH1715) || defined(CONFIG_SENSORS_BH1715_MODULE)
 	i2c_register_board_info(3,
 		bh1715_info,
 		ARRAY_SIZE(bh1715_info));
+#endif
+
+#if defined(CONFIG_SENSORS_MPU3050) || defined(CONFIG_SENSORS_MPU3050_MODULE)
+	i2c_register_board_info(3,
+		mpu3050_info,
+		ARRAY_SIZE(mpu3050_info));
+#endif
 
 #ifdef CONFIG_REGULATOR_USERSPACE_CONSUMER
 	platform_add_devices(bcm59055_userspace_consumer_devices, ARRAY_SIZE(bcm59055_userspace_consumer_devices));
