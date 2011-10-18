@@ -613,6 +613,7 @@ static char * const migratetype_names[MIGRATE_TYPES] = {
 	"Reclaimable",
 	"Movable",
 	"Reserve",
+	"Cma",
 	"Isolate",
 };
 

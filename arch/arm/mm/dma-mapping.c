@@ -29,6 +29,8 @@
 #include <asm/mach/map.h>
 #include <asm/dma-contiguous.h>
 
+#include "mm.h"
+
 static u64 get_coherent_dma_mask(struct device *dev)
 {
 	u64 mask = ISA_DMA_THRESHOLD;
@@ -192,7 +194,7 @@ static struct arm_vmregion_head coherent_head = {
 	.vm_list	= LIST_HEAD_INIT(coherent_head.vm_list),
 };
 
-size_t coherent_pool_size = DEFAULT_CONSISTENT_DMA_SIZE / 8;
+size_t coherent_pool_size = CONSISTENT_DMA_SIZE / 8;
 
 static int __init early_coherent_pool(char *p)
 {

@@ -31,6 +31,8 @@
 #include <linux/swap.h>
 #include <linux/mm_types.h>
 #include <linux/dma-contiguous.h>
+#include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 
 #ifndef SZ_1M
 #define SZ_1M (1 << 20)
@@ -46,7 +48,27 @@
 #  error phys_to_pfn implementation needed
 #endif
 
+#ifdef CONFIG_CMA_STATS
+
+struct cma_allocation {
+	struct list_head clink;
+	struct device *dev;
+	unsigned long pfn_start;
+	unsigned long count;
+};
+
+static void add_cma_stats(struct device *dev, struct cma *cma, unsigned long pfn,
+			unsigned long count, int is_alloc);
+
+#else
+
+#define add_cma_stats(d, c, p, n, a)	do { } while (0)
+
+#endif
 struct cma {
+#ifdef CONFIG_CMA_STATS
+	struct list_head clist;
+#endif
 	unsigned long	base_pfn;
 	unsigned long	count;
 	unsigned long	*bitmap;
@@ -135,6 +157,80 @@ void __init dma_contiguous_reserve(phys_addr_t limit)
 
 static DEFINE_MUTEX(cma_mutex);
 
+#ifdef CONFIG_CMA_STATS
+/* Should be called with cma_mutex held */
+static
+void add_cma_stats(struct device *dev, struct cma *cma, unsigned long pfn,
+			unsigned long count, int is_alloc)
+{
+	struct cma_allocation *p, *next;
+	struct cma_allocation *new;
+
+	/* First, some range checks */
+	if ((pfn < cma->base_pfn) ||
+		((cma->base_pfn + cma->count) < (pfn + count))) {
+		printk(KERN_ALERT"cma allocations(0x%p : 0x%08lx+0x%lx) is out of range ?!\n",
+					cma, pfn, count);
+		goto done;
+	}
+
+	if (is_alloc) {
+		struct list_head *itr;
+
+		new = kzalloc(sizeof(*new), GFP_KERNEL);
+		if (!new) {
+			printk(KERN_ALERT"Failed to allocate memory for (cma_allocation)\n");
+			goto done;
+		}
+
+		new->dev = dev;
+		new->pfn_start = pfn;
+		new->count = count;
+
+		if (unlikely(list_empty(&cma->clist))) {
+			list_add_tail(&new->clink, &cma->clist);
+			goto done;
+		}
+
+		/* parse the list and insert
+		 * the allocation in ascending order of pfn_start
+		 */
+		list_for_each(itr, &cma->clist) {
+			p = list_entry(itr, struct cma_allocation, clink);
+			BUG_ON(p->pfn_start == new->pfn_start);
+			if (p->pfn_start > new->pfn_start) {
+				__list_add(&new->clink, itr->prev, itr);
+				goto done;
+			}
+		}
+
+		/* If we are here, then it means we have to insert this node
+		 * at the end of linked list
+		 */
+		list_add_tail(&new->clink, &cma->clist);
+	} else {
+
+		BUG_ON(list_empty(&cma->clist));
+
+		/* If this is a release, then just delete the node
+		 * corresponding to (pfn,count)
+		 */
+		list_for_each_entry_safe(p, next, &cma->clist, clink) {
+			if (p->pfn_start == pfn) {
+				BUG_ON(p->count != count);
+				list_del_init(&p->clink);
+				kfree(p);
+				goto done;
+			}
+		}
+		BUG();
+	}
+done:
+	return;
+}
+
+#endif /* CONFIG_CMA_STATS */
+
 static void __cma_activate_area(unsigned long base_pfn, unsigned long count)
 {
 	unsigned long pfn = base_pfn;
@@ -174,6 +270,9 @@ static struct cma *__cma_create_area(unsigned long base_pfn,
 	if (!cma->bitmap)
 		goto no_mem;
 
+#ifdef CONFIG_CMA_STATS
+	INIT_LIST_HEAD(&cma->clist);
+#endif
 	__cma_activate_area(base_pfn, count);
 
 	pr_debug("%s: returned %p\n", __func__, (void *)cma);
@@ -188,8 +287,8 @@ static struct cma_reserved {
 	phys_addr_t start;
 	unsigned long size;
 	struct device *dev;
-} cma_reserved[MAX_CMA_AREAS] __initdata;
-static unsigned cma_reserved_count __initdata;
+} cma_reserved[MAX_CMA_AREAS];
+static unsigned cma_reserved_count;
 
 static int __init __cma_init_reserved_areas(void)
 {
@@ -203,10 +302,13 @@ static int __init __cma_init_reserved_areas(void)
 		cma = __cma_create_area(phys_to_pfn(r->start),
 					r->size >> PAGE_SHIFT);
 		if (!IS_ERR(cma)) {
-			if (r->dev)
+			if (r->dev) {
+				pr_debug("%s: created area %p\n", __func__, cma);
 				set_dev_cma_area(r->dev, cma);
-			else
+			} else {
+				WARN_ON(dma_contiguous_default_area);
 				dma_contiguous_default_area = cma;
+			}
 		}
 	}
 	return 0;
@@ -329,9 +431,12 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 	pageno = bitmap_find_next_zero_area(cma->bitmap, cma->count, 0, count,
 					    (1 << align) - 1);
 	if (pageno >= cma->count) {
+		pr_debug("%s : could not find %d/%d in this cma region bitmap\n", __func__, count, align);
 		ret = -ENOMEM;
 		goto error;
 	}
+
+	pr_debug("%s: allocating (%d) pages starting from pageno (%ld)\n", __func__, count, pageno);
 	bitmap_set(cma->bitmap, pageno, count);
 
 	pfn = cma->base_pfn + pageno;
@@ -339,9 +444,12 @@ struct page *dma_alloc_from_contiguous(struct device *dev, int count,
 	if (ret)
 		goto free;
 
+	add_cma_stats(dev, cma, pfn, count, 1);
+
 	mutex_unlock(&cma_mutex);
 
-	pr_debug("%s(): returned %p\n", __func__, pfn_to_page(pfn));
+	pr_debug("%s(): returning [%08lx]\n", __func__, (pfn << PAGE_SHIFT));
+
 	return pfn_to_page(pfn);
 free:
 	bitmap_clear(cma->bitmap, pageno, count);
@@ -381,6 +489,126 @@ int dma_release_from_contiguous(struct device *dev, struct page *pages,
 	bitmap_clear(cma->bitmap, pfn - cma->base_pfn, count);
 	free_contig_pages(pfn, count);
 
+	add_cma_stats(dev, cma, pfn, count, 0);
+
 	mutex_unlock(&cma_mutex);
 	return 1;
 }
+
+#ifdef CONFIG_CMA_STATS
+#ifdef CONFIG_PROC_FS
+
+static void *cma_start(struct seq_file *m, loff_t *pos)
+{
+	struct cma_reserved *region = (struct cma_reserved *)m->private;
+
+	if (!cma_reserved_count || *pos >= cma_reserved_count)
+		return NULL;
+
+	return region + *pos;
+}
+
+static void *cma_next(struct seq_file *m, void *arg, loff_t *pos)
+{
+	struct cma_reserved *region = (struct cma_reserved *)m->private;
+
+	*pos = *pos + 1;
+
+	if (*pos == cma_reserved_count)
+		return NULL;
+
+	seq_putc(m, '\n');
+	seq_putc(m, '\n');
+
+	return region + *pos;
+}
+
+static void cma_stop(struct seq_file *m, void *arg)
+{
+}
+
+static int cmastat_show(struct seq_file *m, void *arg)
+{
+	struct cma_reserved *region = (struct cma_reserved *)arg;
+	struct cma *cma;
+	struct cma_allocation *p;
+	const char *region_name;
+	const char *device_name;
+
+	if (region->dev) {
+		cma = get_dev_cma_area(region->dev);
+		region_name = dev_name(region->dev);
+	} else {
+		cma = dma_contiguous_default_area;
+		region_name = "Default Region";
+	}
+
+	seq_printf(m, "%-20s : (%08lx + %lx)", region_name, cma->base_pfn, cma->count);
+	seq_putc(m, '\n');
+	seq_printf(m, "%-20s :   %-20s %-20s %-23s %-10s", "Device Name", "Number of Pages", "Pfn Range", "Address Range", "Size");
+	seq_putc(m, '\n');
+
+	mutex_lock(&cma_mutex);
+	list_for_each_entry(p, &cma->clist, clink) {
+		if (p->dev) {
+			device_name = dev_name(p->dev);
+		} else {
+			device_name = "Unknown";
+		}
+		seq_printf(m, "%-20s :", device_name);
+		seq_printf(m, "%15ld", p->count);
+		seq_printf(m, "       %08lx-%08lx    %08lx-%08lx %12ldkB",
+				p->pfn_start, (p->pfn_start + p->count),
+				((p->pfn_start) << PAGE_SHIFT),
+				((p->pfn_start + p->count) << PAGE_SHIFT),
+				(p->count * PAGE_SIZE)/1024);
+		seq_putc(m, '\n');
+
+		/* Check of this line was successfully copied by seq_printf()
+		 * if not, break out and return. We well get another _start
+		 * call with larger buffer
+		 */
+		if (m->count >= m->size)
+			break;
+	}
+
+	mutex_unlock(&cma_mutex);
+
+	return 0;
+}
+
+static const struct seq_operations cmastat_op = {
+	.start	= cma_start,
+	.next	= cma_next,
+	.stop	= cma_stop,
+	.show	= cmastat_show,
+};
+
+static int cmastat_open(struct inode *inode, struct file *file)
+{
+	int ret;
+	ret = seq_open(file, &cmastat_op);
+	if (!ret) {
+		struct seq_file *m = file->private_data;
+		m->private = &cma_reserved;
+	}
+
+	return ret;
+}
+
+static const struct file_operations cmastat_file_ops = {
+	.open		= cmastat_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= seq_release,
+};
+
+static int __init cma_stats_init(void)
+{
+	proc_create("cmastat", S_IRUGO, NULL, &cmastat_file_ops);
+	return 0;
+}
+
+late_initcall(cma_stats_init);
+#endif
+#endif /* CONFIG_CMA_STATS */

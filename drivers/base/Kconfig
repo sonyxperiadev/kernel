@@ -191,6 +191,11 @@ config CMA_DEBUG
 	  processing calls such as dma_alloc_from_contiguous().
 	  This option does not affect warning and error messages.
 
+config CMA_STATS
+	bool "CMA Statistics in /proc/cmastat"
+	help
+	  Adds support to show cma allocations per regions in /proc/cmainfo
+
 comment "Default contiguous memory area size:"
 
 config CMA_SIZE_ABSOLUTE
