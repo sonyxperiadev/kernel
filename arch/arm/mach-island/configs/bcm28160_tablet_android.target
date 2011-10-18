@@ -2,6 +2,7 @@ arch   = arm
 family = island
 chip   = 28160
 board  = tablet_28160
+board  = bcm4329
 option = initrd
 option = suspend_invalid
 option = android
