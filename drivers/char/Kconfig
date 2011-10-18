@@ -642,5 +642,12 @@ config BCM_MDEC
 	---help---
 	  BRCM multimeida codec kernel driver for Island architecture.
 
+config BCM_GPS
+	tristate "GPS support"
+	default n
+	---help---
+	  Select this to include GPS support for BCMHANA
+	  If unsure, say N.
+
 endmenu
 

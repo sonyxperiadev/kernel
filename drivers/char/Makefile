@@ -67,6 +67,7 @@ js-rtc-y = rtc.o
 
 obj-$(CONFIG_BRCM_CHAR_DRIVERS) += broadcom/
 obj-$(CONFIG_BCM_MDEC)		+= bcm2708_mdec.o
+obj-$(CONFIG_BCM_GPS)		+= bcm_gps.o
 
 # Files generated that shall be removed upon make clean
 clean-files := consolemap_deftbl.c defkeymap.c

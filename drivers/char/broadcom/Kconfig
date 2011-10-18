@@ -52,14 +52,6 @@ config BCM_BSC
     ---help---
     Say Y to enable the BSC support.
 
-config BCM_GPS
-    tristate "GPS support"
-	default n
-    ---help---
-        Select this to include GPS support for BCMHANA
-
-        If unsure, say N.
-		
 config BCM_GPS_UART
 	int "GPS UART"	
 	depends on BCM_GPS
