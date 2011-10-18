@@ -556,13 +556,16 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
          skt.port    = ptr->client_port;
 
          ptr->km_socket_handle_returned = 0;
+
+         LOG_DBG( "%s: incoming connection %x from %x:%u",
+                  __func__, skt.handle, skt.address, skt.port );
          
          if ( vc_vchi_wifihdmi_skt_in( instance,
                                        &skt,
                                        &skt_res,
                                        &trans_id ) == VCOS_SUCCESS )
          {
-            if ( skt_res.success )
+            if ( skt_res.success == 0 )
             {
                ptr->km_socket_handle_returned = skt_res.handle; 
 
@@ -570,6 +573,16 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
                         __func__, skt_res.handle, skt.handle );
 
             }
+            else
+            {
+               LOG_ERR( "%s: failed to assign incoming handle %x, ret %d",
+                        __func__, skt.handle, skt_res.success );
+            }
+         }
+         else
+         {
+            LOG_ERR( "%s: failed to register incoming connection %x",
+                     __func__, skt.handle );
          }
       }
       break;
@@ -584,6 +597,9 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
          memset ( &result, 0, sizeof(result) );
 
          skt.handle  = (uint32_t) ptr->km_socket_handle;
+
+         LOG_DBG( "%s: disconnected connection %x",
+                  __func__, skt.handle );
 
          vc_vchi_wifihdmi_skt_dsc( instance,
                                    &skt,
@@ -605,6 +621,9 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
          skt_data.handle    = (uint32_t) ptr->km_socket_handle;
          skt_data.data_len  = ptr->data_len;
 
+         LOG_DBG( "%s: data on connection %x, %u bytes",
+                  __func__, skt_data.handle, skt_data.data_len );
+
          if ( skt_data.data_len < VC_WIFIHDMI_MAX_DATA_LEN )
          {
             data_ptr = 0;
@@ -612,14 +631,51 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
                              VC_SM_LOCK_NON_CACHED,
                              &data_ptr ) == 0 )
             {
-               if ( copy_from_user( (void *) data_ptr,
-                                    ptr->data,
-                                    ptr->data_len ) == 0 )
+               if ( ptr->data_user ) /* user-space data. */
                {
+                  if ( copy_from_user( (void *) data_ptr,
+                                       ptr->data,
+                                       ptr->data_len ) == 0 )
+                  {
+                     vc_sm_unlock( (int) instance->data_in_handle,
+                                   0 );
+
+                     skt_data.data_handle =
+                           vc_sm_int_handle( instance->data_in_handle );
+
+                     status = vc_vchi_wifihdmi_skt_data( instance,
+                                                         &skt_data,
+                                                         &result,
+                                                         &trans_id );
+                     if ( status != VCOS_SUCCESS )
+                     {
+                        /* What to do...  we are not able to pass the data to the
+                        ** actual consumer, should we retry, abandon? ... will depend
+                        ** on consequence(s), right now do nothing as it is always more
+                        ** relaxing to do so...
+                        */
+                     }
+                  }
+                  else
+                  {
+                     vc_sm_unlock( (int) instance->data_in_handle,
+                                   0 );
+
+                     LOG_ERR( "%s: rx %d bytes from skt handle %x, failed copy...",
+                              __func__, skt_data.data_len, skt_data.handle );
+                  }
+               }
+               else /* kernel data. */
+               {
+                  memcpy ( (void *) data_ptr,
+                           ptr->data,
+                           ptr->data_len );
+
                   vc_sm_unlock( (int) instance->data_in_handle,
                                 0 );
 
-                  skt_data.data_handle = instance->data_in_handle;
+                  skt_data.data_handle =
+                        vc_sm_int_handle( instance->data_in_handle );
 
                   status = vc_vchi_wifihdmi_skt_data( instance,
                                                       &skt_data,
@@ -633,14 +689,6 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
                      ** relaxing to do so...
                      */
                   }
-               }
-               else
-               {
-                  vc_sm_unlock( (int) instance->data_in_handle,
-                                0 );
-
-                  LOG_ERR( "%s: rx %d bytes from skt handle %x, failed copy...",
-                           __func__, skt_data.data_len, skt_data.handle );
                }
             }
             else
@@ -667,6 +715,9 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
          memset ( &result, 0, sizeof(result) );
 
          skt.handle  = (uint32_t) ptr->km_socket_handle;
+
+         LOG_DBG( "%s: socket closed %x",
+                  __func__, skt.handle );
 
          vc_vchi_wifihdmi_skt_end( instance,
                                    &skt,

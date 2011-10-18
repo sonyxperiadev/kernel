@@ -200,11 +200,56 @@ int whdmi_incoming_socket( int km_socket_handle, int socket_port )
    param->client_addr             = 0x7F000001;
    param->client_port             = socket_port;
    
-   printk( KERN_INFO "[D] whdmi_stubs__callback = %p\n", whdmi_stubs__callback );
-
    if ( whdmi_stubs__callback )
    {
       whdmi_stubs__callback( WHDMI_EVENT_SOCKET_INCOMING,
+                             (WHDMI_EVENT_PARAM *) &event,
+                             whdmi_stubs__callback_param );
+   }
+
+   return 0;
+}
+
+/***************************************************************************/
+/**
+*   
+*/
+#define WHDMI_CANNED_DESCRIBE  "DESCRIBE rtsp://192.168.1.107:1234/stream1 RTSP/1.0\r\nCSeq: 0\r\nUser-Agent: brcm-vowifi/1.0\r\nAccept: application/sdp\r\nAccept-Language: en-KR\r\n"
+#define WHDMI_CANNED_SETUP     "SETUP rtsp://192.168.1.107:1234/stream1/video RTSP/1.0\r\nCSeq: 1\r\nUser-Agent: brcm-vowifi/1.0\r\nTransport: RTP/AVP;unicast;client_port=7898-7899\r\n"
+#define WHDMI_CANNED_PLAY      "PLAY rtsp://192.168.1.107:1234/stream1 RTSP/1.0\r\nCSeq: 3\r\nUser-Agent: brcm-vowifi/1.0\r\nSession: 12345678\r\nRange:npt=0.000-\r\n"
+
+int whdmi_data_on_socket( int km_socket_handle, int canned_data )
+{
+   WHDMI_EVENT_PARAM event;
+   WHDMI_EVENT_SOCKET_DATA_AVAIL_PARAM *param;
+   char *canned = NULL;
+
+   switch ( canned_data )
+   {
+      case 2:
+         canned = (char *)WHDMI_CANNED_SETUP;
+      break;
+
+      case 3:
+         canned = (char *)WHDMI_CANNED_PLAY;
+      break;
+
+      case 1:
+      default:
+         canned = (char *)WHDMI_CANNED_DESCRIBE;
+      break;
+   }
+
+   param = (WHDMI_EVENT_SOCKET_DATA_AVAIL_PARAM *) &event.socket_data_avail;
+
+   param->km_socket_handle        = km_socket_handle;
+   param->data_len                = strlen( (const char *)canned );
+   param->data_user               = 0;
+   param->data                    = (unsigned char *)canned;
+   
+   if ( whdmi_stubs__callback )
+   {
+      whdmi_stubs__callback( WHDMI_EVENT_SOCKET_DATA_AVAIL,
                              (WHDMI_EVENT_PARAM *) &event,
                              whdmi_stubs__callback_param );
    }

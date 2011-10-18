@@ -84,7 +84,9 @@ typedef struct whdmi_event_data_avail_param
 {
     int                     km_socket_handle;       /* Kernel module's socket handle */
     int                     data_len;               /* Length of the data */ 
-    unsigned char __user   *data;                   /* Pointer to data (user space, source of data validated), must call copy_from_user */
+    int                     data_user;              /* Whether data is from user space or not */
+    unsigned char          *data;                   /* Pointer to data */
+    // unsigned char __user   *data;                   /* Pointer to data (user space, source of data validated), must call copy_from_user */
 } WHDMI_EVENT_SOCKET_DATA_AVAIL_PARAM;
 
 /* Socket has been closed */

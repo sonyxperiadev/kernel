@@ -63,6 +63,7 @@
 #define SMT_ACTION_STOP          "stop"
 #define SMT_ACTION_STATS         "stats"
 #define SMT_ACTION_SKTIN         "sktin"
+#define SMT_ACTION_SKTDATA       "sktdata"
 
 /* Global state information.
 */
@@ -98,6 +99,7 @@ typedef struct
 #define DEINIT_EVENT_MASK    0x8
 #define STATS_EVENT_MASK     0x10
 #define SKTIN_EVENT_MASK     0x20
+#define SKTDATA_EVENT_MASK   0x40
 
 
 // ---- Private Variables ----------------------------------------------------
@@ -107,6 +109,7 @@ static unsigned int smt_debug_log = 0;
 
 // ---- Private Function Prototypes ------------------------------------------
 extern int whdmi_incoming_socket( int km_socket_handle, int socket_port );
+extern int whdmi_data_on_socket( int km_socket_handle, int canned_data );
 
 // ---- Private Functions ----------------------------------------------------
 
@@ -236,6 +239,14 @@ static void *vc_smt_ops_waiter( void *arg )
                                    smt_state->smt_port_hdl );
          }
 
+         if ( event_mask & SKTDATA_EVENT_MASK )
+         {
+            LOG_INFO( "[%s]: faking in canned data on %u, canned-id %u",
+                      __func__, smt_state->smt_skt_hdl, smt_state->smt_port_hdl );
+
+            whdmi_data_on_socket( smt_state->smt_skt_hdl,
+                                  smt_state->smt_port_hdl );
+         }
       }
    }
 
@@ -350,7 +361,8 @@ static int vc_smt_ctl_proc_write( struct file *file,
         (strcmp ( kbuf, SMT_ACTION_INIT ) == 0)  ||
         (strcmp ( kbuf, SMT_ACTION_DEINIT ) == 0) ||
         (strcmp ( kbuf, SMT_ACTION_STATS ) == 0) ||
-        (strncmp ( kbuf, SMT_ACTION_SKTIN, strlen(SMT_ACTION_SKTIN) ) == 0) )
+        (strncmp ( kbuf, SMT_ACTION_SKTIN, strlen(SMT_ACTION_SKTIN) ) == 0) ||
+        (strncmp ( kbuf, SMT_ACTION_SKTDATA, strlen(SMT_ACTION_SKTDATA) ) == 0) )
    {
       memcpy ( smt_state->smt_cmd,
                kbuf,
@@ -390,6 +402,22 @@ static int vc_smt_ctl_proc_write( struct file *file,
             else
             {
                smt_state->smt_event_mask |= SKTIN_EVENT_MASK;
+               smt_state->smt_skt_hdl    = skt_val;
+               smt_state->smt_port_hdl   = port_val;
+            }
+         }
+         else if ( !strncmp ( smt_state->smt_cmd, SMT_ACTION_SKTDATA, strlen(SMT_ACTION_SKTDATA) ) )
+         {
+            unsigned int skt_val, port_val;
+            if ( sscanf( kbuf, "%s %u %u", smt_state->smt_cmd, &skt_val, &port_val ) != 3 )
+            {
+               LOG_ERR( "[%s]: sccanf parsing failed on \'%s\', expected \'sktdata <skt_hdl> <canned-id>\'",
+                        __func__,
+                        kbuf );
+            }
+            else
+            {
+               smt_state->smt_event_mask |= SKTDATA_EVENT_MASK;
                smt_state->smt_skt_hdl    = skt_val;
                smt_state->smt_port_hdl   = port_val;
             }
