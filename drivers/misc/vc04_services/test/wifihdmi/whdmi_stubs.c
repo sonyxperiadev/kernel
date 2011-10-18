@@ -148,10 +148,9 @@ int whdmi_tcp_send( int km_socket_handle,
 {
    WHDMI_REMOVE_UNUSED_PARAM_WARNING (km_socket_handle);
 
-   LOG_INFO( "[%s]: control sending %u bytes: \'%s\'",
+   LOG_INFO( "[%s]: control sending %u bytes",
              __func__,
-             data_len,
-             data );
+             data_len );
 
    return 0;
 }
