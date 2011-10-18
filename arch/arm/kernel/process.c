@@ -60,6 +60,18 @@ static const char *isa_modes[] = {
 
 static volatile int hlt_counter;
 
+#ifdef CONFIG_SMP
+void arch_trigger_all_cpu_backtrace(void)
+{
+	smp_send_all_cpu_backtrace();
+}
+#else
+void arch_trigger_all_cpu_backtrace(void)
+{
+	dump_stack();
+}
+#endif
+
 void disable_hlt(void)
 {
 	hlt_counter++;
