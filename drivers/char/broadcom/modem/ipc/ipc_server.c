@@ -41,14 +41,12 @@
 #endif
 #include <linux/broadcom/ipc_server_ifc.h>
 #include <linux/broadcom/ipc_server_ioctl.h>
-#include <linux/broadcom/bcm_fuse_memmap.h>
 
 #include "lnx_support.h"
 #include "ipc_server_ccb.h"
 #include "ipc_debug.h"
 #include "bcmlog.h"
 
-#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <mach/comms/platform_mconfig.h>
 
 #include <mach/io_map.h>
@@ -518,12 +516,14 @@ void Comms_Start(void)
     memset(apcp_shmem, 0, IPC_SIZE);
     iounmap(apcp_shmem);
 
-    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS+CONFIG_BCM_MODEM_HEADER_SIZE, CP_BOOT_BASE_SIZE);
+    cp_boot_base = ioremap(MODEM_DTCM_ADDRESS+CONFIG_BCM_MODEM_HEADER_SIZE, 
+	INIT_ADDRESS_OFFSET+RESERVED_HEADER);
+
     if (!cp_boot_base) {
 	IPC_DEBUG(DBG_ERROR,
-		"DTCM Addr=0x%x, Header Size=0x%x, CP_BOOT_BASE_SIZE=0x%x",
+		"DTCM Addr=0x%x, Header Size=0x%x, length=0x%x",
 		MODEM_DTCM_ADDRESS, CONFIG_BCM_MODEM_HEADER_SIZE,
-		CP_BOOT_BASE_SIZE);
+		INIT_ADDRESS_OFFSET+RESERVED_HEADER);
 	IPC_DEBUG(DBG_ERROR, "ioremap cp_boot_base error\n");
         return;
     }
