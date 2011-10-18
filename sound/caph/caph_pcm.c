@@ -508,8 +508,8 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 				param_start.vol[1] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[1];
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay,&param_start,NULL,0);
-#if 0
-				for (i = 1; i < MAX_PLAYBACK_DEV; i++)
+
+				for (i = 1; i < MAX_PLAYBACK_DEV; i++) //the for loop starts with p[1], the second channel.
 				{
 					if(chip->streamCtl[substream_number].dev_prop.p[i].hw_id != AUDIO_HW_NONE)
 					{
@@ -518,7 +518,6 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 						break;
 					}
 				}
-#endif
 			}
 			break;
 			

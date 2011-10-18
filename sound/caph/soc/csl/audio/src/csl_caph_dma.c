@@ -590,15 +590,16 @@ void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config)
 void csl_caph_dma_set_buffer_address(CSL_CAPH_DMA_CONFIG_t chnl_config)
 {
 	CAPH_DMA_CHANNEL_e caph_aadmac_ch = CAPH_DMA_CH_VOID;
-	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_set_buffer:: \n");
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_set_buffer:: dir %d fifo %d dma %d mem %p size %p Tsize %d dmaCB %p.\r\n",
+		chnl_config.direction, chnl_config.fifo, chnl_config.dma_ch, chnl_config.mem_addr, chnl_config.mem_size, chnl_config.Tsize, chnl_config.dmaCB);
 
 	if (chnl_config.dma_ch == CSL_CAPH_DMA_NONE)
 		return;
-	
+
 	caph_aadmac_ch = csl_caph_dma_get_chal_chnl(chnl_config.dma_ch);
 	chal_caph_dma_set_buffer_address(handle, caph_aadmac_ch, (cUInt32)(chnl_config.mem_addr));
-		
+
 	return;
 }
 
@@ -694,15 +695,15 @@ void csl_caph_dma_stop_transfer(CSL_CAPH_DMA_CHNL_e chnl)
 void csl_caph_dma_enable_intr(CSL_CAPH_DMA_CHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner)
 {
 	CAPH_ARM_DSP_e owner = CAPH_ARM;
-	
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_enable_intr:chnl=0x%x owner=0x%x \n", chnl, owner);
+
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_enable_intr:chnl=0x%x owner=0x%x \n", chnl, csl_owner);
 
 	if (csl_owner == CSL_CAPH_DSP)
 		owner = CAPH_DSP;
-	
+
 	if (chnl != CSL_CAPH_DMA_NONE)
 		chal_caph_intc_enable_dma_intr(intc_handle, csl_caph_dma_get_chal_chnl(chnl), owner);
-	
+
 	return;
 }
 

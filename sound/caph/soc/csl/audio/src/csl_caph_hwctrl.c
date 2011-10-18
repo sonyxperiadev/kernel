@@ -86,6 +86,12 @@ extern CHAL_HANDLE lp_handle;
 //****************************************************************************
 #define SSP3_FOR_FM //use SSP3 for FM, SSP4 for BT
 
+#if defined(ENABLE_DMA_VOICE)
+//these are only for test purpose
+#define DMA_VOICE_SIZE	64		//DSP defines 1ms for each ping-pong buffer. 8x2 samples for 24bit mono
+//#define ENABLE_DMA_LOOPBACK		//Enable HW loopback test of DMA call. This is to verify CAPH path is set up properly for DSP
+#endif
+
 #define PATH_OCCUPIED   1
 #define PATH_AVAILABLE  0
 #define DATA_PACKED	1
@@ -326,13 +332,6 @@ typedef struct
 
 ARM2SP_CONFIG_t arm2spCfg;
 
-#define DMA_VOICE_SIZE	320*2	//2x10ms for 24bit mono
-//#define ENABLE_DMA_LOOPBACK		//define to enable HW loopback via DMA.
-
-#if defined(ENABLE_DMA_LOOPBACK)
-static UInt8 caphDmaTestBuf[320*8]; //for test purpose, somehow using arm2sp shared mem does not give smooth tone playback for voice call path
-#endif
-
 static CSL_I2S_CONFIG_t fmCfg;
 static csl_pcm_config_device_t pcmCfg;
 static csl_pcm_config_tx_t pcmTxCfg; 
@@ -450,7 +449,6 @@ void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
 // =========================================================================
 static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 {
-
 #ifdef ENABLE_DMA_ARM2SP
 	if(!arm2sp_start[arm2spCfg.instanceID])
 	{
@@ -847,13 +845,12 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 				} /*else {
 					path->dma[0] = csl_caph_dma_obtain_channel();
 				}*/
-#if defined(ENABLE_DMA_LOOPBACK) && defined(ENABLE_DMA_VOICE)
+#if defined(ENABLE_DMA_LOOPBACK)
+				if(path->source==CSL_CAPH_DEV_DSP && path->sink[0]!=CSL_CAPH_DEV_BT_SPKR) //for loopback, use mic as input
+					path->pBuf = (void*)csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_PRI_MIC_EN);
 				path->size = DMA_VOICE_SIZE;
 				path->dmaCB = AUDIO_DMA_CB2;
-				path->pBuf = caphDmaTestBuf;
-				if(path->sink[0]==CSL_CAPH_DEV_DSP) 
-					if(path->source==CSL_CAPH_DEV_EANC_DIGI_MIC_R) 
-						path->pBuf += path->size; //pick a mic, analog or eanc? the 1st half is used for loopback, the 2nd half is for 2nd mic.
+				dmaCH = CSL_CAPH_DMA_NONE;
 #endif
 			}
 
@@ -1175,28 +1172,18 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
 		audio_xassert(0, pathID);
 	}
 
-#if defined(ENABLE_DMA_VOICE)	
-	if ((dmaCfg.dma_ch < CSL_CAPH_DMA_CH12) || (dmaCfg.dma_ch > CSL_CAPH_DMA_CH14))
-#endif
-	csl_caph_dma_config_channel(dmaCfg);
-#if defined(ENABLE_DMA_VOICE)
-	else // config dma 12,13,14 per dsp
-		csl_caph_dma_set_buffer_address(dmaCfg);
-#endif
 #if !defined(ENABLE_DMA_LOOPBACK)
-#if defined(ENABLE_DMA_VOICE)
-	/* intr goes to dsp */
-	if(dmaCfg.dma_ch==CSL_CAPH_DMA_CH13) 
-		csl_caph_dma_enable_intr(dmaCfg.dma_ch, CSL_CAPH_DSP);
-#else
-	if(dmaCfg.dma_ch>=CSL_CAPH_DMA_CH12) owner = CSL_CAPH_DSP;
+	if ((dmaCfg.dma_ch >= CSL_CAPH_DMA_CH12) && (dmaCfg.dma_ch <= CSL_CAPH_DMA_CH14))
+		owner = CSL_CAPH_DSP; //Unless it is for test purpose, DMA 12 - 14 belong to DSP
 #endif
-#endif
-#if defined(ENABLE_DMA_VOICE)
-	/* intr goes to arm */
-	if ((dmaCfg.dma_ch < CSL_CAPH_DMA_CH12) || (dmaCfg.dma_ch > CSL_CAPH_DMA_CH14))
-#endif
-	csl_caph_dma_enable_intr(dmaCfg.dma_ch, owner);
+	if(owner == CSL_CAPH_ARM)
+		csl_caph_dma_config_channel(dmaCfg);
+	else // config dma 12,13,14 per dsp, only DMA channel and address are configured
+		csl_caph_dma_set_buffer_address(dmaCfg);
+
+	// Per DSP, even DMA13 is owned by DSP, its interrupt is enabled by ARM
+	if(dmaCfg.dma_ch==CSL_CAPH_DMA_CH13 || owner==CSL_CAPH_ARM) 
+		csl_caph_dma_enable_intr(dmaCfg.dma_ch, owner);
 }
 
 // ==========================================================================
@@ -1457,7 +1444,6 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 			}
 			if(path->sink[0]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) pcmCfg.format = CSL_PCM_WORD_LENGTH_24_BIT;
 			if(path->source == CSL_CAPH_DEV_MEMORY) pcmCfg.format = CSL_PCM_WORD_LENGTH_PACK_16_BIT;
-
 			pcmCfg.sample_rate = path->snk_sampleRate;
 			if (path->source == CSL_CAPH_DEV_DSP) pcmCfg.sample_rate = path->src_sampleRate;
 			pcmCfg.interleave = TRUE;
@@ -1516,20 +1502,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_start_blocks path %d.\r\n", pathID);
 
-#if defined(ENABLE_DMA_LOOPBACK) && defined(ENABLE_DMA_VOICE) //for debug purpose, play 1khz tone to speaker
-	{
-		int k;
-		UInt32 tone1k[] = {0x000000,0x2D5D00,0x402600,0x2D5C00,0xFFFFFF00,0xFFD2A300,0xFFBFD900,0xFFD2A400};  //1kHz tone if sr = 8000
-		//short tone1k[] = {0x0000,0x2D5D,0x4026,0x2D5C,0xFFFF,0xD2A3,0xBFD9,0xD2A4};  //1kHz tone if sr = 8000
-		for(k=0; k<path->size; k+=sizeof(tone1k))
-		{
-#if !defined(WIN32)
-			if(path->pBuf) memcpy(path->pBuf+k, tone1k, sizeof(tone1k));
-#endif
-		}
-	}
-#endif
-
 #if !defined(ENABLE_DMA_VOICE)
 	if(path->sink[0]==CSL_CAPH_DEV_DSP && path->audiohPath[0]) //UL mic to dsp
 	{
@@ -1580,7 +1552,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 		for(i=0; i<MAX_BLOCK_NUM; i++)
 		{
 			if(!path->dma[i]) break;
-#if defined(ENABLE_DMA_VOICE)
+#if defined(ENABLE_DMA_VOICE) && !defined(ENABLE_DMA_LOOPBACK)
 			if ((path->dma[blockIdx] < CSL_CAPH_DMA_CH12)||(path->dma[blockIdx] > CSL_CAPH_DMA_CH14))
 #endif
 			Log_DebugPrintf(LOGID_SOC_AUDIO, "dma %d\r\n", path->dma[i]);
@@ -1590,12 +1562,13 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 
 	if(!pcmRunning && (path->sink[0]==CSL_CAPH_DEV_BT_SPKR || path->source==CSL_CAPH_DEV_BT_MIC))
 	{
+#if !defined(ENABLE_DMA_VOICE)
 		if((path->sink[0]==CSL_CAPH_DEV_BT_SPKR && path->source==CSL_CAPH_DEV_BT_MIC) 
 			|| (path->source == CSL_CAPH_DEV_DSP) 
 			|| (path->sink[0] == CSL_CAPH_DEV_DSP) 
 			|| sspTDM_enabled)
 			csl_caph_intc_enable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
-
+#endif
 		if((path->source == CSL_CAPH_DEV_DSP) || (path->sink[0] == CSL_CAPH_DEV_DSP) || sspTDM_enabled)
 		{
 			if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
@@ -2897,10 +2870,21 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
          */
 		path->list = LIST_NONE;
     }
-    else  if (((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[0] == CSL_CAPH_DEV_BT_SPKR)) ||
-             ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_DSP)))
+    else  if ((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[0] == CSL_CAPH_DEV_BT_SPKR))
     {
+#if defined(ENABLE_DMA_VOICE)
+		path->list = LIST_DMA_SW;
+#else
 		path->list = LIST_NONE;
+#endif
+    }
+    else  if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_DSP))
+    {
+#if defined(ENABLE_DMA_VOICE)
+		path->list = LIST_SW_DMA;
+#else
+		path->list = LIST_NONE;
+#endif
     }
 	else  // DSP --> HW src --> HW src mixerout --> CFIFO->Memory
  	if ((path->source == CSL_CAPH_DEV_DSP)&&(path->sink[0] == CSL_CAPH_DEV_MEMORY))
@@ -3117,7 +3101,9 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		{
 			csl_pcm_stop_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 			csl_pcm_stop_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+#if !defined(ENABLE_DMA_VOICE)
 			csl_caph_intc_disable_pcm_intr(CSL_CAPH_DSP, sspidPcmUse);
+#endif
 			pcmRunning = FALSE;
 		}
 	} else if(path->source == CSL_CAPH_DEV_BT_MIC || path->sink[0] == CSL_CAPH_DEV_BT_SPKR) {
