@@ -83,4 +83,8 @@ config IPC
 	help
 	  Support for IPC.
 
+config ISLAND_DORMANT_MODE
+       bool "Enable dormant mode support for Rhea platform"
+       help
+	Say Y if you want to enable dormant mode support for Rhea platform
 endmenu

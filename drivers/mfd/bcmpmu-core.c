@@ -136,7 +136,7 @@ store_rgltr(struct device *dev, struct device_attribute *attr,
 	return count;
 }
 static ssize_t store_regbulk(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	int i;
 	struct bcmpmu *bcmpmu = dev->platform_data;
@@ -179,6 +179,12 @@ static const struct attribute_group bcmpmu_core_attr_group = {
 	.attrs = bcmpmu_core_attrs,
 };
 #endif
+
+void bcmpmu_client_power_off(void)
+{
+        bcmpmu_core->write_dev(bcmpmu_core,PMU_REG_HOSTCTRL1,BCMPMU_SW_SHDWN,BCMPMU_SW_SHDWN);
+}
+EXPORT_SYMBOL(bcmpmu_client_power_off);
 
 
 static int bcmpmu_open(struct inode *inode, struct file *file);

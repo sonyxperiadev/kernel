@@ -84,35 +84,35 @@ static struct bcmpmu_rw_data register_init_data[] = {
 static struct bcmpmu_temp_map batt_temp_map[] = {
 /* This table is hardware dependent and need to get from platform team */
 /*	adc		temp*/
-	{0x3FF,		233},/* -40 C */
-	{0x3C0,		238},/* -35 C */
-	{0x380,		243},/* -30 C */
-	{0x340,		248},/* -25 C */
-	{0x300,		253},/* -20 C */
-	{0x2C0,		258},/* -15 C */
-	{0x280,		263},/* -10 C */
-	{0x240,		268},/* -5 C */
-	{0x200,		273},/* 0 C */
-	{0x1C0,		278},/* 5 C */
-	{0x180,		283},/* 10 C */
-	{0x140,		288},/* 15 C */
-	{0x100,		293},/* 20 C */
-	{0xF0,		298},/* 25 C */
-	{0xE0,		303},/* 30 C */
-	{0xD0,		308},/* 35 C */
-	{0xC0,		313},/* 40 C */
-	{0xB0,		318},/* 45 C */
-	{0xA0,		323},/* 50 C */
-	{0x90,		328},/* 55 C */
-	{0x86,		333},/* 60 C */
-	{0x70,		338},/* 65 C */
-	{0x60,		343},/* 70 C */
-	{0x50,		348},/* 75 C */
-	{0x40,		353},/* 80 C */
-	{0x30,		358},/* 85 C */
-	{0x20,		363},/* 90 C */
-	{0x10,		368},/* 95 C */
-	{0x00,		373},/* 100 C */
+	{932,		233},/* -40 C */
+	{900,		238},/* -35 C */
+	{860,		243},/* -30 C */
+	{816,		248},/* -25 C */
+	{760,		253},/* -20 C */
+	{704,		258},/* -15 C */
+	{636,		263},/* -10 C */
+	{568,		268},/* -5 C */
+	{500,		273},/* 0 C */
+	{440,		278},/* 5 C */
+	{376,		283},/* 10 C */
+	{324,		288},/* 15 C */
+	{272,		293},/* 20 C */
+	{228,		298},/* 25 C */
+	{192,		303},/* 30 C */
+	{160,		308},/* 35 C */
+	{132,		313},/* 40 C */
+	{112,		318},/* 45 C */
+	{92,		323},/* 50 C */
+	{76,		328},/* 55 C */
+	{64,		333},/* 60 C */
+	{52,		338},/* 65 C */
+	{44,		343},/* 70 C */
+	{36,		348},/* 75 C */
+	{32,		353},/* 80 C */
+	{28,		358},/* 85 C */
+	{24,		363},/* 90 C */
+	{20,		368},/* 95 C */
+	{16,		373},/* 100 C */
 };
 
 struct regulator_consumer_supply rf_supply[] = {
@@ -416,6 +416,16 @@ static struct bcmpmu_adc_setting adc_setting = {
 	.rx_delay = 0,
 };
 
+static struct bcmpmu_charge_zone chrg_zone[] = {
+	{.tl = 253, .th = 333, .v = 3000, .fc = 10, .qc = 100},/* Zone QC */
+	{.tl = 253, .th = 272, .v = 4100, .fc = 50, .qc = 0},/* Zone LL */
+	{.tl = 273, .th = 282, .v = 4200, .fc = 50, .qc = 0},/* Zone L */
+	{.tl = 283, .th = 318, .v = 4200, .fc = 100,.qc = 0},/* Zone N */
+	{.tl = 319, .th = 323, .v = 4200, .fc = 50, .qc = 0},/* Zone H */
+	{.tl = 324, .th = 333, .v = 4100, .fc = 50, .qc = 0},/* Zone HH */
+	{.tl = 253, .th = 333, .v = 0,    .fc = 0,  .qc = 0},/* Zone OUT */
+};
+
 static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.init = bcmpmu_init_platform_hw,
 	.exit = bcmpmu_exit_platform_hw,
@@ -431,6 +441,10 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,
+	.chrg_1c_rate = 1000,
+	.chrg_zone_map = &chrg_zone[0],
+	.fg_capacity_full = 1000*3600,
+	.support_fg = 1,
 };
 
 static struct i2c_board_info __initdata pmu_info[] =

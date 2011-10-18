@@ -36,6 +36,7 @@
 #include<mach/pi_mgr.h>
 #include<plat/pwr_mgr.h>
 #include<plat/pi_mgr.h>
+#include "volt_tbl.h"
 
 #define RUN_POLICY PM_POLICY_5
 #define RETN_POLICY PM_POLICY_1
@@ -48,9 +49,9 @@
 char* armc_core_ccu[] = {KPROC_CCU_CLK_NAME_STR};
 struct pi_opp arm_opp = {
 							.opp =  {
-										[PI_OPP_ECONOMY] = 3,
-										[PI_OPP_NORMAL] = 6,
-										[PI_OPP_TURBO] = 7,
+										[PI_OPP_ECONOMY] = PROC_CCU_FREQ_ID_ECO,
+										[PI_OPP_NORMAL] = PROC_CCU_FREQ_ID_NRML,
+										[PI_OPP_TURBO] = PROC_CCU_FREQ_ID_TURBO,
 									},
 						};
 
@@ -99,9 +100,9 @@ static char* mm_ccu[] = {MM_CCU_CLK_NAME_STR};
 
 struct pi_opp mm_opp = {
 							.opp =  {
-										[PI_OPP_ECONOMY] = 1,
-										[PI_OPP_NORMAL] = 4,
-										[PI_OPP_TURBO] = 5,
+										[PI_OPP_ECONOMY] = MM_CCU_FREQ_ID_ECO,
+										[PI_OPP_NORMAL] = MM_CCU_FREQ_ID_NRML,
+										[PI_OPP_TURBO] = MM_CCU_FREQ_ID_TURBO,
 									},
 						};
 
@@ -124,6 +125,10 @@ static struct pi mm_pi =
 		.num_states = ARRAY_SIZE(mm_states),
 		.opp_active = 0,
 		.pi_opp =  &mm_opp,
+		.opp_def_weightage = {
+								[PI_OPP_ECONOMY] = 35,
+								[PI_OPP_NORMAL] = 50,
+							 },
 		.num_opp = 3,
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
 
@@ -147,8 +152,8 @@ static struct pi mm_pi =
 static char* hub_ccu[] = {KHUB_CCU_CLK_NAME_STR};
 struct pi_opp hub_opp = {
 							.opp =  {
-										[PI_OPP_ECONOMY] = 2, /* 0 */
-										[PI_OPP_NORMAL] = 2,
+										[PI_OPP_ECONOMY] = HUB_CCU_FREQ_ID_ECO, /* 0 */
+										[PI_OPP_NORMAL] = HUB_CCU_FREQ_ID_NRML,
 									},
 						};
 
@@ -172,6 +177,10 @@ static struct pi hub_pi =
 		.opp_active = 0,
 		.pi_opp =  &hub_opp,
 		.num_opp = 2,
+		.opp_def_weightage = {
+								[PI_OPP_ECONOMY] = 25,
+							 },
+
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 		.pi_info =
@@ -195,8 +204,8 @@ static struct pi hub_pi =
 static char* aon_ccu[] = {KHUBAON_CCU_CLK_NAME_STR};
 struct pi_opp aon_opp = {
 							.opp =  {
-										[PI_OPP_ECONOMY] = 2, /* 0 */
-										[PI_OPP_NORMAL] = 3,
+										[PI_OPP_ECONOMY] = AON_CCU_FREQ_ID_ECO, /* 0 */
+										[PI_OPP_NORMAL] = AON_CCU_FREQ_ID_NRML,
 									},
 						};
 
@@ -244,14 +253,14 @@ static char* sub_sys_ccu[] = {KPM_CCU_CLK_NAME_STR,KPS_CCU_CLK_NAME_STR};
 struct pi_opp sub_sys_opp[2] = 	{
 									[0] = { /*KPM*/
 									.opp =	{
-												[PI_OPP_ECONOMY] = 2,
-												[PI_OPP_NORMAL] = 3,
+												[PI_OPP_ECONOMY] = KPM_CCU_FREQ_ID_ECO,
+												[PI_OPP_NORMAL] = KPM_CCU_FREQ_ID_NRML,
 											},
 										  },
 									[1] = { /*KPS*/
 									.opp =	{
-												[PI_OPP_ECONOMY] = 1, /* 0 */
-												[PI_OPP_NORMAL] = 3,
+												[PI_OPP_ECONOMY] = KPS_CCU_FREQ_ID_ECO,
+												[PI_OPP_NORMAL] = KPS_CCU_FREQ_ID_NRML,
 											},
 										  },
 
@@ -277,6 +286,10 @@ static struct pi sub_sys_pi =
 		.opp_active = 0,
 		.pi_opp =  sub_sys_opp,
 		.num_opp = 2,
+		.opp_def_weightage = {
+								[PI_OPP_ECONOMY] = 25,
+							 },
+
 		.qos_sw_event_id = SOFTWARE_0_EVENT,
 
 		.pi_info =

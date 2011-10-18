@@ -313,6 +313,14 @@ static int mmc_read_switch(struct mmc_card *card)
 	if (card->scr.sda_spec3) {
 		card->sw_caps.sd3_bus_mode = status[13];
 
+		/* Workaround to high speed bit check for 2.x cards. Some
+		 * may have rev 3.0 bit set, but whether it is true 3.0
+		 * or not will depends on whether it supports 1.8v. If
+		 * 1.8v is supported it will set the card accordingly.
+		 */
+		if (status[13] & 0x02)
+			card->sw_caps.hs_max_dtr = 50000000;
+
 		/* Find out Driver Strengths supported by the card */
 		err = mmc_sd_switch(card, 0, 2, 1, status);
 		if (err) {

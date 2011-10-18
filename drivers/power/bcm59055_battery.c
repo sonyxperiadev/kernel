@@ -19,13 +19,22 @@
 #include <asm/io.h>
 #include <linux/slab.h>
 
-#include <linux/mfd/bcm590xx/bcm59055_A0.h>
-
 #include <linux/mfd/bcm590xx/core.h>
 #include <linux/broadcom/bcm59055-power.h>
 #include <linux/broadcom/bcm59055-fuelgauge.h>
 #include <linux/broadcom/bcm59055-adc.h>
 #include <linux/workqueue.h>
+#include <linux/mfd/bcm590xx/bcm590xx-usb.h>
+
+#define USB_OFFLINE	4
+
+const char *usb_model_name[]  = {
+	[USB_CHARGER_UNKNOWN]	= "usb-unknown",
+	[USB_CHARGER_SDP]	= "usb-sdp",
+	[USB_CHARGER_CDP]	= "usb-cdp",
+	[USB_CHARGER_DCP]	= "usb-dcp",
+	[USB_OFFLINE]		= "usb-offline"
+};
 
 #define BYTE_COMBINE(msb,lsb)  (msb<<8 | lsb)
 #define MV_FROM_REG(regval)  DIV_ROUND_CLOSEST(((regval) * 4800 ) , 1024)
@@ -40,7 +49,7 @@ struct bcm59055_power {
 	int usb_cc;
 	int wac_cc;
 	enum power_supply_type power_src;
-	int charger_type;
+	int usb_type;
 	struct delayed_work charger_insert_wq;
 	struct delayed_work batt_lvl_wq;
 
@@ -56,12 +65,10 @@ struct bcm59055_power {
 	unsigned int batt_prev_cap;
 	unsigned int batt_status;
 	unsigned int batt_voltage_now;
-#if defined(CONFIG_HAS_WAKELOCK)
-	struct wake_lock usb_charger_wl;
-#endif
+	struct notifier_block nb;
 };
+
 static struct bcm59055_power *pvt_data;
-static int usb_enum_done;
 static enum power_supply_property bcm59055_battery_props[] = {
 	POWER_SUPPLY_PROP_STATUS,
 	POWER_SUPPLY_PROP_ONLINE,
@@ -74,10 +81,13 @@ static enum power_supply_property bcm59055_battery_props[] = {
 
 static enum power_supply_property bcm59055_wall_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
 };
 
 static enum power_supply_property bcm59055_usb_props[] = {
 	POWER_SUPPLY_PROP_ONLINE,
+	POWER_SUPPLY_PROP_CURRENT_NOW,
+	POWER_SUPPLY_PROP_MODEL_NAME
 };
 
 
@@ -116,6 +126,12 @@ static int bcm59055_usb_get_property(struct power_supply *psy,
 		 (bcm59055_power->power_src ==
 		 POWER_SUPPLY_TYPE_USB) ? 1 : 0;
 		break;
+	case POWER_SUPPLY_PROP_MODEL_NAME:
+		val->strval = usb_model_name[bcm59055_power->usb_type];
+		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		val->intval = -1;
+		break;
 	default:
 		ret = -EINVAL;
 		break;
@@ -138,6 +154,9 @@ static int bcm59055_wall_get_property(struct power_supply *psy,
 			(bcm59055_power->power_src ==
 			 POWER_SUPPLY_TYPE_MAINS) ? 1 : 0;
 		break;
+	case POWER_SUPPLY_PROP_CURRENT_NOW:
+		val->intval = -1;
+		break;
 	default:
 		ret = -EINVAL;
 		break;
@@ -159,6 +178,7 @@ static int bcm59055_battery_get_property(struct power_supply *psy,
 		val->intval =
 			(battery_data->power_src ==
 			 POWER_SUPPLY_TYPE_BATTERY) ? 1 : 0;
+		break;
 	case POWER_SUPPLY_PROP_STATUS:
 		val->intval = battery_data->batt_status;
 		break;
@@ -190,6 +210,7 @@ static int get_batt_percentage(struct bcm59055_power *battery_data)
 	u16 count, slp_count;
 	u32 accm;
 	int ret;
+	pr_debug("Inside %s\n", __func__);
 	if (bcm59055_fg_offset_cal(FAST_CALIBRATION))
 		pr_info("%s: FAST Calibration for Fuel Gauge failed\n", __func__);
 	if (bcm59055_fg_init_read())
@@ -216,6 +237,7 @@ static int get_batt_voltage(struct bcm59055_power *battery_data)
 	int adc_val;
 	int voltage;
 	int i;
+	pr_debug("Inside %s\n", __func__);
 	/* TODO: Need to build the ADC-Voltage table for current voltage reading */
 	adc_val = bcm59055_saradc_read_data(ADC_VMBAT_CHANNEL);
 	for (i = 0; i < VOLTAGE_ADC_MAX_SAMPLE; i++)
@@ -230,28 +252,35 @@ static int get_batt_voltage(struct bcm59055_power *battery_data)
 			 ((adc_val - battery_data->batt_adc[i]) /
 			  (battery_data->batt_adc[i+1] - battery_data->batt_adc[i])));
 	battery_data->batt_voltage_now = voltage;
-	pr_debug("%s: Adc Val %d, Battery voltage %d\n", __func__, adc_val, voltage);
+	pr_debug("%s: Adc Val %d, Battery voltage %d\n", __func__, adc_val,
+			voltage);
 	return voltage;
 }
 
 static void bcm59055_batt_lvl_wq(struct work_struct *work)
 {
-	struct bcm59055_power *battery_data = container_of(work, struct bcm59055_power, batt_lvl_wq.work);
-/* For time being this has kept commented */
+	struct bcm59055_power *battery_data = container_of(work,
+			struct bcm59055_power, batt_lvl_wq.work);
+/* For time being this has kept commented as battery management can be moved to
+ * separate driver
+ */
 #if 0
 	if (get_batt_percentage(battery_data))
 		power_supply_changed(&battery_data->battery);
 	if (battery_data->power_src != POWER_SUPPLY_TYPE_BATTERY)
 		get_batt_voltage(battery_data);
-	pr_debug("%s: Battery percentage %d\n", __func__, battery_data->batt_percentage);
+	pr_debug("%s: Battery percentage %d\n", __func__,
+			battery_data->batt_percentage);
 #endif
 	/* If charging is not happening bettery level can be measured
 	 * with a period of 1 min else with 10 sec period
 	*/
 	if (battery_data->batt_status == POWER_SUPPLY_STATUS_DISCHARGING)
-		schedule_delayed_work(&battery_data->batt_lvl_wq, msecs_to_jiffies(60000));
+		schedule_delayed_work(&battery_data->batt_lvl_wq,
+				msecs_to_jiffies(60000));
 	else
-		schedule_delayed_work(&battery_data->batt_lvl_wq, msecs_to_jiffies(10000));
+		schedule_delayed_work(&battery_data->batt_lvl_wq,
+				msecs_to_jiffies(10000));
 }
 
 static void bcm59055_start_charging(struct bcm590xx *bcm59055, int charger_type)
@@ -322,7 +351,6 @@ void pmu_set_usb_enum_current(int curr)
 	int val;
 	pr_debug("Inside %s\n", __func__);
 	/* set the current */
-	usb_enum_done = 1;
 	if (curr)
 		pvt_data->usb_cc = curr;
 	else
@@ -335,16 +363,6 @@ void pmu_set_usb_enum_current(int curr)
 }
 EXPORT_SYMBOL(pmu_set_usb_enum_current);
 
-int pmu_get_charger_type(void)
-{
-	int reg;
-	int type;
-	reg = bcm590xx_reg_read(pvt_data->bcm590xx, BCM59055_REG_MBCCTRL5);
-	type = ((reg >> 4) & 0x3);
-	return type;
-}
-EXPORT_SYMBOL(pmu_get_charger_type);
-
 static void bcm59055_power_isr(int intr, void *data)
 {
 	int val = 0;
@@ -356,7 +374,6 @@ static void bcm59055_power_isr(int intr, void *data)
 	case BCM59055_IRQID_INT2_CHGINS:
 		pr_info("%s: WAC insert interrupt\n", __func__);
 		battery_data->power_src = POWER_SUPPLY_TYPE_MAINS;
-		battery_data->charger_type = pmu_get_charger_type();
 		val = bcm590xx_reg_read(bcm59055, BCM59055_REG_ENV3);
 		if (!(val & P_CHGOV)) {
 			val = bcm590xx_reg_read(bcm59055, BCM59055_REG_MBCCTRL11);
@@ -371,24 +388,50 @@ static void bcm59055_power_isr(int intr, void *data)
 			pr_info("%s: WAC Over Voltage\n", __func__);
 		/* Need to start NTC block on after detecting the charger */
 		bcm59055_saradc_enable_ntc_block();
-		if (bcm59055->pdata->pmu_event_cb)
-			bcm59055->pdata->pmu_event_cb(BCM590XX_CHARGER_INSERT, POWER_SUPPLY_TYPE_USB);
 		break;
-	case BCM59055_IRQID_INT2_USBINS:
-		battery_data->power_src = POWER_SUPPLY_TYPE_USB;
-		battery_data->charger_type = pmu_get_charger_type();
-		pr_info("%s: USB insert interrupt, USB type %d\n", __func__, battery_data->charger_type);
-		pr_info("USB Type (0=UNKNOWN, 1=SDP, 2=CDP & 3=DCP)\n");
-		/* TODO: in case USB type is 0, BCLDO needs to be turned on
-		 * and the algo needs to be implemented
-		*/
+	case BCM59055_IRQID_INT2_CHGRM:
+		pr_info("%s: WAC remove interrupt\n", __func__);
+		battery_data->power_src = bcm59055_get_power_supply_type(battery_data);
+		bcm59055_stop_charging(bcm59055, POWER_SUPPLY_TYPE_MAINS);
+		/* Need to stop NTC block on after detecting the charger */
+		bcm59055_saradc_disable_ntc_block();
+		break;
+	}
+}
+
+static int bcm59055_battery_cb(struct notifier_block *nb, unsigned long event,
+		void *data)
+{
+	struct bcm590xx *bcm59055 = pvt_data->bcm590xx;
+	u8 val;
+	pr_info("Inside %s\n", __func__);
+	printk("%s: Event %ld, Val = %d\n", __func__, event, *(int *)data);
+	switch(event) {
+	case BCMPMU_USB_EVENT_IN_RM:
+		if ((*(int *)data) == 1) {
+			/* USBINS notification: Need not to do anything. Wait for charger
+			 * type notification.
+			 */
+			pvt_data->power_src = POWER_SUPPLY_TYPE_USB;
+		} else {
+			pr_info("%s: USB remove notification\n", __func__);
+			pvt_data->power_src = bcm59055_get_power_supply_type(pvt_data);
+			bcm59055_stop_charging(bcm59055, POWER_SUPPLY_TYPE_USB);
+			pvt_data->usb_cc = PRE_ENUM_CURRENT;
+			pvt_data->usb_type = USB_OFFLINE;
+			/* Need to stop NTC block on after detecting the charger */
+			bcm59055_saradc_disable_ntc_block();
+		}
+		break;
+	case BCMPMU_USB_EVENT_CHGR_DETECTION:
+		pvt_data->usb_type = *(int *)data;
 		val = bcm590xx_reg_read(bcm59055, BCM59055_REG_ENV3);
 		if (!(val & P_USBOV)) {		/* NO USB OV */
 			val = bcm590xx_reg_read(bcm59055, BCM59055_REG_MBCCTRL10);
 			val &= ~USB_FC_CC_MASK;
 			val |= (pvt_data->usb_cc & USB_FC_CC_MASK);
 			if (!bcm590xx_reg_write(bcm59055, BCM59055_REG_MBCCTRL10, val))
-				bcm59055_start_charging(bcm59055, battery_data->power_src);
+				bcm59055_start_charging(bcm59055, pvt_data->power_src);
 			else {
 				pr_info("%s: Failed to set USB FC Current\n", __func__);
 			}
@@ -397,26 +440,9 @@ static void bcm59055_power_isr(int intr, void *data)
 
 		/* Need to start NTC block on after detecting the charger */
 		bcm59055_saradc_enable_ntc_block();
-		if (bcm59055->pdata->pmu_event_cb)
-			bcm59055->pdata->pmu_event_cb(BCM590XX_CHARGER_INSERT, POWER_SUPPLY_TYPE_USB);
-		break;
-	case BCM59055_IRQID_INT2_CHGRM:
-		pr_info("%s: WAC remove interrupt\n", __func__);
-		battery_data->power_src = POWER_SUPPLY_TYPE_BATTERY;
-		bcm59055_stop_charging(bcm59055, POWER_SUPPLY_TYPE_MAINS);
-		/* Need to stop NTC block on after detecting the charger */
-		bcm59055_saradc_disable_ntc_block();
-		break;
-	case BCM59055_IRQID_INT2_USBRM:
-		pr_info("%s: USB remove interrupt\n", __func__);
-		battery_data->power_src = POWER_SUPPLY_TYPE_BATTERY;
-		bcm59055_stop_charging(bcm59055, POWER_SUPPLY_TYPE_USB);
-		battery_data->usb_cc = PRE_ENUM_CURRENT;
-		usb_enum_done = 0;
-		/* Need to stop NTC block on after detecting the charger */
-		bcm59055_saradc_disable_ntc_block();
 		break;
 	}
+	return 0;
 }
 
 static int bcm59055_init_charger(struct bcm59055_power *battery_data)
@@ -473,13 +499,17 @@ static int bcm59055_init_charger(struct bcm59055_power *battery_data)
 		pr_info("%s Configuring MBCCTRL8 failed \n", __func__ );
 		return ret;
 	}
-
-	ret = bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_CHGINS, true, bcm59055_power_isr, battery_data);
-	ret |= bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_USBINS, true, bcm59055_power_isr, battery_data);
-	ret |= bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_CHGRM, true, bcm59055_power_isr, battery_data);
-	ret |= bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_USBRM, true, bcm59055_power_isr, battery_data);
+	battery_data->nb.notifier_call = bcm59055_battery_cb;
+	ret = bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_IN_RM, &battery_data->nb);
+	ret |= bcmpmu_usb_add_notifier(BCMPMU_USB_EVENT_CHGR_DETECTION,
+			&battery_data->nb);
+	ret = bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_CHGINS, true,
+			bcm59055_power_isr, battery_data);
+	ret |= bcm590xx_request_irq(bcm59055, BCM59055_IRQID_INT2_CHGRM, true,
+			bcm59055_power_isr, battery_data);
 	if (ret) {
-		pr_info("%s request_irq for charger inserted condition failed \n", __func__ );
+		pr_info("%s request_irq for charger inserted condition failed \n",
+				__func__ );
 		return ret;
 	}
 
@@ -488,7 +518,7 @@ static int bcm59055_init_charger(struct bcm59055_power *battery_data)
 
 static int bcm59055_battery_probe(struct platform_device *pdev)
 {
-	int ret;
+	int ret, usb_typ;
 	struct bcm59055_power *battery_data;
 	struct bcm590xx *bcm59055 = dev_get_drvdata(pdev->dev.parent);
 	struct bcm590xx_battery_pdata *battery_pdata;
@@ -524,6 +554,8 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 
 	if (get_batt_percentage(battery_data) < 0)
 		battery_data->batt_percentage = 50;
+	/* For now no FG and ADC is connected in rayboard so hardcoding the capacity */
+	battery_data->batt_percentage = 50;
 	battery_data->battery.name = "bcm59055-battery";
 	battery_data->battery.type = POWER_SUPPLY_TYPE_BATTERY;
 	battery_data->battery.properties = bcm59055_battery_props;
@@ -563,7 +595,7 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 		pr_info("%s : Failed to register battery power supply\n", __func__);
 		goto err_usb_register;
 	}
-
+	battery_data->usb_type = USB_OFFLINE;
 	// Check if charger is already connected
 	ret = bcm59055_get_power_supply_type(battery_data);
 	if (ret != POWER_SUPPLY_TYPE_BATTERY /*&& usb_driver_init*/) {
@@ -571,9 +603,16 @@ static int bcm59055_battery_probe(struct platform_device *pdev)
 				(ret == POWER_SUPPLY_TYPE_MAINS ? "Wall" : "USB"));
 		if (ret == POWER_SUPPLY_TYPE_MAINS)
 			bcm59055_power_isr(BCM59055_IRQID_INT2_CHGINS, battery_data);
-		else
-			bcm59055_power_isr(BCM59055_IRQID_INT2_USBINS, battery_data);
+		else {
+			usb_typ = bcmpmu_usb_get(BCMPMU_CTRL_GET_CHARGER_TYPE, bcm59055);
+			battery_data->power_src = POWER_SUPPLY_TYPE_USB;
+			printk("%s: USB Type %d\n", __func__, usb_typ);
+			bcm59055_battery_cb(&battery_data->nb,
+					BCMPMU_USB_EVENT_CHGR_DETECTION, &usb_typ);
+		}
 	}
+	printk("%s: pwr_src %d, usb_typ %d\n", __func__, battery_data->power_src,
+			battery_data->usb_type);
 	schedule_delayed_work(&battery_data->batt_lvl_wq, 0 );
 	printk("%s: Probe Sucess\n", __func__);
 	return 0;
@@ -602,8 +641,6 @@ static int bcm59055_battery_remove(struct platform_device *pdev)
 
 	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_CHGINS);
 	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_CHGRM);
-	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_USBINS);
-	bcm590xx_free_irq(bcm59055, BCM59055_IRQID_INT2_USBRM);
 	kfree(data);
 
 	return 0;

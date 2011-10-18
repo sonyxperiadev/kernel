@@ -539,8 +539,8 @@ static struct ccu_clk CLK_NAME(kproc) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_ARM_CORE,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_ARM_CORE,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(PROC_CLK_BASE_ADDR),
 	.wr_access_offset = KPROC_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KPROC_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -795,16 +795,26 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
     int div = 2;
 #if UPDATE_LPJ
 	u64 lpj;
+#ifdef CONFIG_SMP
 	static unsigned long lpj_ref0 = 0;
 	static unsigned long lpj_freq_ref0 = 0;
 
-	if(lpj_ref0 == 0)
+	if (lpj_ref0 == 0)
 	{
 		lpj_ref0 =  per_cpu(cpu_data, 0).loops_per_jiffy;
 		lpj_freq_ref0 = arm_clk_get_rate(clk)/1000;
 	}
-
 	pr_info("%s:lpj_ref0 = %ld lpj_freq_ref0 = %ld \n", __func__, lpj_ref0, lpj_freq_ref0);
+#else
+	static unsigned long lpj_ref = 0;
+	static unsigned long lpj_freq_ref = 0;
+
+	if (lpj_ref == 0)
+		{
+			lpj_ref = loops_per_jiffy;
+			lpj_freq_ref = arm_clk_get_rate(clk)/1000;
+		}
+#endif
 #endif
 
 
@@ -838,14 +848,18 @@ static int arm_clk_set_rate(struct clk* clk, u32 rate)
 	/*Update lpj*/
 #if UPDATE_LPJ
  	/*new_lpj =  lpj_ref*new_freq/ref_freq*/
-	
+#ifdef CONFIG_SMP
 	lpj = ((u64) lpj_ref0) * ((u64) arm_clk_get_rate(clk)/1000);
 	do_div(lpj, lpj_freq_ref0);
 	per_cpu(cpu_data, 0).loops_per_jiffy = (unsigned long)lpj;
 	per_cpu(cpu_data, 1).loops_per_jiffy = (unsigned long)lpj;
-	pr_info("%s:new lpj ( = %llu\n",__func__,lpj);
-
-	
+	pr_info("%s:new lpj ( = %llu\n", __func__ , lpj);
+#else
+	lpj = ((u64) lpj_ref) * ((u64) arm_clk_get_rate(clk)/1000);
+	do_div(lpj, lpj_freq_ref);
+	loops_per_jiffy = (unsigned long)lpj;
+	pr_info("%s:new lpj = %llu\n", __func__ , lpj);
+#endif
 #endif
     clk_dbg("ARM clock set rate done \n");
 
@@ -1241,8 +1255,8 @@ static struct ccu_clk CLK_NAME(khub) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_HUB_SWITCHABLE,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(HUB_CLK_BASE_ADDR),
 	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KHUB_CLK_MGR_REG_POLICY0_MASK1_OFFSET,
@@ -2294,8 +2308,8 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_HUB_AON,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_HUB_AON,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(AON_CLK_BASE_ADDR),
 	.wr_access_offset = KHUBAON_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KHUBAON_CLK_MGR_REG_POLICY0_MASK1_OFFSET,
@@ -3007,8 +3021,8 @@ static struct ccu_clk CLK_NAME(kpm) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_MST_CLK_BASE_ADDR),
 	.wr_access_offset = KPM_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = KPM_CLK_MGR_REG_POLICY0_MASK_OFFSET,
@@ -3593,8 +3607,8 @@ static struct ccu_clk CLK_NAME(kps) = {
 				.ops = &gen_ccu_clk_ops,
 		},
 	.ccu_ops = &gen_ccu_ops,
-//	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
-	.pi_id = -1,
+	.pi_id = PI_MGR_PI_ID_ARM_SUB_SYSTEM,
+//	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(KONA_SLV_CLK_BASE_ADDR),
 	.wr_access_offset = IKPS_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.policy_mask1_offset = IKPS_CLK_MGR_REG_POLICY0_MASK_OFFSET,

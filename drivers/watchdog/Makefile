@@ -50,6 +50,7 @@ obj-$(CONFIG_ADX_WATCHDOG) += adx_wdt.o
 obj-$(CONFIG_TS72XX_WATCHDOG) += ts72xx_wdt.o
 obj-$(CONFIG_IMX2_WDT) += imx2_wdt.o
 obj-$(CONFIG_KONA_WATCHDOG) += kona_wdt.o
+obj-$(CONFIG_BCM59055_WATCHDOG) += bcm59055-wd.o
 
 # AVR32 Architecture
 obj-$(CONFIG_AT32AP700X_WDT) += at32ap700x_wdt.o

@@ -1,4 +1,4 @@
-/************************************************************************************************/
+ /************************************************************************************************/
 /*                                                                                              */
 /*  Copyright 2010  Broadcom Corporation                                                        */
 /*                                                                                              */
@@ -195,5 +195,9 @@
 #define KONA_VC_EMI                  HW_IO_PHYS_TO_VIRT( VC_EMI )
 #endif
 
+#define KONA_PWRWDOG_VA		HW_IO_PHYS_TO_VIRT(PWRWDOG0_BASE_ADDR)
+#define KONA_A9CPU0_VA		HW_IO_PHYS_TO_VIRT(A9CPU0_BASE_ADDR)
+#define KONA_A9PMU0_VA		HW_IO_PHYS_TO_VIRT(A9PMU0_BASE_ADDR)
+#define KONA_A9PTM0_VA		HW_IO_PHYS_TO_VIRT(A9PTM0_BASE_ADDR)
 
 #endif /* __ISLAND_IO_MAP_H */

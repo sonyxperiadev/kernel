@@ -317,12 +317,6 @@ config REGULATOR_BCMPMU
 	  This driver supports the voltage regulators provided by
 	  this family of companion chips.
 
-config REGULATOR_BCMSAMOA
-	bool "BCMSAMOA Regulator"
-	depends on MFD_BCMPMU && REGULATOR_BCMPMU
-	help
-	  This driver supports the voltage regulators provided by SAMOA PMU
-
 config REGULATOR_BCM59055
 	bool "BCM59055 Regulator"
 	depends on MFD_BCMPMU && REGULATOR_BCMPMU
