@@ -108,7 +108,6 @@ snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogtest
 snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_audioh_analogmic.o
 
 #CSL Source Files
-snd-brcm-omx-objs += soc/csl/audio/src/osdw_caph_drv.o
 #snd-brcm-omx-objs += soc/csl/audio/src/drv_caph_hwctrl.o
 #snd-brcm-omx-objs += soc/csl/audio/src/drv_audio_common.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_switch.o

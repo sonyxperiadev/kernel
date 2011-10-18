@@ -48,7 +48,6 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 #include "csl_caph_i2s_sspi.h"
 #include "csl_caph_pcm_sspi.h"
 #include "csl_caph_gain.h"
-#include "osdw_caph_drv.h"
 
 #include "csl_caph_hwctrl.h"
 #ifdef UNDER_LINUX
@@ -2534,7 +2533,6 @@ void csl_caph_hwctrl_init(void)
     
     csl_caph_ControlHWClock(TRUE);
 
-	CAPHIRQ_Init();
     memset(&addr, 0, sizeof(CSL_CAPH_HWCTRL_BASE_ADDR_t));
     addr.cfifo_baseAddr = CFIFO_BASE_ADDR1;
     addr.aadmac_baseAddr = AADMAC_BASE_ADDR1;
