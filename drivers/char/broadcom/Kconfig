@@ -155,14 +155,7 @@ config BCM_HALAUDIO_PCM_ISLAND
     help
       Select m to build the HAL Audio PCM driver.This driver must
       be built as a loadable module otherwise initialization will fail.
-              
-config BCM_HAPTICS
-    tristate "HAPTICS driver"
-    default n
-    ---help---
-    Select m to build the generic HAPTICS driver. This driver must be
-    built as a loadable module otherwise initialization will fail.
-    
+
 config BCM_VCP
     bool "Video Calling driver support"
     depends on BRCM_CHAR_DRIVERS

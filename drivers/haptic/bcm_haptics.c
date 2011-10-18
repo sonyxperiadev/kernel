@@ -30,7 +30,7 @@
 #include <linux/broadcom/bcm_haptics.h>
 #include <linux/broadcom/amxr.h>
 #include <linux/broadcom/amxr_port.h>
-#include "../../../staging/android/timed_output.h"
+#include "../staging/android/timed_output.h"
 
 static int debug_level = 0;
 

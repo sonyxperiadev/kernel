@@ -20,4 +20,11 @@ config HAPTIC_SAMSUNG_PWM
 	  This options enables support for haptic connected to GPIO lines
 	  controlled by a PWM timer.
 
+config BCM_HAPTICS
+	tristate "HAPTICS driver"
+	default n
+	help
+	  This options enables support for Broadcom haptic driver, implemented
+	  using HALAUDIO interface
+
 endif	# HAPTIC
