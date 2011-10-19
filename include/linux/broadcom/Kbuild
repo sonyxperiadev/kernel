@@ -4,6 +4,7 @@ header-y += halaudio.h
 header-y += halaudio_cfg.h
 header-y += aaa_ioctl.h
 header-y += hdmi.h
+header-y += whdmi_ioctl.h
 header-y += vcp.h
 header-y += vcp_device.h
 header-y += vcp_ioctl.h

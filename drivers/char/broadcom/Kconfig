@@ -196,6 +196,11 @@ config BCM_FRAME_PROFILER_SUPPORT
     ---help---
       Maintain a history of time spent processing frames.      
 
+config BCM_WIFI_HDMI
+    tristate "WIFI HDMI"
+    default n
+    ---help---
+      Select to build the WIFI HDMI driver.
 
 source "drivers/char/broadcom/csx/Kconfig"
 

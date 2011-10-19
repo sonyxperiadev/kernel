@@ -21,6 +21,7 @@ obj-$(CONFIG_BCM_HEADSET_SW)           += headset.o
 obj-$(CONFIG_BCM_GIST)                 += gist.o
 #obj-$(CONFIG_BCM_GIST)                 += gist_test.o
 obj-$(CONFIG_BCM_HDMI_DET)             += hdmi/
+obj-$(CONFIG_BCM_WIFI_HDMI) 		   += wifi_hdmi.o
 
 obj-$(CONFIG_BCM_SIGMORPH)              += sigmorph.o
 #obj-$(CONFIG_BCM_SIGMORPH)              += sigmorph-test.o
