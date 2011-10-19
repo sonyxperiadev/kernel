@@ -225,57 +225,6 @@ static irqreturn_t vce_isr(int irq, void *unused)
 	return IRQ_HANDLED;
 }
 
-static void one_time_power_on(void)
-{
-	/* TODO: proper power management */
-	/* N.B.  *first* call here must be single threaded as I've not
-	   cared about mutual exclusion yet (until we do the proper
-	   p.m. */
-
-	static int done_already = 0;
-	if (done_already) return;
-	done_already = 1;
-
-
-	setup_vce_clock();
-
-	/* Map the VCE registers */
-	/* TODO: split this out into the constituent parts: prog mem / data mem / periph mem / regs */
-	/* Also get rid of the hardcoded size */
-	vce_base = (void __iomem *)ioremap_nocache(RHEA_VCE_BASE_PERIPHERAL_ADDRESS, SZ_512K);
-	/* if (vce_base == NULL) */
-	/* 	goto err; */
-
-
-	/* Map the RESET registers */
-	mm_rst_base = (void __iomem *)ioremap_nocache(MM_RST_BASE_ADDR, SZ_4K);
-	/* if (mm_rst_base == NULL) */
-	/* 	goto err1; */
-
-	/* Print out the VCE identification registers */
-	{
-		uint32_t vce_version;
-		uint32_t spec_revision;
-		uint32_t sub_revision;
-
-		vce_version = readl(vce_base + VCE_VERSION_OFFSET);
-		spec_revision = (vce_version & VCE_VERSION_SPEC_REVISION_MASK) >> VCE_VERSION_SPEC_REVISION_SHIFT;
-		sub_revision = (vce_version & VCE_VERSION_SUB_REVISION_MASK) >> VCE_VERSION_SUB_REVISION_SHIFT;
-		/* TODO: make this available via /proc */
-
-		dbg_print("VCE Version %u.%u [0X%x]\n", spec_revision, sub_revision, vce_version);
-
-		/* If this assertion fails, it means we didn't
-		   decompose the version information fully.  Perhaps
-		   you're running on a simulated version of the IP, or
-		   the register has changed its layout since this
-		   driver was written? */
-		BUG_ON(vce_version != (spec_revision << VCE_VERSION_SPEC_REVISION_SHIFT | sub_revision << VCE_VERSION_SUB_REVISION_SHIFT));
-	}
-
-	dbg_print("VCE register base address (remapped) = 0X%p\n", vce_base);
-}
-
 /******************************************************************
 	VCE driver functions
 *******************************************************************/
@@ -284,9 +233,6 @@ static int vce_open(struct inode *inode, struct file *filp)
 	vce_t *dev;
 
 	(void)inode; /* ? */
-
-	/* hack -- todo: proper pm */
-	one_time_power_on();
 
 	dev = kmalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev)
@@ -353,9 +299,6 @@ static int vce_mmap(struct file *filp, struct vm_area_struct *vma)
 	unsigned long vma_size;
 	vce_t *dev;
 
-	/* hack -- todo: proper pm */
-	one_time_power_on();
-
 	vma_size = vma->vm_end - vma->vm_start;
 	dev = (vce_t *)(filp->private_data);
 
@@ -409,9 +352,6 @@ static long vce_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		return -EFAULT;
 
 	dev = (vce_t *)(filp->private_data);
-
-	/* hack -- todo: proper pm */
-	one_time_power_on();
 
 	switch (cmd)
 	{
@@ -503,9 +443,6 @@ static int proc_version_read(char *buffer, char **start, off_t offset, int bytes
 	uint32_t vce_version, spec_revision, sub_revision;
 	int len;
 
-	/* hack -- todo: proper pm */
-	one_time_power_on();
-
 	ret = 0;
 
 	/* TODO: we have some private data here that we can use: */
@@ -558,9 +495,6 @@ static int proc_status_read(char *buffer, char **start, off_t offset, int bytes,
 	uint32_t nanoflag;
 	uint32_t irq;
 	int len;
-
-	/* hack -- todo: proper pm */
-	one_time_power_on();
 
 	ret = 0;
 
@@ -631,11 +565,43 @@ int __init vce_init(void)
 
 	device_create(vce_state.vce_class, NULL, MKDEV(vce_major, 0), NULL, VCE_DEV_NAME);
 
-        /* defer power-on until later */
-        /* TODO: proper power management */
+	setup_vce_clock();
 
-	vce_base = NULL;
-	mm_rst_base = NULL;
+	/* Map the VCE registers */
+	/* TODO: split this out into the constituent parts: prog mem / data mem / periph mem / regs */
+	/* Also get rid of the hardcoded size */
+	vce_base = (void __iomem *)ioremap_nocache(RHEA_VCE_BASE_PERIPHERAL_ADDRESS, SZ_512K);
+	if (vce_base == NULL)
+		goto err;
+
+
+	/* Map the RESET registers */
+	mm_rst_base = (void __iomem *)ioremap_nocache(MM_RST_BASE_ADDR, SZ_4K);
+	if (mm_rst_base == NULL)
+		goto err1;
+
+	/* Print out the VCE identification registers */
+	{
+		uint32_t vce_version;
+		uint32_t spec_revision;
+		uint32_t sub_revision;
+
+		vce_version = readl(vce_base + VCE_VERSION_OFFSET);
+		spec_revision = (vce_version & VCE_VERSION_SPEC_REVISION_MASK) >> VCE_VERSION_SPEC_REVISION_SHIFT;
+		sub_revision = (vce_version & VCE_VERSION_SUB_REVISION_MASK) >> VCE_VERSION_SUB_REVISION_SHIFT;
+		/* TODO: make this available via /proc */
+
+		dbg_print("VCE Version %u.%u [0X%x]\n", spec_revision, sub_revision, vce_version);
+
+		/* If this assertion fails, it means we didn't
+		   decompose the version information fully.  Perhaps
+		   you're running on a simulated version of the IP, or
+		   the register has changed its layout since this
+		   driver was written? */
+		BUG_ON(vce_version != (spec_revision << VCE_VERSION_SPEC_REVISION_SHIFT | sub_revision << VCE_VERSION_SUB_REVISION_SHIFT));
+	}
+
+	dbg_print("VCE register base address (remapped) = 0X%p\n", vce_base);
 
 	/* Request the VCE IRQ */
 	ret = request_irq(IRQ_VCE, vce_isr,
@@ -676,12 +642,16 @@ int __init vce_init(void)
 
 	return 0;
 
-/* TODO: review these exit paths */
 err4:
 	remove_proc_entry("version", vce_state.proc_vcedir);
 err3:
 	remove_proc_entry(VCE_DEV_NAME, NULL);
 err2:
+	iounmap(mm_rst_base);
+err1:
+	iounmap(vce_base);
+err:
+	err_print("Failed to MAP the VCE IO space\n");
 	unregister_chrdev(vce_major, VCE_DEV_NAME);
 	return ret;
 }
