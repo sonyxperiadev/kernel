@@ -86,7 +86,8 @@ config RHEA_UART_RX_FIX
 
 config RHEA_I2C_USE_PMGR_HW_SEM
 	bool "use HW sem to sync i2c between sw & sequencer"
-	depends on ARCH_RHEA_B0
+	depends on ARCH_RHEA_B0 && KONA_POWER_MGR
+	default y
 	help
 	  The HW sequencer can generate i2c transcations on the PMU i2c
 	  bus while SW driver can still generate the same. To sync 
