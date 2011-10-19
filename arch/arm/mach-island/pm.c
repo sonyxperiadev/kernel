@@ -56,7 +56,9 @@ static void suspend_finish(void)
 }
 
 static struct platform_suspend_ops suspend_ops ={
+#ifndef CONFIG_MAP_ISLAND_SUSPEND_INVALID
 	.valid = suspend_valid_only_mem,
+#endif
 	.prepare = suspend_prepare,
 	.enter = suspend_enter,
 	.finish = suspend_finish,
