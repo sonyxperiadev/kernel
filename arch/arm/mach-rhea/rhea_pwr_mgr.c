@@ -348,6 +348,7 @@ int __init rhea_pwr_mgr_init()
 	pwr_mgr_init(&rhea_pwr_mgr_info);
 	rhea_pi_mgr_init();
 
+#if 0
 #ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	// HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
 	// is used to turn on mm power switches which results in mm clamps getting released before mm subsystem
@@ -361,12 +362,15 @@ int __init rhea_pwr_mgr_init()
 	reg_val &= ~CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_MASK;
 	writel(reg_val, (KONA_CHIPREG_VA + CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
 #endif
+#endif
 	/*MM override is not set by default*/
 	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,false/*clear*/);
+#if 0
 #ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
 	/* 14.5mA per switch */
 	reg_val |= 3;
 	writel(reg_val, (KONA_CHIPREG_VA +CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
+#endif
 #endif
 	/*Done in two steps to skip DUMMY_EVENT*/
 	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
@@ -425,7 +429,7 @@ int __init rhea_pwr_mgr_init()
 	for (i = 0; i < PI_MGR_PI_ID_MODEM;i++) {
 	    pi = pi_mgr_get(i);
 	    BUG_ON(pi == NULL);
-	    pwr_mgr_pi_set_wakeup_override(pi->id,true/*clear*/);
+		pwr_mgr_pi_set_wakeup_override(pi->id,true/*clear*/);
 	}
 
 return 0;
