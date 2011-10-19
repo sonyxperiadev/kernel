@@ -189,11 +189,12 @@ struct uart_8250_port {
 	/*
 	 * Kona PM - QOS service
 	 */
+	struct timer_list	rx_shutoff_timer;
+#define RX_SHUTOFF_DELAY_MSECS	3000
+
 #ifdef CONFIG_KONA_PI_MGR
 	struct pi_mgr_qos_node* qos_tx_node;
 	struct pi_mgr_qos_node* qos_rx_node;
-	struct timer_list	rx_shutoff_timer;
-#define RX_SHUTOFF_DELAY_MSECS	3000
 #else
 	void *qos_tx_node;
 	void *qos_rx_node;
