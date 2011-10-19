@@ -31,6 +31,7 @@
 #include <linux/serial_8250.h>
 #include <linux/irq.h>
 #include <linux/dma-contiguous.h>
+#include <linux/android_pmem.h>
 #include <linux/kernel_stat.h>
 #include <asm/mach/arch.h>
 #include <asm/mach-types.h>
@@ -675,6 +676,24 @@ static struct platform_device bralloc_device = {
 	},
 };
 
+/* Allocate the top 16M of the DRAM for the pmem. */
+static struct android_pmem_platform_data android_pmem_data = {
+	.name = "pmem",
+	.start = 0x0,
+	.size = SZ_16M,
+	.no_allocator = 0,
+	.cached = 1,
+	.buffered = 1,
+};
+
+static struct platform_device android_pmem = {
+	.name 	= "android_pmem",
+	.id	= 0,
+	.dev	= {
+		.platform_data = &android_pmem_data,
+	},
+};
+
 /* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
 static struct platform_device *board_common_plat_devices[] __initdata = {
 	&board_serial_device,
@@ -708,11 +727,11 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #endif
 
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
-       &board_spum_device,
+	&board_spum_device,
 #endif
 
 #ifdef CONFIG_UNICAM
-       &board_unicam_device,
+	&board_unicam_device,
 #endif
 };
 
@@ -723,6 +742,25 @@ static int __init early_bralloc_mem(char *p)
 	return 0;
 }
 early_param("bralloc_mem", early_bralloc_mem);
+
+static unsigned long pmem_base = 0;
+static unsigned int pmem_size = SZ_16M;
+static int __init setup_pmem_pages(char *str)
+{
+	char * endp = NULL;
+	if(str)	{
+		pmem_size = memparse((const char *)str, &endp);
+		printk(KERN_INFO "PMEM size is   0x%08x Bytes\n", pmem_size);
+		if (*endp == '@')
+			pmem_base =  memparse(endp + 1, NULL);
+			printk(KERN_INFO "PMEM starts at 0x%08x\n", (unsigned int)pmem_base);
+		} else	{
+			printk("\"pmem=\" option is not set!!!\n");
+			printk("Unable to determine the memory region for pmem!!!\n");
+		}
+	return 0;
+}
+early_param("pmem", setup_pmem_pages);
 
 void __init board_common_reserve(void)
 {
@@ -736,6 +774,13 @@ void __init board_common_reserve(void)
 void __init board_add_common_devices(void)
 {
 	platform_add_devices(board_common_plat_devices, ARRAY_SIZE(board_common_plat_devices));
+
+	if (pmem_base && pmem_size) {
+		android_pmem_data.start = (unsigned long)pmem_base;
+		android_pmem_data.size  = pmem_size;
+		platform_device_register(&android_pmem);
+	}
+
 	/*
 	 * add the bralloc device only iff we were given memory for
 	 * it's cma region
