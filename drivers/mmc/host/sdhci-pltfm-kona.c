@@ -512,6 +512,8 @@ static int __devinit sdhci_pltfm_probe(struct platform_device *pdev)
 	if (hw_cfg->is_8bit)
 		host->mmc->caps |= MMC_CAP_8_BIT_DATA;
 
+	host->quirks = SDHCI_QUIRK_NO_CARD_NO_RESET;
+
 	ret = sdhci_add_host(host);
 	if (ret)
 		goto err_reset;

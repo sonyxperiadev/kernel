@@ -326,10 +326,6 @@ CONFIG_MAP_ISLAND_SUSPEND_INVALID=y
 CONFIG_IPC=y
 
 #
-# Custom Island SoC based Machine types
-#
-
-#
 # System MMU
 #
 
