@@ -200,6 +200,7 @@ typedef struct
 	Int16  dl_comp_filter_gain_16k[MAX_NO_OF_BIQUADS];	
 	Int32  dl_output_bit_select_16k;		
 	UInt16 dl_nstage_filter;
+	UInt16 reserved;
 } EQDlCompfilter_t;
 
 typedef struct 
@@ -213,6 +214,7 @@ typedef struct
 	Int16  ul_comp_filter_gain_16k[MAX_NO_OF_BIQUADS];		
 	Int32  ul_output_bit_select_16k;			
 	UInt16 ul_nstage_filter;	
+	UInt16 reserved;
 } EQUlCompfilter_t;
 
 typedef struct 

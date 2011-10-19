@@ -944,7 +944,7 @@ int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32
     switch (UserCtrlType)
     {
         case AUDDRV_USER_SP_QUERY:
-            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_GET_SP *\n\r");
+            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_SP_QUERY *\n\r");
 
             if (param == NULL)
                 return -EINVAL;
@@ -952,7 +952,7 @@ int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32
             csl_dsp_sp_query_msg((UInt32 *)param);
             break;
         case AUDDRV_USER_SP_CTRL:
-            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_ENA_SP *\n\r");
+            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_SP_CTRL *\n\r");
 
             if (enable)
             {
@@ -989,7 +989,8 @@ int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32
             {
                 if (param == NULL)
                     return -EINVAL;
-                csl_dsp_sp_cnfg_msg((UInt16)enable, 0, 1, (UInt32 *)param, spVar);
+
+                csl_dsp_sp_cnfg_msg((UInt16)enable, 0, 1, spCtrl, (UInt32 *)param);
                 ConfigSP = FALSE;
             }
             else
@@ -1009,7 +1010,7 @@ int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32
 
             break;
         case AUDDRV_USER_EQ_CTRL:
-            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_SET_EQ *\n\r");
+            Log_DebugPrintf(LOGID_AUDIO, "\n\r\t* AUDDRV_UserCtrlDSP, AUDDRV_USER_EQ_CTRL *\n\r");
 
             if (enable == TRUE)
             {
@@ -1017,8 +1018,7 @@ int AUDDRV_User_CtrlDSP ( AudioDrvUserCtrl_t UserCtrlType, Boolean enable, Int32
                     return -EINVAL;
 
                 userEQOn = TRUE;
-                if (param != NULL)
-                    audio_cmf_filter((AudioCompfilter_t *) param);
+                audio_cmf_filter((AudioCompfilter_t *) param);
             }
             else
                 userEQOn = FALSE;
