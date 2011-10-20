@@ -17,6 +17,7 @@ config MACH_RHEA_RAY_EDN1X
 
 config MACH_RHEA_DALTON
 	bool "Support Nokia Dalton board"
+	select RHEALC_2093
 	help
 	  Support for the Nokia Dalton board.
 	  This will be based on RheaLC program and
@@ -35,6 +36,7 @@ config MACH_RHEA_BERRI
 
 config MACH_RHEALC_BERRI
         bool "Support Broadcom RheaLC Berri board"
+	select RHEALC_2093
         help
           Support for the Broadcom RheaLC Berri board.
 
@@ -51,6 +53,12 @@ config RHEA_A0_PM_ASIC_WORKAROUND
        default y
        help
        Say Y if you want to enable Rhea ASIC workarounds for Power management
+
+config RHEALC_2093
+	bool "Enable RheaLC&2093"
+	default n
+        help
+           Enable ReahLC&2093.
 
 endmenu
 

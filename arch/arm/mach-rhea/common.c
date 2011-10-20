@@ -555,7 +555,12 @@ struct kona_freq_tbl kona_freq_tbl[] =
     FTBL_INIT(156000000, PI_OPP_ECONOMY),
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
+
+#ifdef CONFIG_RHEALC_2093
+    FTBL_INIT(600000, PI_OPP_TURBO),
+#else
     FTBL_INIT(700000, PI_OPP_TURBO),
+#endif
 };
 
 struct kona_cpufreq_drv_pdata kona_cpufreq_drv_pdata = {
