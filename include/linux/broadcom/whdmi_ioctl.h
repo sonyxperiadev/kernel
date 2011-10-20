@@ -151,7 +151,7 @@ typedef struct whdmi_msg_tcp_send
     WHDMI_MSG_HDR       msg_hdr;
     int                 socket_handle;  /* Socket handle to use */
     int                 data_len;       /* Length of data to send */
-    uint8_t             *data;          /* Buffer containing data to send */
+    uint8_t             data[WHDMI_MAX_PACKET_SIZE];        /* Buffer containing data to send */
 } WHDMI_MSG_TCP_SEND;
 
 typedef struct whdmi_msg_udp_send_to
@@ -161,7 +161,7 @@ typedef struct whdmi_msg_udp_send_to
     unsigned long       dest_addr;      /* Destination address to send to (in host order) */
     unsigned short      dest_port;      /* Destination port (in host order) */
     int                 data_len;       /* Length of data to send */
-    uint8_t             *data;          /* Buffer containing data to send */
+    uint8_t             data[WHDMI_MAX_PACKET_SIZE];        /* Buffer containing data to send */
 } WHDMI_MSG_UDP_SEND_TO;
 
 typedef struct whdmi_msg_close_socket
