@@ -284,11 +284,7 @@ static RPC_Result_t bcm_fuse_net_bd_cb(PACKET_InterfaceType_t interfaceType, uns
     ndrvr_info_ptr->stats.rx_packets++;
     ndrvr_info_ptr->stats.rx_bytes += data_len; 
 
-<<<<<<< HEAD
-    BNET_DEBUG(DBG_TRACE,"%s: rx_bytes:%d\n", __FUNCTION__,ndrvr_info_ptr->stats.rx_bytes);
-=======
     BNET_DEBUG(DBG_TRACE,"%s: rx_bytes:%ld\n", __FUNCTION__,ndrvr_info_ptr->stats.rx_bytes);
->>>>>>> mps/map-android-gb
 
     netif_rx(skb);
 
@@ -451,11 +447,7 @@ static int bcm_fuse_net_tx(struct sk_buff *skb, struct net_device *dev)
     */
     t_ndrvr_info_ptr->stats.tx_packets++;
     t_ndrvr_info_ptr->stats.tx_bytes += skb->len;
-<<<<<<< HEAD
-    BNET_DEBUG(DBG_TRACE,"%s: tx_bytes:%d simid:%d cid:%d\n", __FUNCTION__,t_ndrvr_info_ptr->stats.tx_bytes,sim_id,pdp_cid);
-=======
     BNET_DEBUG(DBG_TRACE,"%s: tx_bytes:%ld simid:%d cid:%d\n", __FUNCTION__,t_ndrvr_info_ptr->stats.tx_bytes,sim_id,pdp_cid);
->>>>>>> mps/map-android-gb
 
     dev_kfree_skb(skb);
 

@@ -555,35 +555,35 @@ Result of git status after git merge of map-android-gb (eecd6199) into map_integ
 # Unmerged paths:
 #   (use "git add/rm <file>..." as appropriate to mark resolution)
 #
-#	both modified:      arch/arm/configs/bcm11160_sv_defconfig
-#	both modified:      arch/arm/configs/bcm11160_sv_jffs2_defconfig
-#	both modified:      arch/arm/configs/bcm11160_sv_li_128mb_defconfig
-#	both modified:      arch/arm/configs/bcm11160_tablet_android_defconfig
-#	both modified:      arch/arm/configs/bcm11160_tablet_defconfig
-#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_android_defconfig
-#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_defconfig
-#	both modified:      arch/arm/configs/bcm28160_tablet_android_defconfig
-#	both modified:      arch/arm/configs/bcm28160_tablet_defconfig
-#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_android_defconfig
-#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_defconfig
-#	both modified:      arch/arm/mach-island/configs/bcm28160_tablet_li_128mb_android.target
-#	both modified:      arch/arm/mach-island/island.c
-#	both modified:      drivers/char/broadcom/Makefile
-#	both modified:      drivers/char/broadcom/modem/ipc/ipcinterface.h
-#	both modified:      drivers/char/broadcom/modem/net/bcm_fuse_net.c
-#	both modified:      drivers/char/broadcom/modem/public/audio_consts.h
-#	deleted by them:    drivers/char/broadcom/modem/public/sysinterface/public/serialapi.h
-#	both modified:      drivers/char/broadcom/modem/rpc/Makefile
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/Makefile
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/rpc_ipc.c
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/public/rpc_global.h
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/public/rpc_ipc.h
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/src/Makefile
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/Makefile
-#	both modified:      drivers/char/broadcom/modem/rpc/rpc_stubs.c
+#	both modified:      arch/arm/configs/bcm11160_sv_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm11160_sv_jffs2_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm11160_sv_li_128mb_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm11160_tablet_android_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm11160_tablet_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_android_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm11160_tablet_li_128mb_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm28160_tablet_android_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm28160_tablet_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_android_defconfig fixed by rjui
+#	both modified:      arch/arm/configs/bcm28160_tablet_li_128mb_defconfig fixed by rjui
+#	both modified:      arch/arm/mach-island/configs/bcm28160_tablet_li_128mb_android.target fixed by rjui
+#	both modified:      arch/arm/mach-island/island.c fixed by rjui
+#	both modified:      drivers/char/broadcom/Makefile fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/ipc/ipcinterface.h fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/net/bcm_fuse_net.c fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/public/audio_consts.h fixed by rjui
+#	deleted by them:    drivers/char/broadcom/modem/public/sysinterface/public/serialapi.h fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/rpc/Makefile fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/Makefile fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/src/rpc_ipc.c fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/public/rpc_global.h fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/public/rpc_ipc.h fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/src/Makefile fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/Makefile fixed by rjui
+#	both modified:      drivers/char/broadcom/modem/rpc/rpc_stubs.c fixed by rjui
 #	both modified:      drivers/misc/vc04_services/Kconfig
 #	both modified:      drivers/misc/vc04_services/Makefile
-#	both modified:      drivers/mmc/host/sdhci.c
+#	both modified:      drivers/mmc/host/sdhci.c fixed by rjui
 #	both modified:      drivers/net/wireless/bcmdhd/Makefile
 #	both modified:      drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdh.c
 #	both modified:      drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdh_linux.c
@@ -683,12 +683,12 @@ Result of git status after git merge of map-android-gb (eecd6199) into map_integ
 #	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wl_iw.h
 #	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wldev_common.c
 #	both modified:      drivers/net/wireless/bcmdhd/wl/sys/wldev_common.h
-#	both modified:      drivers/tty/serial/8250.c
-#	both modified:      drivers/usb/gadget/f_acm.c
-#	both modified:      drivers/usb/gadget/f_obex.c
-#	both added:         include/linux/broadcom/bcmbt_lpm.h
-#	both added:         include/linux/broadcom/bcmbt_rfkill.h
-#	both modified:      include/linux/broadcom/ipcinterface.h
+#	both modified:      drivers/tty/serial/8250.c fixed by rjui
+#	both modified:      drivers/usb/gadget/f_acm.c fixed by rjui
+#	both modified:      drivers/usb/gadget/f_obex.c fixed by rjui
+#	both added:         include/linux/broadcom/bcmbt_lpm.h fixed by rjui, keep it
+#	both added:         include/linux/broadcom/bcmbt_rfkill.h fixed by rjui, keep it
+#	both modified:      include/linux/broadcom/ipcinterface.h fixed by rjui
 #	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_bivcm_arm.c
 #	both modified:      vc4-dev/src/interface/vcos/linuxkernel/vcos_platform.h
 #	both modified:      vc4-dev/src/interface/vcos/vcos_logging.h

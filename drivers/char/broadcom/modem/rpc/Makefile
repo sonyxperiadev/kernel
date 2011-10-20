@@ -6,15 +6,8 @@ EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/public
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/arpc/inc
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/inc
 
-<<<<<<< HEAD
-EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/public/"
-EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/public/sysinterface/util/public/"
-EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/sysrpc"
-EXTRA_CFLAGS += -I"drivers/char/broadcom/modem/public/soc/public"
-=======
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/
 EXTRA_CFLAGS += -I drivers/char/broadcom/modem/public/sysinterface/util/public/
->>>>>>> mps/map-android-gb
 
 EXTRA_CFLAGS += -I drivers/char/broadcom/fuse_log/
 

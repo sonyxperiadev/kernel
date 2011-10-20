@@ -583,15 +583,9 @@ acm_bind(struct usb_configuration *c, struct usb_function *f)
 	status = usb_interface_id(c, f);
 	if (status < 0)
 		goto fail;
-<<<<<<< HEAD
-	acm->ctrl_id = status;
-	acm_iad_descriptor.bFirstInterface = status;
-
-=======
 	acm->ctrl_id = status;	
 	acm_iad_descriptor.bFirstInterface = status;
 	
->>>>>>> mps/map-android-gb
 	acm_control_interface_desc.bInterfaceNumber = status;
 	acm_union_desc .bMasterInterface0 = status;
 
@@ -786,11 +780,7 @@ int acm_bind_config(struct usb_configuration *c, u8 port_num)
 	acm->port.func.unbind = acm_unbind;
 	acm->port.func.set_alt = acm_set_alt;
 	acm->port.func.setup = acm_setup;
-<<<<<<< HEAD
-	acm->port.func.disable = acm_disable;
-=======
 	acm->port.func.disable = acm_disable;	
->>>>>>> mps/map-android-gb
 
 	status = usb_add_function(c, &acm->port.func);
 	if (status)
