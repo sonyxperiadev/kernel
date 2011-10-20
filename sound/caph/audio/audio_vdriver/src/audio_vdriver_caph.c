@@ -785,18 +785,14 @@ void AUDDRV_SetAudioMode( AudioMode_t audio_mode, UInt32 dev )
 	audio_control_generic( AUDDRV_CPCMD_SetAudioMode, 
 				(UInt32)audio_mode, 0, 0, 0, 0 );
 
-	// Set DSP UL's and DL's EQ filter
-	//this part has been tested working with the CP code change CL#379137 together.
-	//Will enbale this part after the CP code change CL#379137 propagates to LMP's CP image.
-	/***
-	if (eciEQOn == FALSE)
+	if (userEQOn == FALSE)
+	{
 		//load speaker EQ filter and Mic EQ filter from sysparm to DSP
 		audio_control_generic( AUDDRV_CPCMD_SetFilter, audio_mode, dev, 0, 0, 0 );
-	***/
-		
+	}
 	//else
-		//There is no need to load the ECI-headset-provided speaker EQ filter and Mic EQ filter to DSP.
-		//The ECI headset enable/disable request comes with the data. It means we'll get the coefficient each time they want to switch ECI on.
+		//There is no need for this function to load the ECI-headset-provided speaker EQ filter and Mic EQ filter to DSP.
+		//The ECI headset enable/disable request comes with the data. It means we'll get the coefficients every time they want to switch ECI headset on.
 		//audio_cmf_filter((AudioCompfilter_t *) &copy_of_AudioCompfilter );
 
 	audDev = dev;
