@@ -2680,5 +2680,39 @@ extern cVoid chal_audio_dmic2_pwrctrl(CHAL_HANDLE handle, Boolean pwronoff);
 
 cVoid chal_audio_mic_mute(CHAL_HANDLE handle, Boolean mute_ctrl);
 
+/**
+*
+*  @brief  enable adcpath in one write
+*
+*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  enable            (in) set/clear the adcpath enable bits
+*
+*  @return none
+*****************************************************************************/
+
+cVoid chal_audio_adcpath_global_enable(CHAL_HANDLE handle,Boolean enable);
+
+/**
+*
+*  @brief  check the adcpath global bit status
+*
+*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*
+*  @return bit status
+*****************************************************************************/
+
+Boolean chal_audio_adcpath_global_enable_status(CHAL_HANDLE handle);
+
+/**
+*
+*  @brief  clear the adcpath fifo in one write
+*
+*  @param  handle               (in) this AUDIO chal handle got through chal_audio_init() function
+*  @param  clear            (in) clear the adcpath fifo
+*
+*  @return none
+*****************************************************************************/
+
+cVoid chal_audio_adcpath_fifo_global_clear(CHAL_HANDLE handle,Boolean clear );
 #endif // _CHAL_HERA_AUDIO_
 

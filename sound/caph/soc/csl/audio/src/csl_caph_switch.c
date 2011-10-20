@@ -581,8 +581,6 @@ CSL_CAPH_SWITCH_CHNL_e csl_caph_switch_obtain_channel(void)
     CSL_CAPH_SWITCH_CHNL_e chnl = CSL_CAPH_SWITCH_NONE;
     CAPH_SWITCH_CHNL_e chal_chnl = CAPH_SWITCH_CH_VOID;
 
-    _DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_switch_obtain_channel:: \n"));
-
     chal_chnl = chal_caph_switch_alloc_channel(handle);
     chnl = csl_caph_switch_get_cslchnl(chal_chnl);
 

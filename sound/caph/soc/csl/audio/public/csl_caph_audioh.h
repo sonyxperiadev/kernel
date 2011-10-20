@@ -234,4 +234,5 @@ void csl_caph_audioh_vinpath_digi_mic_enable(UInt16 ctrl);
 void csl_caph_audioh_nvinpath_digi_mic_enable(UInt16 ctrl);
 CSL_CAPH_AUDIOH_VINPATH_DMIC_ENABLE_e csl_caph_audioh_vinpath_digi_mic_enable_read(void);
 CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e csl_caph_audioh_nvinpath_digi_mic_enable_read(void);
+void csl_caph_audioh_adcpath_global_enable(Boolean enable);
 #endif // _CSL_CAPH_AUDIOH_

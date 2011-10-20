@@ -726,6 +726,7 @@ void csl_caph_audioh_start(int path_id)
 {
 	UInt16	chnl_enable = 0x0;
 
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_start:: %d.\r\n", path_id));
 	switch(path_id)
 	{
 		case AUDDRV_PATH_VIBRA_OUTPUT:
@@ -1627,3 +1628,31 @@ CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e csl_caph_audioh_nvinpath_digi_mic_enable_
 {
 	return (CSL_CAPH_AUDIOH_NVINPATH_DMIC_ENABLE_e)chal_audio_nvinpath_digi_mic_enable_read(handle);
 }	
+
+//============================================================================
+//
+// Function Name: void csl_caph_audioh_adcpath_global_enable(Boolean enable)
+//
+// Description:  started the adcpath in one write
+//
+// Parameters: enable: enable/disable the global en bit
+//
+// Return:
+//
+//============================================================================
+void csl_caph_audioh_adcpath_global_enable(Boolean enable)
+{
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_audioh_adcpath_global_enable:: enable %d.\r\n", enable));
+	if (enable)
+	{
+		chal_audio_adcpath_global_enable(handle,FALSE);
+		chal_audio_adcpath_fifo_global_clear(handle,TRUE);
+		chal_audio_adcpath_global_enable(handle,TRUE);
+	}
+	else
+	{
+		if (chal_audio_adcpath_global_enable_status(handle))
+			chal_audio_adcpath_global_enable(handle,FALSE);			
+	}
+	return;
+}

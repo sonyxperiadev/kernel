@@ -392,7 +392,7 @@ void csl_caph_cfifo_release_fifo(CSL_CAPH_CFIFO_FIFO_e fifo)
 {
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_release_fifo:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_release_fifo:: %d\n", fifo));
 	
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(fifo);
 
@@ -455,7 +455,7 @@ UInt32 csl_caph_cfifo_get_fifo_addr(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
     UInt32 cfifo_addr = 0;
 
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_get_fifo_addr:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_get_fifo_addr:: %d\n", csl_fifo));
 
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 
@@ -476,7 +476,7 @@ void csl_caph_cfifo_start_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 {
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_start_fifo:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_start_fifo:: %d\n", csl_fifo));
 	
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 	
@@ -499,7 +499,7 @@ void csl_caph_cfifo_stop_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 {
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_stop_fifo:: \n"));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_stop_fifo:: %d\n", csl_fifo));
 
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 	
@@ -522,8 +522,6 @@ UInt32 csl_caph_cfifo_read_fifo_status(CSL_CAPH_CFIFO_FIFO_e csl_fifo)
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
     UInt32 status = 0x0;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_stop_fifo:: \n"));
-
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 	
 	if (chal_fifo != CAPH_CFIFO_VOID)
@@ -545,8 +543,6 @@ UInt16 csl_caph_cfifo_read_fifo(CSL_CAPH_CFIFO_FIFO_e csl_fifo, UInt32* data, UI
 	CAPH_CFIFO_e chal_fifo = CAPH_CFIFO_VOID;
     UInt16 num = 0x0;
 	
-	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_stop_fifo:: \n"));
-
 	chal_fifo = csl_caph_cfifo_get_chal_fifo(csl_fifo);
 	
 	if (chal_fifo != CAPH_CFIFO_VOID)
@@ -570,7 +566,7 @@ CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_get_fifo_by_dma(CSL_CAPH_DMA_CHNL_e dmaCH)
 	
 	CSL_CAPH_CFIFO_FIFO_e csl_caph_cfifo_ch = CSL_CAPH_CFIFO_NONE;
 
-	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_dma_get_csl_cfifo:: \n");
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_cfifo_get_fifo_by_dma:: %d\n", dmaCH);
 
 	for (id = CSL_CAPH_CFIFO_FIFO1; id <= CSL_CAPH_CFIFO_FIFO16; id++)
 	{

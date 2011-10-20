@@ -935,3 +935,100 @@ cVoid chal_audio_vinpath_set_filter(CHAL_HANDLE handle, cUInt16 filter)
 
     return;
 }
+
+//============================================================================
+//
+// Function Name: cVoid chal_audio_adcpath_global_enable( CHAL_HANDLE handle,
+//                                            Boolean enable)
+//
+// Description:  enable the adcpath global enable bit
+//
+// Parameters:   handle      : the voice input path handle.
+//                 enable : set/clear the bit
+// Return:       None.
+//
+//============================================================================
+
+cVoid chal_audio_adcpath_global_enable( CHAL_HANDLE handle,  Boolean enable )
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    cUInt32 reg_val;
+
+    reg_val = BRCM_READ_REG(base, AUDIOH_ADCPATH_GLOBAL_CTRL);
+
+    if(enable)
+    {
+       reg_val |= AUDIOH_ADCPATH_GLOBAL_CTRL_GLOABAL_EN_MASK;
+    }
+    else
+    {
+       reg_val &= ~AUDIOH_ADCPATH_GLOBAL_CTRL_GLOABAL_EN_MASK;
+    }
+
+    /* Set the required setting */
+    BRCM_WRITE_REG(base,  AUDIOH_ADCPATH_GLOBAL_CTRL, reg_val);
+
+    return;
+}
+
+//============================================================================
+//
+// Function Name: chal_audio_adcpath_global_enable_status( CHAL_HANDLE handle)
+//
+// Description:  check the adcpath global enable bit
+//
+// Parameters:   handle      : the voice input path handle.
+//
+// Return:       None.
+//
+//============================================================================
+
+Boolean chal_audio_adcpath_global_enable_status(CHAL_HANDLE handle)
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    cUInt32 reg_val;
+
+    reg_val = BRCM_READ_REG(base, AUDIOH_ADCPATH_GLOBAL_CTRL);
+
+	if (reg_val & AUDIOH_ADCPATH_GLOBAL_CTRL_GLOABAL_EN_MASK)
+    	return TRUE;
+	else
+		return FALSE;
+}
+
+
+//============================================================================
+//
+// Function Name: cVoid chal_audio_adcpath_fifo_global_clear( CHAL_HANDLE handle,
+//                                            Boolean clear )
+//
+// Description:  clear the adcpath fifo
+//
+// Parameters:   handle      : the voice input path handle.
+//                 clear : clear the adcpath fifo
+// Return:       None.
+//
+//============================================================================
+
+cVoid chal_audio_adcpath_fifo_global_clear( CHAL_HANDLE handle,  Boolean clear )
+{
+    cUInt32 base =    ((ChalAudioCtrlBlk_t*)handle)->audioh_base;
+    cUInt32 reg_val;
+
+    reg_val = BRCM_READ_REG(base, AUDIOH_ADCPATH_GLOBAL_CTRL);
+
+    if(clear)
+    {
+       reg_val |= AUDIOH_ADCPATH_GLOBAL_CTRL_FIFO_GLOBAL_CLEAR_MASK;
+    }
+    else
+    {
+       reg_val &= ~AUDIOH_ADCPATH_GLOBAL_CTRL_FIFO_GLOBAL_CLEAR_MASK;
+    }
+
+    /* Set the required setting */
+    BRCM_WRITE_REG(base,  AUDIOH_ADCPATH_GLOBAL_CTRL, reg_val);
+
+    return;
+}
+

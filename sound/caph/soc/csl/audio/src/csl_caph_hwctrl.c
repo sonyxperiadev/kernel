@@ -100,9 +100,6 @@ extern CHAL_HANDLE lp_handle;
 #define MAX_BLOCK_NUM	4	//max number of same block in a path
 #define MAX_PATH_LEN	20	//max block number in a path
 
-#if defined(WIN32)
-#define AP_SH_BASE 0
-#else
 #define AUDIOH_BASE_ADDR1            KONA_AUDIOH_BASE_VA /* brcm_rdb_cph_cfifo.h */
 #define SDT_BASE_ADDR1            KONA_SDT_BASE_VA /* brcm_rdb_cph_cfifo.h */
 #define SRCMIXER_BASE_ADDR1          KONA_SRCMIXER_BASE_VA /* brcm_rdb_srcmixer.h */
@@ -179,7 +176,6 @@ typedef struct
 	AUDDRV_PATH_Enum_t audiohPath[MAX_SINK_NUM+1]; //0 for source, 1 for sink, 2 for sink2
 	audio_config_t audiohCfg[MAX_SINK_NUM+1];
 }CSL_CAPH_HWConfig_Table_t;
-#endif
 
 //****************************************************************************
 // local variable definitions
@@ -218,7 +214,9 @@ static int ssp_pcm_usecount = 0;
 static Boolean isSTIHF = FALSE;
 static Boolean bBTTest = FALSE;
 static Boolean sClkCurEnabled = FALSE;
-
+#if defined(ENABLE_DMA_VOICE)
+static AUDDRV_PATH_Enum_t voice_audioh_path[3] = {0, 0, 0}; //dual mic + DL
+#endif
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = 
 { //the order must match CAPH_LIST_t
@@ -436,6 +434,45 @@ void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
  		arm2spCfg.playbackMode = CSL_ARM2SP_PLAYBACK_BOTH;
 	else if(mixMode == CSL_ARM2SP_VOICE_MIX_NONE)
 	  	arm2spCfg.playbackMode = CSL_ARM2SP_PLAYBACK_DL; //for standalone testing
+}
+#endif
+
+#if defined(ENABLE_DMA_VOICE)
+// ==========================================================================
+//
+// Function Name: csl_caph_enable_adcpath_by_dsp
+//
+// Description: enable adcpath CB
+//
+// =========================================================================
+static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
+{
+	Boolean enable = FALSE;
+
+	Log_DebugPrintf(LOGID_AUDIO, "csl_caph_enable_adcpath_by_dsp enabled_path=0x%x, pcmRunning %d, voice_audioh_path %d:%d:%d.\r\n", enabled_path, pcmRunning, voice_audioh_path[0], voice_audioh_path[1], voice_audioh_path[2]);
+
+	if(enabled_path) enable = TRUE;
+
+	if(pcmRunning && enable)
+	{
+		//pcm code does not work consistently, need further debug with dsp
+		//if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
+		//csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+		//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+		//csl_pcm_start(pcmHandleSSP, &pcmCfg);
+	} else {
+		//csl_caph_audioh_adcpath_global_enable(enable); //eventually, should use this instead of voice_audioh_path. UL data is muted.
+		if(enable)
+		{
+			if(voice_audioh_path[0]) csl_caph_audioh_start(voice_audioh_path[0]);
+			if(voice_audioh_path[1]) csl_caph_audioh_start(voice_audioh_path[1]);
+			if(voice_audioh_path[2]) csl_caph_audioh_start(voice_audioh_path[2]);
+		} else {
+			voice_audioh_path[0] = 0;
+			voice_audioh_path[1] = 0;
+			voice_audioh_path[2] = 0;
+		}
+	}
 }
 #endif
 
@@ -769,7 +806,6 @@ static void csl_caph_obtain_blocks(CSL_CAPH_PathID pathID, int blockPathIdxStart
 
 	memset(&pcmRxCfg, 0, sizeof(pcmRxCfg));
 	memset(&pcmTxCfg, 0, sizeof(pcmTxCfg));
-	memset(&pcmCfg, 0, sizeof(pcmCfg));
 	memset(&fmCfg, 0, sizeof(fmCfg));
 
     if(path->source == CSL_CAPH_DEV_FM_RADIO)
@@ -1433,6 +1469,7 @@ static void csl_caph_config_blocks(CSL_CAPH_PathID pathID, CAPH_BLOCK_t *blocks)
 	{
 		if(!pcmRunning && !sspTDM_enabled)
 		{
+			memset(&pcmCfg, 0, sizeof(pcmCfg));
 			pcmCfg.mode = CSL_PCM_MASTER_MODE;
 			pcmCfg.protocol = CSL_PCM_PROTOCOL_MONO; 
 			pcmCfg.format = CSL_PCM_WORD_LENGTH_16_BIT;
@@ -1517,15 +1554,12 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 		switch(block)
 		{
 		case CAPH_DMA:
-			//Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_start_blocks dma %d, dmaCB %x.\r\n", path->dma[blockIdx], path->dmaCB);
 			break;
 		case CAPH_CFIFO:
 			if(path->cfifo[blockIdx]) csl_caph_cfifo_start_fifo(path->cfifo[blockIdx]);
-			Log_DebugPrintf(LOGID_SOC_AUDIO, "cfifo %d.\r\n", path->cfifo[blockIdx]);
 			break;
 		case CAPH_SW:
 			if(path->sw[blockIdx].chnl) csl_caph_switch_start_transfer(path->sw[blockIdx].chnl);
-			Log_DebugPrintf(LOGID_SOC_AUDIO, "sw %d.\r\n", path->sw[blockIdx]);
 			break;
 		default:
 			break;
@@ -1535,13 +1569,28 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 
 	if (path->audiohPath[1])
 	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "audioh %d.\r\n", path->audiohPath[1]);
+#if defined(ENABLE_DMA_VOICE)
+		if (path->source == CSL_CAPH_DEV_DSP) 
+		{
+			//csl_caph_audioh_adcpath_global_enable(FALSE);
+			voice_audioh_path[0] = path->audiohPath[1];
+		}
+		else 
+#endif
 		csl_caph_audioh_start(path->audiohPath[1]);
 	}
 
 	if (path->audiohPath[0])
 	{
-		Log_DebugPrintf(LOGID_SOC_AUDIO, "audioh %d.\r\n", path->audiohPath[0]);
+#if defined(ENABLE_DMA_VOICE)
+		if (path->sink[0] == CSL_CAPH_DEV_DSP)
+		{
+			//csl_caph_audioh_adcpath_global_enable(FALSE);
+			if(!voice_audioh_path[1]) voice_audioh_path[1] = path->audiohPath[0];
+			else voice_audioh_path[2] = path->audiohPath[0];
+		}
+		else
+#endif
 		csl_caph_audioh_start(path->audiohPath[0]);
 	}
 
@@ -1552,9 +1601,8 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 		{
 			if(!path->dma[i]) break;
 #if defined(ENABLE_DMA_VOICE) && !defined(ENABLE_DMA_LOOPBACK)
-			if ((path->dma[blockIdx] < CSL_CAPH_DMA_CH12)||(path->dma[blockIdx] > CSL_CAPH_DMA_CH14))
+			if ((path->dma[i] < CSL_CAPH_DMA_CH12)||(path->dma[i] > CSL_CAPH_DMA_CH14))
 #endif
-			Log_DebugPrintf(LOGID_SOC_AUDIO, "dma %d\r\n", path->dma[i]);
 			csl_caph_dma_start_transfer(path->dma[i]);
 		}
 	}
@@ -1570,12 +1618,22 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 #endif
 		if((path->source == CSL_CAPH_DEV_DSP) || (path->sink[0] == CSL_CAPH_DEV_DSP) || sspTDM_enabled)
 		{
+#if defined(ENABLE_DMA_VOICE)
+			//dma sequence will divert from non-dma eventually, hence make 2 copies.
 			if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
 			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
 			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+			csl_pcm_start(pcmHandleSSP, &pcmCfg);
+#else
+			if(!sspTDM_enabled) csl_pcm_enable_scheduler(pcmHandleSSP, TRUE);
+			csl_pcm_start_tx(pcmHandleSSP, CSL_PCM_CHAN_TX0);
+			csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
+			csl_pcm_start(pcmHandleSSP, &pcmCfg);
+#endif
+		} else {
+			csl_pcm_start(pcmHandleSSP, &pcmCfg);
 		}
-
-		csl_pcm_start(pcmHandleSSP, &pcmCfg);
+		
 		pcmRunning = TRUE;
 	}
 
@@ -2594,7 +2652,9 @@ void csl_caph_hwctrl_init(void)
 #ifdef ENABLE_DMA_ARM2SP
 	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
 #endif
-
+#if defined(ENABLE_DMA_VOICE)
+	CSL_RegisterAudioEnableDoneHandler(&csl_caph_enable_adcpath_by_dsp);
+#endif
 	return;
 }
 
@@ -2629,7 +2689,9 @@ void csl_caph_hwctrl_deinit(void)
     csl_i2s_deinit(fmHandleSSP);
 
 	chal_caph_intc_deinit(caph_intc_handle);
-	
+#if defined(ENABLE_DMA_VOICE)
+	CSL_RegisterAudioEnableDoneHandler(NULL);
+#endif
     return;
 }
 
@@ -2760,7 +2822,7 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
     if ((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
     {
 		_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, " *** FM playback to EP/HS via arm2sp (during voice call) *****\r\n"));
-		arm2spPath = LIST_DMA_DMA;
+		arm2spPath = LIST_SW_DMA;
 		path->list = arm2spPath;
 		csl_caph_config_arm2sp(path->pathID);
     }
@@ -2930,8 +2992,8 @@ CSL_CAPH_PathID csl_caph_hwctrl_StartPath(CSL_CAPH_PathID pathID)
     if(pathID) path = &HWConfig_Table[pathID-1];
     else return 0;
     
-    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_StartPath::  PathID %d, Source: %d, Sink: %d, streamID %d.\r\n", 
-            path->pathID, path->source, path->sink, path->streamID);
+    Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_StartPath::  PathID %d, Source: %d, Sink: %d:%d, streamID %d.\r\n", 
+            path->pathID, path->source, path->sink[0], path->sink[1], path->streamID);
     
 	if(path->list!=LIST_NUM)
 	{
@@ -3838,7 +3900,8 @@ void csl_caph_hwctrl_MuteSource(CSL_CAPH_PathID pathID)
 	    path_id = AUDDRV_PATH_NVIN_INPUT_R;
 	    break;
 	default:
-      	    audio_xassert(0, path->sink );
+		audio_xassert(0, path->source );
+		break;
     }
 
     csl_caph_audioh_mute(path_id, 1);
@@ -3923,7 +3986,8 @@ void csl_caph_hwctrl_UnmuteSource(CSL_CAPH_PathID pathID)
 	    path_id = AUDDRV_PATH_NVIN_INPUT_R;
 	    break;
 	default:
-      	    audio_xassert(0, path->sink );
+		audio_xassert(0, path->source );
+		break;
     }
 
 	csl_caph_audioh_mute(path_id, 0);

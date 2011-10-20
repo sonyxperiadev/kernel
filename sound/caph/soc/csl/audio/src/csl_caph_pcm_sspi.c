@@ -160,6 +160,10 @@ CSL_PCM_OPSTATUS_t csl_pcm_start(CSL_PCM_HANDLE handle,
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
     CHAL_SSPI_STATUS_t status;
+
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start:: handle %p.\r\n", handle));
+	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_pcm_start:: cfgDev mode %d interleave %d protocol %d format %d size %d bits %d sr %d.\r\n", 
+		config->mode, config->interleave, config->protocol, config->format, config->xferSize, config->ext_bits, config->sample_rate));
 	
 //    pcm_config_dma(handle, config);
 		
@@ -1449,7 +1453,8 @@ CSL_PCM_OPSTATUS_t csl_pcm_config(CSL_PCM_HANDLE handle,
 UInt32 csl_pcm_get_tx0_fifo_data_port(CSL_PCM_HANDLE handle)
 {
     CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
-	return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0TX_OFFSET);
+	if(pDevice) return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0TX_OFFSET);
+	else return 0;
 }
 //******************************************************************************
 //
@@ -1475,7 +1480,8 @@ UInt32 csl_pcm_get_tx1_fifo_data_port(CSL_PCM_HANDLE handle)
 UInt32 csl_pcm_get_rx0_fifo_data_port(CSL_PCM_HANDLE handle)
 {
 	CSL_PCM_HANDLE_t *pDevice = (CSL_PCM_HANDLE_t *)handle;
-	return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0RX_OFFSET);
+	if(pDevice) return (UInt32)(pDevice->base+SSPIL_FIFO_ENTRY0RX_OFFSET);
+	else return 0;
 }
 //******************************************************************************
 //
