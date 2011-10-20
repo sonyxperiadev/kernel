@@ -202,6 +202,12 @@ config BCM_WIFI_HDMI
     ---help---
       Select to build the WIFI HDMI driver.
 
+config VC_TEST_WIFI_HDMI
+    tristate "Wifi-Hdmi Videocore Service Tester"
+    default n
+    ---help---
+      Select to build the Wifi-Hdmi Videocore Service test driver.
+
 source "drivers/char/broadcom/csx/Kconfig"
 
 
