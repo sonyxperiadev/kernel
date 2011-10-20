@@ -33,7 +33,7 @@
 #define VCOS_LOG_CATEGORY (&wifihdmi_log_category)
 
 // Default VCOS logging level
-#define LOG_LEVEL  VCOS_LOG_TRACE
+#define LOG_LEVEL  VCOS_LOG_INFO
 
 // Logging macros (for remapping to other logging mechanisms, i.e., printf)
 #define LOG_ERR( fmt, arg... )   vcos_log_error( fmt, ##arg )
@@ -562,8 +562,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
          ptr->km_socket_handle_returned = 0;
 
-         LOG_DBG( "%s: incoming connection %x from %x:%u",
-                  __func__, skt.handle, skt.address, skt.port );
+         LOG_INFO( "%s: incoming connection %x from %x:%u",
+                   __func__, skt.handle, skt.address, skt.port );
          
          if ( vc_vchi_wifihdmi_skt_in( instance,
                                        &skt,
@@ -574,8 +574,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
             {
                ptr->km_socket_handle_returned = skt_res.handle; 
 
-               LOG_DBG( "%s: accepted socket %x, parent %x",
-                        __func__, skt_res.handle, skt.handle );
+               LOG_INFO( "%s: accepted socket %x, parent %x",
+                         __func__, skt_res.handle, skt.handle );
 
             }
             else
@@ -603,8 +603,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
          skt.handle  = (uint32_t) ptr->km_socket_handle;
 
-         LOG_DBG( "%s: disconnected connection %x",
-                  __func__, skt.handle );
+         LOG_INFO( "%s: disconnected connection %x",
+                   __func__, skt.handle );
 
          vc_vchi_wifihdmi_skt_dsc( instance,
                                    &skt,
@@ -626,8 +626,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
          skt_data.handle    = (uint32_t) ptr->km_socket_handle;
          skt_data.data_len  = ptr->data_len;
 
-         LOG_DBG( "%s: data on connection %x, %u bytes",
-                  __func__, skt_data.handle, skt_data.data_len );
+         LOG_INFO( "%s: data on connection %x, %u bytes",
+                   __func__, skt_data.handle, skt_data.data_len );
 
          if ( skt_data.data_len < VC_WIFIHDMI_MAX_DATA_LEN )
          {
@@ -721,8 +721,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
 
          skt.handle  = (uint32_t) ptr->km_socket_handle;
 
-         LOG_DBG( "%s: socket closed %x",
-                  __func__, skt.handle );
+         LOG_INFO( "%s: socket closed %x",
+                   __func__, skt.handle );
 
          vc_vchi_wifihdmi_skt_end( instance,
                                    &skt,
@@ -812,8 +812,8 @@ static void *vc_vchi_wifihdmi_videocore_ctrl( void *arg )
                                                 0 );
                }
 
-               LOG_DBG( "%s: open-socket %p, handle %x, port %d - returns %d",
-                        __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
+               LOG_INFO( "%s: open-socket %p, handle %x, port %d - returns %d",
+                         __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
 
                if ( rc != 0 )
                {
@@ -827,8 +827,8 @@ static void *vc_vchi_wifihdmi_videocore_ctrl( void *arg )
             {
                rc = whdmi_close_socket ( (int) ctrlblk->handle );
 
-               LOG_DBG( "%s: close-socket %p, handle %x - returns %d",
-                        __func__, ctrlblk, ctrlblk->handle, rc );
+               LOG_INFO( "%s: close-socket %p, handle %x - returns %d",
+                         __func__, ctrlblk, ctrlblk->handle, rc );
             }
             break;
 
@@ -838,8 +838,8 @@ static void *vc_vchi_wifihdmi_videocore_ctrl( void *arg )
                                                         (unsigned short) ctrlblk->port,
                                                         0 );
 
-               LOG_DBG( "%s: listen-socket %p, handle %x, port %d - returns %d",
-                        __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
+               LOG_INFO( "%s: listen-socket %p, handle %x, port %d - returns %d",
+                         __func__, ctrlblk, ctrlblk->handle, ctrlblk->port, rc );
             }
             break;
 
@@ -1485,7 +1485,7 @@ err_delete_vchi_sema:
 err_free_mem:
    vcos_free( instance );
 err_null:
-   LOG_DBG( "%s: FAILED", __func__ );
+   LOG_ERR( "%s: FAILED", __func__ );
    return NULL;
 }
 
