@@ -134,7 +134,6 @@ static int          whdmi_proc_write( struct file *file, const char __user *buff
 
 static int          chain_buffer_element( WHDMI_READ_BUFFER_ELEMENT *buf_element );
 static void         free_buffer_elements( void );
-static void         free_buffer_element_data( WHDMI_READ_BUFFER_ELEMENT *buf_element );
 static int          chain_socket_element( WHDMI_SOCKET_ELEMENT *socket_element );
 static WHDMI_SOCKET_ELEMENT *remove_socket_element( WHDMI_SOCKET_ELEMENT *socket_element_to_remove );
 static WHDMI_SOCKET_ELEMENT* find_socket_element_by_km_handle( int km_socket_handle );
@@ -267,7 +266,6 @@ static int whdmi_release(
     {
         /* Free all the elements */
         read_buffer.first = buf_element->next;
-        free_buffer_element_data( buf_element );
         kmem_cache_free( kmem_cache, buf_element );
         buf_element = read_buffer.first;
     }
@@ -353,7 +351,6 @@ static ssize_t whdmi_read(
     if ( copy_to_user( buffer, &buf_element->msg, bytes_to_copy ) )
     {
         /* Something bad happened while copying the data */
-        free_buffer_element_data( buf_element );
         kmem_cache_free( kmem_cache, buf_element );
         return -EFAULT;
     }
@@ -364,7 +361,6 @@ static ssize_t whdmi_read(
     }
 
     /* Free the buffer element */
-    free_buffer_element_data( buf_element );
     kmem_cache_free( kmem_cache, buf_element );
    
     return bytes_to_copy;
@@ -1051,7 +1047,6 @@ static int chain_buffer_element(
     if ( down_interruptible( &sem ) )
     {
         /* Failed to acquire semaphore */
-        free_buffer_element_data( buf_element );
         kmem_cache_free( kmem_cache, buf_element );
         return -ERESTARTSYS;
     }
@@ -1075,7 +1070,6 @@ static int chain_buffer_element(
         {
             /* Something is really messed up!! */
             printk( KERN_ERR "WHDMI: Unexpected last element!\n" );
-            free_buffer_element_data( buf_element );
             kmem_cache_free( kmem_cache, buf_element );
         }
     }
@@ -1086,40 +1080,6 @@ static int chain_buffer_element(
     wake_up_interruptible( &read_wq );
 
     return 0;
-}
-
-/***************************************************************************/
-/**
-*  Free buffer element data if applicable to this element 
-*
-*  @return
-*   Nothing
-*/
-static void free_buffer_element_data( WHDMI_READ_BUFFER_ELEMENT *buf_element )
-{
-   if ( buf_element && buf_element->msg_length )
-   {
-      if ( buf_element->msg.hdr.msg_type == WHDMI_MSG_TYPE_TCP_SEND )
-      {
-         WHDMI_MSG_TCP_SEND *p_msg = (WHDMI_MSG_TCP_SEND *) &buf_element->msg;
-
-         if ( p_msg->data_len && (p_msg->data != NULL) )
-         {
-            kfree ( p_msg->data );
-            p_msg->data = NULL;
-         }
-      }
-      else if ( buf_element->msg.hdr.msg_type == WHDMI_MSG_TYPE_UDP_SEND_TO )
-      {
-         WHDMI_MSG_UDP_SEND_TO *p_msg = (WHDMI_MSG_UDP_SEND_TO *) &buf_element->msg;
-
-         if ( p_msg->data_len && (p_msg->data != NULL) )
-         {
-            kfree ( p_msg->data );
-            p_msg->data = NULL;
-         }
-      }
-   }
 }
 
 /***************************************************************************/
@@ -1147,7 +1107,6 @@ static void free_buffer_elements( void )
         buf_element_to_free = buf_element;
         buf_element = buf_element->next;
 
-        free_buffer_element_data( buf_element_to_free );
         kmem_cache_free( kmem_cache, buf_element_to_free );
     }
 
@@ -2004,16 +1963,8 @@ int whdmi_tcp_send(
     msg_to_send->socket_handle  = socket_element->socket_handle;
     msg_to_send->data_len       = data_len;
 
-    msg_to_send->data = kzalloc( data_len * sizeof(uint8_t), GFP_KERNEL );
-    if ( msg_to_send->data != NULL )
-    {
-       /* Copy the data to buffer */
-       memcpy( msg_to_send->data, data, data_len );
-    }
-    else
-    {
-       msg_to_send->data_len       = 0;
-    }
+    /* Copy the data to buffer */
+    memcpy( msg_to_send->data, data, data_len );
 
     /* Fill in the total message length and clear the next packet */
     buf_element->msg_length = msg_hdr->msg_length;
@@ -2349,16 +2300,8 @@ int whdmi_udp_send_to(
         msg_to_send->dest_port      = dest_port;
         msg_to_send->data_len       = data_len;
 
-        msg_to_send->data = kzalloc( data_len * sizeof(uint8_t), GFP_KERNEL );
-        if ( msg_to_send->data != NULL )
-        {
-           /* Copy the data to buffer */
-           memcpy( msg_to_send->data, data, data_len );
-        }
-        else
-        {
-           msg_to_send->data_len       = 0;
-        }
+        /* Copy the data to buffer */
+        memcpy( msg_to_send->data, data, data_len );
 
         /* Fill in the total message length and clear the next packet */
         buf_element->msg_length = msg_hdr->msg_length;
