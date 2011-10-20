@@ -43,7 +43,7 @@
  * Island chip-level pin description table
  */
 static const struct pin_desc pin_desc_tbl[PN_MAX] = {
-   /*                      Signal Name        Alt_1              Alt_2             Alt_3           Alt_4     Alt_5         Alt_6   */
+    /*                      Signal Name        Alt_1              Alt_2             Alt_3           Alt_4     Alt_5         Alt_6   */
 //	/* DUMMY 32 */ PIN_DESC(MPHI_DATA15,       GPEN09,            MPHI_DATA_15,     RESERVED,       RESERVED, RESERVED,     RESERVED),
 //	/* DUMMY 31 */ PIN_DESC(MPHI_DATA14,       GPEN12,            MPHI_DATA_14,     RESERVED,       RESERVED, RESERVED,     RESERVED),
 //	/* DUMMY 30 */ PIN_DESC(MPHI_DATA13,       GPEN10,            MPHI_DATA_13,     RESERVED,       RESERVED, RESERVED,     RESERVED),

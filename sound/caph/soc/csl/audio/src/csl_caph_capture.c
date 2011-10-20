@@ -32,7 +32,6 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 ****************************************************************************/
 #include "mobcom_types.h"
 #include "resultcode.h"
-#include "xassert.h"
 #include "log.h"
 #include "msconsts.h"
 #include "audio_consts.h"

@@ -44,6 +44,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <asm/pgtable.h>
 #include <linux/io.h>
 
+#include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/ipc_sharedmemory.h>
 #include <linux/broadcom/ipcinterface.h>
 
@@ -129,9 +130,6 @@ typedef struct
 	int ep;
 	UInt8 clientId;
 }   RpcIpc_PrivData_t ;
-
-#define TEMP_STR_LEN 255
-static char gTempStr[TEMP_STR_LEN+1]={0};
 
 //local function protos
 
@@ -416,7 +414,6 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType, UInt8 c
 
 RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel, PACKET_BufHandle_t dataBufHandle)
 {
-	Boolean ret;
 	RpcClientInfo_t *cInfo;
 	UInt8 clientId, k;
 	UInt16 msgId = 0;

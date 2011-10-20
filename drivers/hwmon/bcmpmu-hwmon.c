@@ -49,12 +49,12 @@ static ssize_t dbgmsk_show(struct device *dev, struct device_attribute *attr,
 	return sprintf(buf, "debug_mask is %x\n", debug_mask);
 }
 static ssize_t dbgmsk_store(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				const char *buf, size_t count)
 {
 	sscanf(buf, "%x", &debug_mask);
 	return count;
 }
-static DEVICE_ATTR(dbgmsk, S_IRUGO | S_IWUSR | S_IWGRP, dbgmsk_show, dbgmsk_store);
+static DEVICE_ATTR(dbgmsk, S_IRUGO, dbgmsk_show, dbgmsk_store);
 #endif
 
 static struct bcmpmu_adc_cal adc_cal[PMU_ADC_MAX] = {
@@ -110,7 +110,7 @@ struct bcmpmu_adc_irq_data {
 
 static int adc_map_batt_temp(struct bcmpmu_adc *padc, int adc)
 {
-	int i;
+	int i = 0;
 	int temp = padc->btmap[i].temp;
 	int index;
 	for (i = 0; i < padc->btmap_len; i++) {
@@ -118,7 +118,7 @@ static int adc_map_batt_temp(struct bcmpmu_adc *padc, int adc)
 			(adc > padc->btmap[i+1].adc)) {
 			index = ((padc->btmap[i].adc - adc) * 1000)/
 				(padc->btmap[i].adc - padc->btmap[i+1].adc);
-			temp = padc->btmap[i].temp + 
+			temp = padc->btmap[i].temp +
 				((padc->btmap[i+1].temp - padc->btmap[i].temp) * index)/1000;
 			break;
 		}
@@ -238,7 +238,6 @@ static int update_adc_result(struct bcmpmu_adc *padc, struct bcmpmu_adc_req *req
 static void adc_isr(enum bcmpmu_irq irq, void *data)
 {
 	struct bcmpmu_adc *padc = data;
-	int ret;
 
 	pr_hwmon(FLOW, "%s: called\n", __func__);
 			
@@ -468,7 +467,7 @@ static ssize_t show_fg_currsmpl(struct device *dev, struct device_attribute
 }
 
 static ssize_t show_envupdate(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				char *buf)
 {
 	int i;
 	struct bcmpmu *bcmpmu = dev->platform_data;
@@ -484,9 +483,8 @@ static ssize_t show_envupdate(struct device *dev, struct device_attribute *attr,
 }
 
 static ssize_t show_fg_acc_mas(struct device *dev, struct device_attribute *attr,
-				char *buf, size_t count)
+				char *buf)
 {
-	int i;
 	struct bcmpmu *bcmpmu = dev->platform_data;
 	struct bcmpmu_fg *pfg = bcmpmu->fginfo;
 	int result;
@@ -506,7 +504,7 @@ static SENSOR_DEVICE_ATTR(id, S_IRUGO, show_id, NULL, 6);
 static SENSOR_DEVICE_ATTR(fg_vmbatt, S_IRUGO, show_fg_vmbatt, NULL, 7);
 static SENSOR_DEVICE_ATTR(fg_currsmpl, S_IRUGO, show_fg_currsmpl, NULL, 8);
 static SENSOR_DEVICE_ATTR(env_all, S_IRUGO, show_envupdate, NULL, 9);
-static SENSOR_DEVICE_ATTR(fg_acc_mas, S_IRUGO, show_fg_acc_mas, NULL, 9);
+static SENSOR_DEVICE_ATTR(fg_acc_mas, S_IRUGO, show_fg_acc_mas, NULL, 10);
 
 static struct attribute *bcmpmu_hwmon_attrs[] = {
 	&sensor_dev_attr_vmbatt.dev_attr.attr,
@@ -559,7 +557,7 @@ static bool bcmpmu_get_env_bit_status(struct bcmpmu *bcmpmu, enum bcmpmu_env_bit
 		return false;
 }
 
-static bool bcmpmu_get_fg_currsmpl(struct bcmpmu *bcmpmu, int *data)
+static int bcmpmu_get_fg_currsmpl(struct bcmpmu *bcmpmu, int *data)
 {
 	int ret;
 	struct bcmpmu_adc_req req;
@@ -732,6 +730,7 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	int ret;
 
 	struct bcmpmu *bcmpmu = pdev->dev.platform_data;
+	struct bcmpmu_platform_data *pdata = bcmpmu->pdata;
 	struct bcmpmu_adc *padc;
 	struct bcmpmu_env *penv;
 	struct bcmpmu_fg *pfg;
@@ -751,10 +750,10 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	padc->bcmpmu = bcmpmu;
 	padc->adcmap = bcmpmu_get_adcmap();
 	padc->ctrlmap = bcmpmu_get_adc_ctrl_map();
-	padc->btmap = bcmpmu->pdata->batt_temp_map;
-	padc->btmap_len = bcmpmu->pdata->batt_temp_map_len;
+	padc->btmap = pdata->batt_temp_map;
+	padc->btmap_len = pdata->batt_temp_map_len;
 	padc->rtmreq = NULL;
-	padc->adcsetting = bcmpmu->pdata->adc_setting;
+	padc->adcsetting = pdata->adc_setting;
 	bcmpmu->adcinfo = (void *)padc;
 	bcmpmu->adc_req = bcmpmu_adc_request;
 
@@ -782,9 +781,9 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 	pfg->bcmpmu = bcmpmu;
-	pfg->fg_smpl_cnt_tm = 1000000/bcmpmu->pdata->fg_smpl_rate;	/* ms */
-	pfg->fg_slp_cnt_tm = 1000000/bcmpmu->pdata->fg_slp_rate;	/* ms */
-	pfg->fg_slp_curr_ua = bcmpmu->pdata->fg_slp_curr_ua;		/* ua */
+	pfg->fg_smpl_cnt_tm = 1000000/pdata->fg_smpl_rate;	/* ms */
+	pfg->fg_slp_cnt_tm = 1000000/pdata->fg_slp_rate;	/* ms */
+	pfg->fg_slp_curr_ua = pdata->fg_slp_curr_ua;		/* ua */
 	pfg->bcmpmu->fg_currsmpl = bcmpmu_get_fg_currsmpl;
 	pfg->bcmpmu->fg_vmbatt = bcmpmu_get_fg_vmbatt;
 	pfg->bcmpmu->fg_acc_mas = bcmpmu_get_fg_acc_mas;
@@ -817,13 +816,12 @@ static int __devinit bcmpmu_hwmon_probe(struct platform_device *pdev)
 	bcmpmu->unmask_irq(bcmpmu, PMU_IRQ_RTM_OVERRIDDEN);
 
 #ifdef CONFIG_MFD_BCMPMU_DBG
-	device_create_file(&pdev->dev, &dev_attr_dbgmsk);
+	ret = device_create_file(&pdev->dev, &dev_attr_dbgmsk);
 #endif
 	return 0;
 
 exit_remove_files:
 	sysfs_remove_group(&padc->hwmon_dev->kobj, &bcmpmu_hwmon_attr_group);
-err:
 	return ret;
 }
 
@@ -853,10 +851,9 @@ static int __init adc_init(void)
 }
 module_init(adc_init);
 
-static int __exit adc_exit(void)
+static void __exit adc_exit(void)
 {
 	platform_driver_unregister(&bcmpmu_adc_driver);
-	return 0;
 }
 module_exit(adc_exit);
 

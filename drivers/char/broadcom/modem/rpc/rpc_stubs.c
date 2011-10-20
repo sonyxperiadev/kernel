@@ -45,8 +45,12 @@
 #include <linux/io.h>
 
 #include "mobcom_types.h"
+<<<<<<< HEAD
 #include "bcm_kril_debug.h"
 #include "timer.h"
+=======
+#include "bcmlog.h"
+>>>>>>> mps/map-android-gb
 
 #define MAX_CLIENT_NUM              30		
 #define AP_CLIENT_ID_START          64
@@ -150,7 +154,7 @@ typedef struct
 
 mRingBuffer_t gLogBuffer={0};
 
-void InitRingBuffer()
+void InitRingBuffer(void)
 {
 	static int first_time = 1;
 	if(first_time)
@@ -260,7 +264,7 @@ ssize_t kRpcReadLogData(char *destBuf, size_t len)
 	return ret;
 }
 
-int RpcLog_DetailLogEnabled()
+int RpcLog_DetailLogEnabled(void)
 {
 	return 0;
 }
@@ -270,6 +274,7 @@ Boolean IsBasicCapi2LoggingEnable(void)
 {
 	return true;
 }
+<<<<<<< HEAD
 
 #define MAX_BUF_SIZE 1024
 static char buf[MAX_BUF_SIZE];
@@ -300,3 +305,5 @@ int RpcLog_DebugPrintf(char* fmt, ...)
     return 1;
 }
 
+=======
+>>>>>>> mps/map-android-gb

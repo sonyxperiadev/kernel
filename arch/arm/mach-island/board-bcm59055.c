@@ -42,7 +42,8 @@
 #define PMU_DEVICE_I2C_ADDR1	0x0C
 #define PMU_DEVICE_INT_GPIO	10
 
-static const struct bcmpmu_rw_data register_init_data[] = {
+static struct bcmpmu_rw_data register_init_data[] = {
+	{.map=0, .addr=0x0c, .val=0x1b, .mask=0xFF},
 	{.map=0, .addr=0x40, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x41, .val=0xFF, .mask=0xFF},
 	{.map=0, .addr=0x42, .val=0xFF, .mask=0xFF},
@@ -69,9 +70,18 @@ static const struct bcmpmu_rw_data register_init_data[] = {
 	{.map=0, .addr=0x59, .val=0x00, .mask=0xFF},
 	{.map=0, .addr=0x5a, .val=0x07, .mask=0xFF},
 	{.map=0, .addr=0x69, .val=0x10, .mask=0xFF},
+/* OTG registers */
+	{.map=0, .addr=0x71, .val=0x09, .mask=0xFF},
+	{.map=0, .addr=0x77, .val=0xD4, .mask=0xFF},
+	{.map=0, .addr=0x78, .val=0x98, .mask=0xFF},
+	{.map=0, .addr=0x79, .val=0xF0, .mask=0xFF},
+	{.map=0, .addr=0x7A, .val=0x60, .mask=0xFF},
+	{.map=0, .addr=0x7B, .val=0xC3, .mask=0xFF},
+	{.map=0, .addr=0x7C, .val=0xA7, .mask=0xFF},
+	{.map=0, .addr=0x7D, .val=0x08, .mask=0xFF},
 };
 
-static const struct bcmpmu_temp_map batt_temp_map[] = {
+static struct bcmpmu_temp_map batt_temp_map[] = {
 /* This table is hardware dependent and need to get from platform team */
 /*	adc		temp*/
 	{0x3FF,		233},/* -40 C */
@@ -266,6 +276,26 @@ static struct regulator_init_data bcm59055_simldo_data = {
 	.consumer_supplies = sim_supply,
 };
 
+
+
+struct regulator_consumer_supply sim2_supply[] = {
+	{.supply = "sim2_vcc"},
+};
+static struct regulator_init_data bcm59055_sim2ldo_data = {
+	.constraints = {
+		.name = "sim2ldo",
+		.min_uV = 1300000,
+		.max_uV = 3300000,
+		.valid_ops_mask = REGULATOR_CHANGE_STATUS | REGULATOR_CHANGE_MODE | REGULATOR_CHANGE_VOLTAGE,
+		.always_on = 0,
+		.valid_modes_mask = REGULATOR_MODE_NORMAL | REGULATOR_MODE_STANDBY | REGULATOR_MODE_IDLE
+	},
+	.num_consumer_supplies = ARRAY_SIZE(sim2_supply),
+	.consumer_supplies = sim2_supply,
+};
+
+
+
 struct regulator_consumer_supply csr_supply[] = {
 	{.supply = "csr_uc"},
 };
@@ -325,6 +355,7 @@ struct bcmpmu_regulator_init_data bcm59055_regulators[BCMPMU_REGULATOR_MAX] = {
 	{BCMPMU_REGULATOR_HV6LDO, &bcm59055_hv6ldo_data},
 	{BCMPMU_REGULATOR_HV7LDO, &bcm59055_hv7ldo_data},
 	{BCMPMU_REGULATOR_SIMLDO, &bcm59055_simldo_data},
+	{BCMPMU_REGULATOR_SIM2LDO, &bcm59055_sim2ldo_data},
 	{BCMPMU_REGULATOR_CSR, &bcm59055_csr_data},
 	{BCMPMU_REGULATOR_IOSR, &bcm59055_iosr_data},
 	{BCMPMU_REGULATOR_SDSR, &bcm59055_sdsr_data}
@@ -342,12 +373,8 @@ static struct platform_device bcmpmu_em_device = {
 	.dev.platform_data 	= NULL,
 };
 
-/* The name of this client device will eventually
- * change to match the naming convention used by 
- * other client devices
- */
-static struct platform_device bcmpmu_otg_device = {
-	.name 			= "bcm_otg",
+static struct platform_device bcmpmu_otg_xceiv_device = {
+	.name 			= "bcmpmu_otg_xceiv",
 	.id			= -1,
 	.dev.platform_data 	= NULL,
 };
@@ -355,7 +382,7 @@ static struct platform_device bcmpmu_otg_device = {
 static struct platform_device *bcmpmu_client_devices[] = {
 	&bcmpmu_audio_device,
 	&bcmpmu_em_device,
-	&bcmpmu_otg_device,
+	&bcmpmu_otg_xceiv_device,
 };
 
 static int __init bcmpmu_init_platform_hw(struct bcmpmu *bcmpmu)
@@ -383,7 +410,7 @@ static struct i2c_board_info pmu_info_map1 = {
 	I2C_BOARD_INFO("bcmpmu_map1", PMU_DEVICE_I2C_ADDR1),
 };
 
-static const struct bcmpmu_adc_setting adc_setting = {
+static struct bcmpmu_adc_setting adc_setting = {
 	.tx_rx_sel_addr = 0,
 	.tx_delay = 0,
 	.rx_delay = 0,
@@ -395,12 +422,12 @@ static struct bcmpmu_platform_data __initdata bcmpmu_plat_data = {
 	.i2c_board_info_map1 = &pmu_info_map1,
 	.i2c_adapter_id = 2,
 	.i2c_pagesize = 256,
-	.init_data = &register_init_data,
+	.init_data = &register_init_data[0],
 	.init_max = ARRAY_SIZE(register_init_data),
-	.batt_temp_map = &batt_temp_map,
+	.batt_temp_map = &batt_temp_map[0],
 	.batt_temp_map_len = ARRAY_SIZE(batt_temp_map),
 	.adc_setting = &adc_setting,
-	.regulator_init_data = &bcm59055_regulators,
+	.regulator_init_data = bcm59055_regulators,
 	.fg_smpl_rate = 2083,
 	.fg_slp_rate = 32000,
 	.fg_slp_curr_ua = 1000,

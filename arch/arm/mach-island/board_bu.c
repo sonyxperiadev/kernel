@@ -383,8 +383,6 @@ void __init board_init(void)
 
 
 MACHINE_START(ISLAND, "Island BU")
-	.phys_io = IO_START,
-	.io_pg_offst = (IO_BASE >> 18) & 0xFFFC,
 	.map_io = board_map_io,
 	.init_irq = kona_init_irq,
 	.timer = &kona_timer,

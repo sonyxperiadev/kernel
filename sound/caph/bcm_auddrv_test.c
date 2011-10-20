@@ -64,7 +64,6 @@ the GPL, without Broadcom's express prior written consent.
 #include "ossemaphore.h"
 #include "osheap.h"
 #include "msconsts.h"
-#include "shared.h"
 #include "csl_aud_queue.h"
 #include "csl_vpu.h"
 #include "csl_arm2sp.h"
@@ -1022,7 +1021,7 @@ static int HandlePlayCommand()
 
               	AUDCTRL_SetPlayVolume (audPlayHw,
    		     			spkr, 
-    				   	AUDIO_GAIN_FORMAT_VOL_LEVEL, 
+    				   	AUDIO_GAIN_FORMAT_mB, 
 				   	0x00, 0x00); // 0 db for both L and R channels.
 				   	
 
@@ -1051,7 +1050,7 @@ static int HandlePlayCommand()
 				val3 -> VORENDER_TYPE  0- EP_OUT (ARM2SP) , 1 - HS, 2 - IHF
 				Val4 -   0 - playback 
 				Val5 - Sampling rate  0 -> playback of 8K PCM
-				Val6  - Mix mode VORENDER_VOICE_MIX_MODE_t */
+				Val6  - Mix mode CSL_ARM2SP_VOICE_MIX_MODE_t */
 				//AUDTST_VoicePlayback(AUDCTRL_SPK_HANDSET,0, 0 , VORENDER_PLAYBACK_DL, VORENDER_VOICE_MIX_NONE );
 				AUDTST_VoicePlayback(0, sgBrcm_auddrv_TestValues[2],sgBrcm_auddrv_TestValues[3], VORENDER_PLAYBACK_DL, sgBrcm_auddrv_TestValues[4] ); //play to DL
 			}
@@ -1303,8 +1302,8 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 		UInt32	frameSize = 0;
 		UInt32	finishedSize;
 		UInt32 writeSize;
-		VORENDER_PLAYBACK_MODE_t playbackMode; 
-		VORENDER_VOICE_MIX_MODE_t mixMode;  
+		CSL_ARM2SP_PLAYBACK_MODE_t playbackMode; 
+		CSL_ARM2SP_VOICE_MIX_MODE_t mixMode;  
 		AUDIO_SAMPLING_RATE_t	sr = AUDIO_SAMPLING_RATE_8000;
 		AUDCTRL_SPEAKER_t speaker = AUDCTRL_SPK_HANDSET; 
 		Boolean		setTransfer = FALSE;
@@ -1345,8 +1344,8 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 
 		AUDCTRL_SetPlayVolume (audPlayHw, 
    					               speaker, 
-    							   AUDIO_GAIN_FORMAT_VOL_LEVEL, 
-	    						   0x001E, 0x001E); // 0x1E is 30 decimal. 0x001E for both L and R channels.
+    							   AUDIO_GAIN_FORMAT_mB, 
+	    						   0, 0);
 			
 
 			// init driver
@@ -1355,7 +1354,7 @@ void AUDTST_VoicePlayback(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UI
 		AUDDRV_VoiceRender_SetBufDoneCB (drvtype, AUDDRV_BUFFER_DONE_CB);
 
 		playbackMode = VORENDER_PLAYBACK_DL;  //  1= dl, 2 = ul, 3 =both
-		mixMode = (VORENDER_VOICE_MIX_MODE_t) Val6; // 0 = none, 1= dl, 2 = ul, 3 =both
+		mixMode = (CSL_ARM2SP_VOICE_MIX_MODE_t) Val6; // 0 = none, 1= dl, 2 = ul, 3 =both
 
 			
 		if (Val6 == 10)
@@ -1457,7 +1456,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6
 	// Val5: codec value, i.e. 4096 (0x1000, PCM), 8192 (0x2000, FR), 12288 (0x3000, AMR475), 20480 (0x5000, PCM_16K), 24576 (0x6000 AMR_16K), etc
 	// val6: n/a
 	UInt8	*dataDest = NULL;
-	UInt32	vol = 30;
+	UInt32	vol = 0;
 	AudioMode_t mode = AUDIO_MODE_HANDSET;
 	UInt32 codecVal = 0;
 	static AUDIO_DRIVER_HANDLE_t drv_handle = NULL;
@@ -1485,7 +1484,7 @@ void AUDTST_VoIP(UInt32 Val2, UInt32 Val3, UInt32 Val4, UInt32 Val5, UInt32 Val6
 	}
 
 	AUDCTRL_EnableTelephony (AUDIO_HW_VOICE_IN, AUDIO_HW_VOICE_OUT, mic, spk);
-	AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT, spk, vol, AUDIO_GAIN_FORMAT_VOL_LEVEL);
+	AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT, spk, vol, AUDIO_GAIN_FORMAT_mB);
 
 	// init driver
 

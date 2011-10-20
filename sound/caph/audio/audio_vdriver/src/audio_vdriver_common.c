@@ -38,15 +38,13 @@
 #include "resultcode.h"
 #include "audio_consts.h"
 
-#define SYSCFG_BASE_ADDR      0x08880000      /* SYSCFG core */
-#include "shared.h"
 #include "dspcmd.h"
+#include "csl_apcmd.h"
 
 #include "osqueue.h"
 #include "msconsts.h"
 
 #include "audio_consts.h"
-//#include "ripcmdq.h"
 
 #include "csl_dsp.h"
 #include "csl_caph.h"
@@ -54,6 +52,9 @@
 //#include "sysparm.h"
 #include "ostask.h"
 #include "log.h"
+#if defined(ENABLE_DMA_VOICE)
+#include "csl_dsp_caph_control_api.h"
+#endif
 
 extern void VPU_Capture_Request(UInt16 buf_index);
 extern void VPU_Render_Request(UInt16 bufferIndex);
@@ -86,6 +87,9 @@ typedef struct Audio_Driver_t
 
 static Audio_Driver_t sAudDrv = {0};
 static UInt32 voiceCallSampleRate = 8000;  // defalut to 8K Hz
+
+static Boolean IsBTM_WB = FALSE;  //this flag remembers if the Bluetooth headset is a wideband headset (16KHz voice)
+
 //=============================================================================
 // Private function prototypes
 //=============================================================================
@@ -123,15 +127,9 @@ void AUDDRV_Init( void )
                                 TASKPRI_AUDDRV,
                                 STACKSIZE_AUDDRV
                                 );
-#if !((defined(_RHEA_)||defined(_SAMOA_)))
-    AUDDRV_SPKRInit (AUDDRV_SPKR_EP, AUDIO_SPKR_CHANNEL_DIFF);  //Purpose: to initialize the CHAL Audio code with AHB_AUDIO_BASE_ADDR, SYSCFG_BASE_ADDR, AUXMIC_BASE_ADDR.
-#endif
-
 
 	/* register DSP VPU status processing handlers */
-#ifndef _SAMOA_
 	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
-#endif	
 #if 0  // These features are not needed in LMP now.
 	CSL_RegisterVPURenderStatusHandler((VPURenderStatusCB_t)&VPU_Render_Request);
 	CSL_RegisterUSBStatusHandler((USBStatusCB_t)&AUDDRV_USB_HandleDSPInt);
@@ -139,14 +137,14 @@ void AUDDRV_Init( void )
 #endif	
 	CSL_RegisterVoIPStatusHandler((VoIPStatusCB_t)&VOIP_ProcessVOIPDLDone);
 	CSL_RegisterMainAMRStatusHandler((MainAMRStatusCB_t)&AP_ProcessStatusMainAMRDone);
-#ifndef _SAMOA_
 	CSL_RegisterARM2SPRenderStatusHandler((ARM2SPRenderStatusCB_t)&ARM2SP_Render_Request);
 	CSL_RegisterARM2SP2RenderStatusHandler((ARM2SP2RenderStatusCB_t)&ARM2SP2_Render_Request);
-#endif
 #if defined(ENABLE_SPKPROT)
 	CSL_RegisterUserStatusHandler((UserStatusCB_t)&AUDDRV_User_HandleDSPInt);
 #endif
 	CSL_RegisterAudioLogHandler((AudioLogStatusCB_t)&AUDLOG_ProcessLogChannel);
+
+    Audio_InitRpc();
 
 	sAudDrv.isRunning = TRUE;
 }
@@ -272,6 +270,13 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 		AUDDRV_SPKR_Enum_t speaker,
 	        void *pData)
 {
+    ///////////////////////////////////////////////////////////////////////
+    // Phone Setup Sequence
+    // 1. Init CAPH HW
+    // 2. Send DSP command DSPCMD_TYPE_AUDIO_ENABLE
+    // 3. If requires 48KHz for example in IHF mode, Send VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT
+    //////////////////////////////////////////////////////////////////////
+
 	Log_DebugPrintf(LOGID_AUDIO, "AUDDRV_Telephony_Init");
 
 	currVoiceMic = mic;
@@ -296,49 +301,72 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, FALSE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, FALSE, 0, 0, 0, 0 );
 
-	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
-	
 	if( AUDDRV_GetAudioMode() >= AUDIO_MODE_NUMBER )
+	{
 		AUDDRV_Telephony_InitHW ( mic, 
 				speaker, 
 				AUDIO_SAMPLING_RATE_16000,
 			      	pData);
-	else
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
+#endif
+	} else {
 		AUDDRV_Telephony_InitHW ( mic, 
 				speaker, 
 				AUDIO_SAMPLING_RATE_8000,
 			       	pData);
+#if defined(ENABLE_DMA_VOICE)
+		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+#endif
+	}
+
+#if defined(ENABLE_DMA_VOICE)
+	csl_dsp_caph_control_aadmac_enable_path((UInt16)(DSP_AADMAC_PRI_MIC_EN)|(UInt16)(DSP_AADMAC_SEC_MIC_EN)|(UInt16)(DSP_AADMAC_SPKR_EN));
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
+#else
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
+#endif	
+
+    // The dealy is to make sure DSPCMD_TYPE_AUDIO_ENABLE is done since it is a command via CP. 
+    OSTASK_Sleep(1);
+	if(speaker == AUDDRV_SPKR_IHF)
+	{
+		VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(TRUE,
+						FALSE,
+						FALSE);
+    }
 
 	//after AUDDRV_Telephony_InitHW to make SRST.
 	AUDDRV_SetVCflag(TRUE);  //let HW control logic know.
 
+#if defined(ENABLE_DMA_VOICE)
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0 );
+#else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0, 0 );
-
+#endif
 	OSTASK_Sleep( 40 );
 
+#if defined(ENABLE_DMA_VOICE)
+	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, 0, 0, 0, 0 );
+#else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_UL, TRUE, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0, 0 );
-
-	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
-#if !(defined(_SAMOA_))
-	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
 #endif
+	audio_control_dsp( DSPCMD_TYPE_EC_NS_ON, TRUE, TRUE, 0, 0, 0 );
+	audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, TRUE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, TRUE, 0, 0, 0, 0 );
 	audio_control_dsp( DSPCMD_TYPE_UNMUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
-#if !(defined(_SAMOA_))
     //per call basis: enable the DTX by calling stack api when call connected
 	audio_control_generic( AUDDRV_CPCMD_ENABLE_DSP_DTX, TRUE, 0, 0, 0, 0 );
 
 	if (speaker == AUDDRV_SPKR_PCM_IF)
 		AUDDRV_SetPCMOnOff( 1 );
-		//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, TRUE, 0, 0, 0, 0 );
 	else
 	{
 		if(currVoiceMic != AUDDRV_MIC_PCM_IF) //need to check mic too.
 			AUDDRV_SetPCMOnOff( 0 );
-			//audio_control_dsp( DSPCMD_TYPE_AUDIO_SET_PCM, FALSE, 0, 0, 0, 0 );
 	}
-#endif
+
 	return;
 }
 
@@ -377,8 +405,14 @@ void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 	AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), 0);
 
 	//AUDDRV_Enable_Output (AUDDRV_VOICE_OUTPUT, speaker, TRUE, AUDIO_SAMPLING_RATE_8000);
+#if defined(ENABLE_DMA_VOICE)
+	if (AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ))
+		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_16000);
+	else
+		csl_dsp_caph_control_aadmac_set_samp_rate(AUDIO_SAMPLING_RATE_8000);
+#else
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, TRUE, 0, AUDDRV_IsCall16K( AUDDRV_GetAudioMode() ), 0, 0 );
-
+#endif
 	audio_control_dsp( DSPCMD_TYPE_AUDIO_CONNECT_DL, TRUE, 0, 0, 0, 0 );
 
 	//AUDDRV_Enable_Input ( AUDDRV_VOICE_INPUT, mic, AUDIO_SAMPLING_RATE_8000);
@@ -436,11 +470,22 @@ void AUDDRV_Telephony_Deinit (void *pData)
 		audio_control_dsp( DSPCMD_TYPE_DUAL_MIC_ON, FALSE, 0, 0, 0, 0 );
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_TURN_UL_COMPANDEROnOff, FALSE, 0, 0, 0, 0 );
 	
+	    if(currVoiceSpkr == AUDDRV_SPKR_IHF)
+    	{
+		    VPRIPCMDQ_ENABLE_48KHZ_SPEAKER_OUTPUT(FALSE,
+							FALSE,
+							FALSE);
+    	}	
+
 		audio_control_dsp( DSPCMD_TYPE_AUDIO_ENABLE, FALSE, 0, 0, 0, 0 );
 
+#if defined(ENABLE_DMA_VOICE)
+		//csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN | (UInt16)DSP_AADMAC_SEC_MIC_EN);
+		csl_dsp_caph_control_aadmac_disable_path((UInt16)DSP_AADMAC_SPKR_EN | (UInt16)DSP_AADMAC_PRI_MIC_EN); //no second mic on lmp
+#endif
 		audio_control_dsp( DSPCMD_TYPE_MUTE_DSP_UL, 0, 0, 0, 0, 0 );
 
-		OSTASK_Sleep( 3 ); //make sure audio is off
+		OSTASK_Sleep( 3 ); //make sure audio is off, rtos does not have this.
 
 		AUDDRV_Telephony_DeinitHW(pData);
 	}
@@ -496,6 +541,13 @@ Boolean AUDDRV_IsCall16K(AudioMode_t voiceMode)
 		case	AUDIO_MODE_RESERVE_WB:
 			is_call16k = TRUE;
 			break;
+
+		
+		case	AUDIO_MODE_BLUETOOTH: //BT headset needs to consider NB or WB too
+		case	AUDIO_MODE_BLUETOOTH_WB: //BT headset needs to consider NB or WB too
+			is_call16k = IsBTM_WB; 
+			break;
+			
 		default:
 			break;
 		}
@@ -527,5 +579,33 @@ Boolean AUDDRV_InVoiceCall( void )
 void AUDDRV_ControlFlagFor_CustomGain( Boolean on_off )
 {
 	controlFlagForCustomGain = on_off;
+}
+
+
+//*********************************************************************
+/**
+*	Get BTM headset NB or WB info
+
+*	@return 	Boolean, TRUE for WB and FALSE for NB (8k) 
+*	@note	   
+**********************************************************************/
+Boolean AUDDRV_IsBTMWB( void )
+{
+	return IsBTM_WB;
+}
+
+//*********************************************************************
+/**
+*	Set BTM type 
+
+*	@param		Boolean isWB 
+*	@return 	none
+*
+*	@note	isWB=TRUE for BT WB headset; =FALSE for BT NB (8k) headset.
+**********************************************************************/
+void AUDDRV_SetBTMTypeWB( Boolean isWB)
+{
+	IsBTM_WB = isWB;
+	//AUDDRV_SetPCMRate(IsBTM_WB); 
 }
 

@@ -3,6 +3,7 @@
 
 #include <linux/fb.h>
 #include <linux/kd.h>
+#include <linux/proc_fs.h>
 
 #define FPS_CALC_INTERVAL	5 /* update fps after how many frames */
 #define FPS_STR_LEN		20
@@ -15,6 +16,8 @@ struct fb_fps_info {
 	struct fb_image image;
 	int frame_count;
 	unsigned long  interval_start_time;
+	unsigned int frame_calc_interval;
+	struct proc_dir_entry *proc_entry;
 };
 
 struct fb_fps_info * fb_fps_register(struct fb_info *info);

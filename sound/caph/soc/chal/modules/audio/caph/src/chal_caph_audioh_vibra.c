@@ -659,6 +659,8 @@ cVoid chal_audio_vibra_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable_chan)
     {
         /* Clear power down */
        reg_value &= ~AUDIOH_VIBRA_CTRL_ANA_VIBRA_PD_MASK;
+       reg_value &= ~AUDIOH_VIBRA_CTRL_ANA_VIBRA_RATE_CTL_MASK;
+       reg_value |= (2) << AUDIOH_VIBRA_CTRL_ANA_VIBRA_RATE_CTL_SHIFT;
     }
     else
     {

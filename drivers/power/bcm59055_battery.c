@@ -88,7 +88,7 @@ static enum power_supply_type bcm59055_get_power_supply_type(struct
 	int regVal;
 	struct bcm590xx *bcm59055 = bcm59055_power->bcm590xx;
 	pr_debug("Inside %s\n", __func__);
-	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ENV1);
+	regVal = bcm590xx_reg_read(bcm59055, BCM59055_REG_ENV2);
 	if (P_CGPD_ENV & regVal)
 		return POWER_SUPPLY_TYPE_MAINS;
 	else if (P_UBPD_ENV & regVal)

@@ -63,10 +63,10 @@ static struct __init pin_config board_pin_config[] = {
 
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
 	/* GPIO121 for TCA9539 IO expander */
-	PIN_CFG(ICUSBDP, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(ICUSBDP, GPIO121, 0, OFF, ON, 0, 0, 8MA),
 #else
 	/* GPIO74 for TCA9539 IO expander */
-	PIN_CFG(MMC1DAT4, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(MMC1DAT4, GPIO74, 0, OFF, ON, 0, 0, 8MA),
 #endif
 	/*	Pinmux for keypad */
 	PIN_CFG(GPIO00, KEY_R0, 0, OFF, ON, 0, 0, 8MA),
@@ -96,7 +96,7 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(GPIO06, SSP2DI, 0, OFF,  ON, 0, 0, 8MA),
 
 	/* SSP4 - I2S */
-#ifdef CONFIG_MACH_RHEA_RAY
+#if defined(CONFIG_MACH_RHEA_RAY) || defined (CONFIG_MACH_RHEA_RAY_EDN1X)
 	PIN_CFG(GPIO94, SSP1SYN, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(GPIO32,  SSP1CK, 0, OFF, OFF, 0, 0, 8MA),
 	PIN_CFG(DCLK4,  SSP1DO, 0, OFF, OFF, 0, 0, 8MA),
@@ -105,11 +105,11 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* LCD */
 	PIN_CFG(LCDTE, LCDTE, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(LCDRES, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(LCDRES, GPIO41, 0, OFF, ON, 0, 0, 8MA),
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
-	/* conflicts with SSP4 */
-	PIN_CFG(DCLK4, GPIO, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(DCLKREQ4, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	/* conflicts with SSP4 so comment it out.  Leave the code here for possible future change */
+//	PIN_CFG(DCLK4, GPIO95, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(DCLKREQ4, GPIO96, 0, OFF, ON, 0, 0, 8MA),
 #endif
 
 	/* STM trace - PTI */
@@ -121,8 +121,8 @@ static struct __init pin_config board_pin_config[] = {
 	PIN_CFG(TRACEDT03, PTI_DAT3, 0, OFF, ON, 0, 0, 8MA),
 		
 	/* Camera */
-	PIN_CFG(GPIO12, GPIO, 0, ON, OFF, 0, 0, 8MA),
-	PIN_CFG(GPIO13, GPIO, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO12, GPIO12, 0, ON, OFF, 0, 0, 8MA),
+	PIN_CFG(GPIO13, GPIO13, 0, ON, OFF, 0, 0, 8MA),
 
 	/* SMI */
 	PIN_CFG(LCDSCL, LCDCD, 0, OFF, ON, 0, 0, 8MA),
@@ -148,13 +148,31 @@ static struct __init pin_config board_pin_config[] = {
 
 	/* PWM config - PWM4, PWM5*/
 #ifdef CONFIG_MACH_RHEA_RAY_EDN1X
-	/* conflicts with SSP4 */
-	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
-	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
+	/* conflicts with SSP4 so comment it out. Leave the code here for possible future change */
+//	PIN_CFG(DCLK4, PWM4, 0, OFF, ON, 0, 0, 8MA),
+//	PIN_CFG(DCLKREQ4, PWM5, 0, OFF, ON, 0, 0, 8MA),
 #endif
 
 	/* SIM2LDO_EN through GPIO99 (TPS728XX) */
-	PIN_CFG(GPS_CALREQ, GPIO, 0, OFF, ON, 0, 0, 8MA),
+	PIN_CFG(GPS_CALREQ, GPIO99, 0, OFF, ON, 0, 0, 8MA),
+
+        /* Bluetooth related GPIOS */
+        PIN_CFG(GPIO04, GPIO4, 0, ON, OFF, 0, 0, 8MA),
+        PIN_CFG(DCLKREQ1, GPIO111, 0, OFF, ON, 0, 1, 8MA),
+	/*WLAN set SSPSYN as GPIO85 */
+	
+	PIN_CFG(MMC1DAT0, MMC1DAT0, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1DAT1, MMC1DAT1, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1DAT2, MMC1DAT2, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1DAT3, MMC1DAT3, 0, OFF, ON, 0, 0, 16MA),
+
+
+	PIN_CFG(MMC1CK, MMC1CK, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1CMD, MMC1CMD, 0, OFF, ON, 0, 0, 16MA),
+	PIN_CFG(MMC1RST, GPIO70, 0, OFF, ON, 0, 0, 16MA),
+
+	PIN_CFG(SSPSYN, GPIO85, 0, OFF, ON, 0, 0, 16MA),
+
 
 };
 

@@ -739,7 +739,9 @@ static inline void ep0_out_start(dwc_otg_core_if_t * core_if,
 
 	/** DOEPCTL0 Register write */
 	doepctl.b.epena = 1;
-	doepctl.b.cnak = 1;
+
+	/* Set NAK until OUT data phase is queued  */
+	doepctl.b.snak = 1;
 	dwc_write_reg32(&dev_if->out_ep_regs[0]->doepctl, doepctl.d32);
 
 #ifdef VERBOSE

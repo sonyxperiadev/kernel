@@ -220,9 +220,9 @@ extern  void chal_audio_vinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 dis
 *
 *  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
 *
-*  @return UInt8 status (out) digital mic enabling status
+*  @return cUInt8 status (out) digital mic enabling status
 *****************************************************************************/
-extern UInt8 chal_audio_vinpath_digi_mic_enable_read(CHAL_HANDLE handle);
+extern cUInt8 chal_audio_vinpath_digi_mic_enable_read(CHAL_HANDLE handle);
 
 /**
 *
@@ -267,7 +267,7 @@ extern void chal_audio_vinpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_vinpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -278,7 +278,7 @@ extern void chal_audio_vinpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_get_dma_port_addr2(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_vinpath_get_dma_port_addr2(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -290,7 +290,7 @@ extern void chal_audio_vinpath_get_dma_port_addr2(CHAL_HANDLE handle, UInt32 *dm
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vinpath_set_bits_per_sample(CHAL_HANDLE handle, UInt16 bits);
+extern void chal_audio_vinpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
 
 /**
 *
@@ -434,10 +434,10 @@ extern  cUInt32 chal_audio_vinpath_read_int_status(CHAL_HANDLE handle);
 *  @return none
 *****************************************************************************/
 extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle, 
-		UInt32 dmic1_coarse_scale, 
-		UInt32 dmic1_fine_scale, 
-		UInt32 dmic2_coarse_scale, 
-		UInt32 dmic2_fine_scale);
+		cUInt32 dmic1_coarse_scale, 
+		cUInt32 dmic1_fine_scale, 
+		cUInt32 dmic2_coarse_scale, 
+		cUInt32 dmic2_fine_scale);
 
 
 
@@ -454,7 +454,7 @@ extern void chal_audio_vinpath_set_cic_scale(CHAL_HANDLE handle,
 *****************************************************************************/
 extern void chal_audio_vinpath_set_each_cic_scale(CHAL_HANDLE handle,
 						CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
-						UInt32 gain);
+						cUInt32 gain);
 /**
 *
 *  @brief  enable/disable sidetone data for vinpath FIFO
@@ -527,9 +527,9 @@ extern  void chal_audio_nvinpath_digi_mic_disable(CHAL_HANDLE handle, cUInt16 di
 *
 *  @param  handle  (in) this AUDIO chal handle got through chal_audio_init() function
 *
-*  @return UInt8 status (out) digital mic enabling status
+*  @return cUInt8 status (out) digital mic enabling status
 *****************************************************************************/
-extern UInt8 chal_audio_nvinpath_digi_mic_enable_read(CHAL_HANDLE handle);
+extern cUInt8 chal_audio_nvinpath_digi_mic_enable_read(CHAL_HANDLE handle);
 
 
 /**
@@ -564,7 +564,7 @@ extern void chal_audio_nvinpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enabl
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_nvinpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -575,7 +575,7 @@ extern void chal_audio_nvinpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dm
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_get_dma_port_addr2(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_nvinpath_get_dma_port_addr2(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -587,7 +587,7 @@ extern void chal_audio_nvinpath_get_dma_port_addr2(CHAL_HANDLE handle, UInt32 *d
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_nvinpath_set_bits_per_sample(CHAL_HANDLE handle, UInt16 bits);
+extern void chal_audio_nvinpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
 
 /**
 *
@@ -745,10 +745,10 @@ extern  cUInt32 chal_audio_nvinpath_read_int_status(CHAL_HANDLE handle);
 *  @return none
 *****************************************************************************/
 extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle, 
-		UInt32 dmic3_coarse_scale, 
-		UInt32 dmic3_fine_scale, 
-		UInt32 dmic4_coarse_scale, 
-		UInt32 dmic4_fine_scale);
+		cUInt32 dmic3_coarse_scale, 
+		cUInt32 dmic3_fine_scale, 
+		cUInt32 dmic4_coarse_scale, 
+		cUInt32 dmic4_fine_scale);
 
 
 
@@ -765,7 +765,7 @@ extern void chal_audio_nvinpath_set_cic_scale(CHAL_HANDLE handle,
 *****************************************************************************/
 extern void chal_audio_nvinpath_set_each_cic_scale(CHAL_HANDLE handle,
 								CAPH_AUDIOH_MIC_GAIN_e micGainSelect,
-															UInt32 gain);
+															cUInt32 gain);
 
 /**
 *
@@ -839,7 +839,7 @@ extern void chal_audio_hspath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable)
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_hspath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_hspath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -1133,7 +1133,7 @@ extern void chal_audio_ihfpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_ihfpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_ihfpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -1351,9 +1351,9 @@ extern  cVoid chal_audio_ihfpath_set_dac_pwr(CHAL_HANDLE handle, cUInt16 enable_
 *
 *  @param  handle (in) this AUDIO chal handle got through chal_audio_init() function
 *
-*  @return UInt8 (out) status of IHF path DAC pwr
+*  @return cUInt8 (out) status of IHF path DAC pwr
 *****************************************************************************/
-extern UInt8 chal_audio_ihfpath_get_dac_pwr(CHAL_HANDLE handle);
+extern cUInt8 chal_audio_ihfpath_get_dac_pwr(CHAL_HANDLE handle);
 
 /**
 *
@@ -1415,7 +1415,7 @@ extern void chal_audio_earpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_earpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_earpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -1737,7 +1737,7 @@ extern void chal_audio_vibra_dma_enable(CHAL_HANDLE handle, Boolean dma_enable);
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_vibra_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_vibra_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -1993,7 +1993,7 @@ extern void chal_audio_eancpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enabl
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_eancpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -2005,7 +2005,7 @@ extern void chal_audio_eancpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dm
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_eancpath_set_bits_per_sample(CHAL_HANDLE handle, UInt16 bits);
+extern void chal_audio_eancpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
 
 /**
 *
@@ -2321,7 +2321,7 @@ extern void chal_audio_stpath_dma_enable(CHAL_HANDLE handle, Boolean dma_enable 
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 
 /**
@@ -2333,7 +2333,7 @@ extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_addr);
+extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle, cUInt32 *dma_addr);
 
 /**
 *
@@ -2345,7 +2345,7 @@ extern void chal_audio_stpath_get_dma_port_addr(CHAL_HANDLE handle, UInt32 *dma_
 *
 *  @return none
 *****************************************************************************/
-extern void chal_audio_stpath_set_bits_per_sample(CHAL_HANDLE handle, UInt16 bits);
+extern void chal_audio_stpath_set_bits_per_sample(CHAL_HANDLE handle, cUInt16 bits);
 
 /**
 *
@@ -2642,7 +2642,7 @@ extern  cVoid chal_audio_mic_pga(CHAL_HANDLE handle, int gain);
 *
 *  @return none
 *****************************************************************************/
-extern  cVoid chal_audio_mic_input_select(CHAL_HANDLE handle, UInt16 mic_input);
+extern  cVoid chal_audio_mic_input_select(CHAL_HANDLE handle, cUInt16 mic_input);
 
 /**
 *

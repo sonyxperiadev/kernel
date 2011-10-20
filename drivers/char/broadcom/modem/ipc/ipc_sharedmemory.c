@@ -673,7 +673,7 @@ void IPC_Initialise
 
 }
 
-
+#ifdef UNDER_LINUX
 int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu)
 {
 	UInt32 crash_code;
@@ -690,6 +690,7 @@ int IPC_IsCpIpcInit (void* pSmBase, IPC_CPU_ID_T Cpu)
 	}
 	return 1;
 }
+#endif // UNDER_LINUX
 
 //**************************************************
 void IPC_Configured (void)

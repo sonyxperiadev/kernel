@@ -83,6 +83,7 @@ __setup("l2_dprefetch=", l2_d_prefetch_setup);
 
 static int __init l2_i_prefetch_setup(char *str)
 {
+<<<<<<< HEAD
 	get_option(&str, &l2_i_prefetch);
 	return 1;
 }
@@ -133,6 +134,21 @@ static int __init island_l2x0_init(void)
 	l2x0_init(l2cache_base, aux_val, aux_mask);
 
 	return 0;
+=======
+	void __iomem *l2cache_base = (void __iomem *)(KONA_L2C_VA);
+	uint32_t aux_val = 0;
+	uint32_t aux_mask = 0xC200ffff;
+
+
+	aux_val |= ( 1 << 16 );	/* 16-way cache */
+	aux_val |= ( 1 << 27 );	/* Allow non-secure access */
+	aux_val |= ( 1 << 28 );	/* Data prefetch */
+	aux_val |= ( 1 << 29 );	/* Instruction prefetch */
+	aux_val |= ( 1 << 30 );	/* Early BRESP */
+	aux_val |= ( 2 << 17 );	/* 32KB */
+
+	l2x0_init(l2cache_base, aux_val, aux_mask);
+>>>>>>> mps/map-android-gb
 }
 #endif
 

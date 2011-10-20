@@ -29,16 +29,6 @@
 #include <asm/io.h>
 #include <mach/chip_pinmux.h>
 
-#ifdef CONFIG_KONA_ATAG_DT
-/*
-  This is a Broadcom Kona specific ATAG for pin-mux.
-  Put it here instead of setup.h to avoid conflict when merging upstream.
-*/
-#define ATAG_DTBLOB	0x54411122
-
-extern int early_init_dt_scan_pinmux(unsigned long node, const
-				char *uname,int depth, void *data);
-#endif
 
 /* Pull up/down*/
 #define	PULL_UP_ON		1
@@ -93,24 +83,26 @@ struct chip_pin_desc {
 	void __iomem 		*base;		/* pad control registers virtual base */
 };
 
+/* chip pin-mux register */
+union pinmux_reg {
+	unsigned int	val;
+	struct {
+		unsigned	drv_sth:3;
+		unsigned	input_dis:1;
+		unsigned	slew_rate_ctrl:1;
+		unsigned	pull_up:1;
+		unsigned	pull_dn:1;
+		unsigned	hys_en:1;
+		unsigned	sel:3;
+	} b;
+};
+
 /* board-level or use-case based configuration */
 struct pin_config {
 	enum PIN_NAME		name;
 	enum PIN_FUNC		func;
 
-	union
-	{
-		unsigned int	val;
-		struct {
-			unsigned	drv_sth:3;
-			unsigned	input_dis:1;
-			unsigned	slew_rate_ctrl:1;
-			unsigned	pull_up:1;
-			unsigned	pull_dn:1;
-			unsigned	hys_en:1;
-			unsigned	sel:3;
-		} b;
-	}	reg;
+	union pinmux_reg reg;
 };
 
 extern struct chip_pin_desc g_chip_pin_desc;

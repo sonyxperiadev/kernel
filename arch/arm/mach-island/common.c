@@ -37,6 +37,8 @@
 #include <trace/stm.h>
 #include <asm/pmu.h>
 
+#include <plat/bcm_pwm_block.h>
+
 #if defined(CONFIG_USB_ANDROID)
 #include <linux/usb/android_composite.h>
 #endif
@@ -151,8 +153,21 @@ static struct resource pwm_device_resource[] = {
     },
 };
 
+static struct pwm_platform_data pwm_dev = {
+        .max_pwm_id = 6,
+        .syscfg_inf = NULL,
+};
+
+void set_pwm_board_sysconfig(int (*syscfg_inf) (uint32_t module, uint32_t op))
+{
+	pwm_dev.syscfg_inf = syscfg_inf;
+}
+
 static struct platform_device pwm_device =
 {
+   .dev	          = {
+			.platform_data = &pwm_dev,
+		    },
    .name          = "kona_pwmc",
    .id            = -1,
    .resource	  = pwm_device_resource,
@@ -279,7 +294,7 @@ static struct platform_device pmu_device = {
        .num_resources = 1,
 };
 
-#ifdef CONFIG_USB_BCM_OTG
+#ifdef CONFIG_USB
 static struct resource kona_hsotgctrl_platform_resource[] = {
 	[0] = {
 		.start = HSOTG_CTRL_BASE_ADDR,
@@ -537,7 +552,7 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 	&kona_stm_device,
 #endif
 	&pmu_device,
-#ifdef CONFIG_USB_BCM_OTG
+#ifdef CONFIG_USB
 	&board_kona_hsotgctrl_platform_device,
 #endif
 #ifdef CONFIG_USB_DWC_OTG

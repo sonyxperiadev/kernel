@@ -10,3 +10,7 @@ option = android
 option = ext4
 option = mmc
 option = usb_ehci
+<<<<<<< HEAD
+=======
+
+>>>>>>> mps/map-android-gb

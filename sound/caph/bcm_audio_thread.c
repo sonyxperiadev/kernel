@@ -1,5 +1,5 @@
 /*******************************************************************************************
-Copyright 2010 Broadcom Corporation.  All rights reserved.                                
+Copyright 2010-2011 Broadcom Corporation.  All rights reserved.                                
 
 Unless you and Broadcom execute a separate written software license agreement 
 governing use of this software, this software is licensed to you under the 
@@ -243,6 +243,7 @@ void AUDIO_Ctrl_Process(
 {
    	TMsgAudioCtrl	msgAudioCtrl;
 	unsigned int	len;
+	int i;
 
 	BCM_AUDIO_DEBUG("AUDIO_Ctrl_Process action_code=%d\r\n", action_code);
 	
@@ -256,9 +257,7 @@ void AUDIO_Ctrl_Process(
 		    if(param_open->drv_handle == NULL)
     		{
          		BCM_AUDIO_DEBUG("\n %lx:AUDIO_Ctrl_Process-AUDIO_DRIVER_Open  failed\n",jiffies);
-		        break;
     		}
-
 		}
 		break;
 			
@@ -290,8 +289,10 @@ void AUDIO_Ctrl_Process(
 
 			AUDCTRL_SetPlayVolume (param_start->pdev_prop->p[0].hw_id,
 					param_start->pdev_prop->p[0].speaker, 
-					AUDIO_GAIN_FORMAT_Q13_2, 
-					param_start->vol[0], param_start->vol[1]); //0DB 
+					AUDIO_GAIN_FORMAT_mB, 
+					(param_start->vol[0])*25,  //from 0.25dB to mB
+					(param_start->vol[1])*25
+					);
 
      			AUDIO_DRIVER_Ctrl(param_start->drv_handle,AUDIO_DRIVER_START,&param_start->pdev_prop->p[0].aud_dev);
 			
@@ -309,14 +310,16 @@ void AUDIO_Ctrl_Process(
 			AUDIO_DRIVER_Ctrl(param_stop->drv_handle,AUDIO_DRIVER_STOP,NULL);
 
 			// Remove secondary playback path if it's in use
-			if(param_stop->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			for (i = (MAX_PLAYBACK_DEV-1); i > 0; i--)
 			{
-            	AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_id,
+				if (param_stop->pdev_prop->p[i].hw_id != AUDIO_HW_NONE)
+				{
+           			AUDCTRL_RemovePlaySpk(param_stop->pdev_prop->p[0].hw_src,
+										param_stop->pdev_prop->p[0].hw_id,
 										param_stop->pdev_prop->p[0].speaker,
-										param_stop->pdev_prop->p[1].hw_id,
-										param_stop->pdev_prop->p[1].speaker);
-				param_stop->pdev_prop->p[1].hw_id = AUDIO_HW_NONE;
-				param_stop->pdev_prop->p[1].speaker = AUDDRV_DEV_NONE;
+										param_stop->pdev_prop->p[i].hw_id,
+										param_stop->pdev_prop->p[i].speaker);
+				}
 			}
 
 		    if(param_stop->pdev_prop->p[0].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
@@ -379,7 +382,7 @@ void AUDIO_Ctrl_Process(
                                      param_start->rate);
 	            AUDCTRL_SetRecordGain(param_start->pdev_prop->c.hw_id,
                                   param_start->pdev_prop->c.mic,
-                                  AUDIO_GAIN_FORMAT_Q13_2,
+                                  AUDIO_GAIN_FORMAT_mB,
                                   param_start->vol[0],
                                   param_start->vol[1]);
 			}
@@ -426,17 +429,196 @@ void AUDIO_Ctrl_Process(
 		{
             BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
 
-			if(param_start->pdev_prop->p[1].drv_type == AUDIO_DRIVER_PLAY_AUDIO)
+			for (i = 1; i < MAX_PLAYBACK_DEV; i++)
 			{
-            	AUDCTRL_AddPlaySpk(param_start->pdev_prop->p[0].hw_id,
+				if(param_start->pdev_prop->p[i].hw_id != AUDIO_HW_NONE)
+				{
+            		AUDCTRL_AddPlaySpk( param_start->pdev_prop->p[0].hw_src,
+                                    param_start->pdev_prop->p[0].hw_id,
                                    param_start->pdev_prop->p[0].speaker,
-									param_start->pdev_prop->p[1].hw_id,
-									param_start->pdev_prop->p[1].speaker);
+									param_start->pdev_prop->p[i].hw_id,
+									param_start->pdev_prop->p[i].speaker);
+				}
 			}
+		}
+		break;
+		case ACTION_AUD_EnableTelephony:
+		{
+			BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
+			AUDCTRL_EnableTelephony(AUDIO_HW_VOICE_IN,
+									AUDIO_HW_VOICE_OUT,
+									(AUDCTRL_MICROPHONE_t)parm_call->new_mic,
+									(AUDCTRL_SPEAKER_t)parm_call->new_spkr);
+		}
+		break;
+		case ACTION_AUD_DisableTelephony:
+		{
+			BRCM_AUDIO_Param_Call_t *parm_call = (BRCM_AUDIO_Param_Call_t *)arg_param;
+			AUDCTRL_DisableTelephony(AUDIO_HW_VOICE_IN,
+									 AUDIO_HW_VOICE_OUT,
+									 (AUDCTRL_MICROPHONE_t)parm_call->cur_mic,
+									 (AUDCTRL_SPEAKER_t)parm_call->cur_spkr);
+		}
+		break;
+		case ACTION_AUD_MutePlayback:
+		{
+			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
+			AUDCTRL_SetPlayMute (parm_mute->hw_id,
+									parm_mute->device,
+									parm_mute->mute1);	//currently driver doesnt handle Mute for left/right channels
+		}
+		break;
+		case ACTION_AUD_MuteRecord:
+		{
+			BRCM_AUDIO_Param_Mute_t *parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
+			AUDCTRL_SetRecordMute (parm_mute->hw_id,
+		 							parm_mute->device,
+		 							parm_mute->mute1);
+		}
+		break;
+		case ACTION_AUD_EnableByPassVibra:
+		{
+			AUDCTRL_EnableBypassVibra();
+		}
+		break;
+		case ACTION_AUD_SetVibraStrength:
+		{
+			BRCM_AUDIO_Param_Vibra_t *parm_vibra = (BRCM_AUDIO_Param_Vibra_t *)arg_param;
+			AUDCTRL_SetBypassVibraStrength(parm_vibra->strength, parm_vibra->direction);
+		}
+		break;
+		case ACTION_AUD_DisableByPassVibra:
+		{
+			AUDCTRL_DisableBypassVibra();
+		}
+		break;
+		case ACTION_AUD_SetPlaybackVolume:
+		{
+			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
+			AUDCTRL_SetPlayVolume (parm_vol->hw_id,
+								   parm_vol->device,
+								   AUDIO_GAIN_FORMAT_mB,
+								   (parm_vol->volume1)*25,  //from 0.25dB to mB
+								   (parm_vol->volume2)*25
+								   );
+		}
+		break;
+		case ACTION_AUD_SetRecordGain:
+		{
+			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
+			AUDCTRL_SetRecordGain (parm_vol->hw_id,
+								   parm_vol->device,
+								   AUDIO_GAIN_FORMAT_mB,
+								   parm_vol->volume1,
+								   parm_vol->volume2);
+		}
+		break;
+		case ACTION_AUD_SetTelephonySpkrVolume:
+		{
+			BRCM_AUDIO_Param_Volume_t *parm_vol = (BRCM_AUDIO_Param_Volume_t *)arg_param;
+			AUDCTRL_SetTelephonySpkrVolume (AUDIO_HW_VOICE_OUT,
+											parm_vol->device,
+											parm_vol->volume1,
+											AUDIO_GAIN_FORMAT_mB);
+		}
+		break;
+		case ACTION_AUD_SwitchSpkr:
+		{
+			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
+			AUDCTRL_SwitchPlaySpk( parm_spkr->src,
+                                    parm_spkr->cur_sink,
+									parm_spkr->cur_spkr,
+									parm_spkr->new_sink,
+									parm_spkr->new_spkr);
+		}
+		break;
+		case ACTION_AUD_AddSpkr:
+		{
+			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
+			AUDCTRL_AddPlaySpk(parm_spkr->src,
+                               parm_spkr->cur_sink,
+								parm_spkr->cur_spkr,
+								parm_spkr->new_sink,
+								parm_spkr->new_spkr);
+		}
+		break;
+		case ACTION_AUD_SetAudioMode:
+		{
+			BRCM_AUDIO_Param_Call_t *parm_call =  (BRCM_AUDIO_Param_Call_t *)arg_param;
+			AudioMode_t tempMode = (AudioMode_t)parm_call->new_spkr;
+			if ((AUDIO_SAMPLING_RATE_t)AUDCTRL_RateGetTelephony() == AUDIO_SAMPLING_RATE_16000)
+			{
+				tempMode += AUDIO_MODE_NUMBER;
+            }
+			AUDCTRL_SaveAudioModeFlag(tempMode);
+		}
+		break;
+		case ACTION_AUD_SetHWLoopback:
+		{
+			BRCM_AUDIO_Param_Loopback_t *parm_loop = (BRCM_AUDIO_Param_Loopback_t *)arg_param;
+			AUDCTRL_SetAudioLoopback(parm_loop->parm,(AUDCTRL_MICROPHONE_t)parm_loop->mic,(AUDCTRL_SPEAKER_t)parm_loop->spkr);
+		}
+		break;
+		case ACTION_AUD_EnableFMPlay:
+		{
+			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
+			//re-enable FM
+			AUDCTRL_SaveAudioModeFlag((AudioMode_t)parm_FM->device);
+			AUDCTRL_EnablePlay(AUDIO_HW_I2S_IN,
+								parm_FM->hw_id,  // =AUDIO_HW_DSP_VOICE if CallMode = 1
+								AUDIO_HW_NONE,
+								parm_FM->device,
+								AUDIO_CHANNEL_STEREO,
+								AUDIO_SAMPLING_RATE_48000,
+								NULL);
+
+            AUDCTRL_SetPlayVolume (parm_FM->hw_id,
+                                       parm_FM->device,
+                                       AUDIO_GAIN_FORMAT_mB,
+                                       (parm_FM->volume1)*25,  //from 0.25dB to mB
+                                       (parm_FM->volume2)*25
+                                       );
+		}
+		break;
+		case ACTION_AUD_DisableFMPlay:
+		{
+			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
+			AUDCTRL_DisablePlay(AUDIO_HW_I2S_IN,
+								parm_FM->hw_id,
+								parm_FM->device,
+								0); 
+		}
+		break;
+		case ACTION_AUD_SetARM2SPInst:
+		{
+			BRCM_AUDIO_Param_FM_t *parm_FM = (BRCM_AUDIO_Param_FM_t *)arg_param;
+			AUDCTRL_SetArm2spParam(parm_FM->fm_mix, 1); // use ARM2SP instance 1 for FM
+		}
+		break;
+		case ACTION_AUD_SetPrePareParameters:
+		{
+			BRCM_AUDIO_Param_Prepare_t *parm_prepare = (BRCM_AUDIO_Param_Prepare_t *)arg_param;
+			//set the callback
+			AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_SET_CB,(void*)&parm_prepare->cbParams);
+			//set the interrupt period
+		    AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_SET_INT_PERIOD,(void*)&parm_prepare->period_bytes);
+			//set the buffer params
+			AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_SET_BUF_PARAMS,(void*)&parm_prepare->buf_param);
+			//Configure stream params
+			AUDIO_DRIVER_Ctrl(parm_prepare->drv_handle,AUDIO_DRIVER_CONFIG,(void*)&parm_prepare->drv_config);
+		}
+		break;
+		case ACTION_AUD_MuteTelephony:
+		{
+			BRCM_AUDIO_Param_Mute_t	*parm_mute = (BRCM_AUDIO_Param_Mute_t *)arg_param;
+			AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
+										parm_mute->device,
+										parm_mute->mute1);
 		}
 		break;
         default:
             BCM_AUDIO_DEBUG("Error AUDIO_Ctrl_Process Invalid acction command \n");
+			break;
     }
     if(block)
     {

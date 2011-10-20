@@ -117,8 +117,15 @@ static void __init gptimer_clockevents_init(void)
 	clockevent_gptimer.max_delta_ns =
 		clockevent_delta2ns(0xffffffff, &clockevent_gptimer);
 
+#ifdef CONFIG_GP_TIMER_COMPARATOR_LOAD_DELAY
+	/* This is to accomodate the polling in kona_timer_set_match_start().
+	 */
 	clockevent_gptimer.min_delta_ns =
-		clockevent_delta2ns(6, &clockevent_gptimer);
+		clockevent_delta2ns(160, &clockevent_gptimer); 
+#else
+	clockevent_gptimer.min_delta_ns =
+		clockevent_delta2ns(6, &clockevent_gptimer); 
+#endif
 
 	clockevent_gptimer.cpumask = cpumask_of(0);
 	clockevents_register_device(&clockevent_gptimer);

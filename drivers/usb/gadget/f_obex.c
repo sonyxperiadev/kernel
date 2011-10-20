@@ -374,6 +374,10 @@ obex_bind(struct usb_configuration *c, struct usb_function *f)
 	/* Avoid letting this gadget enumerate until the userspace
 	 * OBEX server is active.
 	 */
+<<<<<<< HEAD
+=======
+
+>>>>>>> mps/map-android-gb
 	status = usb_function_deactivate(f);
 	if (status < 0)
 		WARNING(cdev, "obex ttyGS%d: can't prevent enumeration, %d\n",

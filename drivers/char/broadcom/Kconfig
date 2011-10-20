@@ -8,6 +8,11 @@ menuconfig BRCM_CHAR_DRIVERS
 	help
 	  Broadcom's char drivers
 
+config BRCM_HW_TEST
+        tristate "HW_TEST Driver"
+        depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA)
+        default n
+
 config V3D
 	tristate "V3D Driver"
 	depends on BRCM_CHAR_DRIVERS && (ARCH_RHEA || ARCH_SAMOA)

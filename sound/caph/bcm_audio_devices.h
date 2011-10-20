@@ -20,11 +20,12 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef _BCM_AUDIO_DEVICES_H__
 #define _BCM_AUDIO_DEVICES_H__
 
-#define MAX_PLAYBACK_DEV 2
+#define MAX_PLAYBACK_DEV 3
 
 typedef struct _TIDChanOfPlaybackDev
 {
     AUDIO_DRIVER_TYPE_t     drv_type;
+	AUDIO_HW_ID_t     		hw_src;
     AUDIO_HW_ID_t           hw_id;
     AUDCTRL_SPEAKER_t       speaker;
 	AUDDRV_DEVICE_e aud_dev;

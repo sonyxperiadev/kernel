@@ -103,7 +103,7 @@ static unsigned int kona_cpufreq_get_speed(unsigned int cpu)
     int i;
 
     opp = pi_get_active_opp(b->pi_id);
-	pr_info("%s: opp = %d\n",__func__,opp);
+	kcf_dbg("%s: opp = %d\n",__func__,opp);
 
 	if(opp < 0)
 		return 0;
@@ -231,6 +231,7 @@ static int kona_cpufreq_init(struct cpufreq_policy *policy)
 			__func__);
 		goto err_cpufreqs_table;
 	}
+	cpufreq_frequency_table_get_attr(b->kona_freqs_table, policy->cpu);
 	b->policy = policy;
 
 	return 0;
@@ -242,6 +243,8 @@ err_cpufreqs_table:
 static int kona_cpufreq_exit(struct cpufreq_policy *policy)
 {
 	kcf_dbg("%s\n", __func__);
+
+	cpufreq_frequency_table_put_attr(policy->cpu);
 
 	return 0;
 }

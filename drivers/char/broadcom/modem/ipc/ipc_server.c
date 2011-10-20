@@ -511,7 +511,7 @@ void Comms_Start(void)
     }
 
     /* Start the CP, Code taken from Nucleus BSP */
-    *(unsigned int *)(cp_boot_base+INIT_ADDRESS_OFFSET) = *(unsigned int *)(cp_boot_base+MAIN_ADDRESS_OFFSET);
+    *(unsigned int *)(cp_boot_base+INIT_ADDRESS_OFFSET+RESERVED_HEADER) = *(unsigned int *)(cp_boot_base+MAIN_ADDRESS_OFFSET+RESERVED_HEADER);
 
     iounmap(cp_boot_base);
     printk(KERN_ALERT "%s: modem (R4 COMMS) started....\n", __func__);

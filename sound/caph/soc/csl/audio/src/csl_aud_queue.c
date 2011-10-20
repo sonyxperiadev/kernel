@@ -43,11 +43,8 @@ Copyright 2009, 2010 Broadcom Corporation.  All rights reserved.                
 #include "audio_consts.h"
 #include "osheap.h"	
 #include "log.h"
-#include "xassert.h"
 #include "csl_aud_queue.h"
 
-//#define _DBG_(a)
-#define _DBG_(a) (a)
 
 // use it to debug if you suspect sw corrupt the data of ring buffer.
 #ifdef DEBUG_RING_BUFFER
@@ -88,7 +85,7 @@ static void AUDQUE_MemCpyInterleave (UInt8* dest,
     }
     else
     {
-        xassert(0, bitPerSample);
+        audio_xassert(0, bitPerSample);
     }
 
     while (i < size)
@@ -139,7 +136,7 @@ static void AUDQUE_MemCpyInterleave (UInt8* dest,
     }
     else
     {
-        xassert(0, bitPerSample);
+        audio_xassert(0, bitPerSample);
     }
 
 
@@ -745,7 +742,7 @@ UInt32 AUDQUE_GetSizeReadPtrToBottom (AUDQUE_Queue_t *aq)
 	//_DBG_(Log_DebugPrintf(LOGID_AUDIO, "AUDQUE_GetSizeReadPtrToBottom:: aq->readPtr 0x%x, aq->bottom = 0x%x, (aq->readPtr - aq->bottom) %d \n",
 		//aq->readPtr, aq->bottom, (aq->bottom - aq->readPtr) ));
 
-    assert(aq->readPtr <= aq->bottom);
+    audio_xassert(aq->readPtr <= aq->bottom, aq->readPtr);
 
     return(aq->bottom - aq->readPtr);
 }
@@ -759,7 +756,7 @@ UInt32 AUDQUE_GetSizeReadPtrToBottom (AUDQUE_Queue_t *aq)
 // ===================================================================================
 UInt32 AUDQUE_GetSizeWritePtrToBottom (AUDQUE_Queue_t *aq)
 {
-    assert(aq->writePtr <= aq->bottom);
+    audio_xassert(aq->writePtr <= aq->bottom, aq->writePtr);
 
     return(aq->bottom - aq->writePtr);
 }

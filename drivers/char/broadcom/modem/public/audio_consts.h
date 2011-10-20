@@ -71,6 +71,7 @@
 
 #include "tones_def.h"
 
+<<<<<<< HEAD
 /*
 	Audio Volume
 */
@@ -79,19 +80,25 @@
 #define	AUDIO_VOLUME_MAX 		40						///< loudest
 #define	AUDIO_VOLUME_DEFAULT	AUDIO_VOLUME_MAX*3/4	///< default Music Audio volume
 
+=======
+>>>>>>> mps/map-android-gb
 /*
 	Audio MICGAIN Index (3 dB/step)
 */
 #define	AUDIO_MICGAIN_MIN		0 						///< lowest = 0dB
 #define	AUDIO_MICGAIN_MAX 		14						///< loudest = 42dB
-#define	AUDIO_MICGAIN_DEFAULT	((AUDIO_MICGAIN_MIN+AUDIO_MICGAIN_MAX)>>1)	///< default
+
 
 typedef enum AUDIO_GAIN_FORMAT_t 
 {
+<<<<<<< HEAD
 	AUDIO_GAIN_FORMAT_VOL_LEVEL, // logic volume level
 	// AUDIO_GAIN_FORMAT_HW_REG,    // hardware register gain value
 	AUDIO_GAIN_FORMAT_mB,     // gain in milli Bel = 1/100 dB 
 	AUDIO_GAIN_FORMAT_Q13_2,      // gain in Q13.2
+=======
+	AUDIO_GAIN_FORMAT_mB,     // gain in milli Bel = 1/100 dB 
+>>>>>>> mps/map-android-gb
 	AUDIO_GAIN_FORMAT_DSP_VOICE_VOL_GAIN,      // CUSTOMER TABLE: DSP voice volume dB from sysparm
 	AUDIO_GAIN_FORMAT_FM_RADIO_DIGITAL_VOLUME_TABLE   // CUSTOMER TABLE: FM Radio audio gain table
 } AUDIO_GAIN_FORMAT_t;
@@ -664,12 +671,21 @@ typedef enum {
 	
 	PARAM_DL_NOISE_SUPP_MAX,					// 298
     PARAM_DL_NOISE_SUPPRESSION_ENABLE,			// 299	
+<<<<<<< HEAD
 
 	PARAM_VOICE_MIC1_HPF_ENABLE,                // 300	
 	PARAM_VOICE_MIC1_HPF_CUTOFF_FREQ,           // 301
 	PARAM_VOICE_MIC2_HPF_ENABLE,                // 302	
 	PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,           // 303
 
+=======
+
+	PARAM_VOICE_MIC1_HPF_ENABLE,                // 300	
+	PARAM_VOICE_MIC1_HPF_CUTOFF_FREQ,           // 301
+	PARAM_VOICE_MIC2_HPF_ENABLE,                // 302	
+	PARAM_VOICE_MIC2_HPF_CUTOFF_FREQ,           // 303
+
+>>>>>>> mps/map-android-gb
 	AUDIO_PARM_NUMBER   						// 304
  	
 } AudioParam_t;

@@ -38,11 +38,9 @@ EXTRA_CFLAGS += -I $(src)/audio/audio_datadriver/public/
 #CSL header files
 EXTRA_CFLAGS += -I $(src)/soc/csl/audio/public/
 EXTRA_CFLAGS += -I $(src)/soc/csl/dsp/public/
-EXTRA_CFLAGS += -I $(src)/soc/csl/bsp/public/
 #CHAL header files
 EXTRA_CFLAGS += -I $(src)/soc/chal/modules/audio/inc/
 EXTRA_CFLAGS += -I $(src)/soc/chal/modules/audio/caph/
-EXTRA_CFLAGS += -I $(src)/soc/chal/modules/bsp/inc/
 #SYSPARM Header files
 #EXTRA_CFLAGS += -I $(src)/sysinterface/sysparms/
 #RPC Header files
@@ -79,7 +77,7 @@ snd-brcm-omx-objs += at_aud_ctl.o
 snd-brcm-omx-objs += caph_pcm.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_caph.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_common.o
-snd-brcm-omx-objs += audio/audio_controller/src/audio_gain_table.o
+snd-brcm-omx-objs += audio/audio_controller/src/audio_pmu_adapt.o
 snd-brcm-omx-objs += audio/audio_datadriver/src/audio_ddriver.o
 snd-brcm-omx-objs += bcm_audio_thread.o
 #snd-brcm-omx-objs += audio_stubs.o
@@ -112,7 +110,6 @@ snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_pcm_sspi.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_i2s_sspi.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_hwctrl.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_dma.o
-snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_config.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_cfifo.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_capture.o
 snd-brcm-omx-objs += soc/csl/audio/src/csl_caph_audioh.o
@@ -137,5 +134,6 @@ snd-brcm-omx-objs += soc/csl/dsp/src/csl_log.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_voip.o
 snd-brcm-omx-objs += soc/csl/dsp/src/csl_voif.o
 snd-brcm-omx-objs += soc/csl/dsp/src/osdw_dsp_drv.o
+snd-brcm-omx-objs += soc/csl/dsp/src/csl_dsp_caph_control_api.o
 
 

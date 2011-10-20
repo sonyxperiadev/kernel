@@ -2094,6 +2094,7 @@ void dwc_otg_core_host_init(dwc_otg_core_if_t * core_if)
 			if (core_if->xceiver->set_vbus)
 				core_if->xceiver->set_vbus(core_if->xceiver,
 							   true);
+			cil_hcd_session_start(core_if);
 #endif
 		}
 	}
@@ -3001,6 +3002,8 @@ void dwc_otg_ep0_activate(dwc_otg_core_if_t * core_if, dwc_ep_t * ep)
 
 	dwc_write_reg32(&dev_if->in_ep_regs[0]->diepctl, diepctl.d32);
 
+	/* Set NAK for non-SETUP packets until OUT data phase is requested */
+	doepctl.b.snak = 1;
 	/* Enable OUT EP for receive */
 	doepctl.b.epena = 1;
 	dwc_write_reg32(&dev_if->out_ep_regs[0]->doepctl, doepctl.d32);
@@ -6111,6 +6114,8 @@ void dwc_otg_set_prtpower(dwc_otg_core_if_t * core_if, uint32_t val)
 	if (core_if->xceiver->set_vbus)
 		core_if->xceiver->set_vbus(core_if->xceiver,
 					   val ? true : false);
+	if (val)
+		cil_hcd_session_start(core_if);
 #endif
 }
 

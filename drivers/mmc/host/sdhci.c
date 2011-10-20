@@ -25,6 +25,7 @@
 
 #include <linux/mmc/mmc.h>
 #include <linux/mmc/host.h>
+#include <linux/mmc/card.h>
 #define CONFIG_MMC_ARASAN_HOST_FIX
 
 #include "sdhci.h"
@@ -50,10 +51,14 @@ static void sdhci_finish_command(struct sdhci_host *);
 static int sdhci_execute_tuning(struct mmc_host *mmc);
 static void sdhci_tuning_timer(unsigned long data);
 
+<<<<<<< HEAD
 #if defined(CONFIG_MMC_BCM_SD)
+=======
+#ifdef CONFIG_MMC_BCM_SD
+>>>>>>> mps/map-android-gb
 extern int sdhci_pltfm_clk_enable(struct sdhci_host *host, int enable);
 #else
-#define sdhci_pltfm_clk_enable(host, enable)	do { } while(0)
+#define sdhci_pltfm_clk_enable(..)	do { }while(0)
 #endif
 
 static void sdhci_dumpregs(struct sdhci_host *host)
@@ -660,10 +665,14 @@ static u8 sdhci_calc_timeout(struct sdhci_host *host, struct mmc_command *cmd)
 	}
 
 	if (count >= 0xF) {
-#ifndef CONFIG_MMC_BCM_SD
-		printk(KERN_WARNING "%s: Too large timeout requested for CMD%d!\n",
-		       mmc_hostname(host->mmc), cmd->opcode);
-#endif
+		/*
+		 * On certain Micron eMMC cards this value somehow is alway too large.
+		 * Other than seeing this warning message, read or write to the card works okay.
+		 */
+		if ((0x13 != host->mmc->card->cid.manfid) || (0x100 != host->mmc->card->cid.oemid)) {
+				printk(KERN_WARNING "%s: Too large timeout requested for CMD%d!\n",
+					   mmc_hostname(host->mmc), cmd->opcode);
+		}
 		count = 0xE;
 	}
 #ifdef CONFIG_MMC_BCM_SD
@@ -1229,7 +1238,6 @@ static void sdhci_request(struct mmc_host *mmc, struct mmc_request *mrq)
 	WARN_ON(host->mrq != NULL);
 
 	sdhci_pltfm_clk_enable(host, 1);
-
 #ifndef SDHCI_USE_LEDS_CLASS
 	sdhci_activate_led(host);
 #endif

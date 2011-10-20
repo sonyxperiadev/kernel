@@ -48,6 +48,12 @@
 #endif
 
 #define VLT_LUT_SIZE	16
+/*PM policy definitions for Rhea */
+#define PM_OFF		0
+#define PM_RET		1
+#define	PM_ECO		4
+#define	PM_DFS		5
+
 
 #ifdef CONFIG_DEBUG_FS
 const char* _rhea__event2str[] =
@@ -193,58 +199,62 @@ struct rhea_event_table
     u32 policy_hub_switchable;
     u32 policy_mm;
 };
-
 static const struct rhea_event_table event_table[] = {
-			/*event_id				trig_type			modem		arm_core 	arm_sub		aon		hub		mm*/
-	{	SOFTWARE_0_EVENT,			PM_TRIG_BOTH_EDGE,		1,		1, 		5,		5,		5,		1, },
-	{	SOFTWARE_1_EVENT,			PM_TRIG_NONE,			1,		1,		1,		1,		1,		1,	},
-	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		1,		5,		4,		4,		4,		1,	},
-	{	MODEMBUS_ACTIVE_EVENT, 		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	VREQ_NONZERO_PI_MODEM_EVENT,PM_TRIG_POS_EDGE,		5,		1,		1,		5,		5,		1,	},
-	{	COMMON_INT_TO_AC_EVENT,		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	COMMON_TIMER_1_EVENT,		PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	UBRX_EVENT,					PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	UB2RX_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	SIMDET_EVENT,				PM_TRIG_BOTH_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	SIM2DET_EVENT,				PM_TRIG_BOTH_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	KEY_R0_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	KEY_R1_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	KEY_R2_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	KEY_R3_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	KEY_R4_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	KEY_R5_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	KEY_R6_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	KEY_R7_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	BATRM_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	GPIO29_A_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	GPIO71_A_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	MMC1D1_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	GPIO74_A_EVENT,				PM_TRIG_BOTH_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	GPIO111_A_EVENT,			PM_TRIG_POS_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	DBR_IRQ_EVENT,				PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	},
-	{	ACI_EVENT,					PM_TRIG_NEG_EDGE,		1,		5,		5,		5,		5,		1,	}
+		/*event_id				trig_type			modem		arm_core 	arm_sub		aon		hub		mm*/
+	{	SOFTWARE_0_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_RET, 	PM_DFS,		PM_DFS,		PM_DFS,		PM_RET, },
+	{	SOFTWARE_1_EVENT,			PM_TRIG_NONE,			PM_RET,		PM_RET,		PM_RET,		PM_RET,		PM_RET,		PM_RET,	},
+	{	SOFTWARE_2_EVENT,			PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_ECO,		PM_ECO,		PM_ECO,		PM_RET,	},
+	// This is a SW workaround for A0. Configure MODEMBUS_ACTIVE_EVENT to wake up AP at ECONOMY so that
+	// AP stays awake long enough until all CP activities that could trigger MODEMBUS_ACTIVE_EVENT have completed.
+	// For A0 chip, MODEMBUS_ACTIVE_EVENT is enabled to work around the JIRA that VREQ_NONZERO_PI_MODEM_EVENT is not auto-cleared.
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+	{	MODEMBUS_ACTIVE_EVENT, 			PM_TRIG_POS_EDGE,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+#endif
+	{	VREQ_NONZERO_PI_MODEM_EVENT,		PM_TRIG_POS_EDGE,		PM_DFS,		PM_RET,		PM_RET,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	COMMON_INT_TO_AC_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	COMMON_TIMER_1_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	UBRX_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	UB2RX_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	SIMDET_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	SIM2DET_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	KEY_R0_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	KEY_R1_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	KEY_R2_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	KEY_R3_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	KEY_R4_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	KEY_R5_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	KEY_R6_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	KEY_R7_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	BATRM_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	GPIO29_A_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	GPIO71_A_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	MMC1D1_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	GPIO74_A_EVENT,				PM_TRIG_BOTH_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	GPIO111_A_EVENT,			PM_TRIG_POS_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	DBR_IRQ_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	},
+	{	ACI_EVENT,				PM_TRIG_NEG_EDGE,		PM_RET,		PM_DFS,		PM_DFS,		PM_DFS,		PM_DFS,		PM_RET,	}
 
 };
 
 static const struct i2c_cmd i2c_cmd[] = {
 							{REG_ADDR,0},		//0 - NOP
-							{SET_PC_PINS,0xC0},	//other: 1 - Set PC3/4 pins to 0 to begin transaction (HW has semaphore)
-							{REG_ADDR,0},		//2 - NOP
-							{REG_ADDR,0x20},	//3 - Set Address for i2cmmhs BSC_CS register
-							{REG_DATA,0x0B},	//4 - Set Start condition - write 3 to CS register
-							{WAIT_TIMER,0x08},	//5 - Wait..
-							{REG_DATA,1},  		//6 - Clear Start Condition - write 1 to CS
-							{WAIT_TIMER,0x08},	//7 - Wait..
-							{I2C_DATA,0x10},	//8 - PMU client addr  - 8 ..write to FIFO
+							{JUMP_VOLTAGE,0},		//1 - jump to address based on current voltage request
+							{REG_ADDR,0},		//other:2 - NOP
+							{SET_PC_PINS,0xC0},	//3 - Set PC3/4 pins to 0 to begin transaction (HW has semaphore)
+							{REG_ADDR,0},		//4 - NOP
+							{REG_ADDR,0x20},	//5 - Set Address for i2cmmhs BSC_CS register
+							{REG_DATA,0x03},	//6 - Set Start condition - write 3 to CS register
+							{WAIT_TIMER,0x10},	//7 - Wait..
+							{REG_DATA,1},  		//8 - Clear Start Condition - write 1 to CS
 							{WAIT_TIMER,0x08},	//9 - Wait..
-							{I2C_DATA,0xC0},	//10 - PMU register addr C0 (CSRSTRL1)
-							{WAIT_TIMER,0x08},	//11 - Wait..
-							{I2C_VAR,0},		//12 - Data - Write the requested voltage
-							{WAIT_TIMER,0x50},	//13 - Wait..
-							{SET_PC_PINS,0xCC},	//14 - Set PC3/4 to 1 to signal End of transaction
-							{END,0},			//15 - End
-							{REG_ADDR,0},		//16 - NOP
-							{REG_ADDR,0},		//17 - NOP
+							{I2C_DATA,0x10},	//10 - PMU client addr  - 8 ..write to FIFO
+							{WAIT_TIMER,0x80},	//11 - Wait..
+							{I2C_DATA,0xC0},	//12 - PMU register addr C0 (CSRSTRL1)
+							{WAIT_TIMER,0x80},	//13 - Wait..
+							{I2C_VAR,0},		//14 - Data - Write the requested voltage
+							{WAIT_TIMER,0x80},	//15 - Wait..
+							{SET_PC_PINS,0xCC},	//16 - Set PC3/4 to 1 to signal End of transaction
+							{END,0},			//17 - End
 							{REG_ADDR,0},		//18 - NOP
 							{REG_ADDR,0},		//19 - NOP
 							{REG_ADDR,0},		//20 - NOP
@@ -323,24 +333,42 @@ int __init rhea_pwr_mgr_init()
 	struct v0x_spec_i2c_cmd_ptr v_ptr;
 	int i;
 	struct pi* pi;
+	u32 reg_val = 0;
 	struct pm_policy_cfg cfg;
 	cfg.ac = 1;
 	cfg.atl = 0;
 
-	v_ptr.other_ptr = 1;
+	v_ptr.other_ptr = 2;
 	v_ptr.set2_val = 1; /*Retention voltage inx*/
 	v_ptr.set2_ptr = 45;
-	v_ptr.set1_val = 2;/*Should be 8 ????Wakeup override*/
+	v_ptr.set1_val = 2;/*wakeup from retention voltage inx*/
 	v_ptr.set1_ptr = 49;
 	v_ptr.zerov_ptr = 45; /*Not used for Rhea*/
 
 	pwr_mgr_init(&rhea_pwr_mgr_info);
 	rhea_pi_mgr_init();
 
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+	// HWRHEA-1689, HWRHEA-1739 we confirmed that there is a bug in Rhea A0 where wrong control signal
+	// is used to turn on mm power switches which results in mm clamps getting released before mm subsystem
+	// has powered up. This results in glitches on mm outputs which in some parts causes fake write
+	// transaction to memc with random ID. Next real write transfer to memc from mm creates write
+	// interleaving error in memc and hangs mm. This is the root cause of MM block test failures observed
+	// in BLTS MobC00164066: SW workaround is to reduce inrush current setting on mm power switch control
+	// from default 14.5mA (0x3) to 1.5mA (0x0) in bits 1:0 of CHIPREG:mm_powerswitch_control_status register.
+	reg_val = readl(KONA_CHIPREG_VA + CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET);
+	/* 1.5mA per switch */
+	reg_val &= ~CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_POWER_SWITCH_CTRL_MASK;
+	writel(reg_val, (KONA_CHIPREG_VA + CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
+#endif
 	/*MM override is not set by default*/
 	pwr_mgr_pi_set_wakeup_override(PI_MGR_PI_ID_MM,false/*clear*/);
-
-		/*Done in two steps to skip DUMMY_EVENT*/
+#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+	/* 14.5mA per switch */
+	reg_val |= 3;
+	writel(reg_val, (KONA_CHIPREG_VA +CHIPREG_MM_POWERSWITCH_CONTROL_STATUS_OFFSET));
+#endif
+	/*Done in two steps to skip DUMMY_EVENT*/
 	pwr_mgr_event_clear_events(LCDTE_EVENT,VREQ_NONZERO_PI_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,EVENT_ID_ALL);
 

@@ -35,7 +35,6 @@
 #include <asm/mach-types.h>
 #include <asm/gpio.h>
 #include <mach/hardware.h>
-#include <mach/sdio_platform.h>
 #include <linux/i2c.h>
 #include <linux/i2c-kona.h>
 #include <mach/kona.h>
@@ -55,12 +54,17 @@
 #include <plat/kona_avs.h>
 #endif
 
+#ifdef CONFIG_UNICAM
+#include <plat/kona_unicam.h>
+#endif
+
 #ifdef CONFIG_KONA_POWER_MGR
 #include <plat/pwr_mgr.h>
 
 #define VLT_LUT_SIZE 16
 #endif
 
+#include <plat/bcm_pwm_block.h>
 /*
  * todo: 8250 driver has problem autodetecting the UART type -> have to
  * use FIXED type
@@ -71,11 +75,7 @@
 #define KONA_UART1_PA	UARTB2_BASE_ADDR
 #define KONA_UART2_PA	UARTB3_BASE_ADDR
 
-#ifdef CONFIG_GPIO_PCA953X
-#define SD_CARDDET_GPIO_PIN      (KONA_MAX_GPIO + 15)
-#else
-#define SD_CARDDET_GPIO_PIN      75
-#endif
+
 
 #define PID_PLATFORM				0xE600
 #define FD_MASS_PRODUCT_ID			0x0001
@@ -276,108 +276,7 @@ static struct platform_device android_usb = {
 	},
 };
 
-static struct resource board_sdio0_resource[] = {
-	[0] = {
-		.start = SDIO1_BASE_ADDR,
-		.end = SDIO1_BASE_ADDR + SZ_64K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO0,
-		.end = BCM_INT_ID_SDIO0,
-		.flags = IORESOURCE_IRQ,
-	},
-};
 
-static struct resource board_sdio1_resource[] = {
-	[0] = {
-		.start = SDIO2_BASE_ADDR,
-		.end = SDIO2_BASE_ADDR + SZ_64K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO1,
-		.end = BCM_INT_ID_SDIO1,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-
-static struct resource board_sdio2_resource[] = {
-	[0] = {
-		.start = SDIO3_BASE_ADDR,
-		.end = SDIO3_BASE_ADDR + SZ_64K - 1,
-		.flags = IORESOURCE_MEM,
-	},
-	[1] = {
-		.start = BCM_INT_ID_SDIO_NAND,
-		.end = BCM_INT_ID_SDIO_NAND,
-		.flags = IORESOURCE_IRQ,
-	},
-};
-static struct sdio_platform_cfg board_sdio_param[] = {
-	{ /* SDIO0 */
-		.id = 0,
-		.data_pullup = 0,
-		.cd_gpio = SD_CARDDET_GPIO_PIN,
-		.devtype = SDIO_DEV_TYPE_SDMMC,
-		.flags = KONA_SDIO_FLAGS_DEVICE_REMOVABLE,
-		.peri_clk_name = "sdio1_clk",
-		.ahb_clk_name = "sdio1_ahb_clk",
-		.sleep_clk_name = "sdio1_sleep_clk",
-		.peri_clk_rate = 48000000,
-	},
-	{ /* SDIO1 */
-		.id = 1,
-		.data_pullup = 0,
-		.is_8bit = 1,
-		.devtype = SDIO_DEV_TYPE_EMMC,
-		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE ,
-		.peri_clk_name = "sdio2_clk",
-		.ahb_clk_name = "sdio2_ahb_clk",
-		.sleep_clk_name = "sdio2_sleep_clk",
-		.peri_clk_rate = 52000000,
-	},
-	{ /* SDIO2 - SDIO2 on customer board is used for eMMC */
-		.id = 2,
-		.data_pullup = 0,
-		.devtype = SDIO_DEV_TYPE_EMMC,
-		.flags = KONA_SDIO_FLAGS_DEVICE_NON_REMOVABLE,
-		.peri_clk_name = "sdio3_clk",
-		.ahb_clk_name = "sdio3_ahb_clk",
-		.sleep_clk_name = "sdio3_sleep_clk",
-		.peri_clk_rate = 52000000,
-	},
-};
-
-static struct platform_device board_sdio0_device = {
-	.name = "sdhci",
-	.id = 0,
-	.resource = board_sdio0_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio0_resource),
-	.dev      = {
-		.platform_data = &board_sdio_param[0],
-	},
-};
-
-static struct platform_device board_sdio1_device = {
-	.name = "sdhci",
-	.id = 1,
-	.resource = board_sdio1_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio1_resource),
-	.dev      = {
-		.platform_data = &board_sdio_param[1],
-	},
-};
-
-static struct platform_device board_sdio2_device = {
-	.name = "sdhci",
-	.id = 2,
-	.resource = board_sdio2_resource,
-	.num_resources   = ARRAY_SIZE(board_sdio2_resource),
-	.dev      = {
-		.platform_data = &board_sdio_param[2],
-	},
-};
 
 static struct resource board_i2c0_resource[] = {
 	[0] =
@@ -430,18 +329,21 @@ static struct bsc_adap_cfg bsc_i2c_cfg[] = {
 		.dynamic_speed = 1,
 		.bsc_clk = "bsc1_clk",
 		.bsc_apb_clk = "bsc1_apb_clk",
+		.retries = 1,
 	},
 	{ /* for BSC1*/
 		.speed = BSC_BUS_SPEED_50K,
 		.dynamic_speed = 1,
 		.bsc_clk = "bsc2_clk",
 		.bsc_apb_clk = "bsc2_apb_clk",
+		.retries = 3,
 	},
 	{ /* for PMU */
 		.speed = BSC_BUS_SPEED_50K,
 		.dynamic_speed = 1,
 		.bsc_clk = "pmu_bsc_clk",
 		.bsc_apb_clk = "pmu_bsc_apb",
+		.retries = 1,
 	},
 };
 
@@ -498,12 +400,25 @@ static struct resource kona_pwm_resource = {
                 .flags = IORESOURCE_MEM,
 };
 
+static struct pwm_platform_data pwm_dev = {
+        .max_pwm_id = 6,
+        .syscfg_inf = NULL,
+};
+
+void set_pwm_board_sysconfig(int (*syscfg_inf) (uint32_t module, uint32_t op))
+{
+	pwm_dev.syscfg_inf = syscfg_inf;
+}
+
 static struct platform_device kona_pwm_device = {
+		.dev = {
+			.platform_data = &pwm_dev, 
+		},
                 .name = "kona_pwmc",
                 .id = -1,
                 .resource = &kona_pwm_resource,
                 .num_resources  = 1,
-} ;
+};
 
 /* SPI configuration */
 static struct resource kona_sspi_spi0_resource[] = {
@@ -683,7 +598,8 @@ static u8* volt_table[] = {ss_vlt_tbl, tt_vlt_tbl, ff_vlt_tbl};
 
 static struct kona_avs_pdata avs_pdata =
 {
-	.avs_type = AVS_TYPE_OPEN,
+	.flags = AVS_TYPE_OPEN|AVS_READ_FROM_MEM,
+	.param = 0x3404BFA8, /*AVS_READ_FROM_MEM - Address location where monitor values are copied by ABI */
 	.nmos_bin_size = 3,
 	.pmos_bin_size = 3,
 
@@ -697,7 +613,7 @@ static struct kona_avs_pdata avs_pdata =
 	.lvt_silicon_type_lut = lvt_silicon_type_lut,
 
 	.volt_table = volt_table,
-	.otp_row = 8,
+
 	.silicon_type_notify = avs_silicon_type_notify,
 };
 
@@ -732,6 +648,21 @@ static struct platform_device board_spum_device = {
        .id             =       0,
        .resource       =       board_spum_resource,
        .num_resources  =       ARRAY_SIZE(board_spum_resource),
+#endif
+
+#ifdef CONFIG_UNICAM
+static struct kona_unicam_platform_data unicam_pdata =
+{
+	.csi0_gpio = 12,
+	.csi1_gpio = 13,
+};
+
+static struct platform_device board_unicam_device = {
+	.name = "kona-unicam",
+	.id = 1,
+	.dev      = {
+		.platform_data = &unicam_pdata,
+	},
 };
 #endif
 
@@ -766,24 +697,20 @@ static struct platform_device *board_common_plat_devices[] __initdata = {
 #ifdef CONFIG_KONA_AVS
 	&kona_avs_device,
 #endif
+
 #ifdef CONFIG_CRYPTO_DEV_BRCM_SPUM_HASH
        &board_spum_device,
 #endif
+
+#ifdef CONFIG_UNICAM
+       &board_unicam_device,
+#endif
 };
 
-/* Common devices among all the Rhea boards (Rhea Ray, Rhea Berri, etc.) */
-static struct platform_device *board_sdio_plat_devices[] __initdata = {
-	&board_sdio1_device,
-	&board_sdio2_device,
-	&board_sdio0_device,
-};
+
+
 
 void __init board_add_common_devices(void)
 {
 	platform_add_devices(board_common_plat_devices, ARRAY_SIZE(board_common_plat_devices));
-}
-
-void __init board_add_sdio_devices(void)
-{
-	platform_add_devices(board_sdio_plat_devices, ARRAY_SIZE(board_sdio_plat_devices));
 }
