@@ -177,6 +177,7 @@ void csl_caph_dma_release_channel(CSL_CAPH_DMA_CHNL_e chnl);
 *  @return void
 *****************************************************************************/
 void csl_caph_dma_config_channel(CSL_CAPH_DMA_CONFIG_t chnl_config);
+
 /**
 *
 *  @brief  set the caph dma buf addr 
@@ -296,15 +297,6 @@ void csl_caph_dma_clear_ddrfifo_status(CSL_CAPH_DMA_CHNL_e chnl);
 *  @return void
 *****************************************************************************/
 void csl_caph_dma_clear_intr(CSL_CAPH_DMA_CHNL_e chnl, CSL_CAPH_ARM_DSP_e csl_owner);
-/**
-*
-*  @brief  process caph dma callback 
-*
-*  @param   void
-*
-*  @return void
-*****************************************************************************/
-void csl_caph_dma_process_interrupt(void);
 
 /**
 *

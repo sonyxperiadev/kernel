@@ -211,7 +211,7 @@ static int PcmHwFree(
 {
 	int res;
 	
-	BCM_AUDIO_DEBUG("\n %lx:hw_free - stream=%lx\n",jiffies, (UInt32) substream);
+	//BCM_AUDIO_DEBUG("\n %lx:hw_free - stream=%lx\n",jiffies, (UInt32) substream);
 	flush_scheduled_work(); //flush the wait queue in case pending events in the queue are processed after device close
 	
 	res = snd_pcm_lib_free_pages(substream);
@@ -377,8 +377,6 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 	Int32	*pSel;
 	int i;
 
-	BCM_AUDIO_DEBUG("\n %lx:playback_trigger cmd=%d \n",jiffies,cmd);
-
     drv_handle = substream->runtime->private_data;
 	for (i = 0; i < MAX_PLAYBACK_DEV; i++)
     	chip->streamCtl[substream_number].dev_prop.p[i].hw_src = AUDIO_HW_MEM;
@@ -443,8 +441,6 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 
 		if((callMode != 1) || (chip->streamCtl[substream_number].iLineSelect[0] == AUDCTRL_SPK_I2S))
 		{
-            BCM_AUDIO_DEBUG("\n playback_trigger route playback to CAPH \n");
-
 			for (i = 0; i < MAX_PLAYBACK_DEV; i++)
 			{
 				//Update Sink, volume , mute info from mixer controls
@@ -513,7 +509,7 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 
                 AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay,&param_start,NULL,0);
 
-				for (i = 1; i < MAX_PLAYBACK_DEV; i++)
+				for (i = 1; i < MAX_PLAYBACK_DEV; i++) //the for loop starts with p[1], the second channel.
 				{
 					if(chip->streamCtl[substream_number].dev_prop.p[i].hw_id != AUDIO_HW_NONE)
 					{

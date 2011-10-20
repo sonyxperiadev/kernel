@@ -24,106 +24,132 @@
 /************************************************************************************************/
 /**
 *
-*  @file   csl_dsp_caph_control_api.c
+*  @file   csl_dsp_cneon_api.h
 *
-*  @brief  This file contains CSL DSP APIs for control of CAPH (related to DSP)
+*  @brief  This file contains CSL DSP APIs for customer IPs
 *
 *  @note   
 *
 **/
 /*******************************************************************************************/
-#ifndef _CSL_DSP_CAPH_CONTROL_API_H_
-#define _CSL_DSP_CAPH_CONTROL_API_H_
+#ifndef _CSL_DSP_CNEON_API_H_
+#define _CSL_DSP_CNEON_API_H_
 
 // ---- Include Files -------------------------------------------------------
 #include "mobcom_types.h"
 
 
 /**
- * \defgroup CSL_DSP_CAPH_CONTROL_API
+ * \defgroup CSL_DSP_CNEON_Interface
  * @{
  */
-
-#define NUM_8kHz_AUDIO_SAMPLES_PER_DSP_INT  (8)
-#define NUM_16kHz_AUDIO_SAMPLES_PER_DSP_INT (NUM_8kHz_AUDIO_SAMPLES_PER_DSP_INT*2)
-
-// ---- Typedef Declarations -----------------------------------------
-typedef enum
-{
-    DSP_AADMAC_PRI_MIC_EN = 0x10,
-    DSP_AADMAC_SEC_MIC_EN = 0x20,
-    DSP_AADMAC_SPKR_EN = 0x40,
-} DSP_AADMAC_Audio_Connections_t;
 
 // ---- Function Declarations -----------------------------------------
 
 /*****************************************************************************************/
 /**
 * 
-* Function Name: csl_dsp_caph_control_get_aadmac_buf_base_addr
+* Function Name: CSL_DSP_CNEON_AUDIO_CNC_Set_Emergency_Flag
 *
-*   @note     This function returns the base address of the AADMAC buffer's base address
-*             (pointing to the start of the Low part of the AADMAC buffer).
+*   @note     This function sets the Emergency flag for Click Noise Cancellation.
 *                                                                                         
-*   @param    value (DSP_AADMAC_Audio_Connections_t)  Return the base address for which 
-*                                                     AADMAC buffer.
-*
-*   @return   UInt32 *dsp_aadmac_base_addr Base address of the AADMAC buffer.
-*
-**/
-/*******************************************************************************************/
-extern UInt32 * csl_dsp_caph_control_get_aadmac_buf_base_addr(DSP_AADMAC_Audio_Connections_t aadmac_audio_connection);
-
-/*****************************************************************************************/
-/**
-* 
-* Function Name: csl_dsp_caph_control_aadmac_set_samp_rate
-*
-*   @note     This function sets the sample rate for the AADMAC based audio for the DSP
-*             (not valid for IHF)
-*                                                                                         
-*   @param    value (UInt16)  Sample rate for AADMAC based audio for the DSP (non-IHF)
-*             = 8000 or 16000
+*   @param    value (UInt16)  Value to be set to emergency flag for CNC.
 *
 *   @return   None
 *
 **/
 /*******************************************************************************************/
-extern void csl_dsp_caph_control_aadmac_set_samp_rate(UInt16 value);
+void CSL_DSP_CNEON_AUDIO_CNC_Set_Emergency_Flag(UInt16 value);
 
 /*****************************************************************************************/
 /**
 * 
-* Function Name: csl_dsp_caph_control_aadmac_enable_path
+* Function Name: CSL_DSP_CNEON_AUDIO_CNC_Set_Init_Flag
 *
-*   @note     This function informs the DSP about which hardware path is enabled, and 
-*             based on this information, DSP processes the audio interrupt.
-*             (not valid for IHF)
+*   @note     This function sets the Init flag for Click Noise Cancellation.
 *                                                                                         
-*   @param    path (DSP_AADMAC_Audio_Connections_t)
+*   @param    value (UInt16)  Value to be set to init flag for CNC.
 *
 *   @return   None
 *
 **/
 /*******************************************************************************************/
-extern void csl_dsp_caph_control_aadmac_enable_path(UInt16 path);
+void CSL_DSP_CNEON_AUDIO_CNC_Set_Init_Flag(UInt16 value);
 
 /*****************************************************************************************/
 /**
 * 
-* Function Name: csl_dsp_caph_control_aadmac_disable_path
+* Function Name: CSL_DSP_CNEON_AUDIO_CNC_Enable
 *
-*   @note     This function informs the DSP about which hardware path is disabled, and 
-*             based on this information, DSP processes the audio interrupt.
-*             (not valid for IHF)
+*   @note     This function enables Click Noise Cancellation.
 *                                                                                         
-*   @param    path (DSP_AADMAC_Audio_Connections_t)
+*   @param    None
 *
 *   @return   None
 *
 **/
 /*******************************************************************************************/
-extern void csl_dsp_caph_control_aadmac_disable_path(UInt16 path);
+void CSL_DSP_CNEON_AUDIO_CNC_Enable(void);
 
-#endif //_CSL_DSP_CAPH_CONTROL_API_H_
+/*****************************************************************************************/
+/**
+* 
+* Function Name: CSL_DSP_CNEON_AUDIO_CNC_Disable
+*
+*   @note     This function disables Click Noise Cancellation.
+*                                                                                         
+*   @param    None
+*
+*   @return   None
+*
+**/
+/*******************************************************************************************/
+void CSL_DSP_CNEON_AUDIO_CNC_Disable(void);
 
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_sp_cnfg_msg
+*
+*   @note     This function configures speaker protection.
+*                                                                                         
+*   @param    control	0/1 - disable/enable 
+*   @param    mode		0	- mono (stereo is not supported)  
+*   @param    Init		0/1 - no initialization/initializes the internal parameters and take new configuration
+*   @param    sp_config_struct	configuration structure 
+*   @param    sp_config_struct	variables structure  
+*
+*   @return	  0/1 - pass/failed 
+*
+**/
+/*******************************************************************************************/
+UInt16 csl_dsp_sp_cnfg_msg(UInt16 control, UInt16 mode, UInt16 Init, UInt32 *sp_config_struct, UInt32 *sp_vars_struct);
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_sp_ctrl_msg
+*
+*   @note     This function controls speaker protection.
+*                                                                                         
+*   @param    sp_config_struct	variables structure  
+*
+*
+**/
+/*******************************************************************************************/
+void csl_dsp_sp_ctrl_msg(UInt32 *sp_vars_struct);
+
+/*****************************************************************************************/
+/**
+* 
+* Function Name: csl_dsp_sp_query_msg
+*
+*   @note     This function returs speaker protection status.
+*                                                                                         
+*   @param    query		status structure  
+*
+**/
+/*******************************************************************************************/
+void csl_dsp_sp_query_msg(UInt32 *query);
+
+#endif //_CSL_DSP_CNEON_API_H_

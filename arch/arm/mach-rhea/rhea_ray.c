@@ -80,7 +80,6 @@
 #include <linux/mpu.h>
 #endif
 #define _RHEA_
-#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <mach/comms/platform_mconfig.h>
 
 #if (defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE))

@@ -86,14 +86,14 @@ int ipcs_ccb_init(void)
  */
 void ipcs_capi2app_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 {
-	IPC_DEBUG(DBG_INFO, ">> %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, ">>\n");
 
    if (g_clnt_info_tbl[EpCapi2App].flow_ctrl_cb != ipcs_capi2app_fc)
    {
       (*g_clnt_info_tbl[EpCapi2App].flow_ctrl_cb)(pool, event);
    }
 
-	IPC_DEBUG(DBG_INFO, "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "<<\n");
 }
 
 /**
@@ -101,7 +101,7 @@ void ipcs_capi2app_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 */
 void ipcs_capi2app_bd(IPC_Buffer ipc_buffer)
 {
-	IPC_DEBUG(DBG_INFO, ">> %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, ">>\n");
 
    if (g_clnt_info_tbl[EpCapi2App].buffer_delivery_cb != ipcs_capi2app_bd)
    {
@@ -112,7 +112,7 @@ void ipcs_capi2app_bd(IPC_Buffer ipc_buffer)
    	IPC_FreeBuffer(ipc_buffer);
    }
 
-	IPC_DEBUG(DBG_INFO, "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "<<\n");
 }
                              
 /**
@@ -120,14 +120,14 @@ void ipcs_capi2app_bd(IPC_Buffer ipc_buffer)
  */
 void ipcs_capi2psd_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 {
-	IPC_DEBUG(DBG_INFO, ">> %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, ">>\n");
 
    if (g_clnt_info_tbl[EpCapi2AppData].flow_ctrl_cb != ipcs_capi2psd_fc)
    {
       (*g_clnt_info_tbl[EpCapi2AppData].flow_ctrl_cb)(pool, event);
    }
 
-	IPC_DEBUG(DBG_INFO, "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "<<\n");
 }
 
 /**
@@ -135,7 +135,7 @@ void ipcs_capi2psd_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 */
 void ipcs_capi2psd_bd(IPC_Buffer ipc_buffer)
 {
-	IPC_DEBUG(DBG_INFO, ">> %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, ">>\n");
 
    if (g_clnt_info_tbl[EpCapi2AppData].buffer_delivery_cb != ipcs_capi2psd_bd)
    {
@@ -146,7 +146,7 @@ void ipcs_capi2psd_bd(IPC_Buffer ipc_buffer)
    	IPC_FreeBuffer(ipc_buffer);
    }
 
-	IPC_DEBUG(DBG_INFO, "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "<<\n");
 }
 
 /**
@@ -171,14 +171,14 @@ void ipcs_cplog_bd(IPC_Buffer ipc_buffer)
  */
 void ipcs_audioctrl_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 {
-	IPC_DEBUG(DBG_INFO, ">> %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, ">>\n");
 
    if (g_clnt_info_tbl[EpAudioControl].flow_ctrl_cb != ipcs_audioctrl_fc)
    {
       (*g_clnt_info_tbl[EpAudioControl].flow_ctrl_cb)(pool, event);
    }
 
-	IPC_DEBUG(DBG_INFO, "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "<<\n");
 }
 
 /**
@@ -186,7 +186,7 @@ void ipcs_audioctrl_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 */
 void ipcs_audioctrl_bd(IPC_Buffer ipc_buffer)
 {
-	IPC_DEBUG(DBG_INFO, ">> %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, ">>\n");
 
    if (g_clnt_info_tbl[EpAudioControl].buffer_delivery_cb != ipcs_audioctrl_bd)
    {
@@ -197,7 +197,7 @@ void ipcs_audioctrl_bd(IPC_Buffer ipc_buffer)
    	IPC_FreeBuffer(ipc_buffer);
    }
 
-	IPC_DEBUG(DBG_INFO, "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "<<\n");
 }
 
 /**
@@ -205,14 +205,14 @@ void ipcs_audioctrl_bd(IPC_Buffer ipc_buffer)
  */
 void ipcs_capi2csd_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 {
-	IPC_DEBUG(DBG_INFO, ">> %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, ">>\n");
 
    if (g_clnt_info_tbl[EpCapi2Csd].flow_ctrl_cb != ipcs_capi2csd_fc)
    {
       (*g_clnt_info_tbl[EpCapi2Csd].flow_ctrl_cb)(pool, event);
    }
 
-	IPC_DEBUG(DBG_INFO, "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "<<\n");
 }
 
 /**
@@ -220,7 +220,7 @@ void ipcs_capi2csd_fc(IPC_BufferPool pool, IPC_FlowCtrlEvent_T event)
 */
 void ipcs_capi2csd_bf(IPC_Buffer ipc_buffer)
 {
-	IPC_DEBUG(DBG_INFO, ">> %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, ">>\n");
 
    if (g_clnt_info_tbl[EpCapi2Csd].buffer_delivery_cb != ipcs_capi2csd_bf)
    {
@@ -231,7 +231,7 @@ void ipcs_capi2csd_bf(IPC_Buffer ipc_buffer)
    	IPC_FreeBuffer(ipc_buffer);
    }
 
-	IPC_DEBUG(DBG_INFO, "<< %s\n", __FUNCTION__);
+	IPC_DEBUG(DBG_TRACE, "<<\n");
 }
  
  

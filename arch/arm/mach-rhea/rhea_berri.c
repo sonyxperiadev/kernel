@@ -79,7 +79,6 @@
 #endif
 
 #define _RHEA_
-#include <linux/broadcom/bcm_fuse_memmap.h>
 #include <mach/comms/platform_mconfig.h>
 
 #ifdef CONFIG_FB_BRCM_RHEA
