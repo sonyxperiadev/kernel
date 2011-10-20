@@ -76,6 +76,9 @@
 #if defined (CONFIG_BMP18X)
 #include <linux/bmp18x.h>
 #endif
+#if defined (CONFIG_AL3006)
+#include <linux/al3006.h>
+#endif
 #if (defined(CONFIG_MPU_SENSORS_MPU6050A2) || defined(CONFIG_MPU_SENSORS_MPU6050B1))
 #include <linux/mpu.h>
 #endif
@@ -552,11 +555,42 @@ static struct i2c_board_info __initdata bmp18x_info[] =
 };
 #endif
 #ifdef CONFIG_AL3006
+#ifdef CONFIG_GPIO_PCA953X
+	#define AL3006_INT_GPIO_PIN		(KONA_MAX_GPIO + 16 + 6)
+#else
+	#define AL3006_INT_GPIO_PIN		122	/*  skip expander chip */
+#endif
+static int al3006_platform_init_hw(void)
+{
+	int rc;
+	rc = gpio_request(AL3006_INT_GPIO_PIN, "al3006");
+	if (rc < 0)
+	{
+		printk(KERN_ERR "unable to request GPIO pin %d\n", AL3006_INT_GPIO_PIN);
+		return rc;
+	}
+	gpio_direction_input(AL3006_INT_GPIO_PIN);
+
+	return 0;
+}
+
+static void al3006_platform_exit_hw(void)
+{
+	gpio_free(AL3006_INT_GPIO_PIN);
+}
+
+static struct al3006_platform_data al3006_platform_data = {
+	.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_100K),
+	.init_platform_hw = al3006_platform_init_hw,
+	.exit_platform_hw = al3006_platform_exit_hw,
+};
+
 static struct i2c_board_info __initdata al3006_info[] =
 {
 	{
 		I2C_BOARD_INFO("al3006", 0x1d ),
-		/*.irq = */
+		.platform_data = &al3006_platform_data,
+		.irq = gpio_to_irq(AL3006_INT_GPIO_PIN),
 	},
 };
 #endif
