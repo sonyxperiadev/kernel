@@ -25,6 +25,9 @@
 #define SERVER_EVENT_MASK   0x2
 #define NOTIFY_EVENT_MASK   0x4
 
+#define SMEM_POOL_SIZE      1600
+#define SMEM_POOL_DEPTH     40
+
 // VCOS logging category for this service
 #define VCOS_LOG_CATEGORY (&wifihdmi_log_category)
 
@@ -122,6 +125,7 @@ typedef struct opaque_vc_vchi_wifihdmi_handle_t
    VCOS_MUTEX_T           ctrl_lock;
 
    uint32_t               data_in_handle;
+   uint32_t               pool_init;
 
 } WIFIHDMI_INSTANCE_T;
 
@@ -734,6 +738,15 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
       {
          VC_WIFIHDMI_RESULT_T result;
          VC_WIFIHDMI_MODE_T mode;
+
+         if ( !instance->pool_init )
+         {
+            vc_vchi_wifihdmi_tx_pool( instance,
+                                      SMEM_POOL_DEPTH,
+                                      SMEM_POOL_SIZE );
+            
+            instance->pool_init = 1;
+         }
 
          memset ( &mode, 0, sizeof(mode) );
          memset ( &result, 0, sizeof(result) );
