@@ -3,6 +3,7 @@ family = island
 chip   = 11160
 board  = tablet
 board  = bcm4329
+board  = bcm4330
 option = initrd
 option = suspend_invalid
 option = android

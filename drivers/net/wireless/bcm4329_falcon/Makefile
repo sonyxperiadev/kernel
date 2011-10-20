@@ -39,14 +39,8 @@ DHDOFILES += $(DHDO_DHD_SYS)
 DHDOFILES += $(DHDO_SHARED)
 DHDOFILES += $(DHDO_WL_SYS)
 
-# Change the driver name to 'bcmdhd' as Android expects that name.
-ifeq ($(CONFIG_ANDROID),y)
-obj-$(CONFIG_BCM4329_FALCON) += bcmdhd.o
-bcmdhd-objs += $(DHDOFILES)
-else
 obj-$(CONFIG_BCM4329_FALCON) += bcm4329_falcon.o
 bcm4329_falcon-objs += $(DHDOFILES)
-endif
 
 EXTRA_CFLAGS = $(DHDCFLAGS)
 EXTRA_LDFLAGS += --strip-debug
