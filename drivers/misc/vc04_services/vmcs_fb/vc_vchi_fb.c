@@ -140,6 +140,8 @@ VC_VCHI_FB_HANDLE_T vc_vchi_fb_init( VCHI_INSTANCE_T vchi_instance,
          vcos_assert( status == VCOS_SUCCESS );
          goto err_close_services;
       }
+      // Finished with the service for now
+      vchi_service_release(instance->vchi_handle[i]);
    }
 
    return instance;
@@ -188,6 +190,7 @@ int32_t vc_vchi_fb_stop( VC_VCHI_FB_HANDLE_T *handle )
    for ( i = 0; i < instance->num_connections; i++ )
    {
       int32_t success;
+      vchi_service_use(instance->vchi_handle[i]);
 
       success = vchi_service_close( instance->vchi_handle[i] );
       vcos_assert( success == 0 );
@@ -247,6 +250,7 @@ int32_t vc_vchi_fb_get_scrn_info( VC_VCHI_FB_HANDLE_T handle,
    }
 
    vcos_mutex_lock( &instance->vchi_mutex );
+   vchi_service_use(instance->vchi_handle[0]);
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *get_scrn_info );
    memset( instance->msg_buf, 0, msg_len );
@@ -304,6 +308,7 @@ int32_t vc_vchi_fb_get_scrn_info( VC_VCHI_FB_HANDLE_T handle,
    ret = 0;
 
 unlock:
+   vchi_service_release(instance->vchi_handle[0]);
    vcos_mutex_unlock( &instance->vchi_mutex );
 
    return ret;
@@ -318,6 +323,7 @@ int32_t vc_vchi_fb_alloc( VC_VCHI_FB_HANDLE_T handle,
    uint32_t msg_len;
    VC_FB_MSG_HDR_T *msg_hdr;
    VCOS_STATUS_T status;
+   int32_t ret = -1;
 
    if ( handle == NULL )
    {
@@ -346,6 +352,7 @@ int32_t vc_vchi_fb_alloc( VC_VCHI_FB_HANDLE_T handle,
    }
 
    vcos_mutex_lock( &instance->vchi_mutex );
+   vchi_service_use(instance->vchi_handle[0]);
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *alloc );
    memset( instance->msg_buf, 0, msg_len );
@@ -365,7 +372,7 @@ int32_t vc_vchi_fb_alloc( VC_VCHI_FB_HANDLE_T handle,
       LOG_ERR( "%s: failed to queue message (success=%d)",
                __func__, success );
 
-      goto err_unlock;
+      goto unlock;
    }
 
    // We are expecting a reply from the videocore
@@ -375,7 +382,7 @@ int32_t vc_vchi_fb_alloc( VC_VCHI_FB_HANDLE_T handle,
       LOG_ERR( "%s: failed on waiting for event (status=%d)",
                __func__, status );
 
-      goto err_unlock;
+      goto unlock;
    }
 
    success = vchi_msg_dequeue( instance->vchi_handle[0],
@@ -386,24 +393,23 @@ int32_t vc_vchi_fb_alloc( VC_VCHI_FB_HANDLE_T handle,
       LOG_ERR( "%s: failed to dequeue message (success=%d)",
                __func__, success );
 
-      goto err_unlock;
+      goto unlock;
    }
    else if ( msg_len != sizeof( *alloc_result ))
    {
       LOG_ERR( "%s: incorrect message length %u (expected=%u)",
                __func__, msg_len, sizeof( *alloc_result ));
 
-      goto err_unlock;
+      goto unlock;
    }
+   // success if we got to here
+   ret = 0;
 
+unlock:
+   vchi_service_release(instance->vchi_handle[0]);
    vcos_mutex_unlock( &instance->vchi_mutex );
 
-   return 0;
-
-err_unlock:
-   vcos_mutex_unlock( &instance->vchi_mutex );
-
-   return -1;
+   return ret;
 }
 
 int32_t vc_vchi_fb_free( VC_VCHI_FB_HANDLE_T handle,
@@ -427,6 +433,7 @@ int32_t vc_vchi_fb_free( VC_VCHI_FB_HANDLE_T handle,
    }
 
    vcos_mutex_lock( &instance->vchi_mutex );
+   vchi_service_use(instance->vchi_handle[0]);
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *free );
    memset( instance->msg_buf, 0, msg_len );
@@ -484,6 +491,7 @@ int32_t vc_vchi_fb_free( VC_VCHI_FB_HANDLE_T handle,
    ret = result.success ? -1 : 0;
 
 unlock:
+   vchi_service_release(instance->vchi_handle[0]);
    vcos_mutex_unlock( &instance->vchi_mutex );
 
    return ret;
@@ -511,6 +519,7 @@ int32_t vc_vchi_fb_pan( VC_VCHI_FB_HANDLE_T handle,
    }
 
    vcos_mutex_lock( &instance->vchi_mutex );
+   vchi_service_use(instance->vchi_handle[0]);
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *pan );
    memset( instance->msg_buf, 0, msg_len );
@@ -569,6 +578,7 @@ int32_t vc_vchi_fb_pan( VC_VCHI_FB_HANDLE_T handle,
    ret = result.success ? -1 : 0;
 
 unlock:
+   vchi_service_release(instance->vchi_handle[0]);
    vcos_mutex_unlock( &instance->vchi_mutex );
 
    return ret;
@@ -596,6 +606,7 @@ int32_t vc_vchi_fb_swap( VC_VCHI_FB_HANDLE_T handle,
    }
 
    vcos_mutex_lock( &instance->vchi_mutex );
+   vchi_service_use(instance->vchi_handle[0]);
 
    msg_len = sizeof( *msg_hdr ) + sizeof( *swap );
    memset( instance->msg_buf, 0, msg_len );
@@ -654,6 +665,7 @@ int32_t vc_vchi_fb_swap( VC_VCHI_FB_HANDLE_T handle,
    ret = result.success ? -1 : 0;
 
 unlock:
+   vchi_service_release(instance->vchi_handle[0]);
    vcos_mutex_unlock( &instance->vchi_mutex );
 
    return ret;

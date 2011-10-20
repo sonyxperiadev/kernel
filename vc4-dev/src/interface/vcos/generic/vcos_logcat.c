@@ -14,7 +14,7 @@ Categorized logging for VCOS - a generic implementation.
 #include "interface/vcos/vcos_string.h"
 
 static VCOS_MUTEX_T lock;
-static int warned_loglevel;             // only warn about invalid log level once
+static int warned_loglevel;             /* only warn about invalid log level once */
 static VCOS_VLOG_IMPL_FUNC_T vcos_vlog_impl_func = vcos_vlog_default_impl;
 
 #define  VCOS_LOG_CATEGORY (&dflt_log_category)
@@ -133,7 +133,7 @@ VCOS_STATUS_T vcos_log_status_cmd( VCOS_CMD_PARAM_T *param )
       int   nw;
       int   nameWidth = 0;
 
-      // Print information about all of the categories.
+      /* Print information about all of the categories. */
 
       for ( cat = vcos_logging_categories; cat != NULL; cat = cat->next )
       {
@@ -152,7 +152,7 @@ VCOS_STATUS_T vcos_log_status_cmd( VCOS_CMD_PARAM_T *param )
    }
    else
    {
-      // Print information about a particular category
+      /* Print information about a particular category */
 
       for ( cat = vcos_logging_categories; cat != NULL; cat = cat->next )
       {
@@ -189,7 +189,7 @@ VCOS_STATUS_T vcos_log_test_cmd( VCOS_CMD_PARAM_T *param )
    {
       static   int seq_num = 100;
 
-      // No additional arguments - generate a message with an incrementing number
+      /* No additional arguments - generate a message with an incrementing number */
 
       vcos_log_error( "Test message %d", seq_num );
 
@@ -200,7 +200,7 @@ VCOS_STATUS_T vcos_log_test_cmd( VCOS_CMD_PARAM_T *param )
    {
       int   arg_idx;
 
-      // Arguments supplied - log these
+      /* Arguments supplied - log these */
 
       for ( arg_idx = 0; arg_idx < param->argc; arg_idx++ )
       {
@@ -236,7 +236,7 @@ void vcos_logging_init(void)
 {
    if (inited)
    {
-      // FIXME: should print a warning or something here
+      /* FIXME: should print a warning or something here */
       return;
    }
    vcos_mutex_create(&lock, "vcos_log");
@@ -262,7 +262,7 @@ static int read_tok(char *tok, size_t toklen, const char **pstr, char sep)
    size_t n = 0;
    int ch;
 
-   // skip past any whitespace
+   /* skip past any whitespace */
    while (str[0] && isspace((int)(str[0])))
       str++;
 
@@ -275,18 +275,18 @@ static int read_tok(char *tok, size_t toklen, const char **pstr, char sep)
       str++;
    }
 
-   // did it work out?
+   /* did it work out? */
    if (ch == '\0' || ch == sep)
    {
-      if (ch) str++; // move to next token if not at end
-      // yes
+      if (ch) str++; /* move to next token if not at end */
+      /* yes */
       tok[n] = '\0';
       *pstr = str;
       return 1;
    }
    else
    {
-      // no
+      /* no */
       return 0;
    }
 }
@@ -433,7 +433,7 @@ void vcos_log_unregister(VCOS_LOG_CAT_T *category)
             break;   /* possibly deregistered twice? */
          if ((*pcat)->next == NULL)
          {
-            vcos_assert(0); // already removed!
+            vcos_assert(0); /* already removed! */
             vcos_mutex_unlock(&lock);
             return;
          }
