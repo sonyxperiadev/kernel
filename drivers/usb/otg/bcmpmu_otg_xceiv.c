@@ -355,7 +355,7 @@ static void bcmpmu_otg_xceiv_vbus_valid_handler(struct work_struct *work)
 	struct bcmpmu_otg_xceiv_data *xceiv_data =
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_valid_work);
-	dev_info(xceiv_data->dev, "Vbus valid\n");
+// 	dev_info(xceiv_data->dev, "Vbus valid\n");
 }
 
 static void bcmpmu_otg_xceiv_vbus_a_invalid_handler(struct work_struct *work)
