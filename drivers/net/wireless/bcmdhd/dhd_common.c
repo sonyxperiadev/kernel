@@ -1564,7 +1564,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 	uint32 mpc = 0; /* Turn MPC off for AP/APSTA mode */
 #endif
 
-#if defined(AP) || defined(WLP2P)
+#if (defined(AP) && !defined(WLP2P)) || (!defined(AP) && defined(WLP2P))
 	uint32 apsta = 1; /* Enable APSTA mode */
 #endif /* defined(AP) || defined(WLP2P) */
 #ifdef GET_CUSTOM_MAC_ENABLE

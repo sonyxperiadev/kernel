@@ -10,6 +10,17 @@ DHDCFLAGS = -Wall -Wstrict-prototypes -Werror -Dlinux -DBCMDRIVER             \
 	-DSDIO_ISR_THREAD                                                     \
 	-Idrivers/net/wireless/bcmdhd -Idrivers/net/wireless/bcmdhd/include
 
+# If WIFI HDMI is configured
+ifneq ($(CONFIG_DHD_BCM_WIFI_HDMI),)
+DHDCFLAGS += -DDHD_BCM_WIFI_HDMI
+
+# Enable printing firmware dongle debug printfs
+DHDCFLAGS += -DDHD_DEBUG -DSRCBASE=\"$(SRCBASE)\"
+
+# Enable APSTA mode in dhd_preinit_ioctls()
+DHDCFLAGS += -DAP
+endif
+
 DHDOFILES = aiutils.o bcmsdh_sdmmc_linux.o dhd_linux.o siutils.o bcmutils.o   \
 	dhd_linux_sched.o bcmwifi.o dhd_sdio.o bcmevent.o dhd_bta.o hndpmu.o  \
 	bcmsdh.o dhd_cdc.o bcmsdh_linux.o dhd_common.o linux_osl.o            \

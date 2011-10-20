@@ -20,6 +20,16 @@ ifeq ($(CONFIG_ANDROID),y)
 DHDCFLAGS += -DCSCAN
 endif
 
+# If WIFI HDMI is configured
+ifneq ($(CONFIG_DHD_BCM_WIFI_HDMI),)
+DHDCFLAGS += -DDHD_BCM_WIFI_HDMI
+
+# Enable printing firmware dongle debug printfs
+DHDCFLAGS += -DDHD_DEBUG -DSRCBASE=\"$(SRCBASE)\"
+
+# Enable APSTA mode in dhd_preinit_ioctls()
+DHDCFLAGS += -DAP
+endif
 
 DHDO_BCMSDIO_SYS = bcmsdio/sys/bcmsdh.o bcmsdio/sys/bcmsdh_linux.o \
                    bcmsdio/sys/bcmsdh_sdmmc.o bcmsdio/sys/bcmsdh_sdmmc_linux.o 
