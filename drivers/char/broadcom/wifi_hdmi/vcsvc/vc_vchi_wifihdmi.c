@@ -18,6 +18,7 @@
 #include <vc_sm_defs.h>
 #include <vc_sm_knl.h>
 #include <linux/broadcom/whdmi.h>
+#include <asm/memory.h>
 
 // ---- Private Constants and Types ------------------------------------------
 
@@ -635,10 +636,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
                              VC_SM_LOCK_NON_CACHED,
                              &data_ptr ) == 0 )
             {
-#if defined(WHIF_KTEST_KLUDGE)
-               if ( ptr->data_user ) /* user-space data. */
+               if ( (int)ptr->data < TASK_SIZE ) /* data from user-space. */
                {
-#endif
                   if ( copy_from_user( (void *) data_ptr,
                                        (void __user *) ptr->data,
                                        ptr->data_len ) == 0 )
@@ -670,9 +669,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
                      LOG_ERR( "%s: rx %d bytes from skt handle %x, failed copy...",
                               __func__, skt_data.data_len, skt_data.handle );
                   }
-#if defined(WHIF_KTEST_KLUDGE)
                }
-               else /* kernel data. */
+               else /* data from within kernel. */
                {
                   memcpy ( (void *) data_ptr,
                            ptr->data,
@@ -697,7 +695,6 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
                      */
                   }
                }
-#endif
             }
             else
             {

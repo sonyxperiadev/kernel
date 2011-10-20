@@ -259,9 +259,6 @@ int whdmi_data_on_socket( int km_socket_handle, int canned_data )
 
    param->km_socket_handle        = km_socket_handle;
    param->data_len                = strlen( (const char *)canned );
-#if defined(WHIF_KTEST_KLUDGE)
-   param->data_user               = 0;
-#endif
    param->data                    = (unsigned char *)canned;
    
    if ( whdmi_stubs__callback )
