@@ -258,7 +258,7 @@ static int bma150_smbus_read_byte(struct i2c_client *client, unsigned char reg_a
 	s32 rc = i2c_smbus_read_byte_data(client, reg_addr);
 	if (rc < 0)
 	{
-#ifdef BMA150_DEBUG_I2C
+#if BMA150_DEBUG_I2C
 		printk(KERN_ERR "%s: i2c_smbus_read_byte_data failed (rc=%d)\n", __FUNCTION__, rc);
 #endif
 		return rc;
@@ -272,7 +272,7 @@ static int bma150_smbus_write_byte(struct i2c_client *client, unsigned char reg_
 	s32 rc = i2c_smbus_write_byte_data(client, reg_addr, *data);
 	if (rc < 0)
 	{
-#ifdef BMA150_DEBUG_I2C
+#if BMA150_DEBUG_I2C
 		printk(KERN_ERR "%s: i2c_smbus_write_byte_data failed (rc=%d)\n", __FUNCTION__, rc);
 #endif
 		return rc;
@@ -285,7 +285,7 @@ static int bma150_smbus_read_byte_block(struct i2c_client *client, unsigned char
 	s32 rc = i2c_smbus_read_i2c_block_data(client, reg_addr, len, data);
 	if (rc < 0)
 	{
-#ifdef BMA150_DEBUG_I2C
+#if BMA150_DEBUG_I2C
 		printk(KERN_ERR "%s: i2c_smbus_read_i2c_block_data failed (rc=%d)\n", __FUNCTION__, rc);
 #endif
 		return rc;
