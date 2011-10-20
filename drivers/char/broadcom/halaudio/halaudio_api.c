@@ -153,6 +153,9 @@ static struct class * halaudio_class;
 static struct device * halaudio_dev;
 #endif
 
+static struct semaphore             ioctl_equ_lock;
+static HALAUDIO_EQU                 ioctl_equ;
+
 /* Debug print flag to gate verbose prints.  */
 static int gDebugPrintLevel;
 
@@ -1801,23 +1804,26 @@ static long halaudio_ioctl(
 
       case HALAUDIO_CMD_SET_EQU_PARMS:
       {
-         HALAUDIO_EQU equ;
-         if (( rc = copy_from_user( &equ, parm.setequ.equ, sizeof(equ) )) != 0 )
+         down( &ioctl_equ_lock );
+         if (( rc = copy_from_user( &ioctl_equ, parm.setequ.equ, sizeof(ioctl_equ) )) != 0 )
          {
+            up( &ioctl_equ_lock );
             return rc;
          }
-         rc = halAudioSetEquParms( client_hdl, parm.setequ.cid, parm.setequ.dir, &equ );
+         rc = halAudioSetEquParms( client_hdl, parm.setequ.cid, parm.setequ.dir, &ioctl_equ );
+         up( &ioctl_equ_lock );
       }
       break;
 
       case HALAUDIO_CMD_GET_EQU_PARMS:
       {
-         HALAUDIO_EQU equ;
-         rc = halAudioGetEquParms( client_hdl, parm.getequ.cid, parm.getequ.dir, &equ );
+         down( &ioctl_equ_lock );
+         rc = halAudioGetEquParms( client_hdl, parm.getequ.cid, parm.getequ.dir, &ioctl_equ );
          if ( rc == 0 )
          {
-            rc = copy_to_user( parm.getequ.equ, &equ, sizeof(equ) );
+            rc = copy_to_user( parm.getequ.equ, &ioctl_equ, sizeof(ioctl_equ) );
          }
+         up( &ioctl_equ_lock );
       }
       break;
 
@@ -2056,6 +2062,7 @@ static int __init halaudio_init( void )
    init_MUTEX( &gInfo.client_lock );
 #else
    sema_init( &gInfo.client_lock , 1 );
+   sema_init( &ioctl_equ_lock, 1 );
 #endif
    halaudio_debug_init();
 
