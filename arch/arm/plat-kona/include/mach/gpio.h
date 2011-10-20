@@ -20,7 +20,11 @@
 #define   KONA_MAX_GPIO   192
 
 #ifdef CONFIG_GPIO_PCA953X
+#ifdef CONFIG_MACH_RHEA_RAY_EDN1X
+#define EXPANDED_GPIOS		32	/*2 expander on RheaRayEDN1x, 32 gpio expanded*/
+#else
 #define EXPANDED_GPIOS		16
+#endif
 #define ARCH_NR_GPIOS		(KONA_MAX_GPIO+EXPANDED_GPIOS)
 #else
 #ifdef CONFIG_GPIO_TC3589X
