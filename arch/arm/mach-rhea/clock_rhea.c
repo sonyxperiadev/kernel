@@ -2851,7 +2851,7 @@ static struct peri_clk CLK_NAME(hub_timer) = {
 				},
 	.src_clk = {
 					.count = 3,
-					.src_inx = 1,
+					.src_inx = 0,
 					.clk = hub_timer_peri_clk_src_list,
 				},
 };
