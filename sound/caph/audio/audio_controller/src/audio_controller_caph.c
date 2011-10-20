@@ -29,9 +29,6 @@
 * @brief  
 *
 ******************************************************************************/
-#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
-
-//AP version:
 
 //=============================================================================
 // Include directives
@@ -402,13 +399,6 @@ void AUDCTRL_EnableTelephony(
 	data.sr = AUDIO_SAMPLING_RATE_UNDEFINED;
 	AUDCTRL_AddToTable(&data);
 
-#if defined(WIN32)
-	{
-		extern int modeVoiceCall;
-		if(!modeVoiceCall) 
-			modeVoiceCall=1;
-	} 
-#endif
 	return;
 }
 //============================================================================
@@ -452,13 +442,6 @@ void AUDCTRL_DisableTelephony(
 	telephonyPathID.ul2PathID = 0;
 	telephonyPathID.dlPathID = 0;
 	
-#if defined(WIN32)
-	{
-		extern int modeVoiceCall;
-		if(modeVoiceCall) 
-			modeVoiceCall=0;
-	} 
-#endif
 	return;
 }
 
@@ -1049,9 +1032,6 @@ void AUDCTRL_SetPlayVolume(
 		}
 	
     }
-#if defined(WIN32)
-	return;
-#endif
    
 	//Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetPlayVolume: pmuGain = 0x%x, gainHW %x:%x:%x:%x:%x:%x\n", pmuGain, gainHW, gainHW2, gainHW3, gainHW4, gainHW5, gainHW6);
 
@@ -2818,57 +2798,4 @@ Boolean  AUDCTRL_QueryHWClock(void)
 	Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDCTRL_QueryHWClock \r\n");
 	return csl_caph_QueryHWClock();
 }
-
-#else  //#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)
-
-
-
-
-//CP version:
-
-//=============================================================================
-// Include directives
-//=============================================================================
-
-#include "mobcom_types.h"
-#include "resultcode.h"
-
-#include "csl_caph.h"
-#include "csl_caph_hwctrl.h"
-#include "audio_controller.h"
-#include "log.h"
-
-
-//=============================================================================
-// Functions
-//=============================================================================
-
-//============================================================================
-//
-// Function Name: AUDCTRL_Init
-//
-// Description:   Init function
-//
-//============================================================================
-void AUDCTRL_Init (void)
-{
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_Init::  \n"  );
-
-	csl_caph_hwctrl_init();
-}
-
-//============================================================================
-//
-// Function Name: AUDCTRL_Shutdown
-//
-// Description:   De-Initialize audio controller
-//
-//============================================================================
-void AUDCTRL_Shutdown(void)
-{
-
-}
-
-
-#endif //#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)
 

@@ -306,11 +306,6 @@ typedef enum
 	OBTAIN_BLOCKS_MULTICAST
 } OBTAIN_BLOCKS_MODE_t;
 
-#if (defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR))
-#else
-#undef ENABLE_DMA_ARM2SP
-#endif
-
 CAPH_LIST_t arm2spPath = LIST_DMA_SRC_DMA;
 
 typedef struct
