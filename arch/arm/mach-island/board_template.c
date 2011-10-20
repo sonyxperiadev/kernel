@@ -64,6 +64,11 @@
 #include <bcmbt_rfkill_settings.h>
 #endif
 
+#if defined(CONFIG_BCM_LPM_LDISC) || defined(CONFIG_BCM_LPM_LDISC_MODULE)
+#include <linux/broadcom/bcmbt_lpm_ldisc.h>
+#include <bcmbt_lpm_settings.h>
+#endif
+
 #if defined(CONFIG_TOUCHSCREEN_EGALAX_I2C) || defined(CONFIG_TOUCHSCREEN_EGALAX_I2C_MODULE)
 #include <linux/i2c/egalax_i2c_ts.h>
 #include <egalax_i2c_ts_settings.h>
@@ -1137,6 +1142,30 @@ static void __init board_add_bcmbt_rfkill_device(void)
 }
 #endif
 
+#if defined(CONFIG_BCM_LPM_LDISC) || defined(CONFIG_BCM_LPM_LDISC_MODULE)
+#define board_bcmbt_lpm_cfg concatenate(ISLAND_BOARD_ID, _bcmbt_lpm_cfg)
+static struct bcmbt_lpm_ldisc_platform_data board_bcmbt_lpm_cfg =
+{
+    .gpio_bt_wake = GPIO_BT_WAKE,
+    .gpio_host_wake = GPIO_HOST_WAKE,
+};
+#define board_bcmbt_lpm_device concatenate(ISLAND_BOARD_ID, _bcmbt_lpm_device)
+static struct platform_device board_bcmbt_lpm_device =
+{
+    .name = "bcmbt-lpm-ldisc",
+    .id = -1,
+    .dev =
+    {
+       .platform_data = &board_bcmbt_lpm_cfg,
+    },
+};
+
+static void __init board_add_bcmbt_lpm_device(void)
+{
+    platform_device_register(&board_bcmbt_lpm_device);
+}
+#endif
+
 #if defined(CONFIG_MONITOR_ADC121C021_I2C) || defined(CONFIG_MONITOR_ADC121C021_I2C_MODULE)
 
 #define board_adc121c021_i2c_param concatenate(ISLAND_BOARD_ID, _adc121c021_i2c_param)
@@ -1648,6 +1677,10 @@ static void __init add_devices(void)
 
 #if defined(CONFIG_BCM_RFKILL) || defined(CONFIG_BCM_RFKILL_MODULE)
         board_add_bcmbt_rfkill_device();
+#endif
+
+#if defined(CONFIG_BCM_LPM_LDISC) || defined(CONFIG_BCM_LPM_LDISC_MODULE)
+        board_add_bcmbt_lpm_device();
 #endif
 
 #if defined(CONFIG_BCM_CMP_BATTERY_MULTI) || defined(CONFIG_BCM_CMP_BATTERY_MULTI_MODULE)
