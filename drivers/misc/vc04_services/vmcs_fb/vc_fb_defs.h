@@ -39,6 +39,7 @@ typedef enum
    VC_FB_MSG_TYPE_FREE,                // Free framebuffer memory
    VC_FB_MSG_TYPE_PAN,                 // Pan framebuffer
    VC_FB_MSG_TYPE_SWAP,                // Swap active frames in framebuffer
+   VC_FB_MSG_TYPE_CFG,                 // Configure framebuffer
    VC_FB_MSG_TYPE_MAX
 
 } VC_FB_MSG_TYPE;
@@ -113,6 +114,25 @@ typedef struct
    uint32_t active_frame;  // Active frame to display (0-indexed)
 
 } VC_FB_SWAP_T;
+
+// Request to configure the framebuffer (HOST->VC)
+typedef struct
+{
+   uint32_t res_handle;       // Resource handle (returned from alloc)
+   uint32_t bits_per_pixel;   // Bits per pixel (leave as 0 for unchanged)
+   uint32_t alpha_per_pixel;  // 0=use default_alpha for whole frame, 1=use per-pixel alpha channel (needed when using 32 bpp)
+   uint32_t default_alpha;    // Alpha value to use when alpha_per_pixel is 1
+
+} VC_FB_CFG_T;
+
+// Result of a requested configuration of framebuffer (VC->HOST)
+typedef struct
+{
+   int32_t  success;       // Success value
+   uint32_t line_bytes;    // Number of bytes to advance from one line to another
+   uint32_t frame_bytes;   // Number of bytes to advance from one frame to another
+
+} VC_FB_CFG_RESULT_T;
 
 // Generic result for a request (VC->HOST)
 typedef struct

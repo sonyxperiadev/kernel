@@ -34,8 +34,8 @@
 
 #include <vc_sm_defs.h>
 #include <vc_sm_knl.h>
-#include "interface/vcos/vcos.h"
-#include "vc_vchi_wifihdmi.h"
+#include <interface/vcos/vcos.h>
+#include <../vcsvc/vc_vchi_wifihdmi.h>
 
 // ---- Private Constants and Types ------------------------------------------
 

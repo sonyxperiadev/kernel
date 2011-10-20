@@ -75,16 +75,12 @@
 //TODO add to linux.config!!
 #define CONFIG_FB_VC_DEFAULT_SCREEN_WIDTH     (800)
 #define CONFIG_FB_VC_DEFAULT_SCREEN_HEIGHT    (480)
-#define CONFIG_FB_VC_DEFAULT_BPP              (32)
 #define CONFIG_FB_VC_NUM_FRAMES               (2)
-#define CONFIG_FB_VC_DEFAULT_ALPHA            (255)
-#define CONFIG_FB_VC_DEFAULT_ALPHA_PER_PIXEL  (1)
-#define CONFIG_FB_VC_DEFAULT_HW_SCALE         (1)
-#define CONFIG_FB_VC_DEFAULT_Z_ORDER          (50)
 
 // Default values for framebuffer creation modifiable parameters
 #define DEFAULT_ALPHA            (255)
 #define DEFAULT_ALPHA_PER_PIXEL  (1)
+#define DEFAULT_BITS_PER_PIXEL   (32)
 #define DEFAULT_KEEP_RESOURCE    (0)
 #define DEFAULT_SCALE            (1)
 #define DEFAULT_Z_ORDER          (50)
@@ -104,6 +100,7 @@ typedef struct
    // Modifiable paramters for framebuffer creation (upon fb_open call)
    uint32_t         alpha;             // Alpha value to use when alpha_per_pixel=0
    uint32_t         alpha_per_pixel;   // 1 = Each pixel has its own alpha value
+   uint32_t         bpp_override;      // Bits per pixel override
    uint32_t         keep_resource;     // Keep resource open even if release is called
    uint32_t         scale;             // Scale the image to fit the screen
    uint32_t         z_order;           // Z-order of framebuffer
@@ -113,6 +110,7 @@ typedef struct
    // Proc entries corresponding to the modifiable parameters
    VCOS_CFG_ENTRY_T alpha_cfg_entry;
    VCOS_CFG_ENTRY_T alpha_per_pixel_cfg_entry;
+   VCOS_CFG_ENTRY_T bpp_override_cfg_entry;
    VCOS_CFG_ENTRY_T keep_resource_cfg_entry;
    VCOS_CFG_ENTRY_T res_override_cfg_entry;
    VCOS_CFG_ENTRY_T scale_cfg_entry;
@@ -189,6 +187,26 @@ static void alpha_cfg_entry_parse( VCOS_CFG_BUF_T buf,
    *alpha = val < 255 ? val : 255;
 }
 
+static void bpp_override_cfg_entry_parse( VCOS_CFG_BUF_T buf,
+                                          void *data )
+{
+   uint32_t *val = data;
+   uint32_t input;
+
+   vcos_assert( data != NULL );
+
+   input = simple_strtoul( vcos_cfg_buf_get_str( buf ), NULL, 10 );
+
+   if (( input != 0 ) && ( input != 16 ) && ( input != 32 ))
+   {
+      LOG_ERR( "%s: invalid bits per pixel override value", __func__ );
+   }
+   else
+   {
+      *val = input;
+   }
+}
+
 static void res_override_cfg_entry_show( VCOS_CFG_BUF_T buf,
                                          void *data )
 {
@@ -239,7 +257,7 @@ static int vc_fb_get_info( SCRN_INFO_T *scrn_info )
    int32_t success;
    VC_FB_SCRN_INFO_T info;
 
-   LOG_DBG( "%s: start (fb_info=0x%p)", __func__, fb_info );
+   LOG_DBG( "%s: start (scrn_info=0x%p)", __func__, scrn_info );
 
    // Get the screen info from the framebuffer service
    success = vc_vchi_fb_get_scrn_info( fb_state->fb_handle, scrn_info->scrn,
@@ -263,7 +281,17 @@ static int vc_fb_get_info( SCRN_INFO_T *scrn_info )
 
    if ( info.bits_per_pixel == 0 )
    {
-      info.bits_per_pixel = CONFIG_FB_VC_DEFAULT_BPP;
+      LOG_DBG( "%s: using default bits per pixel '%u'", __func__,
+               DEFAULT_BITS_PER_PIXEL );
+
+      info.bits_per_pixel = DEFAULT_BITS_PER_PIXEL;
+   }
+   if ( scrn_info->bpp_override != 0 )
+   {
+      LOG_DBG( "%s: using bits per pixel override '%u'", __func__,
+               scrn_info->bpp_override );
+
+      info.bits_per_pixel = scrn_info->bpp_override;
    }
 
    // Apply any overrides here
@@ -412,7 +440,7 @@ static int vc_fb_open( struct fb_info *fb_info,
       {
          LOG_ERR( "%s: failed to request I/O memory region", __func__ );
 
-         ret = -ENOMEM;
+         ret = -EIO;
          goto err_free_fb;
       }
 
@@ -434,9 +462,8 @@ static int vc_fb_open( struct fb_info *fb_info,
       LOG_DBG( "%s: screen_base=0x%p, smem_start=0x%08x, smem_len=%u, line_length=%u",
                __func__, fb_info->screen_base, (uint32_t)fb_info->fix.smem_start,
                fb_info->fix.smem_len, fb_info->fix.line_length );
-      LOG_DBG( "%s: virt_to_phys=0x%u", __func__,
-               (uint32_t)virt_to_phys(fb_info->screen_base));
-
+      LOG_DBG( "%s: virt_to_phys=0x%p", __func__,
+               (void *)virt_to_phys(fb_info->screen_base));
    }
 
    // Increase the user count by one
@@ -517,11 +544,43 @@ static int vc_fb_check_var( struct fb_var_screeninfo *var,
 
    // Check for parameters that we cannot change
    if (( var->xoffset != fb_info->var.xoffset ) ||
-       ( var->bits_per_pixel != fb_info->var.bits_per_pixel ) ||
        ( var->grayscale != fb_info->var.grayscale ))
    {
       ret = -EINVAL;
       goto out;
+   }
+
+   // Handle bit depth changes - we only handle
+   if ( var->bits_per_pixel != fb_info->var.bits_per_pixel )
+   {
+      if ( var->bits_per_pixel == 16 )
+      {
+         var->red.offset   = 11;
+         var->red.length   = 5;
+         var->green.offset = 5;
+         var->green.length = 6;
+         var->blue.offset  = 0;
+         var->blue.length  = 5;
+      }
+      else if ( var->bits_per_pixel == 32 )
+      {
+         var->red.offset    = 16;
+         var->red.length    = 8;
+         var->green.offset  = 8;
+         var->green.length  = 8;
+         var->blue.offset   = 0;
+         var->blue.length   = 8;
+         var->transp.offset = 24;
+         var->transp.length = 8;
+      }
+      else
+      {
+            LOG_ERR( "%s: bit depth of '%u' not supported", __func__,
+                     var->bits_per_pixel );
+
+            ret = -EINVAL;
+            goto out;
+      }
    }
 
    if (( var->xres > fb_info->var.xres ) || ( var->yres > fb_info->var.yres ))
@@ -543,11 +602,39 @@ out:
 static int vc_fb_set_par( struct fb_info *fb_info )
 {
    int ret = 0;
+   int32_t success;
+   VC_FB_CFG_T cfg;
+   VC_FB_CFG_RESULT_T cfg_result;
+   SCRN_INFO_T *scrn_info = to_scrn_info( fb_info );
 
    LOG_DBG( "%s: start (fb_info=0x%p)", __func__, fb_info );
 
    //TODO Support rotation
 
+   memset( &cfg, 0, sizeof( cfg ));
+   cfg.res_handle = scrn_info->res_handle;
+   cfg.bits_per_pixel = fb_info->var.bits_per_pixel;
+   cfg.alpha_per_pixel = scrn_info->alpha_per_pixel;
+   cfg.default_alpha = scrn_info->alpha;
+
+   success = vc_vchi_fb_cfg( fb_state->fb_handle, &cfg, &cfg_result );
+   if ( success != 0 )
+   {
+      LOG_ERR( "%s: failed to configure framebuffer (success=%d)", __func__,
+               success );
+
+      ret = -EPERM;
+      goto out;
+   }
+
+   LOG_DBG( "%s: cfg_result: success=%d, line_bytes=%u, frame_bytes=%u",
+            __func__, cfg_result.success, cfg_result.line_bytes,
+            cfg_result.frame_bytes );
+
+   // Update the fixed variables
+   fb_info->fix.line_length = cfg_result.line_bytes;
+
+out:
    LOG_DBG( "%s: end (ret=%d)", __func__, ret );
 
    return ret;
@@ -679,6 +766,21 @@ static int vc_fb_create_per_scrn_proc_entries( SCRN_INFO_T *scrn_info )
       goto err_remove_alpha_cfg_entry;
    }
 
+   status = vcos_cfg_create_entry( &scrn_info->bpp_override_cfg_entry,
+                                   &scrn_info->fb_cfg_directory,
+                                   "bpp_override",
+                                   generic_uint_cfg_entry_show,
+                                   bpp_override_cfg_entry_parse,
+                                   &scrn_info->bpp_override );
+   if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed to create proc entry (status=%d)", __func__,
+               status );
+
+      ret = -EPERM;
+      goto err_remove_alpha_per_pixel_cfg_entry;
+   }
+
    status = vcos_cfg_create_entry( &scrn_info->keep_resource_cfg_entry,
                                    &scrn_info->fb_cfg_directory,
                                    "keep_resource",
@@ -691,7 +793,7 @@ static int vc_fb_create_per_scrn_proc_entries( SCRN_INFO_T *scrn_info )
                status );
 
       ret = -EPERM;
-      goto err_remove_alpha_per_pixel_cfg_entry;
+      goto err_remove_bpp_override_cfg_entry;
    }
 
    status = vcos_cfg_create_entry( &scrn_info->res_override_cfg_entry,
@@ -751,6 +853,9 @@ err_remove_res_override_cfg_entry:
 err_remove_keep_res_cfg_entry:
    vcos_cfg_remove_entry( &scrn_info->keep_resource_cfg_entry );
 
+err_remove_bpp_override_cfg_entry:
+   vcos_cfg_remove_entry( &scrn_info->bpp_override_cfg_entry );
+
 err_remove_alpha_per_pixel_cfg_entry:
    vcos_cfg_remove_entry( &scrn_info->alpha_per_pixel_cfg_entry );
 
@@ -782,6 +887,14 @@ static int vc_fb_remove_per_scrn_proc_entries( SCRN_INFO_T *scrn_info )
       ret = -EPERM;
    }
    status = vcos_cfg_remove_entry( &scrn_info->alpha_per_pixel_cfg_entry );
+   if ( status != VCOS_SUCCESS )
+   {
+      LOG_ERR( "%s: failed to remove proc entry (status=%d)", __func__,
+               status );
+
+      ret = -EPERM;
+   }
+   status = vcos_cfg_remove_entry( &scrn_info->bpp_override_cfg_entry );
    if ( status != VCOS_SUCCESS )
    {
       LOG_ERR( "%s: failed to remove proc entry (status=%d)", __func__,

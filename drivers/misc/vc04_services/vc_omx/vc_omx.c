@@ -58,6 +58,7 @@ static struct vc_omx_comp_supported vc_omx_info[OMX_PLUGIN__COMPONENT_SUPPORTED_
 };
 static struct vc_omx_comp_status vc_omx_status;
 static struct vc_omx_enc_color vc_omx_color;
+static struct vc_omx_and_ext vc_omx_andext;
 // Proc entry
 static struct proc_dir_entry *vc_omx_proc_entry;
 
@@ -151,6 +152,17 @@ static long vc_omx_ioctl( struct file *file, unsigned int cmd, unsigned long arg
             break;
         }
 
+        case VC_OMX_IOC_AND_EXT:
+        {
+            if ( copy_to_user( (void *)arg,
+                               &vc_omx_andext,
+                               sizeof( vc_omx_andext )) != 0 )
+            {
+               rc = -EFAULT;
+            }
+            break;
+        }
+
         default:
         {
             return -ENOTTY;
@@ -213,6 +225,12 @@ static int vc_omx_proc_read( char *buf, char **start, off_t offset, int count, i
     p += sprintf( p, "\t(supported format): %d\tOPAQUE\n",
                   OMX_PLUGIN__ENCODING__OPAQUE );
 
+    p += sprintf( p, "\nAndroid OpenMAX Extension Support: %s\n",
+                  (vc_omx_andext.andext == 0) ? "non" : "oui" );
+
+    p += sprintf( p, "\nPrevent OpenMAX Component Creation: %s\n\n",
+                  (vc_omx_andext.nocreate == 0) ? "non" : "oui" );
+
     *eof = 1;
     return p - buf;
 }
@@ -270,6 +288,24 @@ static int vc_omx_proc_write( struct file *file, const char __user *buffer, unsi
            (value <= OMX_PLUGIN__ENCODING__OPAQUE) )
       {
          vc_omx_color.format = value;
+         goto out;
+      }
+   }
+   else if ( strcmp( name, "andext" ) == 0 )
+   {
+      if ( (value >= 0) &&
+           (value <= 1) )
+      {
+         vc_omx_andext.andext = value;
+         goto out;
+      }
+   }
+   else if ( strcmp( name, "nocreate" ) == 0 )
+   {
+      if ( (value >= 0) &&
+           (value <= 1) )
+      {
+         vc_omx_andext.nocreate = value;
          goto out;
       }
    }
@@ -351,6 +387,8 @@ static int __init vc_omx_init( void )
     /* Init configuration data.
     */
     vc_omx_color.format = OMX_PLUGIN__ENCODING__YUVUV128;
+    vc_omx_andext.andext = 1;
+    vc_omx_andext.nocreate = 0;
 
     return 0;
 
