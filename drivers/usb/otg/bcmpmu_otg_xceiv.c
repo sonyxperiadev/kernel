@@ -122,7 +122,7 @@ static void bcmpmu_usb_event_notif_callback(struct bcmpmu * pmu_handle, unsigned
 		case BCMPMU_USB_EVENT_ID_CHANGE:
 			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_id_status_change_work);
 			break;
-		case BCMPMU_CHRGR_EVENT_CHGR_DETECTION:
+		case BCMPMU_USB_EVENT_USB_DETECTION: /* Rhea PMU driver uses this event instead of CHGR_DETECTION. Revisit later */
 			queue_work(xceiv_data->bcm_otg_work_queue, &xceiv_data->bcm_otg_chg_detect_work);
 			break;
 		default:
@@ -375,8 +375,6 @@ static void bcmpmu_otg_xceiv_vbus_a_valid_handler(struct work_struct *work)
 		container_of(work, struct bcmpmu_otg_xceiv_data,
 			     bcm_otg_vbus_a_valid_work);
 	dev_info(xceiv_data->dev, "A session valid\n");
-
-	bcm_hsotgctrl_phy_set_vbus_stat(true);
 }
 
 static void bcmpmu_otg_xceiv_adp_cprb_done_handler(struct work_struct *work)

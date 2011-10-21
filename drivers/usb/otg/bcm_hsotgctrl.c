@@ -26,11 +26,15 @@
 #include <mach/io_map.h>
 #include <mach/rdb/brcm_rdb_hsotg_ctrl.h>
 #include <plat/pi_mgr.h>
+#include <asm/irq.h>
+#include <linux/interrupt.h>
 #include "bcm_hsotgctrl.h"
 
 #define	PHY_MODE_OTG		2
 #define 	BC11CFG_SW_OVERWRITE_KEY 0x55560000
 #define	BC_CONFIG_DELAY_MS 2
+
+#define USB_IRQ 79
 
 struct bcm_hsotgctrl_drv_data {
 	struct device *dev;
@@ -152,6 +156,7 @@ int bcm_hsotgctrl_phy_init(void)
 	bcm_hsotgctrl_phy_set_non_driving(false);
 	bcm_hsotgctrl_phy_set_vbus_stat(true);
 
+	enable_irq(USB_IRQ); /* Temp fix for BC detection coordination with PMU driver */
 	return (rc);
 
 }
@@ -168,6 +173,7 @@ int bcm_hsotgctrl_phy_deinit(void)
 	bcm_hsotgctrl_set_phy_off(true);
 	bcm_hsotgctrl_phy_set_vbus_stat(false);
 
+	disable_irq(USB_IRQ); /* Temp fix for BC detection coordination with PMU driver */
 	/* Disable the OTG core AHB clock */
 	bcm_hsotgctrl_en_clock(false);
 
