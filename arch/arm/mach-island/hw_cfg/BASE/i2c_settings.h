@@ -35,7 +35,7 @@
 	}, \
 	{ /* PMBSC */ \
 		.bsc_clk = "pmu_bsc_clk", \
-		.bsc_apb_clk = "pmu_bsc_apb_clk", \
+		.bsc_apb_clk = "pmu_bsc_apb", \
 		.speed = BSC_BUS_SPEED_400K, \
 	}, \
 }
