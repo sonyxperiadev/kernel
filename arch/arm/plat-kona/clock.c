@@ -781,6 +781,10 @@ static void __clk_disable(struct clk *clk)
 {
 	int ret = 0;
 	clk_dbg("%s - %s\n",__func__, clk->name);
+	/**Return if the clk is already in disabled state*/
+	if(clk->use_cnt == 0)
+		return;
+
 	switch(clk->clk_type)
 	{
 	case CLK_TYPE_CCU:
