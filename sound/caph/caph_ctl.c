@@ -323,7 +323,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	pSel[0] = ucontrol->value.integer.value[0];
 	pSel[1] = ucontrol->value.integer.value[1];
 
-	if (pSel[0] == pSel[1])
+	if((stream != CTL_STREAM_PANEL_VOICECALL) && (pSel[0] == pSel[1]))
 		pSel[1] = AUDCTRL_SPK_TOTAL_COUNT;
 
 	pSel[2] = AUDCTRL_SPK_TOTAL_COUNT;
