@@ -891,6 +891,39 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 
         }
         break;
+	case 1000: //at*maudtst=1000,addr,len
+		{
+			u32 value, index, phy_addr, size;
+			char *addr;
+
+			if(Params[2]==0) size = 4;
+			else size = Params[2] >> 2;
+
+			phy_addr = Params[1];
+
+			addr = ioremap_nocache(phy_addr, sizeof(u32));
+			if(!addr)
+			{
+				pr_err(" addr ioremap failed\n");
+				return 0;
+			}
+
+			printk("Read phy_addr 0x%08x (virtual %p), size = 0x%08x bytes\n", phy_addr, addr, size<<2);
+			iounmap(addr);
+
+			for ( index = 0; index < size; index++ )
+			{
+				addr = ioremap_nocache(phy_addr, sizeof(u32));
+				if(addr)
+				{
+					value = ioread32(addr);
+					iounmap(addr);
+					printk("[%08x] = %08x\n", phy_addr, value);
+				}
+				phy_addr += 4;
+			}
+        }
+        break;
 
         default:
             BCM_AUDIO_DEBUG("%s Not supported command \n", __FUNCTION__);
@@ -912,7 +945,7 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 	s32 *pVolume;
 	int mode;
 
-	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
+	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);
 
 	AUDCTRL_ControlHWClock(TRUE);
 
@@ -925,14 +958,14 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 		//or
 		//pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
 		//Params[0] = pVolume[0];
-		BCM_AUDIO_DEBUG("%s pVolume[0] %d \n", __FUNCTION__, Params[0]); 
+		BCM_AUDIO_DEBUG("%s pVolume[0] %d \n", __FUNCTION__, Params[0]);
 		return 0;
 
-	case 7: //at*maudvol=7,x 
+	case 7: //at*maudvol=7,x
 		mode = AUDCTRL_GetAudioMode();
-		//mode = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1]; 
-		pVolume = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
-		pVolume[0] = Params[1];	
+		//mode = pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL-1].iLineSelect[1];
+		pVolume = (s32*) pChip->streamCtl[CTL_STREAM_PANEL_VOICECALL -1].ctlLine[mode].iVolume;
+		pVolume[0] = Params[1];
 		pVolume[1] = Params[1];
 		AUDCTRL_SetTelephonySpkrVolume(	AUDIO_HW_NONE,
 									AUDCTRL_SPK_UNDEFINED,
@@ -940,14 +973,14 @@ int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 									AUDIO_GAIN_FORMAT_mB
 									);
 
-		BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d \n", __FUNCTION__, pVolume[0],mode); 
+		BCM_AUDIO_DEBUG("%s pVolume[0] %d mode=%d \n", __FUNCTION__, pVolume[0],mode);
 		return 0;
 
 	default:
-		BCM_AUDIO_DEBUG("%s Unsupported cmd %d \n", __FUNCTION__, Params[0]);		
+		BCM_AUDIO_DEBUG("%s Unsupported cmd %d \n", __FUNCTION__, Params[0]);
 		break;
-	}	
-	return -1;		
+	}
+	return -1;
 }
 
 

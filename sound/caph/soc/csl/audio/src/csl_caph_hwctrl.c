@@ -211,9 +211,6 @@ static int ssp_pcm_usecount = 0;
 static Boolean isSTIHF = FALSE;
 static Boolean bBTTest = FALSE;
 static Boolean sClkCurEnabled = FALSE;
-#if defined(ENABLE_DMA_VOICE)
-static AUDDRV_PATH_Enum_t voice_audioh_path[3] = {0, 0, 0}; //dual mic + DL
-#endif
 
 static CAPH_BLOCK_t caph_block_list[LIST_NUM][MAX_PATH_LEN] = 
 { //the order must match CAPH_LIST_t
@@ -439,7 +436,7 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 {
 	Boolean enable = FALSE;
 
-	Log_DebugPrintf(LOGID_AUDIO, "csl_caph_enable_adcpath_by_dsp enabled_path=0x%x, pcmRunning %d, voice_audioh_path %d:%d:%d.\r\n", enabled_path, pcmRunning, voice_audioh_path[0], voice_audioh_path[1], voice_audioh_path[2]);
+	Log_DebugPrintf(LOGID_AUDIO, "csl_caph_enable_adcpath_by_dsp enabled_path=0x%x, pcmRunning %d.\r\n", enabled_path, pcmRunning);
 
 	if(enabled_path) enable = TRUE;
 
@@ -451,17 +448,7 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 		//csl_pcm_start_rx(pcmHandleSSP, CSL_PCM_CHAN_RX0);
 		//csl_pcm_start(pcmHandleSSP, &pcmCfg);
 	} else {
-		//csl_caph_audioh_adcpath_global_enable(enable); //eventually, should use this instead of voice_audioh_path. UL data is muted.
-		if(enable)
-		{
-			if(voice_audioh_path[0]) csl_caph_audioh_start(voice_audioh_path[0]);
-			if(voice_audioh_path[1]) csl_caph_audioh_start(voice_audioh_path[1]);
-			if(voice_audioh_path[2]) csl_caph_audioh_start(voice_audioh_path[2]);
-		} else {
-			voice_audioh_path[0] = 0;
-			voice_audioh_path[1] = 0;
-			voice_audioh_path[2] = 0;
-		}
+		csl_caph_audioh_adcpath_global_enable(enable);
 	}
 }
 #endif
@@ -1555,14 +1542,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 
 	if (path->audiohPath[1])
 	{
-#if defined(ENABLE_DMA_VOICE)
-		if (path->source == CSL_CAPH_DEV_DSP) 
-		{
-			//csl_caph_audioh_adcpath_global_enable(FALSE);
-			voice_audioh_path[0] = path->audiohPath[1];
-		}
-		else 
-#endif
 		csl_caph_audioh_start(path->audiohPath[1]);
 	}
 
@@ -1570,12 +1549,7 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 	{
 #if defined(ENABLE_DMA_VOICE)
 		if (path->sink[0] == CSL_CAPH_DEV_DSP)
-		{
-			//csl_caph_audioh_adcpath_global_enable(FALSE);
-			if(!voice_audioh_path[1]) voice_audioh_path[1] = path->audiohPath[0];
-			else voice_audioh_path[2] = path->audiohPath[0];
-		}
-		else
+			csl_caph_audioh_adcpath_global_enable(FALSE);
 #endif
 		csl_caph_audioh_start(path->audiohPath[0]);
 	}

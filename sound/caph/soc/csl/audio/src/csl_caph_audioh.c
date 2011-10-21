@@ -1646,13 +1646,14 @@ void csl_caph_audioh_adcpath_global_enable(Boolean enable)
 	if (enable)
 	{
 		chal_audio_adcpath_global_enable(handle,FALSE);
-		chal_audio_adcpath_fifo_global_clear(handle,TRUE);
+		chal_audio_adcpath_fifo_global_clear(handle,TRUE); //clear fifo when global en is 0
+		chal_audio_adcpath_fifo_global_clear(handle,FALSE); //clear bit needs to be reset to start interrupt
 		chal_audio_adcpath_global_enable(handle,TRUE);
 	}
 	else
 	{
 		if (chal_audio_adcpath_global_enable_status(handle))
-			chal_audio_adcpath_global_enable(handle,FALSE);			
+			chal_audio_adcpath_global_enable(handle,FALSE);
 	}
 	return;
 }
