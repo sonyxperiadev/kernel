@@ -172,6 +172,7 @@ vc4-dev/src/interface/vchiq_arm/vchiq_bivcm.h
 vc4-dev/src/interface/vchiq_arm/vchiq_bivcm_arm.c
 vc4-dev/src/interface/vchiq_arm/vchiq_memdrv.h
 vc4-dev/src/interface/vchiq_arm/vchiq_memdrv_hana.c
+vc4-dev/src/interface/vchiq_arm/vchiq_pagelist.h
 vc4-dev/src/interface/vchiq_arm/vchiq_util.h
 vc4-dev/src/vcinclude/common.h
 vc4-dev/src/vcinclude/vc_debug_sym.h
@@ -193,6 +194,8 @@ drivers/misc/vc04_services/vmcs_fb/vc_vchi_fb.h
 drivers/misc/vc04_services/vmcs_fb/vc_vchi_fb.c
 include/linux/videocore/vmcs_sm_ioctl.h
 drivers/misc/vc04_services/vmcs_sm/vmcs_sm.c
+drivers/misc/vc04_services/vmcs_sm/vc_sm_knl.h
 drivers/misc/vc04_services/vmcs_sm/vc_sm_defs.h
 drivers/misc/vc04_services/vmcs_sm/vc_vchi_sm.h
 drivers/misc/vc04_services/vmcs_sm/vc_vchi_sm.c
+drivers/misc/vc04_services/vchiq/shared-config.mk

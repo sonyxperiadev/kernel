@@ -83,7 +83,6 @@ static struct early_suspend g_vchiq_early_suspend =
 #define TOTAL_SLOTS (VCHIQ_SLOT_ZERO_SLOTS + 2 * 32)
 
 #define VCHIQ_DOORBELL_IRQ BCM_INT_ID_IPC_OPEN
-<<<<<<< HEAD
 
 #ifdef CONFIG_MAP_LITTLE_ISLAND_MODE
 #define ARM_RAM_BASE_IN_VC 0xc0000000
@@ -92,10 +91,6 @@ static struct early_suspend g_vchiq_early_suspend =
 #endif
 #define VIRT_TO_VC(x) PHYS_TO_VC((unsigned long)x - PAGE_OFFSET + PHYS_OFFSET)
 #define PHYS_TO_VC(x) ((unsigned long)x - 0x80000000 + ARM_RAM_BASE_IN_VC)
-=======
-#define VIRT_TO_VC(x) ((unsigned long)x - PAGE_OFFSET + CONFIG_BCM_RAM_START_RESERVED_SIZE + 0xe0000000)
-#define PHYS_TO_VC(x) ((unsigned long)x - PHYS_OFFSET + CONFIG_BCM_RAM_START_RESERVED_SIZE + 0xe0000000)
->>>>>>> mps/map-android-gb
 
 #define VCOS_LOG_CATEGORY (&vchiq_arm_log_category)
 
@@ -434,7 +429,6 @@ unlock:
    vcos_mutex_unlock(&state->suspend_resume_mutex);
 
    return ret;
-<<<<<<< HEAD
 }
 
 static VCHIQ_STATUS_T
@@ -458,31 +452,6 @@ vchiq_check_resume(VCHIQ_STATE_T* state, int have_mutex)
    return ret;
 }
 
-=======
-}
-
-static VCHIQ_STATUS_T
-vchiq_check_resume(VCHIQ_STATE_T* state, int have_mutex)
-{
-   VCHIQ_STATUS_T ret = VCHIQ_SUCCESS;
-   if(!have_mutex)
-   {
-      vcos_mutex_lock(&state->use_count_mutex);
-   }
-
-   if (state->videocore_suspended && vchiq_videcore_wanted(state))
-   {
-      ret = vchiq_platform_resume(state);
-   }
-
-   if(!have_mutex)
-   {
-      vcos_mutex_unlock(&state->use_count_mutex);
-   }
-   return ret;
-}
-
->>>>>>> mps/map-android-gb
 
 void
 vchiq_platform_resumed(VCHIQ_STATE_T *state)
