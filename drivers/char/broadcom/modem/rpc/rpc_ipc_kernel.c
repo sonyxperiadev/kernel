@@ -43,6 +43,7 @@ the GPL, without Broadcom's express prior written consent.
 #include <linux/jiffies.h> 
 #include <asm/pgtable.h>
 #include <linux/io.h>
+#include <linux/proc_fs.h>
 
 #include <linux/broadcom/bcm_major.h>
 #include <linux/broadcom/ipc_sharedmemory.h>
@@ -53,23 +54,22 @@ the GPL, without Broadcom's express prior written consent.
 #include "resultcode.h"
 #include "taskmsgs.h"
 #include "consts.h"
-#include "xdr_porting_layer.h"
-#include "xdr.h"
 
 
 
 #include "rpc_ipc.h"
-#include "rpc_api.h"
+//#include "rpc_api.h"
 
 #include <linux/broadcom/rpc_ipc_kernel.h>
 
 MODULE_LICENSE("GPL");
 
 ////////////////////////////////////////////
-void kRpcDebugPrintf(char* fmt, ...);
-ssize_t kRpcReadLogData(char *destBuf, size_t len);
+extern void kRpcDebugPrintf(char* fmt, ...);
+extern Boolean RPC_SetProperty(UInt32 type, UInt32 value);
+extern Boolean RPC_GetProperty(UInt32 type, UInt32 *value);
 
-//#define RPC_TRACE_TRACE_ON
+#define RPC_TRACE_TRACE_ON
 #ifdef RPC_TRACE_TRACE_ON
 #define RPC_TRACE(str) kRpcDebugPrintf str
 //#define RPC_TRACE(str) printk str
@@ -77,6 +77,39 @@ ssize_t kRpcReadLogData(char *destBuf, size_t len);
 #define RPC_TRACE(str) {}
 #endif
 
+#ifdef USE_RPC_MUTEX
+
+struct mutex gRpcLock;
+#define DEFINE_RPC_LOCK mutex_init(&gRpcLock)
+#define RPC_READ_LOCK mutex_lock(&gRpcLock)
+#define RPC_READ_UNLOCK mutex_unlock(&gRpcLock)
+
+#define RPC_WRITE_LOCK mutex_lock(&gRpcLock)
+#define RPC_WRITE_UNLOCK mutex_unlock(&gRpcLock)
+
+#else
+
+struct rw_semaphore gRpcLock;
+#define DEFINE_RPC_LOCK init_rwsem(&gRpcLock)
+
+#if 0
+#define RPC_READ_LOCK do{down_read(&gRpcLock);RPC_TRACE(("[RPC_LOCK] Read Lock pid=%d",current->pid));}while(0)
+#define RPC_READ_UNLOCK do{up_read(&gRpcLock);RPC_TRACE(("[RPC_LOCK] Read UnLock pid=%d",current->pid));}while(0)
+
+#define RPC_WRITE_LOCK do{down_write(&gRpcLock);RPC_TRACE(("[RPC_LOCK] Write Lock pid=%d",current->pid));}while(0)
+#define RPC_WRITE_UNLOCK do{up_write(&gRpcLock);RPC_TRACE(("[RPC_LOCK] Write UnLock pid=%d",current->pid));}while(0)
+#else
+#define RPC_READ_LOCK		down_read(&gRpcLock)
+#define RPC_READ_UNLOCK		up_read(&gRpcLock)
+
+#define RPC_WRITE_LOCK		down_write(&gRpcLock)
+#define RPC_WRITE_UNLOCK	up_write(&gRpcLock)
+
+#endif
+
+#endif
+
+//#define USE_INTERNAL_BUFFER
 
 /**
  *  module data
@@ -200,81 +233,98 @@ static int gEp = 0;
 
 static int rpcipc_open(struct inode *inode, struct file *file)
 {
+	int ret = -1;
     static int sysrpc_initialized = 0 ;
-    RpcIpc_PrivData_t *priv;
+   RpcIpc_PrivData_t *priv;
 
-    RPC_TRACE(("rpcipc_open begin file=%x\n", file));
+    RPC_TRACE(("rpcipc_open begin file=%x\n", (int)file));
+
+	RPC_WRITE_LOCK;
 
     priv = kmalloc(sizeof(RpcIpc_PrivData_t), GFP_KERNEL);
     
     if (!priv) 
     {
-		RPC_TRACE(("rpcipc_open mem allocation fail file=%x\n", file));
-		return -ENOMEM;
+		RPC_TRACE(("rpcipc_open mem allocation fail file=%x\n", (int)file));
+		ret =  -ENOMEM;
     }
+	else
+	{
+		priv->mUserfile = file;
+		priv->ep = ++gEp;
+		priv->clientId = 0;
+		file->private_data = priv;
 
-    priv->mUserfile = file;
-    priv->ep = ++gEp;
-    priv->clientId = 0;
-    file->private_data = priv;
-
-    if (is_CP_running())
-    {
-		RPC_TRACE(("rpcipc_open success file=%x sysrpc_initialized=%d\n", file, sysrpc_initialized));
-
-		if (!sysrpc_initialized)
+		if (is_CP_running())
 		{
-			sysrpc_initialized = 1;
-			KRIL_SysRpc_Init();
+			RPC_TRACE(("rpcipc_open success file=%x sysrpc_initialized=%d\n", (int)file, sysrpc_initialized));
+
+			if (!sysrpc_initialized)
+			{
+				sysrpc_initialized = 1;
+				KRIL_SysRpc_Init();
+			}
+			ret = 0;
 		}
+		else
+		{
+			RPC_TRACE(("rpcipc_open FAIL CP is NOT running file=%x\n", (int)file));
+		    ret = -1;
+		}
+	}
 
-		return 0;
-    }
-    else
-    {
-		RPC_TRACE(("rpcipc_open FAIL CP is NOT running file=%x\n", file));
+	RPC_WRITE_UNLOCK;
 
-       return -1;
-    }
+	return ret;
+
 }
 
 
 static int rpcipc_release(struct inode *inode, struct file *file)
 {
+	int ret = -1;
 	unsigned char k = 0;
     RpcIpc_PrivData_t *priv = file->private_data;
+
+	RPC_WRITE_LOCK;
     
     if( !priv )
 	{
 		RPC_TRACE(("k:rpcipc_release invalid priv data\n"));
-		return -1;
+		ret = -1;
 	}
-  
-	for(k=0;k<0xFF;k++)
+	else
 	{
-		RpcClientInfo_t *cInfo;
-		cInfo = gRpcClientList[k];
-
-		if(cInfo && (cInfo->filep == file))
+		for(k=0;k<0xFF;k++)
 		{
-			RpcListCleanup(cInfo->clientId);
+			RpcClientInfo_t *cInfo;
+			cInfo = gRpcClientList[k];
+
+			if(cInfo && (cInfo->filep == file))
+			{
+				RpcListCleanup(cInfo->clientId);
+			}
 		}
+
+		SYS_ReleaseClientID(priv->clientId);
+
+		RPC_TRACE(( "rpcipc_release ok\n" ) );
+
+		if( priv )
+			kfree( priv ) ;
+
+		ret = 0;
 	}
-
-	SYS_ReleaseClientID(priv->clientId);
-
-    RPC_TRACE(( "rpcipc_release ok\n" ) );
-
-    if( priv )
-        kfree( priv ) ;
+	
+	RPC_WRITE_UNLOCK;
     
-    return 0;
+    return ret;
 }
 
 
 ssize_t rpcipc_read(struct file *filep, char __user *buf, size_t len, loff_t *off)
 {
-	return kRpcReadLogData(buf, len);
+	return -1;
 }
 
 ssize_t rpcipc_write(struct file *filep, const char __user *buf, size_t len, loff_t *off)
@@ -297,57 +347,78 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 		RPC_TRACE(( "rpcipc_ioctl ERROR cmd=0x%x\n", cmd )) ;
 		return -ENOTTY;
 	}
+
 	
     switch( cmd )
     {
 	case RPC_PKT_REGISTER_DATA_IND_IOC:
 		{
+			RPC_WRITE_LOCK;
 			handle_pkt_register_data_ind_ioc(filp, cmd, arg);
+			RPC_WRITE_UNLOCK;
 			break;
 		}
 	case RPC_RX_BUFFER_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_pkt_rx_buffer_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_READ_BUFFER_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_pkt_read_buffer_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_BUFF_INFO_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_pkt_get_buffer_info_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_SEND_BUFFER_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_pkt_send_buffer_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_PKT_ALLOC_BUFFER_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_pkt_alloc_buffer_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_PKT_FREE_BUFFER_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_pkt_free_buffer_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_PKT_CMD_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_pkt_cmd_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_TEST_CMD_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_test_cmd_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	case RPC_PKT_POLL_IOC:
 		{
+			RPC_READ_LOCK;
 			handle_pkt_poll_ioc(filp, cmd, arg);
+			RPC_READ_UNLOCK;
 			break;
 		}
 	default:
@@ -356,6 +427,7 @@ static long rpcipc_ioctl(struct file *filp, unsigned int cmd, UInt32 arg )
 		break ;
     }
 	
+
     return retVal;
 }
 
@@ -377,11 +449,7 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType, UInt8 c
 	if(clientId == 0)
 	{
 		printk("kk:RPC_ServerDispatchMsg Error !!!\n");
-		while(1)
-		{
-			set_current_state(TASK_INTERRUPTIBLE);
-			schedule_timeout (20000);
-		}
+        return RPC_RESULT_ERROR;
 	}
 
 	elem = kmalloc(sizeof(RpcCbkElement_t), GFP_KERNEL);
@@ -399,7 +467,7 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType, UInt8 c
 	RPC_PACKET_IncrementBufferRef(dataBufHandle, clientId);
 
 	RPC_TRACE(("k:RPC_ServerDispatchMsg cInfo=%x h=0x%x cid=%d elem=%x msgId=%x\n", (int)cInfo, (int)dataBufHandle, clientId, (int)elem, (int)msgId));
-	//printk("kk:RPC_ServerDispatchMsg cInfo=%x cid=%d elem=%x msgId=%x r1=%x r2=%x\n", (int)cInfo, clientId, (int)elem, (int)msgId, (int)(&elem->mList),(int)(&cInfo->mQ.mList) );
+
     //add to queue
     spin_lock_irqsave( &cInfo->mLock, irql ) ;
     list_add_tail(&elem->mList, &cInfo->mQ.mList); 
@@ -412,58 +480,72 @@ RPC_Result_t RPC_ServerDispatchMsg(PACKET_InterfaceType_t interfaceType, UInt8 c
 	return RPC_RESULT_PENDING;
 }
 
+
+
 RPC_Result_t RPC_ServerRxCbk(PACKET_InterfaceType_t interfaceType, UInt8 channel, PACKET_BufHandle_t dataBufHandle)
 {
 	RpcClientInfo_t *cInfo;
 	UInt8 clientId, k;
 	UInt16 msgId = 0;
+	RPC_Result_t ret = RPC_RESULT_ERROR;
+
+	RPC_READ_LOCK;
 
 	if( interfaceType != INTERFACE_RPC_TELEPHONY ||	channel == 0)
 	{
-		return RPC_RESULT_ERROR;
+		ret = RPC_RESULT_ERROR;
 	}
-
-	if(channel == 0xCD)
+	else if( channel == 201)//Return Error for now Used for DRX sync
 	{
-		channel = 0;
-	}
-
-	clientId = channel;
-	cInfo = gRpcClientList[clientId];
-
-
-	RPC_TRACE(("k:RPC_ServerRxCbk interfaceType=%d bf=0x%x channel=%d msgId=%x numClients=%d\n", (int)interfaceType, (int)dataBufHandle, channel, (int)msgId, gNumActiveClients));
-
-	if(clientId != 0 && cInfo)
-	{
-		return RPC_ServerDispatchMsg(interfaceType, clientId, channel, dataBufHandle, msgId);
-	}
-	else if(gNumActiveClients == 0)
-	{
-		return RPC_RESULT_OK;
+		ret = RPC_RESULT_ERROR;
 	}
 	else
 	{
-		Boolean bSent = FALSE;
-		RPC_Result_t ret = RPC_RESULT_ERROR;
-	
-		RPC_PACKET_IncrementBufferRef(dataBufHandle, 0);//lock the buffer
-		for(k=0;k<0xFF;k++)
+		if(channel == 0xCD)
 		{
-			if(gRpcClientList[k])
-			{
-				ret = RPC_ServerDispatchMsg(interfaceType, k, channel, dataBufHandle, msgId);
-				if(ret == RPC_RESULT_PENDING)
-				{
-					bSent = TRUE;
-				}
-
-			}
+			channel = 0;
 		}
-		RPC_PACKET_FreeBufferEx(dataBufHandle, 0);//unlock buffer
-		return (bSent)?RPC_RESULT_PENDING:RPC_RESULT_OK;
-	}
+
+		clientId = channel;
+		cInfo = gRpcClientList[clientId];
+
+
+		RPC_TRACE(("k:RPC_ServerRxCbk interfaceType=%d bf=0x%x channel=%d msgId=%x numClients=%d\n", (int)interfaceType, (int)dataBufHandle, channel, (int)msgId, gNumActiveClients));
+
+		if(clientId != 0 && cInfo)
+		{
+			ret = RPC_ServerDispatchMsg(interfaceType, clientId, channel, dataBufHandle, msgId);
+		}
+		else if(gNumActiveClients == 0)
+		{
+			ret = RPC_RESULT_OK;
+		}
+		else
+		{
+			Boolean bSent = 0;
+			RPC_Result_t ret = RPC_RESULT_ERROR;
 		
+			RPC_PACKET_IncrementBufferRef(dataBufHandle, 0);//lock the buffer
+			for(k=0;k<0xFF;k++)
+			{
+				if(gRpcClientList[k])
+				{
+					ret = RPC_ServerDispatchMsg(interfaceType, k, channel, dataBufHandle, msgId);
+					if(ret == RPC_RESULT_PENDING)
+					{
+						bSent = 1;
+					}
+
+				}
+			}
+			RPC_PACKET_FreeBufferEx(dataBufHandle, 0);//unlock buffer
+			ret = (bSent)?RPC_RESULT_PENDING:RPC_RESULT_OK;
+		}
+	}
+	
+	RPC_READ_UNLOCK;
+
+	return ret;
 }
 
 static unsigned int rpcipc_poll(struct file *filp, poll_table *wait)
@@ -556,16 +638,21 @@ static long handle_pkt_poll_ioc(struct file *filp, unsigned int cmd, UInt32 para
     if(ioc_param.waitTime > 0 && ioc_param.isEmpty)
     {
 		gAvailData = 0;
+	
+		RPC_READ_UNLOCK;
+
         RPC_TRACE(("k:handle_pkt_poll_ioc() before wait %x\n", (int)jiffies));
-		wait_event_interruptible_timeout(cInfo->mWaitQ, gAvailData, ioc_param.waitTime);
+		wait_event_interruptible_timeout(cInfo->mWaitQ, gAvailData, msecs_to_jiffies(ioc_param.waitTime));
         RPC_TRACE(("k:handle_pkt_poll_ioc() after wait %x\n", (int)jiffies));
+
+		RPC_READ_LOCK;
 
 		spin_lock_irqsave(&cInfo->mLock, irql);
 		ioc_param.isEmpty = (Boolean)list_empty(&cInfo->mQ.mList);
 		spin_unlock_irqrestore(&cInfo->mLock, irql);
     }
     
-	RPC_TRACE(("k:handle_pkt_poll_ioc clientId=%d empty=%d wait=%d\n", ioc_param.clientId, ioc_param.isEmpty, ioc_param.waitTime));
+	RPC_TRACE(("k:handle_pkt_poll_ioc clientId=%d empty=%d wait=%d\n", (int)ioc_param.clientId, (int)ioc_param.isEmpty, (int)ioc_param.waitTime));
 
     if (copy_to_user((rpc_pkt_avail_t*)param, &ioc_param, sizeof(rpc_pkt_avail_t)) != 0)
     {
@@ -627,17 +714,17 @@ static long handle_pkt_rx_buffer_ioc(struct file *filp, unsigned int cmd, UInt32
 	
 	RPC_TRACE(("k:handle_pkt_rx_buffer_ioc item=%x len=%d pkt=%x\n", (int)Item, (int)ioc_param.len, (int)Item->dataBufHandle));
 
-    if (copy_to_user((rpc_pkt_rx_buf_t *)param, &ioc_param, sizeof(rpc_pkt_rx_buf_t)) != 0)
-    {
-        RPC_TRACE(( "k:handle_pkt_rx_buffer_ioc - copy_to_user() had error\n" ));
-        spin_unlock_irqrestore(&cInfo->mLock, irql);
-        return -1;
-    }
-
     list_del(entry);
     kfree(entry);
 
     spin_unlock_irqrestore(&cInfo->mLock, irql);
+
+    if (copy_to_user((rpc_pkt_rx_buf_t *)param, &ioc_param, sizeof(rpc_pkt_rx_buf_t)) != 0)
+    {
+        RPC_TRACE(( "k:handle_pkt_rx_buffer_ioc - copy_to_user() had error\n" ));
+        return -1;
+    }
+
 
     return 0;
 }
@@ -716,26 +803,22 @@ static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd, UInt
         return -1;
     }
 
-//	cInfo = gRpcClientList[ioc_param.clientId];
-
-//	if(!cInfo)
-//	{
-//		RPC_TRACE(("k:handle_pkt_send_buffer_ioc invalid clientID %d\n", ioc_param.clientId));
-//		return -1;
-//	}
 
 	RPC_TRACE(("k:handle_pkt_send_buffer_ioc client=%d pkt=%x len=%d\n", (int)ioc_param.clientId, (int)ioc_param.dataBufHandle, (int)ioc_param.userBufLen));
 
 #ifdef USE_INTERNAL_BUFFER
 	{
-		UInt8* buffer;
-		buffer = RPC_PACKET_GetBufferData(ioc_param.dataBufHandle);
+		UInt8* buffer = RPC_PACKET_GetBufferData(ioc_param.dataBufHandle);
+		UInt8* srcBuf = (UInt8*)ioc_param.userBuf;
+		UInt32 bufLen = RPC_PACKET_GetBufferLength(ioc_param.dataBufHandle);
 
-		if (copy_from_user(buffer, ioc_param.userBuf, ioc_param.userBufLen) != 0)
+
+		if (copy_from_user(buffer, ioc_param.userBuf, bufLen) != 0)
 		{
 			RPC_TRACE(( "k:handle_pkt_send_buffer_ioc - buf copy_from_user() had error\n" ));
 			return -1;
 		}
+		RPC_TRACE(("k:handle_pkt_send_buffer_ioc len=%d dest[%x:%x:%x:%x:%x], src[%x:%x:%x:%x:%x] \n",bufLen, buffer[0],buffer[1],buffer[2],buffer[3],buffer[4], srcBuf[0],srcBuf[1],srcBuf[2],srcBuf[3],srcBuf[4]));
 	}
 #endif
 	//fixme: Handle return value?
@@ -743,7 +826,9 @@ static long handle_pkt_send_buffer_ioc(struct file *filp, unsigned int cmd, UInt
 		UInt8* buffer;
 		buffer = RPC_PACKET_GetBufferData(ioc_param.dataBufHandle);
 
+		RPC_READ_UNLOCK;
 		RPC_PACKET_SendData(ioc_param.clientId, ioc_param.interfaceType, ioc_param.channel, ioc_param.dataBufHandle);
+		RPC_READ_LOCK;
 	}
 
     return 0;
@@ -759,7 +844,9 @@ static long handle_pkt_alloc_buffer_ioc(struct file *filp, unsigned int cmd, UIn
         return -1;
     }
 
+	RPC_READ_UNLOCK;
 	ioc_param.pktBufHandle = RPC_PACKET_AllocateBufferEx(ioc_param.interfaceType, ioc_param.requiredSize, ioc_param.channel, ioc_param.waitTime);
+	RPC_READ_LOCK;
 	
 	RPC_TRACE(("k:handle_pkt_alloc_buffer_ioc pkt=%x len=%d\n", (int)ioc_param.pktBufHandle, (int)ioc_param.requiredSize));
 
@@ -819,13 +906,21 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param
 	{
 		ioc_param.result = RPC_SetProperty(ioc_param.input1, ioc_param.input2);
 	}
-	else if(ioc_param.type == RPC_PROXY_INFO_GET_CONTEXT || ioc_param.type == RPC_PROXY_INFO_GET_CONTEXT_EX)
+	else if(ioc_param.type == RPC_PROXY_INFO_GET_CONTEXT )
 	{
 		ioc_param.outParam = RPC_PACKET_GetContext(ioc_param.interfaceType, ioc_param.dataBufHandle);
 	}
-	else if(ioc_param.type == RPC_PROXY_INFO_SET_CONTEXT || ioc_param.type == RPC_PROXY_INFO_SET_CONTEXT_EX)
+	else if(ioc_param.type == RPC_PROXY_INFO_SET_CONTEXT)
 	{
 		ioc_param.result = RPC_PACKET_SetContext(ioc_param.interfaceType, ioc_param.dataBufHandle, ioc_param.input1);
+	}
+	else if(ioc_param.type == RPC_PROXY_INFO_GET_CONTEXT_EX)
+	{
+		ioc_param.outParam = RPC_PACKET_GetContextEx(ioc_param.interfaceType, ioc_param.dataBufHandle);
+	}
+	else if(ioc_param.type == RPC_PROXY_INFO_SET_CONTEXT_EX)
+	{
+		ioc_param.result = RPC_PACKET_SetContextEx(ioc_param.interfaceType, ioc_param.dataBufHandle, ioc_param.input1);
 	}
 	else if(ioc_param.type == RPC_PROXY_INFO_GET_MAX_PKT_SIZE)
 	{
@@ -843,7 +938,24 @@ static long handle_pkt_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 param
 	{
 		ioc_param.outParam = IPC_SIZE;
 	}
-	
+	else if(ioc_param.type == RPC_PROXY_WAKEUP_USER_THREAD)
+	{
+		RpcClientInfo_t *cInfo;
+		UInt8 cid = (UInt8)ioc_param.input1;
+		cInfo = gRpcClientList[cid];
+
+		if(cInfo)
+		{
+			gAvailData = 1;
+			wake_up_interruptible(&cInfo->mWaitQ);
+			ioc_param.outParam = 1;
+		}
+		else
+		{
+			RPC_TRACE(("k:RPC_PROXY_WAKEUP_USER_THREAD invalid clientID %d\n", cid));
+			ioc_param.outParam = 0;
+		}
+	}
 
 	RPC_TRACE(("k:handle_pkt_cmd_ioc cmd=%d itype=%x handle=%x i1=%x i2=%x res=%x out=%x\n", (int)ioc_param.type, (int)ioc_param.interfaceType, (int)ioc_param.dataBufHandle, 
 																							(int)ioc_param.input1, (int)ioc_param.input2, (int)ioc_param.result, (int)ioc_param.outParam));
@@ -976,55 +1088,7 @@ static long handle_test_cmd_ioc(struct file *filp, unsigned int cmd, UInt32 para
 //****************************************************************************/
 //****************************************************************************/
 
-static int major;
-//***************************************************************************
-/**
- *  Called by Linux I/O system to initialize module.   
- *  @return int     0 if success, -1 if error
- *  @note
- *      API is defined by module_init macro
- */
-static int __init rpcipc_ModuleInit(void)
-{
-	int k;
-    struct device *drvdata ;
-    RPC_TRACE(("enter rpcipc_ModuleInit()\n"));
-    
 
-	for(k=0;k<0xFF;k++)
-	{
-		gRpcClientList[k]=NULL;
-	}
-
-	gNumActiveClients = 0;
-
-    //drive driver process:
-    if ( (major = register_chrdev(0, BCM_KERNEL_RPC_NAME, &rpc_ops)) < 0 )
-    {
-        RPC_TRACE(("register_chrdev failed\n" ) );
-        return major;
-    }
-
-    sModule.mDriverClass = class_create(THIS_MODULE, BCM_KERNEL_RPC_NAME);
-    if (IS_ERR(sModule.mDriverClass)) 
-    {
-        RPC_TRACE(( "driver class_create failed\n" ) );
-        unregister_chrdev( major, BCM_KERNEL_RPC_NAME ) ;
-        return -1 ;
-    }
-
-    drvdata = device_create( sModule.mDriverClass, NULL, MKDEV(major, 0), NULL, BCM_KERNEL_RPC_NAME ) ;  
-    if( IS_ERR( drvdata ) ) 
-    {
-        RPC_TRACE(( "device_create_drvdata failed\n" ) );
-        unregister_chrdev( major, BCM_KERNEL_RPC_NAME ) ;
-        return -1 ;
-    }
-
-   
-    RPC_TRACE(("exit rpcipc_ModuleInit()\n"));
-    return 0;
-}
 
 static void RpcListCleanup(UInt8 clientId)
 {
@@ -1131,6 +1195,110 @@ struct page *rpcipc_vma_nopage(struct vm_area_struct *vma, unsigned long address
 
 
 //***************************************************************************
+//			LOG PROC FILE
+//***************************************************************************
+
+extern ssize_t kRpcReadLogData(char *destBuf, size_t len);
+int gRpcLogToConsole = 0;
+
+int log_buf_read(char *buf, char **start, off_t offset, int count, int *eof, void *data)
+{
+	int len;
+	len = kRpcReadLogData(buf, count);
+	return len;
+}
+
+static int log_buf_write(struct file *file, const char *buf, unsigned long count, void *data)
+{
+	int ret, len;
+	char tbuf[64];
+
+	len = min_t(size_t, 63, count);
+	ret = copy_from_user(tbuf, buf, len);
+	tbuf[len] = '\0';
+
+	if(ret == 0)
+	{
+		if(tbuf[0] == '1')
+			gRpcLogToConsole = 1;
+		else
+			gRpcLogToConsole = 0;
+
+		printk("RPC: Proc write buf=%s, val=%d\n",tbuf, gRpcLogToConsole);
+	}
+
+	return count;
+}
+
+int log_proc_init(void) 
+{
+	struct proc_dir_entry *myproc = create_proc_entry("bcmrpclog", 0667, 0);
+
+	myproc->read_proc = log_buf_read;
+	myproc->write_proc = log_buf_write;
+
+	return 0 ;
+}
+
+void log_proc_cleanup(void) 
+{
+	remove_proc_entry("bcmrpclog", NULL);
+}
+
+static int major;
+//***************************************************************************
+/**
+ *  Called by Linux I/O system to initialize module.   
+ *  @return int     0 if success, -1 if error
+ *  @note
+ *      API is defined by module_init macro
+ */
+static int __init rpcipc_ModuleInit(void)
+{
+	int k;
+    struct device *drvdata ;
+    RPC_TRACE(("enter rpcipc_ModuleInit()\n"));
+    
+
+	for(k=0;k<0xFF;k++)
+	{
+		gRpcClientList[k]=NULL;
+	}
+
+	gNumActiveClients = 0;
+
+    //drive driver process:
+    if ( (major = register_chrdev(0, BCM_KERNEL_RPC_NAME, &rpc_ops)) < 0 )
+    {
+        RPC_TRACE(("register_chrdev failed\n" ) );
+        return major;
+    }
+
+    sModule.mDriverClass = class_create(THIS_MODULE, BCM_KERNEL_RPC_NAME);
+    if (IS_ERR(sModule.mDriverClass)) 
+    {
+        RPC_TRACE(( "driver class_create failed\n" ) );
+        unregister_chrdev( major, BCM_KERNEL_RPC_NAME ) ;
+        return -1 ;
+    }
+
+    drvdata = device_create( sModule.mDriverClass, NULL, MKDEV(major, 0), NULL, BCM_KERNEL_RPC_NAME ) ;  
+    if( IS_ERR( drvdata ) ) 
+    {
+        RPC_TRACE(( "device_create_drvdata failed\n" ) );
+        unregister_chrdev( major, BCM_KERNEL_RPC_NAME ) ;
+        return -1 ;
+    }
+
+	log_proc_init();
+
+	DEFINE_RPC_LOCK;
+   
+    RPC_TRACE(("exit rpcipc_ModuleInit()\n"));
+    return 0;
+}
+
+//***************************************************************************
 /**
  *  Called by Linux I/O system to exit module.   
  *  @return int     0 if success, -1 if error
@@ -1140,13 +1308,17 @@ struct page *rpcipc_vma_nopage(struct vm_area_struct *vma, unsigned long address
 static void __exit rpcipc_ModuleExit(void)
 {
     RPC_TRACE(("rpcipc_ModuleExit()\n"));
+
+	log_proc_cleanup();
 	
 	RpcServerCleanup();
 
 	device_destroy(sModule.mDriverClass, MKDEV(major, 0));
     class_destroy(sModule.mDriverClass);
     unregister_chrdev( major, BCM_KERNEL_RPC_NAME ) ;
+
 }
+
 
 
 
