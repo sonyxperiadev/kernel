@@ -1,6 +1,7 @@
-name   = bcm28160_tablet
 arch   = arm
 family = island
 chip   = 28160
 board  = tablet_28160
+option = ext4
+option = mmc 
 

@@ -106,27 +106,27 @@
 #define    I2C_MM_HS_RCD_CRC_SHIFT                                        0
 #define    I2C_MM_HS_RCD_CRC_MASK                                         0x000000FF
 
-#define I2C_MM_HS_FCR_OFFSET                                              0x0000003C
-#define I2C_MM_HS_FCR_TYPE                                                UInt32
-#define I2C_MM_HS_FCR_RESERVED_MASK                                       0xFFFFFF20
-#define    I2C_MM_HS_FCR_FIFO_FLUSH_SHIFT                                 7
-#define    I2C_MM_HS_FCR_FIFO_FLUSH_MASK                                  0x00000080
-#define    I2C_MM_HS_FCR_FIFO_EN_SHIFT                                    6
-#define    I2C_MM_HS_FCR_FIFO_EN_MASK                                     0x00000040
-#define    I2C_MM_HS_FCR_FIFOCNT_SHIFT                                    0
-#define    I2C_MM_HS_FCR_FIFOCNT_MASK                                     0x0000001F
+#define I2C_MM_HS_TXFCR_OFFSET                                            0x0000003C
+#define I2C_MM_HS_TXFCR_TYPE                                              UInt32
+#define I2C_MM_HS_TXFCR_RESERVED_MASK                                     0xFFFFFF3F
+#define    I2C_MM_HS_TXFCR_FIFO_FLUSH_SHIFT                               7
+#define    I2C_MM_HS_TXFCR_FIFO_FLUSH_MASK                                0x00000080
+#define    I2C_MM_HS_TXFCR_FIFO_EN_SHIFT                                  6
+#define    I2C_MM_HS_TXFCR_FIFO_EN_MASK                                   0x00000040
 
-#define I2C_MM_HS_FIFORDOUT_OFFSET                                        0x00000040
-#define I2C_MM_HS_FIFORDOUT_TYPE                                          UInt32
-#define I2C_MM_HS_FIFORDOUT_RESERVED_MASK                                 0xFFFFFF00
-#define    I2C_MM_HS_FIFORDOUT_FIFO_RDOUT_SHIFT                           0
-#define    I2C_MM_HS_FIFORDOUT_FIFO_RDOUT_MASK                            0x000000FF
+#define I2C_MM_HS_TXFIFORDOUT_OFFSET                                      0x00000040
+#define I2C_MM_HS_TXFIFORDOUT_TYPE                                        UInt32
+#define I2C_MM_HS_TXFIFORDOUT_RESERVED_MASK                               0xFFFFFF00
+#define    I2C_MM_HS_TXFIFORDOUT_FIFO_RDOUT_SHIFT                         0
+#define    I2C_MM_HS_TXFIFORDOUT_FIFO_RDOUT_MASK                          0x000000FF
 
 #define I2C_MM_HS_IER_OFFSET                                              0x00000044
 #define I2C_MM_HS_IER_TYPE                                                UInt32
-#define I2C_MM_HS_IER_RESERVED_MASK                                       0xFFFFFF70
+#define I2C_MM_HS_IER_RESERVED_MASK                                       0xFFFFFF60
 #define    I2C_MM_HS_IER_CMDBUSY_INT_EN_SHIFT                             7
 #define    I2C_MM_HS_IER_CMDBUSY_INT_EN_MASK                              0x00000080
+#define    I2C_MM_HS_IER_READ_COMPLETE_INT_SHIFT                          4
+#define    I2C_MM_HS_IER_READ_COMPLETE_INT_MASK                           0x00000010
 #define    I2C_MM_HS_IER_I2C_INT_EN_SHIFT                                 3
 #define    I2C_MM_HS_IER_I2C_INT_EN_MASK                                  0x00000008
 #define    I2C_MM_HS_IER_ERR_INT_EN_SHIFT                                 2
@@ -138,9 +138,11 @@
 
 #define I2C_MM_HS_ISR_OFFSET                                              0x00000048
 #define I2C_MM_HS_ISR_TYPE                                                UInt32
-#define I2C_MM_HS_ISR_RESERVED_MASK                                       0xFFFFFF70
+#define I2C_MM_HS_ISR_RESERVED_MASK                                       0xFFFFFF60
 #define    I2C_MM_HS_ISR_CMDBUSY_SHIFT                                    7
 #define    I2C_MM_HS_ISR_CMDBUSY_MASK                                     0x00000080
+#define    I2C_MM_HS_ISR_READ_COMPLETE_SHIFT                              4
+#define    I2C_MM_HS_ISR_READ_COMPLETE_MASK                               0x00000010
 #define    I2C_MM_HS_ISR_SES_DONE_SHIFT                                   3
 #define    I2C_MM_HS_ISR_SES_DONE_MASK                                    0x00000008
 #define    I2C_MM_HS_ISR_ERR_SHIFT                                        2
@@ -162,17 +164,27 @@
 #define    I2C_MM_HS_CLKEN_CLKEN_SHIFT                                    0
 #define    I2C_MM_HS_CLKEN_CLKEN_MASK                                     0x00000001
 
-#define I2C_MM_HS_BSTAT_OFFSET                                            0x00000050
-#define I2C_MM_HS_BSTAT_TYPE                                              UInt32
-#define I2C_MM_HS_BSTAT_RESERVED_MASK                                     0xFFFFFFFE
-#define    I2C_MM_HS_BSTAT_STATUS_SHIFT                                   0
-#define    I2C_MM_HS_BSTAT_STATUS_MASK                                    0x00000001
+#define I2C_MM_HS_TXCOUNT_OFFSET                                          0x00000050
+#define I2C_MM_HS_TXCOUNT_TYPE                                            UInt32
+#define I2C_MM_HS_TXCOUNT_RESERVED_MASK                                   0xFFFFFF00
+#define    I2C_MM_HS_TXCOUNT_FIFOCNT_SHIFT                                1
+#define    I2C_MM_HS_TXCOUNT_FIFOCNT_MASK                                 0x000000FE
+#define    I2C_MM_HS_TXCOUNT_STATUS_SHIFT                                 0
+#define    I2C_MM_HS_TXCOUNT_STATUS_MASK                                  0x00000001
 
-#define I2C_MM_HS_RETXMT_OFFSET                                           0x00000054
-#define I2C_MM_HS_RETXMT_TYPE                                             UInt32
-#define I2C_MM_HS_RETXMT_RESERVED_MASK                                    0xFFFFFFFE
-#define    I2C_MM_HS_RETXMT_RETX_SHIFT                                    0
-#define    I2C_MM_HS_RETXMT_RETX_MASK                                     0x00000001
+#define I2C_MM_HS_FIFO_STATUS_OFFSET                                      0x00000054
+#define I2C_MM_HS_FIFO_STATUS_TYPE                                        UInt32
+#define I2C_MM_HS_FIFO_STATUS_RESERVED_MASK                               0xFFFFFFE0
+#define    I2C_MM_HS_FIFO_STATUS_TXFIFO_EMPTY_SHIFT                       4
+#define    I2C_MM_HS_FIFO_STATUS_TXFIFO_EMPTY_MASK                        0x00000010
+#define    I2C_MM_HS_FIFO_STATUS_TXFIFO_FULL_SHIFT                        3
+#define    I2C_MM_HS_FIFO_STATUS_TXFIFO_FULL_MASK                         0x00000008
+#define    I2C_MM_HS_FIFO_STATUS_RXFIFO_EMPTY_SHIFT                       2
+#define    I2C_MM_HS_FIFO_STATUS_RXFIFO_EMPTY_MASK                        0x00000004
+#define    I2C_MM_HS_FIFO_STATUS_RXFIFO_FULL_SHIFT                        1
+#define    I2C_MM_HS_FIFO_STATUS_RXFIFO_FULL_MASK                         0x00000002
+#define    I2C_MM_HS_FIFO_STATUS_RETX_SHIFT                               0
+#define    I2C_MM_HS_FIFO_STATUS_RETX_MASK                                0x00000001
 
 #define I2C_MM_HS_HSTIM_OFFSET                                            0x00000058
 #define I2C_MM_HS_HSTIM_TYPE                                              UInt32

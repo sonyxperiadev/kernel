@@ -11,3 +11,10 @@ config BCM4329_FALCON
 
 	  If you choose to build a module, it'll be called bcm4329_falcon. Say M if
 	  unsure.
+
+config BCM4329_FALCON_IF_PREFIX
+	depends on BCM4329_FALCON
+	string "Wireless interface prefix"
+	default ""
+	---help---
+	 Name of wireless interface. The default value is "eth%d".

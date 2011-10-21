@@ -1,0 +1,6 @@
+arch   = arm
+family = island
+chip   = 11160
+board  = sv
+option = nand
+option = jffs2

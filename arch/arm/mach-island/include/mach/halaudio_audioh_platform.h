@@ -45,6 +45,7 @@ typedef struct halaudio_audioh_platform_info
 {
    HALAUDIO_AUDIOH_SPK_EN_GPIO spk_en_gpio;
    HALAUDIO_AUDIOH_MIC_EN_GPIO mic_en_gpio;
+   int                         earpiece_spare_bit_en;
 
 } HALAUDIO_AUDIOH_PLATFORM_INFO;
 

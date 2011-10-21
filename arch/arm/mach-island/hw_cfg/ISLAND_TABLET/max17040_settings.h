@@ -17,7 +17,9 @@
 
 /* connected to BSC0 */
 #define HW_MAX17040_I2C_BUS_ID    1
-#define HW_MAX17040_SLAVE_ADDR    0x36
-#define HW_MAX17040_DRIVER_NAME   "max17040"
+
+#define HW_MAX17040_GPIO_AC_POWER      181 /* AC_OK_B */
+#define HW_MAX17040_AC_POWER_ON_LEVEL    0
+#define HW_MAX17040_GPIO_CHARGER        -1 /* BAT_CHG_B */
 
 #endif /* MAX17040_I2C_SETTINGS_H */

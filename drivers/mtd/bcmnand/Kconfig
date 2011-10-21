@@ -1,0 +1,9 @@
+menuconfig MTD_BCMNAND
+	tristate "BCMNAND Device Support"
+	depends on MTD && (ARCH_ISLAND || ARCH_KONA)
+	select MTD_PARTITIONS
+	help
+	  This enables support for accessing BCMNAND flash devices. 
+	  These devices do not provide direct access to NAND cmd, 
+	  data, and address registers, but instead use a high
+	  level interface on top of a microcode implementation.

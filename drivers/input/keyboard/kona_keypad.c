@@ -644,6 +644,7 @@ no_pwroff:
          }
       }
    }
+	input_sync(blkp->input);
 }
 
 /* Keypad ISR routine. */
@@ -785,8 +786,13 @@ static int __devinit keypad_probe(struct platform_device *pdev)
     /* tell the Linux input subsystem about our keymap */
     for (i = 0; i < datap->keymap_cnt; i++)
     {
-        rc = input->setkeycode(input, datap->keymap[i].scancode,
-                               datap->keymap[i].keycode);
+	    struct input_keymap_entry ke;
+	    memset(&ke, 0, sizeof(ke));
+	    ke.len = sizeof(datap->keymap[i].scancode);
+	    ke.keycode = datap->keymap[i].keycode;
+	    memcpy(ke.scancode, &datap->keymap[i].scancode, sizeof(datap->keymap[i].scancode));
+
+	rc = input_set_keycode(input, &ke);
         if (rc)
         {
             printk(KERN_WARNING "Keypad: setkeycode failed scancode=0x%x keycode=%u\n",
@@ -957,6 +963,7 @@ static int keypad_resume(struct platform_device *pdev)
                q->keymap.scancode, q->keymap.keycode, q->down);
       }
    }
+   input_sync(blkp->input);
    spin_unlock_irqrestore(&blkp->status_lock, flags);
 
    kfifo->q_cnt = 0;

@@ -51,6 +51,7 @@
 #include <linux/broadcom/halaudio.h>
 #include <linux/broadcom/halaudio_lib.h>
 #include <linux/broadcom/amxr.h>
+#include <linux/broadcom/amxr_port.h>
 
 #include <chal/chal_audio.h>
 
@@ -107,14 +108,9 @@
 #define AUDIOH_DEFAULT_SAMP_FREQ                 48000    /* In Hz */
 #define AUDIOH_DEFAULT_FRAME_PERIOD              5000     /* In usec */
 #define AUDIOH_DEFAULT_FRAME_SIZE                480      /* In bytes (mono frame) */
-#define AUDIOH_CALC_PRIME_SIZE(frame)            ( (frame * 5) / 2 )
-#define AUDIOH_DEFAULT_PRIME_SIZE_BYTES          AUDIOH_CALC_PRIME_SIZE(AUDIOH_DEFAULT_FRAME_SIZE)
 #define AUDIOH_SAMP_WIDTH                        2
 
 #define AUDIOH_MAX_DMA_BUF_SIZE_BYTES     (AUDIOH_MAX_STEREO_DMA_BUFFER_SIZE_BYTES * 2)
-
-/* Priming */
-#define AUDIOH_MAX_PRIME_SIZE_BYTES       (AUDIOH_MAX_STEREO_DMA_BUFFER_SIZE_BYTES * 2)  /* Worst case possible size */
 
 /* Q12 gain map min and max ranges */
 #define MAX_Q12_GAIN                6
@@ -131,12 +127,11 @@
 
 /* Power up ramp delay time */
 #define AUDIOH_DACPWRUP_SETTLE_TIME              (400)         /* Milli Seconds */
-#define AUDIOH_SLOWRAMP_PWRDN_PULSE_TIME         (150)         /* Micro Seconds */
 #define AUDIOH_SLOWRAMP_RAMP1UP_TIME             (40)          /* Milli Seconds */
-#define AUDIOH_SLOWRAMP_RAMP2UP_TIME             (5)           /* Milli Seconds */
+#define AUDIOH_SLOWRAMP_RAMP2UP_TIME             (10)           /* Milli Seconds */
 #define AUDIOH_SLOWRAMP_RAMP2DOWN_TIME           (35)          /* Milli Seconds */
 #define AUDIOH_SLOWRAMP_RAMP1DOWN_TIME           (10)          /* Milli Seconds */
-#define AUDIOH_PATHENDIS_SETTLING_TIME           (1)           /* Milli Seconds */
+#define AUDIOH_PATHENDIS_SETTLING_TIME           (10)           /* Milli Seconds */
 
 #define AUDIOH_DISABLE_CAPH_TIME                 5           /* Milli Seconds */
 
@@ -480,7 +475,6 @@ struct audioh_gain
 struct audioh_sidetone
 {
    int db;               /* Gain in dB */
-   int enable;           /* Enable flag */
 };
 
 /* Audio Hub channel configuration and parameters */
@@ -496,12 +490,11 @@ struct audioh_ch_cfg
    unsigned int                  samp_freq;     /* Sampling frequency in Hz */
    unsigned int                  frame_period;  /* Frame period in usec */
    unsigned int                  frame_size;    /* Frame size in bytes */
-   unsigned int                  prime_egr;     /* Egress priming in bytes */
    int                           anadb;         /* cached analog DB */
    HALAUDIO_HWSEL                anahwsel;      /* cached HW selection */
    HALAUDIO_EQU                  equ;           /* Equalizer parameters */
 
-   atomic_t                      ind_active_idx;/* Per channel active index to active buffer when running independant */
+   atomic_t                      ch_active_idx;/* Per channel active index to active buffer when running independant */
 
    /* Hardware block states */
    struct audioh_gain            audio_gain[AUDIOH_MAX_FIFO_CHANNELS];  /* Active microphone audio settings per fifo channel*/
@@ -511,12 +504,9 @@ struct audioh_ch_cfg
    /* Write state */
    HALAUDIO_WRITE                write;         /* Write state */
 
-   /* ISR status */
-   atomic_t                      queued_pkts_egr;  /* Num of egress packets awaiting to be DMA'd. Should not exceed 2. When 0, means DMA is idle */
-
    struct audioh_ch_errs         errs;          /* Channel errors */
 
-   struct audioh_fifo_mask       masks;         /* Channel masks */
+   const struct audioh_fifo_mask masks;         /* Channel masks */
 
    /* Debug facilities */
    int                           debug;         /* Flag to indicate in debug mode */
@@ -542,7 +532,6 @@ struct audioh_info
    atomic_t                      running;       /* Flag indicating channels are active */
    int                           thresh_intr_en;/* Flag indicating to enable threshold interrupts */
    unsigned int                  audioh_isr_cnt;/* Counter for AudioH ISRs */
-   struct dma_data_buf           zero;          /* DMA scratch buffer used for priming */
    struct audioh_ch_cfg          ch[AUDIOH_MAX_NUM_CHANS];
 };
 
@@ -584,11 +573,8 @@ static void               *gAudiohUserData;
  */
 static atomic_t            gAudiohRefIgrCount;
 
-static atomic_t            gActive_ig_idx;       /* Index to active buffer in ingress double buffers */
-static atomic_t            gActive_eg_idx;       /* Index to active buffer in egress double buffers */
-
-static atomic_t            gPwrDacLevel;
-static atomic_t            gPwrTransducerLevel;
+static int                 gPwrDacLevel = 0;
+static int                 gPwrTransducerLevel = 0;
 
 /* Ingress channel counter */
 static int                 gNumIngressChannels = 0;
@@ -604,10 +590,13 @@ static struct caph_dma_device_attr gCaphDmaDevAttr[CAPH_DMA_NUM_DEVICE_ENTRIES];
 struct semaphore gProcBufLock;   /* acquired when accessing buffer in proc entry */
 struct semaphore gPwrLock;       /* acquired when powering up/down transducers and dacs */
 
+static spinlock_t gGainLock;     /* acquired when adjusting gains */
+
 /* Proc entry buffer */
 int16_t gProcbuf_active[AUDIOH_MAX_DMA_BUF_SIZE_BYTES];
 
-static short gHalFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+static short gIgrHalFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
+static short gEgrHalFiltHist[HALAUDIO_EQU_COEFS_MAX_NUM];
 
 const static struct freq_map_array gAudiohFreqMap[AUDIOH_MAX_NUM_CHANS] =
 {
@@ -937,7 +926,6 @@ static struct audioh_info gAudioh =
          .samp_freq        = AUDIOH_DEFAULT_SAMP_FREQ,
          .frame_period     = AUDIOH_DEFAULT_FRAME_PERIOD,
          .frame_size       = AUDIOH_DEFAULT_FRAME_SIZE,
-         .prime_egr        = AUDIOH_DEFAULT_PRIME_SIZE_BYTES,
          .dma_config =
          {
             .device = AADMA_DEVICE_AUDIOH_MEM_TO_CFIFO_TO_EARPIECE,
@@ -976,7 +964,6 @@ static struct audioh_info gAudioh =
          .samp_freq        = AUDIOH_DEFAULT_SAMP_FREQ,
          .frame_period     = AUDIOH_DEFAULT_FRAME_PERIOD,
          .frame_size       = (AUDIOH_DEFAULT_FRAME_SIZE * AUDIOH_MAX_HSPATH_FIFO_CHANNELS),
-         .prime_egr        = (AUDIOH_DEFAULT_PRIME_SIZE_BYTES * AUDIOH_MAX_HSPATH_FIFO_CHANNELS),
          .dma_config =
          {
             .device = AADMA_DEVICE_AUDIOH_MEM_TO_CFIFO_TO_HEADSET,
@@ -1026,7 +1013,6 @@ static struct audioh_info gAudioh =
          .samp_freq        = AUDIOH_DEFAULT_SAMP_FREQ,
          .frame_period     = AUDIOH_DEFAULT_FRAME_PERIOD,
          .frame_size       = AUDIOH_DEFAULT_FRAME_SIZE,
-         .prime_egr        = AUDIOH_DEFAULT_PRIME_SIZE_BYTES,
          .dma_config =
          {
             .device = AADMA_DEVICE_AUDIOH_MEM_TO_CFIFO_TO_HANDSFREE,
@@ -1065,7 +1051,6 @@ static struct audioh_info gAudioh =
          .samp_freq        = AUDIOH_DEFAULT_SAMP_FREQ,
          .frame_period     = AUDIOH_DEFAULT_FRAME_PERIOD,
          .frame_size       = AUDIOH_DEFAULT_FRAME_SIZE,
-         .prime_egr        = AUDIOH_DEFAULT_PRIME_SIZE_BYTES,
          .dma_config =
          {
             .device = AADMA_DEVICE_AUDIOH_MEM_TO_CFIFO_TO_VIBRA,
@@ -1173,14 +1158,11 @@ static irqreturn_t audioh_isr( int irq, void *dev_id );
 static int audiohDmaInit( void );
 static int audiohDmaTerm( void );
 static int audiohIoRemap( void );
-static void audiohDmaEgressDoTransfer( struct audioh_ch_cfg *ch );
 static int16_t *audiohMixerCb_BufGetIgPtr( int numBytes, void *privdata );
 static int16_t *audiohMixerCb_BufGetEgPtr( int numBytes, void *privdata );
-static void audiohMixerCb_EgressDone( int   numBytes, void *privdata );
 static void audiohMixerCb_EgressFlush( void *privdata );
-static void audiohDmaIngressHandler( AADMA_Device_t dev, int dma_status, void *userData );
-static void audiohDmaSyncEgressHandler( AADMA_Device_t dev, int dma_status, void *userData );
-static void audiohDmaEgressHandler( AADMA_Device_t dev, int dma_status, void *userData );
+static void audiohDmaIngressHandler( AADMA_Device_t dev, AADMA_Status_t *aadma_status, void *userData );
+static void audiohDmaEgressHandler( AADMA_Device_t dev, AADMA_Status_t *aadma_status, void *userData );
 static int audiohMixerPortsRegister( void );
 static int audiohMixerPortsDeregister( void );
 static int audiohHwSelToMux( unsigned int ch_no, unsigned int *fifo_ch, unsigned int *mux_pos, HALAUDIO_HWSEL hwsel );
@@ -1235,7 +1217,6 @@ static int  audiohReadProc( char *buf, char **start, off_t offset, int count, in
 /* CAPH DMA Functions */
 static int caph_dma_set_device_handler( AADMA_Device_t dev, AADMA_DeviceHandler_t dma_handler, void *data );
 static CAPH_DMA_Handle_t caph_dma_request_channel( AADMA_Device_t aadma_dev, SSASW_Device_t switch_dev, enum audioh_ch_dir ch_dir, uint16_t audioh_fifo_addr );
-static int caph_dma_transfer( CAPH_DMA_Handle_t handle, dma_addr_t data_addr, size_t numBytes );
 static int caph_dma_alloc_ring_descriptors( CAPH_DMA_Handle_t, dma_addr_t data_addr, size_t numBytes );
 static int caph_dma_start_transfer( CAPH_DMA_Handle_t handle );
 static int caph_dma_continue_transfer( CAPH_DMA_Handle_t handle, int dma_status );
@@ -1368,17 +1349,6 @@ static int audiohDmaInit( void )
       }
    }
 
-   gAudioh.zero.virt = dma_alloc_writecombine( NULL, AUDIOH_MAX_PRIME_SIZE_BYTES,
-            &gAudioh.zero.phys, GFP_KERNEL );
-
-   if( gAudioh.zero.virt == NULL )
-   {
-      rc = -ENOMEM;
-      goto cleanup_exit;
-   }
-
-   memset( gAudioh.zero.virt, 0, AUDIOH_MAX_PRIME_SIZE_BYTES );
-
 #if AUDIOH_VIN_RIGHT_ENABLE
    /* Primary Speech mic, Headset mic, Handset mic */
    chal_audio_vinpath_dma_enable(gChalAudioHandle, CHAL_AUDIO_ENABLE);
@@ -1492,13 +1462,6 @@ static int audiohDmaTerm( void )
 
    dma_pool_destroy( gDmaPool );
 
-   if( gAudioh.zero.virt )
-   {
-      dma_free_writecombine( NULL, AUDIOH_MAX_PRIME_SIZE_BYTES,
-            gAudioh.zero.virt, gAudioh.zero.phys );
-      gAudioh.zero.virt = NULL;
-   }
-
    return 0;
 }
 
@@ -1554,96 +1517,6 @@ static int audiohIoRemap( void )
 
 /***************************************************************************/
 /**
-*  Helper routine to do the egress DMA transfer for an AUDIOH channel
-*
-*  @return  None
-*
-*  @remark
-*     It is expected that egress DMA transfers only occur after ingress
-*     DMA transfers have completed.
-*
-*/
-static void audiohDmaEgressDoTransfer(
-   struct audioh_ch_cfg *ch         /** (io) Ptr to AUDIOH channel */
-)
-{
-   void *egressp;
-   int   rc;
-   int   frame_size;
-   int   active_idx;
-   int   debug_mode = 0;
-
-   if( ch->ch_dir == AUDIOH_CH_DIR_EGRESS )
-   {
-      active_idx = atomic_read(&gActive_eg_idx);
-
-      egressp     = ch->dma_buf[active_idx].virt;
-      frame_size  = ch->frame_size;
-
-      /* Service write requests */
-      halAudioWriteService( &ch->write, egressp, frame_size );
-
-      /* Apply software digital gain based on channel settings */
-      if( AUDIOH_SYNC_FREQ(ch->samp_freq) && ch->dig_gain != 0 )
-      {
-         audiohSoftDigGain( (int16_t *)egressp, (frame_size/AUDIOH_SAMP_WIDTH), ch->dig_gain );
-      }
-
-      if( ch->equ.len )
-      {
-         halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, gHalFiltHist,
-            ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
-      }
-
-      /* Service test and debug facilities */
-      if( ch->ramp )
-      {
-         debug_mode = 1;
-         halAudioGenerateRamp( (uint16_t *)egressp, &ch->rampseed, (frame_size/AUDIOH_SAMP_WIDTH), ch->num_fifo_ch );
-      }
-      else if( ch->sinectl.freq )
-      {
-         debug_mode = 1;
-         halAudioSine( (uint16_t *)egressp, &ch->sinectl, (frame_size/AUDIOH_SAMP_WIDTH), ch->num_fifo_ch );
-      }
-
-      if( ch->csx_data[HALAUDIO_CSX_POINT_DAC].csx_ops.csxCallback )
-      {
-         debug_mode = 1;
-         ch->csx_data[HALAUDIO_CSX_POINT_DAC].csx_ops.csxCallback( egressp, frame_size, ch->csx_data[HALAUDIO_CSX_POINT_DAC].priv );
-      }
-
-      if ( debug_mode )
-      {
-         ch->debug = 1;
-      }
-      else if ( ch->debug )
-      {
-         /* Clear all samples */
-         memset( ch->dma_buf[0].virt, 0, ch->frame_size );
-         memset( ch->dma_buf[1].virt, 0, ch->frame_size );
-
-         ch->debug = 0;
-      }
-
-      AUDIOH_LOG( "active_idx=%d, ch=%d", active_idx, ch->ch_no );
-
-      /* DMA egress samples */
-      rc = caph_dma_transfer( ch->dma_config.caph_handle, ch->dma_buf[active_idx].phys, frame_size );
-      if( rc )
-      {
-         ch->errs.dma_err++;
-      }
-   }
-   else
-   {
-      ch->errs.dma_wrong_dir++;
-   }
-}
-
-
-/***************************************************************************/
-/**
 *  AUDIOH mixer callback for outgoing data (i.e. ingress)
 *
 *  @return
@@ -1662,7 +1535,7 @@ static int16_t *audiohMixerCb_BufGetIgPtr(
    ch  = (struct audioh_ch_cfg *)privdata;
    ptr = NULL;
 
-   active_idx = atomic_read(&gActive_ig_idx);
+   active_idx = atomic_read(&ch->ch_active_idx);
 
    if( numBytes == ch->frame_size )
    {
@@ -1694,14 +1567,7 @@ static int16_t *audiohMixerCb_BufGetEgPtr(
    ch  = (struct audioh_ch_cfg *)privdata;
    ptr = NULL;
 
-   if ( AUDIOH_SYNC_FREQ( ch->samp_freq ) )
-   {
-      active_idx = atomic_read(&gActive_eg_idx);
-   }
-   else
-   {
-      active_idx = atomic_read(&ch->ind_active_idx);
-   }
+   active_idx = atomic_read(&ch->ch_active_idx);
 
    if( numBytes == ch->frame_size )
    {
@@ -1711,44 +1577,6 @@ static int16_t *audiohMixerCb_BufGetEgPtr(
    AUDIOH_LOG( "audiohMixerCb_BufGetEgPtr active_idx=%d, ch=%d", active_idx, ch->ch_no );
 
    return ptr;
-}
-
-/***************************************************************************/
-/**
-*  AUDIOH mixer callback to indicate that the egress data has been deposited.
-*
-*  @return     None
-*
-*  @remark
-*     This callback is used as a trigger to DMA more data to the DAC, if
-*     appropriate.
-*/
-static void audiohMixerCb_EgressDone(
-   int   numBytes,            /**< (i) frame size in bytes */
-   void *privdata             /**< (i) private data */
-)
-{
-   struct audioh_ch_cfg *ch;
-
-   ch  = (struct audioh_ch_cfg *)privdata;
-
-   if ( AUDIOH_SYNC_FREQ( ch->samp_freq ) )
-   {
-      /* new packet arrived */
-      atomic_inc( &ch->queued_pkts_egr );
-
-      AUDIOH_LOG( "pkts=%d ch=%d", atomic_read( &ch->queued_pkts_egr ), ch->ch_no);
-
-      /* Exactly 1 packet awaits, thus DMA was idle. Start a new transfer right away. */
-      if( atomic_read( &ch->queued_pkts_egr ) == 1 )
-      {
-         audiohDmaEgressDoTransfer( ch );
-      }
-   }
-   else
-   {
-      AUDIOH_LOG( "ch=%d", ch->ch_no);
-   }
 }
 
 /***************************************************************************/
@@ -1782,28 +1610,45 @@ static void audiohMixerCb_EgressFlush(
 */
 static void audiohDmaIngressHandler(
    AADMA_Device_t dev,
-   int dma_status,
+   AADMA_Status_t *aadma_status,
    void *userData
 )
 {
    struct audioh_ch_cfg *ch;
    unsigned short       *ingressp;
-   int active_ig_idx = atomic_read(&gActive_ig_idx);
-   int active_eg_idx = atomic_read(&gActive_eg_idx);
    int debug_mode = 0;
    int rc = 0;
 
    ch = userData;
 
-   AUDIOH_LOG( "isr=%u ch=%i jiffies=%lu", ch->audioh_isrcount, ch->ch_no, jiffies );
+   AUDIOH_LOG( "isr=%u ch=%i jiffies=%lu dma_status=%d", ch->audioh_isrcount, ch->ch_no, jiffies, aadma_status->dma_status );
    ch->audioh_isrcount++;
 
    if( ch->ch_dir == AUDIOH_CH_DIR_INGRESS )
    {
       if( atomic_read( &gAudioh.running ) )
       {
+         if ( aadma_status->dma_status & CAPH_READY_HIGH )
+         {
+            /* DMA finished on high buffer, so we set the active index to be 1.
+             * Note that this handles case of highlow as well as the low buffer will
+             * be written towards after starting up dma transfer again. */
+            atomic_set(&ch->ch_active_idx, 1);
+         }
+         else if ( aadma_status->dma_status & CAPH_READY_LOW )
+         {
+            /* DMA finished on low buffer, so we set the active index to be 0 */
+            atomic_set(&ch->ch_active_idx, 0);
+         }
+         else
+         {
+            /* Somehow none of the buffers are ready */
+            ch->errs.dma_err++;
+            return;
+         }
+
          /* Continue DMA ring operation */
-         rc = caph_dma_continue_transfer( ch->dma_config.caph_handle, dma_status );
+         rc = caph_dma_continue_transfer( ch->dma_config.caph_handle, aadma_status->dma_status );
 
          if( rc )
          {
@@ -1811,8 +1656,7 @@ static void audiohDmaIngressHandler(
          }
 
          /* Point to buffer index with actual samples */
-         active_ig_idx = (active_ig_idx + 1) & 1;
-         ingressp = ch->dma_buf[active_ig_idx].virt;
+         ingressp = ch->dma_buf[atomic_read(&ch->ch_active_idx)].virt;
 
          /* Apply software digital gain based on channel settings */
          if( ch->dig_gain != 0 )
@@ -1822,7 +1666,7 @@ static void audiohDmaIngressHandler(
 
          if( ch->equ.len )
          {
-            halAudioEquProcess( (int16_t *)ingressp, ch->equ.coeffs, gHalFiltHist,
+            halAudioEquProcess( (int16_t *)ingressp, ch->equ.coeffs, gIgrHalFiltHist,
                   ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
          }
 
@@ -1862,11 +1706,6 @@ static void audiohDmaIngressHandler(
          /* Check if all ingress operations complete */
          if( atomic_read( &gAudiohRefIgrCount ) >= gNumIngressChannels )
          {
-            /* Increment ingress and egress active indices when all ingress channels accounted towards */
-            active_eg_idx = (active_eg_idx + 1) & 1;
-            atomic_set( &gActive_eg_idx, active_eg_idx );
-            atomic_set( &gActive_ig_idx, active_ig_idx );
-
             if( gAudiohElapsedCb )
             {
                (*gAudiohElapsedCb)( gAudiohUserData );
@@ -1880,46 +1719,7 @@ static void audiohDmaIngressHandler(
       ch->errs.dma_wrong_dir++;
    }
 
-   AUDIOH_LOG( "end ch=%d", ch->ch_no );
-}
-
-/***************************************************************************/
-/**
-*  AUDIOH egress sync DMA interrupt handler
-*
-*  @return  None
-*/
-static void audiohDmaSyncEgressHandler(
-   AADMA_Device_t dev,
-   int dma_status,
-   void *userData
-)
-{
-   struct audioh_ch_cfg *ch;
-   ch = userData;
-
-   AUDIOH_LOG( "isr=%u pkts=%i ch=%d", ch->audioh_isrcount, atomic_read( &ch->queued_pkts_egr ), ch->ch_no);
-   ch->audioh_isrcount++;
-
-   if( ch->ch_dir == AUDIOH_CH_DIR_EGRESS )
-   {
-      if( atomic_read( &gAudioh.running ) )
-      {
-         atomic_dec( &ch->queued_pkts_egr );
-
-         if( atomic_read( &ch->queued_pkts_egr ) > 0 )
-         {
-            /* More egress packets awaiting to be DMA'd. Start another transfer */
-            audiohDmaEgressDoTransfer( ch );
-         }
-      }
-   }
-   else
-   {
-      ch->errs.dma_wrong_dir++;
-   }
-
-   AUDIOH_LOG( "end pkts=%i ch=%d", atomic_read( &ch->queued_pkts_egr ), ch->ch_no);
+   AUDIOH_LOG( "end idx=%d end ch=%d", atomic_read(&ch->ch_active_idx), ch->ch_no );
 }
 
 /***************************************************************************/
@@ -1930,7 +1730,7 @@ static void audiohDmaSyncEgressHandler(
 */
 static void audiohDmaEgressHandler(
    AADMA_Device_t dev,
-   int dma_status,
+   AADMA_Status_t *aadma_status,
    void *userData
 )
 {
@@ -1941,43 +1741,60 @@ static void audiohDmaEgressHandler(
 
    ch = userData;
 
-   AUDIOH_LOG( "isr=%u ch=%i jiffies=%lu", ch->audioh_isrcount, ch->ch_no, jiffies );
+   AUDIOH_LOG( "isr=%u ch=%i jiffies=%lu dma_status=%d", ch->audioh_isrcount, ch->ch_no, jiffies, aadma_status->dma_status );
    ch->audioh_isrcount++;
 
    if( ch->ch_dir == AUDIOH_CH_DIR_EGRESS )
    {
       if( atomic_read( &gAudioh.running ) )
       {
-         if ( dma_status & CAPH_READY_LOW )
+         if ( aadma_status->dma_status & CAPH_READY_HIGH )
          {
-            /* DMA finished on low buffer, so we set the active index to be 0*/
-            atomic_set(&ch->ind_active_idx, 0);
+            /* DMA finished on high buffer, so we set the active index to be 1.
+             * Note that this handles case of highlow as well as the low buffer will
+             * be written towards after starting up dma transfer again. */
+            atomic_set(&ch->ch_active_idx, 1);
+         }
+         else if ( aadma_status->dma_status & CAPH_READY_LOW )
+         {
+            /* DMA finished on low buffer, so we set the active index to be 0 */
+            atomic_set(&ch->ch_active_idx, 0);
          }
          else
          {
-            /* DMA finished on high buffer, so we set the active index to be 1*/
-            atomic_set(&ch->ind_active_idx, 1);
+            /* Somehow none of the buffers are ready */
+            ch->errs.dma_err++;
+            return;
          }
 
          /* Continue DMA ring operation */
-         rc = caph_dma_continue_transfer( ch->dma_config.caph_handle, dma_status );
+         rc = caph_dma_continue_transfer( ch->dma_config.caph_handle, aadma_status->dma_status );
 
          if( rc )
          {
             ch->errs.dma_err++;
          }
 
-         amxrServiceUnsyncPort( ch->mixer_port );
+         if ( !AUDIOH_SYNC_FREQ( ch->samp_freq ) )
+         {
+            amxrServiceUnsyncPort( ch->mixer_port );
+         }
 
          /* Point to buffer index with actual samples */
-         egressp = ch->dma_buf[atomic_read( &ch->ind_active_idx )].virt;
+         egressp = ch->dma_buf[atomic_read( &ch->ch_active_idx )].virt;
 
          /* Service write requests */
          halAudioWriteService( &ch->write, egressp, ch->frame_size );
 
+         /* Apply software digital gain based on channel settings */
+         if( AUDIOH_SYNC_FREQ(ch->samp_freq) && ch->dig_gain != 0 )
+         {
+            audiohSoftDigGain( (int16_t *)egressp, (ch->frame_size/AUDIOH_SAMP_WIDTH), ch->dig_gain );
+         }
+
          if( ch->equ.len )
          {
-            halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, gHalFiltHist,
+            halAudioEquProcess( (int16_t *)egressp, ch->equ.coeffs, gEgrHalFiltHist,
                   ch->equ.len, (ch->frame_size/AUDIOH_SAMP_WIDTH) );
          }
 
@@ -2017,7 +1834,7 @@ static void audiohDmaEgressHandler(
       ch->errs.dma_wrong_dir++;
    }
 
-   AUDIOH_LOG( "end idx=%i ch=%d", atomic_read( &ch->ind_active_idx ), ch->ch_no);
+   AUDIOH_LOG( "end idx=%i ch=%d", atomic_read( &ch->ch_active_idx ), ch->ch_no);
 }
 
 
@@ -2047,7 +1864,6 @@ static int audiohMixerPortsRegister( void )
 
       if( ch->ch_dir == AUDIOH_CH_DIR_EGRESS )
       {
-         cb.dstdone  = audiohMixerCb_EgressDone;
          cb.dstcnxsremoved = audiohMixerCb_EgressFlush;
          cb.getdst = audiohMixerCb_BufGetEgPtr;
       }
@@ -2262,16 +2078,16 @@ static int audiohResetGainBlocks( void )
 {
    int i, j, k;
    struct audioh_ch_cfg   *ch;
+   HALAUDIO_AUDIOH_PLATFORM_INFO *info;
 
+   info = &gAudiohPlatformInfo;
    ch = gAudioh.ch;
    /* Reset gain for each codec channel */
    for ( i = 0; i < AUDIOH_MAX_NUM_CHANS; i++, ch++ )
    {
-#if AUDIOH_SIDETONE_SUPPORT
       /* Mute sidetone */
       ch->sidetone.db = HALAUDIO_GAIN_MUTE;
       audiohSidetoneGainSet( ch->ch_no, ch->sidetone.db );
-#endif
 
       /*Unity digital gain for each channel */
       ch->dig_gain = 0; /* Default unity gain */
@@ -2290,6 +2106,14 @@ static int audiohResetGainBlocks( void )
          }
       }
    }
+
+   if( info->earpiece_spare_bit_en )
+   {
+      /* Must set bit to enable pop-click suppression.  This will allow earpiece
+       * to becom audible. */
+      chal_audio_audiotx_set_spare_bit( gChalAudioHandle );
+   }
+
    return 0;
 }
 
@@ -2505,9 +2329,6 @@ static int audiohEarpathPowerRamp( int enable )
       chal_audio_earpath_set_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_PUP_ED_DRV_TRIG );
       chal_audio_earpath_set_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN );
 
-      /* Wait for 150usec */
-      schedule_timeout_uninterruptible( HZ * AUDIOH_SLOWRAMP_PWRDN_PULSE_TIME / 1000000 );
-
       /* END_PWRDOWN to 0. This will create a 150usec pulse for this signal */
       chal_audio_earpath_clear_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN );
       chal_audio_earpath_set_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_EN_RAMP1_45M );
@@ -2523,7 +2344,7 @@ static int audiohEarpathPowerRamp( int enable )
       chal_audio_earpath_clear_slowramp_ctrl( gChalAudioHandle ,CHAL_AUDIO_AUDIOTX_SR_EN_RAMP1_45M );
       chal_audio_earpath_set_slowramp_ctrl( gChalAudioHandle, CHAL_AUDIO_AUDIOTX_SR_EN_RAMP2_5M );
 
-      /* Wait for 5msec */
+      /* Wait for 10 msec */
       schedule_timeout_uninterruptible( HZ * AUDIOH_SLOWRAMP_RAMP2UP_TIME / 1000 );
 
       /* End RAMP2_5M */
@@ -2551,9 +2372,6 @@ static int audiohEarpathPowerRamp( int enable )
       chal_audio_earpath_set_slowramp_ctrl(gChalAudioHandle,CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN);
       chal_audio_earpath_clear_slowramp_ctrl(gChalAudioHandle,CHAL_AUDIO_AUDIOTX_SR_PD_ENABLE);
 
-      /* Wait for 150usec */
-      schedule_timeout_uninterruptible( HZ * AUDIOH_SLOWRAMP_PWRDN_PULSE_TIME / 1000000 );
-
       chal_audio_earpath_clear_slowramp_ctrl(gChalAudioHandle,CHAL_AUDIO_AUDIOTX_SR_END_PWRDOWN);
 
       /* power down the earpiece Driver  */
@@ -2562,7 +2380,7 @@ static int audiohEarpathPowerRamp( int enable )
       /* Isolate Input = 1 */
       chal_audio_earpath_set_isolation_ctrl(gChalAudioHandle, CHAL_AUDIO_AUDIOTX_ISO_IN);
 
-      /* Wait for 1 msec */
+      /* Wait for 10 msec */
       schedule_timeout_uninterruptible( HZ * AUDIOH_PATHENDIS_SETTLING_TIME / 1000 );
    }
 
@@ -2628,7 +2446,8 @@ static int audiohHandsfreepathEnable( int enable )
 
 static int audiohChPowerTransducer( int powerup )
 {
-   if ( powerup && !atomic_read(&gPwrTransducerLevel) )
+   down( &gPwrLock );
+   if ( powerup && !gPwrTransducerLevel )
    {
       /* Power up analog microphones */
       chal_audio_enable_aci_auxmic(gChalAudioHandle, 1 );
@@ -2646,9 +2465,9 @@ static int audiohChPowerTransducer( int powerup )
       audiohHandsfreepathEnable( 1 );
 #endif
 
-      atomic_set( &gPwrTransducerLevel, 1 );
+      gPwrTransducerLevel = 1;
    }
-   else if ( !powerup && atomic_read(&gPwrTransducerLevel) )
+   else if ( !powerup && gPwrTransducerLevel )
    {
       /* Power down analog microphones */
       chal_audio_mic_pwrctrl(gChalAudioHandle, 0);
@@ -2665,15 +2484,17 @@ static int audiohChPowerTransducer( int powerup )
 #if AUDIOH_HANDSFREE_ENABLE
       audiohHandsfreepathEnable( 0 );
 #endif
-      atomic_set( &gPwrTransducerLevel, 0 );
+      gPwrTransducerLevel = 0;
    }
+   up( &gPwrLock );
 
    return 0;
 }
 
 static int audiohChPowerDac( int powerup )
 {
-   if ( powerup && !atomic_read(&gPwrDacLevel) )
+   down( &gPwrLock );
+   if ( powerup && !gPwrDacLevel )
    {
 
 #if AUDIOH_EARPIECE_ENABLE
@@ -2691,9 +2512,9 @@ static int audiohChPowerDac( int powerup )
 #if AUDIOH_VIBRA_ENABLE
       chal_audio_vibra_set_dac_pwr( gChalAudioHandle, CHAL_AUDIO_ENABLE );
 #endif
-      atomic_set( &gPwrDacLevel, 1 );
+      gPwrDacLevel = 1;
    }
-   else if ( !powerup && atomic_read(&gPwrDacLevel) )
+   else if ( !powerup && gPwrDacLevel )
    {
 
 #if AUDIOH_EARPIECE_ENABLE
@@ -2711,8 +2532,9 @@ static int audiohChPowerDac( int powerup )
 #if AUDIOH_VIBRA_ENABLE
       chal_audio_vibra_set_dac_pwr( gChalAudioHandle, CHAL_AUDIO_DISABLE );
 #endif
-      atomic_set( &gPwrDacLevel, 0 );
+      gPwrDacLevel = 0;
    }
+   up( &gPwrLock );
 
    return 0;
 }
@@ -2782,6 +2604,8 @@ static int audiohInit(
    /* Initialize lock */
    sema_init( &gProcBufLock , 1 );
    sema_init( &gPwrLock, 1 );
+
+   spin_lock_init( &gGainLock );
 
    /* Set threshold interrupt default to be off */
    gAudioh.thresh_intr_en = 0;
@@ -2916,6 +2740,7 @@ static int audiohPrepare( void )
 {
    int rc = 0;
    int i;
+   int ingressChannels = 0;
    struct audioh_ch_cfg   *ch;
 
    if( atomic_read( &gAudioh.running ) || atomic_read( &gAudioh.prepared ) )
@@ -2926,9 +2751,6 @@ static int audiohPrepare( void )
    /* Reset the AudioH ISR count */
    gAudioh.audioh_isr_cnt = 0;
 
-   /* Reset synchronized ingress channel counter */
-   gNumIngressChannels = 0;
-
    /* Determine number of synchronized ingress channels */
    for( i = 0; i < AUDIOH_MAX_NUM_CHANS; i++ )
    {
@@ -2936,10 +2758,12 @@ static int audiohPrepare( void )
       {
          if( AUDIOH_SYNC_FREQ( gAudioh.ch[i].samp_freq ) )
          {
-            gNumIngressChannels++;
+            ingressChannels++;
          }
       }
    }
+
+   gNumIngressChannels = ingressChannels;
 
    /* Configure settings for each channel */
    audiohChConfigAll();
@@ -2956,17 +2780,10 @@ static int audiohPrepare( void )
    chal_audio_vibra_clr_fifo( gChalAudioHandle );
    chal_audio_stpath_clr_fifo( gChalAudioHandle );
 
-   /* Clear priming buffer */
-   memset( gAudioh.zero.virt, 0, AUDIOH_MAX_PRIME_SIZE_BYTES );
-
    /* Setup DMA for each channel */
    ch = gAudioh.ch;
    for ( i = 0; i < AUDIOH_MAX_NUM_CHANS; i++, ch++ )
    {
-      /* Index is pre-incremented before use. Set to second buffer to start */
-      atomic_set(&gActive_ig_idx, 1);
-      atomic_set(&gActive_eg_idx, 1);
-
       ch->audioh_isrcount      = 0;
       memset( &ch->errs, 0, sizeof(ch->errs) );
 
@@ -2976,84 +2793,43 @@ static int audiohPrepare( void )
          memset( ch->dma_buf[0].virt, 0, ch->frame_size );
          memset( ch->dma_buf[1].virt, 0, ch->frame_size );
 
-         if ( AUDIOH_SYNC_FREQ( ch->samp_freq ) )
+         /* Check if channel can accept non sync samples */
+         rc = caph_dma_set_device_handler( ch->dma_config.device, audiohDmaEgressHandler, ch /* userData */ );
+
+         if( rc != 0 )
          {
-            rc = caph_dma_set_device_handler( ch->dma_config.device, audiohDmaSyncEgressHandler, ch /* userData */ );
-
-            if( rc != 0 )
-            {
-               printk( KERN_ERR "AUDIOH: [CH %u] Setting device handler failed\n", ch->ch_no);
-               goto cleanup_dma_channels;
-            }
-
-            ch->dma_config.caph_handle = caph_dma_request_channel( ch->dma_config.device, ch->switch_dev, ch->ch_dir, ch->dma_config.fifo_addr );
-
-            if( ch->dma_config.caph_handle == NULL )
-            {
-               printk( KERN_ERR "AUDIOH: [CH %u] failed to get MTP DMA channel\n", ch->ch_no );
-               rc = -EBUSY;
-               goto cleanup_dma_channels;
-            }
-
-            if ( ch->frame_size != 0 )
-            {
-               /* Prime egress */
-               atomic_set( &ch->queued_pkts_egr, 1 );
-
-               AUDIOH_LOG( "Priming ch %d", ch->ch_no );
-               rc = caph_dma_transfer( ch->dma_config.caph_handle, gAudioh.zero.phys, ( ch->prime_egr ) );
-
-               if( rc != 0 )
-               {
-                  printk( KERN_ERR "AUDIOH: [CH %u] egress prime DMA failed\n", ch->ch_no);
-                  goto cleanup_dma_channels;
-               }
-            }
+            printk( KERN_ERR "AUDIOH: [CH %u] Setting device handler failed\n", ch->ch_no);
+            goto cleanup_dma_channels;
          }
-         else
-         {
-            /* Clear ingress samples */
-            memset( ch->dma_buf[0].virt, 0, ch->frame_size );
-            memset( ch->dma_buf[1].virt, 0, ch->frame_size );
 
-            /* Check if channel can accept non sync samples */
-            rc = caph_dma_set_device_handler( ch->dma_config.device, audiohDmaEgressHandler, ch /* userData */ );
+         ch->dma_config.caph_handle = caph_dma_request_channel( ch->dma_config.device, ch->switch_dev, ch->ch_dir, ch->dma_config.fifo_addr );
+
+         if( ch->dma_config.caph_handle == NULL )
+         {
+            printk( KERN_ERR "AUDIOH: [CH %u] failed to get MTP DMA channel\n", ch->ch_no );
+            rc = -EBUSY;
+            goto cleanup_dma_channels;
+         }
+
+         /* Only transfer if frame size is non-zero */
+         if ( ch->frame_size != 0 )
+         {
+            /* Allocate egress double buffer DMA descriptors */
+            rc = caph_dma_alloc_ring_descriptors( ch->dma_config.caph_handle, ch->dma_buf[0].phys, (ch->frame_size *2) );
 
             if( rc != 0 )
             {
-               printk( KERN_ERR "AUDIOH: [CH %u] Setting device handler failed\n", ch->ch_no);
+               printk( KERN_ERR "AUDIOH: [CH %u] ring descriptors are not allocated\n", ch->ch_no );
                goto cleanup_dma_channels;
             }
 
-            ch->dma_config.caph_handle = caph_dma_request_channel( ch->dma_config.device, ch->switch_dev, ch->ch_dir, ch->dma_config.fifo_addr );
+            /* Start egress DMA channel. DMA does not actually start until AUDIOH channel is enabled. */
+            rc = caph_dma_start_transfer( ch->dma_config.caph_handle );
 
-            if( ch->dma_config.caph_handle == NULL )
+            if( rc != 0 )
             {
-               printk( KERN_ERR "AUDIOH: [CH %u] failed to get MTP DMA channel\n", ch->ch_no );
-               rc = -EBUSY;
+               printk( KERN_ERR "AUDIOH: [CH %u] Failed to start egress DMA\n", ch->ch_no );
                goto cleanup_dma_channels;
-            }
-
-            /* Only transfer if frame size is non-zero */
-            if ( ch->frame_size != 0 )
-            {
-               /* Allocate egress double buffer DMA descriptors */
-               rc = caph_dma_alloc_ring_descriptors( ch->dma_config.caph_handle, ch->dma_buf[0].phys, (ch->frame_size *2) );
-
-               if( rc != 0 )
-               {
-                  printk( KERN_ERR "AUDIOH: [CH %u] ring descriptors are not allocated\n", ch->ch_no );
-                  goto cleanup_dma_channels;
-               }
-
-               /* Start egress DMA channel. DMA does not actually start until AUDIOH channel is enabled. */
-               rc = caph_dma_start_transfer( ch->dma_config.caph_handle );
-
-               if( rc != 0 )
-               {
-                  printk( KERN_ERR "AUDIOH: [CH %u] Failed to start egress DMA\n", ch->ch_no );
-                  goto cleanup_dma_channels;
-               }
             }
          }
       }
@@ -3147,7 +2923,6 @@ cleanup_dma_channels:
          ch->dma_config.caph_handle = NULL;
       }
    }
-
    return rc;
 }
 
@@ -3347,7 +3122,6 @@ static int audiohDisable( void )
             printk( KERN_ERR "AUDIOH: [CH %u] failed to stop egress DMA\n", ch->ch_no );
             err = rc;
          }
-         atomic_set( &ch->queued_pkts_egr, 0 );
       }
    }
 
@@ -3415,7 +3189,6 @@ static int audiohAnaPowerDown(
    int powerdn                      /*<< (i) 1 to power down, 0 to power up */
 )
 {
-   down( &gPwrLock );
    if ( powerdn )
    {
       audiohChPowerTransducer( 0 );
@@ -3428,7 +3201,6 @@ static int audiohAnaPowerDown(
       audiohChPowerTransducer( 1 );
       AUDIOH_LOG( "Power up" );
    }
-   up( &gPwrLock );
 
    return 0;
 };
@@ -3474,7 +3246,7 @@ static int audiohSetFreq(
    struct audioh_ch_cfg *ch;
    SSASW_Device_t switch_dev;
    int i, validhz;
-   unsigned int frame_size, frame_period, prime_egr, num_ch;
+   unsigned int frame_size, frame_period, num_ch;
    int rc;
 
    if( !gAudioh.initialized )
@@ -3528,9 +3300,6 @@ static int audiohSetFreq(
       frame_period = 0;
    }
 
-   prime_egr = AUDIOH_CALC_PRIME_SIZE(frame_size);
-   prime_egr &= ~0x3;   /* 4 byte alignment */
-
    ch = &gAudioh.ch[chno];
 
    if ( ch->ch_dir == AUDIOH_CH_DIR_EGRESS )
@@ -3576,7 +3345,6 @@ static int audiohSetFreq(
    ch->samp_freq = freqHz;
    ch->frame_size = frame_size;
    ch->frame_period = frame_period;
-   ch->prime_egr = prime_egr;
    ch->num_fifo_ch = num_ch;
    ch->switch_dev = switch_dev;
 
@@ -3585,8 +3353,8 @@ static int audiohSetFreq(
    ch->dma_buf[1].phys = ch->dma_buf[0].phys + (ch->frame_size );
    ch->dma_buf[1].virt = ch->dma_buf[0].virt + (ch->frame_size );
 
-   AUDIOH_LOG( "samp_freq=%i frame_size=%i frame_period=%i prime_egr=%i num_fifo_ch=%i",
-         ch->samp_freq, ch->frame_size, ch->frame_period, ch->prime_egr, ch->num_fifo_ch );
+   AUDIOH_LOG( "samp_freq=%i frame_size=%i frame_period=%i num_fifo_ch=%i",
+         ch->samp_freq, ch->frame_size, ch->frame_period, ch->num_fifo_ch );
 
    return 0;
 }
@@ -3597,6 +3365,7 @@ static int audiohAnaGainSet( int chno, int db, HALAUDIO_DIR dir, HALAUDIO_HWSEL 
    unsigned int fifo_ch = 0;
    unsigned int mux_pos = 0;
    int rc = 0;
+   unsigned long flags;
 
    if( chno >= AUDIOH_MAX_NUM_CHANS )
    {
@@ -3620,6 +3389,8 @@ static int audiohAnaGainSet( int chno, int db, HALAUDIO_DIR dir, HALAUDIO_HWSEL 
       return -EINVAL;
    }
 
+   spin_lock_irqsave( &gGainLock, flags );
+
    /* Only set hardware parameters when interface has been prepared/powered */
    if ( atomic_read( &gAudioh.prepared ))
    {
@@ -3631,6 +3402,8 @@ static int audiohAnaGainSet( int chno, int db, HALAUDIO_DIR dir, HALAUDIO_HWSEL 
    }
    ch->anahwsel = hwsel;   /* Save mux position */
    ch->anadb = db;
+
+   spin_unlock_irqrestore( &gGainLock, flags );
 
    return rc;
 }
@@ -3720,7 +3493,8 @@ static int audiohEquParmSet(
 )
 {
    HALAUDIO_EQU         *saved_equ;
-   struct audioh_ch_cfg   *ch;
+   struct audioh_ch_cfg *ch;
+   unsigned long        flags;
 
    ch = &gAudioh.ch[chno];
 
@@ -3736,7 +3510,9 @@ static int audiohEquParmSet(
 
    saved_equ = &ch->equ;
 
+   local_irq_save( flags );
    memcpy( saved_equ, equ, sizeof(*saved_equ) );
+   local_irq_restore( flags );
 
    return 0;
 }
@@ -3771,6 +3547,7 @@ static int audiohEquParmGet(
 static int audiohDigGainSet( int chno, int db, HALAUDIO_DIR dir )
 {
    struct audioh_ch_cfg *ch;
+   unsigned long flags;
 
    if( chno >= AUDIOH_MAX_NUM_CHANS )
    {
@@ -3799,6 +3576,8 @@ static int audiohDigGainSet( int chno, int db, HALAUDIO_DIR dir )
       db = HALAUDIO_GAIN_MUTE;
    }
 
+   spin_lock_irqsave( &gGainLock, flags );
+
    if ( !AUDIOH_SYNC_FREQ( ch->samp_freq ) )
    {
       /* Call to switch to set SRC mixer gain settings */
@@ -3806,6 +3585,8 @@ static int audiohDigGainSet( int chno, int db, HALAUDIO_DIR dir )
    }
 
    ch->dig_gain = db;
+
+   spin_unlock_irqrestore( &gGainLock, flags );
 
    return 0;
 }
@@ -3844,6 +3625,7 @@ static int audiohSidetoneGainSet( int chno, int db )
 #if AUDIOH_SIDETONE_SUPPORT
    struct audioh_ch_cfg *ch;
    short lin_gain;
+   unsigned long flags;
 
    ch = &gAudioh.ch[chno];
 
@@ -3854,6 +3636,8 @@ static int audiohSidetoneGainSet( int chno, int db )
    }
 
    lin_gain = dbToLinearQ12( &db );
+
+   spin_lock_irqsave( &gGainLock, flags );
 
    /* Update filter coefficients, use the same control taps for both upper and lower */
    chal_audio_stpath_load_filter( gChalAudioHandle, (uint32_t *)sidetoneFirCoeff, 0/*unused*/ );
@@ -3887,6 +3671,7 @@ static int audiohSidetoneGainSet( int chno, int db )
          break;
 #endif
       default:
+         spin_unlock_irqrestore( &gGainLock, flags );
          return -EINVAL;
    }
 
@@ -3904,6 +3689,8 @@ static int audiohSidetoneGainSet( int chno, int db )
    chal_audio_stpath_int_enable( gChalAudioHandle, 0, (lin_gain ? CHAL_AUDIO_ENABLE : CHAL_AUDIO_DISABLE) );
 
    ch->sidetone.db = db;
+
+   spin_unlock_irqrestore( &gGainLock, flags );
 
    return 0;
 
@@ -4106,14 +3893,7 @@ static int audiohReadProc( char *buf, char **start, off_t offset, int count, int
 
    ch = data;
 
-   if( ch->ch_dir == AUDIOH_CH_DIR_INGRESS )
-   {
-      active_idx = atomic_read(&gActive_ig_idx);
-   }
-   else
-   {
-      active_idx = atomic_read(&gActive_eg_idx);
-   }
+   active_idx = atomic_read(&ch->ch_active_idx);
 
    len += sprintf( buf+len, "      AUDIOH CH%i @ %i Hz, %i bytes, %i us\n",
          ch->ch_no, ch->samp_freq, ch->frame_size, ch->frame_period );
@@ -4180,11 +3960,6 @@ static int audiohReadProc( char *buf, char **start, off_t offset, int count, int
    }
 
    /* Channel parameters */
-   if ( ch->ch_dir == AUDIOH_CH_DIR_EGRESS )
-   {
-      len += sprintf( buf+len, "Priming:     samples=%i\n", ch->prime_egr/sizeof(short) );
-   }
-
    if ( ch->ch_dir == AUDIOH_CH_DIR_INGRESS )
    {
       len += sprintf( buf+len, "Ingress DMA: device=0x%x handle=0x%x\n",
@@ -4207,9 +3982,6 @@ static int audiohReadProc( char *buf, char **start, off_t offset, int count, int
       len += sprintf( buf+len, "Buffer Egr:  [0] 0x%.8lx (0x%.8x phy)\n"
                                "             [1] 0x%.8lx (0x%.8x phy)\n",
             (unsigned long)ch->dma_buf[0].virt, ch->dma_buf[0].phys, (unsigned long)ch->dma_buf[1].virt, ch->dma_buf[1].phys );
-
-      len += sprintf( buf+len, "Prime Egr:   [0] 0x%.8lx (0x%.8x phy)\n",
-            (unsigned long)gAudioh.zero.virt, gAudioh.zero.phys );
    }
    len += sprintf( buf+len, "Debug:       running=%i prepared=%i\n",
          atomic_read( &gAudioh.running ), atomic_read( &gAudioh.prepared ) );
@@ -4318,21 +4090,6 @@ static CAPH_DMA_Handle_t caph_dma_request_channel( AADMA_Device_t aadma_dev, SSA
    devAttr->allocated = 1;
 
    return (CAPH_DMA_Handle_t)(devAttr);
-}
-
-static int caph_dma_transfer( CAPH_DMA_Handle_t handle, dma_addr_t data_addr, size_t numBytes )
-{
-   struct caph_dma_device_attr *devAttr;
-   int rc;
-
-   devAttr = (struct caph_dma_device_attr*)handle;
-
-   if(( rc = aadma_alloc_descriptors( devAttr->aadma_handle, data_addr, numBytes )) != 0 )
-   {
-      return rc;
-   }
-
-   return aadma_start_transfer( devAttr->aadma_handle );
 }
 
 static int caph_dma_alloc_ring_descriptors( CAPH_DMA_Handle_t handle, dma_addr_t data_addr, size_t numBytes )
@@ -4568,7 +4325,7 @@ err_platform_exit:
    return err;
 }
 
-static int __exit audioh_remove( struct platform_device *pdev )
+static int audioh_remove( struct platform_device *pdev )
 {
    HALAUDIO_AUDIOH_PLATFORM_INFO *info = &gAudiohPlatformInfo;
 
@@ -4589,7 +4346,7 @@ static struct platform_driver audioh_driver =
       .owner = THIS_MODULE,
    },
    .probe = audioh_probe,
-   .remove = audioh_remove,
+   .remove = __devexit_p(audioh_remove),
 };
 
 

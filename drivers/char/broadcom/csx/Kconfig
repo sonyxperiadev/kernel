@@ -1,0 +1,30 @@
+#
+# Broadcom csx driver config
+#
+menuconfig BCM_CSX
+    tristate "CSX Audio Debug Framework"
+    default n
+    ---help---
+    CSX codec streaming extentions to inject/capture media packets, PCM data, etc.
+
+config BCM_CSX_GIST
+    tristate "CSX to GIST utility interface"
+    depends on BCM_GIST && BCM_CSX
+    default n
+    ---help---
+    CSX codec streaming extentions interface to GIST debugging tool.
+
+config BCM_CSX_HALAUDIO
+    tristate "CSX to HAL Audio module interface"
+    depends on BCM_HALAUDIO && BCM_CSX
+    default n
+    ---help---
+    CSX codec streaming extentions interface to HAL Audio module.
+
+config BCM_CSX_SIGMORPH
+    tristate "CSX to SIGMORPH utility interface"
+    depends on BCM_SIGMORPH && BCM_CSX
+    default n
+    ---help---
+    Codec Streaming eXtensions interface to SIGMORPH debugging tool.
+

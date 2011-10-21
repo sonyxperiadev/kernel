@@ -451,6 +451,17 @@ struct fsg_dev {
 	struct usb_ep		*bulk_out;
 };
 
+static struct usb_otg_descriptor otg_descriptor = {
+	.bLength =		sizeof otg_descriptor,
+	.bDescriptorType =	USB_DT_OTG,
+	.bmAttributes =	USB_OTG_SRP | USB_OTG_HNP,
+};
+
+static const struct usb_descriptor_header *otg_desc[] = {
+	(struct usb_descriptor_header *) &otg_descriptor,
+	NULL,
+};
+
 static inline int __fsg_is_set(struct fsg_common *common,
 			       const char *func, unsigned line)
 {
@@ -3251,4 +3262,3 @@ static int __init init(void)
 }module_init(init);
 
 #endif /* CONFIG_USB_ANDROID_MASS_STORAGE */
-
