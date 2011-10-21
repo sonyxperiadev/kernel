@@ -54,6 +54,7 @@
 
 #include "csl_log.h"
 #include "bcmlog.h"
+#include "audio_caph.h"
 #include "caph_common.h"
 
 

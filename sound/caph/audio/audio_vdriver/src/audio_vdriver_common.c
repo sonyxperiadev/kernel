@@ -91,10 +91,12 @@ static UInt32 voiceCallSampleRate = 8000;  // defalut to 8K Hz
 
 static Boolean IsBTM_WB = FALSE;  //this flag remembers if the Bluetooth headset is a wideband headset (16KHz voice)
 
+static audio_codecId_handler_t codecId_handler = NULL;
+static UInt8 audio_codecID = 6; //default CODEC ID = AMR NB 
+
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-static void AudDrv_TaskEntry(void);
 
 //=============================================================================
 // Functions
@@ -117,18 +119,6 @@ void AUDDRV_Init( void )
 
     if (sAudDrv.isRunning == TRUE)
         return;
-
-    // create queue and task
-    sAudDrv.msgQueue = OSQUEUE_Create( QUEUESIZE_AUDDRV,
-                                    sizeof(AUDDRV_REQUEST_MSG_t), OSSUSPEND_PRIORITY );
-    OSQUEUE_ChangeName(sAudDrv.msgQueue, "AudDrvQ");
-
-    sAudDrv.task = OSTASK_Create( (TEntry_t) AudDrv_TaskEntry,
-                                TASKNAME_AUDDRV,
-                                TASKPRI_AUDDRV,
-                                STACKSIZE_AUDDRV
-                                );
-
 	/* register DSP VPU status processing handlers */
 	CSL_RegisterVPUCaptureStatusHandler((VPUCaptureStatusCB_t)&VPU_Capture_Request);
 #if 0  // These features are not needed in LMP now.
@@ -149,71 +139,6 @@ void AUDDRV_Init( void )
 
 //*********************************************************************
 //
-//   the audio driver task entry
-//
-//   @return   void             Description
-//   @note     
-//**********************************************************************/
-static void AudDrv_TaskEntry()
-{
-    AUDDRV_REQUEST_MSG_t    reqMsg;
-    AudioMode_t     mode;
-    UInt32          dev = 0;
-    OSStatus_t      status;
-
-    while(TRUE)
-    {
-        status = OSQUEUE_Pend( sAudDrv.msgQueue, (QMsg_t *)&reqMsg, TICKS_FOREVER );
-        if (status == OSSTATUS_SUCCESS)
-        {
-            Log_DebugPrintf(LOGID_AUDIO,"AudDrv_TaskEntry:: reqID = 0x%x\n", reqMsg.reqID);
-
-            switch (reqMsg.reqID)
-            {
-                case AUDDRV_RATE_CHANGE_REQ:
-
-					if (inVoiceCall == TRUE)
-					{
-                    	mode = AUDDRV_GetAudioMode();
-                    	// 0x0A as per 3GPP 26.103 Sec 6.3 indicates AMR WB  AUDIO_ID_CALL16k
-                    	// 0x06 indicates AMR NB
-                    	if ( reqMsg.param1 == 0x0A ) // AMR-WB
-                    	{
-                        	voiceCallSampleRate = 16000;
-                        	if (mode < AUDIO_MODE_NUMBER)
-                            	mode = (AudioMode_t)(mode + AUDIO_MODE_NUMBER);
-                    	}
-                    	else  // AMR-NB
-                    	{
-                        	voiceCallSampleRate = 8000;
-                        	if (mode >= AUDIO_MODE_NUMBER)
-                            	mode = (AudioMode_t)(mode - AUDIO_MODE_NUMBER);
-                    	}
-						dev = AUDDRV_GetAudioDev();
-                    	AUDDRV_SetAudioMode(mode, dev);
-                    	AUDDRV_Telephony_RateChange(voiceCallSampleRate);
-					}
-					else // Not in voice call yet, audio mode will be set during path setup, as dev is not available
-					{
-                    	// 0x0A as per 3GPP 26.103 Sec 6.3 indicates AMR WB  AUDIO_ID_CALL16k
-                    	// 0x06 indicates AMR NB
-                    	if ( reqMsg.param1 == 0x0A ) // AMR-WB
-                        	voiceCallSampleRate = 16000;
-                    	else  // AMR-NB
-                        	voiceCallSampleRate = 8000;
-					}
-
-					break;
-
-                default:
-                    break;
-            }
-        }
-    }
-}
-
-//*********************************************************************
-//
 //   Shutdown audio driver task
 //   
 //   @return    void
@@ -224,12 +149,25 @@ void AUDDRV_Shutdown(void)
     if (sAudDrv.isRunning == FALSE)
         return;
 
-    OSTASK_Destroy(sAudDrv.task);
-
-    OSQUEUE_Destroy(sAudDrv.msgQueue);
-
     sAudDrv.isRunning = FALSE;
 }
+
+
+//*********************************************************************
+//
+//   Registers callback for rate change request
+//
+//  @param     callback function
+//  @return     void
+//   @note     
+//**********************************************************************/
+
+void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb )
+{
+	Log_DebugPrintf(LOGID_SOC_AUDIO, "\n\r\t*  AUDDRV_RegisterRateChangeCallback, 0x%x\n\r", codecId_cb);
+	codecId_handler = codecId_cb;
+}
+
 
 //*********************************************************************
 //
@@ -241,15 +179,12 @@ void AUDDRV_Shutdown(void)
 //**********************************************************************/
 void AUDDRV_RequestRateChange(UInt8 codecID)
 {
-    AUDDRV_REQUEST_MSG_t reqMsg;
-
-    reqMsg.reqID = AUDDRV_RATE_CHANGE_REQ;
-    reqMsg.param1 = codecID;
-    reqMsg.param2 = 0;
-    reqMsg.param3 = 0;
-
-    Log_DebugPrintf(LOGID_AUDIO,"AUDDRV_RequestRateChange\n");
-    OSQUEUE_Post(sAudDrv.msgQueue, (QMsg_t*)&reqMsg, TICKS_FOREVER);
+	if((audio_codecID != codecID) && (codecId_handler != NULL)) //if current codecID is same as new, ignore the request
+	{
+		audio_codecID = codecID;
+		codecId_handler(codecID);  		
+	}
+			
 }
 // CSL driver will send a DSP_ENABLE_DIGITAL_SOUND?? cmd to DSP, 
 // But ARM code (audio controller) turns on/off PCM interface.
@@ -470,6 +405,18 @@ void AUDDRV_Telephony_RateChange( UInt32 sampleRate )
 UInt32 AUDDRV_Telephone_GetSampleRate()
 {
 	return voiceCallSampleRate;
+}
+
+//=============================================================================
+//
+// Function Name: AUDDRV_Telephone_SetSampleRate
+//
+// Description:   Set the sample rate for voice call
+//
+//=============================================================================
+void AUDDRV_Telephony_SetSampleRate(UInt32 samplerate)
+{
+	voiceCallSampleRate = samplerate;
 }
 
 //=============================================================================

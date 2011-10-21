@@ -83,6 +83,10 @@ UInt32 AUDCTRL_RateGetTelephony()
 	return AUDDRV_Telephone_GetSampleRate();
 }
 
+void AUDCTRL_RateSetTelephony(UInt32 samplerate)
+{
+	AUDDRV_Telephony_SetSampleRate(samplerate);
+}
 //============================================================================
 //
 // Function Name: AUDCTRL_SetTelephonyMicSpkr

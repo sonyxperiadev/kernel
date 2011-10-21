@@ -66,6 +66,8 @@
 extern "C" {
 #endif
 
+typedef void (*audio_codecId_handler_t)(UInt8 codecId);
+
 //Define the other mic which is used for Noise Cancellation.
 //It is product-dependent.
 #define MIC_NOISE_CANCEL CSL_CAPH_DEV_EANC_DIGI_MIC_R
@@ -259,6 +261,8 @@ void AUDDRV_Telephony_Init (AUDDRV_MIC_Enum_t   mic,
 void AUDDRV_Telephony_RateChange ( UInt32 sampleRate );
 
 UInt32 AUDDRV_Telephone_GetSampleRate( void );
+
+void AUDDRV_Telephony_SetSampleRate(UInt32 samplerate);
 
 // rate change request function
 void AUDDRV_RequestRateChange(UInt8 codecID);
@@ -475,6 +479,16 @@ Int16 AUDDRV_GetHWDLGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
 *****************************************************************************/
 UInt16 AUDDRV_GetPMUGain(CSL_CAPH_DEVICE_e spkr, Int16 gain);
 
+/**
+*
+*  @brief  Register callback for rate change
+*
+*  @param  codecId_cb
+*
+*  @return none
+*****************************************************************************/
+
+void AUDDRV_RegisterRateChangeCallback( audio_codecId_handler_t codecId_cb);
 
 #ifdef __cplusplus
 }

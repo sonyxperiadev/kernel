@@ -91,7 +91,7 @@ typedef void*  AUDIO_DRIVER_HANDLE_t;
 
 typedef void (*AUDIO_DRIVER_InterruptPeriodCB_t)( void * p);
 
-typedef void (*AUDIO_DRIVER_VoipCB_t)( AUDIO_DRIVER_HANDLE_t drv_handle, UInt8* pBuf, UInt32 nsize);
+typedef void (*AUDIO_DRIVER_VoipCB_t)( void *p, u8* pBuf, u32 nsize);
 
 
 typedef struct AUDIO_DRIVER_CallBackParams_t

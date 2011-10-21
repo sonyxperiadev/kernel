@@ -32,7 +32,6 @@ the GPL, without Broadcom's express prior written consent.
 #ifndef __CAPH_COMMON_H__
 #define __CAPH_COMMON_H__
 
-
 #include <linux/platform_device.h>
 #include <linux/init.h>
 #include <linux/jiffies.h>
@@ -51,8 +50,6 @@ the GPL, without Broadcom's express prior written consent.
 #include <sound/rawmidi.h>
 #include <sound/initval.h>
 #include <linux/wakelock.h>
-
-#include "bcm_audio_devices.h"
 
 #ifdef	CONFIG_SND_BCM_PREALLOC_MEM_FOR_PCM
 #define	IS_PCM_MEM_PREALLOCATED		1

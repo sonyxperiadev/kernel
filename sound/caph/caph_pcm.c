@@ -52,8 +52,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
-#include "bcm_audio_devices.h"
-#include "bcm_audio_thread.h"
+#include "audio_caph.h"
 #include "caph_common.h"
 
 #include "csl_dsp.h"
@@ -374,7 +373,7 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
     int substream_number = substream->number ;
-	Int32	*pSel;
+	s32	*pSel;
 	int i;
 
     drv_handle = substream->runtime->private_data;
@@ -497,6 +496,7 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 			case SNDRV_PCM_TRIGGER_START:
 			{
                 BRCM_AUDIO_Param_Start_t param_start;
+				BRCM_AUDIO_Param_Spkr_t param_spkr;
                 
 				struct snd_pcm_runtime *runtime = substream->runtime;
 
@@ -513,9 +513,12 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 				{
 					if(chip->streamCtl[substream_number].dev_prop.p[i].hw_id != AUDIO_HW_NONE)
 					{
-						param_start.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
-               			AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,&param_start,NULL,0);
-						break;
+						 param_spkr.src = chip->streamCtl[substream_number].dev_prop.p[0].hw_src;
+						 param_spkr.cur_sink = chip->streamCtl[substream_number].dev_prop.p[0].hw_id;
+						 param_spkr.cur_spkr = chip->streamCtl[substream_number].dev_prop.p[0].speaker;
+						 param_spkr.new_sink = chip->streamCtl[substream_number].dev_prop.p[i].hw_id;
+						 param_spkr.new_spkr = chip->streamCtl[substream_number].dev_prop.p[i].speaker;
+               			 AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,&param_spkr,NULL,0);
 					}
 				}
 			}
@@ -758,7 +761,7 @@ static int PcmCaptureTrigger(
 {
 	brcm_alsa_chip_t *chip = snd_pcm_substream_chip(substream);
     AUDIO_DRIVER_HANDLE_t  drv_handle;
-    Int32	*pSel;
+    s32	*pSel;
 	int substream_number = substream->number + CTL_STREAM_PANEL_PCMIN - 1;
 
 
@@ -1075,7 +1078,8 @@ int __devinit PcmDeviceNew(struct snd_card *card)
     // Initialize the audio controller
     if(audio_init_complete == 0)
     {
-		BCM_AUDIO_DEBUG("\n PcmDeviceNew : call AUDCTRL_Init\n");
+		BCM_AUDIO_DEBUG("\n PcmDeviceNew : call AUDIO_Init\n");
+		caph_audio_init();
         AUDCTRL_Init ();
         DSPDRV_Init ();
         audio_init_complete = 1;

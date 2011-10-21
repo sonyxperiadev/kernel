@@ -53,8 +53,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_ddriver.h"
 
 #include "audio_controller.h"
-#include "bcm_audio_devices.h"
-#include "bcm_audio_thread.h"
+#include "audio_caph.h"
 #include "caph_common.h"
 
 static Boolean isSTIHF = FALSE;
@@ -128,7 +127,7 @@ static int VolumeCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
-	Int32	*pVolume;
+	s32	*pVolume;
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
 	pVolume = pChip->streamCtl[stream].ctlLine[dev].iVolume;
@@ -152,9 +151,9 @@ static int VolumeCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
-	Int32	*pVolume;
+	s32	*pVolume;
 	struct snd_pcm_substream *pStream=NULL;
-	Int32 *pCurSel;
+	s32 *pCurSel;
 	BRCM_AUDIO_Param_Volume_t parm_vol;
 
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
@@ -284,7 +283,7 @@ static int SelCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
-	Int32	*pSel;
+	s32	*pSel;
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
 	pSel = pChip->streamCtl[stream].iLineSelect;
@@ -309,7 +308,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
-	Int32	*pSel, pCurSel[2];
+	s32	*pSel, pCurSel[2];
 	struct snd_pcm_substream *pStream=NULL;
 	BRCM_AUDIO_Param_Spkr_t parm_spkr;
 	BRCM_AUDIO_Param_Call_t parm_call;
@@ -326,6 +325,8 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 
 	if (pSel[0] == pSel[1])
 		pSel[1] = AUDCTRL_SPK_TOTAL_COUNT;
+
+	pSel[2] = AUDCTRL_SPK_TOTAL_COUNT;
 
 	if (isSTIHF == TRUE)
 	{
@@ -431,7 +432,7 @@ static int SelCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_value
 								parm_spkr.cur_spkr = pChip->streamCtl[stream-1].dev_prop.p[0].speaker;
 								parm_spkr.new_sink = newSink;
 								parm_spkr.new_spkr = newSpk;
-								AUDIO_Ctrl_Trigger(ACTION_AUD_AddSpkr,&parm_spkr,NULL,0);
+								AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,&parm_spkr,NULL,0);
 							}
 						}
 					}
@@ -542,7 +543,7 @@ static int SwitchCtrlGet(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
-	Int32	*pMute;
+	s32	*pMute;
 	CAPH_ASSERT(stream>=CTL_STREAM_PANEL_FIRST && stream<CTL_STREAM_PANEL_LAST);
 	stream--;
 	pMute = pChip->streamCtl[stream].ctlLine[dev].iMute;
@@ -564,7 +565,7 @@ static int SwitchCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_va
 	int priv = kcontrol->private_value;
 	int	stream = STREAM_OF_CTL(priv);
 	int	dev = DEV_OF_CTL(priv);
-	Int32	*pMute;
+	s32	*pMute;
 	struct snd_pcm_substream *pStream=NULL;
 	BRCM_AUDIO_Param_Mute_t parm_mute;
 
@@ -690,10 +691,14 @@ static int MiscCtrlInfo(struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_info
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
 			uinfo->count = 7;
 			uinfo->value.integer.min = 0x80000000;
-			uinfo->value.integer.max = 0x7FFFFFFF;//FIXME
+			uinfo->value.integer.max = 0x7FFFFFFF;
 			uinfo->value.integer.step = 1;
 			if(kcontrol->id.index==1) //val[0] is at command handler, val[1] is 1st parameter of the AT command parameters
+			{
 				uinfo->count = 1;
+				uinfo->value.integer.min = 0x0;
+				uinfo->value.integer.max = 0x7FFFFFFF; //Each bit indicates Log ID. Max of 32 Log IDs can be supported
+			}				
 			break;
 		case CTL_FUNCTION_BYPASS_VIBRA:
 			uinfo->type = SNDRV_CTL_ELEM_TYPE_INTEGER;
@@ -811,7 +816,7 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 	brcm_alsa_chip_t*	pChip = (brcm_alsa_chip_t*)snd_kcontrol_chip(kcontrol);
 	int priv = kcontrol->private_value;
 	int function = priv&0xFF;
-	Int32	*pSel, callMode;
+	s32	*pSel, callMode;
 	int	stream = STREAM_OF_CTL(priv);
 	BRCM_AUDIO_Param_Call_t parm_call;
 	BRCM_AUDIO_Param_Loopback_t parm_loop;

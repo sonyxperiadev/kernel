@@ -55,7 +55,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
-#include "bcm_audio_devices.h"
+#include "audio_caph.h"
 #include "caph_common.h"
 
 #include "brcm_rdb_sysmap.h"
@@ -139,28 +139,28 @@ static AUDQUE_Queue_t	*sVtQueue = NULL;
 static Semaphore_t		sVtQueue_Sema;
 static const UInt16 sVoIPDataLen[] = { 0, 322, 160, 38, 166, 642, 70};
 
-static void AudDrv_VOIP_DumpUL_CB(void *pPrivate, UInt8	*pSrc, UInt32 nSize);
-static void AudDrv_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize);
+static void AudDrv_VOIP_DumpUL_CB(void *pPrivate, u8	*pSrc, u32 nSize);
+static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 *pDst, u32 nSize);
 
 //static UInt8 sVoIPAMRSilenceFrame[1] = {0x000f};
 
 // callback for buffer ready of pull mode
-static void AudDrv_VOIP_DumpUL_CB (void *pPrivate, UInt8	*pSrc, UInt32 nSize)
+static void AudDrv_VOIP_DumpUL_CB (void *pPrivate, u8	*pSrc, u32 nSize)
 {
 	UInt32 copied = 0; 
 
 	copied = AUDQUE_Write (sVtQueue, pSrc, nSize); 
-	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL ready, size = 0x%lx, copied = 0x%lx\n",  nSize, copied);
+	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL ready, size = 0x%x, copied = 0x%lx\n",  nSize, copied);
 	OSSEMAPHORE_Release (sVtQueue_Sema);
 	printk(KERN_INFO  "\n AudDrv_VOIP_DumpUL_CB UL done \n");
 }
 
-static void AudDrv_VOIP_FillDL_CB(void *pPrivate, UInt8 *pDst, UInt32 nSize)
+static void AudDrv_VOIP_FillDL_CB(void *pPrivate, u8 *pDst, u32 nSize)
 {
 	UInt32 copied = 0; 
 
 	copied = AUDQUE_Read (sVtQueue, pDst, nSize);
-	printk(KERN_INFO "\n VOIP_FillDL_CB DL ready, size =0x%lx, copied = 0x%lx\n", nSize, copied);
+	printk(KERN_INFO "\n VOIP_FillDL_CB DL ready, size =0x%x, copied = 0x%lx\n", nSize, copied);
 	
     OSSEMAPHORE_Release (AUDDRV_BufDoneSema);
 }
@@ -289,30 +289,6 @@ static int HandleControlCommand()
 				char *MsgBuf =  NULL;
 				MsgBuf = kmalloc(2408,GFP_KERNEL);
 
-				// map the audio base
-				/*
-				static void __iomem *mappedMem = NULL;
-				if(mappedMem == NULL)
-				{
-					mappedMem = ioremap_nocache(KONA_HUB_CLK_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_BINTC_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_AUDIOH_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_SDT_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_SSP4_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_SSP3_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_SRCMIXER_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_CFIFO_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_AADMAC_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_SSASW_BASE_VA, SZ_4K);
-					ioremap_nocache(KONA_AHINTC_BASE_VA, SZ_4K);
-
-					if (!mappedMem) {
-						DEBUG("\n\r\t* Mapping audio base failed*\n\r");
-						return;
-					}
-				}*/
-
-
 				AUDCTRL_ControlHWClock(TRUE);
 
 				sprintf( MsgBuf, "0x35026800 =0x%08lx, 0x3502c910 =0x%08lx, 0x3502c990 =0x%08lx, 0x3502c900 =0x%08lx,0x3502cc20 =0x%08lx,0x35025800 =0x%08lx, 0x34000a34 =0x%08lx, 0x340004b0 =0x%08lx, 0x3400000c =0x%08lx, 0x3400047c =0x%08lx, 0x34000a40=0x%08lx\n",
@@ -360,327 +336,6 @@ static int HandleControlCommand()
 
 				DEBUG(MsgBuf);
 
-				if (sgBrcm_auddrv_TestValues[2] == 3)
-				{
-					UInt32 regAddr = 0x3502c000;
-					while (regAddr <= 0x3502cc34)
-					{
-						sprintf( MsgBuf, "srcMixer: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-				}
-
-				if (sgBrcm_auddrv_TestValues[2] == 2)
-				{
-					UInt32 regAddr = 0x3502F000;
-					while (regAddr <= 0x3502F7FC)
-					{
-						sprintf( MsgBuf, "SSASW: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-				}
-
-				if (sgBrcm_auddrv_TestValues[2] == 1)
-				{
-					UInt32 regAddr = 0x34000008;
-					while (regAddr <= 0x34000024)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000030;
-					while (regAddr <= 0x34000054)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000100;
-					while (regAddr <= 0x34000100)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000200;
-					while (regAddr <= 0x34000204)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000300;
-					while (regAddr <= 0x34000304)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x3400030c;
-					while (regAddr <= 0x3400030c)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000400;
-					while (regAddr <= 0x34000400)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000408;
-					while (regAddr <= 0x3400040C)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x3400041c;
-					while (regAddr <= 0x3400041c)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000430;
-					while (regAddr <= 0x34000430)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000438;
-					while (regAddr <= 0x3400043c)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000444;
-					while (regAddr <= 0x34000448)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000450;
-					while (regAddr <= 0x34000450)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x3400045c;
-					while (regAddr <= 0x34000474)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x3400047c;
-					while (regAddr <= 0x34000484)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x3400048c;
-					while (regAddr <= 0x34000490)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000498;
-					while (regAddr <= 0x34000498)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x340004a0;
-					while (regAddr <= 0x340004b0)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000a00;
-					while (regAddr <= 0x34000a00)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000a08;
-					while (regAddr <= 0x34000a0c)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000a1c;
-					while (regAddr <= 0x34000a34)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000a40;
-					while (regAddr <= 0x34000a40)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000E00;
-					while (regAddr <= 0x34000e0c)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-						regAddr = 0x34000E20;
-					while (regAddr <= 0x34000e28)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000E40;
-					while (regAddr <= 0x34000e54)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000E74;
-					while (regAddr <= 0x34000e74)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000E84;
-					while (regAddr <= 0x34000e84)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000Ec0;
-					while (regAddr <= 0x34000ec4)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-					regAddr = 0x34000ED4;
-					while (regAddr <= 0x34000eD4)
-					{
-						sprintf( MsgBuf, "CLK: 0x%08lx =0x%08lx\n",
-										regAddr,
-										*((volatile UInt32 *) (HW_IO_PHYS_TO_VIRT(regAddr)))
-										);
-						regAddr += 4;
-						DEBUG(MsgBuf);
-					}
-				}
 				kfree(MsgBuf);
 				AUDCTRL_ControlHWClock(FALSE);
 			}

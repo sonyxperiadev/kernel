@@ -244,6 +244,16 @@ void AUDCTRL_RateChangeTelephony( UInt32 sampleRate );
 UInt32 AUDCTRL_RateGetTelephony( void );
 
 /**
+*  @brief  Set voice call sample rate
+*
+*
+*  @none
+*
+****************************************************************************/
+void AUDCTRL_RateSetTelephony(UInt32 samplerate);
+	
+
+/**
 *  @brief  Disable telephony audio path in HW and DSP
 *
 *  @param  ulSrc	(in)  uplink source 

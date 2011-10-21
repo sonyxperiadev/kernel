@@ -32,9 +32,9 @@ EXTRA_CFLAGS += -I ./include/linux/
 EXTRA_CFLAGS += -I ./include/linux/broadcom
 EXTRA_CFLAGS += -I ./arch/arm/mach-rhea/include/mach/comms
 #Audio Controller header files
-EXTRA_CFLAGS += -I $(src) -I $(src)/common -I $(src)/audio/audio_controller -I $(src)/audio/audio_controller/public
+EXTRA_CFLAGS += -I $(src) -I $(src)/common -I $(src)/audio/audio_controller/public
 EXTRA_CFLAGS += -I $(src)/audio/audio_vdriver/public/
-EXTRA_CFLAGS += -I $(src)/audio/public/
+EXTRA_CFLAGS += -I $(src)/audio
 EXTRA_CFLAGS += -I $(src)/audio/audio_datadriver/public/
 #CSL header files
 EXTRA_CFLAGS += -I $(src)/soc/csl/audio/public/
@@ -60,11 +60,8 @@ EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/mach
 EXTRA_CFLAGS += -I ./drivers/char/broadcom/
-#EXTRA_CFLAGS += -I ./arch/arm/mach-island/include/
-#EXTRA_CFLAGS += -I ./arch/arm/mach-island/include/mach/
 EXTRA_CFLAGS += -I ./arch/arm/mach-rhea/include/
 EXTRA_CFLAGS += -I ./arch/arm/mach-rhea/include/mach/
-#EXTRA_CFLAGS += -I ./arch/arm/mach-island/include/mach/rdb/
 EXTRA_CFLAGS += -I ./arch/arm/mach-rhea/include/mach/rdb/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/chal/
 EXTRA_CFLAGS += -I ./arch/arm/plat-kona/include/plat/csl/
@@ -80,8 +77,7 @@ snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_caph.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_controller_common.o
 snd-brcm-omx-objs += audio/audio_controller/src/audio_pmu_adapt.o
 snd-brcm-omx-objs += audio/audio_datadriver/src/audio_ddriver.o
-snd-brcm-omx-objs += bcm_audio_thread.o
-#snd-brcm-omx-objs += audio_stubs.o
+snd-brcm-omx-objs += audio/audio_caph.o
 
 #CHAL Source Files
 snd-brcm-omx-objs += soc/chal/modules/audio/caph/src/chal_caph_switch.o

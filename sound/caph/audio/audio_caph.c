@@ -16,7 +16,7 @@ the GPL, without Broadcom's express prior written consent.
 *
 *****************************************************************************
 *
-*  bcm_audio_thread.c
+*  audio_caph.c
 *
 *  PURPOSE:
 *
@@ -44,8 +44,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "audio_vdriver.h"
 #include "audio_controller.h"
 #include "audio_ddriver.h"
-#include "bcm_audio_devices.h"
-#include "bcm_audio_thread.h"
+#include "audio_caph.h"
 #include "caph_common.h"
 
 
@@ -123,6 +122,27 @@ static void AudioCtrlWorkThread(struct work_struct *work)
 
 	return;
 }
+
+//AudioCodecIdHander
+//callback function that handles the rate change
+//----------------------------------------------------------------
+
+static void AudioCodecIdHander(UInt8 codecID)
+{
+    BRCM_AUDIO_Param_RateChange_t param_rate_change;
+    BCM_AUDIO_DEBUG("AudioCodeCIdHander : CodecId = %d \r\n", codecID);
+    param_rate_change.codecID = codecID;
+    AUDIO_Ctrl_Trigger(ACTION_AUD_RateChange,&param_rate_change,NULL,0);
+}
+
+//caph_audio_init
+//registers callback for handling rate change and if any init required.
+//----------------------------------------------------------------
+void caph_audio_init(void)
+{		
+	AUDDRV_RegisterRateChangeCallback(AudioCodecIdHander);        
+}
+	
 
 //+++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 //LaunchAudioHalThread
@@ -211,6 +231,8 @@ Result_t AUDIO_Ctrl_Trigger(
         if(osStatus != OSSTATUS_SUCCESS)
         {
             BCM_AUDIO_DEBUG("AUDIO_Ctrl_Trigger Timeout=%d\r\n",osStatus);
+			status = RESULT_ERROR;
+			return status; 
         }
 
         while(1)
@@ -427,19 +449,12 @@ void AUDIO_Ctrl_Process(
 		break;
 		case ACTION_AUD_AddChannel:
 		{
-            BRCM_AUDIO_Param_Start_t* param_start = (BRCM_AUDIO_Param_Start_t*) arg_param;
-
-			for (i = 1; i < MAX_PLAYBACK_DEV; i++)
-			{
-				if(param_start->pdev_prop->p[i].hw_id != AUDIO_HW_NONE)
-				{
-            		AUDCTRL_AddPlaySpk( param_start->pdev_prop->p[0].hw_src,
-                                    param_start->pdev_prop->p[0].hw_id,
-                                   param_start->pdev_prop->p[0].speaker,
-									param_start->pdev_prop->p[i].hw_id,
-									param_start->pdev_prop->p[i].speaker);
-				}
-			}
+			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
+			AUDCTRL_AddPlaySpk(parm_spkr->src,
+	                               parm_spkr->cur_sink,
+									parm_spkr->cur_spkr,
+									parm_spkr->new_sink,
+									parm_spkr->new_spkr);
 		}
 		break;
 		case ACTION_AUD_EnableTelephony:
@@ -532,16 +547,6 @@ void AUDIO_Ctrl_Process(
 									parm_spkr->new_spkr);
 		}
 		break;
-		case ACTION_AUD_AddSpkr:
-		{
-			BRCM_AUDIO_Param_Spkr_t *parm_spkr =  (BRCM_AUDIO_Param_Spkr_t *)arg_param;
-			AUDCTRL_AddPlaySpk(parm_spkr->src,
-                               parm_spkr->cur_sink,
-								parm_spkr->cur_spkr,
-								parm_spkr->new_sink,
-								parm_spkr->new_spkr);
-		}
-		break;
 		case ACTION_AUD_SetAudioMode:
 		{
 			BRCM_AUDIO_Param_Call_t *parm_call =  (BRCM_AUDIO_Param_Call_t *)arg_param;
@@ -614,6 +619,47 @@ void AUDIO_Ctrl_Process(
 			AUDCTRL_SetTelephonyMicMute(AUDIO_HW_VOICE_IN,
 										parm_mute->device,
 										parm_mute->mute1);
+		}
+		break;
+		case ACTION_AUD_RateChange:
+		{
+			BRCM_AUDIO_Param_RateChange_t *param_rate_change = (BRCM_AUDIO_Param_RateChange_t *)arg_param;
+			AudioMode_t mode;
+			UInt32 sampleRate = 8000;
+
+			// 0x0A as per 3GPP 26.103 Sec 6.3 indicates AMR WB  AUDIO_ID_CALL16k
+			// 0x06 indicates AMR NB
+
+			if((param_rate_change->codecID == 0x06) || (param_rate_change->codecID == 0x0A))
+			{
+				if(AUDCTRL_InVoiceCall() == TRUE) //If in voice call mode
+				{
+					mode = AUDCTRL_GetAudioMode();
+					if ( param_rate_change->codecID == 0x0A ) // AMR-WB
+					{
+						sampleRate = 16000;
+						if (mode < AUDIO_MODE_NUMBER)
+							mode = (AudioMode_t)(mode + AUDIO_MODE_NUMBER);
+					}
+					else if (param_rate_change->codecID == 0x06)// AMR-NB
+					{
+						sampleRate = 8000;
+						if (mode >= AUDIO_MODE_NUMBER)
+							mode = (AudioMode_t)(mode - AUDIO_MODE_NUMBER);
+					}
+
+					AUDCTRL_SaveAudioModeFlag(mode);
+					AUDCTRL_RateChangeTelephony(sampleRate);
+				}
+				else // Not in voice call yet, audio mode will be set during path setup
+				{
+					if ( param_rate_change->codecID == 0x0A ) // AMR-WB
+						sampleRate = 16000;
+					else  if (param_rate_change->codecID == 0x06) // AMR-NB
+						sampleRate = 8000;
+					AUDCTRL_RateSetTelephony(sampleRate);
+				}
+			}
 		}
 		break;
         default:

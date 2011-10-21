@@ -53,7 +53,7 @@ the GPL, without Broadcom's express prior written consent.
 #include "csl_caph.h"
 #include "audio_vdriver.h"
 #include "audio_controller.h"
-#include "bcm_audio_devices.h"
+#include "audio_caph.h"
 #include "caph_common.h"
 #include "auddrv_audlog.h"
 
@@ -909,7 +909,7 @@ int	AtMaudTst(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 //---------------------------------------------------------------------------
 int	AtMaudVol(brcm_alsa_chip_t* pChip, Int32	ParamCount, Int32 *Params)
 {
-	Int32 *pVolume;
+	s32 *pVolume;
 	int mode;
 
 	BCM_AUDIO_DEBUG("%s P1-P6=%d %d %d %d %d %d cnt=%d\n", __FUNCTION__, Params[0], Params[1], Params[2], Params[3], Params[4], Params[5], ParamCount);	
