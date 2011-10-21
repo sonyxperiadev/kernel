@@ -1,5 +1,5 @@
 EXTRA_CFLAGS  += -Wall -Wstrict-prototypes -Wno-trigraphs
 EXTRA_CFLAGS  += -Werror
 
-obj-y := vc_hnfo.o
+obj-$(CONFIG_VC_HNFO) := vc_hnfo.o
 

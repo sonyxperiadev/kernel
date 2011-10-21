@@ -295,18 +295,18 @@ Result of git status after git merge of map-android-gb (eecd6199) into map_integ
 #	modified:   drivers/misc/bcmpmu_audio.c
 #	modified:   drivers/misc/bcmpmu_audio.h
 #	modified:   drivers/misc/pmem.c
-#	new file:   drivers/misc/vc04_services/hdmi/Makefile
-#	new file:   drivers/misc/vc04_services/hdmi/hdmi.c
-#	modified:   drivers/misc/vc04_services/vc_dnfo/Makefile
-#	modified:   drivers/misc/vc04_services/vc_hnfo/Makefile
-#	modified:   drivers/misc/vc04_services/vc_mem/Makefile
-#	modified:   drivers/misc/vc04_services/vc_omx/Makefile
-#	modified:   drivers/misc/vc04_services/vc_ovl/Makefile
-#	modified:   drivers/misc/vc04_services/vchiq/Makefile
+#	new file:   drivers/misc/vc04_services/hdmi/Makefile removed by eszeto
+#	new file:   drivers/misc/vc04_services/hdmi/hdmi.c removed by eszeto
+#	modified:   drivers/misc/vc04_services/vc_dnfo/Makefile fixed by eszeto
+#	modified:   drivers/misc/vc04_services/vc_hnfo/Makefile fixed by eszeto
+#	modified:   drivers/misc/vc04_services/vc_mem/Makefile fixed by eszeto
+#	modified:   drivers/misc/vc04_services/vc_omx/Makefile fixed by eszeto
+#	modified:   drivers/misc/vc04_services/vc_ovl/Makefile fixed by eszeto
+#	modified:   drivers/misc/vc04_services/vchiq/Makefile fixed by eszeto
 #	modified:   drivers/misc/vc04_services/vchiq/shared-config.mk
-#	modified:   drivers/misc/vc04_services/vcos/Makefile
-#	modified:   drivers/misc/vc04_services/vmcs_fb/Makefile
-#	modified:   drivers/misc/vc04_services/vmcs_sm/Makefile
+#	modified:   drivers/misc/vc04_services/vcos/Makefile fixed by eszeto
+#	modified:   drivers/misc/vc04_services/vmcs_fb/Makefile fixed by eszeto
+#	modified:   drivers/misc/vc04_services/vmcs_sm/Makefile fixed by eszeto
 #	modified:   drivers/misc/vc04_services/vmcs_sm/vc_sm_knl.h
 #	modified:   drivers/mmc/card/block.c
 #	modified:   drivers/mmc/core/mmc.c
@@ -581,8 +581,8 @@ Result of git status after git merge of map-android-gb (eecd6199) into map_integ
 #	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/srpc/src/Makefile fixed by rjui
 #	both modified:      drivers/char/broadcom/modem/rpc/rpc_CIB/xdr/src/Makefile fixed by rjui
 #	both modified:      drivers/char/broadcom/modem/rpc/rpc_stubs.c fixed by rjui
-#	both modified:      drivers/misc/vc04_services/Kconfig
-#	both modified:      drivers/misc/vc04_services/Makefile
+#	both modified:      drivers/misc/vc04_services/Kconfig fixed by eszeto
+#	both modified:      drivers/misc/vc04_services/Makefile fixed by eszeto
 #	both modified:      drivers/mmc/host/sdhci.c fixed by rjui
 #	both modified:      drivers/net/wireless/bcmdhd/Makefile
 #	both modified:      drivers/net/wireless/bcmdhd/bcmsdio/sys/bcmsdh.c
@@ -689,9 +689,9 @@ Result of git status after git merge of map-android-gb (eecd6199) into map_integ
 #	both added:         include/linux/broadcom/bcmbt_lpm.h fixed by rjui, keep it
 #	both added:         include/linux/broadcom/bcmbt_rfkill.h fixed by rjui, keep it
 #	both modified:      include/linux/broadcom/ipcinterface.h fixed by rjui
-#	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_bivcm_arm.c
-#	both modified:      vc4-dev/src/interface/vcos/linuxkernel/vcos_platform.h
-#	both modified:      vc4-dev/src/interface/vcos/vcos_logging.h
+#	both modified:      vc4-dev/src/interface/vchiq_arm/vchiq_bivcm_arm.c fixed by eszeto
+#	both modified:      vc4-dev/src/interface/vcos/linuxkernel/vcos_platform.h fixed by eszeto
+#	both modified:      vc4-dev/src/interface/vcos/vcos_logging.h fixed by eszeto
 #
 # Untracked files:
 #   (use "git add <file>..." to include in what will be committed)
