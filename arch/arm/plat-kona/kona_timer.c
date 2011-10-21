@@ -234,8 +234,10 @@ int kona_timer_module_set_rate(char* name, unsigned int rate)
 	else
 		ret = __config_aon_hub_timer_clock(rate);
 
+#ifdef CONFIG_ARCH_RHEA
 	/* Configure KONA Timer count in 32 bit mode */
 	writel(0x0, KONA_CHIPREG_VA + CHIPREG_HUB_TIMER_WIDTH_OFFSET);
+#endif
 
 	if (ret != -1) {
 		pktm->rate = rate;
