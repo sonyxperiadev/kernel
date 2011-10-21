@@ -1603,6 +1603,7 @@ static void audiohMixerCb_EgressDone(
    {
       audiohDmaEgressPostProcess( ch );
    }
+   AUDIOH_LOG( "ch=%d", ch->ch_no );
 }
 
 /***************************************************************************/
