@@ -2064,6 +2064,55 @@ struct gen_clk_ops gen_ref_clk_ops =
 
 #ifdef CONFIG_DEBUG_FS
 
+__weak int set_gpio_mux_for_debug_bus(void)
+{
+    return 0;
+}
+
+__weak int set_clk_idle_debug_mon(int clk_idle)
+{
+    return 0;
+}
+
+__weak int set_clk_monitor_debug(int mon_select)
+{
+    return 0;
+}
+
+__weak int clock_monitor_enable(struct clk *clk, int monitor)
+{
+    return 0;
+}
+
+static int set_clk_idle_debug(void *data, u64 clk_idle)
+{
+    return (set_clk_idle_debug_mon(clk_idle));
+}
+DEFINE_SIMPLE_ATTRIBUTE(clock_idle_debug_fops, NULL, set_clk_idle_debug, "%llu\n");
+
+static int set_clk_mon_debug(void *data, u64 mon_select)
+{
+    int ret = 0;
+    clk_dbg("%s:Clock to be monitored on %s\n", __func__, mon_select?"DEBUG_BUS_GPIO":"CAMCS_PIN");
+
+    ret = set_clk_monitor_debug(mon_select);
+
+    return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(clock_mon_debug_fops, NULL, set_clk_mon_debug, "%llu\n");
+
+static int clk_mon_enable(void *data, u64 val)
+{
+    struct clk *clock = data;
+    if(val == 0 || val == 1)
+	clock_monitor_enable(clock, val);
+    else
+	clk_dbg("Invalid value \n");
+
+    return 0;
+}
+DEFINE_SIMPLE_ATTRIBUTE(clock_mon_fops, NULL, clk_mon_enable, "%llu\n");
 
 static int clk_debug_get_rate(void *data, u64 *val)
 {
@@ -2362,6 +2411,11 @@ int __init clock_debug_init(void)
     if(!debugfs_create_u32("debug", 0644, dent_clk_root_dir, (int*)&clk_debug))
 	return -ENOMEM;
 
+    if (!debugfs_create_file("clk_idle_debug", 0644, dent_clk_root_dir, NULL, &clock_idle_debug_fops))
+	 return -ENOMEM;
+    if (!debugfs_create_file("clk_mon_debug", 0644, dent_clk_root_dir, NULL, &clock_mon_debug_fops))
+	return -ENOMEM;
+
     return 0;
 }
 
@@ -2406,7 +2460,8 @@ int __init clock_debug_add_clock(struct clk *c)
 {
 	struct dentry *dent_clk_dir=0, *dent_rate=0, *dent_enable=0,
 		*dent_status=0, *dent_div=0, *dent_use_cnt=0, *dent_id=0,
-		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0, *dent_round_rate=0;
+		*dent_parent=0, *dent_source=0, *dent_ccu_dir=0, *dent_clk_mon=0,
+		*dent_round_rate=0;
 	struct peri_clk *peri_clk;
 	struct bus_clk *bus_clk;
 	struct ref_clk *ref_clk;
@@ -2448,6 +2503,10 @@ int __init clock_debug_add_clock(struct clk *c)
 	dent_rate	=	debugfs_create_file("rate", 0644, dent_clk_dir, c, &clock_rate_fops);
 	if(!dent_rate)
 		goto err;
+	/* file /clock/clk_a/monitor */
+	dent_clk_mon    =       debugfs_create_file("clk_mon", 0444, dent_clk_dir, c, &clock_mon_fops);
+	if(!dent_clk_mon)
+	    goto err;
 
 	/* file /clock/clk_a/round_rate */
 	dent_round_rate	=	debugfs_create_file("round_rate", 0644, dent_clk_dir, c, &clock_round_rate_fops);

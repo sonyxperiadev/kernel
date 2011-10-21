@@ -23,7 +23,7 @@
 /*                                                                                              */
 /************************************************************************************************/
 
-/* Local macro test B0 build on A0 */ 
+/* Local macro test B0 build on A0 */
 #define CONFIG_DONOT_ENABLE_SDIO4
 
 #include <linux/version.h>
@@ -299,7 +299,7 @@ static struct bcm590xx_platform_data bcm590xx_plat_data = {
 	 * we will switch to HS mode 3.4Mbps (BSC_BUS_SPEED_HS)
 	 */
 	/*.i2c_pdata	= ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_HS),*/
-	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K), 
+	.i2c_pdata	=  ADD_I2C_SLAVE_SPEED(BSC_BUS_SPEED_400K),
 	.pmu_event_cb = bcm590xx_event_callback,
 #ifdef CONFIG_BATTERY_BCM59055
 	.battery_pdata = &bcm590xx_battery_plat_data,
@@ -710,7 +710,7 @@ static struct resource board_sdio4_resource[] = {
 		.flags = IORESOURCE_MEM,
 	},
 	[1] = {
-		.start = BCM_INT_ID_SDIO_MMC, 
+		.start = BCM_INT_ID_SDIO_MMC,
 		.end = BCM_INT_ID_SDIO_MMC,
 		.flags = IORESOURCE_IRQ,
 	},
@@ -827,7 +827,7 @@ static struct platform_device board_sdio3_device = {
 #ifdef CONFIG_MACH_RHEA_RAY_EDN2X
 	.resource = board_sdio4_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio4_resource),
-#else 
+#else
 	.resource = board_sdio3_resource,
 	.num_resources   = ARRAY_SIZE(board_sdio3_resource),
 #endif
@@ -955,7 +955,7 @@ static struct kona_fb_platform_data alex_dsi_display_fb_data = {
 	.screen_width		= 360,
 	.screen_height		= 640,
 	.bytes_per_pixel	= 4,
-	.gpio			= (KONA_MAX_GPIO + 3),  
+	.gpio			= (KONA_MAX_GPIO + 3),
 	.pixel_format		= XRGB8888,
 };
 
@@ -974,7 +974,7 @@ static struct kona_fb_platform_data nt35582_smi_display_fb_data = {
 	.screen_width		= 480,
 	.screen_height		= 800,
 	.bytes_per_pixel	= 2,
-	.gpio			= 41, 
+	.gpio			= 41,
 	.pixel_format		= RGB565,
 };
 
@@ -1011,8 +1011,8 @@ static struct platform_device r61581_smi_display_device = {
 #ifdef CONFIG_KONA_CPU_FREQ_DRV
 struct kona_freq_tbl kona_freq_tbl[] =
 {
-#ifndef CONFIG_RHEA_PM_ASIC_WORKAROUND
-    FTBL_INIT(156000000, PI_OPP_ECONOMY),
+#ifdef CONFIG_RHEA_PM_B0_ASIC_WORKAROUND
+    FTBL_INIT(156000, PI_OPP_ECONOMY),
 #endif
     FTBL_INIT(467000, PI_OPP_NORMAL),
     FTBL_INIT(700000, PI_OPP_TURBO),
@@ -1221,7 +1221,7 @@ int pwm_board_sysconfig(uint32_t module, uint32_t op)
 	unsigned long flags;
 	int ret = 0;
 
-	spin_lock_irqsave(&bcm_syscfg_lock, flags);	
+	spin_lock_irqsave(&bcm_syscfg_lock, flags);
 	switch (module) {
 	case SYSCFG_PWM0 + 4:
 		if ((op == SYSCFG_INIT) || (op == SYSCFG_ENABLE))
@@ -1238,7 +1238,7 @@ int pwm_board_sysconfig(uint32_t module, uint32_t op)
 	default:
 		pr_info("%s: inval arguments\n", __func__);
 		spin_unlock_irqrestore(&bcm_syscfg_lock, flags);
-		return -EINVAL;	
+		return -EINVAL;
 	}
 
 	spin_unlock_irqrestore(&bcm_syscfg_lock, flags);

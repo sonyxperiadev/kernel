@@ -25,8 +25,6 @@
 #include <mach/rdb/brcm_rdb_kona_gptimer.h>
 
 
-#define HUB_TIMER_AFTER_WFI_WORK_AROUND 1
-
 extern void enter_wfi(void);
 extern void dormant_enter(void);
 
@@ -319,7 +317,7 @@ int enter_idle_state(struct kona_idle_state* state)
 {
 	struct pi* pi = NULL;
 	u32 reg_val;
-#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+#if	defined(CONFIG_RHEA_PM_A0_ASIC_WORKAROUND) || defined(CONFIG_RHEA_PM_B0_ASIC_WORKAROUND)
 	u32 timer_lsw = 0;
 #endif
 
@@ -341,7 +339,7 @@ int enter_idle_state(struct kona_idle_state* state)
 	clk_set_pll_pwr_on_idle(ROOT_CCU_PLL1A, true);
 	clk_set_crystal_pwr_on_idle(true);
 
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val &= ~ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
@@ -352,7 +350,7 @@ int enter_idle_state(struct kona_idle_state* state)
 
 	clear_wakeup_interrupts();
 	config_wakeup_interrupts();
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
 	if(force_retention)
 		enable_sleep_prevention_clock(0);
 #endif
@@ -377,7 +375,7 @@ int enter_idle_state(struct kona_idle_state* state)
 	{
 		enter_wfi(); /*C0 - simple WFI*/
 	}
-#ifdef HUB_TIMER_AFTER_WFI_WORK_AROUND
+#if	defined(CONFIG_RHEA_PM_A0_ASIC_WORKAROUND) || defined(CONFIG_RHEA_PM_B0_ASIC_WORKAROUND)
 	 // wait for Hub Clock to tick (This is a HW BUG Workaround for JIRA HWRHEA-2045))
 	timer_lsw = readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET);
 	while(timer_lsw == readl(KONA_TMR_HUB_VA + KONA_GPTIMER_STCLO_OFFSET));
@@ -455,12 +453,12 @@ int enter_idle_state(struct kona_idle_state* state)
 	pwr_mgr_event_clear_events(LCDTE_EVENT,BRIDGE_TO_MODEM_EVENT);
 	pwr_mgr_event_clear_events(USBOTG_EVENT,PHY_RESUME_EVENT);
 
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
 	if(force_retention)
 		enable_sleep_prevention_clock(1);
 #endif
 
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
 	reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
 	reg_val |= ROOT_CLK_MGR_REG_PLL0CTRL0_PLL0_8PHASE_EN_MASK;
 	writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_PLL0CTRL0_OFFSET);
@@ -540,7 +538,7 @@ int __init rhea_pm_debug_init(void)
 	INIT_DELAYED_WORK(&uartb_wq,
 		uartb_wq_handler);
 
-#ifdef CONFIG_UART_FORCE_RETENTION 
+#ifdef CONFIG_UART_FORCE_RETENTION
 	pwr_mgr_register_event_handler(UBRX_EVENT, uartb_pwr_mgr_event_cb,
 											NULL);
 #endif

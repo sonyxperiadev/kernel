@@ -31,6 +31,10 @@
 #include <mach/rdb/brcm_rdb_khub_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_kproc_clk_mgr_reg.h>
 #include <mach/rdb/brcm_rdb_pwrmgr.h>
+#ifdef CONFIG_DEBUG_FS
+#include <mach/rdb/brcm_rdb_padctrlreg.h>
+#include <mach/rdb/brcm_rdb_chipreg.h>
+#endif
 #include <linux/clk.h>
 #include <asm/io.h>
 #include <mach/pi_mgr.h>
@@ -64,8 +68,9 @@ static struct ccu_clk CLK_NAME(root) = {
 	},
 	.pi_id = -1,
 	.ccu_clk_mgr_base = HW_IO_PHYS_TO_VIRT(ROOT_CLK_BASE_ADDR),
-	.wr_access_offset = KHUB_CLK_MGR_REG_WR_ACCESS_OFFSET,
+	.wr_access_offset = ROOT_CLK_MGR_REG_WR_ACCESS_OFFSET,
 	.ccu_ops = &root_ccu_ops,
+	.clk_mon_offset = ROOT_CLK_MGR_REG_CLKMON_OFFSET,
 };
 
 /*
@@ -102,6 +107,7 @@ static struct ref_clk CLK_NAME(frac_1m) = {
  .hyst_val_mask = ROOT_CLK_MGR_REG_FRAC_1M_CLKGATE_FRAC_1M_HYST_VAL_MASK,
  .hyst_en_mask = ROOT_CLK_MGR_REG_FRAC_1M_CLKGATE_FRAC_1M_HYST_EN_MASK,
  .stprsts_mask = ROOT_CLK_MGR_REG_FRAC_1M_CLKGATE_FRAC_1M_STPRSTS_MASK,
+    .clk_sel_val = 4,
 };
 
 /*
@@ -124,6 +130,7 @@ static struct ref_clk CLK_NAME(ref_96m_varvdd) = {
  .hyst_val_mask = ROOT_CLK_MGR_REG_REF_96M_VARVDD_CLKGATE_REF_96M_VARVDD_HYST_VAL_MASK,
  .hyst_en_mask = ROOT_CLK_MGR_REG_REF_96M_VARVDD_CLKGATE_REF_96M_VARVDD_HYST_EN_MASK,
  .stprsts_mask = ROOT_CLK_MGR_REG_REF_96M_VARVDD_CLKGATE_REF_96M_VARVDD_STPRSTS_MASK,
+    .clk_sel_val = 11,
 };
 
 /*
@@ -146,6 +153,7 @@ static struct ref_clk CLK_NAME(ref_96m) = {
  .hyst_val_mask = ROOT_CLK_MGR_REG_REF_48M_CLKGATE_REF_96M_HYST_VAL_MASK,
  .hyst_en_mask = ROOT_CLK_MGR_REG_REF_48M_CLKGATE_REF_96M_HYST_EN_MASK,
  .stprsts_mask = ROOT_CLK_MGR_REG_REF_48M_CLKGATE_REF_96M_STPRSTS_MASK,
+    .clk_sel_val = 10,
 };
 
 /*
@@ -168,6 +176,7 @@ static struct ref_clk CLK_NAME(var_96m) = {
  .hyst_val_mask = ROOT_CLK_MGR_REG_VAR_48M_CLKGATE_VAR_96M_HYST_VAL_MASK,
  .hyst_en_mask = ROOT_CLK_MGR_REG_VAR_48M_CLKGATE_VAR_96M_HYST_EN_MASK,
  .stprsts_mask = ROOT_CLK_MGR_REG_VAR_48M_CLKGATE_VAR_96M_STPRSTS_MASK,
+    .clk_sel_val = 12,
 };
 
 /*
@@ -190,6 +199,7 @@ static struct ref_clk CLK_NAME(var_500m_varvdd) = {
  .hyst_val_mask = ROOT_CLK_MGR_REG_VAR_500M_VARVDD_CLKGATE_VAR_500M_VARVDD_HYST_VAL_MASK,
  .hyst_en_mask = ROOT_CLK_MGR_REG_VAR_500M_VARVDD_CLKGATE_VAR_500M_VARVDD_HYST_EN_MASK,
  .stprsts_mask = ROOT_CLK_MGR_REG_VAR_500M_VARVDD_CLKGATE_VAR_500M_VARVDD_STPRSTS_MASK,
+    .clk_sel_val = 17,
 };
 
 /*
@@ -212,6 +222,7 @@ static struct ref_clk CLK_NAME(ref_312m) = {
  .hyst_val_mask = ROOT_CLK_MGR_REG_REF_312M_CLKGATE_REF_312M_HYST_VAL_MASK,
  .hyst_en_mask = ROOT_CLK_MGR_REG_REF_312M_CLKGATE_REF_312M_HYST_EN_MASK,
  .stprsts_mask = ROOT_CLK_MGR_REG_REF_312M_CLKGATE_REF_312M_STPRSTS_MASK,
+    .clk_sel_val = 0,
 };
 
 /*
@@ -228,6 +239,7 @@ static struct ref_clk CLK_NAME(ref_208m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -244,6 +256,7 @@ static struct ref_clk CLK_NAME(ref_156m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -261,6 +274,7 @@ static struct ref_clk CLK_NAME(ref_104m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -278,6 +292,7 @@ static struct ref_clk CLK_NAME(ref_52m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -295,6 +310,7 @@ static struct ref_clk CLK_NAME(ref_13m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -312,6 +328,7 @@ static struct ref_clk CLK_NAME(ref_26m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -335,6 +352,7 @@ static struct ref_clk CLK_NAME(var_312m) = {
  .hyst_val_mask = ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_VAR_312M_HYST_VAL_MASK,
  .hyst_en_mask = ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_VAR_312M_HYST_EN_MASK,
  .stprsts_mask = ROOT_CLK_MGR_REG_VAR_312M_CLKGATE_VAR_312M_STPRSTS_MASK,
+    .clk_sel_val = 2,
 };
 
 /*
@@ -348,6 +366,7 @@ static struct ref_clk CLK_NAME(var_500m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 };
 
 
@@ -366,6 +385,7 @@ static struct ref_clk CLK_NAME(var_208m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -383,6 +403,7 @@ static struct ref_clk CLK_NAME(var_156m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -400,6 +421,7 @@ static struct ref_clk CLK_NAME(var_104m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -417,6 +439,7 @@ static struct ref_clk CLK_NAME(var_52m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -434,6 +457,7 @@ static struct ref_clk CLK_NAME(var_13m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -451,6 +475,7 @@ static struct ref_clk CLK_NAME(dft_19_5m) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -474,6 +499,7 @@ static struct ref_clk CLK_NAME(ref_cx40_varvdd) = {
  .hyst_val_mask = ROOT_CLK_MGR_REG_REF_CX40_VARVDD_CLKGATE_REF_CX40_VARVDD_HYST_VAL_MASK,
  .hyst_en_mask = ROOT_CLK_MGR_REG_REF_CX40_VARVDD_CLKGATE_REF_CX40_VARVDD_HYST_EN_MASK,
  .stprsts_mask = ROOT_CLK_MGR_REG_REF_CX40_VARVDD_CLKGATE_REF_CX40_VARVDD_STPRSTS_MASK,
+    .clk_sel_val = 16,
 };
 
 /*
@@ -490,6 +516,7 @@ static struct ref_clk CLK_NAME(ref_cx40) = {
 				.ops = &gen_ref_clk_ops,
 		},
  .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 
 };
 
@@ -507,6 +534,7 @@ static struct ref_clk CLK_NAME(ref_1m) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -522,6 +550,7 @@ static struct ref_clk CLK_NAME(ref_32k) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(root),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -555,6 +584,7 @@ static struct ccu_clk CLK_NAME(kproc) = {
 	.policy_dbg_offset = KPROC_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPROC_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+	.clk_mon_offset = KPROC_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,4,0xb,0xb,0xe,0xe),
 	.freq_count = 8,
@@ -902,6 +932,7 @@ static struct peri_clk CLK_NAME(arm) = {
 		.pll_select_mask= KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_MASK,
 		.pll_select_shift= KPROC_CLK_MGR_REG_ARM_DIV_ARM_PLL_SELECT_SHIFT,
 	},
+	//clk_sel_val = 2,
 };
 
 static int dig_clk_set_gating_ctrl(struct peri_clk * peri_clk, int clk_id, int  gating_ctrl)
@@ -1059,6 +1090,7 @@ static struct peri_clk CLK_NAME(dig_ch0) = {
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
+	.clk_sel_val = 6,
 };
 
 /*
@@ -1098,6 +1130,7 @@ static struct peri_clk CLK_NAME(dig_ch1) = {
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
+	.clk_sel_val = 7,
 };
 
 /*
@@ -1137,6 +1170,7 @@ static struct peri_clk CLK_NAME(dig_ch2) = {
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
+	.clk_sel_val = 8,
 };
 
 /*
@@ -1175,6 +1209,7 @@ static struct peri_clk CLK_NAME(dig_ch3) = {
 	    .src_inx = 0,
 	    .clk = dig_ch_peri_clk_src_list,
 	},
+	.clk_sel_val = 9,
 };
 
 
@@ -1218,6 +1253,7 @@ static struct ccu_clk CLK_NAME(khub) = {
 	.policy_dbg_offset = KHUB_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KHUB_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+	.clk_mon_offset = KHUB_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,0xb,0xe,0xe,0xe,0xe),
 	.freq_count = 8,
@@ -1249,6 +1285,7 @@ static struct bus_clk CLK_NAME(nor_apb) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_NOR_CLKGATE_NOR_APB_STPRSTS_MASK,
  .freq_tbl_index = 3,
  .src_clk = NULL,
+    .clk_sel_val = 7,
 };
 
 /*
@@ -1274,6 +1311,7 @@ KHUB_CLK_MGR_REG_TMON_CLKGATE_TMON_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_TMON_CLKGATE_TMON_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 12,
 };
 
 /*
@@ -1296,6 +1334,7 @@ static struct bus_clk CLK_NAME(apb5) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_APB5_CLKGATE_APB5_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 4,
 };
 
 /*
@@ -1321,6 +1360,7 @@ KHUB_CLK_MGR_REG_CTI_CLKGATE_CTI_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_CTI_CLKGATE_CTI_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 21,
 };
 
 /*
@@ -1346,6 +1386,7 @@ KHUB_CLK_MGR_REG_FUNNEL_CLKGATE_FUNNEL_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_FUNNEL_CLKGATE_FUNNEL_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 22,
 };
 
 /*
@@ -1371,6 +1412,7 @@ KHUB_CLK_MGR_REG_TPIU_CLKGATE_TPIU_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_TPIU_CLKGATE_TPIU_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 26,
 };
 
 /*
@@ -1396,6 +1438,7 @@ KHUB_CLK_MGR_REG_VC_ITM_CLKGATE_VC_ITM_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_VC_ITM_CLKGATE_VC_ITM_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 19,
 };
 
 /*
@@ -1420,6 +1463,7 @@ static struct bus_clk CLK_NAME(hsi_apb) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_HSI_CLKGATE_HSI_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 28,
 };
 
 /*
@@ -1444,6 +1488,7 @@ static struct bus_clk CLK_NAME(etb_apb) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_ETB_CLKGATE_ETB_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 25,
 };
 
 /*
@@ -1473,6 +1518,7 @@ KHUB_CLK_MGR_REG_FINAL_FUNNEL_CLKGATE_FINAL_FUNNEL_APB_HYST_EN_MASK,
 KHUB_CLK_MGR_REG_FINAL_FUNNEL_CLKGATE_FINAL_FUNNEL_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 23,
 };
 
 /*
@@ -1494,6 +1540,7 @@ static struct bus_clk CLK_NAME(apb10) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_APB10_CLKGATE_APB10_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 27,
 };
 
 /*
@@ -1515,6 +1562,7 @@ static struct bus_clk CLK_NAME(apb9) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_APB9_CLKGATE_APB9_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 14,
 };
 
 /*
@@ -1540,6 +1588,7 @@ KHUB_CLK_MGR_REG_ATB_CLKGATE_ATB_FILTER_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_ATB_CLKGATE_ATB_FILTER_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 20,
 };
 
 /*
@@ -1580,6 +1629,7 @@ static struct peri_clk CLK_NAME(audioh_26m) = {
 					.src_inx = 0,
 					.clk = audioh_26m_peri_clk_src_list,
 				},
+	.clk_sel_val = 40,
 };
 
 /*
@@ -1624,6 +1674,7 @@ static struct peri_clk CLK_NAME(hub_clk) = {
 	.src_inx = 1,
 	.clk = hub_peri_clk_src_list,
     },
+    .clk_sel_val = 0,
 };
 
 
@@ -1654,6 +1705,7 @@ KHUB_CLK_MGR_REG_BT_SLIM_CLKGATE_BT_SLIM_AHB_APB_HYST_EN_MASK,
 KHUB_CLK_MGR_REG_BT_SLIM_CLKGATE_BT_SLIM_AHB_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(audioh_26m),
+    .clk_sel_val = 41,
 };
 
 /*
@@ -1679,6 +1731,7 @@ KHUB_CLK_MGR_REG_ETB2AXI_CLKGATE_ETB2AXI_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUB_CLK_MGR_REG_ETB2AXI_CLKGATE_ETB2AXI_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 24,
 };
 
 /*
@@ -1703,6 +1756,7 @@ static struct bus_clk CLK_NAME(audioh_apb) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_AUDIOH_CLKGATE_AUDIOH_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(audioh_26m),
+    .clk_sel_val = 42,
 };
 
 /*
@@ -1727,6 +1781,7 @@ static struct bus_clk CLK_NAME(ssp3_apb) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_SSP3_CLKGATE_SSP3_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(audioh_26m),
+    .clk_sel_val = 44,
 };
 
 /*
@@ -1751,6 +1806,7 @@ static struct bus_clk CLK_NAME(ssp4_apb) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_SSP4_CLKGATE_SSP4_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(audioh_26m),
+    .clk_sel_val = 43,
 };
 
 /*
@@ -1774,6 +1830,7 @@ static struct bus_clk CLK_NAME(var_spm_apb) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_VAR_SPM_CLKGATE_VAR_SPM_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 13,
 };
 
 /*
@@ -1798,6 +1855,7 @@ static struct bus_clk CLK_NAME(nor) = {
  .stprsts_mask = KHUB_CLK_MGR_REG_NOR_CLKGATE_NOR_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 1,
 };
 
 /*
@@ -1832,6 +1890,7 @@ static struct peri_clk CLK_NAME(audioh_2p4m) = {
 					.src_inx = 0,
 					.clk = audioh_2p4m_peri_clk_src_list,
 				},
+    .clk_sel_val = 45,
 };
 
 /*
@@ -1866,6 +1925,7 @@ static struct peri_clk CLK_NAME(audioh_156m) = {
 					.src_inx = 0,
 					.clk = audioh_156m_peri_clk_src_list,
 				},
+    .clk_sel_val = 38,
 };
 
 /*
@@ -1914,6 +1974,7 @@ static struct peri_clk CLK_NAME(ssp3_audio) = {
 					.src_inx = 0,
 					.clk = ssp3_audio_peri_clk_src_list,
 				},
+    .clk_sel_val = 47,
 };
 
 /*
@@ -1960,6 +2021,7 @@ static struct peri_clk CLK_NAME(ssp3) = {
 					.src_inx = 0,
 					.clk = ssp3_peri_clk_src_list,
 				},
+    .clk_sel_val = 46,
 };
 
 /*
@@ -2008,6 +2070,7 @@ static struct peri_clk CLK_NAME(ssp4_audio) = {
 					.src_inx = 0,
 					.clk = ssp4_audio_peri_clk_src_list,
 				},
+    .clk_sel_val = 49,
 };
 
 /*
@@ -2054,6 +2117,7 @@ static struct peri_clk CLK_NAME(ssp4) = {
 					.src_inx = 0,
 					.clk = ssp4_peri_clk_src_list,
 				},
+    .clk_sel_val = 48,
 };
 
 /*
@@ -2092,6 +2156,7 @@ static struct peri_clk CLK_NAME(tmon_1m) = {
 					.src_inx = 0,
 					.clk = tmon_1m_peri_clk_src_list,
 				},
+    .clk_sel_val = 34,
 };
 
 /*
@@ -2120,6 +2185,7 @@ static struct peri_clk CLK_NAME(dap_switch) = {
 	.hyst_en_mask =KHUB_CLK_MGR_REG_DAP_SWITCH_CLKGATE_DAP_SWITCH_HYST_EN_MASK,
 	.stprsts_mask =KHUB_CLK_MGR_REG_DAP_SWITCH_CLKGATE_DAP_SWITCH_STPRSTS_MASK,
 	.volt_lvl_mask =KHUB_CLK_MGR_REG_DAP_SWITCH_CLKGATE_DAP_SWITCH_VOLTAGE_LEVEL_MASK,
+    .clk_sel_val = 3,
 };
 
 /*
@@ -2153,6 +2219,7 @@ static struct peri_clk CLK_NAME(brom) = {
 		.div_mask = KHUB_CLK_MGR_REG_HUB_DIV_BROM_DIV_MASK,
 		.div_shift = KHUB_CLK_MGR_REG_HUB_DIV_BROM_DIV_SHIFT,
 	},
+    .clk_sel_val = 29,
 };
 
 /*
@@ -2187,6 +2254,7 @@ static struct peri_clk CLK_NAME(mdiomaster) = {
 		.src_inx = 0,
 		.clk = mdiomaster_peri_clk_src_list,
 	},
+    .clk_sel_val = 32,
 };
 
 
@@ -2228,6 +2296,7 @@ static struct ccu_clk CLK_NAME(khubaon) = {
 	.policy_dbg_offset = KHUBAON_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KHUBAON_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+	.clk_mon_offset = KHUBAON_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = DEFINE_ARRAY_ARGS(0xe,0xe,0xe,0xe,0xe,0xe,0xe,0xe),
 	.freq_count = 8,
@@ -2266,6 +2335,7 @@ static struct ref_clk CLK_NAME(pmu_bsc_var) = {
 	.src_inx = 0,
 	.clk = pmu_bsc_var_ref_clk_src_list,
     },
+    .clk_sel_val = 20,
 };
 
 /*
@@ -2306,6 +2376,7 @@ static struct bus_clk CLK_NAME(hub_timer_apb) = {
  .stprsts_mask = KHUBAON_CLK_MGR_REG_HUB_TIMER_CLKGATE_HUB_TIMER_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 6,
 };
 
 /*
@@ -2330,6 +2401,7 @@ static struct bus_clk CLK_NAME(aci_apb) = {
  .stprsts_mask = KHUBAON_CLK_MGR_REG_ACI_CLKGATE_ACI_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 15,
 };
 
 /*
@@ -2353,6 +2425,7 @@ static struct bus_clk CLK_NAME(sim_apb) = {
  .hyst_en_mask = KHUBAON_CLK_MGR_REG_SIM_CLKGATE_SIM_APB_HYST_EN_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_SIM_CLKGATE_SIM_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
+    .clk_sel_val = 17,
 };
 
 /*
@@ -2376,6 +2449,7 @@ static struct bus_clk CLK_NAME(sim2_apb) = {
  .hyst_en_mask = KHUBAON_CLK_MGR_REG_SIM2_CLKGATE_SIM2_APB_HYST_EN_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_SIM2_CLKGATE_SIM2_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
+    .clk_sel_val = 16,
 };
 
 /*
@@ -2401,6 +2475,7 @@ KHUBAON_CLK_MGR_REG_PWRMGR_CLKGATE_PWRMGR_AXI_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_PWRMGR_CLKGATE_PWRMGR_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 18,
 };
 
 /*
@@ -2422,6 +2497,7 @@ static struct bus_clk CLK_NAME(apb6) = {
  .stprsts_mask = KHUBAON_CLK_MGR_REG_APB6_CLKGATE_APB6_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 2,
 };
 
 /*
@@ -2447,6 +2523,7 @@ KHUBAON_CLK_MGR_REG_GPIOKP_CLKGATE_GPIOKP_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_GPIOKP_CLKGATE_GPIOKP_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 4,
 };
 
 /*
@@ -2473,6 +2550,7 @@ KHUBAON_CLK_MGR_REG_PMU_BSC_CLKGATE_PMU_BSC_APB_HYST_VAL_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_PMU_BSC_CLKGATE_PMU_BSC_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 14,
 };
 
 /*
@@ -2499,6 +2577,7 @@ KHUBAON_CLK_MGR_REG_CHIPREG_CLKGATE_CHIPREG_APB_HYST_VAL_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_CHIPREG_CLKGATE_CHIPREG_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 5,
 };
 
 /*
@@ -2524,6 +2603,7 @@ KHUBAON_CLK_MGR_REG_FMON_CLKGATE_FMON_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_FMON_CLKGATE_FMON_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 11,
 };
 
 /*
@@ -2553,6 +2633,7 @@ KHUBAON_CLK_MGR_REG_HUB_TZCFG_CLKGATE_HUB_TZCFG_APB_HYST_EN_MASK,
 KHUBAON_CLK_MGR_REG_HUB_TZCFG_CLKGATE_HUB_TZCFG_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 3,
 };
 
 /*
@@ -2578,6 +2659,7 @@ KHUBAON_CLK_MGR_REG_SEC_WD_CLKGATE_SEC_WD_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_SEC_WD_CLKGATE_SEC_WD_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 13,
 };
 
 /*
@@ -2602,6 +2684,7 @@ static struct bus_clk CLK_NAME(sysemi_sec_apb) = {
  .stprsts_mask = KHUBAON_CLK_MGR_REG_SYSEMI_CLKGATE_SYSEMI_SEC_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 7,
 };
 
 /*
@@ -2626,6 +2709,7 @@ static struct bus_clk CLK_NAME(sysemi_open_apb) = {
  .stprsts_mask = KHUBAON_CLK_MGR_REG_SYSEMI_CLKGATE_SYSEMI_OPEN_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 8,
 };
 
 /*
@@ -2650,6 +2734,7 @@ static struct bus_clk CLK_NAME(vcemi_sec_apb) = {
  .stprsts_mask = KHUBAON_CLK_MGR_REG_VCEMI_CLKGATE_VCEMI_SEC_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 9,
 };
 
 /*
@@ -2674,6 +2759,7 @@ static struct bus_clk CLK_NAME(vcemi_open_apb) = {
  .stprsts_mask = KHUBAON_CLK_MGR_REG_VCEMI_CLKGATE_VCEMI_OPEN_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 10,
 };
 
 /*
@@ -2699,6 +2785,7 @@ KHUBAON_CLK_MGR_REG_SPM_CLKGATE_SPM_APB_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KHUBAON_CLK_MGR_REG_SPM_CLKGATE_SPM_APB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = NULL,
+    .clk_sel_val = 12,
 };
 
 /*
@@ -2723,6 +2810,7 @@ static struct bus_clk CLK_NAME(dap) = {
  .stprsts_mask = KHUBAON_CLK_MGR_REG_DAP_CLKGATE_DAP_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(var_312m),
+    .clk_sel_val = 25,
 };
 
 /*
@@ -2769,6 +2857,7 @@ static struct peri_clk CLK_NAME(sim) = {
 					.src_inx = 0,
 					.clk = sim_peri_clk_src_list,
 				},
+    .clk_sel_val = 22,
 };
 
 /*
@@ -2815,6 +2904,7 @@ static struct peri_clk CLK_NAME(sim2) = {
 					.src_inx = 0,
 					.clk = sim2_peri_clk_src_list,
 				},
+    .clk_sel_val = 23,
 };
 
 /*
@@ -2854,6 +2944,7 @@ static struct peri_clk CLK_NAME(hub_timer) = {
 					.src_inx = 0,
 					.clk = hub_timer_peri_clk_src_list,
 				},
+    .clk_sel_val = 21,
 };
 
 /*
@@ -2897,6 +2988,7 @@ static struct peri_clk CLK_NAME(pmu_bsc) = {
 	.src_inx = 0,
 	.clk = pmu_bsc_peri_clk_src_list,
     },
+    .clk_sel_val = 19,
 };
 
 
@@ -2941,6 +3033,7 @@ static struct ccu_clk CLK_NAME(kpm) = {
 	.policy_dbg_offset = KPM_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+	.clk_mon_offset = KPM_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,4,0xb,0xb,0xe,0xe,0xe),
 	.freq_count = 8,
@@ -2970,6 +3063,7 @@ static struct bus_clk CLK_NAME(usb_otg_ahb) = {
  .stprsts_mask = KPM_CLK_MGR_REG_USB_OTG_CLKGATE_USB_OTG_AHB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 11,
 };
 
 /*
@@ -2992,6 +3086,7 @@ static struct bus_clk CLK_NAME(sdio2_ahb) = {
  .stprsts_mask = KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_AHB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 5,
 };
 
 /*
@@ -3014,6 +3109,7 @@ static struct bus_clk CLK_NAME(sdio3_ahb) = {
  .stprsts_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_AHB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 6,
 };
 
 /*
@@ -3036,6 +3132,7 @@ static struct bus_clk CLK_NAME(sdio1_ahb) = {
  .stprsts_mask = KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_AHB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 8,
 };
 
 /*
@@ -3058,6 +3155,7 @@ static struct bus_clk CLK_NAME(sdio4_ahb) = {
  .stprsts_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_AHB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 7,
 };
 
 
@@ -3081,6 +3179,7 @@ static struct bus_clk CLK_NAME(sys_switch_axi) = {
     .stprsts_mask = KPM_CLK_MGR_REG_AXI_SYS_SWITCH_CLKGATE_SYS_SWITCH_AXI_STPRSTS_MASK,
     .freq_tbl_index = -1,
     .src_clk = CLK_PTR(var_312m),
+    .clk_sel_val = 0,
 };
 
 /*
@@ -3104,6 +3203,7 @@ static struct bus_clk CLK_NAME(master_switch_ahb) = {
     .stprsts_mask = KPM_CLK_MGR_REG_AXI_MST_SWITCH_CLKGATE_MASTER_SWITCH_AHB_STPRSTS_MASK,
     .freq_tbl_index = -1,
     .src_clk = CLK_PTR(sys_switch_axi),
+    .clk_sel_val = 3,
 };
 
 /*
@@ -3126,6 +3226,7 @@ static struct bus_clk CLK_NAME(master_switch_axi) = {
     .stprsts_mask = KPM_CLK_MGR_REG_AXI_MST_SWITCH_CLKGATE_MASTER_SWITCH_AXI_STPRSTS_MASK,
     .freq_tbl_index = -1,
     .src_clk = CLK_PTR(master_switch_ahb),
+    .clk_sel_val = 4,
 };
 
 /*
@@ -3147,6 +3248,7 @@ static struct bus_clk CLK_NAME(usbh_ahb) = {
     .stprsts_mask = KPM_CLK_MGR_REG_USB_EHCI_CLKGATE_USBH_AHB_STPRSTS_MASK,
     .freq_tbl_index = -1,
     .src_clk = CLK_PTR(master_switch_ahb),
+    .clk_sel_val = 12,
 };
 
 
@@ -3189,6 +3291,7 @@ static struct peri_clk CLK_NAME(sdio2) = {
 					.src_inx = 0,
 					.clk = sdio2_peri_clk_src_list,
 				},
+    .clk_sel_val = 20,
 };
 
 /*
@@ -3213,6 +3316,7 @@ static struct peri_clk CLK_NAME(sdio2_sleep) = {
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_SLEEP_STPRSTS_MASK,
 	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO2_CLKGATE_SDIO2_VOLTAGE_LEVEL_MASK,
+    .clk_sel_val = 28,
 };
 
 /*
@@ -3254,6 +3358,7 @@ static struct peri_clk CLK_NAME(sdio3) = {
 					.src_inx = 0,
 					.clk = sdio3_peri_clk_src_list,
 				},
+    .clk_sel_val = 21,
 };
 
 /*
@@ -3278,6 +3383,7 @@ static struct peri_clk CLK_NAME(sdio3_sleep) = {
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_SLEEP_STPRSTS_MASK,
 	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO3_CLKGATE_SDIO3_VOLTAGE_LEVEL_MASK,
+    .clk_sel_val = 29,
 };
 
 /*
@@ -3319,6 +3425,7 @@ static struct peri_clk CLK_NAME(sdio1) = {
 		.src_inx = 0,
 		.clk = sdio1_peri_clk_src_list,
 	},
+    .clk_sel_val = 23,
 };
 
 /*
@@ -3359,6 +3466,7 @@ static struct peri_clk CLK_NAME(sdio4) = {
 		.src_inx = 0,
 		.clk = sdio4_peri_clk_src_list,
 	},
+    .clk_sel_val = 22,
 };
 
 /*
@@ -3382,6 +3490,7 @@ static struct peri_clk CLK_NAME(sdio1_sleep) = {
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_SLEEP_STPRSTS_MASK,
 	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO1_CLKGATE_SDIO1_VOLTAGE_LEVEL_MASK,
+    .clk_sel_val = 27,
 };
 
 
@@ -3405,6 +3514,7 @@ static struct peri_clk CLK_NAME(sdio4_sleep) = {
 	.clk_en_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_SLEEP_CLK_EN_MASK,
 	.stprsts_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_SLEEP_STPRSTS_MASK,
 	.volt_lvl_mask = KPM_CLK_MGR_REG_SDIO4_CLKGATE_SDIO4_VOLTAGE_LEVEL_MASK,
+    .clk_sel_val = 30,
 };
 
 /*
@@ -3445,6 +3555,7 @@ static struct peri_clk CLK_NAME(usbh_48m) = {
 	.src_inx = 2,
 	.clk = usbh_48m_peri_clk_src_list,
     },
+    .clk_sel_val = 31,
 };
 
 /*
@@ -3485,6 +3596,7 @@ static struct peri_clk CLK_NAME(usbh_12m) = {
 	.src_inx = 2,
 	.clk = usbh_12m_peri_clk_src_list,
     },
+    .clk_sel_val = 32,
 };
 
 
@@ -3527,6 +3639,7 @@ static struct ccu_clk CLK_NAME(kps) = {
 	.policy_dbg_offset = KPS_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = KPS_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+	.clk_mon_offset = KPS_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,0xb,0xb,0xe,0xe,0xe,0xe),
 	.freq_count = 8,
@@ -3577,6 +3690,7 @@ static struct peri_clk CLK_NAME(caph_srcmixer) = {
 					.src_inx = 0,
 					.clk = caph_srcmixer_peri_clk_src_list,
 				},
+    .clk_sel_val = 50,
 };
 
 
@@ -3600,6 +3714,7 @@ static struct bus_clk CLK_NAME(uartb_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_UARTB_CLKGATE_UARTB_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 16,
 };
 
 /*
@@ -3622,6 +3737,7 @@ static struct bus_clk CLK_NAME(uartb2_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_UARTB2_CLKGATE_UARTB2_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 15,
 };
 
 /*
@@ -3644,6 +3760,7 @@ static struct bus_clk CLK_NAME(uartb3_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_UARTB3_CLKGATE_UARTB3_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 14,
 };
 
 /*
@@ -3666,6 +3783,7 @@ static struct bus_clk CLK_NAME(dmac_mux_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_DMAC_MUX_CLKGATE_DMAC_MUX_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 13,
 };
 
 /*
@@ -3690,6 +3808,7 @@ static struct bus_clk CLK_NAME(bsc1_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_BSC1_CLKGATE_BSC1_APB_STPRSTS_MASK,
  .freq_tbl_index = 2,
  .src_clk = NULL,
+    .clk_sel_val = 20,
 };
 
 /*
@@ -3714,6 +3833,7 @@ static struct bus_clk CLK_NAME(bsc2_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_BSC2_CLKGATE_BSC2_APB_STPRSTS_MASK,
  .freq_tbl_index = 2,
  .src_clk = NULL,
+    .clk_sel_val = 19,
 };
 
 /*
@@ -3738,6 +3858,7 @@ static struct bus_clk CLK_NAME(pwm_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_PWM_CLKGATE_PWM_APB_STPRSTS_MASK,
  .freq_tbl_index = 2,
  .src_clk = NULL,
+    .clk_sel_val = 18,
 };
 
 /*
@@ -3760,6 +3881,7 @@ static struct bus_clk CLK_NAME(ssp0_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_SSP0_CLKGATE_SSP0_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 12,
 };
 
 /*
@@ -3784,6 +3906,7 @@ KPS_CLK_MGR_REG_AXI_SWITCH_CLKGATE_SWITCH_AXI_HW_SW_GATING_SEL_MASK,
  .stprsts_mask = KPS_CLK_MGR_REG_AXI_SWITCH_CLKGATE_SWITCH_AXI_STPRSTS_MASK,
  .freq_tbl_index = 0,
  .src_clk = NULL,
+    .clk_sel_val = 0,
 };
 
 /*
@@ -3808,6 +3931,7 @@ static struct bus_clk CLK_NAME(hsm_ahb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_HSM_CLKGATE_HSM_AHB_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(switch_axi),
+    .clk_sel_val = 6,
 };
 
 /*
@@ -3832,6 +3956,7 @@ static struct bus_clk CLK_NAME(hsm_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_HSM_CLKGATE_HSM_APB_STPRSTS_MASK,
  .freq_tbl_index = 4,
  .src_clk = NULL,
+    .clk_sel_val = 7,
 };
 
 /*
@@ -3856,6 +3981,7 @@ static struct bus_clk CLK_NAME(spum_open_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_SPUM_OPEN_APB_CLKGATE_SPUM_OPEN_APB_STPRSTS_MASK,
  .freq_tbl_index = 4,
  .src_clk = NULL,
+    .clk_sel_val = 8,
 };
 
 /*
@@ -3884,6 +4010,7 @@ KPS_CLK_MGR_REG_SPUM_SEC_APB_CLKGATE_SPUM_SEC_APB_HYST_EN_MASK,
 KPS_CLK_MGR_REG_SPUM_SEC_APB_CLKGATE_SPUM_SEC_APB_STPRSTS_MASK,
  .freq_tbl_index = 4,
  .src_clk = NULL,
+    .clk_sel_val = 9,
 };
 
 /*
@@ -3907,6 +4034,7 @@ static struct bus_clk CLK_NAME(apb1) = {
  .stprsts_mask = KPS_CLK_MGR_REG_APB1_CLKGATE_APB1_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 10,
 };
 
 /*
@@ -3929,6 +4057,7 @@ static struct bus_clk CLK_NAME(timers_apb) = {
  .stprsts_mask = KPS_CLK_MGR_REG_TIMERS_CLKGATE_TIMERS_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = 11,
 };
 
 /*
@@ -3953,6 +4082,7 @@ static struct bus_clk CLK_NAME(apb2) = {
  .stprsts_mask = KPS_CLK_MGR_REG_APB2_CLKGATE_APB2_STPRSTS_MASK,
  .freq_tbl_index = 2,
  .src_clk = NULL,
+    .clk_sel_val = 22,
 };
 
 /*
@@ -3974,6 +4104,7 @@ static struct bus_clk CLK_NAME(spum_open_axi) = {
     .stprsts_mask = KPS_CLK_MGR_REG_SPUM_OPEN_CLKGATE_SPUM_OPEN_AXI_STPRSTS_MASK,
     .freq_tbl_index = -1,
     .src_clk = CLK_PTR(switch_axi),
+    .clk_sel_val = 2,
 };
 
 /*
@@ -3995,6 +4126,7 @@ static struct bus_clk CLK_NAME(spum_sec_axi) = {
     .stprsts_mask = KPS_CLK_MGR_REG_SPUM_SEC_CLKGATE_SPUM_SEC_AXI_STPRSTS_MASK,
     .freq_tbl_index = -1,
     .src_clk = CLK_PTR(switch_axi),
+    .clk_sel_val = 3,
 };
 
 
@@ -4038,6 +4170,7 @@ static struct peri_clk CLK_NAME(uartb) = {
 					.src_inx = 1,
 					.clk = uartb_peri_clk_src_list,
 				},
+    .clk_sel_val = 30,
 };
 
 /*
@@ -4080,6 +4213,7 @@ static struct peri_clk CLK_NAME(uartb2) = {
 					.src_inx = 1,
 					.clk = uartb2_peri_clk_src_list,
 				},
+    .clk_sel_val = 29,
 };
 
 /*
@@ -4122,6 +4256,7 @@ static struct peri_clk CLK_NAME(uartb3) = {
 					.src_inx = 1,
 					.clk = uartb3_peri_clk_src_list,
 				},
+    .clk_sel_val = 28,
 };
 
 /*
@@ -4167,6 +4302,7 @@ static struct peri_clk CLK_NAME(ssp0_audio) = {
 					.src_inx = 0,
 					.clk = ssp0_audio_peri_clk_src_list,
 				},
+    .clk_sel_val = 42,
 };
 
 /*
@@ -4206,6 +4342,7 @@ static struct peri_clk CLK_NAME(bsc1) = {
 					.src_inx = 3,
 					.clk = bsc1_peri_clk_src_list,
 				},
+    .clk_sel_val = 26,
 };
 
 /*
@@ -4245,6 +4382,7 @@ static struct peri_clk CLK_NAME(bsc2) = {
 					.src_inx = 3,
 					.clk = bsc2_peri_clk_src_list,
 				},
+    .clk_sel_val = 25,
 };
 
 /*
@@ -4271,6 +4409,7 @@ static struct peri_clk CLK_NAME(pwm) = {
 	.gating_sel_mask = KPS_CLK_MGR_REG_PWM_CLKGATE_PWM_HW_SW_GATING_SEL_MASK,
 	.stprsts_mask = KPS_CLK_MGR_REG_PWM_CLKGATE_PWM_STPRSTS_MASK,
 	.volt_lvl_mask = KPS_CLK_MGR_REG_PWM_CLKGATE_PWM_VOLTAGE_LEVEL_MASK,
+    .clk_sel_val = 32,
 };
 
 /*
@@ -4312,6 +4451,7 @@ static struct peri_clk CLK_NAME(ssp0) = {
 					.src_inx = 0,
 					.clk = ssp0_peri_clk_src_list,
 				},
+    .clk_sel_val = 27,
 };
 
 /*
@@ -4350,6 +4490,7 @@ static struct peri_clk CLK_NAME(timers) = {
 	.src_inx = 1,
 	.clk = timers_peri_clk_src_list,
     },
+    .clk_sel_val = 31,
 };
 
 /*
@@ -4393,6 +4534,7 @@ static struct peri_clk CLK_NAME(spum_open) = {
 	.src_inx = 0,
 	.clk = spum_open_peri_clk_src_list,
     },
+    .clk_sel_val = 35,
 };
 
 /*
@@ -4436,6 +4578,7 @@ static struct peri_clk CLK_NAME(spum_sec) = {
 	.src_inx = 0,
 	.clk = spum_sec_peri_clk_src_list,
     },
+    .clk_sel_val = 34,
 };
 
 /*
@@ -4479,6 +4622,7 @@ static struct ccu_clk CLK_NAME(mm) = {
 	.policy_dbg_offset = MM_CLK_MGR_REG_POLICY_DBG_OFFSET,
 	.policy_dbg_act_freq_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_FREQ_SHIFT,
 	.policy_dbg_act_policy_shift = MM_CLK_MGR_REG_POLICY_DBG_ACT_POLICY_SHIFT,
+	.clk_mon_offset = MM_CLK_MGR_REG_CLKMON_OFFSET,
 #endif
 	.freq_volt = DEFINE_ARRAY_ARGS(4,4,0xb,0xb,0xb,0xe,0xe,0xe),
 	.freq_count = 8,
@@ -4501,6 +4645,7 @@ static struct ref_clk CLK_NAME(csi0_pix_phy) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = 8,
 };
 
 /*
@@ -4516,6 +4661,7 @@ static struct ref_clk CLK_NAME(csi0_byte0_phy) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = 7,
 };
 
 /*
@@ -4531,6 +4677,7 @@ static struct ref_clk CLK_NAME(csi0_byte1_phy) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = 6,
 };
 
 /*
@@ -4546,6 +4693,7 @@ static struct ref_clk CLK_NAME(csi1_pix_phy) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = 5,
 };
 
 /*
@@ -4561,6 +4709,7 @@ static struct ref_clk CLK_NAME(csi1_byte0_phy) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = 4,
 };
 
 /*
@@ -4576,6 +4725,7 @@ static struct ref_clk CLK_NAME(csi1_byte1_phy) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = 3,
 };
 
 /*
@@ -4591,6 +4741,7 @@ static struct ref_clk CLK_NAME(dsi0_pix_phy) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = 2,
 };
 
 /*
@@ -4606,6 +4757,7 @@ static struct ref_clk CLK_NAME(dsi1_pix_phy) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = 1,
 };
 
 /*
@@ -4621,6 +4773,7 @@ static struct ref_clk CLK_NAME(test_debug) = {
 	.ops = &gen_ref_clk_ops,
     },
     .ccu_clk = &CLK_NAME(mm),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4665,6 +4818,7 @@ static struct peri_clk CLK_NAME(mm_switch_axi) = {
 					.src_inx = 2,
 					.clk = mm_switch_axi_peri_clk_src_list,
 				},
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4689,6 +4843,7 @@ static struct bus_clk CLK_NAME(csi0_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_CSI0_AXI_CLKGATE_CSI0_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4713,6 +4868,7 @@ static struct bus_clk CLK_NAME(csi1_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_CSI1_AXI_CLKGATE_CSI1_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4737,6 +4893,7 @@ static struct bus_clk CLK_NAME(isp_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_ISP_CLKGATE_ISP_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4761,6 +4918,7 @@ static struct bus_clk CLK_NAME(smi_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_SMI_AXI_CLKGATE_SMI_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4786,6 +4944,7 @@ static struct bus_clk CLK_NAME(vce_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_VCE_CLKGATE_VCE_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4810,6 +4969,7 @@ static struct bus_clk CLK_NAME(dsi0_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_DSI0_AXI_CLKGATE_DSI0_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4834,6 +4994,7 @@ static struct bus_clk CLK_NAME(dsi1_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_DSI1_AXI_CLKGATE_DSI1_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4858,6 +5019,7 @@ static struct bus_clk CLK_NAME(mm_apb) = {
  .stprsts_mask = MM_CLK_MGR_REG_MM_APB_CLKGATE_MM_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4882,6 +5044,7 @@ static struct bus_clk CLK_NAME(spi_apb) = {
  .stprsts_mask = MM_CLK_MGR_REG_SPI_APB_CLKGATE_SPI_APB_STPRSTS_MASK,
  .freq_tbl_index = 1,
  .src_clk = NULL,
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4906,6 +5069,7 @@ static struct bus_clk CLK_NAME(mm_dma_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_MM_DMA_CLKGATE_MM_DMA_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4931,6 +5095,7 @@ static struct bus_clk CLK_NAME(v3d_axi) = {
  .stprsts_mask = MM_CLK_MGR_REG_V3D_CLKGATE_V3D_AXI_STPRSTS_MASK,
  .freq_tbl_index = -1,
  .src_clk = CLK_PTR(mm_switch_axi),
+    .clk_sel_val = -1,
 };
 
 /*
@@ -4974,6 +5139,7 @@ static struct peri_clk CLK_NAME(csi0_lp) = {
 					.src_inx = 0,
 					.clk = csi0_lp_peri_clk_src_list,
 				},
+    .clk_sel_val = -1,
 };
 
 /*
@@ -5017,6 +5183,7 @@ static struct peri_clk CLK_NAME(csi1_lp) = {
 					.src_inx = 0,
 					.clk = csi1_lp_peri_clk_src_list,
 				},
+    .clk_sel_val = -1,
 };
 
 /*
@@ -5062,6 +5229,7 @@ static struct peri_clk CLK_NAME(smi) = {
 					.src_inx = 0,
 					.clk = smi_peri_clk_src_list,
 				},
+    .clk_sel_val = -1,
 };
 
 /*
@@ -5105,6 +5273,7 @@ static struct peri_clk CLK_NAME(dsi0_esc) = {
 					.src_inx = 0,
 					.clk = dsi0_esc_peri_clk_src_list,
 				},
+    .clk_sel_val = -1,
 };
 
 /*
@@ -5147,6 +5316,7 @@ static struct peri_clk CLK_NAME(dsi1_esc) = {
 					.src_inx = 0,
 					.clk = dsi1_esc_peri_clk_src_list,
 				},
+    .clk_sel_val = -1,
 };
 
 /*
@@ -5184,6 +5354,7 @@ static struct peri_clk CLK_NAME(dsi_pll_o_dsi_pll) = {
 					.src_inx = 0,
 					.clk = dsi_pll_o_dsi_pll_peri_clk_src_list,
 				},
+    .clk_sel_val = -1,
 };
 
 
@@ -5276,7 +5447,7 @@ int root_ccu_clk_init(struct clk* clk)
     reg_val &= ~(ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH0_CLK_EN_MASK | ROOT_CLK_MGR_REG_DIG_CLKGATE_DIGITAL_CH1_CLK_EN_MASK);
     writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_DIG_CLKGATE_OFFSET);
 
-#ifdef CONFIG_RHEA_PM_ASIC_WORKAROUND
+#ifdef CONFIG_RHEA_PM_A0_ASIC_WORKAROUND
     /* Var_312M and Var_96M clocks default PLL is wrong. correcting here.*/
     writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_312M_DIV_OFFSET);
     writel (0x1, KONA_ROOT_CLK_VA  + ROOT_CLK_MGR_REG_VAR_48M_DIV_OFFSET);
@@ -5636,6 +5807,152 @@ int __init rhea_clock_init(void)
 
     return 0;
 }
+
+#ifdef CONFIG_DEBUG_FS
+int set_gpio_mux_for_debug_bus(void)
+{
+    static bool mux_init = false;
+    printk("in %s \n", __func__);
+    if(!mux_init) {
+	mux_init = true;
+	/*Get pad control write access by rwiting password */
+	writel(0xa5a501, KONA_PAD_CTRL + PADCTRLREG_WR_ACCESS_OFFSET);
+	/* unlock first 32 pad control registers */
+	writel(0x0, KONA_PAD_CTRL + PADCTRLREG_ACCESS_LOCK0_OFFSET);
+
+	/* Configure GPIO_XX to TESTPORT_XX  */
+	/* writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET); */
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO00_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO01_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO02_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO03_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO04_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO05_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO06_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO07_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO08_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO09_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO10_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO11_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO12_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO13_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO14_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO15_OFFSET);
+	writel(0x503, KONA_PAD_CTRL + PADCTRLREG_GPIO16_OFFSET);
+    }
+
+    return 0;
+}
+int set_clk_idle_debug_mon(int clk_idle)
+{
+    u32 reg_val;
+    struct clk *clk;
+    struct ccu_clk *ccu_clk;
+
+    printk("in %s clk_idle:%d \n", __func__, clk_idle);
+    if(clk_idle > 9) {
+	clk_dbg("%s: Invalid value for rootCCU debug bus: %d\n", __func__, clk_idle);
+	return -EINVAL;
+    }
+
+    set_gpio_mux_for_debug_bus();
+    writel(0xF, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+
+    clk = clk_get(NULL, ROOT_CCU_CLK_NAME_STR);
+    ccu_clk = to_ccu_clk(clk);
+    ccu_write_access_enable(ccu_clk, true);
+    reg_val = readl(KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CLKMON_OFFSET);
+    reg_val = reg_val & ~ROOT_CLK_MGR_REG_CLKMON_DEBUG_BUS_SEL_MASK;
+    reg_val |= ((clk_idle & 0xf) << 12);
+    writel(reg_val, KONA_ROOT_CLK_VA + ROOT_CLK_MGR_REG_CLKMON_OFFSET);
+    ccu_write_access_enable(ccu_clk, false);
+
+    reg_val = readl(KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+    clk_dbg(" CHIPREG_PERIPH_SPARE_CONTROL0 register : %08x\n", reg_val);
+
+    return 0;
+}
+int set_clk_monitor_debug(int mon_select)
+{
+    printk("in %s monitor select: %d\n", __func__, mon_select);
+    switch(mon_select) {
+	case MONITOR_CAMCS_PIN:
+		writel(0x303, KONA_PAD_CTRL + PADCTRLREG_CAMCS1_OFFSET);
+		break;
+	case MONITOR_DEBUG_BUS_GPIO:
+		set_gpio_mux_for_debug_bus();
+		writel(0xF, KONA_CHIPREG_VA + CHIPREG_PERIPH_SPARE_CONTROL0_OFFSET);
+		break;
+	default:
+		return -EINVAL;
+    }
+     return 0;
+}
+
+static int __clock_monitor_enable(struct clk *clock, int enable)
+{
+    u32 reg_val = 0;
+    struct peri_clk *peri_clk;
+    struct bus_clk *bus_clk;
+    struct ref_clk *ref_clk;
+    struct ccu_clk *ccu_clk = NULL;
+    int clk_mon_sel = -1;
+
+    switch(clock->clk_type) {
+    case CLK_TYPE_PERI:
+    	peri_clk = to_peri_clk(clock);
+	ccu_clk = peri_clk->ccu_clk;
+	clk_mon_sel = peri_clk->clk_sel_val;
+	break;
+    case CLK_TYPE_BUS:
+	bus_clk = to_bus_clk(clock);
+	ccu_clk = bus_clk->ccu_clk;
+	clk_mon_sel = bus_clk->clk_sel_val;
+	break;
+    case CLK_TYPE_REF:
+	ref_clk = to_ref_clk(clock);
+	ccu_clk = ref_clk->ccu_clk;
+	clk_mon_sel = ref_clk->clk_sel_val;
+	break;
+    default:
+	return -EINVAL;
+    }
+    if(ccu_clk == NULL || clk_mon_sel < 0) {
+	if (clk_mon_sel < 0)
+	    clk_dbg("Monitoring not supported for this clock\n");
+	return -EINVAL;
+    }
+    clk_dbg("%s clk_mon_sel: %d monitor offset:%08x\n", clock->name, clk_mon_sel, ccu_clk->clk_mon_offset);
+    ccu_write_access_enable(ccu_clk, true);
+    reg_val = readl(ccu_clk->ccu_clk_mgr_base + ccu_clk->clk_mon_offset);
+    reg_val = reg_val & 0xFFFFFF00;
+    if(enable) {
+	reg_val |= (clk_mon_sel & 0xFF);
+	reg_val |= 0x00000100;
+    } else
+	reg_val &= 0xFFFFFCFF;
+    writel(reg_val, ccu_clk->ccu_clk_mgr_base + ccu_clk->clk_mon_offset);
+    ccu_write_access_enable(ccu_clk, false);
+
+    return 0;
+}
+
+int clock_monitor_enable(struct clk *clk, int monitor)
+{
+    int ret = 0;
+
+    if (monitor == 1) {
+	ret = __clock_monitor_enable(clk, 1);
+    } else
+	ret = __clock_monitor_enable(clk, 0);
+
+    if(!ret)
+	clk_dbg("%s monitoring %s\n", clk->name, monitor?"enabled":"disabled");
+    return ret;
+}
+
+#endif
+
 
 int __init clock_late_init(void)
 {
