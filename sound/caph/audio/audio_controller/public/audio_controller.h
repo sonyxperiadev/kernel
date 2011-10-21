@@ -101,43 +101,12 @@ typedef enum AUDCTRL_MIC_Enum_t
     AUDCTRL_MIC_TOTAL_COUNT
 } AUDCTRL_MIC_Enum_t;
 
-typedef enum AUDCTRL_AUDIO_AMP_ACTION_t
-{
-    AUDCTRL_AMP_NO_ACTION,
-    AUDCTRL_AMP_IHF_TURN_OFF,
-	AUDCTRL_AMP_HS_TURN_OFF,
-    AUDCTRL_AMP_IHF_AND_HS_TURN_OFF
-} AUDCTRL_AUDIO_AMP_ACTION_t;
-
 #define AUDCTRL_MICROPHONE_t AUDCTRL_MIC_Enum_t  //need to merge with AUDDRV_MIC_Enum_t
 
 typedef enum {
    TelephonyUseExtSpkr,
-   VoiceUseExtSpkr,
    AudioUseExtSpkr,
-   PolyUseExtSpkr
 } ExtSpkrUsage_en_t;
-
-
-typedef enum AUDCTRL_MIX_SELECT_t
-{
-    AUDCTRL_MIX_EAR_TONE = 0x0001,
-    AUDCTRL_MIX_EAR_DL = 0x0002,
-    AUDCTRL_MIX_EAR_SPEECH_PLAY = 0x0004,
-    AUDCTRL_MIX_EAR_AUDIO_PLAY = 0x0008,
-    AUDCTRL_MIX_EAR_MIC_TO_EAR = 0x0010,
-    AUDCTRL_MIX_EAR_TO_AUDIO_REC = 0x0020,
-    AUDCTRL_MIX_UL_MIC = 0x0040,
-    AUDCTRL_MIX_UL_TONE = 0x0080,
-    AUDCTRL_MIX_UL_SPEECH_PLAY = 0x0100,
-    AUDCTRL_MIX_UL_AUDIO_PLAY = 0x0200,
-    AUDCTRL_MIX_SPEECH_REC_MIC = 0x0400,
-    AUDCTRL_MIX_SPEECH_REC_DL = 0x0800,
-    AUDCTRL_MIX_SPEECH_REC_TONE = 0x1000,
-    AUDCTRL_MIX_AUDIO_REC_MIC = 0x2000,
-    AUDCTRL_MIX_HQ_REC_MIC = 0x4000
-} AUDCTRL_MIX_SELECT_t;
-
 
 typedef struct
 {
@@ -190,10 +159,10 @@ void AUDCTRL_Shutdown (void);
 *  @param  usage_flag	(in)  external speaker usage
 *  @param  use		    (in)  on/off
 *
-*  @return amp action
+*  @return  none
 *
 ****************************************************************************/
-AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use );
+void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use );
 
 
 /**
@@ -645,61 +614,6 @@ void AUDCTRL_SetRecordGain(
 				UInt32					gainR
 				);
 
-
-/**
-*  @brief  Set Mixing gain in DSP/HW
-*
-*  @param  src	(in)  
-*  @param  sink	(in)  
-*  @param  mic	(in)  microphone selection
-*  @param  spk	(in)  speaker selection
-*  @param  mixSelect	(in)  Mixing selection
-*  @param  isDSPGain	(in)  DSP provides the mixing.
-*  @param  dspSpeechProcessingNeeded	(in)  needs DSP Speech processing.
-*  @param  gain	(in)  
-*  @param  pathID (in)  HW pathID
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
-			AUDIO_HW_ID_t sink,
-			AUDCTRL_MICROPHONE_t mic,
-			AUDCTRL_SPEAKER_t spk,
-			AUDCTRL_MIX_SELECT_t mixSelect,
-			Boolean isDSPGain,
-			Boolean dspSpeechProcessingNeeded,			
-			UInt32 gain,
-			UInt32 pathID);
-
-
-/**
-*  @brief  Load the UL gains from Sysparm
-*
-*  @param  ulPathID	(in)  UL path ID  
-*  @param  mic	(in)  microphone selection
-*  @param  isDSPNeeded	(in)  Does UL path go through DSP?  
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_LoadMicGain(CSL_CAPH_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded);
-
-
-/**
-*  @brief  Load the DL gains from Sysparm
-*
-*  @param  dlPathID	(in)  DL path ID  
-*  @param  mic	(in)  microphone selection
-*  @param  isDSPNeeded	(in)  Does DL path go through DSP?  
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_LoadSpkrGain(CSL_CAPH_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded);
-
-
-
 /********************************************************************
 *  @brief  mute/unmute a record path
 *
@@ -807,26 +721,6 @@ void AUDCTRL_RemoveFromTable(CSL_CAPH_PathID pathID);
 *
 ****************************************************************************/
 void AUDCTRL_AddToTable(AUDCTRL_Config_t* data);
-
-/********************************************************************
-*  @brief  set gain on the VPU playback path on the downlink path
-*
-*  @param  uVol (in)  amr volume
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetAMRVolume_DL(UInt16 uVol);
-
-/********************************************************************
-*  @brief  set gain on the VPU playback path on the uplink path
-*
-*  @param  uVol (in)  amr volume
-*
-*  @return none
-*
-****************************************************************************/
-void AUDCTRL_SetAMRVolume_UL(UInt16 uVol);
 
 /********************************************************************
 *  @brief  Set Arm2Sp Parameter
@@ -955,6 +849,8 @@ void  AUDCTRL_ControlHWClock(Boolean enable);
 *
 ****************************************************************************/
 Boolean  AUDCTRL_QueryHWClock(void);
+
+void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int gain, int left_right);
 
 
 #endif //#define __AUDIO_CONTROLLER_H__

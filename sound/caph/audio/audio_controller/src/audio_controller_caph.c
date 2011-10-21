@@ -233,7 +233,6 @@ static int telephony_ul_gain_mB = 0;  // 0 mB
 //=============================================================================
 // Private function prototypes
 //=============================================================================
-static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int gain, int left_right);
 
 //on AP:
 static SysAudioParm_t* AUDIO_GetParmAccessPtr(void)
@@ -349,6 +348,9 @@ void AUDCTRL_EnableTelephony(
 		powerOnDigitalMic(TRUE);
 	}	
 
+	// use gains from sysparm as baseline, adjust gains to achieve user-set volume/gain before call AUDDRV_SetAudioMode( ).
+	//	AUDDRV_SetAudioMode( ) reads sysparm and reconcile them with user-set volume/gain, then set to HW, DSP.
+
 	// This function follows the sequence and enables DSP audio, HW input path and output path.
 	AUDDRV_Telephony_Init ( micSel, 
 			spkSel,
@@ -361,11 +363,6 @@ void AUDCTRL_EnableTelephony(
 	//AUDCTRL_SetTelephonyMicMute (ulSrc, mic, FALSE); 
 
 	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
-
-    //Load the mic gains from sysparm.
-    AUDCTRL_LoadMicGain(telephonyPathID.ulPathID, mic, TRUE);
-    //Load the speaker gains form sysparm.
-    AUDCTRL_LoadSpkrGain(telephonyPathID.dlPathID, speaker, TRUE);
 
 	//Save UL path to the path table.
 	data.pathID = telephonyPathID.ulPathID;
@@ -587,220 +584,6 @@ void AUDCTRL_SetTelephonyMicMute(
 	else
         AUDDRV_Telephony_UnmuteMic ((AUDDRV_MIC_Enum_t)mic, (void*)NULL );
 }
-
-
-//============================================================================
-//
-// Function Name: AUDCTRL_LoadMicGain
-//
-// Description:   Load ul gain from sysparm.
-//
-//============================================================================
-void AUDCTRL_LoadMicGain(CSL_CAPH_PathID ulPathID, AUDCTRL_MICROPHONE_t mic, Boolean isDSPNeeded)
-{
-    UInt16 gainTemp = 0;
-	AudioMode_t mode = AUDIO_MODE_HANDSET;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_LoadMicGain\n");
-
-	// Set DSP UL gain from sysparm.
-	mode = AUDDRV_GetAudioMode();
-/***
-	Int16 dspULGain = 0;
-do not touch DSP UL gain in this function.
-this function shall be merged into AUDCTRL_SetAudioMode( ).
-
-    if(isDSPNeeded == TRUE)
-    {
-	    dspULGain = 64; //AUDIO_GetParmAccessPtr()[mode].echoNlp_parms.echo_nlp_gain;
-	    audio_control_generic( AUDDRV_CPCMD_SetBasebandUplinkGain, 
-				dspULGain, 0, 0, 0, 0);		
-    }
-***/
-
-    if((mic == AUDCTRL_MIC_MAIN) 
-       ||(mic == AUDCTRL_MIC_AUX)) 
-    {
-        // Set Mic PGA gain from sysparm.	
-      	gainTemp = 74; //AUDIO_GetParmAccessPtr()[mode].mic_pga;
-      	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_AMIC_PGA_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-
-        // Set AMic DGA coarse gain from sysparm.	
-       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].amic_dga_coarse_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_AMIC_DGA_COARSE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-	
-        // Set AMic DGA fine gain from sysparm.	
-       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].amic_dga_fine_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_AMIC_DGA_FINE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-    }
-
-    if((mic == AUDCTRL_MIC_DIGI1) 
-       ||(mic == AUDCTRL_MIC_SPEECH_DIGI)) 
-    {
-        // Set DMic1 DGA coarse gain from sysparm.	
-      	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic1_dga_coarse_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_DMIC1_DGA_COARSE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-	
-        // Set DMic1 DGA fine gain from sysparm.	
-       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic1_dga_fine_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_DMIC1_DGA_FINE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-    }
-
-    if((mic == AUDCTRL_MIC_DIGI2) 
-       ||(mic == AUDCTRL_MIC_SPEECH_DIGI)) 
-    {
-        // Set DMic2 DGA coarse gain from sysparm.	
-      	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic2_dga_coarse_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_DMIC2_DGA_COARSE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-	
-        // Set DMic2 DGA fine gain from sysparm.	
-       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic2_dga_fine_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_DMIC2_DGA_FINE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-    }
-
-    if((AUDDRV_IsDualMicEnabled()==TRUE)
-       ||(mic == AUDCTRL_MIC_EANC_DIGI)) 
-    {
-        // Set DMic3 DGA coarse gain from sysparm.	
-       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic3_dga_coarse_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_DMIC3_DGA_COARSE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-	
-        // Set DMic3 DGA fine gain from sysparm.	
-       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic3_dga_fine_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_DMIC3_DGA_FINE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-	
-        // Set DMic4 DGA coarse gain from sysparm.	
-       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic4_dga_coarse_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_DMIC4_DGA_COARSE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-	
-        // Set DMic4 DGA fine gain from sysparm.	
-       	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].dmic4_dga_fine_gain;
-       	csl_caph_hwctrl_SetHWGain(ulPathID,
-                                CSL_CAPH_DMIC4_DGA_FINE_GAIN,
-                                (UInt32) gainTemp,
-                                CSL_CAPH_DEV_NONE);
-    }
-    return;
-}
-
-
-
-//============================================================================
-//
-// Function Name: AUDCTRL_LoadSpkrGain
-//
-// Description:   Load dl gain from sysparm.
-//
-//============================================================================
-void AUDCTRL_LoadSpkrGain(CSL_CAPH_PathID dlPathID, AUDCTRL_SPEAKER_t speaker, Boolean isDSPNeeded)
-{
-	Int16 dspDLGain = 0;
-	Int16 pmuGain = 0;
-    UInt16 gainTemp = 0;
-	AudioMode_t mode = AUDIO_MODE_HANDSET;
-	CSL_CAPH_DEVICE_e dev = CSL_CAPH_DEV_NONE;
-	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_LoadSpkrGain\n");
-
-	mode = AUDDRV_GetAudioMode();
-
-	// Set DSP DL gain from sysparm.
-    if(isDSPNeeded == TRUE)
-    {
-	    dspDLGain = 64; //AUDIO_GetParmAccessPtr()[mode].echo_nlp_downlink_volume_ctrl;
-	    audio_control_generic( AUDDRV_CPCMD_SetBasebandDownlinkGain, 
-						dspDLGain, 0, 0, 0, 0);
-    }
-			
-
-    //Load HW Mixer gains from sysparm
-	if ((mode == AUDIO_MODE_HANDSET)
-		||(mode == AUDIO_MODE_HANDSET_WB)
-		||(mode == AUDIO_MODE_HAC)
-		||(mode == AUDIO_MODE_HAC_WB))		
-	{
-		dev = CSL_CAPH_DEV_EP;
-	}
-	else
-	if ((mode == AUDIO_MODE_HEADSET)
-		||(mode == AUDIO_MODE_HEADSET_WB)
-		||(mode == AUDIO_MODE_TTY)
-		||(mode == AUDIO_MODE_TTY_WB))
-		
-	{
-		dev = CSL_CAPH_DEV_HS;
-	}
-	else
-	if ((mode == AUDIO_MODE_SPEAKERPHONE)
-		||(mode == AUDIO_MODE_SPEAKERPHONE_WB))
-	{
-		dev = CSL_CAPH_DEV_IHF;
-	}
-
-	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_l;
-	csl_caph_hwctrl_SetHWGain(dlPathID, 
-                               CSL_CAPH_SRCM_INPUT_GAIN_L, 
-                               (UInt32)gainTemp, dev);
-	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_input_gain_r;
-	csl_caph_hwctrl_SetHWGain(dlPathID, 
-                               CSL_CAPH_SRCM_INPUT_GAIN_R, 
-                               (UInt32)gainTemp, dev);
-	gainTemp = 96; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_l;
-	csl_caph_hwctrl_SetHWGain(dlPathID, 
-                               CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_L, 
-                               (UInt32)gainTemp, dev);
-	gainTemp = 96; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_coarse_gain_r;
-	csl_caph_hwctrl_SetHWGain(dlPathID, 
-                               CSL_CAPH_SRCM_OUTPUT_COARSE_GAIN_R, 
-                               (UInt32)gainTemp, dev);
-	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_l;
-	csl_caph_hwctrl_SetHWGain(dlPathID, 
-                               CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_L, 
-                               (UInt32)gainTemp, dev);
-	gainTemp = 0; //AUDIO_GetParmAccessPtr()[mode].srcmixer_output_fine_gain_r;
-	csl_caph_hwctrl_SetHWGain(dlPathID, 
-                               CSL_CAPH_SRCM_OUTPUT_FINE_GAIN_R, 
-                               (UInt32)gainTemp, dev);
-	
-	//Load PMU gain from sysparm.
-	pmuGain = AUDIO_GetParmAccessPtr()[mode].ext_speaker_pga_l;
-	SetGainOnExternalAmp(speaker, pmuGain, PMU_AUDIO_HS_LEFT);
-	
-	pmuGain = AUDIO_GetParmAccessPtr()[mode].ext_speaker_pga_r;
-	SetGainOnExternalAmp(speaker, pmuGain, PMU_AUDIO_HS_RIGHT);
-	
-    return;
-}
-
-
 
 
 //============================================================================
@@ -1311,6 +1094,11 @@ static void AUDCTRL_EnableRecordMono(
     //Because Capture driver really enables the path.
     //AUDCTRL_LoadMicGain(pathID, mic, FALSE);
  
+	//also need to have a table to list the used Mic / Mic's (AUDCTRL_MIC_Enum_t) for each audio mode (audio device).
+	
+	// use gains from sysparm as baseline, adjust gains to achieve user-set volume/gain before call AUDDRV_SetAudioMode( ).
+	//	AUDDRV_SetAudioMode( ) reads sysparm and reconcile them with user-set volume/gain, then set to HW, DSP.
+ 
 	Log_DebugPrintf(LOGID_AUDIO, "AUDCTRL_EnableRecordMono: path configuration, source = %d, sink = %d, pathID %d.\r\n", config.source, config.sink, pathID);
 
     //Save this path to the path table.
@@ -1639,142 +1427,6 @@ void AUDCTRL_SetRecordMute(
 	}
 
     return;    
-}
-
-
-//============================================================================
-//
-// Function Name: AUDCTRL_SetMixingGain
-//
-// Description:   set mixing gain of a path
-//
-//============================================================================
-void AUDCTRL_SetMixingGain(AUDIO_HW_ID_t src,
-			AUDIO_HW_ID_t sink,
-			AUDCTRL_MICROPHONE_t mic,
-			AUDCTRL_SPEAKER_t spk,
-			AUDCTRL_MIX_SELECT_t mixSelect,
-			Boolean isDSPGain,
-			Boolean dspSpeechProcessingNeeded,
-			UInt32 gain,
-			UInt32 inPathID)
-{
-    CSL_CAPH_PathID pathID = 0;
-    Int16 dspGain = 0;
-    if (isDSPGain)
-    {
-        //Call DSP CSL interface to set DSP gain.
-	switch (mixSelect)
-	{
-        case AUDCTRL_MIX_EAR_AUDIO_PLAY:
-		//The only use case where HW mixer is needed:
-		// 48/44.1KHZ Music playback to HS/EP/USB
-		// during a voice call.
-       if ((spk == AUDCTRL_SPK_HANDSET)
-		     ||(spk == AUDCTRL_SPK_HEADSET)
-		     ||(spk == AUDCTRL_SPK_USB)) 
-       {
-            pathID = AUDCTRL_GetPathIDFromTable(src, sink, spk, mic);
-            if(pathID == 0)
-            {
-                audio_xassert(0,pathID);
-                return;
-            }
-                (void) csl_caph_hwctrl_SetMixingGain(pathID, 
-                            gain, gain);
-        }
-		else // for IHF
-		{
-                    //Set shared_newaudiofifo_gain_dl
-		}
-                break;
-        case AUDCTRL_MIX_EAR_TONE:
-		dspGain = (Int16)gain;
-		// It is decided that tone will always use
-		// ARM2SP interface #2.
-	    if(FALSE == CSL_SetARM2Speech2DLGain(dspGain))
-		{
-                    audio_xassert(0,0);
-		}
-		break;
-        case AUDCTRL_MIX_EAR_SPEECH_PLAY:
-		dspGain = (Int16)gain;
-		// It is decided that speech playback will always use
-		// ARM2SP interface #1.
-	    if(FALSE == CSL_SetARM2SpeechDLGain(dspGain))
-		{
-                    audio_xassert(0,0);
-		}
-		break;
-        case AUDCTRL_MIX_EAR_DL:
-		dspGain = (Int16)gain;
-	    if(FALSE == CSL_SetInpSpeechToARM2SpeechMixerDLGain(dspGain))
-		{
-                    audio_xassert(0,0);
-		}
-		break;	
-        case AUDCTRL_MIX_UL_MIC:
-		dspGain = (Int16)gain;
-	    if(FALSE == CSL_SetInpSpeechToARM2SpeechMixerULGain(dspGain))
-		{
-                    audio_xassert(0,0);
-		}
-		break;	
-        case AUDCTRL_MIX_UL_TONE:
-		dspGain = (Int16)gain;
-		// It is decided that tone will always use
-		// ARM2SP interface #2.		
-	    if(FALSE == CSL_SetARM2Speech2ULGain(dspGain))
-		{
-                    audio_xassert(0,0);
-		}
-		break;	
-        case AUDCTRL_MIX_UL_SPEECH_PLAY:
-        case AUDCTRL_MIX_UL_AUDIO_PLAY:
-		dspGain = (Int16)gain;
-		// It is decided that speech/music playback will always use
-		// ARM2SP interface #1.
-	    if(FALSE == CSL_SetARM2SpeechULGain(dspGain))
-		{
-                    audio_xassert(0,0);
-		}
-		break;	
-        case AUDCTRL_MIX_SPEECH_REC_TONE:
-		dspGain = (Int16)gain;
-	    if(FALSE == CSL_SetARM2SpeechULGain(dspGain))
-		{
-                    audio_xassert(0,0);
-		}
-		break;	
-        case AUDCTRL_MIX_SPEECH_REC_MIC:
-		dspGain = (Int16)gain;
-	    AUDDRV_SetULSpeechRecordGain(dspGain);
-		break;	
-        case AUDCTRL_MIX_SPEECH_REC_DL:
-		dspGain = (Int16)gain;
-        if(FALSE == CSL_SetDlSpeechRecGain(dspGain))
-		{
-                    audio_xassert(0,0);
-		}
-		break;	
-	    default:
-		;
-	}
-    }
-    else
-    {
-		if(inPathID) 
-			pathID = inPathID;
-        else 
-			pathID = AUDCTRL_GetPathIDFromTable(src, sink, spk, mic);
-        if(pathID == 0)
-        {
-            audio_xassert(0,pathID);
-            return;
-        }
-        (void) csl_caph_hwctrl_SetMixingGain(pathID, gain, gain);
-    }
-    return;
 }
 
 
@@ -2493,7 +2145,7 @@ static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
 //};
 //
 //============================================================================
-static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_right)
+void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_right)
 {
 #if !defined(NO_PMU)
 	int gain=0;
@@ -2528,7 +2180,7 @@ static void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int le
 // Description:   call external amplifier driver
 //
 //============================================================================
-AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use )
+void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag, Boolean use )
 {
 //check for current baseband_use_speaker: OR of voice_spkr, audio_spkr, poly_speaker, and second_speaker
 //
@@ -2537,8 +2189,6 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 // PMU driver needs to know AUDIO_CHNL_HEADPHONE type, so call it from here.
 //AUDCTRL_SPEAKER_t should be moved to public and let PMU driver includes it.
 //and rename it AUD_SPEAKER_t
-
-	AUDCTRL_AUDIO_AMP_ACTION_t retValue = AUDCTRL_AMP_NO_ACTION;
 
 #if !defined(NO_PMU)
 	static Boolean telephonyUseHS = FALSE;
@@ -2557,12 +2207,8 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 	// May need to turn off PMU if speaker is not IHF/HS, but its PMU is still on.
 	if (speaker != AUDCTRL_SPK_HEADSET && speaker != AUDCTRL_SPK_TTY && speaker != AUDCTRL_SPK_LOUDSPK && (!IHF_IsOn && !HS_IsOn))
 	{
-		return retValue;
+		return;
 	}
-
-/////////////////////////////////////////////////////////////////////////////////
-//  Required ! Linux version only
-////////////////////////////////////////////////////////////////////////////////////
 	
 	if (use == TRUE)
 		AUDIO_PMU_INIT(); 	//enable the audio PLL before power ON
@@ -2638,29 +2284,15 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 		if ( HS_IsOn != FALSE )
 		{
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu HS amp\n");
-
-/////////////////////////////////////////////////////////////////////////////////
-//  Start PMU code. Linux version only
-////////////////////////////////////////////////////////////////////////////////////
-			
+	
             AUDIO_PMU_HS_SET_GAIN(PMU_AUDIO_HS_BOTH, PMU_HSGAIN_MUTE),
             AUDIO_PMU_HS_POWER(FALSE);
             OSTASK_Sleep(20);
-
-/////////////////////////////////////////////////////////////////////////////////
-//  End PMU code. Linux version only
-////////////////////////////////////////////////////////////////////////////////////
-
 		}
 		HS_IsOn = FALSE;
 	}
 	else
 	{
-	
-/////////////////////////////////////////////////////////////////////////////////
-//  Start PMU code. Linux version only
-////////////////////////////////////////////////////////////////////////////////////
-
 		int hs_path;	
 		int hs_gain = 0;
 #if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
@@ -2698,15 +2330,6 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 			Log_DebugPrintf(LOGID_AUDIO,"power OFF pmu IHF amp\n");
             AUDIO_PMU_IHF_SET_GAIN(PMU_IHFGAIN_MUTE),
             AUDIO_PMU_IHF_POWER(FALSE);
-            
-            if (retValue == AUDCTRL_AMP_NO_ACTION) 
-            {
-                retValue = AUDCTRL_AMP_IHF_TURN_OFF;
-            }
-            else if (retValue == AUDCTRL_AMP_HS_TURN_OFF)
-            {
-                retValue = AUDCTRL_AMP_IHF_AND_HS_TURN_OFF;
-            }			
 		}
 		IHF_IsOn = FALSE;
 	}
@@ -2732,14 +2355,9 @@ AUDCTRL_AUDIO_AMP_ACTION_t powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpk
 
 	if ( IHF_IsOn==FALSE && HS_IsOn==FALSE )
 		AUDIO_PMU_DEINIT();    //disable the audio PLL after power OFF
-    Log_DebugPrintf(LOGID_AUDIO,"powerOnExternalAmp: retValue %d\n", retValue);
-#endif    
-	return retValue;
-	
-/////////////////////////////////////////////////////////////////////////////////
-//  End PMU code. Linux version only
-////////////////////////////////////////////////////////////////////////////////////
 
+#endif    
+	
 }
 
 

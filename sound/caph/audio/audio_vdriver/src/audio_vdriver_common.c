@@ -253,6 +253,15 @@ void AUDDRV_Telephony_Init ( AUDDRV_MIC_Enum_t  mic,
 #endif
 	}
 
+    if (voiceCallSampleRate == 16000) 
+    {
+		AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), AUDIO_APP_VOICE_CALL_WB );  //WB
+    }
+    else
+    {
+		AUDDRV_SetAudioMode( AUDDRV_GetAudioMode(), AUDIO_APP_VOICE_CALL );  //NB
+    }
+
 	if(speaker == AUDDRV_SPKR_IHF)
 	{
 #if defined(ENABLE_DMA_VOICE)

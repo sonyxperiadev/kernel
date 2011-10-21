@@ -252,39 +252,13 @@ void AUDCTRL_SetTelephonyMicSpkr(
 	powerOnExternalAmp( speaker, TelephonyUseExtSpkr, TRUE );
 
     //Load the mic gains from sysparm.
-    AUDCTRL_LoadMicGain(myTelephonyPathID.ulPathID, mic, TRUE);
+//    AUDCTRL_LoadMicGain(myTelephonyPathID.ulPathID, mic, TRUE);
     //Load the speaker gains form sysparm.
-    AUDCTRL_LoadSpkrGain(myTelephonyPathID.dlPathID, speaker, TRUE);
+ //   AUDCTRL_LoadSpkrGain(myTelephonyPathID.dlPathID, speaker, TRUE);
 
 
 }
-//============================================================================
-//
-// Function Name: AUDCTRL_SetAMRVolume_DL
-//
-// Description:   set gain on the VPU playback path on the downlink path
-//
-//============================================================================
-void AUDCTRL_SetAMRVolume_DL(UInt16 uVol)
-{
-#if defined(_ATHENA_) || defined(_RHEA_)
-	audio_control_dsp( AUDDRV_CPCMD_SET_DSP_AMR_VOLUME_DL, uVol, 0, 0, 0, 0 );
-#endif
-}
 
-//============================================================================
-//
-// Function Name: AUDCTRL_SetAMRVolume_UL
-//
-// Description:   set gain on the VPU playback path on the uplink path
-//
-//============================================================================
-void AUDCTRL_SetAMRVolume_UL(UInt16 uVol)
-{
-#if defined(_ATHENA_) || defined(_RHEA_)
-	audio_control_dsp( AUDDRV_CPCMD_SET_DSP_AMR_VOLUME_UL, uVol, 0, 0, 0, 0 );
-#endif
-}
 
 //*********************************************************************
 //  Function Name: AUDCTRL_InVoiceCall 
@@ -339,6 +313,8 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode, AudioApp_t app)
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d, app=%d\n",  mode, app);
 	AUDCTRL_SaveAudioModeFlag( mode, app );
 	AUDDRV_SetAudioMode( mode, app );
+
+//load PMU gain
 }
 #else
 //*********************************************************************
@@ -363,6 +339,8 @@ void AUDCTRL_SetAudioMode( AudioMode_t mode )
 	Log_DebugPrintf(LOGID_AUDIO,"AUDCTRL_SetAudioMode: mode = %d\n",  mode);
 	AUDCTRL_SaveAudioModeFlag( mode );
 	AUDDRV_SetAudioMode( mode, AUDDRV_MIC1|AUDDRV_MIC2|AUDDRV_SPEAKER);
+
+//load PMU gain
 }
 #endif
 
