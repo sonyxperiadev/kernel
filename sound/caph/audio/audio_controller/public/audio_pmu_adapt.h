@@ -33,7 +33,7 @@
 #ifndef __AUDIO_PMU_ADAPT_H__
 #define __AUDIO_PMU_ADAPT_H__
 
-#ifdef NO_PMU
+#if (!defined(CONFIG_BCM59055_AUDIO) && !defined(CONFIG_BCMPMU_AUDIO)) 
 
 #include "bcmpmu_audio.h"
 #define AUDIO_PMU_INIT() NULL
@@ -43,7 +43,7 @@
 #define AUDIO_PMU_IHF_POWER(a) NULL
 #define AUDIO_PMU_DEINIT() NULL
 #else
-#ifdef PMU_BCM59055 
+#ifdef CONFIG_BCM59055_AUDIO 
 
 #include "linux/broadcom/bcm59055-audio.h"
 #define AUDIO_PMU_INIT bcm59055_audio_init
@@ -108,7 +108,7 @@ UInt32 map2pmu_hs_gain_fromQ13dot2( Int16 gain );
 UInt32 map2pmu_ihf_gain_fromQ13dot2( Int16 gain );
 
 
-#endif  //#if !defined(NO_PMU)
+#endif  //#if (!defined(CONFIG_BCM59055_AUDIO) && !defined(CONFIG_BCMPMU_AUDIO)) 
 
 #endif	//__AUDIO_PMU_ADAPT_H__
 

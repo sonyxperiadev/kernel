@@ -35,13 +35,10 @@
 //=============================================================================
 
 
-#ifdef UNDER_LINUX
 #include <linux/kernel.h>
 #include <linux/workqueue.h>
-
 #include <linux/slab.h>
 #include "plat/osdal_os.h"   
-#endif
 #include "mobcom_types.h"
 #include "resultcode.h"
 #include "audio_consts.h"
@@ -532,9 +529,7 @@ static Result_t AUDIO_DRIVER_ProcessRenderCmd(AUDIO_DDRIVER_t* aud_drv,
 						            			          block_size,
 						                      			  (CSL_AUDRENDER_CB) AUDIO_DRIVER_RenderDmaCallback,
                                         			      aud_drv->stream_id);
-#ifdef ENABLE_DMA_ARM2SP
 				csl_caph_arm2sp_set_param((UInt32)aud_drv->arm2sp_config.mixMode,(aud_drv->arm2sp_config.instanceID+1)); //0 is instance_none
-#endif
                 //start render
                 result_code = csl_audio_render_start (aud_drv->stream_id);
             }

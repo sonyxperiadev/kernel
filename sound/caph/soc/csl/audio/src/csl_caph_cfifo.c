@@ -67,7 +67,6 @@ CAPH_CFIFO_QUEUE_e cfifo_queue = CAPH_CFIFO_QUEUE1;
 //****************************************************************************
 static CHAL_HANDLE handle = 0;
 
-#if defined (_RHEA_)
 CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
 {
 // FIFO map, address, size, threshold, owner: 0=ARM, 1=DSP, status: 0=UNUSED, 1=USED
@@ -98,30 +97,6 @@ CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
     {CSL_CAPH_CFIFO_FIFO16, 0x0C88, 0x4,    0x2,  CAPH_DSP, 0, CSL_CAPH_DMA_CH16}
 #endif
 };
-#elif defined (_SAMOA_)
-CSL_CFIFO_TABLE_t CSL_CFIFO_table[]=
-{
-// FIFO map, address, size in bytes, threshold, owner: 0=ARM, 1=DSP, status: 0=UNUSED, 1=USED
-// CFIFO/DMA 11-16 are reserved and connected for DSP
-    {CSL_CAPH_CFIFO_NONE,   0x0000, 0x0,     0x0,    CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO1,   0x0000, 0x200, 0x100, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO2,   0x0200, 0x200, 0x100, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO3,   0x0400, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO4,   0x0500, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO5,   0x0600, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO6,   0x0700, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO7,   0x0800, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO8,   0x0900, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO9,   0x0a00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO10, 0x0b00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO11, 0x0c00, 0x100, 0x080, CAPH_ARM, 0, CSL_CAPH_DMA_NONE},
-    {CSL_CAPH_CFIFO_FIFO12, 0x0d00, 0x100, 0x080, CAPH_DSP, 0, CSL_CAPH_DMA_CH12},
-    {CSL_CAPH_CFIFO_FIFO13, 0x0e00, 0x100, 0x080, CAPH_DSP, 0, CSL_CAPH_DMA_CH13},
-    {CSL_CAPH_CFIFO_FIFO14, 0x0f00, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH14},
-    {CSL_CAPH_CFIFO_FIFO15, 0x0f20, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH15},
-    {CSL_CAPH_CFIFO_FIFO16, 0x0f40, 0x20,    0x10,    CAPH_DSP, 0, CSL_CAPH_DMA_CH16}
-};
-#endif
 
 //****************************************************************************
 // local function declarations

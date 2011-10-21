@@ -32,7 +32,7 @@
 
 #if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR) 
 
-#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 )||defined(CONFIG_BCMPMU_AUDIO))
+#if !defined(NO_PMU) && (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO))
 
 //=============================================================================
 // Include directives
@@ -40,19 +40,6 @@
 
 #include "mobcom_types.h"
 #include "resultcode.h"
-
-//#include "pmu.h"
-//#include "hal_pmu.h"
-//#include "hal_pmu_private.h"
-
-// to /kernel/drivers/char/broadcom/modem/public/peripherals/pmu/public/pmu.h
-//#include "../../drivers/char/broadcom/modem/public/peripherals/pmu/public/pmu.h"
-
-// from kernel/sound/caph, to find kernel/drivers/char/broadcom/modem/public/sysinterface/hal/pmu/public/hal_pmu_private.h
-//#include "../../drivers/char/broadcom/modem/public/sysinterface/hal/pmu/public/hal_pmu.h"
-//#include "../../drivers/char/broadcom/modem/public/sysinterface/hal/pmu/public/hal_pmu_private.h"
-
-//#include "../../drivers/char/broadcom/modem/public/peripherals/pmu/public/brcm/pmu_bcm59055.h"
 
 #include <linux/kernel.h>
 
@@ -561,7 +548,7 @@ UInt32 map2pmu_ihf_gain_fromQ13dot2( Int16 gain )
 }
 
 
-#endif //#if !defined(NO_PMU) && (defined( PMU_BCM59038)||defined( PMU_BCM59055 ))
+#endif //#if !defined(NO_PMU) && (defined(CONFIG_BCM59055_AUDIO))
 
 #endif //#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)
 

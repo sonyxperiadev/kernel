@@ -627,7 +627,6 @@ void csl_caph_hwctrl_SetIHFmode(Boolean stIHF);
 ****************************************************************************/
 void csl_caph_hwctrl_SetBTMode(Boolean mode);
 
-#ifdef ENABLE_DMA_ARM2SP
 
 /****************************************************************************
 *
@@ -637,7 +636,6 @@ void csl_caph_hwctrl_SetBTMode(Boolean mode);
 *
 ****************************************************************************/
 void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId);
-#endif
 
 void csl_caph_hwctrl_ConfigSSP(CSL_SSP_PORT_e port, CSL_SSP_BUS_e bus);
 #endif // _CSL_CAPH_HWCTRL_

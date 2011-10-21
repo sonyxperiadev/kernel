@@ -50,12 +50,9 @@ Copyright 2009 - 2011 Broadcom Corporation.  All rights reserved.               
 #include "csl_caph_gain.h"
 
 #include "csl_caph_hwctrl.h"
-#ifdef UNDER_LINUX
 #include <mach/io_map.h>
 #include "clock.h"
 #include "clk.h"
-#include "platform_mconfig_rhea.h"
-#endif
 #if defined(ENABLE_DMA_VOICE)
 #include "csl_dsp_caph_control_api.h"
 #endif
@@ -338,7 +335,6 @@ static char *blockName[CAPH_TOTAL] = { //should match the order of CAPH_BLOCK_t
 		"SAME"
 	};
 
-#if defined(ENABLE_DMA_ARM2SP)
 #include "csl_arm2sp.h"
 #include "csl_dsp.h"
 
@@ -430,7 +426,6 @@ void csl_caph_arm2sp_set_param(UInt32 mixMode,UInt32 instanceId)
 	else if(mixMode == CSL_ARM2SP_VOICE_MIX_NONE)
 	  	arm2spCfg.playbackMode = CSL_ARM2SP_PLAYBACK_DL; //for standalone testing
 }
-#endif
 
 #if defined(ENABLE_DMA_VOICE)
 // ==========================================================================
@@ -480,7 +475,6 @@ static void csl_caph_enable_adcpath_by_dsp(UInt16 enabled_path)
 // =========================================================================
 static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 {
-#ifdef ENABLE_DMA_ARM2SP
 	if(!arm2sp_start[arm2spCfg.instanceID])
 	{
 		if(arm2spCfg.instanceID == 1)
@@ -507,7 +501,6 @@ static void AUDIO_DMA_CB2(CSL_CAPH_DMA_CHNL_e chnl)
 		
 		arm2sp_start[arm2spCfg.instanceID] = TRUE;
 	}
-#endif	
 	if ((csl_caph_dma_read_ddrfifo_sw_status(chnl) & CSL_CAPH_READY_LOW) == CSL_CAPH_READY_NONE)
 	{	
 		//_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "AUDIO_DMA_CB2:: low ch=0x%x \r\n", chnl));
@@ -1186,12 +1179,10 @@ static void csl_caph_config_dma(CSL_CAPH_PathID pathID, int blockPathIdx)
 	} else if(path->sink[0]==CSL_CAPH_DEV_DSP_throughMEM && blockPathIdx) { //dma to shared mem
 		dmaCfg.direction = CSL_CAPH_DMA_OUT;
 		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
-#if defined(ENABLE_DMA_ARM2SP)
 		/* Linux Specific - For DMA, we need to pass the physical address of AP SM */
 		dmaCfg.mem_addr = (void *)(csl_dsp_arm2sp_get_phy_base_addr());
 		dmaCfg.mem_size = arm2spCfg.dmaBytes;
 		dmaCfg.dmaCB = AUDIO_DMA_CB2;
-#endif
 	} else if(path->sink[0]==CSL_CAPH_DEV_MEMORY && blockPathIdx) { //dma to mem
 		dmaCfg.direction = CSL_CAPH_DMA_OUT;
 		dmaCfg.fifo = path->cfifo[path->blockIdx[blockPathIdx-1]]; //fifo has be followed by dma
@@ -1638,7 +1629,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 		fmRunning = TRUE;
 	}
 
-#if defined(ENABLE_DMA_ARM2SP)
 	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) || 
         (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
 	{
@@ -1661,7 +1651,6 @@ static void csl_caph_start_blocks(CSL_CAPH_PathID pathID)
 			CSL_RegisterARM2SP2RenderStatusHandler((void*)&ARM2SP2_DMA_Req);
 		}
 	}
-#endif
 	if (path->source == CSL_CAPH_DEV_HS_MIC) csl_caph_hwctrl_ACIControl();
 }
 
@@ -1802,7 +1791,7 @@ void csl_caph_ControlHWClock(Boolean enable)
         clkID[4] = clk_get(NULL,"audioh_156m_clk");
 		clk_enable(clkID[4]);
 
-#ifdef CONFIG_DEPENDENCY_ENABLE_SSP34
+#ifdef CONFIG_ARCH_ISLAND
         clkID[5] = clk_get(NULL, "ssp4_audio_clk");
 		clk_enable(clkID[5]);
 #endif
@@ -2597,8 +2586,6 @@ void csl_caph_hwctrl_init(void)
     addr.ssp3_baseAddr = SSP3_BASE_ADDR1;
     addr.ssp4_baseAddr = SSP4_BASE_ADDR1;
 
-#if defined(FUSE_DUAL_PROCESSOR_ARCHITECTURE) && defined(FUSE_APPS_PROCESSOR)  	
-	
    	_DBG_(Log_DebugPrintf(LOGID_SOC_AUDIO, "csl_caph_hwctrl_init:: \n"));
     memset(HWConfig_Table, 0, sizeof(HWConfig_Table));
 
@@ -2639,18 +2626,17 @@ void csl_caph_hwctrl_init(void)
     // Initialize SSP3 port for PCM.
     pcmHandleSSP = (CSL_HANDLE)csl_pcm_init(addr.ssp3_baseAddr, (UInt32)caph_intc_handle);
 #endif
-#endif    
     csl_caph_srcmixer_init(addr.srcmixer_baseAddr, (UInt32)caph_intc_handle);
     csl_caph_audioh_init(addr.audioh_baseAddr, addr.sdt_baseAddr);
 
     csl_caph_ControlHWClock(FALSE);
-#ifdef ENABLE_DMA_ARM2SP
 	memset(&arm2spCfg, 0, sizeof(arm2spCfg));
-#endif
+
 #if defined(ENABLE_DMA_VOICE)
 	CSL_RegisterAudioEnableDoneHandler(&csl_caph_enable_adcpath_by_dsp);
 #endif
-	return;
+	
+    return;
 }
 
 /****************************************************************************
@@ -2812,7 +2798,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		path->list = LIST_SW_MIX_SW;
 		if(path->sink[0] == CSL_CAPH_DEV_BT_SPKR) path->list = LIST_SW_MIX_SRC_SW;
     }   
-#if defined(ENABLE_DMA_ARM2SP)
     else
     if ((path->source == CSL_CAPH_DEV_FM_RADIO) && (path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
     {
@@ -2821,7 +2806,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		path->list = arm2spPath;
 		csl_caph_config_arm2sp(path->pathID);
     }
-#endif //ENABLE_DMA_ARM2SP   
     else
     if ((path->source == CSL_CAPH_DEV_BT_MIC)&&(path->sink[0] == CSL_CAPH_DEV_MEMORY))
     {
@@ -2951,7 +2935,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
     {
 		path->list = LIST_DMA_SRC;
 	} 
-#if defined(ENABLE_DMA_ARM2SP)
 	else if (path->source == CSL_CAPH_DEV_MEMORY && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM)
 	{
 		if(path->src_sampleRate==AUDIO_SAMPLING_RATE_44100) arm2spPath = LIST_DMA_MIX_DMA;
@@ -2960,7 +2943,6 @@ CSL_CAPH_PathID csl_caph_hwctrl_SetupPath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		path->list = arm2spPath;
 		csl_caph_config_arm2sp(path->pathID);
 	}
-#endif //ENABLE_DMA_ARM2SP
 
     if(path->list!=LIST_NUM)
 	{
@@ -3067,7 +3049,6 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 	}
 #endif
 
-#if defined(ENABLE_DMA_ARM2SP)
 	if ((path->source == CSL_CAPH_DEV_MEMORY && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM) ||
         (path->source == CSL_CAPH_DEV_FM_RADIO && path->sink[0] == CSL_CAPH_DEV_DSP_throughMEM))
 	{
@@ -3090,7 +3071,6 @@ Result_t csl_caph_hwctrl_DisablePath(CSL_CAPH_HWCTRL_CONFIG_t config)
 		if(arm2sp_start[1] == FALSE && arm2sp_start[2] == FALSE)
 			memset(&arm2spCfg, 0, sizeof(arm2spCfg));
 	}
-#endif
 
 	//stopping sequence may be important in some cases: dma, cfifo, switch, srcmixer, source/sink
 	for(i=0; i<MAX_BLOCK_NUM; i++)

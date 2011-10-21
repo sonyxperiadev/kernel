@@ -946,13 +946,11 @@ static int MiscCtrlPut(	struct snd_kcontrol * kcontrol,	struct snd_ctl_elem_valu
 
                 pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].speaker = pSel[0];
 
-#ifdef ENABLE_DMA_ARM2SP
                 if (callMode)
                 {
                     parm_FM.fm_mix = (UInt32)pChip->pi32SpeechMixOption[CTL_STREAM_PANEL_FM-1];
                     AUDIO_Ctrl_Trigger(ACTION_AUD_SetARM2SPInst,&parm_FM,NULL,0);
                 }
-#endif
                 // Enable the playback the path
                  parm_FM.hw_id = pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].hw_id;
 				 parm_FM.device = pChip->streamCtl[CTL_STREAM_PANEL_FM-1].dev_prop.p[0].speaker;

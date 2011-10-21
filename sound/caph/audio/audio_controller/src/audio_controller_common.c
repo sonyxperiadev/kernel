@@ -259,7 +259,6 @@ void AUDCTRL_SetTelephonyMicSpkr(
 
 }
 
-
 //*********************************************************************
 //  Function Name: AUDCTRL_InVoiceCall 
 //	@return	 TRUE/FALSE (in/out voice call)

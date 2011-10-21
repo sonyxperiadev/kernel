@@ -119,25 +119,6 @@ static struct snd_pcm_hardware brcm_playback_hw =
 	.periods_max = 2,//limitation for RHEA
 };
 
-#ifndef ENABLE_DMA_ARM2SP
-static struct snd_pcm_hardware brcm_voice_playback_hw =
-{
-	.info = (SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_INTERLEAVED |
-			SNDRV_PCM_INFO_BLOCK_TRANSFER |	SNDRV_PCM_INFO_MMAP_VALID | SNDRV_PCM_INFO_PAUSE | SNDRV_PCM_INFO_BATCH),
-	.formats = SNDRV_PCM_FMTBIT_S16_LE,
-	.rates = (SNDRV_PCM_RATE_8000 | SNDRV_PCM_RATE_16000),
-	.rate_min = 8000,
-	.rate_max = 16000,
-	.channels_min = 1,
-	.channels_max = 1,
-	.buffer_bytes_max = PCM_MAX_VOICE_PLAYBACK_BUF_BYTES,
-	.period_bytes_min = PCM_MIN_VOICE_PLAYBACK_PERIOD_BYTES,
-	.period_bytes_max = PCM_MAX_VOICE_PLAYBACK_PERIOD_BYTES, 
-	.periods_min = 2,
-	.periods_max = 2,
-};
-#endif
-
 static struct snd_pcm_hardware brcm_capture_hw =
 {
 	.info = (SNDRV_PCM_INFO_MMAP | SNDRV_PCM_INFO_INTERLEAVED |
@@ -253,24 +234,10 @@ static int PcmPlaybackOpen(
 	param_open.drv_handle = NULL;
 	param_open.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
 
-#ifndef ENABLE_DMA_ARM2SP
-
-	if((callMode == 1) && (chip->streamCtl[substream_number].iLineSelect[0] != AUDCTRL_SPK_I2S)) //in call mode & not FM Tx playback
-	{
-		//route the playback to DSP
-		runtime->hw = brcm_voice_playback_hw;
-		chip->streamCtl[substream_number].dev_prop.p[0].drv_type = AUDIO_DRIVER_PLAY_VOICE;
-		err = snd_pcm_hw_constraint_step(runtime,0,SNDRV_PCM_HW_PARAM_BUFFER_BYTES,
-								1280); 	
-	}
-	else
-#endif
-	{
-        BCM_AUDIO_DEBUG("\n %lx:playback_open route the playback to CAPH\n");
-		//route the playback to CAPH
-		runtime->hw = brcm_playback_hw; 
-		chip->streamCtl[substream_number].dev_prop.p[0].drv_type = AUDIO_DRIVER_PLAY_AUDIO;
-	}
+    BCM_AUDIO_DEBUG("\n %lx:playback_open route the playback to CAPH\n");
+    //route the playback to CAPH
+    runtime->hw = brcm_playback_hw; 
+    chip->streamCtl[substream_number].dev_prop.p[0].drv_type = AUDIO_DRIVER_PLAY_AUDIO;
 	chip->streamCtl[substream_number].pSubStream = substream;
 	
     //open the playback device
@@ -382,193 +349,143 @@ static int PcmPlaybackTrigger(	struct snd_pcm_substream * substream,	int cmd )
 
 	if((callMode == 1) && (chip->streamCtl[substream_number].iLineSelect[0] != AUDCTRL_SPK_I2S)) //call mode & not FM Tx playback
 	{
-#ifdef ENABLE_DMA_ARM2SP
 		chip->streamCtl[substream_number].dev_prop.p[0].hw_id = AUDIO_HW_DSP_VOICE;	
 		chip->streamCtl[substream_number].dev_prop.p[0].aud_dev = AUDDRV_DEV_DSP_throughMEM;
-#else		
-		switch(cmd)
-		{
-			case SNDRV_PCM_TRIGGER_START:
-			{
-				
-                BRCM_AUDIO_Param_Start_t param_start;
-
-				param_start.drv_handle = drv_handle;
-				param_start.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
-				AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay,&param_start,NULL,0);
-			}
-			break;
-			case SNDRV_PCM_TRIGGER_STOP:
-			{
-                BRCM_AUDIO_Param_Stop_t param_stop;
-
-                param_stop.drv_handle = drv_handle;
-				param_stop.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
-				AUDIO_Ctrl_Trigger(ACTION_AUD_StopPlay,&param_stop,NULL,0);
-				
-			}
-			break;
-			case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
-			{
-                BRCM_AUDIO_Param_Pause_t param_pause;
-
-                param_pause.drv_handle = drv_handle;
-				param_pause.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
-				AUDIO_Ctrl_Trigger(ACTION_AUD_PausePlay,&param_pause,NULL,0);
-				
-			}
-			break;
-			case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-			{
-				BRCM_AUDIO_Param_Resume_t param_resume;
-					
-                param_resume.drv_handle = drv_handle;
-				param_resume.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
-			    AUDIO_Ctrl_Trigger(ACTION_AUD_ResumePlay,&param_resume,NULL,0);
-				
-			}
-			break;
-		}
-#endif
 	}	
-#ifndef ENABLE_DMA_ARM2SP
-	else	//Idle Mode 
-#endif
-	{
-		//route the playback to CAPH
-		pSel = chip->streamCtl[substream_number].iLineSelect;
 
-		if((callMode != 1) || (chip->streamCtl[substream_number].iLineSelect[0] == AUDCTRL_SPK_I2S))
-		{
-			for (i = 0; i < MAX_PLAYBACK_DEV; i++)
-			{
-				//Update Sink, volume , mute info from mixer controls
-				if(pSel[i]==AUDCTRL_SPK_HANDSET)
-				{
-					chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
-					chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_EP;
-				}
-				else if(pSel[i]==AUDCTRL_SPK_HEADSET)
-				{
-					chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_HEADSET_OUT;
-					chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_HS;		
-				}
-				else if(pSel[i]==AUDCTRL_SPK_LOUDSPK || pSel[i]==AUDCTRL_SPK_HANDSFREE) 
-				{
-					chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_IHF_OUT;
-					chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_IHF;		
-				}
-				else if(pSel[i]==AUDCTRL_SPK_BTM)
-				{
-					chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_MONO_BT_OUT;
-					chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_BT_SPKR;
-				}
-				else if(pSel[i]==AUDCTRL_SPK_I2S)
-				{
-					chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_I2S_OUT;
-					chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_FM_TX; 	
-				}
-				else if(pSel[i]==AUDCTRL_SPK_VIBRA)
-				{
-					chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_VIBRA_OUT;
-					chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_VIBRA;
-				}
-				else
-				{
-					if (i == 0)
-					{
-						BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[i]);
-						chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
-						chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_EP;
-					}
-					else
-					{
-						chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_NONE;
-						chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_NONE;
-					}
-				}
-				chip->streamCtl[substream_number].dev_prop.p[i].speaker = pSel[i];
-			}
-		}
+    //route the playback to CAPH
+    pSel = chip->streamCtl[substream_number].iLineSelect;
 
-		switch (cmd) 
-		{
-			case SNDRV_PCM_TRIGGER_START:
-			{
-                BRCM_AUDIO_Param_Start_t param_start;
-				BRCM_AUDIO_Param_Spkr_t param_spkr;
-                
-				struct snd_pcm_runtime *runtime = substream->runtime;
-
-                param_start.drv_handle = drv_handle;
-				param_start.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
-                param_start.channels = runtime->channels;
-                param_start.rate = runtime->rate;
-				param_start.vol[0] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[0];
-				param_start.vol[1] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[1];
-
-                AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay,&param_start,NULL,0);
-
-				for (i = 1; i < MAX_PLAYBACK_DEV; i++) //the for loop starts with p[1], the second channel.
-				{
-					if(chip->streamCtl[substream_number].dev_prop.p[i].hw_id != AUDIO_HW_NONE)
-					{
-						 param_spkr.src = chip->streamCtl[substream_number].dev_prop.p[0].hw_src;
-						 param_spkr.cur_sink = chip->streamCtl[substream_number].dev_prop.p[0].hw_id;
-						 param_spkr.cur_spkr = chip->streamCtl[substream_number].dev_prop.p[0].speaker;
-						 param_spkr.new_sink = chip->streamCtl[substream_number].dev_prop.p[i].hw_id;
-						 param_spkr.new_spkr = chip->streamCtl[substream_number].dev_prop.p[i].speaker;
-               			 AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,&param_spkr,NULL,0);
-					}
-				}
-			}
-			break;
-			
-			case SNDRV_PCM_TRIGGER_STOP:
+    if((callMode != 1) || (chip->streamCtl[substream_number].iLineSelect[0] == AUDCTRL_SPK_I2S))
+    {
+        for (i = 0; i < MAX_PLAYBACK_DEV; i++)
+        {
+            //Update Sink, volume , mute info from mixer controls
+            if(pSel[i]==AUDCTRL_SPK_HANDSET)
             {
-                BRCM_AUDIO_Param_Stop_t param_stop;
-
-                param_stop.drv_handle = drv_handle;
-				param_stop.pdev_prop = &chip->streamCtl[substream_number].dev_prop;				
-
-                AUDIO_Ctrl_Trigger(ACTION_AUD_StopPlay,&param_stop,NULL,0);
-
-                
+                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
+                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_EP;
             }
-			break;
-			
-        	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+            else if(pSel[i]==AUDCTRL_SPK_HEADSET)
             {
-                BRCM_AUDIO_Param_Pause_t param_pause;
-
-                param_pause.drv_handle = drv_handle;
-				param_pause.pdev_prop = &chip->streamCtl[substream_number].dev_prop;								
-	
-                AUDIO_Ctrl_Trigger(ACTION_AUD_PausePlay,&param_pause,NULL,0);
-			    
-	        }
-			break;
-    	
-			case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
-            {
-    			BRCM_AUDIO_Param_Resume_t param_resume;
-                
-				struct snd_pcm_runtime *runtime = substream->runtime;
-
-                param_resume.drv_handle = drv_handle;
-				param_resume.pdev_prop = &chip->streamCtl[substream_number].dev_prop;								
-                param_resume.channels = runtime->channels;
-                param_resume.rate = runtime->rate;
-
-                AUDIO_Ctrl_Trigger(ACTION_AUD_ResumePlay,&param_resume,NULL,0);
-
+                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_HEADSET_OUT;
+                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_HS;		
             }
-			break;		
-		
-			default:
-				return -EINVAL;
-		}			
-	}
+            else if(pSel[i]==AUDCTRL_SPK_LOUDSPK || pSel[i]==AUDCTRL_SPK_HANDSFREE) 
+            {
+                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_IHF_OUT;
+                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_IHF;		
+            }
+            else if(pSel[i]==AUDCTRL_SPK_BTM)
+            {
+                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_MONO_BT_OUT;
+                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_BT_SPKR;
+            }
+            else if(pSel[i]==AUDCTRL_SPK_I2S)
+            {
+                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_I2S_OUT;
+                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_FM_TX; 	
+            }
+            else if(pSel[i]==AUDCTRL_SPK_VIBRA)
+            {
+                chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_VIBRA_OUT;
+                chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_VIBRA;
+            }
+            else
+            {
+                if (i == 0)
+                {
+                    BCM_AUDIO_DEBUG("Fixme!! hw_id for dev %ld ?\n", pSel[i]);
+                    chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_EARPIECE_OUT;
+                    chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_EP;
+                }
+                else
+                {
+                    chip->streamCtl[substream_number].dev_prop.p[i].hw_id = AUDIO_HW_NONE;
+                    chip->streamCtl[substream_number].dev_prop.p[i].aud_dev = AUDDRV_DEV_NONE;
+                }
+            }
+            chip->streamCtl[substream_number].dev_prop.p[i].speaker = pSel[i];
+        }
+    }
+
+    switch (cmd) 
+    {
+        case SNDRV_PCM_TRIGGER_START:
+        {
+            BRCM_AUDIO_Param_Start_t param_start;
+            BRCM_AUDIO_Param_Spkr_t param_spkr;
+            
+            struct snd_pcm_runtime *runtime = substream->runtime;
+
+            param_start.drv_handle = drv_handle;
+            param_start.pdev_prop = &chip->streamCtl[substream_number].dev_prop;
+            param_start.channels = runtime->channels;
+            param_start.rate = runtime->rate;
+            param_start.vol[0] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[0];
+            param_start.vol[1] = chip->streamCtl[substream_number].ctlLine[pSel[0]].iVolume[1];
+
+            AUDIO_Ctrl_Trigger(ACTION_AUD_StartPlay,&param_start,NULL,0);
+
+            for (i = 1; i < MAX_PLAYBACK_DEV; i++) //the for loop starts with p[1], the second channel.
+            {
+                if(chip->streamCtl[substream_number].dev_prop.p[i].hw_id != AUDIO_HW_NONE)
+                {
+                    param_spkr.src = chip->streamCtl[substream_number].dev_prop.p[0].hw_src;
+                    param_spkr.cur_sink = chip->streamCtl[substream_number].dev_prop.p[0].hw_id;
+                    param_spkr.cur_spkr = chip->streamCtl[substream_number].dev_prop.p[0].speaker;
+                    param_spkr.new_sink = chip->streamCtl[substream_number].dev_prop.p[i].hw_id;
+                    param_spkr.new_spkr = chip->streamCtl[substream_number].dev_prop.p[i].speaker;
+                    AUDIO_Ctrl_Trigger(ACTION_AUD_AddChannel,&param_spkr,NULL,0);
+                }
+            }
+        }
+        break;
+        
+        case SNDRV_PCM_TRIGGER_STOP:
+        {
+            BRCM_AUDIO_Param_Stop_t param_stop;
+
+            param_stop.drv_handle = drv_handle;
+            param_stop.pdev_prop = &chip->streamCtl[substream_number].dev_prop;				
+
+            AUDIO_Ctrl_Trigger(ACTION_AUD_StopPlay,&param_stop,NULL,0);
+
+            
+        }
+        break;
+        
+        case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+        {
+            BRCM_AUDIO_Param_Pause_t param_pause;
+
+            param_pause.drv_handle = drv_handle;
+            param_pause.pdev_prop = &chip->streamCtl[substream_number].dev_prop;								
+
+            AUDIO_Ctrl_Trigger(ACTION_AUD_PausePlay,&param_pause,NULL,0);
+            
+        }
+        break;
+    
+        case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+        {
+            BRCM_AUDIO_Param_Resume_t param_resume;
+            
+            struct snd_pcm_runtime *runtime = substream->runtime;
+
+            param_resume.drv_handle = drv_handle;
+            param_resume.pdev_prop = &chip->streamCtl[substream_number].dev_prop;								
+            param_resume.channels = runtime->channels;
+            param_resume.rate = runtime->rate;
+
+            AUDIO_Ctrl_Trigger(ACTION_AUD_ResumePlay,&param_resume,NULL,0);
+
+        }
+        break;		
+    
+        default:
+            return -EINVAL;
+    }			
 
 	return ret;
 }

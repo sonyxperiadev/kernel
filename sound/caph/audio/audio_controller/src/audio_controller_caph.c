@@ -53,7 +53,7 @@
 #include "osheap.h"
 
 #ifdef CONFIG_DIGI_MIC
-#if !defined(NO_PMU)
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
 #include "pmu.h"
 #include "hal_pmu.h"
 #include "hal_pmu_private.h"
@@ -638,12 +638,10 @@ void AUDCTRL_EnablePlay(
 		config.sink = CSL_CAPH_DEV_MEMORY;
 	}
 
-#if defined(ENABLE_DMA_ARM2SP)
 	if ((src == AUDIO_HW_MEM || src == AUDIO_HW_I2S_IN) && sink == AUDIO_HW_DSP_VOICE && spk!=AUDCTRL_SPK_USB)
 	{
 		config.sink = CSL_CAPH_DEV_DSP_throughMEM; //convert from AUDDRV_DEV_EP
 	}
-#endif
 
 	if( sink == AUDIO_HW_USB_OUT || spk == AUDCTRL_SPK_BTS)
 		;
@@ -2147,7 +2145,7 @@ static CSL_CAPH_DEVICE_e GetDeviceFromSpkr(AUDCTRL_SPEAKER_t spkr)
 //============================================================================
 void SetGainOnExternalAmp(AUDCTRL_SPEAKER_t speaker, int arg_gain, int left_right)
 {
-#if !defined(NO_PMU)
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
 	int gain=0;
 
 	switch(speaker)
@@ -2190,7 +2188,7 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 //AUDCTRL_SPEAKER_t should be moved to public and let PMU driver includes it.
 //and rename it AUD_SPEAKER_t
 
-#if !defined(NO_PMU)
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
 	static Boolean telephonyUseHS = FALSE;
 	static Boolean audioUseHS = FALSE;
 
@@ -2295,7 +2293,7 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 	{
 		int hs_path;	
 		int hs_gain = 0;
-#if defined(PMU_BCM59055) || defined(CONFIG_BCMPMU_AUDIO) 
+#if defined(CONFIG_BCM59055_AUDIO) || defined(CONFIG_BCMPMU_AUDIO) 
 		hs_path = PMU_AUDIO_HS_BOTH;
 #endif
 
@@ -2371,7 +2369,7 @@ void powerOnExternalAmp( AUDCTRL_SPEAKER_t speaker, ExtSpkrUsage_en_t usage_flag
 //============================================================================
 void powerOnDigitalMic(Boolean powerOn)
 {
-#if !defined(NO_PMU)
+#if (defined(CONFIG_BCM59055_AUDIO)||defined(CONFIG_BCMPMU_AUDIO)) 
 	if (powerOn == TRUE)
 	{
 #ifdef CONFIG_DIGI_MIC
