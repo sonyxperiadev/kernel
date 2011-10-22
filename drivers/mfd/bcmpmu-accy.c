@@ -225,7 +225,10 @@ static void bcmpmu_accy_isr(enum bcmpmu_irq irq, void *data)
 		break;
 
 	case PMU_IRQ_USBINS:
+		send_usb_event(bcmpmu, BCMPMU_USB_EVENT_IN, NULL);
+		break;
 	case PMU_IRQ_USBRM:
+		break;
 	case PMU_IRQ_CHGDET_LATCH:
 		schedule_delayed_work(&paccy->det_work, msecs_to_jiffies(0));
 		break;
@@ -527,6 +530,7 @@ static void usb_det_work(struct work_struct *work)
 			usb_type = PMU_USB_TYPE_NONE;
 			chrgr_type = PMU_CHRGR_TYPE_NONE;
 			paccy->det_state = USB_IDLE;
+//			bcm_hsotgctrl_en_clock(0); /* Do this when PM CQ is fixed */
 		}
 		break;
 
@@ -867,9 +871,12 @@ static int bcmpmu_register_usb_callback(struct bcmpmu *pmu,
 		paccy->usb_cb.clientdata = data;
 		ret = 0;
 	}
+
+#if 0 /* Do this only if BC detection is already complete */
 	send_usb_event(paccy->bcmpmu,
 		BCMPMU_USB_EVENT_USB_DETECTION,
-			&paccy->bcmpmu->usb_accy_data.usb_type);
+		&paccy->bcmpmu->usb_accy_data.usb_type);
+#endif
 
 	return ret;
 }
@@ -951,7 +958,7 @@ static int __devinit bcmpmu_accy_probe(struct platform_device *pdev)
 #ifdef CONFIG_MFD_BCMPMU_DBG
 	ret = sysfs_create_group(&pdev->dev.kobj, &bcmpmu_accy_attr_group);
 #endif
-	schedule_delayed_work(&paccy->det_work, 0);
+//	schedule_delayed_work(&paccy->det_work, 0); /* Disable this logic for later use */
 	return 0;
 
 err:
