@@ -626,8 +626,8 @@ static void vc_vchi_wifihdmi_socket_callback( WHDMI_EVENT event,
          skt_data.handle    = (uint32_t) ptr->km_socket_handle;
          skt_data.data_len  = ptr->data_len;
 
-         LOG_INFO( "%s: data on connection %x, %u bytes",
-                   __func__, skt_data.handle, skt_data.data_len );
+         LOG_DBG( "%s: data on connection %x, %u bytes",
+                  __func__, skt_data.handle, skt_data.data_len );
 
          if ( skt_data.data_len < VC_WIFIHDMI_MAX_DATA_LEN )
          {
